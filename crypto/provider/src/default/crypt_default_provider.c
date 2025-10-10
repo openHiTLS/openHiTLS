@@ -91,29 +91,29 @@ static const CRYPT_EAL_AlgInfo g_defEalMacs[] = {
     {CRYPT_MAC_HMAC_SHA3_384, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_MAC_HMAC_SHA3_512, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_MAC_HMAC_SM3, g_defEalMacHmac, CRYPT_EAL_DEFAULT_ATTR},
-#endif
+#endif /* HITLS_CRYPTO_HMAC */
 #ifdef HITLS_CRYPTO_CMAC
 #ifdef HITLS_CRYPTO_AES
     {CRYPT_MAC_CMAC_AES128, g_defEalMacCmac, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_MAC_CMAC_AES192, g_defEalMacCmac, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_MAC_CMAC_AES256, g_defEalMacCmac, CRYPT_EAL_DEFAULT_ATTR},
-#endif
+#endif /* HITLS_CRYPTO_AES */
 #ifdef HITLS_CRYPTO_SM4
     {CRYPT_MAC_CMAC_SM4, g_defEalMacCmac, CRYPT_EAL_DEFAULT_ATTR},
-#endif
-#endif
+#endif /* HITLS_CRYPTO_SM4 */
+#endif /* HITLS_CRYPTO_CMAC */
 #ifdef HITLS_CRYPTO_CBC_MAC
     {CRYPT_MAC_CBC_MAC_SM4, g_defEalMacCbcMac, CRYPT_EAL_DEFAULT_ATTR},
-#endif
+#endif /* HITLS_CRYPTO_CBC_MAC */
 #ifdef HITLS_CRYPTO_SIPHASH
     {CRYPT_MAC_SIPHASH64, g_defEalMacSiphash, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_MAC_SIPHASH128, g_defEalMacSiphash, CRYPT_EAL_DEFAULT_ATTR},
-#endif
+#endif /* HITLS_CRYPTO_SIPHASH */
 #ifdef HITLS_CRYPTO_GMAC
     {CRYPT_MAC_GMAC_AES128, g_defEalMacGmac, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_MAC_GMAC_AES192, g_defEalMacGmac, CRYPT_EAL_DEFAULT_ATTR},
     {CRYPT_MAC_GMAC_AES256, g_defEalMacGmac, CRYPT_EAL_DEFAULT_ATTR},
-#endif
+#endif /* HITLS_CRYPTO_GMAC */
     CRYPT_EAL_ALGINFO_END
 };
 #endif
@@ -215,19 +215,41 @@ static const CRYPT_EAL_AlgInfo g_defEalCiphers[] = {
 #ifdef HITLS_CRYPTO_DRBG
 static const CRYPT_EAL_AlgInfo g_defEalRands[] = {
 #ifdef HITLS_CRYPTO_DRBG_HASH
+#ifdef HITLS_CRYPTO_SHA1
     {CRYPT_RAND_SHA1, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_SHA224
     {CRYPT_RAND_SHA224, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_SHA256
     {CRYPT_RAND_SHA256, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_SHA384
     {CRYPT_RAND_SHA384, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_SHA512
     {CRYPT_RAND_SHA512, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_SM3
     {CRYPT_RAND_SM3, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+#endif
 #endif // HITLS_CRYPTO_DRBG_HASH
 #ifdef HITLS_CRYPTO_DRBG_HMAC
+#ifdef HITLS_CRYPTO_SHA1
     {CRYPT_RAND_HMAC_SHA1, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_SHA224
     {CRYPT_RAND_HMAC_SHA224, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_SHA256
     {CRYPT_RAND_HMAC_SHA256, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_SHA384
     {CRYPT_RAND_HMAC_SHA384, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_SHA512
     {CRYPT_RAND_HMAC_SHA512, g_defEalRand, CRYPT_EAL_DEFAULT_ATTR},
+#endif
 #endif // HITLS_CRYPTO_DRBG_HMAC
 #ifdef HITLS_CRYPTO_DRBG_CTR
 #ifdef HITLS_CRYPTO_AES
@@ -293,9 +315,7 @@ static const CRYPT_EAL_AlgInfo g_defEalKeyMgmt[] = {
     CRYPT_EAL_ALGINFO_END
 };
 
-#if (defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_DECRYPT) || \
-    defined(HITLS_CRYPTO_SM2_CRYPT) || defined(HITLS_CRYPTO_PAILLIER) || defined(HITLS_CRYPTO_ELGAMAL)) && \
-    defined(HITLS_CRYPTO_PROVIDER)
+#ifdef HITLS_CRYPTO_PKEY_CRYPT
 static const CRYPT_EAL_AlgInfo g_defEalAsymCiphers[] = {
 #if defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_DECRYPT)
     {CRYPT_PKEY_RSA, g_defEalAsymCipherRsa, CRYPT_EAL_DEFAULT_ATTR},
@@ -313,8 +333,7 @@ static const CRYPT_EAL_AlgInfo g_defEalAsymCiphers[] = {
 };
 #endif
 
-#if (defined(HITLS_CRYPTO_X25519) || defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDH) || \
-    defined(HITLS_CRYPTO_SM2_EXCH)) && defined(HITLS_CRYPTO_PROVIDER)
+#ifdef HITLS_CRYPTO_PKEY_EXCH
 static const CRYPT_EAL_AlgInfo g_defEalKeyExch[] = {
 #ifdef HITLS_CRYPTO_X25519
     {CRYPT_PKEY_X25519, g_defEalExchX25519, CRYPT_EAL_DEFAULT_ATTR},
@@ -332,9 +351,7 @@ static const CRYPT_EAL_AlgInfo g_defEalKeyExch[] = {
 };
 #endif
 
-#if (defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_RSA_SIGN) || \
-    defined(HITLS_CRYPTO_RSA_VERIFY) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2_SIGN) || \
-    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_MLDSA)) && defined(HITLS_CRYPTO_PROVIDER)
+#ifdef HITLS_CRYPTO_PKEY_SIGN
 static const CRYPT_EAL_AlgInfo g_defEalSigns[] = {
 #ifdef HITLS_CRYPTO_DSA
     {CRYPT_PKEY_DSA, g_defEalSignDsa, CRYPT_EAL_DEFAULT_ATTR},
@@ -372,9 +389,9 @@ static const CRYPT_EAL_AlgInfo g_defEalKems[] = {
     CRYPT_EAL_ALGINFO_END
 };
 #endif
-#endif
+#endif // HITLS_CRYPTO_PKEY
 
-#ifdef HITLS_CRYPTO_CODECSKEY
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
 static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
 #ifdef HITLS_BSL_PEM
     {BSL_CID_DECODE_UNKNOWN, g_defEalPem2Der,
@@ -479,27 +496,22 @@ static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const 
         case CRYPT_EAL_OPERAID_KEYMGMT:
             *algInfos = g_defEalKeyMgmt;
             break;
-#if (defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_RSA_SIGN) || \
-    defined(HITLS_CRYPTO_RSA_VERIFY) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2_SIGN) || \
-    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_MLDSA)) && defined(HITLS_CRYPTO_PROVIDER)
+#ifdef HITLS_CRYPTO_PKEY_SIGN
         case CRYPT_EAL_OPERAID_SIGN:
             *algInfos = g_defEalSigns;
             break;
 #endif
-#if (defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_DECRYPT) || \
-    defined(HITLS_CRYPTO_SM2_CRYPT) || defined(HITLS_CRYPTO_PAILLIER) || defined(HITLS_CRYPTO_ELGAMAL)) && \
-    defined(HITLS_CRYPTO_PROVIDER)
+#ifdef HITLS_CRYPTO_PKEY_CRYPT
         case CRYPT_EAL_OPERAID_ASYMCIPHER:
             *algInfos = g_defEalAsymCiphers;
             break;
 #endif
-#if (defined(HITLS_CRYPTO_X25519) || defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDH) || \
-    defined(HITLS_CRYPTO_SM2_EXCH)) && defined(HITLS_CRYPTO_PROVIDER)
+#ifdef HITLS_CRYPTO_PKEY_EXCH
         case CRYPT_EAL_OPERAID_KEYEXCH:
             *algInfos = g_defEalKeyExch;
             break;
 #endif
-#if defined(HITLS_CRYPTO_MLKEM) || defined(HITLS_CRYPTO_HYBRIDKEM)
+#ifdef HITLS_CRYPTO_PKEY_KEM
         case CRYPT_EAL_OPERAID_KEM:
             *algInfos = g_defEalKems;
             break;
@@ -525,7 +537,7 @@ static int32_t CRYPT_EAL_DefaultProvQuery(void *provCtx, int32_t operaId, const 
             *algInfos = g_defEalRands;
             break;
 #endif
-#ifdef HITLS_CRYPTO_CODECSKEY
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
         case CRYPT_EAL_OPERAID_DECODER:
             *algInfos = g_defEalDecoders;
             break;
@@ -558,9 +570,15 @@ typedef struct {
     bool isKem;                 // true: KEM, false: KEX
 } TLS_GroupInfo;
 
+#ifndef HITLS_TLS_CAP_NO_STR
+#define CONST_CAST(str) ((char *)(uintptr_t)(str))
+#else
+#define CONST_CAST(str) NULL
+#endif
 static const TLS_GroupInfo g_tlsGroupInfo[] = {
+#ifdef HITLS_CRYPTO_X25519
     {
-        "x25519",
+        CONST_CAST("x25519"),
         CRYPT_PKEY_PARAID_MAX,
         CRYPT_PKEY_X25519,
         128,                                    // secBits
@@ -569,9 +587,10 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,  // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_X25519 */
 #ifdef HITLS_TLS_FEATURE_KEM
     {
-        "X25519MLKEM768",
+        CONST_CAST("X25519MLKEM768"),
         CRYPT_HYBRID_X25519_MLKEM768,
         CRYPT_PKEY_HYBRID_KEM,
         192,                                    // secBits
@@ -581,7 +600,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         true,
     },
     {
-        "SecP256r1MLKEM768",
+        CONST_CAST("SecP256r1MLKEM768"),
         CRYPT_HYBRID_ECDH_NISTP256_MLKEM768,
         CRYPT_PKEY_HYBRID_KEM,
         192,                                    // secBits
@@ -591,7 +610,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         true,
     },
     {
-        "SecP384r1MLKEM1024",
+        CONST_CAST("SecP384r1MLKEM1024"),
         CRYPT_HYBRID_ECDH_NISTP384_MLKEM1024,
         CRYPT_PKEY_HYBRID_KEM,
         256,                                    // secBits
@@ -601,8 +620,9 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         true,
     },
 #endif /* HITLS_TLS_FEATURE_KEM */
+#ifdef HITLS_CRYPTO_CURVE_NISTP256
     {
-        "secp256r1",
+        CONST_CAST("secp256r1"),
         CRYPT_ECC_NISTP256, // CRYPT_ECC_NISTP256
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         128, // secBits
@@ -611,8 +631,10 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_CURVE_NISTP256 */
+#ifdef HITLS_CRYPTO_CURVE_NISTP384
     {
-        "secp384r1",
+        CONST_CAST("secp384r1"),
         CRYPT_ECC_NISTP384, // CRYPT_ECC_NISTP384
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         192, // secBits
@@ -621,8 +643,10 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_CURVE_NISTP384 */
+#ifdef HITLS_CRYPTO_CURVE_NISTP521
     {
-        "secp521r1",
+        CONST_CAST("secp521r1"),
         CRYPT_ECC_NISTP521, // CRYPT_ECC_NISTP521
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         256, // secBits
@@ -631,8 +655,10 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_CURVE_NISTP521 */
+#ifdef HITLS_CRYPTO_CURVE_BP256R1
     {
-        "brainpoolP256r1",
+        CONST_CAST("brainpoolP256r1"),
         CRYPT_ECC_BRAINPOOLP256R1, // CRYPT_ECC_BRAINPOOLP256R1
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         128, // secBits
@@ -641,8 +667,10 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_CURVE_BP256R1 */
+#ifdef HITLS_CRYPTO_CURVE_BP384R1
     {
-        "brainpoolP384r1",
+        CONST_CAST("brainpoolP384r1"),
         CRYPT_ECC_BRAINPOOLP384R1, // CRYPT_ECC_BRAINPOOLP384R1
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         192, // secBits
@@ -651,8 +679,10 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_CURVE_BP384R1 */
+#ifdef HITLS_CRYPTO_CURVE_BP512R1
     {
-        "brainpoolP512r1",
+        CONST_CAST("brainpoolP512r1"),
         CRYPT_ECC_BRAINPOOLP512R1, // CRYPT_ECC_BRAINPOOLP512R1
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         256, // secBits
@@ -661,8 +691,10 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_CURVE_BP512R1 */
+#ifdef HITLS_CRYPTO_SM2
     {
-        "curveSm2",
+        CONST_CAST("curveSm2"),
         CRYPT_ECC_SM2, // CRYPT_ECC_SM2
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         128, // secBits
@@ -672,7 +704,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         false,
     },
     {
-        "sm2",
+        CONST_CAST("sm2"),
         CRYPT_PKEY_PARAID_MAX, // CRYPT_PKEY_PARAID_MAX
         CRYPT_PKEY_SM2, // CRYPT_PKEY_SM2
         128, // secBits
@@ -681,8 +713,10 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT, // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_SM2 */
+#ifdef HITLS_CRYPTO_DH
     {
-        "ffdhe8192",
+        CONST_CAST("ffdhe8192"),
         CRYPT_DH_RFC7919_8192, // CRYPT_DH_8192
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         192, // secBits
@@ -692,7 +726,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         false,
     },
     {
-        "ffdhe6144",
+        CONST_CAST("ffdhe6144"),
         CRYPT_DH_RFC7919_6144, // CRYPT_DH_6144
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         128, // secBits
@@ -702,7 +736,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         false,
     },
     {
-        "ffdhe4096",
+        CONST_CAST("ffdhe4096"),
         CRYPT_DH_RFC7919_4096, // CRYPT_DH_4096
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         128, // secBits
@@ -712,7 +746,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         false,
     },
     {
-        "ffdhe3072",
+        CONST_CAST("ffdhe3072"),
         CRYPT_DH_RFC7919_3072, // Fixed constant name
         CRYPT_PKEY_DH,
         128,
@@ -722,7 +756,7 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         false,
     },
     {
-        "ffdhe2048",
+        CONST_CAST("ffdhe2048"),
         CRYPT_DH_RFC7919_2048, // CRYPT_DH_2048
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         112, // secBits
@@ -731,31 +765,35 @@ static const TLS_GroupInfo g_tlsGroupInfo[] = {
         TLS13_VERSION_BIT, // versionBits
         false,
     }
+#endif /* HITLS_CRYPTO_DH */
 };
 
 static int32_t BuildTlsGroupParam(const TLS_GroupInfo *groupInfo, BSL_Param *param)
 {
     int32_t ret = 0;
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_NAME,
+    int32_t i = 0;
+#ifndef HITLS_TLS_CAP_NO_STR
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_NAME,
         BSL_PARAM_TYPE_OCTETS_PTR, (void *)(uintptr_t)groupInfo->name, (uint32_t)strlen(groupInfo->name)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_ID, BSL_PARAM_TYPE_UINT16,
-        (void *)(uintptr_t)&(groupInfo->groupId), sizeof(groupInfo->groupId)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_CAP_TLS_GROUP_PARA_ID, BSL_PARAM_TYPE_INT32,
+#endif
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_ID,
+        BSL_PARAM_TYPE_UINT16, (void *)(uintptr_t)&(groupInfo->groupId), sizeof(groupInfo->groupId)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_GROUP_PARA_ID, BSL_PARAM_TYPE_INT32,
         (void *)(uintptr_t)&(groupInfo->paraId), sizeof(groupInfo->paraId)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[3], CRYPT_PARAM_CAP_TLS_GROUP_ALG_ID, BSL_PARAM_TYPE_INT32,
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_GROUP_ALG_ID, BSL_PARAM_TYPE_INT32,
         (void *)(uintptr_t)&(groupInfo->algId), sizeof(groupInfo->algId)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[4], CRYPT_PARAM_CAP_TLS_GROUP_SEC_BITS, BSL_PARAM_TYPE_INT32,
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_GROUP_SEC_BITS, BSL_PARAM_TYPE_INT32,
         (void *)(uintptr_t)&(groupInfo->secBits), sizeof(groupInfo->secBits)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[5], CRYPT_PARAM_CAP_TLS_GROUP_VERSION_BITS, BSL_PARAM_TYPE_UINT32,
-        (void *)(uintptr_t)&(groupInfo->versionBits), sizeof(groupInfo->versionBits)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[6], CRYPT_PARAM_CAP_TLS_GROUP_IS_KEM, BSL_PARAM_TYPE_BOOL,
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_GROUP_VERSION_BITS,
+        BSL_PARAM_TYPE_UINT32, (void *)(uintptr_t)&(groupInfo->versionBits), sizeof(groupInfo->versionBits)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_GROUP_IS_KEM, BSL_PARAM_TYPE_BOOL,
         (void *)(uintptr_t)&(groupInfo->isKem), sizeof(groupInfo->isKem)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[7], CRYPT_PARAM_CAP_TLS_GROUP_PUBKEY_LEN, BSL_PARAM_TYPE_INT32,
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_GROUP_PUBKEY_LEN, BSL_PARAM_TYPE_INT32,
         (void *)(uintptr_t)&(groupInfo->pubkeyLen), sizeof(groupInfo->pubkeyLen)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[8], CRYPT_PARAM_CAP_TLS_GROUP_SHAREDKEY_LEN, BSL_PARAM_TYPE_INT32,
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_GROUP_SHAREDKEY_LEN, BSL_PARAM_TYPE_INT32,
         (void *)(uintptr_t)&(groupInfo->sharedkeyLen), sizeof(groupInfo->sharedkeyLen)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[9], CRYPT_PARAM_CAP_TLS_GROUP_CIPHERTEXT_LEN, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(groupInfo->ciphertextLen), sizeof(groupInfo->ciphertextLen)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_GROUP_CIPHERTEXT_LEN,
+        BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&(groupInfo->ciphertextLen), sizeof(groupInfo->ciphertextLen)), ret);
 
     return ret;
 }
@@ -789,8 +827,9 @@ typedef struct {
 } TLS_SigSchemeInfo;
 
 static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
+#ifdef HITLS_CRYPTO_CURVE_NISTP521
     {
-        "ecdsa_secp521r1_sha512",
+        CONST_CAST("ecdsa_secp521r1_sha512"),
         CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512,
         TLS_CERT_KEY_TYPE_ECDSA,
         CRYPT_ECC_NISTP521,
@@ -801,8 +840,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
+#endif /* HITLS_CRYPTO_CURVE_NISTP521 */
+#ifdef HITLS_CRYPTO_CURVE_NISTP384
     {
-        "ecdsa_secp384r1_sha384",
+        CONST_CAST("ecdsa_secp384r1_sha384"),
         CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384,
         TLS_CERT_KEY_TYPE_ECDSA,
         CRYPT_ECC_NISTP384,
@@ -813,8 +854,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
+#endif /* HITLS_CRYPTO_CURVE_NISTP384 */
+#ifdef HITLS_CRYPTO_ED25519
     {
-        "ed25519",
+        CONST_CAST("ed25519"),
         CERT_SIG_SCHEME_ED25519,
         TLS_CERT_KEY_TYPE_ED25519,
         CRYPT_PKEY_PARAID_MAX,
@@ -825,8 +868,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
+#endif /* HITLS_CRYPTO_ED25519 */
+#ifdef HITLS_CRYPTO_CURVE_NISTP256
     {
-        "ecdsa_secp256r1_sha256",
+        CONST_CAST("ecdsa_secp256r1_sha256"),
         CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256,
         TLS_CERT_KEY_TYPE_ECDSA,
         CRYPT_ECC_NISTP256,
@@ -837,8 +882,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
+#endif /* HITLS_CRYPTO_CURVE_NISTP256 */
+#ifdef HITLS_CRYPTO_SM2
     {
-        "sm2_sm3",
+        CONST_CAST("sm2_sm3"),
         CERT_SIG_SCHEME_SM2_SM3,
         TLS_CERT_KEY_TYPE_SM2,
         CRYPT_PKEY_PARAID_MAX,
@@ -849,8 +896,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT | TLS13_VERSION_BIT,
         TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT | TLS13_VERSION_BIT,
     },
+#endif /* HITLS_CRYPTO_SM2 */
+#ifdef HITLS_CRYPTO_RSA
     {
-        "rsa_pss_pss_sha512",
+        CONST_CAST("rsa_pss_pss_sha512"),
         CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512,
         TLS_CERT_KEY_TYPE_RSA_PSS,
         CRYPT_PKEY_PARAID_MAX,
@@ -862,7 +911,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "rsa_pss_pss_sha384",
+        CONST_CAST("rsa_pss_pss_sha384"),
         CERT_SIG_SCHEME_RSA_PSS_PSS_SHA384,
         TLS_CERT_KEY_TYPE_RSA_PSS,
         CRYPT_PKEY_PARAID_MAX,
@@ -874,7 +923,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "rsa_pss_pss_sha256",
+        CONST_CAST("rsa_pss_pss_sha256"),
         CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256,
         TLS_CERT_KEY_TYPE_RSA_PSS,
         CRYPT_PKEY_PARAID_MAX,
@@ -886,7 +935,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "rsa_pss_rsae_sha512",
+        CONST_CAST("rsa_pss_rsae_sha512"),
         CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -898,7 +947,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "rsa_pss_rsae_sha384",
+        CONST_CAST("rsa_pss_rsae_sha384"),
         CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA384,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -910,7 +959,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "rsa_pss_rsae_sha256",
+        CONST_CAST("rsa_pss_rsae_sha256"),
         CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -922,7 +971,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "rsa_pkcs1_sha512",
+        CONST_CAST("rsa_pkcs1_sha512"),
         CERT_SIG_SCHEME_RSA_PKCS1_SHA512,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -933,8 +982,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
+#endif /* HITLS_CRYPTO_RSA */
+#ifdef HITLS_CRYPTO_DSA
     {
-        "dsa_sha512",
+        CONST_CAST("dsa_sha512"),
         CERT_SIG_SCHEME_DSA_SHA512,
         TLS_CERT_KEY_TYPE_DSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -945,8 +996,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
+#endif /* HITLS_CRYPTO_DSA */
+#ifdef HITLS_CRYPTO_RSA
     {
-        "rsa_pkcs1_sha384",
+        CONST_CAST("rsa_pkcs1_sha384"),
         CERT_SIG_SCHEME_RSA_PKCS1_SHA384,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -957,8 +1010,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
+#endif /* HITLS_CRYPTO_RSA */
+#ifdef HITLS_CRYPTO_DSA
     {
-        "dsa_sha384",
+        CONST_CAST("dsa_sha384"),
         CERT_SIG_SCHEME_DSA_SHA384,
         TLS_CERT_KEY_TYPE_DSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -969,8 +1024,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
+#endif /* HITLS_CRYPTO_DSA */
+#ifdef HITLS_CRYPTO_RSA
     {
-        "rsa_pkcs1_sha256",
+        CONST_CAST("rsa_pkcs1_sha256"),
         CERT_SIG_SCHEME_RSA_PKCS1_SHA256,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -981,8 +1038,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
+#endif /* HITLS_CRYPTO_RSA */
+#ifdef HITLS_CRYPTO_DSA
     {
-        "dsa_sha256",
+        CONST_CAST("dsa_sha256"),
         CERT_SIG_SCHEME_DSA_SHA256,
         TLS_CERT_KEY_TYPE_DSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -993,8 +1052,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
+#endif /* HITLS_CRYPTO_RSA */
+#ifdef HITLS_CRYPTO_ECDSA
     {
-        "ecdsa_sha224",
+        CONST_CAST("ecdsa_sha224"),
         CERT_SIG_SCHEME_ECDSA_SHA224,
         TLS_CERT_KEY_TYPE_ECDSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -1005,8 +1066,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
+#endif /* HITLS_CRYPTO_ECDSA */
+#ifdef HITLS_CRYPTO_RSA
     {
-        "rsa_pkcs1_sha224",
+        CONST_CAST("rsa_pkcs1_sha224"),
         CERT_SIG_SCHEME_RSA_PKCS1_SHA224,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -1017,8 +1080,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
+#endif /* HITLS_CRYPTO_RSA */
+#ifdef HITLS_CRYPTO_DSA
     {
-        "dsa_sha224",
+        CONST_CAST("dsa_sha224"),
         CERT_SIG_SCHEME_DSA_SHA224,
         TLS_CERT_KEY_TYPE_DSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -1029,8 +1094,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
+#endif
+#ifdef HITLS_CRYPTO_ECDSA
     {
-        "ecdsa_sha1",
+        CONST_CAST("ecdsa_sha1"),
         CERT_SIG_SCHEME_ECDSA_SHA1,
         TLS_CERT_KEY_TYPE_ECDSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -1041,8 +1108,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
+#endif
+#ifdef HITLS_CRYPTO_RSA
     {
-        "rsa_pkcs1_sha1",
+        CONST_CAST("rsa_pkcs1_sha1"),
         CERT_SIG_SCHEME_RSA_PKCS1_SHA1,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -1053,8 +1122,10 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
+#endif /* HITLS_CRYPTO_RSA */
+#ifdef HITLS_CRYPTO_DSA
     {
-        "dsa_sha1",
+        CONST_CAST("dsa_sha1"),
         CERT_SIG_SCHEME_DSA_SHA1,
         TLS_CERT_KEY_TYPE_DSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -1065,32 +1136,37 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
-
+#endif /* HITLS_CRYPTO_DSA */
 };
 
 static int32_t BuildTlsSigAlgParam(const TLS_SigSchemeInfo *sigSchemeInfo, BSL_Param *param)
 {
     int32_t ret = 0;
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_NAME,
+    int32_t i = 0;
+#ifndef HITLS_TLS_CAP_NO_STR
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_NAME,
         BSL_PARAM_TYPE_OCTETS_PTR, (void *)(uintptr_t)sigSchemeInfo->name, (uint32_t)strlen(sigSchemeInfo->name)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_ID, BSL_PARAM_TYPE_UINT16,
-        (void *)(uintptr_t)&(sigSchemeInfo->signatureScheme), sizeof(sigSchemeInfo->signatureScheme)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+#endif
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_ID,
+        BSL_PARAM_TYPE_UINT16, (void *)(uintptr_t)&(sigSchemeInfo->signatureScheme),
+        sizeof(sigSchemeInfo->signatureScheme)), ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE, BSL_PARAM_TYPE_INT32,
         (void *)(uintptr_t)&(sigSchemeInfo->keyType), sizeof(sigSchemeInfo->keyType)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[3], CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_ID, BSL_PARAM_TYPE_INT32,
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_ID, BSL_PARAM_TYPE_INT32,
         (void *)(uintptr_t)&(sigSchemeInfo->paraId), sizeof(sigSchemeInfo->paraId)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[4], CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_ID, BSL_PARAM_TYPE_INT32,
-        (void *)(uintptr_t)&(sigSchemeInfo->signHashAlgId), sizeof(sigSchemeInfo->signHashAlgId)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[5], CRYPT_PARAM_CAP_TLS_SIGNALG_SIGN_ID, BSL_PARAM_TYPE_INT32,
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_ID,
+        BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&(sigSchemeInfo->signHashAlgId), sizeof(sigSchemeInfo->signHashAlgId)),
+        ret);
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_SIGNALG_SIGN_ID, BSL_PARAM_TYPE_INT32,
         (void *)(uintptr_t)&(sigSchemeInfo->signAlgId), sizeof(sigSchemeInfo->signAlgId)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[6], CRYPT_PARAM_CAP_TLS_SIGNALG_MD_ID, BSL_PARAM_TYPE_INT32,
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_SIGNALG_MD_ID, BSL_PARAM_TYPE_INT32,
         (void *)(uintptr_t)&(sigSchemeInfo->hashAlgId), sizeof(sigSchemeInfo->hashAlgId)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[7], CRYPT_PARAM_CAP_TLS_SIGNALG_SEC_BITS, BSL_PARAM_TYPE_INT32,
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_SIGNALG_SEC_BITS, BSL_PARAM_TYPE_INT32,
         (void *)(uintptr_t)&(sigSchemeInfo->secBits), sizeof(sigSchemeInfo->secBits)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[8], CRYPT_PARAM_CAP_TLS_SIGNALG_CERT_VERSION_BITS,
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_SIGNALG_CERT_VERSION_BITS,
         BSL_PARAM_TYPE_UINT32, (void *)(uintptr_t)&(sigSchemeInfo->certVersionBits),
         sizeof(sigSchemeInfo->certVersionBits)), ret);
-    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[9], CRYPT_PARAM_CAP_TLS_SIGNALG_CHAIN_VERSION_BITS,
+    RETURN_RET_IF_ERR_EX(BSL_PARAM_InitValue(&param[i++], CRYPT_PARAM_CAP_TLS_SIGNALG_CHAIN_VERSION_BITS,
         BSL_PARAM_TYPE_UINT32, (void *)(uintptr_t)&(sigSchemeInfo->chainVersionBits),
         sizeof(sigSchemeInfo->chainVersionBits)), ret);
 

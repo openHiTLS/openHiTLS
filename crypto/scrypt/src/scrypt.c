@@ -22,6 +22,7 @@
 #include "bsl_sal.h"
 #include "crypt_local_types.h"
 #include "crypt_errno.h"
+#include "crypt_util_ctrl.h"
 #include "crypt_utils.h"
 #include "crypt_types.h"
 #include "crypt_scrypt.h"
@@ -346,9 +347,9 @@ CRYPT_SCRYPT_Ctx *CRYPT_SCRYPT_NewCtx(void)
     return ctx;
 }
 
-#ifdef HITLS_CRYPTO_PROVIDER
-CRYPT_SCRYPT_Ctx *CRYPT_SCRYPT_NewCtxEx(void *libCtx)
+CRYPT_SCRYPT_Ctx *CRYPT_SCRYPT_NewCtxEx(void *libCtx, int32_t algId)
 {
+    (void)algId;
     CRYPT_SCRYPT_Ctx *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_SCRYPT_Ctx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -362,43 +363,6 @@ CRYPT_SCRYPT_Ctx *CRYPT_SCRYPT_NewCtxEx(void *libCtx)
     }
     ctx->libCtx = libCtx;
     return ctx;
-}
-#endif
-
-int32_t CRYPT_SCRYPT_SetPassWord(CRYPT_SCRYPT_Ctx *ctx, const uint8_t *password, uint32_t passLen)
-{
-    if (password == NULL && passLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    BSL_SAL_ClearFree(ctx->password, ctx->passLen);
-
-    ctx->password = BSL_SAL_Dump(password, passLen);
-    if (ctx->password == NULL && passLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ctx->passLen = passLen;
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_SCRYPT_SetSalt(CRYPT_SCRYPT_Ctx *ctx, const uint8_t *salt, uint32_t saltLen)
-{
-    if (salt == NULL && saltLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    BSL_SAL_FREE(ctx->salt);
-
-    ctx->salt = BSL_SAL_Dump(salt, saltLen);
-    if (ctx->salt == NULL && saltLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ctx->saltLen = saltLen;
-    return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_SCRYPT_SetN(CRYPT_SCRYPT_Ctx *ctx, const uint32_t n)
@@ -442,10 +406,10 @@ int32_t CRYPT_SCRYPT_SetParam(CRYPT_SCRYPT_Ctx *ctx, const BSL_Param *param)
         return CRYPT_NULL_INPUT;
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_PASSWORD)) != NULL) {
-        GOTO_ERR_IF(CRYPT_SCRYPT_SetPassWord(ctx, temp->value, temp->valueLen), ret);
+        GOTO_ERR_IF(CRYPT_CTRL_SetData(temp->value, temp->valueLen, &ctx->password, &ctx->passLen), ret);
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_SALT)) != NULL) {
-        GOTO_ERR_IF(CRYPT_SCRYPT_SetSalt(ctx, temp->value, temp->valueLen), ret);
+        GOTO_ERR_IF(CRYPT_CTRL_SetData(temp->value, temp->valueLen, &ctx->salt, &ctx->saltLen), ret);
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_N)) != NULL) {
         len = sizeof(val);

@@ -221,8 +221,9 @@ static CRYPT_DECODER_Ctx* GetUsableDecoderFromPool(CRYPT_DECODER_PoolCtx *poolCt
     if (node != NULL) {
         decoderCtx = node;
         decoderCtx->decoderState = CRYPT_DECODER_STATE_TRING;
+        return decoderCtx;
     }
-    return node != NULL ? decoderCtx : NULL;
+    return NULL;
 }
 
 static int32_t UpdateDecoderPath(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_DECODER_Node *currNode)

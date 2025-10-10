@@ -86,9 +86,14 @@ static int32_t UpdateSignAlgorithmsArray(TLS_Config *config)
 }
 
 #ifndef HITLS_TLS_FEATURE_PROVIDER
+#ifndef HITLS_TLS_CAP_NO_STR
+#define CONST_CAST(str) ((char *)(uintptr_t)(str))
+#else
+#define CONST_CAST(str) NULL
+#endif
 static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
     {
-        "ecdsa_secp521r1_sha512",
+        CONST_CAST("ecdsa_secp521r1_sha512"),
         CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512,
         TLS_CERT_KEY_TYPE_ECDSA,
         CRYPT_ECC_NISTP521,
@@ -100,7 +105,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "ecdsa_secp384r1_sha384",
+        CONST_CAST("ecdsa_secp384r1_sha384"),
         CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384,
         TLS_CERT_KEY_TYPE_ECDSA,
         CRYPT_ECC_NISTP384,
@@ -112,7 +117,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "ed25519",
+        CONST_CAST("ed25519"),
         CERT_SIG_SCHEME_ED25519,
         TLS_CERT_KEY_TYPE_ED25519,
         CRYPT_PKEY_PARAID_MAX,
@@ -124,7 +129,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "ecdsa_secp256r1_sha256",
+        CONST_CAST("ecdsa_secp256r1_sha256"),
         CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256,
         TLS_CERT_KEY_TYPE_ECDSA,
         CRYPT_ECC_NISTP256,
@@ -136,7 +141,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "sm2_sm3",
+        CONST_CAST("sm2_sm3"),
         CERT_SIG_SCHEME_SM2_SM3,
         TLS_CERT_KEY_TYPE_SM2,
         CRYPT_PKEY_PARAID_MAX,
@@ -148,7 +153,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLCP11_VERSION_BIT | DTLCP11_VERSION_BIT | TLS13_VERSION_BIT,
     },
     {
-        "rsa_pss_pss_sha512",
+        CONST_CAST("rsa_pss_pss_sha512"),
         CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512,
         TLS_CERT_KEY_TYPE_RSA_PSS,
         CRYPT_PKEY_PARAID_MAX,
@@ -160,7 +165,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "rsa_pss_pss_sha384",
+        CONST_CAST("rsa_pss_pss_sha384"),
         CERT_SIG_SCHEME_RSA_PSS_PSS_SHA384,
         TLS_CERT_KEY_TYPE_RSA_PSS,
         CRYPT_PKEY_PARAID_MAX,
@@ -172,7 +177,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "rsa_pss_pss_sha256",
+        CONST_CAST("rsa_pss_pss_sha256"),
         CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256,
         TLS_CERT_KEY_TYPE_RSA_PSS,
         CRYPT_PKEY_PARAID_MAX,
@@ -184,7 +189,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "rsa_pss_rsae_sha512",
+        CONST_CAST("rsa_pss_rsae_sha512"),
         CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA512,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -196,7 +201,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "rsa_pss_rsae_sha384",
+        CONST_CAST("rsa_pss_rsae_sha384"),
         CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA384,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -208,7 +213,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "rsa_pss_rsae_sha256",
+        CONST_CAST("rsa_pss_rsae_sha256"),
         CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -220,7 +225,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "rsa_pkcs1_sha512",
+        CONST_CAST("rsa_pkcs1_sha512"),
         CERT_SIG_SCHEME_RSA_PKCS1_SHA512,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -232,7 +237,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "dsa_sha512",
+        CONST_CAST("dsa_sha512"),
         CERT_SIG_SCHEME_DSA_SHA512,
         TLS_CERT_KEY_TYPE_DSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -244,7 +249,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
     {
-        "rsa_pkcs1_sha384",
+        CONST_CAST("rsa_pkcs1_sha384"),
         CERT_SIG_SCHEME_RSA_PKCS1_SHA384,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -256,7 +261,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "dsa_sha384",
+        CONST_CAST("dsa_sha384"),
         CERT_SIG_SCHEME_DSA_SHA384,
         TLS_CERT_KEY_TYPE_DSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -268,7 +273,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
     {
-        "rsa_pkcs1_sha256",
+        CONST_CAST("rsa_pkcs1_sha256"),
         CERT_SIG_SCHEME_RSA_PKCS1_SHA256,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -280,7 +285,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK,
     },
     {
-        "dsa_sha256",
+        CONST_CAST("dsa_sha256"),
         CERT_SIG_SCHEME_DSA_SHA256,
         TLS_CERT_KEY_TYPE_DSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -292,7 +297,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
     {
-        "ecdsa_sha224",
+        CONST_CAST("ecdsa_sha224"),
         CERT_SIG_SCHEME_ECDSA_SHA224,
         TLS_CERT_KEY_TYPE_ECDSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -304,7 +309,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
     {
-        "rsa_pkcs1_sha224",
+        CONST_CAST("rsa_pkcs1_sha224"),
         CERT_SIG_SCHEME_RSA_PKCS1_SHA224,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -316,7 +321,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
     {
-        "dsa_sha224",
+        CONST_CAST("dsa_sha224"),
         CERT_SIG_SCHEME_DSA_SHA224,
         TLS_CERT_KEY_TYPE_DSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -328,7 +333,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
     {
-        "ecdsa_sha1",
+        CONST_CAST("ecdsa_sha1"),
         CERT_SIG_SCHEME_ECDSA_SHA1,
         TLS_CERT_KEY_TYPE_ECDSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -340,7 +345,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
     {
-        "rsa_pkcs1_sha1",
+        CONST_CAST("rsa_pkcs1_sha1"),
         CERT_SIG_SCHEME_RSA_PKCS1_SHA1,
         TLS_CERT_KEY_TYPE_RSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -352,7 +357,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
     {
-        "dsa_sha1",
+        CONST_CAST("dsa_sha1"),
         CERT_SIG_SCHEME_DSA_SHA1,
         TLS_CERT_KEY_TYPE_DSA,
         CRYPT_PKEY_PARAID_MAX,
@@ -415,6 +420,7 @@ typedef struct {
     const char *oidName;
 } BslOidInfo;
 
+#ifdef HITLS_BSL_OBJ_CUSTOM
 static int32_t ProcessOids(TLS_SigSchemeInfo *scheme, BslOidInfo *keyTypeOidInfo, BslOidInfo *paraOidInfo,
                          BslOidInfo *signHashAlgOidInfo, BslOidInfo *hashOidInfo)
 {
@@ -449,6 +455,7 @@ static int32_t ProcessOids(TLS_SigSchemeInfo *scheme, BslOidInfo *keyTypeOidInfo
     }
     return BSL_OBJ_CreateSignId(scheme->signHashAlgId, scheme->signAlgId, scheme->hashAlgId);
 }
+#endif
 
 static int32_t ProviderAddSignatureSchemeInfo(const BSL_Param *params, void *args)
 {
@@ -461,16 +468,20 @@ static int32_t ProviderAddSignatureSchemeInfo(const BSL_Param *params, void *arg
     TLS_SigSchemeInfo *scheme = NULL;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     BSL_Param *param = NULL;
+#ifdef HITLS_BSL_OBJ_CUSTOM
     const char *keyTypeOid = NULL, *keyTypeName = NULL, *paraOid = NULL, *paraName = NULL;
     const char *signHashAlgOid = NULL, *signHashAlgName = NULL, *hashOid = NULL, *hashName = NULL;
     uint32_t keyTypeOidLen = 0, paraOidLen = 0, signHashAlgOidLen = 0, hashOidLen = 0;
+#endif
 
     int32_t ret = PrepareSignSchemeStorage(config, &scheme);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
     ret = HITLS_CONFIG_ERR_LOAD_SIGN_SCHEME_INFO;
+#ifndef HITLS_TLS_CAP_NO_STR
     PROCESS_STRING_PARAM(param, scheme, params, CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_NAME, name);
+#endif
     PROCESS_PARAM_UINT16(param, scheme, params, CRYPT_PARAM_CAP_TLS_SIGNALG_IANA_SIGN_ID, signatureScheme);
     PROCESS_PARAM_INT32(param, scheme, params, CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE, keyType);
     PROCESS_PARAM_INT32(param, scheme, params, CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_ID, paraId);
@@ -480,7 +491,8 @@ static int32_t ProviderAddSignatureSchemeInfo(const BSL_Param *params, void *arg
     PROCESS_PARAM_INT32(param, scheme, params, CRYPT_PARAM_CAP_TLS_SIGNALG_SEC_BITS, secBits);
     PROCESS_PARAM_UINT32(param, scheme, params, CRYPT_PARAM_CAP_TLS_SIGNALG_CHAIN_VERSION_BITS, chainVersionBits);
     PROCESS_PARAM_UINT32(param, scheme, params, CRYPT_PARAM_CAP_TLS_SIGNALG_CERT_VERSION_BITS, certVersionBits);
-    PROCESS_OPTIONAL_STRING_PARAM(param, params, CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE_OID, keyTypeOid, keyTypeOidLen, 
+#ifdef HITLS_BSL_OBJ_CUSTOM
+    PROCESS_OPTIONAL_STRING_PARAM(param, params, CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE_OID, keyTypeOid, keyTypeOidLen,
         CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE_NAME, keyTypeName);
     PROCESS_OPTIONAL_STRING_PARAM(param, params, CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_OID, paraOid, paraOidLen,
         CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_NAME, paraName);
@@ -488,18 +500,20 @@ static int32_t ProviderAddSignatureSchemeInfo(const BSL_Param *params, void *arg
         signHashAlgOidLen, CRYPT_PARAM_CAP_TLS_SIGNALG_SIGNWITHMD_NAME, signHashAlgName);
     PROCESS_OPTIONAL_STRING_PARAM(param, params, CRYPT_PARAM_CAP_TLS_SIGNALG_MD_OID, hashOid, hashOidLen,
         CRYPT_PARAM_CAP_TLS_SIGNALG_MD_NAME, hashName);
+#endif
 
     if (scheme->keyType == TLS_CERT_KEY_TYPE_RSA_PSS) {
-        pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), TLS_CERT_KEY_TYPE_RSA, 
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), TLS_CERT_KEY_TYPE_RSA,
             CRYPT_EAL_PKEY_SIGN_OPERATE, ATTRIBUTE_FROM_CONFIG(config));
     } else {
-        pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), scheme->keyType, 
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), scheme->keyType,
             CRYPT_EAL_PKEY_SIGN_OPERATE, ATTRIBUTE_FROM_CONFIG(config));
     }
     if (pkey == NULL) {
         goto ERR;
     }
 
+#ifdef HITLS_BSL_OBJ_CUSTOM
     BslOidInfo keyTypeOidInfo = { { keyTypeOidLen, (char *)(uintptr_t)keyTypeOid, 0 }, keyTypeName };
     BslOidInfo paraOidInfo = { { paraOidLen, (char *)(uintptr_t)paraOid, 0 }, paraName };
     BslOidInfo signHashAlgOidInfo = { { signHashAlgOidLen, (char *)(uintptr_t)signHashAlgOid, 0 }, signHashAlgName };
@@ -508,6 +522,7 @@ static int32_t ProviderAddSignatureSchemeInfo(const BSL_Param *params, void *arg
     if (ret != HITLS_SUCCESS) {
         goto ERR;
     }
+#endif
     config->sigSchemeInfolen++;
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return HITLS_SUCCESS;

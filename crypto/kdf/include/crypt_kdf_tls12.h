@@ -43,11 +43,12 @@ CRYPT_KDFTLS12_Ctx* CRYPT_KDFTLS12_NewCtx(void);
  * @brief Generate KDFTLS12 context.
  *
  * @param libCtx [in] Library context.
+ * @param algId [in] algorithm id
  *
  * @retval Success: KDFTLS12 ctx.
  *         Fails: NULL.
  */
-CRYPT_KDFTLS12_Ctx *CRYPT_KDFTLS12_NewCtxEx(void *libCtx);
+CRYPT_KDFTLS12_Ctx *CRYPT_KDFTLS12_NewCtxEx(void *libCtx, int32_t algId);
 
 /**
  * @ingroup KDFTLS12

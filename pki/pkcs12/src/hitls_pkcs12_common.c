@@ -25,7 +25,7 @@
 #include "hitls_cms_local.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey.h"
 #include "crypt_eal_codecs.h"
 #include "bsl_bytes.h"
 #include "crypt_eal_md.h"
@@ -158,9 +158,8 @@ static int32_t ParseCommonSafeBag(BSL_Buffer *buffer, HITLS_PKCS12_CommonSafeBag
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    BslOidString oidStr = {asnArr[HITLS_PKCS12_COMMON_SAFEBAG_OID_IDX].len,
-        (char *)asnArr[HITLS_PKCS12_COMMON_SAFEBAG_OID_IDX].buff, 0};
-    BslCid cid = BSL_OBJ_GetCID(&oidStr);
+    BslCid cid = BSL_OBJ_GetCidFromOidBuff(asnArr[HITLS_PKCS12_COMMON_SAFEBAG_OID_IDX].buff,
+        asnArr[HITLS_PKCS12_COMMON_SAFEBAG_OID_IDX].len);
     if (cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_PARSE_TYPE);
         return HITLS_PKCS12_ERR_PARSE_TYPE;
@@ -277,8 +276,8 @@ static int32_t ParseSafeBag(BSL_Buffer *buffer, HITLS_PKCS12_SafeBag *safeBag)
         return ret;
     }
 
-    BslOidString oid = {asnArr[HITLS_PKCS12_SAFEBAG_OID_IDX].len, (char *)asnArr[HITLS_PKCS12_SAFEBAG_OID_IDX].buff, 0};
-    BslCid cid = BSL_OBJ_GetCID(&oid);
+    BslCid cid = BSL_OBJ_GetCidFromOidBuff(asnArr[HITLS_PKCS12_SAFEBAG_OID_IDX].buff,
+        asnArr[HITLS_PKCS12_SAFEBAG_OID_IDX].len);
     if (cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SAFEBAG_TYPE);
         return HITLS_PKCS12_ERR_INVALID_SAFEBAG_TYPE;
@@ -466,8 +465,8 @@ int32_t HITLS_PKCS12_ParseContentInfo(HITLS_PKI_LibCtx *libCtx, const char *attr
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    BslOidString oid = {asnArr[HITLS_PKCS12_CONTENT_OID_IDX].len, (char *)asnArr[HITLS_PKCS12_CONTENT_OID_IDX].buff, 0};
-    BslCid cid = BSL_OBJ_GetCID(&oid);
+    BslCid cid = BSL_OBJ_GetCidFromOidBuff(asnArr[HITLS_PKCS12_CONTENT_OID_IDX].buff,
+        asnArr[HITLS_PKCS12_CONTENT_OID_IDX].len);
     if (cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_SAFEBAG_TYPE);
         return HITLS_PKCS12_ERR_INVALID_SAFEBAG_TYPE;

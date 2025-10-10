@@ -22,7 +22,7 @@
 
 /* The value of __STDC_VERSION__ is determined by the compilation option -std.
    The atomic API is provided only when -std=gnu11 is used. */
-#if __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_ATOMICS__)
+#if __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_ATOMICS__) && !defined(HITLS_ATOMIC_THREAD_LOCK)
 #include <stdatomic.h>
 #define SAL_HAVE_C11_ATOMICS
 #endif
@@ -127,6 +127,15 @@ static inline void BSL_SAL_ReferencesFree(BSL_SAL_RefCount *references)
     return;
 }
 #endif
+
+/**
+ * @brief Atomic reference up control
+ * @param references [IN] Reference count structure, can be NULL
+ * @param val [OUT] Value to be added
+ * @param len [IN] Length of the value
+ * @return BSL_SUCCESS if successful, otherwise an error code
+ */
+int32_t BSL_SAL_AtomicRefUpCtrl(BSL_SAL_RefCount *references, void *val, uint32_t len);
 
 #ifdef __cplusplus
 }

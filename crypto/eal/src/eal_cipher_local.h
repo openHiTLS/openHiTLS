@@ -65,26 +65,41 @@ typedef struct {
  * @ingroup  crypt_eal_cipherctx
  * Asymmetric algorithm data type */
 struct CryptEalCipherCtx {
-#ifdef HITLS_CRYPTO_PROVIDER
-    bool isProvider;
-#endif
     CRYPT_CIPHER_AlgId id;
     EAL_CipherStates states;                        /**< record status */
     void *ctx;                                      /**< handle of the mode */
-    EAL_CipherUnitaryMethod *method;          /**< method corresponding to the encryption/decryption mode */
+    EAL_CipherMethod method;          /**< method corresponding to the encryption/decryption mode */
 };
 
 const EAL_SymMethod *EAL_GetSymMethod(int32_t algId);
 
 /**
- * @brief Obtain the EAL_CipherMethod based on the algorithm ID.
+ * @brief Find the EAL_CipherMethod by the id
  *
- * @param id [IN]     Symmetric encryption/decryption algorithm ID.
- * @param modeMethod  [IN/OUT] EAL_CipherMethod Pointer
- * @return If it's successful, the system returns CRYPT_SUCCESS and assigns the value to the method in m.
- * If it's failed, returns CRYPT_EAL_ERR_ALGID: ID of the unsupported algorithm.
+ * @param id [IN] The algorithm id
+ * @param method [OUT] The method pointer
+ *
+ * @return CRYPT_SUCCESS The method is found
+ * @return CRYPT_NULL_INPUT The method pointer is NULL
+ * @return CRYPT_EAL_ERR_ALGID The algorithm id is not found
  */
-int32_t EAL_FindCipher(CRYPT_CIPHER_AlgId id, const EAL_CipherMethod **modeMethod);
+int32_t EAL_CipherFindMethod(CRYPT_CIPHER_AlgId id, EAL_CipherMethod *method);
+
+/**
+ * @brief Find the EAL_CipherMethod by the id
+ *
+ * @param id [IN] The algorithm id
+ * @param libCtx [IN] The library context
+ * @param attrName [IN] The attribute name
+ * @param method [OUT] The method pointer
+ * @param provCtx [OUT] The provider context
+ *
+ * @return CRYPT_SUCCESS The method is found
+ * @return CRYPT_NULL_INPUT The method pointer is NULL
+ * @return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL The unexpected implementation is found
+ */
+int32_t EAL_ProviderCipherFindMethod(CRYPT_CIPHER_AlgId id, void *libCtx, const char *attrName,
+    EAL_CipherMethod *method, void **provCtx);
 
 /**
  * @brief Obtain keyLen/ivLen/blockSize based on the algorithm ID.

@@ -22,6 +22,7 @@
 #include "crypt_types.h"
 #include "bsl_params.h"
 #include "crypt_modes.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -33,6 +34,7 @@ typedef struct {
     uint8_t tweak[MODES_MAX_IV_LENGTH]; /* The length is blocksize */
     uint8_t blockSize;                  /* Save the block size. */
 } MODES_CipherXTSCtx;
+
 struct ModesXTSCtx {
     int32_t algId;
     MODES_CipherXTSCtx xtsCtx;
@@ -41,10 +43,12 @@ struct ModesXTSCtx {
     CRYPT_PaddingType pad;
     bool enc;
 };
+
 typedef struct ModesXTSCtx MODES_XTS_Ctx;
 
 // XTS mode universal implementation
 MODES_XTS_Ctx *MODES_XTS_NewCtx(int32_t algId);
+MODES_XTS_Ctx *MODES_XTS_NewCtxEx(void *libCtx, int32_t algId);
 int32_t MODES_XTS_InitCtx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc);
 

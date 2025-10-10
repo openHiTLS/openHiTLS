@@ -209,7 +209,7 @@ static int32_t CheckPBKDF2ParamAndLog(IsoKdfCtx *ctx, const BSL_Param *param)
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                              \
             return NULL;                                                                                       \
         }                                                                                                      \
-        void *kdfCtx = CRYPT_##name##_NewCtxEx(provCtx->libCtx);                                               \
+        void *kdfCtx = CRYPT_##name##_NewCtxEx(provCtx->libCtx, algId);                                        \
         if (kdfCtx == NULL) {                                                                                  \
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);                                                          \
             return NULL;                                                                                       \

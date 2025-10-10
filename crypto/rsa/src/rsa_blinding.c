@@ -78,8 +78,7 @@ int32_t RSA_BlindCovert(RSA_Blind *b, BN_BigNum *data, BN_BigNum *n, BN_Optimize
 
 int32_t RSA_BlindInvert(RSA_Blind *b, BN_BigNum *data, BN_BigNum *n, BN_Optimizer *opt)
 {
-    int32_t ret;
-    ret = BN_ModMul(data, data, b->rInv, n, opt);
+    int32_t ret = BN_ModMul(data, data, b->rInv, n, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }

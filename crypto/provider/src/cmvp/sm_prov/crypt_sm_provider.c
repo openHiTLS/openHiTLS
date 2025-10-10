@@ -94,7 +94,7 @@ static const CRYPT_EAL_AlgInfo g_smSelftests[] = {
     CRYPT_EAL_ALGINFO_END
 };
 
-#ifdef HITLS_CRYPTO_CODECSKEY
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
 static const CRYPT_EAL_AlgInfo g_smEalDecoders[] = {
     {BSL_CID_DECODE_UNKNOWN, g_smEalPem2Der,
         "provider=sm, inFormat=PEM, outFormat=ASN1"},
@@ -112,7 +112,7 @@ static const CRYPT_EAL_AlgInfo g_smEalDecoders[] = {
         "provider=sm, inFormat=OBJECT, inType=LOW_KEY, outFormat=OBJECT, outType=HIGH_KEY"},
     CRYPT_EAL_ALGINFO_END
 };
-#endif // HITLS_CRYPTO_CODECSKEY
+#endif // HITLS_CRYPTO_KEY_DECODE_CHAIN
 
 static int32_t CRYPT_EAL_SmProvQuery(void *provCtx, int32_t operaId, const CRYPT_EAL_AlgInfo **algInfos)
 {
@@ -149,7 +149,7 @@ static int32_t CRYPT_EAL_SmProvQuery(void *provCtx, int32_t operaId, const CRYPT
         case CRYPT_EAL_OPERAID_SELFTEST:
             *algInfos = g_smSelftests;
             break;
-#ifdef HITLS_CRYPTO_CODECSKEY
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
         case CRYPT_EAL_OPERAID_DECODER:
             *algInfos = g_smEalDecoders;
             break;

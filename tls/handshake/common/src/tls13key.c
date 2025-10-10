@@ -337,8 +337,7 @@ int32_t TLS13GetTrafficSecretDeriveInfo(TLS_Ctx *ctx, CRYPT_KeyDeriveParameters 
     uint8_t *seed, uint32_t seedLen)
 {
     uint32_t tmpSeedLen = seedLen;
-    int32_t ret;
-    ret = VERIFY_CalcSessionHash(ctx->hsCtx->verifyCtx, seed, &tmpSeedLen);
+    int32_t ret = VERIFY_CalcSessionHash(ctx->hsCtx->verifyCtx, seed, &tmpSeedLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16898, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "CalcSessionHash fail", 0, 0, 0, 0);
@@ -365,8 +364,7 @@ int32_t HS_TLS13DeriveHandshakeTrafficSecret(TLS_Ctx *ctx)
     uint8_t seed[MAX_DIGEST_SIZE] = {0};
     uint32_t seedLen = MAX_DIGEST_SIZE;
     CRYPT_KeyDeriveParameters deriveInfo = {0};
-    int32_t ret;
-    ret = TLS13GetTrafficSecretDeriveInfo(ctx, &deriveInfo, seed, seedLen);
+    int32_t ret = TLS13GetTrafficSecretDeriveInfo(ctx, &deriveInfo, seed, seedLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16900, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "GetTrafficSecretDeriveInfo fail", 0, 0, 0, 0);
@@ -409,8 +407,7 @@ int32_t TLS13DeriveApplicationTrafficSecret(TLS_Ctx *ctx)
     uint8_t seed[MAX_DIGEST_SIZE] = {0};
     uint32_t seedLen = MAX_DIGEST_SIZE;
     CRYPT_KeyDeriveParameters deriveInfo = {0};
-    int32_t ret;
-    ret = TLS13GetTrafficSecretDeriveInfo(ctx, &deriveInfo, seed, seedLen);
+    int32_t ret = TLS13GetTrafficSecretDeriveInfo(ctx, &deriveInfo, seed, seedLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16902, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "GetTrafficSecretDeriveInfo fail", 0, 0, 0, 0);
@@ -511,8 +508,7 @@ int32_t HS_TLS13CalcServerHelloProcessSecret(TLS_Ctx *ctx)
 
 int32_t HS_TLS13CalcServerFinishProcessSecret(TLS_Ctx *ctx)
 {
-    int32_t ret;
-    ret = TLS13DeriveMasterSecret(ctx);
+    int32_t ret = TLS13DeriveMasterSecret(ctx);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16908, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveMasterSecret fail", 0, 0, 0, 0);

@@ -57,7 +57,11 @@ int32_t CRYPT_ML_DSA_GetPrvKeyEx(const CRYPT_ML_DSA_Ctx *ctx, BSL_Param *para);
 int32_t CRYPT_ML_DSA_GetPubKeyEx(const CRYPT_ML_DSA_Ctx *ctx, BSL_Param *para);
 #endif
 
+#ifdef HITLS_CRYPTO_MLDSA_CMP
 int32_t CRYPT_ML_DSA_Cmp(const CRYPT_ML_DSA_Ctx *a, const CRYPT_ML_DSA_Ctx *b);
+#else
+#define CRYPT_ML_DSA_Cmp NULL
+#endif
 
 #ifdef HITLS_CRYPTO_MLDSA_CHECK
 

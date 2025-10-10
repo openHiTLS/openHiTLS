@@ -31,8 +31,8 @@
 #include "crypt_errno.h"
 #include "crypt_eal_codecs.h"
 #include "crypt_eal_init.h"
-#include "crypt_encode_decode_local.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey_local.h"
+#include "crypt_codecskey.h"
 #include "crypt_util_rand.h"
 #include "bsl_obj_internal.h"
 #include "crypt_eal_rand.h"
@@ -368,7 +368,7 @@ void SDV_BSL_ASN1_PARSE_SUBPUBKEY_TC001(int encodeType, Hex *subKeyInfo)
     RegisterLogFunc();
     (void)encodeType;
     CRYPT_EAL_PkeyCtx *pctx = NULL;
-    ASSERT_EQ(CRYPT_EAL_ParseAsn1SubPubkey(subKeyInfo->x, subKeyInfo->len, (void **)&pctx, false), 0);
+    ASSERT_EQ(CRYPT_EAL_ParseAsn1SubPubkey(NULL, NULL, subKeyInfo->x, subKeyInfo->len, (void **)&pctx, false), 0);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pctx);

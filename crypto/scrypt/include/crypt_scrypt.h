@@ -49,10 +49,13 @@ CRYPT_SCRYPT_Ctx *CRYPT_SCRYPT_NewCtx(void);
  * @ingroup  SCRYPT
  * @brief Generate SCRYPT context.
  *
+ * @param libCtx [in] Library context.
+ * @param algId [in] algorithm id
+ *
  * @retval Success: SCRYPT ctx.
  *         Fails: NULL.
  */
-CRYPT_SCRYPT_Ctx *CRYPT_SCRYPT_NewCtxEx(void *libCtx);
+CRYPT_SCRYPT_Ctx *CRYPT_SCRYPT_NewCtxEx(void *libCtx, int32_t algId);
 
 /**
  * @ingroup SCRYPT

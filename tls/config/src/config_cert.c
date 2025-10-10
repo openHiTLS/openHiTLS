@@ -665,6 +665,7 @@ int32_t HITLS_CFG_RemoveCertAndKey(HITLS_Config *config)
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_CONFIG_CERT_CALLBACK
 int32_t HITLS_CFG_SetVerifyCb(HITLS_Config *config, HITLS_VerifyCb callback)
 {
     if (config == NULL) {
@@ -682,6 +683,7 @@ HITLS_VerifyCb HITLS_CFG_GetVerifyCb(HITLS_Config *config)
 
     return SAL_CERT_GetVerifyCb(config->certMgrCtx);
 }
+#endif
 
 #ifdef HITLS_TLS_FEATURE_CERT_CB
 int32_t HITLS_CFG_SetCertCb(HITLS_Config *config, HITLS_CertCb certCb, void *arg)

@@ -59,22 +59,19 @@ HITLS_CERT_X509 *HITLS_CERT_ProviderCertParse(HITLS_Lib_Ctx *libCtx, const char 
     uint32_t len, HITLS_ParseType type, const char *format)
 {
     BSL_Buffer encodedCert = { NULL, 0 };
-    int ret;
+    int ret = HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT;
     HITLS_X509_Cert *cert = NULL;
-    switch (type) {
-        case TLS_PARSE_TYPE_FILE:
-            ret = HITLS_X509_ProviderCertParseFile(libCtx, attrName, format, (const char *)buf, &cert);
-            break;
-        case TLS_PARSE_TYPE_BUFF:
-            encodedCert.data = (uint8_t *)(uintptr_t)buf;
-            encodedCert.dataLen = len;
-            ret = HITLS_X509_ProviderCertParseBuff(libCtx, attrName, format, &encodedCert, &cert);
-            break;
-        default:
-            BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT);
-            ret = HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT;
-            break;
+#ifdef HITLS_TLS_CONFIG_CERT_LOAD_FILE
+    if (type == TLS_PARSE_TYPE_FILE) {
+        ret = HITLS_X509_ProviderCertParseFile(libCtx, attrName, format, (const char *)buf, &cert);
+    } else
+#endif
+    if (type == TLS_PARSE_TYPE_BUFF) {
+        encodedCert.data = (uint8_t *)(uintptr_t)buf;
+        encodedCert.dataLen = len;
+        ret = HITLS_X509_ProviderCertParseBuff(libCtx, attrName, format, &encodedCert, &cert);
     }
+
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
@@ -88,22 +85,19 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t 
 {
     (void)config;
     BSL_Buffer encodedCert = { NULL, 0 };
-    int ret;
+    int ret = HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT;
     HITLS_X509_Cert *cert = NULL;
-    switch (type) {
-        case TLS_PARSE_TYPE_FILE:
-            ret = HITLS_X509_CertParseFile(format, (const char *)buf, &cert);
-            break;
-        case TLS_PARSE_TYPE_BUFF:
-            encodedCert.data = (uint8_t *)(uintptr_t)buf;
-            encodedCert.dataLen = len;
-            ret = HITLS_X509_CertParseBuff(format, &encodedCert, &cert);
-            break;
-        default:
-            BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT);
-            ret = HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT;
-            break;
+#ifdef HITLS_TLS_CONFIG_CERT_LOAD_FILE
+    if (type == TLS_PARSE_TYPE_FILE) {
+        ret = HITLS_X509_CertParseFile(format, (const char *)buf, &cert);
+    } else
+#endif
+    if (type == TLS_PARSE_TYPE_BUFF) {
+        encodedCert.data = (uint8_t *)(uintptr_t)buf;
+        encodedCert.dataLen = len;
+        ret = HITLS_X509_CertParseBuff(format, &encodedCert, &cert);
     }
+
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
@@ -140,11 +134,6 @@ HITLS_CERT_Chain *HITLS_X509_Adapt_BundleCertParse(HITLS_Lib_Ctx *libCtx, const 
     return certlist;
 }
 
-void HITLS_X509_Adapt_CertFree(HITLS_CERT_X509 *cert)
-{
-    HITLS_X509_CertFree(cert);
-}
-
 HITLS_CERT_X509 *HITLS_X509_Adapt_CertRef(HITLS_CERT_X509 *cert)
 {
     int ref = 0;
@@ -154,11 +143,6 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertRef(HITLS_CERT_X509 *cert)
         return NULL;
     }
     return cert;
-}
-
-HITLS_CERT_X509 *HITLS_X509_Adapt_CertDup(HITLS_CERT_X509 *cert)
-{
-    return HITLS_X509_Adapt_CertRef(cert);
 }
 
 static HITLS_SignHashAlgo BslCid2SignHashAlgo(HITLS_Config *config, BslCid signAlgId, BslCid hashAlgId)
@@ -249,9 +233,11 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
         case CERT_KEY_CTRL_IS_NON_REPUDIATION_USAGE:
             return CertCheckKeyUsage(config, cert, HITLS_X509_EXT_KU_NON_REPUDIATION, (bool *)output);
 #endif
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
         case CERT_CTRL_GET_ENCODE_SUBJECT_DN:
             ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODE_SUBJECT_DN, output, sizeof(BSL_Buffer *));
             break;
+#endif
 #ifdef HITLS_TLS_CONFIG_CERT_BUILD_CHAIN
         case CERT_CTRL_IS_SELF_SIGNED:
             return HITLS_X509_CertCtrl(cert, HITLS_X509_IS_SELF_SIGNED, (bool *)output, (uint32_t)sizeof(bool));

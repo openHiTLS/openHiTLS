@@ -412,8 +412,7 @@ static int32_t GenerateSessFromTicket(HITLS_Lib_Ctx *libCtx, const char *attrNam
             "plaintext malloc fail when decrypt session ticket.", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
-    int32_t ret;
-    ret = SAL_CRYPT_Decrypt(libCtx, attrName,
+    int32_t ret = SAL_CRYPT_Decrypt(libCtx, attrName,
         cipher, ticket->encryptedState, ticket->encryptedStateSize, plaintext, &plaintextLen);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(plaintext);

@@ -46,7 +46,7 @@ struct EAL_MacCtx {
  * @brief Find the default MAC method by the algorithm ID.
  *
  * @param id The algorithm ID.
- * 
+ *
  * @return The MAC method.
  */
 const EAL_MacMethod *EAL_MacFindDefaultMethod(CRYPT_MAC_AlgId id);
@@ -102,7 +102,7 @@ EAL_MacMethod *EAL_MacFindMethodEx(CRYPT_MAC_AlgId id, void *libCtx, const char 
  * @param attrName  [IN]  Attribute name for provider selection
  * @param depMeth   [OUT] Structure containing dependent methods and algorithm IDs
  * @param provCtx   [OUT] The provider context.
- * @param isProvider [IN]  Whether to use the provider method.
+ * @param isProvider [IN] Whether to use the provider method.
  *
  * @return CRYPT_SUCCESS on success, error code on failure
  *

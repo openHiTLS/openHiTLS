@@ -50,14 +50,11 @@ static void DRBG_CleanEntropy(DRBG_Ctx *ctx, CRYPT_Data *entropy)
 
     entropy->data = NULL;
     entropy->len = 0;
-
-    return;
 }
 
 // According to the definition of DRBG_Ctx, ctx->seedMeth is not NULL
 static int32_t DRBG_GetEntropy(DRBG_Ctx *ctx, CRYPT_Data *entropy, bool addEntropy)
 {
-    int32_t ret;
     CRYPT_RandSeedMethod *seedMeth = NULL;
     CRYPT_Range entropyRange = ctx->entropyRange;
     uint32_t strength = ctx->strength;
@@ -77,7 +74,7 @@ static int32_t DRBG_GetEntropy(DRBG_Ctx *ctx, CRYPT_Data *entropy, bool addEntro
 
     // CPRNG is implemented by hooks, in DRBG, the CPRNG is not verified,
     // but only the entropy source pointer and its length are verified.
-    ret = seedMeth->getEntropy(ctx->seedCtx, entropy, strength, &entropyRange);
+    int32_t ret = seedMeth->getEntropy(ctx->seedCtx, entropy, strength, &entropyRange);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_DRBG_FAIL_GET_ENTROPY);
         return CRYPT_DRBG_FAIL_GET_ENTROPY;
@@ -114,13 +111,11 @@ static void DRBG_CleanNonce(DRBG_Ctx *ctx, CRYPT_Data *nonce)
     }
     nonce->data = NULL;
     nonce->len = 0;
-    return;
 }
 
 // According to the definition of DRBG_Ctx, ctx->seedMeth is not NULL
 static int32_t DRBG_GetNonce(DRBG_Ctx *ctx, CRYPT_Data *nonce, bool *addEntropy)
 {
-    int32_t ret;
     CRYPT_RandSeedMethod *seedMeth = NULL;
 
     seedMeth = &ctx->seedMeth;
@@ -134,7 +129,7 @@ static int32_t DRBG_GetNonce(DRBG_Ctx *ctx, CRYPT_Data *nonce, bool *addEntropy)
         return CRYPT_SUCCESS;
     }
 
-    ret = seedMeth->getNonce(ctx->seedCtx, nonce, ctx->strength, &ctx->nonceRange);
+    int32_t ret = seedMeth->getNonce(ctx->seedCtx, nonce, ctx->strength, &ctx->nonceRange);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_DRBG_FAIL_GET_NONCE);
         return CRYPT_DRBG_FAIL_GET_NONCE;
@@ -287,7 +282,6 @@ void DRBG_Free(DRBG_Ctx *ctx)
 int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen, BSL_Param *param)
 {
     (void) param;
-    int32_t ret;
     CRYPT_Data entropy = {NULL, 0};
     CRYPT_Data nonce = {NULL, 0};
     CRYPT_Data pers = {(uint8_t *)(uintptr_t)person, persLen};
@@ -315,7 +309,7 @@ int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen,
 
     ctx->state = DRBG_STATE_ERROR;
 
-    ret = DRBG_GetNonce(ctx, &nonce, &addEntropy);
+    int32_t ret = DRBG_GetNonce(ctx, &nonce, &addEntropy);
     if (ret != CRYPT_SUCCESS) {
         goto ERR_NONCE;
     }
@@ -372,7 +366,6 @@ static inline bool DRBG_IsNeedReseed(DRBG_Ctx *ctx, bool pr)
 int32_t DRBG_Reseed(DRBG_Ctx *ctx, const uint8_t *adin, uint32_t adinLen, BSL_Param *param)
 {
     (void) param;
-    int32_t ret;
     CRYPT_Data entropy = {NULL, 0};
     CRYPT_Data adinData = {(uint8_t*)(uintptr_t)adin, adinLen};
 
@@ -399,7 +392,7 @@ int32_t DRBG_Reseed(DRBG_Ctx *ctx, const uint8_t *adin, uint32_t adinLen, BSL_Pa
 
     ctx->state = DRBG_STATE_ERROR;
 
-    ret = DRBG_GetEntropy(ctx, &entropy, false);
+    int32_t ret = DRBG_GetEntropy(ctx, &entropy, false);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -519,7 +512,7 @@ int32_t DRBG_Uninstantiate(DRBG_Ctx *ctx)
 #if defined(HITLS_CRYPTO_DRBG_GM)
 static int32_t DRBG_SetGmlevel(DRBG_Ctx *ctx, const void *val, uint32_t len)
 {
-    if (val == NULL || len != sizeof(uint32_t)) {
+    if (len != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
@@ -535,7 +528,7 @@ static int32_t DRBG_SetGmlevel(DRBG_Ctx *ctx, const void *val, uint32_t len)
 
 static int32_t DRBG_SetReseedIntervalTime(DRBG_Ctx *ctx, const void *val, uint32_t len)
 {
-    if (val == NULL || len != sizeof(uint64_t)) {
+    if (len != sizeof(uint64_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
@@ -545,7 +538,7 @@ static int32_t DRBG_SetReseedIntervalTime(DRBG_Ctx *ctx, const void *val, uint32
 
 static int32_t DRBG_GetReseedIntervalTime(DRBG_Ctx *ctx, void *val, uint32_t len)
 {
-    if (val == NULL || len != sizeof(uint64_t)) {
+    if (len != sizeof(uint64_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
@@ -556,7 +549,7 @@ static int32_t DRBG_GetReseedIntervalTime(DRBG_Ctx *ctx, void *val, uint32_t len
 
 static int32_t DRBG_SetReseedInterval(DRBG_Ctx *ctx, const void *val, uint32_t len)
 {
-    if (val == NULL || len != sizeof(uint32_t)) {
+    if (len != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
@@ -566,7 +559,7 @@ static int32_t DRBG_SetReseedInterval(DRBG_Ctx *ctx, const void *val, uint32_t l
 
 static int32_t DRBG_GetReseedInterval(DRBG_Ctx *ctx, void *val, uint32_t len)
 {
-    if (val == NULL || len != sizeof(uint32_t)) {
+    if (len != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
@@ -576,7 +569,7 @@ static int32_t DRBG_GetReseedInterval(DRBG_Ctx *ctx, void *val, uint32_t len)
 
 static int32_t DRBG_SetPredictionResistance(DRBG_Ctx *ctx, const void *val, uint32_t len)
 {
-    if (val == NULL || len != sizeof(bool)) {
+    if (len != sizeof(bool)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
@@ -586,7 +579,7 @@ static int32_t DRBG_SetPredictionResistance(DRBG_Ctx *ctx, const void *val, uint
 
 int32_t DRBG_Ctrl(DRBG_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
-    if (ctx == NULL) {
+    if (ctx == NULL || val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }

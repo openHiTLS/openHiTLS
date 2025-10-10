@@ -84,7 +84,8 @@ ERR:
 // If n and d are not NULL, p and q are optional. If p and q exist, qInv, dP, and dQ need to be calculated.
 static int32_t SetPrvBasicCheck(const CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *prv)
 {
-    if (ctx == NULL || prv == NULL || prv->n == NULL || prv->d == NULL || prv->nLen == 0) {
+    bool invalidIn = ctx == NULL || prv == NULL || prv->n == NULL || prv->d == NULL || prv->nLen == 0;
+    if (invalidIn == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -94,8 +95,9 @@ static int32_t SetPrvBasicCheck(const CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *pr
     }
     // prv->p\q and prv->dP\dQ\qInv must be both empty or not.
     // If prv->p is empty, prv->dP must be empty.
-    if ((prv->p == NULL) != (prv->q == NULL) || (prv->p == NULL && prv->dP != NULL) ||
-        ((prv->dP == NULL || prv->dQ == NULL || prv->qInv == NULL) && (prv->dP || prv->dQ || prv->qInv))) {
+    invalidIn = (prv->p == NULL) != (prv->q == NULL) || (prv->p == NULL && prv->dP != NULL) ||
+        ((prv->dP == NULL || prv->dQ == NULL || prv->qInv == NULL) && (prv->dP || prv->dQ || prv->qInv));
+    if (invalidIn == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
         return CRYPT_RSA_NO_KEY_INFO;
     }
@@ -244,9 +246,10 @@ static int32_t GetPrvBasicCheck(const CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *pr
     // ctx\ctx->prvKey\prv is not empty.
     // prv->p\q and prv->dP\dQ\qInv are both null or non-null.
     // If prv->p is empty, prv->dP is empty.
-    if (ctx == NULL || ctx->prvKey == NULL || prv == NULL || ((prv->p == NULL) != (prv->q == NULL)) ||
+    bool nullInput = ctx == NULL || ctx->prvKey == NULL || prv == NULL || ((prv->p == NULL) != (prv->q == NULL)) ||
         ((prv->dP == NULL || prv->dQ == NULL || prv->qInv == NULL) && (prv->dP || prv->dQ || prv->qInv)) ||
-        (prv->p == NULL && prv->dP != NULL)) {
+        (prv->p == NULL && prv->dP != NULL);
+    if (nullInput == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -407,6 +410,7 @@ int32_t CRYPT_RSA_GetPubKeyEx(const CRYPT_RSA_Ctx *ctx, BSL_Param *para)
 }
 #endif
 
+#ifdef HITLS_CRYPTO_RSA_CMP
 int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b)
 {
     RETURN_RET_IF(a == NULL || b == NULL, CRYPT_NULL_INPUT);
@@ -419,6 +423,7 @@ int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b)
 
     return CRYPT_SUCCESS;
 }
+#endif
 
 int32_t CRYPT_RSA_GetSecBits(const CRYPT_RSA_Ctx *ctx)
 {
@@ -460,7 +465,8 @@ static int32_t BasicKeypairCheck(const CRYPT_RSA_PubKey *pubKey, const CRYPT_RSA
     uint32_t eBits1 = BN_Bits(pubKey->e); // not check e == NULL repeatedly.
     uint32_t eBits2 = BN_Bits(prvKey->e); // prvKey->e can be empty, unless in crt mode
     // e <= 2^16 or e >= 2^256 -> e shoule be [17, 256].
-    if ((eBits2 != 0 && eBits2 != eBits1) || eBits1 < 17 || eBits1 > 256 || !BN_IsOdd(pubKey->e)) {
+    bool flag = (eBits2 != 0 && eBits2 != eBits1) || eBits1 < 17 || eBits1 > 256 || !BN_IsOdd(pubKey->e);
+    if (flag == true) {
         return CRYPT_RSA_ERR_E_VALUE;
     }
     uint32_t nBbits = BN_Bits(pubKey->n);
@@ -770,8 +776,8 @@ ERR:
 
 static int32_t CheckLevel(const CRYPT_RSA_PrvKey *prvKey)
 {
-    if (!BN_IsZero(prvKey->e) && !BN_IsZero(prvKey->dP) && !BN_IsZero(prvKey->dQ) && !BN_IsZero(prvKey->qInv)
-        && !BN_IsZero(prvKey->p) && !BN_IsZero(prvKey->q)) {
+    if (!BN_IsZero(prvKey->e) && !BN_IsZero(prvKey->dP) && !BN_IsZero(prvKey->dQ) && !BN_IsZero(prvKey->qInv) &&
+        !BN_IsZero(prvKey->p) && !BN_IsZero(prvKey->q)) {
         return RSA_CHECK_CRT_CHECK; // check crt.
     }
     if (!BN_IsZero(prvKey->p) && !BN_IsZero(prvKey->q)) {

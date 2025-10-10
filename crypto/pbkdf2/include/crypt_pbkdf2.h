@@ -43,11 +43,12 @@ CRYPT_PBKDF2_Ctx* CRYPT_PBKDF2_NewCtx(void);
  * @brief Generate PBKDF2 context.
  *
  * @param libCtx [in] Library context.
+ * @param algId [in] algorithm id
  *
  * @retval Success: PBKDF2 ctx.
  *         Fails: NULL.
  */
-CRYPT_PBKDF2_Ctx *CRYPT_PBKDF2_NewCtxEx(void *libCtx);
+CRYPT_PBKDF2_Ctx *CRYPT_PBKDF2_NewCtxEx(void *libCtx, int32_t algId);
 
 /**
  * @ingroup PBKDF2

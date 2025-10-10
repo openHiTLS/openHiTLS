@@ -22,6 +22,7 @@
 #include "bsl_sal.h"
 #include "crypt_local_types.h"
 #include "crypt_errno.h"
+#include "crypt_util_ctrl.h"
 #include "crypt_utils.h"
 #include "eal_mac_local.h"
 #include "bsl_params.h"
@@ -191,7 +192,7 @@ int32_t CRYPT_HKDF(void *macCtx, const EAL_MacMethod *macMeth, uint16_t mdSize,
     return CRYPT_HKDF_Expand(macCtx, macMeth, mdSize, prk, prkLen, info, infoLen, out, len);
 }
 
-CRYPT_HKDF_Ctx* CRYPT_HKDF_NewCtx(void)
+CRYPT_HKDF_Ctx *CRYPT_HKDF_NewCtx(void)
 {
     CRYPT_HKDF_Ctx *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_HKDF_Ctx));
     if (ctx == NULL) {
@@ -201,10 +202,10 @@ CRYPT_HKDF_Ctx* CRYPT_HKDF_NewCtx(void)
     return ctx;
 }
 
-#ifdef HITLS_CRYPTO_PROVIDER
-CRYPT_HKDF_Ctx* CRYPT_HKDF_NewCtxEx(void *libCtx)
+CRYPT_HKDF_Ctx *CRYPT_HKDF_NewCtxEx(void *libCtx, int32_t algId)
 {
     (void)libCtx;
+    (void)algId;
     CRYPT_HKDF_Ctx *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_HKDF_Ctx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -215,7 +216,6 @@ CRYPT_HKDF_Ctx* CRYPT_HKDF_NewCtxEx(void *libCtx)
 #endif
     return ctx;
 }
-#endif
 
 static int32_t HkdfGetMdSize(CRYPT_HKDF_Ctx *ctx, const char *mdAttr)
 {
@@ -234,8 +234,8 @@ static int32_t HkdfGetMdSize(CRYPT_HKDF_Ctx *ctx, const char *mdAttr)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ctx->mdSize = mdMeth.mdSize;
     ctx->hasGetMdSize = true;
+    ctx->mdSize = mdMeth.mdSize;
     return CRYPT_SUCCESS;
 }
 
@@ -245,110 +245,11 @@ int32_t CRYPT_HKDF_SetMacMethod(CRYPT_HKDF_Ctx *ctx, const CRYPT_MAC_AlgId id)
         BSL_ERR_PUSH_ERROR(CRYPT_HKDF_PARAM_ERROR);
         return CRYPT_HKDF_PARAM_ERROR;
     }
-
-    // free the old macCtx
-    if (ctx->macCtx != NULL) {
-        if (ctx->macMeth.freeCtx == NULL) {
-            BSL_ERR_PUSH_ERROR(CRYPT_PBKDF2_ERR_MAC_METH);
-            return CRYPT_PBKDF2_ERR_MAC_METH;
-        }
-        ctx->macMeth.freeCtx(ctx->macCtx);
-        ctx->macCtx = NULL;
-        (void)memset_s(&ctx->macMeth, sizeof(EAL_MacMethod), 0, sizeof(EAL_MacMethod));
-    }
-
-    EAL_MacMethod *macMeth = EAL_MacFindMethod(id, &ctx->macMeth);
-    if (macMeth == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_METH_NULL_MEMBER);
-        return CRYPT_EAL_ERR_METH_NULL_MEMBER;
-    }
-    if (macMeth->newCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HKDF_ERR_MAC_METH);
-        return CRYPT_HKDF_ERR_MAC_METH;
-    }
 #ifdef HITLS_CRYPTO_PROVIDER
-    ctx->macCtx = macMeth->newCtx(ctx->libCtx, id);
+    return CRYPT_CTRL_SetMacMethod(ctx->libCtx, id, CRYPT_HKDF_ERR_MAC_METH, &ctx->macCtx, &ctx->macMeth, &ctx->macId);
 #else
-    ctx->macCtx = macMeth->newCtx(NULL, id);
+    return CRYPT_CTRL_SetMacMethod(NULL, id, CRYPT_HKDF_ERR_MAC_METH, &ctx->macCtx, &ctx->macMeth, &ctx->macId);
 #endif
-    if (ctx->macCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ctx->macId = id;
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_HKDF_SetKey(CRYPT_HKDF_Ctx *ctx, const uint8_t *key, uint32_t keyLen)
-{
-    if (key == NULL && keyLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    BSL_SAL_ClearFree((void *)ctx->key, ctx->keyLen);
-
-    ctx->key = BSL_SAL_Dump(key, keyLen);
-    if (ctx->key == NULL && keyLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ctx->keyLen = keyLen;
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_HKDF_SetSalt(CRYPT_HKDF_Ctx *ctx, const uint8_t *salt, uint32_t saltLen)
-{
-    if (salt == NULL && saltLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    BSL_SAL_FREE(ctx->salt);
-
-    ctx->salt = BSL_SAL_Dump(salt, saltLen);
-    if (ctx->salt == NULL && saltLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ctx->saltLen = saltLen;
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_HKDF_SetPRK(CRYPT_HKDF_Ctx *ctx, const uint8_t *prk, uint32_t prkLen)
-{
-    if (prk == NULL && prkLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    BSL_SAL_ClearFree((void *)ctx->prk, ctx->prkLen);
-
-    ctx->prk = BSL_SAL_Dump(prk, prkLen);
-    if (ctx->prk == NULL && prkLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ctx->prkLen = prkLen;
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_HKDF_SetInfo(CRYPT_HKDF_Ctx *ctx, const uint8_t *info, uint32_t infoLen)
-{
-    if (info == NULL && infoLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    BSL_SAL_ClearFree((void *)ctx->info, ctx->infoLen);
-
-    ctx->info = BSL_SAL_Dump(info, infoLen);
-    if (ctx->info == NULL && infoLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ctx->infoLen = infoLen;
-    return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_HKDF_SetOutLen(CRYPT_HKDF_Ctx *ctx, uint32_t *outLen)
@@ -365,27 +266,7 @@ int32_t CRYPT_HKDF_SetOutLen(CRYPT_HKDF_Ctx *ctx, uint32_t *outLen)
 #ifdef HITLS_CRYPTO_PROVIDER
 static int32_t CRYPT_HKDF_SetMdAttr(CRYPT_HKDF_Ctx *ctx, const char *mdAttr, uint32_t valLen)
 {
-    if (mdAttr == NULL || valLen == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HKDF_PARAM_ERROR);
-        return CRYPT_HKDF_PARAM_ERROR;
-    }
-
-    if (ctx->macCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HKDF_ERR_MAC_ID_NOT_SET);
-        return CRYPT_HKDF_ERR_MAC_ID_NOT_SET;
-    }
-
-    // Set mdAttr for macCtx
-    if (ctx->macMeth.setParam == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_HKDF_ERR_MAC_METH);
-        return CRYPT_HKDF_ERR_MAC_METH;
-    }
-    BSL_Param param[] = {
-        {.key = CRYPT_PARAM_MD_ATTR, .valueType = BSL_PARAM_TYPE_UTF8_STR,
-        .value = (void *)(uintptr_t)mdAttr, .valueLen = valLen, .useLen = 0},
-        BSL_PARAM_END
-    };
-    int32_t ret = ctx->macMeth.setParam(ctx->macCtx, param);
+    int32_t ret = CRYPT_CTRL_SetMdAttrToHmac(mdAttr, valLen, ctx->macMeth.setParam, ctx->macCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -418,16 +299,16 @@ int32_t CRYPT_HKDF_SetParam(CRYPT_HKDF_Ctx *ctx, const BSL_Param *param)
         ctx->mode = val;
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_KEY)) != NULL) {
-        GOTO_ERR_IF(CRYPT_HKDF_SetKey(ctx, temp->value, temp->valueLen), ret);
+        GOTO_ERR_IF(CRYPT_CTRL_SetData(temp->value, temp->valueLen, &ctx->key, &ctx->keyLen), ret);
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_SALT)) != NULL) {
-        GOTO_ERR_IF(CRYPT_HKDF_SetSalt(ctx, temp->value, temp->valueLen), ret);
+        GOTO_ERR_IF(CRYPT_CTRL_SetData(temp->value, temp->valueLen, &ctx->salt, &ctx->saltLen), ret);
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_PRK)) != NULL) {
-        GOTO_ERR_IF(CRYPT_HKDF_SetPRK(ctx, temp->value, temp->valueLen), ret);
+        GOTO_ERR_IF(CRYPT_CTRL_SetData(temp->value, temp->valueLen, &ctx->prk, &ctx->prkLen), ret);
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_INFO)) != NULL) {
-        GOTO_ERR_IF(CRYPT_HKDF_SetInfo(ctx, temp->value, temp->valueLen), ret);
+        GOTO_ERR_IF(CRYPT_CTRL_SetData(temp->value, temp->valueLen, &ctx->info, &ctx->infoLen), ret);
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_EXLEN)) != NULL) {
         len = sizeof(val);
@@ -479,12 +360,8 @@ int32_t CRYPT_HKDF_Derive(CRYPT_HKDF_Ctx *ctx, uint8_t *out, uint32_t len)
     }
 }
 
-int32_t CRYPT_HKDF_Deinit(CRYPT_HKDF_Ctx *ctx)
+static void DeinitCtx(CRYPT_HKDF_Ctx *ctx)
 {
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     if (ctx->macMeth.freeCtx != NULL) {
         ctx->macMeth.freeCtx(ctx->macCtx);
         ctx->macCtx = NULL;
@@ -493,6 +370,15 @@ int32_t CRYPT_HKDF_Deinit(CRYPT_HKDF_Ctx *ctx)
     BSL_SAL_FREE(ctx->salt);
     BSL_SAL_ClearFree((void *)ctx->prk, ctx->prkLen);
     BSL_SAL_ClearFree((void *)ctx->info, ctx->infoLen);
+}
+
+int32_t CRYPT_HKDF_Deinit(CRYPT_HKDF_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    DeinitCtx(ctx);
     (void)memset_s(ctx, sizeof(CRYPT_HKDF_Ctx), 0, sizeof(CRYPT_HKDF_Ctx));
     return CRYPT_SUCCESS;
 }
@@ -502,13 +388,7 @@ void CRYPT_HKDF_FreeCtx(CRYPT_HKDF_Ctx *ctx)
     if (ctx == NULL) {
         return;
     }
-    if (ctx->macMeth.freeCtx != NULL) {
-        ctx->macMeth.freeCtx(ctx->macCtx);
-    }
-    BSL_SAL_ClearFree((void *)ctx->key, ctx->keyLen);
-    BSL_SAL_FREE(ctx->salt);
-    BSL_SAL_ClearFree((void *)ctx->prk, ctx->prkLen);
-    BSL_SAL_ClearFree((void *)ctx->info, ctx->infoLen);
+    DeinitCtx(ctx);
     BSL_SAL_Free(ctx);
 }
 #endif // HITLS_CRYPTO_HKDF

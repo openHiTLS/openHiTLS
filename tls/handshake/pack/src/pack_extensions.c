@@ -491,8 +491,7 @@ static int32_t PackClientSecRenegoInfo(const TLS_Ctx *ctx, PackPacket *pkt)
     uint16_t exMsgDataLen = (uint16_t)clientDataSize;
 
     /* Pack the extension header */
-    int32_t ret;
-    ret = PackExtensionHeader(HS_EX_TYPE_RENEGOTIATION_INFO, exMsgHeaderLen + exMsgDataLen, pkt);
+    int32_t ret = PackExtensionHeader(HS_EX_TYPE_RENEGOTIATION_INFO, exMsgHeaderLen + exMsgDataLen, pkt);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

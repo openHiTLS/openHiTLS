@@ -212,12 +212,11 @@ static int32_t GetVerifySaltLen(const uint8_t *emData, const uint8_t *dbBuff, ui
     uint32_t *saltLen)
 {
     uint32_t i = 0;
-    uint8_t *tmpBuff = (uint8_t *)BSL_SAL_Malloc(maskedDBLen);
+    uint8_t *tmpBuff = (uint8_t *)BSL_SAL_Dump(dbBuff, maskedDBLen);
     if (tmpBuff == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memcpy_s(tmpBuff, maskedDBLen, dbBuff, maskedDBLen);
     if (msBit != 0) {
         tmpBuff[0] &= ((uint8_t)(0xFF >> (8 - msBit)));  // Set the leftmost 8emLen - emBits bits to zero
     }
@@ -508,6 +507,7 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type1(CRYPT_MD_AlgId hashId, const uint8_t *pad, 
 }
 #endif // HITLS_CRYPTO_RSA_VERIFY
 
+#ifdef HITLS_CRYPTO_RSA_RECOVER
 int32_t CRYPT_RSA_UnPackPkcsV15Type1(uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen)
 {
     uint8_t *index = data;
@@ -549,6 +549,7 @@ int32_t CRYPT_RSA_UnPackPkcsV15Type1(uint8_t *data, uint32_t dataLen, uint8_t *o
     *outLen = tmpLen;
     return CRYPT_SUCCESS;
 }
+#endif // HITLS_CRYPTO_RSA_RECOVER
 #endif // HITLS_CRYPTO_RSA_EMSA_PKCSV15
 
 #ifdef HITLS_CRYPTO_RSAES_OAEP

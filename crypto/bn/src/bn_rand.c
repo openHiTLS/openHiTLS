@@ -27,7 +27,6 @@
 
 static int32_t RandGenerate(void *libCtx, BN_BigNum *r, uint32_t bits)
 {
-    int32_t ret;
     uint32_t room = BITS_TO_BN_UNIT(bits);
     BN_UINT mask;
     // Maxbits = (1 << 29) --> MaxBytes = (1 << 26), hence BN_BITS_TO_BYTES(bits) will not exceed the upper limit.
@@ -37,7 +36,7 @@ static int32_t RandGenerate(void *libCtx, BN_BigNum *r, uint32_t bits)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    ret = CRYPT_RandEx(libCtx, buf, byteSize);
+    int32_t ret = CRYPT_RandEx(libCtx, buf, byteSize);
     if (ret == CRYPT_NO_REGIST_RAND) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -150,9 +149,8 @@ int32_t BN_RandRangeEx(void *libCtx, BN_BigNum *r, const BN_BigNum *p)
 {
     const int32_t maxCnt = 100; /* try 100 times */
     int32_t tryCnt = 0;
-    int32_t ret;
 
-    ret = InputCheck(r, p);
+    int32_t ret = InputCheck(r, p);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

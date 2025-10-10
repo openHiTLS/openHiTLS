@@ -27,6 +27,7 @@ extern "C" {
 #endif // __cplusplus
 
 #define CCM_BLOCKSIZE 16
+
 typedef struct {
     void *ciphCtx;  /* Context defined by each algorithm  */
     const EAL_SymMethod *ciphMeth;  /* Corresponding to the related methods for each symmetric algorithm */
@@ -39,14 +40,18 @@ typedef struct {
     uint8_t tagLen;     /* The length of the tag is 16 by default. The tag is reset each time the key is set. */
     uint8_t tagInit;    /* Indicate whether the tag is initialized. */
 } MODES_CipherCCMCtx;
+
 struct ModesCcmCtx {
     int32_t algId;
     MODES_CipherCCMCtx ccmCtx;
     bool enc;
 };
+
 typedef struct ModesCcmCtx MODES_CCM_Ctx;
 // CCM mode universal implementation
 MODES_CCM_Ctx *MODES_CCM_NewCtx(int32_t algId);
+MODES_CCM_Ctx *MODES_CCM_NewCtxEx(void *libCtx, int32_t algId);
+
 int32_t MODES_CCM_InitCtx(MODES_CCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, void *param, bool enc);
 

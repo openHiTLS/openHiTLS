@@ -15,7 +15,7 @@
 
 #include "hitls_build.h"
 
-#if defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_BSL_PEM) && defined(HITLS_CRYPTO_PROVIDER)
+#if defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) && defined(HITLS_BSL_PEM)
 #include <stdint.h>
 #include <string.h>
 #include "crypt_eal_implprovider.h"
@@ -24,8 +24,8 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "bsl_pem_internal.h"
-#include "crypt_encode_decode_local.h"
-#include "crypt_decode_key_impl.h"
+#include "crypt_codecskey_local.h"
+#include "crypt_decoder.h"
 
 typedef struct {
     void *provCtx;
@@ -129,4 +129,4 @@ void DECODER_Pem2DerFreeCtx(void *ctx)
     }
     BSL_SAL_Free(ctx);
 }
-#endif /* HITLS_CRYPTO_CODECSKEY && HITLS_BSL_PEM && HITLS_CRYPTO_PROVIDER */
+#endif /* HITLS_CRYPTO_KEY_DECODE_CHAIN && HITLS_BSL_PEM */

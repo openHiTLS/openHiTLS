@@ -102,16 +102,34 @@
     #endif
 #endif
 
-#ifdef HITLS_BSL_PEM
-    #ifndef HITLS_BSL_BASE64
-        #define HITLS_BSL_BASE64
+#ifdef HITLS_BSL_OBJ
+    #ifndef HITLS_BSL_OBJ_DEFAULT
+        #define HITLS_BSL_OBJ_DEFAULT
+    #endif
+    #ifndef HITLS_BSL_OBJ_CUSTOM
+        #define HITLS_BSL_OBJ_CUSTOM
     #endif
 #endif
 
-#ifdef HITLS_BSL_ASN1
-    #ifndef HITLS_BSL_SAL_TIME
-        #define HITLS_BSL_SAL_TIME
+#ifdef HITLS_BSL_OBJ_CUSTOM
+    #ifndef HITLS_BSL_OBJ_DEFAULT
+        #define HITLS_BSL_OBJ_DEFAULT
     #endif
+    #ifndef HITLS_BSL_HASH
+        #define HITLS_BSL_HASH
+    #endif
+#endif
+
+#if (defined(HITLS_BSL_OBJ_DEFAULT) || defined(HITLS_BSL_OBJ_CUSTOM)) && !defined(HITLS_BSL_OBJ)
+    #define HITLS_BSL_OBJ
+#endif
+
+#if defined(HITLS_BSL_PEM) && !defined(HITLS_BSL_BASE64)
+    #define HITLS_BSL_BASE64
+#endif
+
+#if defined(HITLS_BSL_ASN1) && !defined(HITLS_BSL_SAL_TIME)
+    #define HITLS_BSL_SAL_TIME
 #endif
 
 #endif /* HITLS_CONFIG_LAYER_BSL_H */

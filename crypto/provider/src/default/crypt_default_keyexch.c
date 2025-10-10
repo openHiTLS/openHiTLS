@@ -14,20 +14,13 @@
  */
 
 #include "hitls_build.h"
-#if (defined(HITLS_CRYPTO_X25519) || defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDH) || \
-    defined(HITLS_CRYPTO_SM2_EXCH)) && defined(HITLS_CRYPTO_PROVIDER)
+#if defined(HITLS_CRYPTO_PKEY_EXCH) && defined(HITLS_CRYPTO_PROVIDER)
 
 #include "crypt_eal_implprovider.h"
 #include "crypt_curve25519.h"
 #include "crypt_dh.h"
 #include "crypt_ecdh.h"
 #include "crypt_sm2.h"
-
-typedef struct {
-    void *pkeyCtx;
-    int32_t algId;
-    int32_t index;
-} CRYPT_EAL_DefPkeyCtx;
 
 #ifdef HITLS_CRYPTO_X25519
 const CRYPT_EAL_Func g_defEalExchX25519[] = {
@@ -57,4 +50,4 @@ const CRYPT_EAL_Func g_defEalExchSm2[] = {
 };
 #endif
 
-#endif
+#endif /* HITLS_CRYPTO_PKEY_EXCH && HITLS_CRYPTO_PROVIDER */

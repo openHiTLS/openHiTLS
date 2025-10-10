@@ -152,8 +152,7 @@ static int32_t IsParamValid(const CRYPT_SM2_Ctx *selfCtx, const CRYPT_SM2_Ctx *p
     return CRYPT_SUCCESS;
 }
 
-void BnMemDestroy(BN_BigNum *xs, BN_BigNum *xp, BN_BigNum *t,
-    BN_BigNum *twoPowerW, BN_BigNum *order)
+void BnMemDestroy(BN_BigNum *xs, BN_BigNum *xp, BN_BigNum *t, BN_BigNum *twoPowerW, BN_BigNum *order)
 {
     BN_Destroy(xs);
     BN_Destroy(xp);
@@ -337,8 +336,7 @@ int32_t CRYPT_SM2_KapComputeKey(const CRYPT_SM2_Ctx *selfCtx, const CRYPT_SM2_Ct
     uint32_t w;
     int32_t ret;
     BN_Optimizer *opt = BN_OptimizerCreate();
-    if (uorv == NULL || xs == NULL || xp == NULL || t == NULL || twoPowerW == NULL ||
-        order == NULL || opt == NULL) {
+    if (uorv == NULL || xs == NULL || xp == NULL || t == NULL || twoPowerW == NULL || order == NULL || opt == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;

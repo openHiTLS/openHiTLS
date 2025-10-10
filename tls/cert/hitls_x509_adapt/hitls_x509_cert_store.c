@@ -26,11 +26,6 @@
 #include "hitls_error.h"
 #include "hitls_x509_adapt.h"
 
-HITLS_CERT_Store *HITLS_X509_Adapt_StoreNew(void)
-{
-    return (HITLS_CERT_Store *)HITLS_X509_StoreCtxNew();
-}
-
 HITLS_CERT_Store *HITLS_X509_Adapt_StoreDup(HITLS_CERT_Store *store)
 {
     int references = 0;
@@ -42,11 +37,6 @@ HITLS_CERT_Store *HITLS_X509_Adapt_StoreDup(HITLS_CERT_Store *store)
     }
 
     return store;
-}
-
-void HITLS_X509_Adapt_StoreFree(HITLS_CERT_Store *store)
-{
-    HITLS_X509_StoreCtxFree(store);
 }
 
 int32_t HITLS_X509_Adapt_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store, HITLS_CERT_CtrlCmd cmd,

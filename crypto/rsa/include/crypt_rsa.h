@@ -54,13 +54,13 @@ CRYPT_RSA_Ctx *CRYPT_RSA_NewCtx(void); // create key structure
 /**
  * @ingroup rsa
  * @brief Allocate rsa context memory space.
- * 
+ *
  * @param libCtx [IN] Library context
  *
  * @retval (CRYPT_RSA_Ctx *) Pointer to the memory space of the allocated context
  * @retval NULL              Invalid null pointer.
  */
-CRYPT_RSA_Ctx *CRYPT_RSA_NewCtxEx(void *libCtx); 
+CRYPT_RSA_Ctx *CRYPT_RSA_NewCtxEx(void *libCtx);
 
 /**
  * @ingroup rsa
@@ -543,7 +543,7 @@ int32_t CRYPT_RSA_Decrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
     uint8_t *out, uint32_t *outLen);
 #endif
 
-#ifdef HITLS_CRYPTO_RSA_VERIFY
+#ifdef HITLS_CRYPTO_RSA_RECOVER
 /**
  * @ingroup rsa
  * @brief RSA public key decryption
@@ -565,8 +565,11 @@ int32_t CRYPT_RSA_Decrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
  * @retval CRYPT_SUCCESS                    Decrypted Successfully
  */
 int32_t CRYPT_RSA_Recover(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen);
+#else
+#define CRYPT_RSA_Recover NULL
 #endif
 
+#ifdef HITLS_CRYPTO_RSA_CMP
 /**
  * @ingroup rsa
  * @brief RSA compare the public key
@@ -580,6 +583,9 @@ int32_t CRYPT_RSA_Recover(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
  * @retval CRYPT_RSA_PUBKEY_NOT_EQUAL   Public Keys are not equal
  */
 int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b);
+#else
+#define CRYPT_RSA_Cmp NULL
+#endif
 
 #ifdef HITLS_CRYPTO_RSAES_OAEP
 #ifdef HITLS_CRYPTO_RSA_ENCRYPT
@@ -672,7 +678,7 @@ int32_t CRYPT_RSA_Check(uint32_t checkType, const CRYPT_RSA_Ctx *pkey1, const CR
 
 #endif // HITLS_CRYPTO_RSA_CHECK
 
-#ifdef HITLS_CRYPTO_PROVIDER
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
 /**
  * @ingroup RSA
  * @brief RSA import key
@@ -690,7 +696,7 @@ int32_t CRYPT_RSA_Import(CRYPT_RSA_Ctx *ctx, const BSL_Param *params);
  * @param params [IN/OUT] key parameters
  */
 int32_t CRYPT_RSA_Export(const CRYPT_RSA_Ctx *ctx, BSL_Param *params);
-#endif // HITLS_CRYPTO_PROVIDER
+#endif // HITLS_CRYPTO_KEY_DECODE_CHAIN
 
 #ifdef __cplusplus
 }

@@ -47,7 +47,7 @@
 #ifdef HITLS_CRYPTO_ELGAMAL
 #include "crypt_elgamal.h"
 #endif
-#ifdef HITLS_CRYPTO_KEM
+#ifdef HITLS_CRYPTO_MLKEM
 #include "crypt_mlkem.h"
 #endif
 #ifdef HITLS_CRYPTO_MLDSA

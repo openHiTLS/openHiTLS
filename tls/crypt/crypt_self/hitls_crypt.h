@@ -198,13 +198,14 @@ int32_t HITLS_CRYPT_EcdhCalcSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attr
  * @retval HITLS_SUCCESS  Succeeded.
  * @retval Other          Failed.
  */
-int32_t HITLS_CRYPT_CalcSM2SharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName, 
+int32_t HITLS_CRYPT_CalcSM2SharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName,
     HITLS_Sm2GenShareKeyParameters *sm2Params, uint8_t *sharedSecret, uint32_t *sharedSecretLen);
 
 /**
  * @brief Generate a DH key pair based on the security level.
  *
- * This function generates a DH key pair using the given library context, attribute name, configuration, and named group ID.
+ * This function generates a DH key pair using the given library context, attribute name, configuration, and named group
+ * ID.
  *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
  * @param attrName   [IN] Attribute name, which may be used for specific configuration.
@@ -240,7 +241,8 @@ HITLS_CRYPT_Key *HITLS_CRYPT_GenerateDhKeyByParameters(HITLS_Lib_Ctx *libCtx,
 /**
  * @brief HKDF expand function.
  *
- * This function performs the HKDF expand operation using the given library context, attribute name, and HKDF expand input.
+ * This function performs the HKDF expand operation using the given library context, attribute name, and HKDF expand
+ * input.
  *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
  * @param attrName   [IN] Attribute name, which may be used for specific configuration.
@@ -257,7 +259,8 @@ int32_t HITLS_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx, const char *attrName, cons
 /**
  * @brief HKDF extract function.
  *
- * This function performs the HKDF extract operation using the given library context, attribute name, and HKDF extract input.
+ * This function performs the HKDF extract operation using the given library context, attribute name, and HKDF extract
+ * input.
  *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
  * @param attrName   [IN] Attribute name, which may be used for specific configuration.

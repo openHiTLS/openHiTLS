@@ -15,7 +15,7 @@
 
 #include "hitls_build.h"
 
-#if defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_CRYPTO_KEY_EPKI) && defined(HITLS_CRYPTO_PROVIDER)
+#if defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) && defined(HITLS_CRYPTO_KEY_EPKI)
 #include <string.h>
 #include "crypt_eal_implprovider.h"
 #include "crypt_params_key.h"
@@ -23,8 +23,8 @@
 #include "bsl_types.h"
 #include "bsl_params.h"
 #include "bsl_err_internal.h"
-#include "crypt_encode_decode_local.h"
-#include "crypt_decode_key_impl.h"
+#include "crypt_codecskey_local.h"
+#include "crypt_decoder.h"
 
 typedef struct DECODER_EPki2PkiCtx {
     CRYPT_EAL_LibCtx *libCtx;
@@ -137,4 +137,4 @@ void DECODER_EPKI2PKI_FreeOutData(void *ctx, BSL_Param *outParam)
     BSL_SAL_Free(outParam);
 }
 
-#endif /* HITLS_CRYPTO_CODECSKEY && HITLS_CRYPTO_EPKI2PKI && HITLS_CRYPTO_PROVIDER */
+#endif /* HITLS_CRYPTO_KEY_DECODE_CHAIN && HITLS_CRYPTO_EPKI2PKI */

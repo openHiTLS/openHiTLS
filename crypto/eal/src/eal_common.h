@@ -26,14 +26,26 @@
 extern "C" {
 #endif // __cplusplus
 
+#ifdef HITLS_CRYPTO_EAL_REPORT
 #define EAL_ERR_REPORT(oper, type, id, err) \
     do { \
         EAL_EventReport((oper), (type), (id), (err)); \
         BSL_ERR_PUSH_ERROR((err)); \
     } while (0)
 
-void EAL_EventReport(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err);
+#define EAL_EVENT_REPORT(oper, type, id, err) \
+    do { \
+        EAL_EventReport((oper), (type), (id), (err)); \
+    } while (0)
 
+void EAL_EventReport(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err);
+#else
+
+#define EAL_ERR_REPORT(oper, type, id, err)
+
+#define EAL_EVENT_REPORT(oper, type, id, err)
+
+#endif
 
 #ifdef __cplusplus
 }

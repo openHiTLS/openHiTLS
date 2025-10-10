@@ -59,10 +59,14 @@ static int32_t SetPkeySignParam(HITLS_Ctx *hitlsCtx, CRYPT_EAL_PkeyCtx *ctx, HIT
     }
 #endif
 
+#ifdef HITLS_CRYPTO_RSA_EMSA_PKCSV15
     if (signAlgo == HITLS_SIGN_RSA_PKCS1_V15) {
         int32_t pad = mdAlgId;
         return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pad, sizeof(pad));
-    } else if (signAlgo == HITLS_SIGN_RSA_PSS) {
+    } else
+#endif
+#ifdef HITLS_CRYPTO_RSA_EMSA_PSS
+    if (signAlgo == HITLS_SIGN_RSA_PSS) {
         int32_t saltLen = CRYPT_RSA_SALTLEN_TYPE_HASHLEN;
         BSL_Param pssParam[4] = {
             {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdAlgId, sizeof(mdAlgId), 0},
@@ -70,18 +74,21 @@ static int32_t SetPkeySignParam(HITLS_Ctx *hitlsCtx, CRYPT_EAL_PkeyCtx *ctx, HIT
             {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
             BSL_PARAM_END};
         return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0);
-    } else if (signAlgo == HITLS_SIGN_SM2) {
+    } else
+#endif
+#ifdef HITLS_CRYPTO_SM2
+    if (signAlgo == HITLS_SIGN_SM2) {
 #ifdef HITLS_TLS_FEATURE_SM_TLS13
         if (IS_SM_TLS13(hitlsCtx->negotiatedInfo.cipherSuiteInfo.cipherSuite)) {
             char sm2DefaultUserid[] = "TLSv1.3+GM+Cipher+Suite";
             return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, sm2DefaultUserid, strlen(sm2DefaultUserid));
         }
-#endif
+#endif // HITLS_TLS_FEATURE_SM_TLS13
         /* The default user id as specified in GM/T 0009-2012 */
         char sm2DefaultUserid[] = "1234567812345678";
         return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, sm2DefaultUserid, strlen(sm2DefaultUserid));
     }
-
+#endif // HITLS_CRYPTO_SM2
     return HITLS_SUCCESS;
 }
 

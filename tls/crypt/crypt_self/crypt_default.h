@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include "hitls_crypt_type.h"
 #include "hitls_crypt_reg.h"
+#include "hitls_crypt.h"
+#include "crypt_eal_rand.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,7 +34,11 @@ extern "C" {
  * @retval HITLS_SUCCESS succeeded.
  * @retval Other         failure
  */
-int32_t CRYPT_DEFAULT_RandomBytes(uint8_t *buf, uint32_t len);
+#ifdef HITLS_CRYPTO_DRBG
+#define CRYPT_DEFAULT_RandomBytes CRYPT_EAL_Randbytes
+#else
+#define CRYPT_DEFAULT_RandomBytes NULL
+#endif
 
 /**
  * @brief Obtain the HMAC length.
@@ -41,7 +47,7 @@ int32_t CRYPT_DEFAULT_RandomBytes(uint8_t *buf, uint32_t len);
  *
  * @return HMAC length
  */
-uint32_t CRYPT_DEFAULT_HMAC_Size(HITLS_HashAlgo hashAlgo);
+#define CRYPT_DEFAULT_HMAC_Size CRYPT_DEFAULT_DigestSize
 
 /**
  * @brief Initialize the HMAC context.
@@ -62,14 +68,14 @@ HITLS_HMAC_Ctx *CRYPT_DEFAULT_HMAC_Init(HITLS_HashAlgo hashAlgo, const uint8_t *
  * @retval HITLS_SUCCESS succeeded.
  * @retval Other         failure
  */
-int32_t CRYPT_DEFAULT_HMAC_ReInit(HITLS_HMAC_Ctx *ctx);
+#define CRYPT_DEFAULT_HMAC_ReInit HITLS_CRYPT_HMAC_ReInit
 
 /**
  * @brief Release the HMAC context.
  *
  * @param hmac [IN] HMAC context. The CTX is set NULL by the invoker.
  */
-void CRYPT_DEFAULT_HMAC_Free(HITLS_HMAC_Ctx *ctx);
+#define CRYPT_DEFAULT_HMAC_Free HITLS_CRYPT_HMAC_Free
 
 /**
  * @brief Add the HMAC input data.
@@ -81,7 +87,7 @@ void CRYPT_DEFAULT_HMAC_Free(HITLS_HMAC_Ctx *ctx);
  * @retval HITLS_SUCCESS succeeded.
  * @retval Other         failure
  */
-int32_t CRYPT_DEFAULT_HMAC_Update(HITLS_HMAC_Ctx *ctx, const uint8_t *data, uint32_t len);
+#define CRYPT_DEFAULT_HMAC_Update HITLS_CRYPT_HMAC_Update
 
 /**
  * @brief HMAC calculation result
@@ -93,7 +99,7 @@ int32_t CRYPT_DEFAULT_HMAC_Update(HITLS_HMAC_Ctx *ctx, const uint8_t *data, uint
  * @retval HITLS_SUCCESS succeeded.
  * @retval Other         failure
  */
-int32_t CRYPT_DEFAULT_HMAC_Final(HITLS_HMAC_Ctx *ctx, uint8_t *out, uint32_t *len);
+#define CRYPT_DEFAULT_HMAC_Final HITLS_CRYPT_HMAC_Final
 
 /**
  * @brief HMAC function
@@ -119,7 +125,7 @@ int32_t CRYPT_DEFAULT_HMAC(HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t
  *
  * @return Hash length
  */
-uint32_t CRYPT_DEFAULT_DigestSize(HITLS_HashAlgo hashAlgo);
+#define CRYPT_DEFAULT_DigestSize HITLS_CRYPT_DigestSize
 
 /**
  * @brief Initialize the hash context.
@@ -137,14 +143,14 @@ HITLS_HASH_Ctx *CRYPT_DEFAULT_DigestInit(HITLS_HashAlgo hashAlgo);
  *
  * @return hash context
  */
-HITLS_HASH_Ctx *CRYPT_DEFAULT_DigestCopy(HITLS_HASH_Ctx *ctx);
+#define CRYPT_DEFAULT_DigestCopy HITLS_CRYPT_DigestCopy
 
 /**
  * @brief Release the hash context.
  *
  * @param ctx [IN] Hash context. The CTX is set NULL by the invoker.
  */
-void CRYPT_DEFAULT_DigestFree(HITLS_HASH_Ctx *ctx);
+#define CRYPT_DEFAULT_DigestFree HITLS_CRYPT_DigestFree
 
 /**
  * @brief Add the hash input data.
@@ -156,7 +162,7 @@ void CRYPT_DEFAULT_DigestFree(HITLS_HASH_Ctx *ctx);
  * @retval HITLS_SUCCESS succeeded.
  * @retval Other         failure
  */
-int32_t CRYPT_DEFAULT_DigestUpdate(HITLS_HASH_Ctx *ctx, const uint8_t *data, uint32_t len);
+#define CRYPT_DEFAULT_DigestUpdate HITLS_CRYPT_DigestUpdate
 
 /**
  * @brief Calculate the hash result.
@@ -168,7 +174,7 @@ int32_t CRYPT_DEFAULT_DigestUpdate(HITLS_HASH_Ctx *ctx, const uint8_t *data, uin
  * @retval HITLS_SUCCESS succeeded.
  * @retval Other         failure
  */
-int32_t CRYPT_DEFAULT_DigestFinal(HITLS_HASH_Ctx *ctx, uint8_t *out, uint32_t *len);
+#define CRYPT_DEFAULT_DigestFinal HITLS_CRYPT_DigestFinal
 
 /**
  * @brief hash function
@@ -220,7 +226,7 @@ int32_t CRYPT_DEFAULT_Decrypt(const HITLS_CipherParameters *cipher, const uint8_
  *
  * @param ctx [IN] cipher ctx handle. The handle is set NULL by the invoker.
  */
-void CRYPT_DEFAULT_CipherFree(HITLS_Cipher_Ctx *ctx);
+#define CRYPT_DEFAULT_CipherFree HITLS_CRYPT_CipherFree
 
 /**
  * @brief Generate the ECDH key pair.
@@ -265,7 +271,11 @@ HITLS_CRYPT_Key *CRYPT_DEFAULT_GenerateDhKeyByParameters(uint8_t *p, uint16_t pL
  * @retval HITLS_SUCCESS succeeded.
  * @retval Other         failure
  */
-int32_t CRYPT_DEFAULT_GetDhParameters(HITLS_CRYPT_Key *key, uint8_t *p, uint16_t *pLen, uint8_t *g, uint16_t *gLen);
+#ifdef HITLS_TLS_SUITE_KX_DHE
+#define CRYPT_DEFAULT_GetDhParameters HITLS_CRYPT_GetDhParameters
+#else
+#define CRYPT_DEFAULT_GetDhParameters NULL
+#endif /* HITLS_TLS_SUITE_KX_DHE */
 
 /**
  * @brief Deep copy key
@@ -273,14 +283,16 @@ int32_t CRYPT_DEFAULT_GetDhParameters(HITLS_CRYPT_Key *key, uint8_t *p, uint16_t
  * @param key [IN] Key handle
  * @retval Key handle
  */
-HITLS_CRYPT_Key *CRYPT_DEFAULT_DupKey(HITLS_CRYPT_Key *key);
+#ifdef HITLS_TLS_CONFIG_MANUAL_DH
+#define CRYPT_DEFAULT_DupKey HITLS_CRYPT_DupKey
+#endif
 
 /**
  * @brief Release the key.
  *
  * @param key [IN] Key handle. The key is set NULL by the invoker.
  */
-void CRYPT_DEFAULT_FreeKey(HITLS_CRYPT_Key *key);
+#define CRYPT_DEFAULT_FreeKey HITLS_CRYPT_FreeKey
 
 /**
  * @brief Obtain the public key data.
@@ -293,7 +305,7 @@ void CRYPT_DEFAULT_FreeKey(HITLS_CRYPT_Key *key);
  * @retval HITLS_SUCCESS succeeded.
  * @retval Other         failure
  */
-int32_t CRYPT_DEFAULT_GetPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint32_t bufLen, uint32_t *pubKeyLen);
+#define CRYPT_DEFAULT_GetPubKey HITLS_CRYPT_GetPubKey
 
 /**
  * @brief Calculate the shared key. Ref RFC 5246 section 8.1.2, this interface will remove the pre-zeros.
@@ -384,8 +396,9 @@ int32_t CRYPT_DEFAULT_KemEncapsulate(HITLS_KemEncapsulateParams *params);
  * @retval HITLS_SUCCESS succeeded.
  * @retval Other         failure
  */
-int32_t CRYPT_DEFAULT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *ciphertext, uint32_t ciphertextLen,
-    uint8_t *sharedSecret, uint32_t *sharedSecretLen);
+#ifdef HITLS_TLS_FEATURE_KEM
+#define CRYPT_DEFAULT_KemDecapsulate HITLS_CRYPT_KemDecapsulate
+#endif /* HITLS_TLS_FEATURE_KEM */
 
 #ifdef __cplusplus
 }

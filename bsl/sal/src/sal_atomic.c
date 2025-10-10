@@ -15,6 +15,7 @@
 
 #include "sal_atomic.h"
 #include "bsl_errno.h"
+#include "bsl_err_internal.h"
 
 int BSL_SAL_AtomicAdd(int *val, int amount, int *ref, BSL_SAL_ThreadLockHandle lock)
 {
@@ -28,4 +29,13 @@ int BSL_SAL_AtomicAdd(int *val, int amount, int *ref, BSL_SAL_ThreadLockHandle l
     *val += amount;
     *ref = *val;
     return BSL_SAL_ThreadUnlock(lock);
+}
+
+int32_t BSL_SAL_AtomicRefUpCtrl(BSL_SAL_RefCount *references, void *val, uint32_t len)
+{
+    if (val == NULL || len != (uint32_t)sizeof(int)) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return BSL_INVALID_ARG;
+    }
+    return BSL_SAL_AtomicUpReferences(references, (int *)val);
 }

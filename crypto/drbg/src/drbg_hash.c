@@ -246,7 +246,6 @@ int32_t DRBG_HashInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropy,
 {
     DRBG_HashCtx *ctx = (DRBG_HashCtx*)drbg->ctx;
     CRYPT_Data seed = {ctx->v, (uint32_t)(ctx->seedLen)};
-    int32_t ret;
     uint8_t c = 0;
     CRYPT_Data temp = {&c, 1};
 
@@ -256,7 +255,7 @@ int32_t DRBG_HashInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropy,
     3. V = seed
     4. C = Hash_df(0x00 || V)
     */
-    ret = DRBG_HashDf(ctx, ctx->v, ctx->seedLen, entropy, nonce, pers, NULL);
+    int32_t ret = DRBG_HashDf(ctx, ctx->v, ctx->seedLen, entropy, nonce, pers, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

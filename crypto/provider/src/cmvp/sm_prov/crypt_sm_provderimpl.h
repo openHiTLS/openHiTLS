@@ -65,7 +65,7 @@ extern const CRYPT_EAL_Func g_smXts[];
 
 extern const CRYPT_EAL_Func g_smSelftest[];
 
-#ifdef HITLS_CRYPTO_CODECSKEY
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
 extern const CRYPT_EAL_Func g_smEalPrvP8Enc2P8[];
 extern const CRYPT_EAL_Func g_smEalPem2Der[];
 extern const CRYPT_EAL_Func g_smEalSm2PrvDer2Key[];
@@ -73,7 +73,7 @@ extern const CRYPT_EAL_Func g_smEalP8Der2Sm2Key[];
 extern const CRYPT_EAL_Func g_smEalSubPubKeyDer2Sm2Key[];
 extern const CRYPT_EAL_Func g_smEalSubPubKeyWithoutSeqDer2Sm2Key[];
 extern const CRYPT_EAL_Func g_smEalLowKeyObject2PkeyObject[];
-#endif // HITLS_CRYPTO_CODECSKEY
+#endif // HITLS_CRYPTO_KEY_DECODE_CHAIN
 
 #ifdef __cplusplus
 }

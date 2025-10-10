@@ -13,18 +13,18 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#ifndef CRYPT_DECODE_KEY_IMPL_H
-#define CRYPT_DECODE_KEY_IMPL_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#ifndef CRYPT_DECODER_H
+#define CRYPT_DECODER_H
 
 #include "hitls_build.h"
 
 #ifdef HITLS_CRYPTO_CODECSKEY
 #include <stdint.h>
 #include "bsl_params.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct {
     const char *outFormat;
@@ -100,10 +100,10 @@ int32_t DECODER_LowKeyObject2PkeyObjectDecode(void *ctx, const BSL_Param *inPara
 void DECODER_LowKeyObject2PkeyObjectFreeOutData(void *ctx, BSL_Param *outParam);
 void DECODER_LowKeyObject2PkeyObjectFreeCtx(void *ctx);
 
-#endif /* HITLS_CRYPTO_CODECSKEY */
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* CRYPT_DECODE_KEY_IMPL_H */
+#endif /* HITLS_CRYPTO_CODECSKEY */
+
+#endif /* CRYPT_DECODER_H */

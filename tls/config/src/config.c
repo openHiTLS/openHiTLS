@@ -78,15 +78,19 @@ void CFG_CleanConfig(HITLS_Config *config)
     BSL_SAL_FREE(config->groups);
     BSL_SAL_FREE(config->signAlgorithms);
 #ifdef HITLS_TLS_FEATURE_PROVIDER
+#ifndef HITLS_TLS_CAP_NO_STR
     for (uint32_t i = 0; i < config->groupInfolen; i++) {
         BSL_SAL_FREE(config->groupInfo[i].name);
     }
+#endif
     BSL_SAL_FREE(config->groupInfo);
     config->groupInfoSize = 0;
     config->groupInfolen = 0;
+#ifndef HITLS_TLS_CAP_NO_STR
     for (uint32_t i = 0; i < config->sigSchemeInfolen; i++) {
         BSL_SAL_FREE(config->sigSchemeInfo[i].name);
     }
+#endif
     BSL_SAL_FREE(config->sigSchemeInfo);
     config->sigSchemeInfoSize = 0;
     config->sigSchemeInfolen = 0;
@@ -272,9 +276,11 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
     }
 #ifdef HITLS_TLS_FEATURE_PROVIDER
     if (srcConfig->groupInfo != NULL) {
+#ifndef HITLS_TLS_CAP_NO_STR
         for (uint32_t i = 0; i < destConfig->groupInfolen; i++) {
             BSL_SAL_FREE(destConfig->groupInfo[i].name);
         }
+#endif
         BSL_SAL_FREE(destConfig->groupInfo);
         destConfig->groupInfoSize = 0;
         destConfig->groupInfolen = 0;
@@ -284,11 +290,13 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
         }
         for (uint32_t i = 0; i < srcConfig->groupInfolen; i++) {
             destConfig->groupInfo[i] = srcConfig->groupInfo[i];
+#ifndef HITLS_TLS_CAP_NO_STR
             destConfig->groupInfo[i].name =
                 BSL_SAL_Dump(srcConfig->groupInfo[i].name, strlen(srcConfig->groupInfo[i].name) + 1);
             if (destConfig->groupInfo[i].name == NULL) {
                 return HITLS_MEMALLOC_FAIL;
             }
+#endif
         }
         destConfig->groupInfoSize = srcConfig->groupInfolen;
         destConfig->groupInfolen = srcConfig->groupInfolen;

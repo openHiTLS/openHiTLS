@@ -292,7 +292,7 @@ static void FreeGeneralName(void *data)
 {
     HITLS_X509_GeneralName *name = (HITLS_X509_GeneralName *)data;
     if (name->type == HITLS_X509_GN_DNNAME) {
-        BSL_LIST_DeleteAll((BslList *)name->value.data, NULL);
+        BSL_LIST_DeleteAll((BslList *)(uintptr_t)name->value.data, NULL);
         BSL_SAL_Free(name->value.data);
     }
     BSL_SAL_Free(data);
@@ -304,7 +304,7 @@ void HITLS_X509_FreeGeneralName(HITLS_X509_GeneralName *data)
         return;
     }
     if (data->type == HITLS_X509_GN_DNNAME) {
-        BSL_LIST_DeleteAll((BslList *)data->value.data, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
+        BSL_LIST_DeleteAll((BslList *)(uintptr_t)data->value.data, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
     }
     BSL_SAL_Free(data->value.data);
     BSL_SAL_Free(data);
@@ -509,7 +509,8 @@ int32_t X509_ParseCrlNumber(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtCrlNumb
     return HITLS_PKI_SUCCESS;
 }
 
-#if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CRL_PARSE) || defined(HITLS_PKI_X509_CSR_PARSE)
+#if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CSR_PARSE) || \
+    defined(HITLS_PKI_INFO_CRT) || defined(HITLS_PKI_INFO_CSR)
 static int32_t ParseExKeyUsageList(uint32_t layer, BSL_ASN1_Buffer *asn, void *param, BSL_ASN1_List *list)
 {
     (void)param;
@@ -555,6 +556,17 @@ int32_t HITLS_X509_ParseExtendedKeyUsage(HITLS_X509_ExtEntry *extEntry, HITLS_X5
     return ret;
 }
 
+void HITLS_X509_ClearExtendedKeyUsage(HITLS_X509_ExtExKeyUsage *exku)
+{
+    if (exku == NULL) {
+        return;
+    }
+    BSL_LIST_FREE(exku->oidList, NULL);
+}
+#endif
+
+#if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CSR_PARSE) || \
+    defined(HITLS_PKI_INFO_CRT) || defined(HITLS_PKI_INFO_CSR) || defined(HITLS_PKI_INFO_CRL)
 void HITLS_X509_ClearSubjectAltName(HITLS_X509_ExtSan *san)
 {
     if (san == NULL) {
@@ -596,14 +608,6 @@ int32_t HITLS_X509_ParseSubjectAltName(HITLS_X509_ExtEntry *extEntry, HITLS_X509
     san->critical = extEntry->critical;
     return ret;
 }
-
-void HITLS_X509_ClearExtendedKeyUsage(HITLS_X509_ExtExKeyUsage *exku)
-{
-    if (exku == NULL) {
-        return;
-    }
-    BSL_LIST_FREE(exku->oidList, NULL);
-}
 #endif
 
 #if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CRL_PARSE) || defined(HITLS_PKI_X509_CSR)
@@ -629,8 +633,7 @@ int32_t HITLS_X509_ParseExtItem(BSL_ASN1_Buffer *extItem, HITLS_X509_ExtEntry *e
     }
     // extnid
     extEntry->extnId = asnArr[HITLS_X509_EXT_OID_IDX];
-    BslOidString oid = {extEntry->extnId.len, (char *)extEntry->extnId.buff, 0};
-    extEntry->cid = BSL_OBJ_GetCID(&oid);
+    extEntry->cid = BSL_OBJ_GetCidFromOidBuff(extEntry->extnId.buff, extEntry->extnId.len);
     // critical
     if (asnArr[HITLS_X509_EXT_CRITICAL_IDX].tag == 0) {
         extEntry->critical = false;
@@ -719,8 +722,7 @@ static int32_t ParseExtAsnItem(BSL_ASN1_Buffer *asn, void *param, BSL_ASN1_List 
         return ret;
     }
 
-    BslOidString oid = {extEntry.extnId.len, (char *)extEntry.extnId.buff, 0};
-    switch (BSL_OBJ_GetCID(&oid)) {
+    switch (BSL_OBJ_GetCidFromOidBuff(extEntry.extnId.buff, extEntry.extnId.len)) {
         case BSL_CID_CE_KEYUSAGE:
             return ParseExtKeyUsage(&extEntry, (HITLS_X509_CertExt *)ext->extData);
         case BSL_CID_CE_BASICCONSTRAINTS:
@@ -891,7 +893,7 @@ static int32_t SetExtSki(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, const 
     return ret;
 }
 
-static void SetAsn1Templ(BSL_Buffer *value, uint8_t tag, BSL_ASN1_TemplateItem *item, BSL_ASN1_Buffer *asn)
+static inline void SetAsn1Templ(BSL_Buffer *value, uint8_t tag, BSL_ASN1_TemplateItem *item, BSL_ASN1_Buffer *asn)
 {
     item->tag = tag;
     asn->tag = tag;
@@ -909,24 +911,18 @@ static void FreeGnAsns(BSL_ASN1_Buffer *asns, uint32_t number)
     BSL_SAL_Free(asns);
 }
 
-static int32_t GetSanDirNameExtnValue(BslList *dirNames, BSL_ASN1_Buffer *extnValue)
+static int32_t EncodeGnDirNameValue(BslList *dirNames, BSL_ASN1_Buffer *extnValue)
 {
-    BSL_ASN1_Buffer tmp = {0};
-    int32_t ret = HITLS_X509_EncodeNameList((BSL_ASN1_List *)dirNames, &tmp);
+    /* Reuse common encoder to avoid duplicated logic */
+    BSL_Buffer res = {0};
+    int32_t ret = HITLS_X509_GetEncodeDn(dirNames, &res, sizeof(BslList *));
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-
-    BSL_ASN1_TemplateItem item = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0};
-    BSL_ASN1_Template templ = {&item, 1};
-    ret = BSL_ASN1_EncodeTemplate(&templ, &tmp, 1, &extnValue->buff, &extnValue->len);
-    BSL_SAL_Free(tmp.buff);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
     extnValue->tag = HITLS_X509_GENERALNAME_DIR_TAG;
-    return ret;
+    extnValue->buff = res.data;
+    extnValue->len = res.dataLen;
+    return HITLS_PKI_SUCCESS;
 }
 
 static int32_t SetGnEncodeParam(BslList *names, BSL_ASN1_TemplateItem *items, BSL_ASN1_Buffer *asns)
@@ -948,7 +944,7 @@ static int32_t SetGnEncodeParam(BslList *names, BSL_ASN1_TemplateItem *items, BS
                 SetAsn1Templ(&(*name)->value, HITLS_X509_GENERALNAME_DNS_TAG, item, asn);
                 break;
             case HITLS_X509_GN_DNNAME:
-                ret = GetSanDirNameExtnValue((BSL_ASN1_List *)(*name)->value.data, asn);
+                ret = EncodeGnDirNameValue((BSL_ASN1_List *)(uintptr_t)(*name)->value.data, asn);
                 if (ret != HITLS_PKI_SUCCESS) {
                     return ret;
                 }
@@ -1011,19 +1007,18 @@ static int32_t SetExtGeneralNames(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entr
     items[0].tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
     ret = SetGnEncodeParam(san->names, items + 1, asns);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_SAL_Free(items);
-        FreeGnAsns(asns, number);
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto EXIT;
     }
 
     BSL_ASN1_Template templ = {items, number + 1};
     ret = BSL_ASN1_EncodeTemplate(&templ, asns, number, &entry->extnValue.buff, &entry->extnValue.len);
-    BSL_SAL_Free(items);
-    FreeGnAsns(asns, number);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
+EXIT:
+    BSL_SAL_Free(items);
+    FreeGnAsns(asns, number);
     return ret;
 }
 
@@ -1050,10 +1045,9 @@ static int32_t SetExtExKeyUsage(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry,
     BSL_Buffer **buffer = BSL_LIST_First(exku->oidList);
     for (uint32_t i = 0; i < number; i++) {
         if (buffer == NULL || *buffer == NULL || (*buffer)->dataLen == 0 || (*buffer)->data == NULL) {
-            BSL_SAL_Free(items);
-            BSL_SAL_Free(asns);
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_EXTENDED_KU_ELE);
-            return HITLS_X509_ERR_EXT_EXTENDED_KU_ELE;
+            ret = HITLS_X509_ERR_EXT_EXTENDED_KU_ELE;
+            goto EXIT;
         }
         items[i + 1].depth = 1;
         items[i + 1].tag = BSL_ASN1_TAG_OBJECT_ID;
@@ -1065,11 +1059,12 @@ static int32_t SetExtExKeyUsage(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry,
 
     BSL_ASN1_Template templ = {items, number + 1};
     ret = BSL_ASN1_EncodeTemplate(&templ, asns, number, &entry->extnValue.buff, &entry->extnValue.len);
-    BSL_SAL_Free(items);
-    BSL_SAL_Free(asns);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
+EXIT:
+    BSL_SAL_Free(items);
+    BSL_SAL_Free(asns);
     return ret;
 }
 
@@ -1223,12 +1218,12 @@ static int32_t GetExtBCons(HITLS_X509_Ext *ext, uint32_t *val, uint32_t valLen)
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
+    HITLS_X509_ExtBCons *bCons = (HITLS_X509_ExtBCons *)val;
     HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)ext->extData;
     if ((certExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_NO_BCONS);
         return HITLS_X509_ERR_EXT_NO_BCONS;
     }
-    HITLS_X509_ExtBCons *bCons = (HITLS_X509_ExtBCons *)val;
     BslCid cid = BSL_CID_CE_BASICCONSTRAINTS;
     HITLS_X509_ExtEntry *entry = BSL_LIST_Search(ext->extList, &cid, CmpExtByCid, NULL);
     if (entry == NULL) {

@@ -14,7 +14,8 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_KEY_DECODE
+#if defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) && \
+    (defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_ED25519))
 
 #include "crypt_ecc.h"
 #ifdef HITLS_CRYPTO_ECDSA
@@ -32,8 +33,8 @@
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
-#include "crypt_encode_decode_local.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey_local.h"
+#include "crypt_codecskey.h"
 
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
 typedef struct {
@@ -42,17 +43,6 @@ typedef struct {
     BSL_ASN1_Buffer prikey;
     BSL_ASN1_Buffer pubkey;
 } CRYPT_DECODE_EccPrikeyInfo;
-
-static int32_t GetParaId(uint8_t *octs, uint32_t octsLen)
-{
-    BslOidString oidStr = {octsLen, (char *)octs, 0};
-    BslCid cid = BSL_OBJ_GetCID(&oidStr);
-    if (cid == BSL_CID_UNKNOWN) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
-        return CRYPT_PKEY_PARAID_MAX;
-    }
-    return (int32_t)cid;
-}
 
 static int32_t ParsePrikeyAsn1Info(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *pk8AlgoParam,
     CRYPT_DECODE_EccPrikeyInfo *eccPrvInfo)
@@ -104,7 +94,7 @@ static int32_t ParsePrikeyAsn1Info(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buf
 // ecdh is not considered, and it will be improved in the future
 static int32_t EccKeyNew(void *libCtx, BSL_ASN1_Buffer *ecParamOid, void **ecKey)
 {
-    int32_t paraId = GetParaId(ecParamOid->buff, ecParamOid->len);
+    int32_t paraId = BSL_OBJ_GetCidFromOidBuff(ecParamOid->buff, ecParamOid->len);
     if (!IsEcdsaEcParaId(paraId)) {
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
@@ -231,7 +221,7 @@ int32_t CRYPT_ECC_ParsePkcs8Key(void *libCtx, uint8_t *buff, uint32_t buffLen, v
 static int32_t Sm2KeyNew(void *libCtx, BSL_ASN1_Buffer *ecParamOid, CRYPT_SM2_Ctx **ecKey)
 {
     CRYPT_SM2_Ctx *key = NULL;
-    int32_t paraId = GetParaId(ecParamOid->buff, ecParamOid->len);
+    int32_t paraId = BSL_OBJ_GetCidFromOidBuff(ecParamOid->buff, ecParamOid->len);
     if (paraId != CRYPT_ECC_SM2) {
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
@@ -428,4 +418,4 @@ int32_t CRYPT_ED25519_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32
     return ret;
 }
 #endif // HITLS_CRYPTO_ED25519
-#endif // HITLS_CRYPTO_KEY_DECODE
+#endif

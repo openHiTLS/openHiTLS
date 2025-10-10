@@ -27,9 +27,8 @@
 
 CRYPT_CBC_MAC_Ctx *CRYPT_CBC_MAC_NewCtx(CRYPT_MAC_AlgId id)
 {
-    int32_t ret;
     EAL_MacDepMethod method = {0};
-    ret = EAL_MacFindDepMethod(id, NULL, NULL, &method, NULL, false);
+    int32_t ret = EAL_MacFindDepMethod(id, NULL, NULL, &method, NULL, false);
     if (ret != CRYPT_SUCCESS) {
         return NULL;
     }

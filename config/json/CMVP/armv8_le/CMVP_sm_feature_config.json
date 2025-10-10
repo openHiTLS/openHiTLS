@@ -26,6 +26,7 @@
                 "entropy",
                 "key_encode",
                 "key_decode",
+                "key_decode_chain",
                 "codecs",
                 "key_epki",
                 "cbc",

@@ -485,6 +485,7 @@ void *SAL_CERT_GetDefaultPasswordCbUserdata(CERT_MgrCtx *mgrCtx)
     return mgrCtx->defaultPasswdCbUserData;
 }
 
+#ifdef HITLS_TLS_CONFIG_CERT_CALLBACK
 int32_t SAL_CERT_SetVerifyCb(CERT_MgrCtx *mgrCtx, HITLS_VerifyCb cb)
 {
     if (mgrCtx == NULL) {
@@ -502,6 +503,8 @@ HITLS_VerifyCb SAL_CERT_GetVerifyCb(CERT_MgrCtx *mgrCtx)
     }
     return mgrCtx->verifyCb;
 }
+#endif /* HITLS_TLS_CONFIG_CERT_CALLBACK */
+
 #ifdef HITLS_TLS_FEATURE_CERT_CB
 int32_t SAL_CERT_SetCertCb(CERT_MgrCtx *mgrCtx, HITLS_CertCb certCb, void *arg)
 {

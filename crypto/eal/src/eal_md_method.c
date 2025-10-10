@@ -201,6 +201,7 @@ static int32_t SetMdMethod(const CRYPT_EAL_Func *funcs, EAL_MdMethod *method)
 static EAL_MdMethod *EAL_ProviderMdFindMethod(CRYPT_MD_AlgId id, void *libCtx, const char *attrName,
     EAL_MdMethod *method, void **provCtx)
 {
+    BSL_Param params[] = {{0}, {0}, BSL_PARAM_END};
     EAL_MdMethod *retMethod = method;
     const CRYPT_EAL_Func *funcs = NULL;
     int32_t ret = CRYPT_EAL_ProviderGetFuncs(libCtx, CRYPT_EAL_OPERAID_HASH, id, attrName, &funcs, provCtx);
@@ -227,19 +228,10 @@ static EAL_MdMethod *EAL_ProviderMdFindMethod(CRYPT_MD_AlgId id, void *libCtx, c
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_IMPL_NULL);
         goto ERR;
     }
-    BSL_Param params[] = {{0}, {0}, BSL_PARAM_END};
-    ret = BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_MD_DIGEST_SIZE, BSL_PARAM_TYPE_UINT16, &retMethod->mdSize,
+    (void)BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_MD_DIGEST_SIZE, BSL_PARAM_TYPE_UINT16, &retMethod->mdSize,
         sizeof(retMethod->mdSize));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-    ret = BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_MD_BLOCK_SIZE, BSL_PARAM_TYPE_UINT16, &retMethod->blockSize,
+    (void)BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_MD_BLOCK_SIZE, BSL_PARAM_TYPE_UINT16, &retMethod->blockSize,
         sizeof(retMethod->blockSize));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
     ret = retMethod->getParam(NULL, &params[0]);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

@@ -22,6 +22,7 @@
 #include "bsl_sal.h"
 #include "crypt_local_types.h"
 #include "crypt_errno.h"
+#include "crypt_util_ctrl.h"
 #include "crypt_utils.h"
 #include "eal_mac_local.h"
 #include "bsl_params.h"
@@ -117,9 +118,10 @@ CRYPT_KDFTLS12_Ctx* CRYPT_KDFTLS12_NewCtx(void)
     return ctx;
 }
 
-CRYPT_KDFTLS12_Ctx *CRYPT_KDFTLS12_NewCtxEx(void *libCtx)
+CRYPT_KDFTLS12_Ctx *CRYPT_KDFTLS12_NewCtxEx(void *libCtx, int32_t algId)
 {
     (void)libCtx;
+    (void)algId;
     CRYPT_KDFTLS12_Ctx *ctx = CRYPT_KDFTLS12_NewCtx();
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -137,118 +139,13 @@ int32_t CRYPT_KDFTLS12_SetMacMethod(CRYPT_KDFTLS12_Ctx *ctx, const CRYPT_MAC_Alg
         BSL_ERR_PUSH_ERROR(CRYPT_KDFTLS12_PARAM_ERROR);
         return CRYPT_KDFTLS12_PARAM_ERROR;
     }
-    // free the old macCtx
-    if (ctx->macCtx != NULL) {
-        if (ctx->macMeth.freeCtx == NULL) {
-            BSL_ERR_PUSH_ERROR(CRYPT_KDFTLS12_ERR_MAC_METH);
-            return CRYPT_KDFTLS12_ERR_MAC_METH;
-        }
-        ctx->macMeth.freeCtx(ctx->macCtx);
-        ctx->macCtx = NULL;
-        (void)memset_s(&ctx->macMeth, sizeof(EAL_MacMethod), 0, sizeof(EAL_MacMethod));
-    }
-    EAL_MacMethod *macMeth = EAL_MacFindMethod(id, &ctx->macMeth);
-    if (macMeth == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_METH_NULL_MEMBER);
-        return CRYPT_EAL_ERR_METH_NULL_MEMBER;
-    }
-
-    if (macMeth->newCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_KDFTLS12_ERR_MAC_METH);
-        return CRYPT_KDFTLS12_ERR_MAC_METH;
-    }
 #ifdef HITLS_CRYPTO_PROVIDER
-    ctx->macCtx = macMeth->newCtx(ctx->libCtx, id);
+    return CRYPT_CTRL_SetMacMethod(ctx->libCtx, id, CRYPT_KDFTLS12_ERR_MAC_METH, &ctx->macCtx, &ctx->macMeth,
+        &ctx->macId);
 #else
-    ctx->macCtx = macMeth->newCtx(NULL, id);
+    return CRYPT_CTRL_SetMacMethod(NULL, id, CRYPT_KDFTLS12_ERR_MAC_METH, &ctx->macCtx, &ctx->macMeth, &ctx->macId);
 #endif
-    if (ctx->macCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ctx->macId = id;
-    return CRYPT_SUCCESS;
 }
-
-int32_t CRYPT_KDFTLS12_SetKey(CRYPT_KDFTLS12_Ctx *ctx, const uint8_t *key, uint32_t keyLen)
-{
-    if (key == NULL && keyLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    BSL_SAL_ClearFree((void *)ctx->key, ctx->keyLen);
-
-    ctx->key = BSL_SAL_Dump(key, keyLen);
-    if (ctx->key == NULL && keyLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ctx->keyLen = keyLen;
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_KDFTLS12_SetLabel(CRYPT_KDFTLS12_Ctx *ctx, const uint8_t *label, uint32_t labelLen)
-{
-    if (label == NULL && labelLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    BSL_SAL_ClearFree((void *)ctx->label, ctx->labelLen);
-
-    ctx->label = BSL_SAL_Dump(label, labelLen);
-    if (ctx->label == NULL && labelLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ctx->labelLen = labelLen;
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_KDFTLS12_SetSeed(CRYPT_KDFTLS12_Ctx *ctx, const uint8_t *seed, uint32_t seedLen)
-{
-    if (seed == NULL && seedLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    BSL_SAL_ClearFree((void *)ctx->seed, ctx->seedLen);
-
-    ctx->seed = BSL_SAL_Dump(seed, seedLen);
-    if (ctx->seed == NULL && seedLen > 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ctx->seedLen = seedLen;
-    return CRYPT_SUCCESS;
-}
-
-#ifdef HITLS_CRYPTO_PROVIDER
-static int32_t CRYPT_KDFTLS12_SetMdAttr(CRYPT_KDFTLS12_Ctx *ctx, const char *mdAttr, uint32_t valLen)
-{
-    if (mdAttr == NULL || valLen == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_KDFTLS12_PARAM_ERROR);
-        return CRYPT_KDFTLS12_PARAM_ERROR;
-    }
-
-    if (ctx->macCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_KDFTLS12_ERR_MAC_ID_NOT_SET);
-        return CRYPT_KDFTLS12_ERR_MAC_ID_NOT_SET;
-    }
-
-    // Set mdAttr for macCtx
-    if (ctx->macMeth.setParam == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_KDFTLS12_ERR_MAC_METH);
-        return CRYPT_KDFTLS12_ERR_MAC_METH;
-    }
-    BSL_Param param[] = {
-        {.key = CRYPT_PARAM_MD_ATTR, .valueType = BSL_PARAM_TYPE_UTF8_STR,
-            .value = (void *)(uintptr_t)mdAttr, .valueLen = valLen, .useLen = 0},
-        BSL_PARAM_END};
-    return ctx->macMeth.setParam(ctx->macCtx, param);
-}
-#endif
 
 int32_t CRYPT_KDFTLS12_SetParam(CRYPT_KDFTLS12_Ctx *ctx, const BSL_Param *param)
 {
@@ -268,17 +165,17 @@ int32_t CRYPT_KDFTLS12_SetParam(CRYPT_KDFTLS12_Ctx *ctx, const BSL_Param *param)
         GOTO_ERR_IF(CRYPT_KDFTLS12_SetMacMethod(ctx, val), ret);
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_KEY)) != NULL) {
-        GOTO_ERR_IF(CRYPT_KDFTLS12_SetKey(ctx, temp->value, temp->valueLen), ret);
+        GOTO_ERR_IF(CRYPT_CTRL_SetData(temp->value, temp->valueLen, &ctx->key, &ctx->keyLen), ret);
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_LABEL)) != NULL) {
-        GOTO_ERR_IF(CRYPT_KDFTLS12_SetLabel(ctx, temp->value, temp->valueLen), ret);
+        GOTO_ERR_IF(CRYPT_CTRL_SetData(temp->value, temp->valueLen, &ctx->label, &ctx->labelLen), ret);
     }
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_KDF_SEED)) != NULL) {
-        GOTO_ERR_IF(CRYPT_KDFTLS12_SetSeed(ctx, temp->value, temp->valueLen), ret);
+        GOTO_ERR_IF(CRYPT_CTRL_SetData(temp->value, temp->valueLen, &ctx->seed, &ctx->seedLen), ret);
     }
 #ifdef HITLS_CRYPTO_PROVIDER
     if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_MD_ATTR)) != NULL) {
-        GOTO_ERR_IF(CRYPT_KDFTLS12_SetMdAttr(ctx, temp->value, temp->valueLen), ret);
+        GOTO_ERR_IF(CRYPT_CTRL_SetMdAttrToHmac(temp->value, temp->valueLen, ctx->macMeth.setParam, ctx->macCtx), ret);
     }
 #endif
 ERR:
@@ -291,8 +188,9 @@ int32_t CRYPT_KDFTLS12_Derive(CRYPT_KDFTLS12_Ctx *ctx, uint8_t *out, uint32_t le
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->macMeth.deinit == NULL || ctx->macMeth.freeCtx == NULL || ctx->macMeth.init == NULL ||
-        ctx->macMeth.reinit == NULL || ctx->macMeth.update == NULL || ctx->macMeth.final == NULL) {
+    bool methodInvalid = ctx->macMeth.deinit == NULL || ctx->macMeth.freeCtx == NULL || ctx->macMeth.init == NULL ||
+        ctx->macMeth.reinit == NULL || ctx->macMeth.update == NULL || ctx->macMeth.final == NULL;
+    if (methodInvalid == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_KDFTLS12_ERR_MAC_METH);
         return CRYPT_KDFTLS12_ERR_MAC_METH;
     }

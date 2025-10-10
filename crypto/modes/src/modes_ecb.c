@@ -68,18 +68,12 @@ int32_t MODES_ECB_Decrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t
     return MODES_ECB_Crypt(ctx, in, out, len, false);
 }
 
-MODES_CipherCtx *MODES_ECB_NewCtx(int32_t algId)
-{
-    return MODES_CipherNewCtx(algId);
-}
-
 int32_t MODES_ECB_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc)
 {
     (void)iv;
     (void)ivLen;
-    int32_t ret;
-    ret = enc ? modeCtx->commonCtx.ciphMeth->setEncryptKey(modeCtx->commonCtx.ciphCtx, key, keyLen) :
+    int32_t ret = enc ? modeCtx->commonCtx.ciphMeth->setEncryptKey(modeCtx->commonCtx.ciphCtx, key, keyLen) :
         modeCtx->commonCtx.ciphMeth->setDecryptKey(modeCtx->commonCtx.ciphCtx, key, keyLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

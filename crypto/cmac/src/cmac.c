@@ -27,9 +27,8 @@
 
 CRYPT_CMAC_Ctx *CRYPT_CMAC_NewCtx(CRYPT_MAC_AlgId id)
 {
-    int32_t ret;
-    EAL_MacDepMethod method = {0};
-    ret = EAL_MacFindDepMethod(id, NULL, NULL, &method, NULL, false);
+    EAL_MacDepMethod method = {{0}, {NULL}};
+    int32_t ret = EAL_MacFindDepMethod(id, NULL, NULL, &method, NULL, false);
     if (ret != CRYPT_SUCCESS) {
         return NULL;
     }
@@ -82,9 +81,8 @@ static void CMAC_Final(CRYPT_CMAC_Ctx *ctx)
     uint8_t k1[CIPHER_MAC_MAXBLOCKSIZE];
     const EAL_SymMethod *method = ctx->method;
     uint32_t blockSize = method->blockSize;
-    int32_t ret;
 
-    ret = method->encryptBlock(ctx->key, z, l, blockSize);
+    int32_t ret = method->encryptBlock(ctx->key, z, l, blockSize);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return;

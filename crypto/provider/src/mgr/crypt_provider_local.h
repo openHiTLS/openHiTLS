@@ -38,7 +38,9 @@ extern "C" {
 #define DEFAULT_PROVIDER_PATH_LEN_MAX 4095
 
 struct EAL_ProviderMgrCtx {
+#ifdef HITLS_BSL_SAL_DL
     void *handle; // so handle
+#endif
     void *provCtx;
     BSL_SAL_RefCount ref;
     char *providerName;

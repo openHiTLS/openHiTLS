@@ -23,7 +23,7 @@
 
 /**
  * @brief Sign a message using Hypertree
- * 
+ *
  * @param msg Input message to sign
  * @param msgLen Length of the message
  * @param treeIdx Index of the tree to use
@@ -38,7 +38,7 @@ int32_t HypertreeSign(const uint8_t *msg, uint32_t msgLen, uint64_t treeIdx, uin
 
 /**
  * @brief Verify a Hypertree signature
- * 
+ *
  * @param msg Input message that was signed
  * @param msgLen Length of the message
  * @param sig Hypertree signature to verify

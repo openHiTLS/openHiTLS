@@ -12,7 +12,9 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
- 
+
+#include "hitls_build.h"
+#ifdef HITLS_BSL_PRINT
 #include <stdarg.h>
 #include <inttypes.h>
 #include <string.h>
@@ -160,7 +162,7 @@ int32_t BSL_PRINT_Fmt(uint32_t layer, BSL_UIO *uio, const char *fmt, ...)
 }
 
 // rfc822: https://www.w3.org/Protocols/rfc822/
-static const char MONTH_STR[12][4] = {
+const char BSL_PRINT_MONTH_STR[12][4] = {
     "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
 int32_t BSL_PRINT_Time(uint32_t layer, const BSL_TIME *time, BSL_UIO *uio)
@@ -169,7 +171,7 @@ int32_t BSL_PRINT_Time(uint32_t layer, const BSL_TIME *time, BSL_UIO *uio)
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
-    return BSL_PRINT_Fmt(layer, uio, "%s %u %02u:%02u:%02u %u GMT\n", MONTH_STR[time->month - 1],
+    return BSL_PRINT_Fmt(layer, uio, BSL_PRINT_TIME_FMT"\n", BSL_PRINT_MONTH_STR[time->month - 1],
         time->day, time->hour, time->minute, time->second, time->year);
 }
 
@@ -203,3 +205,4 @@ int32_t BSL_PRINT_Number(uint32_t layer, const char *title, const uint8_t *data,
     }
     return BSL_PRINT_Fmt(layer, uio, "%"PRIu64" (0x%"PRIX64")\n", num, num);
 }
+#endif

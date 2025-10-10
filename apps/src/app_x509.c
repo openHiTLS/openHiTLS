@@ -28,7 +28,7 @@
 #include "bsl_errno.h"
 #include "crypt_errno.h"
 #include "crypt_eal_rand.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey.h"
 #include "crypt_eal_codecs.h"
 #include "crypt_eal_md.h"
 #include "hitls_pki_errno.h"

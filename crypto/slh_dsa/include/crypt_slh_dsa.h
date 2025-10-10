@@ -28,37 +28,37 @@ typedef union Adrs SlhDsaAdrs;
 
 /**
  * @brief Create a new SLH-DSA context
- * 
+ *
  * @return CryptSlhDsaCtx* Pointer to the new SLH-DSA context
  */
 CryptSlhDsaCtx *CRYPT_SLH_DSA_NewCtx(void);
 
 /**
  * @brief Create a new SLH-DSA context
- * 
+ *
  * @param libCtx Pointer to the library context
- * 
+ *
  * @return CryptSlhDsaCtx* Pointer to the new SLH-DSA context
  */
 CryptSlhDsaCtx *CRYPT_SLH_DSA_NewCtxEx(void *libCtx);
 
 /**
  * @brief Free a SLH-DSA context
- * 
+ *
  * @param ctx Pointer to the SLH-DSA context
  */
 void CRYPT_SLH_DSA_FreeCtx(CryptSlhDsaCtx *ctx);
 
 /**
  * @brief Generate a SLH-DSA key pair
- * 
+ *
  * @param ctx Pointer to the SLH-DSA context
  */
 int32_t CRYPT_SLH_DSA_Gen(CryptSlhDsaCtx *ctx);
 
 /**
  * @brief Sign data using SLH-DSA
- * 
+ *
  * @param ctx Pointer to the SLH-DSA context
  * @param algId Algorithm ID
  * @param data Pointer to the data to sign
@@ -71,7 +71,7 @@ int32_t CRYPT_SLH_DSA_Sign(CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t *da
 
 /**
  * @brief Verify data using SLH-DSA
- * 
+ *
  * @param ctx Pointer to the SLH-DSA context
  * @param algId Algorithm ID
  * @param data Pointer to the data to verify
@@ -85,7 +85,7 @@ int32_t CRYPT_SLH_DSA_Verify(const CryptSlhDsaCtx *ctx, int32_t algId, const uin
 
 /**
  * @brief Control function for SLH-DSA
- * 
+ *
  * @param ctx Pointer to the SLH-DSA context
  * @param opt Option
  * @param val Value

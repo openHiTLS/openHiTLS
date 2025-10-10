@@ -855,39 +855,39 @@ void FRAME_RegCryptMethod(void)
 {
 #ifndef HITLS_TLS_FEATURE_PROVIDER
     HITLS_CRYPT_BaseMethod cryptMethod = { 0 };
-    cryptMethod.randBytes = STUB_CRYPT_RandBytesCallback;
-    cryptMethod.hmacSize = STUB_CRYPT_HmacSizeCallback;
-    cryptMethod.hmacInit = STUB_CRYPT_HmacInitCallback;
-    cryptMethod.hmacFree = STUB_CRYPT_HmacFreeCallback;
-    cryptMethod.hmacUpdate = STUB_CRYPT_HmacUpdateCallback;
-    cryptMethod.hmacFinal = STUB_CRYPT_HmacFinalCallback;
-    cryptMethod.hmac = STUB_CRYPT_HmacCallback;
-    cryptMethod.digestSize = STUB_CRYPT_DigestSizeCallback;
-    cryptMethod.digestInit = STUB_CRYPT_DigestInitCallback;
-    cryptMethod.digestCopy = STUB_CRYPT_DigestCopyCallback;
-    cryptMethod.digestFree = CRYPT_DEFAULT_DigestFree;
-    cryptMethod.digestUpdate = STUB_CRYPT_DigestUpdateCallback;
-    cryptMethod.digestFinal = STUB_CRYPT_DigestFinalCallback;
-    cryptMethod.digest = STUB_CRYPT_DigestCallback;
-    cryptMethod.encrypt = STUB_CRYPT_EncryptCallback;
-    cryptMethod.decrypt = STUB_CRYPT_DecryptCallback;
-    cryptMethod.cipherFree = CRYPT_DEFAULT_CipherFree;
+    cryptMethod.randBytes = (CRYPT_RandBytesCallback)STUB_CRYPT_RandBytesCallback;
+    cryptMethod.hmacSize = (CRYPT_HmacSizeCallback)STUB_CRYPT_HmacSizeCallback;
+    cryptMethod.hmacInit = (CRYPT_HmacInitCallback)STUB_CRYPT_HmacInitCallback;
+    cryptMethod.hmacFree = (CRYPT_HmacFreeCallback)STUB_CRYPT_HmacFreeCallback;
+    cryptMethod.hmacUpdate = (CRYPT_HmacUpdateCallback)STUB_CRYPT_HmacUpdateCallback;
+    cryptMethod.hmacFinal = (CRYPT_HmacFinalCallback)STUB_CRYPT_HmacFinalCallback;
+    cryptMethod.hmac = (CRYPT_HmacCallback)STUB_CRYPT_HmacCallback;
+    cryptMethod.digestSize = (CRYPT_DigestSizeCallback)STUB_CRYPT_DigestSizeCallback;
+    cryptMethod.digestInit = (CRYPT_DigestInitCallback)STUB_CRYPT_DigestInitCallback;
+    cryptMethod.digestCopy = (CRYPT_DigestCopyCallback)STUB_CRYPT_DigestCopyCallback;
+    cryptMethod.digestFree = (CRYPT_DigestFreeCallback)CRYPT_DEFAULT_DigestFree;
+    cryptMethod.digestUpdate = (CRYPT_DigestUpdateCallback)STUB_CRYPT_DigestUpdateCallback;
+    cryptMethod.digestFinal = (CRYPT_DigestFinalCallback)STUB_CRYPT_DigestFinalCallback;
+    cryptMethod.digest = (CRYPT_DigestCallback)STUB_CRYPT_DigestCallback;
+    cryptMethod.encrypt = (CRYPT_EncryptCallback)STUB_CRYPT_EncryptCallback;
+    cryptMethod.decrypt = (CRYPT_DecryptCallback)STUB_CRYPT_DecryptCallback;
+    cryptMethod.cipherFree = (CRYPT_CipherFreeCallback)CRYPT_DEFAULT_CipherFree;
     HITLS_CRYPT_RegisterBaseMethod(&cryptMethod);
 
     HITLS_CRYPT_EcdhMethod ecdhMethod = { 0 };
-    ecdhMethod.generateEcdhKeyPair = STUB_CRYPT_GenerateEcdhKeyPairCallback;
-    ecdhMethod.freeEcdhKey = CRYPT_DEFAULT_FreeKey;
-    ecdhMethod.getEcdhPubKey = STUB_CRYPT_GetEcdhEncodedPubKeyCallback;
-    ecdhMethod.calcEcdhSharedSecret = STUB_CRYPT_CalcEcdhSharedSecretCallback;
+    ecdhMethod.generateEcdhKeyPair = (CRYPT_GenerateEcdhKeyPairCallback)STUB_CRYPT_GenerateEcdhKeyPairCallback;
+    ecdhMethod.freeEcdhKey = (CRYPT_FreeEcdhKeyCallback)CRYPT_DEFAULT_FreeKey;
+    ecdhMethod.getEcdhPubKey = (CRYPT_GetEcdhEncodedPubKeyCallback)STUB_CRYPT_GetEcdhEncodedPubKeyCallback;
+    ecdhMethod.calcEcdhSharedSecret = (CRYPT_CalcEcdhSharedSecretCallback)STUB_CRYPT_CalcEcdhSharedSecretCallback;
     HITLS_CRYPT_RegisterEcdhMethod(&ecdhMethod);
 
     HITLS_CRYPT_DhMethod dhMethod = { 0 };
-    dhMethod.generateDhKeyBySecbits = STUB_CRYPT_GenerateDhKeyBySecbitsCallback;
-    dhMethod.generateDhKeyByParams = STUB_CRYPT_GenerateDhKeyByParamsCallback;
-    dhMethod.freeDhKey = CRYPT_DEFAULT_FreeKey;
-    dhMethod.getDhParameters = STUB_CRYPT_DHGetParametersCallback;
-    dhMethod.getDhPubKey = STUB_CRYPT_GetDhEncodedPubKeyCallback;
-    dhMethod.calcDhSharedSecret = STUB_CRYPT_CalcDhSharedSecretCallback;
+    dhMethod.generateDhKeyBySecbits = (CRYPT_GenerateDhKeyBySecbitsCallback)STUB_CRYPT_GenerateDhKeyBySecbitsCallback;
+    dhMethod.generateDhKeyByParams = (CRYPT_GenerateDhKeyByParamsCallback)STUB_CRYPT_GenerateDhKeyByParamsCallback;
+    dhMethod.freeDhKey = (CRYPT_FreeDhKeyCallback)CRYPT_DEFAULT_FreeKey;
+    dhMethod.getDhParameters = (CRYPT_DHGetParametersCallback)STUB_CRYPT_DHGetParametersCallback;
+    dhMethod.getDhPubKey = (CRYPT_GetDhEncodedPubKeyCallback)STUB_CRYPT_GetDhEncodedPubKeyCallback;
+    dhMethod.calcDhSharedSecret = (CRYPT_CalcDhSharedSecretCallback)STUB_CRYPT_CalcDhSharedSecretCallback;
     HITLS_CRYPT_RegisterDhMethod(&dhMethod);
 #else
     STUB_Init();

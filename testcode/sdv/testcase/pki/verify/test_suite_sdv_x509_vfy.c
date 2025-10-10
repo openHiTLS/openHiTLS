@@ -250,6 +250,15 @@ EXIT:
 }
 /* END_CASE */
 
+#ifdef HITLS_PKI_X509_VFY_CB
+static int32_t X509StoreCtrlCbkSuc(int32_t err, HITLS_X509_StoreCtx *ctx)
+{
+    (void)ctx;
+    (void)err;
+    return HITLS_PKI_SUCCESS;
+}
+#endif
+
 /* BEGIN_CASE */
 void SDV_X509_STORE_CTRL_NEW_FIELDS_FUNC_TC003(void)
 {
@@ -275,10 +284,10 @@ void SDV_X509_STORE_CTRL_NEW_FIELDS_FUNC_TC003(void)
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CUR_CERT, &getCurrentCert, sizeof(HITLS_X509_Cert *)), HITLS_PKI_SUCCESS);
 
     /* Test verify callback field */
-    int32_t (*testCallback)(int32_t, HITLS_X509_StoreCtx*) = NULL;
+    int32_t (*testCallback)(int32_t, HITLS_X509_StoreCtx*) = X509StoreCtrlCbkSuc;
     int32_t (*getCallback)(int32_t, HITLS_X509_StoreCtx*) = NULL;
 
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB, &testCallback, sizeof(testCallback)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB, testCallback, sizeof(testCallback)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(store->verifyCb, testCallback);
 
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_VERIFY_CB, &getCallback, sizeof(getCallback)), HITLS_PKI_SUCCESS);
@@ -641,7 +650,7 @@ static int32_t X509StoreCtrlCbk(HITLS_X509_StoreCtx *store, int cbkflag)
         cbk = X509_STORECTX_VerifyCb2;
     }
 
-    return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB, &cbk, sizeof(X509_STORECTX_VerifyCb));
+    return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB, cbk, sizeof(X509_STORECTX_VerifyCb));
 }
 #endif
 
@@ -1160,7 +1169,7 @@ static int32_t X509StoreCtrlCbk2(HITLS_X509_StoreCtx *store, int cbkflag)
         default:
             return HITLS_PKI_SUCCESS;
     }
-    return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB, &cbk, sizeof(X509_STORECTX_VerifyCb));
+    return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB, cbk, sizeof(X509_STORECTX_VerifyCb));
 }
 #endif
 
@@ -1227,7 +1236,7 @@ static int32_t X509StoreCtrlCbk3(HITLS_X509_StoreCtx *store, int cbkflag)
         return HITLS_PKI_SUCCESS;
     }
     X509_STORECTX_VerifyCb cbk = X509StoreCbk3;
-    return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB, &cbk, sizeof(X509_STORECTX_VerifyCb));
+    return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB, cbk, sizeof(X509_STORECTX_VerifyCb));
 }
 #endif
 

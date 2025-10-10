@@ -1874,7 +1874,9 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKCS12_GEN_SECRET_BAG_TC001(char *pkeyPath, char *certPath)
 {
-#if !defined(HITLS_CRYPTO_KEY_DECODE) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_PKI_PKCS12_GEN)
+#if !defined(HITLS_PKI_PKCS12_PARSE) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_PKI_PKCS12_GEN)
+    (void)pkeyPath;
+    (void)certPath;
     SKIP_TEST();
 #else
     TestMemInit();
@@ -1964,7 +1966,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKCS12_BAG_CTRL_TC001(void)
 {
-#if !defined(HITLS_CRYPTO_KEY_DECODE) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_PKI_PKCS12_GEN)
+#if !defined(HITLS_PKI_PKCS12_PARSE) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_PKI_PKCS12_GEN)
     SKIP_TEST();
 #else
     TestMemInit();
@@ -2132,7 +2134,8 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKCS12_BAG_CUSTOM_OID_TC001(void)
 {
-#if !defined(HITLS_CRYPTO_KEY_DECODE) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_PKI_PKCS12_GEN)
+#if !defined(HITLS_CRYPTO_KEY_DECODE) || !defined(HITLS_BSL_SAL_FILE) || !defined(HITLS_PKI_PKCS12_GEN) || \
+    !defined(HITLS_BSL_OBJ_CUSTOM)
     SKIP_TEST();
 #else
     TestMemInit();
@@ -2202,6 +2205,7 @@ EXIT:
 }
 /* END_CASE */
 
+#ifdef HITLS_PKI_PKCS12_PARSE
 static int32_t STUB_HITLS_X509_AddListItemDefault1(void *item, uint32_t len, BSL_ASN1_List *list)
 {
     (void)item;
@@ -2225,6 +2229,7 @@ static int32_t STUB_HITLS_X509_AddListItemDefault2(void *item, uint32_t len, BSL
     }
     return BSL_MALLOC_FAIL;
 }
+#endif
 
 /**
  * For test parse safeBag-cert in incorrect condition.
@@ -2278,6 +2283,7 @@ EXIT:
 }
 /* END_CASE */
 
+#ifdef HITLS_PKI_PKCS12_PARSE
 static int32_t STUB_HITLS_PKCS12_ParseAsn1AddList(BSL_Buffer *encode, BSL_ASN1_List *list, uint32_t parseType)
 {
     (void)encode;
@@ -2343,6 +2349,8 @@ static int32_t STUB_BSL_LIST_AddElement(BslList *pList, void *pData, BslListPosi
     #define MAX_TRIGGERS 103
 #else
     #define MAX_TRIGGERS 51
+#endif
+
 #endif
 /**
  * For test parse authSafe in incorrect condition.

@@ -17,6 +17,8 @@
 #define HITLS_X509_ADAPT_LOCAL_H
 
 #include <stdint.h>
+#include "hitls_pki_cert.h"
+#include "hitls_pki_x509.h"
 #include "hitls_type.h"
 #include "hitls_cert.h"
 #include "hitls_crypt_type.h"
@@ -26,9 +28,9 @@
 extern "C" {
 #endif
 
-HITLS_CERT_Store *HITLS_X509_Adapt_StoreNew(void);
+#define HITLS_X509_Adapt_StoreNew HITLS_X509_StoreCtxNew
 HITLS_CERT_Store *HITLS_X509_Adapt_StoreDup(HITLS_CERT_Store *store);
-void HITLS_X509_Adapt_StoreFree(HITLS_CERT_Store *store);
+#define HITLS_X509_Adapt_StoreFree HITLS_X509_StoreCtxFree
 int32_t HITLS_X509_Adapt_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store, HITLS_CERT_CtrlCmd cmd,
     void *input, void *output);
 
@@ -46,9 +48,9 @@ HITLS_CERT_X509 *HITLS_CERT_ProviderCertParse(HITLS_Lib_Ctx *libCtx, const char 
 #endif
 HITLS_CERT_Chain *HITLS_X509_Adapt_BundleCertParse(HITLS_Lib_Ctx *libCtx, const char *attrName, const uint8_t *buf,
     uint32_t len, HITLS_ParseType type, const char *format);
-HITLS_CERT_X509 *HITLS_X509_Adapt_CertDup(HITLS_CERT_X509 *cert);
+#define HITLS_X509_Adapt_CertDup HITLS_X509_Adapt_CertRef
 HITLS_CERT_X509 *HITLS_X509_Adapt_CertRef(HITLS_CERT_X509 *cert);
-void HITLS_X509_Adapt_CertFree(HITLS_CERT_X509 *cert);
+#define HITLS_X509_Adapt_CertFree HITLS_X509_CertFree
 int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CERT_CtrlCmd cmd,
     void *input, void *output);
 

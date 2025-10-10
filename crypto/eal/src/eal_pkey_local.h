@@ -36,7 +36,7 @@ extern "C" {
 */
 struct EAL_PkeyCtx {
     bool isProvider;
-    EAL_PkeyUnitaryMethod *method;
+    EAL_PkeyUnitaryMethod method;
     void *key;
     void *extData;
     CRYPT_PKEY_AlgId id;

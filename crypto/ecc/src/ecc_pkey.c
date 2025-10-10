@@ -20,6 +20,7 @@
 #include "crypt_errno.h"
 #include "crypt_types.h"
 #include "crypt_utils.h"
+#include "crypt_util_ctrl.h"
 #include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
@@ -50,7 +51,6 @@ void ECC_FreeCtx(ECC_Pkey *ctx)
     ECC_FreePara(ctx->para);
     BSL_SAL_FREE(ctx->mdAttr);
     BSL_SAL_Free(ctx);
-    return;
 }
 
 ECC_Pkey *ECC_DupCtx(ECC_Pkey *ctx)
@@ -493,16 +493,6 @@ static int32_t ECC_GetPubXYBnBin(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t
     BN_Destroy(y);
     return ret;
 }
-
-static uint32_t GetOrderBits(const ECC_Pkey *ctx)
-{
-    if (ctx->para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_ERR_PARA);
-        return 0;
-    }
-    return BN_Bits(ctx->para->n);
-}
-
 static uint32_t ECC_GetKeyLen(const ECC_Pkey *ctx)
 {
     if ((ctx == NULL) || (ctx->para == NULL)) {
@@ -582,18 +572,14 @@ int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t len)
         case CRYPT_CTRL_GEN_ECC_PUBLICKEY:
             return GenPublicKey(ctx);
         case CRYPT_CTRL_GET_ECC_ORDER_BITS:
-            return GetUintCtrl(ctx, val, len, (GetUintCallBack)GetOrderBits);
+            return CRYPT_CTRL_GetNum32(ctx->para == NULL ? 0 : BN_Bits(ctx->para->n), val, len);
         case CRYPT_CTRL_GET_PUBKEY_LEN:
-            return GetUintCtrl(ctx, val, len, (GetUintCallBack)ECC_GetPubKeyLen);
+            return CRYPT_CTRL_GET_NUM32_EX(ECC_GetPubKeyLen, ctx, val, len);
         case CRYPT_CTRL_GET_PRVKEY_LEN:
         case CRYPT_CTRL_GET_SHARED_KEY_LEN:
-            return GetUintCtrl(ctx, val, len, (GetUintCallBack)ECC_GetKeyLen);
+            return CRYPT_CTRL_GET_NUM32_EX(ECC_GetKeyLen, ctx, val, len);
         case CRYPT_CTRL_UP_REFERENCES:
-            if (len != (uint32_t)sizeof(int)) {
-                BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_CTRL_LEN);
-                return CRYPT_ECC_PKEY_ERR_CTRL_LEN;
-            }
-            return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
+            return BSL_SAL_AtomicRefUpCtrl(&(ctx->references), val, len);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION);
             return CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION;
@@ -618,6 +604,7 @@ ECC_Pkey *ECC_PkeyNewCtx(CRYPT_PKEY_ParaId id)
     return key;
 }
 
+#ifdef HITLS_CRYPTO_ECC_CMP
 int32_t ECC_PkeyCmp(const ECC_Pkey *a, const ECC_Pkey *b)
 {
     RETURN_RET_IF(a == NULL || b == NULL, CRYPT_NULL_INPUT);
@@ -630,4 +617,5 @@ int32_t ECC_PkeyCmp(const ECC_Pkey *a, const ECC_Pkey *b)
 
     return CRYPT_SUCCESS;
 }
+#endif
 #endif /* HITLS_CRYPTO_ECC */

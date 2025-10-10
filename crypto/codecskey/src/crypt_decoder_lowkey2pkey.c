@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_CRYPTO_PROVIDER)
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
 #include "crypt_eal_implprovider.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_provider.h"
@@ -23,7 +23,7 @@
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "eal_pkey.h"
-#include "crypt_decode_key_impl.h"
+#include "crypt_decoder.h"
 #include "bsl_err_internal.h"
 
 typedef struct {
@@ -161,8 +161,8 @@ static int32_t ImportTargetPkey(const BSL_Param *param, void *args)
     ImportTargetPkeyArgs *importTargetPkeyArgs = (ImportTargetPkeyArgs *)args;
     void *provCtx = NULL;
     CRYPT_EAL_PkeyMgmtInfo *pkeyAlgInfo = importTargetPkeyArgs->pkeyAlgInfo;
-    if (pkeyAlgInfo == NULL || pkeyAlgInfo->keyMgmtMethod->provNewCtx == NULL ||
-        pkeyAlgInfo->keyMgmtMethod->import == NULL || pkeyAlgInfo->keyMgmtMethod->freeCtx == NULL) {
+    if (pkeyAlgInfo == NULL || pkeyAlgInfo->keyMgmtMethod.provNewCtx == NULL ||
+        pkeyAlgInfo->keyMgmtMethod.import == NULL || pkeyAlgInfo->keyMgmtMethod.freeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -171,15 +171,15 @@ static int32_t ImportTargetPkey(const BSL_Param *param, void *args)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    void *keyRef = pkeyAlgInfo->keyMgmtMethod->provNewCtx(provCtx, pkeyAlgInfo->algId);
+    void *keyRef = pkeyAlgInfo->keyMgmtMethod.provNewCtx(provCtx, pkeyAlgInfo->algId);
     if (keyRef == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    ret = pkeyAlgInfo->keyMgmtMethod->import(keyRef, param);
+    ret = pkeyAlgInfo->keyMgmtMethod.import(keyRef, param);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        pkeyAlgInfo->keyMgmtMethod->freeCtx(keyRef);
+        pkeyAlgInfo->keyMgmtMethod.freeCtx(keyRef);
         return ret;
     }
     importTargetPkeyArgs->targetKeyRef = keyRef;
@@ -288,7 +288,6 @@ int32_t DECODER_LowKeyObject2PkeyObjectDecode(void *ctx, const BSL_Param *inPara
     return ret;
 
 EXIT:
-    BSL_SAL_Free(pkeyAlgInfo.keyMgmtMethod);
     if (targetKeyRef != NULL) {
         method.freeCtx(targetKeyRef);
     }
@@ -319,4 +318,4 @@ void DECODER_LowKeyObject2PkeyObjectFreeCtx(void *ctx)
     BSL_SAL_Free(ctx);
 }
 
-#endif
+#endif /* HITLS_CRYPTO_KEY_DECODE_CHAIN */

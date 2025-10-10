@@ -267,6 +267,7 @@ int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t len);
  */
 ECC_Pkey *ECC_PkeyNewCtx(CRYPT_PKEY_ParaId id);
 
+#ifdef HITLS_CRYPTO_ECC_CMP
 /**
  * @ingroup ecc
  * @brief ecc Compare public keys and parameters
@@ -282,6 +283,9 @@ ECC_Pkey *ECC_PkeyNewCtx(CRYPT_PKEY_ParaId id);
  * @retval For other error codes, see crypt_errno.h.
  */
 int32_t ECC_PkeyCmp(const ECC_Pkey *a, const ECC_Pkey *b);
+#else
+#define ECC_PkeyCmp NULL
+#endif
 
 /**
  * @ingroup ecc

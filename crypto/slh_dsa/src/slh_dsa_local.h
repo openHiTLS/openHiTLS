@@ -49,7 +49,7 @@ typedef enum {
 
 /**
  * @brief Address structure definition
- * 
+ *
  *  all the address is big-endian
  *  it can be a address or a compressed address
  *  Address:
@@ -57,7 +57,7 @@ typedef enum {
  *  | tree address  | 12 bytes
  *  | type          | 4 bytes
  *  | padding       | 12 bytes
- * 
+ *
  *  Compressed Address:
  *  | layer address | 1 bytes
  *  | tree address  | 8 bytes
@@ -159,7 +159,7 @@ struct SlhDsaCtx {
     uint8_t *addrand; // optional random bytes, can be set through CTRL interface, or comes from RNG
     uint32_t addrandLen; // length of the optional random bytes
     bool isPrehash;
-    bool isXmss; /* XMSS and SLH-DSA share common structure, 
+    bool isXmss; /* XMSS and SLH-DSA share common structure,
                   * true : XMSS, false : SLH-DSA */
     SlhDsaPrvKey prvKey;
     SlhDsaHashFuncs hashFuncs;

@@ -458,7 +458,7 @@ void SDV_CRYPTO_AES_GET_PADDING_API_TC001(Hex *key, Hex *iv)
     ret = CRYPT_EAL_CipherGetPadding(ctx);
     ASSERT_TRUE(ret == CRYPT_PADDING_ZEROS);
     ret = CRYPT_EAL_CipherGetPadding(NULL);
-    ASSERT_TRUE(ret == CRYPT_NULL_INPUT);
+    ASSERT_TRUE(ret == CRYPT_PADDING_MAX_COUNT);
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);

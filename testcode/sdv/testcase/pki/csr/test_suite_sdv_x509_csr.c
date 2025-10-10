@@ -23,7 +23,7 @@
 #include "hitls_pki_errno.h"
 #include "crypt_types.h"
 #include "crypt_errno.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey.h"
 #include "crypt_eal_codecs.h"
 #include "crypt_eal_rand.h"
 #include "eal_pkey_local.h"
@@ -492,7 +492,7 @@ void SDV_X509_CSR_GEN_PROCESS_TC001(char *csrPath, int csrFormat, char *privPath
 
     TestMemInit();
 
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(keyFormat, keyType, privPath, NULL, &privKey), 0);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(keyFormat, keyType, privPath, NULL, 0, &privKey), 0);
     ASSERT_EQ(HITLS_X509_CsrParseFile(csrFormat, csrPath, &csr), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrSign(mdId, privKey, NULL, NULL), HITLS_X509_ERR_INVALID_PARAM);
@@ -527,7 +527,7 @@ void SDV_X509_CSR_GEN_PROCESS_TC002(char *privPath, int keyFormat, int keyType)
     HITLS_X509_DN dnName[1] = {{BSL_CID_AT_COUNTRYNAME, (uint8_t *)"CN", strlen("CN")}};
 
     TestMemInit();
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(keyFormat, keyType, privPath, NULL, &key), 0);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(keyFormat, keyType, privPath, NULL, 0, &key), 0);
 
     new = HITLS_X509_CsrNew();
     ASSERT_TRUE(new != NULL);

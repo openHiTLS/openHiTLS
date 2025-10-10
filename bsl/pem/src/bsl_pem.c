@@ -172,8 +172,8 @@ int32_t BSL_PEM_DecodePemToAsn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symb
  */
 bool BSL_PEM_IsPemFormat(char *encode, uint32_t encodeLen)
 {
-    if (encode == NULL || encodeLen < (BSL_PEM_BEGIN_STR_LEN + BSL_PEM_END_STR_LEN
-        + 2 * BSL_PEM_SHORT_DASH_STR_LEN)) {
+    // 2 denote two dash after the begin and end label
+    if (encode == NULL || encodeLen < (BSL_PEM_BEGIN_STR_LEN + BSL_PEM_END_STR_LEN + 2 * BSL_PEM_SHORT_DASH_STR_LEN)) {
         return false;
     }
     // match "-----BEGIN"
@@ -181,27 +181,18 @@ bool BSL_PEM_IsPemFormat(char *encode, uint32_t encodeLen)
     if (begin == NULL) {
         return false;
     }
-    char *tmp = (char *)encode + BSL_PEM_BEGIN_STR_LEN;
     // match "-----"
-    begin = strstr(tmp, BSL_PEM_SHORT_DASH_STR);
-    if (begin == NULL) {
+    char *dashAfterBegin = strstr(begin + BSL_PEM_BEGIN_STR_LEN, BSL_PEM_SHORT_DASH_STR);
+    if (dashAfterBegin == NULL) {
         return false;
     }
-
-    tmp = begin + BSL_PEM_SHORT_DASH_STR_LEN;
-
     // match "-----END"
-    begin = strstr(tmp, BSL_PEM_END_STR);
-    if (begin == NULL) {
+    char *end = strstr(dashAfterBegin + BSL_PEM_SHORT_DASH_STR_LEN, BSL_PEM_END_STR);
+    if (end == NULL) {
         return false;
     }
-    tmp = begin + BSL_PEM_END_STR_LEN;
-
     // match "-----"
-    if (strstr(tmp, BSL_PEM_SHORT_DASH_STR) == NULL) {
-        return false;
-    }
-    return true;
+    return (strstr(end + BSL_PEM_END_STR_LEN, BSL_PEM_SHORT_DASH_STR) != NULL);
 }
 
 typedef struct {
@@ -234,15 +225,11 @@ int32_t BSL_PEM_GetSymbolAndType(char *encode, uint32_t encodeLen, BSL_PEM_Symbo
     }
     for (uint32_t i = 0; i < sizeof(g_pemHeaderInfo) / sizeof(g_pemHeaderInfo[0]); i++) {
         char *beginMarker = strstr(encode, g_pemHeaderInfo[i].symbol.head);
-        if (beginMarker != NULL) {
-            char *endMarker = strstr(beginMarker + strlen(g_pemHeaderInfo[i].symbol.head),
-                g_pemHeaderInfo[i].symbol.tail);
-            if (endMarker != NULL) {
-                symbol->head = g_pemHeaderInfo[i].symbol.head;
-                symbol->tail = g_pemHeaderInfo[i].symbol.tail;
-                *type = g_pemHeaderInfo[i].type;
-                return BSL_SUCCESS;
-            }
+        if (beginMarker != NULL &&
+            strstr(beginMarker + strlen(g_pemHeaderInfo[i].symbol.head), g_pemHeaderInfo[i].symbol.tail) != NULL) {
+            *symbol = g_pemHeaderInfo[i].symbol;
+            *type = g_pemHeaderInfo[i].type;
+            return BSL_SUCCESS;
         }
     }
 

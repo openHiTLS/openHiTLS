@@ -14,9 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if (defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_DECRYPT) || \
-    defined(HITLS_CRYPTO_SM2_CRYPT) || defined(HITLS_CRYPTO_PAILLIER) || defined(HITLS_CRYPTO_ELGAMAL)) && \
-    defined(HITLS_CRYPTO_PROVIDER)
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_PKEY_CRYPT)
 
 #include "crypt_eal_implprovider.h"
 #include "crypt_rsa.h"

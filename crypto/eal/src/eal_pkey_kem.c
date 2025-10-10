@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_PKEY)
+#if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_PKEY_KEM)
 #include "securec.h"
 #include "eal_pkey_local.h"
 #include "crypt_eal_pkey.h"
@@ -33,8 +33,8 @@ int32_t CRYPT_EAL_PkeyEncapsInit(CRYPT_EAL_PkeyCtx *pkey, BSL_Param *params)
     }
     int32_t ret = CRYPT_SUCCESS;
 #ifdef HITLS_CRYPTO_PROVIDER
-    if (pkey->isProvider && pkey->method != NULL && pkey->method->encapsInit != NULL) {
-        ret = pkey->method->encapsInit(pkey->key, params);
+    if (pkey->isProvider && pkey->method.encapsInit != NULL) {
+        ret = pkey->method.encapsInit(pkey->key, params);
         if (ret != CRYPT_SUCCESS) {
             EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
         }
@@ -53,8 +53,8 @@ int32_t CRYPT_EAL_PkeyDecapsInit(CRYPT_EAL_PkeyCtx *pkey, BSL_Param *params)
     }
     int32_t ret = CRYPT_SUCCESS;
 #ifdef HITLS_CRYPTO_PROVIDER
-    if (pkey->isProvider && pkey->method != NULL && pkey->method->decapsInit != NULL) {
-        ret = pkey->method->decapsInit(pkey->key, params);
+    if (pkey->isProvider && pkey->method.decapsInit != NULL) {
+        ret = pkey->method.decapsInit(pkey->key, params);
         if (ret != CRYPT_SUCCESS) {
             EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
         }
@@ -72,11 +72,11 @@ int32_t CRYPT_EAL_PkeyEncaps(const CRYPT_EAL_PkeyCtx *pkey, uint8_t *cipher, uin
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (pkey->method == NULL || pkey->method->encaps == NULL) {
+    if (pkey->method.encaps == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    int32_t ret = pkey->method->encaps(pkey->key, cipher, cipherLen, sharekey, shareKeyLen);
+    int32_t ret = pkey->method.encaps(pkey->key, cipher, cipherLen, sharekey, shareKeyLen);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     }
@@ -90,11 +90,11 @@ int32_t CRYPT_EAL_PkeyDecaps(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *ciphe
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (pkey->method == NULL || pkey->method->decaps == NULL) {
+    if (pkey->method.decaps == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    int32_t ret = pkey->method->decaps(pkey->key, cipher, cipherLen, sharekey, shareKeyLen);
+    int32_t ret = pkey->method.decaps(pkey->key, cipher, cipherLen, sharekey, shareKeyLen);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     }

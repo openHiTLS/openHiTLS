@@ -301,14 +301,13 @@ int32_t ECP_PrimePointDoubleMont(const ECC_Para *para, ECC_Point *r, const ECC_P
     if (opt == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret;
+    int32_t ret = CRYPT_MEM_ALLOC_FAIL;
     (void)OptimizerStart(opt);
     BN_BigNum *t1 = OptimizerGetBn(opt, a->x.room);
     BN_BigNum *t2 = OptimizerGetBn(opt, a->x.room);
     BN_BigNum *t3 = OptimizerGetBn(opt, a->x.room);
     BN_BigNum *halfP = ECP_HalfPGet(para->p);
     if (t1 == NULL || t2 == NULL || t3 == NULL || halfP == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
         goto ERR;
     }
     GOTO_ERR_IF(para->method->bnMontEnc(halfP, para->montP, opt, false), ret);

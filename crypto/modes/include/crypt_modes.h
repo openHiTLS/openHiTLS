@@ -60,6 +60,10 @@ typedef struct {
 void MODES_Clean(MODES_CipherCommonCtx *ctx);
 int32_t MODES_SetIv(MODES_CipherCommonCtx *ctx, const uint8_t *val, uint32_t len);
 int32_t MODES_GetIv(MODES_CipherCommonCtx *ctx, uint8_t *val, uint32_t len);
+
+MODES_CipherCtx *MODES_CipherNewCtx(int32_t algId);
+MODES_CipherCtx *MODES_CipherNewCtxEx(void *libCtx, int32_t algId);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

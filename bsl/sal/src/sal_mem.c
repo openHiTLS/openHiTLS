@@ -229,7 +229,7 @@ void BSL_SAL_ClearFree(void *ptr, uint32_t size)
     if (size != 0) {
         BSL_SAL_CleanseData(ptr, size);
     }
-    BSL_SAL_FREE(ptr);
+    BSL_SAL_Free(ptr);
 }
 
 #if !defined(__clang__)

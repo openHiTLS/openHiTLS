@@ -20,6 +20,9 @@
     defined(HITLS_CRYPTO_GCM) || defined(HITLS_CRYPTO_OFB) || defined(HITLS_CRYPTO_CTR)) && \
     defined(HITLS_CRYPTO_PROVIDER)
 
+#include "crypt_errno.h"
+#include "bsl_err_internal.h"
+#include "crypt_ealinit.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_modes_cbc.h"
 #include "crypt_modes_ccm.h"
@@ -31,61 +34,119 @@
 #include "crypt_modes_cfb.h"
 #include "crypt_modes_xts.h"
 #include "crypt_local_types.h"
-#include "crypt_errno.h"
-#include "bsl_err_internal.h"
-#include "crypt_ealinit.h"
+#include "crypt_default_provider.h"
 
-static void *CRYPT_EAL_DefCipherNewCtx(void *provCtx, int32_t algId)
+static void *GetNewCtxFunc(int32_t algId)
 {
-    (void) provCtx;
+    switch (algId) {
+#if defined(HITLS_CRYPTO_CBC) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4))
+#ifdef HITLS_CRYPTO_AES
+        case CRYPT_CIPHER_AES128_CBC:
+        case CRYPT_CIPHER_AES192_CBC:
+        case CRYPT_CIPHER_AES256_CBC:
+#endif
+#ifdef HITLS_CRYPTO_SM4
+        case CRYPT_CIPHER_SM4_CBC:
+#endif
+            return MODES_CBC_NewCtxEx;
+#endif
+#if defined(HITLS_CRYPTO_CTR) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4))
+#ifdef HITLS_CRYPTO_AES
+        case CRYPT_CIPHER_AES128_CTR:
+        case CRYPT_CIPHER_AES192_CTR:
+        case CRYPT_CIPHER_AES256_CTR:
+#endif
+#ifdef HITLS_CRYPTO_SM4
+        case CRYPT_CIPHER_SM4_CTR:
+#endif
+            return MODES_CTR_NewCtxEx;
+#endif
+#if defined(HITLS_CRYPTO_ECB) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4))
+#ifdef HITLS_CRYPTO_AES
+        case CRYPT_CIPHER_AES128_ECB:
+        case CRYPT_CIPHER_AES192_ECB:
+        case CRYPT_CIPHER_AES256_ECB:
+#endif
+#ifdef HITLS_CRYPTO_SM4
+        case CRYPT_CIPHER_SM4_ECB:
+#endif
+            return MODES_ECB_NewCtxEx;
+#endif
+#if defined(HITLS_CRYPTO_CCM) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4))
+#ifdef HITLS_CRYPTO_AES
+        case CRYPT_CIPHER_AES128_CCM:
+        case CRYPT_CIPHER_AES192_CCM:
+        case CRYPT_CIPHER_AES256_CCM:
+#endif
+#ifdef HITLS_CRYPTO_SM4
+        case CRYPT_CIPHER_SM4_CCM:
+#endif
+            return MODES_CCM_NewCtxEx;
+#endif
+#if defined(HITLS_CRYPTO_GCM) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4))
+#ifdef HITLS_CRYPTO_AES
+        case CRYPT_CIPHER_AES128_GCM:
+        case CRYPT_CIPHER_AES192_GCM:
+        case CRYPT_CIPHER_AES256_GCM:
+#endif
+#ifdef HITLS_CRYPTO_SM4
+        case CRYPT_CIPHER_SM4_GCM:
+#endif
+            return MODES_GCM_NewCtxEx;
+#endif
+#if defined(HITLS_CRYPTO_CFB) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4))
+#ifdef HITLS_CRYPTO_AES
+        case CRYPT_CIPHER_AES128_CFB:
+        case CRYPT_CIPHER_AES192_CFB:
+        case CRYPT_CIPHER_AES256_CFB:
+#endif
+#ifdef HITLS_CRYPTO_SM4
+        case CRYPT_CIPHER_SM4_CFB:
+#endif
+            return MODES_CFB_NewCtxEx;
+#endif
+#if defined(HITLS_CRYPTO_OFB) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4))
+#ifdef HITLS_CRYPTO_AES
+        case CRYPT_CIPHER_AES128_OFB:
+        case CRYPT_CIPHER_AES192_OFB:
+        case CRYPT_CIPHER_AES256_OFB:
+#endif
+#ifdef HITLS_CRYPTO_SM4
+        case CRYPT_CIPHER_SM4_OFB:
+#endif
+            return MODES_OFB_NewCtxEx;
+#endif
+#if defined(HITLS_CRYPTO_XTS) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4))
+#ifdef HITLS_CRYPTO_AES
+        case CRYPT_CIPHER_AES128_XTS:
+        case CRYPT_CIPHER_AES256_XTS:
+#endif
+#ifdef HITLS_CRYPTO_SM4
+        case CRYPT_CIPHER_SM4_XTS:
+#endif
+            return MODES_XTS_NewCtxEx;
+#endif
+#if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
+        case CRYPT_CIPHER_CHACHA20_POLY1305:
+            return MODES_CHACHA20POLY1305_NewCtxEx;
+#endif
+        default:
+            return NULL;
+    }
+}
+
+static void *CRYPT_EAL_DefCipherNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
+{
+    void *libCtx = provCtx == NULL ? NULL : provCtx->libCtx;
 #ifdef HITLS_CRYPTO_ASM_CHECK
     if (CRYPT_ASMCAP_Cipher(algId) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
         return NULL;
     }
 #endif
-    CRYPT_EAL_Func cipherNewCtxFunc[] = {
-        {CRYPT_CIPHER_AES128_CBC, MODES_CBC_NewCtx},
-        {CRYPT_CIPHER_AES192_CBC, MODES_CBC_NewCtx},
-        {CRYPT_CIPHER_AES256_CBC, MODES_CBC_NewCtx},
-        {CRYPT_CIPHER_AES128_CTR, MODES_CTR_NewCtx},
-        {CRYPT_CIPHER_AES192_CTR, MODES_CTR_NewCtx},
-        {CRYPT_CIPHER_AES256_CTR, MODES_CTR_NewCtx},
-        {CRYPT_CIPHER_AES128_ECB, MODES_ECB_NewCtx},
-        {CRYPT_CIPHER_AES192_ECB, MODES_ECB_NewCtx},
-        {CRYPT_CIPHER_AES256_ECB, MODES_ECB_NewCtx},
-#ifdef HITLS_CRYPTO_CCM
-        {CRYPT_CIPHER_AES128_CCM, MODES_CCM_NewCtx},
-        {CRYPT_CIPHER_AES192_CCM, MODES_CCM_NewCtx},
-        {CRYPT_CIPHER_AES256_CCM, MODES_CCM_NewCtx},
-        {CRYPT_CIPHER_SM4_CCM, MODES_CCM_NewCtx},
-#endif
-        {CRYPT_CIPHER_AES128_GCM, MODES_GCM_NewCtx},
-        {CRYPT_CIPHER_AES192_GCM, MODES_GCM_NewCtx},
-        {CRYPT_CIPHER_AES256_GCM, MODES_GCM_NewCtx},
-        {CRYPT_CIPHER_AES128_CFB, MODES_CFB_NewCtx},
-        {CRYPT_CIPHER_AES192_CFB, MODES_CFB_NewCtx},
-        {CRYPT_CIPHER_AES256_CFB, MODES_CFB_NewCtx},
-        {CRYPT_CIPHER_AES128_OFB, MODES_OFB_NewCtx},
-        {CRYPT_CIPHER_AES192_OFB, MODES_OFB_NewCtx},
-        {CRYPT_CIPHER_AES256_OFB, MODES_OFB_NewCtx},
-        {CRYPT_CIPHER_AES128_XTS, MODES_XTS_NewCtx},
-        {CRYPT_CIPHER_AES256_XTS, MODES_XTS_NewCtx},
-#if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
-        {CRYPT_CIPHER_CHACHA20_POLY1305, MODES_CHACHA20POLY1305_NewCtx},
-#endif
-        {CRYPT_CIPHER_SM4_XTS, MODES_XTS_NewCtx},
-        {CRYPT_CIPHER_SM4_CBC, MODES_CBC_NewCtx},
-        {CRYPT_CIPHER_SM4_ECB, MODES_ECB_NewCtx},
-        {CRYPT_CIPHER_SM4_CTR, MODES_CTR_NewCtx},
-        {CRYPT_CIPHER_SM4_GCM, MODES_GCM_NewCtx},
-        {CRYPT_CIPHER_SM4_CFB, MODES_CFB_NewCtx},
-        {CRYPT_CIPHER_SM4_OFB, MODES_OFB_NewCtx},
-    };
-    for (size_t i = 0; i < sizeof(cipherNewCtxFunc)/sizeof(cipherNewCtxFunc[0]); i++) {
-        if (cipherNewCtxFunc[i].id == algId) {
-            return ((CipherNewCtx)cipherNewCtxFunc[i].func)(algId);
-        }
+    void *newCtxFunc = GetNewCtxFunc(algId);
+    if (newCtxFunc != NULL) {
+        return ((CipherNewCtx)newCtxFunc)(libCtx, algId);
     }
 
     return NULL;

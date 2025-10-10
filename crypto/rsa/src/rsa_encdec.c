@@ -203,8 +203,9 @@ static int32_t RsaDecProcedureAlloc(RsaDecProcedurePara *para, uint32_t bits, co
     para->mQ = BN_Create(bits);
     para->montP = BN_MontCreate(priKey->p);
     para->montQ = BN_MontCreate(priKey->q);
-    if (para->cP == NULL || para->cQ == NULL ||
-        para->mP == NULL || para->mQ == NULL || para->montP == NULL || para->montQ == NULL) {
+    bool allocFailed = para->cP == NULL || para->cQ == NULL ||
+                       para->mP == NULL || para->mQ == NULL || para->montP == NULL || para->montQ == NULL;
+    if (allocFailed == true) {
         RsaDecProcedureFree(para);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -766,8 +767,7 @@ ERR:
 int32_t CRYPT_RSA_UnBlind(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen)
 {
-    int32_t ret;
-    ret = BlindInputCheck(ctx, input, inputLen, out, outLen);
+    int32_t ret = BlindInputCheck(ctx, input, inputLen, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -982,7 +982,7 @@ int32_t CRYPT_RSA_Verify(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data,
 }
 #endif // HITLS_CRYPTO_RSA_VERIFY
 
-#if defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_VERIFY)
+#if defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_RECOVER)
 static int32_t EncryptInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     const uint8_t *out, const uint32_t *outLen)
 {
@@ -1158,7 +1158,7 @@ EXIT:
 }
 #endif // HITLS_CRYPTO_RSA_DECRYPT
 
-#ifdef HITLS_CRYPTO_RSA_VERIFY
+#ifdef HITLS_CRYPTO_RSA_RECOVER
 int32_t CRYPT_RSA_Recover(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen)
 {
     int32_t ret = EncryptInputCheck(ctx, data, dataLen, out, outLen);
@@ -1166,14 +1166,10 @@ int32_t CRYPT_RSA_Recover(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (data == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    uint8_t *emMsg = NULL;
+    RETURN_RET_IF(data == NULL, CRYPT_NULL_INPUT);
     uint32_t bits = CRYPT_RSA_GetBits(ctx);
     uint32_t emLen = BN_BITS_TO_BYTES(bits);
-    emMsg = BSL_SAL_Malloc(emLen);
+    uint8_t *emMsg = BSL_SAL_Malloc(emLen);
     if (emMsg == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -1210,6 +1206,6 @@ ERR:
     BSL_SAL_FREE(emMsg);
     return ret;
 }
-#endif // HITLS_CRYPTO_RSA_VERIFY
+#endif // HITLS_CRYPTO_RSA_RECOVER
 
 #endif /* HITLS_CRYPTO_RSA */

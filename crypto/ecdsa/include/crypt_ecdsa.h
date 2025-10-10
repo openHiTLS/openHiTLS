@@ -64,7 +64,7 @@ CRYPT_ECDSA_Ctx *CRYPT_ECDSA_NewCtxEx(void *libCtx);
  * @return CRYPT_ECDSA_Ctx ECDSA context pointer
  * If it fails, null is returned.
  */
-CRYPT_ECDSA_Ctx *CRYPT_ECDSA_DupCtx(CRYPT_ECDSA_Ctx *ctx);
+#define CRYPT_ECDSA_DupCtx ECC_DupCtx
 
 /**
  * @ingroup ecdsa
@@ -72,7 +72,7 @@ CRYPT_ECDSA_Ctx *CRYPT_ECDSA_DupCtx(CRYPT_ECDSA_Ctx *ctx);
  *
  * @param ctx [IN] Pointer to the context structure to be released. The ctx is set NULL by the invoker.
  */
-void CRYPT_ECDSA_FreeCtx(CRYPT_ECDSA_Ctx *ctx);
+#define CRYPT_ECDSA_FreeCtx ECC_FreeCtx
 
 /**
  * @ingroup ecdsa
@@ -84,7 +84,7 @@ void CRYPT_ECDSA_FreeCtx(CRYPT_ECDSA_Ctx *ctx);
  * @retval (CRYPT_EcdsaPara *) Pointer to the memory space of the allocated context
  * @retval NULL                Invalid null pointer
  */
-CRYPT_EcdsaPara *CRYPT_ECDSA_NewParaById(int32_t id);
+#define CRYPT_ECDSA_NewParaById ECC_NewPara
 
 /**
  * @ingroup ecdsa
@@ -114,7 +114,7 @@ CRYPT_PKEY_ParaId CRYPT_ECDSA_GetParaId(const CRYPT_ECDSA_Ctx *ctx);
  *
  * @param para [IN] Pointer to the key parameter structure to be released. The parameter is set NULL by the invoker.
  */
-void CRYPT_ECDSA_FreePara(CRYPT_EcdsaPara *para);
+#define CRYPT_ECDSA_FreePara ECC_FreePara
 
 /**
  * @ingroup ecdsa
@@ -140,7 +140,7 @@ int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const CRYPT_EccPara *para);
  * @retval CRYPT_MEM_ALLOC_FAIL Internal memory allocation error
  * @retval CRYPT_SUCCESS        Get parameters successfully.
  */
-int32_t CRYPT_ECDSA_GetPara(const CRYPT_ECDSA_Ctx *ctx, CRYPT_EccPara *para);
+#define CRYPT_ECDSA_GetPara ECC_GetPara
 
 /**
  * @ingroup ecdsa
@@ -151,7 +151,7 @@ int32_t CRYPT_ECDSA_GetPara(const CRYPT_ECDSA_Ctx *ctx, CRYPT_EccPara *para);
  * @retval 0        The input is incorrect or the corresponding key structure does not contain valid key length.
  * @retval uint32_t Valid key length
  */
-uint32_t CRYPT_ECDSA_GetBits(const CRYPT_ECDSA_Ctx *ctx);
+#define CRYPT_ECDSA_GetBits ECC_PkeyGetBits
 
 /**
  * @ingroup ecdsa
@@ -175,7 +175,7 @@ uint32_t CRYPT_ECDSA_GetSignLen(const CRYPT_ECDSA_Ctx *ctx);
  * @retval ECC error code.      An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        The key pair is successfully generated.
  */
-int32_t CRYPT_ECDSA_Gen(CRYPT_ECDSA_Ctx *ctx);
+#define CRYPT_ECDSA_Gen ECC_PkeyGen
 
 /**
  * @ingroup ecdsa
@@ -279,7 +279,7 @@ int32_t CRYPT_ECDSA_VerifyData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, 
  * @retval ECC error.           An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDSA_SetPrvKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_DsaPrv *prv);
+#define CRYPT_ECDSA_SetPrvKey ECC_PkeySetPrvKey
 
 /**
  * @ingroup ecdsa
@@ -293,7 +293,7 @@ int32_t CRYPT_ECDSA_SetPrvKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_DsaPrv *prv);
  * @retval ECC error.           An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDSA_SetPubKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_DsaPub *pub);
+#define CRYPT_ECDSA_SetPubKey ECC_PkeySetPubKey
 
 /**
  * @ingroup ecdsa
@@ -307,7 +307,7 @@ int32_t CRYPT_ECDSA_SetPubKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_DsaPub *pub);
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_ECDSA_GetPrvKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_DsaPrv *prv);
+#define CRYPT_ECDSA_GetPrvKey ECC_PkeyGetPrvKey
 
 /**
  * @ingroup ecdsa
@@ -321,7 +321,7 @@ int32_t CRYPT_ECDSA_GetPrvKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_DsaPrv *prv);
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_ECDSA_GetPubKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_DsaPub *pub);
+#define CRYPT_ECDSA_GetPubKey ECC_PkeyGetPubKey
 
 #ifdef HITLS_BSL_PARAMS
 /**
@@ -336,7 +336,7 @@ int32_t CRYPT_ECDSA_GetPubKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_DsaPub *pub);
  * @retval ECC error.           An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDSA_SetPrvKeyEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para);
+#define CRYPT_ECDSA_SetPrvKeyEx ECC_PkeySetPrvKeyEx
 
 /**
  * @ingroup ecdsa
@@ -350,7 +350,7 @@ int32_t CRYPT_ECDSA_SetPrvKeyEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para);
  * @retval ECC error.           An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        Set successfully.
  */
-int32_t CRYPT_ECDSA_SetPubKeyEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para);
+#define CRYPT_ECDSA_SetPubKeyEx ECC_PkeySetPubKeyEx
 
 /**
  * @ingroup ecdsa
@@ -364,7 +364,7 @@ int32_t CRYPT_ECDSA_SetPubKeyEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para);
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_ECDSA_GetPrvKeyEx(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *para);
+#define CRYPT_ECDSA_GetPrvKeyEx ECC_PkeyGetPrvKeyEx
 
 /**
  * @ingroup ecdsa
@@ -378,7 +378,7 @@ int32_t CRYPT_ECDSA_GetPrvKeyEx(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *para);
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_ECDSA_GetPubKeyEx(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *para);
+#define CRYPT_ECDSA_GetPubKeyEx ECC_PkeyGetPubKeyEx
 
 /**
  * @ingroup ecdsa
@@ -404,7 +404,7 @@ int32_t CRYPT_ECDSA_SetParaEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para);
  * @retval CRYPT_MEM_ALLOC_FAIL Internal memory allocation error
  * @retval CRYPT_SUCCESS        Get parameters successfully.
  */
-int32_t CRYPT_ECDSA_GetParaEx(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *para);
+#define CRYPT_ECDSA_GetParaEx ECC_GetParaEx
 #endif
 
 /**
@@ -434,7 +434,7 @@ int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, int32_t opt, void *val, uint32_t 
  * @retval CRYPT_SUCCESS is the same
  * Others. For details, see error code in errno.
  */
-int32_t CRYPT_ECDSA_Cmp(const CRYPT_ECDSA_Ctx *a, const CRYPT_ECDSA_Ctx *b);
+#define CRYPT_ECDSA_Cmp ECC_PkeyCmp
 
 /**
  * @ingroup ecdsa
@@ -446,7 +446,7 @@ int32_t CRYPT_ECDSA_Cmp(const CRYPT_ECDSA_Ctx *a, const CRYPT_ECDSA_Ctx *b);
  */
 int32_t CRYPT_ECDSA_GetSecBits(const CRYPT_ECDSA_Ctx *ctx);
 
-#ifdef HITLS_CRYPTO_PROVIDER
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
 /**
  * @ingroup ecdsa
  * @brief ecdsa import key
@@ -465,7 +465,7 @@ int32_t CRYPT_ECDSA_Import(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *params);
  */
 int32_t CRYPT_ECDSA_Export(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *params);
 
-#endif // HITLS_CRYPTO_PROVIDER
+#endif // HITLS_CRYPTO_KEY_DECODE_CHAIN
 
 #ifdef HITLS_CRYPTO_ECDSA_CHECK
 /**

@@ -23,8 +23,8 @@
 #include "bsl_err_internal.h"
 #include "crypt_params_key.h"
 #include "crypt_errno.h"
-#include "crypt_encode_decode_key.h"
-#include "crypt_encode_decode_local.h"
+#include "crypt_codecskey.h"
+#include "crypt_codecskey_local.h"
 #include "crypt_eal_kdf.h"
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_rand.h"
@@ -465,16 +465,16 @@ int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara 
     }
 
     if (asns[CRYPT_RSAPSS_HASH_IDX].tag != 0) {
-        BslOidString hashOid = {asns[CRYPT_RSAPSS_HASH_IDX].len, (char *)asns[CRYPT_RSAPSS_HASH_IDX].buff, 0};
-        para->mdId = (CRYPT_MD_AlgId)BSL_OBJ_GetCID(&hashOid);
+        para->mdId = (CRYPT_MD_AlgId)BSL_OBJ_GetCidFromOidBuff(asns[CRYPT_RSAPSS_HASH_IDX].buff,
+            asns[CRYPT_RSAPSS_HASH_IDX].len);
         if (para->mdId == (CRYPT_MD_AlgId)BSL_CID_UNKNOWN) {
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_RSSPSS_MD);
             return CRYPT_DECODE_ERR_RSSPSS_MD;
         }
     }
     if (asns[CRYPT_RSAPSS_MGF1PARAM_IDX].tag != 0) {
-        BslOidString mgf1 = {asns[CRYPT_RSAPSS_MGF1PARAM_IDX].len, (char *)asns[CRYPT_RSAPSS_MGF1PARAM_IDX].buff, 0};
-        para->mgfId = (CRYPT_MD_AlgId)BSL_OBJ_GetCID(&mgf1);
+        para->mgfId = (CRYPT_MD_AlgId)BSL_OBJ_GetCidFromOidBuff(asns[CRYPT_RSAPSS_MGF1PARAM_IDX].buff,
+            asns[CRYPT_RSAPSS_MGF1PARAM_IDX].len);
         if (para->mgfId == (CRYPT_MD_AlgId)BSL_CID_UNKNOWN) {
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_RSSPSS_MGF1MD);
             return CRYPT_DECODE_ERR_RSSPSS_MGF1MD;
@@ -512,8 +512,7 @@ static int32_t DecSubKeyInfoCb(int32_t type, uint32_t idx, void *data, void *exp
 
     switch (type) {
         case BSL_ASN1_TYPE_GET_ANY_TAG: {
-            BslOidString oidStr = {param->len, (char *)param->buff, 0};
-            BslCid cid = BSL_OBJ_GetCID(&oidStr);
+            BslCid cid = BSL_OBJ_GetCidFromOidBuff(param->buff, param->len);
             if (cid == BSL_CID_EC_PUBLICKEY || cid == BSL_CID_SM2PRIME256) {
                 // note: any It can be encoded empty or it can be null
                 *(uint8_t *)expVal = BSL_ASN1_TAG_OBJECT_ID;
@@ -592,8 +591,7 @@ int32_t CRYPT_DECODE_SubPubkey(uint8_t *buff, uint32_t buffLen, BSL_ASN1_DecTemp
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    BslOidString oidStr = {oid->len, (char *)oid->buff, 0};
-    BslCid cid = BSL_OBJ_GetCID(&oidStr);
+    BslCid cid = BSL_OBJ_GetCidFromOidBuff(oid->buff, oid->len);
     if (cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
         return CRYPT_DECODE_UNKNOWN_OID;
@@ -614,8 +612,7 @@ static int32_t ParsePk8PriParamAsn1(BSL_ASN1_Buffer *encode, BSL_ASN1_DecTemplCa
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    BslOidString oidStr = {algoId[0].len, (char *)algoId[0].buff, 0};
-    BslCid cid = BSL_OBJ_GetCID(&oidStr);
+    BslCid cid = BSL_OBJ_GetCidFromOidBuff(algoId[0].buff, algoId[0].len);
     if (cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
         return CRYPT_DECODE_UNKNOWN_OID;
@@ -677,9 +674,7 @@ static int32_t ParseDeriveKeyPrfAlgId(BSL_ASN1_Buffer *asn, int32_t *prfId, BSL_
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        BslOidString oidStr = {algoId[BSL_ASN1_TAG_ALGOID_IDX].len,
-            (char *)algoId[BSL_ASN1_TAG_ALGOID_IDX].buff, 0};
-        *prfId = BSL_OBJ_GetCID(&oidStr);
+        *prfId = BSL_OBJ_GetCidFromOidBuff(algoId[BSL_ASN1_TAG_ALGOID_IDX].buff, algoId[BSL_ASN1_TAG_ALGOID_IDX].len);
         if (*prfId == BSL_CID_UNKNOWN) {
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM);
             return CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM;
@@ -703,9 +698,8 @@ static int32_t ParseDeriveKeyParam(BSL_Buffer *derivekeyData, uint32_t *iter, ui
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    BslOidString oidStr = {derParam[CRYPT_PKCS_ENC_DERALG_IDX].len,
-        (char *)derParam[CRYPT_PKCS_ENC_DERALG_IDX].buff, 0};
-    BslCid cid = BSL_OBJ_GetCID(&oidStr);
+    BslCid cid = BSL_OBJ_GetCidFromOidBuff(derParam[CRYPT_PKCS_ENC_DERALG_IDX].buff,
+        derParam[CRYPT_PKCS_ENC_DERALG_IDX].len);
     if (cid != BSL_CID_PBKDF2) { // only pbkdf2 is supported
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM);
         return CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM;
@@ -804,17 +798,15 @@ int32_t CRYPT_DECODE_Pkcs8PrvDecrypt(CRYPT_EAL_LibCtx *libctx, const char *attrN
         return ret;
     }
 
-    BslOidString encOidStr = {asn1[CRYPT_PKCS_ENCPRIKEY_ENCALG_IDX].len,
-        (char *)asn1[CRYPT_PKCS_ENCPRIKEY_ENCALG_IDX].buff, 0};
-    BslCid cid = BSL_OBJ_GetCID(&encOidStr);
+    BslCid cid = BSL_OBJ_GetCidFromOidBuff(asn1[CRYPT_PKCS_ENCPRIKEY_ENCALG_IDX].buff,
+        asn1[CRYPT_PKCS_ENCPRIKEY_ENCALG_IDX].len);
     if (cid != BSL_CID_PBES2) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
         return CRYPT_DECODE_UNKNOWN_OID;
     }
     // parse sym alg id
-    BslOidString symOidStr = {asn1[CRYPT_PKCS_ENCPRIKEY_SYMALG_IDX].len,
-        (char *)asn1[CRYPT_PKCS_ENCPRIKEY_SYMALG_IDX].buff, 0};
-    BslCid symId = BSL_OBJ_GetCID(&symOidStr);
+    BslCid symId = BSL_OBJ_GetCidFromOidBuff(asn1[CRYPT_PKCS_ENCPRIKEY_SYMALG_IDX].buff,
+        asn1[CRYPT_PKCS_ENCPRIKEY_SYMALG_IDX].len);
     if (symId == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
         return CRYPT_DECODE_UNKNOWN_OID;
@@ -1060,7 +1052,6 @@ static int32_t EncodeEncryptedData(CRYPT_EAL_LibCtx *libCtx, const char *attrNam
 
 static int32_t GenRandIv(CRYPT_EAL_LibCtx *libCtx, CRYPT_Pbkdf2Param *pkcsParam, BSL_ASN1_Buffer *asn1)
 {
-    int32_t ret;
     BslOidString *oidSym = BSL_OBJ_GetOID((BslCid)pkcsParam->symId);
     if (oidSym == NULL) {
         return CRYPT_ERR_ALGID;
@@ -1070,7 +1061,7 @@ static int32_t GenRandIv(CRYPT_EAL_LibCtx *libCtx, CRYPT_Pbkdf2Param *pkcsParam,
     asn1[CRYPT_PKCS_ENCPRIKEY_SYMALG_IDX].tag = BSL_ASN1_TAG_OBJECT_ID;
 
     uint32_t ivLen;
-    ret = CRYPT_EAL_CipherGetInfo(pkcsParam->symId, CRYPT_INFO_IV_LEN, &ivLen);
+    int32_t ret = CRYPT_EAL_CipherGetInfo(pkcsParam->symId, CRYPT_INFO_IV_LEN, &ivLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

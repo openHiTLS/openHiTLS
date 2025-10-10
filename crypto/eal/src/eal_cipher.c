@@ -31,147 +31,55 @@
 #include "crypt_provider.h"
 #endif
 
-static void CipherCopyMethod(const EAL_CipherMethod *modeMethod, EAL_CipherUnitaryMethod *method)
+static CRYPT_EAL_CipherCtx *CipherNewCtxInner(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
+    bool isProvider)
 {
-    method->newCtx = modeMethod->newCtx;
-    method->initCtx = modeMethod->initCtx;
-    method->deinitCtx = modeMethod->deinitCtx;
-    method->update = modeMethod->update;
-    method->final = modeMethod->final;
-    method->ctrl = modeMethod->ctrl;
-    method->freeCtx = modeMethod->freeCtx;
-}
-
-static CRYPT_EAL_CipherCtx *CipherNewDefaultCtx(CRYPT_CIPHER_AlgId id)
-{
-    int32_t ret;
-    const EAL_CipherMethod *modeMethod = NULL;
-    ret = EAL_FindCipher(id, &modeMethod);
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, id, ret);
-        return NULL;
-    }
-
-    CRYPT_EAL_CipherCtx *ctx = (CRYPT_EAL_CipherCtx *)BSL_SAL_Calloc(1u, sizeof(struct CryptEalCipherCtx));
-    if (ctx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, id, CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-
-    EAL_CipherUnitaryMethod *method = (EAL_CipherUnitaryMethod *)BSL_SAL_Calloc(1u, sizeof(EAL_CipherUnitaryMethod));
-    if (method == NULL) {
-        BSL_SAL_Free(ctx);
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, id, CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-
-    void *modeCtx = modeMethod->newCtx(id);
-    if (modeCtx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, id, CRYPT_EAL_CIPHER_ERR_NEWCTX);
-        BSL_SAL_Free(ctx);
-        BSL_SAL_Free(method);
-        return NULL;
-    }
-
-    CipherCopyMethod(modeMethod, method);
-    ctx->id = id;
-    ctx->method = method;
-    ctx->ctx = modeCtx;
-    ctx->states = EAL_CIPHER_STATE_NEW;
-
-    return ctx;
-}
-
-#ifdef HITLS_CRYPTO_PROVIDER
-static int32_t CRYPT_EAL_SetCipherMethod(CRYPT_EAL_CipherCtx *ctx, const CRYPT_EAL_Func *funcs)
-{
-    int32_t index = 0;
-    EAL_CipherUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_CipherUnitaryMethod));
-    if (method == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
-    }
-    
-    while (funcs[index].id != 0) {
-        switch (funcs[index].id) {
-            case CRYPT_EAL_IMPLCIPHER_NEWCTX:
-                method->provNewCtx = funcs[index].func;
-                break;
-            case CRYPT_EAL_IMPLCIPHER_INITCTX:
-                method->initCtx = funcs[index].func;
-                break;
-            case CRYPT_EAL_IMPLCIPHER_UPDATE:
-                method->update = funcs[index].func;
-                break;
-            case CRYPT_EAL_IMPLCIPHER_FINAL:
-                method->final = funcs[index].func;
-                break;
-            case CRYPT_EAL_IMPLCIPHER_DEINITCTX:
-                method->deinitCtx = funcs[index].func;
-                break;
-            case CRYPT_EAL_IMPLCIPHER_FREECTX:
-                method->freeCtx = funcs[index].func;
-                break;
-            case CRYPT_EAL_IMPLCIPHER_CTRL:
-                method->ctrl = funcs[index].func;
-                break;
-            default:
-                BSL_SAL_FREE(method);
-                BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
-                return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
-        }
-        index++;
-    }
-    ctx->method = method;
-    return CRYPT_SUCCESS;
-}
-
-CRYPT_EAL_CipherCtx *CRYPT_EAL_ProviderCipherNewCtxInner(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
-{
-    const CRYPT_EAL_Func *funcs = NULL;
-    void *provCtx = NULL;
-    int32_t ret = CRYPT_EAL_ProviderGetFuncs(libCtx, CRYPT_EAL_OPERAID_SYMMCIPHER, algId, attrName,
-        (const CRYPT_EAL_Func **)&funcs, &provCtx);
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, algId, ret);
-        return NULL;
-    }
+    (void)libCtx;
+    (void)attrName;
+    (void)isProvider;
     CRYPT_EAL_CipherCtx *ctx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_CipherCtx));
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, algId, CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    
-    ret = CRYPT_EAL_SetCipherMethod(ctx, funcs);
-    if (ret != BSL_SUCCESS) {
+
+    int32_t ret;
+    void *provCtx = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    if (isProvider == true) {
+        ret = EAL_ProviderCipherFindMethod(algId, libCtx, attrName, &ctx->method, &provCtx);
+    } else
+#endif
+    {
+        ret = EAL_CipherFindMethod(algId, &ctx->method);
+    }
+    if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, algId, ret);
-        BSL_SAL_FREE(ctx);
-        return NULL;
+        goto ERR;
     }
-    if (ctx->method->provNewCtx == NULL) {
+
+    if (ctx->method.newCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, algId, CRYPT_PROVIDER_ERR_IMPL_NULL);
-        BSL_SAL_FREE(ctx->method);
-        BSL_SAL_FREE(ctx);
-        return NULL;
+        goto ERR;
     }
-    ctx->ctx = ctx->method->provNewCtx(provCtx, algId);
+    ctx->ctx = ctx->method.newCtx(provCtx, algId);
     if (ctx->ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, algId, CRYPT_MEM_ALLOC_FAIL);
-        BSL_SAL_FREE(ctx->method);
-        BSL_SAL_FREE(ctx);
-        return NULL;
+        goto ERR;
     }
+
     ctx->id = algId;
     ctx->states = EAL_CIPHER_STATE_NEW;
-    ctx->isProvider = true;
     return ctx;
+ERR:
+    BSL_SAL_Free(ctx);
+    return NULL;
 }
-#endif
 
 CRYPT_EAL_CipherCtx *CRYPT_EAL_ProviderCipherNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
 #ifdef HITLS_CRYPTO_PROVIDER
-    return CRYPT_EAL_ProviderCipherNewCtxInner(libCtx, algId, attrName);
+    return CipherNewCtxInner(libCtx, algId, attrName, true);
 #else
     (void)libCtx;
     (void)attrName;
@@ -187,7 +95,7 @@ CRYPT_EAL_CipherCtx *CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AlgId id)
         return NULL;
     }
 #endif
-    return CipherNewDefaultCtx(id);
+    return CipherNewCtxInner(NULL, id, NULL, false);
 }
 
 void CRYPT_EAL_CipherFreeCtx(CRYPT_EAL_CipherCtx *ctx)
@@ -196,28 +104,24 @@ void CRYPT_EAL_CipherFreeCtx(CRYPT_EAL_CipherCtx *ctx)
         // If the input parameter is NULL, it is not considered as an error.
         return;
     }
-    if (ctx->method == NULL || ctx->method->freeCtx == NULL) {
+    if (ctx->method.freeCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
-        BSL_SAL_FREE(ctx->method);
-        BSL_SAL_FREE(ctx);
-        return;
+    } else {
+        (void)ctx->method.freeCtx(ctx->ctx);
     }
 
-    (void)ctx->method->freeCtx(ctx->ctx);
-    BSL_SAL_FREE(ctx->method);
     // Free the memory eal ctx and mode ctx at the EAL layer.
-    BSL_SAL_FREE(ctx);
+    BSL_SAL_Free(ctx);
 }
 
 int32_t CRYPT_EAL_CipherInit(CRYPT_EAL_CipherCtx *ctx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc)
 {
-    int32_t ret;
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, CRYPT_CIPHER_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->method == NULL || ctx->method->initCtx == NULL) {
+    if (ctx->method.initCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
@@ -228,7 +132,7 @@ int32_t CRYPT_EAL_CipherInit(CRYPT_EAL_CipherCtx *ctx, const uint8_t *key, uint3
         return CRYPT_EAL_ERR_STATE;
     }
 
-    ret = ctx->method->initCtx(ctx->ctx, key, keyLen, iv, ivLen, NULL, enc);
+    int32_t ret = ctx->method.initCtx(ctx->ctx, key, keyLen, iv, ivLen, NULL, enc);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
         return ret;
@@ -244,12 +148,12 @@ void CRYPT_EAL_CipherDeinit(CRYPT_EAL_CipherCtx *ctx)
         // If the ctx is NULL during deinit, it is not considered as an error.
         return;
     }
-    if (ctx->method == NULL || ctx->method->deinitCtx == NULL) {
+    if (ctx->method.deinitCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return;
     }
 
-    int32_t ret = ctx->method->deinitCtx(ctx->ctx);
+    int32_t ret = ctx->method.deinitCtx(ctx->ctx);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
     }
@@ -261,7 +165,6 @@ void CRYPT_EAL_CipherDeinit(CRYPT_EAL_CipherCtx *ctx)
 // no need for IV, the value can be set to NULL
 int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, uint8_t *iv, uint32_t ivLen)
 {
-    int32_t ret;
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, CRYPT_CIPHER_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -274,11 +177,11 @@ int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, uint8_t *iv, uint32_t i
     }
 
     // Reset the IV. In this case, reset the IV is not restricted by the states.
-    if (ctx->method == NULL || ctx->method->ctrl == NULL) {
+    if (ctx->method.ctrl == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    ret = ctx->method->ctrl(ctx->ctx, CRYPT_CTRL_REINIT_STATUS, iv, ivLen);
+    int32_t ret = ctx->method.ctrl(ctx->ctx, CRYPT_CTRL_REINIT_STATUS, iv, ivLen);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
         return ret;
@@ -317,7 +220,7 @@ static int32_t CheckUpdateParam(const CRYPT_EAL_CipherCtx *ctx, const uint8_t *i
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }
-    if (ctx->method == NULL || ctx->method->update == NULL) {
+    if (ctx->method.update == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
@@ -334,7 +237,7 @@ int32_t CRYPT_EAL_CipherUpdate(CRYPT_EAL_CipherCtx *ctx, const uint8_t *in, uint
         return ret;
     }
 
-    ret = ctx->method->update(ctx->ctx, in, inLen, out, outLen);
+    ret = ctx->method.update(ctx->ctx, in, inLen, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
         return ret;
@@ -356,7 +259,7 @@ int32_t CheckFinalParam(const CRYPT_EAL_CipherCtx *ctx, const uint8_t *out, cons
         return CRYPT_EAL_ERR_STATE;
     }
 
-    if (ctx->method == NULL || ctx->method->final == NULL) {
+    if (ctx->method.final == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
@@ -365,14 +268,13 @@ int32_t CheckFinalParam(const CRYPT_EAL_CipherCtx *ctx, const uint8_t *out, cons
 
 int32_t CRYPT_EAL_CipherFinal(CRYPT_EAL_CipherCtx *ctx, uint8_t *out, uint32_t *outLen)
 {
-    int32_t ret;
-    ret = CheckFinalParam(ctx, out, outLen);
+    int32_t ret = CheckFinalParam(ctx, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, (ctx == NULL) ? CRYPT_CIPHER_MAX : ctx->id, ret);
         return ret;
     }
 
-    ret = ctx->method->final(ctx->ctx, out, outLen);
+    ret = ctx->method.final(ctx->ctx, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
         return ret;
@@ -422,11 +324,11 @@ int32_t CRYPT_EAL_CipherCtrl(CRYPT_EAL_CipherCtx *ctx, int32_t type, void *data,
         // After getTag the system enters the final state.
         ctx->states = EAL_CIPHER_STATE_FINAL;
     }
-    if (ctx->method == NULL || ctx->method->ctrl == NULL) {
+    if (ctx->method.ctrl == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    int32_t ret = ctx->method->ctrl(ctx->ctx, type, data, len);
+    int32_t ret = ctx->method.ctrl(ctx->ctx, type, data, len);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
         return ret;
@@ -441,11 +343,11 @@ int32_t CRYPT_EAL_CipherSetPadding(CRYPT_EAL_CipherCtx *ctx, CRYPT_PaddingType t
         return CRYPT_NULL_INPUT;
     }
 
-    if (ctx->method == NULL || ctx->method->ctrl == NULL) {
+    if (ctx->method.ctrl == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    int32_t ret = ctx->method->ctrl(ctx->ctx, CRYPT_CTRL_SET_PADDING, (void *)&type, sizeof(type));
+    int32_t ret = ctx->method.ctrl(ctx->ctx, CRYPT_CTRL_SET_PADDING, (void *)&type, sizeof(type));
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
     }
@@ -456,15 +358,15 @@ int32_t CRYPT_EAL_CipherGetPadding(CRYPT_EAL_CipherCtx *ctx)
 {
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, CRYPT_CIPHER_MAX, CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+        return CRYPT_PADDING_MAX_COUNT;
     }
 
-    if (ctx->method == NULL || ctx->method->ctrl == NULL) {
+    if (ctx->method.ctrl == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_NOT_SUPPORT;
+        return CRYPT_PADDING_MAX_COUNT;
     }
     int32_t type;
-    int32_t ret = ctx->method->ctrl(ctx->ctx, CRYPT_CTRL_GET_PADDING, (void *)&type, sizeof(type));
+    int32_t ret = ctx->method.ctrl(ctx->ctx, CRYPT_CTRL_GET_PADDING, (void *)&type, sizeof(type));
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
         return CRYPT_PADDING_MAX_COUNT;
@@ -474,10 +376,9 @@ int32_t CRYPT_EAL_CipherGetPadding(CRYPT_EAL_CipherCtx *ctx)
 
 bool CRYPT_EAL_CipherIsValidAlgId(CRYPT_CIPHER_AlgId id)
 {
-    const EAL_CipherMethod *m = NULL;
-    return EAL_FindCipher(id, &m) == CRYPT_SUCCESS;
+    EAL_CipherMethod method = {0};
+    return EAL_CipherFindMethod(id, &method) == CRYPT_SUCCESS;
 }
-
 
 static const uint32_t CIPHER_IS_AEAD[] = {
     CRYPT_CIPHER_AES128_CCM,

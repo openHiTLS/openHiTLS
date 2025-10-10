@@ -848,7 +848,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKI_PARSE_CERT_FILE_CONTAIN_T61_TC001(int algId, int format, char *path)
 {
-#if defined(HITLS_PKI_X509_CRT) && defined(HITLS_BSL_SAL_FILE)
+#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_BSL_SAL_FILE)
     if (PkiSkipTest(algId, format)) {
         SKIP_TEST();
     }

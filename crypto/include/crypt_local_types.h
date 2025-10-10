@@ -16,6 +16,7 @@
 #ifndef CRYPT_LOCAL_TYPES_H
 #define CRYPT_LOCAL_TYPES_H
 
+#include "hitls_build.h"
 #include "crypt_algid.h"
 #include "crypt_types.h"
 #include "bsl_params.h"
@@ -203,8 +204,7 @@ typedef enum {
     CRYPT_SYM_MAX
 } CRYPT_SYM_AlgId;
 
-typedef void *(*CipherNewCtx)(int32_t alg);
-typedef void *(*CipherProvNewCtx)(void *provCtx, int32_t alg);
+typedef void *(*CipherNewCtx)(void *provCtx, int32_t alg);
 typedef int32_t (*CipherInitCtx)(void *ctx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, const BSL_Param *param, bool enc);
 typedef int32_t (*CipherDeInitCtx)(void *ctx);
@@ -243,17 +243,6 @@ typedef struct {
     CipherCtrl ctrl;
     CipherFreeCtx freeCtx;
 } EAL_CipherMethod;
-
-typedef struct {
-    CipherNewCtx newCtx;
-    CipherProvNewCtx provNewCtx;
-    CipherInitCtx initCtx;
-    CipherDeInitCtx deinitCtx;
-    CipherUpdate update;
-    CipherFinal final;
-    CipherCtrl ctrl;
-    CipherFreeCtx freeCtx;
-} EAL_CipherUnitaryMethod;
 
 /* prototype of MAC algorithm operation functions */
 typedef void* (*MacNewCtx)(void *provCtx, int32_t algId);
@@ -299,7 +288,7 @@ typedef struct {
  * Symmetric encryption/decryption mode ID
  */
 typedef enum {
-    CRYPT_MODE_CBC = 0,
+    CRYPT_MODE_CBC,
     CRYPT_MODE_ECB,
     CRYPT_MODE_CTR,
     CRYPT_MODE_XTS,
@@ -327,8 +316,7 @@ typedef struct {
 } RSA_PadingPara;
 
 /* Prototype of the KDF algorithm operation functions */
-typedef void* (*KdfNewCtx)(void);
-typedef void* (*KdfProvNewCtx)(void *provCtx, int32_t algId);
+typedef void* (*KdfNewCtx)(void *provCtx, int32_t algId);
 typedef int32_t (*KdfSetParam)(void *ctx, const BSL_Param *param);
 typedef int32_t (*KdfDerive)(void *ctx, uint8_t *key, uint32_t keyLen);
 typedef int32_t (*KdfDeinit)(void *ctx);
@@ -340,18 +328,9 @@ typedef struct {
     KdfSetParam setParam;
     KdfDerive derive;
     KdfDeinit deinit;
+    KdfCtrl ctrl;
     KdfFreeCtx freeCtx;
 } EAL_KdfMethod;
-
-typedef struct {
-    KdfNewCtx newCtx;
-    KdfProvNewCtx provNewCtx;
-    KdfSetParam setParam;
-    KdfDerive derive;
-    KdfDeinit deinit;
-    KdfFreeCtx freeCtx;
-    KdfCtrl ctrl;
-} EAL_KdfUnitaryMethod;
 
 typedef struct {
     uint32_t id;

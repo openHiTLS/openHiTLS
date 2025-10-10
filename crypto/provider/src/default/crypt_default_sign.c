@@ -14,9 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if (defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_RSA_SIGN) || \
-    defined(HITLS_CRYPTO_RSA_VERIFY) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2_SIGN) || \
-    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_MLDSA)) && defined(HITLS_CRYPTO_PROVIDER)
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_PKEY_SIGN)
 
 #include "crypt_eal_implprovider.h"
 #include "crypt_dsa.h"
@@ -54,7 +52,9 @@ const CRYPT_EAL_Func g_defEalSignRsa[] = {
 #ifdef HITLS_CRYPTO_RSA_VERIFY
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_RSA_Verify},
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFYDATA, (CRYPT_EAL_ImplPkeyVerifyData)CRYPT_RSA_VerifyData},
+#ifdef HITLS_CRYPTO_RSA_RECOVER
     {CRYPT_EAL_IMPLPKEYSIGN_RECOVER, (CRYPT_EAL_ImplPkeyRecover)CRYPT_RSA_Recover},
+#endif
 #endif
 #ifdef HITLS_CRYPTO_RSA_BSSA
 #ifdef HITLS_CRYPTO_RSA_SIGN
@@ -102,4 +102,4 @@ const CRYPT_EAL_Func g_defEalSignMlDsa[] = {
 };
 #endif
 
-#endif
+#endif /* HITLS_CRYPTO_PROVIDER && HITLS_CRYPTO_PKEY_SIGN */

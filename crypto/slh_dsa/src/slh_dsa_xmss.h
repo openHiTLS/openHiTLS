@@ -24,7 +24,7 @@
 
 /**
  * @brief Sign a message using XMSS
- * 
+ *
  * @param sig Output XMSS signature
  * @param sigLen Length of the signature
  * @param msg Input message to sign
@@ -40,7 +40,7 @@ int32_t XmssSign(const uint8_t *msg, size_t msgLen, uint32_t idx, SlhDsaAdrs *ad
 
 /**
  * @brief Compute an internal node of the XMSS tree
- * 
+ *
  * @param node Output internal node
  * @param idx Node index at the given height
  * @param height Node height in the tree
@@ -55,7 +55,7 @@ int32_t XmssNode(uint8_t *node, uint32_t idx, uint32_t height, SlhDsaAdrs *adrs,
 
 /**
  * @brief Compute a public key from a signature and message
- * 
+ *
  * @param idx Index of the used WOTS+ key pair
  * @param sig Signature
  * @param sigLen Length of the signature

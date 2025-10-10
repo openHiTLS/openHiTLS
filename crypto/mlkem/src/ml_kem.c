@@ -22,6 +22,7 @@
 #include "bsl_err_internal.h"
 #include "eal_pkey_local.h"
 #include "crypt_util_rand.h"
+#include "crypt_util_ctrl.h"
 #include "crypt_utils.h"
 #include "ml_kem_local.h"
 
@@ -342,6 +343,7 @@ int32_t CRYPT_ML_KEM_GetDecapsKeyEx(const CRYPT_ML_KEM_Ctx *ctx, BSL_Param *para
 }
 #endif
 
+#ifdef HITLS_CRYPTO_MLKEM_CMP
 static int32_t MlKemCmpKey(uint8_t *a, uint32_t aLen, uint8_t *b, uint32_t bLen)
 {
     if (aLen != bLen) {
@@ -380,6 +382,7 @@ int32_t CRYPT_ML_KEM_Cmp(const CRYPT_ML_KEM_Ctx *a, const CRYPT_ML_KEM_Ctx *b)
     }
     return CRYPT_SUCCESS;
 }
+#endif
 
 int32_t CRYPT_ML_KEM_GetSecBits(const CRYPT_ML_KEM_Ctx *ctx)
 {
@@ -387,17 +390,6 @@ int32_t CRYPT_ML_KEM_GetSecBits(const CRYPT_ML_KEM_Ctx *ctx)
         return 0;
     }
     return (int32_t)ctx->info->secBits;
-}
-
-static int32_t CRYPT_ML_KEM_GetLen(const CRYPT_ML_KEM_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
-{
-    if (val == NULL || len != sizeof(int32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    *(int32_t *)val = func(ctx);
-    return CRYPT_SUCCESS;
 }
 
 static int32_t MlKemCleanPubKey(CRYPT_ML_KEM_Ctx *ctx)
@@ -417,7 +409,7 @@ int32_t CRYPT_ML_KEM_Ctrl(CRYPT_ML_KEM_Ctx *ctx, int32_t opt, void *val, uint32_
         return CRYPT_NULL_INPUT;
     }
     if (opt == CRYPT_CTRL_GET_SECBITS) {
-        return CRYPT_ML_KEM_GetLen(ctx, (GetLenFunc)CRYPT_ML_KEM_GetSecBits, val, len);
+        return CRYPT_CTRL_GET_NUM32_EX(CRYPT_ML_KEM_GetSecBits, ctx, val, len);
     }
     if (opt == CRYPT_CTRL_CLEAN_PUB_KEY) {
         return MlKemCleanPubKey(ctx);
@@ -495,8 +487,9 @@ int32_t CRYPT_ML_KEM_GenKey(CRYPT_ML_KEM_Ctx *ctx)
 static int32_t EncCapsInputCheck(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen,
     uint8_t *sk, uint32_t *skLen)
 {
-    if (ctx == NULL || ctx->ek == NULL || ct == NULL || ctLen == NULL ||
-        sk == NULL || skLen == NULL) {
+    bool nullInput = ctx == NULL || ctx->ek == NULL || ct == NULL || ctLen == NULL ||
+                     sk == NULL || skLen == NULL;
+    if (nullInput == true) {
         return CRYPT_NULL_INPUT;
     }
     if (ctx->info == NULL) {

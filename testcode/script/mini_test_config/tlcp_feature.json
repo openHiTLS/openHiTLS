@@ -84,7 +84,8 @@
                 "mlkem",
                 "mldsa",
                 "slh_dsa",
-                "codecskey"
+                "codecskey",
+                "pkey_cmp"
             ]
         },
         "hitls_tls": {

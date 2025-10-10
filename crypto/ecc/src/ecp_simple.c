@@ -49,17 +49,13 @@ int32_t ECP_PointAtInfinity(const ECC_Para *para, const ECC_Point *pt)
 // Check whether the point is on the curve.
 int32_t ECP_PointOnCurve(const ECC_Para *para, const ECC_Point *pt)
 {
-    int32_t ret = 0;
     uint32_t nistList[] = {CRYPT_ECC_NISTP224, CRYPT_ECC_NISTP256, CRYPT_ECC_NISTP384, CRYPT_ECC_NISTP521};
-    ret = ECP_PointAtInfinity(para, pt);
+    int32_t ret = ECP_PointAtInfinity(para, pt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
     // Do not check the point on the Jacobian coordinate system.
-    if (!BN_IsOne(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_NOT_AFFINE);
-        return CRYPT_ECC_POINT_NOT_AFFINE;
-    }
+    RETURN_RET_IF(!BN_IsOne(&pt->z), CRYPT_ECC_POINT_NOT_AFFINE);
 
     uint32_t bits = BN_Bits(para->p);
     BN_Optimizer *opt = BN_OptimizerCreate();
@@ -81,9 +77,12 @@ int32_t ECP_PointOnCurve(const ECC_Para *para, const ECC_Point *pt)
     if (ParamIdIsValid(para->id, nistList, sizeof(nistList) / sizeof(nistList[0]))) {
         // Currently, only the NIST curve is supported(calculating x^3 - 3x).
         // Other curves need to be expanded in the future.
-        GOTO_ERR_IF(BN_ModSub(x, x, &pt->x, para->p, opt), ret);
-        GOTO_ERR_IF(BN_ModSub(x, x, &pt->x, para->p, opt), ret);
-        GOTO_ERR_IF(BN_ModSub(x, x, &pt->x, para->p, opt), ret); //  x^3 - 3x
+        if ((ret = BN_ModSub(x, x, &pt->x, para->p, opt)) != CRYPT_SUCCESS ||
+            (ret = BN_ModSub(x, x, &pt->x, para->p, opt)) != CRYPT_SUCCESS ||
+            (ret = BN_ModSub(x, x, &pt->x, para->p, opt)) != CRYPT_SUCCESS) { //  x^3 - 3x
+            BSL_ERR_PUSH_ERROR(ret);
+            goto ERR;
+        }
     } else {
         // General implementation
         GOTO_ERR_IF(BN_ModMul(y, dupA, &pt->x, para->p, opt), ret);
@@ -132,15 +131,15 @@ int32_t ECP_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    GOTO_ERR_IF(BN_ModInv(inv, &pt->z, para->p, opt), ret);
-    GOTO_ERR_IF(BN_ModSqr(zz, inv, para->p, opt), ret);
+    if ((ret = BN_ModInv(inv, &pt->z, para->p, opt)) != CRYPT_SUCCESS ||
+        (ret = BN_ModSqr(zz, inv, para->p, opt)) != CRYPT_SUCCESS ||
+        (ret = BN_ModMul(&r->x, &pt->x, zz, para->p, opt)) != CRYPT_SUCCESS ||
+        (ret = BN_ModMul(zz, zz, inv, para->p, opt)) != CRYPT_SUCCESS ||
+        (ret = BN_ModMul(&r->y, &pt->y, zz, para->p, opt)) != CRYPT_SUCCESS ||
+        (ret = BN_SetLimb(&r->z, 1)) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
 
-    GOTO_ERR_IF(BN_ModMul(&r->x, &pt->x, zz, para->p, opt), ret);
-
-    GOTO_ERR_IF(BN_ModMul(zz, zz, inv, para->p, opt), ret);
-    GOTO_ERR_IF(BN_ModMul(&r->y, &pt->y, zz, para->p, opt), ret);
-
-    GOTO_ERR_IF(BN_SetLimb(&r->z, 1), ret);
 ERR:
     BN_Destroy(zz);
     BN_Destroy(inv);
@@ -302,11 +301,13 @@ int32_t ECP_PointMul(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const EC
         goto ERR;
     }
     // Convert base to affine.
-    GOTO_ERR_IF(ECP_Point2Affine(para, base, base), ret);
-    // Add salt to prevent side channels.
-    GOTO_ERR_IF(ECC_PointToMont(para, base, opt), ret);
-    GOTO_ERR_IF(ECC_CopyPoint(r, base), ret);
-    GOTO_ERR_IF(ECC_PointBlind(para, r), ret);
+    if ((ret = ECP_Point2Affine(para, base, base)) != CRYPT_SUCCESS ||
+        (ret = ECC_PointToMont(para, base, opt)) != CRYPT_SUCCESS || // Add salt to prevent side channels.
+        (ret = ECC_CopyPoint(r, base)) != CRYPT_SUCCESS ||
+        (ret = ECC_PointBlind(para, r)) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
     bits = BN_Bits(k);
     for (i = bits - 1; i > 0; i--) {
         GOTO_ERR_IF(para->method->pointDouble(para, r, r), ret);
@@ -388,12 +389,13 @@ static int32_t ECP_PointJacMulZ(const ECC_Para *para, ECC_Point *pt, const BN_Bi
         return CRYPT_MEM_ALLOC_FAIL;
     }
     int32_t ret;
-    GOTO_ERR_IF(BN_ModMul(&pt->z, &pt->z, z, para->p, opt), ret);  // z = z * z0
-    GOTO_ERR_IF(BN_ModMul(&pt->y, &pt->y, z, para->p, opt), ret);  // y = y * z0
-    GOTO_ERR_IF(BN_ModSqr(t, z, para->p, opt), ret);             // t = z0^2
-    GOTO_ERR_IF(BN_ModMul(&pt->x, &pt->x, t, para->p, opt), ret);  // x = x * (z0^2)
-    GOTO_ERR_IF(BN_ModMul(&pt->y, &pt->y, t, para->p, opt), ret);  // y = y * (z0^3)
-ERR:
+    if ((ret = BN_ModMul(&pt->z, &pt->z, z, para->p, opt)) != CRYPT_SUCCESS || // z = z * z0
+        (ret = BN_ModMul(&pt->y, &pt->y, z, para->p, opt)) != CRYPT_SUCCESS || // y = y * z0
+        (ret = BN_ModSqr(t, z, para->p, opt)) != CRYPT_SUCCESS || // t = z0^2
+        (ret = BN_ModMul(&pt->x, &pt->x, t, para->p, opt)) != CRYPT_SUCCESS || // x = x * (z0^2)
+        (ret = BN_ModMul(&pt->y, &pt->y, t, para->p, opt)) != CRYPT_SUCCESS) { // y = y * (z0^3)
+        BSL_ERR_PUSH_ERROR(ret);
+    }
     BN_Destroy(t);
     return ret;
 }
@@ -436,7 +438,8 @@ ERR:
     return ret;
 }
 
-int32_t ECP_PointCmp(const ECC_Para *para, const ECC_Point *a, const ECC_Point *b)
+// Currently, only prime number curves are supported. Other curves need to be expanded.
+int32_t ECC_PointCmp(const ECC_Para *para, const ECC_Point *a, const ECC_Point *b)
 {
     if (para == NULL || a == NULL || b == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -484,10 +487,11 @@ int32_t ECP_PointCopy(const ECC_Para *para, ECC_Point *a, const ECC_Point *b)
     int32_t ret;
 
     a->id = b->id;
-    GOTO_ERR_IF(BN_Copy(&a->x, &b->x), ret);
-    GOTO_ERR_IF(BN_Copy(&a->y, &b->y), ret);
-    GOTO_ERR_IF(BN_Copy(&a->z, &b->z), ret);
-ERR:
+    if ((ret = BN_Copy(&a->x, &b->x)) != CRYPT_SUCCESS ||
+        (ret = BN_Copy(&a->y, &b->y)) != CRYPT_SUCCESS ||
+        (ret = BN_Copy(&a->z, &b->z)) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
     return ret;
 }
 
@@ -915,7 +919,8 @@ static int32_t EncodePointParaCheck(const ECC_Para *para, const ECC_Point *pt, c
     return CRYPT_SUCCESS;
 }
 
-int32_t ECP_EncodePoint(const ECC_Para *para, ECC_Point *pt, uint8_t *data, uint32_t *dataLen,
+// Currently, only prime number curves are supported. Other curves need to be expanded.
+int32_t ECC_EncodePoint(const ECC_Para *para, ECC_Point *pt, uint8_t *data, uint32_t *dataLen,
     CRYPT_PKEY_PointFormat format)
 {
     int32_t ret;
@@ -1048,7 +1053,8 @@ static int32_t GetFormatAndCheckLen(const uint8_t *data, uint32_t dataLen, CRYPT
     return CRYPT_ECC_ERR_POINT_CODE;
 }
 
-int32_t ECP_DecodePoint(const ECC_Para *para, ECC_Point *pt, const uint8_t *data, uint32_t dataLen)
+// Currently, only prime number curves are supported. Other curves need to be expanded.
+int32_t ECC_DecodePoint(const ECC_Para *para, ECC_Point *pt, const uint8_t *data, uint32_t dataLen)
 {
     if (para == NULL || pt == NULL || data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

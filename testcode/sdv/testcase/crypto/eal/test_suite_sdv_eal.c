@@ -412,7 +412,7 @@ void SDV_CRYPTO_EAL_PKEY_CMP_TC001(void)
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(NULL, NULL), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(NULL, &ctx2), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(&ctx1, NULL), CRYPT_NULL_INPUT);
-    ASSERT_EQ(CRYPT_EAL_PkeyCmp(&ctx1, &ctx2), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(&ctx1, &ctx2), CRYPT_EAL_ALG_NOT_SUPPORT);
 
     ctx1.id = CRYPT_PKEY_DH;
     ctx2.id = CRYPT_PKEY_DSA;
@@ -421,7 +421,6 @@ void SDV_CRYPTO_EAL_PKEY_CMP_TC001(void)
     ctx2.id = CRYPT_PKEY_DH;
     pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DH);
     ASSERT_TRUE(pkey != NULL);
-    ASSERT_TRUE(pkey->method != NULL);
     ctx1.method = pkey->method;
     ctx2.method = pkey->method;
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(&ctx1, &ctx2), CRYPT_NULL_INPUT);

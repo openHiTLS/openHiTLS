@@ -109,7 +109,7 @@ void GF128Mul(uint8_t *a, uint32_t len)
 }
 #else
 // AES XTS IEEE P1619/D16 5.2
-// Multiplication by a primitive element |ив
+// Multiplication by a primitive element
 void GF128Mul(uint8_t *a, uint32_t len)
 {
     (void)len;
@@ -408,11 +408,16 @@ MODES_XTS_Ctx *MODES_XTS_NewCtx(int32_t algId)
     return ctx;
 }
 
+MODES_XTS_Ctx *MODES_XTS_NewCtxEx(void *libCtx, int32_t algId)
+{
+    (void)libCtx;
+    return MODES_XTS_NewCtx(algId);
+}
+
 int32_t MODES_XTS_InitCtx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc)
 {
-    int32_t ret;
-    ret = MODES_XTS_CheckPara(key, keyLen, iv);
+    int32_t ret = MODES_XTS_CheckPara(key, keyLen, iv);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

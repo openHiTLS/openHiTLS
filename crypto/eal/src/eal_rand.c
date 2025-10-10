@@ -329,7 +329,6 @@ void EAL_RandDrbgFree(void *ctx)
 #ifdef HITLS_CRYPTO_ENTROPY
 static int32_t GetSeedDrbgEntropy(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRYPT_Range *lenRange)
 {
-    int32_t ret;
     CRYPT_EAL_RndCtx *seed = (CRYPT_EAL_RndCtx *)ctx;
     uint32_t strengthBytes = (strength + 7) / 8; // Figure out how many bytes needed.
     entropy->len = ((strengthBytes > lenRange->min) ? strengthBytes : lenRange->min);
@@ -343,7 +342,7 @@ static int32_t GetSeedDrbgEntropy(void *ctx, CRYPT_Data *entropy, uint32_t stren
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = EAL_DrbgbytesWithAdin(seed, entropy->data, entropy->len, NULL, 0);
+    int32_t ret = EAL_DrbgbytesWithAdin(seed, entropy->data, entropy->len, NULL, 0);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_FREE(entropy->data);
     }
@@ -809,11 +808,7 @@ int32_t CRYPT_EAL_ProviderRandInitCtxInner(CRYPT_EAL_LibCtx *libCtx, int32_t alg
     const uint8_t *pers, uint32_t persLen, BSL_Param *param)
 {
     CRYPT_EAL_RndCtx *ctx = NULL;
-    CRYPT_EAL_LibCtx *localLibCtx = NULL;
-    localLibCtx = libCtx;
-    if (localLibCtx == NULL) {
-        localLibCtx = CRYPT_EAL_GetGlobalLibCtx();
-    }
+    CRYPT_EAL_LibCtx *localLibCtx = GetCurrentProviderLibCtx(libCtx);
     if (localLibCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
         return CRYPT_PROVIDER_INVALID_LIB_CTX;

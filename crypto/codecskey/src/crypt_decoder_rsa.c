@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_KEY_DECODE) && defined(HITLS_CRYPTO_RSA)
+#if defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) && defined(HITLS_CRYPTO_RSA)
 #include "crypt_rsa.h"
 #include "bsl_asn1_internal.h"
 #include "bsl_params.h"
@@ -22,8 +22,8 @@
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "crypt_params_key.h"
-#include "crypt_encode_decode_local.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey_local.h"
+#include "crypt_codecskey.h"
 
 static int32_t ProcRsaPubKey(const BSL_ASN1_Buffer *asn1, CRYPT_RSA_Ctx *rsaKey)
 {

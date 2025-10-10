@@ -13,10 +13,11 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_CRYPTO_PROVIDER)
+#if defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) && defined(HITLS_CRYPTO_PROVIDER)
 #include "crypt_eal_implprovider.h"
 #include "crypt_eal_pkey.h"
-#include "crypt_decode_key_impl.h"
+#include "crypt_decoder_local.h"
+#include "crypt_decoder.h"
 
 #ifdef HITLS_CRYPTO_KEY_EPKI
 const CRYPT_EAL_Func g_defEalPrvP8Enc2P8[] = {
@@ -281,4 +282,4 @@ const CRYPT_EAL_Func g_defEalLowKeyObject2PkeyObject[] = {
 };
 
 
-#endif /* HITLS_CRYPTO_CODECSKEY && HITLS_CRYPTO_PROVIDER */
+#endif /* HITLS_CRYPTO_KEY_DECODE_CHAIN && HITLS_CRYPTO_PROVIDER */

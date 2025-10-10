@@ -164,7 +164,7 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/crypto/paillier/src
     ${openHiTLS_SRC}/crypto/elgamal/include
     ${openHiTLS_SRC}/crypto/elgamal/src
-    ${openHiTLS_SRC}/crypto/encode/include
+    ${openHiTLS_SRC}/crypto/codecsdata/include
     ${openHiTLS_SRC}/crypto/codecskey/include
     ${openHiTLS_SRC}/crypto/codecskey/src
     ${openHiTLS_SRC}/crypto/entropy/src

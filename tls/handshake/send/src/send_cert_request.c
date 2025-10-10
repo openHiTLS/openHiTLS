@@ -50,8 +50,7 @@ static int32_t PackAndSendCertRequest(TLS_Ctx *ctx)
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 int32_t ServerSendCertRequestProcess(TLS_Ctx *ctx)
 {
-    int32_t ret;
-    ret = PackAndSendCertRequest(ctx);
+    int32_t ret = PackAndSendCertRequest(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

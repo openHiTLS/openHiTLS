@@ -349,7 +349,6 @@ static int32_t OutputCheck(BN_BigNum **r, int32_t num)
 
 int32_t BN_Hex2Bn(BN_BigNum **r, const char *str)
 {
-    int32_t ret;
     int32_t len;
     int32_t negtive = 0;
     if (r == NULL || str == NULL) {
@@ -357,7 +356,7 @@ int32_t BN_Hex2Bn(BN_BigNum **r, const char *str)
         return CRYPT_NULL_INPUT;
     }
     const char *inputStr = str;
-    ret = CheckInputStr(&len, inputStr, &negtive, true);
+    int32_t ret = CheckInputStr(&len, inputStr, &negtive, true);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -478,7 +477,6 @@ ERR:
 
 int32_t BN_Dec2Bn(BN_BigNum **r, const char *str)
 {
-    int32_t ret;
     int32_t num;
     int32_t negtive = 0;
     if (r == NULL || str == NULL) {
@@ -486,7 +484,7 @@ int32_t BN_Dec2Bn(BN_BigNum **r, const char *str)
         return CRYPT_NULL_INPUT;
     }
     const char *inputStr = str;
-    ret = CheckInputStr(&num, inputStr, &negtive, false);
+    int32_t ret = CheckInputStr(&num, inputStr, &negtive, false);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

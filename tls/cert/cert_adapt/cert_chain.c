@@ -68,7 +68,6 @@ void SAL_CERT_ChainFree(HITLS_CERT_Chain *chain)
 HITLS_CERT_Chain *SAL_CERT_ChainDup(CERT_MgrCtx *mgrCtx, HITLS_CERT_Chain *chain)
 {
     int32_t ret;
-    uint32_t listSize = (uint32_t)BSL_LIST_COUNT(chain);
     HITLS_CERT_X509 *dupCert = NULL;
     HITLS_CERT_X509 *currCert = NULL;
 
@@ -85,13 +84,7 @@ HITLS_CERT_Chain *SAL_CERT_ChainDup(CERT_MgrCtx *mgrCtx, HITLS_CERT_Chain *chain
         return NULL;
     }
 
-    for (uint32_t index = 0u; index < listSize; ++index) {
-        currCert = (HITLS_CERT_X509 *)BSL_LIST_GetIndexNode(index, chain);
-        if (currCert == NULL) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15002, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "dup cert error: currCert NULL.", 0, 0, 0, 0);
-            goto EXIT;
-        }
+    for (currCert = BSL_LIST_GET_FIRST(chain); currCert != NULL; currCert = BSL_LIST_GET_NEXT(chain)) {
         dupCert = SAL_CERT_X509Dup(mgrCtx, currCert);
         if (dupCert == NULL) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15013, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

@@ -74,9 +74,9 @@ typedef struct _HITLS_X509_Crl {
     BSL_SAL_RefCount references;
 } HITLS_X509_Crl;
 
-int32_t HITLS_ParseCrlExtInvalidTime(HITLS_X509_ExtEntry *extEntry, void *val);
-
 int32_t HITLS_ParseCrlExtReason(HITLS_X509_ExtEntry *extEntry, void *val);
+
+int32_t HITLS_ParseCrlExtInvalidTime(HITLS_X509_ExtEntry *extEntry, void *val);
 
 #ifdef __cplusplus
 }

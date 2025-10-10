@@ -51,7 +51,9 @@ struct CertMgrCtxInner {
 #endif
     HITLS_PasswordCb defaultPasswdCb;           /* Default password callback, used in loading certificate. */
     void *defaultPasswdCbUserData;              /* Set the userData used by the default password callback.  */
+#ifdef HITLS_TLS_CONFIG_CERT_CALLBACK
     HITLS_VerifyCb verifyCb;                    /* Certificate verification callback function */
+#endif /* HITLS_TLS_CONFIG_CERT_CALLBACK */
 #ifdef HITLS_TLS_FEATURE_CERT_CB
     HITLS_CertCb certCb;                      /* Certificate callback function */
     void *certCbArg;                        /* Argument for the certificate callback function */

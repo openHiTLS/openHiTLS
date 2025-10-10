@@ -43,13 +43,13 @@ CRYPT_SM2_Ctx *CRYPT_SM2_NewCtx(void);
 /**
  * @ingroup sm2
  * @brief sm2 Allocate the context memory space.
- * 
+ *
  * @param libCtx [IN] Library context
  *
  * @retval (CRYPT_SM2_Ctx *) Pointer to the memory space of the allocated context
  * @retval NULL              Invalid null pointer.
  */
-CRYPT_SM2_Ctx *CRYPT_SM2_NewCtxEx(void *libCtx);  
+CRYPT_SM2_Ctx *CRYPT_SM2_NewCtxEx(void *libCtx);
 
 /**
  * @ingroup sm2
@@ -178,7 +178,7 @@ int32_t CRYPT_SM2_SetPrvKey(CRYPT_SM2_Ctx *ctx, const CRYPT_Sm2Prv *prv);
  * @retval ECC error.           An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS        set successfully.
  */
-int32_t CRYPT_SM2_SetPubKey(CRYPT_SM2_Ctx *ctx, const CRYPT_DsaPub *pub);
+int32_t CRYPT_SM2_SetPubKey(CRYPT_SM2_Ctx *ctx, const CRYPT_Sm2Pub *pub);
 
 /**
  * @ingroup sm2
@@ -192,7 +192,7 @@ int32_t CRYPT_SM2_SetPubKey(CRYPT_SM2_Ctx *ctx, const CRYPT_DsaPub *pub);
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                obtained successfully.
  */
-int32_t CRYPT_SM2_GetPrvKey(const CRYPT_SM2_Ctx *ctx, CRYPT_DsaPrv *prv);
+int32_t CRYPT_SM2_GetPrvKey(const CRYPT_SM2_Ctx *ctx, CRYPT_Sm2Prv *prv);
 
 /**
  * @ingroup sm2
@@ -206,7 +206,7 @@ int32_t CRYPT_SM2_GetPrvKey(const CRYPT_SM2_Ctx *ctx, CRYPT_DsaPrv *prv);
  * @retval ECC error.                   An error occurred in the internal ECC calculation.
  * @retval CRYPT_SUCCESS                Obtained successfully.
  */
-int32_t CRYPT_SM2_GetPubKey(const CRYPT_SM2_Ctx *ctx, CRYPT_DsaPub *pub);
+int32_t CRYPT_SM2_GetPubKey(const CRYPT_SM2_Ctx *ctx, CRYPT_Sm2Pub *pub);
 
 #ifdef HITLS_BSL_PARAMS
 /**
@@ -330,6 +330,8 @@ int32_t CRYPT_SM2_Encrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
  */
 int32_t CRYPT_SM2_Decrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t datalen, uint8_t *out, uint32_t *outlen);
 #endif
+
+#ifdef HITLS_CRYPTO_SM2_CMP
 /**
  * @ingroup sm2
  * @brief sm2 Compare the public key and parameters.
@@ -341,6 +343,9 @@ int32_t CRYPT_SM2_Decrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
  * For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_SM2_Cmp(const CRYPT_SM2_Ctx *a, const CRYPT_SM2_Ctx *b);
+#else
+#define CRYPT_SM2_Cmp NULL
+#endif
 
 /**
  * @ingroup sm2
@@ -352,6 +357,7 @@ int32_t CRYPT_SM2_Cmp(const CRYPT_SM2_Ctx *a, const CRYPT_SM2_Ctx *b);
  */
 int32_t CRYPT_SM2_GetSecBits(const CRYPT_SM2_Ctx *ctx);
 
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
 /**
  * @ingroup sm2
  * @brief sm2 import key
@@ -369,6 +375,7 @@ int32_t CRYPT_SM2_Import(CRYPT_SM2_Ctx *ctx, const BSL_Param *params);
  * @param params [IN/OUT] key parameters
  */
 int32_t CRYPT_SM2_Export(const CRYPT_SM2_Ctx *ctx, BSL_Param *params);
+#endif
 
 #ifdef HITLS_CRYPTO_SM2_CHECK
 /**

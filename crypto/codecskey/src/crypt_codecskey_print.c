@@ -26,23 +26,27 @@
 #include "crypt_utils.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_errno.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey.h"
 
 #define CRYPT_UNKOWN_STRING "Unknown\n"
 #define CRYPT_UNSUPPORT_ALG "Unsupported alg\n"
+#define CRYPT_PUB_KEY_BITS_FMT "Public-Key: (%d bit)\n"
+#define CRYPT_PRV_KEY_BITS_FMT "Private-Key: (%d bit)\n"
 
-static inline int32_t PrintPubkeyBits(bool isEcc, uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio)
+static int32_t PrintKeyBits(bool isEcc, bool isPrv, uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio)
 {
-    if (!isEcc) {
-        return BSL_PRINT_Fmt(layer, uio, "Public-Key: (%d bit)\n", CRYPT_EAL_PkeyGetKeyBits(pkey));
-    }
+    int32_t ret;
     uint32_t bits = 0;
-    int32_t ret = CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_ECC_ORDER_BITS, &bits, sizeof(uint32_t));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+    if (isEcc == true) {
+        ret = CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_ECC_ORDER_BITS, &bits, sizeof(uint32_t));
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    } else {
+        bits = CRYPT_EAL_PkeyGetKeyBits(pkey);
     }
-    return BSL_PRINT_Fmt(layer, uio, "Public-Key: (%d bit)\n", bits);
+    return BSL_PRINT_Fmt(layer, uio, isPrv == true ? CRYPT_PRV_KEY_BITS_FMT : CRYPT_PUB_KEY_BITS_FMT, bits);
 }
 
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
@@ -70,7 +74,7 @@ static int32_t GetEccPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *pub)
 
 static int32_t PrintEccPubkey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio)
 {
-    RETURN_RET_IF(PrintPubkeyBits(true, layer, pkey, uio) != 0, CRYPT_DECODE_PRINT_KEYBITS);
+    RETURN_RET_IF(PrintKeyBits(true, false, layer, pkey, uio) != 0, CRYPT_DECODE_PRINT_KEYBITS);
 
     /* pub key */
     CRYPT_EAL_PkeyPub pub = {0};
@@ -78,13 +82,13 @@ static int32_t PrintEccPubkey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    if (BSL_PRINT_Fmt(layer, uio, "Pub:\n") != 0 ||
-        BSL_PRINT_Hex(layer + 1, false, pub.key.eccPub.data, pub.key.eccPub.len, uio) != 0) {
-        BSL_SAL_Free(pub.key.eccPub.data);
+    (void)BSL_PRINT_Fmt(layer, uio, "Pub:\n");
+    ret = BSL_PRINT_Hex(layer + 1, false, pub.key.eccPub.data, pub.key.eccPub.len, uio);
+    BSL_SAL_Free(pub.key.eccPub.data);
+    if (ret != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_ECC_PUB);
         return CRYPT_DECODE_PRINT_ECC_PUB;
     }
-    BSL_SAL_Free(pub.key.eccPub.data);
 
     /* ASN1 OID */
     CRYPT_PKEY_ParaId paraId =
@@ -130,15 +134,15 @@ int32_t CRYPT_EAL_PrintRsaPssPara(uint32_t layer, CRYPT_RSA_PssPara *para, BSL_U
         return CRYPT_INVALID_ARG;
     }
     /* hash */
-    const char *mdIdName = BSL_OBJ_GetOidNameFromCID((BslCid)para->mdId);
+    const char *name = BSL_OBJ_GetOidNameFromCID((BslCid)para->mdId);
     RETURN_RET_IF(BSL_PRINT_Fmt(layer, uio, "Hash Algorithm: %s%s\n",
-        mdIdName == NULL ? CRYPT_UNKOWN_STRING : mdIdName, para->mdId ==
-            CRYPT_MD_SHA1 ? " (default)" : "") != BSL_SUCCESS, CRYPT_DECODE_PRINT_RSAPSS_PARA);
+        name == NULL ? CRYPT_UNKOWN_STRING : name, para->mdId == CRYPT_MD_SHA1 ? " (default)" : "") != BSL_SUCCESS,
+        CRYPT_DECODE_PRINT_RSAPSS_PARA);
     /* mgf */
-    const char *mgfIdName = BSL_OBJ_GetOidNameFromCID((BslCid)para->mgfId);
+    name = BSL_OBJ_GetOidNameFromCID((BslCid)para->mgfId);
     RETURN_RET_IF(BSL_PRINT_Fmt(layer, uio, "Mask Algorithm: %s%s\n",
-        mgfIdName == NULL ? CRYPT_UNKOWN_STRING : mgfIdName, para->mgfId ==
-            CRYPT_MD_SHA1 ? " (default)" : "") != BSL_SUCCESS, CRYPT_DECODE_PRINT_RSAPSS_PARA);
+        name == NULL ? CRYPT_UNKOWN_STRING : name, para->mgfId == CRYPT_MD_SHA1 ? " (default)" : "") != BSL_SUCCESS,
+        CRYPT_DECODE_PRINT_RSAPSS_PARA);
     /* saltLen */
     RETURN_RET_IF(BSL_PRINT_Fmt(layer, uio, "Salt Length: 0x%x%s\n",
         para->saltLen, para->saltLen == 20 ? " (default)" : "") != 0,
@@ -177,7 +181,7 @@ static int32_t PrintRsaPssPara(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO 
 
 static int32_t PrintRsaPubkey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio)
 {
-    RETURN_RET_IF(PrintPubkeyBits(false, layer, pkey, uio) != 0, CRYPT_DECODE_PRINT_KEYBITS);
+    RETURN_RET_IF(PrintKeyBits(false, false, layer, pkey, uio) != 0, CRYPT_DECODE_PRINT_KEYBITS);
 
     /* pub key */
     CRYPT_EAL_PkeyPub pub = {0};
@@ -185,18 +189,18 @@ static int32_t PrintRsaPubkey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    if (BSL_PRINT_Fmt(layer, uio, "Modulus:\n") != 0 ||
-        BSL_PRINT_Hex(layer + 1, false, pub.key.rsaPub.n, pub.key.rsaPub.nLen, uio) != 0) {
+    (void)BSL_PRINT_Fmt(layer, uio, "Modulus:\n");
+    if (BSL_PRINT_Hex(layer + 1, false, pub.key.rsaPub.n, pub.key.rsaPub.nLen, uio) != 0) {
         BSL_SAL_Free(pub.key.rsaPub.n);
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_MODULUS);
         return CRYPT_DECODE_PRINT_MODULUS;
     }
-    if (BSL_PRINT_Number(layer, "Exponent", pub.key.rsaPub.e, pub.key.rsaPub.eLen, uio) != 0) {
-        BSL_SAL_Free(pub.key.rsaPub.n);
+    ret = BSL_PRINT_Number(layer, "Exponent", pub.key.rsaPub.e, pub.key.rsaPub.eLen, uio);
+    BSL_SAL_Free(pub.key.rsaPub.n);
+    if (ret != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_EXPONENT);
         return CRYPT_DECODE_PRINT_EXPONENT;
     }
-    BSL_SAL_Free(pub.key.rsaPub.n);
 
     return PrintRsaPssPara(layer, pkey, uio);
 }
@@ -225,28 +229,13 @@ int32_t CRYPT_EAL_PrintPubkey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *
 }
 
 #ifdef HITLS_CRYPTO_RSA
-static inline int32_t PrintPrikeyBits(bool isEcc, uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio)
-{
-    if (!isEcc) {
-        return BSL_PRINT_Fmt(layer, uio, "Private-Key: (%d bit)\n", CRYPT_EAL_PkeyGetKeyBits(pkey));
-    }
-    uint32_t bits = 0;
-    int32_t ret = CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_ECC_ORDER_BITS, &bits, sizeof(uint32_t));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    return BSL_PRINT_Fmt(layer, uio, "Private-Key: (%d bit)\n", bits);
-}
-
 static int32_t PrintRsaPrikey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio)
 {
-    RETURN_RET_IF(PrintPrikeyBits(false, layer, pkey, uio) != 0, CRYPT_DECODE_PRINT_KEYBITS);
+    RETURN_RET_IF(PrintKeyBits(false, true, layer, pkey, uio) != 0, CRYPT_DECODE_PRINT_KEYBITS);
 
-    int32_t ret;
     /* pri key */
     CRYPT_EAL_PkeyPrv pri = {0};
-    ret = CRYPT_EAL_InitRsaPrv(pkey, CRYPT_PKEY_RSA, &pri);
+    int32_t ret = CRYPT_EAL_InitRsaPrv(pkey, CRYPT_PKEY_RSA, &pri);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

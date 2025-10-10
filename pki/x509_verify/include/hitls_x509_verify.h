@@ -48,9 +48,9 @@ struct _HITLS_X509_StoreCtx {
     HITLS_X509_List *crl;
     BSL_SAL_RefCount references;
     HITLS_X509_VerifyParam verifyParam;
-    HITLS_X509_List *certChain;       // Certificate chain built during verification
     CRYPT_EAL_LibCtx *libCtx;         // Provider context
     const char *attrName;             // Provider attribute name
+    HITLS_X509_List *certChain;       // Certificate chain built during verification
 #ifdef HITLS_PKI_X509_VFY_LOCATION
     BslList *caPaths;                 // List of CA directory paths for on-demand loading (char*)
 #endif

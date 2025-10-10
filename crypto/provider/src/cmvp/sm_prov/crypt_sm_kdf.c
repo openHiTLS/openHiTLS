@@ -40,11 +40,11 @@ void *CRYPT_EAL_SmKdfNewCtxEx(CRYPT_EAL_SmProvCtx *provCtx, int32_t algId)
     switch (algId) {
 #ifdef HITLS_CRYPTO_PBKDF2
         case CRYPT_KDF_PBKDF2:
-            return CRYPT_PBKDF2_NewCtxEx(provCtx->libCtx);
+            return CRYPT_PBKDF2_NewCtxEx(provCtx->libCtx, algId);
 #endif
 #ifdef HITLS_CRYPTO_KDFTLS12
         case CRYPT_KDF_KDFTLS12:
-            return CRYPT_KDFTLS12_NewCtxEx(provCtx->libCtx);
+            return CRYPT_KDFTLS12_NewCtxEx(provCtx->libCtx, algId);
 #endif
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);

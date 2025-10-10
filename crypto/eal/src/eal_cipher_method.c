@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_CIPHER)
 
+#include "securec.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "eal_cipher_local.h"
@@ -63,7 +64,7 @@
 
 #if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
 static const EAL_CipherMethod CHACHA20_POLY1305_METHOD = {
-    (CipherNewCtx)MODES_CHACHA20POLY1305_NewCtx,
+    (CipherNewCtx)MODES_CHACHA20POLY1305_NewCtxEx,
     (CipherInitCtx)MODES_CHACHA20POLY1305_InitCtx,
     (CipherDeInitCtx)MODES_CHACHA20POLY1305_DeInitCtx,
     (CipherUpdate)MODES_CHACHA20POLY1305_Update,
@@ -75,7 +76,7 @@ static const EAL_CipherMethod CHACHA20_POLY1305_METHOD = {
 
 #ifdef HITLS_CRYPTO_CTR
 static const EAL_CipherMethod CTR_METHOD = {
-    (CipherNewCtx)MODES_CTR_NewCtx,
+    (CipherNewCtx)MODES_CTR_NewCtxEx,
     (CipherInitCtx)MODES_CTR_InitCtxEx,
     (CipherDeInitCtx)MODES_CTR_DeInitCtx,
     (CipherUpdate)MODES_CTR_UpdateEx,
@@ -87,7 +88,7 @@ static const EAL_CipherMethod CTR_METHOD = {
 
 #ifdef HITLS_CRYPTO_CBC
 static const EAL_CipherMethod CBC_METHOD = {
-    (CipherNewCtx)MODES_CBC_NewCtx,
+    (CipherNewCtx)MODES_CBC_NewCtxEx,
     (CipherInitCtx)MODES_CBC_InitCtxEx,
     (CipherDeInitCtx)MODES_CBC_DeInitCtx,
     (CipherUpdate)MODES_CBC_UpdateEx,
@@ -99,7 +100,7 @@ static const EAL_CipherMethod CBC_METHOD = {
 
 #ifdef HITLS_CRYPTO_ECB
 static const EAL_CipherMethod ECB_METHOD = {
-    (CipherNewCtx)MODES_ECB_NewCtx,
+    (CipherNewCtx)MODES_ECB_NewCtxEx,
     (CipherInitCtx)MODES_ECB_InitCtxEx,
     (CipherDeInitCtx)MODES_ECB_DeinitCtx,
     (CipherUpdate)MODES_ECB_UpdateEx,
@@ -111,7 +112,7 @@ static const EAL_CipherMethod ECB_METHOD = {
 
 #ifdef HITLS_CRYPTO_CCM
 static const EAL_CipherMethod CCM_METHOD = {
-    (CipherNewCtx)MODES_CCM_NewCtx,
+    (CipherNewCtx)MODES_CCM_NewCtxEx,
     (CipherInitCtx)MODES_CCM_InitCtx,
     (CipherDeInitCtx)MODES_CCM_DeInitCtx,
     (CipherUpdate)MODES_CCM_UpdateEx,
@@ -123,7 +124,7 @@ static const EAL_CipherMethod CCM_METHOD = {
 
 #ifdef HITLS_CRYPTO_GCM
 static const EAL_CipherMethod GCM_METHOD = {
-    (CipherNewCtx)MODES_GCM_NewCtx,
+    (CipherNewCtx)MODES_GCM_NewCtxEx,
     (CipherInitCtx)MODES_GCM_InitCtxEx,
     (CipherDeInitCtx)MODES_GCM_DeInitCtx,
     (CipherUpdate)MODES_GCM_UpdateEx,
@@ -136,7 +137,7 @@ static const EAL_CipherMethod GCM_METHOD = {
 
 #ifdef HITLS_CRYPTO_CFB
 static const EAL_CipherMethod CFB_METHOD = {
-    (CipherNewCtx)MODES_CFB_NewCtx,
+    (CipherNewCtx)MODES_CFB_NewCtxEx,
     (CipherInitCtx)MODES_CFB_InitCtxEx,
     (CipherDeInitCtx)MODES_CFB_DeInitCtx,
     (CipherUpdate)MODES_CFB_UpdateEx,
@@ -148,7 +149,7 @@ static const EAL_CipherMethod CFB_METHOD = {
 
 #ifdef HITLS_CRYPTO_OFB
 static const EAL_CipherMethod OFB_METHOD = {
-    (CipherNewCtx)MODES_OFB_NewCtx,
+    (CipherNewCtx)MODES_OFB_NewCtxEx,
     (CipherInitCtx)MODES_OFB_InitCtxEx,
     (CipherDeInitCtx)MODES_OFB_DeInitCtx,
     (CipherUpdate)MODES_OFB_UpdateEx,
@@ -160,7 +161,7 @@ static const EAL_CipherMethod OFB_METHOD = {
 
 #ifdef HITLS_CRYPTO_XTS
 static const EAL_CipherMethod XTS_METHOD = {
-    (CipherNewCtx)MODES_XTS_NewCtx,
+    (CipherNewCtx)MODES_XTS_NewCtxEx,
     (CipherInitCtx)MODES_XTS_InitCtxEx,
     (CipherDeInitCtx)MODES_XTS_DeInitCtx,
     (CipherUpdate)MODES_XTS_UpdateEx,
@@ -170,133 +171,122 @@ static const EAL_CipherMethod XTS_METHOD = {
 };
 #endif
 
-/**
- * g_modeMethod[id]
- * The content of g_modeMethod has a hash mapping relationship with CRYPT_MODE_AlgId. Change the value accordingly.
-*/
-static const EAL_CipherMethod *g_modeMethod[CRYPT_MODE_MAX] = {
-#ifdef HITLS_CRYPTO_CBC
-    &CBC_METHOD,
-#else
-    NULL,
-#endif // cbc
-#ifdef HITLS_CRYPTO_ECB
-    &ECB_METHOD,
-#else
-    NULL,
-#endif // ecb
-#ifdef HITLS_CRYPTO_CTR
-    &CTR_METHOD,
-#else
-    NULL,
-#endif // ctr
-#ifdef HITLS_CRYPTO_XTS
-    &XTS_METHOD,
-#else
-    NULL,
-#endif // xts
-#ifdef HITLS_CRYPTO_CCM
-    &CCM_METHOD,
-#else
-    NULL,
-#endif // ccm
-#ifdef HITLS_CRYPTO_GCM
-    &GCM_METHOD,
-#else
-    NULL,
-#endif // gcm
-#if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
-    &CHACHA20_POLY1305_METHOD,
-#else
-    NULL,
-#endif // chacha20
-#ifdef HITLS_CRYPTO_CFB
-    &CFB_METHOD,
-#else
-    NULL,
-#endif // cfb
-#ifdef HITLS_CRYPTO_OFB
-    &OFB_METHOD
-#else
-    NULL
-#endif // ofb
-};
-
-
 const EAL_CipherMethod *EAL_FindModeMethod(CRYPT_MODE_AlgId id)
 {
-    if (id < 0 || id >= CRYPT_MODE_MAX) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
-        return NULL;
+    switch (id) {
+#ifdef HITLS_CRYPTO_CBC
+        case CRYPT_MODE_CBC:
+            return &CBC_METHOD;
+#endif
+#ifdef HITLS_CRYPTO_ECB
+        case CRYPT_MODE_ECB:
+            return &ECB_METHOD;
+#endif
+#ifdef HITLS_CRYPTO_CTR
+        case CRYPT_MODE_CTR:
+            return &CTR_METHOD;
+#endif
+#ifdef HITLS_CRYPTO_XTS
+        case CRYPT_MODE_XTS:
+            return &XTS_METHOD;
+#endif
+#ifdef HITLS_CRYPTO_CCM
+        case CRYPT_MODE_CCM:
+            return &CCM_METHOD;
+#endif
+#ifdef HITLS_CRYPTO_GCM
+        case CRYPT_MODE_GCM:
+            return &GCM_METHOD;
+#endif
+#if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
+        case CRYPT_MODE_CHACHA20_POLY1305:
+            return &CHACHA20_POLY1305_METHOD;
+#endif
+#ifdef HITLS_CRYPTO_CFB
+        case CRYPT_MODE_CFB:
+            return &CFB_METHOD;
+#endif
+#ifdef HITLS_CRYPTO_OFB
+        case CRYPT_MODE_OFB:
+            return &OFB_METHOD;
+#endif
+        default:
+            return NULL;
     }
-    return g_modeMethod[id];
 }
 
 static const EAL_SymAlgMap SYM_ID_MAP[] = {
 #ifdef HITLS_CRYPTO_AES
+#ifdef HITLS_CRYPTO_CBC
     {.id = CRYPT_CIPHER_AES128_CBC, .modeId = CRYPT_MODE_CBC },
     {.id = CRYPT_CIPHER_AES192_CBC, .modeId = CRYPT_MODE_CBC },
     {.id = CRYPT_CIPHER_AES256_CBC, .modeId = CRYPT_MODE_CBC },
+#endif
+#ifdef HITLS_CRYPTO_ECB
     {.id = CRYPT_CIPHER_AES128_ECB, .modeId = CRYPT_MODE_ECB },
     {.id = CRYPT_CIPHER_AES192_ECB, .modeId = CRYPT_MODE_ECB },
     {.id = CRYPT_CIPHER_AES256_ECB, .modeId = CRYPT_MODE_ECB },
+#endif
+#ifdef HITLS_CRYPTO_CTR
     {.id = CRYPT_CIPHER_AES128_CTR, .modeId = CRYPT_MODE_CTR },
     {.id = CRYPT_CIPHER_AES192_CTR, .modeId = CRYPT_MODE_CTR },
     {.id = CRYPT_CIPHER_AES256_CTR, .modeId = CRYPT_MODE_CTR },
+#endif
+#ifdef HITLS_CRYPTO_CCM
     {.id = CRYPT_CIPHER_AES128_CCM, .modeId = CRYPT_MODE_CCM },
     {.id = CRYPT_CIPHER_AES192_CCM, .modeId = CRYPT_MODE_CCM },
     {.id = CRYPT_CIPHER_AES256_CCM, .modeId = CRYPT_MODE_CCM },
+#endif
+#ifdef HITLS_CRYPTO_GCM
     {.id = CRYPT_CIPHER_AES128_GCM, .modeId = CRYPT_MODE_GCM },
     {.id = CRYPT_CIPHER_AES192_GCM, .modeId = CRYPT_MODE_GCM },
     {.id = CRYPT_CIPHER_AES256_GCM, .modeId = CRYPT_MODE_GCM },
+#endif
+#ifdef HITLS_CRYPTO_CFB
     {.id = CRYPT_CIPHER_AES128_CFB, .modeId = CRYPT_MODE_CFB },
     {.id = CRYPT_CIPHER_AES192_CFB, .modeId = CRYPT_MODE_CFB },
     {.id = CRYPT_CIPHER_AES256_CFB, .modeId = CRYPT_MODE_CFB },
+#endif
+#ifdef HITLS_CRYPTO_OFB
     {.id = CRYPT_CIPHER_AES128_OFB, .modeId = CRYPT_MODE_OFB },
     {.id = CRYPT_CIPHER_AES192_OFB, .modeId = CRYPT_MODE_OFB },
     {.id = CRYPT_CIPHER_AES256_OFB, .modeId = CRYPT_MODE_OFB },
-	{.id = CRYPT_CIPHER_AES128_XTS, .modeId = CRYPT_MODE_XTS },
+#endif
+#ifdef HITLS_CRYPTO_XTS
+    {.id = CRYPT_CIPHER_AES128_XTS, .modeId = CRYPT_MODE_XTS },
     {.id = CRYPT_CIPHER_AES256_XTS, .modeId = CRYPT_MODE_XTS },
 #endif
+#endif // aes
 #ifdef HITLS_CRYPTO_CHACHA20
     {.id = CRYPT_CIPHER_CHACHA20_POLY1305, .modeId = CRYPT_MODE_CHACHA20_POLY1305},
 #endif
 #ifdef HITLS_CRYPTO_SM4
+#ifdef HITLS_CRYPTO_XTS
     {.id = CRYPT_CIPHER_SM4_XTS, .modeId = CRYPT_MODE_XTS },
+#endif
+#ifdef HITLS_CRYPTO_ECB
     {.id = CRYPT_CIPHER_SM4_ECB, .modeId = CRYPT_MODE_ECB },
+#endif
+#ifdef HITLS_CRYPTO_CBC
     {.id = CRYPT_CIPHER_SM4_CBC, .modeId = CRYPT_MODE_CBC },
+#endif
+#ifdef HITLS_CRYPTO_CTR
     {.id = CRYPT_CIPHER_SM4_CTR, .modeId = CRYPT_MODE_CTR },
+#endif
+#ifdef HITLS_CRYPTO_GCM
     {.id = CRYPT_CIPHER_SM4_GCM, .modeId = CRYPT_MODE_GCM },
+#endif
+#ifdef HITLS_CRYPTO_CFB
     {.id = CRYPT_CIPHER_SM4_CFB, .modeId = CRYPT_MODE_CFB },
+#endif
+#ifdef HITLS_CRYPTO_OFB
     {.id = CRYPT_CIPHER_SM4_OFB, .modeId = CRYPT_MODE_OFB },
+#endif
+#ifdef HITLS_CRYPTO_CCM
     {.id = CRYPT_CIPHER_SM4_CCM, .modeId = CRYPT_MODE_CCM },
 #endif
+#endif // sm4
 };
-
-int32_t EAL_FindCipher(CRYPT_CIPHER_AlgId id, const EAL_CipherMethod **modeMethod)
-{
-    uint32_t num = sizeof(SYM_ID_MAP) / sizeof(SYM_ID_MAP[0]);
-    const EAL_SymAlgMap *symAlgMap = NULL;
-
-    for (uint32_t i = 0; i < num; i++) {
-        if (SYM_ID_MAP[i].id == id) {
-            symAlgMap = &SYM_ID_MAP[i];
-            break;
-        }
-    }
-
-    if (symAlgMap == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
-        return CRYPT_EAL_ERR_ALGID;
-    }
-
-    *modeMethod = EAL_FindModeMethod(symAlgMap->modeId);
-    if (*modeMethod == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
-        return CRYPT_EAL_ERR_ALGID;
-    }
-    return CRYPT_SUCCESS;
-}
 
 #ifdef HITLS_CRYPTO_AES
 static const EAL_SymMethod AES128_METHOD = {
@@ -417,41 +407,71 @@ const EAL_SymMethod *EAL_GetSymMethod(int32_t algId)
 
 static CRYPT_CipherInfo g_cipherInfo[] = {
 #ifdef HITLS_CRYPTO_AES
+#ifdef HITLS_CRYPTO_CBC
     {.id = CRYPT_CIPHER_AES128_CBC, .blockSize = 16, .keyLen = 16, .ivLen = 16},
     {.id = CRYPT_CIPHER_AES192_CBC, .blockSize = 16, .keyLen = 24, .ivLen = 16},
     {.id = CRYPT_CIPHER_AES256_CBC, .blockSize = 16, .keyLen = 32, .ivLen = 16},
+#endif
+#ifdef HITLS_CRYPTO_ECB
     {.id = CRYPT_CIPHER_AES128_ECB, .blockSize = 16, .keyLen = 16, .ivLen = 0},
     {.id = CRYPT_CIPHER_AES192_ECB, .blockSize = 16, .keyLen = 24, .ivLen = 0},
     {.id = CRYPT_CIPHER_AES256_ECB, .blockSize = 16, .keyLen = 32, .ivLen = 0},
+#endif
+#ifdef HITLS_CRYPTO_CTR
     {.id = CRYPT_CIPHER_AES128_CTR, .blockSize = 1, .keyLen = 16, .ivLen = 16},
     {.id = CRYPT_CIPHER_AES192_CTR, .blockSize = 1, .keyLen = 24, .ivLen = 16},
     {.id = CRYPT_CIPHER_AES256_CTR, .blockSize = 1, .keyLen = 32, .ivLen = 16},
+#endif
+#ifdef HITLS_CRYPTO_CCM
     {.id = CRYPT_CIPHER_AES128_CCM, .blockSize = 1, .keyLen = 16, .ivLen = 12},
     {.id = CRYPT_CIPHER_AES192_CCM, .blockSize = 1, .keyLen = 24, .ivLen = 12},
     {.id = CRYPT_CIPHER_AES256_CCM, .blockSize = 1, .keyLen = 32, .ivLen = 12},
+#endif
+#ifdef HITLS_CRYPTO_GCM
     {.id = CRYPT_CIPHER_AES128_GCM, .blockSize = 1, .keyLen = 16, .ivLen = 12},
     {.id = CRYPT_CIPHER_AES192_GCM, .blockSize = 1, .keyLen = 24, .ivLen = 12},
     {.id = CRYPT_CIPHER_AES256_GCM, .blockSize = 1, .keyLen = 32, .ivLen = 12},
+#endif
+#ifdef HITLS_CRYPTO_CFB
     {.id = CRYPT_CIPHER_AES128_CFB, .blockSize = 1, .keyLen = 16, .ivLen = 16},
     {.id = CRYPT_CIPHER_AES192_CFB, .blockSize = 1, .keyLen = 24, .ivLen = 16},
     {.id = CRYPT_CIPHER_AES256_CFB, .blockSize = 1, .keyLen = 32, .ivLen = 16},
+#endif
+#ifdef HITLS_CRYPTO_OFB
     {.id = CRYPT_CIPHER_AES128_OFB, .blockSize = 1, .keyLen = 16, .ivLen = 16},
     {.id = CRYPT_CIPHER_AES192_OFB, .blockSize = 1, .keyLen = 24, .ivLen = 16},
     {.id = CRYPT_CIPHER_AES256_OFB, .blockSize = 1, .keyLen = 32, .ivLen = 16},
-	{.id = CRYPT_CIPHER_AES128_XTS, .blockSize = 1, .keyLen = 32, .ivLen = 16},
+#endif
+#ifdef HITLS_CRYPTO_XTS
+    {.id = CRYPT_CIPHER_AES128_XTS, .blockSize = 1, .keyLen = 32, .ivLen = 16},
     {.id = CRYPT_CIPHER_AES256_XTS, .blockSize = 1, .keyLen = 64, .ivLen = 16},
+#endif
 #endif
 #ifdef HITLS_CRYPTO_CHACHA20
     {.id = CRYPT_CIPHER_CHACHA20_POLY1305, .blockSize = 1, .keyLen = 32, .ivLen = 12},
 #endif
 #ifdef HITLS_CRYPTO_SM4
+#ifdef HITLS_CRYPTO_XTS
     {.id = CRYPT_CIPHER_SM4_XTS, .blockSize = 1, .keyLen = 32, .ivLen = 16},
+#endif
+#ifdef HITLS_CRYPTO_CBC
     {.id = CRYPT_CIPHER_SM4_CBC, .blockSize = 16, .keyLen = 16, .ivLen = 16},
+#endif
+#ifdef HITLS_CRYPTO_ECB
     {.id = CRYPT_CIPHER_SM4_ECB, .blockSize = 16, .keyLen = 16, .ivLen = 0},
+#endif
+#ifdef HITLS_CRYPTO_CTR
     {.id = CRYPT_CIPHER_SM4_CTR, .blockSize = 1, .keyLen = 16, .ivLen = 16},
+#endif
+#ifdef HITLS_CRYPTO_GCM
     {.id = CRYPT_CIPHER_SM4_GCM, .blockSize = 1, .keyLen = 16, .ivLen = 12},
+#endif
+#ifdef HITLS_CRYPTO_CFB
     {.id = CRYPT_CIPHER_SM4_CFB, .blockSize = 1, .keyLen = 16, .ivLen = 16},
+#endif
+#ifdef HITLS_CRYPTO_OFB
     {.id = CRYPT_CIPHER_SM4_OFB, .blockSize = 1, .keyLen = 16, .ivLen = 16},
+#endif
 #endif
 };
 
@@ -484,5 +504,88 @@ int32_t EAL_GetCipherInfo(CRYPT_CIPHER_AlgId id, CRYPT_CipherInfo *info)
     info->keyLen = cipherInfoGet->keyLen;
     return CRYPT_SUCCESS;
 }
+
+int32_t EAL_CipherFindMethod(CRYPT_CIPHER_AlgId id, EAL_CipherMethod *method)
+{
+    if (method == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+
+    uint32_t num = sizeof(SYM_ID_MAP) / sizeof(SYM_ID_MAP[0]);
+    const EAL_SymAlgMap *symAlgMap = NULL;
+
+    for (uint32_t i = 0; i < num; i++) {
+        if (SYM_ID_MAP[i].id == id) {
+            symAlgMap = &SYM_ID_MAP[i];
+            break;
+        }
+    }
+
+    if (symAlgMap == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
+
+    const EAL_CipherMethod *modeMethod = EAL_FindModeMethod(symAlgMap->modeId);
+    if (modeMethod == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
+    (void)memcpy_s(method, sizeof(EAL_CipherMethod), modeMethod, sizeof(EAL_CipherMethod));
+    return CRYPT_SUCCESS;
+}
+
+#ifdef HITLS_CRYPTO_PROVIDER
+static int32_t SetCipherMethod(const CRYPT_EAL_Func *funcs, EAL_CipherMethod *method)
+{
+    int32_t index = 0;
+    while (funcs[index].id != 0) {
+        switch (funcs[index].id) {
+            case CRYPT_EAL_IMPLCIPHER_NEWCTX:
+                method->newCtx = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLCIPHER_INITCTX:
+                method->initCtx = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLCIPHER_UPDATE:
+                method->update = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLCIPHER_FINAL:
+                method->final = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLCIPHER_DEINITCTX:
+                method->deinitCtx = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLCIPHER_FREECTX:
+                method->freeCtx = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLCIPHER_CTRL:
+                method->ctrl = funcs[index].func;
+                break;
+            default:
+                BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+                return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
+        }
+        index++;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t EAL_ProviderCipherFindMethod(CRYPT_CIPHER_AlgId id, void *libCtx, const char *attrName,
+    EAL_CipherMethod *method, void **provCtx)
+{
+    if (method == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+
+    const CRYPT_EAL_Func *funcs = NULL;
+    int32_t ret = CRYPT_EAL_ProviderGetFuncs(libCtx, CRYPT_EAL_OPERAID_SYMMCIPHER, id, attrName,
+        &funcs, provCtx);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    return SetCipherMethod(funcs, method);
+}
+#endif // HITLS_CRYPTO_PROVIDER
 
 #endif

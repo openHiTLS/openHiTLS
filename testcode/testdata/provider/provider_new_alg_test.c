@@ -24,7 +24,7 @@
 #include "bsl_params.h"
 #include "bsl_asn1_internal.h"
 #include "bsl_obj_internal.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey.h"
 #include "crypt_errno.h"
 #include "crypt_params_key.h"
 #include "crypt_eal_implprovider.h"

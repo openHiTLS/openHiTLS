@@ -16,6 +16,8 @@
 #ifndef BSL_PRINT_H
 #define BSL_PRINT_H
 
+#include "hitls_build.h"
+#ifdef HITLS_BSL_PRINT
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -26,6 +28,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+extern const char BSL_PRINT_MONTH_STR[12][4];
+
+#define BSL_PRINT_TIME_FMT "%s %u %02u:%02u:%02u %u GMT"
 
 /**
  * @ingroup bsl_print
@@ -95,6 +101,8 @@ int32_t BSL_PRINT_Number(uint32_t layer, const char *title, const uint8_t *data,
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
 
 #endif // BSL_PRINT_H

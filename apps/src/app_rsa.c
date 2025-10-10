@@ -31,7 +31,7 @@
 #include "app_utils.h"
 #include "app_print.h"
 #include "crypt_eal_codecs.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey.h"
 #include "crypt_errno.h"
 
 #define RSA_MIN_LEN 256

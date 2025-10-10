@@ -14,10 +14,10 @@
  */
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CMVP_SM
-#if defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_CRYPTO_PROVIDER)
+#if defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) && defined(HITLS_CRYPTO_PROVIDER)
 #include "crypt_eal_implprovider.h"
 #include "crypt_eal_pkey.h"
-#include "crypt_decode_key_impl.h"
+#include "crypt_decoder.h"
 
 const CRYPT_EAL_Func g_smEalPrvP8Enc2P8[] = {
     {CRYPT_DECODER_IMPL_NEWCTX, (CRYPT_DECODER_IMPL_NewCtx)DECODER_EPKI2PKI_NewCtx},

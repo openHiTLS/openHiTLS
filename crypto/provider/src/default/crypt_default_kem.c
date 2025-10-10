@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if (defined(HITLS_CRYPTO_MLKEM) || defined(HITLS_CRYPTO_HYBRIDKEM)) && defined(HITLS_CRYPTO_PROVIDER)
+#if defined(HITLS_CRYPTO_PKEY_KEM) && defined(HITLS_CRYPTO_PROVIDER)
 
 #include "crypt_eal_implprovider.h"
 #ifdef HITLS_CRYPTO_MLKEM

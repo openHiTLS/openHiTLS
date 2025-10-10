@@ -165,8 +165,10 @@ int32_t HITLS_PKCS12_BagCtrl(HITLS_PKCS12_Bag *bag, int32_t cmd, void *val, uint
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
     switch (cmd) {
+#ifdef HITLS_PKI_PKCS12_GEN
         case HITLS_PKCS12_BAG_ADD_ATTR:
             return HITLS_PKCS12_BagAddAttr(bag, valType, val);
+#endif
         case HITLS_PKCS12_BAG_GET_ATTR:
             return BagGetAttr(bag, valType, val);
         case HITLS_PKCS12_BAG_GET_ID:

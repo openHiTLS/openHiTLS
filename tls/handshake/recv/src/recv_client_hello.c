@@ -393,8 +393,10 @@ static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello,
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+#if defined(HITLS_BSL_LOG) || defined(HITLS_TLS_FEATURE_SECURITY)
     /* Check the security level of ciphersuites */
     CipherSuiteInfo *cipherSuiteInfo = &ctx->negotiatedInfo.cipherSuiteInfo;
+#endif
 #ifdef HITLS_TLS_FEATURE_SECURITY
     ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_CIPHER_SHARED, 0, 0, (void *)cipherSuiteInfo);
     if (ret != SECURITY_SUCCESS) {
@@ -1389,8 +1391,7 @@ static int32_t PrepareDtlsCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello
 #ifdef HITLS_BSL_UIO_UDP
 static int32_t DtlsServerCheckAndProcessCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid)
 {
-    int32_t ret;
-    ret = HS_CheckCookie(ctx, clientHello, isCookieValid);
+    int32_t ret = HS_CheckCookie(ctx, clientHello, isCookieValid);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15243, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "HS_CheckCookie fail when process client hello.", 0, 0, 0, 0);

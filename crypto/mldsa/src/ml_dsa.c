@@ -653,6 +653,7 @@ int32_t CRYPT_ML_DSA_GetPubKey(const CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPub *pub)
     return CRYPT_SUCCESS;
 }
 
+#ifdef HITLS_CRYPTO_MLDSA_CMP
 static int32_t MLDSACmpKey(uint8_t *a, uint32_t aLen, uint8_t *b, uint32_t bLen)
 {
     if (aLen != bLen) {
@@ -694,6 +695,7 @@ int32_t CRYPT_ML_DSA_Cmp(const CRYPT_ML_DSA_Ctx *a, const CRYPT_ML_DSA_Ctx *b)
     }
     return CRYPT_SUCCESS;
 }
+#endif
 
 static uint32_t MLDSAGetMdSize(const EAL_MdMethod *hashMethod, int32_t hashId)
 {

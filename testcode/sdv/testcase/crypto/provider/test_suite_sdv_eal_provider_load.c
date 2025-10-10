@@ -123,9 +123,9 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
     // Test loading a provider without complete return methods
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, testNoFullfunc, NULL, NULL), CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
 
-    ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, cmd, test2), CRYPT_SUCCESS);
+    setenv("LD_LIBRARY_PATH", path, 1);
     ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, NULL), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test2, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL), CRYPT_SUCCESS);
 
     // Test CRYPT_EAL_ProviderUnload
     ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, cmd, test1), CRYPT_SUCCESS);
@@ -738,19 +738,35 @@ void SDV_CRYPTO_PROVIDER_GET_CAPS_TC001(void)
     // Test getting group capabilities
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP, (CRYPT_EAL_ProcessFuncCb)GroupCapsCallback,
         &groupCount), CRYPT_SUCCESS);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+#ifdef HITLS_TLS_FEATURE_KEM
     ASSERT_EQ(groupCount, 17);
+#else
+    ASSERT_EQ(groupCount, 14);
+#endif
+#else
+    ASSERT_EQ(groupCount, 0);
+#endif
 
     // Test getting signature algorithm capabilities
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_SIGALG_CAP, (CRYPT_EAL_ProcessFuncCb)SigAlgCapsCallback,
         &sigAlgCount), CRYPT_SUCCESS);
+#ifdef HITLS_TLS_FEATURE_PROVIDER
     ASSERT_EQ(sigAlgCount, 23);
+#else
+    ASSERT_EQ(sigAlgCount, 0);
+#endif
 
     // Test invalid mgrCtx
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(NULL, CRYPT_EAL_GET_GROUP_CAP, (CRYPT_EAL_ProcessFuncCb)GroupCapsCallback,
         &groupCount), CRYPT_NULL_INPUT);
 
     // Test invalid CRYPT_EAL_ProcessFuncCb
+#ifdef HITLS_TLS_FEATURE_PROVIDER
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP, NULL, &groupCount), CRYPT_NULL_INPUT);
+#else
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_GROUP_CAP, NULL, &groupCount), 0);
+#endif
 
     // Test invalid mgrCtx
     provMgrWithGetCapCb.provCtx = NULL;
@@ -759,8 +775,13 @@ void SDV_CRYPTO_PROVIDER_GET_CAPS_TC001(void)
         (CRYPT_EAL_ProcessFuncCb)GroupCapsCallback, &groupCount), CRYPT_SUCCESS);
 
     // Test invalid command
+#ifdef HITLS_TLS_FEATURE_PROVIDER
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, -1, (CRYPT_EAL_ProcessFuncCb)GroupCapsCallback, &groupCount),
         CRYPT_NOT_SUPPORT);
+#else
+    ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, -1, (CRYPT_EAL_ProcessFuncCb)GroupCapsCallback, &groupCount),
+        0);
+#endif
 
     // Cleanup
     ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, BSL_SAL_LIB_FMT_OFF, "default"), CRYPT_SUCCESS);

@@ -21,7 +21,7 @@
 #include "bsl_obj_internal.h"
 #include "crypt_eal_codecs.h"
 #include "crypt_eal_md.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey.h"
 #include "hitls_pki_errno.h"
 
 #ifdef HITLS_PKI_PKCS12_PARSE
@@ -105,8 +105,8 @@ int32_t HITLS_CMS_ParseDigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *d
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    BslOidString oidStr = {asn1[HITLS_P7_DIGESTINFO_OID_IDX].len, (char *)asn1[HITLS_P7_DIGESTINFO_OID_IDX].buff, 0};
-    BslCid parseCid = BSL_OBJ_GetCID(&oidStr);
+    BslCid parseCid = BSL_OBJ_GetCidFromOidBuff(asn1[HITLS_P7_DIGESTINFO_OID_IDX].buff,
+        asn1[HITLS_P7_DIGESTINFO_OID_IDX].len);
     if (parseCid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_PARSE_TYPE);
         return HITLS_CMS_ERR_PARSE_TYPE;

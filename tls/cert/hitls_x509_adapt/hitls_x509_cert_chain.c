@@ -88,59 +88,57 @@ int32_t HITLS_X509_Adapt_BuildCertChain(HITLS_Config *config, HITLS_CERT_Store *
 
 int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store, HITLS_CERT_X509 **list, uint32_t num)
 {
-    (void)ctx;
-    /* The default user id as specified in GM/T 0009-2012 */
-    char sm2DefaultUserid[] = "1234567812345678";
-    HITLS_X509_List *certList = NULL;
-    HITLS_VerifyCb verCb = NULL;
-    int32_t ret = BuildCertListFromCertArray(list, num, &certList);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
+    HITLS_X509_StoreCtx *storeCtx = (HITLS_X509_StoreCtx *)store;
     int64_t sysTime = BSL_SAL_CurrentSysTimeGet();
     if (sysTime == 0) {
-        ret = HITLS_CERT_SELF_ADAPT_INVALID_TIME;
         BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_INVALID_TIME);
-        goto EXIT;
+        return HITLS_CERT_SELF_ADAPT_INVALID_TIME;
     }
-    ret = HITLS_X509_StoreCtxCtrl((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_SET_TIME, &sysTime,
+    int32_t ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_TIME, &sysTime,
         sizeof(sysTime));
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        return ret;
     }
-    ret = HITLS_X509_StoreCtxCtrl((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_SET_VFY_SM2_USERID,
-        sm2DefaultUserid, strlen(sm2DefaultUserid));
+#ifdef HITLS_CRYPTO_SM2
+    /* The default user id as specified in GM/T 0009-2012 */
+    char sm2UserId[] = "1234567812345678";
+    ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_VFY_SM2_USERID, sm2UserId, strlen(sm2UserId));
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        return ret;
     }
-    ret = HITLS_X509_StoreCtxCtrl((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_SET_USR_DATA, ctx, sizeof(void *));
+#endif
+#ifdef HITLS_TLS_CONFIG_CERT_CALLBACK
+    HITLS_VerifyCb verCb = NULL;
+    ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_USR_DATA, ctx, sizeof(void *));
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
+        return ret;
     }
-    verCb = HITLS_GetVerifyCb(ctx);
-    if (verCb != NULL) {
-        ret = HITLS_X509_StoreCtxCtrl((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_SET_VERIFY_CB, &verCb,
+    if ((verCb = HITLS_GetVerifyCb(ctx)) != NULL) {
+        ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_VERIFY_CB, verCb,
             sizeof(X509_STORECTX_VerifyCb));
         if (ret != HITLS_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            goto EXIT;
+            return ret;
         }
     }
-    HITLS_SetVerifyResult(ctx, HITLS_SUCCESS);
-    ret = HITLS_X509_CertVerify((HITLS_X509_StoreCtx *)store, certList);
+#endif /* HITLS_TLS_CONFIG_CERT_CALLBACK */
+    HITLS_X509_List *certList = NULL;
+    if ((ret = BuildCertListFromCertArray(list, num, &certList)) != HITLS_SUCCESS) {
+        return ret;
+    }
+    HITLS_SetVerifyResult(ctx, HITLS_X509_V_OK);
+    ret = HITLS_X509_CertVerify(storeCtx, certList);
+    BSL_LIST_FREE(certList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     if (ret != HITLS_SUCCESS) {
         int32_t x509Err = HITLS_SUCCESS;
-        (void)HITLS_X509_StoreCtxCtrl((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_GET_ERROR, &x509Err,
-            sizeof(x509Err));
+        (void)HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_GET_ERROR, &x509Err, sizeof(x509Err));
         HITLS_SetVerifyResult(ctx, x509Err != HITLS_SUCCESS ? x509Err : ret);
         BSL_ERR_PUSH_ERROR(ret);
     }
 
-EXIT:
-    BSL_LIST_FREE(certList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     return ret;
 }
 #endif /* defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER) */

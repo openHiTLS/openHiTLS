@@ -47,7 +47,8 @@ extern "C" {
 #define BSL_ASN1_TAG_SEQUENCE          0x10
 #define BSL_ASN1_TAG_SET               0x11
 #define BSL_ASN1_TAG_PRINTABLESTRING   0x13
-#define BSL_ASN1_TAG_T61STRING         0x14
+#define BSL_ASN1_TAG_TELETEXSTRING     0x14
+#define BSL_ASN1_TAG_T61STRING         BSL_ASN1_TAG_TELETEXSTRING
 #define BSL_ASN1_TAG_IA5STRING         0x16
 
 #define BSL_ASN1_TAG_UTCTIME           0x17

@@ -22,6 +22,7 @@
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "curve25519_local.h"
+#include "crypt_util_ctrl.h"
 #include "crypt_util_rand.h"
 #include "crypt_types.h"
 #include "eal_md_local.h"
@@ -29,6 +30,8 @@
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 #endif
+
+#define CRYPT_CURVE25519_SEC_BITS 128
 
 #ifdef HITLS_CRYPTO_X25519
 CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void)
@@ -109,23 +112,6 @@ CRYPT_CURVE25519_Ctx *CRYPT_CURVE25519_DupCtx(CRYPT_CURVE25519_Ctx *ctx)
     return newCtx;
 }
 
-static int32_t CRYPT_CURVE25519_GetLen(CRYPT_CURVE25519_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
-{
-    if (val == NULL || len != sizeof(int32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    *(int32_t *)val = func(ctx);
-    return CRYPT_SUCCESS;
-}
-
-static int32_t CRYPT_CURVE25519_GetKeyLen(const CRYPT_CURVE25519_Ctx *pkey)
-{
-    (void)pkey;
-    return CRYPT_CURVE25519_KEYLEN;
-}
-
 int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val, uint32_t len)
 {
     if (pkey == NULL) {
@@ -134,23 +120,19 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val
     }
     switch (opt) {
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_CURVE25519_GetLen(pkey, (GetLenFunc)CRYPT_CURVE25519_GetBits, val, len);
-#ifdef HITLS_CRYPTO_ED25519
-        case CRYPT_CTRL_GET_SIGNLEN:
-            return CRYPT_CURVE25519_GetLen(pkey, (GetLenFunc)CRYPT_CURVE25519_GetSignLen, val, len);
-#endif
-        case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_CURVE25519_GetLen(pkey, (GetLenFunc)CRYPT_CURVE25519_GetSecBits, val, len);
+            return CRYPT_CTRL_GetNum32(CRYPT_CURVE25519_KEYLEN * 8, val, len); // bits = 8 * bytes
         case CRYPT_CTRL_GET_PUBKEY_LEN:
         case CRYPT_CTRL_GET_PRVKEY_LEN:
         case CRYPT_CTRL_GET_SHARED_KEY_LEN:
-            return GetUintCtrl(pkey, val, len, (GetUintCallBack)CRYPT_CURVE25519_GetKeyLen);
+            return CRYPT_CTRL_GetNum32(CRYPT_CURVE25519_KEYLEN, val, len);
+#ifdef HITLS_CRYPTO_ED25519
+        case CRYPT_CTRL_GET_SIGNLEN:
+            return CRYPT_CTRL_GetNum32(CRYPT_CURVE25519_SIGNLEN, val, len);
+#endif
+        case CRYPT_CTRL_GET_SECBITS:
+            return CRYPT_CTRL_GetNum32(CRYPT_CURVE25519_SEC_BITS, val, len);
         case CRYPT_CTRL_UP_REFERENCES:
-            if (val == NULL || len != (uint32_t)sizeof(int)) {
-                BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-                return CRYPT_INVALID_ARG;
-            }
-            return BSL_SAL_AtomicUpReferences(&(pkey->references), (int *)val);
+            return BSL_SAL_AtomicRefUpCtrl(&(pkey->references), val, len);
 #ifdef HITLS_CRYPTO_X25519
         case CRYPT_CTRL_GEN_X25519_PUBLICKEY:
             if ((pkey->keyType & CURVE25519_PUBKEY) != 0) {
@@ -165,10 +147,9 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val
             return CRYPT_SUCCESS;
 #endif
         default:
-            break;
+            BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_UNSUPPORTED_CTRL_OPTION);
+            return CRYPT_CURVE25519_UNSUPPORTED_CTRL_OPTION;
     }
-    BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_UNSUPPORTED_CTRL_OPTION);
-    return CRYPT_CURVE25519_UNSUPPORTED_CTRL_OPTION;
 }
 
 void CRYPT_CURVE25519_FreeCtx(CRYPT_CURVE25519_Ctx *pkey)
@@ -351,7 +332,6 @@ static int32_t PrvKeyHash(const uint8_t *prvKey, uint32_t prvKeyLen, uint8_t *pr
     const EAL_MdMethod *hashMethod)
 {
     void *mdCtx = NULL;
-    int32_t ret;
     uint32_t hashLen = prvHashLen;
 
     mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
@@ -360,7 +340,7 @@ static int32_t PrvKeyHash(const uint8_t *prvKey, uint32_t prvKeyLen, uint8_t *pr
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = hashMethod->init(mdCtx, NULL);
+    int32_t ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -386,7 +366,6 @@ static int32_t GetRHash(uint8_t r[CRYPT_CURVE25519_SIGNLEN], const uint8_t prefi
     const uint8_t *msg, uint32_t msgLen, const EAL_MdMethod *hashMethod)
 {
     void *mdCtx = NULL;
-    int32_t ret;
     uint32_t hashLen = CRYPT_CURVE25519_SIGNLEN;
 
     mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
@@ -395,7 +374,7 @@ static int32_t GetRHash(uint8_t r[CRYPT_CURVE25519_SIGNLEN], const uint8_t prefi
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = hashMethod->init(mdCtx, NULL);
+    int32_t ret = hashMethod->init(mdCtx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -635,14 +614,12 @@ int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algId,
 
     if (!VerifyCheckSValid(s)) {
         BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_VERIFY_FAIL);
-        ret = CRYPT_CURVE25519_VERIFY_FAIL;
-        return ret;
+        return CRYPT_CURVE25519_VERIFY_FAIL;
     }
 
     if (PointDecoding(&geA, pkey->pubKey) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_VERIFY_FAIL);
-        ret = CRYPT_CURVE25519_INVALID_PUBKEY;
-        return ret;
+        return CRYPT_CURVE25519_INVALID_PUBKEY;
     }
 
     ret = GetKHash(kHash, r, pkey->pubKey, msg, msgLen, pkey->hashMethod);
@@ -697,10 +674,9 @@ int32_t CRYPT_ED25519_GenKey(CRYPT_CURVE25519_Ctx *pkey)
         BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_NO_HASH_METHOD);
         return CRYPT_CURVE25519_NO_HASH_METHOD;
     }
-    int32_t ret;
     uint8_t prvKey[CRYPT_CURVE25519_KEYLEN];
 
-    ret = CRYPT_RandEx(pkey->libCtx, prvKey, sizeof(prvKey));
+    int32_t ret = CRYPT_RandEx(pkey->libCtx, prvKey, sizeof(prvKey));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -819,6 +795,7 @@ int32_t CRYPT_X25519_GenKey(CRYPT_CURVE25519_Ctx *pkey)
 }
 #endif /* HITLS_CRYPTO_X25519 */
 
+#ifdef HITLS_CRYPTO_CURVE25519_CMP
 int32_t CRYPT_CURVE25519_Cmp(const CRYPT_CURVE25519_Ctx *a, const CRYPT_CURVE25519_Ctx *b)
 {
     RETURN_RET_IF(a == NULL || b == NULL, CRYPT_NULL_INPUT);
@@ -830,6 +807,7 @@ int32_t CRYPT_CURVE25519_Cmp(const CRYPT_CURVE25519_Ctx *a, const CRYPT_CURVE255
 
     return CRYPT_SUCCESS;
 }
+#endif
 
 int32_t CRYPT_CURVE25519_GetSecBits(const CRYPT_CURVE25519_Ctx *ctx)
 {
@@ -837,7 +815,7 @@ int32_t CRYPT_CURVE25519_GetSecBits(const CRYPT_CURVE25519_Ctx *ctx)
     return 128;
 }
 
-#ifdef HITLS_CRYPTO_PROVIDER
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
 
 int32_t CRYPT_CURVE25519_Import(CRYPT_CURVE25519_Ctx *ctx, const BSL_Param *params)
 {
@@ -917,7 +895,7 @@ int32_t CRYPT_CURVE25519_Export(const CRYPT_CURVE25519_Ctx *ctx, BSL_Param *para
     return ret;
 }
 
-#endif // HITLS_CRYPTO_PROVIDER
+#endif // HITLS_CRYPTO_KEY_DECODE_CHAIN
 
 #if defined(HITLS_CRYPTO_X25519_CHECK) || defined(HITLS_CRYPTO_ED25519_CHECK)
 

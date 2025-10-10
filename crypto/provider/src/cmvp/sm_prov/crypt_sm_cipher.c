@@ -28,10 +28,10 @@
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
 #include "crypt_ealinit.h"
+#include "crypt_sm_provider.h"
 
-static void *CRYPT_EAL_SmCipherNewCtx(void *provCtx, int32_t algId)
+static void *CRYPT_EAL_SmCipherNewCtx(CRYPT_EAL_SmProvCtx *provCtx, int32_t algId)
 {
-    (void) provCtx;
 #ifdef HITLS_CRYPTO_ASM_CHECK
     if (CRYPT_ASMCAP_Cipher(algId) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
@@ -39,17 +39,17 @@ static void *CRYPT_EAL_SmCipherNewCtx(void *provCtx, int32_t algId)
     }
 #endif
     CRYPT_EAL_Func cipherNewCtxFunc[] = {
-        {CRYPT_CIPHER_SM4_XTS, MODES_XTS_NewCtx},
-        {CRYPT_CIPHER_SM4_CBC, MODES_CBC_NewCtx},
-        {CRYPT_CIPHER_SM4_ECB, MODES_ECB_NewCtx},
-        {CRYPT_CIPHER_SM4_CTR, MODES_CTR_NewCtx},
-        {CRYPT_CIPHER_SM4_GCM, MODES_GCM_NewCtx},
-        {CRYPT_CIPHER_SM4_CFB, MODES_CFB_NewCtx},
-        {CRYPT_CIPHER_SM4_OFB, MODES_OFB_NewCtx},
+        {CRYPT_CIPHER_SM4_XTS, MODES_XTS_NewCtxEx},
+        {CRYPT_CIPHER_SM4_CBC, MODES_CBC_NewCtxEx},
+        {CRYPT_CIPHER_SM4_ECB, MODES_ECB_NewCtxEx},
+        {CRYPT_CIPHER_SM4_CTR, MODES_CTR_NewCtxEx},
+        {CRYPT_CIPHER_SM4_GCM, MODES_GCM_NewCtxEx},
+        {CRYPT_CIPHER_SM4_CFB, MODES_CFB_NewCtxEx},
+        {CRYPT_CIPHER_SM4_OFB, MODES_OFB_NewCtxEx},
     };
     for (size_t i = 0; i < sizeof(cipherNewCtxFunc)/sizeof(cipherNewCtxFunc[0]); i++) {
         if (cipherNewCtxFunc[i].id == algId) {
-            return ((CipherNewCtx)cipherNewCtxFunc[i].func)(algId);
+            return ((CipherNewCtx)cipherNewCtxFunc[i].func)(provCtx->libCtx, algId);
         }
     }
     BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);

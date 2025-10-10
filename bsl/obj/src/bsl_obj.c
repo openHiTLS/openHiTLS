@@ -22,7 +22,7 @@
 #include "bsl_obj.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
-#ifdef HITLS_BSL_HASH
+#ifdef HITLS_BSL_OBJ_CUSTOM
 #include "bsl_hash.h"
 
 #define BSL_OBJ_HASH_BKT_SIZE 256u
@@ -32,7 +32,7 @@ BSL_HASH_Hash *g_oidHashTable = NULL;
 static BSL_SAL_ThreadLockHandle g_oidHashRwLock = NULL;
 
 static uint32_t g_oidHashInitOnce = BSL_SAL_ONCE_INIT;
-#endif // HITLS_BSL_HASH
+#endif // HITLS_BSL_OBJ_CUSTOM
 
 #define BSL_OBJ_ARCS_X_MAX 2
 #define BSL_OBJ_ARCS_Y_MAX 40
@@ -174,7 +174,7 @@ BslOidInfo g_oidTable[] = {
 
 uint32_t g_tableSize = (uint32_t)sizeof(g_oidTable)/sizeof(g_oidTable[0]);
 
-#ifdef HITLS_BSL_HASH
+#ifdef HITLS_BSL_OBJ_CUSTOM
 static void FreeBslOidInfo(void *data)
 {
     if (data == NULL) {
@@ -202,7 +202,7 @@ static void InitOidHashTableOnce(void)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
     }
 }
-#endif // HITLS_BSL_HASH
+#endif // HITLS_BSL_OBJ_CUSTOM
 
 static int32_t GetOidIndex(int32_t inputCid)
 {
@@ -222,21 +222,21 @@ static int32_t GetOidIndex(int32_t inputCid)
     return -1;
 }
 
-BslCid BSL_OBJ_GetCID(const BslOidString *oidstr)
+BslCid BSL_OBJ_GetCidFromOidBuff(const uint8_t *oid, uint32_t len)
 {
-    if (oidstr == NULL || oidstr->octs == NULL) {
+    if (oid == NULL || len == 0) {
         return BSL_CID_UNKNOWN;
     }
 
     /* First, search in the g_oidTable */
     for (uint32_t i = 0; i < g_tableSize; i++) {
-        if (g_oidTable[i].strOid.octetLen == oidstr->octetLen) {
-            if (memcmp(g_oidTable[i].strOid.octs, oidstr->octs, oidstr->octetLen) == 0) {
+        if (g_oidTable[i].strOid.octetLen == len) {
+            if (memcmp(g_oidTable[i].strOid.octs, oid, len) == 0) {
                 return g_oidTable[i].cid;
             }
         }
     }
-#ifndef HITLS_BSL_HASH
+#ifndef HITLS_BSL_OBJ_CUSTOM
     return BSL_CID_UNKNOWN;
 #else
     if (g_oidHashTable == NULL) {
@@ -258,8 +258,8 @@ BslCid BSL_OBJ_GetCID(const BslOidString *oidstr)
     
     while (iter != end) {
         BslOidInfo *oidInfo = (BslOidInfo *)BSL_HASH_IterValue(g_oidHashTable, iter);
-        if (oidInfo != NULL && oidInfo->strOid.octetLen == oidstr->octetLen &&
-            memcmp(oidInfo->strOid.octs, oidstr->octs, oidstr->octetLen) == 0) {
+        if (oidInfo != NULL && oidInfo->strOid.octetLen == len &&
+            memcmp(oidInfo->strOid.octs, oid, len) == 0) {
             cid = oidInfo->cid;
             break;
         }
@@ -268,7 +268,15 @@ BslCid BSL_OBJ_GetCID(const BslOidString *oidstr)
 
     (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
     return cid;
-#endif // HITLS_BSL_HASH
+#endif // HITLS_BSL_OBJ_CUSTOM
+}
+
+BslCid BSL_OBJ_GetCID(const BslOidString *oidstr)
+{
+    if (oidstr == NULL) {
+        return BSL_CID_UNKNOWN;
+    }
+    return BSL_OBJ_GetCidFromOidBuff((const uint8_t *)oidstr->octs, oidstr->octetLen);
 }
 
 BslOidString *BSL_OBJ_GetOID(BslCid ulCID)
@@ -283,7 +291,7 @@ BslOidString *BSL_OBJ_GetOID(BslCid ulCID)
     if (index != -1) {
         return &g_oidTable[index].strOid;
     }
-#ifndef HITLS_BSL_HASH
+#ifndef HITLS_BSL_OBJ_CUSTOM
     return NULL;
 #else
 
@@ -310,24 +318,24 @@ BslOidString *BSL_OBJ_GetOID(BslCid ulCID)
     }
 
     return oidString;
-#endif // HITLS_BSL_HASH
+#endif // HITLS_BSL_OBJ_CUSTOM
 }
 
-const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid)
+const char *BSL_OBJ_GetOidNameFromOidBuff(const uint8_t *oid, uint32_t len)
 {
-    if (oid == NULL || oid->octs == NULL) {
+    if (oid == NULL || len == 0) {
         return NULL;
     }
 
     /* First, search in the g_oidTable */
     for (uint32_t i = 0; i < g_tableSize; i++) {
-        if (g_oidTable[i].strOid.octetLen == oid->octetLen) {
-            if (memcmp(g_oidTable[i].strOid.octs, oid->octs, oid->octetLen) == 0) {
+        if (g_oidTable[i].strOid.octetLen == len) {
+            if (memcmp(g_oidTable[i].strOid.octs, oid, len) == 0) {
                 return g_oidTable[i].oidName;
             }
         }
     }
-#ifndef HITLS_BSL_HASH
+#ifndef HITLS_BSL_OBJ_CUSTOM
     return NULL;
 #else
     if (g_oidHashTable == NULL) {
@@ -349,8 +357,8 @@ const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid)
 
     while (iter != end) {
         BslOidInfo *oidInfo = (BslOidInfo *)BSL_HASH_IterValue(g_oidHashTable, iter);
-        if (oidInfo != NULL && oidInfo->strOid.octetLen == oid->octetLen &&
-            memcmp(oidInfo->strOid.octs, oid->octs, oid->octetLen) == 0) {
+        if (oidInfo != NULL && oidInfo->strOid.octetLen == len &&
+            memcmp(oidInfo->strOid.octs, oid, len) == 0) {
             oidName = oidInfo->oidName;
             break;
         }
@@ -359,9 +367,16 @@ const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid)
 
     (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
     return oidName;
-#endif // HITLS_BSL_HASH
+#endif // HITLS_BSL_OBJ_CUSTOM
 }
 
+const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid)
+{
+    if (oid == NULL) {
+        return NULL;
+    }
+    return BSL_OBJ_GetOidNameFromOidBuff((const uint8_t *)oid->octs, oid->octetLen);
+}
 
 #if defined(HITLS_PKI_X509) || defined(HITLS_PKI_INFO)
 
@@ -433,7 +448,7 @@ const char *BSL_OBJ_GetOidNameFromCID(BslCid ulCID)
 #endif // HITLS_PKI_X509 || HITLS_PKI_INFO || HITLS_CRYPTO_KEY_INFO
 
 
-#ifdef HITLS_BSL_HASH
+#ifdef HITLS_BSL_OBJ_CUSTOM
 static int32_t BslOidStringCopy(const BslOidString *srcOidStr, BslOidString *oidString)
 {
     oidString->octs = BSL_SAL_Dump(srcOidStr->octs, srcOidStr->octetLen);
@@ -583,7 +598,7 @@ void BSL_OBJ_FreeHashTable(void)
         g_oidHashInitOnce = BSL_SAL_ONCE_INIT;
     }
 }
-#endif // HITLS_BSL_HASH
+#endif // HITLS_BSL_OBJ_CUSTOM
 
 /*
 * Conversion Rules:
@@ -605,13 +620,13 @@ char *BSL_OBJ_GetOidNumericString(const uint8_t *oid, uint32_t len)
     }
 
     char buffer[256] = {0};
-    if (snprintf_s(buffer, sizeof(buffer), sizeof(buffer) - 1, "%u.%u", (unsigned int)(oid[0] / BSL_OBJ_ARCS_Y_MAX),
-        (unsigned int)(oid[0] % BSL_OBJ_ARCS_Y_MAX)) < 0) {
+    if (snprintf_s(buffer, sizeof(buffer), sizeof(buffer) - 1, "%d.%d", oid[0] / BSL_OBJ_ARCS_Y_MAX,
+        oid[0] % BSL_OBJ_ARCS_Y_MAX) < 0) {
         return NULL;
     }
 
     uint64_t value = 0;
-    uint32_t currentPos = (uint32_t)strlen(buffer);
+    uint32_t currentPos = strlen(buffer);
     for (uint32_t i = 1; i < len; i++) {
         if (value > (UINT64_MAX >> 7)) {
             /* Overflow check */
@@ -626,20 +641,22 @@ char *BSL_OBJ_GetOidNumericString(const uint8_t *oid, uint32_t len)
         }
 
         value = (value << 7) | (oid[i] & 0x7F);
-        if (((oid[i] & 0x80) == 0)) {
+        if (!(oid[i] & 0x80)) {
             char temp[20] = {0};
             int32_t tempLen = snprintf_s(temp, sizeof(temp), sizeof(temp) - 1, ".%lu", value);
             if (tempLen < 0) {
                 BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
                 return NULL;
             }
-            if (currentPos + (uint32_t)tempLen >= sizeof(buffer)) {
+            if (currentPos + tempLen >= sizeof(buffer)) {
                 BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
                 return NULL;
             }
-            (void)memcpy_s(buffer + currentPos, (size_t)tempLen, temp, (size_t)tempLen);
-        
-            currentPos += (uint32_t)tempLen;
+            if (memcpy_s(buffer + currentPos, tempLen, temp, tempLen) != 0) {
+                BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
+                return NULL;
+            }
+            currentPos += tempLen;
             value = 0;
         }
     }
@@ -662,7 +679,7 @@ static void BslEncodeOidPart(uint64_t num, uint8_t *output, uint32_t *offset)
         int32_t i = 0;
         uint64_t t = num;
         while (t > 0) {
-            temp[i] = (uint8_t)((t & 0x7F) | 0x80);
+            temp[i] = (t & 0x7F) | 0x80;
             i++;
             t >>= 7; // Process 7 bits each time.
         }
@@ -675,7 +692,7 @@ static void BslEncodeOidPart(uint64_t num, uint8_t *output, uint32_t *offset)
     }
 }
 
-static bool BslEncodeOidValueCheck(uint64_t *parts, const uint32_t count)
+static bool BslEncodeOidValueCheck(uint64_t *parts, uint32_t count)
 {
     // At least 2 pieces of data are required.
     if (count < 2 || parts[0] > BSL_OBJ_ARCS_X_MAX) {

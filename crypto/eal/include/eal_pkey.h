@@ -27,7 +27,7 @@ extern "C" {
 typedef struct {
     int32_t algId;
     CRYPT_EAL_ProvMgrCtx *mgrCtx;
-    EAL_PkeyUnitaryMethod *keyMgmtMethod;
+    EAL_PkeyUnitaryMethod keyMgmtMethod;
 } CRYPT_EAL_PkeyMgmtInfo;
 
 typedef struct {
@@ -62,7 +62,7 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_MakeKeyByPkeyAlgInfo(CRYPT_EAL_PkeyMgmtInfo *pkeyAl
 int32_t CRYPT_EAL_GetPkeyAlgInfo(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
     CRYPT_EAL_PkeyMgmtInfo *pkeyAlgInfo);
 
-int32_t CRYPT_EAL_SetPkeyMethod(EAL_PkeyUnitaryMethod **pkeyMethod, const CRYPT_EAL_Func *funcsKeyMgmt,
+int32_t CRYPT_EAL_SetPkeyMethod(EAL_PkeyUnitaryMethod *method, const CRYPT_EAL_Func *funcsKeyMgmt,
     const CRYPT_EAL_Func *funcsAsyCipher, const CRYPT_EAL_Func *funcsExch, const CRYPT_EAL_Func *funcSign,
     const CRYPT_EAL_Func *funcKem);
 

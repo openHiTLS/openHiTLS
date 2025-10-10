@@ -46,9 +46,14 @@ static const uint16_t DEFAULT_GROUP_ID[] = {
 };
 
 #ifndef HITLS_TLS_FEATURE_PROVIDER
+#ifndef HITLS_TLS_CAP_NO_STR
+#define CONST_CAST(str) ((char *)(uintptr_t)(str))
+#else
+#define CONST_CAST(str) NULL
+#endif
 static const TLS_GroupInfo GROUP_INFO[] = {
     {
-        "x25519",
+        CONST_CAST("x25519"),
         CRYPT_PKEY_PARAID_MAX,
         CRYPT_PKEY_X25519,
         128,                                    // secBits
@@ -59,7 +64,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
     },
 #ifdef HITLS_TLS_FEATURE_KEM
     {
-        "X25519MLKEM768",
+        CONST_CAST("X25519MLKEM768"),
         CRYPT_HYBRID_X25519_MLKEM768,
         CRYPT_PKEY_HYBRID_KEM,
         192,                                    // secBits
@@ -69,7 +74,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         true,
     },
     {
-        "SecP256r1MLKEM768",
+        CONST_CAST("SecP256r1MLKEM768"),
         CRYPT_HYBRID_ECDH_NISTP256_MLKEM768,
         CRYPT_PKEY_HYBRID_KEM,
         192,                                    // secBits
@@ -79,7 +84,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         true,
     },
     {
-        "SecP384r1MLKEM1024",
+        CONST_CAST("SecP384r1MLKEM1024"),
         CRYPT_HYBRID_ECDH_NISTP384_MLKEM1024,
         CRYPT_PKEY_HYBRID_KEM,
         256,                                    // secBits
@@ -90,7 +95,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
     },
 #endif /* HITLS_TLS_FEATURE_KEM */
     {
-        "secp256r1",
+        CONST_CAST("secp256r1"),
         CRYPT_ECC_NISTP256, // CRYPT_ECC_NISTP256
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         128, // secBits
@@ -100,7 +105,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         false,
     },
     {
-        "secp384r1",
+        CONST_CAST("secp384r1"),
         CRYPT_ECC_NISTP384, // CRYPT_ECC_NISTP384
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         192, // secBits
@@ -110,7 +115,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         false,
     },
     {
-        "secp521r1",
+        CONST_CAST("secp521r1"),
         CRYPT_ECC_NISTP521, // CRYPT_ECC_NISTP521
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         256, // secBits
@@ -120,33 +125,33 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         false,
     },
     {
-        "brainpoolP256r1",
+        CONST_CAST("brainpoolP256r1"),
         CRYPT_ECC_BRAINPOOLP256R1, // CRYPT_ECC_BRAINPOOLP256R1
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         128, // secBits
         HITLS_EC_GROUP_BRAINPOOLP256R1, // groupId
         65, 32, 0, // pubkeyLen=65, sharedkeyLen=32 (256 bits)
-        TLS10_VERSION_BIT | TLS11_VERSION_BIT| TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
     {
-        "brainpoolP384r1",
+        CONST_CAST("brainpoolP384r1"),
         CRYPT_ECC_BRAINPOOLP384R1, // CRYPT_ECC_BRAINPOOLP384R1
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         192, // secBits
         HITLS_EC_GROUP_BRAINPOOLP384R1, // groupId
         97, 48, 0, // pubkeyLen=97, sharedkeyLen=48 (384 bits)
-        TLS10_VERSION_BIT| TLS11_VERSION_BIT|TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
     {
-        "brainpoolP512r1",
+        CONST_CAST("brainpoolP512r1"),
         CRYPT_ECC_BRAINPOOLP512R1, // CRYPT_ECC_BRAINPOOLP512R1
         CRYPT_PKEY_ECDH, // CRYPT_PKEY_ECDH
         256, // secBits
         HITLS_EC_GROUP_BRAINPOOLP512R1, // groupId
         129, 64, 0, // pubkeyLen=129, sharedkeyLen=64 (512 bits)
-        TLS10_VERSION_BIT| TLS11_VERSION_BIT|TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
+        TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
 #ifdef HITLS_TLS_FEATURE_SM_TLS13
@@ -163,7 +168,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
 #endif
 #ifdef HITLS_TLS_PROTO_TLCP11
     {
-        "sm2",
+        CONST_CAST("sm2"),
         CRYPT_PKEY_PARAID_MAX, // CRYPT_PKEY_PARAID_MAX
         CRYPT_PKEY_SM2, // CRYPT_PKEY_SM2
         128, // secBits
@@ -174,7 +179,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
     },
 #endif
     {
-        "ffdhe8192",
+        CONST_CAST("ffdhe8192"),
         CRYPT_DH_RFC7919_8192, // CRYPT_DH_8192
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         192, // secBits
@@ -184,7 +189,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         false,
     },
     {
-        "ffdhe6144",
+        CONST_CAST("ffdhe6144"),
         CRYPT_DH_RFC7919_6144, // CRYPT_DH_6144
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         128, // secBits
@@ -194,7 +199,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         false,
     },
     {
-        "ffdhe4096",
+        CONST_CAST("ffdhe4096"),
         CRYPT_DH_RFC7919_4096, // CRYPT_DH_4096
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         128, // secBits
@@ -204,7 +209,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         false,
     },
     {
-        "ffdhe3072",
+        CONST_CAST("ffdhe3072"),
         CRYPT_DH_RFC7919_3072, // Fixed constant name
         CRYPT_PKEY_DH,
         128,
@@ -214,7 +219,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         false,
     },
     {
-        "ffdhe2048",
+        CONST_CAST("ffdhe2048"),
         CRYPT_DH_RFC7919_2048, // CRYPT_DH_2048
         CRYPT_PKEY_DH, // CRYPT_PKEY_DH
         112, // secBits
@@ -281,7 +286,9 @@ static int32_t ProviderAddGroupInfo(const BSL_Param *params, void *args)
     }
 
     group = config->groupInfo + config->groupInfolen;
+#ifndef HITLS_TLS_CAP_NO_STR
     PROCESS_STRING_PARAM(param, group, params, CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_NAME, name);
+#endif
     PROCESS_PARAM_UINT16(param, group, params, CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_ID, groupId);
     PROCESS_PARAM_INT32(param, group, params, CRYPT_PARAM_CAP_TLS_GROUP_PARA_ID, paraId);
     PROCESS_PARAM_INT32(param, group, params, CRYPT_PARAM_CAP_TLS_GROUP_ALG_ID, algId);

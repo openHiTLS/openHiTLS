@@ -230,7 +230,7 @@ void SDV_CRYPTO_SM2_CTRL_API_TC001(int isProvider)
     EAL_MdMethod hashMethod = {0};
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &hashMethod, sizeof(EAL_MdMethod)) ==
                 CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION);
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_UP_REFERENCES, &ref, 0), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_UP_REFERENCES, &ref, 0), BSL_INVALID_ARG);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);

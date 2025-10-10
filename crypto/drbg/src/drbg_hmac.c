@@ -100,9 +100,8 @@ EXIT:
 static int32_t DRBG_HmacUpdate(DRBG_Ctx *drbg, const CRYPT_Data *provData[], int32_t provDataLen)
 {
     DRBG_HmacCtx *ctx = (DRBG_HmacCtx *)drbg->ctx;
-    int32_t ret;
     // K = HMAC (K, V || 0x00 || provided_data).  V = HMAC (K, V), provided_data have 3 input
-    ret = Hmac(ctx, 0x00, provData, provDataLen);
+    int32_t ret = Hmac(ctx, 0x00, provData, provDataLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -127,7 +126,6 @@ int32_t DRBG_HmacInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropyInput, con
     const CRYPT_Data *perstr)
 {
     DRBG_HmacCtx *ctx = (DRBG_HmacCtx *)drbg->ctx;
-    int32_t ret;
     const CRYPT_Data *provData[3] = {0}; // We only need 3 at most.
     int32_t index = 0;
     if (!CRYPT_IsDataNull(entropyInput)) {
@@ -148,7 +146,7 @@ int32_t DRBG_HmacInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropyInput, con
 
     // seed_material = entropy_input || nonce || personalization_string.
     // (Key, V) = HMAC_DRBG_Update (seed_material, Key, V).
-    ret = DRBG_HmacUpdate(drbg, provData, index);
+    int32_t ret = DRBG_HmacUpdate(drbg, provData, index);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -162,7 +160,6 @@ int32_t DRBG_HmacInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropyInput, con
  */
 int32_t DRBG_HmacReseed(DRBG_Ctx *drbg, const CRYPT_Data *entropyInput, const CRYPT_Data *adin)
 {
-    int32_t ret;
     // seed_material = entropy_input || additional_input.
     const CRYPT_Data *seedMaterial[2] = {0}; // This stage only needs 2 at most.
     int32_t index = 0;
@@ -173,7 +170,7 @@ int32_t DRBG_HmacReseed(DRBG_Ctx *drbg, const CRYPT_Data *entropyInput, const CR
         seedMaterial[index++] = adin;
     }
     // (Key, V) = HMAC_DRBG_Update (seed_material, Key, V).
-    ret = DRBG_HmacUpdate(drbg, seedMaterial, index);
+    int32_t ret = DRBG_HmacUpdate(drbg, seedMaterial, index);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }

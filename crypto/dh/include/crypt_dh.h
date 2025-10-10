@@ -346,6 +346,23 @@ int32_t CRYPT_DH_SetParaEx(CRYPT_DH_Ctx *ctx, const BSL_Param *para);
 int32_t CRYPT_DH_GetParaEx(const CRYPT_DH_Ctx *ctx, BSL_Param *para);
 #endif
 
+#ifdef HITLS_CRYPTO_DH_CHECK
+/**
+ * @ingroup dh
+ * @brief check the key pair consistency
+ *
+ * @param checkType [IN] check type
+ * @param pkey1 [IN] dh key context structure
+ * @param pkey2 [IN] dh key context structure
+ *
+ * @retval CRYPT_SUCCESS    check success.
+ * Others. For details, see error code in errno.
+ */
+int32_t CRYPT_DH_Check(uint32_t checkType, const CRYPT_DH_Ctx *pkey1, const CRYPT_DH_Ctx *pkey2);
+
+#endif // HITLS_CRYPTO_DH_CHECK
+
+#ifdef HITLS_CRYPTO_DH_CMP
 /**
  * @ingroup dh
  * @brief dh Compare public keys and parameters
@@ -361,6 +378,9 @@ int32_t CRYPT_DH_GetParaEx(const CRYPT_DH_Ctx *ctx, BSL_Param *para);
  * @retval CRYPT_DH_PARA_NOT_EQUAL  The parameters are not equal.
  */
 int32_t CRYPT_DH_Cmp(const CRYPT_DH_Ctx *a, const CRYPT_DH_Ctx *b);
+#else
+#define CRYPT_DH_Cmp NULL
+#endif
 
 /**
  * @ingroup dh
@@ -385,22 +405,6 @@ int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, int32_t opt, void *val, uint32_t len);
  * @retval security bits
  */
 int32_t CRYPT_DH_GetSecBits(const CRYPT_DH_Ctx *ctx);
-
-#ifdef HITLS_CRYPTO_DH_CHECK
-/**
- * @ingroup dh
- * @brief check the key pair consistency
- *
- * @param checkType [IN] check type
- * @param pkey1 [IN] dh key context structure
- * @param pkey2 [IN] dh key context structure
- *
- * @retval CRYPT_SUCCESS    check success.
- * Others. For details, see error code in errno.
- */
-int32_t CRYPT_DH_Check(uint32_t checkType, const CRYPT_DH_Ctx *pkey1, const CRYPT_DH_Ctx *pkey2);
-
-#endif // HITLS_CRYPTO_DH_CHECK
 
 #ifdef __cplusplus
 }

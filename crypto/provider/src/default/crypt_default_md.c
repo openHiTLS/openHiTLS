@@ -14,8 +14,8 @@
  */
 
 #include "hitls_build.h"
-#if (defined(HITLS_CRYPTO_MD5) || defined(HITLS_CRYPTO_SHA1) || defined(HITLS_CRYPTO_SHA256) || \
-    defined(HITLS_CRYPTO_SHA224) || defined(HITLS_CRYPTO_SHA384) || defined(HITLS_CRYPTO_SHA512) || \
+#if (defined(HITLS_CRYPTO_MD5) || defined(HITLS_CRYPTO_SHA1) || defined(HITLS_CRYPTO_SHA224) || \
+    defined(HITLS_CRYPTO_SHA256) || defined(HITLS_CRYPTO_SHA384) || defined(HITLS_CRYPTO_SHA512) || \
     defined(HITLS_CRYPTO_SHA3) || defined(HITLS_CRYPTO_SM3)) && defined(HITLS_CRYPTO_PROVIDER)
 
 #include "crypt_eal_implprovider.h"

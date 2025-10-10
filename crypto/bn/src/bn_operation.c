@@ -624,8 +624,7 @@ int32_t ModBaseInputCheck(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
 
 int32_t BN_ModSub(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod, BN_Optimizer *opt)
 {
-    int32_t ret;
-    ret = ModBaseInputCheck(r, a, b, mod, opt);
+    int32_t ret = ModBaseInputCheck(r, a, b, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -658,8 +657,7 @@ err:
 
 int32_t BN_ModAdd(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod, BN_Optimizer *opt)
 {
-    int32_t ret;
-    ret = ModBaseInputCheck(r, a, b, mod, opt);
+    int32_t ret = ModBaseInputCheck(r, a, b, mod, opt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

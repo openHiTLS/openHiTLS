@@ -953,8 +953,7 @@ int32_t SAL_CERT_VerifyCertChain(HITLS_Ctx *ctx, CERT_Pair *certPair, bool isTlc
 #endif
         certPair->cert;
     HITLS_CERT_X509 *currCert = NULL;
-    for (uint32_t index = 0u; index < (certNum - 1); ++index) {
-        currCert = (HITLS_CERT_X509 *)BSL_LIST_GetIndexNode(index, chain);
+    for (currCert = BSL_LIST_GET_FIRST(chain); currCert != NULL; currCert = BSL_LIST_GET_NEXT(chain)) {
         certList[i++] = currCert;
     }
 

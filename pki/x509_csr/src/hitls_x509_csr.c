@@ -25,7 +25,7 @@
 #endif // HITLS_BSL_PEM
 #include "bsl_log_internal.h"
 #include "hitls_pki_errno.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey.h"
 #include "crypt_errno.h"
 #ifdef HITLS_BSL_SAL_FILE
 #include "sal_file.h"
@@ -85,31 +85,21 @@ HITLS_X509_Csr *HITLS_X509_CsrNew(void)
     BSL_ASN1_List *subjectName = NULL;
     HITLS_X509_Attrs *attributes = NULL;
     csr = (HITLS_X509_Csr *)BSL_SAL_Calloc(1, sizeof(HITLS_X509_Csr));
-    if (csr == NULL) {
+    subjectName = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    attributes = HITLS_X509_AttrsNew();
+    if (csr == NULL || subjectName == NULL || attributes == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        BSL_SAL_Free(subjectName);
+        BSL_SAL_Free(csr);
+        HITLS_X509_AttrsFree(attributes, NULL);
         return NULL;
     }
 
-    subjectName = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
-    if (subjectName == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        goto ERR;
-    }
-    attributes = HITLS_X509_AttrsNew();
-    if (attributes == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        goto ERR;
-    }
     BSL_SAL_ReferencesInit(&(csr->references));
     csr->reqInfo.subjectName = subjectName;
     csr->reqInfo.attributes = attributes;
     csr->state = HITLS_X509_CSR_STATE_NEW;
     return csr;
-ERR:
-    BSL_SAL_FREE(subjectName);
-    HITLS_X509_AttrsFree(attributes, NULL);
-    BSL_SAL_FREE(csr);
-    return NULL;
 }
 
 HITLS_X509_Csr *HITLS_X509_ProviderCsrNew(HITLS_PKI_LibCtx *libCtx, const char *attrName)
@@ -163,8 +153,7 @@ int32_t HITLS_X509_CsrTagGetOrCheck(int32_t type, uint32_t idx, void *data, void
     (void)idx;
     if (type == BSL_ASN1_TYPE_GET_ANY_TAG) {
         BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *)data;
-        BslOidString oidStr = {param->len, (char *)param->buff, 0};
-        BslCid cid = BSL_OBJ_GetCID(&oidStr);
+        BslCid cid = BSL_OBJ_GetCidFromOidBuff(param->buff, param->len);
         if (cid == BSL_CID_UNKNOWN) {
             return HITLS_X509_ERR_GET_ANY_TAG;
         }
@@ -397,6 +386,7 @@ static int32_t CheckCsrValid(HITLS_X509_Csr *csr)
 static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer *subject,
     BSL_ASN1_Buffer *publicKey, BSL_ASN1_Buffer *attributes)
 {
+    (void)attributes;
     /* encode subject name */
     int32_t ret = HITLS_X509_EncodeNameList(reqInfo->subjectName, subject);
     if (ret != HITLS_PKI_SUCCESS) {
@@ -412,6 +402,7 @@ static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer
         goto ERR;
     }
 
+#ifdef HITLS_PKI_X509_CSR_ATTR
     /* encode attribute */
     ret = HITLS_X509_EncodeAttrList(
         BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | HITLS_CSR_CTX_SPECIFIC_TAG_ATTRIBUTE,
@@ -420,6 +411,7 @@ static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
+#endif // HITLS_PKI_X509_CSR_ATTR
 
     publicKey->buff = pub.data;
     publicKey->len = pub.dataLen;
@@ -427,7 +419,9 @@ static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer
 ERR:
     BSL_SAL_FREE(subject->buff);
     BSL_SAL_FREE(pub.data);
+#ifdef HITLS_PKI_X509_CSR_ATTR
     BSL_SAL_FREE(attributes->buff);
+#endif
     return ret;
 }
 
@@ -632,6 +626,7 @@ int32_t HITLS_X509_CsrGenFile(int32_t format, HITLS_X509_Csr *csr, const char *p
 
 #endif // HITLS_PKI_X509_CSR_GEN
 
+#if defined(HITLS_PKI_X509_CSR_ATTR) && defined(HITLS_PKI_X509_CSR_GET)
 static int32_t X509GetAttr(HITLS_X509_Attrs *attrs, HITLS_X509_Attrs **val, uint32_t valLen)
 {
     if (val == NULL || valLen != sizeof(HITLS_X509_Attrs *)) {
@@ -640,6 +635,13 @@ static int32_t X509GetAttr(HITLS_X509_Attrs *attrs, HITLS_X509_Attrs **val, uint
     }
     *val = attrs;
     return HITLS_PKI_SUCCESS;
+}
+#endif
+
+static inline void SetCsrGenFlag(HITLS_X509_Csr *csr)
+{
+    csr->flag |= HITLS_X509_CSR_GEN_FLAG;
+    csr->state = HITLS_X509_CSR_STATE_SET;
 }
 
 int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, uint32_t valLen)
@@ -657,15 +659,13 @@ int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, uint32_t
 
     switch (cmd) {
         case HITLS_X509_REF_UP:
-            return HITLS_X509_RefUp(&csr->references, val, valLen);
+            return BSL_SAL_AtomicRefUpCtrl(&(csr->references), val, valLen);
 #ifdef HITLS_PKI_X509_CSR_GEN
         case HITLS_X509_SET_PUBKEY:
-            csr->flag |= HITLS_X509_CSR_GEN_FLAG;
-            csr->state = HITLS_X509_CSR_STATE_SET;
+            SetCsrGenFlag(csr);
             return HITLS_X509_SetPkey(&csr->reqInfo.ealPubKey, val);
         case HITLS_X509_ADD_SUBJECT_NAME:
-            csr->flag |= HITLS_X509_CSR_GEN_FLAG;
-            csr->state = HITLS_X509_CSR_STATE_SET;
+            SetCsrGenFlag(csr);
             return HITLS_X509_AddDnName(csr->reqInfo.subjectName, (HITLS_X509_DN *)val, valLen);
 #ifdef HITLS_CRYPTO_SM2
         case HITLS_X509_SET_VFY_SM2_USER_ID:
@@ -676,6 +676,7 @@ int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, uint32_t
             return HITLS_X509_SetSm2UserId(&csr->signAlgId.sm2UserId, val, valLen);
 #endif
 #endif
+#ifdef HITLS_PKI_X509_CSR_GET
         case HITLS_X509_GET_ENCODELEN:
             return HITLS_X509_GetEncodeLen(csr->rawDataLen, val, valLen);
         case HITLS_X509_GET_ENCODE:
@@ -686,8 +687,11 @@ int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, uint32_t
             return HITLS_X509_GetSignAlg(csr->signAlgId.algId, (int32_t *)val, valLen);
         case HITLS_X509_GET_SUBJECT_DN:
             return HITLS_X509_GetList(csr->reqInfo.subjectName, val, valLen);
+#ifdef HITLS_PKI_X509_CSR_ATTR
         case HITLS_X509_CSR_GET_ATTRIBUTES:
             return X509GetAttr(csr->reqInfo.attributes, val, valLen);
+#endif // HITLS_PKI_X509_CSR_ATTR
+#endif // HITLS_PKI_X509_CSR_GET
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;

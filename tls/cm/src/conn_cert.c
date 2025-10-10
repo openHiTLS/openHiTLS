@@ -187,7 +187,6 @@ int32_t HITLS_ProviderLoadKeyBuffer(HITLS_Ctx *ctx, const uint8_t *buf, uint32_t
     }
 
     return HITLS_CFG_ProviderLoadKeyBuffer(&(ctx->config.tlsConfig), buf, bufLen, format, type);
-
 }
 
 int32_t HITLS_LoadKeyBuffer(HITLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HITLS_ParseFormat format)
@@ -226,6 +225,7 @@ int32_t HITLS_RemoveCertAndKey(HITLS_Ctx *ctx)
     return HITLS_CFG_RemoveCertAndKey(&(ctx->config.tlsConfig));
 }
 
+#ifdef HITLS_TLS_CONFIG_CERT_CALLBACK
 int32_t HITLS_SetVerifyCb(HITLS_Ctx *ctx, HITLS_VerifyCb callback)
 {
     if (ctx == NULL) {
@@ -243,6 +243,7 @@ HITLS_VerifyCb HITLS_GetVerifyCb(HITLS_Ctx *ctx)
 
     return HITLS_CFG_GetVerifyCb(&(ctx->config.tlsConfig));
 }
+#endif /* HITLS_TLS_CONFIG_CERT_CALLBACK */
 
 int32_t HITLS_LoadCrlFile(HITLS_Ctx *ctx, const char *file, HITLS_ParseFormat format)
 {

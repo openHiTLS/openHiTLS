@@ -65,7 +65,7 @@ CRYPT_HMAC_Ctx *CRYPT_HMAC_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id)
     return ctx;
 }
 
-static void HmacCleanseData(uint8_t *tmp, uint32_t tmpLen, uint8_t *ipad, uint32_t ipadLen,
+static inline void HmacCleanseData(uint8_t *tmp, uint32_t tmpLen, uint8_t *ipad, uint32_t ipadLen,
     uint8_t *opad, uint32_t opadLen)
 {
     BSL_SAL_CleanseData(tmp, tmpLen);
@@ -97,17 +97,9 @@ static int32_t HmacInitMdCtx(CRYPT_HMAC_Ctx *ctx, const char *attr)
     }
 
     ctx->mdCtx = ctx->method.newCtx(provCtx, depMeth.id.mdId);
-    if (ctx->mdCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        goto ERR;
-    }
     ctx->iCtx = ctx->method.newCtx(provCtx, depMeth.id.mdId);
-    if (ctx->iCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        goto ERR;
-    }
     ctx->oCtx = ctx->method.newCtx(provCtx, depMeth.id.mdId);
-    if (ctx->oCtx == NULL) {
+    if (ctx->mdCtx == NULL || ctx->iCtx == NULL || ctx->oCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         goto ERR;
     }
@@ -120,6 +112,12 @@ ERR:
     ctx->method.freeCtx(ctx->oCtx);
     ctx->oCtx = NULL;
     return CRYPT_MEM_ALLOC_FAIL;
+}
+
+static inline bool IsMdMethodValid(const EAL_MdMethod *method)
+{
+    return method->init != NULL && method->update != NULL && method->final != NULL &&
+        method->deinit != NULL && method->copyCtx != NULL;
 }
 
 int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len, BSL_Param *param)
@@ -141,8 +139,7 @@ int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len, B
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    if (ctx->method.init == NULL || ctx->method.update == NULL || ctx->method.final == NULL ||
-        ctx->method.deinit == NULL || ctx->method.copyCtx == NULL) {
+    if (IsMdMethodValid(&ctx->method) == false) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -168,14 +165,13 @@ int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len, B
     GOTO_ERR_IF(ctx->method.update(ctx->oCtx, opad, ctx->method.blockSize), ret);
     GOTO_ERR_IF(ctx->method.copyCtx(ctx->mdCtx, ctx->iCtx), ret);
 
-    HmacCleanseData(tmp, HMAC_MAXBLOCKSIZE, ipad, HMAC_MAXBLOCKSIZE, opad, HMAC_MAXBLOCKSIZE);
-    return CRYPT_SUCCESS;
-
 ERR:
     HmacCleanseData(tmp, HMAC_MAXBLOCKSIZE, ipad, HMAC_MAXBLOCKSIZE, opad, HMAC_MAXBLOCKSIZE);
-    ctx->method.deinit(ctx->mdCtx);
-    ctx->method.deinit(ctx->iCtx);
-    ctx->method.deinit(ctx->oCtx);
+    if (ret != CRYPT_SUCCESS) {
+        ctx->method.deinit(ctx->mdCtx);
+        ctx->method.deinit(ctx->iCtx);
+        ctx->method.deinit(ctx->oCtx);
+    }
     return ret;
 }
 
@@ -190,8 +186,9 @@ int32_t CRYPT_HMAC_Update(CRYPT_HMAC_Ctx *ctx, const uint8_t *in, uint32_t len)
 
 int32_t CRYPT_HMAC_Final(CRYPT_HMAC_Ctx *ctx, uint8_t *out, uint32_t *len)
 {
-    if (ctx == NULL || ctx->method.final == NULL || ctx->method.copyCtx == NULL || ctx->method.update == NULL ||
-        out == NULL || len == NULL) {
+    bool nullInput = ctx == NULL || ctx->method.final == NULL || ctx->method.copyCtx == NULL ||
+                     ctx->method.update == NULL || out == NULL || len == NULL;
+    if (nullInput == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -243,40 +240,30 @@ int32_t CRYPT_HMAC_Deinit(CRYPT_HMAC_Ctx *ctx)
     return CRYPT_SUCCESS;
 }
 
-static int32_t CRYPT_HMAC_GetMacLen(CRYPT_HMAC_Ctx *ctx)
+static int32_t HMAC_GetMacLen(CRYPT_HMAC_Ctx *ctx, void *val, uint32_t len)
 {
-    if (ctx == NULL) {
+    if (val == NULL || len != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return 0;
+        return CRYPT_NULL_INPUT;
     }
     int32_t ret = HmacInitMdCtx(ctx, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return 0;
+        return ret;
     }
-    return ctx->method.mdSize;
-}
-
-static int32_t HmacGetLen(CRYPT_HMAC_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
-{
-    if (len != sizeof(uint32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    *(uint32_t *)val = func(ctx);
+    *(uint32_t *)val = ctx->method.mdSize;
     return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_HMAC_Ctrl(CRYPT_HMAC_Ctx *ctx, CRYPT_MacCtrl opt, void *val, uint32_t len)
 {
-    if (ctx == NULL || val == NULL) {
+    if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     switch (opt) {
         case CRYPT_CTRL_GET_MACLEN:
-            return HmacGetLen(ctx, (GetLenFunc)CRYPT_HMAC_GetMacLen, val, len);
+            return HMAC_GetMacLen(ctx, val, len);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_HMAC_ERR_UNSUPPORTED_CTRL_OPTION);
             return CRYPT_HMAC_ERR_UNSUPPORTED_CTRL_OPTION;

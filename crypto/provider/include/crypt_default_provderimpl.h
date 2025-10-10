@@ -241,7 +241,7 @@ extern const CRYPT_EAL_Func g_defEalHybridKeyKem[];
 #endif
 #endif // HITLS_CRYPTO_PKEY
 
-#ifdef HITLS_CRYPTO_CODECSKEY
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
 #ifdef HITLS_CRYPTO_KEY_EPKI
 extern const CRYPT_EAL_Func g_defEalPrvP8Enc2P8[];
 #endif
@@ -306,7 +306,7 @@ extern const CRYPT_EAL_Func g_defEalLowKeyObject2PkeyObject[];
 #ifdef HITLS_CRYPTO_RSA
 extern const CRYPT_EAL_Func g_defEalRsaPubDer2Key[];
 #endif
-#endif // HITLS_CRYPTO_CODECSKEY
+#endif // HITLS_CRYPTO_KEY_DECODE_CHAIN
 
 #ifdef __cplusplus
 }

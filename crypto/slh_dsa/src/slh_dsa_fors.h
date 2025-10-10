@@ -25,7 +25,7 @@
 
 /**
  * @brief Sign a message using FORS
- * 
+ *
  * @param md Input message to sign (already hashed to appropriate length)
  * @param mdLen Length of the message
  * @param adrs Address structure for domain separation
@@ -39,7 +39,7 @@ int32_t ForsSign(const uint8_t *md, uint32_t mdLen, SlhDsaAdrs *adrs, const Cryp
 
 /**
  * @brief Verify a FORS signature
- * 
+ *
  * @param sig Input signature
  * @param sigLen Length of the signature
  * @param md Input message that was signed
@@ -54,7 +54,7 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
 
 /**
  * @brief Generate a FORS private value
- * 
+ *
  * @param adrs Address structure for domain separation
  * @param idx Tree index
  * @param ctx Context
@@ -65,7 +65,7 @@ int32_t ForsGenPrvKey(const SlhDsaAdrs *adrs, uint32_t idx, const CryptSlhDsaCtx
 
 /**
  * @brief Generate a FORS node
- * 
+ *
  * @param idx Tree index
  * @param height Height of the tree
  * @param adrs Address structure for domain separation

@@ -33,8 +33,12 @@
 #include "crypt_provider.h"
 #endif
 
-static CRYPT_EAL_MdCTX *MdNewCtxInner(CRYPT_MD_AlgId id, CRYPT_EAL_LibCtx *libCtx, const char *attrName, bool isProvider)
+static CRYPT_EAL_MdCTX *MdNewCtxInner(CRYPT_MD_AlgId id, CRYPT_EAL_LibCtx *libCtx, const char *attrName,
+    bool isProvider)
 {
+    (void)libCtx;
+    (void)attrName;
+    (void)isProvider;
     EAL_MdMethod *method = NULL;
     CRYPT_EAL_MdCTX *ctx = BSL_SAL_Malloc(sizeof(CRYPT_EAL_MdCTX));
     if (ctx == NULL) {
@@ -44,37 +48,41 @@ static CRYPT_EAL_MdCTX *MdNewCtxInner(CRYPT_MD_AlgId id, CRYPT_EAL_LibCtx *libCt
     void *provCtx = NULL;
     // The ctx->method will be overwritten if the method is found.
     (void)memset_s(&ctx->method, sizeof(ctx->method), 0, sizeof(ctx->method));
-    if (!isProvider) {
-        method = EAL_MdFindMethod(id, &ctx->method);
-    } else {
+#ifdef HITLS_CRYPTO_PROVIDER
+    if (isProvider == true) {
         method = EAL_MdFindMethodEx(id, libCtx, attrName, &ctx->method, &provCtx);
+    } else
+#endif
+    {
+        method = EAL_MdFindMethod(id, &ctx->method);
     }
-    if (method == NULL) {
-        BSL_SAL_Free(ctx);
-        return NULL;
+    if (method == NULL || ctx->method.newCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_EAL_ERR_METH_NULL_MEMBER);
+        goto ERR;
     }
-
-    if (ctx->method.newCtx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_NULL_INPUT);
-        BSL_SAL_Free(ctx);
-        return NULL;
-    }
-    void *data = ctx->method.newCtx(provCtx, id);
-    if (data == NULL) {
+    ctx->data = ctx->method.newCtx(provCtx, id);
+    if (ctx->data == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_MEM_ALLOC_FAIL);
-        BSL_SAL_Free(ctx);
-        return NULL;
+        goto ERR;
     }
 
     ctx->id = id;
     ctx->state = CRYPT_MD_STATE_NEW;
-    ctx->data = data;
     return ctx;
+ERR:
+    BSL_SAL_Free(ctx);
+    return NULL;
 }
 
 CRYPT_EAL_MdCTX *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
+#ifdef HITLS_CRYPTO_PROVIDER
     return MdNewCtxInner(algId, libCtx, attrName, true);
+#else
+    (void)libCtx;
+    (void)attrName;
+    return CRYPT_EAL_MdNewCtx(algId);
+#endif
 }
 
 CRYPT_EAL_MdCTX *CRYPT_EAL_MdNewCtx(CRYPT_MD_AlgId id)
@@ -164,12 +172,11 @@ void CRYPT_EAL_MdFreeCtx(CRYPT_EAL_MdCTX *ctx)
     }
     if (ctx->method.freeCtx != NULL) {
         ctx->method.freeCtx(ctx->data);
-        EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_MD, ctx->id, CRYPT_SUCCESS);
+        EAL_EVENT_REPORT(CRYPT_EVENT_ZERO, CRYPT_ALGO_MD, ctx->id, CRYPT_SUCCESS);
     } else {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
     }
-    BSL_SAL_FREE(ctx);
-    return;
+    BSL_SAL_Free(ctx);
 }
 
 int32_t CRYPT_EAL_MdInit(CRYPT_EAL_MdCTX *ctx)
@@ -203,8 +210,8 @@ int32_t CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data, uint32_t l
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    if ((ctx->state == CRYPT_MD_STATE_FINAL) || (ctx->state == CRYPT_MD_STATE_NEW)
-        || (ctx->state == CRYPT_MD_STATE_SQUEEZE)) {
+    if ((ctx->state == CRYPT_MD_STATE_FINAL) || (ctx->state == CRYPT_MD_STATE_NEW) ||
+        (ctx->state == CRYPT_MD_STATE_SQUEEZE)) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }

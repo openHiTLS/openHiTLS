@@ -215,20 +215,6 @@ int32_t ECP_PointMulAdd(
 
 /**
  * @ingroup ecc
- * @brief   Check whether a is consistent with b.
- *
- * @param   para [IN] Curve parameter information
- * @param   a [IN] Input point information
- * @param   b [IN] Input point information
- *
- * @retval CRYPT_SUCCESS                The two points are the same.
- * @retval CRYPT_ECC_POINT_NOT_EQUAL    The two points are different.
- * @retval For details about other errors, see crypt_errno.h
- */
-int32_t ECP_PointCmp(const ECC_Para *para, const ECC_Point *a, const ECC_Point *b);
-
-/**
- * @ingroup ecc
  * @brief   Calculate r = k * pt. When pt is NULL, calculate r = k * G
  *          The pre-computation table under para will be updated.
  *
@@ -335,36 +321,6 @@ int32_t ECP_NistPointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Poi
  * @retval For details about other errors, see crypt_errno.h
  */
 int32_t ECP_NistPointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
-
-/**
- * @ingroup ecc
- * @brief   Convert the point to the affine coordinate and encode the point information as a data stream.
- *
- * @param   para [IN] Curve parameter information
- * @param   pt [IN/OUT] Point data
- * @param   data [OUT] data stream
- * @param   dataLen [IN/OUT] The input is the buff length of data and the output is the valid length of data.
- * @param   format [IN] Encoding format
- *
- * @retval CRYPT_SUCCESS    succeeded.
- * @retval For details about other errors, see crypt_errno.h
- */
-int32_t ECP_EncodePoint(const ECC_Para *para, ECC_Point *pt, uint8_t *data, uint32_t *dataLen,
-    CRYPT_PKEY_PointFormat format);
-
-/**
- * @ingroup ecc
- * @brief   Encode the data stream into point information.
- *
- * @param   para [IN] Curve parameter information
- * @param   pt [OUT] Point data
- * @param   data [IN] data stream
- * @param   dataLen [IN] data stream length
- *
- * @retval CRYPT_SUCCESS    succeeded.
- * @retval For details about other errors, see crypt_errno.h
- */
-int32_t ECP_DecodePoint(const ECC_Para *para, ECC_Point *pt, const uint8_t *data, uint32_t dataLen);
 
 /**
  * @brief   Calculate r = 1/a mod para->n

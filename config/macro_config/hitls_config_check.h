@@ -26,7 +26,8 @@
 #error "[HiTLS] The tls-provider must work with crypto-provider"
 #endif
 
-#if defined(HITLS_TLS_CONFIG_CERT_VERIFY_LOCATION) && !defined(HITLS_PKI_X509_VFY_LOCATION)
+#if defined(HITLS_TLS_CONFIG_CERT_VERIFY_LOCATION) && defined(HITLS_TLS_CALLBACK_CERT) && \
+    !defined(HITLS_PKI_X509_VFY_LOCATION)
 #error "[HiTLS] The tls verify must work with pki vfy location"
 #endif
 
@@ -627,7 +628,7 @@ chacha20poly1305, chacha20, rsa"
 #endif
 
 #if defined(HITLS_CRYPTO_ENTROPY) && !defined(HITLS_CRYPTO_DRBG)
-#error "[HiTLS] The entropy must work with at leaset one drbg algorithm."
+    #error "[HiTLS] The entropy must work with at least one drbg algorithm."
 #endif
 
 #if defined(HITLS_CRYPTO_DRBG_GM) && !defined(HITLS_CRYPTO_DRBG_CTR) && !defined(HITLS_CRYPTO_DRBG_HASH)
@@ -639,14 +640,14 @@ chacha20poly1305, chacha20, rsa"
 #endif
 
 #if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_DRBG_CTR) && !defined(HITLS_CRYPTO_DRBG_GM)
-    #if !defined(HITLS_CRYPTO_CMAC_AES)
+    #ifndef HITLS_CRYPTO_CMAC_AES
         #error "[HiTLS] Configure the conditioning function. Currently, CRYPT_MAC_CMAC_AES is supported. \
             others may be supported in the future."
     #endif
 #endif
 
 #if defined(HITLS_CRYPTO_BN) && !(defined(HITLS_THIRTY_TWO_BITS) || defined(HITLS_SIXTY_FOUR_BITS))
-#error "[HiTLS] To use bn, the number of system bits must be specified first."
+    #error "[HiTLS] To use bn, the number of system bits must be specified first."
 #endif
 
 #if defined(HITLS_CRYPTO_HPKE)
@@ -746,26 +747,6 @@ chacha20poly1305, chacha20, rsa"
     #endif
 #endif
 
-#if defined(HITLS_CRYPTO_HMAC) && !defined(HITLS_CRYPTO_MD)
-#error "[HiTLS] The hmac must work with hash."
-#endif
-
-#if defined(HITLS_CRYPTO_DRBG_HASH) && !defined(HITLS_CRYPTO_MD)
-#error "[HiTLS] The drbg_hash must work with hash."
-#endif
-
-#if defined(HITLS_CRYPTO_ENTROPY) && !defined(HITLS_CRYPTO_DRBG)
-#error "[HiTLS] The entropy must work with at leaset one drbg algorithm."
-#endif
-
-#if defined(HITLS_CRYPTO_PKEY) && !defined(HITLS_CRYPTO_MD)
-#error "[HiTLS] The pkey must work with hash."
-#endif
-
-#if defined(HITLS_CRYPTO_BN) && !(defined(HITLS_THIRTY_TWO_BITS) || defined(HITLS_SIXTY_FOUR_BITS))
-#error "[HiTLS] To use bn, the number of system bits must be specified first."
-#endif
-
 #ifdef HITLS_CRYPTO_KEY_EPKI
     #if !defined(HITLS_CRYPTO_KEY_ENCODE) && !defined(HITLS_CRYPTO_KEY_DECODE)
         #error "[HiTLS] The key encrypt must work with key gen or key parse."
@@ -784,6 +765,18 @@ chacha20poly1305, chacha20, rsa"
     #error "[HiTLS] The encode must work with ecdsa or sm2_sign or sm2_crypt or ed25519 or rsa_sign or rsa_verify."
 #endif
 
+#if defined(HITLS_CRYPTO_SHA256_SMALL_MEM) && !defined(HITLS_CRYPTO_SHA256)
+    #error "[HiTLS] The HITLS_CRYPTO_SHA256_SMALL_MEM must work with sha256."
+#endif
+
+#if defined(HITLS_CRYPTO_SHA512_SMALL_MEM) && !defined(HITLS_CRYPTO_SHA512)
+    #error "[HiTLS] The HITLS_CRYPTO_SHA512_SMALL_MEM must work with sha512."
+#endif
+
+#if defined(HITLS_CRYPTO_SHA1_SMALL_MEM) && !defined(HITLS_CRYPTO_SHA1)
+    #error "[HiTLS] The HITLS_CRYPTO_SHA1_SMALL_MEM must work with sha1."
+#endif
+
 #endif /* HITLS_CRYPTO */
 
 #ifdef HITLS_PKI
@@ -798,6 +791,15 @@ chacha20poly1305, chacha20, rsa"
 
 #if defined(HITLS_PKI_INFO_CRL) && !defined(HITLS_PKI_X509_CRL)
 #error "[HiTLS] The info_crl must work with x509_crl_gen or x509_crl_parse."
+#endif
+
+
+#if defined(HITLS_PKI_X509_CSR_GET) && !defined(HITLS_PKI_X509_CSR)
+#error "[HiTLS] The x509_csr_get must work with x509_csr_gen or x509_csr_parse."
+#endif
+
+#if defined(HITLS_PKI_X509_CSR_ATTR) && !defined(HITLS_PKI_X509_CSR)
+#error "[HiTLS] The x509_csr_attr must work with x509_csr_gen or x509_csr_parse."
 #endif
 
 #endif /* HITLS_PKI */

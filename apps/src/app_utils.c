@@ -31,7 +31,7 @@
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_md.h"
 #include "crypt_eal_rand.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey.h"
 #include "app_print.h"
 #include "app_errno.h"
 #include "app_opt.h"

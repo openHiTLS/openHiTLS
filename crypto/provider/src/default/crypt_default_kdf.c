@@ -35,19 +35,19 @@ void *CRYPT_EAL_DefKdfNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
     switch (algId) {
 #ifdef HITLS_CRYPTO_SCRYPT
         case CRYPT_KDF_SCRYPT:
-            return CRYPT_SCRYPT_NewCtxEx(libCtx);
+            return CRYPT_SCRYPT_NewCtxEx(libCtx, algId);
 #endif
 #ifdef HITLS_CRYPTO_PBKDF2
         case CRYPT_KDF_PBKDF2:
-            return CRYPT_PBKDF2_NewCtxEx(libCtx);
+            return CRYPT_PBKDF2_NewCtxEx(libCtx, algId);
 #endif
 #ifdef HITLS_CRYPTO_KDFTLS12
         case CRYPT_KDF_KDFTLS12:
-            return CRYPT_KDFTLS12_NewCtxEx(libCtx);
+            return CRYPT_KDFTLS12_NewCtxEx(libCtx, algId);
 #endif
 #ifdef HITLS_CRYPTO_HKDF
         case CRYPT_KDF_HKDF:
-            return CRYPT_HKDF_NewCtxEx(libCtx);
+            return CRYPT_HKDF_NewCtxEx(libCtx, algId);
 #endif
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);

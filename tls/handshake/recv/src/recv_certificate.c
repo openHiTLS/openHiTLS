@@ -117,8 +117,7 @@ int32_t ServerCheckPeerCert(TLS_Ctx *ctx, HITLS_CERT_X509 *cert)
 
 static int32_t ClientCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
 {
-    int32_t ret;
-    ret = ClientCheckPeerCert(ctx, SAL_CERT_PairGetX509(peerCert));
+    int32_t ret = ClientCheckPeerCert(ctx, SAL_CERT_PairGetX509(peerCert));
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16224, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client check peer cert failed", 0, 0, 0, 0);
@@ -162,8 +161,7 @@ static int32_t ClientCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
 
 static int32_t ServerCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
 {
-    int32_t ret;
-    ret = ServerCheckPeerCert(ctx, SAL_CERT_PairGetX509(peerCert));
+    int32_t ret = ServerCheckPeerCert(ctx, SAL_CERT_PairGetX509(peerCert));
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16226, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "server check peer cert failed.", 0, 0, 0, 0);

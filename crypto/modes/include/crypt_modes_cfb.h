@@ -41,6 +41,7 @@ typedef struct ModesCFBCtx MODES_CFB_Ctx;
 
 // CFB mode universal implementation
 MODES_CFB_Ctx *MODES_CFB_NewCtx(int32_t algId);
+MODES_CFB_Ctx *MODES_CFB_NewCtxEx(void *libCtx, int32_t algId);
 int32_t MODES_CFB_InitCtx(MODES_CFB_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc);
 

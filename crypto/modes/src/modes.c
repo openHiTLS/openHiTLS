@@ -89,6 +89,12 @@ MODES_CipherCtx *MODES_CipherNewCtx(int32_t algId)
     return ctx;
 }
 
+MODES_CipherCtx *MODES_CipherNewCtxEx(void *libCtx, int32_t algId)
+{
+    (void)libCtx;
+    return MODES_CipherNewCtx(algId);
+}
+
 int32_t MODES_CipherInitCommonCtx(MODES_CipherCommonCtx *modeCtx, void *setSymKey, void *keyCtx,
     const uint8_t *key, uint32_t keyLen, const uint8_t *iv, uint32_t ivLen)
 {

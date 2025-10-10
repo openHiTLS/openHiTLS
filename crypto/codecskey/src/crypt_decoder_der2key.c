@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_CRYPTO_PROVIDER)
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
 #include <string.h>
 #include <stdbool.h>
 #include "crypt_eal_implprovider.h"
@@ -42,15 +42,16 @@
 #include "bsl_sal.h"
 #include "bsl_obj.h"
 #include "bsl_err_internal.h"
-#include "crypt_encode_decode_local.h"
-#include "crypt_decode_key_impl.h"
+#include "crypt_codecskey_local.h"
+#include "crypt_decoder_local.h"
+#include "crypt_decoder.h"
 #define PKEY_MAX_PARAM_NUM 20
 
 #if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) || \
     defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_MLDSA)
 typedef struct {
     CRYPT_EAL_ProvMgrCtx *provMgrCtx;
-    EAL_PkeyUnitaryMethod *method;
+    EAL_PkeyUnitaryMethod method;
     int32_t keyAlgId;
     const char *outFormat;
     const char *outType;
@@ -195,19 +196,19 @@ static int32_t ConstructOutputParams(DECODER_Der2KeyCtx *decoderCtx, void *key, 
         goto EXIT;
     }
     ret = BSL_PARAM_InitValue(&result[2], CRYPT_PARAM_DECODE_PKEY_EXPORT_METHOD_FUNC, BSL_PARAM_TYPE_FUNC_PTR,
-        decoderCtx->method->export, 0);
+        decoderCtx->method.export, 0);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
     ret = BSL_PARAM_InitValue(&result[3], CRYPT_PARAM_DECODE_PKEY_FREE_METHOD_FUNC, BSL_PARAM_TYPE_FUNC_PTR,
-        decoderCtx->method->freeCtx, 0);
+        decoderCtx->method.freeCtx, 0);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
     ret = BSL_PARAM_InitValue(&result[4], CRYPT_PARAM_DECODE_PKEY_DUP_METHOD_FUNC, BSL_PARAM_TYPE_FUNC_PTR,
-        decoderCtx->method->dupCtx, 0);
+        decoderCtx->method.dupCtx, 0);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -221,8 +222,8 @@ static int32_t ConstructOutputParams(DECODER_Der2KeyCtx *decoderCtx, void *key, 
     *outParam = result;
     return CRYPT_SUCCESS;
 EXIT:
-    if (decoderCtx->method != NULL && decoderCtx->method->freeCtx != NULL) {
-        decoderCtx->method->freeCtx(key);
+    if (decoderCtx->method.freeCtx != NULL) {
+        decoderCtx->method.freeCtx(key);
     }
     BSL_SAL_Free(result);
     return ret;
@@ -244,7 +245,7 @@ int32_t DECODER_##keyType##PrvKeyDer2KeyDecode(void *ctx, const BSL_Param *inPar
 #define DECODER_DEFINE_PUBKEY_DER2KEY_DECODE(keyType, keyStructName, parseFunc) \
 int32_t DECODER_##keyType##PubKeyDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam) \
 { \
-     DECODER_CHECK_PARAMS(ctx, inParam, outParam); \
+    DECODER_CHECK_PARAMS(ctx, inParam, outParam); \
     ret = parseFunc(decoderCtx->provMgrCtx->libCtx, asn1Encode.data, asn1Encode.dataLen, NULL, \
         (keyStructName **)&key, BSL_CID_UNKNOWN); \
     if (ret != CRYPT_SUCCESS) { \
@@ -299,27 +300,22 @@ void DECODER_DER2KEY_FreeOutData(void *ctx, BSL_Param *outParam)
     if (decoderCtx == NULL || outParam == NULL) {
         return;
     }
-    if (decoderCtx->method == NULL || decoderCtx->method->freeCtx == NULL) {
+    if (decoderCtx->method.freeCtx == NULL) {
         return;
     }
     BSL_Param *outKey = BSL_PARAM_FindParam(outParam, CRYPT_PARAM_DECODE_OBJECT_DATA);
     if (outKey == NULL) {
         return;
     }
-    decoderCtx->method->freeCtx(outKey->value);
+    decoderCtx->method.freeCtx(outKey->value);
     BSL_SAL_Free(outParam);
 }
 
 void DECODER_DER2KEY_FreeCtx(void *ctx)
 {
-    if (ctx == NULL) {
-        return;
+    if (ctx != NULL) {
+        BSL_SAL_Free(ctx);
     }
-    DECODER_Der2KeyCtx *decoderCtx = (DECODER_Der2KeyCtx *)ctx;
-    if (decoderCtx->method != NULL) {
-        BSL_SAL_Free(decoderCtx->method);
-    }
-    BSL_SAL_Free(decoderCtx);
 }
 #endif
 
@@ -328,8 +324,7 @@ DECODER_DEFINE_DER2KEY_NEW_CTX(Rsa, CRYPT_PKEY_RSA, g_defEalKeyMgmtRsa, g_defEal
     g_defEalSignRsa, NULL)
 #endif
 #ifdef HITLS_CRYPTO_ECDSA
-DECODER_DEFINE_DER2KEY_NEW_CTX(Ecdsa, CRYPT_PKEY_ECDSA, g_defEalKeyMgmtEcdsa, NULL, NULL, \
-    g_defEalSignEcdsa, NULL)
+DECODER_DEFINE_DER2KEY_NEW_CTX(Ecdsa, CRYPT_PKEY_ECDSA, g_defEalKeyMgmtEcdsa, NULL, NULL, g_defEalSignEcdsa, NULL)
 #endif
 #ifdef HITLS_CRYPTO_SM2
 DECODER_DEFINE_DER2KEY_NEW_CTX(Sm2, CRYPT_PKEY_SM2, g_defEalKeyMgmtSm2, g_defEalAsymCipherSm2, g_defEalExchSm2, \
@@ -340,8 +335,7 @@ DECODER_DEFINE_DER2KEY_NEW_CTX(Ed25519, CRYPT_PKEY_ED25519, g_defEalKeyMgmtEd255
     g_defEalSignEd25519, NULL)
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
-DECODER_DEFINE_DER2KEY_NEW_CTX(Mldsa, CRYPT_PKEY_ML_DSA, g_defEalKeyMgmtMlDsa, NULL, NULL, \
-    g_defEalSignMlDsa, NULL)
+DECODER_DEFINE_DER2KEY_NEW_CTX(Mldsa, CRYPT_PKEY_ML_DSA, g_defEalKeyMgmtMlDsa, NULL, NULL, g_defEalSignMlDsa, NULL)
 #endif
 #ifdef HITLS_CRYPTO_RSA
 DECODER_DEFINE_PRVKEY_DER2KEY_DECODE(Rsa, CRYPT_RSA_Ctx, CRYPT_RSA_ParsePrikeyAsn1Buff)
@@ -361,7 +355,7 @@ DECODER_DEFINE_PKCS8_DECODE(Ecdsa, void, CRYPT_ECC_ParsePkcs8Key)
 #ifdef HITLS_CRYPTO_SM2
 DECODER_DEFINE_PRVKEY_DER2KEY_DECODE(Sm2, CRYPT_SM2_Ctx, CRYPT_SM2_ParsePrikeyAsn1Buff)
 DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(Sm2, CRYPT_SM2_Ctx, CRYPT_SM2_ParseSubPubkeyAsn1Buff)
-DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Sm2, CRYPT_SM2_Ctx,CRYPT_SM2_ParseSubPubkeyAsn1Buff)
+DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Sm2, CRYPT_SM2_Ctx, CRYPT_SM2_ParseSubPubkeyAsn1Buff)
 DECODER_DEFINE_PKCS8_DECODE(Sm2, CRYPT_SM2_Ctx, CRYPT_SM2_ParsePkcs8Key)
 #endif
 
@@ -376,4 +370,4 @@ DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(Mldsa, CRYPT_ML_DSA_Ctx, CRYPT_MLDSA_Par
 DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Mldsa, CRYPT_ML_DSA_Ctx, CRYPT_MLDSA_ParseSubPubkeyAsn1Buff)
 DECODER_DEFINE_PKCS8_DECODE(Mldsa, CRYPT_ML_DSA_Ctx, CRYPT_MLDSA_ParsePkcs8key)
 #endif
-#endif /* HITLS_CRYPTO_CODECSKEY && defined(HITLS_CRYPTO_PROVIDER) */
+#endif /* HITLS_CRYPTO_KEY_DECODE_CHAIN */
