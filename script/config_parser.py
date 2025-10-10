@@ -195,6 +195,7 @@ class FeatureParser:
         [asm_type_set.update(self.libs[lib]['features'].keys()) for lib in self.libs.keys()]
         asm_type_set.discard('c')
         asm_type_set.add('no_asm')
+        asm_type_set.add('riscv64')
         return asm_type_set
 
     def get_module_deps(self, module, dep_list, result):
