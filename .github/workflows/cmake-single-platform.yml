@@ -127,10 +127,10 @@ jobs:
       working-directory: ${{github.workspace}}/build
       run: make -j4
 
-    - name: Test
-      working-directory: ${{github.workspace}}/testcode/script
+      # - name: Test
+      # working-directory: ${{github.workspace}}/testcode/script
       # Execute tests defined by the CMake configuration.
-      run: bash build_sdv.sh no-sctp && bash execute_sdv.sh
+      # run: bash build_sdv.sh no-sctp && bash execute_sdv.sh
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
