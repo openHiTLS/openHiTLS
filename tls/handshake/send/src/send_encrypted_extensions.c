@@ -75,7 +75,7 @@ int32_t Tls13ServerSendEncryptedExtensionsProcess(TLS_Ctx *ctx)
     /* The server sends a CertificateRequest message only when the VerifyPeer mode is enabled */
     if (ctx->config.tlsConfig.isSupportClientVerify
 #ifdef HITLS_TLS_FEATURE_PHA
-        && ctx->phaState != PHA_EXTENSION
+        && (ctx->phaState != PHA_EXTENSION || !ctx->config.tlsConfig.isSupportPostHandshakeAuth)
 #endif /* HITLS_TLS_FEATURE_PHA */
         ) {
         return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE_REQUEST);

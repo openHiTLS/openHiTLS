@@ -1862,3 +1862,70 @@ EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
+
+/** @
+* @test  SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC018
+* @spec  -
+* @title Close isSupportPostHandshakeAuth of server, open isSupportClientVerify, the server send certificate request
+        successfully
+* @precon  nan
+* @brief
+*   1. Apply and initialize config
+*   2. Set the client support post-handshake extension
+*   3. After the connection establishment, the server sends a certificate request message for backhandshake
+    authentication.
+*   4. Observe client behavior
+* @expect
+*   1. Initialization succeeded.
+*   2. Set succeeded.
+*   3. Authentication succeeded.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC018()
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+    HLT_Ctx_Config *serverConfig = NULL;
+    HLT_Ctx_Config *clientConfig = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, 18889, false);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    // Apply and initialize config
+    serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverConfig != NULL);
+    clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientConfig != NULL);
+
+    // Set the client support post-handshake extension
+    HLT_SetPostHandshakeAuth(serverConfig, false);
+    HLT_SetClientVerifySupport(serverConfig, true);
+    HLT_SetPostHandshakeAuth(clientConfig, true);
+    HLT_SetClientVerifySupport(clientConfig, true);
+
+    serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_3, serverConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_3, clientConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+
+    ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), 0);
+
+    ASSERT_EQ(HITLS_VerifyClientPostHandshake(serverRes->ssl), HITLS_SUCCESS);
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen;
+    const char *writeBuf = "Hello world";
+
+    ASSERT_TRUE(HLT_TlsWrite(serverRes->ssl, (uint8_t *)writeBuf, strlen(writeBuf)) == HITLS_SUCCESS);
+    ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);
+
+    // The client returns alert
+    ASSERT_TRUE(HLT_RpcTlsRead(remoteProcess, clientRes->sslId, readBuf, READ_BUF_SIZE, &readLen) == HITLS_SUCCESS);
+EXIT:
+    HLT_FreeAllProcess();
+}
+/* END_CASE */

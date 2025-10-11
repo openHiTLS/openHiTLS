@@ -2296,7 +2296,7 @@ static int32_t Tls13ServerProcessClientHello(TLS_Ctx *ctx, HS_Msg *msg)
     }
 #ifdef HITLS_TLS_FEATURE_PHA
     TLS_Config *tlsConfig = &ctx->config.tlsConfig;
-    if (ctx->phaState == PHA_NONE && tlsConfig->isSupportClientVerify && tlsConfig->isSupportPostHandshakeAuth &&
+    if (ctx->phaState == PHA_NONE && tlsConfig->isSupportClientVerify &&
         msg->body.clientHello.extension.flag.havePostHsAuth) {
         ctx->phaState = PHA_EXTENSION;
     }

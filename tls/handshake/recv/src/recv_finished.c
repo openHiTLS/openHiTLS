@@ -491,8 +491,7 @@ int32_t Tls13ServerRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
             return ret;
         }
 #ifdef HITLS_TLS_FEATURE_PHA
-        if (ctx->phaState == PHA_EXTENSION && ctx->config.tlsConfig.isSupportClientVerify &&
-            ctx->config.tlsConfig.isSupportPostHandshakeAuth) {
+        if (ctx->phaState == PHA_EXTENSION && ctx->config.tlsConfig.isSupportClientVerify) {
             SAL_CRYPT_DigestFree(ctx->phaHash);
             ctx->phaHash = SAL_CRYPT_DigestCopy(ctx->hsCtx->verifyCtx->hashCtx);
             if (ctx->phaHash == NULL) {
