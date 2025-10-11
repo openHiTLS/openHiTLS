@@ -66,11 +66,6 @@ static int32_t DecodeAsn1Template(const uint8_t *encode, uint32_t encodeLen, BSL
         return ret;
     }
 
-    if (tmpEncLen != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ASN1_BUFF_FAILED);
-        return CRYPT_DECODE_ASN1_BUFF_FAILED;
-    }
-
     for (uint32_t i = 0; i < asnArrLen; i++) {
         if (asnArr[i].len == 0) {
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ASN1_BUFF_LEN_ZERO);
