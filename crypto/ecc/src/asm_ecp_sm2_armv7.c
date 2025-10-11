@@ -163,6 +163,10 @@ static int ECP_Sm2FpEqu(const Sm2Fp a, const Sm2Fp b) {
 
 // ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 2.22
 void ECP_Sm2FpInv(Sm2Fp r, const Sm2Fp q) {
+    if (r == NULL || q == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
     Sm2Fp u, v = {0xFFFFFFFFU, 0xFFFFFFFFU, 0x00000000U, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFEU}, a = {1}, c = {0};
     ECP_Sm2FpSet(u, q);
     while (ECP_Sm2FpIsOne(u) == 0 && ECP_Sm2FpIsOne(v) == 0) {
@@ -191,6 +195,10 @@ void ECP_Sm2FpInv(Sm2Fp r, const Sm2Fp q) {
 
 // ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 2.22
 void ECP_Sm2FnInv(Sm2Fp r, const Sm2Fp q) {
+    if (r == NULL || q == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
     Sm2Fp u, v = {0x39D54123U, 0x53BBF409U, 0x21C6052BU, 0x7203DF6BU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFEU}, a = {1}, c = {0};
     ECP_Sm2FpSet(u, q);
     while (ECP_Sm2FpIsOne(u) == 0 && ECP_Sm2FpIsOne(v) == 0) {
@@ -218,6 +226,10 @@ void ECP_Sm2FnInv(Sm2Fp r, const Sm2Fp q) {
 }
 
 static void ECP_Sm2FpNaf(Sm2Naf r, const uint8_t w, const Sm2Fp n) {
+    if (r == NULL || w == NULL || n == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
     if (w > 7)
         return;     // w > 7 is not supported unless the sm2_naf type definition is expanded from int8_t[257] to int[257]
 
@@ -271,10 +283,18 @@ void ECP_Sm2PointToAffineCore(const Sm2Point *a, Sm2Point *r) {
 }
 
 static void ECP_Sm2PointCopy(Sm2Point *p, const Sm2Point *q) {
+    if (p == NULL || q == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
     memcpy_s(p, sizeof(Sm2Point), q, sizeof(Sm2Point));
 }
 
 static void ECP_Sm2PointSet(Sm2Point *p, const Sm2Fp x, const Sm2Fp y, const Sm2Fp z) {
+    if (p == NULL || x == NULL || y == NULL || z == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
     ECP_Sm2FpSet(p->x, x);
     ECP_Sm2FpSet(p->y, y);
     ECP_Sm2FpSet(p->z, z);
@@ -290,6 +310,10 @@ static int ECP_Sm2PointAtInfinity(const Sm2Point *r){
 
 // ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo-2
 void ECP_Sm2PointAddCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
+    if (r == NULL || p == NULL || q == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
     // Check if one of the points is the point at infinity
     if (ECP_Sm2PointAtInfinity(p)) {
         ECP_Sm2PointCopy(r, q);
@@ -339,6 +363,10 @@ void ECP_Sm2PointAddCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
 
 // ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo-2
 void ECP_Sm2PointSubCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
+    if (r == NULL || p == NULL || q == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
     // Check if one of the points is the point at infinity
     if (ECP_Sm2PointAtInfinity(p)) {
         ECP_Sm2PointCopy(r, q);
@@ -387,6 +415,10 @@ void ECP_Sm2PointSubCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
 
 // ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-madd-2004-hmv
 void ECP_Sm2PointAddWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
+    if (r == NULL || p == NULL || q == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
     if (ECP_Sm2PointAtInfinity(p)) {
         ECP_Sm2PointCopy(r, q);
         return;
@@ -432,6 +464,10 @@ void ECP_Sm2PointAddWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Poin
 
 // ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-madd-2004-hmv
 void ECP_Sm2PointSubWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
+    if (r == NULL || p == NULL || q == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
     const uint32_t *x1 = p->x, *y1 = p->y, *z1 = p->z, *x2 = q->x;
     Sm2Fp y2, x3, y3, z3, t1, t2, t3, t4;
     ECP_Sm2FpNeg(y2, q->y);
@@ -478,6 +514,10 @@ void ECP_Sm2PointSubWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Poin
 
 // ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#doubling-dbl-2004-hmv
 void ECP_Sm2PointDouCore(Sm2Point *r, const Sm2Point *a) {
+    if (r == NULL || a == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
     if (ECP_Sm2PointAtInfinity(a)) {
         ECP_Sm2PointCopy(r, a);
         return;
@@ -510,6 +550,10 @@ void ECP_Sm2PointDouCore(Sm2Point *r, const Sm2Point *a) {
 
 // ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 3.23
 void ECP_Sm2PointMultDoubleCore(Sm2Point *r, uint32_t m, const Sm2Point *p) {
+    if (r == NULL || p == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
     if (ECP_Sm2PointAtInfinity(p)) {
         ECP_Sm2PointSet(r, p->x, p->y, p->z); return;
     }
@@ -547,6 +591,10 @@ void ECP_Sm2PointMultDoubleCore(Sm2Point *r, uint32_t m, const Sm2Point *p) {
 
 // ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 3.38
 void ECP_Sm2PointMulCore(Sm2Point *r, const Sm2Fp k, const Sm2Point *g) {
+    if (r == NULL || k == NULL || g == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
     static Sm2Naf K;
     static Sm2Point upt[8];
 
@@ -580,6 +628,10 @@ void ECP_Sm2PointMulCore(Sm2Point *r, const Sm2Fp k, const Sm2Point *g) {
 
 // ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 3.42
 void ECP_Sm2PointGenCore(Sm2Point *r, const Sm2Fp k) {
+    if (r == NULL || k == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return;
+    }
     static Sm2Point a, b;
     static int8_t K[52];
 
