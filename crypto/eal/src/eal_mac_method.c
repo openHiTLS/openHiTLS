@@ -337,8 +337,7 @@ int32_t EAL_MacFindDepMethod(CRYPT_MAC_AlgId macId, void *libCtx, const char *at
 #ifdef HITLS_CRYPTO_HMAC
         case CRYPT_MAC_HMAC:
             depMeth->id.mdId = macAlgMap->mdId;
-            mdMethod = isProvider ? EAL_MdFindMethodEx(macAlgMap->mdId, libCtx, attrName, depMeth->method.md, provCtx)
-                                  : EAL_MdFindMethod(macAlgMap->mdId, depMeth->method.md);
+            mdMethod = EAL_MdFindMethodEx(macAlgMap->mdId, libCtx, attrName, depMeth->method.md, provCtx, isProvider);
             if (mdMethod == NULL) {
                 BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
                 return CRYPT_EAL_ERR_ALGID;

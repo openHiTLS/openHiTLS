@@ -249,20 +249,22 @@ ERR:
 #endif // HITLS_CRYPTO_PROVIDER
 
 EAL_MdMethod *EAL_MdFindMethodEx(CRYPT_MD_AlgId id, void *libCtx, const char *attrName, EAL_MdMethod *method,
-    void **provCtx)
+    void **provCtx, bool isProvider)
 {
 #ifdef HITLS_CRYPTO_PROVIDER
-    return EAL_ProviderMdFindMethod(id, libCtx, attrName, method, provCtx);
+    return isProvider == true ? EAL_ProviderMdFindMethod(id, libCtx, attrName, method, provCtx)
+                              : EAL_MdFindMethod(id, method);
 #else
     (void)libCtx;
     (void)attrName;
     (void)provCtx;
+    (void)isProvider;
     return EAL_MdFindMethod(id, method);
 #endif
 }
 
 int32_t EAL_Md(CRYPT_MD_AlgId id, void *libCtx, const char *attr, const uint8_t *in, uint32_t inLen, uint8_t *out,
-    uint32_t *outLen)
+    uint32_t *outLen, bool isProvider)
 {
     int32_t ret;
     if (out == NULL || outLen == NULL) {
@@ -275,7 +277,7 @@ int32_t EAL_Md(CRYPT_MD_AlgId id, void *libCtx, const char *attr, const uint8_t 
     }
     EAL_MdMethod method = {0};
     void *provCtx = NULL;
-    if (EAL_MdFindMethodEx(id, libCtx, attr, &method, &provCtx) == NULL) {
+    if (EAL_MdFindMethodEx(id, libCtx, attr, &method, &provCtx, isProvider) == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }

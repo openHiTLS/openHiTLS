@@ -86,13 +86,14 @@ EAL_MdMethod *EAL_MdFindMethod(CRYPT_MD_AlgId id, EAL_MdMethod *method);
  *                  If NULL, function will allocate new memory. Caller must free returned pointer when no longer needed.
  *                  If not NULL, the method should be cleared before calling this function.
  * @param provCtx   [OUT] The provider context.
+ * @param isProvider [IN] Whether to find method from provider
  *
  * @return Pointer to MD method structure on success. NULL on failure (invalid ID or alloc fail).
  *         Note: When input method is NULL, returned pointer MUST be freed by caller.
  *               When input method is valid, returns the same pointer with initialized contents.
  */
 EAL_MdMethod *EAL_MdFindMethodEx(CRYPT_MD_AlgId id, void *libCtx, const char *attrName, EAL_MdMethod *method,
-    void **provCtx);
+    void **provCtx, bool isProvider);
 
 /**
  * @ingroup eal
@@ -105,12 +106,13 @@ EAL_MdMethod *EAL_MdFindMethodEx(CRYPT_MD_AlgId id, void *libCtx, const char *at
  * @param inLen [IN] Input data length
  * @param out [OUT] Output data
  * @param outLen [OUT] Output data length
+ * @param isProvider [IN] Whether to find method from provider
  *
  * @return #CRYPT_SUCCESS Success.
  * @return #CRYPT_EAL_ERR_ALGID Algorithm ID is invalid.
  */
 int32_t EAL_Md(CRYPT_MD_AlgId id, void *libCtx, const char *attr, const uint8_t *in, uint32_t inLen, uint8_t *out,
-    uint32_t *outLen);
+    uint32_t *outLen, bool isProvider);
 
 #ifdef __cplusplus
 }

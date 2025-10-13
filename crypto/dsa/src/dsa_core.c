@@ -985,7 +985,7 @@ int32_t CRYPT_DSA_Sign(const CRYPT_DSA_Ctx *ctx, int32_t algId, const uint8_t *d
     }
     uint8_t hash[64]; // 64 is max hash len
     uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
-    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hash, &hashLen);
+    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hash, &hashLen, ctx->libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -1094,7 +1094,7 @@ int32_t CRYPT_DSA_Verify(const CRYPT_DSA_Ctx *ctx, int32_t algId, const uint8_t 
     }
     uint8_t hash[64]; // 64 is max hash len
     uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
-    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hash, &hashLen);
+    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hash, &hashLen, ctx->libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -1162,7 +1162,7 @@ static int32_t DSAFips1864GenQ(int32_t algId, void *libCtx, const char *mdAttr, 
 {
     uint8_t hash[64] = {0}; // 64 is max hash len
     uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
-    int32_t ret = EAL_Md(algId, libCtx, mdAttr, seed, seedLen, hash, &hashLen);
+    int32_t ret = EAL_Md(algId, libCtx, mdAttr, seed, seedLen, hash, &hashLen, libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -1206,7 +1206,7 @@ static int32_t DSAFips1864GenP(DSA_FIPS186_4_Para *fipsPara, const BN_BigNum *po
         }
         hashLen = sizeof(hash) / sizeof(hash[0]);
         (void)memset_s(hash, hashLen, 0, hashLen);
-        ret = EAL_Md(fipsPara->algId, libCtx, mdAttr, seed->data, seed->dataLen, hash, &hashLen);
+        ret = EAL_Md(fipsPara->algId, libCtx, mdAttr, seed->data, seed->dataLen, hash, &hashLen, libCtx != NULL);
         GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
         ret = BN_Bin2Bn(V, hash, hashLen);
         GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
@@ -1382,7 +1382,8 @@ ERR:
 }
 
 // fips186-4 A.2.3
-int32_t CryptDsaFips1864GenVerifiableG(DSA_FIPS186_4_Para *fipsPara, BSL_Buffer *seed, CRYPT_DSA_Para *dsaPara)
+int32_t CryptDsaFips1864GenVerifiableG(void *libCtx, const char *mdAttr, DSA_FIPS186_4_Para *fipsPara, BSL_Buffer *seed,
+    CRYPT_DSA_Para *dsaPara)
 {
     RETURN_RET_IF(fipsPara->index < 0, CRYPT_INVALID_ARG);
     int32_t ret;
@@ -1412,7 +1413,7 @@ int32_t CryptDsaFips1864GenVerifiableG(DSA_FIPS186_4_Para *fipsPara, BSL_Buffer 
         msg[seed->dataLen + 6] = (uint8_t)(cnt & 0xff); // skip 6 bytes.
         hashLen = sizeof(hash) / sizeof(hash[0]);
         (void)memset_s(hash, hashLen, 0, hashLen);
-        GOTO_ERR_IF(EAL_Md(fipsPara->algId, NULL, NULL, msg, msgLen, hash, &hashLen), ret);
+        GOTO_ERR_IF(EAL_Md(fipsPara->algId, libCtx, mdAttr, msg, msgLen, hash, &hashLen, libCtx != NULL), ret);
         GOTO_ERR_IF(BN_Bin2Bn(gTmp, hash, hashLen), ret);
         GOTO_ERR_IF(BN_ModExp(gTmp, gTmp, e, dsaPara->p, opt), ret);
         if (BN_IsNegative(gTmp) == true || BN_IsZero(gTmp) == true || BN_IsOne(gTmp) == true) { // gTmp < 2
@@ -1488,14 +1489,15 @@ ERR:
 }
 
 // fips186-4 A.2.4
-int32_t CryptDsaFips1864ValidateG(DSA_FIPS186_4_Para *fipsPara, BSL_Buffer *seed, CRYPT_DSA_Para *dsaPara)
+int32_t CryptDsaFips1864ValidateG(void *libCtx, const char *mdAttr, DSA_FIPS186_4_Para *fipsPara, BSL_Buffer *seed,
+    CRYPT_DSA_Para *dsaPara)
 {
     int32_t ret = CryptDsaFips1864PartialValidateG(dsaPara);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
     CRYPT_DSA_Para dsaVerify = {dsaPara->p, dsaPara->q, NULL};
-    ret = CryptDsaFips1864GenVerifiableG(fipsPara, seed, &dsaVerify);
+    ret = CryptDsaFips1864GenVerifiableG(libCtx, mdAttr, fipsPara, seed, &dsaVerify);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -1584,7 +1586,7 @@ int32_t CryptDsaFips1864GenParams(CRYPT_DSA_Ctx *ctx, void *val)
         ctx->para = oldPara;
         return ret;
     }
-    ret = CryptDsaFips1864GenVerifiableG(&fipsPara, &seed, ctx->para);
+    ret = CryptDsaFips1864GenVerifiableG(ctx->libCtx, ctx->mdAttr, &fipsPara, &seed, ctx->para);
     BSL_SAL_ClearFree(seed.data, seed.dataLen);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_DSA_FreePara(ctx->para);

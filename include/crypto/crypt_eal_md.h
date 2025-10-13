@@ -195,6 +195,24 @@ int32_t CRYPT_EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8
 
 /**
  * @ingroup crypt_eal_md
+ * @brief   Calculate the data digest. Supported in provider
+ *
+ * @param   libCtx [IN] Library context
+ * @param   id [IN] Algorithm ID
+ * @param   attrName [IN] Attribute name
+ * @param   in [IN] Data to be digested
+ * @param   len [IN] Data length
+ * @param   out [OUT] Digest result
+ * @param   len [IN/OUT] The input parameter indicates the length of the buffer marked as "out", and the output
+ * parameter indicates the valid length of the obtained "out".
+ * @retval  #CRYPT_SUCCESS.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_ProviderMd(CRYPT_EAL_LibCtx *libCtx, CRYPT_MD_AlgId id, const char *attrName,
+    const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+
+/**
+ * @ingroup crypt_eal_md
  * @brief   Deinitialize the function.
  *
  * If need to be calculated after the CRYPT_EAL_MdDeinit is called, it needs to be initialized again.

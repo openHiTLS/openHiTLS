@@ -993,6 +993,7 @@ static int32_t PrintDnNameHash(uint32_t layer, BslList *list, BSL_UIO *uio)
         return ret;
     }
 
+    // Need to support provider
     ret = CRYPT_EAL_Md(CRYPT_MD_SHA1, name.buff, name.len, md, &mdLen);
     BSL_SAL_Free(name.buff);
     if (ret != CRYPT_SUCCESS) {

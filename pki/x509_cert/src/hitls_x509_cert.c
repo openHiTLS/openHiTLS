@@ -1030,7 +1030,7 @@ int32_t HITLS_X509_CertDigest(HITLS_X509_Cert *cert, CRYPT_MD_AlgId mdId, uint8_
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     if ((cert->flag & HITLS_X509_CERT_PARSE_FLAG) != 0 || (cert->state == HITLS_X509_CERT_STATE_GEN)) {
-        return CRYPT_EAL_Md(mdId, cert->rawData, cert->rawDataLen, data, dataLen);
+        goto EXIT;
     }
 
 #ifdef HITLS_PKI_X509_CRT_GEN
@@ -1039,11 +1039,16 @@ int32_t HITLS_X509_CertDigest(HITLS_X509_Cert *cert, CRYPT_MD_AlgId mdId, uint8_
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    return CRYPT_EAL_Md(mdId, cert->rawData, cert->rawDataLen, data, dataLen);
+    goto EXIT;
 #else
     BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_FUNC_UNSUPPORT);
     return HITLS_X509_ERR_FUNC_UNSUPPORT;
 #endif
+
+EXIT:
+    return cert->isProvider == true
+        ? CRYPT_EAL_ProviderMd(cert->libCtx, mdId, cert->attrName, cert->rawData, cert->rawDataLen, data, dataLen)
+        : CRYPT_EAL_Md(mdId, cert->rawData, cert->rawDataLen, data, dataLen);
 }
 
 #ifdef HITLS_PKI_X509_CRT_GEN
@@ -1118,6 +1123,7 @@ HITLS_X509_Cert *HITLS_X509_ProviderCertNew(HITLS_PKI_LibCtx *libCtx, const char
     }
     cert->libCtx = libCtx;
     cert->attrName = attrName;
+    cert->isProvider = true;
     return cert;
 }
 

@@ -707,7 +707,8 @@ int32_t CRYPT_RSA_Blind(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *input,
     }
     uint8_t hash[64]; // 64 is max hash len
     uint32_t hashLen = sizeof(hash);
-    ret = EAL_Md(algId, LIBCTX_FROM_RSA_CTX(ctx), MDATTR_FROM_RSA_CTX(ctx), input, inputLen, hash, &hashLen);
+    void *libCtx = LIBCTX_FROM_RSA_CTX(ctx);
+    ret = EAL_Md(algId, libCtx, MDATTR_FROM_RSA_CTX(ctx), input, inputLen, hash, &hashLen, libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -879,7 +880,8 @@ int32_t CRYPT_RSA_Sign(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data, u
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = EAL_Md(algId, LIBCTX_FROM_RSA_CTX(ctx), MDATTR_FROM_RSA_CTX(ctx), data, dataLen, hash, &hashLen);
+    void *libCtx = LIBCTX_FROM_RSA_CTX(ctx);
+    int32_t ret = EAL_Md(algId, libCtx, MDATTR_FROM_RSA_CTX(ctx), data, dataLen, hash, &hashLen, libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -973,7 +975,8 @@ int32_t CRYPT_RSA_Verify(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data,
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = EAL_Md(algId, LIBCTX_FROM_RSA_CTX(ctx), MDATTR_FROM_RSA_CTX(ctx), data, dataLen, hash, &hashLen);
+    void *libCtx = LIBCTX_FROM_RSA_CTX(ctx);
+    int32_t ret = EAL_Md(algId, libCtx, MDATTR_FROM_RSA_CTX(ctx), data, dataLen, hash, &hashLen, libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

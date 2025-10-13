@@ -48,14 +48,7 @@ static CRYPT_EAL_MdCTX *MdNewCtxInner(CRYPT_MD_AlgId id, CRYPT_EAL_LibCtx *libCt
     void *provCtx = NULL;
     // The ctx->method will be overwritten if the method is found.
     (void)memset_s(&ctx->method, sizeof(ctx->method), 0, sizeof(ctx->method));
-#ifdef HITLS_CRYPTO_PROVIDER
-    if (isProvider == true) {
-        method = EAL_MdFindMethodEx(id, libCtx, attrName, &ctx->method, &provCtx);
-    } else
-#endif
-    {
-        method = EAL_MdFindMethod(id, &ctx->method);
-    }
+    method = EAL_MdFindMethodEx(id, libCtx, attrName, &ctx->method, &provCtx, isProvider);
     if (method == NULL || ctx->method.newCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_EAL_ERR_METH_NULL_MEMBER);
         goto ERR;
@@ -327,6 +320,12 @@ uint32_t CRYPT_EAL_MdGetDigestSize(CRYPT_MD_AlgId id)
 
 int32_t CRYPT_EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    return EAL_Md(id, NULL, NULL, in, inLen, out, outLen);
+    return EAL_Md(id, NULL, NULL, in, inLen, out, outLen, false);
+}
+
+int32_t CRYPT_EAL_ProviderMd(CRYPT_EAL_LibCtx *libCtx, CRYPT_MD_AlgId id, const char *attrName,
+    const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+{
+    return EAL_Md(id, libCtx, attrName, in, inLen, out, outLen, true);
 }
 #endif

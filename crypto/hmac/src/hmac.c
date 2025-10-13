@@ -86,7 +86,7 @@ static int32_t HmacInitMdCtx(CRYPT_HMAC_Ctx *ctx, const char *attr)
 #endif
     void *provCtx = NULL;
     EAL_MacDepMethod depMeth = {.method = {.md = &ctx->method}};
-    int32_t ret = EAL_MacFindDepMethod(ctx->hmacId, libCtx, attr, &depMeth, &provCtx, true);
+    int32_t ret = EAL_MacFindDepMethod(ctx->hmacId, libCtx, attr, &depMeth, &provCtx, libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
