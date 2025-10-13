@@ -28,6 +28,10 @@
 #include "hs_msg.h"
 #include "hs_kx.h"
 #include "session.h"
+#include "recv_process.h"
+#ifdef HITLS_TLS_FEATURE_SESSION
+#include "session_mgr.h"
+#endif /* HITLS_TLS_FEATURE_SESSION */
 
 static int32_t UpdateTicket(TLS_Ctx *ctx, NewSessionTicketMsg *msg, uint8_t *psk, uint32_t pskSize)
 {
@@ -57,7 +61,20 @@ static int32_t UpdateTicket(TLS_Ctx *ctx, NewSessionTicketMsg *msg, uint8_t *psk
 
     HITLS_SESS_Free(ctx->session);
     ctx->session = newSession;
-
+    
+#if defined(HITLS_TLS_FEATURE_SESSION) && defined(HITLS_TLS_PROTO_TLS13)
+    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
+        return HITLS_SUCCESS;
+    }
+    HITLS_SESS_CACHE_MODE mode = SESSMGR_GetCacheMode(ctx->globalConfig->sessMgr);
+    if ((mode & HITLS_SESS_DISABLE_AUTO_CLEANUP) == 0) {
+        SESSMGR_ClearTimeout(ctx->globalConfig, (uint64_t)BSL_SAL_CurrentSysTimeGet());
+    }
+    if ((mode & HITLS_SESS_DISABLE_INTERNAL_STORE) == 0) {
+        bool isStore =
+            ctx->isClient == true ? (mode & HITLS_SESS_CACHE_CLIENT) != 0 : (mode & HITLS_SESS_CACHE_SERVER) != 0;
+        SESSMGR_InsertSession(ctx->globalConfig->sessMgr, newSession, isStore);
+    }
     /* The server may send multiple tickets. In this case, each ticket received will be notified to the user through
      * this callback, so that the client can obtain multiple sessions */
     if (ctx->globalConfig != NULL && ctx->globalConfig->newSessionCb != NULL) {
@@ -67,7 +84,7 @@ static int32_t UpdateTicket(TLS_Ctx *ctx, NewSessionTicketMsg *msg, uint8_t *psk
             HITLS_SESS_Free(newSession);
         }
     }
-
+#endif /* HITLS_TLS_FEATURE_SESSION && HITLS_TLS_PROTO_TLS13*/
     return HITLS_SUCCESS;
 }
 #ifdef HITLS_TLS_PROTO_TLS_BASIC

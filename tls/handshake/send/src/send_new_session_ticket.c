@@ -38,7 +38,7 @@ int32_t SendNewSessionTicketProcess(TLS_Ctx *ctx)
 {
     int32_t ret;
     HS_Ctx *hsCtx = ctx->hsCtx;
-    TLS_SessionMgr *sessMgr = ctx->config.tlsConfig.sessMgr;
+    TLS_SessionMgr *sessMgr = ctx->globalConfig->sessMgr;
 
     /* determine whether to assemble a message */
     if (hsCtx->msgLen == 0) {
@@ -53,7 +53,7 @@ int32_t SendNewSessionTicketProcess(TLS_Ctx *ctx)
             return ret;
         }
         /* assemble message */
-        ret = HS_PackMsg(ctx, NEW_SESSION_TICKET, hsCtx->msgBuf, REC_MAX_PLAIN_LENGTH, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, NEW_SESSION_TICKET);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15978, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "server pack new session ticket msg fail.", 0, 0, 0, 0);
@@ -108,7 +108,7 @@ int32_t Tls13TicketGenerate(TLS_Ctx *ctx)
     int32_t ret;
     HITLS_Session *newSession = NULL;
     HS_Ctx *hsCtx = ctx->hsCtx;
-    TLS_SessionMgr *sessMgr = ctx->config.tlsConfig.sessMgr;
+    TLS_SessionMgr *sessMgr = ctx->globalConfig->sessMgr;
 
     uint64_t timeout = SESSMGR_GetTimeout(sessMgr);
     /* TLS1.3 timeout period cannot exceed 604800 seconds, that is, seven days. */
@@ -172,7 +172,7 @@ int32_t Tls13SendNewSessionTicketProcess(TLS_Ctx *ctx)
         }
 
         /* assemble message */
-        ret = HS_PackMsg(ctx, NEW_SESSION_TICKET, hsCtx->msgBuf, REC_MAX_PLAIN_LENGTH, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, NEW_SESSION_TICKET);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16052, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "server pack new session ticket msg fail.", 0, 0, 0, 0);

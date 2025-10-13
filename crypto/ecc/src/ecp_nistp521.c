@@ -1384,9 +1384,9 @@ static int32_t InitPreComputeTable(Point preCompute[TABLE_P_SIZE], const ECC_Poi
     FelemSetLimb(&preCompute[0].y, 0);
     FelemSetLimb(&preCompute[0].z, 0);
     /* 1x point */
-    GOTO_ERR_IF_EX(BN2Felem(&preCompute[1].x, pt->x), ret);
-    GOTO_ERR_IF_EX(BN2Felem(&preCompute[1].y, pt->y), ret);
-    GOTO_ERR_IF_EX(BN2Felem(&preCompute[1].z, pt->z), ret);
+    GOTO_ERR_IF_EX(BN2Felem(&preCompute[1].x, &pt->x), ret);
+    GOTO_ERR_IF_EX(BN2Felem(&preCompute[1].y, &pt->y), ret);
+    GOTO_ERR_IF_EX(BN2Felem(&preCompute[1].z, &pt->z), ret);
     /* 2 to 16x points */
     for (uint32_t i = 2; i < TABLE_P_SIZE; i++) {
         if ((i & 1) == 0) {
@@ -1429,7 +1429,7 @@ int32_t ECP521_PointMulAdd(ECC_Para *para, ECC_Point *r,
     GOTO_ERR_IF(CheckBnValid(k1, FELEM_BITS), ret);
     GOTO_ERR_IF(CheckBnValid(k2, FELEM_BITS), ret);
     GOTO_ERR_IF(CheckPointValid(pt, CRYPT_ECC_NISTP521), ret);
-    if (BN_IsZero(pt->z)) {
+    if (BN_IsZero(&pt->z)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
     }
@@ -1441,9 +1441,9 @@ int32_t ECP521_PointMulAdd(ECC_Para *para, ECC_Point *r,
     /* Calculate */
     GOTO_ERR_IF_EX(ComputePointMulAdd(&out, &binG, &binP, pt), ret);
     /* Output result */
-    GOTO_ERR_IF_EX(Felem2BN(r->x, &out.x), ret);
-    GOTO_ERR_IF_EX(Felem2BN(r->y, &out.y), ret);
-    GOTO_ERR_IF_EX(Felem2BN(r->z, &out.z), ret);
+    GOTO_ERR_IF_EX(Felem2BN(&r->x, &out.x), ret);
+    GOTO_ERR_IF_EX(Felem2BN(&r->y, &out.y), ret);
+    GOTO_ERR_IF_EX(Felem2BN(&r->z, &out.z), ret);
 ERR:
     return ret;
 }
@@ -1465,7 +1465,7 @@ int32_t ECP521_PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const 
             BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
             return CRYPT_ECC_POINT_ERR_CURVE_ID;
         }
-        if (BN_IsZero(pt->z)) {
+        if (BN_IsZero(&pt->z)) {
             BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
             return CRYPT_ECC_POINT_AT_INFINITY;
         }
@@ -1480,9 +1480,9 @@ int32_t ECP521_PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const 
         FelemPointMul(&out, &bin, NULL, NULL);
     }
     /* Output result */
-    GOTO_ERR_IF_EX(Felem2BN(r->x, &out.x), ret);
-    GOTO_ERR_IF_EX(Felem2BN(r->y, &out.y), ret);
-    GOTO_ERR_IF_EX(Felem2BN(r->z, &out.z), ret);
+    GOTO_ERR_IF_EX(Felem2BN(&r->x, &out.x), ret);
+    GOTO_ERR_IF_EX(Felem2BN(&r->y, &out.y), ret);
+    GOTO_ERR_IF_EX(Felem2BN(&r->z, &out.z), ret);
 ERR:
     return ret;
 }
@@ -1491,15 +1491,15 @@ static int32_t MakeAffineWithInv(ECC_Point *r, const ECC_Point *a, const Felem *
 {
     int32_t ret;
     Felem x, y, tmp;
-    GOTO_ERR_IF_EX(BN2Felem(&x, a->x), ret);
-    GOTO_ERR_IF_EX(BN2Felem(&y, a->y), ret);
+    GOTO_ERR_IF_EX(BN2Felem(&x, &a->x), ret);
+    GOTO_ERR_IF_EX(BN2Felem(&y, &a->y), ret);
     FelemMulReduce(&y, &y, zInv);  // y/z
     FelemSqrReduce(&tmp, zInv);    // 1/(z^2)
     FelemMulReduce(&x, &x, &tmp);  // x/(z^2)
     FelemMulReduce(&y, &y, &tmp);  // y/(z^3)
-    GOTO_ERR_IF_EX(Felem2BN(r->x, &x), ret);
-    GOTO_ERR_IF_EX(Felem2BN(r->y, &y), ret);
-    GOTO_ERR_IF_EX(BN_SetLimb(r->z, 1), ret);
+    GOTO_ERR_IF_EX(Felem2BN(&r->x, &x), ret);
+    GOTO_ERR_IF_EX(Felem2BN(&r->y, &y), ret);
+    GOTO_ERR_IF_EX(BN_SetLimb(&r->z, 1), ret);
 ERR:
     return ret;
 }
@@ -1514,12 +1514,12 @@ int32_t ECP521_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point 
     GOTO_ERR_IF(CheckPointValid(r, CRYPT_ECC_NISTP521), ret);
     GOTO_ERR_IF(CheckPointValid(pt, CRYPT_ECC_NISTP521), ret);
     /* Special data processing */
-    if (BN_IsZero(pt->z)) {
+    if (BN_IsZero(&pt->z)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
     }
     /* Convert the input data. */
-    GOTO_ERR_IF_EX(BN2Felem(&z, pt->z), ret);
+    GOTO_ERR_IF_EX(BN2Felem(&z, &pt->z), ret);
     /* Calculate and output result */
     FelemInv(&zInv, &z);
     GOTO_ERR_IF_EX(MakeAffineWithInv(r, pt, &zInv), ret);

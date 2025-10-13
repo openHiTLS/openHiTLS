@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "bsl_asn1.h"
+#include "bsl_asn1_internal.h"
 
 #ifdef __cplusplus
 extern "C" {

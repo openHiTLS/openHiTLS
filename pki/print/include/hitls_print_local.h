@@ -25,12 +25,13 @@
 extern "C" {
 #endif
 
+#ifdef HITLS_PKI_INFO_DN_CONF
 int32_t HITLS_PKI_SetPrintFlag(int32_t val);
 
 int32_t HITLS_PKI_GetPrintFlag(void);
+#endif
 
 int32_t HITLS_PKI_PrintDnName(uint32_t layer, BslList *list, bool newLine, BSL_UIO *uio);
-
 
 #ifdef __cplusplus
 }

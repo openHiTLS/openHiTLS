@@ -955,7 +955,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_MASTEREXTKEY_FUNC_TC001()
     HLT_SetVersion(serverCtxConfig, HITLS_VERSION_TLS12, HITLS_VERSION_TLS13);
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384");
 
-    serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_3, serverCtxConfig, NULL);
+    serverRes = HLT_ProcessTlsAccept(localProcess, TLS_ALL, serverCtxConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL,"CLIENT");
@@ -1111,9 +1111,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_PSKTICKET_FUNC_TC001(int version, int con
             HITLS_SESS_Free(session);
             session = NULL;
 
-            uint8_t isReused = 0;
+            bool isReused = false;
             ASSERT_TRUE(HITLS_IsSessionReused(clientSsl, &isReused) == HITLS_SUCCESS);
-            ASSERT_TRUE(isReused == 0);
+            ASSERT_TRUE(isReused == false);
         }
 
         session = HITLS_GetDupSession(clientSsl);

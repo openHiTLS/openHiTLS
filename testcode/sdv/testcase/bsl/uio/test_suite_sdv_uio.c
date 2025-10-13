@@ -122,6 +122,10 @@ const BSL_UIO_Method * GetUioMethodByType(int uioType)
         case BSL_UIO_UDP:
             return BSL_UIO_UdpMethod();
 #endif
+#ifdef HITLS_BSL_UIO_MEM
+        case BSL_UIO_MEM:
+            return BSL_UIO_MemMethod();
+#endif
         case BSL_UIO_BUFFER:
             return BSL_UIO_BufferMethod();
         default:
@@ -468,6 +472,7 @@ void SDV_BSL_UIO_INIT_FUNC_TC002(int uioType)
     const BSL_UIO_Method *ori = NULL;
     switch (uioType) {
         case BSL_UIO_BUFFER:
+        case BSL_UIO_MEM:
             ori = GetUioMethodByType(uioType);
             break;
         default:
@@ -1202,8 +1207,8 @@ void SDV_BSL_UIO_MEM_BASIC_TC001(void)
     ASSERT_TRUE(memcmp(readBuf, testData, readLen) == 0);
     
     // Test pending data length
-    int64_t pendingLen = 0;
-    ret = BSL_UIO_Ctrl(uio, BSL_UIO_PENDING, sizeof(size_t), &pendingLen);
+    uint64_t pendingLen = 0;
+    ret = BSL_UIO_Ctrl(uio, BSL_UIO_PENDING, sizeof(uint64_t), &pendingLen);
     ASSERT_TRUE(ret == BSL_SUCCESS);
     ASSERT_TRUE(pendingLen == 0); // All data has been read
 
@@ -1276,6 +1281,80 @@ void SDV_BSL_UIO_MEM_EOF_TC001(void)
     uint32_t flags = 0;
     BSL_UIO_TestFlags(uio, BSL_UIO_FLAGS_SHOULD_RETRY, &flags);
     ASSERT_TRUE((flags & BSL_UIO_FLAGS_SHOULD_RETRY) != 0);
+
+EXIT:
+    BSL_UIO_Free(uio);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_UIO_MEM_PUTS_TC001(void)
+{
+    char buf[MAX_BUF_SIZE] = {0};
+    uint32_t len = 0;
+    const char *str = "Hello World";
+    bool init = 0;
+
+    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_MemMethod());
+    ASSERT_TRUE(uio != NULL);
+    ASSERT_EQ(BSL_UIO_Ctrl(uio, BSL_UIO_GET_INIT, (int32_t)sizeof(init), &init), BSL_SUCCESS);
+    ASSERT_EQ(init, true);
+
+    BSL_UIO_SetInit(uio, false);
+    ASSERT_EQ(BSL_UIO_Puts(uio, str, &len), BSL_UIO_UNINITIALIZED);
+    ASSERT_EQ(BSL_UIO_Read(uio, buf, sizeof(buf), &len), BSL_UIO_UNINITIALIZED);
+
+    BSL_UIO_SetInit(uio, true);
+    ASSERT_EQ(BSL_UIO_Puts(uio, str, &len), BSL_SUCCESS);
+    ASSERT_EQ(len, strlen(str));
+
+    len = 0;
+    ASSERT_EQ(BSL_UIO_Read(uio, buf, sizeof(buf), &len), BSL_SUCCESS);
+    ASSERT_EQ(len, strlen(str));
+    buf[len] = '\0';
+    ASSERT_EQ(strcmp(buf, str), 0);
+
+EXIT:
+    BSL_UIO_Free(uio);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_UIO_MEM_GETS_TC001(void)
+{
+    char buf[MAX_BUF_SIZE] = {0};
+    uint32_t len = 0;
+    const char *data = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK9zf3ZM1EP9N\n-----END PUBLIC KEY-----";
+    uint32_t dataLen = strlen(data);
+
+    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_MemMethod());
+    ASSERT_TRUE(uio != NULL);
+
+    BSL_UIO_SetInit(uio, false);
+    ASSERT_EQ(BSL_UIO_Write(uio, data, dataLen, &len), BSL_UIO_UNINITIALIZED);
+    ASSERT_EQ(BSL_UIO_Gets(uio, buf, &len), BSL_UIO_UNINITIALIZED);
+
+    BSL_UIO_SetInit(uio, true);
+    ASSERT_EQ(BSL_UIO_Write(uio, data, dataLen, &len), BSL_SUCCESS);
+    ASSERT_EQ(len, dataLen);
+
+    len = MAX_BUF_SIZE;
+    ASSERT_EQ(BSL_UIO_Gets(uio, buf, &len), BSL_SUCCESS);
+    const char *str = "-----BEGIN PUBLIC KEY-----\n";
+    ASSERT_EQ(len, strlen(str));
+    ASSERT_EQ(strcmp(buf, str), 0);
+
+    len = MAX_BUF_SIZE;
+    ASSERT_EQ(BSL_UIO_Gets(uio, buf, &len), BSL_SUCCESS);
+    const char *str1 = "MCowBQYDK9zf3ZM1EP9N\n";
+    ASSERT_EQ(len, strlen(str1));
+    ASSERT_EQ(strcmp(buf, str1), 0);
+
+    len = MAX_BUF_SIZE;
+    ASSERT_EQ(BSL_UIO_Gets(uio, buf, &len), BSL_SUCCESS);
+    const char *str2 = "-----END PUBLIC KEY-----";
+    ASSERT_EQ(len, strlen(str2));
+    ASSERT_EQ(strcmp(buf, str2), 0);
 
 EXIT:
     BSL_UIO_Free(uio);

@@ -214,7 +214,7 @@ void SDV_TLS_CFG_SET_GET_VERIFYNONESUPPORT_FUNC_TC001(int version, int connType)
     HLT_Tls_Res *clientRes = NULL;
     HLT_Process *localProcess = NULL;
     HLT_Process *remoteProcess = NULL;
-    uint8_t c_flag = 0;
+    bool c_flag = 0;
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
@@ -292,7 +292,7 @@ void SDV_TLS_CFG_SET_GET_CLIENTVERIFYUPPORT_FUNC_TC001(int clientverify)
     ASSERT_TRUE(config_c != NULL);
     ASSERT_TRUE(config_s != NULL);
 
-    uint8_t c_flag;
+    bool c_flag;
 
     if (clientverify) {
         HITLS_CFG_SetClientVerifySupport(config_s, true);
@@ -546,7 +546,7 @@ void SDV_TLS_CFG_GET_FLIGHTTRANSMITSWITH_FUNC_TC001(int version)
 
     HITLS_Config *Config = NULL;
     HITLS_Ctx *ctx = NULL;
-    uint8_t support;
+    bool support;
     Config = GetHitlsConfigViaVersion(version);
     ASSERT_TRUE(Config != NULL);
     ctx = HITLS_New(Config);

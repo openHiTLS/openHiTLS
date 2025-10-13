@@ -31,6 +31,10 @@ int32_t CheckConfig(const HITLS_Config *config);
 
 uint32_t MapVersion2VersionBit(bool isDatagram, uint16_t version);
 
+void ChangeMinMaxVersion(uint32_t versionMask, uint32_t originVersionMask, uint16_t *minVersion, uint16_t *maxVersion);
+
+int32_t CheckRenegotiatedVersion(TLS_Ctx *ctx);
+
 #ifdef __cplusplus
 }
 #endif

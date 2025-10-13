@@ -639,3 +639,30 @@ EXIT:
     FRAME_FreeLink(testInfo.server);
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_SELECT_PREFER_CIPHER_SUITE_TC001(void)
+{
+    HITLS_CryptMethodInit();
+    FRAME_Init();
+
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    uint16_t cipherSuite[] = {HITLS_AES_256_GCM_SHA384, HITLS_AES_128_GCM_SHA256};
+    HITLS_CFG_SetCipherSuites(config, cipherSuite, sizeof(cipherSuite) / sizeof(uint16_t));
+    HITLS_CFG_SetPskServerCallback(config, (HITLS_PskServerCb)ExampleServerCb);
+    HITLS_CFG_SetPskClientCallback(config, (HITLS_PskClientCb)ExampleClientCb);
+    FRAME_CertInfo certInfo = {0, 0, 0, 0, 0, 0};
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    const char *name = client->ssl->negotiatedInfo.cipherSuiteInfo.name;
+    char *expectName = "HITLS_AES_128_GCM_SHA256";
+    ASSERT_TRUE(memcmp(expectName, name, strlen(expectName)) == 0);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

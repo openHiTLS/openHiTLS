@@ -16,10 +16,13 @@
 /* BEGIN_HEADER */
 #include "bsl_sal.h"
 #include "crypt_errno.h"
+#include "crypt_algid.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_util_rand.h"
 #include "eal_pkey_local.h"
 #include "securec.h"
+#include "crypt_mlkem.h"
+#include "ml_kem_local.h"
 /* END_HEADER */
 
 static uint8_t gKyberRandBuf[3][32] = { 0 };
@@ -876,7 +879,7 @@ void SDV_CRYPTO_MLKEM_ABNORMAL_DECAPS_FUNC_TC002(int bits, Hex *m, Hex *testEK, 
     CRYPT_EAL_PkeyPrv dk = { 0 };
     dk.id = CRYPT_PKEY_ML_KEM;
     dk.key.kemDk.len = decapsKeyLen;
-    dk.key.kemDk.data =  BSL_SAL_Malloc(decapsKeyLen);
+    dk.key.kemDk.data =  BSL_SAL_Calloc(1u, decapsKeyLen);
     (void)memcpy_s(dk.key.kemDk.data, dk.key.kemDk.len, changeDK->x, changeDK->len);
 
     uint8_t *ciphertext = BSL_SAL_Malloc(cipherLen);
@@ -892,8 +895,8 @@ void SDV_CRYPTO_MLKEM_ABNORMAL_DECAPS_FUNC_TC002(int bits, Hex *m, Hex *testEK, 
     ASSERT_COMPARE("compare sk", sharedKey, sharedLen, testSK->x, testSK->len);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &dk), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, ciphertext, cipherLen, decSharedKey, &decSharedLen), CRYPT_SUCCESS);
-    ASSERT_TRUE(memcmp(sharedKey, decSharedKey, sharedLen) != 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, ciphertext, cipherLen, decSharedKey, &decSharedLen),
+        CRYPT_MLKEM_INVALID_PRVKEY);
 
 EXIT:
     BSL_SAL_Free(ek.key.kemEk.data);
@@ -985,6 +988,284 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_RandRegist(NULL);
     CRYPT_RandRegistEx(NULL);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MLKEM_KEY_PAIR_FUNC_TC001
+* @spec  -
+* @title Key pair generation function test
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLKEM_KEY_PAIR_FUNC_TC001(int bits)
+{
+#if !defined(HITLS_CRYPTO_MLKEM_CHECK)
+    (void)bits;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyCtx *pubCtx = NULL;
+    CRYPT_EAL_PkeyCtx *prvCtx = NULL;
+    CRYPT_EAL_PkeyPrv dk = { 0 };
+    CRYPT_EAL_PkeyPub ek = { 0 };
+    uint32_t decapsKeyLen = 0;
+    uint32_t encapsKeyLen = 0;
+
+#ifdef HITLS_CRYPTO_PROVIDER
+    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+    pubCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+    prvCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+#else
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+    pubCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+    prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+#endif
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_TRUE(pubCtx != NULL);
+    ASSERT_TRUE(prvCtx != NULL);
+
+    uint32_t val = (uint32_t)bits;
+    dk.id = CRYPT_PKEY_ML_KEM;
+    ek.id = CRYPT_PKEY_ML_KEM;
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, val), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pubCtx, val), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvCtx, val), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PRVKEY_LEN, &decapsKeyLen, sizeof(decapsKeyLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, &encapsKeyLen, sizeof(encapsKeyLen)), CRYPT_SUCCESS);
+    dk.key.kemDk.len = decapsKeyLen;
+    dk.key.kemDk.data =  BSL_SAL_Malloc(decapsKeyLen);
+    ek.key.kemEk.len = encapsKeyLen;
+    ek.key.kemEk.data =  BSL_SAL_Malloc(encapsKeyLen);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &dk), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &ek), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &dk), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubCtx, &ek), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(prvCtx, pubCtx), CRYPT_NULL_INPUT); // no pub
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, pubCtx), CRYPT_NULL_INPUT); // no prv
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    BSL_SAL_Free(dk.key.kemDk.data);
+    BSL_SAL_Free(ek.key.kemEk.data);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MLKEM_KEY_PAIR_FUNC_TC002
+* @spec  -
+* @title Key pair generation function invalid test
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLKEM_KEY_PAIR_FUNC_TC002(void)
+{
+#if !defined(HITLS_CRYPTO_MLKEM_CHECK)
+    SKIP_TEST();
+#else
+    TestMemInit();
+    TestRandInit();
+    int32_t bits1 = CRYPT_KEM_TYPE_MLKEM_512;
+    int32_t bits2 = CRYPT_KEM_TYPE_MLKEM_768;
+    CRYPT_EAL_PkeyCtx *ctx1 = NULL;
+    CRYPT_EAL_PkeyCtx *ctx2 = NULL;
+    CRYPT_EAL_PkeyCtx *ctx3 = NULL;
+
+#ifdef HITLS_CRYPTO_PROVIDER
+    ctx1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+    ctx2 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+    ctx3 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+#else
+    ctx1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+    ctx2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+    ctx3 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+#endif
+    ASSERT_TRUE(ctx1 != NULL);
+    ASSERT_TRUE(ctx2 != NULL);
+    ASSERT_TRUE(ctx3 != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(NULL, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx1, ctx2), CRYPT_MLKEM_KEYINFO_NOT_SET); // different key-info
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx1, bits1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx2, bits1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx3, bits2), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx1, ctx2), CRYPT_NULL_INPUT); // no key.
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx2), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx1, ctx1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx2, ctx2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx1, ctx2), CRYPT_MLKEM_PAIRWISE_CHECK_FAIL);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx1);
+    CRYPT_EAL_PkeyFreeCtx(ctx2);
+    CRYPT_EAL_PkeyFreeCtx(ctx3);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MLKEM_PRV_KEY_FUNC_TC001
+* @spec  -
+* @title Key generation and check prv key
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLKEM_PRV_KEY_FUNC_TC001(int bits)
+{
+#if !defined(HITLS_CRYPTO_MLKEM_CHECK)
+    (void)bits;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyCtx *prvCtx = NULL;
+    CRYPT_EAL_PkeyPrv dk = { 0 };
+    uint32_t decapsKeyLen = 0;
+    CRYPT_ML_KEM_Ctx *tmp = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+    prvCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+#else
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+    prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+#endif
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_TRUE(prvCtx != NULL);
+    uint32_t val = (uint32_t)bits;
+    dk.id = CRYPT_PKEY_ML_KEM;
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(prvCtx), CRYPT_MLKEM_KEYINFO_NOT_SET);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, val), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvCtx, val), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PRVKEY_LEN, &decapsKeyLen, sizeof(decapsKeyLen)), CRYPT_SUCCESS);
+    dk.key.kemDk.len = decapsKeyLen;
+    dk.key.kemDk.data =  BSL_SAL_Malloc(decapsKeyLen);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &dk), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(prvCtx), CRYPT_MLKEM_INVALID_PRVKEY); // no dk
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &dk), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(prvCtx), CRYPT_SUCCESS); // dk is set
+
+    tmp = (CRYPT_ML_KEM_Ctx *)prvCtx->key;
+    tmp->dkLen = 1;
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(prvCtx), CRYPT_MLKEM_INVALID_PRVKEY); // dk is set
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    BSL_SAL_Free(dk.key.kemDk.data);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MLKEM_INVALID_KEY_ENCAPS_API_TC001
+* @spec  -
+* @title  Invalid public key encapsulation test
+* @precon  nan
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLKEM_INVALID_KEY_ENCAPS_API_TC001(int bits, int res1, int res2, Hex *testEK)
+{
+    TestMemInit();
+    TestRandInit();
+
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+    ASSERT_TRUE(ctx != NULL);
+
+    uint32_t val = (uint32_t)bits;
+    int32_t ret = CRYPT_EAL_PkeySetParaById(ctx, val);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_PkeyEncapsInit(ctx, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    uint32_t cipherLen = 0;
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    uint8_t *ciphertext = BSL_SAL_Malloc(cipherLen);
+    uint32_t sharedLen = 32;
+    uint8_t sharedKey[32];
+
+    CRYPT_EAL_PkeyPub ek = { 0 };
+    ek.id = CRYPT_PKEY_ML_KEM;
+    ek.key.kemEk.len = testEK->len;
+    ek.key.kemEk.data = testEK->x;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &ek), res1);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctx, ciphertext, &cipherLen, sharedKey, &sharedLen), res2);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_Free(ciphertext);
+    TestRandDeInit();
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MLKEM_INVALID_KEY_DECAPS_API_TC001
+* @spec  -
+* @title  Invalid private key decapsulation test
+* @precon  nan
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLKEM_INVALID_KEY_DECAPS_API_TC001(int bits, int res, Hex *testDK)
+{
+    TestMemInit();
+
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+    ASSERT_TRUE(ctx != NULL);
+
+    uint32_t val = (uint32_t)bits;
+    int32_t ret = CRYPT_EAL_PkeySetParaById(ctx, val);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_PkeyDecapsInit(ctx, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    uint32_t sharedLen = 32;
+    uint8_t sharedKey[32];
+
+    uint32_t cipherLen = 0;
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    uint8_t *ciphertext = BSL_SAL_Malloc(cipherLen);
+
+    CRYPT_EAL_PkeyPrv dk = { 0 };
+    dk.id = CRYPT_PKEY_ML_KEM;
+    dk.key.kemDk.len = testDK->len;
+    dk.key.kemDk.data =  testDK->x;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &dk), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, ciphertext, cipherLen, sharedKey, &sharedLen), res);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_Free(ciphertext);
+    TestRandDeInit();
     return;
 }
 /* END_CASE */

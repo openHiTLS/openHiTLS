@@ -28,12 +28,22 @@ extern "C" {
 
 typedef struct CBC_MAC_Ctx CRYPT_CBC_MAC_Ctx;
 
+#define CRYPT_CBC_MAC_SetParam NULL
+
 /**
  * @brief Create a new CBC_MAC context.
  * @param id [IN] CBC_MAC algorithm ID
  * @return Pointer to the CBC_MAC context
  */
 CRYPT_CBC_MAC_Ctx *CRYPT_CBC_MAC_NewCtx(CRYPT_MAC_AlgId id);
+
+/**
+ * @brief Create a new CBC_MAC context with external library context.
+ * @param libCtx [in] External library context
+ * @param id [in] CBC_MAC algorithm ID
+ * @return Pointer to the CBC_MAC context
+ */
+CRYPT_CBC_MAC_Ctx *CRYPT_CBC_MAC_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id);
 
 /**
  * @brief Use the key passed by the user to initialize the algorithm context.
@@ -75,14 +85,14 @@ int32_t CRYPT_CBC_MAC_Final(CRYPT_CBC_MAC_Ctx *ctx, uint8_t *out, uint32_t *len)
  *        This function is equivalent to the combination of deinit and init interfaces.
  * @param ctx [IN] CBC_MAC context
  */
-void CRYPT_CBC_MAC_Reinit(CRYPT_CBC_MAC_Ctx *ctx);
+int32_t CRYPT_CBC_MAC_Reinit(CRYPT_CBC_MAC_Ctx *ctx);
 
 /**
  * @brief Deinitialization function.
  *        If calculation is required after this function is invoked, it needs to be initialized again.
  * @param ctx [IN] CBC_MAC context
  */
-void CRYPT_CBC_MAC_Deinit(CRYPT_CBC_MAC_Ctx *ctx);
+int32_t CRYPT_CBC_MAC_Deinit(CRYPT_CBC_MAC_Ctx *ctx);
 
 /**
  * @brief CBC_MAC control function to set some information

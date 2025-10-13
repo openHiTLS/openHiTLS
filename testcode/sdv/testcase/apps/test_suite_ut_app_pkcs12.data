@@ -18,7 +18,7 @@ UT_HITLS_APP_PKCS12_TC009 test stdin pwd mode
 UT_HITLS_APP_PKCS12_TC009:
 
 UT_HITLS_APP_PKCS12_TC010 userCert is rootCert
-UT_HITLS_APP_PKCS12_TC010:"pkcs12 -export -inkey ../testdata/apps/pkcs12/p12_rootCA.key -in ../testdata/apps/pkcs12/p12_ca.crt -chain -CAfile ../testdata/apps/pkcs12/p12_ca.crt -passout pass:123456 -out test.p12":HITLS_APP_SUCCESS
+UT_HITLS_APP_PKCS12_TC010:"pkcs12 -export -inkey ../testdata/apps/pkcs12/p12_rootCA.key -in ../testdata/apps/pkcs12/p12_ca.crt -chain -CAfile ../testdata/apps/pkcs12/p12_ca.crt -passout pass:123456 -out test.p12":HITLS_APP_X509_FAIL
 
 UT_HITLS_APP_PKCS12_TC010 devcert include caCert and dup ca
 UT_HITLS_APP_PKCS12_TC010:"pkcs12 -export -inkey ../testdata/apps/pkcs12/p12_intermediateCA.key -in ../testdata/apps/pkcs12/p12_ca.crt -chain -CAfile ../testdata/apps/pkcs12/p12_ca.crt -passout pass:123456 -out test.p12":HITLS_APP_SUCCESS
@@ -33,10 +33,10 @@ UT_HITLS_APP_PKCS12_TC010 caname num is greater than other cert num
 UT_HITLS_APP_PKCS12_TC010:"pkcs12 -export -inkey ../testdata/apps/pkcs12/p12_server.key -in ../testdata/apps/pkcs12/p12_dev.crt -chain -CAfile ../testdata/apps/pkcs12/p12_ca.crt -passout pass:123456 -out test.p12 -name dev1 -caname a1 -caname a2 -caname a3 -caname a4 -caname a5 -caname a6 -caname a7":HITLS_APP_SUCCESS
 
 UT_HITLS_APP_PKCS12_TC010 export and -aes256-cbc
-UT_HITLS_APP_PKCS12_TC010:"pkcs12 -export -inkey ../testdata/apps/pkcs12/p12_rootCA.key -in ../testdata/apps/pkcs12/p12_ca.crt -chain -CAfile ../testdata/apps/pkcs12/p12_ca.crt -passout pass:123456 -out test.p12 -aes256-cbc":HITLS_APP_SUCCESS
+UT_HITLS_APP_PKCS12_TC010:"pkcs12 -export -inkey ../testdata/apps/pkcs12/p12_intermediateCA.key -in ../testdata/apps/pkcs12/p12_ca.crt -chain -CAfile ../testdata/apps/pkcs12/p12_ca.crt -passout pass:123456 -out test.p12 -aes256-cbc":HITLS_APP_SUCCESS
 
 UT_HITLS_APP_PKCS12_TC010 export and -clcerts
-UT_HITLS_APP_PKCS12_TC010:"pkcs12 -export -inkey ../testdata/apps/pkcs12/p12_rootCA.key -in ../testdata/apps/pkcs12/p12_ca.crt -chain -CAfile ../testdata/apps/pkcs12/p12_ca.crt -passout pass:123456 -out test.p12 -clcerts":HITLS_APP_SUCCESS
+UT_HITLS_APP_PKCS12_TC010:"pkcs12 -export -inkey ../testdata/apps/pkcs12/p12_intermediateCA.key -in ../testdata/apps/pkcs12/p12_ca.crt -chain -CAfile ../testdata/apps/pkcs12/p12_ca.crt -passout pass:123456 -out test.p12 -clcerts":HITLS_APP_SUCCESS
 
 UT_HITLS_APP_PKCS12_TC011 init rand failed
 UT_HITLS_APP_PKCS12_TC011:"pkcs12 -export -inkey ../testdata/apps/pkcs12/p12_rootCA.key -in ../testdata/apps/pkcs12/p12_ca.crt -chain -CAfile ../testdata/apps/pkcs12/p12_ca.crt -passout pass:123456 -out test.p12 -clcerts":HITLS_APP_CRYPTO_FAIL

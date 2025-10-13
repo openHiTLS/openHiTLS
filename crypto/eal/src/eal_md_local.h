@@ -36,8 +36,7 @@ typedef enum {
 } CRYPT_MD_WORKSTATE;
 
 struct EAL_MdCtx {
-    bool isProvider;
-    EAL_MdUnitaryMethod *method;  /* algorithm operation entity */
+    EAL_MdMethod method;  /* algorithm operation entity */
     void *data;        /* Algorithm ctx, mainly context */
     uint32_t state;
     CRYPT_MD_AlgId id;
@@ -45,16 +44,75 @@ struct EAL_MdCtx {
 
 /**
  * @ingroup eal
- * @brief Method for generating the hash algorithm
+ * @brief Find the default MD method by the algorithm ID.
+ *
+ * @param id The algorithm ID.
+ *
+ * @return The MD method.
+ */
+const EAL_MdMethod *EAL_MdFindDefaultMethod(CRYPT_MD_AlgId id);
+
+/**
+ * @ingroup eal
+ * @brief Find Md algorithm implementation method by algorithm ID
+ *
+ * This function retrieves the default implementation method for specified MD algorithm ID.
+ * If the input method pointer is NULL, will allocate new memory for method structure. Otherwise,
+ * will initialize the provided method structure.
+ *
+ * @param id        [IN] MD algorithm identifier (e.g. CRYPT_MD_SHA256, CRYPT_MD_SHA384)
+ * @param method    [IN/OUT] Pointer to method structure. 
+ *                  If NULL, function will allocate new memory. Caller must free returned pointer when no longer needed.
+ *                  If not NULL, the method should be cleared before calling this function.
+ *
+ * @return Pointer to MD method structure on success. NULL on failure (invalid ID or alloc fail).
+ *         Note: When input method is NULL, returned pointer MUST be freed by caller.
+ *               When input method is valid, returns the same pointer with initialized contents.
+ */
+EAL_MdMethod *EAL_MdFindMethod(CRYPT_MD_AlgId id, EAL_MdMethod *method);
+
+/**
+ * @ingroup eal
+ * @brief Find Md algorithm implementation method by algorithm ID with provider context
+ *
+ * This function retrieves the default implementation method for specified MD algorithm ID.
+ * If the input method pointer is NULL, will allocate new memory for method structure. Otherwise,
+ * will initialize the provided method structure.
+ *
+ * @param id        [IN] MD algorithm identifier (e.g. CRYPT_MD_SHA256, CRYPT_MD_SHA384)
+ * @param libCtx    [IN] The library context.
+ * @param attrName  [IN] The attribute name.
+ * @param method    [IN/OUT] Pointer to method structure.
+ *                  If NULL, function will allocate new memory. Caller must free returned pointer when no longer needed.
+ *                  If not NULL, the method should be cleared before calling this function.
+ * @param provCtx   [OUT] The provider context.
+ * @param isProvider [IN] Whether to find method from provider
+ *
+ * @return Pointer to MD method structure on success. NULL on failure (invalid ID or alloc fail).
+ *         Note: When input method is NULL, returned pointer MUST be freed by caller.
+ *               When input method is valid, returns the same pointer with initialized contents.
+ */
+EAL_MdMethod *EAL_MdFindMethodEx(CRYPT_MD_AlgId id, void *libCtx, const char *attrName, EAL_MdMethod *method,
+    void **provCtx, bool isProvider);
+
+/**
+ * @ingroup eal
+ * @brief Calculate the hash value
  *
  * @param id [IN] Algorithm ID
+ * @param libCtx [IN] Library context
+ * @param attr [IN] Attribute
+ * @param in [IN] Input data
+ * @param inLen [IN] Input data length
+ * @param out [OUT] Output data
+ * @param outLen [OUT] Output data length
+ * @param isProvider [IN] Whether to find method from provider
  *
- * @return Pointer to CRYPT_MD_Method
- * For other error codes, see crypt_errno.h.
+ * @return #CRYPT_SUCCESS Success.
+ * @return #CRYPT_EAL_ERR_ALGID Algorithm ID is invalid.
  */
-const EAL_MdMethod *EAL_MdFindMethod(CRYPT_MD_AlgId id);
-
-int32_t EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+int32_t EAL_Md(CRYPT_MD_AlgId id, void *libCtx, const char *attr, const uint8_t *in, uint32_t inLen, uint8_t *out,
+    uint32_t *outLen, bool isProvider);
 
 #ifdef __cplusplus
 }

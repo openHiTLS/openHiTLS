@@ -46,7 +46,7 @@ void HITLS_X509_CsrFree(HITLS_X509_Csr *csr);
  * @ingroup pki
  * @brief Sign a CSR (Certificate Signing Request).
  *
-* @attention 1. This function can only be used when generating a new csr.
+ * @attention 1. This function can only be used when generating a new csr.
  *            2. You need to first call interfaces HITLS_X509_CsrCtrl and HITLS_X509_AttrCtrl to set csr information.
  *
  * @param mdId     [IN] The message digest algorithm ID.
@@ -65,7 +65,7 @@ int32_t HITLS_X509_CsrSign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const 
  *
  * @attention This function is used after parsing the csr or after signing.
  *
- * @param format [IN] The format of the generated csr.
+ * @param format [IN] The format of the generated csr: BSL_FORMAT_ASN1/BSL_FORMAT_PEM
  * @param csr    [IN] The csr context
  * @param buff   [OUT] The buffer of the generated csr.
  * @retval #HITLS_PKI_SUCCESS, success.
@@ -79,7 +79,7 @@ int32_t HITLS_X509_CsrGenBuff(int32_t format, HITLS_X509_Csr *csr, BSL_Buffer *b
  *
  * @attention This function is used after parsing the csr or after signing.
  *
- * @param format [IN] The format of the generated csr.
+ * @param format [IN] The format of the generated csr: BSL_FORMAT_ASN1/BSL_FORMAT_PEM
  * @param csr    [IN] The csr context
  * @param path   [IN] The path of the generated csr.
  * @retval #HITLS_PKI_SUCCESS, success.
@@ -129,7 +129,7 @@ int32_t HITLS_X509_CsrParseFile(int32_t format, const char *path, HITLS_X509_Csr
  * @ingroup pki
  * @brief Csr verify function
  *
- * @param csr [OUT] The csr context
+ * @param csr [IN] The csr context
  * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
  */

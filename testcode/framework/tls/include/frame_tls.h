@@ -64,6 +64,21 @@ FRAME_LinkObj *FRAME_CreateLinkEx(HITLS_Config *config, BSL_UIO_TransportType ty
 FRAME_LinkObj *FRAME_CreateLinkWithCert(
     HITLS_Config *config, BSL_UIO_TransportType type, const FRAME_CertInfo *certInfo);
 
+FRAME_LinkObj *FRAME_CreateLinkWithCerts(HITLS_Config *config, BSL_UIO_TransportType type,
+    const FRAME_CertInfo* certInfo, size_t certInfoLen);
+/**
+ * @brief Create an SSL connection with configurable certificate loading.
+ *        This interface will complete the SSL CTX application and bottom-layer UIO creation.
+ *        The setCertFlag parameter controls whether to load the default certificate.
+ *
+ * @param config [IN] TLS configuration
+ * @param type [IN] Transport type
+ * @param setCertFlag [IN] Whether to load default certificate
+ *
+ * @return Return the connection object, which can be used by the test framework to perform operations
+ */
+FRAME_LinkObj *FRAME_CreateLinkBase(HITLS_Config *config, BSL_UIO_TransportType type, bool setCertFlag);
+
 /**
 * @brief  Releases an SSL connection, which corresponds to Frame_CreateLink
 *

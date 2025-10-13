@@ -107,6 +107,14 @@ int32_t ALERT_Flush(TLS_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(HITLS_ALERT_NO_WANT_SEND);
         return HITLS_ALERT_NO_WANT_SEND;
     }
+#ifdef HITLS_TLS_PROTO_TLS
+    if (REC_GetOutBufPendingSize(ctx) != 0) {
+        ret = REC_OutBufFlush(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+#endif
     if (alertCtx->isFlush == false) {
         if (ctx->recCtx != NULL && ctx->recCtx->pendingData != NULL && alertCtx->description == ALERT_CLOSE_NOTIFY) {
             return HITLS_REC_NORMAL_IO_BUSY;
@@ -120,6 +128,9 @@ int32_t ALERT_Flush(TLS_Ctx *ctx)
         }
         /** write the record */
         ret = REC_Write(ctx, REC_TYPE_ALERT, data, ALERT_DATA_LEN);
+        if (!IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+            alertCtx->isFlush = true;
+        }
         if (ret != HITLS_SUCCESS) {
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16267, "Write fail");
         }
@@ -129,19 +140,12 @@ int32_t ALERT_Flush(TLS_Ctx *ctx)
     }
 #ifdef HITLS_TLS_FEATURE_FLIGHT
     /* if isFlightTransmitEnable is enabled, the stored handshake information needs to be sent */
-    uint8_t isFlightTransmitEnable = 0;
+    bool isFlightTransmitEnable = false;
     (void)HITLS_GetFlightTransmitSwitch(ctx, &isFlightTransmitEnable);
-    if (isFlightTransmitEnable == 1) {
-        ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_FLUSH, 0, NULL);
-        if (ret == BSL_UIO_IO_BUSY) {
-            BSL_ERR_PUSH_ERROR(HITLS_REC_NORMAL_IO_BUSY);
-            return HITLS_REC_NORMAL_IO_BUSY;
-        }
-        if (ret != BSL_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16111, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "fail to send alert message in bUio.", 0, 0, 0, 0);
-            BSL_ERR_PUSH_ERROR(HITLS_REC_ERR_IO_EXCEPTION);
-            return HITLS_REC_ERR_IO_EXCEPTION;
+    if (isFlightTransmitEnable) {
+        ret = REC_FlightTransmit(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
         }
     }
 #endif /* HITLS_TLS_FEATURE_FLIGHT */

@@ -65,12 +65,11 @@ int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, uint32_t
  * @ingroup pki
  * @brief Parse the CRL in the buffer.
  * @par Description: Parse the CRL in the buffer.
- *  If the encoding is successful, the memory for the crl is requested from within the function,
- *  and the user needs to free it after using it. When the parameter is BSL_FORMAT_PEM and
+ *  If the parsing is successful, the memory for the crl is requested from within the function,
+ *  and the user needs to free it after use. When the parameter is BSL_FORMAT_PEM and
  *  BSL_FORMAT_UNKNOWN, the buff of encode needs to end with '\0'
  * @attention None
- * @param format         [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/
- *                            BSL_FORMAT_UNKNOWN.
+ * @param format         [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param encode         [IN] CRL data.
  * @param crl           [OUT] CRL after parse.
  * @return Error code
@@ -79,13 +78,27 @@ int32_t HITLS_X509_CrlParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_
 
 /**
  * @ingroup pki
+ * @brief Parse multiple CRLs from a buffer.
+ * @par Description: Parse multiple CRLs from a buffer.
+ *  If parsing is successful, memory for the CRL list is allocated internally,
+ *  and the user needs to free it after use.
+ * @attention None
+ * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
+ * @param encode [IN] CRL data buffer.
+ * @param crlList [OUT] List of parsed CRL objects.
+ * @return #HITLS_PKI_SUCCESS, success.
+ *         Error codes can be found in hitls_pki_errno.h
+ */
+int32_t HITLS_X509_CrlParseBundleBuff(int32_t format, const BSL_Buffer *encode, HITLS_X509_List **crlList);
+
+/**
+ * @ingroup pki
  * @brief Parse the CRL in the file.
  * @par Description: Parse the CRL in the file.
- *  If the encoding is successful, the memory for the crl is requested from within the function,
- *  and the user needs to free it after using it.
+ *  If the parsing is successful, the memory for the crl is requested from within the function,
+ *  and the user needs to free it after use.
  * @attention None
- * @param format         [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/
- *                            BSL_FORMAT_UNKNOWN.
+ * @param format         [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param path           [IN] CRL file path.
  * @param crl           [OUT] CRL after parse.
  * @return Error code
@@ -96,8 +109,8 @@ int32_t HITLS_X509_CrlParseFile(int32_t format, const char *path, HITLS_X509_Crl
  * @ingroup pki
  * @brief Parse the CRLs in the file.
  * @par Description: Parse multiple CRLs in the file.
- *  If the encoding is successful, the memory for the crllist is requested from within the function,
- *  and the user needs to free it after using it.
+ *  If the parsing is successful, the memory for the crllist is requested from within the function,
+ *  and the user needs to free it after use.
  * @attention None
  * @param format         [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/
  *                            BSL_FORMAT_UNKNOWN.
@@ -112,7 +125,7 @@ int32_t HITLS_X509_CrlParseBundleFile(int32_t format, const char *path, HITLS_X5
  * @brief Generate a CRL and encode it.
  * @par Description: This function encodes the CRL into the specified format.
  *  If the encoding is successful, the memory for the encode data is requested from within the function,
- *  and the user needs to free it after using it.
+ *  and the user needs to free it after use.
  *
  * @attention This function is used after parsing the crl or after signing.
  *
@@ -129,7 +142,7 @@ int32_t HITLS_X509_CrlGenBuff(int32_t format, HITLS_X509_Crl *crl, BSL_Buffer *b
  * @brief Generate a CRL and encode it to specific file.
  * @par Description: This function encodes the CRL into the specified format.
  *  If the encoding is successful, the memory for the encode data is requested from within the function,
- *  and the user needs to free it after using it.
+ *  and the user needs to free it after use.
  *
  * @attention This function is used after parsing the crl or after signing.
  *
@@ -195,13 +208,13 @@ void HITLS_X509_CrlEntryFree(HITLS_X509_CrlEntry *entry);
 
 /**
  * @ingroup pki
- * @brief Generate a CRL and encode it to specific file.
- * @par Description: This function encodes the CRL into the specified format.
- *  If the encoding is successful, the memory for the encode data is requested from within the function,
- *  and the user needs to free it after using it.
+ * @brief Control interface for CRL entry.
+ * @par Description: This function provides control interface for CRL entry operations.
  * @attention None
- * @param pubkey         [IN] pubkey.
- * @param crl            [IN] CRL info.
+ * @param revoked        [IN] CRL entry to control.
+ * @param cmd            [IN] Control command.
+ * @param val            [IN/OUT] Control value.
+ * @param valLen         [IN] Length of control value.
  * @return Error code
  */
 int32_t HITLS_X509_CrlEntryCtrl(HITLS_X509_CrlEntry *revoked, int32_t cmd, void *val, uint32_t valLen);

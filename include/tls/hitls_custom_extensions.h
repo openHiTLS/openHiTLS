@@ -24,7 +24,7 @@
 
 #include <stdint.h>
 #include "hitls_type.h"
-#include "hitls_pki_cert.h"
+#include "hitls_cert_type.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,7 +96,7 @@ extern "C" {
  * @param   context [IN]  Context where the extension applies
  * @param   out     [OUT] Pointer to the extension data to be sent
  * @param   outLen  [OUT] Length of the extension data
- * @param   cert    [IN]  Pointer to the HITLS_X509_Cert structure representing certificate information
+ * @param   cert    [IN]  Pointer to the HITLS_CERT_X509 structure representing certificate information
  * @param   certIndex  [IN]  Certificate index indicating its position in the certificate chain
  * @param   alert   [OUT] Alert value provided by the user when requesting to add the custom extension
  * @param   addArg  [IN]  Additional argument provided when registering the callback
@@ -105,7 +105,7 @@ extern "C" {
  *          otherwise, any other return value is considered a failure and will trigger a fatal alert based on the alert value.
  */
 typedef int (*HITLS_AddCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, uint8_t **out,
-    uint32_t *outLen, HITLS_X509_Cert *cert, uint32_t certIndex, uint32_t *alert, void *addArg);
+    uint32_t *outLen, HITLS_CERT_X509 *cert, uint32_t certIndex, uint32_t *alert, void *addArg);
 
 
 /**
@@ -135,14 +135,14 @@ typedef void (*HITLS_FreeCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extT
  * @param   context  [IN]  Context where the extension applies
  * @param   in       [IN]  Pointer to the received extension data
  * @param   inlen    [IN]  Length of the extension data
- * @param   cert     [IN]  Pointer to the HITLS_X509_Cert structure representing certificate information
+ * @param   cert     [IN]  Pointer to the HITLS_CERT_X509 structure representing certificate information
  * @param   certIndex   [IN]  Certificate index indicating its position in the certificate chain
  * @param   alert    [OUT] Alert value provided by the user when requesting to add the custom extension
  * @param   parseArg [IN]  Additional argument provided when registering the callback
  * @retval  HITLS_SUCCESS if successful, otherwise an error code
  */
 typedef int (*HITLS_ParseCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extType, uint32_t context,
-    const uint8_t **in, uint32_t *inLen, HITLS_X509_Cert *cert, uint32_t certIndex, uint32_t *alert, void *parseArg);
+    const uint8_t **in, uint32_t *inLen, HITLS_CERT_X509 *cert, uint32_t certIndex, uint32_t *alert, void *parseArg);
 
 
 /**

@@ -17,10 +17,12 @@
 #ifdef HITLS_CRYPTO_MLKEM
 #include "securec.h"
 #include "crypt_errno.h"
+#include "crypt_algid.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "eal_pkey_local.h"
 #include "crypt_util_rand.h"
+#include "crypt_util_ctrl.h"
 #include "crypt_utils.h"
 #include "ml_kem_local.h"
 
@@ -137,6 +139,7 @@ CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_DupCtx(CRYPT_ML_KEM_Ctx *ctx)
         }
         newCtx->dkLen = ctx->dkLen;
     }
+    newCtx->libCtx = ctx->libCtx;
     return newCtx;
 }
 
@@ -340,6 +343,7 @@ int32_t CRYPT_ML_KEM_GetDecapsKeyEx(const CRYPT_ML_KEM_Ctx *ctx, BSL_Param *para
 }
 #endif
 
+#ifdef HITLS_CRYPTO_MLKEM_CMP
 static int32_t MlKemCmpKey(uint8_t *a, uint32_t aLen, uint8_t *b, uint32_t bLen)
 {
     if (aLen != bLen) {
@@ -378,6 +382,7 @@ int32_t CRYPT_ML_KEM_Cmp(const CRYPT_ML_KEM_Ctx *a, const CRYPT_ML_KEM_Ctx *b)
     }
     return CRYPT_SUCCESS;
 }
+#endif
 
 int32_t CRYPT_ML_KEM_GetSecBits(const CRYPT_ML_KEM_Ctx *ctx)
 {
@@ -387,14 +392,13 @@ int32_t CRYPT_ML_KEM_GetSecBits(const CRYPT_ML_KEM_Ctx *ctx)
     return (int32_t)ctx->info->secBits;
 }
 
-static int32_t CRYPT_ML_KEM_GetLen(const CRYPT_ML_KEM_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
+static int32_t MlKemCleanPubKey(CRYPT_ML_KEM_Ctx *ctx)
 {
-    if (val == NULL || len != sizeof(int32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+    if (ctx->ek != NULL) {
+        BSL_SAL_CleanseData(ctx->ek, ctx->ekLen);
+        BSL_SAL_FREE(ctx->ek);
+        ctx->ekLen = 0;
     }
-
-    *(int32_t *)val = func(ctx);
     return CRYPT_SUCCESS;
 }
 
@@ -405,7 +409,10 @@ int32_t CRYPT_ML_KEM_Ctrl(CRYPT_ML_KEM_Ctx *ctx, int32_t opt, void *val, uint32_
         return CRYPT_NULL_INPUT;
     }
     if (opt == CRYPT_CTRL_GET_SECBITS) {
-        return CRYPT_ML_KEM_GetLen(ctx, (GetLenFunc)CRYPT_ML_KEM_GetSecBits, val, len);
+        return CRYPT_CTRL_GET_NUM32_EX(CRYPT_ML_KEM_GetSecBits, ctx, val, len);
+    }
+    if (opt == CRYPT_CTRL_CLEAN_PUB_KEY) {
+        return MlKemCleanPubKey(ctx);
     }
     if (val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -480,8 +487,9 @@ int32_t CRYPT_ML_KEM_GenKey(CRYPT_ML_KEM_Ctx *ctx)
 static int32_t EncCapsInputCheck(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen,
     uint8_t *sk, uint32_t *skLen)
 {
-    if (ctx == NULL || ctx->ek == NULL || ct == NULL || ctLen == NULL ||
-        sk == NULL || skLen == NULL) {
+    bool nullInput = ctx == NULL || ctx->ek == NULL || ct == NULL || ctLen == NULL ||
+                     sk == NULL || skLen == NULL;
+    if (nullInput == true) {
         return CRYPT_NULL_INPUT;
     }
     if (ctx->info == NULL) {
@@ -531,5 +539,76 @@ int32_t CRYPT_ML_KEM_Decaps(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32
 
     return MLKEM_DecapsInternal(ctx, cipher, cipherLen, share, shareLen);
 }
+
+#ifdef HITLS_CRYPTO_MLKEM_CHECK
+
+static int32_t MlKemKeyPairCheck(const CRYPT_ML_KEM_Ctx *pubKey, const CRYPT_ML_KEM_Ctx *prvKey)
+{
+    if (pubKey == NULL || prvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (pubKey->info == NULL || prvKey->info == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYINFO_NOT_SET);
+        return CRYPT_MLKEM_KEYINFO_NOT_SET;
+    }
+    if (pubKey->info->bits != prvKey->info->bits) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_PAIRWISE_CHECK_FAIL);
+        return CRYPT_MLKEM_PAIRWISE_CHECK_FAIL;
+    }
+    uint32_t cipherLen = pubKey->info->cipherLen;
+    uint8_t *ciphertext = BSL_SAL_Malloc(pubKey->info->cipherLen);
+    if (ciphertext == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    int32_t ret;
+    uint32_t sharedLen1 = MLKEM_SHARED_KEY_LEN;
+    uint8_t sharedKey1[MLKEM_SHARED_KEY_LEN];
+    uint32_t sharedLen2 = MLKEM_SHARED_KEY_LEN;
+    uint8_t sharedKey2[MLKEM_SHARED_KEY_LEN];
+    GOTO_ERR_IF(CRYPT_ML_KEM_Encaps(pubKey, ciphertext, &cipherLen, sharedKey1, &sharedLen1), ret);
+    GOTO_ERR_IF(CRYPT_ML_KEM_Decaps(prvKey, ciphertext, cipherLen, sharedKey2, &sharedLen2), ret);
+    if (sharedLen1 != sharedLen2 || memcmp(sharedKey1, sharedKey2, sharedLen1) != 0) {
+        ret = CRYPT_MLKEM_PAIRWISE_CHECK_FAIL;
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_PAIRWISE_CHECK_FAIL);
+    }
+ERR:
+    BSL_SAL_CleanseData(sharedKey1, MLKEM_SHARED_KEY_LEN);
+    BSL_SAL_ClearFree(ciphertext, pubKey->info->cipherLen);
+    return ret;
+}
+
+static int32_t MlKemPrvKeyCheck(const CRYPT_ML_KEM_Ctx *prvKey)
+{
+    if (prvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (prvKey->info == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYINFO_NOT_SET);
+        return CRYPT_MLKEM_KEYINFO_NOT_SET;
+    }
+    if (prvKey->dk == NULL || prvKey->dkLen != prvKey->info->decapsKeyLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_INVALID_PRVKEY);
+        return CRYPT_MLKEM_INVALID_PRVKEY;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_ML_KEM_Check(uint32_t checkType, const CRYPT_ML_KEM_Ctx *pkey1, const CRYPT_ML_KEM_Ctx *pkey2)
+{
+    switch (checkType) {
+        case CRYPT_PKEY_CHECK_KEYPAIR:
+            return MlKemKeyPairCheck(pkey1, pkey2);
+        case CRYPT_PKEY_CHECK_PRVKEY:
+            return MlKemPrvKeyCheck(pkey1);
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+    }
+}
+
+#endif // HITLS_CRYPTO_MLKEM_CHECK
 
 #endif

@@ -28,7 +28,7 @@
 int32_t ForsSign(const uint8_t *md, uint32_t mdLen, SlhDsaAdrs *adrs, const CryptSlhDsaCtx *ctx, uint8_t *sig,
                  uint32_t *sigLen)
 {
-    int32_t ret;
+    int32_t ret = CRYPT_SLHDSA_ERR_INVALID_SIG_LEN;
     uint32_t n = ctx->para.n;
     uint32_t a = ctx->para.a;
     uint32_t k = ctx->para.k;

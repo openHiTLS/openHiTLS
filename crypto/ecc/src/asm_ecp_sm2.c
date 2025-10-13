@@ -199,9 +199,9 @@ static int32_t ECP_Sm2Point2Array(SM2_point *r, const ECC_Point *p)
 {
     int32_t ret;
     uint32_t len = SM2_LIMBS;
-    GOTO_ERR_IF_EX(BN_Bn2U64Array(p->x, (BN_UINT *)&r->x, &len), ret);
-    GOTO_ERR_IF_EX(BN_Bn2U64Array(p->y, (BN_UINT *)&r->y, &len), ret);
-    GOTO_ERR_IF_EX(BN_Bn2U64Array(p->z, (BN_UINT *)&r->z, &len), ret);
+    GOTO_ERR_IF_EX(BN_Bn2U64Array(&p->x, (BN_UINT *)&r->x, &len), ret);
+    GOTO_ERR_IF_EX(BN_Bn2U64Array(&p->y, (BN_UINT *)&r->y, &len), ret);
+    GOTO_ERR_IF_EX(BN_Bn2U64Array(&p->z, (BN_UINT *)&r->z, &len), ret);
 ERR:
     return ret;
 }
@@ -209,9 +209,9 @@ ERR:
 static int32_t ECP_Sm2Array2Point(ECC_Point *r, const SM2_point *a)
 {
     int32_t ret;
-    GOTO_ERR_IF_EX(BN_U64Array2Bn(r->x, (const BN_UINT *)a->x, SM2_LIMBS), ret);
-    GOTO_ERR_IF_EX(BN_U64Array2Bn(r->y, (const BN_UINT *)a->y, SM2_LIMBS), ret);
-    GOTO_ERR_IF_EX(BN_U64Array2Bn(r->z, (const BN_UINT *)a->z, SM2_LIMBS), ret);
+    GOTO_ERR_IF_EX(BN_U64Array2Bn(&r->x, (const BN_UINT *)a->x, SM2_LIMBS), ret);
+    GOTO_ERR_IF_EX(BN_U64Array2Bn(&r->y, (const BN_UINT *)a->y, SM2_LIMBS), ret);
+    GOTO_ERR_IF_EX(BN_U64Array2Bn(&r->z, (const BN_UINT *)a->z, SM2_LIMBS), ret);
 ERR:
     return ret;
 }
@@ -255,9 +255,9 @@ int32_t ECP_Sm2Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point 
     int32_t ret;
     GOTO_ERR_IF_EX(ECP_Sm2Point2Array(&temp, a), ret);
     GOTO_ERR_IF_EX(ECP_Sm2GetAffine(&rTemp, &temp), ret);
-    GOTO_ERR_IF_EX(BN_Array2BN(r->x, rTemp.x, SM2_LIMBS), ret);
-    GOTO_ERR_IF_EX(BN_Array2BN(r->y, rTemp.y, SM2_LIMBS), ret);
-    GOTO_ERR_IF_EX(BN_SetLimb(r->z, 1), ret);
+    GOTO_ERR_IF_EX(BN_Array2BN(&r->x, rTemp.x, SM2_LIMBS), ret);
+    GOTO_ERR_IF_EX(BN_Array2BN(&r->y, rTemp.y, SM2_LIMBS), ret);
+    GOTO_ERR_IF_EX(BN_SetLimb(&r->z, 1), ret);
 
 ERR:
     return ret;
@@ -353,12 +353,12 @@ int32_t ECP_Sm2PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *scalar, c
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
         return CRYPT_ECC_POINT_ERR_CURVE_ID;
     }
-    if (pt != NULL && BN_IsZero(pt->z)) {
+    if (pt != NULL && BN_IsZero(&pt->z)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
     }
     if (BN_IsZero(scalar)) {
-        return BN_Zeroize(r->z);
+        return BN_Zeroize(&r->z);
     }
     int32_t ret;
     BN_UINT k[SM2_LIMBS] = {0};
@@ -428,7 +428,7 @@ static int32_t ECP_Sm2PointMulAddCheck(
         return CRYPT_ECC_POINT_ERR_CURVE_ID;
     }
     // Special processing of the infinite point.
-    if (BN_IsZero(pt->z)) {
+    if (BN_IsZero(&pt->z)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
     }

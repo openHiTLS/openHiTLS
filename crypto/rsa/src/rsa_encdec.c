@@ -203,8 +203,9 @@ static int32_t RsaDecProcedureAlloc(RsaDecProcedurePara *para, uint32_t bits, co
     para->mQ = BN_Create(bits);
     para->montP = BN_MontCreate(priKey->p);
     para->montQ = BN_MontCreate(priKey->q);
-    if (para->cP == NULL || para->cQ == NULL ||
-        para->mP == NULL || para->mQ == NULL || para->montP == NULL || para->montQ == NULL) {
+    bool allocFailed = para->cP == NULL || para->cQ == NULL ||
+                       para->mP == NULL || para->mQ == NULL || para->montP == NULL || para->montQ == NULL;
+    if (allocFailed == true) {
         RsaDecProcedureFree(para);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -363,7 +364,7 @@ static int32_t RSA_InitBlind(CRYPT_RSA_Ctx *ctx, BN_Optimizer *opt)
 
     ctx->scBlind = RSA_BlindNewCtx();
 
-    int32_t ret = RSA_BlindCreateParam(ctx->libCtx, ctx->scBlind, e, ctx->prvKey->n, bits, opt);
+    int32_t ret = RSA_BlindCreateParam(LIBCTX_FROM_RSA_CTX(ctx), ctx->scBlind, e, ctx->prvKey->n, bits, opt);
     if (needDestoryE) {
         BN_Destroy(e);
     }
@@ -508,7 +509,7 @@ static uint32_t GetHashLen(const CRYPT_RSA_Ctx *ctx)
         return CRYPT_GetMdSizeById(ctx->pad.para.pkcsv15.mdId);
     }
 
-    return (uint32_t)(ctx->pad.para.pss.mdMeth->mdSize);
+    return (uint32_t)(ctx->pad.para.pss.mdMeth.mdSize);
 }
 
 static int32_t CheckHashLen(uint32_t inputLen)
@@ -526,34 +527,21 @@ static int32_t CheckHashLen(uint32_t inputLen)
 #if defined(HITLS_CRYPTO_RSA_EMSA_PSS) && defined(HITLS_CRYPTO_RSA_SIGN)
 static int32_t PssPad(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen, uint8_t *out, uint32_t outLen)
 {
-    CRYPT_Data salt = { 0 };
+    uint32_t saltLen = 0;
     bool kat = false; // mark
     if (ctx->pad.salt.data != NULL) {
         // If the salt contains data, that is the kat test.
         kat = true;
     }
-    if (kat) {
-        salt.data = ctx->pad.salt.data;
-        salt.len = ctx->pad.salt.len;
-        ctx->pad.salt.data = NULL;
-        ctx->pad.salt.len = 0;
+    if (kat == true) {
+        saltLen = ctx->pad.salt.len;
     } else if (ctx->pad.para.pss.saltLen != 0) {
-        // Generate a salt information to the salt.
-        int32_t ret = GenPssSalt(ctx->libCtx, &salt, ctx->pad.para.pss.mdMeth, ctx->pad.para.pss.saltLen, outLen);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_GEN_SALT);
-            return CRYPT_RSA_ERR_GEN_SALT;
-        }
+        saltLen = ctx->pad.para.pss.saltLen;
     }
-    int32_t ret = CRYPT_RSA_SetPss(ctx->pad.para.pss.mdMeth, ctx->pad.para.pss.mgfMeth, CRYPT_RSA_GetBits(ctx),
-        salt.data, salt.len, input, inputLen, out, outLen);
+    int32_t ret = CRYPT_RSA_SetPss(ctx, &ctx->pad.para.pss.mdMeth, &ctx->pad.para.pss.mgfMeth,
+        saltLen, input, inputLen, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-    }
-    if (!kat && (ctx->pad.para.pss.saltLen != 0)) {
-        // The generated salt needs to be released.
-        BSL_SAL_CleanseData(salt.data, salt.len);
-        BSL_SAL_FREE(salt.data);
     }
     return ret;
 }
@@ -643,7 +631,7 @@ static int32_t BssaBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inpu
             ret = CRYPT_MEM_ALLOC_FAIL;
             goto ERR;
         }
-        GOTO_ERR_IF(RSA_BlindCreateParam(ctx->libCtx, param->para.bssa, e, n, bits, opt), ret);
+        GOTO_ERR_IF(RSA_BlindCreateParam(LIBCTX_FROM_RSA_CTX(ctx), param->para.bssa, e, n, bits, opt), ret);
     }
     blind = param->para.bssa;
     GOTO_ERR_IF(BN_ModMul(enMsg, enMsg, blind->r, n, opt), ret);
@@ -719,7 +707,8 @@ int32_t CRYPT_RSA_Blind(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *input,
     }
     uint8_t hash[64]; // 64 is max hash len
     uint32_t hashLen = sizeof(hash);
-    ret = CRYPT_EAL_Md(algId, input, inputLen, hash, &hashLen);
+    void *libCtx = LIBCTX_FROM_RSA_CTX(ctx);
+    ret = EAL_Md(algId, libCtx, MDATTR_FROM_RSA_CTX(ctx), input, inputLen, hash, &hashLen, libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -779,8 +768,7 @@ ERR:
 int32_t CRYPT_RSA_UnBlind(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen)
 {
-    int32_t ret;
-    ret = BlindInputCheck(ctx, input, inputLen, out, outLen);
+    int32_t ret = BlindInputCheck(ctx, input, inputLen, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -888,7 +876,12 @@ int32_t CRYPT_RSA_Sign(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data, u
 {
     uint8_t hash[64]; // 64 is max hash len
     uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
-    int32_t ret = EAL_Md(algId, data, dataLen, hash, &hashLen);
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    void *libCtx = LIBCTX_FROM_RSA_CTX(ctx);
+    int32_t ret = EAL_Md(algId, libCtx, MDATTR_FROM_RSA_CTX(ctx), data, dataLen, hash, &hashLen, libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -955,17 +948,12 @@ int32_t CRYPT_RSA_VerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t d
 #ifdef HITLS_CRYPTO_RSA_EMSA_PSS
         case EMSA_PSS:
             saltLen = (uint32_t)ctx->pad.para.pss.saltLen;
-            if (ctx->pad.para.pss.mdMeth == NULL) {
+            if (ctx->pad.para.pss.mdMeth.id == 0) {
                 ret = CRYPT_NULL_INPUT;
                 goto EXIT;
             }
-            if (ctx->pad.para.pss.saltLen == CRYPT_RSA_SALTLEN_TYPE_HASHLEN) { // saltLen is -1
-                saltLen = (uint32_t)ctx->pad.para.pss.mdMeth->mdSize;
-            } else if (ctx->pad.para.pss.saltLen == CRYPT_RSA_SALTLEN_TYPE_MAXLEN) { // saltLen is -2
-                saltLen = (uint32_t)(padLen - ctx->pad.para.pss.mdMeth->mdSize - 2); // salt, obtains DRBG
-            }
-            ret = CRYPT_RSA_VerifyPss(ctx->pad.para.pss.mdMeth, ctx->pad.para.pss.mgfMeth,
-                bits, saltLen, data, dataLen, pad, padLen);
+            ret = CRYPT_RSA_VerifyPss(ctx, &ctx->pad.para.pss.mdMeth, &ctx->pad.para.pss.mgfMeth,
+                saltLen, data, dataLen, pad, padLen);
             break;
 #endif
         default: // This branch cannot be entered because it's been verified before.
@@ -983,7 +971,12 @@ int32_t CRYPT_RSA_Verify(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data,
 {
     uint8_t hash[64]; // 64 is max hash len
     uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
-    int32_t ret = EAL_Md(algId, data, dataLen, hash, &hashLen);
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    void *libCtx = LIBCTX_FROM_RSA_CTX(ctx);
+    int32_t ret = EAL_Md(algId, libCtx, MDATTR_FROM_RSA_CTX(ctx), data, dataLen, hash, &hashLen, libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -992,7 +985,7 @@ int32_t CRYPT_RSA_Verify(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data,
 }
 #endif // HITLS_CRYPTO_RSA_VERIFY
 
-#if defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_VERIFY)
+#if defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_RECOVER)
 static int32_t EncryptInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     const uint8_t *out, const uint32_t *outLen)
 {
@@ -1042,7 +1035,7 @@ int32_t CRYPT_RSA_Encrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
 #if defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS) || defined(HITLS_CRYPTO_RSAES_PKCSV15)
         case RSAES_PKCSV15_TLS:
         case RSAES_PKCSV15:
-            ret = CRYPT_RSA_SetPkcsV15Type2(ctx->libCtx, data, dataLen, pad, padLen);
+            ret = CRYPT_RSA_SetPkcsV15Type2(LIBCTX_FROM_RSA_CTX(ctx), data, dataLen, pad, padLen);
             if (ret != CRYPT_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
                 goto EXIT;
@@ -1132,8 +1125,8 @@ int32_t CRYPT_RSA_Decrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
     switch (ctx->pad.type) {
 #ifdef HITLS_CRYPTO_RSAES_OAEP
         case RSAES_OAEP:
-            ret = CRYPT_RSA_VerifyPkcs1Oaep(ctx->pad.para.oaep.mdMeth,
-                ctx->pad.para.oaep.mgfMeth, pad, padLen, ctx->label.data, ctx->label.len, out, outLen);
+            ret = CRYPT_RSA_VerifyPkcs1Oaep(&ctx->pad.para.oaep, pad, padLen, ctx->label.data, ctx->label.len,
+                out, outLen);
             break;
 #endif
 #ifdef HITLS_CRYPTO_RSAES_PKCSV15
@@ -1168,7 +1161,7 @@ EXIT:
 }
 #endif // HITLS_CRYPTO_RSA_DECRYPT
 
-#ifdef HITLS_CRYPTO_RSA_VERIFY
+#ifdef HITLS_CRYPTO_RSA_RECOVER
 int32_t CRYPT_RSA_Recover(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen)
 {
     int32_t ret = EncryptInputCheck(ctx, data, dataLen, out, outLen);
@@ -1176,14 +1169,10 @@ int32_t CRYPT_RSA_Recover(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (data == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    uint8_t *emMsg = NULL;
+    RETURN_RET_IF(data == NULL, CRYPT_NULL_INPUT);
     uint32_t bits = CRYPT_RSA_GetBits(ctx);
     uint32_t emLen = BN_BITS_TO_BYTES(bits);
-    emMsg = BSL_SAL_Malloc(emLen);
+    uint8_t *emMsg = BSL_SAL_Malloc(emLen);
     if (emMsg == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -1220,6 +1209,6 @@ ERR:
     BSL_SAL_FREE(emMsg);
     return ret;
 }
-#endif // HITLS_CRYPTO_RSA_VERIFY
+#endif // HITLS_CRYPTO_RSA_RECOVER
 
 #endif /* HITLS_CRYPTO_RSA */

@@ -93,6 +93,12 @@ python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki hitl
 ```
 python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki hitls_auth --lib_type static --bits=64 --system=linux --asm_type x8664
 ```
+
+* build the app：
+```
+python3 ../configure.py --executes hitls
+```
+
 The options are described in [Build Installation Guide](docs/en/4_User%20Guide/1_Build%20and%20Installation%20Guide.md)
 
 Step 3 (Generate the build script):

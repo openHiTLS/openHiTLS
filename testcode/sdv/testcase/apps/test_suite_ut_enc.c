@@ -23,6 +23,7 @@
 #include "app_help.h"
 #include "app_print.h"
 #include "app_opt.h"
+#include "app_provider.h"
 #include "bsl_uio.h"
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_kdf.h"
@@ -41,6 +42,24 @@ typedef struct {
     int expect;
 } OptTestData;
 
+static int32_t AppInit(void)
+{
+    int32_t ret = AppPrintErrorUioInit(stderr);
+    if (ret != HITLS_APP_SUCCESS) {
+        return ret;
+    }
+    if (APP_Create_LibCtx() == NULL) {
+        (void)AppPrintError("Create g_libCtx failed\n");
+        return HITLS_APP_INVALID_ARG;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static void AppUninit(void)
+{
+    AppPrintErrorUioUnInit();
+    HITLS_APP_FreeLibCtx();
+}
 
 /**
  * @test UT_HITLS_APP_ENC_TC001
@@ -65,14 +84,14 @@ void UT_HITLS_APP_ENC_TC001(void)
         {10, argv[3], HITLS_APP_SUCCESS}
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_EncMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
     
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     return;
 }
 /* END_CASE */
@@ -120,14 +139,14 @@ void UT_HITLS_APP_ENC_TC002(void)
         {10, argv[13], HITLS_APP_SUCCESS}
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_EncMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
     
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     return;
 }
 /* END_CASE */
@@ -157,14 +176,14 @@ void UT_HITLS_APP_ENC_TC003(void)
         {10, argv[4], HITLS_APP_PASSWD_FAIL}
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_EncMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
     
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     return;
 }
 /* END_CASE */

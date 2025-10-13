@@ -118,9 +118,9 @@ static void Test_PskConnect(uint32_t serverMode, PskStatus pskStatus)
     HITLS_CFG_SetKeyExchMode(testInfo.config, serverMode);
     testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, false, HS_STATE_BUTT), HITLS_SUCCESS);
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(testInfo.client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, pskStatus == SESSION_RESUME_PSK ? 1 : 0);
+    ASSERT_EQ(isReused, pskStatus == SESSION_RESUME_PSK);
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -228,9 +228,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_MODES_FUNC_TC005()
     HITLS_SetSession(testInfo.client->ssl, testInfo.clientSession);
     testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, false, HS_STATE_BUTT), HITLS_SUCCESS);
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(testInfo.client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 0);
+    ASSERT_EQ(isReused, false);
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -842,9 +842,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SVERSION_FUNC_TC006()
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
 
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 1);
+    ASSERT_EQ(isReused, true);
 
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
@@ -1001,9 +1001,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSKTICKETLIFETIME_FUNC_TC001()
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
 
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 0);
+    ASSERT_EQ(isReused, false);
 
 EXIT:
     HITLS_CFG_FreeConfig(config);

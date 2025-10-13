@@ -27,9 +27,8 @@
 
 CRYPT_CBC_MAC_Ctx *CRYPT_CBC_MAC_NewCtx(CRYPT_MAC_AlgId id)
 {
-    int32_t ret;
-    EAL_MacMethLookup method = {0};
-    ret = EAL_MacFindMethod(id, &method);
+    EAL_MacDepMethod method = {0};
+    int32_t ret = EAL_MacFindDepMethod(id, NULL, NULL, &method, NULL, false);
     if (ret != CRYPT_SUCCESS) {
         return NULL;
     }
@@ -38,13 +37,19 @@ CRYPT_CBC_MAC_Ctx *CRYPT_CBC_MAC_NewCtx(CRYPT_MAC_AlgId id)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    ret = CipherMacInitCtx(&ctx->common, method.ciph);
+    ret = CipherMacInitCtx(&ctx->common, method.method.sym);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_Free(ctx);
         return NULL;
     }
     ctx->paddingType = CRYPT_PADDING_MAX_COUNT;
     return ctx;
+}
+
+CRYPT_CBC_MAC_Ctx *CRYPT_CBC_MAC_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id)
+{
+    (void)libCtx;
+    return CRYPT_CBC_MAC_NewCtx(id);
 }
 
 int32_t CRYPT_CBC_MAC_Init(CRYPT_CBC_MAC_Ctx *ctx, const uint8_t *key, uint32_t len, void *param)
@@ -115,22 +120,22 @@ int32_t CRYPT_CBC_MAC_Final(CRYPT_CBC_MAC_Ctx *ctx, uint8_t *out, uint32_t *len)
     return CRYPT_SUCCESS;
 }
 
-void CRYPT_CBC_MAC_Reinit(CRYPT_CBC_MAC_Ctx *ctx)
+int32_t CRYPT_CBC_MAC_Reinit(CRYPT_CBC_MAC_Ctx *ctx)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
+        return CRYPT_NULL_INPUT;
     }
-    CipherMacReinit(&ctx->common);
+    return CipherMacReinit(&ctx->common);
 }
 
-void CRYPT_CBC_MAC_Deinit(CRYPT_CBC_MAC_Ctx *ctx)
+int32_t CRYPT_CBC_MAC_Deinit(CRYPT_CBC_MAC_Ctx *ctx)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
+        return CRYPT_NULL_INPUT;
     }
-    CipherMacDeinit(&ctx->common);
+    return CipherMacDeinit(&ctx->common);
 }
 
 int32_t CRYPT_CBC_MAC_Ctrl(CRYPT_CBC_MAC_Ctx *ctx, uint32_t opt, void *val, uint32_t len)

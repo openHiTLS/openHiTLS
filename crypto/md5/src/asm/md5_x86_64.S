@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MD5
 
-.file   "md5_x86_64.S"
 
 .set TEMP1, %r14d
 .set TEMP2, %r15d

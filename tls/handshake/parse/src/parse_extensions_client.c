@@ -86,7 +86,6 @@ int32_t ParseServerKeyShare(ParsePacket *pkt, ServerHelloMsg *msg)
     if (ret != HITLS_SUCCESS) {
         return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15159, BINGLOG_STR("ServerKeyShare"));
     }
-
     if (pkt->bufLen == *pkt->bufOffset) {
         msg->haveKeyShare = true;
         return HITLS_SUCCESS;  // If there is no subsequent content, the extension is the keyshare of hrr
@@ -194,7 +193,7 @@ int32_t ParseServerSelectedAlpnProtocol(
 
     (void)memcpy_s(*alpnSelected, selectedAlpnLen + 1, &pkt->buf[offset], selectedAlpnLen + 1);
 
-    *alpnSelectedSize = selectedAlpnLen;
+    *alpnSelectedSize = selectedAlpnLen + 1;
     *haveSelectedAlpn = true;
 
     return HITLS_SUCCESS;
@@ -261,7 +260,16 @@ static int32_t ParseServerTicket(ParsePacket *pkt, ServerHelloMsg *msg)
     if (msg->haveTicket == true) {
         return ParseDupExtProcess(pkt->ctx, BINLOG_ID15964, BINGLOG_STR("ticket"));
     }
-
+#ifdef HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET
+    if (pkt->ctx->config.tlsConfig.sessionTicketExtCb != NULL) {
+        int32_t ret = pkt->ctx->config.tlsConfig.sessionTicketExtCb(pkt->ctx, pkt->buf, pkt->bufLen,
+                                                                 pkt->ctx->config.tlsConfig.sessionTicketExtCbArg);
+        if (ret == 0) {
+            return ParseErrorProcess(pkt->ctx, HITLS_PARSE_SESSION_TICKET_FAIL, BINLOG_ID17378,
+                BINGLOG_STR("parse ticket extension failed."), ALERT_HANDSHAKE_FAILURE);
+        }
+    }
+#endif /* HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET */
     /* The ticket extended data length of server hello can only be empty */
     if (pkt->bufLen != 0) {
         return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15965, BINGLOG_STR("tiket"));
@@ -343,13 +351,13 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         default:
             break;
     }
-
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
     if (IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType,
         HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO | HITLS_EX_TYPE_HELLO_RETRY_REQUEST)) {
         return ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen,
             HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO | HITLS_EX_TYPE_HELLO_RETRY_REQUEST, NULL, 0);
     }
-
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
     // You need to send an alert when an unknown extended field is encountered
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15205, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
         "unknown extension message type:%d len:%lu in server hello message.", extMsgType, extMsgLen, 0, 0);
@@ -377,9 +385,13 @@ int32_t ParseServerExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
-        if (extensionId != HS_EX_TYPE_ID_UNRECOGNIZED || !IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType,
-            HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO |
-            HITLS_EX_TYPE_HELLO_RETRY_REQUEST)) {
+        if (extensionId != HS_EX_TYPE_ID_UNRECOGNIZED
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+            || !IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType,
+                HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO |
+                HITLS_EX_TYPE_HELLO_RETRY_REQUEST)
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
+        ) {
             if (!GetExtensionFlagValue(ctx, extensionId)) {
                 BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17330, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

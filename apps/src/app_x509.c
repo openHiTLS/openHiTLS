@@ -28,7 +28,7 @@
 #include "bsl_errno.h"
 #include "crypt_errno.h"
 #include "crypt_eal_rand.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey.h"
 #include "crypt_eal_codecs.h"
 #include "crypt_eal_md.h"
 #include "hitls_pki_errno.h"
@@ -45,7 +45,6 @@
 #define X509_DAY_SECONDS (24 * 60 * 60)
 #define X509_SET_SERIAL_PREFIX "0x"
 #define X509_MAX_MD_LEN 64
-#define HEX_TO_BYTE 2
 
 typedef enum {
     HITLS_APP_OPT_IN = 2,
@@ -215,6 +214,13 @@ static int32_t AppPrintX509(const X509OptCtx *optCtx)
     return ret;
 }
 
+static void ResetPrintX509FuncList(void)
+{
+    for (size_t i = 0; i < PRINT_X509_FUNC_LIST_CNT; ++i) {
+        g_printX509FuncList[i] = NULL;
+    }
+}
+
 static int32_t PrintIssuer(const X509OptCtx *optCtx)
 {
     BslList *issuer = NULL;
@@ -279,6 +285,11 @@ static int32_t PrintFingerPrint(const X509OptCtx *optCtx)
 {
     uint8_t md[X509_MAX_MD_LEN] = {0};
     uint32_t mdLen = X509_MAX_MD_LEN;
+    if (optCtx->printOpts.mdId == CRYPT_MD_SHAKE128) {
+        mdLen = HITLS_APP_SHAKE128_SIZE;
+    } else if (optCtx->printOpts.mdId == CRYPT_MD_SHAKE256) {
+        mdLen = HITLS_APP_SHAKE256_SIZE;
+    }
     int32_t ret = HITLS_X509_CertDigest(optCtx->cert, optCtx->printOpts.mdId, md, &mdLen);
     if (ret != 0) {
         AppPrintError("x509: Get cert digest failed, errCode=%d.\n", ret);
@@ -444,57 +455,12 @@ static int32_t X509OptDays(X509OptCtx *optCtx)
     return ret;
 }
 
-static int32_t HexToByte(const char *hex, uint8_t **bin, uint32_t *len)
-{
-    uint32_t hexLen = strlen(hex);
-    const char *num = hex;
-    // Skip the preceding zeros.
-    for (uint32_t i = 0; i < hexLen; ++i) {
-        if (num[i] != '0' && (i + 1) != hexLen) {
-            num += i;
-            hexLen -= i;
-            break;
-        }
-    }
-    *len = (hexLen + 1) / HEX_TO_BYTE;
-    uint8_t *res = BSL_SAL_Malloc(*len);
-    if (res == NULL) {
-        AppPrintError("x509: Allocate memory of serial failed.\n");
-        return HITLS_APP_MEM_ALLOC_FAIL;
-    }
-    uint32_t hexIdx = 0;
-    uint32_t binIdx = 0;
-    char *endptr;
-    char tmp[] = {'0', '0', '\0'};
-    while (hexIdx < hexLen) {
-        if (hexIdx == 0 && hexLen % HEX_TO_BYTE == 1) {
-            tmp[0] = '0';
-        } else {
-            tmp[0] = hex[hexIdx++];
-        }
-        tmp[1] = hex[hexIdx++];
-        res[binIdx++] = (uint32_t)strtol(tmp, &endptr, 16);  // 16: hex
-        if (*endptr != '\0') {
-            BSL_SAL_Free(res);
-            return HITLS_APP_OPT_VALUE_INVALID;
-        }
-    }
-
-    *bin = res;
-    return HITLS_APP_SUCCESS;
-}
-
 static int32_t X509OptSetSerial(X509OptCtx *optCtx)
 {
     char *str = HITLS_APP_OptGetValueStr();
-    uint32_t prefixLen = strlen(X509_SET_SERIAL_PREFIX);
-    if (strncmp(str, X509_SET_SERIAL_PREFIX, prefixLen) != 0 || strlen(str) <= prefixLen) {
-        AppPrintError("x509: Invalid serial, should start with '0x'.\n");
-        return HITLS_APP_OPT_VALUE_INVALID;
-    }
 
-    int32_t ret = HexToByte(str + prefixLen, &optCtx->certOpts.serial, &optCtx->certOpts.serialLen);
-    if (ret == HITLS_APP_OPT_VALUE_INVALID) {
+    int32_t ret = HITLS_APP_HexToByte(str, &optCtx->certOpts.serial, &optCtx->certOpts.serialLen);
+    if (ret != HITLS_APP_SUCCESS) {
         AppPrintError("x509: Invalid serial: %s.\n", str);
     }
     return ret;
@@ -808,8 +774,8 @@ static int32_t SetValidity(X509OptCtx *optCtx)
         AppPrintError("x509: Get system time failed.\n");
         return HITLS_APP_SAL_FAIL;
     }
-    if ((startTime + optCtx->certOpts.days * X509_DAY_SECONDS) < startTime) {
-        AppPrintError("x509: The sum of the current time and -days %s outside integer range.\n", optCtx->certOpts.days);
+    if (optCtx->certOpts.days > (INT64_MAX - startTime) / X509_DAY_SECONDS) {
+        AppPrintError("x509: The sum of the current time and -days %lld outside integer range.\n", optCtx->certOpts.days);
         return HITLS_APP_SAL_FAIL;
     }
     int64_t endTime = startTime + optCtx->certOpts.days * X509_DAY_SECONDS;
@@ -1193,7 +1159,7 @@ static int32_t OutputPubkey(X509OptCtx *optCtx)
     ret = BSL_UIO_Write(optCtx->outUio, encodePubkey.data, encodePubkey.dataLen, &writeLen);
     BSL_SAL_Free(encodePubkey.data);
     if (ret != 0 || writeLen != encodePubkey.dataLen) {
-        AppPrintError("x509: write pubKey failed, errCode = %d, writeLen = %ld.\n", ret, writeLen);
+        AppPrintError("x509: write pubKey failed, errCode = %d, writeLen = %u.\n", ret, writeLen);
         return HITLS_APP_UIO_FAIL;
     }
     return HITLS_APP_SUCCESS;
@@ -1239,7 +1205,7 @@ static int32_t X509Output(X509OptCtx *optCtx)
     uint32_t writeLen = 0;
     ret = BSL_UIO_Write(optCtx->outUio, optCtx->encodeCert.data, optCtx->encodeCert.dataLen, &writeLen);
     if (ret != 0 || writeLen != optCtx->encodeCert.dataLen) {
-        AppPrintError("x509: write cert failed, errCode = %d, writeLen = %ld.\n", ret, writeLen);
+        AppPrintError("x509: write cert failed, errCode = %d, writeLen = %u.\n", ret, writeLen);
         return HITLS_APP_UIO_FAIL;
     }
     return HITLS_APP_SUCCESS;
@@ -1352,6 +1318,7 @@ static void UnInitX509OptCtx(X509OptCtx *optCtx)
 // x509 main function
 int32_t HITLS_X509Main(int argc, char *argv[])
 {
+    ResetPrintX509FuncList();
     X509OptCtx optCtx = {0};
     InitX509OptCtx(&optCtx);
     int32_t ret = HITLS_APP_SUCCESS;

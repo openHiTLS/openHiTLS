@@ -23,6 +23,8 @@
 #include "bsl_params.h"
 #include "crypt_slh_dsa.h"
 
+#define MAX_MDSIZE 64
+
 // The length "out" is n, the max length is SLH_DSA_MAX_N
 typedef int32_t (*SlhDsaPrf)(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, uint8_t *out);
 
@@ -42,7 +44,7 @@ typedef int32_t (*SlhDsaPrfMsg)(const CryptSlhDsaCtx *ctx, const uint8_t *rand, 
 // The length of "r", "seed" and "root" is n, the max length is SLH_DSA_MAX_N
 // the max length of "out" is SLH_DSA_MAX_M
 typedef int32_t (*SlhDsaHmsg)(const CryptSlhDsaCtx *ctx, const uint8_t *r, const uint8_t *msg, uint32_t msgLen,
-                              uint8_t *out);
+                              const uint8_t *idx, uint8_t *out);
 struct HashFuncs {
     SlhDsaPrf prf;
     SlhDsaTl tl;

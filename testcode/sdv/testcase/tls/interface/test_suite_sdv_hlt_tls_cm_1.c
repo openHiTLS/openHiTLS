@@ -107,7 +107,7 @@ void SDV_TLS_CM_KEYUPDATE_FUNC_TC001(int version)
     ASSERT_TRUE(config != NULL);
 
     config->isSupportRenegotiation = true;
-    ASSERT_EQ(HITLS_CFG_SetEncryptThenMac(config, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetEncryptThenMac(config, true), HITLS_SUCCESS);
 
     uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
     HITLS_CFG_SetSignature(config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));

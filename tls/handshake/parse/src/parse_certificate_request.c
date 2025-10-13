@@ -30,6 +30,7 @@
 #include "hs_extensions.h"
 #include "parse_extensions.h"
 #include "parse_common.h"
+#include "custom_extensions.h"
 
 #if defined(HITLS_TLS_PROTO_TLS12) || defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_TLS13)
 
@@ -91,7 +92,7 @@ void FreeDNList(HITLS_TrustedCAList *caList)
 
     return;
 }
-// Allocate memory for the caListNode
+
 HITLS_TrustedCANode *ParseDN(const uint8_t *data, uint32_t len)
 {
     HITLS_TrustedCANode *dnNode = (HITLS_TrustedCANode *)BSL_SAL_Calloc(1u, sizeof(HITLS_TrustedCANode));
@@ -194,6 +195,10 @@ static int32_t ParseDistinguishedName(ParsePacket *pkt, CertificateRequestMsg *m
     }
 
     if (distinguishedNamesLen > 0u) {
+        if (pkt->ctx->peerInfo.caList != NULL) {
+            FreeDNList(pkt->ctx->peerInfo.caList);
+            pkt->ctx->peerInfo.caList = NULL;
+        }
         pkt->ctx->peerInfo.caList = ParseDNList(&pkt->buf[*pkt->bufOffset], distinguishedNamesLen);
         if (pkt->ctx->peerInfo.caList == NULL) {
             return ParseErrorProcess(pkt->ctx, HITLS_PARSE_CA_LIST_ERR, BINLOG_ID16951,
@@ -270,12 +275,12 @@ static int32_t ParseCertificateRequestExBody(TLS_Ctx *ctx, uint16_t extMsgType, 
         default:
             break;
     }
-
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
     if (IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType, HITLS_EX_TYPE_TLS1_3_CERTIFICATE_REQUEST)) {
         return ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen,
             HITLS_EX_TYPE_TLS1_3_CERTIFICATE_REQUEST, NULL, 0);
     }
-
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
     return HITLS_SUCCESS;
 }
 
@@ -376,7 +381,6 @@ void CleanCertificateRequest(CertificateRequestMsg *msg)
         return;
     }
 
-    /* release Certificate request message */
     BSL_SAL_FREE(msg->certTypes);
 #ifdef HITLS_TLS_PROTO_TLS13
     BSL_SAL_FREE(msg->certificateReqCtx);

@@ -30,6 +30,11 @@ void CRYPT_RandRegist(CRYPT_EAL_RandFunc func)
     g_randFunc = func;
 }
 
+CRYPT_EAL_RandFunc CRYPT_RandRegistGet(void)
+{
+    return g_randFunc;
+}
+
 int32_t CRYPT_Rand(uint8_t *rand, uint32_t randLen)
 {
     if (g_randFunc == NULL) {
@@ -46,6 +51,11 @@ int32_t CRYPT_Rand(uint8_t *rand, uint32_t randLen)
 void CRYPT_RandRegistEx(CRYPT_EAL_RandFuncEx func)
 {
     g_randFuncEx = func;
+}
+
+CRYPT_EAL_RandFuncEx CRYPT_RandRegistExGet(void)
+{
+    return g_randFuncEx;
 }
 
 int32_t CRYPT_RandEx(void *libCtx, uint8_t *rand, uint32_t randLen)

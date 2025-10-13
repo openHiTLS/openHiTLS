@@ -108,7 +108,7 @@ void CRYPT_DECODE_PoolFreeCtx(CRYPT_DECODER_PoolCtx *poolCtx)
     BSL_SAL_Free(poolCtx);
 }
 
-static int32_t SetDecodeType(void *val, size_t valLen, const char **targetValue)
+static int32_t SetDecodeType(void *val, int32_t valLen, const char **targetValue)
 {
     if (valLen == 0 || valLen > MAX_CRYPT_DECODE_FORMAT_TYPE_SIZE) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
@@ -221,8 +221,9 @@ static CRYPT_DECODER_Ctx* GetUsableDecoderFromPool(CRYPT_DECODER_PoolCtx *poolCt
     if (node != NULL) {
         decoderCtx = node;
         decoderCtx->decoderState = CRYPT_DECODER_STATE_TRING;
+        return decoderCtx;
     }
-    return node != NULL ? decoderCtx : NULL;
+    return NULL;
 }
 
 static int32_t UpdateDecoderPath(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_DECODER_Node *currNode)

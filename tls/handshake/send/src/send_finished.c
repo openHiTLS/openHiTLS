@@ -34,7 +34,6 @@
 int32_t PrepareClientFinishedMsg(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
-    HS_Ctx *hsCtx = ctx->hsCtx;
     ret = VERIFY_CalcVerifyData(ctx, true, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15357, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -44,7 +43,7 @@ int32_t PrepareClientFinishedMsg(TLS_Ctx *ctx)
         return ret;
     }
 
-    ret = HS_PackMsg(ctx, FINISHED, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+    ret = HS_PackMsg(ctx, FINISHED);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15358, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client pack finished msg error.", 0, 0, 0, 0);
@@ -222,7 +221,7 @@ int32_t Tls13ClientSendFinishedProcess(TLS_Ctx *ctx)
 
     /* Determine whether the message needs to be packed */
     if (hsCtx->msgLen == 0) {
-        if ((!ctx->hsCtx->haveHrr) && (!ctx->hsCtx->isNeedClientCert)) {
+        if ((ctx->config.tlsConfig.isMiddleBoxCompat && (!ctx->hsCtx->haveHrr)) && (!ctx->hsCtx->isNeedClientCert)) {
             /* In the middlebox scenario, if the client does not send the hrr message and the certificate does not need
              * to be sent, a CCS message needs to be sent before the finished message */
             ret = ctx->method.sendCCS(ctx);
@@ -262,7 +261,7 @@ int32_t Tls13ClientSendFinishedProcess(TLS_Ctx *ctx)
             return ret;
         }
 
-        ret = HS_PackMsg(ctx, FINISHED, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, FINISHED);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15376, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "client pack tls1.3 finished msg fail.", 0, 0, 0, 0);
@@ -309,7 +308,7 @@ int32_t Tls12ServerSendFinishedProcess(TLS_Ctx *ctx)
             return ret;
         }
 
-        ret = HS_PackMsg(ctx, FINISHED, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, FINISHED);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15363, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "server pack finished msg fail.", 0, 0, 0, 0);
@@ -408,7 +407,7 @@ int32_t DtlsServerSendFinishedProcess(TLS_Ctx *ctx)
             return ret;
         }
 
-        ret = HS_PackMsg(ctx, FINISHED, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, FINISHED);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15373, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "server pack finished msg fail.", 0, 0, 0, 0);
@@ -431,7 +430,6 @@ int32_t DtlsServerSendFinishedProcess(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_PROTO_TLS13
 static int32_t PrepareServerSendFinishedMsg(TLS_Ctx *ctx)
 {
-    HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
     int32_t ret = VERIFY_Tls13CalcVerifyData(ctx, false);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15378, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -440,7 +438,7 @@ static int32_t PrepareServerSendFinishedMsg(TLS_Ctx *ctx)
         return ret;
     }
 
-    ret = HS_PackMsg(ctx, FINISHED, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+    ret = HS_PackMsg(ctx, FINISHED);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15379, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "server pack tls1.3 finished msg fail.", 0, 0, 0, 0);

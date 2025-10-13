@@ -53,18 +53,6 @@ int main(void)
     }
     printf("\n");
 
-    // Initialize the error code module.
-    BSL_ERR_Init();
-
-    /**
-     * Before calling the algorithm APIs,
-     * call the BSL_SAL_CallBack_Ctrl function to register the malloc and free functions.
-     * Execute this step only once. If the memory allocation ability of Linux is available,
-     * the two functions can be registered using Linux by default.
-    */
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
-
     // Create a context.
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_SM4_CBC);
     if (ctx == NULL) {

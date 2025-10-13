@@ -858,7 +858,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC007(void)
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
 
-    uint8_t isRenegotiation = true;
+    bool isRenegotiation = true;
     config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
 
@@ -909,7 +909,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC008(void)
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
 
-    uint8_t isRenegotiation = true;
+    bool isRenegotiation = true;
     config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
 
@@ -983,7 +983,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC006(void)
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
 
-    uint8_t isRenegotiation = true;
+    bool isRenegotiation = true;
     config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
 
@@ -1064,7 +1064,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC0014(void)
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
 
-    uint8_t isRenegotiation = true;
+    bool isRenegotiation = true;
     config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
 
@@ -1152,7 +1152,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC0015(void)
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
 
-    uint8_t isRenegotiation = true;
+    bool isRenegotiation = true;
     config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
 
@@ -1232,7 +1232,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC0012(void)
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
 
-    uint8_t isRenegotiation = true;
+    bool isRenegotiation = true;
     config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
 

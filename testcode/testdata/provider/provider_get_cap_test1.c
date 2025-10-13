@@ -420,6 +420,13 @@ static void TestKemFreeCtx(TestKemKeyCtx *ctx)
     }
 }
 
+static int32_t TestEccCheck(const TestEccKeyCtx *ctx1, const TestEccKeyCtx *ctx2)
+{
+    (void)ctx1;
+    (void)ctx2;
+    return CRYPT_SUCCESS;
+}
+
 const CRYPT_EAL_Func g_testKeyMgmtEcdsa[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)TestPkeyMgmtEcNewCtx},
     {CRYPT_EAL_IMPLPKEYMGMT_SETPARAM, (CRYPT_EAL_ImplPkeyMgmtSetParam)TestEccSetPara},
@@ -434,6 +441,7 @@ const CRYPT_EAL_Func g_testKeyMgmtEcdsa[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)TestEccFreeCtx},
     {CRYPT_EAL_IMPLPKEYMGMT_IMPORT, (CRYPT_EAL_ImplPkeyMgmtImport)TestEccImport},
     {CRYPT_EAL_IMPLPKEYMGMT_EXPORT, (CRYPT_EAL_ImplPkeyMgmtExport)TestEccExport},
+    {CRYPT_EAL_IMPLPKEYMGMT_CHECK, (CRYPT_EAL_ImplPkeyMgmtCheck)TestEccCheck},
     CRYPT_EAL_FUNC_END,
 };
 
@@ -756,7 +764,8 @@ static int32_t TestCryptGetSigAlgCaps(CRYPT_EAL_ProcessFuncCb cb, void *args)
             BSL_PARAM_TYPE_UINT32,
             (void *)(uintptr_t)&(certVersionBits),
             sizeof(certVersionBits)
-        }
+        },
+        BSL_PARAM_END
     };
     return cb(param, args);
 }

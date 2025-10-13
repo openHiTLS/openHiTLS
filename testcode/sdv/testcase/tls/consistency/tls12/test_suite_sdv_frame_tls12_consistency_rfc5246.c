@@ -5379,7 +5379,7 @@ void UT_TLS_TLS1_2_RFC5246_Fragmented_Msg_FUNC_TC001(void)
     ret = HITLS_Connect(client->ssl);
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
     ret = HITLS_Accept(server->ssl);
-    ASSERT_TRUE(ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_TRUE(ret == HITLS_REC_NORMAL_IO_BUSY);
     ret = HITLS_Accept(server->ssl);
     ASSERT_TRUE(ret == HITLS_REC_NORMAL_IO_BUSY);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -5563,6 +5563,8 @@ void UT_TLS_TLS1_2_RFC5246_READ_AFTER_CLOSE_TC003()
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_ALERTING);
 
     ASSERT_EQ(BSL_UIO_SetMethod(method, BSL_UIO_WRITE_CB, FRAME_Write), BSL_SUCCESS);
+    ASSERT_TRUE(HITLS_Close(clientTlsCtx) == HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_Close(clientTlsCtx) == HITLS_SUCCESS);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_CLOSED);
 

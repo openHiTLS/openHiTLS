@@ -96,6 +96,7 @@ static bool StateCompare(FRAME_LinkObj *link, bool isClient, HITLS_HandshakeStat
         // In tls1.3, the server may receive the CCS message in the TRY_RECV_CERTIFICATIONATE phase
         if (state == TRY_RECV_CERTIFICATE){
             if (link->needStopBeforeRecvCCS || CCS_IsRecv(link->ssl) == true ||
+                link->ssl->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11 ||
 #ifdef HITLS_TLS_PROTO_TLS13
                 link->ssl->hsCtx->haveHrr == true ||
 #endif /* HITLS_TLS_PROTO_TLS13 */

@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_X25519
 
-.file "x25519_x86_64.S"
 .text
 
 .macro push_stack

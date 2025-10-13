@@ -121,12 +121,12 @@ static int32_t ParseEncryptedExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uin
         default:
             break;
     }
-
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
     if (IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS)) {
         return ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen,
             HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS, NULL, 0);
     }
-
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
     return ParseErrorProcess(ctx, HITLS_PARSE_UNSUPPORTED_EXTENSION, BINLOG_ID16982,
         "unknow extension received", ALERT_UNSUPPORTED_EXTENSION);
 }
@@ -151,8 +151,11 @@ int32_t ParseEncryptedEx(TLS_Ctx *ctx, EncryptedExtensions *msg, const uint8_t *
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
-        if (extensionId != HS_EX_TYPE_ID_UNRECOGNIZED ||
-                !IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS)) {
+        if (extensionId != HS_EX_TYPE_ID_UNRECOGNIZED
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+            || !IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS)
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
+        ) {
             msg->extensionTypeMask |= 1ULL << extensionId;
             /* check whether the extension that is not sent is received. */
             if (!GetExtensionFlagValue(ctx, extensionId)) {

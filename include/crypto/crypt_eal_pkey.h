@@ -50,6 +50,7 @@ typedef struct {
         CRYPT_ElGamalPub elgamalPub; /**< Elgamal public key structure */
 		CRYPT_MlDsaPub mldsaPub;  /**< MLDSA public key structure */
         CRYPT_SlhDsaPub slhDsaPub; /**< SLH-DSA public key structure */
+        CRYPT_XmssPub xmssPub; /**< XMSS public key structure */
     } key;                           /**< Public key union of all algorithms */
 } CRYPT_EAL_PkeyPub;
 
@@ -77,6 +78,7 @@ typedef struct {
         CRYPT_ElGamalPrv elgamalPrv; /**< ElGamal private key structure */
 		CRYPT_MlDsaPrv mldsaPrv;  /**< MLDSA private key structure */
         CRYPT_SlhDsaPrv slhDsaPrv; /**< SLH-DSA private key structure */
+        CRYPT_XmssPrv xmssPrv; /**< XMSS private key structure */
     } key;                           /**<Private key union of all algorithms */
 } CRYPT_EAL_PkeyPrv;
 
@@ -147,6 +149,7 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_ProviderPkeyNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_
 /**
  * @ingroup crypt_eal_pkey
  * @brief   Copy the pkey context.
+ * @note    to and from must has identical key management.
  *
  * @param   to [IN/OUT] Target pkey context
  * @param   from [IN] Source pkey context
@@ -187,7 +190,6 @@ void CRYPT_EAL_PkeyFreeCtx(CRYPT_EAL_PkeyCtx *pkey);
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_PkeySetPara(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara *para);
-
 
 /**
  * @ingroup crypt_eal_pkey
@@ -453,8 +455,36 @@ int32_t CRYPT_EAL_PkeyDecrypt(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *data
 
 /**
  * @ingroup crypt_eal_pkey
- * @brief Check whether the public and private keys match.
- *  Currently not supported in the provider, supported in the future
+ * @brief   Homomorphic addition operations
+ *
+ * @param   pkey      [IN] Addition Context
+ * @param   input    [IN] Input ciphertext data
+ * @param   out      [OUT] The result of the addition operation
+ * @param   outLen   [OUT/IN] Pointer to the length of the addition result
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyHEAdd(const CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *input, uint8_t *out, uint32_t *outLen);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief   Homomorphic multiplication operations
+ *
+ * @param   pkey      [IN] Multiplication Context
+ * @param   input    [IN] Input ciphertext data
+ * @param   out      [OUT] The result of the multiplication operation
+ * @param   outLen   [OUT/IN] Pointer to the length of the multiplication result
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyHEMul(const CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *input, uint8_t *out, uint32_t *outLen);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief   Check whether the public and private keys match.
+ * @note    pubKey and prvKey must has identical key management.
  *
  * @param   pubKey      [IN] Public key
  * @param   prvKey      [IN] private key
@@ -463,6 +493,17 @@ int32_t CRYPT_EAL_PkeyDecrypt(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *data
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_PkeyPairCheck(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *prvKey);
+
+/**
+ * @ingroup crypt_eal_pkey
+ * @brief   Check the private key is valid.
+ *
+ * @param   prvKey [IN] Private key
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyPrvCheck(CRYPT_EAL_PkeyCtx *prvKey);
 
 /**
  * @ingroup crypt_eal_pkey
@@ -692,8 +733,8 @@ int32_t CRYPT_EAL_PkeyEncaps(const CRYPT_EAL_PkeyCtx *pkey, uint8_t *cipher, uin
  * @retval  #CRYPT_SUCCESS.
  *          For other error codes see crypt_errno.h.
  */
-int32_t CRYPT_EAL_PkeyDecaps(const CRYPT_EAL_PkeyCtx *pkey, uint8_t *cipher, uint32_t cipherLen, uint8_t *sharekey,
-    uint32_t *shareKeyLen);
+int32_t CRYPT_EAL_PkeyDecaps(
+    const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *cipher, uint32_t cipherLen, uint8_t *sharekey, uint32_t *shareKeyLen);
 
 #ifdef __cplusplus
 }

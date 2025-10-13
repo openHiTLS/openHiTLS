@@ -137,9 +137,8 @@ static int32_t CRYPT_SIPHASH_GetMacLen(const CRYPT_SIPHASH_Ctx *ctx, void *val, 
 
 CRYPT_SIPHASH_Ctx *CRYPT_SIPHASH_NewCtx(CRYPT_MAC_AlgId id)
 {
-    int32_t ret;
-    EAL_MacMethLookup macMethod;
-    ret = EAL_MacFindMethod(id, &macMethod);
+    EAL_MacDepMethod macMethod = {0};
+    int32_t ret = EAL_MacFindDepMethod(id, NULL, NULL, &macMethod, NULL, false);
     if (ret != CRYPT_SUCCESS) {
         return NULL;
     }
@@ -148,7 +147,7 @@ CRYPT_SIPHASH_Ctx *CRYPT_SIPHASH_NewCtx(CRYPT_MAC_AlgId id)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    const EAL_SiphashMethod *method = macMethod.sip;
+    const EAL_SiphashMethod *method = macMethod.method.sip;
 
     uint16_t cRounds = method->compressionRounds;
     uint16_t dRounds = method->finalizationRounds;
@@ -159,6 +158,12 @@ CRYPT_SIPHASH_Ctx *CRYPT_SIPHASH_NewCtx(CRYPT_MAC_AlgId id)
     ctx->accInLen = 0;
     ctx->offset = 0;
     return ctx;
+}
+
+CRYPT_SIPHASH_Ctx *CRYPT_SIPHASH_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id)
+{
+    (void)libCtx;
+    return CRYPT_SIPHASH_NewCtx(id);
 }
 
 int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen, void *param)
@@ -282,11 +287,11 @@ int32_t CRYPT_SIPHASH_Final(CRYPT_SIPHASH_Ctx *ctx, uint8_t *out, uint32_t *outl
     return CRYPT_SUCCESS;
 }
 
-void CRYPT_SIPHASH_Reinit(CRYPT_SIPHASH_Ctx *ctx)
+int32_t CRYPT_SIPHASH_Reinit(CRYPT_SIPHASH_Ctx *ctx)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
+        return CRYPT_NULL_INPUT;
     }
     ctx->state0 = 0;
     ctx->state1 = 0;
@@ -295,14 +300,16 @@ void CRYPT_SIPHASH_Reinit(CRYPT_SIPHASH_Ctx *ctx)
     ctx->accInLen = 0;
     ctx->offset = 0;
     (void)memset_s(ctx->remainder, SIPHASH_WORD_SIZE, 0, SIPHASH_WORD_SIZE);
+    return CRYPT_SUCCESS;
 }
 
-void CRYPT_SIPHASH_Deinit(CRYPT_SIPHASH_Ctx *ctx)
+int32_t CRYPT_SIPHASH_Deinit(CRYPT_SIPHASH_Ctx *ctx)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
+        return CRYPT_NULL_INPUT;
     }
+    return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_SIPHASH_Ctrl(CRYPT_SIPHASH_Ctx *ctx, uint32_t opt, void *val, uint32_t len)

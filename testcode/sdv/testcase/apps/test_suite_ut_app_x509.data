@@ -185,6 +185,9 @@ UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss
 "-out": not exist path
 UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss.root.crt -out ./no_exist/no_exist/x509.out":HITLS_APP_UIO_FAIL
 
+"-md": shake128
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/rsa.intca.crt -fingerprint -noout -md shake128":HITLS_APP_SUCCESS
+
 UT_HITLS_APP_X509_NormalOpt_TC001
 UT_HITLS_APP_X509_NormalOpt_TC001:"x509 -req -days 3650 -signkey ../testdata/apps/x509/sm2.key -in ../testdata/apps/x509/sm2.csr -userId 1234567812345678 -out sm2.crt -md sm3"
 

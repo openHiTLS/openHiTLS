@@ -173,34 +173,34 @@ static int16_t DeCompress(int16_t x, uint8_t bits)
 }
 
 // hash functions
-static int32_t HashFuncH(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
+static int32_t HashFuncH(void *libCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
 {
     uint32_t len = outLen;
-    return EAL_Md(CRYPT_MD_SHA3_256, in, inLen, out, &len);
+    return EAL_Md(CRYPT_MD_SHA3_256, libCtx, NULL, in, inLen, out, &len, libCtx != NULL);
 }
 
-static int32_t HashFuncG(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
+static int32_t HashFuncG(void *libCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
 {
     uint32_t len = outLen;
-    return EAL_Md(CRYPT_MD_SHA3_512, in, inLen, out, &len);
+    return EAL_Md(CRYPT_MD_SHA3_512, libCtx, NULL, in, inLen, out, &len, libCtx != NULL);
 }
 
-static int32_t HashFuncXOF(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
+static int32_t HashFuncXOF(void *libCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
 {
     uint32_t len = outLen;
-    return EAL_Md(CRYPT_MD_SHAKE128, in, inLen, out, &len);
+    return EAL_Md(CRYPT_MD_SHAKE128, libCtx, NULL, in, inLen, out, &len, libCtx != NULL);
 }
 
-static int32_t HashFuncJ(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
+static int32_t HashFuncJ(void *libCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
 {
     uint32_t len = outLen;
-    return EAL_Md(CRYPT_MD_SHAKE256, in, inLen, out, &len);
+    return EAL_Md(CRYPT_MD_SHAKE256, libCtx, NULL, in, inLen, out, &len, libCtx != NULL);
 }
 
-static int32_t PRF(uint8_t *extSeed, uint32_t extSeedLen, uint8_t *outBuf, uint32_t bufLen)
+static int32_t PRF(void *libCtx, uint8_t *extSeed, uint32_t extSeedLen, uint8_t *outBuf, uint32_t bufLen)
 {
     uint32_t len = bufLen;
-    return EAL_Md(CRYPT_MD_SHAKE256, extSeed, extSeedLen, outBuf, &len);
+    return EAL_Md(CRYPT_MD_SHAKE256, libCtx, NULL, extSeed, extSeedLen, outBuf, &len, libCtx != NULL);
 }
 
 static int32_t Parse(uint16_t *polyNtt, uint8_t *arrayB, uint32_t arrayLen, uint32_t n)
@@ -423,14 +423,23 @@ static void DecodeBits11(int16_t *polyF, const uint8_t *a)
     }
 }
 
-static void DecodeBits12(int16_t *polyF, const uint8_t *a)
+static int32_t DecodeBits12(int16_t *polyF, const uint8_t *a)
 {
     uint32_t i;
     for (i = 0; i < MLKEM_N / 2; i++) {
         // 3 byte data is decoded into 2 polyF elements, value & 0xFFF is used to obtain 12 bits.
         polyF[2 * i] = ((a[3 * i + 0] >> 0) | ((uint16_t)a[3 * i + 1] << 8)) & 0xFFF;
         polyF[2 * i + 1] = ((a[3 * i + 1] >> 4) | ((uint16_t)a[3 * i + 2] << 4)) & 0xFFF;
+        /* According to Section 7.2 of NIST.FIPS.203, when decapsulating, use ByteDecode and ByteEncode
+         * to check that the data does not change after decoding and re-encoding. This is equivalent to
+         * checking that there is no data that exceeds the modulus q after decoding.
+         */
+        if (polyF[2 * i] >= MLKEM_Q || polyF[2 * i + 1] >= MLKEM_Q) {
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+        }
     }
+    return CRYPT_SUCCESS;
 }
 
 // Decodes a byte array into an array of d-bit integers for 1 ≤ d ≤ 12.
@@ -453,7 +462,7 @@ static void ByteDecode(int16_t *polyF, const uint8_t *a, uint8_t bit)
             DecodeBits11(polyF, a);
             break;
         case 12:
-            DecodeBits12(polyF, a);
+            (void)DecodeBits12(polyF, a);
             break;
         default:
             break;
@@ -477,7 +486,7 @@ static int32_t GenMatrix(const CRYPT_ML_KEM_Ctx *ctx, const uint8_t *digest,
                 p[MLKEM_SEED_LEN] = j;
                 p[MLKEM_SEED_LEN + 1] = i;
             }
-            int32_t ret = HashFuncXOF(p, MLKEM_SEED_LEN + 2, xofOut, MLKEM_XOF_OUTPUT_LENGTH);
+            int32_t ret = HashFuncXOF(ctx->libCtx, p, MLKEM_SEED_LEN + 2, xofOut, MLKEM_XOF_OUTPUT_LENGTH);
             RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
             ret = Parse((uint16_t *)polyMatrix[i][j], xofOut, MLKEM_XOF_OUTPUT_LENGTH, MLKEM_N);
             RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
@@ -494,7 +503,7 @@ static int32_t SampleEta1(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, int16_t 
 
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         q[MLKEM_SEED_LEN] = *nonce;
-        int32_t ret = PRF(q, MLKEM_SEED_LEN + 1, prfOut, MLKEM_PRF_BLOCKSIZE * MLKEM_ETA1_MAX);
+        int32_t ret = PRF(ctx->libCtx, q, MLKEM_SEED_LEN + 1, prfOut, MLKEM_PRF_BLOCKSIZE * MLKEM_ETA1_MAX);
         RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
         MLKEM_SamplePolyCBD(polyS[i], prfOut, ctx->info->eta1);
         *nonce = *nonce + 1;
@@ -511,7 +520,7 @@ static int32_t SampleEta2(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, int16_t 
 
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         q[MLKEM_SEED_LEN] = *nonce;
-        int32_t ret = PRF(q, MLKEM_SEED_LEN + 1, prfOut, MLKEM_PRF_BLOCKSIZE * MLKEM_ETA2_MAX);
+        int32_t ret = PRF(ctx->libCtx, q, MLKEM_SEED_LEN + 1, prfOut, MLKEM_PRF_BLOCKSIZE * MLKEM_ETA2_MAX);
         RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
         MLKEM_SamplePolyCBD(polyS[i], prfOut, ctx->info->eta2);
         *nonce = *nonce + 1;
@@ -530,7 +539,7 @@ static int32_t PkeKeyGen(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *pk, uint8_t *dk, 
     // (p,q) = G(d || k)
     (void)memcpy_s(seed, MLKEM_SEED_LEN + 1, d, MLKEM_SEED_LEN);
     seed[MLKEM_SEED_LEN] = k;
-    int32_t ret = HashFuncG(seed, MLKEM_SEED_LEN + 1, digest, CRYPT_SHA3_512_DIGESTSIZE);  // Step 1
+    int32_t ret = HashFuncG(ctx->libCtx, seed, MLKEM_SEED_LEN + 1, digest, CRYPT_SHA3_512_DIGESTSIZE);  // Step 1
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
     // expand 32+1 bytes to two pseudorandom 32-byte seeds
@@ -586,7 +595,7 @@ static int32_t PkeEncrypt(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, const uint8_
     // Step 17
     (void)memcpy_s(seedE, MLKEM_SEED_LEN, r, MLKEM_SEED_LEN);
     seedE[MLKEM_SEED_LEN] = nonce;
-    GOTO_ERR_IF(PRF(seedE, MLKEM_SEED_LEN + 1, bufEncE, MLKEM_PRF_BLOCKSIZE * ctx->info->eta2), ret);
+    GOTO_ERR_IF(PRF(ctx->libCtx, seedE, MLKEM_SEED_LEN + 1, bufEncE, MLKEM_PRF_BLOCKSIZE * ctx->info->eta2), ret);
     MLKEM_SamplePolyCBD(polyVectorE2, bufEncE, ctx->info->eta2);
 
     // Step 18
@@ -604,7 +613,7 @@ static int32_t PkeEncrypt(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, const uint8_
 
     // Step 21
     for (i = 0; i < k; i++) {
-        ByteDecode(st.vectorE[i], ek + MLKEM_CIPHER_LEN * i, MLKEM_BITS_OF_Q);
+        GOTO_ERR_IF(DecodeBits12(st.vectorE[i], ek + MLKEM_CIPHER_LEN * i), ret);
     }
     MLKEM_MatrixMulAdd(k, st.vectorE, st.vectorS, NULL, polyVectorC2, PRE_COMPUT_TABLE_NTT);
 
@@ -687,7 +696,7 @@ int32_t MLKEM_KeyGenInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *d, uint8_t *z)
         return CRYPT_SECUREC_FAIL;
     }
 
-    ret = HashFuncH(ctx->ek, ctx->ekLen, ctx->dk + dkPkeLen + ctx->ekLen, CRYPT_SHA3_256_DIGESTSIZE);
+    ret = HashFuncH(ctx->libCtx, ctx->ek, ctx->ekLen, ctx->dk + dkPkeLen + ctx->ekLen, CRYPT_SHA3_256_DIGESTSIZE);
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
     if (memcpy_s(ctx->dk + dkPkeLen + ctx->ekLen + CRYPT_SHA3_256_DIGESTSIZE,
@@ -707,10 +716,10 @@ int32_t MLKEM_EncapsInternal(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t 
 
     //  (K,r) = G(m || H(ek))
     (void)memcpy_s(mhek, MLKEM_SEED_LEN, m, MLKEM_SEED_LEN);
-    int32_t ret = HashFuncH(ctx->ek, ctx->ekLen, mhek + MLKEM_SEED_LEN, CRYPT_SHA3_256_DIGESTSIZE);
+    int32_t ret = HashFuncH(ctx->libCtx, ctx->ek, ctx->ekLen, mhek + MLKEM_SEED_LEN, CRYPT_SHA3_256_DIGESTSIZE);
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
-    ret = HashFuncG(mhek, MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE, kr, CRYPT_SHA3_512_DIGESTSIZE);
+    ret = HashFuncG(ctx->libCtx, mhek, MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE, kr, CRYPT_SHA3_512_DIGESTSIZE);
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
     (void)memcpy_s(sk, *skLen, kr, MLKEM_SHARED_KEY_LEN);
@@ -737,11 +746,19 @@ int32_t MLKEM_DecapsInternal(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t 
     uint8_t mh[MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE];    // m′ and h
     uint8_t kr[CRYPT_SHA3_512_DIGESTSIZE];    // K' and r'
 
-    int32_t ret = PkeDecrypt(algInfo, mh, dk, ct);  // Step 5: 𝑚′ ← K-PKE.Decrypt(dkPKE, 𝑐)
+    // NIST.FIPS.203: test = H(dk[384k : 768k + 32]) and check test == h
+    int32_t ret = HashFuncH(ctx->libCtx, ek, 384 * ctx->info->k + 32, mh, CRYPT_SHA3_256_DIGESTSIZE);
+    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+    if (memcmp(h, mh, CRYPT_SHA3_256_DIGESTSIZE) != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_INVALID_PRVKEY);
+        return CRYPT_MLKEM_INVALID_PRVKEY;
+    }
+
+    ret = PkeDecrypt(algInfo, mh, dk, ct);  // Step 5: 𝑚′ ← K-PKE.Decrypt(dkPKE, 𝑐)
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
     // Step 6: (K′,r′) ← G(m′ || h)
     (void)memcpy_s(mh + MLKEM_SEED_LEN, CRYPT_SHA3_256_DIGESTSIZE, h, CRYPT_SHA3_256_DIGESTSIZE);
-    ret = HashFuncG(mh, MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE, kr, CRYPT_SHA3_512_DIGESTSIZE);
+    ret = HashFuncG(ctx->libCtx, mh, MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE, kr, CRYPT_SHA3_512_DIGESTSIZE);
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
     // Step 8: 𝑐′ ← K-PKE.Encrypt(ekPKE,𝑚′,𝑟′)
     uint8_t *r = kr + MLKEM_SHARED_KEY_LEN;
@@ -756,7 +773,7 @@ int32_t MLKEM_DecapsInternal(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t 
         // Step 7: K = J(z || c)
         (void)memcpy_s(newCt, ctLen + MLKEM_SEED_LEN, z, MLKEM_SEED_LEN);
         (void)memcpy_s(newCt + MLKEM_SEED_LEN, ctLen, ct, ctLen);
-        GOTO_ERR_IF(HashFuncJ(newCt, ctLen + MLKEM_SEED_LEN, sk, MLKEM_SHARED_KEY_LEN), ret);
+        GOTO_ERR_IF(HashFuncJ(ctx->libCtx, newCt, ctLen + MLKEM_SEED_LEN, sk, MLKEM_SHARED_KEY_LEN), ret);
     }
     *skLen = MLKEM_SHARED_KEY_LEN;
 ERR:

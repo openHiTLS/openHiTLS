@@ -26,7 +26,7 @@ extern "C" {
 /**
  * Hook function for packing extensions of client and server.
  */
-typedef int32_t (*PACK_EXT_FUNC)(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len);
+typedef int32_t (*PACK_EXT_FUNC)(const TLS_Ctx *ctx, PackPacket *pkt);
 
 /**
  * PackExtInfo structure, used to transfer extension information of ClientHello messages
@@ -48,54 +48,50 @@ typedef struct {
  * @brief   Pack Client Hello extension
  *
  * @param   ctx [IN] TLS context
- * @param   buf [OUT] Returned handshake message buffer
- * @param   bufLen [IN]  Maximum buffer length of the handshake message
- * @param   len [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  HITLS_PACK_NOT_ENOUGH_BUF_LENGTH The message buffer length is insufficient
  */
-int32_t PackClientExtension(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len);
+int32_t PackClientExtension(const TLS_Ctx *ctx, PackPacket *pkt);
 
 /**
  * @brief   Pack Server Hello extension
  *
  * @param   ctx [IN] TLS context
- * @param   buf [OUT] Returned handshake message buffer
- * @param   bufLen [IN] Maximum buffer length of the handshake message
- * @param   len [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  HITLS_PACK_NOT_ENOUGH_BUF_LENGTH The message buffer length is insufficient
  */
-int32_t PackServerExtension(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *len);
+int32_t PackServerExtension(const TLS_Ctx *ctx, PackPacket *pkt);
 
 /**
  * @brief   Pack an empty extension
  *
- * @param   ctx [IN] TLS context
- * @param   buf [OUT] Returned handshake message buffer
- * @param   bufLen [IN] Maximum buffer length of the handshake message
- * @param   len [OUT] Returned message length
+ * @param   exMsgType [IN] Extension type
+ * @param   needPack [IN] Whether packing is needed
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  HITLS_PACK_NOT_ENOUGH_BUF_LENGTH The message buffer length is insufficient
  */
-int32_t PackEmptyExtension(uint16_t exMsgType, bool needPack, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackEmptyExtension(uint16_t exMsgType, bool needPack, PackPacket *pkt);
 /**
  * @brief   Pack the header of an extension
  *
  * @param   exMsgType [IN] Extension type
  * @param   exMsgLen [IN] Extension length
- * @param   buf [OUT] Returned handshake message buffer
- * @param   bufLen [IN] Maximum buffer length of the handshake message
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackExtensionHeader(uint16_t exMsgType, uint16_t exMsgLen, uint8_t *buf, uint32_t bufLen);
+int32_t PackExtensionHeader(uint16_t exMsgType, uint16_t exMsgLen, PackPacket *pkt);
 
-int32_t PackServerSelectAlpnProto(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackServerSelectAlpnProto(const TLS_Ctx *ctx, PackPacket *pkt);
+
+int32_t PackClientCAList(const TLS_Ctx *ctx, PackPacket *pkt);
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */

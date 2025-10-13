@@ -722,7 +722,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CERTCHAIN_FUNC_TC002(void)
     ASSERT_TRUE(frameMsg.recType.data == REC_TYPE_ALERT);
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_BAD_CERTIFICATE);
+    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_UNKNOWN_CA);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -786,7 +786,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CERTCHAIN_FUNC_TC003(void)
     ASSERT_TRUE(frameMsg.recType.data == REC_TYPE_ALERT);
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_BAD_CERTIFICATE);
+    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_UNKNOWN_CA);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -850,7 +850,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CERTCHAIN_FUNC_TC004(void)
     ASSERT_TRUE(frameMsg.recType.data == REC_TYPE_ALERT);
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data == ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_BAD_CERTIFICATE);
+    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_UNKNOWN_CA);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1803,7 +1803,7 @@ static void Test_AlertPackAndParse004(HITLS_Ctx *ctx, uint8_t *data, uint32_t *l
     ASSERT_EQ(frameMsg.recType.data, REC_TYPE_ALERT);
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_EQ(alertMsg->alertLevel.data, ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_BAD_CERTIFICATE);
+    ASSERT_EQ(alertMsg->alertDescription.data, ALERT_UNKNOWN_CA);
 
     memset_s(data, bufSize, 0, bufSize);
     ASSERT_EQ(parseLen, *len);
@@ -2132,5 +2132,161 @@ EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+static void Test_NewSessionTicketNonceLen0(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)bufSize;
+    (void)user;
+    FRAME_Type frameType = { 0 };
+    frameType.versionType = HITLS_VERSION_TLS13;
+    FRAME_Msg frameMsg = { 0 };
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLS13;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, NEW_SESSION_TICKET);
+    FRAME_NewSessionTicketMsg *newsessionTMsg = &frameMsg.body.hsMsg.body.newSessionTicket;
+    newsessionTMsg->ticketNonceSize.data = 0;
+    newsessionTMsg->ticketNonceSize.state = ASSIGNED_FIELD;
+    newsessionTMsg->ticketNonce.state = ASSIGNED_FIELD;
+    newsessionTMsg->ticketNonce.size = 0;
+    BSL_SAL_Free(newsessionTMsg->ticketNonce.data);
+    newsessionTMsg->ticketNonce.data = NULL;
+    ASSERT_EQ(parseLen, *len);
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_TICKET_NONCE_ZEROLENGTH_MSG_TC001
+* @spec -
+* @title The ticketNonce length in the NewSessionTicket message received by the client is zero.
+* @precon nan
+* @brief    1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+*           2. The client initiates a TLS over TCP connection request and receives the request from the client.
+            After receiving the Hello message, construct a New SessionTicket message with a ticketNonce length of zero
+            and send it to the client. Expected result 2 is obtained.
+* @expect   1. The initialization is successful.
+*           2. The link is set up successfully.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_TICKET_NONCE_ZEROLENGTH_MSG_TC001(void)
+{
+    FRAME_Init();
+    HsTestInfo testInfo = {0};
+    testInfo.version = HITLS_VERSION_TLS13;
+    testInfo.uioType = BSL_UIO_TCP;
+
+    ASSERT_EQ(NewConfig(&testInfo), HITLS_SUCCESS);
+    testInfo.config->isSupportNoClientCert = false;
+    testInfo.config->isSupportClientVerify = true;
+    RecWrapper wrapper = {
+        TRY_SEND_NEW_SESSION_TICKET,
+        REC_TYPE_HANDSHAKE,
+        false,
+        NULL,
+        Test_NewSessionTicketNonceLen0
+    };
+    RegisterWrapper(wrapper);
+    ASSERT_EQ(DoHandshake(&testInfo), HITLS_SUCCESS);
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(testInfo.config);
+    FRAME_FreeLink(testInfo.client);
+    FRAME_FreeLink(testInfo.server);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_SELECT_PREFER_CIPHER_SUITE_TC001(void)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, g_uiPort, false);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    HLT_Ctx_Config *serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverConfig != NULL);
+
+    HLT_SetCertPath(serverConfig, "NULL", "NULL", "NULL", "NULL", "NULL", "NULL");
+    HLT_SetPsk(serverConfig, "1A1A1A1A1A");
+    HLT_SetCipherSuites(serverConfig, "HITLS_AES_256_GCM_SHA384:HITLS_AES_128_GCM_SHA256");
+    
+    HLT_Ctx_Config *clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientConfig != NULL);
+
+    HLT_SetCertPath(clientConfig, "NULL", "NULL", "NULL", "NULL", "NULL", "NULL");
+    HLT_SetPsk(clientConfig, "1A1A1A1A1A");
+    HLT_SetCipherSuites(clientConfig, "HITLS_AES_256_GCM_SHA384:HITLS_AES_128_GCM_SHA256");
+    
+    serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_3, serverConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_3, clientConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+    ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), 0);
+
+    HITLS_Ctx *clientTlsCtx = (HITLS_Ctx *)clientRes->ssl;
+    const char *name = clientTlsCtx->negotiatedInfo.cipherSuiteInfo.name;
+    char *expectName = "HITLS_AES_128_GCM_SHA256";
+    ASSERT_TRUE(memcmp(expectName, name, strlen(expectName)) == 0);
+EXIT:
+    HLT_FreeAllProcess();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_SELECT_PREFER_CIPHER_SUITE_TC002(void)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, g_uiPort, false);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    HLT_Ctx_Config *serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverConfig != NULL);
+
+    HLT_SetCertPath(serverConfig, ECDSA_SHA_CA_PATH, ECDSA_SHA_CHAIN_PATH, ECDSA_SHA256_EE_PATH,
+        ECDSA_SHA256_PRIV_PATH, "NULL", "NULL");
+    HLT_SetPsk(serverConfig, "123456789");
+    HLT_SetCipherSuites(serverConfig, "HITLS_AES_256_GCM_SHA384:HITLS_AES_128_GCM_SHA256");
+    
+    HLT_Ctx_Config *clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientConfig != NULL);
+
+    HLT_SetCertPath(clientConfig, ECDSA_SHA_CA_PATH, ECDSA_SHA_CHAIN_PATH, ECDSA_SHA256_EE_PATH,
+        ECDSA_SHA256_PRIV_PATH, "NULL", "NULL");
+    HLT_SetPsk(clientConfig, "123456789");
+    HLT_SetCipherSuites(clientConfig, "HITLS_AES_256_GCM_SHA384:HITLS_AES_128_GCM_SHA256");
+    
+    serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_3, serverConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(localProcess, TLS1_3, clientConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+    ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), 0);
+
+    HITLS_Ctx *clientTlsCtx = (HITLS_Ctx *)clientRes->ssl;
+    const char *name = clientTlsCtx->negotiatedInfo.cipherSuiteInfo.name;
+    char *expectName = "HITLS_AES_256_GCM_SHA384";
+    ASSERT_TRUE(memcmp(expectName, name, strlen(expectName)) == 0);
+EXIT:
+    HLT_FreeAllProcess();
 }
 /* END_CASE */

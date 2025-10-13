@@ -34,7 +34,7 @@ typedef struct {
     BSL_SAL_SockAddr peer;
     int32_t fd; // Network socket
     uint32_t connected;
-    uint32_t sysErrno;
+    int32_t sysErrno;
 } UdpParameters;
 
 static int32_t UdpNew(BSL_UIO *uio)
@@ -181,7 +181,7 @@ static int32_t UdpQueryMtu(UdpParameters *parameters, int32_t size, uint32_t *mt
                 (void *)&socketVal, &socketOptLen) != BSL_SUCCESS || socketVal < IPV4_WITH_UDP_HEADER_LEN) {
                 *mtu = 0;
             } else {
-                *mtu = socketVal - IPV4_WITH_UDP_HEADER_LEN;
+                *mtu = (uint32_t)socketVal - IPV4_WITH_UDP_HEADER_LEN;
             }
             break;
         case SAL_IPV6:
@@ -189,7 +189,7 @@ static int32_t UdpQueryMtu(UdpParameters *parameters, int32_t size, uint32_t *mt
                 (void *)&socketVal, &socketOptLen) != BSL_SUCCESS || socketVal < IPV6_WITH_UDP_HEADER_LEN) {
                 *mtu = 0;
             } else {
-                *mtu = socketVal - IPV6_WITH_UDP_HEADER_LEN;
+                *mtu = (uint32_t)socketVal - IPV6_WITH_UDP_HEADER_LEN;
             }
             break;
         default:

@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SHA512
 
-.file   "sha2_512_x86_64.S"
 
 .set TEMP1, %rbp
 .set TEMP2, %rax

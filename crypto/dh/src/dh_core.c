@@ -21,6 +21,7 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_bn.h"
+#include "crypt_util_ctrl.h"
 #include "crypt_utils.h"
 #include "crypt_dh.h"
 #include "dh_local.h"
@@ -288,6 +289,7 @@ CRYPT_DH_Ctx *CRYPT_DH_DupCtx(CRYPT_DH_Ctx *ctx)
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->x, ctx->x, BN_Dup(ctx->x), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->y, ctx->y, BN_Dup(ctx->y), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->para, ctx->para, ParaDup(ctx->para), CRYPT_MEM_ALLOC_FAIL);
+    newKeyCtx->libCtx = ctx->libCtx;
     BSL_SAL_ReferencesInit(&(newKeyCtx->references));
     return newKeyCtx;
 
@@ -848,7 +850,7 @@ int32_t CRYPT_DH_SetPubKeyEx(CRYPT_DH_Ctx *ctx, const BSL_Param *para)
         return CRYPT_NULL_INPUT;
     }
     CRYPT_DhPub pub = {0};
-    if(GetConstParamValue(para, CRYPT_PARAM_DH_PUBKEY, &pub.data, &pub.len) == NULL) {
+    if (GetConstParamValue(para, CRYPT_PARAM_DH_PUBKEY, &pub.data, &pub.len) == NULL) {
         (void)GetConstParamValue(para, CRYPT_PARAM_PKEY_ENCODE_PUBKEY, (uint8_t **)&pub.data, &pub.len);
     }
     return CRYPT_DH_SetPubKey(ctx, &pub);
@@ -903,11 +905,6 @@ uint32_t CRYPT_DH_GetBits(const CRYPT_DH_Ctx *ctx)
     return BN_Bits(ctx->para->p);
 }
 
-static uint32_t CRYPT_DH_GetPrvKeyLen(const CRYPT_DH_Ctx *ctx)
-{
-    return BN_Bytes(ctx->x);
-}
-
 static uint32_t CRYPT_DH_GetPubKeyLen(const CRYPT_DH_Ctx *ctx)
 {
     if (ctx->para != NULL) {
@@ -920,53 +917,60 @@ static uint32_t CRYPT_DH_GetPubKeyLen(const CRYPT_DH_Ctx *ctx)
     return 0;
 }
 
-static uint32_t CRYPT_DH_GetSharedKeyLen(const CRYPT_DH_Ctx *ctx)
-{
-    if (ctx->para != NULL) {
-        return BN_Bytes(ctx->para->p);
-    }
-    BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-    return 0;
-}
+#ifdef HITLS_CRYPTO_DH_CHECK
 
-int32_t CRYPT_DH_Check(const CRYPT_DH_Ctx *prv, const CRYPT_DH_Ctx *pub)
+static int32_t DhKeyPairCheck(const CRYPT_DH_Ctx *pub, const CRYPT_DH_Ctx *prv)
 {
-    int32_t ret;
     if (prv == NULL || pub == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
-    }
-    if (prv->x == NULL || pub->y == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DH_KEYINFO_ERROR);
-        return CRYPT_DH_KEYINFO_ERROR;
     }
     if (prv->para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_DH_PARA_ERROR);
         return CRYPT_DH_PARA_ERROR;
     }
-    BN_Mont *mont = BN_MontCreate(prv->para->p);
-    BN_BigNum *y = BN_Create(BN_Bits(prv->para->p));
-    if (y == NULL || mont == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-    ret = BN_MontExpConsttime(y, prv->para->g, prv->x, mont, NULL);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-    if (BN_Cmp(y, pub->y) != 0) {
+    int32_t ret = CRYPT_FFC_KeyPairCheck(prv->x, pub->y, prv->para->p, prv->para->g);
+    if (ret == CRYPT_PAIRWISE_CHECK_FAIL) {
         ret = CRYPT_DH_PAIRWISE_CHECK_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
     }
-
-ERR:
-    BN_Destroy(y);
-    BN_MontDestroy(mont);
     return ret;
 }
 
+/*
+ * SP800-56a 5.6.2.1.2
+ * for check an FFC key pair.
+*/
+static int32_t DhPrvKeyCheck(const CRYPT_DH_Ctx *pkey)
+{
+    if (pkey == NULL || pkey->para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    int32_t ret = CRYPT_FFC_PrvCheck(pkey->x, pkey->para->p, pkey->para->q);
+    if (ret == CRYPT_INVALID_KEY) {
+        ret = CRYPT_DH_INVALID_PRVKEY;
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+
+int32_t CRYPT_DH_Check(uint32_t checkType, const CRYPT_DH_Ctx *pkey1, const CRYPT_DH_Ctx *pkey2)
+{
+    switch (checkType) {
+        case CRYPT_PKEY_CHECK_KEYPAIR:
+            return DhKeyPairCheck(pkey1, pkey2);
+        case CRYPT_PKEY_CHECK_PRVKEY:
+            return DhPrvKeyCheck(pkey1);
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+    }
+}
+
+#endif // HITLS_CRYPTO_DH_CHECK
+
+#ifdef HITLS_CRYPTO_DH_CMP
 int32_t CRYPT_DH_Cmp(const CRYPT_DH_Ctx *a, const CRYPT_DH_Ctx *b)
 {
     RETURN_RET_IF(a == NULL || b == NULL, CRYPT_NULL_INPUT);
@@ -984,6 +988,7 @@ int32_t CRYPT_DH_Cmp(const CRYPT_DH_Ctx *a, const CRYPT_DH_Ctx *b)
     }
     return CRYPT_SUCCESS;
 }
+#endif
 
 int32_t CRYPT_DH_SetParamById(CRYPT_DH_Ctx *ctx, CRYPT_PKEY_ParaId id)
 {
@@ -997,17 +1002,6 @@ int32_t CRYPT_DH_SetParamById(CRYPT_DH_Ctx *ctx, CRYPT_PKEY_ParaId id)
         CRYPT_DH_FreePara(para);
     }
     return ret;
-}
-
-static int32_t CRYPT_DH_GetLen(const CRYPT_DH_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
-{
-    if (val == NULL || len != sizeof(int32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    *(int32_t *)val = func(ctx);
-    return CRYPT_SUCCESS;
 }
 
 static int32_t CRYPT_DH_SetFlag(CRYPT_DH_Ctx *ctx, const void *val, uint32_t len)
@@ -1037,32 +1031,27 @@ int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, int32_t opt, void *val, uint32_t len)
     }
     switch (opt) {
         case CRYPT_CTRL_GET_PARAID:
-            return CRYPT_DH_GetLen(ctx, (GetLenFunc)CRYPT_DH_GetParaId, val, len);
+            return CRYPT_CTRL_GET_NUM32_EX(CRYPT_DH_GetParaId, ctx, val, len);
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_DH_GetLen(ctx, (GetLenFunc)CRYPT_DH_GetBits, val, len);
+            return CRYPT_CTRL_GetNum32(ctx->para == NULL ? 0 : BN_Bits(ctx->para->p), val, len);
         case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_DH_GetLen(ctx, (GetLenFunc)CRYPT_DH_GetSecBits, val, len);
+            return CRYPT_CTRL_GET_NUM32_EX(CRYPT_DH_GetSecBits, ctx, val, len);
         case CRYPT_CTRL_GET_PUBKEY_LEN:
-            return GetUintCtrl(ctx, val, len, (GetUintCallBack)CRYPT_DH_GetPubKeyLen);
+            return CRYPT_CTRL_GET_NUM32_EX(CRYPT_DH_GetPubKeyLen, ctx, val, len);
         case CRYPT_CTRL_GET_PRVKEY_LEN:
-            return GetUintCtrl(ctx, val, len, (GetUintCallBack)CRYPT_DH_GetPrvKeyLen);
+            return CRYPT_CTRL_GetNum32(BN_Bytes(ctx->x), val, len);
         case CRYPT_CTRL_GET_SHARED_KEY_LEN:
-            return GetUintCtrl(ctx, val, len, (GetUintCallBack)CRYPT_DH_GetSharedKeyLen);
+            return CRYPT_CTRL_GetNum32(ctx->para == NULL ? 0 : BN_Bytes(ctx->para->p), val, len);
         case CRYPT_CTRL_SET_PARA_BY_ID:
             return CRYPT_DH_SetParamById(ctx, *(CRYPT_PKEY_ParaId *)val);
         case CRYPT_CTRL_SET_DH_FLAG:
             return CRYPT_DH_SetFlag(ctx, val, len);
         case CRYPT_CTRL_UP_REFERENCES:
-            if (val == NULL || len != (uint32_t)sizeof(int)) {
-                BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-                return CRYPT_INVALID_ARG;
-            }
-            return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
+            return BSL_SAL_AtomicRefUpCtrl(&(ctx->references), val, len);
         default:
-            break;
+            BSL_ERR_PUSH_ERROR(CRYPT_DH_UNSUPPORTED_CTRL_OPTION);
+            return CRYPT_DH_UNSUPPORTED_CTRL_OPTION;
     }
-    BSL_ERR_PUSH_ERROR(CRYPT_DH_UNSUPPORTED_CTRL_OPTION);
-    return CRYPT_DH_UNSUPPORTED_CTRL_OPTION;
 }
 
 /**

@@ -76,7 +76,7 @@ static int32_t WriteSingleRetransmitNode(TLS_Ctx *ctx, REC_Type recordType, cons
         return ret;
     }
 
-    ret = REC_RecBufReSet(ctx);
+    ret = REC_RecOutBufReSet(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

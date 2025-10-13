@@ -50,6 +50,8 @@ BslCid BSL_OBJ_GetAsymAlgIdFromSignId(BslCid signAlg);
 
 const char *BSL_OBJ_GetOidNameFromOid(const BslOidString *oid);
 
+const char *BSL_OBJ_GetOidNameFromOidBuff(const uint8_t *oid, uint32_t oidLen);
+
 BslCid BSL_OBJ_GetSignIdFromHashAndAsymId(BslCid asymAlg, BslCid hashAlg);
 
 const BslAsn1DnInfo *BSL_OBJ_GetDnInfoFromCid(BslCid cid);
@@ -58,9 +60,13 @@ const char *BSL_OBJ_GetOidNameFromCID(BslCid ulCID);
 
 const BslAsn1DnInfo *BSL_OBJ_GetDnInfoFromShortName(const char *shortName);
 
+#ifdef HITLS_BSL_OBJ_CUSTOM
 void BSL_OBJ_FreeSignHashTable(void);
 
 void BSL_OBJ_FreeHashTable(void);
+#endif // HITLS_BSL_OBJ_CUSTOM
+
+BslCid BSL_OBJ_GetCidFromOidBuff(const uint8_t *oid, uint32_t oidLen);
 
 #ifdef __cplusplus
 }

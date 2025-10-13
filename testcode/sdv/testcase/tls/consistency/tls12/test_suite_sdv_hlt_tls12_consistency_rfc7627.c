@@ -481,7 +481,7 @@ EXIT:
 * @test     SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009
 * @title    Resume sessions that both support no EMS on the client and server
 * @precon nan
-* @brief    1. The client and server that does not support the extension connection establishment. 
+* @brief    1. The client and server that does not support the extension connection establishment.
 *              Disconnect the connection and save the session.
 *            2. Apply for another server that does not support the extension and establish a connection. Expected result
 *                2 is obtained.
@@ -493,31 +493,31 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009(int ver
 {
     Process *localProcess = NULL;
     Process *remoteProcess = NULL;
-    HLT_Ctx_Config *clientCtxConfig = NULL; 
+    HLT_Ctx_Config *clientCtxConfig = NULL;
     HLT_Ctx_Config *serverCtxConfig = NULL;
     HLT_FD sockFd = {0};
     int32_t serverConfigId = 0;
- 
+
     HITLS_Session *session = NULL;
     const char *writeBuf = "Hello world";
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen;
     int32_t cnt = 1;
- 
+
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
     remoteProcess = HLT_CreateRemoteProcess(HITLS);
     ASSERT_TRUE(remoteProcess != NULL);
- 
+
     void *clientConfig = HLT_TlsNewCtx(version);
     ASSERT_TRUE(clientConfig != NULL);
- 
+
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     HLT_SetExtenedMasterSecretSupport(clientCtxConfig, false);
- 
+
     serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     HLT_SetExtenedMasterSecretSupport(serverCtxConfig, false);
- 
+
 #ifdef HITLS_TLS_FEATURE_PROVIDER
     serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, NULL, NULL, NULL, 0, NULL);
 #else
@@ -544,7 +544,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009(int ver
         remoteProcess->connType = connType;
         localProcess->connType = connType;
         int32_t serverSslId = HLT_RpcTlsNewSsl(remoteProcess, serverConfigId);
- 
+
         HLT_Ssl_Config *serverSslConfig;
         serverSslConfig = HLT_NewSslConfig(NULL);
         ASSERT_TRUE(serverSslConfig != NULL);
@@ -554,20 +554,20 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009(int ver
         HLT_RpcTlsAccept(remoteProcess, serverSslId);
         void *clientSsl = HLT_TlsNewSsl(clientConfig);
         ASSERT_TRUE(clientSsl != NULL);
- 
+
         HLT_Ssl_Config *clientSslConfig;
         clientSslConfig = HLT_NewSslConfig(NULL);
         ASSERT_TRUE(clientSslConfig != NULL);
         clientSslConfig->sockFd = localProcess->connFd;
         clientSslConfig->connType = connType;
- 
+
         HLT_TlsSetSsl(clientSsl, clientSslConfig);
         if (session != NULL) {
             ASSERT_TRUE(HITLS_SetSession(clientSsl, session) == HITLS_SUCCESS);
             ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
-            uint8_t isReused = 0;
+            bool isReused = false;
             ASSERT_TRUE(HITLS_IsSessionReused(clientSsl, &isReused) == HITLS_SUCCESS);
-            ASSERT_TRUE(isReused != 0);
+            ASSERT_TRUE(isReused == true);
         } else {
             ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
             ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
@@ -581,12 +581,12 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009(int ver
             HLT_RpcTlsRead(remoteProcess, serverSslId, readBuf, READ_BUF_SIZE, &readLen);
             HLT_RpcCloseFd(remoteProcess, sockFd.peerFd, remoteProcess->connType);
             HLT_CloseFd(sockFd.srcFd, localProcess->connType);
- 
+
             session = HITLS_GetDupSession(clientSsl);
             ASSERT_TRUE(session != NULL);
             ASSERT_TRUE(HITLS_SESS_IsResumable(session) == true);
         }
- 
+
         cnt++;
     } while (cnt < 3);
 EXIT:

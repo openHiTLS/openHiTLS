@@ -40,6 +40,11 @@ MODES_GCM_Ctx *CRYPT_GMAC_NewCtx(CRYPT_MAC_AlgId id)
     return MODES_GCM_NewCtx(GmacIdToSymId(id));
 }
 
+MODES_GCM_Ctx *CRYPT_GMAC_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id)
+{
+    return MODES_GCM_NewCtxEx(libCtx, GmacIdToSymId(id));
+}
+
 int32_t CRYPT_GMAC_Init(MODES_GCM_Ctx *ctx, const uint8_t *key, uint32_t len, void *param)
 {
     (void)param;
@@ -65,9 +70,9 @@ void CRYPT_GMAC_FreeCtx(MODES_GCM_Ctx *ctx)
     MODES_GCM_FreeCtx(ctx);
 }
 
-void CRYPT_GMAC_Deinit(MODES_GCM_Ctx *ctx)
+int32_t CRYPT_GMAC_Deinit(MODES_GCM_Ctx *ctx)
 {
-    (void)MODES_GCM_DeInitCtx(ctx);
+    return MODES_GCM_DeInitCtx(ctx);
 }
 
 int32_t CRYPT_GMAC_Ctrl(MODES_GCM_Ctx *ctx, int32_t opt, void *val, uint32_t len)

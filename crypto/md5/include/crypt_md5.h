@@ -32,14 +32,29 @@ extern "C" {
 #define CRYPT_MD5_BLOCKSIZE  64
 
 typedef struct CryptMdCtx CRYPT_MD5_Ctx;
+
+#define CRYPT_MD5_Squeeze NULL
+
 /**
  * @ingroup MD5
  * @brief Generate md context.
  *
- * @retval Success: cipher ctx.
+ * @retval Success: md ctx.
  *         Fails: NULL.
  */
 CRYPT_MD5_Ctx *CRYPT_MD5_NewCtx(void);
+
+/**
+ * @ingroup MD5
+ * @brief Generate md context.
+ *
+ * @param libCtx [IN] library context
+ * @param algId [IN] algorithm id
+ *
+ * @retval Success: md ctx.
+ *         Fails: NULL.
+ */
+CRYPT_MD5_Ctx *CRYPT_MD5_NewCtxEx(void *libCtx, int32_t algId);
 
 /**
  * @ingroup MD5
@@ -64,8 +79,11 @@ int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx, BSL_Param *param);
  * @ingroup MD5
  * @brief MD5 deinitialization API
  * @param ctx [in,out]   Pointer to the MD5 context.
+ *
+ * @retval #CRYPT_SUCCESS    Deinitialization succeeded.
+ * @retval #CRYPT_NULL_INPUT Pointer ctx is NULL
  */
-void CRYPT_MD5_Deinit(CRYPT_MD5_Ctx *ctx);
+int32_t CRYPT_MD5_Deinit(CRYPT_MD5_Ctx *ctx);
 
 /**
  * @ingroup MD5
@@ -100,6 +118,9 @@ int32_t CRYPT_MD5_Final(CRYPT_MD5_Ctx *ctx, uint8_t *out, uint32_t *outLen);
  * @brief MD5 copy CTX function
  * @param dst [out]  Pointer to the new MD5 context.
  * @param src [in]   Pointer to the original MD5 context.
+ *
+ * @retval #CRYPT_SUCCESS    Copy succeeded.
+ * @retval #CRYPT_NULL_INPUT Pointer src is NULL
  */
 int32_t CRYPT_MD5_CopyCtx(CRYPT_MD5_Ctx *dst, const CRYPT_MD5_Ctx *src);
 
@@ -107,8 +128,27 @@ int32_t CRYPT_MD5_CopyCtx(CRYPT_MD5_Ctx *dst, const CRYPT_MD5_Ctx *src);
  * @ingroup MD5
  * @brief MD5 dup CTX function
  * @param src [in]   Pointer to the original MD5 context.
+ *
+ * @retval Success: md ctx.
+ *         Fails: NULL.
  */
 CRYPT_MD5_Ctx *CRYPT_MD5_DupCtx(const CRYPT_MD5_Ctx *src);
+
+#ifdef HITLS_CRYPTO_PROVIDER
+/**
+ * @ingroup MD5
+ * @brief MD5 get param function
+ * @param ctx [in]   Pointer to the MD5 context.
+ * @param param [in]   Pointer to the parameter.
+ *
+ * @retval #CRYPT_SUCCESS       Success.
+ * @retval #CRYPT_NULL_INPUT    Pointer param is NULL
+ * @retval #CRYPT_INVALID_ARG   Pointer param is invalid
+ */
+int32_t CRYPT_MD5_GetParam(CRYPT_MD5_Ctx *ctx, BSL_Param *param);
+#else
+#define CRYPT_MD5_GetParam NULL
+#endif
 
 #ifdef __cplusplus
 }

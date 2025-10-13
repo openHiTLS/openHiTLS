@@ -59,9 +59,9 @@ static int32_t ClientPrepareSession(TLS_Ctx *ctx)
     }
 
     if (ctx->session != NULL) {
-        uint8_t haveExtMasterSecret = 0;
+        bool haveExtMasterSecret = false;
         HITLS_SESS_GetHaveExtMasterSecret(ctx->session, &haveExtMasterSecret);
-        if (haveExtMasterSecret == 0 && ctx->config.tlsConfig.isSupportExtendMasterSecret) {
+        if (!haveExtMasterSecret && ctx->config.tlsConfig.isSupportExtendMasterSecret) {
             HITLS_SESS_Free(ctx->session);
             ctx->session = NULL;
             return HITLS_SUCCESS;
@@ -147,7 +147,7 @@ int32_t ClientSendClientHelloProcess(TLS_Ctx *ctx)
         }
 
         ctx->negotiatedInfo.clientVersion = ctx->config.tlsConfig.maxVersion;
-        ret = HS_PackMsg(ctx, CLIENT_HELLO, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, CLIENT_HELLO);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15626, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "pack client hello fail.", 0, 0, 0, 0);
@@ -260,7 +260,7 @@ static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyEx
     KeyShareParam *share = &ctx->hsCtx->kxCtx->keyExchParam.share;
     if (ctx->hsCtx->haveHrr) {
         /* If the value of group is not updated in the hello retry request, the system directly returns */
-        if (share->group == ctx->negotiatedInfo.negotiatedGroup || 
+        if (share->group == ctx->negotiatedInfo.negotiatedGroup ||
             share->secondGroup == ctx->negotiatedInfo.negotiatedGroup) {
             return HITLS_SUCCESS;
         }
@@ -283,6 +283,11 @@ static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyEx
 
 static int32_t Tls13ClientPrepareSession(TLS_Ctx *ctx)
 {
+    if (!ctx->config.tlsConfig.isMiddleBoxCompat) {
+        ctx->hsCtx->sessionIdSize = 0;
+        return HITLS_SUCCESS;
+    }
+
     int32_t ret = HITLS_SUCCESS;
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
 
@@ -480,7 +485,7 @@ int32_t Tls13ClientHelloPrepare(TLS_Ctx *ctx)
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
-    } else {
+    } else if (ctx->config.tlsConfig.isMiddleBoxCompat) {
         /* If the middlebox is used, a CCS message must be sent before the second clientHello message is sent */
         ret = ctx->method.sendCCS(ctx);
         if (ret != HITLS_SUCCESS) {
@@ -604,7 +609,7 @@ int32_t Tls13ClientSendClientHelloProcess(TLS_Ctx *ctx)
         ctx->negotiatedInfo.clientVersion = HITLS_VERSION_TLS12;
         /* The packed message is placed in the hsCtx->msgBuf. The length of the packed message is hsCtx->msgLen,
          * including the CH message header and body */
-        ret = HS_PackMsg(ctx, CLIENT_HELLO, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, CLIENT_HELLO);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15633, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "pack tls1.3 client hello fail.", 0, 0, 0, 0);

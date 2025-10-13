@@ -33,6 +33,7 @@ usage()
     printf "%-50s %-30s\n" "* gcov         : Enable the coverage capability."  "bash ${BASH_SOURCE[0]} gcov"
     printf "%-50s %-30s\n" "* asan         : Enabling the ASAN capability."    "bash ${BASH_SOURCE[0]} asan"
     printf "%-50s %-30s\n" "* big-endian   : Specify the platform endianness." "bash ${BASH_SOURCE[0]} big-endian"
+    printf "%-50s %-30s\n" "* include-path : Specify the config file path."    "bash ${BASH_SOURCE[0]} include-path=-Ixxx"
     printf "%-50s %-30s\n\n" "* run-tests  : Creating a custom test suite."    "bash ${BASH_SOURCE[0]} run-tests=xxx1|xxx2|xxx3"
     printf "%-50s %-30s\n" "* apps         : Create apps testcase."            "bash ${BASH_SOURCE[0]} apps"
 }
@@ -235,6 +236,9 @@ options()
                 ;;
             big-endian)
                 BIG_ENDIAN=ON
+                ;;
+            include-path)
+                CUSTOM_CFLAGS="${CUSTOM_CFLAGS} ${value}"
                 ;;
             apps)
                 ENABLE_APP=ON

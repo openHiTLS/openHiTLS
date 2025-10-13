@@ -36,7 +36,7 @@ int32_t ServerSendHelloRequestProcess(TLS_Ctx *ctx)
     /* determine whether to assemble a message */
     if (hsCtx->msgLen == 0) {
         /* assemble message */
-        ret = HS_PackMsg(ctx, HELLO_REQUEST, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, HELLO_REQUEST);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15906, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "server pack hello request msg fail.", 0, 0, 0, 0);

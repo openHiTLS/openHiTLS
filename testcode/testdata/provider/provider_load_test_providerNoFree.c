@@ -46,6 +46,13 @@ int32_t MD5_Init(void *mdCtx)
     return RESULT;
 }
 
+int32_t MD5_GetParam(void *mdCtx, BSL_Param *param)
+{
+    (void)mdCtx;
+    (void)param;
+    return CRYPT_SUCCESS;
+}
+
 const CRYPT_EAL_Func defMdMd5[] = {
     {CRYPT_EAL_IMPLMD_NEWCTX, Provider_NewCtx},
     {CRYPT_EAL_IMPLMD_INITCTX, MD5_Init},
@@ -53,7 +60,7 @@ const CRYPT_EAL_Func defMdMd5[] = {
     {CRYPT_EAL_IMPLMD_FINAL, NULL},
     {CRYPT_EAL_IMPLMD_DEINITCTX, NULL},
     {CRYPT_EAL_IMPLMD_DUPCTX, NULL},
-    {CRYPT_EAL_IMPLMD_CTRL, NULL},
+    {CRYPT_EAL_IMPLMD_GETPARAM, MD5_GetParam},
     {CRYPT_EAL_IMPLMD_FREECTX, NULL},
     CRYPT_EAL_FUNC_END,
 };

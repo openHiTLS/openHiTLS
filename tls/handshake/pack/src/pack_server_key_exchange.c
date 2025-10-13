@@ -138,7 +138,7 @@ static uint32_t GetNamedCurveMsgLen(TLS_Ctx *ctx, uint32_t pubKeyLen)
     return dataLen;
 }
 
-static int32_t PackServerKxMsgNamedCurve(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+static int32_t PackServerKxMsgNamedCurve(TLS_Ctx *ctx, PackPacket *pkt)
 {
     KeyExchCtx *kxCtx = ctx->hsCtx->kxCtx;
     HITLS_ECParameters *ecParam = &(kxCtx->keyExchParam.ecdh.curveParams);
@@ -156,54 +156,78 @@ static int32_t PackServerKxMsgNamedCurve(TLS_Ctx *ctx, uint8_t *buf, uint32_t bu
         return HITLS_PACK_SIGNATURE_ERR;
     }
 
-    /* If the length of bufLen does not meet the requirements, an error code is returned */
-    if (bufLen < dataLen) {
-        return PackBufLenError(BINLOG_ID15500, BINGLOG_STR("serverKeyexchange"));
+    uint32_t dataOffset = 0;
+    int32_t ret = PackGetSubBuffer(pkt, 0, &dataOffset, NULL);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
     }
 
     /* Curve type and curve ID. Although these parameters are ignored in the TLCP, they are
      * filled in to ensure the uniform style. However, the client cannot depend on the value of this parameter */
-    buf[0] = (uint8_t)(ecParam->type);
-    uint32_t offset = sizeof(uint8_t);
-    BSL_Uint16ToByte((uint16_t)(ecParam->param.namedcurve), &buf[offset]);
-    offset += sizeof(uint16_t);
+    ret = PackAppendUint8ToBuf(pkt, (uint8_t)(ecParam->type));
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    ret = PackAppendUint16ToBuf(pkt, (uint16_t)(ecParam->param.namedcurve));
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
 
     /* Public key length and public key content */
-    uint32_t pubKeyLenOffset = offset;   // indicates the offset of pubkeyLen.
-    offset += sizeof(uint8_t);
+    uint32_t pubKeyLenOffset = 0;
+    ret = PackStartLengthField(pkt, sizeof(uint8_t), &pubKeyLenOffset);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    uint8_t *pubKeyBuf = NULL;
+    ret = PackReserveBytes(pkt, pubKeyLen, &pubKeyBuf);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
     uint32_t pubKeyUsedLen = 0;
-    int32_t ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->key, &buf[offset], pubKeyLen, &pubKeyUsedLen);
+    ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->key, pubKeyBuf, pubKeyLen, &pubKeyUsedLen);
     if (ret != HITLS_SUCCESS || pubKeyLen != pubKeyUsedLen) {
         BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15501, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "encode ecdh key fail.", 0, 0, 0, 0);
         return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
     }
-    offset += pubKeyUsedLen;
-    buf[pubKeyLenOffset] = (uint8_t)pubKeyUsedLen;   // Fill pubkeyLen
+    (void)PackSkipBytes(pkt, pubKeyUsedLen);
+
+    PackCloseUint8Field(pkt, pubKeyLenOffset);
 
     if (IsNeedKeyExchParamSignature(ctx)) {
-        uint32_t signatureLen = dataLen - offset;
-        ret = SignKeyExchParams(ctx, &buf[0], offset, &buf[offset], &signatureLen);
+        uint32_t signDataLen = 0;
+        (void)PackGetSubBuffer(pkt, dataOffset, &signDataLen, NULL);
+        uint32_t signatureLen = dataLen - signDataLen;
+        uint8_t *signBuf = NULL;
+        ret = PackReserveBytes(pkt, signatureLen, &signBuf);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        uint8_t *signData = NULL;
+        (void)PackGetSubBuffer(pkt, dataOffset, &signDataLen, &signData);
+        ret = SignKeyExchParams(ctx, signData, signDataLen, signBuf, &signatureLen);
         if (ret != HITLS_SUCCESS) {
             BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15502, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "signature fail.", 0, 0, 0, 0);
             return HITLS_PACK_SIGNATURE_ERR;
         }
-        offset += signatureLen;
+        (void)PackSkipBytes(pkt, signatureLen);
     }
-
-    *usedLen = offset;
     return HITLS_SUCCESS;
 }
 
-static int32_t PackServerKxMsgEcdhe(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+static int32_t PackServerKxMsgEcdhe(TLS_Ctx *ctx, PackPacket *pkt)
 {
     HITLS_ECCurveType type = ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams.type;
     switch (type) {
         case HITLS_EC_CURVE_TYPE_NAMED_CURVE:
-            return PackServerKxMsgNamedCurve(ctx, buf, bufLen, usedLen);
+            return PackServerKxMsgNamedCurve(ctx, pkt);
         default:
             break;
     }
@@ -215,11 +239,49 @@ static int32_t PackServerKxMsgEcdhe(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen,
 }
 #endif /* HITLS_TLS_SUITE_KX_ECDHE */
 #ifdef HITLS_TLS_PROTO_TLCP11
+static int32_t PackEccSignature(TLS_Ctx *ctx, PackPacket *pkt, HITLS_SignAlgo signAlgo,
+                                HITLS_HashAlgo hashAlgo, uint8_t *data, uint32_t dataLen)
+{
+    HITLS_CERT_Key *privateKey = SAL_CERT_GetCurrentPrivateKey(ctx->config.tlsConfig.certMgrCtx, false);
+    uint32_t signatureLen = SAL_CERT_GetSignMaxLen(&(ctx->config.tlsConfig), privateKey);
+    if ((signatureLen == 0u) || (signatureLen > MAX_SIGN_SIZE)) {
+        BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15508, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "invalid signature length.", 0, 0, 0, 0);
+        return HITLS_PACK_SIGNATURE_ERR;
+    }
+
+    /* Fill signature parameters */
+    CERT_SignParam signParam = {0};
+    signParam.signAlgo = signAlgo;
+    signParam.hashAlgo = hashAlgo;
+    signParam.data = data;
+    signParam.dataLen = dataLen;
+    uint8_t *signBuf = NULL;
+    int32_t ret = PackReserveBytes(pkt, signatureLen, &signBuf);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    signParam.sign = signBuf;
+    signParam.signLen = signatureLen;
+
+    ret = SAL_CERT_CreateSign(ctx, privateKey, &signParam);
+    if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_PACK_SIGNATURE_ERR, BINLOG_ID16221, "create sm2 signature fail");
+    }
+
+    ret = PackSkipBytes(pkt, signParam.signLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    return HITLS_SUCCESS;
+}
 /* This function is invoked only by the TLCP */
-static int32_t PackServerKxMsgEcc(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+static int32_t PackServerKxMsgEcc(TLS_Ctx *ctx, PackPacket *pkt)
 {
     uint8_t *data = NULL;
-    uint32_t offset = 0u;
     uint32_t dataLen, certLen;
 
     uint8_t *encCert = SAL_CERT_SrvrGmEncodeEncCert(ctx, &certLen);
@@ -244,29 +306,21 @@ static int32_t PackServerKxMsgEcc(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
     }
     /* The hash and signature algorithms do not need to be explicitly specified in messages by TLCP. The hash algorithm
      * obtained based on signScheme is used. */
-    uint32_t signLenOffset = offset; /* The records the position of the signature length in the message temporarily, and
+    uint32_t signLenPosition = 0u; /* The records the position of the signature length in the message temporarily, and
                                         then fills the signature length in the message later */
-    offset += sizeof(uint16_t);
-
-    /* Fill signature parameters */
-    CERT_SignParam signParam = {0};
-    signParam.signAlgo = signAlgo;
-    signParam.hashAlgo = hashAlgo;
-    signParam.data = data;
-    signParam.dataLen = dataLen;
-    signParam.sign = &buf[offset];
-    signParam.signLen = (uint16_t)(bufLen - offset);
-    /* Fill the signature */
-    HITLS_CERT_Key *privateKey = SAL_CERT_GetCurrentPrivateKey(ctx->config.tlsConfig.certMgrCtx, false);
-    int32_t ret = SAL_CERT_CreateSign(ctx, privateKey, &signParam);
-    if ((ret != HITLS_SUCCESS) || (offset + signParam.signLen > bufLen)) {
+    int32_t ret = PackStartLengthField(pkt, sizeof(uint16_t), &signLenPosition);
+    if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(data);
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_PACK_SIGNATURE_ERR, BINLOG_ID16221, "create sm2 signature fail");
+        return ret;
     }
-    offset += signParam.signLen;
-    BSL_Uint16ToByte((uint16_t)signParam.signLen, &buf[signLenOffset]);
-    *usedLen = offset;
+
+    ret = PackEccSignature(ctx, pkt, signAlgo, hashAlgo, data, dataLen);
+    if (ret != HITLS_SUCCESS) {
+        BSL_SAL_FREE(data);
+        return ret;
+    }
+
+    PackCloseUint16Field(pkt, signLenPosition);
 
     BSL_SAL_FREE(data);
     return HITLS_SUCCESS;
@@ -274,47 +328,61 @@ static int32_t PackServerKxMsgEcc(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
 #endif /* HITLS_TLS_PROTO_TLCP11 */
 
 #ifdef HITLS_TLS_SUITE_KX_DHE
-static int32_t PackKxPrimaryData(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+static int32_t PackKxPrimaryData(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     KeyExchCtx *kxCtx = ctx->hsCtx->kxCtx;
     DhParam *dh = &ctx->hsCtx->kxCtx->keyExchParam.dh;
     uint32_t pubkeyLen = dh->plen;
     uint16_t plen = dh->plen;
     uint16_t glen = dh->glen;
-    uint32_t bufOffset = 0;
-    BSL_Uint16ToByte(plen, &buf[bufOffset]);
-    bufOffset += sizeof(uint16_t);
 
-    int32_t ret;
-    if (bufLen - bufOffset < plen) {
-        return PackBufLenError(BINLOG_ID15504, BINGLOG_STR("param p"));
+    int32_t ret = PackAppendUint16ToBuf(pkt, plen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
     }
-    (void)memcpy_s(&buf[bufOffset], bufLen - bufOffset, dh->p, plen);
-    bufOffset += plen;
 
-    BSL_Uint16ToByte(glen, &buf[bufOffset]);
-    bufOffset += sizeof(uint16_t);
-
-    if (bufLen - bufOffset < glen) {
-        return PackBufLenError(BINLOG_ID15505, BINGLOG_STR("param g"));
+    ret = PackAppendDataToBuf(pkt, dh->p, plen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
     }
-    (void)memcpy_s(&buf[bufOffset], bufLen - bufOffset, dh->g, glen);
-    bufOffset += glen;
 
-    uint32_t pubKeyLenOffset = bufOffset;   // indicates the offset of pubkeyLen
-    bufOffset += sizeof(uint16_t);
+    ret = PackAppendUint16ToBuf(pkt, glen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
 
-    ret = SAL_CRYPT_EncodeDhPubKey(kxCtx->key, &buf[bufOffset], pubkeyLen, &pubkeyLen);
+    ret = PackAppendDataToBuf(pkt, dh->g, glen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    uint32_t pubKeyLenPosition = 0u;
+    ret = PackStartLengthField(pkt, sizeof(uint16_t), &pubKeyLenPosition);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    uint8_t *reservedBuf = NULL;
+    ret = PackReserveBytes(pkt, pubkeyLen, &reservedBuf);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    ret = SAL_CRYPT_EncodeDhPubKey(kxCtx->key, reservedBuf, pubkeyLen, &pubkeyLen);
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_DH_KEY);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15506, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "encode dhe key fail.", 0, 0, 0, 0);
         return HITLS_CRYPT_ERR_ENCODE_DH_KEY;
     }
-    bufOffset += pubkeyLen;
-    BSL_Uint16ToByte((uint16_t)pubkeyLen, &buf[pubKeyLenOffset]);
 
-    *usedLen = bufOffset;
+    ret = PackSkipBytes(pkt, pubkeyLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    PackCloseUint16Field(pkt, pubKeyLenPosition);
+
     return HITLS_SUCCESS;
 }
 
@@ -333,8 +401,10 @@ static int32_t PackServerKxMsgDhePre(TLS_Ctx *ctx, uint32_t *signatureLen)
     return HITLS_SUCCESS;
 }
 
-static int32_t PackServerKxMsgDhe(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+static int32_t GetDheParameterLen(TLS_Ctx *ctx, uint32_t *outLen)
 {
+    int32_t ret = HITLS_SUCCESS;
+    uint32_t dataLen = 0;
     DhParam *dh = &ctx->hsCtx->kxCtx->keyExchParam.dh;
     uint32_t pubkeyLen = dh->plen;
     uint16_t plen = dh->plen;
@@ -349,12 +419,12 @@ static int32_t PackServerKxMsgDhe(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
 
     /* DHE_PSK and ANON_DH do not need signatures */
     uint32_t signatureLen = 0;
-    int32_t ret = PackServerKxMsgDhePre(ctx, &signatureLen);
+    ret = PackServerKxMsgDhePre(ctx, &signatureLen);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
-    uint32_t dataLen = sizeof(uint16_t) + plen + sizeof(uint16_t) + glen + sizeof(uint16_t) + pubkeyLen;
+    dataLen = sizeof(uint16_t) + plen + sizeof(uint16_t) + glen + sizeof(uint16_t) + pubkeyLen;
     if (IsNeedKeyExchParamSignature(ctx)) {
         dataLen += (sizeof(uint16_t) + signatureLen);
     }
@@ -363,98 +433,108 @@ static int32_t PackServerKxMsgDhe(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, u
         dataLen += sizeof(uint16_t);   // TLS1.2/DTLS needs to add a signature type
     }
 #endif /* HITLS_TLS_PROTO_TLS12 || HITLS_TLS_PROTO_DTLS12 */
-    if (bufLen < dataLen) {
-        return PackBufLenError(BINLOG_ID15509, BINGLOG_STR("serverKeyexchange"));
+    *outLen = dataLen;
+    return HITLS_SUCCESS;
+}
+
+static int32_t PackServerKxMsgDhe(TLS_Ctx *ctx, PackPacket *pkt)
+{
+    int32_t ret = HITLS_SUCCESS;
+    uint32_t dataLen = 0;
+    ret = GetDheParameterLen(ctx, &dataLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
     }
 
     /* Fill the following values in sequence: plen, p, glen, g, pubkeylen, pubkey, signature len, and signature */
-    uint32_t offset = 0u;
-    ret = PackKxPrimaryData(ctx, buf, bufLen, &offset);
+    uint32_t dataOffset = 0;
+    ret = PackGetSubBuffer(pkt, 0, &dataOffset, NULL);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    ret = PackKxPrimaryData(ctx, pkt);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
     if (IsNeedKeyExchParamSignature(ctx)) {
-        uint32_t signLen = dataLen - offset;
-        ret = SignKeyExchParams(ctx, &buf[0], offset, &buf[offset], &signLen);
+        uint32_t signDataLen = 0;
+        (void)PackGetSubBuffer(pkt, dataOffset, &signDataLen, NULL);
+        uint32_t signLen = dataLen - signDataLen;
+        uint8_t *signBuf = NULL;
+        ret = PackReserveBytes(pkt, signLen, &signBuf);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        uint8_t *signData = NULL;
+        (void)PackGetSubBuffer(pkt, dataOffset, &signDataLen, &signData);
+        ret = SignKeyExchParams(ctx, signData, signDataLen, signBuf, &signLen);
         if (ret != HITLS_SUCCESS) {
             BSL_ERR_PUSH_ERROR(HITLS_PACK_SIGNATURE_ERR);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15510, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "kx msg signature fail. ret %d", ret, 0, 0, 0);
             return HITLS_PACK_SIGNATURE_ERR;
         }
-        offset += signLen;
+        ret = PackSkipBytes(pkt, signLen);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
     }
 
-    *usedLen = offset;
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_SUITE_KX_DHE */
 #ifdef HITLS_TLS_FEATURE_PSK
-static int32_t PackServerKxMsgPskIdentityHint(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+static int32_t PackServerKxMsgPskIdentityHint(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     uint8_t *pskIdentityHint = ctx->config.tlsConfig.pskIdentityHint;
-    /* The length of hintSize <= HITLS_IDENTITY_HINT_MAX_SIZE is ensured during configuration. Therefore, the length of
+    /* The length of hintSize <= HS_PSK_IDENTITY_MAX_LEN is ensured during configuration. Therefore, the length of
      * uint16_t can be forcibly converted to the length of uint16_t */
     uint16_t pskIdentityHintSize = (uint16_t)ctx->config.tlsConfig.hintSize;
-    uint32_t dataLen;
-
-    dataLen = sizeof(uint16_t) + pskIdentityHintSize;
-
-    if (bufLen < dataLen) {
-        return PackBufLenError(BINLOG_ID15511, BINGLOG_STR("serverKeyexchange"));
-    }
 
     /* append identity hint */
     /* for dhe_psk, ecdhe_psk, msg must contain the length of hint even if there is no hint to provide */
-    uint32_t offset = 0u;
-    BSL_Uint16ToByte(pskIdentityHintSize, &buf[offset]);
-    offset += sizeof(uint16_t);
-
-    if (pskIdentityHint != NULL) {
-        if (bufLen - offset < pskIdentityHintSize) {
-            return PackBufLenError(BINLOG_ID15512, BINGLOG_STR("psk identity hint"));
-        }
-        (void)memcpy_s(&buf[offset], bufLen - offset, pskIdentityHint, pskIdentityHintSize);
-        offset += pskIdentityHintSize;
+    int32_t ret = PackAppendUint16ToBuf(pkt, pskIdentityHintSize);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
     }
 
-    *usedLen = offset;
+    if (pskIdentityHint != NULL && pskIdentityHintSize > 0) {
+        ret = PackAppendDataToBuf(pkt, pskIdentityHint, pskIdentityHintSize);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_FEATURE_PSK */
 // Pack the ServerKeyExchange message.
-int32_t PackServerKeyExchange(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+int32_t PackServerKeyExchange(TLS_Ctx *ctx, PackPacket *pkt)
 {
     int32_t ret = HITLS_SUCCESS;
-    uint32_t len = 0u;
-    uint32_t offset = 0u;
-    (void)buf;
-    (void)bufLen;
 #ifdef HITLS_TLS_FEATURE_PSK
     /* pack psk identity hint before dynamic key */
     if (IsPskNegotiation(ctx)) {
-        ret = PackServerKxMsgPskIdentityHint(ctx, buf, bufLen, &len);
+        ret = PackServerKxMsgPskIdentityHint(ctx, pkt);
         if (ret != HITLS_SUCCESS) {
-            // log here
             return ret;
         }
-        offset += len;
     }
 #endif /* HITLS_TLS_FEATURE_PSK */
     /* Pack a key exchange message */
-    len = 0u;
     switch (ctx->negotiatedInfo.cipherSuiteInfo.kxAlg) {
 #ifdef HITLS_TLS_SUITE_KX_ECDHE
         case HITLS_KEY_EXCH_ECDHE:
         case HITLS_KEY_EXCH_ECDHE_PSK:
-            ret = PackServerKxMsgEcdhe(ctx, &buf[offset], bufLen - offset, &len);
+            ret = PackServerKxMsgEcdhe(ctx, pkt);
             break;
 #endif
 #ifdef HITLS_TLS_SUITE_KX_DHE
         case HITLS_KEY_EXCH_DHE:
         case HITLS_KEY_EXCH_DHE_PSK:
-            ret = PackServerKxMsgDhe(ctx, &buf[offset], bufLen - offset, &len);
+            ret = PackServerKxMsgDhe(ctx, pkt);
             break;
 #endif /* HITLS_TLS_SUITE_KX_DHE */
 #ifdef HITLS_TLS_SUITE_KX_RSA
@@ -466,7 +546,7 @@ int32_t PackServerKeyExchange(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
 #endif /* HITLS_TLS_SUITE_KX_RSA */
 #ifdef HITLS_TLS_PROTO_TLCP11
         case HITLS_KEY_EXCH_ECC:
-            ret = PackServerKxMsgEcc(ctx, &buf[offset], bufLen - offset, &len);
+            ret = PackServerKxMsgEcc(ctx, pkt);
             break;
 #endif
         default:
@@ -476,8 +556,6 @@ int32_t PackServerKeyExchange(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint3
             return HITLS_PACK_UNSUPPORT_KX_ALG;
     }
 
-    offset += len;
-    *usedLen = offset;
     return ret;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */

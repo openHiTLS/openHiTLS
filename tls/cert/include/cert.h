@@ -21,10 +21,15 @@
 #include "hitls_cert_type.h"
 #include "cipher_suite.h"
 #include "cert_mgr.h"
+#include "tls.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define TLS_DEFAULT_VERIFY_DEPTH 20u
+
+#define MAX_PASS_LEN 256
 
 /* tls.handshake.certificate_length Length of a label */
 #define CERT_LEN_TAG_SIZE 3u
@@ -99,9 +104,7 @@ int32_t SAL_CERT_SelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info);
  * @brief Encode the certificate chain in ASN.1 DER format.
  *
  * @param ctx     [IN] tls Context
- * @param buf     [OUT] Certificate encoding data
- * @param bufLen  [OUT] Maximum length of data padding.
- * @param usedLen [OUT] Data length
+ * @param pkt     [IN/OUT] Context for packing
  *
  * @retval HITLS_SUCCESS                            succeeded.
  * @retval HITLS_UNREGISTERED_CALLBACK              No callback is set.
@@ -109,7 +112,7 @@ int32_t SAL_CERT_SelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info);
  * @retval HITLS_CERT_CTRL_ERR_GET_ENCODE_LEN       Failed to obtain the encoding length.
  * @retval HITLS_CERT_ERR_ENCODE_CERT               Certificate encoding failed.
  */
-int32_t SAL_CERT_EncodeCertChain(HITLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t SAL_CERT_EncodeCertChain(HITLS_Ctx *ctx, PackPacket *pkt);
 
 /**
  * @brief Decode the certificate in ASN.1 DER format.

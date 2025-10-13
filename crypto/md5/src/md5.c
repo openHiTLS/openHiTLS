@@ -46,12 +46,15 @@ CRYPT_MD5_Ctx *CRYPT_MD5_NewCtx(void)
     return BSL_SAL_Calloc(1, sizeof(CRYPT_MD5_Ctx));
 }
 
+CRYPT_MD5_Ctx *CRYPT_MD5_NewCtxEx(void *libCtx, int32_t algId)
+{
+    (void)libCtx;
+    (void)algId;
+    return BSL_SAL_Calloc(1, sizeof(CRYPT_MD5_Ctx));
+}
+
 void CRYPT_MD5_FreeCtx(CRYPT_MD5_Ctx *ctx)
 {
-    CRYPT_MD5_Ctx *mdCtx = ctx;
-    if (mdCtx == NULL) {
-        return;
-    }
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_MD5_Ctx));
 }
 
@@ -71,13 +74,14 @@ int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx, BSL_Param *param)
     return CRYPT_SUCCESS;
 }
 
-void CRYPT_MD5_Deinit(CRYPT_MD5_Ctx *ctx)
+int32_t CRYPT_MD5_Deinit(CRYPT_MD5_Ctx *ctx)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
+        return CRYPT_NULL_INPUT;
     }
     (void)memset_s(ctx, sizeof(CRYPT_MD5_Ctx), 0, sizeof(CRYPT_MD5_Ctx));
+    return CRYPT_SUCCESS;
 }
 
 static uint32_t IsInputOverflow(CRYPT_MD5_Ctx *ctx, uint32_t nbytes)
@@ -238,6 +242,14 @@ CRYPT_MD5_Ctx *CRYPT_MD5_DupCtx(const CRYPT_MD5_Ctx *src)
     (void)memcpy_s(newCtx, sizeof(CRYPT_MD5_Ctx), src, sizeof(CRYPT_MD5_Ctx));
     return newCtx;
 }
+
+#ifdef HITLS_CRYPTO_PROVIDER
+int32_t CRYPT_MD5_GetParam(CRYPT_MD5_Ctx *ctx, BSL_Param *param)
+{
+    (void)ctx;
+    return CRYPT_MdCommonGetParam(CRYPT_MD5_DIGESTSIZE, CRYPT_MD5_BLOCKSIZE, param);
+}
+#endif
 
 #ifdef __cplusplus
 }

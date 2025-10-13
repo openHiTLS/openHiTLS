@@ -15,6 +15,7 @@ message(STATUS "Enable bsl: ${ENABLE_BSL}")
 message(STATUS "Enable fail repeat: ${ENABLE_FAIL_REPEAT}")
 message(STATUS "Enable print: ${ENABLE_PRINT}")
 
+add_compile_definitions(OPENHITLSDIR="${CMAKE_INSTALL_PREFIX}/")
 set(TEST_SOURCE
     ${openHiTLS_SRC}/testcode/framework/gen_test/helper.c
     ${openHiTLS_SRC}/testcode/framework/gen_test/test.c
@@ -108,7 +109,6 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/bsl/base64/include
     ${openHiTLS_SRC}/bsl/pem/include
     ${openHiTLS_SRC}/bsl/list/include
-    ${openHiTLS_SRC}/bsl/usrdata/include
     ${openHiTLS_SRC}/bsl/obj/include
     ${openHiTLS_SRC}/bsl/include
     ${openHiTLS_SRC}/bsl/sal/src
@@ -164,10 +164,11 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/crypto/paillier/src
     ${openHiTLS_SRC}/crypto/elgamal/include
     ${openHiTLS_SRC}/crypto/elgamal/src
-    ${openHiTLS_SRC}/crypto/encode/include
+    ${openHiTLS_SRC}/crypto/codecsdata/include
     ${openHiTLS_SRC}/crypto/codecskey/include
     ${openHiTLS_SRC}/crypto/codecskey/src
     ${openHiTLS_SRC}/crypto/entropy/src
+    ${openHiTLS_SRC}/crypto/provider/src/cmvp/cmvp_utils
     ${openHiTLS_SRC}/bsl/err/include
     ${openHiTLS_SRC}/bsl/err/src
     ${openHiTLS_SRC}/include/tls
@@ -217,6 +218,10 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/config/macro_config
     ${openHiTLS_SRC}/codecs/include
     ${openHiTLS_SRC}/tls/feature/custom_extensions/include
+    ${openHiTLS_SRC}/crypto/mlkem/include
+    ${openHiTLS_SRC}/crypto/mlkem/src
+    ${openHiTLS_SRC}/crypto/mldsa/include
+    ${openHiTLS_SRC}/crypto/mldsa/src
     ${openHiTLS_SRC}/apps/include
     ${openHiTLS_SRC}/apps/src
     ${openHiTLS_SRC}/bsl/ui/include
@@ -261,6 +266,8 @@ endif()
 set(TEST_SHARED_LIBS
     test_suite_sdv_hlt_provider
     test_suite_sdv_frame_provider
+    test_suite_sdv_hlt_base_connect
+    test_suite_sdv_hlt_tlcp_ciphersuite
 )
 
 # Create test cases

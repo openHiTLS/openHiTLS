@@ -260,13 +260,7 @@ int32_t CommonEventInHandshakingState(HITLS_Ctx *ctx)
 
     // If HS_DoHandshake returns success, the connection has been established.
     ChangeConnState(ctx, CM_STATE_TRANSPORTING);
-
-    /* In the UDP scenario, peer may retransmit the finished message even if the local endpoint is connected
-     * Therefore, the hsCtx is not released in the UDP scenario */
-    if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
-        HS_DeInit(ctx);
-    }
-
+    HS_DeInit(ctx);
     return HITLS_SUCCESS;
 }
 
@@ -531,7 +525,7 @@ int32_t HITLS_GetFinishVerifyData(const HITLS_Ctx *ctx, void *buf, uint32_t bufL
 }
 #endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
 
-#ifdef HITLS_TLS_PROTO_ALL
+#ifdef HITLS_TLS_CONFIG_VERSION
 int32_t HITLS_GetVersionSupport(const HITLS_Ctx *ctx, uint32_t *version)
 {
     if (ctx == NULL) {
@@ -640,12 +634,7 @@ int32_t CommonEventInRenegotiationState(HITLS_Ctx *ctx)
 
     // If the HS_DoHandshake message is returned successfully, the link has been terminated.
     ChangeConnState(ctx, CM_STATE_TRANSPORTING);
-
-    /* In the UDP scenario, the peer end may retransmit the finished message even if the local end is terminated.
-     * Therefore, the hsCtx is not released in the UDP scenario */
-    if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
-        HS_DeInit(ctx);
-    }
+    HS_DeInit(ctx);
 
     // Prevent the renegotiation status from being changed after the Hello Request message is sent.
     if (ctx->negotiatedInfo.isRenegotiation) {
@@ -686,5 +675,63 @@ int32_t HITLS_GetNegotiateGroup(const HITLS_Ctx *ctx, uint16_t *group)
 
     *group = ctx->negotiatedInfo.negotiatedGroup;
     return HITLS_SUCCESS;
+}
+#endif
+
+int32_t HITLS_GetOutPendingSize(const HITLS_Ctx *ctx, uint32_t *size)
+{
+    if (ctx == NULL || size == NULL || ctx->recCtx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *size = REC_GetOutBufPendingSize(ctx);
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_Flush(HITLS_Ctx *ctx)
+{
+    if (ctx == NULL || ctx->recCtx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+#ifdef HITLS_TLS_PROTO_TLS
+    return REC_OutBufFlush(ctx);
+#else
+    return HITLS_SUCCESS;
+#endif
+}
+
+int32_t HITLS_SetExtenedMasterSecretSupport(HITLS_Ctx *ctx, bool support)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetExtenedMasterSecretSupport(&(ctx->config.tlsConfig), support);
+}
+
+int32_t HITLS_GetExtenedMasterSecretSupport(HITLS_Ctx *ctx, bool *isSupport)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_GetExtenedMasterSecretSupport(&(ctx->config.tlsConfig), isSupport);
+}
+#if defined(HITLS_TLS_FEATURE_RENEGOTIATION) && defined(HITLS_TLS_FEATURE_SESSION)
+int32_t HITLS_SetResumptionOnRenegoSupport(HITLS_Ctx *ctx, bool support)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetResumptionOnRenegoSupport(&(ctx->config.tlsConfig), support);
+}
+
+int32_t HITLS_GetResumptionOnRenegoSupport(HITLS_Ctx *ctx, bool *isSupport)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_GetResumptionOnRenegoSupport(&(ctx->config.tlsConfig), isSupport);
 }
 #endif

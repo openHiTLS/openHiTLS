@@ -22,7 +22,12 @@
 #include "bsl_bytes.h"
 #include "hitls_error.h"
 #include "hs_msg.h"
+#include "hs_ctx.h"
+#include "hitls_cert_type.h"
+#include "bsl_list.h"
 #include "pack_common.h"
+
+#define BUFFER_GROW_FACTOR 2u
 
 #ifdef HITLS_TLS_PROTO_DTLS12
 /**
@@ -60,7 +65,7 @@ void PackDtlsMsgHeader(HS_MsgType type, uint16_t sequence, uint32_t length, uint
  * @retval HITLS_PACK_SESSIONID_ERR Failed to pack the sessionId.
  * @retval HITLS_MEMCPY_FAIL Memory Copy Failure
  */
-int32_t PackSessionId(const uint8_t *id, uint32_t idSize, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+int32_t PackSessionId(PackPacket *pkt, const uint8_t *id, uint32_t idSize)
 {
     /* If the sessionId length does not meet the requirement, an error code is returned */
     if ((idSize != 0) && ((idSize > TLS_HS_MAX_SESSION_ID_SIZE) || (idSize < TLS_HS_MIN_SESSION_ID_SIZE))) {
@@ -70,36 +75,218 @@ int32_t PackSessionId(const uint8_t *id, uint32_t idSize, uint8_t *buf, uint32_t
         return HITLS_PACK_SESSIONID_ERR;
     }
 
-    uint32_t bufOffset = 0u;
-    buf[bufOffset] = (uint8_t)idSize;
+    int32_t ret = PackAppendUint8ToBuf(pkt, (uint8_t)idSize);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
 
-    /* Calculate the buffer offset length */
-    bufOffset += sizeof(uint8_t);
     /* If the value of sessionId is 0, a success message is returned */
     if (idSize == 0u) {
-        *usedLen = bufOffset;
         return HITLS_SUCCESS;
     }
-
-    if ((bufLen - bufOffset) < idSize) {
-        return PackBufLenError(BINLOG_ID15850, BINGLOG_STR("session id"));
-    }
-    /* Copy the session ID */
-    (void)memcpy_s(&buf[bufOffset], bufLen - bufOffset, id, idSize);
-    /* Update the offset length */
-    bufOffset += idSize;
-
-    *usedLen = bufOffset;
-    return HITLS_SUCCESS;
+    return PackAppendDataToBuf(pkt, id, idSize);
 }
 #endif /* #if HITLS_TLS_FEATURE_SESSION_ID || HITLS_TLS_PROTO_TLS13 */
 
-int32_t PackBufLenError(uint32_t logId, const void *format)
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
+int32_t PackTrustedCAList(HITLS_TrustedCAList *caList, PackPacket *pkt)
 {
-    BSL_ERR_PUSH_ERROR(HITLS_PACK_NOT_ENOUGH_BUF_LENGTH);
-    if (format != NULL) {
-        BSL_LOG_BINLOG_VARLEN(logId, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "buffer not enough when pack %s.",
-            format);
+    if (caList == NULL) {
+        return HITLS_NULL_INPUT;
     }
-    return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+    int32_t ret = HITLS_SUCCESS;
+    HITLS_TrustedCANode *node = (HITLS_TrustedCANode *)BSL_LIST_GET_FIRST(caList);
+    while (node != NULL) {
+        if (node->data != NULL && node->dataSize != 0) {
+            ret = PackAppendUint16ToBuf(pkt, (uint16_t)node->dataSize);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+
+            ret = PackAppendDataToBuf(pkt, node->data, node->dataSize);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+        }
+        node = (HITLS_TrustedCANode *)BSL_LIST_GET_NEXT(caList);
+    }
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
+
+static int32_t PackMsBufferGrow(PackPacket *pkt, uint32_t newSize)
+{
+    uint32_t oldDataSize = *pkt->bufLen;
+
+    uint8_t *newAddr = BSL_SAL_Realloc(*pkt->buf, newSize, oldDataSize);
+    if (newAddr == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    *pkt->buf = newAddr;
+    *pkt->bufLen = newSize;
+    return HITLS_SUCCESS;
+}
+
+static int32_t PackMsBufferPrepare(PackPacket *pkt, uint32_t msgSize)
+{
+    if (*pkt->bufLen - *pkt->bufOffset >= msgSize) {
+        return HITLS_SUCCESS;
+    }
+
+    if (HITLS_HS_BUFFER_SIZE_LIMIT - *pkt->bufOffset < msgSize) {
+        return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+    }
+
+    uint32_t oldBufSize = *pkt->bufLen;
+    uint32_t newBufSize = (msgSize > oldBufSize) ? msgSize : oldBufSize;
+    if (newBufSize >= HITLS_HS_BUFFER_SIZE_LIMIT / BUFFER_GROW_FACTOR) {
+        newBufSize = HITLS_HS_BUFFER_SIZE_LIMIT;
+    } else {
+        newBufSize = newBufSize * BUFFER_GROW_FACTOR;
+    }
+    return PackMsBufferGrow(pkt, newBufSize);
+}
+
+int32_t PackAppendUint8ToBuf(PackPacket *pkt, uint8_t value)
+{
+    int32_t ret = PackMsBufferPrepare(pkt, sizeof(uint8_t));
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    (*pkt->buf)[*pkt->bufOffset] = value;
+    *pkt->bufOffset += sizeof(uint8_t);
+    return HITLS_SUCCESS;
+}
+
+int32_t PackAppendUint16ToBuf(PackPacket *pkt, uint16_t value)
+{
+    int32_t ret = PackMsBufferPrepare(pkt, sizeof(uint16_t));
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    BSL_Uint16ToByte(value, &(*pkt->buf)[*pkt->bufOffset]);
+    *pkt->bufOffset += sizeof(uint16_t);
+    return HITLS_SUCCESS;
+}
+
+int32_t PackAppendUint24ToBuf(PackPacket *pkt, uint32_t value)
+{
+    int32_t ret = PackMsBufferPrepare(pkt, UINT24_SIZE);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    BSL_Uint24ToByte(value, &(*pkt->buf)[*pkt->bufOffset]);
+    *pkt->bufOffset += UINT24_SIZE;
+    return HITLS_SUCCESS;
+}
+
+int32_t PackAppendUint32ToBuf(PackPacket *pkt, uint32_t value)
+{
+    int32_t ret = PackMsBufferPrepare(pkt, sizeof(uint32_t));
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    BSL_Uint32ToByte(value, &(*pkt->buf)[*pkt->bufOffset]);
+    *pkt->bufOffset += sizeof(uint32_t);
+    return HITLS_SUCCESS;
+}
+
+int32_t PackAppendUint64ToBuf(PackPacket *pkt, uint64_t value)
+{
+    int32_t ret = PackMsBufferPrepare(pkt, sizeof(uint64_t));
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    BSL_Uint64ToByte(value, &(*pkt->buf)[*pkt->bufOffset]);
+    *pkt->bufOffset += sizeof(uint64_t);
+    return HITLS_SUCCESS;
+}
+
+int32_t PackAppendDataToBuf(PackPacket *pkt, const uint8_t *data, uint32_t size)
+{
+    int32_t ret = PackMsBufferPrepare(pkt, size);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    (void)memcpy_s(&(*pkt->buf)[*pkt->bufOffset], *pkt->bufLen - *pkt->bufOffset, data, size);
+    *pkt->bufOffset += size;
+    return HITLS_SUCCESS;
+}
+
+int32_t PackReserveBytes(PackPacket *pkt, uint32_t size, uint8_t **reservedBuf)
+{
+    int32_t ret = PackMsBufferPrepare(pkt, size);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    if (reservedBuf != NULL) {
+        *reservedBuf = &(*pkt->buf)[*pkt->bufOffset];
+    }
+    return HITLS_SUCCESS;
+}
+
+int32_t PackStartLengthField(PackPacket *pkt, uint32_t size, uint32_t *allocatedPosition)
+{
+    int32_t ret = PackMsBufferPrepare(pkt, size);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    *allocatedPosition = *pkt->bufOffset;
+    *pkt->bufOffset += size;
+    return HITLS_SUCCESS;
+}
+
+int32_t PackSkipBytes(PackPacket *pkt, uint32_t size)
+{
+    if (*pkt->bufLen - *pkt->bufOffset < size) {
+        return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+    }
+    *pkt->bufOffset += size;
+    return HITLS_SUCCESS;
+}
+
+void PackCloseUint8Field(const PackPacket *pkt, uint32_t position)
+{
+    (*pkt->buf)[position] = (uint8_t)(*pkt->bufOffset - position - sizeof(uint8_t));
+    return;
+}
+
+void PackCloseUint16Field(const PackPacket *pkt, uint32_t position)
+{
+    BSL_Uint16ToByte((uint16_t)(*pkt->bufOffset - position - sizeof(uint16_t)), &(*pkt->buf)[position]);
+    return;
+}
+
+void PackCloseUint24Field(const PackPacket *pkt, uint32_t position)
+{
+    BSL_Uint24ToByte((uint32_t)(*pkt->bufOffset - position - UINT24_SIZE), &(*pkt->buf)[position]);
+    return;
+}
+
+int32_t PackGetSubBuffer(const PackPacket *pkt, uint32_t start, uint32_t *length, uint8_t **buf)
+{
+    if (length == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    if (start > *pkt->bufOffset) {
+        return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+    }
+
+    *length = *pkt->bufOffset - start;
+
+    if (buf != NULL) {
+        *buf = &(*pkt->buf)[start];
+    }
+
+    return HITLS_SUCCESS;
 }

@@ -149,3 +149,59 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+
+/* BEGIN_CASE */
+void SDV_TLS13_MULTI_PROVIDER_TC001(char *path, char *providerName, char *attrName, int providerLibFmt)
+{
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+    (void)path;
+    (void)providerName;
+    (void)attrName;
+    (void)providerLibFmt;
+    SKIP_TEST();
+#else
+    (void)path;
+    (void)providerName;
+    (void)attrName;
+    (void)providerLibFmt;
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Ctx_Config *serverCtxConfig = NULL;
+    HLT_Ctx_Config *clientCtxConfig = NULL;
+    HLT_Process *localProcess = HLT_InitLocalProcess(HITLS);
+    HLT_Process *remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, PORT, true);
+    ASSERT_TRUE(localProcess != NULL);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(serverCtxConfig != NULL);
+    ASSERT_TRUE(clientCtxConfig != NULL);
+
+    HLT_SetProviderPath(serverCtxConfig, path);
+    HLT_SetProviderAttrName(serverCtxConfig, attrName);
+    HLT_AddProviderInfo(serverCtxConfig, providerName, providerLibFmt);
+    HLT_AddProviderInfo(serverCtxConfig, "default", BSL_SAL_LIB_FMT_OFF);
+
+    HLT_SetCipherSuites(serverCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
+    HLT_SetCipherSuites(clientCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
+
+    serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_2, serverCtxConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+    ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
+
+    ASSERT_TRUE(HLT_ProcessTlsWrite(localProcess, serverRes, (uint8_t *)"Hello World", strlen("Hello World")) == 0);
+    uint8_t readBuf[READ_BUF_LEN_18K] = {0};
+    uint32_t readLen;
+    ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_LEN_18K, &readLen) == 0);
+    ASSERT_TRUE(readLen == strlen("Hello World"));
+    ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
+EXIT:
+    HLT_FreeAllProcess();
+#endif
+}
+/* END_CASE */

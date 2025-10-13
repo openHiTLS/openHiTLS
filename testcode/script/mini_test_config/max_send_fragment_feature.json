@@ -20,7 +20,6 @@
                 "uio_plt",
                 "uio_tcp",
                 "uio_udp",
-                "usrdata",
                 "sal_thread",
                 "sal_net",
                 "sal_time",
@@ -83,7 +82,8 @@
                 "slh_dsa",
                 "cbc",
                 "cipher",
-                "pkey"
+                "pkey",
+                "codecskey"
             ]
         },
         "hitls_tls": {

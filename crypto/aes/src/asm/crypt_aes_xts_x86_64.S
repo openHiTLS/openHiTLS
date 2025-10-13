@@ -17,7 +17,6 @@
 
 #include "crypt_aes_macro_x86_64.s"
 
-.file   "crypt_aes_xts_x86_64.S"
 
 .set    KEY, %rdi
 .set    IN, %rsi

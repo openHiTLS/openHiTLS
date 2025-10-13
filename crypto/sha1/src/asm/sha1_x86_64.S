@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SHA1
 
-.file   "sha1_x86_64.S"
 .text
 
 .set    INPUT, %rdi

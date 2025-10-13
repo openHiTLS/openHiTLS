@@ -35,7 +35,7 @@ static int32_t Tls13SendKeyUpdateProcess(TLS_Ctx *ctx)
     HS_Ctx *hsCtx = ctx->hsCtx;
 
     if (hsCtx->msgLen == 0) {
-        ret = HS_PackMsg(ctx, KEY_UPDATE, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, KEY_UPDATE);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15791, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "pack tls1.3 key update msg fail.", 0, 0, 0, 0);

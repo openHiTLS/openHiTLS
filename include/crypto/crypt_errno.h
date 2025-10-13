@@ -46,6 +46,8 @@ enum CRYPT_ERROR {
     CRYPT_INVALID_ARG,                  /**< Invalid input parameter. */
     CRYPT_NOT_SUPPORT,                  /**< unsupported operation. */
     CRYPT_INCONSISTENT_OPERATION,       /**< Inconsistent operation. */
+    CRYPT_INVALID_KEY,                  /**< invalid key. */
+    CRYPT_PAIRWISE_CHECK_FAIL,          /**< key-pair check failed. */
 
     CRYPT_BN_BUFF_LEN_NOT_ENOUGH = 0x01020001, /**< Insufficient buffer length. */
     CRYPT_BN_SPACE_NOT_ENOUGH,          /**< Insufficient big number space. */
@@ -129,6 +131,8 @@ enum CRYPT_ERROR {
     CRYPT_RSA_GET_SALT_LEN_ERROR,       /**< The input length of getting salt-len is incorrect. */
     CRYPT_RSA_GET_SALT_NOT_PSS_ERROR,   /**< When the padding type of the key is not pss, and get the salt len. */
     CRYPT_RSA_ERR_PSS_PARAMS,            /**< The parameter is error when the padding type of the key is pss. */
+    CRYPT_RSA_ERR_NO_PRVKEY_INFO,       /**< The rsa prv key is missing. */
+    CRYPT_RSA_ERR_INVALID_PRVKEY,       /**< The private key is invalid. */
 
     CRYPT_EAL_BUFF_LEN_NOT_ENOUGH = 0x01040001, /**< Insufficient buffer length. */
     CRYPT_EAL_BUFF_LEN_TOO_LONG,        /**< Insufficient buffer length. */
@@ -137,7 +141,7 @@ enum CRYPT_ERROR {
     CRYPT_EAL_ERR_NEW_PARA_FAIL,        /**< Failed to generate parameters. */
     CRYPT_EAL_ERR_RAND_WORKING,         /**< DRBG is in the working state. */
     CRYPT_EAL_ERR_RAND_NO_WORKING,      /**< DRBG is not working. */
-    CRYPT_EAL_ERR_METH_NULL_NUMBER,     /**< The method variable member is NULL. */
+    CRYPT_EAL_ERR_METH_NULL_MEMBER,     /**< The method variable member is NULL. */
     CRYPT_EAL_ERR_GLOBAL_DRBG_NULL,     /**< The global DRBG is null. */
     CRYPT_EAL_ERR_DRBG_REPEAT_INIT,     /**< DRBG is initialized repeatedly. */
     CRYPT_EAL_ERR_DRBG_INIT_FAIL,       /**< DRBG initialization failure. */
@@ -166,6 +170,8 @@ enum CRYPT_ERROR {
     CRYPT_EAL_INTO_TYPE_NOT_SUPPORT,    /**< The info type is not supported. */
     CRYPT_EAL_ALG_ASM_NOT_SUPPORT,      /**< Algorithm assembly is not supported. */
     CRYPT_EAL_CIPHER_ERR_NEWCTX,
+    CRYPT_EAL_PKEY_CHECK_ERROR,         /**< Pkey check failure. */
+    CRYPT_EAL_MD_METH_NULL,
 
     CRYPT_SHA2_INPUT_OVERFLOW = 0x01050001, /**< The length of the input data exceeds the maximum
                                                      processing range of SHA2. */
@@ -190,6 +196,8 @@ enum CRYPT_ERROR {
     CRYPT_CURVE25519_KEY_COMPUTE_FAILED,        /**< Failed to generate the shared key. */
     CRYPT_CURVE25519_INVALID_PUBKEY,            /**< Invalid public key. */
     CRYPT_CURVE25519_PUBKEY_NOT_EQUAL,          /**< Public keys are not equal. */
+    CRYPT_CURVE25519_INVALID_PRVKEY,                   /**< Invalid private key. */
+    CRYPT_CURVE25519_PAIRWISE_CHECK_FAIL,              /**< The public and private keys are inconsistent. */
 
     CRYPT_SHA1_INPUT_OVERFLOW = 0x01090001,          /**< The length of the input data exceeds the
                                                            maximum processing range of SHA1. */
@@ -231,10 +239,14 @@ enum CRYPT_ERROR {
                                                      contain necessary parameter information. */
     CRYPT_DSA_PUBKEY_NOT_EQUAL,                 /**< Public keys are not equal. */
     CRYPT_DSA_PARA_NOT_EQUAL,                   /**< Key parameters are not equal. */
+    CRYPT_DSA_INVALID_PRVKEY,                   /**< Invalid private key. */
+    CRYPT_DSA_PAIRWISE_CHECK_FAIL,              /**< The public and private keys are inconsistent. */
 
     CRYPT_HMAC_OUT_BUFF_LEN_NOT_ENOUGH = 0x010C0001, /**< The length of the buffer that storing
                                                           the output result is insufficient. */
     CRYPT_HMAC_ERR_UNSUPPORTED_CTRL_OPTION,  /**< Unsupport the control type. */
+    CRYPT_HMAC_ERR_NO_MD_LIB_CTX,            /**< MD library context not set. */
+    CRYPT_HMAC_PARAM_ERROR,                  /**< Incorrect input parameter. */
 
     CRYPT_DH_BUFF_LEN_NOT_ENOUGH = 0x010D0001,   /**< The buffer length is insufficient. */
     CRYPT_DH_PARA_ERROR,                         /**< The value of the key parameter does not meet
@@ -254,6 +266,7 @@ enum CRYPT_ERROR {
     CRYPT_DH_SET_FLAG_LEN_ERROR,                 /**< The length of the input data is incorrect and return failure when
                                                       setting the flag. */
     CRYPT_DH_FLAG_NOT_SUPPORT_ERROR,             /**< Unsupported flag. */
+    CRYPT_DH_INVALID_PRVKEY,                     /**< Invalid private key. */
 
     CRYPT_CHACHA20_KEYLEN_ERROR = 0x010E0001,        /**< The key length input is incorrect during key setting. */
     CRYPT_CHACHA20_NONCELEN_ERROR,                   /**< The length of the input nounce is incorrect when you
@@ -314,6 +327,8 @@ enum CRYPT_ERROR {
     CRYPT_HKDF_DKLEN_OVERFLOW = 0x01110001,          /**< The length of the derived key exceeds the maximum. */
     CRYPT_HKDF_NOT_SUPPORTED,                        /**< Unsupport HKDF algorithm. */
     CRYPT_HKDF_PARAM_ERROR,                          /**< Incorrect input parameter. */
+    CRYPT_HKDF_ERR_MAC_ID_NOT_SET,                   /**< Mac id not set. */
+    CRYPT_HKDF_ERR_MAC_METH,                         /**< Mac method err. */
 
     CRYPT_CMAC_OUT_BUFF_LEN_NOT_ENOUGH = 0x01120001, /**< The length of the buffer that storing the output
                                                           result is insufficient. */
@@ -328,6 +343,8 @@ enum CRYPT_ERROR {
 
     CRYPT_PBKDF2_PARAM_ERROR = 0x01150001,           /**< Incorrect input parameter. */
     CRYPT_PBKDF2_NOT_SUPPORTED,                      /**< Does not support the PBKDF2 algorithm. */
+    CRYPT_PBKDF2_ERR_MAC_METH,                       /**< Mac method err. */
+    CRYPT_PBKDF2_ERR_MAC_ID_NOT_SET,                 /**< Mac id not set. */
 
     CRYPT_ECC_POINT_AT_INFINITY = 0x01160001,         /**< Point at infinity. */
     CRYPT_ECC_POINT_NOT_ON_CURVE,                    /**< Point is not on the curve. */
@@ -356,6 +373,8 @@ enum CRYPT_ERROR {
 
     CRYPT_ECC_INVERSE_INPUT_ZERO,                     /** Modulo inverse input is 0. */
     CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL,                   /**< ECC public keys are not equal. */
+    CRYPT_ECC_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
+    CRYPT_ECC_INVALID_PRVKEY,                         /**< Invalid private key. */
 
     CRYPT_SHA3_OUT_BUFF_LEN_NOT_ENOUGH = 0x01170001,  /**< Insufficient buffer length for storing output results. */
     CRYPT_SHA3_INVALID_STATE,                       /**< Invalid state. */
@@ -363,6 +382,8 @@ enum CRYPT_ERROR {
     CRYPT_ECDH_ERR_UNSUPPORT_CURVE_TYPE = 0x01180001, /**< Unsupported curve type. */
     CRYPT_ECDH_ERR_EMPTY_KEY,                         /**< Key is null. */
     CRYPT_ECDH_ERR_INVALID_COFACTOR,                  /**< Invalid cofactor value. */
+    CRYPT_ECDH_PAIRWISE_CHECK_FAIL,                     /**< The public and private keys are inconsistent. */
+    CRYPT_ECDH_INVALID_PRVKEY,                        /**< Invalid private key. */
 
     CRYPT_ECDSA_ERR_EMPTY_KEY = 0x01190001,           /**< Key is NULL. */
     CRYPT_ECDSA_ERR_TRY_CNT,                          /**< Key generation and generate signature fail
@@ -370,6 +391,8 @@ enum CRYPT_ERROR {
     CRYPT_ECDSA_VERIFY_FAIL,                          /**< Verification failure. */
     CRYPT_ECDSA_ERR_UNSUPPORTED_CTRL_OPTION,          /**< Unsupport the control type. */
     CRYPT_ECDSA_BUFF_LEN_NOT_ENOUGH,                  /**< BUFF insufficient length. */
+    CRYPT_ECDSA_PAIRWISE_CHECK_FAIL,                  /**< The public and private keys are inconsistent. */
+    CRYPT_ECDSA_INVALID_PRVKEY,                       /**< Invalid private key. */
 
     CRYPT_SM3_INPUT_OVERFLOW = 0x011A0001,             /**< The length of the input data exceeds the maximum
                                                            processing range of the SM3. */
@@ -409,9 +432,14 @@ enum CRYPT_ERROR {
                                                             the decoding requirements. */
     CRYPT_SM2_ID_TOO_LARGE,                           /**< User id to large. */
     CRYPT_SM2_K_REPEAT_SET_ERROR,                     /**< the random k is set repeatedly*/
+    CRYPT_SM2_PAIRWISE_CHECK_FAIL,                     /**< The public and private keys are inconsistent. */
+    CRYPT_SM2_INVALID_PRVKEY,                         /**< Invalid private key. */
+    CRYPT_SM2_NO_RANDOM_INFO,                         /**< no r value in sm2 exch. */
 
     CRYPT_KDFTLS12_NOT_SUPPORTED = 0x01210001,        /**< Unsupport the KDFTLS12 algorithm. */
-    CRYPT_KDFTLS12_PARAM_ERROR,
+    CRYPT_KDFTLS12_PARAM_ERROR,                       /**< Incorrect input parameter. */
+    CRYPT_KDFTLS12_ERR_MAC_METH,                      /**< Mac method err. */
+    CRYPT_KDFTLS12_ERR_MAC_ID_NOT_SET,                /**< Mac id not set. */
 
     CRYPT_SIPHASH_OUT_BUFF_LEN_NOT_ENOUGH = 0x01220001, /**< The buffer size for storing the output
                                                              result is insufficient. */
@@ -441,6 +469,8 @@ enum CRYPT_ERROR {
     CRYPT_MLKEM_KEY_NOT_EQUAL,                          /**< The MLKEM keys are not equal. */
     CRYPT_MLKEM_CTRL_NOT_SUPPORT,                       /**< The Ctrl type is not supported.*/
     CRYPT_MLKEM_CTRL_INIT_REPEATED,                     /**< The CTX cannot be initialized repeatedly.*/
+    CRYPT_MLKEM_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
+    CRYPT_MLKEM_INVALID_PRVKEY,                         /**< Invalid private key. */
 
     CRYPT_HPKE_ERR_GEN_ASYM_KEY = 0x01310001,            /**< HPKE Generate asymmetric key error. */
     CRYPT_HPKE_ERR_AEAD_TAG,                             /**< Failed to verify AEAD tag when decrypt. */
@@ -510,6 +540,12 @@ enum CRYPT_ERROR {
     CRYPT_MLDSA_KEY_NOT_EQUAL,                          /**< The MLDSA keys are not equal. */
     CRYPT_MLDSA_CTRL_INIT_REPEATED,                     /**< The CTX cannot be initialized repeatedly.*/
     CRYPT_MLDSA_SET_KEY_FAILED,                         /**< Failed to set the key. */
+    CRYPT_MLDSA_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
+    CRYPT_MLDSA_INVALID_PRVKEY,                         /**< Invalid private key. */
+    CRYPT_MLDSA_INVALID_PUBKEY,                         /**< Invalid public key. */
+    CRYPT_MLDSA_PRVKEY_FORMAT_ERROR,
+    CRYPT_MLDSA_SEED_NOT_SET,                           /**< Invalid private key encode format. */
+    CRYPT_MLDSA_PRVKEY_SEED_INCONSISTENT,                /**< Input seed and private key are inconsistent */
 
     CRYPT_ELGAMAL_BUFF_LEN_NOT_ENOUGH = 0x01370001, /**< The buffer length is insufficient. */
     CRYPT_ELGAMAL_NO_KEY_INFO,              /**< Lacks valid key information. */
@@ -530,6 +566,9 @@ enum CRYPT_ERROR {
     CRYPT_SLHDSA_ERR_HYPERTREE_VERIFY_FAIL,              /**< Hypertree verify failed. */
     CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED,           /**< Prehash id is not supported. */
     CRYPT_SLHDSA_ERR_CONTEXT_LEN_OVERFLOW,               /**< Context length is overflow. */
+    CRYPT_SLHDSA_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
+    CRYPT_SLHDSA_ERR_NO_PUBKEY,                          /**< No public key. */
+    CRYPT_SLHDSA_ERR_NO_PRVKEY,                          /**< No private key. */
 
     CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH = 0x01390001, /**< The buffer length is insufficient. */
     CRYPT_PAILLIER_NO_KEY_INFO,              /**< Lacks valid key information. */
@@ -538,6 +577,24 @@ enum CRYPT_ERROR {
     CRYPT_PAILLIER_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
     CRYPT_PAILLIER_ERR_INPUT_VALUE,          /**< Some special values, which are used as input errors. */
     CRYPT_PAILLIER_CTRL_NOT_SUPPORT_ERROR,   /**< The Ctrl type is not supported When paillier is used for Ctrl. */
+
+    CRYPT_XMSS_ERR_INVALID_ALGID = 0x013A0001,         /**< The algorithm id is invalid. */
+    CRYPT_XMSS_ERR_INVALID_SIG_LEN,                    /**< The signature length is invalid. */
+    CRYPT_XMSS_ERR_INVALID_KEYLEN,                     /**< The key length is invalid. */
+    CRYPT_XMSS_ERR_KEY_EXPIRED,                        /**< The key has expired. */
+
+    CRYPT_CMVP_COMMON_ERR = 0x013B0001, /**< Common error in CMVP selftest. */
+    CRYPT_CMVP_ERR_INTEGRITY,           /**< Integrity error in CMVP selftest. */
+    CRYPT_CMVP_RANDOMNESS_ERR,          /**< Randomness error in CMVP selftest. */
+    CRYPT_CMVP_ERR_ALGO_SELFTEST,       /**< Algorithm selftest error in CMVP selftest. */
+    CRYPT_CMVP_ERR_PAIRWISETEST,        /**< Pairwise test error in CMVP selftest. */
+    CRYPT_CMVP_ERR_PARAM_CHECK,         /**< Parameter check error in CMVP selftest. */
+    CRYPT_CMVP_ERR_CIPHER_SELFTEST,     /**< Cipher selftest error in CMVP selftest. */
+    CRYPT_CMVP_ERR_MD_SELFTEST,         /**< Md selftest error in CMVP selftest. */
+    CRYPT_CMVP_ERR_MAC_SELFTEST,        /**< Mac selftest error in CMVP selftest. */
+    CRYPT_CMVP_ERR_KDF_SELFTEST,        /**< Kdf selftest error in CMVP selftest. */
+    CRYPT_CMVP_ERR_DRBG_SELFTEST,       /**< Drbg selftest error in CMVP selftest. */
+    CRYPT_CMVP_ERR_PKEY_SELFTEST,       /**< Pkey selftest error in CMVP selftest. */
 };
 #ifdef __cplusplus
 }

@@ -16,7 +16,6 @@
 #define CONFIG_TYPE_H
 
 #include <stdint.h>
-#include <stdbool.h>
 #include "hitls_type.h"
 #include "tls_config.h"
 

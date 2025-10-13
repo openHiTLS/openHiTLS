@@ -36,161 +36,55 @@
 
 #define MAC_TYPE_INVALID 0
 
-static void EalMacCopyMethod(const EAL_MacMethod *src, EAL_MacUnitaryMethod *dst)
+static CRYPT_EAL_MacCtx *MacNewCtxInner(int32_t algId, CRYPT_EAL_LibCtx *libCtx, const char *attrName, bool isProvider)
 {
-    dst->init = src->init;
-    dst->update = src->update;
-    dst->final = src->final;
-    dst->deinit = src->deinit;
-    dst->reinit = src->reinit;
-    dst->newCtx = src->newCtx;
-    dst->ctrl = src->ctrl;
-    dst->freeCtx = src->freeCtx;
-}
-
-#ifdef HITLS_CRYPTO_PROVIDER
-static int32_t CRYPT_EAL_SetMacMethod(CRYPT_EAL_MacCtx *ctx, const CRYPT_EAL_Func *funcs)
-{
-    int32_t index = 0;
-    EAL_MacUnitaryMethod *method = BSL_SAL_Calloc(1, sizeof(EAL_MacUnitaryMethod));
-    if (method == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
-    }
-    while (funcs[index].id != 0) {
-        switch (funcs[index].id) {
-            case CRYPT_EAL_IMPLMAC_NEWCTX:
-                method->provNewCtx = funcs[index].func;
-                break;
-            case CRYPT_EAL_IMPLMAC_INIT:
-                method->init = funcs[index].func;
-                break;
-            case CRYPT_EAL_IMPLMAC_UPDATE:
-                method->update = funcs[index].func;
-                break;
-            case CRYPT_EAL_IMPLMAC_FINAL:
-                method->final = funcs[index].func;
-                break;
-            case CRYPT_EAL_IMPLMAC_REINITCTX:
-                method->reinit = funcs[index].func;
-                break;
-            case CRYPT_EAL_IMPLMAC_DEINITCTX:
-                method->deinit = funcs[index].func;
-                break;
-            case CRYPT_EAL_IMPLMAC_CTRL:
-                method->ctrl = funcs[index].func;
-                break;
-            case CRYPT_EAL_IMPLMAC_FREECTX:
-                method->freeCtx = funcs[index].func;
-                break;
-            default:
-                BSL_SAL_Free(method);
-                BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
-                return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
-        }
-        index++;
-    }
-    ctx->macMeth = method;
-    return CRYPT_SUCCESS;
-}
-
-CRYPT_EAL_MacCtx *CRYPT_EAL_ProviderMacNewCtxInner(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
-{
-    const CRYPT_EAL_Func *funcs = NULL;
-    void *provCtx = NULL;
-    int32_t ret = CRYPT_EAL_ProviderGetFuncs(libCtx, CRYPT_EAL_OPERAID_MAC, algId, attrName,
-        &funcs, &provCtx);
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, algId, ret);
-        return NULL;
-    }
-    CRYPT_EAL_MacCtx *macCtx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_MacCtx));
+    (void)libCtx;
+    (void)attrName;
+    (void)isProvider;
+    EAL_MacMethod *method = NULL;
+    CRYPT_EAL_MacCtx *macCtx = BSL_SAL_Malloc(sizeof(CRYPT_EAL_MacCtx));
     if (macCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, algId, CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
+    (void)memset_s(macCtx, sizeof(CRYPT_EAL_MacCtx), 0, sizeof(CRYPT_EAL_MacCtx));
+    void *provCtx = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    if (isProvider == true) {
+        method = EAL_MacFindMethodEx(algId, libCtx, attrName, &macCtx->macMeth, &provCtx);
+    } else
+#endif
+    {
+        method = EAL_MacFindMethod(algId, &macCtx->macMeth);
+    }
+    if (method == NULL || macCtx->macMeth.newCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, algId, CRYPT_EAL_ERR_METH_NULL_MEMBER);
+        goto ERR;
+    }
 
-    ret = CRYPT_EAL_SetMacMethod(macCtx, funcs);
-    if (ret != BSL_SUCCESS) {
-        BSL_SAL_FREE(macCtx);
-        return NULL;
-    }
-    if (macCtx->macMeth->provNewCtx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, algId, CRYPT_PROVIDER_ERR_IMPL_NULL);
-        BSL_SAL_FREE(macCtx->macMeth);
-        BSL_SAL_FREE(macCtx);
-        return NULL;
-    }
-    macCtx->ctx = macCtx->macMeth->provNewCtx(provCtx, algId);
+    macCtx->ctx = macCtx->macMeth.newCtx(provCtx, algId);
     if (macCtx->ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, algId, CRYPT_MEM_ALLOC_FAIL);
-        BSL_SAL_FREE(macCtx->macMeth);
-        BSL_SAL_FREE(macCtx);
-        return NULL;
+        goto ERR;
     }
 
     macCtx->id = algId;
     macCtx->state = CRYPT_MAC_STATE_NEW;
-    macCtx->isProvider = true;
-
     return macCtx;
+ERR:
+    BSL_SAL_Free(macCtx);
+    return NULL;
 }
-#endif
 
 CRYPT_EAL_MacCtx *CRYPT_EAL_ProviderMacNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
 #ifdef HITLS_CRYPTO_PROVIDER
-    return CRYPT_EAL_ProviderMacNewCtxInner(libCtx, algId, attrName);
+    return MacNewCtxInner(algId, libCtx, attrName, true);
 #else
     (void)libCtx;
     (void)attrName;
     return CRYPT_EAL_MacNewCtx(algId);
 #endif
-}
-
-CRYPT_EAL_MacCtx *MacNewDefaultCtx(CRYPT_MAC_AlgId id)
-{
-    EAL_MacMethLookup method;
-    int32_t ret = EAL_MacFindMethod(id, &method);
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, ret);
-        return NULL;
-    }
-
-    CRYPT_EAL_MacCtx *macCtx = NULL;
-
-    macCtx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_MacCtx));
-    if (macCtx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-    macCtx->id = id;
-    macCtx->state = CRYPT_MAC_STATE_NEW;
-
-    EAL_MacUnitaryMethod *temp = BSL_SAL_Calloc(1, sizeof(EAL_MacUnitaryMethod));
-    if (temp == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, CRYPT_MEM_ALLOC_FAIL);
-        BSL_SAL_FREE(macCtx);
-        return NULL;
-    }
-    EalMacCopyMethod(method.macMethod, temp);
-    macCtx->macMeth = temp;
-
-    if (method.macMethod->newCtx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, CRYPT_PROVIDER_ERR_IMPL_NULL);
-        BSL_SAL_FREE(macCtx->macMeth);
-        BSL_SAL_FREE(macCtx);
-        return NULL;
-    }
-    macCtx->ctx = method.macMethod->newCtx(id);
-    if (macCtx->ctx == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, id, CRYPT_MEM_ALLOC_FAIL);
-        BSL_SAL_FREE(macCtx->macMeth);
-        BSL_SAL_FREE(macCtx);
-        return NULL;
-    }
-
-    return macCtx;
 }
 
 CRYPT_EAL_MacCtx *CRYPT_EAL_MacNewCtx(CRYPT_MAC_AlgId id)
@@ -201,7 +95,7 @@ CRYPT_EAL_MacCtx *CRYPT_EAL_MacNewCtx(CRYPT_MAC_AlgId id)
         return NULL;
     }
 #endif
-    return MacNewDefaultCtx(id);
+    return MacNewCtxInner(id, NULL, NULL, false);
 }
 
 void CRYPT_EAL_MacFreeCtx(CRYPT_EAL_MacCtx *ctx)
@@ -209,17 +103,13 @@ void CRYPT_EAL_MacFreeCtx(CRYPT_EAL_MacCtx *ctx)
     if (ctx == NULL) {
         return;
     }
-    if (ctx->macMeth == NULL || ctx->macMeth->freeCtx == NULL) {
+    if (ctx->macMeth.freeCtx != NULL) {
+        ctx->macMeth.freeCtx(ctx->ctx);
+        EAL_EVENT_REPORT(CRYPT_EVENT_ZERO, CRYPT_ALGO_MAC, ctx->id, CRYPT_SUCCESS);
+    } else {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
-        BSL_SAL_FREE(ctx->macMeth);
-        BSL_SAL_FREE(ctx);
-        return;
     }
-    EAL_EventReport(CRYPT_EVENT_ZERO, CRYPT_ALGO_MAC, ctx->id, CRYPT_SUCCESS);
-    ctx->macMeth->freeCtx(ctx->ctx);
-    BSL_SAL_FREE(ctx->macMeth);
-    BSL_SAL_FREE(ctx);
-    return;
+    BSL_SAL_Free(ctx);
 }
 
 int32_t CRYPT_EAL_MacInit(CRYPT_EAL_MacCtx *ctx, const uint8_t *key, uint32_t len)
@@ -228,22 +118,17 @@ int32_t CRYPT_EAL_MacInit(CRYPT_EAL_MacCtx *ctx, const uint8_t *key, uint32_t le
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->macMeth == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
 
-    if (ctx->macMeth == NULL || ctx->macMeth->init == NULL) {
+    if (ctx->macMeth.init == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    int32_t ret = ctx->macMeth->init(ctx->ctx, key, len, NULL);
+    int32_t ret = ctx->macMeth.init(ctx->ctx, key, len, NULL);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, ret);
         return ret;
     }
-    EAL_EventReport(CRYPT_EVENT_SETSSP, CRYPT_ALGO_MAC, ctx->id, ret);
     ctx->state = CRYPT_MAC_STATE_INIT;
     return CRYPT_SUCCESS;
 }
@@ -254,22 +139,18 @@ int32_t CRYPT_EAL_MacUpdate(CRYPT_EAL_MacCtx *ctx, const uint8_t *in, uint32_t l
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->macMeth == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
 
     if ((ctx->state == CRYPT_MAC_STATE_FINAL) || (ctx->state == CRYPT_MAC_STATE_NEW)) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }
 
-    if (ctx->macMeth == NULL || ctx->macMeth->update == NULL) {
+    if (ctx->macMeth.update == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    int32_t ret = ctx->macMeth->update(ctx->ctx, in, len);
+    int32_t ret = ctx->macMeth.update(ctx->ctx, in, len);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, ret);
         return ret;
@@ -284,28 +165,23 @@ int32_t CRYPT_EAL_MacFinal(CRYPT_EAL_MacCtx *ctx, uint8_t *out, uint32_t *len)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->macMeth == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
 
     if ((ctx->state == CRYPT_MAC_STATE_NEW) || (ctx->state == CRYPT_MAC_STATE_FINAL)) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }
 
-    if (ctx->macMeth == NULL || ctx->macMeth->final == NULL) {
+    if (ctx->macMeth.final == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    int32_t ret = ctx->macMeth->final(ctx->ctx, out, len);
+    int32_t ret = ctx->macMeth.final(ctx->ctx, out, len);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, ret);
         return ret;
     }
     ctx->state = CRYPT_MAC_STATE_FINAL;
-    EAL_EventReport(CRYPT_EVENT_MAC, CRYPT_ALGO_MAC, ctx->id, CRYPT_SUCCESS);
     return CRYPT_SUCCESS;
 }
 
@@ -315,11 +191,15 @@ void CRYPT_EAL_MacDeinit(CRYPT_EAL_MacCtx *ctx)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
         return;
     }
-    if (ctx->macMeth == NULL || ctx->macMeth->deinit == NULL) {
+    if (ctx->macMeth.deinit == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return;
     }
-    ctx->macMeth->deinit(ctx->ctx);
+    int32_t ret = ctx->macMeth.deinit(ctx->ctx);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, ret);
+        return;
+    }
 
     ctx->state = CRYPT_MAC_STATE_NEW;
     return;
@@ -337,24 +217,28 @@ int32_t CRYPT_EAL_MacReinit(CRYPT_EAL_MacCtx *ctx)
         return CRYPT_EAL_ERR_STATE;
     }
 
-    if (ctx->macMeth == NULL || ctx->macMeth->reinit == NULL) {
+    if (ctx->macMeth.reinit == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    ctx->macMeth->reinit(ctx->ctx);
+    int32_t ret = ctx->macMeth.reinit(ctx->ctx);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, ctx->id, ret);
+        return ret;
+    }
     ctx->state = CRYPT_MAC_STATE_INIT;
     return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_EAL_MacCtrl(CRYPT_EAL_MacCtx *ctx, int32_t cmd, void *val, uint32_t valLen)
 {
-    if (ctx == NULL || ctx->macMeth == NULL || ctx->macMeth->ctrl== NULL) {
+    if (ctx == NULL || ctx->macMeth.ctrl == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
 
     if (cmd == CRYPT_CTRL_GET_MACLEN) {
-        return ctx->macMeth->ctrl(ctx->ctx, cmd, val, valLen);
+        return ctx->macMeth.ctrl(ctx->ctx, cmd, val, valLen);
     }
 
     if (ctx->state != CRYPT_MAC_STATE_INIT) {
@@ -362,7 +246,7 @@ int32_t CRYPT_EAL_MacCtrl(CRYPT_EAL_MacCtx *ctx, int32_t cmd, void *val, uint32_
         return CRYPT_EAL_ERR_STATE;
     }
 
-    return ctx->macMeth->ctrl(ctx->ctx, cmd, val, valLen);
+    return ctx->macMeth.ctrl(ctx->ctx, cmd, val, valLen);
 }
 
 uint32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx)
@@ -373,10 +257,32 @@ uint32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx)
     return (ret == CRYPT_SUCCESS) ? result : 0;
 }
 
+/* The function not support provider */
 bool CRYPT_EAL_MacIsValidAlgId(CRYPT_MAC_AlgId id)
 {
-    EAL_MacMethLookup method;
-    return EAL_MacFindMethod(id, &method) == CRYPT_SUCCESS;
+    // 1. Check if the dependency method is valid
+    /**
+     * The dependency method is getted from the global static table:
+     *     If the mac algorithm is HMAC, the method in mdMethod will be overwritten.
+     *     If the mac algorithm is other than HMAC, the depMeth.method will be overwritten.
+     */
+    EAL_MdMethod mdMethod = {0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+    EAL_MacDepMethod depMeth = {.method = {.md = &mdMethod}};
+    int32_t ret = EAL_MacFindDepMethod(id, NULL, NULL, &depMeth, NULL, false);
+    if (ret != CRYPT_SUCCESS) {
+        return false;
+    }
+    // 2. Check if the mac method is valid
+    return EAL_MacFindDefaultMethod(id) != NULL;
+}
+
+int32_t CRYPT_EAL_MacSetParam(CRYPT_EAL_MacCtx *ctx, const BSL_Param *param)
+{
+    if (ctx == NULL || param == NULL || ctx->macMeth.setParam == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return ctx->macMeth.setParam(ctx->ctx, param);
 }
 
 #endif

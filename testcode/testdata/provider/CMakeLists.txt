@@ -15,7 +15,7 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 project(openHiTLS_PROVIDER_TEST)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -shared")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -shared -Werror")
 
 # Set output directory
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
@@ -48,6 +48,7 @@ set(SOURCE_FILES_PATH1_LIBSO
     provider_load_test_providerNoInit.c
     provider_load_test_providerNoFree.c
     provider_self_decoder_test.c
+    provider_load_p12.c
 )
 
 set(SOURCE_FILES_PATH2_SO
@@ -132,3 +133,31 @@ foreach(SOURCE_FILE ${SOURCE_FILES_PATH2_LIBSO})
         )
     endif()
 endforeach()
+
+# compile provider_sha256.so to path2
+add_library(provider_sha256 SHARED
+    provider_sha256.c
+    ${OPENHITLS_ROOT}/crypto/sha2/src/noasm_sha256.c
+    ${OPENHITLS_ROOT}/crypto/sha2/src/sha2_256.c
+    ${OPENHITLS_ROOT}/crypto/util/crypt_util_md.c
+    ${OPENHITLS_ROOT}/bsl/sal/src/sal_mem.c
+    ${OPENHITLS_ROOT}/bsl/params/src/bsl_params.c
+)
+target_include_directories(provider_sha256 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+                                               ${OPENHITLS_ROOT}/config/macro_config
+                                               ${OPENHITLS_ROOT}/bsl/include
+                                               ${OPENHITLS_ROOT}/bsl/err/include
+                                               ${OPENHITLS_ROOT}/bsl/log/include
+                                               ${OPENHITLS_ROOT}/bsl/sal/include
+                                               ${OPENHITLS_ROOT}/bsl/sal/src
+                                               ${OPENHITLS_ROOT}/crypto/include
+                                               ${OPENHITLS_ROOT}/crypto/sha2/include
+                                               ${OPENHITLS_ROOT}/crypto/sha2/src
+                                               ${OPENHITLS_ROOT}/platform/Secure_C/include)
+target_link_libraries(provider_sha256 PRIVATE boundscheck)
+target_link_directories(provider_sha256 PRIVATE ${OPENHITLS_ROOT}/platform/Secure_C/lib)
+target_compile_options(provider_sha256 PRIVATE -g -O0 -DHITLS_CRYPTO_SHA256 -DHITLS_CRYPTO_SHA2 -DHITLS_CRYPTO_MD -DHITLS_CRYPTO_PROVIDER -DHITLS_BSL_PARAMS)
+set_target_properties(provider_sha256 PROPERTIES
+    PREFIX ""
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/path2"
+)

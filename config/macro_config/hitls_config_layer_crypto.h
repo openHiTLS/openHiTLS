@@ -25,19 +25,6 @@
 #ifndef HITLS_CONFIG_LAYER_CRYPTO_H
 #define HITLS_CONFIG_LAYER_CRYPTO_H
 
-#ifdef HITLS_CRYPTO_CODECS
-    #ifndef HITLS_CRYPTO_PROVIDER
-        #define HITLS_CRYPTO_PROVIDER
-    #endif
-#endif
-
-#if defined(HITLS_CRYPTO_CODECSKEY) && defined(HITLS_CRYPTO_PROVIDER)
-    #ifndef HITLS_CRYPTO_CODECS
-        #define HITLS_CRYPTO_CODECS
-    #endif
-#endif
-
-
 #ifdef HITLS_CRYPTO_CODECSKEY
     #ifndef HITLS_CRYPTO_KEY_ENCODE
         #define HITLS_CRYPTO_KEY_ENCODE
@@ -50,6 +37,15 @@
     #endif
     #ifndef HITLS_CRYPTO_KEY_INFO
         #define HITLS_CRYPTO_KEY_INFO
+    #endif
+#endif
+
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
+    #ifndef HITLS_CRYPTO_KEY_DECODE
+        #define HITLS_CRYPTO_KEY_DECODE
+    #endif
+    #ifndef HITLS_CRYPTO_CODECS
+        #define HITLS_CRYPTO_CODECS
     #endif
 #endif
 
@@ -73,8 +69,14 @@
     #ifndef HITLS_BSL_ASN1
         #define HITLS_BSL_ASN1
     #endif
-    #ifndef HITLS_BSL_OBJ
-        #define HITLS_BSL_OBJ
+    #ifndef HITLS_BSL_OBJ_DEFAULT
+        #define HITLS_BSL_OBJ_DEFAULT
+    #endif
+#endif
+
+#ifdef HITLS_CRYPTO_CODECS
+    #ifndef HITLS_CRYPTO_PROVIDER
+        #define HITLS_CRYPTO_PROVIDER
     #endif
 #endif
 
@@ -167,10 +169,12 @@
     #endif
 #endif
 
-#if defined(HITLS_CRYPTO_DRBG_GM)
-    #ifndef HITLS_BSL_SAL_TIME
-        #define HITLS_BSL_SAL_TIME
-    #endif
+#if defined(HITLS_CRYPTO_DRBG) && !defined(HITLS_BSL_SAL_PID)
+    #define HITLS_BSL_SAL_PID
+#endif
+
+#if defined(HITLS_CRYPTO_DRBG_GM) && !defined(HITLS_BSL_SAL_TIME)
+    #define HITLS_BSL_SAL_TIME
 #endif
 /* MAC */
 #ifdef HITLS_CRYPTO_MAC
@@ -298,6 +302,9 @@
 
 /* PKEY */
 #ifdef HITLS_CRYPTO_PKEY
+    #ifndef HITLS_CRYPTO_PKEY_CMP
+        #define HITLS_CRYPTO_PKEY_CMP
+    #endif
     #ifndef HITLS_CRYPTO_ECC
         #define HITLS_CRYPTO_ECC
     #endif
@@ -306,6 +313,9 @@
     #endif
     #ifndef HITLS_CRYPTO_RSA
         #define HITLS_CRYPTO_RSA
+    #endif
+    #ifndef HITLS_CRYPTO_RSA_BSSA
+        #define HITLS_CRYPTO_RSA_BSSA
     #endif
     #ifndef HITLS_CRYPTO_DH
         #define HITLS_CRYPTO_DH
@@ -325,11 +335,11 @@
     #ifndef HITLS_CRYPTO_MLKEM
         #define HITLS_CRYPTO_MLKEM
     #endif
-    #ifndef HITLS_CRYPTO_MLDSA
-        #define HITLS_CRYPTO_MLDSA
-    #endif
     #ifndef HITLS_CRYPTO_HYBRIDKEM
         #define HITLS_CRYPTO_HYBRIDKEM
+    #endif
+    #ifndef HITLS_CRYPTO_MLDSA
+        #define HITLS_CRYPTO_MLDSA
     #endif
     #ifndef HITLS_CRYPTO_PAILLIER
         #define HITLS_CRYPTO_PAILLIER
@@ -340,6 +350,9 @@
     #ifndef HITLS_CRYPTO_SLH_DSA
         #define HITLS_CRYPTO_SLH_DSA
     #endif
+    #ifndef HITLS_CRYPTO_XMSS
+        #define HITLS_CRYPTO_XMSS
+    #endif
 #endif
 
 #ifdef HITLS_CRYPTO_RSA
@@ -348,6 +361,9 @@
     #endif
     #ifndef HITLS_CRYPTO_RSA_VERIFY
         #define HITLS_CRYPTO_RSA_VERIFY
+    #endif
+    #ifndef HITLS_CRYPTO_RSA_RECOVER
+        #define HITLS_CRYPTO_RSA_RECOVER
     #endif
     #ifndef HITLS_CRYPTO_RSA_ENCRYPT
         #define HITLS_CRYPTO_RSA_ENCRYPT
@@ -364,8 +380,8 @@
     #ifndef HITLS_CRYPTO_RSA_PAD
         #define HITLS_CRYPTO_RSA_PAD
     #endif
-    #ifndef HITLS_CRYPTO_RSA_BSSA
-        #define HITLS_CRYPTO_RSA_BSSA
+    #ifndef HITLS_CRYPTO_RSA_CHECK
+        #define HITLS_CRYPTO_RSA_CHECK
     #endif
 #endif
 
@@ -387,9 +403,16 @@
     #endif
 #endif
 
-#ifdef HITLS_CRYPTO_RSA_BLINDING
+#if defined(HITLS_CRYPTO_RSA_BLINDING) && !defined(HITLS_CRYPTO_BN_RAND)
+    #define HITLS_CRYPTO_BN_RAND
+#endif
+
+#ifdef HITLS_CRYPTO_RSA_CHECK
     #ifndef HITLS_CRYPTO_BN_RAND
         #define HITLS_CRYPTO_BN_RAND
+    #endif
+    #ifndef HITLS_CRYPTO_BN_PRIME
+        #define HITLS_CRYPTO_BN_PRIME
     #endif
 #endif
 
@@ -422,7 +445,11 @@
     #endif
 #endif
 
-#if defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_VERIFY) || \
+#if defined(HITLS_CRYPTO_RSA_RECOVER) && !defined(HITLS_CRYPTO_RSA_VERIFY)
+    #define HITLS_CRYPTO_RSA_VERIFY
+#endif
+
+#if defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_VERIFY) || defined(HITLS_CRYPTO_RSA_RECOVER) || \
     defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_DECRYPT) || \
     defined(HITLS_CRYPTO_RSA_BLINDING) || defined(HITLS_CRYPTO_RSA_PAD) || defined(HITLS_CRYPTO_RSA_GEN)
     #ifndef HITLS_CRYPTO_RSA
@@ -442,16 +469,20 @@
     #ifndef HITLS_CRYPTO_ED25519
         #define HITLS_CRYPTO_ED25519
     #endif
+    #ifndef HITLS_CRYPTO_X25519_CHECK
+        #define HITLS_CRYPTO_X25519_CHECK
+    #endif
+    #ifndef HITLS_CRYPTO_ED25519_CHECK
+        #define HITLS_CRYPTO_ED25519_CHECK
+    #endif
 #endif
 
 #if defined(HITLS_CRYPTO_ED25519) && !defined(HITLS_CRYPTO_SHA512)
     #define HITLS_CRYPTO_SHA512
 #endif
 
-#if defined(HITLS_CRYPTO_X25519) || defined(HITLS_CRYPTO_ED25519)
-    #ifndef HITLS_CRYPTO_CURVE25519
-        #define HITLS_CRYPTO_CURVE25519
-    #endif
+#if (defined(HITLS_CRYPTO_X25519) || defined(HITLS_CRYPTO_ED25519)) && !defined(HITLS_CRYPTO_CURVE25519)
+    #define HITLS_CRYPTO_CURVE25519
 #endif
 
 #ifdef HITLS_CRYPTO_SM2
@@ -479,6 +510,15 @@
     #ifndef HITLS_CRYPTO_CURVE_SM2
         #define HITLS_CRYPTO_CURVE_SM2
     #endif
+    #ifndef HITLS_CRYPTO_SM2_CHECK
+        #define HITLS_CRYPTO_SM2_CHECK
+    #endif
+#endif
+
+#ifdef HITLS_CRYPTO_XMSS
+    #ifndef HITLS_CRYPTO_SLH_DSA
+        #define HITLS_CRYPTO_SLH_DSA
+    #endif
 #endif
 
 #ifdef HITLS_CRYPTO_SLH_DSA
@@ -488,8 +528,8 @@
     #ifndef HITLS_CRYPTO_SHA3
         #define HITLS_CRYPTO_SHA3
     #endif
-    #ifndef HITLS_BSL_OBJ
-        #define HITLS_BSL_OBJ
+    #ifndef HITLS_BSL_OBJ_DEFAULT
+        #define HITLS_BSL_OBJ_DEFAULT
     #endif
     #ifndef HITLS_CRYPTO_EAL
         #define HITLS_CRYPTO_EAL
@@ -503,6 +543,9 @@
     #ifndef HITLS_CRYPTO_SHA512
         #define HITLS_CRYPTO_SHA512
     #endif
+    #ifndef HITLS_CRYPTO_SLH_DSA_CHECK
+        #define HITLS_CRYPTO_SLH_DSA_CHECK
+    #endif
 #endif
 
 #if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_ELGAMAL)
@@ -514,18 +557,16 @@
     #endif
 #endif
 
-#ifdef HITLS_CRYPTO_HYBRIDKEM
-    #ifndef HITLS_CRYPTO_MLKEM
-        #define HITLS_CRYPTO_MLKEM
-    #endif
+#if defined(HITLS_CRYPTO_HYBRIDKEM) && !defined(HITLS_CRYPTO_MLKEM)
+    #define HITLS_CRYPTO_MLKEM
 #endif
 
 #ifdef HITLS_CRYPTO_MLKEM
     #ifndef HITLS_CRYPTO_SHA3
         #define HITLS_CRYPTO_SHA3
     #endif
-    #ifndef HITLS_CRYPTO_KEM
-        #define HITLS_CRYPTO_KEM
+    #ifndef HITLS_CRYPTO_MLKEM_CHECK
+        #define HITLS_CRYPTO_MLKEM_CHECK
     #endif
 #endif
 
@@ -533,8 +574,11 @@
     #ifndef HITLS_CRYPTO_SHA3
         #define HITLS_CRYPTO_SHA3
     #endif
-    #ifndef HITLS_BSL_OBJ
-        #define HITLS_BSL_OBJ
+    #ifndef HITLS_BSL_OBJ_DEFAULT
+        #define HITLS_BSL_OBJ_DEFAULT
+    #endif
+    #ifndef HITLS_CRYPTO_MLDSA_CHECK
+        #define HITLS_CRYPTO_MLDSA_CHECK
     #endif
 #endif
 
@@ -563,6 +607,9 @@
     #ifndef HITLS_CRYPTO_CURVE_SM2
         #define HITLS_CRYPTO_CURVE_SM2
     #endif
+    #ifndef HITLS_CRYPTO_ECC_CHECK
+        #define HITLS_CRYPTO_ECC_CHECK
+    #endif
 #endif
 
 #if defined(HITLS_CRYPTO_CURVE_NISTP224) || defined(HITLS_CRYPTO_CURVE_NISTP256) || \
@@ -585,22 +632,98 @@
     #define HITLS_CRYPTO_NIST_USE_ACCEL
 #endif
 
-#ifdef HITLS_CRYPTO_DSA_GEN_PARA
-    #ifndef HITLS_CRYPTO_DSA
-        #define HITLS_CRYPTO_DSA
-    #endif
+#if defined(HITLS_CRYPTO_DSA_GEN_PARA) && !defined(HITLS_CRYPTO_DSA)
+    #define HITLS_CRYPTO_DSA
+#endif
+
+#if defined(HITLS_CRYPTO_ECDH) && !defined(HITLS_CRYPTO_ECDH_CHECK)
+    #define HITLS_CRYPTO_ECDH_CHECK
+#endif
+
+#if defined(HITLS_CRYPTO_ECDSA) && !defined(HITLS_CRYPTO_ECDSA_CHECK)
+    #define HITLS_CRYPTO_ECDSA_CHECK
+#endif
+
+#if defined(HITLS_CRYPTO_DH) && !defined(HITLS_CRYPTO_DH_CHECK)
+    #define HITLS_CRYPTO_DH_CHECK
+#endif
+
+#if defined(HITLS_CRYPTO_DSA) && !defined(HITLS_CRYPTO_DSA_CHECK)
+    #define HITLS_CRYPTO_DSA_CHECK
 #endif
 
 #if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_CURVE25519) || defined(HITLS_CRYPTO_RSA) || \
     defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_ECDH) ||      \
     defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_PAILLIER)|| defined(HITLS_CRYPTO_ELGAMAL) || \
     defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_MLKEM) || defined(HITLS_CRYPTO_HYBRIDKEM) || \
-    defined(HITLS_CRYPTO_SLH_DSA)
+    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_XMSS)
     #ifndef HITLS_CRYPTO_PKEY
         #define HITLS_CRYPTO_PKEY
     #endif
     #ifndef HITLS_BSL_PARAMS
         #define HITLS_BSL_PARAMS
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_X25519) || defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDH) || \
+    defined(HITLS_CRYPTO_SM2_EXCH)
+    #ifndef HITLS_CRYPTO_PKEY_EXCH
+        #define HITLS_CRYPTO_PKEY_EXCH
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_DECRYPT) || defined(HITLS_CRYPTO_SM2_CRYPT) || \
+    defined(HITLS_CRYPTO_PAILLIER) || defined(HITLS_CRYPTO_ELGAMAL)
+    #ifndef HITLS_CRYPTO_PKEY_CRYPT
+        #define HITLS_CRYPTO_PKEY_CRYPT
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_VERIFY) || \
+    defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2_SIGN) || defined(HITLS_CRYPTO_ED25519) || \
+    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_MLDSA)
+    #ifndef HITLS_CRYPTO_PKEY_SIGN
+        #define HITLS_CRYPTO_PKEY_SIGN
+    #endif
+#endif
+
+#if (defined(HITLS_CRYPTO_MLKEM) || defined(HITLS_CRYPTO_HYBRIDKEM)) && !defined(HITLS_CRYPTO_PKEY_KEM)
+    #define HITLS_CRYPTO_PKEY_KEM
+#endif
+
+#ifdef HITLS_CRYPTO_PKEY_CMP
+    #if defined(HITLS_CRYPTO_RSA) && !defined(HITLS_CRYPTO_RSA_CMP)
+        #define HITLS_CRYPTO_RSA_CMP
+    #endif
+    #if defined(HITLS_CRYPTO_DSA) && !defined(HITLS_CRYPTO_DSA_CMP)
+        #define HITLS_CRYPTO_DSA_CMP
+    #endif
+    #if defined(HITLS_CRYPTO_DH) && !defined(HITLS_CRYPTO_DH_CMP)
+        #define HITLS_CRYPTO_DH_CMP
+    #endif
+    #if defined(HITLS_CRYPTO_ECDSA) && !defined(HITLS_CRYPTO_ECDSA_CMP)
+        #define HITLS_CRYPTO_ECDSA_CMP
+    #endif
+    #if defined(HITLS_CRYPTO_ECDH) && !defined(HITLS_CRYPTO_ECDH_CMP)
+        #define HITLS_CRYPTO_ECDH_CMP
+    #endif
+    #if defined(HITLS_CRYPTO_SM2) && !defined(HITLS_CRYPTO_SM2_CMP)
+        #define HITLS_CRYPTO_SM2_CMP
+    #endif
+    #if defined(HITLS_CRYPTO_CURVE25519) && !defined(HITLS_CRYPTO_CURVE25519_CMP)
+        #define HITLS_CRYPTO_CURVE25519_CMP
+    #endif
+    #if defined(HITLS_CRYPTO_MLDSA) && !defined(HITLS_CRYPTO_MLDSA_CMP)
+        #define HITLS_CRYPTO_MLDSA_CMP
+    #endif
+    #if defined(HITLS_CRYPTO_MLKEM) && !defined(HITLS_CRYPTO_MLKEM_CMP)
+        #define HITLS_CRYPTO_MLKEM_CMP
+    #endif
+
+    #if defined(HITLS_CRYPTO_ECDSA_CMP) || defined(HITLS_CRYPTO_ECDH_CMP) || defined(HITLS_CRYPTO_SM2_CMP)
+        #ifndef HITLS_CRYPTO_ECC_CMP
+            #define HITLS_CRYPTO_ECC_CMP
+        #endif
     #endif
 #endif
 
@@ -798,6 +921,12 @@
 
 #if defined(HITLS_CRYPTO_CURVE_MONT_PRIME) || defined(HITLS_CRYPTO_CURVE_MONT_NIST)
 #define HITLS_CRYPTO_CURVE_MONT
+#endif
+
+#if defined(HITLS_CRYPTO_ECDSA_CHECK) || defined(HITLS_CRYPTO_ECDH_CHECK) || defined(HITLS_CRYPTO_SM2_CHECK)
+    #ifndef HITLS_CRYPTO_ECC_CHECK
+        #define HITLS_CRYPTO_ECC_CHECK
+    #endif
 #endif
 
 #endif /* HITLS_CONFIG_LAYER_CRYPTO_H */

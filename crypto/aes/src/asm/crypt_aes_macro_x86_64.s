@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_AES
 
-.file    "crypt_aes_macro_x86_64.s"
 
 /* AES_ENC_1_BLK */
 .macro    AES_ENC_1_BLK    key round rdk blk

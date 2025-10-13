@@ -1185,9 +1185,6 @@ static int32_t PackNewSessionTicketMsg(FRAME_Type *type, const FRAME_NewSessionT
         PackInteger16(&newSessionTicket->extensionLen, &buf[offset], bufLen - offset, &offset);
     }
     *usedLen = offset;
-    if (offset != bufLen) {
-        return HITLS_PACK_UNSUPPORT_HANDSHAKE_MSG;
-    }
     return HITLS_SUCCESS;
 }
 

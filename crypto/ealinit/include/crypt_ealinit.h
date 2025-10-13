@@ -18,6 +18,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_ASM_CHECK
 #include <stdint.h>
+#include "crypt_algid.h"
  
 #ifdef __cplusplus
 extern "C" {

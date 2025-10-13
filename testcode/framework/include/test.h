@@ -83,6 +83,16 @@ typedef struct {
         }                                               \
     } while (0)
 
+#define ASSERT_LT(VALUE1, VALUE2)                       \
+    do {                                                \
+        int64_t value1__ = (int64_t)(VALUE1);           \
+        int64_t value2__ = (int64_t)(VALUE2);           \
+        if (!(value1__ < value2__)) {                     \
+            RecordFailure(#VALUE1 #VALUE2, __FILE__);   \
+            Print("\nvalue is %d (0x%x).\nexpect %d (0x%x).\n", value1__, value1__, value2__, value2__); \
+            goto EXIT;                                  \
+        }                                               \
+    } while (0)
 
 #define ASSERT_EQ_LOG(LOG, VALUE1, VALUE2)              \
     do {                                                \

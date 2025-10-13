@@ -84,7 +84,8 @@ ERR:
 // If n and d are not NULL, p and q are optional. If p and q exist, qInv, dP, and dQ need to be calculated.
 static int32_t SetPrvBasicCheck(const CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *prv)
 {
-    if (ctx == NULL || prv == NULL || prv->n == NULL || prv->d == NULL || prv->nLen == 0) {
+    bool invalidIn = ctx == NULL || prv == NULL || prv->n == NULL || prv->d == NULL || prv->nLen == 0;
+    if (invalidIn == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -94,8 +95,9 @@ static int32_t SetPrvBasicCheck(const CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *pr
     }
     // prv->p\q and prv->dP\dQ\qInv must be both empty or not.
     // If prv->p is empty, prv->dP must be empty.
-    if ((prv->p == NULL) != (prv->q == NULL) || (prv->p == NULL && prv->dP != NULL) ||
-        ((prv->dP == NULL || prv->dQ == NULL || prv->qInv == NULL) && (prv->dP || prv->dQ || prv->qInv))) {
+    invalidIn = (prv->p == NULL) != (prv->q == NULL) || (prv->p == NULL && prv->dP != NULL) ||
+        ((prv->dP == NULL || prv->dQ == NULL || prv->qInv == NULL) && (prv->dP || prv->dQ || prv->qInv));
+    if (invalidIn == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
         return CRYPT_RSA_NO_KEY_INFO;
     }
@@ -244,9 +246,10 @@ static int32_t GetPrvBasicCheck(const CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *pr
     // ctx\ctx->prvKey\prv is not empty.
     // prv->p\q and prv->dP\dQ\qInv are both null or non-null.
     // If prv->p is empty, prv->dP is empty.
-    if (ctx == NULL || ctx->prvKey == NULL || prv == NULL || ((prv->p == NULL) != (prv->q == NULL)) ||
+    bool nullInput = ctx == NULL || ctx->prvKey == NULL || prv == NULL || ((prv->p == NULL) != (prv->q == NULL)) ||
         ((prv->dP == NULL || prv->dQ == NULL || prv->qInv == NULL) && (prv->dP || prv->dQ || prv->qInv)) ||
-        (prv->p == NULL && prv->dP != NULL)) {
+        (prv->p == NULL && prv->dP != NULL);
+    if (nullInput == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -407,6 +410,7 @@ int32_t CRYPT_RSA_GetPubKeyEx(const CRYPT_RSA_Ctx *ctx, BSL_Param *para)
 }
 #endif
 
+#ifdef HITLS_CRYPTO_RSA_CMP
 int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b)
 {
     RETURN_RET_IF(a == NULL || b == NULL, CRYPT_NULL_INPUT);
@@ -419,6 +423,7 @@ int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b)
 
     return CRYPT_SUCCESS;
 }
+#endif
 
 int32_t CRYPT_RSA_GetSecBits(const CRYPT_RSA_Ctx *ctx)
 {
@@ -429,4 +434,458 @@ int32_t CRYPT_RSA_GetSecBits(const CRYPT_RSA_Ctx *ctx)
     int32_t bits = (int32_t)CRYPT_RSA_GetBits(ctx);
     return BN_SecBits(bits, -1);
 }
+
+#ifdef HITLS_CRYPTO_RSA_CHECK
+
+#define RSA_CHECK_PQ_RECOVER 1 // recover p q and check.
+#define RSA_CHECK_PQD_CHECK 2 // check prime p q
+#define RSA_CHECK_CRT_CHECK 3 // check crt
+
+// m = 2^t * r, m != 0. cal Max(t) and bn = m / 2^t.
+static void CalMaxT(BN_BigNum *bn, uint32_t *res)
+{
+    uint32_t t = 0;
+    while (BN_GetBit(bn, t) == false) {
+        t++;
+    }
+    *res = t;
+    (void)BN_Rshift(bn, bn, t); // bn will decrease, and the memory will definitely be sufficient
+    return;
+}
+
+static int32_t BasicKeypairCheck(const CRYPT_RSA_PubKey *pubKey, const CRYPT_RSA_PrvKey *prvKey)
+{
+    if (pubKey->n == NULL || pubKey->e == NULL) {
+        return CRYPT_RSA_ERR_NO_PUBKEY_INFO;
+    }
+    // Currently, the check for p and q being null is not supported.
+    if (prvKey->n == NULL || prvKey->d == NULL) {
+        return CRYPT_RSA_ERR_NO_PRVKEY_INFO;
+    }
+    uint32_t eBits1 = BN_Bits(pubKey->e); // not check e == NULL repeatedly.
+    uint32_t eBits2 = BN_Bits(prvKey->e); // prvKey->e can be empty, unless in crt mode
+    // e <= 2^16 or e >= 2^256 -> e shoule be [17, 256].
+    bool flag = (eBits2 != 0 && eBits2 != eBits1) || eBits1 < 17 || eBits1 > 256 || !BN_IsOdd(pubKey->e);
+    if (flag == true) {
+        return CRYPT_RSA_ERR_E_VALUE;
+    }
+    uint32_t nBbits = BN_Bits(pubKey->n);
+    if (nBbits % 2 != 0) { // mod 2 to check nBits is a positive even integer or not.
+        return CRYPT_RSA_ERR_KEY_BITS;
+    }
+    int32_t ret = BN_Cmp(pubKey->n, prvKey->n); // If n_pub != n_priv
+    if (ret != 0) { // not equal
+        return CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+    }
+    ret = BN_SecBits((int32_t)nBbits, -1); // no need to consider prvLen.
+    /* SP800-56B requires that its should in the interval [112, 256]
+     * Because the current rsa specification supports 1024 bits, so the lower limit is 80. */
+    if (ret < 80 || ret > 256) {
+        return CRYPT_RSA_ERR_KEY_BITS;
+    }
+    return CRYPT_SUCCESS;
+}
+
+/*
+ * if lower < p < upper, return success, otherwise return error.
+ */
+static int32_t RangeCheck(const BN_BigNum *lower, const BN_BigNum *p, const BN_BigNum *upper)
+{
+    int32_t ret = BN_Cmp(lower, p);
+    if (ret >= 0) {
+        return CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+    }
+    ret = BN_Cmp(p, upper);
+    if (ret >= 0) {
+        return CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+    }
+    return CRYPT_SUCCESS;
+}
+
+#ifdef HITLS_CRYPTO_SP800_STRICT_CHECK
+/*
+ * if (p < √2)(2nBits/2−1)) or (p > 2nBits/2 – 1), return error.
+*/
+static int32_t FactorPQcheck(const BN_BigNum *e, const BN_BigNum *p, const BN_BigNum *n1, const BN_BigNum *n2,
+    BN_Optimizer *opt)
+{
+    int32_t ret = OptimizerStart(opt);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    BN_BigNum *pSqr = OptimizerGetBn(opt, p->size);
+    BN_BigNum *tmp = OptimizerGetBn(opt, p->size);
+    if (tmp == NULL || pSqr == NULL) {
+        OptimizerEnd(opt);
+        BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
+        return CRYPT_BN_OPTIMIZER_GET_FAIL;
+    }
+    GOTO_ERR_IF(BN_Sqr(pSqr, p, opt), ret);
+    if (BN_Cmp(pSqr, n1) < 0) { // check (p < (√2)(2^(nBits/2−1))
+        ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+    if (BN_Cmp(p, n2) > 0) { // check (p > (2^(nBits - 1)))
+        ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+    GOTO_ERR_IF(BN_SubLimb(tmp, p, 1), ret);
+    GOTO_ERR_IF(BN_Gcd(tmp, e, tmp, opt), ret); // check gcd(p-1, e_pub) != 1
+    if (!BN_IsOne(tmp)) {
+        ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+ERR:
+    OptimizerEnd(opt);
+    return ret;
+}
+#endif
+
+static int32_t FactorPrimeCheck(const BN_BigNum *n, const BN_BigNum *e, const BN_BigNum *p, const BN_BigNum *q,
+    BN_Optimizer *opt)
+{
+    int32_t ret = OptimizerStart(opt);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    uint32_t nBits = BN_Bits(n);
+    uint32_t checkTimes = nBits < 1536 ? 5 : 4; // ref. FIPS 186-5, Table B.1
+    uint32_t needRoom = nBits / BN_UINT_BITS;
+    BN_BigNum *tmp1 = OptimizerGetBn(opt, needRoom);
+    BN_BigNum *tmp2 = OptimizerGetBn(opt, needRoom);
+    if (tmp1 == NULL || tmp2 == NULL) {
+        OptimizerEnd(opt);
+        BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
+        return CRYPT_BN_OPTIMIZER_GET_FAIL;
+    }
+    GOTO_ERR_IF(BN_Mul(tmp1, p, q, opt), ret);
+    if (BN_Cmp(tmp1, n) != 0) { // if n_pub != p * q.
+        ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE);
+        goto ERR;
+    }
+
+#ifdef HITLS_CRYPTO_SP800_STRICT_CHECK
+    // get ((√2)(2^(nBits/2 - 1)))^2
+    (void)BN_SetLimb(tmp1, 1);
+    GOTO_ERR_IF(BN_Lshift(tmp1, tmp1, nBits - 2), ret); // secLen can guarantee nBits > 2.
+    GOTO_ERR_IF(BN_Add(tmp1, tmp1, tmp1), ret);
+
+    // get 2^(nBits/2) - 1.
+    (void)BN_SetLimb(tmp2, 1);
+    GOTO_ERR_IF(BN_Lshift(tmp2, tmp2, nBits << 1), ret);
+    GOTO_ERR_IF(BN_SubLimb(tmp2, tmp2, 1), ret);
+
+    GOTO_ERR_IF(FactorPQcheck(e, p, tmp1, tmp2, opt), ret);
+    GOTO_ERR_IF(FactorPQcheck(e, q, tmp1, tmp2, opt), ret);
+#else
+    (void)e;
+#endif
+    GOTO_ERR_IF(BN_Sub(tmp1, p, q), ret);
+    (void)BN_SetSign(tmp1, false); // tmp1 = |p - q|
+    (void)BN_SetLimb(tmp2, 1);
+    GOTO_ERR_IF(BN_Lshift(tmp2, tmp2, (nBits >> 1) - 100), ret); // 2^(nBits/2 - 100)
+    if (BN_Cmp(tmp1, tmp2) <= 0) { // check |p - q| <= (2^(nBits/2 - 100))
+        ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+    ret = BN_PrimeCheck(p, checkTimes, opt, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        if (ret == CRYPT_BN_NOR_CHECK_PRIME) {
+            ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+            BSL_ERR_PUSH_ERROR(ret);
+            goto ERR;
+        }
+    }
+    ret = BN_PrimeCheck(q, checkTimes, opt, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        if (ret == CRYPT_BN_NOR_CHECK_PRIME) {
+            ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+            BSL_ERR_PUSH_ERROR(ret);
+        }
+    }
+ERR:
+    OptimizerEnd(opt);
+    return ret;
+}
+
+static int32_t FactorDCheck(const BN_BigNum *n, const BN_BigNum *e, const BN_BigNum *p, const BN_BigNum *q,
+    const BN_BigNum *d, BN_Optimizer *opt)
+{
+    int32_t ret = OptimizerStart(opt);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    uint32_t nBits = BN_Bits(n);
+    uint32_t needRoom = nBits / BN_UINT_BITS;
+    BN_BigNum *tmp0 = OptimizerGetBn(opt, needRoom);
+    BN_BigNum *tmp1 = OptimizerGetBn(opt, needRoom);
+    BN_BigNum *tmp2 = OptimizerGetBn(opt, needRoom);
+    if (tmp0 == NULL || tmp1 == NULL || tmp2 == NULL) {
+        OptimizerEnd(opt);
+        BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
+        return CRYPT_BN_OPTIMIZER_GET_FAIL;
+    }
+    // get 2^(nBits / 2)
+    (void)BN_SetLimb(tmp0, 1);
+    GOTO_ERR_IF(BN_Lshift(tmp0, tmp0, nBits >> 1), ret);
+
+    GOTO_ERR_IF(BN_SubLimb(tmp1, p, 1), ret);
+    GOTO_ERR_IF(BN_SubLimb(tmp2, q, 1), ret);
+    // tmp1 = LCM(p – 1, q – 1)
+    GOTO_ERR_IF(BN_Lcm(tmp1, tmp1, tmp2, opt), ret);
+#ifdef HITLS_CRYPTO_SP800_STRICT_CHECK
+    // In the original RSA paper <A Method for Obtaining Digital Signatures and Public-Key Cryptosystems>,
+    // the Euler totient function is φ(n) = (p – 1)(q – 1), hence d < LCM(p – 1, q – 1) will be incompatible.
+    // check 2^(nBits / 2) < d < LCM(p – 1, q – 1).
+    GOTO_ERR_IF(RangeCheck(tmp0, d, tmp1), ret);
+#endif
+    GOTO_ERR_IF(BN_Mul(tmp0, e, d, opt), ret);
+    GOTO_ERR_IF(BN_Mod(tmp2, tmp0, tmp1, opt), ret);
+    // check. 1 = (d * epub) mod LCM(p – 1, q – 1).
+    if (!BN_IsOne(tmp2)) {
+        ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+ERR:
+    OptimizerEnd(opt);
+    return ret;
+}
+
+/*
+ * Recover prime factors p and q from n, e, and d.
+ * ref SP800.56b Appendix C
+*/
+static int32_t RecoverPrimeFactorsAndCheck(const CRYPT_RSA_Ctx *pubKey, const CRYPT_RSA_Ctx *prvKey,
+    BN_Optimizer *opt)
+{
+    int ret = OptimizerStart(opt);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    bool flag = false;
+    uint32_t tFactor;
+    uint32_t nBits = BN_Bits(pubKey->pubKey->n);
+    uint32_t needRoom = nBits / BN_UINT_BITS;
+    BN_BigNum *g = OptimizerGetBn(opt, needRoom);
+    BN_BigNum *x = OptimizerGetBn(opt, needRoom);
+    BN_BigNum *y = OptimizerGetBn(opt, needRoom);
+    BN_BigNum *nSubOne = OptimizerGetBn(opt, needRoom);
+    BN_BigNum *p = OptimizerGetBn(opt, needRoom);
+    BN_BigNum *q = OptimizerGetBn(opt, needRoom);
+    BN_BigNum *r = OptimizerGetBn(opt, needRoom);
+    if (g == NULL || x == NULL || y == NULL || nSubOne == NULL || p == NULL || q == NULL || r == NULL) {
+        OptimizerEnd(opt);
+        BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
+        return CRYPT_BN_OPTIMIZER_GET_FAIL;
+    }
+    GOTO_ERR_IF(BN_SubLimb(nSubOne, pubKey->pubKey->n, 1), ret); // n - 1
+    // step 1: compute r = d * e - 1
+    GOTO_ERR_IF(BN_Mul(r, prvKey->prvKey->d, pubKey->pubKey->e, opt), ret); // d * e
+    GOTO_ERR_IF(BN_SubLimb(r, r, 1), ret); // d * e - 1
+    if (BN_IsOdd(r)) {
+        ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+    // step 2: find t and m = (2^t) * r, r is the largest odd integer.
+    CalMaxT(r, &tFactor); // r = m / 2^t
+    // step 3: find prime factors p and q.
+    for (uint32_t i = 0; i < 100; i++) { // try 100 times
+        GOTO_ERR_IF(BN_RandRangeEx(LIBCTX_FROM_RSA_CTX(pubKey), g, pubKey->pubKey->n), ret); // rand(0, n)
+        GOTO_ERR_IF(BN_ModExp(y, g, r, pubKey->pubKey->n, opt), ret); // y = g ^ r % n
+        if (BN_IsOne(y) == true || BN_Cmp(y, nSubOne) == 0) { // y == 1 or y == n - 1
+            continue;
+        }
+        for (uint32_t j = 1; j < tFactor; j++) { // 1 -> t - 1
+            GOTO_ERR_IF(BN_ModSqr(x, y, pubKey->pubKey->n, opt), ret); // y ^ 2 mod n
+            if (BN_IsOne(x) == true) {
+                flag = true;
+                break;
+            }
+            if (BN_Cmp(x, nSubOne) == 0) {
+                continue;
+            }
+            GOTO_ERR_IF(BN_Copy(y, x), ret); // update y.
+        }
+        GOTO_ERR_IF(BN_ModSqr(x, y, pubKey->pubKey->n, opt), ret); // y ^ 2 mod n
+        if (BN_IsOne(x) == true) {
+            flag = true;
+            break;
+        }
+    }
+    // step 4: check if flag is true.
+    if (!flag) {
+        ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+    GOTO_ERR_IF(BN_SubLimb(y, y, 1), ret); // y - 1
+    // step 5: compute p = gcd(y, n) and q = n / p.
+    GOTO_ERR_IF(BN_Gcd(p, y, pubKey->pubKey->n, opt), ret); // p = gcd(y, n)
+    GOTO_ERR_IF(BN_Div(q, NULL, pubKey->pubKey->n, p, opt), ret); // q = n / p
+    GOTO_ERR_IF(FactorPrimeCheck(pubKey->pubKey->n, pubKey->pubKey->e, p, q, opt), ret);
+    GOTO_ERR_IF(FactorDCheck(pubKey->pubKey->n, pubKey->pubKey->e, p, q, prvKey->prvKey->d, opt), ret);
+ERR:
+    OptimizerEnd(opt);
+    return ret;
+}
+
+static int32_t FactorCRTCheck(const CRYPT_RSA_PrvKey *prvKey, BN_Optimizer *opt)
+{
+    int32_t ret = OptimizerStart(opt);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    uint32_t nBits = BN_Bits(prvKey->n);
+    uint32_t needRoom = nBits / BN_UINT_BITS;
+    BN_BigNum *pMinusOne = OptimizerGetBn(opt, needRoom);
+    BN_BigNum *qMinusOne = OptimizerGetBn(opt, needRoom);
+    BN_BigNum *one = OptimizerGetBn(opt, needRoom);
+    if (pMinusOne == NULL || qMinusOne == NULL || one == NULL) {
+        OptimizerEnd(opt);
+        BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
+        return CRYPT_BN_OPTIMIZER_GET_FAIL;
+    }
+    GOTO_ERR_IF(BN_SubLimb(pMinusOne, prvKey->p, 1), ret); // p - 1
+    GOTO_ERR_IF(BN_SubLimb(qMinusOne, prvKey->q, 1), ret); // q - 1
+    (void)BN_SetLimb(one, 1);
+    GOTO_ERR_IF(RangeCheck(one, prvKey->dP, pMinusOne), ret); // 1 < dP < (p – 1).
+    GOTO_ERR_IF(RangeCheck(one, prvKey->dQ, qMinusOne), ret); // 1 < dQ < (q – 1).
+    GOTO_ERR_IF(RangeCheck(one, prvKey->qInv, prvKey->p), ret); // 1 < qInv < p.
+
+    GOTO_ERR_IF(BN_ModMul(pMinusOne, prvKey->dP, prvKey->e, pMinusOne, opt), ret); // (dP * e) mod (p - 1)
+    GOTO_ERR_IF(BN_ModMul(qMinusOne, prvKey->dQ, prvKey->e, qMinusOne, opt), ret); // (dQ * e) mod (q - 1)
+    GOTO_ERR_IF(BN_ModMul(one, prvKey->qInv, prvKey->q, prvKey->p, opt), ret); // (qInv * q) mod p
+    if (!BN_IsOne(pMinusOne) || !BN_IsOne(qMinusOne) || !BN_IsOne(one)) {
+        ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+ERR:
+    OptimizerEnd(opt);
+    return ret;
+}
+
+static int32_t CheckLevel(const CRYPT_RSA_PrvKey *prvKey)
+{
+    if (!BN_IsZero(prvKey->e) && !BN_IsZero(prvKey->dP) && !BN_IsZero(prvKey->dQ) && !BN_IsZero(prvKey->qInv) &&
+        !BN_IsZero(prvKey->p) && !BN_IsZero(prvKey->q)) {
+        return RSA_CHECK_CRT_CHECK; // check crt.
+    }
+    if (!BN_IsZero(prvKey->p) && !BN_IsZero(prvKey->q)) {
+        return RSA_CHECK_PQD_CHECK; // check prime p q.
+    }
+    return RSA_CHECK_PQ_RECOVER; // recover p q and check.
+}
+
+/*
+ * ref. SP800-56B 6.4.3.1 RSA Key-Pair Validation (Random Public Exponent)
+ */
+static int32_t RsaKeyPairCheck(const CRYPT_RSA_Ctx *pubKey, const CRYPT_RSA_Ctx *prvKey)
+{
+    if (pubKey == NULL || prvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (pubKey->pubKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_NO_PUBKEY_INFO);
+        return CRYPT_RSA_ERR_NO_PUBKEY_INFO;
+    }
+    if (prvKey->prvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_NO_PRVKEY_INFO);
+        return CRYPT_RSA_ERR_NO_PRVKEY_INFO;
+    }
+    /* basic check */
+    int32_t ret = BasicKeypairCheck(pubKey->pubKey, prvKey->prvKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    BN_Optimizer *opt = BN_OptimizerCreate();
+    if (opt == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    switch (CheckLevel(prvKey->prvKey)) {
+        case RSA_CHECK_PQ_RECOVER:
+            ret = RecoverPrimeFactorsAndCheck(pubKey, prvKey, opt);
+            break;
+        case RSA_CHECK_PQD_CHECK:
+            /* prime p q check */
+            ret = FactorPrimeCheck(pubKey->pubKey->n, pubKey->pubKey->e, prvKey->prvKey->p, prvKey->prvKey->q, opt);
+            if (ret != CRYPT_SUCCESS) {
+                goto ERR;
+            }
+            /* factor d check */
+            ret = FactorDCheck(pubKey->pubKey->n, pubKey->pubKey->e, prvKey->prvKey->p, prvKey->prvKey->q,
+                prvKey->prvKey->d, opt);
+            break;
+        default:
+            /* prime p q check */
+            ret = FactorPrimeCheck(pubKey->pubKey->n, pubKey->pubKey->e, prvKey->prvKey->p, prvKey->prvKey->q, opt);
+            if (ret != CRYPT_SUCCESS) {
+                goto ERR;
+            }
+            /* factor d check */
+            ret = FactorDCheck(pubKey->pubKey->n, pubKey->pubKey->e, prvKey->prvKey->p, prvKey->prvKey->q,
+                prvKey->prvKey->d, opt);
+            if (ret != CRYPT_SUCCESS) {
+                goto ERR;
+            }
+            ret = FactorCRTCheck(prvKey->prvKey, opt); /* factor crt check */
+            break;
+    }
+ERR:
+    BN_OptimizerDestroy(opt);
+    return ret;
+}
+
+static int32_t RsaPrvKeyCheck(const CRYPT_RSA_Ctx *pkey)
+{
+    if (pkey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (pkey->prvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_NO_PRVKEY_INFO);
+        return CRYPT_RSA_ERR_NO_PRVKEY_INFO;
+    }
+    if (pkey->prvKey->n == NULL || pkey->prvKey->d == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_NO_PRVKEY_INFO);
+        return CRYPT_RSA_ERR_NO_PRVKEY_INFO;
+    }
+    if (BN_IsZero(pkey->prvKey->n) || BN_IsZero(pkey->prvKey->d)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INVALID_PRVKEY);
+        return CRYPT_RSA_ERR_INVALID_PRVKEY;
+    }
+    if (BN_Cmp(pkey->prvKey->n, pkey->prvKey->d) <= 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INVALID_PRVKEY);
+        return CRYPT_RSA_ERR_INVALID_PRVKEY;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_RSA_Check(uint32_t checkType, const CRYPT_RSA_Ctx *pkey1, const CRYPT_RSA_Ctx *pkey2)
+{
+    switch (checkType) {
+        case CRYPT_PKEY_CHECK_KEYPAIR:
+            return RsaKeyPairCheck(pkey1, pkey2);
+        case CRYPT_PKEY_CHECK_PRVKEY:
+            return RsaPrvKeyCheck(pkey1);
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+    }
+}
+
+#endif // HITLS_CRYPTO_RSA_CHECK
+
 #endif // HITLS_CRYPTO_RSA

@@ -14,6 +14,7 @@
  */
 
 #include "hitls_build.h"
+#include "securec.h"
 #include "bsl_sal.h"
 #include "tls_binlog_id.h"
 #include "hitls_type.h"
@@ -166,8 +167,17 @@ static void BasicInitConfig(HITLS_Config *config)
 {
     config->isSupportExtendMasterSecret = false;
     config->emptyRecordsNum = HITLS_MAX_EMPTY_RECORDS;
+#ifdef HITLS_TLS_PROTO_TLS13
+    config->isMiddleBoxCompat = true;
+#endif
+#ifdef HITLS_TLS_FEATURE_MODE
+    config->modeSupport = HITLS_MODE_AUTO_RETRY;
+#endif
 #ifdef HITLS_TLS_FEATURE_MAX_SEND_FRAGMENT
     config->maxSendFragment = HITLS_MAX_SEND_FRAGMENT_DEFAULT;
+#endif
+#ifdef HITLS_TLS_FEATURE_REC_INBUFFER_SIZE
+    config->recInbufferSize = 0;
 #endif
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
     config->allowLegacyRenegotiate = false;
@@ -196,9 +206,6 @@ static void InitConfig(HITLS_Config *config)
 #ifdef HITLS_TLS_CONFIG_MANUAL_DH
     config->isSupportDhAuto = false;
 #endif
-    if (config->maxVersion == HITLS_VERSION_TLCP_DTLCP11) {
-        config->isSupportExtendMasterSecret = false;
-    }
 #ifdef HITLS_TLS_FEATURE_FLIGHT
     config->isFlightTransmitEnable = true;
 #endif
@@ -252,7 +259,6 @@ int32_t DefaultConfig(HITLS_Lib_Ctx *libCtx, const char *attrName, uint16_t vers
     // Static settings
     config->minVersion = version;
     config->maxVersion = version;
-
     config->libCtx = libCtx;
     config->attrName = attrName;
 
@@ -311,7 +317,6 @@ int32_t DefaultTLS13Config(HITLS_Config *config)
     // Static settings
     config->minVersion = HITLS_VERSION_TLS13;
     config->maxVersion = HITLS_VERSION_TLS13;
-
     InitConfig(config);
 
     // Dynamic setting. By default, only the cipher suite and point format are set. For details, see the comments in
@@ -349,20 +354,38 @@ int32_t DefaultTLS13Config(HITLS_Config *config)
     return HITLS_SUCCESS;
 }
 #endif
-#ifdef HITLS_TLS_PROTO_ALL
+#ifdef HITLS_TLS_CONFIG_VERSION
 static int32_t SetDefaultTlsAllCipherSuites(HITLS_Config *config)
 {
+    int32_t ret = HITLS_SUCCESS;
 #ifdef HITLS_TLS_PROTO_TLS13
-    int32_t ret = SetTLS13DefaultCipherSuites(config);
+    ret = SetTLS13DefaultCipherSuites(config);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 #endif
 
-    return SetDefaultCipherSuite(config, g_tls12CipherSuites, sizeof(g_tls12CipherSuites));
+    uint32_t tls12CipherSuitesLen = sizeof(g_tls12CipherSuites) / sizeof(uint16_t);
+    uint32_t tlcpCipherSuitesLen = 0;
+#ifdef HITLS_TLS_PROTO_TLCP11
+    tlcpCipherSuitesLen = sizeof(g_tlcpCipherSuites) / sizeof(uint16_t);
+#endif
+    uint32_t cipherSuitesLen = tls12CipherSuitesLen + tlcpCipherSuitesLen;
+    uint16_t *cipherSuites = BSL_SAL_Calloc(1u, cipherSuitesLen * sizeof(uint16_t));
+    if (cipherSuites == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+#ifdef HITLS_TLS_PROTO_TLCP11
+    (void)memcpy_s(cipherSuites, cipherSuitesLen * sizeof(uint16_t), g_tlcpCipherSuites, sizeof(g_tlcpCipherSuites));
+#endif
+    (void)memcpy_s(cipherSuites + tlcpCipherSuitesLen, (cipherSuitesLen - tlcpCipherSuitesLen) * sizeof(uint16_t),
+                   g_tls12CipherSuites, sizeof(g_tls12CipherSuites));
+    ret = SetDefaultCipherSuite(config, cipherSuites, cipherSuitesLen * sizeof(uint16_t));
+    BSL_SAL_FREE(cipherSuites);
+    return ret;
 }
 #endif
-#ifdef HITLS_TLS_PROTO_ALL
+#ifdef HITLS_TLS_CONFIG_VERSION
 int32_t DefaultTlsAllConfig(HITLS_Config *config)
 {
     // Support full version
@@ -429,7 +452,6 @@ int32_t DefaultDtlsAllConfig(HITLS_Config *config)
     config->minVersion =
         HITLS_VERSION_DTLS12;  // does not support DTLS 1.0. Therefore, the minimum version number is set to DTLS 1.2.
     config->maxVersion = HITLS_VERSION_DTLS12;
-
     InitConfig(config);
 
     // Dynamic setting

@@ -54,9 +54,9 @@ int32_t CipherMacInit(Cipher_MAC_Common_Ctx *ctx, const uint8_t *key, uint32_t l
 
 int32_t CipherMacUpdate(Cipher_MAC_Common_Ctx *ctx, const uint8_t *in, uint32_t len);
 
-void CipherMacReinit(Cipher_MAC_Common_Ctx *ctx);
+int32_t CipherMacReinit(Cipher_MAC_Common_Ctx *ctx);
 
-void CipherMacDeinit(Cipher_MAC_Common_Ctx *ctx);
+int32_t CipherMacDeinit(Cipher_MAC_Common_Ctx *ctx);
 
 int32_t CipherMacGetMacLen(const Cipher_MAC_Common_Ctx *ctx, void *val, uint32_t len);
 

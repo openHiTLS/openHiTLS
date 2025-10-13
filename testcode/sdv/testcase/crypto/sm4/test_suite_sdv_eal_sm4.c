@@ -1618,3 +1618,40 @@ EXIT:
     CRYPT_EAL_CipherFreeCtx(ctxDec);
 }
 /* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_SM4_CCM_TC001  
+ * @title  SM4-CCM KAT test from RFC8998
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM4_CCM_TC001(int isProvider, int algId, Hex *key, Hex *iv, Hex *aad, Hex *in, Hex *out, Hex *tag)
+{
+    TestMemInit();
+    uint8_t result[MAX_OUTPUT] = {0};
+    uint8_t outTag[16] = {0};
+    uint32_t outTagLen = 16;
+    uint32_t totalLen = 0;
+    uint32_t leftLen = MAX_OUTPUT;
+    uint32_t len = MAX_OUTPUT;
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+
+    len = MAX_OUTPUT;
+    leftLen = MAX_OUTPUT;
+    ctx = TestCipherNewCtx(NULL, algId, "provider=default", isProvider);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &outTagLen, sizeof(outTagLen)), CRYPT_SUCCESS);
+    uint64_t msgLen = in->len;
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &msgLen, sizeof(msgLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad->x, aad->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, in->x, in->len, result, &len), CRYPT_SUCCESS);
+    totalLen += len;
+    leftLen = leftLen - len;
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, outTag, outTagLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("Compare ciphertext", result, out->len, out->x, out->len);
+    ASSERT_COMPARE("Compare Tag", outTag, outTagLen, tag->x, tag->len);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */

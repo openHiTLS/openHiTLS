@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_MD)
 
+#include "securec.h"
 #include "crypt_local_types.h"
 #include "crypt_algid.h"
 #ifdef HITLS_CRYPTO_SHA2
@@ -38,59 +39,55 @@
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 
-#define CRYPT_MD_IMPL_METHOD_DECLARE(name)     \
-    EAL_MdMethod g_mdMethod_##name = {         \
-        CRYPT_##name##_BLOCKSIZE,         CRYPT_##name##_DIGESTSIZE,              \
-        (MdNewCtx)CRYPT_##name##_NewCtx,  (MdInit)CRYPT_##name##_Init,            \
-        (MdUpdate)CRYPT_##name##_Update,  (MdFinal)CRYPT_##name##_Final,          \
-        (MdDeinit)CRYPT_##name##_Deinit,  (MdCopyCtx)CRYPT_##name##_CopyCtx,      \
-        (MdDupCtx)CRYPT_##name##_DupCtx,  (MdFreeCtx)CRYPT_##name##_FreeCtx, NULL, NULL \
+#ifdef HITLS_CRYPTO_PROVIDER
+#include "crypt_eal_provider.h"
+#include "crypt_eal_implprovider.h"
+#endif
+
+typedef struct {
+    uint32_t id;
+    EAL_MdMethod *mdMeth;
+} EAL_CidToMdMeth;
+
+#define CRYPT_MD_IMPL_METHOD_DECLARE(name, id)                                              \
+    EAL_MdMethod g_mdMethod_##name = {                                                      \
+        id,                                                                                 \
+        CRYPT_##name##_BLOCKSIZE,                   CRYPT_##name##_DIGESTSIZE,              \
+        (MdNewCtx)CRYPT_##name##_NewCtxEx,          (MdInit)CRYPT_##name##_Init,            \
+        (MdUpdate)CRYPT_##name##_Update,            (MdFinal)CRYPT_##name##_Final,          \
+        (MdDeinit)CRYPT_##name##_Deinit,            (MdCopyCtx)CRYPT_##name##_CopyCtx,      \
+        (MdDupCtx)CRYPT_##name##_DupCtx,            (MdFreeCtx)CRYPT_##name##_FreeCtx,      \
+        (MdGetParam)CRYPT_##name##_GetParam,        (MdSqueeze)CRYPT_##name##_Squeeze       \
     }
 
 #ifdef HITLS_CRYPTO_MD5
-CRYPT_MD_IMPL_METHOD_DECLARE(MD5);
+CRYPT_MD_IMPL_METHOD_DECLARE(MD5, CRYPT_MD_MD5);
 #endif
 #ifdef HITLS_CRYPTO_SHA1
-CRYPT_MD_IMPL_METHOD_DECLARE(SHA1);
+CRYPT_MD_IMPL_METHOD_DECLARE(SHA1, CRYPT_MD_SHA1);
 #endif
-#ifdef HITLS_CRYPTO_SHA2
 #ifdef HITLS_CRYPTO_SHA224
-CRYPT_MD_IMPL_METHOD_DECLARE(SHA2_224);
+CRYPT_MD_IMPL_METHOD_DECLARE(SHA2_224, CRYPT_MD_SHA224);
 #endif
 #ifdef HITLS_CRYPTO_SHA256
-CRYPT_MD_IMPL_METHOD_DECLARE(SHA2_256);
+CRYPT_MD_IMPL_METHOD_DECLARE(SHA2_256, CRYPT_MD_SHA256);
 #endif
 #ifdef HITLS_CRYPTO_SHA384
-CRYPT_MD_IMPL_METHOD_DECLARE(SHA2_384);
+CRYPT_MD_IMPL_METHOD_DECLARE(SHA2_384, CRYPT_MD_SHA384);
 #endif
 #ifdef HITLS_CRYPTO_SHA512
-CRYPT_MD_IMPL_METHOD_DECLARE(SHA2_512);
-#endif
+CRYPT_MD_IMPL_METHOD_DECLARE(SHA2_512, CRYPT_MD_SHA512);
 #endif
 #ifdef HITLS_CRYPTO_SHA3
-CRYPT_MD_IMPL_METHOD_DECLARE(SHA3_224);
-CRYPT_MD_IMPL_METHOD_DECLARE(SHA3_256);
-CRYPT_MD_IMPL_METHOD_DECLARE(SHA3_384);
-CRYPT_MD_IMPL_METHOD_DECLARE(SHA3_512);
-EAL_MdMethod g_mdMethod_SHAKE128 = {
-    CRYPT_SHAKE128_BLOCKSIZE,         CRYPT_SHAKE128_DIGESTSIZE,
-    (MdNewCtx)CRYPT_SHAKE128_NewCtx,  (MdInit)CRYPT_SHAKE128_Init,
-    (MdUpdate)CRYPT_SHAKE128_Update,  (MdFinal)CRYPT_SHAKE128_Final,
-    (MdDeinit)CRYPT_SHAKE128_Deinit,  (MdCopyCtx)CRYPT_SHAKE128_CopyCtx,
-    (MdDupCtx)CRYPT_SHAKE128_DupCtx,  (MdFreeCtx)CRYPT_SHAKE128_FreeCtx,
-    NULL, (MdSqueeze)CRYPT_SHAKE128_Squeeze
-};
-EAL_MdMethod g_mdMethod_SHAKE256 = {
-    CRYPT_SHAKE256_BLOCKSIZE,         CRYPT_SHAKE256_DIGESTSIZE,
-    (MdNewCtx)CRYPT_SHAKE256_NewCtx,  (MdInit)CRYPT_SHAKE256_Init,
-    (MdUpdate)CRYPT_SHAKE256_Update,  (MdFinal)CRYPT_SHAKE256_Final,
-    (MdDeinit)CRYPT_SHAKE256_Deinit,  (MdCopyCtx)CRYPT_SHAKE256_CopyCtx,
-    (MdDupCtx)CRYPT_SHAKE256_DupCtx,  (MdFreeCtx)CRYPT_SHAKE256_FreeCtx,
-    NULL, (MdSqueeze)CRYPT_SHAKE256_Squeeze
-};
+CRYPT_MD_IMPL_METHOD_DECLARE(SHA3_224, CRYPT_MD_SHA3_224);
+CRYPT_MD_IMPL_METHOD_DECLARE(SHA3_256, CRYPT_MD_SHA3_256);
+CRYPT_MD_IMPL_METHOD_DECLARE(SHA3_384, CRYPT_MD_SHA3_384);
+CRYPT_MD_IMPL_METHOD_DECLARE(SHA3_512, CRYPT_MD_SHA3_512);
+CRYPT_MD_IMPL_METHOD_DECLARE(SHAKE128, CRYPT_MD_SHAKE128);
+CRYPT_MD_IMPL_METHOD_DECLARE(SHAKE256, CRYPT_MD_SHAKE256);
 #endif
 #ifdef HITLS_CRYPTO_SM3
-CRYPT_MD_IMPL_METHOD_DECLARE(SM3);
+CRYPT_MD_IMPL_METHOD_DECLARE(SM3, CRYPT_MD_SM3);
 #endif
 
 static const EAL_CidToMdMeth ID_TO_MD_METH_TABLE[] = {
@@ -121,26 +118,153 @@ static const EAL_CidToMdMeth ID_TO_MD_METH_TABLE[] = {
     {CRYPT_MD_SHAKE256, &g_mdMethod_SHAKE256},
 #endif
 #ifdef HITLS_CRYPTO_SM3
-    {CRYPT_MD_SM3,      &g_mdMethod_SM3},       // SM3
+    {CRYPT_MD_SM3,      &g_mdMethod_SM3},
 #endif
 };
 
-const EAL_MdMethod *EAL_MdFindMethod(CRYPT_MD_AlgId id)
+const EAL_MdMethod *EAL_MdFindDefaultMethod(CRYPT_MD_AlgId id)
 {
-    EAL_MdMethod *pMdMeth = NULL;
     uint32_t num = sizeof(ID_TO_MD_METH_TABLE) / sizeof(ID_TO_MD_METH_TABLE[0]);
-
     for (uint32_t i = 0; i < num; i++) {
         if (ID_TO_MD_METH_TABLE[i].id == id) {
-            pMdMeth = ID_TO_MD_METH_TABLE[i].mdMeth;
-            return pMdMeth;
+            return ID_TO_MD_METH_TABLE[i].mdMeth;
         }
     }
-
     return NULL;
 }
 
-int32_t EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
+EAL_MdMethod *EAL_MdFindMethod(CRYPT_MD_AlgId id, EAL_MdMethod *method)
+{
+    EAL_MdMethod *retMethod = method;
+    const EAL_MdMethod *findMethod = EAL_MdFindDefaultMethod(id);
+    if (findMethod == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return NULL;
+    }
+    if (retMethod == NULL) {
+        retMethod = BSL_SAL_Malloc(sizeof(EAL_MdMethod));
+        if (retMethod == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            return NULL;
+        }
+        (void)memset_s(retMethod, sizeof(EAL_MdMethod), 0, sizeof(EAL_MdMethod));
+    }
+    *retMethod = *findMethod;
+    return retMethod;
+}
+
+#ifdef HITLS_CRYPTO_PROVIDER
+static int32_t SetMdMethod(const CRYPT_EAL_Func *funcs, EAL_MdMethod *method)
+{
+    int32_t index = 0;
+    while (funcs[index].id != 0) {
+        switch (funcs[index].id) {
+            case CRYPT_EAL_IMPLMD_NEWCTX:
+                method->newCtx = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLMD_INITCTX:
+                method->init = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLMD_UPDATE:
+                method->update = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLMD_FINAL:
+                method->final = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLMD_DEINITCTX:
+                method->deinit = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLMD_DUPCTX:
+                method->dupCtx = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLMD_GETPARAM:
+                method->getParam = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLMD_FREECTX:
+                method->freeCtx = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLMD_SQUEEZE:
+                method->squeeze = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLMD_COPYCTX:
+                method->copyCtx = funcs[index].func;
+                break;
+            default:
+                BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+                return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
+        }
+        index++;
+    }
+    return CRYPT_SUCCESS;
+}
+
+static EAL_MdMethod *EAL_ProviderMdFindMethod(CRYPT_MD_AlgId id, void *libCtx, const char *attrName,
+    EAL_MdMethod *method, void **provCtx)
+{
+    BSL_Param params[] = {{0}, {0}, BSL_PARAM_END};
+    EAL_MdMethod *retMethod = method;
+    const CRYPT_EAL_Func *funcs = NULL;
+    int32_t ret = CRYPT_EAL_ProviderGetFuncs(libCtx, CRYPT_EAL_OPERAID_HASH, id, attrName, &funcs, provCtx);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return NULL;
+    }
+
+    if (method == NULL) {
+        retMethod = (EAL_MdMethod *)BSL_SAL_Malloc(sizeof(EAL_MdMethod));
+        if (retMethod == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            return NULL;
+        }
+        (void)memset_s(retMethod, sizeof(EAL_MdMethod), 0, sizeof(EAL_MdMethod));
+    }
+
+    ret = SetMdMethod(funcs, retMethod);
+    if (ret != CRYPT_SUCCESS) {
+        goto ERR;
+    }
+
+    if (retMethod->getParam == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_IMPL_NULL);
+        goto ERR;
+    }
+    (void)BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_MD_DIGEST_SIZE, BSL_PARAM_TYPE_UINT16, &retMethod->mdSize,
+        sizeof(retMethod->mdSize));
+    (void)BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_MD_BLOCK_SIZE, BSL_PARAM_TYPE_UINT16, &retMethod->blockSize,
+        sizeof(retMethod->blockSize));
+    ret = retMethod->getParam(NULL, &params[0]);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+
+    retMethod->id = id;
+    return retMethod;
+ERR:
+    if (retMethod != method) {
+        BSL_SAL_Free(retMethod);
+    }
+    return NULL;
+}
+#endif // HITLS_CRYPTO_PROVIDER
+
+EAL_MdMethod *EAL_MdFindMethodEx(CRYPT_MD_AlgId id, void *libCtx, const char *attrName, EAL_MdMethod *method,
+    void **provCtx, bool isProvider)
+{
+#ifdef HITLS_CRYPTO_PROVIDER
+    return isProvider == true ? EAL_ProviderMdFindMethod(id, libCtx, attrName, method, provCtx)
+                              : EAL_MdFindMethod(id, method);
+#else
+    (void)libCtx;
+    (void)attrName;
+    (void)provCtx;
+    (void)isProvider;
+    return EAL_MdFindMethod(id, method);
+#endif
+}
+
+int32_t EAL_Md(CRYPT_MD_AlgId id, void *libCtx, const char *attr, const uint8_t *in, uint32_t inLen, uint8_t *out,
+    uint32_t *outLen, bool isProvider)
 {
     int32_t ret;
     if (out == NULL || outLen == NULL) {
@@ -151,40 +275,45 @@ int32_t EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8_t *ou
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    const EAL_MdMethod *method = EAL_MdFindMethod(id);
-    if (method == NULL) {
+    EAL_MdMethod method = {0};
+    void *provCtx = NULL;
+    if (EAL_MdFindMethodEx(id, libCtx, attr, &method, &provCtx, isProvider) == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
+    if (method.newCtx == NULL || method.init == NULL || method.update == NULL || method.final == NULL ||
+        method.freeCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_EAL_MD_METH_NULL);
+        return CRYPT_EAL_MD_METH_NULL;
+    }
 
-    void *data = method->newCtx();
+    void *data = method.newCtx(provCtx, id);
     if (data == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    ret = method->init(data, NULL);
+    ret = method.init(data, NULL);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, ret);
         goto EXIT;
     }
     if (inLen != 0) {
-        ret = method->update(data, in, inLen);
+        ret = method.update(data, in, inLen);
         if (ret != CRYPT_SUCCESS) {
             EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, ret);
             goto EXIT;
         }
     }
 
-    ret = method->final(data, out, outLen);
+    ret = method.final(data, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, ret);
         goto EXIT;
     }
-    *outLen = method->mdSize;
 
 EXIT:
-    method->freeCtx(data);
+    method.freeCtx(data);
     return ret;
 }
 #endif

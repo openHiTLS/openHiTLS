@@ -28,6 +28,9 @@
 #include "app_help.h"
 #include "app_print.h"
 #include "app_opt.h"
+#include "app_provider.h"
+#include "app_sm.h"
+#include "app_keymgmt.h"
 #include "bsl_sal.h"
 #include "sal_file.h"
 #include "ui_type.h"
@@ -40,6 +43,22 @@
 #include "crypt_errno.h"
 #include "crypt_params_key.h"
 
+#define HITLS_APP_ENC_MAX_PARAM_NUM 5
+
+typedef enum {
+    HITLS_APP_OPT_CIPHER_ALG = 2,
+    HITLS_APP_OPT_IN_FILE,
+    HITLS_APP_OPT_OUT_FILE,
+    HITLS_APP_OPT_DEC,
+    HITLS_APP_OPT_ENC,
+    HITLS_APP_OPT_MD,
+    HITLS_APP_OPT_PASS,
+    HITLS_APP_PROV_ENUM,
+#ifdef HITLS_APP_SM_MODE
+    HITLS_SM_OPTIONS_ENUM,
+#endif
+} HITLS_OptType;
+
 static const HITLS_CmdOption g_encOpts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"cipher", HITLS_APP_OPT_CIPHER_ALG, HITLS_APP_OPT_VALUETYPE_STRING, "Cipher algorthm"},
@@ -49,6 +68,10 @@ static const HITLS_CmdOption g_encOpts[] = {
     {"enc", HITLS_APP_OPT_ENC, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Decryption operation"},
     {"md", HITLS_APP_OPT_MD, HITLS_APP_OPT_VALUETYPE_STRING, "Specified digest to create a key"},
     {"pass", HITLS_APP_OPT_PASS, HITLS_APP_OPT_VALUETYPE_STRING, "Passphrase source, such as stdin ,file etc"},
+    HITLS_APP_PROV_OPTIONS,
+#ifdef HITLS_APP_SM_MODE
+    HITLS_SM_OPTIONS,
+#endif
     {NULL}
 };
 
@@ -74,6 +97,7 @@ static const HITLS_CipherAlgList g_cIdList[] = {
     {CRYPT_CIPHER_SM4_GCM, "sm4_gcm"},
     {CRYPT_CIPHER_SM4_CFB, "sm4_cfb"},
     {CRYPT_CIPHER_SM4_OFB, "sm4_ofb"},
+    {CRYPT_CIPHER_SM4_XTS, "sm4_xts"},
     {CRYPT_CIPHER_AES128_CFB, "aes128_cfb"},
     {CRYPT_CIPHER_AES192_CFB, "aes192_cfb"},
     {CRYPT_CIPHER_AES256_CFB, "aes256_cfb"},
@@ -111,6 +135,7 @@ static const uint32_t CIPHER_IS_BlOCK[] = {
 static const uint32_t CIPHER_IS_XTS[] = {
     CRYPT_CIPHER_AES128_XTS,
     CRYPT_CIPHER_AES256_XTS,
+    CRYPT_CIPHER_SM4_XTS,
 };
 
 typedef struct {
@@ -142,6 +167,10 @@ typedef struct {
     uint32_t iter; // Indicates the number of iterations entered by the user.
     EncKeyParam *keySet;
     EncUio *encUio;
+    AppProvider *provider;
+#ifdef HITLS_APP_SM_MODE
+    HITLS_APP_SM_Param *smParam;
+#endif
 } EncCmdOpt;
 
 static int32_t GetPwdFromFile(const char *fileArg, char *tmpPass);
@@ -163,6 +192,10 @@ static int32_t HandleOpt(EncCmdOpt *encOpt)
 {
     int32_t encOptType;
     while ((encOptType = HITLS_APP_OptNext()) != HITLS_APP_OPT_EOF) {
+        HITLS_APP_PROV_CASES(encOptType, encOpt->provider);
+#ifdef HITLS_APP_SM_MODE
+        HITLS_APP_SM_CASES(encOptType, encOpt->smParam);
+#endif
         switch (encOptType) {
             case HITLS_APP_OPT_EOF:
                 break;
@@ -211,9 +244,32 @@ static int32_t HandleOpt(EncCmdOpt *encOpt)
     return HITLS_APP_SUCCESS;
 }
 
+static int32_t CheckSmParam(EncCmdOpt *encOpt)
+{
+#ifdef HITLS_APP_SM_MODE
+    if (encOpt->smParam->smTag == 1) {
+        if (encOpt->smParam->uuid == NULL) {
+            AppPrintError("enc: The uuid is not specified.\n");
+            return HITLS_APP_OPT_VALUE_INVALID;
+        }
+        if (encOpt->smParam->workPath == NULL) {
+            AppPrintError("enc: The workpath is not specified.\n");
+            return HITLS_APP_OPT_VALUE_INVALID;
+        }
+    }
+#else
+    (void)encOpt;
+#endif
+    return HITLS_APP_SUCCESS;
+}
+
 // enc check the validity of option parameters
 static int32_t CheckParam(EncCmdOpt *encOpt)
 {
+    int32_t ret = CheckSmParam(encOpt);
+    if (ret != HITLS_APP_SUCCESS) {
+        return ret;
+    }
     // if the -cipher option is not specified, an error is returned
     if (encOpt->cipherId < 0) {
         AppPrintError("The cipher algorithm is not specified.\n");
@@ -362,6 +418,11 @@ static int32_t ApplyForSpace(EncCmdOpt *encOpt)
 // enc parses the password entered by the user
 static int32_t HandlePasswd(EncCmdOpt *encOpt)
 {
+#ifdef HITLS_APP_SM_MODE
+    if (encOpt->smParam->smTag == 1) {
+        return HITLS_APP_SUCCESS;
+    }
+#endif
     // If the user enters the last value of -pass, the system parses the value directly.
     // If the user does not enter the value, the system reads the value from the standard input.
     if (encOpt->passOptStr != NULL) {
@@ -411,19 +472,19 @@ static int32_t GenSaltAndIv(EncCmdOpt *encOpt)
 {
     // During encryption, salt and iv are randomly generated.
     // use the random number API to generate the salt value
-    if (CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL) != CRYPT_SUCCESS ||
-        CRYPT_EAL_RandbytesEx(NULL, encOpt->keySet->salt, encOpt->keySet->saltLen) != CRYPT_SUCCESS) {
-        AppPrintError("Failed to generate the salt value.\n");
+    int32_t ret = CRYPT_EAL_RandbytesEx(APP_GetCurrent_LibCtx(), encOpt->keySet->salt, encOpt->keySet->saltLen);
+    if (ret != CRYPT_SUCCESS) {
+        AppPrintError("enc: Failed to generate the salt value, errCode: 0x%x.\n", ret);
         return HITLS_APP_CRYPTO_FAIL;
     }
     // use the random number API to generate the iv value
     if (encOpt->keySet->ivLen > 0) {
-        if (CRYPT_EAL_RandbytesEx(NULL, encOpt->keySet->iv, encOpt->keySet->ivLen) != CRYPT_SUCCESS) {
-            AppPrintError("Failed to generate the iv value.\n");
+        ret = CRYPT_EAL_RandbytesEx(APP_GetCurrent_LibCtx(), encOpt->keySet->iv, encOpt->keySet->ivLen);
+        if (ret != CRYPT_SUCCESS) {
+            AppPrintError("enc: Failed to generate the iv value, errCode: 0x%x.\n", ret);
             return HITLS_APP_CRYPTO_FAIL;
         }
     }
-    CRYPT_EAL_RandDeinitEx(NULL);
     return HITLS_APP_SUCCESS;
 }
 
@@ -566,24 +627,51 @@ static int32_t HandleDecFileHeader(EncCmdOpt *encOpt)
     return ret;
 }
 
-static int32_t DriveKey(EncCmdOpt *encOpt)
+#ifdef HITLS_APP_SM_MODE
+static int32_t GetKeyFromP12(EncCmdOpt *encOpt)
+{
+    HITLS_APP_KeyInfo keyInfo = {0};
+    int32_t ret = HITLS_APP_FindKey(encOpt->provider, encOpt->smParam, encOpt->cipherId, &keyInfo);
+    if (ret != HITLS_APP_SUCCESS) {
+        AppPrintError("enc: Failed to find key, errCode: 0x%x\n", ret);
+        return ret;
+    }
+    if (encOpt->keySet->dKeyLen != keyInfo.keyLen) {
+        AppPrintError("enc: Key length is not equal, dKeyLen: %u, keyLen: %u.\n", encOpt->keySet->dKeyLen,
+            keyInfo.keyLen);
+        BSL_SAL_CleanseData(keyInfo.key, keyInfo.keyLen);
+        return HITLS_APP_INVALID_ARG;
+    }
+    (void)memcpy_s(encOpt->keySet->dKey, encOpt->keySet->dKeyLen, keyInfo.key, keyInfo.keyLen);
+    BSL_SAL_CleanseData(keyInfo.key, keyInfo.keyLen);
+    return HITLS_APP_SUCCESS;
+}
+#endif
+
+static int32_t GetCipherKey(EncCmdOpt *encOpt)
 {
     if (CRYPT_EAL_CipherGetInfo(encOpt->cipherId, CRYPT_INFO_KEY_LEN, &encOpt->keySet->dKeyLen) != CRYPT_SUCCESS) {
         return HITLS_APP_CRYPTO_FAIL;
     }
-
-    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
+#ifdef HITLS_APP_SM_MODE
+    if (encOpt->smParam->smTag == 1) {
+        return GetKeyFromP12(encOpt);
+    }
+#endif
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_ProviderKdfNewCtx(APP_GetCurrent_LibCtx(), CRYPT_KDF_PBKDF2,
+        encOpt->provider->providerAttr);
     if (ctx == NULL) {
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
-    BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
-    (void)BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &encOpt->mdId,
+    int index = 0;
+    BSL_Param params[HITLS_APP_ENC_MAX_PARAM_NUM] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
+    (void)BSL_PARAM_InitValue(&params[index++], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, &encOpt->mdId,
         sizeof(encOpt->mdId));
-    (void)BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS,
+    (void)BSL_PARAM_InitValue(&params[index++], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS,
         encOpt->keySet->pass, encOpt->keySet->passLen);
-    (void)BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
+    (void)BSL_PARAM_InitValue(&params[index++], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
         encOpt->keySet->salt, encOpt->keySet->saltLen);
-    (void)BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32,
+    (void)BSL_PARAM_InitValue(&params[index++], CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32,
         &encOpt->iter, sizeof(encOpt->iter));
     uint32_t ret = CRYPT_EAL_KdfSetParam(ctx, params);
     if (ret != CRYPT_SUCCESS) {
@@ -902,11 +990,12 @@ static int32_t DoCipherUpdate(EncCmdOpt *encOpt)
 // Enc encryption or decryption process
 static int32_t EncOrDecProc(EncCmdOpt *encOpt)
 {
-    if (DriveKey(encOpt) != BSL_SUCCESS) {
+    if (GetCipherKey(encOpt) != BSL_SUCCESS) {
         return HITLS_APP_CRYPTO_FAIL;
     }
     // Create a cipher context.
-    encOpt->keySet->ctx = CRYPT_EAL_ProviderCipherNewCtx(NULL, encOpt->cipherId ,"provider=default");
+    encOpt->keySet->ctx = CRYPT_EAL_ProviderCipherNewCtx(APP_GetCurrent_LibCtx(), encOpt->cipherId,
+        encOpt->provider->providerAttr);
     if (encOpt->keySet->ctx == NULL) {
         return HITLS_APP_CRYPTO_FAIL;
     }
@@ -923,6 +1012,11 @@ static int32_t EncOrDecProc(EncCmdOpt *encOpt)
             return HITLS_APP_CRYPTO_FAIL;
         }
     }
+#ifdef HITLS_APP_SM_MODE
+    if (encOpt->smParam->smTag == 1) {
+        encOpt->smParam->status = HITLS_APP_SM_STATUS_APPORVED;
+    }
+#endif
     int32_t ret = HITLS_APP_SUCCESS;
     if (encOpt->encTag == 1) {
         if ((ret = WriteEncFileHeader(encOpt)) != HITLS_APP_SUCCESS) {
@@ -935,13 +1029,52 @@ static int32_t EncOrDecProc(EncCmdOpt *encOpt)
     return HITLS_APP_SUCCESS;
 }
 
+static int32_t HandleEnc(EncCmdOpt *encOpt)
+{
+    int32_t ret = HITLS_APP_SUCCESS;
+    if ((ret = HandleIO(encOpt)) != HITLS_APP_SUCCESS) {
+        return ret;
+    }
+    if ((ret = ApplyForSpace(encOpt)) != HITLS_APP_SUCCESS) {
+        return ret;
+    }
+    if ((ret = HandlePasswd(encOpt)) != HITLS_APP_SUCCESS) {
+        return ret;
+    }
+    // The ciphertext format is
+    // [g_version:uint32][derived algID:uint32][saltlen:uint32][salt][iter times:uint32][ivlen:uint32][iv][ciphertext]
+    // If the user identifier is encrypted
+    if (encOpt->encTag == 1 && (ret = GenSaltAndIv(encOpt)) != HITLS_APP_SUCCESS) {
+        // Random salt and IV are generated in encryption mode.
+        return ret;
+    }
+    // If the user identifier is decrypted
+    if (encOpt->encTag == 0 && (ret = HandleDecFileHeader(encOpt)) != HITLS_APP_SUCCESS) {
+        // Decryption mode: Parse the file header data and receive the ciphertext in the input file.
+        return ret;
+    }
+    // Final encryption or decryption process
+    if ((ret = EncOrDecProc(encOpt)) != HITLS_APP_SUCCESS) {
+        return ret;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
 // enc main function
 int32_t HITLS_EncMain(int argc, char *argv[])
 {
     int32_t encRet = -1; // return value of enc
     EncKeyParam keySet = {NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0};
     EncUio encUio = {NULL, NULL};
-    EncCmdOpt encOpt = {1, NULL, NULL, NULL, -1, -1, -1, 0, &keySet, &encUio};
+    AppProvider appProvider = {NULL, NULL, NULL};
+#ifdef HITLS_APP_SM_MODE
+    HITLS_APP_SM_Param smParam = {NULL, 0, NULL, NULL, 0, HITLS_APP_SM_STATUS_OPEN};
+    AppInitParam initParam = {CRYPT_RAND_SHA256, &appProvider, &smParam};
+    EncCmdOpt encOpt = {1, NULL, NULL, NULL, -1, -1, -1, 0, &keySet, &encUio, &appProvider, &smParam};
+#else
+    AppInitParam initParam = {CRYPT_RAND_SHA256, &appProvider};
+    EncCmdOpt encOpt = {1, NULL, NULL, NULL, -1, -1, -1, 0, &keySet, &encUio, &appProvider};
+#endif
     if ((encRet = HITLS_APP_OptBegin(argc, argv, g_encOpts)) != HITLS_APP_SUCCESS) {
         AppPrintError("error in opt begin.\n");
         goto End;
@@ -954,37 +1087,16 @@ int32_t HITLS_EncMain(int argc, char *argv[])
     if ((encRet = CheckParam(&encOpt)) != HITLS_APP_SUCCESS) {
         goto End;
     }
-    if ((encRet = HandleIO(&encOpt)) != HITLS_APP_SUCCESS) {
+    encRet = HITLS_APP_Init(&initParam);
+    if (encRet != HITLS_APP_SUCCESS) {
         goto End;
     }
-    if ((encRet = ApplyForSpace(&encOpt)) != HITLS_APP_SUCCESS) {
-        goto End;
-    }
-    if ((encRet = HandlePasswd(&encOpt)) != HITLS_APP_SUCCESS) {
-        goto End;
-    }
-    // The ciphertext format is
-    // [g_version:uint32][derived algID:uint32][saltlen:uint32][salt][iter times:uint32][ivlen:uint32][iv][ciphertext]
-    // If the user identifier is encrypted
-    if (encOpt.encTag == 1) {
-        // Random salt and IV are generated in encryption mode.
-        if ((encRet = GenSaltAndIv(&encOpt)) != HITLS_APP_SUCCESS) {
-            goto End;
-        }
-    }
-    // If the user identifier is decrypted
-    if (encOpt.encTag == 0) {
-        // Decryption mode: Parse the file header data and receive the ciphertext in the input file.
-        if ((encRet = HandleDecFileHeader(&encOpt)) != HITLS_APP_SUCCESS) {
-            goto End;
-        }
-    }
-    // Final encryption or decryption process
-    if ((encRet = EncOrDecProc(&encOpt)) != HITLS_APP_SUCCESS) {
+    if ((encRet = HandleEnc(&encOpt)) != HITLS_APP_SUCCESS) {
         goto End;
     }
     encRet = HITLS_APP_SUCCESS;
 End:
+    HITLS_APP_Deinit(&initParam, encRet);
     FreeEnc(&encOpt);
     return encRet;
 }

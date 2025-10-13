@@ -27,6 +27,7 @@
 #include "parse_common.h"
 #include "hs_extensions.h"
 #include "parse_extensions.h"
+#include "custom_extensions.h"
 
 /**
  * @brief   Parse the certificate signature
@@ -54,7 +55,6 @@ int32_t ParseSingleCert(ParsePacket *pkt, CERT_Item **certItem)
         return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, 0, NULL, ALERT_DECODE_ERROR);
     }
 
-    /* Allocate memory for certificate messages */
     CERT_Item *item = (CERT_Item*)BSL_SAL_Calloc(1u, sizeof(CERT_Item));
     if (item == NULL) {
         return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15588,
@@ -79,6 +79,8 @@ int32_t ParseSingleCert(ParsePacket *pkt, CERT_Item **certItem)
 
 static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg, CERT_Item *item, uint32_t certIndex)
 {
+    (void)item;
+    (void)certIndex;
     if (pkt->ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
         return HITLS_SUCCESS;
     }
@@ -104,6 +106,7 @@ static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg, CERT_It
         }
         *pkt->bufOffset += HS_EX_HEADER_LEN;
         offset += HS_EX_HEADER_LEN;
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
         if (IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(pkt->ctx), extMsgType, HITLS_EX_TYPE_TLS1_3_CERTIFICATE)) {
             HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(LIBCTX_FROM_CTX(pkt->ctx),
                 ATTRIBUTE_FROM_CTX(pkt->ctx), &pkt->ctx->config.tlsConfig, item->data, item->dataSize,
@@ -119,7 +122,9 @@ static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg, CERT_It
                 return ParseErrorProcess(pkt->ctx, ret, BINLOG_ID15332, "ParseCustomExtensions fail",
                     ALERT_DECODE_ERROR);
             }
-        } else {
+        } else
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
+        {
             msg->extensionTypeMask |= 1ULL << HS_GetExtensionTypeId(extMsgType);
         }
         *pkt->bufOffset += extMsgLen;
@@ -134,7 +139,6 @@ static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg, CERT_It
     return HITLS_SUCCESS;
 }
 
-// Parse the certificate content
 int32_t ParseCerts(ParsePacket *pkt, HS_Msg *hsMsg)
 {
     int32_t ret;
@@ -270,7 +274,6 @@ int32_t Tls13ParseCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
         return ret;
     }
 
-    /* Obtain the lengths of all certificates */
     uint32_t allCertsLen = 0;
     ret = ParseBytesToUint24(&pkt, &allCertsLen);
     if (ret != HITLS_SUCCESS || (allCertsLen != (pkt.bufLen - *pkt.bufOffset))) {
@@ -308,9 +311,7 @@ void CleanCertificate(CertificateMsg *msg)
 #ifdef HITLS_TLS_PROTO_TLS13
     BSL_SAL_FREE(msg->certificateReqCtx);
 #endif
-    /* Obtain the certificate message */
     CERT_Item *next = msg->cert;
-    /* Release the message until it is empty */
     while (next != NULL) {
         CERT_Item *temp = next->next;
         BSL_SAL_FREE(next->data);

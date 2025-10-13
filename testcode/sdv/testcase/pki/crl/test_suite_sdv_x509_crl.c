@@ -23,12 +23,15 @@
 #include "bsl_types.h"
 #include "bsl_log.h"
 #include "bsl_obj.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey.h"
+#include "crypt_eal_codecs.h"
 #include "sal_file.h"
 #include "bsl_init.h"
 #include "crypt_errno.h"
 #include "hitls_crl_local.h"
 #include "hitls_cert_local.h"
+#include "stub_replace.h"
+#include "hitls_pki_utils.h"
 
 static char g_sm2DefaultUserid[] = "1234567812345678";
 /* END_HEADER */
@@ -713,7 +716,7 @@ void SDV_X509_CRL_Gen_Process_TC001(void)
     BSL_Buffer encodeCrl = {0};
     BslList *tmp = NULL;
 
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, keyPath, NULL, &prvKey), 0);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, keyPath, NULL, 0, &prvKey), 0);
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlPath, &crl), HITLS_PKI_SUCCESS);
 
     /* Cannot repeat parse */
@@ -758,8 +761,7 @@ void SDV_X509_CRL_Gen_Process_TC002(void)
     BSL_Buffer encodeCrl = {0};
 
     TestMemInit();
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, keyPath, NULL,
-        &prvKey), 0);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, keyPath, NULL, 0, &prvKey), 0);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &cert), 0);
 
     crl = HITLS_X509_CrlNew();
@@ -851,7 +853,7 @@ void SDV_X509_CRL_Sign_AlgParamCheck_TC001(void)
     BslList *issuerDN = NULL;
 
     TestMemInit();
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, keyPath, NULL, &prvKey), 0);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA, keyPath, NULL, 0, &prvKey), 0);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &cert), 0);
 
     crl = HITLS_X509_CrlNew();
@@ -884,7 +886,80 @@ EXIT:
 }
 /* END_CASE */
 
-static int32_t SetCrlRevoked(HITLS_X509_Crl *crl, BslList *issuerDN, int8_t ser)
+#if defined(HITLS_PKI_X509_CRL_GEN) || defined(HITLS_PKI_X509_CRT_GEN)
+static BslList* GenDNList(void)
+{
+    HITLS_X509_DN dnName1[1] = {{BSL_CID_AT_COMMONNAME, (uint8_t *)"OH", 2}};
+    HITLS_X509_DN dnName2[1] = {{BSL_CID_AT_COUNTRYNAME, (uint8_t *)"CN", 2}};
+
+    BslList *dirNames = HITLS_X509_DnListNew();
+    ASSERT_NE(dirNames, NULL);
+
+    ASSERT_EQ(HITLS_X509_AddDnName(dirNames, dnName1, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_AddDnName(dirNames, dnName2, 1), HITLS_PKI_SUCCESS);
+    return dirNames;
+
+EXIT:
+    HITLS_X509_DnListFree(dirNames);
+    return NULL;
+}
+#endif
+
+static BslList* GenGeneralNameList(void)
+{
+    char *str = "test";
+    HITLS_X509_GeneralName *email = NULL;
+    HITLS_X509_GeneralName *dns = NULL;
+    HITLS_X509_GeneralName *dname = NULL;
+    HITLS_X509_GeneralName *uri = NULL;
+    HITLS_X509_GeneralName *ip = NULL;
+
+    BslList *names = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
+    ASSERT_NE(names, NULL);
+
+    email = BSL_SAL_Malloc(sizeof(HITLS_X509_GeneralName));
+    dns = BSL_SAL_Malloc(sizeof(HITLS_X509_GeneralName));
+    dname = BSL_SAL_Malloc(sizeof(HITLS_X509_GeneralName));
+    uri = BSL_SAL_Malloc(sizeof(HITLS_X509_GeneralName));
+    ip = BSL_SAL_Malloc(sizeof(HITLS_X509_GeneralName));
+    ASSERT_TRUE(email != NULL && dns != NULL && dname != NULL && uri != NULL && ip != NULL);
+
+    email->type = HITLS_X509_GN_EMAIL;
+    dns->type = HITLS_X509_GN_DNS;
+    uri->type = HITLS_X509_GN_URI;
+    dname->type = HITLS_X509_GN_DNNAME;
+    ip->type = HITLS_X509_GN_IP;
+    email->value.dataLen = strlen(str);
+    dns->value.dataLen = strlen(str);
+    uri->value.dataLen = strlen(str);
+    dname->value.dataLen = sizeof(BslList *);
+    ip->value.dataLen = strlen(str);
+    email->value.data = BSL_SAL_Dump(str, strlen(str));
+    dns->value.data = BSL_SAL_Dump(str, strlen(str));
+    uri->value.data = BSL_SAL_Dump(str, strlen(str));
+    dname->value.data = (uint8_t *)GenDNList();
+    ip->value.data = BSL_SAL_Dump(str, strlen(str));
+    ASSERT_TRUE(email->value.data != NULL && dns->value.data != NULL && uri->value.data != NULL
+        && dname->value.data != NULL && ip->value.data != NULL);
+
+    ASSERT_EQ(BSL_LIST_AddElement(names, email, BSL_LIST_POS_END), 0);
+    ASSERT_EQ(BSL_LIST_AddElement(names, dns, BSL_LIST_POS_END), 0);
+    ASSERT_EQ(BSL_LIST_AddElement(names, uri, BSL_LIST_POS_END), 0);
+    ASSERT_EQ(BSL_LIST_AddElement(names, dname, BSL_LIST_POS_END), 0);
+    ASSERT_EQ(BSL_LIST_AddElement(names, ip, BSL_LIST_POS_END), 0);
+
+    return names;
+EXIT:
+    HITLS_X509_FreeGeneralName(email);
+    HITLS_X509_FreeGeneralName(dns);
+    HITLS_X509_FreeGeneralName(dname);
+    HITLS_X509_FreeGeneralName(uri);
+    HITLS_X509_FreeGeneralName(ip);
+    BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
+    return NULL;
+}
+
+static int32_t SetCrlRevoked(HITLS_X509_Crl *crl, int8_t ser)
 {
     uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
     serialNum[3] = ser;
@@ -908,16 +983,15 @@ static int32_t SetCrlRevoked(HITLS_X509_Crl *crl, BslList *issuerDN, int8_t ser)
         &invalidTimeExt, sizeof(HITLS_X509_RevokeExtTime)), HITLS_PKI_SUCCESS);
 
     // Set certificate issuer (optional, only needed for indirect CRLs)
-    HITLS_X509_RevokeExtCertIssuer certIssuer = {
-        false,  // non-critical
-        issuerDN  // Use the same DN as CRL issuer for this test
-    };
+    HITLS_X509_RevokeExtCertIssuer certIssuer = {true, NULL};
+    certIssuer.issuerName = GenGeneralNameList();
     ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_CERTISSUER,
         &certIssuer, sizeof(HITLS_X509_RevokeExtCertIssuer)), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_CRL_ADD_REVOKED_CERT, entry, sizeof(HITLS_X509_CrlEntry)),
         HITLS_PKI_SUCCESS);
     HITLS_X509_CrlEntryFree(entry);
+    BSL_LIST_FREE(certIssuer.issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     return HITLS_PKI_SUCCESS;
 EXIT:
     return -1;
@@ -934,8 +1008,8 @@ void SDV_X509_CRL_Sign_RevokedCheck_TC001(void)
     BSL_TIME beforeTime = {0};
     BSL_TIME afterTime = {0};
 
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA,
-        "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, &prvKey), 0);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_RSA,
+        "../testdata/cert/asn1/rsa_cert/rsa_p1.key.der", NULL, 0, &prvKey), 0);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/rsa_cert/rsa_p1_v1.crt.der", &cert),
         HITLS_PKI_SUCCESS);
 
@@ -953,7 +1027,7 @@ void SDV_X509_CRL_Sign_RevokedCheck_TC001(void)
     afterTime.year += 1;
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
 
-    ASSERT_EQ(SetCrlRevoked(crl, cert->tbs.subjectName, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(SetCrlRevoked(crl, 1), HITLS_PKI_SUCCESS);
     entry = BSL_LIST_GET_FIRST(crl->tbs.revokedCerts);
     ASSERT_TRUE(entry != NULL);
 
@@ -1005,7 +1079,7 @@ static int32_t SetCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool isV2)
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)),
         HITLS_PKI_SUCCESS);
     for (int i = 0; i < 3; i++) {
-        ASSERT_EQ(SetCrlRevoked(crl, issuerDN, i), HITLS_PKI_SUCCESS);
+        ASSERT_EQ(SetCrlRevoked(crl, i), HITLS_PKI_SUCCESS);
     }
     if (isV2) {
         HITLS_X509_ExtSki ski = {0};
@@ -1042,7 +1116,7 @@ void SDV_X509_CRL_Sign_Func_TC001(char *cert, char *key, int keytype, int pad, i
     TestRandInit();
     // Parse issuer certificate and private key
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PriKeyParseFile(BSL_FORMAT_UNKNOWN, keytype, key, NULL, &prvKey), 0);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, keytype, key, NULL, 0, &prvKey), 0);
 
     // Create and initialize CRL
     crl = HITLS_X509_CrlNew();
@@ -1086,5 +1160,27 @@ EXIT:
     HITLS_X509_CrlFree(parseCrl);
     HITLS_X509_CertFree(issuerCert);
     CRYPT_EAL_PkeyFreeCtx(prvKey);
+}
+/* END_CASE */
+
+static int32_t STUB_HITLS_X509_ParseNameList(BSL_ASN1_Buffer *name, BSL_ASN1_List *list)
+{
+    (void)name;
+    (void)list;
+    return BSL_MALLOC_FAIL;
+}
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_INVALIED_TEST_TC001(int format, char *path)
+{
+    TestMemInit();
+    FuncStubInfo tmpRpInfo = {0};
+    STUB_Init();
+    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, HITLS_X509_ParseNameList, STUB_HITLS_X509_ParseNameList) == 0);
+    HITLS_X509_Crl *crl = NULL;
+    ASSERT_NE(HITLS_X509_CrlParseFile((int32_t)format, path, &crl), HITLS_PKI_SUCCESS);
+EXIT:
+    STUB_Reset(&tmpRpInfo);
+    HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */

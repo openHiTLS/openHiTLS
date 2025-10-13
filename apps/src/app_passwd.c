@@ -174,7 +174,8 @@ static int32_t GetSalt(PasswdOpt *opt)
         }
         opt->salt = tmpSalt;
         // Generate a salt value
-        if (CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL) != CRYPT_SUCCESS ||
+        if (CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default",
+                NULL, 0, NULL) != CRYPT_SUCCESS ||
             CRYPT_EAL_RandbytesEx(NULL, opt->salt, opt->saltLen) != CRYPT_SUCCESS) {
             AppPrintError("Failed to generate the salt value.\n");
             BSL_SAL_FREE(opt->salt);

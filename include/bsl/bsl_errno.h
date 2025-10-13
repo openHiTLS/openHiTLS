@@ -86,6 +86,7 @@ enum BSL_ERROR {
     BSL_ERR_ERR_NO_MARK,                              /**< Error stack has no mark. */
 
     BSL_SAL_TIME_NO_REG_FUNC = 0x03050001,
+    BSL_SAL_TIME_SYS_ERROR,                 /**< Function gettimeofday failed. */
 
     /* The return value of the UIO submodule starts from 0x03060001. */
     BSL_UIO_FAIL = 0x03060001,
@@ -171,6 +172,7 @@ enum BSL_ERROR {
     BSL_PARAMS_INVALID_TYPE,
     BSL_PARAMS_LEN_NOT_ENOUGH,
     BSL_PARAMS_MISMATCH,
+    BSL_PARAMS_OUT_LIMIT,
 
     BSL_ASN1_FAIL = 0x03100001,
     BSL_ASN1_ERR_DECODE_BOOL,
@@ -200,6 +202,8 @@ enum BSL_ERROR {
     BSL_ASN1_ERR_PRINTF,
     BSL_ASN1_ERR_PRINTF_IO_ERR,
     BSL_ASN1_ERR_LEN_OVERFLOW,
+    BSL_ASN1_ERR_DECODE_T61_STRING,
+    BSL_ASN1_ERR_ENCODE_T61_STRING,
 
     BSL_PEM_INVALID = 0x03110001,
     BSL_PEM_DATA_NOT_ENOUGH,

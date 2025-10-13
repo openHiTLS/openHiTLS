@@ -1688,9 +1688,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_FUNC_TC001()
 
     HITLS_SetSession(testInfo.client->ssl, testInfo.clientSession);
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(testInfo.client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 0);
+    ASSERT_EQ(isReused, false);
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);

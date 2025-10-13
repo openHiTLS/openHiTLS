@@ -32,17 +32,9 @@
 #include "pack_extensions.h"
 
 // Pack the mandatory content of the ServerHello message
-static int32_t PackServerHelloMandatoryField(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+static int32_t PackServerHelloMandatoryField(const TLS_Ctx *ctx, PackPacket *pkt)
 {
-    /* The bufLen must be able to pack at least the version number (2 bytes) + random number (32 bytes) + session ID
-     * (1 byte length field) + algorithm suite (2 bytes) + compression method (1 byte) */
-    if (bufLen < (sizeof(uint16_t) + HS_RANDOM_SIZE + sizeof(uint8_t) + sizeof(uint16_t) + sizeof(uint8_t))) {
-        return PackBufLenError(BINLOG_ID16079, BINGLOG_STR("server hello"));
-    }
-
     int32_t ret = HITLS_SUCCESS;
-    (void)ret;
-    uint32_t offset = 0u;
     uint16_t negotiatedVersion = ctx->negotiatedInfo.version;
 
     uint16_t version =
@@ -60,59 +52,59 @@ static int32_t PackServerHelloMandatoryField(const TLS_Ctx *ctx, uint8_t *buf, u
         return HITLS_PACK_UNSECURE_VERSION;
     }
 #endif
-    BSL_Uint16ToByte(version, &buf[offset]);    // version number
-    offset += sizeof(uint16_t);
-    (void)memcpy_s(&buf[offset], bufLen - offset, ctx->hsCtx->serverRandom, HS_RANDOM_SIZE);    // server random number
-    offset += HS_RANDOM_SIZE;
+    ret = PackAppendUint16ToBuf(pkt, version);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    ret = PackAppendDataToBuf(pkt, ctx->hsCtx->serverRandom, HS_RANDOM_SIZE);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
 #if defined(HITLS_TLS_FEATURE_SESSION_ID) || defined(HITLS_TLS_PROTO_TLS13)
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
-    uint32_t len = 0u;
-    ret = PackSessionId(hsCtx->sessionId, hsCtx->sessionIdSize, &buf[offset], bufLen - offset, &len);
+    ret = PackSessionId(pkt, hsCtx->sessionId, hsCtx->sessionIdSize);
     if (ret != HITLS_SUCCESS) {
         (void)memset_s(hsCtx->sessionId, hsCtx->sessionIdSize, 0, hsCtx->sessionIdSize);
         return ret;
     }
-    offset += len;
 #else // Session recovery is not supported.
-    buf[offset] = 0;
-    offset += sizeof(uint8_t);
+    ret = PackAppendUint8ToBuf(pkt, 0);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
 #endif
-    BSL_Uint16ToByte(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite, &buf[offset]);    // cipher suite
-    offset += sizeof(uint16_t);
+    ret = PackAppendUint16ToBuf(pkt, ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite); // cipher suite
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
 
-    buf[offset] = 0;    // Compression method, currently supports uncompression
-    offset += sizeof(uint8_t);
+    ret = PackAppendUint8ToBuf(pkt, 0); // Compression method, currently supports uncompression
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
 
-    *usedLen = offset;
     return HITLS_SUCCESS;
 }
 
 // Pack the ServertHello message.
-int32_t PackServerHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+int32_t PackServerHello(const TLS_Ctx *ctx, PackPacket *pkt)
 {
-    int32_t ret = HITLS_SUCCESS;
-    uint32_t offset = 0u;
-    uint32_t msgLen = 0u;
-    uint32_t exMsgLen = 0u;
-
-    ret = PackServerHelloMandatoryField(ctx, buf, bufLen, &msgLen);
+    int32_t ret = PackServerHelloMandatoryField(ctx, pkt);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15863, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "pack server hello mandatory content fail.", 0, 0, 0, 0);
         return ret;
     }
-    offset += msgLen;
 
-    exMsgLen = 0u;
-    ret = PackServerExtension(ctx, &buf[offset], bufLen - offset, &exMsgLen);
+    ret = PackServerExtension(ctx, pkt);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15864, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "pack server hello extension content fail.", 0, 0, 0, 0);
         return ret;
     }
-    offset += exMsgLen;
 
-    *usedLen = offset;
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_HOST_SERVER */

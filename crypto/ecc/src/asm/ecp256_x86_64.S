@@ -17,7 +17,6 @@
 #if defined(HITLS_CRYPTO_CURVE_NISTP256) && defined(HITLS_CRYPTO_NIST_USE_ACCEL)
 
 #include "ecp256_pre_comp_table.s"
-.file  "ecp256_x86.S"
 
 .data
 .align	64

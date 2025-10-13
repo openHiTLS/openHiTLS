@@ -108,6 +108,9 @@ bool IsNonFatalErr(int32_t err)
 #ifdef EPROTO
         case EPROTO:
 #endif
+#ifdef EMSGSIZE
+        case EMSGSIZE:
+#endif
             ret = true;
             break;
         default:

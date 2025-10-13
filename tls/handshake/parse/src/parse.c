@@ -168,7 +168,11 @@ int32_t CheckHsMsgType(TLS_Ctx *ctx, HS_MsgType msgType)
 static int32_t CheckHsMsgLen(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo)
 {
     int32_t ret = HITLS_SUCCESS;
+    uint32_t headerLen = IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) ?
+        DTLS_HS_MSG_HEADER_SIZE : HS_MSG_HEADER_SIZE;
     uint32_t hsMsgOfSpecificTypeMaxSize = HS_MaxMessageSize(ctx, hsMsgInfo->type);
+    hsMsgOfSpecificTypeMaxSize = hsMsgOfSpecificTypeMaxSize > HITLS_HS_BUFFER_SIZE_LIMIT - headerLen ?
+        HITLS_HS_BUFFER_SIZE_LIMIT - headerLen : hsMsgOfSpecificTypeMaxSize;
     if (hsMsgInfo->length > hsMsgOfSpecificTypeMaxSize) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16161, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "(D)TLS HS msg type: %d, parsed length: %u, max length: %u.", (int)hsMsgInfo->type, hsMsgInfo->length,
@@ -176,8 +180,6 @@ static int32_t CheckHsMsgLen(TLS_Ctx *ctx, HS_MsgInfo *hsMsgInfo)
         return ParseErrorProcess(ctx, HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE, 0,
             NULL, ALERT_ILLEGAL_PARAMETER);
     }
-    uint32_t headerLen = IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) ?
-        DTLS_HS_MSG_HEADER_SIZE : HS_MSG_HEADER_SIZE;
     ret = HS_GrowMsgBuf(ctx, headerLen + hsMsgInfo->length, true);
     if (ret != HITLS_SUCCESS) {
         return ret;

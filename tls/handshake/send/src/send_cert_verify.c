@@ -42,7 +42,7 @@ static int32_t PackAndSendCertVerify(TLS_Ctx *ctx)
         }
 
         /* assemble message */
-        ret = HS_PackMsg(ctx, CERTIFICATE_VERIFY, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, CERTIFICATE_VERIFY);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15833, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "client pack certificate verify msg fail.", 0, 0, 0, 0);
@@ -57,8 +57,7 @@ static int32_t PackAndSendCertVerify(TLS_Ctx *ctx)
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 int32_t ClientSendCertVerifyProcess(TLS_Ctx *ctx)
 {
-    int32_t ret;
-    ret = PackAndSendCertVerify(ctx);
+    int32_t ret = PackAndSendCertVerify(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -73,8 +72,7 @@ int32_t ClientSendCertVerifyProcess(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_PROTO_TLS13
 int32_t Tls13SendCertVerifyProcess(TLS_Ctx *ctx)
 {
-    int32_t ret;
-    ret = PackAndSendCertVerify(ctx);
+    int32_t ret = PackAndSendCertVerify(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

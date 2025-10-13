@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_PROVIDER
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_PKEY_CRYPT)
 
 #include "crypt_eal_implprovider.h"
 #include "crypt_rsa.h"
@@ -22,6 +22,7 @@
 #include "crypt_paillier.h"
 #include "crypt_elgamal.h"
 
+#if defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_DECRYPT)
 const CRYPT_EAL_Func g_defEalAsymCipherRsa[] = {
 #ifdef HITLS_CRYPTO_RSA_ENCRYPT
     {CRYPT_EAL_IMPLPKEYCIPHER_ENCRYPT, (CRYPT_EAL_ImplPkeyEncrypt)CRYPT_RSA_Encrypt},
@@ -31,29 +32,31 @@ const CRYPT_EAL_Func g_defEalAsymCipherRsa[] = {
 #endif
     CRYPT_EAL_FUNC_END
 };
+#endif
 
-const CRYPT_EAL_Func g_defEalAsymCipherSm2[] = {
 #ifdef HITLS_CRYPTO_SM2_CRYPT
+const CRYPT_EAL_Func g_defEalAsymCipherSm2[] = {
     {CRYPT_EAL_IMPLPKEYCIPHER_ENCRYPT, (CRYPT_EAL_ImplPkeyEncrypt)CRYPT_SM2_Encrypt},
     {CRYPT_EAL_IMPLPKEYCIPHER_DECRYPT, (CRYPT_EAL_ImplPkeyDecrypt)CRYPT_SM2_Decrypt},
-#endif
     CRYPT_EAL_FUNC_END
 };
+#endif
 
-const CRYPT_EAL_Func g_defEalAsymCipherPaillier[] = {
 #ifdef HITLS_CRYPTO_PAILLIER
+const CRYPT_EAL_Func g_defEalAsymCipherPaillier[] = {
     {CRYPT_EAL_IMPLPKEYCIPHER_ENCRYPT, (CRYPT_EAL_ImplPkeyEncrypt)CRYPT_PAILLIER_Encrypt},
     {CRYPT_EAL_IMPLPKEYCIPHER_DECRYPT, (CRYPT_EAL_ImplPkeyDecrypt)CRYPT_PAILLIER_Decrypt},
-#endif
+    {CRYPT_EAL_IMPLPKEYCIPHER_HEADD, (CRYPT_EAL_ImplPkeyHEAdd)CRYPT_PAILLIER_Add},
     CRYPT_EAL_FUNC_END
 };
+#endif
 
-const CRYPT_EAL_Func g_defEalAsymCipherElGamal[] = {
 #ifdef HITLS_CRYPTO_ELGAMAL
+const CRYPT_EAL_Func g_defEalAsymCipherElGamal[] = {
     {CRYPT_EAL_IMPLPKEYCIPHER_ENCRYPT, CRYPT_ELGAMAL_Encrypt},
     {CRYPT_EAL_IMPLPKEYCIPHER_DECRYPT, CRYPT_ELGAMAL_Decrypt},
-#endif
     CRYPT_EAL_FUNC_END
 };
+#endif
 
-#endif /* HITLS_CRYPTO_PROVIDER */
+#endif

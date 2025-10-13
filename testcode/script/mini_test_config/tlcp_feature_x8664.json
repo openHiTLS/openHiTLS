@@ -19,7 +19,6 @@
                 "uio_mem",
                 "uio_plt",
                 "uio_tcp",
-                "usrdata",
                 "sal_thread",
                 "sal_net",
                 "sal_time",

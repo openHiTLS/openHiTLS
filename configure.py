@@ -94,6 +94,8 @@ def get_cfg_args():
                             help='compile temp directory')
         parser.add_argument('--output_dir', metavar='dir', type=str, default=os.path.join(srcdir, 'output'),
                             help='compile output directory')
+        parser.add_argument('--hkey', metavar='hkey', type=str, default="b8fc4931453af3285f0f",
+                            help='Key used by the HMAC.')
         # Configuration file
         parser.add_argument('--feature_config', metavar='file_path', type=str, default='',
                             help='Configuration file of the compilation features.')
@@ -126,6 +128,8 @@ def get_cfg_args():
                             help='add some link flags such as --add_link_flags="-pie"')
         parser.add_argument('--del_link_flags', default='', type=str,
                             help='delete some link flags such as --del_link_flags="-shared -Wl,-z,relro"')
+
+        parser.add_argument('--no_config_check', action='store_true', help='disable the configuration check')
 
         parser.add_argument('--hitls_version', default='openHiTLS 0.2.0 15 May 2025', help='%(prog)s version str')
         parser.add_argument('--hitls_version_num', default=0x00200000, help='%(prog)s version num')
@@ -285,6 +289,8 @@ class CMakeGenerator:
         self._asm_type = self._cfg_custom_feature.asm_type
 
         self._platform = 'linux'
+        self._approved_provider = False
+        self._hmac = "sha256"
 
     @staticmethod
     def _add_if_exists(inc_dirs, path):
@@ -376,6 +382,7 @@ class CMakeGenerator:
 
         cmake += self._gen_cmd_cmake('target_include_directories', '{} PRIVATE'.format(tgt_name), inc_set)
         cmake += self._gen_cmd_cmake('target_sources', '{} PRIVATE'.format(tgt_name), src_list)
+        cmake += 'target_compile_definitions(%s PUBLIC OPENHITLSDIR="${CMAKE_INSTALL_PREFIX}/")\n' % tgt_name
         mods_cmake[tgt_name] = cmake
     def _gen_shared_lib_cmake(self, lib_name, tgt_obj_list, tgt_list, macros):
         tgt_name = lib_name + '-shared' 
@@ -388,6 +395,11 @@ class CMakeGenerator:
             cmake += self._gen_cmd_cmake('target_link_directories', '{} PRIVATE'.format(tgt_name), '{}/platform/Secure_C/lib'.format(srcdir))
         cmake += self._gen_cmd_cmake('set_target_properties', '{} PROPERTIES'.format(tgt_name), properties)
         cmake += 'install(TARGETS %s DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)\n' % tgt_name
+        if (self._approved_provider):
+            # Use the openssl command to generate an HMAC file.
+            cmake += 'install(CODE "execute_process(COMMAND openssl dgst -hmac \\\"%s\\\" -%s -out lib%s.so.hmac lib%s.so)")\n' % (self._args.hkey, self._hmac, lib_name, lib_name)
+            # Install the hmac file to the output directory.
+            cmake += 'install(CODE "execute_process(COMMAND cp lib%s.so.hmac ${CMAKE_INSTALL_PREFIX}/lib/lib%s.so.hmac)")\n' % (lib_name, lib_name)
 
         if lib_name == 'hitls_bsl':
             for item in macros:
@@ -411,6 +423,8 @@ class CMakeGenerator:
             cmake += self._gen_cmd_cmake("target_link_directories", "hitls_auth-shared PRIVATE " + "${CMAKE_SOURCE_DIR}/platform/Secure_C/lib")
             cmake += self._gen_cmd_cmake(
                 "target_link_libraries", "hitls_auth-shared hitls_crypto-shared hitls_bsl-shared " + str(self._args.securec_lib))
+        if self._approved_provider:
+            cmake += self._gen_cmd_cmake("target_link_libraries", "hitls-shared m " + str(self._args.securec_lib))
         tgt_list.append(tgt_name)
         return cmake
 
@@ -440,8 +454,13 @@ class CMakeGenerator:
         return cmake
 
     def _get_definitions(self):
-        return '"${CMAKE_C_FLAGS} -DOPENHITLS_VERSION_S=\'\\"%s\\"\' -DOPENHITLS_VERSION_I=%lu %s"' % (
-            self._args.hitls_version, self._args.hitls_version_num, '-D__FILENAME__=\'\\"$(notdir $(subst .o,,$@))\\"\'')
+        ret = '"${CMAKE_C_FLAGS} -DOPENHITLS_VERSION_S=\'\\"%s\\"\' -DOPENHITLS_VERSION_I=%lu %s' % (
+                self._args.hitls_version, self._args.hitls_version_num, '-D__FILENAME__=\'\\"$(notdir $(subst .o,,$@))\\"\'')
+        if self._approved_provider:
+            icv_key = '-DCMVP_INTEGRITYKEY=\'\\"%s\\"\'' % self._args.hkey
+            ret += ' %s' % icv_key
+        ret += '"'
+        return ret
 
     def _gen_lib_cmake(self, lib_name, inc_dirs, lib_obj, macros):
         lang = self._cfg_feature.libs[lib_name].get('lang', 'C')
@@ -469,8 +488,8 @@ class CMakeGenerator:
 
     def _gen_exe_cmake(self, exe_name, inc_dirs, exe_obj):
         lang = self._cfg_feature.executes[exe_name].get('lang', 'C')
-        definitions = '"${CMAKE_C_FLAGS} -DHITLS_VERSION=\'\\"%s\\"\' %s"' % (
-            self._args.hitls_version, '-D__FILENAME__=\'\\"$(notdir $(subst .o,,$@))\\"\'')
+        definitions = '"${CMAKE_C_FLAGS} -DHITLS_VERSION=\'\\"%s\\"\' %s -DCMVP_INTEGRITYKEY=\'\\"%s\\"\'"' % (
+            self._args.hitls_version, '-D__FILENAME__=\'\\"$(notdir $(subst .o,,$@))\\"\'', self._args.hkey)
         cmake = 'project({} {})\n\n'.format(exe_name, lang)
         cmake += self._gen_cmd_cmake('set', 'CMAKE_C_FLAGS', '${CC_ALL_OPTIONS}')
         cmake += self._gen_cmd_cmake('set', 'CMAKE_C_FLAGS', definitions)
@@ -484,19 +503,19 @@ class CMakeGenerator:
         lib_type = self._cfg_custom_feature.lib_type
         if 'shared' in lib_type:
             cmake += self._gen_cmd_cmake('add_dependencies', exe_name,
-                                        'hitls_pki-shared hitls_crypto-shared hitls_bsl-shared')
+                                        'hitls_tls-shared hitls_pki-shared hitls_crypto-shared hitls_bsl-shared')
         elif 'static' in lib_type:
             cmake += self._gen_cmd_cmake('add_dependencies', exe_name,
-                                        'hitls_pki-static hitls_crypto-static hitls_bsl-static')
+                                        'hitls_tls-static hitls_pki-static hitls_crypto-static hitls_bsl-static')
 
         common_link_dir = [
             '${CMAKE_CURRENT_LIST_DIR}', # libhitls_*
-            'platform/Huawei_Secure_C/lib',
+            '${CMAKE_SOURCE_DIR}/platform/Secure_C/lib',
         ]
         common_link_lib = [
-            'hitls_pki', 'hitls_crypto', 'hitls_bsl',
+            'hitls_tls', 'hitls_pki', 'hitls_crypto', 'hitls_bsl',
             'dl', 'pthread', 'm',
-            'securec'
+            str(self._args.securec_lib)
         ]
         cmake += self._gen_cmd_cmake('list', 'APPEND HITLS_APP_LINK_DIRS', common_link_dir)
         cmake += self._gen_cmd_cmake('list', 'APPEND HITLS_APP_LINK_LIBS', common_link_lib)
@@ -505,6 +524,9 @@ class CMakeGenerator:
         cmake += self._gen_cmd_cmake('target_link_options', '{} PRIVATE'.format(exe_name), '${EXE_LNK_FLAGS}')
 
         cmake += 'install(TARGETS %s DESTINATION ${CMAKE_INSTALL_PREFIX})\n' % exe_name
+        cmake += 'install(CODE "execute_process(COMMAND openssl dgst -hmac \\\"%s\\\" -sm3 -out %s.hmac %s)")\n' % (self._args.hkey, exe_name, exe_name)
+        # Install the hmac file to the output directory.
+        cmake += 'install(CODE "execute_process(COMMAND cp %s.hmac ${CMAKE_INSTALL_PREFIX}/%s.hmac)")\n' % (exe_name, exe_name)
 
         exe_obj['cmake'] = cmake
         exe_obj['targets'] = [exe_name]
@@ -559,7 +581,7 @@ class CMakeGenerator:
 
         if self._args.bundle_libs:
             # update projects
-            projects = self._gen_bundled_lib_cmake('openhitls', all_inc_dirs, projects, macros)
+            projects = self._gen_bundled_lib_cmake('hitls', all_inc_dirs, projects, macros)
 
         for exe, exe_obj in exe_enable_modules.items():
             projects[exe] = {}
@@ -580,9 +602,15 @@ class CMakeGenerator:
         compile_flags, link_flags = self._cfg_compile.union_options(self._cfg_custom_compile)
         macros = self._cfg_custom_feature.get_fea_macros()
         macros.sort()
+        if self._args.no_config_check:
+            macros.append('-DHITLS_NO_CONFIG_CHECK')
 
-        if '-DHITLS_CRYPTO_CMVP' in macros:
-            self._hmac = True
+        if '-DHITLS_CRYPTO_CMVP_ISO19790' in compile_flags:
+            self._approved_provider = True
+            self._hmac = "sha256"
+        elif '-DHITLS_CRYPTO_CMVP_SM' in compile_flags:
+            self._approved_provider = True
+            self._hmac = "sm3"
 
         compile_flags.extend(macros)
         hitls_macros = list(filter(lambda x: '-DHITLS' in x, compile_flags))

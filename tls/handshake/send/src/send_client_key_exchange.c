@@ -115,7 +115,7 @@ int32_t ClientSendClientKeyExchangeProcess(TLS_Ctx *ctx)
             return ret;
         }
 
-        ret = HS_PackMsg(ctx, CLIENT_KEY_EXCHANGE, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, CLIENT_KEY_EXCHANGE);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15816, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "client pack client key exchange msg error.", 0, 0, 0, 0);

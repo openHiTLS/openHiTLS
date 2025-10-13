@@ -412,6 +412,7 @@ int32_t CRYPT_DSA_GetPrvKeyEx(const CRYPT_DSA_Ctx *ctx, BSL_Param *para);
 int32_t CRYPT_DSA_GetPubKeyEx(const CRYPT_DSA_Ctx *ctx, BSL_Param *para);
 #endif
 
+#ifdef HITLS_CRYPTO_DSA_CMP
 /**
  * @ingroup dsa
  * @brief dsa Compare public keys and parameters
@@ -427,6 +428,9 @@ int32_t CRYPT_DSA_GetPubKeyEx(const CRYPT_DSA_Ctx *ctx, BSL_Param *para);
  * @retval CRYPT_DSA_PARA_NOT_EQUAL     The parameters are not equal.
  */
 int32_t CRYPT_DSA_Cmp(const CRYPT_DSA_Ctx *a, const CRYPT_DSA_Ctx *b);
+#else
+#define CRYPT_DSA_Cmp NULL
+#endif
 
 /**
  * @ingroup dsa
@@ -452,6 +456,23 @@ int32_t CRYPT_DSA_Ctrl(CRYPT_DSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
  * @retval security bits
  */
 int32_t CRYPT_DSA_GetSecBits(const CRYPT_DSA_Ctx *ctx);
+
+#ifdef HITLS_CRYPTO_DSA_CHECK
+
+/**
+ * @ingroup dsa
+ * @brief check the key pair consistency
+ *
+ * @param checkType [IN] check type
+ * @param pkey1 [IN] dsa key context structure
+ * @param pkey2 [IN] dsa key context structure
+ *
+ * @retval CRYPT_SUCCESS            succeeded
+ * @retval other                    error.
+ */
+int32_t CRYPT_DSA_Check(uint32_t checkType, const CRYPT_DSA_Ctx *pkey1, const CRYPT_DSA_Ctx *pkey2);
+
+#endif // HITLS_CRYPTO_DSA_CHECK
 
 #ifdef __cplusplus
 }

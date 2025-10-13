@@ -145,6 +145,7 @@ static const ECC_Method EC_METHOD_NIST_P224 = {
     .bnModNistEccMul = BN_ModNistEccMul,
     .bnModNistEccSqr = BN_ModNistEccSqr,
     .modOrdInv = ECP_ModOrderInv,
+    .pointAdd = ECP_NistPointAdd,
 };
 #endif
 
@@ -162,6 +163,7 @@ static const ECC_Method EC_METHOD_NIST_P521 = {
     .bnModNistEccMul = BN_ModNistEccMul,
     .bnModNistEccSqr = BN_ModNistEccSqr,
     .modOrdInv = ECP_ModOrderInv,
+    .pointAdd = ECP_NistPointAdd,
 };
 #endif
 #endif // HITLS_CRYPTO_NIST_USE_ACCEL
@@ -182,6 +184,7 @@ static const ECC_Method EC_METHOD_NIST_P256 = {
     .bnModNistEccMul = BN_ModNistEccMul,
     .bnModNistEccSqr = BN_ModNistEccSqr,
     .modOrdInv = ECP256_ModOrderInv,
+    .pointAdd = ECP_NistPointAdd,
 };
 #endif
 #endif

@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
 
-.file   "poly1305_x86_64_macro.s"
 .text
 
 .align   32

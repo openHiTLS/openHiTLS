@@ -113,7 +113,7 @@ static int32_t SessionConfig(TLS_Ctx *ctx)
     /* When the SNI negotiation is HITLS_ACCEPT_ERR_OK, save the client Hello server_name extension to the session
      * structure */
     if (ctx->negotiatedInfo.isSniStateOK && isTls13 == false) {
-        ret = SESS_SetHostName(ctx->session, hsCtx->serverNameSize, hsCtx->serverName);
+        ret = SESS_SetHostName(ctx->session, ctx->negotiatedInfo.serverNameSize, ctx->negotiatedInfo.serverName);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17076, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "SetHostName fail", 0, 0, 0, 0);
@@ -157,13 +157,18 @@ static int32_t SessionConfig(TLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 
-static int32_t HsSetSessionInfo(TLS_Ctx *ctx)
+int32_t HsSetSessionInfo(TLS_Ctx *ctx)
 {
     int32_t ret = 0;
-    TLS_SessionMgr *sessMgr = ctx->config.tlsConfig.sessMgr;
-
-    SESSMGR_ClearTimeout(sessMgr);
-
+    TLS_SessionMgr *sessMgr = NULL;
+    if (ctx->globalConfig != NULL) {
+        sessMgr = ctx->globalConfig->sessMgr;
+    }
+    HITLS_SESS_CACHE_MODE mode = SESSMGR_GetCacheMode(sessMgr);
+    if ((mode & HITLS_SESS_DISABLE_AUTO_CLEANUP) == 0) {
+        SESSMGR_ClearTimeout(ctx->globalConfig, (uint64_t)BSL_SAL_CurrentSysTimeGet());
+    }
+    
     /* This parameter is not required for session multiplexing */
     if (ctx->negotiatedInfo.isResume == true) {
         return HITLS_SUCCESS;
@@ -187,12 +192,18 @@ static int32_t HsSetSessionInfo(TLS_Ctx *ctx)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+        return HITLS_SUCCESS;
+    }
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
     /* The session cache does not store TLS1.3 sessions */
-    if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
-        SESSMGR_InsertSession(sessMgr, ctx->session, ctx->isClient);
+    if ((mode & HITLS_SESS_DISABLE_INTERNAL_STORE) == 0) {
+        bool isStore =
+            ctx->isClient == true ? (mode & HITLS_SESS_CACHE_CLIENT) != 0 : (mode & HITLS_SESS_CACHE_SERVER) != 0;
+        SESSMGR_InsertSession(sessMgr, ctx->session, isStore);
         if (ctx->globalConfig != NULL && ctx->globalConfig->newSessionCb != NULL) {
-            HITLS_SESS_UpRef(ctx->session); // It is convenient for users to take away and needs to be released by users
+            HITLS_SESS_UpRef(ctx->session);
+            // It is convenient for users to take away and needs to be released by users
             if (ctx->globalConfig->newSessionCb(ctx, ctx->session) == 0) {
                 /* If the user does not reference the session, the number of reference times decreases by 1 */
                 HITLS_SESS_Free(ctx->session);
@@ -480,8 +491,7 @@ int32_t Tls13ServerRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg)
             return ret;
         }
 #ifdef HITLS_TLS_FEATURE_PHA
-        if (ctx->phaState == PHA_EXTENSION && ctx->config.tlsConfig.isSupportClientVerify &&
-            ctx->config.tlsConfig.isSupportPostHandshakeAuth) {
+        if (ctx->phaState == PHA_EXTENSION && ctx->config.tlsConfig.isSupportClientVerify) {
             SAL_CRYPT_DigestFree(ctx->phaHash);
             ctx->phaHash = SAL_CRYPT_DigestCopy(ctx->hsCtx->verifyCtx->hashCtx);
             if (ctx->phaHash == NULL) {

@@ -32,14 +32,13 @@
 #include "recv_process.h"
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 // The client processes the certificate request
-int32_t ClientRecvCertRequestProcess(TLS_Ctx *ctx, HS_Msg *msg)
+int32_t ClientRecvCertRequestProcess(TLS_Ctx *ctx)
 {
     /**
      *  If the server certificate is not received, a failure message is returned after the cert request is received
      *  RFC 5246 7.4.4: Note: It is a fatal handshake_failure alert for
      *  an anonymous server to request client authentication.
      */
-    (void) msg;
 #ifdef HITLS_TLS_FEATURE_CERT_CB
     int32_t ret = ProcessCertCallback(ctx);
     if (ret != HITLS_SUCCESS) {

@@ -31,6 +31,7 @@
             "--param=ssp-buffer-size=4"
         ],
         "CC_DEFINE_FLAGS": [
+            "-DHITLS_CRYPTO_EAL_REPORT",
             "-DHITLS_CRYPTO_NIST_ECC_ACCELERATE",
             "-DHITLS_CRYPTO_BN_COMBA",
             "-DHITLS_CRYPTO_AES_PRECALC_TABLES",

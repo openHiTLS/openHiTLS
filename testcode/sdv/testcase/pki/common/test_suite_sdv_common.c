@@ -188,8 +188,8 @@ void SDV_HITLS_X509_CtrlCert_TC001(void)
     ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_GET_SIGNALG, &cert, 0), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_GET_SIGN_MDALG, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_GET_SIGN_MDALG, &cert, 0), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_REF_UP, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_REF_UP, &cert, 0), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_REF_UP, NULL, 0), BSL_INVALID_ARG);
+    ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_REF_UP, &cert, 0), BSL_INVALID_ARG);
 
     ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_GET_SUBJECT_DN_STR, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CertCtrl(&cert, HITLS_X509_GET_ISSUER_DN_STR, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
@@ -233,8 +233,8 @@ void SDV_HITLS_X509_CtrlCrl_TC001(void)
     ASSERT_EQ(HITLS_X509_CrlCtrl(NULL, 0xff, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     HITLS_X509_Crl crl = {0};
     ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, 0xff, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, HITLS_X509_REF_UP, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, HITLS_X509_REF_UP, &crl, 0), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, HITLS_X509_REF_UP, NULL, 0), BSL_INVALID_ARG);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, HITLS_X509_REF_UP, &crl, 0), BSL_INVALID_ARG);
 EXIT:
     BSL_GLOBAL_DeInit();
 }
@@ -300,7 +300,7 @@ void SDV_CRYPT_EAL_ParseFilePubKey_TC001(void)
 {
     TestMemInit();
     BSL_GLOBAL_Init();
-
+    CRYPT_EAL_PkeyCtx *key = NULL;
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(0xff, 0, NULL, NULL, 0, NULL), CRYPT_INVALID_ARG);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, NULL, NULL, 0, NULL), CRYPT_INVALID_ARG);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY,
@@ -309,6 +309,7 @@ void SDV_CRYPT_EAL_ParseFilePubKey_TC001(void)
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PUBKEY_RSA,
         "../testdata/cert/asn1/rsa2048pub_pkcs1.der", NULL, 0, NULL), CRYPT_INVALID_ARG);
 EXIT:
+    CRYPT_EAL_PkeyFreeCtx(key);
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
@@ -1309,8 +1310,40 @@ void SDV_CRYPT_EAL_DecodeFileKey_Ex_TC001(void)
     ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, CRYPT_PKEY_ECDSA, "ASN1", "PRIKEY_PKCS8_ENCRYPT",
         "../testdata/cert/asn1/prime256v1_pkcs8_enc.der", &pwd, &key), CRYPT_INVALID_ARG);
 
+    // Test inconsistent seed and private key
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, CRYPT_PKEY_ML_DSA, "PEM", "PRIKEY_PKCS8_UNENCRYPT",
+        "../testdata/cert/asn1/mldsa-44-pri-key-both-inconsistent.key", &pwd, &key),
+        CRYPT_MLDSA_PRVKEY_SEED_INCONSISTENT);
 EXIT:
     BSL_GLOBAL_DeInit();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_X509_PrintCrl_TC001(char *certPath, int format, int printFlag, char *expectFile)
+{
+#if defined(HITLS_PKI_INFO_CRL) && defined(HITLS_PKI_X509_CRL)
+    TestMemInit();
+    HITLS_X509_Crl *crl = NULL;
+    int32_t *version = NULL;
+    Hex expect = { (uint8_t *)expectFile, 0};
+    
+    ASSERT_EQ(HITLS_X509_CrlParseFile(format, certPath, &crl), HITLS_PKI_SUCCESS);
+    ASSERT_NE(crl, NULL);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &version, sizeof(int32_t)), HITLS_PKI_SUCCESS);
+    BSL_Buffer data = {(uint8_t *)crl, sizeof(HITLS_X509_Crl *)};
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_SET_PRINT_FLAG, &printFlag, sizeof(int), NULL), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(PrintBuffTest(HITLS_PKI_PRINT_CRL, &data, "Print crl file", &expect, true), 0);
+
+EXIT:
+    HITLS_X509_CrlFree(crl);
+#else
+    (void)certPath;
+    (void)format;
+    (void)printFlag;
+    (void)expectFile;
+    SKIP_TEST();
 #endif
 }
 /* END_CASE */

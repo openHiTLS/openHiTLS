@@ -46,7 +46,13 @@
 #include "bsl_list.h"
 #include "rec.h"
 #include "hitls_cookie.h"
-
+#include "cert_method.h"
+#ifdef HITLS_TLS_FEATURE_SECURITY
+#include "security.h"
+#endif
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+#include "custom_extensions.h"
+#endif
 #ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
 /* Define the upper limit of the group type */
 #define MAX_GROUP_TYPE_NUM 128u
@@ -57,28 +63,11 @@
 #define MIN_MAX_SEND_FRAGMENT 512u
 #endif
 
-#ifdef HITLS_TLS_EXTENSION_CERT_AUTH
-static void HitlsTrustedCANodeFree(void *caNode)
-{
-    if (caNode == NULL) {
-        return;
-    }
-    HITLS_TrustedCANode *newCaNode = (HITLS_TrustedCANode *)caNode;
-    BSL_SAL_FREE(newCaNode->data);
-    newCaNode->data = NULL;
-    BSL_SAL_FREE(newCaNode);
-}
-
-void HITLS_CFG_ClearCAList(HITLS_Config *config)
-{
-    if (config == NULL) {
-        return;
-    }
-    BSL_LIST_FREE(config->caList, HitlsTrustedCANodeFree);
-    config->caList = NULL;
-    return;
-}
+#ifdef HITLS_TLS_FEATURE_REC_INBUFFER_SIZE
+#define MAX_INBUFFER_SIZE 18432u
+#define MIN_INBUFFER_SIZE 512u
 #endif
+
 void CFG_CleanConfig(HITLS_Config *config)
 {
     BSL_SAL_FREE(config->cipherSuites);
@@ -89,15 +78,19 @@ void CFG_CleanConfig(HITLS_Config *config)
     BSL_SAL_FREE(config->groups);
     BSL_SAL_FREE(config->signAlgorithms);
 #ifdef HITLS_TLS_FEATURE_PROVIDER
+#ifndef HITLS_TLS_CAP_NO_STR
     for (uint32_t i = 0; i < config->groupInfolen; i++) {
         BSL_SAL_FREE(config->groupInfo[i].name);
     }
+#endif
     BSL_SAL_FREE(config->groupInfo);
     config->groupInfoSize = 0;
     config->groupInfolen = 0;
+#ifndef HITLS_TLS_CAP_NO_STR
     for (uint32_t i = 0; i < config->sigSchemeInfolen; i++) {
         BSL_SAL_FREE(config->sigSchemeInfo[i].name);
     }
+#endif
     BSL_SAL_FREE(config->sigSchemeInfo);
     config->sigSchemeInfoSize = 0;
     config->sigSchemeInfolen = 0;
@@ -112,11 +105,12 @@ void CFG_CleanConfig(HITLS_Config *config)
 #ifdef HITLS_TLS_FEATURE_SNI
     BSL_SAL_FREE(config->serverName);
 #endif
-#ifdef HITLS_TLS_EXTENSION_CERT_AUTH
-    BSL_LIST_FREE(config->caList, HitlsTrustedCANodeFree);
-#endif
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
+    HITLS_CFG_ClearCAList(config);
+#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
 #ifdef HITLS_TLS_CONFIG_MANUAL_DH
     SAL_CRYPT_FreeDhKey(config->dhTmp);
+    config->dhTmp = NULL;
 #endif
 #ifdef HITLS_TLS_FEATURE_SESSION
     SESSMGR_Free(config->sessMgr);
@@ -124,10 +118,15 @@ void CFG_CleanConfig(HITLS_Config *config)
 #endif
     SAL_CERT_MgrCtxFree(config->certMgrCtx);
     config->certMgrCtx = NULL;
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
     FreeCustomExtensions(config->customExts);
     config->customExts = NULL;
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
     BSL_SAL_ReferencesFree(&(config->references));
-    return;
+#ifdef HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET
+    BSL_SAL_FREE(config->sessionTicketExt);
+    config->sessionTicketExtSize = 0;
+#endif
 }
 
 
@@ -151,8 +150,15 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
     destConfig->isKeepPeerCert = srcConfig->isKeepPeerCert;
     destConfig->version = srcConfig->version;
     destConfig->originVersionMask = srcConfig->originVersionMask;
+    destConfig->endpoint = srcConfig->endpoint;
+#ifdef HITLS_TLS_PROTO_TLS13
+    destConfig->isMiddleBoxCompat = srcConfig->isMiddleBoxCompat;
+#endif
 #ifdef HITLS_TLS_FEATURE_MAX_SEND_FRAGMENT
     destConfig->maxSendFragment = srcConfig->maxSendFragment;
+#endif
+#ifdef HITLS_TLS_FEATURE_REC_INBUFFER_SIZE
+    destConfig->recInbufferSize = srcConfig->recInbufferSize;
 #endif
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     destConfig->isSupportRenegotiation = srcConfig->isSupportRenegotiation;
@@ -270,20 +276,27 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
     }
 #ifdef HITLS_TLS_FEATURE_PROVIDER
     if (srcConfig->groupInfo != NULL) {
-        if (destConfig->groupInfo != NULL) {
-            BSL_SAL_FREE(destConfig->groupInfo->name);
-            BSL_SAL_FREE(destConfig->groupInfo);
+#ifndef HITLS_TLS_CAP_NO_STR
+        for (uint32_t i = 0; i < destConfig->groupInfolen; i++) {
+            BSL_SAL_FREE(destConfig->groupInfo[i].name);
         }
+#endif
+        BSL_SAL_FREE(destConfig->groupInfo);
+        destConfig->groupInfoSize = 0;
+        destConfig->groupInfolen = 0;
         destConfig->groupInfo= BSL_SAL_Calloc(srcConfig->groupInfolen, sizeof(TLS_GroupInfo));
         if (destConfig->groupInfo == NULL) {
             return HITLS_MEMALLOC_FAIL;
         }
         for (uint32_t i = 0; i < srcConfig->groupInfolen; i++) {
             destConfig->groupInfo[i] = srcConfig->groupInfo[i];
-            destConfig->groupInfo[i].name = BSL_SAL_Dump(srcConfig->groupInfo[i].name, strlen(srcConfig->groupInfo[i].name) + 1);
+#ifndef HITLS_TLS_CAP_NO_STR
+            destConfig->groupInfo[i].name =
+                BSL_SAL_Dump(srcConfig->groupInfo[i].name, strlen(srcConfig->groupInfo[i].name) + 1);
             if (destConfig->groupInfo[i].name == NULL) {
                 return HITLS_MEMALLOC_FAIL;
             }
+#endif
         }
         destConfig->groupInfoSize = srcConfig->groupInfolen;
         destConfig->groupInfolen = srcConfig->groupInfolen;
@@ -319,14 +332,20 @@ static int32_t SignAlgorithmsCfgDeepCopy(HITLS_Config *destConfig, const HITLS_C
     }
 #ifdef HITLS_TLS_FEATURE_PROVIDER
     if (srcConfig->sigSchemeInfo != NULL) {
+        for (uint32_t i = 0; i < destConfig->sigSchemeInfolen; i++) {
+            BSL_SAL_FREE(destConfig->sigSchemeInfo[i].name);
+        }
         BSL_SAL_FREE(destConfig->sigSchemeInfo);
+        destConfig->sigSchemeInfoSize = 0;
+        destConfig->sigSchemeInfolen = 0;
         destConfig->sigSchemeInfo = BSL_SAL_Calloc(srcConfig->sigSchemeInfolen, sizeof(TLS_SigSchemeInfo));
         if (destConfig->sigSchemeInfo == NULL) {
             return HITLS_MEMALLOC_FAIL;
         }
         for (uint32_t i = 0; i < srcConfig->sigSchemeInfolen; i++) {
             destConfig->sigSchemeInfo[i] = srcConfig->sigSchemeInfo[i];
-            destConfig->sigSchemeInfo[i].name = BSL_SAL_Dump(srcConfig->sigSchemeInfo[i].name, strlen(srcConfig->sigSchemeInfo[i].name) + 1);
+            destConfig->sigSchemeInfo[i].name =
+                BSL_SAL_Dump(srcConfig->sigSchemeInfo[i].name, strlen(srcConfig->sigSchemeInfo[i].name) + 1);
             if (destConfig->sigSchemeInfo[i].name == NULL) {
                 return HITLS_MEMALLOC_FAIL;
             }
@@ -418,18 +437,6 @@ static int32_t SessionIdCtxCopy(HITLS_Config *destConfig, const HITLS_Config *sr
 }
 #endif /* HITLS_TLS_FEATURE_SESSION_ID */
 #ifdef HITLS_TLS_FEATURE_SESSION
-static int32_t SessMgrDeepCopy(HITLS_Config *destConfig, const HITLS_Config *srcConfig)
-{
-    destConfig->sessMgr = SESSMGR_Dup(srcConfig->sessMgr);
-    if (destConfig->sessMgr == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16593, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "MGR_Dup fail", 0, 0, 0, 0);
-        return HITLS_MEMALLOC_FAIL;
-    }
-
-    return HITLS_SUCCESS;
-}
-
 int32_t HITLS_CFG_SetSessionTimeout(HITLS_Config *config, uint64_t timeout)
 {
     if (config == NULL || config->sessMgr == NULL) {
@@ -459,7 +466,28 @@ int32_t HITLS_CFG_SetNewSessionCb(HITLS_Config *config, const HITLS_NewSessionCb
     config->newSessionCb = newSessionCb;
     return HITLS_SUCCESS;
 }
-#endif
+#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
+int32_t HITLS_CFG_SetSessionGetCb(HITLS_Config *config, const HITLS_SessionGetCb sessionGetCb)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->sessionGetCb = sessionGetCb;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_SetSessionRemoveCb(HITLS_Config *config, const HITLS_SessionRemoveCb sessionRemoveCb)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->sessionRemoveCb = sessionRemoveCb;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_SESSION_CACHE_CB */
+#endif /* HITLS_TLS_FEATURE_SESSION */
 
 #ifdef HITLS_TLS_CONFIG_MANUAL_DH
 static int32_t CryptKeyDeepCopy(HITLS_Config *destConfig, const HITLS_Config *srcConfig)
@@ -475,49 +503,95 @@ static int32_t CryptKeyDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
 }
 #endif /* HITLS_TLS_CONFIG_MANUAL_DH */
 
-static int32_t BasicConfigDeepCopy(HITLS_Config *destConfig, const HITLS_Config *srcConfig)
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
+void FreeNode(HITLS_TrustedCANode *node)
 {
-    int32_t ret = HITLS_SUCCESS;
-    (void)destConfig;
-    (void)srcConfig;
-#ifdef HITLS_TLS_FEATURE_SESSION_ID
-    ret = SessionIdCtxCopy(destConfig, srcConfig);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-#endif
-    ret = CertMgrDeepCopy(destConfig, srcConfig);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-#ifdef HITLS_TLS_FEATURE_SESSION
-    ret = SessMgrDeepCopy(destConfig, srcConfig);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-#endif
-#ifdef HITLS_TLS_FEATURE_ALPN
-    ret = AlpnListDeepCopy(destConfig, srcConfig);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-#endif
-#ifdef HITLS_TLS_FEATURE_SNI
-    ret = ServerNameDeepCopy(destConfig, srcConfig);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-#endif
-#ifdef HITLS_TLS_CONFIG_MANUAL_DH
-    ret = CryptKeyDeepCopy(destConfig, srcConfig);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-#endif /* HITLS_TLS_CONFIG_MANUAL_DH */
+    BSL_SAL_FREE(node->data);
+    BSL_SAL_FREE(node);
+    return;
+}
 
+static HITLS_TrustedCANode *DupNameNode(const HITLS_TrustedCANode *src)
+{
+    /* Src is not null. */
+    HITLS_TrustedCANode *dest = BSL_SAL_Malloc(sizeof(HITLS_TrustedCANode));
+    if (dest == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return NULL;
+    }
+    dest->caType = src->caType;
+    // nameValue
+    dest->dataSize = src->dataSize;
+    if (dest->dataSize != 0) {
+        dest->data = BSL_SAL_Dump(src->data, src->dataSize);
+        if (dest->data == NULL) {
+            BSL_SAL_Free(dest);
+            BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
+            return NULL;
+        }
+    }
+    return dest;
+}
+
+static int32_t CaListDeepCopy(HITLS_Config *destConfig, const HITLS_Config *srcConfig)
+{
+    if (srcConfig->caList != NULL) {
+        destConfig->caList =
+            BSL_LIST_Copy(srcConfig->caList, (BSL_LIST_PFUNC_DUP)DupNameNode, (BSL_LIST_PFUNC_FREE)FreeNode);
+        if (destConfig->caList == NULL) {
+            return HITLS_MEMCPY_FAIL;
+        }
+    }
+
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
+
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+static int32_t CustomExtsDeepCopy(HITLS_Config *destConfig, const HITLS_Config *srcConfig)
+{
     destConfig->customExts = DupCustomExtensions(srcConfig->customExts);
     if (srcConfig->customExts != NULL && destConfig->customExts == NULL) {
         return HITLS_MEMALLOC_FAIL;
+    }
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
+
+static int32_t BasicConfigDeepCopy(HITLS_Config *destConfig, const HITLS_Config *srcConfig)
+{
+    int32_t ret = HITLS_SUCCESS;
+    const struct {
+        int32_t (*copyFunc)(HITLS_Config *destConfig, const HITLS_Config *srcConfig);
+    } copyFeatures[] = {
+#ifdef HITLS_TLS_FEATURE_SESSION_ID
+        {SessionIdCtxCopy},
+#endif
+        {CertMgrDeepCopy},
+#ifdef HITLS_TLS_FEATURE_ALPN
+        {AlpnListDeepCopy},
+#endif
+#ifdef HITLS_TLS_FEATURE_SNI
+        {ServerNameDeepCopy},
+#endif
+#ifdef HITLS_TLS_CONFIG_MANUAL_DH
+        {CryptKeyDeepCopy},
+#endif
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
+        {CaListDeepCopy},
+#endif
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+        {CustomExtsDeepCopy},
+#endif
+    };
+
+    for (size_t i = 0; i < sizeof(copyFeatures) / sizeof(copyFeatures[0]); i++) {
+        if (copyFeatures[i].copyFunc != NULL) {
+            ret = copyFeatures[i].copyFunc(destConfig, srcConfig);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+        }
     }
 
     return HITLS_SUCCESS;
@@ -618,7 +692,7 @@ HITLS_Config *HITLS_CFG_ProviderNewDTLCPConfig(HITLS_Lib_Ctx *libCtx, const char
     if (newConfig == NULL) {
         return NULL;
     }
-    
+
     newConfig->version |= DTLCP11_VERSION_BIT;   // Enable DTLCP 1.1
     if (DefaultConfig(libCtx, attrName, HITLS_VERSION_TLCP_DTLCP11, newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
@@ -675,7 +749,7 @@ HITLS_Config *HITLS_CFG_ProviderNewTLS12Config(HITLS_Lib_Ctx *libCtx, const char
 }
 #endif
 
-#ifdef HITLS_TLS_PROTO_ALL
+#ifdef HITLS_TLS_CONFIG_VERSION
 HITLS_Config *HITLS_CFG_NewTLSConfig(void)
 {
     return HITLS_CFG_ProviderNewTLSConfig(NULL, NULL);
@@ -687,7 +761,15 @@ HITLS_Config *HITLS_CFG_ProviderNewTLSConfig(HITLS_Lib_Ctx *libCtx, const char *
     if (newConfig == NULL) {
         return NULL;
     }
-    newConfig->version |= TLS_VERSION_MASK;
+#ifdef HITLS_TLS_PROTO_TLS12
+    newConfig->version |= TLS12_VERSION_BIT;
+#endif
+#ifdef HITLS_TLS_PROTO_TLS13
+    newConfig->version |= TLS13_VERSION_BIT;
+#endif
+#ifdef HITLS_TLS_PROTO_TLCP11
+    newConfig->version |= TLCP11_VERSION_BIT;
+#endif
 
     newConfig->libCtx = libCtx;
     newConfig->attrName = attrName;
@@ -788,52 +870,64 @@ uint32_t MapVersion2VersionBit(bool isDatagram, uint16_t version)
     return ret;
 }
 
-#ifdef HITLS_TLS_PROTO_ALL
+void ChangeMinMaxVersion(uint32_t versionMask, uint32_t originVersionMask, uint16_t *minVersion, uint16_t *maxVersion)
+{
+    uint32_t versionMaskBit = versionMask;
+    if (IS_SUPPORT_TLS(versionMaskBit) && IS_SUPPORT_TLCP(versionMaskBit)) {
+        versionMaskBit &= ~TLCP_VERSION_BITS;
+    }
+    uint32_t versionBits[] = {TLS12_VERSION_BIT, TLS13_VERSION_BIT, DTLS12_VERSION_BIT, TLCP11_VERSION_BIT,
+                              DTLCP11_VERSION_BIT};
+    uint16_t versions[] = {HITLS_VERSION_TLS12, HITLS_VERSION_TLS13, HITLS_VERSION_DTLS12, HITLS_VERSION_TLCP_DTLCP11,
+                           HITLS_VERSION_TLCP_DTLCP11};
+    uint32_t versionBitsSize = sizeof(versionBits) / sizeof(uint32_t);
+    uint32_t minIdx = 0;
+    uint32_t maxIdx = 0;
+    bool found = false;
+    uint32_t intersection = versionMaskBit & originVersionMask;
+    for (uint32_t i = 0; i < versionBitsSize; i++) {
+        if ((intersection & versionBits[i]) == versionBits[i]) {
+            if (!found) {
+                minIdx = i;
+                found = true;
+            }
+            maxIdx = i;
+        } else if (found) {
+            break;
+        }
+    }
+    if (found == false) {
+        // No version is supported
+        *minVersion = 0;
+        *maxVersion = 0;
+        return;
+    }
+    *minVersion = versions[minIdx];
+    *maxVersion = versions[maxIdx];
+}
+
 static int ChangeVersionMask(HITLS_Config *config, uint16_t minVersion, uint16_t maxVersion)
 {
     uint32_t originVersionMask = config->originVersionMask;
     uint32_t versionMask = 0;
     uint32_t versionBit = 0;
-
-    /* Creating a DTLS version but setting a TLS version is invalid. */
-    if (originVersionMask == DTLS_VERSION_MASK) {
-        if (IS_DTLS_VERSION(minVersion) == 0) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16596, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "Config min version [0x%x] err.", minVersion, 0, 0, 0);
-            BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_VERSION);
-            return HITLS_CONFIG_INVALID_VERSION;
-        }
+    uint16_t begin = IS_DTLS_VERSION(minVersion) ? maxVersion : minVersion;
+    uint16_t end = IS_DTLS_VERSION(maxVersion) ? minVersion : maxVersion;
+    for (uint16_t version = begin; version <= end; version++) {
+        versionBit = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(originVersionMask), version);
+        versionMask |= versionBit;
     }
-
-    if (originVersionMask == TLS_VERSION_MASK) {
-        /* Creating a TLS version but setting a DTLS version is invalid. */
-        if (IS_DTLS_VERSION(minVersion)) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16597, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "minVersion err", 0, 0, 0, 0);
-            BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_VERSION);
-            return HITLS_CONFIG_INVALID_VERSION;
-        }
-
-        for (uint16_t version = minVersion; version <= maxVersion; version++) {
-            versionBit = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(originVersionMask), version);
-            versionMask |= versionBit;
-        }
-
-        if ((versionMask & originVersionMask) == 0) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16598, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "Config version err", 0, 0, 0, 0);
-            BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_VERSION);
-            return HITLS_CONFIG_INVALID_VERSION;
-        }
-
-        config->version = versionMask;
-        return HITLS_SUCCESS;
+    if ((versionMask & originVersionMask) == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16598, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Config version err", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_VERSION);
+        return HITLS_CONFIG_INVALID_VERSION;
     }
-
+    config->version = (versionMask & originVersionMask);
     return HITLS_SUCCESS;
 }
 
-static int32_t CheckVersionValid(HITLS_Config *config, uint16_t minVersion, uint16_t maxVersion)
+static int32_t CheckVersionValid(const HITLS_Config *config, uint16_t minVersion, uint16_t maxVersion)
 {
     if ((minVersion < HITLS_VERSION_SSL30 && minVersion != 0) ||
         (minVersion == HITLS_VERSION_SSL30 && config->minVersion != HITLS_VERSION_SSL30) ||
@@ -848,20 +942,41 @@ static int32_t CheckVersionValid(HITLS_Config *config, uint16_t minVersion, uint
 
 static void ChangeTmpVersion(HITLS_Config *config, uint16_t *tmpMinVersion, uint16_t *tmpMaxVersion)
 {
+    uint16_t minVersion = 0;
+    uint16_t maxVersion = 0;
+    ChangeMinMaxVersion(config->originVersionMask, config->originVersionMask, &minVersion, &maxVersion);
     if (*tmpMinVersion == 0) {
         if (config->originVersionMask == DTLS_VERSION_MASK) {
             *tmpMinVersion = HITLS_VERSION_DTLS12;
         } else {
-            *tmpMinVersion = HITLS_VERSION_TLS12;
+            *tmpMinVersion = minVersion;
         }
-    } else if (*tmpMaxVersion == 0) {
+    }
+    if (*tmpMaxVersion == 0) {
         if (config->originVersionMask == DTLS_VERSION_MASK) {
             *tmpMaxVersion = HITLS_VERSION_DTLS12;
         } else {
-            *tmpMaxVersion = HITLS_VERSION_TLS13;
+            *tmpMaxVersion = maxVersion;
         }
     }
     return;
+}
+
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
+int32_t CheckRenegotiatedVersion(TLS_Ctx *ctx)
+{
+    if (ctx->negotiatedInfo.isRenegotiation) {
+        uint16_t oldNegotiatedVersion = ctx->negotiatedInfo.version;
+        uint32_t versionBit =
+            MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), oldNegotiatedVersion);
+        if ((versionBit & ctx->config.tlsConfig.version) == 0) {
+            return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
+        }
+        ctx->config.tlsConfig.version = versionBit;
+        ChangeMinMaxVersion(ctx->config.tlsConfig.version, ctx->config.tlsConfig.originVersionMask,
+                            &ctx->config.tlsConfig.minVersion, &ctx->config.tlsConfig.maxVersion);
+    }
+    return HITLS_SUCCESS;
 }
 #endif
 
@@ -871,7 +986,6 @@ int32_t HITLS_CFG_SetVersion(HITLS_Config *config, uint16_t minVersion, uint16_t
         return HITLS_NULL_INPUT;
     }
     int32_t ret = 0;
-#ifdef HITLS_TLS_PROTO_ALL
     if (config->minVersion == minVersion && config->maxVersion == maxVersion && minVersion != 0 && maxVersion != 0) {
         return HITLS_SUCCESS;
     }
@@ -884,68 +998,32 @@ int32_t HITLS_CFG_SetVersion(HITLS_Config *config, uint16_t minVersion, uint16_t
         return ret;
     }
 
-    config->minVersion = 0;
-    config->maxVersion = 0;
-
-    /* If both the latest version and the earliest version supported are 0, clear the versionMask. */
-    if (minVersion == maxVersion && minVersion == 0) {
-        config->version = 0;
-        return HITLS_SUCCESS;
-    }
-#endif
     uint16_t tmpMinVersion = minVersion;
     uint16_t tmpMaxVersion = maxVersion;
-#ifdef HITLS_TLS_PROTO_ALL
     ChangeTmpVersion(config, &tmpMinVersion, &tmpMaxVersion);
-#endif
     ret = CheckVersion(tmpMinVersion, tmpMaxVersion);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
-#ifdef HITLS_TLS_PROTO_ALL
     /* In invalid cases, both maxVersion and minVersion are 0 */
-    if (ChangeVersionMask(config, tmpMinVersion, tmpMaxVersion) == HITLS_SUCCESS) {
-#endif
-        config->minVersion = tmpMinVersion;
-        config->maxVersion = tmpMaxVersion;
-#ifdef HITLS_TLS_PROTO_ALL
+    ret = ChangeVersionMask(config, tmpMinVersion, tmpMaxVersion);
+    if (ret == HITLS_SUCCESS) {
+        ChangeMinMaxVersion(config->version, config->originVersionMask, &config->minVersion, &config->maxVersion);
     }
-#endif
-    return HITLS_SUCCESS;
+
+    return ret;
 }
 
-#ifdef HITLS_TLS_PROTO_ALL
+#ifdef HITLS_TLS_CONFIG_VERSION
 int32_t HITLS_CFG_SetVersionForbid(HITLS_Config *config, uint32_t noVersion)
 {
     if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
     // Now only DTLS1.2 is supported, so single version is not supported (disable to version 0)
-    if ((config->originVersionMask & TLS_VERSION_MASK) == TLS_VERSION_MASK) {
-        uint32_t noVersionBit = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(config->originVersionMask), noVersion);
-        if ((config->version & (~noVersionBit)) == 0) {
-            return HITLS_SUCCESS; // Not all is disabled but the return value is SUCCESS
-        }
-        config->version &= ~noVersionBit;
-        uint32_t versionBits[] = {
-            TLS12_VERSION_BIT, TLS13_VERSION_BIT};
-        uint16_t versions[] = {
-            HITLS_VERSION_TLS12, HITLS_VERSION_TLS13};
-        uint32_t versionBitsSize = sizeof(versionBits) / sizeof(uint32_t);
-        for (uint32_t i = 0; i < versionBitsSize; i++) {
-            if ((config->version & versionBits[i]) == versionBits[i]) {
-                config->minVersion = versions[i];
-                break;
-            }
-        }
-        for (int i = (int)versionBitsSize - 1; i >= 0; i--) {
-            if ((config->version & versionBits[i]) == versionBits[i]) {
-                config->maxVersion = versions[i];
-                break;
-            }
-        }
-    }
+    config->version &= ~noVersion;
+    ChangeMinMaxVersion(config->version, config->originVersionMask, &config->minVersion, &config->maxVersion);
     return HITLS_SUCCESS;
 }
 #endif
@@ -958,7 +1036,8 @@ static void GetCipherSuitesCnt(const uint16_t *cipherSuites, uint32_t cipherSuit
     uint32_t tmpTls13CipherSize = *tls13CipherSize;
     for (uint32_t i = 0; i < cipherSuitesSize; i++) {
 #ifdef HITLS_TLS_PROTO_TLS13
-        if (cipherSuites[i] >= HITLS_AES_128_GCM_SHA256 && cipherSuites[i] <= HITLS_AES_128_CCM_8_SHA256) {
+        if ((cipherSuites[i] >= HITLS_AES_128_GCM_SHA256 && cipherSuites[i] <= HITLS_AES_128_CCM_8_SHA256) ||
+            (cipherSuites[i] == HITLS_SM4_GCM_SM3 || cipherSuites[i] == HITLS_SM4_CCM_SM3)) {
             tmpTls13CipherSize++;
             continue;
         }
@@ -1005,7 +1084,8 @@ int32_t HITLS_CFG_SetCipherSuites(HITLS_Config *config, const uint16_t *cipherSu
         if (CFG_CheckCipherSuiteSupported(cipherSuites[i]) != true) {
             continue;
         }
-        if (cipherSuites[i] >= HITLS_AES_128_GCM_SHA256 && cipherSuites[i] <= HITLS_AES_128_CCM_8_SHA256) {
+        if ((cipherSuites[i] >= HITLS_AES_128_GCM_SHA256 && cipherSuites[i] <= HITLS_AES_128_CCM_8_SHA256) ||
+            (cipherSuites[i] == HITLS_SM4_GCM_SM3 || cipherSuites[i] == HITLS_SM4_CCM_SM3)) {
 #ifdef HITLS_TLS_PROTO_TLS13
             tls13CipherSuite[validTls13Cipher] = cipherSuites[i];
             validTls13Cipher++;
@@ -1054,12 +1134,11 @@ int32_t HITLS_CFG_SetEcPointFormats(HITLS_Config *config, const uint8_t *pointFo
     }
 
     uint8_t *newData = BSL_SAL_Dump(pointFormats, pointFormatsSize * sizeof(uint8_t));
-    /* If the allocation fails, an error code is returned. */
     if (newData == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16602, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Dump fail", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
-    /* Reallocate the memory of pointFormats and update the length of pointFormats */
+
     BSL_SAL_FREE(config->pointFormats);
     config->pointFormats = newData;
     config->pointFormatsSize = pointFormatsSize;
@@ -1078,14 +1157,12 @@ int32_t HITLS_CFG_SetGroups(HITLS_Config *config, const uint16_t *groups, uint32
     }
 
     uint16_t *newData = BSL_SAL_Dump(groups, groupsSize * sizeof(uint16_t));
-    /* If the allocation fails, return an error code */
     if (newData == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16603, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Dump fail", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return HITLS_MEMALLOC_FAIL;
     }
 
-    /* Reallocate the memory of groups and update the length of groups */
     BSL_SAL_FREE(config->groups);
     config->groups = newData;
     config->groupsSize = groupsSize;
@@ -1153,19 +1230,30 @@ int32_t HITLS_CFG_SetTmpDh(HITLS_Config *config, HITLS_CRYPT_Key *dhPkey)
     if ((config == NULL) || (dhPkey == NULL)) {
         return HITLS_NULL_INPUT;
     }
-
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    int32_t secBits = 0;
+    /* Temporary DH security check */
+    int32_t ret = SAL_CERT_KeyCtrl(config, dhPkey, CERT_KEY_CTRL_GET_SECBITS, NULL, (void *)&secBits);
+    if (ret != HITLS_SUCCESS) {
+        return HITLS_CERT_KEY_CTRL_ERR_GET_SECBITS;
+    }
+    ret = SECURITY_CfgCheck(config, HITLS_SECURITY_SECOP_TMP_DH, secBits, 0, dhPkey);
+    if (ret != SECURITY_SUCCESS) {
+        return HITLS_CRYPT_ERR_DH;
+    }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
     SAL_CRYPT_FreeDhKey(config->dhTmp);
     config->dhTmp = dhPkey;
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_GetDhAutoSupport(HITLS_Config *config, uint8_t *isSupport)
+int32_t HITLS_CFG_GetDhAutoSupport(HITLS_Config *config, bool *isSupport)
 {
     if (config == NULL || isSupport == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *isSupport = (uint8_t)config->isSupportDhAuto;
+    *isSupport = config->isSupportDhAuto;
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_CONFIG_MANUAL_DH */
@@ -1202,7 +1290,7 @@ int32_t HITLS_CFG_ClearModeSupport(HITLS_Config *config, uint32_t mode)
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_GetModeSupport(HITLS_Config *config, uint32_t *mode)
+int32_t HITLS_CFG_GetModeSupport(const HITLS_Config *config, uint32_t *mode)
 {
     if (config == NULL || mode == NULL) {
         return HITLS_NULL_INPUT;
@@ -1365,13 +1453,11 @@ int32_t HITLS_CFG_SetSignature(HITLS_Config *config, const uint16_t *signAlgs, u
     }
 
     uint16_t *newData = BSL_SAL_Dump(signAlgs, signAlgsSize * sizeof(uint16_t));
-    /* If the allocation fails, return an error code. */
     if (newData == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16605, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Dump fail", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
 
-    /* Reallocate the signAlgs memory and update the signAlgs length */
     BSL_SAL_FREE(config->signAlgorithms);
     config->signAlgorithms = newData;
     config->signAlgorithmsSize = signAlgsSize;
@@ -1398,7 +1484,7 @@ int32_t HITLS_CFG_SetServerName(HITLS_Config *config, uint8_t *serverName, uint3
     }
     (void)memcpy_s(newData, serverNameSize, serverName, serverNameStrlen);
     newData[serverNameSize - 1] = '\0';
-    /* Reallocate the serverName memory and update the serverName length */
+
     BSL_SAL_FREE(config->serverName);
     config->serverName = newData;
     config->serverNameSize = serverNameSize;
@@ -1479,6 +1565,15 @@ int32_t HITLS_CFG_SetClientRenegotiateSupport(HITLS_Config *config, bool support
     config->allowClientRenegotiate = support;
     return HITLS_SUCCESS;
 }
+
+int32_t HITLS_CFG_GetClientRenegotiateSupport(HITLS_Config *config, bool *isSupport)
+{
+    if (config == NULL || isSupport == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *isSupport = config->allowClientRenegotiate;
+    return HITLS_SUCCESS;
+}
 #endif
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 int32_t HITLS_CFG_SetLegacyRenegotiateSupport(HITLS_Config *config, bool support)
@@ -1499,6 +1594,15 @@ int32_t HITLS_CFG_SetResumptionOnRenegoSupport(HITLS_Config *config, bool suppor
     config->isResumptionOnRenego = support;
     return HITLS_SUCCESS;
 }
+
+int32_t HITLS_CFG_GetResumptionOnRenegoSupport(HITLS_Config *config, bool *isSupport)
+{
+    if (config == NULL || isSupport == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *isSupport = config->isResumptionOnRenego;
+    return HITLS_SUCCESS;
+}
 #endif
 
 int32_t HITLS_CFG_SetExtenedMasterSecretSupport(HITLS_Config *config, bool support)
@@ -1506,20 +1610,18 @@ int32_t HITLS_CFG_SetExtenedMasterSecretSupport(HITLS_Config *config, bool suppo
     if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
-    /** et the extended master key flag */
     config->isSupportExtendMasterSecret = support;
     return HITLS_SUCCESS;
 }
 
 #if defined(HITLS_TLS_FEATURE_PSK) && (defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12))
-// Set the identity hint interface
 int32_t HITLS_CFG_SetPskIdentityHint(HITLS_Config *config, const uint8_t *hint, uint32_t hintSize)
 {
     if ((config == NULL) || (hint == NULL) || (hintSize == 0)) {
         return HITLS_NULL_INPUT;
     }
 
-    if (hintSize > HITLS_IDENTITY_HINT_MAX_SIZE) {
+    if (hintSize > HS_PSK_IDENTITY_MAX_LEN) {
         return HITLS_CONFIG_INVALID_LENGTH;
     }
 
@@ -1529,7 +1631,6 @@ int32_t HITLS_CFG_SetPskIdentityHint(HITLS_Config *config, const uint8_t *hint, 
         return HITLS_MEMALLOC_FAIL;
     }
 
-    /* Repeated settings are supported */
     BSL_SAL_FREE(config->pskIdentityHint);
     config->pskIdentityHint = newData;
     config->hintSize = hintSize;
@@ -1574,35 +1675,35 @@ int32_t HITLS_CFG_SetSessionTicketSupport(HITLS_Config *config, bool support)
 #endif
 
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
-int32_t HITLS_CFG_GetRenegotiationSupport(const HITLS_Config *config, uint8_t *isSupport)
+int32_t HITLS_CFG_GetRenegotiationSupport(const HITLS_Config *config, bool *isSupport)
 {
     if (config == NULL || isSupport == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *isSupport = (uint8_t)config->isSupportRenegotiation;
+    *isSupport = config->isSupportRenegotiation;
     return HITLS_SUCCESS;
 }
 #endif
 
-int32_t HITLS_CFG_GetExtenedMasterSecretSupport(HITLS_Config *config, uint8_t *isSupport)
+int32_t HITLS_CFG_GetExtenedMasterSecretSupport(HITLS_Config *config, bool *isSupport)
 {
     if (config == NULL || isSupport == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *isSupport = (uint8_t)config->isSupportExtendMasterSecret;
+    *isSupport = config->isSupportExtendMasterSecret;
     return HITLS_SUCCESS;
 }
 
 #if defined(HITLS_TLS_FEATURE_SESSION_TICKET)
-int32_t HITLS_CFG_GetSessionTicketSupport(const HITLS_Config *config, uint8_t *isSupport)
+int32_t HITLS_CFG_GetSessionTicketSupport(const HITLS_Config *config, bool *isSupport)
 {
     if (config == NULL || isSupport == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *isSupport = (uint8_t)config->isSupportSessionTicket;
+    *isSupport = config->isSupportSessionTicket;
     return HITLS_SUCCESS;
 }
 
@@ -1646,17 +1747,17 @@ int32_t HITLS_CFG_SetClientOnceVerifySupport(HITLS_Config *config, bool support)
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_GetClientOnceVerifySupport(HITLS_Config *config, uint8_t *isSupport)
+int32_t HITLS_CFG_GetClientOnceVerifySupport(HITLS_Config *config, bool *isSupport)
 {
     if (config == NULL || isSupport == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *isSupport = (uint8_t)config->isSupportClientOnceVerify;
+    *isSupport = config->isSupportClientOnceVerify;
     return HITLS_SUCCESS;
 }
 #endif
-#ifdef HITLS_TLS_PROTO_ALL
+#ifdef HITLS_TLS_CONFIG_VERSION
 int32_t HITLS_CFG_GetMaxVersion(const HITLS_Config *config, uint16_t *maxVersion)
 {
     if (config == NULL || maxVersion == NULL) {
@@ -1766,7 +1867,7 @@ int32_t HITLS_CFG_SetSessionIdCtx(HITLS_Config *config, const uint8_t *sessionId
 #endif
 
 #ifdef HITLS_TLS_FEATURE_SESSION
-int32_t HITLS_CFG_SetSessionCacheMode(HITLS_Config *config, HITLS_SESS_CACHE_MODE mode)
+int32_t HITLS_CFG_SetSessionCacheMode(HITLS_Config *config, uint32_t mode)
 {
     if (config == NULL || config->sessMgr == NULL) {
         return HITLS_NULL_INPUT;
@@ -1776,7 +1877,7 @@ int32_t HITLS_CFG_SetSessionCacheMode(HITLS_Config *config, HITLS_SESS_CACHE_MOD
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_GetSessionCacheMode(HITLS_Config *config, HITLS_SESS_CACHE_MODE *mode)
+int32_t HITLS_CFG_GetSessionCacheMode(HITLS_Config *config, uint32_t *mode)
 {
     if (config == NULL || config->sessMgr == NULL || mode == NULL) {
         return HITLS_NULL_INPUT;
@@ -1805,9 +1906,26 @@ int32_t HITLS_CFG_GetSessionCacheSize(HITLS_Config *config, uint32_t *size)
     *size = SESSMGR_GetCacheSize(config->sessMgr);
     return HITLS_SUCCESS;
 }
+
+int32_t HITLS_CFG_ClearTimeoutSession(HITLS_Config *config, uint64_t nowTime)
+{
+    if (config == NULL || config->sessMgr == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    SESSMGR_ClearTimeout(config, nowTime);
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_RemoveSession(HITLS_Config *config, HITLS_Session *sess)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    return SESSMGR_RemoveSession(config, sess);
+}
 #endif
 
-#ifdef HITLS_TLS_PROTO_ALL
+#ifdef HITLS_TLS_CONFIG_VERSION
 int32_t HITLS_CFG_GetVersionSupport(const HITLS_Config *config, uint32_t *version)
 {
     if ((config == NULL) || (version == NULL)) {
@@ -1816,40 +1934,6 @@ int32_t HITLS_CFG_GetVersionSupport(const HITLS_Config *config, uint32_t *versio
 
     *version = config->version;
     return HITLS_SUCCESS;
-}
-
-static void ChangeSupportVersion(HITLS_Config *config)
-{
-    uint32_t versionMask = config->version;
-    uint32_t originVersionMask = config->originVersionMask;
-
-    config->maxVersion = 0;
-    config->minVersion = 0;
-    /* The original supported version is disabled. This is abnormal and packets cannot be sent */
-    if ((versionMask & originVersionMask) == 0) {
-        return;
-    }
-
-    /* Currently, only DTLS1.2 is supported. DTLS1.0 is not supported */
-    if ((versionMask & DTLS12_VERSION_BIT) == DTLS12_VERSION_BIT) {
-        config->maxVersion = HITLS_VERSION_DTLS12;
-        config->minVersion = HITLS_VERSION_DTLS12;
-        return;
-    }
-
-    /* Description TLS_ANY_VERSION */
-    uint32_t versionBits[] = {TLS12_VERSION_BIT, TLS13_VERSION_BIT};
-    uint16_t versions[] = {HITLS_VERSION_TLS12, HITLS_VERSION_TLS13};
-
-    uint32_t versionBitsSize = sizeof(versionBits) / sizeof(uint32_t);
-    for (uint32_t i = 0; i < versionBitsSize; i++) {
-        if ((versionMask & versionBits[i]) == versionBits[i]) {
-            config->maxVersion = versions[i];
-            if (config->minVersion == 0) {
-                config->minVersion = versions[i];
-            }
-        }
-    }
 }
 
 int32_t HITLS_CFG_SetVersionSupport(HITLS_Config *config, uint32_t version)
@@ -1861,10 +1945,10 @@ int32_t HITLS_CFG_SetVersionSupport(HITLS_Config *config, uint32_t version)
     if ((version & SSLV3_VERSION_BIT) == SSLV3_VERSION_BIT) {
         return HITLS_CONFIG_INVALID_VERSION;
     }
-
-    config->version = version;
+    uint32_t tmp = version & config->originVersionMask;
+    config->version |= tmp;
     /* Update the maximum supported version */
-    ChangeSupportVersion(config);
+    ChangeMinMaxVersion(config->version, config->originVersionMask, &config->minVersion, &config->maxVersion);
     return HITLS_SUCCESS;
 }
 
@@ -1930,33 +2014,29 @@ int32_t HITLS_CFG_SetDtlsPostHsTimeoutVal(HITLS_Config *config, uint32_t timeout
 #endif
 
 #ifdef HITLS_TLS_SUITE_CIPHER_CBC
-int32_t HITLS_CFG_SetEncryptThenMac(HITLS_Config *config, uint32_t encryptThenMacType)
+int32_t HITLS_CFG_SetEncryptThenMac(HITLS_Config *config, bool encryptThenMacType)
 {
     if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    if (encryptThenMacType == 0) {
-        config->isEncryptThenMac = false;
-    } else {
-        config->isEncryptThenMac = true;
-    }
+    config->isEncryptThenMac = encryptThenMacType;
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_GetEncryptThenMac(const HITLS_Config *config, uint32_t *encryptThenMacType)
+int32_t HITLS_CFG_GetEncryptThenMac(const HITLS_Config *config, bool *encryptThenMacType)
 {
     if (config == NULL || encryptThenMacType == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *encryptThenMacType = (uint32_t)config->isEncryptThenMac;
+    *encryptThenMacType = config->isEncryptThenMac;
     return HITLS_SUCCESS;
 }
 #endif
 
 #ifdef HITLS_TLS_PROTO_DTLS
-int32_t HITLS_CFG_IsDtls(const HITLS_Config *config, uint8_t *isDtls)
+int32_t HITLS_CFG_IsDtls(const HITLS_Config *config, bool *isDtls)
 {
     if (config == NULL || isDtls == NULL) {
         return HITLS_NULL_INPUT;
@@ -2006,21 +2086,17 @@ uint32_t HITLS_CFG_GetTicketNums(HITLS_Config *config)
 }
 #endif
 #ifdef HITLS_TLS_FEATURE_FLIGHT
-int32_t HITLS_CFG_SetFlightTransmitSwitch(HITLS_Config *config, uint8_t isEnable)
+int32_t HITLS_CFG_SetFlightTransmitSwitch(HITLS_Config *config, bool isEnable)
 {
     if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    if (isEnable == 0) {
-        config->isFlightTransmitEnable = false;
-    } else {
-        config->isFlightTransmitEnable = true;
-    }
+    config->isFlightTransmitEnable = isEnable;
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, uint8_t *isEnable)
+int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, bool *isEnable)
 {
     if (config == NULL || isEnable == NULL) {
         return HITLS_NULL_INPUT;
@@ -2119,3 +2195,61 @@ int32_t HITLS_CFG_GetMaxSendFragment(const HITLS_Config *config, uint16_t *maxSe
     return HITLS_SUCCESS;
 }
 #endif
+
+#ifdef HITLS_TLS_FEATURE_REC_INBUFFER_SIZE
+int32_t HITLS_CFG_SetRecInbufferSize(HITLS_Config *config, uint32_t recInbufferSize)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    if (recInbufferSize > MAX_INBUFFER_SIZE || recInbufferSize < MIN_INBUFFER_SIZE) {
+        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_LENGTH);
+        return HITLS_CONFIG_INVALID_LENGTH;
+    }
+
+    config->recInbufferSize = recInbufferSize;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetRecInbufferSize(const HITLS_Config *config, uint32_t *recInbufferSize)
+{
+    if (config == NULL || recInbufferSize == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *recInbufferSize = config->recInbufferSize;
+
+    return HITLS_SUCCESS;
+}
+#endif
+
+#ifdef HITLS_TLS_PROTO_TLS13
+int32_t HITLS_CFG_SetMiddleBoxCompat(HITLS_Config *config, bool isMiddleBox)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->isMiddleBoxCompat = isMiddleBox;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetMiddleBoxCompat(HITLS_Config *config, bool *isMiddleBox)
+{
+    if (config == NULL || isMiddleBox == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *isMiddleBox = config->isMiddleBoxCompat;
+    return HITLS_SUCCESS;
+}
+#endif
+
+int32_t HITLS_CFG_SetEndPoint(HITLS_Config *config, bool isClient)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->endpoint = isClient ? HITLS_ENDPOINT_CLIENT : HITLS_ENDPOINT_SERVER;
+    return HITLS_SUCCESS;
+}

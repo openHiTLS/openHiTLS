@@ -87,8 +87,7 @@ typedef struct RecCtx {
  * @param   ctx [IN] TLS_Ctx context
  * @param   isRead [IN] is read buffer
  *
- * @retval  HITLS_SUCCESS
- * @retval  HITLS_INTERNAL_EXCEPTION Access a null pointer
+ * @retval  the size of the buffer for read and write operations
  */
 uint32_t RecGetInitBufferSize(const TLS_Ctx *ctx, bool isRead);
 
@@ -96,6 +95,25 @@ int32_t RecDerefBufList(TLS_Ctx *ctx);
 
 void RecClearAlertCount(TLS_Ctx *ctx, REC_Type recordType);
 
+/**
+ * @brief   free the record buffer
+ *
+ * @param   ctx [IN] TLS_Ctx context
+ * @param   isOut [IN] is out buffer or not
+ */
+void RecTryFreeRecBuf(TLS_Ctx *ctx, bool isOut);
+
+/**
+ * @brief   Init the record io buffer
+ *
+ * @param   ctx [IN] TLS_Ctx context
+ * @param   recordCtx [IN] record context
+ * @param   isRead [IN] Init in buffer or not
+ *
+ * @retval  HITLS_SUCCESS
+ * @retval  HITLS_MEMALLOC_FAIL malloc fail
+ */
+int32_t RecIoBufInit(TLS_Ctx *ctx, RecCtx *recordCtx, bool isRead);
 #ifdef __cplusplus
 }
 #endif

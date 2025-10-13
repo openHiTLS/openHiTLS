@@ -48,7 +48,6 @@ typedef struct TlsCipherSuiteInfo HITLS_Cipher;
 
 typedef struct TlsSessCtx HITLS_Session;
 
-typedef struct CertVerifyParamInner HITLS_CertVerifyParam;
 /**
 * @ingroup hitls_type
 * @brief   DTLS SCTP authkey length, which is specified in the protocol and can be used to determine the length
@@ -103,10 +102,14 @@ typedef struct CertVerifyParamInner HITLS_CertVerifyParam;
  * @brief   HITLS_SESS_CACHE_MODE: mode for storing hitls sessions.
  */
 typedef enum {
-    HITLS_SESS_CACHE_NO,
-    HITLS_SESS_CACHE_CLIENT,
-    HITLS_SESS_CACHE_SERVER,
-    HITLS_SESS_CACHE_BOTH,
+    HITLS_SESS_CACHE_NO = 0x00000000U,
+    HITLS_SESS_CACHE_CLIENT = 0x00000001U,
+    HITLS_SESS_CACHE_SERVER = 0x00000002U,
+    HITLS_SESS_CACHE_BOTH = 0x00000003U,
+    HITLS_SESS_DISABLE_INTERNAL_STORE = 0x00000004U,
+    HITLS_SESS_DISABLE_INTERNAL_LOOKUP = 0x00000008U,
+    HITLS_SESS_DISABLE_AUTO_CLEANUP = 0x00000010U,
+    HITLS_SESS_ENABLE_TIME_UPDATE = 0x00000020U,
 } HITLS_SESS_CACHE_MODE;
 
 /**

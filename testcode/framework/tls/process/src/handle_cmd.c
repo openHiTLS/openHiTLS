@@ -405,6 +405,14 @@ int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ct
     ctxConfig->modeSupport = (int)strtol(string[index++], NULL, 10);
     LOG_DEBUG("Remote Process Set Ctx modeSupport is %d", ctxConfig->modeSupport);
 
+    ctxConfig->isMiddleBoxCompat = (int)strtol(string[index++], NULL, 10);
+    LOG_DEBUG("Remote Process Set Ctx MiddleBoxCompat is %d", ctxConfig->isMiddleBoxCompat);
+
+    // set the attrName
+    ret = strcpy_s(ctxConfig->attrName, sizeof(ctxConfig->attrName), string[index++]);
+    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    LOG_DEBUG("Remote Process Set Ctx attrName is %s", ctxConfig->attrName);
+
     // Setting the info cb
     ctxConfig->infoCb = NULL; // The pointer cannot be transferred. Set this parameter to null.
 

@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_GCM
 
-.file   "ghash_x86_64.S"
 .text
 
 .set INL,       %xmm11

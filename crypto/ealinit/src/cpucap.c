@@ -166,33 +166,39 @@ void getarmcap(void)
     // NEON
     if (setjmp(g_jump_buffer) == 0) {
 #if defined(__ARM_NEON) || defined(__aarch64__)
-        __asm__ volatile ("ORR v0.16b, v0.16b, v0.16b" : : : "v0");
+        // ORR v0.16b, v0.16b, v0.16b
+        __asm__ volatile (".inst 0x4ea01c00" : : : "v0");
         g_cryptArmCpuInfo |= CRYPT_ARM_NEON;
 #endif
 #if defined(__aarch64__)
         // AES
         if (setjmp(g_jump_buffer) == 0) {
-            __asm__ volatile ("aese v0.16b, v0.16b" : : : "v0");
+            // aese v0.16b, v0.16b
+            __asm__ volatile (".inst 0x4e284800" : : : "v0");
             g_cryptArmCpuInfo |= CRYPT_ARM_AES;
         }
         // PMULL
         if (setjmp(g_jump_buffer) == 0) {
-            __asm__ volatile ("pmull v0.1q, v0.1d, v0.1d" : : : "v0");
+            // pmull v0.1q, v0.1d, v0.1d
+            __asm__ volatile (".inst 0x0ee0e000" : : : "v0");
             g_cryptArmCpuInfo |= CRYPT_ARM_PMULL;
         }
         // SHA1
         if (setjmp(g_jump_buffer) == 0) {
-            __asm__ volatile ("sha1h s0, s0" : : : "s0");
+            // sha1h s0, s0
+            __asm__ volatile (".inst 0x5e280800" : : : "s0");
             g_cryptArmCpuInfo |= CRYPT_ARM_SHA1;
         }
         // SHA256
         if (setjmp(g_jump_buffer) == 0) {
-            __asm__ volatile ("sha256su0 v0.4s, v0.4s" : : : "v0");
+            // sha256su0 v0.4s, v0.4s
+            __asm__ volatile (".inst 0x5e282800" : : : "v0");
             g_cryptArmCpuInfo |= CRYPT_ARM_SHA256;
         }
         // SHA512
         if (setjmp(g_jump_buffer) == 0) {
-            __asm__ volatile ("sha512su0 v0.2d, v0.2d" : : : "v0");
+            // sha512su0 v0.2d, v0.2d
+            __asm__ volatile (".inst 0xcec08000" : : : "v0");
             g_cryptArmCpuInfo |= CRYPT_ARM_SHA512;
         }
 #endif

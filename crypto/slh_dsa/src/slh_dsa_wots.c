@@ -51,7 +51,7 @@ int32_t WotsChain(const uint8_t *x, uint32_t xLen, uint32_t start, uint32_t end,
 {
     (void)seed;
     int32_t ret;
-    uint8_t tmp[SLH_DSA_MAX_N];
+    uint8_t tmp[MAX_MDSIZE];
     (void)memcpy_s(tmp, sizeof(tmp), x, xLen);
     uint32_t tmpLen = xLen;
 
@@ -74,8 +74,11 @@ int WotsGeneratePublicKey(uint8_t *pub, SlhDsaAdrs *adrs, const CryptSlhDsaCtx *
     uint32_t n = ctx->para.n;
     uint32_t len = 2 * n + 3;
     SlhDsaAdrs skAdrs = *adrs;
-    ctx->adrsOps.setType(&skAdrs, WOTS_PRF);
-    ctx->adrsOps.copyKeyPairAddr(&skAdrs, adrs);
+
+    if (!ctx->isXmss) {
+        ctx->adrsOps.setType(&skAdrs, WOTS_PRF);
+        ctx->adrsOps.copyKeyPairAddr(&skAdrs, adrs);
+    }
 
     uint8_t *tmp = (uint8_t *)BSL_SAL_Malloc(len * n);
     if (tmp == NULL) {
@@ -84,7 +87,7 @@ int WotsGeneratePublicKey(uint8_t *pub, SlhDsaAdrs *adrs, const CryptSlhDsaCtx *
 
     for (uint32_t i = 0; i < len; i++) {
         ctx->adrsOps.setChainAddr(&skAdrs, i);
-        uint8_t sk[SLH_DSA_MAX_N] = {0};
+        uint8_t sk[MAX_MDSIZE] = {0};
         ret = ctx->hashFuncs.prf(ctx, &skAdrs, sk);
         if (ret != 0) {
             goto ERR;
@@ -129,11 +132,13 @@ int32_t WotsSign(uint8_t *sig, uint32_t *sigLen, const uint8_t *msg, uint32_t ms
     }
 
     SlhDsaAdrs skAdrs = *adrs;
-    ctx->adrsOps.setType(&skAdrs, WOTS_PRF);
-    ctx->adrsOps.copyKeyPairAddr(&skAdrs, adrs);
+    if (!ctx->isXmss) {
+        ctx->adrsOps.setType(&skAdrs, WOTS_PRF);
+        ctx->adrsOps.copyKeyPairAddr(&skAdrs, adrs);
+    }
     for (uint32_t i = 0; i < len; i++) {
         ctx->adrsOps.setChainAddr(&skAdrs, i);
-        uint8_t sk[SLH_DSA_MAX_N] = {0};
+        uint8_t sk[MAX_MDSIZE] = {0};
         ret = ctx->hashFuncs.prf(ctx, &skAdrs, sk);
         if (ret != 0) {
             goto ERR;

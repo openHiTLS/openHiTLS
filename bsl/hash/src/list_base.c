@@ -27,15 +27,9 @@ extern "C" {
 /* internal function definition */
 static inline bool ListRawNodeInList(const ListRawNode *node)
 {
-    bool ret = false;
-
-    if ((node->next != NULL) && (node->prev != NULL) &&
+    return (node->next != NULL) && (node->prev != NULL) &&
         ((const ListRawNode *)(node->next->prev) == node) &&
-        ((const ListRawNode *)(node->prev->next) == node)) {
-        ret = true;
-    }
-
-    return ret;
+        ((const ListRawNode *)(node->prev->next) == node);
 }
 
 static inline bool IsListRawEmptyCheck(const RawList *list)
@@ -58,24 +52,12 @@ static inline void ListRawAddBeforeNode(ListRawNode *node, const ListRawNode *wh
 
 static inline bool IsListRawFirstNode(const RawList *list, const ListRawNode *node)
 {
-    bool ret = false;
-
-    if ((const ListRawNode *)list->head.next == node) {
-        ret = true;
-    }
-
-    return ret;
+    return (const ListRawNode *)list->head.next == node;
 }
 
 static inline bool IsListRawLastNode(const RawList *list, const ListRawNode *node)
 {
-    bool ret = false;
-
-    if ((const ListRawNode *)list->head.prev == node) {
-        ret = true;
-    }
-
-    return ret;
+    return (const ListRawNode *)list->head.prev == node;
 }
 
 /* Deleting the list node, internal function, input parameter validation is not required. */
@@ -91,31 +73,27 @@ static void ListRawRemoveNode(const RawList *list, ListRawNode *node)
 
 int32_t ListRawInit(RawList *list, ListFreeFunc freeFunc)
 {
-    int32_t ret = (int32_t)BSL_INTERNAL_EXCEPTION;
-
-    if (list != NULL) {
-        list->head.next = &list->head;
-        list->head.prev = &list->head;
-        list->freeFunc  = freeFunc;
-        ret = BSL_SUCCESS;
+    if (list == NULL) {
+        return BSL_INTERNAL_EXCEPTION;
     }
 
-    return ret;
+    list->head.next = &list->head;
+    list->head.prev = &list->head;
+    list->freeFunc  = freeFunc;
+    return BSL_SUCCESS;
 }
 
 int32_t ListRawClear(RawList *list)
 {
-    int32_t ret = (int32_t)BSL_INTERNAL_EXCEPTION;
-
-    if (list != NULL) {
-        while (!IsListRawEmptyCheck(list)) {
-            ListRawRemoveNode(list, (ListRawNode *)list->head.next);
-        }
-
-        ret = BSL_SUCCESS;
+    if (list == NULL) {
+        return BSL_INTERNAL_EXCEPTION;
     }
 
-    return ret;
+    while (!IsListRawEmptyCheck(list)) {
+        ListRawRemoveNode(list, (ListRawNode *)list->head.next);
+    }
+
+    return BSL_SUCCESS;
 }
 
 int32_t ListRawDeinit(RawList *list)
@@ -132,22 +110,14 @@ int32_t ListRawDeinit(RawList *list)
 
 bool ListRawEmpty(const RawList *list)
 {
-    bool ret = true;
-
-    if (list != NULL) {
-        ret = IsListRawEmptyCheck(list);
-    }
-
-    return ret;
+    return list == NULL ? true : IsListRawEmptyCheck(list);
 }
 
 static inline size_t ListRawSizeInner(const RawList *list)
 {
     size_t size = 0;
-    const ListRawNode *node = NULL, *head = NULL;
-
-    head = &list->head;
-    for (node = head->next; node != head; node = node->next) {
+    const ListRawNode *head = &list->head;
+    for (const ListRawNode *node = head->next; node != head; node = node->next) {
         size++;
     }
 
@@ -156,81 +126,57 @@ static inline size_t ListRawSizeInner(const RawList *list)
 
 size_t ListRawSize(const RawList *list)
 {
-    size_t size = 0;
-
-    if ((list != NULL) && !IsListRawEmptyCheck(list)) {
-        size = ListRawSizeInner(list);
-    }
-
-    return size;
+    return (list == NULL || IsListRawEmptyCheck(list) == true) ? 0 : ListRawSizeInner(list);
 }
 
 int32_t ListRawPushFront(RawList *list, ListRawNode *node)
 {
-    int32_t ret = (int32_t)BSL_INTERNAL_EXCEPTION;
-
-    if ((list != NULL) && (node != NULL)) {
-        ListRawAddAfterNode(node, &(list->head));
-        ret = BSL_SUCCESS;
+    if (list == NULL || node == NULL) {
+        return BSL_INTERNAL_EXCEPTION;
     }
 
-    return ret;
+    ListRawAddAfterNode(node, &(list->head));
+    return BSL_SUCCESS;
 }
 
 int32_t ListRawPushBack(RawList *list, ListRawNode *node)
 {
-    int32_t ret = (int32_t)BSL_INTERNAL_EXCEPTION;
-
-    if ((list != NULL) && (node != NULL)) {
-        ListRawAddBeforeNode(node, &(list->head));
-        ret = BSL_SUCCESS;
+    if (list == NULL || node == NULL) {
+        return BSL_INTERNAL_EXCEPTION;
     }
 
-    return ret;
+    ListRawAddBeforeNode(node, &(list->head));
+    return BSL_SUCCESS;
 }
 
-int32_t ListIRawnsert(const ListRawNode *curNode, ListRawNode *newNode)
+int32_t ListRawInsert(const ListRawNode *curNode, ListRawNode *newNode)
 {
-    int32_t ret = (int32_t)BSL_INTERNAL_EXCEPTION;
-
     if ((curNode != NULL) && (newNode != NULL) && (ListRawNodeInList(curNode))) {
         ListRawAddBeforeNode(newNode, curNode);
-        ret = BSL_SUCCESS;
+        return BSL_SUCCESS;
     }
 
-    return ret;
+    return BSL_INTERNAL_EXCEPTION;
 }
 
 int32_t ListRawPopFront(RawList *list)
 {
-    int32_t ret = (int32_t)BSL_INTERNAL_EXCEPTION;
-    ListRawNode *firstNode = NULL;
-
-    if ((list != NULL) && (!IsListRawEmptyCheck(list))) {
-        firstNode = list->head.next;
-        ListRawRemoveNode(list, firstNode);
-        ret = BSL_SUCCESS;
+    if (list == NULL || IsListRawEmptyCheck(list) == true) {
+        return BSL_INTERNAL_EXCEPTION;
     }
-
-    return ret;
+    ListRawNode *firstNode = list->head.next;
+    ListRawRemoveNode(list, firstNode);
+    return BSL_SUCCESS;
 }
 
 int32_t ListRawPopBack(RawList *list)
 {
-    int32_t ret = (int32_t)BSL_INTERNAL_EXCEPTION;
-    ListRawNode *lastNode = NULL;
-
-    if (list != NULL) {
-        if (!IsListRawEmptyCheck(list)) {
-            lastNode = list->head.prev;
-            ListRawRemoveNode(list, lastNode);
-            ret = BSL_SUCCESS;
-        } else {
-            ret = (int32_t)BSL_INTERNAL_EXCEPTION;
-        }
+    if (list == NULL || IsListRawEmptyCheck(list) == true) {
+        return BSL_INTERNAL_EXCEPTION;
     }
-
-    return ret;
+    ListRawNode *lastNode = list->head.prev;
+    ListRawRemoveNode(list, lastNode);
+    return BSL_SUCCESS;
 }
 
 static void ListRawRemoveInner(RawList *list, ListRawNode *node)
@@ -245,86 +191,55 @@ static void ListRawRemoveInner(RawList *list, ListRawNode *node)
 
 int32_t ListRawRemove(RawList *list, ListRawNode *node)
 {
-    int32_t ret = (int32_t)BSL_INTERNAL_EXCEPTION;
-
-    if ((node != NULL) && (ListRawNodeInList(node))) {
-        ListRawRemoveInner(list, node);
-        ret = BSL_SUCCESS;
+    if (node == NULL || ListRawNodeInList(node) == false) {
+        return BSL_INTERNAL_EXCEPTION;
     }
-
-    return ret;
+    ListRawRemoveInner(list, node);
+    return BSL_SUCCESS;
 }
 
 ListRawNode *ListRawFront(const RawList *list)
 {
-    ListRawNode *front = NULL;
-
-    if ((list != NULL) && (!IsListRawEmptyCheck(list))) {
-        front = list->head.next;
-    }
-
-    return front;
+    return (list == NULL || IsListRawEmptyCheck(list) == true) ? NULL : list->head.next;
 }
 
 ListRawNode *ListRawBack(const RawList *list)
 {
-    ListRawNode *back = NULL;
-
-    if ((list != NULL) && (!IsListRawEmptyCheck(list))) {
-        back = list->head.prev;
-    }
-
-    return back;
+    return (list == NULL || IsListRawEmptyCheck(list) == true) ? NULL : list->head.prev;
 }
 
 ListRawNode *ListRawGetPrev(const RawList *list, const ListRawNode *node)
 {
-    ListRawNode *prev = NULL;
-
-    if ((list == NULL) || (node == NULL) ||
-        (IsListRawEmptyCheck(list)) || (IsListRawFirstNode(list, node)) || (!ListRawNodeInList(node))) {
-        prev = NULL;
-    } else {
-        prev = node->prev;
-    }
-
-    return prev;
+    return ((list == NULL) || (node == NULL) || (IsListRawEmptyCheck(list)) || (IsListRawFirstNode(list, node)) ||
+        (!ListRawNodeInList(node)))
+        ? NULL
+        : node->prev;
 }
 
 ListRawNode *ListRawGetNext(const RawList *list, const ListRawNode *node)
 {
-    ListRawNode *next = NULL;
-
-    if ((list == NULL) || (node == NULL) ||
-        (IsListRawEmptyCheck(list)) || (IsListRawLastNode(list, node)) || (!ListRawNodeInList(node))) {
-        next = NULL;
-    } else {
-        next = node->next;
-    }
-
-    return next;
+    return ((list == NULL) || (node == NULL) || (IsListRawEmptyCheck(list)) || (IsListRawLastNode(list, node)) ||
+        (!ListRawNodeInList(node)))
+        ? NULL
+        : node->next;
 }
 
 /* Linked list node search function. The type of the first parameter of nodeMatchFunc must be (ListRawNode *) */
 ListRawNode *ListRawFindNode(const RawList *list, ListMatchFunc nodeMatchFunc, uintptr_t data)
 {
-    ListRawNode *ans = NULL;
-    ListRawNode *node = NULL;
-    const ListRawNode *head = NULL;
-
-    if ((list != NULL) && (nodeMatchFunc != NULL)) {
-        head = (const ListRawNode *)(&list->head);
-        node = head->next;
-        while ((const ListRawNode *)node != head) {
-            if (nodeMatchFunc((void *)node, data)) {
-                ans = node;
-                break;
-            }
-            node = node->next;
+    if (list == NULL || nodeMatchFunc == NULL) {
+        return NULL;
+    }
+    const ListRawNode *head = (const ListRawNode *)(&list->head);
+    ListRawNode *node = head->next;
+    while ((const ListRawNode *)node != head) {
+        if (nodeMatchFunc((void *)node, data)) {
+            return node;
         }
+        node = node->next;
     }
 
-    return ans;
+    return NULL;
 }
 
 #ifdef __cplusplus

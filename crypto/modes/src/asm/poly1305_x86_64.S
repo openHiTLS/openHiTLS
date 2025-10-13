@@ -18,7 +18,6 @@
 
 #include "poly1305_x86_64_macro.s"
 
-.file   "poly1305_x86_64.S"
 .text
 
 /**

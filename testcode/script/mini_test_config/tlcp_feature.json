@@ -19,7 +19,6 @@
                 "uio_mem",
                 "uio_plt",
                 "uio_tcp",
-                "usrdata",
                 "sal_thread",
                 "sal_net",
                 "sal_time",
@@ -85,7 +84,8 @@
                 "mlkem",
                 "mldsa",
                 "slh_dsa",
-                "codecskey"
+                "codecskey",
+                "pkey_cmp"
             ]
         },
         "hitls_tls": {

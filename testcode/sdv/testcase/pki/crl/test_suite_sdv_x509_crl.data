@@ -307,3 +307,5 @@ SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_cert/inter2.mul.crt":"..
 SDV_X509_CRL_Sign_Func_TC001 v3 cert sm2 with userid
 SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/sm2_with_userid/ca.crt":"../testdata/cert/sm2_with_userid/ca.key":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SM3:0:"tmp-sm2-withuserId.crl":1
 
+SDV_X509_CRL_INVALIED_TEST_TC001
+SDV_X509_CRL_INVALIED_TEST_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sha256-v1.der"

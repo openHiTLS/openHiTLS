@@ -164,39 +164,20 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC010(void)
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_VerifyClientPostHandshake(server->ssl), HITLS_SUCCESS);
 
-    uint8_t readBuf[READ_BUF_SIZE] = {0};
-    uint32_t readLen;
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
 
-    // the server receives the CertificateVerify message.
-    FRAME_Msg frameMsg = {0};
-    FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLS13;
-    frameType.recordType = REC_TYPE_HANDSHAKE;
-    frameType.handshakeType = CERTIFICATE_VERIFY;
-    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
-    ASSERT_TRUE(FRAME_GetDefaultMsg(&frameType, &frameMsg) == HITLS_SUCCESS);
-
     uint32_t sendLen = MAX_RECORD_LENTH;
     uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
-    ASSERT_TRUE(FRAME_PackMsg(&frameType, &frameMsg, sendBuf, sendLen, &sendLen) == HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_GetTls13DisorderHsMsg(CERTIFICATE_VERIFY, sendBuf, sendLen, &sendLen) == HITLS_SUCCESS);
 
-    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
-    ioUserData->recMsg.len = 0;
-    ASSERT_TRUE(FRAME_TransportRecMsg(server->io, sendBuf, sendLen) == HITLS_SUCCESS);
-    FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    ASSERT_EQ(REC_Write(client->ssl, REC_TYPE_HANDSHAKE, sendBuf, sendLen), HITLS_SUCCESS);
 
-    STUB_Init();
-    FuncStubInfo tmpStubInfo;
-    STUB_Replace(&tmpStubInfo, RecConnDecrypt, STUB_RecConnDecrypt);
-
-    // The server sends an alert message, and the connection is interrupted.
-    ASSERT_TRUE(client->ssl != NULL);
-    ASSERT_EQ(HITLS_Read(client->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen;
+    ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
     FRAME_FreeLink(client);

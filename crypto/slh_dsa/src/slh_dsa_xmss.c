@@ -25,7 +25,8 @@
 #include "slh_dsa_xmss.h"
 #include "slh_dsa_wots.h"
 
-int32_t XmssNode(uint8_t *node, uint32_t idx, uint32_t height, SlhDsaAdrs *adrs, const CryptSlhDsaCtx *ctx)
+int32_t XmssNode(uint8_t *node, uint32_t idx, uint32_t height, SlhDsaAdrs *adrs, const CryptSlhDsaCtx *ctx,
+                 uint8_t *AuthPath, uint32_t LeafIdx)
 {
     int32_t ret;
     if (node == NULL || adrs == NULL || ctx == NULL) {
@@ -38,38 +39,58 @@ int32_t XmssNode(uint8_t *node, uint32_t idx, uint32_t height, SlhDsaAdrs *adrs,
     if (height == 0) {
         ctx->adrsOps.setType(adrs, WOTS_HASH);
         ctx->adrsOps.setKeyPairAddr(adrs, idx);
-        return WotsGeneratePublicKey(node, adrs, ctx);
+        ret = WotsGeneratePublicKey(node, adrs, ctx);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+        if (AuthPath && (idx == ((LeafIdx >> height) ^ 0x01))) {
+            (void)memcpy_s(AuthPath + (height * n), n, node, n);
+        }
+        return CRYPT_SUCCESS;
     }
     // Compute internal node
-    uint8_t leftNode[SLH_DSA_MAX_N] = {0};
-    uint8_t rightNode[SLH_DSA_MAX_N] = {0};
+    uint8_t leftNode[MAX_MDSIZE] = {0};
+    uint8_t rightNode[MAX_MDSIZE] = {0};
 
     // Compute left child
-    ret = XmssNode(leftNode, 2 * idx, height - 1, adrs, ctx);
+    ret = XmssNode(leftNode, 2 * idx, height - 1, adrs, ctx, AuthPath, LeafIdx);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
 
     // Compute right child
-    ret = XmssNode(rightNode, 2 * idx + 1, height - 1, adrs, ctx);
+    ret = XmssNode(rightNode, 2 * idx + 1, height - 1, adrs, ctx, AuthPath, LeafIdx);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
 
     // Hash children to get parent node
     ctx->adrsOps.setType(adrs, TREE);
-    ctx->adrsOps.setTreeHeight(adrs, height);
+    if (ctx->isXmss) {
+        /* tree height is the 'lower' layer for xmss */
+        ctx->adrsOps.setTreeHeight(adrs, height - 1);
+    } else {
+        ctx->adrsOps.setTreeHeight(adrs, height);
+    }
     ctx->adrsOps.setTreeIndex(adrs, idx);
 
-    uint8_t tmp[SLH_DSA_MAX_N * 2];
-    (void)memcpy_s(tmp, SLH_DSA_MAX_N * 2, leftNode, n);
-    (void)memcpy_s(tmp + n, SLH_DSA_MAX_N * 2 - n, rightNode, n);
+    uint8_t tmp[MAX_MDSIZE * 2];
+    (void)memcpy_s(tmp, MAX_MDSIZE * 2, leftNode, n);
+    (void)memcpy_s(tmp + n, MAX_MDSIZE * 2 - n, rightNode, n);
 
-    return ctx->hashFuncs.h(ctx, adrs, tmp, 2 * n, node);
+    ret = ctx->hashFuncs.h(ctx, adrs, tmp, 2 * n, node);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    if ((height != ctx->para.hp) && 
+        AuthPath && (idx == ((LeafIdx >> height) ^ 0x01))) {
+        (void)memcpy_s(AuthPath + (height * n), n, node, n);
+    }
+    return CRYPT_SUCCESS;
 }
 
 int32_t XmssSign(const uint8_t *msg, size_t msgLen, uint32_t idx, SlhDsaAdrs *adrs, const CryptSlhDsaCtx *ctx,
-                 uint8_t *sig, uint32_t *sigLen)
+                 uint8_t *sig, uint32_t *sigLen, uint8_t *root)
 {
     int32_t ret;
 
@@ -81,23 +102,19 @@ int32_t XmssSign(const uint8_t *msg, size_t msgLen, uint32_t idx, SlhDsaAdrs *ad
         return CRYPT_SLHDSA_ERR_SIG_LEN_NOT_ENOUGH;
     }
 
-    for (uint32_t j = 0; j < hp; j++) {
-        uint32_t k = (idx >> j) ^ 1;
-        uint8_t node[SLH_DSA_MAX_N] = {0};
-        ret = XmssNode(node, k, j, adrs, ctx);
-        if (ret != CRYPT_SUCCESS) {
-            return ret;
-        }
-        (void)memcpy_s((sig + (len + j) * n), n, node, n);
-    }
-
     ctx->adrsOps.setType(adrs, WOTS_HASH);
     ctx->adrsOps.setKeyPairAddr(adrs, idx);
     uint32_t tmpLen = len * n;
-    ret = WotsSign(sig, &tmpLen, msg, msgLen, adrs, ctx);
+    ret = WotsSign(sig, &tmpLen, msg, (uint32_t)msgLen, adrs, ctx);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
+    
+    ret = XmssNode(root, 0, hp, adrs, ctx, sig + (len * n), idx);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+
     *sigLen = (len + hp) * n;
     return CRYPT_SUCCESS;
 }
@@ -106,7 +123,6 @@ int32_t XmssPkFromSig(uint32_t idx, const uint8_t *sig, uint32_t sigLen, const u
                       SlhDsaAdrs *adrs, const CryptSlhDsaCtx *ctx, uint8_t *pk)
 {
     int32_t ret;
-
     uint32_t n = ctx->para.n;
     uint32_t hp = ctx->para.hp;
     uint32_t len = 2 * n + 3;
@@ -117,8 +133,8 @@ int32_t XmssPkFromSig(uint32_t idx, const uint8_t *sig, uint32_t sigLen, const u
 
     ctx->adrsOps.setType(adrs, WOTS_HASH);
     ctx->adrsOps.setKeyPairAddr(adrs, idx);
-    uint8_t node0[SLH_DSA_MAX_N] = {0};
-    uint8_t node1[SLH_DSA_MAX_N] = {0};
+    uint8_t node0[MAX_MDSIZE] = {0};
+    uint8_t node1[MAX_MDSIZE] = {0};
     ret = WotsPubKeyFromSig(msg, msgLen, sig, sigLen, adrs, ctx, node0);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -126,13 +142,17 @@ int32_t XmssPkFromSig(uint32_t idx, const uint8_t *sig, uint32_t sigLen, const u
     ctx->adrsOps.setType(adrs, TREE);
     ctx->adrsOps.setTreeIndex(adrs, idx);
     for (uint32_t k = 0; k < hp; k++) {
-        ctx->adrsOps.setTreeHeight(adrs, k + 1);
-        uint8_t tmp[SLH_DSA_MAX_N * 2];
-        if ((idx >> k) & 1) {
+        if (ctx->isXmss) {
+            /* tree height is the 'lower' layer for xmss */
+            ctx->adrsOps.setTreeHeight(adrs, k);
+        } else {
+            ctx->adrsOps.setTreeHeight(adrs, k + 1);
+        }
+        uint8_t tmp[MAX_MDSIZE * 2];
+        if (((idx >> k) & 1) != 0) {
             (void)memcpy_s(tmp, sizeof(tmp), sig + (len + k) * n, n);
             (void)memcpy_s(tmp + n, sizeof(tmp) - n, node0, n);
             ctx->adrsOps.setTreeIndex(adrs, (ctx->adrsOps.getTreeIndex(adrs) - 1) >> 1);
-
         } else {
             (void)memcpy_s(tmp, sizeof(tmp), node0, n);
             (void)memcpy_s(tmp + n, sizeof(tmp) - n, sig + (len + k) * n, n);

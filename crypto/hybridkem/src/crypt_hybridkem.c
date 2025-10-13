@@ -22,6 +22,7 @@
 #include "eal_pkey_local.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_utils.h"
+#include "crypt_algid.h"
 #include "crypt_hybridkem_local.h"
 #include "crypt_hybridkem.h"
 #include "crypt_ecdh.h"

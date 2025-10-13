@@ -42,6 +42,7 @@
 #include "alert.h"
 #include "hs_kx.h"
 #include "config_type.h"
+#include "config_check.h"
 
 typedef int32_t (*CheckExtFunc)(TLS_Ctx *ctx, const ServerHelloMsg *serverHello);
 
@@ -105,12 +106,13 @@ static int32_t ClientCheckServerName(TLS_Ctx *ctx, const ServerHelloMsg *serverH
             ctx->config.tlsConfig.serverNameSize > 0) {
             /* The server negotiates the extension of the server_name of the client successfully */
             ctx->negotiatedInfo.isSniStateOK = true;
-            ctx->hsCtx->serverNameSize = ctx->config.tlsConfig.serverNameSize;
+            ctx->negotiatedInfo.serverNameSize = ctx->config.tlsConfig.serverNameSize;
 
-            BSL_SAL_FREE(ctx->hsCtx->serverName);
-            ctx->hsCtx->serverName =
-                (uint8_t *)BSL_SAL_Dump(ctx->config.tlsConfig.serverName, ctx->hsCtx->serverNameSize * sizeof(uint8_t));
-            if (ctx->hsCtx->serverName == NULL) {
+            BSL_SAL_FREE(ctx->negotiatedInfo.serverName);
+            ctx->negotiatedInfo.serverName =
+                (uint8_t *)BSL_SAL_Dump(ctx->config.tlsConfig.serverName,
+                    ctx->negotiatedInfo.serverNameSize * sizeof(uint8_t));
+            if (ctx->negotiatedInfo.serverName == NULL) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17082, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "Dump fail", 0, 0, 0, 0);
                 BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
@@ -132,7 +134,8 @@ static int32_t ClientCheckExtendedMasterSecret(TLS_Ctx *ctx, const ServerHelloMs
         return HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE;
     }
     /* tls1.3 Ignore Extended Master Secret */
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 || ctx->negotiatedInfo.version < HITLS_VERSION_TLS12) {
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 || (ctx->negotiatedInfo.version < HITLS_VERSION_TLS12 &&
+        ctx->negotiatedInfo.version != HITLS_VERSION_TLCP_DTLCP11)) {
         ctx->negotiatedInfo.isExtendedMasterSecret = false;
         return HITLS_SUCCESS;
     }
@@ -147,10 +150,9 @@ static int32_t ClientCheckExtendedMasterSecret(TLS_Ctx *ctx, const ServerHelloMs
         does not contain the extension, the client MUST abort the
         handshake.  */
     if (ctx->negotiatedInfo.isResume && ctx->session != NULL) {
-        uint8_t haveExtMasterSecret;
+        bool haveExtMasterSecret;
         HITLS_SESS_GetHaveExtMasterSecret(ctx->session, &haveExtMasterSecret);
-        bool preEms = haveExtMasterSecret != 0;
-        if (serverHello->haveExtendedMasterSecret != preEms) {
+        if (serverHello->haveExtendedMasterSecret != haveExtMasterSecret) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17083, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "ExtendedMasterSecret err", 0, 0, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
@@ -405,7 +407,7 @@ static int32_t ClientCheckExtensionsFlag(TLS_Ctx *ctx, const ServerHelloMsg *ser
 
 static bool IsCipherSuiteSupport(const TLS_Ctx *ctx, uint16_t cipherSuite)
 {
-    if (!IsCipherSuiteAllowed(ctx, cipherSuite)) {
+    if (!IsCipherSuiteAllowed(ctx, cipherSuite, true)) {
         return false;
     }
 #ifdef HITLS_TLS_PROTO_TLS13
@@ -483,6 +485,16 @@ static int32_t ClientCheckCipherSuite(TLS_Ctx *ctx, const ServerHelloMsg *server
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 static int32_t ClientCheckVersion(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 {
+    int32_t ret = HITLS_SUCCESS;
+    (void)ret;
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
+    ret = CheckRenegotiatedVersion(ctx);
+    if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return RETURN_ALERT_PROCESS(ctx, ret, BINLOG_ID15072,
+            "The client renegotiation version is inconsistent with the initial one", ALERT_PROTOCOL_VERSION);
+    }
+#endif
     uint16_t clientMinVersion = ctx->config.tlsConfig.minVersion;
     uint16_t clientMaxVersion = ctx->config.tlsConfig.maxVersion;
     uint16_t serverVersion = serverHello->version;
@@ -509,7 +521,7 @@ static int32_t ClientCheckVersion(TLS_Ctx *ctx, const ServerHelloMsg *serverHell
         }
     }
 #ifdef HITLS_TLS_FEATURE_SECURITY
-    int32_t ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_VERSION, 0, serverHello->version, NULL);
+    ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_VERSION, 0, serverHello->version, NULL);
     if (ret != SECURITY_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17088, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "SslCheck fail, ret %d", ret, 0, 0, 0);
@@ -527,7 +539,7 @@ static int32_t ClientCheckResumeServerHello(TLS_Ctx *ctx, const ServerHelloMsg *
 {
     uint16_t version = 0;
     uint16_t cipherSuite = 0;
-    uint8_t haveExtMasterSecret = 0;
+    bool haveExtMasterSecret = false;
 
     HITLS_SESS_GetProtocolVersion(ctx->session, &version);
     HITLS_SESS_GetCipherSuite(ctx->session, &cipherSuite);
@@ -552,7 +564,7 @@ static int32_t ClientCheckResumeServerHello(TLS_Ctx *ctx, const ServerHelloMsg *
     }
 
     /* Check the extended master secret information */
-    if (serverHello->haveExtendedMasterSecret != (bool)haveExtMasterSecret) {
+    if (serverHello->haveExtendedMasterSecret != haveExtMasterSecret) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15275, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "session resume error:can not downgrade from extended master secret.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
@@ -1024,6 +1036,10 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
     uint32_t keyshareLen = 0u;
     /* The keyshare extension of the server must contain the keyExchange field */
     if (serverHello->keyShare.keyExchangeSize == 0 || serverHello->keyShare.group == HITLS_NAMED_GROUP_BUTT ||
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
+        (IS_SM_TLS13(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite)
+         && serverHello->keyShare.group != HITLS_EC_GROUP_SM2) ||
+#endif
         /* Check whether the sent support group is the same as the negotiated group */
         (serverHello->keyShare.group != ctx->hsCtx->kxCtx->keyExchParam.share.group &&
             serverHello->keyShare.group != ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup)) {

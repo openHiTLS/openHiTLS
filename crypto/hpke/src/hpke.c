@@ -202,8 +202,7 @@ static int32_t HpkeInitCipherSuite(CRYPT_EAL_HpkeCtx *ctx, CRYPT_HPKE_CipherSuit
     uint8_t kemIndex;
     uint8_t kdfIndex;
     uint8_t aeadIndex;
-    int32_t ret;
-    ret = HpkeCheckCipherSuite(cipherSuite, &kemIndex, &kdfIndex, &aeadIndex);
+    int32_t ret = HpkeCheckCipherSuite(cipherSuite, &kemIndex, &kdfIndex, &aeadIndex);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

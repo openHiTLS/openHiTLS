@@ -18,7 +18,6 @@
 
 #include "crypt_arm.h"
 
-.file "x25519_armv8.S"
 .text
 
 .macro push_stack

@@ -27,191 +27,163 @@ extern "C" {
  * @brief   Pack ClientHello message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackClientHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackClientHello(const TLS_Ctx *ctx, PackPacket *pkt);
 
 /**
  * @brief   Pack HelloVerifyRequest message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackHelloVerifyRequest(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackHelloVerifyRequest(const TLS_Ctx *ctx, PackPacket *pkt);
 
 /**
  * @brief   Pack ServertHello message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt  [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackServerHello(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackServerHello(const TLS_Ctx *ctx, PackPacket *pkt);
 
 /**
  * @brief   Pack Encrypted Extensions message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackEncryptedExtensions(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackEncryptedExtensions(const TLS_Ctx *ctx, PackPacket *pkt);
 /**
  * @brief   Pack Tls1.3 Certificate message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t Tls13PackCertificate(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t Tls13PackCertificate(TLS_Ctx *ctx, PackPacket *pkt);
 /**
  * @brief   Pack certificate message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackCertificate(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackCertificate(TLS_Ctx *ctx, PackPacket *pkt);
 
 /**
  * @brief   Pack CertificateRequest message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackCertificateRequest(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackCertificateRequest(const TLS_Ctx *ctx, PackPacket *pkt);
 
 /**
  * @brief   Pack Tls1.3 CertificateRequest message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t Tls13PackCertificateRequest(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t Tls13PackCertificateRequest(const TLS_Ctx *ctx, PackPacket *pkt);
 /**
  * @brief   Pack CertificateVerify message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackCertificateVerify(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackCertificateVerify(const TLS_Ctx *ctx, PackPacket *pkt);
 
 /**
  * @brief   Pack new session ticket message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackNewSessionTicket(const TLS_Ctx *ctx, PackPacket *pkt);
 
 /**
  * @brief   Pack TLS1.3 new session ticket message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, PackPacket *pkt);
+
 /**
  * @brief   Pack ServerKeyExchange message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackServerKeyExchange(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackServerKeyExchange(TLS_Ctx *ctx, PackPacket *pkt);
 
 /**
  * @brief   Pack ClientKeyExchange message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackClientKeyExchange(TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackClientKeyExchange(TLS_Ctx *ctx, PackPacket *pkt);
 
 /**
  * @brief   Pack Finished message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackFinished(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackFinished(const TLS_Ctx *ctx, PackPacket *pkt);
+
 /**
  * @brief   Pack KeyUpdate message
  *
  * @param   ctx  [IN] TLS context
- * @param   buf [OUT] Returned handshake message
- * @param   bufLen [IN] Buffer size
- * @param   usedLen  [OUT] Returned message length
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t PackKeyUpdate(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackKeyUpdate(const TLS_Ctx *ctx, PackPacket *pkt);
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */

@@ -91,8 +91,7 @@ int32_t HITLS_X509_CrlTagGetOrCheck(int32_t type, uint32_t idx, void *data, void
         }
         case BSL_ASN1_TYPE_GET_ANY_TAG: {
             BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *) data;
-            BslOidString oidStr = {param->len, (char *)param->buff, 0};
-            BslCid cid = BSL_OBJ_GetCID(&oidStr);
+            BslCid cid = BSL_OBJ_GetCidFromOidBuff(param->buff, param->len);
             if (cid == BSL_CID_UNKNOWN) {
                 return HITLS_X509_ERR_GET_ANY_TAG;
             }
@@ -140,7 +139,6 @@ void HITLS_X509_CrlFree(HITLS_X509_Crl *crl)
     BSL_SAL_ReferencesFree(&(crl->references));
     BSL_SAL_FREE(crl->rawData);
     BSL_SAL_Free(crl);
-    return;
 }
 
 HITLS_X509_Crl *HITLS_X509_CrlNew(void)
@@ -150,17 +148,9 @@ HITLS_X509_Crl *HITLS_X509_CrlNew(void)
     BSL_ASN1_List *entryList = NULL;
     HITLS_X509_Ext *ext = NULL;
     crl = (HITLS_X509_Crl *)BSL_SAL_Calloc(1, sizeof(HITLS_X509_Crl));
-    if (crl == NULL) {
-        return NULL;
-    }
-
     issuerName = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
-    if (issuerName == NULL) {
-        goto ERR;
-    }
-
     entryList = BSL_LIST_New(sizeof(HITLS_X509_CrlEntry));
-    if (entryList == NULL) {
+    if (crl == NULL || issuerName == NULL || entryList == NULL) {
         goto ERR;
     }
     ext = X509_ExtNew(&crl->tbs.crlExt, HITLS_X509_EXT_TYPE_CRL);
@@ -534,7 +524,6 @@ int32_t HITLS_X509_EncodeCrlTbsRaw(HITLS_X509_CrlTbs *crlTbs, BSL_ASN1_Buffer *a
     BSL_ASN1_Buffer *issuerAsn = &asnArr[2]; // 2 is issuer name
     BSL_ASN1_Buffer *revokeBuf = &asnArr[5]; // 5 is revoke list
     BSL_ASN1_Buffer *crlExt = &asnArr[6]; // 6 is crl extension
-
     int32_t ret = HITLS_X509_EncodeSignAlgInfo(&crlTbs->signAlgId, signAlgAsn);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -780,15 +769,15 @@ int32_t HITLS_X509_CrlGenFile(int32_t format, HITLS_X509_Crl *crl, const char *p
 #endif // HITLS_PKI_X509_CRL_GEN
 
 #ifdef HITLS_PKI_X509_CRL_PARSE
-int32_t HITLS_X509_ParseAsn1Crl(uint8_t **encode, uint32_t *encodeLen, HITLS_X509_Crl *crl)
+int32_t HITLS_X509_ParseAsn1Crl(uint8_t *encode, uint32_t encodeLen, HITLS_X509_Crl *crl)
 {
-    uint8_t *temp = *encode;
-    uint32_t tempLen = *encodeLen;
+    uint8_t *temp = encode;
+    uint32_t tempLen = encodeLen;
+    crl->rawData = encode; // crl takes over the encode immediately.
     if ((crl->flag & HITLS_X509_CRL_GEN_FLAG) != 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-
     // template parse
     BSL_ASN1_Buffer asnArr[HITLS_X509_CRL_MAX_IDX] = {0};
     BSL_ASN1_Template templ = {g_crlTempl, sizeof(g_crlTempl) / sizeof(g_crlTempl[0])};
@@ -799,7 +788,7 @@ int32_t HITLS_X509_ParseAsn1Crl(uint8_t **encode, uint32_t *encodeLen, HITLS_X50
         return ret;
     }
     // parse tbs raw data
-    ret = HITLS_X509_ParseTbsRawData(*encode, *encodeLen, &crl->tbs.tbsRawData, &crl->tbs.tbsRawDataLen);
+    ret = HITLS_X509_ParseTbsRawData(encode, encodeLen, &crl->tbs.tbsRawData, &crl->tbs.tbsRawDataLen);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -822,11 +811,7 @@ int32_t HITLS_X509_ParseAsn1Crl(uint8_t **encode, uint32_t *encodeLen, HITLS_X50
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-
-    crl->rawData = *encode;
-    crl->rawDataLen = *encodeLen - tempLen;
-    *encode = temp;
-    *encodeLen = tempLen;
+    crl->rawDataLen = encodeLen - tempLen;
     crl->flag |= HITLS_X509_CRL_PARSE_FLAG;
     return HITLS_PKI_SUCCESS;
 ERR:
@@ -920,15 +905,6 @@ int32_t HITLS_X509_CrlParseBundleFile(int32_t format, const char *path, HITLS_X5
 
 #endif // HITLS_PKI_X509_CRL_PARSE
 
-static int32_t X509_CrlRefUp(HITLS_X509_Crl *crl, int32_t *val, uint32_t valLen)
-{
-    if (val == NULL || valLen != sizeof(int32_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    return BSL_SAL_AtomicUpReferences(&crl->references, val);
-}
-
 static int32_t X509_CrlGetThisUpdate(HITLS_X509_Crl *crl, BSL_TIME *val, uint32_t valLen)
 {
     if (valLen != sizeof(BSL_TIME)) {
@@ -1004,6 +980,8 @@ static int32_t X509_CrlGetCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, uint
             return HITLS_X509_GetList(crl->tbs.issuerName, val, valLen);
         case HITLS_X509_GET_REVOKELIST:
             return X509_CrlGetRevokeList(crl, val, valLen);
+        case HITLS_X509_GET_ISSUER_DN_STR:
+            return HITLS_X509_GetDistinguishNameStrFromList(crl->tbs.issuerName, val);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -1013,7 +991,7 @@ static int32_t X509_CrlGetCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, uint
 #ifdef HITLS_PKI_X509_CRL_GEN
 static int32_t CrlSetTime(void *dest, uint8_t *val, uint32_t valLen)
 {
-    if (valLen != sizeof(BSL_TIME) || !BSL_DateTimeCheck((BSL_TIME *)val)) {
+    if (valLen != sizeof(BSL_TIME) || !BSL_DateTimeCheck((BSL_TIME *)(uintptr_t)val)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -1184,7 +1162,7 @@ int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, uint32_t
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     if (cmd == HITLS_X509_REF_UP) {
-        return X509_CrlRefUp(crl, val, valLen);
+        return BSL_SAL_AtomicRefUpCtrl(&(crl->references), val, valLen);
 #ifdef HITLS_CRYPTO_SM2
     } else if (cmd == HITLS_X509_SET_VFY_SM2_USER_ID) {
         if (crl->signAlgId.algId != BSL_CID_SM2DSAWITHSM3) {
@@ -1334,8 +1312,8 @@ static int32_t SetExtReason(void *param, HITLS_X509_ExtEntry *extEntry, void *va
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     extEntry->critical = reason->critical;
-    uint8_t tmp = (uint8_t)reason->reason; // int32_t -> uint8_t: avoid value errors in bit-endian scenario
-    BSL_ASN1_Buffer asns = {BSL_ASN1_TAG_ENUMERATED, sizeof(uint8_t), (uint8_t *)&tmp};
+    uint8_t tmp = (uint8_t)reason->reason; // int32_t -> uint8_t: avoid value errors in big-endian scenario
+    BSL_ASN1_Buffer asns = {BSL_ASN1_TAG_ENUMERATED, sizeof(uint8_t), &tmp};
     BSL_ASN1_TemplateItem items = {BSL_ASN1_TAG_ENUMERATED, 0, 0};
     BSL_ASN1_Template reasonTempl = {&items, 1};
 
@@ -1346,32 +1324,14 @@ static int32_t SetExtReason(void *param, HITLS_X509_ExtEntry *extEntry, void *va
     return ret;
 }
 
-static int32_t SetExtCertIssuer(void *param, HITLS_X509_ExtEntry *extEntry, void *val)
+static int32_t SetExtCertificateIssuer(void *param, HITLS_X509_ExtEntry *extEntry, void *val)
 {
     (void)param;
-    HITLS_X509_RevokeExtCertIssuer *certIssuer = (HITLS_X509_RevokeExtCertIssuer *)val;
-    if (certIssuer->issuerName == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-    BSL_ASN1_Buffer name = {0};
-    int32_t ret = HITLS_X509_EncodeNameList(certIssuer->issuerName, &name);
-    if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    BSL_ASN1_TemplateItem item =  {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0};
-    BSL_ASN1_Template templ = {&item, 1};
-    ret = BSL_ASN1_EncodeTemplate(&templ, &name, 1, &extEntry->extnValue.buff, &extEntry->extnValue.len);
-    BSL_SAL_Free(name.buff);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    return ret;
+    return HITLS_X509_SetGeneralNames(extEntry, val);
 }
 #endif // HITLS_PKI_X509_CRL_GEN
 
-static int32_t DecodeExtInvalidTime(HITLS_X509_ExtEntry *extEntry, void *val)
+int32_t HITLS_ParseCrlExtInvalidTime(HITLS_X509_ExtEntry *extEntry, void *val)
 {
     uint8_t *temp = extEntry->extnValue.buff;
     uint32_t tempLen = extEntry->extnValue.len;
@@ -1392,7 +1352,7 @@ static int32_t DecodeExtInvalidTime(HITLS_X509_ExtEntry *extEntry, void *val)
     return ret;
 }
 
-static int32_t DecodeExtReason(HITLS_X509_ExtEntry *extEntry, void *val)
+int32_t HITLS_ParseCrlExtReason(HITLS_X509_ExtEntry *extEntry, void *val)
 {
     uint8_t *temp = extEntry->extnValue.buff;
     uint32_t tempLen = extEntry->extnValue.len;
@@ -1451,7 +1411,7 @@ static int32_t RevokedSet(HITLS_X509_CrlEntry *revoked, int32_t cmd, void *val, 
                 (EncodeExtCb)SetExtReason);
         case HITLS_X509_CRL_SET_REVOKED_CERTISSUER:
             return X509_CrlSetRevokedExt(revoked, BSL_CID_CE_CERTIFICATEISSUER, &buff,
-                sizeof(HITLS_X509_RevokeExtCertIssuer), (EncodeExtCb)SetExtCertIssuer);
+                sizeof(HITLS_X509_RevokeExtCertIssuer), (EncodeExtCb)SetExtCertificateIssuer);
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -1469,10 +1429,10 @@ static int32_t RevokedGet(HITLS_X509_CrlEntry *revoked, int32_t cmd, void *val, 
             return HITLS_X509_GetSerial(&revoked->serialNumber, val, valLen);
         case HITLS_X509_CRL_GET_REVOKED_INVALID_TIME:
             return HITLS_X509_GetExt(revoked->extList, BSL_CID_CE_INVALIDITYDATE, &buff, sizeof(BSL_TIME),
-                (DecodeExtCb)DecodeExtInvalidTime);
+                (DecodeExtCb)HITLS_ParseCrlExtInvalidTime);
         case HITLS_X509_CRL_GET_REVOKED_REASON:
             return HITLS_X509_GetExt(revoked->extList, BSL_CID_CE_CRLREASONS, &buff, sizeof(int32_t),
-                (DecodeExtCb)DecodeExtReason);
+                (DecodeExtCb)HITLS_ParseCrlExtReason);
         case HITLS_X509_CRL_GET_REVOKED_CERTISSUER:
             return HITLS_X509_GetExt(revoked->extList, BSL_CID_CE_CERTIFICATEISSUER, &buff, sizeof(BslList *),
                 (DecodeExtCb)DecodeExtCertIssuer);

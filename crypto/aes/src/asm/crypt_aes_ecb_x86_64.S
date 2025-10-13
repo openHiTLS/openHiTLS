@@ -18,7 +18,6 @@
 
 #include "crypt_aes_macro_x86_64.s"
 
-.file   "crypt_aes_ecb_x86_64.S"
 .text
 
 .set    ARG1, %rdi

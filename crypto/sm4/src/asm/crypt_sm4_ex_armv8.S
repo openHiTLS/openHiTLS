@@ -131,6 +131,10 @@
 .align 4
 vpsm4_ex_set_key:
 AARCH64_PACIASP
+    stp x29, x30, [sp, #-0x30]!
+    stp d8, d9, [sp, #0x10]
+    stp d10, d11, [sp, #0x20]
+
     ld1 {V_KEY.4s},[USER_KEY]
     LOAD_SBOX_MATRIX
     REV32_EQ(V_KEY,V_KEY)
@@ -184,6 +188,9 @@ AARCH64_PACIASP
     /*clear register for temp key */
     eor V_KEY.16b, V_KEY.16b, V_KEY.16b
     eor ROUND_KEY2, ROUND_KEY2, ROUND_KEY2
+    ldp d10, d11, [sp, #0x20]
+    ldp d8, d9, [sp, #0x10]
+    ldp x29, x30, [sp], #0x30
 AARCH64_AUTIASP
     ret
 .size vpsm4_ex_set_key,.-vpsm4_ex_set_key

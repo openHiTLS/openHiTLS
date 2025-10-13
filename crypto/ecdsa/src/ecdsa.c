@@ -21,6 +21,7 @@
 #include "crypt_errno.h"
 #include "crypt_types.h"
 #include "crypt_utils.h"
+#include "crypt_util_ctrl.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_bn.h"
@@ -53,24 +54,6 @@ CRYPT_ECDSA_Ctx *CRYPT_ECDSA_NewCtxEx(void *libCtx)
     return ctx;
 }
 
-CRYPT_ECDSA_Ctx *CRYPT_ECDSA_DupCtx(CRYPT_ECDSA_Ctx *ctx)
-{
-    return ECC_DupCtx(ctx);
-}
-
-void CRYPT_ECDSA_FreeCtx(CRYPT_ECDSA_Ctx *ctx)
-{
-    if (ctx == NULL) {
-        return;
-    }
-    ECC_FreeCtx(ctx);
-}
-
-CRYPT_EcdsaPara *CRYPT_ECDSA_NewParaById(int32_t id)
-{
-    return ECC_NewPara(id);
-}
-
 CRYPT_EcdsaPara *CRYPT_ECDSA_NewPara(const CRYPT_EccPara *eccPara)
 {
     CRYPT_PKEY_ParaId id = GetCurveId(eccPara);
@@ -89,53 +72,13 @@ CRYPT_PKEY_ParaId CRYPT_ECDSA_GetParaId(const CRYPT_ECDSA_Ctx *ctx)
     return ECC_GetParaId(ctx->para);
 }
 
-void CRYPT_ECDSA_FreePara(CRYPT_EcdsaPara *para)
-{
-    ECC_FreePara(para);
-}
-
-int32_t CRYPT_ECDSA_GetPara(const CRYPT_ECDSA_Ctx *ctx, CRYPT_EccPara *para)
-{
-    return ECC_GetPara(ctx, para);
-}
-
-static int32_t EcdsaSetPara(CRYPT_ECDSA_Ctx *ctx, CRYPT_EcdsaPara *para)
-{
-    return ECC_SetPara(ctx, para);
-}
-
 int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const CRYPT_EccPara *para)
 {
     if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    return EcdsaSetPara(ctx, CRYPT_ECDSA_NewPara(para));
-}
-
-uint32_t CRYPT_ECDSA_GetBits(const CRYPT_ECDSA_Ctx *ctx)
-{
-    return ECC_PkeyGetBits(ctx);
-}
-
-int32_t CRYPT_ECDSA_SetPrvKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_EcdsaPrv *prv)
-{
-    return ECC_PkeySetPrvKey(ctx, prv);
-}
-
-int32_t CRYPT_ECDSA_SetPubKey(CRYPT_ECDSA_Ctx *ctx, const CRYPT_EcdsaPub *pub)
-{
-    return ECC_PkeySetPubKey(ctx, pub);
-}
-
-int32_t CRYPT_ECDSA_GetPrvKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_EcdsaPrv *prv)
-{
-    return ECC_PkeyGetPrvKey(ctx, prv);
-}
-
-int32_t CRYPT_ECDSA_GetPubKey(const CRYPT_ECDSA_Ctx *ctx, CRYPT_EcdsaPub *pub)
-{
-    return ECC_PkeyGetPubKey(ctx, pub);
+    return ECC_SetPara(ctx, CRYPT_ECDSA_NewPara(para));
 }
 
 #ifdef HITLS_BSL_PARAMS
@@ -144,6 +87,19 @@ int32_t CRYPT_ECDSA_SetParaEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para)
     if (para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
+    }
+#ifdef HITLS_CRYPTO_PROVIDER
+    int32_t ret;
+    const BSL_Param *temp = NULL;
+    if ((temp = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_MD_ATTR)) != NULL) {
+        ret = CRYPT_PkeySetMdAttr((const char *)(temp->value), temp->valueLen, &(ctx->mdAttr));
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+#endif
+    if (BSL_PARAM_FindConstParam(para, CRYPT_PARAM_EC_P) == NULL) {
+        return CRYPT_SUCCESS;
     }
     CRYPT_EccPara eccPara = {0};
     (void)GetConstParamValue(para, CRYPT_PARAM_EC_P, &(eccPara.p), &(eccPara.pLen));
@@ -155,37 +111,7 @@ int32_t CRYPT_ECDSA_SetParaEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para)
     (void)GetConstParamValue(para, CRYPT_PARAM_EC_Y, &(eccPara.y), &(eccPara.yLen));
     return CRYPT_ECDSA_SetPara(ctx, &eccPara);
 }
-
-int32_t CRYPT_ECDSA_GetParaEx(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *para)
-{
-    return ECC_GetParaEx(ctx, para);
-}
-
-int32_t CRYPT_ECDSA_SetPrvKeyEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para)
-{
-    return ECC_PkeySetPrvKeyEx(ctx, para);
-}
-
-int32_t CRYPT_ECDSA_SetPubKeyEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para)
-{
-    return ECC_PkeySetPubKeyEx(ctx, para);
-}
-
-int32_t CRYPT_ECDSA_GetPrvKeyEx(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *para)
-{
-    return ECC_PkeyGetPrvKeyEx(ctx, para);
-}
-
-int32_t CRYPT_ECDSA_GetPubKeyEx(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *para)
-{
-    return ECC_PkeyGetPubKeyEx(ctx, para);
-}
 #endif
-
-int32_t CRYPT_ECDSA_Gen(CRYPT_ECDSA_Ctx *ctx)
-{
-    return ECC_PkeyGen(ctx);
-}
 
 uint32_t CRYPT_ECDSA_GetSignLen(const CRYPT_ECDSA_Ctx *ctx)
 {
@@ -358,8 +284,9 @@ OK:
 int32_t CRYPT_ECDSA_SignData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen)
 {
-    if ((ctx == NULL) || (ctx->para == NULL) || (sign == NULL) || (signLen == NULL) ||
-        ((data == NULL) && (dataLen != 0))) {
+    bool nullInput = (ctx == NULL) || (ctx->para == NULL) || (sign == NULL) || (signLen == NULL) ||
+        ((data == NULL) && (dataLen != 0));
+    if (nullInput == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -390,9 +317,13 @@ int32_t CRYPT_ECDSA_SignData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, ui
 int32_t CRYPT_ECDSA_Sign(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen)
 {
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     uint8_t hash[64]; // 64 is max hash len
     uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
-    int32_t ret = EAL_Md(algId, data, dataLen, hash, &hashLen);
+    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hash, &hashLen, ctx->libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -473,8 +404,9 @@ ERR:
 int32_t CRYPT_ECDSA_VerifyData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen)
 {
-    if ((ctx == NULL) || (ctx->para == NULL) || ((data == NULL) && (dataLen != 0)) ||
-        (sign == NULL) || (signLen == 0)) {
+    bool nullInput = (ctx == NULL) || (ctx->para == NULL) || ((data == NULL) && (dataLen != 0)) ||
+        (sign == NULL) || (signLen == 0);
+    if (nullInput == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -515,25 +447,18 @@ ERR:
 int32_t CRYPT_ECDSA_Verify(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen)
 {
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     uint8_t hash[64]; // 64 is max hash len
     uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
-    int32_t ret = EAL_Md(algId, data, dataLen, hash, &hashLen);
+    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hash, &hashLen, ctx->libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     return CRYPT_ECDSA_VerifyData(ctx, hash, hashLen, sign, signLen);
-}
-
-static int32_t CRYPT_ECDSA_GetLen(const CRYPT_ECDSA_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
-{
-    if (val == NULL || len != sizeof(int32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    *(int32_t *)val = func(ctx);
-    return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
@@ -547,29 +472,22 @@ int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, int32_t opt, void *val, uint32_t 
             BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_ERR_UNSUPPORTED_CTRL_OPTION);
             return CRYPT_ECDSA_ERR_UNSUPPORTED_CTRL_OPTION;
         case CRYPT_CTRL_GET_PARAID:
-            return CRYPT_ECDSA_GetLen(ctx, (GetLenFunc)CRYPT_ECDSA_GetParaId, val, len);
+            return CRYPT_CTRL_GET_NUM32_EX(ECC_GetParaId, ctx->para, val, len);
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_ECDSA_GetLen(ctx, (GetLenFunc)CRYPT_ECDSA_GetBits, val, len);
+            return CRYPT_CTRL_GET_NUM32_EX(ECC_PkeyGetBits, ctx, val, len);
         case CRYPT_CTRL_GET_SIGNLEN:
-            return CRYPT_ECDSA_GetLen(ctx, (GetLenFunc)CRYPT_ECDSA_GetSignLen, val, len);
+            return CRYPT_CTRL_GET_NUM32_EX(CRYPT_ECDSA_GetSignLen, ctx, val, len);
         case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_ECDSA_GetLen(ctx, (GetLenFunc)CRYPT_ECDSA_GetSecBits, val, len);
+            return CRYPT_CTRL_GET_NUM32_EX(ECC_GetSecBits, ctx->para, val, len);
         case CRYPT_CTRL_SET_PARA_BY_ID:
             if (val == NULL || len != sizeof(CRYPT_PKEY_ParaId)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
                 return CRYPT_INVALID_ARG;
             }
-            return EcdsaSetPara(ctx, CRYPT_ECDSA_NewParaById(*(CRYPT_PKEY_ParaId *)val));
+            return ECC_SetPara(ctx, CRYPT_ECDSA_NewParaById(*(CRYPT_PKEY_ParaId *)val));
         default:
-            break;
+            return ECC_PkeyCtrl(ctx, opt, val, len);
     }
-
-    return ECC_PkeyCtrl(ctx, opt, val, len);
-}
-
-int32_t CRYPT_ECDSA_Cmp(const CRYPT_ECDSA_Ctx *a, const CRYPT_ECDSA_Ctx *b)
-{
-    return ECC_PkeyCmp(a, b);
 }
 
 int32_t CRYPT_ECDSA_GetSecBits(const CRYPT_ECDSA_Ctx *ctx)
@@ -581,7 +499,7 @@ int32_t CRYPT_ECDSA_GetSecBits(const CRYPT_ECDSA_Ctx *ctx)
     return ECC_GetSecBits(ctx->para);
 }
 
-#ifdef HITLS_CRYPTO_PROVIDER
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
 
 static int32_t SetCurveInfo(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *curve)
 {
@@ -590,7 +508,8 @@ static int32_t SetCurveInfo(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *curve)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = ECC_SetPara(ctx, CRYPT_ECDSA_NewParaById(*(CRYPT_PKEY_ParaId *)curve->value));
+    CRYPT_PKEY_ParaId paraId = *(CRYPT_PKEY_ParaId *)curve->value;
+    int32_t ret = ECC_SetPara(ctx, CRYPT_ECDSA_NewParaById((int32_t)paraId));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -647,17 +566,14 @@ int32_t CRYPT_ECDSA_Export(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *params)
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    int32_t ret;
     int index = 1;
     void *args = NULL;
     CRYPT_EAL_ProcessFuncCb processCb = NULL;
     BSL_Param ecdsaParams[4] = {
         {CRYPT_PARAM_EC_CURVE_ID, BSL_PARAM_TYPE_INT32, (int32_t *)&curveId, sizeof(int32_t), 0},
-        {0},
-        {0},
-        BSL_PARAM_END
+        {0}, {0}, BSL_PARAM_END
     };
-    ret = CRYPT_GetPkeyProcessParams(params, &processCb, &args);
+    int32_t ret = CRYPT_GetPkeyProcessParams(params, &processCb, &args);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -698,6 +614,24 @@ int32_t CRYPT_ECDSA_Export(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *params)
     }
     return ret;
 }
-#endif // HITLS_CRYPTO_PROVIDER
+#endif // HITLS_CRYPTO_KEY_DECODE_CHAIN
+
+#ifdef HITLS_CRYPTO_ECDSA_CHECK
+
+int32_t CRYPT_ECDSA_Check(uint32_t checkType, const CRYPT_ECDSA_Ctx *pkey1, const CRYPT_ECDSA_Ctx *pkey2)
+{
+    int32_t ret = ECC_PkeyCheck(pkey1, pkey2, checkType);
+    if (ret == CRYPT_ECC_PAIRWISE_CHECK_FAIL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_PAIRWISE_CHECK_FAIL);
+        return CRYPT_ECDSA_PAIRWISE_CHECK_FAIL;
+    }
+    if (ret == CRYPT_ECC_INVALID_PRVKEY) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_INVALID_PRVKEY);
+        return CRYPT_ECDSA_INVALID_PRVKEY;
+    }
+    return ret; // may be other error occurred.
+}
+
+#endif // HITLS_CRYPTO_ECDSA_CHECK
 
 #endif /* HITLS_CRYPTO_ECDSA */

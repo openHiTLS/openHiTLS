@@ -36,22 +36,12 @@ int main(int32_t argc, char *argv[])
     HITLS_X509_Cert *rootCA = NULL;
     HITLS_X509_Cert *subCA = NULL;
 
-    /* 注册BSL内存能力、仅供参考 */
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, malloc);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
-    BSL_ERR_Init();
-
-    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
+    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_ALL);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_Init: error code is %x\n", ret);
         return ret;
     }
 
-    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
-    if (ret != CRYPT_SUCCESS) {
-        printf("Init rand failed.\n");
-        goto EXIT;
-    }
     HITLS_CertMethodInit();
     HITLS_CryptMethodInit();
 

@@ -141,9 +141,6 @@ uint8_t privKey[] = {0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x42, 0x45, 0x47, 0x49, 0x4E,
   0x2D, 0x2D, 0x2D, 0x45, 0x4E, 0x44, 0x20, 0x50, 0x52, 0x49, 0x56, 0x41, 0x54, 0x45, 0x20, 0x4B,
   0x45, 0x59, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x0A};
 
-void *StdMalloc(uint32_t len) {
-    return malloc((uint32_t)len);
-}
 void PrintLastError(void) {
     const char *file = NULL;
     uint32_t line = 0;
@@ -164,10 +161,6 @@ void PrintHex(const uint8_t* data, uint32_t len) {
 }
 
 int main(void) {
-    BSL_ERR_Init(); // Initialize error code module
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc); // Register memory allocation function
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free); // Register memory free function
-
     int32_t ret = 1;
 
     HITLS_AUTH_PrivPassCtx *client = NULL;
@@ -201,16 +194,8 @@ int main(void) {
             sizeof(originInfo)},
         BSL_PARAM_END
     };
-    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
+    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_ALL);
     if (ret != CRYPT_SUCCESS) {
-        printf("error code is %x\n", ret);
-        PrintLastError();
-        goto EXIT;
-    }
-    // Initialize random number generator. NULL means using default entropy source, 
-    // users can choose to use their own entropy source
-    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
-    if (ret != CRYPT_SUCCESS) { 
         printf("error code is %x\n", ret);
         PrintLastError();
         goto EXIT;

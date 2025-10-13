@@ -27,14 +27,46 @@
 #include "crypt_eal_pkey.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
+#include "eal_md_local.h"
 #include "hitls_pki_cert.h"
+#include "tls.h"
 
-static int32_t SetPkeySignParam(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo, int32_t mdAlgId)
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+static int32_t SetMdAttr(CRYPT_EAL_PkeyCtx *ctx, const char *attrName)
 {
+    CRYPT_PKEY_AlgId id = CRYPT_EAL_PkeyGetId(ctx);
+    bool supportUnloadMd = id == CRYPT_PKEY_RSA || id == CRYPT_PKEY_ECDSA || id == CRYPT_PKEY_DSA;
+    if (attrName == NULL || strlen(attrName) == 0 || supportUnloadMd == false) {
+        return CRYPT_SUCCESS;
+    }
+    BSL_Param param[] = {
+        {.key = CRYPT_PARAM_MD_ATTR, .valueType = BSL_PARAM_TYPE_UTF8_STR,
+        .value = (void *)(uintptr_t)attrName, .valueLen = strlen(attrName), .useLen = 0},
+        BSL_PARAM_END
+    };
+    return CRYPT_EAL_PkeySetParaEx(ctx, param);
+}
+#endif
+
+static int32_t SetPkeySignParam(HITLS_Ctx *hitlsCtx, CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo, int32_t mdAlgId, const char *attrName)
+{
+    (void)attrName;
+    (void)hitlsCtx;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    int32_t ret = SetMdAttr(ctx, attrName);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+#endif
+
+#ifdef HITLS_CRYPTO_RSA_EMSA_PKCSV15
     if (signAlgo == HITLS_SIGN_RSA_PKCS1_V15) {
         int32_t pad = mdAlgId;
         return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pad, sizeof(pad));
-    } else if (signAlgo == HITLS_SIGN_RSA_PSS) {
+    } else
+#endif
+#ifdef HITLS_CRYPTO_RSA_EMSA_PSS
+    if (signAlgo == HITLS_SIGN_RSA_PSS) {
         int32_t saltLen = CRYPT_RSA_SALTLEN_TYPE_HASHLEN;
         BSL_Param pssParam[4] = {
             {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdAlgId, sizeof(mdAlgId), 0},
@@ -42,20 +74,28 @@ static int32_t SetPkeySignParam(CRYPT_EAL_PkeyCtx *ctx, HITLS_SignAlgo signAlgo,
             {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
             BSL_PARAM_END};
         return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0);
-    } else if (signAlgo == HITLS_SIGN_SM2) {
+    } else
+#endif
+#ifdef HITLS_CRYPTO_SM2
+    if (signAlgo == HITLS_SIGN_SM2) {
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
+        if (IS_SM_TLS13(hitlsCtx->negotiatedInfo.cipherSuiteInfo.cipherSuite)) {
+            char sm2DefaultUserid[] = "TLSv1.3+GM+Cipher+Suite";
+            return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, sm2DefaultUserid, strlen(sm2DefaultUserid));
+        }
+#endif // HITLS_TLS_FEATURE_SM_TLS13
         /* The default user id as specified in GM/T 0009-2012 */
         char sm2DefaultUserid[] = "1234567812345678";
         return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, sm2DefaultUserid, strlen(sm2DefaultUserid));
     }
-
+#endif // HITLS_CRYPTO_SM2
     return HITLS_SUCCESS;
 }
 
 int32_t HITLS_X509_Adapt_CreateSign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_SignAlgo signAlgo,
     HITLS_HashAlgo hashAlgo, const uint8_t *data, uint32_t dataLen, uint8_t *sign, uint32_t *signLen)
 {
-    (void)ctx;
-    if (SetPkeySignParam(key, signAlgo, hashAlgo) != HITLS_SUCCESS) {
+    if (SetPkeySignParam(ctx, key, signAlgo, hashAlgo, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
         return HITLS_CERT_SELF_ADAPT_ERR;
     }
     return CRYPT_EAL_PkeySign(key, (CRYPT_MD_AlgId)hashAlgo, data, dataLen, sign, signLen);
@@ -64,8 +104,7 @@ int32_t HITLS_X509_Adapt_CreateSign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_S
 int32_t HITLS_X509_Adapt_VerifySign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_SignAlgo signAlgo,
     HITLS_HashAlgo hashAlgo, const uint8_t *data, uint32_t dataLen, const uint8_t *sign, uint32_t signLen)
 {
-    (void)ctx;
-    if (SetPkeySignParam(key, signAlgo, hashAlgo) != HITLS_SUCCESS) {
+    if (SetPkeySignParam(ctx, key, signAlgo, hashAlgo, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
         return HITLS_CERT_SELF_ADAPT_ERR;
     }
     return CRYPT_EAL_PkeyVerify(key, (CRYPT_MD_AlgId)hashAlgo, data, dataLen, sign, signLen);
@@ -83,6 +122,11 @@ int32_t HITLS_X509_Adapt_Encrypt(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint
     uint8_t *out, uint32_t *outLen)
 {
     (void)ctx;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    if (SetMdAttr(key, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
+        return HITLS_CERT_SELF_ADAPT_ERR;
+    }
+#endif
     if (CRYPT_EAL_PkeyGetId(key) == CRYPT_PKEY_RSA && CertSetRsaEncryptionScheme(key) != HITLS_SUCCESS) {
         return HITLS_CERT_SELF_ADAPT_ERR;
     }
@@ -95,6 +139,11 @@ int32_t HITLS_X509_Adapt_Decrypt(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint
     uint8_t *out, uint32_t *outLen)
 {
     (void)ctx;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    if (SetMdAttr(key, ATTRIBUTE_FROM_CTX(ctx)) != HITLS_SUCCESS) {
+        return HITLS_CERT_SELF_ADAPT_ERR;
+    }
+#endif
     if (CRYPT_EAL_PkeyGetId(key) == CRYPT_PKEY_RSA && CertSetRsaEncryptionScheme(key) != HITLS_SUCCESS) {
         return HITLS_CERT_SELF_ADAPT_ERR;
     }

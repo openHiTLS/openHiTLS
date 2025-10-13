@@ -28,13 +28,38 @@ extern "C" {
 #endif // __cplusplus
 
 struct EalKdfCtx {
-    bool isProvider;
-    EAL_KdfUnitaryMethod *method;  /* algorithm operation entity */
+    EAL_KdfMethod method;  /* algorithm operation entity */
     void *data;
     CRYPT_KDF_AlgId id;
 };
 
-const EAL_KdfMethod *EAL_KdfFindMethod(CRYPT_KDF_AlgId id);
+/**
+ * @brief Find the method by the id
+ *
+ * @param id [IN] The algorithm id
+ * @param method [OUT] The method pointer
+ *
+ * @return CRYPT_SUCCESS The method is found
+ * @return CRYPT_NULL_INPUT The method pointer is NULL
+ * @return CRYPT_EAL_ERR_ALGID The algorithm id is not found
+ */
+int32_t EAL_KdfFindMethod(CRYPT_KDF_AlgId id, EAL_KdfMethod *method);
+
+/**
+ * @brief Find the method by the id
+ *
+ * @param id [IN] The algorithm id
+ * @param libCtx [IN] The library context
+ * @param attrName [IN] The attribute name
+ * @param method [OUT] The method pointer
+ * @param provCtx [OUT] The provider context
+ *
+ * @return CRYPT_SUCCESS The method is found
+ * @return CRYPT_NULL_INPUT The method pointer is NULL
+ * @return CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL The unexpected implementation is found
+ */
+int32_t EAL_ProviderKdfFindMethod(CRYPT_KDF_AlgId id, void *libCtx, const char *attrName, EAL_KdfMethod *method,
+    void **provCtx);
 
 #ifdef __cplusplus
 }

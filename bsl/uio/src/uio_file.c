@@ -214,6 +214,19 @@ static int32_t FileGetEof(BSL_UIO *uio, int32_t larg, bool *isEof)
     return BSL_SUCCESS;
 }
 
+static int32_t FileFlush(BSL_UIO *uio)
+{
+    FILE *file = BSL_UIO_GetCtx(uio);
+    if (file == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
+        return BSL_NULL_INPUT;
+    }
+    if (!SAL_Flush(file)) {
+        return BSL_UIO_IO_EXCEPTION;
+    }
+    return BSL_SUCCESS;
+}
+
 static int32_t FileCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 {
     if (larg < 0) {
@@ -233,6 +246,8 @@ static int32_t FileCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
             return FileReset(uio);
         case BSL_UIO_FILE_GET_EOF:
             return FileGetEof(uio, larg, parg);
+        case BSL_UIO_FLUSH:
+            return FileFlush(uio);
         default:
             break;
     }

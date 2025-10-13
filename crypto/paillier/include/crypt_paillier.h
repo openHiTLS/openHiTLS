@@ -387,6 +387,24 @@ int32_t CRYPT_PAILLIER_GetSecBits(const CRYPT_PAILLIER_Ctx *ctx);
  */
 int32_t CRYPT_PAILLIER_Ctrl(CRYPT_PAILLIER_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
+/**
+ * @ingroup paillier
+ * @brief PAILLIER homomorphic addition operation (c_res = c1 * c2 mod n^2)
+ *
+ * @param ctx [IN] Paillier context structure
+ * @param input [IN] Addition operands, must include two ciphertext parameters
+ * @param out [OUT] The result of the addition operation
+ * @param outLen [IN/OUT] Pointer to the length of the output buffer
+ *
+ * @retval CRYPT_NULL_INPUT                     Any input pointer is NULL
+ * @retval CRYPT_PAILLIER_NO_KEY_INFO           Context does not contain valid public key information
+ * @retval CRYPT_PAILLIER_ERR_INPUT_VALUE       Input ciphertext value is incorrect
+ * @retval CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH   Output buffer length is insufficient
+ * @retval CRYPT_MEM_ALLOC_FAIL                 Memory allocation failure
+ * @retval CRYPT_SUCCESS                        Operation succeeded, result is written to out
+ */
+int32_t CRYPT_PAILLIER_Add(const void *ctx, const BSL_Param *input, uint8_t *out, uint32_t *outLen);
+
 #ifdef __cplusplus
 }
 #endif

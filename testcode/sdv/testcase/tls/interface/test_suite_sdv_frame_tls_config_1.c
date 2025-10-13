@@ -98,7 +98,10 @@
 #include "cert_method.h"
 #include "bsl_list.h"
 #include "session_mgr.h"
+#include "hitls_pki_errno.h"
+#include "hitls_x509_verify.h"
 #define DEFAULT_DESCRIPTION_LEN 128
+#define MAX_PATH_LEN 4096
 #define ERROR_HITLS_GROUP 1
 #define ERROR_HITLS_SIGNATURE 0xffffu
 typedef struct {
@@ -251,49 +254,89 @@ void UT_TLS_CFG_SET_GET_VERSIONFORBID_API_TC001(void)
 
     config = HITLS_CFG_NewTLSConfig();
     ASSERT_TRUE(HITLS_CFG_SetVersionForbid(config, version) == HITLS_SUCCESS);
-    ASSERT_TRUE(config->version == TLS_VERSION_MASK);
+    ASSERT_TRUE(config->version == (TLS_VERSION_MASK | TLCP11_VERSION_BIT));
     ASSERT_TRUE(config->minVersion == HITLS_VERSION_TLS12 && config->maxVersion == HITLS_VERSION_TLS13);
     HITLS_CFG_FreeConfig(config);
 
     config = HITLS_CFG_NewTLS12Config();
-    version = HITLS_VERSION_TLS12;
+    version = TLS12_VERSION_BIT;
+    ASSERT_TRUE(HITLS_CFG_SetVersionForbid(config, version) == HITLS_SUCCESS);
+    ASSERT_TRUE(config->version == 0);
+    ASSERT_TRUE(config->minVersion == 0 && config->maxVersion == 0);
+    HITLS_CFG_FreeConfig(config);
+    config = HITLS_CFG_NewTLS12Config();
+    version = DTLS12_VERSION_BIT;
     ASSERT_TRUE(HITLS_CFG_SetVersionForbid(config, version) == HITLS_SUCCESS);
     ASSERT_TRUE(config->version == TLS12_VERSION_BIT);
     ASSERT_TRUE(config->minVersion == HITLS_VERSION_TLS12 && config->maxVersion == HITLS_VERSION_TLS12);
 
-    version = HITLS_VERSION_DTLS12;
-    ASSERT_TRUE(HITLS_CFG_SetVersionForbid(config, version) == HITLS_SUCCESS);
-    ASSERT_TRUE(config->version == TLS12_VERSION_BIT);
-    ASSERT_TRUE(config->minVersion == HITLS_VERSION_TLS12 && config->maxVersion == HITLS_VERSION_TLS12);
-
-    version = 0x0305u;
+    version = 0x10000000U;
     ASSERT_TRUE(HITLS_CFG_SetVersionForbid(config, version) == HITLS_SUCCESS);
     ASSERT_TRUE(config->version == TLS12_VERSION_BIT);
     ASSERT_TRUE(config->minVersion == HITLS_VERSION_TLS12 && config->maxVersion == HITLS_VERSION_TLS12);
     HITLS_CFG_FreeConfig(config);
+
     config = HITLS_CFG_NewTLSConfig();
-    version = HITLS_VERSION_DTLS12;
+    version = DTLS12_VERSION_BIT;
     ASSERT_TRUE(HITLS_CFG_SetVersionForbid(config, version) == HITLS_SUCCESS);
-    ASSERT_TRUE(config->version == TLS_VERSION_MASK);
+    ASSERT_TRUE(config->version == (TLS_VERSION_MASK | TLCP11_VERSION_BIT));
     ASSERT_TRUE(config->minVersion == HITLS_VERSION_TLS12 && config->maxVersion == HITLS_VERSION_TLS13);
 
-    version = 0x0305u;
+    version = 0x10000000U;
     ASSERT_TRUE(HITLS_CFG_SetVersionForbid(config, version) == HITLS_SUCCESS);
-    ASSERT_TRUE(config->version == TLS_VERSION_MASK);
+    ASSERT_TRUE(config->version == (TLS_VERSION_MASK | TLCP11_VERSION_BIT));
     ASSERT_TRUE(config->minVersion == HITLS_VERSION_TLS12 && config->maxVersion == HITLS_VERSION_TLS13);
     HITLS_CFG_FreeConfig(config);
 
     config = HITLS_CFG_NewTLSConfig();
-    version = HITLS_VERSION_TLS13;
+    version = TLS13_VERSION_BIT;
     ASSERT_TRUE(HITLS_CFG_SetVersionForbid(config, version) == HITLS_SUCCESS);
-    ASSERT_TRUE(config->version == TLS12_VERSION_BIT);
+    ASSERT_TRUE(config->version == (TLS12_VERSION_BIT | TLCP11_VERSION_BIT));
     ASSERT_TRUE(config->minVersion == HITLS_VERSION_TLS12 && config->maxVersion == HITLS_VERSION_TLS12);
 
     HITLS_CFG_FreeConfig(config);
     config = HITLS_CFG_NewTLSConfig();
-    version = HITLS_TLS_ANY_VERSION;
+    version = STREAM_VERSION_BITS;
     ASSERT_TRUE(HITLS_CFG_SetVersionForbid(config, version) == HITLS_SUCCESS);
-    ASSERT_TRUE(config->version == TLS_VERSION_MASK);
+    ASSERT_TRUE(config->version == 0);
+    ASSERT_TRUE(config->minVersion == 0 && config->maxVersion == 0);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_CFG_SET_GET_VERSIONFORBID_API_TC002
+* @title Test the HITLS_CFG_SetVersionForbid interface.
+* @precon nan
+* @brief HITLS_CFG_SetVersionForbid
+* 1. Use HITLS_CFG_SetVersionForbid disable all version. Expected result 1.
+* 2. Use HITLS_CFG_SetVersionSupport to set tls12 version. Expected result 2.
+* 3. Use HITLS_CFG_GetVersionSupport to set tls13 version.
+* @expect
+* 1. config->version is 0, config->minVersion and config->maxVersion are 0.
+* 2. config->version is TLS12_VERSION_BIT, config->minVersion and config->maxVersion are HITLS_VERSION_TLS12.
+* 3. config->version is (TLS12_VERSION_BIT | TLS13_VERSION_BIT),
+     config->minVersion is HITLS_VERSION_TLS12 and config->maxVersion is HITLS_VERSION_TLS13.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_SET_GET_VERSIONFORBID_API_TC002(void)
+{
+    FRAME_Init();
+    uint32_t version = TLS_VERSION_MASK | TLCP11_VERSION_BIT;
+    HITLS_Config *config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(HITLS_CFG_SetVersionForbid(config, version) == HITLS_SUCCESS);
+    ASSERT_TRUE(config->version == 0);
+    ASSERT_TRUE(config->minVersion == 0 && config->maxVersion == 0);
+
+    version = TLS12_VERSION_BIT;
+    ASSERT_TRUE(HITLS_CFG_SetVersionSupport(config, version) == HITLS_SUCCESS);
+    ASSERT_TRUE(config->version == TLS12_VERSION_BIT);
+    ASSERT_TRUE(config->minVersion == HITLS_VERSION_TLS12 && config->maxVersion == HITLS_VERSION_TLS12);
+
+    version = TLS13_VERSION_BIT;
+    ASSERT_TRUE(HITLS_CFG_SetVersionSupport(config, version) == HITLS_SUCCESS);
+    ASSERT_TRUE(config->version == (TLS12_VERSION_BIT | TLS13_VERSION_BIT));
     ASSERT_TRUE(config->minVersion == HITLS_VERSION_TLS12 && config->maxVersion == HITLS_VERSION_TLS13);
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -325,7 +368,7 @@ void UT_TLS_CFG_SET_GET_EXTENEDMASTERSECRETSUPPORT_API_TC001(int tlsVersion)
     FRAME_Init();
     HITLS_Config *config = NULL;
     bool support = -1;
-    uint8_t isSupport = -1;
+    bool isSupport = -1;
     ASSERT_TRUE(HITLS_CFG_SetExtenedMasterSecretSupport(config, support) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_CFG_GetExtenedMasterSecretSupport(config, &isSupport) == HITLS_NULL_INPUT);
 
@@ -386,7 +429,7 @@ void  UT_TLS_CFG_SET_GET_POSTHANDSHAKEAUTHSUPPORT_API_TC001(int tlsVersion)
     FRAME_Init();
     HITLS_Config *config = NULL;
     bool support = -1;
-    uint8_t isSupport = -1;
+    bool isSupport = -1;
     ASSERT_TRUE(HITLS_CFG_SetPostHandshakeAuthSupport(config, support) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_CFG_GetPostHandshakeAuthSupport(config, &isSupport) == HITLS_NULL_INPUT);
 
@@ -547,7 +590,7 @@ EXIT:
 @ */
 
 /* BEGIN_CASE */
-void UT_TLS_CFG_SET_GET_VERSIONSUPPORT_API_TC001(int tlsVersion)
+void UT_TLS_CFG_SET_GET_VERSIONSUPPORT_API_TC001()
 {
     FRAME_Init();
     HITLS_Config *config = NULL;
@@ -555,18 +598,7 @@ void UT_TLS_CFG_SET_GET_VERSIONSUPPORT_API_TC001(int tlsVersion)
 
     ASSERT_TRUE(HITLS_CFG_SetVersionSupport(config, version) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_CFG_GetVersionSupport(config, &version) == HITLS_NULL_INPUT);
-    switch (tlsVersion) {
-        case HITLS_VERSION_TLS12:
-            config = HITLS_CFG_NewTLS12Config();
-            break;
-        case HITLS_VERSION_TLS13:
-            config = HITLS_CFG_NewTLS13Config();
-            break;
-        default:
-            config = NULL;
-            break;
-    }
-
+    config = HITLS_CFG_NewTLSConfig();
     ASSERT_TRUE(HITLS_CFG_GetVersionSupport(config, NULL) == HITLS_NULL_INPUT);
 
     version = (TLS13_VERSION_BIT << 1) | TLS13_VERSION_BIT | TLS12_VERSION_BIT;
@@ -610,7 +642,7 @@ void UT_TLS_CFG_SET_GET_ENCRYPTTHENMAC_API_TC001(int tlsVersion)
 {
     FRAME_Init();
     HITLS_Config *config = NULL;
-    uint32_t encryptThenMacType = 0;
+    bool encryptThenMacType = false;
 
     ASSERT_TRUE(HITLS_CFG_SetEncryptThenMac(config, encryptThenMacType) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_CFG_GetEncryptThenMac(config, &encryptThenMacType) == HITLS_NULL_INPUT);
@@ -627,13 +659,13 @@ void UT_TLS_CFG_SET_GET_ENCRYPTTHENMAC_API_TC001(int tlsVersion)
     }
 
     ASSERT_TRUE(HITLS_CFG_GetEncryptThenMac(config, NULL) == HITLS_NULL_INPUT);
-    encryptThenMacType = 1;
+    encryptThenMacType = true;
     ASSERT_TRUE(HITLS_CFG_SetEncryptThenMac(config, encryptThenMacType) == HITLS_SUCCESS);
-    encryptThenMacType = 2;
+    encryptThenMacType = true;
     ASSERT_TRUE(HITLS_CFG_SetEncryptThenMac(config, encryptThenMacType) == HITLS_SUCCESS);
-    ASSERT_TRUE(config->isEncryptThenMac = true);
+    ASSERT_TRUE(config->isEncryptThenMac == true);
 
-    uint32_t getencryptThenMacType = -1;
+    bool getencryptThenMacType = false;
     ASSERT_TRUE(HITLS_CFG_GetEncryptThenMac(config, &getencryptThenMacType) == HITLS_SUCCESS);
     ASSERT_TRUE(getencryptThenMacType == config->isEncryptThenMac);
 EXIT:
@@ -660,7 +692,7 @@ void UT_TLS_CFG_IS_DTLS_API_TC001(int tlsVersion)
 {
     FRAME_Init();
     HITLS_Config *config = NULL;
-    uint8_t isDtls = false;
+    bool isDtls = false;
 
     ASSERT_TRUE(HITLS_CFG_IsDtls(config, &isDtls) == HITLS_NULL_INPUT);
     switch (tlsVersion) {
@@ -1013,7 +1045,7 @@ void UT_TLS_CFG_GET_SESSION_CACHEMODE_API_TC001(void)
     HITLS_Config *config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
 
-    HITLS_SESS_CACHE_MODE getCacheMode = 0;
+    uint32_t getCacheMode = 0;
     ASSERT_EQ(HITLS_CFG_GetSessionCacheMode(config, &getCacheMode), 0);
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -1347,8 +1379,8 @@ void UT_HITLS_CFG_REMOVE_CERTANDKEY_API_TC001(int version, char *certFile, char 
     ASSERT_TRUE(HITLS_CFG_GetPrivateKey(tlsConfig) == NULL);
 
 EXIT:
+    HITLS_CFG_FreeCert(tlsConfig, cert);
     HITLS_CFG_FreeConfig(tlsConfig);
-    SAL_CERT_X509Free(cert);
 }
 /* END_CASE */
 
@@ -1398,6 +1430,9 @@ void UT_HITLS_CFG_ADD_EXTRA_CHAINCERT_API_TC001(int version, char *certFile1, ch
     HITLS_CERT_Chain *extraChainCert1 = HITLS_CFG_GetExtraChainCerts(tlsConfig);
     ASSERT_TRUE(extraChainCert1->count == 2);
     ASSERT_TRUE(HITLS_CFG_GetExtraChainCerts(tlsConfig) != NULL);
+    ASSERT_TRUE(HITLS_CFG_ClearExtraChainCerts(NULL) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_ClearExtraChainCerts(tlsConfig) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_GetExtraChainCerts(tlsConfig) == NULL);
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -1596,7 +1631,7 @@ void UT_TLS_CFG_SET_GET_DHAUTOSUPPORT_TC001(int tlsVersion)
     FRAME_Init();
     HITLS_Config *config = NULL;
     bool support = -1;
-    uint8_t isSupport = -1;
+    bool isSupport = -1;
     ASSERT_TRUE(HITLS_CFG_SetDhAutoSupport(config, support) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_CFG_GetDhAutoSupport(config, &isSupport) == HITLS_NULL_INPUT);
 
@@ -1745,3 +1780,418 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+
+/* @
+* @test  UT_TLS_CFG_LOADVERIFYDIR_MULTI_PATH_TC001
+* @title  Test HITLS_CFG_LoadVerifyDir with multiple CA paths
+* @brief
+*   1. Create a config object.
+*   2. Pass in a string containing multiple paths (such as "/tmp/ca1:/tmp/ca2:/tmp/ca3").
+*   3. Call HITLS_CFG_LoadVerifyDir.
+*   4. Check that the number and content of caPaths in the cert store are consistent with the input.
+* @expect
+*   1. The interface returns success.
+*   2. The number and content of paths in the cert store are consistent with the input.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADVERIFYDIR_MULTI_PATH_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    const char *multi_path = "/tmp/ca1:/tmp/ca2:/tmp/ca3:/tmp/ca3";
+    int32_t ret = HITLS_CFG_LoadVerifyDir(config, multi_path);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+
+    HITLS_CERT_Store *store = SAL_CERT_GetCertStore(config->certMgrCtx);
+    ASSERT_TRUE(store != NULL);
+
+    HITLS_X509_StoreCtx *storeCtx = (HITLS_X509_StoreCtx *)store;
+    BslList *caPaths = storeCtx->caPaths;
+    ASSERT_TRUE(caPaths != NULL);
+
+    int expect_count = 3;
+    int actual_count = BSL_LIST_COUNT(caPaths);
+    ASSERT_TRUE(actual_count == expect_count);
+
+    const char *expect_paths[] = {"/tmp/ca1", "/tmp/ca2", "/tmp/ca3"};
+    for (int i = 0; i < expect_count; ++i) {
+        const char *path = (const char *)BSL_LIST_GetIndexNode(i, caPaths);
+        ASSERT_TRUE(path != NULL);
+        ASSERT_TRUE(strcmp(path, expect_paths[i]) == 0);
+    }
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADVERIFYFILE_TC001
+* @title  Test HITLS_CFG_LoadVerifyFile with a single CA path
+* @brief
+*   1. Create a config object.
+*   2. Pass in a string containing a single path.
+*   3. Call HITLS_CFG_LoadVerifyFile.
+*   4. Load a client certificate signed by the CA in the specified path.
+*   5. Call HITLS_CFG_BuildCertChain to verify the client certificate.
+* @expect
+*   1. The interface returns success.
+*   2. The client certificate is successfully verified.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADVERIFYFILE_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    const char *path = "../testdata/tls/certificate/pem/rsa_sha256/inter.pem";
+    int32_t ret = HITLS_CFG_LoadVerifyFile(config, path);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    const char *path1 = "../testdata/tls/certificate/pem/rsa_sha256/ca.pem";
+    ret = HITLS_CFG_LoadVerifyFile(config, path1);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    const char *certToVerify = "../testdata/tls/certificate/pem/rsa_sha256/client.pem";
+    ret = HITLS_CFG_LoadCertFile(config, certToVerify, TLS_PARSE_FORMAT_PEM);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_CFG_BuildCertChain(config, HITLS_BUILD_CHAIN_FLAG_NO_ROOT), HITLS_SUCCESS);
+    HITLS_CERT_Chain *chain = HITLS_CFG_GetChainCerts(config);
+    ASSERT_TRUE(chain != NULL);
+    ASSERT_TRUE(chain->count == 1);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADVERIFYFILE_TC002
+* @title  Test HITLS_CFG_LoadVerifyFile with a single CA path
+* @brief
+*   1. Create a config object.
+*   2. Pass in a string containing a single path.
+*   3. Call HITLS_CFG_LoadVerifyFile.
+*   4. Load a client certificate signed by the CA in the specified path.
+*   5. Call HITLS_CFG_BuildCertChain to verify the client certificate.
+* @expect
+*   1. The interface returns success.
+*   2. The client certificate verification fails.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADVERIFYFILE_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    const char *path = "../testdata/tls/certificate/pem/ecdsa_sha256/inter.pem";
+    int32_t ret = HITLS_CFG_LoadVerifyFile(config, path);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    const char *certToVerify = "../testdata/tls/certificate/pem/rsa_sha256/client.pem";
+    ret = HITLS_CFG_LoadCertFile(config, certToVerify, TLS_PARSE_FORMAT_PEM);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_CFG_BuildCertChain(config, HITLS_BUILD_CHAIN_FLAG_NO_ROOT), HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_GetChainCerts(config) == NULL);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_USECERTCHAINFILE_TC001
+* @title  Test HITLS_CFG_UseCertificateChainFile with a single file path
+* @brief
+*   1. Create a config object.
+*   2. Pass in a string containing a single path.
+*   3. Call HITLS_CFG_UseCertificateChainFile.
+*   4. Load a client certificate signed by the CA in the specified path.
+*   5. Call HITLS_CFG_BuildCertChain to verify the client certificate.
+* @expect
+*   1. The interface returns success.
+*   2. The client certificate verification verified.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_USECERTCHAINFILE_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    const char *path = "../testdata/tls/certificate/pem/rsa_sha256/cert_chain.pem";
+    int32_t ret = HITLS_CFG_UseCertificateChainFile(config, path);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_CFG_BuildCertChain(config, HITLS_BUILD_CHAIN_FLAG_CHECK), HITLS_SUCCESS);
+    HITLS_CERT_Chain *chain = HITLS_CFG_GetChainCerts(config);
+    ASSERT_TRUE(chain != NULL);
+    ASSERT_TRUE(chain->count == 1);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_USECERTCHAINFILE_TC002
+* @title  Test HITLS_CFG_UseCertificateChainFile with a single CA path
+* @brief
+*   1. Create a config object.
+*   2. Pass in a string containing a single path.
+*   3. Call HITLS_CFG_UseCertificateChainFile.
+*   4. Load a client certificate signed by the CA in the specified path.
+*   5. Call HITLS_CFG_BuildCertChain to verify the client certificate.
+* @expect
+*   1. The interface returns success.
+*   2. The client certificate verification fails.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_USECERTCHAINFILE_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    const char *path = "../testdata/tls/certificate/pem/rsa_sha256/cert_chain_damaged_ca.pem";
+    int32_t ret = HITLS_CFG_UseCertificateChainFile(config, path);
+    ASSERT_EQ(ret, HITLS_CFG_ERR_LOAD_CERT_FILE);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_USECERTCHAINFILE_TC003
+* @title  Test HITLS_CFG_LoadVerifyFile with a single CA path
+* @brief
+*   1. Create a config object.
+*   2. Pass in a string containing a single path.
+*   3. Call HITLS_CFG_UseCertificateChainFile.
+*   4. Load a client certificate signed by the CA in the specified path.
+*   5. Call HITLS_CFG_BuildCertChain to verify the client certificate.
+* @expect
+*   1. The interface returns success.
+*   2. The client certificate verification fails.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_USECERTCHAINFILE_TC003(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    const char *path = "../testdata/tls/certificate/pem/rsa_sha256/cert_chain_duplicate_ca.pem";
+    int32_t ret = HITLS_CFG_UseCertificateChainFile(config, path);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_CFG_BuildCertChain(config, HITLS_BUILD_CHAIN_FLAG_CHECK), HITLS_X509_ERR_CERT_EXIST);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADDEFAULTCAPATH_TC002
+* @title  Test HITLS_CFG_LoadDefaultCAPath with NULL input
+* @brief
+*   1. Call HITLS_CFG_LoadDefaultCAPath with NULL config.
+* @expect
+*   1. Returns HITLS_NULL_INPUT.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADDEFAULTCAPATH_TC002(void)
+{
+    FRAME_Init();
+
+    // Test with NULL config
+    int32_t ret = HITLS_CFG_LoadDefaultCAPath(NULL);
+    ASSERT_EQ(ret, HITLS_NULL_INPUT);
+
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADDEFAULTCAPATH_TC003
+* @title  Test HITLS_CFG_LoadDefaultCAPath sets correct default path
+* @brief
+*   1. Create a config object.
+*   2. Call HITLS_CFG_LoadDefaultCAPath.
+*   3. Verify that the CA store contains the expected default path.
+* @expect
+*   1. HITLS_CFG_LoadDefaultCAPath returns HITLS_SUCCESS.
+*   2. Default path is correctly configured.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADDEFAULTCAPATH_TC003(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    // Load default CA path
+    int32_t ret = HITLS_CFG_LoadDefaultCAPath(config);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    // Verify the path was set correctly by checking CA store
+    HITLS_CERT_Store *store = SAL_CERT_GetCertStore(config->certMgrCtx);
+    ASSERT_TRUE(store != NULL);
+
+    // Cast to HITLS_X509_StoreCtx to access internal structure
+    HITLS_X509_StoreCtx *storeCtx = (HITLS_X509_StoreCtx *)store;
+    ASSERT_TRUE(storeCtx != NULL);
+    ASSERT_TRUE(storeCtx->caPaths != NULL);
+    ASSERT_TRUE(BSL_LIST_COUNT(storeCtx->caPaths) > 0);
+
+    // Get the first path from the caPaths list
+    char *pathPtr = (char *)BSL_LIST_GET_FIRST(storeCtx->caPaths);
+    ASSERT_TRUE(pathPtr != NULL);
+
+    // Construct expected default path
+    char expectedPath[MAX_PATH_LEN] = {0};
+    ret = snprintf_s(expectedPath, sizeof(expectedPath), sizeof(expectedPath) - 1,
+                     "%s/ssl/certs", OPENHITLSDIR);
+    ASSERT_TRUE(ret > 0);
+
+    // Compare the actual path with expected path
+    ASSERT_TRUE(strcmp(pathPtr, expectedPath) == 0);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC001
+* @title  Test HITLS_CFG_LoadVerifyFile with bundle file containing multiple certificates
+* @brief
+*   1. Create a config object.
+*   2. Load a bundle file containing multiple CA certificates.
+*   3. Load client certificates signed by different CAs in the bundle.
+*   4. Verify all certificates can be validated.
+* @expect
+*   1. HITLS_CFG_LoadVerifyFile returns HITLS_SUCCESS.
+*   2. All certificates in bundle are loaded and can be used for verification.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    // Load bundle file containing multiple CA certificates
+    const char *bundlePath = "../testdata/tls/certificate/pem/rsa_sha256/ca_bundle.pem";
+    int32_t ret = HITLS_CFG_LoadVerifyFile(config, bundlePath);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    // Test verification with first CA's client cert
+    const char *clientCert1 = "../testdata/tls/certificate/pem/rsa_sha256/client.pem";
+    ret = HITLS_CFG_LoadCertFile(config, clientCert1, TLS_PARSE_FORMAT_PEM);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ret = HITLS_CFG_BuildCertChain(config, HITLS_BUILD_CHAIN_FLAG_NO_ROOT);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    // Clean up for next test
+    HITLS_CFG_RemoveCertAndKey(config);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC002
+* @title  Test HITLS_CFG_LoadVerifyFile with empty bundle file
+* @brief
+*   1. Create a config object.
+*   2. Try to load an empty bundle file.
+* @expect
+*   1. Returns HITLS_CFG_ERR_LOAD_CERT_FILE.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    // Try to load empty bundle file
+    const char *emptyBundlePath = "../testdata/tls/certificate/pem/rsa_sha256/empty_bundle.pem";
+    int32_t ret = HITLS_CFG_LoadVerifyFile(config, emptyBundlePath);
+    ASSERT_EQ(ret, HITLS_CFG_ERR_LOAD_CERT_FILE);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC003
+* @title  Test HITLS_CFG_LoadVerifyFile with corrupted bundle file
+* @brief
+*   1. Create a config object.
+*   2. Try to load a bundle file with corrupted certificate data.
+* @expect
+*   1. Returns HITLS_CFG_ERR_LOAD_CERT_FILE.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADVERIFYFILE_BUNDLE_TC003(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    // Try to load corrupted bundle file
+    const char *corruptedBundlePath = "../testdata/tls/certificate/pem/rsa_sha256/corrupted_bundle.pem";
+    int32_t ret = HITLS_CFG_LoadVerifyFile(config, corruptedBundlePath);
+    ASSERT_EQ(ret, HITLS_CFG_ERR_LOAD_CERT_FILE);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CFG_LOADVERIFYFILE_COMPAT_TC001
+* @title  Test HITLS_CFG_LoadVerifyFile backward compatibility with single certificate
+* @brief
+*   1. Create a config object.
+*   2. Load a single certificate file (existing functionality).
+*   3. Verify it works the same as before.
+* @expect
+*   1. HITLS_CFG_LoadVerifyFile returns HITLS_SUCCESS.
+*   2. Single certificate loading works as expected.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CFG_LOADVERIFYFILE_COMPAT_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    // Load single certificate file (existing functionality)
+    const char *singleCertPath = "../testdata/tls/certificate/pem/rsa_sha256/ca.pem";
+    int32_t ret = HITLS_CFG_LoadVerifyFile(config, singleCertPath);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    // Verify certificate can be used for validation
+    const char *clientCert = "../testdata/tls/certificate/pem/rsa_sha256/client.pem";
+    ret = HITLS_CFG_LoadCertFile(config, clientCert, TLS_PARSE_FORMAT_PEM);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ret = HITLS_CFG_BuildCertChain(config, HITLS_BUILD_CHAIN_FLAG_NO_ROOT);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+

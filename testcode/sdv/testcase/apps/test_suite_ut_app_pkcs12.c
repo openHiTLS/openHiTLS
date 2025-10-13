@@ -546,6 +546,11 @@ int32_t STUB_CRYPT_EAL_RandInit(
 /* BEGIN_CASE */
 void UT_HITLS_APP_PKCS12_TC011(char *arg, int expect)
 {
+#ifdef HITLS_CRYPTO_CMVP_SM_ARMV8_LE
+    (void)arg;
+    (void)expect;
+    SKIP_TEST();
+#else
     STUB_Init();
     FuncStubInfo stubInfo = {0};
     STUB_Replace(&stubInfo, CRYPT_EAL_ProviderRandInitCtx, STUB_CRYPT_EAL_RandInit);
@@ -562,6 +567,7 @@ EXIT:
     AppPrintErrorUioUnInit();
     STUB_Reset(&stubInfo);
     return;
+#endif
 }
 /* END_CASE */
  

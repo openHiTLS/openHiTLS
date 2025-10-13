@@ -32,6 +32,12 @@
 #include "app_pkey.h"
 #include "app_genpkey.h"
 #include "app_req.h"
+#include "app_mac.h"
+#include "app_kdf.h"
+#include "app_keymgmt.h"
+#include "app_client.h"
+#include "app_server.h"
+#include "app_pkeyutl.h"
 
 HITLS_CmdFunc g_cmdFunc[] = {
     {"help",     FUNC_TYPE_GENERAL,   HITLS_HelpMain},
@@ -49,6 +55,14 @@ HITLS_CmdFunc g_cmdFunc[] = {
     {"pkey",     FUNC_TYPE_GENERAL,   HITLS_PkeyMain},
     {"genpkey",  FUNC_TYPE_GENERAL,   HITLS_GenPkeyMain},
     {"req",      FUNC_TYPE_GENERAL,   HITLS_ReqMain},
+    {"mac",      FUNC_TYPE_GENERAL,   HITLS_MacMain},
+    {"kdf",      FUNC_TYPE_GENERAL,   HITLS_KdfMain},
+#ifdef HITLS_APP_SM_MODE
+    {"keymgmt",  FUNC_TYPE_GENERAL,   HITLS_KeyMgmtMain},
+#endif
+    {"s_client", FUNC_TYPE_GENERAL,   HITLS_ClientMain},
+    {"s_server", FUNC_TYPE_GENERAL,   HITLS_ServerMain},
+    {"pkeyutl",  FUNC_TYPE_GENERAL,   HITLS_PkeyUtlMain},
     {NULL,      FUNC_TYPE_NONE, NULL}
 };
 static void AppGetFuncPrintfLen(size_t *maxLen)

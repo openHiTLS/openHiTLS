@@ -46,8 +46,14 @@ extern int32_t __wrap_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t
     // The value of manipulateLen can be greater than or smaller than num
     g_recWrapper.func(ctx, g_locBuffer, &manipulateLen, MAX_BUF, g_recWrapper.userData);
     if (ctx->hsCtx->bufferLen < manipulateLen) {
-        exit(-1);
+        uint8_t *tmp = BSL_SAL_Realloc(ctx->hsCtx->msgBuf, manipulateLen, ctx->hsCtx->bufferLen);
+        if (tmp == NULL) {
+            return HITLS_MEMALLOC_FAIL;
+        }
+        ctx->hsCtx->bufferLen = manipulateLen;
+        ctx->hsCtx->msgBuf = tmp;
     }
+
     if (recordType == REC_TYPE_HANDSHAKE) {
         (void)memcpy_s(ctx->hsCtx->msgBuf, ctx->hsCtx->bufferLen, g_locBuffer, manipulateLen);
         ctx->hsCtx->msgLen = manipulateLen;

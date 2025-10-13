@@ -69,14 +69,6 @@ static int32_t SavePendingData(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataL
     }
 #endif
     RecCtx *recCtx = (RecCtx *)ctx->recCtx;
-    if (recCtx->pendingData != NULL) {
-        if (recCtx->pendingData != data || recCtx->pendingDataSize != dataLen) {
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16241, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "The two buffer addresses are inconsistent.", 0, 0, 0, 0);
-            return HITLS_APP_ERR_WRITE_BAD_RETRY;
-        }
-    }
     // Stores the plaintext data to be sent.
     recCtx->pendingData = data;
     recCtx->pendingDataSize = dataLen;
@@ -85,6 +77,22 @@ static int32_t SavePendingData(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataL
 
 static int32_t CheckDataLen(TLS_Ctx *ctx, const uint8_t *data, uint32_t *sendLen)
 {
+    RecCtx *recCtx = (RecCtx *)ctx->recCtx;
+    if (recCtx->pendingData != NULL) {
+        if ((
+#ifdef HITLS_TLS_FEATURE_MODE_ACCEPT_MOVING_WRITE_BUFFER
+            (ctx->config.tlsConfig.modeSupport & HITLS_MODE_ACCEPT_MOVING_WRITE_BUFFER) == 0 &&
+#endif
+                recCtx->pendingData != data) || recCtx->pendingDataSize > *sendLen) {
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16241, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "The two buffer addresses are inconsistent.", 0, 0, 0, 0);
+            return HITLS_APP_ERR_WRITE_BAD_RETRY;
+        }
+        *sendLen = recCtx->pendingDataSize;
+        return HITLS_SUCCESS;
+    }
+
     uint32_t maxWriteLen = 0u;
     int32_t ret = REC_GetMaxWriteSize(ctx, &maxWriteLen);
     if (ret != HITLS_SUCCESS) {
@@ -108,7 +116,7 @@ int32_t APP_Write(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t 
         return ret;
     }
 #endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
-    ret = REC_RecBufReSet(ctx);
+    ret = REC_RecOutBufReSet(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -126,14 +134,9 @@ int32_t APP_Write(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t 
     }
 #ifdef HITLS_TLS_FEATURE_FLIGHT
     if (ctx->config.tlsConfig.isFlightTransmitEnable) {
-        ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_FLUSH, 0, NULL);
-        if (ret == BSL_UIO_IO_BUSY) {
-            return HITLS_REC_NORMAL_IO_BUSY;
-        }
-        if (ret != BSL_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16112, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "fail to send handshake message in bUio.", 0, 0, 0, 0);
-            return HITLS_REC_ERR_IO_EXCEPTION;
+        ret = REC_FlightTransmit(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
         }
     }
 #endif

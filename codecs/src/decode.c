@@ -38,7 +38,7 @@ int32_t CRYPT_DECODE_ParseDecoderAttr(const char *attrName, DECODER_AttrInfo *in
     info->inType = NULL;
     info->outFormat = NULL;
     info->outType = NULL;
-    info->attrName = (char *)BSL_SAL_Dump(attrName, strlen(attrName) + 1);
+    info->attrName = (char *)BSL_SAL_Dump(attrName, (uint32_t)strlen(attrName) + 1);
     if (info->attrName == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;

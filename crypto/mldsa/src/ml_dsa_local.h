@@ -48,6 +48,7 @@
 #define MLDSA_MOD_Q(val) {int32_t m = ((val) + (1 << 22u)) >> 23u; (val) = (val) - m * MLDSA_Q;}
 
 typedef struct {
+    int32_t paramId;
     uint8_t k;
     uint8_t l;
     uint8_t eta;
@@ -76,6 +77,9 @@ struct CryptMlDsaCtx {
     bool deterministicSignFlag;
     BSL_SAL_RefCount references;
     void *libCtx;
+    CRYPT_ALGO_MLDSA_PRIV_KEY_FORMAT_TYPE prvKeyFormat;
+    bool hasSeed;
+    uint8_t seed[MLDSA_SEED_BYTES_LEN];
 };
 
 void MLDSA_ComputesNTT(int32_t w[MLDSA_N]);
@@ -88,5 +92,11 @@ int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, CRYPT_Data *msg, uint8_t
     uint8_t *rand);
 
 int32_t MLDSA_VerifyInternal(const CRYPT_ML_DSA_Ctx *ctx, CRYPT_Data *msg, const uint8_t *sign, uint32_t signLen);
+
+#ifdef HITLS_CRYPTO_MLDSA_CHECK
+// calculate public key from private key
+int32_t MLDSA_CalPub(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pub, uint32_t pubLen);
+int32_t MLDSA_KeyConsistenceCheck(CRYPT_ML_DSA_Ctx *ctx);
+#endif // HITLS_CRYPTO_MLDSA_CHECK
 
 #endif    // ML_DSA_LOCAL_H

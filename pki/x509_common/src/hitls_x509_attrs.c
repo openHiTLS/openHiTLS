@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_PKI_X509_CSR) || defined(HITLS_PKI_PKCS12)
+#if (defined(HITLS_PKI_X509_CSR) && defined(HITLS_PKI_X509_CSR_ATTR)) || defined(HITLS_PKI_PKCS12)
 #include <stdint.h>
 #include "securec.h"
 #include "hitls_x509_local.h"
@@ -164,8 +164,8 @@ int32_t HITLS_X509_ParseAttr(BSL_ASN1_Buffer *attrItem, HITLS_X509_AttrEntry *at
         return ret;
     }
     /* parse attribute id */
-    BslOidString oid = {asnArr[HITLS_X509_ATTR_OID_IDX].len, (char *)asnArr[HITLS_X509_ATTR_OID_IDX].buff, 0};
-    attrEntry->cid = BSL_OBJ_GetCID(&oid);
+    attrEntry->cid = BSL_OBJ_GetCidFromOidBuff(asnArr[HITLS_X509_ATTR_OID_IDX].buff,
+        asnArr[HITLS_X509_ATTR_OID_IDX].len);
     if (attrEntry->cid == BSL_CID_UNKNOWN) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_OBJ_ID);
         return HITLS_X509_ERR_PARSE_OBJ_ID;
@@ -439,4 +439,4 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X5
 }
 #endif // HITLS_PKI_X509_CSR_GEN || HITLS_PKI_PKCS12_GEN
 
-#endif // HITLS_PKI_X509_CSR || HITLS_PKI_PKCS12
+#endif // (HITLS_PKI_X509_CSR && HITLS_PKI_X509_CSR_ATTR) || HITLS_PKI_PKCS12

@@ -197,6 +197,9 @@ typedef enum {
     HITLS_CHACHA20_POLY1305_SHA256 = 0x1303,
     HITLS_AES_128_CCM_SHA256 = 0x1304,
     HITLS_AES_128_CCM_8_SHA256 = 0x1305,
+    /* RFC 8998 */
+    HITLS_SM4_GCM_SM3 = 0x00C6,
+    HITLS_SM4_CCM_SM3 = 0x00C7,
     /* TLCP 1.1 cipher suite */
     HITLS_ECDHE_SM4_CBC_SM3 = 0xE011,
     HITLS_ECC_SM4_CBC_SM3 = 0xE013,
@@ -660,7 +663,7 @@ int32_t HITLS_CFG_SetTmpDh(HITLS_Config *config, HITLS_CRYPT_Key *dhPkey);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */
-int32_t HITLS_CFG_GetRenegotiationSupport(const HITLS_Config *config, uint8_t *isSupport);
+int32_t HITLS_CFG_GetRenegotiationSupport(const HITLS_Config *config, bool *isSupport);
 
 
 /**
@@ -672,7 +675,7 @@ int32_t HITLS_CFG_GetRenegotiationSupport(const HITLS_Config *config, uint8_t *i
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */
-int32_t HITLS_CFG_GetClientVerifySupport(HITLS_Config *config, uint8_t *isSupport);
+int32_t HITLS_CFG_GetClientVerifySupport(HITLS_Config *config, bool *isSupport);
 
 /**
  * @ingroup hitls_config
@@ -684,7 +687,7 @@ int32_t HITLS_CFG_GetClientVerifySupport(HITLS_Config *config, uint8_t *isSuppor
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */
-int32_t HITLS_CFG_GetNoClientCertSupport(HITLS_Config *config, uint8_t *isSupport);
+int32_t HITLS_CFG_GetNoClientCertSupport(HITLS_Config *config, bool *isSupport);
 
 /**
  * @ingroup hitls_config
@@ -695,7 +698,7 @@ int32_t HITLS_CFG_GetNoClientCertSupport(HITLS_Config *config, uint8_t *isSuppor
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */
-int32_t HITLS_CFG_GetExtenedMasterSecretSupport(HITLS_Config *config, uint8_t *isSupport);
+int32_t HITLS_CFG_GetExtenedMasterSecretSupport(HITLS_Config *config, bool *isSupport);
 
 /**
  * @ingroup hitls_config
@@ -707,7 +710,7 @@ int32_t HITLS_CFG_GetExtenedMasterSecretSupport(HITLS_Config *config, uint8_t *i
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */
-int32_t HITLS_CFG_GetDhAutoSupport(HITLS_Config *config, uint8_t *isSupport);
+int32_t HITLS_CFG_GetDhAutoSupport(HITLS_Config *config, bool *isSupport);
 
 /**
  * @ingroup hitls_config
@@ -736,7 +739,7 @@ int32_t HITLS_CFG_SetPostHandshakeAuthSupport(HITLS_Config *config, bool support
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */
-int32_t HITLS_CFG_GetPostHandshakeAuthSupport(HITLS_Config *config, uint8_t *isSupport);
+int32_t HITLS_CFG_GetPostHandshakeAuthSupport(HITLS_Config *config, bool *isSupport);
 
 /**
  * @ingroup hitls_config
@@ -757,7 +760,7 @@ int32_t HITLS_CFG_SetVerifyNoneSupport(HITLS_Config *config, bool support);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */
-int32_t HITLS_CFG_GetVerifyNoneSupport(HITLS_Config *config, uint8_t *isSupport);
+int32_t HITLS_CFG_GetVerifyNoneSupport(HITLS_Config *config, bool *isSupport);
 
 /**
  * @ingroup hitls_config
@@ -779,7 +782,7 @@ int32_t HITLS_CFG_SetClientOnceVerifySupport(HITLS_Config *config, bool support)
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */
-int32_t HITLS_CFG_GetClientOnceVerifySupport(HITLS_Config *config, uint8_t *isSupport);
+int32_t HITLS_CFG_GetClientOnceVerifySupport(HITLS_Config *config, bool *isSupport);
 
 /**
  * @ingroup hitls_config
@@ -867,6 +870,17 @@ int32_t HITLS_CFG_AddCAIndication(HITLS_Config *config, HITLS_TrustedCAType caTy
  * @retval  CA list
  */
 HITLS_TrustedCAList *HITLS_CFG_GetCAList(const HITLS_Config *config);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set the CA list.
+ *
+ * @param   config [in] TLS link configuration
+ * @param   list [in] CA list
+ * @retval  HITLS_SUCCESS, if successful.
+ *          For details about other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_SetCAList(HITLS_Config *config, HITLS_TrustedCAList *list);
 
 /**
  * @ingroup hitls_config
@@ -1078,7 +1092,7 @@ int32_t HITLS_CFG_GetDescription(const HITLS_Cipher *cipher, uint8_t *buf, int32
  * @retval  HITLS_SUCCESS, obtained successfully.
  *          HITLS_NULL_INPUT, the input parameter pointer is null.
  */
-int32_t HITLS_CIPHER_IsAead(const HITLS_Cipher *cipher, uint8_t *isAead);
+int32_t HITLS_CIPHER_IsAead(const HITLS_Cipher *cipher, bool *isAead);
 
 /**
  * @ingroup hitls_config
@@ -1199,7 +1213,7 @@ int32_t HITLS_CFG_SetDtlsPostHsTimeoutVal(HITLS_Config *config, uint32_t timeout
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_CFG_SetEncryptThenMac(HITLS_Config *config, uint32_t encryptThenMacType);
+int32_t HITLS_CFG_SetEncryptThenMac(HITLS_Config *config, bool encryptThenMacType);
 
 /**
  * @ingroup hitls_config
@@ -1210,7 +1224,7 @@ int32_t HITLS_CFG_SetEncryptThenMac(HITLS_Config *config, uint32_t encryptThenMa
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_CFG_GetEncryptThenMac(const HITLS_Config *config, uint32_t *encryptThenMacType);
+int32_t HITLS_CFG_GetEncryptThenMac(const HITLS_Config *config, bool *encryptThenMacType);
 
 /**
  * @ingroup hitls_config
@@ -1268,7 +1282,7 @@ int32_t HITLS_CFG_SetConfigUserDataFreeCb(HITLS_Config *config, HITLS_ConfigUser
  * @retval  HITLS_SUCCESS, obtained successfully.
  *          HITLS_NULL_INPUT, the input parameter pointer is null.
  */
-int32_t HITLS_CFG_IsDtls(const HITLS_Config *config, uint8_t *isDtls);
+int32_t HITLS_CFG_IsDtls(const HITLS_Config *config, bool *isDtls);
 
 /**
  * @ingroup hitls_config
@@ -1303,7 +1317,7 @@ int32_t HITLS_CFG_GetCipherServerPreference(const HITLS_Config *config, bool *is
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_CFG_SetFlightTransmitSwitch(HITLS_Config *config, uint8_t isEnable);
+int32_t HITLS_CFG_SetFlightTransmitSwitch(HITLS_Config *config, bool isEnable);
 
 /**
  * @ingroup hitls_config
@@ -1314,7 +1328,7 @@ int32_t HITLS_CFG_SetFlightTransmitSwitch(HITLS_Config *config, uint8_t isEnable
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, uint8_t *isEnable);
+int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, bool *isEnable);
 
 /**
  * @ingroup hitls_config
@@ -1382,6 +1396,29 @@ int32_t HITLS_CFG_SetMaxSendFragment(HITLS_Config *config, uint16_t maxSendFragm
  * @retval  HITLS_SUCCESS, if successful.
  */
 int32_t HITLS_CFG_GetMaxSendFragment(const HITLS_Config *config, uint16_t *maxSendFragment);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set the rec inbuffer inital size
+ *
+ * @param   config [IN/OUT] TLS link configuration
+ * @param   recInbufferSize [IN] Indicates the rec inbuffer inital size
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_CONFIG_INVALID_LENGTH, the recInbufferSize is less than 512 or greater than 18432.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_CFG_SetRecInbufferSize(HITLS_Config *config, uint32_t recInbufferSize);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Obtain the rec inbuffer inital size
+ *
+ * @param   config [IN] TLS link configuration.
+ * @param   recInbufferSize [OUT] Indicates the rec inbuffer inital size
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_CFG_GetRecInbufferSize(const HITLS_Config *config, uint32_t *recInbufferSize);
 
 /**
  * @ingroup hitls_config
@@ -1524,7 +1561,71 @@ int32_t HITLS_CFG_ClearModeSupport(HITLS_Config *config, uint32_t mode);
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_CFG_GetModeSupport(HITLS_Config *config, uint32_t *mode);
+int32_t HITLS_CFG_GetModeSupport(const HITLS_Config *config, uint32_t *mode);
+
+/**
+ * @ingroup hitls
+ * @brief   Sets whether to support middle box compat mode.
+ *
+ * @param   config [IN] TLS Connection Handle.
+ * @param   isMiddleBox [IN] Support or Not.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_CFG_SetMiddleBoxCompat(HITLS_Config *config, bool isMiddleBox);
+
+/**
+ * @ingroup hitls
+ * @brief   Obtain whether middle box compat mode is supported.
+ *
+ * @param   config [IN] TLS connection handle.
+ * @param   isMiddleBox [OUT] Support or Not.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_CFG_GetMiddleBoxCompat(HITLS_Config *config, bool *isMiddleBox);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set whether the current configuration is a client configuration.
+ *
+ * @param   config [OUT] Config context.
+ * @param   isClient [IN] Indicates whether it is a client configuration.
+ * @retval  HITLS_SUCCESS, if successful.
+ *          For details about other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_SetEndPoint(HITLS_Config *config, bool isClient);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Get whether to support session restoration during renegotiation.
+ * By default, session restoration is not supported.
+ * @param   config   [IN] Config handle
+ * @param   isSupport  [OUT] Indicates whether to support session restoration during renegotiation.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_GetResumptionOnRenegoSupport(HITLS_Config *config, bool *isSupport);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Get whether to allow a renegotiate request from the client
+ * @param   config   [IN] Config handle
+ * @param   isSupport  [OUT] Indicates whether to allow a renegotiate request from the client
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_GetClientRenegotiateSupport(HITLS_Config *config, bool *isSupport);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set enable support tls1.3 SM
+ * @param   config   [IN] Config handle
+ * @param   isOnlySupportSM  [OUT] Indicates whether to only support tls1.3 SM
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_EnableTls13SM(HITLS_Config *config, bool isOnlySupportSM);
 
 #ifdef __cplusplus
 }

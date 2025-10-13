@@ -21,6 +21,7 @@
 
 #include "crypt_types.h"
 #include "crypt_modes.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -47,6 +48,7 @@ typedef struct {
     uint32_t aadLen;        // use for calc tag
     uint32_t lastLen;       // ctr mode lastLen
 } MODES_CipherGCMCtx;
+
 struct ModesGcmCtx {
     int32_t algId;
     MODES_CipherGCMCtx gcmCtx;
@@ -57,6 +59,7 @@ typedef struct ModesGcmCtx MODES_GCM_Ctx;
 
 // GCM mode universal implementation
 MODES_GCM_Ctx *MODES_GCM_NewCtx(int32_t algId);
+MODES_GCM_Ctx *MODES_GCM_NewCtxEx(void *libCtx, int32_t algId);
 int32_t MODES_GCM_InitCtx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc);
 

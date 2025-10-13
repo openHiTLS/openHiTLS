@@ -21,7 +21,6 @@
 #include "bsl_asn1_local.h"
 #include "bsl_sal.h"
 #include "sal_time.h"
-#include "bsl_asn1.h"
 
 #define BSL_ASN1_INDEFINITE_LENGTH  0x80
 #define BSL_ASN1_DEFINITE_MAX_CONTENT_OCTET_NUM 0x7F // 127
@@ -231,7 +230,11 @@ static int32_t ParseTime(uint8_t tag, uint8_t *val, uint32_t len, BSL_TIME *deco
     }
     if (tag == BSL_ASN1_TAG_UTCTIME) {
         decodeData->year = (uint16_t)DecodeAsciiNum(&temp, 2); // 2: YY
-        decodeData->year += 2000; // Currently supported after 2000 year
+        if (decodeData->year < 50) {
+            decodeData->year += 2000;
+        } else {
+            decodeData->year += 1900;
+        }
     } else {
         decodeData->year = (uint16_t)DecodeAsciiNum(&temp, 4); // 4: YYYY
     }
@@ -354,26 +357,40 @@ static int32_t ParseBMPString(const uint8_t *bmp, uint32_t bmpLen, BSL_ASN1_Buff
     return BSL_SUCCESS;
 }
 
-int32_t EncodeBMPString(const uint8_t *in, uint32_t inLen, uint8_t *encode, uint32_t *offset)
+static int32_t ParseT61String(const uint8_t *t61, uint32_t t61Len, BSL_ASN1_Buffer *decode)
 {
-    if (in == NULL || inLen == 0 || encode == NULL || offset == NULL) {
+    if (t61 == NULL || t61Len == 0 || decode == NULL) {
         return BSL_NULL_INPUT;
     }
-    uint8_t *tmp = (uint8_t *)BSL_SAL_Calloc(inLen * 2, 1); // encodeLen = 2 * inLen
+    // Currently only supports single-byte character decoding
+    // The lower 128 characters (0x00 - 0x7F) of T.61 are fully compatible with ASCII.
+    // This means any pure ASCII text is valid in T.61 encoding and retains the same meaning.
+    uint8_t *tmp = (uint8_t *)BSL_SAL_Malloc(t61Len);
     if (tmp == NULL) {
         return BSL_MALLOC_FAIL;
     }
-    for (uint32_t i = 0; i < inLen; i++) {
-        if (in[i] > 127) { // max ascii 127.
-            BSL_SAL_FREE(tmp);
-            return BSL_INVALID_ARG;
-        }
-        tmp[2 * i + 1] = in[i]; // we need 2 space, [0,0] -> after encode = [0, data];
-    }
-    (void)memcpy_s(encode + *offset, inLen * 2, tmp, inLen * 2); // encodeLen = 2 * inLen
-    BSL_SAL_FREE(tmp);
-    *offset += inLen * 2; // encodeLen = 2 * inLen
+    (void)memcpy_s(tmp, t61Len, t61, t61Len);
+    decode->buff = tmp;
+    decode->len = t61Len;
     return BSL_SUCCESS;
+}
+
+static void EncodeT61String(const uint8_t *in, uint32_t inLen, uint8_t *encode, uint32_t *offset)
+{
+    (void)memcpy_s(encode + *offset, inLen, in, inLen);
+    *offset += inLen;
+    return;
+}
+
+static void EncodeBMPString(const uint8_t *in, uint32_t inLen, uint8_t *encode, uint32_t *offset)
+{
+    uint8_t *output = encode + *offset;
+    for (uint32_t i = 0; i < inLen; i++) {
+        output[2 * i + 1] = in[i]; // need 2 space, [0,0] -> after encode = [0, data];
+        output[2 * i + 0] = 0;
+    }
+    *offset += inLen * 2; // encodeLen = 2 * inLen
+    return;
 }
 
 /**
@@ -400,6 +417,8 @@ int32_t BSL_ASN1_DecodePrimitiveItem(BSL_ASN1_Buffer *asn, void *decodeData)
             return ParseTime(asn->tag, asn->buff, asn->len, decodeData);
         case BSL_ASN1_TAG_BMPSTRING:
             return ParseBMPString(asn->buff, asn->len, decodeData);
+        case BSL_ASN1_TAG_T61STRING:
+            return ParseT61String(asn->buff, asn->len, decodeData);
         default:
             break;
     }
@@ -819,7 +838,6 @@ static int32_t GetContentLen(BSL_ASN1_Buffer *asn, uint32_t *len)
     if (asn == NULL || len == NULL) {
         return BSL_NULL_INPUT;
     }
-
     switch (asn->tag) {
         case BSL_ASN1_TAG_NULL:
             *len = 0;
@@ -845,6 +863,9 @@ static int32_t GetContentLen(BSL_ASN1_Buffer *asn, uint32_t *len)
                 return BSL_ASN1_ERR_LEN_OVERFLOW;
             }
             *len = asn->len * 2; // 2: Each character is 2 bytes
+            return BSL_SUCCESS;
+        case BSL_ASN1_TAG_T61STRING:
+            *len = asn->len;
             return BSL_SUCCESS;
         default:
             *len = asn->len;
@@ -1055,6 +1076,9 @@ static void EncodeContent(BSL_ASN1_Buffer *asn, uint32_t encodeLen, uint8_t *enc
         case BSL_ASN1_TAG_BMPSTRING:
             EncodeBMPString(asn->buff, asn->len, encode, offset);
             return;
+        case BSL_ASN1_TAG_T61STRING:
+            EncodeT61String(asn->buff, asn->len, encode, offset);
+            return;
         default:
             (void)memcpy_s(encode + *offset, encodeLen, asn->buff, encodeLen);
             *offset += encodeLen;
@@ -1105,6 +1129,16 @@ static int32_t CheckBslTime(BSL_ASN1_Buffer *asn)
     return BSL_SUCCESS;
 }
 
+static int32_t CheckBMPString(BSL_ASN1_Buffer *asn)
+{
+    for (uint32_t i = 0; i < asn->len; i++) {
+        if (asn->buff[i] > 127) { // max ascii 127.
+            return BSL_INVALID_ARG;
+        }
+    }
+    return BSL_SUCCESS;
+}
+
 static int32_t CheckAsn(BSL_ASN1_Buffer *asn)
 {
     switch (asn->tag) {
@@ -1119,6 +1153,8 @@ static int32_t CheckAsn(BSL_ASN1_Buffer *asn)
         case BSL_ASN1_TAG_UTCTIME:
         case BSL_ASN1_TAG_GENERALIZEDTIME:
             return CheckBslTime(asn);
+        case BSL_ASN1_TAG_BMPSTRING:
+            return CheckBMPString(asn);
         default:
             return BSL_SUCCESS;
     }

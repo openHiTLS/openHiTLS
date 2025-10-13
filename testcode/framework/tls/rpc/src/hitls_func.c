@@ -118,6 +118,8 @@ static const HitlsConfig g_cipherSuiteList[] = {
     {"HITLS_RSA_WITH_AES_256_CCM_8", HITLS_RSA_WITH_AES_256_CCM_8},
     {"HITLS_RSA_WITH_AES_128_CCM", HITLS_RSA_WITH_AES_128_CCM},
     {"HITLS_RSA_WITH_AES_128_CCM_8", HITLS_RSA_WITH_AES_128_CCM_8},
+    {"HITLS_SM4_GCM_SM3", HITLS_SM4_GCM_SM3},
+    {"HITLS_SM4_CCM_SM3", HITLS_SM4_CCM_SM3},
 
     /* psk cipher suite */
     {"HITLS_PSK_WITH_AES_128_CBC_SHA", HITLS_PSK_WITH_AES_128_CBC_SHA},
@@ -233,6 +235,26 @@ static const HitlsConfig g_eccFormatList[] = {
     {"HITLS_INVALID_FORMAT_TC02", 0xFE},
 };
 
+#ifdef HITLS_TLS_MAINTAIN_KEYLOG
+static void KetLogPrint(HITLS_Ctx *ctx, const char *out)
+{
+    (void)ctx;
+    char *fileName = "FileKeyLog.txt";
+    char *fileEndStr = "\n";
+    char *p = getenv("HITLSKEYLOGFILE");
+    if (p == NULL) {
+        return;
+    }
+    FILE *fp = fopen(fileName, "a+");
+    if (fp == NULL) {
+        return;
+    }
+    fwrite(out, sizeof(char), strlen(out), fp);
+    fwrite((char *)fileEndStr, sizeof(char), strlen(fileEndStr), fp);
+    fclose(fp);
+}
+#endif
+
 int HitlsInit(void)
 {
     int ret;
@@ -273,8 +295,8 @@ static HITLS_Lib_Ctx *InitProviderLibCtx(char *providerPath, char (*providerName
             return NULL;
         }
         char attrName[512] = {0};
-        memcpy_s(attrName, sizeof(attrName), "provider=", strlen("provider="));
-        memcpy_s(attrName + strlen("provider="), sizeof(attrName) - strlen("provider="), providerNames[i],
+        memcpy_s(attrName, sizeof(attrName), "provider?", strlen("provider?"));
+        memcpy_s(attrName + strlen("provider?"), sizeof(attrName) - strlen("provider?"), providerNames[i],
             strlen(providerNames[i]));
         CRYPT_EAL_ProviderRandInitCtx(libCtx, CRYPT_RAND_SHA256, attrName, NULL, 0, NULL);
     }
@@ -364,7 +386,7 @@ HITLS_Config *HitlsNewCtx(TLS_VERSION tlsVersion)
             hitlsConfig = HITLS_CFG_NewTLS13Config();
             break;
 #endif
-#ifdef HITLS_TLS_PROTO_ALL
+#ifdef HITLS_TLS_CONFIG_VERSION
         case TLS_ALL:
             LOG_DEBUG("HiTLS New TLS_ALL Ctx");
             hitlsConfig = HITLS_CFG_NewTLSConfig();
@@ -475,14 +497,12 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
         HITLS_CFG_SetSessionCacheMode(outCfg, inCtxCfg->setSessionCache);
     }
 #endif
-#ifdef HITLS_TLS_PROTO_ALL
     // Set the protocol version.
     if ((inCtxCfg->minVersion != 0) && (inCtxCfg->maxVersion != 0)) {
         LOG_DEBUG("HiTLS Set minVersion is %u maxVersion is %u", inCtxCfg->minVersion, inCtxCfg->maxVersion);
         ret = HITLS_CFG_SetVersion(outCfg, inCtxCfg->minVersion, inCtxCfg->maxVersion);
         ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetVersion Error ERROR");
     }
-#endif
     if (inCtxCfg->SupportType == SERVER_CFG_SET_TRUE) {
         HITLS_CFG_SetCipherServerPreference(outCfg, true);
     }
@@ -539,7 +559,7 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
 #ifdef HITLS_TLS_SUITE_CIPHER_CBC
     // Whether encrypt-then-mac is supported
     LOG_DEBUG("HiTLS Set Support EncryptThenMac is %d", inCtxCfg->isEncryptThenMac);
-    ret = HITLS_CFG_SetEncryptThenMac(outCfg, (uint32_t)inCtxCfg->isEncryptThenMac);
+    ret = HITLS_CFG_SetEncryptThenMac(outCfg, inCtxCfg->isEncryptThenMac);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetEncryptThenMac ERROR");
 #endif
     // ECC Point Format Configuration for Asymmetric Algorithms
@@ -716,6 +736,33 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     ret = HITLS_CFG_SetLegacyRenegotiateSupport(outCfg, inCtxCfg->allowLegacyRenegotiate);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetLegacyRenegotiateSupport ERROR");
 #endif /* defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
+    if (inCtxCfg->caList != NULL) {
+        LOG_DEBUG("HiTLS Set caList");
+        ret = HITLS_CFG_SetCAList(outCfg, inCtxCfg->caList);
+        ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetCAList Fail");
+    }
+#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
+#ifdef HITLS_TLS_PROTO_TLS13
+    // Whether to support middlebox compatibility.
+    LOG_DEBUG("HiTLS Set Support middlebox compatibility is %d", inCtxCfg->isMiddleBoxCompat);
+    ret = HITLS_CFG_SetMiddleBoxCompat(outCfg, (uint32_t)inCtxCfg->isMiddleBoxCompat);
+    ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetMiddleBoxCompat ERROR");
+#endif
+
+#ifdef HITLS_TLS_MAINTAIN_KEYLOG
+    // Set the keylogcb callback function on the server.
+    if (strncmp("NULL", inCtxCfg->keyLogCb, strlen(inCtxCfg->keyLogCb)) != 0) {
+        LOG_DEBUG("HiTLS Set key log callback is %s", inCtxCfg->keyLogCb);
+        ret = HITLS_CFG_SetKeyLogCb(outCfg, GetExtensionCb(inCtxCfg->keyLogCb));
+        ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetKeyLogCb Fail");
+    }
+    // support exporting keys through environment variables
+    if (strncmp("NULL", inCtxCfg->keyLogCb, strlen(inCtxCfg->keyLogCb)) == 0) {
+        ret = HITLS_CFG_SetKeyLogCb(outCfg, KetLogPrint);
+        ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetKeyLogCb Fail");
+    }
+#endif
 
     return SUCCESS;
 }
@@ -934,7 +981,7 @@ int HitlsSetSession(void *ssl, void *session)
 
 int HitlsSessionReused(void *ssl)
 {
-    uint8_t isReused = 0;
+    bool isReused = false;
     (void)ssl;
 #ifdef HITLS_TLS_FEATURE_SESSION
     int32_t ret;

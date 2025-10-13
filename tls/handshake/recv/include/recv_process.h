@@ -89,12 +89,11 @@ int32_t ClientRecvServerKxProcess(TLS_Ctx *ctx, HS_Msg *msg);
  * @brief   Process server certificate request
  *
  * @param   ctx [IN] TLS context
- * @param   msg [IN] server certificate request message
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t ClientRecvCertRequestProcess(TLS_Ctx *ctx, HS_Msg *msg);
+int32_t ClientRecvCertRequestProcess(TLS_Ctx *ctx);
 
 /**
  * @brief   Process sever hello done

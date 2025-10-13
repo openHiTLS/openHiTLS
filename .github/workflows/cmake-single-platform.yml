@@ -1,6 +1,8 @@
 # This starter workflow is for a CMake project running on a single platform. There is a different starter workflow if you need cross-platform coverage.
 # See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-multi-platform.yml
 name: CMake on a single platform
+permissions:
+  contents: read
 
 on:
   push:
@@ -28,7 +30,7 @@ jobs:
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: mkdir build && cd build && python3  ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki hitls_auth --lib_type static --add_options="-DHITLS_EAL_INIT_OPTS=9 -DHITLS_CRYPTO_ASM_CHECK -DHITLS_CRYPTO_ENTROPY -DHITLS_CRYPTO_ENTROPY_DEVRANDOM -DHITLS_CRYPTO_ENTROPY_GETENTROPY -DHITLS_CRYPTO_ENTROPY_SYS -DHITLS_CRYPTO_ENTROPY_HARDWARE -DHITLS_CRYPTO_DRBG_GM -fprofile-arcs -ftest-coverage" --bits=64 --system=linux --add_link_flags="-ldl" && cmake ..
+      run: cd testcode/script && bash build_hitls.sh no_sctp asan gcov x86_64
 
     - name: Build
       # Build your program with the given configuration
@@ -50,3 +52,98 @@ jobs:
       uses: codecov/codecov-action@v5
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  pure-c:
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with: 
+        submodules: recursive
+        fetch-depth: 1
+
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: cd testcode/script && bash build_hitls.sh no_sctp asan gcov pure_c add-options="-DHITLS_ATOMIC_THREAD_LOCK"
+
+    - name: Build
+      # Build your program with the given configuration
+      working-directory: ${{github.workspace}}/build
+      run: make -j
+
+    - name: Test
+      working-directory: ${{github.workspace}}/testcode/script
+      # Execute tests defined by the CMake configuration.
+      run: bash build_sdv.sh no-sctp asan gcov add-options="-DHITLS_ATOMIC_THREAD_LOCK" && bash execute_sdv.sh
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: openhitls-pure-c
+        path: ${{ github.workspace }}/build
+        retention-days: 5
+    - name: Upload coverage
+      uses: codecov/codecov-action@v5
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  mini-test:
+    uses: ./.github/workflows/minitest-reusable-job.yml
+    with:
+      param1: 'all'
+      param2: 'mini-test-pure-c'
+      param3: 'ubuntu-latest'
+
+  mini-test-x86:
+    uses: ./.github/workflows/minitest-reusable-job.yml
+    with:
+      param1: 'all x8664'
+      param2: 'mini-test-x86'
+      param3: 'ubuntu-latest'
+
+  riscv64:
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: self-hosted
+
+    steps:
+    - uses: actions/checkout@v4
+      with: 
+        submodules: recursive
+        fetch-depth: 1
+
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: cd testcode/script && bash build_hitls.sh riscv64 no_sctp
+
+    - name: Build
+      # Build your program with the given configuration
+      working-directory: ${{github.workspace}}/build
+      run: make -j4
+
+      # - name: Test
+      # working-directory: ${{github.workspace}}/testcode/script
+      # Execute tests defined by the CMake configuration.
+      # run: bash build_sdv.sh no-sctp && bash execute_sdv.sh
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: openhitls-riscv
+        path: ${{ github.workspace }}/build
+        retention-days: 5
+
+  # TODO: fix the 'Illegal instruction' when run on ubuntu-22.04-
+  #
+  # mini-test-armv8:
+  #   uses: ./.github/workflows/reusable-job.yml
+  #   with:
+  #     param1: 'all armv8'
+  #     param2: 'mini-test-armv8'
+  #     param3: 'ubuntu-22.04-arm'

@@ -18,8 +18,7 @@
 
 #include "crypt_sm4_modes_macro_x86_64.s"
 
- .file	"crypt_sm4_x86_64.S"
- .text
+  .text
 
 .set	W0,	%r8d
 .set	W1, %r9d

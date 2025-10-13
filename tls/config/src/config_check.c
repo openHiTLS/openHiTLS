@@ -266,7 +266,12 @@ int32_t CheckConfig(const TLS_Config *config)
         BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_SET);
         return HITLS_CONFIG_INVALID_SET;
     }
-
+    if (config->minVersion == 0 || config->maxVersion == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17374, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
+            "minVersion or maxVersion is 0", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_VERSION);
+        return HITLS_CONFIG_INVALID_VERSION;
+    }
     /* The checkpoint format and group are required only when the ecdhe cipher suite is available */
     if (IsHaveEccCipherSuite(config)) {
         ret = CheckPointFormats(config);

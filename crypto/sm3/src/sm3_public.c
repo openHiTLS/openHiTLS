@@ -40,6 +40,13 @@ CRYPT_SM3_Ctx *CRYPT_SM3_NewCtx(void)
     return BSL_SAL_Calloc(1, sizeof(CRYPT_SM3_Ctx));
 }
 
+CRYPT_SM3_Ctx *CRYPT_SM3_NewCtxEx(void *libCtx, int32_t algId)
+{
+    (void)libCtx;
+    (void)algId;
+    return BSL_SAL_Calloc(1, sizeof(CRYPT_SM3_Ctx));
+}
+
 void CRYPT_SM3_FreeCtx(CRYPT_SM3_Ctx *ctx)
 {
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SM3_Ctx));
@@ -65,13 +72,14 @@ int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx, BSL_Param *param)
     return CRYPT_SUCCESS;
 }
 
-void CRYPT_SM3_Deinit(CRYPT_SM3_Ctx *ctx)
+int32_t CRYPT_SM3_Deinit(CRYPT_SM3_Ctx *ctx)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
+        return CRYPT_NULL_INPUT;
     }
     (void)memset_s(ctx, sizeof(CRYPT_SM3_Ctx), 0, sizeof(CRYPT_SM3_Ctx));
+    return CRYPT_SUCCESS;
 }
 
 static uint32_t IsInputOverflow(CRYPT_SM3_Ctx *ctx, uint32_t nbytes)
@@ -233,5 +241,13 @@ CRYPT_SM3_Ctx *CRYPT_SM3_DupCtx(const CRYPT_SM3_Ctx *src)
     (void)memcpy_s(newCtx, sizeof(CRYPT_SM3_Ctx), src, sizeof(CRYPT_SM3_Ctx));
     return newCtx;
 }
+
+#ifdef HITLS_CRYPTO_PROVIDER
+int32_t CRYPT_SM3_GetParam(CRYPT_SM3_Ctx *ctx, BSL_Param *param)
+{
+    (void)ctx;
+    return CRYPT_MdCommonGetParam(CRYPT_SM3_DIGESTSIZE, CRYPT_SM3_BLOCKSIZE, param);
+}
+#endif // HITLS_CRYPTO_PROVIDER
 
 #endif /* HITLS_CRYPTO_SM3 */

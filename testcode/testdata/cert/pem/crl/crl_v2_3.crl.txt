@@ -1,0 +1,26 @@
+Certificate Revocation List (CRL):
+    Version: 2 (0x01)
+    Signature Algorithm: ECDSAWITHSHA256
+    Issuer: CN = OH, C = CN
+    Last Update: Jan 1 00:00:00 2025 GMT
+    Next Update: Jan 1 00:00:00 2035 GMT
+    Revoked Certificates:
+        Serial Number: 287454020 (0x11223344)
+        Revocation Date: Jan 1 00:00:00 2030 GMT
+        CRL entry extensions:
+            X509v3 CRL Reason Code: 
+                1
+            Invalidity Date: 
+                Jan 1 00:00:00 2030 GMT
+            X509v3 Certificate Issuer: critical
+                Email:test, DNS:test, URI:test, DirName:CN = OH, C = CN, IP Address:116.101.115.116
+    X509V3 extensions:
+        CrlNumber:
+            17 (0x11)
+    Signature Algorithm: ECDSAWITHSHA256
+    Signature Value:
+        30:44:02:20:19:07:12:e7:0f:68:81:56:29:bc:00:d2
+        51:71:11:a6:69:43:4e:ab:9a:ff:25:cd:cc:86:3b:22
+        81:32:65:c6:02:20:51:2c:22:84:0e:16:06:6b:6e:0c
+        f7:c2:d0:90:af:d8:5b:00:db:b3:92:2b:62:4b:0e:84
+        96:c1:7d:50:ef:1c
