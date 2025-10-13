@@ -2,7 +2,7 @@
 
 ## Protocol Description
 
-openHiTLS offers functions such as creating, configuring, and managing security protocol links based on transport-layer security protocol standards, with the main functional interfaces available in the protocol module. openHiTLS supports various protocol versions and features, including basic protocol handshake, key update, application-layer protocol negotiation, and server name indication.
+openHiTLS offers functions such as creating, configuring, and managing security protocol links based on transport-layer security protocol standards, with the main functional interfaces available in the protocol module. openHiTLS supports various protocol versions and features, including basic protocol handshake, key update, application-layer protocol negotiation, and server name indication. **In TLS1.3, openHiTLS also supports Hybrid Key Exchange to provide protection against future quantum computing threats.**
 
 Currently, openHiTLS supports the following protocol versions:
 
@@ -39,7 +39,7 @@ Currently, openHiTLS supports the following protocol versions:
 | TLS version| TLS13 (0x0304u)|
 | Algorithm suite| TLS_AES_128_GCM_SHA256 (0x1301)<br>TLS_AES_256_GCM_SHA384 (0x1302)<br>TLS_CHACHA20_POLY1305_SHA256 (0x1303)<br>TLS_AES_128_CCM_SHA256 (0x1304)<br>TLS_AES_128_CCM_8_SHA256 (0x1305)|
 | EC dotted format| uncompressed (0)|
-| Elliptic curve| secp256r1 (23)<br>secp384r1 (24)<br>secp521r1 (25)<br>x25519 (29)<br>ffdhe2048 (256)<br>ffdhe3072 (257)<br>ffdhe4096 (258)<br>ffdhe6144 (259)<br>ffdhe8192 (260)|
+| Supported Groups (Key Exchange Groups) | **Traditional Elliptic Curves:**<br>secp256r1 (23)<br>secp384r1 (24)<br>secp521r1 (25)<br>x25519 (29)<br>**Finite Field DH Groups:**<br>ffdhe2048 (256)<br>ffdhe3072 (257)<br>ffdhe4096 (258)<br>ffdhe6144 (259)<br>ffdhe8192 (260)<br>**Hybrid Key Exchange:**<br>X25519MLKEM768 (4588)<br>SecP256r1MLKEM768 (4587)<br>SecP384r1MLKEM1024 (4589) |
 | Signature hash algorithm| rsa_pkcs1_sha256 (0x0401)<br>rsa_pkcs1_sha384 (0x0501)<br>rsa_pkcs1_sha512 (0x0601)<br>ecdsa_secp256r1_sha256 (0x0403)<br>ecdsa_secp384r1_sha384 (0x0503)<br>ecdsa_secp521r1_sha512 (0x0603)<br>rsa_pss_rsae_sha256 (0x0804)<br>rsa_pss_rsae_sha384 (0x0805)<br>rsa_pss_rsae_sha512 (0x0806)<br>rsa_pss_pss_sha256 (0x0809)<br>rsa_pss_pss_sha384 (0x080a)<br>rsa_pss_pss_sha512 (0x080b)<br>ed25519 (0x0807)|
 | Dual-ended verification| **HITLS_CFG_SetClientVerifySupport** (disabled by default)|
 | Blank client certificate| **HITLS_CFG_SetNoClientCertSupport** (disabled by default)|
@@ -52,6 +52,37 @@ Currently, openHiTLS supports the following protocol versions:
 | Support **sessionTicket**| **HITLS_CFG_SetSessionTicketSupport** (enabled by default)|
 | Verify **keyUsage**| **HITLS_CFG_SetCheckKeyUsage** (enabled by default)|
 | Auto-generate DH parameter| **HITLS_CFG_SetDhAutoSupport** (enabled by default)|
+
+### Post-Quantum Cryptography Support
+
+openHiTLS supports Hybrid Key Exchange in TLS1.3 to address the threat of future quantum computers to traditional cryptography. The hybrid key exchange scheme combines traditional ECDH key exchange with lattice-based ML-KEM algorithms, providing "defense in depth" security assurance.
+
+**Supported Hybrid Key Exchange Algorithms:**
+
+| Algorithm Name | Components | Security Strength | IANA Code Point | Use Case |
+| :---- | :---- | :---- | :---- | :---- |
+| X25519MLKEM768 | X25519 + ML-KEM-768 | 192-bit | 4588 | High-performance scenarios, recommended |
+| SecP256r1MLKEM768 | ECDH(NIST P-256) + ML-KEM-768 | 192-bit | 4587 | Scenarios requiring NIST curve compatibility |
+| SecP384r1MLKEM1024 | ECDH(NIST P-384) + ML-KEM-1024 | 256-bit | 4589 | High-security requirement scenarios |
+
+**Usage Notes:**
+- Hybrid key exchange algorithms are only available in TLS 1.3
+- X25519MLKEM768 has the highest priority in default configurations
+- Requires the `HITLS_TLS_FEATURE_KEM` feature to be enabled at compile time
+- Both client and server need to support the same hybrid key exchange algorithm for successful negotiation
+
+**API Configuration Example:**
+```c
+// Configure supported groups, including hybrid key exchange
+uint16_t groups[] = {
+    HITLS_HYBRID_X25519_MLKEM768,           // Hybrid key exchange
+    HITLS_EC_GROUP_CURVE25519,              // Traditional X25519
+    HITLS_EC_GROUP_SECP256R1,               // Traditional NIST P-256
+};
+HITLS_CFG_SetGroups(config, groups, sizeof(groups) / sizeof(groups[0]));
+```
+
+> **NOTE:** Post-quantum cryptographic algorithms have larger key and ciphertext sizes (e.g., X25519MLKEM768 has a public key length of 1216 bytes), which may increase handshake message sizes.
 
 ### TLCP Specifications
 
