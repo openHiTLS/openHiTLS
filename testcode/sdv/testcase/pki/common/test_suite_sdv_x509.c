@@ -111,13 +111,14 @@ static int32_t SetRsaPssPara(CRYPT_EAL_PkeyCtx *pkey)
 }
 #endif // HITLS_CRYPT_RSA
 
-static CRYPT_EAL_PkeyCtx *GenKey(int32_t algId, int32_t curveId)
+// if alg is ecc, algParam specifies curveId; if pqc, algParam specifies paramSet
+static CRYPT_EAL_PkeyCtx *GenKey(int32_t algId, int32_t algParam)
 {
     CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(algId == BSL_CID_RSASSAPSS ? BSL_CID_RSA : algId);
     ASSERT_NE(pkey, NULL);
 
     if (algId == CRYPT_PKEY_ECDSA) {
-        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, curveId), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algParam), CRYPT_SUCCESS);
     }
 
 #ifdef HITLS_CRYPTO_RSA
@@ -129,6 +130,11 @@ static CRYPT_EAL_PkeyCtx *GenKey(int32_t algId, int32_t curveId)
         ASSERT_EQ(SetRsaPssPara(pkey), CRYPT_SUCCESS);
     }
 #endif
+#ifdef HITLS_CRYPTO_MLDSA
+    if (algId == CRYPT_PKEY_ML_DSA) {
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algParam), CRYPT_SUCCESS);
+    }
+#endif
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
 
     return pkey;
@@ -138,14 +144,15 @@ EXIT:
 }
 
 /**
- * Generate DER/PEM public/private key: rsa, ecc, sm2, ed25519
+ * Generate DER/PEM public/private key: rsa, ecc, sm2, ed25519, mldsa
+ * if ecc alg, algParam specifies curveId; if pqc, algParam specifies paramSet
  */
-static int32_t TestEncodeKey(int32_t algId, int32_t type, int32_t curveId, char *path)
+static int32_t TestEncodeKey(int32_t algId, int32_t type, int32_t algParam, char *path)
 {
     BSL_Buffer encode = {0};
     int32_t ret = CRYPT_MEM_ALLOC_FAIL;
 
-    CRYPT_EAL_PkeyCtx *pkey = GenKey(algId, curveId);
+    CRYPT_EAL_PkeyCtx *pkey = GenKey(algId, algParam);
     ASSERT_NE(pkey, NULL);
 
 #ifdef HITLS_BSL_SAL_FILE
@@ -872,3 +879,64 @@ EXIT:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_HITLS_MLDSA_PQC_CERT_TC001(char *keypath)
+{
+    HITLS_X509_Cert *cert = NULL;
+    uint32_t version = 2; // v3 cert
+    uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
+    BSL_TIME beforeTime = {2025, 1, 1, 0, 0, 0, 0, 0};
+    BSL_TIME afterTime = {2035, 1, 1, 0, 0, 0, 0, 0};
+    BslList *dnList = NULL;
+    BSL_Buffer encode = {0};
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, keypath, NULL, 0, &pkey),
+              CRYPT_SUCCESS);
+    ASSERT_NE(pkey, NULL);
+    cert = HITLS_X509_CertNew();
+    ASSERT_NE(cert, NULL);
+
+    // set cert info
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, serialNum, sizeof(serialNum)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
+    dnList = GenDNList();
+    ASSERT_NE(dnList, NULL);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_ISSUER_DN, dnList, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SUBJECT_DN, dnList, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(SetCertExt(cert), 0);
+
+    // sign cert
+    ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, pkey, NULL, cert), HITLS_PKI_SUCCESS);
+
+    // generate cert buff
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_PEM, cert, &encode), HITLS_PKI_SUCCESS);
+    BSL_SAL_FREE(encode.data);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    HITLS_X509_CertFree(cert);
+    HITLS_X509_DnListFree(dnList);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_MLDSA_PQC_CERT_TC002(char *keypath)
+{
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ASSERT_NE(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, keypath, NULL, 0, &pkey),
+              CRYPT_SUCCESS);
+    ASSERT_EQ(pkey, NULL);
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */

@@ -449,7 +449,7 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
     {CRYPT_PKEY_ML_DSA, g_defEalSubPubKeyDer2MldsaKey,
-        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
 #ifdef HITLS_CRYPTO_ED25519
     {CRYPT_PKEY_ED25519, g_defEalSubPubKeyDer2Ed25519Key,

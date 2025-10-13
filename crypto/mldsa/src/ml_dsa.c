@@ -526,8 +526,10 @@ int32_t CRYPT_ML_DSA_SetPrvKeyEx(CRYPT_ML_DSA_Ctx *ctx, const BSL_Param *para)
     CRYPT_MlDsaPrv prvKeySeed = {0};
     (void)GetConstParamValue(para, CRYPT_PARAM_ML_DSA_PRVKEY, &prvKey.data, &prvKey.len);
     (void)GetConstParamValue(para, CRYPT_PARAM_ML_DSA_PRVKEY_SEED, &prvKeySeed.data, &prvKeySeed.len);
-    if (prvKeySeed.data!= NULL && prvKeySeed.len != 0) {
-        int32_t ret = MLDSA_SetPrvSeed(ctx, prvKeySeed.data, prvKeySeed.len);
+    int32_t ret = 0;
+    // seed only or both seed and private key
+    if (prvKeySeed.data != NULL && prvKeySeed.len != 0) {
+        ret = MLDSA_SetPrvSeed(ctx, prvKeySeed.data, prvKeySeed.len);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -539,7 +541,14 @@ int32_t CRYPT_ML_DSA_SetPrvKeyEx(CRYPT_ML_DSA_Ctx *ctx, const BSL_Param *para)
         }
         return CRYPT_SUCCESS;
     }
-    return CRYPT_ML_DSA_SetPrvKey(ctx, &prvKey);
+    // private key only
+    ret = CRYPT_ML_DSA_SetPrvKey(ctx, &prvKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = MLDSA_KeyConsistenceCheck(ctx);
+    return ret;
 }
 
 int32_t CRYPT_ML_DSA_SetPubKeyEx(CRYPT_ML_DSA_Ctx *ctx, const BSL_Param *para)
@@ -602,8 +611,12 @@ int32_t CRYPT_ML_DSA_SetPubKey(CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPub *pub)
         return CRYPT_MLDSA_KEYLEN_ERROR;
     }
     if (ctx->pubKey != NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_SET_KEY_FAILED);
-        return CRYPT_MLDSA_SET_KEY_FAILED;
+        // if set prv key is called before, then ctx->pubKey is not NULL
+        if (ctx->pubLen != ctx->info->publicKeyLen || memcmp(ctx->pubKey, pub->data, ctx->pubLen) != 0) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_SET_KEY_FAILED);
+            return CRYPT_MLDSA_SET_KEY_FAILED;
+        }
+        return CRYPT_SUCCESS;
     }
 
     ctx->pubKey = BSL_SAL_Malloc(ctx->info->publicKeyLen);

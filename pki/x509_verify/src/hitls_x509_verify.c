@@ -1061,8 +1061,31 @@ static int32_t HITLS_X509_CheckCertExt(void *ctx, HITLS_X509_Cert *cert, int32_t
 #else
     (void)depth;
 #endif
-    return HITLS_X509_TrvList(cert->tbs.ext.extList,
-        (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCertExtNode, ctx);
+#ifdef HITLS_CRYPTO_MLDSA
+if (cert->tbs.signAlgId.algId == BSL_CID_ML_DSA_44 ||
+    cert->tbs.signAlgId.algId == BSL_CID_ML_DSA_65 ||
+    cert->tbs.signAlgId.algId == BSL_CID_ML_DSA_87) {
+    HITLS_X509_CertExt *tmpExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
+    if (tmpExt != NULL && (tmpExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) != 0) {
+        uint32_t mustOneOf = (HITLS_X509_EXT_KU_DIGITAL_SIGN |
+                              HITLS_X509_EXT_KU_NON_REPUDIATION |
+                              HITLS_X509_EXT_KU_KEY_CERT_SIGN |
+                              HITLS_X509_EXT_KU_CRL_SIGN);
+        uint32_t forbidden = (HITLS_X509_EXT_KU_KEY_ENCIPHERMENT |
+                              HITLS_X509_EXT_KU_DATA_ENCIPHERMENT |
+                              HITLS_X509_EXT_KU_KEY_AGREEMENT |
+                              HITLS_X509_EXT_KU_ENCIPHER_ONLY |
+                              HITLS_X509_EXT_KU_DECIPHER_ONLY);
+        if ((tmpExt->keyUsage & mustOneOf) == 0) {
+            return HITLS_X509_ERR_EXT_KU;
+        }
+        if ((tmpExt->keyUsage & forbidden) != 0) {
+            return HITLS_X509_ERR_EXT_KU;
+        }
+    }
+}
+#endif
+    return HITLS_X509_TrvList(cert->tbs.ext.extList, (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCertExtNode, ctx);
 }
 
 int32_t HITLS_X509_VerifyParamAndExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)

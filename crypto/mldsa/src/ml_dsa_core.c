@@ -1260,6 +1260,49 @@ ERR:
     return ret;
 }
 
+// Referenced from draft-ietf-lamps-dilithium-certificates section C.4
+int32_t MLDSA_KeyConsistenceCheck(CRYPT_ML_DSA_Ctx *ctx)
+{
+    int32_t ret = CRYPT_SUCCESS;
+    uint8_t *pubKey = BSL_SAL_Malloc(ctx->info->publicKeyLen);
+    if (pubKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    // recompute public key from private key, the consistency check of t0 is done
+    ret = MLDSA_CalPub(ctx, pubKey, ctx->info->publicKeyLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_FREE(pubKey);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    // perform the consistence check of tr
+    uint8_t tr[MLDSA_TR_MSG_LEN] = {0};
+    ret = HashFuncH(pubKey, ctx->info->publicKeyLen, NULL, 0, tr, MLDSA_TR_MSG_LEN);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_FREE(pubKey);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (memcmp(tr, ctx->prvKey + MLDSA_PUBLIC_SEED_LEN + MLDSA_SIGNING_SEED_LEN, MLDSA_TR_MSG_LEN) != 0) {
+        BSL_SAL_FREE(pubKey);
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_PAIRWISE_CHECK_FAIL);
+        return CRYPT_MLDSA_PAIRWISE_CHECK_FAIL;
+    }
+    if (ctx->pubKey == NULL) {
+        ctx->pubKey = pubKey;
+        ctx->pubLen = ctx->info->publicKeyLen;
+    } else {
+        if (memcmp(pubKey, ctx->pubKey, ctx->info->publicKeyLen) != 0) {
+            BSL_SAL_FREE(pubKey);
+            BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_PAIRWISE_CHECK_FAIL);
+            return CRYPT_MLDSA_PAIRWISE_CHECK_FAIL;
+        }
+        BSL_SAL_FREE(pubKey);
+    }
+    return CRYPT_SUCCESS;
+}
+
 #endif // HITLS_CRYPTO_MLDSA_CHECK
 
 #endif
