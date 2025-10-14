@@ -562,10 +562,10 @@ uint32_t HS_GetState(const TLS_Ctx *ctx)
 #ifdef HITLS_TLS_FEATURE_SNI
 const char *HS_GetServerName(const TLS_Ctx *ctx)
 {
-    if (ctx == NULL || ctx->hsCtx == NULL) {
+    if (ctx == NULL || ctx->negotiatedInfo.serverName == NULL) {
         return NULL;
     }
-    return (char *)ctx->hsCtx->serverName;
+    return (char *)ctx->negotiatedInfo.serverName;
 }
 #endif
 

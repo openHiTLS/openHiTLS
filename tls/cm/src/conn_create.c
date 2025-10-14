@@ -127,6 +127,9 @@ static void CleanNegotiatedInfo(TLS_NegotiatedInfo *negotiatedInfo)
 #ifdef HITLS_TLS_FEATURE_ALPN
     BSL_SAL_FREE(negotiatedInfo->alpnSelected);
 #endif
+#ifdef HITLS_TLS_FEATURE_SNI
+    BSL_SAL_FREE(negotiatedInfo->serverName);
+#endif
     return;
 }
 #endif

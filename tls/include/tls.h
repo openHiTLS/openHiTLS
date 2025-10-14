@@ -241,6 +241,10 @@ typedef struct {
     bool isEncryptThenMacWrite;                    /* Whether to enable EncryptThenMacWrite */
     bool isTicket;                                 /* whether to negotiate tickets, only below tls1.3 */
     bool isSniStateOK;                             /* Whether server successfully processes the server_name callback */
+#ifdef HITLS_TLS_FEATURE_SNI
+    uint8_t *serverName;
+    uint32_t serverNameSize;
+#endif
 } TLS_NegotiatedInfo;
 
 typedef struct {

@@ -640,22 +640,23 @@ static int32_t ServerDealServerName(TLS_Ctx *ctx, const ClientHelloMsg *clientHe
     int alert = ALERT_UNRECOGNIZED_NAME;
     uint32_t serverNameSize = clientHello->extension.content.serverNameSize;
 
+    BSL_SAL_FREE(ctx->negotiatedInfo.serverName);
+    ctx->negotiatedInfo.serverNameSize = 0;
     if (clientHello->extension.flag.haveServerName == false) {
         return HITLS_SUCCESS;
     }
-
-    BSL_SAL_FREE(ctx->hsCtx->serverName);
-    ctx->hsCtx->serverName = (uint8_t *)BSL_SAL_Dump(clientHello->extension.content.serverName,
+    
+    ctx->negotiatedInfo.serverName = (uint8_t *)BSL_SAL_Dump(clientHello->extension.content.serverName,
         serverNameSize * sizeof(uint8_t));
 
-    if (ctx->hsCtx->serverName == NULL) {
+    if (ctx->negotiatedInfo.serverName == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15230, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "server_name malloc fail when parse extensions msg.", 0, 0, 0, 0);
         return HITLS_MEMCPY_FAIL;
     }
 
-    ctx->hsCtx->serverNameSize = serverNameSize;
+    ctx->negotiatedInfo.serverNameSize = serverNameSize;
 
     /* The product does not have the registered server_name callback processing function */
     if (ctx->globalConfig == NULL || ctx->globalConfig->sniDealCb == NULL) {

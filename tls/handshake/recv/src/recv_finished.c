@@ -113,7 +113,7 @@ static int32_t SessionConfig(TLS_Ctx *ctx)
     /* When the SNI negotiation is HITLS_ACCEPT_ERR_OK, save the client Hello server_name extension to the session
      * structure */
     if (ctx->negotiatedInfo.isSniStateOK && isTls13 == false) {
-        ret = SESS_SetHostName(ctx->session, hsCtx->serverNameSize, hsCtx->serverName);
+        ret = SESS_SetHostName(ctx->session, ctx->negotiatedInfo.serverNameSize, ctx->negotiatedInfo.serverName);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17076, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "SetHostName fail", 0, 0, 0, 0);

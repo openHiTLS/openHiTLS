@@ -106,12 +106,13 @@ static int32_t ClientCheckServerName(TLS_Ctx *ctx, const ServerHelloMsg *serverH
             ctx->config.tlsConfig.serverNameSize > 0) {
             /* The server negotiates the extension of the server_name of the client successfully */
             ctx->negotiatedInfo.isSniStateOK = true;
-            ctx->hsCtx->serverNameSize = ctx->config.tlsConfig.serverNameSize;
+            ctx->negotiatedInfo.serverNameSize = ctx->config.tlsConfig.serverNameSize;
 
-            BSL_SAL_FREE(ctx->hsCtx->serverName);
-            ctx->hsCtx->serverName =
-                (uint8_t *)BSL_SAL_Dump(ctx->config.tlsConfig.serverName, ctx->hsCtx->serverNameSize * sizeof(uint8_t));
-            if (ctx->hsCtx->serverName == NULL) {
+            BSL_SAL_FREE(ctx->negotiatedInfo.serverName);
+            ctx->negotiatedInfo.serverName =
+                (uint8_t *)BSL_SAL_Dump(ctx->config.tlsConfig.serverName,
+                    ctx->negotiatedInfo.serverNameSize * sizeof(uint8_t));
+            if (ctx->negotiatedInfo.serverName == NULL) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17082, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "Dump fail", 0, 0, 0, 0);
                 BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);

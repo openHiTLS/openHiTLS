@@ -178,9 +178,6 @@ void HS_DeInit(TLS_Ctx *ctx)
 #if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_PROTO_TLS13)
     BSL_SAL_FREE(hsCtx->sessionId);
 #endif /* HITLS_TLS_FEATURE_SESSION || HITLS_TLS_PROTO_TLS13 */
-#ifdef HITLS_TLS_FEATURE_SNI
-    BSL_SAL_FREE(hsCtx->serverName);
-#endif /* HITLS_TLS_FEATURE_SNI */
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
     BSL_SAL_FREE(hsCtx->ticket);
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */

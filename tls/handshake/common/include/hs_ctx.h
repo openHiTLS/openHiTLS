@@ -179,10 +179,6 @@ struct HsCtx {
     uint8_t *clientAlpnList;
     uint32_t clientAlpnListSize;
 #endif
-#ifdef HITLS_TLS_FEATURE_SNI
-    uint8_t *serverName;
-    uint32_t serverNameSize;
-#endif
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
     uint32_t ticketSize;
     uint8_t *ticket;
