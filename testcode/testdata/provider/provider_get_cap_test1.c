@@ -764,7 +764,8 @@ static int32_t TestCryptGetSigAlgCaps(CRYPT_EAL_ProcessFuncCb cb, void *args)
             BSL_PARAM_TYPE_UINT32,
             (void *)(uintptr_t)&(certVersionBits),
             sizeof(certVersionBits)
-        }
+        },
+        BSL_PARAM_END
     };
     return cb(param, args);
 }
