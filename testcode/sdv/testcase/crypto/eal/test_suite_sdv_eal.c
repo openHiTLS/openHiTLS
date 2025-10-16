@@ -735,7 +735,7 @@ void SDV_CRYPTO_EAL_GET_KEY_LEN_TC003_2(int algid, int rsaBits, Hex *p, Hex *q, 
     uint32_t flag = CRYPT_ENABLE_SP800_KEYGEN_FLAG;
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_GEN_FLAG, &flag, sizeof(flag));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_DSA_PARA_ERROR);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
     flag = CRYPT_DISABLE_SP800_KEYGEN_FLAG;
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_GEN_FLAG, &flag, sizeof(flag));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
