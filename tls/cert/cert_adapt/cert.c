@@ -170,6 +170,13 @@ static int32_t CheckSelectSignAlgorithms(TLS_Ctx *ctx, const SelectSignAlgorithm
             /* The signature algorithm must be the same as the algorithm configured on the peer end. */
             continue;
         }
+        if (info->keyType == TLS_CERT_KEY_TYPE_RSA_PSS) {
+            HITLS_HashAlgo hashAlgId = HITLS_HASH_BUTT;
+            (void)SAL_CERT_KeyCtrl(&ctx->config.tlsConfig, pubkey, CERT_KEY_CTRL_GET_PSS_MD, NULL, (void *)&hashAlgId);
+            if (hashAlgId != HITLS_HASH_BUTT && (int32_t)hashAlgId != info->hashAlgId) {
+                continue;
+            }
+        }
 #ifdef HITLS_TLS_FEATURE_SECURITY
         if (SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_SIGALG_CHECK, 0, baseSignAlgorithms[i],
             NULL) != SECURITY_SUCCESS) {

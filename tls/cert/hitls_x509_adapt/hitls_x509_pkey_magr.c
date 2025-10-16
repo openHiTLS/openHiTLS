@@ -204,6 +204,9 @@ int32_t HITLS_X509_Adapt_KeyCtrl(HITLS_Config *config, HITLS_CERT_Key *key, HITL
         case CERT_KEY_CTRL_GET_PARAM_ID:
             *(int32_t *)output = CRYPT_EAL_PkeyGetParaId(key);
             break;
+        case CERT_KEY_CTRL_GET_PSS_MD:
+            (void)CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MD, output, sizeof(CRYPT_MD_AlgId));
+            break;
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_ERR);
             ret = HITLS_CERT_SELF_ADAPT_ERR;
