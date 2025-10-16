@@ -27,6 +27,10 @@
 #include "app_print.h"
 #include "app_errno.h"
 #include "app_function.h"
+#include "app_provider.h"
+#include "app_sm.h"
+#include "app_list.h"
+#include "app_utils.h"
 
 #define MAX_RANDOM_LEN 4096
 
@@ -38,7 +42,23 @@ typedef enum OptionChoice {
     HITLS_APP_OPT_RAND_HEX = 2,
     HITLS_APP_OPT_RAND_BASE64,
     HITLS_APP_OPT_RAND_OUT,
+    HITLS_APP_OPT_RAND_ALGORITHM,
+    HITLS_APP_PROV_ENUM,
+#ifdef HITLS_APP_SM_MODE
+    HITLS_SM_OPTIONS_ENUM,
+#endif
 } HITLSOptType;
+
+typedef struct {
+    int32_t randNumLen;
+    char *outFile;
+    int32_t format;
+    int32_t algId;
+    AppProvider *provider;
+#ifdef HITLS_APP_SM_MODE
+    HITLS_APP_SM_Param *smParam;
+#endif
+} RandCmdOpt;
 
 HITLS_CmdOption g_randOpts[] = {
     {"help", HITLS_APP_OPT_RAND_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
@@ -46,53 +66,72 @@ HITLS_CmdOption g_randOpts[] = {
     {"base64", HITLS_APP_OPT_RAND_BASE64, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Base64-encoded output"},
     {"out", HITLS_APP_OPT_RAND_OUT, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output file"},
     {"numbytes", HITLS_APP_OPT_RAND_NUMBITS, HITLS_APP_OPT_VALUETYPE_PARAMTERS, "Random byte length"},
+    {"algorithm", HITLS_APP_OPT_RAND_ALGORITHM, HITLS_APP_OPT_VALUETYPE_STRING, "Random algorithm"},
+    HITLS_APP_PROV_OPTIONS,
+#ifdef HITLS_APP_SM_MODE
+    HITLS_SM_OPTIONS,
+#endif
     {NULL}};
-static int32_t OptParse(char **outfile, int32_t *format);
-static int32_t RandNumOut(int32_t randNumLen, char *outfile, int format);
+
+static int32_t OptParse(RandCmdOpt *randCmdOpt);
+static int32_t RandNumOut(RandCmdOpt *randCmdOpt);
+
+static int32_t GetRandNumLen(int32_t *randNumLen)
+{
+    int unParseParamNum = HITLS_APP_GetRestOptNum();
+    char** unParseParam = HITLS_APP_GetRestOpt();
+    if (unParseParamNum != 1) {
+        (void)AppPrintError("rand: Extra arguments given.\n");
+        return HITLS_APP_OPT_UNKOWN;
+    }
+    int32_t ret = HITLS_APP_OptGetInt(unParseParam[0], randNumLen);
+    if (ret != HITLS_APP_SUCCESS || *randNumLen <= 0) {
+        (void)AppPrintError("rand: Valid Range[1, 2147483647]\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    return HITLS_APP_SUCCESS;
+}
 
 int32_t HITLS_RandMain(int argc, char **argv)
 {
-    char *outfile = NULL;                      // output file name
-    int32_t format = HITLS_APP_FORMAT_BINARY;  // default binary output
-    int32_t randNumLen = 0;                    // length of the random number entered by the user
     int32_t mainRet = HITLS_APP_SUCCESS;       // return value of the main function
+    AppProvider appProvider = {NULL, NULL, NULL};
+#ifdef HITLS_APP_SM_MODE
+    HITLS_APP_SM_Param smParam = {NULL, 0, NULL, NULL, 0, HITLS_APP_SM_STATUS_OPEN};
+    AppInitParam initParam = {CRYPT_RAND_SHA256, &appProvider, &smParam};
+    RandCmdOpt randCmdOpt = {0, NULL, HITLS_APP_FORMAT_BINARY, CRYPT_RAND_SHA256, &appProvider, &smParam};
+#else
+    AppInitParam initParam = {CRYPT_RAND_SHA256, &appProvider};
+    RandCmdOpt randCmdOpt = {0, NULL, HITLS_APP_FORMAT_BINARY, CRYPT_RAND_SHA256, &appProvider};
+#endif
     mainRet = HITLS_APP_OptBegin(argc, argv, g_randOpts);
     if (mainRet != HITLS_APP_SUCCESS) {
         goto end;
     }
-    mainRet = OptParse(&outfile, &format);
+
+    mainRet = OptParse(&randCmdOpt);
     if (mainRet != HITLS_APP_SUCCESS) {
         goto end;
     }
-    // 获取用户输入即要生成的随机数长度
-    int unParseParamNum = HITLS_APP_GetRestOptNum();
-    char** unParseParam = HITLS_APP_GetRestOpt();
-    if (unParseParamNum != 1) {
-        (void)AppPrintError("Extra arguments given.\n");
-        (void)AppPrintError("rand: Use -help for summary.\n");
-        mainRet = HITLS_APP_OPT_UNKOWN;
-        goto end;
-    } else {
-        mainRet = HITLS_APP_OptGetInt(unParseParam[0], &randNumLen);
-        if (mainRet != HITLS_APP_SUCCESS || randNumLen <= 0) {
-            mainRet = HITLS_APP_OPT_VALUE_INVALID;
-            (void)AppPrintError("Valid Range[1, 2147483647]\n");
-            goto end;
-        }
-    }
-    if (CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_AES128_CTR,
-        "provider=default", NULL, 0, NULL) != CRYPT_SUCCESS) {
-        mainRet = HITLS_APP_CRYPTO_FAIL;
+    initParam.randAlgId = randCmdOpt.algId;
+    // GET the length of the random number to be generated.
+    mainRet = GetRandNumLen(&randCmdOpt.randNumLen);
+    if (mainRet != HITLS_APP_SUCCESS) {
         goto end;
     }
-    mainRet = RandNumOut(randNumLen, outfile, format);
+    mainRet = HITLS_APP_Init(&initParam);
+    if (mainRet != HITLS_APP_SUCCESS) {
+        (void)AppPrintError("rand: Failed to init, errCode: 0x%x.\n", mainRet);
+        goto end;
+    }
+    mainRet = RandNumOut(&randCmdOpt);
 end:
-    CRYPT_EAL_RandDeinitEx(NULL);
+    HITLS_APP_Deinit(&initParam, mainRet);
     HITLS_APP_OptEnd();
     return mainRet;
 }
 
-static int32_t OptParse(char **outfile, int32_t *format)
+static int32_t OptParse(RandCmdOpt *randCmdOpt)
 {
     HITLSOptType optType;
     int ret = HITLS_APP_SUCCESS;
@@ -109,66 +148,91 @@ static int32_t OptParse(char **outfile, int32_t *format)
                 (void)HITLS_APP_OptHelpPrint(g_randOpts);
                 return ret;
             case HITLS_APP_OPT_RAND_OUT:
-                *outfile = HITLS_APP_OptGetValueStr();
-                if (*outfile == NULL || strlen(*outfile) >= PATH_MAX) {
-                    AppPrintError("The length of outfile error, range is (0, 4096).\n");
+                randCmdOpt->outFile = HITLS_APP_OptGetValueStr();
+                if (randCmdOpt->outFile == NULL || strlen(randCmdOpt->outFile) >= PATH_MAX) {
+                    AppPrintError("rand: The length of outfile error, range is (0, 4096).\n");
                     return HITLS_APP_OPT_VALUE_INVALID;
                 }
                 break;
             case HITLS_APP_OPT_RAND_BASE64:
-                *format = HITLS_APP_FORMAT_BASE64;
+                randCmdOpt->format = HITLS_APP_FORMAT_BASE64;
                 break;
             case HITLS_APP_OPT_RAND_HEX:
-                *format = HITLS_APP_FORMAT_HEX;
+                randCmdOpt->format = HITLS_APP_FORMAT_HEX;
+                break;
+            case HITLS_APP_OPT_RAND_ALGORITHM:
+                randCmdOpt->algId = HITLS_APP_GetCidByName(HITLS_APP_OptGetValueStr(), HITLS_APP_LIST_OPT_RAND_ALG);
+                if (randCmdOpt->algId == BSL_CID_UNKNOWN) {
+                    AppPrintError("rand: The algorithm is not supported.\n");
+                    return HITLS_APP_OPT_VALUE_INVALID;
+                }
                 break;
             default:
                 break;
         }
+        HITLS_APP_PROV_CASES(optType, randCmdOpt->provider);
+#ifdef HITLS_APP_SM_MODE
+        HITLS_APP_SM_CASES(optType, randCmdOpt->smParam);
+#endif
     }
+#ifdef HITLS_APP_SM_MODE
+    if (randCmdOpt->smParam->smTag == 1 && randCmdOpt->smParam->workPath == NULL) {
+        AppPrintError("rand: The workpath is not specified.\n");
+        return HITLS_APP_INVALID_ARG;
+    }
+#endif
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t RandNumOut(int32_t randNumLen, char *outfile, int format)
+static int32_t RandNumOut(RandCmdOpt *randCmdOpt)
 {
+#ifdef HITLS_APP_SM_MODE
+    if (randCmdOpt->smParam->smTag == 1) {
+        randCmdOpt->smParam->status = HITLS_APP_SM_STATUS_APPORVED;
+    }
+#endif
     int ret = HITLS_APP_SUCCESS;
     BSL_UIO *uio;
-    uio = HITLS_APP_UioOpen(outfile, 'w', 0);
+    uio = HITLS_APP_UioOpen(randCmdOpt->outFile, 'w', 0);
     if (uio == NULL) {
         return HITLS_APP_UIO_FAIL;
     }
-    if (outfile != NULL) {
+    if (randCmdOpt->outFile != NULL) {
         BSL_UIO_SetIsUnderlyingClosedByUio(uio, true);
     }
+    int32_t randNumLen = randCmdOpt->randNumLen;
+    uint8_t outBuf[MAX_RANDOM_LEN] = {0};
+    uint32_t outLen = 0;
     while (randNumLen > 0) {
-        uint8_t outBuf[MAX_RANDOM_LEN] = {0};
-        uint32_t outLen = randNumLen;
-        if (outLen > MAX_RANDOM_LEN) {
-            outLen = MAX_RANDOM_LEN;
-        }
-        int32_t randRet = CRYPT_EAL_RandbytesEx(NULL, outBuf, outLen);
+        outLen = randNumLen > MAX_RANDOM_LEN ? MAX_RANDOM_LEN : randNumLen;
+        int32_t randRet = CRYPT_EAL_RandbytesEx(APP_GetCurrent_LibCtx(), outBuf, outLen);
         if (randRet != CRYPT_SUCCESS) {
             BSL_UIO_Free(uio);
-            (void)AppPrintError("Failed to generate a random number.\n");
+            BSL_SAL_CleanseData(outBuf, sizeof(outBuf));
+            (void)AppPrintError("rand: Failed to generate random number, randRet: 0x%x\n", randRet);
             return HITLS_APP_CRYPTO_FAIL;
         }
-        ret = HITLS_APP_OptWriteUio(uio, outBuf, outLen, format);
+        ret = HITLS_APP_OptWriteUio(uio, outBuf, outLen, randCmdOpt->format);
         if (ret != HITLS_APP_SUCCESS) {
             BSL_UIO_Free(uio);
+            BSL_SAL_CleanseData(outBuf, outLen);
             return ret;
         }
         randNumLen -= outLen;
-        if (format != HITLS_APP_FORMAT_BINARY && randNumLen == 0) {
+        if (randCmdOpt->format != HITLS_APP_FORMAT_BINARY && randNumLen == 0) {
             char buf[1] = {'\n'};  // Enter a newline character at the end.
             uint32_t bufLen = 1;
             uint32_t writeLen = 0;
             ret = BSL_UIO_Write(uio, buf, bufLen, &writeLen);
             if (ret != BSL_SUCCESS) {
                 BSL_UIO_Free(uio);
-                (void)AppPrintError("Failed to enter the newline character\n");
-                return ret;
+                BSL_SAL_CleanseData(outBuf, outLen);
+                (void)AppPrintError("rand: Failed to enter the newline character, errCode: 0x%x.\n", ret);
+                return HITLS_APP_UIO_FAIL;
             }
         }
     }
     BSL_UIO_Free(uio);
+    BSL_SAL_CleanseData(outBuf, outLen);
     return HITLS_APP_SUCCESS;
 }

@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 HITLS_Config *CreateConfig(void);
-#ifdef HITLS_TLS_PROTO_ALL
+#ifdef HITLS_TLS_CONFIG_VERSION
 /* provide default configuration */
 int32_t DefaultTlsAllConfig(HITLS_Config *config);
 #endif

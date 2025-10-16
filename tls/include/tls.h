@@ -22,7 +22,6 @@
 #include "cipher_suite.h"
 #include "tls_config.h"
 #include "hitls_error.h"
-#include "custom_extensions.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,6 +43,7 @@ extern "C" {
 #define IS_SUPPORT_STREAM(versionBits) (((versionBits) & STREAM_VERSION_BITS) != 0x0u)
 #define IS_SUPPORT_DATAGRAM(versionBits) (((versionBits) & DATAGRAM_VERSION_BITS) != 0x0u)
 #define IS_SUPPORT_TLCP(versionBits) (((versionBits) & TLCP_VERSION_BITS) != 0x0u)
+#define IS_SUPPORT_TLS(versionBits) (((versionBits) & TLS_VERSION_MASK) != 0x0u)
 
 #define DTLS_COOKIE_LEN 255
 
@@ -241,6 +241,10 @@ typedef struct {
     bool isEncryptThenMacWrite;                    /* Whether to enable EncryptThenMacWrite */
     bool isTicket;                                 /* whether to negotiate tickets, only below tls1.3 */
     bool isSniStateOK;                             /* Whether server successfully processes the server_name callback */
+#ifdef HITLS_TLS_FEATURE_SNI
+    uint8_t *serverName;
+    uint32_t serverNameSize;
+#endif
 } TLS_NegotiatedInfo;
 
 typedef struct {
@@ -311,6 +315,12 @@ struct TlsCtx {
     bool needQueryMtu;                      /* whether need query mtu from bio */
     bool mtuModified;                       /* whether mtu has been modified */
 };
+
+typedef struct {
+    uint8_t **buf;       // &hsCtx->msgbuf
+    uint32_t *bufLen;    // &hsCtx->bufferLen
+    uint32_t *bufOffset; // &hsCtx->msgLen
+} PackPacket;
 
 #define LIBCTX_FROM_CTX(ctx) ((ctx == NULL) ? NULL : (ctx)->config.tlsConfig.libCtx)
 #define ATTRIBUTE_FROM_CTX(ctx) ((ctx == NULL) ? NULL : (ctx)->config.tlsConfig.attrName)

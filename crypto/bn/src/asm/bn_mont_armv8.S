@@ -47,7 +47,6 @@
 #include "crypt_arm.h"
 
 .arch   armv8-a+crypto
-.file   "bn_mont_armv8.S"
 .text
 
 .global MontMul_Asm

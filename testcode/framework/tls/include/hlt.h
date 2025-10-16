@@ -51,11 +51,13 @@ int HLT_SetLegacyRenegotiateSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetClientRenegotiateSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetEmptyRecordsNum(HLT_Ctx_Config *ctxConfig, uint32_t emptyNum);
 int HLT_SetFlightTransmitSwitch(HLT_Ctx_Config *ctxConfig, bool support);
+int HLT_SetKeyLogCb(HLT_Ctx_Config *ctxConfig, char *SetKeyLogCb);
 int HLT_SetClientVerifySupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetNoClientCertSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetPostHandshakeAuth(HLT_Ctx_Config *ctxConfig, bool support);
 int HLT_SetExtenedMasterSecretSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetEncryptThenMac(HLT_Ctx_Config *ctxConfig, int support);
+int HLT_SetMiddleBoxCompat(HLT_Ctx_Config *ctxConfig, int support);
 int HLT_SetModeSupport(HLT_Ctx_Config *ctxConfig, uint32_t mode);
 int HLT_SetCipherSuites(HLT_Ctx_Config* ctxConfig, const char* cipherSuites);
 int HLT_SetProviderPath(HLT_Ctx_Config *ctxConfig, char *providerPath);
@@ -90,6 +92,7 @@ void HLT_CleanFrameHandle(void);
 int HLT_FreeResFromSsl(const void *ssl);
 int HLT_SetClientHelloCb(HLT_Ctx_Config *ctxConfig, HITLS_ClientHelloCb callback, void *arg);
 int HLT_SetCertCb(HLT_Ctx_Config *ctxConfig, HITLS_CertCb certCb, void *arg);
+int HLT_SetCAList(HLT_Ctx_Config *ctxConfig, HITLS_TrustedCAList *caList);
 // General initialization interface
 int HLT_LibraryInit(TLS_TYPE tlsType);
 

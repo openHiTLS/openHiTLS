@@ -117,13 +117,14 @@ typedef struct {
  * @brief Apply for a context for the DRBG.
  * @brief This API does not support multiple threads.
  *
+ * @param libCtx    Library context
  * @param algId     Algorithm ID for the DRBG
  * @param param     DRBG parameters
  *
  * @retval DRBG_Ctx* Success
  * @retval NULL      Failure
  */
-DRBG_Ctx *DRBG_New(int32_t algId, BSL_Param *param);
+DRBG_Ctx *DRBG_New(void *libCtx, int32_t algId, BSL_Param *param);
 
 /**
  * @ingroup drbg

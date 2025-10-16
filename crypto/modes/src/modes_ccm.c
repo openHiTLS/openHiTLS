@@ -536,6 +536,12 @@ MODES_CCM_Ctx *MODES_CCM_NewCtx(int32_t algId)
     return ctx;
 }
 
+MODES_CCM_Ctx *MODES_CCM_NewCtxEx(void *libCtx, int32_t algId)
+{
+    (void)libCtx;
+    return MODES_CCM_NewCtx(algId);
+}
+
 int32_t MODES_CCM_InitCtx(MODES_CCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, void *param, bool enc)
 {

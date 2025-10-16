@@ -401,10 +401,13 @@ int32_t SAL_CERT_AddExtraChainCert(CERT_MgrCtx *mgrCtx, HITLS_CERT_X509 *cert)
     return HITLS_SUCCESS;
 }
 
-HITLS_CERT_Chain *SAL_CERT_GetExtraChainCerts(CERT_MgrCtx *mgrCtx)
+HITLS_CERT_Chain *SAL_CERT_GetExtraChainCerts(CERT_MgrCtx *mgrCtx, bool isExtraChainCertsOnly)
 {
     if (mgrCtx == NULL) {
         return NULL;
+    }
+    if (mgrCtx->extraChain == NULL && !isExtraChainCertsOnly) {
+        return SAL_CERT_GetCurrentChainCerts(mgrCtx);
     }
 
     return mgrCtx->extraChain;
@@ -425,23 +428,24 @@ void SAL_CERT_ClearExtraChainCerts(CERT_MgrCtx *mgrCtx)
     return;
 }
 
-int32_t SAL_CERT_SetVerifyDepth(CERT_MgrCtx *mgrCtx, uint32_t depth)
+int32_t SAL_CERT_CtrlVerifyParams(HITLS_Config *config, HITLS_CERT_Store *store, uint32_t cmd, void *in, void *out)
 {
+    CERT_MgrCtx *mgrCtx = config->certMgrCtx;
     if (mgrCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
-    mgrCtx->verifyParam.verifyDepth = depth;
-    return HITLS_SUCCESS;
-}
-
-int32_t SAL_CERT_GetVerifyDepth(CERT_MgrCtx *mgrCtx, uint32_t *depth)
-{
-    if (mgrCtx == NULL || depth == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
-        return HITLS_NULL_INPUT;
+    HITLS_CERT_Store *tempStore = store;
+    if (tempStore == NULL) {
+        tempStore = (mgrCtx->verifyStore != NULL) ? mgrCtx->verifyStore : mgrCtx->certStore;
+        if (tempStore == NULL) {
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_NULL_INPUT, BINLOG_ID15327, "store is null");
+        }
     }
-    *depth = mgrCtx->verifyParam.verifyDepth;
+    int32_t ret = SAL_CERT_StoreCtrl(config, tempStore, cmd, in, out);
+    if (ret != HITLS_SUCCESS) {
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15326, "SAL_CERT_StoreCtrl fail");
+    }
     return HITLS_SUCCESS;
 }
 
@@ -481,6 +485,7 @@ void *SAL_CERT_GetDefaultPasswordCbUserdata(CERT_MgrCtx *mgrCtx)
     return mgrCtx->defaultPasswdCbUserData;
 }
 
+#ifdef HITLS_TLS_CONFIG_CERT_CALLBACK
 int32_t SAL_CERT_SetVerifyCb(CERT_MgrCtx *mgrCtx, HITLS_VerifyCb cb)
 {
     if (mgrCtx == NULL) {
@@ -498,6 +503,8 @@ HITLS_VerifyCb SAL_CERT_GetVerifyCb(CERT_MgrCtx *mgrCtx)
     }
     return mgrCtx->verifyCb;
 }
+#endif /* HITLS_TLS_CONFIG_CERT_CALLBACK */
+
 #ifdef HITLS_TLS_FEATURE_CERT_CB
 int32_t SAL_CERT_SetCertCb(CERT_MgrCtx *mgrCtx, HITLS_CertCb certCb, void *arg)
 {

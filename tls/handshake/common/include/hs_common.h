@@ -219,10 +219,11 @@ bool GroupConformToVersion(const TLS_Ctx *ctx, uint16_t version, uint16_t group)
  *
  * @param   ctx [IN] TLS context
  * @param   cipherSuite  [IN] cipherSuite
+ * @param   checkNegoVersion  [IN] whether need negotiated version check
  *
  * @return  true: valid; false: invalid
  */
-bool IsCipherSuiteAllowed(const HITLS_Ctx *ctx, uint16_t cipherSuite);
+bool IsCipherSuiteAllowed(const HITLS_Ctx *ctx, uint16_t cipherSuite, bool checkNegoVersion);
 
 uint16_t *CheckSupportSignAlgorithms(const TLS_Ctx *ctx, const uint16_t *signAlgorithms,
     uint32_t signAlgorithmsSize, uint32_t *newSignAlgorithmsSize);

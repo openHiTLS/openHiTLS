@@ -26,18 +26,11 @@
 #include "crypt_types.h"
 #include "bsl_sal.h"
 #include "bsl_params.h"
+#include "crypt_eal_implprovider.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
-typedef struct {
-    int32_t id;
-    void *func;
-} CRYPT_EAL_Func;
-
-/* The hitls framework generates context for each provider */
-typedef struct EAL_ProviderMgrCtx CRYPT_EAL_ProvMgrCtx;
 
 /**
  * @ingroup crypt_eal_provider
@@ -80,6 +73,37 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
 
 /**
  * @ingroup crypt_eal_provider
+ * @brief Provider register interface
+ *
+ * @param libCtx [IN] Library context
+ * @param providerName [IN] provider name
+ * @param init [IN] Provider initialization function
+ * @param param [IN] parameter is transparently passed to the initialization function of the underlying provider
+ * @param mgrCtx [OUT] Provider context
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ *         Other error codes see the crypt_errno.h
+*/
+int32_t CRYPT_EAL_ProviderRegister(CRYPT_EAL_LibCtx *libCtx, const char *providerName, CRYPT_EAL_ImplProviderInit init,
+    BSL_Param *param, CRYPT_EAL_ProvMgrCtx **mgrCtx);
+
+/**
+ * @ingroup crypt_eal_provider
+ * @brief Check if the provider is loaded
+ *
+ * @param libCtx [IN] Library context
+ * @param cmd [IN] Command specifying the conversion format for the provider library name.
+ * @param providerName [IN] provider name
+ * @param isLoaded [OUT] Whether the provider is loaded
+ *
+ * @retval #CRYPT_SUCCESS, if success.
+ *         Other error codes see the crypt_errno.h
+ */
+int32_t CRYPT_EAL_ProviderIsLoaded(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd, const char *providerName,
+    bool *isLoaded);
+
+/**
+ * @ingroup crypt_eal_provider
  * @brief Control provider interface
  *
  * @param ctx [IN] Provider context
@@ -91,17 +115,6 @@ int32_t CRYPT_EAL_ProviderLoad(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd,
  *         Other error codes see the crypt_errno.h
 */
 int32_t CRYPT_EAL_ProviderCtrl(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, void *val, uint32_t valLen);
-
-/**
- * @brief Callback function type for processing provider capabilities
- *
- * @param params [IN] Parameters containing capability information
- * @param args [IN] User-provided arguments for capability processing
- *
- * @retval #CRYPT_SUCCESS if processing succeeds
- *         Other error codes see the crypt_errno.h
- */
-typedef int32_t (*CRYPT_EAL_ProcessFuncCb)(const BSL_Param *params, void *args);
 
 /**
  * @ingroup crypt_eal_provider

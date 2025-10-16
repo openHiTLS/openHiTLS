@@ -22,7 +22,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "crypt_types.h"
+
+#ifdef HITLS_CRYPTO_PROVIDER
 #include "bsl_params.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,86 +71,108 @@ typedef CRYPT_SHA3_Ctx CRYPT_SHA3_512_Ctx;
 typedef CRYPT_SHA3_Ctx CRYPT_SHAKE128_Ctx;
 
 typedef CRYPT_SHA3_Ctx CRYPT_SHAKE256_Ctx;
-// new context
-CRYPT_SHA3_224_Ctx *CRYPT_SHA3_224_NewCtx(void);
-CRYPT_SHA3_256_Ctx *CRYPT_SHA3_256_NewCtx(void);
-CRYPT_SHA3_384_Ctx *CRYPT_SHA3_384_NewCtx(void);
-CRYPT_SHA3_512_Ctx *CRYPT_SHA3_512_NewCtx(void);
-CRYPT_SHAKE128_Ctx *CRYPT_SHAKE128_NewCtx(void);
-CRYPT_SHAKE256_Ctx *CRYPT_SHAKE256_NewCtx(void);
 
-// free context
-void CRYPT_SHA3_224_FreeCtx(CRYPT_SHA3_224_Ctx* ctx);
-void CRYPT_SHA3_256_FreeCtx(CRYPT_SHA3_256_Ctx* ctx);
-void CRYPT_SHA3_384_FreeCtx(CRYPT_SHA3_384_Ctx* ctx);
-void CRYPT_SHA3_512_FreeCtx(CRYPT_SHA3_512_Ctx* ctx);
-void CRYPT_SHAKE128_FreeCtx(CRYPT_SHAKE128_Ctx* ctx);
-void CRYPT_SHAKE256_FreeCtx(CRYPT_SHAKE256_Ctx* ctx);
+CRYPT_SHA3_Ctx *CRYPT_SHA3_NewCtx(void);
+#define CRYPT_SHA3_224_NewCtx CRYPT_SHA3_NewCtx
+#define CRYPT_SHA3_256_NewCtx CRYPT_SHA3_NewCtx
+#define CRYPT_SHA3_384_NewCtx CRYPT_SHA3_NewCtx
+#define CRYPT_SHA3_512_NewCtx CRYPT_SHA3_NewCtx
+#define CRYPT_SHAKE128_NewCtx CRYPT_SHA3_NewCtx
+#define CRYPT_SHAKE256_NewCtx CRYPT_SHA3_NewCtx
 
-// free context
+CRYPT_SHA3_Ctx *CRYPT_SHA3_NewCtxEx(void *libCtx, int32_t algId);
+#define CRYPT_SHA3_224_NewCtxEx CRYPT_SHA3_NewCtxEx
+#define CRYPT_SHA3_256_NewCtxEx CRYPT_SHA3_NewCtxEx
+#define CRYPT_SHA3_384_NewCtxEx CRYPT_SHA3_NewCtxEx
+#define CRYPT_SHA3_512_NewCtxEx CRYPT_SHA3_NewCtxEx
+#define CRYPT_SHAKE128_NewCtxEx CRYPT_SHA3_NewCtxEx
+#define CRYPT_SHAKE256_NewCtxEx CRYPT_SHA3_NewCtxEx
+
+void CRYPT_SHA3_FreeCtx(CRYPT_SHA3_Ctx *ctx);
+#define CRYPT_SHA3_224_FreeCtx CRYPT_SHA3_FreeCtx
+#define CRYPT_SHA3_256_FreeCtx CRYPT_SHA3_FreeCtx
+#define CRYPT_SHA3_384_FreeCtx CRYPT_SHA3_FreeCtx
+#define CRYPT_SHA3_512_FreeCtx CRYPT_SHA3_FreeCtx
+#define CRYPT_SHAKE128_FreeCtx CRYPT_SHA3_FreeCtx
+#define CRYPT_SHAKE256_FreeCtx CRYPT_SHA3_FreeCtx
 
 // Initialize the context
 int32_t CRYPT_SHA3_224_Init(CRYPT_SHA3_224_Ctx *ctx, BSL_Param *param);
-
 int32_t CRYPT_SHA3_256_Init(CRYPT_SHA3_256_Ctx *ctx, BSL_Param *param);
-
 int32_t CRYPT_SHA3_384_Init(CRYPT_SHA3_384_Ctx *ctx, BSL_Param *param);
-
 int32_t CRYPT_SHA3_512_Init(CRYPT_SHA3_512_Ctx *ctx, BSL_Param *param);
 int32_t CRYPT_SHAKE128_Init(CRYPT_SHAKE128_Ctx *ctx, BSL_Param *param);
 int32_t CRYPT_SHAKE256_Init(CRYPT_SHAKE256_Ctx *ctx, BSL_Param *param);
 
 // Data update API
-int32_t CRYPT_SHA3_224_Update(CRYPT_SHA3_224_Ctx *ctx, const uint8_t *in, uint32_t len);
-
-int32_t CRYPT_SHA3_256_Update(CRYPT_SHA3_256_Ctx *ctx, const uint8_t *in, uint32_t len);
-
-int32_t CRYPT_SHA3_384_Update(CRYPT_SHA3_384_Ctx *ctx, const uint8_t *in, uint32_t len);
-
-int32_t CRYPT_SHA3_512_Update(CRYPT_SHA3_512_Ctx *ctx, const uint8_t *in, uint32_t len);
-int32_t CRYPT_SHAKE128_Update(CRYPT_SHAKE128_Ctx *ctx, const uint8_t *in, uint32_t len);
-int32_t CRYPT_SHAKE256_Update(CRYPT_SHAKE256_Ctx *ctx, const uint8_t *in, uint32_t len);
+int32_t CRYPT_SHA3_Update(CRYPT_SHA3_Ctx *ctx, const uint8_t *in, uint32_t len);
+#define CRYPT_SHA3_224_Update CRYPT_SHA3_Update
+#define CRYPT_SHA3_256_Update CRYPT_SHA3_Update
+#define CRYPT_SHA3_384_Update CRYPT_SHA3_Update
+#define CRYPT_SHA3_512_Update CRYPT_SHA3_Update
+#define CRYPT_SHAKE128_Update CRYPT_SHA3_Update
+#define CRYPT_SHAKE256_Update CRYPT_SHA3_Update
 
 // Padding and output the digest value
-int32_t CRYPT_SHA3_224_Final(CRYPT_SHA3_224_Ctx *ctx, uint8_t *out, uint32_t *len);
+int32_t CRYPT_SHA3_Final(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t *len);
+#define CRYPT_SHA3_224_Final CRYPT_SHA3_Final
+#define CRYPT_SHA3_256_Final CRYPT_SHA3_Final
+#define CRYPT_SHA3_384_Final CRYPT_SHA3_Final
+#define CRYPT_SHA3_512_Final CRYPT_SHA3_Final
+#define CRYPT_SHAKE128_Final CRYPT_SHA3_Final
+#define CRYPT_SHAKE256_Final CRYPT_SHA3_Final
 
-int32_t CRYPT_SHA3_256_Final(CRYPT_SHA3_256_Ctx *ctx, uint8_t *out, uint32_t *len);
-
-int32_t CRYPT_SHA3_384_Final(CRYPT_SHA3_384_Ctx *ctx, uint8_t *out, uint32_t *len);
-
-int32_t CRYPT_SHA3_512_Final(CRYPT_SHA3_512_Ctx *ctx, uint8_t *out, uint32_t *len);
-int32_t CRYPT_SHAKE128_Final(CRYPT_SHAKE128_Ctx *ctx, uint8_t *out, uint32_t *len);
-int32_t CRYPT_SHAKE256_Final(CRYPT_SHAKE256_Ctx *ctx, uint8_t *out, uint32_t *len);
-
-int32_t CRYPT_SHAKE128_Squeeze(CRYPT_SHAKE128_Ctx *ctx, uint8_t *out, uint32_t len);
-int32_t CRYPT_SHAKE256_Squeeze(CRYPT_SHAKE256_Ctx *ctx, uint8_t *out, uint32_t len);
+int32_t CRYPT_SHA3_Squeeze(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t len);
+#define CRYPT_SHA3_224_Squeeze NULL
+#define CRYPT_SHA3_256_Squeeze NULL
+#define CRYPT_SHA3_384_Squeeze NULL
+#define CRYPT_SHA3_512_Squeeze NULL
+#define CRYPT_SHAKE128_Squeeze CRYPT_SHA3_Squeeze
+#define CRYPT_SHAKE256_Squeeze CRYPT_SHA3_Squeeze
 
 // Clear the context
-void CRYPT_SHA3_224_Deinit(CRYPT_SHA3_224_Ctx *ctx);
-
-void CRYPT_SHA3_256_Deinit(CRYPT_SHA3_256_Ctx *ctx);
-
-void CRYPT_SHA3_384_Deinit(CRYPT_SHA3_384_Ctx *ctx);
-
-void CRYPT_SHA3_512_Deinit(CRYPT_SHA3_512_Ctx *ctx);
-void CRYPT_SHAKE128_Deinit(CRYPT_SHAKE128_Ctx *ctx);
-void CRYPT_SHAKE256_Deinit(CRYPT_SHAKE256_Ctx *ctx);
+int32_t CRYPT_SHA3_Deinit(CRYPT_SHA3_Ctx *ctx);
+#define CRYPT_SHA3_224_Deinit CRYPT_SHA3_Deinit
+#define CRYPT_SHA3_256_Deinit CRYPT_SHA3_Deinit
+#define CRYPT_SHA3_384_Deinit CRYPT_SHA3_Deinit
+#define CRYPT_SHA3_512_Deinit CRYPT_SHA3_Deinit
+#define CRYPT_SHAKE128_Deinit CRYPT_SHA3_Deinit
+#define CRYPT_SHAKE256_Deinit CRYPT_SHA3_Deinit
 
 // Copy the context
-int32_t CRYPT_SHA3_224_CopyCtx(CRYPT_SHA3_224_Ctx *dst, const CRYPT_SHA3_224_Ctx *src);
-int32_t CRYPT_SHA3_256_CopyCtx(CRYPT_SHA3_256_Ctx *dst, const CRYPT_SHA3_256_Ctx *src);
-int32_t CRYPT_SHA3_384_CopyCtx(CRYPT_SHA3_384_Ctx *dst, const CRYPT_SHA3_384_Ctx *src);
-int32_t CRYPT_SHA3_512_CopyCtx(CRYPT_SHA3_512_Ctx *dst, const CRYPT_SHA3_512_Ctx *src);
-int32_t CRYPT_SHAKE128_CopyCtx(CRYPT_SHA3_384_Ctx *dst, const CRYPT_SHA3_384_Ctx *src);
-int32_t CRYPT_SHAKE256_CopyCtx(CRYPT_SHA3_512_Ctx *dst, const CRYPT_SHA3_512_Ctx *src);
+int32_t CRYPT_SHA3_CopyCtx(CRYPT_SHA3_Ctx *dst, const CRYPT_SHA3_Ctx *src);
+#define CRYPT_SHA3_224_CopyCtx CRYPT_SHA3_CopyCtx
+#define CRYPT_SHA3_256_CopyCtx CRYPT_SHA3_CopyCtx
+#define CRYPT_SHA3_384_CopyCtx CRYPT_SHA3_CopyCtx
+#define CRYPT_SHA3_512_CopyCtx CRYPT_SHA3_CopyCtx
+#define CRYPT_SHAKE128_CopyCtx CRYPT_SHA3_CopyCtx
+#define CRYPT_SHAKE256_CopyCtx CRYPT_SHA3_CopyCtx
 
 // Dup the context
-CRYPT_SHA3_224_Ctx *CRYPT_SHA3_224_DupCtx(const CRYPT_SHA3_224_Ctx *src);
-CRYPT_SHA3_256_Ctx *CRYPT_SHA3_256_DupCtx(const CRYPT_SHA3_256_Ctx *src);
-CRYPT_SHA3_384_Ctx *CRYPT_SHA3_384_DupCtx(const CRYPT_SHA3_384_Ctx *src);
-CRYPT_SHA3_512_Ctx *CRYPT_SHA3_512_DupCtx(const CRYPT_SHA3_512_Ctx *src);
-CRYPT_SHA3_384_Ctx *CRYPT_SHAKE128_DupCtx(const CRYPT_SHA3_384_Ctx *src);
-CRYPT_SHA3_512_Ctx *CRYPT_SHAKE256_DupCtx(const CRYPT_SHA3_512_Ctx *src);
+CRYPT_SHA3_Ctx *CRYPT_SHA3_DupCtx(const CRYPT_SHA3_Ctx *src);
+#define CRYPT_SHA3_224_DupCtx CRYPT_SHA3_DupCtx
+#define CRYPT_SHA3_256_DupCtx CRYPT_SHA3_DupCtx
+#define CRYPT_SHA3_384_DupCtx CRYPT_SHA3_DupCtx
+#define CRYPT_SHA3_512_DupCtx CRYPT_SHA3_DupCtx
+#define CRYPT_SHAKE128_DupCtx CRYPT_SHA3_DupCtx
+#define CRYPT_SHAKE256_DupCtx CRYPT_SHA3_DupCtx
+
+#ifdef HITLS_CRYPTO_PROVIDER
+int32_t CRYPT_SHA3_224_GetParam(CRYPT_SHA3_224_Ctx *ctx, BSL_Param *param);
+int32_t CRYPT_SHA3_256_GetParam(CRYPT_SHA3_256_Ctx *ctx, BSL_Param *param);
+int32_t CRYPT_SHA3_384_GetParam(CRYPT_SHA3_384_Ctx *ctx, BSL_Param *param);
+int32_t CRYPT_SHA3_512_GetParam(CRYPT_SHA3_512_Ctx *ctx, BSL_Param *param);
+int32_t CRYPT_SHAKE128_GetParam(CRYPT_SHAKE128_Ctx *ctx, BSL_Param *param);
+int32_t CRYPT_SHAKE256_GetParam(CRYPT_SHAKE256_Ctx *ctx, BSL_Param *param);
+#else
+#define CRYPT_SHA3_224_GetParam NULL
+#define CRYPT_SHA3_256_GetParam NULL
+#define CRYPT_SHA3_384_GetParam NULL
+#define CRYPT_SHA3_512_GetParam NULL
+#define CRYPT_SHAKE128_GetParam NULL
+#define CRYPT_SHAKE256_GetParam NULL
+#endif
+
 #ifdef __cplusplus
 }
 #endif

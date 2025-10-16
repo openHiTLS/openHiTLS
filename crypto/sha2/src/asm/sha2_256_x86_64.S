@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SHA256
 
-.file   "sha2_256_x86_64.S"
 
 .set HashAddr, %rdi
 .set InAddr, %rsi

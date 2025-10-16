@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM4
 
-.file	"crypt_sm4_modes_macro_x86_64.s"
 
 .set	TMP0,%ymm8
 .set	TMP1,%ymm9

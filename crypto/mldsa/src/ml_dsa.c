@@ -19,6 +19,7 @@
 #include "crypt_errno.h"
 #include "crypt_util_rand.h"
 #include "crypt_utils.h"
+#include "crypt_algid.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "bsl_obj_internal.h"
@@ -27,19 +28,19 @@
 #include "eal_md_local.h"
 
 // These data from NIST.FIPS.204 Table 1 and Table 2.
-static const CRYPT_ML_DSA_Info MLDSA_PARAMETERTER_44 = {4, 4, 2, 39, 78, (1 << 17), ((MLDSA_Q - 1) / 88),
-    80, 128, 1312, 2560, 2420};
- 
-static const CRYPT_ML_DSA_Info MLDSA_PARAMETERTER_65 = {6, 5, 4, 49, 196, (1 << 19), ((MLDSA_Q - 1) / 32),
-    55, 192, 1952, 4032, 3309};
- 
-static const CRYPT_ML_DSA_Info MLDSA_PARAMETERTER_87 = {8, 7, 2, 60, 120, (1 << 19), ((MLDSA_Q - 1) / 32),
-    75, 256, 2592, 4896, 4627};
- 
+static const CRYPT_ML_DSA_Info MLDSA_PARAMETERTER_44 = {CRYPT_MLDSA_TYPE_MLDSA_44, 4,  4,   2,    39,   78,  (1 << 17),
+                                                        ((MLDSA_Q - 1) / 88),      80, 128, 1312, 2560, 2420};
+
+static const CRYPT_ML_DSA_Info MLDSA_PARAMETERTER_65 = {CRYPT_MLDSA_TYPE_MLDSA_65, 6,  5,   4,    49,   196, (1 << 19),
+                                                        ((MLDSA_Q - 1) / 32),      55, 192, 1952, 4032, 3309};
+
+static const CRYPT_ML_DSA_Info MLDSA_PARAMETERTER_87 = {CRYPT_MLDSA_TYPE_MLDSA_87, 8,  7,   2,    60,   120, (1 << 19),
+                                                        ((MLDSA_Q - 1) / 32),      75, 256, 2592, 4896, 4627};
+
 static const CRYPT_ML_DSA_Info *g_mldsaInfo[] = {&MLDSA_PARAMETERTER_44, &MLDSA_PARAMETERTER_65,
     &MLDSA_PARAMETERTER_87};
 
-const CRYPT_ML_DSA_Info *CRYPT_ML_DSA_GetInfo(uint32_t k)
+const CRYPT_ML_DSA_Info *CRYPT_ML_DSA_GetInfo(int32_t k)
 {
     if (k == CRYPT_MLDSA_TYPE_MLDSA_44) {
         return g_mldsaInfo[0];
@@ -62,6 +63,8 @@ CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_NewCtx(void)
     keyCtx->isMuMsg = false;
     keyCtx->deterministicSignFlag = false;
     keyCtx->needPreHash = false;
+    keyCtx->hasSeed = false;
+    keyCtx->prvKeyFormat = CRYPT_ALGO_MLDSA_PRIV_FORMAT_NOT_SET;
     BSL_SAL_ReferencesInit(&(keyCtx->references));
     return keyCtx;
 }
@@ -86,6 +89,7 @@ void CRYPT_ML_DSA_FreeCtx(CRYPT_ML_DSA_Ctx *ctx)
     if (ret > 0) {
         return;
     }
+    BSL_SAL_CleanseData(ctx->seed, MLDSA_SEED_BYTES_LEN);
     BSL_SAL_ClearFree(ctx->prvKey, ctx->prvLen);
     BSL_SAL_FREE(ctx->pubKey);
     BSL_SAL_FREE(ctx->ctxInfo);
@@ -115,6 +119,7 @@ CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_DupCtx(CRYPT_ML_DSA_Ctx *ctx)
     newCtx->isMuMsg = ctx->isMuMsg;
     newCtx->deterministicSignFlag = ctx->deterministicSignFlag;
     newCtx->needPreHash = ctx->needPreHash;
+    newCtx->libCtx = ctx->libCtx;
     return newCtx;
 ERR:
     CRYPT_ML_DSA_FreeCtx(newCtx);
@@ -139,9 +144,23 @@ static int32_t MlDSASetAlgInfo(CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
+static int32_t MlDSAGetParaId(CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
+{
+    if (len != sizeof(int32_t) || val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    if (ctx->info == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_CTRL_INIT_REPEATED);
+        return CRYPT_MLDSA_CTRL_INIT_REPEATED;
+    }
+    *(int32_t *)val = ctx->info->paramId;
+    return CRYPT_SUCCESS;
+}
+
 static int32_t MLDSAGetSignLen(const CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
 {
-    if (ctx == NULL || val == NULL) {
+    if (val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -159,7 +178,7 @@ static int32_t MLDSAGetSignLen(const CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t 
 
 static int32_t MLDSAGetSecBits(const CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
 {
-    if (ctx == NULL || val == NULL) {
+    if (val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -172,6 +191,48 @@ static int32_t MLDSAGetSecBits(const CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t 
         return CRYPT_INVALID_ARG;
     }
     *(int32_t *)val = ctx->info->secBits;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t MLDSAGetSeed(const CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
+{
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (!ctx->hasSeed) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_SEED_NOT_SET);
+        return CRYPT_MLDSA_SEED_NOT_SET;
+    }
+    if (len != MLDSA_SEED_BYTES_LEN) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    (void)memcpy_s(val, len, ctx->seed, MLDSA_SEED_BYTES_LEN);
+    return CRYPT_SUCCESS;
+}
+
+static int32_t MLDSASetPrvKeyFormat(CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
+{
+    if (len != sizeof(uint32_t) || val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    ctx->prvKeyFormat = *(uint32_t *)val;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t MLDSAGetPrvKeyFormat(const CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
+{
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (len != sizeof(uint32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    *(uint32_t *) val = ctx->prvKeyFormat;
     return CRYPT_SUCCESS;
 }
 
@@ -258,7 +319,17 @@ static int32_t MLDSAGetPrvKeyLen(const CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_ML_DSA_Ctrl(CRYPT_ML_DSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len)
+static int32_t MLDSACleanPubKey(CRYPT_ML_DSA_Ctx *ctx)
+{
+    if (ctx->pubKey != NULL) {
+        BSL_SAL_CleanseData(ctx->pubKey, ctx->pubLen);
+        BSL_SAL_FREE(ctx->pubKey);
+        ctx->pubLen = 0;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_ML_DSA_Ctrl(CRYPT_ML_DSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -267,6 +338,8 @@ int32_t CRYPT_ML_DSA_Ctrl(CRYPT_ML_DSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, 
     switch ((uint32_t)opt) {
         case CRYPT_CTRL_SET_PARA_BY_ID:
             return MlDSASetAlgInfo(ctx, val, len);
+        case CRYPT_CTRL_GET_PARAID:
+            return MlDSAGetParaId(ctx, val, len);
         case CRYPT_CTRL_GET_SIGNLEN:
             return MLDSAGetSignLen(ctx, val, len);
         case CRYPT_CTRL_GET_SECBITS:
@@ -285,6 +358,14 @@ int32_t CRYPT_ML_DSA_Ctrl(CRYPT_ML_DSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, 
             return MLDSAGetPubKeyLen(ctx, val, len);
         case CRYPT_CTRL_GET_PRVKEY_LEN:
             return MLDSAGetPrvKeyLen(ctx, val, len);
+        case CRYPT_CTRL_GET_MLDSA_SEED:
+            return MLDSAGetSeed(ctx, val, len);
+        case CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT:
+            return MLDSASetPrvKeyFormat(ctx, val, len);
+        case CRYPT_CTRL_GET_MLDSA_PRVKEY_FORMAT:
+            return MLDSAGetPrvKeyFormat(ctx, val, len);
+        case CRYPT_CTRL_CLEAN_PUB_KEY:
+            return MLDSACleanPubKey(ctx);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_CTRL_NOT_SUPPORT);
             return CRYPT_MLDSA_CTRL_NOT_SUPPORT;
@@ -392,13 +473,13 @@ int32_t CRYPT_ML_DSA_SetPrvKey(CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPrv *prv)
         BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_KEYINFO_NOT_SET);
         return CRYPT_MLDSA_KEYINFO_NOT_SET;
     }
-    if (prv->len != ctx->info->privateKeyLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_KEYLEN_ERROR);
-        return CRYPT_MLDSA_KEYLEN_ERROR;
-    }
     if (ctx->prvKey != NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_SET_KEY_FAILED);
         return CRYPT_MLDSA_SET_KEY_FAILED;
+    }
+    if (prv->len != ctx->info->privateKeyLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_KEYLEN_ERROR);
+        return CRYPT_MLDSA_KEYLEN_ERROR;
     }
     ctx->prvKey = BSL_SAL_Malloc(ctx->info->privateKeyLen);
     if (ctx->prvKey == NULL) {
@@ -411,15 +492,63 @@ int32_t CRYPT_ML_DSA_SetPrvKey(CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPrv *prv)
 }
 
 #ifdef HITLS_BSL_PARAMS
+static int32_t MLDSA_SetPrvSeed(CRYPT_ML_DSA_Ctx *ctx, uint8_t* buff, uint32_t len)
+{
+    if (ctx == NULL || buff == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->info == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_KEYINFO_NOT_SET);
+        return CRYPT_MLDSA_KEYINFO_NOT_SET;
+    }
+    if (ctx->prvKey != NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_SET_KEY_FAILED);
+        return CRYPT_MLDSA_SET_KEY_FAILED;
+    }
+    if (len != MLDSA_SEED_BYTES_LEN) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_SET_KEY_FAILED);
+            return CRYPT_MLDSA_SET_KEY_FAILED;
+    }
+    if (MLDSACreateKeyBuf(ctx) != CRYPT_SUCCESS) {
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    return MLDSA_KeyGenInternal(ctx, buff);
+}
+
 int32_t CRYPT_ML_DSA_SetPrvKeyEx(CRYPT_ML_DSA_Ctx *ctx, const BSL_Param *para)
 {
     if (para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_MlDsaPrv prv = {0};
-    (void)GetConstParamValue(para, CRYPT_PARAM_ML_DSA_PRVKEY, &prv.data, &prv.len);
-    return CRYPT_ML_DSA_SetPrvKey(ctx, &prv);
+    CRYPT_MlDsaPrv prvKey = {0};
+    CRYPT_MlDsaPrv prvKeySeed = {0};
+    (void)GetConstParamValue(para, CRYPT_PARAM_ML_DSA_PRVKEY, &prvKey.data, &prvKey.len);
+    (void)GetConstParamValue(para, CRYPT_PARAM_ML_DSA_PRVKEY_SEED, &prvKeySeed.data, &prvKeySeed.len);
+    int32_t ret = 0;
+    // seed only or both seed and private key
+    if (prvKeySeed.data != NULL && prvKeySeed.len != 0) {
+        ret = MLDSA_SetPrvSeed(ctx, prvKeySeed.data, prvKeySeed.len);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        // Consistence Check
+        if (prvKey.data != NULL && prvKey.len != 0) {
+            return memcmp(ctx->prvKey, prvKey.data, ctx->prvLen) == 0 ? CRYPT_SUCCESS :
+                                                                        CRYPT_MLDSA_PRVKEY_SEED_INCONSISTENT;
+        }
+        return CRYPT_SUCCESS;
+    }
+    // private key only
+    ret = CRYPT_ML_DSA_SetPrvKey(ctx, &prvKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = MLDSA_KeyConsistenceCheck(ctx);
+    return ret;
 }
 
 int32_t CRYPT_ML_DSA_SetPubKeyEx(CRYPT_ML_DSA_Ctx *ctx, const BSL_Param *para)
@@ -482,8 +611,12 @@ int32_t CRYPT_ML_DSA_SetPubKey(CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPub *pub)
         return CRYPT_MLDSA_KEYLEN_ERROR;
     }
     if (ctx->pubKey != NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_SET_KEY_FAILED);
-        return CRYPT_MLDSA_SET_KEY_FAILED;
+        // if set prv key is called before, then ctx->pubKey is not NULL
+        if (ctx->pubLen != ctx->info->publicKeyLen || memcmp(ctx->pubKey, pub->data, ctx->pubLen) != 0) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_SET_KEY_FAILED);
+            return CRYPT_MLDSA_SET_KEY_FAILED;
+        }
+        return CRYPT_SUCCESS;
     }
 
     ctx->pubKey = BSL_SAL_Malloc(ctx->info->publicKeyLen);
@@ -533,6 +666,7 @@ int32_t CRYPT_ML_DSA_GetPubKey(const CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPub *pub)
     return CRYPT_SUCCESS;
 }
 
+#ifdef HITLS_CRYPTO_MLDSA_CMP
 static int32_t MLDSACmpKey(uint8_t *a, uint32_t aLen, uint8_t *b, uint32_t bLen)
 {
     if (aLen != bLen) {
@@ -574,6 +708,7 @@ int32_t CRYPT_ML_DSA_Cmp(const CRYPT_ML_DSA_Ctx *a, const CRYPT_ML_DSA_Ctx *b)
     }
     return CRYPT_SUCCESS;
 }
+#endif
 
 static uint32_t MLDSAGetMdSize(const EAL_MdMethod *hashMethod, int32_t hashId)
 {
@@ -597,7 +732,7 @@ static int32_t MLDSAPreHashEncode(CRYPT_ML_DSA_Ctx *ctx, int32_t hashId, const u
     BslOidString *oidInfo = BSL_OBJ_GetOID(hashId);
     RETURN_RET_IF(oidInfo == NULL, CRYPT_ERR_ALGID);
 
-    const EAL_MdMethod *hashMethod = EAL_MdFindMethod(hashId);
+    const EAL_MdMethod *hashMethod = EAL_MdFindDefaultMethod(hashId);
     RETURN_RET_IF(hashMethod == NULL, CRYPT_EAL_ALG_NOT_SUPPORT);
     uint32_t mdSize = MLDSAGetMdSize(hashMethod, hashId);
     msg->len = MLDSA_SIGN_PREFIX_BYTES + ctx->ctxLen + MLDSA_SIGN_PREFIX_BYTES + oidInfo->octetLen + mdSize;
@@ -623,7 +758,7 @@ static int32_t MLDSAPreHashEncode(CRYPT_ML_DSA_Ctx *ctx, int32_t hashId, const u
     (void)memcpy_s(ptr, tmpLen, oidInfo->octs, oidInfo->octetLen);
     ptr += oidInfo->octetLen;
     tmpLen -= oidInfo->octetLen;
-    void *mdCtx = hashMethod->newCtx();
+    void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
     if (mdCtx == NULL) {
         BSL_SAL_Free(msg->data);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -716,5 +851,80 @@ int32_t CRYPT_ML_DSA_Verify(CRYPT_ML_DSA_Ctx *ctx, int32_t hashId, const uint8_t
     BSL_SAL_Free(msg.data);
     return ret;
 }
+
+#ifdef HITLS_CRYPTO_MLDSA_CHECK
+
+static int32_t MLDSAKeyPairCheck(const CRYPT_ML_DSA_Ctx *pubKey, const CRYPT_ML_DSA_Ctx *prvKey)
+{
+    if (pubKey == NULL || prvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (pubKey->info == NULL || prvKey->info == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_KEYINFO_NOT_SET);
+        return CRYPT_MLDSA_KEYINFO_NOT_SET;
+    }
+    if (pubKey->info->secBits != prvKey->info->secBits) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_PAIRWISE_CHECK_FAIL);
+        return CRYPT_MLDSA_PAIRWISE_CHECK_FAIL;
+    }
+    if (pubKey->pubKey == NULL || pubKey->pubLen != pubKey->info->publicKeyLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_INVALID_PUBKEY);
+        return CRYPT_MLDSA_INVALID_PUBKEY;
+    }
+    if (prvKey->prvKey == NULL || prvKey->prvLen != prvKey->info->privateKeyLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_INVALID_PRVKEY);
+        return CRYPT_MLDSA_INVALID_PRVKEY;
+    }
+    uint8_t *pub = BSL_SAL_Malloc(pubKey->info->publicKeyLen);
+    if (pub == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    int32_t ret = MLDSA_CalPub(prvKey, pub, pubKey->info->publicKeyLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_Free(pub);
+        return ret;
+    }
+    if (memcmp(pub, pubKey->pubKey, pubKey->info->publicKeyLen) != 0) {
+        BSL_SAL_Free(pub);
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_PAIRWISE_CHECK_FAIL);
+        return CRYPT_MLDSA_PAIRWISE_CHECK_FAIL;
+    }
+    BSL_SAL_Free(pub);
+    return CRYPT_SUCCESS;
+}
+
+static int32_t MLDSAPrvKeyCheck(const CRYPT_ML_DSA_Ctx *prvKey)
+{
+    if (prvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (prvKey->info == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_KEYINFO_NOT_SET);
+        return CRYPT_MLDSA_KEYINFO_NOT_SET;
+    }
+    if (prvKey->prvKey == NULL || prvKey->prvLen != prvKey->info->privateKeyLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_INVALID_PRVKEY);
+        return CRYPT_MLDSA_INVALID_PRVKEY;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_ML_DSA_Check(uint32_t checkType, const CRYPT_ML_DSA_Ctx *pkey1, const CRYPT_ML_DSA_Ctx *pkey2)
+{
+    switch (checkType) {
+        case CRYPT_PKEY_CHECK_KEYPAIR:
+            return MLDSAKeyPairCheck(pkey1, pkey2);
+        case CRYPT_PKEY_CHECK_PRVKEY:
+            return MLDSAPrvKeyCheck(pkey1);
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+    }
+}
+
+#endif // HITLS_CRYPTO_MLDSA_CHECK
 
 #endif

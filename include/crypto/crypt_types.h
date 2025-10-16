@@ -358,6 +358,21 @@ typedef struct {
 } CRYPT_SlhDsaPrv;
 
 /**
+ * @brief XMSS public key structure
+ */
+typedef CRYPT_SlhDsaPub CRYPT_XmssPub;
+
+/**
+ * @brief XMSS private key structure
+ */
+typedef struct {
+    uint8_t *seed; // Seed for generating keys
+    uint8_t *prf; // To generate randomization value
+    uint64_t index; // ots key index
+    CRYPT_XmssPub pub; // pubkey
+} CRYPT_XmssPrv;
+
+/**
  * @ingroup crypt_types
  *
  * ElGamal public key parameter structure
@@ -618,6 +633,8 @@ typedef enum {
     CRYPT_CTRL_SET_PREHASH_FLAG,         /**< Change the SLH-DSA or ML-DSA mode to prehash version or pure version. */
     CRYPT_CTRL_GEN_PARA,                 /**< Asymmetric cipher generate para. */
     CRYPT_CTRL_SET_GEN_FLAG,             /**< Set SP800-56Ar3 generate private key flag. */
+    CRYPT_CTRL_PCT_TEST,                 /**< Verify the consistency of the asymmetric key pair. */
+    CRYPT_CTRL_CLEAN_PUB_KEY,            /**< Clean the pubkey. */
 
     // dh
     CRYPT_CTRL_SET_DH_FLAG = 150,          /**< Set the dh flag.*/
@@ -671,6 +688,7 @@ typedef enum {
     CRYPT_CTRL_GET_ECC_ORDER_BITS,      /**< Get the number of bits in the group order. */
     CRYPT_CTRL_GET_ECC_NAME,            /**< Obtain the name of the ECC curve. */
     CRYPT_CTRL_GEN_X25519_PUBLICKEY,    /**< Use prikey genarate x25519 pubkey. */
+    CRYPT_CTRL_GET_SM2_RANDOM,          /**< SM2 get the r value. */
 
     // slh-dsa
     CRYPT_CTRL_GET_SLH_DSA_KEY_LEN = 600,     /**< Get the SLH-DSA key length. */
@@ -678,6 +696,12 @@ typedef enum {
 
 	CRYPT_CTRL_SET_MLDSA_ENCODE_FLAG = 700,  /**< Set the flag for encode messages. */
     CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG,         /**< Whether to calculate message representative */
+    CRYPT_CTRL_GET_MLDSA_SEED,               /**< Get MLDSA private key seed */
+    CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT,      /**< Set MLDSA private key encode format */
+    CRYPT_CTRL_GET_MLDSA_PRVKEY_FORMAT,      /**< Get MLDSA private key encode format*/
+
+    // xmss
+    CRYPT_CTRL_GET_XMSS_KEY_LEN = 800,     /**< Get the XMSS key length. */
 } CRYPT_PkeyCtrl;
 
 
@@ -685,6 +709,10 @@ typedef enum {
     CRYPT_CTRL_SET_GM_LEVEL,    /**<  Set the authentication level of gm drbg */
     CRYPT_CTRL_SET_RESEED_INTERVAL,
     CRYPT_CTRL_SET_RESEED_TIME,
+    CRYPT_CTRL_GET_RESEED_INTERVAL,
+    CRYPT_CTRL_GET_RESEED_TIME,
+    CRYPT_CTRL_SET_PREDICTION_RESISTANCE,
+    CRYPT_CTRL_GET_WORKING_STATUS,
     CRYPT_CTRL_RAND_MAX = 0xff,
 } CRYPT_RandCtrl;
 
@@ -721,6 +749,8 @@ typedef enum {
                                                obtained each time is the output length of the adjustment function.
                                                The caller can use this interface to implement the automatic collection
                                                function of the entropy pool. */
+    CRYPT_ENTROPY_SET_LOG_CALLBACK,       /**< Set the entropy log callback. This callback is used to log the noise
+                                               source collection result. */
     CRYPT_ENTROPY_MAX
 } CRYPT_ENTROPY_TYPE;
 
@@ -765,7 +795,6 @@ typedef enum {
     CRYPT_EVENT_MAC,          /**< MAC. */
     CRYPT_EVENT_KDF,          /**< KDF. */
     CRYPT_EVENT_KEYAGGREMENT, /**< Key negotiation. */
-    CRYPT_EVENT_KEYDERIVE,    /**< Derived key. */
     CRYPT_EVENT_RANDGEN,      /**< Generating a random number. */
     CRYPT_EVENT_ZERO,         /**< sensitive information to zero. */
     CRYPT_EVENT_ERR,          /**< An error occurred. */
@@ -775,6 +804,12 @@ typedef enum {
     CRYPT_EVENT_DECAPS,       /**< Key decapsulation. */
     CRYPT_EVENT_BLIND,        /**< Message blinding. */
     CRYPT_EVENT_UNBLIND,      /**< Signature unblinding. */
+    CRYPT_EVENT_PARAM_CHECK,  /**< Parameter check. */
+    CRYPT_EVENT_PCT_TEST,     /**< PCT test. */
+    CRYPT_EVENT_KAT_TEST,     /**< KAT test. */
+    CRYPT_EVENT_ES_HEALTH_TEST, /**< Entropy source health test. */
+    CRYPT_EVENT_INTEGRITY_TEST, /**< Integrity test. */
+    CRYPT_EVENT_GET_VERSION,    /**< Get the version of the provider. */
     CRYPT_EVENT_MAX
 } CRYPT_EVENT_TYPE;
 
@@ -791,6 +826,14 @@ typedef enum {
     CRYPT_ALGO_KDF,
     CRYPT_ALGO_RAND
 } CRYPT_ALGO_TYPE;
+
+typedef enum {
+    CRYPT_ALGO_MLDSA_PRIV_FORMAT_NOT_SET = 0,
+    CRYPT_ALGO_MLDSA_PRIV_FORMAT_BOTH,
+    CRYPT_ALGO_MLDSA_PRIV_FORMAT_PRIV_ONLY,
+    CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY,
+    CRYPT_ALGO_MLDSA_PRIV_FORMAT_END,
+} CRYPT_ALGO_MLDSA_PRIV_KEY_FORMAT_TYPE;
 
 /**
  * @ingroup crypt_types
@@ -873,38 +916,17 @@ typedef struct {
 
 typedef struct EAL_LibCtx CRYPT_EAL_LibCtx;
 
-/* Optional parameter set for MLDSA */
-typedef enum {
-    CRYPT_MLDSA_TYPE_MLDSA_44 = 0x01,            // MLDSA-44
-    CRYPT_MLDSA_TYPE_MLDSA_65 = 0x02,            // MLDSA-65
-    CRYPT_MLDSA_TYPE_MLDSA_87 = 0x03,            // MLDSA-87
-    CRYPT_MLDSA_TYPE_INVALID = 0x7fffffff        // invalid value
-} CRYPT_MLDSA_KeyType;
+/* The hitls framework generates context for each provider */
+typedef struct EAL_ProviderMgrCtx CRYPT_EAL_ProvMgrCtx;
 
-/* Optional parameter set for MLKEM */
-typedef enum {
-    CRYPT_KEM_TYPE_MLKEM_512 = 0x01,            // MLKEM512
-    CRYPT_KEM_TYPE_MLKEM_768 = 0x02,            // MLKEM768
-    CRYPT_KEM_TYPE_MLKEM_1024 = 0x03,            // MLKEM1024
-    CRYPT_KEM_TYPE_INVALID = 0x7fffffff        // invalid value
-} CRYPT_MLKEM_KeyType;
+typedef struct {
+    int32_t id;
+    void *func;
+} CRYPT_EAL_Func;
 
-/* Optional parameter set for SLHDSA */
 typedef enum {
-    CRYPT_SLH_DSA_SHA2_128S,
-    CRYPT_SLH_DSA_SHAKE_128S,
-    CRYPT_SLH_DSA_SHA2_128F,
-    CRYPT_SLH_DSA_SHAKE_128F,
-    CRYPT_SLH_DSA_SHA2_192S,
-    CRYPT_SLH_DSA_SHAKE_192S,
-    CRYPT_SLH_DSA_SHA2_192F,
-    CRYPT_SLH_DSA_SHAKE_192F,
-    CRYPT_SLH_DSA_SHA2_256S,
-    CRYPT_SLH_DSA_SHAKE_256S,
-    CRYPT_SLH_DSA_SHA2_256F,
-    CRYPT_SLH_DSA_SHAKE_256F,
-    CRYPT_SLH_DSA_ALG_ID_MAX,
-} CRYPT_SLH_DSA_AlgId;
+    CRYPT_CMVP_PROVIDER_SELFTEST = 0x01, /**< Self-test. */
+} CRYPT_CMVP_SELFTEST_AlgId;
 
 #ifdef __cplusplus
 }

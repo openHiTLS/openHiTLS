@@ -32,7 +32,8 @@ extern "C" {
  * @ingroup hitls_psk
  * @brief PSK Maximum size of the identity message
  */
-#define HITLS_IDENTITY_HINT_MAX_SIZE 128
+#define HS_PSK_IDENTITY_MAX_LEN 256u
+#define HS_PSK_MAX_LEN 512u
 #define HITLS_PSK_FIND_SESSION_CB_SUCCESS 1
 #define HITLS_PSK_FIND_SESSION_CB_FAIL 0
 #define HITLS_PSK_USE_SESSION_CB_SUCCESS 1

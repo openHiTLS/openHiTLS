@@ -81,10 +81,7 @@ int32_t MODES_CBC_Decrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t
     const uint8_t *input = in;
 
     // The ctx, in, and out pointers have been determined at the EAL layer and are not determined again.
-    if ((left % blockSize) != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);
-        return CRYPT_MODE_ERR_INPUT_LEN;
-    }
+    RETURN_RET_IF((left % blockSize) != 0, CRYPT_MODE_ERR_INPUT_LEN);
 
     // In the case where the input and output are at the same address,
     // the judgment should be placed outside the while loop. Otherwise, the performance will be affected.
@@ -123,11 +120,6 @@ int32_t MODES_CBC_Decrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t
     }
 
     return CRYPT_SUCCESS;
-}
-
-MODES_CipherCtx *MODES_CBC_NewCtx(int32_t algId)
-{
-    return MODES_CipherNewCtx(algId);
 }
 
 int32_t MODES_CBC_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,

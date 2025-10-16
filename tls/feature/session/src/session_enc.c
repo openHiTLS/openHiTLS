@@ -39,12 +39,8 @@ typedef struct {
 static int32_t EncSessObjVersion(const HITLS_Session *sess, SessionObjType type, uint8_t *data, uint32_t length,
     uint32_t *encLen)
 {
-    int ret;
     uint16_t version = sess->version;
-    BSL_Tlv tlv = {0};
-    tlv.type = type;
-    tlv.length = sizeof(version);
-    tlv.value = (uint8_t *)&version;
+    BSL_Tlv tlv = {type, (uint32_t)sizeof(version), (uint8_t *)&version};
 
     if (data == NULL) {
         /* If the input parameter is NULL, return the length after encoding. */
@@ -52,7 +48,7 @@ static int32_t EncSessObjVersion(const HITLS_Session *sess, SessionObjType type,
         return HITLS_SUCCESS;
     }
 
-    ret = BSL_TLV_Pack(&tlv, data, length, encLen);
+    int32_t ret = BSL_TLV_Pack(&tlv, data, length, encLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_VERSION_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15992, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -66,12 +62,8 @@ static int32_t EncSessObjVersion(const HITLS_Session *sess, SessionObjType type,
 static int32_t EncSessObjCipherSuite(const HITLS_Session *sess, SessionObjType type, uint8_t *data, uint32_t length,
     uint32_t *encLen)
 {
-    int ret;
     uint16_t cipherSuite = sess->cipherSuite;
-    BSL_Tlv tlv = {0};
-    tlv.type = type;
-    tlv.length = sizeof(cipherSuite);
-    tlv.value = (uint8_t *)&cipherSuite;
+    BSL_Tlv tlv = {type, (uint32_t)sizeof(cipherSuite), (uint8_t *)&cipherSuite};
 
     if (data == NULL) {
         /* If the input parameter is NULL, return the length after encoding. */
@@ -79,7 +71,7 @@ static int32_t EncSessObjCipherSuite(const HITLS_Session *sess, SessionObjType t
         return HITLS_SUCCESS;
     }
 
-    ret = BSL_TLV_Pack(&tlv, data, length, encLen);
+    int32_t ret = BSL_TLV_Pack(&tlv, data, length, encLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_CIPHER_SUITE_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15982, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -93,11 +85,7 @@ static int32_t EncSessObjCipherSuite(const HITLS_Session *sess, SessionObjType t
 static int32_t EncSessObjMasterSecret(const HITLS_Session *sess, SessionObjType type, uint8_t *data, uint32_t length,
     uint32_t *encLen)
 {
-    int ret;
-    BSL_Tlv tlv = {0};
-    tlv.type = type;
-    tlv.length = sess->masterKeySize;
-    tlv.value = (uint8_t *)(uintptr_t)(sess->masterKey);
+    BSL_Tlv tlv = {type, sess->masterKeySize, (uint8_t *)(uintptr_t)(sess->masterKey)};
 
     if (data == NULL) {
         /* If the input parameter is NULL, return the length after encoding. */
@@ -105,7 +93,7 @@ static int32_t EncSessObjMasterSecret(const HITLS_Session *sess, SessionObjType 
         return HITLS_SUCCESS;
     }
 
-    ret = BSL_TLV_Pack(&tlv, data, length, encLen);
+    int32_t ret = BSL_TLV_Pack(&tlv, data, length, encLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_MASTER_SECRET_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15983, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -119,12 +107,8 @@ static int32_t EncSessObjMasterSecret(const HITLS_Session *sess, SessionObjType 
 static int32_t EncSessObjStartTime(const HITLS_Session *sess, SessionObjType type, uint8_t *data, uint32_t length,
     uint32_t *encLen)
 {
-    int ret;
     uint64_t startTime = sess->startTime;
-    BSL_Tlv tlv = {0};
-    tlv.type = type;
-    tlv.length = sizeof(startTime);
-    tlv.value = (uint8_t *)&startTime;
+    BSL_Tlv tlv = {type, (uint32_t)sizeof(startTime), (uint8_t *)&startTime};
 
     if (data == NULL) {
         /* If the input parameter is NULL, return the length after encoding. */
@@ -132,7 +116,7 @@ static int32_t EncSessObjStartTime(const HITLS_Session *sess, SessionObjType typ
         return HITLS_SUCCESS;
     }
 
-    ret = BSL_TLV_Pack(&tlv, data, length, encLen);
+    int32_t ret = BSL_TLV_Pack(&tlv, data, length, encLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_START_TIME_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15985, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -146,12 +130,8 @@ static int32_t EncSessObjStartTime(const HITLS_Session *sess, SessionObjType typ
 static int32_t EncSessObjTimeout(const HITLS_Session *sess, SessionObjType type, uint8_t *data, uint32_t length,
     uint32_t *encLen)
 {
-    int ret;
     uint64_t timeout = sess->timeout;
-    BSL_Tlv tlv = {0};
-    tlv.type = type;
-    tlv.length = sizeof(timeout);
-    tlv.value = (uint8_t *)&timeout;
+    BSL_Tlv tlv = {type, (uint32_t)sizeof(timeout), (uint8_t *)&timeout};
 
     if (data == NULL) {
         /* If the input parameter is NULL, return the length after encoding. */
@@ -159,7 +139,7 @@ static int32_t EncSessObjTimeout(const HITLS_Session *sess, SessionObjType type,
         return HITLS_SUCCESS;
     }
 
-    ret = BSL_TLV_Pack(&tlv, data, length, encLen);
+    int32_t ret = BSL_TLV_Pack(&tlv, data, length, encLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_TIME_OUT_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15986, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -178,11 +158,7 @@ static int32_t EncSessObjHostName(const HITLS_Session *sess, SessionObjType type
         return HITLS_SUCCESS;
     }
 
-    int ret;
-    BSL_Tlv tlv = {0};
-    tlv.type = type;
-    tlv.length = sess->hostNameSize;
-    tlv.value = (uint8_t *)sess->hostName;
+    BSL_Tlv tlv = {type, sess->hostNameSize, (uint8_t *)sess->hostName};
 
     if (data == NULL) {
         /* If the input parameter is NULL, return the length after encoding. */
@@ -190,7 +166,7 @@ static int32_t EncSessObjHostName(const HITLS_Session *sess, SessionObjType type
         return HITLS_SUCCESS;
     }
 
-    ret = BSL_TLV_Pack(&tlv, data, length, encLen);
+    int32_t ret = BSL_TLV_Pack(&tlv, data, length, encLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_HOST_NAME_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15987, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -209,11 +185,7 @@ static int32_t EncSessObjSessionIdCtx(const HITLS_Session *sess, SessionObjType 
         return HITLS_SUCCESS;
     }
 
-    int ret;
-    BSL_Tlv tlv = {0};
-    tlv.type = type;
-    tlv.length = sess->sessionIdCtxSize;
-    tlv.value = (uint8_t *)(uintptr_t)(sess->sessionIdCtx);
+    BSL_Tlv tlv = {type, sess->sessionIdCtxSize, (uint8_t *)(uintptr_t)(sess->sessionIdCtx)};
 
     if (data == NULL) {
         /* If the input parameter is NULL, return the length after encoding. */
@@ -221,7 +193,7 @@ static int32_t EncSessObjSessionIdCtx(const HITLS_Session *sess, SessionObjType 
         return HITLS_SUCCESS;
     }
 
-    ret = BSL_TLV_Pack(&tlv, data, length, encLen);
+    int32_t ret = BSL_TLV_Pack(&tlv, data, length, encLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_SESSION_ID_CTX_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15988, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -239,11 +211,7 @@ static int32_t EncSessObjSessionId(const HITLS_Session *sess, SessionObjType typ
         return HITLS_SUCCESS;
     }
 
-    int ret;
-    BSL_Tlv tlv = {0};
-    tlv.type = type;
-    tlv.length = sess->sessionIdSize;
-    tlv.value = (uint8_t *)(uintptr_t)(sess->sessionId);
+    BSL_Tlv tlv = {type, sess->sessionIdSize, (uint8_t *)(uintptr_t)(sess->sessionId)};
 
     if (data == NULL) {
         /* If the input parameter is NULL, return the length after encoding. */
@@ -251,7 +219,7 @@ static int32_t EncSessObjSessionId(const HITLS_Session *sess, SessionObjType typ
         return HITLS_SUCCESS;
     }
 
-    ret = BSL_TLV_Pack(&tlv, data, length, encLen);
+    int32_t ret = BSL_TLV_Pack(&tlv, data, length, encLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_SESSION_ID_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15989, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -265,12 +233,8 @@ static int32_t EncSessObjSessionId(const HITLS_Session *sess, SessionObjType typ
 static int32_t EncSessObjExtendMasterSecret(const HITLS_Session *sess, SessionObjType type, uint8_t *data,
     uint32_t length, uint32_t *encLen)
 {
-    int ret;
     uint8_t haveExtMasterSecret = (uint8_t)sess->haveExtMasterSecret;
-    BSL_Tlv tlv = {0};
-    tlv.type = type;
-    tlv.length = sizeof(haveExtMasterSecret);
-    tlv.value = (uint8_t *)&haveExtMasterSecret;
+    BSL_Tlv tlv = {type, (uint32_t)sizeof(haveExtMasterSecret), (uint8_t *)&haveExtMasterSecret};
 
     if (data == NULL) {
         /* If the input parameter is NULL, return the length after encoding. */
@@ -278,7 +242,7 @@ static int32_t EncSessObjExtendMasterSecret(const HITLS_Session *sess, SessionOb
         return HITLS_SUCCESS;
     }
 
-    ret = BSL_TLV_Pack(&tlv, data, length, encLen);
+    int32_t ret = BSL_TLV_Pack(&tlv, data, length, encLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_EXT_MASTER_SECRET_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15990, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -292,12 +256,8 @@ static int32_t EncSessObjExtendMasterSecret(const HITLS_Session *sess, SessionOb
 static int32_t EncSessObjVerifyResult(const HITLS_Session *sess, SessionObjType type, uint8_t *data, uint32_t length,
     uint32_t *encLen)
 {
-    int ret;
     int32_t verifyResult = sess->verifyResult;
-    BSL_Tlv tlv = {0};
-    tlv.type = type;
-    tlv.length = sizeof(verifyResult);
-    tlv.value = (uint8_t *)&verifyResult;
+    BSL_Tlv tlv = {type, (uint32_t)sizeof(verifyResult), (uint8_t *)&verifyResult};
 
     if (data == NULL) {
         /* If the input parameter is NULL, return the length after encoding. */
@@ -305,7 +265,7 @@ static int32_t EncSessObjVerifyResult(const HITLS_Session *sess, SessionObjType 
         return HITLS_SUCCESS;
     }
 
-    ret = BSL_TLV_Pack(&tlv, data, length, encLen);
+    int32_t ret = BSL_TLV_Pack(&tlv, data, length, encLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_VERIFY_RESULT_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15991, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -382,9 +342,7 @@ static int32_t EncSessObjPeerCert(const HITLS_Session *sess, SessionObjType type
     if (bufLen == 0) {
         return HITLS_SUCCESS;
     }
-    BSL_Tlv tlv = {0};
-    tlv.type = type;
-    tlv.length = bufLen;
+    BSL_Tlv tlv = {type, bufLen, NULL};
 
     if (data == NULL) {
         /* If the input parameter is NULL, return the length after encoding. */
@@ -421,12 +379,8 @@ static int32_t EncSessObjPeerCert(const HITLS_Session *sess, SessionObjType type
 static int32_t EncSessObjTicketAgeAdd(const HITLS_Session *sess, SessionObjType type, uint8_t *data, uint32_t length,
     uint32_t *encLen)
 {
-    int ret;
     uint32_t ticketAgeAdd = sess->ticketAgeAdd;
-    BSL_Tlv tlv = {0};
-    tlv.type = type;
-    tlv.length = sizeof(ticketAgeAdd);
-    tlv.value = (uint8_t *)&ticketAgeAdd;
+    BSL_Tlv tlv = {type, (uint32_t)sizeof(ticketAgeAdd), (uint8_t *)&ticketAgeAdd};
 
     if (data == NULL) {
         /* If the input parameter is NULL, the length after encoding is returned. */
@@ -434,7 +388,7 @@ static int32_t EncSessObjTicketAgeAdd(const HITLS_Session *sess, SessionObjType 
         return HITLS_SUCCESS;
     }
 
-    ret = BSL_TLV_Pack(&tlv, data, length, encLen);
+    int32_t ret = BSL_TLV_Pack(&tlv, data, length, encLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_ENC_VERIFY_RESULT_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16183, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

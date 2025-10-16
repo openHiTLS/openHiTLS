@@ -27,6 +27,7 @@ extern "C" {
 void TestMemInit(void);
 
 int TestRandInit(void);
+int TestRandInitEx(void *libCtx);
 
 void TestRandDeInit(void);
 

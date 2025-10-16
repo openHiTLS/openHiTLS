@@ -26,11 +26,10 @@
 #include "tls.h"
 #include "hs_ctx.h"
 
-int32_t PackCertificateVerify(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+int32_t PackCertificateVerify(const TLS_Ctx *ctx, PackPacket *pkt)
 {
-    uint32_t offset = 0u;
     const HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
-
+    int32_t ret = HITLS_SUCCESS;
     if (hsCtx->verifyCtx->verifyDataSize == 0u) {
         BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15824, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -38,24 +37,22 @@ int32_t PackCertificateVerify(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen,
         return HITLS_INTERNAL_EXCEPTION;
     }
 
-    if (bufLen < sizeof(uint16_t) + sizeof(uint16_t) + hsCtx->verifyCtx->verifyDataSize) {
-        return PackBufLenError(BINLOG_ID15825, BINGLOG_STR("cert verify"));
-    }
 #if defined(HITLS_TLS_PROTO_TLS12) || defined(HITLS_TLS_PROTO_DTLS12) || defined(HITLS_TLS_PROTO_TLS13)
-
     if (ctx->negotiatedInfo.version != HITLS_VERSION_TLCP_DTLCP11) {
-        BSL_Uint16ToByte((uint16_t)ctx->negotiatedInfo.signScheme, &buf[offset]);
-        offset += sizeof(uint16_t);
+        ret = PackAppendUint16ToBuf(pkt, (uint16_t)ctx->negotiatedInfo.signScheme);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
     }
 #endif
-    /* Verify the data is the signature data. The maximum length of the signature data is 1024 bytes */
-    BSL_Uint16ToByte((uint16_t)hsCtx->verifyCtx->verifyDataSize, &buf[offset]);
-    offset += sizeof(uint16_t);
 
-    (void)memcpy_s(&buf[offset], bufLen - offset, hsCtx->verifyCtx->verifyData, hsCtx->verifyCtx->verifyDataSize);
-    offset += hsCtx->verifyCtx->verifyDataSize;
+    /* Pack signature data length */
+    ret = PackAppendUint16ToBuf(pkt, (uint16_t)hsCtx->verifyCtx->verifyDataSize);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
 
-    *usedLen = offset;
-    return HITLS_SUCCESS;
+    /* Pack signature data */
+    return PackAppendDataToBuf(pkt, hsCtx->verifyCtx->verifyData, hsCtx->verifyCtx->verifyDataSize);
 }
 #endif /* HITLS_TLS_HOST_CLIENT || HITLS_TLS_PROTO_TLS13 */

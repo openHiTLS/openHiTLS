@@ -304,7 +304,7 @@ void UT_TLS_CM_SET_GET_ENCRYPTHENMAC_FUNC_TC001(int version)
     FRAME_LinkObj *server = NULL;
     config = GetHitlsConfigViaVersion(version);
     ASSERT_TRUE(config != NULL);
-    ASSERT_EQ(HITLS_CFG_SetEncryptThenMac(config, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetEncryptThenMac(config, true), HITLS_SUCCESS);
 
     uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
     HITLS_CFG_SetSignature(config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
@@ -318,7 +318,7 @@ void UT_TLS_CM_SET_GET_ENCRYPTHENMAC_FUNC_TC001(int version)
     server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
 
-    uint32_t encryptThenMacType = 0;
+    bool encryptThenMacType = 0;
     ASSERT_EQ(HITLS_GetEncryptThenMac(server->ssl, &encryptThenMacType), HITLS_SUCCESS);
     ASSERT_EQ(encryptThenMacType, 1);
 
@@ -406,8 +406,8 @@ void UT_TLS_CM_SET_GET_SESSION_TICKET_SUPPORT_API_TC001(int tlsVersion)
     FRAME_Init();
     HITLS_Config *config = NULL;
     HITLS_Ctx *ctx = NULL;
-    uint8_t isSupport = -1;
-    uint8_t getIsSupport = -1;
+    bool isSupport = false;
+    bool getIsSupport = false;
     ASSERT_TRUE(HITLS_SetSessionTicketSupport(ctx, isSupport) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_GetSessionTicketSupport(ctx, &getIsSupport) == HITLS_NULL_INPUT);
 
@@ -417,12 +417,12 @@ void UT_TLS_CM_SET_GET_SESSION_TICKET_SUPPORT_API_TC001(int tlsVersion)
     ASSERT_TRUE(ctx != NULL);
 
     ASSERT_TRUE(HITLS_GetSessionTicketSupport(ctx, NULL) == HITLS_NULL_INPUT);
-    isSupport = 1;
+    isSupport = true;
     ASSERT_TRUE(HITLS_SetSessionTicketSupport(ctx, isSupport) == HITLS_SUCCESS);
-    isSupport = -1;
+    isSupport = true;
     ASSERT_TRUE(HITLS_SetSessionTicketSupport(ctx, isSupport) == HITLS_SUCCESS);
-    ASSERT_TRUE(ctx->config.tlsConfig.isSupportSessionTicket = true);
-    isSupport = 0;
+    ASSERT_TRUE(ctx->config.tlsConfig.isSupportSessionTicket == true);
+    isSupport = false;
     ASSERT_TRUE(HITLS_SetSessionTicketSupport(ctx, isSupport) == HITLS_SUCCESS);
 
     ASSERT_TRUE(HITLS_GetSessionTicketSupport(ctx, &getIsSupport) == HITLS_SUCCESS);
@@ -964,7 +964,7 @@ EXIT:
 * @expect   1. The connection is not established.
             2. The client status is CM_STATE_HANDSHAKING.
             3. The client status is CM_STATE_ALERTING.
-            4. The client status is CM_STATE_ALERTED. 
+            4. The client status is CM_STATE_ALERTED.
             5. The client status is CM_STATE_CLOSED.
 * @prior  Level 1
 * @auto  TRUE
@@ -998,7 +998,7 @@ void UT_TLS_HITLS_CLOSE_TC001(int uioType)
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_HANDSHAKING);
 
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
-    ioUserData->sndMsg.len = 1; 
+    ioUserData->sndMsg.len = 1;
     ASSERT_TRUE(HITLS_Close(clientTlsCtx) == HITLS_REC_NORMAL_IO_BUSY);
     ASSERT_EQ(clientTlsCtx->state, CM_STATE_ALERTED);
 

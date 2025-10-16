@@ -17,34 +17,49 @@
 #if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_ENTROPY_SYS)
 
 #include <stdint.h>
-#include <time.h>
 #include "securec.h"
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "es_noise_source.h"
 
-
+#ifndef HITLS_CACHE_LINE_SIZE
+    #define HITLS_CACHE_LINE_SIZE 64
+#endif
+#ifndef HITLS_CACHE_ROW_COUNT
+    #define HITLS_CACHE_ROW_COUNT 1025
+#endif
+#ifndef HITLS_JITTER_APT_CUT_OFF
 /**
  * Binary WINDOW 1024, 0.8 Entropy CUT off 664 0.6 Entropy CUT off 748
  * reference to SP800-90B sec 4.4.2
  */
-#define NS_APT_BIN_CUT_OFF 592
-#define NS_APT_BIN_WINDOW_SIZE 1024
-
+    #define HITLS_JITTER_APT_CUT_OFF 592
+#endif
+#ifndef HITLS_JITTER_RCT_CUT_OFF
 /**
  * C = 1 + ceil(-log_2(alpha)/H), H = 1(MIN_ENTROPY), alpha = 2^(-20)
  * alpha value reference SP800-90B sec 4.4.1
  * following SP800-90B. Thus C = ceil(-log_2(alpha)/H) = 20.
  */
-#define NS_RCT_CUT_OFF 20  // max 20
+#define HITLS_JITTER_RCT_CUT_OFF 20
+#endif
+#ifndef HITLS_JITTER_MINENTROPY
+/**
+ * HITLS_JITTER_RCT_CUT_OFF and HITLS_JITTER_APT_CUT_OFF are calculated based on HITLS_JITTER_MINENTROPY.
+ * If HITLS_JITTER_MINENTROPY is configured manually, HITLS_JITTER_RCT_CUT_OFF and must be
+ * configured simultaneously.
+ */
+    #define HITLS_JITTER_MINENTROPY 5
+#endif
+
+#define NS_APT_BIN_WINDOW_SIZE 1024
 
 #define NS_ENTROPY_HASH_SIZE 32                            // hash size
 #define NS_ENTROPY_DATA_SIZE (NS_ENTROPY_HASH_SIZE * 4)  // 4 * 32， 128 bytes，1024 bits，one APT window
 
 /* Mainstream CPU cache access unit (cache line) 32 或者64 */
-#define NS_CACHE_LINE_SIZE 64                                         // memory column Size
-#define NS_CACHE_LINE_COUNT 1025                                      // memory row Size
-#define NS_CACHE_SIZE (NS_CACHE_LINE_SIZE * NS_CACHE_LINE_COUNT)      // total operation memory size
+#define NS_CACHE_SIZE (HITLS_CACHE_LINE_SIZE * HITLS_CACHE_ROW_COUNT) // total operation memory size
 #define NS_CACHE_MIN_SIZE 33                                          // minimum Length
 
 #define NS_ENTROPY_RCT_FAILURE (-1)
@@ -63,7 +78,7 @@ typedef struct ES_JitterState {
     uint64_t lastDelta;
     uint32_t remainCount;
     uint32_t memLocation;
-    uint8_t mem[NS_CACHE_LINE_COUNT][NS_CACHE_LINE_SIZE];
+    uint8_t mem[HITLS_CACHE_ROW_COUNT][HITLS_CACHE_LINE_SIZE];
     volatile uint32_t mID;
     uint64_t lastTime;
     void (*hashFunc)(uint8_t *, int, uint8_t *, int);
@@ -71,12 +86,12 @@ typedef struct ES_JitterState {
 
 static void UpdateRctHealth(ES_JitterState *e, int stuck)
 {
-    if (e->rctCount > NS_RCT_CUT_OFF) {
+    if (e->rctCount > HITLS_JITTER_RCT_CUT_OFF) {
         return;
     }
     if (stuck > 0) {
         e->rctCount++;
-        if (e->rctCount > NS_RCT_CUT_OFF) {
+        if (e->rctCount > HITLS_JITTER_RCT_CUT_OFF) {
             e->testFailure = NS_ENTROPY_RCT_FAILURE;  // If the RCT test fails, the entropy source can be restarted.
         }
     } else {
@@ -94,7 +109,7 @@ static void UpdateAptHealth(ES_JitterState *e, uint8_t data)
     }
     if (e->aptBase == data) {
         e->aptCount++;
-        if (e->aptCount > NS_APT_BIN_CUT_OFF) {
+        if (e->aptCount > HITLS_JITTER_APT_CUT_OFF) {
             e->testFailure = NS_ENTROPY_APT_FAILURE;  // If APT detection fails, the entropy source can be restarted.
         }
     }
@@ -102,17 +117,6 @@ static void UpdateAptHealth(ES_JitterState *e, uint8_t data)
     if (e->aptObservations >= NS_APT_BIN_WINDOW_SIZE) {
         e->aptBaseSet = 0;
     }
-}
-
-static uint64_t NS_ENTROPY_Gettick(void)
-{
-    uint64_t ticks = 0;
-    struct timespec time;
-    if (clock_gettime(CLOCK_REALTIME, &time) == 0) {
-        ticks = ((uint64_t)time.tv_sec & 0xFFFFFFFF) * 1000000000UL;
-        ticks = ticks + (uint64_t)time.tv_nsec;
-    }
-    return ticks;
 }
 
 #define NS_MOVE_LEVEL 128
@@ -126,11 +130,11 @@ static void __attribute__((optimize("O0"))) EntropyMemeryAccess(ES_JitterState *
      * 4. branch prediction mitigation
      */
     e->mID = (e->mID + det) % NS_CACHE_SIZE;
-    uint32_t bound = NS_CACHE_LINE_COUNT + det;
+    uint32_t bound = HITLS_CACHE_ROW_COUNT + det;
     for (uint32_t i = 0; i < bound; i++) {
         // c, l Calculate the row and column coordinate points.
-        uint32_t c = e->mID / NS_CACHE_LINE_SIZE;
-        uint32_t l = e->mID % NS_CACHE_LINE_SIZE;
+        uint32_t c = e->mID / HITLS_CACHE_LINE_SIZE;
+        uint32_t l = e->mID % HITLS_CACHE_LINE_SIZE;
         volatile uint8_t *volatile cur = e->mem[c] + l;
         *cur ^= det;
         e->memLocation = (e->memLocation + (*cur & 0x0f) + NS_CACHE_MIN_SIZE) % NS_CACHE_SIZE;
@@ -151,7 +155,7 @@ static uint8_t GetUChar(uint64_t tick)
         }
         data >>= 1;
     }
-    return (uint8_t)((data % NS_CACHE_LINE_SIZE) + NS_CACHE_MIN_SIZE);
+    return (uint8_t)((data % HITLS_CACHE_LINE_SIZE) + NS_CACHE_MIN_SIZE);
 }
 
 static void EntropyMeasure(ES_JitterState *e, int32_t index)
@@ -160,9 +164,9 @@ static void EntropyMeasure(ES_JitterState *e, int32_t index)
     int i;
     // One byte has eight bits. Only the status of one bit can be obtained each time the memory is read or written.
     for (i = 0; i < 8; i++) {  // 8 bit
-        uint64_t tick1 = NS_ENTROPY_Gettick();
+        uint64_t tick1 = BSL_SAL_TIME_GetNSec();
         EntropyMemeryAccess(e, GetUChar(tick1));
-        uint64_t tick = NS_ENTROPY_Gettick();
+        uint64_t tick = BSL_SAL_TIME_GetNSec();
         uint64_t delta = tick - tick1;
         uint8_t bit;
         if (delta & 0x01) {
@@ -318,7 +322,7 @@ ES_NoiseSource *ES_CpuJitterGetCtx(void)
     ctx->init = ES_CpuJitterInit;
     ctx->read = ES_CpuJitterRead;
     ctx->deinit = ES_CpuJitterFree;
-    ctx->minEntropy = 5; // one byte bring 5 bits entropy
+    ctx->minEntropy = HITLS_JITTER_MINENTROPY; // one byte bring 5 bits entropy
     return ctx;
 }
 #endif

@@ -72,6 +72,11 @@ struct DrbgCtx {
        When seedMeth and seedCtx are empty, the default entropy source is used. */
     CRYPT_RandSeedMethod seedMeth;
     void *seedCtx; /* Seed context */
+
+    void *libCtx; /* Library context */
+    bool predictionResistance;
+
+    int32_t forkId;
 };
 
 #ifdef HITLS_CRYPTO_DRBG_HMAC
@@ -80,6 +85,7 @@ struct DrbgCtx {
  * @brief Apply for a context for the HMAC_DRBG.
  * @brief This API does not support multiple threads.
  *
+ * @param libCtx    Library context
  * @param hmacMeth  HMAC method
  * @param mdMeth    hash algid
  * @param seedMeth  DRBG seed hook
@@ -88,7 +94,7 @@ struct DrbgCtx {
  * @retval DRBG_Ctx* Success
  * @retval NULL      failure
  */
-DRBG_Ctx *DRBG_NewHmacCtx(const EAL_MacMethod *hmacMeth, CRYPT_MAC_AlgId macId,
+DRBG_Ctx *DRBG_NewHmacCtx(void *libCtx, const EAL_MacMethod *hmacMeth, CRYPT_MAC_AlgId macId,
     const CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
 #endif
 

@@ -19,7 +19,6 @@
 #include "crypt_arm.h"
 #include "crypt_aes_macro_armv8.s"
 
-.file    "crypt_aes_cbc_armv8.S"
 .text
 .arch	armv8-a+crypto
 

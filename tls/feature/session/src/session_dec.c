@@ -45,13 +45,10 @@ typedef struct {
 static int32_t DecSessObjVersion(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
     uint32_t *readLen)
 {
-    int32_t ret;
     uint16_t version = 0;
-    BSL_Tlv tlv = {0};
-    tlv.length = sizeof(version);
-    tlv.value = (uint8_t *)&version;
+    BSL_Tlv tlv = {0, (uint32_t)sizeof(version), (uint8_t *)&version};
 
-    ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
+    int32_t ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_VERSION_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15993, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -66,13 +63,10 @@ static int32_t DecSessObjVersion(HITLS_Session *sess, SessionObjType type, const
 static int32_t DecSessObjCipherSuite(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
     uint32_t *readLen)
 {
-    int32_t ret;
     uint16_t cipherSuite = 0;
-    BSL_Tlv tlv = {0};
-    tlv.length = sizeof(cipherSuite);
-    tlv.value = (uint8_t *)&cipherSuite;
+    BSL_Tlv tlv = {0, (uint32_t)sizeof(cipherSuite), (uint8_t *)&cipherSuite};
 
-    ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
+    int32_t ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_CIPHER_SUITE_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15994, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -87,12 +81,9 @@ static int32_t DecSessObjCipherSuite(HITLS_Session *sess, SessionObjType type, c
 static int32_t DecSessObjMasterSecret(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
     uint32_t *readLen)
 {
-    int32_t ret;
-    BSL_Tlv tlv = {0};
-    tlv.length = MAX_MASTER_KEY_SIZE;
-    tlv.value = sess->masterKey;
+    BSL_Tlv tlv = {0, MAX_MASTER_KEY_SIZE, sess->masterKey};
 
-    ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
+    int32_t ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_MASTER_SECRET_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15995, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -107,13 +98,10 @@ static int32_t DecSessObjMasterSecret(HITLS_Session *sess, SessionObjType type, 
 static int32_t DecSessObjStartTime(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
     uint32_t *readLen)
 {
-    int32_t ret;
     uint64_t startTime = 0;
-    BSL_Tlv tlv = {0};
-    tlv.length = sizeof(startTime);
-    tlv.value = (uint8_t *)&startTime;
+    BSL_Tlv tlv = {0, (uint32_t)sizeof(startTime), (uint8_t *)&startTime};
 
-    ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
+    int32_t ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_START_TIME_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15998, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -128,13 +116,10 @@ static int32_t DecSessObjStartTime(HITLS_Session *sess, SessionObjType type, con
 static int32_t DecSessObjTimeout(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
     uint32_t *readLen)
 {
-    int32_t ret;
     uint64_t timeout = 0;
-    BSL_Tlv tlv = {0};
-    tlv.length = sizeof(timeout);
-    tlv.value = (uint8_t *)&timeout;
+    BSL_Tlv tlv = {0, (uint32_t)sizeof(timeout), (uint8_t *)&timeout};
 
-    ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
+    int32_t ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_TIME_OUT_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15999, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -150,7 +135,6 @@ static int32_t DecSessObjTimeout(HITLS_Session *sess, SessionObjType type, const
 static int32_t DecSessObjHostName(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
     uint32_t *readLen)
 {
-    int32_t ret;
     uint32_t offset = sizeof(uint32_t);
     // The length has been verified at the upper layer and must be greater than 8 bytes.
     uint32_t tlvLen = BSL_ByteToUint32(&data[offset]);
@@ -166,11 +150,9 @@ static int32_t DecSessObjHostName(HITLS_Session *sess, SessionObjType type, cons
         return HITLS_MEMALLOC_FAIL;
     }
 
-    BSL_Tlv tlv = {0};
-    tlv.length = tlvLen;
-    tlv.value = hostName;
+    BSL_Tlv tlv = {0, tlvLen, hostName};
 
-    ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
+    int32_t ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
     if (ret != BSL_SUCCESS) {
         BSL_SAL_FREE(hostName);
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_HOST_NAME_FAIL);
@@ -188,12 +170,9 @@ static int32_t DecSessObjHostName(HITLS_Session *sess, SessionObjType type, cons
 static int32_t DecSessObjSessionIdCtx(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
     uint32_t *readLen)
 {
-    int32_t ret;
-    BSL_Tlv tlv = {0};
-    tlv.length = HITLS_SESSION_ID_MAX_SIZE;
-    tlv.value = sess->sessionIdCtx;
+    BSL_Tlv tlv = {0, HITLS_SESSION_ID_MAX_SIZE, sess->sessionIdCtx};
 
-    ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
+    int32_t ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_SESSION_ID_CTX_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16002, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -208,12 +187,9 @@ static int32_t DecSessObjSessionIdCtx(HITLS_Session *sess, SessionObjType type, 
 static int32_t DecSessObjSessionId(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
     uint32_t *readLen)
 {
-    int32_t ret;
-    BSL_Tlv tlv = {0};
-    tlv.length = HITLS_SESSION_ID_MAX_SIZE;
-    tlv.value = sess->sessionId;
+    BSL_Tlv tlv = {0, HITLS_SESSION_ID_MAX_SIZE, sess->sessionId};
 
-    ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
+    int32_t ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_SESSION_ID_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16003, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -228,13 +204,10 @@ static int32_t DecSessObjSessionId(HITLS_Session *sess, SessionObjType type, con
 static int32_t DecSessObjExtendMasterSecret(HITLS_Session *sess, SessionObjType type, const uint8_t *data,
     uint32_t length, uint32_t *readLen)
 {
-    int32_t ret;
     uint8_t haveExtMasterSecret = 0;
-    BSL_Tlv tlv = {0};
-    tlv.length = sizeof(haveExtMasterSecret);
-    tlv.value = &haveExtMasterSecret;
+    BSL_Tlv tlv = {0, (uint32_t)sizeof(haveExtMasterSecret), &haveExtMasterSecret};
 
-    ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
+    int32_t ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_EXT_MASTER_SECRET_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16004, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -249,13 +222,10 @@ static int32_t DecSessObjExtendMasterSecret(HITLS_Session *sess, SessionObjType 
 static int32_t DecSessObjVerifyResult(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
     uint32_t *readLen)
 {
-    int32_t ret;
     uint32_t verifyResult = 0;
-    BSL_Tlv tlv = {0};
-    tlv.length = sizeof(verifyResult);
-    tlv.value = (uint8_t *)&verifyResult;
+    BSL_Tlv tlv = {0, (uint32_t)sizeof(verifyResult), (uint8_t *)&verifyResult};
 
-    ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
+    int32_t ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_VERIFY_RESULT_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16005, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -335,13 +305,10 @@ static int32_t DecSessObjPeerCert(HITLS_Session *sess, SessionObjType type, cons
 static int32_t DecSessObjTicketAgeAdd(HITLS_Session *sess, SessionObjType type, const uint8_t *data, uint32_t length,
     uint32_t *readLen)
 {
-    int32_t ret;
     uint32_t ticketAgeAdd = 0;
-    BSL_Tlv tlv = {0};
-    tlv.length = sizeof(ticketAgeAdd);
-    tlv.value = (uint8_t *)&ticketAgeAdd;
+    BSL_Tlv tlv = {0, (uint32_t)sizeof(ticketAgeAdd), (uint8_t *)&ticketAgeAdd};
 
-    ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
+    int32_t ret = BSL_TLV_Parse(type, data, length, &tlv, readLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_START_TIME_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15998, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

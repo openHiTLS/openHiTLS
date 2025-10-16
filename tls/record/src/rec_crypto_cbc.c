@@ -263,8 +263,8 @@ static int32_t RecConnCbcDecMtECheckMacTls(TLS_Ctx *ctx, const REC_TextInput *cr
     ConstTimeHmac(state->suiteInfo, hashCtxs, good, cryptMsg, plain, plainLen, mac, &macLen);
 
     // check mac
-    padLen = Uint32ConstTimeSelect(good, padLen, 0);
-    plainLen -= state->suiteInfo->macLen + padLen + 1;
+    uint32_t retLen = Uint32ConstTimeSelect(good, padLen, 0);
+    plainLen -= state->suiteInfo->macLen + retLen + 1;
     good &= ConstTimeSelectMemcmp(good, &plain[plainLen], mac, macLen);
     SAL_CRYPT_DigestFree(ihashCtx);
     SAL_CRYPT_DigestFree(ohashCtx);

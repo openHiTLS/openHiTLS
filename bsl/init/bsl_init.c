@@ -18,7 +18,7 @@
 
 #include "bsl_err.h"
 #include "bsl_errno.h"
-#ifdef HITLS_BSL_OBJ
+#ifdef HITLS_BSL_OBJ_CUSTOM
 #include "bsl_obj_internal.h"
 #endif // HITLS_BSL_OBJ
 
@@ -32,10 +32,10 @@ int32_t BSL_GLOBAL_DeInit(void)
     BSL_ERR_RemoveErrStringBatch();
     BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
-#if defined HITLS_BSL_OBJ && defined HITLS_BSL_HASH
+#ifdef HITLS_BSL_OBJ_CUSTOM
     BSL_OBJ_FreeSignHashTable();
     BSL_OBJ_FreeHashTable();
-#endif // HITLS_BSL_OBJ && HITLS_BSL_HASH
+#endif // HITLS_BSL_OBJ_CUSTOM
     return BSL_SUCCESS;
 }
 

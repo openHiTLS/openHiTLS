@@ -19,7 +19,6 @@
 #include "crypt_aes_macro_armv8.s"
 #include "crypt_arm.h"
 
-.file    "crypt_aes_xts_armv8.S"
 .text
 .arch    armv8-a+crypto
 
@@ -591,7 +590,7 @@ AARCH64_PACIASP
 
 .Lxts_aesdec_start:
     cmp LTMP, #80
-    b.gt .Lxts_dec_proc_5_blks
+    b.ge .Lxts_dec_proc_5_blks
     cmp LTMP, #48
     b.ge .Lxts_dec_proc_3_blks
     cmp LTMP, #32
@@ -615,14 +614,14 @@ AARCH64_PACIASP
     b.gt .Lxtx_dec_tail_blk_loop
     ld1 {BLK0.16b}, [TMPOUT]
     mov OUT,TMPOUT
-    mov TWK0.16b,TWK1.16b  // load pre-tweak back
+    mov TWK0.16b,TWK2.16b  // load pre-tweak back
     b .Lxts_dec_proc_1blk_loaded
 
     cbz LTMP,.Lxts_aesdec_finish
 
 .Lxts_dec_last_secondblk:
     cbz TAILNUM,.Lxts_aesdec_finish
-    mov TWK1.16b,TWK0.16b   // save last second tweak
+    mov TWK2.16b,TWK0.16b   // save last second tweak
     NextTweak TWX0,TWX1,TWKD00,TWKD01
 .Lxts_dec_proc_1blk:
     ld1 {BLK0.16b}, [IN],#16
@@ -931,7 +930,7 @@ AARCH64_PACIASP
 
     b.hs .Lxts_dec_rounds_5blks
     add LTMP,LTMP,#80      // add 5 blocks length back if LTMP < 0
-    cbz LTMP,.Lxtx_dec_tail_blk
+    cbz LTMP, .Lxts_dec_pre_last_secondblks
     cmp LTMP, #16
     b.eq .Lxts_dec_pre_last_1blks
     cmp LTMP,#32
@@ -940,6 +939,12 @@ AARCH64_PACIASP
     b.eq .Lxts_dec_pre_last_3blks
     cmp LTMP,#64
     b.eq .Lxts_dec_pre_last_4blks
+.Lxts_dec_pre_last_secondblks:
+    fmov TWX0,TWKD10  // reset already computed tweak
+    fmov TWX1,TWKD11
+    mov TWK2.16b, TWK0.16b  //save the last second tweak
+    mov TWK0.16b, TWK1.16b  // use the last tweak
+    b .Lxts_dec_proc_1blk
 .Lxts_dec_pre_last_1blks:
     eor IN0.16b,IN0.16b,IN4.16b   //in0 = in0 ^ in41
     eor BLK0.16b,BLK0.16b,IN0.16b   // blk0 =  in0 ^ twk0 ^ in0 ^ in4

@@ -21,9 +21,8 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "hitls_error.h"
+#include "hs_ctx.h"
 #include "parse_common.h"
-
-#define UINT24_SIZE 3u
 
 int32_t ParseVersion(ParsePacket *pkt, uint16_t *version)
 {

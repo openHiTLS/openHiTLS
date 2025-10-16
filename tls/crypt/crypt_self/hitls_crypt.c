@@ -19,6 +19,7 @@
 #include "securec.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
+#include "bsl_params.h"
 #include "tls_binlog_id.h"
 #include "crypt_algid.h"
 #include "hitls_crypt_type.h"
@@ -55,7 +56,7 @@
 #define CCM8_TLS_TAG_LEN 8u
 
 /* The default user id as specified in GM/T 0009-2012 */
-char g_SM2DefaultUserid[] = "1234567812345678";
+char g_sm2DefaultUserid[] = "1234567812345678";
 #ifdef HITLS_TLS_PROTO_TLCP11
 #define SM2_DEFAULT_USERID_LEN 16u
 #define SM2_PUBKEY_LEN 65
@@ -115,6 +116,26 @@ static bool IsCipherCCM8(HITLS_CipherAlgo cipherAlgo)
 }
 #endif
 
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+static int32_t SetHmacMdAttr(CRYPT_EAL_MacCtx *ctx, const char *attrName)
+{
+    if (attrName == NULL) {
+        return CRYPT_SUCCESS;
+    }
+    BSL_Param param[] = {
+        {.key = CRYPT_PARAM_MD_ATTR, .valueType = BSL_PARAM_TYPE_UTF8_STR,
+        .value = (void *)(uintptr_t)attrName, .valueLen = strlen(attrName), .useLen = 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = CRYPT_EAL_MacSetParam(ctx, param);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_MacFreeCtx(ctx);
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17372, "MacSetParam fail");
+    }
+    return ret;
+}
+#endif
+
 #ifdef HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES
 HITLS_HMAC_Ctx *HITLS_CRYPT_HMAC_Init(HITLS_Lib_Ctx *libCtx, const char *attrName,
     HITLS_HashAlgo hashAlgo, const uint8_t *key, uint32_t len)
@@ -125,15 +146,21 @@ HITLS_HMAC_Ctx *HITLS_CRYPT_HMAC_Init(HITLS_Lib_Ctx *libCtx, const char *attrNam
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16618, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "hashAlgo err", 0, 0, 0, 0);
         return NULL;
     }
-    CRYPT_EAL_MacCtx *ctx = NULL;
-    ctx = CRYPT_EAL_ProviderMacNewCtx(libCtx, id, attrName);
+    CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_ProviderMacNewCtx(libCtx, id, attrName);
     if (ctx == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16619, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "MacNewCtx fail", 0, 0, 0, 0);
         return NULL;
     }
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    if (SetHmacMdAttr(ctx, attrName) != CRYPT_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17365, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "MacSetParam fail", 0, 0, 0,
+            0);
+        CRYPT_EAL_MacFreeCtx(ctx);
+        return NULL;
+    }
+#endif /* HITLS_TLS_FEATURE_PROVIDER */
 
-    int32_t ret = CRYPT_EAL_MacInit(ctx, key, len);
-    if (ret != CRYPT_SUCCESS) {
+    if (CRYPT_EAL_MacInit(ctx, key, len) != CRYPT_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16620, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "MacInit fail", 0, 0, 0, 0);
         CRYPT_EAL_MacFreeCtx(ctx);
         return NULL;
@@ -149,7 +176,6 @@ HITLS_HMAC_Ctx *HITLS_CRYPT_HMAC_Init(HITLS_Lib_Ctx *libCtx, const char *attrNam
     return NULL;
 #endif // HITLS_CRYPTO_MAC
 }
-
 
 int32_t HITLS_CRYPT_HMAC_ReInit(HITLS_HMAC_Ctx *ctx)
 {
@@ -168,7 +194,6 @@ void HITLS_CRYPT_HMAC_Free(HITLS_HMAC_Ctx *ctx)
 #else
     (void)ctx;
 #endif
-    return;
 }
 
 int32_t HITLS_CRYPT_HMAC_Update(HITLS_HMAC_Ctx *ctx, const uint8_t *data, uint32_t len)
@@ -206,13 +231,20 @@ int32_t HITLS_CRYPT_HMAC(HITLS_Lib_Ctx *libCtx, const char *attrName,
     if (id == CRYPT_MAC_MAX) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_HMAC, BINLOG_ID16621, "No proper id");
     }
-    CRYPT_EAL_MacCtx *ctx = NULL;
-    ctx = CRYPT_EAL_ProviderMacNewCtx(libCtx, id, attrName);
+    CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_ProviderMacNewCtx(libCtx, id, attrName);
     if (ctx == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_HMAC, BINLOG_ID16622, "new ctx fail");
     }
+    int32_t ret;
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    ret = SetHmacMdAttr(ctx, attrName);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_MacFreeCtx(ctx);
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17373, "MacSetParam fail");
+    }
+#endif /* HITLS_TLS_FEATURE_PROVIDER */
 
-    int32_t ret = CRYPT_EAL_MacInit(ctx, key, keyLen);
+    ret = CRYPT_EAL_MacInit(ctx, key, keyLen);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_MacFreeCtx(ctx);
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16623, "mac init fail");
@@ -332,8 +364,10 @@ static int32_t SpecialModeEncryptPreSolve(CRYPT_EAL_CipherCtx *ctx, const HITLS_
         }
     }
     // In the case of CCM processing, msgLen needs to be set.
-    if ((cipher->algo == HITLS_CIPHER_AES_128_CCM) || (cipher->algo == HITLS_CIPHER_AES_128_CCM8) ||
-        (cipher->algo == HITLS_CIPHER_AES_256_CCM) || (cipher->algo == HITLS_CIPHER_AES_256_CCM8)) {
+    bool isCcm = (cipher->algo == HITLS_CIPHER_AES_128_CCM) || (cipher->algo == HITLS_CIPHER_AES_128_CCM8) ||
+                 (cipher->algo == HITLS_CIPHER_AES_256_CCM) || (cipher->algo == HITLS_CIPHER_AES_256_CCM8) ||
+                 (cipher->algo == HITLS_CIPHER_SM4_CCM);
+    if (isCcm == true) {
         ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &inLen, sizeof(inLen));
         if (ret != CRYPT_SUCCESS) {
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16636, "SET_MSGLEN fail");
@@ -531,8 +565,10 @@ static int32_t DEFAULT_DecryptPrepare(CRYPT_EAL_CipherCtx *ctx, const HITLS_Ciph
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16652, "CipherUpdate fail");
         }
     }
-    if ((cipher->algo == HITLS_CIPHER_AES_128_CCM) || (cipher->algo == HITLS_CIPHER_AES_128_CCM8) ||
-        (cipher->algo == HITLS_CIPHER_AES_256_CCM) || (cipher->algo == HITLS_CIPHER_AES_256_CCM8)) {
+    bool isCcm = (cipher->algo == HITLS_CIPHER_AES_128_CCM) || (cipher->algo == HITLS_CIPHER_AES_128_CCM8) ||
+                 (cipher->algo == HITLS_CIPHER_AES_256_CCM) || (cipher->algo == HITLS_CIPHER_AES_256_CCM8) ||
+                 (cipher->algo == HITLS_CIPHER_SM4_CCM);
+    if (isCcm == true) {
         // The length of the decrypted ciphertext consists of msgLen and tagLen, so tagLen needs to be subtracted.
         uint64_t msgLen = inLen - tagLen;
         ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &msgLen, sizeof(msgLen));
@@ -684,7 +720,7 @@ static int32_t SetSM2SelfCtx(CRYPT_EAL_PkeyCtx *selfCtx, HITLS_Sm2GenShareKeyPar
             "SET_SM2_RANDOM fail", 0, 0, 0, 0);
         return ret;
     }
-    ret = CRYPT_EAL_PkeyCtrl(selfCtx, CRYPT_CTRL_SET_SM2_USER_ID, (void *)g_SM2DefaultUserid, SM2_DEFAULT_USERID_LEN);
+    ret = CRYPT_EAL_PkeyCtrl(selfCtx, CRYPT_CTRL_SET_SM2_USER_ID, (void *)g_sm2DefaultUserid, SM2_DEFAULT_USERID_LEN);
     if (ret != CRYPT_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16669, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "SET_SM2_USER_ID fail", 0, 0, 0, 0);
@@ -714,7 +750,7 @@ static int32_t CalcSM2SecretPre(
     if (ret != CRYPT_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16675, "SET_SM2_R fail");
     }
-    ret = CRYPT_EAL_PkeyCtrl(peerCtx, CRYPT_CTRL_SET_SM2_USER_ID, (void *)g_SM2DefaultUserid, SM2_DEFAULT_USERID_LEN);
+    ret = CRYPT_EAL_PkeyCtrl(peerCtx, CRYPT_CTRL_SET_SM2_USER_ID, (void *)g_sm2DefaultUserid, SM2_DEFAULT_USERID_LEN);
     if (ret != CRYPT_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16676, "SET_SM2_USER_ID fail");
     }
@@ -729,8 +765,9 @@ int32_t HITLS_CRYPT_CalcSM2SharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrN
     uint32_t *sharedSecretLen)
 {
 #ifdef HITLS_CRYPTO_PKEY
-    if (sm2Params->priKey == NULL || sm2Params->peerPubKey == NULL || sm2Params->tmpPriKey == NULL ||
-        sm2Params->tmpPeerPubkey == NULL) {
+    bool nullInput = sm2Params->priKey == NULL || sm2Params->peerPubKey == NULL || sm2Params->tmpPriKey == NULL ||
+                     sm2Params->tmpPeerPubkey == NULL;
+    if (nullInput == true) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_CALC_SHARED_KEY, BINLOG_ID16670, "input null");
     }
     CRYPT_EAL_PkeyCtx *selfCtx = (CRYPT_EAL_PkeyCtx *)sm2Params->priKey;
@@ -1084,7 +1121,6 @@ void HITLS_CRYPT_DigestFree(HITLS_HASH_Ctx *ctx)
 #else
     (void)ctx;
 #endif
-    return;
 }
 
 int32_t HITLS_CRYPT_DigestUpdate(HITLS_HASH_Ctx *ctx, const uint8_t *data, uint32_t len)
@@ -1199,8 +1235,60 @@ int32_t HITLS_CRYPT_KemEncapsulate(HITLS_Lib_Ctx *libCtx, const char *attrName,
 int32_t HITLS_CRYPT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *ciphertext, uint32_t ciphertextLen,
     uint8_t *sharedSecret, uint32_t *sharedSecretLen)
 {
-    return CRYPT_EAL_PkeyDecaps(key, (uint8_t *)(uintptr_t)ciphertext, ciphertextLen, sharedSecret, sharedSecretLen);
+    return CRYPT_EAL_PkeyDecaps(key, ciphertext, ciphertextLen, sharedSecret, sharedSecretLen);
 }
 #endif /* HITLS_TLS_FEATURE_KEM */
+
+#ifdef HITLS_CRYPTO_KDFTLS12
+static void InitKdfTls12Param(CRYPT_KeyDeriveParameters *input, CRYPT_MAC_AlgId *id, BSL_Param *params)
+{
+    (void)BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, id, sizeof(CRYPT_MAC_AlgId));
+    (void)BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS,
+        (void *)(uintptr_t)input->secret, input->secretLen);
+    (void)BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_LABEL, BSL_PARAM_TYPE_OCTETS, // 2: index of label
+        (void *)(uintptr_t)input->label, input->labelLen);
+    (void)BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_SEED, BSL_PARAM_TYPE_OCTETS, // 3: index of seed
+        (void *)(uintptr_t)input->seed, input->seedLen);
+    if (input->attrName != NULL && strlen(input->attrName) > 0) {
+        (void)BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_MD_ATTR, BSL_PARAM_TYPE_UTF8_STR, // 4: index of md attr
+            (void *)(uintptr_t)input->attrName, strlen(input->attrName));
+    }
+}
+#endif
+
+int32_t HITLS_CRYPT_PRF(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
+{
+#ifdef HITLS_CRYPTO_KDFTLS12
+    CRYPT_MAC_AlgId id = GetHmacAlgId(input->hashAlgo);
+    BSL_Param params[6] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END}; // Set 5 parameters for kdftls12
+    InitKdfTls12Param(input, &id, params);
+
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_ProviderKdfNewCtx(input->libCtx, CRYPT_KDF_KDFTLS12, input->attrName);
+    if (ctx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17374, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "KdfNewCtx fail", 0, 0, 0, 0);
+        return HITLS_CRYPT_ERR_KDF;
+    }
+
+    int32_t ret = CRYPT_EAL_KdfSetParam(ctx, params);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_KdfFreeCtx(ctx);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17375, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "KdfSetParam fail", 0, 0, 0, 0);
+        return ret;
+    }
+
+    ret = CRYPT_EAL_KdfDerive(ctx, out, outLen);
+    CRYPT_EAL_KdfFreeCtx(ctx);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17376, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "KdfDerive fail", 0, 0, 0, 0);
+    }
+    return ret;
+#else
+    (void)input;
+    (void)out;
+    (void)outLen;
+    return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
+}
 
 #endif /* HITLS_TLS_CALLBACK_CRYPT || HITLS_TLS_FEATURE_PROVIDER */

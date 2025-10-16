@@ -18,7 +18,6 @@
 
 #include "crypt_sm4_modes_macro_x86_64.s"
 
-.file	"crypt_sm4_modes_x86_64.S"
 .text
 .extern g_cpuState
 .hidden g_cpuState

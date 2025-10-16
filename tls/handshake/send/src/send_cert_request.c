@@ -37,7 +37,7 @@ static int32_t PackAndSendCertRequest(TLS_Ctx *ctx)
     /* determine whether to assemble a message */
     if (hsCtx->msgLen == 0) {
         /* assemble message */
-        int32_t ret = HS_PackMsg(ctx, CERTIFICATE_REQUEST, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        int32_t ret = HS_PackMsg(ctx, CERTIFICATE_REQUEST);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15836, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "server pack certificate request msg fail.", 0, 0, 0, 0);
@@ -50,8 +50,7 @@ static int32_t PackAndSendCertRequest(TLS_Ctx *ctx)
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 int32_t ServerSendCertRequestProcess(TLS_Ctx *ctx)
 {
-    int32_t ret;
-    ret = PackAndSendCertRequest(ctx);
+    int32_t ret = PackAndSendCertRequest(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

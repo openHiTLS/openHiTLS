@@ -552,14 +552,18 @@ void DRBG_CtrUnInstantiate(DRBG_Ctx *drbg)
 
 DRBG_Ctx *DRBG_CtrDup(DRBG_Ctx *drbg)
 {
-    DRBG_CtrCtx *ctx = NULL;
-
     if (drbg == NULL) {
         return NULL;
     }
 
-    ctx = (DRBG_CtrCtx*)drbg->ctx;
-    return DRBG_NewCtrCtx(ctx->ciphMeth, ctx->keyLen,  drbg->isGm, ctx->isUsedDf, &(drbg->seedMeth), drbg->seedCtx);
+    DRBG_CtrCtx *ctx = (DRBG_CtrCtx*)drbg->ctx;
+    DRBG_Ctx *newDrbg = DRBG_NewCtrCtx(ctx->ciphMeth, ctx->keyLen,  drbg->isGm, ctx->isUsedDf, &(drbg->seedMeth),
+        drbg->seedCtx);
+    if (newDrbg == NULL) {
+        return NULL;
+    }
+    newDrbg->libCtx = drbg->libCtx;
+    return newDrbg;
 }
 
 void DRBG_CtrFree(DRBG_Ctx *drbg)
@@ -573,6 +577,30 @@ void DRBG_CtrFree(DRBG_Ctx *drbg)
     BSL_SAL_FREE(ctx->dfCtx);
     BSL_SAL_FREE(drbg);
     return;
+}
+
+static void DRBG_InitializeRanges(DRBG_Ctx *drbg, DRBG_CtrCtx *ctx, bool isUsedDf, uint32_t keyLen)
+{
+    // NIST.SP.800-90Ar1, Section 10.3.1 Table 3 defined those initial value.
+    if (isUsedDf) {
+        // shift rightwards by 3, converting from bit length to byte length
+        drbg->entropyRange.min = (drbg->isGm) ? DRBG_CTR_MIN_ENTROPYLEN : keyLen;
+        drbg->entropyRange.max = DRBG_MAX_LEN;
+        drbg->maxPersLen = DRBG_MAX_LEN;
+        drbg->maxAdinLen = DRBG_MAX_LEN;
+
+        // NIST.SP.800-90Ar1, Section 8.6.7 defined, a nonce needs (security_strength/2) bits of entropy at least.
+        drbg->nonceRange.min = drbg->entropyRange.min / DRBG_NONCE_FROM_ENTROPY;
+        drbg->nonceRange.max = DRBG_MAX_LEN;
+    } else {
+        drbg->entropyRange.min = ctx->seedLen;
+        drbg->entropyRange.max = ctx->seedLen;
+        drbg->maxPersLen = ctx->seedLen;
+        drbg->maxAdinLen = ctx->seedLen;
+
+        drbg->nonceRange.min = 0;
+        drbg->nonceRange.max = 0;
+    }
 }
 
 DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, const uint32_t keyLen, bool isGm, const bool isUsedDf,
@@ -624,26 +652,11 @@ DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, const uint32_t keyLen, b
 
     drbg->strength = keyLen * 8;
     drbg->maxRequest = (drbg->isGm) ? DRBG_MAX_REQUEST_SM4 : DRBG_MAX_REQUEST;
-    // NIST.SP.800-90Ar1, Section 10.3.1 Table 3 defined those initial value.
-    if (isUsedDf) {
-        // shift rightwards by 3, converting from bit length to byte length
-        drbg->entropyRange.min = (drbg->isGm) ? DRBG_CTR_MIN_ENTROPYLEN : keyLen;
-        drbg->entropyRange.max = DRBG_MAX_LEN;
-        drbg->maxPersLen = DRBG_MAX_LEN;
-        drbg->maxAdinLen = DRBG_MAX_LEN;
+    
+    DRBG_InitializeRanges(drbg, ctx, isUsedDf, keyLen);
 
-        // NIST.SP.800-90Ar1, Section 8.6.7 defined, a nonce needs (security_strength/2) bits of entropy at least.
-        drbg->nonceRange.min = drbg->entropyRange.min / DRBG_NONCE_FROM_ENTROPY;
-        drbg->nonceRange.max = DRBG_MAX_LEN;
-    } else {
-        drbg->entropyRange.min = ctx->seedLen;
-        drbg->entropyRange.max = ctx->seedLen;
-        drbg->maxPersLen = ctx->seedLen;
-        drbg->maxAdinLen = ctx->seedLen;
-
-        drbg->nonceRange.min = 0;
-        drbg->nonceRange.max = 0;
-    }
+    drbg->predictionResistance = false;
+    drbg->forkId = BSL_SAL_GetPid();
 
     return drbg;
 }

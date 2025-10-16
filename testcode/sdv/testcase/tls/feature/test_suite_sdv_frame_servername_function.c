@@ -455,3 +455,35 @@ EXIT:
     HITLS_SESS_Free(Session);
 }
 /* END_CASE */
+
+// make sure server can get serverName after handshake
+/* BEGIN_CASE */
+void UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC003()
+{
+    FRAME_Init();
+
+    HITLS_Config *clientconfig = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *serverconfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(serverconfig != NULL);
+    ASSERT_TRUE(clientconfig != NULL);
+    HITLS_CFG_SetServerNameCb(serverconfig, ExampleServerNameCb1);
+    HITLS_CFG_SetServerNameArg(serverconfig, ExampleServerNameArg1);
+
+    HITLS_CFG_SetServerName(clientconfig, (uint8_t *)g_serverName, strlen(g_serverName));
+
+    FRAME_LinkObj *client = FRAME_CreateLink(clientconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(serverconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    const char *hostName = HITLS_GetServerName(server->ssl, HITLS_SNI_HOSTNAME_TYPE);
+    ASSERT_TRUE(*hostName == *g_serverName);
+EXIT:
+    HITLS_CFG_FreeConfig(clientconfig);
+    HITLS_CFG_FreeConfig(serverconfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

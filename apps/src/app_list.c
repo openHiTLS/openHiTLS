@@ -139,6 +139,7 @@ static const CidInfo g_allMacAlgInfo[] = {
     {CRYPT_MAC_GMAC_AES256, "gmac-aes256"},
     {CRYPT_MAC_SIPHASH64, "siphash64"},
     {CRYPT_MAC_SIPHASH128, "siphash128"},
+    {CRYPT_MAC_CBC_MAC_SM4, "sm4-cbc-mac"},
 };
 
 #define MAC_ALG_CNT (sizeof(g_allMacAlgInfo) / sizeof(CidInfo))
@@ -149,6 +150,7 @@ static const CidInfo g_allRandAlgInfo[] = {
     {CRYPT_RAND_SHA256, "sha256"},
     {CRYPT_RAND_SHA384, "sha384"},
     {CRYPT_RAND_SHA512, "sha512"},
+    {CRYPT_RAND_SM3, "sm3"},
     {CRYPT_RAND_HMAC_SHA1, "hmac-sha1"},
     {CRYPT_RAND_HMAC_SHA224, "hmac-sha224"},
     {CRYPT_RAND_HMAC_SHA256, "hmac-sha256"},
@@ -160,6 +162,7 @@ static const CidInfo g_allRandAlgInfo[] = {
     {CRYPT_RAND_AES128_CTR_DF, "aes128-ctr-df"},
     {CRYPT_RAND_AES192_CTR_DF, "aes192-ctr-df"},
     {CRYPT_RAND_AES256_CTR_DF, "aes256-ctr-df"},
+    {CRYPT_RAND_SM4_CTR_DF, "sm4-ctr-df"},
 };
 
 #define RAND_ALG_CNT (sizeof(g_allRandAlgInfo) / sizeof(CidInfo))
@@ -176,6 +179,7 @@ static const CidInfo g_allKdfAlgInfo[] = {
     {CRYPT_MAC_HMAC_SHA3_384, "hmac-sha3-384"},
     {CRYPT_MAC_HMAC_SHA3_512, "hmac-sha3-512"},
     {CRYPT_MAC_HMAC_SM3, "hmac-sm3"},
+    {CRYPT_KDF_PBKDF2, "pbkdf2"},
 };
 
 #define KDF_ALG_CNT (sizeof(g_allKdfAlgInfo) / sizeof(CidInfo))
@@ -218,6 +222,13 @@ static void AppPrintList(void)
         if ((g_printAlgFuncList[i] != NULL)) {
             g_printAlgFuncList[i]();
         }
+    }
+}
+
+static void ResetPrintAlgFuncList(void)
+{
+    for (size_t i = 0; i < PRINT_ALG_FUNC_LIST_CNT; ++i) {
+        g_printAlgFuncList[i] = NULL;
     }
 }
 
@@ -422,6 +433,7 @@ static int32_t ParseListOpt(void)
 // List main function
 int32_t HITLS_ListMain(int argc, char *argv[])
 {
+    ResetPrintAlgFuncList();
     int32_t ret = HITLS_APP_SUCCESS;
     do {
         ret = AppPrintStdoutUioInit();

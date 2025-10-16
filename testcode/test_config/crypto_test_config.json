@@ -15,7 +15,6 @@
         "pem": ["test_suite_sdv_pem"],
         "tlv": ["test_suite_sdv_tlv"],
         "uio": ["test_suite_sdv_uio"],
-        "usrdata": ["test_suite_sdv_usr"],
         "sal": ["test_suite_sdv_sal"],
         "sal_mem": ["test_suite_sdv_sal"],
         "sal_thread": ["test_suite_sdv_sal"],
@@ -105,9 +104,10 @@
         "hybridkem": ["test_suite_sdv_hybridkem"],
         "mlkem": ["test_suite_sdv_mlkem"],
         "slh_dsa": ["test_suite_sdv_eal_slh_dsa"],
+        "xmss": ["test_suite_sdv_eal_xmss"],
 
         "encode": ["test_suite_sdv_encode"],
-        "provider": ["test_suite_sdv_eal_provider_load"],
+        "provider": ["test_suite_sdv_eal_multi_provider"],
         "key_encode": ["test_suite_sdv_x509"],
         "key_decode": ["test_suite_sdv_x509"],
         "x509_crl_gen": ["test_suite_sdv_x509"],
@@ -280,8 +280,10 @@
         "test_suite_sdv_eal_paillier": [],
         "test_suite_sdv_mlkem": [],
         "test_suite_sdv_eal_slh_dsa": [],
+        "test_suite_sdv_eal_xmss": [],
         "test_suite_sdv_eal_elgamal": [],
         "test_suite_sdv_x509": [],
-        "test_suite_sdv_pkcs12": []
+        "test_suite_sdv_pkcs12": [],
+        "test_suite_sdv_eal_multi_provider": []
     }
 }

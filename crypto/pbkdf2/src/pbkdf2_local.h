@@ -29,6 +29,7 @@ extern "C" {
 /**
  * @brief PBKDF Password-based key derivation function
  *
+ * @param libCtx [IN] Library context
  * @param macMeth [IN] Pointer to the HMAC algorithm method
  * @param mdMeth [IN] MD algorithm method pointer
  * @param key [IN] Password, a string entered by the user.
@@ -44,7 +45,7 @@ extern "C" {
  * @return Success: CRYPT_SUCCESS
  *         For other error codes, see crypt_errno.h
  */
-int32_t CRYPT_PBKDF2_HMAC(const EAL_MacMethod *macMeth, CRYPT_MAC_AlgId macId, const EAL_MdMethod *mdMeth,
+int32_t CRYPT_PBKDF2_HMAC(void *libCtx, const EAL_MacMethod *macMeth, CRYPT_MAC_AlgId macId, const EAL_MdMethod *mdMeth,
     const uint8_t *key, uint32_t keyLen,
     const uint8_t *salt, uint32_t saltLen,
     uint32_t iterCnt, uint8_t *out, uint32_t len);

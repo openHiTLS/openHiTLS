@@ -23,18 +23,10 @@
 #include "hs_ctx.h"
 #include "pack_common.h"
 
-int32_t PackKeyUpdate(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+int32_t PackKeyUpdate(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     uint8_t keyUpdateValue = (uint8_t)ctx->keyUpdateType;
-
-    /* If the cache length is less than the length of keyUpdateValue, return an error code. */
-    if (bufLen < 1) {
-        return PackBufLenError(BINLOG_ID15854, BINGLOG_STR("keyUpdate"));
-    }
-
-    buf[0] = keyUpdateValue;
-    *usedLen = 1;
-
-    return HITLS_SUCCESS;
+    
+    return PackAppendUint8ToBuf(pkt, keyUpdateValue);
 }
 #endif /* HITLS_TLS_FEATURE_KEY_UPDATE */

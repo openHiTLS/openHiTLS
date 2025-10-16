@@ -27,7 +27,7 @@
 * @test     SDV_TLS12_RESUME_FUNC_TC001
 * @title    Test the PSK-based session resume of tls12.
 *
-* @brief    1. at first handshake, config the client does not support tickets, 
+* @brief    1. at first handshake, config the client does not support tickets,
 but the server supports tickets. Expect result 1
             2. after first handshake, config the client support tickets, Expect result 2
 * @expect   1. connect success
@@ -110,9 +110,9 @@ void SDV_TLS12_RESUME_FUNC_TC001()
         } else {
             int ret = HLT_TlsConnect(clientSsl);
             ASSERT_EQ(ret, HITLS_SUCCESS);
-            uint8_t isReused = 0;
+            bool isReused = false;
             ASSERT_TRUE(HITLS_IsSessionReused(clientSsl, &isReused) == HITLS_SUCCESS);
-            ASSERT_EQ(isReused, 1);
+            ASSERT_EQ(isReused, true);
         }
         ASSERT_TRUE(HLT_TlsClose(clientSsl) == 0);
         HLT_RpcTlsClose(remoteProcess, serverSslId);
@@ -251,9 +251,9 @@ void SDV_HITLS_TICKET_KEY_CALLBACK_RESUME_FUNC_TC001(int version, int connType, 
             HITLS_SESS_Free(session);
             session = NULL;
 
-            uint8_t isReused = 0;
+            bool isReused = false;
             ASSERT_TRUE(HITLS_IsSessionReused(clientSsl, &isReused) == HITLS_SUCCESS);
-            ASSERT_TRUE(isReused == 1);
+            ASSERT_TRUE(isReused == true);
         }
 
         // After the first handshake is complete, obtain and store the session.

@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_PROVIDER
+#if defined(HITLS_CRYPTO_PKEY_KEM) && defined(HITLS_CRYPTO_PROVIDER)
 
 #include "crypt_eal_implprovider.h"
 #ifdef HITLS_CRYPTO_MLKEM
@@ -24,19 +24,19 @@
 #include "crypt_hybridkem.h"
 #endif
 
-const CRYPT_EAL_Func g_defEalMlKem[] = {
 #ifdef HITLS_CRYPTO_MLKEM
+const CRYPT_EAL_Func g_defEalMlKem[] = {
     {CRYPT_EAL_IMPLPKEYKEM_ENCAPSULATE, (CRYPT_EAL_ImplPkeyKemEncapsulate)CRYPT_ML_KEM_Encaps},
     {CRYPT_EAL_IMPLPKEYKEM_DECAPSULATE, (CRYPT_EAL_ImplPkeyKemDecapsulate)CRYPT_ML_KEM_Decaps},
-#endif
     CRYPT_EAL_FUNC_END
 };
+#endif
 
-const CRYPT_EAL_Func g_defEalHybridKeyKem[] = {
 #ifdef HITLS_CRYPTO_HYBRIDKEM
+const CRYPT_EAL_Func g_defEalHybridKeyKem[] = {
     {CRYPT_EAL_IMPLPKEYKEM_ENCAPSULATE, (CRYPT_EAL_ImplPkeyKemEncapsulate)CRYPT_HYBRID_KEM_Encaps},
     {CRYPT_EAL_IMPLPKEYKEM_DECAPSULATE, (CRYPT_EAL_ImplPkeyKemDecapsulate)CRYPT_HYBRID_KEM_Decaps},
-#endif
     CRYPT_EAL_FUNC_END
 };
-#endif // HITLS_CRYPTO_PROVIDER
+#endif
+#endif

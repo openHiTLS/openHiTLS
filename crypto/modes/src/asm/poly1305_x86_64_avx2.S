@@ -17,7 +17,6 @@
 
 #include "poly1305_x86_64.S"
 
-.file   "poly1305_x86_64_avx2.S"
 .text
 
 /**

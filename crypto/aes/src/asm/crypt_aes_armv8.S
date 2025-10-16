@@ -18,7 +18,6 @@
 
 #include "crypt_arm.h"
 #include "crypt_aes_macro_armv8.s"
-.file    "crypt_aes_armv8.S"
 .text
 .arch    armv8-a+crypto
 
@@ -174,9 +173,11 @@ AARCH64_AUTIASP
 .align 5
 SetDecryptKey128:
 AARCH64_PACIASP
-    stp x29, x30, [sp, #-32]!
+    stp x29, x30, [sp, #-0x40]!
     add x29, sp, #0
-    stp x25, x28, [sp, #16]             // Register push stack completed.
+    stp x25, x28, [sp, #0x10]             // Register push stack completed.
+    stp d8, d9, [sp, #0x20]
+    stp d10, d11, [sp, #0x30]
 
     mov x28, x0
     bl .Lenc_key_128
@@ -190,8 +191,10 @@ AARCH64_PACIASP
     st1 {v10.4s}, [x28]
     eor x28, x28, x28
     eor x0, x0, x0
-    ldp x25, x28, [sp, #16]
-    ldp x29, x30, [sp], #32             // Stacking completed.
+    ldp d10, d11, [sp, #0x30]
+    ldp d8, d9, [sp, #0x20]
+    ldp x25, x28, [sp, #0x10]
+    ldp x29, x30, [sp], #0x40             // Stacking completed.
 AARCH64_AUTIASP
     ret
 .size   SetDecryptKey128, .-SetDecryptKey128
@@ -270,9 +273,12 @@ AARCH64_AUTIASP
 .align 5
 SetDecryptKey192:
 AARCH64_PACIASP
-    stp x29, x30, [sp, #-32]!
+    stp x29, x30, [sp, #-0x50]!
     add x29, sp, #0
-    stp x25, x28, [sp, #16]             // Register is stacked.
+    stp x25, x28, [sp, #0x10]             // Register is stacked.
+    stp d8, d9, [sp, #0x20]             // Register is stacked.
+    stp d10, d11, [sp, #0x30]             // Register is stacked.
+    stp d12, d13, [sp, #0x40]             // Register is stacked.
 
     mov x28, x0
     bl .Lenc_key_192
@@ -292,8 +298,11 @@ AARCH64_PACIASP
     st1 {v12.4s}, [x28]
     eor x28, x28, x28
     eor x0, x0, x0
-    ldp x25, x28, [sp, #16]
-    ldp x29, x30, [sp], #32             // Stacking completed.
+    ldp d12, d13, [sp, #0x40]
+    ldp d10, d11, [sp, #0x30]
+    ldp d8, d9, [sp, #0x20]
+    ldp x25, x28, [sp, #0x10]
+    ldp x29, x30, [sp], #0x50             // Stacking completed.
 AARCH64_AUTIASP
     ret
 .size   SetDecryptKey192, .-SetDecryptKey192
@@ -392,9 +401,13 @@ AARCH64_AUTIASP
 .align 5
 SetDecryptKey256:
 AARCH64_PACIASP
-    stp x29, x30, [sp, #-32]!
+    stp x29, x30, [sp, #-0x60]!
     add x29, sp, #0
-    stp x25, x28, [sp, #16]
+    stp x25, x28, [sp, #0x10]
+    stp d8, d9, [sp, #0x20]
+    stp d10, d11, [sp, #0x30]
+    stp d12, d13, [sp, #0x40]
+    stp d14, d15, [sp, #0x50]
 
     mov x28, x0
     bl .Lenc_key_256
@@ -420,8 +433,12 @@ AARCH64_PACIASP
     st1 {v14.4s}, [x28]
     eor x28, x28, x28
     eor x0, x0, x0
-    ldp x25, x28, [sp, #16]
-    ldp x29, x30, [sp], #32             // Stack has been popped.
+    ldp d14, d15, [sp, #0x50]
+    ldp d12, d13, [sp, #0x40]
+    ldp d10, d11, [sp, #0x30]
+    ldp d8, d9, [sp, #0x20]
+    ldp x25, x28, [sp, #0x10]
+    ldp x29, x30, [sp], #0x60             // Stack has been popped.
 AARCH64_AUTIASP
     ret
 .size   SetDecryptKey256, .-SetDecryptKey256

@@ -115,7 +115,6 @@ void SDV_CRYPT_EAL_KDF_HKDF_API_TC001(int algId)
 
     ASSERT_EQ(CRYPT_EAL_KdfDeInitCtx(ctx), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_KdfCtrl(ctx, 0, NULL, 0), CRYPT_NULL_INPUT);
 EXIT:
     CRYPT_EAL_KdfFreeCtx(ctx);
 }
@@ -213,5 +212,79 @@ EXIT:
         free(out);
     }
     CRYPT_EAL_KdfFreeCtx(ctx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_HKDF_BSL_PARAM_MAKER_TC001(int algId, Hex *key, Hex *salt, Hex *info, Hex *result)
+{
+    TestMemInit();
+    uint32_t outLen = result->len;
+    uint8_t *out = malloc(outLen * sizeof(uint8_t));
+    ASSERT_TRUE(out != NULL);
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
+    ASSERT_TRUE(ctx != NULL);
+    CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_FULL;
+
+    BSL_ParamMaker *maker = BSL_PARAM_MAKER_New();
+    ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32,
+        &algId, sizeof(algId)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, CRYPT_PARAM_KDF_MODE, BSL_PARAM_TYPE_UINT32,
+        &mode, sizeof(mode)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS,
+        key->x, key->len), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
+        salt->x, salt->len), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, CRYPT_PARAM_KDF_INFO, BSL_PARAM_TYPE_OCTETS,
+        info->x, info->len), BSL_SUCCESS);
+    BSL_Param *params = BSL_PARAM_MAKER_ToParam(maker);
+
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), BSL_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), BSL_SUCCESS);
+    ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
+EXIT:
+    if (out != NULL) {
+        free(out);
+    }
+    CRYPT_EAL_KdfFreeCtx(ctx);
+    BSL_PARAM_MAKER_Free(maker);
+    BSL_PARAM_Free(params);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_HKDF_BSL_PARAM_MAKER_TC002(int algId, Hex *key, Hex *salt, Hex *info, Hex *result)
+{
+    TestMemInit();
+    uint32_t outLen = result->len;
+    uint8_t *out = malloc(outLen * sizeof(uint8_t));
+    ASSERT_TRUE(out != NULL);
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
+    ASSERT_TRUE(ctx != NULL);
+    CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_FULL;
+
+    BSL_ParamMaker *maker = BSL_PARAM_MAKER_New();
+    ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32,
+        &algId, sizeof(algId)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, CRYPT_PARAM_KDF_MODE, BSL_PARAM_TYPE_UINT32,
+        &mode, sizeof(mode)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_MAKER_DeepPushValue(maker, CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS,
+        key->x, key->len), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_MAKER_DeepPushValue(maker, CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
+        salt->x, salt->len), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_MAKER_DeepPushValue(maker, CRYPT_PARAM_KDF_INFO, BSL_PARAM_TYPE_OCTETS,
+        info->x, info->len), BSL_SUCCESS);
+    BSL_Param *params = BSL_PARAM_MAKER_ToParam(maker);
+
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), BSL_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), BSL_SUCCESS);
+    ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
+EXIT:
+    if (out != NULL) {
+        free(out);
+    }
+    CRYPT_EAL_KdfFreeCtx(ctx);
+    BSL_PARAM_MAKER_Free(maker);
+    BSL_PARAM_Free(params);
 }
 /* END_CASE */

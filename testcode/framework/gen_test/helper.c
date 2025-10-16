@@ -366,6 +366,14 @@ int GenFunctionWrapper(FILE *file, FunctionTable *function)
     if (ret < 0) {
         return 1;
     }
+    ret = fprintf(file, "    (void)signal(SIGALRM, handleAlarmSignal);\n");
+    if (ret < 0) {
+        return 1;
+    }
+    ret = fprintf(file, "    alarm(600u);\n");
+    if (ret < 0) {
+        return 1;
+    }
     if (function->argCount == 0) {
         ret = fprintf(file, "    (void) param;\n");
         if (ret < 0) {
@@ -576,7 +584,7 @@ EXIT:
 
 int WriteHeader(FILE *outFile)
 {
-    if (fprintf(outFile, "#include \"helper.h\"\n#include \"test.h\"\n#include <time.h>\n") < 0) {
+    if (fprintf(outFile, "#include \"helper.h\"\n#include \"test.h\"\n#include <time.h>\n#include <unistd.h>\n") < 0) {
         return 1;
     }
     return 0;
@@ -932,6 +940,12 @@ int ScanFunctionFile(FILE *fpIn, FILE *fpOut, const char *dir)
     ret = ScanAllFunction(fpIn, fpOut);
     if (ret != 0) {
         Print("scan function failed\n");
+        return 1;
+    }
+    if (fprintf(fpOut, "\n void handleAlarmSignal(int signum)\n{\n\
+    (void)signum; \n\
+    fprintf(stderr, \"timeout 600\\n\");\n\
+    exit(-1);\n}\n") < 0) {
         return 1;
     }
 

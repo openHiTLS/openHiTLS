@@ -644,23 +644,79 @@ EXIT:
 }
 /* END_CASE */
 
-int32_t StatusPark2(HandshakeTestInfo *testInfo)
+static void SetFrameType(FRAME_Type *frametype, uint16_t versionType, REC_Type recordType, HS_MsgType handshakeType,
+    HITLS_KeyExchAlgo keyExType)
 {
-    testInfo->client = FRAME_CreateLink(testInfo->config, BSL_UIO_TCP);
-    if (testInfo->client == NULL) {
-        return HITLS_INTERNAL_EXCEPTION;
-    }
-
-    testInfo->server = FRAME_CreateLink(testInfo->config, BSL_UIO_TCP);
-    if (testInfo->server == NULL) {
-        return HITLS_INTERNAL_EXCEPTION;
-    }
-
-    if (FRAME_CreateConnection(testInfo->client, testInfo->server,
-                               testInfo->isClient, testInfo->state) != HITLS_SUCCESS) {
-        return HITLS_INTERNAL_EXCEPTION;
-    }
-
-    return HITLS_SUCCESS;
+    frametype->versionType = versionType;
+    frametype->recordType = recordType;
+    frametype->handshakeType = handshakeType;
+    frametype->keyExType = keyExType;
+    frametype->transportType = BSL_UIO_TCP;
 }
+
+/* @
+* @test UT_TLS_TLS12_RFC5246_CONSISTENCY_GROUP_SUPPORT_TC001
+* @title Set multiple groups, among which there are groups that are not supported by the protocol version. The expected
+*       group sent by the client is only the group it supports.
+* @precon nan
+* @brief 1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+2. Set up two groups, HITLS_EC_GROUP_SECP521R1 and HITLS_FF_DHE_2048, where HITLS_FF_DHE_2048 is not supported in
+*   tls1.2. Expected result 2 is obtained.
+3. Continue to establish the link， Stop the server handshake state at TRY_RECV_CLIENT_HELLO state. Expected result 3
+*   is obtained.
+4. Analyze the client hello message, retrieve the group list sent by the client, and check if there is only one group,
+*   HITLS_EC_GROUP_SECP521R1. Expected result 4 is obtained.
+* @expect 1. The initialization is successful.
+2. return HITLS_SUCCESS.
+3. return HITLS_SUCCESS.
+4. The group list in the parsed client hello message only contains one group, HITLS_EC_GROUP_SECP521R1.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_GROUP_SUPPORT_TC001()
+{
+    FRAME_Init();
+
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(clientTlsCtx != NULL);
+    ASSERT_TRUE(serverTlsCtx != NULL);
+
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1, HITLS_FF_DHE_2048};
+    uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
+    ASSERT_EQ(HITLS_CFG_SetGroups(&(clientTlsCtx->config.tlsConfig), groups, groupsSize), HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO) == HITLS_SUCCESS);
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_HANDSHAKING);
+    ASSERT_TRUE(serverTlsCtx->state == CM_STATE_IDLE);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+
+    FRAME_Msg frameMsg = { 0 };
+    FRAME_Type frameType = { 0 };
+
+    uint32_t parseLen = 0;
+    SetFrameType(&frameType, HITLS_VERSION_TLS12, REC_TYPE_HANDSHAKE, CLIENT_HELLO, HITLS_KEY_EXCH_ECDHE);
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+
+    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
+    ASSERT_EQ(clientMsg->supportedGroups.exData.data[0], HITLS_EC_GROUP_SECP521R1);
+    ASSERT_EQ(clientMsg->supportedGroups.exData.size, 1);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
 

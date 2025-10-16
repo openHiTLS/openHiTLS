@@ -18,7 +18,6 @@
 
 #include "poly1305_x86_64.S"
 
-.file   "poly1305_x86_64_avx512.S"
 .text
 
 .set    ZH0, %zmm0

@@ -500,7 +500,7 @@ static int32_t ReqOutput(ReqOptCtx *optCtx)
     uint32_t writeLen = 0;
     ret = BSL_UIO_Write(optCtx->wUio, optCtx->encode.data, optCtx->encode.dataLen, &writeLen);
     if (ret != 0 || writeLen != optCtx->encode.dataLen) {
-        AppPrintError("req: write csr failed, errCode = %d, writeLen = %ld.\n", ret, writeLen);
+        AppPrintError("req: write csr failed, errCode = %d, writeLen = %u.\n", ret, writeLen);
         return HITLS_APP_UIO_FAIL;
     }
     return HITLS_APP_SUCCESS;
@@ -516,7 +516,7 @@ static void InitReqOptCtx(ReqOptCtx *optCtx)
 static void UnInitReqOptCtx(ReqOptCtx *optCtx)
 {
     if (optCtx->passin != NULL) {
-         BSL_SAL_ClearFree(optCtx->passin, strlen(optCtx->passin));
+        BSL_SAL_ClearFree(optCtx->passin, strlen(optCtx->passin));
     }
     if (optCtx->passout != NULL) {
         BSL_SAL_ClearFree(optCtx->passout, strlen(optCtx->passout));

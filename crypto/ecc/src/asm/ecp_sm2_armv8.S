@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CURVE_SM2
 #include "crypt_arm.h"
-.file	"ecp_sm2_armv8.S"
 
 #define	s0 x7
 #define	s1 x8
@@ -465,7 +464,6 @@ AARCH64_PACIASP
 	sbc	x8,x8,x14
 	stp	x9, x7, [x0]
 	stp	x10, x8, [x0, #16]
-	ret
 AARCH64_AUTIASP
 	ret
 .size	ECP_Sm2Neg, .-ECP_Sm2Neg

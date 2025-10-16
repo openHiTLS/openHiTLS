@@ -1,0 +1,8 @@
+UT_TLS_CERT_CFG_LoadCAFile_API_TC001
+UT_TLS_CERT_CFG_LoadCAFile_API_TC001:TLS1_3:"../../testcode/testdata/tls/certificate/der/need_passwd_cert/eecert.der":"123456"
+
+UT_TLS_TLS13_RECV_CA_LIST_TC001
+UT_TLS_TLS13_RECV_CA_LIST_TC001:"../../testcode/testdata/tls/certificate/der/need_passwd_cert/eecert.der"
+
+UT_TLS_TLS12_RECV_CA_LIST_TC001
+UT_TLS_TLS12_RECV_CA_LIST_TC001:"../../testcode/testdata/tls/certificate/der/need_passwd_cert/eecert.der"

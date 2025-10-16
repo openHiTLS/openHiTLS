@@ -161,7 +161,7 @@ int32_t ListRawPushBack(RawList *list, ListRawNode *node);
  * @param newNode [IN] Node to be inserted
  * @retval #BSL_SUCCESS 0 indicates that the linked list is inserted successfully.
  */
-int32_t ListIRawnsert(const ListRawNode *curNode, ListRawNode *newNode);
+int32_t ListRawInsert(const ListRawNode *curNode, ListRawNode *newNode);
 
 /**
  * @ingroup bsl_base

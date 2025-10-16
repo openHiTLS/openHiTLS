@@ -22,6 +22,12 @@ SDV_X509_STORE_CTRL_FUNC_TC001:
 SDV_X509_STORE_CTRL_CERT_FUNC_TC002
 SDV_X509_STORE_CTRL_CERT_FUNC_TC002:
 
+SDV_X509_STORE_CTRL_NEW_FIELDS_FUNC_TC003
+SDV_X509_STORE_CTRL_NEW_FIELDS_FUNC_TC003:
+
+SDV_X509_STORE_CTRL_NEW_FIELDS_INVALID_FUNC_TC004
+SDV_X509_STORE_CTRL_NEW_FIELDS_INVALID_FUNC_TC004:
+
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 ed25519-nocrl
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/ed25519/ed25519.ca.der":"../testdata/cert/ed25519/ed25519.intca.pem":"../testdata/cert/ed25519/ed25519.end.pem":"../testdata/cert/ed25519/ed25519.crl.der"
 
@@ -59,13 +65,22 @@ SDV_X509_BUILD_CERT_CHAIN_FUNC_TC007 cert chain error depth
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC007:
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test crl have no cacrl vfy dev
-SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_DEV:0:HITLS_PKI_SUCCESS
 
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test crl have no cacrl  vfy all
-SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_X509_ERR_CRL_NOT_FOUND
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_ALL:0:HITLS_X509_ERR_VFY_CRL_NOT_FOUND
  
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test revoke endcert
-SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v1.der":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_X509_ERR_VFY_CERT_REVOKED
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v1.der":HITLS_X509_VFY_FLAG_CRL_DEV:0:HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test crl have no cacrl vfy all with cbk
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_ALL:1:HITLS_PKI_SUCCESS
+
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test revoke endcert with cbk
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v1.der":HITLS_X509_VFY_FLAG_CRL_DEV:1:HITLS_PKI_SUCCESS
+ 
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test crl have no cacrl vfy dev with cbk
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:"../testdata/cert/chain/rsa-v3/ca1.der":"../testdata/cert/chain/rsa-v3/inter.der":"../testdata/cert/chain/rsa-v3/end.der":"":"../testdata/cert/chain/rsa-v3/crl_v2.old.der":HITLS_X509_VFY_FLAG_CRL_DEV:2:-1
 
 # SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008 test revoke cacert
 # SDV_X509_BUILD_CERT_CHAIN_FUNC_TC008:
@@ -81,3 +96,42 @@ SDV_X509_SM2_CERT_USERID_FUNC_TC001:"../testdata/cert/sm2_with_userid/ca.crt":".
 
 SDV_X509_SM2_CERT_USERID_FUNC_TC001
 SDV_X509_SM2_CERT_USERID_FUNC_TC001:"../testdata/cert/sm2/ca.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/sign.mul.der":0
+
+SDV_X509_STORE_LOAD_CA_PATH_FUNC_TC001
+SDV_X509_STORE_LOAD_CA_PATH_FUNC_TC001:
+
+SDV_X509_STORE_LOAD_CA_PATH_CHAIN_BUILD_TC001
+SDV_X509_STORE_LOAD_CA_PATH_CHAIN_BUILD_TC001:
+
+SDV_X509_STORE_LOAD_CA_PATH_CHAIN_BUILD_TC002
+SDV_X509_STORE_LOAD_CA_PATH_CHAIN_BUILD_TC002:
+
+SDV_X509_STORE_LOAD_CA_PATH_CHAIN_BUILD_TC003
+SDV_X509_STORE_LOAD_CA_PATH_CHAIN_BUILD_TC003:
+
+SDV_X509_STORE_LOAD_CA_PATH_CHAIN_BUILD_TC004
+SDV_X509_STORE_LOAD_CA_PATH_CHAIN_BUILD_TC004:
+
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001 error cert notbefore
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001:HITLS_X509_ERR_VFY_GET_NOTBEFORE_FAIL:19
+
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001 check cert notbefore error
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001:HITLS_X509_ERR_VFY_NOTBEFORE_IN_FUTURE:20
+
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001 error cert notafter
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001:HITLS_X509_ERR_VFY_GET_NOTAFTER_FAIL:21
+
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001 check cert notafter error
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001:HITLS_X509_ERR_VFY_NOTAFTER_EXPIRED:22
+
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001 check no cacert
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001:HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND:-2
+
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC002
+SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC002:HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND:HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND
+
+SDV_X509_VERIFY_CERT_CHAIN_FUNC_TC001
+SDV_X509_VERIFY_CERT_CHAIN_FUNC_TC001:
+
+SDV_X509_BUILD_MLDSA_CERT_CHAIN_FUNC_TC001
+SDV_X509_BUILD_MLDSA_CERT_CHAIN_FUNC_TC001:

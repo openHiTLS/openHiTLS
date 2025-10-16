@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CURVE_SM2
 
-.file	"ecp_sm2_x86_64.S"
 .text
 
 .set	s0,%r8

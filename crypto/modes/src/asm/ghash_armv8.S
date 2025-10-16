@@ -136,6 +136,13 @@ OUT_X    .req v23
 .align 4
 GcmTableGen4bit:
 AARCH64_PACIASP
+    stp x29, x30, [sp, #-0x50]!
+    add x29, sp, #0
+    stp d8, d9, [sp, #0x10]
+    stp d10, d11, [sp, #0x20]
+    stp d12, d13, [sp, #0x30]
+    stp d14, d15, [sp, #0x40]
+
     movi MULL_C2.16b, #0xe1                     // set 0xc2
     ld1 {MULL_H.16b}, [INPUT_H]                 // load input H
     shl MULL_C2.2d, MULL_C2.2d, #57             // 0xc20000000000000
@@ -143,6 +150,11 @@ AARCH64_PACIASP
     GEN_H
     GEN_H2
     GEN_H3_4
+    ldp d8, d9, [sp, #0x10]
+    ldp d10, d11, [sp, #0x20]
+    ldp d12, d13, [sp, #0x30]
+    ldp d14, d15, [sp, #0x40]
+    ldp x29, x30, [sp], #0x50
 AARCH64_AUTIASP
     ret
 .size GcmTableGen4bit,.-GcmTableGen4bit
@@ -172,9 +184,9 @@ AARCH64_PACIASP
     pmull v1.1q, OUT_H1_2.1d, INPUT_X.1d        // (H.lo + H.hi) * (Xi.lo + Xi.hi)
 
     ext v7.16b, OUT_X.16b, v2.16b, #8           // M
-    eor v8.16b, OUT_X.16b, v2.16b               // (H.lo * Xi.hi) + (H.hi * Xi.lo)
+    eor v6.16b, OUT_X.16b, v2.16b               // (H.lo * Xi.hi) + (H.hi * Xi.lo)
     eor v1.16b, v1.16b, v7.16b                  // (H.lo + H.hi) * (Xi.lo + Xi.hi) + M
-    eor v1.16b, v1.16b, v8.16b                  // (H.lo * Xi.hi) + (H.hi * Xi.lo) + (H.lo + H.hi) * (Xi.lo + Xi.hi) + M
+    eor v1.16b, v1.16b, v6.16b                  // (H.lo * Xi.hi) + (H.hi * Xi.lo) + (H.lo + H.hi) * (Xi.lo + Xi.hi) + M
     pmull v18.1q, OUT_X.1d, MULL_C2.1d          // 1st phase of reduction
 
     ins v2.d[0], v1.d[1]

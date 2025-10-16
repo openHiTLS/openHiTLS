@@ -21,6 +21,7 @@
 #include "app_function.h"
 #include "app_print.h"
 #include "app_help.h"
+#include "app_provider.h"
 
 static int AppInit(void)
 {
@@ -105,9 +106,17 @@ int main(int argc, char *argv[])
         goto end;
     }
 
+    if (APP_GetCurrent_LibCtx() == NULL) {
+        if (APP_Create_LibCtx() == NULL) {
+            (void)AppPrintError("Create g_libCtx failed\n");
+            ret = HITLS_APP_INVALID_ARG;
+            goto end;
+        }
+    }
     ret = func.main(newArgc, newArgv);
     FreeNewArgv(newArgv, newArgc);
 end:
+    HITLS_APP_FreeLibCtx();
     AppUninit();
     return ret;
 }

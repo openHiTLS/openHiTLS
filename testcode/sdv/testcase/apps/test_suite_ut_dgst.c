@@ -20,6 +20,7 @@
 #include "app_errno.h"
 #include "app_help.h"
 #include "app_dgst.h"
+#include "app_provider.h"
 #include "app_print.h"
 #include "crypt_eal_md.h"
 #include "bsl_sal.h"
@@ -41,6 +42,25 @@ typedef struct {
 
 /* INCLUDE_SOURCE  ${HITLS_ROOT_PATH}/apps/src/app_print.c ${HITLS_ROOT_PATH}/apps/src/app_dgst.c ${HITLS_ROOT_PATH}/apps/src/app_opt.c */
 
+static int32_t AppInit(void)
+{
+    int32_t ret = AppPrintErrorUioInit(stderr);
+    if (ret != HITLS_APP_SUCCESS) {
+        return ret;
+    }
+    if (APP_Create_LibCtx() == NULL) {
+        (void)AppPrintError("Create g_libCtx failed\n");
+        return HITLS_APP_INVALID_ARG;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static void AppUninit(void)
+{
+    AppPrintErrorUioUnInit();
+    HITLS_APP_FreeLibCtx();
+}
+
 /**
  * @test UT_HITLS_APP_dgst_TC001
  * @spec  -
@@ -61,14 +81,14 @@ void UT_HITLS_APP_dgst_TC001(void)
         {6, argv[2], HITLS_APP_SUCCESS}
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_DgstMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     return;
 }
 /* END_CASE */
@@ -100,15 +120,14 @@ void UT_HITLS_APP_dgst_TC002(void)
         {7, argv[6], HITLS_APP_UIO_FAIL}
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
-
         int ret = HITLS_DgstMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     return;
 }
 /* END_CASE */
@@ -129,14 +148,14 @@ void UT_HITLS_APP_dgst_TC003(void)
         {2, argv[0], HITLS_APP_HELP},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_DgstMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     return;
 }
 /* END_CASE */
@@ -166,13 +185,13 @@ void UT_HITLS_APP_dgst_TC004(void)
         {6, argv[0], HITLS_APP_OPT_UNKOWN},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_DgstMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     STUB_Reset(&stubInfo);
     return;
 }
@@ -197,6 +216,7 @@ void UT_HITLS_APP_dgst_TC005(void)
 {
     STUB_Init();
     FuncStubInfo stubInfo = {0};
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     STUB_Replace(&stubInfo, BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);
     char *argv[][50] = {{"dgst", "-md", "md5", "-out", OUT_FILE_PATH, PRV_PATH}};
 
@@ -211,6 +231,7 @@ void UT_HITLS_APP_dgst_TC005(void)
 
 EXIT:
     STUB_Reset(&stubInfo);
+    AppUninit();
     return;
 }
 /* END_CASE */
@@ -237,14 +258,14 @@ void UT_HITLS_APP_dgst_TC006(void)
         {4, argv[0], HITLS_APP_OPT_VALUE_INVALID},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_DgstMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     STUB_Reset(&stubInfo);
     return;
 }
@@ -276,14 +297,14 @@ void UT_HITLS_APP_dgst_TC007(void)
         {4, argv[0], HITLS_APP_UIO_FAIL},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_DgstMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     STUB_Reset(&stubInfo);
     return;
 }
@@ -312,7 +333,7 @@ void UT_HITLS_APP_dgst_TC008(void)
 
     OptTestData testData[] = {{4, argv[0], HITLS_APP_SUCCESS}};
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_DgstMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
@@ -321,7 +342,7 @@ void UT_HITLS_APP_dgst_TC008(void)
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     return;
 }
 /* END_CASE */
@@ -349,14 +370,14 @@ void UT_HITLS_APP_dgst_TC009(void)
         {4, argv[0], HITLS_APP_CRYPTO_FAIL},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_DgstMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     STUB_Reset(&stubInfo);
     return;
 }
@@ -387,14 +408,14 @@ void UT_HITLS_APP_dgst_TC0010(void)
         {4, argv[0], HITLS_APP_CRYPTO_FAIL},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_DgstMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     STUB_Reset(&stubInfo);
     return;
 }
@@ -422,14 +443,14 @@ void UT_HITLS_APP_dgst_TC0011(void)
         {4, argv[0], HITLS_APP_CRYPTO_FAIL},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_DgstMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     STUB_Reset(&stubInfo);
     return;
 }
@@ -459,14 +480,14 @@ void UT_HITLS_APP_dgst_TC0012(void)
         {4, argv[0], HITLS_APP_UIO_FAIL},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_DgstMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     STUB_Reset(&stubInfo);
     return;
 }
@@ -494,14 +515,14 @@ void UT_HITLS_APP_dgst_TC0013(void)
 
     OptTestData testData[] = {{4, argv[0], HITLS_APP_CRYPTO_FAIL}};
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_DgstMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     STUB_Reset(&stubInfo);
     return;
 }

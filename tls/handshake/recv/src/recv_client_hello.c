@@ -30,6 +30,7 @@
 #include "alert.h"
 #include "session_mgr.h"
 #include "recv_process.h"
+#include "config_check.h"
 #ifdef HITLS_TLS_FEATURE_SECURITY
 #include "security.h"
 #endif
@@ -42,16 +43,15 @@
 #include "cert_mgr_ctx.h"
 #include "record.h"
 #include "hs_cookie.h"
+#ifdef HITLS_TLS_FEATURE_SESSION
+#include "session_mgr.h"
+#endif
+#include "cert_method.h"
+
 #ifdef HITLS_TLS_PROTO_TLS13
 #if defined(HITLS_TLS_FEATURE_SESSION) || defined(HITLS_TLS_FEATURE_PSK)
 #define HS_MAX_BINDER_SIZE 64
 #endif
-#endif
-#ifdef HITLS_TLS_PROTO_DTLS12
-#define COOKIE_GEN_SUCCESS    1
-#define COOKIE_GEN_ERROR      0
-#define COOKIE_VERIFY_SUCCESS 1
-#define COOKIE_VERIFY_ERROR   0
 #endif
 #ifdef HITLS_TLS_SUITE_KX_ECDHE
 /**
@@ -94,7 +94,12 @@ static uint16_t FindSupportedCurves(const TLS_Ctx *ctx, const uint16_t *perferen
 #endif /* HITLS_TLS_FEATURE_SECURITY */
         return 0;
     }
-
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
+    if (IS_SM_TLS13(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite) &&
+        perferenceGroups[index] != HITLS_EC_GROUP_SM2) {
+        return 0;
+    }
+#endif
     return perferenceGroups[index];
 }
 
@@ -322,9 +327,8 @@ static int32_t ServerNegotiateCipher(TLS_Ctx *ctx, const ClientHelloMsg *clientH
     return ret;
 }
 #ifdef HITLS_TLS_PROTO_TLS13
-static int32_t Tls13ServerNegotiateCipher(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint16_t cipher)
+static int32_t Tls13ServerNegotiateCipher(TLS_Ctx *ctx, uint16_t cipher, bool preferSha256)
 {
-    (void)clientHello;
     int32_t ret = 0;
     CipherSuiteInfo cipherSuiteInfo = {0};
 
@@ -332,17 +336,47 @@ static int32_t Tls13ServerNegotiateCipher(TLS_Ctx *ctx, const ClientHelloMsg *cl
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15218, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "get cipher suite info fail when processing client hello.", 0, 0, 0, 0);
-        return HITLS_MSG_HANDLE_UNSUPPORT_CIPHER_SUITE;
+        return HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE;
     }
 
+    if (preferSha256 && cipherSuiteInfo.hashAlg != HITLS_HASH_SHA_256) {
+        return HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE;
+    }
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
+    if (IS_SM_TLS13(cipher)) {
+        int32_t certKeyType = TLS_CERT_KEY_TYPE_SM2;
+        CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
+        CERT_Pair *certPair =  NULL;
+        ret = BSL_HASH_At(mgrCtx->certPairs, (uintptr_t)certKeyType, (uintptr_t *)&certPair);
+        if (ret != HITLS_SUCCESS || certPair == NULL) {
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSECURE_CIPHER_SUITE);
+            return HITLS_MSG_HANDLE_UNSECURE_CIPHER_SUITE;
+        }
+        HITLS_Config *config = &ctx->config.tlsConfig;
+        int32_t signAlg = 0;
+        ret = SAL_CERT_X509Ctrl(config, certPair->cert, CERT_CTRL_GET_SIGN_ALGO, NULL, (void *)&signAlg);
+        if (ret != HITLS_SUCCESS || signAlg != CERT_SIG_SCHEME_SM2_SM3) {
+            BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH);
+            return HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH;
+        }
+        bool checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, certPair->cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE);
+        if (!checkUsageRec) {
+            BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_KEYUSAGE);
+            return HITLS_CERT_ERR_KEYUSAGE;
+        }
+    }
+#endif
     (void)memcpy_s(&ctx->negotiatedInfo.cipherSuiteInfo, sizeof(CipherSuiteInfo),
         &cipherSuiteInfo, sizeof(CipherSuiteInfo));
+
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
-static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint16_t cipherSuite)
+static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint16_t cipherSuite,
+    bool preferSha256)
 {
-    if (!IsCipherSuiteAllowed(ctx, cipherSuite)) {
+    (void)preferSha256;
+    if (!IsCipherSuiteAllowed(ctx, cipherSuite, true)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17046, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "No proper cipher suite", 0, 0, 0, 0);
         return HITLS_CONFIG_UNSUPPORT_CIPHER_SUITE;
@@ -350,7 +384,7 @@ static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello,
     int32_t ret = 0;
 #ifdef HITLS_TLS_PROTO_TLS13
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
-        ret = Tls13ServerNegotiateCipher(ctx, clientHello, cipherSuite);
+        ret = Tls13ServerNegotiateCipher(ctx, cipherSuite, preferSha256);
     } else
 #endif /* HITLS_TLS_PROTO_TLS13 */
     {
@@ -359,8 +393,10 @@ static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello,
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+#if defined(HITLS_BSL_LOG) || defined(HITLS_TLS_FEATURE_SECURITY)
     /* Check the security level of ciphersuites */
     CipherSuiteInfo *cipherSuiteInfo = &ctx->negotiatedInfo.cipherSuiteInfo;
+#endif
 #ifdef HITLS_TLS_FEATURE_SECURITY
     ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_CIPHER_SHARED, 0, 0, (void *)cipherSuiteInfo);
     if (ret != SECURITY_SUCCESS) {
@@ -380,6 +416,29 @@ static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello,
 
     return HITLS_SUCCESS;
 }
+
+#ifdef HITLS_TLS_PROTO_TLS13
+static bool Tls13HasCertificate(TLS_Ctx *ctx)
+{
+    CERT_MgrCtx *certMgrCtx = ctx->config.tlsConfig.certMgrCtx;
+    BSL_HASH_Hash *certPairs = certMgrCtx->certPairs;
+    BSL_HASH_Iterator it = BSL_HASH_IterBegin(certPairs);
+    while (it != BSL_HASH_IterEnd(certPairs)) {
+        uint32_t keyType = (uint32_t)BSL_HASH_HashIterKey(certPairs, it);
+        if (keyType == TLS_CERT_KEY_TYPE_DSA) {
+             /* in TLS1.3, Do not use the DSA certificate. */
+            it = BSL_HASH_IterNext(certPairs, it);
+            continue;
+        }
+        CERT_Pair *certPair = (CERT_Pair *)BSL_HASH_IterValue(certPairs, it);
+        if (certPair != NULL && certPair->cert != NULL && certPair->privateKey != NULL) {
+            return true;
+        }
+        it = BSL_HASH_IterNext(certPairs, it);
+    }
+    return false;
+}
+#endif
 
 // Select the cipher suite.
 int32_t ServerSelectCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
@@ -404,13 +463,22 @@ int32_t ServerSelectCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
         normalCipherSuitesSize = clientHello->cipherSuitesSize;
     }
 
+    bool preferSha256 = false;
+
+#ifdef HITLS_TLS_PROTO_TLS13
+    /* TLS 1.3 PSK connection establishment, prioritizing the SHA-256 cipher suite when no certificate is available. */
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 && ctx->config.tlsConfig.pskServerCb != NULL) {
+        preferSha256 = !Tls13HasCertificate(ctx);
+    }
+#endif
+
     /* Select the supported cipher suite. If the cipher suite is found, return success */
     for (uint16_t i = 0u; i < preferenceCipherSuitesSize; i++) {
         for (uint32_t j = 0u; j < normalCipherSuitesSize; j++) {
             if (normalCipherSuites[j] != preferenceCipherSuites[i]) {
                 continue;
             }
-            if (CheckCipherSuite(ctx, clientHello, normalCipherSuites[j]) != HITLS_SUCCESS) {
+            if (CheckCipherSuite(ctx, clientHello, normalCipherSuites[j], preferSha256) != HITLS_SUCCESS) {
                 break;
             }
             return HITLS_SUCCESS;
@@ -425,6 +493,23 @@ int32_t ServerSelectCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 }
 
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
+static uint32_t MapLegacyVersionToBits(const TLS_Ctx *ctx, uint16_t version)
+{
+    uint32_t ret = 0;
+    uint16_t versions[] = {HITLS_VERSION_DTLS12, HITLS_VERSION_TLS12, HITLS_VERSION_TLCP_DTLCP11};
+    bool isGreater = !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) ||
+                     IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask);
+
+    for (uint32_t i = 0; i < sizeof(versions) / sizeof(versions[0]); i++) {
+        if (isGreater? version >= versions[i] : version <= versions[i]) {
+            ret |= MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), versions[i]);
+        }
+    }
+    if (IS_SUPPORT_TLS(ret) && IS_SUPPORT_TLCP(ret)) {
+        ret &= ~TLCP_VERSION_BITS;
+    }
+    return ret;
+}
 /**
  * @brief Select the negotiation version based on the client Hello packet.
  *
@@ -436,59 +521,40 @@ int32_t ServerSelectCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
  */
 static int32_t ServerSelectNegoVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
-    uint16_t legacyVersion = clientHello->version;
-    if (legacyVersion > HITLS_VERSION_TLS13 && !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
-        legacyVersion = HITLS_VERSION_TLS12;
+    int32_t ret = HITLS_SUCCESS;
+    (void)ret;
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
+    ret = CheckRenegotiatedVersion(ctx);
+    if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return RETURN_ALERT_PROCESS(ctx, ret, BINLOG_ID15071,
+            "The server renegotiation version is inconsistent with the initial one", ALERT_PROTOCOL_VERSION);
     }
-    /* Check whether DTLS is used */
-    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
-        !IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask)) {
-        if (legacyVersion > ctx->config.tlsConfig.minVersion) {
-            /** The DTLS version supported by the client is too early and the negotiation cannot be continued */
-            if (TLS_IS_FIRST_HANDSHAKE(ctx)) {
-                ctx->negotiatedInfo.version = legacyVersion;
-            }
-            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15223, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "client want a unsupported protocol version 0x%02x.", legacyVersion, 0, 0, 0);
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_PROTOCOL_VERSION);
-            return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
-        }
-        /** Continue the version negotiation and obtain the earlier DTLS version between the latest versions of the
-         * client and server */
-        if (legacyVersion < ctx->config.tlsConfig.maxVersion) {
-            ctx->negotiatedInfo.version = ctx->config.tlsConfig.maxVersion;
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15224, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-                "client want a unsupported protocol version 0x%02x.", legacyVersion, 0, 0, 0);
-        } else {
+#endif
+    uint16_t legacyVersion = clientHello->version;
+    uint32_t legacyVersionBits = MapLegacyVersionToBits(ctx, legacyVersion);
+    uint32_t intersection = ctx->config.tlsConfig.version & legacyVersionBits;
+    if (intersection == 0) {
+        if (TLS_IS_FIRST_HANDSHAKE(ctx)) {
             ctx->negotiatedInfo.version = legacyVersion;
         }
-    } else {
-        if (legacyVersion < ctx->config.tlsConfig.minVersion) {
-            if (TLS_IS_FIRST_HANDSHAKE(ctx)) {
-                ctx->negotiatedInfo.version = legacyVersion;
-            }
-            /* The TLS version supported by the client is too early and cannot be negotiated */
-            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15225, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "client version = 0x%02x, min version = 0x%02x.",
-                legacyVersion, ctx->config.tlsConfig.minVersion, 0, 0);
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_PROTOCOL_VERSION);
-            return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
-        }
-        /* Continue the version negotiation. Obtain the earlier version between the latest versions of the client and
-         * server */
-        if (legacyVersion > ctx->config.tlsConfig.maxVersion) {
-            ctx->negotiatedInfo.version = ctx->config.tlsConfig.maxVersion;
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15226, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-                "client version = 0x%02x, max version = 0x%02x.",
-                legacyVersion, ctx->config.tlsConfig.maxVersion, 0, 0);
-        } else {
-            ctx->negotiatedInfo.version = legacyVersion;
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15220, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "client want a unsupported protocol version 0x%02x.", legacyVersion, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_PROTOCOL_VERSION);
+        return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
+    }
+    uint16_t versions[] = {HITLS_VERSION_DTLS12, HITLS_VERSION_TLS12, HITLS_VERSION_TLCP_DTLCP11,
+                           HITLS_VERSION_TLCP_DTLCP11};
+    uint32_t versionBits[] = {DTLS12_VERSION_BIT, TLS12_VERSION_BIT, TLCP11_VERSION_BIT,
+                              DTLCP11_VERSION_BIT};
+    for (uint32_t i = 0; i < sizeof(versionBits) / sizeof(versionBits[0]); i++) {
+        if (intersection & versionBits[i]) {
+            ctx->negotiatedInfo.version = versions[i];
+            break;
         }
     }
 #ifdef HITLS_TLS_FEATURE_SECURITY
-    int32_t ret = 0;
     /* Version security check */
     ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_VERSION, 0, ctx->negotiatedInfo.version, NULL);
     if (ret != SECURITY_SUCCESS) {
@@ -497,6 +563,21 @@ static int32_t ServerSelectNegoVersion(TLS_Ctx *ctx, const ClientHelloMsg *clien
             "SslCheck fail", ALERT_INSUFFICIENT_SECURITY);
     }
 #endif /* HITLS_TLS_FEATURE_SECURITY */
+
+#ifdef HITLS_TLS_PROTO_TLCP11
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
+        ctx->config.tlsConfig.version &= ~TLS_VERSION_MASK;
+        ctx->config.tlsConfig.originVersionMask &= ~TLS_VERSION_MASK;
+        ChangeMinMaxVersion(ctx->config.tlsConfig.version, ctx->config.tlsConfig.originVersionMask,
+                            &ctx->config.tlsConfig.minVersion, &ctx->config.tlsConfig.maxVersion);
+    } else {
+        ctx->config.tlsConfig.version &= ~TLCP_VERSION_BITS;
+        ctx->config.tlsConfig.originVersionMask &= ~TLCP_VERSION_BITS;
+        // The tlcp version will not appear in the maximum and minimum version numbers of non tlcp protocols, so there
+        // is no need to set the maximum and minimum version numbers here.
+    }
+#endif
+
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
@@ -556,25 +637,26 @@ static int32_t ServerSelectAlpnProtocol(TLS_Ctx *ctx, const ClientHelloMsg *clie
 static int32_t ServerDealServerName(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
     int32_t ret = 0;
-    int32_t alert = ALERT_UNRECOGNIZED_NAME;
+    int alert = ALERT_UNRECOGNIZED_NAME;
     uint32_t serverNameSize = clientHello->extension.content.serverNameSize;
 
+    BSL_SAL_FREE(ctx->negotiatedInfo.serverName);
+    ctx->negotiatedInfo.serverNameSize = 0;
     if (clientHello->extension.flag.haveServerName == false) {
         return HITLS_SUCCESS;
     }
-
-    BSL_SAL_FREE(ctx->hsCtx->serverName);
-    ctx->hsCtx->serverName = (uint8_t *)BSL_SAL_Dump(clientHello->extension.content.serverName,
+    
+    ctx->negotiatedInfo.serverName = (uint8_t *)BSL_SAL_Dump(clientHello->extension.content.serverName,
         serverNameSize * sizeof(uint8_t));
 
-    if (ctx->hsCtx->serverName == NULL) {
+    if (ctx->negotiatedInfo.serverName == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15230, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "server_name malloc fail when parse extensions msg.", 0, 0, 0, 0);
         return HITLS_MEMCPY_FAIL;
     }
 
-    ctx->hsCtx->serverNameSize = serverNameSize;
+    ctx->negotiatedInfo.serverNameSize = serverNameSize;
 
     /* The product does not have the registered server_name callback processing function */
     if (ctx->globalConfig == NULL || ctx->globalConfig->sniDealCb == NULL) {
@@ -735,7 +817,7 @@ static int32_t DealResumeServerName(TLS_Ctx *ctx, const ClientHelloMsg *clientHe
 
 static int32_t ServerCheckResumeSni(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, HITLS_Session **sess)
 {
-    if (*sess == NULL || ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLCP_DTLCP11) {
+    if (*sess == NULL) {
         return HITLS_SUCCESS;
     }
     int32_t ret = HITLS_SUCCESS;
@@ -777,10 +859,10 @@ static int32_t ServerCheckResumeParam(TLS_Ctx *ctx, const ClientHelloMsg *client
     HITLS_SESS_GetCipherSuite(sess, &cipherSuite);
 
     if (ServerCmpSessionIdCtx(ctx, sess) != true) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15886, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "Resuming Sessions: session id ctx is inconsistent.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        return HITLS_MSG_HANDLE_SESSION_ID_CTX_ILLEGAL;
+        HITLS_SESS_Free(ctx->session);
+        ctx->session = NULL;
+        ctx->negotiatedInfo.isResume = false;
+        return HITLS_SUCCESS;
     }
 
     if (ctx->negotiatedInfo.version != version) {
@@ -826,13 +908,13 @@ offering to resume a known previous session, it behaves as follows:
 */
 static int32_t ResumeCheckExtendedMasterScret(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, HITLS_Session **sess)
 {
-    if (*sess == NULL || ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLCP_DTLCP11) {
+    if (*sess == NULL) {
         return HITLS_SUCCESS;
     }
     (void)clientHello;
-    uint8_t haveExtMasterSecret = false;
+    bool haveExtMasterSecret = false;
     HITLS_SESS_GetHaveExtMasterSecret(*sess, &haveExtMasterSecret);
-    if (haveExtMasterSecret != 0) {
+    if (haveExtMasterSecret) {
         if (!clientHello->extension.flag.haveExtendedMasterSecret) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17051, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "ExtendedMasterSecret err", 0, 0, 0, 0);
@@ -861,7 +943,7 @@ static int32_t ResumeCheckExtendedMasterScret(TLS_Ctx *ctx, const ClientHelloMsg
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 static int32_t ServerCheckResumeTicket(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
-    TLS_SessionMgr *sessMgr = ctx->config.tlsConfig.sessMgr;
+    TLS_SessionMgr *sessMgr = ctx->globalConfig->sessMgr;
     HITLS_Session *sess = NULL;
     uint8_t *ticketBuf = clientHello->extension.content.ticket;
     uint32_t ticketBufSize = clientHello->extension.content.ticketSize;
@@ -909,8 +991,6 @@ static int32_t ServerCheckResume(TLS_Ctx *ctx, const ClientHelloMsg *clientHello
     if (ctx->negotiatedInfo.isRenegotiation && !ctx->config.tlsConfig.isResumptionOnRenego) {
         return HITLS_SUCCESS;
     }
-    /* Obtain the session resumption information */
-    TLS_SessionMgr *sessMgr = ctx->config.tlsConfig.sessMgr;
     /* Create a null session handle */
     HITLS_Session *sess = NULL;
     uint32_t ticketBufSize = clientHello->extension.content.ticketSize;
@@ -922,7 +1002,8 @@ static int32_t ServerCheckResume(TLS_Ctx *ctx, const ClientHelloMsg *clientHello
         if (supportTicket && clientHello->extension.flag.haveTicket) {
             ctx->negotiatedInfo.isTicket = true;
         }
-        sess = HITLS_SESS_Dup(SESSMGR_Find(sessMgr, clientHello->sessionId, clientHello->sessionIdSize));
+        sess = HITLS_SESS_Dup(SESSMGR_Find(ctx, clientHello->sessionId, clientHello->sessionIdSize));
+
         int32_t ret = ResumeCheckExtendedMasterScret(ctx, clientHello, &sess);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17053, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -1101,14 +1182,14 @@ static int32_t ServerCheckVersionDowngrade(TLS_Ctx *ctx, const ClientHelloMsg *c
         }
         return HITLS_SUCCESS;
     }
-    
+
     if (ctx->negotiatedInfo.version < ctx->config.tlsConfig.maxVersion) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15335, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "server supports a higher protocol version.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INAPPROPRIATE_FALLBACK);
         return HITLS_MSG_HANDLE_ERR_INAPPROPRIATE_FALLBACK;
     }
-    
+
     return HITLS_SUCCESS;
 }
 
@@ -1170,12 +1251,6 @@ static int32_t ServerPostProcessClientHello(TLS_Ctx *ctx, const ClientHelloMsg *
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    /* TLCP does not pay attention to the extension */
-#ifdef HITLS_TLS_PROTO_TLCP11
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
-        return HITLS_SUCCESS;
-    }
-#endif
     return ServerProcessClientHelloExt(ctx, clientHello);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
@@ -1317,8 +1392,7 @@ static int32_t PrepareDtlsCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello
 #ifdef HITLS_BSL_UIO_UDP
 static int32_t DtlsServerCheckAndProcessCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid)
 {
-    int32_t ret;
-    ret = HS_CheckCookie(ctx, clientHello, isCookieValid);
+    int32_t ret = HS_CheckCookie(ctx, clientHello, isCookieValid);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15243, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "HS_CheckCookie fail when process client hello.", 0, 0, 0, 0);
@@ -1641,7 +1715,7 @@ static int32_t TLS13ServerProcessTicket(TLS_Ctx *ctx, PreSharedKey *cur,
     HITLS_Session *pskSession = NULL;
 
     int32_t ret = SESSMGR_DecryptSessionTicket(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
-        ctx->config.tlsConfig.sessMgr, &pskSession, ticket, ticketLen, &isTicketExcept);
+        ctx->globalConfig->sessMgr, &pskSession, ticket, ticketLen, &isTicketExcept);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16048, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Decrypt Ticket fail when processing client hello.", 0, 0, 0, 0);
@@ -2016,7 +2090,6 @@ static int32_t Tls13ServerCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *clientH
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
     /* rfc8446 9.2.  Mandatory-to-Implement Extensions */
     ret = Tls13ServerCheckClientHelloExtension(ctx, clientHello);
     if (ret != HITLS_SUCCESS) {
@@ -2071,17 +2144,18 @@ static int32_t Tls13ServerPostCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *cli
     return Tls13ServerSelectCert(ctx, clientHello);
 }
 
-static int32_t CheckVersion(TLS_Ctx *ctx, uint16_t version, uint16_t minVersion, uint16_t maxVersion, uint16_t *selectVersion)
+static int32_t CheckSupportVersion(TLS_Ctx *ctx, uint16_t version, uint16_t *selectVersion)
 {
     if (version >= HITLS_VERSION_TLS13 && !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
         version = HITLS_VERSION_TLS12;
     }
+    uint32_t versionBits = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), version);
 #ifdef HITLS_TLS_PROTO_TLCP11
     if (((version > HITLS_VERSION_SSL30) || (version == HITLS_VERSION_TLCP_DTLCP11)) &&
 #else
     if ((version > HITLS_VERSION_SSL30) &&
 #endif /* HITLS_TLS_PROTO_TLCP11 */
-        (minVersion <= version) && (version <= maxVersion)) {
+        ((versionBits & ctx->config.tlsConfig.version) == versionBits)) {
         *selectVersion = version;
         return HITLS_SUCCESS;
     }
@@ -2092,9 +2166,8 @@ static int32_t CheckVersion(TLS_Ctx *ctx, uint16_t version, uint16_t minVersion,
 
 bool IsTls13KeyExchAvailable(TLS_Ctx *ctx)
 {
-    TLS_Config *config = &ctx->config.tlsConfig;
-    CERT_MgrCtx *certMgrCtx = config->certMgrCtx;
 #ifdef HITLS_TLS_FEATURE_PSK
+    TLS_Config *config = &ctx->config.tlsConfig;
     if (config->pskServerCb != NULL) {
         return true;
     }
@@ -2104,26 +2177,10 @@ bool IsTls13KeyExchAvailable(TLS_Ctx *ctx)
     }
 #endif /* HITLS_TLS_FEATURE_PSK */
     /* The PSK is not used. The certificate must be set */
-    BSL_HASH_Hash *certPairs = certMgrCtx->certPairs;
-    BSL_HASH_Iterator it = BSL_HASH_IterBegin(certPairs);
-    while (it != BSL_HASH_IterEnd(certPairs)) {
-        uint32_t keyType = (uint32_t)BSL_HASH_HashIterKey(certPairs, it);
-        if (keyType == TLS_CERT_KEY_TYPE_DSA) {
-             /* in TLS1.3, Do not use the DSA certificate. */
-            it = BSL_HASH_IterNext(certPairs, it);
-            continue;
-        }
-        CERT_Pair *certPair = (CERT_Pair *)BSL_HASH_IterValue(certPairs, it);
-        if (certPair != NULL && certPair->cert != NULL && certPair->privateKey != NULL) {
-            return true;
-        }
-        it = BSL_HASH_IterNext(certPairs, it);
-    }
-    return false;
+    return Tls13HasCertificate(ctx);
 }
 
-static int32_t SelectVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint16_t minVersion, uint16_t maxVersion,
-    uint16_t *selectVersion)
+static int32_t SelectVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint16_t *selectVersion)
 {
     int32_t ret;
     uint16_t version = clientHello->version;
@@ -2133,7 +2190,7 @@ static int32_t SelectVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, ui
      * Then the server must negotiate TLS 1.2 or earlier as specified in rfc5246.
      */
     if (clientHello->extension.content.supportedVersionsCount == 0) {
-        ret = CheckVersion(ctx, version, minVersion, maxVersion, selectVersion);
+        ret = CheckSupportVersion(ctx, version, selectVersion);
         if (ret != HITLS_SUCCESS) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16134, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -2152,15 +2209,19 @@ static int32_t SelectVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, ui
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_PROTOCOL_VERSION);
         return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
     }
-
+    uint32_t versionBits;
+    uint16_t versions[] = {HITLS_VERSION_DTLS12, HITLS_VERSION_TLS13, HITLS_VERSION_TLS12, HITLS_VERSION_TLCP_DTLCP11};
     /* Find the supported version in the extended field supportedVersions. */
-    for (version = maxVersion; version >= minVersion; version--) {
+    for (uint32_t j = 0; j < sizeof(versions) / sizeof(uint16_t); j++) {
+        version = versions[j];
+         /* Check whether the version is supported */
         for (int i = 0; i < clientHello->extension.content.supportedVersionsCount; i++) {
-            if (clientHello->extension.content.supportedVersions[i] != version) {
+            versionBits = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), version);
+            if (clientHello->extension.content.supportedVersions[i] != version ||
+                (versionBits & ctx->config.tlsConfig.version) == 0) {
                 continue;
             }
-            if (((version == HITLS_VERSION_TLS13) && (!IsTls13KeyExchAvailable(ctx))) ||
-                (version <= HITLS_VERSION_SSL30)) {
+            if (((version == HITLS_VERSION_TLS13) && (!IsTls13KeyExchAvailable(ctx)))) {
                 /* TLS1.3 must have an available PSK or certificate, and TLS1.3 cannot negotiate SSL versions earlier
                  * than SSL3.0. */
                 continue;
@@ -2236,7 +2297,7 @@ static int32_t Tls13ServerProcessClientHello(TLS_Ctx *ctx, HS_Msg *msg)
     }
 #ifdef HITLS_TLS_FEATURE_PHA
     TLS_Config *tlsConfig = &ctx->config.tlsConfig;
-    if (ctx->phaState == PHA_NONE && tlsConfig->isSupportClientVerify && tlsConfig->isSupportPostHandshakeAuth &&
+    if (ctx->phaState == PHA_NONE && tlsConfig->isSupportClientVerify &&
         msg->body.clientHello.extension.flag.havePostHsAuth) {
         ctx->phaState = PHA_EXTENSION;
     }
@@ -2249,7 +2310,6 @@ int32_t Tls13ServerRecvClientHelloProcess(TLS_Ctx *ctx, HS_Msg *msg)
     int32_t ret = 0;
     uint16_t selectedVersion = 0;
     ClientHelloMsg *clientHello = &msg->body.clientHello;
-    TLS_Config *tlsConfig = &ctx->config.tlsConfig;
     if (ctx->hsCtx->readSubState == TLS_PROCESS_STATE_A) {
 #ifdef HITLS_TLS_FEATURE_CLIENT_HELLO_CB
     /* Perform the ClientHello callback. The pause handshake status is not considered */
@@ -2258,7 +2318,7 @@ int32_t Tls13ServerRecvClientHelloProcess(TLS_Ctx *ctx, HS_Msg *msg)
             return ret;
         }
 #endif /* HITLS_TLS_FEATURE_CLIENT_HELLO_CB */
-        ret = SelectVersion(ctx, clientHello, tlsConfig->minVersion, tlsConfig->maxVersion, &selectedVersion);
+        ret = SelectVersion(ctx, clientHello, &selectedVersion);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
@@ -2269,6 +2329,7 @@ int32_t Tls13ServerRecvClientHelloProcess(TLS_Ctx *ctx, HS_Msg *msg)
     }
     switch (clientHello->version) {
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
+        case HITLS_VERSION_TLCP_DTLCP11:
         case HITLS_VERSION_TLS12:
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15251, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
                 "tls1.3 server receive a 0x%x clientHello.", selectedVersion, 0, 0, 0);

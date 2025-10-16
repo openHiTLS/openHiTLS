@@ -19,7 +19,6 @@
                 "uio_mem",
                 "uio_plt",
                 "uio_udp",
-                "usrdata",
                 "sal_thread",
                 "sal_net",
                 "sal_time",
@@ -83,7 +82,8 @@
                 "rsa",
                 "sha1",
                 "cipher",
-                "pkey"
+                "pkey",
+                "codecskey"
             ]
         },
         "hitls_tls": {

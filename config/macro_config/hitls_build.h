@@ -30,6 +30,12 @@
 
 #include "hitls_config_layer_bsl.h"
 
+#ifndef HITLS_NO_CONFIG_CHECK
 #include "hitls_config_check.h"
+#endif
+
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CONFIG_FILE)
+#include HITLS_CONFIG_FILE
+#endif
 
 #endif /* HITLS_BUILD_H */

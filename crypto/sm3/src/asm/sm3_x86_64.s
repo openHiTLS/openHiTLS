@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM3
 
-.file	"sm3_x86_64.s"
 .text
 
 .set	A,%r8d

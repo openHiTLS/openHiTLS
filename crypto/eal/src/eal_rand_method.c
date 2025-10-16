@@ -41,7 +41,7 @@
 #endif
 
 static EAL_RandUnitaryMethod g_randMethod = {
-    .newCtx = (RandNewCtx)DRBG_New,
+    .newCtx = (RandDrbgNewCtx)DRBG_New,
     .inst = (RandDrbgInst)DRBG_Instantiate,
     .unInst = (RandDrbgUnInst)DRBG_Uninstantiate,
     .gen = (RandDrbgGen)DRBG_GenerateBytes,
@@ -60,7 +60,7 @@ static int32_t GetRequiredMethod(const DrbgIdMap *map, EAL_RandMethLookup *lu)
     switch (map->type) {
 #ifdef HITLS_CRYPTO_DRBG_HASH
         case RAND_TYPE_MD: {
-            const EAL_MdMethod *md = EAL_MdFindMethod(map->depId);
+            const EAL_MdMethod *md = EAL_MdFindDefaultMethod(map->depId);
             if (md == NULL) {
                 BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
                 return CRYPT_EAL_ERR_ALGID;
@@ -72,14 +72,12 @@ static int32_t GetRequiredMethod(const DrbgIdMap *map, EAL_RandMethLookup *lu)
 #endif
 #ifdef HITLS_CRYPTO_DRBG_HMAC
         case RAND_TYPE_MAC: {
-            EAL_MacMethLookup hmac;
-            int32_t ret = EAL_MacFindMethod(map->depId, &hmac);
-            if (ret != CRYPT_SUCCESS) {
+            lu->method = EAL_MacFindDefaultMethod(map->depId);
+            if (lu->method == NULL) {
                 BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
                 return CRYPT_EAL_ERR_ALGID;
             }
             lu->methodId = map->depId;
-            lu->method = hmac.macMethod;
             break;
         }
 #endif

@@ -41,7 +41,7 @@ int32_t SendCertificateProcess(TLS_Ctx *ctx)
             return HITLS_MSG_HANDLE_ERR_NO_SERVER_CERTIFICATE;
         }
 
-        ret = HS_PackMsg(ctx, CERTIFICATE, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, CERTIFICATE);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15761, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "pack certificate msg fail.", 0, 0, 0, 0);
@@ -85,7 +85,7 @@ int32_t Tls13ClientSendCertificateProcess(TLS_Ctx *ctx)
     if (hsCtx->msgLen == 0) {
         /* In the middlebox scenario, if the client does not send the hrr message, a CCS message needs to be sent
          * before the certificate */
-        if (!ctx->hsCtx->haveHrr
+        if (ctx->config.tlsConfig.isMiddleBoxCompat && !ctx->hsCtx->haveHrr
 #ifdef HITLS_TLS_FEATURE_PHA
                 && ctx->phaState != PHA_REQUESTED
 #endif /* HITLS_TLS_FEATURE_PHA */
@@ -115,7 +115,7 @@ int32_t Tls13ClientSendCertificateProcess(TLS_Ctx *ctx)
             }
         }
 
-        ret = HS_PackMsg(ctx, CERTIFICATE, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, CERTIFICATE);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15763, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "pack tls1.3 client certificate msg fail.", 0, 0, 0, 0);
@@ -153,7 +153,7 @@ int32_t Tls13ServerSendCertificateProcess(TLS_Ctx *ctx)
             return HITLS_MSG_HANDLE_ERR_NO_SERVER_CERTIFICATE;
         }
 
-        ret = HS_PackMsg(ctx, CERTIFICATE, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, CERTIFICATE);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15766, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "pack server tls1.3 certificate msg fail.", 0, 0, 0, 0);

@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_BN
 
-.file   "bn_mont_x86_64.S"
 .text
 
 .macro  ADD_CARRY a b

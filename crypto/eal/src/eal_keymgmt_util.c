@@ -22,17 +22,13 @@
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 
-CRYPT_EAL_PkeyCtx *CRYPT_EAL_MakeKeyByPkeyAlgInfo(CRYPT_EAL_PkeyMgmtInfo *pkeyAlgInfo, void *keyRef,
-    uint32_t keyRefLen)
+CRYPT_EAL_PkeyCtx *CRYPT_EAL_MakeKeyByPkeyAlgInfo(CRYPT_EAL_PkeyMgmtInfo *pkeyAlgInfo, void *keyRef)
 {
     if (pkeyAlgInfo == NULL || keyRef == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return NULL;
     }
-    if (keyRefLen != sizeof(void *)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return NULL;
-    }
+
     CRYPT_EAL_PkeyCtx *pkeyCtx = BSL_SAL_Calloc(1, sizeof(CRYPT_EAL_PkeyCtx));
     if (pkeyCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);

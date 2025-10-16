@@ -20,10 +20,11 @@
 #ifdef HITLS_CRYPTO_SLH_DSA
 
 #include <stdint.h>
+#include "crypt_slh_dsa.h"
 
 /**
  * @brief Sign a message using XMSS
- * 
+ *
  * @param sig Output XMSS signature
  * @param sigLen Length of the signature
  * @param msg Input message to sign
@@ -31,26 +32,30 @@
  * @param idx Index of the used WOTS+ key pair
  * @param adrs Address structure for domain separation
  * @param ctx SLH-DSA context
+ * @param root root node of XMSS tree
  * @return int 0 on success, error code otherwise
  */
 int32_t XmssSign(const uint8_t *msg, size_t msgLen, uint32_t idx, SlhDsaAdrs *adrs, const CryptSlhDsaCtx *ctx,
-                 uint8_t *sig, uint32_t *sigLen);
+                 uint8_t *sig, uint32_t *sigLen, uint8_t *root);
 
 /**
  * @brief Compute an internal node of the XMSS tree
- * 
+ *
  * @param node Output internal node
  * @param idx Node index at the given height
  * @param height Node height in the tree
  * @param adrs Address structure for domain separation
  * @param ctx SLH-DSA context
+ * @param AuthPath authentication path for the LeafIdx
+ * @param LeafIdx WOTS+ key pair index
  * @return int 0 on success, error code otherwise
  */
-int32_t XmssNode(uint8_t *node, uint32_t idx, uint32_t height, SlhDsaAdrs *adrs, const CryptSlhDsaCtx *ctx);
+int32_t XmssNode(uint8_t *node, uint32_t idx, uint32_t height, SlhDsaAdrs *adrs, const CryptSlhDsaCtx *ctx,
+                 uint8_t *AuthPath, uint32_t LeafIdx);
 
 /**
  * @brief Compute a public key from a signature and message
- * 
+ *
  * @param idx Index of the used WOTS+ key pair
  * @param sig Signature
  * @param sigLen Length of the signature

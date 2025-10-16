@@ -383,6 +383,20 @@ void *GetTicketKeyCb(char *str)
     return NULL;
 }
 
+static void ExampleKeyLogCb(HITLS_Ctx *ctx, const char *out)
+{
+    (void)ctx; // Unused parameter
+    char *fileName = "FileKeyLog.txt";
+    char *fileEndStr = "\n";
+    FILE *fp = fopen(fileName, "a+");
+    if (fp == NULL) {
+        return;
+    }
+    fwrite(out, sizeof(char), strlen(out), fp);
+    fwrite((char*)fileEndStr, sizeof(char), strlen(fileEndStr), fp);
+    fclose(fp);
+}
+
 void *GetExtensionCb(const char *str)
 {
     const ExampleCb cbList[] = {
@@ -392,6 +406,7 @@ void *GetExtensionCb(const char *str)
         {"ExampleAlpAlertCb", AlpnCbALERT1},
         {"ExampleSNICbnoack", ExampleServerNameCbNOACK},
         {"ExampleSNICbAlert", ExampleServerNameCbALERT},
+        {"ExampleKeyLogCb", ExampleKeyLogCb},
     };
 
     int len = sizeof(cbList) / sizeof(cbList[0]);

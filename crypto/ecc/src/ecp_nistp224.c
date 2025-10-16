@@ -1402,9 +1402,9 @@ static int32_t GetPreMulPt(Point preMulPt[TABLE_P_SIZE], const ECC_Point *pt)
     // 0pt
     (void)memset_s((void *)&preMulPt[0], sizeof(Point), 0, sizeof(Point));
     // 1pt
-    GOTO_ERR_IF_EX(BN2Felem(&preMulPt[1].x, pt->x), ret);
-    GOTO_ERR_IF_EX(BN2Felem(&preMulPt[1].y, pt->y), ret);
-    GOTO_ERR_IF_EX(BN2Felem(&preMulPt[1].z, pt->z), ret);
+    GOTO_ERR_IF_EX(BN2Felem(&preMulPt[1].x, &pt->x), ret);
+    GOTO_ERR_IF_EX(BN2Felem(&preMulPt[1].y, &pt->y), ret);
+    GOTO_ERR_IF_EX(BN2Felem(&preMulPt[1].z, &pt->z), ret);
     // 2pt ~ 15pt
     for (uint32_t i = 2; i < 15; i += 2) {
         PtDouble(&preMulPt[i], &preMulPt[i >> 1]);
@@ -1437,7 +1437,7 @@ int32_t ECP224_PointMulAdd(
     GOTO_ERR_IF(CheckBnValid(k2, FELEM_BITS), retVal);
     GOTO_ERR_IF(CheckPointValid(pt, CRYPT_ECC_NISTP224), retVal);
     // Special treatment of infinity points
-    if (BN_IsZero(pt->z)) {
+    if (BN_IsZero(&pt->z)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
     }
@@ -1447,9 +1447,9 @@ int32_t ECP224_PointMulAdd(
     GOTO_ERR_IF_EX(GetPreMulPt(preMulPt, pt), retVal);
 
     PtMul(&out, &fK1, &fK2, preMulPt);
-    GOTO_ERR_IF_EX(Felem2BN(r->x, &out.x), retVal);
-    GOTO_ERR_IF_EX(Felem2BN(r->y, &out.y), retVal);
-    GOTO_ERR_IF_EX(Felem2BN(r->z, &out.z), retVal);
+    GOTO_ERR_IF_EX(Felem2BN(&r->x, &out.x), retVal);
+    GOTO_ERR_IF_EX(Felem2BN(&r->y, &out.y), retVal);
+    GOTO_ERR_IF_EX(Felem2BN(&r->z, &out.z), retVal);
 ERR:
     return retVal;
 }
@@ -1468,7 +1468,7 @@ int32_t ECP224_PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const 
     if (pt != NULL) {
         GOTO_ERR_IF(CheckPointValid(pt, CRYPT_ECC_NISTP224), retVal);
         // Special treatment of infinity points
-        if (BN_IsZero(pt->z)) {
+        if (BN_IsZero(&pt->z)) {
             BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
             return CRYPT_ECC_POINT_AT_INFINITY;
         }
@@ -1483,9 +1483,9 @@ int32_t ECP224_PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const 
         PtMul(&out, NULL, &felemK, preMulPt);
     }
 
-    GOTO_ERR_IF_EX(Felem2BN(r->x, &out.x), retVal);
-    GOTO_ERR_IF_EX(Felem2BN(r->y, &out.y), retVal);
-    GOTO_ERR_IF_EX(Felem2BN(r->z, &out.z), retVal);
+    GOTO_ERR_IF_EX(Felem2BN(&r->x, &out.x), retVal);
+    GOTO_ERR_IF_EX(Felem2BN(&r->y, &out.y), retVal);
+    GOTO_ERR_IF_EX(Felem2BN(&r->z, &out.z), retVal);
 ERR:
     return retVal;
 }
@@ -1501,21 +1501,21 @@ int32_t ECP224_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point 
     GOTO_ERR_IF(CheckPointValid(r, CRYPT_ECC_NISTP224), retVal);
     GOTO_ERR_IF(CheckPointValid(pt, CRYPT_ECC_NISTP224), retVal);
     // Special treatment of infinity points
-    if (BN_IsZero(pt->z)) {
+    if (BN_IsZero(&pt->z)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
     }
 
-    GOTO_ERR_IF_EX(BN2Felem(&out.x, pt->x), retVal);
-    GOTO_ERR_IF_EX(BN2Felem(&out.y, pt->y), retVal);
-    GOTO_ERR_IF_EX(BN2Felem(&out.z, pt->z), retVal);
+    GOTO_ERR_IF_EX(BN2Felem(&out.x, &pt->x), retVal);
+    GOTO_ERR_IF_EX(BN2Felem(&out.y, &pt->y), retVal);
+    GOTO_ERR_IF_EX(BN2Felem(&out.z, &pt->z), retVal);
 
     FelemInv(&zInv, &out.z);
     PtMakeAffineWithInv(&out, &out, &zInv);
 
-    GOTO_ERR_IF_EX(Felem2BN(r->x, &out.x), retVal);
-    GOTO_ERR_IF_EX(Felem2BN(r->y, &out.y), retVal);
-    GOTO_ERR_IF_EX(Felem2BN(r->z, &out.z), retVal);
+    GOTO_ERR_IF_EX(Felem2BN(&r->x, &out.x), retVal);
+    GOTO_ERR_IF_EX(Felem2BN(&r->y, &out.y), retVal);
+    GOTO_ERR_IF_EX(Felem2BN(&r->z, &out.z), retVal);
 ERR:
     return retVal;
 }

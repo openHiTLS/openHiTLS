@@ -25,10 +25,6 @@
 #include "crypt_eal_rand.h"
 #include "crypt_eal_init.h"
 
-void *StdMalloc(uint32_t len) {
-    return malloc((size_t)len);
-}
-
 void PrintLastError(void) {
     const char *file = NULL;
     uint32_t line = 0;
@@ -48,16 +44,7 @@ int main(void)
     CRYPT_EAL_PkeyPub pub = {0};
     CRYPT_EAL_PkeyCtx *ctx = NULL;
 
-    BSL_ERR_Init(); // Initialize the error code module.
-    /**
-     * Before calling the algorithm APIs,
-     * call the BSL_SAL_CallBack_Ctrl function to register the malloc and free functions.
-     * Execute this step only once. If the memory allocation ability of Linux is available,
-     * the two functions can be registered using Linux by default.
-    */
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, StdMalloc);
-    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
-    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_PROVIDER);
+    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_ALL);
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         goto EXIT;
@@ -70,14 +57,6 @@ int main(void)
 
     // Set a user ID.
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId));
-    if (ret != CRYPT_SUCCESS) {
-        printf("error code is %x\n", ret);
-        PrintLastError();
-        goto EXIT;
-    }
-
-    // Initialize the random number.
-    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();

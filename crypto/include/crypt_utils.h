@@ -253,18 +253,20 @@ do {                                         \
 /**
  * @brief Calculate the hash value of the input data.
  *
+ * @param provCtx [IN] Provider context
  * @param hashMethod [IN] Hash method
  * @param hashData [IN] Hash data
  * @param size [IN] Size of hash data
  * @param out [OUT] Output hash value
  */
-int32_t CRYPT_CalcHash(const EAL_MdMethod *hashMethod, const CRYPT_ConstData *hashData, uint32_t size,
+int32_t CRYPT_CalcHash(void *provCtx, const EAL_MdMethod *hashMethod, const CRYPT_ConstData *hashData, uint32_t size,
     uint8_t *out, uint32_t *outlen);
 
 /**
  * @ingroup rsa
  * @brief mgf1 of PKCS1
  *
+ * @param provCtx [IN] Provider context
  * @param hashMethod [IN] Hash method
  * @param seed [IN] Seed
  * @param seedLen [IN] Seed length
@@ -273,7 +275,7 @@ int32_t CRYPT_CalcHash(const EAL_MdMethod *hashMethod, const CRYPT_ConstData *ha
  *
  * @retval CRYPT_SUCCESS on success
  */
-int32_t CRYPT_Mgf1(const EAL_MdMethod *hashMethod, const uint8_t *seed, const uint32_t seedLen,
+int32_t CRYPT_Mgf1(void *provCtx, const EAL_MdMethod *hashMethod, const uint8_t *seed, const uint32_t seedLen,
     uint8_t *mask, uint32_t maskLen);
 
 /**
@@ -285,6 +287,63 @@ int32_t CRYPT_Mgf1(const EAL_MdMethod *hashMethod, const uint8_t *seed, const ui
  * @return int32_t Returns CRYPT_SUCCESS if the operation is successful, otherwise an error code.
  */
 int32_t CRYPT_GetPkeyProcessParams(BSL_Param *params, CRYPT_EAL_ProcessFuncCb *processCb, void **args);
+
+#if (defined(HITLS_CRYPTO_DH_CHECK) || defined(HITLS_CRYPTO_DSA_CHECK))
+/**
+ * @brief check the key pair consistency
+ *
+ * @param x [IN] FFC private key
+ * @param y [IN] FFC public key
+ * @param p [IN] FFC prime
+ * @param g [IN] FFC generator
+ *
+ * @retval CRYPT_SUCCESS    check success.
+ * Others. For details, see error code in errno.
+ */
+int32_t CRYPT_FFC_KeyPairCheck(const void *x, const void *y, const void *p, const void *g);
+
+/**
+ * @brief check the private key
+ *
+ * @param x [IN] FFC private key
+ * @param p [IN] FFC prime
+ * @param q [IN] FFC subprime
+ *
+ * @retval CRYPT_SUCCESS    check success.
+ * Others. For details, see error code in errno.
+ */
+int32_t CRYPT_FFC_PrvCheck(const void *x, const void *p, const void *q);
+
+#endif // HITLS_CRYPTO_DH_CHECK || HITLS_CRYPTO_DSA_CHECK
+
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_MD)
+/**
+ * @brief Control the MD context.
+ *
+ * @param mdSize [IN] MD size
+ * @param mdBlockSize [IN] MD block size
+ * @param opt [IN] Option
+ * @param val [IN] Value
+ * @param len [IN] Length
+ *
+ * @retval #CRYPT_SUCCESS       initialization succeeded.
+ * @retval #CRYPT_NULL_INPUT    Pointer ctx is NULL
+ * @retval #CRYPT_NOT_SUPPORT   Option is not supported
+ */
+int32_t CRYPT_MdCommonGetParam(uint16_t mdSize, uint16_t mdBlockSize, BSL_Param *param);
+#endif
+
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_ECDSA) || \
+    defined(HITLS_CRYPTO_DSA))
+/**
+ * @brief Set the MD attribute.
+ *
+ * @param mdAttr [IN] MD attribute
+ * @param len [IN] MD attribute length
+ * @param pkeyMdAttr [OUT] Output pkey MD attribute
+ */
+int32_t CRYPT_PkeySetMdAttr(const char *mdAttr, uint32_t len, char **pkeyMdAttr);
+#endif
 
 /* Assumes that x is uint32_t and 0 < n < 32 */
 #define ROTL32(x, n) (((x) << (n)) | ((x) >> (32 - (n))))

@@ -30,6 +30,9 @@ LIB_TYPE="static shared"
 enable_sctp="--enable-sctp"
 BITS=64
 
+subdir="CMVP"
+libname=""
+
 usage()
 {
     printf "%-50s %-30s\n" "Build openHiTLS Code"                      "sh build_hitls.sh"
@@ -47,6 +50,7 @@ usage()
     printf "%-50s %-30s\n" "Build openHiTLS Code With Lib Type"        "sh build_hitls.sh shared"
     printf "%-50s %-30s\n" "Build openHiTLS Code With Lib Fuzzer"      "sh build_hitls.sh libfuzzer"
     printf "%-50s %-30s\n" "Build openHiTLS Code With command line"    "sh build_hitls.sh exe"
+    printf "%-50s %-30s\n" "Build openHiTLS Code With Iso Provider"     "sh build_hitls.sh iso"
     printf "%-50s %-30s\n" "Build openHiTLS Code With Help"            "sh build_hitls.sh help"
 }
 
@@ -65,7 +69,7 @@ down_depend_code()
 
     if [ ! -d "${HITLS_ROOT_DIR}/platform/Secure_C/src" ]; then
         cd ${HITLS_ROOT_DIR}/platform
-        git clone https://gitee.com/openeuler/libboundscheck.git  Secure_C
+        git clone https://gitee.com/openeuler/libboundscheck.git Secure_C
     fi
 }
 
@@ -88,27 +92,58 @@ build_hitls_code()
     add_options="${add_options} -DHITLS_CRYPTO_DRBG_GM" # enable GM DRBG
     add_options="${add_options} -DHITLS_CRYPTO_ACVP_TESTS" # enable ACVP tests
     add_options="${add_options} -DHITLS_CRYPTO_DSA_GEN_PARA" # enable DSA genPara tests
+    add_options="${add_options} -DHITLS_TLS_FEATURE_SM_TLS13" # enable rfc8998 tests
     add_options="${add_options} ${test_options}"
+
+    build_options=""
+    if [[ $executes = "ON" ]]; then
+        build_options="${build_options} --executes hitls"
+        add_options="${add_options} -DHITLS_CRYPTO_CMVP"
+    fi
+
     if [[ $get_arch = "x86_64" ]]; then
         echo "Compile: env=x86_64, c, little endian, 64bits"
+        add_options="${add_options} -DHITLS_CRYPTO_SP800_STRICT_CHECK" # open the strict check in crypto.
         del_options="${del_options} -DHITLS_CRYPTO_SM2_PRECOMPUTE_512K_TBL" # close the sm2 512k pre-table
-        if [[ $executes = "ON" ]]; then
-            python3 ../configure.py --executes hitls --lib_type ${LIB_TYPE} --enable all --asm_type x8664 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
-        else 
-            python3 ../configure.py --lib_type ${LIB_TYPE} --enable all --asm_type x8664 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
-        fi
+        python3 ../configure.py ${build_options} --lib_type ${LIB_TYPE} --enable all --asm_type x8664 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
     elif [[ $get_arch = "armv8_be" ]]; then
         echo "Compile: env=armv8, asm + c, big endian, 64bits"
-        python3 ../configure.py --lib_type ${LIB_TYPE} --enable all --endian big --asm_type armv8 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
+        python3 ../configure.py ${build_options} --lib_type ${LIB_TYPE} --enable all --endian big --asm_type armv8 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
     elif [[ $get_arch = "armv8_le" ]]; then
         echo "Compile: env=armv8, asm + c, little endian, 64bits"
-        python3 ../configure.py --lib_type ${LIB_TYPE} --enable all --asm_type armv8 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
+        python3 ../configure.py ${build_options} --lib_type ${LIB_TYPE} --enable all --asm_type armv8 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
+    elif [[ $get_arch = "riscv64" ]]; then
+        echo "Compile: env=riscv64, asm + c, little endian, 64bits"
+        python3 ../configure.py --lib_type ${LIB_TYPE} --asm_type riscv64 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp}
     else
         echo "Compile: env=$get_arch, c, little endian, 64bits"
-        python3 ../configure.py --lib_type ${LIB_TYPE} --enable all --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
+        python3 ../configure.py ${build_options} --lib_type ${LIB_TYPE} --enable all --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
     fi
     cmake ..
     make -j
+}
+
+build_hitls_provider()
+{
+    # Compile openHiTLS
+    cd ${HITLS_ROOT_DIR}/build
+    if [[ $libname = "libhitls_sm.so" ]] && [[ $get_arch = "armv8_le" ]]; then
+        config_file="${subdir}_sm_feature_config.json"
+        compile_file="${subdir}_sm_compile_config.json"
+    else
+        config_file="${subdir}_feature_config.json"
+        compile_file="${subdir}_compile_config.json"
+    fi
+    python3 ../configure.py --add_options="$add_options" --del_options="$del_options" \
+        --feature_config=./config/json/${subdir}/${get_arch}/${config_file} \
+        --compile=./config/json/${subdir}/${get_arch}/${compile_file} \
+        --lib_type=shared
+    cmake .. -DCMAKE_SKIP_RPATH=TRUE -DCMAKE_INSTALL_PREFIX=../output/${subdir}/${get_arch}
+    make -j
+    make install
+    cd ../output/${subdir}/${get_arch}/lib
+    mv libhitls.so $libname
+    mv libhitls.so.hmac $libname.hmac
 }
 
 parse_option()
@@ -144,6 +179,9 @@ parse_option()
             "armv8_le")
                 get_arch="armv8_le"
                 ;;
+            "riscv64")
+                get_arch="riscv64"
+                ;;
             "pure_c")
                 get_arch="C"
                 ;;
@@ -169,6 +207,18 @@ parse_option()
                 executes="ON"
                 add_options="${add_options} -fno-plt"
                 ;;
+            "iso")
+                add_options="${add_options} -DHITLS_CRYPTO_CMVP_ISO19790"
+                libname="libhitls_iso.so"
+                ;;
+            "fips")
+                add_options="${add_options} -DHITLS_CRYPTO_CMVP_FIPS"
+                libname="libhitls_fips.so"
+                ;;
+            "sm")
+                add_options="${add_options} -DHITLS_CRYPTO_CMVP_SM"
+                libname="libhitls_sm.so"
+                ;;
             "help")
                 usage
                 exit 0
@@ -186,4 +236,8 @@ clean
 parse_option
 down_depend_code
 build_depend_code
-build_hitls_code
+if [[ $libname != "" ]]; then
+    build_hitls_provider
+else
+    build_hitls_code
+fi

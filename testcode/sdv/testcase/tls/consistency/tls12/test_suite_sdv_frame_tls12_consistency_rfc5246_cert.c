@@ -645,3 +645,593 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/** @
+* @test UT_TLS_TLS12_RFC5246_CONSISTENCY_EXTRA_CHAIN_CERT_TC001
+* @title Set the intermediate certificates separately to the extra_chain and the chain, where the correct intermediate
+    certificate is stored in the extra_chain and the incorrect intermediate certificate is stored in the chain, proving
+    that the priority of the chain is higher than that of extra_chain.
+* @precon nan
+* @brief    1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+2. Analyze valid and invalid intermediate certificates separately. Expected result 2 is obtained.
+3. Set valid intermediate certificates to extra_chain and invalid intermediate certificates to chain. Expected result 3 is obtained.
+4. Continue to establish the link. Expected result 4 is obtained.
+* @expect 1. The initialization is successful.
+2. The parsing was successful.
+3. Successfully set up.
+4. establish the link failed, returned HITLS_CERT_ERR_VERIFY_CERT_CHAIN, proving that the priority of the chain is higher than extra_chain.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_EXTRA_CHAIN_CERT_TC001()
+{
+    FRAME_Init();
+
+    HITLS_Config *config_c = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_c != NULL);
+    HITLS_Config *config_s = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_s != NULL);
+    HITLS_CFG_SetVerifyNoneSupport(config_c, false);
+    char invalidIntCaFile[] = "../testdata/tls/certificate/der/ecdsa_sha256/inter.der";
+    char validIntCaFile[] = "../testdata/tls/certificate/der/rsa_sha256/inter.der";
+
+    HITLS_CERT_X509 *invalidIntCa = HITLS_CFG_ParseCert(config_s, (const uint8_t *)invalidIntCaFile,
+        strlen(invalidIntCaFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *validIntCa = HITLS_CFG_ParseCert(config_s, (const uint8_t *)validIntCaFile,
+        strlen(validIntCaFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(invalidIntCa != NULL);
+    ASSERT_TRUE(validIntCa != NULL);
+
+    FRAME_CertInfo certInfoClient = {
+        "rsa_sha256/ca.der",
+        0,
+        "rsa_sha256/client.der",
+        0,
+        "rsa_sha256/client.key.der",
+        0,
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_sha256/ca.der",
+        0,
+        "rsa_sha256/server.der",
+        0,
+        "rsa_sha256/server.key.der",
+        0,
+    };
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config_c, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(HITLS_CFG_AddChainCert(&server->ssl->config.tlsConfig, invalidIntCa, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_AddExtraChainCert(&server->ssl->config.tlsConfig, validIntCa) == HITLS_SUCCESS);
+    HITLS_CERT_Chain *extraChainCert = HITLS_CFG_GetExtraChainCerts(&server->ssl->config.tlsConfig);
+    ASSERT_TRUE(extraChainCert->count == 1);
+    ASSERT_TRUE(extraChainCert != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS12_RFC5246_CONSISTENCY_EXTRA_CHAIN_CERT_TC002
+* @title Set the intermediate certificates separately to the extra_chain and store, where the correct intermediate
+    certificate is stored in the extra_chain and the incorrect intermediate certificate is stored in the store, proving
+    that the priority of extra_chain is higher than that of the store.
+* @precon nan
+* @brief    1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+2. Analyze valid and invalid intermediate certificates separately  Expected result 2 is obtained.
+3. Set valid intermediate certificates to extra_chain and invalid intermediate certificates to store. Expected result 3 is obtained.
+4. Continue to establish the link. Expected result 4 is obtained.
+* @expect 1. The initialization is successful.
+2. The parsing was successful.
+3. Successfully set up.
+4. The link is set up successfullyl, returns HITLS_SUCCESS, proving that extra_chain has a higher priority than store.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_EXTRA_CHAIN_CERT_TC002()
+{
+    FRAME_Init();
+
+    HITLS_Config *config_c = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_c != NULL);
+    HITLS_Config *config_s = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_s != NULL);
+    HITLS_CFG_SetVerifyNoneSupport(config_c, false);
+    char validIntCaFile[] = "../testdata/tls/certificate/der/rsa_sha256/inter.der";
+    HITLS_CERT_X509 *validIntCa = HITLS_CFG_ParseCert(config_s, (const uint8_t *)validIntCaFile,
+        strlen(validIntCaFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(validIntCa != NULL);
+
+    FRAME_CertInfo certInfoClient = {
+        "rsa_sha256/ca.der",
+        0,
+        "rsa_sha256/client.der",
+        0,
+        "rsa_sha256/client.key.der",
+        0,
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_sha256/ca.der",
+        "ecdsa_sha256/inter.der",
+        "rsa_sha256/server.der",
+        0,
+        "rsa_sha256/server.key.der",
+        0,
+    };
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config_c, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(HITLS_CFG_AddExtraChainCert(&server->ssl->config.tlsConfig, validIntCa) == HITLS_SUCCESS);
+    HITLS_CERT_Chain *extraChainCert = HITLS_CFG_GetExtraChainCerts(&server->ssl->config.tlsConfig);
+    ASSERT_TRUE(extraChainCert->count == 1);
+    ASSERT_TRUE(extraChainCert != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS12_RFC5246_CONSISTENCY_BUILD_CERT_CHAIN_TC001
+* @title
+* @precon Set up a certificate chain from the chain, but there is no certificate in the chain chain. There is a
+    certificate in the store, and it is expected that the connection will be successfully established.
+* @brief    1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+2. Load the intermediate certificate into the store. Expected result 2 is obtained.
+3. Call the HITLS_CFG_BuildCertChain function to group the certificate chain, set the flag to HITLS_SBILD_CHAIN_LAGCHECK
+    . Expected result 3 is obtained.
+4. Continue to establish the link. Expected result 4 is obtained.
+* @expect 1. The initialization is successful.
+2. Successfully set up.
+3. Return success.
+4. The link is set up successfullyl, returns HITLS_SUCCESS.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_BUILD_CERT_CHAIN_TC001()
+{
+#ifdef HITLS_TLS_CONFIG_CERT_BUILD_CHAIN
+    FRAME_Init();
+
+    HITLS_Config *config_c = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_c != NULL);
+    HITLS_Config *config_s = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_s != NULL);
+    HITLS_CFG_SetVerifyNoneSupport(config_c, false);
+
+    FRAME_CertInfo certInfoClient = {
+        "rsa_sha256/ca.der",
+        "rsa_sha256/inter.der",
+        "rsa_sha256/client.der",
+        0,
+        "rsa_sha256/client.key.der",
+        0,
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_sha256/ca.der",
+        "rsa_sha256/inter.der",
+        "rsa_sha256/server.der",
+        0,
+        "rsa_sha256/server.key.der",
+        0,
+    };
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config_c, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(HITLS_CFG_BuildCertChain(&server->ssl->config.tlsConfig, HITLS_BUILD_CHAIN_FLAG_CHECK) == HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+#endif
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS12_RFC5246_CONSISTENCY_BUILD_CERT_CHAIN_TC002
+* @title Set up a certificate chain from the store, but there is no certificate in the store. There is a certificate in
+    the chain, and it is expected that the chain will be empty after the chain is formed, resulting in a connection failure.
+* @precon nan
+* @brief    1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+2. Set the intermediate certificate to the chain, but there are no certificates in the Cert_store and Chain_store.
+    Expected result 2 is obtained.
+3. Call HITLS_CFG_BuildCertChain to group the certificate chain and set the flag to 0. Expected result 3 is obtained.
+4. Continue to establish the link. Expected result 4 is obtained.
+* @expect 1. The initialization is successful.
+2. Successfully set up.
+3. Return success.
+4. Failed to establish connection.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_BUILD_CERT_CHAIN_TC002()
+{
+#ifdef HITLS_TLS_CONFIG_CERT_BUILD_CHAIN
+    FRAME_Init();
+
+    HITLS_Config *config_c = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_c != NULL);
+    HITLS_Config *config_s = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_s != NULL);
+    HITLS_CFG_SetVerifyNoneSupport(config_c, false);
+
+    char rootCaFile[] = "../testdata/tls/certificate/der/rsa_sha256/ca.der";
+    char intCaFile[] = "../testdata/tls/certificate/der/rsa_sha256/inter.der";
+    HITLS_CERT_X509 *rootCa = HITLS_CFG_ParseCert(config_s, (const uint8_t *)rootCaFile,
+        strlen(rootCaFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(rootCa != NULL);
+    HITLS_CERT_X509 *intCa = HITLS_CFG_ParseCert(config_s, (const uint8_t *)intCaFile,
+        strlen(intCaFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(intCa != NULL);
+
+    HITLS_CERT_Store *store = SAL_CERT_StoreNew(config_s->certMgrCtx);
+    ASSERT_TRUE(store != NULL);
+
+    SAL_CERT_StoreCtrl(config_s, store, CERT_STORE_CTRL_ADD_CERT_LIST, rootCa, NULL);
+    HITLS_CFG_SetVerifyStore(config_s, store, 0);
+
+    FRAME_CertInfo certInfoClient = {
+        "rsa_sha256/ca.der",
+        0,
+        "rsa_sha256/server.der",
+        0,
+        "rsa_sha256/server.key.der",
+        0,
+    };
+    FRAME_CertInfo certInfoServer = {
+        0,
+        0,
+        "rsa_sha256/server.der",
+        0,
+        "rsa_sha256/server.key.der",
+        0,
+    };
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config_c, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(HITLS_CFG_AddChainCert(&server->ssl->config.tlsConfig, intCa, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_BuildCertChain(&server->ssl->config.tlsConfig, 0) == HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+#endif
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS12_RFC5246_CONSISTENCY_BUILD_CERT_CHAIN_TC003
+* @title Set up a certificate chain from the chain, where there are multiple certificates and unrelated certificates.
+    It is expected that after the chain is formed, only the certificates that make up the certificate chain will be
+    present, and the connection will be successfully established.
+* @precon nan
+* @brief    1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+2. Load 2 different intermediate certificates into the chain, and there is only 1 available intermediate certificate.
+    Expected result 2 is obtained.
+3. Call the HITLS_CFG_BuildCertChain function to group the certificate chain, set the flag to HITLS_SBILD_CHAIN_LAGCHECK
+    , Obtain the number of certificates in the chain after the chain is formed. Expected result 3 is obtained.
+4. Continue to establish the link. Expected result 4 is obtained.
+* @expect 1. The initialization is successful.
+2. The parsing was successful.
+3. Obtaining only one certificate in the chain.
+4. The link is set up successfullyl, returns HITLS_SUCCESS.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_BUILD_CERT_CHAIN_TC003()
+{
+#ifdef HITLS_TLS_CONFIG_CERT_BUILD_CHAIN
+    FRAME_Init();
+
+    HITLS_Config *config_c = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_c != NULL);
+    HITLS_Config *config_s = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_s != NULL);
+    HITLS_CFG_SetVerifyNoneSupport(config_c, false);
+
+    char intCaFile1[] = "../testdata/tls/certificate/der/rsa_sha256/inter.der";
+    HITLS_CERT_X509 *intCa1 = HITLS_CFG_ParseCert(config_s, (const uint8_t *)intCaFile1,
+        strlen(intCaFile1) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(intCa1 != NULL);
+    char intCaFile2[] = "../testdata/tls/certificate/der/ecdsa_sha256/inter.der";
+    HITLS_CERT_X509 *intCa2 = HITLS_CFG_ParseCert(config_s, (const uint8_t *)intCaFile2,
+        strlen(intCaFile2) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(intCa2 != NULL);
+
+    FRAME_CertInfo certInfoClient = {
+        "rsa_sha256/ca.der",
+        0,
+        "rsa_sha256/server.der",
+        0,
+        "rsa_sha256/server.key.der",
+        0,
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_sha256/ca.der",
+        0,
+        "rsa_sha256/server.der",
+        0,
+        "rsa_sha256/server.key.der",
+        0,
+    };
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config_c, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(HITLS_CFG_AddChainCert(&server->ssl->config.tlsConfig, intCa1, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_AddChainCert(&server->ssl->config.tlsConfig, intCa2, false) == HITLS_SUCCESS);
+    HITLS_CERT_Chain *chainCertList = HITLS_CFG_GetChainCerts(&server->ssl->config.tlsConfig);
+    ASSERT_EQ(BSL_LIST_COUNT(chainCertList), 2);
+    ASSERT_TRUE(HITLS_CFG_BuildCertChain(&server->ssl->config.tlsConfig, HITLS_BUILD_CHAIN_FLAG_CHECK) == HITLS_SUCCESS);
+    chainCertList = HITLS_CFG_GetChainCerts(&server->ssl->config.tlsConfig);
+    ASSERT_EQ(BSL_LIST_COUNT(chainCertList), 1);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+#endif
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS12_RFC5246_CONSISTENCY_BUILD_CERT_CHAIN_TC004
+* @title Set the flag to HITLS_BUILD_CHAIN_FLAG_NO_ROOT, and set both the intermediate certificate and the root
+* certificate to the certificate store. It is expected that the root certificate will not appear in the certificate
+* chain after the completion of the chain assembly.
+* @precon nan
+* @brief    1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+2. Load the root certificate and intermediate certificate into CertStore. Expected result 2 is obtained.
+3. Call the HITLS_BuildCertChain function to group the certificate chain, set the flag to HITLS_BUILD_CHAIN_FLAG_NO_ROOT
+    , Obtain the number of certificates in the chain after the chain is formed. Expected result 3 is obtained.
+4. Continue to establish the link. Expected result 4 is obtained.
+* @expect 1. The initialization is successful.
+2. The parsing was successful.
+3. Obtaining only one certificate in the chain.
+4. The link is set up successfully, returns HITLS_SUCCESS.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_BUILD_CERT_CHAIN_TC004()
+{
+#ifdef HITLS_TLS_CONFIG_CERT_BUILD_CHAIN
+    FRAME_Init();
+
+    HITLS_Config *config_c = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_c != NULL);
+    HITLS_Config *config_s = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_s != NULL);
+    HITLS_CFG_SetVerifyNoneSupport(config_c, false);
+
+    char intCaFile[] = "../testdata/tls/certificate/der/rsa_sha256/inter.der";
+    HITLS_CERT_X509 *intCa = HITLS_CFG_ParseCert(config_s, (const uint8_t *)intCaFile,
+        strlen(intCaFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(intCa != NULL);
+
+    FRAME_CertInfo certInfoClient = {
+        "rsa_sha256/ca.der",
+        0,
+        "rsa_sha256/server.der",
+        0,
+        "rsa_sha256/server.key.der",
+        0,
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_sha256/ca.der",
+        0,
+        "rsa_sha256/server.der",
+        0,
+        "rsa_sha256/server.key.der",
+        0,
+    };
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config_c, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_CERT_Store *store = HITLS_CFG_GetCertStore(&server->ssl->config.tlsConfig);
+    ASSERT_TRUE(store != NULL);
+
+    SAL_CERT_StoreCtrl(&server->ssl->config.tlsConfig, store, CERT_STORE_CTRL_ADD_CERT_LIST, intCa, NULL);
+
+    ASSERT_TRUE(HITLS_BuildCertChain(server->ssl, HITLS_BUILD_CHAIN_FLAG_NO_ROOT) == HITLS_SUCCESS);
+    HITLS_CERT_Chain *chainCertList = HITLS_CFG_GetChainCerts(&server->ssl->config.tlsConfig);
+    ASSERT_EQ(BSL_LIST_COUNT(chainCertList), 1);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_TLS12_RFC5246_CONSISTENCY_VERIFY_CHAIN_TC001
+ * @title Verify the certificate chain in three ways: from a file, from a directory, and from a single CA certificate.
+ * @precon nan
+ * @brief    1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+ *           2. Load the certificate chain from a file. Expected result 2 is obtained.
+ *           3. Continue to establish the link. Expected result 3 is obtained.
+ * @expect 1. The initialization is successful.
+ *         2. The parsing was successful.
+ *         3. The link is set up successfully, returns HITLS_SUCCESS.
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_VERIFY_CHAIN_TC001()
+{
+    FRAME_Init();
+
+    HITLS_Config *config_c = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_c != NULL);
+    HITLS_Config *config_s = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_s != NULL);
+    HITLS_CFG_SetClientVerifySupport(config_s, true);
+    FRAME_CertInfo certInfoClient = {
+        "rsa_sha256/ca.der", 0, 0, 0, 0, 0,
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_sha256/ca.der",
+        "rsa_sha256/inter.der",
+        "rsa_sha256/client.der",
+        0,
+        "rsa_sha256/client.key.der",
+        0,
+    };
+    const char *path = "../testdata/tls/certificate/pem/rsa_sha256/cert_chain.pem";
+    int32_t ret = HITLS_CFG_UseCertificateChainFile(config_c, path);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    const char *keyPath = "../testdata/tls/certificate/pem/rsa_sha256/client.key.pem";
+    HITLS_CFG_LoadKeyFile(config_c, keyPath, TLS_PARSE_FORMAT_PEM);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config_c, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_TLS12_RFC5246_CONSISTENCY_VERIFY_CHAIN_TC002
+ * @title Verify the certificate chain in three ways: from a file, from a directory, and from a single CA certificate.
+ * @precon nan
+ * @brief    1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+ *           2. Load the certificate chain from a directory. Expected result 2 is obtained.
+ *           3. Continue to establish the link. Expected result 3 is obtained.
+ * @expect 1. The initialization is successful.
+ *         2. The parsing was successful.
+ *         3. The link is set up successfully, returns HITLS_SUCCESS.
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_VERIFY_CHAIN_TC002()
+{
+    FRAME_Init();
+
+    HITLS_Config *config_c = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_c != NULL);
+    HITLS_Config *config_s = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_s != NULL);
+    HITLS_CFG_SetClientVerifySupport(config_s, true);
+    FRAME_CertInfo certInfoClient = {
+        0,
+        0,
+        "rsa_sha256/client.der",
+        0,
+        "rsa_sha256/client.key.der",
+        0,
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_sha256/ca.der",
+        "rsa_sha256/inter.der",
+        "rsa_sha256/client.der",
+        0,
+        "rsa_sha256/client.key.der",
+        0,
+    };
+    const char *path = "../testdata/tls/certificate/pem/rsa_sha256";
+    int32_t ret = HITLS_CFG_LoadVerifyDir(config_c, path);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config_c, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_TLS12_RFC5246_CONSISTENCY_VERIFY_CHAIN_TC003
+ * @title Verify the certificate chain in three ways: from a file, from a directory, and from a single CA certificate.
+ * @precon nan
+ * @brief    1. Use the default configuration items to configure the client and server. Expected result 1 is obtained.
+ *           2. Load the certificate chain from a single CA certificate. Expected result 2 is obtained.
+ *           3. Continue to establish the link. Expected result 3 is obtained.
+ * @expect 1. The initialization is successful.
+ *         2. The parsing was successful.
+ *         3. The link is set up successfully, returns HITLS_SUCCESS.
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_VERIFY_CHAIN_TC003()
+{
+    FRAME_Init();
+
+    HITLS_Config *config_c = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_c != NULL);
+    HITLS_Config *config_s = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_s != NULL);
+    HITLS_CFG_SetClientVerifySupport(config_s, true);
+    FRAME_CertInfo certInfoClient = {
+        0,
+        "rsa_sha256/inter.der",
+        "rsa_sha256/client.der",
+        0,
+        "rsa_sha256/client.key.der",
+        0,
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_sha256/ca.der",
+        "rsa_sha256/inter.der",
+        "rsa_sha256/client.der",
+        0,
+        "rsa_sha256/client.key.der",
+        0,
+    };
+    const char *caPath = "../testdata/tls/certificate/pem/rsa_sha256/ca.pem";
+    int32_t ret = HITLS_CFG_LoadVerifyFile(config_c, caPath);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config_c, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

@@ -524,23 +524,21 @@ int32_t HITLS_APP_OptToBase64(uint8_t *inBuf, uint32_t inBufLen, char *outBuf, u
 
 int32_t HITLS_APP_OptToHex(uint8_t *inBuf, uint32_t inBufLen, char *outBuf, uint32_t outBufLen)
 {
-    if (inBuf == NULL || outBuf == NULL || inBufLen == 0 || outBufLen == 0) {
-        return HITLS_APP_INTERNAL_EXCEPTION;
-    }
     // One byte is encoded into hex and becomes 2 bytes.
     int32_t hexCharSize = 2;
-    char midBuf[outBufLen + 1];  // snprint_s will definitely increase '\ 0'
-    for (uint32_t i = 0; i < inBufLen; ++i) {
-        int ret = snprintf_s(midBuf + i * hexCharSize, outBufLen + 1, outBufLen, "%02x", inBuf[i]);
-        if (ret == -1) {
-            (void)AppPrintError("Failed to convert to hex format\n");
-            return HITLS_APP_ENCODE_FAIL;
-        }
+    if (inBuf == NULL || outBuf == NULL || inBufLen == 0 || outBufLen < hexCharSize * inBufLen + 1) {
+        (void)AppPrintError("opt: Invalid input buffer or output buffer.\n");
+        return HITLS_APP_INTERNAL_EXCEPTION;
+    }
+    const char *hexChars = "0123456789abcdef";
+    size_t pos = 0;
+
+    for (size_t i = 0; i < inBufLen; ++i) {
+        outBuf[pos++] = hexChars[(inBuf[i] >> 4) & 0xF]; // high 4 bits.
+        outBuf[pos++] = hexChars[inBuf[i] & 0xF]; // low 4 bits.
     }
 
-    if (memcpy_s(outBuf, outBufLen, midBuf, strlen(midBuf)) != EOK) {
-        return HITLS_APP_SECUREC_FAIL;
-    }
+    outBuf[pos] = '\0';
     return HITLS_APP_SUCCESS;
 }
 
@@ -561,7 +559,7 @@ int32_t HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t bufLen, int32
             break;
         // One byte is encoded into hex and becomes 2 bytes.
         case HITLS_APP_FORMAT_HEX:
-            outBufLen = bufLen * 2; // The length of the encoded data is 2 times the length of the original data.
+            outBufLen = bufLen * 2 + 1; // The length of the encoded data is 2 times the length of the original data.
             break;
         default: // The original length of bufLen is used by the default type.
             outBufLen = bufLen;
@@ -578,6 +576,7 @@ int32_t HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t bufLen, int32
             break;
         case HITLS_APP_FORMAT_HEX:
             outRet = HITLS_APP_OptToHex(buf, bufLen, outBuf, outBufLen);
+            outBufLen = strlen(outBuf);
             break;
         default:
             outRet = memcpy_s(outBuf, outBufLen, buf, bufLen);
@@ -592,6 +591,7 @@ int32_t HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t bufLen, int32
         (void)AppPrintError("Failed to output the content.\n");
         return HITLS_APP_UIO_FAIL;
     }
+    (void)BSL_UIO_Ctrl(uio, BSL_UIO_FLUSH, 0, NULL);
     return HITLS_APP_SUCCESS;
 }
 

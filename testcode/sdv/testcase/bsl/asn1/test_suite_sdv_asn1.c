@@ -20,7 +20,7 @@
 #include <pthread.h>
 #include <string.h>
 #include "bsl_sal.h"
-#include "bsl_asn1.h"
+#include "bsl_asn1_internal.h"
 #include "bsl_err.h"
 #include "bsl_log.h"
 #include "sal_time.h"
@@ -1252,6 +1252,8 @@ void SDV_BSL_ASN1_ENCODE_BMPSTRING_TC001(Hex *enc, char *dec)
     BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_BMPSTRING, enc->len, enc->x};
     BSL_ASN1_Buffer decode = {BSL_ASN1_TAG_BMPSTRING, 0, NULL};
     BSL_ASN1_Buffer encode = {0};
+    uint8_t tmp[10] = {0xff}; // select len 10.
+    BSL_ASN1_Buffer wrong = {BSL_ASN1_TAG_BMPSTRING, 10, tmp};
 
     TestMemInit();
     ret = BSL_ASN1_DecodePrimitiveItem(&asn, &decode);
@@ -1266,6 +1268,10 @@ void SDV_BSL_ASN1_ENCODE_BMPSTRING_TC001(Hex *enc, char *dec)
     ret = BSL_ASN1_EncodeTemplate(&templ, &decode, 1, &encode.buff, &encode.len);
     ASSERT_EQ(ret, BSL_SUCCESS);
     ASSERT_COMPARE("Encode String", encode.buff + 2, encode.len - 2, enc->x, enc->len); // skip 2 bytes header
+
+    BSL_SAL_FREE(encode.buff);
+    ret = BSL_ASN1_EncodeTemplate(&templ, &wrong, 1, &encode.buff, &encode.len);
+    ASSERT_EQ(ret, BSL_INVALID_ARG);
 EXIT:
     BSL_SAL_FREE(decode.buff);
     BSL_SAL_FREE(encode.buff);

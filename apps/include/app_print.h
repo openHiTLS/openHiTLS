@@ -22,6 +22,8 @@
 extern "C" {
 #endif
 
+#define AppPrintInfo AppPrintError
+
 /**
  * @ingroup HITLS_APPS
  * @brief Print output to UIO

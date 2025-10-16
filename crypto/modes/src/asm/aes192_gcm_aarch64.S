@@ -22,7 +22,6 @@
     ROUND CTR1.16b, KEY0.16b
     ldp x6, x7, [INPUT], #16                // AES[0] - load plaintext
     ext HASH0.16b, HASH0.16b, HASH0.16b, #8 // PRE 0
-
     fmov d3, x10                            // CTR[3]
     rev64 OUT0.16b, OUT0.16b                // GHASH block 4k (only t0 is free)
     ROUND CTR2.16b, KEY1.16b

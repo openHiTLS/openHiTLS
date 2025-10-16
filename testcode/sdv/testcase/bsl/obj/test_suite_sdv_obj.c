@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <pthread.h>
 #include "securec.h"
 #include "bsl_errno.h"
 #include "bsl_obj.h"
@@ -27,6 +28,20 @@
 
 extern BslOidInfo g_oidTable[];
 extern uint32_t g_tableSize;
+
+static int32_t PthreadRunOnce(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine initFunc)
+{
+    if (onceControl == NULL || initFunc == NULL) {
+        return BSL_SAL_ERR_BAD_PARAM;
+    }
+
+    pthread_once_t *tmpOnce = (pthread_once_t *)onceControl;
+    if (pthread_once(tmpOnce, initFunc) != 0) {
+        return BSL_SAL_ERR_UNKNOWN;
+    }
+    return BSL_SUCCESS;
+}
+
 /**
  * @test SDV_BSL_OBJ_CID_OID_FUNC_TC001
  * @title check whether the relative sequence of cid and oid tables is corrent
@@ -66,7 +81,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_BSL_OBJ_CREATE_SIGN_ID_TC001(void)
 {
-#ifndef HITLS_BSL_HASH
+#ifndef HITLS_BSL_OBJ_CUSTOM
     SKIP_TEST();
 #else
     BslCid signId = BSL_CID_MAX - 1;
@@ -74,6 +89,7 @@ void SDV_BSL_OBJ_CREATE_SIGN_ID_TC001(void)
     BslCid hashId = BSL_CID_MAX - 2;
 
     TestMemInit();
+    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_RUN_ONCE_CB_FUNC, PthreadRunOnce);
     ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, hashId), BSL_SUCCESS);
 
     BslCid retrievedAsymId = BSL_OBJ_GetAsymAlgIdFromSignId(signId);
@@ -110,7 +126,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_BSL_OBJ_CREATE_TC001()
 {
-#ifndef HITLS_BSL_HASH
+#ifndef HITLS_BSL_OBJ_CUSTOM
     SKIP_TEST();
 #else
     char *testOidName = "TEST-OID";
@@ -123,6 +139,7 @@ void SDV_BSL_OBJ_CREATE_TC001()
     char aesOidData[] = "\140\206\110\1\145\3\4\1\2";
 
     TestMemInit();
+    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_RUN_ONCE_CB_FUNC, PthreadRunOnce);
     ASSERT_EQ(BSL_OBJ_Create(aesOidData, 9, aesOidName, aesCid), BSL_SUCCESS);
 
     ASSERT_EQ(BSL_OBJ_Create(testOidData, 9, testOidName, testCid), BSL_SUCCESS);
@@ -162,7 +179,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_BSL_OBJ_HASH_TABLE_LOOKUP_TC001()
 {
-#ifndef HITLS_BSL_HASH
+#ifndef HITLS_BSL_OBJ_CUSTOM
     SKIP_TEST();
 #else
     int32_t ret;
@@ -184,6 +201,7 @@ void SDV_BSL_OBJ_HASH_TABLE_LOOKUP_TC001()
     testOid2.flags = BSL_OID_GLOBAL;
 
     TestMemInit();
+    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_RUN_ONCE_CB_FUNC, PthreadRunOnce);
     ret = BSL_OBJ_Create(testOidData1, sizeof(testOidData1), testOidName1, testCid1);
     ASSERT_EQ(BSL_SUCCESS, ret);
 
@@ -218,5 +236,105 @@ void SDV_BSL_OBJ_HASH_TABLE_LOOKUP_TC001()
 EXIT:
     return;
 #endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_OBJ_GetOIDNUMBERICSTRING_FUNC_TC001
+ * @title Test converting an ASN.1 OID to its numeric representation
+ * @expect success
+ */
+/* BEGIN_CASE */
+void SDV_BSL_OBJ_GetOIDNUMBERICSTRING_FUNC_TC001(Hex *str, char *expect)
+{
+    char *oid = NULL;
+    uint8_t *hexOid = NULL;
+    TestMemInit();
+    oid = BSL_OBJ_GetOidNumericString(str->x, str->len);
+    ASSERT_TRUE(oid != NULL);
+    ASSERT_EQ(memcmp(oid, expect, strlen(expect)), 0);
+
+    uint32_t outLen = 0;
+    hexOid = BSL_OBJ_GetOidFromNumericString(expect, strlen(expect), &outLen);
+    ASSERT_TRUE(hexOid != NULL);
+    ASSERT_EQ(outLen, str->len);
+    ASSERT_COMPARE("test obj", hexOid, outLen, str->x, str->len);
+
+EXIT:
+    if (oid != NULL) {
+        free(oid);
+    }
+    BSL_SAL_Free(hexOid);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_OBJ_GetOIDNUMBERICSTRING_FUNC_TC002
+ * @title Test converting an ASN.1 OID to its numeric representation (Counterexample)
+ * @expect success
+ */
+/* BEGIN_CASE */
+void SDV_BSL_OBJ_GetOIDNUMBERICSTRING_FUNC_TC002(Hex *str)
+{
+    ASSERT_TRUE(BSL_OBJ_GetOidNumericString(str->x, str->len) == NULL);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_OBJ_GetOIDNUMBERICSTRING_FUNC_TC001
+ * @title Exception Parameter Testing for the BSL_OBJ_GetOidFromNumericString Function.
+ * @expect success
+ */
+/* BEGIN_CASE */
+void SDV_BSL_OBJ_GETOID_FROM_NUMBERIC_FUNC_TC001(char *expect)
+{
+    TestMemInit();
+    uint32_t outLen = 0;
+    uint8_t *hexOid = NULL;
+    ASSERT_TRUE(BSL_OBJ_GetOidFromNumericString(NULL, 0, &outLen) == NULL);
+    ASSERT_TRUE(BSL_OBJ_GetOidFromNumericString(expect, strlen(expect), NULL) == NULL);
+    hexOid = BSL_OBJ_GetOidFromNumericString(expect, strlen(expect), &outLen);
+    ASSERT_TRUE(hexOid == NULL);
+EXIT:
+    BSL_SAL_FREE(hexOid);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_OID_LENGTH_CHECK_TC001
+ * @title Verify that octetLen matches the actual length of octs in OID table
+ * @expect success
+ */
+/* BEGIN_CASE */
+void SDV_BSL_OID_LENGTH_CHECK_TC001()
+{
+    static const int32_t KNOWN_EXCEPTIONS = 5;
+    
+    int32_t oidIndex = 0;
+    int32_t totalCount = 0;
+    int32_t passedCount = 0;
+    BslOidInfo oidInfo;
+    uint32_t octetLen;
+    uint32_t actualLen;
+
+    while (oidIndex < (int32_t)g_tableSize) {
+        oidInfo = g_oidTable[oidIndex];
+        octetLen = oidInfo.strOid.octetLen;
+        actualLen = strlen(oidInfo.strOid.octs);
+        
+        totalCount++;
+        if (octetLen == actualLen) {
+            passedCount++;
+        }
+        oidIndex++;
+    }
+
+    ASSERT_TRUE(totalCount == passedCount + KNOWN_EXCEPTIONS);
+EXIT:
+    return;
 }
 /* END_CASE */

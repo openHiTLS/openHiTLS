@@ -71,11 +71,33 @@
 #endif
 
 #ifdef HITLS_PKI_X509_VFY
+    #ifndef HITLS_PKI_X509_VFY_DEFAULT
+        #define HITLS_PKI_X509_VFY_DEFAULT
+    #endif
+    #ifndef HITLS_PKI_X509_VFY_CB
+        #define HITLS_PKI_X509_VFY_CB
+    #endif
+    #ifndef HITLS_PKI_X509_VFY_LOCATION
+        #define HITLS_PKI_X509_VFY_LOCATION
+    #endif
+#endif
+
+#ifdef HITLS_PKI_X509_VFY_DEFAULT
     #ifndef HITLS_PKI_X509_CRT_PARSE
         #define HITLS_PKI_X509_CRT_PARSE
     #endif
     #ifndef HITLS_PKI_X509_CRL_PARSE
         #define HITLS_PKI_X509_CRL_PARSE
+    #endif
+#endif
+
+#if defined(HITLS_PKI_X509_VFY_LOCATION) && !defined(HITLS_BSL_SAL_FILE)
+    #define HITLS_BSL_SAL_FILE
+#endif
+
+#if defined(HITLS_PKI_X509_VFY_DEFAULT) || defined(HITLS_PKI_X509_VFY_CB) || defined(HITLS_PKI_X509_VFY_LOCATION)
+    #ifndef HITLS_PKI_X509_VFY
+        #define HITLS_PKI_X509_VFY
     #endif
 #endif
 
@@ -85,6 +107,10 @@
     #endif
     #ifndef HITLS_PKI_X509_CRT_PARSE
         #define HITLS_PKI_X509_CRT_PARSE
+    #endif
+    #ifndef HITLS_PKI_X509_CRT_AUTH
+        // Could be defined by HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
+        #define HITLS_PKI_X509_CRT_AUTH
     #endif
 #endif
 
@@ -100,6 +126,12 @@
     #endif
     #ifndef HITLS_PKI_X509_CSR_PARSE
         #define HITLS_PKI_X509_CSR_PARSE
+    #endif
+    #ifndef HITLS_PKI_X509_CSR_GET
+        #define HITLS_PKI_X509_CSR_GET
+    #endif
+    #ifndef HITLS_PKI_X509_CSR_ATTR
+        #define HITLS_PKI_X509_CSR_ATTR
     #endif
 #endif
 
@@ -145,9 +177,43 @@
     #endif
 #endif
 
+#if defined(HITLS_PKI_INFO)
+    #ifndef HITLS_PKI_INFO_DN_CONF
+        #define HITLS_PKI_INFO_DN_CONF
+    #endif
+    #ifndef HITLS_PKI_INFO_DN_HASH
+        #define HITLS_PKI_INFO_DN_HASH
+    #endif
+    #ifndef HITLS_PKI_INFO_CRT
+        #define HITLS_PKI_INFO_CRT
+    #endif
+    #ifndef HITLS_PKI_INFO_CSR
+        #define HITLS_PKI_INFO_CSR
+    #endif
+    #ifndef HITLS_PKI_INFO_CRL
+        #define HITLS_PKI_INFO_CRL
+    #endif
+#endif
+
+#if defined(HITLS_PKI_INFO_CRT) || defined(HITLS_PKI_INFO_CSR) || defined(HITLS_PKI_INFO_CRL) || \
+    defined(HITLS_PKI_INFO_DN_CONF) || defined(HITLS_PKI_INFO_DN_HASH)
+    #ifndef HITLS_PKI_INFO
+        #define HITLS_PKI_INFO
+    #endif
+#endif
+
+#if defined(HITLS_PKI_INFO_CRT) || defined(HITLS_PKI_INFO_CSR) || defined(HITLS_PKI_INFO_CRL)
+    #ifndef HITLS_CRYPTO_KEY_INFO
+        #define HITLS_CRYPTO_KEY_INFO
+    #endif
+#endif
+
 #ifdef HITLS_PKI_INFO
     #ifndef HITLS_BSL_UIO_PLT
         #define HITLS_BSL_UIO_PLT
+    #endif
+    #ifndef HITLS_BSL_PRINT
+        #define HITLS_BSL_PRINT
     #endif
 #endif
 
@@ -155,8 +221,8 @@
 #ifndef HITLS_BSL_LIST
     #define HITLS_BSL_LIST
 #endif
-#ifndef HITLS_BSL_OBJ
-    #define HITLS_BSL_OBJ
+#ifndef HITLS_BSL_OBJ_DEFAULT
+    #define HITLS_BSL_OBJ_DEFAULT
 #endif
 #ifndef HITLS_BSL_ASN1
     #define HITLS_BSL_ASN1

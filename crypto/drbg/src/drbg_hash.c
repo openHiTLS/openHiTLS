@@ -246,7 +246,6 @@ int32_t DRBG_HashInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropy,
 {
     DRBG_HashCtx *ctx = (DRBG_HashCtx*)drbg->ctx;
     CRYPT_Data seed = {ctx->v, (uint32_t)(ctx->seedLen)};
-    int32_t ret;
     uint8_t c = 0;
     CRYPT_Data temp = {&c, 1};
 
@@ -256,7 +255,7 @@ int32_t DRBG_HashInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropy,
     3. V = seed
     4. C = Hash_df(0x00 || V)
     */
-    ret = DRBG_HashDf(ctx, ctx->v, ctx->seedLen, entropy, nonce, pers, NULL);
+    int32_t ret = DRBG_HashDf(ctx, ctx->v, ctx->seedLen, entropy, nonce, pers, NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -429,14 +428,17 @@ void DRBG_HashUnInstantiate(DRBG_Ctx *drbg)
 
 DRBG_Ctx *DRBG_HashDup(DRBG_Ctx *drbg)
 {
-    DRBG_HashCtx *ctx = NULL;
-
     if (drbg == NULL) {
         return NULL;
     }
 
-    ctx = (DRBG_HashCtx*)drbg->ctx;
-    return DRBG_NewHashCtx(ctx->md, drbg->isGm, &(drbg->seedMeth), drbg->seedCtx);
+    DRBG_HashCtx *ctx = (DRBG_HashCtx*)drbg->ctx;
+    DRBG_Ctx *newDrbg = DRBG_NewHashCtx(ctx->md, drbg->isGm, &(drbg->seedMeth), drbg->seedCtx);
+    if (newDrbg == NULL) {
+        return NULL;
+    }
+    newDrbg->libCtx = drbg->libCtx;
+    return newDrbg;
 }
 
 void DRBG_HashFree(DRBG_Ctx *drbg)
@@ -502,7 +504,7 @@ DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, bool isGm, const CRYPT_RandSee
 
     ctx = (DRBG_HashCtx*)(drbg + 1);
     ctx->md = md;
-    ctx->mdCtx = md->newCtx();
+    ctx->mdCtx = md->newCtx(NULL, md->id);
     if (ctx->mdCtx == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         BSL_SAL_FREE(drbg);
@@ -537,6 +539,9 @@ DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, bool isGm, const CRYPT_RandSee
     drbg->maxPersLen = DRBG_MAX_LEN;
     drbg->maxAdinLen = DRBG_MAX_LEN;
     drbg->maxRequest = (drbg->isGm) ? DRBG_MAX_REQUEST_SM3 : DRBG_MAX_REQUEST;
+
+    drbg->predictionResistance = false;
+    drbg->forkId = BSL_SAL_GetPid();
 
     return drbg;
 }

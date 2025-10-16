@@ -41,11 +41,6 @@ AARCH64_PACIASP
     eor KEY8.16b, KEY8.16b, KEY8.16b
     eor KEY9.16b, KEY9.16b, KEY9.16b
     eor KEY10.16b, KEY10.16b, KEY10.16b
-    eor HASH0.16b, HASH0.16b, HASH0.16b
-    eor HASH1.16b, HASH1.16b, HASH1.16b
-    eor HASH2.16b, HASH2.16b, HASH2.16b
-    eor HASH3.16b, HASH3.16b, HASH3.16b
-    eor HASH4.16b, HASH4.16b, HASH4.16b
 AARCH64_AUTIASP
     ret
 .size AES_GCM_ClearAsm,.-AES_GCM_ClearAsm

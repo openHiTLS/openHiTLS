@@ -26,6 +26,10 @@ extern "C" {
 #define CRYPT_PARAM_PKEY_ENCODE_PUBKEY                      (CRYPT_PARAM_PKEY_BASE + 1)
 #define CRYPT_PARAM_PKEY_PROCESS_FUNC                       (CRYPT_PARAM_PKEY_BASE + 2)
 #define CRYPT_PARAM_PKEY_PROCESS_ARGS                       (CRYPT_PARAM_PKEY_BASE + 3)
+#define CRYPT_PARAM_PKEY_HE_CIPHERTEXT1                     (CRYPT_PARAM_PKEY_BASE + 4)
+#define CRYPT_PARAM_PKEY_HE_CIPHERTEXT2                     (CRYPT_PARAM_PKEY_BASE + 5)
+#define CRYPT_PARAM_PKEY_SIG_PAD_MODE                       (CRYPT_PARAM_PKEY_BASE + 6)
+#define CRYPT_PARAM_PKEY_SIG_PAD_DIGEST                     (CRYPT_PARAM_PKEY_BASE + 7)
 
 #define CRYPT_PARAM_KDF_BASE                                100
 #define CRYPT_PARAM_KDF_PASSWORD                            (CRYPT_PARAM_KDF_BASE + 1)
@@ -91,6 +95,8 @@ extern "C" {
 #define CRYPT_PARAM_RAND_SEED_CLEANENTROPY                  (CRYPT_PARAM_RAND_BASE + 4)
 #define CRYPT_PARAM_RAND_SEED_GETNONCE                      (CRYPT_PARAM_RAND_BASE + 5)
 #define CRYPT_PARAM_RAND_SEED_CLEANNONCE                    (CRYPT_PARAM_RAND_BASE + 6)
+#define CRYPT_PARAM_RAND_RESEED_INTERVAL                    (CRYPT_PARAM_RAND_BASE + 7)
+#define CRYPT_PARAM_RAND_RESEED_TIME                        (CRYPT_PARAM_RAND_BASE + 8)
 
 #define CRYPT_PARAM_CURVE25519_BASE                         700
 #define CRYPT_PARAM_CURVE25519_PUBKEY                       (CRYPT_PARAM_CURVE25519_BASE + 1)
@@ -132,6 +138,7 @@ extern "C" {
 #define CRYPT_PARAM_ML_DSA_BASE                             1500
 #define CRYPT_PARAM_ML_DSA_PRVKEY                           (CRYPT_PARAM_ML_DSA_BASE + 1)
 #define CRYPT_PARAM_ML_DSA_PUBKEY                           (CRYPT_PARAM_ML_DSA_BASE + 2)
+#define CRYPT_PARAM_ML_DSA_PRVKEY_SEED                      (CRYPT_PARAM_ML_DSA_BASE + 3)
 
 #define CRYPT_PARAM_HYBRID_BASE                             1600
 #define CRYPT_PARAM_HYBRID_PRVKEY                           (CRYPT_PARAM_HYBRID_BASE + 1)
@@ -142,6 +149,18 @@ extern "C" {
 #define CRYPT_PARAM_SLH_DSA_PRV_PRF                         (CRYPT_PARAM_SLH_DSA_BASE + 2)
 #define CRYPT_PARAM_SLH_DSA_PUB_SEED                        (CRYPT_PARAM_SLH_DSA_BASE + 3)
 #define CRYPT_PARAM_SLH_DSA_PUB_ROOT                        (CRYPT_PARAM_SLH_DSA_BASE + 4)
+
+#define CRYPT_PARAM_MD_BASE                                 1800
+#define CRYPT_PARAM_MD_DIGEST_SIZE                          (CRYPT_PARAM_MD_BASE + 1)
+#define CRYPT_PARAM_MD_BLOCK_SIZE                           (CRYPT_PARAM_MD_BASE + 2)
+#define CRYPT_PARAM_MD_ATTR                                 (CRYPT_PARAM_MD_BASE + 3)
+
+#define CRYPT_PARAM_XMSS_BASE                               1900
+#define CRYPT_PARAM_XMSS_PRV_INDEX                          (CRYPT_PARAM_XMSS_BASE + 1)
+#define CRYPT_PARAM_XMSS_PRV_SEED                           (CRYPT_PARAM_XMSS_BASE + 2)
+#define CRYPT_PARAM_XMSS_PRV_PRF                            (CRYPT_PARAM_XMSS_BASE + 3)
+#define CRYPT_PARAM_XMSS_PUB_SEED                           (CRYPT_PARAM_XMSS_BASE + 4)
+#define CRYPT_PARAM_XMSS_PUB_ROOT                           (CRYPT_PARAM_XMSS_BASE + 5)
 
 #define CRYPT_PARAM_DECODE_BASE                             4000
 #define CRYPT_PARAM_DECODE_OUTPUT_FORMAT                    (CRYPT_PARAM_DECODE_BASE + 1)
@@ -158,6 +177,12 @@ extern "C" {
 #define CRYPT_PARAM_DECODE_TARGET_ATTR_NAME                 (CRYPT_PARAM_DECODE_BASE + 12)
 #define CRYPT_PARAM_DECODE_PROVIDER_CTX                     (CRYPT_PARAM_DECODE_BASE + 13)
 #define CRYPT_PARAM_DECODE_FLAG_FREE_OUTDATA                (CRYPT_PARAM_DECODE_BASE + 14)
+
+#define CRYPT_PARAM_CIPHER_BASE                             4600
+#define CRYPT_PARAM_CIPHER_AEAD_IV_LEN                      (CRYPT_PARAM_CIPHER_BASE + 1)
+
+#define CRYPT_PARAM_MAC_BASE                                4700
+#define CRYPT_PARAM_MAC_MAC_DIGEST                          (CRYPT_PARAM_MAC_BASE + 1)
 
 #define CRYPT_PARAM_CAP_TLS_GROUP_BASE                      5000
 #define CRYPT_PARAM_CAP_TLS_GROUP_IANA_GROUP_NAME           (CRYPT_PARAM_CAP_TLS_GROUP_BASE + 1)
@@ -190,6 +215,12 @@ extern "C" {
 #define CRYPT_PARAM_CAP_TLS_SIGNALG_SEC_BITS                (CRYPT_PARAM_CAP_TLS_SIGNALG_BASE + 16)
 #define CRYPT_PARAM_CAP_TLS_SIGNALG_CHAIN_VERSION_BITS      (CRYPT_PARAM_CAP_TLS_SIGNALG_BASE + 17)
 #define CRYPT_PARAM_CAP_TLS_SIGNALG_CERT_VERSION_BITS       (CRYPT_PARAM_CAP_TLS_SIGNALG_BASE + 18)
+
+#define CRYPT_PARAM_CMVP_BASE                               5200
+#define CRYPT_PARAM_CMVP_LOG_FUNC                           (CRYPT_PARAM_CMVP_BASE + 1)
+#define CRYPT_PARAM_CMVP_SELFTEST_TYPE                      (CRYPT_PARAM_CMVP_BASE + 2)
+#define CRYPT_PARAM_CMVP_RANDOM                             (CRYPT_PARAM_CMVP_BASE + 3)
+#define CRYPT_PARAM_CMVP_INTERNAL_LIBCTX_FLAG               (CRYPT_PARAM_CMVP_BASE + 4)
 
 #ifdef __cplusplus
 }

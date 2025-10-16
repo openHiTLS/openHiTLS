@@ -35,6 +35,8 @@ extern "C" {
 #define CRYPT_EAL_INIT_LOCK             0x10
 #define CRYPT_EAL_INIT_PROVIDER_RAND    0x20
 
+#define CRYPT_EAL_INIT_ALL (CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_BSL | CRYPT_EAL_INIT_RAND | \
+    CRYPT_EAL_INIT_PROVIDER | CRYPT_EAL_INIT_PROVIDER_RAND | CRYPT_EAL_INIT_LOCK)
 /**
  * @ingroup crypt_method
  * @brief CRYPTO initialization

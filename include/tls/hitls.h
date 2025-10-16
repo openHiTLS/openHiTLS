@@ -374,7 +374,7 @@ int32_t HITLS_SetMaxProtoVersion(HITLS_Ctx *ctx, uint16_t version);
  * @retval  HITLS_SUCCESS, obtained successfully.
  *          HITLS_NULL_INPUT, The input parameter pointer is null.
  */
-int32_t HITLS_IsAead(const HITLS_Ctx *ctx, uint8_t *isAead);
+int32_t HITLS_IsAead(const HITLS_Ctx *ctx, bool *isAead);
 
 /**
  * @ingroup hitls
@@ -385,7 +385,7 @@ int32_t HITLS_IsAead(const HITLS_Ctx *ctx, uint8_t *isAead);
  * @retval  HITLS_SUCCESS, is obtained successfully.
  *          HITLS_NULL_INPUT, The input parameter pointer is null.
  */
-int32_t HITLS_IsDtls(const HITLS_Ctx *ctx, uint8_t *isDtls);
+int32_t HITLS_IsDtls(const HITLS_Ctx *ctx, bool *isDtls);
 
 /**
  * @ingroup hitls
@@ -427,7 +427,7 @@ int32_t HITLS_IsHandShakeDone(const HITLS_Ctx *ctx, uint8_t *isDone);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  For other error codes, see hitls_error.h.
  */
-int32_t HITLS_IsServer(const HITLS_Ctx *ctx, uint8_t *isServer);
+int32_t HITLS_IsServer(const HITLS_Ctx *ctx, bool *isServer);
 
 /**
  * @ingroup hitls
@@ -440,7 +440,7 @@ int32_t HITLS_IsServer(const HITLS_Ctx *ctx, uint8_t *isServer);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  For other error codes, see hitls_error.h.
  */
-int32_t HITLS_ReadHasPending(const HITLS_Ctx *ctx, uint8_t *isPending);
+int32_t HITLS_ReadHasPending(const HITLS_Ctx *ctx, bool *isPending);
 
 /**
  * @ingroup hitls
@@ -675,7 +675,7 @@ const char *HITLS_GetStateString(uint32_t state);
  * @retval  HITLS_SUCCESS, Obtaining the status succeeded.
  *          For other error codes, see hitls_error.h.
  */
-int32_t HITLS_IsHandShaking(const HITLS_Ctx *ctx, uint8_t *isHandShaking);
+int32_t HITLS_IsHandShaking(const HITLS_Ctx *ctx, bool *isHandShaking);
 
 /**
  * @ingroup hitls
@@ -686,7 +686,7 @@ int32_t HITLS_IsHandShaking(const HITLS_Ctx *ctx, uint8_t *isHandShaking);
  * @retval  HITLS_SUCCESS, obtain successful.
  *          For details about other error codes, see hitls_error.h.
  */
-int32_t HITLS_GetRenegotiationSupport(const HITLS_Ctx *ctx, uint8_t *isSupportRenegotiation);
+int32_t HITLS_GetRenegotiationSupport(const HITLS_Ctx *ctx, bool *isSupportRenegotiation);
 
 /**
  * @ingroup hitls
@@ -697,7 +697,7 @@ int32_t HITLS_GetRenegotiationSupport(const HITLS_Ctx *ctx, uint8_t *isSupportRe
  * @retval  HITLS_SUCCESS, obtaining the status succeeded.
  *          For other error codes, see hitls_error.h.
  */
-int32_t HITLS_IsBeforeHandShake(const HITLS_Ctx *ctx, uint8_t *isBefore);
+int32_t HITLS_IsBeforeHandShake(const HITLS_Ctx *ctx, bool *isBefore);
 
 /**
  * @ingroup hitls
@@ -1047,7 +1047,7 @@ int32_t HITLS_GetFinishVerifyData(const HITLS_Ctx *ctx, void *buf, uint32_t bufL
  * @retval  HITLS_SUCCESS, obtained successfully.
  *          For details about other error codes, see hitls_error.h.
  */
-int32_t HITLS_GetSecureRenegotiationSupport(const HITLS_Ctx *ctx, uint8_t *isSecureRenegotiation);
+int32_t HITLS_GetSecureRenegotiationSupport(const HITLS_Ctx *ctx, bool *isSecureRenegotiation);
 
 /**
  * @ingroup hitls
@@ -1108,7 +1108,7 @@ int32_t HITLS_Renegotiate(HITLS_Ctx *ctx);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  For details about other error codes, see hitls_error.h.
  */
-int32_t HITLS_GetRenegotiationState(const HITLS_Ctx *ctx, uint8_t *isRenegotiationState);
+int32_t HITLS_GetRenegotiationState(const HITLS_Ctx *ctx, bool *isRenegotiationState);
 
 
 /**
@@ -1131,7 +1131,7 @@ int32_t HITLS_GetRwstate(const HITLS_Ctx *ctx, uint8_t *rwstate);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, ctx is null.
  */
-int32_t HITLS_GetClientVerifySupport(HITLS_Ctx *ctx, uint8_t *isSupport);
+int32_t HITLS_GetClientVerifySupport(HITLS_Ctx *ctx, bool *isSupport);
 
 /**
  * @ingroup hitls
@@ -1143,7 +1143,7 @@ int32_t HITLS_GetClientVerifySupport(HITLS_Ctx *ctx, uint8_t *isSupport);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, ctx is null.
  */
-int32_t HITLS_GetNoClientCertSupport(HITLS_Ctx *ctx, uint8_t *isSupport);
+int32_t HITLS_GetNoClientCertSupport(HITLS_Ctx *ctx, bool *isSupport);
 
 /**
  * @ingroup hitls
@@ -1154,7 +1154,7 @@ int32_t HITLS_GetNoClientCertSupport(HITLS_Ctx *ctx, uint8_t *isSupport);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, ctx is null.
  */
-int32_t HITLS_GetPostHandshakeAuthSupport(HITLS_Ctx *ctx, uint8_t *isSupport);
+int32_t HITLS_GetPostHandshakeAuthSupport(HITLS_Ctx *ctx, bool *isSupport);
 
 /**
  * @ingroup hitls
@@ -1165,7 +1165,7 @@ int32_t HITLS_GetPostHandshakeAuthSupport(HITLS_Ctx *ctx, uint8_t *isSupport);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, ctx is null.
  */
-int32_t HITLS_GetVerifyNoneSupport(HITLS_Ctx *ctx, uint8_t *isSupport);
+int32_t HITLS_GetVerifyNoneSupport(HITLS_Ctx *ctx, bool *isSupport);
 
 /**
  * @ingroup hitls
@@ -1176,7 +1176,7 @@ int32_t HITLS_GetVerifyNoneSupport(HITLS_Ctx *ctx, uint8_t *isSupport);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, ctx is null.
  */
-int32_t HITLS_GetClientOnceVerifySupport(HITLS_Ctx *ctx, uint8_t *isSupport);
+int32_t HITLS_GetClientOnceVerifySupport(HITLS_Ctx *ctx, bool *isSupport);
 
 
 /**
@@ -1214,6 +1214,17 @@ int32_t HITLS_SetModeSupport(HITLS_Ctx *ctx, uint32_t mode);
 
 /**
  * @ingroup hitls
+ * @brief   Function to clear the specified feature.
+ *
+ * @param   ctx [OUT] TLS Connection Handle
+ * @param   mode [IN] Mode features to clear.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_ClearModeSupport(HITLS_Ctx *ctx, uint32_t mode);
+
+/**
+ * @ingroup hitls
  * @brief   Obtain the mode of the function feature in the config file.
  *
  * @param   ctx [OUT] TLS Connection Handle
@@ -1221,7 +1232,7 @@ int32_t HITLS_SetModeSupport(HITLS_Ctx *ctx, uint32_t mode);
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is null.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_GetModeSupport(HITLS_Ctx *ctx, uint32_t *mode);
+int32_t HITLS_GetModeSupport(const HITLS_Ctx *ctx, uint32_t *mode);
 
 /**
  * @ingroup hitls
@@ -1232,7 +1243,7 @@ int32_t HITLS_GetModeSupport(HITLS_Ctx *ctx, uint32_t *mode);
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_SetEncryptThenMac(HITLS_Ctx *ctx, uint32_t encryptThenMacType);
+int32_t HITLS_SetEncryptThenMac(HITLS_Ctx *ctx, bool encryptThenMacType);
 
 /**
  * @ingroup hitls
@@ -1243,7 +1254,7 @@ int32_t HITLS_SetEncryptThenMac(HITLS_Ctx *ctx, uint32_t encryptThenMacType);
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_GetEncryptThenMac(const HITLS_Ctx *ctx, uint32_t *encryptThenMacType);
+int32_t HITLS_GetEncryptThenMac(const HITLS_Ctx *ctx, bool *encryptThenMacType);
 
 /**
  * @ingroup hitls
@@ -1331,7 +1342,7 @@ int32_t HITLS_SetSessionTicketSupport(HITLS_Ctx *ctx, bool isSupport);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
  */
-int32_t HITLS_GetSessionTicketSupport(const HITLS_Ctx *ctx, uint8_t *isSupport);
+int32_t HITLS_GetSessionTicketSupport(const HITLS_Ctx *ctx, bool *isSupport);
 
 /**
  * @ingroup hitls
@@ -1365,7 +1376,7 @@ int32_t HITLS_GetDtlsCookieExangeSupport(const HITLS_Ctx *ctx, bool *isSupport);
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_SetFlightTransmitSwitch(HITLS_Ctx *ctx, uint8_t isEnable);
+int32_t HITLS_SetFlightTransmitSwitch(HITLS_Ctx *ctx, bool isEnable);
 
 /**
  * @ingroup hitls
@@ -1376,7 +1387,7 @@ int32_t HITLS_SetFlightTransmitSwitch(HITLS_Ctx *ctx, uint8_t isEnable);
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
  * @retval  HITLS_SUCCESS, if successful.
  */
-int32_t HITLS_GetFlightTransmitSwitch(const HITLS_Ctx *ctx, uint8_t *isEnable);
+int32_t HITLS_GetFlightTransmitSwitch(const HITLS_Ctx *ctx, bool *isEnable);
 
 /**
  * @ingroup hitls
@@ -1423,6 +1434,29 @@ int32_t HITLS_SetMaxSendFragment(HITLS_Ctx *ctx, uint16_t maxSendFragment);
  * @retval  HITLS_SUCCESS, if successful.
  */
 int32_t HITLS_GetMaxSendFragment(const HITLS_Ctx *ctx, uint16_t *maxSendFragment);
+
+/**
+ * @ingroup hitls
+ * @brief   Set the rec inbuffer inital size
+ *
+ * @param   ctx [IN/OUT] TLS connection handle.
+ * @param   recInbufferSize [IN] Indicates the rec inbuffer inital size
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_CONFIG_INVALID_LENGTH, the recInbufferSize is less than 512 or greater than 18432.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_SetRecInbufferSize(HITLS_Ctx *ctx, uint32_t recInbufferSize);
+
+/**
+ * @ingroup hitls
+ * @brief   Obtain the rec inbuffer inital size
+ *
+ * @param   ctx [IN] TLS connection handle.
+ * @param   recInbufferSize [OUT] Indicates the rec inbuffer inital size
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_GetRecInbufferSize(const HITLS_Ctx *ctx, uint32_t *recInbufferSize);
 
 /**
  * @ingroup hitls
@@ -1558,6 +1592,103 @@ int32_t HITLS_DtlsProcessTimeout(HITLS_Ctx *ctx);
  * @retval  For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_DtlsGetTimeout(HITLS_Ctx *ctx, uint64_t *remainTimeOut);
+
+/**
+ * @ingroup hitls
+ * @brief   Sets whether to support middle box compat mode.
+ *
+ * @param   ctx [IN] TLS Connection Handle.
+ * @param   isMiddleBox [IN] Support or Not.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_SetMiddleBoxCompat(HITLS_Ctx *ctx, bool isMiddleBox);
+
+/**
+ * @ingroup hitls
+ * @brief   Obtain whether middle box compat mode is supported.
+ *
+ * @param   ctx [IN] TLS connection handle.
+ * @param   isMiddleBox [OUT] Support or Not.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_GetMiddleBoxCompat(HITLS_Ctx *ctx, bool *isMiddleBox);
+
+/**
+ * @brief   Obtain the record out buffer remaining size
+ *
+ * @param   ctx [IN] TLS connection handle
+ * @param   size [OUT] record out buffer remaining size
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ * @retval  HITLS_SUCCESS, if successful.
+ */
+int32_t HITLS_GetOutPendingSize(const HITLS_Ctx *ctx, uint32_t *size);
+
+/**
+ * @brief   Flush the record out buffer
+ *
+ * @param   ctx [IN] TLS connection handle
+ *
+ * @retval  HITLS_SUCCESS Out buffer is empty or flush success
+ * @retval  HITLS_REC_NORMAL_IO_BUSY Out buffer is not empty, but the IO operation is busy
+ */
+int32_t HITLS_Flush(HITLS_Ctx *ctx);
+
+/**
+ * @ingroup hitls
+ * @brief   Sets whether to forcibly support extended master keys.
+ *
+ * @param   ctx [IN] TLS connection handle
+ * @param   support [IN] Indicates whether to forcibly support extended master keys.
+                         The options are as follows: True: yes; False: no. The default value is true.
+ * @retval  HITLS_SUCCESS.
+ * @retval  HITLS_NULL_INPUT, ctx is NULL.
+ */
+int32_t HITLS_SetExtenedMasterSecretSupport(HITLS_Ctx *ctx, bool support);
+
+/**
+ * @ingroup hitls
+ * @brief   Query whether extended master keys are supported.
+ *
+ * @param   ctx [IN] TLS connection handle
+ * @param   isSupport   [OUT] Indicates whether to support the extended master key.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, ctx is NULL.
+ */
+int32_t HITLS_GetExtenedMasterSecretSupport(HITLS_Ctx *ctx, bool *isSupport);
+
+/**
+ * @ingroup hitls
+ * @brief   Set whether to support session restoration during renegotiation.
+ * By default, session restoration is not supported.
+ * @param   ctx [IN] TLS connection handle
+ * @param   support  [IN] Whether to support the function. The options are as follows: True: yes; False: no.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, ctx is null.
+ */
+int32_t HITLS_SetResumptionOnRenegoSupport(HITLS_Ctx *ctx, bool support);
+
+/**
+ * @ingroup hitls
+ * @brief   Get whether to support session restoration during renegotiation.
+ * By default, session restoration is not supported.
+ * @param   ctx [IN] TLS connection handle
+ * @param   isSupport  [OUT] Indicates whether to support session restoration during renegotiation.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, ctx is null.
+ */
+int32_t HITLS_GetResumptionOnRenegoSupport(HITLS_Ctx *ctx, bool *isSupport);
+
+/**
+ * @ingroup hitls
+ * @brief   Get whether to allow a renegotiate request from the client
+ * @param   ctx   [IN] TLS connection handle.
+ * @param   isSupport  [OUT] Indicates whether to allow a renegotiate request from the client
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ */
+int32_t HITLS_GetClientRenegotiateSupport(HITLS_Ctx *ctx, bool *isSupport);
 
 #ifdef __cplusplus
 }

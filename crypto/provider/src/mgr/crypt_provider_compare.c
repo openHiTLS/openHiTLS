@@ -67,7 +67,7 @@ static void FreeValueList(void *ptr)
     }
     BslList *valueList = (BslList *)ptr;
     BSL_LIST_DeleteAll(valueList, AttributeValueFree);
-    BSL_SAL_FREE(valueList);
+    BSL_SAL_Free(valueList);
 }
 
 // Value copy callback function, essentially a function to create a new value list
@@ -243,7 +243,7 @@ static int32_t ParseAttributeValue(const char *attribute, int32_t *startPos, cha
         goto ERR;
     }
 
-    *startPos = attribute[valueEnd] == '\0'? valueEnd : valueEnd + 1;
+    *startPos = attribute[valueEnd] == '\0' ? valueEnd : valueEnd + 1;
     *key = tempKey;
     *value = tempValue;
     return CRYPT_SUCCESS;
@@ -288,7 +288,7 @@ static int32_t ParseAttributeString(InputAttributeStrInfo *attrInfo)
             tempMustAttributeNum++;
         }
 
-        ret = BSL_HASH_Put(hash, (uintptr_t)key, BSL_SAL_Strnlen(key, UINT32_MAX)+1,
+        ret = BSL_HASH_Put(hash, (uintptr_t)key, BSL_SAL_Strnlen(key, UINT32_MAX) + 1,
                            (uintptr_t)value, sizeof(AttributeValue), UpdateAttributeValueNode);
         BSL_SAL_FREE(key);
         AttributeValueFree(value);

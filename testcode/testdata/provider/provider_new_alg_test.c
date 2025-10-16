@@ -22,9 +22,9 @@
 #include "bsl_obj.h"
 #include "bsl_err.h"
 #include "bsl_params.h"
-#include "bsl_asn1.h"
+#include "bsl_asn1_internal.h"
 #include "bsl_obj_internal.h"
-#include "crypt_encode_decode_key.h"
+#include "crypt_codecskey.h"
 #include "crypt_errno.h"
 #include "crypt_params_key.h"
 #include "crypt_eal_implprovider.h"
@@ -234,6 +234,13 @@ static void TestNewKeyFreeCtx(TestNewKeyCtx *ctx)
     }
 }
 
+static int32_t TestNewKeyCheck(const TestNewKeyCtx *ctx1, const TestNewKeyCtx *ctx2)
+{
+    (void)ctx1;
+    (void)ctx2;
+    return CRYPT_SUCCESS;
+}
+
 static int32_t TestNewKeyCtrl(TestNewKeyCtx *ctx, int32_t cmd, void *val, uint32_t valLen)
 {
     if (ctx == NULL || val == NULL) {
@@ -342,6 +349,7 @@ const CRYPT_EAL_Func g_testKeyMgmtNewKey[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)TestNewKeyCtrl},
     {CRYPT_EAL_IMPLPKEYMGMT_IMPORT, (CRYPT_EAL_ImplPkeyMgmtImport)TestNewKeyImport},
     {CRYPT_EAL_IMPLPKEYMGMT_EXPORT, (CRYPT_EAL_ImplPkeyMgmtExport)TestNewKeyExport},
+    {CRYPT_EAL_IMPLPKEYMGMT_CHECK, (CRYPT_EAL_ImplPkeyMgmtCheck)TestNewKeyCheck},
     {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)TestNewKeyFreeCtx},
     CRYPT_EAL_FUNC_END
 };

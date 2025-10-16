@@ -115,7 +115,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC001(int version, int connType)
     serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
 #endif
     cachemode = GetSessionCacheMode(clientCtxConfig);
-    ASSERT_EQ(cachemode , HITLS_SESS_CACHE_SERVER);
+    ASSERT_TRUE((cachemode & HITLS_SESS_CACHE_SERVER) != 0);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
@@ -379,9 +379,9 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC003(int version, int connType)
         if (session != NULL) {
             ASSERT_TRUE(HITLS_SetSession(clientSsl, session) == HITLS_SUCCESS);
             ASSERT_EQ(HLT_TlsConnect(clientSsl), HITLS_SUCCESS);
-            uint8_t isReused = 0;
+            bool isReused = false;
             ASSERT_TRUE(HITLS_IsSessionReused(clientSsl, &isReused) == HITLS_SUCCESS);
-            ASSERT_TRUE(isReused == 1);
+            ASSERT_TRUE(isReused == true);
         } else {
             ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
             ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
@@ -541,9 +541,9 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC004(int version, int connType)
         ASSERT_TRUE(session != NULL);
         ASSERT_TRUE(HITLS_SESS_IsResumable(session) == true);
         if (count == 2) {
-            uint8_t isReused = 0;
+            bool isReused = false;
             ASSERT_TRUE(HITLS_IsSessionReused(clientSsl, &isReused) == HITLS_SUCCESS);
-            ASSERT_TRUE(isReused == 1);
+            ASSERT_TRUE(isReused == true);
         }
         count++;
     } while (count <= 2);
@@ -596,12 +596,11 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC005(int version, int connType)
     serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
 #endif
     cachemode = GetSessionCacheMode(clientCtxConfig);
-    ASSERT_EQ(cachemode , HITLS_SESS_CACHE_SERVER);
+    ASSERT_TRUE((cachemode & HITLS_SESS_CACHE_SERVER) != 0);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
     do {
-
         DataChannelParam channelParam;
         channelParam.port = PORT;
         channelParam.type = connType;
@@ -712,12 +711,11 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC006(int version, int connType)
     serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
 #endif
     cachemode = GetSessionCacheMode(clientCtxConfig);
-    ASSERT_EQ(cachemode , HITLS_SESS_CACHE_SERVER);
+    ASSERT_TRUE((cachemode & HITLS_SESS_CACHE_SERVER) != 0);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
     do {
-
         DataChannelParam channelParam;
         channelParam.port = PORT;
         channelParam.type = connType;
@@ -827,12 +825,11 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC007(int version, int connType)
     serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
 #endif
     cachemode = GetSessionCacheMode(clientCtxConfig);
-    ASSERT_EQ(cachemode , HITLS_SESS_CACHE_SERVER);
+    ASSERT_TRUE((cachemode & HITLS_SESS_CACHE_SERVER) != 0);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
     do {
-
         DataChannelParam channelParam;
         channelParam.port = PORT;
         channelParam.type = connType;
@@ -942,7 +939,7 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC008(int version, int connType)
     serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
 #endif
     cachemode = GetSessionCacheMode(clientCtxConfig);
-    ASSERT_EQ(cachemode , HITLS_SESS_CACHE_SERVER);
+    ASSERT_TRUE((cachemode & HITLS_SESS_CACHE_SERVER) != 0);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
 
@@ -1144,13 +1141,13 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC009(int mode)
 
         if (cnt == 2) {
             if (mode == HITLS_SESS_CACHE_NO || mode == HITLS_SESS_CACHE_CLIENT){
-                uint8_t isReused = -1;
+                bool isReused = false;
                 HITLS_IsSessionReused(clientSsl, &isReused);
-                ASSERT_TRUE(isReused == 0);
+                ASSERT_TRUE(isReused == false);
             } else {
-                uint8_t isReused = -1;
+                bool isReused = false;
                 HITLS_IsSessionReused(clientSsl, &isReused);
-                ASSERT_TRUE(isReused == 1);
+                ASSERT_TRUE(isReused == true);
             }
         } else {
             session = HITLS_GetDupSession(clientSsl);

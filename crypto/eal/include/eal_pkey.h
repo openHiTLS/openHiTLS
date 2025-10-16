@@ -27,7 +27,7 @@ extern "C" {
 typedef struct {
     int32_t algId;
     CRYPT_EAL_ProvMgrCtx *mgrCtx;
-    EAL_PkeyUnitaryMethod *keyMgmtMethod;
+    EAL_PkeyUnitaryMethod keyMgmtMethod;
 } CRYPT_EAL_PkeyMgmtInfo;
 
 typedef struct {
@@ -43,15 +43,12 @@ typedef struct {
  * @ingroup crypt_eal_pkey
  * @brief Create a new asymmetric key context by key management information.
  *
- * @param pkey [IN/OUT] The asymmetric key context to be created.
  * @param pkeyAlgInfo [IN] The key management information.
  * @param keyRef [IN] The reference to the key.
- * @param keyRefLen [IN] The length of the key reference.
  *
- * @return CRYPT_SUCCESS on success, CRYPT_ERROR on failure.
+ * @return pkey on success, NULL on failure.
  */
-CRYPT_EAL_PkeyCtx *CRYPT_EAL_MakeKeyByPkeyAlgInfo(CRYPT_EAL_PkeyMgmtInfo *pkeyAlgInfo, void *keyRef,
-    uint32_t keyRefLen);
+CRYPT_EAL_PkeyCtx *CRYPT_EAL_MakeKeyByPkeyAlgInfo(CRYPT_EAL_PkeyMgmtInfo *pkeyAlgInfo, void *keyRef);
 
 /**
  * @ingroup crypt_eal_pkey
@@ -65,7 +62,7 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_MakeKeyByPkeyAlgInfo(CRYPT_EAL_PkeyMgmtInfo *pkeyAl
 int32_t CRYPT_EAL_GetPkeyAlgInfo(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
     CRYPT_EAL_PkeyMgmtInfo *pkeyAlgInfo);
 
-int32_t CRYPT_EAL_SetPkeyMethod(EAL_PkeyUnitaryMethod **pkeyMethod, const CRYPT_EAL_Func *funcsKeyMgmt,
+int32_t CRYPT_EAL_SetPkeyMethod(EAL_PkeyUnitaryMethod *method, const CRYPT_EAL_Func *funcsKeyMgmt,
     const CRYPT_EAL_Func *funcsAsyCipher, const CRYPT_EAL_Func *funcsExch, const CRYPT_EAL_Func *funcSign,
     const CRYPT_EAL_Func *funcKem);
 

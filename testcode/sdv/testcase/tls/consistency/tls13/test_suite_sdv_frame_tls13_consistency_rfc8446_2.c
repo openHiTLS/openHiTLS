@@ -1394,9 +1394,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBFUSCATED_TICKET_AGE_FUNC_TC002()
 
     // Establish a connection.
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, false, HS_STATE_BUTT), HITLS_SUCCESS);
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(testInfo.client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 1);
+    ASSERT_EQ(isReused, true);
 EXIT:
     ClearWrapper();
     STUB_Reset(&stubInfo);
@@ -3151,9 +3151,9 @@ static int32_t SendCcs(HITLS_Ctx *ctx, uint8_t *data, uint8_t len)
         return ret;
     }
     /* If isFlightTransmitEnable is enabled, the stored handshake information needs to be sent. */
-    uint8_t isFlightTransmitEnable;
+    bool isFlightTransmitEnable = false;
     (void)HITLS_GetFlightTransmitSwitch(ctx, &isFlightTransmitEnable);
-    if (isFlightTransmitEnable == 1) {
+    if (isFlightTransmitEnable == true) {
         ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_FLUSH, 0, NULL);
         if (ret == BSL_UIO_IO_BUSY) {
             return HITLS_REC_NORMAL_IO_BUSY;
@@ -3177,9 +3177,9 @@ static int32_t SendAlert(HITLS_Ctx *ctx, ALERT_Level level, ALERT_Description de
         return ret;
     }
     /* If isFlightTransmitEnable is enabled, the stored handshake information needs to be sent. */
-    uint8_t isFlightTransmitEnable;
+    bool isFlightTransmitEnable = false;
     (void)HITLS_GetFlightTransmitSwitch(ctx, &isFlightTransmitEnable);
-    if (isFlightTransmitEnable == 1) {
+    if (isFlightTransmitEnable == true) {
         ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_FLUSH, 0, NULL);
         if (ret == BSL_UIO_IO_BUSY) {
             return HITLS_REC_NORMAL_IO_BUSY;
@@ -3429,6 +3429,79 @@ void UT_TLS_SDV_TLS1_3_RFC8446_CONSISTENCY_Legacy_Version_TC001(int statehs)
         ASSERT_EQ(info.description, ALERT_DECODE_ERROR);
     }
 EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_SDV_TLS1_3_RFC8446_CONSISTENCY_MIDDLE_BOX_COMPAT_TC001
+* @spec -
+* @title Test TLS 1.3 connection and data transfer when middlebox compatibility mode is enabled or disabled
+* @precon nan
+* @brief 1. Initialize the client and server using the default configuration. Expected result 1.
+* 2. Set the middlebox compatibility mode for both the client and server based on the isMiddleBoxCompat parameter.
+    Expected result 2.
+* 3. Stop the server state at TRY_RECV_CLIENT_HELLO and determine the length of the session ID at this time.
+    Expected result 3.
+* 4. The server calls the HITLS_Accept function and then determines the next state of the server. Expected result 4.
+* 5. Continue to establish a connection. Expected result 5.
+* @expect 1 Initialization succeeded.
+* 2. Successful setup.
+* 3. If isMiddleBoxCompat is true, then the session ID length is 32, otherwise it is 0
+* 4. If isMiddleBoxCompat is true, the next state of the server is TRY_SEND_CHANGE_CIPHER_SPEC,
+    otherwise it is TRY_SEND_ENCRYPTED_EXTENSIONS.
+* 5. The connection between the client and server is successfully established.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_SDV_TLS1_3_RFC8446_CONSISTENCY_MIDDLE_BOX_COMPAT_TC001(int isMiddleBoxCompat)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    HITLS_CFG_SetMiddleBoxCompat(tlsConfig, isMiddleBoxCompat);
+
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO) == HITLS_SUCCESS);
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recvLen != 0);
+
+    uint32_t parseLen = 0;
+    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+
+    frameType.handshakeType = CLIENT_HELLO;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+
+    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
+    if (isMiddleBoxCompat) {
+        ASSERT_TRUE(clientMsg->sessionIdSize.data == TLS_HS_MAX_SESSION_ID_SIZE);
+        ASSERT_TRUE(clientMsg->sessionId.data != NULL);
+        (void)HITLS_Accept(server->ssl);
+        ASSERT_EQ(server->ssl->hsCtx->state, TRY_SEND_CHANGE_CIPHER_SPEC);
+    } else {
+        ASSERT_TRUE(clientMsg->sessionIdSize.data == 0);
+        ASSERT_TRUE(clientMsg->sessionId.data == NULL);
+        (void)HITLS_Accept(server->ssl);
+        ASSERT_EQ(server->ssl->hsCtx->state, TRY_SEND_ENCRYPTED_EXTENSIONS);
+    }
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

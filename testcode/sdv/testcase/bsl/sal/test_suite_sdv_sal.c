@@ -100,6 +100,13 @@ static uint64_t pthreadGetId(void)
     return (uint64_t)pthread_self();
 }
 
+#if defined(HITLS_BSL_SAL_PID) && defined(HITLS_BSL_SAL_LINUX)
+static int32_t getProcessId(void)
+{
+    return (int32_t)getpid();
+}
+#endif
+
 #ifdef HITLS_BSL_SAL_THREAD
 static void *TEST_Read(void *arg)
 {
@@ -228,6 +235,62 @@ void SDV_BSL_SAL_REG_THREAD_API_TC001(void)
     ASSERT_TRUE(BSL_SAL_ThreadWriteLock(NULL) == BSL_SAL_ERR_BAD_PARAM);
     ASSERT_TRUE(BSL_SAL_ThreadUnlock(NULL) == BSL_SAL_ERR_BAD_PARAM);
     BSL_SAL_ThreadLockFree(NULL);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+#ifdef HITLS_BSL_SAL_PID
+static int32_t MockGetPid(void)
+{
+    return -1;
+}
+#endif
+/**
+ * @test SDV_BSL_SAL_GETPID_FUNC_TC001
+ * @title Testing BSL_SAL_GetPid Under Different Configurations
+ * @precon nan
+ * @brief
+ *    1. Call BSL_SAL_CallBack_Ctrl with invalid parameters. Expected result 1 is obtained.
+ *    2. Call BSL_SAL_GetPid with default callback configuration. Expected result 2 is obtained.
+ *    3. Call BSL_SAL_GetPid after setting default callback function. Expected result 3 is obtained.
+ *    4. Call BSL_SAL_GetPid after setting mock callback function. Expected result 4 is obtained.
+ * @expect
+ *    1. Failed to register callback, returns BSL_SAL_ERR_BAD_PARAM
+ *    2. Returns actual process ID on Linux, otherwise returns BSL_SUCCESS
+ *    3. Returns actual process ID on Linux, otherwise returns BSL_SUCCESS
+ *    4. Returns mock value (-1)
+ */
+/* BEGIN_CASE */
+    void SDV_BSL_SAL_GETPID_FUNC_TC001(void)
+{
+    int32_t pid;
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(0, NULL) == BSL_SAL_ERR_BAD_PARAM);
+
+#ifdef HITLS_BSL_SAL_PID
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_PID_GET_ID_CB_FUNC, NULL) == BSL_SUCCESS);
+    pid = BSL_SAL_GetPid();
+#ifdef HITLS_BSL_SAL_LINUX
+    ASSERT_EQ(pid, getProcessId());
+#else
+    ASSERT_EQ(pid, 0);
+#endif
+
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_PID_GET_ID_CB_FUNC, BSL_SAL_GetPid) == BSL_SUCCESS);
+    pid = BSL_SAL_GetPid();
+#ifdef HITLS_BSL_SAL_LINUX
+    ASSERT_EQ(pid, getProcessId());
+#else
+    ASSERT_EQ(pid, 0);
+#endif
+
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_PID_GET_ID_CB_FUNC, MockGetPid) == BSL_SUCCESS);
+    pid = BSL_SAL_GetPid();
+    ASSERT_EQ(pid, -1);
+#else
+    pid = BSL_SAL_GetPid();
+    ASSERT_EQ(pid, 0);
+#endif
 EXIT:
     return;
 }

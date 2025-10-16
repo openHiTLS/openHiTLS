@@ -22,7 +22,7 @@
 * @title Enable the session restoration function at both ends. If the session ID is obtained after the link is
          successfully established, a fatal alert is sent. The session ID fails to be used to restore the session.
 * @precon  nan
-* @brief   1. Use the default configuration items to configure the client and server. 
+* @brief   1. Use the default configuration items to configure the client and server.
 *             Enable the session restoration function at both ends. Expected result 1.
 *          2. Obtaine the session ID and a fatal alert is sent. The session ID fails to be used to restore the session.
 *             Expected result 2.
@@ -55,9 +55,9 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC003()
     HITLS_SetSession(client->ssl, clientSession);
     server = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, false);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 0);
+    ASSERT_EQ(isReused, false);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -69,12 +69,12 @@ EXIT:
 
 /* @
 * @test  UT_TLS_TLCP_CONSISTENCY_RESUME_TC004
-* @title Set the client and server support session recovery. After the first connection is established, the session ID 
-         is obtained. Create two connection. The client and server are the same as those in the last session. Use the 
+* @title Set the client and server support session recovery. After the first connection is established, the session ID
+         is obtained. Create two connection. The client and server are the same as those in the last session. Use the
          same session ID to restore the session. If the session on one link fails, check whether the data communication
          on the other link is blocked. It is expected that the link is not blocked.
 * @precon  nan
-* @brief   1. Use the default configuration items to configure the client and server. 
+* @brief   1. Use the default configuration items to configure the client and server.
 *             Enable the session restoration function at both ends. Expected result 1.
 *          2. Use the default configuration items to configure two new client and server.
 *             The client and server are the same as those in the last session. Expected result 1.
@@ -117,9 +117,9 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC004()
     FRAME_FreeLink(server);
 
     ASSERT_EQ(FRAME_CreateConnection(clientResume, serverResume, false, HS_STATE_BUTT), HITLS_SUCCESS);
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(clientResume->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 1);
+    ASSERT_EQ(isReused, true);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(clientResume);
@@ -137,7 +137,7 @@ EXIT:
 *        on the other link is blocked. If the data communication on the other link is not blocked, the data
 *        communication on the other link is not blocked.
 * @precon  nan
-* @brief   1. Use the default configuration items to configure the client and server. 
+* @brief   1. Use the default configuration items to configure the client and server.
 *             Enable the session restoration function at both ends. Expected result 1.
 *          2. Use the default configuration items to configure two new client and server.
 *             The client and server are the same as those in the last session. Expected result 1.
@@ -179,11 +179,11 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC005()
     ASSERT_EQ(FRAME_CreateConnection(clientResume, serverResume, false, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
 
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(clientResume->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 0);
+    ASSERT_EQ(isReused, false);
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 1);
+    ASSERT_EQ(isReused, true);
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -227,9 +227,9 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC006()
     HITLS_SetSession(client->ssl, clientSession);
     sleep(timeout);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 0);
+    ASSERT_EQ(isReused, false);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -269,9 +269,9 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC007()
     server = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, false);
     HITLS_SetSession(client->ssl, clientSession);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 0);
+    ASSERT_EQ(isReused, false);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);

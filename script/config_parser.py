@@ -195,6 +195,7 @@ class FeatureParser:
         [asm_type_set.update(self.libs[lib]['features'].keys()) for lib in self.libs.keys()]
         asm_type_set.discard('c')
         asm_type_set.add('no_asm')
+        asm_type_set.add('riscv64')
         return asm_type_set
 
     def get_module_deps(self, module, dep_list, result):
@@ -267,7 +268,7 @@ class FeatureConfigParser:
         "asmType":{"require": True, "type": str, "choices": [], "default": "no_asm"},
         "libs":{"require": True, "type": dict, "choices": [], "default": {}},
         "bundleLibs":{"require": False, "type": bool, "choices": [True, False], "default": False},
-        "securecLib":{"require": False, "type": str, "choices": ["boundscheck", "securec", ""], "default": ""},
+        "securecLib":{"require": False, "type": str, "choices": ["boundscheck", "securec", "sec_shared.z", ""], "default": ""},
         "executes":{"require": False, "type": dict, "default": {}}
     }
 

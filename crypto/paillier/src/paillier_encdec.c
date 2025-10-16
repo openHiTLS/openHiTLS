@@ -352,4 +352,170 @@ int32_t CRYPT_PAILLIER_Ctrl(CRYPT_PAILLIER_Ctx *ctx, int32_t opt, void *val, uin
     }
 }
 
+static int32_t CRYPT_PAILLIER_CheckHECiphertext(const BN_BigNum* ciphertext, const CRYPT_PAILLIER_PubKey* pubKey,
+    BN_Optimizer *optimizer)
+{
+    if (BN_Cmp(ciphertext, pubKey->n2) >= 0 || BN_IsNegative(ciphertext)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_ERR_INPUT_VALUE);
+        return CRYPT_PAILLIER_ERR_INPUT_VALUE;
+    }
+    int32_t ret = CRYPT_SUCCESS;
+    BN_BigNum *gcd_result = BN_Create(BN_Bits(ciphertext));
+    if (gcd_result == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        goto EXIT;
+    }
+    ret = BN_Gcd(gcd_result, ciphertext, pubKey->n2, optimizer);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    if (BN_IsOne(gcd_result) == false) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_ERR_INPUT_VALUE);
+        ret = CRYPT_PAILLIER_ERR_INPUT_VALUE;
+    }
+EXIT:
+    BN_Destroy(gcd_result);
+    return ret;
+}
+
+int32_t CRYPT_PAILLIER_Add(const void *ctx, const BSL_Param *input, uint8_t *out, uint32_t *outLen)
+{
+    if (ctx == NULL || input == NULL || out == NULL || outLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    const CRYPT_PAILLIER_Ctx *paillierCtx = ctx;
+    if (paillierCtx == NULL || paillierCtx->pubKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_NO_KEY_INFO);
+        return CRYPT_PAILLIER_NO_KEY_INFO;
+    }
+
+    const BSL_Param *ciphertext1Param = BSL_PARAM_FindConstParam(input, CRYPT_PARAM_PKEY_HE_CIPHERTEXT1);
+    const BSL_Param *ciphertext2Param = BSL_PARAM_FindConstParam(input, CRYPT_PARAM_PKEY_HE_CIPHERTEXT2);
+
+    if (ciphertext1Param == NULL || ciphertext2Param == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_ERR_INPUT_VALUE);
+        return CRYPT_PAILLIER_ERR_INPUT_VALUE;
+    }
+
+    uint32_t bits = CRYPT_PAILLIER_GetBits(paillierCtx);
+    uint32_t n2Bytes = BN_BITS_TO_BYTES(bits) * 2;
+    int32_t ret = CRYPT_SUCCESS;
+
+    uint8_t *ciphertext1 = (uint8_t *)BSL_SAL_Malloc(n2Bytes);
+    uint8_t *ciphertext2 = (uint8_t *)BSL_SAL_Malloc(n2Bytes);
+    uint32_t ciphertext1Len = n2Bytes;
+    uint32_t ciphertext2Len = n2Bytes;
+    
+    if (ciphertext1 == NULL || ciphertext2 == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(ciphertext1);
+        BSL_SAL_Free(ciphertext2);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+
+    BN_BigNum *c1 = BN_Create(bits);
+    BN_BigNum *c2 = BN_Create(bits);
+    BN_BigNum *result = BN_Create(bits);
+
+    if (c1 == NULL || c2 == NULL || result == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        BN_Destroy(c1);
+        BN_Destroy(c2);
+        BN_Destroy(result);
+        BSL_SAL_Free(ciphertext1);
+        BSL_SAL_Free(ciphertext2);
+        return ret;
+    }
+
+    BN_Optimizer *optimizer = BN_OptimizerCreate();
+    if (optimizer == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        goto EXIT;
+    }
+
+    if (BSL_PARAM_GetValue(ciphertext1Param, CRYPT_PARAM_PKEY_HE_CIPHERTEXT1, BSL_PARAM_TYPE_OCTETS, ciphertext1,
+                           &ciphertext1Len) != BSL_SUCCESS ||
+        BSL_PARAM_GetValue(ciphertext2Param, CRYPT_PARAM_PKEY_HE_CIPHERTEXT2, BSL_PARAM_TYPE_OCTETS, ciphertext2,
+                           &ciphertext2Len) != BSL_SUCCESS) {
+        ret = CRYPT_PAILLIER_ERR_INPUT_VALUE;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+
+    // Check whether the input ciphertext meets the specifications
+    if (ciphertext1Len != n2Bytes || ciphertext2Len != n2Bytes) {
+        ret = CRYPT_PAILLIER_ERR_INPUT_VALUE;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    
+    // Check whether the length of the out is sufficient to place the result
+    if (*outLen < n2Bytes) {
+        ret = CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+
+    if ((ret = BN_Bin2Bn(c1, ciphertext1, ciphertext1Len)) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    if ((ret = BN_Bin2Bn(c2, ciphertext2, ciphertext2Len)) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+
+    // Verify that the ciphertext is within the valid range [0, n^2)
+    if ((ret = CRYPT_PAILLIER_CheckHECiphertext(c1, paillierCtx->pubKey, optimizer))!= CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    if ((ret = CRYPT_PAILLIER_CheckHECiphertext(c2, paillierCtx->pubKey, optimizer))!= CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+
+    // Add: c_res = c1 * c2 mod n^2
+    if ((ret = BN_ModMul(result, c1, c2, paillierCtx->pubKey->n2, optimizer)) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+
+    // Export result as fixed-length n^2 bytes with leading-zero padding
+    uint8_t *tmpBuf = (uint8_t *)BSL_SAL_Malloc(n2Bytes);
+    if (tmpBuf == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+
+    uint32_t actualLen = n2Bytes;
+    ret = BN_Bn2Bin(result, tmpBuf, &actualLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        BSL_SAL_Free(tmpBuf);
+        goto EXIT;
+    }
+
+    (void)memset_s(out, n2Bytes, 0, n2Bytes);
+    if (actualLen > 0) {
+        (void)memcpy_s(out + (n2Bytes - actualLen), actualLen, tmpBuf, actualLen);
+    }
+    *outLen = n2Bytes;
+    BSL_SAL_Free(tmpBuf);
+
+EXIT:
+    BN_Destroy(c1);
+    BN_Destroy(c2);
+    BN_Destroy(result);
+    BN_OptimizerDestroy(optimizer);
+    BSL_SAL_Free(ciphertext1);
+    BSL_SAL_Free(ciphertext2);
+    return ret;
+}
+
 #endif  // HITLS_CRYPTO_PAILLIER

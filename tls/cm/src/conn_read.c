@@ -120,7 +120,7 @@ static int32_t RecvRenegoReqPreprocess(TLS_Ctx *ctx, uint8_t type)
         // nextSendSeq increases to 1. Then, the hsctx is released and the nextSendSeq is reset to 0.
         // Therefore, the value of nextSendSeq should return to 1 when sending server hello.
 #ifdef HITLS_TLS_PROTO_DTLS12
-        if (ctx->userRenego && IS_DTLS_VERSION(ctx->negotiatedInfo.version)) {
+        if (ctx->userRenego && IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
             ctx->hsCtx->nextSendSeq++;
         }
 #endif
@@ -174,7 +174,7 @@ static int32_t RecvCertPreprocess(TLS_Ctx *ctx)
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
         return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
     }
-
+    SAL_CRYPT_DigestFree(ctx->hsCtx->verifyCtx->hashCtx);
     ctx->hsCtx->verifyCtx->hashCtx = ctx->phaCurHash;
     ctx->phaCurHash = NULL;
 
@@ -358,7 +358,6 @@ static int32_t ReadEventInTransportingState(HITLS_Ctx *ctx, uint8_t *data, uint3
             if (ctx->state == CM_STATE_ALERTED || ctx->state == CM_STATE_CLOSED) {
                 return ret;
             }
-            continue;
         }
 
         if (ret != HITLS_REC_NORMAL_RECV_UNEXPECT_MSG) {
@@ -369,6 +368,11 @@ static int32_t ReadEventInTransportingState(HITLS_Ctx *ctx, uint8_t *data, uint3
         if (unexpectMsgRet != HITLS_SUCCESS) {
             return unexpectMsgRet;
         }
+#ifdef HITLS_TLS_FEATURE_MODE_AUTO_RETRY
+        if ((ctx->config.tlsConfig.modeSupport & HITLS_MODE_AUTO_RETRY) == 0) {
+            return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
+        }
+#endif
     } while (ret != HITLS_SUCCESS);
 
     return ret;
@@ -507,13 +511,13 @@ int32_t HITLS_Peek(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *re
     return ret;
 }
 
-int32_t HITLS_ReadHasPending(const HITLS_Ctx *ctx, uint8_t *isPending)
+int32_t HITLS_ReadHasPending(const HITLS_Ctx *ctx, bool *isPending)
 {
     if (ctx == NULL || isPending == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *isPending = APP_GetReadPendingBytes(ctx) > 0 || REC_ReadHasPending(ctx) ? 1 : 0;
+    *isPending = (APP_GetReadPendingBytes(ctx) > 0 || REC_ReadHasPending(ctx));
 
     return HITLS_SUCCESS;
 }
@@ -538,12 +542,12 @@ int32_t HITLS_DtlsProcessTimeout(HITLS_Ctx *ctx)
     }
 
     if (isTimeout) {
-        /* Receive the message of the last flight when the receiving times out */
-        ret = REC_RetransmitListFlush(ctx);
+        ret = HS_TimeoutProcess(ctx);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
-        ret = HS_TimeoutProcess(ctx);
+        /* Receive the message of the last flight when the receiving times out */
+        ret = REC_RetransmitListFlush(ctx);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
@@ -557,13 +561,13 @@ int32_t HITLS_DtlsGetTimeout(HITLS_Ctx *ctx, uint64_t *remainTimeOut)
     if (ctx == NULL || ctx->hsCtx == NULL || remainTimeOut == NULL) {
         return HITLS_NULL_INPUT;
     }
-    
+
     *remainTimeOut = 0;
     if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP) || ctx->hsCtx->timeoutValue == 0) {
         return HITLS_MSG_HANDLE_ERR_WITHOUT_TIMEOUT_ACTION;
     }
     BSL_TIME curTime;
-    int32_t ret = (uint64_t)BSL_SAL_SysTimeGet(&curTime);
+    int32_t ret = BSL_SAL_SysTimeGet(&curTime);
     if (ret != BSL_SUCCESS) {
         return ret;
     }
@@ -587,7 +591,7 @@ int32_t HITLS_DtlsGetTimeout(HITLS_Ctx *ctx, uint64_t *remainTimeOut)
         return ret;
     }
 
-    uint64_t remainSecTimeout = endUtcTime - curUtcTime;
+    uint64_t remainSecTimeout = (uint64_t)(endUtcTime - curUtcTime);
     if (remainSecTimeout >= DTLS_SPECIFY_MAX_TIMEOUT_VALUE) {
         *remainTimeOut = DTLS_SPECIFY_MAX_TIMEOUT_VALUE * BSL_SECOND_TRANSFER_RATIO * BSL_SECOND_TRANSFER_RATIO;
         return HITLS_SUCCESS;

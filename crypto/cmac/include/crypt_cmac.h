@@ -28,12 +28,22 @@ extern "C" {
 
 typedef struct Cipher_MAC_Ctx CRYPT_CMAC_Ctx;
 
+#define CRYPT_CMAC_SetParam NULL
+
 /**
  * @brief Create a new CMAC context.
  * @param id [in] Symmetric encryption and decryption algorithm ID
  * @return CMAC context
  */
 CRYPT_CMAC_Ctx *CRYPT_CMAC_NewCtx(CRYPT_MAC_AlgId id);
+
+/**
+ * @brief Create a new CMAC context with external library context.
+ * @param libCtx [in] External library context
+ * @param id [in] Symmetric encryption and decryption algorithm ID
+ * @return CMAC context
+ */
+CRYPT_CMAC_Ctx *CRYPT_CMAC_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id);
 
 /**
  * @brief Use the key passed by the user to initialize the algorithm context.
@@ -71,14 +81,21 @@ int32_t CRYPT_CMAC_Final(CRYPT_CMAC_Ctx *ctx, uint8_t *out, uint32_t *len);
  * @brief Re-initialize using the information retained in the ctx. Do not need to invoke the init again.
  *        This function is equivalent to the combination of deinit and init interfaces.
  * @param ctx [IN] CMAC context
+ * @retval #CRYPT_SUCCESS       Succeeded.
+ * @retval #CRYPT_NULL_INPUT    The input parameter is NULL.
+ *          For other error codes, see crypt_errno.h.
  */
-void CRYPT_CMAC_Reinit(CRYPT_CMAC_Ctx *ctx);
+int32_t CRYPT_CMAC_Reinit(CRYPT_CMAC_Ctx *ctx);
+
 /**
  * @brief Deinitialization function.
  *        If calculation is required after this function is invoked, it needs to be initialized again.
  * @param ctx [IN] CMAC context
+ * @retval #CRYPT_SUCCESS       Succeeded.
+ * @retval #CRYPT_NULL_INPUT    The input parameter is NULL.
+ *          For other error codes, see crypt_errno.h.
  */
-void CRYPT_CMAC_Deinit(CRYPT_CMAC_Ctx *ctx);
+int32_t CRYPT_CMAC_Deinit(CRYPT_CMAC_Ctx *ctx);
 
 /**
  * @brief Control function for CMAC.

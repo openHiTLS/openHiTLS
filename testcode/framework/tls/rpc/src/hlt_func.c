@@ -562,7 +562,7 @@ HLT_Ctx_Config* HLT_NewCtxConfigTLCP(char *setFile, const char *key, bool isClie
     (void)setFile;
     Process *localProcess;
 
-    HLT_Ctx_Config *ctxConfig = (HLT_Ctx_Config*)calloc(sizeof(HLT_Ctx_Config), 1u);
+    HLT_Ctx_Config *ctxConfig = (HLT_Ctx_Config*)calloc(1u, sizeof(HLT_Ctx_Config));
     if (ctxConfig == NULL) {
         return NULL;
     }
@@ -573,7 +573,7 @@ HLT_Ctx_Config* HLT_NewCtxConfigTLCP(char *setFile, const char *key, bool isClie
     ctxConfig->isSupportNoClientCert = false;
     ctxConfig->isSupportExtendMasterSecret = false;
     ctxConfig->isClient = isClient;
-    ctxConfig->setSessionCache = 2;
+    ctxConfig->setSessionCache = HITLS_SESS_CACHE_SERVER;
     HLT_SetGroups(ctxConfig, "NULL");
     HLT_SetCipherSuites(ctxConfig, "NULL");
     HLT_SetTls13CipherSuites(ctxConfig, "NULL");
@@ -625,6 +625,7 @@ HLT_Ctx_Config* HLT_NewCtxConfig(char *setFile, const char *key)
     ctxConfig->isSupportSessionTicket = false;
     ctxConfig->isSupportDhAuto = true;
 	ctxConfig->isEncryptThenMac = true;
+    ctxConfig->isMiddleBoxCompat = true;
     ctxConfig->keyExchMode = TLS13_KE_MODE_PSK_WITH_DHE;
     ctxConfig->setSessionCache = HITLS_SESS_CACHE_SERVER;
     ctxConfig->mtu = 0;
@@ -727,6 +728,7 @@ void HLT_FreeAllProcess(void)
     // Clearing HLT_Tls_Res and Threads
     for (int i = 0; i < localProcess->hltTlsResNum; i++) {
         tlsRes = localProcess->hltTlsResArray[i];
+        alarm(60); // Avoid long waits
         if ((tlsRes->acceptId > 0) && (tlsRes->ctx != NULL)) {
             pthread_join(tlsRes->acceptId, NULL);
         }
@@ -1078,9 +1080,25 @@ int HLT_SetEmptyRecordsNum(HLT_Ctx_Config *ctxConfig, uint32_t emptyNum)
     return SUCCESS;
 }
 
+int HLT_SetKeyLogCb(HLT_Ctx_Config *ctxConfig, char *SetKeyLogCb)
+{
+    (void)memset_s(ctxConfig->keyLogCb, KEY_LOG_CB_LEN, 0, KEY_LOG_CB_LEN);
+    if (strcpy_s(ctxConfig->keyLogCb, KEY_LOG_CB_LEN, SetKeyLogCb) != EOK) {
+        LOG_ERROR("HLT_SetKeyLogCb failed.");
+        return -1;
+    }
+    return SUCCESS;
+}
+
 int HLT_SetEncryptThenMac(HLT_Ctx_Config *ctxConfig, int support)
 {
     ctxConfig->isEncryptThenMac = support;
+    return SUCCESS;
+}
+
+int HLT_SetMiddleBoxCompat(HLT_Ctx_Config *ctxConfig, int support)
+{
+    ctxConfig->isMiddleBoxCompat = support;
     return SUCCESS;
 }
 
@@ -1388,6 +1406,12 @@ int HLT_SetCertCb(HLT_Ctx_Config *ctxConfig, HITLS_CertCb certCb, void *arg)
 {
     ctxConfig->certCb = certCb;
     ctxConfig->certArg = arg;
+    return SUCCESS;
+}
+
+int HLT_SetCAList(HLT_Ctx_Config *ctxConfig, HITLS_TrustedCAList *caList)
+{
+    ctxConfig->caList = caList;
     return SUCCESS;
 }
 

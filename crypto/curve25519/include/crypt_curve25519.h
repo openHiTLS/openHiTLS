@@ -238,7 +238,7 @@ int32_t CRYPT_CURVE25519_GetBits(const CRYPT_CURVE25519_Ctx *pkey);
  *
  * @param pkey       [IN/OUT] curve25519 Key pair structure. A private key is required for signature.
  *                            After signature, a public key is generated.
- * @param algid      [IN] md algid
+ * @param algId      [IN] md algId
  * @param msg        [IN] Data to be signed
  * @param msgLen     [IN] Data length: 0 <= msgLen <= (2^125 - 64) bytes
  * @param hashMethod [IN] SHA512 method
@@ -270,7 +270,7 @@ int32_t CRYPT_CURVE25519_GetSignLen(const CRYPT_CURVE25519_Ctx *pkey);
  * @brief curve25519 Verification
  *
  * @param pkey    [IN] curve25519 Key pair structure. A public key is required for signature verification.
- * @param algid   [IN] md algid
+ * @param algId   [IN] md algId
  * @param msg     [IN] Data
  * @param msgLen  [IN] Data length: 0 <= msgLen <= (2^125 - 64) bytes
  * @param sign    [IN] Signature
@@ -334,6 +334,7 @@ int32_t CRYPT_CURVE25519_ComputeSharedKey(CRYPT_CURVE25519_Ctx *prvKey, CRYPT_CU
 int32_t CRYPT_X25519_GenKey(CRYPT_CURVE25519_Ctx *pkey);
 #endif /* HITLS_CRYPTO_X25519 */
 
+#ifdef HITLS_CRYPTO_CURVE25519_CMP
 /**
  * @ingroup curve25519
  * @brief curve25519 Public key comparison
@@ -346,6 +347,9 @@ int32_t CRYPT_X25519_GenKey(CRYPT_CURVE25519_Ctx *pkey);
  * @retval CRYPT_CURVE25519_PUBKEY_NOT_EQUAL    Public Keys are not equal
  */
 int32_t CRYPT_CURVE25519_Cmp(const CRYPT_CURVE25519_Ctx *a, const CRYPT_CURVE25519_Ctx *b);
+#else
+#define CRYPT_CURVE25519_Cmp NULL
+#endif
 
 /**
  * @ingroup curve25519
@@ -357,7 +361,7 @@ int32_t CRYPT_CURVE25519_Cmp(const CRYPT_CURVE25519_Ctx *a, const CRYPT_CURVE255
  */
 int32_t CRYPT_CURVE25519_GetSecBits(const CRYPT_CURVE25519_Ctx *ctx);
 
-#ifdef HITLS_CRYPTO_PROVIDER
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
 /**
  * @ingroup curve25519
  * @brief curve25519 import key
@@ -375,7 +379,39 @@ int32_t CRYPT_CURVE25519_Import(CRYPT_CURVE25519_Ctx *ctx, const BSL_Param *para
  * @param params [IN/OUT] key parameters
  */
 int32_t CRYPT_CURVE25519_Export(const CRYPT_CURVE25519_Ctx *ctx, BSL_Param *params);
-#endif // HITLS_CRYPTO_PROVIDER
+#endif // HITLS_CRYPTO_KEY_DECODE_CHAIN
+
+#ifdef HITLS_CRYPTO_ED25519_CHECK
+
+/**
+ * @ingroup ed25519
+ * @brief ed25519 check key pair
+ *
+ * @param checkType [IN] check type
+ * @param pkey1 [IN] ed25519 context structure
+ * @param pkey2 [IN] ed25519 context structure
+ *
+ * @retval CRYPT_SUCCESS                        successfully.
+ * @retval other                                error.
+ */
+int32_t CRYPT_ED25519_Check(uint32_t checkType, const CRYPT_CURVE25519_Ctx *pkey1, const CRYPT_CURVE25519_Ctx *pkey2);
+#endif // HITLS_CRYPTO_ED25519_CHECK
+
+#ifdef HITLS_CRYPTO_X25519_CHECK
+/**
+ * @ingroup x25519
+ * @brief x25519 check key pair
+ *
+ * @param checkType [IN] check type
+ * @param pkey1 [IN] x25519 context structure
+ * @param pkey2 [IN] x25519 context structure
+ *
+ * @retval CRYPT_SUCCESS                        successfully.
+ * @retval other                                error.
+ */
+int32_t CRYPT_X25519_Check(uint32_t checkType, const CRYPT_CURVE25519_Ctx *pkey1, const CRYPT_CURVE25519_Ctx *pkey2);
+
+#endif // HITLS_CRYPTO_X25519_CHECK
 
 #ifdef __cplusplus
 }

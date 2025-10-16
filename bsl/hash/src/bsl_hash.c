@@ -83,9 +83,8 @@ static uint32_t BSL_HASH_MixV(uint32_t v)
     uint32_t res = v;
     res = res * HASH_VC1;
     res = BSL_HASH_Rotate(res, HASH_V_ROTATE);
-    res = res * HASH_VC2;
 
-    return res;
+    return res * HASH_VC2;
 }
 
 static uint32_t BSL_HASH_MixH(uint32_t h, uint32_t v)
@@ -94,9 +93,8 @@ static uint32_t BSL_HASH_MixH(uint32_t h, uint32_t v)
 
     res ^= v;
     res = BSL_HASH_Rotate(res, HASH_H_ROTATE);
-    res = res * HASH_HC4 + HASH_HC1;
 
-    return res;
+    return res * HASH_HC4 + HASH_HC1;
 }
 
 uint32_t BSL_HASH_CodeCalc(void *key, uint32_t keySize)
@@ -155,17 +153,8 @@ static void BSL_HASH_HookRegister(BSL_HASH_Hash *hash, BSL_HASH_CodeCalcFunc has
     ListDupFreeFuncPair *hashKeyFunc = &hash->keyFunc;
     ListDupFreeFuncPair *hashValueFunc = &hash->valueFunc;
 
-    if (hashFunc == NULL) {
-        hash->hashFunc = BSL_HASH_CodeCalcInt;
-    } else {
-        hash->hashFunc = hashFunc;
-    }
-
-    if (matchFunc == NULL) {
-        hash->matchFunc = BSL_HASH_MatchInt;
-    } else {
-        hash->matchFunc = matchFunc;
-    }
+    hash->hashFunc = hashFunc == NULL ? BSL_HASH_CodeCalcInt : hashFunc;
+    hash->matchFunc = matchFunc == NULL ? BSL_HASH_MatchInt : matchFunc;
 
     if (keyFunc == NULL) {
         hashKeyFunc->dupFunc = NULL;
@@ -315,9 +304,7 @@ static void BSL_HASH_NodeFree(BSL_HASH_Hash *hash, BSL_HASH_Node *node)
 
 uint32_t BSL_HASH_CodeCalcInt(uintptr_t key, uint32_t bktSize)
 {
-    uint32_t hashCode = BSL_HASH_CodeCalc(&key, sizeof(key));
-
-    return hashCode % bktSize;
+    return BSL_HASH_CodeCalc(&key, sizeof(key)) % bktSize;
 }
 
 bool BSL_HASH_MatchInt(uintptr_t key1, uintptr_t key2)
@@ -328,9 +315,7 @@ bool BSL_HASH_MatchInt(uintptr_t key1, uintptr_t key2)
 uint32_t BSL_HASH_CodeCalcStr(uintptr_t key, uint32_t bktSize)
 {
     char *tmpKey = (char *)key;
-    uint32_t hashCode = BSL_HASH_CodeCalc(tmpKey, (uint32_t)strlen(tmpKey));
-
-    return hashCode % bktSize;
+    return BSL_HASH_CodeCalc(tmpKey, (uint32_t)strlen(tmpKey)) % bktSize;
 }
 
 bool BSL_HASH_MatchStr(uintptr_t key1, uintptr_t key2)
@@ -338,11 +323,7 @@ bool BSL_HASH_MatchStr(uintptr_t key1, uintptr_t key2)
     char *tkey1 = (char *)key1;
     char *tkey2 = (char *)key2;
 
-    if (strcmp(tkey1, tkey2) == 0) {
-        return true;
-    }
-
-    return false;
+    return strcmp(tkey1, tkey2) == 0;
 }
 
 BSL_HASH_Hash *BSL_HASH_Create(uint32_t bktSize, BSL_HASH_CodeCalcFunc hashFunc, BSL_HASH_MatchFunc matchFunc,
@@ -516,11 +497,10 @@ int32_t BSL_HASH_At(const BSL_HASH_Hash *hash, uintptr_t key, uintptr_t *value)
 
 BSL_HASH_Iterator BSL_HASH_Find(const BSL_HASH_Hash *hash, uintptr_t key)
 {
-    int32_t ret;
     uint32_t hashCode;
     BSL_HASH_Node *hashNode = NULL;
 
-    ret = BSL_HASH_CodeCheck(hash, key, &hashCode);
+    int32_t ret = BSL_HASH_CodeCheck(hash, key, &hashCode);
     if (ret != BSL_SUCCESS) {
         return hash == NULL ? NULL : BSL_HASH_IterEndGet(hash);
     }
@@ -535,20 +515,12 @@ BSL_HASH_Iterator BSL_HASH_Find(const BSL_HASH_Hash *hash, uintptr_t key)
 
 bool BSL_HASH_Empty(const BSL_HASH_Hash *hash)
 {
-    if ((hash == NULL) || (hash->hashCount == 0U)) {
-        return true;
-    }
-
-    return false;
+    return (hash == NULL) || (hash->hashCount == 0U);
 }
 
 uint32_t BSL_HASH_Size(const BSL_HASH_Hash *hash)
 {
-    if (hash == NULL) {
-        return 0;
-    }
-
-    return hash->hashCount;
+    return hash == NULL ? 0 : hash->hashCount;
 }
 
 BSL_HASH_Iterator BSL_HASH_Erase(BSL_HASH_Hash *hash, uintptr_t key)
@@ -609,57 +581,35 @@ void BSL_HASH_Clear(BSL_HASH_Hash *hash)
 
 void BSL_HASH_Destory(BSL_HASH_Hash *hash)
 {
-    if (hash == NULL) {
-        return;
+    if (hash != NULL) {
+        BSL_HASH_Clear(hash);
+        BSL_SAL_Free(hash);
     }
-
-    BSL_HASH_Clear(hash);
-    BSL_SAL_FREE(hash);
 }
 
 BSL_HASH_Iterator BSL_HASH_IterBegin(const BSL_HASH_Hash *hash)
 {
-    if (hash == NULL) {
-        return NULL;
-    }
-
-    return BSL_HASH_Front(hash);
+    return hash == NULL ? NULL : BSL_HASH_Front(hash);
 }
 
 BSL_HASH_Iterator BSL_HASH_IterEnd(const BSL_HASH_Hash *hash)
 {
-    if (hash == NULL) {
-        return NULL;
-    }
-
-    return BSL_HASH_IterEndGet(hash);
+    return hash == NULL ? NULL : BSL_HASH_IterEndGet(hash);
 }
 
 BSL_HASH_Iterator BSL_HASH_IterNext(const BSL_HASH_Hash *hash, BSL_HASH_Iterator it)
 {
-    if ((hash == NULL) || (it == BSL_HASH_IterEnd(hash))) {
-        return BSL_HASH_IterEnd(hash);
-    }
-
-    return BSL_HASH_Next(hash, it);
+    return (hash == NULL || it == BSL_HASH_IterEnd(hash)) ? BSL_HASH_IterEnd(hash) : BSL_HASH_Next(hash, it);
 }
 
 uintptr_t BSL_HASH_HashIterKey(const BSL_HASH_Hash *hash, BSL_HASH_Iterator it)
 {
-    if (it == NULL || it == BSL_HASH_IterEnd(hash)) {
-        return 0;
-    }
-
-    return it->key;
+    return (it == NULL || it == BSL_HASH_IterEnd(hash)) ? 0 : it->key;
 }
 
 uintptr_t BSL_HASH_IterValue(const BSL_HASH_Hash *hash, BSL_HASH_Iterator it)
 {
-    if (it == NULL || it == BSL_HASH_IterEnd(hash)) {
-        return 0;
-    }
-
-    return it->value;
+    return (it == NULL || it == BSL_HASH_IterEnd(hash)) ? 0 : it->value;
 }
 
 #ifdef __cplusplus

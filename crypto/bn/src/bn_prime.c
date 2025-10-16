@@ -199,9 +199,8 @@ static int32_t ProbablePrime(BN_BigNum *rnd, BN_BigNum *e, uint32_t bits, bool h
     const int32_t maxCnt = 100; /* try 100 times */
     int32_t tryCnt = 0;
     uint32_t i;
-    int32_t ret;
     uint32_t cnt = DivisorsCnt(bits);
-    ret = OptimizerStart(opt);
+    int32_t ret = OptimizerStart(opt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

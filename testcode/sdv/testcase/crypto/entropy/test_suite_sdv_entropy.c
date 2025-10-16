@@ -1293,9 +1293,9 @@ void SDV_CRYPTO_SEEDPOOL_MutiTest(void)
     CRYPT_RandSeedMethod meth = {0};
     ASSERT_TRUE(EAL_SetDefaultEntropyMeth(&meth) == CRYPT_SUCCESS);
     for (int32_t index = 0; index < 3; index++) {
-        BSL_SAL_ThreadId thrd;
-        ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrd, DrbgSeedTest, pool) == 0);
-        BSL_SAL_ThreadClose(thrd);
+        pthread_t thrd;
+        ASSERT_TRUE(pthread_create(&thrd, NULL, DrbgSeedTest, pool) == 0);
+        pthread_join(thrd, NULL);
     }
 
 EXIT:

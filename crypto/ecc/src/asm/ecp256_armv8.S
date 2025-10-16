@@ -20,7 +20,6 @@
 #include "ecp256_pre_comp_table.s"
 
 .arch   armv8-a+crypto
-.file   "ecp256_armv8.S"
 
 .section .rodata
 .align  4

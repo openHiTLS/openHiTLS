@@ -843,6 +843,8 @@ void UT_HITLS_APP_OptToHex_TC001(void)
     ASSERT_EQ(ret2, HITLS_APP_INTERNAL_EXCEPTION);
     int ret3 = HITLS_APP_OptToHex(str, 12, outBuf, 0);
     ASSERT_EQ(ret3, HITLS_APP_INTERNAL_EXCEPTION);
+    int ret4 = HITLS_APP_OptToHex(str, 12, outBuf, 4);
+    ASSERT_EQ(ret4, HITLS_APP_INTERNAL_EXCEPTION);
 EXIT:
     return;
 }

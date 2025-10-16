@@ -17,10 +17,11 @@
 #ifdef HITLS_CRYPTO_SM2
 
 #include <stdbool.h>
+#include "securec.h"
 #include "crypt_errno.h"
 #include "crypt_types.h"
 #include "crypt_utils.h"
-#include "securec.h"
+#include "crypt_util_ctrl.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_bn.h"
@@ -40,7 +41,7 @@ static int32_t Sm2SetUserId(CRYPT_SM2_Ctx *ctx, const uint8_t *val, uint32_t len
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void) memcpy_s(ctx->userId, len, val, len);
+    (void)memcpy_s(ctx->userId, len, val, len);
     ctx->userIdLen = len;
     return CRYPT_SUCCESS;
 }
@@ -59,10 +60,10 @@ CRYPT_SM2_Ctx *CRYPT_SM2_NewCtx(void)
         return NULL;
     }
 
-    const EAL_MdMethod *mdMethod = EAL_MdFindMethod(CRYPT_MD_SM3);
+    const EAL_MdMethod *mdMethod = EAL_MdFindDefaultMethod(CRYPT_MD_SM3);
     if (mdMethod == NULL) {
         CRYPT_SM2_FreeCtx(ctx);
-        BSL_ERR_PUSH_ERROR(CRYPT_EVENT_ERR);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return NULL;
     }
     ctx->hashMethod = (const EAL_MdMethod *)mdMethod;
@@ -157,7 +158,7 @@ int32_t Sm2ComputeZDigest(const CRYPT_SM2_Ctx *ctx, uint8_t *out, uint32_t *outL
     BN_BigNum *b = ECC_GetParaB(ctx->pkey->para);
     BN_BigNum *xG = ECC_GetParaX(ctx->pkey->para);
     BN_BigNum *yG = ECC_GetParaY(ctx->pkey->para);
-    void *mdCtx = ctx->hashMethod->newCtx();
+    void *mdCtx = ctx->hashMethod->newCtx(NULL, ctx->hashMethod->id);
     uint8_t *buf = BSL_SAL_Calloc(1u, keyBits);
     if (a == NULL || b == NULL || xG == NULL || yG == NULL || buf == NULL || mdCtx == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
@@ -205,7 +206,7 @@ static int32_t Sm2ComputeMsgHash(const CRYPT_SM2_Ctx *ctx, const uint8_t *msg, u
     int ret;
     uint8_t out[SM3_MD_SIZE];
     uint32_t outLen = sizeof(out);
-    void *mdCtx = ctx->hashMethod->newCtx();
+    void *mdCtx = ctx->hashMethod->newCtx(NULL, ctx->hashMethod->id);
     if (mdCtx == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
@@ -318,7 +319,7 @@ int32_t CRYPT_SM2_Gen(CRYPT_SM2_Ctx *ctx)
     return ECC_PkeyGen(ctx->pkey);
 }
 
-#ifdef HITLS_CRYPTO_PROVIDER
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
 int32_t CRYPT_SM2_Import(CRYPT_SM2_Ctx *ctx, const BSL_Param *params)
 {
     if (ctx == NULL || params == NULL) {
@@ -479,7 +480,6 @@ ERR:
 
 int32_t KeyCheckAndPubGen(const CRYPT_SM2_Ctx *ctx)
 {
-    int32_t ret;
     if (ctx->pkey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_SM2_ERR_EMPTY_KEY);
         return CRYPT_SM2_ERR_EMPTY_KEY;
@@ -492,7 +492,7 @@ int32_t KeyCheckAndPubGen(const CRYPT_SM2_Ctx *ctx)
     if (ctx->pkey->pubkey != NULL) {
         return CRYPT_SUCCESS;
     }
-    ret = ECC_GenPublicKey(ctx->pkey);
+    int32_t ret = ECC_GenPublicKey(ctx->pkey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -507,8 +507,9 @@ int32_t CRYPT_SM2_Sign(const CRYPT_SM2_Ctx *ctx, int32_t algId, const uint8_t *d
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
-    
-    if ((ctx == NULL) || (sign == NULL) || (signLen == NULL) || ((data == NULL) && (dataLen != 0))) {
+
+    bool nullInput = ctx == NULL || sign == NULL || signLen == NULL || ((data == NULL) && (dataLen != 0));
+    if (nullInput == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -782,6 +783,23 @@ ERR:
     return ret;
 }
 
+static int32_t Sm2GetRandom(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
+{
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->r == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_NO_RANDOM_INFO);
+        return CRYPT_SM2_NO_RANDOM_INFO;
+    }
+    if (len != SM3_MD_SIZE) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_BUFF_LEN_NOT_ENOUGH);
+        return CRYPT_SM2_BUFF_LEN_NOT_ENOUGH;
+    }
+    return BN_Bn2BinFixZero(ctx->r, val, len);
+}
+
 static int32_t Sm2GetSumSend(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
 {
     if (val == NULL) {
@@ -835,7 +853,7 @@ static int32_t Sm2DoCheck(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (len != SM3_MD_SIZE) {
+    if (len != SM2_X_LEN) {
         ret = CRYPT_SM2_ERR_DATA_LEN;
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -898,25 +916,6 @@ static int32_t Sm2SetPKG(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-static int32_t SM2UpReferences(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
-{
-    if (val == NULL || len != (uint32_t)sizeof(int)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    return BSL_SAL_AtomicUpReferences(&(ctx->references), (int *)val);
-}
-
-static int32_t CRYPT_SM2_GetLen(const CRYPT_SM2_Ctx *ctx, GetLenFunc func, void *val, uint32_t len)
-{
-    if (val == NULL || len != sizeof(int32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    *(int32_t *)val = func(ctx);
-    return CRYPT_SUCCESS;
-}
 
 int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
@@ -924,58 +923,45 @@ int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = CRYPT_SM2_ERR_UNSUPPORTED_CTRL_OPTION;
     switch (opt) {
         case CRYPT_CTRL_GET_BITS:
-            return CRYPT_SM2_GetLen(ctx, (GetLenFunc)CRYPT_SM2_GetBits, val, len);
+            return CRYPT_CTRL_GET_NUM32_EX(CRYPT_SM2_GetBits, ctx, val, len);
 #ifdef HITLS_CRYPTO_SM2_SIGN
         case CRYPT_CTRL_GET_SIGNLEN:
-            return CRYPT_SM2_GetLen(ctx, (GetLenFunc)CRYPT_SM2_GetSignLen, val, len);
+            return CRYPT_CTRL_GET_NUM32_EX(CRYPT_SM2_GetSignLen, ctx, val, len);
 #endif
         case CRYPT_CTRL_GET_SECBITS:
-            return CRYPT_SM2_GetLen(ctx, (GetLenFunc)CRYPT_SM2_GetSecBits, val, len);
+            return CRYPT_CTRL_GET_NUM32_EX(CRYPT_SM2_GetSecBits, ctx, val, len);
         case CRYPT_CTRL_SET_SM2_SERVER:
-            ret = CtrlServerSet(ctx, val, len);
-            break;
+            return CtrlServerSet(ctx, val, len);
         case CRYPT_CTRL_SET_SM2_USER_ID:
-            ret = CtrlUserId(ctx, val, len);
-            break;
+            return CtrlUserId(ctx, val, len);
         case CRYPT_CTRL_GENE_SM2_R:
-            ret = Sm2GenerateR(ctx, val, len);
-            break;
+            return Sm2GenerateR(ctx, val, len);
         case CRYPT_CTRL_SET_SM2_R:
-            ret = Sm2SetR(ctx, val, len);
-            break;
+            return Sm2SetR(ctx, val, len);
 #ifdef HITLS_CRYPTO_ACVP_TESTS
         case CRYPT_CTRL_SET_SM2_K:
-            ret = CRYPT_SM2_SetK(ctx, val, len);
-            break;
+            return CRYPT_SM2_SetK(ctx, val, len);
 #endif
         case CRYPT_CTRL_SET_SM2_RANDOM:
-            ret = Sm2SetRandom(ctx, val, len);
-            break;
+            return Sm2SetRandom(ctx, val, len);
+        case CRYPT_CTRL_GET_SM2_RANDOM:
+            return Sm2GetRandom(ctx, val, len);
         case CRYPT_CTRL_GET_SM2_SEND_CHECK:
-            ret = Sm2GetSumSend(ctx, val, len);
-            break;
+            return Sm2GetSumSend(ctx, val, len);
         case CRYPT_CTRL_SM2_DO_CHECK:
-            ret = Sm2DoCheck(ctx, val, len);
-            break;
+            return Sm2DoCheck(ctx, val, len);
         case CRYPT_CTRL_SET_SM2_PKG:
-            ret = Sm2SetPKG(ctx, val, len);
-            break;
+            return Sm2SetPKG(ctx, val, len);
         case CRYPT_CTRL_UP_REFERENCES:
-            ret = SM2UpReferences(ctx, val, len);
-            break;
+            return BSL_SAL_AtomicRefUpCtrl(&(ctx->references), val, len);
         default:
-            ret = ECC_PkeyCtrl(ctx->pkey, opt, val, len);
-            break;
+            return ECC_PkeyCtrl(ctx->pkey, opt, val, len);
     }
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    return ret;
 }
 
+#ifdef HITLS_CRYPTO_SM2_CMP
 int32_t CRYPT_SM2_Cmp(const CRYPT_SM2_Ctx *a, const CRYPT_SM2_Ctx *b)
 {
     if (a == NULL || b == NULL) {
@@ -984,6 +970,7 @@ int32_t CRYPT_SM2_Cmp(const CRYPT_SM2_Ctx *a, const CRYPT_SM2_Ctx *b)
     }
     return ECC_PkeyCmp(a->pkey, b->pkey);
 }
+#endif
 
 int32_t CRYPT_SM2_GetSecBits(const CRYPT_SM2_Ctx *ctx)
 {
@@ -994,4 +981,41 @@ int32_t CRYPT_SM2_GetSecBits(const CRYPT_SM2_Ctx *ctx)
     return ECC_GetSecBits(ctx->pkey->para);
 }
 
-#endif // HITLS_CRYPTO_SM2_SIGN
+#ifdef HITLS_CRYPTO_SM2_CHECK
+
+int32_t CRYPT_SM2_Check(uint32_t checkType, const CRYPT_SM2_Ctx *pkey1, const CRYPT_SM2_Ctx *pkey2)
+{
+    int32_t ret;
+    switch (checkType) {
+        case CRYPT_PKEY_CHECK_KEYPAIR:
+            if (pkey1 == NULL || pkey2 == NULL) {
+                BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+                return CRYPT_NULL_INPUT;
+            }
+            ret = ECC_PkeyCheck(pkey1->pkey, pkey2->pkey, checkType);
+            break;
+        case CRYPT_PKEY_CHECK_PRVKEY:
+            if (pkey1 == NULL) {
+                BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+                return CRYPT_NULL_INPUT;
+            }
+            ret = ECC_PkeyCheck(pkey1->pkey, NULL, checkType);
+            break;
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+    }
+    if (ret == CRYPT_ECC_PAIRWISE_CHECK_FAIL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_PAIRWISE_CHECK_FAIL);
+        return CRYPT_SM2_PAIRWISE_CHECK_FAIL;
+    }
+    if (ret == CRYPT_ECC_INVALID_PRVKEY) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_INVALID_PRVKEY);
+        return CRYPT_SM2_INVALID_PRVKEY;
+    }
+    return ret; // may be other error occurred.
+}
+
+#endif // HITLS_CRYPTO_SM2_CHECK
+
+#endif

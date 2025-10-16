@@ -29,6 +29,8 @@
 #include "eal_pkey_local.h"
 #include "crypt_eal_rand.h"
 #include "securec.h"
+#include "curve25519_local.h"
+#include "crypt_curve25519.h"
 
 #define CRYPT_EAL_PKEY_KEYMGMT_OPERATE  0
 #define CRYPT_EAL_PKEY_CIPHER_OPERATE   1
@@ -892,13 +894,20 @@ EXIT:
  *    4. Return CRYPT_SUCCESS when expect is 1, CRYPT_CURVE25519_VERIFY_FAIL otherwise.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_ED25519_KEY_PAIR_CHECK_FUNC_TC001(Hex *pubkey, Hex *prvkey,  int expect, int isProvider)
+void SDV_CRYPTO_ED25519_KEY_PAIR_CHECK_FUNC_TC001(Hex *pubkey, Hex *prvkey, int expect, int isProvider)
 {
+#if !defined(HITLS_CRYPTO_ED25519_CHECK)
+    (void)prvkey;
+    (void)pubkey;
+    (void)expect;
+    (void)isProvider;
+    SKIP_TEST();
+#else
     CRYPT_EAL_PkeyCtx *pubCtx = NULL;
     CRYPT_EAL_PkeyCtx *prvCtx = NULL;
     CRYPT_EAL_PkeyPub pub = {0};
     CRYPT_EAL_PkeyPrv prv = {0};
-    int expectRet = expect == 1 ? CRYPT_SUCCESS : CRYPT_CURVE25519_VERIFY_FAIL;
+    int expectRet = expect == 1 ? CRYPT_SUCCESS : CRYPT_CURVE25519_PAIRWISE_CHECK_FAIL;
 
     Set_Curve25519_Prv(&prv, CRYPT_PKEY_ED25519, prvkey->x, prvkey->len);
     Set_Curve25519_Pub(&pub, CRYPT_PKEY_ED25519, pubkey->x, pubkey->len);
@@ -919,6 +928,7 @@ void SDV_CRYPTO_ED25519_KEY_PAIR_CHECK_FUNC_TC001(Hex *pubkey, Hex *prvkey,  int
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pubCtx);
     CRYPT_EAL_PkeyFreeCtx(prvCtx);
+#endif
 }
 /* END_CASE */
 
@@ -962,5 +972,81 @@ void SDV_CRYPTO_CURVE25519_GET_SECURITY_BITS_FUNC_TC001(int id, int secBits)
     ASSERT_TRUE(CRYPT_EAL_PkeyGetSecurityBits(pkey) == (uint32_t)secBits);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_CURVE25519_KEY_PAIR_CHECK_FUNC_TC001
+ * @brief  CURVE25519: key pair check.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_CURVE25519_KEY_PAIR_CHECK_FUNC_TC001(int id, int isProvider)
+{
+#if !defined(HITLS_CRYPTO_ED25519_CHECK) && !defined(HITLS_CRYPTO_X25519_CHECK)
+    (void)id;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    CRYPT_EAL_PkeyCtx *pubCtx = NULL;
+    CRYPT_EAL_PkeyCtx *prvCtx = NULL;
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    pubCtx = TestPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE,
+        "provider=default", isProvider);
+    prvCtx = TestPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE,
+        "provider=default", isProvider);
+    ASSERT_TRUE(pubCtx != NULL && prvCtx != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(NULL, NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_CURVE25519_NO_PRVKEY); // no prv key and pub key.
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(prvCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_CURVE25519_NO_PUBKEY); // no pub key
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pubCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_CURVE25519_PAIRWISE_CHECK_FAIL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(prvCtx, prvCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, pubCtx), CRYPT_SUCCESS);
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_CURVE25519_PRV_KEY_CHECK_FUNC_TC001
+ * @brief CURE25519: private key check.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_CURVE25519_PRV_KEY_CHECK_FUNC_TC001(int id, int isProvider)
+{
+#if !defined(HITLS_CRYPTO_ED25519_CHECK) && !defined(HITLS_CRYPTO_X25519_CHECK)
+    (void)id;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_CURVE25519_Ctx *ctx = NULL;
+    CRYPT_EAL_PkeyCtx *pkey = TestPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey), CRYPT_CURVE25519_NO_PRVKEY);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey), CRYPT_SUCCESS);
+    ctx = (CRYPT_CURVE25519_Ctx *)pkey->key;
+    (void)memset_s(ctx->prvKey, CRYPT_CURVE25519_KEYLEN, 0, CRYPT_CURVE25519_KEYLEN);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey), CRYPT_CURVE25519_INVALID_PRVKEY);
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
 }
 /* END_CASE */

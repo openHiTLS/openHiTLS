@@ -241,7 +241,7 @@ static int32_t CheckPara(GenrsaInOpt *opt, BSL_UIO *outUio)
 
 static CRYPT_EAL_PkeyPara *PkeyNewRsaPara(uint8_t *e, uint32_t eLen, uint32_t bits)
 {
-    CRYPT_EAL_PkeyPara *para = malloc(sizeof(CRYPT_EAL_PkeyPara));
+    CRYPT_EAL_PkeyPara *para = BSL_SAL_Calloc(1, sizeof(CRYPT_EAL_PkeyPara));
     if (para == NULL) {
         return NULL;
     }

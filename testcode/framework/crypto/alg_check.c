@@ -141,6 +141,9 @@ static int GetDrbgHashAlgId(void)
     if (g_mdDisableTable[1] == 0) {
         return CRYPT_RAND_SHA1;
     }
+    if (g_mdDisableTable[12] == 0) {
+        return CRYPT_RAND_SM3;
+    }
     return ERR_ID;
 }
 

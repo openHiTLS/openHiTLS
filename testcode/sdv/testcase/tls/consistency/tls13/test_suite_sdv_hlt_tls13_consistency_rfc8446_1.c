@@ -155,3 +155,66 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/** @
+* @test SDV_TLS_TLS13_RFC8446_CONSISTENCY_MIDDLE_BOX_COMPAT_FUNC_TC001
+* @spec -
+* @title Test TLS 1.3 connection and data transfer when middlebox compatibility mode is enabled or disabled
+* @precon nan
+* @brief
+*   1. The server and client are configured with middlebox compatibility mode controlled by the input parameter isMiddleBoxCompat.
+*   2. Establish a TLS 1.3 connection between server and client.
+*   3. Verify bidirectional data transmission integrity.
+* @expect 1. The TLS 1.3 connection is successfully established.
+*   2. Data sent by the server is correctly received by the client (length and content match).
+*   3. Data sent by the client is correctly received by the server (length and content match).
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_TLS13_RFC8446_CONSISTENCY_MIDDLE_BOX_COMPAT_FUNC_TC001(int isMiddleBoxCompat)
+{
+    HLT_Tls_Res *serverRes = NULL;
+    HLT_Tls_Res *clientRes = NULL;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+    HLT_Ctx_Config *serverCtxConfig = NULL;
+    HLT_Ctx_Config *clientCtxConfig = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, g_uiPort, true);
+    ASSERT_TRUE(remoteProcess != NULL);
+    serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    ASSERT_TRUE(serverCtxConfig != NULL);
+    HLT_SetClientVerifySupport(serverCtxConfig, true);
+    HLT_SetMiddleBoxCompat(serverCtxConfig, isMiddleBoxCompat);
+    clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    ASSERT_TRUE(clientCtxConfig != NULL);
+    HLT_SetClientVerifySupport(clientCtxConfig, true);
+    HLT_SetMiddleBoxCompat(clientCtxConfig, isMiddleBoxCompat);
+
+    serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_3, serverCtxConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_3, clientCtxConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+    ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
+    uint8_t writeData[REC_MAX_PLAIN_LENGTH] = {1};
+    uint32_t writeLen = REC_MAX_PLAIN_LENGTH;
+    uint8_t readData[REC_MAX_PLAIN_LENGTH] = {0};
+    uint32_t readLen = REC_MAX_PLAIN_LENGTH;
+
+    ASSERT_EQ(HLT_ProcessTlsWrite(localProcess, serverRes, writeData, writeLen), 0);
+    ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, clientRes, readData, readLen, &readLen), 0);
+    ASSERT_EQ(readLen, REC_MAX_PLAIN_LENGTH);
+    ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
+
+    ASSERT_EQ(HLT_ProcessTlsWrite(remoteProcess, clientRes, writeData, writeLen), 0);
+    ASSERT_EQ(HLT_ProcessTlsRead(localProcess, serverRes, readData, readLen, &readLen), 0);
+    ASSERT_EQ(readLen, REC_MAX_PLAIN_LENGTH);
+    ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
+EXIT:
+    HLT_FreeAllProcess();
+    HLT_CleanFrameHandle();
+    return;
+}
+/* END_CASE */

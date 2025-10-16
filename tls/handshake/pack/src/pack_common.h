@@ -17,6 +17,8 @@
 #define PACK_COMMON_H
 
 #include <stdint.h>
+#include "tls.h"
+#include "pack.h"
 #include "hs_msg.h"
 
 #ifdef __cplusplus
@@ -26,17 +28,16 @@ extern "C" {
 /**
  * @brief   Pack session ID
  *
+ * @param   pkt [IN/OUT] Context for packing
  * @param   id [IN] Session ID
  * @param   idSize [IN] Session ID length
- * @param   buf [OUT] Message buffer
- * @param   bufLen [IN] Maximum message length
- * @param   usedLen [OUT] Length of message
  *
  * @retval  HITLS_SUCCESS
  * @retval  HITLS_PACK_SESSIONID_ERR Failed to pack sessionId
- * @retval  HITLS_MEMCPY_FAIL Memory Copy Failed
+ * @retval  HITLS_MEMALLOC_FAIL Grow buffer failed
+ * @retval  HITLS_PACK_NOT_ENOUGH_BUF_LENGTH Buffer is not enough
  */
-int32_t PackSessionId(const uint8_t *id, uint32_t idSize, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen);
+int32_t PackSessionId(PackPacket *pkt, const uint8_t *id, uint32_t idSize);
 
 /**
  * @brief   Pack DTLS message header
@@ -48,15 +49,7 @@ int32_t PackSessionId(const uint8_t *id, uint32_t idSize, uint8_t *buf, uint32_t
  */
 void PackDtlsMsgHeader(HS_MsgType type, uint16_t sequence, uint32_t length, uint8_t *buf);
 
-/**
- * @brief   Error processing function in pack module
- *
- * @param   logId [IN] binlogid
- * @param   format [IN] Message for log function
-
- * @retval  error code
- */
-int32_t PackBufLenError(uint32_t logId, const void *format);
+int32_t PackTrustedCAList(HITLS_TrustedCAList *caList, PackPacket *pkt);
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */

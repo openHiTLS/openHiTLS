@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM4
 
-.file    "crypt_sm4_macro_x86_64.s"
 
 .macro	MUL_MATRIX	A0 HI_MASK LO_MASK
 	vpsrlw		$4,\A0,%ymm5

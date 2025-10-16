@@ -27,8 +27,7 @@
                 "sal_thread",
                 "sal_time",
                 "tlv",
-                "uio",
-                "usrdata"
+                "uio"
             ]
         },
         "hitls_crypto": {

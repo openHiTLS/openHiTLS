@@ -27,14 +27,9 @@
 #include "hs_ctx.h"
 
 // pack the Finished message.
-int32_t PackFinished(const TLS_Ctx *ctx, uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
+int32_t PackFinished(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     const HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
-    if (bufLen < hsCtx->verifyCtx->verifyDataSize) {
-        return PackBufLenError(BINLOG_ID15861, BINGLOG_STR("finish"));
-    }
-
-    (void)memcpy_s(buf, bufLen, hsCtx->verifyCtx->verifyData, hsCtx->verifyCtx->verifyDataSize);
-    *usedLen = hsCtx->verifyCtx->verifyDataSize;
-    return HITLS_SUCCESS;
+    
+    return PackAppendDataToBuf(pkt, hsCtx->verifyCtx->verifyData, hsCtx->verifyCtx->verifyDataSize);
 }

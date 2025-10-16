@@ -26,10 +26,8 @@
 
 int32_t SendChangeCipherSpecProcess(TLS_Ctx *ctx)
 {
-    int32_t ret;
-
     /* send message which changed cipher suites */
-    ret = ctx->method.sendCCS(ctx);
+    int32_t ret = ctx->method.sendCCS(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

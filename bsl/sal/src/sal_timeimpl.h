@@ -34,6 +34,7 @@ typedef struct {
     BslSalSleep pfSleep;
     BslSalTick pfTick;
     BslSalTicksPerSec pfTicksPerSec;
+    BslGetTimeInNS pfBslGetTimeInNS;
 } BSL_SAL_TimeCallback;
 
 int32_t SAL_TimeCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
@@ -46,6 +47,7 @@ uint32_t TIME_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime);
 void SAL_Sleep(uint32_t time);
 long SAL_Tick(void);
 long SAL_TicksPerSec(void);
+uint64_t SAL_TIME_GetNSec(void);
 #endif
 
 #ifdef __cplusplus

@@ -368,6 +368,12 @@ MODES_CHACHAPOLY_Ctx *MODES_CHACHA20POLY1305_NewCtx(int32_t algId)
     return ctx;
 }
 
+MODES_CHACHAPOLY_Ctx *MODES_CHACHA20POLY1305_NewCtxEx(void *libCtx, int32_t algId)
+{
+    (void)libCtx;
+    return MODES_CHACHA20POLY1305_NewCtx(algId);
+}
+
 int32_t MODES_CHACHA20POLY1305_InitCtx(MODES_CHACHAPOLY_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen,
     const uint8_t *iv, uint32_t ivLen, void *param, bool enc)
 {

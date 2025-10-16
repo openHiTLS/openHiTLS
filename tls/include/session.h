@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#define MAX_MASTER_KEY_SIZE 256u        /* <= tls1.2 master key is 48 bytes. TLS1.3 can be to 256 bytes. */
+#define MAX_MASTER_KEY_SIZE 512u
 
 /* Increments the reference count for session */
 void HITLS_SESS_UpRef(HITLS_Session *sess);

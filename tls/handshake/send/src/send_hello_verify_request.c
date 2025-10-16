@@ -36,7 +36,7 @@ int32_t DtlsServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx)
     /** determine whether to assemble a message */
     if (hsCtx->msgLen == 0) {
         /* assemble message */
-        ret = HS_PackMsg(ctx, HELLO_VERIFY_REQUEST, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, HELLO_VERIFY_REQUEST);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17333, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "server pack hello verify request msg fail.", 0, 0, 0, 0);

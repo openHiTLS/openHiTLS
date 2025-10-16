@@ -29,42 +29,36 @@
 #endif
 #include "crypt_eal_init.h"
 
-static bool g_trigger = false;
-
-#define CRYPT_INIT_ABILITY_CPU                 1
-#define CRYPT_INIT_ABILITY_BSL                 2
-#define CRYPT_INIT_ABILITY_RAND                4
-#define CRYPT_INIT_ABILITY_PROVIDER            8
-#define CRYPT_INIT_ABILITY_PROVIDER_RAND       16
-#define CRYPT_INIT_ABILITY_LOCK                32
-
-
+static uint64_t g_ealInitOpts = 0;
 
 #if defined(HITLS_CRYPTO_PROVIDER)
 static int32_t ProviderModuleInit(uint64_t initOpt, int32_t alg)
 {
     (void) alg;
     int32_t ret = CRYPT_SUCCESS;
-    if (initOpt & CRYPT_INIT_ABILITY_PROVIDER) {
+    if (initOpt & CRYPT_EAL_INIT_PROVIDER && (g_ealInitOpts & CRYPT_EAL_INIT_PROVIDER) == 0) {
         ret = CRYPT_EAL_InitPreDefinedProviders();
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }
+        g_ealInitOpts |= CRYPT_EAL_INIT_PROVIDER;
     }
 #if defined(HITLS_CRYPTO_DRBG)
-    if (initOpt & CRYPT_INIT_ABILITY_PROVIDER_RAND) {
+    if (initOpt & CRYPT_EAL_INIT_PROVIDER_RAND && (g_ealInitOpts & CRYPT_EAL_INIT_PROVIDER_RAND) == 0) {
         ret = CRYPT_EAL_ProviderRandInitCtx(NULL, alg, "provider=default", NULL, 0, NULL);
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }
+        g_ealInitOpts |= CRYPT_EAL_INIT_PROVIDER_RAND;
     }
 #endif
+
     return ret;
 }
 
 static void ProviderModuleFree(uint64_t initOpt)
 {
-    if (!(initOpt & CRYPT_INIT_ABILITY_PROVIDER)) {
+    if (!(initOpt & CRYPT_EAL_INIT_PROVIDER)) {
         return;
     }
     CRYPT_EAL_FreePreDefinedProviders();
@@ -87,15 +81,19 @@ static void ProviderModuleFree(uint64_t initOpt)
 #if defined(HITLS_BSL_INIT)
 static int32_t BslModuleInit(uint64_t initOpt)
 {
-    if (!(initOpt & CRYPT_INIT_ABILITY_BSL)) {
+    if (!(initOpt & CRYPT_EAL_INIT_BSL) || (g_ealInitOpts & CRYPT_EAL_INIT_BSL) != 0) {
         return BSL_SUCCESS;
     }
-    return BSL_GLOBAL_Init();
+    int32_t ret = BSL_GLOBAL_Init();
+    if (ret == BSL_SUCCESS) {
+        g_ealInitOpts |= CRYPT_EAL_INIT_BSL;
+    }
+    return ret;
 }
 
 static void BslModuleFree(uint64_t initOpt)
 {
-    if (!(initOpt & CRYPT_INIT_ABILITY_BSL)) {
+    if (!(initOpt & CRYPT_EAL_INIT_BSL)) {
         return;
     }
     BSL_GLOBAL_DeInit();
@@ -117,7 +115,7 @@ static void BslModuleFree(uint64_t initOpt)
 #if defined(HITLS_CRYPTO_DRBG)
 static void RandModuleFree(uint64_t initOpt)
 {
-    if (!(initOpt & CRYPT_INIT_ABILITY_RAND)) {
+    if (!(initOpt & CRYPT_EAL_INIT_RAND)) {
         return;
     }
     CRYPT_EAL_RandDeinit();
@@ -125,10 +123,14 @@ static void RandModuleFree(uint64_t initOpt)
 
 static int32_t RandModuleInit(uint64_t initOpt, int32_t alg)
 {
-    if (!(initOpt & CRYPT_INIT_ABILITY_RAND)) {
+    if (!(initOpt & CRYPT_EAL_INIT_RAND) || (g_ealInitOpts & CRYPT_EAL_INIT_RAND) != 0) {
         return BSL_SUCCESS;
     }
-    return CRYPT_EAL_RandInit(alg, NULL, NULL, NULL, 0);
+    int32_t ret = CRYPT_EAL_RandInit(alg, NULL, NULL, NULL, 0);
+    if (ret == CRYPT_SUCCESS) {
+        g_ealInitOpts |= CRYPT_EAL_INIT_RAND;
+    }
+    return ret;
 }
 #else
 static void RandModuleFree(uint64_t initOpt)
@@ -148,7 +150,7 @@ static int32_t RandModuleInit(uint64_t initOpt, int32_t alg)
 static int32_t GlobalLockInit(uint64_t initOpt, int32_t alg)
 {
 	(void) alg;
-    if ((initOpt & CRYPT_INIT_ABILITY_LOCK) == 0) {
+    if ((initOpt & CRYPT_EAL_INIT_LOCK) == 0 || (g_ealInitOpts & CRYPT_EAL_INIT_LOCK) != 0) {
         return CRYPT_SUCCESS;
     }
 #ifdef HITLS_CRYPTO_ENTROPY
@@ -157,12 +159,13 @@ static int32_t GlobalLockInit(uint64_t initOpt, int32_t alg)
         return ret;
     }
 #endif
+    g_ealInitOpts |= CRYPT_EAL_INIT_LOCK;
     return CRYPT_SUCCESS;
 }
 
 static void GlobalLockFree(uint64_t initOpt)
 {
-    if ((initOpt & CRYPT_INIT_ABILITY_LOCK) == 0) {
+    if ((initOpt & CRYPT_EAL_INIT_LOCK) == 0) {
         return;
     }
 #ifdef HITLS_CRYPTO_ENTROPY
@@ -171,6 +174,9 @@ static void GlobalLockFree(uint64_t initOpt)
     return;
 }
 
+#if defined(HITLS_EAL_INIT_OPTS)
+static bool g_ealInitOptsFlags = false;
+#endif
 
 #if defined(HITLS_EAL_INIT_OPTS)
 __attribute__((constructor(102))) int32_t CRYPT_EAL_Init(uint64_t opts)
@@ -178,13 +184,13 @@ __attribute__((constructor(102))) int32_t CRYPT_EAL_Init(uint64_t opts)
 int32_t CRYPT_EAL_Init(uint64_t opts)
 #endif
 {
-    if (g_trigger) {
-        return CRYPT_SUCCESS;
-    }
     int32_t ret = CRYPT_SUCCESS;
     uint64_t initOpt = opts;
 #if defined(HITLS_EAL_INIT_OPTS)
-    initOpt = HITLS_EAL_INIT_OPTS;
+    if (!g_ealInitOptsFlags) {
+        initOpt = HITLS_EAL_INIT_OPTS;
+        g_ealInitOptsFlags = true;
+    }
 #endif
 
 #if defined(HITLS_CRYPTO_INIT_RAND_ALG)
@@ -193,27 +199,29 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
     int32_t alg = CRYPT_RAND_SHA256;
 #endif
 
-    if (initOpt & CRYPT_INIT_ABILITY_CPU) {
+    if ((initOpt & CRYPT_EAL_INIT_CPU) && (g_ealInitOpts & CRYPT_EAL_INIT_CPU) == 0) {
         GetCpuInstrSupportState();
+        g_ealInitOpts |= CRYPT_EAL_INIT_CPU;
     }
 
     ret = BslModuleInit(initOpt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-  
-    ret = RandModuleInit(initOpt, alg);
-    if (ret != CRYPT_SUCCESS) {
-        BslModuleFree(initOpt);
-        return ret;
-    }
 
     ret = ProviderModuleInit(initOpt, alg);
     if (ret != CRYPT_SUCCESS) {
-        RandModuleFree(initOpt);
         BslModuleFree(initOpt);
         return ret;
     }
+    
+    ret = RandModuleInit(initOpt, alg);
+    if (ret != CRYPT_SUCCESS) {
+        BslModuleFree(initOpt);
+        ProviderModuleFree(initOpt);
+        return ret;
+    }
+
     ret = GlobalLockInit(initOpt, alg);
     if (ret != CRYPT_SUCCESS) {
         RandModuleFree(initOpt);
@@ -221,7 +229,6 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
         ProviderModuleFree(initOpt);
         return ret;
     }
-    g_trigger = true;
     return ret;
 }
 
@@ -240,7 +247,7 @@ void CRYPT_EAL_Cleanup(uint64_t opts)
     RandModuleFree(initOpt);
     BslModuleFree(initOpt);
     GlobalLockFree(initOpt);
-    g_trigger = false;
+    g_ealInitOpts &= (~opts);
 }
 
 #ifdef HITLS_CRYPTO_ASM_CHECK

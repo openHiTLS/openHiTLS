@@ -62,7 +62,7 @@ static void *ES_CfDfInit(void *mdMeth)
         return NULL;
     }
     (void)memcpy_s(&ctx->meth, sizeof(EAL_MdMethod), meth, sizeof(EAL_MdMethod));
-    ctx->ctx = meth->newCtx();
+    ctx->ctx = meth->newCtx(NULL, meth->id);
     if (ctx->ctx == NULL) {
         BSL_SAL_Free(ctx);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);

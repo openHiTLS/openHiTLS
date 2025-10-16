@@ -1,0 +1,86 @@
+UT_HITLS_APP_PKEYUTL_TC001 test1
+UT_HITLS_APP_PKEYUTL_TC001:"pkeyutl -encrypt -pubin ../testdata/apps/sm2/pub.pem -in ../testdata/apps/mac/test.txt -out out_test.bin":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEYUTL_TC001 test2
+UT_HITLS_APP_PKEYUTL_TC001:"pkeyutl -decrypt -prvin ../testdata/apps/sm2/prv.pem -in out_test.bin -out plain.txt":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEYUTL_TC001 test3
+UT_HITLS_APP_PKEYUTL_TC001:"pkeyutl -derive -inkey ../testdata/apps/sm2/prv1.pem -outR R2.bin -outr r2.bin":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEYUTL_TC001 test4
+UT_HITLS_APP_PKEYUTL_TC001:"pkeyutl -derive -inkey ../testdata/apps/sm2/prv.pem -peerkey ../testdata/apps/sm2/pub1.pem -inR R2.bin -outR R1.bin -out share1.key":HITLS_APP_SUCCESS
+
+UT_HITLS_APP_PKEYUTL_TC001 test5
+UT_HITLS_APP_PKEYUTL_TC001:"pkeyutl -derive -inkey ../testdata/apps/sm2/prv1.pem -peerkey ../testdata/apps/sm2/pub.pem -inR R1.bin -inr r2.bin -out share2.key":HITLS_APP_SUCCESS
+
+"-encrypto，-deriver": Redundant parameters
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -encrypt -derive":HITLS_APP_INVALID_ARG
+
+"-encrypto，-decrypt": Redundant parameters
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -encrypt -decrypt":HITLS_APP_INVALID_ARG
+
+"-deriver，-decrypt": Redundant parameters
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -derive -decrypt":HITLS_APP_INVALID_ARG
+
+"Missing public key parameter"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -encrypt -in macro.txt -out out.bin":HITLS_APP_INVALID_ARG
+
+"Missing private key parameter"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -decrypt -in out.bin -out macro1.txt":HITLS_APP_INVALID_ARG
+
+"derive missing inkey"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -derive -outR R2.bin -outr r2.bin":HITLS_APP_INVALID_ARG
+
+"Input file does not exist"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -encrypt -pubin ../testdata/apps/sm2/pub.pem -in notfound.txt -out out.bin":HITLS_APP_UIO_FAIL
+
+"Key file does not exist"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -decrypt -prvin notfound.pem -in out.bin -out macro1.txt":HITLS_APP_UIO_FAIL
+
+"Redundant parameters"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -encrypt -pubin ../testdata/apps/sm2/pub.pem -prvin ../testdata/apps/sm2/prv.pem -in macro.txt -out out.bin":HITLS_APP_UIO_FAIL
+
+"Parameter format error"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -encrypt -pubin ../testdata/apps/sm2/pub.pem -in macro.txt -out":HITLS_APP_OPT_UNKOWN
+
+"Invalid command"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -xxxx -in macro.txt -out out.bin":HITLS_APP_OPT_UNKOWN
+
+"encrypt missing in parameter"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -encrypt -pubin ../testdata/apps/sm2/pub.pem -out out.bin":HITLS_APP_INVALID_ARG
+
+"decrypt missing in parameter"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -decrypt -prvin ../testdata/apps/sm2/prv.pem -out macro1.txt":HITLS_APP_INVALID_ARG
+
+"encrypt input file is empty"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -encrypt -pubin ../testdata/apps/sm2/pub.pem -in  -out out.bin":HITLS_APP_UIO_FAIL
+
+"decrypt input file is empty"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -decrypt -prvin ../testdata/apps/sm2/prv.pem -in  -out macro1.txt":HITLS_APP_UIO_FAIL
+
+"derive inR file does not exist"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -derive -inkey ../testdata/apps/sm2/prv.pem -peerkey ../testdata/apps/sm2/pub1.pem -inR notfound.bin -outR R1.bin -out share1.key":HITLS_APP_UIO_FAIL
+
+"Duplicate encrypt parameter"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -encrypt -encrypt -pubin ../testdata/apps/sm2/pub.pem -in plain.txt -out out.bin":HITLS_APP_SUCCESS
+
+"Duplicate derive parameter"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -derive -derive -inkey ../testdata/apps/sm2/prv.pem -peerkey ../testdata/apps/sm2/pub1.pem -inR R2.bin -outR R1.bin -out share1.key":HITLS_APP_SUCCESS
+
+"Invalid operation combination"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -encrypt -derive -decrypt -pubin ../testdata/apps/sm2/pub.pem -in plain.txt -out out.bin":HITLS_APP_INVALID_ARG
+
+"derive missing both peerkey and inkey"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -derive -inR R2.bin -outR R1.bin -out share1.key":HITLS_APP_INVALID_ARG
+
+"derive both peerkey and inkey specified but peerkey file does not exist"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -derive -inkey ../testdata/apps/sm2/prv.pem -peerkey notfound.pem -inR R2.bin -outR R1.bin -out share1.key":HITLS_APP_UIO_FAIL
+
+"encrypt pubin file is empty"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -encrypt -pubin  -in plain.txt -out out.bin":HITLS_APP_UIO_FAIL
+
+"decrypt prvin file is empty"
+UT_HITLS_APP_PKEYUTL_InvaildOpt_TC001:"pkeyutl -decrypt -prvin  -in plain.txt -out macro1.txt":HITLS_APP_UIO_FAIL
+
+UT_HITLS_APP_PKEYUTL_NormalOpt_TC002
+UT_HITLS_APP_PKEYUTL_NormalOpt_TC002:"pkeyutl -decrypt -prvin ../testdata/apps/sm2/prv.pem -in out_test.bin -out plain.txt":"plain.txt":"../testdata/apps/mac/test.txt"

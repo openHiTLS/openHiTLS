@@ -35,6 +35,7 @@ typedef struct {
     uint32_t lastLen;   // Indicates the remaining length of the last data.
     uint32_t flag;      // Used to save the assembly status information.
 } Poly1305Ctx;
+
 typedef struct {
     void *key; // Handle for the method.
     const EAL_SymMethod *method; // algorithm method
@@ -42,14 +43,17 @@ typedef struct {
     uint64_t aadLen; // Status, indicating whether identification data is set.
     uint64_t cipherTextLen; // status, indicating whether the identification data is set.
 } MODES_CipherChaChaPolyCtx;
+
 struct ModesChaChaCtx {
     int32_t algId;
     MODES_CipherChaChaPolyCtx chachaCtx;
     bool enc;
 };
+
 typedef struct ModesChaChaCtx MODES_CHACHAPOLY_Ctx;
 
 MODES_CHACHAPOLY_Ctx *MODES_CHACHA20POLY1305_NewCtx(int32_t algId);
+MODES_CHACHAPOLY_Ctx *MODES_CHACHA20POLY1305_NewCtxEx(void *libCtx, int32_t algId);
 int32_t MODES_CHACHA20POLY1305_InitCtx(MODES_CHACHAPOLY_Ctx *modeCtx, const uint8_t *key,
     uint32_t keyLen, const uint8_t *iv, uint32_t ivLen, void *param, bool enc);
 

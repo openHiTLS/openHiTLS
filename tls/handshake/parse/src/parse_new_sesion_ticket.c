@@ -28,20 +28,18 @@
 #include "parse_msg.h"
 #include "parse_common.h"
 #include "parse_extensions.h"
+#include "custom_extensions.h"
+
 #ifdef HITLS_TLS_PROTO_TLS13
 static int32_t ParseTicketNonce(ParsePacket *pkt, NewSessionTicketMsg *msg)
 {
     uint8_t ticketNonceSize = 0;
-    const char *logStr = BINGLOG_STR("ParseOneByteLengthField fail");
+    const char *logStr = BINGLOG_STR("ParseTicketNonce fail");
     int32_t ret = ParseOneByteLengthField(pkt, &ticketNonceSize, &msg->ticketNonce);
     if (ret == HITLS_PARSE_INVALID_MSG_LEN) {
         return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17010, logStr, ALERT_DECODE_ERROR);
     } else if (ret == HITLS_MEMALLOC_FAIL) {
         return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID17011, logStr, ALERT_INTERNAL_ERROR);
-    }
-
-    if (ticketNonceSize == 0) {
-        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID17012, logStr, ALERT_DECODE_ERROR);
     }
 
     msg->ticketNonceSize = (uint32_t)ticketNonceSize;
@@ -92,18 +90,25 @@ int32_t ParseNewSessionTicketExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_
 
         if (bufLen - bufOffset >= extMsgLen) {
             uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
-            if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED ||
-                !IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType, HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET)) {
+            if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+                || !IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx),
+                    extMsgType, HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET)
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
+            ) {
                 msg->extensionTypeMask |= 1ULL << hsExTypeId;
             }
 
-            if (IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType, HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET)) {
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+            if (IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx),
+                extMsgType, HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET)) {
                 ret = ParseCustomExtensions(ctx, buf + bufOffset, extMsgType, extMsgLen,
                     HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET, NULL, 0);
                 if (ret != HITLS_SUCCESS) {
                     return ret;
                 }
             }
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
             bufOffset += extMsgLen;
         } else {
             return HITLS_PARSE_INVALID_MSG_LEN;

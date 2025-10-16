@@ -118,9 +118,12 @@ typedef enum {
     HITLS_CFG_ERR_LOAD_CERT_BUFFER,                /**< Failed to load the certificate buffer. */
     HITLS_CFG_ERR_LOAD_KEY_FILE,                   /**< Failed to load the key file. */
     HITLS_CFG_ERR_LOAD_KEY_BUFFER,                 /**< Failed to load the key buffer. */
+    HITLS_CFG_ERR_LOAD_CRL_FILE,                   /**< Failed to load the CRL file. */
+    HITLS_CFG_ERR_LOAD_CRL_BUFFER,                 /**< Failed to load the CRL buffer. */
     HITLS_CONFIG_ERR_LOAD_GROUP_INFO,              /**< Failed to load the group info. */
     HITLS_CONFIG_ERR_LOAD_SIGN_SCHEME_INFO,        /**< Failed to load the signature scheme info. */
     HITLS_CONFIG_DUP_CUSTOM_EXT,                   /**< Duplicate custom extension type detected. */
+    HITLS_CONFIG_ERR_MAX_LIMIT_CUSTOM_EXT,         /**< Exceed the max limit of custom extensions. */
 
     HITLS_CM_FAIL_START = 0x02030001,              /**< Error start bit of the conn module. */
     HITLS_CM_LINK_FATAL_ALERTED,                   /**< link sent fatal alert. */
@@ -230,6 +233,7 @@ typedef enum {
     HITLS_PARSE_EXCESSIVE_MESSAGE_SIZE,             /**< The length of the parsing exceeds the maximum. */
     HITLS_PARSE_PRE_SHARED_KEY_FAILED,              /**< Failed to parse the PSK extension. */
     HITLS_PARSE_DUPLICATED_KEY_SHARE,               /**< duplicated key share entry. */
+    HITLS_PARSE_SESSION_TICKET_FAIL,                /**< parse session ticket fail. */
 
     HITLS_REASS_FAIL_START = 0x02070001,            /**< Reassembly module error code start bit. */
     HITLS_REASS_INVALID_FRAGMENT,                   /**< Receives invalid fragmented messages. */
@@ -281,6 +285,8 @@ typedef enum {
     HITLS_CERT_FAIL_START = 0x020C0001,            /**< Certificate module error code start bit. */
     HITLS_CERT_STORE_CTRL_ERR_SET_VERIFY_DEPTH,
     HITLS_CERT_STORE_CTRL_ERR_ADD_CERT_LIST,
+    HITLS_CERT_STORE_CTRL_ERR_ADD_CRL_LIST,        /**< Failed to add CRL list to verify store. */
+    HITLS_CERT_STORE_CTRL_ERR_CLEAR_CRL_LIST,      /**< Failed to clear CRL list from verify store. */
     HITLS_CERT_ERR_X509_DUP,                       /**< Failed to duplicate the certificate. */
     HITLS_CERT_ERR_KEY_DUP,                        /**< Failed to duplicate the key. */
     HITLS_CERT_ERR_STORE_DUP,                      /**< Failed to duplicate the store. */
@@ -294,7 +300,7 @@ typedef enum {
     HITLS_CERT_KEY_CTRL_ERR_GET_POINT_FORMAT,      /**< Failed to obtain the point format. */
     HITLS_CERT_KEY_CTRL_ERR_GET_SECBITS,           /**< Failed to obtain security bits. */
     HITLS_CERT_KEY_CTRL_ERR_IS_ENC_USAGE,          /**< Determine whether the certificate fails to be encrypted,
-                                                        Applicable to TCLP scenarios. */
+                                                        Applicable to TLCP scenarios. */
     HITLS_CERT_KEY_CTRL_ERR_IS_DIGITAL_SIGN_USAGE,  /**< Determine whether the certificate fails to be digital sign. */
     HITLS_CERT_KEY_CTRL_ERR_IS_KEY_CERT_SIGN_USAGE, /**< Determine whether the certificate fails to be cert sign. */
     HITLS_CERT_KEY_CTRL_ERR_IS_KEY_AGREEMENT_USAGE, /**< Determine whether the certificate fails to be agreement. */
@@ -329,6 +335,13 @@ typedef enum {
     HITLS_CERT_KEY_CTRL_ERR_IS_DATA_ENC_USAGE,      /**< Determine whether the certificate fails to be data enc. */
     HITLS_CERT_KEY_CTRL_ERR_IS_NON_REPUDIATION_USAGE, /**< Determine whether the certificate fails to be
                                                            non-repudiation. */
+    HITLS_CERT_CTRL_ERR_GET_SUBJECT_DN,             /**< Failed to obtain the subject DN of the certificate. */
+    HITLS_CERT_STORE_CTRL_ERR_GET_VERIFY_DEPTH,     /**< Get the certificate verification depth error. */
+    HITLS_CERT_CTRL_ERR_IS_SELF_SIGNED,             /** Determine whether the certificate is a self-signed
+                                                        certificate */
+    HITLS_CERT_CTRL_ERR_INVALID_CMD,               /**< certificate ctrl invalid command */
+    HITLS_CERT_STORE_CTRL_ERR_GET_VERIFY_FLAGS,    /**< Failed to obtain the certificate verification flags. */
+    HITLS_CERT_STORE_CTRL_ERR_SET_VERIFY_FLAGS,    /**< Failed to set the certificate verification flags. */
 
     HITLS_CRYPT_FAIL_START = 0x020D0001,           /**< Crypt adaptation module error code start bit. */
     HITLS_CRYPT_ERR_GENERATE_RANDOM,               /**< Failed to generate a random number. */
@@ -344,6 +357,7 @@ typedef enum {
     HITLS_CRYPT_ERR_KEM_ENCAPSULATE,               /**< KEM-Encapsulate calculation error. */
     HITLS_CRYPT_ERR_KEM_DECAPSULATE,               /**< KEM-Decapsulate calculation error. */
     HITLS_CRYPT_ERR_DH,                            /**< DH failure. */
+    HITLS_CRYPT_ERR_KDF,                           /**< KDF failure. */
 
     HITLS_APP_FAIL_START = 0x020E0001,             /**< APP module error code start bit. */
     HITLS_APP_ERR_TOO_LONG_TO_WRITE,               /**< APP Data written is too long. */
@@ -379,59 +393,13 @@ typedef enum {
     HITLS_SESS_ERR_DEC_SESSION_ID_CTX_FAIL,        /**< Failed to decode the session ID context. */
     HITLS_SESS_ERR_DEC_SESSION_ID_FAIL,            /**< Failed to decode the session ID. */
     HITLS_SESS_ERR_DEC_EXT_MASTER_SECRET_FAIL,     /**< Failed to decode the extended master secret. */
+    HITLS_SESS_ERR_BAD_SESSION,                    /**< Invalid session in the unclosed state. */
     HITLS_SESS_ERR_ENC_PEER_CERT_FAIL,             /**< Failed to encode the peercert. */
     HITLS_SESS_ERR_DEC_PEER_CERT_FAIL,             /**< Failed to decode the peercert. */
+    HITLS_SESS_ERR_FLUSH_FAIL,                     /**< Session flush failure. */
+    HITLS_SESS_ERR_NOT_FOUND,                      /**< Session not found. */
 
     HITLS_X509_FAIL_START = 0x02120001,            /**< The X509 feature error code start bit of. */
-    HITLS_X509_V_ERR_UNSPECIFIED,
-    HITLS_X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT,
-    HITLS_X509_V_ERR_UNABLE_TO_GET_CRL,
-    HITLS_X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE,
-    HITLS_X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE,
-    HITLS_X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY,
-    HITLS_X509_V_ERR_CERT_SIGNATURE_FAILURE,
-    HITLS_X509_V_ERR_CRL_SIGNATURE_FAILURE,
-    HITLS_X509_V_ERR_CERT_NOT_YET_VALID,
-    HITLS_X509_V_ERR_CERT_HAS_EXPIRED,
-    HITLS_X509_V_ERR_CRL_NOT_YET_VALID,
-    HITLS_X509_V_ERR_CRL_HAS_EXPIRED,
-    HITLS_X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD,
-    HITLS_X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD,
-    HITLS_X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD,
-    HITLS_X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD,
-    HITLS_X509_V_ERR_OUT_OF_MEM,
-    HITLS_X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT,
-    HITLS_X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN,
-    HITLS_X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY,
-    HITLS_X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE,
-    HITLS_X509_V_ERR_CERT_CHAIN_TOO_LONG,
-    HITLS_X509_V_ERR_CERT_REVOKED,
-    HITLS_X509_V_ERR_INVALID_CA,
-    HITLS_X509_V_ERR_PATH_LENGTH_EXCEEDED,
-    HITLS_X509_V_ERR_INVALID_PURPOSE,
-    HITLS_X509_V_ERR_CERT_UNTRUSTED,
-    HITLS_X509_V_ERR_CERT_REJECTED,
-    HITLS_X509_V_ERR_SUBJECT_ISSUER_MISMATCH,
-    HITLS_X509_V_ERR_AKID_SKID_MISMATCH,
-    HITLS_X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH,
-    HITLS_X509_V_ERR_KEYUSAGE_NO_CERTSIGN,
-    HITLS_X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER,
-    HITLS_X509_V_ERR_UNHANDLED_CRITICAL_EXTENSION,
-    HITLS_X509_V_ERR_KEYUSAGE_NO_CRL_SIGN,
-    HITLS_X509_V_ERR_UNHANDLED_CRITICAL_CRL_EXTENSION,
-    HITLS_X509_V_ERR_INVALID_NON_CA,
-    HITLS_X509_V_ERR_PROXY_PATH_LENGTH_EXCEEDED,
-    HITLS_X509_V_ERR_KEYUSAGE_NO_DIGITAL_SIGNATURE,
-    HITLS_X509_V_ERR_PROXY_CERTIFICATES_NOT_ALLOWED,
-    HITLS_X509_V_ERR_INVALID_EXTENSION,
-    HITLS_X509_V_ERR_INVALID_POLICY_EXTENSION,
-    HITLS_X509_V_ERR_NO_EXPLICIT_POLICY,
-    HITLS_X509_V_ERR_DIFFERENT_CRL_SCOPE,
-    HITLS_X509_V_ERR_ERROR_IN_CMP_CERT_NOT_AFTER_FIELD,
-    HITLS_X509_V_ERR_ERROR_IN_CMP_CRL_THIS_UPDATE_FIELD,
-    HITLS_X509_V_ERR_ERROR_IN_CMP_CRL_NEXT_UPDATE_FIELD,
-    HITLS_X509_V_ERR_ERROR_IN_CMP_CERT_NOT_BEFORE_FIELD,
-    HITLS_X509_V_ERR_CRL_PATH_VALIDATION_ERROR,
 
     HITLS_CERT_SELF_ADAPT_ERR = 0x02130001,
     HITLS_CERT_SELF_ADAPT_INVALID_TIME,

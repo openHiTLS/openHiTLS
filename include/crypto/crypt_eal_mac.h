@@ -24,6 +24,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "bsl_params.h"
 #include "crypt_algid.h"
 #include "crypt_types.h"
 
@@ -201,6 +202,18 @@ uint32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx);
  *         Other error codes see crypt_errno.h
  */
 int32_t CRYPT_EAL_MacCtrl(CRYPT_EAL_MacCtx *ctx, int32_t type, void *in, uint32_t len);
+
+/**
+ * @ingroup crypt_eal_mac
+ * @brief   Set algorithm parameters.
+ *
+ * @param   ctx [IN] MAC context
+ * @param   param [IN] Parameter
+ * @retval #CRYPT_SUCCESS, parameters are set successfully.
+ * @retval #CRYPT_NULL_INPUT, the input parameter is NULL.
+ *         Other error codes see crypt_errno.h
+ */
+int32_t CRYPT_EAL_MacSetParam(CRYPT_EAL_MacCtx *ctx, const BSL_Param *param);
 
 #ifdef __cplusplus
 }   // end extern "C"

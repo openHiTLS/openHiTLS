@@ -133,6 +133,40 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         .cipherType = HITLS_AEAD_CIPHER,
         .strengthBits = 128},
 #endif
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
+#ifdef HITLS_TLS_SUITE_SM4_GCM_SM3
+    {.enable = true,
+        .name = CIPHER_NAME("HITLS_SM4_GCM_SM3"),
+        .stdName = CIPHER_NAME("HITLS_SM4_GCM_SM3"),
+        .cipherSuite = HITLS_SM4_GCM_SM3,
+        .cipherAlg = HITLS_CIPHER_SM4_GCM,
+        .kxAlg = HITLS_KEY_EXCH_NULL,
+        .authAlg = HITLS_AUTH_ANY,
+        .macAlg = HITLS_MAC_SM3,
+        .hashAlg = HITLS_HASH_SM3,
+        .signScheme = CERT_SIG_SCHEME_SM2_SM3,
+        KEY_BLOCK_PARTITON_LENGTH(12u, 16u, 0u, 0u, 0u, 16u),
+        VERSION_SCOPE(HITLS_VERSION_TLS13, HITLS_VERSION_TLS13, 0, 0),
+        .cipherType = HITLS_AEAD_CIPHER,
+        .strengthBits = 128},
+#endif
+#ifdef HITLS_TLS_SUITE_SM4_CCM_SM3
+    {.enable = true,
+        .name = CIPHER_NAME("HITLS_SM4_CCM_SM3"),
+        .stdName = CIPHER_NAME("TLS_SM4_CCM_SM3"),
+        .cipherSuite = HITLS_SM4_CCM_SM3,
+        .cipherAlg = HITLS_CIPHER_SM4_CCM,
+        .kxAlg = HITLS_KEY_EXCH_NULL,
+        .authAlg = HITLS_AUTH_ANY,
+        .macAlg = HITLS_MAC_SM3,
+        .hashAlg = HITLS_HASH_SM3,
+        .signScheme = CERT_SIG_SCHEME_SM2_SM3,
+        KEY_BLOCK_PARTITON_LENGTH(12u, 16u, 0u, 0u, 0u, 16u),
+        VERSION_SCOPE(HITLS_VERSION_TLS13, HITLS_VERSION_TLS13, 0, 0),
+        .cipherType = HITLS_AEAD_CIPHER,
+        .strengthBits = 128},
+#endif
+#endif
 #ifdef HITLS_TLS_SUITE_RSA_WITH_AES_128_CBC_SHA
     {.enable = true,
         .name = CIPHER_NAME("HITLS_RSA_WITH_AES_128_CBC_SHA"),
@@ -1552,6 +1586,8 @@ const CipherSuiteCertType g_cipherSuiteAndCertTypes[] = {
     { HITLS_ECC_SM4_CBC_SM3, CERT_TYPE_ECDSA_SIGN },
     { HITLS_ECDHE_SM4_GCM_SM3, CERT_TYPE_ECDSA_SIGN },
     { HITLS_ECC_SM4_GCM_SM3, CERT_TYPE_ECDSA_SIGN },
+    { HITLS_SM4_GCM_SM3, CERT_TYPE_ECDSA_SIGN },
+    { HITLS_SM4_CCM_SM3, CERT_TYPE_ECDSA_SIGN },
 };
 
 /**
@@ -2118,7 +2154,7 @@ int32_t HITLS_CFG_GetDescription(const HITLS_Cipher *cipher, uint8_t *buf, int32
  * @return  HITLS_SUCCESS Obtained successfully.
  *          HITLS_NULL_INPUT The input parameter pointer is NULL.
  */
-int32_t HITLS_CIPHER_IsAead(const HITLS_Cipher *cipher, uint8_t *isAead)
+int32_t HITLS_CIPHER_IsAead(const HITLS_Cipher *cipher, bool *isAead)
 {
     if (cipher == NULL || isAead == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);

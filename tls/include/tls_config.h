@@ -65,6 +65,10 @@ typedef struct TlsSessionManager TLS_SessionMgr;
 /* max cert list is 100k */
 #define HITLS_MAX_CERT_LIST_DEFAULT (1024 * 100)
 
+#define HITLS_ENDPOINT_UNDEFINED 0
+#define HITLS_ENDPOINT_CLIENT 1
+#define HITLS_ENDPOINT_SERVER 2
+
 /**
  * @brief Group information
  */
@@ -72,13 +76,13 @@ typedef struct {
     char *name;           // group name
     int32_t paraId;             // parameter id CRYPT_PKEY_ParaId
     int32_t algId;              // algorithm id CRYPT_PKEY_AlgId
-    int32_t secBits;           // security bits
+    int32_t secBits;            // security bits
     uint16_t groupId;           // iana group id, HITLS_NamedGroup
-    int32_t pubkeyLen;         // public key length(CH keyshare / SH keyshare)
-    int32_t sharedkeyLen;      // shared key length
-    int32_t ciphertextLen;     // ciphertext length(SH keyshare)
+    uint32_t pubkeyLen;         // public key length(CH keyshare / SH keyshare)
+    uint32_t sharedkeyLen;      // shared key length
+    uint32_t ciphertextLen;     // ciphertext length(SH keyshare)
     uint32_t versionBits;       // TLS_VERSION_MASK
-    bool isKem;                // true: KEM, false: KEX
+    bool isKem;                 // true: KEM, false: KEX
 } TLS_GroupInfo;
 
 /**
@@ -108,7 +112,7 @@ typedef struct {
 #define TLS_CAPABILITY_LIST_MALLOC_SIZE 10
 #endif
 
-typedef struct CustomExt_Methods HITLS_CustomExts;
+typedef struct CustomExtMethods HITLS_CustomExts;
 
 /**
  * @brief   TLS Global Configuration
@@ -125,6 +129,7 @@ typedef struct TlsConfig {
     uint32_t sigSchemeInfolen;
     uint32_t sigSchemeInfoSize;
 #endif
+    uint32_t endpoint;                  /* client or server */
     uint32_t version;                   /* supported proto version */
     uint32_t originVersionMask;         /* the original supported proto version mask */
     uint16_t minVersion;                /* min supported proto version */
@@ -190,7 +195,8 @@ typedef struct TlsConfig {
     uint8_t sessionIdCtx[HITLS_SESSION_ID_CTX_MAX_SIZE];  /* the sessionId context */
 
     uint32_t ticketNums;                /* TLS1.3 ticket number */
-    uint16_t maxSendFragment;           /* max send fragment to restrict the amount of plaintext bytes in any record  */
+    uint16_t maxSendFragment;           /* max send fragment to restrict the amount of plaintext bytes in any record */
+    uint32_t recInbufferSize;           /* Rec inbuffer inital size */
     TLS_SessionMgr *sessMgr;            /* session management */
 
     void *userData;                     /* user data */
@@ -245,10 +251,23 @@ typedef struct TlsConfig {
     HITLS_AppVerifyCookieCb appVerifyCookieCb;
 #endif
     HITLS_NewSessionCb newSessionCb;    /* negotiates to generate a session */
+#ifdef HITLS_TLS_FEATURE_SESSION
+#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
+    HITLS_SessionRemoveCb sessionRemoveCb; /* session removal callback */
+    HITLS_SessionGetCb sessionGetCb;       /* obtains a session based on the session ID */
+#endif /* HITLS_TLS_FEATURE_SESSION_CACHE_CB */
+#ifdef HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET
+    uint8_t *sessionTicketExt;
+    uint32_t sessionTicketExtSize;
+    HITLS_SessionTicketExtProcessCb sessionTicketExtCb;
+    void *sessionTicketExtCbArg;
+#endif /* HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET */
+#endif /* HITLS_TLS_FEATURE_SESSION */
     HITLS_KeyLogCb keyLogCb;            /* the key log callback */
     bool isKeepPeerCert;                /* whether to save the peer certificate */
 
     HITLS_CustomExts *customExts;
+    bool isMiddleBoxCompat;             /* whether to support middlebox compatibility */
 } TLS_Config;
 
 #define LIBCTX_FROM_CONFIG(config) ((config == NULL) ? NULL : (config)->libCtx)

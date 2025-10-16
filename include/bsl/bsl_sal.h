@@ -231,6 +231,17 @@ uint64_t BSL_SAL_ThreadGetId(void);
 
 /**
  * @ingroup bsl_sal
+ * @brief Obtain the process ID.
+ *
+ * Obtain the process ID.
+ *
+ * @attention none
+ * @retval Process ID
+ */
+int32_t BSL_SAL_GetPid(void);
+
+/**
+ * @ingroup bsl_sal
  * @brief run once: Use the initialization callback.
  *
  * @attention This function should not be a cancel, otherwise the default implementation of run
@@ -585,6 +596,15 @@ long BSL_SAL_Tick(void);
 long BSL_SAL_TicksPerSec(void);
 
 /**
+ * @ingroup bsl_sal
+ * @brief   Get the system time in nanoseconds.
+ *
+ * @attention none
+ * @retval The time in nanoseconds.
+ */
+uint64_t BSL_SAL_TIME_GetNSec(void);
+
+/**
  * @ingroup  bsl_sal_net
  * @brief socket address.
  * 
@@ -925,6 +945,7 @@ typedef enum {
     BSL_SAL_THREAD_LOCK_WRITE_LOCK_CB_FUNC,
     BSL_SAL_THREAD_LOCK_UNLOCK_CB_FUNC,
     BSL_SAL_THREAD_GET_ID_CB_FUNC,
+    BSL_SAL_THREAD_RUN_ONCE_CB_FUNC,                    /* BslSalThreadRunOnce */
 
     BSL_SAL_NET_WRITE_CB_FUNC = 0x0300,
     BSL_SAL_NET_READ_CB_FUNC,
@@ -954,6 +975,7 @@ typedef enum {
     BSL_SAL_TIME_SLEEP_CB_FUNC,
     BSL_SAL_TIME_TICK_CB_FUNC,
     BSL_SAL_TIME_TICK_PER_SEC_CB_FUNC,
+    BSL_SAL_TIME_GET_TIME_IN_NS,
 
     BSL_SAL_FILE_OPEN_CB_FUNC = 0X0500,                 /* BslSalFileOpen */
     BSL_SAL_FILE_READ_CB_FUNC,                          /* BslSalFileRead */
@@ -973,6 +995,8 @@ typedef enum {
     BSL_SAL_DL_OPEN_CB_FUNC = 0x0700,
     BSL_SAL_DL_CLOSE_CB_FUNC,
     BSL_SAL_DL_SYM_CB_FUNC,
+
+    BSL_SAL_PID_GET_ID_CB_FUNC = 0x0800,
 
     BSL_SAL_MAX_FUNC_CB = 0xffff
 } BSL_SAL_CB_FUNC_TYPE;
@@ -1071,6 +1095,22 @@ typedef int32_t (*BslSalThreadUnlock)(BSL_SAL_ThreadLockHandle lock);
  * @retval Thread ID
  */
 typedef uint64_t (*BslSalThreadGetId)(void);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Run the initialization function once.
+ *
+ * @param onceControl [IN/OUT] Once control
+ * @param initFunc [IN] Initialization function
+ * @retval #BSL_SUCCESS, succeeded.
+ * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
+ * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of onceControl is NULL.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSalThreadRunOnce)(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine initFunc);
 
 /**
 * @ingroup bsl_sal
@@ -1358,6 +1398,14 @@ typedef long (*BslSalTick)(void);
  * @retval Number of ticks per second.
  */
 typedef long (*BslSalTicksPerSec)(void);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Get the system time in nanoseconds.
+ *
+ * @retval The time in nanoseconds.
+ */
+typedef uint64_t (*BslGetTimeInNS)(void);
 
 /**
  * @ingroup bsl_sal

@@ -92,7 +92,7 @@ static int32_t HandshakeDone(TLS_Ctx *ctx)
     return ret;
 }
 
-static bool IsHsSendState(HITLS_HandshakeState state)
+bool IsHsSendState(HITLS_HandshakeState state)
 {
     switch (state) {
         case TRY_SEND_HELLO_REQUEST:

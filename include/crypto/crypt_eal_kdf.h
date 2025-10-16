@@ -51,7 +51,7 @@ bool CRYPT_EAL_KdfIsValidAlgId(CRYPT_KDF_AlgId id);
  * @param libCtx [IN] Library context
  * @param attrName [IN] Specify expected attribute values
  * @param algId [IN] kdf algorithm ID.
- * @retval Success: cipher ctx.
+ * @retval Success: kdf ctx.
  *         Fails: NULL.
  */
 CRYPT_EAL_KdfCTX *CRYPT_EAL_ProviderKdfNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName);
@@ -60,7 +60,7 @@ CRYPT_EAL_KdfCTX *CRYPT_EAL_ProviderKdfNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t 
  * @ingroup crypt_eal_kdf
  * @brief Generate kdf handles
  * @param algId [IN] kdf algorithm ID.
- * @retval Success: cipher ctx.
+ * @retval Success: kdf ctx.
  *         Fails: NULL.
  */
 CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfNewCtx(CRYPT_KDF_AlgId algId);
@@ -100,20 +100,6 @@ int32_t CRYPT_EAL_KdfDerive(CRYPT_EAL_KdfCTX *ctx, uint8_t *key, uint32_t keyLen
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_KdfDeInitCtx(CRYPT_EAL_KdfCTX *ctx);
-
- /**
- * @ingroup crypt_eal_kdf
- * @brief get or set kdf param
- *
- * @param ctx [IN] kdf context
- * @param cmd [IN] Option information
- * @param val [IN/OUT] Data to be set/obtained
- * @param valLen [IN] Length of the data marked as "val"
- *
- * @retval  #CRYPT_SUCCESS.
- *          For other error codes, see crypt_errno.h.
- */
-int32_t CRYPT_EAL_KdfCtrl(CRYPT_EAL_KdfCTX *ctx, int32_t cmd, void *val, uint32_t valLen);
 
  /**
  * @ingroup crypt_eal_kdf

@@ -38,12 +38,22 @@ extern "C" {
 
 typedef struct SIPHASH_Ctx CRYPT_SIPHASH_Ctx;
 
+#define CRYPT_SIPHASH_SetParam NULL
+
 /**
  * @brief Create a new siphash context.
  * @param id [IN] MAC algorithm id
  * @retval Pointer to the created siphash context.
  */
 CRYPT_SIPHASH_Ctx *CRYPT_SIPHASH_NewCtx(CRYPT_MAC_AlgId id);
+
+/**
+ * @brief Create a new siphash context with external library context.
+ * @param libCtx [in] External library context
+ * @param id [in] siphash algorithm ID
+ * @return Pointer to the siphash context
+ */
+CRYPT_SIPHASH_Ctx *CRYPT_SIPHASH_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id);
 
 /**
  * @brief Initialize the siphash context by using the key passed by the user.
@@ -81,14 +91,18 @@ int32_t CRYPT_SIPHASH_Final(CRYPT_SIPHASH_Ctx *ctx, uint8_t *out, uint32_t *outl
 /**
  * @brief Re-initialize the siphash context
  * @param ctx [IN]  siphash context
+ * @retval #CRYPT_SUCCESS       Succeeded.
+ * @retval #CRYPT_NULL_INPUT    The input parameter is NULL.
  */
-void CRYPT_SIPHASH_Reinit(CRYPT_SIPHASH_Ctx *ctx);
+int32_t CRYPT_SIPHASH_Reinit(CRYPT_SIPHASH_Ctx *ctx);
 
 /**
  * @brief   siphash de-initialization
  * @param ctx [IN]  siphash context
+ * @retval #CRYPT_SUCCESS       Succeeded.
+ * @retval #CRYPT_NULL_INPUT    The input parameter is NULL.
  */
-void CRYPT_SIPHASH_Deinit(CRYPT_SIPHASH_Ctx *ctx);
+int32_t CRYPT_SIPHASH_Deinit(CRYPT_SIPHASH_Ctx *ctx);
 
 /**
  * @brief   siphash control

@@ -70,6 +70,8 @@ typedef enum {
     HITLS_X509_GET_BEFORE_TIME,        /** Get the validity start time */
     HITLS_X509_GET_AFTER_TIME,         /** Get the validity end time */
     HITLS_X509_GET_SIGN_MDALG,         /** Get the hash algorithm of signature algorithm used to sign the cert/ */
+    HITLS_X509_GET_ENCODE_SUBJECT_DN,  /** Get the ASN.1 DER encoded subject distinguished name */
+    HITLS_X509_IS_SELF_SIGNED,         /** Determine whether the certificate is a self-signed certificate */
 
     HITLS_X509_SET_VERSION = 0x0200,   /** Set the version for the cert. */
     HITLS_X509_SET_SERIALNUM,          /** Set the serial number for the cert, the length range is 1 to 20. */
@@ -96,6 +98,7 @@ typedef enum {
     HITLS_X509_EXT_GET_AKI,                     /** get the Authority Key Identifier form the crl/cert/csr. */
     HITLS_X509_EXT_GET_KUSAGE,                  /** get the key usage form the crl/cert/csr.
                                                     Note: If key usage is not set, return 0xffff. */
+    HITLS_X509_EXT_GET_BCONS,                   /** Get the basic constraints extension. */
 
     HITLS_X509_EXT_CHECK_SKI = 0x0600,          /** Check if ski is exists. */
 
@@ -259,7 +262,7 @@ typedef struct {
 
 typedef struct {
     bool critical;
-    BslList *issuerName;
+    BslList *issuerName; // List of HITLS_X509_GeneralName
 } HITLS_X509_RevokeExtCertIssuer;
 
 typedef enum {
@@ -271,8 +274,18 @@ typedef enum {
     HITLS_X509_VFY_FLAG_CRL_DEV = 2
 } HITLS_X509_VFY_FLAGS;
 
+/**
+ * @ingroup hitls_pki_types
+ * @brief Commands for manipulating the X509 store context
+ * Enumeration Value Segmentation Principle:
+ *  0x0~0x0100: Enumeration values must be set before constructing a certificate chain or verification.
+ *  0x0100~0x0200: Enumeration values corresponding to capabilities can be uesd at any time.
+ *  0x0200~0x0300: Enumeration values corresponding to capabilities can only be during signature verification or
+ *                 certificate chain construction.
+ *  Others: To be determined.
+ */
 typedef enum {
-    HITLS_X509_STORECTX_SET_PARAM_DEPTH,
+    HITLS_X509_STORECTX_SET_PARAM_DEPTH = 0x0,
     HITLS_X509_STORECTX_SET_PARAM_FLAGS,
     HITLS_X509_STORECTX_SET_TIME,
     HITLS_X509_STORECTX_SET_SECBITS,
@@ -281,8 +294,31 @@ typedef enum {
     HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
     HITLS_X509_STORECTX_SHALLOW_COPY_SET_CA,
     HITLS_X509_STORECTX_SET_CRL,
-    HITLS_X509_STORECTX_REF_UP,
     HITLS_X509_STORECTX_SET_VFY_SM2_USERID,
+    HITLS_X509_STORECTX_SET_VERIFY_CB,
+    HITLS_X509_STORECTX_SET_USR_DATA,
+    HITLS_X509_STORECTX_ADD_CA_PATH,       /**< Add additional CA path for on-demand loading */
+    HITLS_X509_STORECTX_CLEAR_CRL,
+    HITLS_X509_STORECTX_SET_DEFAULT_PATH,  /**< Set default CA path (OPENHITLSDIR/ssl/certs) */
+
+    HITLS_X509_STORECTX_REF_UP = 0x0100,
+    HITLS_X509_STORECTX_GET_PARAM_DEPTH,
+    HITLS_X509_STORECTX_GET_VERIFY_CB,
+    HITLS_X509_STORECTX_GET_USR_DATA,
+    HITLS_X509_STORECTX_GET_PARAM_FLAGS,
+
+    /* New commands for the added fields */
+    HITLS_X509_STORECTX_SET_ERROR = 0x0200,
+    HITLS_X509_STORECTX_GET_ERROR,
+    HITLS_X509_STORECTX_GET_CUR_CERT,
+    /*
+     * Indicates the depth of certificate chain verification, starting from 0, representing the entity certificate,
+     * CA certificate,..., root certificate respectively.
+     */
+    HITLS_X509_STORECTX_SET_CUR_DEPTH,
+    HITLS_X509_STORECTX_GET_CUR_DEPTH,
+    HITLS_X509_STORECTX_GET_CERT_CHAIN,
+
     HITLS_X509_STORECTX_MAX
 } HITLS_X509_StoreCtxCmd;
 
@@ -312,6 +348,7 @@ typedef enum {
     HITLS_PKI_PRINT_CERT,
     HITLS_PKI_PRINT_NEXTUPDATE,
     HITLS_PKI_PRINT_CSR,
+    HITLS_PKI_PRINT_CRL
 } HITLS_PKI_PrintCmd;
 
 /**
@@ -334,11 +371,9 @@ typedef struct {
 /**
  * Parameters for p12 file generation.
  * Only PBES2 is supported, but different symmetric encryption algorithms can be used within certificates and keys.
- * Additionally, the encryption key must be the same for both certificates and private keys.
  */
 typedef struct {
-    CRYPT_EncodeParam certEncParam;
-    CRYPT_EncodeParam keyEncParam;
+    CRYPT_EncodeParam encParam;
     HITLS_PKCS12_MacParam macParam;
 } HITLS_PKCS12_EncodeParam;
 
@@ -349,7 +384,25 @@ typedef enum {
     HITLS_PKCS12_ADD_CERTBAG,                   /** Set other cert-Bag to p12-ctx. */
     HITLS_PKCS12_GET_ENTITY_CERT,               /** Obtain entity cert from p12-ctx. */
     HITLS_PKCS12_GET_ENTITY_KEY,                /** Obtain entity pkey from p12-ctx. */
+    HITLS_PKCS12_GET_SECRETBAGS,                /** Get secret-Bags from p12-ctx.
+                                                    The list is read-only and should not be modified. */
+    HITLS_PKCS12_ADD_SECRETBAG,                 /** Add secret-Bag to p12-ctx. */
+    HITLS_PKCS12_GET_ENTITY_CERTBAG,            /** Obtain entity cert-Bag from p12-ctx. */
+    HITLS_PKCS12_GET_ENTITY_KEYBAG,             /** Obtain entity key-Bag from p12-ctx. */
+    HITLS_PKCS12_ADD_KEYBAG,                    /** Add key-Bag to p12-ctx. */
+    HITLS_PKCS12_GET_KEYBAGS,                   /** Get key-Bags from p12-ctx.
+                                                    The list is read-only and should not be modified. */
+    HITLS_PKCS12_GET_CERTBAGS,                  /** Get cert-Bags from p12-ctx.
+                                                    The list is read-only and should not be modified. */
 } HITLS_PKCS12_Cmd;
+
+typedef enum {
+    HITLS_PKCS12_BAG_ADD_ATTR,                  /** Add attribute to safeBag. */
+    HITLS_PKCS12_BAG_GET_ATTR,                  /** Get attribute from safeBag. */
+    HITLS_PKCS12_BAG_GET_VALUE,                 /** Get value from safeBag. */
+    HITLS_PKCS12_BAG_GET_ID,                    /** Get id from safeBag. */
+    HITLS_PKCS12_BAG_GET_TYPE,                  /** Get type from safeBag. */
+} HITLS_PKCS12_BagCmd;
 
 #ifdef __cplusplus
 }

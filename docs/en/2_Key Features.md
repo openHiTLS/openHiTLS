@@ -1,6 +1,6 @@
 # Overview
 
-openHiTLS aims to provide efficient and agile cryptography suites for all scenarios. With the elastic architecture of hierarchical modules and features, features can be selected and constructed as required, supporting applications in all scenarios to meet different requirements for RAM and ROM, computing performance, and feature satisfaction. Currently, openHiTLS supports cryptographic algorithms, secure communication protocols (TLS, DTLS, and TLCP), and Arm-based performance optimization of commercial encryption algorithms. More features are to be planned and welcome to participate in co-construction.
+openHiTLS aims to provide efficient and agile cryptography suites for all scenarios. With the elastic architecture of hierarchical modules and features, features can be selected and constructed as required, supporting applications in all scenarios to meet different requirements for RAM and ROM, computing performance, and feature satisfaction. Currently, openHiTLS supports cryptographic algorithms, secure communication protocols (TLS, DTLS, and TLCP), Arm-based performance optimization of commercial encryption algorithms, **and Hybrid Key Exchange**. More features are to be planned and welcome to participate in co-construction.
 
 # Feature Description
 

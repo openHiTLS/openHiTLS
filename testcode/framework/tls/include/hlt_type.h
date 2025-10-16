@@ -49,6 +49,7 @@ extern "C" {
 #define MAX_ATTR_NAME_LEN (256)
 #define MAX_PROVIDER_PATH_LEN (256)
 #define MAX_PROVIDER_COUNT (10)
+#define KEY_LOG_CB_LEN (1024)
 
 #define DEFAULT_CERT_PATH       "../../testcode/testdata/tls/certificate/der/"
 
@@ -211,6 +212,7 @@ typedef struct {
     char alpnList[MAX_ALPN_LEN];               // alpn
     char alpnUserData[ALPN_CB_NAME_LEN];
     char alpnSelectCb[ALPN_DATA_NAME_LEN];     // Application Layer Protocol Select Callback
+    char keyLogCb[KEY_LOG_CB_LEN];
 
     // Indicates whether renegotiation is supported. The default value is False, indicating that renegotiation is not
     // supported
@@ -245,7 +247,7 @@ typedef struct {
     bool isNoSetCert;                   // Indicates whether the certificate does not need to be set
 	int32_t securitylevel;                  // Security level
     int32_t readAhead;
-
+    void *caList;
     char psk[PSK_MAX_LEN];              // psk password
     char ticketKeyCb[TICKET_KEY_CB_NAME_LEN]; // ticket key Callback Function Name
 
@@ -265,6 +267,7 @@ typedef struct {
     int32_t providerCnt;
     char attrName[MAX_ATTR_NAME_LEN];
     uint32_t modeSupport;       // support features, such as HITLS_MODE_SEND_FALLBACK_SCSV. All mode at hitls_type.h
+    bool isMiddleBoxCompat;     // Indicates whether to enable the middle box compatibility mode.
 } HLT_Ctx_Config;
 
 typedef struct {

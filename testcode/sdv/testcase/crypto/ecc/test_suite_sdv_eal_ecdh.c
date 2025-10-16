@@ -15,6 +15,8 @@
 /* INCLUDE_BASE test_suite_sdv_eal_ecc */
 
 /* BEGIN_HEADER */
+#include "crypt_ecc.h"
+#include "ecc_local.h"
 /* END_HEADER */
 #define ECDH_MAX_BIT_LEN 521
 
@@ -716,5 +718,238 @@ void SDV_CRYPTO_ECDH_GET_SEC_BITS_FUNC_TC001(int paraid, int secBits)
     ASSERT_EQ(CRYPT_EAL_PkeyGetSecurityBits(pkey), secBits);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECDH_CHECK_KEYPAIR_FUNC_TC001
+ * @title  ECDH CRYPT_EAL_PkeyPairCheck test.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDH_CHECK_KEYPAIR_FUNC_TC001(int paraid, int isProvider)
+{
+#if !defined(HITLS_CRYPTO_ECDH_CHECK)
+    (void)paraid;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    uint8_t wrong[KEY_MAX_LEN] = {1};
+    CRYPT_EAL_PkeyPub ecdhPubKey = {0};
+    CRYPT_EAL_PkeyPrv ecdhPrvKey = {0};
+
+    KeyData pubKeyVector = {{0}, KEY_MAX_LEN};
+    KeyData prvKeyVector = {{0}, KEY_MAX_LEN};
+    CRYPT_EAL_PkeyCtx *pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH,
+        CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *pubCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH,
+        CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *prvCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH,
+        CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_TRUE(pubCtx != NULL);
+    ASSERT_TRUE(prvCtx != NULL);
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraid), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pubCtx, paraid), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvCtx, paraid), CRYPT_SUCCESS);
+
+    Ecc_SetPubKey(&ecdhPubKey, CRYPT_PKEY_ECDH, pubKeyVector.data, pubKeyVector.len);
+    Ecc_SetPrvKey(&ecdhPrvKey, CRYPT_PKEY_ECDH, prvKeyVector.data, prvKeyVector.len);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pkey, pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &ecdhPubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &ecdhPrvKey), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubCtx, &ecdhPubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &ecdhPrvKey), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_SUCCESS);
+
+    ecdhPrvKey.key.eccPrv.data = wrong;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &ecdhPrvKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_ECDH_PAIRWISE_CHECK_FAIL);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECDH_CHECK_PRVKEY_FUNC_TC001
+ * @title  ECDH CRYPT_EAL_PkeyPrvCheck test.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDH_CHECK_PRVKEY_FUNC_TC001(int paraid, int isProvider)
+{
+#if !defined(HITLS_CRYPTO_ECDH_CHECK)
+    (void)paraid;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    CRYPT_EAL_PkeyPrv ecdhPrvKey = {0};
+    CRYPT_ECDH_Ctx *ctx = NULL;
+    BN_BigNum *n = NULL;
+    BN_BigNum *prvKey = NULL;
+
+    KeyData prvKeyVector = {{0}, KEY_MAX_LEN};
+    CRYPT_EAL_PkeyCtx *pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH,
+        CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *prvCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH,
+        CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_TRUE(prvCtx != NULL);
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraid), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvCtx, paraid), CRYPT_SUCCESS);
+
+    Ecc_SetPrvKey(&ecdhPrvKey, CRYPT_PKEY_ECDH, prvKeyVector.data, prvKeyVector.len);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey), CRYPT_ECC_PKEY_ERR_EMPTY_KEY);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey), CRYPT_SUCCESS);
+
+    ctx = (CRYPT_ECDH_Ctx *)pkey->key;
+    prvKey = ctx->prvkey;
+    n = ECC_GetParaN(ctx->para);
+
+    (void)BN_Copy(prvKey, n);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey), CRYPT_ECDH_INVALID_PRVKEY);
+
+    (void)BN_SubLimb(prvKey, prvKey, 1); // key = n - 1
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey), CRYPT_SUCCESS);
+
+    (void)BN_Zeroize(prvKey); // key = 0
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey), CRYPT_ECDH_INVALID_PRVKEY);
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    BN_Destroy(n);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECC_MUL_CAL_TEST_FUNC_TC001
+ * @title  ECDH SDV_CRYPTO_ECC_MUL_CAL_TEST_FUNC_TC001 test.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECC_MUL_CAL_TEST_FUNC_TC001(int paraId)
+{
+    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ECC_Para *para = ECC_NewPara(paraId);
+    ASSERT_TRUE(para != NULL);
+    BN_BigNum *N = ECC_GetParaN(para);
+    ASSERT_TRUE(N != NULL);
+    BN_BigNum *rand = BN_Create(0);
+    ASSERT_TRUE(rand != NULL);
+    ASSERT_EQ(BN_RandRange(rand, N), CRYPT_SUCCESS);
+
+    ECC_Point *point1 = ECC_NewPoint(para);
+    ASSERT_TRUE(point1 != NULL);
+    ECC_Point *point2 = ECC_NewPoint(para);
+    ASSERT_TRUE(point2 != NULL);
+    ECC_Point *point3 = ECC_NewPoint(para);
+    ASSERT_TRUE(point3 != NULL);
+
+    // cal N*G
+    ASSERT_EQ(ECC_PointMul(para, point1, N, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(ECP_PointMulFast(para, point2, N, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(ECC_PointCmp(para, point1, point2), CRYPT_SUCCESS);
+    // cal random*G
+    ASSERT_EQ(ECC_PointMul(para, point1, rand, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(ECP_PointMulFast(para, point2, rand, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(ECC_PointCmp(para, point1, point2), CRYPT_SUCCESS);
+    // cal random*Point
+    ASSERT_EQ(ECC_PointMul(para, point2, rand, point1), CRYPT_SUCCESS);
+    ASSERT_EQ(ECP_PointMulFast(para, point3, rand, point1), CRYPT_SUCCESS);
+    ASSERT_EQ(ECC_PointCmp(para, point2, point3), CRYPT_SUCCESS);
+
+EXIT:
+    ECC_FreePara(para);
+    ECC_FreePoint(point1);
+    ECC_FreePoint(point2);
+    ECC_FreePoint(point3);
+    BN_Destroy(rand);
+    BN_Destroy(N);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+
+/**
+ * @test   SDV_CRYPTO_ECC_ADD_CAL_TEST_FUNC_TC001
+ * @title  ECDH SDV_CRYPTO_ECC_ADD_CAL_TEST_FUNC_TC001 test.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECC_ADD_CAL_TEST_FUNC_TC001(int paraId, Hex *bk1, Hex *bk2, Hex *bk3)
+{
+    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ECC_Para *para = ECC_NewPara(paraId);
+    ECC_Point *twoG = ECC_NewPoint(para);
+    ECC_Point *pt1 = ECC_NewPoint(para);
+    ECC_Point *pt2 = ECC_NewPoint(para);
+    ECC_Point *r1 = ECC_NewPoint(para);
+    ECC_Point *r2 = ECC_NewPoint(para);
+
+    BN_BigNum *bnk1 = BN_Create(0);
+    BN_BigNum *bnk2 = BN_Create(0);
+    BN_BigNum *bnk3 = BN_Create(0);
+
+    ASSERT_TRUE(bnk1 != NULL);
+    ASSERT_TRUE(bnk2 != NULL);
+    ASSERT_TRUE(bnk3 != NULL);
+    ASSERT_TRUE(twoG != NULL);
+    ASSERT_TRUE(pt1 != NULL);
+    ASSERT_TRUE(pt2 != NULL);
+    ASSERT_TRUE(r1 != NULL);
+    ASSERT_TRUE(r2 != NULL);
+
+    ASSERT_EQ(BN_Bin2Bn(bnk1, bk1->x, bk1->len), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Bin2Bn(bnk2, bk2->x, bk2->len), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Bin2Bn(bnk3, bk3->x, bk3->len), CRYPT_SUCCESS);
+    // cal 2*G
+    ASSERT_EQ(ECP_PointMulFast(para, twoG, bnk3, NULL), CRYPT_SUCCESS);
+
+    ASSERT_EQ(ECP_PointMulFast(para, pt1, bnk1, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(ECP_PointMulFast(para, pt2, bnk2, twoG), CRYPT_SUCCESS);
+
+    ASSERT_EQ(ECC_PointAddAffine(para, r1, pt1, pt2), CRYPT_SUCCESS);
+
+    ASSERT_EQ(ECC_PointMulAdd(para, r2, bnk1, bnk2, twoG), CRYPT_SUCCESS);
+    ASSERT_EQ(ECC_PointCmp(para, r1, r2), CRYPT_SUCCESS);
+
+EXIT:
+    ECC_FreePara(para);
+    ECC_FreePoint(twoG);
+    ECC_FreePoint(pt1);
+    ECC_FreePoint(pt2);
+    ECC_FreePoint(r1);
+    ECC_FreePoint(r2);
+    BN_Destroy(bnk1);
+    BN_Destroy(bnk2);
+    BN_Destroy(bnk3);
+    TestRandDeInit();
 }
 /* END_CASE */

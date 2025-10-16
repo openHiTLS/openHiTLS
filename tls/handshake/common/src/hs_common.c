@@ -41,6 +41,7 @@
 #include "hs_common.h"
 #include "config_type.h"
 #include "config_check.h"
+#include "record.h"
 
 #ifdef HITLS_TLS_PROTO_DTLS12
 #define DTLS_SCTP_AUTH_LABEL "EXPORTER_DTLS_OVER_SCTP" /* dtls SCTP auth key label */
@@ -73,7 +74,6 @@ const uint8_t *HS_GetTls12DowngradeRandom(uint32_t *len)
 uint32_t HS_GetVersion(const TLS_Ctx *ctx)
 {
     if (ctx->negotiatedInfo.version > 0) {
-        /* The version has been negotiated */
         return ctx->negotiatedInfo.version;
     } else {
         /* If the version is not negotiated, the latest version supported by the local is returned */
@@ -130,12 +130,10 @@ static const char *g_stateMachineStr[] = {
 
 const char *HS_GetStateStr(uint32_t state)
 {
-    /** The handshake status is abnormal. */
     if ((state >= (sizeof(g_stateMachineStr) / sizeof(char *))) || (g_stateMachineStr[state] == NULL)) {
         return "unknown";
     }
 
-    /** Status character string */
     return g_stateMachineStr[state];
 }
 
@@ -178,6 +176,18 @@ int32_t HS_ChangeState(TLS_Ctx *ctx, uint32_t nextState)
 {
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
     hsCtx->state = nextState;
+#ifdef HITLS_TLS_FEATURE_MODE_RELEASE_BUFFERS
+    if ((ctx->config.tlsConfig.modeSupport & HITLS_MODE_RELEASE_BUFFERS) != 0) {
+        if (hsCtx->state == TLS_CONNECTED) {
+            RecTryFreeRecBuf(ctx, false);
+            RecTryFreeRecBuf(ctx, true);
+        } else if (IsHsSendState(hsCtx->state)) {
+            RecTryFreeRecBuf(ctx, false);
+        } else {
+            RecTryFreeRecBuf(ctx, true);
+        }
+    }
+#endif
     /* when link state is transporting, unexpected hs message should be processed, the log shouldn't be printed during
         the hsCtx initiation */
     if (ctx->state != CM_STATE_TRANSPORTING) {
@@ -207,14 +217,12 @@ int32_t HS_CombineRandom(const uint8_t *random1, const uint8_t *random2, uint32_
         return HITLS_MSG_HANDLE_RANDOM_SIZE_ERR;
     }
 
-    /** Copy the first random value */
     if (memcpy_s(dest, destSize, random1, randomSize) != EOK) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15575, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "combine random1 fail.", 0, 0, 0, 0);
         return HITLS_MEMCPY_FAIL;
     }
-    /** Copy the second random value */
     if (memcpy_s(&dest[randomSize], destSize - randomSize, random2, randomSize) != EOK) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15576, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -235,7 +243,6 @@ uint8_t *HS_PrepareSignDataTlcp(const TLS_Ctx *ctx, const uint8_t *partSignData,
     uint32_t randomLen = HS_RANDOM_SIZE * 2u;
     uint32_t dataLen = randomLen + partSignDataLen + exchParamLen;
 
-    /* Allocate the signature data memory. */
     uint8_t *data = BSL_SAL_Calloc(1u, dataLen);
     if (data == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
@@ -244,9 +251,7 @@ uint8_t *HS_PrepareSignDataTlcp(const TLS_Ctx *ctx, const uint8_t *partSignData,
         return NULL;
     }
 
-    /* Replicate the random number of the client */
     (void)memcpy_s(data, dataLen, ctx->hsCtx->clientRandom, HS_RANDOM_SIZE);
-    /* Replicate the random number on the server */
     (void)memcpy_s(&data[HS_RANDOM_SIZE], dataLen - HS_RANDOM_SIZE, ctx->hsCtx->serverRandom, HS_RANDOM_SIZE);
     /* Fill the length of the key exchange parameter */
     BSL_Uint24ToByte(partSignDataLen, &data[randomLen]);
@@ -266,7 +271,6 @@ uint8_t *HS_PrepareSignData(const TLS_Ctx *ctx, const uint8_t *partSignData,
     uint32_t randomLen = HS_RANDOM_SIZE * 2u;
     uint32_t dataLen = randomLen + partSignDataLen;
 
-    /* Allocate the signature data memory. */
     uint8_t *data = BSL_SAL_Calloc(1u, dataLen);
     if (data == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16813, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
@@ -274,9 +278,7 @@ uint8_t *HS_PrepareSignData(const TLS_Ctx *ctx, const uint8_t *partSignData,
         return NULL;
     }
 
-    /* Replicate the random number of the client */
     (void)memcpy_s(data, dataLen, ctx->hsCtx->clientRandom, HS_RANDOM_SIZE);
-    /* Replicate the random number on the server */
     (void)memcpy_s(&data[HS_RANDOM_SIZE], dataLen - HS_RANDOM_SIZE, ctx->hsCtx->serverRandom, HS_RANDOM_SIZE);
     /* Copy key exchange packet data */
     ret = memcpy_s(&data[randomLen], dataLen - randomLen, partSignData, partSignDataLen);
@@ -291,7 +293,7 @@ uint8_t *HS_PrepareSignData(const TLS_Ctx *ctx, const uint8_t *partSignData,
     return data;
 }
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_SCTP)
 /**
  * @brief   Calculate the sctp auth key
  * @details auth key: PRF(SecurityParameters.master_secret, label,
@@ -342,7 +344,6 @@ int32_t CalcSctpAuthKey(const TLS_Ctx *ctx, uint8_t *authKey, uint32_t authKeyLe
 
 int32_t HS_SetSctpAuthKey(TLS_Ctx *ctx)
 {
-    /* If the bottom layer is not SCTP, the auth key does not need to be configured and return HITLS_SUCCESS */
     if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
         return HITLS_SUCCESS;
     }
@@ -377,9 +378,6 @@ int32_t HS_SetSctpAuthKey(TLS_Ctx *ctx)
 
 int32_t HS_ActiveSctpAuthKey(TLS_Ctx *ctx)
 {
-    /* If the bottom layer is not SCTP, the auth key does not need to be configured and
-     * return HITLS_SUCCESS.
-     */
     if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
         return HITLS_SUCCESS;
     }
@@ -396,14 +394,12 @@ int32_t HS_ActiveSctpAuthKey(TLS_Ctx *ctx)
 
 int32_t HS_DeletePreviousSctpAuthKey(TLS_Ctx *ctx)
 {
-    int32_t ret;
-
     if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
         return HITLS_SUCCESS;
     }
 
     /* After the handshake is complete, delete the old sctp auth key */
-    ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_SCTP_DEL_PRE_AUTH_SHARED_KEY, 0, NULL);
+    int32_t ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_SCTP_DEL_PRE_AUTH_SHARED_KEY, 0, NULL);
     if (ret != BSL_SUCCESS) {
         ret = HITLS_UIO_SCTP_DEL_AUTH_KEY_FAIL;
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15584, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -412,7 +408,7 @@ int32_t HS_DeletePreviousSctpAuthKey(TLS_Ctx *ctx)
     }
     return ret;
 }
-#endif /* end #ifdef HITLS_TLS_PROTO_DTLS12 */
+#endif /* defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_SCTP) */
 
 bool IsNeedServerKeyExchange(const TLS_Ctx *ctx)
 {
@@ -444,7 +440,6 @@ bool IsNeedServerKeyExchange(const TLS_Ctx *ctx)
     return ((kxAlg != HITLS_KEY_EXCH_ECDH) && (kxAlg != HITLS_KEY_EXCH_DH) && (kxAlg != HITLS_KEY_EXCH_RSA));
 }
 
-/* Check whether the certificate needs to be prepared. */
 bool IsNeedCertPrepare(const CipherSuiteInfo *cipherSuiteInfo)
 {
     if (cipherSuiteInfo == NULL) {
@@ -567,10 +562,10 @@ uint32_t HS_GetState(const TLS_Ctx *ctx)
 #ifdef HITLS_TLS_FEATURE_SNI
 const char *HS_GetServerName(const TLS_Ctx *ctx)
 {
-    if (ctx == NULL || ctx->hsCtx == NULL) {
+    if (ctx == NULL || ctx->negotiatedInfo.serverName == NULL) {
         return NULL;
     }
-    return (char *)ctx->hsCtx->serverName;
+    return (char *)ctx->negotiatedInfo.serverName;
 }
 #endif
 
@@ -709,10 +704,8 @@ uint16_t *CheckSupportSignAlgorithms(const TLS_Ctx *ctx, const uint16_t *signAlg
         const uint32_t dsaMask = 0x02;
         const uint32_t sha1Mask = 0x0200;
         const uint32_t sha224Mask = 0x0300;
-        // DSA is not allowed in TLS 1.3
         if (ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 &&
             ctx->config.tlsConfig.minVersion == HITLS_VERSION_TLS13) {
-            // At some point we should fully axe DSA/etc. in ClientHello as per TLS 1.3 spec
             if (ctx->isClient &&
                 (((signAlgorithms[i] & 0xff00) == sha1Mask) ||
                 ((signAlgorithms[i] & 0xff00) == sha224Mask))) {
@@ -725,6 +718,11 @@ uint16_t *CheckSupportSignAlgorithms(const TLS_Ctx *ctx, const uint16_t *signAlg
             }
         }
 #endif /* HITLS_TLS_PROTO_TLS13 */
+        if (ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLCP_DTLCP11 &&
+            ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLS13 &&
+            signAlgorithms[i] == CERT_SIG_SCHEME_SM2_SM3) {
+            continue;
+        }
 #ifdef HITLS_TLS_FEATURE_SECURITY
         if (SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_SIGALG_CHECK, 0, signAlgorithms[i], NULL) != SECURITY_SUCCESS) {
             continue;
@@ -775,7 +773,7 @@ int32_t HS_CheckReceivedExtension(HITLS_Ctx *ctx, HS_MsgType hsType, uint64_t hs
     return HITLS_SUCCESS;
 }
 
-bool IsCipherSuiteAllowed(const HITLS_Ctx *ctx, uint16_t cipherSuite)
+bool IsCipherSuiteAllowed(const HITLS_Ctx *ctx, uint16_t cipherSuite, bool checkNegoVersion)
 {
     if (!CFG_CheckCipherSuiteSupported(cipherSuite)) {
         return false;
@@ -799,10 +797,12 @@ bool IsCipherSuiteAllowed(const HITLS_Ctx *ctx, uint16_t cipherSuite)
             }
     }
 
-    uint16_t negotiatedVersion = ctx->negotiatedInfo.version;
-    if (negotiatedVersion > 0) {
-        if (!CFG_CheckCipherSuiteVersion(cipherSuite, negotiatedVersion, negotiatedVersion)) {
-            return false;
+    if (checkNegoVersion) {
+        uint16_t negotiatedVersion = ctx->negotiatedInfo.version;
+        if (negotiatedVersion > 0) {
+            if (!CFG_CheckCipherSuiteVersion(cipherSuite, negotiatedVersion, negotiatedVersion)) {
+                return false;
+            }
         }
     }
 

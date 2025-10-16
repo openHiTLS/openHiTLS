@@ -31,6 +31,35 @@ extern "C" {
 #define HITLS_APP_FORMAT_BASE64 4
 #define HITLS_APP_FORMAT_HEX 5
 #define HITLS_APP_FORMAT_BINARY 6
+#define HITLS_APP_SHAKE128_SIZE 16
+#define HITLS_APP_SHAKE256_SIZE 32
+#define HITLS_APP_PROV_ENUM \
+    HITLS_APP_OPT_PROVIDER, \
+    HITLS_APP_OPT_PROVIDER_PATH, \
+    HITLS_APP_OPT_PROVIDER_ATTR \
+
+#define HITLS_APP_PROV_OPTIONS \
+    {"provider", HITLS_APP_OPT_PROVIDER, HITLS_APP_OPT_VALUETYPE_STRING, \
+        "Specify the cryptographic service provider"}, \
+    {"provider-path", HITLS_APP_OPT_PROVIDER_PATH, HITLS_APP_OPT_VALUETYPE_STRING, \
+        "Set the path to the cryptographic service provider"}, \
+    {"provider-attr", HITLS_APP_OPT_PROVIDER_ATTR, HITLS_APP_OPT_VALUETYPE_STRING, \
+        "Set additional attributes for the cryptographic service provider"} \
+
+#define HITLS_APP_PROV_CASES(optType, provider)            \
+    switch (optType) {                            \
+        case HITLS_APP_OPT_PROVIDER:               \
+            (provider)->providerName = HITLS_APP_OptGetValueStr();   \
+            break;                                \
+        case HITLS_APP_OPT_PROVIDER_PATH:          \
+            (provider)->providerPath = HITLS_APP_OptGetValueStr();   \
+            break;                                \
+        case HITLS_APP_OPT_PROVIDER_ATTR:          \
+            (provider)->providerAttr = HITLS_APP_OptGetValueStr();   \
+            break;                                \
+        default:                                  \
+            break;                                \
+    }
 
 typedef enum {
     HITLS_APP_OPT_VALUETYPE_NONE = 0,
@@ -214,26 +243,26 @@ BSL_UIO* HITLS_APP_UioOpen(const char* filename, char mode, int32_t flag);
  * @brief   Converts a character string to a character string in Base64 format and output the buf to UIO
  *
  * @param   buf     [IN]  content to be encoded
- * @param   outLen  [IN]  the length of content to be encoded
+ * @param   inBufLen  [IN]  the length of content to be encoded
  * @param   outBuf  [IN]  Encoded content
  * @param   outBufLen  [IN] the length of encoded content
  *
  * @retval  int32_t success or not
 */
-int32_t HITLS_APP_OptToBase64(uint8_t *buf, uint32_t outLen, char *outBuf, uint32_t outBufLen);
+int32_t HITLS_APP_OptToBase64(uint8_t *buf, uint32_t inBufLen, char *outBuf, uint32_t outBufLen);
 
 /**
  * @ingroup HITLS_APP
  * @brief   Converts a character string to a hexadecimal character string and output the buf to UIO
  *
  * @param   buf     [IN]  content to be encoded
- * @param   outLen  [IN]  the length of content to be encoded
+ * @param   inBufLen  [IN]  the length of content to be encoded
  * @param   outBuf  [IN]  Encoded content
  * @param   outBufLen  [IN] the length of encoded content
  *
  * @retval  int32_t success or not
 */
-int32_t HITLS_APP_OptToHex(uint8_t *buf, uint32_t outLen, char *outBuf, uint32_t outBufLen);
+int32_t HITLS_APP_OptToHex(uint8_t *buf, uint32_t inBufLen, char *outBuf, uint32_t outBufLen);
 
 /**
  * @ingroup HITLS_APP

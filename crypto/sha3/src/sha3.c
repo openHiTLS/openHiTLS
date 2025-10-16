@@ -37,17 +37,20 @@ struct CryptSha3Ctx {
     bool squeeze;
 };
 
-static CRYPT_SHA3_Ctx *CRYPT_SHA3_NewCtx(void)
+CRYPT_SHA3_Ctx *CRYPT_SHA3_NewCtx(void)
 {
     return BSL_SAL_Calloc(1, sizeof(CRYPT_SHA3_Ctx));
 }
 
-static void CRYPT_SHA3_FreeCtx(CRYPT_SHA3_Ctx *ctx)
+CRYPT_SHA3_Ctx *CRYPT_SHA3_NewCtxEx(void *libCtx, int32_t algId)
 {
-    CRYPT_SHA3_Ctx *mdCtx = ctx;
-    if (mdCtx == NULL) {
-        return;
-    }
+    (void)libCtx;
+    (void)algId;
+    return BSL_SAL_Calloc(1, sizeof(CRYPT_SHA3_Ctx));
+}
+
+void CRYPT_SHA3_FreeCtx(CRYPT_SHA3_Ctx *ctx)
+{
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA3_Ctx));
 }
 
@@ -64,7 +67,7 @@ static int32_t CRYPT_SHA3_Init(CRYPT_SHA3_Ctx *ctx, uint32_t mdSize, uint32_t bl
     return CRYPT_SUCCESS;
 }
 
-static int32_t CRYPT_SHA3_Update(CRYPT_SHA3_Ctx *ctx, const uint8_t *in, uint32_t len)
+int32_t CRYPT_SHA3_Update(CRYPT_SHA3_Ctx *ctx, const uint8_t *in, uint32_t len)
 {
     if (ctx == NULL || (in == NULL && len != 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -88,7 +91,7 @@ static int32_t CRYPT_SHA3_Update(CRYPT_SHA3_Ctx *ctx, const uint8_t *in, uint32_
         // When the external input data is greater than the remaining space of the block,
         // copy the data of the remaining space.
         (void)memcpy_s(ctx->buf + ctx->num, left, data, left);
-        SHA3_Absorb(ctx->state, ctx->buf, ctx->blockSize, ctx->blockSize);
+        (void)SHA3_Absorb(ctx->state, ctx->buf, ctx->blockSize, ctx->blockSize);
         dataLen -= left;
         data += left;
         ctx->num = 0;
@@ -105,7 +108,7 @@ static int32_t CRYPT_SHA3_Update(CRYPT_SHA3_Ctx *ctx, const uint8_t *in, uint32_
     return CRYPT_SUCCESS;
 }
 
-static int32_t CRYPT_SHA3_Final(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t *len)
+int32_t CRYPT_SHA3_Final(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t *len)
 {
     if (ctx == NULL || out == NULL || len == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -130,7 +133,7 @@ static int32_t CRYPT_SHA3_Final(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t *len
     return CRYPT_SUCCESS;
 }
 
-static int32_t CRYPT_SHA3_Squeeze(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t len)
+int32_t CRYPT_SHA3_Squeeze(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t len)
 {
     if (ctx == NULL || out == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -169,16 +172,17 @@ static int32_t CRYPT_SHA3_Squeeze(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t le
     return CRYPT_SUCCESS;
 }
 
-static void CRYPT_SHA3_Deinit(CRYPT_SHA3_Ctx *ctx)
+int32_t CRYPT_SHA3_Deinit(CRYPT_SHA3_Ctx *ctx)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
+        return CRYPT_NULL_INPUT;
     }
     BSL_SAL_CleanseData(ctx, sizeof(CRYPT_SHA3_Ctx));
+    return CRYPT_SUCCESS;
 }
 
-static int32_t CRYPT_SHA3_CopyCtx(CRYPT_SHA3_Ctx *dst, const CRYPT_SHA3_Ctx *src)
+int32_t CRYPT_SHA3_CopyCtx(CRYPT_SHA3_Ctx *dst, const CRYPT_SHA3_Ctx *src)
 {
     if (dst == NULL || src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -189,7 +193,7 @@ static int32_t CRYPT_SHA3_CopyCtx(CRYPT_SHA3_Ctx *dst, const CRYPT_SHA3_Ctx *src
     return CRYPT_SUCCESS;
 }
 
-static CRYPT_SHA3_Ctx *CRYPT_SHA3_DupCtx(const CRYPT_SHA3_Ctx *src)
+CRYPT_SHA3_Ctx *CRYPT_SHA3_DupCtx(const CRYPT_SHA3_Ctx *src)
 {
     if (src == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -202,58 +206,6 @@ static CRYPT_SHA3_Ctx *CRYPT_SHA3_DupCtx(const CRYPT_SHA3_Ctx *src)
     }
     (void)memcpy_s(newCtx, sizeof(CRYPT_SHA3_Ctx), src, sizeof(CRYPT_SHA3_Ctx));
     return newCtx;
-}
-
-// new context
-CRYPT_SHA3_224_Ctx *CRYPT_SHA3_224_NewCtx(void)
-{
-    return CRYPT_SHA3_NewCtx();
-}
-CRYPT_SHA3_256_Ctx *CRYPT_SHA3_256_NewCtx(void)
-{
-    return CRYPT_SHA3_NewCtx();
-}
-CRYPT_SHA3_384_Ctx *CRYPT_SHA3_384_NewCtx(void)
-{
-    return CRYPT_SHA3_NewCtx();
-}
-CRYPT_SHA3_512_Ctx *CRYPT_SHA3_512_NewCtx(void)
-{
-    return CRYPT_SHA3_NewCtx();
-}
-CRYPT_SHAKE128_Ctx* CRYPT_SHAKE128_NewCtx(void)
-{
-    return CRYPT_SHA3_NewCtx();
-}
-CRYPT_SHAKE256_Ctx* CRYPT_SHAKE256_NewCtx(void)
-{
-    return CRYPT_SHA3_NewCtx();
-}
-
-// free context
-void CRYPT_SHA3_224_FreeCtx(CRYPT_SHA3_224_Ctx* ctx)
-{
-    CRYPT_SHA3_FreeCtx(ctx);
-}
-void CRYPT_SHA3_256_FreeCtx(CRYPT_SHA3_256_Ctx* ctx)
-{
-    CRYPT_SHA3_FreeCtx(ctx);
-}
-void CRYPT_SHA3_384_FreeCtx(CRYPT_SHA3_384_Ctx* ctx)
-{
-    CRYPT_SHA3_FreeCtx(ctx);
-}
-void CRYPT_SHA3_512_FreeCtx(CRYPT_SHA3_512_Ctx* ctx)
-{
-    CRYPT_SHA3_FreeCtx(ctx);
-}
-void CRYPT_SHAKE128_FreeCtx(CRYPT_SHAKE128_Ctx* ctx)
-{
-    CRYPT_SHA3_FreeCtx(ctx);
-}
-void CRYPT_SHAKE256_FreeCtx(CRYPT_SHAKE256_Ctx* ctx)
-{
-    CRYPT_SHA3_FreeCtx(ctx);
 }
 
 int32_t CRYPT_SHA3_224_Init(CRYPT_SHA3_224_Ctx *ctx, BSL_Param *param)
@@ -298,163 +250,41 @@ int32_t CRYPT_SHAKE256_Init(CRYPT_SHAKE256_Ctx *ctx, BSL_Param *param)
     return CRYPT_SHA3_Init(ctx, 0, CRYPT_SHAKE256_BLOCKSIZE, 0x1F);
 }
 
-int32_t CRYPT_SHA3_224_Update(CRYPT_SHA3_224_Ctx *ctx, const uint8_t *in, uint32_t len)
+#ifdef HITLS_CRYPTO_PROVIDER
+int32_t CRYPT_SHA3_224_GetParam(CRYPT_SHA3_224_Ctx *ctx, BSL_Param *param)
 {
-    return CRYPT_SHA3_Update(ctx, in, len);
+    (void)ctx;
+    return CRYPT_MdCommonGetParam(CRYPT_SHA3_224_DIGESTSIZE, CRYPT_SHA3_224_BLOCKSIZE, param);
 }
 
-int32_t CRYPT_SHA3_256_Update(CRYPT_SHA3_256_Ctx *ctx, const uint8_t *in, uint32_t len)
+int32_t CRYPT_SHA3_256_GetParam(CRYPT_SHA3_256_Ctx *ctx, BSL_Param *param)
 {
-    return CRYPT_SHA3_Update(ctx, in, len);
+    (void)ctx;
+    return CRYPT_MdCommonGetParam(CRYPT_SHA3_256_DIGESTSIZE, CRYPT_SHA3_256_BLOCKSIZE, param);
 }
 
-int32_t CRYPT_SHA3_384_Update(CRYPT_SHA3_384_Ctx *ctx, const uint8_t *in, uint32_t len)
+int32_t CRYPT_SHA3_384_GetParam(CRYPT_SHA3_384_Ctx *ctx, BSL_Param *param)
 {
-    return CRYPT_SHA3_Update(ctx, in, len);
+    (void)ctx;
+    return CRYPT_MdCommonGetParam(CRYPT_SHA3_384_DIGESTSIZE, CRYPT_SHA3_384_BLOCKSIZE, param);
 }
 
-int32_t CRYPT_SHA3_512_Update(CRYPT_SHA3_512_Ctx *ctx, const uint8_t *in, uint32_t len)
+int32_t CRYPT_SHA3_512_GetParam(CRYPT_SHA3_512_Ctx *ctx, BSL_Param *param)
 {
-    return CRYPT_SHA3_Update(ctx, in, len);
+    (void)ctx;
+    return CRYPT_MdCommonGetParam(CRYPT_SHA3_512_DIGESTSIZE, CRYPT_SHA3_512_BLOCKSIZE, param);
 }
 
-int32_t CRYPT_SHAKE128_Update(CRYPT_SHAKE128_Ctx *ctx, const uint8_t *in, uint32_t len)
+int32_t CRYPT_SHAKE128_GetParam(CRYPT_SHAKE128_Ctx *ctx, BSL_Param *param)
 {
-    return CRYPT_SHA3_Update(ctx, in, len);
+    (void)ctx;
+    return CRYPT_MdCommonGetParam(CRYPT_SHAKE128_DIGESTSIZE, CRYPT_SHAKE128_BLOCKSIZE, param);
 }
 
-int32_t CRYPT_SHAKE256_Update(CRYPT_SHAKE256_Ctx *ctx, const uint8_t *in, uint32_t len)
+int32_t CRYPT_SHAKE256_GetParam(CRYPT_SHAKE256_Ctx *ctx, BSL_Param *param)
 {
-    return CRYPT_SHA3_Update(ctx, in, len);
+    (void)ctx;
+    return CRYPT_MdCommonGetParam(CRYPT_SHAKE128_DIGESTSIZE, CRYPT_SHAKE256_BLOCKSIZE, param);
 }
-
-int32_t CRYPT_SHA3_224_Final(CRYPT_SHA3_224_Ctx *ctx, uint8_t *out, uint32_t *len)
-{
-    return CRYPT_SHA3_Final(ctx, out, len);
-}
-
-int32_t CRYPT_SHA3_256_Final(CRYPT_SHA3_256_Ctx *ctx, uint8_t *out, uint32_t *len)
-{
-    return CRYPT_SHA3_Final(ctx, out, len);
-}
-
-int32_t CRYPT_SHA3_384_Final(CRYPT_SHA3_384_Ctx *ctx, uint8_t *out, uint32_t *len)
-{
-    return CRYPT_SHA3_Final(ctx, out, len);
-}
-
-int32_t CRYPT_SHA3_512_Final(CRYPT_SHA3_512_Ctx *ctx, uint8_t *out, uint32_t *len)
-{
-    return CRYPT_SHA3_Final(ctx, out, len);
-}
-
-int32_t CRYPT_SHAKE128_Final(CRYPT_SHAKE128_Ctx *ctx, uint8_t *out, uint32_t *len)
-{
-    return CRYPT_SHA3_Final(ctx, out, len);
-}
-
-int32_t CRYPT_SHAKE256_Final(CRYPT_SHAKE256_Ctx *ctx, uint8_t *out, uint32_t *len)
-{
-    return CRYPT_SHA3_Final(ctx, out, len);
-}
-
-int32_t CRYPT_SHAKE128_Squeeze(CRYPT_SHAKE128_Ctx *ctx, uint8_t *out, uint32_t len)
-{
-    return CRYPT_SHA3_Squeeze(ctx, out, len);
-}
-int32_t CRYPT_SHAKE256_Squeeze(CRYPT_SHAKE256_Ctx *ctx, uint8_t *out, uint32_t len)
-{
-    return CRYPT_SHA3_Squeeze(ctx, out, len);
-}
-
-void CRYPT_SHA3_224_Deinit(CRYPT_SHA3_224_Ctx *ctx)
-{
-    CRYPT_SHA3_Deinit(ctx);
-}
-
-void CRYPT_SHA3_256_Deinit(CRYPT_SHA3_256_Ctx *ctx)
-{
-    CRYPT_SHA3_Deinit(ctx);
-}
-
-void CRYPT_SHA3_384_Deinit(CRYPT_SHA3_384_Ctx *ctx)
-{
-    CRYPT_SHA3_Deinit(ctx);
-}
-
-void CRYPT_SHA3_512_Deinit(CRYPT_SHA3_512_Ctx *ctx)
-{
-    CRYPT_SHA3_Deinit(ctx);
-}
-
-void CRYPT_SHAKE128_Deinit(CRYPT_SHAKE128_Ctx *ctx)
-{
-    CRYPT_SHA3_Deinit(ctx);
-}
-
-void CRYPT_SHAKE256_Deinit(CRYPT_SHAKE256_Ctx *ctx)
-{
-    CRYPT_SHA3_Deinit(ctx);
-}
-
-int32_t CRYPT_SHA3_224_CopyCtx(CRYPT_SHA3_224_Ctx *dst, const CRYPT_SHA3_224_Ctx *src)
-{
-    return CRYPT_SHA3_CopyCtx(dst, src);
-}
-
-int32_t CRYPT_SHA3_256_CopyCtx(CRYPT_SHA3_256_Ctx *dst, const CRYPT_SHA3_256_Ctx *src)
-{
-    return CRYPT_SHA3_CopyCtx(dst, src);
-}
-
-int32_t CRYPT_SHA3_384_CopyCtx(CRYPT_SHA3_384_Ctx *dst, const CRYPT_SHA3_384_Ctx *src)
-{
-    return CRYPT_SHA3_CopyCtx(dst, src);
-}
-
-int32_t CRYPT_SHA3_512_CopyCtx(CRYPT_SHA3_512_Ctx *dst, const CRYPT_SHA3_512_Ctx *src)
-{
-    return CRYPT_SHA3_CopyCtx(dst, src);
-}
-
-int32_t CRYPT_SHAKE128_CopyCtx(CRYPT_SHA3_384_Ctx *dst, const CRYPT_SHA3_384_Ctx *src)
-{
-    return CRYPT_SHA3_CopyCtx(dst, src);
-}
-
-int32_t CRYPT_SHAKE256_CopyCtx(CRYPT_SHA3_512_Ctx *dst, const CRYPT_SHA3_512_Ctx *src)
-{
-    return CRYPT_SHA3_CopyCtx(dst, src);
-}
-
-CRYPT_SHA3_224_Ctx *CRYPT_SHA3_224_DupCtx(const CRYPT_SHA3_224_Ctx *src)
-{
-    return CRYPT_SHA3_DupCtx(src);
-}
-
-CRYPT_SHA3_256_Ctx *CRYPT_SHA3_256_DupCtx(const CRYPT_SHA3_256_Ctx *src)
-{
-    return CRYPT_SHA3_DupCtx(src);
-}
-
-CRYPT_SHA3_384_Ctx *CRYPT_SHA3_384_DupCtx(const CRYPT_SHA3_384_Ctx *src)
-{
-    return CRYPT_SHA3_DupCtx(src);
-}
-
-CRYPT_SHA3_512_Ctx *CRYPT_SHA3_512_DupCtx(const CRYPT_SHA3_512_Ctx *src)
-{
-    return CRYPT_SHA3_DupCtx(src);
-}
-
-CRYPT_SHA3_384_Ctx *CRYPT_SHAKE128_DupCtx(const CRYPT_SHA3_384_Ctx *src)
-{
-    return CRYPT_SHA3_DupCtx(src);
-}
-
-CRYPT_SHA3_512_Ctx *CRYPT_SHAKE256_DupCtx(const CRYPT_SHA3_512_Ctx *src)
-{
-    return CRYPT_SHA3_DupCtx(src);
-}
-
+#endif // HITLS_CRYPTO_PROVIDER
 #endif // HITLS_CRYPTO_SHA3

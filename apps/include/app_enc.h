@@ -40,16 +40,6 @@ extern "C" {
 
 #define BSL_SUCCESS 0
 
-typedef enum {
-    HITLS_APP_OPT_CIPHER_ALG = 2,
-    HITLS_APP_OPT_IN_FILE,
-    HITLS_APP_OPT_OUT_FILE,
-    HITLS_APP_OPT_DEC,
-    HITLS_APP_OPT_ENC,
-    HITLS_APP_OPT_MD,
-    HITLS_APP_OPT_PASS,
-} HITLS_OptType;
-
 typedef struct {
     const int cipherId;
     const char *cipherAlgName;

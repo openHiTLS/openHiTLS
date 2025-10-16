@@ -50,6 +50,53 @@ static void RecCmpPmtu(const TLS_Ctx *ctx, uint32_t *recSize)
 }
 #endif
 
+#ifdef HITLS_TLS_FEATURE_MODE_RELEASE_BUFFERS
+void RecTryFreeRecBuf(TLS_Ctx *ctx, bool isOut)
+{
+    RecCtx *recordCtx = (RecCtx *)ctx->recCtx;
+    if (isOut) {
+        if (recordCtx->outBuf != NULL && recordCtx->outBuf->start == recordCtx->outBuf->end) {
+            RecBufFree(recordCtx->outBuf);
+            recordCtx->outBuf = NULL;
+        }
+    } else {
+        if (recordCtx->inBuf != NULL && recordCtx->inBuf->start == recordCtx->inBuf->end) {
+            RecBufFree(recordCtx->inBuf);
+            recordCtx->inBuf = NULL;
+        }
+    }
+    return;
+}
+#endif
+
+uint32_t REC_GetOutBufPendingSize(const TLS_Ctx *ctx)
+{
+    RecBuf *writeBuf = ctx->recCtx->outBuf;
+    if (writeBuf == NULL) {
+        return 0;
+    }
+    return writeBuf->start > writeBuf->end ? 0 : writeBuf->end - writeBuf->start;
+}
+
+int32_t RecIoBufInit(TLS_Ctx *ctx, RecCtx *recordCtx, bool isRead)
+{
+    RecBuf **ioBuf = isRead ? &recordCtx->inBuf : &recordCtx->outBuf;
+    if (*ioBuf == NULL) {
+        uint32_t initSize = RecGetInitBufferSize(ctx, isRead);
+        if (isRead && ctx->config.tlsConfig.recInbufferSize != 0) {
+            initSize = ctx->config.tlsConfig.recInbufferSize;
+        }
+        *ioBuf = RecBufNew(initSize);
+        if (*ioBuf == NULL) {
+            BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15532, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "Record: malloc fail.", 0, 0, 0, 0);
+            return HITLS_MEMALLOC_FAIL;
+        }
+    }
+    return HITLS_SUCCESS;
+}
+
 static uint32_t RecGetDefaultBufferSize(bool isDtls, bool isRead)
 {
 (void)isDtls;
@@ -196,23 +243,22 @@ static int32_t RecConnStatesInit(RecCtx *recordCtx)
     return HITLS_SUCCESS;
 }
 
-static int RecBufInit(TLS_Ctx *ctx, RecCtx *newRecCtx)
+static int32_t RecBufInit(TLS_Ctx *ctx, RecCtx *newRecCtx)
 {
-    newRecCtx->inBuf = RecBufNew(RecGetInitBufferSize(ctx, true));
-    if (newRecCtx->inBuf == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15532, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "Record: malloc fail.", 0, 0, 0, 0);
-        return HITLS_MEMALLOC_FAIL;
+#ifdef HITLS_TLS_FEATURE_MODE_RELEASE_BUFFERS
+    if ((ctx->config.tlsConfig.modeSupport & HITLS_MODE_RELEASE_BUFFERS) == 0) {
+#endif
+        int32_t ret = RecIoBufInit(ctx, newRecCtx, true);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        ret = RecIoBufInit(ctx, newRecCtx, false);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+#ifdef HITLS_TLS_FEATURE_MODE_RELEASE_BUFFERS
     }
-
-    newRecCtx->outBuf = RecBufNew(RecGetInitBufferSize(ctx, false));
-    if (newRecCtx->outBuf == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15533, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "Record: malloc fail.", 0, 0, 0, 0);
-        return HITLS_MEMALLOC_FAIL;
-    }
+#endif
     newRecCtx->hsRecList = RecBufListNew();
     newRecCtx->appRecList = RecBufListNew();
     if (newRecCtx->hsRecList == NULL || newRecCtx->appRecList == NULL) {
@@ -256,7 +302,7 @@ int32_t REC_Init(TLS_Ctx *ctx)
     if (ctx->recCtx != NULL) {
         return HITLS_SUCCESS;
     }
-    /* Allocate RecCtxHandle space */
+
     RecCtx *newRecCtx = (RecCtx *)BSL_SAL_Calloc(1, sizeof(RecCtx));
     if (newRecCtx == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15531, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -306,7 +352,6 @@ bool REC_ReadHasPending(const TLS_Ctx *ctx)
         return false;
     }
 
-    /* Obtain the record structure */
     RecCtx *recordCtx = (RecCtx *)ctx->recCtx;
     RecBuf *inBuf = recordCtx->inBuf;
 
@@ -510,7 +555,6 @@ int32_t REC_ActivePendingState(TLS_Ctx *ctx, bool isOut)
     states->outdatedState = states->currentState;
     states->currentState = states->pendingState;
     states->pendingState = NULL;
-    /* Set the sequence number to 0 */
     RecConnSetSeqNum(states->currentState, 0);
 
 #ifdef HITLS_TLS_PROTO_DTLS12
@@ -551,13 +595,9 @@ static uint32_t REC_GetRecordSizeLimitWriteLen(const TLS_Ctx *ctx)
     return defaultLen;
 }
 
-int32_t REC_RecBufReSet(TLS_Ctx *ctx)
+int32_t REC_RecOutBufReSet(TLS_Ctx *ctx)
 {
     RecCtx *recCtx = ctx->recCtx;
-    int32_t ret = RecBufResize(recCtx->inBuf, RecGetReadBufferSize(ctx));
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
     return RecBufResize(recCtx->outBuf, RecGetWriteBufferSize(ctx));
 }
 
@@ -596,7 +636,7 @@ int32_t REC_QueryMtu(TLS_Ctx *ctx)
     if (ctx->config.linkMtu > 0) {
         uint8_t overhead = 0;
         (void)BSL_UIO_Ctrl(ctx->uio, BSL_UIO_UDP_GET_MTU_OVERHEAD, sizeof(uint8_t), &overhead);
-        ctx->config.pmtu = ctx->config.linkMtu - overhead;
+        ctx->config.pmtu = ctx->config.linkMtu - (uint16_t)overhead;
         ctx->config.linkMtu = 0;
     }
 
@@ -614,7 +654,7 @@ int32_t REC_QueryMtu(TLS_Ctx *ctx)
         (void)BSL_UIO_Ctrl(ctx->uio, BSL_UIO_UDP_GET_MTU_OVERHEAD, sizeof(uint8_t), &overhead);
         uint16_t minMtu = (uint16_t)DTLS_MIN_MTU - (uint16_t)overhead;
         mtu = mtu > UINT16_MAX ? UINT16_MAX : mtu;
-        ctx->config.pmtu = (mtu < minMtu) ? minMtu : mtu;
+        ctx->config.pmtu = ((uint16_t)mtu < minMtu) ? minMtu : (uint16_t)mtu;
     }
     ctx->needQueryMtu = false;
 

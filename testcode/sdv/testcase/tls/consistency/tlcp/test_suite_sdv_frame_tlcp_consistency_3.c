@@ -671,7 +671,7 @@ static void Test_Finish_Len_TooLong_client(HITLS_Ctx *ctx, uint8_t *data, uint32
     ASSERT_EQ(frameMsg.body.hsMsg.body.finished.verifyData.size, 12); // in RFC5246, length of verifyData is always 12.
     if (ctx->isClient==true) {
         frameMsg.body.hsMsg.body.finished.verifyData.state = ASSIGNED_FIELD;
-        frameMsg.body.hsMsg.body.finished.verifyData.data[0] = 0x00;
+        frameMsg.body.hsMsg.body.finished.verifyData.data[0] += 1;
     }
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:

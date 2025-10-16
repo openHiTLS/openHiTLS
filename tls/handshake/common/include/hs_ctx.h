@@ -31,9 +31,25 @@ extern "C" {
 #endif
 
 #define MASTER_SECRET_LEN 48u
-#define HS_PSK_IDENTITY_MAX_LEN 128u /* Maximum length of PSK-negotiated identity information */
-#define HS_PSK_MAX_LEN 256u
 #define COOKIE_SECRET_LIFETIME 5u /* the number of times the cookie's secret is used */
+
+#ifndef HITLS_HS_INIT_BUFFER_SIZE
+#define HITLS_HS_INIT_BUFFER_SIZE 4096u
+#endif
+
+#ifndef HITLS_HS_BUFFER_SIZE_LIMIT
+#define HITLS_HS_BUFFER_SIZE_LIMIT 20480u
+#endif
+
+#if HITLS_HS_INIT_BUFFER_SIZE < 32
+#error "HITLS_HS_INIT_BUFFER_SIZE must be greater than or equal to 32"
+#endif
+
+#if HITLS_HS_BUFFER_SIZE_LIMIT < HITLS_HS_INIT_BUFFER_SIZE
+#error "HITLS_HS_BUFFER_SIZE_LIMIT must be greater than or equal to HITLS_HS_INIT_BUFFER_SIZE"
+#endif
+
+#define UINT24_SIZE 3u
 
 /* Transmits ECDH key exchange data */
 typedef struct {
@@ -163,10 +179,6 @@ struct HsCtx {
     uint8_t *clientAlpnList;
     uint32_t clientAlpnListSize;
 #endif
-#ifdef HITLS_TLS_FEATURE_SNI
-    uint8_t *serverName;
-    uint32_t serverNameSize;
-#endif
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
     uint32_t ticketSize;
     uint8_t *ticket;
@@ -195,12 +207,13 @@ struct HsCtx {
     uint16_t nextSendSeq;    /* message sending sequence number */
     uint16_t expectRecvSeq;  /* message receiving sequence number */
     HS_ReassQueue *reassMsg; /* reassembly message queue, used for reassembly of fragmented messages */
-
+#ifdef HITLS_BSL_UIO_UDP
     /* To reduce the calculation amount for determining timeout, use the end time instead of the start time. If the end
      * time is exceeded, the receiving times out. */
     BSL_TIME deadline;     /* End time */
     uint32_t timeoutValue; /* Timeout interval, in us. */
     uint32_t timeoutNum;   /* Timeout count */
+#endif /* HITLS_BSL_UIO_UDP */
 #endif /* HITLS_TLS_PROTO_DTLS12 */
 };
 

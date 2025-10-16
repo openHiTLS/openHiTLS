@@ -215,7 +215,8 @@ static int32_t ParseBasicConstraints(char **value, HITLS_X509_ExtBCons *bCons)
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t ProcBasicConstraints(BSL_CONF *cnf, bool critical, const char *cnfValue, ProcExtCallBack procExt, void *ctx)
+static int32_t ProcBasicConstraints(BSL_CONF *cnf, bool critical, const char *cnfValue,
+    ProcExtCallBack procExt, void *ctx)
 {
     (void)cnf;
     HITLS_X509_ExtBCons bCons = {critical, false, -1};
@@ -602,7 +603,7 @@ static int32_t ParseGeneralName(BSL_CONF *conf, char *genNameStr, HITLS_X509_Gen
         value++;
     }
     if (strlen(value) == 0) {
-        AppPrintError("The value of general name is not set, key: %u.\n", key);
+        AppPrintError("The value of general name is not set, key: %s.\n", key);
         return HITLS_APP_INVALID_GENERAL_NAME;
     }
     HITLS_X509_GeneralNameType type = HITLS_X509_GN_MAX;
@@ -782,8 +783,8 @@ static int32_t GetDnTypeAndValue(const char **nameStr, HITLS_X509_DN *name, bool
     }
     *tmp++ = '\0';
     if (*p == '\0') {
-        BSL_SAL_FREE(nameTypeStr);
         AppPrintError("The type(%s) must be have value.\n", nameTypeStr);
+        BSL_SAL_FREE(nameTypeStr);
         return HITLS_APP_INVALID_DN_VALUE;
     }
     p++; // skip '='
@@ -801,7 +802,7 @@ static int32_t GetDnTypeAndValue(const char **nameStr, HITLS_X509_DN *name, bool
         *tmp++ = *p++;
     }
     if (*p == '/' || *p == '+') {
-        *tmp++='\0';
+        *tmp++ = '\0';
     }
     int32_t ret = SetDnTypeAndValue(name, nameTypeStr, nameValueStr);
     BSL_SAL_FREE(nameTypeStr);

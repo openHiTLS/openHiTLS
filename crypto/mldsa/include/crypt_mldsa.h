@@ -29,7 +29,7 @@ void CRYPT_ML_DSA_FreeCtx(CRYPT_ML_DSA_Ctx *ctx);
 
 CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_DupCtx(CRYPT_ML_DSA_Ctx *ctx);
 
-int32_t CRYPT_ML_DSA_Ctrl(CRYPT_ML_DSA_Ctx *ctx, CRYPT_PkeyCtrl opt, void *val, uint32_t len);
+int32_t CRYPT_ML_DSA_Ctrl(CRYPT_ML_DSA_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
 int32_t CRYPT_ML_DSA_GenKey(CRYPT_ML_DSA_Ctx *ctx);
 
@@ -57,6 +57,27 @@ int32_t CRYPT_ML_DSA_GetPrvKeyEx(const CRYPT_ML_DSA_Ctx *ctx, BSL_Param *para);
 int32_t CRYPT_ML_DSA_GetPubKeyEx(const CRYPT_ML_DSA_Ctx *ctx, BSL_Param *para);
 #endif
 
+#ifdef HITLS_CRYPTO_MLDSA_CMP
 int32_t CRYPT_ML_DSA_Cmp(const CRYPT_ML_DSA_Ctx *a, const CRYPT_ML_DSA_Ctx *b);
+#else
+#define CRYPT_ML_DSA_Cmp NULL
+#endif
+
+#ifdef HITLS_CRYPTO_MLDSA_CHECK
+
+/**
+ * @ingroup mldsa
+ * @brief check the key pair consistency
+ *
+ * @param checkType [IN] check type
+ * @param pkey1 [IN] mldsa key context structure
+ * @param pkey2 [IN] mldsa key context structure
+ *
+ * @retval CRYPT_SUCCESS    check success.
+ * Others. For details, see error code in errno.
+ */
+int32_t CRYPT_ML_DSA_Check(uint32_t checkType, const CRYPT_ML_DSA_Ctx *pkey1, const CRYPT_ML_DSA_Ctx *pkey2);
+
+#endif // HITLS_CRYPTO_MLDSA_CHECK
 
 #endif    // CRYPT_ML_DSA_H

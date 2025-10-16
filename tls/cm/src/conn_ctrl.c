@@ -23,6 +23,7 @@
 #include "session.h"
 #endif
 #include "cert_method.h"
+#include "record.h"
 
 #ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 int32_t HITLS_GetNegotiatedVersion(const HITLS_Ctx *ctx, uint16_t *version)
@@ -35,7 +36,7 @@ int32_t HITLS_GetNegotiatedVersion(const HITLS_Ctx *ctx, uint16_t *version)
 }
 #endif
 
-#ifdef HITLS_TLS_PROTO_ALL
+#ifdef HITLS_TLS_CONFIG_VERSION
 int32_t HITLS_GetMaxProtoVersion(const HITLS_Ctx *ctx, uint16_t *maxVersion)
 {
     if (ctx == NULL || maxVersion == NULL) {
@@ -78,7 +79,7 @@ int32_t HITLS_SetMaxProtoVersion(HITLS_Ctx *ctx, uint16_t version)
 #endif
 
 #ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
-int32_t HITLS_IsAead(const HITLS_Ctx *ctx, uint8_t *isAead)
+int32_t HITLS_IsAead(const HITLS_Ctx *ctx, bool *isAead)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -89,7 +90,7 @@ int32_t HITLS_IsAead(const HITLS_Ctx *ctx, uint8_t *isAead)
 }
 #endif
 #ifdef HITLS_TLS_PROTO_DTLS
-int32_t HITLS_IsDtls(const HITLS_Ctx *ctx, uint8_t *isDtls)
+int32_t HITLS_IsDtls(const HITLS_Ctx *ctx, bool *isDtls)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -99,13 +100,13 @@ int32_t HITLS_IsDtls(const HITLS_Ctx *ctx, uint8_t *isDtls)
 #endif
 
 #ifdef HITLS_TLS_FEATURE_SESSION
-int32_t HITLS_IsSessionReused(HITLS_Ctx *ctx, uint8_t *isReused)
+int32_t HITLS_IsSessionReused(HITLS_Ctx *ctx, bool *isReused)
 {
     if (ctx == NULL || isReused == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *isReused = (uint8_t)ctx->negotiatedInfo.isResume;
+    *isReused = ctx->negotiatedInfo.isResume;
     return HITLS_SUCCESS;
 }
 #endif
@@ -222,13 +223,13 @@ int32_t HITLS_GetQuietShutdown(const HITLS_Ctx *ctx, int32_t *mode)
     return HITLS_SUCCESS;
 }
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
-int32_t HITLS_GetRenegotiationState(const HITLS_Ctx *ctx, uint8_t *isRenegotiationState)
+int32_t HITLS_GetRenegotiationState(const HITLS_Ctx *ctx, bool *isRenegotiationState)
 {
     if (ctx == NULL || isRenegotiationState == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *isRenegotiationState = (uint8_t)ctx->negotiatedInfo.isRenegotiation;
+    *isRenegotiationState = ctx->negotiatedInfo.isRenegotiation;
 
     return HITLS_SUCCESS;
 }
@@ -265,7 +266,7 @@ int32_t HITLS_GetShutdownState(const HITLS_Ctx *ctx, uint32_t *mode)
 }
 
 #ifdef HITLS_TLS_FEATURE_CERT_MODE
-int32_t HITLS_GetClientVerifySupport(HITLS_Ctx *ctx, uint8_t *isSupport)
+int32_t HITLS_GetClientVerifySupport(HITLS_Ctx *ctx, bool *isSupport)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -274,7 +275,7 @@ int32_t HITLS_GetClientVerifySupport(HITLS_Ctx *ctx, uint8_t *isSupport)
     return HITLS_CFG_GetClientVerifySupport(&(ctx->config.tlsConfig), isSupport);
 }
 
-int32_t HITLS_GetNoClientCertSupport(HITLS_Ctx *ctx, uint8_t *isSupport)
+int32_t HITLS_GetNoClientCertSupport(HITLS_Ctx *ctx, bool *isSupport)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -285,7 +286,7 @@ int32_t HITLS_GetNoClientCertSupport(HITLS_Ctx *ctx, uint8_t *isSupport)
 #endif
 
 #ifdef HITLS_TLS_FEATURE_PHA
-int32_t HITLS_GetPostHandshakeAuthSupport(HITLS_Ctx *ctx, uint8_t *isSupport)
+int32_t HITLS_GetPostHandshakeAuthSupport(HITLS_Ctx *ctx, bool *isSupport)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -295,7 +296,7 @@ int32_t HITLS_GetPostHandshakeAuthSupport(HITLS_Ctx *ctx, uint8_t *isSupport)
 }
 #endif
 #ifdef HITLS_TLS_FEATURE_CERT_MODE
-int32_t HITLS_GetVerifyNoneSupport(HITLS_Ctx *ctx, uint8_t *isSupport)
+int32_t HITLS_GetVerifyNoneSupport(HITLS_Ctx *ctx, bool *isSupport)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -306,7 +307,7 @@ int32_t HITLS_GetVerifyNoneSupport(HITLS_Ctx *ctx, uint8_t *isSupport)
 #endif
 
 #if defined(HITLS_TLS_FEATURE_CERT_MODE) && defined(HITLS_TLS_FEATURE_RENEGOTIATION)
-int32_t HITLS_GetClientOnceVerifySupport(HITLS_Ctx *ctx, uint8_t *isSupport)
+int32_t HITLS_GetClientOnceVerifySupport(HITLS_Ctx *ctx, bool *isSupport)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -338,7 +339,15 @@ int32_t HITLS_SetModeSupport(HITLS_Ctx *ctx, uint32_t mode)
     return HITLS_CFG_SetModeSupport(&(ctx->config.tlsConfig), mode);
 }
 
-int32_t HITLS_GetModeSupport(HITLS_Ctx *ctx, uint32_t *mode)
+int32_t HITLS_ClearModeSupport(HITLS_Ctx *ctx, uint32_t mode)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    return HITLS_CFG_ClearModeSupport(&(ctx->config.tlsConfig), mode);
+}
+
+int32_t HITLS_GetModeSupport(const HITLS_Ctx *ctx, uint32_t *mode)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -348,7 +357,7 @@ int32_t HITLS_GetModeSupport(HITLS_Ctx *ctx, uint32_t *mode)
 #endif
 
 #ifdef HITLS_TLS_SUITE_CIPHER_CBC
-int32_t HITLS_SetEncryptThenMac(HITLS_Ctx *ctx, uint32_t encryptThenMacType)
+int32_t HITLS_SetEncryptThenMac(HITLS_Ctx *ctx, bool encryptThenMacType)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -357,7 +366,7 @@ int32_t HITLS_SetEncryptThenMac(HITLS_Ctx *ctx, uint32_t encryptThenMacType)
     return HITLS_CFG_SetEncryptThenMac(&(ctx->config.tlsConfig), encryptThenMacType);
 }
 
-int32_t HITLS_GetEncryptThenMac(const HITLS_Ctx *ctx, uint32_t *encryptThenMacType)
+int32_t HITLS_GetEncryptThenMac(const HITLS_Ctx *ctx, bool *encryptThenMacType)
 {
     if (ctx == NULL || encryptThenMacType == NULL) {
         return HITLS_NULL_INPUT;
@@ -365,7 +374,7 @@ int32_t HITLS_GetEncryptThenMac(const HITLS_Ctx *ctx, uint32_t *encryptThenMacTy
 
     // Returns the negotiated value if it has been negotiated
     if (ctx->negotiatedInfo.version > 0) {
-        *encryptThenMacType = (uint32_t)ctx->negotiatedInfo.isEncryptThenMac;
+        *encryptThenMacType = ctx->negotiatedInfo.isEncryptThenMac;
         return HITLS_SUCCESS;
     } else {
         return HITLS_CFG_GetEncryptThenMac(&(ctx->config.tlsConfig), encryptThenMacType);
@@ -418,6 +427,15 @@ int32_t HITLS_SetClientRenegotiateSupport(HITLS_Ctx *ctx, bool isSupport)
 
     return HITLS_CFG_SetClientRenegotiateSupport(&(ctx->config.tlsConfig), isSupport);
 }
+
+int32_t HITLS_GetClientRenegotiateSupport(HITLS_Ctx *ctx, bool *isSupport)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_GetClientRenegotiateSupport(&(ctx->config.tlsConfig), isSupport);
+}
 #endif
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 int32_t HITLS_SetLegacyRenegotiateSupport(HITLS_Ctx *ctx, bool isSupport)
@@ -439,7 +457,7 @@ int32_t HITLS_SetSessionTicketSupport(HITLS_Ctx *ctx, bool isSupport)
     return HITLS_CFG_SetSessionTicketSupport(&(ctx->config.tlsConfig), isSupport);
 }
 
-int32_t HITLS_GetSessionTicketSupport(const HITLS_Ctx *ctx, uint8_t *isSupport)
+int32_t HITLS_GetSessionTicketSupport(const HITLS_Ctx *ctx, bool *isSupport)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -472,6 +490,9 @@ int32_t HITLS_SetMaxSendFragment(HITLS_Ctx *ctx, uint16_t maxSendFragment)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
+    if (ctx->recCtx != NULL && ctx->recCtx->outBuf != NULL && ctx->recCtx->outBuf->start != ctx->recCtx->outBuf->end) {
+        return HITLS_REC_NORMAL_IO_BUSY;
+    }
     return HITLS_CFG_SetMaxSendFragment(&(ctx->config.tlsConfig), maxSendFragment);
 }
 
@@ -481,6 +502,24 @@ int32_t HITLS_GetMaxSendFragment(const HITLS_Ctx *ctx, uint16_t *maxSendFragment
         return HITLS_NULL_INPUT;
     }
     return HITLS_CFG_GetMaxSendFragment(&(ctx->config.tlsConfig), maxSendFragment);
+}
+#endif
+
+#ifdef HITLS_TLS_FEATURE_REC_INBUFFER_SIZE
+int32_t HITLS_SetRecInbufferSize(HITLS_Ctx *ctx, uint32_t recInbufferSize)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    return HITLS_CFG_SetRecInbufferSize(&(ctx->config.tlsConfig), recInbufferSize);
+}
+
+int32_t HITLS_GetRecInbufferSize(const HITLS_Ctx *ctx, uint32_t *recInbufferSize)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    return HITLS_CFG_GetRecInbufferSize(&(ctx->config.tlsConfig), recInbufferSize);
 }
 #endif
 
@@ -504,7 +543,7 @@ uint32_t HITLS_GetTicketNums(HITLS_Ctx *ctx)
 }
 #endif
 #ifdef HITLS_TLS_FEATURE_FLIGHT
-int32_t HITLS_SetFlightTransmitSwitch(HITLS_Ctx *ctx, uint8_t isEnable)
+int32_t HITLS_SetFlightTransmitSwitch(HITLS_Ctx *ctx, bool isEnable)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -513,7 +552,7 @@ int32_t HITLS_SetFlightTransmitSwitch(HITLS_Ctx *ctx, uint8_t isEnable)
     return HITLS_CFG_SetFlightTransmitSwitch(&(ctx->config.tlsConfig), isEnable);
 }
 
-int32_t HITLS_GetFlightTransmitSwitch(const HITLS_Ctx *ctx, uint8_t *isEnable)
+int32_t HITLS_GetFlightTransmitSwitch(const HITLS_Ctx *ctx, bool *isEnable)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -639,3 +678,54 @@ int32_t HITLS_SetCheckKeyUsage(HITLS_Ctx *ctx, bool isCheck)
     return HITLS_CFG_SetCheckKeyUsage(&(ctx->config.tlsConfig), isCheck);
 }
 #endif
+
+#ifdef HITLS_TLS_PROTO_TLS13
+int32_t HITLS_SetMiddleBoxCompat(HITLS_Ctx *ctx, bool isMiddleBox)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetMiddleBoxCompat(&(ctx->config.tlsConfig), isMiddleBox);
+}
+
+int32_t HITLS_GetMiddleBoxCompat(HITLS_Ctx *ctx, bool *isMiddleBox)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_GetMiddleBoxCompat(&(ctx->config.tlsConfig), isMiddleBox);
+}
+#endif
+#ifdef HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET
+int32_t HITLS_SetSessionTicketExtProcessCb(HITLS_Ctx *ctx, const HITLS_SessionTicketExtProcessCb sessionTicketExtCb,
+                                           void *arg)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    ctx->config.tlsConfig.sessionTicketExtCb = sessionTicketExtCb;
+    ctx->config.tlsConfig.sessionTicketExtCbArg = arg;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_SetSessionTicketExtData(HITLS_Ctx *ctx, uint8_t *data, uint32_t dataSize)
+{
+    if (ctx == NULL || data == NULL || dataSize == 0) {
+        return HITLS_INVALID_INPUT;
+    }
+    HITLS_Config *config = &(ctx->config.tlsConfig);
+
+    BSL_SAL_FREE(config->sessionTicketExt);
+    config->sessionTicketExtSize = 0;
+    config->sessionTicketExt = BSL_SAL_Dump(data, dataSize);
+    if (config->sessionTicketExt == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    config->sessionTicketExtSize = dataSize;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET */

@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_CTR)
 
-.file   "crypt_aes_ctr_x86_64.S"
 .text
 
 .set    KEY, %rdi

@@ -120,8 +120,9 @@ int32_t TestSimpleRandEx(void *libCtx, uint8_t *buff, uint32_t len)
     return TestSimpleRand(buff, len);
 }
 
-int TestRandInit(void)
+int TestRandInitEx(void *libCtx)
 {
+    (void)libCtx;
     int drbgAlgId = GetAvailableRandAlgId();
     int32_t ret;
     if (drbgAlgId == -1) {
@@ -138,26 +139,33 @@ int TestRandInit(void)
 #endif
 
 #ifdef HITLS_CRYPTO_PROVIDER
- #ifndef HITLS_CRYPTO_ENTROPY
+#ifndef HITLS_CRYPTO_ENTROPY
     BSL_Param param[4] = {0};
     (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, &seedCtx, 0);
-    (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.getEntropy, 0);
-    (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanEntropy, 0);
+    (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
+        seedMeth.getEntropy, 0);
+    (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
+        seedMeth.cleanEntropy, 0);
     ret = CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)drbgAlgId, "provider=default", NULL, 0, param);
- #else
-    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)drbgAlgId, "provider=default", NULL, 0, NULL);
- #endif
 #else
- #ifndef HITLS_CRYPTO_ENTROPY
+    ret = CRYPT_EAL_ProviderRandInitCtx(libCtx, (CRYPT_RAND_AlgId)drbgAlgId, "provider=default", NULL, 0, NULL);
+#endif
+#else
+#ifndef HITLS_CRYPTO_ENTROPY
     ret = CRYPT_EAL_RandInit(drbgAlgId, &seedMeth, (void *)&seedCtx, NULL, 0);
- #else
+#else
     ret = CRYPT_EAL_RandInit(drbgAlgId, NULL, NULL, NULL, 0);
- #endif
+#endif
 #endif
     if (ret == CRYPT_EAL_ERR_DRBG_REPEAT_INIT) {
         ret = CRYPT_SUCCESS;
     }
     return ret;
+}
+
+int TestRandInit(void)
+{
+    return TestRandInitEx(NULL);
 }
 
 void TestRandDeInit(void)
@@ -289,9 +297,11 @@ CRYPT_EAL_PkeyCtx *TestPkeyNewCtx(
 {
 #ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
+#ifdef HITLS_CRYPTO_EALINIT
         if (CRYPT_EAL_Init(0) != CRYPT_SUCCESS) {
             return NULL;
         }
+#endif
         return CRYPT_EAL_ProviderPkeyNewCtx(libCtx, id, operType, attrName);
     } else {
         return CRYPT_EAL_PkeyNewCtx(id);

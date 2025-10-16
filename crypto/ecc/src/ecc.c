@@ -22,6 +22,7 @@
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "ecc_local.h"
+#include "crypt_ecc.h"
 
 ECC_Point *ECC_NewPoint(const ECC_Para *para)
 {
@@ -29,19 +30,19 @@ ECC_Point *ECC_NewPoint(const ECC_Para *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return NULL;
     }
-    uint32_t bits = BN_Bits(para->p);
-    ECC_Point *pt = BSL_SAL_Malloc(sizeof(ECC_Point));
+    int32_t ret;
+    uint32_t words = BITS_TO_BN_UNIT(BN_Bits(para->p));
+    ECC_Point *pt = BSL_SAL_Calloc(sizeof(ECC_Point), 1u);
     if (pt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
     pt->id = para->id;
-    pt->x = BN_Create(bits);
-    pt->y = BN_Create(bits);
-    pt->z = BN_Create(bits);
-    if (pt->x == NULL || pt->y == NULL || pt->z == NULL) {
+    if ((ret = BN_Extend(&pt->x, words)) != CRYPT_SUCCESS ||
+        (ret = BN_Extend(&pt->y, words)) != CRYPT_SUCCESS ||
+        (ret = BN_Extend(&pt->z, words)) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         ECC_FreePoint(pt);
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
     return pt;
@@ -52,9 +53,12 @@ void ECC_FreePoint(ECC_Point *pt)
     if (pt == NULL) {
         return;
     }
-    BN_Destroy(pt->x);
-    BN_Destroy(pt->y);
-    BN_Destroy(pt->z);
+    BSL_SAL_CleanseData((void *)(pt->x.data), pt->x.size * sizeof(BN_UINT));
+    BSL_SAL_FREE(pt->x.data);
+    BSL_SAL_CleanseData((void *)(pt->y.data), pt->y.size * sizeof(BN_UINT));
+    BSL_SAL_FREE(pt->y.data);
+    BSL_SAL_CleanseData((void *)(pt->z.data), pt->z.size * sizeof(BN_UINT));
+    BSL_SAL_FREE(pt->z.data);
     BSL_SAL_Free(pt);
 }
 
@@ -74,10 +78,11 @@ int32_t ECC_CopyPoint(ECC_Point *dst, const ECC_Point *src)
         return CRYPT_ECC_POINT_ERR_CURVE_ID;
     }
     int32_t ret;
-    GOTO_ERR_IF(BN_Copy(dst->x, src->x), ret);
-    GOTO_ERR_IF(BN_Copy(dst->y, src->y), ret);
-    GOTO_ERR_IF(BN_Copy(dst->z, src->z), ret);
-ERR:
+    if ((ret = BN_Copy(&dst->x, &src->x)) != CRYPT_SUCCESS ||
+        (ret = BN_Copy(&dst->y, &src->y)) != CRYPT_SUCCESS ||
+        (ret = BN_Copy(&dst->z, &src->z)) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
     return ret;
 }
 
@@ -87,20 +92,23 @@ ECC_Point *ECC_DupPoint(const ECC_Point *pt)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return NULL;
     }
-    ECC_Point *newPt = BSL_SAL_Malloc(sizeof(ECC_Point));
+    int32_t ret;
+    ECC_Point *newPt = BSL_SAL_Calloc(sizeof(ECC_Point), 1u);
     if (newPt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
     newPt->id = pt->id;
-    newPt->x = BN_Dup(pt->x);
-    newPt->y = BN_Dup(pt->y);
-    newPt->z = BN_Dup(pt->z);
-    if (newPt->x == NULL || newPt->y == NULL || newPt->z == NULL) {
+    if ((ret = BN_Extend(&newPt->x, pt->x.room)) != CRYPT_SUCCESS ||
+        (ret = BN_Extend(&newPt->y, pt->y.room)) != CRYPT_SUCCESS ||
+        (ret = BN_Extend(&newPt->z, pt->z.room)) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         ECC_FreePoint(newPt);
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
+    (void)BN_Copy(&newPt->x, &pt->x);
+    (void)BN_Copy(&newPt->y, &pt->y);
+    (void)BN_Copy(&newPt->z, &pt->z);
     return newPt;
 }
 
@@ -108,9 +116,8 @@ ECC_Point *ECC_DupPoint(const ECC_Point *pt)
 int32_t ECC_GetPoint(const ECC_Para *para, ECC_Point *pt, CRYPT_Data *x, CRYPT_Data *y)
 {
     int32_t ret;
-    uint32_t pBytes;
-    if (para == NULL || pt == NULL || x == NULL || x->data == NULL ||
-        ((y != NULL) && (y->data == NULL))) {
+    bool nullInput = para == NULL || pt == NULL || x == NULL || x->data == NULL || ((y != NULL) && (y->data == NULL));
+    if (nullInput == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -118,12 +125,12 @@ int32_t ECC_GetPoint(const ECC_Para *para, ECC_Point *pt, CRYPT_Data *x, CRYPT_D
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
         return CRYPT_ECC_POINT_ERR_CURVE_ID;
     }
-    pBytes = BN_Bytes(para->p);
+    uint32_t pBytes = BN_Bytes(para->p);
     if ((x->len < pBytes) || ((y != NULL) && (y->len < pBytes))) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_ECC_BUFF_LEN_NOT_ENOUGH;
     }
-    if (BN_IsZero(pt->z)) { // infinity point
+    if (BN_IsZero(&pt->z)) { // infinity point
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
     }
@@ -132,10 +139,10 @@ int32_t ECC_GetPoint(const ECC_Para *para, ECC_Point *pt, CRYPT_Data *x, CRYPT_D
         return CRYPT_ECC_NOT_SUPPORT;
     }
     GOTO_ERR_IF(para->method->point2Affine(para, pt, pt), ret);
-    GOTO_ERR_IF(BN_Bn2BinFixZero(pt->x, x->data, pBytes), ret);
+    GOTO_ERR_IF(BN_Bn2BinFixZero(&pt->x, x->data, pBytes), ret);
     x->len = pBytes;
     if (y != NULL) {
-        GOTO_ERR_IF(BN_Bn2BinFixZero(pt->y, y->data, pBytes), ret);
+        GOTO_ERR_IF(BN_Bn2BinFixZero(&pt->y, y->data, pBytes), ret);
         y->len = pBytes;
     }
 ERR:
@@ -152,7 +159,7 @@ int32_t ECC_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a)
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
         return CRYPT_ECC_POINT_ERR_CURVE_ID;
     }
-    if (BN_IsZero(a->z)) { // infinity point
+    if (BN_IsZero(&a->z)) { // infinity point
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
     }
@@ -172,7 +179,7 @@ int32_t ECC_GetPoint2Bn(const ECC_Para *para, ECC_Point *pt, BN_BigNum *x, BN_Bi
     int32_t ret;
     GOTO_ERR_IF(ECC_GetPointDataX(para, pt, x), ret);
     if (y != NULL) {
-        GOTO_ERR_IF(BN_Copy(y, pt->y), ret);
+        GOTO_ERR_IF(BN_Copy(y, &pt->y), ret);
     }
 ERR:
     return ret;
@@ -191,7 +198,7 @@ int32_t ECC_GetPointDataX(const ECC_Para *para, ECC_Point *pt, BN_BigNum *x)
         return CRYPT_ECC_NOT_SUPPORT;
     }
     GOTO_ERR_IF(para->method->point2Affine(para, pt, pt), ret);
-    GOTO_ERR_IF(BN_Copy(x, pt->x), ret);
+    GOTO_ERR_IF(BN_Copy(x, &pt->x), ret);
 ERR:
     return ret;
 }
@@ -207,9 +214,9 @@ ECC_Point *ECC_GetGFromPara(const ECC_Para *para)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)BN_Copy(pt->x, para->x);
-    (void)BN_Copy(pt->y, para->y);
-    (void)BN_SetLimb(pt->z, 1);
+    (void)BN_Copy(&pt->x, para->x);
+    (void)BN_Copy(&pt->y, para->y);
+    (void)BN_SetLimb(&pt->z, 1);
     return pt;
 }
 
@@ -241,19 +248,17 @@ int32_t ECC_PointMul(ECC_Para *para,  ECC_Point *r,
     return para->method->pointMul(para, r, k, pt);
 }
 
-int32_t ECC_PointCmp(const ECC_Para *para, const ECC_Point *a, const ECC_Point *b)
-{
-    // Currently, only prime number curves are supported. Other curves need to be expanded.
-    return ECP_PointCmp(para, a, b);
-}
-
 ECC_Para *ECC_DupPara(const ECC_Para *para)
 {
     if (para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return NULL;
     }
-    return ECC_NewPara(para->id);
+    ECC_Para *newPara = ECC_NewPara(para->id);
+    if (newPara != NULL) {
+        newPara->libCtx = para->libCtx;
+    }
+    return newPara;
 }
 
 uint32_t ECC_ParaBits(const ECC_Para *para)
@@ -341,26 +346,13 @@ BN_BigNum *ECC_GetParaY(const ECC_Para *para)
     return BN_Dup(para->y);
 }
 
-int32_t ECC_EncodePoint(const ECC_Para *para, ECC_Point *pt, uint8_t *data, uint32_t *dataLen,
-    CRYPT_PKEY_PointFormat format)
-{
-    // Currently, only prime number curves are supported. Other curves need to be expanded.
-    return ECP_EncodePoint(para, pt, data, dataLen, format);
-}
-
-int32_t ECC_DecodePoint(const ECC_Para *para, ECC_Point *pt, const uint8_t *data, uint32_t dataLen)
-{
-    // Currently, only prime number curves are supported. Other curves need to be expanded.
-    return ECP_DecodePoint(para, pt, data, dataLen);
-}
-
 int32_t ECC_PointCheck(const ECC_Point *pt)
 {
     if (pt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (BN_IsZero(pt->z)) {
+    if (BN_IsZero(&pt->z)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
     }
@@ -390,10 +382,11 @@ int32_t ECC_PointToMont(const ECC_Para *para, ECC_Point *pt, BN_Optimizer *opt)
         return CRYPT_SUCCESS;
     }
     int32_t ret;
-    GOTO_ERR_IF(para->method->bnMontEnc(pt->x, para->montP, opt, false), ret);
-    GOTO_ERR_IF(para->method->bnMontEnc(pt->y, para->montP, opt, false), ret);
-    GOTO_ERR_IF(para->method->bnMontEnc(pt->z, para->montP, opt, false), ret);
-ERR:
+    if ((ret = para->method->bnMontEnc(&pt->x, para->montP, opt, false)) != CRYPT_SUCCESS ||
+        (ret = para->method->bnMontEnc(&pt->y, para->montP, opt, false)) != CRYPT_SUCCESS ||
+        (ret = para->method->bnMontEnc(&pt->z, para->montP, opt, false)) != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
     return ret;
 }
 
@@ -402,9 +395,9 @@ void ECC_PointFromMont(const ECC_Para *para, ECC_Point *r)
     if (para == NULL || r == NULL || para->method->bnMontDec == NULL) {
         return;
     }
-    para->method->bnMontDec(r->x, para->montP);
-    para->method->bnMontDec(r->y, para->montP);
-    para->method->bnMontDec(r->z, para->montP);
+    para->method->bnMontDec(&r->x, para->montP);
+    para->method->bnMontDec(&r->y, para->montP);
+    para->method->bnMontDec(&r->z, para->montP);
 }
 
 /*

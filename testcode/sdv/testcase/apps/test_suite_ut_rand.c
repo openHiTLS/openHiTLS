@@ -26,12 +26,39 @@
 #include "crypt_errno.h"
 #include "app_rand.h"
 #include "app_function.h"
+#include "app_provider.h"
+#include "app_sm.h"
 #include "securec.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
+#include "bsl_ui.h"
 #include "stub_replace.h"
 
 /* END_HEADER */
+
+#define WORK_PATH "./rand_workpath"
+#define PASSWORD "12345678"
+
+#ifdef HITLS_CRYPTO_CMVP_SM_PURE_C
+#define HITLS_SM_PROVIDER_PATH "../../output/CMVP/C/lib"
+#endif
+
+#ifdef HITLS_CRYPTO_CMVP_SM_ARMV8_LE
+#define HITLS_SM_PROVIDER_PATH "../../output/CMVP/armv8_le/lib"
+#endif
+
+#ifdef HITLS_CRYPTO_CMVP_SM_X86_64
+#define HITLS_SM_PROVIDER_PATH "../../output/CMVP/x86_64/lib"
+#endif
+
+#define HITLS_SM_LIB_NAME "libhitls_sm.so"
+#define HITLS_SM_PROVIDER_ATTR "provider=sm"
+
+#define SM_PARAM \
+    "-sm", "-workpath", WORK_PATH, \
+    "-provider", HITLS_SM_LIB_NAME, \
+    "-provider-path", HITLS_SM_PROVIDER_PATH, \
+    "-provider-attr", HITLS_SM_PROVIDER_ATTR
 
 typedef struct {
     int argc;
@@ -40,6 +67,49 @@ typedef struct {
 } OptTestData;
 
 /* INCLUDE_SOURCE  ${HITLS_ROOT_PATH}/apps/src/app_print.c ${HITLS_ROOT_PATH}/apps/src/app_rand.c ${HITLS_ROOT_PATH}/apps/src/app_opt.c */
+
+static int32_t AppInit(void)
+{
+    int32_t ret = AppPrintErrorUioInit(stderr);
+    if (ret != HITLS_APP_SUCCESS) {
+        return ret;
+    }
+    if (APP_Create_LibCtx() == NULL) {
+        (void)AppPrintError("Create g_libCtx failed\n");
+        return HITLS_APP_INVALID_ARG;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static void AppUninit(void)
+{
+    AppPrintErrorUioUnInit();
+    HITLS_APP_FreeLibCtx();
+}
+
+#ifdef HITLS_APP_SM_MODE
+static int32_t STUB_BSL_UI_ReadPwdUtil(BSL_UI_ReadPwdParam *param, char *buff, uint32_t *buffLen,
+    const BSL_UI_CheckDataCallBack checkDataCallBack, void *callBackData)
+{
+    (void)param;
+    (void)checkDataCallBack;
+    (void)callBackData;
+    char result[] = PASSWORD;
+    (void)strcpy_s(buff, *buffLen, result);
+    *buffLen = (uint32_t)strlen(buff) + 1;
+    return BSL_SUCCESS;
+}
+
+static int32_t STUB_HITLS_APP_SM_IntegrityCheck(void)
+{
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t STUB_HITLS_APP_SM_RootUserCheck(void)
+{
+    return HITLS_APP_SUCCESS;
+}
+#endif
 
 /**
  * @test UT_HITLS_APP_rand_TC001
@@ -67,14 +137,14 @@ void UT_HITLS_APP_rand_TC001(void)
         {5, argv[5], HITLS_APP_SUCCESS}
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     return;
 }
 /* END_CASE */
@@ -102,14 +172,14 @@ void UT_HITLS_APP_rand_TC002(void)
         {2, argv[3], HITLS_APP_OPT_UNKOWN}
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     return;
 }
 /* END_CASE */
@@ -140,14 +210,14 @@ void UT_HITLS_APP_rand_TC003(void)
         {4, argv[5], HITLS_APP_SUCCESS}
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+AppUninit();
     return;
 }
 /* END_CASE */
@@ -168,14 +238,14 @@ void UT_HITLS_APP_rand_TC004(void)
         {2, argv[0], HITLS_APP_HELP},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     return;
 }
 /* END_CASE */
@@ -207,55 +277,14 @@ void UT_HITLS_APP_rand_TC005(void)
         {3, argv[0], HITLS_APP_OPT_UNKOWN},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
-    return;
-}
-/* END_CASE */
-
-void *STUB_SAL_Calloc(uint32_t num, uint32_t size)
-{
-    (void)num;
-    (void)size;
-    return NULL;
-}
-
-/**
- * @test UT_HITLS_APP_rand_TC006
- * @spec  -
- * @title   测试UT_HITLS_APP_rand_TC006函数
- */
-/* BEGIN_CASE */
-void UT_HITLS_APP_rand_TC006(void)
-{
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_SAL_Calloc, STUB_SAL_Calloc);
-    char *argv[][3] = {
-        {"rand", "-hex", "10"},
-        {"rand", "-base64", "10"},
-        {"rand", "10"},
-    };
-
-    OptTestData testData[] = {
-        {3, argv[0], HITLS_APP_CRYPTO_FAIL},
-        {3, argv[1], HITLS_APP_CRYPTO_FAIL},
-        {2, argv[2], HITLS_APP_CRYPTO_FAIL},
-    };
-
-    for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
-        int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
-        ASSERT_EQ(ret, testData[i].expect);
-    }
-
-EXIT:
+    AppUninit();
     STUB_Reset(&stubInfo);
     return;
 }
@@ -280,6 +309,7 @@ void UT_HITLS_APP_rand_TC007(void)
 {
     STUB_Init();
     FuncStubInfo stubInfo = {0};
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     STUB_Replace(&stubInfo, BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);
     char *argv[][4] = {
         {"rand", "-hex", "2049"},
@@ -300,6 +330,7 @@ void UT_HITLS_APP_rand_TC007(void)
 
 EXIT:
     STUB_Reset(&stubInfo);
+    AppUninit();
     return;
 }
 /* END_CASE */
@@ -336,14 +367,14 @@ void UT_HITLS_APP_rand_TC008(void)
         {3, argv[0], HITLS_APP_CRYPTO_FAIL},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     STUB_Reset(&stubInfo);
     return;
 }
@@ -376,14 +407,14 @@ void UT_HITLS_APP_rand_TC009(void)
         {3, argv[0], HITLS_APP_CRYPTO_FAIL},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     STUB_Reset(&stubInfo);
     return;
 }
@@ -405,6 +436,7 @@ void UT_HITLS_APP_rand_TC0010(void)
 {
     STUB_Init();
     FuncStubInfo stubInfo = {0};
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     STUB_Replace(&stubInfo, BSL_UIO_New, STUB_BSL_UIO_New);
     char *argv[][3] = {
         {"rand", "-hex", "10"},
@@ -421,6 +453,7 @@ void UT_HITLS_APP_rand_TC0010(void)
 
 EXIT:
     STUB_Reset(&stubInfo);
+    AppUninit();
     return;
 }
 /* END_CASE */
@@ -447,14 +480,14 @@ void UT_HITLS_APP_rand_TC0011(void)
         {4, argv[0], HITLS_APP_OPT_VALUE_INVALID},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     STUB_Reset(&stubInfo);
     return;
 }
@@ -486,14 +519,14 @@ void UT_HITLS_APP_rand_TC0012(void)
         {4, argv[0], HITLS_APP_UIO_FAIL},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
     STUB_Reset(&stubInfo);
     return;
 }
@@ -529,7 +562,7 @@ void UT_HITLS_APP_rand_TC0013(void)
         {5, argv[2], HITLS_APP_SUCCESS},
     };
 
-    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         ASSERT_TRUE(IsFileExist(filename) == false);
         int ret = HITLS_RandMain(testData[i].argc, testData[i].argv);
@@ -539,7 +572,41 @@ void UT_HITLS_APP_rand_TC0013(void)
     }
 
 EXIT:
-    AppPrintErrorUioUnInit();
+    AppUninit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_rand_TC0014
+ * @spec  -
+ * @title   Test the random function in SM mode.
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_rand_TC0014(void)
+{
+#ifndef HITLS_APP_SM_MODE
+    SKIP_TEST();
+#else
+    system("rm -rf " WORK_PATH);
+    system("mkdir -p " WORK_PATH);
+    STUB_Init();
+    FuncStubInfo stubInfo[3] = {0};
+    STUB_Replace(&stubInfo[0], BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);
+    STUB_Replace(&stubInfo[1], HITLS_APP_SM_IntegrityCheck, STUB_HITLS_APP_SM_IntegrityCheck);
+    STUB_Replace(&stubInfo[2], HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);
+    char *argv[] = {"rand", SM_PARAM, "-hex", "10", NULL};
+
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_RandMain(sizeof(argv) / sizeof(argv[0]) - 1, argv), HITLS_APP_SUCCESS);
+
+EXIT:
+    AppUninit();
+    STUB_Reset(&stubInfo[0]);
+    STUB_Reset(&stubInfo[1]);
+    STUB_Reset(&stubInfo[2]);
+    system("rm -rf " WORK_PATH);
+#endif
     return;
 }
 /* END_CASE */

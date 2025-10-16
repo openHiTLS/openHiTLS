@@ -60,7 +60,7 @@ static int32_t Sm3Hash(const EAL_MdMethod *hashMethod, const uint8_t *pbBuf, con
     uint8_t *c3Buf, uint32_t *c3BufLen)
 {
     int32_t ret;
-    void *mdCtx = hashMethod->newCtx();
+    void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
     if (mdCtx == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);

@@ -183,17 +183,17 @@ static int32_t ECP256_GetAffine(ECC_Point *r, const P256_Point *pt)
     ECP256_Mul(&res_y, &(pt->y), &zInv3);       // yMont = y / (z^3)
     ECP256_FromMont(&res_x, &res_x);
     ECP256_FromMont(&res_y, &res_y);
-    ret = BN_Array2BN(r->x, res_x.value, P256_SIZE);
+    ret = BN_Array2BN(&r->x, res_x.value, P256_SIZE);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_Array2BN(r->y, res_y.value, P256_SIZE);
+    ret = BN_Array2BN(&r->y, res_y.value, P256_SIZE);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BN_SetLimb(r->z, 1);
+    ret = BN_SetLimb(&r->z, 1);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -208,16 +208,16 @@ static void ECP256_P256Point2EccPoint(ECC_Point *r, const P256_Point *pt)
     ECP256_FromMont(&xTemp, &(pt->x));
     ECP256_FromMont(&yTemp, &(pt->y));
     ECP256_FromMont(&zTemp, &(pt->z));
-    (void)BN_Array2BN(r->x, xTemp.value, P256_SIZE);
-    (void)BN_Array2BN(r->y, yTemp.value, P256_SIZE);
-    (void)BN_Array2BN(r->z, zTemp.value, P256_SIZE);
+    (void)BN_Array2BN(&r->x, xTemp.value, P256_SIZE);
+    (void)BN_Array2BN(&r->y, yTemp.value, P256_SIZE);
+    (void)BN_Array2BN(&r->z, zTemp.value, P256_SIZE);
 }
 
 static void ECP256_EccPoint2P256Point(P256_Point *r, const ECC_Point *pt)
 {
-    (void)BN_BN2Array(pt->x, r->x.value, P256_SIZE);
-    (void)BN_BN2Array(pt->y, r->y.value, P256_SIZE);
-    (void)BN_BN2Array(pt->z, r->z.value, P256_SIZE);
+    (void)BN_BN2Array(&pt->x, r->x.value, P256_SIZE);
+    (void)BN_BN2Array(&pt->y, r->y.value, P256_SIZE);
+    (void)BN_BN2Array(&pt->z, r->z.value, P256_SIZE);
     ECP256_Mul(&(r->x), &(r->x), &g_rrModP);
     ECP256_Mul(&(r->y), &(r->y), &g_rrModP);
     ECP256_Mul(&(r->z), &(r->z), &g_rrModP);
@@ -445,7 +445,7 @@ static int32_t ECP256_PointMulCheck(ECC_Para *para, ECC_Point *r, const BN_BigNu
             return CRYPT_ECC_POINT_ERR_CURVE_ID;
         }
         // Special processing for the infinite point.
-        if (BN_IsZero(pt->z)) {
+        if (BN_IsZero(&pt->z)) {
             BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
             return CRYPT_ECC_POINT_AT_INFINITY;
         }
@@ -493,7 +493,7 @@ static int32_t ECP256_PointMulAddCheck(
         return CRYPT_ECC_POINT_ERR_CURVE_ID;
     }
     // Special processing of the infinite point.
-    if (BN_IsZero(pt->z)) {
+    if (BN_IsZero(&pt->z)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
     }

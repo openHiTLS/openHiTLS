@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_PROVIDER
+#if defined(HITLS_CRYPTO_DRBG) && defined(HITLS_CRYPTO_PROVIDER)
 
 #include "crypt_eal_implprovider.h"
 #include "crypt_drbg.h"
@@ -49,9 +49,9 @@ static int32_t GetDefaultSeed(BSL_Param *param)
 }
 #endif
 
-void *CRYPT_EAL_DefRandNewCtx(void *provCtx, int32_t algId, BSL_Param *param)
+void *CRYPT_EAL_DefRandNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId, BSL_Param *param)
 {
-    (void) provCtx;
+    void *libCtx = provCtx == NULL ? NULL : provCtx->libCtx;
     void *randCtx = NULL;
 #ifdef HITLS_CRYPTO_ASM_CHECK
     if (CRYPT_ASMCAP_Drbg(algId) != CRYPT_SUCCESS) {
@@ -81,13 +81,13 @@ void *CRYPT_EAL_DefRandNewCtx(void *provCtx, int32_t algId, BSL_Param *param)
             BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
             return NULL;
         }
-        return DRBG_New(algId, defaultParam);
+        return DRBG_New(libCtx, algId, defaultParam);
 #else
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return NULL;
 #endif
     }
-    randCtx = DRBG_New(algId, param);
+    randCtx = DRBG_New(libCtx, algId, param);
     if (randCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);
         return NULL;
@@ -96,7 +96,6 @@ void *CRYPT_EAL_DefRandNewCtx(void *provCtx, int32_t algId, BSL_Param *param)
 }
 
 const CRYPT_EAL_Func g_defEalRand[] = {
-#if defined(HITLS_CRYPTO_DRBG)
     {CRYPT_EAL_IMPLRAND_DRBGNEWCTX, (CRYPT_EAL_ImplRandDrbgNewCtx)CRYPT_EAL_DefRandNewCtx},
     {CRYPT_EAL_IMPLRAND_DRBGINST, (CRYPT_EAL_ImplRandDrbgInst)DRBG_Instantiate},
     {CRYPT_EAL_IMPLRAND_DRBGUNINST, (CRYPT_EAL_ImplRandDrbgUnInst)DRBG_Uninstantiate},
@@ -104,8 +103,7 @@ const CRYPT_EAL_Func g_defEalRand[] = {
     {CRYPT_EAL_IMPLRAND_DRBGRESEED, (CRYPT_EAL_ImplRandDrbgReSeed)DRBG_Reseed},
     {CRYPT_EAL_IMPLRAND_DRBGCTRL, (CRYPT_EAL_ImplRandDrbgCtrl)DRBG_Ctrl},
     {CRYPT_EAL_IMPLRAND_DRBGFREECTX, (CRYPT_EAL_ImplRandDrbgFreeCtx)DRBG_Free},
-#endif
     CRYPT_EAL_FUNC_END,
 };
 
-#endif /* HITLS_CRYPTO_PROVIDER */
+#endif /* HITLS_CRYPTO_DRBG && HITLS_CRYPTO_PROVIDER */

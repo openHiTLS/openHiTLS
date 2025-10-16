@@ -120,22 +120,23 @@ int32_t CipherMacUpdate(Cipher_MAC_Common_Ctx *ctx, const uint8_t *in, uint32_t 
     return CRYPT_SUCCESS;
 }
 
-void CipherMacReinit(Cipher_MAC_Common_Ctx *ctx)
+int32_t CipherMacReinit(Cipher_MAC_Common_Ctx *ctx)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
+        return CRYPT_NULL_INPUT;
     }
 
     (void)memset_s(ctx->data, CIPHER_MAC_MAXBLOCKSIZE, 0, CIPHER_MAC_MAXBLOCKSIZE);
     ctx->len = 0;
+    return CRYPT_SUCCESS;
 }
 
-void CipherMacDeinit(Cipher_MAC_Common_Ctx *ctx)
+int32_t CipherMacDeinit(Cipher_MAC_Common_Ctx *ctx)
 {
     if (ctx == NULL || ctx->method == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
+        return CRYPT_NULL_INPUT;
     }
 
     const uint32_t ctxSize = ctx->method->ctxSize;
@@ -143,6 +144,7 @@ void CipherMacDeinit(Cipher_MAC_Common_Ctx *ctx)
     (void)memset_s(ctx->data, CIPHER_MAC_MAXBLOCKSIZE, 0, CIPHER_MAC_MAXBLOCKSIZE);
     (void)memset_s(ctx->left, CIPHER_MAC_MAXBLOCKSIZE, 0, CIPHER_MAC_MAXBLOCKSIZE);
     ctx->len = 0;
+    return CRYPT_SUCCESS;
 }
 
 int32_t CipherMacGetMacLen(const Cipher_MAC_Common_Ctx *ctx, void *val, uint32_t len)

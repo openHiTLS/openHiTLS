@@ -37,7 +37,7 @@
 static int32_t TlsSendHandShakeMsg(TLS_Ctx *ctx)
 {
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
-    int32_t ret = REC_RecBufReSet(ctx);
+    int32_t ret = REC_RecOutBufReSet(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -159,7 +159,7 @@ static int32_t DtlsSendHandShakeMsg(TLS_Ctx *ctx)
         return ret;
     }
 #endif /* HITLS_BSL_UIO_UDP */
-    ret = REC_RecBufReSet(ctx);
+    ret = REC_RecOutBufReSet(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

@@ -37,7 +37,7 @@ extern "C" {
  * @param   ctx  [IN] Ctx context
  * @param   cookie  [OUT] Generated cookie
  * @param   cookie_len  [OUT] Length of Generated cookie
- * @retval  COOKIE_GEN_SUCCESS: successful. Other values are considered as failure.
+ * @retval  HITLS_COOKIE_GENERATE_SUCCESS: successful. Other values are considered as failure.
  */
 typedef int32_t (*HITLS_AppGenCookieCb)(HITLS_Ctx *ctx, uint8_t *cookie, uint32_t *cookieLen);
 
@@ -48,7 +48,7 @@ typedef int32_t (*HITLS_AppGenCookieCb)(HITLS_Ctx *ctx, uint8_t *cookie, uint32_
  * @param   ctx  [IN] Ctx context
  * @param   cookie  [IN] Cookie to be verified
  * @param   cookie_len  [IN] Length of Cookie to be verified
- * @retval  COOKIE_VERIFY_SUCCESS: successful. Other values are considered as failure.
+ * @retval  HITLS_COOKIE_VERIFY_SUCCESS: successful. Other values are considered as failure.
  */
 typedef int32_t (*HITLS_AppVerifyCookieCb)(HITLS_Ctx *ctx, const uint8_t *cookie, uint32_t cookieLen);
 

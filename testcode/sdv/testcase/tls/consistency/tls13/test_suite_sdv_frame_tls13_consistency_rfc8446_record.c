@@ -49,9 +49,9 @@ static int32_t SendCcs(HITLS_Ctx *ctx, uint8_t *data, uint8_t len)
         return ret;
     }
     /* If isFlightTransmitEnable is enabled, the stored handshake information needs to be sent. */
-    uint8_t isFlightTransmitEnable;
+    bool isFlightTransmitEnable = false;
     (void)HITLS_GetFlightTransmitSwitch(ctx, &isFlightTransmitEnable);
-    if (isFlightTransmitEnable == 1) {
+    if (isFlightTransmitEnable == true) {
         ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_FLUSH, 0, NULL);
         if (ret == BSL_UIO_IO_BUSY) {
             return HITLS_REC_NORMAL_IO_BUSY;
@@ -75,9 +75,9 @@ static int32_t SendAlert(HITLS_Ctx *ctx, ALERT_Level level, ALERT_Description de
         return ret;
     }
     /* If isFlightTransmitEnable is enabled, the stored handshake information needs to be sent. */
-    uint8_t isFlightTransmitEnable;
+    bool isFlightTransmitEnable = false;
     (void)HITLS_GetFlightTransmitSwitch(ctx, &isFlightTransmitEnable);
-    if (isFlightTransmitEnable == 1) {
+    if (isFlightTransmitEnable == true) {
         ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_FLUSH, 0, NULL);
         if (ret == BSL_UIO_IO_BUSY) {
             return HITLS_REC_NORMAL_IO_BUSY;
@@ -98,9 +98,9 @@ static int32_t SendErrorAlert(HITLS_Ctx *ctx, ALERT_Level level, ALERT_Descripti
         return ret;
     }
     /* If isFlightTransmitEnable is enabled, the stored handshake information needs to be sent. */
-    uint8_t isFlightTransmitEnable;
+    bool isFlightTransmitEnable = false;
     (void)HITLS_GetFlightTransmitSwitch(ctx, &isFlightTransmitEnable);
-    if (isFlightTransmitEnable == 1) {
+    if (isFlightTransmitEnable == true) {
         ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_FLUSH, 0, NULL);
         if (ret == BSL_UIO_IO_BUSY) {
             return HITLS_REC_NORMAL_IO_BUSY;
@@ -378,9 +378,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC004(void)
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_FINISH) == HITLS_SUCCESS);
     ASSERT_EQ(server->ssl->hsCtx->state, TRY_RECV_FINISH);
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 1);
+    ASSERT_EQ(isReused, true);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     FrameMsg recMsg;
     ASSERT_TRUE(memcpy_s(recMsg.msg, MAX_RECORD_LENTH, ioServerData->recMsg.msg, ioServerData->recMsg.len) == EOK);
@@ -2112,9 +2112,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_LEGACY_RECORD_VERSION_FUNC_TC004(void)
     ioClientData->recMsg.msg[bufOffset] = 0xff;
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 1);
+    ASSERT_EQ(isReused, true);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -2185,9 +2185,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_LEGACY_RECORD_VERSION_FUNC_TC005(void)
     ioClientData->recMsg.msg[bufOffset] = 0xff;
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
-    uint8_t isReused = 0;
+    bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
-    ASSERT_EQ(isReused, 1);
+    ASSERT_EQ(isReused, true);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);

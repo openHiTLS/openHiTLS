@@ -21,6 +21,7 @@
 #include <sys/types.h>
 #include "app_opt.h"
 #include "app_print.h"
+#include "sal_file.h"
 #include "bsl_uio.h"
 #include "bsl_ui.h"
 #include "uio_abstraction.h"
@@ -39,11 +40,38 @@
 #define PKEY_TEST_FILE_PATH "out_test.pem"
 #define PKEY_TEST_DIR_PATH "./pkey_dir"
 
+#define PKEY_MAX_ARGC 10
+
 typedef struct {
     int argc;
     char **argv;
     int expect;
 } OptTestData;
+
+static void PreProcArgs(char *args, int *argc, char **argv)
+{
+    uint32_t len = strlen(args);
+    argv[(*argc)++] = args;
+    for (uint32_t i = 0; i < len; i++) {
+        if (args[i] == ' ') {
+            args[i] = '\0';
+            argv[(*argc)++] = args + i + 1;
+        }
+    }
+}
+
+static int32_t CompareOutByData(char *file1, Hex *data)
+{
+    int ret = 1;
+    BSL_Buffer buff = {0};
+    ASSERT_EQ(BSL_SAL_ReadFile(file1, &buff.data, &buff.dataLen), 0);
+    ASSERT_EQ(buff.dataLen, data->len);
+    ASSERT_COMPARE("Compare out data", buff.data, buff.dataLen, data->x, data->len);
+    ret = 0;
+EXIT:
+    BSL_SAL_Free(buff.data);
+    return ret;
+}
 
 /* INCLUDE_SOURCE  ${HITLS_ROOT_PATH}/apps/src/app_print.c ${HITLS_ROOT_PATH}/apps/src/app_pkey.c ${HITLS_ROOT_PATH}/apps/src/app_opt.c ${HITLS_ROOT_PATH}/apps/src/app_utils.c */
 
@@ -236,5 +264,31 @@ EXIT:
     STUB_Reset(&stubInfo);
     remove(PKEY_TEST_FILE_PATH);
     return;
+}
+/* END_CASE */
+
+/**
+ * @test   UT_HITLS_APP_PKEY_IN_FILE_SIZE_TC001
+ * @title  Test the limit size of input key file.
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_PKEY_IN_FILE_SIZE_TC001(char *opts, int ret, char *outFile, Hex *expectOut)
+{
+    int argc = 0;
+    char *argv[PKEY_MAX_ARGC] = {0};
+    char *tmp = strdup(opts);
+    ASSERT_NE(tmp, NULL);
+    PreProcArgs(tmp, &argc, argv);
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    ASSERT_EQ(HITLS_PkeyMain(argc, argv), ret);
+    if (ret == 0) {
+        ASSERT_EQ(CompareOutByData(outFile, expectOut), HITLS_APP_SUCCESS);
+    }
+
+EXIT:
+    AppPrintErrorUioUnInit();
+    BSL_SAL_Free(tmp);
+    // remove(outFile);
 }
 /* END_CASE */

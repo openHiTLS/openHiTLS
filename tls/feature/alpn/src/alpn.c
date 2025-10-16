@@ -68,12 +68,11 @@ static int32_t SelectProtocol(TLS_Ctx *ctx, uint8_t *alpnSelected, uint16_t alpn
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     } else if (protoMatch == NULL) {
-        /* The RFC 7301 does not specify the behavior when the client selectedProto does not match the local
-         * configuration list. */
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15259, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "server proposed protocol is not supported by client", 0, 0, 0, 0);
-        return HITLS_SUCCESS;
+        return HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH;
     }
 
     uint8_t *alpnSelectedTmp = (uint8_t *)BSL_SAL_Calloc(1u, (protoMatchLen + 1));

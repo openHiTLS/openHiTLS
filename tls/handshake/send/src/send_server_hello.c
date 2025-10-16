@@ -50,8 +50,8 @@ static int32_t ServerPrepareSessionId(TLS_Ctx *ctx)
     }
 
     if (ctx->negotiatedInfo.isResume == false) {
-        HITLS_SESS_CACHE_MODE sessCacheMode = SESSMGR_GetCacheMode(ctx->config.tlsConfig.sessMgr);
-        bool needSessionId = (sessCacheMode == HITLS_SESS_CACHE_SERVER || sessCacheMode == HITLS_SESS_CACHE_BOTH) &&
+        HITLS_SESS_CACHE_MODE sessCacheMode = SESSMGR_GetCacheMode(ctx->globalConfig->sessMgr);
+        bool needSessionId = ((sessCacheMode & HITLS_SESS_CACHE_SERVER) != 0) &&
             (!ctx->negotiatedInfo.isTicket);
         if (needSessionId) {
             hsCtx->sessionIdSize = HITLS_SESSION_ID_MAX_SIZE;
@@ -180,7 +180,7 @@ int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
             return ret;
         }
 
-        ret = HS_PackMsg(ctx, SERVER_HELLO, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, SERVER_HELLO);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15550, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "pack server hello msg fail.", 0, 0, 0, 0);
@@ -273,7 +273,7 @@ int32_t Tls13ServerSendServerHelloProcess(TLS_Ctx *ctx)
             return ret;
         }
 
-        ret = HS_PackMsg(ctx, SERVER_HELLO, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, SERVER_HELLO);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15555, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "pack tls1.3 server hello msg fail.", 0, 0, 0, 0);
@@ -295,7 +295,7 @@ int32_t Tls13ServerSendServerHelloProcess(TLS_Ctx *ctx)
         "send tls1.3 server hello msg success.", 0, 0, 0, 0);
 
     /* In the middlebox mode, If the scenario is not hrr, the CCS needs to be sent before the EE */
-    if (!ctx->hsCtx->haveHrr) {
+    if (ctx->config.tlsConfig.isMiddleBoxCompat && !ctx->hsCtx->haveHrr) {
         ctx->hsCtx->ccsNextState = TRY_SEND_ENCRYPTED_EXTENSIONS;
         return HS_ChangeState(ctx, TRY_SEND_CHANGE_CIPHER_SPEC);
     }
@@ -321,7 +321,7 @@ int32_t Tls13ServerSendHelloRetryRequestProcess(TLS_Ctx *ctx)
         }
 
         /* Pack the message. The hello retry request is assembled in the server hello format */
-        ret = HS_PackMsg(ctx, SERVER_HELLO, hsCtx->msgBuf, hsCtx->bufferLen, &hsCtx->msgLen);
+        ret = HS_PackMsg(ctx, SERVER_HELLO);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15558, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "pack tls1.3 hello retry request msg fail.", 0, 0, 0, 0);
@@ -342,7 +342,9 @@ int32_t Tls13ServerSendHelloRetryRequestProcess(TLS_Ctx *ctx)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
+    if (!ctx->config.tlsConfig.isMiddleBoxCompat) {
+        return HS_ChangeState(ctx, TRY_RECV_CLIENT_HELLO);
+    }
     /* In middlebox mode, the peer sends CCS messages. Set this parameter to allow receiving CCS messages */
     ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_READY);
     /* In middlebox mode, the server sends the CCS immediately after sending the hrr */

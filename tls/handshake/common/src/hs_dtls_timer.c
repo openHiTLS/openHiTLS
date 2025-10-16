@@ -166,6 +166,7 @@ int32_t HS_TimeoutProcess(TLS_Ctx *ctx)
     if (hsCtx->timeoutNum > NEED_REDUCE_MTU_TIMEOUT_NUM && !ctx->noQueryMtu) {
         if (ctx->config.pmtu > DTLS_IP_MIN_MTU) {
             ctx->config.pmtu = DTLS_IP_MIN_MTU;
+            ctx->mtuModified = true;
         }
     }
 

@@ -137,7 +137,6 @@ void SDV_CRYPT_EAL_KDF_SCRYPT_API_TC001(void)
 
     ASSERT_EQ(CRYPT_EAL_KdfDeInitCtx(ctx), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_KdfCtrl(ctx, 0, NULL, 0), CRYPT_NULL_INPUT);
 EXIT:
     CRYPT_EAL_KdfFreeCtx(ctx);
 }
@@ -371,6 +370,51 @@ EXIT:
     if (out != NULL) {
         free(out);
     }
+    CRYPT_EAL_KdfFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_EAL_KDF_SCRYPT_FUN_TC002
+ * @title  Data tests that may exceed the boundaries.
+ * @precon nan
+ * @brief
+ *    1. Use parameters that will go out of bounds, Call func CRYPT_EAL_KdfDerive.
+ * @expect
+ *    1.return value is CRYPT_SCRYPT_PARAM_ERROR.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_KDF_SCRYPT_FUN_TC002(int testN, int testR, int testP)
+{
+    TestMemInit();
+    uint32_t keyLen = DATA_LEN;
+    uint8_t key[DATA_LEN];
+    uint32_t saltLen = DATA_LEN;
+    uint8_t salt[DATA_LEN];
+    uint32_t N = testN;
+    uint32_t r = testR;
+    uint32_t p = testP;
+    uint32_t outLen = DATA_LEN;
+    uint8_t out[DATA_LEN];
+
+    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_SCRYPT);
+    ASSERT_TRUE(ctx != NULL);
+
+    BSL_Param params[6] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END};
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS,
+        key, keyLen), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS,
+        salt, saltLen), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_N, BSL_PARAM_TYPE_UINT32,
+        &N, sizeof(N)), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[3], CRYPT_PARAM_KDF_R, BSL_PARAM_TYPE_UINT32,
+        &r, sizeof(r)), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[4], CRYPT_PARAM_KDF_P, BSL_PARAM_TYPE_UINT32,
+        &p, sizeof(p)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SCRYPT_PARAM_ERROR);
+
+EXIT:
     CRYPT_EAL_KdfFreeCtx(ctx);
 }
 /* END_CASE */

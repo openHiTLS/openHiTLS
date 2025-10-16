@@ -19,7 +19,8 @@
 #include "crypt_arm.h"
 
 .arch   armv8-a+crypto
-
+.extern	g_cryptArmCpuInfo
+.hidden	g_cryptArmCpuInfo
 /* SHA1 used constant value. For the data source, see the RFC3174 document.
  * K(t) = 5A827999 ( 0 <= t <= 19)
  * K(t) = 6ED9EBA1 (20 <= t <= 39)

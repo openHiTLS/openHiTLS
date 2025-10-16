@@ -553,17 +553,14 @@ int32_t SAL_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx, const char *attrName,
 /**
  * @brief   HKDF-ExpandLabel
  *
- * @param libCtx     [IN] Library context, used to manage cryptographic operations.
- * @param attrName   [IN] Attribute name, used to configure the cryptographic 
- *                      algorithm provided by the algorithm provider
- * @param input      [IN] Input key material.
- * @param prk        [OUT] Output key
- * @param prkLen     [IN/OUT] IN: Maximum buffer length OUT: Output key length
+ * @param deriveInfo [IN] Key derivation parameters, including hash algorithm, secret, label, seed, etc.
+ * @param outSecret  [OUT] Output key buffer
+ * @param outLen     [IN]  Output key length
  *
  * @retval HITLS_SUCCESS                succeeded.
  * @retval HITLS_UNREGISTERED_CALLBACK  Unregistered callback
  * @retval HITLS_CRYPT_ERR_HKDF_EXTRACT calculation fails.
- * @retval HITLS_MEMCPY_FAIL            Memory Copy Failure
+ * @retval HITLS_MEMCPY_FAIL            Memory copy failure
  */
 int32_t SAL_CRYPT_HkdfExpandLabel(CRYPT_KeyDeriveParameters *deriveInfo,
     uint8_t *outSecret, uint32_t outLen);

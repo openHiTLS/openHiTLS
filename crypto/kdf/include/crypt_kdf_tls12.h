@@ -33,10 +33,22 @@ typedef struct CryptKdfTls12Ctx CRYPT_KDFTLS12_Ctx;
  * @ingroup  KDFTLS12
  * @brief Generate KDFTLS12 context.
  *
- * @retval Success: cipher ctx.
+ * @retval Success: KDFTLS12 ctx.
  *         Fails: NULL.
  */
 CRYPT_KDFTLS12_Ctx* CRYPT_KDFTLS12_NewCtx(void);
+
+/**
+ * @ingroup KDFTLS12
+ * @brief Generate KDFTLS12 context.
+ *
+ * @param libCtx [in] Library context.
+ * @param algId [in] algorithm id
+ *
+ * @retval Success: KDFTLS12 ctx.
+ *         Fails: NULL.
+ */
+CRYPT_KDFTLS12_Ctx *CRYPT_KDFTLS12_NewCtxEx(void *libCtx, int32_t algId);
 
 /**
  * @ingroup KDFTLS12
@@ -81,7 +93,6 @@ int32_t CRYPT_KDFTLS12_Deinit(CRYPT_KDFTLS12_Ctx *ctx);
  * @param ctx [IN] KDFTLS12 handle
  */
 void CRYPT_KDFTLS12_FreeCtx(CRYPT_KDFTLS12_Ctx *ctx);
-
 
 #ifdef __cplusplus
 }

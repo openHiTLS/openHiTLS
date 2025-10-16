@@ -1023,3 +1023,66 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx2);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SM2_EXCHANGE_CHECK_TC002
+ * @title  SM2 EAL key exchange check.
+ * @precon Vectors:
+ *         server: The value 1 indicates the initiator, and the value 0 indicates the responder.
+ *         User 1: private key, generate random number r, userId1, optional term S
+ *         User 2: public key , R, userId2, optional term S
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM2_EXCHANGE_CHECK_TC002(Hex *prvKey, Hex *pubKey, Hex *r, Hex *R, Hex *shareKey, Hex *userId1,
+    Hex *userId2, int server, Hex *peerS, Hex *selfS, int isProvider)
+{
+    uint8_t out[500];
+    uint32_t outLen = shareKey->len;
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    uint8_t val[selfS->len];
+    CRYPT_EAL_PkeyPrv prv = {0};
+    CRYPT_EAL_PkeyPub pub = {0};
+    SetSm2PrvKey(&prv, prvKey->x, prvKey->len);
+    SetSm2PubKey(&pub, pubKey->x, pubKey->len);
+    uint8_t random[32];
+    uint32_t randomLen = 32;
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *ctx1 = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
+        CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *ctx2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
+        CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(ctx2 != NULL);
+    ASSERT_TRUE(ctx1 != NULL);
+
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_DO_CHECK, peerS->x, peerS->len) == CRYPT_SM2_ERR_S_NOT_SET);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_USER_ID, userId1->x, userId1->len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_RANDOM, r->x, r->len) == CRYPT_SUCCESS);
+
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GET_SM2_RANDOM, random, randomLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(random, r->x, r->len) == 0);
+
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId2->x, userId2->len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_R, R->x, R->len) == CRYPT_SUCCESS);
+
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx1, &prv) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx2, &pub) == CRYPT_SUCCESS);
+
+    ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(ctx1, ctx2, out, &outLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(outLen == shareKey->len);
+    ASSERT_TRUE(memcmp(out, shareKey->x, shareKey->len) == 0);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_DO_CHECK, peerS->x, peerS->len - 1) == CRYPT_SM2_ERR_DATA_LEN);
+    ASSERT_TRUE(
+        CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GET_SM2_SEND_CHECK, val, selfS->len - 1) == CRYPT_SM2_BUFF_LEN_NOT_ENOUGH);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GET_SM2_SEND_CHECK, val, selfS->len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(val, selfS->x, selfS->len) == 0);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_DO_CHECK, peerS->x, peerS->len) == CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+    CRYPT_EAL_PkeyFreeCtx(ctx1);
+    CRYPT_EAL_PkeyFreeCtx(ctx2);
+}
+/* END_CASE */

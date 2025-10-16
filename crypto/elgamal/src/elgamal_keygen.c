@@ -130,6 +130,7 @@ CRYPT_ELGAMAL_Ctx *CRYPT_ELGAMAL_DupCtx(CRYPT_ELGAMAL_Ctx *keyCtx)
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->pubKey, keyCtx->pubKey, ElGamalPubKeyDupCtx(keyCtx->pubKey),
                              CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->para, keyCtx->para, ElGamalParaDupCtx(keyCtx->para), CRYPT_MEM_ALLOC_FAIL);
+    newKeyCtx->libCtx = keyCtx->libCtx;
     BSL_SAL_ReferencesInit(&(newKeyCtx->references));
 
     return newKeyCtx;

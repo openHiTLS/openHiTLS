@@ -144,12 +144,12 @@ static int32_t GetCrlInfoByStd(uint8_t **infileBuf, uint64_t *infileBufLen)
         size_t bufLen = 0;
         ssize_t readLen = getline(&buf, &bufLen, stdin);
         if (readLen <= 0) {
-            free(buf);
+            BSL_SAL_FREE(buf);
             (void)AppPrintError("Failed to obtain the standard input.\n");
             break;
         }
         if ((crlDataSize + readLen) > MAX_CRLFILE_SIZE) {
-            free(buf);
+            BSL_SAL_FREE(buf);
             BSL_SAL_FREE(crlData);
             AppPrintError("The stdin supports a maximum of %zu bytes.\n", MAX_CRLFILE_SIZE);
             return HITLS_APP_STDIN_FAIL;
@@ -166,7 +166,7 @@ static int32_t GetCrlInfoByStd(uint8_t **infileBuf, uint64_t *infileBufLen)
             crlDataCapacity = newCrlDataCapacity;
         }
         if (memcpy_s(crlData + crlDataSize, crlDataCapacity - crlDataSize, buf, readLen) != 0) {
-            free(buf);
+            BSL_SAL_FREE(buf);
             BSL_SAL_FREE(crlData);
             return HITLS_APP_SECUREC_FAIL;
         }
@@ -175,10 +175,10 @@ static int32_t GetCrlInfoByStd(uint8_t **infileBuf, uint64_t *infileBufLen)
             isMatchCrlData = true;
         }
         if (isMatchCrlData && (strcmp(buf, "-----END X509 CRL-----\n") == 0)) {
-            free(buf);
+            BSL_SAL_FREE(buf);
             break;
         }
-        free(buf);
+        BSL_SAL_FREE(buf);
     }
     *infileBuf = crlData;
     *infileBufLen = crlDataSize;

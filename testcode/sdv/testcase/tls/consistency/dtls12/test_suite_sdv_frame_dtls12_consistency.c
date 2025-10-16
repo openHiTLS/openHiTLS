@@ -2905,7 +2905,7 @@ EXIT:
 /* END_CASE */
 
 /* @
-* @test UT_TLS_DTLS_CONSISTENCY_RETANSIMATE_TC001
+* @test UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC001
 * @spec -
 * @title When testing the behavior of the client preparing to receive messages, querying the remaining timeout time,
             selecting whether to sleep, and then retransmitting the message
@@ -2924,7 +2924,7 @@ EXIT:
 * @auto TRUE
 @ */
 /* BEGIN_CASE */
-void UT_TLS_DTLS_CONSISTENCY_RETANSIMATE_TC001(int isNeedSleep, int clientState)
+void UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC001(int isNeedSleep, int clientState)
 {
     FRAME_Init();
     HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
@@ -2939,7 +2939,7 @@ void UT_TLS_DTLS_CONSISTENCY_RETANSIMATE_TC001(int isNeedSleep, int clientState)
     int32_t ret = HITLS_DtlsGetTimeout(client->ssl, &timeout);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
     if (isNeedSleep) {
-        usleep(timeout);
+        sleep(2); // the sleep time is greater than the timeout period, the retransmission operation is triggered
         ret = HITLS_DtlsProcessTimeout(client->ssl);
         // When there are multiple messages, retransmission will be blocked, so it will be busy.
         // If there is only one message, it will be successfully sent.

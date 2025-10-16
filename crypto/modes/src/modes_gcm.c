@@ -450,6 +450,12 @@ MODES_GCM_Ctx *MODES_GCM_NewCtx(int32_t algId)
     return ctx;
 }
 
+MODES_GCM_Ctx *MODES_GCM_NewCtxEx(void *libCtx, int32_t algId)
+{
+    (void)libCtx;
+    return MODES_GCM_NewCtx(algId);
+}
+
 int32_t MODES_GCM_InitCtx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc)
 {

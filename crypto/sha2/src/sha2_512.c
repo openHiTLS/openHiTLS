@@ -78,12 +78,15 @@ CRYPT_SHA2_512_Ctx *CRYPT_SHA2_512_NewCtx(void)
     return BSL_SAL_Calloc(1, sizeof(CRYPT_SHA2_512_Ctx));
 }
 
+CRYPT_SHA2_512_Ctx *CRYPT_SHA2_512_NewCtxEx(void *libCtx, int32_t algId)
+{
+    (void)libCtx;
+    (void)algId;
+    return BSL_SAL_Calloc(1, sizeof(CRYPT_SHA2_512_Ctx));
+}
+
 void CRYPT_SHA2_512_FreeCtx(CRYPT_SHA2_512_Ctx *ctx)
 {
-    CRYPT_SHA2_512_Ctx *mdCtx = ctx;
-    if (mdCtx == NULL) {
-        return;
-    }
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA2_512_Ctx));
 }
 
@@ -111,12 +114,14 @@ int32_t CRYPT_SHA2_512_Init(CRYPT_SHA2_512_Ctx *ctx, BSL_Param *param)
     return CRYPT_SUCCESS;
 }
 
-void CRYPT_SHA2_512_Deinit(CRYPT_SHA2_512_Ctx *ctx)
+int32_t CRYPT_SHA2_512_Deinit(CRYPT_SHA2_512_Ctx *ctx)
 {
     if (ctx == NULL) {
-        return;
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
     }
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SHA2_512_Ctx));
+    return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_SHA2_512_CopyCtx(CRYPT_SHA2_512_Ctx *dst, const CRYPT_SHA2_512_Ctx *src)
@@ -266,24 +271,15 @@ int32_t CRYPT_SHA2_512_Final(CRYPT_SHA2_512_Ctx *ctx, uint8_t *digest, uint32_t 
     return CRYPT_SUCCESS;
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
+int32_t CRYPT_SHA2_512_GetParam(CRYPT_SHA2_512_Ctx *ctx, BSL_Param *param)
+{
+    (void)ctx;
+    return CRYPT_MdCommonGetParam(CRYPT_SHA2_512_DIGESTSIZE, CRYPT_SHA2_512_BLOCKSIZE, param);
+}
+#endif
+
 #ifdef HITLS_CRYPTO_SHA384
-
-typedef CRYPT_SHA2_512_Ctx CRYPT_SHA2_384_Ctx;
-
-CRYPT_SHA2_384_Ctx *CRYPT_SHA2_384_NewCtx(void)
-{
-    return BSL_SAL_Calloc(1, sizeof(CRYPT_SHA2_384_Ctx));
-}
-
-void CRYPT_SHA2_384_FreeCtx(CRYPT_SHA2_384_Ctx *ctx)
-{
-    CRYPT_SHA2_384_Ctx *mdCtx = ctx;
-    if (mdCtx == NULL) {
-        return;
-    }
-    BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA2_384_Ctx));
-}
-
 int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx, BSL_Param *param)
 {
     if (ctx == NULL) {
@@ -304,50 +300,13 @@ int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx, BSL_Param *param)
     return CRYPT_SUCCESS;
 }
 
-void CRYPT_SHA2_384_Deinit(CRYPT_SHA2_384_Ctx *ctx)
+#ifdef HITLS_CRYPTO_PROVIDER
+int32_t CRYPT_SHA2_384_GetParam(CRYPT_SHA2_384_Ctx *ctx, BSL_Param *param)
 {
-    if (ctx == NULL) {
-        return;
-    }
-    BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SHA2_384_Ctx));
+    (void)ctx;
+    return CRYPT_MdCommonGetParam(CRYPT_SHA2_384_DIGESTSIZE, CRYPT_SHA2_384_BLOCKSIZE, param);
 }
-
-int32_t CRYPT_SHA2_384_CopyCtx(CRYPT_SHA2_384_Ctx *dst, const CRYPT_SHA2_384_Ctx *src)
-{
-    if (dst == NULL || src == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    (void)memcpy_s(dst, sizeof(CRYPT_SHA2_384_Ctx), src, sizeof(CRYPT_SHA2_384_Ctx));
-    return CRYPT_SUCCESS;
-}
-
-CRYPT_SHA2_384_Ctx *CRYPT_SHA2_384_DupCtx(const CRYPT_SHA2_384_Ctx *src)
-{
-    if (src == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return NULL;
-    }
-    CRYPT_SHA2_384_Ctx *newCtx = CRYPT_SHA2_384_NewCtx();
-    if (newCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-    (void)memcpy_s(newCtx, sizeof(CRYPT_SHA2_384_Ctx), src, sizeof(CRYPT_SHA2_384_Ctx));
-    return newCtx;
-}
-
-int32_t CRYPT_SHA2_384_Update(CRYPT_SHA2_384_Ctx *ctx, const uint8_t *data, uint32_t nbytes)
-{
-    return CRYPT_SHA2_512_Update((CRYPT_SHA2_512_Ctx *)ctx, data, nbytes);
-}
-
-int32_t CRYPT_SHA2_384_Final(CRYPT_SHA2_384_Ctx *ctx, uint8_t *digest, uint32_t *len)
-{
-    return CRYPT_SHA2_512_Final((CRYPT_SHA2_512_Ctx *)ctx, digest, len);
-}
-
+#endif
 #endif // HITLS_CRYPTO_SHA384
 
 #endif // HITLS_CRYPTO_SHA512

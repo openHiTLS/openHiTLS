@@ -44,8 +44,8 @@ static int32_t MemNewBuf(BSL_UIO *uio, int32_t len, void *buf)
     }
     BSL_BufMem *bm = ubm->buf;
     if (bm->data != NULL && (uio->flags & BSL_UIO_FLAGS_MEM_READ_ONLY) == 0) {
-        /* If the uio mode is not read-only, need to release the memory first.
-         * Otherwise, the internal memory applied for read/write mode will be overwritten,
+        /* If the UIO mode is not read-only, need to release the memory first.
+         * Otherwise, the internal memory applied for the read/write mode will be overwritten,
          */
         BSL_ERR_PUSH_ERROR(BSL_UIO_MEM_NOT_NULL);
         return BSL_UIO_MEM_NOT_NULL;
@@ -59,7 +59,7 @@ static int32_t MemNewBuf(BSL_UIO *uio, int32_t len, void *buf)
     }
 
     ubm->readIndex = 0;
-    ubm->eof = 0;
+    ubm->eof = 0; // Read-only memory, and retry is not required.
     bm->length = (size_t)len;
     bm->max = (size_t)len;
     bm->data = (void *)buf;
@@ -144,20 +144,20 @@ static int32_t MemRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
     if (*readLen > 0) {
         return BSL_SUCCESS;
     }
-    /* when real = 0, it is necessary to determine whether to retry based on eof */
+    /* when real equals 0, it is necessary to determine whether to retry based on eof */
     if (ubm->eof != 0) { // retry if eof is not zero
         (void)BSL_UIO_SetFlags(uio, BSL_UIO_FLAGS_READ | BSL_UIO_FLAGS_SHOULD_RETRY);
     }
     return BSL_SUCCESS;
 }
 
-static int32_t MemPending(BSL_UIO *uio, int32_t larg, int64_t *ret)
+static int32_t MemPending(BSL_UIO *uio, int32_t larg, uint64_t *ret)
 {
     if (ret == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
-    if (larg != sizeof(int64_t)) {
+    if (larg != sizeof(uint64_t)) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
@@ -168,17 +168,17 @@ static int32_t MemPending(BSL_UIO *uio, int32_t larg, int64_t *ret)
         return BSL_UIO_FAIL;
     }
 
-    *ret = (int64_t)(ubm->buf->length - ubm->readIndex);
+    *ret = (uint64_t)(ubm->buf->length - ubm->readIndex);
     return BSL_SUCCESS;
 }
 
-static int32_t MemWpending(int32_t larg, int64_t *ret)
+static int32_t MemWpending(int32_t larg, uint64_t *ret)
 {
     if (ret == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
-    if (larg != sizeof(int64_t)) {
+    if (larg != sizeof(uint64_t)) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
@@ -234,6 +234,8 @@ static int32_t MemGetPtr(BSL_UIO *uio, int32_t size, BSL_BufMem **ptr)
         }
         *ptr = ubm->buf;
     } else {
+        /* when reset to read-only mode, can read from the beginning.
+         * Temporary buf is not used to manage memory. */
         ubm->tmpBuf->data = ubm->buf->data + ubm->readIndex;
         ubm->tmpBuf->length = ubm->buf->length - ubm->readIndex;
         ubm->tmpBuf->max = ubm->buf->max - ubm->readIndex;
@@ -339,6 +341,49 @@ static int32_t MemCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
     }
 }
 
+static int32_t MemPuts(BSL_UIO *uio, const char *buf, uint32_t *writeLen)
+{
+    uint32_t len = 0;
+    if (buf != NULL) {
+        len = (uint32_t)strlen(buf);
+    }
+    return MemWrite(uio, buf, len, writeLen);
+}
+
+static int32_t MemGets(BSL_UIO *uio, char *buf, uint32_t *readLen)
+{
+    uint32_t cnt = 0;
+    int32_t ret;
+    UIO_BufMem *ubm = BSL_UIO_GetCtx(uio);
+    if (ubm == NULL || ubm->buf == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
+        return BSL_NULL_INPUT;
+    }
+    if (*readLen == 0) {
+        return BSL_SUCCESS;
+    }
+    uint32_t len = (uint32_t)((*readLen - 1) >= (ubm->buf->length - ubm->readIndex) ?
+        (ubm->buf->length - ubm->readIndex) : (*readLen - 1));
+    if (len == 0) { /* No data to read */
+        *buf = '\0';
+        *readLen = 0;
+        return BSL_SUCCESS;
+    }
+    char *pre = ubm->buf->data + ubm->readIndex;
+    /* len greater than 0 */
+    while (cnt < len) {
+        cnt++;
+        if (*pre++ == '\n') {
+            break;
+        }
+    }
+    ret = MemRead(uio, buf, cnt, readLen);
+    if (ret == BSL_SUCCESS) {
+        buf[cnt] = '\0';
+    }
+    return ret;
+}
+
 static int32_t MemDestroy(BSL_UIO *uio)
 {
     UIO_BufMem *ubm = BSL_UIO_GetCtx(uio);
@@ -388,8 +433,8 @@ const BSL_UIO_Method *BSL_UIO_MemMethod(void)
         MemWrite,
         MemRead,
         MemCtrl,
-        NULL,
-        NULL,
+        MemPuts,
+        MemGets,
         MemCreate,
         MemDestroy
     };

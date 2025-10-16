@@ -47,8 +47,6 @@ extern "C" {
         (o) += (len); \
     } while (false)
 
-MODES_CipherCtx *MODES_CipherNewCtx(int32_t algId);
-
 int32_t MODES_CipherInitCommonCtx(MODES_CipherCommonCtx *modeCtx, void *setSymKey, void *keyCtx,
     const uint8_t *key, uint32_t keyLen, const uint8_t *iv, uint32_t ivLen);
 int32_t MODES_CipherInitCtx(MODES_CipherCtx *ctx, void *setSymKey, void *keyCtx, const uint8_t *key,

@@ -43,7 +43,7 @@ int32_t KdfGmt0032012(uint8_t *out, const uint32_t *outlen, const uint8_t *z, ui
     uint32_t mdlen;
     int32_t ret;
     uint32_t len = MAX_MD_SIZE;
-    void *mdCtx = hashMethod->newCtx();
+    void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
     uint8_t dgst[MAX_MD_SIZE];
     uint8_t *tmp = out;
     uint32_t tmplen = *outlen;
@@ -152,8 +152,7 @@ static int32_t IsParamValid(const CRYPT_SM2_Ctx *selfCtx, const CRYPT_SM2_Ctx *p
     return CRYPT_SUCCESS;
 }
 
-void BnMemDestroy(BN_BigNum *xs, BN_BigNum *xp, BN_BigNum *t,
-    BN_BigNum *twoPowerW, BN_BigNum *order)
+void BnMemDestroy(BN_BigNum *xs, BN_BigNum *xp, BN_BigNum *t, BN_BigNum *twoPowerW, BN_BigNum *order)
 {
     BN_Destroy(xs);
     BN_Destroy(xp);
@@ -166,7 +165,7 @@ static int32_t Sm3MsgHash(const EAL_MdMethod *hashMethod, const uint8_t *yBuf, c
     uint8_t *out, uint32_t *outlen, uint8_t tag)
 {
     int32_t ret;
-    void *mdCtx = hashMethod->newCtx();
+    void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
     if (mdCtx == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
@@ -186,7 +185,7 @@ static int32_t Sm3InnerHash(const EAL_MdMethod *hashMethod, const uint8_t *coord
     uint32_t zlen, const uint8_t *rBuf, uint8_t *out, uint32_t *outlen)
 {
     int32_t ret;
-    void *mdCtx = hashMethod->newCtx();
+    void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
     if (mdCtx == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
@@ -264,7 +263,7 @@ static int SM2_PKG_Kdf(const CRYPT_SM2_Ctx *ctx, uint8_t *in, const uint32_t inL
     const EAL_MdMethod *hashMethod = ctx->hashMethod;
     uint8_t *tmp = BSL_SAL_Malloc(hashMethod->mdSize);
     uint32_t tmpLen = hashMethod->mdSize;
-    void *mdCtx = hashMethod->newCtx();
+    void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
     if (mdCtx == NULL || tmp == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
@@ -337,8 +336,7 @@ int32_t CRYPT_SM2_KapComputeKey(const CRYPT_SM2_Ctx *selfCtx, const CRYPT_SM2_Ct
     uint32_t w;
     int32_t ret;
     BN_Optimizer *opt = BN_OptimizerCreate();
-    if (uorv == NULL || xs == NULL || xp == NULL || t == NULL || twoPowerW == NULL ||
-        order == NULL || opt == NULL) {
+    if (uorv == NULL || xs == NULL || xp == NULL || t == NULL || twoPowerW == NULL || order == NULL || opt == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;

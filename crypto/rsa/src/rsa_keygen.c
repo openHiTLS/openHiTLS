@@ -191,6 +191,9 @@ CRYPT_RSA_Ctx *CRYPT_RSA_DupCtx(CRYPT_RSA_Ctx *keyCtx)
     }
 #endif
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->para, keyCtx->para, RSAParaDupCtx(keyCtx->para), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->mdAttr, keyCtx->mdAttr, BSL_SAL_Dump(keyCtx->mdAttr,
+        strlen(keyCtx->mdAttr) + 1), CRYPT_MEM_ALLOC_FAIL);
+    newKeyCtx->libCtx = keyCtx->libCtx;
     BSL_SAL_ReferencesInit(&(newKeyCtx->references));
     return newKeyCtx;
 
@@ -330,8 +333,7 @@ CRYPT_RSA_Para *CRYPT_RSA_NewPara(const CRYPT_RsaPara *para)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         goto ERR;
     }
-    int32_t ret;
-    ret = BN_Bin2Bn(retPara->e, para->e, para->eLen);
+    int32_t ret = BN_Bin2Bn(retPara->e, para->e, para->eLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -421,6 +423,7 @@ void CRYPT_RSA_FreeCtx(CRYPT_RSA_Ctx *ctx)
 #endif
     BSL_SAL_CleanseData((void *)(&(ctx->pad)), sizeof(RSAPad));
     BSL_SAL_FREE(ctx->label.data);
+    BSL_SAL_FREE(ctx->mdAttr);
     BSL_SAL_FREE(ctx);
 }
 
@@ -611,16 +614,30 @@ static int32_t IsRSASetParamValidEx(const CRYPT_RSA_Para *para)
 
 int32_t CRYPT_RSA_SetParaEx(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
 {
-    if (ctx == NULL) {
+    if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
+    }
+
+    int32_t ret;
+#ifdef HITLS_CRYPTO_PROVIDER
+    const BSL_Param *temp = NULL;
+    if ((temp = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_MD_ATTR)) != NULL) {
+        ret = CRYPT_PkeySetMdAttr((const char *)(temp->value), temp->valueLen, &(ctx->mdAttr));
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+#endif
+    if (BSL_PARAM_FindConstParam(para, CRYPT_PARAM_RSA_E) == NULL) {
+        return CRYPT_SUCCESS;
     }
     CRYPT_RSA_Para *rsaPara = CRYPT_RSA_NewParaEx(para);
     if (rsaPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
         return CRYPT_EAL_ERR_NEW_PARA_FAIL;
     }
-    int32_t ret = IsRSASetParamValidEx(rsaPara);
+    ret = IsRSASetParamValidEx(rsaPara);
     if (ret != CRYPT_SUCCESS) {
         RSA_FREE_PARA(rsaPara);
         return ret;
@@ -1317,7 +1334,7 @@ int32_t CRYPT_RSA_Import(CRYPT_RSA_Ctx *ctx, const BSL_Param *params)
     return ret;
 }
 
-static void InitRsaPubKeyParams(BSL_Param *params, uint32_t *index, uint8_t *buffer, int32_t len)
+static void InitRsaPubKeyParams(BSL_Param *params, uint32_t *index, uint8_t *buffer, uint32_t len)
 {
     (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_E,
         BSL_PARAM_TYPE_OCTETS, buffer + ((*index) * len), len);
@@ -1327,7 +1344,7 @@ static void InitRsaPubKeyParams(BSL_Param *params, uint32_t *index, uint8_t *buf
     (*index)++;
 }
 
-static void InitRsaPrvKeyParams(BSL_Param *params, uint32_t *index, uint8_t *buffer, int32_t len)
+static void InitRsaPrvKeyParams(BSL_Param *params, uint32_t *index, uint8_t *buffer, uint32_t len)
 {
     (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_D, 
         BSL_PARAM_TYPE_OCTETS, buffer + ((*index) * len), len);

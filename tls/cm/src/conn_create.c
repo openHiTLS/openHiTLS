@@ -114,7 +114,7 @@ static void CleanPeerInfo(PeerInfo *peerInfo)
 {
     BSL_SAL_FREE(peerInfo->groups);
     BSL_SAL_FREE(peerInfo->cipherSuites);
-    BSL_LIST_FREE(peerInfo->caList, CaListNodeDestroy);
+    BSL_LIST_FREE(peerInfo->caList, (BSL_LIST_PFUNC_FREE)CaListNodeDestroy);
     BSL_SAL_FREE(peerInfo->signatureAlgorithms);
 }
 
@@ -126,6 +126,9 @@ static void CleanNegotiatedInfo(TLS_NegotiatedInfo *negotiatedInfo)
 #endif
 #ifdef HITLS_TLS_FEATURE_ALPN
     BSL_SAL_FREE(negotiatedInfo->alpnSelected);
+#endif
+#ifdef HITLS_TLS_FEATURE_SNI
+    BSL_SAL_FREE(negotiatedInfo->serverName);
 #endif
     return;
 }
@@ -175,6 +178,18 @@ void HITLS_Free(HITLS_Ctx *ctx)
     return;
 }
 
+#ifdef HITLS_TLS_FEATURE_SESSION
+static int32_t HITLS_ClearBadSession(HITLS_Ctx *ctx)
+{
+    if (ctx != NULL && ctx->session != NULL && (ctx->shutdownState & HITLS_SENT_SHUTDOWN) == 0 &&
+        !(ctx->state == CM_STATE_HANDSHAKING || ctx->state == CM_STATE_IDLE)) {
+        SESSMGR_RemoveSession(ctx->globalConfig, ctx->session);
+        return HITLS_SESS_ERR_BAD_SESSION;
+    }
+    return HITLS_SUCCESS;
+}
+#endif
+
 #ifdef HITLS_TLS_FEATURE_FLIGHT
 int32_t HITLS_SetReadUio(HITLS_Ctx *ctx, BSL_UIO *uio)
 {
@@ -211,7 +226,7 @@ static void ConfigPmtu(HITLS_Ctx *ctx, BSL_UIO *uio)
         if (BSL_UIO_GetUioChainTransportType(uio, BSL_UIO_UDP)) {
             uint8_t overhead = 0;
             (void)BSL_UIO_Ctrl(ctx->uio, BSL_UIO_UDP_GET_MTU_OVERHEAD, sizeof(uint8_t), &overhead);
-            ctx->config.pmtu = DTLS_DEFAULT_PMTU - overhead;
+            ctx->config.pmtu = DTLS_DEFAULT_PMTU - (uint16_t)overhead;
         } else {
             ctx->config.pmtu = DTLS_SCTP_PMTU;
         }
@@ -389,15 +404,15 @@ int32_t HITLS_GetSelectedAlpnProto(HITLS_Ctx *ctx, uint8_t **proto, uint32_t *pr
 }
 #endif
 
-int32_t HITLS_IsServer(const HITLS_Ctx *ctx, uint8_t *isServer)
+int32_t HITLS_IsServer(const HITLS_Ctx *ctx, bool *isServer)
 {
     if (ctx == NULL || isServer == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *isServer = 0;
-    if (ctx->isClient == false) {
-        *isServer = 1;
+    *isServer = false;
+    if (!ctx->isClient) {
+        *isServer = true;
     }
 
     return HITLS_SUCCESS;
@@ -410,7 +425,7 @@ int32_t HITLS_SetSession(HITLS_Ctx *ctx, HITLS_Session *session)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
-
+    HITLS_ClearBadSession(ctx);
     /* The client and server are specified only in hitls connect/accept. Therefore, the client cannot be specified here
      */
     HITLS_SESS_Free(ctx->session);
@@ -503,7 +518,7 @@ int32_t HITLS_SetSigalgsList(HITLS_Ctx *ctx, const uint16_t *signAlgs, uint16_t 
 }
 
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
-int32_t HITLS_GetRenegotiationSupport(const HITLS_Ctx *ctx, uint8_t *isSupportRenegotiation)
+int32_t HITLS_GetRenegotiationSupport(const HITLS_Ctx *ctx, bool *isSupportRenegotiation)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
@@ -618,26 +633,44 @@ HITLS_CERT_Chain *HITLS_GetPeerCertChain(const HITLS_Ctx *ctx)
 }
 #endif
 #ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
-HITLS_TrustedCAList *HITLS_GetClientCAList(const HITLS_Ctx *ctx)
+HITLS_TrustedCAList *HITLS_GetPeerCAList(const HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
         return NULL;
     }
 
-    if (ctx->isClient) {
-        return ctx->peerInfo.caList;
-    }
-    return ctx->globalConfig->caList;
+    return ctx->peerInfo.caList;
 }
 #endif
+
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
+HITLS_TrustedCAList *HITLS_GetCAList(const HITLS_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        return NULL;
+    }
+
+    return HITLS_CFG_GetCAList(&(ctx->config.tlsConfig));
+}
+
+int32_t HITLS_SetCAList(HITLS_Ctx *ctx, HITLS_TrustedCAList *list)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetCAList(&(ctx->config.tlsConfig), list);
+}
+#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
+
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
-int32_t HITLS_GetSecureRenegotiationSupport(const HITLS_Ctx *ctx, uint8_t *isSecureRenegotiation)
+int32_t HITLS_GetSecureRenegotiationSupport(const HITLS_Ctx *ctx, bool *isSecureRenegotiation)
 {
     if (ctx == NULL || isSecureRenegotiation == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *isSecureRenegotiation = (uint8_t)ctx->negotiatedInfo.isSecureRenegotiation;
+    *isSecureRenegotiation = ctx->negotiatedInfo.isSecureRenegotiation;
     return HITLS_SUCCESS;
 }
 #endif
@@ -744,3 +777,32 @@ int32_t HITLS_SetCertCb(HITLS_Ctx *ctx, HITLS_CertCb certCb, void *arg)
     return HITLS_CFG_SetCertCb(&(ctx->config.tlsConfig), certCb, arg);
 }
 #endif /* HITLS_TLS_FEATURE_CERT_CB */
+
+#ifdef HITLS_TLS_CONFIG_CERT_BUILD_CHAIN
+int32_t HITLS_BuildCertChain(HITLS_Ctx *ctx, HITLS_BUILD_CHAIN_FLAG flag)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_BuildCertChain(&(ctx->config.tlsConfig), flag);
+}
+#endif
+
+int32_t HITLS_CtrlSetVerifyParams(HITLS_Ctx *ctx, HITLS_CERT_Store *store, uint32_t cmd, int64_t in, void *inArg)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_CtrlSetVerifyParams(&(ctx->config.tlsConfig), store, cmd, in, inArg);
+}
+
+int32_t HITLS_CtrlGetVerifyParams(HITLS_Ctx *ctx, HITLS_CERT_Store *store, uint32_t cmd, void *out)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_CtrlGetVerifyParams(&(ctx->config.tlsConfig), store, cmd, out);
+}

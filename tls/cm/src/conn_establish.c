@@ -42,6 +42,13 @@
 static int32_t ConnectEventInIdleState(HITLS_Ctx *ctx)
 {
     ctx->isClient = true; // Set the configuration as a client
+#if defined(HITLS_TLS_PROTO_TLCP11) && defined(HITLS_TLS_CONFIG_VERSION)
+    if (IS_SUPPORT_TLS(ctx->config.tlsConfig.originVersionMask) &&
+        IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask)) {
+        ctx->config.tlsConfig.originVersionMask &= ~TLCP11_VERSION_BIT;
+        HITLS_SetVersionForbid(ctx, TLCP11_VERSION_BIT);
+    }
+#endif
 
     int32_t ret = CONN_Init(ctx);
     if (ret != HITLS_SUCCESS) {
@@ -299,9 +306,56 @@ int32_t HITLS_SetEndPoint(HITLS_Ctx *ctx, bool isClient)
     return HITLS_SUCCESS;
 }
 
+static void SetTlsMinMaxVersion(TLS_Config *config)
+{
+    uint32_t versionBits[] = { TLS12_VERSION_BIT, TLS13_VERSION_BIT };
+    uint16_t versions[] = { HITLS_VERSION_TLS12, HITLS_VERSION_TLS13 };
+    uint32_t versionBitsSize = sizeof(versionBits) / sizeof(uint32_t);
+    for (uint32_t i = 0; i < versionBitsSize; i++) {
+        if ((config->version & versionBits[i]) == versionBits[i]) {
+            config->minVersion = versions[i];
+            break;
+        }
+    }
+    for (int32_t i = versionBitsSize - 1; i >= 0; i--) {
+        if ((config->version & versionBits[i]) == versionBits[i]) {
+            config->maxVersion = versions[i];
+            break;
+        }
+    }
+    if ((config->version & DTLS12_VERSION_BIT) == DTLS12_VERSION_BIT) {
+        config->maxVersion = HITLS_VERSION_DTLS12;
+        config->minVersion = HITLS_VERSION_DTLS12;
+    }
+}
+
 static int32_t ProcessEvent(HITLS_Ctx *ctx, ManageEventProcess proc)
 {
     return proc(ctx);
+}
+static int32_t SetConnState(HITLS_Ctx *ctx, bool isClient)
+{
+    TLS_Config *config = &ctx->config.tlsConfig;
+    if (config->endpoint == HITLS_ENDPOINT_UNDEFINED) {
+        config->endpoint = isClient ? HITLS_ENDPOINT_CLIENT : HITLS_ENDPOINT_SERVER;
+    }
+#if defined(HITLS_TLS_PROTO_TLCP11) && defined(HITLS_TLS_CONFIG_VERSION)
+    if (isClient) {
+        if (IS_SUPPORT_TLS(ctx->config.tlsConfig.originVersionMask) &&
+            IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask)) {
+            ctx->config.tlsConfig.originVersionMask &= ~TLCP11_VERSION_BIT;
+            HITLS_SetVersionForbid(ctx, TLCP11_VERSION_BIT);
+        }
+    }
+#endif
+    if (config->endpoint == HITLS_ENDPOINT_CLIENT) {
+        return HITLS_SetEndPoint(ctx, true);
+    }
+    if (config->endpoint == HITLS_ENDPOINT_SERVER) {
+        SetTlsMinMaxVersion(config);
+        return HITLS_SetEndPoint(ctx, false);
+    }
+    return HITLS_SUCCESS;
 }
 
 int32_t HITLS_Connect(HITLS_Ctx *ctx)
@@ -312,6 +366,12 @@ int32_t HITLS_Connect(HITLS_Ctx *ctx)
         return ret;
     }
     ctx->allowAppOut = false;
+    if (GetConnState(ctx) == CM_STATE_IDLE) {
+        ret = SetConnState(ctx, true);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
 
     ManageEventProcess connectEventProcess[CM_STATE_END] = {
         ConnectEventInIdleState,
@@ -334,11 +394,19 @@ int32_t HITLS_Accept(HITLS_Ctx *ctx)
         return ret;
     }
     ctx->allowAppOut = false;
+
+    if (GetConnState(ctx) == CM_STATE_IDLE) {
+        ret = SetConnState(ctx, false);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
 #ifdef HITLS_TLS_FEATURE_PHA
     ret = CommonCheckPostHandshakeAuth(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+
 #endif
     ManageEventProcess acceptEventProcess[CM_STATE_END] = {
         AcceptEventInIdleState,
@@ -537,28 +605,28 @@ int32_t HITLS_GetHandShakeState(const HITLS_Ctx *ctx, uint32_t *state)
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_IsHandShaking(const HITLS_Ctx *ctx, uint8_t *isHandShaking)
+int32_t HITLS_IsHandShaking(const HITLS_Ctx *ctx, bool *isHandShaking)
 {
     if (ctx == NULL || isHandShaking == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    *isHandShaking = 0;
+    *isHandShaking = false;
     uint32_t state = GetConnState(ctx);
     if ((state == CM_STATE_HANDSHAKING) || (state == CM_STATE_RENEGOTIATION)) {
-        *isHandShaking = 1;
+        *isHandShaking = true;
     }
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_IsBeforeHandShake(const HITLS_Ctx *ctx, uint8_t *isBefore)
+int32_t HITLS_IsBeforeHandShake(const HITLS_Ctx *ctx, bool *isBefore)
 {
     if (ctx == NULL || isBefore == NULL) {
         return HITLS_NULL_INPUT;
     }
-    *isBefore = 0;
+    *isBefore = false;
     if (GetConnState(ctx) == CM_STATE_IDLE) {
-        *isBefore = 1;
+        *isBefore = true;
     }
     return HITLS_SUCCESS;
 }
@@ -695,7 +763,7 @@ static int32_t CheckRenegotiateValid(HITLS_Ctx *ctx)
         return HITLS_NULL_INPUT;
     }
 
-    uint8_t isSupport = false;
+    bool isSupport = false;
 
     (void)HITLS_GetRenegotiationSupport(ctx, &isSupport);
     /* Renegotiation is disabled */

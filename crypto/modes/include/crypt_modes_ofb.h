@@ -21,13 +21,15 @@
 
 #include "crypt_types.h"
 #include "crypt_modes.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-
 // OFB mode universal implementation
-MODES_CipherCtx *MODES_OFB_NewCtx(int32_t algId);
+#define MODES_OFB_NewCtx MODES_CipherNewCtx
+#define MODES_OFB_NewCtxEx MODES_CipherNewCtxEx
+
 int32_t MODES_OFB_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc);
 

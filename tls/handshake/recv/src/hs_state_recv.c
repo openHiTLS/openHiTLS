@@ -96,7 +96,7 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
             break;
 #endif /* HITLS_TLS_PROTO_TLS_BASIC only for tls13 */
         case TRY_RECV_CERTIFICATE_REQUEST:
-            return ClientRecvCertRequestProcess(ctx, hsMsg);
+            return ClientRecvCertRequestProcess(ctx);
         case TRY_RECV_CLIENT_KEY_EXCHANGE:
             return ServerRecvClientKxProcess(ctx, hsMsg);
         case TRY_RECV_CERTIFICATE_VERIFY:
@@ -241,8 +241,14 @@ int32_t ReadHsMessage(TLS_Ctx *ctx, uint32_t length)
         return ret;
     }
     uint32_t readLen = 0;
-    ret = REC_Read(ctx, REC_TYPE_HANDSHAKE, &hsCtx->msgBuf[hsCtx->msgLen], &readLen, length - hsCtx->msgLen);
-    hsCtx->msgLen += readLen;
+    do {
+        readLen = 0;
+        ret = REC_Read(ctx, REC_TYPE_HANDSHAKE, &hsCtx->msgBuf[hsCtx->msgLen], &readLen, length - hsCtx->msgLen);
+        hsCtx->msgLen += readLen;
+        if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+            break;
+        }
+    } while (ret == HITLS_SUCCESS && hsCtx->msgLen < length && readLen != 0);
     if (ret == HITLS_SUCCESS && hsCtx->msgLen < length) {
         return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
     }
@@ -563,23 +569,7 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
     return ret;
 }
 #endif
-#ifdef HITLS_TLS_FEATURE_FLIGHT
-static int32_t FlightTransmit(TLS_Ctx *ctx)
-{
-    int32_t ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_FLUSH, 0, NULL);
-    if (ret == BSL_UIO_IO_BUSY) {
-        return HITLS_REC_NORMAL_IO_BUSY;
-    }
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(HITLS_REC_ERR_IO_EXCEPTION);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16110, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "fail to send handshake message in bUio.", 0, 0, 0, 0);
-        return HITLS_REC_ERR_IO_EXCEPTION;
-    }
 
-    return HITLS_SUCCESS;
-}
-#endif /* HITLS_TLS_FEATURE_FLIGHT */
 int32_t HandleResult(TLS_Ctx *ctx, int32_t ret)
 {
     if (ret != HITLS_SUCCESS) {
@@ -608,7 +598,7 @@ int32_t HS_RecvMsgProcess(TLS_Ctx *ctx)
     /* If isFlightTransmitEnable is enabled, the handshake information stored in the bUio needs to be sent when the
      * receiving status is changed. */
     if (ctx->config.tlsConfig.isFlightTransmitEnable) {
-        ret = FlightTransmit(ctx);
+        ret = REC_FlightTransmit(ctx);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }

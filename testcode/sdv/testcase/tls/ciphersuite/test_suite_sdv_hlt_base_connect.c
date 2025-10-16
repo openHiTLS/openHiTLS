@@ -56,7 +56,7 @@ bool SkipTlsTest(int connType, int version)
         case DTLCP1_1:
             break;
 #endif
-#ifdef HITLS_TLS_PROTO_ALL
+#if defined(HITLS_TLS_CONFIG_VERSION) && (defined(HITLS_TLS_PROTO_TLS12) || defined(HITLS_TLS_PROTO_TLS13))
         case TLS_ALL:
             break;
 #endif
