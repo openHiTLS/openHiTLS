@@ -245,18 +245,16 @@ typedef enum {
     HITLS_X509_CRL_GET_REVOKED_CERTISSUER,          /** Get the revoke cert issuer extension. */
 } HITLS_X509_RevokeCmd;
 
-typedef enum {
-    HITLS_X509_REVOKED_REASON_UNSPECIFIED = 0,         /** CRLReason: Unspecified. */
-    HITLS_X509_REVOKED_REASON_KEY_COMPROMISE,          /** CRLReason: Key compromise. */
-    HITLS_X509_REVOKED_REASON_CA_COMPROMISE,           /** CRLReason: CA compromise. */
-    HITLS_X509_REVOKED_REASON_AFFILIATION_CHANGED,     /** CRLReason: Affiliation changed. */
-    HITLS_X509_REVOKED_REASON_SUPERSEDED,              /** CRLReason: Superseded. */
-    HITLS_X509_REVOKED_REASON_CESSATION_OF_OPERATION,  /** CRLReason: Cessation of operation. */
-    HITLS_X509_REVOKED_REASON_CERTIFICATE_HOLD,        /** CRLReason: Certificate hold. */
-    HITLS_X509_REVOKED_REASON_REMOVE_FROM_CRL,         /** CRLReason: Remove from CRL. */
-    HITLS_X509_REVOKED_REASON_PRIVILEGE_WITHDRAWN,     /** CRLReason: Privilege withdrawn. */
-    HITLS_X509_REVOKED_REASON_AA_COMPROMISE,           /** CRLReason: aA compromise. */
-} HITLS_X509_RevokeReason;
+#define HITLS_X509_REVOKED_REASON_UNSPECIFIED               0   /** CRLReason: Unspecified. */
+#define HITLS_X509_REVOKED_REASON_KEY_COMPROMISE            1   /** CRLReason: Key compromise. */
+#define HITLS_X509_REVOKED_REASON_CA_COMPROMISE             2   /** CRLReason: CA compromise. */
+#define HITLS_X509_REVOKED_REASON_AFFILIATION_CHANGED       3   /** CRLReason: Affiliation changed. */
+#define HITLS_X509_REVOKED_REASON_SUPERSEDED                4   /** CRLReason: Superseded. */
+#define HITLS_X509_REVOKED_REASON_CESSATION_OF_OPERATION    5   /** CRLReason: Cessation of operation. */
+#define HITLS_X509_REVOKED_REASON_CERTIFICATE_HOLD          6   /** CRLReason: Certificate hold. */
+#define HITLS_X509_REVOKED_REASON_REMOVE_FROM_CRL           8   /** CRLReason: Remove from CRL. */
+#define HITLS_X509_REVOKED_REASON_PRIVILEGE_WITHDRAWN       9   /** CRLReason: Privilege withdrawn. */
+#define HITLS_X509_REVOKED_REASON_AA_COMPROMISE             10  /** CRLReason: aA compromise. */
 
 typedef struct {
     bool critical;

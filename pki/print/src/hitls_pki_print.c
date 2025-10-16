@@ -81,6 +81,23 @@ static HITLS_X509_TypeNameMap g_gnNameMap[] = {
 #define HITLS_X509_GN_NAME_CNT (sizeof(g_gnNameMap) / sizeof(g_gnNameMap[0]))
 #endif // HITLS_PKI_INFO_CRT || HITLS_PKI_INFO_CSR || HITLS_PKI_INFO_CRL
 
+#if defined(HITLS_PKI_INFO_CRL)
+static HITLS_X509_TypeNameMap g_revokedReasonNameMap[] = {
+    {HITLS_X509_REVOKED_REASON_UNSPECIFIED, "Unspecified"},
+    {HITLS_X509_REVOKED_REASON_KEY_COMPROMISE, "Key Compromise"},
+    {HITLS_X509_REVOKED_REASON_CA_COMPROMISE, "CA Compromise"},
+    {HITLS_X509_REVOKED_REASON_AFFILIATION_CHANGED, "Affiliation Changed"},
+    {HITLS_X509_REVOKED_REASON_SUPERSEDED, "Superseded"},
+    {HITLS_X509_REVOKED_REASON_CESSATION_OF_OPERATION, "Cessation Of Operation"},
+    {HITLS_X509_REVOKED_REASON_CERTIFICATE_HOLD, "Certificate Hold"},
+    {HITLS_X509_REVOKED_REASON_REMOVE_FROM_CRL, "Remove From Crl"},
+    {HITLS_X509_REVOKED_REASON_PRIVILEGE_WITHDRAWN, "Privilege Withdrawn"},
+    {HITLS_X509_REVOKED_REASON_AA_COMPROMISE, "AA Compromise"},
+};
+
+#define HITLS_X509_REVOKED_REASN_NAME_CNT (sizeof(g_revokedReasonNameMap) / sizeof(g_revokedReasonNameMap[0]))
+#endif
+
 static int32_t g_nameFlag = HITLS_PKI_PRINT_DN_RFC2253;
 
 static char g_rfc2253Ecsape[] = {',', '+', '"', '\\', '<', '>', ';'};
@@ -821,8 +838,21 @@ static int32_t PrintCrlReason(HITLS_X509_ExtEntry *extEntry, uint32_t layer, BSL
         return ret;
     }
 
-    (void)BSL_PRINT_Fmt(layer, uio, "X509v3 CRL Reason Code: %s\n", extEntry->critical ? "critical" : "");
-    RETURN_RET_IF(BSL_PRINT_Fmt(layer + 1, uio, "%d\n", reason) != 0, HITLS_PRINT_ERR_CRL_TBS);
+    const char *name = NULL;
+    for (uint32_t i = 0; i < HITLS_X509_REVOKED_REASN_NAME_CNT; i++) {
+        if ((int32_t)g_revokedReasonNameMap[i].type == reason) {
+            name = g_revokedReasonNameMap[i].name;
+            break;
+        }
+    }
+
+    RETURN_RET_IF(BSL_PRINT_Fmt(layer, uio, "X509v3 CRL Reason Code: %s\n", extEntry->critical ? "critical" : "") != 0,
+        HITLS_PRINT_ERR_CRL_TBS);
+    if (name == NULL) {
+        RETURN_RET_IF(BSL_PRINT_Fmt(layer + 1, uio, "%d\n", reason) != 0, HITLS_PRINT_ERR_CRL_TBS);
+    } else {
+        RETURN_RET_IF(BSL_PRINT_Fmt(layer + 1, uio, "%s\n", name) != 0, HITLS_PRINT_ERR_CRL_TBS);
+    }
 
     return HITLS_PKI_SUCCESS;
 }

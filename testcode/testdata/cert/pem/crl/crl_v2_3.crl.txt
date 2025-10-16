@@ -9,7 +9,7 @@ Certificate Revocation List (CRL):
         Revocation Date: Jan 1 00:00:00 2030 GMT
         CRL entry extensions:
             X509v3 CRL Reason Code: 
-                1
+                Key Compromise
             Invalidity Date: 
                 Jan 1 00:00:00 2030 GMT
             X509v3 Certificate Issuer: critical

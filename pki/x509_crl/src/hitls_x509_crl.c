@@ -34,6 +34,7 @@
 #include "hitls_pki_crl.h"
 
 #define HITLS_CRL_CTX_SPECIFIC_TAG_EXTENSION 0
+#define HITLS_X509_REVOKED_REASON_UNUSED    7   /** CRLReason: unused reason. */
 
 #ifdef HITLS_PKI_X509_CRL_PARSE
 BSL_ASN1_TemplateItem g_crlTempl[] = {
@@ -1307,7 +1308,8 @@ static int32_t SetExtReason(void *param, HITLS_X509_ExtEntry *extEntry, void *va
     (void)param;
     HITLS_X509_RevokeExtReason *reason = (HITLS_X509_RevokeExtReason *)val;
     if (reason->reason < HITLS_X509_REVOKED_REASON_UNSPECIFIED ||
-        reason->reason > HITLS_X509_REVOKED_REASON_AA_COMPROMISE) {
+        reason->reason > HITLS_X509_REVOKED_REASON_AA_COMPROMISE ||
+        reason->reason == HITLS_X509_REVOKED_REASON_UNUSED) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }

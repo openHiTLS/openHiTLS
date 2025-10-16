@@ -391,3 +391,5 @@ SDV_HITLS_X509_PrintCrl_TC001
 SDV_HITLS_X509_PrintCrl_TC001:"../testdata/cert/pem/crl/crl_v2_2.pem":BSL_FORMAT_PEM:HITLS_PKI_PRINT_DN_ONELINE:"../testdata/cert/pem/crl/crl_v2_2.pem.txt"
 SDV_HITLS_X509_PrintCrl_TC001
 SDV_HITLS_X509_PrintCrl_TC001:"../testdata/cert/pem/crl/crl_v2_3.crl":BSL_FORMAT_PEM:HITLS_PKI_PRINT_DN_ONELINE:"../testdata/cert/pem/crl/crl_v2_3.crl.txt"
+SDV_HITLS_X509_PrintCrl_TC001
+SDV_HITLS_X509_PrintCrl_TC001:"../testdata/cert/pem/crl/crl_error_reason.crl":BSL_FORMAT_PEM:HITLS_PKI_PRINT_DN_ONELINE:"../testdata/cert/pem/crl/crl_error_reason.crl.txt"

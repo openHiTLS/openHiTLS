@@ -1,0 +1,37 @@
+Certificate Revocation List (CRL):
+    Version: 2 (0x01)
+    Signature Algorithm: SHA256WITHRSA
+    Issuer: CN = OH, C = CN
+    Last Update: Jan 1 00:00:00 2025 GMT
+    Next Update: Jan 1 00:00:00 2035 GMT
+    Revoked Certificates:
+        Serial Number: 287454020 (0x11223344)
+        Revocation Date: Jan 1 00:00:00 2030 GMT
+        CRL entry extensions:
+            X509v3 CRL Reason Code: 
+                7
+            Invalidity Date: 
+                Jan 1 00:00:00 2030 GMT
+            X509v3 Certificate Issuer: critical
+                Email:test, DNS:test, URI:test, DirName:CN = OH, C = CN, IP Address:116.101.115.116
+    X509V3 extensions:
+        CrlNumber:
+            17 (0x11)
+    Signature Algorithm: SHA256WITHRSA
+    Signature Value:
+        2f:d1:24:cb:ea:f8:8f:8d:c5:2d:4e:74:1b:1b:fa:d6
+        4e:b5:5a:6a:88:e1:06:40:4b:7a:3c:39:0c:2c:97:79
+        20:d3:dc:86:23:97:8e:7c:42:d4:45:de:ff:10:b4:b5
+        6c:c8:44:9a:41:69:08:19:f0:bb:4a:37:26:78:b3:08
+        2e:53:0d:a5:6f:26:48:24:7a:93:d8:b7:38:b0:da:ac
+        a7:80:46:ac:23:d2:01:c8:f2:b0:0b:f8:ad:36:05:65
+        93:36:18:af:57:e8:c5:87:6b:ce:63:3d:e7:b1:ab:b3
+        ca:68:76:02:d3:09:2b:a5:30:97:47:25:6e:30:b7:15
+        0f:7a:2e:b4:40:9f:97:ee:d1:2b:a5:19:8f:e3:24:83
+        c6:13:58:b2:da:b6:a8:b5:e7:9e:f1:b1:8f:80:e9:90
+        c7:06:64:08:c9:f0:46:f8:22:4d:25:2b:1d:c3:53:b2
+        fe:db:65:68:a0:b9:b4:52:7d:cd:d5:e7:85:56:88:3d
+        4f:96:74:54:75:48:c2:02:ac:d9:3d:d4:0d:4e:28:99
+        55:c5:6c:56:99:82:80:2d:34:10:5a:bf:66:0a:ce:03
+        43:1e:76:fc:23:6e:5e:58:0b:7f:3b:56:3c:0f:75:d3
+        a2:53:a9:ba:1e:6b:f3:f8:01:69:51:e8:9a:87:d3:02
