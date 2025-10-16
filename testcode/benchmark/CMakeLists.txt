@@ -19,7 +19,12 @@ set(BENCHS sm2_bench.c slh_dsa_bench.c ecdsa_bench.c md_bench.c cipher_bench.c m
            dh_bench.c ecdh_bench.c 25519_bench.c mldsa_bench.c mlkem_bench.c)
 
 add_compile_options(-g)
-add_link_options(-z noexecstack)
+# -z noexecstack: Mark the stack as non-executable (ELF security feature)
+# Supported by: GNU ld (all versions), LLVM lld 7.0+
+# Not needed on: macOS (ld64 defaults to non-executable stack), Windows (uses /NXCOMPAT)
+if(UNIX AND NOT APPLE)
+    add_link_options(-z noexecstack)
+endif()
 add_executable(openhitls_benchmark benchmark.c ${BENCHS})
 
 

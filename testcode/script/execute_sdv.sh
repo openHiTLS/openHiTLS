@@ -24,7 +24,37 @@ need_run_all=1
 threadsNum=$(grep -c ^processor /proc/cpuinfo)
 testsuite_array=()
 testcase_array=()
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$(realpath ${HITLS_ROOT_DIR}/build):$(realpath ${HITLS_ROOT_DIR}/platform/Secure_C/lib)
+
+# Build LD_LIBRARY_PATH with all necessary library paths
+# Start with build directory (no leading colon)
+LIB_PATHS="$(realpath ${HITLS_ROOT_DIR}/build)"
+LIB_PATHS="${LIB_PATHS}:$(realpath ${HITLS_ROOT_DIR}/platform/Secure_C/lib)"
+
+# Add CMVP provider library paths (all architectures: C, armv8_le, x86_64, etc.)
+for cmvp_lib_dir in ${HITLS_ROOT_DIR}/output/CMVP/*/lib; do
+    if [ -d "$cmvp_lib_dir" ]; then
+        LIB_PATHS="${LIB_PATHS}:$(realpath $cmvp_lib_dir)"
+        echo "[INFO] Adding CMVP library path: $(realpath $cmvp_lib_dir)"
+    fi
+done
+
+# Also check build/output location (alternative install path)
+if [ -d "${HITLS_ROOT_DIR}/build/output/CMVP" ]; then
+    for cmvp_lib_dir in ${HITLS_ROOT_DIR}/build/output/CMVP/*/lib; do
+        if [ -d "$cmvp_lib_dir" ]; then
+            LIB_PATHS="${LIB_PATHS}:$(realpath $cmvp_lib_dir)"
+            echo "[INFO] Adding CMVP library path (build): $(realpath $cmvp_lib_dir)"
+        fi
+    done
+fi
+
+# Prepend any existing LD_LIBRARY_PATH
+if [ -n "${LD_LIBRARY_PATH}" ]; then
+    LIB_PATHS="${LIB_PATHS}:${LD_LIBRARY_PATH}"
+fi
+
+export LD_LIBRARY_PATH="${LIB_PATHS}"
+echo "[INFO] Final LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}"
 
 # Check whether an ASAN alarm is generated.
 generate_asan_log() {
@@ -66,11 +96,11 @@ run_test() {
         for i in ${testsuite_array[@]}
         do
             if [ "${i}" = "test_suite_sdv_eal_provider_load" ]; then
-                # 针对特定测试套件设置 LD_LIBRARY_PATH
+                # Set custom LD_LIBRARY_PATH for provider load test suite
                 echo "Running ${i} with LD_LIBRARY_PATH set to ../testdata/provider/path1"
                 env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" ./${i} NO_DETAIL
             else
-                # 其他测试套件正常运行
+                # Run other test suites normally
                 ./${i} NO_DETAIL
             fi
         done

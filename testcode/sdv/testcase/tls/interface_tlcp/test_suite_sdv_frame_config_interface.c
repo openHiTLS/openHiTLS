@@ -28,7 +28,7 @@
 #include <errno.h>
 #include <sys/select.h>
 #include <sys/time.h>
-#include <linux/ioctl.h>
+#include <sys/ioctl.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>

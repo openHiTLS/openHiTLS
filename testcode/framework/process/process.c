@@ -96,14 +96,14 @@ void ThreadExcuteCmd(void *param)
     }
     free(param);
     ControlChannelRes *channelInfo = GetControlChannelRes();
-    (int)ExecuteCmd(&cmdData);
+    (void)ExecuteCmd(&cmdData);  // Cast to void to suppress unused-value warning
     PushResultToChannelSendBuffer(channelInfo, cmdData.result);
     return;
 }
 
 int main(int argc, char **argv)
 {
-    int ret, sctpFd;
+    int ret, sctpFd = -1;  // Initialize sctpFd to -1 (invalid fd)
     ControlChannelRes* channelInfo = NULL;
     ControlChannelBuf dataBuf;
     CmdData exitCmdData = {0};

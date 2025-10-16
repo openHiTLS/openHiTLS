@@ -1,7 +1,7 @@
 {
     "compileFlag": {
-        "CC_DEFINE_FLAGS":{
-            "CC_FLAGS_ADD":[
+        "common": {
+            "CC_DEFINE_FLAGS_EXTRA": [
                 "-DHITLS_CRYPTO_DRBG_GM",
                 "-DHITLS_CRYPTO_ENTROPY_SYS",
                 "-DHITLS_CRYPTO_RAND_CB",
@@ -12,8 +12,10 @@
         }
     },
     "linkFlag": {
-        "LINK_FLAG_ADD":[
-            "-Wl,--version-script=${HiTLS_SOURCE_ROOT_DIR}/config/json/CMVP/libhitls_cmvp.ld"
-        ]
+        "common": {
+            "PUBLIC_EXTRA": [
+                "-Wl,--version-script=${HiTLS_SOURCE_ROOT_DIR}/config/json/CMVP/libhitls_cmvp.ld"
+            ]
+        }
     }
 }

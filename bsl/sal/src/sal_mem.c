@@ -34,7 +34,7 @@ void *BSL_SAL_Malloc(uint32_t size)
     if (size == 0) {
         return NULL;
     }
-#if defined(HITLS_BSL_SAL_MEM) && defined(HITLS_BSL_SAL_LINUX)
+#if defined(HITLS_BSL_SAL_MEM) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
     return SAL_MallocImpl(size);
 #else
     return NULL;
@@ -44,7 +44,7 @@ void *BSL_SAL_Malloc(uint32_t size)
 void BSL_SAL_Free(void *value)
 {
     if (g_memCallback.pfFree == NULL || g_memCallback.pfFree == BSL_SAL_Free) {
-#if defined(HITLS_BSL_SAL_MEM) && defined(HITLS_BSL_SAL_LINUX)
+#if defined(HITLS_BSL_SAL_MEM) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
         SAL_FreeImpl(value);
 #endif
         return;

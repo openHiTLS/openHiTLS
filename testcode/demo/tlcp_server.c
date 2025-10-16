@@ -116,13 +116,13 @@ int main(int32_t argc, char *argv[])
     // Load signature certificate
     HITLS_CERT_X509 *signCert = NULL;
     HITLS_CERT_X509 *signPkey = NULL;
-    signCert = HITLS_CFG_ParseCert(config, CERTS_PATH "sign.crt",
+    signCert = HITLS_CFG_ParseCert(config, (const uint8_t *)(CERTS_PATH "sign.crt"),
         strlen(CERTS_PATH "sign.crt"), TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_PEM);
     if (signCert == NULL) {
         printf("Parse signCert failed.\n");
         goto EXIT;
     }
-    signPkey = HITLS_CFG_ParseKey(config, CERTS_PATH "sign.key",
+    signPkey = HITLS_CFG_ParseKey(config, (const uint8_t *)(CERTS_PATH "sign.key"),
         strlen(CERTS_PATH "sign.key"), TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_PEM);
     if (signPkey == NULL) {
         printf("Parse signPkey failed.\n");
@@ -134,13 +134,13 @@ int main(int32_t argc, char *argv[])
     // Load encryption certificate
     HITLS_CERT_X509 *encCert = NULL;
     HITLS_CERT_X509 *encPkey = NULL;
-    encCert = HITLS_CFG_ParseCert(config, CERTS_PATH "enc.crt",
+    encCert = HITLS_CFG_ParseCert(config, (const uint8_t *)(CERTS_PATH "enc.crt"),
         strlen(CERTS_PATH "enc.crt"), TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_PEM);
     if (encCert == NULL) {
         printf("Parse encCert failed.\n");
         goto EXIT;
     }
-    encPkey = HITLS_CFG_ParseKey(config, CERTS_PATH "enc.key",
+    encPkey = HITLS_CFG_ParseKey(config, (const uint8_t *)(CERTS_PATH "enc.key"),
         strlen(CERTS_PATH "enc.key"), TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_PEM);
     if (encPkey == NULL) {
         printf("Parse encPkey failed.\n");

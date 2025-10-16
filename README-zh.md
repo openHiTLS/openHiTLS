@@ -34,24 +34,43 @@ openHiTLS架构高度模块化，可通过模块和特性配置。RAM/ROM尺寸�
 
 ### 依赖准备
 
-openHiTLS依赖于Secure C，因此需将Secure C下载到${openHiTLS_dir}/platform/Secure_C，Secure C的一个官方Git库是 <https://gitee.com/openeuler/libboundscheck>。
+openHiTLS依赖于Secure C（libboundscheck），**现已由 configure.py 脚本自动管理**。
 
-* 下载安全函数库
+**快速开始（自动化 - 推荐）**：
+
 ```bash
-# 方式1 与openHiTLS代码仓一起拉取
-git clone --recurse-submodules https://gitcode.com/openhitls/openhitls.git
-
-# 方式2 单独拉取安全函数库
+# 只需克隆并配置 - securec 将自动初始化和构建
 git clone https://gitcode.com/openhitls/openhitls.git
-cd ${openHiTLS_dir} 
-git clone https://gitee.com/openeuler/libboundscheck platform/Secure_C
+cd openhitls
+mkdir -p build && cd build
+python3 ../configure.py  # Securec 在此自动处理
+cmake .. && make && make install
 ```
 
-* 构建安全函数库
-```bash
-cd ${openHiTLS_dir}/platform/Secure_C
-make -j
-```
+**其他方式**：
+
+1. **随子模块一起克隆**（如果希望一次性准备所有内容）：
+   ```bash
+   git clone --recurse-submodules https://gitcode.com/openhitls/openhitls.git
+   cd openhitls
+   # Securec 已初始化，configure.py 将自动构建
+   ```
+
+2. **手动管理依赖**（如果需要完全控制）：
+   ```bash
+   git clone https://gitcode.com/openhitls/openhitls.git
+   cd openhitls
+   git clone https://gitee.com/openeuler/libboundscheck platform/Secure_C
+   cd platform/Secure_C && make -j && cd ../..
+   # 使用 --no-auto-deps 跳过自动依赖处理
+   python3 configure.py --no-auto-deps
+   ```
+
+**依赖管理选项**：
+- `--no-auto-deps`：禁用自动依赖初始化和构建
+- `--force-rebuild-deps`：强制重新构建 securec（即使已构建）
+
+Secure C 官方仓库地址：<https://gitee.com/openeuler/libboundscheck>。
 
 ### 致应用开发人员
 

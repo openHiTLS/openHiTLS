@@ -1282,12 +1282,11 @@
             "sm2": {
                 ".features": ["sm2_crypt", "sm2_sign", "sm2_exch"],
                 ".srcs": "crypto/sm2/src/*.c",
-                ".deps": ["crypto::bn", "bsl::sal", "crypto::ecc"],
+                ".deps": ["crypto::bn", "bsl::sal", "crypto::codecsdata", "crypto::ecc"],
                 ".include": [
                     "crypto/eal/src",
                     "bsl/asn1/include",
-                    "bsl/obj/include",
-                    "crypto/codecsdata/include"
+                    "bsl/obj/include"
                 ]
             },
             "paillier": {
@@ -1357,7 +1356,7 @@
                 ".features": ["sal", "sal_mem", "sal_lock", "sal_thread", "sal_time", "sal_file", "sal_str", "sal_dl"],
                 ".srcs": [
                     "bsl/sal/src/*.c",
-                    "bsl/sal/src/linux/*.c"
+                    "bsl/sal/src/posix/*.c"
                 ],
                 ".deps": ["platform::Secure_C"]
             },

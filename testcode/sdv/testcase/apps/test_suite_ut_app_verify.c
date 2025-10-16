@@ -15,7 +15,7 @@
 
 /* BEGIN_HEADER */
 #include "app_verify.h"
-#include <linux/limits.h>
+#include <limits.h>
 #include <stdbool.h>
 #include "string.h"
 #include "securec.h"

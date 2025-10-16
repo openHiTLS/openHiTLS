@@ -85,6 +85,14 @@
 // sizeof array
 #define SIZEOF(a) (sizeof(a) / sizeof(a[0]))
 
+// Compile-time array size calculation using C99 compound literals with sizeof
+// Cross-platform support:
+//   - GCC 4.0+:   Supported (tested with -std=c99 -pedantic)
+//   - Clang 3.0+: Supported (tested on macOS with -std=c99 -pedantic)
+//   - MSVC 2013+: Supported in C mode (requires /std:c11 or /std:c17)
+#define COUNT_OPS(...) \
+    (sizeof((Operation[]){ __VA_ARGS__ }) / sizeof(Operation))
+
 static inline void Hex2Bin(const char *hex, uint8_t *bin, uint32_t *len)
 {
     *len = strlen(hex) / 2;
@@ -131,6 +139,7 @@ typedef struct {
 struct CtxOps_ {
     int32_t algId;
     int32_t hashId;
+    int32_t opsNum;
     SetUp setUp;
     TearDown tearDown;
     Operation ops[];
@@ -154,87 +163,124 @@ static uint8_t g_iv[16];
 
 #define DEFINE_OPER(id, oper) {id, #oper, oper}
 
-#define DEFINE_OPS(alg, id, hId)                            \
-    static const CtxOps alg##CtxOps = {                     \
-        .algId = id,                                        \
-        .hashId = hId,                                      \
-        .setUp = alg##SetUp,                                \
-        .tearDown = alg##TearDown,                          \
-        .ops =                                              \
-            {                                               \
-                DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),       \
-                DEFINE_OPER(KEY_DERIVE_ID, alg##KeyDerive), \
-                DEFINE_OPER(ENC_ID, alg##Enc),              \
-                DEFINE_OPER(DEC_ID, alg##Dec),              \
-                DEFINE_OPER(SIGN_ID, alg##Sign),            \
-                DEFINE_OPER(VERIFY_ID, alg##Verify),        \
-            },                                              \
+// Compiler-calculated operation count using compound literals and sizeof
+// Supports Linux (GCC), macOS (Clang), and Windows (MSVC with C99+)
+#define DEFINE_OPS(alg, id, hId)                                         \
+    enum { alg##_OPS_NUM = COUNT_OPS(                                    \
+        DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),                            \
+        DEFINE_OPER(KEY_DERIVE_ID, alg##KeyDerive),                      \
+        DEFINE_OPER(ENC_ID, alg##Enc),                                   \
+        DEFINE_OPER(DEC_ID, alg##Dec),                                   \
+        DEFINE_OPER(SIGN_ID, alg##Sign),                                 \
+        DEFINE_OPER(VERIFY_ID, alg##Verify)                              \
+    ) };                                                                 \
+    static const CtxOps alg##CtxOps = {                                  \
+        .algId = id,                                                     \
+        .hashId = hId,                                                   \
+        .opsNum = alg##_OPS_NUM,                                         \
+        .setUp = alg##SetUp,                                             \
+        .tearDown = alg##TearDown,                                       \
+        .ops =                                                           \
+            {                                                            \
+                DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),                    \
+                DEFINE_OPER(KEY_DERIVE_ID, alg##KeyDerive),              \
+                DEFINE_OPER(ENC_ID, alg##Enc),                           \
+                DEFINE_OPER(DEC_ID, alg##Dec),                           \
+                DEFINE_OPER(SIGN_ID, alg##Sign),                         \
+                DEFINE_OPER(VERIFY_ID, alg##Verify),                     \
+            },                                                           \
     }
 
-#define DEFINE_OPS_SIGN(alg, id, hId)                 \
-    static const CtxOps alg##CtxOps = {               \
-        .algId = id,                                  \
-        .hashId = hId,                                \
-        .setUp = alg##SetUp,                          \
-        .tearDown = alg##TearDown,                    \
-        .ops =                                        \
-            {                                         \
-                DEFINE_OPER(KEY_GEN_ID, alg##KeyGen), \
-                DEFINE_OPER(SIGN_ID, alg##Sign),      \
-                DEFINE_OPER(VERIFY_ID, alg##Verify),  \
-            },                                        \
+#define DEFINE_OPS_SIGN(alg, id, hId)                              \
+    enum { alg##_OPS_NUM = COUNT_OPS(                              \
+        DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),                      \
+        DEFINE_OPER(SIGN_ID, alg##Sign),                           \
+        DEFINE_OPER(VERIFY_ID, alg##Verify)                        \
+    ) };                                                           \
+    static const CtxOps alg##CtxOps = {                            \
+        .algId = id,                                               \
+        .hashId = hId,                                             \
+        .opsNum = alg##_OPS_NUM,                                   \
+        .setUp = alg##SetUp,                                       \
+        .tearDown = alg##TearDown,                                 \
+        .ops =                                                     \
+            {                                                      \
+                DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),              \
+                DEFINE_OPER(SIGN_ID, alg##Sign),                   \
+                DEFINE_OPER(VERIFY_ID, alg##Verify),               \
+            },                                                     \
     }
 
-#define DEFINE_OPS_CIPHER(alg, id)             \
-    static const CtxOps alg##CtxOps = {        \
-        .algId = id,                           \
-        .hashId = id,                          \
-        .setUp = alg##SetUp,                   \
-        .tearDown = alg##TearDown,             \
-        .ops =                                 \
-            {                                  \
-                DEFINE_OPER(ENC_ID, alg##Enc), \
-                DEFINE_OPER(DEC_ID, alg##Dec), \
-            },                                 \
+#define DEFINE_OPS_CIPHER(alg, id)                              \
+    enum { alg##_OPS_NUM = COUNT_OPS(                           \
+        DEFINE_OPER(ENC_ID, alg##Enc),                          \
+        DEFINE_OPER(DEC_ID, alg##Dec)                           \
+    ) };                                                        \
+    static const CtxOps alg##CtxOps = {                         \
+        .algId = id,                                            \
+        .hashId = id,                                           \
+        .opsNum = alg##_OPS_NUM,                                \
+        .setUp = alg##SetUp,                                    \
+        .tearDown = alg##TearDown,                              \
+        .ops =                                                  \
+            {                                                   \
+                DEFINE_OPER(ENC_ID, alg##Enc),                  \
+                DEFINE_OPER(DEC_ID, alg##Dec),                  \
+            },                                                  \
     }
 
-#define DEFINE_OPS_MD(alg)                             \
-    static const CtxOps alg##CtxOps = {                \
-        .algId = CRYPT_MD_MAX,                         \
-        .hashId = CRYPT_MD_MAX,                        \
-        .setUp = alg##SetUp,                           \
-        .tearDown = alg##TearDown,                     \
-        .ops =                                         \
-            {                                          \
-                DEFINE_OPER(ONESHOT_ID, alg##OneShot), \
-            },                                         \
+#define DEFINE_OPS_MD(alg)                                            \
+    enum { alg##_OPS_NUM = COUNT_OPS(                                 \
+        DEFINE_OPER(ONESHOT_ID, alg##OneShot)                         \
+    ) };                                                              \
+    static const CtxOps alg##CtxOps = {                               \
+        .algId = CRYPT_MD_MAX,                                        \
+        .hashId = CRYPT_MD_MAX,                                       \
+        .opsNum = alg##_OPS_NUM,                                      \
+        .setUp = alg##SetUp,                                          \
+        .tearDown = alg##TearDown,                                    \
+        .ops =                                                        \
+            {                                                         \
+                DEFINE_OPER(ONESHOT_ID, alg##OneShot),                \
+            },                                                        \
     }
 
-#define DEFINE_OPS_KX(alg, id)                              \
-    static const CtxOps alg##CtxOps = {                     \
-        .algId = id,                                        \
-        .hashId = CRYPT_MD_MAX,                             \
-        .setUp = alg##SetUp,                                \
-        .tearDown = alg##TearDown,                          \
-        .ops =                                              \
-            {                                               \
-                DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),       \
-                DEFINE_OPER(KEY_DERIVE_ID, alg##KeyDerive), \
-            },                                              \
+#define DEFINE_OPS_KX(alg, id)                                        \
+    enum { alg##_OPS_NUM = COUNT_OPS(                                 \
+        DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),                         \
+        DEFINE_OPER(KEY_DERIVE_ID, alg##KeyDerive)                    \
+    ) };                                                              \
+    static const CtxOps alg##CtxOps = {                               \
+        .algId = id,                                                  \
+        .hashId = CRYPT_MD_MAX,                                       \
+        .opsNum = alg##_OPS_NUM,                                      \
+        .setUp = alg##SetUp,                                          \
+        .tearDown = alg##TearDown,                                    \
+        .ops =                                                        \
+            {                                                         \
+                DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),                 \
+                DEFINE_OPER(KEY_DERIVE_ID, alg##KeyDerive),           \
+            },                                                        \
     }
 
-#define DEFINE_OPS_KEM(alg, id)                       \
-    static const CtxOps alg##CtxOps = {               \
-        .algId = id,                                  \
-        .hashId = CRYPT_MD_MAX,                       \
-        .setUp = alg##SetUp,                          \
-        .tearDown = alg##TearDown,                    \
-        .ops =                                        \
-            {                                         \
-                DEFINE_OPER(KEY_GEN_ID, alg##KeyGen), \
-                DEFINE_OPER(ENCAPS_ID, alg##Encaps),  \
-                DEFINE_OPER(DECAPS_ID, alg##Decaps),  \
-            },                                        \
+#define DEFINE_OPS_KEM(alg, id)                                  \
+    enum { alg##_OPS_NUM = COUNT_OPS(                            \
+        DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),                    \
+        DEFINE_OPER(ENCAPS_ID, alg##Encaps),                     \
+        DEFINE_OPER(DECAPS_ID, alg##Decaps)                      \
+    ) };                                                         \
+    static const CtxOps alg##CtxOps = {                          \
+        .algId = id,                                             \
+        .hashId = CRYPT_MD_MAX,                                  \
+        .opsNum = alg##_OPS_NUM,                                 \
+        .setUp = alg##SetUp,                                     \
+        .tearDown = alg##TearDown,                               \
+        .ops =                                                   \
+            {                                                    \
+                DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),            \
+                DEFINE_OPER(ENCAPS_ID, alg##Encaps),             \
+                DEFINE_OPER(DECAPS_ID, alg##Decaps),             \
+            },                                                   \
     }
 
 typedef struct BenchCtx_ {
@@ -255,7 +301,7 @@ typedef struct BenchCtx_ {
         .name = #alg,                                                \
         .desc = #alg " benchmark",                                   \
         .ctxOps = &alg##CtxOps,                                      \
-        .opsNum = SIZEOF(alg##CtxOps.ops),                           \
+        .opsNum = alg##_OPS_NUM,                                     \
         .paraIds = pId,                                              \
         .paraIdsNum = pIdNum,                                        \
         .lens = l,                                                   \

@@ -66,7 +66,9 @@
 
 #ifdef HITLS_CRYPTO_CMVP_ISO19790
 #define ISO19790_LOG_FILE "iso19790_audit.log"
-#define HITLS_ISO_LIB_NAME "libhitls_iso.so"
+#ifndef HITLS_PROVIDER_LIB_NAME
+#error "HITLS_PROVIDER_LIB_NAME must be defined by build system"
+#endif
 #define HITLS_ISO_PROVIDER_ATTR "provider=iso"
 
 static FILE* g_logFile = NULL;
@@ -255,7 +257,7 @@ static int32_t Iso19790_ProviderLoad(Iso19790_ProviderLoadCtx *ctx)
     (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, CleanNonce_Stub, 0);
     (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, NULL, 0);
 
-    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, HITLS_ISO_LIB_NAME, param, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, HITLS_PROVIDER_LIB_NAME, param, NULL), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(libCtx, CRYPT_RAND_SHA256, HITLS_ISO_PROVIDER_ATTR, NULL, 0, NULL), CRYPT_SUCCESS);
 
     ctx->libCtx = libCtx;
@@ -418,7 +420,7 @@ void SDV_ISO19790_PROVIDER_DRBG_TEST_TC001()
     BSL_Param param[2] = {{0}, BSL_PARAM_END};
     (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_CMVP_LOG_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ISO19790_RunLogCb, 0);
     for (int32_t i = 0; i < 3; i++) {
-        ret = CRYPT_EAL_ProviderLoad(libCtx, 0, HITLS_ISO_LIB_NAME, param, NULL);
+        ret = CRYPT_EAL_ProviderLoad(libCtx, 0, HITLS_PROVIDER_LIB_NAME, param, NULL);
         if (ret == CRYPT_SUCCESS) {
             break;
         }
@@ -723,7 +725,7 @@ void SDV_ISO19790_PROVIDER_Get_Status_Test_TC001()
     ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, HITLS_ISO_PROVIDER_PATH), CRYPT_SUCCESS);
     
     bool isLoaded = false;
-    int32_t ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, HITLS_ISO_LIB_NAME, &isLoaded);
+    int32_t ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, HITLS_PROVIDER_LIB_NAME, &isLoaded);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(isLoaded == false);
 
@@ -736,33 +738,33 @@ void SDV_ISO19790_PROVIDER_Get_Status_Test_TC001()
     (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, CleanNonce_Stub, 0);
     (void)BSL_PARAM_InitValue(&param[index++], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, NULL, 0);
 
-    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, HITLS_ISO_LIB_NAME, param, &providerMgr), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, HITLS_PROVIDER_LIB_NAME, param, &providerMgr), CRYPT_SUCCESS);
     ASSERT_TRUE(providerMgr != NULL);
 
-    ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, HITLS_ISO_LIB_NAME, &isLoaded);
+    ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, HITLS_PROVIDER_LIB_NAME, &isLoaded);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(isLoaded);
 
     providerMgr = NULL;
-    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, HITLS_ISO_LIB_NAME, param, &providerMgr), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, HITLS_PROVIDER_LIB_NAME, param, &providerMgr), CRYPT_SUCCESS);
     ASSERT_TRUE(providerMgr != NULL);
 
-    ret = CRYPT_EAL_ProviderUnload(libCtx, 0, HITLS_ISO_LIB_NAME);
+    ret = CRYPT_EAL_ProviderUnload(libCtx, 0, HITLS_PROVIDER_LIB_NAME);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, HITLS_ISO_LIB_NAME, &isLoaded);
+    ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, HITLS_PROVIDER_LIB_NAME, &isLoaded);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(isLoaded);
 
-    ret = CRYPT_EAL_ProviderUnload(libCtx, 0, HITLS_ISO_LIB_NAME);
+    ret = CRYPT_EAL_ProviderUnload(libCtx, 0, HITLS_PROVIDER_LIB_NAME);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
-    ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, HITLS_ISO_LIB_NAME, &isLoaded);
+    ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, HITLS_PROVIDER_LIB_NAME, &isLoaded);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(isLoaded == false);
 
 EXIT:
-    CRYPT_EAL_ProviderUnload(libCtx, 0, HITLS_ISO_LIB_NAME);
+    CRYPT_EAL_ProviderUnload(libCtx, 0, HITLS_PROVIDER_LIB_NAME);
     CRYPT_EAL_LibCtxFree(libCtx);
 #endif
 }
@@ -1425,7 +1427,7 @@ void SDV_ISO19790_PROVIDER_MD_USE_DEFAULT_LIBCTX_TEST_TC001(int algId)
 
     ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(NULL, HITLS_ISO_PROVIDER_PATH), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_ProviderLoad(NULL, 0, HITLS_ISO_LIB_NAME, param, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(NULL, 0, HITLS_PROVIDER_LIB_NAME, param, NULL), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, HITLS_ISO_PROVIDER_ATTR, NULL, 0, NULL), CRYPT_SUCCESS);
 
@@ -1441,7 +1443,7 @@ void SDV_ISO19790_PROVIDER_MD_USE_DEFAULT_LIBCTX_TEST_TC001(int algId)
 EXIT:
     CRYPT_EAL_MdFreeCtx(mdCtx);
     CRYPT_EAL_RandDeinitEx(NULL);
-    CRYPT_EAL_ProviderUnload(NULL, 0, HITLS_ISO_LIB_NAME);
+    CRYPT_EAL_ProviderUnload(NULL, 0, HITLS_PROVIDER_LIB_NAME);
 #endif
 }
 /* END_CASE */

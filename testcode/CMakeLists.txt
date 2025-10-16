@@ -20,7 +20,46 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
     option(__x86_64__ "x86" ON)
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Werror -Wformat=2 -Wno-format-nonliteral -Wno-deprecated-declarations -Wno-unused-but-set-variable -Wl,--wrap=REC_Read -Wl,--wrap=REC_Write")
+# Base compiler flags
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Werror -Wformat=2 -Wno-format-nonliteral -Wno-deprecated-declarations -Wno-unused-but-set-variable")
+
+# Add macOS-specific warning suppression for generated code
+if(APPLE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-sometimes-uninitialized")
+    # Fix linker warning: "reducing alignment of section __DATA,__common from 0x8000 to 0x4000"
+    # Apple Clang still defaults to -fcommon (unlike GCC 10+ and LLVM Clang 11+)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-common")
+endif()
+
+# Detect platform-specific shared library extension
+if(APPLE)
+    set(SHARED_LIB_EXT ".dylib")
+else()
+    set(SHARED_LIB_EXT ".so")
+endif()
+
+# Dynamically determine provider library name based on CMVP mode
+# This allows testing of ISO19790, FIPS, SM, or standard providers
+if(CUSTOM_CFLAGS MATCHES "-DHITLS_CRYPTO_CMVP_ISO19790")
+    set(HITLS_PROVIDER_LIB_NAME "libhitls_iso${SHARED_LIB_EXT}")
+    message(STATUS "Provider library: ISO19790 mode (${HITLS_PROVIDER_LIB_NAME})")
+elseif(CUSTOM_CFLAGS MATCHES "-DHITLS_CRYPTO_CMVP_FIPS")
+    set(HITLS_PROVIDER_LIB_NAME "libhitls_fips${SHARED_LIB_EXT}")
+    message(STATUS "Provider library: FIPS mode (${HITLS_PROVIDER_LIB_NAME})")
+elseif(CUSTOM_CFLAGS MATCHES "-DHITLS_CRYPTO_CMVP_SM")
+    set(HITLS_PROVIDER_LIB_NAME "libhitls_sm${SHARED_LIB_EXT}")
+    message(STATUS "Provider library: SM mode (${HITLS_PROVIDER_LIB_NAME})")
+else()
+    set(HITLS_PROVIDER_LIB_NAME "libhitls${SHARED_LIB_EXT}")
+    message(STATUS "Provider library: Standard mode (${HITLS_PROVIDER_LIB_NAME})")
+endif()
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHITLS_PROVIDER_LIB_NAME=\\\"${HITLS_PROVIDER_LIB_NAME}\\\"")
+
+# Add GNU ld-specific wrap flags only on Linux (not supported on macOS)
+if(NOT APPLE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,--wrap=REC_Read -Wl,--wrap=REC_Write")
+endif()
 
 message(STATUS "System processor :${CMAKE_SYSTEM_PROCESSOR}")
 message(STATUS "Enable bsl uio sctp :${ENABLE_UIO_SCTP}")

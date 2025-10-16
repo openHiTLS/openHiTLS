@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include <unistd.h>
 #include <stdbool.h>
 

@@ -76,7 +76,10 @@
 #define APP_PASS_FILE_STR_LEN ((int)(sizeof(APP_PASS_FILE_STR) - 1))
 
 #ifdef HITLS_APP_SM_MODE
-#define APP_SM_PROVIDER_NAME "libhitls_sm.so"
+#ifndef HITLS_PROVIDER_LIB_NAME
+#error "HITLS_PROVIDER_LIB_NAME must be defined by build system"
+#endif
+#define APP_SM_PROVIDER_NAME HITLS_PROVIDER_LIB_NAME
 #define APP_SM_PROVIDER_ATTR "provider=sm"
 #endif
 

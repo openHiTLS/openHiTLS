@@ -64,7 +64,15 @@ int32_t STUB_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, u
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_BSL_SAL_LINUX
+// On Linux, __real_REC_Write is created by --wrap linker flag
 extern int32_t __real_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num);
+#define REC_WRITE_FUNC __real_REC_Write
+#else
+// On macOS/Darwin, use REC_Write directly (no --wrap support)
+extern int32_t REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num);
+#define REC_WRITE_FUNC REC_Write
+#endif
 
 static void Test_FinishToAPP(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
 {
@@ -81,7 +89,7 @@ static void Test_FinishToAPP(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint3
     ASSERT_EQ(parseLen, *len);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, FINISHED);
 
-    STUB_Replace(user, __real_REC_Write, STUB_REC_Write);
+    STUB_Replace(user, REC_WRITE_FUNC, STUB_REC_Write);
     memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 

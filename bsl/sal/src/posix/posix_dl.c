@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_BSL_SAL_LINUX) && defined(HITLS_BSL_SAL_DL)
+#if (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)) && defined(HITLS_BSL_SAL_DL)
 
 #include <stdint.h>
 #include <stdlib.h>

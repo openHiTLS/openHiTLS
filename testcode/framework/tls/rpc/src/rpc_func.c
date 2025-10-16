@@ -454,6 +454,7 @@ int RpcTlsWrite(CmdData *cmdData)
     }
     if (dataLen >= CONTROL_CHANNEL_MAX_MSG_LEN) {
         free(data);
+        ret = ERROR;
         goto ERR;
     }
     // The second parameter of indicates the content of the write data.

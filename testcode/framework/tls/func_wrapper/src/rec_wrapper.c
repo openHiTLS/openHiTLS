@@ -21,8 +21,11 @@
 #define MAX_BUF 16384
 static RecWrapper g_recWrapper;
 static bool g_enableWrapper;
-static __thread uint8_t g_locBuffer[MAX_BUF] = { 0 };
 
+// Platform-specific wrapper function declarations
+#if defined(HITLS_BSL_SAL_LINUX)
+// GNU ld --wrap functions (only available on Linux with --wrap flags)
+static __thread uint8_t g_locBuffer[MAX_BUF] = { 0 };
 extern int32_t __real_REC_Read(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t *readLen, uint32_t num);
 
 extern int32_t __real_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num);
@@ -64,6 +67,19 @@ extern int32_t __wrap_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t
     }
     return ret;
 }
+#elif defined(HITLS_BSL_SAL_DARWIN)
+// macOS/Darwin does not support GNU ld --wrap flag
+// Use direct function calls instead of __real_/__wrap_ symbols should add later for full support
+static uint8_t g_locBuffer[MAX_BUF] = { 0 };
+extern int32_t REC_Read(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t *readLen, uint32_t num);
+
+extern int32_t REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num);
+
+// Note: On macOS, these wrapper functions are not automatically invoked by the linker
+// Direct function call interception would require different mechanisms (e.g., dyld interposing)
+#else
+#error "Unsupported platform: REC wrapper functions require either HITLS_BSL_SAL_LINUX or HITLS_BSL_SAL_DARWIN"
+#endif
 
 RecCryptoFunc g_aeadFuncs;
 RecCryptoFunc g_cbcFuncs;

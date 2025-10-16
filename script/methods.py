@@ -12,6 +12,7 @@
 # EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 # MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
+
 import shutil
 import sys
 sys.dont_write_bytecode = True
@@ -26,10 +27,6 @@ def trans2list(x):
     if type(x) == str: return [x]
 
     raise ValueError('Unsupported type: "%s"' % type(x))
-
-def unique_list(x):
-    """ Deduplicate the list. """
-    return list(dict.fromkeys(x))
 
 def copy_file(src_file, dest_file, isCoverd=True):
     if not os.path.exists(src_file):

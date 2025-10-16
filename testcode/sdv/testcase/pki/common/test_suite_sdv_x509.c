@@ -44,7 +44,6 @@ static inline void UnusedParam1(int param1, int param2, int param3)
     (void)param3;
 }
 
-
 static inline void UnusedParam2(int param1, int param2, void *param3)
 {
     (void)param1;

@@ -151,16 +151,16 @@ int HLT_TlsSetSsl(void *ssl, HLT_Ssl_Config *sslConfig)
 }
 
 // listen non-blocking interface
-unsigned long int HLT_TlsListen(void *ssl)
+pthread_t HLT_TlsListen(void *ssl)
 {
     (void)ssl;
     Process *process = GetProcess();
     switch (process->tlsType) {
         case HITLS : {
-            return ERROR; // Hitls does not support the listen function.
+            return 0; // Hitls does not support the listen function.
         }
         default:
-            return ERROR;
+            return 0;
     }
 }
 
@@ -177,10 +177,10 @@ int HLT_TlsListenBlock(void* ssl)
 }
 
 // Non-blocking interface
-unsigned long int HLT_TlsAccept(void *ssl)
+pthread_t HLT_TlsAccept(void *ssl)
 {
     (void)ssl;
-    unsigned long int ret = ERROR;
+    int ret;
     Process *process = GetProcess();
     pthread_t t_id;
     switch (process->tlsType) {
@@ -188,11 +188,11 @@ unsigned long int HLT_TlsAccept(void *ssl)
             ret = pthread_create(&t_id, NULL, (void*)HitlsAccept, (void*)ssl);
             break;
         default:
-            break;
+            return 0;
     }
 
     if (ret != 0) {
-        return ret;
+        return 0;
     }
     return t_id;
 }
@@ -209,7 +209,7 @@ int HLT_TlsAcceptBlock(void *ssl)
     }
 }
 
-int HLT_GetTlsAcceptResultFromId(unsigned long int threadId)
+int HLT_GetTlsAcceptResultFromId(pthread_t threadId)
 {
     pthread_join(threadId, NULL);
     return SUCCESS;
@@ -218,13 +218,14 @@ int HLT_GetTlsAcceptResultFromId(unsigned long int threadId)
 int HLT_GetTlsAcceptResult(HLT_Tls_Res* tlsRes)
 {
     static int ret;
-    if (tlsRes->acceptId <= 0) {
+    if (tlsRes->acceptId == 0) {
         LOG_ERROR("This Res Has Not acceptId");
         return ERROR;
     }
     if (tlsRes->ctx == NULL) {
         // Indicates that the remote process accepts the request.
-        ret = HLT_RpcGetTlsAcceptResult(tlsRes->acceptId);
+        // acceptId stores RPC command ID (int) cast to pthread_t, cast it back
+        ret = HLT_RpcGetTlsAcceptResult((int)(uintptr_t)tlsRes->acceptId);
     } else {
         // Indicates that the local process accepts the request.
         int *tmp = NULL;
@@ -492,7 +493,7 @@ HLT_FD HLT_CreateDataChannel(HLT_Process *process1, HLT_Process *process2, DataC
 {
     int acceptId;
     int bindFd;
-    unsigned long int pthreadId;
+    pthread_t pthreadId;
     HLT_FD sockFd;
     char *userPort = getenv("FIXED_PORT");
     if (userPort == NULL) {
@@ -729,7 +730,7 @@ void HLT_FreeAllProcess(void)
     for (int i = 0; i < localProcess->hltTlsResNum; i++) {
         tlsRes = localProcess->hltTlsResArray[i];
         alarm(60); // Avoid long waits
-        if ((tlsRes->acceptId > 0) && (tlsRes->ctx != NULL)) {
+        if ((tlsRes->acceptId != 0) && (tlsRes->ctx != NULL)) {
             pthread_join(tlsRes->acceptId, NULL);
         }
         free(tlsRes);
@@ -933,8 +934,6 @@ int HLT_TlsGetErrorCode(void *ssl)
 HLT_Tls_Res* HLT_ProcessTlsAccept(HLT_Process *process, TLS_VERSION tlsVersion,
                                   HLT_Ctx_Config *ctxConfig, HLT_Ssl_Config *sslConfig)
 {
-    unsigned long int acceptId;
-
     HLT_Tls_Res *tlsRes = NULL;
 
     tlsRes = HLT_ProcessTlsInit(process, tlsVersion, ctxConfig, sslConfig);
@@ -944,19 +943,21 @@ HLT_Tls_Res* HLT_ProcessTlsAccept(HLT_Process *process, TLS_VERSION tlsVersion,
     }
     // Check whether the call is invoked by the local process or by the RPC.
     if (process->remoteFlag == 0) {
-        acceptId = HLT_TlsAccept(tlsRes->ssl);
-        if (acceptId == (unsigned long int)ERROR) {
+        pthread_t acceptId = HLT_TlsAccept(tlsRes->ssl);
+        if (acceptId == 0) {
             LOG_ERROR("HLT_TlsAccept ERROR");
             return NULL;
         }
+        tlsRes->acceptId = acceptId;
     } else {
-        acceptId = HLT_RpcTlsAccept(process, tlsRes->sslId);
-        if (acceptId == (unsigned long int)ERROR) {
+        int rpcAcceptId = HLT_RpcTlsAccept(process, tlsRes->sslId);
+        if (rpcAcceptId == ERROR) {
             LOG_ERROR("HLT_TlsAccept ERROR");
             return NULL;
         }
+        // Store RPC command ID in acceptId (safe to cast int to pthread_t for storage)
+        tlsRes->acceptId = (pthread_t)(uintptr_t)rpcAcceptId;
     }
-    tlsRes->acceptId = acceptId;
     return tlsRes;
 }
 

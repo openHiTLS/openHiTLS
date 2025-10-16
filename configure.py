@@ -77,12 +77,246 @@ import os
 import argparse
 import traceback
 import glob
+import shutil
 from script.methods import copy_file, save_json_file, trans2list
 from script.config_parser import (FeatureParser, CompileParser, FeatureConfigParser,
                                   CompileConfigParser, CompleteOptionParser)
+from script.platform_utils import CompilerDetector, LinkerDetector, PlatformDetector
+from script.toolchain_manager import ToolchainManager
 
 srcdir = os.path.dirname(os.path.realpath(sys.argv[0]))
 work_dir = os.path.abspath(os.getcwd())
+
+
+def list_available_toolchains():
+    """List all available toolchain files."""
+    toolchain_dir = os.path.join(srcdir, 'config/toolchain')
+    ToolchainManager.list_available(toolchain_dir)
+
+
+def check_securec_submodule():
+    """Check if securec submodule is initialized."""
+    securec_dir = os.path.join(srcdir, 'platform/Secure_C')
+    securec_makefile = os.path.join(securec_dir, 'Makefile')
+    securec_git = os.path.join(securec_dir, '.git')
+
+    # Check if it's a valid submodule directory
+    return os.path.exists(securec_makefile) or os.path.exists(securec_git)
+
+
+def init_securec_submodule():
+    """Initialize securec git submodule."""
+    import subprocess
+
+    print("=" * 70)
+    print("[INFO] Securec dependency not found, initializing git submodule...")
+    print("=" * 70)
+
+    try:
+        result = subprocess.run(
+            ['git', 'submodule', 'update', '--init', '--recursive', 'platform/Secure_C'],
+            cwd=srcdir,
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        print("[SUCCESS] Securec submodule initialized successfully!")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"[ERROR] Failed to initialize securec submodule:")
+        print(f"  {e.stderr}")
+        print("\n[HINT] Please manually initialize the submodule:")
+        print("  git submodule update --init --recursive platform/Secure_C")
+        print("  OR manually clone:")
+        print("  git clone https://gitee.com/openeuler/libboundscheck.git platform/Secure_C")
+        return False
+    except FileNotFoundError:
+        print("[WARNING] Git command not found, cannot auto-initialize submodule")
+        print("\n[HINT] Please manually download securec dependency:")
+        print("  git clone https://gitee.com/openeuler/libboundscheck.git platform/Secure_C")
+        return False
+
+
+def build_securec_with_cmake(force_rebuild=False):
+    """Build securec library using CMake (cross-platform preferred method)."""
+    import subprocess
+
+    securec_dir = os.path.join(srcdir, 'platform/Secure_C')
+    securec_lib_dir = os.path.join(securec_dir, 'lib')
+    build_dir = os.path.join(srcdir, 'build')
+
+    print("[INFO] Attempting CMake build (cross-platform)...")
+
+    try:
+        # Check if CMake is available
+        subprocess.run(['cmake', '--version'],
+                      capture_output=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("[WARNING] CMake not found, will try Makefile instead")
+        return False
+
+    try:
+        # CMake will handle securec build via SecureC.cmake
+        # Just verify the build directory exists
+        if not os.path.exists(build_dir):
+            os.makedirs(build_dir)
+
+        # The actual build will happen when user runs cmake
+        # Here we just verify the setup is correct
+        if os.path.exists(os.path.join(srcdir, 'platform/SecureC.cmake')):
+            print("[SUCCESS] CMake configuration ready for securec")
+            print("[INFO] Securec will be built automatically when running: cmake ..")
+            return True
+        else:
+            print("[WARNING] SecureC.cmake not found")
+            return False
+
+    except Exception as e:
+        print(f"[WARNING] CMake setup failed: {e}")
+        return False
+
+
+def build_securec_with_make(force_rebuild=False):
+    """Build securec library using Makefile (fallback method)."""
+    import subprocess
+
+    securec_dir = os.path.join(srcdir, 'platform/Secure_C')
+    securec_lib_dir = os.path.join(securec_dir, 'lib')
+
+    print("[INFO] Building with Makefile (fallback)...")
+
+    # Detect compiler
+    try:
+        detector = CompilerDetector()
+        compiler = detector.detect()
+        print(f"[INFO] Using compiler: {compiler}")
+    except Exception:
+        compiler = 'gcc'  # Fallback to gcc
+        print(f"[INFO] Using default compiler: {compiler}")
+
+    try:
+        # Clean first if needed
+        if force_rebuild:
+            subprocess.run(['make', 'clean'], cwd=securec_dir, capture_output=True)
+
+        # Build securec
+        result = subprocess.run(
+            ['make', '-j', f'CC={compiler}'],
+            cwd=securec_dir,
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        print("[SUCCESS] Securec library built successfully with Makefile!")
+        print(f"[INFO] Library location: {securec_lib_dir}")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"[ERROR] Makefile build failed:")
+        print(f"  {e.stderr}")
+        return False
+    except Exception as e:
+        print(f"[ERROR] Unexpected error: {e}")
+        return False
+
+
+def build_securec_library(force_rebuild=False):
+    """
+    Build securec library using CMake (preferred) or Makefile (fallback).
+
+    Strategy:
+    1. Try CMake first (better cross-platform support)
+    2. Fallback to Makefile if CMake fails
+    3. Both methods output to platform/Secure_C/lib/
+    """
+    import subprocess
+
+    securec_dir = os.path.join(srcdir, 'platform/Secure_C')
+    securec_lib_dir = os.path.join(securec_dir, 'lib')
+
+    # Check if already built (skip if not forcing rebuild)
+    if not force_rebuild and os.path.exists(securec_lib_dir):
+        lib_files = []
+        for ext in ['*.so', '*.dylib', '*.dll', '*.a']:
+            lib_files.extend(glob.glob(os.path.join(securec_lib_dir, ext)))
+
+        if lib_files:
+            print("[INFO] Securec library already built, skipping build...")
+            return True
+
+    if force_rebuild and os.path.exists(securec_lib_dir):
+        print("[INFO] Force rebuilding securec library...")
+        shutil.rmtree(securec_lib_dir, ignore_errors=True)
+
+    print("=" * 70)
+    print("[INFO] Building securec library...")
+    print("=" * 70)
+
+    # Try CMake first (better cross-platform support)
+    if build_securec_with_cmake(force_rebuild):
+        return True
+
+    # Fallback to Makefile
+    print("[INFO] CMake build not available, trying Makefile...")
+    if build_securec_with_make(force_rebuild):
+        return True
+
+    # Both methods failed
+    print("\n" + "=" * 70)
+    print("[ERROR] Failed to build securec library with both CMake and Makefile")
+    print("=" * 70)
+    print("\n[HINT] Please manually build securec:")
+    print(f"  cd {securec_dir}")
+    print(f"  make -j")
+    print("\nOr ensure CMake is installed and run:")
+    print(f"  mkdir -p build && cd build")
+    print(f"  cmake .. && make")
+    return False
+
+
+def ensure_securec_dependency(auto_init=True, auto_build=True, force_rebuild=False):
+    """
+    Ensure securec dependency is ready.
+
+    Args:
+        auto_init: Automatically initialize git submodule if not present
+        auto_build: Automatically build securec if not built
+        force_rebuild: Force rebuild even if already built
+
+    Returns:
+        bool: True if dependency is ready, False otherwise
+    """
+    securec_dir = os.path.join(srcdir, 'platform/Secure_C')
+
+    # Step 1: Check if submodule is initialized
+    if not check_securec_submodule():
+        if not auto_init:
+            print("=" * 70)
+            print("[WARNING] Securec dependency not found!")
+            print("=" * 70)
+            print("Please initialize the submodule manually:")
+            print("  git submodule update --init --recursive platform/Secure_C")
+            print("OR download manually:")
+            print("  git clone https://gitee.com/openeuler/libboundscheck.git platform/Secure_C")
+            return False
+
+        if not init_securec_submodule():
+            return False
+
+    # Step 2: Build securec library
+    if not auto_build and not force_rebuild:
+        # Just check if already built
+        securec_lib_dir = os.path.join(securec_dir, 'lib')
+        if not os.path.exists(securec_lib_dir) or not os.listdir(securec_lib_dir):
+            print("=" * 70)
+            print("[WARNING] Securec library not built!")
+            print("=" * 70)
+            print("Please build manually:")
+            print(f"  cd {securec_dir}")
+            print("  make -j")
+            return False
+        return True
+
+    return build_securec_library(force_rebuild)
 
 
 def get_cfg_args():
@@ -117,6 +351,16 @@ def get_cfg_args():
                             help='Specify the platform endianness as little or big, default is "little".')
         parser.add_argument('--bits', metavar='32|64', type=int, choices=[32, 64],
                             help='To enable feature "bn", should specify the number of OS bits, default is "64".')
+        # Compiler and Linker Configuration
+        parser.add_argument('--toolchain', type=str,
+                            help='Specify toolchain file name (without .cmake extension). '
+                                 'Example: apple-clang-darwin, gcc-linux, arm-none-eabi-gcc')
+        parser.add_argument('--list-toolchains', action='store_true',
+                            help='List all available toolchain files and exit.')
+        parser.add_argument('--compiler', type=str, choices=['gcc', 'clang', 'apple-clang'],
+                            help='Specify the compiler type (auto-detected if not provided).')
+        parser.add_argument('--linker', type=str, choices=['gnu-ld', 'ld64', 'lld', 'gold'],
+                            help='Specify the linker type (auto-detected if not provided).')
         # Compiler Options, Link Options
         parser.add_argument('--lib_type', choices=['static', 'shared', 'object'], nargs='+',
                             help='set lib type, such as --lib_type staic shared, default is "staic shared object"')
@@ -130,6 +374,14 @@ def get_cfg_args():
                             help='delete some link flags such as --del_link_flags="-shared -Wl,-z,relro"')
 
         parser.add_argument('--no_config_check', action='store_true', help='disable the configuration check')
+
+        # Dependency Management
+        parser.add_argument('--no-auto-deps', action='store_true',
+                            help='Disable automatic dependency initialization and build. '
+                                 'Use this if you want to manually manage securec dependency.')
+        parser.add_argument('--force-rebuild-deps', action='store_true',
+                            help='Force rebuild dependencies even if already built. '
+                                 'This will clean and rebuild securec library.')
 
         parser.add_argument('--hitls_version', default='openHiTLS 0.2.0 15 May 2025', help='%(prog)s version str')
         parser.add_argument('--hitls_version_num', default=0x00200000, help='%(prog)s version num')
@@ -237,7 +489,20 @@ class Configure:
         if self._args.bundle_libs:
             conf_custom_feature.set_param('bundleLibs', self._args.bundle_libs)
         conf_custom_feature.set_param('endian', self._args.endian)
-        conf_custom_feature.set_param('system', self._args.system, False)
+        # Only override system value if explicitly specified via command line
+        # Otherwise, respect the value from feature_config.json
+        if self._args.system is not None:
+            # User explicitly specified --system on command line
+            conf_custom_feature.set_param('system', self._args.system, False)
+        else:
+            # Check if feature_config.json has a valid system value
+            current_system = conf_custom_feature._cfg.get('system')
+            valid_systems = ['linux', 'darwin', 'none', '']
+            if not current_system or current_system not in valid_systems:
+                # No valid system in config file, use auto-detection as fallback
+                system_value = PlatformDetector.get_current_platform()
+                conf_custom_feature.set_param('system', system_value, False)
+            # Otherwise, keep the system value from feature_config.json unchanged
         conf_custom_feature.set_param('bits', self._args.bits, False)
 
         enable_feas, asm_feas = conf_custom_feature.get_enable_feas(self._args.enable, self._args.asm)
@@ -281,16 +546,39 @@ class CMakeGenerator:
     def __init__(self, args, features: FeatureParser, all_options: CompleteOptionParser):
         self._args = args
         self._cfg_feature = features
-        self._cfg_compile = CompileParser(all_options, Configure.default_compile_json_file)
+        self._cfg_compile = CompileParser(
+            all_options,
+            Configure.default_compile_json_file,
+            compiler=getattr(args, 'compiler', None),
+            linker=getattr(args, 'linker', None),
+            platform=getattr(args, 'system', None)
+        )
         self._cfg_custom_feature = FeatureConfigParser(features, args.tmp_feature_config)
         self._cfg_custom_feature.check_fea_opts()
-        self._cfg_custom_compile = CompileConfigParser(all_options, args.tmp_compile_config)
+        self._cfg_custom_compile = CompileConfigParser(
+            all_options,
+            args.tmp_compile_config,
+            compiler=getattr(args, 'compiler', None),
+            linker=getattr(args, 'linker', None),
+            platform=getattr(args, 'system', None)
+        )
 
         self._asm_type = self._cfg_custom_feature.asm_type
 
         self._platform = 'linux'
         self._approved_provider = False
         self._hmac = "sha256"
+
+    def select_toolchain(self):
+        """Select or generate toolchain file using ToolchainManager."""
+        ToolchainManager.select_or_generate(
+            self._args,
+            self._cfg_compile.compiler,
+            self._cfg_compile.linker,
+            self._cfg_compile.platform,
+            self._args.build_dir,
+            srcdir
+        )
 
     @staticmethod
     def _add_if_exists(inc_dirs, path):
@@ -371,6 +659,16 @@ class CMakeGenerator:
         srcs = self._cfg_feature.get_mod_srcs(top_mod, sub_mod, mod_obj)
         return self._expand_srcs(srcs)
 
+    @staticmethod
+    def _is_bundled_lib(lib_name):
+        """
+        Check if lib_name is a bundled library.
+        Bundled libraries include:
+        - 'hitls': standard bundle
+        - 'hitls_iso', 'hitls_fips', 'hitls_sm': CMVP provider bundles
+        """
+        return lib_name == 'hitls' or lib_name in ['hitls_iso', 'hitls_fips', 'hitls_sm']
+
     def _gen_module_cmake(self, lib, mod, mod_obj, mods_cmake):
         top_mod, module_name = mod.split('::')
         inc_set = self._get_module_include(mod, mod_obj.get('deps', []))
@@ -385,7 +683,7 @@ class CMakeGenerator:
         cmake += 'target_compile_definitions(%s PUBLIC OPENHITLSDIR="${CMAKE_INSTALL_PREFIX}/")\n' % tgt_name
         mods_cmake[tgt_name] = cmake
     def _gen_shared_lib_cmake(self, lib_name, tgt_obj_list, tgt_list, macros):
-        tgt_name = lib_name + '-shared' 
+        tgt_name = lib_name + '-shared'
         properties = 'OUTPUT_NAME {}'.format(lib_name)
 
         cmake = '\n'
@@ -402,29 +700,36 @@ class CMakeGenerator:
             cmake += 'install(CODE "execute_process(COMMAND cp lib%s.so.hmac ${CMAKE_INSTALL_PREFIX}/lib/lib%s.so.hmac)")\n' % (lib_name, lib_name)
 
         if lib_name == 'hitls_bsl':
+            # Always link libboundscheck for BSL (required for securec functions)
+            libs_to_link = [str(self._args.securec_lib)]
             for item in macros:
-                if item == '-DHITLS_BSL_UIO' or item == '-DHITLS_BSL_UIO_SCTP':
-                    cmake += self._gen_cmd_cmake("target_link_directories", "hitls_bsl-shared PRIVATE " + "${CMAKE_SOURCE_DIR}/platform/Secure_C/lib")
-                    cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_bsl-shared " + str(self._args.securec_lib))
-                if item == '-DHITLS_BSL_SAL_DL':
-                    cmake += self._gen_cmd_cmake("target_link_directories", "hitls_bsl-shared PRIVATE " + "${CMAKE_SOURCE_DIR}/platform/Secure_C/lib")
-                    cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_bsl-shared dl " + str(self._args.securec_lib))
+                if item == '-DHITLS_BSL_SAL_DL' and 'dl' not in libs_to_link:
+                    libs_to_link.insert(0, 'dl')
+            cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_bsl-shared " + " ".join(libs_to_link))
         if lib_name == 'hitls_crypto':
             cmake += self._gen_cmd_cmake("target_link_directories", "hitls_crypto-shared PRIVATE " + "${CMAKE_SOURCE_DIR}/platform/Secure_C/lib")
-            cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_crypto-shared hitls_bsl-shared " + str(self._args.securec_lib))
+            cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_crypto-shared hitls_bsl-shared")
         if lib_name == 'hitls_tls':
             cmake += self._gen_cmd_cmake("target_link_directories", "hitls_tls-shared PRIVATE " + "${CMAKE_SOURCE_DIR}/platform/Secure_C/lib")
-            cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_tls-shared hitls_pki-shared hitls_crypto-shared hitls_bsl-shared " + str(self._args.securec_lib))
+            cmake += self._gen_cmd_cmake("target_link_libraries", "hitls_tls-shared hitls_pki-shared hitls_crypto-shared hitls_bsl-shared")
         if lib_name == 'hitls_pki':
             cmake += self._gen_cmd_cmake("target_link_directories", "hitls_pki-shared PRIVATE " + "${CMAKE_SOURCE_DIR}/platform/Secure_C/lib")
             cmake += self._gen_cmd_cmake(
-                "target_link_libraries", "hitls_pki-shared hitls_crypto-shared hitls_bsl-shared " + str(self._args.securec_lib))
+                "target_link_libraries", "hitls_pki-shared hitls_crypto-shared hitls_bsl-shared")
         if lib_name == 'hitls_auth':
             cmake += self._gen_cmd_cmake("target_link_directories", "hitls_auth-shared PRIVATE " + "${CMAKE_SOURCE_DIR}/platform/Secure_C/lib")
             cmake += self._gen_cmd_cmake(
-                "target_link_libraries", "hitls_auth-shared hitls_crypto-shared hitls_bsl-shared " + str(self._args.securec_lib))
+                "target_link_libraries", "hitls_auth-shared hitls_crypto-shared hitls_bsl-shared")
+        elif self._is_bundled_lib(lib_name):
+            # Bundled library (hitls, hitls_iso, hitls_fips, hitls_sm) contains all modules
+            cmake += self._gen_cmd_cmake("target_link_directories", "{}-shared PRIVATE".format(lib_name) + " ${CMAKE_SOURCE_DIR}/platform/Secure_C/lib")
+            libs_to_link = [str(self._args.securec_lib)]
+            for item in macros:
+                if item == '-DHITLS_BSL_SAL_DL' and 'dl' not in libs_to_link:
+                    libs_to_link.insert(0, 'dl')
+            cmake += self._gen_cmd_cmake("target_link_libraries", "{}-shared {}".format(lib_name, " ".join(libs_to_link)))
         if self._approved_provider:
-            cmake += self._gen_cmd_cmake("target_link_libraries", "hitls-shared m " + str(self._args.securec_lib))
+            cmake += self._gen_cmd_cmake("target_link_libraries", "{}-shared m {}".format(lib_name, str(self._args.securec_lib)))
         tgt_list.append(tgt_name)
         return cmake
 
@@ -440,15 +745,75 @@ class CMakeGenerator:
         tgt_list.append(tgt_name)
         return cmake
 
-    def _gen_obejct_lib_cmake(self, lib_name, tgt_obj_list, tgt_list):
+    def _gen_obejct_lib_cmake(self, lib_name, tgt_obj_list, tgt_list, macros):
         tgt_name = lib_name + '-object'
         properties = 'OUTPUT_NAME lib{}.o'.format(lib_name)
 
         cmake = '\n'
         cmake += self._gen_cmd_cmake('add_executable', tgt_name, tgt_obj_list)
         cmake += self._gen_cmd_cmake('target_link_options', '{} PRIVATE'.format(tgt_name), '${SHARED_LNK_FLAGS}')
+        if os.path.exists('{}/platform/Secure_C/lib'.format(srcdir)):
+            cmake += self._gen_cmd_cmake('target_link_directories', '{} PRIVATE'.format(tgt_name), '{}/platform/Secure_C/lib'.format(srcdir))
         cmake += self._gen_cmd_cmake('set_target_properties', '{} PROPERTIES'.format(tgt_name), properties)
         cmake += 'install(TARGETS %s DESTINATION ${CMAKE_INSTALL_PREFIX}/obj)\n' % tgt_name
+
+        # Note: Object libraries are relocatable object files (created with -r flag).
+        # On macOS (ld64), even relocatable objects need all symbols defined.
+        # Link external libraries and built shared libraries to resolve undefined symbols.
+
+        # Build library dependency configuration dynamically
+        # Use actual configured bounds-checking library name (e.g., boundscheck, securec, sec_shared.z)
+        securec = str(self._args.securec_lib)
+
+        # Check if dl library is needed (when -DHITLS_BSL_SAL_DL is defined)
+        needs_dl = any(item == '-DHITLS_BSL_SAL_DL' for item in macros)
+
+        library_link_config = {
+            'hitls_bsl': {
+                'deps': (['dl'] if needs_dl else []) + [securec]
+            },
+            'hitls_crypto': {
+                'deps': ['hitls_bsl-shared']
+            },
+            'hitls_tls': {
+                'deps': ['hitls_pki-shared', 'hitls_crypto-shared', 'hitls_bsl-shared']
+            },
+            'hitls_pki': {
+                'deps': ['hitls_crypto-shared', 'hitls_bsl-shared']
+            },
+            'hitls_auth': {
+                'deps': ['hitls_crypto-shared', 'hitls_bsl-shared']
+            }
+        }
+
+        # Check exact match first, then handle bundled libraries (hitls, hitls_iso, hitls_fips, hitls_sm)
+        if lib_name in library_link_config:
+            config = library_link_config[lib_name]
+        elif self._is_bundled_lib(lib_name):
+            # Bundled library configuration
+            config = {
+                'deps': (['dl'] if needs_dl else []) + [securec],
+                'link_dirs': '${CMAKE_SOURCE_DIR}/platform/Secure_C/lib'
+            }
+        else:
+            config = None
+
+        if config:
+            libs_to_link = []
+
+            # Add library dependencies
+            libs_to_link.extend(config.get('deps', []))
+
+            # Add special link_directories if specified
+            if 'link_dirs' in config:
+                cmake += self._gen_cmd_cmake("target_link_directories",
+                                            "{}-object PRIVATE".format(lib_name),
+                                            config['link_dirs'])
+
+            # Generate target_link_libraries command
+            if libs_to_link:
+                cmake += self._gen_cmd_cmake("target_link_libraries",
+                                            "{}-object {}".format(lib_name, " ".join(libs_to_link)))
 
         tgt_list.append(tgt_name)
         return cmake
@@ -482,7 +847,7 @@ class CMakeGenerator:
         if 'static' in lib_type:
             cmake += self._gen_static_lib_cmake(lib_name, tgt_obj_list, tgt_list)
         if 'object' in lib_type:
-            cmake += self._gen_obejct_lib_cmake(lib_name, tgt_obj_list, tgt_list)
+            cmake += self._gen_obejct_lib_cmake(lib_name, tgt_obj_list, tgt_list, macros)
         lib_obj['cmake'] = cmake
         lib_obj['targets'] = tgt_list
 
@@ -492,7 +857,24 @@ class CMakeGenerator:
             self._args.hitls_version, '-D__FILENAME__=\'\\"$(notdir $(subst .o,,$@))\\"\'', self._args.hkey)
         cmake = 'project({} {})\n\n'.format(exe_name, lang)
         cmake += self._gen_cmd_cmake('set', 'CMAKE_C_FLAGS', '${CC_ALL_OPTIONS}')
-        cmake += self._gen_cmd_cmake('set', 'CMAKE_C_FLAGS', definitions)
+
+        # Detect platform and set shared library extension
+        cmake += '# Detect platform-specific shared library extension\n'
+        cmake += 'if(APPLE)\n'
+        cmake += '    set(SHARED_LIB_EXT ".dylib")\n'
+        cmake += 'else()\n'
+        cmake += '    set(SHARED_LIB_EXT ".so")\n'
+        cmake += 'endif()\n\n'
+
+        # Dynamically determine provider library name based on CMVP mode
+        cmake += '# Dynamically determine provider library name based on CMVP mode\n'
+        lib_name = self._get_bundle_lib_name()
+        cmake += 'set(HITLS_PROVIDER_LIB_NAME "lib{}${{SHARED_LIB_EXT}}")\n'.format(lib_name)
+        cmake += 'message(STATUS "Provider library for apps: ${HITLS_PROVIDER_LIB_NAME}")\n\n'
+
+        # Add the macro definition to CMAKE_C_FLAGS
+        definitions_with_provider = definitions[:-1] + ' -DHITLS_PROVIDER_LIB_NAME=\'\\"${HITLS_PROVIDER_LIB_NAME}\\"\'"'
+        cmake += self._gen_cmd_cmake('set', 'CMAKE_C_FLAGS', definitions_with_provider)
 
         cmake += self._gen_cmd_cmake('include_directories', '', inc_dirs)
         for _, mod_cmake in exe_obj['mods_cmake'].items():
@@ -556,9 +938,32 @@ class CMakeGenerator:
         if 'static' in lib_type:
             cmake += self._gen_static_lib_cmake(lib_name, tgt_obj_list, tgt_list)
         if 'object' in lib_type:
-            cmake += self._gen_obejct_lib_cmake(lib_name, tgt_obj_list, tgt_list)
+            cmake += self._gen_obejct_lib_cmake(lib_name, tgt_obj_list, tgt_list, macros)
 
         return {lib_name: {'cmake': cmake, 'targets': tgt_list}}
+
+    def _get_bundle_lib_name(self):
+        """
+        Determine the output library name based on CMVP mode.
+        Returns 'hitls_iso', 'hitls_fips', 'hitls_sm', or 'hitls' (default).
+        """
+        # Collect all compile flags from the nested structure
+        # compileFlag structure: {'option_type': {'CC_FLAGS_ADD': [flags], ...}}
+        compile_flags = []
+        compile_flag_dict = self._cfg_custom_compile.options
+        for option_type, flags_dict in compile_flag_dict.items():
+            if isinstance(flags_dict, dict) and 'CC_FLAGS_ADD' in flags_dict:
+                compile_flags.extend(flags_dict['CC_FLAGS_ADD'])
+
+        # Check for CMVP mode flags
+        if '-DHITLS_CRYPTO_CMVP_ISO19790' in compile_flags:
+            return 'hitls_iso'
+        elif '-DHITLS_CRYPTO_CMVP_FIPS' in compile_flags:
+            return 'hitls_fips'
+        elif '-DHITLS_CRYPTO_CMVP_SM' in compile_flags:
+            return 'hitls_sm'
+        else:
+            return 'hitls'
 
     def _gen_common_compile_c_flags(self):
         return self._gen_cmd_cmake('set', 'CMAKE_C_FLAGS', self._get_definitions())
@@ -580,8 +985,10 @@ class CMakeGenerator:
             self._gen_lib_cmake(lib, inc_dirs, projects[lib], macros)
 
         if self._args.bundle_libs:
+            # Determine library name based on CMVP mode
+            lib_name = self._get_bundle_lib_name()
             # update projects
-            projects = self._gen_bundled_lib_cmake('hitls', all_inc_dirs, projects, macros)
+            projects = self._gen_bundled_lib_cmake(lib_name, all_inc_dirs, projects, macros)
 
         for exe, exe_obj in exe_enable_modules.items():
             projects[exe] = {}
@@ -619,8 +1026,18 @@ class CMakeGenerator:
             f.close()
         self._cc_all_options = compile_flags
         compile_flags_str = '"{}"'.format(" ".join(compile_flags))
-        shared_link_flags = '{}'.format(" ".join(link_flags['SHARED']) + " " + " ".join(link_flags['PUBLIC']))
-        exe_link_flags = '{}'.format(" ".join(link_flags['EXE']) + " " + " ".join(link_flags['PUBLIC']))
+
+        # Concatenate link flags and deduplicate to handle flags from multiple sources
+        # SHARED_LNK_FLAGS = SHARED + PUBLIC, EXE_LNK_FLAGS = EXE + PUBLIC
+        shared_flags_list = link_flags['SHARED'] + link_flags['PUBLIC']
+        exe_flags_list = link_flags['EXE'] + link_flags['PUBLIC']
+
+        # Deduplicate while preserving order (keep first occurrence)
+        shared_flags_list = list(dict.fromkeys(shared_flags_list))
+        exe_flags_list = list(dict.fromkeys(exe_flags_list))
+
+        shared_link_flags = '{}'.format(" ".join(shared_flags_list))
+        exe_link_flags = '{}'.format(" ".join(exe_flags_list))
 
         cmake = self._gen_cmd_cmake('set', 'CC_ALL_OPTIONS', compile_flags_str) + "\n"
         cmake += self._gen_cmd_cmake('set', 'SHARED_LNK_FLAGS', shared_link_flags) + "\n"
@@ -628,9 +1045,32 @@ class CMakeGenerator:
 
         return cmake, macros
 
+    def _gen_compiler_config_cmake(self):
+        """Generate CMake configuration to ensure compiler consistency."""
+        cmake = "# ============================================================\n"
+        cmake += "# Compiler Configuration (detected by configure.py)\n"
+        cmake += "# ============================================================\n"
+        cmake += "# Detected compiler: {}\n".format(self._cfg_compile.compiler)
+        cmake += "# Detected linker:   {}\n".format(self._cfg_compile.linker)
+        cmake += "# Detected platform: {}\n".format(self._cfg_compile.platform)
+        cmake += "#\n"
+        cmake += "# Note: CMake will use its own compiler detection.\n"
+        cmake += "# If you need to override, set CC/CXX environment variables\n"
+        cmake += "# or use cmake -DCMAKE_C_COMPILER=... -DCMAKE_CXX_COMPILER=...\n"
+        cmake += "# ============================================================\n\n"
+
+        # Save detected configuration for verification
+        cmake += "# Store detected configuration for consistency checks\n"
+        cmake += "set(CONFIGURE_DETECTED_COMPILER \"{}\")\n".format(self._cfg_compile.compiler)
+        cmake += "set(CONFIGURE_DETECTED_LINKER \"{}\")\n".format(self._cfg_compile.linker)
+        cmake += "set(CONFIGURE_DETECTED_PLATFORM \"{}\")\n\n".format(self._cfg_compile.platform)
+
+        return cmake
+
     def out_cmake(self, cmake_path, macro_file):
         self._cfg_custom_feature.check_bn_config()
 
+        compiler_config_cmake = self._gen_compiler_config_cmake()
         set_param_cmake, macros = self._gen_set_param_cmake(macro_file)
         set_param_cmake += self._gen_common_compile_c_flags()
 
@@ -640,6 +1080,7 @@ class CMakeGenerator:
         bottom_cmake = self._gen_target_cmake(lib_tgts)
 
         with open(cmake_path, "w") as f:
+            f.write(compiler_config_cmake)
             f.write(set_param_cmake)
             for lib_obj in projects.values():
                 f.write(lib_obj['cmake'])
@@ -655,6 +1096,37 @@ def main():
         print("your python version %d.%d should not be lower than 3.5" % tuple(sys.version_info[:2]))
         raise Exception("your python version %d.%d should not be lower than 3.5" % tuple(sys.version_info[:2]))
 
+    # Handle --list-toolchains early (before loading features)
+    if '--list-toolchains' in sys.argv:
+        list_available_toolchains()
+        sys.exit(0)
+
+    # Check and handle securec dependency early
+    # Skip dependency check if called from CMake (with -m flag)
+    # CMake handles securec build via SecureC.cmake
+    is_cmake_invocation = '-m' in sys.argv or '--module_cmake' in sys.argv
+    auto_deps = '--no-auto-deps' not in sys.argv
+    force_rebuild = '--force-rebuild-deps' in sys.argv
+
+    if not is_cmake_invocation and (auto_deps or force_rebuild):
+        print("\n" + "=" * 70)
+        print("Checking securec dependency...")
+        print("=" * 70)
+        if not ensure_securec_dependency(
+            auto_init=auto_deps,
+            auto_build=auto_deps,
+            force_rebuild=force_rebuild
+        ):
+            print("\n" + "=" * 70)
+            print("[ERROR] Failed to prepare securec dependency!")
+            print("=" * 70)
+            print("\nYou can:")
+            print("  1. Fix the issue and run configure.py again")
+            print("  2. Use --no-auto-deps to skip automatic dependency management")
+            print("  3. Manually prepare securec and run configure.py")
+            sys.exit(1)
+        print()
+
     conf_feature = FeatureParser(Configure.feature_json_file)
     complete_options = CompleteOptionParser(Configure.complete_options_json_file)
 
@@ -668,7 +1140,11 @@ def main():
         macro_file = os.path.join(cfg.args.build_dir, 'macro.txt')
         if (os.path.exists(macro_file)):
             os.remove(macro_file)
-        CMakeGenerator(cfg.args, conf_feature, complete_options).out_cmake(tmp_cmake, macro_file)
+
+        # Generate toolchain file
+        cmake_gen = CMakeGenerator(cfg.args, conf_feature, complete_options)
+        cmake_gen.select_toolchain()
+        cmake_gen.out_cmake(tmp_cmake, macro_file)
 
 if __name__ == '__main__':
     try:

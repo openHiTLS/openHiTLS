@@ -36,7 +36,7 @@ int32_t BSL_SAL_FileOpen(bsl_sal_file_handle *stream, const char *path, const ch
     if (g_fileCallBack.pfFileOpen != NULL && g_fileCallBack.pfFileOpen != BSL_SAL_FileOpen) {
         return g_fileCallBack.pfFileOpen(stream, path, mode);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_FILE_FOpen(stream, path, mode);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;
@@ -48,7 +48,7 @@ int32_t BSL_SAL_FileRead(bsl_sal_file_handle stream, void *buffer, size_t size, 
     if (g_fileCallBack.pfFileRead != NULL && g_fileCallBack.pfFileRead != BSL_SAL_FileRead) {
         return g_fileCallBack.pfFileRead(stream, buffer, size, num, len);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_FILE_FRead(stream, buffer, size, num, len);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;
@@ -60,7 +60,7 @@ int32_t BSL_SAL_FileWrite(bsl_sal_file_handle stream, const void *buffer, size_t
     if (g_fileCallBack.pfFileWrite != NULL && g_fileCallBack.pfFileWrite != BSL_SAL_FileWrite) {
         return g_fileCallBack.pfFileWrite(stream, buffer, size, num);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_FILE_FWrite(stream, buffer, size, num);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;
@@ -73,7 +73,7 @@ void BSL_SAL_FileClose(bsl_sal_file_handle stream)
         g_fileCallBack.pfFileClose(stream);
         return;
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     SAL_FILE_FClose(stream);
 #endif
 }
@@ -83,7 +83,7 @@ int32_t BSL_SAL_FileLength(const char *path, size_t *len)
     if (g_fileCallBack.pfFileLength != NULL && g_fileCallBack.pfFileLength != BSL_SAL_FileLength) {
         return g_fileCallBack.pfFileLength(path, len);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_FILE_FLength(path, len);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;
@@ -95,7 +95,7 @@ bool SAL_FileError(bsl_sal_file_handle stream)
     if (g_fileCallBack.pfFileError != NULL && g_fileCallBack.pfFileError != SAL_FileError) {
         return g_fileCallBack.pfFileError(stream);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_FILE_FError(stream);
 #else
     BSL_ERR_PUSH_ERROR(BSL_SAL_FILE_NO_REG_FUNC);
@@ -108,7 +108,7 @@ int32_t SAL_FileTell(bsl_sal_file_handle stream, long *pos)
     if (g_fileCallBack.pfFileTell != NULL && g_fileCallBack.pfFileTell != SAL_FileTell) {
         return g_fileCallBack.pfFileTell(stream, pos);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_FILE_FTell(stream, pos);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;
@@ -120,7 +120,7 @@ int32_t SAL_FileSeek(bsl_sal_file_handle stream, long offset, int32_t origin)
     if (g_fileCallBack.pfFileSeek != NULL && g_fileCallBack.pfFileSeek != SAL_FileSeek) {
         return g_fileCallBack.pfFileSeek(stream, offset, origin);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_FILE_FSeek(stream, offset, origin);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;
@@ -132,7 +132,7 @@ char *SAL_FGets(bsl_sal_file_handle stream, char *buf, int32_t readLen)
     if (g_fileCallBack.pfFileGets != NULL && g_fileCallBack.pfFileGets != SAL_FGets) {
         return g_fileCallBack.pfFileGets(stream, buf, readLen);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_FILE_FGets(stream, buf, readLen);
 #else
     BSL_ERR_PUSH_ERROR(BSL_SAL_FILE_NO_REG_FUNC);
@@ -145,7 +145,7 @@ bool SAL_FPuts(bsl_sal_file_handle stream, const char *buf)
     if (g_fileCallBack.pfFilePuts != NULL && g_fileCallBack.pfFilePuts != SAL_FPuts) {
         return g_fileCallBack.pfFilePuts(stream, buf);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_FILE_FPuts(stream, buf);
 #else
     BSL_ERR_PUSH_ERROR(BSL_SAL_FILE_NO_REG_FUNC);
@@ -158,7 +158,7 @@ bool SAL_Flush(bsl_sal_file_handle stream)
     if (g_fileCallBack.pfFileFlush != NULL && g_fileCallBack.pfFileFlush != SAL_Flush) {
         return g_fileCallBack.pfFileFlush(stream);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_FILE_Flush(stream);
 #else
     BSL_ERR_PUSH_ERROR(BSL_SAL_FILE_NO_REG_FUNC);
@@ -171,7 +171,7 @@ int32_t SAL_Feof(bsl_sal_file_handle stream)
     if (g_fileCallBack.pfFileEof != NULL && g_fileCallBack.pfFileEof != SAL_Feof) {
         return g_fileCallBack.pfFileEof(stream);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_FILE_Feof(stream);
 #else
     BSL_ERR_PUSH_ERROR(BSL_SAL_FILE_NO_REG_FUNC);
@@ -184,7 +184,7 @@ int32_t SAL_FSetAttr(bsl_sal_file_handle stream, int cmd, const void *arg)
     if (g_fileCallBack.pfFileSetAttr != NULL && g_fileCallBack.pfFileSetAttr != SAL_FSetAttr) {
         return g_fileCallBack.pfFileSetAttr(stream, cmd, arg);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_FILE_FSetAttr(stream, cmd, arg);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;
@@ -196,7 +196,7 @@ int32_t SAL_FGetAttr(bsl_sal_file_handle stream, void *arg)
     if (g_fileCallBack.pfFileGetAttr != NULL && g_fileCallBack.pfFileGetAttr != SAL_FGetAttr) {
         return g_fileCallBack.pfFileGetAttr(stream, arg);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_FILE_FGetAttr(stream, arg);
 #else
     return BSL_SAL_FILE_NO_REG_FUNC;

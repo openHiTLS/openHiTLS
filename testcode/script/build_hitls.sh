@@ -32,6 +32,28 @@ BITS=64
 
 subdir="CMVP"
 libname=""
+build_crypto_module_provider=false
+
+# Detect platform and set shared library extension
+# Reference: https://en.wikipedia.org/wiki/Dynamic_linker
+case "$(uname)" in
+    Linux)
+        # Linux uses ELF format with .so extension
+        SHARED_LIB_EXT=".so"
+        ;;
+    Darwin)
+        # macOS uses Mach-O format with .dylib extension
+        SHARED_LIB_EXT=".dylib"
+        ;;
+    FreeBSD|OpenBSD|NetBSD)
+        # BSD systems use ELF format with .so extension
+        SHARED_LIB_EXT=".so"
+        ;;
+    *)
+        echo "Warning: Unknown platform '$(uname)', assuming .so extension"
+        SHARED_LIB_EXT=".so"
+        ;;
+esac
 
 usage()
 {
@@ -101,23 +123,30 @@ build_hitls_code()
         add_options="${add_options} -DHITLS_CRYPTO_CMVP"
     fi
 
+    # On Linux, we need -ldl for dlopen() and related functions
+    # On macOS, libdl functionality is part of libSystem, so -ldl is not needed (and causes duplicate warnings)
+    link_flags=""
+    if [[ "$(uname)" != "Darwin" ]]; then
+        link_flags="--add_link_flags=\"-ldl\""
+    fi
+
     if [[ $get_arch = "x86_64" ]]; then
         echo "Compile: env=x86_64, c, little endian, 64bits"
         add_options="${add_options} -DHITLS_CRYPTO_SP800_STRICT_CHECK" # open the strict check in crypto.
         del_options="${del_options} -DHITLS_CRYPTO_SM2_PRECOMPUTE_512K_TBL" # close the sm2 512k pre-table
-        python3 ../configure.py ${build_options} --lib_type ${LIB_TYPE} --enable all --asm_type x8664 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
+        python3 ../configure.py ${build_options} --lib_type ${LIB_TYPE} --enable all --asm_type x8664 --add_options="$add_options" --del_options="$del_options" ${link_flags} ${enable_sctp} ${dis_options}
     elif [[ $get_arch = "armv8_be" ]]; then
         echo "Compile: env=armv8, asm + c, big endian, 64bits"
-        python3 ../configure.py ${build_options} --lib_type ${LIB_TYPE} --enable all --endian big --asm_type armv8 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
+        python3 ../configure.py ${build_options} --lib_type ${LIB_TYPE} --enable all --endian big --asm_type armv8 --add_options="$add_options" --del_options="$del_options" ${link_flags} ${enable_sctp} ${dis_options}
     elif [[ $get_arch = "armv8_le" ]]; then
         echo "Compile: env=armv8, asm + c, little endian, 64bits"
-        python3 ../configure.py ${build_options} --lib_type ${LIB_TYPE} --enable all --asm_type armv8 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
+        python3 ../configure.py ${build_options} --lib_type ${LIB_TYPE} --enable all --asm_type armv8 --add_options="$add_options" --del_options="$del_options" ${link_flags} ${enable_sctp} ${dis_options}
     elif [[ $get_arch = "riscv64" ]]; then
         echo "Compile: env=riscv64, asm + c, little endian, 64bits"
-        python3 ../configure.py --lib_type ${LIB_TYPE} --asm_type riscv64 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp}
+        python3 ../configure.py --lib_type ${LIB_TYPE} --asm_type riscv64 --add_options="$add_options" --del_options="$del_options" ${link_flags} ${enable_sctp}
     else
         echo "Compile: env=$get_arch, c, little endian, 64bits"
-        python3 ../configure.py ${build_options} --lib_type ${LIB_TYPE} --enable all --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp} ${dis_options}
+        python3 ../configure.py ${build_options} --lib_type ${LIB_TYPE} --enable all --add_options="$add_options" --del_options="$del_options" ${link_flags} ${enable_sctp} ${dis_options}
     fi
     cmake ..
     make -j
@@ -127,7 +156,11 @@ build_hitls_provider()
 {
     # Compile openHiTLS
     cd ${HITLS_ROOT_DIR}/build
-    if [[ $libname = "libhitls_sm.so" ]] && [[ $get_arch = "armv8_le" ]]; then
+
+    # Remove configuration files to allow reconfiguration for provider build
+    rm -f feature_config.json compile_config.json macro.txt modules.cmake
+
+    if [[ $libname = "libhitls_sm${SHARED_LIB_EXT}" ]] && [[ $get_arch = "armv8_le" ]]; then
         config_file="${subdir}_sm_feature_config.json"
         compile_file="${subdir}_sm_compile_config.json"
     else
@@ -135,15 +168,24 @@ build_hitls_provider()
         compile_file="${subdir}_compile_config.json"
     fi
     python3 ../configure.py --add_options="$add_options" --del_options="$del_options" \
-        --feature_config=./config/json/${subdir}/${get_arch}/${config_file} \
-        --compile=./config/json/${subdir}/${get_arch}/${compile_file} \
-        --lib_type=shared
+        --feature_config=config/json/${subdir}/${get_arch}/${config_file} \
+        --compile_config=config/json/${subdir}/${get_arch}/${compile_file} \
+        --lib_type=shared \
+        --bundle_libs
     cmake .. -DCMAKE_SKIP_RPATH=TRUE -DCMAKE_INSTALL_PREFIX=../output/${subdir}/${get_arch}
     make -j
     make install
+
+    # Verify the library was built with correct name
     cd ../output/${subdir}/${get_arch}/lib
-    mv libhitls.so $libname
-    mv libhitls.so.hmac $libname.hmac
+    if [ ! -f "$libname" ]; then
+        echo "Error: $libname not found in $(pwd)"
+        echo "Available files:"
+        ls -la
+        exit 1
+    fi
+
+    echo "Successfully built $libname in $(pwd)"
 }
 
 parse_option()
@@ -208,16 +250,31 @@ parse_option()
                 add_options="${add_options} -fno-plt"
                 ;;
             "iso")
-                add_options="${add_options} -DHITLS_CRYPTO_CMVP_ISO19790"
-                libname="libhitls_iso.so"
+                if [[ "$(uname)" = "Darwin" ]]; then
+                    echo "Warning: ISO provider build is not supported on macOS, due to sw-entropy skipping..."
+                else
+                    add_options="${add_options} -DHITLS_CRYPTO_CMVP_ISO19790"
+                    libname="libhitls_iso${SHARED_LIB_EXT}"
+                    build_crypto_module_provider=true
+                fi
                 ;;
             "fips")
-                add_options="${add_options} -DHITLS_CRYPTO_CMVP_FIPS"
-                libname="libhitls_fips.so"
+                if [[ "$(uname)" = "Darwin" ]]; then
+                    echo "Warning: FIPS provider build is not supported on macOS, due to sw-entropy skipping..."
+                else
+                    add_options="${add_options} -DHITLS_CRYPTO_CMVP_FIPS"
+                    libname="libhitls_fips${SHARED_LIB_EXT}"
+                    build_crypto_module_provider=true
+                fi
                 ;;
             "sm")
-                add_options="${add_options} -DHITLS_CRYPTO_CMVP_SM"
-                libname="libhitls_sm.so"
+                if [[ "$(uname)" = "Darwin" ]]; then
+                    echo "Warning: SM provider build is not supported on macOS, due to sw-entropy skipping..."
+                else
+                    add_options="${add_options} -DHITLS_CRYPTO_CMVP_SM"
+                    libname="libhitls_sm${SHARED_LIB_EXT}"
+                    build_crypto_module_provider=true
+                fi
                 ;;
             "help")
                 usage
@@ -236,8 +293,11 @@ clean
 parse_option
 down_depend_code
 build_depend_code
-if [[ $libname != "" ]]; then
+
+# Always build main library
+build_hitls_code
+
+# Build CMVP provider if requested (iso/fips/sm)
+if [[ $build_crypto_module_provider == true ]]; then
     build_hitls_provider
-else
-    build_hitls_code
 fi

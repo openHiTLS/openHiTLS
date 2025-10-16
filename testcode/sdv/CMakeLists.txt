@@ -52,6 +52,7 @@ set(TEST_INTF_SHARED_LIBS "")
 
 if(APPS)
     list(APPEND TEST_INTF_LIBS hitls_apps)
+    list(APPEND TEST_INTF_SHARED_LIBS hitls_apps)
 endif()
 
 if(ENABLE_TLS AND ${BUILD_TLS} GREATER -1)
@@ -263,18 +264,36 @@ else()
 endif()
 
 # Set library type for each test case
+# Tests that dynamically load provider libraries must use shared libraries
+# so that symbols are available when the provider is loaded
 set(TEST_SHARED_LIBS
     test_suite_sdv_hlt_provider
     test_suite_sdv_frame_provider
     test_suite_sdv_hlt_base_connect
     test_suite_sdv_hlt_tlcp_ciphersuite
+    test_suite_ut_app_kdf
+    test_suite_ut_app_keymgmt
+    test_suite_ut_app_sm
+    test_suite_ut_rand
 )
+
+# Add CMVP-specific tests only when the corresponding provider is enabled
+if(CUSTOM_CFLAGS MATCHES "-DHITLS_CRYPTO_CMVP_SM")
+    list(APPEND TEST_SHARED_LIBS test_suite_sdv_eal_sm_provider)
+endif()
+
+if(CUSTOM_CFLAGS MATCHES "-DHITLS_CRYPTO_CMVP_ISO19790")
+    list(APPEND TEST_SHARED_LIBS test_suite_sdv_eal_iso19790_provider)
+endif()
 
 # Create test cases
 foreach(test_suite ${TEST_FILES})
     get_filename_component(sdv_exe ${test_suite} NAME_WE)
     add_executable(${sdv_exe} ${openHiTLS_SRC}/testcode/output/${sdv_exe}.c)
-    target_link_options(${sdv_exe} PRIVATE "LINKER:-z,noexecstack")
+    # Apply GNU ld-specific link options only on Linux
+    if(NOT APPLE)
+        target_link_options(${sdv_exe} PRIVATE "LINKER:-z,noexecstack")
+    endif()
     add_dependencies(${sdv_exe} ${sdv_exe}_phony)
     set_target_properties(${sdv_exe} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${openHiTLS_SRC}/testcode/output"

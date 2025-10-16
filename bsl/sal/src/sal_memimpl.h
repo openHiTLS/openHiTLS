@@ -54,7 +54,7 @@ typedef struct MemCallback {
 
 int32_t SAL_MemCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 
-#if defined(HITLS_BSL_SAL_MEM) && defined(HITLS_BSL_SAL_LINUX)
+#if defined(HITLS_BSL_SAL_MEM) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
 void *SAL_MallocImpl(uint32_t size);
 
 void SAL_FreeImpl(void *value);

@@ -121,7 +121,14 @@ static void UpdateAptHealth(ES_JitterState *e, uint8_t data)
 
 #define NS_MOVE_LEVEL 128
 
+// GCC uses optimize("O0"), Clang/AppleClang uses optnone
+#if defined(__clang__)
+static void __attribute__((optnone)) EntropyMemeryAccess(ES_JitterState *e, uint8_t det)
+#elif defined(__GNUC__)
 static void __attribute__((optimize("O0"))) EntropyMemeryAccess(ES_JitterState *e, uint8_t det)
+#else
+static void EntropyMemeryAccess(ES_JitterState *e, uint8_t det)
+#endif
 {
     /*
      * 1. Random read/write start position

@@ -67,7 +67,7 @@ int main(void) {
     uint8_t dcrypt[125] = {0};
     uint32_t dcryptLen = 125;
     // Encrypt data.
-    ret = CRYPT_EAL_PkeyEncrypt(pkey, data, dataLen, ecrypt, &ecryptLen);
+    ret = CRYPT_EAL_PkeyEncrypt(pkey, (const uint8_t *)data, dataLen, ecrypt, &ecryptLen);
     if (ret != CRYPT_SUCCESS) {
         printf("CRYPT_EAL_PkeyEncrypt: error code is %x\n", ret);
         PrintLastError();

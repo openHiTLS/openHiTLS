@@ -74,8 +74,8 @@ test_bsl()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=init test=init
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=list test=list
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=log test=log
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=obj_default test=obj
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=obj_custom,hash,sal_thread test=obj # depends on thread to init hash
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=obj test=obj
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=obj,hash,sal_thread test=obj # depends on thread to init hash
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=params test=params
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=pem test=pem
 
@@ -320,13 +320,13 @@ test_pkey()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,ed25519,drbg_hash,sha2 test=ed25519
 
     # mldsa
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,mldsa,pkey_cmp,drbg_hash,sha2 test=mldsa
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,mldsa,drbg_hash,sha2 test=mldsa
 
     # paillier
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,paillier,drbg_hash,sha2 test=paillier
 
     # mlkem
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,mlkem,pkey_cmp,drbg_hash,sha2 test=mlkem
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,mlkem,drbg_hash,sha2 test=mlkem
 
     # hybridkem
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,hybridkem,x25519,ecdh,ecc,drbg_hash,sha2 test=hybridkem

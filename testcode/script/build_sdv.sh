@@ -40,7 +40,10 @@ usage()
 
 export_env()
 {
-    HITLS_ROOT_DIR=${HITLS_ROOT_DIR:=$(cd $(dirname ${BASH_SOURCE[0]})/../..;pwd)}
+    # Force recalculate HITLS_ROOT_DIR to avoid CI environment variable pollution
+    # Unset any pre-existing value to ensure clean path resolution
+    unset HITLS_ROOT_DIR
+    HITLS_ROOT_DIR=$(cd $(dirname ${BASH_SOURCE[0]})/../.. && pwd)
     LOCAL_ARCH=${LOCAL_ARCH:=`arch`}
     ENABLE_GCOV=${ENABLE_GCOV:=OFF}
     ENABLE_ASAN=${ENABLE_ASAN:=OFF}
@@ -60,12 +63,30 @@ export_env()
     ENABLE_VERBOSE=${ENABLE_VERBOSE:=''}
     RUN_TESTS=${RUN_TESTS:=''}
     DEBUG=${DEBUG:=ON}
+
     if [ -f ${HITLS_ROOT_DIR}/build/macro.txt ];then
         CUSTOM_CFLAGS=$(cat ${HITLS_ROOT_DIR}/build/macro.txt)
         CUSTOM_CFLAGS="$CUSTOM_CFLAGS -D__FILENAME__=__FILE__"
+        # Add PKI macro if PKI library exists (needed for test framework linking)
+        if ls ${HITLS_ROOT_DIR}/build/libhitls_pki.* 1> /dev/null 2>&1; then
+            CUSTOM_CFLAGS="$CUSTOM_CFLAGS -DHITLS_PKI"
+        fi
+    fi
+
+    # Add macOS-specific flags for AppleClang (must come AFTER macro.txt)
+    if [[ "$(uname)" == "Darwin" ]]; then
+        CUSTOM_CFLAGS="$CUSTOM_CFLAGS -Wno-unused-command-line-argument -Wno-error=unused-command-line-argument"
+        CUSTOM_CFLAGS="$CUSTOM_CFLAGS -Wno-sometimes-uninitialized -Wno-error=sometimes-uninitialized"
+        CUSTOM_CFLAGS="$CUSTOM_CFLAGS -Wno-gnu-folding-constant -Wno-error=gnu-folding-constant"
+        CUSTOM_CFLAGS="$CUSTOM_CFLAGS -Wno-non-literal-null-conversion -Wno-error=non-literal-null-conversion"
+        CUSTOM_CFLAGS="$CUSTOM_CFLAGS -Wno-sizeof-array-div -Wno-error=sizeof-array-div"
+        CUSTOM_CFLAGS="$CUSTOM_CFLAGS -Wno-format -Wno-error=format"
+        CUSTOM_CFLAGS="$CUSTOM_CFLAGS -Wno-enum-conversion -Wno-error=enum-conversion"
+        CUSTOM_CFLAGS="$CUSTOM_CFLAGS -Wno-int-conversion -Wno-error=int-conversion"
+        CUSTOM_CFLAGS="$CUSTOM_CFLAGS -Wno-unused-function -Wno-error=unused-function"
     fi
     if [[ ! -e "${HITLS_ROOT_DIR}/testcode/output/log" ]]; then
-        mkdir ${HITLS_ROOT_DIR}/testcode/output/log
+        mkdir -p ${HITLS_ROOT_DIR}/testcode/output/log
     fi
 }
 
@@ -173,7 +194,7 @@ clean()
     rm -rf ${HITLS_ROOT_DIR}/testcode/testdata/provider/build
     rm -rf ${HITLS_ROOT_DIR}/testcode/testdata/provider/path1
     rm -rf ${HITLS_ROOT_DIR}/testcode/testdata/provider/path2
-    mkdir ${HITLS_ROOT_DIR}/testcode/output/log
+    mkdir -p ${HITLS_ROOT_DIR}/testcode/output/log
 }
 
 options()

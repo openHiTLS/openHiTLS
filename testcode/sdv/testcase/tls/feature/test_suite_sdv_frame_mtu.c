@@ -35,7 +35,7 @@
 #include <errno.h>
 #include <sys/select.h>
 #include <sys/time.h>
-#include <linux/ioctl.h>
+#include <sys/ioctl.h>
 #include "securec.h"
 #include "bsl_sal.h"
 #include "sal_net.h"

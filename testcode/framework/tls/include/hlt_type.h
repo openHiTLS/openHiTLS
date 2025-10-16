@@ -21,6 +21,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
+#include <pthread.h>
 #include "uio_base.h"
 #include "bsl_uio.h"
 #include "hitls_type.h"
@@ -284,7 +285,7 @@ typedef struct {
     void *ssl; // hitls ctx
     int ctxId;
     int sslId;
-    unsigned long int acceptId;
+    pthread_t acceptId;
 } HLT_Tls_Res;
 
 typedef enum {

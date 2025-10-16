@@ -34,25 +34,43 @@ openHiTLS include 5 components currently. The BSL component will be used with ot
 
 ### Dependency Preparation
 
-openHiTLS depends on Secure C which should be downloaded to ${openHiTLS_dir}/platform/Secure_C. One of the official git repositories of Secure C is located at <https://gitee.com/openeuler/libboundscheck>.
+openHiTLS depends on Secure C (libboundscheck), which **is now automatically managed** by the configure.py script.
 
-* Download the security library
+**Quick Start (Automatic - Recommended)**:
 
 ```bash
-# Method 1: Pull it with the openHiTLS code repository
-git clone --recurse-submodules https://gitcode.com/openhitls/openhitls.git
-
-# Method 2: Pull the security library separately
+# Simply clone and configure - securec will be automatically initialized and built
 git clone https://gitcode.com/openhitls/openhitls.git
-cd ${openHiTLS_dir} 
-git clone https://gitee.com/openeuler/libboundscheck platform/Secure_C
+cd openhitls
+mkdir -p build && cd build
+python3 ../configure.py  # Securec is automatically handled here
+cmake .. && make && make install
 ```
 
-* Build security library
-```bash
-cd ${openHiTLS_dir}/platform/Secure_C
-make -j
-```
+**Alternative Methods**:
+
+1. **Clone with submodules** (if you prefer to have everything ready):
+   ```bash
+   git clone --recurse-submodules https://gitcode.com/openhitls/openhitls.git
+   cd openhitls
+   # Securec is already initialized, configure.py will build it automatically
+   ```
+
+2. **Manual dependency management** (if you need full control):
+   ```bash
+   git clone https://gitcode.com/openhitls/openhitls.git
+   cd openhitls
+   git clone https://gitee.com/openeuler/libboundscheck platform/Secure_C
+   cd platform/Secure_C && make -j && cd ../..
+   # Use --no-auto-deps to skip automatic dependency handling
+   python3 configure.py --no-auto-deps
+   ```
+
+**Dependency Management Options**:
+- `--no-auto-deps`: Disable automatic dependency initialization and build
+- `--force-rebuild-deps`: Force rebuild securec even if already built
+
+The official Secure C repository is at <https://gitee.com/openeuler/libboundscheck>.
 
 ### For Application Developers
 

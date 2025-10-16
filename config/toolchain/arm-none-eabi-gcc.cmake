@@ -1,6 +1,9 @@
+# ARM Cortex-M/R bare-metal with GNU GCC embedded toolchain (no OS, EABI)
+
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR arm)
 
+# Standard GNU toolchain prefix for ARM bare-metal
 set(TOOLCHAIN_PATH /usr/bin)
 set(TOOLCHAIN_PREFIX arm-none-eabi)
 

@@ -70,7 +70,7 @@ typedef struct {
     bool isWrapped;                         /* tls: Check whether the sequence number is wrapped */
 
     uint16_t epoch;                         /* dtls: 2 byte epoch */
-#if defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
     uint16_t reserve;                       /* Four-byte alignment is reserved */
     RecSlidWindow window;                   /* dtls record sliding window (for anti-replay) */
 #endif

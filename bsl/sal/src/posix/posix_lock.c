@@ -19,7 +19,7 @@
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 
-#if defined(HITLS_BSL_SAL_LINUX) && defined(HITLS_BSL_SAL_LOCK)
+#if (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)) && defined(HITLS_BSL_SAL_LOCK)
 // Used for DEFAULT lock implementation
 typedef struct {
     pthread_rwlock_t rwlock;
@@ -90,7 +90,7 @@ void SAL_RwLockFree(BSL_SAL_ThreadLockHandle rwLock)
 }
 #endif
 
-#if defined(HITLS_BSL_SAL_LINUX) && defined(HITLS_BSL_SAL_THREAD)
+#if (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)) && defined(HITLS_BSL_SAL_THREAD)
 uint64_t SAL_GetThreadId(void)
 {
     // By default, gettid is not used to obtain the global tid corresponding to the thread

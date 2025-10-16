@@ -28,7 +28,7 @@
 #include <errno.h>
 #include <sys/select.h>
 #include <sys/time.h>
-#include <linux/ioctl.h>
+#include <sys/ioctl.h>
 #include "securec.h"
 #include "stub_replace.h"
 #include "bsl_sal.h"

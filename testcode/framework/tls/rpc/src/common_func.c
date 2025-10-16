@@ -14,7 +14,6 @@
  */
 
 #include <stdlib.h>
-#include <malloc.h>
 #include <stdatomic.h>
 #include "securec.h"
 #include "hitls_crypt_type.h"

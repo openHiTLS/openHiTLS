@@ -22,7 +22,7 @@
 #include "entropy_seed_pool.h"
 
 #ifdef HITLS_CRYPTO_ENTROPY_HARDWARE
-#if defined(__x86_64__) || defined(__aarch64__)
+#if defined(__x86_64__) || (defined(__aarch64__) && defined(__linux__))
 /* For clarity */
 #define DRNG_NO_SUPPORT	0x0
 #define DRNG_HAS_RDRAND	0x1
@@ -129,14 +129,17 @@ uint32_t ENTROPY_HWEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen)
 #endif
 
 #ifdef __aarch64__
+#ifdef __linux__
 #include <sys/auxv.h>
 #include "crypt_arm.h"
+
 static uint32_t GetDrbgSupport()
 {
     static uint32_t drngCap = 0xffffffff;
 
     if (drngCap == 0xffffffff) {
         drngCap = DRNG_NO_SUPPORT;
+        // On Linux, check CPU capability via auxv
         if (getauxval(CRYPT_CAP2) & CRYPT_ARM_CAP2_RNG) {
             drngCap |= (DRNG_HAS_RDRAND | DRNG_HAS_RDSEED);
         }
@@ -177,7 +180,9 @@ uint32_t ENTROPY_HWEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen)
     }
 }
 
-#endif
+#endif // __linux__
+
+#endif // __aarch64__
 
 #else
 uint32_t ENTROPY_HWEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen)

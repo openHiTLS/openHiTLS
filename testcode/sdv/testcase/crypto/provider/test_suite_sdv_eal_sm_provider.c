@@ -64,7 +64,10 @@
 #endif
 
 #ifdef HITLS_CRYPTO_CMVP_SM
-#define HITLS_SM_LIB_NAME "libhitls_sm.so"
+#ifndef HITLS_PROVIDER_LIB_NAME
+#error "HITLS_PROVIDER_LIB_NAME must be defined by build system"
+#endif
+#define HITLS_SM_LIB_NAME HITLS_PROVIDER_LIB_NAME
 #define HITLS_SM_PROVIDER_ATTR "provider=sm"
 
 static CRYPT_EAL_LibCtx *SM_ProviderLoad(void)

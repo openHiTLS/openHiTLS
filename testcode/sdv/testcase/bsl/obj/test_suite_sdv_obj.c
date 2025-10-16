@@ -29,7 +29,6 @@
 extern BslOidInfo g_oidTable[];
 extern uint32_t g_tableSize;
 
-#ifdef HITLS_BSL_OBJ_CUSTOM
 static int32_t PthreadRunOnce(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine initFunc)
 {
     if (onceControl == NULL || initFunc == NULL) {
@@ -42,7 +41,6 @@ static int32_t PthreadRunOnce(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine i
     }
     return BSL_SUCCESS;
 }
-#endif
 
 /**
  * @test SDV_BSL_OBJ_CID_OID_FUNC_TC001

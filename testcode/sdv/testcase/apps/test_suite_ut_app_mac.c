@@ -15,7 +15,7 @@
 
 /* BEGIN_HEADER */
 #include <stdio.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "securec.h"
 #include "stub_replace.h"
 #include "test.h"

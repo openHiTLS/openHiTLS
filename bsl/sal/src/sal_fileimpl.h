@@ -45,7 +45,7 @@ typedef struct {
 
 int32_t SAL_FileCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
 int32_t SAL_FILE_FOpen(bsl_sal_file_handle *stream, const char *path, const char *mode);
 int32_t SAL_FILE_FRead(bsl_sal_file_handle stream, void *buffer, size_t size, size_t num, size_t *len);
 int32_t SAL_FILE_FWrite(bsl_sal_file_handle stream, const void *buffer, size_t size, size_t num);
