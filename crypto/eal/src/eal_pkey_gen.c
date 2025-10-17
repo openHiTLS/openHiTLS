@@ -178,7 +178,7 @@ void CRYPT_EAL_PkeyFreeCtx(CRYPT_EAL_PkeyCtx *pkey)
         pkey->key = NULL;
     }
     BSL_SAL_ReferencesFree(&(pkey->references));
-    EAL_EVENT_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_SUCCESS);
+    EAL_EVENT_REPORT(CRYPT_EVENT_ZERO, CRYPT_ALGO_PKEY, pkey->id, CRYPT_SUCCESS);
     BSL_SAL_Free(pkey);
 }
 
@@ -197,202 +197,6 @@ static int32_t ParaIsVaild(const CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPa
     return CRYPT_SUCCESS;
 }
 
-static int32_t SetDsaParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_DsaPara *dsaPara)
-{
-    BSL_Param param[4] = {
-        {CRYPT_PARAM_DSA_P, BSL_PARAM_TYPE_OCTETS, dsaPara->p, dsaPara->pLen, 0},
-        {CRYPT_PARAM_DSA_Q, BSL_PARAM_TYPE_OCTETS, dsaPara->q, dsaPara->qLen, 0},
-        {CRYPT_PARAM_DSA_G, BSL_PARAM_TYPE_OCTETS, dsaPara->g, dsaPara->gLen, 0},
-        BSL_PARAM_END
-    };
-    return pkey->method.setPara(pkey->key, param);
-}
-
-static int32_t SetRsaParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_RsaPara *rsaPara)
-{
-    uint32_t bits = rsaPara->bits;
-    BSL_Param param[] = {
-        {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, rsaPara->e, rsaPara->eLen, 0},
-        {CRYPT_PARAM_RSA_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
-        BSL_PARAM_END
-    };
-    return pkey->method.setPara(pkey->key, param);
-}
-
-static int32_t SetDhParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_DhPara *dhPara)
-{
-    BSL_Param param[4] = {
-        {CRYPT_PARAM_DH_P, BSL_PARAM_TYPE_OCTETS, dhPara->p, dhPara->pLen, 0},
-        {CRYPT_PARAM_DH_Q, BSL_PARAM_TYPE_OCTETS, dhPara->q, dhPara->qLen, 0},
-        {CRYPT_PARAM_DH_G, BSL_PARAM_TYPE_OCTETS, dhPara->g, dhPara->gLen, 0},
-        BSL_PARAM_END
-    };
-    return pkey->method.setPara(pkey->key, param);
-}
-
-static int32_t SetEccParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EccPara *eccPara)
-{
-    BSL_Param param[8] = {
-        {CRYPT_PARAM_EC_P, BSL_PARAM_TYPE_OCTETS, eccPara->p, eccPara->pLen, 0},
-        {CRYPT_PARAM_EC_A, BSL_PARAM_TYPE_OCTETS, eccPara->a, eccPara->aLen, 0},
-        {CRYPT_PARAM_EC_B, BSL_PARAM_TYPE_OCTETS, eccPara->b, eccPara->bLen, 0},
-        {CRYPT_PARAM_EC_N, BSL_PARAM_TYPE_OCTETS, eccPara->n, eccPara->nLen, 0},
-        {CRYPT_PARAM_EC_H, BSL_PARAM_TYPE_OCTETS, eccPara->h, eccPara->hLen, 0},
-        {CRYPT_PARAM_EC_X, BSL_PARAM_TYPE_OCTETS, eccPara->x, eccPara->xLen, 0},
-        {CRYPT_PARAM_EC_Y, BSL_PARAM_TYPE_OCTETS, eccPara->y, eccPara->yLen, 0},
-        BSL_PARAM_END
-    };
-    return pkey->method.setPara(pkey->key, param);
-}
-
-static int32_t SetPaillierParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_PaillierPara *paillierPara)
-{
-    uint32_t bits = paillierPara->bits;
-    BSL_Param param[4] = {
-        {CRYPT_PARAM_PAILLIER_P, BSL_PARAM_TYPE_OCTETS, paillierPara->p, paillierPara->pLen, 0},
-        {CRYPT_PARAM_PAILLIER_Q, BSL_PARAM_TYPE_OCTETS, paillierPara->q, paillierPara->qLen, 0},
-        {CRYPT_PARAM_PAILLIER_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
-        BSL_PARAM_END
-    };
-    return pkey->method.setPara(pkey->key, param);
-}
-
-static int32_t SetElGamalParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_ElGamalPara *elgamalPara)
-{
-    uint32_t bits = elgamalPara->bits;
-    uint32_t k_bits = elgamalPara->k_bits;
-    BSL_Param param[4] = {
-        {CRYPT_PARAM_ELGAMAL_Q, BSL_PARAM_TYPE_OCTETS, elgamalPara->q, elgamalPara->qLen, 0},
-        {CRYPT_PARAM_ELGAMAL_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
-        {CRYPT_PARAM_ELGAMAL_KBITS, BSL_PARAM_TYPE_UINT32, &k_bits, sizeof(k_bits), 0},
-        BSL_PARAM_END
-    };
-    return pkey->method.setPara(pkey->key, param);
-}
-
-static int32_t GetDsaParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_DsaPara *dsaPara)
-{
-    BSL_Param param[4] = {
-        {CRYPT_PARAM_DSA_P, BSL_PARAM_TYPE_OCTETS, dsaPara->p, dsaPara->pLen, 0},
-        {CRYPT_PARAM_DSA_Q, BSL_PARAM_TYPE_OCTETS, dsaPara->q, dsaPara->qLen, 0},
-        {CRYPT_PARAM_DSA_G, BSL_PARAM_TYPE_OCTETS, dsaPara->g, dsaPara->gLen, 0},
-        BSL_PARAM_END
-    };
-    int32_t ret = pkey->method.getPara(pkey->key, param);
-    if (ret == CRYPT_SUCCESS) {
-        dsaPara->pLen = param[0].useLen;
-        dsaPara->qLen = param[1].useLen;
-        dsaPara->gLen = param[2].useLen;
-    }
-    return ret;
-}
-
-static int32_t GetDhParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_DhPara *dhPara)
-{
-    BSL_Param param[4] = {
-        {CRYPT_PARAM_DH_P, BSL_PARAM_TYPE_OCTETS, dhPara->p, dhPara->pLen, 0},
-        {CRYPT_PARAM_DH_Q, BSL_PARAM_TYPE_OCTETS, dhPara->q, dhPara->qLen, 0},
-        {CRYPT_PARAM_DH_G, BSL_PARAM_TYPE_OCTETS, dhPara->g, dhPara->gLen, 0},
-        BSL_PARAM_END
-    };
-    int32_t ret = pkey->method.getPara(pkey->key, param);
-    if (ret == CRYPT_SUCCESS) {
-        dhPara->pLen = param[0].useLen;
-        dhPara->qLen = param[1].useLen;
-        dhPara->gLen = param[2].useLen;
-    }
-    return ret;
-}
-
-static int32_t GetEccParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EccPara *eccPara)
-{
-    BSL_Param param[8] = {
-        {CRYPT_PARAM_EC_P, BSL_PARAM_TYPE_OCTETS, eccPara->p, eccPara->pLen, 0},
-        {CRYPT_PARAM_EC_A, BSL_PARAM_TYPE_OCTETS, eccPara->a, eccPara->aLen, 0},
-        {CRYPT_PARAM_EC_B, BSL_PARAM_TYPE_OCTETS, eccPara->b, eccPara->bLen, 0},
-        {CRYPT_PARAM_EC_N, BSL_PARAM_TYPE_OCTETS, eccPara->n, eccPara->nLen, 0},
-        {CRYPT_PARAM_EC_H, BSL_PARAM_TYPE_OCTETS, eccPara->h, eccPara->hLen, 0},
-        {CRYPT_PARAM_EC_X, BSL_PARAM_TYPE_OCTETS, eccPara->x, eccPara->xLen, 0},
-        {CRYPT_PARAM_EC_Y, BSL_PARAM_TYPE_OCTETS, eccPara->y, eccPara->yLen, 0},
-        BSL_PARAM_END
-    };
-    int32_t ret = pkey->method.getPara(pkey->key, param);
-    if (ret == CRYPT_SUCCESS) {
-        eccPara->pLen = param[0].useLen;
-        eccPara->aLen = param[1].useLen;
-        eccPara->bLen = param[2].useLen;
-        eccPara->nLen = param[3].useLen;
-        eccPara->hLen = param[4].useLen;
-        eccPara->xLen = param[5].useLen;
-        eccPara->yLen = param[6].useLen;
-    }
-    return ret;
-}
-
-static int32_t CvtBslParamAndSetParams(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara *para)
-{
-    int32_t ret = CRYPT_NOT_SUPPORT;
-    switch (pkey->id) {
-        case CRYPT_PKEY_DSA:
-            ret = SetDsaParams(pkey, &para->para.dsaPara);
-            break;
-        case CRYPT_PKEY_RSA:
-            ret = SetRsaParams(pkey, &para->para.rsaPara);
-            break;
-        case CRYPT_PKEY_DH:
-            ret = SetDhParams(pkey, &para->para.dhPara);
-            break;
-        case CRYPT_PKEY_ECDSA:
-        case CRYPT_PKEY_ECDH:
-            ret =  SetEccParams(pkey, &para->para.eccPara);
-            break;
-        case CRYPT_PKEY_PAILLIER:
-            ret = SetPaillierParams(pkey, &para->para.paillierPara);
-            break;
-        case CRYPT_PKEY_ELGAMAL:
-            ret = SetElGamalParams(pkey, &para->para.elgamalPara);
-            break;
-        case CRYPT_PKEY_ED25519:
-        case CRYPT_PKEY_X25519:
-        case CRYPT_PKEY_SM2:
-        default:
-            return CRYPT_NOT_SUPPORT;
-    }
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
-    }
-    return ret;
-}
-
-static int32_t CvtBslParamAndGetParams(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPara *para)
-{
-    int32_t ret = CRYPT_NOT_SUPPORT;
-    switch (pkey->id) {
-        case CRYPT_PKEY_DSA:
-            ret =  GetDsaParams(pkey, &para->para.dsaPara);
-            break;
-        case CRYPT_PKEY_DH:
-            ret =  GetDhParams(pkey, &para->para.dhPara);
-            break;
-        case CRYPT_PKEY_ECDSA:
-        case CRYPT_PKEY_ECDH:
-            ret =  GetEccParams(pkey, &para->para.eccPara);
-            break;
-        case CRYPT_PKEY_PAILLIER:
-        case CRYPT_PKEY_ELGAMAL:
-        case CRYPT_PKEY_RSA:
-        case CRYPT_PKEY_ED25519:
-        case CRYPT_PKEY_X25519:
-        case CRYPT_PKEY_SM2:
-        default:
-            return CRYPT_NOT_SUPPORT;
-    }
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
-    }
-    return ret;
-}
-
 int32_t CRYPT_EAL_PkeySetPara(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara *para)
 {
     int32_t ret = ParaIsVaild(pkey, para);
@@ -405,7 +209,7 @@ int32_t CRYPT_EAL_PkeySetPara(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara 
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    ret = CvtBslParamAndSetParams(pkey, para);
+    ret = PkeyProviderSetPara(pkey, para);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     }
@@ -443,7 +247,7 @@ int32_t CRYPT_EAL_PkeyGetPara(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPara 
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    ret = CvtBslParamAndGetParams(pkey, para);
+    ret = PkeyProviderGetPara(pkey, para);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     }
@@ -524,107 +328,8 @@ int32_t CRYPT_EAL_PkeySetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *k
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    switch (key->id) {
-        case CRYPT_PKEY_RSA: {
-            BSL_Param rsa[3] = {{CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, key->key.rsaPub.e, key->key.rsaPub.eLen, 0},
-                {CRYPT_PARAM_RSA_N, BSL_PARAM_TYPE_OCTETS, key->key.rsaPub.n, key->key.rsaPub.nLen, 0}, BSL_PARAM_END};
-            ret = pkey->method.setPub(pkey->key, &rsa);
-            break;
-        }
-        case CRYPT_PKEY_DSA: {
-            BSL_Param dsa[2] = {{CRYPT_PARAM_DSA_PUBKEY, BSL_PARAM_TYPE_OCTETS, key->key.dsaPub.data,
-                key->key.dsaPub.len, 0}, BSL_PARAM_END};
-            ret = pkey->method.setPub(pkey->key, &dsa);
-            break;
-        }
-        case CRYPT_PKEY_ED25519:
-        case CRYPT_PKEY_X25519: {
-            BSL_Param para[2] = {{CRYPT_PARAM_CURVE25519_PUBKEY, BSL_PARAM_TYPE_OCTETS, key->key.curve25519Pub.data,
-                key->key.curve25519Pub.len, 0}, BSL_PARAM_END};
-            ret = pkey->method.setPub(pkey->key, &para);
-            break;
-        }
-        case CRYPT_PKEY_DH: {
-            BSL_Param dhParam[2] = {{CRYPT_PARAM_DH_PUBKEY, BSL_PARAM_TYPE_OCTETS, key->key.dhPub.data,
-                key->key.dhPub.len, 0}, BSL_PARAM_END};
-            ret = pkey->method.setPub(pkey->key, &dhParam);
-            break;
-        }
-        case CRYPT_PKEY_ECDH:
-        case CRYPT_PKEY_ECDSA:
-        case CRYPT_PKEY_SM2: {
-            BSL_Param ecParam[2] = {{CRYPT_PARAM_EC_PUBKEY, BSL_PARAM_TYPE_OCTETS, key->key.eccPub.data,
-                key->key.eccPub.len, 0}, BSL_PARAM_END};
-            ret = pkey->method.setPub(pkey->key, &ecParam);
-            break;
-        }
-        case CRYPT_PKEY_PAILLIER: {
-            BSL_Param paParam[4] = {{CRYPT_PARAM_PAILLIER_N, BSL_PARAM_TYPE_OCTETS, key->key.paillierPub.n,
-                key->key.paillierPub.nLen, 0},
-                {CRYPT_PARAM_PAILLIER_G, BSL_PARAM_TYPE_OCTETS, key->key.paillierPub.g, key->key.paillierPub.gLen, 0},
-                {CRYPT_PARAM_PAILLIER_N2, BSL_PARAM_TYPE_OCTETS, key->key.paillierPub.n2, key->key.paillierPub.n2Len,
-                    0},
-                 BSL_PARAM_END};
-            ret = pkey->method.setPub(pkey->key, &paParam);
-            break;
-        }
-        case CRYPT_PKEY_ML_KEM: {
-            BSL_Param paParam[2] = {{CRYPT_PARAM_ML_KEM_PUBKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemEk.data,
-                key->key.kemEk.len, 0},
-                BSL_PARAM_END};
-            ret = pkey->method.setPub(pkey->key, &paParam);
-            break;
-        }
-        case CRYPT_PKEY_ML_DSA: {
-            BSL_Param paParam[2] = {{CRYPT_PARAM_ML_DSA_PUBKEY, BSL_PARAM_TYPE_OCTETS, key->key.mldsaPub.data,
-                key->key.mldsaPub.len, 0},
-                BSL_PARAM_END};
-            ret = pkey->method.setPub(pkey->key, &paParam);
-            break;
-        }
-        case CRYPT_PKEY_ELGAMAL: {
-            BSL_Param paParam[5] = {{CRYPT_PARAM_ELGAMAL_P, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPub.p,
-                key->key.elgamalPub.pLen, 0},
-                {CRYPT_PARAM_ELGAMAL_G, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPub.g, key->key.elgamalPub.gLen, 0},
-                {CRYPT_PARAM_ELGAMAL_Y, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPub.y, key->key.elgamalPub.pLen,
-                    0},
-                {CRYPT_PARAM_ELGAMAL_Q, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPub.q, key->key.elgamalPub.qLen,
-                0},
-                 BSL_PARAM_END};
-            ret = pkey->method.setPub(pkey->key, &paParam);
-            break;
-        }
-        case CRYPT_PKEY_SLH_DSA: {
-            BSL_Param slhDsaPub[3] = {{CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, key->key.slhDsaPub.seed,
-                key->key.slhDsaPub.len, 0},
-                {CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, key->key.slhDsaPub.root, key->key.slhDsaPub.len,
-                    0},
-                BSL_PARAM_END};
-            ret = pkey->method.setPub(pkey->key, &slhDsaPub);
-            break;
-        }
-        case CRYPT_PKEY_XMSS: {
-            BSL_Param xmssPub[3] = {
-                {CRYPT_PARAM_XMSS_PUB_SEED, BSL_PARAM_TYPE_OCTETS, key->key.xmssPub.seed, key->key.xmssPub.len, 0},
-                {CRYPT_PARAM_XMSS_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, key->key.xmssPub.root, key->key.xmssPub.len, 0},
-                BSL_PARAM_END,
-            };
-            ret = pkey->method.setPub(pkey->key, &xmssPub);
-            break;
-        }
-		case CRYPT_PKEY_HYBRID_KEM: {
-            BSL_Param paParam[2] = {{CRYPT_PARAM_HYBRID_PUBKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemEk.data,
-                key->key.kemEk.len, 0},
-                BSL_PARAM_END};
-            ret = pkey->method.setPub(pkey->key, &paParam);
-            break;
-        }
-        default:
-            ret = CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
-    }
+    ret = PkeyProviderSetPub(pkey, key);
+    EAL_EVENT_REPORT((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_SETSSP : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     return ret;
 }
 
@@ -639,335 +344,69 @@ int32_t CRYPT_EAL_PkeySetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *k
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    switch(key->id) {
-        case CRYPT_PKEY_RSA: {
-            BSL_Param rsaParam[] = {{CRYPT_PARAM_RSA_D, BSL_PARAM_TYPE_OCTETS, key->key.rsaPrv.d,
-                    key->key.rsaPrv.dLen, 0},
-                {CRYPT_PARAM_RSA_N, BSL_PARAM_TYPE_OCTETS, key->key.rsaPrv.n, key->key.rsaPrv.nLen, 0},
-                {CRYPT_PARAM_RSA_P, BSL_PARAM_TYPE_OCTETS, key->key.rsaPrv.p, key->key.rsaPrv.pLen, 0},
-                {CRYPT_PARAM_RSA_Q, BSL_PARAM_TYPE_OCTETS, key->key.rsaPrv.q, key->key.rsaPrv.qLen, 0},
-                {CRYPT_PARAM_RSA_DP, BSL_PARAM_TYPE_OCTETS, key->key.rsaPrv.dP, key->key.rsaPrv.dPLen, 0},
-                {CRYPT_PARAM_RSA_DQ, BSL_PARAM_TYPE_OCTETS, key->key.rsaPrv.dQ, key->key.rsaPrv.dQLen, 0},
-                {CRYPT_PARAM_RSA_QINV, BSL_PARAM_TYPE_OCTETS, key->key.rsaPrv.qInv, key->key.rsaPrv.qInvLen, 0},
-                {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, key->key.rsaPrv.e, key->key.rsaPrv.eLen, 0},
-                BSL_PARAM_END};
-            ret = pkey->method.setPrv(pkey->key, &rsaParam);
-            break;
-        }
-        case CRYPT_PKEY_DSA: {
-            BSL_Param dsaParam[2] = {{CRYPT_PARAM_DSA_PRVKEY, BSL_PARAM_TYPE_OCTETS, key->key.dsaPrv.data,
-                key->key.dsaPrv.len, 0}, BSL_PARAM_END};
-            ret = pkey->method.setPrv(pkey->key, &dsaParam);
-            break;
-        }
-        case CRYPT_PKEY_ED25519:
-        case CRYPT_PKEY_X25519: {
-            BSL_Param para[2] = {{CRYPT_PARAM_CURVE25519_PRVKEY, BSL_PARAM_TYPE_OCTETS, key->key.curve25519Prv.data,
-                key->key.curve25519Prv.len, 0}, BSL_PARAM_END};
-            ret = pkey->method.setPrv(pkey->key, &para);
-            break;
-        }
-        case CRYPT_PKEY_DH: {
-            BSL_Param dhParam[2] = {{CRYPT_PARAM_DH_PRVKEY, BSL_PARAM_TYPE_OCTETS, key->key.dhPrv.data,
-                key->key.dhPrv.len, 0}, BSL_PARAM_END};
-            ret = pkey->method.setPrv(pkey->key, &dhParam);
-            break;
-        }
-        case CRYPT_PKEY_ECDH:
-        case CRYPT_PKEY_ECDSA:
-        case CRYPT_PKEY_SM2: {
-            BSL_Param ecParam[2] = {{CRYPT_PARAM_EC_PRVKEY, BSL_PARAM_TYPE_OCTETS, key->key.eccPrv.data,
-                key->key.eccPrv.len, 0}, BSL_PARAM_END};
-            ret = pkey->method.setPrv(pkey->key, &ecParam);
-            break;
-        }
-        case CRYPT_PKEY_PAILLIER: {
-            BSL_Param paParam[5] = {{CRYPT_PARAM_PAILLIER_N, BSL_PARAM_TYPE_OCTETS, key->key.paillierPrv.n,
-                    key->key.paillierPrv.nLen, 0},
-                {CRYPT_PARAM_PAILLIER_LAMBDA, BSL_PARAM_TYPE_OCTETS, key->key.paillierPrv.lambda,
-                    key->key.paillierPrv.lambdaLen, 0},
-                {CRYPT_PARAM_PAILLIER_MU, BSL_PARAM_TYPE_OCTETS, key->key.paillierPrv.mu, key->key.paillierPrv.muLen,
-                    0},
-                {CRYPT_PARAM_PAILLIER_N2, BSL_PARAM_TYPE_OCTETS, key->key.paillierPrv.n2, key->key.paillierPrv.n2Len,
-                    0},
-                 BSL_PARAM_END};
-            ret = pkey->method.setPrv(pkey->key, &paParam);
-            break;
-        }   
-        case CRYPT_PKEY_SLH_DSA: {
-            BSL_Param slhDsaParam[5] = {{CRYPT_PARAM_SLH_DSA_PRV_SEED, BSL_PARAM_TYPE_OCTETS, key->key.slhDsaPrv.seed,
-                key->key.slhDsaPrv.pub.len, 0},
-                {CRYPT_PARAM_SLH_DSA_PRV_PRF, BSL_PARAM_TYPE_OCTETS, key->key.slhDsaPrv.prf, key->key.slhDsaPrv.pub.len,
-                    0},
-                {CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, key->key.slhDsaPrv.pub.seed, key->key.slhDsaPrv.pub.len,
-                    0},
-                {CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, key->key.slhDsaPrv.pub.root, key->key.slhDsaPrv.pub.len,
-                    0},
-                BSL_PARAM_END};
-            ret = pkey->method.setPrv(pkey->key, &slhDsaParam);
-            break;
-        }
-        case CRYPT_PKEY_XMSS: {
-            uint64_t index = key->key.xmssPrv.index;
-            BSL_Param xmssParam[6] = {
-                {CRYPT_PARAM_XMSS_PRV_SEED, BSL_PARAM_TYPE_OCTETS, key->key.xmssPrv.seed, key->key.xmssPrv.pub.len, 0},
-                {CRYPT_PARAM_XMSS_PRV_PRF, BSL_PARAM_TYPE_OCTETS, key->key.xmssPrv.prf, key->key.xmssPrv.pub.len, 0},
-                {CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64, &index, sizeof(index), 0},
-                {CRYPT_PARAM_XMSS_PUB_SEED, BSL_PARAM_TYPE_OCTETS, key->key.xmssPrv.pub.seed, key->key.xmssPrv.pub.len, 0},
-                {CRYPT_PARAM_XMSS_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, key->key.xmssPrv.pub.root, key->key.xmssPrv.pub.len, 0},
-                BSL_PARAM_END,
-            };
-            ret = pkey->method.setPrv(pkey->key, &xmssParam);
-            break;
-        }
-        case CRYPT_PKEY_ELGAMAL: {
-            BSL_Param paParam[4] = {
-                {CRYPT_PARAM_ELGAMAL_P, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPrv.p, key->key.elgamalPrv.pLen, 0},
-                {CRYPT_PARAM_ELGAMAL_G, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPrv.g, key->key.elgamalPrv.gLen, 0},
-                {CRYPT_PARAM_ELGAMAL_X, BSL_PARAM_TYPE_OCTETS, key->key.elgamalPrv.x, key->key.elgamalPrv.xLen, 0},
-                BSL_PARAM_END};
-            ret = pkey->method.setPrv(pkey->key, &paParam);
-            break;
-        }
-		case CRYPT_PKEY_ML_KEM: {
-            BSL_Param paParam[2] = {{CRYPT_PARAM_ML_KEM_PRVKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemDk.data,
-                key->key.kemDk.len, 0},
-                BSL_PARAM_END};
-            ret = pkey->method.setPrv(pkey->key, &paParam);
-            break;
-        }
-        case CRYPT_PKEY_ML_DSA: {
-            BSL_Param paParam[2] = {{CRYPT_PARAM_ML_DSA_PRVKEY, BSL_PARAM_TYPE_OCTETS, key->key.mldsaPrv.data,
-                key->key.mldsaPrv.len, 0},
-                BSL_PARAM_END};
-            ret = pkey->method.setPrv(pkey->key, &paParam);
-            break;
-        }
-        case CRYPT_PKEY_HYBRID_KEM: {
-            BSL_Param paParam[2] = {{CRYPT_PARAM_HYBRID_PRVKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemDk.data,
-                key->key.kemDk.len, 0},
-                BSL_PARAM_END};
-            ret = pkey->method.setPrv(pkey->key, &paParam);
-            break;
-        }
-        default:
-            ret = CRYPT_EAL_ALG_NOT_SUPPORT;
+    ret = PkeyProviderSetPrv(pkey, key);
+    EAL_EVENT_REPORT((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_SETSSP : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
+    return ret;
+}
+
+static int32_t CommonParaGet(const CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param,
+    int32_t (*getFunc)(const void *key, void *para))
+{
+    if (pkey == NULL || param == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
     }
+
+    if (getFunc == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
+    }
+
+    int32_t ret = getFunc(pkey->key, param);
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     }
     return ret;
 }
 
-static int32_t GetRSAPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_RsaPub *pub)
+static int32_t CommonParaSet(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *param,
+    int32_t (*setFunc)(void *key, const void *para))
 {
-    BSL_Param param[3] = {{CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, pub->e, pub->eLen, 0},
-        {CRYPT_PARAM_RSA_N, BSL_PARAM_TYPE_OCTETS, pub->n, pub->nLen, 0}, BSL_PARAM_END};
-    int32_t ret = pkey->method.getPub(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+    if (pkey == NULL || param == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
     }
-    pub->eLen = param[0].useLen;
-    pub->nLen = param[1].useLen;
-    return CRYPT_SUCCESS;
-}
 
-static int32_t GetCommonPub(const CRYPT_EAL_PkeyCtx *pkey, int32_t paramKey, CRYPT_Data *pub)
-{
-    BSL_Param param[2] = {{paramKey, BSL_PARAM_TYPE_OCTETS, pub->data, pub->len, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPub(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+    if (setFunc == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    pub->len = param[0].useLen;
-    return CRYPT_SUCCESS;
-}
 
-static int32_t GetPaillierPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_PaillierPub *pub)
-{
-     BSL_Param param[4] = {{CRYPT_PARAM_PAILLIER_N, BSL_PARAM_TYPE_OCTETS, pub->n, pub->nLen, 0},
-        {CRYPT_PARAM_PAILLIER_G, BSL_PARAM_TYPE_OCTETS, pub->g, pub->gLen, 0},
-        {CRYPT_PARAM_PAILLIER_N2, BSL_PARAM_TYPE_OCTETS, pub->n2, pub->n2Len, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPub(pkey->key, &param);
+    int32_t ret = setFunc(pkey->key, param);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     }
-    pub->nLen = param[0].useLen;
-    pub->gLen = param[1].useLen;
-    pub->n2Len = param[2].useLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetElGamalPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_ElGamalPub *pub)
-{
-     BSL_Param param[5] = {{CRYPT_PARAM_ELGAMAL_P, BSL_PARAM_TYPE_OCTETS, pub->p, pub->pLen, 0},
-        {CRYPT_PARAM_ELGAMAL_G, BSL_PARAM_TYPE_OCTETS, pub->g, pub->gLen, 0},
-        {CRYPT_PARAM_ELGAMAL_Y, BSL_PARAM_TYPE_OCTETS, pub->y, pub->yLen, 0},
-        {CRYPT_PARAM_ELGAMAL_Q, BSL_PARAM_TYPE_OCTETS, pub->q, pub->qLen, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPub(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    pub->pLen = param[0].useLen;
-    pub->gLen = param[1].useLen;
-    pub->yLen = param[2].useLen;
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t CRYPT_EAL_PkeyGetPubEx(const CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param)
 {
-    if (pkey == NULL || param == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (pkey->method.getPub == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-
-    int32_t ret = pkey->method.getPub(pkey->key, param);
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
-    }
-    return ret;
+    return CommonParaGet(pkey, param, pkey == NULL ? NULL : pkey->method.getPub);
 }
 
 int32_t CRYPT_EAL_PkeySetPubEx(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *param)
 {
-    if (pkey == NULL || param == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (pkey->method.setPub == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-
-    int32_t ret = pkey->method.setPub(pkey->key, param);
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
-    }
-    return ret;
+    return CommonParaSet(pkey, param, pkey == NULL ? NULL : pkey->method.setPub);
 }
 
 int32_t CRYPT_EAL_PkeyGetPrvEx(const CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param)
 {
-    if (pkey == NULL || param == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (pkey->method.getPrv == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-
-    int32_t ret = pkey->method.getPrv(pkey->key, param);
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
-    }
-    return ret;
+    return CommonParaGet(pkey, param, pkey == NULL ? NULL : pkey->method.getPrv);
 }
 
 int32_t CRYPT_EAL_PkeySetPrvEx(CRYPT_EAL_PkeyCtx *pkey, const BSL_Param *param)
 {
-    if (pkey == NULL || param == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (pkey->method.setPrv == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-
-    int32_t ret = pkey->method.setPrv(pkey->key, param);
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
-    }
-    return ret;
-}
-
-static int32_t GetMlkemPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemEncapsKey *kemEk)
-{
-    BSL_Param param[2] = {{CRYPT_PARAM_ML_KEM_PUBKEY, BSL_PARAM_TYPE_OCTETS, kemEk->data,
-        kemEk->len, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPub(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    kemEk->len = param[0].useLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetMldsaPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_MlDsaPub *dsaPub)
-{
-    BSL_Param param[2] = {{CRYPT_PARAM_ML_DSA_PUBKEY, BSL_PARAM_TYPE_OCTETS, dsaPub->data,
-        dsaPub->len, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPub(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    dsaPub->len = param[0].useLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetHybridkemPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemEncapsKey *kemEk)
-{
-    BSL_Param param[2] = {{CRYPT_PARAM_HYBRID_PUBKEY, BSL_PARAM_TYPE_OCTETS, kemEk->data,
-        kemEk->len, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPub(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    kemEk->len = param[0].useLen;
-    return CRYPT_SUCCESS;
-}
-
-
-static int32_t GetSlhDsaPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_SlhDsaPub *pub)
-{
-    BSL_Param param[3] = {{CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, pub->seed, pub->len, 0},
-        {CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, pub->root, pub->len, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPub(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    pub->len = param[0].useLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetXmssPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_XmssPub *pub)
-{
-    BSL_Param param[3] = {
-        {CRYPT_PARAM_XMSS_PUB_SEED, BSL_PARAM_TYPE_OCTETS, pub->seed, pub->len, 0},
-        {CRYPT_PARAM_XMSS_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, pub->root, pub->len, 0},
-        BSL_PARAM_END,
-    };
-    int32_t ret = pkey->method.getPub(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    pub->len = param[0].useLen;
-    return CRYPT_SUCCESS;
+    return CommonParaSet(pkey, param, pkey == NULL ? NULL : pkey->method.setPrv);
 }
 
 int32_t CRYPT_EAL_PkeyGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *key)
@@ -982,206 +421,9 @@ int32_t CRYPT_EAL_PkeyGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *k
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
-    switch (key->id) {
-        case CRYPT_PKEY_RSA:
-            ret = GetRSAPub(pkey, &key->key.rsaPub);
-            break;
-        case CRYPT_PKEY_DSA:
-            ret = GetCommonPub(pkey, CRYPT_PARAM_DSA_PUBKEY, &key->key.dsaPub);
-            break;
-        case CRYPT_PKEY_ED25519:
-        case CRYPT_PKEY_X25519:
-            ret = GetCommonPub(pkey, CRYPT_PARAM_CURVE25519_PUBKEY, &key->key.curve25519Pub);
-            break;
-        case CRYPT_PKEY_DH:
-            ret = GetCommonPub(pkey, CRYPT_PARAM_DH_PUBKEY, &key->key.dhPub);
-            break;
-        case CRYPT_PKEY_ECDH:
-        case CRYPT_PKEY_ECDSA:
-        case CRYPT_PKEY_SM2:
-            ret = GetCommonPub(pkey, CRYPT_PARAM_EC_PUBKEY, &key->key.eccPub);
-            break;
-        case CRYPT_PKEY_PAILLIER:
-            ret = GetPaillierPub(pkey, &key->key.paillierPub);
-            break;
-        case CRYPT_PKEY_ELGAMAL:
-            ret = GetElGamalPub(pkey, &key->key.elgamalPub);
-            break;
-		case CRYPT_PKEY_ML_KEM:
-            ret = GetMlkemPub(pkey, &key->key.kemEk);
-            break;
-        case CRYPT_PKEY_ML_DSA: 
-            ret = GetMldsaPub(pkey, &key->key.mldsaPub);
-            break;
-        case CRYPT_PKEY_HYBRID_KEM:
-            ret = GetHybridkemPub(pkey, &key->key.kemEk);
-            break;
-        case CRYPT_PKEY_SLH_DSA:
-            ret = GetSlhDsaPub(pkey, &key->key.slhDsaPub);
-            break;
-        case CRYPT_PKEY_XMSS:
-            ret = GetXmssPub(pkey, &key->key.xmssPub);
-            break;
-        default:
-            ret = CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
-    }
+    ret = PkeyProviderGetPub(pkey, key);
+    EAL_EVENT_REPORT((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_GETSSP : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     return ret;
-}
-
-static int32_t GetRSAPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_RsaPrv *prv)
-{
-    BSL_Param param[] = {{CRYPT_PARAM_RSA_D, BSL_PARAM_TYPE_OCTETS, prv->d, prv->dLen, 0},
-        {CRYPT_PARAM_RSA_N, BSL_PARAM_TYPE_OCTETS, prv->n, prv->nLen, 0},
-        {CRYPT_PARAM_RSA_P, BSL_PARAM_TYPE_OCTETS, prv->p, prv->pLen, 0},
-        {CRYPT_PARAM_RSA_Q, BSL_PARAM_TYPE_OCTETS, prv->q, prv->qLen, 0},
-        {CRYPT_PARAM_RSA_DP, BSL_PARAM_TYPE_OCTETS, prv->dP, prv->dPLen, 0},
-        {CRYPT_PARAM_RSA_DQ, BSL_PARAM_TYPE_OCTETS, prv->dQ, prv->dQLen, 0},
-        {CRYPT_PARAM_RSA_QINV, BSL_PARAM_TYPE_OCTETS, prv->qInv, prv->qInvLen, 0},
-        {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, prv->e, prv->eLen, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPrv(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    prv->dLen = param[0].useLen;
-    prv->nLen = param[1].useLen;
-    prv->pLen = param[2].useLen;
-    prv->qLen = param[3].useLen;
-    prv->dPLen = param[4].useLen;
-    prv->dQLen = param[5].useLen;
-    prv->qInvLen = param[6].useLen;
-    prv->eLen = param[7].useLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetCommonPrv(const CRYPT_EAL_PkeyCtx *pkey, int32_t paramKey, CRYPT_Data *prv)
-{
-    BSL_Param param[2] = {{paramKey, BSL_PARAM_TYPE_OCTETS, prv->data, prv->len, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPrv(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    prv->len = param[0].useLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetPaillierPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_PaillierPrv *prv)
-{
-    BSL_Param param[5] = {{CRYPT_PARAM_PAILLIER_N, BSL_PARAM_TYPE_OCTETS, prv->n, prv->nLen, 0},
-        {CRYPT_PARAM_PAILLIER_LAMBDA, BSL_PARAM_TYPE_OCTETS, prv->lambda, prv->lambdaLen, 0},
-        {CRYPT_PARAM_PAILLIER_MU, BSL_PARAM_TYPE_OCTETS, prv->mu, prv->muLen, 0},
-        {CRYPT_PARAM_PAILLIER_N2, BSL_PARAM_TYPE_OCTETS, prv->n2, prv->n2Len, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPrv(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    prv->nLen = param[0].useLen;
-    prv->lambdaLen = param[1].useLen;
-    prv->muLen = param[2].useLen;
-    prv->n2Len = param[3].useLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetElGamalPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_ElGamalPrv *prv)
-{
-    BSL_Param param[5] = {{CRYPT_PARAM_ELGAMAL_P, BSL_PARAM_TYPE_OCTETS, prv->p, prv->pLen, 0},
-        {CRYPT_PARAM_ELGAMAL_G, BSL_PARAM_TYPE_OCTETS, prv->g, prv->gLen, 0},
-        {CRYPT_PARAM_ELGAMAL_X, BSL_PARAM_TYPE_OCTETS, prv->x, prv->xLen, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPrv(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    prv->pLen = param[0].useLen;
-    prv->gLen = param[1].useLen;
-    prv->xLen = param[2].useLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetMlkemPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemDecapsKey *kemDk)
-{
-    BSL_Param param[2] = {{CRYPT_PARAM_ML_KEM_PRVKEY, BSL_PARAM_TYPE_OCTETS, kemDk->data,
-        kemDk->len, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPrv(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    kemDk->len = param[0].useLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetMldsaPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_MlDsaPrv *dsaPrv)
-{
-    BSL_Param param[2] = {{CRYPT_PARAM_ML_DSA_PRVKEY, BSL_PARAM_TYPE_OCTETS, dsaPrv->data,
-        dsaPrv->len, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPrv(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    dsaPrv->len = param[0].useLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetHybridkemPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemDecapsKey *kemDk)
-{
-    BSL_Param param[2] = {{CRYPT_PARAM_HYBRID_PRVKEY, BSL_PARAM_TYPE_OCTETS, kemDk->data,
-        kemDk->len, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPrv(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    kemDk->len = param[0].useLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetSlhDsaPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_SlhDsaPrv *prv)
-{
-    BSL_Param param[5] = {{CRYPT_PARAM_SLH_DSA_PRV_SEED, BSL_PARAM_TYPE_OCTETS, prv->seed, prv->pub.len, 0},
-        {CRYPT_PARAM_SLH_DSA_PRV_PRF, BSL_PARAM_TYPE_OCTETS, prv->prf, prv->pub.len, 0},
-        {CRYPT_PARAM_SLH_DSA_PUB_SEED, BSL_PARAM_TYPE_OCTETS, prv->pub.seed, prv->pub.len, 0},
-        {CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, prv->pub.root, prv->pub.len, 0},
-        BSL_PARAM_END};
-    int32_t ret = pkey->method.getPrv(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    prv->pub.len = param[0].useLen;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetXmssPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_XmssPrv *prv)
-{
-    BSL_Param param[6] = {
-        {CRYPT_PARAM_XMSS_PRV_SEED, BSL_PARAM_TYPE_OCTETS, prv->seed, prv->pub.len, 0},
-        {CRYPT_PARAM_XMSS_PRV_PRF, BSL_PARAM_TYPE_OCTETS, prv->prf, prv->pub.len, 0},
-        {CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64, &prv->index, sizeof(prv->index), 0},
-        {CRYPT_PARAM_XMSS_PUB_SEED, BSL_PARAM_TYPE_OCTETS, prv->pub.seed, prv->pub.len, 0},
-        {CRYPT_PARAM_XMSS_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, prv->pub.root, prv->pub.len, 0},
-        BSL_PARAM_END,
-    };
-    int32_t ret = pkey->method.getPrv(pkey->key, &param);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    prv->pub.len = param[0].useLen;
-    return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_EAL_PkeyGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *key)
@@ -1195,52 +437,8 @@ int32_t CRYPT_EAL_PkeyGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *k
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    switch(key->id) {
-        case CRYPT_PKEY_RSA:
-            ret = GetRSAPrv(pkey, &key->key.rsaPrv);
-            break;
-        case CRYPT_PKEY_DSA:
-            ret = GetCommonPrv(pkey, CRYPT_PARAM_DSA_PRVKEY, &key->key.dsaPrv);
-            break;
-        case CRYPT_PKEY_ED25519:
-        case CRYPT_PKEY_X25519:
-            ret = GetCommonPrv(pkey, CRYPT_PARAM_CURVE25519_PRVKEY, &key->key.curve25519Prv);
-            break;
-        case CRYPT_PKEY_DH:
-            ret = GetCommonPrv(pkey, CRYPT_PARAM_DH_PRVKEY, &key->key.dhPrv);
-            break;
-        case CRYPT_PKEY_ECDH:
-        case CRYPT_PKEY_ECDSA:
-        case CRYPT_PKEY_SM2:
-            ret = GetCommonPrv(pkey, CRYPT_PARAM_EC_PRVKEY, &key->key.eccPrv);
-            break;
-        case CRYPT_PKEY_PAILLIER:
-            ret = GetPaillierPrv(pkey, &key->key.paillierPrv);
-            break;
-        case CRYPT_PKEY_ELGAMAL:
-            ret = GetElGamalPrv(pkey, &key->key.elgamalPrv);
-            break;
-		case CRYPT_PKEY_ML_KEM:
-            ret = GetMlkemPrv(pkey, &key->key.kemDk);
-            break;
-        case CRYPT_PKEY_ML_DSA:
-            ret = GetMldsaPrv(pkey, &key->key.mldsaPrv);
-            break;
-        case CRYPT_PKEY_SLH_DSA:
-            ret = GetSlhDsaPrv(pkey, &key->key.slhDsaPrv);
-            break;
-        case CRYPT_PKEY_XMSS:
-            ret = GetXmssPrv(pkey, &key->key.xmssPrv);
-            break;
-		case CRYPT_PKEY_HYBRID_KEM:
-            ret = GetHybridkemPrv(pkey, &key->key.kemDk);
-            break;
-        default:
-            ret = CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-    if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
-    }
+    ret = PkeyProviderGetPrv(pkey, key);
+    EAL_EVENT_REPORT((ret == CRYPT_SUCCESS) ? CRYPT_EVENT_GETSSP : CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
     return ret;
 }
 

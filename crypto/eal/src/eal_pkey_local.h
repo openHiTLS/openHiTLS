@@ -53,6 +53,19 @@ struct EAL_PkeyCtx {
  * For other error codes, see crypt_errno.h.
  */
 const EAL_PkeyMethod *CRYPT_EAL_PkeyFindMethod(CRYPT_PKEY_AlgId id);
+
+int32_t PkeyProviderSetPara(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPara *para);
+
+int32_t PkeyProviderGetPara(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPara *para);
+
+int32_t PkeyProviderSetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *key);
+
+int32_t PkeyProviderSetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *key);
+
+int32_t PkeyProviderGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *key);
+
+int32_t PkeyProviderGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *key);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

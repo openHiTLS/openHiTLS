@@ -677,10 +677,10 @@ static const EAL_PkeyMethod METHODS[] = {
 
 const EAL_PkeyMethod *CRYPT_EAL_PkeyFindMethod(CRYPT_PKEY_AlgId id)
 {
-    uint32_t num = sizeof(METHODS) / sizeof(METHODS[0]);
+    size_t num = sizeof(METHODS) / sizeof(METHODS[0]);
     const EAL_PkeyMethod *pkeyMeth = NULL;
 
-    for (uint32_t i = 0; i < num; i++) {
+    for (size_t i = 0; i < num; i++) {
         if (METHODS[i].id == id) {
             pkeyMeth = &METHODS[i];
             return pkeyMeth;
