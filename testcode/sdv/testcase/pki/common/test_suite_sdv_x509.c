@@ -992,27 +992,27 @@ void SDV_PKI_HOSTNAME_EXACT_MATCH_TC001(int flag)
 {
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
-    ASSERT_EQ(HITLS_X509_MatchPattern("", "", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern(" ", " ", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.openhitls.com", "www.openhitls.com", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("WWW.OPENHITLS.COM", "www.openhitls.com", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.openhitls.com", "WWW.OPENHITLS.COM", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("a.b.c.openhitls.com", "a.b.c.openhitls.com", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.oPenHiTls.com", "www.oPenHiTls.com", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.\nopenhitls.com", "www.\nopenhitls.com", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("...", "...", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("12...", "12...", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern(".&..", ".&..", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("12...@", "12...@", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("web-server-1.openhitls.com", "web-server-1.openhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "", ""), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, " ", " "), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.openhitls.com", "www.openhitls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "WWW.OPENHITLS.COM", "www.openhitls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.openhitls.com", "WWW.OPENHITLS.COM"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "a.b.c.openhitls.com", "a.b.c.openhitls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.oPenHiTls.com", "www.oPenHiTls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.\nopenhitls.com", "www.\nopenhitls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "...", "..."), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "12...", "12..."), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, ".&..", ".&.."), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "12...@", "12...@"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "web-server-1.openhitls.com", "web-server-1.openhitls.com"),
         HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("1.2.3.4.openhitls.com", "1.2.3.4.openhitls.com", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.openhitls.COM", "www.openhitls.com", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www-*.openhitls.com", "www-1.openhitls.com",
-        HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("*.web-server.openhitls.com", "app1.web-server.openhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "1.2.3.4.openhitls.com", "1.2.3.4.openhitls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.openhitls.COM", "www.openhitls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD, "www-*.openhitls.com",
+        "www-1.openhitls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "*.web-server.openhitls.com", "app1.web-server.openhitls.com"),
         HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("192.168.1.1", "192.168.1.1", testFlag), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "192.168.1.1", "192.168.1.1"), HITLS_PKI_SUCCESS);
 EXIT:
     return;
 }
@@ -1026,26 +1026,26 @@ void SDV_PKI_HOSTNAME_WILDCARD_MATCH_TC002(int flag)
 {
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
-    ASSERT_EQ(HITLS_X509_MatchPattern("*.openhitls.com", ".openhitls.com", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("*.openhitls.com", "www.openhitls.com", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("*.openhitls.com", "api.openhitls.com", testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("f*.openhitls.com", "foo.openhitls.com",
-        HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("*o.openhitls.com", "foo.openhitls.com",
-        HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("f*o.openhitls.com", "foo.openhitls.com",
-        HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("f*o.openhitls.com", "foo.openHITLS.com",
-        HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("f*o.openhitls.com", "fToo.openHITLS.com",
-        HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "*.openhitls.com", ".openhitls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "*.openhitls.com", "www.openhitls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "*.openhitls.com", "api.openhitls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD, "f*.openhitls.com",
+        "foo.openhitls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD, "*o.openhitls.com",
+        "foo.openhitls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD, "f*o.openhitls.com",
+        "foo.openhitls.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD, "f*o.openhitls.com",
+        "foo.openHITLS.com"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD, "f*o.openhitls.com",
+        "fToo.openHITLS.com"), HITLS_PKI_SUCCESS);
     // RFC 6125
-    ASSERT_EQ(HITLS_X509_MatchPattern("baz*.example.net", "baz1.example.net",
-        HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("*baz.example.net", "foobaz.example.net",
-        HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_MatchPattern("b*z.example.net", "buzz.example.net",
-        HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD, "baz*.example.net",
+        "baz1.example.net"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD, "*baz.example.net",
+        "foobaz.example.net"), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD, "b*z.example.net",
+        "buzz.example.net"), HITLS_PKI_SUCCESS);
 EXIT:
     return;
 }
@@ -1059,19 +1059,19 @@ void SDV_PKI_HOSTNAME_MISMATCH_TC001(int flag)
 {
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
-    ASSERT_EQ(HITLS_X509_MatchPattern("*.openhitls.com", ".openhitls.com.", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "*.openhitls.com", ".openhitls.com."),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.openhitls.com", "www.google.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.openhitls.com", "www.google.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.openhitls.com", "mail.openhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.openhitls.com", "mail.openhitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.openhitls.com", "www.openhitls.org", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.openhitls.com", "www.openhitls.org"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("a.b.openhitls.com", "x.y.openhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "a.b.openhitls.com", "x.y.openhitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("openhitls.com", "www.openhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "openhitls.com", "www.openhitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.openhitls.com", "openhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.openhitls.com", "openhitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
 EXIT:
     return;
@@ -1087,15 +1087,15 @@ void SDV_PKI_HOSTNAME_MISMATCH_TC002(int flag)
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
     // Wildcard should not match multiple labels
-    ASSERT_EQ(HITLS_X509_MatchPattern("*.com", "www.openhitls.com", testFlag), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("*.openhitls.com", "openhitls.com", testFlag), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("*.openhitls.com", "api.v1.openhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "*.com", "www.openhitls.com"), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "*.openhitls.com", "openhitls.com"), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "*.openhitls.com", "api.v1.openhitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.*.com", "www.openhitls.com", testFlag), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.*.com", "www.openhitls.com"), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
     // Mismatch with wildcard
-    ASSERT_EQ(HITLS_X509_MatchPattern("*.openhitls.com", "www.google.com", testFlag), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("f**o.openhitls.com", "fToo.openHITLS.com",
-        HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "*.openhitls.com", "www.google.com"), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "f**o.openhitls.com", "fToo.openHITLS.com"),
+        HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
 EXIT:
     return;
 }
@@ -1110,34 +1110,34 @@ void SDV_PKI_HOSTNAME_INVALID_INPUTS_TC001(int flag)
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
     // More invalid inputs
-    ASSERT_EQ(HITLS_X509_MatchPattern(NULL, "www.openhitls.com", testFlag), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.openhitls.com", NULL, testFlag), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern(NULL, NULL, testFlag), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("a", "", testFlag), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("", "a", testFlag), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern(".", "a", testFlag), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern(".", ".", testFlag), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, NULL, "www.openhitls.com"), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.openhitls.com", NULL), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, NULL, NULL), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "a", ""), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "", "a"), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, ".", "a"), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, ".", "."), HITLS_PKI_SUCCESS);
     // additional charactors
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.open\0hitls.com", "www.openhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.open\0hitls.com", "www.openhitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.openhitls.com", "www.open\0hitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.openhitls.com", "www.open\0hitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.open\\hitls.com", "www.openhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.open\\hitls.com", "www.openhitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.openhitls.com", "www.open\\hitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.openhitls.com", "www.open\\hitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.open\nhitls.com", "www.openhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.open\nhitls.com", "www.openhitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.openhitls.com", "www.open\nhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.openhitls.com", "www.open\nhitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("openhitls.com", "sub.openhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "openhitls.com", "sub.openhitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("192.168.1.1", "192.168.1.2", testFlag), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("**..openhitls.com", "www.openhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "192.168.1.1", "192.168.1.2"), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "**..openhitls.com", "www.openhitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.openhitls.com", "www.openhhtls.com.", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.openhitls.com", "www.openhhtls.com."),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_MatchPattern("www.op\xE9nhitls.com", "www.openhitls.com", testFlag),
+    ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "www.op\xE9nhitls.com", "www.openhitls.com"),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
 EXIT:
     return;
@@ -1159,53 +1159,53 @@ void SDV_PKI_VERIFY_HOSTNAME_TC001(int algId, int format, Hex *encode, int flag)
     HITLS_X509_Cert *cert = NULL;
     ASSERT_EQ(HITLS_X509_CertParseBuff(format, (BSL_Buffer *)encode, &cert), HITLS_PKI_SUCCESS);
     ASSERT_NE(cert, NULL);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.hitls.com", strlen("test.hitls.com") - 1, -1),
-    HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, -1, "test.hitls.com", strlen("test.hitls.com") - 1),
+        HITLS_X509_ERR_INVALID_PARAM);
     // Normal cases
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.hitls.com", strlen("test.hitls.com"), testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.hitls.net", strlen("test.hitls.net"), testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.openhitls.net", strlen("test.openhitls.net"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.hitls.com", strlen("test.hitls.com")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.hitls.net", strlen("test.hitls.net")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.openhitls.net", strlen("test.openhitls.net")),
         HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.hello.com", strlen("test.hello.com"), testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.m.open.hitls.com", strlen("test.m.open.hitls.com"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.hello.com", strlen("test.hello.com")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.m.open.hitls.com", strlen("test.m.open.hitls.com")),
         HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.hitls.com", strlen("test.hitls.com"), testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.xx.hitls.net", strlen("test.xx.hitls.net"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.hitls.com", strlen("test.hitls.com")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.xx.hitls.net", strlen("test.xx.hitls.net")),
         HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.xy.hitls.net", strlen("test.xy.hitls.net"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.xy.hitls.net", strlen("test.xy.hitls.net")),
         HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.xz.hitls.net", strlen("test.xz.hitls.net"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.xz.hitls.net", strlen("test.xz.hitls.net")),
         HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "www.openhitls.com", strlen("www.openhitls.com"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "www.openhitls.com", strlen("www.openhitls.com")),
         HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "www.openhitls.net", strlen("www.openhitls.net"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "www.openhitls.net", strlen("www.openhitls.net")),
         HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "openhitls.com", strlen("openhitls.com"), testFlag), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "TEST.HITLS.COM", strlen("TEST.HITLS.COM"), testFlag), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "openhitls.com", strlen("openhitls.com")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "TEST.HITLS.COM", strlen("TEST.HITLS.COM")), HITLS_PKI_SUCCESS);
 
     // Abnormal cases
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "openhitls.com\0otherinfo", 23, testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "openhitls.com\0otherinfo", 23),
         HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, " ", strlen(" "), testFlag), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "hitls.com", strlen("hitls.com"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, " ", strlen(" ")), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "hitls.com", strlen("hitls.com")),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "a.b.hitls.com", strlen("a.b.hitls.com"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "a.b.hitls.com", strlen("a.b.hitls.com")),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "www.hitls.org", strlen("www.hitls.org"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "www.hitls.org", strlen("www.hitls.org")),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.open.hitls.com", strlen("test.open.hitls.com"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.open.hitls.com", strlen("test.open.hitls.com")),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "m.open.hitls.com", strlen("m.open.hitls.com"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "m.open.hitls.com", strlen("m.open.hitls.com")),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "hitls.com", strlen("hitls.com"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "hitls.com", strlen("hitls.com")),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "a.b.hitls.com", strlen("a.b.hitls.com"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "a.b.hitls.com", strlen("a.b.hitls.com")),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "www.hitls.org", strlen("www.hitls.org"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "www.hitls.org", strlen("www.hitls.org")),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.open.hitls.com", strlen("test.open.hitls.com"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.open.hitls.com", strlen("test.open.hitls.com")),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "..", strlen(".."), testFlag), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "..", strlen("..")), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
 EXIT:
     HITLS_X509_CertFree(cert);
 #else
@@ -1231,12 +1231,12 @@ void SDV_PKI_VERIFY_HOSTNAME_WITH_CN_TC001(int algId, int format, Hex *encode, i
     ASSERT_EQ(HITLS_X509_CertParseBuff(format, (BSL_Buffer *)encode, &cert), HITLS_PKI_SUCCESS);
     ASSERT_NE(cert, NULL);
 
-    ASSERT_EQ(HITLS_X509_VerifyHostname(NULL, NULL, strlen(""), testFlag), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(NULL, "", strlen(""), testFlag), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(NULL, "\0", strlen("\0"), testFlag), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.hitls.com", strlen("test.hitls.com"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(NULL, testFlag, NULL, strlen("")), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_VerifyHostname(NULL, testFlag, "", strlen("")), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_VerifyHostname(NULL, testFlag, "\0", strlen("\0")), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.hitls.com", strlen("test.hitls.com")),
         HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
-    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, "test.openhitls.com", strlen("test.openhitls.com"), testFlag),
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, testFlag, "test.openhitls.com", strlen("test.openhitls.com")),
         HITLS_PKI_SUCCESS);
 
 EXIT:

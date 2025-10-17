@@ -143,7 +143,7 @@ static int32_t MatchWithPartialWildcard(const char *pattern, const char *hostnam
     return HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
 }
 
-int32_t HITLS_X509_MatchPattern(const char *pattern, const char *hostname, uint32_t flags)
+int32_t HITLS_X509_MatchPattern(uint32_t flags, const char *pattern, const char *hostname)
 {
     if (pattern == NULL || hostname == NULL) {
         return HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
@@ -199,9 +199,9 @@ int32_t X509_VerifyHostnameWithCn(HITLS_X509_Cert *cert, const char *hostname,
     return ret;
 }
  
-int32_t HITLS_X509_VerifyHostname(HITLS_X509_Cert *cert, const char *hostname, uint32_t hostnameLen, uint32_t flags)
+int32_t HITLS_X509_VerifyHostname(HITLS_X509_Cert *cert, uint32_t flags, const char *hostname, uint32_t hostnameLen)
 {
-    if (cert == NULL || hostname == NULL || *hostname == '\0') {
+    if (cert == NULL || hostname == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }

@@ -327,8 +327,8 @@ typedef enum {
 
 /* Flags for HITLS_X509_VerifyHostname */
 #define HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD   0x01  /**< For compatibility purposes, ref RFC6125 to support
-                                                        match rules similar to  *.a.com matches foo.a.com,
-                                                        f*.com matches foo.com */
+                                                           * match rules similar to  *.a.com matches foo.a.com,
+                                                           * f*.com matches foo.com */
 
 typedef struct {
     BSL_Buffer *macPwd;

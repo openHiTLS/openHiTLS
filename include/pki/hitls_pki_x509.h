@@ -139,14 +139,14 @@ int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot
  *              'foo.example.com', we also will check CN name if SAN is not present.
  *
  * @param cert [IN] The certificate to verify.
+ * @param flags [IN] A flag controlling wildcard matching behavior.
  * @param hostname [IN] The hostname to match against.
  * @param hostnameLen [IN] The length of the hostname.
- * @param flags [IN] A flag controlling wildcard matching behavior.
  * @retval #HITLS_PKI_SUCCESS if the hostname is successfully verified.
  * @retval #HITLS_X509_ERR_VFY_HOSTNAME_FAIL if the hostname does not match.
  * @retval Other error codes for parsing or parameter errors.
  */
-int32_t HITLS_X509_VerifyHostname(HITLS_X509_Cert *cert, const char *hostname, uint32_t hostnameLen, uint32_t flags);
+int32_t HITLS_X509_VerifyHostname(HITLS_X509_Cert *cert, uint32_t flags, const char *hostname, uint32_t hostnameLen);
 
 #ifdef __cplusplus
 }
