@@ -106,7 +106,7 @@ static int32_t STUB_BSL_UI_ReadPwdUtil(BSL_UI_ReadPwdParam *param, char *buff, u
     (void)param;
     (void)checkDataCallBack;
     (void)callBackData;
-    char result[] = "12345678";
+    char result[] = "a1234567";
     (void)strcpy_s(buff, *buffLen, result);
     *buffLen = (uint32_t)strlen(buff) + 1;
     return BSL_SUCCESS;

@@ -116,7 +116,7 @@ static void UserInfoOrderCvt(UserInfo *userInfo, bool toByte)
 int32_t HITLS_APP_SM_RootUserCheck(void)
 {
     if (getuid() == 0) {
-        AppPrintError("The current user is root, please use a non-root user to run the program.\n");
+        AppPrintError("Root selftest failed.\n");
         return HITLS_APP_ROOT_CHECK_FAIL;
     }
     return HITLS_APP_SUCCESS;
@@ -125,6 +125,44 @@ int32_t HITLS_APP_SM_RootUserCheck(void)
 static bool CheckFileExists(const char *filename)
 {
     return access(filename, F_OK) == 0;
+}
+
+static int32_t CheckPassword(const uint8_t *password, const uint32_t passwordLen)
+{
+    const char specialStr[] = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+    uint32_t hasLowercase = 0;
+    uint32_t hasUppercase = 0;
+    uint32_t hasDigit = 0;
+    uint32_t hasSpecial = 0;
+    if (passwordLen < 8) { // 8: minimum length of password
+        AppPrintError("The password must be at least 8 characters long.\n");
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    for (uint32_t i = 0; i < passwordLen; i++) {
+        if (password[i] < '!' || password[i] > '~') {
+            AppPrintError("The password can contain only the following characters:\n");
+            AppPrintError("a~z A~Z 0~9 ! \" # $ %% & ' ( ) * + , - . / : ; < = > ? @ [ \\ ] ^ _ ` { | } ~\n");
+            return HITLS_APP_PASSWD_FAIL;
+        }
+        if (password[i] >= 'a' && password[i] <= 'z') {
+            hasLowercase = 1;
+        }
+        if (password[i] >= 'A' && password[i] <= 'Z') {
+            hasUppercase = 1;
+        }
+        if (password[i] >= '0' && password[i] <= '9') {
+            hasDigit = 1;
+        }
+        if (strchr(specialStr, password[i]) != NULL) {
+            hasSpecial = 1;
+        }
+    }
+    if (hasLowercase + hasUppercase + hasDigit + hasSpecial < 2) { // 2: minimum number of different characters
+        AppPrintError("The password must contain at least two of the following characters: lowercase letter, uppercase "
+                      "letter, digit, or special character.\n");
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
 }
 
 static int32_t GetPassword(char **password)
@@ -143,7 +181,7 @@ static int32_t GetPassword(char **password)
         return HITLS_APP_PASSWD_FAIL;
     }
     buf[bufLen - 1] = '\0';
-    ret = HITLS_APP_CheckPasswd((const uint8_t *)buf, bufLen - 1);
+    ret = CheckPassword((const uint8_t *)buf, bufLen - 1);
     if (ret != HITLS_APP_SUCCESS) {
         BSL_SAL_CleanseData(buf, bufLen);
         return ret;
@@ -383,12 +421,12 @@ static int32_t VerifyPassword(AppProvider *provider, UserInfo *userInfo, char *p
         return ret;
     }
     if (userInfo->userParam.dKeyLen != sizeof(derivedKey)) {
-        AppPrintError("The admin password is incorrect.\n");
+        AppPrintError("Admin verification failed.\n");
         return HITLS_APP_INFO_CMP_FAIL;
     }
 
     if (memcmp(derivedKey, userInfo->userParam.dKey, userInfo->userParam.dKeyLen) != 0) {
-        AppPrintError("The admin password is incorrect.\n");
+        AppPrintError("Admin verification failed.\n");
         return HITLS_APP_PASSWD_FAIL;
     }
 

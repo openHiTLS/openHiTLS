@@ -40,7 +40,7 @@
 #define KDF_MAX_ARGC 22
 #define MAX_BUFSIZE (1024 * 8)
 #define WORK_PATH "./kdf_workpath"
-#define PASSWORD "12345678"
+#define PASSWORD "a1234567"
 
 #ifdef HITLS_CRYPTO_CMVP_SM_PURE_C
 #define HITLS_SM_PROVIDER_PATH "../../output/CMVP/C/lib"

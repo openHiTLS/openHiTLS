@@ -37,7 +37,7 @@
 /* END_HEADER */
 
 #define WORK_PATH "./rand_workpath"
-#define PASSWORD "12345678"
+#define PASSWORD "a1234567"
 
 #ifdef HITLS_CRYPTO_CMVP_SM_PURE_C
 #define HITLS_SM_PROVIDER_PATH "../../output/CMVP/C/lib"
