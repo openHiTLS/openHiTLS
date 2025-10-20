@@ -107,10 +107,6 @@ static int32_t SetOtherValues(BSL_Param *param, uint32_t type, void *val, uint32
             *(uint64_t *)param->value = *(uint64_t *)val;
             param->useLen = len;
             return BSL_SUCCESS;
-        case BSL_PARAM_TYPE_OCTETS:
-            (void)memcpy_s(param->value, len, val, len);
-            param->useLen = len;
-            return BSL_SUCCESS;
         case BSL_PARAM_TYPE_BOOL:
             *(bool *)param->value = *(bool *)val;
             param->useLen = len;
