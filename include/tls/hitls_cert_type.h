@@ -106,6 +106,7 @@ typedef enum {
     CERT_KEY_CTRL_GET_PARAM_ID,               /**< Obtain the parameter ID. */
     CERT_KEY_CTRL_IS_DATA_ENC_USAGE,          /**< Is it the data encryption permission. */
     CERT_KEY_CTRL_IS_NON_REPUDIATION_USAGE,   /**< Is it the non-repudiation permission. */
+    CERT_KEY_CTRL_GET_PSS_MD,                 /**< Obtain PSS hash */
 
     CERT_CTRL_BUTT,
 } HITLS_CERT_CtrlCmd;

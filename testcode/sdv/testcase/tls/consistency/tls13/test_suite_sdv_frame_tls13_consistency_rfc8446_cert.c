@@ -2202,3 +2202,38 @@ EXIT:
     FRAME_FreeLink(testInfo.server);
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSS_PARAMETER_CHECK()
+{
+    FRAME_Init();
+    HITLS_Config *config_c = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *config_s = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_c != NULL);
+    ASSERT_TRUE(config_s != NULL);
+    uint16_t signAlgs_s[] = {CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256, CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512};
+    HITLS_CFG_SetSignature(config_s, signAlgs_s, sizeof(signAlgs_s) / sizeof(uint16_t));
+    uint16_t cipherSuite[] = {HITLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256};
+    HITLS_CFG_SetCipherSuites(config_s, cipherSuite, sizeof(cipherSuite) / sizeof(uint16_t));
+    FRAME_CertInfo certInfo = {
+        "rsa_pss_sha256/rsa_pss_root.der",
+        "rsa_pss_sha256/rsa_pss_intCa.der",
+        "rsa_pss_sha256/rsa_pss_dev_sha512.der",
+        0,
+        "rsa_pss_sha256/rsa_pss_dev_sha512.key.der",
+        0,
+    };
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config_c, BSL_UIO_TCP, &certInfo);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+    ASSERT_EQ(server->ssl->negotiatedInfo.signScheme, CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512);
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
