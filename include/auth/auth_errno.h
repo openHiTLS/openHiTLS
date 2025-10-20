@@ -62,6 +62,14 @@ typedef enum {
     HITLS_AUTH_PRIVPASS_NO_BLINDEDMSG,                     /* No blinded message in token request */
     HITLS_AUTH_PRIVPASS_NO_AUTHENTICATOR,                  /* No authenticator in token */
 
+    HITLS_AUTH_OTP_INVALID_INPUT = 0x05020001,             /* Invalid input parameters */
+    HITLS_AUTH_OTP_INVALID_PROTOCOL_TYPE,                  /* Invalid protocol type */
+    HITLS_AUTH_OTP_INVALID_CMD,                            /* Invalid command */
+    HITLS_AUTH_OTP_INVALID_CRYPTO_CALLBACK_TYPE,           /* Invalid cryptographic callback type */
+    HITLS_AUTH_OTP_BUFFER_NOT_ENOUGH,                      /* Buffer size is insufficient */
+    HITLS_AUTH_OTP_NO_COUNTER,                             /* Counter is missing */
+    HITLS_AUTH_OTP_NO_CURTIME,                             /* Current time is missing */
+    HITLS_AUTH_OTP_VALIDATE_MISMATCH,                      /* The otp to validate does not match target value. */
 } HITLS_AUTH_ERRNO;
 
 #ifdef __cplusplus

@@ -216,6 +216,7 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/config/macro_config
     ${openHiTLS_SRC}/tls/handshake/parse/src
     ${openHiTLS_SRC}/auth/privpass_token/include
+    ${openHiTLS_SRC}/auth/otp/include
     ${openHiTLS_SRC}/config/macro_config
     ${openHiTLS_SRC}/codecs/include
     ${openHiTLS_SRC}/tls/feature/custom_extensions/include

@@ -692,6 +692,10 @@
                 "c": {
                     "privpass_token": {
                         "privpass_pubtoken": null
+                    },
+                    "otp": {
+                        "hotp": null,
+                        "totp": null
                     }
                 }
             }
@@ -1657,6 +1661,11 @@
             "privpass_token": {
                 ".features" : ["privpass_pubtoken"],
                 ".srcs" : "auth/privpass_token/src/*",
+                ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
+            "otp": {
+                ".features" : ["hotp", "totp"],
+                ".srcs" : "auth/otp/src/*",
                 ".deps": ["platform::Secure_C", "bsl::sal"]
             }
         }
