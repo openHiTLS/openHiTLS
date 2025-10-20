@@ -1358,7 +1358,7 @@ void SDV_PKCS12_GEN_PARSE_P12FILE_TC001(void)
     encodeParam.encParam = encParam;
 
     const char *path = "../testdata/cert/asn1/pkcs12/chain.p12";
-    const char *writePath = "../testdata/cert/asn1/pkcs12/chain_cp.p12";
+    const char *writePath = "./chain_cp.p12";
 
     int32_t ret = HITLS_PKCS12_ParseFile(BSL_FORMAT_ASN1, NULL, &param, &p12, true);
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
