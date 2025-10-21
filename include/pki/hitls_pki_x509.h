@@ -73,6 +73,7 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx);
  * @param cmd [IN] HITLS_X509_Cmd                       data type             data length
  *        HITLS_X509_STORECTX_SET_PARAM_DEPTH           int32_t               sizeof(int32_t)
  *        HITLS_X509_STORECTX_SET_PARAM_FLAGS           uint64_t              sizeof(uint64_t)
+ *        HITLS_X509_STORECTX_SET_PURPOSE               uint64_t              sizeof(uint64_t)
  *        HITLS_X509_STORECTX_SET_TIME                  int64_t               sizeof(int64_t)
  *        HITLS_X509_STORECTX_SET_SECBITS               uint32_t              sizeof(uint32_t)
  *        HITLS_X509_STORECTX_CLR_PARAM_FLAGS           uint64_t              sizeof(uint64_t)

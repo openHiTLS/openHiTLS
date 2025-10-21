@@ -306,6 +306,17 @@ static int32_t X509_ClearParamFlag(HITLS_X509_StoreCtx *storeCtx, uint64_t *val,
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t X509_SetPurpose(HITLS_X509_StoreCtx *storeCtx, int32_t *val, uint32_t valLen)
+{
+    if (valLen != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    storeCtx->verifyParam.purpose = *val;
+    return HITLS_PKI_SUCCESS;
+}
+
 static int32_t X509_CheckCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert)
 {
     if (!HITLS_X509_CertIsCA(cert)) {
@@ -563,6 +574,8 @@ int32_t X509VfyBeforeCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val,
             return X509_SetMaxDepth(storeCtx, val, valLen);
         case HITLS_X509_STORECTX_SET_PARAM_FLAGS:
             return X509_SetParamFlag(storeCtx, val, valLen);
+        case HITLS_X509_STORECTX_SET_PURPOSE:
+            return X509_SetPurpose(storeCtx, val, valLen);
         case HITLS_X509_STORECTX_SET_TIME:
             return X509_SetVerifyTime(storeCtx, val, valLen);
         case HITLS_X509_STORECTX_SET_SECBITS:
@@ -1214,6 +1227,130 @@ int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
     return HITLS_PKI_SUCCESS;
 }
 
+static bool OidInList(BslList *oidList, BslCid target)
+{
+    if (oidList == NULL) {
+        return false;
+    }
+
+    BSL_Buffer *buffer = (BSL_Buffer *)BSL_LIST_GET_FIRST(oidList);
+    while (buffer != NULL) {
+        if (buffer->data != NULL && buffer->dataLen > 0) {
+            BslCid cid = BSL_OBJ_GetCidFromOidBuff(buffer->data, buffer->dataLen);
+            if (cid == target) {
+                return true;
+            }
+        }
+        buffer = (BSL_Buffer *)BSL_LIST_GET_NEXT(oidList);
+    }
+    return false;
+}
+
+static int32_t X509_VerifyExtKeyUsage(HITLS_X509_Cert *cert, uint16_t requiredKuMask, BslCid requiredEkuOids)
+{
+    HITLS_X509_CertExt *ext = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
+
+    // KeyUsage check
+    if ((ext->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) != 0) {
+        if ((ext->keyUsage & requiredKuMask) == 0) {
+            return HITLS_X509_ERR_VFY_PURPOSE_UNMATCH;
+        }
+    }
+
+    // ExtendedKeyUsage check
+    if (OidInList(ext->exKeyUsage.oidList, requiredEkuOids) == false) {
+        return HITLS_X509_ERR_VFY_PURPOSE_UNMATCH;
+    }
+
+    return HITLS_PKI_SUCCESS;
+}
+
+/**
+ * RFC 5280 4.2.1.3 (Key Usage) and 4.2.1.12 (Extended Key Usage)
+ * The KU/EKU extensions jointly constrain how an end-entity certificate may be used.
+ * If both are present, usage must satisfy *both* extensions.  Typical application
+ * mappings (serverAuth, clientAuth, emailProtection, codeSigning, OCSPSigning)
+ * follow the examples given in RFC 5280 4.2.1.12, Table 1 and text paragraphs.
+ */
+static int32_t X509_VerifyUsageEE(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *ee)
+{
+    uint16_t requiredKu = 0;
+    BslCid eku = 0;
+    int32_t purpose = storeCtx->verifyParam.purpose;
+    HITLS_X509_CertExt *ext = (HITLS_X509_CertExt *)ee->tbs.ext.extData;
+    if (ext == NULL || (ext->extFlags & HITLS_X509_EXT_FLAG_EXKUSAGE) == 0 || purpose == 0 ||
+        purpose == HITLS_X509_VFY_PURPOSE_ANY) {
+        return HITLS_PKI_SUCCESS;
+    }
+    switch (purpose) {
+        case HITLS_X509_VFY_PURPOSE_TLS_SERVER:
+            // id-kp-serverAuth
+            // TLS WWW server authentication
+            // Key usage bits that may be consistent: digitalSignature,keyEncipherment or keyAgreement
+            // GM/T (0015-2023) SM2 certificates allow digital signature, non-repudiation, key encipherment,
+            // data encipherment, and key agreement.
+            requiredKu =
+                (HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_KEY_ENCIPHERMENT | HITLS_X509_EXT_KU_KEY_AGREEMENT |
+                HITLS_X509_EXT_KU_NON_REPUDIATION | HITLS_X509_EXT_KU_DATA_ENCIPHERMENT);
+            eku = BSL_CID_KP_SERVERAUTH;
+            break;
+        case HITLS_X509_VFY_PURPOSE_TLS_CLIENT:
+            // id-kp-clientAuth
+            // TLS WWW client authentication
+            // Key usage bits that may be consistent: digitalSignature and/or keyAgreement
+            // GM/T (0015-2023) SM2 certificates allow digital signature,non-repudation, key encipherment,
+            // data encipherment, and key agreement.
+            requiredKu = (HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_KEY_AGREEMENT |
+                HITLS_X509_EXT_KU_KEY_ENCIPHERMENT | HITLS_X509_EXT_KU_NON_REPUDIATION |
+                HITLS_X509_EXT_KU_DATA_ENCIPHERMENT);
+            eku = BSL_CID_KP_CLIENTAUTH;
+            break;
+        case HITLS_X509_VFY_PURPOSE_EMAIL_SIGN:
+            // id-kp-emailProtection
+            // Email protection
+            // Key usage bits that may be consistent: digitalSignature,nonRepudiation,
+            // and/or (keyEncipherment or keyAgreement)
+            requiredKu = (HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_NON_REPUDIATION);
+            eku = BSL_CID_KP_EMAILPROTECTION;
+            break;
+        case HITLS_X509_VFY_PURPOSE_EMAIL_ENCRYPT:
+            // id-kp-emailProtection
+            // Email protection
+            // Key usage bits that may be consistent: digitalSignature,nonRepudiation,
+            // and/or (keyEncipherment or keyAgreement)
+            requiredKu = HITLS_X509_EXT_KU_KEY_ENCIPHERMENT;
+            eku = BSL_CID_KP_EMAILPROTECTION;
+            break;
+        case HITLS_X509_VFY_PURPOSE_CODE_SIGN:
+            // id-kp-codeSigning
+            // Signing of downloadable executable code
+            // Key usage bits that may be consistent: digitalSignature
+            requiredKu = HITLS_X509_EXT_KU_DIGITAL_SIGN;
+            eku = BSL_CID_KP_CODESIGNING;
+            break;
+        case HITLS_X509_VFY_PURPOSE_OCSP_SIGN:
+            // id-kp-OCSPSigning
+            // Signing OCSP responses
+            // Key usage bits that may be consistent: digitalSignature and/or nonRepudiation
+            requiredKu = (HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_NON_REPUDIATION);
+            eku = BSL_CID_KP_OCSPSIGNING;
+            break;
+        case HITLS_X509_VFY_PURPOSE_TIMESTAMPING:
+            // id-kp-timeStamping
+            // Binding the hash of an object to a time
+            // Key usage bits that may be consistent: digitalSignature and/or nonRepudiation
+            requiredKu = (HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_NON_REPUDIATION);
+            eku = BSL_CID_KP_TIMESTAMPING;
+            break;
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_INVALID_PURPOSE);
+            return HITLS_X509_ERR_VFY_INVALID_PURPOSE;
+    }
+
+    // Enforce both KU and EKU consistency as per RFC 5280 4.2.1.(12) final paragraph
+    return X509_VerifyExtKeyUsage(ee, requiredKu, eku);
+}
+
 int32_t X509_VerifyChainCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
 {
     HITLS_X509_Cert *issue = BSL_LIST_GET_LAST(chain);
@@ -1229,16 +1366,19 @@ int32_t X509_VerifyChainCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
         }
 #ifdef HITLS_CRYPTO_SM2
         ret = X509_StoreCheckSignature(&storeCtx->verifyParam.sm2UserId, issue->tbs.ealPubKey, cur->tbs.tbsRawData,
-            cur->tbs.tbsRawDataLen, &cur->signAlgId, &cur->signature);
+                                       cur->tbs.tbsRawDataLen, &cur->signAlgId, &cur->signature);
 #else
-        ret = X509_StoreCheckSignature(NULL, issue->tbs.ealPubKey, cur->tbs.tbsRawData,
-            cur->tbs.tbsRawDataLen, &cur->signAlgId, &cur->signature);
+        ret = X509_StoreCheckSignature(NULL, issue->tbs.ealPubKey, cur->tbs.tbsRawData, cur->tbs.tbsRawDataLen,
+                                       &cur->signAlgId, &cur->signature);
 #endif
         VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cur, depth, HITLS_X509_ERR_VFY_CERT_SIGN_FAIL);
+
+        // next
         issue = cur;
         cur = BSL_LIST_GET_PREV(chain);
         depth--;
-    };
+    }
+
     return HITLS_PKI_SUCCESS;
 }
 
@@ -1278,32 +1418,42 @@ static int32_t X509_GetVerifyCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509
     return HITLS_PKI_SUCCESS;
 }
 
-int32_t X509_VerifyCa(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
+int32_t X509_CheckExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
 {
-#ifndef HITLS_PKI_X509_VFY_CB
-    (void)storeCtx;
-#endif
-    HITLS_X509_Cert *cert = BSL_LIST_GET_FIRST(chain);
-    int32_t depth = 1;
-    for (cert = BSL_LIST_GET_NEXT(chain); cert != NULL; cert = BSL_LIST_GET_NEXT(chain)) {
-        HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
-        /**
-         * If the basic constraints extension is not present in a version 3 certificate,
-         * or the extension is present but the cA boolean is not asserted,
-         * then the certified public key MUST NOT be used to verify certificate signatures.
-         */
-        VFYCBK_FAIL_IF(((cert->tbs.version == HITLS_X509_VERSION_3) &&
-            ((certExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) == 0 || !certExt->isCa)), storeCtx, cert, depth,
-            HITLS_X509_ERR_VFY_INVALID_CA);
-        /**
-         * Conforming CAs MUST include this extension
-         * in certificates that contain public keys that are used to validate digital signatures on
-         * other public key certificates or CRLs.
-         */
-        VFYCBK_FAIL_IF(((certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) != 0) &&
-            ((certExt->keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN) == 0), storeCtx, cert, depth,
-            HITLS_X509_ERR_VFY_KU_NO_CERTSIGN);
-        depth++;
+    int32_t depth = BSL_LIST_COUNT(chain) - 1;
+    int32_t ret;
+    HITLS_X509_Cert *cur = BSL_LIST_GET_LAST(chain);
+
+    while (cur != NULL) {
+        HITLS_X509_CertExt *curExt = (HITLS_X509_CertExt *)cur->tbs.ext.extData;
+
+        if (depth > 0) {
+            /**
+             * If the basic constraints extension is not present in a version 3 certificate,
+             * or the extension is present but the cA boolean is not asserted,
+             * then the certified public key MUST NOT be used to verify certificate signatures.
+             */
+            VFYCBK_FAIL_IF(((cur->tbs.version == HITLS_X509_VERSION_3) &&
+                            ((curExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) == 0 || !curExt->isCa)),
+                           storeCtx, cur, depth, HITLS_X509_ERR_VFY_INVALID_CA);
+            /**
+             * Conforming CAs MUST include this extension in certificates that contain public keys
+             * that are used to validate digital signatures on other public key certificates or CRLs.
+             */
+            VFYCBK_FAIL_IF(((curExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) != 0) &&
+                               ((curExt->keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN) == 0),
+                           storeCtx, cur, depth, HITLS_X509_ERR_VFY_KU_NO_CERTSIGN);
+
+            if ((curExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) != 0 && curExt->isCa && curExt->maxPathLen >= 0) {
+                VFYCBK_FAIL_IF(curExt->maxPathLen < depth - 1, storeCtx, cur, depth,
+                               HITLS_X509_ERR_VFY_PATHLEN_EXCEEDED);
+            }
+        } else {
+            ret = X509_VerifyUsageEE(storeCtx, cur);
+            VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cur, depth, ret);
+        }
+        cur = BSL_LIST_GET_PREV(chain);
+        depth--;
     }
     return HITLS_PKI_SUCCESS;
 }
@@ -1327,7 +1477,7 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
     if (ret != HITLS_PKI_SUCCESS) {
         goto EXIT;
     }
-    ret = X509_VerifyCa(storeCtx, storeCtx->certChain);
+    ret = X509_CheckExt(storeCtx, storeCtx->certChain);
     if (ret != HITLS_PKI_SUCCESS) {
         goto EXIT;
     }

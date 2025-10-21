@@ -1374,3 +1374,658 @@ EXIT:
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
 }
 /* END_CASE */
+
+// root(pathLen=0);leaf->inter->root;non-self-issued intermediate CA appears → expected PATHLEN_EXCEEDED
+/* BEGIN_CASE */
+void SDV_X509_VFY_PATHLEN_FAIL_TC001(void)
+{
+    TestMemInit();
+
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(store, NULL);
+
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-v3/rootca.der", &root),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-v3/ca.der", &inter),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-v3/cert.der", &leaf),
+              HITLS_PKI_SUCCESS);
+
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, leaf,  BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, root,  BSL_LIST_POS_END), BSL_SUCCESS);
+
+    // Set root BasicConstraints: isCa=true, maxPathLen=0
+    HITLS_X509_CertExt *ext = (HITLS_X509_CertExt *)root->tbs.ext.extData;
+    ASSERT_TRUE(ext != NULL);
+    ext->extFlags  |= HITLS_X509_EXT_FLAG_BCONS;
+    ext->isCa       = true;
+    ext->maxPathLen = 0;
+
+    // Put the same root into the truststore (it must come from the store to be a "trusted root")
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root,
+        sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    // Disable strong CRL verification to avoid premature failure without CRL
+    int64_t clr = (int64_t)HITLS_X509_VFY_FLAG_CRL_ALL;
+#ifdef HITLS_X509_VFY_FLAG_CRL_DEV
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_CRL_DEV;
+#endif
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clr,
+        sizeof(clr)), HITLS_PKI_SUCCESS);
+
+    // Disable security bit check (SECBITS) to avoid being intercepted before pathLen/EKU
+    int64_t clrSec = (int64_t)HITLS_X509_VFY_FLAG_SECBITS;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clrSec,
+        sizeof(clrSec)), HITLS_PKI_SUCCESS);
+
+    // Set the time
+    int64_t now = time(NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)), HITLS_PKI_SUCCESS);
+
+    // Inter(CA) fails even when pathLen=0
+    int32_t ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_PATHLEN_EXCEEDED);
+
+    // Release the internally constructed certChain to avoid leakage
+    HITLS_X509_List *built = NULL;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built,
+        sizeof(built)), HITLS_PKI_SUCCESS);
+    if (built) {
+        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        store->certChain = NULL;
+    }
+
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+// root(pathLen=1),leaf->inter->root, allow 1 "non-self-issued intermediate CA", expect verification to succeed
+/* BEGIN_CASE */
+void SDV_X509_VFY_PATHLEN_PASS_TC002(void)
+{
+    TestMemInit();
+
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(store, NULL);
+
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-v3/rootca.der", &root),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-v3/ca.der", &inter),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-v3/cert.der", &leaf),
+              HITLS_PKI_SUCCESS);
+
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, leaf,  BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, root,  BSL_LIST_POS_END), BSL_SUCCESS);
+
+    HITLS_X509_CertExt *ext = (HITLS_X509_CertExt *)root->tbs.ext.extData;
+    ASSERT_TRUE(ext != NULL);
+    ext->extFlags  |= HITLS_X509_EXT_FLAG_BCONS;
+    ext->isCa       = true;
+    ext->maxPathLen = 1;
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
+        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    int64_t clr = (int64_t)HITLS_X509_VFY_FLAG_CRL_ALL;
+#ifdef HITLS_X509_VFY_FLAG_CRL_DEV
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_CRL_DEV;
+#endif
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clr, sizeof(clr)),
+              HITLS_PKI_SUCCESS);
+    int64_t clrSec = (int64_t)HITLS_X509_VFY_FLAG_SECBITS;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clrSec, sizeof(clrSec)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t now = time(NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)), HITLS_PKI_SUCCESS);
+
+    int32_t ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    HITLS_X509_List *built = NULL;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
+              HITLS_PKI_SUCCESS);
+    if (built) {
+        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        store->certChain = NULL;
+    }
+
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+// root(maxPathLen = -1) is considered "unlimited" ,should pass
+/* BEGIN_CASE */
+void SDV_X509_VFY_PATHLEN_UNLIMITED_PASS_TC003(void)
+{
+    TestMemInit();
+
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(store, NULL);
+
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-pss-v3/ca.der", &root),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-pss-v3/inter.der", &inter),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/rsa-pss-v3/end.der", &leaf),
+              HITLS_PKI_SUCCESS);
+
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, leaf,  BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, root,  BSL_LIST_POS_END), BSL_SUCCESS);
+
+    HITLS_X509_CertExt *ext = (HITLS_X509_CertExt *)root->tbs.ext.extData;
+    ASSERT_TRUE(ext != NULL);
+    ext->extFlags  |= HITLS_X509_EXT_FLAG_BCONS;
+    ext->isCa       = true;
+    ext->maxPathLen = -1;
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
+        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    int64_t clr = (int64_t)HITLS_X509_VFY_FLAG_CRL_ALL;
+#ifdef HITLS_X509_VFY_FLAG_CRL_DEV
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_CRL_DEV;
+#endif
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clr, sizeof(clr)),
+              HITLS_PKI_SUCCESS);
+    int64_t clrSec = (int64_t)HITLS_X509_VFY_FLAG_SECBITS;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clrSec, sizeof(clrSec)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t now = time(NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)), HITLS_PKI_SUCCESS);
+
+    int32_t ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    HITLS_X509_List *built = NULL;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
+              HITLS_PKI_SUCCESS);
+    if (built) {
+        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        store->certChain = NULL;
+    }
+
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/* Ensure pathLenConstraint is rejected when the issuing CA lacks keyCertSign per RFC 5280. */
+/* BEGIN_CASE */
+void SDV_X509_VFY_PATHLEN_KEYCERTSIGN_MISSING_FAIL_TC004(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(store, NULL);
+
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/anyEKU/rootca.der", &root),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/anyEKU/ca.der", &inter),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/anyEKU/anyeku_good.der",
+        &leaf), HITLS_PKI_SUCCESS);
+
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, leaf, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, root, BSL_LIST_POS_END), BSL_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
+        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    int64_t clr = (int64_t)HITLS_X509_VFY_FLAG_CRL_ALL;
+#ifdef HITLS_X509_VFY_FLAG_CRL_DEV
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_CRL_DEV;
+#endif
+#ifdef HITLS_X509_VFY_FLAG_OCSP
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_OCSP;
+#endif
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clr, sizeof(clr)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t clrSec = (int64_t)HITLS_X509_VFY_FLAG_SECBITS;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clrSec, sizeof(clrSec)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t now = time(NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)), HITLS_PKI_SUCCESS);
+
+    HITLS_X509_CertExt *interExt = (HITLS_X509_CertExt *)inter->tbs.ext.extData;
+    ASSERT_TRUE(interExt != NULL);
+    interExt->extFlags |= HITLS_X509_EXT_FLAG_BCONS;
+    interExt->isCa = true;
+    interExt->extFlags |= HITLS_X509_EXT_FLAG_KUSAGE;
+    interExt->keyUsage &= ~HITLS_X509_EXT_KU_KEY_CERT_SIGN;
+
+    int32_t ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_KU_NO_CERTSIGN);
+
+    HITLS_X509_List *built = NULL;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
+              HITLS_PKI_SUCCESS);
+    if (built) {
+        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        store->certChain = NULL;
+    }
+
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+// Leaf: client_good.der (EKU=clientAuth, KU includes digitalSignature) → TLS_CLIENT should pass
+/* BEGIN_CASE */
+void SDV_X509_VFY_TLS_CLIENT_KU_EKU_BOTH_MATCH_PASS_TC01(void)
+{
+    TestMemInit();
+
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(store, NULL);
+
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/rootca.der", &root),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/ca.der", &inter),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/client_good.der", &leaf),
+              HITLS_PKI_SUCCESS);
+
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, leaf,  BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, root,  BSL_LIST_POS_END), BSL_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
+        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    /* Disable CRL/OCSP, SECBITS interference; set usage to TLS_SERVER; set time */
+    int64_t clr = (int64_t)HITLS_X509_VFY_FLAG_CRL_ALL;
+#ifdef HITLS_X509_VFY_FLAG_CRL_DEV
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_CRL_DEV;
+#endif
+#ifdef HITLS_X509_VFY_FLAG_OCSP
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_OCSP;
+#endif
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clr, sizeof(clr)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t clrSec = (int64_t)HITLS_X509_VFY_FLAG_SECBITS;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clrSec, sizeof(clrSec)),
+              HITLS_PKI_SUCCESS);
+    int32_t purpose = HITLS_X509_VFY_PURPOSE_TLS_CLIENT;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PURPOSE, &purpose, sizeof(purpose)),
+              HITLS_PKI_SUCCESS);
+    int64_t now = time(NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)), HITLS_PKI_SUCCESS);
+
+    int32_t ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    HITLS_X509_List *built = NULL;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
+              HITLS_PKI_SUCCESS);
+    if (built) {
+        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        store->certChain = NULL;
+    }
+
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+// Leaf: client_badku.der (EKU=clientAuth, but KU has no digitalSignature) → expect KU_UNMATCH
+/* BEGIN_CASE */
+void SDV_X509_VFY_TLS_CLIENT_EKU_ONLY_KU_MISSING_FAIL_TC02(void)
+{
+    TestMemInit();
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(store, NULL);
+
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/rootca.der", &root),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/ca.der", &inter),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/client_badku.der", &leaf),
+              HITLS_PKI_SUCCESS);
+
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, leaf,  BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, root,  BSL_LIST_POS_END), BSL_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
+        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    int64_t clr = (int64_t)HITLS_X509_VFY_FLAG_CRL_ALL;
+#ifdef HITLS_X509_VFY_FLAG_CRL_DEV
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_CRL_DEV;
+#endif
+#ifdef HITLS_X509_VFY_FLAG_OCSP
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_OCSP;
+#endif
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clr, sizeof(clr)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t clrSec = (int64_t)HITLS_X509_VFY_FLAG_SECBITS;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clrSec, sizeof(clrSec)),
+              HITLS_PKI_SUCCESS);
+    int32_t purpose = HITLS_X509_VFY_PURPOSE_TLS_CLIENT;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PURPOSE, &purpose, sizeof(purpose)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t now = time(NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)), HITLS_PKI_SUCCESS);
+
+    int32_t ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_PURPOSE_UNMATCH);
+
+    HITLS_X509_List *built = NULL;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
+              HITLS_PKI_SUCCESS);
+    if (built) {
+        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        store->certChain = NULL;
+    }
+
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+// Leaf: server_good.der (EKU=serverAuth, KU includes digitalSignature, keyEncipherment) → TLS_SERVER should pass
+/* BEGIN_CASE */
+void SDV_X509_VFY_TLS_SERVER_KU_EKU_BOTH_MATCH_PASS_TC03(void)
+{
+    TestMemInit();
+
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(store, NULL);
+
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/rootca.der", &root),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/ca.der", &inter),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/server_good.der", &leaf),
+              HITLS_PKI_SUCCESS);
+
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, leaf,  BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, root,  BSL_LIST_POS_END), BSL_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
+        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    int64_t clr = (int64_t)HITLS_X509_VFY_FLAG_CRL_ALL;
+#ifdef HITLS_X509_VFY_FLAG_CRL_DEV
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_CRL_DEV;
+#endif
+#ifdef HITLS_X509_VFY_FLAG_OCSP
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_OCSP;
+#endif
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clr, sizeof(clr)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t clrSec = (int64_t)HITLS_X509_VFY_FLAG_SECBITS;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clrSec, sizeof(clrSec)),
+              HITLS_PKI_SUCCESS);
+    int32_t purpose = HITLS_X509_VFY_PURPOSE_TLS_SERVER;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PURPOSE, &purpose, sizeof(purpose)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t now = time(NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)), HITLS_PKI_SUCCESS);
+
+    int32_t ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    HITLS_X509_List *built = NULL;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
+              HITLS_PKI_SUCCESS);
+    if (built) {
+        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        store->certChain = NULL;
+    }
+
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+// Leaf: server_badku.der (EKU=serverAuth, but KU=nonRepudiation) → expecting KU_UNMATCH
+/* BEGIN_CASE */
+void SDV_X509_VFY_TLS_SERVER_EKU_ONLY_KU_MISSING_FAIL_TC04(void)
+{
+    TestMemInit();
+
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(store, NULL);
+
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/rootca.der", &root),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/ca.der", &inter),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/server_badku.der", &leaf),
+              HITLS_PKI_SUCCESS);
+
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, leaf,  BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, root,  BSL_LIST_POS_END), BSL_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
+        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    int64_t clr = (int64_t)HITLS_X509_VFY_FLAG_CRL_ALL;
+#ifdef HITLS_X509_VFY_FLAG_CRL_DEV
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_CRL_DEV;
+#endif
+#ifdef HITLS_X509_VFY_FLAG_OCSP
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_OCSP;
+#endif
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clr, sizeof(clr)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t clrSec = (int64_t)HITLS_X509_VFY_FLAG_SECBITS;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clrSec, sizeof(clrSec)),
+              HITLS_PKI_SUCCESS);
+    int32_t purpose = HITLS_X509_VFY_PURPOSE_TLS_SERVER;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PURPOSE, &purpose, sizeof(purpose)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t now = time(NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)), HITLS_PKI_SUCCESS);
+
+    int32_t ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_PURPOSE_UNMATCH);
+
+    HITLS_X509_List *built = NULL;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
+              HITLS_PKI_SUCCESS);
+    if (built) {
+        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        store->certChain = NULL;
+    }
+
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+// set any-purpose, certificate module does not verify any ext key usage of the certificate.
+/* BEGIN_CASE */
+void SDV_X509_VFY_ANYEKU_EKU_ALLOW_KU_MATCH_PASS_TC05(void)
+{
+    TestMemInit();
+
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(store, NULL);
+
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/anyEKU/rootca.der", &root),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/anyEKU/ca.der", &inter),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/anyEKU/anyeku_good.der",
+        &leaf), HITLS_PKI_SUCCESS);
+
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, leaf,  BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, root,  BSL_LIST_POS_END), BSL_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
+        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    int64_t clr = (int64_t)HITLS_X509_VFY_FLAG_CRL_ALL;
+#ifdef HITLS_X509_VFY_FLAG_CRL_DEV
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_CRL_DEV;
+#endif
+#ifdef HITLS_X509_VFY_FLAG_OCSP
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_OCSP;
+#endif
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clr, sizeof(clr)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t clrSec = (int64_t)HITLS_X509_VFY_FLAG_SECBITS;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clrSec, sizeof(clrSec)),
+              HITLS_PKI_SUCCESS);
+    int32_t purpose = HITLS_X509_VFY_PURPOSE_ANY;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PURPOSE, &purpose, sizeof(purpose)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t now = time(NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)), HITLS_PKI_SUCCESS);
+
+    int32_t ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    HITLS_X509_List *built = NULL;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
+              HITLS_PKI_SUCCESS);
+    if (built) {
+        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        store->certChain = NULL;
+    }
+
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+// anyeku_badku.der: EKU=anyExtendedKeyUsage but KU=keyEncipherment(no digitalSignature) → expected KU_UNMATCH
+/* BEGIN_CASE */
+void SDV_X509_VFY_ANYEKU_KU_MISSING_FAIL_TC06(void)
+{
+    TestMemInit();
+
+    HITLS_X509_StoreCtx *store = HITLS_X509_NewStoreCtxMock();
+    ASSERT_NE(store, NULL);
+
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/anyEKU/rootca.der", &root),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/anyEKU/ca.der", &inter),
+              HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/eku_suite/anyEKU/anyeku_badku.der",
+        &leaf), HITLS_PKI_SUCCESS);
+
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, leaf,  BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, root,  BSL_LIST_POS_END), BSL_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
+        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    int64_t clr = (int64_t)HITLS_X509_VFY_FLAG_CRL_ALL;
+#ifdef HITLS_X509_VFY_FLAG_CRL_DEV
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_CRL_DEV;
+#endif
+#ifdef HITLS_X509_VFY_FLAG_OCSP
+    clr |= (int64_t)HITLS_X509_VFY_FLAG_OCSP;
+#endif
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clr, sizeof(clr)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t clrSec = (int64_t)HITLS_X509_VFY_FLAG_SECBITS;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &clrSec, sizeof(clrSec)),
+              HITLS_PKI_SUCCESS);
+    int32_t purpose = HITLS_X509_VFY_PURPOSE_TLS_CLIENT;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PURPOSE, &purpose, sizeof(purpose)),
+              HITLS_PKI_SUCCESS);
+    int64_t now = time(NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)), HITLS_PKI_SUCCESS);
+
+    int32_t ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_PURPOSE_UNMATCH);
+
+    HITLS_X509_List *built = NULL;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
+              HITLS_PKI_SUCCESS);
+    if (built) {
+        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        store->certChain = NULL;
+    }
+
+EXIT:
+    HITLS_X509_FreeStoreCtxMock(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */

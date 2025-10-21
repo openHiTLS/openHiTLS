@@ -103,6 +103,7 @@ BslOidInfo g_oidTable[] = {
     {{3, "\125\35\23", BSL_OID_GLOBAL}, "BasicConstraints", BSL_CID_CE_BASICCONSTRAINTS},
     {{3, "\125\35\37", BSL_OID_GLOBAL}, "CRLDistributionPoints", BSL_CID_CE_CRLDISTRIBUTIONPOINTS},
     {{3, "\125\35\45", BSL_OID_GLOBAL}, "ExtendedKeyUsage", BSL_CID_CE_EXTKEYUSAGE},
+    {{4, "\125\35\45\0", BSL_OID_GLOBAL}, "AnyExtendedKeyUsage", BSL_CID_ANYEXTENDEDKEYUSAGE},
     {{8, "\53\6\1\5\5\7\3\1", BSL_OID_GLOBAL}, "ServerAuth", BSL_CID_KP_SERVERAUTH},
     {{8, "\53\6\1\5\5\7\3\2", BSL_OID_GLOBAL}, "ClientAuth", BSL_CID_KP_CLIENTAUTH},
     {{8, "\53\6\1\5\5\7\3\3", BSL_OID_GLOBAL}, "CodeSigning", BSL_CID_KP_CODESIGNING},

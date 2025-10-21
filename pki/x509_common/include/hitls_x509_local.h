@@ -48,6 +48,8 @@ extern "C" {
 #define HITLS_X509_EXT_FLAG_KUSAGE (1 << 0)
 /* Identifies the basic constraints extension in the current structure */
 #define HITLS_X509_EXT_FLAG_BCONS (1 << 1)
+/* Identifies the extended keyusage extension in the current structure */
+#define HITLS_X509_EXT_FLAG_EXKUSAGE (1 << 2)
 
 #define HITLS_X509_GN_OTHER (HITLS_X509_GN_IP + 1)
 #define HITLS_X509_GN_X400  (HITLS_X509_GN_OTHER + 1)
@@ -75,6 +77,8 @@ typedef struct _HITLS_X509_CertExt {
     int32_t maxPathLen;
     // key usage ext
     uint32_t keyUsage;
+    // extended key usage ext
+    HITLS_X509_ExtExKeyUsage exKeyUsage;
 } HITLS_X509_CertExt;
 
 typedef enum {

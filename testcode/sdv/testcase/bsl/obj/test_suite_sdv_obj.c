@@ -312,7 +312,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_BSL_OID_LENGTH_CHECK_TC001()
 {
-    static const int32_t KNOWN_EXCEPTIONS = 5;
+    static const int32_t KNOWN_EXCEPTIONS = 6;
     
     int32_t oidIndex = 0;
     int32_t totalCount = 0;

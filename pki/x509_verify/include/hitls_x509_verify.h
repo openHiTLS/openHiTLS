@@ -38,6 +38,7 @@ typedef struct _HITLS_X509_VerifyParam {
     uint32_t securityBits;
     int64_t time;
     uint64_t flags;
+    int32_t purpose;
 #ifdef HITLS_CRYPTO_SM2
     BSL_Buffer sm2UserId;
 #endif
