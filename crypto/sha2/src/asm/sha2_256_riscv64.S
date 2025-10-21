@@ -16,6 +16,8 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SHA256
 
+ .option    arch, +zbb
+
 .section .rodata
 .balign 64
 .LK256:

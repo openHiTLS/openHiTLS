@@ -71,6 +71,9 @@ build_hitls_code()
     elif [[ $get_arch = "armv8_le" ]]; then
         echo "Compile: env=armv8, asm + c, little endian, 64bits"
         python3 ../configure.py --lib_type ${LIB_TYPE} --asm_type armv8 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp}
+    elif [[ $get_arch = "riscv64" ]]; then
+        echo "Compile: env=riscv64, asm + c, little endian, 64bits"
+        python3 ../configure.py --lib_type ${LIB_TYPE} --asm_type riscv64 --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp}
     else
         echo "Compile: env=$get_arch, c, little endian, 64bits"
         python3 ../configure.py --lib_type ${LIB_TYPE} --add_options="$add_options" --del_options="$del_options" --add_link_flags="-ldl" ${enable_sctp}
@@ -102,6 +105,9 @@ parse_option()
                 ;;
             "armv8_le")
                 get_arch="armv8_le"
+                ;;
+            "riscv64")
+                get_arch="riscv64"
                 ;;
             "pure_c")
                 get_arch="C"

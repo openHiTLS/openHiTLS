@@ -16,6 +16,8 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SHA512
 
+ .option    arch, +zbb
+
 .section .rodata
 .align 3
 .LK512:
