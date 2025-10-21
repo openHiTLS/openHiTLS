@@ -84,6 +84,9 @@ static void BinLogFixFunc(uint32_t logId, uint32_t logLevel, uint32_t logType,
     uint8_t ucTemp;
     uint8_t ucNo = 0;
 
+    if (g_LogOutput == NULL) {
+        return;
+    }
     fprintf(g_LogOutput, "HITLS_BIN_LOG[FIXLEN]: logId=%u, logLevel=%u, logType=%u.\n", logId, logLevel, logType);
 
     /* Search for all format specifiers */
@@ -127,6 +130,9 @@ static void BinLogVarFunc(uint32_t logId, uint32_t logLevel, uint32_t logType, v
     uint8_t ucTemp;
     uint8_t ucValidNo = 0;
 
+    if (g_LogOutput == NULL) {
+        return;
+    }
     fprintf(g_LogOutput, "HITLS_BIN_LOG[VARLEN]: logId=%u, logLevel=%u, logType=%u.\n", logId, logLevel, logType);
 
     while (*pucFormat != '\0') {
@@ -439,5 +445,6 @@ void SDV_BSL_BIN_LOG_FUNC_TC001(void)
 
 EXIT:
     fclose(g_LogOutput); // flush and close
+    g_LogOutput = NULL;
 }
 /* END_CASE */

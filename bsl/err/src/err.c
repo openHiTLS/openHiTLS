@@ -159,7 +159,7 @@ void BSL_ERR_PushError(int32_t err, const char *file, uint32_t lineNo)
         /* push success is not allowed. */
         return;
     }
-
+    (void)BSL_SAL_ThreadRunOnce(&g_isErrInit, ErrAutoInit);
     int32_t ret = BSL_SAL_ThreadWriteLock(g_errLock);
     if (ret != BSL_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05007, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

@@ -240,14 +240,14 @@ void CRYPT_EAL_Cleanup(uint64_t opts)
 {
     uint64_t initOpt = opts;
 #if defined(HITLS_EAL_INIT_OPTS)
-    initOpt = HITLS_EAL_INIT_OPTS;
+    initOpt = CRYPT_EAL_INIT_ALL;
 #endif
 
     ProviderModuleFree(initOpt);
     RandModuleFree(initOpt);
     BslModuleFree(initOpt);
     GlobalLockFree(initOpt);
-    g_ealInitOpts &= (~opts);
+    g_ealInitOpts &= (~initOpt);
 }
 
 #ifdef HITLS_CRYPTO_ASM_CHECK
