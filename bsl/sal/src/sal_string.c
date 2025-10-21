@@ -20,28 +20,26 @@
 #include <stdint.h>
 #include <string.h>
 #include "securec.h"
-
 #include "bsl_errno.h"
+#include "bsl_sal.h"
 
 int32_t BSL_SAL_StrcaseCmp(const char *str1, const char *str2)
 {
-    if (str1 == NULL || str2 == NULL) {
-        return BSL_NULL_INPUT;
-    }
     const char *tmpStr1 = str1;
     const char *tmpStr2 = str2;
     uint8_t t1 = 0;
     uint8_t t2 = 0;
-    uint8_t sub = 'a' - 'A';
-
+    if (str1 == NULL || str2 == NULL) {
+        return BSL_NULL_INPUT;
+    }
     for (; (*tmpStr1 != '\0') && (*tmpStr2 != '\0'); tmpStr1++, tmpStr2++) {
         t1 = (uint8_t)*tmpStr1;
         t2 = (uint8_t)*tmpStr2;
-        if (t1 >= 'A' && t1 <= 'Z') {
-            t1 = t1 + sub;
+        if (t1 >= 0x41 && t1 <= 0x5A) {    // 'A' is 0x41, 'Z' is 0x5A
+            t1 = t1 + 0x20;                // 'a' - 'A' is  0x20
         }
-        if (t2 >= 'A' && t2 <= 'Z') {
-            t2 = t2 + sub;
+        if (t2 >= 0x41 && t2 <= 0x5A) {
+            t2 = t2 + 0x20;
         }
         if (t1 != t2) {
             break;
@@ -84,8 +82,8 @@ uint32_t BSL_SAL_Strnlen(const char *string, uint32_t count)
         return 0;
     }
 
-    for (n = 0; (n < count) && (*pscTemp != '\0'); n++) {
-        pscTemp++;
+    for (n = 0; (n < count) && (*pscTemp != '\0'); n++, pscTemp++) {
+        // nothing
     }
 
     return n;

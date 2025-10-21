@@ -25,8 +25,7 @@
 #include "bsl_base64.h"
 #include "bsl_pem_local.h"
 #include "bsl_pem_internal.h"
-
-#define PEM_LINE_LEN 64
+#include "bsl_types.h"
 
 int32_t BSL_PEM_GetPemRealEncode(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, char **realEncode,
     uint32_t *realLen)
@@ -38,6 +37,7 @@ int32_t BSL_PEM_GetPemRealEncode(char **encode, uint32_t *encodeLen, BSL_PEM_Sym
         return BSL_PEM_INVALID;
     }
     if (!BSL_PEM_IsPemFormat(*encode, *encodeLen)) {
+        BSL_ERR_PUSH_ERROR(BSL_PEM_INVALID);
         return BSL_PEM_INVALID;
     }
     char *begin = strstr(*encode, symbol->head);
@@ -67,7 +67,7 @@ int32_t BSL_PEM_GetAsn1Encode(const char *encode, const uint32_t encodeLen, uint
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    int32_t ret = BSL_BASE64_Decode(encode, encodeLen, asn1, &len);
+    int32_t ret = (int32_t)BSL_BASE64_Decode(encode, encodeLen, asn1, &len);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_Free(asn1);
@@ -77,6 +77,8 @@ int32_t BSL_PEM_GetAsn1Encode(const char *encode, const uint32_t encodeLen, uint
     *asn1Len = len;
     return BSL_SUCCESS;
 }
+
+#define PEM_LINE_LEN 64
 
 static void PemFormatBase64(char *src, uint32_t srcLen, char **des)
 {
@@ -111,7 +113,7 @@ int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_S
     char *tmp = buff;
     char *res = NULL;
     do {
-        ret = BSL_BASE64_Encode(asn1Encode, asn1Len, tmp, &len);
+        ret = (int32_t)BSL_BASE64_Encode(asn1Encode, asn1Len, tmp, &len);
         if (ret != BSL_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             break;
@@ -164,6 +166,44 @@ int32_t BSL_PEM_DecodePemToAsn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symb
     *encodeLen = nextEncodeLen;
     return BSL_SUCCESS;
 }
+
+#ifdef HITLS_BSL_PEM_ENCRYPTED
+int32_t BSL_PEM_DecodeEncryptedPemToAsn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol,
+    uint8_t **asn1Encode, uint32_t *asn1Len, const uint8_t *pwd, uint32_t pwdLen, EncryptedPemCb cb)
+{
+    char *nextEncode = *encode;
+    uint32_t nextEncodeLen = *encodeLen;
+    char *realEncode = NULL;
+    uint32_t realLen;
+
+    int32_t ret = BSL_PEM_GetPemRealEncode(&nextEncode, &nextEncodeLen, symbol, &realEncode, &realLen);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+
+    // check
+    static const char procStr[] = "Proc-Type:";
+    uint32_t tmpLen = (uint32_t)strspn(realEncode, " \t\r\n");
+    realEncode += tmpLen;
+    BSL_Buffer asn1Buff = {0};
+
+    if (strncmp(realEncode, procStr, sizeof(procStr) - 1) != 0) {
+        realEncode -= tmpLen;
+        ret = BSL_PEM_GetAsn1Encode(realEncode, realLen, &asn1Buff.data, &asn1Buff.dataLen);
+    } else {
+        ret = cb(realEncode, pwd, pwdLen, &asn1Buff);
+    }
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    *encode = nextEncode;
+    *encodeLen = nextEncodeLen;
+    *asn1Encode = asn1Buff.data;
+    *asn1Len = asn1Buff.dataLen;
+    return BSL_SUCCESS;
+}
+#endif
 
 /**
  *  reference rfc7468

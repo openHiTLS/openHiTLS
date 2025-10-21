@@ -20,10 +20,13 @@
 #include "crypt_drbg.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
+#include "crypt_types.h"
+#include "crypt_utils.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
+#include "eal_rand_local.h"
 #include "crypt_ealinit.h"
-#include "bsl_params.h"
+#include "crypt_params_key.h"
 #include "crypt_default_provider.h"
 
 #ifdef HITLS_CRYPTO_ENTROPY
@@ -49,7 +52,7 @@ static int32_t GetDefaultSeed(BSL_Param *param)
 }
 #endif
 
-void *CRYPT_EAL_DefRandNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId, BSL_Param *param)
+static void *DRBG_DefRandNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId, BSL_Param *param)
 {
     void *libCtx = provCtx == NULL ? NULL : provCtx->libCtx;
     void *randCtx = NULL;
@@ -68,9 +71,10 @@ void *CRYPT_EAL_DefRandNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId, BSL_
      * If you use a registered entropy source, the getEntropy callback cannot be NULL,
      * and if getEntropy is NULL, cleanEntropy, getNonce, cleanNonce, etc. must be NULL
      */
-    if (getEnt == NULL && ((cleanEnt != NULL && cleanEnt->value != NULL) ||
+    bool nullInput = getEnt == NULL && ((cleanEnt != NULL && cleanEnt->value != NULL) ||
         (getNonce != NULL && getNonce->value != NULL) || (cleanNonce != NULL && cleanNonce->value != NULL) ||
-        (ctx != NULL && ctx->value != NULL))) {
+        (ctx != NULL && ctx->value != NULL));
+    if (nullInput == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return NULL;
     }
@@ -81,13 +85,13 @@ void *CRYPT_EAL_DefRandNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId, BSL_
             BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
             return NULL;
         }
-        return DRBG_New(libCtx, algId, defaultParam);
+        return DRBG_NewEx(libCtx, algId, defaultParam);
 #else
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return NULL;
 #endif
     }
-    randCtx = DRBG_New(libCtx, algId, param);
+    randCtx = DRBG_NewEx(libCtx, algId, param);
     if (randCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);
         return NULL;
@@ -96,11 +100,11 @@ void *CRYPT_EAL_DefRandNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId, BSL_
 }
 
 const CRYPT_EAL_Func g_defEalRand[] = {
-    {CRYPT_EAL_IMPLRAND_DRBGNEWCTX, (CRYPT_EAL_ImplRandDrbgNewCtx)CRYPT_EAL_DefRandNewCtx},
-    {CRYPT_EAL_IMPLRAND_DRBGINST, (CRYPT_EAL_ImplRandDrbgInst)DRBG_Instantiate},
+    {CRYPT_EAL_IMPLRAND_DRBGNEWCTX, (CRYPT_EAL_ImplRandDrbgNewCtx)DRBG_DefRandNewCtx},
+    {CRYPT_EAL_IMPLRAND_DRBGINST, (CRYPT_EAL_ImplRandDrbgInst)DRBG_InstantiateWrapper},
     {CRYPT_EAL_IMPLRAND_DRBGUNINST, (CRYPT_EAL_ImplRandDrbgUnInst)DRBG_Uninstantiate},
-    {CRYPT_EAL_IMPLRAND_DRBGGEN, (CRYPT_EAL_ImplRandDrbgGen)DRBG_GenerateBytes},
-    {CRYPT_EAL_IMPLRAND_DRBGRESEED, (CRYPT_EAL_ImplRandDrbgReSeed)DRBG_Reseed},
+    {CRYPT_EAL_IMPLRAND_DRBGGEN, (CRYPT_EAL_ImplRandDrbgGen)DRBG_GenerateBytesWrapper},
+    {CRYPT_EAL_IMPLRAND_DRBGRESEED, (CRYPT_EAL_ImplRandDrbgReSeed)DRBG_ReSeedWrapper},
     {CRYPT_EAL_IMPLRAND_DRBGCTRL, (CRYPT_EAL_ImplRandDrbgCtrl)DRBG_Ctrl},
     {CRYPT_EAL_IMPLRAND_DRBGFREECTX, (CRYPT_EAL_ImplRandDrbgFreeCtx)DRBG_Free},
     CRYPT_EAL_FUNC_END,

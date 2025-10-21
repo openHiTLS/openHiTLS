@@ -23,14 +23,16 @@
 #include "crypt_errno.h"
 #include "crypt_algid.h"
 #include "crypt_local_types.h"
-#ifdef HITLS_BSL_PARAMS
 #include "bsl_params.h"
 #include "crypt_params_key.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+
+#define BITS_PER_BYTE   8
+#define SHIFTS_PER_BYTE 3
+#define BITSIZE(t)      (sizeof(t) * BITS_PER_BYTE)
 
 #if defined(__GNUC__) || defined(__clang__)
     #define LIKELY(x) __builtin_expect(!!(x), 1)
@@ -44,9 +46,10 @@ extern "C" {
     #define ALIGN64
 #endif
 
-#define BITS_PER_BYTE   8
-#define SHIFTS_PER_BYTE 3
-#define BITSIZE(t)      (sizeof(t) * BITS_PER_BYTE)
+#define FORCE_ADDR_ALIGN 1
+#if defined(__x86_64) || defined(__x86_64__) || defined(__aarch64__)
+    #undef FORCE_ADDR_ALIGN
+#endif
 
 #define PUT_UINT32_BE(v, p, i)               \
 do {                                         \
@@ -106,13 +109,6 @@ do {                                         \
 /**
  * Check whether conditions are met. If yes, an error code is returned.
  */
-#define RETURN_RET_IF(condition, ret) \
-    do {                              \
-        if (condition) {              \
-            BSL_ERR_PUSH_ERROR(ret);  \
-            return ret;               \
-        }                             \
-    } while (0)
 
 /**
  * If the return value of func is not CRYPT_SUCCESS, go to the label ERR.
@@ -142,6 +138,15 @@ do {                                         \
 /**
  * Check whether conditions are met. If yes, an error code is returned.
  */
+#define RETURN_RET_IF(condition, ret) \
+    do {                              \
+        if (condition) {              \
+            BSL_ERR_PUSH_ERROR(ret);  \
+            return ret;               \
+        }                             \
+    } while (0)
+
+
 #define RETURN_RET_IF_ERR(func, ret)   \
     do {                               \
         (ret) = (func);                \
@@ -160,11 +165,9 @@ do {                                         \
     } while (0)
 
 #define BREAK_IF(condition) \
-    do {                    \
         if (condition) {    \
             break;          \
-        }                   \
-    } while (0)
+        }
 
 /**
  * If src is not NULL, then execute the fun function. If the operation fails, go to the label ERR.
@@ -206,23 +209,22 @@ do {                                         \
  * @param r [out] Output the result data.
  * @param len [IN] Output result data length
  */
-#define DATA32_XOR(a, b, r, len)                                \
-    do {                                                        \
-        uint32_t ii;                                            \
-        uintptr_t aPtr = (uintptr_t)(a);                        \
-        uintptr_t bPtr = (uintptr_t)(b);                        \
-        uintptr_t rPtr = (uintptr_t)(r);                        \
-        if (((aPtr & 0x3) != 0) || ((bPtr & 0x3) != 0) || ((rPtr & 0x3) != 0)) {     \
-            for (ii = 0; ii < (len); ii++) {                    \
-                (r)[ii] = (a)[ii] ^ (b)[ii];                    \
-            }                                                   \
-        } else {                                                \
-            for (ii = 0; ii < (len); ii += 4) {                 \
-                *(uint32_t *)((r) + ii) = (*(const uint32_t *)((a) + ii)) ^ (*(const uint32_t *)((b) + ii)); \
-            }                                                   \
-        }                                                       \
+#ifdef FORCE_ADDR_ALIGN
+#define DATA32_XOR(a, b, r, len)                  \
+    do {                                          \
+        for (uint32_t ii = 0; ii < (len); ii++) { \
+            (r)[ii] = (a)[ii] ^ (b)[ii];          \
+        }                                         \
     } while (0)
-
+#else
+#define DATA32_XOR(a, b, r, len)                                                                         \
+    do {                                                                                                 \
+        for (uint32_t ii = 0; ii < (len); ii += 4) {                                                     \
+            *(uint32_t *)((uintptr_t)(r) + ii) =                                                         \
+                (*(const uint32_t *)((uintptr_t)(a) + ii)) ^ (*(const uint32_t *)((uintptr_t)(b) + ii)); \
+        }                                                                                                \
+    } while (0)
+#endif
 /**
  * @brief Perform the XOR operation on 64 bits of data in two arrays each time.
  * Ensure that the input and output are integer multiples of 64 bits.
@@ -245,7 +247,7 @@ do {                                         \
             }                                                   \
         } else {                                                \
             for (ii = 0; ii < (len); ii += 8) {                 \
-                *(uint64_t *)((r) + ii) = (*(const uint64_t *)((a) + ii)) ^ (*(const uint64_t *)((b) + ii)); \
+                *(uint64_t *)((rPtr) + ii) = (*(const uint64_t *)((aPtr) + ii)) ^ (*(const uint64_t *)((bPtr) + ii)); \
             }                                                   \
         }                                                       \
     } while (0)
@@ -385,11 +387,11 @@ int32_t CRYPT_PkeySetMdAttr(const char *mdAttr, uint32_t len, char **pkeyMdAttr)
 // Interpret p + i as little endian.
 #define GET_UINT32_LE(p, i)         \
 (                                   \
-    (((uintptr_t)(p) & 0x7) != 0) ? ((uint32_t)((const uint8_t *)(p))[(i) + 3] << 24) |    \
-                                    ((uint32_t)((const uint8_t *)(p))[(i) + 2] << 16) |    \
-                                    ((uint32_t)((const uint8_t *)(p))[(i) + 1] <<  8) |    \
-                                    ((uint32_t)((const uint8_t *)(p))[(i) + 0] <<  0)      \
-                                  : (*(uint32_t *)((uint8_t *)(uintptr_t)(p) + (i)))       \
+    (((uintptr_t)(p) & 0x7) != 0) ? ((uint32_t)((const uint8_t *)(p))[(i) + 3] << 24) | /* 24: 4th byte */      \
+                                    ((uint32_t)((const uint8_t *)(p))[(i) + 2] << 16) | /* 16: 3rd byte */      \
+                                    ((uint32_t)((const uint8_t *)(p))[(i) + 1] <<  8) | /*  8: 2nd byte */      \
+                                    ((uint32_t)((const uint8_t *)(p))[(i) + 0] <<  0)   /*  0: 1st byte */      \
+                                  : (*(uint32_t *)((uintptr_t)(p) + (i)))                                       \
 )
 // Convert little-endian order to host order
 #define CRYPT_LE32TOH(x)    (x)
@@ -450,8 +452,14 @@ static inline void Uint64ToBeBytes(uint64_t v, uint8_t *bytes)
     bytes[7] = (uint8_t)(v & 0xffu);
 }
 
-#if defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_VERIFY)
+#if defined(HITLS_CRYPTO_RSA_VERIFY) || defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_DSA) || \
+    defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2_SIGN)
 uint32_t CRYPT_GetMdSizeById(CRYPT_MD_AlgId id);
+#endif
+
+#if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2_SIGN)
+typedef int32_t (*CheckSignMdCallBack)(void *val);
+int32_t CRYPT_SetSignMdCtrl(CRYPT_MD_AlgId *signMdId, void *val, uint32_t len, CheckSignMdCallBack checkSignMdIdCb);
 #endif
 
 static inline bool ParamIdIsValid(uint32_t id, const uint32_t *list, uint32_t num)
@@ -464,26 +472,14 @@ static inline bool ParamIdIsValid(uint32_t id, const uint32_t *list, uint32_t nu
     return false;
 }
 
-typedef uint32_t (*GetUintCallBack)(const void *key);
-static inline int32_t GetUintCtrl(const void *ctx, void *val, uint32_t len, GetUintCallBack getUint)
-{
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (len != sizeof(uint32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-    *(uint32_t *)val = getUint(ctx);
-    return CRYPT_SUCCESS;
-}
+const BSL_Param *EAL_FindConstParam(const BSL_Param *param, int32_t key);
 
-#ifdef HITLS_BSL_PARAMS
+BSL_Param *EAL_FindParam(BSL_Param *param, int32_t key);
+
 static inline const BSL_Param *GetConstParamValue(const BSL_Param *params, int32_t type,
     uint8_t **value, uint32_t *valueLen)
 {
-    const BSL_Param *temp = BSL_PARAM_FindConstParam(params, type);
+    const BSL_Param *temp = EAL_FindConstParam(params, type);
     if (temp != NULL) {
         *value = temp->value;
         if (valueLen != NULL) {
@@ -495,7 +491,7 @@ static inline const BSL_Param *GetConstParamValue(const BSL_Param *params, int32
 
 static inline BSL_Param *GetParamValue(BSL_Param *params, int32_t type, uint8_t **value, uint32_t *valueLen)
 {
-    BSL_Param *temp = BSL_PARAM_FindParam(params, type);
+    BSL_Param *temp = EAL_FindParam(params, type);
     if (temp != NULL) {
         *value = temp->value;
         if (valueLen != NULL) {
@@ -504,7 +500,6 @@ static inline BSL_Param *GetParamValue(BSL_Param *params, int32_t type, uint8_t 
     }
     return temp;
 }
-#endif
 
 void GetCpuInstrSupportState(void);
 
@@ -559,6 +554,7 @@ bool IsSupportSHA256(void);
 bool IsSupportNEON(void);
 
 #if defined(__aarch64__)
+bool IsSupportSM4(void);
 bool IsSupportSHA512(void);
 #endif // __aarch64__
 

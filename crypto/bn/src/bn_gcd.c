@@ -256,4 +256,39 @@ ERR:
     OptimizerEnd(opt); // Release occupation from the optimizer.
     return ret;
 }
+
+#if defined(HITLS_CRYPTO_RSA_CHECK)
+
+int32_t BN_Lcm(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimizer *opt)
+{
+    if (r == NULL || a == NULL || b == NULL || opt == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    BN_BigNum *gcd = BN_Create(BN_Bits(r));
+    if (gcd == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    int32_t ret = BN_Gcd(gcd, a, b, opt);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        BN_Destroy(gcd);
+        return ret;
+    }
+    if (BN_IsOne(gcd) == false) {
+        ret = BN_Div(r, NULL, a, gcd, opt);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            BN_Destroy(gcd);
+            return ret;
+        }
+        BN_Destroy(gcd);
+        return BN_Mul(r, r, b, opt);
+    }
+    BN_Destroy(gcd); // a and b are coprime.
+    return BN_Mul(r, a, b, opt);
+}
+#endif
+
 #endif /* HITLS_CRYPTO_BN */

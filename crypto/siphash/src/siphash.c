@@ -22,6 +22,7 @@
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "bsl_err_internal.h"
+#include "bsl_util_internal.h"
 #include "bsl_sal.h"
 #include "crypt_siphash.h"
 #include "eal_mac_local.h"
@@ -73,25 +74,25 @@ static uint64_t DealLastWord(uint64_t lastWord, const uint8_t *bytes, size_t byt
             // Do not need to run break from the case, fall through the switch-case.
             // The remaining 7 bytes are to be processed and shift to left by 6 bytes.
             tmpLastWord |= ((uint64_t)bytes[6]) << SIPHASH_SIX_OCTET_TO_BITS;
-            /* fall-through */
+            FALLTHROUGH; /* FALLTHROUGH */
         case 6:
             tmpLastWord |= ((uint64_t)bytes[5]) << SIPHASH_FIVE_OCTET_TO_BITS;
-            /* fall-through */
+            FALLTHROUGH; /* FALLTHROUGH */
         case 5:
             tmpLastWord |= ((uint64_t)bytes[4]) << SIPHASH_FOUR_OCTET_TO_BITS;
-            /* fall-through */
+            FALLTHROUGH; /* FALLTHROUGH */
         case 4:
             tmpLastWord |= ((uint64_t)bytes[3]) << SIPHASH_THREE_OCTET_TO_BITS;
-            /* fall-through */
+            FALLTHROUGH; /* FALLTHROUGH */
         case 3:
             tmpLastWord |= ((uint64_t)bytes[2]) << SIPHASH_TWO_OCTET_TO_BITS;
-            /* fall-through */
+            FALLTHROUGH; /* FALLTHROUGH */
         case 2:
             tmpLastWord |= ((uint64_t)bytes[1]) << SIPHASH_ONE_OCTET_TO_BITS;
-            /* fall-through */
+            FALLTHROUGH; /* FALLTHROUGH */
         case 1:
             tmpLastWord |= ((uint64_t)bytes[0]);
-            /* fall-through */
+            FALLTHROUGH; /* FALLTHROUGH */
         default: // case 0
             break;
     }
@@ -166,10 +167,9 @@ CRYPT_SIPHASH_Ctx *CRYPT_SIPHASH_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id)
     return CRYPT_SIPHASH_NewCtx(id);
 }
 
-int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen, void *param)
+int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen)
 {
-    (void)param;
-    if (ctx == NULL || key == NULL) {
+    if (ctx == NULL || (key == NULL && keyLen != 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -197,6 +197,12 @@ int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t 
         ctx->state1 ^= 0xee;
     }
     return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_SIPHASH_InitEx(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen, void *param)
+{
+    (void)param;
+    return CRYPT_SIPHASH_Init(ctx, key, keyLen);
 }
 
 int32_t CRYPT_SIPHASH_Update(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *in, uint32_t inlen)

@@ -125,7 +125,7 @@
  * generate sm4 rounk key context
  *   USER_KEY => userKey; 
  *   ROUND_KEY1 => key ; 
- *   if encryption：ENC=>enc
+ *   if encryption: ENC=>enc
  */
 .type    vpsm4_ex_set_key,%function
 .align 4

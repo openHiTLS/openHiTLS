@@ -112,6 +112,13 @@ typedef enum {
     CRYPT_DH_MAXFLAG
 } CRYPT_DH_Flag;
 
+typedef enum {
+    CRYPT_ECC_CACHE_PUBKEY = 0x00000001,            /**< Enable the RSA blinding function for signature.
+                                                     At the same time, You need to set the public key information,
+                                                     or set the p q parameter when setting the private key. */
+    CRYPT_ECC_MAXFLAG
+} CRYPT_ECC_Flag;
+
 /**
  * @ingroup crypt_types
  *
@@ -635,6 +642,12 @@ typedef enum {
     CRYPT_CTRL_SET_GEN_FLAG,             /**< Set SP800-56Ar3 generate private key flag. */
     CRYPT_CTRL_PCT_TEST,                 /**< Verify the consistency of the asymmetric key pair. */
     CRYPT_CTRL_CLEAN_PUB_KEY,            /**< Clean the pubkey. */
+    CRYPT_CTRL_GET_PUB_KEY_BITS,         /**< Get the number of key bits. */
+    CRYPT_CTRL_SET_SIGN_MD,
+    CRYPT_CTRL_GET_ECC_POINT_FORMAT,     /**< ECC PKEY get the point format. */
+    CRYPT_CTRL_SET_FLAG,                 /**< ECC PKEY set the enc flag. */
+    CRYPT_CTRL_GET_FLAG,                 /**< ECC PKEY get the enc flag. */
+    CRYPT_CTRL_CLEAR_FLAG,               /**< ECC PKEY clear the enc flag. */
 
     // dh
     CRYPT_CTRL_SET_DH_FLAG = 150,          /**< Set the dh flag.*/

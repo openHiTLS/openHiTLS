@@ -22,14 +22,16 @@
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_local_types.h"
-#include "crypt_eal_md.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "eal_md_local.h"
 #include "eal_common.h"
+#include "crypt_utils.h"
+#include "crypt_eal_md.h"
 #include "crypt_ealinit.h"
 #ifdef HITLS_CRYPTO_PROVIDER
 #include "crypt_eal_implprovider.h"
+#include "crypt_eal_provider.h"
 #include "crypt_provider.h"
 #endif
 
@@ -152,7 +154,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdDupCtx(const CRYPT_EAL_MdCTX *ctx)
     newCtx->data = ctx->method.dupCtx(ctx->data);
     if (newCtx->data == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        BSL_SAL_Free(newCtx);
+        BSL_SAL_FREE(newCtx);
         return NULL;
     }
     return newCtx;
@@ -243,6 +245,7 @@ int32_t CRYPT_EAL_MdFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t *len)
         return ret;
     }
     ctx->state = CRYPT_MD_STATE_FINAL;
+    EAL_EVENT_REPORT(CRYPT_EVENT_MD, CRYPT_ALGO_MD, ctx->id, CRYPT_SUCCESS);
     return CRYPT_SUCCESS;
 }
 
@@ -267,6 +270,7 @@ int32_t CRYPT_EAL_MdSqueeze(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t len)
         return ret;
     }
     ctx->state = CRYPT_MD_STATE_SQUEEZE;
+    EAL_EVENT_REPORT(CRYPT_EVENT_MD, CRYPT_ALGO_MD, ctx->id, CRYPT_SUCCESS);
     return CRYPT_SUCCESS;
 }
 
@@ -320,12 +324,12 @@ uint32_t CRYPT_EAL_MdGetDigestSize(CRYPT_MD_AlgId id)
 
 int32_t CRYPT_EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    return EAL_Md(id, NULL, NULL, in, inLen, out, outLen, false);
+    return EAL_Md(id, NULL, NULL, in, inLen, out, outLen, false, false);
 }
 
 int32_t CRYPT_EAL_ProviderMd(CRYPT_EAL_LibCtx *libCtx, CRYPT_MD_AlgId id, const char *attrName,
     const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    return EAL_Md(id, libCtx, attrName, in, inLen, out, outLen, true);
+    return EAL_Md(id, libCtx, attrName, in, inLen, out, outLen, false, true);
 }
 #endif

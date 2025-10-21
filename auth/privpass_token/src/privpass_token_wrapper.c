@@ -21,27 +21,27 @@
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
 #include "crypt_eal_md.h"
-#include "crypt_eal_rand.h"
 #include "crypt_errno.h"
 #include "crypt_eal_codecs.h"
+#include "crypt_util_rand.h"
 #include "auth_privpass_token.h"
 #include "privpass_token.h"
 #include "bsl_sal.h"
 
-void *PrivPassNewPkeyCtx(void *libCtx, const char *attrName, int32_t algId)
+static void *PrivPassNewPkeyCtx(void *libCtx, const char *attrName, int32_t algId)
 {
     (void)libCtx;
     (void)attrName;
     return CRYPT_EAL_PkeyNewCtx(algId);
 }
 
-void PrivPassFreePkeyCtx(void *pkeyCtx)
+static void PrivPassFreePkeyCtx(void *pkeyCtx)
 {
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
 }
 
-int32_t PrivPassPubDigest(void *libCtx, const char *attrName, int32_t algId, const uint8_t *input, uint32_t inputLen,
-    uint8_t *digest, uint32_t *digestLen)
+static int32_t PrivPassPubDigest(void *libCtx, const char *attrName, int32_t algId, const uint8_t *input,
+    uint32_t inputLen, uint8_t *digest, uint32_t *digestLen)
 {
     (void)libCtx;
     (void)attrName;
@@ -85,8 +85,8 @@ int32_t PrivPassPubDigest(void *libCtx, const char *attrName, int32_t algId, con
     return CRYPT_SUCCESS;
 }
 
-int32_t PrivPassPubBlind(void *pkeyCtx, int32_t algId, const uint8_t *data, uint32_t dataLen, uint8_t *blindedData,
-    uint32_t *blindedDataLen)
+static int32_t PrivPassPubBlind(void *pkeyCtx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    uint8_t *blindedData, uint32_t *blindedDataLen)
 {
     if (pkeyCtx == NULL || data == NULL || dataLen == 0 || blindedData == NULL || blindedDataLen == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
@@ -117,7 +117,7 @@ int32_t PrivPassPubBlind(void *pkeyCtx, int32_t algId, const uint8_t *data, uint
     return ret;
 }
 
-int32_t PrivPassPubUnBlind(void *pkeyCtx, const uint8_t *blindedData, uint32_t blindedDataLen, uint8_t *data,
+static int32_t PrivPassPubUnBlind(void *pkeyCtx, const uint8_t *blindedData, uint32_t blindedDataLen, uint8_t *data,
     uint32_t *dataLen)
 {
     if (pkeyCtx == NULL || blindedData == NULL || blindedDataLen == 0 || data == NULL || dataLen == NULL) {
@@ -128,7 +128,8 @@ int32_t PrivPassPubUnBlind(void *pkeyCtx, const uint8_t *blindedData, uint32_t b
     return CRYPT_EAL_PkeyUnBlind(ctx, blindedData, blindedDataLen, data, dataLen);
 }
 
-int32_t PrivPassPubSignData(void *pkeyCtx, const uint8_t *data, uint32_t dataLen, uint8_t *sign, uint32_t *signLen)
+static int32_t PrivPassPubSignData(void *pkeyCtx, const uint8_t *data, uint32_t dataLen, uint8_t *sign,
+    uint32_t *signLen)
 {
     if (pkeyCtx == NULL || data == NULL || dataLen == 0 || sign == NULL || signLen == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
@@ -150,8 +151,8 @@ int32_t PrivPassPubSignData(void *pkeyCtx, const uint8_t *data, uint32_t dataLen
     return CRYPT_EAL_PkeySignData(ctx, data, dataLen, sign, signLen);
 }
 
-int32_t PrivPassPubVerify(void *pkeyCtx, int32_t algId, const uint8_t *data, uint32_t dataLen, const uint8_t *sign,
-    uint32_t signLen)
+static int32_t PrivPassPubVerify(void *pkeyCtx, int32_t algId, const uint8_t *data, uint32_t dataLen,
+    const uint8_t *sign, uint32_t signLen)
 {
     if (pkeyCtx == NULL || data == NULL || dataLen == 0 || sign == NULL || signLen == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
@@ -214,7 +215,8 @@ static int32_t PubKeyCheck(CRYPT_EAL_PkeyCtx *ctx)
     return CRYPT_SUCCESS;
 }
 
-int32_t PrivPassPubDecodePubKey(void *libCtx, const char *attrName, uint8_t *pubKey, uint32_t pubKeyLen, void **pkeyCtx)
+static int32_t PrivPassPubDecodePubKey(void *libCtx, const char *attrName, uint8_t *pubKey, uint32_t pubKeyLen,
+    void **pkeyCtx)
 {
     (void)libCtx;
     (void)attrName;
@@ -238,8 +240,8 @@ int32_t PrivPassPubDecodePubKey(void *libCtx, const char *attrName, uint8_t *pub
     return CRYPT_SUCCESS;
 }
 
-int32_t PrivPassPubDecodePrvKey(void *libCtx, const char *attrName, void *param, uint8_t *prvKey, uint32_t prvKeyLen,
-    void **pkeyCtx)
+static int32_t PrivPassPubDecodePrvKey(void *libCtx, const char *attrName, void *param, uint8_t *prvKey,
+    uint32_t prvKeyLen, void **pkeyCtx)
 {
     (void)libCtx;
     (void)attrName;
@@ -280,7 +282,7 @@ int32_t PrivPassPubDecodePrvKey(void *libCtx, const char *attrName, void *param,
     return CRYPT_SUCCESS;
 }
 
-int32_t PrivPassPubCheckKeyPair(void *pubKeyCtx, void *prvKeyCtx)
+static int32_t PrivPassPubCheckKeyPair(void *pubKeyCtx, void *prvKeyCtx)
 {
     if (pubKeyCtx == NULL || prvKeyCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
@@ -293,7 +295,7 @@ int32_t PrivPassPubCheckKeyPair(void *pubKeyCtx, void *prvKeyCtx)
     return ret;
 }
 
-int32_t PrivPassPubRandom(uint8_t *buffer, uint32_t bufferLen)
+static int32_t PrivPassPubRandom(uint8_t *buffer, uint32_t bufferLen)
 {
     if (buffer == NULL || bufferLen == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);

@@ -27,6 +27,8 @@
 #include "crypt_eal_pkey.h"
 #include "crypt_eal_codecs.h"
 #include "bsl_types.h"
+#include "bsl_params.h"
+#include "crypt_params_key.h"
 #include "crypt_types.h"
 #include "crypt_utils.h"
 #include "decode_local.h"
@@ -38,7 +40,7 @@ int32_t CRYPT_DECODE_ParseDecoderAttr(const char *attrName, DECODER_AttrInfo *in
     info->inType = NULL;
     info->outFormat = NULL;
     info->outType = NULL;
-    info->attrName = (char *)BSL_SAL_Dump(attrName, (uint32_t)strlen(attrName) + 1);
+    info->attrName = (char *)BSL_SAL_Dump(attrName, (uint32_t)(strlen(attrName) + 1));
     if (info->attrName == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;

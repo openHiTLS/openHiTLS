@@ -20,8 +20,10 @@
 #ifdef HITLS_CRYPTO_CURVE25519
 
 #include <stdint.h>
+#include <stddef.h>
 #include "crypt_local_types.h"
 #include "bsl_params.h"
+#include "crypt_params_key.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,6 +44,7 @@ typedef struct CryptCurve25519Ctx CRYPT_CURVE25519_Ctx;
  */
 CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void);
 
+#ifdef HITLS_CRYPTO_PROVIDER
 /**
  * @ingroup curve25519
  * @brief curve25519 Create a key pair structure and allocate memory space.
@@ -52,6 +55,7 @@ CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void);
  * @retval NULL                     Invalid null pointer
  */
 CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtxEx(void *libCtx);
+#endif
 #endif
 
 #ifdef HITLS_CRYPTO_ED25519

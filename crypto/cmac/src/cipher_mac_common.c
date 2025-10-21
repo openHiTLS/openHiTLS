@@ -31,11 +31,12 @@ int32_t CipherMacInitCtx(Cipher_MAC_Common_Ctx *ctx, const EAL_SymMethod *method
         return CRYPT_NULL_INPUT;
     }
 
-    void *key = (void *)BSL_SAL_Calloc(1u, method->ctxSize);
+    void *key = (void *)BSL_SAL_Malloc(method->ctxSize);
     if (key == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
+    BSL_SAL_CleanseData(key, method->ctxSize);
 
     // set key and set method
     ctx->key = key;

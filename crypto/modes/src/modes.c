@@ -20,6 +20,7 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
+#include "crypt_utils.h"
 #include "modes_local.h"
 #ifdef HITLS_CRYPTO_CTR
 #include "crypt_modes_ctr.h"
@@ -52,7 +53,7 @@
 #include "crypt_modes_aes_wrap.h"
 #endif
 
-int32_t MODE_NewCtxInternal(MODES_CipherCtx *ctx, const EAL_SymMethod *method)
+static int32_t MODE_NewCtxInternal(MODES_CipherCtx *ctx, const EAL_SymMethod *method)
 {
     ctx->commonCtx.ciphCtx = BSL_SAL_Calloc(1, method->ctxSize);
     if (ctx->commonCtx.ciphCtx  == NULL) {
@@ -128,13 +129,13 @@ int32_t MODES_CipherInitCtx(MODES_CipherCtx *ctx, void *setSymKey, void *keyCtx,
     return MODES_CipherInitCommonCtx(&ctx->commonCtx, setSymKey, keyCtx, key, keyLen, iv, ivLen);
 }
 
-int32_t MODE_CheckUpdateParam(uint8_t blockSize, uint32_t cacheLen, uint32_t inLen, uint32_t *outLen)
+static int32_t CheckUpdateParam(uint32_t blockSize, uint32_t cacheLen, uint32_t inLen, uint32_t *outLen)
 {
-    if (inLen + cacheLen < inLen) { // Integer flipping
+    if (UNLIKELY(inLen + cacheLen < inLen)) { // Integer flipping
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_TOO_LONG);
         return CRYPT_EAL_BUFF_LEN_TOO_LONG;
     }
-    if ((*outLen) < ((inLen + cacheLen) / blockSize * blockSize)) {
+    if (UNLIKELY(*outLen < ((inLen + cacheLen) & ~(blockSize - 1)))) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_EAL_BUFF_LEN_NOT_ENOUGH;
     }
@@ -240,7 +241,7 @@ int32_t MODES_BlockPadding(int32_t algId, int32_t padding, uint8_t blockSize, ui
     switch (padding) {
         case CRYPT_PADDING_NONE:
             *dataLen = tempLen;
-            if (tempLen % blockSize != 0) {
+            if ((tempLen & (blockSize - 1)) != 0) {
                 return IfXts(algId) ? CRYPT_SUCCESS : CRYPT_MODE_ERR_INPUT_LEN;
             }
             break;
@@ -274,7 +275,7 @@ int32_t MODES_BlockPadding(int32_t algId, int32_t padding, uint8_t blockSize, ui
     return CRYPT_SUCCESS;
 }
 
-int32_t MODES_CipherUpdateCache(MODES_CipherCtx *ctx,  void *blockUpdate, const uint8_t **in, uint32_t *inLen,
+static int32_t MODES_CipherUpdateCache(MODES_CipherCtx *ctx,  void *blockUpdate, const uint8_t **in, uint32_t *inLen,
     uint8_t **out, uint32_t *outLen)
 {
     int32_t ret;
@@ -380,7 +381,7 @@ int32_t MODES_CipherUpdate(MODES_CipherCtx *modeCtx, void *blockUpdate, const ui
     const uint8_t *tmpIn = in;
     uint8_t *tmpOut = (uint8_t *)out;
     
-    ret = MODE_CheckUpdateParam(modeCtx->commonCtx.blockSize, modeCtx->dataLen, inLen, outLen);
+    ret = CheckUpdateParam(modeCtx->commonCtx.blockSize, modeCtx->dataLen, inLen, outLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -395,7 +396,7 @@ int32_t MODES_CipherUpdate(MODES_CipherCtx *modeCtx, void *blockUpdate, const ui
         return CRYPT_SUCCESS;
     }
 
-    uint8_t left = tmpLen % modeCtx->commonCtx.blockSize;
+    uint8_t left = (uint8_t)(tmpLen & (modeCtx->commonCtx.blockSize - 1));
     uint32_t len = tmpLen - left;
     if (len > 0) {
         if (modeCtx->enc) {
@@ -509,7 +510,6 @@ int32_t MODES_CipherCtrl(MODES_CipherCtx *ctx, int32_t opt, void *val, uint32_t 
         case CRYPT_CTRL_REINIT_STATUS:
             (void)memset_s(ctx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
             ctx->dataLen = 0;
-            ctx->pad = CRYPT_PADDING_NONE;
             return MODES_SetIv(&ctx->commonCtx, val, len);
         case CRYPT_CTRL_GET_IV:
             return MODES_GetIv(&ctx->commonCtx, (uint8_t *)val, len);

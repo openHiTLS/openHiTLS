@@ -20,7 +20,7 @@
 #ifdef HITLS_CRYPTO_CODECSKEY
 
 #include "bsl_types.h"
-#include "bsl_asn1.h"
+#include "bsl_asn1_internal.h"
 #include "crypt_types.h"
 #include "crypt_eal_pkey.h"
 
@@ -208,6 +208,10 @@ static inline bool IsEcdsaEcParaId(int32_t paraId)
         paraId == CRYPT_ECC_BRAINPOOLP256R1 || paraId == CRYPT_ECC_BRAINPOOLP384R1 ||
         paraId == CRYPT_ECC_BRAINPOOLP512R1;
 }
+#endif
+
+#ifdef HITLS_BSL_PEM_ENCRYPTED
+int32_t CRYPT_EAL_ParseEncryptedPem(char *header, const uint8_t *pwd, uint32_t pwdLen, BSL_Buffer *asn1Encode);
 #endif
 
 #ifdef __cplusplus

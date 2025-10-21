@@ -22,7 +22,10 @@
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "ecc_local.h"
-#include "crypt_ecc.h"
+
+#ifdef HITLS_CRYPTO_ECC_PUB_CACHE
+#include "ecp_sm2.h"
+#endif
 
 ECC_Point *ECC_NewPoint(const ECC_Para *para)
 {
@@ -346,6 +349,11 @@ BN_BigNum *ECC_GetParaY(const ECC_Para *para)
     return BN_Dup(para->y);
 }
 
+int32_t ECC_GetEncodeDataLen(const ECC_Para *para, ECC_Point *pt, CRYPT_PKEY_PointFormat format, uint32_t *dataLen)
+{
+    return ECP_GetEncodeDataLen(para, pt, format, dataLen);
+}
+
 int32_t ECC_PointCheck(const ECC_Point *pt)
 {
     if (pt == NULL) {
@@ -446,7 +454,7 @@ typedef struct {
 /* See the standard document
    https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r4.pdf
    Table 2: Comparable strengths */
-const ComparableStrengths g_strengthsTable[] = {
+const ComparableStrengths STRENGTHS_TABLE[] = {
     {512, 256},
     {384, 192},
     {256, 128},
@@ -461,11 +469,44 @@ int32_t ECC_GetSecBits(const ECC_Para *para)
         return 0;
     }
     uint32_t bits = BN_Bits(para->n);
-    for (size_t i = 0; i < (sizeof(g_strengthsTable) / sizeof(g_strengthsTable[0])); i++) {
-        if (bits >= g_strengthsTable[i].ecKeyLen) {
-            return g_strengthsTable[i].secBits;
+    for (uint32_t i = 0; i < sizeof(STRENGTHS_TABLE) / sizeof(STRENGTHS_TABLE[0]); i++) {
+        if (bits >= STRENGTHS_TABLE[i].ecKeyLen) {
+            return (int32_t)STRENGTHS_TABLE[i].secBits;
         }
     }
-    return bits / 2;
+    return (int32_t)(bits / 2); // If the key length is less than 160, the key strength is equal to the key length / 2.
 }
+
+#ifdef HITLS_CRYPTO_ECC_PUB_CACHE
+
+int32_t ECC_PointMulWithCache(const ECC_Para *para, ECC_Point *r, const BN_BigNum *scalar1, const ECC_Point *point,
+    const BN_BigNum *scalar2, void **preTable)
+{
+    if (para == NULL || r == NULL || point == NULL || preTable == NULL ||
+        (scalar1 == NULL && scalar2 == NULL)) { // scalar1 or scalar2 can be null.
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (para->id == CRYPT_ECC_SM2) {
+        return CRYPT_SM2_PointMulwithCache(para, r, scalar1, point, scalar2, preTable);
+    }
+    BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
+    return CRYPT_ECC_POINT_ERR_CURVE_ID;
+}
+
+int32_t ECC_PointCalCache(const ECC_Point *para, void **preTable)
+{
+    if (para == NULL || preTable == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+        }
+    if (para->id == CRYPT_ECC_SM2) {
+        return CRYPT_SM2_PointCaCheCal(para, preTable);
+    }
+    BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
+    return CRYPT_ECC_POINT_ERR_CURVE_ID;
+}
+
+#endif
+
 #endif /* HITLS_CRYPTO_ECC */

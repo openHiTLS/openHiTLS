@@ -14,11 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4) || defined(HITLS_CRYPTO_CHACHA20) || \
-    defined(HITLS_CRYPTO_CHACHA20POLY1305) || defined(HITLS_CRYPTO_XTS) || defined(HITLS_CRYPTO_CBC) || \
-    defined(HITLS_CRYPTO_CCM) || defined(HITLS_CRYPTO_CFB) || defined(HITLS_CRYPTO_ECB) || \
-    defined(HITLS_CRYPTO_GCM) || defined(HITLS_CRYPTO_OFB) || defined(HITLS_CRYPTO_CTR)) && \
-    defined(HITLS_CRYPTO_PROVIDER)
+#if defined(HITLS_CRYPTO_CIPHER) && defined(HITLS_CRYPTO_PROVIDER)
 
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
@@ -261,7 +257,7 @@ const CRYPT_EAL_Func g_defEalXts[] = {
     {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
     {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_XTS_InitCtxEx},
     {CRYPT_EAL_IMPLCIPHER_UPDATE, (CRYPT_EAL_ImplCipherUpdate)MODES_XTS_UpdateEx},
-    {CRYPT_EAL_IMPLCIPHER_FINAL, (CRYPT_EAL_ImplCipherFinal)MODES_XTS_Final},
+    {CRYPT_EAL_IMPLCIPHER_FINAL, (CRYPT_EAL_ImplCipherFinal)MODES_XTS_FinalEx},
     {CRYPT_EAL_IMPLCIPHER_DEINITCTX, (CRYPT_EAL_ImplCipherDeinitCtx)MODES_XTS_DeInitCtx},
     {CRYPT_EAL_IMPLCIPHER_CTRL, (CRYPT_EAL_ImplCipherCtrl)MODES_XTS_Ctrl},
     {CRYPT_EAL_IMPLCIPHER_FREECTX, (CRYPT_EAL_ImplCipherFreeCtx)MODES_XTS_FreeCtx},

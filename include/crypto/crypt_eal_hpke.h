@@ -24,6 +24,7 @@
 
 #include <stdint.h>
 #include "crypt_errno.h"
+#include "crypt_types.h"
 #include "crypt_eal_pkey.h"
 
 #ifdef __cplusplus

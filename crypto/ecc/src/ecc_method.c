@@ -20,6 +20,7 @@
 #include "bsl_err_internal.h"
 #include "ecp_nistp224.h"
 #include "ecp_nistp256.h"
+#include "ecp_nistp384.h"
 #include "ecp_nistp521.h"
 #include "ecp_sm2.h"
 
@@ -32,7 +33,8 @@ typedef struct {
 #if defined(HITLS_SIXTY_FOUR_BITS)
 #if (((defined(HITLS_CRYPTO_CURVE_NISTP224) || defined(HITLS_CRYPTO_CURVE_NISTP521)) && \
         !defined(HITLS_CRYPTO_NIST_USE_ACCEL)) || \
-    defined(HITLS_CRYPTO_CURVE_NISTP384) || \
+    (defined(HITLS_CRYPTO_CURVE_NISTP384) && (!defined(HITLS_CRYPTO_CURVE_NISTP384_ASM) || \
+        !defined(HITLS_CRYPTO_NIST_USE_ACCEL))) || \
     (defined(HITLS_CRYPTO_CURVE_NISTP256) && (!defined(HITLS_CRYPTO_CURVE_NISTP256_ASM) || \
         (!defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE))) && (!defined(HITLS_CRYPTO_NIST_USE_ACCEL))))
 static const ECC_Method EC_METHOD_NIST = {
@@ -149,6 +151,24 @@ static const ECC_Method EC_METHOD_NIST_P224 = {
 };
 #endif
 
+#ifdef HITLS_CRYPTO_CURVE_NISTP384_ASM
+static const ECC_Method EC_METHOD_NIST_P384 = {
+    .pointMulAdd = ECP384_PointMulAdd,
+    .pointMul = ECP384_PointMul,
+    .pointMulFast = ECP384_PointMul,
+    .pointAddAffine = ECP_NistPointAddAffine,
+    .pointDouble = ECP_NistPointDouble,
+    .pointMultDouble = ECP_NistPointMultDouble,
+    .modInv = BN_ModInv,
+    .point2AffineWithInv = ECP_Point2AffineWithInv,
+    .point2Affine = ECP384_Point2Affine,
+    .bnModNistEccMul = BN_ModNistEccMul,
+    .bnModNistEccSqr = BN_ModNistEccSqr,
+    .modOrdInv = ECP384_ModOrderInv,
+    .pointAdd = ECP_NistPointAdd,
+};
+#endif
+
 #ifdef HITLS_CRYPTO_CURVE_NISTP521
 static const ECC_Method EC_METHOD_NIST_P521 = {
     .pointMulAdd = ECP521_PointMulAdd,
@@ -216,8 +236,10 @@ static const ECC_MethodMap EC_METHODS[] = {
 
 // p384
 #ifdef HITLS_CRYPTO_CURVE_NISTP384
-    #if defined(HITLS_SIXTY_FOUR_BITS)
-        { CRYPT_ECC_NISTP384, &EC_METHOD_NIST }, // Common nist calculation + fast modulus reduction of Bn
+    #if defined(HITLS_CRYPTO_NIST_USE_ACCEL) && defined(HITLS_CRYPTO_CURVE_NISTP384_ASM)
+        { CRYPT_ECC_NISTP384, &EC_METHOD_NIST_P384 }, // 依赖int128的汇编优化
+    #elif defined(HITLS_SIXTY_FOUR_BITS)
+        { CRYPT_ECC_NISTP384, &EC_METHOD_NIST }, // 普通nist计算+大数快速模约减
     #else
         { CRYPT_ECC_NISTP384, &EC_METHOD_NIST_MONT },
     #endif

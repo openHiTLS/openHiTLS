@@ -18,6 +18,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_PEM
 #include <stdint.h>
+#include "bsl_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,6 +54,11 @@ extern "C" {
 #define BSL_PEM_CERT_REQ_BEGIN_STR "-----BEGIN CERTIFICATE REQUEST-----"
 #define BSL_PEM_CERT_REQ_END_STR "-----END CERTIFICATE REQUEST-----"
 
+/* encode must end in '\0' */
+bool BSL_PEM_IsPemFormat(char *encode, uint32_t encodeLen);
+
+int32_t BSL_PEM_GetAsn1Encode(const char *encode, const uint32_t encodeLen, uint8_t **asn1Encode, uint32_t *asn1Len);
+
 typedef struct {
     const char *head;
     const char *tail;
@@ -65,8 +71,15 @@ int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_S
 int32_t BSL_PEM_DecodePemToAsn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, uint8_t **asn1Encode,
     uint32_t *asn1Len);
 
-/* encode must end in '\0' */
-bool BSL_PEM_IsPemFormat(char *encode, uint32_t encodeLen);
+#ifdef HITLS_BSL_PEM_ENCRYPTED
+typedef int32_t (*EncryptedPemCb)(char *header, const uint8_t *pwd, uint32_t pwdLen, BSL_Buffer *asn1Encode);
+
+int32_t BSL_PEM_DecodeEncryptedPemToAsn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol,
+    uint8_t **asn1Encode, uint32_t *asn1Len, const uint8_t *pwd, uint32_t pwdLen, EncryptedPemCb cb);
+#endif
+
+int32_t BSL_PEM_GetPemRealEncode(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, char **realEncode,
+    uint32_t *realLen);
 
 int32_t BSL_PEM_GetSymbolAndType(char *encode, uint32_t encodeLen, BSL_PEM_Symbol *symbol, char **type);
 

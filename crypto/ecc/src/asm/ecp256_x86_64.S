@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CURVE_NISTP256) && defined(HITLS_CRYPTO_NIST_USE_ACCEL)
+#if defined(HITLS_CRYPTO_CURVE_NISTP256) && defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE)
 
 #include "ecp256_pre_comp_table.s"
 
@@ -54,64 +54,6 @@ ECP256_GetPreCompTable:
     ret
 .cfi_endproc
 .size   ECP256_GetPreCompTable, .-ECP256_GetPreCompTable
-
-/**
- * Function description: Addition of the ECP256 field. res = a + b mod P
- * Function prototype: void ECP256_Add(Coord *r, const Coord *a, const Coord *b);
- * Input register:
- *     rdi: Pointer to the output Coord structure
- *     rsi: Address pointing to input data a
- *     rdx: Address pointing to input data b
- * Change register: rsi, rdx, rcx, rax, r8, r9, r10, r11, r12, r13
- * Output register: None
- * Function/Macro call: Addition can be implemented by calling ECP256_AddCore.
- */
-.globl  ECP256_Add
-.type   ECP256_Add,@function
-.align 32
-ECP256_Add:
-.cfi_startproc
-    pushq   %r12
-    pushq   %r13
-
-    movq    (%rsi), %r8         // a[0]
-    movq    8(%rsi), %r9        // a[1]
-    xorq    %r13, %r13          // Save carry
-    movq    16(%rsi), %r10      // a[2]
-    movq    24(%rsi), %r11      // a[3]
-    leaq    .Lpoly(%rip), %rsi  // P
-
-    addq    (%rdx), %r8         // c[0] = a[0] + b[0]
-    adcq    8(%rdx), %r9        // c[1] = a[1] + b[1] + carry
-    movq    %r8, %rax           // save c[0]
-    adcq    16(%rdx), %r10      // c[2] = a[2] + b[2] + carry
-    adcq    24(%rdx), %r11      // c[3] = a[3] = b[3] + carry
-    movq    %r9, %rcx           // save c[1]
-    adcq    $0, %r13            // save carry value to r13
-
-    subq    $-1, %r8            // d[0] = c[0] - P[0]
-    movq    %r10, %rdx          // save c[2]
-    sbbq    8(%rsi), %r9        // d[1] = c[1] - P[1] - borrow
-    sbbq    $0, %r10            // d[2] = c[2] - P[2] - borrow
-    movq    %r11, %r12          // save c[3]
-    sbbq    24(%rsi), %r11      // d[3] = c[3] - P[3] - borrow
-    sbbq    $0, %r13            // r13 = 0 + carry - borrow
-
-    cmovcq  %rax, %r8           // res[0] = (r13 < 0) ? c[0]: d[0]
-    cmovcq  %rcx, %r9           // res[1] = (r13 < 0) ? c[1]: d[1]
-    movq    %r8, (%rdi)
-    cmovcq  %rdx, %r10          // res[2] = (r13 < 0) ? c[2]: d[2]
-    movq    %r9, 8(%rdi)
-    cmovcq  %r12, %r11          // res[3] = (r13 < 0) ? c[3]: d[3]
-    movq    %r10, 16(%rdi)
-
-    movq    (%rsp), %r13
-    movq    %r11, 24(%rdi)
-    movq    8(%rsp), %r12
-    leaq    16(%rsp), %rsp
-    ret
-.cfi_endproc
-.size   ECP256_Add, .-ECP256_Add
 
 /**
  * Function description: Addition core part of the ECP256 field, a + b mod P; Outputs r8-r11, r14,15 are P[1] and P[3]
@@ -155,64 +97,6 @@ ECP256_AddCore:
     ret
 .cfi_endproc
 .size   ECP256_AddCore, .-ECP256_AddCore
-
-/**
- * Function description: Subtraction of the ECP256 field. Res = a - b mod P
- * Function prototype: void ECP256_Sub(Coord *r, const Coord *a, const Coord *b);
- * Input register:
- *        rdi: Pointer to the output Coord structure
- *        rsi: Address pointing to input data a
- *        rdx: Address pointing to input data b
- * Change register: rsi, rdx, rcx, rax, r8, r9, r10, r11, r12, r13
- * Output register: None
- * Function/Macro call: Subtraction can be implemented by calling ECP256_SubCore.
- */
-.globl  ECP256_Sub
-.type   ECP256_Sub,@function
-.align 32
-ECP256_Sub:
-.cfi_startproc
-    pushq   %r12
-    pushq   %r13
-
-    movq    (%rsi), %r8         // a[0]
-    movq    8(%rsi), %r9        // a[1]
-    xorq    %r13, %r13          // Save borrow
-    movq    16(%rsi), %r10      // a[3]
-    movq    24(%rsi), %r11      // a[4]
-    leaq    .Lpoly(%rip), %rsi  // P
-
-    subq    (%rdx), %r8         // c[0] = a[0] - b[0]
-    sbbq    8(%rdx), %r9        // c[1] = a[1] - b[1] - borrow
-    movq    %r8, %rax           // save c[0]
-    sbbq    16(%rdx), %r10      // c[2] = a[2] - b[2] - borrow
-    sbbq    24(%rdx), %r11      // c[3] = a[3] - b[3] - borrow
-    movq    %r9, %rcx           // save c[1]
-    sbbq    $0, %r13            // save borrow value to r13
-
-    addq    $-1, %r8            // d[0] = c[0] + P[0]
-    movq    %r10, %rdx          // save c[2]
-    adcq    8(%rsi), %r9        // d[1] = c[1] + P[1] + carry
-    adcq    $0, %r10            // d[2] = c[2] + P[2] + carry
-    movq    %r11, %r12          // save c[3]
-    adcq    24(%rsi), %r11      // d[3] = c[3] + P[3] + carry
-    testq   %r13, %r13
-
-    cmovzq  %rax, %r8           // res[0] = (r13 == 0) ? c[0] : d[0]
-    cmovzq  %rcx, %r9           // res[1] = (r13 == 0) ? c[1] : d[1]
-    movq    %r8, (%rdi)
-    cmovzq  %rdx, %r10          // res[2] = (r13 == 0) ? c[2] : d[2]
-    movq    %r9, 8(%rdi)
-    cmovzq  %r12, %r11          // res[3] = (r13 == 0) ? c[3] : d[3]
-    movq    %r10, 16(%rdi)
-    movq    %r11, 24(%rdi)
-
-    movq    (%rsp), %r13
-    movq    8(%rsp), %r12
-    leaq    16(%rsp), %rsp
-    ret
-.cfi_endproc
-.size   ECP256_Sub, .-ECP256_Sub
 
 /**
  * Function description: subtraction core part of the ECP256 field, a-b mod P; no writeback
@@ -1216,42 +1100,6 @@ ECP256_DivBy2Core:
 .cfi_endproc
 .size   ECP256_DivBy2Core, .-ECP256_DivBy2Core
 
-/**
- *  Function description: Half calculation of the ECP256 field: res = a/2 mod P
- *  Function prototype: void ECP256_DivBy2(Coord *r, const Coord *a);
- *  Input register:
- *        rdi: Pointer to the output Coord structure
- *        rsi: Address pointing to input data a
- *  Change register: rax, rcx, rdx, rsi, r8, r9, r10, r11, r12, r13, r14, r15
- *  Output register: None
- *  Function/macro call: Call ECP256_DivBy2Core to implement half calculation.
- */
-.globl  ECP256_DivBy2
-.type   ECP256_DivBy2, @function
-ECP256_DivBy2:
-.cfi_startproc
-    pushq   %r12
-    pushq   %r13
-    pushq   %r14
-    pushq   %r15
-
-    movq    (%rsi), %r8
-    movq    8(%rsi), %r9
-    movq    16(%rsi), %r10
-    movq    24(%rsi), %r11
-    movq    8+.Lpoly(%rip), %r14
-    movq    24+.Lpoly(%rip), %r15
-    call    ECP256_DivBy2Core
-
-    movq    (%rsp), %r15
-    movq    8(%rsp), %r14
-    movq    16(%rsp), %r13
-    movq    24(%rsp), %r12
-    leaq    32(%rsp),  %rsp
-    ret
-.cfi_endproc
-.size   ECP256_DivBy2, .-ECP256_DivBy2
-
 /* r14 = .Lpoly[1], r15 = .Lpoly[3] */
 .type   ECP256_MulBy2Core,@function
 .align 32
@@ -1286,54 +1134,6 @@ ECP256_MulBy2Core:
     ret
 .cfi_endproc
 .size   ECP256_MulBy2Core, .-ECP256_MulBy2Core
-
-.globl  ECP256_MulBy2
-.type   ECP256_MulBy2,@function
-.align 32
-ECP256_MulBy2:
-.cfi_startproc
-    pushq   %r12
-    pushq   %r13
-
-    movq    (%rsi), %r8
-    movq    8(%rsi), %r9
-    movq    16(%rsi), %r10
-    movq    24(%rsi), %r11
-    xorq    %r13, %r13
-
-    leaq    .Lpoly(%rip), %rsi
-
-    addq    %r8, %r8
-    adcq    %r9, %r9
-    movq    %r8, %rax
-    adcq    %r10, %r10
-    adcq    %r11, %r11
-    movq    %r9, %rcx
-    adcq    $0, %r13
-
-    subq    $-1, %r8
-    movq    %r10, %rdx
-    sbbq    8(%rsi), %r9
-    movq    %r11, %r12
-    sbbq    $0, %r10
-    sbbq    24(%rsi), %r11
-    sbbq    $0, %r13
-
-    cmovcq  %rax, %r8           // Obtain mod P result
-    cmovcq  %rcx, %r9
-    movq    %r8, (%rdi)
-    cmovcq  %rdx, %r10
-    movq    %r9, 8(%rdi)
-    cmovcq  %r12, %r11
-    movq    %r10, 16(%rdi)
-    movq    %r11, 24(%rdi)
-
-    movq    0(%rsp), %r13
-    movq    8(%rsp), %r12
-    leaq    16(%rsp), %rsp
-    ret
-.cfi_endproc
-.size   ECP256_MulBy2, .-ECP256_MulBy2
 
 /* r14 = .Lpoly[1], r15 = .Lpoly[3] */
 .type   ECP256_MulBy3Core,@function
@@ -1388,33 +1188,6 @@ ECP256_MulBy3Core:
     ret
 .cfi_endproc
 .size   ECP256_MulBy3Core, .-ECP256_MulBy3Core
-
-.globl  ECP256_MulBy3
-.type   ECP256_MulBy3,@function
-.align 32
-ECP256_MulBy3:
-.cfi_startproc
-    pushq   %r12
-    pushq   %r13
-    pushq   %r14
-    pushq   %r15
-
-    movq    (%rsi), %r8
-    movq    8(%rsi), %r9
-    movq    16(%rsi), %r10
-    movq    24(%rsi), %r11
-    movq    8+.Lpoly(%rip), %r14
-    movq    24+.Lpoly(%rip), %r15
-    call    ECP256_MulBy3Core
-
-    movq    (%rsp), %r15
-    movq    8(%rsp), %r14
-    movq    16(%rsp), %r13
-    movq    24(%rsp), %r12
-    leaq    32(%rsp), %rsp
-    ret
-.cfi_endproc
-.size   ECP256_MulBy3, .-ECP256_MulBy3
 
 /**
  *  Function description: This function is used to calculate the Montgomery multiplication of the ord(P256) field:

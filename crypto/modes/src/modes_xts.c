@@ -113,7 +113,7 @@ void GF128Mul(uint8_t *a, uint32_t len)
 void GF128Mul(uint8_t *a, uint32_t len)
 {
     (void)len;
-    uint64_t *t = (uint64_t *)a;
+    uint64_t *t = (uint64_t *)(uintptr_t)a;
     uint8_t c = (t[1] >> 63) & 0xff; // 63 is the last bit of the last eight bytes.
     t[1] = t[1] << 1 | t[0] >> 63; // 63 is the last bit of the first eight bytes
     t[0] = t[0] << 1;
@@ -185,6 +185,7 @@ int32_t BlocksCrypt(MODES_CipherXTSCtx *ctx, const uint8_t **in, uint8_t **out, 
 
 int32_t MODES_XTS_Encrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
+    RETURN_RET_IF(ctx->ciphCtx == NULL, CRYPT_NULL_INPUT);
     int32_t ret;
     uint32_t i;
     uint8_t pp[MODES_XTS_BLOCKSIZE];
@@ -243,6 +244,7 @@ int32_t MODES_XTS_Encrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *o
 
 int32_t MODES_XTS_Decrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
+    RETURN_RET_IF(ctx->ciphCtx == NULL, CRYPT_NULL_INPUT);
     int32_t ret;
     uint8_t pp[MODES_XTS_BLOCKSIZE], t2[MODES_XTS_BLOCKSIZE]; // xts blocksize MODES_XTS_BLOCKSIZE
     uint32_t i;
@@ -291,10 +293,7 @@ int32_t MODES_XTS_Decrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *o
     }
 
     ret = BlockCrypt(ctx, pp, t2, pp, false);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
     if (memcpy_s(tmpOut, blockSize + tmpLen, pp, blockSize) != EOK) {
         BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
         return CRYPT_SECUREC_FAIL;
@@ -442,16 +441,68 @@ int32_t MODES_XTS_InitCtx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t k
 
 int32_t MODES_XTS_Update(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
+#ifndef HITLS_XTS_STREAM
+    // Except XTS mode. (SM4_XTS is not included and is not cached at the EAL layer.
+    // Therefore, select ProcessStream in CipherUpdate to process stream encryption.)
+    if (modeCtx->algId == CRYPT_CIPHER_AES128_XTS || modeCtx->algId == CRYPT_CIPHER_AES256_XTS) {
+        return XtsCipherUpdate(modeCtx, in, inLen, out, outLen,
+            modeCtx->enc ? MODES_XTS_Encrypt : MODES_XTS_Decrypt);
+    }
+#endif
     return MODES_CipherStreamProcess(modeCtx->enc ? MODES_XTS_Encrypt : MODES_XTS_Decrypt, &modeCtx->xtsCtx,
         in, inLen, out, outLen);
 }
 
-int32_t MODES_XTS_Final(MODES_XTS_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
+int32_t MODES_XTS_Final(MODES_XTS_Ctx *modeCtx, uint8_t *out, uint32_t *outLen, void *func)
 {
+    if (outLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+#ifndef HITLS_XTS_STREAM
+    int32_t ret;
+    uint32_t outLenTemp;
+    if (out == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (modeCtx->pad != CRYPT_PADDING_NONE && (*outLen) < modeCtx->xtsCtx.blockSize) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
+        return CRYPT_EAL_BUFF_LEN_NOT_ENOUGH;
+    }
+    if (modeCtx->enc) {
+        ret = MODES_BlockPadding(modeCtx->algId, modeCtx->pad,
+            modeCtx->xtsCtx.blockSize, modeCtx->data, &modeCtx->dataLen);
+        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        if (modeCtx->dataLen == 0) {
+            *outLen = modeCtx->dataLen;
+            return CRYPT_SUCCESS;
+        }
+        ret = ((EncryptBlock)func)(&modeCtx->xtsCtx, modeCtx->data, out, modeCtx->dataLen);
+        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        *outLen = modeCtx->dataLen;
+    } else {
+        if (modeCtx->dataLen == 0) {
+            *outLen = modeCtx->dataLen;
+            return CRYPT_SUCCESS;
+        }
+        
+        ret = ((DecryptBlock)func)(&modeCtx->xtsCtx, modeCtx->data, out, modeCtx->dataLen);
+        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        outLenTemp = modeCtx->dataLen;
+        ret = MODES_BlockUnPadding(modeCtx->pad, out, modeCtx->xtsCtx.blockSize, &outLenTemp);
+        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        *outLen = outLenTemp;
+    }
+    modeCtx->dataLen = 0;
+    return ret;
+#else
     (void) modeCtx;
     (void) out;
+    (void) func;
     *outLen = 0;
     return CRYPT_SUCCESS;
+#endif
 }
 
 int32_t MODES_XTS_DeInitCtx(MODES_XTS_Ctx *modeCtx)
@@ -482,8 +533,8 @@ void MODES_XTS_FreeCtx(MODES_XTS_Ctx *modeCtx)
 int32_t MODES_XTS_InitCtxEx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, void *param, bool enc)
 {
-    (void)param;
-    if (modeCtx == NULL) {
+    (void) param;
+    if (modeCtx == NULL || modeCtx->xtsCtx.ciphMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -499,13 +550,159 @@ int32_t MODES_XTS_InitCtxEx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t
     }
 }
 
+#ifndef HITLS_XTS_STREAM
+static int32_t XtsUpdateOneBlock(MODES_XTS_Ctx *ctx, const uint8_t **in, uint32_t *inLen, uint8_t **out,
+    uint32_t *outLen, void *func)
+{
+    int32_t ret;
+    uint8_t blockSize = MODES_XTS_BLOCKSIZE;
+    uint8_t xtsCacheSize = blockSize * 2; // 2 blocks
+    if (ctx->dataLen >= blockSize) {  // obtain a piece from the cache for encryption and decryption
+        ctx->dataLen -= blockSize;
+    } else {
+        // Padded the in into the length of blockSize data for encryption and decryption.
+        (void)memcpy_s(ctx->data + ctx->dataLen, (xtsCacheSize - ctx->dataLen), *in, (blockSize - ctx->dataLen));
+        *in += (blockSize - ctx->dataLen);
+        *inLen -= (blockSize - ctx->dataLen);
+        ctx->dataLen = 0;
+    }
+
+    // The encryption and decryption processes in XTS mode are the same here.
+    ret = ((EncryptBlock)(func))(&ctx->xtsCtx, ctx->data, *out, blockSize);
+
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    *out += blockSize;
+    *outLen = blockSize;
+    if (ctx->dataLen > 0) {
+        (void)memmove_s(ctx->data, xtsCacheSize, ctx->data + blockSize, ctx->dataLen);
+    }
+
+    (void)memcpy_s(ctx->data + ctx->dataLen, (xtsCacheSize - ctx->dataLen), *in, *inLen);
+    ctx->dataLen += (uint8_t)(*inLen);
+    *inLen = 0;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t XtsUpdateTwoBlock(MODES_XTS_Ctx *ctx, const uint8_t **in, uint32_t *inLen, uint8_t **out,
+    uint32_t *outLen, void *func)
+{
+    int32_t ret;
+    uint8_t blockSize = MODES_XTS_BLOCKSIZE;
+    uint8_t xtsCacheSize = blockSize * 2; // 2 blocks
+    uint32_t cryptLen = xtsCacheSize - ctx->dataLen;
+    if (ctx->dataLen < xtsCacheSize) {
+        (void)memcpy_s(ctx->data + ctx->dataLen, cryptLen, (*in), cryptLen);
+        *in += cryptLen;
+        *inLen -= cryptLen;
+    }
+    // The encryption and decryption processes in XTS mode are the same here.
+    ret = ((EncryptBlock)(func))(&ctx->xtsCtx, ctx->data, *out, xtsCacheSize);
+
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    *out += xtsCacheSize;
+    *outLen = xtsCacheSize;
+
+    return CRYPT_SUCCESS;
+}
+
+static int32_t XtsUpdateCache(MODES_XTS_Ctx *ctx, const uint8_t **in, uint32_t *inLen,
+    uint8_t **out, uint32_t *outLen, void *func)
+{
+    uint8_t blockSize = MODES_XTS_BLOCKSIZE;
+    uint8_t xtsCacheSize = blockSize * 2; // 2 blocks
+    uint64_t total = (uint64_t)ctx->dataLen + *inLen;
+
+    // len <= 2 * blockSize
+    if (total <= (uint64_t)xtsCacheSize) {
+        (void)memcpy_s(ctx->data + ctx->dataLen, (2 * blockSize - ctx->dataLen), *in, *inLen); // 2 blocks
+        *in += *inLen;
+        ctx->dataLen += (uint8_t)*inLen;
+        *inLen = 0;
+        *outLen = 0;
+        return CRYPT_SUCCESS;
+    }
+
+    //  2*blockSize < len <= 3*blockSize, process 1 block
+    if (total <= (uint64_t)(xtsCacheSize + blockSize)) {
+        return XtsUpdateOneBlock(ctx, in, inLen, out, outLen, func);
+    }
+
+    //  3*blockSize < len
+    return XtsUpdateTwoBlock(ctx, in, inLen, out, outLen, func);
+}
+
+int32_t XtsCipherUpdate(MODES_XTS_Ctx *ctx, const uint8_t *in, uint32_t inLen, uint8_t *out,
+    uint32_t *outLen, void *func)
+{
+    uint32_t tmpLen = inLen;
+    const uint8_t *tmpIn = in;
+    uint8_t *tmpOut = (uint8_t *)out;
+    int32_t ret;
+    uint8_t blockSize = MODES_XTS_BLOCKSIZE;
+    uint32_t xtsCacheSize = blockSize * 2; // 2 blocks
+
+    ret = XtsUpdateCache(ctx, &tmpIn, &tmpLen, &tmpOut, outLen, func);
+    if (ret != CRYPT_SUCCESS) {
+        // The push error in CheckUpdateParam can be locate the only error location. No need to add the push error here.
+        return ret;
+    }
+    if (tmpLen == 0) {
+        return CRYPT_SUCCESS;
+    }
+
+    // If tmpLen % blockSize == 0, two blockSize buffers are reserved.
+    uint8_t remain = tmpLen % blockSize + blockSize;
+    if (remain == blockSize) {
+        remain += blockSize;
+    }
+    tmpLen -= remain;
+
+    if (tmpLen > 0) {
+        // The type of EncryptBlock is the same as that of DecryptBlock. Therefore,
+        // only the EncryptBlock type is converted to the EncryptBlock type to pass the access control.
+        // If the EncryptBlock type is different later,
+        // the ctx->enc command is used to determine whether the EncryptBlock type is different.
+        ret = ((EncryptBlock)(func))(&ctx->xtsCtx, tmpIn, tmpOut, tmpLen);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+
+    (void)memcpy_s(ctx->data, xtsCacheSize, tmpIn + tmpLen, remain);
+    ctx->dataLen = remain;
+    *outLen += tmpLen;
+
+    return CRYPT_SUCCESS;
+}
+#endif
+
+static int32_t CheckUpdateParam(uint32_t cacheLen, uint32_t inLen, uint32_t *outLen)
+{
+    if (UNLIKELY(inLen + cacheLen < inLen)) { // Integer flipping
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_TOO_LONG);
+        return CRYPT_EAL_BUFF_LEN_TOO_LONG;
+    }
+    if (UNLIKELY(*outLen < (inLen + cacheLen))) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
+        return CRYPT_EAL_BUFF_LEN_NOT_ENOUGH;
+    }
+    return CRYPT_SUCCESS;
+}
+
 int32_t MODES_XTS_UpdateEx(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
     if (modeCtx == NULL || modeCtx->xtsCtx.ciphMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = MODE_CheckUpdateParam(modeCtx->xtsCtx.blockSize, modeCtx->dataLen, inLen, outLen);
+    int32_t ret = CheckUpdateParam(modeCtx->dataLen, inLen, outLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -528,5 +725,43 @@ int32_t MODES_XTS_UpdateEx(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t i
             return MODES_XTS_Update(modeCtx, in, inLen, out, outLen);
     }
 }
+
+int32_t MODES_XTS_FinalEx(MODES_XTS_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
+{
+    if (modeCtx == NULL || modeCtx->xtsCtx.ciphMeth == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+#ifndef HITLS_XTS_STREAM
+    switch (modeCtx->algId) {
+        case CRYPT_CIPHER_AES128_XTS:
+        case CRYPT_CIPHER_AES256_XTS:
+#ifdef HITLS_CRYPTO_AES
+            return AES_XTS_Final(modeCtx, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
+        case CRYPT_CIPHER_SM4_XTS:
+#ifdef HITLS_CRYPTO_SM4
+            return SM4_XTS_Final(modeCtx, out, outLen);
+#else
+            return CRYPT_EAL_ALG_NOT_SUPPORT;
+#endif
+        default:
+            return MODES_XTS_Final(modeCtx, out, outLen,
+                modeCtx->enc ? MODES_XTS_Encrypt : MODES_XTS_Decrypt);
+    }
+#else
+    if (outLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    (void) modeCtx;
+    (void) out;
+    *outLen = 0;
+    return CRYPT_SUCCESS;
+#endif
+}
+
 
 #endif // HITLS_CRYPTO_XTS

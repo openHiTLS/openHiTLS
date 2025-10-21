@@ -24,6 +24,7 @@
 #include "crypt_algid.h"
 #include "crypt_ecc_pkey.h"
 #include "bsl_params.h"
+#include "crypt_params_key.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,6 +45,7 @@ typedef struct EccPara CRYPT_EcdhPara;
  */
 CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void);
 
+#ifdef HITLS_CRYPTO_PROVIDER
 /**
  * @ingroup ecdh
  * @brief ecdh Allocate the context memory space.
@@ -54,6 +56,7 @@ CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void);
  * @retval NULL               Invalid null pointer
  */
 CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtxEx(void *libCtx);
+#endif
 
 /**
  * @ingroup ecdh

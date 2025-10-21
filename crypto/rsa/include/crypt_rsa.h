@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include "crypt_local_types.h"
 #include "bsl_params.h"
+#include "crypt_params_key.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,7 +83,7 @@ CRYPT_RSA_Ctx *CRYPT_RSA_DupCtx(CRYPT_RSA_Ctx *keyCtx);
  * @retval (CRYPT_RSA_Para *) Pointer to the allocated memory space of the structure
  * @retval NULL               Invalid null pointer.
  */
-CRYPT_RSA_Para *CRYPT_RSA_NewParaEx(const BSL_Param *para);
+CRYPT_RSA_Para *CRYPT_RSA_NewPara(const CRYPT_RsaPara *para);
 
 /**
  * @ingroup rsa
@@ -248,7 +249,6 @@ int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, CRYPT_RsaPrv *prv);
  */
 int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, CRYPT_RsaPub *pub);
 
-#ifdef HITLS_BSL_PARAMS
 /**
  * @ingroup rsa
  * @brief RSA Set the private key information.
@@ -322,7 +322,6 @@ int32_t CRYPT_RSA_GetPubKeyEx(const CRYPT_RSA_Ctx *ctx, BSL_Param *para);
  * @retval CRYPT_SUCCESS            set successfully.
  */
 int32_t CRYPT_RSA_SetParaEx(CRYPT_RSA_Ctx *ctx, const BSL_Param *para);
-#endif
 
 int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 

@@ -124,6 +124,10 @@ int32_t CryptLenCheckAndRefresh(MODES_CipherGCMCtx *ctx, uint32_t len);
 
 // xts
 #ifdef HITLS_CRYPTO_XTS
+#ifndef HITLS_XTS_STREAM
+int32_t XtsCipherUpdate(MODES_XTS_Ctx *ctx, const uint8_t *in, uint32_t inLen, uint8_t *out,
+    uint32_t *outLen, void *func);
+#endif
 int32_t MODES_XTS_CheckPara(const uint8_t *key, uint32_t len, const uint8_t *iv);
 int32_t MODES_XTS_SetIv(MODES_CipherXTSCtx *ctx, const uint8_t *val, uint32_t len);
 
@@ -180,6 +184,8 @@ int32_t MODES_SM4_GCM_DecryptBlock(MODES_CipherGCMCtx *ctx, const uint8_t *in, u
 #endif
 #ifdef HITLS_CRYPTO_OFB
 int32_t MODES_OFB_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+int32_t MODE_SM4_OFB_Encrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+int32_t MODE_SM4_OFB_Decrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
 #endif
 #ifdef HITLS_CRYPTO_XTS
 int32_t MODES_XTS_Encrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);

@@ -43,7 +43,11 @@ CRYPT_RSA_Ctx *CRYPT_RSA_NewCtxEx(void *libCtx)
     if (keyCtx == NULL) {
         return NULL;
     }
+#ifdef HITLS_CRYPTO_PROVIDER
     keyCtx->libCtx = libCtx;
+#else
+    (void)libCtx;
+#endif
     return keyCtx;
 }
 
@@ -1211,16 +1215,18 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx)
      * due to its low security, our interface does not lift this restriction.
      * Meanwhile, the check of e is not added to ensure compatibility.
      */
+#ifdef HITLS_CRYPTO_PROVIDER
     BN_OptimizerSetLibCtx(ctx->libCtx, optimizer);
+#endif
     ret = GenPQBasedOnProbPrimes(ctx->para, newCtx->prvKey, optimizer);
     if (ret != CRYPT_SUCCESS) {
-        BN_OptimizerDestroy(optimizer);
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
     ret = RSA_CalcPrvKey(ctx->para, newCtx, optimizer);
     BN_OptimizerDestroy(optimizer);
+    optimizer = NULL;
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -1243,6 +1249,7 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx)
     BSL_SAL_FREE(newCtx);
     return ret;
 ERR:
+    BN_OptimizerDestroy(optimizer);
     CRYPT_RSA_FreeCtx(newCtx);
     return ret;
 }

@@ -50,14 +50,45 @@ extern "C" {
 #define CRYPT_SHA2_512_DIGESTSIZE 64
 #endif // HITLS_CRYPTO_SHA512
 
+#ifdef HITLS_CRYPTO_SHA256
+/* SHA2 256 ctx */
+typedef struct CryptSha256Ctx {
+    uint32_t h[CRYPT_SHA2_256_DIGESTSIZE / sizeof(uint32_t)]; /* 256 bits for SHA256 state */
+    uint32_t block[CRYPT_SHA2_256_BLOCKSIZE / sizeof(uint32_t)]; /* 512 bits block cache */
+    uint32_t lNum, hNum;                                           /* input bits counter, max 2^64 bits */
+    uint32_t blocklen;                                     /* block length */
+    uint32_t outlen;                                       /* digest output length */
+    uint32_t errorCode; /* error Code */
+} CRYPT_SHA2_256_Ctx;
+#endif
+
+#ifdef HITLS_CRYPTO_SHA224
+/* SHA2 224 ctx */
+typedef struct CryptSha256Ctx CRYPT_SHA2_224_Ctx;
+#endif
+
+#ifdef HITLS_CRYPTO_SHA512
+/* SHA2 512 ctx */
+typedef struct CryptSha2512Ctx {
+    uint64_t h[CRYPT_SHA2_512_DIGESTSIZE / sizeof(uint64_t)];
+    uint8_t block[CRYPT_SHA2_512_BLOCKSIZE];
+    uint64_t lNum, hNum;
+    uint32_t num, mdlen;
+    uint32_t errorCode; /* error Code */
+} CRYPT_SHA2_512_Ctx;
+#endif
+
+#ifdef HITLS_CRYPTO_SHA384
+/* SHA2 384 ctx */
+typedef struct CryptSha2512Ctx CRYPT_SHA2_384_Ctx;
+#endif
+
 #define CRYPT_SHA2_224_Squeeze NULL
 #define CRYPT_SHA2_256_Squeeze NULL
 #define CRYPT_SHA2_384_Squeeze NULL
 #define CRYPT_SHA2_512_Squeeze NULL
 
 #ifdef HITLS_CRYPTO_SHA224
-
-typedef struct CryptSha256Ctx CRYPT_SHA2_224_Ctx;
 
 #define CRYPT_SHA2_224_NewCtx CRYPT_SHA2_256_NewCtx
 #define CRYPT_SHA2_224_NewCtxEx CRYPT_SHA2_256_NewCtxEx
@@ -91,7 +122,19 @@ typedef struct CryptSha256Ctx CRYPT_SHA2_224_Ctx;
  * @retval #CRYPT_SUCCESS ctx is initialized
  * @retval #CRYPT_NULL_INPUT ctx is NULL
  */
-int32_t CRYPT_SHA2_224_Init(CRYPT_SHA2_224_Ctx *ctx, BSL_Param *param);
+int32_t CRYPT_SHA2_224_Init(CRYPT_SHA2_224_Ctx *ctx);
+
+/**
+ * @ingroup SHA224
+ * @brief This API is used to initialize the SHA224 context.
+ *
+ * @param ctx [in,out] Pointer to the SHA224 context.
+ * @param param [in] param.
+ *
+ * @retval #CRYPT_SUCCESS       Initialization succeeded.
+ * @retval #CRYPT_NULL_INPUT    Pointer ctx is NULL
+ */
+int32_t CRYPT_SHA2_224_InitEx(CRYPT_SHA2_224_Ctx *ctx, void *param);
 
 #ifdef HITLS_CRYPTO_PROVIDER
 /**
@@ -112,8 +155,6 @@ int32_t CRYPT_SHA2_224_GetParam(CRYPT_SHA2_224_Ctx *ctx, BSL_Param *param);
 #endif // HITLS_CRYPTO_SHA224
 
 #ifdef HITLS_CRYPTO_SHA256
-
-typedef struct CryptSha256Ctx CRYPT_SHA2_256_Ctx;
 
 /**
  * @ingroup SHA2_256
@@ -169,7 +210,19 @@ void CRYPT_SHA2_256_FreeCtx(CRYPT_SHA2_256_Ctx *ctx);
  * @retval #CRYPT_SUCCESS ctx is initialized
  * @retval #CRYPT_NULL_INPUT ctx is NULL
  */
-int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx, BSL_Param *param);
+int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx);
+
+/**
+ * @ingroup SHA256
+ * @brief This API is used to initialize the SHA256 context.
+ *
+ * @param ctx [in,out] Pointer to the SHA256 context.
+ * @param param [in] param.
+ *
+ * @retval #CRYPT_SUCCESS       Initialization succeeded.
+ * @retval #CRYPT_NULL_INPUT    Pointer ctx is NULL
+ */
+int32_t CRYPT_SHA2_256_InitEx(CRYPT_SHA2_256_Ctx *ctx, void *param);
 
 /**
  * @defgroup CRYPT_SHA2_256_Update
@@ -274,8 +327,6 @@ int32_t CRYPT_SHA2_256_GetParam(CRYPT_SHA2_256_Ctx *ctx, BSL_Param *param);
 
 #ifdef HITLS_CRYPTO_SHA384
 
-typedef struct CryptSha2512Ctx CRYPT_SHA2_384_Ctx;
-
 #define CRYPT_SHA2_384_NewCtx CRYPT_SHA2_512_NewCtx
 #define CRYPT_SHA2_384_NewCtxEx CRYPT_SHA2_512_NewCtxEx
 #define CRYPT_SHA2_384_FreeCtx CRYPT_SHA2_512_FreeCtx
@@ -307,7 +358,19 @@ typedef struct CryptSha2512Ctx CRYPT_SHA2_384_Ctx;
  * @retval #CRYPT_SUCCESS ctx is initialized
  * @retval #CRYPT_NULL_INPUT ctx is NULL
  */
-int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx, BSL_Param *param);
+int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx);
+
+/**
+ * @ingroup SHA384
+ * @brief This API is used to initialize the SHA384 context.
+ *
+ * @param ctx [in,out] Pointer to the SHA384 context.
+ * @param param [in] param.
+ *
+ * @retval #CRYPT_SUCCESS       Initialization succeeded.
+ * @retval #CRYPT_NULL_INPUT    Pointer ctx is NULL
+ */
+int32_t CRYPT_SHA2_384_InitEx(CRYPT_SHA2_384_Ctx *ctx, void *param);
 
 #ifdef HITLS_CRYPTO_PROVIDER
 /**
@@ -328,8 +391,6 @@ int32_t CRYPT_SHA2_384_GetParam(CRYPT_SHA2_384_Ctx *ctx, BSL_Param *param);
 #endif // HITLS_CRYPTO_SHA384
 
 #ifdef HITLS_CRYPTO_SHA512
-
-typedef struct CryptSha2512Ctx CRYPT_SHA2_512_Ctx;
 
 /**
  * @ingroup SHA2_512
@@ -382,7 +443,19 @@ void CRYPT_SHA2_512_FreeCtx(CRYPT_SHA2_512_Ctx *ctx);
  * @retval #CRYPT_SUCCESS ctx is initialized
  * @retval #CRYPT_NULL_INPUT ctx is NULL
  */
-int32_t CRYPT_SHA2_512_Init(CRYPT_SHA2_512_Ctx *ctx, BSL_Param *param);
+int32_t CRYPT_SHA2_512_Init(CRYPT_SHA2_512_Ctx *ctx);
+
+/**
+ * @ingroup SHA512
+ * @brief This API is used to initialize the SHA512 context.
+ *
+ * @param ctx [in,out] Pointer to the SHA512 context.
+ * @param param [in] param.
+ *
+ * @retval #CRYPT_SUCCESS       Initialization succeeded.
+ * @retval #CRYPT_NULL_INPUT    Pointer ctx is NULL
+ */
+int32_t CRYPT_SHA2_512_InitEx(CRYPT_SHA2_512_Ctx *ctx, void *param);
 
 /**
  * @ingroup LLF Low Level Functions

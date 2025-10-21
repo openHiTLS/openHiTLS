@@ -15,7 +15,7 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_DRBG_HMAC
-
+#include <stdint.h>
 #include <stdlib.h>
 #include <securec.h>
 #include "crypt_errno.h"
@@ -276,7 +276,6 @@ void DRBG_HmacFree(DRBG_Ctx *drbg)
     DRBG_HmacCtx *ctx = (DRBG_HmacCtx*)drbg->ctx;
     ctx->hmacMeth->freeCtx(ctx->hmacCtx);
     BSL_SAL_FREE(drbg);
-    return;
 }
 
 static int32_t DRBG_NewHmacCtxBase(uint32_t hmacSize, DRBG_Ctx *drbg)
@@ -363,8 +362,8 @@ DRBG_Ctx *DRBG_NewHmacCtx(void *libCtx, const EAL_MacMethod *hmacMeth, CRYPT_MAC
     drbg->nonceRange.min = drbg->entropyRange.min / DRBG_NONCE_FROM_ENTROPY;
     drbg->nonceRange.max = DRBG_MAX_LEN;
 
-    drbg->maxPersLen = DRBG_MAX_LEN;
     drbg->maxAdinLen = DRBG_MAX_LEN;
+    drbg->maxPersLen = DRBG_MAX_LEN;
     drbg->maxRequest = DRBG_MAX_REQUEST;
     drbg->libCtx = libCtx;
 

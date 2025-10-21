@@ -26,7 +26,6 @@
 #include <stdint.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
-#include "crypt_eal_provider.h"
 #include "bsl_params.h"
 
 #ifdef __cplusplus
@@ -374,7 +373,7 @@ bool CRYPT_EAL_RandIsValidAlgId(CRYPT_RAND_AlgId id);
  * @retval #CRYPT_SUCCESS, if successful.
  *         For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_EAL_DrbgInstantiate(CRYPT_EAL_RndCtx *ctx, const uint8_t *pers, uint32_t persLen);
+int32_t CRYPT_EAL_DrbgInstantiate(CRYPT_EAL_RndCtx *rndCtx, const uint8_t *pers, uint32_t persLen);
 
 /**
  * @ingroup crypt_eal_rand

@@ -357,6 +357,12 @@ void X509_ExtFree(HITLS_X509_Ext *ext, bool isFreeOut)
     } else {
         BSL_LIST_FREE(ext->extList, (BSL_LIST_PFUNC_FREE)HITLS_X509_ExtEntryFree);
     }
+    if (ext->type == HITLS_X509_EXT_TYPE_CERT && ext->extData != NULL) {
+        HITLS_X509_CertExt *c = (HITLS_X509_CertExt *)ext->extData;
+        if ((c->extFlags & HITLS_X509_EXT_FLAG_EXKUSAGE) != 0) {
+            HITLS_X509_ClearExtendedKeyUsage(&c->exKeyUsage);
+        }
+    }
     BSL_SAL_Free(ext->extData);
     if (isFreeOut) {
         BSL_SAL_Free(ext);
@@ -727,6 +733,14 @@ static int32_t ParseExtAsnItem(BSL_ASN1_Buffer *asn, void *param, BSL_ASN1_List 
             return ParseExtKeyUsage(&extEntry, (HITLS_X509_CertExt *)ext->extData);
         case BSL_CID_CE_BASICCONSTRAINTS:
             return ParseExtBasicConstraints(&extEntry, (HITLS_X509_CertExt *)ext->extData);
+        case BSL_CID_CE_EXTKEYUSAGE: {
+            HITLS_X509_CertExt *c = (HITLS_X509_CertExt *)ext->extData;
+            ret = HITLS_X509_ParseExtendedKeyUsage(&extEntry, &c->exKeyUsage);
+            if (ret == HITLS_PKI_SUCCESS) {
+                c->extFlags |= HITLS_X509_EXT_FLAG_EXKUSAGE;
+            }
+            return ret;
+        }
         default:
             return HITLS_PKI_SUCCESS;
     }

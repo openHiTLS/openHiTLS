@@ -21,8 +21,8 @@
 
 #include <stdint.h>
 #include "bsl_sal.h"
+
 #include "crypt_eal_rand.h"
-#include "crypt_algid.h"
 #include "sal_atomic.h"
 #include "crypt_local_types.h"
 
@@ -53,8 +53,6 @@ int32_t EAL_SeedDrbgInit(EAL_SeedDrbg *seedDrbg);
 void EAL_SeedDrbgEntropyMeth(CRYPT_RandSeedMethod *meth);
 
 void EAL_SeedDrbgRandDeinit(CRYPT_EAL_RndCtx *rndCtx);
-
-int32_t EAL_RandFindMethod(CRYPT_RAND_AlgId id, EAL_RandMethLookup *lu);
 
 /**
  * @brief Global random deinitialization

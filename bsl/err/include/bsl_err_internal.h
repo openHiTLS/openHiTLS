@@ -41,6 +41,107 @@ extern "C" {
  */
 void BSL_ERR_PushError(int32_t err, const char *file, uint32_t lineNo);
 
+#ifdef HITLS_BSL_ERR_ENHANCE
+/**
+ * @ingroup bsl_err
+ * @brief Save the error information to the error information stack.
+ *
+ * @par Description:
+ * Save the error information to the error information stack.
+ *
+ * @attention err cannot be 0.
+ * @param err [IN] Error code. The most significant 16 bits indicate the submodule ID,
+ *                 and the least significant 16 bits indicate the error ID.
+ * @param format [IN] Log format character string
+ * @param ... [IN] format Parameter
+ */
+void BSL_ERR_SetErrorReason(int32_t err, const char *format, ...);
+
+/**
+ * @ingroup bsl_err
+ * @brief Obtain the error code, file name, and line number of the earliest push message in the error stack.
+ *
+ * @par Description:
+ * When an error occurs on a HiTLS interface, the user obtains an error code, file name, and line number.
+ * The obtained information is not deleted from the error stack.
+ *
+ * @param reason [OUT] Obtain the err reason of the file where the error occurs.
+ * @param file [OUT] Obtains the name of the file where the error occurs, excluding the directory path.
+ * @param lineNo [OUT] Obtain the line number of the file where the error occurs.
+ * @return Error code. The most significant 16 bits indicate the ID of the module where the error occurs,
+ *                     and the least significant 16 bits indicate the cause number.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : Not time-consuming.
+ * If either of the two parameters is null, the file name and line number cannot be obtained.
+ */
+int32_t BSL_ERR_GetErrorReason(const char **reason, const char **file, uint32_t *lineNo);
+
+/**
+ * @ingroup bsl_err
+ * @brief Obtain the error code, file name, and line number of the earliest push message in the error stack.
+ *
+ * @par Description:
+ * When an error occurs on a HiTLS interface, the user obtains an error code, file name, and line number.
+ * The obtained information is not deleted from the error stack.
+ *
+ * @param reason [OUT] Obtain the err reason of the file where the error occurs.
+ * @param file [OUT] Obtains the name of the file where the error occurs, excluding the directory path.
+ * @param lineNo [OUT] Obtain the line number of the file where the error occurs.
+ * @return Error code. The most significant 16 bits indicate the ID of the module where the error occurs,
+ *                     and the least significant 16 bits indicate the cause number.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : Not time-consuming.
+ * If either of the two parameters is null, the file name and line number cannot be obtained.
+ */
+int32_t BSL_ERR_PeekErrorReason(const char **reason, const char **file, uint32_t *lineNo);
+
+/**
+ * @ingroup bsl_err
+ * @brief Obtain the error code, file name, and line number of the last push message in the error stack.
+ *
+ * @par Description:
+ * When an error occurs on a HiTLS interface, the user obtains an error code, file name, and line number.
+ * The obtained information is not deleted from the error stack.
+ *
+ * @param reason [OUT] Obtain the err reason of the file where the error occurs.
+ * @param file [OUT] Obtains the name of the file where the error occurs, excluding the directory path.
+ * @param lineNo [OUT] Obtain the line number of the file where the error occurs.
+ * @return Error code. The most significant 16 bits indicate the ID of the module where the error occurs,
+ *                     and the least significant 16 bits indicate the cause number.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : Not time-consuming.
+ * If either of the two parameters is null, the file name and line number cannot be obtained.
+ */
+int32_t BSL_ERR_GetLastErrorReason(const char **reason, const char **file, uint32_t *lineNo);
+
+/**
+ * @ingroup bsl_err
+ * @brief Obtain the error code, file name, and line number of the last push message in the error stack.
+ *
+ * @par Description:
+ * When an error occurs on a HiTLS interface, the user obtains an error code, file name, and line number.
+ * The obtained information is not deleted from the error stack.
+ *
+ * @param reason [OUT] Obtain the err reason of the file where the error occurs.
+ * @param file [OUT] Obtains the name of the file where the error occurs, excluding the directory path.
+ * @param lineNo [OUT] Obtain the line number of the file where the error occurs.
+ * @return Error code. The most significant 16 bits indicate the ID of the module where the error occurs,
+ *                     and the least significant 16 bits indicate the cause number.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : Not time-consuming.
+ * If either of the two parameters is null, the file name and line number cannot be obtained.
+ */
+int32_t BSL_ERR_PeekLastErrorReason(const char **reason, const char **file, uint32_t *lineNo);
+#endif
+
 /**
  * @ingroup bsl_err
  * @brief Save the error information to the error information stack.

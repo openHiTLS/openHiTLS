@@ -95,7 +95,6 @@ void Poly1305Update(Poly1305Ctx *ctx, const uint8_t *data, uint32_t dataLen)
     for (i = 0; i < ctx->lastLen; i++) {
         ctx->last[i] = off[i];
     }
-    return;
 }
 
 void Poly1305Final(Poly1305Ctx *ctx, uint8_t mac[POLY1305_TAGSIZE])
@@ -313,14 +312,15 @@ int32_t MODES_CHACHA20POLY1305_SetDecryptKey(MODES_CipherChaChaPolyCtx *ctx, con
     }
     return ctx->method->setDecryptKey(ctx->key, key, len);
 }
-int32_t MODES_CHACHA20POLY1305_Ctrl(MODES_CHACHAPOLY_Ctx *modeCtx, int32_t opt, void *val, uint32_t len)
+
+int32_t MODES_CHACHA20POLY1305_Ctrl(MODES_CHACHAPOLY_Ctx *modeCtx, int32_t cmd, void *val, uint32_t len)
 {
     if (modeCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
     }
     
-    switch (opt) {
+    switch (cmd) {
         case CRYPT_CTRL_REINIT_STATUS:
             return SetIv(&modeCtx->chachaCtx, val, len);
         case CRYPT_CTRL_GET_TAG:
@@ -339,7 +339,7 @@ int32_t MODES_CHACHA20POLY1305_Ctrl(MODES_CHACHAPOLY_Ctx *modeCtx, int32_t opt, 
                 BSL_ERR_PUSH_ERROR(CRYPT_MODES_CTRL_TYPE_ERROR);
                 return CRYPT_MODES_CTRL_TYPE_ERROR;
             }
-            return modeCtx->chachaCtx.method->cipherCtrl(modeCtx->chachaCtx.key, opt, val, len);
+            return modeCtx->chachaCtx.method->cipherCtrl(modeCtx->chachaCtx.key, cmd, val, len);
     }
 }
 

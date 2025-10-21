@@ -50,12 +50,24 @@ CRYPT_CMAC_Ctx *CRYPT_CMAC_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id);
  * @param ctx [IN] CMAC context
  * @param key [in] symmetric algorithm key
  * @param len [in] Key length
+ * @retval #CRYPT_SUCCESS       Succeeded.
+ * @retval #CRYPT_NULL_INPUT    The input parameter is NULL.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_CMAC_Init(CRYPT_CMAC_Ctx *ctx, const uint8_t *key, uint32_t len);
+
+/**
+ * @brief Use the key passed by the user to initialize the algorithm context.
+ * @param ctx [IN] CMAC context
+ * @param key [in] symmetric algorithm key
+ * @param len [in] Key length
  * @param param [in] param
  * @retval #CRYPT_SUCCESS       Succeeded.
  * @retval #CRYPT_NULL_INPUT    The input parameter is NULL.
  *          For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_CMAC_Init(CRYPT_CMAC_Ctx *ctx, const uint8_t *key, uint32_t len, void *param);
+int32_t CRYPT_CMAC_InitEx(CRYPT_CMAC_Ctx *ctx, const uint8_t *key, uint32_t len, void *param);
+
 /**
  * @brief Enter the data to be calculated and update the context.
  * @param ctx [IN] CMAC context

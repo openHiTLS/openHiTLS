@@ -38,6 +38,7 @@ typedef struct _HITLS_X509_VerifyParam {
     uint32_t securityBits;
     int64_t time;
     uint64_t flags;
+    int32_t purpose;
 #ifdef HITLS_CRYPTO_SM2
     BSL_Buffer sm2UserId;
 #endif
@@ -71,9 +72,6 @@ int32_t HITLS_X509_VerifyParamAndExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_L
  * You can configure not to verify or only verify the terminal certificate
  */
 int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain);
-
-
-int32_t HITLS_X509_GetIssuerFromStore(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_Cert **issuer);
 
 #ifdef __cplusplus
 }

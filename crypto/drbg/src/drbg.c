@@ -15,21 +15,29 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_DRBG
-
+#include <stdint.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <securec.h>
 #include "crypt_types.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
-#include "crypt_ealinit.h"
-#include "eal_entropy.h"
+#include "bsl_sal.h"
 #include "bsl_err_internal.h"
+#include "crypt_eal_rand.h"
 #include "drbg_local.h"
-#include "crypt_drbg_local.h"
+#ifdef HITLS_CRYPTO_MD
+#include "eal_md_local.h"
+#endif
+#ifdef HITLS_CRYPTO_MAC
+#include "eal_mac_local.h"
+#endif
+#ifdef HITLS_CRYPTO_CIPHER
+#include "eal_cipher_local.h"
+#endif
+#ifdef HITLS_BSL_PARAMS
 #include "bsl_params.h"
 #include "crypt_params_key.h"
-#include "bsl_sal.h"
+#endif
 
 #define DRBG_NONCE_FROM_ENTROPY (2)
 
@@ -151,118 +159,19 @@ ERR:
     return CRYPT_DRBG_FAIL_GET_NONCE;
 }
 
-#ifdef HITLS_CRYPTO_DRBG_CTR
-#define RAND_AES128_KEYLEN  16
-#define RAND_AES192_KEYLEN  24
-#define RAND_AES256_KEYLEN  32
-#define RAND_SM4_KEYLEN     16
-
-static int32_t GetCipherKeyLen(int32_t id, uint32_t *keyLen)
-{
-    switch (id) {
-        case CRYPT_CIPHER_AES128_CTR:
-            *keyLen = RAND_AES128_KEYLEN;
-            break;
-        case CRYPT_CIPHER_AES192_CTR:
-            *keyLen = RAND_AES192_KEYLEN;
-            break;
-        case CRYPT_CIPHER_AES256_CTR:
-            *keyLen = RAND_AES256_KEYLEN;
-            break;
-        case CRYPT_CIPHER_SM4_CTR:
-            *keyLen = RAND_SM4_KEYLEN;
-            break;
-        default:
-            BSL_ERR_PUSH_ERROR(CRYPT_DRBG_ALG_NOT_SUPPORT);
-            return CRYPT_DRBG_ALG_NOT_SUPPORT;
-    }
-    return CRYPT_SUCCESS;
-}
-#endif
-
 static int32_t DRBG_Restart(DRBG_Ctx *ctx)
 {
     if (ctx->state == DRBG_STATE_ERROR) {
         (void)DRBG_Uninstantiate(ctx);
     }
     if (ctx->state == DRBG_STATE_UNINITIALISED) {
-        int32_t ret = DRBG_Instantiate(ctx, NULL, 0, NULL);
+        int32_t ret = DRBG_Instantiate(ctx, NULL, 0);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
     }
     return CRYPT_SUCCESS;
-}
-
-DRBG_Ctx *DRBG_New(void *libCtx, int32_t algId, BSL_Param *param)
-{
-    int32_t ret;
-    (void)libCtx;
-    CRYPT_RandSeedMethod seedMethArray = {0};
-    CRYPT_RandSeedMethod *seedMeth = &seedMethArray;
-    void *seedCtx = NULL;
-
-    const BSL_Param *temp = NULL;
-    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEED_GETENTROPY)) != NULL) {
-        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
-            (void **)&(seedMethArray.getEntropy), NULL), ret);
-    }
-    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEED_CLEANENTROPY)) != NULL) {
-        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR,
-            (void **)&(seedMethArray.cleanEntropy), NULL), ret);
-    }
-    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEED_GETNONCE)) != NULL) {
-        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR,
-            (void **)&(seedMethArray.getNonce), NULL), ret);
-    }
-    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEED_CLEANNONCE)) != NULL) {
-        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR,
-            (void **)&(seedMethArray.cleanNonce), NULL), ret);
-    }
-
-    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_SEEDCTX)) != NULL) {
-        GOTO_ERR_IF(BSL_PARAM_GetPtrValue(temp, CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, &seedCtx, NULL), ret);
-    }
-
-    DRBG_Ctx *drbg = NULL;
-    EAL_RandMethLookup lu = { 0 };
-    if (EAL_RandFindMethod(algId, &lu) != CRYPT_SUCCESS) {
-        return NULL;
-    }
-    switch (lu.type) {
-#ifdef HITLS_CRYPTO_DRBG_HASH
-        case RAND_TYPE_MD:
-            drbg = DRBG_NewHashCtx((const EAL_MdMethod *)(lu.method), algId == CRYPT_RAND_SM3, seedMeth, seedCtx);
-            break;
-#endif
-#ifdef HITLS_CRYPTO_DRBG_HMAC
-        case RAND_TYPE_MAC:
-            drbg = DRBG_NewHmacCtx(libCtx, (const EAL_MacMethod *)(lu.method), lu.methodId, seedMeth, seedCtx);
-            break;
-#endif
-#ifdef HITLS_CRYPTO_DRBG_CTR
-        case RAND_TYPE_SM4_DF:
-        case RAND_TYPE_AES:
-        case RAND_TYPE_AES_DF: {
-            bool isUsedDF = (lu.type == RAND_TYPE_AES_DF || lu.type == RAND_TYPE_SM4_DF) ? true : false;
-            uint32_t keyLen;
-            if (GetCipherKeyLen(lu.methodId, &keyLen) != CRYPT_SUCCESS) {
-                return NULL;
-            }
-            drbg = DRBG_NewCtrCtx((const EAL_SymMethod *)(lu.method), keyLen, algId == CRYPT_RAND_SM4_CTR_DF, isUsedDF,
-                seedMeth, seedCtx);
-            break;
-        }
-#endif
-        default:
-            BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
-            return NULL;
-    }
-    return drbg;
-
-ERR:
-    return NULL;
 }
 
 void DRBG_Free(DRBG_Ctx *ctx)
@@ -275,13 +184,10 @@ void DRBG_Free(DRBG_Ctx *ctx)
 
     DRBG_Uninstantiate(ctx);
     ctxFree(ctx);
-
-    return;
 }
 
-int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen, BSL_Param *param)
+int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen)
 {
-    (void) param;
     CRYPT_Data entropy = {NULL, 0};
     CRYPT_Data nonce = {NULL, 0};
     CRYPT_Data pers = {(uint8_t *)(uintptr_t)person, persLen};
@@ -363,9 +269,8 @@ static inline bool DRBG_IsNeedReseed(DRBG_Ctx *ctx, bool pr)
     return false;
 }
 
-int32_t DRBG_Reseed(DRBG_Ctx *ctx, const uint8_t *adin, uint32_t adinLen, BSL_Param *param)
+int32_t DRBG_Reseed(DRBG_Ctx *ctx, const uint8_t *adin, uint32_t adinLen)
 {
-    (void) param;
     CRYPT_Data entropy = {NULL, 0};
     CRYPT_Data adinData = {(uint8_t*)(uintptr_t)adin, adinLen};
 
@@ -418,11 +323,19 @@ ERR:
     return ret;
 }
 
-int32_t DRBG_Generate(DRBG_Ctx *ctx, uint8_t *out, uint32_t outLen,
-    const uint8_t *adin, uint32_t adinLen,  bool pr)
+int32_t DRBG_Generate(DRBG_Ctx *ctx,
+                      uint8_t *out, uint32_t outLen,
+                      const uint8_t *adin, uint32_t adinLen,
+                      bool pr)
 {
     int32_t ret;
     CRYPT_Data adinData = {(uint8_t*)(uintptr_t)adin, adinLen};
+
+    if (ctx == NULL || out == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
     if (CRYPT_CHECK_BUF_INVALID(adin, adinLen)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -440,7 +353,7 @@ int32_t DRBG_Generate(DRBG_Ctx *ctx, uint8_t *out, uint32_t outLen,
     }
 
     if (DRBG_IsNeedReseed(ctx, pr)) {
-        ret = DRBG_Reseed(ctx, adin, adinLen, NULL);
+        ret = DRBG_Reseed(ctx, adin, adinLen);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -458,40 +371,6 @@ int32_t DRBG_Generate(DRBG_Ctx *ctx, uint8_t *out, uint32_t outLen,
     ctx->reseedCtr++;
 
     return ret;
-}
-
-int32_t DRBG_GenerateBytes(DRBG_Ctx *ctx, uint8_t *out, uint32_t outLen,
-    const uint8_t *adin, uint32_t adinLen,  BSL_Param *param)
-{
-    if (ctx == NULL || out == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    int32_t ret;
-    bool pr = ctx->predictionResistance;
-    const BSL_Param *temp = NULL;
-    if ((temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RAND_PR)) != NULL) {
-        uint32_t boolSize = sizeof(bool);
-        ret = BSL_PARAM_GetValue(temp, CRYPT_PARAM_RAND_PR, BSL_PARAM_TYPE_BOOL, (void *)&pr, &boolSize);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-    }
-    uint32_t block = ctx->maxRequest;
-    if (block == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-    for (uint32_t leftLen = outLen; leftLen > 0; leftLen -= block, out += block) {
-        block = leftLen > block ? block : leftLen;
-        ret = DRBG_Generate(ctx, out, block, adin, adinLen, pr);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-    }
-    return CRYPT_SUCCESS;
 }
 
 int32_t DRBG_Uninstantiate(DRBG_Ctx *ctx)
@@ -647,4 +526,124 @@ const DrbgIdMap *DRBG_GetIdMap(CRYPT_RAND_AlgId id)
     return NULL;
 }
 
-#endif /* HITLS_CRYPTO_DRBG */
+#if defined(HITLS_CRYPTO_DRBG_CTR)
+#define RAND_AES128_KEYLEN  16
+#define RAND_AES192_KEYLEN  24
+#define RAND_AES256_KEYLEN  32
+#define RAND_SM4_KEYLEN     16
+
+static int32_t GetCipherKeyLen(int32_t  id, uint32_t *keyLen)
+{
+    switch (id) {
+        case CRYPT_CIPHER_AES128_CTR:
+            *keyLen = RAND_AES128_KEYLEN;
+            break;
+        case CRYPT_CIPHER_AES192_CTR:
+            *keyLen = RAND_AES192_KEYLEN;
+            break;
+        case CRYPT_CIPHER_AES256_CTR:
+            *keyLen = RAND_AES256_KEYLEN;
+            break;
+        case CRYPT_CIPHER_SM4_CTR:
+            *keyLen = RAND_SM4_KEYLEN;
+            break;
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_DRBG_ALG_NOT_SUPPORT);
+            return CRYPT_DRBG_ALG_NOT_SUPPORT;
+    }
+    return CRYPT_SUCCESS;
+}
+#endif // defined(HITLS_CRYPTO_DRBG_CTR)
+
+DRBG_Ctx *DRBG_New(void *libCtx, int32_t algId, CRYPT_RandSeedMethod *seedMethod, void *seedCtx)
+{
+    (void)libCtx;
+    int32_t ret;
+    if (seedMethod == NULL) {
+        return NULL;
+    }
+    const DrbgIdMap *map = DRBG_GetIdMap(algId);
+    if (map == NULL) {
+        return NULL;
+    }
+
+    DRBG_Ctx *drbg = NULL;
+#if defined(HITLS_CRYPTO_DRBG_HASH) || defined(HITLS_CRYPTO_MULTI_DRBG_HASH)
+    if (map->type == RAND_TYPE_MD) {
+        const EAL_MdMethod *md = EAL_MdFindDefaultMethod(map->depId);
+        if (md == NULL) {
+            return NULL;
+        }
+        drbg = DRBG_NewHashCtx(md, algId == CRYPT_RAND_SM3, seedMethod, seedCtx);
+    }
+#endif
+#if defined(HITLS_CRYPTO_DRBG_HMAC) || defined(HITLS_CRYPTO_MULTI_DRBG_HMAC)
+    if (map->type == RAND_TYPE_MAC) {
+        const EAL_MacMethod *hmacMeth = EAL_MacFindDefaultMethod(map->depId);
+        if (hmacMeth == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+            return NULL;
+        }
+        drbg = DRBG_NewHmacCtx(libCtx, hmacMeth, map->depId, seedMethod, seedCtx);
+    }
+#endif
+#if defined(HITLS_CRYPTO_DRBG_CTR) || defined(HITLS_CRYPTO_MULTI_DRBG_CTR)
+    if (map->type == RAND_TYPE_AES || map->type == RAND_TYPE_AES_DF || map->type == RAND_TYPE_SM4_DF) {
+        bool isUsedDF = (map->type == RAND_TYPE_AES_DF || map->type == RAND_TYPE_SM4_DF) ? true : false;
+        uint32_t keyLen;
+        if (GetCipherKeyLen(map->depId, &keyLen) != CRYPT_SUCCESS) {
+            return NULL;
+        }
+        const EAL_SymMethod *ciphMeth = EAL_GetSymMethod(map->depId);
+        if (ciphMeth == NULL) {
+            return NULL;
+        }
+        drbg = DRBG_NewCtrCtx(ciphMeth, keyLen, algId == CRYPT_RAND_SM4_CTR_DF, isUsedDF, seedMethod, seedCtx);
+    }
+#endif
+    (void)ret;
+    return drbg;
+}
+
+#ifdef HITLS_BSL_PARAMS
+DRBG_Ctx *DRBG_NewEx(void *libCtx, int32_t algId, BSL_Param *param)
+{
+    if (param == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return NULL;
+    }
+    CRYPT_RandSeedMethod seedMeth = {0};
+    void *seedCtx = NULL;
+    (void)GetConstParamValue(param, CRYPT_PARAM_RAND_SEED_GETENTROPY, (uint8_t **)&seedMeth.getEntropy, NULL);
+    (void)GetConstParamValue(param, CRYPT_PARAM_RAND_SEED_CLEANENTROPY, (uint8_t **)&seedMeth.cleanEntropy, NULL);
+    (void)GetConstParamValue(param, CRYPT_PARAM_RAND_SEED_GETNONCE, (uint8_t **)&seedMeth.getNonce, NULL);
+    (void)GetConstParamValue(param, CRYPT_PARAM_RAND_SEED_CLEANNONCE, (uint8_t **)&seedMeth.cleanNonce, NULL);
+    (void)GetConstParamValue(param, CRYPT_PARAM_RAND_SEEDCTX, (uint8_t **)&seedCtx, NULL);
+    return DRBG_New(libCtx, algId, &seedMeth, seedCtx);
+}
+#endif
+
+int32_t DRBG_GenerateBytes(DRBG_Ctx *ctx, uint8_t *out, uint32_t outLen,
+    const uint8_t *adin, uint32_t adinLen)
+{
+    if (ctx == NULL || out == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    uint32_t block = ctx->maxRequest;
+    if (block == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    for (uint32_t leftLen = outLen; leftLen > 0; leftLen -= block, out += block) {
+        block = leftLen > block ? block : leftLen;
+        int32_t ret = DRBG_Generate(ctx, out, block, adin, adinLen, ctx->predictionResistance);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    return CRYPT_SUCCESS;
+}
+
+#endif // #if defined(HITLS_CRYPTO_DRBG) || defined(HITLS_CRYPTO_MULTI_DRBG)

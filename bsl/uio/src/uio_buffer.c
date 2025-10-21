@@ -21,6 +21,7 @@
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
 #include "bsl_uio.h"
+#include "uio_base.h"
 #include "uio_abstraction.h"
 
 // The write behavior must be the same.
@@ -57,7 +58,7 @@ static int32_t BufferCreate(BSL_UIO *uio)
         return BSL_MALLOC_FAIL;
     }
     BSL_UIO_SetCtx(uio, ctx);
-    uio->init = 1;
+    uio->init = true;
     return BSL_SUCCESS;
 }
 
@@ -74,7 +75,7 @@ static int32_t BufferDestroy(BSL_UIO *uio)
         BSL_UIO_SetCtx(uio, NULL);
     }
     uio->flags = 0;
-    uio->init = 0;
+    uio->init = false;
     return BSL_SUCCESS;
 }
 
@@ -147,11 +148,12 @@ static int32_t BufferSetBufferSize(BSL_UIO *uio, int32_t larg, void *parg)
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
-    BufferCtx *ctx = BSL_UIO_GetCtx(uio);
-    if (ctx == NULL) {
+    bool invalid = (uio == NULL) || (uio->ctx == NULL);
+    if (invalid) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
+    BufferCtx *ctx = BSL_UIO_GetCtx(uio);
     uint32_t len = *(uint32_t *)parg;
     BSL_SAL_FREE(ctx->outBuf);
     ctx->outBuf = (uint8_t *)BSL_SAL_Malloc(len);
@@ -159,9 +161,33 @@ static int32_t BufferSetBufferSize(BSL_UIO *uio, int32_t larg, void *parg)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    ctx->outOff = 0;
     ctx->outLen = 0;
+    ctx->outOff = 0;
     ctx->outSize = len;
+    return BSL_SUCCESS;
+}
+
+static int32_t BufferDoHandShake(BSL_UIO *uio, int32_t larg, void *parg)
+{
+    uint32_t flag;
+    int32_t ret;
+    bool invalid = (uio == NULL) || (uio->next == NULL) || (uio->ctx == NULL);
+    if (invalid) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
+        return BSL_NULL_INPUT;
+    }
+    (void)BSL_UIO_ClearFlags(uio, (BSL_UIO_FLAGS_RWS | BSL_UIO_FLAGS_SHOULD_RETRY));
+    ret = BSL_UIO_Ctrl(uio->next, BSL_UIO_DO_HANDSHAKE, larg, parg);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    (void)BSL_UIO_TestFlags(uio->next, (BSL_UIO_FLAGS_RWS | BSL_UIO_FLAGS_SHOULD_RETRY), &flag);
+    ret = BSL_UIO_SetFlags(uio, flag);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     return BSL_SUCCESS;
 }
 
@@ -172,6 +198,8 @@ static int32_t BufferCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
             return BufferFlush(uio, larg, parg);
         case BSL_UIO_RESET:
             return BufferReset(uio);
+        case BSL_UIO_DO_HANDSHAKE:
+            return BufferDoHandShake(uio, larg, parg);
         case BSL_UIO_SET_BUFFER_SIZE:
             return BufferSetBufferSize(uio, larg, parg);
         default:
@@ -261,6 +289,8 @@ const BSL_UIO_Method *BSL_UIO_BufferMethod(void)
         NULL,
         BufferCreate,
         BufferDestroy,
+        NULL,
+        NULL,
     };
     return &m;
 }

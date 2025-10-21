@@ -64,7 +64,6 @@ void BSL_CONF_Free(BSL_CONF *conf)
         BSL_ERR_PUSH_ERROR(BSL_CONF_FREE_FAIL);
     }
     BSL_SAL_FREE(conf);
-    return;
 }
 
 // Read the conf information from the UIO.

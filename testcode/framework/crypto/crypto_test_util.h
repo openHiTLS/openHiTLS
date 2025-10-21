@@ -24,12 +24,22 @@
 extern "C" {
 #endif
 
+void *FailedMalloc(uint32_t len);
+
+void *FailedCalloc(uint32_t num, uint32_t size);
+
 void TestMemInit(void);
+
+void TestErrMemInit(void);
 
 int TestRandInit(void);
 int TestRandInitEx(void *libCtx);
 
 void TestRandDeInit(void);
+
+#ifndef AEAD_MAX_TAG_LEN 
+#define AEAD_MAX_TAG_LEN 16
+#endif
 
 bool IsMdAlgDisabled(int id);
 

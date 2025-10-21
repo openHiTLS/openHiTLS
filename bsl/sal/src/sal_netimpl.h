@@ -27,58 +27,99 @@ extern "C" {
 #endif // __cplusplus
 
 typedef struct {
-    BslSalWrite pfWrite;
-    BslSalRead pfRead;
+    BslSalNetWrite pfWrite;
+    BslSalNetRead pfRead;
+    BslSalNetLSeek pfLSeek;
+    BslSalNetOpen pfOpen;
+    BslSalNetClose pfClose;
     BslSalSocket pfSocket;
     BslSalSockClose pfSockClose;
-    BslSalSetSockopt pfSetSockopt;
-    BslSalGetSockopt pfGetSockopt;
+    BslSalSetSockopt pfSetSocketopt;
+    BslSalGetSockopt pfGetSocketopt;
+    BslSalGetSockName pfGetSocketName;
     BslSalSockListen pfSockListen;
-    BslSalSockBind pfSockBind;
+    BslSalSockBind  pfSockBind;
     BslSalSockConnect pfSockConnect;
+    BslSalSockAccept pfSockAccept;
     BslSalSockSend pfSockSend;
     BslSalSockRecv pfSockRecv;
-    BslSalSelect pfSelect;
-    BslSalIoctlsocket pfIoctlsocket;
-    BslSalSockGetLastSocketError pfSockGetLastSocketError;
+    BslSelect pfSelect;
+    BslIoctlSocket pfIoctlsocket;
+    BslGetErrno pfGetErrno;
     BslSalSockAddrNew pfSockAddrNew;
     BslSalSockAddrFree pfSockAddrFree;
     BslSalSockAddrSize pfSockAddrSize;
     BslSalSockAddrCopy pfSockAddrCopy;
+    BslSalSockAddrGetFamily pfSockAddrGetFamily;
     BslSalNetSendTo pfSendTo;
     BslSalNetRecvFrom pfRecvFrom;
-    BslSalSockAddrGetFamily pfSockAddrGetFamily;
+    BslSetBlockMode pfSetBlockMode;
+    BslSocketWait pfSocketWait;
+    BslSocketError pfSocketError;
 } BSL_SAL_NetCallback;
 
-int32_t SAL_NetCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
-
 #ifdef HITLS_BSL_SAL_LINUX
-int32_t SAL_NET_Write(int32_t fd, const void *buf, uint32_t len, int32_t *err);
-int32_t SAL_NET_Read(int32_t fd, void *buf, uint32_t len, int32_t *err);
+
 int32_t SAL_NET_SockAddrNew(BSL_SAL_SockAddr *sockAddr);
 void SAL_NET_SockAddrFree(BSL_SAL_SockAddr sockAddr);
-int32_t SAL_NET_SockAddrGetFamily(const BSL_SAL_SockAddr sockAddr);
 uint32_t SAL_NET_SockAddrSize(const BSL_SAL_SockAddr sockAddr);
 void SAL_NET_SockAddrCopy(BSL_SAL_SockAddr dst, BSL_SAL_SockAddr src);
-int32_t SAL_NET_Sendto(int32_t sock, const void *buf, size_t len, int32_t flags, void *address, int32_t addrLen,
-                       int32_t *err);
-int32_t SAL_NET_RecvFrom(int32_t sock, void *buf, size_t len, int32_t flags, void *address, int32_t *addrLen,
-                         int32_t *err);
+int32_t SAL_NET_SockAddrGetFamily(const BSL_SAL_SockAddr sockAddr);
 
-int32_t SAL_Socket(int32_t af, int32_t type, int32_t protocol);
-int32_t SAL_SockClose(int32_t sockId);
-int32_t SAL_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *val, int32_t len);
-int32_t SAL_GetSockopt(int32_t sockId, int32_t level, int32_t name, void *val, int32_t *len);
-int32_t SAL_SockListen(int32_t sockId, int32_t backlog);
-int32_t SAL_SockBind(int32_t sockId, BSL_SAL_SockAddr addr, size_t len);
-int32_t SAL_SockConnect(int32_t sockId, BSL_SAL_SockAddr addr, size_t len);
-int32_t SAL_SockSend(int32_t sockId, const void *msg, size_t len, int32_t flags);
-int32_t SAL_SockRecv(int32_t sockfd, void *buff, size_t len, int32_t flags);
-int32_t SAL_Select(int32_t nfds, void *readfds, void *writefds, void *exceptfds, void *timeout);
-int32_t SAL_Ioctlsocket(int32_t sockId, long cmd, unsigned long *arg);
-int32_t SAL_SockGetLastSocketError(void);
+int32_t SAL_NET_Write(int32_t fd, const void *buf, uint32_t len, int32_t *err);
+
+int32_t SAL_NET_Read(int32_t fd, void *buf, uint32_t len, int32_t *err);
+
+int64_t SAL_NET_LSeek(int32_t fd, int64_t offset, uint32_t origin);
+
+int32_t SAL_NET_Open(const char *path, int32_t flag);
+
+int32_t SAL_NET_Close(int32_t fd);
+
+int32_t SAL_NET_Socket(int32_t af, int32_t type, int32_t protocol);
+int32_t SAL_NET_SockClose(int32_t sockId);
+
+int32_t SAL_NET_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *val, int32_t len);
+
+int32_t SAL_NET_GetSockopt(int32_t sockId, int32_t level, int32_t name, void *val, int32_t *len);
+
+int32_t SAL_NET_GetSockName(int32_t sockId, BSL_SAL_SockAddr addr, size_t *len);
+
+int32_t SAL_NET_SockListen(int32_t sockId, int32_t backlog);
+
+int32_t SAL_NET_SockBind(int32_t sockId, BSL_SAL_SockAddr addr, size_t len);
+
+int32_t SAL_NET_SockConnect(int32_t sockId, BSL_SAL_SockAddr addr, size_t len);
+
+int32_t SAL_NET_SockAccept(int32_t sockId, BSL_SAL_SockAddr addr, size_t *len);
+
+int32_t SAL_NET_SockSend(int32_t sockId, const void *msg, size_t len, int32_t flags);
+
+int32_t SAL_NET_SockRecv(int32_t sockfd, void *buff, size_t len, int32_t flags);
+
+int32_t SAL_NET_Select(int32_t nfds, void *readfds, void *writefds, void *exceptfds, void *timeout);
+
+int32_t SAL_NET_Ioctlsocket(int32_t sockId, long cmd, unsigned long *arg);
+
+int32_t SAL_NET_SockGetErrno(void);
+
+int32_t SAL_NET_SetBlockMode(int32_t fd, int32_t isBlock);
+
+int32_t SAL_NET_Sendto(int32_t sock, const void *buf, size_t len, int32_t flags, void *address, int32_t addrLen,
+    int32_t *err);
+
+int32_t SAL_NET_Recvfrom(int32_t sock, void *buf, size_t len, int32_t flags, void *address, int32_t *addrLen,
+    int32_t *err);
+
+int32_t SAL_NET_SocketWait(int32_t fd, int32_t forRead, int64_t maxTime);
+
+int32_t SAL_NET_SocketError(int32_t fd);
 
 #endif
+
+BSL_SAL_NetCallback SAL_GetNetCallBack(void);
+
+int32_t SAL_NetCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 
 #ifdef __cplusplus
 }

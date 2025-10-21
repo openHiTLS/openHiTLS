@@ -20,6 +20,7 @@
 #ifdef HITLS_CRYPTO_EAL
 
 #include <stdint.h>
+#include "bsl_err_internal.h"
 #include "crypt_types.h"
 
 #ifdef __cplusplus

@@ -349,7 +349,7 @@ static HITLS_X509_NameNode *NameNodeDup(HITLS_X509_NameNode *node)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return NULL;
     }
-    HITLS_X509_NameNode *res = (HITLS_X509_NameNode *)tmp;
+    HITLS_X509_NameNode *res = (HITLS_X509_NameNode *)(uintptr_t)tmp;
     res->layer = node->layer;
 
     if (node->nameType.len != 0) {
@@ -657,7 +657,7 @@ static int32_t X509_CheckPssParam(CRYPT_EAL_PkeyCtx *key, int32_t algId, const C
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_MD_NOT_MATCH);
         return HITLS_X509_ERR_MD_NOT_MATCH;
     }
-    CRYPT_MD_AlgId mgfId;
+    uint32_t mgfId;
     ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MGF, &mgfId, sizeof(uint32_t));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

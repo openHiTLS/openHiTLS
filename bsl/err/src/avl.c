@@ -49,7 +49,7 @@ static void UpdateAvlTreeHeight(BSL_AvlTree *node)
         uint32_t leftHeight = GetAvlTreeHeight(node->leftNode);
         uint32_t rightHeight = GetAvlTreeHeight(node->rightNode);
         if (node->height >= AVL_MAX_HEIGHT) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05001, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05078, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "avl tree height exceed max limit", 0, 0, 0, 0);
             return;
         }

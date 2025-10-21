@@ -100,7 +100,8 @@ static void SCRYPT_Salsa20WordSpecification(uint32_t t[16])
 
     SALSA_INPUT_TO_HOST(t, x);
 
-    for (int i = 0; i < 4; i++) {
+    // Starting from 8, the index is decreased by 2 for each calculation, which is equivalent to 4 calculations.
+    for (int i = 8; i > 0; i -= 2) {
         x[4] ^= ROTL32(x[0] + x[12], 7);
         x[8] ^= ROTL32(x[4] + x[0], 9);
         x[12] ^= ROTL32(x[8] + x[4], 13);
@@ -165,20 +166,20 @@ static void SCRYPT_BlockMix(uint8_t *b, uint8_t *y, uint32_t r)
 
     // r << 7 is equal to r * 128, where r * 128 is the block size of the algorithm.
     DATA32_XOR(b + (r << 7) - SCRYPT_ELEMENTSIZE, bTmp, y0, SCRYPT_ELEMENTSIZE);
-    SCRYPT_Salsa20WordSpecification((uint32_t*)y0);
+    SCRYPT_Salsa20WordSpecification((uint32_t*)(uintptr_t)y0);
     DATA32_XOR(y0, bTmp + SCRYPT_ELEMENTSIZE, y1, SCRYPT_ELEMENTSIZE);
-    SCRYPT_Salsa20WordSpecification((uint32_t*)y1);
+    SCRYPT_Salsa20WordSpecification((uint32_t*)(uintptr_t)y1);
 
     for (uint32_t i = 1; i < r; i++) {
         bTmp += 128; // Process two pieces of 64-bit(SCRYPT_ELEMENTSIZE) data in one cycle. 64 * 2 = 128
 
         y0 += SCRYPT_ELEMENTSIZE;
         DATA32_XOR(y1, bTmp, y0, SCRYPT_ELEMENTSIZE);
-        SCRYPT_Salsa20WordSpecification((uint32_t*)y0);
+        SCRYPT_Salsa20WordSpecification((uint32_t*)(uintptr_t)y0);
 
         y1 += SCRYPT_ELEMENTSIZE;
         DATA32_XOR(y0, bTmp + SCRYPT_ELEMENTSIZE, y1, SCRYPT_ELEMENTSIZE);
-        SCRYPT_Salsa20WordSpecification((uint32_t*)y1);
+        SCRYPT_Salsa20WordSpecification((uint32_t*)(uintptr_t)y1);
     }
 
     (void)memcpy_s(b, r << 7, y, r << 7); // Length bit r of B and y: r << 7

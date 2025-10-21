@@ -17,8 +17,7 @@
 #define ECP_NISTP256_H
 
 #include "hitls_build.h"
-
-#if defined(HITLS_CRYPTO_CURVE_NISTP256)
+#if defined(HITLS_CRYPTO_CURVE_NISTP256) && defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE)
 
 #include "ecc_local.h"
 

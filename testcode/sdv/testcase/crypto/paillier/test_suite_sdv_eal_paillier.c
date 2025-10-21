@@ -32,8 +32,9 @@
 #include "paillier_local.h"
 #include "bn_basic.h"
 #include "securec.h"
-
 #include "crypt_codecskey.h"
+#include "crypt_params_key.h"
+
 /* END_HEADER */
 
 #define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0

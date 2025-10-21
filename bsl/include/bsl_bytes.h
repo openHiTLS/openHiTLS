@@ -227,7 +227,7 @@ static inline uint32_t Uint32ConstTimeSelect(uint32_t mask, uint32_t a, uint32_t
     return ((mask) & a) | ((~mask) & b);
 }
 
-static inline uint32_t Uint8ConstTimeSelect(uint32_t mask, uint8_t a, uint8_t b)
+static inline uint8_t Uint8ConstTimeSelect(uint32_t mask, uint8_t a, uint8_t b)
 {
     return (((mask) & a) | ((~mask) & b)) & 0xff;
 }
@@ -256,7 +256,7 @@ static inline uint32_t Uint32ConstTimeLe(uint32_t a, uint32_t b)
 }
 
 // if a == b, return 0xffffffff, else return 0
-static inline uint32_t ConstTimeMemcmp(uint8_t *a, uint8_t *b, uint32_t l)
+static inline uint32_t ConstTimeMemcmp(const uint8_t *a, const uint8_t *b, uint32_t l)
 {
     uint8_t r = 0;
     for (uint32_t i = 0; i < l; i++) {

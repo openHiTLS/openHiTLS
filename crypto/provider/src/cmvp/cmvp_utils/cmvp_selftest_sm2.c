@@ -28,7 +28,7 @@
 #include "crypt_utils.h"
 #include "bsl_sal.h"
 #include "crypt_eal_rand.h"
-#include "crypt_encode_internal.h"
+#include "crypt_encode.h"
 #include "crypt_util_rand.h"
 
 #define BITS_OF_BYTE 8

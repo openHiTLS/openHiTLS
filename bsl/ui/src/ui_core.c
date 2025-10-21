@@ -242,7 +242,7 @@ static int32_t BSL_UI_OperInputData(BSL_UI *ui, BSL_UI_ReadPwdParam *param, BSL_
         ret = checkDataCallBack(ui, readData->data, readData->dataLen, callBackData);
         if (ret != BSL_SUCCESS) {
             BSL_SAL_FREE(promptStr);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05086, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05104, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "ui pwd util: callback check data failed:%u.", (uint32_t)ret, 0, 0, 0);
             BSL_ERR_PUSH_ERROR(ret);
             return ret;

@@ -24,12 +24,13 @@
 extern "C" {
 #endif
 
-#ifdef HITLS_BSL_LOG
-#ifdef HITLS_BSL_LOG_NO_FORMAT_STRING
-#define LOG_STR(str) NULL
+#if defined(HITLS_BSL_LOG) && !defined(HITLS_BSL_LOG_NO_FORMAT_STRING)
+    #define LOG_STR(str) (str)
 #else
-#define LOG_STR(str) (str)
+    #define LOG_STR(str) NULL
 #endif
+
+#ifdef HITLS_BSL_LOG
 
 #define BSL_LOG_BUF_SIZE            1024U
 

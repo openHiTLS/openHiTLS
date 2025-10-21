@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include "bsl_params.h"
+#include "crypt_types.h"
 
 typedef struct SlhDsaCtx CryptSlhDsaCtx;
 typedef struct HashFuncs SlhDsaHashFuncs;
@@ -33,6 +34,7 @@ typedef union Adrs SlhDsaAdrs;
  */
 CryptSlhDsaCtx *CRYPT_SLH_DSA_NewCtx(void);
 
+#ifdef HITLS_CRYPTO_PROVIDER
 /**
  * @brief Create a new SLH-DSA context
  *
@@ -41,6 +43,7 @@ CryptSlhDsaCtx *CRYPT_SLH_DSA_NewCtx(void);
  * @return CryptSlhDsaCtx* Pointer to the new SLH-DSA context
  */
 CryptSlhDsaCtx *CRYPT_SLH_DSA_NewCtxEx(void *libCtx);
+#endif
 
 /**
  * @brief Free a SLH-DSA context
@@ -125,7 +128,6 @@ int32_t CRYPT_SLH_DSA_SetPubKey(CryptSlhDsaCtx *ctx, const CRYPT_SlhDsaPub *pub)
  */
 int32_t CRYPT_SLH_DSA_SetPrvKey(CryptSlhDsaCtx *ctx, const CRYPT_SlhDsaPrv *prv);
 
-#ifdef HITLS_BSL_PARAMS
 /**
  * @brief Get the public key of SLH-DSA
  *
@@ -157,7 +159,6 @@ int32_t CRYPT_SLH_DSA_SetPubKeyEx(CryptSlhDsaCtx *ctx, const BSL_Param *para);
  * @param para Pointer to the private key
  */
 int32_t CRYPT_SLH_DSA_SetPrvKeyEx(CryptSlhDsaCtx *ctx, const BSL_Param *para);
-#endif
 
 #ifdef HITLS_CRYPTO_SLH_DSA_CHECK
 

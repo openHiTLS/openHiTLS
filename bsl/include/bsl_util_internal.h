@@ -20,9 +20,14 @@
 extern "C" {
 #endif
 
-// check if gcc/clang defined 128 bits int
-#ifdef __SIZEOF_INT128__
+#if defined(__clang__) && defined(__clang_major__) && __clang_major__ >= 15
+#define FALLTHROUGH __attribute__((fallthrough))
+#else
+#define FALLTHROUGH
+#endif /* __clang__ */
 
+
+#ifdef HITLS_INT128
 typedef __int128_t int128_t;
 typedef __uint128_t uint128_t;
 

@@ -101,7 +101,7 @@ void SDV_CRYPTO_MD5_API_TC001(void)
     ASSERT_EQ(CRYPT_EAL_MdFinal(md5Ctx, output, NULL), CRYPT_NULL_INPUT);
 
     outputLen = CRYPT_MD5_DIGESTSIZE - 1;
-    ASSERT_EQ(CRYPT_EAL_MdFinal(md5Ctx, output, &outputLen), CRYPT_MD5_OUT_BUFF_LEN_NOT_ENOUGH);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(md5Ctx, output, &outputLen), CRYPT_MD_OUT_BUFF_LEN_NOT_ENOUGH);
     outputLen = CRYPT_MD5_DIGESTSIZE;
     ASSERT_EQ(CRYPT_EAL_MdFinal(md5Ctx, output, &outputLen), CRYPT_SUCCESS);
     

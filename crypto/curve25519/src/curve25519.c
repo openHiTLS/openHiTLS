@@ -50,6 +50,7 @@ CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void)
     return ctx;
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
 CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtxEx(void *libCtx)
 {
     CRYPT_CURVE25519_Ctx *ctx = CRYPT_X25519_NewCtx();
@@ -59,6 +60,7 @@ CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtxEx(void *libCtx)
     ctx->libCtx = libCtx;
     return ctx;
 }
+#endif
 #endif
 
 #ifdef HITLS_CRYPTO_ED25519
@@ -119,6 +121,7 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val
         return CRYPT_NULL_INPUT;
     }
     switch (opt) {
+        case CRYPT_CTRL_GET_PUB_KEY_BITS:
         case CRYPT_CTRL_GET_BITS:
             return CRYPT_CTRL_GetNum32(CRYPT_CURVE25519_KEYLEN * 8, val, len); // bits = 8 * bytes
         case CRYPT_CTRL_GET_PUBKEY_LEN:
@@ -167,7 +170,6 @@ void CRYPT_CURVE25519_FreeCtx(CRYPT_CURVE25519_Ctx *pkey)
     BSL_SAL_FREE(pkey);
 }
 
-#ifdef HITLS_BSL_PARAMS
 int32_t CRYPT_CURVE25519_SetPubKeyEx(CRYPT_CURVE25519_Ctx *pkey, const BSL_Param *para)
 {
     if (para == NULL) {
@@ -226,7 +228,6 @@ int32_t CRYPT_CURVE25519_GetPrvKeyEx(const CRYPT_CURVE25519_Ctx *pkey, BSL_Param
     paramPrv->useLen = prv.len;
     return CRYPT_SUCCESS;
 }
-#endif
 
 int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve25519Pub *pub)
 {
@@ -618,7 +619,7 @@ int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algId,
     }
 
     if (PointDecoding(&geA, pkey->pubKey) != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_VERIFY_FAIL);
+        BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_INVALID_PUBKEY);
         return CRYPT_CURVE25519_INVALID_PUBKEY;
     }
 

@@ -32,6 +32,7 @@ MODES_GCM_Ctx *CRYPT_GMAC_NewCtx(CRYPT_MAC_AlgId id);
 
 MODES_GCM_Ctx *CRYPT_GMAC_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id);
 
+#define CRYPT_GMAC_InitEx CRYPT_GMAC_Init
 int32_t CRYPT_GMAC_Init(MODES_GCM_Ctx *ctx, const uint8_t *key, uint32_t len, void *param);
 
 int32_t CRYPT_GMAC_Update(MODES_GCM_Ctx *ctx, const uint8_t *in, uint32_t len);

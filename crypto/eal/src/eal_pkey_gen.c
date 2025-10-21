@@ -19,23 +19,25 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "securec.h"
-#include "eal_pkey_local.h"
+#include "bsl_sal.h"
+#include "bsl_err_internal.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_errno.h"
 #include "crypt_algid.h"
 #include "crypt_local_types.h"
 #include "crypt_types.h"
-#include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
+#include "eal_pkey_local.h"
 #include "eal_md_local.h"
 #include "eal_common.h"
-#include "crypt_eal_implprovider.h"
 #include "crypt_ealinit.h"
-#include "bsl_err_internal.h"
+#ifdef HITLS_CRYPTO_PROVIDER
+#include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
+#endif
 #include "eal_pkey.h"
 
 static void EalPkeyCopyMethod(const EAL_PkeyMethod *method, EAL_PkeyUnitaryMethod *dest)
@@ -63,8 +65,8 @@ static void EalPkeyCopyMethod(const EAL_PkeyMethod *method, EAL_PkeyUnitaryMetho
     dest->hemul = method->hemul;
     dest->check = method->check;
     dest->cmp = method->cmp;
-    dest->encaps = method->encaps;
-    dest->decaps = method->decaps;
+    dest->pkeyEncaps = method->pkeyEncaps;
+    dest->pkeyDecaps = method->pkeyDecaps;
     dest->blind = method->blind;
     dest->unBlind = method->unBlind;
 }
@@ -109,7 +111,7 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_AlgId id)
 
 static int32_t PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *from)
 {
-    if (from->method.dupCtx == NULL) {
+    if (from->method.dupCtx == NULL || from->method.freeCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, from->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
@@ -127,12 +129,12 @@ static int32_t PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *from)
 int32_t CRYPT_EAL_PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *from)
 {
     if (to == NULL || from == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     if (to->key != NULL) {
         if (to->method.freeCtx == NULL) {
-            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_INVALID_ARG);
             return CRYPT_INVALID_ARG;
         }
         to->method.freeCtx(to->key);
@@ -1515,10 +1517,10 @@ static int32_t CRYPT_EAL_SetKemMethod(const CRYPT_EAL_Func *funcKem, EAL_PkeyUni
                     method->decapsInit = funcKem[index].func;
                     break;
                 case CRYPT_EAL_IMPLPKEYKEM_ENCAPSULATE:
-                    method->encaps = funcKem[index].func;
+                    method->pkeyEncaps = funcKem[index].func;
                     break;
                 case CRYPT_EAL_IMPLPKEYKEM_DECAPSULATE:
-                    method->decaps = funcKem[index].func;
+                    method->pkeyDecaps = funcKem[index].func;
                     break;
                 default:
                     BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);

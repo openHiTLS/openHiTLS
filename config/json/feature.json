@@ -1223,6 +1223,7 @@
                     "bsl/pem/include",
                     "crypto/bn/include",
                     "crypto/eal/include",
+                    "crypto/eal/src",
                     "crypto/ecc/include",
                     "crypto/rsa/include",
                     "crypto/ecdsa/include",

@@ -20,7 +20,6 @@
 #ifdef HITLS_CRYPTO_XTS
 
 #include "crypt_types.h"
-#include "bsl_params.h"
 #include "crypt_modes.h"
 
 #ifdef __cplusplus
@@ -53,7 +52,8 @@ int32_t MODES_XTS_InitCtx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t k
     uint32_t ivLen, bool enc);
 
 int32_t MODES_XTS_Update(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
-int32_t MODES_XTS_Final(MODES_XTS_Ctx *modeCtx, uint8_t *out, uint32_t *outLen);
+int32_t MODES_XTS_Final(MODES_XTS_Ctx *modeCtx, uint8_t *out, uint32_t *outLen, void *func);
+int32_t MODES_XTS_FinalEx(MODES_XTS_Ctx *modeCtx, uint8_t *out, uint32_t *outLen);
 int32_t MODES_XTS_DeInitCtx(MODES_XTS_Ctx *modeCtx);
 int32_t MODES_XTS_Ctrl(MODES_XTS_Ctx *modeCtx, int32_t cmd, void *val, uint32_t len);
 void MODES_XTS_FreeCtx(MODES_XTS_Ctx *modeCtx);

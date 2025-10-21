@@ -19,6 +19,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_UIO_PLT
 
+#include <stdint.h>
 #include "bsl_uio.h"
 
 #ifdef __cplusplus
@@ -26,7 +27,7 @@ extern "C" {
 #endif
 
 struct BSL_UIO_MethodStruct {
-    int32_t uioType;
+    BSL_UIO_TransportType uioType;
     BslUioWriteCb uioWrite;
     BslUioReadCb uioRead;
     BslUioCtrlCb uioCtrl;
@@ -34,15 +35,12 @@ struct BSL_UIO_MethodStruct {
     BslUioGetsCb uioGets;
     BslUioCreateCb uioCreate;
     BslUioDestroyCb uioDestroy;
+    BslUioCbCtrlCb uioCbCtrl;
+    void *userData;
 };
 
-/**
- * @ingroup bsl_uio
- *
- * @brief   Get the fd of the UIO object
- * @param   uio [IN] UIO object
- * @retval  File Descriptor fd
- */
+uint32_t UIO_GetCtxLen(const BSL_UIO *uio);
+// Used only for internal and test purposes currently. This function can be opened if required.
 int32_t BSL_UIO_GetFd(BSL_UIO *uio);
 
 #ifdef __cplusplus

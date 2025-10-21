@@ -1155,3 +1155,59 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM2_SIGN_VERIFY_WITH_PREPUB_FUNC_TC001(int isProvider)
+{
+    TestMemInit();
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    uint8_t signBuf[SM2_SIGN_MAX_LEN];
+    uint8_t msg[SM2_PRVKEY_MAX_LEN] = {0};
+    uint32_t signLen = sizeof(signBuf);
+    CRYPT_EAL_PkeyCtx *ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
+        CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(ctx != NULL);
+    uint32_t flag = CRYPT_ECC_CACHE_PUBKEY;
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    ASSERT_TRUE(CRYPT_EAL_PkeyGen(ctx) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeySign(ctx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, &signLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, signLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_FLAG, &flag, sizeof(uint32_t)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, signLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, signLen) == CRYPT_SUCCESS);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+}
+/* END_CASE */
+
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM2_SIGN_VERIFY_WITH_PREPUB_FUNC_TC002(Hex *pubKey, Hex *userId, Hex *msg, Hex *sign)
+{
+    TestMemInit();
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    ASSERT_TRUE(ctx != NULL);
+    CRYPT_EAL_PkeyPub pub;
+    uint32_t flag = CRYPT_ECC_CACHE_PUBKEY;
+
+    SetSm2PubKey(&pub, pubKey->x, pubKey->len);
+
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, userId->x, userId->len) == CRYPT_SUCCESS);
+    // set flag before set-pub
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_FLAG, &flag, sizeof(uint32_t)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx, &pub) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg->x, msg->len, sign->x, sign->len) == CRYPT_SUCCESS);
+    // repeat verify
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg->x, msg->len, sign->x, sign->len) == CRYPT_SUCCESS);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+}
+/* END_CASE */

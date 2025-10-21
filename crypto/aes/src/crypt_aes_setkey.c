@@ -29,6 +29,7 @@ int32_t CRYPT_AES_SetEncryptKey128(CRYPT_AES_Key *ctx, const uint8_t *key, uint3
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    // 16 bytes = 128 bits
     if (len != 16) {
         BSL_ERR_PUSH_ERROR(CRYPT_AES_ERR_KEYLEN);
         return CRYPT_AES_ERR_KEYLEN;
@@ -43,6 +44,7 @@ int32_t CRYPT_AES_SetEncryptKey192(CRYPT_AES_Key *ctx, const uint8_t *key, uint3
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    // 24 bytes = 192 bits
     if (len != 24) {
         BSL_ERR_PUSH_ERROR(CRYPT_AES_ERR_KEYLEN);
         return CRYPT_AES_ERR_KEYLEN;
@@ -57,6 +59,7 @@ int32_t CRYPT_AES_SetEncryptKey256(CRYPT_AES_Key *ctx, const uint8_t *key, uint3
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    // 32 bytes = 256 bits
     if (len != 32) {
         BSL_ERR_PUSH_ERROR(CRYPT_AES_ERR_KEYLEN);
         return CRYPT_AES_ERR_KEYLEN;
@@ -71,6 +74,7 @@ int32_t CRYPT_AES_SetDecryptKey128(CRYPT_AES_Key *ctx, const uint8_t *key, uint3
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    // 16 bytes = 128 bits
     if (len != 16) {
         BSL_ERR_PUSH_ERROR(CRYPT_AES_ERR_KEYLEN);
         return CRYPT_AES_ERR_KEYLEN;
@@ -85,6 +89,7 @@ int32_t CRYPT_AES_SetDecryptKey192(CRYPT_AES_Key *ctx, const uint8_t *key, uint3
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    // 24 bytes = 192 bits
     if (len != 24) {
         BSL_ERR_PUSH_ERROR(CRYPT_AES_ERR_KEYLEN);
         return CRYPT_AES_ERR_KEYLEN;
@@ -99,6 +104,7 @@ int32_t CRYPT_AES_SetDecryptKey256(CRYPT_AES_Key *ctx, const uint8_t *key, uint3
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    // 32 bytes = 256 bits
     if (len != 32) {
         BSL_ERR_PUSH_ERROR(CRYPT_AES_ERR_KEYLEN);
         return CRYPT_AES_ERR_KEYLEN;
@@ -109,9 +115,6 @@ int32_t CRYPT_AES_SetDecryptKey256(CRYPT_AES_Key *ctx, const uint8_t *key, uint3
 
 void CRYPT_AES_Clean(CRYPT_AES_Key *ctx)
 {
-    if (ctx == NULL) {
-        return;
-    }
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_AES_Key));
 }
 #endif /* HITLS_CRYPTO_AES */

@@ -25,12 +25,14 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_bn.h"
-#include "crypt_encode_internal.h"
+#include "crypt_encode.h"
 #include "crypt_ecc.h"
 #include "crypt_ecc_pkey.h"
 #include "eal_pkey_local.h"
 #include "eal_md_local.h"
 #include "crypt_ecdsa.h"
+#include "bsl_params.h"
+#include "crypt_params_key.h"
 
 CRYPT_ECDSA_Ctx *CRYPT_ECDSA_NewCtx(void)
 {
@@ -41,6 +43,7 @@ CRYPT_ECDSA_Ctx *CRYPT_ECDSA_NewCtx(void)
     }
     ctx->pointFormat = CRYPT_POINT_UNCOMPRESSED;    // point format is uncompressed by default.
     BSL_SAL_ReferencesInit(&(ctx->references));
+    ctx->signMdId = CRYPT_MD_MAX;
     return ctx;
 }
 
@@ -81,7 +84,6 @@ int32_t CRYPT_ECDSA_SetPara(CRYPT_ECDSA_Ctx *ctx, const CRYPT_EccPara *para)
     return ECC_SetPara(ctx, CRYPT_ECDSA_NewPara(para));
 }
 
-#ifdef HITLS_BSL_PARAMS
 int32_t CRYPT_ECDSA_SetParaEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para)
 {
     if (para == NULL) {
@@ -91,31 +93,30 @@ int32_t CRYPT_ECDSA_SetParaEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para)
 #ifdef HITLS_CRYPTO_PROVIDER
     int32_t ret;
     const BSL_Param *temp = NULL;
-    if ((temp = BSL_PARAM_FindConstParam(para, CRYPT_PARAM_MD_ATTR)) != NULL) {
+    if ((temp = EAL_FindConstParam(para, CRYPT_PARAM_MD_ATTR)) != NULL) {
         ret = CRYPT_PkeySetMdAttr((const char *)(temp->value), temp->valueLen, &(ctx->mdAttr));
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }
     }
 #endif
-    if (BSL_PARAM_FindConstParam(para, CRYPT_PARAM_EC_P) == NULL) {
+    if (EAL_FindConstParam(para, CRYPT_PARAM_EC_P) == NULL) {
         return CRYPT_SUCCESS;
     }
     CRYPT_EccPara eccPara = {0};
     (void)GetConstParamValue(para, CRYPT_PARAM_EC_P, &(eccPara.p), &(eccPara.pLen));
     (void)GetConstParamValue(para, CRYPT_PARAM_EC_A, &(eccPara.a), &(eccPara.aLen));
     (void)GetConstParamValue(para, CRYPT_PARAM_EC_B, &(eccPara.b), &(eccPara.bLen));
-    (void)GetConstParamValue(para, CRYPT_PARAM_EC_N, &(eccPara.n), &(eccPara.nLen));
     (void)GetConstParamValue(para, CRYPT_PARAM_EC_H, &(eccPara.h), &(eccPara.hLen));
+    (void)GetConstParamValue(para, CRYPT_PARAM_EC_N, &(eccPara.n), &(eccPara.nLen));
     (void)GetConstParamValue(para, CRYPT_PARAM_EC_X, &(eccPara.x), &(eccPara.xLen));
     (void)GetConstParamValue(para, CRYPT_PARAM_EC_Y, &(eccPara.y), &(eccPara.yLen));
     return CRYPT_ECDSA_SetPara(ctx, &eccPara);
 }
-#endif
 
 uint32_t CRYPT_ECDSA_GetSignLen(const CRYPT_ECDSA_Ctx *ctx)
 {
-    if (ctx == NULL) {
+    if (ctx == NULL || ctx->para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return 0;
     }
@@ -290,7 +291,10 @@ int32_t CRYPT_ECDSA_SignData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, ui
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-
+    if (ctx->signMdId != CRYPT_MD_MAX && CRYPT_GetMdSizeById(ctx->signMdId) != dataLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_PKEY_ERR_SIGN_DATA_LEN);
+        return CRYPT_ECDSA_PKEY_ERR_SIGN_DATA_LEN;
+    }
     if (ctx->prvkey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_ERR_EMPTY_KEY);
         return CRYPT_ECDSA_ERR_EMPTY_KEY;
@@ -323,7 +327,7 @@ int32_t CRYPT_ECDSA_Sign(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint8_
     }
     uint8_t hash[64]; // 64 is max hash len
     uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
-    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hash, &hashLen, ctx->libCtx != NULL);
+    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hash, &hashLen, true, ctx->libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -453,7 +457,7 @@ int32_t CRYPT_ECDSA_Verify(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint
     }
     uint8_t hash[64]; // 64 is max hash len
     uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
-    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hash, &hashLen, ctx->libCtx != NULL);
+    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hash, &hashLen, true, ctx->libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -485,6 +489,8 @@ int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, int32_t opt, void *val, uint32_t 
                 return CRYPT_INVALID_ARG;
             }
             return ECC_SetPara(ctx, CRYPT_ECDSA_NewParaById(*(CRYPT_PKEY_ParaId *)val));
+        case CRYPT_CTRL_SET_SIGN_MD:
+            return CRYPT_SetSignMdCtrl(&ctx->signMdId, val, len, NULL);
         default:
             return ECC_PkeyCtrl(ctx, opt, val, len);
     }

@@ -268,7 +268,8 @@ static int32_t EccEalKeyNew(CRYPT_EAL_LibCtx *libctx, const char *attrName, BSL_
     } else { // scenario ecdh is not considered, and it will be improved in the future
         return CRYPT_DECODE_UNKNOWN_OID;
     }
-    CRYPT_EAL_PkeyCtx *key = CRYPT_EAL_ProviderPkeyNewCtx(libctx, algId, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, attrName);
+    CRYPT_EAL_PkeyCtx *key = CRYPT_EAL_ProviderPkeyNewCtx(libctx, algId, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        attrName);
     if (key == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;

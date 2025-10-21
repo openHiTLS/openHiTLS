@@ -27,5 +27,12 @@ int32_t AES_XTS_Update(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t inLen
     return MODES_XTS_Update(modeCtx, in, inLen, out, outLen);
 }
 
+#ifndef HITLS_XTS_STREAM
+int32_t AES_XTS_Final(MODES_XTS_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
+{
+    return MODES_XTS_Final(modeCtx, out, outLen,
+        modeCtx->enc ? MODES_XTS_Encrypt : MODES_XTS_Decrypt);
+}
+#endif
 
 #endif

@@ -25,6 +25,7 @@
 #include "crypt_util_ctrl.h"
 #include "crypt_utils.h"
 #include "eal_mac_local.h"
+#include "crypt_eal_kdf.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 #include "crypt_kdf_tls12.h"

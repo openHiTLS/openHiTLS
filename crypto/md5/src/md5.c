@@ -17,29 +17,16 @@
 #ifdef HITLS_CRYPTO_MD5
 
 #include "securec.h"
-#include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
+#include "bsl_err_internal.h"
 #include "md5_core.h"
 #include "crypt_md5.h"
 #include "bsl_sal.h"
-#include "crypt_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cpluscplus */
-
-#define CRYPT_MD5_DIGESTSIZE 16
-#define CRYPT_MD5_BLOCKSIZE  64
-
-/* md5 ctx */
-struct CryptMdCtx {
-    uint32_t h[CRYPT_MD5_DIGESTSIZE / sizeof(uint32_t)]; /* store the intermediate data of the hash value */
-    uint8_t block[CRYPT_MD5_BLOCKSIZE];                  /* store the remaining data of less than one block */
-    uint32_t hNum, lNum;                                 /* input data counter, maximum value 2 ^ 64 bits */
-    /* Number of remaining bytes in 'block' arrary that are stored less than one block */
-    uint32_t num;
-};
 
 CRYPT_MD5_Ctx *CRYPT_MD5_NewCtx(void)
 {
@@ -58,13 +45,13 @@ void CRYPT_MD5_FreeCtx(CRYPT_MD5_Ctx *ctx)
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_MD5_Ctx));
 }
 
-int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    (void) param;
+
     (void)memset_s(ctx, sizeof(CRYPT_MD5_Ctx), 0, sizeof(CRYPT_MD5_Ctx));
     /* Set the initial values of A, B, C, and D according to step 3 in section 3.3 of RFC1321. */
     ctx->h[0] = 0x67452301;
@@ -72,6 +59,12 @@ int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx, BSL_Param *param)
     ctx->h[2] = 0x98badcfe;
     ctx->h[3] = 0x10325476;
     return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_MD5_InitEx(CRYPT_MD5_Ctx *ctx, void *param)
+{
+    (void)param;
+    return CRYPT_MD5_Init(ctx);
 }
 
 int32_t CRYPT_MD5_Deinit(CRYPT_MD5_Ctx *ctx)
@@ -89,14 +82,14 @@ static uint32_t IsInputOverflow(CRYPT_MD5_Ctx *ctx, uint32_t nbytes)
     uint32_t cnt0 = ctx->lNum + (nbytes << SHIFTS_PER_BYTE);
     if (cnt0 < ctx->lNum) {
         if (++ctx->hNum == 0) {
-            BSL_ERR_PUSH_ERROR(CRYPT_MD5_INPUT_OVERFLOW);
-            return CRYPT_MD5_INPUT_OVERFLOW;
+            BSL_ERR_PUSH_ERROR(CRYPT_MD_INPUT_OVERFLOW);
+            return CRYPT_MD_INPUT_OVERFLOW;
         }
     }
     uint32_t cnt1 = ctx->hNum + (uint32_t)(nbytes >> (BITSIZE(uint32_t) - SHIFTS_PER_BYTE));
     if (cnt1 < ctx->hNum) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MD5_INPUT_OVERFLOW);
-        return CRYPT_MD5_INPUT_OVERFLOW;
+        BSL_ERR_PUSH_ERROR(CRYPT_MD_INPUT_OVERFLOW);
+        return CRYPT_MD_INPUT_OVERFLOW;
     }
     ctx->hNum = cnt1;
     ctx->lNum = cnt0;
@@ -111,8 +104,8 @@ static int32_t IsUpdateParamValid(CRYPT_MD5_Ctx *ctx, const uint8_t *in, uint32_
     }
 
     if (IsInputOverflow(ctx, len) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MD5_INPUT_OVERFLOW);
-        return CRYPT_MD5_INPUT_OVERFLOW;
+        BSL_ERR_PUSH_ERROR(CRYPT_MD_INPUT_OVERFLOW);
+        return CRYPT_MD_INPUT_OVERFLOW;
     }
 
     return CRYPT_SUCCESS;
@@ -121,10 +114,7 @@ static int32_t IsUpdateParamValid(CRYPT_MD5_Ctx *ctx, const uint8_t *in, uint32_
 int32_t CRYPT_MD5_Update(CRYPT_MD5_Ctx *ctx, const uint8_t *in, uint32_t len)
 {
     int32_t ret = IsUpdateParamValid(ctx, in, len);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
     if (len == 0) {
         return CRYPT_SUCCESS;
@@ -174,8 +164,8 @@ static int32_t IsFinalParamValid(const CRYPT_MD5_Ctx *ctx, const uint8_t *out, c
     }
 
     if (*outLen < CRYPT_MD5_DIGESTSIZE) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MD5_OUT_BUFF_LEN_NOT_ENOUGH);
-        return CRYPT_MD5_OUT_BUFF_LEN_NOT_ENOUGH;
+        BSL_ERR_PUSH_ERROR(CRYPT_MD_OUT_BUFF_LEN_NOT_ENOUGH);
+        return CRYPT_MD_OUT_BUFF_LEN_NOT_ENOUGH;
     }
 
     return CRYPT_SUCCESS;
@@ -185,10 +175,7 @@ static int32_t IsFinalParamValid(const CRYPT_MD5_Ctx *ctx, const uint8_t *out, c
 int32_t CRYPT_MD5_Final(CRYPT_MD5_Ctx *ctx, uint8_t *out, uint32_t *outLen)
 {
     int32_t ret = IsFinalParamValid(ctx, out, outLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
     ctx->block[ctx->num++] = 0x80;  /* 0x80 indicates that '1' is appended to the end of a message. */
     uint8_t *block = ctx->block;

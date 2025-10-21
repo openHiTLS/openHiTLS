@@ -270,9 +270,24 @@ typedef enum {
 } HITLS_X509_ExtType;
 
 typedef enum {
-    HITLS_X509_VFY_FLAG_CRL_ALL = 1,
-    HITLS_X509_VFY_FLAG_CRL_DEV = 2
+    HITLS_X509_VFY_FLAG_CRL_ALL = 1, // 1ULL << 0
+    HITLS_X509_VFY_FLAG_CRL_DEV = 2, // 1ULL << 1
 } HITLS_X509_VFY_FLAGS;
+
+/**
+ * @ingroup hitls_pki_types
+ * @brief Verification purpose for X509 certificate verification
+ */
+typedef enum {
+    HITLS_X509_VFY_PURPOSE_TLS_SERVER = 1,
+    HITLS_X509_VFY_PURPOSE_TLS_CLIENT = 2,
+    HITLS_X509_VFY_PURPOSE_EMAIL_SIGN = 3,
+    HITLS_X509_VFY_PURPOSE_EMAIL_ENCRYPT = 4,
+    HITLS_X509_VFY_PURPOSE_CODE_SIGN = 5,
+    HITLS_X509_VFY_PURPOSE_OCSP_SIGN = 6,
+    HITLS_X509_VFY_PURPOSE_TIMESTAMPING = 7,
+    HITLS_X509_VFY_PURPOSE_ANY = 8,
+} HITLS_X509_VFY_PURPOSE;
 
 /**
  * @ingroup hitls_pki_types
@@ -289,6 +304,7 @@ typedef enum {
     HITLS_X509_STORECTX_SET_PARAM_FLAGS,
     HITLS_X509_STORECTX_SET_TIME,
     HITLS_X509_STORECTX_SET_SECBITS,
+    HITLS_X509_STORECTX_SET_PURPOSE,
     /* clear flag */
     HITLS_X509_STORECTX_CLR_PARAM_FLAGS,
     HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
@@ -322,11 +338,6 @@ typedef enum {
     HITLS_X509_STORECTX_MAX
 } HITLS_X509_StoreCtxCmd;
 
-typedef struct {
-    BSL_Buffer *macPwd;
-    BSL_Buffer *encPwd;
-} HITLS_PKCS12_PwdParam;
-
 /**
  * @ingroup hitls_pki_types
  * @brief Flags for printing Distinguished Names (DNs) in X509 certificates
@@ -352,6 +363,20 @@ typedef enum {
 } HITLS_PKI_PrintCmd;
 
 /**
+ * @ingroup hitls_pki_types
+ * @brief Structure for PKCS12 password parameters
+ * Only characters in the ASCii code table can be used as input parameters of the password. According to RFC7292,
+ * the bottom-layer p12 implementation does not limit the password length unless the password length + salt length
+ * exceeds the upper limit of int32.
+ */
+typedef struct {
+    BSL_Buffer *macPwd;
+    BSL_Buffer *encPwd;
+} HITLS_PKCS12_PwdParam;
+
+/**
+ * @ingroup hitls_pki_types
+ * @brief Structure for PKCS12 KDF parameters
  * While the standard imposes no constraints on password length, (pwdLen + saltLen) should be kept below 2^31
  * to avoid integer overflow in internal calculations.
 */

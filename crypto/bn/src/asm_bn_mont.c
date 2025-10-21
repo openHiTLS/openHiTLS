@@ -82,6 +82,5 @@ void Reduce(BN_UINT *r, BN_UINT *x, const BN_UINT *one, const BN_UINT *m, uint32
     }
 #endif
     MontMul_Asm(r, x, one, m, m0, mSize);
-    return;
 }
 #endif /* HITLS_CRYPTO_BN */

@@ -20,7 +20,7 @@
 #include "cmvp_common.h"
 #include "err.h"
 #include "crypt_bn.h"
-#include "crypt_encode_internal.h"
+#include "crypt_encode.h"
 #include "crypt_errno.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_eal_rand.h"

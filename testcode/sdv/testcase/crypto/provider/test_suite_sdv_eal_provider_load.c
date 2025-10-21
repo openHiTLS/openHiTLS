@@ -40,6 +40,11 @@
 #include "hitls_crypt_type.h"
 #include "hitls_cert_type.h"
 #include "hitls_type.h"
+#ifdef HITLS_CRYPTO_PROVIDER
+#include "bsl_params.h"
+#include "crypt_params_key.h"
+#endif
+
 /* END_HEADER */
 
 #define PROVIDER_LOAD_SAIZE_2 2

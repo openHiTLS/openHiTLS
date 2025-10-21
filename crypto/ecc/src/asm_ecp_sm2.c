@@ -471,4 +471,173 @@ ERR:
     return ret;
 }
 
+#ifdef HITLS_CRYPTO_ECC_PUB_CACHE
+
+#define UNIT_LEN    8
+// 256
+#define OFFSET_LEN  (1 << UNIT_LEN)
+// 32
+#define UNIT_NUM    ((256 + UNIT_LEN - 1) / UNIT_LEN)
+
+static const BN_UINT g_ONE[SM2_LIMBS] = {1, 0, 0, 0};
+
+#define IsOne(a) IsEqual(a, g_ONE)
+
+/* Get affine point: x_aff = x * z^(-2), y_aff = y * z^(-3) */
+static void Sm2GetAffine(SM2_AffinePoint *r, const SM2_point *a)
+{
+    BN_UINT z_inv3[SM2_LIMBS] ALIGN32 = {0};
+    BN_UINT z_inv2[SM2_LIMBS] ALIGN32 = {0};
+ 
+    if (IsOne(a->z)) {
+        memcpy_s(r->x, SM2_BYTES_NUM, a->x, SM2_BYTES_NUM);
+        memcpy_s(r->y, SM2_BYTES_NUM, a->y, SM2_BYTES_NUM);
+        return;
+    }
+
+    ECP_Sm2ModInverse(z_inv3, a->z);
+    ECP_Sm2Sqr(z_inv2, z_inv3);
+    ECP_Sm2Mul(r->x, a->x, z_inv2);
+    ECP_Sm2Mul(z_inv3, z_inv3, z_inv2);
+    ECP_Sm2Mul(r->y, a->y, z_inv3);
+}
+
+/* Get affine point: x_aff = x * z^(-2), y_aff = y * z^(-3) */
+static void getMontAffine(SM2_point *r, const SM2_point *a)
+{
+    BN_UINT z_inv3[SM2_LIMBS] ALIGN32 = {0};
+    BN_UINT z_inv2[SM2_LIMBS] ALIGN32 = {0};
+
+    BN_UINT tmpX[SM2_LIMBS] ALIGN32 = {0};
+    BN_UINT tmpY[SM2_LIMBS] ALIGN32 = {0};
+    BN_UINT tmpZ[SM2_LIMBS] ALIGN32 = {0};
+
+    if (IsZeros(a->x) && IsZeros(a->y)) {
+        return;
+    }
+
+    if (IsOne(a->z)) {
+        memcpy_s(r->x, SM2_BYTES_NUM, a->x, SM2_BYTES_NUM);
+        memcpy_s(r->y, SM2_BYTES_NUM, a->y, SM2_BYTES_NUM);
+        return;
+    }
+
+    ECP_Sm2FromMont(tmpX, a->x);
+    ECP_Sm2FromMont(tmpY, a->y);
+    ECP_Sm2FromMont(tmpZ, a->z);
+    ECP_Sm2ModInverse(z_inv3, tmpZ);
+    ECP_Sm2Sqr(z_inv2, z_inv3);
+    ECP_Sm2Mul(r->x, tmpX, z_inv2);
+    ECP_Sm2Mul(z_inv3, z_inv3, z_inv2);
+    ECP_Sm2Mul(r->y, tmpY, z_inv3);
+    ECP_Sm2ToMont(r->x, r->x);
+    ECP_Sm2ToMont(r->y, r->y);
+}
+
+static void Sm2CalPreTable(SM2_point *table, SM2_AffinePoint *r)
+{
+    BSL_SAL_CleanseData(&table[0], sizeof(SM2_point));
+    for (int32_t j = 1; j < OFFSET_LEN; j++) {
+        if (j % 2 == 0) { // 2: even-loc to cal add
+            ECP_Sm2PointDoubleMont(&table[j], &table[j / 2]);
+        } else {
+            ECP_Sm2PointAddAffineMont(&table[j], &table[j - 1], r);
+        }
+    }
+
+    for (int32_t i = 1; i < UNIT_NUM; i++) {
+        // T[i, 0] = O
+        BSL_SAL_CleanseData(&table[i * OFFSET_LEN + 0], sizeof(SM2_point));
+        // T[i, 1] = (2 ^ U)T[i - 1, 1]
+        ECP_Sm2PointDoubleMont(&table[i * OFFSET_LEN + 1], &table[(i - 1) * OFFSET_LEN + 1]);
+        for (int p = 1; p < UNIT_LEN; p++)
+            ECP_Sm2PointDoubleMont(&table[i * OFFSET_LEN + 1], &table[i * OFFSET_LEN + 1]);
+        // T[i, 2..]
+        for (int32_t j = 2; j < OFFSET_LEN; j++) { // from second-loc
+            if (j % 2 == 0) { // 2: even-loc to cal add
+                ECP_Sm2PointDoubleMont(&table[i * OFFSET_LEN + j], &table[i * OFFSET_LEN + j / 2]);
+            } else {
+                ECP_Sm2PointAddMont(&table[i * OFFSET_LEN + j], &table[i * OFFSET_LEN + j - 1],
+                    &table[i * OFFSET_LEN + 1]);
+            }
+        }
+    }
+    for (int32_t i = 0; i < OFFSET_LEN * UNIT_NUM; i++) {
+        getMontAffine(&table[i], &table[i]);
+    }
+}
+
+static void Sm2MulWithPreTable(SM2_point *r, const BN_UINT *k, const SM2_point *precomputed)
+{
+    int32_t i;
+    uint32_t index;
+    BSL_SAL_CleanseData(r, sizeof(SM2_point));
+ 
+    if (IsZeros(k)) {
+        return;
+    }
+ 
+    for (i = 0; i < SM2_BYTES_NUM; ++i) {
+        index = (k[i / sizeof(BN_UINT)] >> (SM2_BITSOFBYTES * (i % sizeof(BN_UINT)))) & SM2_MASK2;
+        if (index) {
+            ECP_Sm2PointAddAffineMont(r, r, (const SM2_AffinePoint *)&precomputed[i * OFFSET_LEN + index]);
+        }
+    }
+}
+
+int32_t CRYPT_SM2_PointCaCheCal(const ECC_Point *point, void **preTable)
+{
+    if (*preTable != NULL) {
+        return CRYPT_SUCCESS;
+    }
+    SM2_point p = {0};
+    SM2_AffinePoint tmp;
+    int32_t ret = ECP_Sm2Point2Array(&p, point);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR((ret));
+        return ret;
+    }
+    Sm2GetAffine(&tmp, &p);
+    ECP_Sm2ToMont(tmp.x, tmp.x);
+    ECP_Sm2ToMont(tmp.y, tmp.y);
+    SM2_point *table = (SM2_point *)BSL_SAL_Malloc(sizeof(SM2_point) * OFFSET_LEN * UNIT_NUM);
+    if (table == NULL) {
+        BSL_ERR_PUSH_ERROR((CRYPT_MEM_ALLOC_FAIL));
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    Sm2CalPreTable((SM2_point *)table, &tmp);
+    *preTable = table;
+    return CRYPT_SUCCESS;
+}
+
+/* r = scalar1 * G + scalar2 * P. */
+int32_t CRYPT_SM2_PointMulwithCache(const ECC_Para *group, ECC_Point *r, const BN_BigNum *scalar1,
+    const ECC_Point *point, const BN_BigNum *scalar2, void **preTable)
+{
+    (void)group;
+    int32_t ret = 0;
+    SM2_point r1 = {0};
+    SM2_point r2 = {0};
+ 
+    if (scalar1 != NULL) {
+        ECP_Sm2ScalarMulG(&r1, scalar1->data);
+    }
+    if (scalar2 != NULL) {
+        ret = CRYPT_SM2_PointCaCheCal(point, preTable);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+        Sm2MulWithPreTable(&r2, scalar2->data, *preTable);
+    }
+    ECP_Sm2PointAddMont(&r1, &r1, &r2);
+    ECP_Sm2FromMont(r1.x, r1.x);
+    ECP_Sm2FromMont(r1.y, r1.y);
+    ECP_Sm2FromMont(r1.z, r1.z);
+
+    GOTO_ERR_IF_EX(ECP_Sm2Array2Point(r, &r1), ret);
+ERR:
+    return ret;
+}
+#endif // HITLS_CRYPTO_ECC_PUB_CACHE
+
 #endif

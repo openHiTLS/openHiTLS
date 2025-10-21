@@ -24,6 +24,7 @@
     defined(HITLS_CRYPTO_SCRYPT)
 #include "eal_mac_local.h"
 #endif
+#include "crypt_params_key.h"
 #include "crypt_util_ctrl.h"
 
 int32_t CRYPT_CTRL_GetNum32(uint32_t num, void *val, uint32_t valLen)

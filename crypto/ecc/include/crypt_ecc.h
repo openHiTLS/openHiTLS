@@ -22,7 +22,6 @@
 #include "crypt_bn.h"
 #include "crypt_algid.h"
 #include "crypt_types.h"
-#include "bsl_params.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -419,6 +418,16 @@ int32_t ECC_PointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Point *
  * @retval security bits
  */
 int32_t ECC_GetSecBits(const ECC_Para *para);
+/**
+ * @ingroup ecc
+ * @brief   convert ecc point to mont form
+ * @param   para [IN] Curve parameters
+ * @param   pt [IN/OUT] Point information
+ *
+ * @param libCtx [IN] Pointer to the library context
+ * @param para [OUT] Pointer to the elliptic curve parameters
+ */
+void ECC_SetLibCtx(void *libCtx, ECC_Para *para);
 
 /**
  * @ingroup ecc
@@ -454,16 +463,14 @@ int32_t ECC_PointToMont(const ECC_Para *para, ECC_Point *pt, BN_Optimizer *opt);
  */
 void ECC_PointFromMont(const ECC_Para *para, ECC_Point *r);
 
-/**
- * @ingroup ecc
- * @brief   convert ecc point to mont form
- * @param   para [IN] Curve parameters
- * @param   pt [IN/OUT] Point information
- *
- * @param libCtx [IN] Pointer to the library context
- * @param para [OUT] Pointer to the elliptic curve parameters
- */
-void ECC_SetLibCtx(void *libCtx, ECC_Para *para);
+#ifdef HITLS_CRYPTO_ECC_PUB_CACHE
+
+int32_t ECC_PointMulWithCache(const ECC_Para *para, ECC_Point *r, const BN_BigNum *scalar1, const ECC_Point *point,
+    const BN_BigNum *scalar2, void **preTable);
+
+int32_t ECC_PointCalCache(const ECC_Point *point, void **preTable);
+
+#endif
 
 #ifdef __cplusplus
 }
