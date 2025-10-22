@@ -1347,3 +1347,44 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_MLDSA_PQCCert_TC001(int format, int type, char *path)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    BSL_Buffer encodeAsn1 = {0};
+    uint8_t expectBuf[MAX_BUFF_SIZE * 2] = {};
+    uint32_t expectBufLen = sizeof(expectBuf);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+    
+    ASSERT_EQ(ReadFile(path, expectBuf, encodeAsn1.dataLen, &expectBufLen), 0);
+    ASSERT_COMPARE("key ", encodeAsn1.data, encodeAsn1.dataLen, expectBuf, expectBufLen);
+
+EXIT:
+    BSL_SAL_FREE(encodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_MLDSA_PQCCert_TC005(int format, int type, char *path, int key_format, int err)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    BSL_Buffer encodeAsn1 = {0};
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
+    
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT, &key_format, sizeof(uint32_t)), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), err);
+EXIT:
+    BSL_SAL_FREE(encodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */

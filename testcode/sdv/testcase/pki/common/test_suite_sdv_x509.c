@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "securec.h"
+#include "sal_file.h"
 #include "bsl_sal.h"
 #include "bsl_list.h"
 #include "bsl_obj.h"
@@ -31,6 +32,7 @@
 #include "hitls_pki_cert.h"
 #include "hitls_pki_crl.h"
 #include "hitls_pki_csr.h"
+#include "hitls_pki_x509.h"
 #include "hitls_pki_errno.h"
 #include "hitls_pki_types.h"
 #include "hitls_pki_utils.h"
@@ -938,6 +940,558 @@ void SDV_HITLS_MLDSA_PQC_CERT_TC002(char *keypath)
 EXIT:
     TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_MLDSA_PQCCert_TC003(int format, char *path)
+{
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_Cert *certCpy = NULL;
+    BSL_Buffer buff = {0};
+
+    TestMemInit();
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    BSL_SAL_ReadFile(path, &data, &dataLen);
+    ASSERT_EQ(HITLS_X509_CertParseFile(format, path, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertGenBuff(format, cert, &buff), HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("cert", buff.data, buff.dataLen, data, dataLen);
+EXIT:
+    BSL_SAL_Free(buff.data);
+    BSL_SAL_Free(data);
+    HITLS_X509_CertFree(cert);
+    HITLS_X509_CertFree(certCpy);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_MLDSA_PQCCert_TC004(int format, int type, int key_format, int keylen, char* path)
+{
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    BSL_Buffer encodeAsn1 = {0}; 
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+    ASSERT_NE(pkey, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_MLDSA_TYPE_MLDSA_87), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT, &key_format, sizeof(uint32_t)), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkey, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+    ASSERT_EQ(keylen, encodeAsn1.dataLen);
+    
+    ASSERT_EQ(CRYPT_EAL_EncodeFileKey(pkey, NULL, format, type, path), CRYPT_SUCCESS);
+      
+EXIT:
+    BSL_SAL_FREE(encodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_MLDSA_PQCCert_TC006()
+{
+    char *path = "tmp.cert";
+    HITLS_X509_Cert *cert = NULL;
+    uint32_t version = 2; // v3 cert
+    uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
+    BSL_TIME beforeTime = {2025, 1, 1, 0, 0, 0, 0, 0};
+    BSL_TIME afterTime = {2035, 1, 1, 0, 0, 0, 0, 0};
+    BslList *dnList = NULL;
+    BSL_Buffer encode = {0};
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+    ASSERT_NE(pkey, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_MLDSA_TYPE_MLDSA_87), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_NE(pkey, NULL);
+    cert = HITLS_X509_CertNew();
+    ASSERT_NE(cert, NULL);
+
+    // set cert info
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, serialNum, sizeof(serialNum)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
+    dnList = GenDNList();
+    ASSERT_NE(dnList, NULL);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_ISSUER_DN, dnList, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SUBJECT_DN, dnList, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(SetCertExt(cert), 0);
+
+    // sign cert
+    ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, pkey, NULL, cert), HITLS_PKI_SUCCESS);
+
+    // generate cert file
+    ASSERT_EQ(HITLS_X509_CertGenFile(BSL_FORMAT_PEM, cert, path), HITLS_PKI_SUCCESS);
+    // generate cert buff
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_PEM, cert, &encode), 0);
+    BSL_SAL_FREE(encode.data);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    HITLS_X509_CertFree(cert);
+    HITLS_X509_DnListFree(dnList);
+    remove(path);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_MLDSA_PQCCert_TC007(char *keypath)
+{
+    char *path = "tmp.cert";
+    HITLS_X509_Cert *cert = NULL;
+    uint32_t version = 2; // v3 cert
+    uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
+    BSL_TIME beforeTime = {2025, 1, 1, 0, 0, 0, 0, 0};
+    BSL_TIME afterTime = {2035, 1, 1, 0, 0, 0, 0, 0};
+    BslList *dnList = NULL;
+    BSL_Buffer encode = {0};
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, keypath, NULL, 0, &pkey), CRYPT_SUCCESS);
+    ASSERT_NE(pkey, NULL);
+    cert = HITLS_X509_CertNew();
+    ASSERT_NE(cert, NULL);
+
+    // set cert info
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, serialNum, sizeof(serialNum)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
+    dnList = GenDNList();
+    ASSERT_NE(dnList, NULL);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_ISSUER_DN, dnList, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SUBJECT_DN, dnList, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(SetCertExt(cert), 0);
+
+    // sign cert
+    ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, pkey, NULL, cert), HITLS_PKI_SUCCESS);
+
+    // generate cert file
+    ASSERT_EQ(HITLS_X509_CertGenFile(BSL_FORMAT_PEM, cert, path), HITLS_PKI_SUCCESS);
+    // generate cert buff
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_PEM, cert, &encode), 0);
+    BSL_SAL_FREE(encode.data);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    HITLS_X509_CertFree(cert);
+    HITLS_X509_DnListFree(dnList);
+    remove(path);
+}
+/* END_CASE */
+
+static int32_t SetCertExtkid(HITLS_X509_Cert *cert, uint8_t *akid, uint8_t *skid)
+{
+    int32_t ret = 1;
+    HITLS_X509_ExtBCons bCons = {true, true, -1};
+    HITLS_X509_ExtKeyUsage ku = {true, HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_KEY_CERT_SIGN | HITLS_X509_EXT_KU_NON_REPUDIATION};
+    HITLS_X509_ExtAki aki = {false, {akid, sizeof(akid)}, NULL, {0}};
+    HITLS_X509_ExtSki ski = {false, {skid, sizeof(skid)}};
+    HITLS_X509_ExtSan san = {false, NULL};
+
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_KUSAGE, &ku, sizeof(HITLS_X509_ExtKeyUsage)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), 0);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), 0);
+
+    san.names = GenGeneralNameList();
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)), 0);
+    ret = 0;
+EXIT:
+    BSL_LIST_FREE(san.names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
+    return ret;
+}
+
+/* BEGIN_CASE */
+void SDV_HITLS_GEN_CSR_CERT_TC001()
+{
+    char *path = "tmpca.csr";
+    char *pathcakey = "tmpcakey.pem";
+    char *path1 = "tmpca.cert";
+    HITLS_X509_Csr *csr = NULL;
+    BSL_Buffer encode = {0};
+    HITLS_X509_DN dnName1[1] = {{BSL_CID_AT_COMMONNAME, (uint8_t *)"ROOT", 2}};
+    HITLS_X509_DN dnName2[1] = {{BSL_CID_AT_COUNTRYNAME, (uint8_t *)"CN", 2}};
+    HITLS_X509_Attrs *attrs = NULL;
+    HITLS_X509_SignAlgParam algParam = {0};
+
+
+    HITLS_X509_Cert *cert = NULL;
+    uint32_t version = 2; // v3 cert
+    uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
+    BSL_TIME beforeTime = {2025, 1, 1, 0, 0, 0, 0, 0};
+    BSL_TIME afterTime = {2035, 1, 1, 0, 0, 0, 0, 0};    
+    uint8_t akid[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+    BslList *dnList = NULL; 
+    BslList *subject = NULL;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+    ASSERT_NE(pkey, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_MLDSA_TYPE_MLDSA_87), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_NE(pkey, NULL);
+    ASSERT_EQ(CRYPT_EAL_EncodeFileKey(pkey, NULL, BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, pathcakey), CRYPT_SUCCESS);
+
+    csr = HITLS_X509_CsrNew();
+    ASSERT_NE(csr, NULL);
+
+    // set csr info
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, dnName1, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, dnName2, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(HITLS_X509_Attrs *)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CsrSign(CRYPT_MD_SHA256, pkey, &algParam, csr), HITLS_PKI_SUCCESS);
+    
+    ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, csr, &encode), 0);
+    BSL_SAL_FREE(encode.data);
+    ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, csr, path), 0);
+
+    cert = HITLS_X509_CertNew();
+    ASSERT_NE(cert, NULL);
+
+    // set cert info
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, serialNum, sizeof(serialNum)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
+    
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DN, &subject, sizeof(BslList *)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SUBJECT_DN, subject, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_ISSUER_DN, subject, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(SetCertExtkid(cert, akid, akid), 0);
+
+    // sign cert
+    ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, pkey, &algParam, cert), HITLS_PKI_SUCCESS);
+
+    // generate cert file
+    ASSERT_EQ(HITLS_X509_CertGenFile(BSL_FORMAT_PEM, cert, path1), HITLS_PKI_SUCCESS);
+    // generate cert buff
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_PEM, cert, &encode), 0);
+    BSL_SAL_FREE(encode.data);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    HITLS_X509_CertFree(cert);
+    HITLS_X509_CsrFree(csr);
+    HITLS_X509_DnListFree(dnList);
+    remove(path);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_GEN_CSR_MIDCERT_TC001()
+{
+    SDV_HITLS_GEN_CSR_CERT_TC001();
+    char *path = "tmpmid.csr";
+    char *pathmidkey = "tmpmidkey.pem";
+    char *pathmid = "tmpmid.cert";
+    HITLS_X509_Csr *csr = NULL;
+    BSL_Buffer encode = {0};
+    HITLS_X509_DN dnName1[1] = {{BSL_CID_AT_COMMONNAME, (uint8_t *)"MID", 2}};
+    HITLS_X509_DN dnName2[1] = {{BSL_CID_AT_COUNTRYNAME, (uint8_t *)"CN", 2}};
+    HITLS_X509_Attrs *attrs = NULL;
+    HITLS_X509_SignAlgParam algParam = {0};
+
+
+    HITLS_X509_Cert *cert = NULL;
+    uint32_t version = 2; // v3 cert
+    uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x55};
+    BSL_TIME beforeTime = {2025, 1, 1, 0, 0, 0, 0, 0};
+    BSL_TIME afterTime = {2035, 1, 1, 0, 0, 0, 0, 0};
+    uint8_t akid[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+    uint8_t skid[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x99};
+    BslList *dnList = NULL; 
+    BslList *subject = NULL;
+    BslList *issuer = NULL;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    CRYPT_EAL_PkeyCtx *capkey = NULL;
+    HITLS_X509_Cert *cacert = NULL;
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+    ASSERT_NE(pkey, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_MLDSA_TYPE_MLDSA_87), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_NE(pkey, NULL);
+    ASSERT_EQ(CRYPT_EAL_EncodeFileKey(pkey, NULL, BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, pathmidkey), CRYPT_SUCCESS);
+
+    csr = HITLS_X509_CsrNew();
+    ASSERT_NE(csr, NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, "tmpca.cert", &cacert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, "tmpcakey.pem", NULL, 0, &capkey), CRYPT_SUCCESS);
+
+    // set csr info
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, dnName1, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, dnName2, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(HITLS_X509_Attrs *)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CsrSign(CRYPT_MD_SHA256, pkey, &algParam, csr), HITLS_PKI_SUCCESS);
+    
+    ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, csr, &encode), 0);
+    BSL_SAL_FREE(encode.data);
+    ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, csr, path), 0);
+
+    cert = HITLS_X509_CertNew();
+    ASSERT_NE(cert, NULL);
+
+    // set cert info
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, serialNum, sizeof(serialNum)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
+    
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DN, &subject, sizeof(BslList *)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SUBJECT_DN, subject, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cacert, HITLS_X509_GET_SUBJECT_DN, &issuer, sizeof(BslList *)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_ISSUER_DN, issuer, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(SetCertExtkid(cert, akid, skid), 0);
+
+    // sign cert
+    ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, capkey, &algParam, cert), HITLS_PKI_SUCCESS);
+
+    // generate cert file
+    ASSERT_EQ(HITLS_X509_CertGenFile(BSL_FORMAT_PEM, cert, pathmid), HITLS_PKI_SUCCESS);
+    // generate cert buff
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_PEM, cert, &encode), 0);
+    BSL_SAL_FREE(encode.data);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(capkey);
+    HITLS_X509_CertFree(cacert);
+    HITLS_X509_CertFree(cert);
+    HITLS_X509_CsrFree(csr);
+    HITLS_X509_DnListFree(dnList);
+    remove(path);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_GEN_CSR_EECERT_TC001()
+{
+    SDV_HITLS_GEN_CSR_MIDCERT_TC001();
+    char *path = "tmpee.csr";
+    char *pathmidkey = "tmpeekey.pem";
+    char *pathmid = "tmpee.cert";
+    HITLS_X509_Csr *csr = NULL;
+    BSL_Buffer encode = {0};
+    HITLS_X509_DN dnName1[1] = {{BSL_CID_AT_COMMONNAME, (uint8_t *)"EE", 2}};
+    HITLS_X509_DN dnName2[1] = {{BSL_CID_AT_COUNTRYNAME, (uint8_t *)"CN", 2}};
+    HITLS_X509_Attrs *attrs = NULL;
+    HITLS_X509_SignAlgParam algParam = {0};
+
+    HITLS_X509_Cert *cert = NULL;
+    uint32_t version = 2; // v3 cert
+    uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x66};
+    BSL_TIME beforeTime = {2025, 1, 1, 0, 0, 0, 0, 0};
+    BSL_TIME afterTime = {2035, 1, 1, 0, 0, 0, 0, 0};
+    uint8_t akid[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x99};
+    uint8_t skid[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x00};
+    BslList *dnList = NULL; 
+    BslList *subject = NULL;
+    BslList *issuer = NULL;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    CRYPT_EAL_PkeyCtx *capkey = NULL;
+    HITLS_X509_Cert *cacert = NULL;
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+    ASSERT_NE(pkey, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_MLDSA_TYPE_MLDSA_87), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_NE(pkey, NULL);
+    ASSERT_EQ(CRYPT_EAL_EncodeFileKey(pkey, NULL, BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, pathmidkey), CRYPT_SUCCESS);
+
+    csr = HITLS_X509_CsrNew();
+    ASSERT_NE(csr, NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, "tmpmid.cert", &cacert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, "tmpmidkey.pem", NULL, 0, &capkey), CRYPT_SUCCESS);
+
+    // set csr info
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, dnName1, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, dnName2, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(HITLS_X509_Attrs *)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CsrSign(CRYPT_MD_SHA256, pkey, &algParam, csr), HITLS_PKI_SUCCESS);
+    
+    ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, csr, &encode), 0);
+    BSL_SAL_FREE(encode.data);
+    ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, csr, path), 0);
+
+    cert = HITLS_X509_CertNew();
+    ASSERT_NE(cert, NULL);
+
+    // set cert info
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, serialNum, sizeof(serialNum)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
+    
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DN, &subject, sizeof(BslList *)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SUBJECT_DN, subject, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cacert, HITLS_X509_GET_SUBJECT_DN, &issuer, sizeof(BslList *)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_ISSUER_DN, issuer, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(SetCertExtkid(cert, akid, skid), 0);
+
+    // sign cert
+    ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, capkey, &algParam, cert), HITLS_PKI_SUCCESS);
+
+    // generate cert file
+    ASSERT_EQ(HITLS_X509_CertGenFile(BSL_FORMAT_PEM, cert, pathmid), HITLS_PKI_SUCCESS);
+    // generate cert buff
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_PEM, cert, &encode), 0);
+    BSL_SAL_FREE(encode.data);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(capkey);
+    HITLS_X509_CertFree(cacert);
+    HITLS_X509_CertFree(cert);
+    HITLS_X509_CsrFree(csr);
+    HITLS_X509_DnListFree(dnList);
+    remove(path);
+    remove(pathmidkey);
+    remove("tmpcakey.pem");
+    remove("tmpmidkey.pem");
+}
+/* END_CASE */
+
+static int32_t HITLS_AddCertToStoreTest(char *path, HITLS_X509_StoreCtx *store, HITLS_X509_Cert **cert)
+{
+    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, path, cert);
+    if (ret != HITLS_PKI_SUCCESS){
+        return ret;
+    }
+    return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, *cert, 0);
+}
+
+/* BEGIN_CASE */
+void SDV_HITLS_CERT_CHAIN_FUNC_TC001()
+{
+    SDV_HITLS_GEN_CSR_EECERT_TC001();
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+    HITLS_X509_Cert *entity = NULL;
+    int32_t ret = HITLS_AddCertToStoreTest("tmpee.cert", store, &entity);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    HITLS_X509_Cert *midcert = NULL;
+    ret = HITLS_AddCertToStoreTest("tmpmid.cert", store, &midcert);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    HITLS_X509_Cert *cacert = NULL;
+    ret = HITLS_AddCertToStoreTest("tmpca.cert", store, &cacert);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    HITLS_X509_List *chain = NULL;
+    ret = HITLS_X509_CertChainBuild(store, true, entity, &chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+EXIT:
+    HITLS_X509_CertFree(entity);
+    HITLS_X509_CertFree(midcert);
+    HITLS_X509_CertFree(cacert);
+    HITLS_X509_StoreCtxFree(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    remove("tmpee.cert");
+    remove("tmpca.cert");
+    remove("tmpmid.cert");
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_MLDSA_PQCCert_TC009(int key_format)
+{
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    BSL_Buffer encodeAsn1 = {0}; 
+    CRYPT_EAL_PkeyCtx *pkeyout = NULL;
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+    ASSERT_NE(pkey, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_MLDSA_TYPE_MLDSA_44), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT, &key_format, sizeof(uint32_t)), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1), CRYPT_SUCCESS);
+    switch (key_format)
+    {
+        case CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY:
+            encodeAsn1.data[20] = 0x81;  //seed_only  修改第20位为tag
+            ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1, NULL, 0, &pkeyout), BSL_ASN1_ERR_TAG_EXPECTED);
+            break;
+        case CRYPT_ALGO_MLDSA_PRIV_FORMAT_PRIV_ONLY:
+            encodeAsn1.data[24] = 0x05;  //priv_only  修改第24位为tag
+            ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1, NULL, 0, &pkeyout), BSL_ASN1_ERR_TAG_EXPECTED);
+            break;
+        case CRYPT_ALGO_MLDSA_PRIV_FORMAT_BOTH:
+            encodeAsn1.data[28] = 0x31;  //both  修改第28位为第一个tag
+            ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1, NULL, 0, &pkeyout), BSL_ASN1_ERR_TAG_EXPECTED);
+            encodeAsn1.data[28] = 0x04;  //both  修改第28位为第一个tag
+            encodeAsn1.data[62] = 0x80;  //both  修改第62位为第二个tag
+            ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1, NULL, 0, &pkeyout), BSL_ASN1_ERR_TAG_EXPECTED);
+            encodeAsn1.data[62] = 0x04;  //both  修改第62位为第二个tag
+            break;    
+        default:
+            break;
+    }
+EXIT:
+    BSL_SAL_FREE(encodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(pkeyout);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_MLDSA_PQCCert_TC010()
+{
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    BSL_Buffer encodeAsn1 = {0}; 
+    int key_format = CRYPT_ALGO_MLDSA_PRIV_FORMAT_BOTH;
+    CRYPT_EAL_PkeyCtx *pkeyout = NULL;
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
+    ASSERT_NE(pkey, NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_MLDSA_TYPE_MLDSA_44), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT, &key_format, sizeof(uint32_t)), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1), CRYPT_SUCCESS);
+
+    encodeAsn1.data[40] = 0x00; 
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1, NULL, 0, &pkeyout), CRYPT_MLDSA_PRVKEY_SEED_INCONSISTENT);
+
+EXIT:
+    BSL_SAL_FREE(encodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(pkeyout);
 }
 /* END_CASE */
 

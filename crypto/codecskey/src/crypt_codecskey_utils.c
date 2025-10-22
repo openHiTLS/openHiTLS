@@ -397,7 +397,7 @@ int32_t CRYPT_DECODE_MldsaPrikeyAsn1Buff(uint8_t* buffer, uint32_t bufferLen, BS
             asn1[CRYPT_ML_DSA_PRVKEY_SEED_IDX] = asn1Tmp;
             break;
         default:
-            return BSL_INVALID_ARG;
+            return BSL_ASN1_ERR_TAG_EXPECTED;
     }
     return ret;
 }
