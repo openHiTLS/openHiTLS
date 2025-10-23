@@ -262,6 +262,17 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .tag = NULL,
         .mode = CRYPT_MODE_CBC
     },
+    // CRYPT_CIPHER_SM4_CBC
+    {
+        .id = CRYPT_CIPHER_SM4_CBC,
+        .key = "2b7e151628aed2a6abf7158809cf4f3c",
+        .aad = NULL,
+        .iv = "000102030405060708090A0b0C0D0E0F",
+        .plaintext = "6BC1BEE22E409F96E93D7E117393172A73F3D6557DC1BA9BF9DD717E53AAF9AC",
+        .ciphertext = "AC529AF989A62FCE9CDDC5FFB84125CA2FB185F512E505453C6456C3E81BF507",
+        .tag = NULL,
+        .mode = CRYPT_MODE_CBC
+    },
     // CRYPT_CIPHER_SM4_XTS
     // GB/T 17964-2021
     {
@@ -286,6 +297,17 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .tag = NULL,
         .mode = CRYPT_MODE_ECB
     },
+    // CRYPT_CIPHER_SM4_ECB
+    {
+        .id = CRYPT_CIPHER_SM4_ECB,
+        .key = "2b7e151628aed2a6abf7158809cf4f3c",
+        .aad = NULL,
+        .iv = NULL,
+        .plaintext = "6BC1BEE22E409F96E93D7E117393172ABF570C705E9A8CD9A3268884B47E99C5",
+        .ciphertext = "A51411FF04A711443891FCE7AB842A29FA4CF0EB1747BC376CCF06C002BFABC3",
+        .tag = NULL,
+        .mode = CRYPT_MODE_ECB
+    },
     // CRYPT_CIPHER_SM4_CTR
     // GB/T 17964-2021
     {
@@ -295,6 +317,17 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .iv = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
         .plaintext = "6BC1BEE22E409F96E93D7E117393172A",
         .ciphertext = "14AE4A72B97A93CE1216CCD998E371C1",
+        .tag = NULL,
+        .mode = CRYPT_MODE_CTR
+    },
+    // CRYPT_CIPHER_SM4_CTR
+    {
+        .id = CRYPT_CIPHER_SM4_CTR,
+        .key = "2b7e151628aed2a6abf7158809cf4f3c",
+        .aad = NULL,
+        .iv = "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+        .plaintext = "6BC1BEE22E409F96E93D7E117393172AF16AC4741C7E907EDB41E3D61976132E",
+        .ciphertext = "14AE4A72B97A93CE1216CCD998E371C13FB0A1A86139818FE46FA97FB925BCE4",
         .tag = NULL,
         .mode = CRYPT_MODE_CTR
     },
@@ -322,6 +355,17 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .tag = NULL,
         .mode = CRYPT_MODE_CFB
     },
+    // CRYPT_CIPHER_SM4_CFB
+    {
+        .id = CRYPT_CIPHER_SM4_CFB,
+        .key = "2b7e151628aed2a6abf7158809cf4f3c",
+        .aad = NULL,
+        .iv = "000102030405060708090A0B0C0D0E0F",
+        .plaintext = "6BC1BEE22E409F96E93D7E117393172A790297389526FF2D9312B724753A8416",
+        .ciphertext = "BC710D762D070B26361DA82B54565E4673E25F17E11F0122AE6313491365B913",
+        .tag = NULL,
+        .mode = CRYPT_MODE_CFB
+    },
     // CRYPT_CIPHER_SM4_OFB
     // GB/T 17964-2021
     {
@@ -331,6 +375,17 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .iv = "000102030405060708090A0B0C0D0E0F",
         .plaintext = "6BC1BEE22E409F96E93D7E117393172A",
         .ciphertext = "BC710D762D070B26361DA82B54565E46",
+        .tag = NULL,
+        .mode = CRYPT_MODE_OFB
+    },
+    // CRYPT_CIPHER_SM4_OFB
+    {
+        .id = CRYPT_CIPHER_SM4_OFB,
+        .key = "2b7e151628aed2a6abf7158809cf4f3c",
+        .aad = NULL,
+        .iv = "000102030405060708090A0B0C0D0E0F",
+        .plaintext = "6BC1BEE22E409F96E93D7E117393172AFD21572934B59ABB3E10F3ABB92E6587",
+        .ciphertext = "BC710D762D070B26361DA82B54565E4654AC1B561EC23CF484AABF96D960FDF7",
         .tag = NULL,
         .mode = CRYPT_MODE_OFB
     },
@@ -586,23 +641,9 @@ ERR:
     return ret;
 }
 
-const CMVP_CIPHER_VECTOR *FindCipherVectorById(CRYPT_CIPHER_AlgId id)
+static bool DoCipherSelftest(const CMVP_CIPHER_VECTOR *cipherVec, void *libCtx, const char *attrName,
+    CRYPT_CIPHER_AlgId id)
 {
-    uint32_t num = sizeof(CIPHER_VECTOR) / sizeof(CIPHER_VECTOR[0]);
-    const CMVP_CIPHER_VECTOR *cipherVec = NULL;
-
-    for (uint32_t i = 0; i < num; i++) {
-        if (CIPHER_VECTOR[i].id == id) {
-            cipherVec = &CIPHER_VECTOR[i];
-            return cipherVec;
-        }
-    }
-
-    return NULL;
-}
-static bool CRYPT_CMVP_SelftestCipherInternal(void *libCtx, const char *attrName, CRYPT_CIPHER_AlgId id)
-{
-    const CMVP_CIPHER_VECTOR *cipherVec = FindCipherVectorById(id);
     if (cipherVec == NULL || cipherVec->key == NULL) {
         return false;
     }
@@ -647,6 +688,20 @@ ERR:
     BSL_SAL_Free(data.aad.data);
     BSL_SAL_Free(data.tag.data);
     return ret;
+}
+
+bool CRYPT_CMVP_SelftestCipherInternal(void *libCtx, const char *attrName, CRYPT_CIPHER_AlgId id)
+{
+    bool hasVector = false;
+    for (uint32_t i = 0; i < sizeof(CIPHER_VECTOR) / sizeof(CIPHER_VECTOR[0]); i++) {
+        if (CIPHER_VECTOR[i].id == id) {
+            hasVector = true;
+            if (DoCipherSelftest(&CIPHER_VECTOR[i], libCtx, attrName, id) == false) {
+                return false;
+            }
+        }
+    }
+    return hasVector;
 }
 
 bool CRYPT_CMVP_SelftestCipher(CRYPT_CIPHER_AlgId id)

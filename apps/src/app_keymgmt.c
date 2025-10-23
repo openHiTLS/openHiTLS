@@ -47,7 +47,9 @@
 #define APP_KEYMGMT_MAX_KEY_COUNT 1024
 
 #define APP_KEYMGMT_PBKDF2_IT_CNT_MIN 1024
+#define APP_KEYMGMT_PBKDF2_IT_DEFAULT_CNT 10000
 #define APP_KEYMGMT_PBKDF2_SALT_LEN_MIN 8
+#define APP_KEYMGMT_PBKDF2_SALT_DEFAULT_LEN 16
 #define APP_KEYMGMT_UUID_STR_LEN (2 * (HITLS_APP_UUID_LEN) + 1)
 #define APP_KEYMGMT_KEY_EXPIRE_TIME (180 * 24 * 60 * 60) /* 180 days */
 #define APP_KEYMGMT_KEY_VERSION 1
@@ -627,7 +629,7 @@ static int32_t CheckOptParam(KeyMgmtCmdOpt *keyMgmtOpt)
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     if (keyMgmtOpt->iter == -1) {
-        keyMgmtOpt->iter = APP_KEYMGMT_PBKDF2_IT_CNT_MIN;
+        keyMgmtOpt->iter = APP_KEYMGMT_PBKDF2_IT_DEFAULT_CNT;
     }
     if (keyMgmtOpt->iter < APP_KEYMGMT_PBKDF2_IT_CNT_MIN) {
         AppPrintError("keymgmt: The number of iterations is invalid, iter: %d, min: %d.\n", keyMgmtOpt->iter,
@@ -635,7 +637,7 @@ static int32_t CheckOptParam(KeyMgmtCmdOpt *keyMgmtOpt)
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     if (keyMgmtOpt->saltLen == -1) {
-        keyMgmtOpt->saltLen = APP_KEYMGMT_PBKDF2_SALT_LEN_MIN;
+        keyMgmtOpt->saltLen = APP_KEYMGMT_PBKDF2_SALT_DEFAULT_LEN;
     }
     if (keyMgmtOpt->saltLen < APP_KEYMGMT_PBKDF2_SALT_LEN_MIN) {
         AppPrintError("keymgmt: The salt length is invalid, saltLen: %d, min: %d.\n", keyMgmtOpt->saltLen,
@@ -1437,8 +1439,8 @@ static int32_t CheckAndSetKdfParam(KeyMgmtCmdOpt *keyMgmtOpt, HITLS_APP_SM_Param
     }
     keyMgmtOpt->smParam = smParam;
 
-    keyMgmtOpt->iter = iter == -1 ? APP_KEYMGMT_PBKDF2_IT_CNT_MIN : iter;
-    keyMgmtOpt->saltLen = saltLen == -1 ? APP_KEYMGMT_PBKDF2_SALT_LEN_MIN : saltLen;
+    keyMgmtOpt->iter = iter == -1 ? APP_KEYMGMT_PBKDF2_IT_DEFAULT_CNT : iter;
+    keyMgmtOpt->saltLen = saltLen == -1 ? APP_KEYMGMT_PBKDF2_SALT_DEFAULT_LEN : saltLen;
 
     if (keyMgmtOpt->iter < APP_KEYMGMT_PBKDF2_IT_CNT_MIN) {
         AppPrintError("keymgmt: The number of iterations is invalid, iter: %d.\n", keyMgmtOpt->iter);
