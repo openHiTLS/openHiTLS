@@ -38,11 +38,11 @@
 #endif
 #ifndef HITLS_JITTER_RCT_CUT_OFF
 /**
- * C = 1 + ceil(-log_2(alpha)/H), H = 1(MIN_ENTROPY), alpha = 2^(-20)
+ * C = 1 + ceil(-log_2(alpha)/H), H = 0.991(MIN_ENTROPY), alpha = 2^(-20)
  * alpha value reference SP800-90B sec 4.4.1
- * following SP800-90B. Thus C = ceil(-log_2(alpha)/H) = 20.
+ * following SP800-90B. Thus C = 1 + ceil(-log_2(alpha)/H) = 22.
  */
-#define HITLS_JITTER_RCT_CUT_OFF 20
+#define HITLS_JITTER_RCT_CUT_OFF 22
 #endif
 #ifndef HITLS_JITTER_MINENTROPY
 /**

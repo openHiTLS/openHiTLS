@@ -25,7 +25,7 @@
 
 #define TIME_STAMP_ENTROPY_RCT_CUT_OFF 5
 #define TIME_STAMP_ENTROPY_APT_WINDOW_SIZE 512
-#define TIME_STAMP_ENTROPY_APT_CUT_OFF 39
+#define TIME_STAMP_ENTROPY_APT_CUT_OFF 20
 
 static int32_t ES_TimeStampRead(void *ctx, uint32_t timeout, uint8_t *buf, uint32_t bufLen)
 {

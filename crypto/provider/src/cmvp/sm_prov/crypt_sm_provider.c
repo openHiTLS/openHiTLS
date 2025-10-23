@@ -366,7 +366,7 @@ static int32_t CreateSmEs(CRYPT_EAL_Es **es)
         false,
         5,
         {NULL, NULL, ReadDevRandom, NULL},
-        {4, 15, 512},
+        {4, 16, 512},
     };
     ret = CRYPT_EAL_EsCtrl(esTemp, CRYPT_ENTROPY_ADD_NS, (void *)&para, sizeof(CRYPT_EAL_NsPara));
     GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
