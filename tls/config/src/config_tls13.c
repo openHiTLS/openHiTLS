@@ -119,6 +119,7 @@ int32_t HITLS_CFG_GetPostHandshakeAuthSupport(HITLS_Config *config, bool *isSupp
     *isSupport = config->isSupportPostHandshakeAuth;
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_FEATURE_PHA */
 
 #ifdef HITLS_TLS_FEATURE_SM_TLS13
 static int32_t SetTLS13SMCipherSuites(HITLS_Config *config, bool isOnlySupportSM)
@@ -256,6 +257,24 @@ int32_t HITLS_CFG_EnableTls13SM(HITLS_Config *config, bool isOnlySupportSM)
     }
     return HITLS_SUCCESS;
 }
-#endif
-#endif
+#endif /* HITLS_TLS_FEATURE_SM_TLS13 */
+
+int32_t HITLS_CFG_SetMiddleBoxCompat(HITLS_Config *config, bool isMiddleBox)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->isMiddleBoxCompat = isMiddleBox;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetMiddleBoxCompat(HITLS_Config *config, bool *isMiddleBox)
+{
+    if (config == NULL || isMiddleBox == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *isMiddleBox = config->isMiddleBoxCompat;
+    return HITLS_SUCCESS;
+}
 #endif /* HITLS_TLS_PROTO_TLS13 */

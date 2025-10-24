@@ -1280,7 +1280,6 @@ int32_t HITLS_CFG_LoadVerifyFile(HITLS_Config *config, const char *file)
     }
 
     int32_t ret = LoadVerifyCommon(config, certList);
-    
 
     SAL_CERT_ChainFree(certList);
     return ret;
@@ -1383,3 +1382,25 @@ int32_t HITLS_CFG_LoadDefaultCAPath(HITLS_Config *config)
 
     return SAL_CERT_StoreCtrl(config, store, CERT_STORE_CTRL_SET_DEFAULT_PATH, NULL, NULL);
 }
+
+#ifdef HITLS_TLS_CONFIG_CERT
+int32_t HITLS_CFG_SetMaxCertList(HITLS_Config *config, uint32_t maxSize)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->maxCertList = maxSize;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetMaxCertList(const HITLS_Config *config, uint32_t *maxSize)
+{
+    if (config == NULL || maxSize == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    *maxSize = config->maxCertList;
+    return HITLS_SUCCESS;
+}
+#endif
