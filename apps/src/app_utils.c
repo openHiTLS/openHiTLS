@@ -19,7 +19,6 @@
 #include <unistd.h>
 #include <linux/limits.h>
 #include "bsl_sal.h"
-#include "bsl_buffer.h"
 #include "bsl_ui.h"
 #include "bsl_errno.h"
 #include "bsl_buffer.h"
@@ -37,7 +36,6 @@
 #include "app_opt.h"
 #include "app_list.h"
 #include "app_sm.h"
-#include "hitls_pki_errno.h"
 
 #define DEFAULT_PEM_FILE_SIZE 1024U
 #define RSA_PRV_CTX_LEN 8

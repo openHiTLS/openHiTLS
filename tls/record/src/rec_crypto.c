@@ -15,7 +15,6 @@
 #include <string.h>
 #include "securec.h"
 #include "hitls_build.h"
-#include "bsl_bytes.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #ifdef HITLS_TLS_SUITE_CIPHER_AEAD

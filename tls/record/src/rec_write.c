@@ -25,7 +25,6 @@
 #include "bsl_errno.h"
 #include "bsl_uio.h"
 #include "tls.h"
-#include "uio_base.h"
 #include "record.h"
 #include "hs_ctx.h"
 #ifdef HITLS_TLS_FEATURE_INDICATOR

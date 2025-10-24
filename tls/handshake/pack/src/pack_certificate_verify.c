@@ -20,7 +20,6 @@
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
 #include "bsl_err_internal.h"
-#include "bsl_bytes.h"
 #include "pack_common.h"
 #include "hitls_error.h"
 #include "tls.h"

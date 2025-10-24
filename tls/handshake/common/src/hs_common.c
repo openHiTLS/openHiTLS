@@ -26,11 +26,9 @@
 #include "tls_config.h"
 #include "bsl_errno.h"
 #include "bsl_uio.h"
-#include "uio_base.h"
 #ifdef HITLS_TLS_FEATURE_INDICATOR
 #include "indicator.h"
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
-#include "pack.h"
 #ifdef HITLS_TLS_FEATURE_SECURITY
 #include "security.h"
 #endif

@@ -21,7 +21,6 @@
 #include "bsl_err_internal.h"
 #include "tls_binlog_id.h"
 #include "tls.h"
-#include "bsl_bytes.h"
 #include "hitls_error.h"
 #include "hitls_security.h"
 #ifdef HITLS_TLS_FEATURE_SECURITY

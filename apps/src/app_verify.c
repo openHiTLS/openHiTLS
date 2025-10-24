@@ -19,19 +19,16 @@
 #include "string.h"
 #include "securec.h"
 #include "bsl_sal.h"
-#include "bsl_errno.h"
 #include "crypt_errno.h"
 #include "app_function.h"
 #include "bsl_list.h"
 #include "app_errno.h"
 #include "app_opt.h"
-#include "app_help.h"
 #include "app_print.h"
 #include "app_conf.h"
 #include "app_utils.h"
 #include "crypt_eal_rand.h"
 #include "hitls_pki_errno.h"
-#include "hitls_cert_local.h"
 
 typedef enum OptionChoice {
     HITLS_APP_OPT_VERIFY_ERR = -1,
@@ -120,7 +117,7 @@ int32_t InitVerify(HITLS_X509_StoreCtx *store, const char *cafile)
             ret = HITLS_APP_X509_FAIL;
             break;
         }
-        ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, *cert, sizeof(HITLS_X509_Cert));
+        ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, *cert, sizeof(HITLS_X509_Cert *));
         if (ret != HITLS_PKI_SUCCESS) {
             PrintCertErr(*cert);
             ret = HITLS_APP_X509_FAIL;

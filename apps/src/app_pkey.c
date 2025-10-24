@@ -22,7 +22,6 @@
 #include <securec.h>
 #include <linux/limits.h>
 #include "app_errno.h"
-#include "app_help.h"
 #include "app_print.h"
 #include "app_opt.h"
 #include "app_list.h"

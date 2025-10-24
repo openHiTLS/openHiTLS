@@ -19,7 +19,6 @@
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
-#include "bsl_bytes.h"
 #include "crypt_algid.h"
 #include "hitls_error.h"
 #include "cert_method.h"

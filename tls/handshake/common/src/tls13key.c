@@ -16,7 +16,6 @@
 #ifdef HITLS_TLS_PROTO_TLS13
 #include <stdbool.h>
 #include "securec.h"
-#include "bsl_bytes.h"
 #include "bsl_err_internal.h"
 #include "tls_binlog_id.h"
 #include "hitls_error.h"

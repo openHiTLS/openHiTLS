@@ -18,8 +18,6 @@
 
 #include <stdint.h>
 #include "hitls_build.h"
-#include "sal_time.h"
-#include "hitls_cert_type.h"
 #include "hitls_crypt_type.h"
 #include "cert.h"
 #include "crypt.h"

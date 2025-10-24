@@ -304,7 +304,7 @@ int32_t DtlsCheckRecordHeader(TLS_Ctx *ctx, const RecHdr *hdr)
     if (epoch == 0 && hdr->type == REC_TYPE_APP && BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
         BSL_ERR_PUSH_ERROR(HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15440, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "get a UNEXPECTE record msg: epoch 0's app msg.", 0, 0, 0, 0);
+            "get a UNEXPECTED record msg: epoch 0's app msg.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
         return HITLS_REC_ERR_RECV_UNEXPECTED_MSG;
     }

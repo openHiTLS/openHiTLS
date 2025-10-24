@@ -22,18 +22,14 @@
 #include <securec.h>
 #include <linux/limits.h>
 #include "app_errno.h"
-#include "app_help.h"
 #include "app_print.h"
 #include "app_opt.h"
-#include "app_list.h"
-#include "bsl_ui.h"
 #include "app_utils.h"
 #include "bsl_sal.h"
 #include "bsl_errno.h"
 #include "crypt_errno.h"
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_rand.h"
-#include "hitls_csr_local.h"
 #include "hitls_pki_errno.h"
 
 #define HITLS_APP_REQ_SECTION "req"

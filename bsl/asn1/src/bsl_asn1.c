@@ -16,7 +16,6 @@
 #include <stdbool.h>
 #include "securec.h"
 #include "bsl_err.h"
-#include "bsl_bytes.h"
 #include "bsl_log_internal.h"
 #include "bsl_binlog_id.h"
 #include "bsl_asn1_local.h"
@@ -25,6 +24,14 @@
 
 #define BSL_ASN1_INDEFINITE_LENGTH  0x80
 #define BSL_ASN1_DEFINITE_MAX_CONTENT_OCTET_NUM 0x7F // 127
+
+typedef struct {
+    BSL_ASN1_DecodeListParam *param;
+    BSL_ASN1_Buffer *asn;
+    BSL_ASN1_ParseListAsnItem parseListItemCb;
+    void *cbParam;
+    BSL_ASN1_List *list;
+} BSL_ASN1_DecodeListInternalParam;
 
 int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen, uint32_t *len)
 {
@@ -247,8 +254,8 @@ static int32_t ParseTime(uint8_t tag, uint8_t *val, uint32_t len, BSL_TIME *deco
     return BSL_DateTimeCheck(decodeData) ? BSL_SUCCESS : BSL_ASN1_ERR_CHECK_TIME;
 }
 
-static int32_t DecodeTwoLayerListInternal(uint32_t layer, BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer *asn,
-    BSL_ASN1_ParseListAsnItem parseListItemCb, void *cbParam, BSL_ASN1_List *list)
+static int32_t DecodeTwoLayerListInternal(uint32_t layer, BSL_ASN1_Buffer *asn,
+    BSL_ASN1_DecodeListInternalParam *internalParam)
 {
     int32_t ret;
     uint8_t tag;
@@ -257,7 +264,7 @@ static int32_t DecodeTwoLayerListInternal(uint32_t layer, BSL_ASN1_DecodeListPar
     uint32_t len = asn->len;
     BSL_ASN1_Buffer item;
     while (len > 0) {
-        if (*buff != param->expTag[layer - 1]) {
+        if (*buff != internalParam->param->expTag[layer - 1]) {
             return BSL_ASN1_ERR_MISMATCH_TAG;
         }
         tag = *buff;
@@ -270,7 +277,7 @@ static int32_t DecodeTwoLayerListInternal(uint32_t layer, BSL_ASN1_DecodeListPar
         item.tag = tag;
         item.len = encLen;
         item.buff = buff;
-        ret = parseListItemCb(layer, &item, cbParam, list);
+        ret = internalParam->parseListItemCb(layer, &item, internalParam->cbParam, internalParam->list);
         if (ret != BSL_SUCCESS) {
             return ret;
         }
@@ -280,23 +287,21 @@ static int32_t DecodeTwoLayerListInternal(uint32_t layer, BSL_ASN1_DecodeListPar
     return BSL_SUCCESS;
 }
 
-static int32_t DecodeOneLayerList(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer *asn,
-    BSL_ASN1_ParseListAsnItem parseListItemCb, void *cbParam, BSL_ASN1_List *list)
+static int32_t DecodeOneLayerList(BSL_ASN1_DecodeListInternalParam *internalParam)
 {
-    return DecodeTwoLayerListInternal(1, param, asn, parseListItemCb, cbParam, list);
+    return DecodeTwoLayerListInternal(1, internalParam->asn, internalParam);
 }
 
-static int32_t DecodeTwoLayerList(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer *asn,
-    BSL_ASN1_ParseListAsnItem parseListItemCb, void *cbParam, BSL_ASN1_List *list)
+static int32_t DecodeTwoLayerList(BSL_ASN1_DecodeListInternalParam *internalParam)
 {
     int32_t ret;
     uint8_t tag;
     uint32_t encLen;
-    uint8_t *buff = asn->buff;
-    uint32_t len = asn->len;
+    uint8_t *buff = internalParam->asn->buff;
+    uint32_t len = internalParam->asn->len;
     BSL_ASN1_Buffer item;
     while (len > 0) {
-        if (*buff != param->expTag[0]) {
+        if (*buff != internalParam->param->expTag[0]) {
             return BSL_ASN1_ERR_MISMATCH_TAG;
         }
         tag = *buff;
@@ -309,11 +314,11 @@ static int32_t DecodeTwoLayerList(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buff
         item.tag = tag;
         item.len = encLen;
         item.buff = buff;
-        ret = parseListItemCb(1, &item, cbParam, list);
+        ret = internalParam->parseListItemCb(1, &item, internalParam->cbParam, internalParam->list);
         if (ret != BSL_SUCCESS) {
             return ret;
         }
-        ret = DecodeTwoLayerListInternal(2, param, &item, parseListItemCb, cbParam, list);
+        ret = DecodeTwoLayerListInternal(2, &item, internalParam); // Level 2 List.
         if (ret != BSL_SUCCESS) {
             return ret;
         }
@@ -334,8 +339,9 @@ int32_t BSL_ASN1_DecodeListItem(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer
     if (param->layer > BSL_ASN1_MAX_LIST_NEST_EPTH) {
         return BSL_ASN1_ERR_EXCEED_LIST_DEPTH;
     }
-    return param->layer == 1 ? DecodeOneLayerList(param, asn, parseListItemCb, cbParam, list)
-                             : DecodeTwoLayerList(param, asn, parseListItemCb, cbParam, list);
+    BSL_ASN1_DecodeListInternalParam internalParam = {param, asn, parseListItemCb, cbParam, list};
+    return param->layer == 1 ? DecodeOneLayerList(&internalParam)
+                             : DecodeTwoLayerList(&internalParam);
 }
 
 static int32_t ParseBMPString(const uint8_t *bmp, uint32_t bmpLen, BSL_ASN1_Buffer *decode)

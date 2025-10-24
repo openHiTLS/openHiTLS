@@ -21,7 +21,6 @@
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
 #include "hitls_crypt_type.h"
-#include "hitls_cert_type.h"
 #include "hitls_error.h"
 #include "hitls_config.h"
 #include "tls.h"

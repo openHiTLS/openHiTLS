@@ -23,9 +23,7 @@
 #include <linux/limits.h>
 #include "bsl_list.h"
 #include "bsl_print.h"
-#include "bsl_buffer.h"
-#include "bsl_conf.h"
-#include "bsl_errno.h"
+#include "bsl_conf_def.h"
 #include "crypt_errno.h"
 #include "crypt_eal_rand.h"
 #include "crypt_codecskey.h"
@@ -33,7 +31,6 @@
 #include "crypt_eal_md.h"
 #include "hitls_pki_errno.h"
 #include "app_errno.h"
-#include "app_help.h"
 #include "app_print.h"
 #include "app_conf.h"
 #include "app_opt.h"

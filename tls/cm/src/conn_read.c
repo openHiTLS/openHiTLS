@@ -15,6 +15,7 @@
 
 #include "hitls_build.h"
 #include "hitls_error.h"
+#include "sal_time.h"
 #include "bsl_err_internal.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"

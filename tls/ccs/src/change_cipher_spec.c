@@ -21,7 +21,6 @@
 #include "bsl_err_internal.h"
 #include "hitls_error.h"
 #include "bsl_uio.h"
-#include "uio_base.h"
 #include "rec.h"
 #ifdef HITLS_TLS_FEATURE_INDICATOR
 #include "indicator.h"

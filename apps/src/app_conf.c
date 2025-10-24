@@ -28,7 +28,6 @@
 #include "securec.h"
 #include "app_errno.h"
 #include "bsl_sal.h"
-#include "bsl_types.h"
 #include "bsl_obj.h"
 #include "bsl_obj_internal.h"
 #include "bsl_list.h"

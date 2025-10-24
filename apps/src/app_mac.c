@@ -25,7 +25,6 @@
 #include "app_function.h"
 #include "app_list.h"
 #include "app_errno.h"
-#include "app_help.h"
 #include "app_print.h"
 #include "app_provider.h"
 #include "app_utils.h"

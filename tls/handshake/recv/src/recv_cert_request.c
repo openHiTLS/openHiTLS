@@ -18,7 +18,6 @@
 #include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_log.h"
-#include "bsl_bytes.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #include "tls.h"

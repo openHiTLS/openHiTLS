@@ -24,7 +24,6 @@
 #include "bsl_bytes.h"
 #include "bsl_errno.h"
 #include "sal_net.h"
-#include "uio_base.h"
 #include "hitls.h"
 #include "hitls_error.h"
 #include "hitls_cookie.h"
