@@ -687,10 +687,9 @@ static int32_t ClientCheckServerHello(TLS_Ctx *ctx, const ServerHelloMsg *server
 // The client processes the Server Hello message
 int32_t ClientRecvServerHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
-    int32_t ret = HITLS_SUCCESS;
     const ServerHelloMsg *serverHello = &msg->body.serverHello;
 
-    ret = ClientCheckServerHello(ctx, serverHello);
+    int32_t ret = ClientCheckServerHello(ctx, serverHello);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -698,9 +697,7 @@ int32_t ClientRecvServerHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     ret = VERIFY_SetHash(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
         ctx->hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17089, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "VERIFY_SetHash fail", 0, 0, 0, 0);
-        return ret;
+        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17089, "VERIFY_SetHash fail");
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
     if (ctx->negotiatedInfo.isResume == true) {
@@ -714,10 +711,8 @@ int32_t ClientRecvServerHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         /* Calculate the 'server verify data' for verifying the 'finished' message of the server. */
         ret = VERIFY_CalcVerifyData(ctx, false, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15278, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "client Calculate server finished data error.", 0, 0, 0, 0);
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-            return ret;
+            return RETURN_ALERT_PROCESS(ctx, ret, BINLOG_ID15278,
+                "client Calculate server finished data error", ALERT_INTERNAL_ERROR);
         }
         ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_READY);
         ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_ACTIVE_CIPHER_SPEC);
@@ -1043,11 +1038,9 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
         /* Check whether the sent support group is the same as the negotiated group */
         (serverHello->keyShare.group != ctx->hsCtx->kxCtx->keyExchParam.share.group &&
             serverHello->keyShare.group != ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup)) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15289, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the keyshare parameter is illegal.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
-        return HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP;
+        return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP, BINLOG_ID15289,
+            "the keyshare parameter is illegal.", ALERT_ILLEGAL_PARAMETER);
     }
 
     const KeyShare *keyShare = &serverHello->keyShare;
@@ -1060,9 +1053,7 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
     }
     const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, keyShare->group);
     if (groupInfo == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16247, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "group info not found", 0, 0, 0, 0);
-        return HITLS_INVALID_INPUT;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_INVALID_INPUT, BINLOG_ID16247, "group info not found");
     }
     if (groupInfo->isKem) {
         keyshareLen = groupInfo->ciphertextLen;
@@ -1077,11 +1068,9 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
     }
     uint8_t *peerPubkey = BSL_SAL_Dump(keyShare->keyExchange, keyshareLen);
     if (peerPubkey == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15290, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "malloc peerPubkey fail when process server hello key share.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        return HITLS_MEMALLOC_FAIL;
+        return RETURN_ALERT_PROCESS(ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15290,
+            "malloc peerPubkey fail when process server hello key share", ALERT_INTERNAL_ERROR);
     }
 
     BSL_SAL_FREE(ctx->hsCtx->kxCtx->peerPubkey);

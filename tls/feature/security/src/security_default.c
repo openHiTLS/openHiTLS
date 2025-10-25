@@ -119,17 +119,16 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
     void *other, void *exData)
 {
     (void)exData;
-    int32_t ret;
     int32_t level = HITLS_DEFAULT_SECURITY_LEVEL;
-    int32_t minBits;
-    const TLS_GroupInfo *groupInfo = NULL;
     const TLS_SigSchemeInfo *schemeInfo = NULL;
-    if (ctx == NULL && config == NULL) {
-        return SECURITY_ERR;
-    } else if (config != NULL) {
+    const TLS_GroupInfo *groupInfo = NULL;
+
+    if (config != NULL) {
         (void)HITLS_CFG_GetSecurityLevel(config, &level);
     } else if (ctx != NULL) {
         (void)HITLS_GetSecurityLevel(ctx, &level);
+    } else {
+        return SECURITY_ERR;
     }
     /* No restrictions are imposed when Level is 0. */
     if (level <= HITLS_SECURITY_LEVEL_MIN) {
@@ -141,51 +140,35 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
     }
 
     /* Check the number of security bits. */
-    minBits = SECURITY_GetSecbits(level);
+    int32_t minBits = SECURITY_GetSecbits(level);
     switch (option) {
         case HITLS_SECURITY_SECOP_VERSION:
             /* Check the version. */
-            ret = CheckVersion(id, level);
-            break;
+            return CheckVersion(id, level);
         case HITLS_SECURITY_SECOP_CIPHER_SUPPORTED:
         case HITLS_SECURITY_SECOP_CIPHER_SHARED:
         case HITLS_SECURITY_SECOP_CIPHER_CHECK:
             /* Check the algorithm suite. */
-            ret = CheckCipherSuite(other, level);
-            break;
+            return CheckCipherSuite(other, level);
         case HITLS_SECURITY_SECOP_SIGALG_SUPPORTED:
         case HITLS_SECURITY_SECOP_SIGALG_SHARED:
         case HITLS_SECURITY_SECOP_SIGALG_CHECK:
             /* Check the signature algorithm. */
             schemeInfo = ConfigGetSignatureSchemeInfo(config, (uint16_t)id);
-            if (schemeInfo != NULL && schemeInfo->secBits >= g_minBits[level - 1]) {
-                ret = SECURITY_SUCCESS;
-            } else {
-                ret = SECURITY_ERR;
-            }
-            break;
+            return (schemeInfo != NULL && schemeInfo->secBits >= g_minBits[level - 1]) ? SECURITY_SUCCESS :
+                                                                                         SECURITY_ERR;
         case HITLS_SECURITY_SECOP_CURVE_SUPPORTED:
         case HITLS_SECURITY_SECOP_CURVE_SHARED:
         case HITLS_SECURITY_SECOP_CURVE_CHECK:
             /* Check the group. */
             groupInfo = ConfigGetGroupInfo(config, (uint16_t)id);
-            if (groupInfo != NULL && groupInfo->secBits >= g_minBits[level - 1]) {
-                ret = SECURITY_SUCCESS;
-            } else {
-                ret = SECURITY_ERR;
-            }
-            break;
+            return (groupInfo != NULL && groupInfo->secBits >= g_minBits[level - 1]) ? SECURITY_SUCCESS : SECURITY_ERR;
         case HITLS_SECURITY_SECOP_TICKET:
             /* Check the session ticket. */
-            ret = CheckSessionTicket(level);
-            break;
+            return CheckSessionTicket(level);
         default:
-            if (bits < minBits) {
-                return SECURITY_ERR;
-            }
-            return SECURITY_SUCCESS;
+            return (bits < minBits) ? SECURITY_ERR : SECURITY_SUCCESS;
     }
-    return ret;
 }
 
 void SECURITY_SetDefault(HITLS_Config *config)

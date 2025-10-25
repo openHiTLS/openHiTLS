@@ -250,8 +250,7 @@ int32_t SESSMGR_EncryptSessionTicket(TLS_Ctx *ctx,
     const TLS_SessionMgr *sessMgr, const HITLS_Session *sess, uint8_t **ticketBuf, uint32_t *ticketBufSize)
 {
     if (sessMgr == NULL || sess == NULL || ticketBuf == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16713, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
-        return HITLS_INTERNAL_EXCEPTION;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_INTERNAL_EXCEPTION, BINLOG_ID16713, "input null");
     }
 
     Ticket ticket = {0};
@@ -259,9 +258,8 @@ int32_t SESSMGR_EncryptSessionTicket(TLS_Ctx *ctx,
     int32_t retVal = GetSessEncryptInfo(ctx, sessMgr, &ticket, &cipher);
     if (retVal < 0) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_SESSION_TICKET_KEY_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16030, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "GetSessEncryptInfo fail when encrypt session ticket.", 0, 0, 0, 0);
-        return HITLS_SESS_ERR_SESSION_TICKET_KEY_FAIL;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_SESS_ERR_SESSION_TICKET_KEY_FAIL, BINLOG_ID16030,
+            "GetSessEncryptInfo fail");
     }
     if (retVal == HITLS_TICKET_KEY_RET_FAIL) {
         /* Failed to obtain the encryption information. An empty ticket is returned. */
@@ -275,10 +273,9 @@ int32_t SESSMGR_EncryptSessionTicket(TLS_Ctx *ctx,
         return HITLS_MEMALLOC_FAIL;
     }
     /* Fill in the key name and iv. */
-    int32_t ret;
     uint32_t packLen = 0;
     uint32_t offset = 0;
-    ret = PackKeyNameAndIv(&ticket, &data[0], dataLen, &packLen);
+    int32_t ret = PackKeyNameAndIv(&ticket, &data[0], dataLen, &packLen);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(data);
         return ret;

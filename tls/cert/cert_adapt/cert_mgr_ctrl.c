@@ -135,18 +135,14 @@ int32_t SAL_CERT_SetCurrentCert(HITLS_Config *config, HITLS_CERT_X509 *cert, boo
         return HITLS_MEMALLOC_FAIL;
     }
 
-    HITLS_CERT_Key **privateKey = NULL;
-    HITLS_CERT_X509 **certPairCert = NULL;
+    HITLS_CERT_Key **privateKey = &certPair->privateKey;
+    HITLS_CERT_X509 **certPairCert = &certPair->cert;
 #ifdef HITLS_TLS_PROTO_TLCP11
     if (isTlcpEncCert) {
         privateKey = &certPair->encPrivateKey;
         certPairCert = &certPair->encCert;
-    } else
-#endif
-    {
-        privateKey = &certPair->privateKey;
-        certPairCert = &certPair->cert;
     }
+#endif
     if (*privateKey != NULL) {
         ret = SAL_CERT_CheckPrivateKey(config, cert, *privateKey);
         if (ret != HITLS_SUCCESS) {

@@ -33,6 +33,7 @@
 #include "send_process.h"
 #include "hs_kx.h"
 #include "config_type.h"
+#include "alert.h"
 
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 #ifdef HITLS_TLS_FEATURE_SESSION
@@ -250,34 +251,25 @@ int32_t Tls13ServerSendServerHelloProcess(TLS_Ctx *ctx)
 
         ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), hsCtx->serverRandom, HS_RANDOM_SIZE);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15553, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "get server random error.", 0, 0, 0, 0);
-            return ret;
+            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15553, "SAL_CRYPT_Rand fail");
         }
 
         /* Set the verify information */
         ret = VERIFY_SetHash(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
             hsCtx->verifyCtx, ctx->negotiatedInfo.cipherSuiteInfo.hashAlg);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15554, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "set verify info fail.",
-                0, 0, 0, 0);
-            return ret;
+            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15554, "set verify info fail");
         }
 
         /* Server secret derivation */
         ret = HS_TLS13CalcServerHelloProcessSecret(ctx);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16190, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "Derive-Sevret failed.", 0, 0, 0, 0);
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-            return ret;
+            return RETURN_ALERT_PROCESS(ctx, ret, BINLOG_ID16190, "Derive-Secret fail", ALERT_ILLEGAL_PARAMETER);
         }
 
         ret = HS_PackMsg(ctx, SERVER_HELLO);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15555, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "pack tls1.3 server hello msg fail.", 0, 0, 0, 0);
-            return ret;
+            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15555, "pack tls1.3 server hello msg fail");
         }
     }
 

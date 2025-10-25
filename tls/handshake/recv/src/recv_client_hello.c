@@ -645,7 +645,7 @@ static int32_t ServerDealServerName(TLS_Ctx *ctx, const ClientHelloMsg *clientHe
     if (clientHello->extension.flag.haveServerName == false) {
         return HITLS_SUCCESS;
     }
-    
+
     ctx->negotiatedInfo.serverName = (uint8_t *)BSL_SAL_Dump(clientHello->extension.content.serverName,
         serverNameSize * sizeof(uint8_t));
 
@@ -1564,10 +1564,8 @@ static int32_t Tls13ServerProcessKeyShare(TLS_Ctx *ctx, const ClientHelloMsg *cl
             handshake with an "illegal_parameter" alert if one is violated. */
         if (!CheckClientHelloKeyShareValid(clientHello, cur->group)) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16138, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "The group in the keyshare does not exist in the support group extension.", 0, 0, 0, 0);
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-            return HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP;
+            return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP, BINLOG_ID16138,
+                "The group in the keyshare does not exist in the support group extension.", ALERT_ILLEGAL_PARAMETER);
         }
         if (cur->group != selectGroup) {
             continue;
@@ -1579,10 +1577,8 @@ static int32_t Tls13ServerProcessKeyShare(TLS_Ctx *ctx, const ClientHelloMsg *cl
         if (SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group) !=
             ctx->hsCtx->kxCtx->pubKeyLen) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16189, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "invalid keyShare length.", 0, 0, 0, 0);
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-            return HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP;
+            return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP, BINLOG_ID16189,
+                "invalid keyShare length", ALERT_ILLEGAL_PARAMETER);
         }
         BSL_SAL_FREE(ctx->hsCtx->kxCtx->peerPubkey);
         ctx->hsCtx->kxCtx->peerPubkey = BSL_SAL_Dump(cur->keyExchange, cur->keyExchangeSize);

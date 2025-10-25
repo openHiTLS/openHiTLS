@@ -266,50 +266,43 @@ int32_t DefaultConfig(HITLS_Lib_Ctx *libCtx, const char *attrName, uint16_t vers
 
     int32_t ret = DefaultCipherSuitesByVersion(version, config);
     if (ret != HITLS_SUCCESS) {
-        goto ERR;
+        CFG_CleanConfig(config);
+        return HITLS_MEMALLOC_FAIL;
     }
 #ifdef HITLS_TLS_PROTO_TLS13
     /* Configure the TLS1.3 cipher suite for all TLS versions */
     ret = SetTLS13DefaultCipherSuites(config);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16570, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "SetCipherSuites fail", 0, 0, 0, 0);
-        goto ERR;
+        CFG_CleanConfig(config);
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16570, "SetCipherSuites fail");
     }
 #endif
     if (ConfigLoadSignatureSchemeInfo(config) != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16571, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "SetSignHashAlg fail", 0, 0, 0, 0);
-        goto ERR;
+        CFG_CleanConfig(config);
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16571, "SetSignHashAlg fail");
     }
 
     if ((SetDefaultPointFormats(config) != HITLS_SUCCESS) ||
         (ConfigLoadGroupInfo(config) != HITLS_SUCCESS)) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16572, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "SetPointFormats or SetGroups fail", 0, 0, 0, 0);
-        goto ERR;
+        CFG_CleanConfig(config);
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16572, "SetPointFormat or LoadGroup fail");
     }
 
     if (SAL_CERT_MgrIsEnable()) {
         config->certMgrCtx = SAL_CERT_MgrCtxProviderNew(libCtx, attrName);
         if (config->certMgrCtx == NULL) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16573, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "sessMgr new fail", 0, 0, 0, 0);
-            goto ERR;
+            CFG_CleanConfig(config);
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16573, "certMgrCtx new fail");
         }
     }
 #ifdef HITLS_TLS_FEATURE_SESSION
     config->sessMgr = SESSMGR_New(config->libCtx);
     if (config->sessMgr == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16574, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "sessMgr new fail", 0, 0, 0, 0);
-        goto ERR;
+        CFG_CleanConfig(config);
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16574, "sessMgr new fail");
     }
 #endif
     return HITLS_SUCCESS;
-ERR:
-    CFG_CleanConfig(config);
-    return HITLS_MEMALLOC_FAIL;
 }
 #ifdef HITLS_TLS_PROTO_TLS13
 int32_t DefaultTLS13Config(HITLS_Config *config)
