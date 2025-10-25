@@ -551,15 +551,6 @@ static bool ISO19790_PkeyKat(void *libCtx, const char *attrName)
     if (!CRYPT_CMVP_SelftestProviderX25519(libCtx, attrName)) {
         return false;
     }
-    if (!CRYPT_CMVP_SelftestProviderMlkemEncapsDecaps(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderMldsaSignVerify(libCtx, attrName)) {
-        return false;
-    }
-    if (!CRYPT_CMVP_SelftestProviderSlhdsaSignVerify(libCtx, attrName)) {
-        return false;
-    }
     return true;
 }
 

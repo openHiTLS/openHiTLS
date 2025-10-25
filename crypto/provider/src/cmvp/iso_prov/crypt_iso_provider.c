@@ -78,9 +78,6 @@ static const CRYPT_EAL_AlgInfo g_isoKeyMgmt[] = {
     {CRYPT_PKEY_ECDSA, g_isoKeyMgmtEcdsa, CRYPT_EAL_ISO_ATTR},
     {CRYPT_PKEY_ECDH, g_isoKeyMgmtEcdh, CRYPT_EAL_ISO_ATTR},
     {CRYPT_PKEY_SM2, g_isoKeyMgmtSm2, CRYPT_EAL_ISO_ATTR},
-    {CRYPT_PKEY_SLH_DSA, g_isoKeyMgmtSlhDsa, CRYPT_EAL_ISO_ATTR},
-    {CRYPT_PKEY_ML_KEM, g_isoKeyMgmtMlKem, CRYPT_EAL_ISO_ATTR},
-    {CRYPT_PKEY_ML_DSA, g_isoKeyMgmtMlDsa, CRYPT_EAL_ISO_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -104,8 +101,6 @@ static const CRYPT_EAL_AlgInfo g_isoSigns[] = {
     {CRYPT_PKEY_RSA, g_isoSignRsa, CRYPT_EAL_ISO_ATTR},
     {CRYPT_PKEY_ECDSA, g_isoSignEcdsa, CRYPT_EAL_ISO_ATTR},
     {CRYPT_PKEY_SM2, g_isoSignSm2, CRYPT_EAL_ISO_ATTR},
-    {CRYPT_PKEY_SLH_DSA, g_isoSignSlhDsa, CRYPT_EAL_ISO_ATTR},
-    {CRYPT_PKEY_ML_DSA, g_isoSignMlDsa, CRYPT_EAL_ISO_ATTR},
     CRYPT_EAL_ALGINFO_END
 };
 
@@ -187,11 +182,6 @@ static const CRYPT_EAL_AlgInfo g_isoCiphers[] = {
     CRYPT_EAL_ALGINFO_END
 };
 
-static const CRYPT_EAL_AlgInfo g_isoKems[] = {
-    {CRYPT_PKEY_ML_KEM, g_isoMlKem, CRYPT_EAL_ISO_ATTR},
-    CRYPT_EAL_ALGINFO_END
-};
-
 static const CRYPT_EAL_AlgInfo g_isoSelftests[] = {
     {CRYPT_CMVP_PROVIDER_SELFTEST, g_isoSelftest, CRYPT_EAL_ISO_ATTR},
     CRYPT_EAL_ALGINFO_END
@@ -216,9 +206,6 @@ static int32_t CRYPT_EAL_IsoProvQuery(void *provCtx, int32_t operaId, const CRYP
             break;
         case CRYPT_EAL_OPERAID_KEYEXCH:
             *algInfos = g_isoKeyExch;
-            break;
-        case CRYPT_EAL_OPERAID_KEM:
-            *algInfos = g_isoKems;
             break;
         case CRYPT_EAL_OPERAID_HASH:
             *algInfos = g_isoMds;

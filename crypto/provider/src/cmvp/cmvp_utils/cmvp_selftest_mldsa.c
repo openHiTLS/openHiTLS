@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CMVP_ISO19790) || defined(HITLS_CRYPTO_CMVP_FIPS)
+#if defined(HITLS_CRYPTO_CMVP_FIPS)
 #include <string.h>
 #include "crypt_cmvp_selftest.h"
 #include "cmvp_common.h"
@@ -173,4 +173,4 @@ bool CRYPT_CMVP_SelftestProviderMldsaSignVerify(void *libCtx, const char *attrNa
     return TestMldsaSignVerify(libCtx, attrName, &MLDSA_VECTOR[0]);
 }
 
-#endif /* HITLS_CRYPTO_CMVP_ISO19790 || HITLS_CRYPTO_CMVP_FIPS */
+#endif /* HITLS_CRYPTO_CMVP_FIPS */

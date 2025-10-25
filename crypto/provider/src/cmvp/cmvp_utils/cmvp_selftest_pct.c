@@ -29,39 +29,6 @@
 #include "crypt_eal_implprovider.h"
 #include "crypt_slh_dsa.h"
 
-#ifdef HITLS_CRYPTO_MLKEM
-static bool CMVP_MlkemPct(void *ctx)
-{
-    bool ret = false;
-    uint32_t cipherLen = 0;
-    uint8_t *ciphertext = NULL;
-    uint8_t sharedKey[32] = {0};
-    uint32_t sharedLen = sizeof(sharedKey);
-    uint8_t sharedKey2[32] = {0};
-    uint32_t sharedLen2 = sizeof(sharedKey2);
-
-    GOTO_ERR_IF_TRUE(CRYPT_ML_KEM_Ctrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen,
-        sizeof(cipherLen)) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-
-    ciphertext = BSL_SAL_Malloc(cipherLen);
-    GOTO_ERR_IF_TRUE(ciphertext == NULL, CRYPT_MEM_ALLOC_FAIL);
-
-    GOTO_ERR_IF_TRUE(CRYPT_ML_KEM_Encaps(ctx, ciphertext, &cipherLen, sharedKey, &sharedLen) != CRYPT_SUCCESS,
-        CRYPT_CMVP_ERR_ALGO_SELFTEST);
-
-    GOTO_ERR_IF_TRUE(CRYPT_ML_KEM_Decaps(ctx, ciphertext, cipherLen, sharedKey2, &sharedLen2) != CRYPT_SUCCESS,
-        CRYPT_CMVP_ERR_ALGO_SELFTEST);
-
-    GOTO_ERR_IF_TRUE(sharedLen != sharedLen2 || memcmp(sharedKey, sharedKey2, sharedLen) != 0,
-        CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    ret = true;
-
-ERR:
-    BSL_SAL_Free(ciphertext);
-    return ret;
-}
-#endif
-
 typedef struct {
     int32_t id;
     CRYPT_EAL_ImplPkeySign sign;
@@ -89,14 +56,6 @@ static const PkeyMethodMap pkey_map[] = {
 #ifdef HITLS_CRYPTO_SM2
     {CRYPT_PKEY_SM2,     (CRYPT_EAL_ImplPkeySign)CRYPT_SM2_Sign,
         (CRYPT_EAL_ImplPkeyVerify)CRYPT_SM2_Verify,        (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_SM2_Ctrl},
-#endif
-#ifdef HITLS_CRYPTO_SLH_DSA
-    {CRYPT_PKEY_SLH_DSA, (CRYPT_EAL_ImplPkeySign)CRYPT_SLH_DSA_Sign,
-        (CRYPT_EAL_ImplPkeyVerify)CRYPT_SLH_DSA_Verify,    (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_SLH_DSA_Ctrl},
-#endif
-#ifdef HITLS_CRYPTO_MLDSA
-    {CRYPT_PKEY_ML_DSA,  (CRYPT_EAL_ImplPkeySign)CRYPT_ML_DSA_Sign,
-        (CRYPT_EAL_ImplPkeyVerify)CRYPT_ML_DSA_Verify,     (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_ML_DSA_Ctrl},
 #endif
     {CRYPT_PKEY_MAX, NULL, NULL, NULL}
 };
@@ -146,11 +105,6 @@ bool CRYPT_CMVP_SelftestPkeyPct(void *ctx, int32_t algId)
     if (algId == CRYPT_PKEY_DH || algId == CRYPT_PKEY_ECDH || algId == CRYPT_PKEY_X25519) {
         return true;
     }
-#ifdef HITLS_CRYPTO_MLKEM
-    if (algId == CRYPT_PKEY_ML_KEM) {
-        return CMVP_MlkemPct(ctx);
-    }
-#endif
     return CMVP_SignVerifyPct(ctx, algId);
 }
 
