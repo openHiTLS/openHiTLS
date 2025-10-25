@@ -292,3 +292,31 @@ EXIT:
     // remove(outFile);
 }
 /* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_PKEY_STDIN_TC001
+ * @spec  -
+ * @title  Read PEM from standard input (without -in), should succeed
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_PKEY_STDIN_TC001(char *keyPath)
+{
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+
+    /* Redirect stdin to specified PEM file, simulating stdin reading of `cat file | ./hitls pkey` */
+    ASSERT_NE(freopen(keyPath, "r", stdin), NULL);
+
+    char *argv[] = {"pkey", NULL};
+    int argc = 1;
+
+    int ret = HITLS_PkeyMain(argc, argv);
+    ASSERT_EQ(ret, HITLS_APP_SUCCESS);
+
+EXIT:
+    (void)fflush(stdout);
+    /* Restore stdin to terminal to avoid affecting subsequent test cases */
+    (void)freopen("/dev/tty", "r", stdin);
+    AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */

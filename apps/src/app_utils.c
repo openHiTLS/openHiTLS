@@ -89,6 +89,8 @@ typedef struct defaultPassCBData {
     uint32_t minLen;
 } APP_DefaultPassCBData;
 
+static int32_t ReadData(const char *path, BSL_PEM_Symbol *symbol, char *fileName, BSL_Buffer *data);
+
 void *ExpandingMem(void *oldPtr, size_t newSize, size_t oldSize)
 {
     if (newSize <= 0) {
@@ -139,24 +141,6 @@ int32_t HITLS_APP_DefaultPassCB(BSL_UI *ui, char *buff, uint32_t buffLen, void *
         return BSL_UI_INVALID_DATA_RESULT;
     }
     return BSL_SUCCESS;
-}
-
-static int32_t CheckFileSizeByUio(BSL_UIO *uio, uint32_t *fileSize)
-{
-    uint64_t getFileSize = 0;
-    int32_t ret = BSL_UIO_Ctrl(uio, BSL_UIO_PENDING, sizeof(getFileSize), &getFileSize);
-    if (ret != BSL_SUCCESS) {
-        AppPrintError("Failed to get the file size: %d.\n", ret);
-        return HITLS_APP_UIO_FAIL;
-    }
-    if (getFileSize > APP_FILE_MAX_SIZE) {
-        AppPrintError("File size exceed limit %zukb.\n", APP_FILE_MAX_SIZE_KB);
-        return HITLS_APP_UIO_FAIL;
-    }
-    if (fileSize != NULL) {
-        *fileSize = (uint32_t)getFileSize;
-    }
-    return ret;
 }
 
 static int32_t CheckFileSizeByPath(const char *inFilePath, uint32_t *fileSize)
@@ -240,51 +224,43 @@ static int32_t ReadPemKeyFile(const char *inFilePath, uint8_t **inData, uint32_t
     if ((inData == NULL) || (inDataSize == NULL) || (name == NULL)) {
         return HITLS_APP_INVALID_ARG;
     }
-    BSL_UIO *rUio = HITLS_APP_UioOpen(inFilePath, 'r', 1);
-    if (rUio == NULL) {
-        return HITLS_APP_UIO_FAIL;
-    }
-    BSL_UIO_SetIsUnderlyingClosedByUio(rUio, true);
-    uint32_t fileSize = 0;
-    if (CheckFileSizeByUio(rUio, &fileSize) != HITLS_APP_SUCCESS) {
-        BSL_UIO_Free(rUio);
-        return HITLS_APP_UIO_FAIL;
-    }
+
     // End after reading the following two strings in sequence:
     // -----BEGIN XXX-----
     // -----END XXX-----
     bool isParseHeader = false;
-    uint8_t *data = (uint8_t *)BSL_SAL_Calloc(fileSize + 1, sizeof(uint8_t)); // +1 for the null terminator
-    if (data == NULL) {
-        BSL_UIO_Free(rUio);
-        return HITLS_APP_MEM_ALLOC_FAIL;
+    BSL_Buffer dataBuff = {0};
+    BSL_PEM_Symbol symbol = {PEM_BEGIN_STR, PEM_END_STR};
+    int32_t ret = ReadData(inFilePath, &symbol, "key", &dataBuff);
+    if (ret != HITLS_APP_SUCCESS) {
+        return ret;
     }
-    char *tmp = (char *)data;
+    uint32_t fileSize = dataBuff.dataLen;
+    char *tmp = (char *)dataBuff.data;
     uint32_t readLen = 0;
     while (readLen < fileSize) {
-        uint32_t getsLen = APP_LINESIZE;
-        if ((BSL_UIO_Gets(rUio, tmp, &getsLen) != BSL_SUCCESS) || (getsLen == 0)) {
-            break;
-        }
+        uint32_t remain = fileSize - readLen;
+        char *nextline = memchr(tmp, '\n', remain);
+        uint32_t curLineLen = (nextline != NULL) ? (uint32_t)(nextline - tmp + 1) : remain;
+
         if (*name == NULL) {
-            *name = GetPemKeyFileName(tmp, getsLen);
-        } else if (getsLen < PEM_END_STR_LEN && strncmp(tmp, PEM_END_STR, PEM_END_STR_LEN) == 0) {
+            *name = GetPemKeyFileName(tmp, curLineLen);
+        } else if (curLineLen < PEM_END_STR_LEN && strncmp(tmp, PEM_END_STR, PEM_END_STR_LEN) == 0) {
             break; // Read the end of the pem.
         } else if (!isParseHeader) {
-            *isEncrypted = IsNeedEncryped(*name, tmp, getsLen);
+            *isEncrypted = IsNeedEncryped(*name, tmp, curLineLen);
             isParseHeader = true;
         }
-        tmp += getsLen;
-        readLen += getsLen;
+        tmp += curLineLen;
+        readLen += curLineLen;
     }
-    BSL_UIO_Free(rUio);
     if (readLen == 0 || *name == NULL) {
         AppPrintError("Failed to read the pem file.\n");
-        BSL_SAL_FREE(data);
+        BSL_SAL_FREE(dataBuff.data);
         BSL_SAL_FREE(*name);
         return HITLS_APP_STDIN_FAIL;
     }
-    *inData = data;
+    *inData = dataBuff.data;
     *inDataSize = readLen;
     return HITLS_APP_SUCCESS;
 }
