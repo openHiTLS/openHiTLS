@@ -15,7 +15,7 @@
 #include "app_verify.h"
 #include <stddef.h>
 #include <stdbool.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "string.h"
 #include "securec.h"
 #include "bsl_sal.h"
@@ -46,7 +46,7 @@ const HITLS_CmdOption g_verifyOpts[] = {
     {"CAfile", HITLS_APP_OPT_VERIFY_CAFILE, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Input ca file"},
     {"verbose", HITLS_APP_OPT_VERIFY_VERBOSE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print extra information"},
     {"certs", HITLS_APP_OPT_VERIFY_CERTS, HITLS_APP_OPT_VALUETYPE_PARAMTERS, "Input certs"},
-    {NULL}
+    {NULL, 0, 0, NULL}
 };
 
 static bool g_verbose = false;

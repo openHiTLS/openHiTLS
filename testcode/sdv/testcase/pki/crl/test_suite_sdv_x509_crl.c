@@ -30,11 +30,16 @@
 #include "crypt_errno.h"
 #include "hitls_crl_local.h"
 #include "hitls_cert_local.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "hitls_pki_utils.h"
 
 static char g_sm2DefaultUserid[] = "1234567812345678";
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET2(int32_t, HITLS_X509_ParseNameList, BSL_ASN1_Buffer *, BSL_ASN1_List *);
 
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_FUNC_TC001(int format, char *path)
@@ -1174,13 +1179,11 @@ static int32_t STUB_HITLS_X509_ParseNameList(BSL_ASN1_Buffer *name, BSL_ASN1_Lis
 void SDV_X509_CRL_INVALIED_TEST_TC001(int format, char *path)
 {
     TestMemInit();
-    FuncStubInfo tmpRpInfo = {0};
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, HITLS_X509_ParseNameList, STUB_HITLS_X509_ParseNameList) == 0);
+    STUB_REPLACE(HITLS_X509_ParseNameList, STUB_HITLS_X509_ParseNameList);
     HITLS_X509_Crl *crl = NULL;
     ASSERT_NE(HITLS_X509_CrlParseFile((int32_t)format, path, &crl), HITLS_PKI_SUCCESS);
 EXIT:
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(HITLS_X509_ParseNameList);
     HITLS_X509_CrlFree(crl);
 }
 /* END_CASE */

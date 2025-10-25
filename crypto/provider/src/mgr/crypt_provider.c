@@ -32,8 +32,8 @@
 // Name of the dl initialization function
 #define PROVIDER_INIT_FUNC "CRYPT_EAL_ProviderInit"
 
-// Maximum length of search path
-static uint32_t g_threadRunOnce = 0;
+
+BSL_SAL_DECLARE_THREAD_ONCE(g_threadRunOnce);
 
 
 CRYPT_EAL_LibCtx *CRYPT_EAL_LibCtxNew(void)

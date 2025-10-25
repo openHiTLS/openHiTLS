@@ -23,7 +23,7 @@
 
 #ifdef HITLS_CRYPTO_ENTROPY_HARDWARE
 #if defined(__x86_64__) || (defined(__aarch64__) && defined(__linux__))
-/* For clarity */
+
 #define DRNG_NO_SUPPORT	0x0
 #define DRNG_HAS_RDRAND	0x1
 #define DRNG_HAS_RDSEED	0x2
@@ -43,14 +43,12 @@ static uint32_t HWRandBytes(uint8_t *buf, uint32_t len, int32_t (*rand)(uint64_t
             cnt++;
         }
         if (cnt == retries) {
-            // high probability that it wouldn't be here
             return len - left;
         }
         uint32_t cpLen = left < sizeof(randVal) ? left : sizeof(randVal);
         (void)memcpy_s(buf + len - left, left, (uint8_t *)&randVal, cpLen);
         left -= cpLen;
     }
-
     return len;
 }
 
@@ -181,7 +179,6 @@ uint32_t ENTROPY_HWEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen)
 }
 
 #endif // __linux__
-
 #endif // __aarch64__
 
 #else

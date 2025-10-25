@@ -20,7 +20,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <securec.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "app_errno.h"
 #include "app_print.h"
 #include "app_opt.h"
@@ -59,7 +59,7 @@ const HITLS_CmdOption g_genPkeyOpts[] = {
     {"pubout", HITLS_APP_OPT_PUBOUT, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output public key"},
     {"out", HITLS_APP_OPT_OUT, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output file"},
     {"outform", HITLS_APP_OPT_OUTFORM, HITLS_APP_OPT_VALUETYPE_STRING, "Output format (PEM or DER, default: PEM)"},
-    {NULL},
+    {NULL, 0, 0, NULL},
 };
 
 typedef struct {

@@ -297,6 +297,10 @@ static int32_t CheckOptValueType(const HITLS_CmdOption *opt, const char *valStr)
 
 int32_t HITLS_APP_OptNext(void)
 {
+    if (g_cmdOptState.optIndex > g_cmdOptState.argc) {
+        return HITLS_APP_OPT_EOF;
+    }
+
     char *optName = g_cmdOptState.argv[g_cmdOptState.optIndex];
     if (optName == NULL || *optName != '-') {
         return HITLS_APP_OPT_EOF;
@@ -334,7 +338,7 @@ int32_t HITLS_APP_OptNext(void)
 
         // case: opt should has value
         if (g_cmdOptState.valueStr == NULL) {
-            if (g_cmdOptState.argv[g_cmdOptState.optIndex] == NULL) {
+            if (g_cmdOptState.optIndex > g_cmdOptState.argc || g_cmdOptState.argv[g_cmdOptState.optIndex] == NULL) {
                 AppPrintError("%s needs a value\n", opt->name);
                 return HITLS_APP_OPT_ERR;
             }

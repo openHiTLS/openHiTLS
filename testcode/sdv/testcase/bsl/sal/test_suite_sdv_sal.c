@@ -502,7 +502,7 @@ static void TestRunOnce(void)
 /* BEGIN_CASE */
 void SDV_BSL_SAL_THREAD_API_TC001(void)
 {
-    uint32_t isErrInit = 0;
+    BSL_SAL_OnceControl isErrInit = BSL_SAL_ONCE_INIT;
     ASSERT_EQ(BSL_SAL_ThreadRunOnce(NULL, TestRunOnce), BSL_SAL_ERR_BAD_PARAM);
     ASSERT_EQ(BSL_SAL_ThreadRunOnce(&isErrInit, NULL), BSL_SAL_ERR_BAD_PARAM);
     ASSERT_EQ(BSL_SAL_ThreadRunOnce(&isErrInit, TestRunOnce), BSL_SUCCESS);

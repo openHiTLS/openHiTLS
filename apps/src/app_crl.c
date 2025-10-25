@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_types.h"
@@ -55,7 +55,7 @@ const HITLS_CmdOption g_crlOpts[] = {
     {"CAfile", HITLS_APP_OPT_CRL_CAFILE, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Verify CRL using CAFile"},
     {"inform", HITLS_APP_OPT_CRL_INFORM, HITLS_APP_OPT_VALUETYPE_FMT_PEMDER, "Input crl file format"},
     {"outform", HITLS_APP_OPT_CRL_OUTFORM, HITLS_APP_OPT_VALUETYPE_FMT_PEMDER, "Output crl file format"},
-    {NULL}
+    {NULL, 0, 0, NULL}
 };
 
 typedef struct {

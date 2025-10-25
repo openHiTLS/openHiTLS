@@ -31,7 +31,7 @@ BSL_HASH_Hash *g_oidHashTable = NULL;
 
 static BSL_SAL_ThreadLockHandle g_oidHashRwLock = NULL;
 
-static uint32_t g_oidHashInitOnce = BSL_SAL_ONCE_INIT;
+BSL_SAL_DECLARE_THREAD_ONCE(g_oidHashInitOnce);
 #endif // HITLS_BSL_OBJ_CUSTOM
 
 #define BSL_OBJ_ARCS_X_MAX 2
@@ -596,7 +596,7 @@ void BSL_OBJ_FreeHashTable(void)
             (void)BSL_SAL_ThreadLockFree(g_oidHashRwLock);
             g_oidHashRwLock = NULL;
         }
-        g_oidHashInitOnce = BSL_SAL_ONCE_INIT;
+        (void)memset_s(&g_oidHashInitOnce, sizeof(g_oidHashInitOnce), 0, sizeof(g_oidHashInitOnce));
     }
 }
 #endif // HITLS_BSL_OBJ_CUSTOM

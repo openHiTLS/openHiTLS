@@ -607,7 +607,6 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC001(
     uint8_t out[500];
     uint8_t localR[65];
     uint32_t outLen = shareKey->len;
-    FuncStubInfo tmpRpInfo;
     CRYPT_EAL_PkeyPrv prv = {0};
     CRYPT_EAL_PkeyPub pub = {0};
     CRYPT_EAL_PkeyCtx *dupCtx1 = NULL;
@@ -617,6 +616,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC001(
     SetSm2PubKey(&pub, pubKey->x, pubKey->len);
 
     TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     CRYPT_EAL_PkeyCtx *ctx1 = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
         CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
     CRYPT_EAL_PkeyCtx *ctx2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
@@ -627,9 +627,12 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC001(
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_USER_ID, userId1->x, userId1->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
 
-    STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
+    // Register fake random function to return fixed r value for deterministic testing
     ASSERT_TRUE(SetFakeRandOutput(r->x, r->len) == CRYPT_SUCCESS);
+    CRYPT_RandRegist(FakeRandFunc);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(FakeRandFuncEx);
+#endif
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId2->x, userId2->len) == CRYPT_SUCCESS);
@@ -652,7 +655,8 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC001(
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(dupCtx1, dupCtx2, out, &outLen), CRYPT_SUCCESS);
 
 EXIT:
-    STUB_Reset(&tmpRpInfo);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
     CRYPT_EAL_PkeyFreeCtx(dupCtx1);
@@ -690,7 +694,6 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC002(Hex *prvKey1, Hex *pubKey2, Hex *prvKey2
     uint8_t localR[65];
     uint8_t badId[10] = {0};
     uint32_t outLen = shareKey->len;
-    FuncStubInfo tmpRpInfo;
     CRYPT_EAL_PkeyPrv prv1 = {0};
     CRYPT_EAL_PkeyPub pub2 = {0};
     CRYPT_EAL_PkeyPrv prv2 = {0};
@@ -701,6 +704,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC002(Hex *prvKey1, Hex *pubKey2, Hex *prvKey2
     SetSm2PubKey(&pub1, pubKey1->x, pubKey1->len);
 
     TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     CRYPT_EAL_PkeyCtx *ctx1 = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
         CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
     CRYPT_EAL_PkeyCtx *ctx2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
@@ -712,9 +716,12 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC002(Hex *prvKey1, Hex *pubKey2, Hex *prvKey2
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_USER_ID, userId1->x, userId1->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
 
-    STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
+    // Register fake random function to return fixed r value for deterministic testing
     ASSERT_TRUE(SetFakeRandOutput(r->x, r->len) == CRYPT_SUCCESS);
+    CRYPT_RandRegist(FakeRandFunc);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(FakeRandFuncEx);
+#endif
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, badId, sizeof(badId)) == CRYPT_SUCCESS);
@@ -732,7 +739,8 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC002(Hex *prvKey1, Hex *pubKey2, Hex *prvKey2
     ASSERT_TRUE(memcmp(out, shareKey->x, shareKey->len) == 0);
 
 EXIT:
-    STUB_Reset(&tmpRpInfo);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
 }
@@ -877,7 +885,6 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC004(
     uint8_t out[500];
     uint8_t localR[65];
     uint32_t outLen = shareKey->len;
-    FuncStubInfo tmpRpInfo;
     CRYPT_EAL_PkeyPrv prv = {0};
     CRYPT_EAL_PkeyPub pub = {0};
     CRYPT_EAL_PkeyCtx *cpyCtx1 = NULL;
@@ -887,6 +894,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC004(
     SetSm2PubKey(&pub, pubKey->x, pubKey->len);
 
     TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     CRYPT_EAL_PkeyCtx *ctx1 = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
         CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
     CRYPT_EAL_PkeyCtx *ctx2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
@@ -895,9 +903,12 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC004(
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_USER_ID, userId1->x, userId1->len) == CRYPT_SUCCESS);
 
-    STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
+    // Register fake random function to return fixed r value for deterministic testing
     ASSERT_TRUE(SetFakeRandOutput(r->x, r->len) == CRYPT_SUCCESS);
+    CRYPT_RandRegist(FakeRandFunc);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(FakeRandFuncEx);
+#endif
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId2->x, userId2->len) == CRYPT_SUCCESS);
@@ -927,7 +938,8 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC004(
     ASSERT_TRUE(memcmp(out, shareKey->x, shareKey->len) == 0);
 
 EXIT:
-    STUB_Reset(&tmpRpInfo);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
     CRYPT_EAL_PkeyFreeCtx(cpyCtx1);
@@ -977,7 +989,6 @@ void SDV_CRYPTO_SM2_EXCHANGE_CHECK_TC001(Hex *prvKey, Hex *pubKey, Hex *r, Hex *
     uint8_t out[500];
     uint8_t localR[65];
     uint32_t outLen = shareKey->len;
-    FuncStubInfo tmpRpInfo;
     uint8_t val[selfS->len];
     CRYPT_EAL_PkeyPrv prv = {0};
     CRYPT_EAL_PkeyPub pub = {0};
@@ -985,6 +996,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_CHECK_TC001(Hex *prvKey, Hex *pubKey, Hex *r, Hex *
     SetSm2PubKey(&pub, pubKey->x, pubKey->len);
 
     TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     CRYPT_EAL_PkeyCtx *ctx1 = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
         CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
     CRYPT_EAL_PkeyCtx *ctx2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
@@ -996,9 +1008,12 @@ void SDV_CRYPTO_SM2_EXCHANGE_CHECK_TC001(Hex *prvKey, Hex *pubKey, Hex *r, Hex *
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_USER_ID, userId1->x, userId1->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_SM2_SERVER, &server, sizeof(int32_t)) == CRYPT_SUCCESS);
 
-    STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
+    // Register fake random function to return fixed r value for deterministic testing
     ASSERT_TRUE(SetFakeRandOutput(r->x, r->len) == CRYPT_SUCCESS);
+    CRYPT_RandRegist(FakeRandFunc);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(FakeRandFuncEx);
+#endif
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GENE_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId2->x, userId2->len) == CRYPT_SUCCESS);
@@ -1018,7 +1033,8 @@ void SDV_CRYPTO_SM2_EXCHANGE_CHECK_TC001(Hex *prvKey, Hex *pubKey, Hex *r, Hex *
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_DO_CHECK, peerS->x, peerS->len) == CRYPT_SUCCESS);
 
 EXIT:
-    STUB_Reset(&tmpRpInfo);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
     CRYPT_EAL_PkeyFreeCtx(ctx1);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
 }

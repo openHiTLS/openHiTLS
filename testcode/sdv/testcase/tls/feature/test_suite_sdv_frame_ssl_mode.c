@@ -23,7 +23,7 @@
 #include "frame_tls.h"
 #include "frame_link.h"
 #include "alert.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "hs_common.h"
 #include "change_cipher_spec.h"
 #include "hs.h"
@@ -31,8 +31,20 @@
 #include "rec_header.h"
 #include "rec_wrapper.h"
 #include "record.h"
-#include "app.c"
+#include "rec.h"
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET4(int32_t, APP_Read, TLS_Ctx *, uint8_t *, uint32_t, uint32_t *);
+
+// Local helper function to replace app.c inclusion
+static int32_t ReadAppData(TLS_Ctx *ctx, uint8_t *buf, uint32_t num, uint32_t *readLen)
+{
+    return REC_Read(ctx, REC_TYPE_APP, buf, readLen, num);
+}
+
 
 #define READ_BUF_SIZE 18432
 #define MAX_DIGEST_SIZE 64UL /* The longest known is SHA512 */
@@ -116,14 +128,13 @@ void UT_TLS_CM_SSL_MODE_AUTO_RETRY_TC001()
 
     ASSERT_TRUE(HITLS_ClearModeSupport(server->ssl, HITLS_MODE_AUTO_RETRY) == HITLS_SUCCESS);
     g_time = 0;
-    FuncStubInfo tmpRpInfo = {0};
-    STUB_Replace(&tmpRpInfo, APP_Read, STUB_APP_Read);
+    STUB_REPLACE(APP_Read, STUB_APP_Read);;
     ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(APP_Read);
     g_time = 0;
 }
 /* END_CASE */
@@ -181,14 +192,13 @@ void UT_TLS_CM_SSL_MODE_AUTO_RETRY_TC002()
 
     ASSERT_TRUE(HITLS_ClearModeSupport(client->ssl, HITLS_MODE_AUTO_RETRY) == HITLS_SUCCESS);
     g_time = 0;
-    FuncStubInfo tmpRpInfo = {0};
-    STUB_Replace(&tmpRpInfo, APP_Read, STUB_APP_Read);
+    STUB_REPLACE(APP_Read, STUB_APP_Read);;
     ASSERT_EQ(HITLS_Read(client->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(APP_Read);
     g_time = 0;
 }
 /* END_CASE */

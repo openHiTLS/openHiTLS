@@ -29,7 +29,7 @@
 #include "securec.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 
 /* END_HEADER */
 

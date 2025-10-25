@@ -35,7 +35,7 @@
 #include "frame_link.h"
 #include "hs_common.h"
 #include "change_cipher_spec.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 
 #define READ_BUF_SIZE 18432
 #define Port 7788
@@ -48,6 +48,12 @@
 #define BUF_SZIE 18432
 
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET2(int32_t, REC_GetMaxWriteSize, const TLS_Ctx *, uint32_t *);
+
 static uint32_t g_uiPort = 18889;
 
 static void SetCertPath_2(HLT_Ctx_Config *ctxConfig, char *cipherSuite)
@@ -424,17 +430,14 @@ void SDV_TLS_CM_FRAGMENTATION_FUNC_TC001(void)
 
     serverRes = HLT_ProcessTlsAccept(remoteProcess, DTLS1_2, serverConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
-
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, REC_GetMaxWriteSize, STUB_REC_GetMaxWriteSize);
+    STUB_REPLACE(REC_GetMaxWriteSize, STUB_REC_GetMaxWriteSize);;
 
     clientRes = HLT_ProcessTlsInit(localProcess, DTLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
 
     ASSERT_TRUE(HLT_TlsConnect(clientRes->ssl) == 0);
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(REC_GetMaxWriteSize);
     HLT_FreeAllProcess();
 }
 /* END_CASE */

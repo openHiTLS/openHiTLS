@@ -25,7 +25,7 @@
 #include "frame_io.h"
 #include "frame_msg.h"
 #include "simulate_io.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "hs.h"
 #include "alert.h"
 #include "bsl_sal.h"
@@ -59,8 +59,13 @@ static char *g_serverName = "testServer";
 uint32_t g_uiPort = 18890;
 /* END_HEADER */
 
-int32_t RecParseInnerPlaintext(TLS_Ctx *ctx, uint8_t *text, uint32_t *textLen, uint8_t *recType);
-int32_t STUB_RecParseInnerPlaintext(TLS_Ctx *ctx, uint8_t *text, uint32_t *textLen, uint8_t *recType)
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET4(int32_t, RecParseInnerPlaintext, TLS_Ctx *, const uint8_t *, uint32_t *, uint8_t *);
+
+
+int32_t STUB_RecParseInnerPlaintext(TLS_Ctx *ctx, const uint8_t *text, uint32_t *textLen, uint8_t *recType)
 {
     (void)ctx;
     (void)text;
@@ -588,9 +593,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_FUNC_TC006()
 {
     FRAME_Init();
 
-    STUB_Init();
-    FuncStubInfo tmpRpInfo = { 0 };
-
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     tlsConfig->isSupportClientVerify = false;
     HITLS_CFG_SetKeyExchMode(tlsConfig, TLS13_KE_MODE_PSK_WITH_DHE);
@@ -607,14 +609,14 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_FUNC_TC006()
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_HANDSHAKING);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_HANDSHAKING);
 
-    STUB_Replace(&tmpRpInfo, RecParseInnerPlaintext, STUB_RecParseInnerPlaintext);
+    STUB_REPLACE(RecParseInnerPlaintext, STUB_RecParseInnerPlaintext);;
 
     ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(RecParseInnerPlaintext);
 }
 /* END_CASE */
 
@@ -785,9 +787,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_FUNC_TC010()
 {
     FRAME_Init();
 
-    STUB_Init();
-    FuncStubInfo tmpRpInfo = { 0 };
-
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     tlsConfig->isSupportClientVerify = false;
     HITLS_CFG_SetKeyExchMode(tlsConfig, TLS13_KE_MODE_PSK_WITH_DHE);
@@ -804,14 +803,14 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_FUNC_TC010()
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_HANDSHAKING);
 
-    STUB_Replace(&tmpRpInfo, RecParseInnerPlaintext, STUB_RecParseInnerPlaintext);
+    STUB_REPLACE(RecParseInnerPlaintext, STUB_RecParseInnerPlaintext);;
 
     ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(RecParseInnerPlaintext);
 }
 /* END_CASE */
 
@@ -920,9 +919,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_FUNC_TC013()
 {
     FRAME_Init();
 
-    STUB_Init();
-    FuncStubInfo tmpRpInfo = { 0 };
-
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     tlsConfig->isSupportClientVerify = true;
     HITLS_CFG_SetKeyExchMode(tlsConfig, TLS13_KE_MODE_PSK_WITH_DHE);
@@ -939,14 +935,14 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_FUNC_TC013()
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_HANDSHAKING);
 
-    STUB_Replace(&tmpRpInfo, RecParseInnerPlaintext, STUB_RecParseInnerPlaintext);
+    STUB_REPLACE(RecParseInnerPlaintext, STUB_RecParseInnerPlaintext);;
 
     ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(RecParseInnerPlaintext);
 }
 /* END_CASE */
 

@@ -19,7 +19,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "securec.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "test.h"
 #include "bsl_uio.h"
 #include "bsl_types.h"

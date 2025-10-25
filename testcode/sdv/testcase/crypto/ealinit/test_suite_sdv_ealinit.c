@@ -15,7 +15,7 @@
 
 /* BEGIN_HEADER */
 
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "bsl_init.h"
@@ -33,6 +33,21 @@
 #include "crypt_params_key.h"
 /* END_HEADER */
 
+/* ============================================================================
+ * Stub Definitions - Define all functions to be stubbed
+ * ============================================================================ */
+STUB_DEFINE_RET0(bool, IsSupportAVX);
+STUB_DEFINE_RET0(bool, IsSupportAES);
+STUB_DEFINE_RET0(bool, IsSupportNEON);
+STUB_DEFINE_RET0(bool, IsSupportBMI1);
+STUB_DEFINE_RET0(bool, IsSupportMOVBE);
+STUB_DEFINE_RET0(int32_t, CRYPT_AES_AsmCheck);
+STUB_DEFINE_RET0(int32_t, CRYPT_GHASH_AsmCheck);
+STUB_DEFINE_RET0(int32_t, CRYPT_POLY1305_AsmCheck);
+
+/* ============================================================================
+ * Helper Functions
+ * ============================================================================ */
 #define DATA_LEN (64)
 void ResetStatus(void)
 {
@@ -40,6 +55,9 @@ void ResetStatus(void)
     BSL_GLOBAL_DeInit();
 }
 
+/* ============================================================================
+ * Stub Function Implementations
+ * ============================================================================ */
 bool STUB_IsSupportAVX()
 {
     return false;
@@ -106,7 +124,7 @@ int32_t STUB_CRYPT_POLY1305_AsmCheck()
 /* BEGIN_CASE */
 void SDV_CRYPT_INIT_FUNC_TC001()
 {
-#if defined(HITLS_EAL_INIT_OPTS) 
+#if defined(HITLS_EAL_INIT_OPTS)
     uint8_t output[DATA_LEN];
     uint32_t len = DATA_LEN;
     int32_t ret = CRYPT_SUCCESS;
@@ -134,16 +152,14 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_CRYPT_EAL_Init_TC002()
 {
-    FuncStubInfo tmpStubInfo = {0};
     CRYPT_EAL_CipherCtx *ctx = NULL;
-    STUB_Init();
     ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AES128_CBC);
     ASSERT_TRUE(ctx != NULL);
     CRYPT_EAL_CipherFreeCtx(ctx);
 #if defined(HITLS_CRYPTO_ASM_CHECK)
 #if defined(__x86_64__)
 #if defined(HITLS_CRYPTO_AES_ASM)
-    STUB_Replace(&tmpStubInfo, IsSupportAVX, STUB_IsSupportAVX);
+    STUB_REPLACE(IsSupportAVX, STUB_IsSupportAVX);
     ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AES128_CBC);
     ASSERT_TRUE(ctx == NULL);
 #endif
@@ -151,17 +167,19 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC002()
     ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_SM4_CBC);
     ASSERT_TRUE(ctx == NULL);
 #endif
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(IsSupportAVX);
 #elif defined(__aarch64__)
 #if defined(HITLS_CRYPTO_AES_ASM)
-    STUB_Replace(&tmpStubInfo, IsSupportAES, STUB_IsSupportAES);
+    STUB_REPLACE(IsSupportAES, STUB_IsSupportAES);
     ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AES128_CBC);
     ASSERT_TRUE(ctx == NULL);
+    STUB_RESTORE(IsSupportAES);
 #endif
 #endif
 #endif
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(IsSupportAVX);
+    STUB_RESTORE(IsSupportAES);
     ResetStatus();
 }
 /* END_CASE */
@@ -186,12 +204,10 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC003()
 #if defined(HITLS_CRYPTO_ASM_CHECK)
 #if defined(__x86_64__)
 #if defined(HITLS_CRYPTO_SM2_ASM)
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Init();
-    STUB_Replace(&tmpStubInfo, IsSupportMOVBE, STUB_IsSupportMOVBE);
+    STUB_REPLACE(IsSupportMOVBE, STUB_IsSupportMOVBE);
     ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_SM3);
     ASSERT_TRUE(ctx == NULL);
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(IsSupportMOVBE);
 #endif
 #endif
 #endif
@@ -214,8 +230,6 @@ EXIT:
 void SDV_CRYPTO_CRYPT_EAL_Init_TC004()
 {
     ResetStatus();
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Init();
     uint32_t keyLen = DATA_LEN;
     uint8_t key[keyLen];
     uint32_t saltLen = DATA_LEN;
@@ -242,27 +256,29 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC004()
 #if defined(HITLS_CRYPTO_ASM_CHECK)
 #if defined(__x86_64__)
 #if defined(HITLS_CRYPTO_SHA2_ASM)
-    STUB_Replace(&tmpStubInfo, IsSupportAVX, STUB_IsSupportAVX);
+    STUB_REPLACE(IsSupportAVX, STUB_IsSupportAVX);
     ASSERT_TRUE(CRYPT_EAL_KdfSetParam(ctx, params) != CRYPT_SUCCESS);
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(IsSupportAVX);
 #endif
 #if defined(HITLS_CRYPTO_MD5_ASM)
-    STUB_Replace(&tmpStubInfo, IsSupportBMI1, STUB_IsSupportBMI1);
+    STUB_REPLACE(IsSupportBMI1, STUB_IsSupportBMI1);
     macAlgId = CRYPT_MAC_HMAC_MD5;
     ASSERT_TRUE(CRYPT_EAL_KdfSetParam(ctx, params) != CRYPT_SUCCESS);
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(IsSupportBMI1);
 #endif
 #if defined(HITLS_CRYPTO_SM3_ASM)
-    STUB_Replace(&tmpStubInfo, IsSupportMOVBE, STUB_IsSupportMOVBE);
+    STUB_REPLACE(IsSupportMOVBE, STUB_IsSupportMOVBE);
     macAlgId = CRYPT_MAC_HMAC_SM3;
     ASSERT_TRUE(CRYPT_EAL_KdfSetParam(ctx, params) != CRYPT_SUCCESS);
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(IsSupportMOVBE);
 #endif
 #endif
 #endif
 EXIT:
     CRYPT_EAL_KdfFreeCtx(ctx);
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(IsSupportAVX);
+    STUB_RESTORE(IsSupportBMI1);
+    STUB_RESTORE(IsSupportMOVBE);
     ResetStatus();
 }
 /* END_CASE */
@@ -281,17 +297,15 @@ EXIT:
 void SDV_CRYPTO_CRYPT_EAL_Init_TC005()
 {
     ResetStatus();
-    FuncStubInfo tmpStubInfo = {0};
     CRYPT_EAL_RndCtx *ctx = NULL;
 
-    STUB_Init();
     ctx = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA256, NULL, NULL);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(CRYPT_EAL_DrbgInstantiate(ctx, NULL, 0) == CRYPT_SUCCESS);
     CRYPT_EAL_DrbgDeinit(ctx);
 #if defined(HITLS_CRYPTO_ASM_CHECK)
 #if defined(__x86_64__)
-    STUB_Replace(&tmpStubInfo, IsSupportAVX, STUB_IsSupportAVX);
+    STUB_REPLACE(IsSupportAVX, STUB_IsSupportAVX);
 #if defined(HITLS_CRYPTO_SHA1_ASM)
     ctx = CRYPT_EAL_DrbgNew(CRYPT_RAND_SHA1, NULL, NULL);
     ASSERT_TRUE(ctx == NULL);
@@ -307,17 +321,20 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC005()
     ASSERT_TRUE(ctx == NULL);
     ASSERT_NE(CRYPT_EAL_RandInit(CRYPT_RAND_AES128_CTR, NULL, NULL, NULL, 0), CRYPT_SUCCESS);
 #endif
+    STUB_RESTORE(IsSupportAVX);
 #elif defined(__aarch64__)
 #if defined(HITLS_CRYPTO_AES_ASM)
-    STUB_Replace(&tmpStubInfo, IsSupportAES, STUB_IsSupportAES);
+    STUB_REPLACE(IsSupportAES, STUB_IsSupportAES);
     ctx = CRYPT_EAL_DrbgNew(CRYPT_RAND_AES128_CTR, NULL, NULL);
     ASSERT_TRUE(ctx == NULL);
     ASSERT_NE(CRYPT_EAL_RandInit(CRYPT_RAND_AES128_CTR, NULL, NULL, NULL, 0), CRYPT_SUCCESS);
+    STUB_RESTORE(IsSupportAES);
 #endif
 #endif
 #endif
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(IsSupportAVX);
+    STUB_RESTORE(IsSupportAES);
     ResetStatus();
 }
 /* END_CASE */

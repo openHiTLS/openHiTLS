@@ -17,7 +17,7 @@
 
 #include "bsl_sal.h"
 #include "securec.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "hitls_pki_cert.h"
 #include "hitls_pki_csr.h"
 #include "hitls_pki_errno.h"
@@ -31,9 +31,14 @@
 #include "crypt_codecskey.h"
 #include "crypt_eal_codecs.h"
 #include "hitls_x509_local.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET2(int32_t, HITLS_X509_ParseCertTbs, BSL_ASN1_Buffer *, HITLS_X509_Cert *);
 
 /* BEGIN_CASE */
 void SDV_X509_CERT_PARSE_FUNC_TC001(int format, char *path)
@@ -1197,8 +1202,6 @@ EXIT:
 }
 /* END_CASE */
 
-extern int32_t HITLS_X509_ParseCertTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Cert *cert);
-
 static int32_t STUB_HITLS_X509_ParseCertTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Cert *cert)
 {
     (void)asnArr;
@@ -1210,13 +1213,11 @@ static int32_t STUB_HITLS_X509_ParseCertTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_
 void SDV_X509_CERT_INVALIED_TEST_TC001(int format, char *path)
 {
     TestMemInit();
-    FuncStubInfo tmpRpInfo = {0};
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, HITLS_X509_ParseCertTbs, STUB_HITLS_X509_ParseCertTbs) == 0);
+    STUB_REPLACE(HITLS_X509_ParseCertTbs, STUB_HITLS_X509_ParseCertTbs);
     HITLS_X509_Cert *cert = NULL;
     ASSERT_NE(HITLS_X509_CertParseFile(format, path, &cert), HITLS_PKI_SUCCESS);
 EXIT:
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(HITLS_X509_ParseCertTbs);
     HITLS_X509_CertFree(cert);
 }
 /* END_CASE */

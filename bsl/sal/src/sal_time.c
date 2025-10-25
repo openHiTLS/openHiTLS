@@ -132,7 +132,7 @@ uint32_t BSL_DateToStrConvert(const BSL_TIME *dateTime, char *timeStr, size_t le
     if (g_timeCallback.pfDateToStrConvert != NULL && g_timeCallback.pfDateToStrConvert != BSL_DateToStrConvert) {
         return g_timeCallback.pfDateToStrConvert(dateTime, timeStr, len);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return TIME_DateToStrConvert(dateTime, timeStr, len);
 #else
     return BSL_SAL_TIME_NO_REG_FUNC;
@@ -144,7 +144,7 @@ int64_t BSL_SAL_CurrentSysTimeGet(void)
     if (g_timeCallback.pfGetSysTime != NULL && g_timeCallback.pfGetSysTime != BSL_SAL_CurrentSysTimeGet) {
         return g_timeCallback.pfGetSysTime();
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return TIME_GetSysTime();
 #else
     BSL_ERR_PUSH_ERROR(BSL_SAL_TIME_NO_REG_FUNC);
@@ -375,7 +375,7 @@ int32_t BSL_SAL_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
         g_timeCallback.pfUtcTimeToDateConvert != (BslSalUtcTimeToDateConvert)BSL_SAL_UtcTimeToDateConvert) {
         return g_timeCallback.pfUtcTimeToDateConvert(utcTime, sysTime);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return TIME_UtcTimeToDateConvert(utcTime, sysTime);
 #else
     return BSL_SAL_TIME_NO_REG_FUNC;
@@ -390,7 +390,7 @@ int32_t BSL_SAL_SysTimeGet(BSL_TIME *sysTime)
     if (g_timeCallback.pfSysTimeGet != NULL && g_timeCallback.pfSysTimeGet != (BslSalSysTimeGet)BSL_SAL_SysTimeGet) {
         return g_timeCallback.pfSysTimeGet(sysTime);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return TIME_SysTimeGet(sysTime);
 #else
     return BSL_SAL_TIME_NO_REG_FUNC;
@@ -403,7 +403,7 @@ void BSL_SAL_Sleep(uint32_t time)
         g_timeCallback.pfSleep(time);
         return;
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     SAL_Sleep(time);
 #endif
 }
@@ -413,7 +413,7 @@ long BSL_SAL_Tick(void)
     if (g_timeCallback.pfTick != NULL && g_timeCallback.pfTick != BSL_SAL_Tick) {
         return g_timeCallback.pfTick();
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_Tick();
 #else
     return BSL_SAL_TIME_NO_REG_FUNC;
@@ -425,7 +425,7 @@ long BSL_SAL_TicksPerSec(void)
     if (g_timeCallback.pfTicksPerSec != NULL && g_timeCallback.pfTicksPerSec != BSL_SAL_TicksPerSec) {
         return g_timeCallback.pfTicksPerSec();
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_TicksPerSec();
 #else
     return BSL_SAL_TIME_NO_REG_FUNC;
@@ -437,7 +437,7 @@ uint64_t BSL_SAL_TIME_GetNSec(void)
     if (g_timeCallback.pfBslGetTimeInNS != NULL && g_timeCallback.pfBslGetTimeInNS != BSL_SAL_TIME_GetNSec) {
         return g_timeCallback.pfBslGetTimeInNS();
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_TIME_GetNSec();
 #else
     BSL_ERR_PUSH_ERROR(BSL_SAL_TIME_NO_REG_FUNC);

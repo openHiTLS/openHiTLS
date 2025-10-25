@@ -140,7 +140,7 @@ static uint32_t RecGetWriteBufferSize(const TLS_Ctx *ctx)
             recSize--;
         }
     }
-#if defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
     RecCmpPmtu(ctx, &recSize);
 #endif
     return recSize;

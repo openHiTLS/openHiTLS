@@ -87,15 +87,24 @@ BslList *ES_NsListCreat(void)
         BSL_ERR_PUSH_ERROR(BSL_LIST_MALLOC_FAIL);
         return NULL;
     }
+    int32_t ret;
+
+#ifndef HITLS_BSL_SAL_DARWIN
+    /* TODO: Enable CPU Jitter on Darwin after Currently not supported
+     * 1. Disabled on macOS because health test thresholds (RCT/APT) need adjustment
+     * 2. Jitter is platform-independent in theory but requires per-platform validation
+     */
     ES_NoiseSource *jitterCtx = ES_CpuJitterGetCtx();
     if (jitterCtx == NULL) {
         goto ERR;
     }
-    int32_t ret = BSL_LIST_AddElement(ns, jitterCtx, BSL_LIST_POS_AFTER);
+    ret = BSL_LIST_AddElement(ns, jitterCtx, BSL_LIST_POS_AFTER);
     if (ret != CRYPT_SUCCESS) {
         ES_NsFree(jitterCtx);
         goto ERR;
     }
+#endif
+
     ES_NoiseSource *stampCtx = ES_TimeStampGetCtx();
     if (stampCtx == NULL) {
         goto ERR;

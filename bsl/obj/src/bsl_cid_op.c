@@ -29,7 +29,7 @@ BSL_HASH_Hash *g_signHashTable = NULL;
 // Read-write lock for thread-safe access to g_signHashTable
 static BSL_SAL_ThreadLockHandle g_signHashRwLock = NULL;
 // Once control for thread-safe initialization
-static uint32_t g_signHashInitOnce = BSL_SAL_ONCE_INIT;
+BSL_SAL_DECLARE_THREAD_ONCE(g_signHashInitOnce);
 
 #define BSL_OBJ_SIGN_HASH_BKT_SIZE 64u
 #endif // HITLS_BSL_OBJ_CUSTOM
@@ -343,7 +343,7 @@ void BSL_OBJ_FreeSignHashTable(void)
             (void)BSL_SAL_ThreadLockFree(g_signHashRwLock);
             g_signHashRwLock = NULL;
         }
-        g_signHashInitOnce = BSL_SAL_ONCE_INIT;
+        (void)memset_s(&g_signHashInitOnce, sizeof(g_signHashInitOnce), 0, sizeof(g_signHashInitOnce));
     }
 }
 #endif // HITLS_BSL_OBJ_CUSTOM

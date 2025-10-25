@@ -16,7 +16,7 @@
 /* BEGIN_HEADER */
 
 #include <stdio.h>
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "hitls.h"
 #include "hitls_config.h"
 #include "hitls_error.h"
@@ -48,6 +48,12 @@
 #include "bsl_log.h"
 #include "cert_callback.h"
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET5(int32_t, CompareBinder, TLS_Ctx *, const PreSharedKey *, uint8_t *, uint32_t, uint32_t);
+
 
 #define PORT 23456
 #define READ_BUF_SIZE (18 * 1024)
@@ -1387,10 +1393,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBFUSCATED_TICKET_AGE_FUNC_TC002()
     testInfo.server = FRAME_CreateLink(testInfo.s_config, testInfo.uioType);
     ASSERT_TRUE(testInfo.server != NULL);
     ASSERT_EQ(HITLS_SetSession(testInfo.client->ssl, testInfo.clientSession), HITLS_SUCCESS);
-
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, CompareBinder, CompareBinder_Success);
+    STUB_REPLACE(CompareBinder, CompareBinder_Success);;
 
     // Establish a connection.
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, false, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -1399,7 +1402,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBFUSCATED_TICKET_AGE_FUNC_TC002()
     ASSERT_EQ(isReused, true);
 EXIT:
     ClearWrapper();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(CompareBinder);
     HITLS_CFG_FreeConfig(testInfo.c_config);
     HITLS_CFG_FreeConfig(testInfo.s_config);
     FRAME_FreeLink(testInfo.client);
@@ -1461,16 +1464,13 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_OBFUSCATED_TICKET_AGE_FUNC_TC003()
     testInfo.server = FRAME_CreateLink(testInfo.s_config, testInfo.uioType);
     ASSERT_TRUE(testInfo.server != NULL);
     ASSERT_EQ(HITLS_SetSession(testInfo.client->ssl, testInfo.clientSession), HITLS_SUCCESS);
-
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, CompareBinder, CompareBinder_Success);
+    STUB_REPLACE(CompareBinder, CompareBinder_Success);;
 
     // Establish a connection.
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 EXIT:
     ClearWrapper();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(CompareBinder);
     HITLS_CFG_FreeConfig(testInfo.c_config);
     HITLS_CFG_FreeConfig(testInfo.s_config);
     FRAME_FreeLink(testInfo.client);

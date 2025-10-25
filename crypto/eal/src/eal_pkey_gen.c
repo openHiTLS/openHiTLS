@@ -30,13 +30,15 @@
 #include "crypt_utils.h"
 #include "eal_md_local.h"
 #include "eal_common.h"
-#include "crypt_eal_implprovider.h"
 #include "crypt_ealinit.h"
 #include "bsl_err_internal.h"
-#include "crypt_provider.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 #include "eal_pkey.h"
+#ifdef HITLS_CRYPTO_PROVIDER
+#include "crypt_eal_implprovider.h"
+#include "crypt_provider.h"
+#endif
 
 static void EalPkeyCopyMethod(const EAL_PkeyMethod *method, EAL_PkeyUnitaryMethod *dest)
 {

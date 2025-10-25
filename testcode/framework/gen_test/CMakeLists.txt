@@ -40,10 +40,14 @@ if(PRINT_TO_TERMINAL)
     target_compile_options(${GEN_TESTCASE} PRIVATE -DPRINT_TO_TERMINAL)
 endif()
 
-target_link_directories(${GEN_TESTCASE}
-    PRIVATE
-        ${HITLS_SRC}/platform/Secure_C/lib
+# Use find_library to support cross-platform static library extensions (.a on Unix, .lib on Windows)
+find_library(BOUNDSCHECK_STATIC_LIB
+    NAMES libboundscheck.a boundscheck  # Try .a explicitly first, then let CMake find static version
+    PATHS ${HITLS_SRC}/platform/Secure_C/lib
+    NO_DEFAULT_PATH
+    NO_CMAKE_FIND_ROOT_PATH
 )
-target_link_libraries(${GEN_TESTCASE}
-    boundscheck
-)
+if(NOT BOUNDSCHECK_STATIC_LIB)
+    message(FATAL_ERROR "Could not find static boundscheck library at ${HITLS_SRC}/platform/Secure_C/lib")
+endif()
+target_link_libraries(${GEN_TESTCASE} ${BOUNDSCHECK_STATIC_LIB})

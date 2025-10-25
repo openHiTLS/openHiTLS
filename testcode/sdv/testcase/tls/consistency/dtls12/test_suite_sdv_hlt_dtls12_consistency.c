@@ -31,7 +31,7 @@
 #include "hs_state_recv.h"
 #include "conn_init.h"
 #include "recv_process.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "stub_crypt.h"
 #include "frame_tls.h"
 #include "frame_msg.h"
@@ -57,6 +57,12 @@
 #include "uio_abstraction.h"
 #include "record.h"
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET4(int32_t, REC_Write, TLS_Ctx *, REC_Type, const uint8_t *, uint32_t);
+
 
 #define REC_DTLS_RECORD_HEADER_LEN 13
 #define BUF_SIZE_DTO_TEST 18432
@@ -270,13 +276,12 @@ static void Test_Timeout001(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32
     ASSERT_EQ(HITLS_DtlsProcessTimeout(ctx), HITLS_SUCCESS);
     sleep(2);
     ASSERT_EQ(HITLS_DtlsProcessTimeout(ctx), HITLS_SUCCESS);
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, REC_Write, STUB_REC_Write);
+    STUB_REPLACE(REC_Write, STUB_REC_Write);;
     sleep(4);
     ASSERT_EQ(HITLS_DtlsProcessTimeout(ctx), HITLS_SUCCESS);
 
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(REC_Write);
     return;
 }
 

@@ -16,7 +16,7 @@
 /* BEGIN_HEADER */
 /* INCLUDE_BASE test_suite_tls13_consistency_rfc8446 */
 
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "hitls.h"
 #include "hitls_config.h"
 #include "hitls_error.h"
@@ -36,6 +36,12 @@
 #include "alert.h"
 #include "hs_kx.h"
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET4(int32_t, RecParseInnerPlaintext, TLS_Ctx *, const uint8_t *, uint32_t *, uint8_t *);
+
 
 #define MAX_RECORD_LENTH (20 * 1024)
 #define ALERT_BODY_LEN 2u
@@ -1707,8 +1713,7 @@ EXIT:
 }
 /* END_CASE */
 
-int32_t RecParseInnerPlaintext(TLS_Ctx *ctx, uint8_t *text, uint32_t *textLen, uint8_t *recType);
-int32_t STUB_RecParseInnerPlaintext(TLS_Ctx *ctx, uint8_t *text, uint32_t *textLen, uint8_t *recType)
+int32_t STUB_RecParseInnerPlaintext(TLS_Ctx *ctx, const uint8_t *text, uint32_t *textLen, uint8_t *recType)
 {
     (void)ctx;
     (void)text;
@@ -1732,8 +1737,6 @@ int32_t STUB_RecParseInnerPlaintext(TLS_Ctx *ctx, uint8_t *text, uint32_t *textL
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_HANDSHAKE_RECORD_TYPE_FUNC_TC002(void)
 {
     FRAME_Init();
-    STUB_Init();
-    FuncStubInfo tmpRpInfo;
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
@@ -1753,10 +1756,15 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HANDSHAKE_RECORD_TYPE_FUNC_TC002(void)
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_IDLE);
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_SEND_FINISH) == HITLS_SUCCESS);
-    STUB_Replace(&tmpRpInfo, RecParseInnerPlaintext, STUB_RecParseInnerPlaintext);
-    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    STUB_REPLACE(RecParseInnerPlaintext, STUB_RecParseInnerPlaintext);;
+    int32_t actualRet = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+    if (actualRet != HITLS_REC_NORMAL_RECV_UNEXPECT_MSG) {
+        printf("[TC002] MISMATCH: actual=0x%x (%d), expected=0x%x (%d)\n",
+               actualRet, actualRet, HITLS_REC_NORMAL_RECV_UNEXPECT_MSG, HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
+    }
+    ASSERT_TRUE(actualRet == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
 EXIT:
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(RecParseInnerPlaintext);
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

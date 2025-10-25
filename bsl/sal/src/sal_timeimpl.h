@@ -39,7 +39,7 @@ typedef struct {
 
 int32_t SAL_TimeCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
 int64_t TIME_GetSysTime(void);
 uint32_t TIME_DateToStrConvert(const BSL_TIME *dateTime, char *timeStr, size_t len);
 uint32_t TIME_SysTimeGet(BSL_TIME *sysTime);

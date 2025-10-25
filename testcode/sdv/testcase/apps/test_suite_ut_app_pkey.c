@@ -32,9 +32,15 @@
 #include "securec.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET5(int32_t, BSL_UI_ReadPwdUtil, BSL_UI_ReadPwdParam *, char *, uint32_t *, const BSL_UI_CheckDataCallBack, void *);
+
 
 #define BAD_KEY_PATH "../testdata/apps/pkey/bad_rsa.pem"
 #define PKEY_TEST_FILE_PATH "out_test.pem"
@@ -222,9 +228,7 @@ static int32_t BSL_UI_ReadPwdUtil_Mock(BSL_UI_ReadPwdParam *param, char *buff, u
 /* BEGIN_CASE */
 void UT_HITLS_APP_PKEY_TC004(char *encKeyPath, char *keyPath)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_UI_ReadPwdUtil, BSL_UI_ReadPwdUtil_Mock);
+    STUB_REPLACE(BSL_UI_ReadPwdUtil, BSL_UI_ReadPwdUtil_Mock);;
     char *argv[][20] = {
         {"pkey", "-in", keyPath, "-passin", "pass:"},
         {"pkey", "-in", keyPath, "-passin", "stdin"},
@@ -261,7 +265,7 @@ void UT_HITLS_APP_PKEY_TC004(char *encKeyPath, char *keyPath)
 
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UI_ReadPwdUtil);
     remove(PKEY_TEST_FILE_PATH);
     return;
 }

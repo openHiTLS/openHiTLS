@@ -53,7 +53,7 @@
 #include "process.h"
 #include "hs_ctx.h"
 #include "hlt.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "hitls_type.h"
 #include "frame_link.h"
 #include "session_type.h"
@@ -97,7 +97,6 @@
 #include "parse_extensions_server.c"
 #include "parse_server_hello.c"
 #include "parse_client_hello.c"
-#include "uio_udp.c"
 /* END_HEADER */
 
 /* @
@@ -221,6 +220,9 @@ EXIT:
 }
 /* END_CASE */
 
+STUB_DEFINE_RET4(int32_t, REC_Write, TLS_Ctx *, REC_Type, const uint8_t *, uint32_t);
+STUB_DEFINE_RET4(int32_t, UdpSocketCtrl, BSL_UIO *, int32_t, int32_t, void *);
+
 int32_t STUB_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num)
 {
     if ((ctx == NULL) || (ctx->recCtx == NULL) ||
@@ -252,9 +254,11 @@ int32_t STUB_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, u
 int32_t STUB_UdpSocketCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 {
     (void)uio;
-    (void)cmd;
     (void)larg;
-    *(bool *)parg = true;
+    // Simulate EMSGSIZE error: always report MTU exceeded
+    if (cmd == BSL_UIO_UDP_MTU_EXCEEDED) {
+        *(bool *)parg = true;
+    }
     return BSL_SUCCESS;
 }
 
@@ -286,20 +290,35 @@ void UT_TLS_CM_MTU_EMSGSIZE_TC001(void)
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
 
-    STUB_Init();
-    FuncStubInfo tmpStubInfo = {0};
-    FuncStubInfo tmpStubInfo2 = {0};
-    STUB_Replace(&tmpStubInfo, REC_Write, STUB_REC_Write);
-    STUB_Replace(&tmpStubInfo2, FRAME_Ctrl, STUB_UdpSocketCtrl);
-    
+    STUB_REPLACE(REC_Write, STUB_REC_Write);
+    STUB_REPLACE(UdpSocketCtrl, STUB_UdpSocketCtrl);
+
+    // STUB_REPLACE cannot update function pointers in structures
+    // We need to manually update the UIO's method pointer to point to our STUB
+    BSL_UIO *clientUio = client->ssl->uio;
+    while (clientUio != NULL && BSL_UIO_GetTransportType(clientUio) != BSL_UIO_UDP) {
+        clientUio = BSL_UIO_Next(clientUio);
+    }
+    if (clientUio != NULL) {
+        clientUio->method.uioCtrl = STUB_UdpSocketCtrl;
+    }
+
+    BSL_UIO *serverUio = server->ssl->uio;
+    while (serverUio != NULL && BSL_UIO_GetTransportType(serverUio) != BSL_UIO_UDP) {
+        serverUio = BSL_UIO_Next(serverUio);
+    }
+    if (serverUio != NULL) {
+        serverUio->method.uioCtrl = STUB_UdpSocketCtrl;
+    }
+
     ASSERT_TRUE(HITLS_SetMtu(client->ssl, 500) == HITLS_SUCCESS);
     ASSERT_EQ(client->ssl->config.pmtu, 500);
     const uint8_t sndBuf[1200] = {0};
     uint32_t writeLen = 0;
     ASSERT_EQ(HITLS_Write(client->ssl, sndBuf, sizeof(sndBuf), &writeLen), HITLS_REC_NORMAL_IO_BUSY);
     ASSERT_EQ(writeLen, 0);
-    STUB_Reset(&tmpStubInfo);
-    STUB_Reset(&tmpStubInfo2);
+    STUB_RESTORE(REC_Write);
+    STUB_RESTORE(UdpSocketCtrl);
 
     bool needQueryMtu = false;
 
@@ -311,8 +330,8 @@ void UT_TLS_CM_MTU_EMSGSIZE_TC001(void)
     ASSERT_TRUE(writeLen < 256);
     ASSERT_TRUE(writeLen > 0);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
-    STUB_Reset(&tmpStubInfo2);
+    STUB_RESTORE(REC_Write);
+    STUB_RESTORE(UdpSocketCtrl);
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

@@ -33,7 +33,7 @@
 #include "tls.h"
 #include "conn_init.h"
 #include "crypt_errno.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "frame_tls.h"
 #include "frame_link.h"
 #include "rec_wrapper.h"
@@ -53,6 +53,22 @@
 #define MIN_CERT_LIST 0
 #define DEFAULT_SECURITYLEVEL 0
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+// HS_ChangeState stub is defined in frame_connect.c (part of libtls_frame.a)
+// Declare extern to use it
+typedef int32_t (*real_HS_ChangeState_func_t)(TLS_Ctx *, uint32_t);
+typedef struct HS_ChangeState_Stub {
+    void *stub_handle;
+    const char *stub_target_symbol;
+    int32_t (*stub_impl)(TLS_Ctx *, uint32_t);
+    real_HS_ChangeState_func_t stub_real_impl;
+} HS_ChangeState_Stub;
+extern HS_ChangeState_Stub HS_ChangeState_stub;
+extern void HS_ChangeState_restore(void);
+
 
 static HITLS_Config *GetHitlsConfigViaVersion(int ver)
 {
@@ -4008,10 +4024,7 @@ void UT_TLS_CM_HITLS_DOHANDSHAKE_API_TC001()
     int32_t serverRet;
     int32_t ret;
     uint32_t count = 0;
-
-    FuncStubInfo tmpRpInfo = { 0 };
-    STUB_Init();
-    STUB_Replace(&tmpRpInfo, HS_ChangeState, STUB_ChangeState);
+    STUB_REPLACE(HS_ChangeState, STUB_ChangeState);;
     HITLS_SetEndPoint(client->ssl, true);
     do {
         if (StateCompare(client, HS_STATE_BUTT)) {
@@ -4054,7 +4067,7 @@ void UT_TLS_CM_HITLS_DOHANDSHAKE_API_TC001()
     } while (count < 40);
     ASSERT_EQ(ret, HITLS_SUCCESS);
 EXIT:
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(HS_ChangeState);
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

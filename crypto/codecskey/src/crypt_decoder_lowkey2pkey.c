@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
+#if defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) && defined(HITLS_CRYPTO_PROVIDER)
 #include "crypt_eal_implprovider.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_provider.h"
@@ -318,4 +318,4 @@ void DECODER_LowKeyObject2PkeyObjectFreeCtx(void *ctx)
     BSL_SAL_Free(ctx);
 }
 
-#endif /* HITLS_CRYPTO_KEY_DECODE_CHAIN */
+#endif /* HITLS_CRYPTO_KEY_DECODE_CHAIN && HITLS_CRYPTO_PROVIDER */

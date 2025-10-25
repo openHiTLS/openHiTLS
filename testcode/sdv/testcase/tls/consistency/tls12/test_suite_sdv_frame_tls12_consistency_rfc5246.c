@@ -17,7 +17,7 @@
 /* INCLUDE_BASE test_suite_tls12_consistency_rfc5246 */
 
 #include <stdio.h>
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "hitls.h"
 #include "hitls_config.h"
 #include "hitls_error.h"
@@ -43,6 +43,12 @@
 #include "hs.h"
 #include "stub_crypt.h"
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET1(int32_t, HS_DoHandshake, TLS_Ctx *);
+
 
 /* @
 * @test  UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC001
@@ -4330,31 +4336,41 @@ int32_t TryResumeByTheUsingSessionId(ResumeTestInfo *testInfo)
     if (testInfo->clientSession != NULL) {
         ret = HITLS_SetSession(testInfo->client->ssl, testInfo->clientSession);
         if (ret != HITLS_SUCCESS) {
-            return ret;
+            goto ERR;
         }
     }
 
     testInfo->server = FRAME_CreateLink(testInfo->config, testInfo->uioType);
     if (testInfo->server == NULL) {
-        return HITLS_INTERNAL_EXCEPTION;
+        ret = HITLS_INTERNAL_EXCEPTION;
+        goto ERR;
     }
 
     ret = FRAME_CreateConnection(testInfo->client, testInfo->server, false, TRY_RECV_CLIENT_HELLO);
     if (ret != HITLS_SUCCESS) {
-        return ret;
+        goto ERR;
     }
 
     ret = CmpClientHelloSessionId(testInfo);
     if (ret != HITLS_SUCCESS) {
-        return ret;
+        goto ERR;
     }
 
     ret = CmpSessionId(testInfo);
     if (ret != HITLS_SUCCESS) {
-        return HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID;
+        ret = HITLS_MSG_HANDLE_ILLEGAL_SESSION_ID;
+        goto ERR;
     }
 
     return HITLS_SUCCESS;
+
+ERR:
+    /* Clean up allocated resources on error */
+    FRAME_FreeLink(testInfo->client);
+    testInfo->client = NULL;
+    FRAME_FreeLink(testInfo->server);
+    testInfo->server = NULL;
+    return ret;
 }
 
 /* @
@@ -4406,16 +4422,12 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_MULTILINK_RESUME_ALERT_TC001(int uioType, 
 
 EXIT:
     FreeLink(&testInfo01);
-    FreeLink(&testInfo02);
+    /* testInfo02: TryResumeByTheUsingSessionId expected to fail and clean up internally */
     BSL_SAL_FREE(g_sessionId);
     HITLS_CFG_FreeConfig(testInfo01.config);
-    FRAME_FreeLink(testInfo01.client);
-    FRAME_FreeLink(testInfo01.server);
     HITLS_SESS_Free(testInfo01.clientSession);
 
     HITLS_CFG_FreeConfig(testInfo02.config);
-    FRAME_FreeLink(testInfo02.client);
-    FRAME_FreeLink(testInfo02.server);
 }
 /* END_CASE */
 
@@ -5504,11 +5516,8 @@ EXIT:
 }
 /* END_CASE */
 
-int32_t STUB_HS_DoHandshake_Warning(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t plainLen)
+int32_t STUB_HS_DoHandshake_Warning(TLS_Ctx *ctx)
 {
-    (void)recordType;
-    (void)data;
-    (void)plainLen;
     ctx->method.sendAlert(ctx, ALERT_LEVEL_WARNING, ALERT_NO_CERTIFICATE_RESERVED);
     return HITLS_INTERNAL_EXCEPTION;
 }
@@ -5553,9 +5562,7 @@ void UT_TLS_TLS1_2_RFC5246_READ_AFTER_CLOSE_TC003()
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_KEY_EXCHANGE) == HITLS_SUCCESS);
-    FuncStubInfo tmpRpInfo = { 0 };
-    STUB_Init();
-    STUB_Replace(&tmpRpInfo, HS_DoHandshake, STUB_HS_DoHandshake_Warning);
+    STUB_REPLACE(HS_DoHandshake, STUB_HS_DoHandshake_Warning);;
     BSL_UIO *uio = HITLS_GetReadUio(clientTlsCtx);
     BSL_UIO_Method *method = (BSL_UIO_Method *)BSL_UIO_GetMethod(uio);
     ASSERT_EQ(BSL_UIO_SetMethod(method, BSL_UIO_WRITE_CB, UioWriteException), BSL_SUCCESS);
@@ -5578,7 +5585,7 @@ void UT_TLS_TLS1_2_RFC5246_READ_AFTER_CLOSE_TC003()
     ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_CM_LINK_CLOSED);
     ASSERT_TRUE(readLen == 0);
 EXIT:
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(HS_DoHandshake);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
     HITLS_CFG_FreeConfig(tlsConfig);

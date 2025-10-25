@@ -34,8 +34,14 @@
 #include "crypt_utils.h"
 #include "decode_local.h"
 #include "test.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
+
 
 void *malloc_fail(uint32_t size)
 {
@@ -336,7 +342,6 @@ void SDV_CRYPT_DECODE_POOL_NEW_CTX_API_TC001(void)
 #ifndef HITLS_CRYPTO_PROVIDER
     SKIP_TEST();
 #else
-    FuncStubInfo tmpRpInfo = {0};
     CRYPT_DECODER_PoolCtx *poolCtx = CRYPT_DECODE_PoolNewCtx(NULL, NULL, CRYPT_PKEY_RSA, "PEM", "PRIKEY_RSA");
     ASSERT_TRUE(poolCtx != NULL);
 
@@ -346,8 +351,7 @@ void SDV_CRYPT_DECODE_POOL_NEW_CTX_API_TC001(void)
     CRYPT_DECODE_PoolFreeCtx(NULL);
 
     /* Test with malloc failed */
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, malloc_fail) == 0);
+    STUB_REPLACE(BSL_SAL_Malloc, malloc_fail);
 
     TestMemInit();
 
@@ -355,7 +359,7 @@ void SDV_CRYPT_DECODE_POOL_NEW_CTX_API_TC001(void)
     ASSERT_TRUE(poolCtx == NULL);
 
 EXIT:
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_DECODE_PoolFreeCtx(poolCtx);
 #endif
 }

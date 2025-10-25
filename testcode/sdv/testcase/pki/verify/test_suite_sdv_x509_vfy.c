@@ -38,10 +38,56 @@
 #include "bsl_uio.h"
 #include "hitls_pki_utils.h"
 #include "bsl_asn1.h"
-#include "stub_replace.h"
-#include "../../../../../pki/x509_verify/src/hitls_x509_verify.c"
+#include "stub_utils.h"
+#include "bsl_err_internal.h"
 
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET3(int32_t, HITLS_X509_CheckCertTime, HITLS_X509_StoreCtx *, HITLS_X509_Cert *, int32_t);
+
+/* ============================================================================
+ * Helper Macros for Verification Callback
+ * ============================================================================ */
+#ifdef HITLS_PKI_X509_VFY_CB
+// Define internal helper and macro needed for stub implementations
+static int32_t VerifyCertCbk(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t errDepth, int32_t errCode)
+{
+    if (cert != NULL) {
+        storeCtx->curCert = cert;
+    }
+    if (errDepth >= 0) {
+        storeCtx->curDepth = errDepth;
+    }
+    if (errCode != HITLS_PKI_SUCCESS) {
+        storeCtx->error = errCode;
+    }
+    return storeCtx->verifyCb(errCode, storeCtx);
+}
+
+#define VFYCBK_FAIL_IF(cond, storeCtx, cert, depth, err)                 \
+    do {                                                                 \
+        if (cond) {                                                      \
+            int32_t cbkRet = VerifyCertCbk(storeCtx, cert, depth, err);  \
+            if (cbkRet != HITLS_PKI_SUCCESS) {                           \
+                BSL_ERR_PUSH_ERROR(err);                                 \
+                return cbkRet;                                           \
+            }                                                            \
+        }                                                                \
+    } while (0)
+#else
+// When callback feature is disabled, use simple error checking
+#define VFYCBK_FAIL_IF(cond, storeCtx, cert, depth, err)                 \
+    do {                                                                 \
+        if (cond) {                                                      \
+            BSL_ERR_PUSH_ERROR(err);                                     \
+            return err;                                                  \
+        }                                                                \
+    } while (0)
+#endif
+
 
 void HITLS_X509_FreeStoreCtxMock(HITLS_X509_StoreCtx *ctx)
 {
@@ -1069,6 +1115,7 @@ EXIT:
 #ifdef HITLS_PKI_X509_VFY_CB
 int32_t HITLS_X509_CheckCertTimeStub(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth)
 {
+    (void)depth;  // Parameter used by VFYCBK_FAIL_IF macro
     int64_t start = 0;
     int64_t end = 0;
     HITLS_X509_ValidTime *validTime = &cert->tbs.validTime;
@@ -1115,20 +1162,20 @@ int32_t CheckCertTimeCheckNotAfter(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cer
     return HITLS_X509_CheckCertTimeStub(storeCtx, cert, depth);
 }
 
-static void TestReplace(FuncStubInfo *stubInfo, int flag)
+static void TestReplace(int flag)
 {
     switch (flag) {
         case HITLS_X509_ERR_VFY_GET_NOTBEFORE_FAIL:
-            STUB_Replace(stubInfo, HITLS_X509_CheckCertTime, CheckCertTimeGetNotBefore);
+            STUB_REPLACE(HITLS_X509_CheckCertTime, CheckCertTimeGetNotBefore);
             return;
         case HITLS_X509_ERR_VFY_NOTBEFORE_IN_FUTURE:
-            STUB_Replace(stubInfo, HITLS_X509_CheckCertTime, CheckCertTimeCheckNotBefore);
+            STUB_REPLACE(HITLS_X509_CheckCertTime, CheckCertTimeCheckNotBefore);
             return;
         case HITLS_X509_ERR_VFY_GET_NOTAFTER_FAIL:
-            STUB_Replace(stubInfo, HITLS_X509_CheckCertTime, CheckCertTimeGetNotAfter);
+            STUB_REPLACE(HITLS_X509_CheckCertTime, CheckCertTimeGetNotAfter);
             return;
         case HITLS_X509_ERR_VFY_NOTAFTER_EXPIRED:
-            STUB_Replace(stubInfo, HITLS_X509_CheckCertTime, CheckCertTimeCheckNotAfter);
+            STUB_REPLACE(HITLS_X509_CheckCertTime, CheckCertTimeCheckNotAfter);
             return;
         default:
             return;
@@ -1186,8 +1233,6 @@ static int32_t X509StoreCtrlCbk2(HITLS_X509_StoreCtx *store, int cbkflag)
 void SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001(int flag, int ecp)
 {
 #ifdef HITLS_PKI_X509_VFY_CB
-    FuncStubInfo stubInfo = {0};
-    STUB_Init();
     HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
     ASSERT_TRUE(store != NULL);
     HITLS_X509_Cert *ca = NULL;
@@ -1214,11 +1259,11 @@ void SDV_X509_BUILD_CERT_CHAIN_CBK_FUNC_TC001(int flag, int ecp)
     int64_t timeval = time(NULL);
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval)),
               HITLS_PKI_SUCCESS);
-    TestReplace(&stubInfo, flag);
+    TestReplace(flag);
     ASSERT_EQ(HITLS_X509_CertVerify(store, chain), ecp);
 
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_X509_CheckCertTime);
     HITLS_X509_StoreCtxFree(store);
     HITLS_X509_CertFree(root);
     HITLS_X509_CertFree(ca);

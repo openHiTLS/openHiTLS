@@ -14,12 +14,15 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
+#if defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) && defined(HITLS_CRYPTO_PROVIDER)
 #include <string.h>
 #include <stdbool.h>
+#ifdef HITLS_CRYPTO_PROVIDER
 #include "crypt_eal_implprovider.h"
-#include "crypt_eal_pkey.h"
 #include "crypt_default_provderimpl.h"
+#include "crypt_provider_local.h"
+#endif
+#include "crypt_eal_pkey.h"
 #include "crypt_algid.h"
 #ifdef HITLS_CRYPTO_RSA
 #include "crypt_rsa.h"
@@ -37,7 +40,6 @@
 #include "crypt_mldsa.h"
 #endif
 #include "eal_pkey.h"
-#include "crypt_provider_local.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
 #include "bsl_obj.h"
@@ -319,6 +321,7 @@ void DECODER_DER2KEY_FreeCtx(void *ctx)
 }
 #endif
 
+#ifdef HITLS_CRYPTO_PROVIDER
 #ifdef HITLS_CRYPTO_RSA
 DECODER_DEFINE_DER2KEY_NEW_CTX(Rsa, CRYPT_PKEY_RSA, g_defEalKeyMgmtRsa, g_defEalAsymCipherRsa, NULL, \
     g_defEalSignRsa, NULL)
@@ -370,4 +373,5 @@ DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(Mldsa, CRYPT_ML_DSA_Ctx, CRYPT_MLDSA_Par
 DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Mldsa, CRYPT_ML_DSA_Ctx, CRYPT_MLDSA_ParseSubPubkeyAsn1Buff)
 DECODER_DEFINE_PKCS8_DECODE(Mldsa, CRYPT_ML_DSA_Ctx, CRYPT_MLDSA_ParsePkcs8key)
 #endif
-#endif /* HITLS_CRYPTO_KEY_DECODE_CHAIN */
+#endif /* HITLS_CRYPTO_PROVIDER */
+#endif /* HITLS_CRYPTO_KEY_DECODE_CHAIN && HITLS_CRYPTO_PROVIDER */

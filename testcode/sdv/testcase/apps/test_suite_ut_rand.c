@@ -32,9 +32,31 @@
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "bsl_ui.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 
 /* END_HEADER */
+
+/* Platform-specific dynamic library extension for testing */
+#ifdef __APPLE__
+#define BSL_SAL_DL_EXT "dylib"
+#else
+#define BSL_SAL_DL_EXT "so"
+#endif
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET3(int32_t, HITLS_APP_OptBegin, int32_t, char **, const HITLS_CmdOption *);
+STUB_DEFINE_RET4(int32_t, BSL_UIO_Ctrl, BSL_UIO *, int32_t, int32_t, void *);
+STUB_DEFINE_RET6(int32_t, CRYPT_EAL_ProviderRandInitCtx, CRYPT_EAL_LibCtx *, int32_t, const char *, const uint8_t *, uint32_t, BSL_Param *);
+STUB_DEFINE_RET3(int32_t, CRYPT_EAL_RandbytesEx, CRYPT_EAL_LibCtx *, uint8_t *, uint32_t);
+STUB_DEFINE_RET1(BSL_UIO *, BSL_UIO_New, const BSL_UIO_Method *);
+STUB_DEFINE_RET0(char *, HITLS_APP_OptGetValueStr);
+STUB_DEFINE_RET4(int32_t, HITLS_APP_OptWriteUio, BSL_UIO *, uint8_t *, uint32_t, int32_t);
+STUB_DEFINE_RET5(int32_t, BSL_UI_ReadPwdUtil, BSL_UI_ReadPwdParam *, char *, uint32_t *, const BSL_UI_CheckDataCallBack, void *);
+STUB_DEFINE_RET1(int32_t, HITLS_APP_SM_IntegrityCheck, AppProvider *);
+STUB_DEFINE_RET0(int32_t, HITLS_APP_SM_RootUserCheck);
+
 
 #define WORK_PATH "./rand_workpath"
 #define PASSWORD "a1234567"
@@ -51,7 +73,7 @@
 #define HITLS_SM_PROVIDER_PATH "../../output/CMVP/x86_64/lib"
 #endif
 
-#define HITLS_SM_LIB_NAME "libhitls_sm.so"
+#define HITLS_SM_LIB_NAME "libhitls_sm." BSL_SAL_DL_EXT
 #define HITLS_SM_PROVIDER_ATTR "provider=sm"
 
 #define SM_PARAM \
@@ -100,8 +122,9 @@ static int32_t STUB_BSL_UI_ReadPwdUtil(BSL_UI_ReadPwdParam *param, char *buff, u
     return BSL_SUCCESS;
 }
 
-static int32_t STUB_HITLS_APP_SM_IntegrityCheck(void)
+static int32_t STUB_HITLS_APP_SM_IntegrityCheck(AppProvider *provider)
 {
+    (void)provider;
     return HITLS_APP_SUCCESS;
 }
 
@@ -266,9 +289,7 @@ int32_t STUB_HITLS_APP_OptBegin(int32_t argc, char **argv, const HITLS_CmdOption
 /* BEGIN_CASE */
 void UT_HITLS_APP_rand_TC005(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptBegin, STUB_HITLS_APP_OptBegin);
+    STUB_REPLACE(HITLS_APP_OptBegin, STUB_HITLS_APP_OptBegin);
     char *argv[][3] = {
         {"rand", "-hex", "10"},
     };
@@ -285,7 +306,7 @@ void UT_HITLS_APP_rand_TC005(void)
 
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptBegin);
     return;
 }
 /* END_CASE */
@@ -307,10 +328,8 @@ int32_t STUB_BSL_UIO_Ctrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 /* BEGIN_CASE */
 void UT_HITLS_APP_rand_TC007(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
     ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
-    STUB_Replace(&stubInfo, BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);
+    STUB_REPLACE(BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);
     char *argv[][4] = {
         {"rand", "-hex", "2049"},
         {"rand", "-out", "1.txt", "10"},
@@ -329,7 +348,7 @@ void UT_HITLS_APP_rand_TC007(void)
     }
 
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UIO_Ctrl);
     AppUninit();
     return;
 }
@@ -356,9 +375,7 @@ int32_t STUB_CRYPT_EAL_RandInit(
 /* BEGIN_CASE */
 void UT_HITLS_APP_rand_TC008(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, CRYPT_EAL_ProviderRandInitCtx, STUB_CRYPT_EAL_RandInit);
+    STUB_REPLACE(CRYPT_EAL_ProviderRandInitCtx, STUB_CRYPT_EAL_RandInit);
     char *argv[][3] = {
         {"rand", "-hex", "10"},
     };
@@ -375,12 +392,12 @@ void UT_HITLS_APP_rand_TC008(void)
 
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(CRYPT_EAL_ProviderRandInitCtx);
     return;
 }
 /* END_CASE */
 
-int32_t STUB_CRYPT_EAL_Randbytes(void *libctx, uint8_t *byte, uint32_t len)
+int32_t STUB_CRYPT_EAL_Randbytes(CRYPT_EAL_LibCtx *libctx, uint8_t *byte, uint32_t len)
 {
     (void)byte;
     (void)len;
@@ -396,9 +413,7 @@ int32_t STUB_CRYPT_EAL_Randbytes(void *libctx, uint8_t *byte, uint32_t len)
 /* BEGIN_CASE */
 void UT_HITLS_APP_rand_TC009(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, CRYPT_EAL_RandbytesEx, STUB_CRYPT_EAL_Randbytes);
+    STUB_REPLACE(CRYPT_EAL_RandbytesEx, STUB_CRYPT_EAL_Randbytes);
     char *argv[][3] = {
         {"rand", "-hex", "10"},
     };
@@ -415,7 +430,7 @@ void UT_HITLS_APP_rand_TC009(void)
 
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(CRYPT_EAL_RandbytesEx);
     return;
 }
 /* END_CASE */
@@ -434,10 +449,8 @@ BSL_UIO *STUB_BSL_UIO_New(const BSL_UIO_Method *method)
 /* BEGIN_CASE */
 void UT_HITLS_APP_rand_TC0010(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
     ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
-    STUB_Replace(&stubInfo, BSL_UIO_New, STUB_BSL_UIO_New);
+    STUB_REPLACE(BSL_UIO_New, STUB_BSL_UIO_New);
     char *argv[][3] = {
         {"rand", "-hex", "10"},
     };
@@ -452,7 +465,7 @@ void UT_HITLS_APP_rand_TC0010(void)
     }
 
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UIO_New);
     AppUninit();
     return;
 }
@@ -471,9 +484,7 @@ char *STUB_HITLS_APP_OptGetValueStr(void)
 /* BEGIN_CASE */
 void UT_HITLS_APP_rand_TC0011(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptGetValueStr, STUB_HITLS_APP_OptGetValueStr);
+    STUB_REPLACE(HITLS_APP_OptGetValueStr, STUB_HITLS_APP_OptGetValueStr);
     char *argv[][4] = {{"rand", "-out", "1.txt", "10"}};
 
     OptTestData testData[] = {
@@ -488,7 +499,7 @@ void UT_HITLS_APP_rand_TC0011(void)
 
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptGetValueStr);
     return;
 }
 /* END_CASE */
@@ -510,9 +521,7 @@ int32_t STUB_HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t outLen, 
 /* BEGIN_CASE */
 void UT_HITLS_APP_rand_TC0012(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptWriteUio, STUB_HITLS_APP_OptWriteUio);
+    STUB_REPLACE(HITLS_APP_OptWriteUio, STUB_HITLS_APP_OptWriteUio);
     char *argv[][4] = {{"rand", "-out", "1.txt", "10"}};
 
     OptTestData testData[] = {
@@ -527,7 +536,7 @@ void UT_HITLS_APP_rand_TC0012(void)
 
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptWriteUio);
     return;
 }
 /* END_CASE */
@@ -590,11 +599,9 @@ void UT_HITLS_APP_rand_TC0014(void)
 #else
     system("rm -rf " WORK_PATH);
     system("mkdir -p " WORK_PATH);
-    STUB_Init();
-    FuncStubInfo stubInfo[3] = {0};
-    STUB_Replace(&stubInfo[0], BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);
-    STUB_Replace(&stubInfo[1], HITLS_APP_SM_IntegrityCheck, STUB_HITLS_APP_SM_IntegrityCheck);
-    STUB_Replace(&stubInfo[2], HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);
+    STUB_REPLACE(BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);
+    STUB_REPLACE(HITLS_APP_SM_IntegrityCheck, STUB_HITLS_APP_SM_IntegrityCheck);
+    STUB_REPLACE(HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);
     char *argv[] = {"rand", SM_PARAM, "-hex", "10", NULL};
 
     ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
@@ -602,9 +609,9 @@ void UT_HITLS_APP_rand_TC0014(void)
 
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo[0]);
-    STUB_Reset(&stubInfo[1]);
-    STUB_Reset(&stubInfo[2]);
+    STUB_RESTORE(BSL_UI_ReadPwdUtil);
+    STUB_RESTORE(HITLS_APP_SM_IntegrityCheck);
+    STUB_RESTORE(HITLS_APP_SM_RootUserCheck);
     system("rm -rf " WORK_PATH);
 #endif
     return;

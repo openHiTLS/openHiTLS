@@ -17,7 +17,7 @@
 /* INCLUDE_BASE test_suite_tls13_consistency_rfc8446 */
 
 #include <stdio.h>
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "hitls.h"
 #include "hitls_config.h"
 #include "hitls_error.h"
@@ -64,13 +64,6 @@ int32_t STUB_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, u
     return HITLS_SUCCESS;
 }
 
-#ifdef HITLS_BSL_SAL_LINUX
-// On Linux, __real_REC_Write is created by --wrap linker flag
-extern int32_t __real_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num);
-#else
-// On macOS/Darwin, use REC_Write directly (no --wrap support)
-extern int32_t REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num);
-#endif
 
 /** @
 * @test  UT_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC001

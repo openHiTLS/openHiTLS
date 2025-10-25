@@ -19,7 +19,6 @@
 #include "securec.h"
 #include "bsl_bytes.h"
 #include "bsl_sal.h"
-#include "stub_replace.h"
 #include "hitls_error.h"
 #include "tls.h"
 #include "bsl_uio.h"

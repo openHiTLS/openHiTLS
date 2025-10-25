@@ -1389,7 +1389,7 @@ static int32_t PrepareDtlsCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
 
-#ifdef HITLS_BSL_UIO_UDP
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
 static int32_t DtlsServerCheckAndProcessCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid)
 {
     int32_t ret = HS_CheckCookie(ctx, clientHello, isCookieValid);
@@ -1417,7 +1417,7 @@ static int32_t DtlsServerCheckAndProcessCookie(TLS_Ctx *ctx, const ClientHelloMs
     }
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_BSL_UIO_UDP */
+#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
 
 // The server processes the DTLS client hello message.
 #ifdef HITLS_TLS_PROTO_DTLS12

@@ -16,7 +16,7 @@
 #define HITLS_APP_ENC_H
 
 #include <stdint.h>
-#include <linux/limits.h>
+#include <limits.h>
 #ifdef __cplusplus
 extern "C" {
 #endif

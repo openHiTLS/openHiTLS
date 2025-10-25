@@ -21,7 +21,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <securec.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "bsl_ui.h"
 #include "bsl_uio.h"
 #include "app_utils.h"
@@ -54,7 +54,7 @@ const HITLS_CmdOption g_genrsaOpts[] = {
     {"cipher", HITLS_APP_OPT_CIPHER, HITLS_APP_OPT_VALUETYPE_STRING, "Secret key cryptography"},
     {"out", HITLS_APP_OPT_OUT_FILE, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output the rsa key to specified file"},
     {"numbits", HITLS_APP_OPT_NUMBITS, HITLS_APP_OPT_VALUETYPE_PARAMTERS, "RSA key length, command line tail value"},
-    {NULL}
+    {NULL, 0, 0, NULL}
 };
 
 uint8_t g_e[] = {0x01, 0x00, 0x01}; // Default E value

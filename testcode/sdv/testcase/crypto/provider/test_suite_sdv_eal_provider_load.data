@@ -1,54 +1,54 @@
 SDV_CRYPTO_PROVIDER_LOAD_TC001
-SDV_CRYPTO_PROVIDER_LOAD_TC001:"../testdata/provider/path1":"../testdata/provider/path2":"provider_load_test1":"provider_load_test2":"provider_load_test_no_init":"provider_load_test_no_fullfunc":2:1
+SDV_CRYPTO_PROVIDER_LOAD_TC001:"provider_test_data/path1":"provider_test_data/path2":"provider_load_test1":"provider_load_test2":"provider_load_test_no_init":"provider_load_test_no_fullfunc":2:1
 SDV_CRYPTO_PROVIDER_LOAD_TC002
 SDV_CRYPTO_PROVIDER_LOAD_TC002:
 SDV_CRYPTO_PROVIDER_LOAD_TC003
-SDV_CRYPTO_PROVIDER_LOAD_TC003:"../testdata/provider/path1":BSL_SAL_LIB_FMT_LIBSO:"provider_load_test1":"provider=test1,compare1=one,cpmpare3=three"
+SDV_CRYPTO_PROVIDER_LOAD_TC003:"provider_test_data/path1":BSL_SAL_LIB_FMT_LIBSO:"provider_load_test1":"provider=test1,compare1=one,cpmpare3=three"
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #1
-SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1":1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1":1415926
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #2
-SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider=test2":5358979
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2:"provider=test2":5358979
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #3
-SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider!=test2":1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2:"provider!=test2":1415926
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #4
-SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1,provider!=test2":1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1,provider!=test2":1415926
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #5
-SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1,compare2?two":1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1,compare2?two":1415926
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #6
-SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1,provider=test1,compare2?two":1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1,provider=test1,compare2?two":1415926
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #7
-SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1,compare2?two,compare4?four":1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1,compare2?two,compare4?four":1415926
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #8
-SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"compare1?one,compare2?two":5358979
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2:"compare1?one,compare2?two":5358979
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #9
-SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:"compare1?one,cpmpare3?three,cpmpare3?three,compare2?two":1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2:"compare1?one,cpmpare3?three,cpmpare3?three,compare2?two":1415926
 
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002
-SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2:1415926
+SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2:1415926
 
 SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001
-SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001:"../testdata/provider/path1":"provider_load_test_providerNoInit":2
+SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC001:"provider_test_data/path1":"provider_load_test_providerNoInit":2
 
 SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002
-SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002:"../testdata/provider/path1":"provider_load_test_providerNoFree":2
+SDV_CRYPTO_PROVIDER_LOAD_UNINSTALL_TC002:"provider_test_data/path1":"provider_load_test_providerNoFree":2
 
 SDV_CRYPTO_PROVIDER_LOAD_DEFAULT_TC001
-SDV_CRYPTO_PROVIDER_LOAD_DEFAULT_TC001:"../testdata/provider/path1":"provider_load_test1":2:"a4bc10b1a62c96d459fbaf3a5aa3face73":"d7e6634723ac25cb1879bdb1508da05313530419013fe255967a39e1"
+SDV_CRYPTO_PROVIDER_LOAD_DEFAULT_TC001:"provider_test_data/path1":"provider_load_test1":2:"a4bc10b1a62c96d459fbaf3a5aa3face73":"d7e6634723ac25cb1879bdb1508da05313530419013fe255967a39e1"
 
 SDV_CRYPTO_PROVIDER_GET_CAPS_TC001
 SDV_CRYPTO_PROVIDER_GET_CAPS_TC001:
 
 SDV_CRYPTO_PROVIDER_PROC_ALL_TC001
-SDV_CRYPTO_PROVIDER_PROC_ALL_TC001:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2
+SDV_CRYPTO_PROVIDER_PROC_ALL_TC001:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2
 
 SDV_CRYPTO_PROVIDER_PROC_ALL_TC002
-SDV_CRYPTO_PROVIDER_PROC_ALL_TC002:"../testdata/provider/path1":"provider_load_test1":"provider_load_test2":2
+SDV_CRYPTO_PROVIDER_PROC_ALL_TC002:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2
 
 SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001
-SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001:"../testdata/provider/path1":"provider_get_cap_test1":2
+SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001:"provider_test_data/path1":"provider_get_cap_test1":2
 
 SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC002
-SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC002:"../testdata/provider/path1":"provider_get_cap_test1":2
+SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC002:"provider_test_data/path1":"provider_get_cap_test1":2
 
 SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC003
 SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC003:

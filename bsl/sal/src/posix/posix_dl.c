@@ -20,18 +20,24 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dlfcn.h>
+#include <unistd.h>
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
 
 int32_t SAL_LoadLib(const char *fileName, void **handle)
 {
+    /* Pre-check file accessibility to distinguish "not found" from "load failure"
+     * access() is POSIX-standard and works on both Linux and macOS
+     */
+    if (access(fileName, R_OK) != 0) {
+        BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_DL_NOT_FOUND);
+        return BSL_SAL_ERR_DL_NOT_FOUND;
+    }
+
     void *tempHandle = dlopen(fileName, RTLD_NOW);
     if (tempHandle == NULL) {
-        char *error = dlerror();
-        if (strstr(error, "No such file or directory") != NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_DL_NOT_FOUND);
-            return BSL_SAL_ERR_DL_NOT_FOUND;
-        }
+        /* Clear any old error */
+        (void)dlerror(); 
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_DL_LOAD_FAIL);
         return BSL_SAL_ERR_DL_LOAD_FAIL;
     }
@@ -54,7 +60,11 @@ int32_t SAL_GetFunc(void *handle, const char *funcName, void **func)
     void *tempFunc = dlsym(handle, funcName);
     if (tempFunc == NULL) {
         char *error = dlerror();
-        if (strstr(error, "undefined symbol") != NULL) {
+        /* Check for symbol not found errors across different platforms:
+         * - Linux: "undefined symbol"
+         * - macOS: "symbol not found"
+         */
+        if (strstr(error, "undefined symbol") != NULL || strstr(error, "symbol not found") != NULL) {
             BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_DL_NON_FUNCTION);
             return BSL_SAL_ERR_DL_NON_FUNCTION;
         }

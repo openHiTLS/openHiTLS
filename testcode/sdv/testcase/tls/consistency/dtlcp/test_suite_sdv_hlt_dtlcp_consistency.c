@@ -31,7 +31,6 @@
 #include "hs_state_recv.h"
 #include "conn_init.h"
 #include "recv_process.h"
-#include "stub_replace.h"
 #include "stub_crypt.h"
 #include "frame_tls.h"
 #include "frame_msg.h"

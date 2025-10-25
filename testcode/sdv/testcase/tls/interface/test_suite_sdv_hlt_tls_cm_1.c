@@ -23,7 +23,7 @@
 #include "frame_tls.h"
 #include "frame_link.h"
 #include "alert.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "hs_common.h"
 #include "change_cipher_spec.h"
 #include "hs.h"
@@ -38,6 +38,12 @@
 uint32_t g_uiPort = 8890;
 
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET4(int32_t, BSL_UIO_Write, BSL_UIO *, const void *, uint32_t, uint32_t *);
+
 
 static HITLS_Config *GetHitlsConfigViaVersion(int ver)
 {
@@ -130,9 +136,7 @@ void SDV_TLS_CM_KEYUPDATE_FUNC_TC001(int version)
     ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_SUCCESS);
     ret = HITLS_GetKeyUpdateType(client->ssl);
     ASSERT_EQ(ret, HITLS_KEY_UPDATE_REQ_END);
-
-    FuncStubInfo tmpRpInfo = {0};
-    STUB_Replace(&tmpRpInfo, BSL_UIO_Write, STUB_BSL_UIO_Write);
+    STUB_REPLACE(BSL_UIO_Write, STUB_BSL_UIO_Write);;
     ret = HITLS_KeyUpdate(client->ssl, HITLS_UPDATE_REQUESTED);
     ASSERT_EQ(ret, HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_ERR_IO_EXCEPTION);
@@ -142,6 +146,6 @@ EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(BSL_UIO_Write);
 }
 /* END_CASE */

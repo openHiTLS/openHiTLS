@@ -76,32 +76,58 @@ usage()
     printf "%-50s %-30s\n" "Build openHiTLS Code With Help"            "sh build_hitls.sh help"
 }
 
+# ============================================================
+# Clean Build Directory
+# ============================================================
+# Function: clean
+# Purpose: Remove and recreate build directory for fresh build
+# ============================================================
 clean()
 {
     rm -rf ${HITLS_ROOT_DIR}/build
     mkdir ${HITLS_ROOT_DIR}/build
 }
 
-down_depend_code()
+# ============================================================
+# Ensure Secure_C Submodule is Ready
+# ============================================================
+# Function: ensure_securec_ready
+# Purpose: Check and initialize Secure_C git submodule if needed
+# Note: Actual build happens via CMake (platform/SecureC.cmake)
+#       This function only ensures the source code is available
+# ============================================================
+ensure_securec_ready()
 {
-    if [ ! -d "${HITLS_ROOT_DIR}/platform" ]; then
-        cd ${HITLS_ROOT_DIR}
-        mkdir platform
+    local securec_src_dir="${HITLS_ROOT_DIR}/platform/Secure_C/src"
+    local securec_lib_file="${HITLS_ROOT_DIR}/platform/Secure_C/lib/libboundscheck.a"
+
+    echo "======================================================================"
+    echo "Checking Secure_C dependency..."
+    echo "======================================================================"
+
+    # Initialize submodule if source not present
+    if [ ! -d "${securec_src_dir}" ]; then
+        echo "[INFO] Secure_C submodule not initialized, initializing..."
+        cd "${HITLS_ROOT_DIR}"
+
+        if ! git submodule update --init platform/Secure_C; then
+            echo "[ERROR] Failed to initialize Secure_C submodule"
+            echo "[ERROR] Please check your git configuration and network connection"
+            exit 1
+        fi
+
+        echo "[SUCCESS] Secure_C submodule initialized"
+    else
+        echo "[INFO] Secure_C submodule already initialized"
     fi
 
-    if [ ! -d "${HITLS_ROOT_DIR}/platform/Secure_C/src" ]; then
-        cd ${HITLS_ROOT_DIR}/platform
-        git clone https://gitee.com/openeuler/libboundscheck.git Secure_C
+    # Report build status
+    if [ -f "${securec_lib_file}" ]; then
+        echo "[INFO] Securec library already built: ${securec_lib_file}"
+    else
+        echo "[INFO] Securec will be built by CMake during hitls build"
     fi
-}
-
-build_depend_code()
-{
-    if [ ! -d "${HITLS_ROOT_DIR}/platform/Secure_C/lib" ]; then
-        mkdir -p ${HITLS_ROOT_DIR}/platform/Secure_C/lib
-        cd ${HITLS_ROOT_DIR}/platform/Secure_C
-        make -j
-    fi
+    echo ""
 }
 
 build_hitls_code()
@@ -125,9 +151,12 @@ build_hitls_code()
 
     # On Linux, we need -ldl for dlopen() and related functions
     # On macOS, libdl functionality is part of libSystem, so -ldl is not needed (and causes duplicate warnings)
+    # On macOS, also need -fno-inline to prevent inlining (required for STUB interception to work)
     link_flags=""
     if [[ "$(uname)" != "Darwin" ]]; then
         link_flags="--add_link_flags=\"-ldl\""
+    else
+        add_options="${add_options} -fno-inline"
     fi
 
     if [[ $get_arch = "x86_64" ]]; then
@@ -148,7 +177,19 @@ build_hitls_code()
         echo "Compile: env=$get_arch, c, little endian, 64bits"
         python3 ../configure.py ${build_options} --lib_type ${LIB_TYPE} --enable all --add_options="$add_options" --del_options="$del_options" ${link_flags} ${enable_sctp} ${dis_options}
     fi
-    cmake ..
+
+    # macOS-specific flags for STUB test mechanism compatibility
+    # On macOS, use flat namespace + interposable to allow test STUB wrappers to intercept library internal calls
+    # -flat_namespace: Changes symbol resolution order (matches Linux behavior)
+    # -Wl,-interposable: Forces all function calls through PLT, even intra-module calls (prevents direct jumps)
+    # This combination ensures STUB mechanism can intercept same-compilation-unit calls
+    # ONLY needed for test builds - Production builds use default two-level namespace
+    if [[ "$(uname)" = "Darwin" ]]; then
+        cmake .. -DCMAKE_SHARED_LINKER_FLAGS="-flat_namespace -undefined dynamic_lookup -Wl,-interposable" \
+                 -DCMAKE_EXE_LINKER_FLAGS="-flat_namespace -undefined dynamic_lookup"
+    else
+        cmake ..
+    fi
     make -j
 }
 
@@ -199,7 +240,7 @@ parse_option()
                 add_options="${add_options} ${value}"
                 ;;
             "no-provider")
-                dis_options="--disable feature_provider provider codecs"
+                dis_options="--disable feature_provider provider codecs codecsdata key_decode_chain"
                 ;;
             "gcov")
                 add_options="${add_options} -fno-omit-frame-pointer -fprofile-arcs -ftest-coverage -fdump-rtl-expand"
@@ -291,8 +332,7 @@ parse_option()
 
 clean
 parse_option
-down_depend_code
-build_depend_code
+ensure_securec_ready
 
 # Always build main library
 build_hitls_code

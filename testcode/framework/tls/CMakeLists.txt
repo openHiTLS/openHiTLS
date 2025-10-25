@@ -85,7 +85,6 @@ aux_source_directory(${openHiTLS_SRC}/testcode/framework/tls/rpc/src RPC_SRC)
 aux_source_directory(${openHiTLS_SRC}/testcode/framework/tls/transfer/src TRANSFER_SRC)
 aux_source_directory(${openHiTLS_SRC}/testcode/framework/tls/callback/src CALLBACK_SRC)
 aux_source_directory(${openHiTLS_SRC}/testcode/framework/tls/func_wrapper/src WRAPPER_SRC)
-SET(WRAPPER_SRC ${WRAPPER_SRC} ${openHiTLS_SRC}/testcode/framework/stub/stub_replace.c)
 
 target_compile_options(TLS_TEST_INTF INTERFACE -g)
 
@@ -97,12 +96,14 @@ add_library(${DT_LIBNAME}
     STATIC
     ${BASE_SRC}  ${CALLBACK_SRC} ${CRYPT_SRC} ${IO_SRC} ${FRAME_SRC} ${MSG_SRC})
 target_link_libraries(${DT_LIBNAME} PRIVATE TLS_TEST_INTF)
-add_library(${WRAPPER_LIBNAME}
-    STATIC
-    ${WRAPPER_SRC})
-target_link_libraries(${WRAPPER_LIBNAME} PRIVATE TLS_TEST_INTF)
 
-set_target_properties(${HLT_LIBNAME} ${DT_LIBNAME} ${WRAPPER_LIBNAME}
+# compile wrapper source directly into test executables use cmake library type INTERFACE
+# This ensures REC_Write/REC_Read wrappers can override library symbols on all platforms
+add_library(${WRAPPER_LIBNAME} INTERFACE)
+target_sources(${WRAPPER_LIBNAME} INTERFACE ${WRAPPER_SRC})
+target_link_libraries(${WRAPPER_LIBNAME} INTERFACE TLS_TEST_INTF)
+
+set_target_properties(${HLT_LIBNAME} ${DT_LIBNAME}
     PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${openHiTLS_SRC}/testcode/output/lib"
 )

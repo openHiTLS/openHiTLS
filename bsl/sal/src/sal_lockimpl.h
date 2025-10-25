@@ -117,7 +117,7 @@ typedef struct PiDCallback {
 int32_t SAL_PiDCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 #endif
 
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
 #ifdef HITLS_BSL_SAL_LOCK
 int32_t SAL_RwLockNew(BSL_SAL_ThreadLockHandle *lock);
 
@@ -131,7 +131,7 @@ void SAL_RwLockFree(BSL_SAL_ThreadLockHandle rwLock);
 #endif
 
 #ifdef HITLS_BSL_SAL_THREAD
-int32_t SAL_PthreadRunOnce(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine initFunc);
+int32_t SAL_PthreadRunOnce(BSL_SAL_OnceControl *onceControl, BSL_SAL_ThreadInitRoutine initFunc);
 
 uint64_t SAL_GetThreadId(void);
 #endif

@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include "securec.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "test.h"
 #include "bsl_uio.h"
 #include "bsl_types.h"
@@ -37,6 +37,14 @@
 #include "bsl_ui.h"
 
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET5(int32_t, BSL_UI_ReadPwdUtil, BSL_UI_ReadPwdParam *, char *, uint32_t *, const BSL_UI_CheckDataCallBack, void *);
+STUB_DEFINE_RET1(int32_t, HITLS_APP_SM_IntegrityCheck, AppProvider *);
+STUB_DEFINE_RET0(int32_t, HITLS_APP_SM_RootUserCheck);
+
 #define KDF_MAX_ARGC 22
 #define MAX_BUFSIZE (1024 * 8)
 #define WORK_PATH "./kdf_workpath"
@@ -54,7 +62,7 @@
 #define HITLS_SM_PROVIDER_PATH "../../output/CMVP/x86_64/lib"
 #endif
 
-#define HITLS_SM_LIB_NAME "libhitls_sm.so"
+#define HITLS_SM_LIB_NAME "libhitls_sm." BSL_SAL_DL_EXT
 #define HITLS_SM_PROVIDER_ATTR "provider=sm"
 
 #define SM_PARAM \
@@ -101,8 +109,9 @@ static int32_t STUB_BSL_UI_ReadPwdUtil(BSL_UI_ReadPwdParam *param, char *buff, u
     return BSL_SUCCESS;
 }
 
-static int32_t STUB_HITLS_APP_SM_IntegrityCheck(void)
+static int32_t STUB_HITLS_APP_SM_IntegrityCheck(AppProvider *provider)
 {
+    (void)provider;
     return HITLS_APP_SUCCESS;
 }
 
@@ -232,11 +241,9 @@ void UT_HITLS_APP_kdf_TC003(char *outFile, Hex *expectData)
 #else
     system("rm -rf " WORK_PATH);
     system("mkdir -p " WORK_PATH);
-    STUB_Init();
-    FuncStubInfo stubInfo[3] = {0};
-    STUB_Replace(&stubInfo[0], BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);
-    STUB_Replace(&stubInfo[1], HITLS_APP_SM_IntegrityCheck, STUB_HITLS_APP_SM_IntegrityCheck);
-    STUB_Replace(&stubInfo[2], HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);
+    STUB_REPLACE(BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);;
+    STUB_REPLACE(HITLS_APP_SM_IntegrityCheck, STUB_HITLS_APP_SM_IntegrityCheck);;
+    STUB_REPLACE(HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);;
 
     char *argv[] = {"kdf", SM_PARAM, "-mac", "hmac-sm3", "-pass", "passwordPASSWORDpassword",
         "-salt", "saltSALTsaltSALTsaltSALTsaltSALTsalt", "-keylen", "40", "-out", outFile,
@@ -246,9 +253,9 @@ void UT_HITLS_APP_kdf_TC003(char *outFile, Hex *expectData)
     ASSERT_EQ(CompareOutByData(outFile, expectData), HITLS_APP_SUCCESS);
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo[0]);
-    STUB_Reset(&stubInfo[1]);
-    STUB_Reset(&stubInfo[2]);
+    STUB_RESTORE(HITLS_APP_SM_RootUserCheck);
+    STUB_RESTORE(HITLS_APP_SM_RootUserCheck);
+    STUB_RESTORE(HITLS_APP_SM_RootUserCheck);
     system("rm -rf " WORK_PATH);
     remove(outFile);
 #endif

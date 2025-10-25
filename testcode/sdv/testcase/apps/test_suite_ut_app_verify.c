@@ -29,8 +29,19 @@
 #include "app_help.h"
 #include "app_print.h"
 #include "app_utils.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET3(int32_t, HITLS_APP_OptBegin, int32_t, char **, const HITLS_CmdOption *);
+STUB_DEFINE_RET0(char *, HITLS_APP_OptGetValueStr);
+STUB_DEFINE_RET3(int32_t, HITLS_X509_CertParseBundleFile, int32_t, const char *, HITLS_X509_List **);
+STUB_DEFINE_RET4(int32_t, HITLS_X509_StoreCtxCtrl, HITLS_X509_StoreCtx *, int32_t, void *, uint32_t);
+STUB_DEFINE_RET0(HITLS_X509_StoreCtx *, HITLS_X509_StoreCtxNew);
+STUB_DEFINE_RET2(int32_t, HITLS_X509_CertVerify, HITLS_X509_StoreCtx *, HITLS_X509_List *);
+
 
 #define MAX_CRLFILE_SIZE (256 * 1024)
 #define CAFILE_PATH "../testdata/certificate/VerifyCAfile/root_trust.ca"
@@ -125,9 +136,7 @@ int32_t STUB_HITLS_APP_OptBegin(int32_t argc, char **argv, const HITLS_CmdOption
 /* BEGIN_CASE */
 void UT_HITLS_APP_verify_TC003(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptBegin, STUB_HITLS_APP_OptBegin);
+    STUB_REPLACE(HITLS_APP_OptBegin, STUB_HITLS_APP_OptBegin);;
 
     char *argv[][100] = {
         {"verify", "-CAfile", CAFILE_PATH, CERT_PATH},
@@ -144,7 +153,7 @@ void UT_HITLS_APP_verify_TC003(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptBegin);
     return;
 }
 /* END_CASE */
@@ -171,9 +180,7 @@ char *STUB_HITLS_APP_OptGetValueStr(void)
 /* BEGIN_CASE */
 void UT_HITLS_APP_verify_TC005(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptGetValueStr, STUB_HITLS_APP_OptGetValueStr);
+    STUB_REPLACE(HITLS_APP_OptGetValueStr, STUB_HITLS_APP_OptGetValueStr);;
     char *argv[][100] = {{"verify", "-CAfile", CAFILE_PATH, CERT_PATH}};
 
     OptTestData testData[] = {
@@ -188,7 +195,7 @@ void UT_HITLS_APP_verify_TC005(void)
 
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptGetValueStr);
     return;
 }
 /* END_CASE */
@@ -209,9 +216,7 @@ int32_t STUB_HITLS_X509_CertMulParseFile(int32_t format, const char *path, HITLS
 /* BEGIN_CASE */
 void UT_HITLS_APP_verify_TC006(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_X509_CertParseBundleFile, STUB_HITLS_X509_CertMulParseFile);
+    STUB_REPLACE(HITLS_X509_CertParseBundleFile, STUB_HITLS_X509_CertMulParseFile);;
     char *argv[][100] = {{"verify", "-CAfile", CAFILE_PATH, CERT_PATH}};
 
     OptTestData testData[] = {
@@ -225,7 +230,7 @@ void UT_HITLS_APP_verify_TC006(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_X509_CertParseBundleFile);
     return;
 }
 /* END_CASE */
@@ -251,9 +256,7 @@ int32_t STUB_HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd,
 /* BEGIN_CASE */
 void UT_HITLS_APP_verify_TC008(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_X509_StoreCtxCtrl, STUB_HITLS_X509_StoreCtxCtrl);
+    STUB_REPLACE(HITLS_X509_StoreCtxCtrl, STUB_HITLS_X509_StoreCtxCtrl);;
     char *argv[][100] = {{"verify", "-CAfile", CAFILE_PATH, CERT_PATH}};
 
     OptTestData testData[] = {
@@ -267,7 +270,7 @@ void UT_HITLS_APP_verify_TC008(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_X509_StoreCtxCtrl);
     return;
 }
 /* END_CASE */
@@ -285,9 +288,7 @@ HITLS_X509_StoreCtx *STUB_HITLS_X509_StoreCtxNew(void)
 /* BEGIN_CASE */
 void UT_HITLS_APP_verify_TC009(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_X509_StoreCtxNew, STUB_HITLS_X509_StoreCtxNew);
+    STUB_REPLACE(HITLS_X509_StoreCtxNew, STUB_HITLS_X509_StoreCtxNew);;
     char *argv[][100] = {{"verify", "-CAfile", CAFILE_PATH, CERT_PATH}};
 
     OptTestData testData[] = {
@@ -301,7 +302,7 @@ void UT_HITLS_APP_verify_TC009(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_X509_StoreCtxNew);
     return;
 }
 /* END_CASE */
@@ -320,9 +321,7 @@ int32_t STUB_HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Lis
 /* BEGIN_CASE */
 void UT_HITLS_APP_verify_TC0010(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_X509_CertVerify, STUB_HITLS_X509_CertVerify);
+    STUB_REPLACE(HITLS_X509_CertVerify, STUB_HITLS_X509_CertVerify);;
     char *argv[][50] = {{"verify", "-CAfile", CAFILE_PATH, CERT_PATH}};
 
     OptTestData testData[] = {
@@ -336,7 +335,7 @@ void UT_HITLS_APP_verify_TC0010(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_X509_CertVerify);
     return;
 }
 /* END_CASE */

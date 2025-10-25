@@ -20,7 +20,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <securec.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "app_errno.h"
 #include "app_print.h"
 #include "app_opt.h"
@@ -52,7 +52,7 @@ const HITLS_CmdOption g_pKeyOpts[] = {
     {"passout", HITLS_APP_OPT_PASSOUT, HITLS_APP_OPT_VALUETYPE_STRING, "Output file pass phrase source"},
     {"text", HITLS_APP_OPT_TEXT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print key in text(only RSA is supported)"},
     {"noout", HITLS_APP_OPT_NOOUT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Do not output the key in encoded form"},
-    {NULL},
+    {NULL, 0, 0, NULL},
 };
 
 typedef struct {

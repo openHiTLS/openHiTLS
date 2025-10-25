@@ -19,12 +19,17 @@
 #include "crypt_types.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_errno.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "crypt_eal_rand.h"
 #include "securec.h"
 #include "crypt_util_rand.h"
 #include "crypt_encode_internal.h"
 #include "crypt_dsa.h"
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET3(int32_t, BN_RandRangeEx, void *, BN_BigNum *, const BN_BigNum *);
 
 #define ERR_BAD_RAND 1
 #define RAND_BUF_LEN 2048

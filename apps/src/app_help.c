@@ -21,7 +21,7 @@
 
 HITLS_CmdOption g_helpOptions[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Usage: help [options]"},
-    {NULL}
+    {NULL, 0, 0, NULL}
 };
 
 int HITLS_HelpMain(int argc, char *argv[])

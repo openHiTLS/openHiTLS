@@ -69,7 +69,7 @@ static const HITLS_CmdOption g_encOpts[] = {
 #ifdef HITLS_APP_SM_MODE
     HITLS_SM_OPTIONS,
 #endif
-    {NULL}
+    {NULL, 0, 0, NULL}
 };
 
 static const HITLS_CipherAlgList g_cIdList[] = {

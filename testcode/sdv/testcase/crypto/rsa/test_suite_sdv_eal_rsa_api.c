@@ -67,10 +67,9 @@ EXIT:
 void SDV_CRYPTO_RSA_NEW_API_TC002(int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
-    FuncStubInfo tmpRpInfo = {0};
 
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, malloc_fail) == 0);
+    
+    STUB_REPLACE(BSL_SAL_Malloc, malloc_fail);
 
     TestMemInit();
 
@@ -78,7 +77,7 @@ void SDV_CRYPTO_RSA_NEW_API_TC002(int isProvider)
     ASSERT_TRUE(pkey == NULL);
 
 EXIT:
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(BSL_SAL_Malloc); STUB_RESTORE(BN_Gcd);
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
@@ -1481,20 +1480,20 @@ void SDV_CRYPTO_RSA_NOR_KEYGEN_FAIL_TC001(int isProvider)
     CRYPT_EAL_PkeyPara para = {0};
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     TestMemInit();
-    STUB_Init();
-    FuncStubInfo tmpRpInfo = {0};
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
     SetRsaPara(&para, e, 3, 1024);
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
-    STUB_Replace(&tmpRpInfo, BN_Gcd, STUB_Gcd);
+    STUB_REPLACE(BN_Gcd, STUB_Gcd);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_RSA_NOR_KEYGEN_FAIL);
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(BSL_SAL_Malloc); STUB_RESTORE(BN_Gcd);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(BSL_SAL_Malloc); STUB_RESTORE(BN_Gcd);
 }
 /* END_CASE */
 
@@ -1517,6 +1516,7 @@ void SDV_CRYPTO_RSA_SEED_KEYGEN_TC001(Hex *xp, Hex *xp1, Hex *xp2, Hex *xq, Hex 
 {
 #ifdef HITLS_CRYPTO_ACVP_TESTS
     TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     uint8_t e[] = {1, 0, 1};
     uint32_t bits = 1024;
     

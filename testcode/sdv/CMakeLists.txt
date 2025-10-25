@@ -21,65 +21,61 @@ set(TEST_SOURCE
     ${openHiTLS_SRC}/testcode/framework/gen_test/test.c
     ${openHiTLS_SRC}/testcode/framework/crypto/alg_check.c
     ${openHiTLS_SRC}/testcode/framework/crypto/crypto_test_util.c
-    ${openHiTLS_SRC}/testcode/framework/stub/stub_replace.c
 )
 
 add_library(TEST_INTF INTERFACE)
-add_library(TEST_INTF_SHARED INTERFACE)
 
 if(ENABLE_PRINT)
     target_compile_options(TEST_INTF INTERFACE -DPRINT_TO_TERMINAL)
-    target_compile_options(TEST_INTF_SHARED INTERFACE -DPRINT_TO_TERMINAL)
 endif()
 if(ENABLE_FAIL_REPEAT)
     target_compile_options(TEST_INTF INTERFACE -DFAIL_REPEAT_RUN)
-    target_compile_options(TEST_INTF_SHARED INTERFACE -DFAIL_REPEAT_RUN)
 endif()
+
 target_link_directories(TEST_INTF INTERFACE
     ${openHiTLS_SRC}/build
     ${openHiTLS_SRC}/testcode/output/lib
     ${openHiTLS_SRC}/platform/Secure_C/lib
 )
-target_link_directories(TEST_INTF_SHARED INTERFACE
-    ${openHiTLS_SRC}/build
-    ${openHiTLS_SRC}/testcode/output/lib
-    ${openHiTLS_SRC}/platform/Secure_C/lib
-)
 
-# link libs
+# Link libraries - cross-platform shared library configuration
+# Use library names without extensions; CMake handles platform-specific suffixes
+# macOS: .dylib, Linux: .so
 set(TEST_INTF_LIBS "")
-set(TEST_INTF_SHARED_LIBS "")
 
-if(APPS)
-    list(APPEND TEST_INTF_LIBS hitls_apps)
-    list(APPEND TEST_INTF_SHARED_LIBS hitls_apps)
-endif()
 
 if(ENABLE_TLS AND ${BUILD_TLS} GREATER -1)
-    list(APPEND TEST_INTF_LIBS tls_hlt tls_frame libhitls_tls.a rec_wrapper)
-    list(APPEND TEST_INTF_SHARED_LIBS tls_hlt tls_frame libhitls_tls.so rec_wrapper)
+    list(APPEND TEST_INTF_LIBS tls_hlt tls_frame hitls_tls rec_wrapper)
 endif()
 
 if(ENABLE_PKI AND ${BUILD_PKI} GREATER -1)
-    list(APPEND TEST_INTF_LIBS libhitls_pki.a)
-    list(APPEND TEST_INTF_SHARED_LIBS libhitls_pki.so)
+    list(APPEND TEST_INTF_LIBS hitls_pki)
 endif()
 
 if(ENABLE_AUTH AND ${BUILD_AUTH} GREATER -1)
-    list(APPEND TEST_INTF_LIBS libhitls_auth.a)
-    list(APPEND TEST_INTF_SHARED_LIBS libhitls_auth.so)
+    list(APPEND TEST_INTF_LIBS hitls_auth)
 endif()
 
 if(ENABLE_CRYPTO AND ${BUILD_CRYPTO} GREATER -1)
-    list(APPEND TEST_INTF_LIBS libhitls_crypto.a)
-    list(APPEND TEST_INTF_SHARED_LIBS libhitls_crypto.so)
+    list(APPEND TEST_INTF_LIBS hitls_crypto)
 endif()
 
-list(APPEND TEST_INTF_LIBS libhitls_bsl.a boundscheck pthread dl)
-list(APPEND TEST_INTF_SHARED_LIBS libhitls_bsl.so boundscheck pthread dl)
-
+# Use find_library to support cross-platform static library extensions (.a on Unix, .lib on Windows)
+find_library(BOUNDSCHECK_STATIC_LIB
+    NAMES libboundscheck.a boundscheck  # Try .a explicitly first, then let CMake find static version
+    PATHS ${CMAKE_SOURCE_DIR}/../platform/Secure_C/lib
+    NO_DEFAULT_PATH
+    NO_CMAKE_FIND_ROOT_PATH
+)
+if(NOT BOUNDSCHECK_STATIC_LIB)
+    message(FATAL_ERROR "Could not find static boundscheck library at ${CMAKE_SOURCE_DIR}/../platform/Secure_C/lib")
+endif()
+list(APPEND TEST_INTF_LIBS hitls_bsl ${BOUNDSCHECK_STATIC_LIB} pthread dl)
 target_link_libraries(TEST_INTF INTERFACE ${TEST_INTF_LIBS})
-target_link_libraries(TEST_INTF_SHARED INTERFACE ${TEST_INTF_SHARED_LIBS})
+
+# Shared variant inherits all configurations from TEST_INTF
+add_library(TEST_INTF_SHARED INTERFACE)
+target_link_libraries(TEST_INTF_SHARED INTERFACE TEST_INTF)
 
 set(TEST_INTF_INCLUDE_DIRS 
     ${openHiTLS_SRC}/platform/Secure_C/include
@@ -234,16 +230,74 @@ target_include_directories(TEST_INTF
         INTERFACE
         ${TEST_INTF_INCLUDE_DIRS}
 )
-target_include_directories(TEST_INTF_SHARED
-        INTERFACE
-        ${TEST_INTF_INCLUDE_DIRS}
-)
+# TEST_INTF_SHARED inherits include directories from TEST_INTF
 
+# Test case precompiled library - currently using shared library configuration
+# Future: Create separate TESTCASE_PRE if static library support is needed
 add_library(TESTCASE_PRE ${TEST_SOURCE})
-add_library(TESTCASE_PRE_SHARED ${TEST_SOURCE})
+target_link_libraries(TESTCASE_PRE PRIVATE TEST_INTF_SHARED)
 
-target_link_libraries(TESTCASE_PRE PRIVATE TEST_INTF)
-target_link_libraries(TESTCASE_PRE_SHARED PRIVATE TEST_INTF_SHARED)
+# Build apps library BEFORE test executables (must be defined before linking)
+if("${APPS}" STREQUAL "ON")
+    SET(APPS_LIB "hitls_apps")
+    aux_source_directory(${openHiTLS_SRC}/apps/src APPS_SRC)
+    # Exclude hitls.c which contains main() - conflicts with test executables
+    list(REMOVE_ITEM APPS_SRC "${openHiTLS_SRC}/apps/src/hitls.c")
+    # Build as SHARED library (dylib/so) for stub framework compatibility
+    # Stub framework uses dlsym(RTLD_NEXT) which requires dynamic symbol visibility
+    add_library(${APPS_LIB} SHARED ${APPS_SRC})
+
+    if(WIN32)
+        # Windows: .dll (not yet supported, placeholder for future implementation)
+        set(HITLS_LIB_EXT "dll")
+        message(WARNING "Windows build for apps library is not yet supported")
+    elseif(APPLE)
+        # macOS: .dylib
+        set(HITLS_LIB_EXT "dylib")
+    else()
+        # Linux/Unix: .so
+        set(HITLS_LIB_EXT "so")
+    endif()
+
+    target_link_libraries(${APPS_LIB} PRIVATE
+        ${openHiTLS_SRC}/build/libhitls_crypto.${HITLS_LIB_EXT}
+        ${openHiTLS_SRC}/build/libhitls_tls.${HITLS_LIB_EXT}
+        ${openHiTLS_SRC}/build/libhitls_pki.${HITLS_LIB_EXT}
+        ${openHiTLS_SRC}/build/libhitls_bsl.${HITLS_LIB_EXT}
+    )
+
+    # Platform-specific system libraries
+    if(WIN32)
+        # Windows system libraries (not yet supported)
+        message(WARNING "Windows build for apps library is not yet supported")
+    elseif(APPLE OR UNIX)
+        # macOS and Linux: pthread and dl
+        target_link_libraries(${APPS_LIB} PRIVATE pthread dl)
+    endif()
+
+    # Platform-specific compile options
+    if(MSVC)
+        # MSVC (Windows): Debug info + position-independent code equivalent
+        # target_compile_options(${APPS_LIB} PRIVATE /Od /Zi /DEBUG)
+        message(WARNING " Platform-specific options: Windows build for apps library is not yet supported")
+    elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+        # GCC/Clang (Linux/macOS): Debug info + position-independent code
+        target_compile_options(${APPS_LIB} PRIVATE -O0 -g3 -gdwarf-2 -fPIC)
+    endif()
+
+    target_include_directories(${APPS_LIB} PRIVATE
+        ${openHiTLS_SRC}/apps/include
+        ${openHiTLS_SRC}/apps/src
+        ${TEST_INTF_INCLUDE_DIRS}
+    )
+
+    # Output directory for shared library
+    set_target_properties(${APPS_LIB}
+        PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${openHiTLS_SRC}/testcode/output/lib"
+        RUNTIME_OUTPUT_DIRECTORY "${openHiTLS_SRC}/testcode/output/lib"  # For Windows DLL
+    )
+endif()
 
 if(GEN_TEST_FILES)
     # test1 test2 ...
@@ -264,30 +318,7 @@ else()
     message(STATUS "No file needs to be generated")
 endif()
 
-# Set library type for each test case
-# Tests that dynamically load provider libraries must use shared libraries
-# so that symbols are available when the provider is loaded
-set(TEST_SHARED_LIBS
-    test_suite_sdv_hlt_provider
-    test_suite_sdv_frame_provider
-    test_suite_sdv_hlt_base_connect
-    test_suite_sdv_hlt_tlcp_ciphersuite
-    test_suite_ut_app_kdf
-    test_suite_ut_app_keymgmt
-    test_suite_ut_app_sm
-    test_suite_ut_rand
-)
-
-# Add CMVP-specific tests only when the corresponding provider is enabled
-if(CUSTOM_CFLAGS MATCHES "-DHITLS_CRYPTO_CMVP_SM")
-    list(APPEND TEST_SHARED_LIBS test_suite_sdv_eal_sm_provider)
-endif()
-
-if(CUSTOM_CFLAGS MATCHES "-DHITLS_CRYPTO_CMVP_ISO19790")
-    list(APPEND TEST_SHARED_LIBS test_suite_sdv_eal_iso19790_provider)
-endif()
-
-# Create test cases
+# Create test cases with shared library linking for STUB framework compatibility
 foreach(test_suite ${TEST_FILES})
     get_filename_component(sdv_exe ${test_suite} NAME_WE)
     add_executable(${sdv_exe} ${openHiTLS_SRC}/testcode/output/${sdv_exe}.c)
@@ -299,23 +330,13 @@ foreach(test_suite ${TEST_FILES})
     set_target_properties(${sdv_exe} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${openHiTLS_SRC}/testcode/output"
     )
-    # Choose between static and shared libraries based on test case
-    if(${sdv_exe} IN_LIST TEST_SHARED_LIBS)
-        target_link_libraries(${sdv_exe} PRIVATE TEST_INTF_SHARED TESTCASE_PRE_SHARED)
-    else()
-        target_link_libraries(${sdv_exe} PRIVATE TEST_INTF TESTCASE_PRE)
+
+    # Use shared libraries for STUB framework (dlsym RTLD_NEXT) compatibility
+    target_link_libraries(${sdv_exe} PRIVATE TEST_INTF_SHARED TESTCASE_PRE)
+
+    # Link apps test suites against hitls_apps shared library
+    # Matches all 23 apps tests: 18 with "app" in name + dgst, enc, opt, print, rand
+    if("${APPS}" STREQUAL "ON" AND ${sdv_exe} MATCHES "test_suite_ut_(app|dgst|enc|opt|print|rand)")
+        target_link_libraries(${sdv_exe} PRIVATE hitls_apps)
     endif()
 endforeach()
-
-if("${APPS}" STREQUAL "ON")
-    SET(APPS_LIB "hitls_apps")
-    aux_source_directory(${openHiTLS_SRC}/apps/src APPS_SRC)
-    add_library(${APPS_LIB} STATIC ${APPS_SRC})
-    target_link_libraries(${APPS_LIB} PRIVATE TEST_INTF)
-    target_compile_options(${APPS_LIB} PRIVATE -O0 -g3 -gdwarf-2)
-   
-    set_target_properties(${APPS_LIB}
-        PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY "${openHiTLS_SRC}/testcode/output/lib"
-    )
-endif()

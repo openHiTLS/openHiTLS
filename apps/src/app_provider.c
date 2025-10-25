@@ -15,7 +15,7 @@
  
 #ifdef HITLS_CRYPTO_PROVIDER
 #include "app_provider.h"
-#include <linux/limits.h>
+#include <limits.h>
 #include "string.h"
 #include "securec.h"
 #include "app_errno.h"

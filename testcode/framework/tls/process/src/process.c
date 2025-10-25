@@ -161,7 +161,12 @@ void MonitorControlChannel(void)
     fd_set fdSet;
     char *endPtr = NULL;
     int ret, fdMax, index;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return;
+    }
     ControlChannelRes *channelInfo;
     channelInfo = GetControlChannelRes();
     int32_t fd = channelInfo->sockFd;
@@ -179,24 +184,33 @@ void MonitorControlChannel(void)
         }
 
         if (FD_ISSET(fd, &fdSet)) {
-            ret = ControlChannelRead(fd, &dataBuf);
+            ret = ControlChannelRead(fd, dataBuf);
             if (ret != SUCCESS) {
                 LOG_ERROR("ControlChannelRead Error");
                 continue;
             }
-            CmdData cmdData = {0};
-            ret = ParseCmdFromStr(dataBuf.data, &cmdData);
-            index = (int)strtol(cmdData.id, &endPtr, 0) % MAX_RCV_BUFFER_NUM;
-            ret = PushResultToChannelIdBuffer(channelInfo, dataBuf.data, index);
-            if (ret != SUCCESS) {
-                LOG_ERROR("PushResultToChannelRcvBuffer Error");
+            /* Allocate CmdData on heap to avoid stack overflow (2MB is too large for stack) */
+            CmdData *cmdData = (CmdData *)calloc(1, sizeof(CmdData));
+            if (cmdData == NULL) {
+                LOG_ERROR("Failed to allocate CmdData");
+                free(dataBuf);
                 return;
             }
-            LOG_DEBUG("Local Process Rcv is %s", dataBuf.data);
+            ret = ParseCmdFromStr(dataBuf->data, cmdData);
+            index = (int)strtol(cmdData->id, &endPtr, 0) % MAX_RCV_BUFFER_NUM;
+            ret = PushResultToChannelIdBuffer(channelInfo, dataBuf->data, index);
+            free(cmdData);
+            if (ret != SUCCESS) {
+                LOG_ERROR("PushResultToChannelRcvBuffer Error");
+                free(dataBuf);
+                return;
+            }
+            LOG_DEBUG("Local Process Rcv is %s", dataBuf->data);
         } else {
             LOG_ERROR("FD_ISSET Error");
         }
     }
+    free(dataBuf);
 }
 
 HLT_Process *InitSrcProcess(TLS_TYPE tlsType, char *srcDomainPath)

@@ -29,10 +29,22 @@
 #include "hitls_cert_local.h"
 #include "bsl_types.h"
 #include "crypt_errno.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "bsl_list_internal.h"
 #include "crypt_eal_rand.h"
 /* END_HEADER */
+
+/* Platform-specific dynamic library extension for testing */
+#ifdef __APPLE__
+#define BSL_SAL_DL_EXT "dylib"
+#else
+#define BSL_SAL_DL_EXT "so"
+#endif
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET4(int32_t, HITLS_PKCS12_CalMac, HITLS_PKCS12 *, BSL_Buffer *, BSL_Buffer *, BSL_Buffer *);
 
 static int32_t SetCertBag(HITLS_PKCS12 *p12, HITLS_X509_Cert *cert)
 {
@@ -329,12 +341,17 @@ EXIT:
 
 #if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_PKI_PKCS12_PARSE) && defined(HITLS_PKI_PKCS12_GEN)
 
-#define HITLS_P12_LIB_NAME "libprovider_load_p12.so"
+#define HITLS_P12_LIB_NAME "libprovider_load_p12." BSL_SAL_DL_EXT
 #define HITLS_P12_PROVIDER_ATTR "provider?=p12Load"
-#define HITLS_P12_PROVIDER_PATH "../../testcode/testdata/provider/path1"
+#define HITLS_P12_PROVIDER_PATH "provider_test_data/path1"
 
 static CRYPT_EAL_LibCtx *P12_ProviderLoadWithDefault(void)
 {
+    int32_t ret = CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+    if (ret != CRYPT_SUCCESS && ret != CRYPT_EAL_ERR_DRBG_REPEAT_INIT) {
+        ASSERT_EQ(ret, CRYPT_SUCCESS);
+    }
+
     CRYPT_EAL_LibCtx *libCtx = CRYPT_EAL_LibCtxNew();
     ASSERT_TRUE(libCtx != NULL);
 
@@ -385,7 +402,6 @@ void SDV_PKCS12_PARSE_WITH_PROVIDER_TC001(Hex *mulBag)
     CRYPT_EAL_LibCtx *libCtx = NULL;
     libCtx = P12_ProviderLoadWithDefault();
     ASSERT_TRUE(libCtx != NULL);
-    FuncStubInfo tmpRpInfo = {0};
     
     char *pwd = "123456";
     BSL_Buffer encPwd = {.data = (uint8_t *)pwd, .dataLen = strlen(pwd)};
@@ -394,8 +410,7 @@ void SDV_PKCS12_PARSE_WITH_PROVIDER_TC001(Hex *mulBag)
     BSL_Buffer buffer = {.data = (uint8_t *)mulBag->x, .dataLen = mulBag->len};
     ASSERT_EQ(HITLS_PKCS12_ProviderParseBuff(libCtx, HITLS_P12_PROVIDER_ATTR, "ASN1", &buffer, &pwdParam, &p12, true),
         HITLS_PKCS12_ERR_VERIFY_FAIL); // mac has been installed.
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, HITLS_PKCS12_CalMac, STUB_HITLS_PKCS12_CalMac) == 0);
+    STUB_REPLACE(HITLS_PKCS12_CalMac, STUB_HITLS_PKCS12_CalMac);
     ASSERT_EQ(HITLS_PKCS12_ProviderParseBuff(libCtx, HITLS_P12_PROVIDER_ATTR, "ASN1", &buffer, &pwdParam, &p12, true),
         HITLS_PKI_SUCCESS);
     ASSERT_NE(p12, NULL);
@@ -407,7 +422,7 @@ EXIT:
     HITLS_PKCS12_Free(p12);
     CRYPT_EAL_RandDeinitEx(libCtx);
     CRYPT_EAL_LibCtxFree(libCtx);
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(HITLS_PKCS12_CalMac);
 #endif
 }
 /* END_CASE */
@@ -421,7 +436,6 @@ void SDV_PKCS12_ENCODE_WITH_PROVIDER_TC001(void)
 #if !defined(HITLS_PKI_PKCS12_GEN) || !defined(HITLS_CRYPTO_PROVIDER)
     SKIP_TEST();
 #else
-    CRYPT_EAL_RandDeinit();
     CRYPT_EAL_LibCtx *libCtx = NULL;
     libCtx = P12_ProviderLoadWithDefault();
     ASSERT_TRUE(libCtx != NULL);

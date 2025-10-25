@@ -30,7 +30,6 @@
 #include <sys/time.h>
 #include <sys/ioctl.h>
 #include "securec.h"
-#include "stub_replace.h"
 #include "bsl_sal.h"
 #include "sal_net.h"
 #include "bsl_errno.h"

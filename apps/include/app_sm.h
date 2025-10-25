@@ -16,7 +16,7 @@
 #define HITLS_APP_SM_H
 
 #include <stdint.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "app_provider.h"
 #ifdef __cplusplus
 extern "C" {

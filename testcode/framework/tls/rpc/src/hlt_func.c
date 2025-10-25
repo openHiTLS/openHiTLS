@@ -35,6 +35,7 @@
 #include "cert_callback.h"
 #include "sctp_channel.h"
 #include "frame_tls.h"
+#include "rec_wrapper.h"
 
 #define DOMAIN_PATH_LEN (128)
 #define CMD_MAX_LEN 1024
@@ -245,6 +246,17 @@ int HLT_TlsConnect(void *ssl)
 {
     Process *process;
     process = GetProcess();
+
+    // For local connections, register connection for wrapper tracking
+    if (process->remoteFlag == 0) {
+        RegisterConnection((TLS_Ctx *)ssl);
+
+        // If wrapper already enabled, apply it now
+        if (IsWrapperEnabled()) {
+            ApplyWrapperToConnectionEarly((TLS_Ctx *)ssl);
+        }
+    }
+
     switch (process->tlsType) {
         case HITLS:
             return HitlsConnect(ssl);
@@ -752,6 +764,8 @@ void HLT_FreeAllProcess(void)
     if (localProcess->connFd > 0) {
         close(localProcess->connFd);
     }
+    // Clear wrapper state BEFORE freeing SSL objects to prevent use-after-free
+    ClearWrapper();
     // Clear the TlsRes linked list.
     FreeTlsResList();
     // Clear CTX SSL configuration resources.
@@ -764,6 +778,8 @@ void HLT_FreeAllProcess(void)
     FreeControlChannelRes();
     // Clear local processes.
     FreeProcess();
+    // Clear connection tracking list to prevent state leakage between tests
+    ClearConnectionList();
     return;
 }
 
@@ -815,6 +831,10 @@ static int LocalProcessTlsInit(HLT_Process *process, TLS_VERSION tlsVersion,
     tlsRes->ssl = ssl;
     tlsRes->ctxId = -1; // -1 indicates that the field is discarded.
     tlsRes->sslId = -1; // -1 indicates that the field is discarded.
+
+    // Register connection for wrapper tracking
+    RegisterConnection((TLS_Ctx *)ssl);
+
     return SUCCESS;
 }
 

@@ -17,7 +17,7 @@
 /* INCLUDE_BASE test_suite_tls13_consistency_rfc8446 */
 
 #include <stdio.h>
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "hitls.h"
 #include "hitls_config.h"
 #include "hitls_error.h"
@@ -42,6 +42,12 @@
 #include "process.h"
 #include "bsl_sal.h"
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET4(int32_t, REC_Write, TLS_Ctx *, REC_Type, const uint8_t *, uint32_t);
+
 #define MAX_BUF 16384
 
 int32_t STUB_RecConnDecrypt(
@@ -55,7 +61,9 @@ int32_t STUB_RecConnDecrypt(
     return HITLS_SUCCESS;
 }
 
-int32_t STUB_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num)
+// Stub function for REC_Write - used by STUB_REPLACE in test cases
+// Note: Test cases can use stub mechanism, but framework cannot
+int32_t Stub_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num)
 {
     (void)ctx;
     (void)recordType;
@@ -63,16 +71,6 @@ int32_t STUB_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, u
     (void)num;
     return HITLS_SUCCESS;
 }
-
-#ifdef HITLS_BSL_SAL_LINUX
-// On Linux, __real_REC_Write is created by --wrap linker flag
-extern int32_t __real_REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num);
-#define REC_WRITE_FUNC __real_REC_Write
-#else
-// On macOS/Darwin, use REC_Write directly (no --wrap support)
-extern int32_t REC_Write(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num);
-#define REC_WRITE_FUNC REC_Write
-#endif
 
 static void Test_FinishToAPP(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
 {
@@ -89,7 +87,8 @@ static void Test_FinishToAPP(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint3
     ASSERT_EQ(parseLen, *len);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, FINISHED);
 
-    STUB_Replace(user, REC_WRITE_FUNC, STUB_REC_Write);
+    // Use stub mechanism directly - no ld --wrap needed
+    STUB_REPLACE(REC_Write, Stub_REC_Write);;
     memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 
@@ -1474,8 +1473,6 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC015()
 {
-    STUB_Init();
-    FuncStubInfo tmpStubInfo;
 
     int version = TLS1_3;
     int connType = TCP;
@@ -1557,15 +1554,14 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC015()
     int ret = HLT_TlsConnect(clientSsl);
     ASSERT_EQ(ret, HITLS_SUCCESS);
 
-    // he server initiates a handshake for authentication
+    // the server initiates a handshake for authentication
     ASSERT_TRUE(HLT_RpcTlsVerifyClientPostHandshake(remoteProcess, serverSslId) == HITLS_SUCCESS);
-    ;
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen;
     const char *writeBuf = "Hello world";
 
     // Enable the client to send an app message before sending the finish message.
-    RecWrapper wrapper = {TRY_SEND_FINISH, REC_TYPE_HANDSHAKE, false, &tmpStubInfo, Test_FinishToAPP};
+    RecWrapper wrapper = {TRY_SEND_FINISH, REC_TYPE_HANDSHAKE, false, NULL, Test_FinishToAPP};
     RegisterWrapper(wrapper);
 
     ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
@@ -1575,7 +1571,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_POSTHANDSHAKE_FUNC_TC015()
     ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
     HLT_TlsWrite(clientSsl, (uint8_t *)writeBuf, strlen(writeBuf));
 
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(REC_Write);
     HLT_TlsWrite(clientSsl, (uint8_t *)writeBuf, strlen(writeBuf));
 
     ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);

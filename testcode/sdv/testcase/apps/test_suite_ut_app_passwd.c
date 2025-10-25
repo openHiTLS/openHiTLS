@@ -25,9 +25,15 @@
 #include "app_print.h"
 #include "app_opt.h"
 #include "bsl_ui.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 /* INCLUDE_SOURCE  ${HITLS_ROOT_PATH}/apps/src/app_print.c ${HITLS_ROOT_PATH}/apps/src/app_passwd.c ${HITLS_ROOT_PATH}/apps/src/app_opt.c ${HITLS_ROOT_PATH}/apps/src/app_utils.c */
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET5(int32_t, BSL_UI_ReadPwdUtil, BSL_UI_ReadPwdParam *, char *, uint32_t *, const BSL_UI_CheckDataCallBack, void *);
+
 
 #define BSL_SUCCESS 0
 
@@ -56,9 +62,7 @@ int32_t STUB_BSL_UI_ReadPwdUtil(BSL_UI_ReadPwdParam *param, char *buff, uint32_t
 /* BEGIN_CASE */
 void UT_HITLS_APP_passwd_TC001(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);
+    STUB_REPLACE(BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);;
     char *argv[][10] = {
         {"passwd", "-help"},
         {"passwd", "-sha512"},
@@ -82,7 +86,7 @@ void UT_HITLS_APP_passwd_TC001(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UI_ReadPwdUtil);
     return;
 }
 /* END_CASE */
@@ -129,9 +133,7 @@ int32_t STUB_BSL_UI_ReadPwdUtilIs1024(BSL_UI_ReadPwdParam *param, char *buff, ui
 /* BEGIN_CASE */
 void UT_HITLS_APP_passwd_TC002(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtilIsZero);
+    STUB_REPLACE(BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtilIsZero);;
     char *argv[][10] = {
         {"passwd", "-sha512", "-out", "PasswdOutFile"},
     };
@@ -147,7 +149,7 @@ void UT_HITLS_APP_passwd_TC002(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UI_ReadPwdUtil);
     return;
 }
 /* END_CASE */
@@ -160,9 +162,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_passwd_TC003(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtilIs1024);
+    STUB_REPLACE(BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtilIs1024);;
     char *argv[][10] = {
         {"passwd", "-sha512", "-out", "PasswdOutFile"},
     };
@@ -178,7 +178,7 @@ void UT_HITLS_APP_passwd_TC003(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UI_ReadPwdUtil);
     return;
 }
 /* END_CASE */

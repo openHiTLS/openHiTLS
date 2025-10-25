@@ -20,7 +20,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <securec.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "app_errno.h"
 #include "app_print.h"
 #include "app_opt.h"
@@ -70,7 +70,7 @@ const HITLS_CmdOption g_reqOpts[] = {
     {"inform", HITLS_REQ_APP_OPT_INFORM, HITLS_APP_OPT_VALUETYPE_FMT_PEMDER, "Input format - DER or PEM"},
     {"out", HITLS_REQ_APP_OPT_OUT, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output file"},
     {"outform", HITLS_REQ_APP_OPT_OUTFORM, HITLS_APP_OPT_VALUETYPE_FMT_PEMDER, "Output format - DER or PEM"},
-    {NULL},
+    {NULL, 0, 0, NULL},
 };
 
 typedef struct {
@@ -326,7 +326,7 @@ static int32_t GetSignMdId(ReqOptCtx *optCtx)
     if (mdalgId == CRYPT_MD_MAX) {
         if (id == CRYPT_PKEY_ED25519) {
             mdalgId = CRYPT_MD_SHA512;
-        } else if ((id == CRYPT_PKEY_SM2)) {
+        } else if (id == CRYPT_PKEY_SM2) {
             mdalgId = CRYPT_MD_SM3;
         } else {
             mdalgId = CRYPT_MD_SHA256;

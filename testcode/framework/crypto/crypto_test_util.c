@@ -165,11 +165,25 @@ int TestRandInitEx(void *libCtx)
 
 int TestRandInit(void)
 {
-    return TestRandInitEx(NULL);
+    int32_t ret = TestRandInitEx(NULL);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    CRYPT_RandRegist(TestSimpleRand);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(TestSimpleRandEx);
+#endif
+
+    return CRYPT_SUCCESS;
 }
 
 void TestRandDeInit(void)
 {
+    CRYPT_RandRegist(NULL);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(NULL);
+#endif
+
 #ifdef HITLS_CRYPTO_PROVIDER
     CRYPT_EAL_RandDeinitEx(NULL);
 #else

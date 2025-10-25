@@ -52,12 +52,23 @@ int32_t BSL_SAL_LibNameFormat(BSL_SAL_LibFmtCmd cmd, const char *fileName, char 
     if (tempName == NULL) {
         return BSL_MALLOC_FAIL;
     }
+
+    /* Select appropriate library extension based on operating system:
+     * - Darwin (macOS/iOS): .dylib (Mach-O dynamic library format)
+     * - Linux/Unix (Linux, Solaris, AIX, FreeBSD, OpenBSD, NetBSD): .so (ELF shared object)
+     */
+#if defined(HITLS_BSL_SAL_DARWIN)
+    const char *lib_ext = "dylib";
+#else /* HITLS_BSL_SAL_LINUX and other Unix-like systems (Solaris, AIX, *BSD) */
+    const char *lib_ext = "so";
+#endif
+
     switch (cmd) {
         case BSL_SAL_LIB_FMT_SO:
-            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s.so", fileName);
+            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s.%s", fileName, lib_ext);
             break;
         case BSL_SAL_LIB_FMT_LIBSO:
-            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "lib%s.so", fileName);
+            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "lib%s.%s", fileName, lib_ext);
             break;
         case BSL_SAL_LIB_FMT_LIBDLL:
             ret = snprintf_s(tempName, dlPathLen, dlPathLen, "lib%s.dll", fileName);
@@ -92,7 +103,7 @@ int32_t BSL_SAL_LoadLib(const char *fileName, void **handle)
     if (g_dlCallback.pfLoadLib != NULL && g_dlCallback.pfLoadLib != BSL_SAL_LoadLib) {
         return g_dlCallback.pfLoadLib(fileName, handle);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_LoadLib(fileName, handle);
 #else
     return BSL_SAL_DL_NO_REG_FUNC;
@@ -108,7 +119,7 @@ int32_t BSL_SAL_UnLoadLib(void *handle)
     if (g_dlCallback.pfUnLoadLib != NULL && g_dlCallback.pfUnLoadLib != BSL_SAL_UnLoadLib) {
         return g_dlCallback.pfUnLoadLib(handle);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_UnLoadLib(handle);
 #else
     return BSL_SAL_DL_NO_REG_FUNC;
@@ -124,7 +135,7 @@ int32_t BSL_SAL_GetFuncAddress(void *handle, const char *funcName, void **func)
     if (g_dlCallback.pfGetFunc != NULL && g_dlCallback.pfGetFunc != BSL_SAL_GetFuncAddress) {
         return g_dlCallback.pfGetFunc(handle, funcName, func);
     }
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_GetFunc(handle, funcName, func);
 #else
     return BSL_SAL_DL_NO_REG_FUNC;

@@ -38,7 +38,7 @@
 #include "rec_conn.h"
 #include "session.h"
 #include "recv_process.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "frame_tls.h"
 #include "frame_msg.h"
 #include "simulate_io.h"

@@ -27,13 +27,26 @@
 #include "bsl_sal.h"
 #include "bsl_err.h"
 #include "app_rsa.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "app_utils.h"
 #include "bsl_types.h"
 #include "crypt_eal_codecs.h"
 #include "crypt_errno.h"
 
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET3(int32_t, HITLS_APP_OptBegin, int32_t, char **, const HITLS_CmdOption *);
+STUB_DEFINE_RET6(int32_t, CRYPT_EAL_DecodeBuffKey, int32_t, int32_t, BSL_Buffer *, const uint8_t *, uint32_t, CRYPT_EAL_PkeyCtx **);
+STUB_DEFINE_RET1(BSL_UIO *, BSL_UIO_New, const BSL_UIO_Method *);
+STUB_DEFINE_RET4(int32_t, BSL_UIO_Ctrl, BSL_UIO *, int32_t, int32_t, void *);
+STUB_DEFINE_RET0(char *, HITLS_APP_OptGetValueStr);
+STUB_DEFINE_RET4(int32_t, HITLS_APP_OptWriteUio, BSL_UIO *, uint8_t *, uint32_t, int32_t);
+STUB_DEFINE_RET5(int32_t, CRYPT_EAL_EncodeBuffKey, CRYPT_EAL_PkeyCtx *, const CRYPT_EncodeParam *, int32_t, int32_t, BSL_Buffer *);
+STUB_DEFINE_RET4(int32_t, HITLS_APP_Passwd, char *, int32_t, int32_t, void *);
+
 #define PRV_PATH "../testdata/certificate/rsa_key/prvKey.pem"
 #define PRV_PASSWD_PATH "../testdata/cert/asn1/keypem/rsa-pri-key-p8-2048.pem"
 #define PRV_DER_PATH "../testdata/cert/asn1/rsa2048key_pkcs1.der"
@@ -138,9 +151,7 @@ int32_t STUB_HITLS_APP_OptBegin(int32_t argc, char **argv, const HITLS_CmdOption
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T003(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptBegin, STUB_HITLS_APP_OptBegin);
+    STUB_REPLACE(HITLS_APP_OptBegin, STUB_HITLS_APP_OptBegin);;
     char *argv[][4] = {{"rsa", "-in", PRV_PATH, "-noout"}};
 
     RsaTestData testData[] = {
@@ -156,13 +167,13 @@ void UT_HITLS_APP_rsa_T003(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptBegin);
     return;
 }
 /* END_CASE */
 
-int32_t STUB_CRYPT_EAL_DecodeBuffKey(BSL_ParseFormat format, int32_t type, BSL_Buffer *encode,
-    uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey)
+int32_t STUB_CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type, BSL_Buffer *encode,
+    const uint8_t *pwd, uint32_t pwdlen, CRYPT_EAL_PkeyCtx **ealPKey)
 {
     (void)format;
     (void)type;
@@ -181,9 +192,7 @@ int32_t STUB_CRYPT_EAL_DecodeBuffKey(BSL_ParseFormat format, int32_t type, BSL_B
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T004(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, CRYPT_EAL_DecodeBuffKey, STUB_CRYPT_EAL_DecodeBuffKey);
+    STUB_REPLACE(CRYPT_EAL_DecodeBuffKey, STUB_CRYPT_EAL_DecodeBuffKey);;
     char *argv[][10] = {{"rsa", "-in", PRV_PATH, "-noout"}};
 
     RsaTestData testData[] = {
@@ -200,7 +209,7 @@ void UT_HITLS_APP_rsa_T004(void)
 
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(CRYPT_EAL_DecodeBuffKey);
     return;
 }
 /* END_CASE */
@@ -219,9 +228,7 @@ BSL_UIO *STUB_BSL_UIO_New(const BSL_UIO_Method *method)
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T005(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_UIO_New, STUB_BSL_UIO_New);
+    STUB_REPLACE(BSL_UIO_New, STUB_BSL_UIO_New);;
     char *argv[][10] = {{"rsa", "-in", PRV_PATH, "-noout"}};
 
     RsaTestData testData[] = {
@@ -236,7 +243,7 @@ void UT_HITLS_APP_rsa_T005(void)
     }
 
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UIO_New);
     return;
 }
 /* END_CASE */
@@ -258,9 +265,7 @@ int32_t STUB_BSL_UIO_Ctrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T006(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);
+    STUB_REPLACE(BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);;
     char *argv[][10] = {{"rsa", "-in", PRV_PATH, "-noout"}};
 
     RsaTestData testData[] = {
@@ -275,7 +280,7 @@ void UT_HITLS_APP_rsa_T006(void)
     }
 
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UIO_Ctrl);
     return;
 }
 /* END_CASE */
@@ -293,9 +298,7 @@ char *STUB_HITLS_APP_OptGetValueStr(void)
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T007(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptGetValueStr, STUB_HITLS_APP_OptGetValueStr);
+    STUB_REPLACE(HITLS_APP_OptGetValueStr, STUB_HITLS_APP_OptGetValueStr);;
     char *argv[][10] = {{"rsa", "-in", PRV_PATH, "-noout"}};
 
     RsaTestData testData[] = {
@@ -312,7 +315,7 @@ void UT_HITLS_APP_rsa_T007(void)
 
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptGetValueStr);
     return;
 }
 /* END_CASE */
@@ -334,9 +337,7 @@ int32_t STUB_HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t outLen, 
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T008(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptWriteUio, STUB_HITLS_APP_OptWriteUio);
+    STUB_REPLACE(HITLS_APP_OptWriteUio, STUB_HITLS_APP_OptWriteUio);;
     char *argv[][10] = {{"rsa", "-in", PRV_PATH, "-text"}};
 
     RsaTestData testData[] = {
@@ -353,7 +354,7 @@ void UT_HITLS_APP_rsa_T008(void)
 
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptWriteUio);
     return;
 }
 /* END_CASE */
@@ -399,8 +400,8 @@ EXIT:
 }
 /* END_CASE */
 
-int32_t STUB_CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, CRYPT_EncodeParam *encodeParam,
-    BSL_ParseFormat format, int32_t type, BSL_Buffer *encode)
+int32_t STUB_CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_EncodeParam *encodeParam,
+    int32_t format, int32_t type, BSL_Buffer *encode)
 {
     (void)ealPKey;
     (void)encodeParam;
@@ -418,9 +419,7 @@ int32_t STUB_CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, CRYPT_EncodePar
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T0010(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, CRYPT_EAL_EncodeBuffKey, STUB_CRYPT_EAL_EncodeBuffKey);
+    STUB_REPLACE(CRYPT_EAL_EncodeBuffKey, STUB_CRYPT_EAL_EncodeBuffKey);;
     char *argv[][10] = {{"rsa", "-in", PRV_PATH}};
 
     RsaTestData testData[] = {
@@ -437,7 +436,7 @@ void UT_HITLS_APP_rsa_T0010(void)
 
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(CRYPT_EAL_EncodeBuffKey);
     return;
 }
 /* END_CASE */
@@ -453,9 +452,7 @@ int32_t STUB_HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag, void *
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T0011(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);
+    STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
     char *argv[][10] = {
         {"rsa", "-in", PRV_PASSWD_PATH, "-noout"},
         {"rsa", "-in", PRV_DER_PATH, "-noout"},
@@ -478,7 +475,7 @@ void UT_HITLS_APP_rsa_T0011(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_Passwd);
     return;
 }
 /* END_CASE */

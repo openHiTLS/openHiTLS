@@ -707,7 +707,7 @@ static uint64_t TestTimeGetNSec(void)
 /* BEGIN_CASE */
 void SDV_BSL_TIME_GET_NSEC_FUNC_TC001(void)
 {
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     ASSERT_TRUE(BSL_SAL_TIME_GetNSec() > 0);
 #else
     ASSERT_EQ(BSL_SAL_TIME_GetNSec(), 0);

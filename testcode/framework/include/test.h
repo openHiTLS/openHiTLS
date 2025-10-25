@@ -33,6 +33,21 @@
 extern "C" {
 #endif
 
+/**
+ * Platform-specific dynamic library file extension for testing
+ *
+ * This macro provides the appropriate shared library extension for each platform
+ * and is used by test code to construct dynamic library names.
+ *
+ * - Darwin (macOS/iOS): .dylib
+ * - Linux/Unix/BSD: .so
+ */
+#ifdef __APPLE__
+#define BSL_SAL_DL_EXT "dylib"
+#else
+#define BSL_SAL_DL_EXT "so"
+#endif
+
 #define TEST_RESULT_SUCCEED 0
 #define TEST_RESULT_FAILED 1
 #define TEST_RESULT_SKIPPED 2

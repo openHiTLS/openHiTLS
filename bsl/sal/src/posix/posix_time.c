@@ -102,6 +102,11 @@ long SAL_TicksPerSec(void)
 
 uint64_t SAL_TIME_GetNSec(void)
 {
+#if defined(HITLS_BSL_SAL_DARWIN)
+    /* macOS/Darwin: Use clock_gettime_nsec_np for nanosecond precision */
+    return clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+#elif defined(HITLS_BSL_SAL_LINUX)
+    /* Linux: Use CLOCK_MONOTONIC (sufficient precision on Linux) */
     uint64_t tick = 0;
     struct timespec time;
     if (clock_gettime(CLOCK_MONOTONIC, &time) == 0) {
@@ -109,5 +114,8 @@ uint64_t SAL_TIME_GetNSec(void)
         tick = tick + (uint64_t)time.tv_nsec;
     }
     return tick;
+#else
+    #error "SAL_TIME_GetNSec not implemented for this platform"
+#endif
 }
 #endif

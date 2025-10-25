@@ -20,7 +20,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <securec.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "bsl_list.h"
 #include "bsl_print.h"
 #include "bsl_conf_def.h"
@@ -100,7 +100,7 @@ const HITLS_CmdOption g_x509Opts[] = {
     {"CA", HITLS_APP_OPT_CA, HITLS_APP_OPT_VALUETYPE_IN_FILE, "CA certificate, must be PEM format"},
     {"CAkey", HITLS_APP_OPT_CA_KEY, HITLS_APP_OPT_VALUETYPE_IN_FILE, "CA key, must be PEM format"},
     {"userId", HITLS_APP_OPT_USERID, HITLS_APP_OPT_VALUETYPE_STRING, "sm2 userId, default is null"},
-    {NULL},
+    {NULL, 0, 0, NULL},
 };
 
 typedef struct {

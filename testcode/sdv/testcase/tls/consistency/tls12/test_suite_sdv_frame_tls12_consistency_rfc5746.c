@@ -35,7 +35,6 @@
 #include "hs_msg.h"
 #include "hs_extensions.h"
 #include "frame_msg.h"
-#include "stub_replace.h"
 #include "hitls.h"
 #include "hitls_config.h"
 #include "bsl_uio.h"

@@ -29,7 +29,7 @@
 #include "hs_state_recv.h"
 #include "conn_init.h"
 #include "recv_process.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "stub_crypt.h"
 #include "frame_tls.h"
 #include "frame_msg.h"
@@ -52,6 +52,11 @@
 #include "bsl_log.h"
 #include "cert_callback.h"
 
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET4(int32_t, HS_CalcCookie, TLS_Ctx *, const ClientHelloMsg *, uint8_t *, uint32_t *);
+STUB_DEFINE_RET3(int32_t, HS_CheckCookie, TLS_Ctx *, const ClientHelloMsg *, bool *);
 
 #define BUF_SIZE_DTO_TEST 18432
 int32_t g_uiPort = 18887;

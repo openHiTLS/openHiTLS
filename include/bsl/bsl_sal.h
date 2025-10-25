@@ -140,15 +140,47 @@ void BSL_SAL_CleanseData(void *ptr, uint32_t size);
  */
 void BSL_SAL_ClearFree(void *ptr, uint32_t size);
 
-#define BSL_SAL_FREE(value_)                        \
+#define BSL_SAL_FREE(value_)                    \
     do {                                        \
         if ((value_) != NULL) {                 \
-            BSL_SAL_Free((void *)(value_));         \
+            BSL_SAL_Free((void *)(value_));     \
             (value_) = NULL;                    \
         }                                       \
     } while (0)
 
-#define BSL_SAL_ONCE_INIT 0 // equal to PTHREAD_ONCE_INIT, the pthread symbol is masked.
+/**
+ * @ingroup bsl_sal
+ * @brief Thread run-once control type
+ *
+ * Platform-specific type for thread-safe one-time initialization.
+ * - POSIX (Linux/macOS): pthread_once_t
+ * - No threading: Simple status flag
+ */
+#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
+    #include <pthread.h>
+    typedef pthread_once_t BSL_SAL_OnceControl;
+    #define BSL_SAL_ONCE_INIT PTHREAD_ONCE_INIT
+#else
+    // Fallback for no threading support
+    typedef struct {
+        volatile int status;  // 0=not initialized, 1=initializing, 2=done
+    } BSL_SAL_OnceControl;
+    #define BSL_SAL_ONCE_INIT {0}
+#endif
+
+/**
+ * @ingroup bsl_sal
+ * @brief Macro to declare thread run-once control variable
+ *
+ * Uses platform-native once mechanism (pthread_once on POSIX).
+ *
+ * Usage:
+ * @code
+ * BSL_SAL_DECLARE_THREAD_ONCE(g_myOnce);
+ * BSL_SAL_ThreadRunOnce(&g_myOnce, MyInitFunction);
+ * @endcode
+ */
+#define BSL_SAL_DECLARE_THREAD_ONCE(name) static BSL_SAL_OnceControl name = BSL_SAL_ONCE_INIT
 
 /**
  * @ingroup bsl_sal
@@ -253,16 +285,17 @@ typedef void (*BSL_SAL_ThreadInitRoutine)(void);
  * @ingroup bsl_sal
  * @brief Execute only once.
  *
- * Run the init Func command only once.
+ * Run the init Func command only once in a thread-safe manner.
+ * Uses platform-native once mechanism (pthread_once on POSIX).
  *
  * @attention The current version does not support registration.
- * @param onceControl [IN] Record the execution status.
+ * @param onceControl [IN] Once control variable initialized with BSL_SAL_ONCE_INIT.
  * @param initFunc [IN] Initialization function.
  * @retval #BSL_SUCCESS, succeeded.
  * @retval #BSL_SAL_ERR_BAD_PARAM, input parameter is abnormal.
  * @retval #BSL_SAL_ERR_UNKNOWN, the default run once failed.
  */
-int32_t BSL_SAL_ThreadRunOnce(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine initFunc);
+int32_t BSL_SAL_ThreadRunOnce(BSL_SAL_OnceControl *onceControl, BSL_SAL_ThreadInitRoutine initFunc);
 
 /**
  * @ingroup bsl_sal

@@ -2486,7 +2486,7 @@ static int32_t UT_CookieVerifyCb(HITLS_Ctx *ctx, const uint8_t *cookie, uint32_t
     return cookie_valid;
 }
 
-int32_t HS_CheckCookie_Stub(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid)
+int32_t HS_CheckCookie_Custom(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid)
 {
     *isCookieValid = false;
 
@@ -2506,7 +2506,7 @@ int32_t HS_CheckCookie_Stub(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, boo
     return HITLS_SUCCESS;
 }
 
-int32_t HS_CalcCookie_Stub(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen)
+int32_t HS_CalcCookie_Custom(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen)
 {
     (void)clientHello;
     if (ctx->globalConfig->appGenCookieCb == NULL) {
@@ -2540,24 +2540,22 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC001(int setGenerateCb, i
     FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
 
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
     serverTlsCtx->config.tlsConfig.isSupportDtlsCookieExchange = true;
     if (setGenerateCb) {
         serverTlsCtx->globalConfig->appGenCookieCb = UT_CookieGenerateCb;
-        STUB_Replace(&stubInfo, HS_CheckCookie, HS_CheckCookie_Stub);
+        STUB_REPLACE(HS_CheckCookie, HS_CheckCookie_Custom);
     }
     if (setVerifyCb) {
         serverTlsCtx->globalConfig->appVerifyCookieCb = UT_CookieVerifyCb;
-        STUB_Replace(&stubInfo, HS_CalcCookie, HS_CalcCookie_Stub);
+        STUB_REPLACE(HS_CalcCookie, HS_CalcCookie_Custom);
     }
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_UNREGISTERED_CALLBACK);
 
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HS_CheckCookie); STUB_RESTORE(HS_CalcCookie);
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

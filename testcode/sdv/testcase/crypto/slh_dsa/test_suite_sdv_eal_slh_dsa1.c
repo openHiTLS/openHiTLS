@@ -25,7 +25,6 @@
 #include "crypt_util_rand.h"
 #include "crypt_bn.h"
 #include "eal_pkey_local.h"
-#include "stub_replace.h"
 #include "test.h"
 /* END_HEADER */
 

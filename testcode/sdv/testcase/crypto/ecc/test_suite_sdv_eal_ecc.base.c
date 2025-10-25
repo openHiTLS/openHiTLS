@@ -25,7 +25,7 @@
 #include "crypt_dsa.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_eal_rand.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "crypt_util_rand.h"
 #include "crypt_encode_internal.h"
 #include "crypt_eal_md.h"
@@ -34,6 +34,11 @@
 #include "crypt_ecdsa.h"
 #include "crypt_ecc.h"
 #include "eal_pkey_local.h"
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET3(int32_t, BN_RandRangeEx, void *, BN_BigNum *, const BN_BigNum *);
 
 #define SUCCESS 0
 #define ERROR (-1)
@@ -70,13 +75,23 @@ static int32_t RandFuncEx(void *libCtx, uint8_t *randNum, uint32_t randLen)
     return 0;
 }
 
-static int32_t STUB_RandRangeK(void *libCtx, BN_BigNum *r, const BN_BigNum *p)
+// Custom random function to return fixed K value for signature tests (macOS provider mode fix)
+static int32_t STUB_RandForSignature(uint8_t *byte, uint32_t len)
 {
-    (void)p;
-    (void)libCtx;
-    BN_Bin2Bn(r, gkRandBuf, gkRandBufLen);
-    return CRYPT_SUCCESS;
+    if (len > sizeof(gkRandBuf)) {
+        return CRYPT_NULL_INPUT;
+    }
+    // Return the fixed K value from test vector
+    return memcpy_s(byte, len, gkRandBuf, len);
 }
+
+#ifdef HITLS_CRYPTO_PROVIDER
+static int32_t STUB_RandForSignatureEx(void *libCtx, uint8_t *byte, uint32_t len)
+{
+    (void)libCtx;
+    return STUB_RandForSignature(byte, len);
+}
+#endif
 
 static int32_t EccPointToBuffer(Hex *pubKeyX, Hex *pubKeyY, CRYPT_PKEY_PointFormat pointFormat, KeyData *pubKey)
 {
@@ -178,7 +193,6 @@ static int Ecc_GenKey(
     int algId, int eccId, Hex *prvKeyVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat, int isProvider)
 {
     int ret;
-    FuncStubInfo tmpRpInfo;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     KeyData pubKeyVector = {{0}, KEY_MAX_LEN};
     CRYPT_EAL_PkeyPub ecdsaPubKey = {0};
@@ -193,14 +207,20 @@ static int Ecc_GenKey(
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, eccId), CRYPT_SUCCESS);
 
-    /* Mock BN_RandRange to STUB_RandRangeK */
+    /* Setup fixed random value for deterministic key generation */
     ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), prvKeyVector->x, prvKeyVector->len) == 0);
     gkRandBufLen = prvKeyVector->len;
-    STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
+
+    /* Init DRBG first, then register our callback AFTER to override TestSimpleRand */
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    /* Register callback to return fixed random value (must be AFTER TestRandInit) */
+    CRYPT_RandRegist(STUB_RandForSignature);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(STUB_RandForSignatureEx);
+#endif
 
     /* Generate a key pair */
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
 
     /* Set point format*/
@@ -237,14 +257,16 @@ static int Ecc_GenKey(
 
     free(ecdsaPubKey.key.eccPub.data);
     free(ecdsaPrvKey.key.eccPrv.data);
-    STUB_Reset(&tmpRpInfo);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
     TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return SUCCESS;
 EXIT:
     free(ecdsaPubKey.key.eccPub.data);
     free(ecdsaPrvKey.key.eccPrv.data);
-    STUB_Reset(&tmpRpInfo);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
     TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return ERROR;

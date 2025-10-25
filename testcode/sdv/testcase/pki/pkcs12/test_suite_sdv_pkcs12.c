@@ -29,9 +29,20 @@
 #include "hitls_cert_local.h"
 #include "bsl_types.h"
 #include "crypt_errno.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "bsl_list_internal.h"
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET3(int32_t, HITLS_X509_AddListItemDefault, void *, uint32_t, BSL_ASN1_List *);
+STUB_DEFINE_RET3(int32_t, HITLS_PKCS12_ParseAsn1AddList, BSL_Buffer *, BSL_ASN1_List *, uint32_t);
+STUB_DEFINE_RET6(int32_t, HITLS_PKCS12_ParseContentInfo, HITLS_PKI_LibCtx *, const char *, BSL_Buffer *, const uint8_t *, uint32_t, BSL_Buffer *);
+STUB_DEFINE_RET8(int32_t, CRYPT_EAL_ProviderDecodeBuffKey, CRYPT_EAL_LibCtx *, const char *, int32_t, const char *, const char *, BSL_Buffer *, const BSL_Buffer *, CRYPT_EAL_PkeyCtx **);
+STUB_DEFINE_RET3(int32_t, HITLS_X509_CertParseBuff, int32_t, const BSL_Buffer *, HITLS_X509_Cert **);
+STUB_DEFINE_RET3(HITLS_PKCS12_Bag *, HITLS_PKCS12_BagNew, uint32_t, uint32_t, void *);
+STUB_DEFINE_RET3(int32_t, BSL_LIST_AddElement, BslList *, void *, BslListPosition);
 
 /**
  * For test parse safeBag-p8shroudkeyBag of correct data.
@@ -2241,7 +2252,6 @@ void SDV_PKCS12_PARSE_SAFEBAGS_INVALID_TC001(Hex *buff)
     (void)buff;
     SKIP_TEST();
 #else
-    FuncStubInfo tmpRpInfo = {0};
     BSL_Buffer safeContent = {0};
     HITLS_PKCS12 *p12 = NULL;
     BSL_ASN1_List *bagLists = BSL_LIST_New(sizeof(HITLS_PKCS12_SafeBag));
@@ -2258,16 +2268,14 @@ void SDV_PKCS12_PARSE_SAFEBAGS_INVALID_TC001(Hex *buff)
     &safeContent);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, HITLS_X509_AddListItemDefault, STUB_HITLS_X509_AddListItemDefault1) == 0);
+    STUB_REPLACE(HITLS_X509_AddListItemDefault, STUB_HITLS_X509_AddListItemDefault1);
 
     // get the safeBag of safeContents, and put int list.
     ret = HITLS_PKCS12_ParseAsn1AddList(&safeContent, bagLists, BSL_CID_SAFECONTENTSBAG);
     ASSERT_NE(ret, HITLS_PKI_SUCCESS);
-    STUB_Reset(&tmpRpInfo);
 
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, HITLS_X509_AddListItemDefault, STUB_HITLS_X509_AddListItemDefault2) == 0);
+
+    STUB_REPLACE(HITLS_X509_AddListItemDefault, STUB_HITLS_X509_AddListItemDefault2);
     // get the safeBag of safeContents, and put int list.
     ret = HITLS_PKCS12_ParseAsn1AddList(&safeContent, bagLists, BSL_CID_SAFECONTENTSBAG);
     ASSERT_NE(ret, HITLS_PKI_SUCCESS);
@@ -2278,7 +2286,7 @@ EXIT:
     BSL_LIST_DeleteAll(bagLists, (BSL_LIST_PFUNC_FREE)HITLS_PKCS12_SafeBagFree);
     HITLS_PKCS12_Free(p12);
     BSL_SAL_Free(bagLists);
-    STUB_Reset(&tmpRpInfo);
+
 #endif
 }
 /* END_CASE */
@@ -2362,56 +2370,46 @@ void SDV_PKCS12_PARSE_AUTHSAFE_INVALID_TC001(Hex *buff)
     (void)buff;
     SKIP_TEST();
 #else
-    FuncStubInfo tmpRpInfo = {0};
     HITLS_PKCS12 *p12 = HITLS_PKCS12_New();
     ASSERT_NE(p12, NULL);
 
     char *pwd = "123456";
     uint32_t pwdlen = strlen(pwd);
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, HITLS_PKCS12_ParseAsn1AddList, STUB_HITLS_PKCS12_ParseAsn1AddList) == 0);
+    STUB_REPLACE(HITLS_PKCS12_ParseAsn1AddList, STUB_HITLS_PKCS12_ParseAsn1AddList);
     ASSERT_NE(HITLS_PKCS12_ParseAuthSafeData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, p12), HITLS_PKI_SUCCESS);
 
-    STUB_Reset(&tmpRpInfo);
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, HITLS_PKCS12_ParseContentInfo, STUB_HITLS_PKCS12_ParseContentInfo) == 0);
+
+    STUB_REPLACE(HITLS_PKCS12_ParseContentInfo, STUB_HITLS_PKCS12_ParseContentInfo);
     ASSERT_NE(HITLS_PKCS12_ParseAuthSafeData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, p12), HITLS_PKI_SUCCESS);
 
-    STUB_Reset(&tmpRpInfo);
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, HITLS_X509_AddListItemDefault, STUB_HITLS_X509_AddListItemDefault1) == 0);
+
+    STUB_REPLACE(HITLS_X509_AddListItemDefault, STUB_HITLS_X509_AddListItemDefault1);
     ASSERT_NE(HITLS_PKCS12_ParseAuthSafeData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, p12), HITLS_PKI_SUCCESS);
 
-    STUB_Reset(&tmpRpInfo);
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, HITLS_X509_AddListItemDefault, STUB_HITLS_X509_AddListItemDefault2) == 0);
+
+    STUB_REPLACE(HITLS_X509_AddListItemDefault, STUB_HITLS_X509_AddListItemDefault2);
     ASSERT_NE(HITLS_PKCS12_ParseAuthSafeData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, p12), HITLS_PKI_SUCCESS);
 
-    STUB_Reset(&tmpRpInfo);
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, HITLS_X509_AddListItemDefault, STUB_HITLS_X509_AddListItemDefault2) == 0);
+
+    STUB_REPLACE(HITLS_X509_AddListItemDefault, STUB_HITLS_X509_AddListItemDefault2);
     ASSERT_NE(HITLS_PKCS12_ParseAuthSafeData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, p12), HITLS_PKI_SUCCESS);
 
-    STUB_Reset(&tmpRpInfo);
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, CRYPT_EAL_ProviderDecodeBuffKey, STUB_CRYPT_EAL_ProviderDecodeBuffKey) == 0);
+
+    STUB_REPLACE(CRYPT_EAL_ProviderDecodeBuffKey, STUB_CRYPT_EAL_ProviderDecodeBuffKey);
     ASSERT_NE(HITLS_PKCS12_ParseAuthSafeData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, p12), HITLS_PKI_SUCCESS);
 
-    STUB_Reset(&tmpRpInfo);
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, HITLS_X509_CertParseBuff, STUB_HITLS_X509_CertParseBuff) == 0);
+
+    STUB_REPLACE(HITLS_X509_CertParseBuff, STUB_HITLS_X509_CertParseBuff);
     ASSERT_NE(HITLS_PKCS12_ParseAuthSafeData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, p12), HITLS_PKI_SUCCESS);
 
-    STUB_Reset(&tmpRpInfo);
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, HITLS_PKCS12_BagNew, STUB_HITLS_PKCS12_BagNew) == 0);
+
+    STUB_REPLACE(HITLS_PKCS12_BagNew, STUB_HITLS_PKCS12_BagNew);
     ASSERT_NE(HITLS_PKCS12_ParseAuthSafeData((BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen, p12), HITLS_PKI_SUCCESS);
 
-    STUB_Reset(&tmpRpInfo);
-    STUB_Init();
+
     test = MAX_TRIGGERS; // It takes fixed triggers to parse cert from entering p12
     marked = 0;
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, BSL_LIST_AddElement, STUB_BSL_LIST_AddElement) == 0);
+    STUB_REPLACE(BSL_LIST_AddElement, STUB_BSL_LIST_AddElement);
     HITLS_PKCS12_Free(p12);
     p12 = NULL;
     for (int i = MAX_TRIGGERS; i > 0; i--) {
@@ -2425,7 +2423,7 @@ void SDV_PKCS12_PARSE_AUTHSAFE_INVALID_TC001(Hex *buff)
     }
 EXIT:
     HITLS_PKCS12_Free(p12);
-    STUB_Reset(&tmpRpInfo);
+
 #endif
 }
 /* END_CASE */

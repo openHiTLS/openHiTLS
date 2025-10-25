@@ -26,7 +26,7 @@
 #include "crypt_eal_rand.h"
 #include "crypt_bn.h"
 #include "eal_pkey_local.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "crypt_util_rand.h"
 #include "crypt_paillier.h"
 #include "paillier_local.h"
@@ -35,6 +35,12 @@
 
 #include "crypt_codecskey.h"
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
+
 
 #define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
 #define CRYPT_EAL_PKEY_CIPHER_OPERATE  1
@@ -140,10 +146,7 @@ EXIT:
 void SDV_CRYPTO_PAILLIER_NEW_API_TC002(int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = NULL;
-    FuncStubInfo tmpRpInfo = {0};
-
-    STUB_Init();
-    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, malloc_fail) == 0);
+    STUB_REPLACE(BSL_SAL_Malloc, malloc_fail);
 
     TestMemInit();
 
@@ -152,7 +155,7 @@ void SDV_CRYPTO_PAILLIER_NEW_API_TC002(int isProvider)
     ASSERT_TRUE(pkey == NULL);
 
 EXIT:
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */

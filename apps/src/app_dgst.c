@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "app_dgst.h"
-#include <linux/limits.h>
+#include <limits.h>
 #include "string.h"
 #include "securec.h"
 #include "bsl_sal.h"
@@ -68,7 +68,7 @@ const HITLS_CmdOption g_dgstOpts[] = {
     HITLS_SM_OPTIONS,
 #endif
     {"file...", HITLS_APP_OPT_DGST_FILE, HITLS_APP_OPT_VALUETYPE_PARAMTERS, "Files to be digested"},
-    {NULL}};
+    {NULL, 0, 0, NULL}};
 
 typedef struct {
     char *algName;

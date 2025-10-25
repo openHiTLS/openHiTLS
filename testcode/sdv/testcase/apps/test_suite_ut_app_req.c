@@ -26,7 +26,6 @@
 #include "securec.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
-#include "stub_replace.h"
 
 /* END_HEADER */
 

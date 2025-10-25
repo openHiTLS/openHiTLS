@@ -17,7 +17,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <dirent.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "securec.h"
 #include "bsl_uio.h"
 #include "crypt_eal_rand.h"
@@ -116,7 +116,7 @@ static const HITLS_CmdOption g_keyMgmtOpts[] = {
         "Salt length for generating p12 file"},
     HITLS_APP_PROV_OPTIONS,
     HITLS_SM_OPTIONS,
-    {NULL}
+    {NULL, 0, 0, NULL}
 };
 
 static void KeyAttrOrderCvt(HITLS_APP_KeyAttr *attr, bool toByte)

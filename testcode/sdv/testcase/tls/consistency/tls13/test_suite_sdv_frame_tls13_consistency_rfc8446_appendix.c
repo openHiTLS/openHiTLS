@@ -22,7 +22,6 @@
 #include "securec.h"
 #include "hitls_error.h"
 #include "hs.h"
-#include "stub_replace.h"
 #include "frame_tls.h"
 #include "simulate_io.h"
 #include "parser_frame_msg.h"

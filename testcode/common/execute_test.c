@@ -17,7 +17,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-static jmp_buf env;
+static sigjmp_buf env;
 static int isSubProc = 0;
 int *GetJmpAddress(void)
 {

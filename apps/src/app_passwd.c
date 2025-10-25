@@ -21,7 +21,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <securec.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "bsl_ui.h"
 #include "bsl_uio.h"
 #include "bsl_sal.h"
@@ -46,7 +46,7 @@ const HITLS_CmdOption g_passwdOpts[] = {
     {"help", HITLS_APP_OPT_PASSWD_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"out", HITLS_APP_OPT_PASSWD_OUTFILE, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Outfile"},
     {"sha512",  HITLS_APP_OPT_PASSWD_SHA512, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "SHA512-based password algorithm"},
-    {NULL}
+    {NULL, 0, 0, NULL}
 };
 
 typedef struct {

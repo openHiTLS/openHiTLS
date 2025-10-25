@@ -16,7 +16,6 @@
 /* BEGIN_HEADER */
 
 #include <stdio.h>
-#include "stub_replace.h"
 #include "hitls.h"
 #include "hitls_config.h"
 #include "hitls_error.h"

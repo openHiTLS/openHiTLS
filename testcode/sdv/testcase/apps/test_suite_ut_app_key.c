@@ -32,7 +32,6 @@
 #include "securec.h"
 #include "bsl_err.h"
 #include "bsl_sal.h"
-#include "stub_replace.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 /* END_HEADER */

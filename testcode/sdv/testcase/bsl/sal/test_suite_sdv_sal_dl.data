@@ -1,14 +1,23 @@
-SDV_BSL_SAL_DL_FUNC_TC001
-SDV_BSL_SAL_DL_FUNC_TC001:"../testdata/provider/path1/libprovider_load_test1.so":"../testdata/provider/path1/libprovider_load_test2.so":"../testdata/provider/path1/libprovider_load_test_no_init.so":"CRYPT_EAL_ProviderInit"
+SDV_BSL_SAL_DL_FUNC_TC001  # Linux
+SDV_BSL_SAL_DL_FUNC_TC001:"provider_test_data/path1/libprovider_load_test1.so":"provider_test_data/path1/libprovider_load_test2.so":"provider_test_data/path1/libprovider_load_test_no_init.so":"CRYPT_EAL_ProviderInit"
 
-SDV_BSL_SAL_CONVERTER_NAME_TC001  #1
+SDV_BSL_SAL_DL_FUNC_TC001  # Darwin
+SDV_BSL_SAL_DL_FUNC_TC001:"provider_test_data/path1/libprovider_load_test1.dylib":"provider_test_data/path1/libprovider_load_test2.dylib":"provider_test_data/path1/libprovider_load_test_no_init.dylib":"CRYPT_EAL_ProviderInit"
+
+SDV_BSL_SAL_CONVERTER_NAME_TC001  #1 Linux
 SDV_BSL_SAL_CONVERTER_NAME_TC001:"provider_load_test1":1:"provider_load_test1.so"
 
-SDV_BSL_SAL_CONVERTER_NAME_TC001  #2
+SDV_BSL_SAL_CONVERTER_NAME_TC001  #1 Darwin
+SDV_BSL_SAL_CONVERTER_NAME_TC001:"provider_load_test1":1:"provider_load_test1.dylib"
+
+SDV_BSL_SAL_CONVERTER_NAME_TC001  #2 Linux
 SDV_BSL_SAL_CONVERTER_NAME_TC001:"provider_load_test1":2:"libprovider_load_test1.so"
 
-SDV_BSL_SAL_CONVERTER_NAME_TC001  #3
+SDV_BSL_SAL_CONVERTER_NAME_TC001  #2 Darwin
+SDV_BSL_SAL_CONVERTER_NAME_TC001:"provider_load_test1":2:"libprovider_load_test1.dylib"
+
+SDV_BSL_SAL_CONVERTER_NAME_TC001  #3 Windows
 SDV_BSL_SAL_CONVERTER_NAME_TC001:"provider_load_test1":3:"libprovider_load_test1.dll"
 
-SDV_BSL_SAL_CONVERTER_NAME_TC001  #4
+SDV_BSL_SAL_CONVERTER_NAME_TC001  #4 Windows
 SDV_BSL_SAL_CONVERTER_NAME_TC001:"provider_load_test1":4:"provider_load_test1.dll"

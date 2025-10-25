@@ -100,16 +100,21 @@ uint64_t SAL_GetThreadId(void)
     return (uint64_t)pthread_self();
 }
 
-int32_t SAL_PthreadRunOnce(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine initFunc)
+/**
+ * @brief Thread-safe one-time initialization wrapper
+ *
+ * Directly wraps pthread_once for posix system
+ */
+int32_t SAL_PthreadRunOnce(BSL_SAL_OnceControl *onceControl, BSL_SAL_ThreadInitRoutine initFunc)
 {
     if (onceControl == NULL || initFunc == NULL) {
         return BSL_SAL_ERR_BAD_PARAM;
     }
 
-    pthread_once_t *tmpOnce = (pthread_once_t *)onceControl;
-    if (pthread_once(tmpOnce, initFunc) != 0) {
+    if (pthread_once(onceControl, initFunc) != 0) {
         return BSL_SAL_ERR_UNKNOWN;
     }
+
     return BSL_SUCCESS;
 }
 

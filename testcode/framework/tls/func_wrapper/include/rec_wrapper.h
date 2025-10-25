@@ -42,6 +42,34 @@ typedef struct {
 void RegisterWrapper(RecWrapper wrapper);
 void ClearWrapper(void);
 
+// Apply registered wrapper to a specific TLS connection
+// Called internally by HLT framework after creating each connection
+void ApplyWrapperToConnection(TLS_Ctx *ctx);
+
+// Early wrapper application - initializes recCtx if needed before first HITLS_Connect
+// This solves the timing issue: wrapper applied BEFORE ClientHello is sent
+void ApplyWrapperToConnectionEarly(TLS_Ctx *ctx);
+
+// Remove wrapper from a specific TLS connection
+// Called when connection is destroyed to clean up resources
+void RemoveWrapperFromConnection(TLS_Ctx *ctx);
+
+// Register a connection for late wrapper application
+// Called by FRAME_CreateLink to enable RegisterWrapper to apply to existing connections
+void RegisterConnection(TLS_Ctx *ctx);
+
+// Unregister a connection from tracking
+// Called by FRAME_FreeLink during cleanup
+void UnregisterConnection(TLS_Ctx *ctx);
+
+// Check if wrapper is currently enabled
+// Returns true if RegisterWrapper has been called and wrapper is active
+bool IsWrapperEnabled(void);
+
+// Clear connection tracking list - called during test cleanup to prevent state leakage
+// This should be called by HLT_FreeAllProcess() to clear connections between tests
+void ClearConnectionList(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -174,7 +174,6 @@ EXIT:
 void UT_TLS_TLCP_CONSISTENCY_CLIENTKXCH_VERSIONERR_TC001(char *cipherSuite)
 {
     FRAME_Init();
-    STUB_Init();
     RegDefaultMemCallback();
     HITLS_Config *tlsConfig = NULL;
     FRAME_LinkObj *client = NULL;
@@ -191,8 +190,7 @@ void UT_TLS_TLCP_CONSISTENCY_CLIENTKXCH_VERSIONERR_TC001(char *cipherSuite)
     server = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, false);
     ASSERT_TRUE(server != NULL);
 
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, GenerateEccPremasterSecret, STUB_GenerateEccPremasterSecret);
+    STUB_REPLACE(GenerateEccPremasterSecret, STUB_GenerateEccPremasterSecret);
     int32_t ret = FRAME_CreateConnection(client, server, false, TRY_RECV_FINISH);
     ASSERT_EQ(ret, HITLS_SUCCESS);
 
@@ -204,7 +202,7 @@ EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(GenerateEccPremasterSecret);
 }
 /* END_CASE */
 
@@ -1029,16 +1027,15 @@ void UT_TLS_TLCP_CONSISTENCY_FATAL_ALERT_TC003(char *cipherSuite, int isResume)
     int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
     ASSERT_EQ(ret, HITLS_SUCCESS);
 
-    FuncStubInfo tmpRpInfo = { 0 };
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     HITLS_Session *Newsession = NULL;
     HITLS_Session *serverSession = NULL;
     uint32_t readLen = 0;
     uint8_t data[] = "Hello World";
-    STUB_Replace(&tmpRpInfo, APP_Write, STUB_APP_Write_Fatal);
+    STUB_REPLACE(APP_Write, STUB_APP_Write_Fatal);
     uint32_t writeLen;
     ASSERT_EQ(HITLS_Write(server->ssl, data, sizeof(data), &writeLen), HITLS_INTERNAL_EXCEPTION);
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(APP_Write);
     ASSERT_TRUE(server->ssl->state == CM_STATE_ALERTED);
 
     if (isResume == 1) {

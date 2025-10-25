@@ -17,7 +17,7 @@
 #include <securec.h>
 #include <string.h>
 #include <unistd.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "bsl_sal.h"
 #include "bsl_ui.h"
 #include "bsl_errno.h"

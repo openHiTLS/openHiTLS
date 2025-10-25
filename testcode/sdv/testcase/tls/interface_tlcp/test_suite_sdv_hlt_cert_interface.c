@@ -40,7 +40,6 @@
 #include "session.h"
 #include "bsl_sal.h"
 #include "alert.h"
-#include "stub_replace.h"
 #include "cert_callback.h"
 #include "crypt_eal_rand.h"
 #include "hitls_crypt_reg.h"

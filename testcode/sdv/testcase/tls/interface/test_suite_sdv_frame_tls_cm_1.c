@@ -53,7 +53,7 @@
 #include "process.h"
 #include "hs_ctx.h"
 #include "hlt.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "hitls_type.h"
 #include "frame_link.h"
 #include "session_type.h"
@@ -99,6 +99,12 @@
 #include "parse_client_hello.c"
 /* END_HEADER */
 
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET2(void *, BSL_SAL_Calloc, uint32_t, uint32_t);
+
+
 static char *g_serverName = "testServer";
 uint32_t g_uiPort = 18888;
 #define DEFAULT_DESCRIPTION_LEN 128
@@ -141,8 +147,6 @@ void *STUB_SAL_Dump(const void *src, uint32_t size)
     (void)size;
     return NULL;
 }
-
-FuncStubInfo g_TmpRpInfo = {0};
 
 int32_t STUB_BSL_UIO_Read(BSL_UIO *uio, void *data, uint32_t len, uint32_t *readLen)
 {
@@ -258,13 +262,10 @@ void UT_TLS_CM_SET_CLEAR_CIPHERSUITES_API_TC001(int tlsVersion)
     ASSERT_TRUE(HITLS_SetCipherSuites(ctx, NULL, 0) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_SetCipherSuites(ctx, cipherSuites, 0) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_SetCipherSuites(ctx, cipherSuites, HITLS_CFG_MAX_SIZE + 1) == HITLS_CONFIG_INVALID_LENGTH);
-
-    STUB_Init();
-    FuncStubInfo tmpRpInfo;
-    STUB_Replace(&tmpRpInfo, BSL_SAL_Calloc, STUB_SAL_Calloc);
+    STUB_REPLACE(BSL_SAL_Calloc, STUB_SAL_Calloc);;
     ASSERT_TRUE(
         HITLS_SetCipherSuites(ctx, cipherSuites, sizeof(cipherSuites) / sizeof(uint16_t)) == HITLS_MEMALLOC_FAIL);
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(BSL_SAL_Calloc);
     uint16_t cipherSuites2[10] = {0};
     cipherSuites2[0] = 0xFFFF;
     cipherSuites2[1] = 0xEFFF;
@@ -276,7 +277,7 @@ void UT_TLS_CM_SET_CLEAR_CIPHERSUITES_API_TC001(int tlsVersion)
         ASSERT_TRUE(ctx->config.tlsConfig.tls13cipherSuitesSize == 0);
     }
 EXIT:
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(BSL_SAL_Calloc);
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);
 }

@@ -54,7 +54,6 @@
 #include "simulate_io.h"
 #include "frame_io.h"
 #include "frame_link.h"
-#include "stub_replace.h"
 #include "session_type.h"
 #include "cert_callback.h"
 #include "bsl_sal.h"

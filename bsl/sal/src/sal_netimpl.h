@@ -52,7 +52,7 @@ typedef struct {
 
 int32_t SAL_NetCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
 int32_t SAL_NET_Write(int32_t fd, const void *buf, uint32_t len, int32_t *err);
 int32_t SAL_NET_Read(int32_t fd, void *buf, uint32_t len, int32_t *err);
 int32_t SAL_NET_SockAddrNew(BSL_SAL_SockAddr *sockAddr);

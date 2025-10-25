@@ -19,7 +19,7 @@
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "securec.h"
 #include "bsl_uio.h"
 #include "bsl_ui.h"
@@ -61,7 +61,7 @@ HITLS_CmdOption g_rsaOpts[] = {
     {"out", HITLS_APP_OPT_RSA_OUT, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output file"},
     {"noout", HITLS_APP_OPT_RSA_NOOUT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "No RSA output "},
     {"text", HITLS_APP_OPT_RSA_TEXT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print RSA key in text"},
-    {NULL}};
+    {NULL, 0, 0, NULL}};
 
 static int32_t OutPemFormat(BSL_UIO *uio, void *encode)
 {

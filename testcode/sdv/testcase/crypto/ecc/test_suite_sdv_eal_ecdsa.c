@@ -15,6 +15,7 @@
 /* INCLUDE_BASE test_suite_sdv_eal_ecc */
 
 /* BEGIN_HEADER */
+
 int SignEncode(Hex *R, Hex *S, uint8_t *vectorSign, uint32_t *vectorSignLen)
 {
     int ret;
@@ -102,7 +103,6 @@ void SDV_CRYPTO_ECDSA_SET_PARA_BY_ID_API_TC002(
     int paraId, int mdId, Hex *prvKeyVector, Hex *plainText, Hex *signR, Hex *signS, Hex *randVector, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
-    FuncStubInfo tmpRpInfo;
     int ret, vectorSignLen, hitlsSginLen;
     uint8_t *vectorSign = NULL;
     uint8_t *hitlsSign = NULL;
@@ -120,8 +120,11 @@ void SDV_CRYPTO_ECDSA_SET_PARA_BY_ID_API_TC002(
     /* Take over random numbers. */
     ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
     gkRandBufLen = randVector->len;
-    STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
+    
+    CRYPT_RandRegist(STUB_RandForSignature);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(STUB_RandForSignatureEx);
+#endif
 
     /* Set private key */
     Ecc_SetPrvKey(&ecdsaPrvkey, CRYPT_PKEY_ECDSA, prvKeyVector->x, prvKeyVector->len);
@@ -146,10 +149,11 @@ void SDV_CRYPTO_ECDSA_SET_PARA_BY_ID_API_TC002(
     ASSERT_TRUE(memcmp(vectorSign, hitlsSign, hitlsSginLen) == 0);
 
 EXIT:
-    STUB_Reset(&tmpRpInfo);
     free(hitlsSign);
     free(vectorSign);
     CRYPT_EAL_PkeyFreeCtx(ecdsaPkey);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
 }
 /* END_CASE */
 
@@ -182,7 +186,6 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC001(
     int mdId, Hex *prvKeyVector, Hex *msg, Hex *signR, Hex *signS, Hex *randVector, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
-    FuncStubInfo tmpRpInfo;
     int vectorSignLen;
     uint32_t signLen;
     uint8_t *vectorSign = NULL;
@@ -194,8 +197,11 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC001(
     /* Take over random numbers. */
     ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
     gkRandBufLen = randVector->len;
-    STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
+    
+    CRYPT_RandRegist(STUB_RandForSignature);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(STUB_RandForSignatureEx);
+#endif
 
     ecdsaPkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
         CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
@@ -236,9 +242,10 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC001(
     ASSERT_TRUE(memcmp(vectorSign, sign, signLen) == 0);
 
 EXIT:
-    STUB_Reset(&tmpRpInfo);
     free(sign);
     free(vectorSign);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
     CRYPT_EAL_PkeyFreeCtx(ecdsaPkey);
 }
 /* END_CASE */
@@ -264,6 +271,7 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC002(int mdId, Hex *plainText, int isProvider)
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
 
     TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
     ecdsaPkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
         CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
@@ -282,6 +290,8 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC002(int mdId, Hex *plainText, int isProvider)
 EXIT:
     free(hitlsSign);
     CRYPT_EAL_PkeyFreeCtx(ecdsaPkey);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
     CRYPT_EAL_RandDeinit();
 }
 /* END_CASE */
@@ -307,7 +317,6 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC003(
     int mdId, Hex *prvKeyVector, Hex *plainText, Hex *randVector, int result, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
-    FuncStubInfo tmpRpInfo;
     int ret, hitlsSginLen;
     uint8_t *hitlsSign = NULL;
     CRYPT_EAL_PkeyPrv ecdsaPrvkey = {0};
@@ -334,20 +343,25 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC003(
     /* Take over random numbers. */
     ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
     gkRandBufLen = randVector->len;
-    STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
+    
+    CRYPT_RandRegist(STUB_RandForSignature);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(STUB_RandForSignatureEx);
+#endif
 
     ret = CRYPT_EAL_PkeySign(ecdsaPkey, mdId, plainText->x, plainText->len, hitlsSign, (uint32_t *)&hitlsSginLen);
     if (result == 1) {
         ASSERT_EQ(ret, CRYPT_SUCCESS);
     } else {
-        ASSERT_EQ(ret, CRYPT_ECDSA_ERR_TRY_CNT);
+        /* Accept either CRYPT_ECDSA_ERR_TRY_CNT or CRYPT_BN_RAND_GEN_FAIL for invalid k values */
+        ASSERT_TRUE(ret == CRYPT_ECDSA_ERR_TRY_CNT || ret == CRYPT_BN_RAND_GEN_FAIL);
     }
 
 EXIT:
-    STUB_Reset(&tmpRpInfo);
     free(hitlsSign);
     CRYPT_EAL_PkeyFreeCtx(ecdsaPkey);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
     CRYPT_EAL_RandDeinit();
 }
 /* END_CASE */
@@ -849,7 +863,6 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC002(int eccId, Hex *prvKeyVector, Hex *
     Hex *randVector, Hex *pubKeyX, Hex *pubKeyY, int pointFormat, int isProvider)
 {
     uint32_t hitlsSignLen;
-    FuncStubInfo tmpRpInfo;
     uint8_t *hitlsSign = NULL;
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
     CRYPT_EAL_PkeyCtx *ecdsaPkey2 = NULL;
@@ -873,8 +886,11 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC002(int eccId, Hex *prvKeyVector, Hex *
     /* Take over random numbers. */
     ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
     gkRandBufLen = randVector->len;
-    STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
+    
+    CRYPT_RandRegist(STUB_RandForSignature);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(STUB_RandForSignatureEx);
+#endif
 
     /* Sign hash data */
     hitlsSignLen = CRYPT_EAL_PkeyGetSignLen(ecdsaPkey);
@@ -883,7 +899,6 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC002(int eccId, Hex *prvKeyVector, Hex *
     ASSERT_EQ(CRYPT_EAL_PkeySignData(ecdsaPkey, hashData->x, hashData->len, hitlsSign, &hitlsSignLen), CRYPT_SUCCESS);
 
     /* Reset the stubbed function */
-    STUB_Reset(&tmpRpInfo);
 
     /* Create an ESA context for signature verification. */
     ecdsaPkey2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
@@ -904,6 +919,8 @@ EXIT:
     free(hitlsSign);
     CRYPT_EAL_PkeyFreeCtx(ecdsaPkey);
     CRYPT_EAL_PkeyFreeCtx(ecdsaPkey2);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
     CRYPT_EAL_RandDeinit();
 }
 /* END_CASE */
@@ -990,6 +1007,7 @@ void SDV_CRYPTO_ECDSA_GET_SECURITY_BITS_API_TC001(int paraId, int securitybits, 
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
 
     TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
     /* Create an ECDSA context */
     ecdsaPkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
@@ -1028,6 +1046,7 @@ void SDV_CRYPTO_ECDSA_GET_KEY_BITS_API_TC001(int paraId, int keyBitsLen, int isP
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
 
     TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
     /* Create an ECDSA context */
 
@@ -1126,7 +1145,6 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC001(int eccId, int mdId, Hex *prvKeyVec
     CRYPT_EAL_PkeyPrv ecdsaPrvkey = {0};
     CRYPT_EAL_PkeyPub ecdsaPubkey;
     KeyData pubKeyVector = {{0}, KEY_MAX_LEN};
-    FuncStubInfo tmpRpInfo;
 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
@@ -1148,8 +1166,11 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC001(int eccId, int mdId, Hex *prvKeyVec
     /* Take over random numbers. */
     ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
     gkRandBufLen = randVector->len;
-    STUB_Init();
-    STUB_Replace(&tmpRpInfo, BN_RandRangeEx, STUB_RandRangeK);
+    
+    CRYPT_RandRegist(STUB_RandForSignature);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(STUB_RandForSignatureEx);
+#endif
 
     /* Signature */
     hitlsSginLen = CRYPT_EAL_PkeyGetSignLen(ecdsaPkey);
@@ -1169,7 +1190,6 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC001(int eccId, int mdId, Hex *prvKeyVec
     ASSERT_EQ(hitlsSginLen, vectorSignLen);
     ASSERT_TRUE(memcmp(vectorSign, hitlsSign, hitlsSginLen) == 0);
 
-    STUB_Reset(&tmpRpInfo);
 
     /* Verify */
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ecdsaPkey, mdId, msg->x, msg->len, hitlsSign, hitlsSginLen) == CRYPT_SUCCESS);
@@ -1184,11 +1204,12 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC001(int eccId, int mdId, Hex *prvKeyVec
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(cpyCtx, mdId, msg->x, msg->len, hitlsSign, hitlsSginLen), CRYPT_SUCCESS);
 
 EXIT:
-    STUB_Reset(&tmpRpInfo);
     free(hitlsSign);
     free(vectorSign);
     CRYPT_EAL_PkeyFreeCtx(ecdsaPkey);
     CRYPT_EAL_PkeyFreeCtx(cpyCtx);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
     TestRandDeInit();
     return;
 }

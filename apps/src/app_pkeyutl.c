@@ -14,7 +14,7 @@
  */
 
 #include "app_pkeyutl.h"
-#include <linux/limits.h>
+#include <limits.h>
 #include "string.h"
 #include "securec.h"
 #include "bsl_sal.h"
@@ -95,7 +95,7 @@ const HITLS_CmdOption g_pkeyUtlOpts[] = {
 #ifdef HITLS_APP_SM_MODE
     HITLS_SM_OPTIONS,
 #endif
-    {NULL}};
+    {NULL, 0, 0, NULL}};
 
 typedef struct {
         int32_t optEncrypt;   // Flag for encrypt

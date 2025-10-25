@@ -34,7 +34,6 @@
 #include "transcript_hash.h"
 #include "conn_init.h"
 #include "recv_process.h"
-#include "stub_replace.h"
 #include "simulate_io.h"
 #include "parser_frame_msg.h"
 #include "pack_frame_msg.h"

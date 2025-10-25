@@ -30,9 +30,16 @@
 #include "bsl_err.h"
 #include "bsl_sal.h"
 #include "bsl_ui.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET5(int32_t, BSL_UI_ReadPwdUtil, BSL_UI_ReadPwdParam *, char *, uint32_t *, const BSL_UI_CheckDataCallBack, void *);
+STUB_DEFINE_RET6(int32_t, CRYPT_EAL_ProviderRandInitCtx, CRYPT_EAL_LibCtx *, int32_t, const char *, const uint8_t *, uint32_t, BSL_Param *);
+
 
 #define PRI_KEY "../testdata/apps/pkcs12/server.key"
 #define CERT "../testdata/apps/pkcs12/server.crt"
@@ -461,9 +468,7 @@ static int32_t BSL_UI_ReadPwdUtil_Mock(BSL_UI_ReadPwdParam *param, char *buff, u
 /* BEGIN_CASE */
 void UT_HITLS_APP_PKCS12_TC009(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_UI_ReadPwdUtil, BSL_UI_ReadPwdUtil_Mock);
+    STUB_REPLACE(BSL_UI_ReadPwdUtil, BSL_UI_ReadPwdUtil_Mock);;
     char *argv[][18] = {
         {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-chain", "-CAfile",
             CHAIN, "-passout", "pass:12345678", "-out", "out.pfx"},
@@ -551,9 +556,7 @@ void UT_HITLS_APP_PKCS12_TC011(char *arg, int expect)
     (void)expect;
     SKIP_TEST();
 #else
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, CRYPT_EAL_ProviderRandInitCtx, STUB_CRYPT_EAL_RandInit);
+    STUB_REPLACE(CRYPT_EAL_ProviderRandInitCtx, STUB_CRYPT_EAL_RandInit);;
     char *argv[30] = {};
     int argc = 0;
     SplitArgs(arg, argv, &argc);
@@ -565,7 +568,7 @@ void UT_HITLS_APP_PKCS12_TC011(char *arg, int expect)
 
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(CRYPT_EAL_ProviderRandInitCtx);
     return;
 #endif
 }

@@ -17,7 +17,6 @@
 #include <limits.h>
 #include <pthread.h>
 #include "securec.h"
-#include "stub_replace.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_eal_mac.h"

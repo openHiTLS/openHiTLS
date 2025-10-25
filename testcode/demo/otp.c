@@ -234,7 +234,8 @@ int main()
 
     for (int i = 0; i < sizeof(ts) / sizeof(ts[0]); i++) {
         long T = (ts[i] - t0) / x;
-        struct tm *utcTime = gmtime(&ts[i]);
+        time_t timeVal = (time_t)ts[i];
+        struct tm *utcTime = gmtime(&timeVal);
         char fmtTime[20] = {0};
         if (strftime(fmtTime, sizeof(fmtTime), "%Y-%m-%d %H:%M:%S", utcTime) == 0) {
             printf("strftime failed\n");

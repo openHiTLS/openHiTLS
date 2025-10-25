@@ -27,9 +27,23 @@
 #include "securec.h"
 #include "bsl_errno.h"
 #include "crypt_errno.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET3(int32_t, HITLS_APP_OptBegin, int32_t, char **, const HITLS_CmdOption *);
+STUB_DEFINE_RET4(int32_t, BSL_UIO_Ctrl, BSL_UIO *, int32_t, int32_t, void *);
+STUB_DEFINE_RET0(char *, HITLS_APP_OptGetValueStr);
+STUB_DEFINE_RET4(int32_t, HITLS_APP_OptWriteUio, BSL_UIO *, uint8_t *, uint32_t, int32_t);
+STUB_DEFINE_RET1(uint32_t, CRYPT_EAL_MdGetDigestSize, CRYPT_MD_AlgId);
+STUB_DEFINE_RET3(CRYPT_EAL_MdCTX *, CRYPT_EAL_ProviderMdNewCtx, CRYPT_EAL_LibCtx *, int32_t, const char *);
+STUB_DEFINE_RET1(int32_t, CRYPT_EAL_MdInit, CRYPT_EAL_MdCTX *);
+STUB_DEFINE_RET3(int32_t, CRYPT_EAL_MdUpdate, CRYPT_EAL_MdCTX *, const uint8_t *, uint32_t);
+STUB_DEFINE_RET3(int32_t, CRYPT_EAL_MdFinal, CRYPT_EAL_MdCTX *, uint8_t *, uint32_t *);
+
 
 #define PRV_PATH "../testdata/certificate/rsa_key/prvKey.pem"
 #define OUT_FILE_PATH "../testdata/certificate/rsa_key/out.pem"
@@ -176,9 +190,7 @@ int32_t STUB_HITLS_APP_OptBegin(int32_t argc, char **argv, const HITLS_CmdOption
 /* BEGIN_CASE */
 void UT_HITLS_APP_dgst_TC004(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptBegin, STUB_HITLS_APP_OptBegin);
+    STUB_REPLACE(HITLS_APP_OptBegin, STUB_HITLS_APP_OptBegin);;
     char *argv[][50] = {{"dgst", "-md", "md5", "-out", OUT_FILE_PATH, PRV_PATH}};
 
     OptTestData testData[] = {
@@ -192,7 +204,7 @@ void UT_HITLS_APP_dgst_TC004(void)
     }
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptBegin);
     return;
 }
 /* END_CASE */
@@ -214,10 +226,8 @@ int32_t STUB_BSL_UIO_Ctrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 /* BEGIN_CASE */
 void UT_HITLS_APP_dgst_TC005(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
     ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
-    STUB_Replace(&stubInfo, BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);
+    STUB_REPLACE(BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);;
     char *argv[][50] = {{"dgst", "-md", "md5", "-out", OUT_FILE_PATH, PRV_PATH}};
 
     OptTestData testData[] = {
@@ -230,7 +240,7 @@ void UT_HITLS_APP_dgst_TC005(void)
     }
 
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UIO_Ctrl);
     AppUninit();
     return;
 }
@@ -249,9 +259,7 @@ char *STUB_HITLS_APP_OptGetValueStr(void)
 /* BEGIN_CASE */
 void UT_HITLS_APP_dgst_TC006(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptGetValueStr, STUB_HITLS_APP_OptGetValueStr);
+    STUB_REPLACE(HITLS_APP_OptGetValueStr, STUB_HITLS_APP_OptGetValueStr);;
     char *argv[][50] = {{"dgst",  "-out", OUT_FILE_PATH, PRV_PATH}};
 
     OptTestData testData[] = {
@@ -266,7 +274,7 @@ void UT_HITLS_APP_dgst_TC006(void)
 
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptGetValueStr);
     return;
 }
 /* END_CASE */
@@ -288,9 +296,7 @@ int32_t STUB_HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t outLen, 
 /* BEGIN_CASE */
 void UT_HITLS_APP_dgst_TC007(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptWriteUio, STUB_HITLS_APP_OptWriteUio);
+    STUB_REPLACE(HITLS_APP_OptWriteUio, STUB_HITLS_APP_OptWriteUio);;
     char *argv[][50] = {{"dgst",  "-out", OUT_FILE_PATH, PRV_PATH}};
 
     OptTestData testData[] = {
@@ -305,7 +311,7 @@ void UT_HITLS_APP_dgst_TC007(void)
 
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptWriteUio);
     return;
 }
 /* END_CASE */
@@ -361,9 +367,7 @@ uint32_t STUB_CRYPT_EAL_MdGetDigestSize(CRYPT_MD_AlgId id)
 /* BEGIN_CASE */
 void UT_HITLS_APP_dgst_TC009(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, CRYPT_EAL_MdGetDigestSize, STUB_CRYPT_EAL_MdGetDigestSize);
+    STUB_REPLACE(CRYPT_EAL_MdGetDigestSize, STUB_CRYPT_EAL_MdGetDigestSize);;
     char *argv[][50] = {{"dgst", "-out", OUT_FILE_PATH, PRV_PATH}};
 
     OptTestData testData[] = {
@@ -378,7 +382,7 @@ void UT_HITLS_APP_dgst_TC009(void)
 
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(CRYPT_EAL_MdGetDigestSize);
     return;
 }
 /* END_CASE */
@@ -399,9 +403,7 @@ CRYPT_EAL_MdCTX *STUB_CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32
 /* BEGIN_CASE */
 void UT_HITLS_APP_dgst_TC0010(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, CRYPT_EAL_ProviderMdNewCtx, STUB_CRYPT_EAL_ProviderMdNewCtx);
+    STUB_REPLACE(CRYPT_EAL_ProviderMdNewCtx, STUB_CRYPT_EAL_ProviderMdNewCtx);;
     char *argv[][50] = {{"dgst", "-out", OUT_FILE_PATH, PRV_PATH}};
 
     OptTestData testData[] = {
@@ -416,7 +418,7 @@ void UT_HITLS_APP_dgst_TC0010(void)
 
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(CRYPT_EAL_ProviderMdNewCtx);
     return;
 }
 /* END_CASE */
@@ -434,9 +436,7 @@ int32_t STUB_CRYPT_EAL_MdInit(CRYPT_EAL_MdCTX *ctx){
 /* BEGIN_CASE */
 void UT_HITLS_APP_dgst_TC0011(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, CRYPT_EAL_MdInit, STUB_CRYPT_EAL_MdInit);
+    STUB_REPLACE(CRYPT_EAL_MdInit, STUB_CRYPT_EAL_MdInit);;
     char *argv[][50] = {{"dgst", "-out", OUT_FILE_PATH, PRV_PATH}};
 
     OptTestData testData[] = {
@@ -451,7 +451,7 @@ void UT_HITLS_APP_dgst_TC0011(void)
 
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(CRYPT_EAL_MdInit);
     return;
 }
 /* END_CASE */
@@ -471,9 +471,7 @@ int32_t STUB_CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data, uint3
 /* BEGIN_CASE */
 void UT_HITLS_APP_dgst_TC0012(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, CRYPT_EAL_MdUpdate, STUB_CRYPT_EAL_MdUpdate);
+    STUB_REPLACE(CRYPT_EAL_MdUpdate, STUB_CRYPT_EAL_MdUpdate);;
     char *argv[][50] = {{"dgst", "-out", OUT_FILE_PATH, PRV_PATH}};
 
     OptTestData testData[] = {
@@ -488,7 +486,7 @@ void UT_HITLS_APP_dgst_TC0012(void)
 
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(CRYPT_EAL_MdUpdate);
     return;
 }
 /* END_CASE */
@@ -508,9 +506,7 @@ int32_t STUB_CRYPT_EAL_MdFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t *len
 /* BEGIN_CASE */
 void UT_HITLS_APP_dgst_TC0013(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, CRYPT_EAL_MdFinal, STUB_CRYPT_EAL_MdFinal);
+    STUB_REPLACE(CRYPT_EAL_MdFinal, STUB_CRYPT_EAL_MdFinal);;
     char *argv[][50] = {{"dgst", "-out", OUT_FILE_PATH, PRV_PATH}};
 
     OptTestData testData[] = {{4, argv[0], HITLS_APP_CRYPTO_FAIL}};
@@ -523,7 +519,7 @@ void UT_HITLS_APP_dgst_TC0013(void)
 
 EXIT:
     AppUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(CRYPT_EAL_MdFinal);
     return;
 }
 /* END_CASE */

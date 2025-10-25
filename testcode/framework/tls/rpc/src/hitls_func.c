@@ -46,6 +46,7 @@
 #include "crypt_algid.h"
 #include "channel_res.h"
 #include "crypt_eal_provider.h"
+#include "rec_wrapper.h"
 
 #define SUCCESS 0
 #define ERROR (-1)
@@ -864,6 +865,12 @@ void *HitlsAccept(void *ssl)
     if (getenv("SSL_TIMEOUT") != NULL) {
         timeout = atoi(getenv("SSL_TIMEOUT"));
     }
+    // Apply wrapper if enabled before handshake
+    // This handles the case where RegisterWrapper() was called before connection creation
+    if (IsWrapperEnabled()) {
+        ApplyWrapperToConnectionEarly((TLS_Ctx *)ssl);
+    }
+
     time_t start = time(NULL);
     LOG_DEBUG("HiTLS Tls Accept Ing...");
     do {

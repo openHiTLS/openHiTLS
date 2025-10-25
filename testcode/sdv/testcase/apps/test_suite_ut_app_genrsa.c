@@ -27,10 +27,16 @@
 #include "app_opt.h"
 #include "app_utils.h"
 #include "bsl_uio.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 
 /* INCLUDE_SOURCE  ${HITLS_ROOT_PATH}/apps/src/app_print.c ${HITLS_ROOT_PATH}/apps/src/app_genrsa.c ${HITLS_ROOT_PATH}/apps/src/app_opt.c ${HITLS_ROOT_PATH}/apps/src/app_utils.c */
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET4(int32_t, HITLS_APP_Passwd, char *, int32_t, int32_t, void *);
+
 
 #define BSL_SUCCESS 0
 
@@ -56,9 +62,7 @@ int32_t STUB_HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag, void *
 /* BEGIN_CASE */
 void UT_HITLS_APP_genrsa_TC001(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);
+    STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
     char *argv[][10] = {
         {"genrsa", "-help"},
         {"genrsa", "-cipher", "aes128-cbc", "1024"},
@@ -90,7 +94,7 @@ void UT_HITLS_APP_genrsa_TC001(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_Passwd);
     return;
 }
 /* END_CASE */
@@ -98,9 +102,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_genrsa_TC002(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);
+    STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
     char *argv[][10] = {
         {"",       "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "2048"},
         {"genrsa", "",        "aes128-cbc", "-out", "GenrsaOutFile_1", "2048"},
@@ -119,7 +121,7 @@ void UT_HITLS_APP_genrsa_TC002(void)
     ASSERT_EQ(HITLS_GenRSAMain(6, argv[5]), HITLS_APP_OPT_VALUE_INVALID);
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_Passwd);
     return;
 }
 /* END_CASE */
@@ -127,9 +129,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_genrsa_TC003(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);
+    STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
     char *argv[][10] = {
         {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "2048"},
     };
@@ -139,7 +139,7 @@ void UT_HITLS_APP_genrsa_TC003(void)
     ASSERT_EQ(HITLS_GenRSAMain(7, argv[0]), HITLS_APP_OPT_UNKOWN);
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_Passwd);
     return;
 }
 /* END_CASE */
@@ -147,9 +147,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_genrsa_TC004(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);
+    STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
     char *argv[][10] = {
         {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "1023"},
         {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "1025"},
@@ -174,7 +172,7 @@ void UT_HITLS_APP_genrsa_TC004(void)
     ASSERT_EQ(HITLS_GenRSAMain(6, argv[8]), HITLS_APP_OPT_VALUE_INVALID);
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_Passwd);
     return;
 }
 /* END_CASE */
@@ -182,9 +180,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_genrsa_TC005(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);
+    STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
     char *argv[][10] = {
         {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile", "1024"},
         {"genrsa", "-cipher", "aes192-cbc", "-out", "GenrsaOutFile", "1024"},
@@ -218,7 +214,7 @@ void UT_HITLS_APP_genrsa_TC005(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_Passwd);
     return;
 }
 /* END_CASE */

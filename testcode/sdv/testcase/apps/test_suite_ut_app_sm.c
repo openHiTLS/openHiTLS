@@ -36,9 +36,25 @@
 #include "crypt_eal_pkey.h"
 #include "crypt_eal_cmvp.h"
 #include "eal_cipher_local.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 /* INCLUDE_SOURCE  ${HITLS_ROOT_PATH}/apps/src/app_print.c ${HITLS_ROOT_PATH}/apps/src/app_enc.c ${HITLS_ROOT_PATH}/apps/src/app_opt.c ${HITLS_ROOT_PATH}/apps/src/app_utils.c */
 /* END_HEADER */
+
+/* Platform-specific dynamic library extension for testing */
+#ifdef __APPLE__
+#define BSL_SAL_DL_EXT "dylib"
+#else
+#define BSL_SAL_DL_EXT "so"
+#endif
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET5(int32_t, BSL_UI_ReadPwdUtil, BSL_UI_ReadPwdParam *, char *, uint32_t *, const BSL_UI_CheckDataCallBack, void *);
+STUB_DEFINE_RET1(int32_t, HITLS_APP_SM_IntegrityCheck, AppProvider *);
+STUB_DEFINE_RET0(int32_t, HITLS_APP_SM_RootUserCheck);
+STUB_DEFINE_RET0(uid_t, getuid);
+
 
 #ifdef HITLS_APP_SM_MODE
 #define WORK_PATH "./sm_workpath"
@@ -56,7 +72,7 @@
 #define HITLS_SM_PROVIDER_PATH "../../output/CMVP/x86_64/lib"
 #endif
 
-#define HITLS_SM_LIB_NAME "libhitls_sm.so"
+#define HITLS_SM_LIB_NAME "libhitls_sm." BSL_SAL_DL_EXT
 #define HITLS_SM_PROVIDER_ATTR "provider=sm"
 
 static AppProvider g_appProvider = {HITLS_SM_LIB_NAME, HITLS_SM_PROVIDER_PATH, HITLS_SM_PROVIDER_ATTR};
@@ -135,8 +151,9 @@ static int32_t STUB_HITLS_APP_SM_RootUserCheck(void)
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t STUB_HITLS_APP_SM_IntegrityCheck(void)
+static int32_t STUB_HITLS_APP_SM_IntegrityCheck(AppProvider *provider)
 {
+    (void)provider;
     return HITLS_APP_SUCCESS;
 }
 #endif
@@ -154,12 +171,9 @@ void UT_HITLS_APP_SM_TC001(void)
     SKIP_TEST();
 #else
     char *password = NULL;
-
-    STUB_Init();
-    FuncStubInfo stubInfo[3] = {0};
-    STUB_Replace(&stubInfo[0], BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);
-    STUB_Replace(&stubInfo[1], HITLS_APP_SM_IntegrityCheck, STUB_HITLS_APP_SM_IntegrityCheck);
-    STUB_Replace(&stubInfo[2], HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);
+    STUB_REPLACE(BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);;
+    STUB_REPLACE(HITLS_APP_SM_IntegrityCheck, STUB_HITLS_APP_SM_IntegrityCheck);;
+    STUB_REPLACE(HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);;
 
     system("rm -rf " WORK_PATH);
     system("mkdir -p " WORK_PATH);
@@ -177,9 +191,9 @@ void UT_HITLS_APP_SM_TC001(void)
 EXIT:
     BSL_SAL_FREE(password);
     AppTestUninit();
-    STUB_Reset(&stubInfo[0]);
-    STUB_Reset(&stubInfo[1]);
-    STUB_Reset(&stubInfo[2]);
+    STUB_RESTORE(HITLS_APP_SM_RootUserCheck);
+    STUB_RESTORE(HITLS_APP_SM_RootUserCheck);
+    STUB_RESTORE(HITLS_APP_SM_RootUserCheck);
     system("rm -rf " WORK_PATH);
 #endif
 }
@@ -197,9 +211,7 @@ void UT_HITLS_APP_SM_TC002(void)
 #ifndef HITLS_APP_SM_MODE
     SKIP_TEST();
 #else
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, getuid, STUB_getuid);
+    STUB_REPLACE(getuid, STUB_getuid);;
 
     ASSERT_EQ(AppTestInit(), HITLS_APP_SUCCESS);
 
@@ -210,7 +222,7 @@ void UT_HITLS_APP_SM_TC002(void)
 
 EXIT:
     AppTestUninit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(getuid);
 #endif
 }
 /* END_CASE */
@@ -230,12 +242,9 @@ void UT_HITLS_APP_SM_TC003(void)
     char *password = NULL;
     char userFilePath[1024] = {0};
     int fd = -1;
-
-    STUB_Init();
-    FuncStubInfo stubInfo[3] = {0};
-    STUB_Replace(&stubInfo[0], BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);
-    STUB_Replace(&stubInfo[1], HITLS_APP_SM_IntegrityCheck, STUB_HITLS_APP_SM_IntegrityCheck);
-    STUB_Replace(&stubInfo[2], HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);
+    STUB_REPLACE(BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);;
+    STUB_REPLACE(HITLS_APP_SM_IntegrityCheck, STUB_HITLS_APP_SM_IntegrityCheck);;
+    STUB_REPLACE(HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);;
 
     system("rm -rf " WORK_PATH);
     system("mkdir -p " WORK_PATH);
@@ -279,9 +288,9 @@ EXIT:
     }
     BSL_SAL_FREE(password);
     AppTestUninit();
-    STUB_Reset(&stubInfo[0]);
-    STUB_Reset(&stubInfo[1]);
-    STUB_Reset(&stubInfo[2]);
+    STUB_RESTORE(HITLS_APP_SM_RootUserCheck);
+    STUB_RESTORE(HITLS_APP_SM_RootUserCheck);
+    STUB_RESTORE(HITLS_APP_SM_RootUserCheck);
     system("rm -rf " WORK_PATH);
 #endif
 }
@@ -300,14 +309,11 @@ void UT_HITLS_APP_SM_TC005(void)
     SKIP_TEST();
 #else
     char *password = NULL;
-
-    STUB_Init();
-    FuncStubInfo stubInfo[3] = {0};
     
     // First login: use correct password
-    STUB_Replace(&stubInfo[0], BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);
-    STUB_Replace(&stubInfo[1], HITLS_APP_SM_IntegrityCheck, STUB_HITLS_APP_SM_IntegrityCheck);
-    STUB_Replace(&stubInfo[2], HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);
+    STUB_REPLACE(BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil);;
+    STUB_REPLACE(HITLS_APP_SM_IntegrityCheck, STUB_HITLS_APP_SM_IntegrityCheck);;
+    STUB_REPLACE(HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);;
     system("rm -rf " WORK_PATH);
     system("mkdir -p " WORK_PATH);
     ASSERT_EQ(AppTestInit(), HITLS_APP_SUCCESS);
@@ -319,8 +325,7 @@ void UT_HITLS_APP_SM_TC005(void)
     BSL_SAL_FREE(password);
 
     // Second login: use wrong password
-    STUB_Reset(&stubInfo[0]);
-    STUB_Replace(&stubInfo[0], BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil_WrongPassword);
+    STUB_REPLACE(BSL_UI_ReadPwdUtil, STUB_BSL_UI_ReadPwdUtil_WrongPassword);;
 
     // Second login with wrong password should fail
     ASSERT_EQ(HITLS_APP_SM_Init(&g_appProvider, WORK_PATH, &password, &status), HITLS_APP_PASSWD_FAIL);
@@ -329,9 +334,9 @@ void UT_HITLS_APP_SM_TC005(void)
 EXIT:
     BSL_SAL_FREE(password);
     AppTestUninit();
-    STUB_Reset(&stubInfo[0]);
-    STUB_Reset(&stubInfo[1]);
-    STUB_Reset(&stubInfo[2]);
+    STUB_RESTORE(BSL_UI_ReadPwdUtil);
+    STUB_RESTORE(HITLS_APP_SM_IntegrityCheck);
+    STUB_RESTORE(HITLS_APP_SM_RootUserCheck);
     system("rm -rf " WORK_PATH);
 #endif
 }

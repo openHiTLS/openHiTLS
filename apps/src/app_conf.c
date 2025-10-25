@@ -18,12 +18,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#if defined(__linux__) || defined(__unix__)
+#if defined(__linux__) || defined(__unix__) || defined(__APPLE__) || defined(__MACH__)
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #else
-#error "only support linux"
+#error "only support linux and macOS"
 #endif
 #include "securec.h"
 #include "app_errno.h"
@@ -177,7 +177,7 @@ static bool ExtGetCritical(char **value)
 {
     SkipSpace(value);
     uint32_t criticalLen = strlen(EXT_STR_CRITICAL);
-    if (strlen(*value) < criticalLen || strncmp(*value, EXT_STR_CRITICAL, criticalLen != 0)) {
+    if (strlen(*value) < criticalLen || strncmp(*value, EXT_STR_CRITICAL, criticalLen) != 0) {
         return false;
     }
     *value += criticalLen;
@@ -530,6 +530,16 @@ static int32_t ParseIPValue(char *value, HITLS_X509_GeneralName *generalName)
             AppPrintError("Failed to split IP string, IP: %s.\n", value);
             BSL_SAL_FREE(ipv4ValueList[0]);
             return HITLS_APP_INVALID_IP;
+        }
+        // Normalize IPv4 octets by removing leading zeros (cross-platform fix)
+        // inet_pton() behavior differs on macOS vs Linux for leading zeros
+        for (uint32_t i = 0; i < IPV4_VALUE_MAX_CNT; i++) {
+            // Skip leading zeros, but keep "0" as "0"
+            char *octet = ipv4ValueList[i];
+            while (*octet == '0' && *(octet + 1) != '\0') {
+                octet++;
+            }
+            ipv4ValueList[i] = octet;
         }
         ipSize = IPV4_VALUE_MAX_CNT;
     } else if (inet_pton(AF_INET6, value, &(sockIpv6.sin6_addr)) == 1) {

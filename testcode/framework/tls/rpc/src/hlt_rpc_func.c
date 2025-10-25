@@ -64,65 +64,107 @@ int HLT_RpcProviderTlsNewCtx(HLT_Process *peerProcess, TLS_VERSION tlsVersion, b
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+   int result = ERROR;
     uint32_t offset = 0;
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsNewCtx");
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsNewCtx");
+        goto cleanup;
+    }
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data),
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data),
         "%llu|%s|%d|%d|",
         g_cmdIndex, __FUNCTION__, tlsVersion, isClient);
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
     offset += ret;
     if (providerCnt == 0 || providerNames == NULL || providerLibFmts == NULL) {
-        ret = sprintf_s(dataBuf.data + offset, sizeof(dataBuf.data) - offset, "|");
-        ASSERT_RETURN(ret > 0, "sprintf_s Error");
+        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "|");
+        if (!(ret > 0)) {
+            LOG_ERROR("sprintf_s Error");
+            goto cleanup;
+        }
         offset += ret;
     }
 
     for (int i = 0; i < providerCnt - 1; i++) {
-        ret = sprintf_s(dataBuf.data + offset, sizeof(dataBuf.data) - offset, "%s,%d:", providerNames[i],
+        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "%s,%d:", providerNames[i],
             providerLibFmts[i]);
-        ASSERT_RETURN(ret > 0, "sprintf_s Error");
+        if (!(ret > 0)) {
+            LOG_ERROR("sprintf_s Error");
+            goto cleanup;
+        }
         offset += ret;
     }
     if (providerCnt >= 1) {
-        ret = sprintf_s(dataBuf.data + offset, sizeof(dataBuf.data) - offset, "%s,%d|", providerNames[providerCnt - 1],
+        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "%s,%d|", providerNames[providerCnt - 1],
             providerLibFmts[providerCnt - 1]);
-        ASSERT_RETURN(ret > 0, "sprintf_s Error");
+        if (!(ret > 0)) {
+            LOG_ERROR("sprintf_s Error");
+            goto cleanup;
+        }
         offset += ret;
     }
     if (attrName != NULL && strlen(attrName) > 0) {
-        ret = sprintf_s(dataBuf.data + offset, sizeof(dataBuf.data) - offset, "%s|", attrName);
+        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "%s|", attrName);
     } else {
-        ret = sprintf_s(dataBuf.data + offset, sizeof(dataBuf.data) - offset, "|");
+        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "|");
     }
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
     offset += ret;
     if (providerPath != NULL && strlen(providerPath) > 0) {
-        ret = sprintf_s(dataBuf.data + offset, sizeof(dataBuf.data) - offset, "%s|", providerPath);
+        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "%s|", providerPath);
     } else {
-        ret = sprintf_s(dataBuf.data + offset, sizeof(dataBuf.data) - offset, "|");
+        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "|");
     }
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
     offset += ret;
 
-    dataBuf.dataLen = strlen(dataBuf.data);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
 
-    return atoi(expectCmdData.paras[0]);
+    result = atoi(expectCmdData.paras[0]);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsNewCtx(HLT_Process *peerProcess, TLS_VERSION tlsVersion, bool isClient)
@@ -131,27 +173,52 @@ int HLT_RpcTlsNewCtx(HLT_Process *peerProcess, TLS_VERSION tlsVersion, bool isCl
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsNewCtx");
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsNewCtx");
+        goto cleanup;
+    }
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d|%d", g_cmdIndex, __FUNCTION__, tlsVersion, isClient);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d", g_cmdIndex, __FUNCTION__, tlsVersion, isClient);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
 
-    return atoi(expectCmdData.paras[0]);
+    result = atoi(expectCmdData.paras[0]);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config)
@@ -160,13 +227,23 @@ int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
 
-    ASSERT_RETURN(peerProcess->remoteFlag ==  1, "Only Remote Process Support Call HLT_RpcTlsSetCtx");
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag ==  1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsSetCtx");
+        goto cleanup;
+    }
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data),
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data),
     "%llu|%s|%d|"
     "%u|%u|%s|%s|"
     "%s|%s|%s|%d|"
@@ -193,20 +270,36 @@ int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config
     config->readAhead, config->needCheckKeyUsage, config->isSupportVerifyNone,
     config->allowClientRenegotiate, config->emptyRecordsNum, config->allowLegacyRenegotiate, config->isEncryptThenMac,
     config->modeSupport, config->isMiddleBoxCompat, config->attrName);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Wait to receive the result.
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return atoi(expectCmdData.paras[0]);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+
+    result = atoi(expectCmdData.paras[0]);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsNewSsl(HLT_Process *peerProcess, int ctxId)
@@ -215,28 +308,54 @@ int HLT_RpcTlsNewSsl(HLT_Process *peerProcess, int ctxId)
     uint64_t cmdIndex;
     CmdData expectCmdData = {0};
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
 
-    ASSERT_RETURN(peerProcess->remoteFlag ==  1, "Only Remote Process Support Call HLT_RpcTlsNewSsl");
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag ==  1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsNewSsl");
+        goto cleanup;
+    }
 
     // Constructing Commands
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, ctxId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, ctxId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Wait to receive the result.
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return atoi(expectCmdData.paras[0]);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+
+    result = atoi(expectCmdData.paras[0]);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsSetSsl(HLT_Process *peerProcess, int sslId, HLT_Ssl_Config *config)
@@ -245,28 +364,54 @@ int HLT_RpcTlsSetSsl(HLT_Process *peerProcess, int sslId, HLT_Ssl_Config *config
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
 
-    ASSERT_RETURN(peerProcess->remoteFlag ==  1, "Only Remote Process Support Call HLT_RpcTlsSetSsl");
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag ==  1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsSetSsl");
+        goto cleanup;
+    }
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d|%d|%d|%d",
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d|%d|%d",
                     g_cmdIndex, __FUNCTION__, sslId, config->sockFd, config->connType, config->connPort);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Wait to receive the result.
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return atoi(expectCmdData.paras[0]);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+
+    result = atoi(expectCmdData.paras[0]);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsListen(HLT_Process *peerProcess, int sslId)
@@ -274,23 +419,44 @@ int HLT_RpcTlsListen(HLT_Process *peerProcess, int sslId)
     int ret;
     uint64_t acceptId;
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     srcProcess = GetProcess();
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsListen");
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsListen");
+        goto cleanup;
+    }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     acceptId = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
-    return acceptId;
+    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
+    result = acceptId;
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsAccept(HLT_Process *peerProcess, int sslId)
@@ -298,23 +464,44 @@ int HLT_RpcTlsAccept(HLT_Process *peerProcess, int sslId)
     int ret;
     uint64_t acceptId;
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     srcProcess = GetProcess();
 
-    ASSERT_RETURN(peerProcess->remoteFlag ==  1, "Only Remote Process Support Call HLT_RpcTlsAccept");
+    if (!(peerProcess->remoteFlag ==  1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsAccept");
+        goto cleanup;
+    }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     acceptId = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
-    return acceptId;
+    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
+    result = acceptId;
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcGetTlsListenResult(int acceptId)
@@ -342,52 +529,99 @@ int HLT_RpcTlsConnect(HLT_Process *peerProcess, int sslId)
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
 
-    ASSERT_RETURN(peerProcess->remoteFlag ==  1, "Only Remote Process Support Call HLT_RpcTlsConnect");
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag ==  1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsConnect");
+        goto cleanup;
+    }
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Waiting for the result returned by the peer
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
 
-    return atoi(expectCmdData.paras[0]);
+    result = atoi(expectCmdData.paras[0]);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsConnectUnBlock(HLT_Process *peerProcess, int sslId)
 {
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsConnect");
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsConnect");
+        goto cleanup;
+    }
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    int ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, "HLT_RpcTlsConnect", sslId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    int ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, "HLT_RpcTlsConnect", sslId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
-    return cmdIndex;
+    result = cmdIndex;
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcGetTlsConnectResult(int cmdIndex)
@@ -407,26 +641,45 @@ int HLT_RpcTlsRead(HLT_Process *peerProcess, int sslId, uint8_t *data, uint32_t 
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsRead");
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsRead");
+        goto cleanup;
+    }
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d|%u", g_cmdIndex, __FUNCTION__, sslId, bufSize);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%u", g_cmdIndex, __FUNCTION__, sslId, bufSize);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Waiting for the result returned by the peer
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
 
     // Parsing result
     ret = atoi(expectCmdData.paras[0]);
@@ -436,7 +689,13 @@ int HLT_RpcTlsRead(HLT_Process *peerProcess, int sslId, uint8_t *data, uint32_t 
             data, bufSize, expectCmdData.paras[2], *readLen);  // The second parameter indicates the content to be read.
     }
 
-    return ret;
+    result = ret;
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsReadUnBlock(HLT_Process *peerProcess, int sslId, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
@@ -446,24 +705,46 @@ int HLT_RpcTlsReadUnBlock(HLT_Process *peerProcess, int sslId, uint8_t *data, ui
     int ret;
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsRead");
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsRead");
+        goto cleanup;
+    }
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d|%u", g_cmdIndex, "HLT_RpcTlsRead", sslId, bufSize);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%u", g_cmdIndex, "HLT_RpcTlsRead", sslId, bufSize);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
-    return cmdIndex;
+    result = cmdIndex;
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcGetTlsReadResult(int cmdIndex, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
@@ -490,28 +771,53 @@ int HLT_RpcTlsWrite(HLT_Process *peerProcess, int sslId, uint8_t *data, uint32_t
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsWrite");
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsWrite");
+        goto cleanup;
+    }
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d|%u|%s",
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%u|%s",
                     g_cmdIndex, __FUNCTION__, sslId, bufSize, data);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Waiting for the result returned by the peer
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return atoi(expectCmdData.paras[0]);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = atoi(expectCmdData.paras[0]);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsWriteUnBlock(HLT_Process *peerProcess, int sslId, uint8_t *data, uint32_t bufSize)
@@ -519,26 +825,48 @@ int HLT_RpcTlsWriteUnBlock(HLT_Process *peerProcess, int sslId, uint8_t *data, u
     int ret;
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsWrite");
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsWrite");
+        goto cleanup;
+    }
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d|%u|%s",
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%u|%s",
                     g_cmdIndex, "HLT_RpcTlsWrite", sslId, bufSize, data);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Do not wait for the result returned by the peer.
-    return cmdIndex;
+    result = cmdIndex;
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcGetTlsWriteResult(int cmdIndex)
@@ -557,27 +885,51 @@ int HLT_RpcTlsRenegotiate(HLT_Process *peerProcess, int sslId)
     uint64_t cmdIndex;
     char *endPtr = NULL;
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     CmdData expectCmdData = {0};
     srcProcess = GetProcess();
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsRenegotiate");
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsRenegotiate");
+        goto cleanup;
+    }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
     // Waiting for the result
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 
@@ -587,27 +939,51 @@ int HLT_RpcTlsVerifyClientPostHandshake(HLT_Process *peerProcess, int sslId)
     uint64_t cmdIndex;
     char *endPtr = NULL;
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     CmdData expectCmdData = {0};
     srcProcess = GetProcess();
 
-    ASSERT_RETURN(peerProcess->remoteFlag ==  1, "Only Remote Process Support Call RpcTlsVerifyClientPostHandshake");
+    if (!(peerProcess->remoteFlag ==  1)) {
+        LOG_ERROR("Only Remote Process Support Call RpcTlsVerifyClientPostHandshake");
+        goto cleanup;
+    }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
     // Waiting for the result
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcDataChannelConnect(HLT_Process *peerProcess, DataChannelParam *channelParam)
@@ -616,29 +992,54 @@ int HLT_RpcDataChannelConnect(HLT_Process *peerProcess, DataChannelParam *channe
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcDataChannelConnect");
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcDataChannelConnect");
+        goto cleanup;
+    }
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d|%d|%d", g_cmdIndex, __FUNCTION__,
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d|%d", g_cmdIndex, __FUNCTION__,
                     channelParam->type, channelParam->port, channelParam->isBlock);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Waiting for the result returned by the peer
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
 
-    return atoi(expectCmdData.paras[0]);
+    result = atoi(expectCmdData.paras[0]);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcDataChannelBind(HLT_Process *peerProcess, DataChannelParam *channelParam)
@@ -647,25 +1048,49 @@ int HLT_RpcDataChannelBind(HLT_Process *peerProcess, DataChannelParam *channelPa
     uint64_t bindId;
     Process *srcProcess = NULL;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
-    ASSERT_RETURN(peerProcess->remoteFlag ==  1, "Only Remote Process Support Call HLT_RpcDataChannelBind");
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
+    if (!(peerProcess->remoteFlag ==  1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcDataChannelBind");
+        goto cleanup;
+    }
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d|%d|%d|%d", g_cmdIndex, __FUNCTION__,
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d|%d|%d", g_cmdIndex, __FUNCTION__,
                     channelParam->type, channelParam->port, channelParam->isBlock, channelParam->bindFd);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    dataBuf->dataLen = strlen(dataBuf->data);
     bindId = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
-    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
+    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Waiting for the result returned by the peer
     ret = WaitResult(&expectCmdData, bindId, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
     channelParam->port = atoi(expectCmdData.paras[1]);
-    return atoi(expectCmdData.paras[0]);
+    result = atoi(expectCmdData.paras[0]);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcDataChannelAccept(HLT_Process *peerProcess, DataChannelParam *channelParam)
@@ -673,24 +1098,46 @@ int HLT_RpcDataChannelAccept(HLT_Process *peerProcess, DataChannelParam *channel
     int ret;
     uint64_t acceptId;
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcDataChannelAccept");
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcDataChannelAccept");
+        goto cleanup;
+    }
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d|%d|%d|%d", g_cmdIndex, __FUNCTION__,
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d|%d|%d", g_cmdIndex, __FUNCTION__,
                     channelParam->type, channelParam->port, channelParam->isBlock, channelParam->bindFd);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    dataBuf->dataLen = strlen(dataBuf->data);
     acceptId = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
-    return acceptId;
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
+    result = acceptId;
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcGetAcceptFd(int acceptId)
@@ -710,27 +1157,52 @@ int HLT_RpcTlsRegCallback(HLT_Process *peerProcess, TlsCallbackType type)
     uint64_t cmdIndex;
     Process *srcProcess;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsRegCallback");
+    int result = ERROR;
+
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsRegCallback");
+        goto cleanup;
+    }
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, type);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, type);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Waiting for the result
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return atoi(expectCmdData.paras[0]);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = atoi(expectCmdData.paras[0]);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcProcessExit(HLT_Process *peerProcess)
@@ -739,27 +1211,51 @@ int HLT_RpcProcessExit(HLT_Process *peerProcess)
     uint64_t cmdIndex;
     Process *srcProcess;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     srcProcess = GetProcess();
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcProcessExit");
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcProcessExit");
+        goto cleanup;
+    }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, peerProcess->connFd);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, peerProcess->connFd);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Waiting for the result
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return SUCCESS;
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = SUCCESS;
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsGetStatus(HLT_Process *peerProcess, int sslId)
@@ -772,25 +1268,46 @@ int HLT_RpcTlsGetStatus(HLT_Process *peerProcess, int sslId)
     char *endPtr = NULL;
     Process *srcProcess;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     srcProcess = GetProcess();
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Waiting for the result
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsGetAlertFlag(HLT_Process *peerProcess, int sslId)
@@ -803,25 +1320,46 @@ int HLT_RpcTlsGetAlertFlag(HLT_Process *peerProcess, int sslId)
     char *endPtr = NULL;
     Process *srcProcess;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     srcProcess = GetProcess();
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Waiting for the result
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsGetAlertLevel(HLT_Process *peerProcess, int sslId)
@@ -834,25 +1372,46 @@ int HLT_RpcTlsGetAlertLevel(HLT_Process *peerProcess, int sslId)
     char *endPtr = NULL;
     Process *srcProcess;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     srcProcess = GetProcess();
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (!(ret > 0)) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Waiting for the result
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsGetAlertDescription(HLT_Process *peerProcess, int sslId)
@@ -865,25 +1424,46 @@ int HLT_RpcTlsGetAlertDescription(HLT_Process *peerProcess, int sslId)
     char *endPtr = NULL;
     Process *srcProcess;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     srcProcess = GetProcess();
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (ret <= 0) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (ret != SUCCESS) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Waiting for the result
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsClose(HLT_Process *peerProcess, int sslId)
@@ -892,27 +1472,51 @@ int HLT_RpcTlsClose(HLT_Process *peerProcess, int sslId)
     uint64_t cmdIndex;
     char *endPtr = NULL;
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     CmdData expectCmdData = {0};
     srcProcess = GetProcess();
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsClose");
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsClose");
+        goto cleanup;
+    }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (ret <= 0) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (ret != SUCCESS) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
     // Waiting for the result
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+    if (!(ret == SUCCESS)) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcFreeResFormSsl(HLT_Process *peerProcess, int sslId)
@@ -921,27 +1525,51 @@ int HLT_RpcFreeResFormSsl(HLT_Process *peerProcess, int sslId)
     uint64_t cmdIndex;
     char *endPtr = NULL;
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     CmdData expectCmdData = {0};
     srcProcess = GetProcess();
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcFreeResFormSsl");
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcFreeResFormSsl");
+        goto cleanup;
+    }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (ret <= 0) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (ret != SUCCESS) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
     // Waiting for the result
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+    if (ret != SUCCESS) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcSctpClose(HLT_Process *peerProcess, int fd)
@@ -950,27 +1578,51 @@ int HLT_RpcSctpClose(HLT_Process *peerProcess, int fd)
     uint64_t cmdIndex;
     char *endPtr = NULL;
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     CmdData expectCmdData = {0};
     srcProcess = GetProcess();
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcSctpClose");
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcSctpClose");
+        goto cleanup;
+    }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, fd);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, fd);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (ret <= 0) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (ret != SUCCESS) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
     // Waiting for the result
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return (int)strtol((const char *)expectCmdData.paras[0], &endPtr, 0);
+    if (ret != SUCCESS) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = (int)strtol((const char *)expectCmdData.paras[0], &endPtr, 0);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcCloseFd(HLT_Process *peerProcess, int fd, int linkType)
@@ -978,24 +1630,45 @@ int HLT_RpcCloseFd(HLT_Process *peerProcess, int fd, int linkType)
     int ret;
     uint64_t cmdIndex;
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     srcProcess = GetProcess();
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcCloseFd");
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcCloseFd");
+        goto cleanup;
+    }
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d|%d", g_cmdIndex, __FUNCTION__, fd, linkType);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d", g_cmdIndex, __FUNCTION__, fd, linkType);
 
-    dataBuf.dataLen = strlen(dataBuf.data);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (ret <= 0) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (ret != SUCCESS) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
     // The close fd does not need to wait for the result.
-    return ret;
+    result = ret;
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsSetMtu(HLT_Process *peerProcess, int sslId, uint16_t mtu)
@@ -1004,27 +1677,51 @@ int HLT_RpcTlsSetMtu(HLT_Process *peerProcess, int sslId, uint16_t mtu)
     uint64_t cmdIndex;
     char *endPtr = NULL;
     Process *srcProcess = NULL;
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     CmdData expectCmdData = {0};
     srcProcess = GetProcess();
 
-    ASSERT_RETURN(peerProcess->remoteFlag == 1, "Only Remote Process Support Call HLT_RpcTlsSetMtu");
+    if (!(peerProcess->remoteFlag == 1)) {
+        LOG_ERROR("Only Remote Process Support Call HLT_RpcTlsSetMtu");
+        goto cleanup;
+    }
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d|%d", g_cmdIndex, __FUNCTION__, sslId, mtu);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d", g_cmdIndex, __FUNCTION__, sslId, mtu);
 
-    dataBuf.dataLen = strlen(dataBuf.data);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (ret <= 0) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (ret != SUCCESS) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
     // Waiting for the result
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+    if (ret != SUCCESS) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }
 
 int HLT_RpcTlsGetErrorCode(HLT_Process *peerProcess, int sslId)
@@ -1037,23 +1734,44 @@ int HLT_RpcTlsGetErrorCode(HLT_Process *peerProcess, int sslId)
     char *endPtr = NULL;
     Process *srcProcess;
     CmdData expectCmdData = {0};
-    ControlChannelBuf dataBuf;
+    /* Allocate buffer on heap to avoid stack overflow (20KB is too large for stack) */
+    ControlChannelBuf *dataBuf = (ControlChannelBuf *)malloc(sizeof(ControlChannelBuf));
+    if (dataBuf == NULL) {
+        LOG_ERROR("Failed to allocate ControlChannelBuf");
+        return ERROR;
+    }
+    int result = ERROR;
     srcProcess = GetProcess();
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
-    dataBuf.dataLen = strlen(dataBuf.data);
+    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    if (ret <= 0) {
+        LOG_ERROR("sprintf_s Error");
+        goto cleanup;
+    }
 
-    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, &dataBuf);
-    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+    ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
+    if (ret != SUCCESS) {
+        LOG_ERROR("ControlChannelWrite Error");
+        goto cleanup;
+    }
 
     // Waiting for the result
     ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
-    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
-    return (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+    if (ret != SUCCESS) {
+        LOG_ERROR("WaitResult Error");
+        goto cleanup;
+    }
+    result = (int)strtol(expectCmdData.paras[0], &endPtr, 0);
+
+cleanup:
+    if (dataBuf != NULL) {
+        free(dataBuf);
+    }
+    return result;
 }

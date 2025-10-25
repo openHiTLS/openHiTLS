@@ -53,12 +53,36 @@
 /* BEGIN_CASE */
 void SDV_BSL_SAL_DL_FUNC_TC001(char *test1, char *test2, char *testNoInit, char *funcName)
 {
+#ifndef HITLS_CRYPTO_PROVIDER
+    /* Skip test in no-provider mode: provider test libraries are not built */
+    (void)test1;
+    (void)test2;
+    (void)testNoInit;
+    (void)funcName;
+    SKIP_TEST();
+#else
     void *handle1 = NULL;
     void *handle2 = NULL;
     void *handleNoInit = NULL;
     void *func = NULL;
     void *nonExistentLib = NULL;
     int32_t ret;
+
+    /* Skip test data that doesn't match current platform */
+    const char *ext = strrchr(test1, '.');
+    if (ext != NULL) {
+#if defined(HITLS_BSL_SAL_DARWIN)
+        /* On Darwin, skip .so test data */
+        if (strcmp(ext, ".so") == 0) {
+            return;
+        }
+#else  /* HITLS_BSL_SAL_LINUX and other Unix-like systems */
+        /* On Linux, skip .dylib test data */
+        if (strcmp(ext, ".dylib") == 0) {
+            return;
+        }
+#endif
+    }
 
     // Test BSL_SAL_LoadLib with valid input
     ret = BSL_SAL_LoadLib(test1, &handle1);
@@ -122,6 +146,7 @@ EXIT:
         BSL_SAL_UnLoadLib(handleNoInit);
     }
     return;
+#endif /* HITLS_CRYPTO_PROVIDER */
 }
 /* END_CASE */
 
@@ -153,6 +178,23 @@ void SDV_BSL_SAL_CONVERTER_NAME_TC001(char *name, int cmd, char *aimResult)
     int32_t ret;
 
     TestMemInit();
+
+    /* Skip test data that doesn't match current platform */
+    const char *ext = strrchr(aimResult, '.');
+    if (ext != NULL) {
+#if defined(HITLS_BSL_SAL_DARWIN)
+        /* On Darwin, skip .so test data */
+        if (strcmp(ext, ".so") == 0) {
+            return;
+        }
+#else  /* HITLS_BSL_SAL_LINUX and other Unix-like systems */
+        /* On Linux, skip .dylib test data */
+        if (strcmp(ext, ".dylib") == 0) {
+            return;
+        }
+#endif
+    }
+
     ret = BSL_SAL_LibNameFormat(cmd, name, &convertedName);
     ASSERT_EQ(ret, BSL_SUCCESS);
     ASSERT_TRUE(convertedName != NULL);

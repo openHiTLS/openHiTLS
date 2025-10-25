@@ -29,6 +29,9 @@ if(APPLE)
     # Fix linker warning: "reducing alignment of section __DATA,__common from 0x8000 to 0x4000"
     # Apple Clang still defaults to -fcommon (unlike GCC 10+ and LLVM Clang 11+)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-common")
+else()
+    # Linux/Unix: Enable GNU extensions for RTLD_NEXT and other POSIX features
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 endif()
 
 # Detect platform-specific shared library extension
@@ -56,10 +59,6 @@ endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHITLS_PROVIDER_LIB_NAME=\\\"${HITLS_PROVIDER_LIB_NAME}\\\"")
 
-# Add GNU ld-specific wrap flags only on Linux (not supported on macOS)
-if(NOT APPLE)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,--wrap=REC_Read -Wl,--wrap=REC_Write")
-endif()
 
 message(STATUS "System processor :${CMAKE_SYSTEM_PROCESSOR}")
 message(STATUS "Enable bsl uio sctp :${ENABLE_UIO_SCTP}")

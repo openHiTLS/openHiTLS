@@ -17,7 +17,6 @@
 #include <stdio.h>
 #include <limits.h>
 #include "securec.h"
-#include "stub_replace.h"
 #include "test.h"
 #include "bsl_uio.h"
 #include "bsl_types.h"

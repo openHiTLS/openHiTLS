@@ -17,7 +17,7 @@
 /* INCLUDE_BASE test_suite_tls13_consistency_rfc8446 */
 
 #include <stdio.h>
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "hitls.h"
 #include "hitls_config.h"
 #include "hitls_error.h"
@@ -49,6 +49,13 @@
 #include "process.h"
 #include "rec_read.h"
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET4(int32_t, RecParseInnerPlaintext, TLS_Ctx *, const uint8_t *, uint32_t *, uint8_t *);
+STUB_DEFINE_RET1(int32_t, HS_DoHandshake, TLS_Ctx *);
+
 
 #define g_uiPort 6543
 // REC_Read calls TlsRecordRead calls RecParseInnerPlaintext
@@ -86,7 +93,6 @@ typedef struct {
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_APP_DATA_BEFORE_FINISH_FUNC_TC001(int isClient)
 {
     FRAME_Init();
-    STUB_Init();
 
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
@@ -102,14 +108,13 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_APP_DATA_BEFORE_FINISH_FUNC_TC001(int isCl
     ASSERT_TRUE(FRAME_CreateConnection(sender, recver, true, TRY_RECV_FINISH) == HITLS_SUCCESS);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_HANDSHAKING);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_HANDSHAKING);
-    FuncStubInfo stubInfo = {0};
     /*
      * Plaintext header of the wrapped record, which is of the app type for finish and app data.
      * After the wrapped record body is parsed (that is, the body is decrypted), the last nonzero byte of the body is
      * the actual record type. This case is constructed by tampering with the rec type to the app type,
      * which should be the hs type.
      */
-    STUB_Replace(&stubInfo, RecParseInnerPlaintext, STUB_RecParseInnerPlaintext);
+    STUB_REPLACE(RecParseInnerPlaintext, STUB_RecParseInnerPlaintext);;
     if (isClient) {
         ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     } else {
@@ -119,7 +124,7 @@ EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(RecParseInnerPlaintext);
 }
 /* END_CASE */
 
@@ -1392,7 +1397,6 @@ EXIT:
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECVAPP_AFTER_CERT_FUNC_TC001(int isClient)
 {
     FRAME_Init();
-    STUB_Init();
     FRAME_CertInfo certInfo = {
         "ecdsa/ca-nist521.der",
         "ecdsa/inter-nist521.der",
@@ -1423,14 +1427,13 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECVAPP_AFTER_CERT_FUNC_TC001(int isClient
     } else {
         ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_RECV_FINISH) == HITLS_SUCCESS);
     }
-    FuncStubInfo stubInfo = {0};
     /*
      * Plaintext header of the wrapped record, which is of the app type for finish and app data.
      * After the wrapped record body is parsed (that is, the body is decrypted), the last nonzero byte of the body is
      * the actual record type. This case is constructed by tampering with the rec type to the app type, which should be
      * the hs type.
      */
-    STUB_Replace(&stubInfo, RecParseInnerPlaintext, STUB_RecParseInnerPlaintext);
+    STUB_REPLACE(RecParseInnerPlaintext, STUB_RecParseInnerPlaintext);;
     if (isClient) {
         ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     } else {
@@ -1440,7 +1443,7 @@ EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(RecParseInnerPlaintext);
 }
 /* END_CASE */
 
@@ -3100,11 +3103,8 @@ EXIT:
 }
 /* END_CASE */
 
-int32_t STUB_HS_DoHandshake_Fatal(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t plainLen)
+int32_t STUB_HS_DoHandshake_Fatal(TLS_Ctx *ctx)
 {
-    (void)recordType;
-    (void)data;
-    (void)plainLen;
     ctx->method.sendAlert(ctx, ALERT_LEVEL_WARNING, ALERT_UNEXPECTED_MESSAGE); /* sends a fatal alert message.*/
     return HITLS_INTERNAL_EXCEPTION;
 }
@@ -3126,8 +3126,6 @@ int32_t STUB_HS_DoHandshake_Fatal(TLS_Ctx *ctx, REC_Type recordType, const uint8
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ALERT_DESCRIPTION_FUNC_TC001()
 {
     FRAME_Init();
-    STUB_Init();
-    FuncStubInfo tmpRpInfo = {0};
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLSConfig();
     tlsConfig->isSupportClientVerify = true;
     HITLS_CFG_SetKeyExchMode(tlsConfig, TLS13_KE_MODE_PSK_WITH_DHE);
@@ -3143,10 +3141,10 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ALERT_DESCRIPTION_FUNC_TC001()
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_HANDSHAKING);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_HANDSHAKING);
     server->ssl->recCtx->outBuf->end = 0;
-    STUB_Replace(&tmpRpInfo, HS_DoHandshake, STUB_HS_DoHandshake_Fatal);
+    STUB_REPLACE(HS_DoHandshake, STUB_HS_DoHandshake_Fatal);;
     int32_t ret = HITLS_Accept(server->ssl);
     ASSERT_EQ(ret, HITLS_REC_NORMAL_IO_BUSY);
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(HS_DoHandshake);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
     ioUserData->recMsg.len = 0;
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
@@ -3176,8 +3174,6 @@ EXIT:
 void UT_TLS_TLS13_RFC8446_CONSISTENCY_ALERT_DESCRIPTION_FUNC_TC002()
 {
     FRAME_Init();
-    STUB_Init();
-    FuncStubInfo tmpRpInfo = {0};
 
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLSConfig();
     tlsConfig->isSupportClientVerify = true;
@@ -3198,10 +3194,10 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ALERT_DESCRIPTION_FUNC_TC002()
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_IDLE);
 
     client->ssl->recCtx->outBuf->end = 0;
-    STUB_Replace(&tmpRpInfo, HS_DoHandshake, STUB_HS_DoHandshake_Fatal);
+    STUB_REPLACE(HS_DoHandshake, STUB_HS_DoHandshake_Fatal);;
     int32_t ret = HITLS_Connect(client->ssl);
     ASSERT_EQ(ret, HITLS_REC_NORMAL_IO_BUSY);
-    STUB_Reset(&tmpRpInfo);
+    STUB_RESTORE(HS_DoHandshake);
 
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
     ioUserData->recMsg.len = 0;

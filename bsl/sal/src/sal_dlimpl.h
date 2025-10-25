@@ -34,7 +34,7 @@ typedef struct {
 
 int32_t SAL_DlCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
 /**
  * @brief Load a dynamic library
  * @param fileName Name of the library file to load

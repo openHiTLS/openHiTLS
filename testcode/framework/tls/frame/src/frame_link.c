@@ -25,6 +25,7 @@
 #include "frame_tls.h"
 #include "frame_io.h"
 #include "frame_link.h"
+#include "rec_wrapper.h"
 
 #define MAX_CERT_PATH_LENGTH (1024)
 
@@ -149,6 +150,12 @@ FRAME_LinkObj *CreateLink(HITLS_Config *config, BSL_UIO_TransportType type)
     }
     linkObj->io = io;
     linkObj->ssl = sslObj;
+
+    // Register connection for late wrapper application
+    // This enables RegisterWrapper to apply wrappers to connections
+    // that were created before the wrapper was registered
+    RegisterConnection(sslObj);
+
     return linkObj;
 ERR:
     FRAME_IO_FreeUserData(ioUserdata);
@@ -295,6 +302,13 @@ void FRAME_FreeLink(FRAME_LinkObj *linkObj)
     if (linkObj == NULL) {
         return;
     }
+
+    // Unregister connection from global tracking before freeing
+    if (linkObj->ssl != NULL) {
+        UnregisterConnection(linkObj->ssl);
+        RemoveWrapperFromConnection(linkObj->ssl);
+    }
+
     FRAME_IO_FreeUserData(BSL_UIO_GetUserData(linkObj->io));
     // BSL_UIO_Free is automatically invoked twice in HITLS_Free
 #ifdef HITLS_TLS_FEATURE_FLIGHT

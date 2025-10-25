@@ -19,7 +19,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <securec.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "app_errno.h"
 #include "app_print.h"
 #include "app_opt.h"
@@ -135,7 +135,7 @@ static const HITLS_CmdOption OPTS[] = {
     {"name", HITLS_APP_OPT_NAME, HITLS_APP_OPT_VALUETYPE_STRING, "Use name as friendly name"},
     {"CAfile", HITLS_APP_OPT_CA_FILE, HITLS_APP_OPT_VALUETYPE_STRING, "PEM-format file of CA's"},
     {"", HITLS_APP_OPT_CIPHER_ALG, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Any supported cipher"},
-    {NULL}
+    {NULL, 0, 0, NULL}
 };
 
 static const AlgList MAC_ALG_LIST[] = {

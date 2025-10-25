@@ -25,6 +25,13 @@
 #include "sal_lockimpl.h"
 #include "bsl_sal.h"
 
+// OnceControl status values for non-threaded fallback implementation
+typedef enum {
+    ONCE_STATUS_NOT_INITIALIZED = 0,  // Not initialized yet
+    ONCE_STATUS_INITIALIZING    = 1,  // Currently initializing
+    ONCE_STATUS_DONE            = 2   // Initialization complete
+} OnceStatus;
+
 static BSL_SAL_ThreadCallback g_threadCallback = {0};
 static BSL_SAL_PiDCallback g_pidCallback = {0};
 
@@ -33,7 +40,7 @@ int32_t BSL_SAL_ThreadLockNew(BSL_SAL_ThreadLockHandle *lock)
     if ((g_threadCallback.pfThreadLockNew != NULL) && (g_threadCallback.pfThreadLockNew != BSL_SAL_ThreadLockNew)) {
         return g_threadCallback.pfThreadLockNew(lock);
     }
-#if defined (HITLS_BSL_SAL_LOCK) && defined(HITLS_BSL_SAL_LINUX)
+#if defined(HITLS_BSL_SAL_LOCK) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
     return SAL_RwLockNew(lock);
 #else
     return BSL_SUCCESS;
@@ -45,7 +52,7 @@ int32_t BSL_SAL_ThreadReadLock(BSL_SAL_ThreadLockHandle lock)
     if ((g_threadCallback.pfThreadReadLock != NULL) && (g_threadCallback.pfThreadReadLock != BSL_SAL_ThreadReadLock)) {
         return g_threadCallback.pfThreadReadLock(lock);
     }
-#if defined (HITLS_BSL_SAL_LOCK) && defined(HITLS_BSL_SAL_LINUX)
+#if defined(HITLS_BSL_SAL_LOCK) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
     return SAL_RwReadLock(lock);
 #else
     return BSL_SUCCESS;
@@ -58,7 +65,7 @@ int32_t BSL_SAL_ThreadWriteLock(BSL_SAL_ThreadLockHandle lock)
         (g_threadCallback.pfThreadWriteLock != BSL_SAL_ThreadWriteLock)) {
         return g_threadCallback.pfThreadWriteLock(lock);
     }
-#if defined (HITLS_BSL_SAL_LOCK) && defined(HITLS_BSL_SAL_LINUX)
+#if defined(HITLS_BSL_SAL_LOCK) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
     return SAL_RwWriteLock(lock);
 #else
     return BSL_SUCCESS;
@@ -70,7 +77,7 @@ int32_t BSL_SAL_ThreadUnlock(BSL_SAL_ThreadLockHandle lock)
     if ((g_threadCallback.pfThreadUnlock != NULL) && (g_threadCallback.pfThreadUnlock != BSL_SAL_ThreadUnlock)) {
         return g_threadCallback.pfThreadUnlock(lock);
     }
-#if defined (HITLS_BSL_SAL_LOCK) && defined(HITLS_BSL_SAL_LINUX)
+#if defined(HITLS_BSL_SAL_LOCK) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
     return SAL_RwUnlock(lock);
 #else
     return BSL_SUCCESS;
@@ -83,7 +90,7 @@ void BSL_SAL_ThreadLockFree(BSL_SAL_ThreadLockHandle lock)
         g_threadCallback.pfThreadLockFree(lock);
         return;
     }
-#if defined (HITLS_BSL_SAL_LOCK) && defined(HITLS_BSL_SAL_LINUX)
+#if defined(HITLS_BSL_SAL_LOCK) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
     SAL_RwLockFree(lock);
 #endif
 }
@@ -93,7 +100,7 @@ uint64_t BSL_SAL_ThreadGetId(void)
     if ((g_threadCallback.pfThreadGetId != NULL) && (g_threadCallback.pfThreadGetId != BSL_SAL_ThreadGetId)) {
         return g_threadCallback.pfThreadGetId();
     }
-#if defined (HITLS_BSL_SAL_THREAD) && defined(HITLS_BSL_SAL_LINUX)
+#if defined(HITLS_BSL_SAL_THREAD) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
     return SAL_GetThreadId();
 #else
     return BSL_SUCCESS;
@@ -112,19 +119,23 @@ int32_t BSL_SAL_GetPid(void)
 #endif
 }
 
-int32_t BSL_SAL_ThreadRunOnce(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine initFunc)
+int32_t BSL_SAL_ThreadRunOnce(BSL_SAL_OnceControl *onceControl, BSL_SAL_ThreadInitRoutine initFunc)
 {
     if (onceControl == NULL || initFunc == NULL) {
         return BSL_SAL_ERR_BAD_PARAM;
     }
-#if defined (HITLS_BSL_SAL_THREAD) && defined(HITLS_BSL_SAL_LINUX)
+#if defined(HITLS_BSL_SAL_THREAD) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
     return SAL_PthreadRunOnce(onceControl, initFunc);
 #else
-    if (*onceControl == 1) {
-        return BSL_SUCCESS;
+    // Fallback for no threading support
+    if (onceControl->status == ONCE_STATUS_DONE) {
+        return BSL_SUCCESS;  // Already initialized before
     }
-    initFunc();
-    *onceControl = 1;
+    if (onceControl->status == ONCE_STATUS_NOT_INITIALIZED) {
+        onceControl->status = ONCE_STATUS_INITIALIZING;
+        initFunc();
+        onceControl->status = ONCE_STATUS_DONE;
+    }
     return BSL_SUCCESS;
 #endif
 }

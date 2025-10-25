@@ -14,7 +14,7 @@
  */
 
 #include "app_kdf.h"
-#include <linux/limits.h>
+#include <limits.h>
 #include "string.h"
 #include "securec.h"
 #include "bsl_sal.h"
@@ -73,7 +73,7 @@ const HITLS_CmdOption g_kdfOpts[] = {
     HITLS_SM_OPTIONS,
 #endif
     {"kdfalg...", HITLS_APP_OPT_KDF_ALG, HITLS_APP_OPT_VALUETYPE_PARAMTERS, "Specify KDF algorithm (e.g.: pbkdf2)."},
-    {NULL}};
+    {NULL, 0, 0, NULL}};
 
 typedef struct {
     int32_t macId;

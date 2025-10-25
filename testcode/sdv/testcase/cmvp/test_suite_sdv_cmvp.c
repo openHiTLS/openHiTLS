@@ -25,7 +25,7 @@
 #include "crypt_errno.h"
 #include "cmvp_common.h"
 #include "crypt_cmvp.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "crypt_util_rand.h"
 #include "crypt_cmvp_selftest.h"
 #include "crypt_eal_cipher.h"
@@ -41,6 +41,12 @@
 #include "crypt_hmac.h"
 
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_VOID0(BSL_SAL_Malloc);
+
 
 #define MAX_OUTPUT 200
 
@@ -861,12 +867,10 @@ void SDV_CRYPTO_CMVP_SELFTEST_TC046(void)
 {
     ResetStatusAndStartTest();
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
-    STUB_Init();
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Replace(&tmpStubInfo, BSL_SAL_Malloc, STUB_Malloc);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_Malloc);;
     ASSERT_TRUE(CRYPT_CMVP_SelftestDrbg(CRYPT_RAND_AES256_CTR_DF) == false);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_EAL_RandDeinit();
     EndTest();
 }
@@ -887,12 +891,10 @@ void SDV_CRYPTO_CMVP_SELFTEST_TC047(void)
 {
     ResetStatusAndStartTest();
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
-    STUB_Init();
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Replace(&tmpStubInfo, BSL_SAL_Malloc, STUB_Malloc);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_Malloc);;
     ASSERT_TRUE(CRYPT_CMVP_SelftestMd(CRYPT_MD_SHA256) == false);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_EAL_RandDeinit();
     EndTest();
 }
@@ -913,12 +915,10 @@ void SDV_CRYPTO_CMVP_SELFTEST_TC048(void)
 {
     ResetStatusAndStartTest();
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
-    STUB_Init();
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Replace(&tmpStubInfo, BSL_SAL_Malloc, STUB_Malloc);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_Malloc);;
     ASSERT_TRUE(CRYPT_CMVP_SelftestRsa() == false);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_EAL_RandDeinit();
     EndTest();
 }
@@ -939,12 +939,10 @@ void SDV_CRYPTO_CMVP_SELFTEST_TC049(void)
 {
     ResetStatusAndStartTest();
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
-    STUB_Init();
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Replace(&tmpStubInfo, BSL_SAL_Malloc, STUB_Malloc);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_Malloc);;
     ASSERT_TRUE(CRYPT_CMVP_SelftestCipher(CRYPT_CIPHER_AES128_CBC) == false);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_EAL_RandDeinit();
     EndTest();
 }
@@ -965,12 +963,10 @@ void SDV_CRYPTO_CMVP_SELFTEST_TC050(void)
 {
     ResetStatusAndStartTest();
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
-    STUB_Init();
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Replace(&tmpStubInfo, BSL_SAL_Malloc, STUB_Malloc);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_Malloc);;
     ASSERT_TRUE(CRYPT_CMVP_SelftestChacha20poly1305() == false);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_EAL_RandDeinit();
     EndTest();
 }
@@ -991,12 +987,10 @@ void SDV_CRYPTO_CMVP_SELFTEST_TC051(void)
 {
     ResetStatusAndStartTest();
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
-    STUB_Init();
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Replace(&tmpStubInfo, BSL_SAL_Malloc, STUB_Malloc);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_Malloc);;
     ASSERT_TRUE(CRYPT_CMVP_SelftestDh() == false);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_EAL_RandDeinit();
     EndTest();
 }
@@ -1017,12 +1011,10 @@ void SDV_CRYPTO_CMVP_SELFTEST_TC052(void)
 {
     ResetStatusAndStartTest();
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
-    STUB_Init();
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Replace(&tmpStubInfo, BSL_SAL_Malloc, STUB_Malloc);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_Malloc);;
     ASSERT_TRUE(CRYPT_CMVP_SelftestDsa() == false);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_EAL_RandDeinit();
     EndTest();
 }
@@ -1043,12 +1035,10 @@ void SDV_CRYPTO_CMVP_SELFTEST_TC053(void)
 {
     ResetStatusAndStartTest();
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
-    STUB_Init();
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Replace(&tmpStubInfo, BSL_SAL_Malloc, STUB_Malloc);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_Malloc);;
     ASSERT_TRUE(CRYPT_CMVP_SelftestEd25519() == false);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_EAL_RandDeinit();
     EndTest();
 }
@@ -1071,14 +1061,12 @@ void SDV_CRYPTO_CMVP_SELFTEST_TC054(void)
 {
     ResetStatusAndStartTest();
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
-    STUB_Init();
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Replace(&tmpStubInfo, BSL_SAL_Malloc, STUB_Malloc);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_Malloc);;
     ASSERT_TRUE(CRYPT_CMVP_SelftestHkdf() == false);
     ASSERT_TRUE(CRYPT_CMVP_SelftestPbkdf2(CRYPT_MAC_HMAC_SHA1) == false);
     ASSERT_TRUE(CRYPT_CMVP_SelftestScrypt() == false);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_EAL_RandDeinit();
     EndTest();
 }
@@ -1099,12 +1087,10 @@ void SDV_CRYPTO_CMVP_SELFTEST_TC057(void)
 {
     ResetStatusAndStartTest();
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
-    STUB_Init();
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Replace(&tmpStubInfo, BSL_SAL_Malloc, STUB_Malloc);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_Malloc);;
     ASSERT_TRUE(CRYPT_CMVP_SelftestX25519() == false);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_EAL_RandDeinit();
     EndTest();
 }
@@ -1115,12 +1101,10 @@ void SDV_CRYPTO_CMVP_SELFTEST_TC058(void)
 {
     ResetStatusAndStartTest();
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
-    STUB_Init();
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Replace(&tmpStubInfo, BSL_SAL_Malloc, STUB_Malloc);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_Malloc);;
     ASSERT_TRUE(CRYPT_CMVP_SelftestMac(CRYPT_MAC_HMAC_SHA256) == false);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_EAL_RandDeinit();
     EndTest();
 }
@@ -1185,12 +1169,10 @@ void SDV_CRYPTO_CMVP_SELFTEST_TC062(void)
 {
     ResetStatusAndStartTest();
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_SUCCESS);
-    STUB_Init();
-    FuncStubInfo tmpStubInfo = {0};
-    STUB_Replace(&tmpStubInfo, BSL_SAL_Malloc, STUB_Malloc);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_Malloc);;
     ASSERT_TRUE(CRYPT_CMVP_SelftestCipher(CRYPT_CIPHER_AES128_CBC) == false);
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(BSL_SAL_Malloc);
     CRYPT_EAL_RandDeinit();
     EndTest();
 }

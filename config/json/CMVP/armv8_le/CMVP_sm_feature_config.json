@@ -54,8 +54,10 @@
                 "pem",
                 "sal",
                 "sal_dl",
+                "sal_lock",
                 "sal_mem",
                 "sal_str",
+                "sal_thread",
                 "sal_time",
                 "uio_plt"
             ]

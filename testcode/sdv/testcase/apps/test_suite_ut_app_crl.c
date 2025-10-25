@@ -29,12 +29,22 @@
 #include "app_help.h"
 #include "app_print.h"
 #include "app_utils.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 
 #define MAX_CRLFILE_SIZE (256 * 1024)
 #define DEFAULT_CERT_SIZE 1024U
 
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET3(int32_t, HITLS_APP_OptBegin, int32_t, char **, const HITLS_CmdOption *);
+STUB_DEFINE_RET4(int32_t, BSL_UIO_Ctrl, BSL_UIO *, int32_t, int32_t, void *);
+STUB_DEFINE_RET0(char *, HITLS_APP_OptGetValueStr);
+STUB_DEFINE_RET4(int32_t, HITLS_APP_OptWriteUio, BSL_UIO *, uint8_t *, uint32_t, int32_t);
+STUB_DEFINE_RET4(int32_t, HITLS_X509_CertCtrl, HITLS_X509_Cert *, int32_t, void *, uint32_t);
+
 
 #define CRL_PATH "../testdata/certificate/crlAndCert/crl.crt"
 #define CRL_ASN1_PATH "../testdata/cert/asn1/sm2_crl/crl_v2.v1.der"
@@ -174,9 +184,7 @@ int32_t STUB_HITLS_APP_OptBegin(int32_t argc, char **argv, const HITLS_CmdOption
 /* BEGIN_CASE */
 void UT_HITLS_APP_crl_TC004(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptBegin, STUB_HITLS_APP_OptBegin);
+    STUB_REPLACE(HITLS_APP_OptBegin, STUB_HITLS_APP_OptBegin);;
 
     char *argv[][10] = {
         {"crl", "-in", CRL_PATH, "-noout", "-CAfile", CERT_PATH},
@@ -193,7 +201,7 @@ void UT_HITLS_APP_crl_TC004(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptBegin);
     return;
 }
 /* END_CASE */
@@ -215,9 +223,7 @@ int32_t STUB_BSL_UIO_Ctrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 /* BEGIN_CASE */
 void UT_HITLS_APP_crl_TC005(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);
+    STUB_REPLACE(BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);;
     char *argv[][50] = {{"crl", "-in", CRL_PATH, "-noout", "-CAfile", CERT_PATH}};
 
     OptTestData testData[] = {
@@ -230,7 +236,7 @@ void UT_HITLS_APP_crl_TC005(void)
     }
 
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UIO_Ctrl);
     return;
 }
 /* END_CASE */
@@ -248,9 +254,7 @@ char *STUB_HITLS_APP_OptGetValueStr(void)
 /* BEGIN_CASE */
 void UT_HITLS_APP_crl_TC006(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptGetValueStr, STUB_HITLS_APP_OptGetValueStr);
+    STUB_REPLACE(HITLS_APP_OptGetValueStr, STUB_HITLS_APP_OptGetValueStr);;
     char *argv[][50] = {{"crl", "-in", CRL_PATH, "-noout", "-CAfile", CERT_PATH}};
 
     OptTestData testData[] = {
@@ -265,7 +269,7 @@ void UT_HITLS_APP_crl_TC006(void)
 
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptGetValueStr);
     return;
 }
 /* END_CASE */
@@ -287,9 +291,7 @@ int32_t STUB_HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t outLen, 
 /* BEGIN_CASE */
 void UT_HITLS_APP_crl_TC007(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_APP_OptWriteUio, STUB_HITLS_APP_OptWriteUio);
+    STUB_REPLACE(HITLS_APP_OptWriteUio, STUB_HITLS_APP_OptWriteUio);;
     char *argv[][50] = {{"crl", "-in", CRL_PATH, "-CAfile", CERT_PATH}};
 
     OptTestData testData[] = {
@@ -304,7 +306,7 @@ void UT_HITLS_APP_crl_TC007(void)
 
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_APP_OptWriteUio);
     return;
 }
 /* END_CASE */
@@ -364,9 +366,7 @@ int32_t STUB_X509_extractPublicKey(HITLS_X509_Cert *cert, int32_t cmd, void *val
 /* BEGIN_CASE */
 void UT_HITLS_APP_crl_TC0010(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, HITLS_X509_CertCtrl, STUB_X509_extractPublicKey);
+    STUB_REPLACE(HITLS_X509_CertCtrl, STUB_X509_extractPublicKey);;
     char *argv[][50] = {{"crl", "-in", CRL_PATH, "-noout", "-CAfile", CERT_PATH}};
 
     OptTestData testData[] = {
@@ -380,7 +380,7 @@ void UT_HITLS_APP_crl_TC0010(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(HITLS_X509_CertCtrl);
     return;
 }
 /* END_CASE */

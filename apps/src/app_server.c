@@ -18,8 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/socket.h>
-#include <sys/wait.h>
 #include <signal.h>
 #include <unistd.h>
 #include "securec.h"

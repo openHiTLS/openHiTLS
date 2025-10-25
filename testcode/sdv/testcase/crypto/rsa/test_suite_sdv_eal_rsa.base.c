@@ -24,7 +24,7 @@
 #include "crypt_types.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_errno.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "crypt_eal_rand.h"
 #include "crypt_util_rand.h"
 #include "eal_pkey_local.h"
@@ -32,6 +32,12 @@
 #include "rsa_local.h"
 #include "bn_basic.h"
 #include "securec.h"
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
+STUB_DEFINE_RET4(int32_t, BN_Gcd, BN_BigNum *, const BN_BigNum *, const BN_BigNum *, BN_Optimizer *);
 
 #define SUCCESS 0
 #define FAIL (-1)

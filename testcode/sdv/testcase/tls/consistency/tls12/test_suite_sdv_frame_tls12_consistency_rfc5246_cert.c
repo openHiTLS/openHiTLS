@@ -32,7 +32,14 @@
 #include "hs_kx.c"
 #include "common_func.h"
 #include "stub_crypt.h"
+#include "stub_utils.h"
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET6(int32_t, SAL_CERT_KeyDecrypt, HITLS_Ctx *, HITLS_CERT_Key *, const uint8_t *, uint32_t, uint8_t *, uint32_t *);
+STUB_DEFINE_RET7(int32_t, SAL_CRYPT_CalcEcdhSharedSecret, HITLS_Lib_Ctx *, const char *, HITLS_CRYPT_Key *, uint8_t *, uint32_t, uint8_t *, uint32_t *);
 
 #define g_uiPort 45678
 
@@ -346,10 +353,11 @@ EXIT:
 /* END_CASE */
 
 
-static int32_t STUB_SAL_CERT_KeyDecrypt_Fail(const HITLS_CipherParameters *cipher, const uint8_t *in, uint32_t inLen,
+static int32_t STUB_SAL_CERT_KeyDecrypt_Fail(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen)
 {
-    (void)cipher;
+    (void)ctx;
+    (void)key;
     (void)in;
     (void)inLen;
     (void)out;
@@ -385,11 +393,9 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_DECRYPT_FAIL_TC005(void)
     ASSERT_TRUE(server != NULL);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_KEY_EXCHANGE), HITLS_SUCCESS);
 
-    STUB_Init();
-    FuncStubInfo tmpStubInfo;
-    STUB_Replace(&tmpStubInfo, SAL_CERT_KeyDecrypt, STUB_SAL_CERT_KeyDecrypt_Fail);
+    STUB_REPLACE(SAL_CERT_KeyDecrypt, STUB_SAL_CERT_KeyDecrypt_Fail);
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(SAL_CERT_KeyDecrypt);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_REC_BAD_RECORD_MAC);
     ALERT_Info alertInfo = { 0 };
     ALERT_GetInfo(server->ssl, &alertInfo);
@@ -481,23 +487,44 @@ EXIT:
 }
 /* END_CASE */
 
-static int32_t Stub_GenPremasterSecretFromEcdhe(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32_t *preMasterSecretLen)
+/* ============================================================================
+ * Stub implementation for ECDHE-PSK bounds checking test
+ * ============================================================================ */
+static int32_t Stub_SAL_CRYPT_CalcEcdhSharedSecret(
+    HITLS_Lib_Ctx *libCtx,
+    const char *attrName,
+    HITLS_CRYPT_Key *key,
+    uint8_t *peerPubkey,
+    uint32_t pubKeyLen,
+    uint8_t *sharedSecret,
+    uint32_t *sharedSecretLen)
 {
-    int32_t ret = SAL_CRYPT_CalcEcdhSharedSecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
-        ctx->hsCtx->kxCtx->key, ctx->hsCtx->kxCtx->peerPubkey,
-        ctx->hsCtx->kxCtx->pubKeyLen, preMasterSecret, preMasterSecretLen);
-    *preMasterSecretLen = PREMASTERSECRETLEN;
+    // Get the real function pointer using the auto-generated helper
+    real_SAL_CRYPT_CalcEcdhSharedSecret_func_t real_func = get_real_SAL_CRYPT_CalcEcdhSharedSecret();
+
+    if (real_func == NULL) {
+        return HITLS_CRYPT_ERR_CALC_SHARED_KEY;
+    }
+
+    // Call the real function to get valid shared secret
+    int32_t ret = real_func(libCtx, attrName, key, peerPubkey, pubKeyLen, sharedSecret, sharedSecretLen);
+
+    if (ret == HITLS_SUCCESS) {
+        // Modify the length to maximum value (1534) to test bounds checking
+        // This tests the edge case where premaster secret length is at maximum
+        *sharedSecretLen = PREMASTERSECRETLEN;
+    }
+
     return ret;
 }
 
 /** @
 * @test UT_TLS_TLS12_RFC5246_CONSISTENCY_ECDHE_PSK_TC001
-* @title After the premasterkey to be received by the server is modified, the connection fails to be established.
+* @title Test ECDHE-PSK with maximum premaster secret length for bounds checking
 * @precon nan
-* @brief    1. Configure the PSK cipher suite. When generating the premasterkey, change the preMasterSecretLen parameter
-            of GenPremasterSecretFromEcdhe to 1534 to reach the maximum value of the secret and check whether it is out
-            of bounds.
-* @expect   1. The link success.
+* @brief    1. Configure the PSK cipher suite. When generating the premasterkey, stub SAL_CRYPT_CalcEcdhSharedSecret
+            to set sharedSecretLen to 1534 (maximum value) to test bounds checking in PSK key derivation.
+* @expect   1. The connection succeeds with proper bounds handling.
 @ */
 /* BEGIN_CASE */
 void UT_TLS_TLS12_RFC5246_CONSISTENCY_ECDHE_PSK_TC001(void)
@@ -517,13 +544,11 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_ECDHE_PSK_TC001(void)
     FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
 
-    STUB_Init();
-    FuncStubInfo tmpStubInfo;
-    STUB_Replace(&tmpStubInfo, GenPremasterSecretFromEcdhe, Stub_GenPremasterSecretFromEcdhe);
+    STUB_REPLACE(SAL_CRYPT_CalcEcdhSharedSecret, Stub_SAL_CRYPT_CalcEcdhSharedSecret);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
 
 EXIT:
-    STUB_Reset(&tmpStubInfo);
+    STUB_RESTORE(SAL_CRYPT_CalcEcdhSharedSecret);
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

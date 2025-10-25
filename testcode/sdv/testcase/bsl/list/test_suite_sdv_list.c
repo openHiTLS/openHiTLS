@@ -51,7 +51,10 @@ void UserDataFree(void *data)
 
 static int Compare(const void *data1, const void *data2)
 {
-    return **(int **)data1 > **(int **)data2;
+    int val1 = **(int **)data1;
+    int val2 = **(int **)data2;
+    /* qsort requires: <0 if val1<val2, 0 if equal, >0 if val1>val2 */
+    return (val1 > val2) - (val1 < val2);
 }
 
 static int32_t UserDataCompare(const void *data1, const void *data2)

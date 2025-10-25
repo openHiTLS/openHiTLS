@@ -21,11 +21,16 @@ paramList=$@
 paramNum=$#
 is_concurrent=1
 need_run_all=1
-threadsNum=$(grep -c ^processor /proc/cpuinfo)
+# Cross-platform CPU count detection
+if [[ "$(uname)" == "Darwin" ]]; then
+    threadsNum=$(sysctl -n hw.ncpu)
+else
+    threadsNum=$(grep -c ^processor /proc/cpuinfo)
+fi
 testsuite_array=()
 testcase_array=()
 
-# Build LD_LIBRARY_PATH with all necessary library paths
+# Build library path with all necessary library paths (cross-platform)
 # Start with build directory (no leading colon)
 LIB_PATHS="$(realpath ${HITLS_ROOT_DIR}/build)"
 LIB_PATHS="${LIB_PATHS}:$(realpath ${HITLS_ROOT_DIR}/platform/Secure_C/lib)"
@@ -48,13 +53,23 @@ if [ -d "${HITLS_ROOT_DIR}/build/output/CMVP" ]; then
     done
 fi
 
-# Prepend any existing LD_LIBRARY_PATH
-if [ -n "${LD_LIBRARY_PATH}" ]; then
-    LIB_PATHS="${LIB_PATHS}:${LD_LIBRARY_PATH}"
+# Set library path based on platform
+if [[ "$(uname)" == "Darwin" ]]; then
+    # macOS uses DYLD_LIBRARY_PATH
+    if [ -n "${DYLD_LIBRARY_PATH}" ]; then
+        LIB_PATHS="${LIB_PATHS}:${DYLD_LIBRARY_PATH}"
+    fi
+    export DYLD_LIBRARY_PATH="${LIB_PATHS}"
+    export LD_LIBRARY_PATH="${LIB_PATHS}"  # Also set for compatibility
+    echo "[INFO] Final DYLD_LIBRARY_PATH: ${DYLD_LIBRARY_PATH}"
+else
+    # Linux uses LD_LIBRARY_PATH
+    if [ -n "${LD_LIBRARY_PATH}" ]; then
+        LIB_PATHS="${LIB_PATHS}:${LD_LIBRARY_PATH}"
+    fi
+    export LD_LIBRARY_PATH="${LIB_PATHS}"
+    echo "[INFO] Final LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}"
 fi
-
-export LD_LIBRARY_PATH="${LIB_PATHS}"
-echo "[INFO] Final LD_LIBRARY_PATH: ${LD_LIBRARY_PATH}"
 
 # Check whether an ASAN alarm is generated.
 generate_asan_log() {
@@ -216,7 +231,13 @@ run_all() {
     end_time=$(date +%s)
     echo "End: $(date)" >> time.txt
     elapsed=$((end_time - start_time))
-    eval "echo Elapsed time: $(date -ud "@$elapsed" +'$((%s/3600/24)) days %H hr %M min %S sec') >> time.txt"
+    # Cross-platform date formatting
+    if [[ "$(uname)" == "Darwin" ]]; then
+        days=$((elapsed/86400)); hours=$(( (elapsed%86400)/3600 )); minutes=$(( (elapsed%3600)/60 )); seconds=$((elapsed%60))
+        echo "Elapsed time: $days days $(printf "%02d" $hours) hr $(printf "%02d" $minutes) min $(printf "%02d" $seconds) sec" >> time.txt
+    else
+        eval "echo Elapsed time: $(date -ud "@$elapsed" +'$((%s/3600/24)) days %H hr %M min %S sec') >> time.txt"
+    fi
 
     generate_asan_log
 }

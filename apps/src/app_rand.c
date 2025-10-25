@@ -15,7 +15,7 @@
 
 #include "app_rand.h"
 #include <stddef.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include "securec.h"
 #include "bsl_uio.h"
 #include "crypt_eal_rand.h"
@@ -71,7 +71,7 @@ HITLS_CmdOption g_randOpts[] = {
 #ifdef HITLS_APP_SM_MODE
     HITLS_SM_OPTIONS,
 #endif
-    {NULL}};
+    {NULL, 0, 0, NULL}};
 
 static int32_t OptParse(RandCmdOpt *randCmdOpt);
 static int32_t RandNumOut(RandCmdOpt *randCmdOpt);

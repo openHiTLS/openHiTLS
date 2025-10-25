@@ -54,7 +54,6 @@
 #include "process.h"
 #include "hs_ctx.h"
 #include "hlt.h"
-#include "stub_replace.h"
 #include "hitls_type.h"
 #include "frame_link.h"
 #include "session_type.h"
@@ -743,8 +742,8 @@ uint64_t RECORDPADDING_CB(HITLS_Ctx *ctx, int32_t type, uint64_t length, void *a
     (void)arg;
     return 100;
 }
-int32_t RecParseInnerPlaintext(TLS_Ctx *ctx, uint8_t *text, uint32_t *textLen, uint8_t *recType);
-int32_t STUB_RecParseInnerPlaintext(TLS_Ctx *ctx, uint8_t *text, uint32_t *textLen, uint8_t *recType)
+int32_t RecParseInnerPlaintext(TLS_Ctx *ctx, const uint8_t *text, uint32_t *textLen, uint8_t *recType);
+int32_t STUB_RecParseInnerPlaintext(TLS_Ctx *ctx, const uint8_t *text, uint32_t *textLen, uint8_t *recType)
 {
     (void)ctx;
     (void)text;

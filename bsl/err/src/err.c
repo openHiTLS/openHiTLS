@@ -66,7 +66,7 @@ static uint32_t g_avlNodeCount = 0;
 static uint32_t g_maxAvlNodes = 0x0000FFFF;
 
 /* Check the initialization status. 0 means false, if the value is not 0, it means true. Run once. */
-static uint32_t g_isErrInit = 0;
+BSL_SAL_DECLARE_THREAD_ONCE(g_isErrInit);
 
 /* Handle of the thread lock */
 static BSL_SAL_ThreadLockHandle g_errLock = NULL;
@@ -88,7 +88,7 @@ int32_t BSL_ERR_Init(void)
 
 void BSL_ERR_DeInit(void)
 {
-    g_isErrInit = 0;
+    (void)memset(&g_isErrInit, 0, sizeof(g_isErrInit));
     if (g_errLock == NULL) {
         return;
     }

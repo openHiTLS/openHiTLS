@@ -1866,8 +1866,6 @@ EXIT:
 void UT_TLS_TLCP_CONSISTENCY_CIPHERTEXT_TOOLONG_TC001(int isClient, int ptLen, int ctLen)
 {
     FRAME_Init();
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
     HITLS_Config *config = HITLS_CFG_NewTLCPConfig();
     ASSERT_TRUE(config != NULL);
     FRAME_LinkObj *client = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, true);
@@ -1899,7 +1897,7 @@ void UT_TLS_TLCP_CONSISTENCY_CIPHERTEXT_TOOLONG_TC001(int isClient, int ptLen, i
 
     ASSERT_EQ(TlsRecordWrite(sender->ssl, REC_TYPE_APP, sendBuf, ptLen), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(sender, receiver), HITLS_SUCCESS);
-    STUB_Replace(&stubInfo, TlsRecordRead, STUB_TlsRecordRead);
+    STUB_REPLACE(TlsRecordRead, STUB_TlsRecordRead);
     int32_t ret = ctLen > 18432 ? HITLS_REC_RECORD_OVERFLOW : HITLS_SUCCESS;
     ASSERT_EQ(TlsRecordRead(receiver->ssl, REC_TYPE_APP, readBuf, &readLen, ctLen), ret);
 
@@ -1907,7 +1905,7 @@ EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(sender);
     FRAME_FreeLink(receiver);
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(TlsRecordRead);
 }
 /* END_CASE */
 

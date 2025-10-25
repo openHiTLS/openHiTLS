@@ -22,13 +22,19 @@
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "app_print.h"
-#include "stub_replace.h"
+#include "stub_utils.h"
 #include "bsl_base64.h"
-#ifdef HITLS_BSL_SAL_DOPRA_V3
-#include <unistd.h>
-#include "vfs_core.h"
-#endif
 /* END_HEADER */
+
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET4(int32_t, BSL_UIO_Ctrl, BSL_UIO *, int32_t, int32_t, void *);
+STUB_DEFINE_RET1(BSL_UIO *, BSL_UIO_New, const BSL_UIO_Method *);
+STUB_DEFINE_RET4(int32_t, BSL_UIO_Write, BSL_UIO *, const void *, uint32_t, uint32_t *);
+STUB_DEFINE_RET4(int32_t, BSL_BASE64_Encode, const uint8_t *, const uint32_t, char *, uint32_t *);
+STUB_DEFINE_RET4(int32_t, BSL_UIO_Read, BSL_UIO *, void *, uint32_t, uint32_t *);
+
 
 typedef struct {
     int argc;
@@ -49,7 +55,7 @@ typedef struct {
 
 void UT_HITLS_APP_OptBegin_TC001(void)
 {
-    HITLS_CmdOption opts[] = {{"test1", 1, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "test1"}, {NULL}};
+    HITLS_CmdOption opts[] = {{"test1", 1, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "test1"}, {NULL, 0, 0, NULL}};
     OptTestData testData[] = {
         {0, NULL, NULL, HITLS_APP_OPT_UNKOWN}, // case1:invalid arg argc、argv、opt
         {0, NULL, opts, HITLS_APP_OPT_UNKOWN}  // case2:invalid argc and argv
@@ -73,7 +79,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_OptBegin_TC002(void)
 {
-    HITLS_CmdOption opts[] = {{"-test1", 1, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "test1"}, {NULL}};
+    HITLS_CmdOption opts[] = {{"-test1", 1, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "test1"}, {NULL, 0, 0, NULL}};
     char *argv[] = {"path", "help"};
     OptTestData testData[] = {
         {2, argv, opts, HITLS_APP_OPT_NAME_INVALID}, // case1： invald optname
@@ -96,10 +102,10 @@ EXIT:
 void UT_HITLS_APP_OptBegin_TC003(void)
 {
     HITLS_CmdOption opts[][4] = {
-        {{"test1", 1, HITLS_APP_OPT_VALUETYPE_NONE, "test1"}, {NULL}},
-        {{"test2", 1, HITLS_APP_OPT_VALUETYPE_NONE - 1, "test1"}, {NULL}},
-        {{"test3", 1, HITLS_APP_OPT_VALUETYPE_MAX, "test1"}, {NULL}},
-        {{"test4", 1, HITLS_APP_OPT_VALUETYPE_MAX + 1, "test1"}, {NULL}}
+        {{"test1", 1, HITLS_APP_OPT_VALUETYPE_NONE, "test1"}, {NULL, 0, 0, NULL}},
+        {{"test2", 1, HITLS_APP_OPT_VALUETYPE_NONE - 1, "test1"}, {NULL, 0, 0, NULL}},
+        {{"test3", 1, HITLS_APP_OPT_VALUETYPE_MAX, "test1"}, {NULL, 0, 0, NULL}},
+        {{"test4", 1, HITLS_APP_OPT_VALUETYPE_MAX + 1, "test1"}, {NULL, 0, 0, NULL}}
     };
 
     char *argv[] = {"path", "help"};
@@ -131,24 +137,24 @@ void UT_HITLS_APP_OptBegin_TC004(void)
         {
             {"test1", 1, HITLS_APP_OPT_VALUETYPE_NONE + 1, "test1"},
             {"test1", 1, HITLS_APP_OPT_VALUETYPE_NONE + 1, "test1"},
-            {NULL}
+            {NULL, 0, 0, NULL}
         },
         {
             {"test1", 1, HITLS_APP_OPT_VALUETYPE_NONE + 1, "test1"},
             {"test2", 1, HITLS_APP_OPT_VALUETYPE_NONE + 1, "test1"},
             {"test1", 1, HITLS_APP_OPT_VALUETYPE_NONE + 1, "test1"},
-            {NULL}
+            {NULL, 0, 0, NULL}
         },
         {
             {"", 1, HITLS_APP_OPT_VALUETYPE_MAX - 1, "test1"},
             {"", 1, HITLS_APP_OPT_VALUETYPE_MAX - 1, "test1"},
-            {NULL}
+            {NULL, 0, 0, NULL}
         },
         {
             {"", 1, HITLS_APP_OPT_VALUETYPE_NONE + 1, "test1"},
             {"test2", 1, HITLS_APP_OPT_VALUETYPE_NONE + 1, "test1"},
             {"", 1, HITLS_APP_OPT_VALUETYPE_NONE + 1, "test1"},
-            {NULL}
+            {NULL, 0, 0, NULL}
         }
     };
     char *argv[] = {"path", "help"};
@@ -175,7 +181,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_OptBegin_TC005(void)
 {
-    HITLS_CmdOption opts[] = {{"", 1, HITLS_APP_OPT_VALUETYPE_FMT_PEMDER, "test1"}, {NULL}};
+    HITLS_CmdOption opts[] = {{"", 1, HITLS_APP_OPT_VALUETYPE_FMT_PEMDER, "test1"}, {NULL, 0, 0, NULL}};
     char *argv[] = {"path", "help"};
     OptTestData testData[] = {
         {2, argv, opts, HITLS_APP_OPT_NAME_INVALID} // case1： optname is "",but opttype is not  no value
@@ -199,8 +205,8 @@ EXIT:
 void UT_HITLS_APP_OptBegin_TC006(void)
 {
    HITLS_CmdOption opts[2][2] = {
-        {{"", 1, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "test1"},{NULL}},
-        {{"test", 1, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "test1"},{NULL}}
+        {{"", 1, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "test1"},{NULL, 0, 0, NULL}},
+        {{"test", 1, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "test1"},{NULL, 0, 0, NULL}}
     };
     char *argv[] = {"test", "help"};
     OptTestData testData[] = {
@@ -228,7 +234,7 @@ void UT_HITLS_APP_OptNext_TC001(void)
     HITLS_CmdOption opts[] = {
         {"", 1, HITLS_APP_OPT_VALUETYPE_STRING, "test1"},
         {"test", 1, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "test1"},
-        {NULL}
+        {NULL, 0, 0, NULL}
     };
     char *argv[3][2] = {{"help", "-"}, {"help", "--"}, {"help", NULL}};
     OptTestData testData[] = {
@@ -258,8 +264,8 @@ void UT_HITLS_APP_OptNext_TC002(void)
         {"11", 1, HITLS_APP_OPT_VALUETYPE_STRING, "test1"},
         {"test", 1, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "test1"},
         {"test2", 1, HITLS_APP_OPT_VALUETYPE_STRING, "test2"},
-        {NULL},
-        {NULL}
+        {NULL, 0, 0, NULL},
+        {NULL, 0, 0, NULL}
     };
     char *argv[][3] = {
         {"help", "-test"},        // case1:no opt value
@@ -295,7 +301,7 @@ HITLS_CmdOption g_tc003Opts[] = {
     {"ulong", 1, HITLS_APP_OPT_VALUETYPE_ULONG, "test2"},
     {"pemder", 1, HITLS_APP_OPT_VALUETYPE_FMT_PEMDER, "test2"},
     {"any", 1, HITLS_APP_OPT_VALUETYPE_FMT_ANY, "test2"},
-    {NULL}
+    {NULL, 0, 0, NULL}
 };
 char *g_tc003Argv[][3] = {
     {"help", "-novalue", NULL},      // 0 novalue tpye case
@@ -380,7 +386,7 @@ void UT_HITLS_APP_OptNext_TC004(void)
         {"help",help , HITLS_APP_OPT_VALUETYPE_NO_VALUE, "print help"},
         {"",cipher,HITLS_APP_OPT_VALUETYPE_NO_VALUE,"cipher alg" },
         {"param", param, HITLS_APP_OPT_VALUETYPE_PARAMTERS, "input paramters"},
-        {NULL}
+        {NULL, 0, 0, NULL}
     };
 
     char *argv[][3] = {
@@ -415,7 +421,7 @@ void UT_HITLS_APP_GetRestOptNum_TC001(void)
     char *argv[] = {"help", "-infile", "1.txt"};
     HITLS_CmdOption opts[] = {
         {"infile", 1, HITLS_APP_OPT_VALUETYPE_IN_FILE, "test1"},
-        {NULL}
+        {NULL, 0, 0, NULL}
     };
     OptTestData testData[] = {
         {3, argv, opts, 2} // case1: rest opt number
@@ -441,7 +447,7 @@ void UT_HITLS_APP_GetRestOpt_TC001(void)
     char *argv[] = {"help", "-infile", "1.txt"};
     HITLS_CmdOption opts[] = {
         {"infile", 1, HITLS_APP_OPT_VALUETYPE_IN_FILE, "test1"}, // case1: rest opt number
-        {NULL}
+        {NULL, 0, 0, NULL}
     };
     OptTestData testData[] = {
         {3, argv, opts, 1}
@@ -511,13 +517,9 @@ static void *TestOptHelpPrint(void *args)
         {"inint", 1, HITLS_APP_OPT_VALUETYPE_INT, "input int"},             // case1: rest opt number
         {"help", 1, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "print help"},        // case1: rest opt number
         {"param", 1, HITLS_APP_OPT_VALUETYPE_PARAMTERS, "input paramters"}, // case1: rest opt number
-        {NULL}
+        {NULL, 0, 0, NULL}
     };
     char *argv[] = {"help"};
-#ifdef HITLS_BSL_SAL_DOPRA_V3
-    char* abPath = getcwd(NULL, 0);
-    ASSERT_EQ(VOS_VFS_SetWorkPath(abPath), 0);
-#endif
     ASSERT_TRUE(InitStderrUIOForFp("test.dat", "w+") == HITLS_APP_SUCCESS);
     HITLS_APP_OptBegin(1, argv, opts);
     HITLS_APP_OptHelpPrint(opts);
@@ -537,14 +539,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_OptHelpPrint_TC001(void)
 {
-#ifdef HITLS_BSL_SAL_DOPRA_V3
-    BSL_SAL_ThreadId serverThread = NULL;
-    ASSERT_EQ(BSL_SAL_ThreadCreate(&serverThread, TestOptHelpPrint, NULL), BSL_SUCCESS);
-EXIT:
-    BSL_SAL_ThreadClose(serverThread);
-#else
     TestOptHelpPrint(NULL);
-#endif
 }
 /* END_CASE */
 
@@ -596,9 +591,7 @@ int32_t STUB_BSL_UIO_Ctrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 /* BEGIN_CASE */
 void UT_HITLS_APP_OptUioOpen_TC002(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);
+    STUB_REPLACE(BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);;
 
     OptUioData testData[] = {
         {NULL, 'w', 0},
@@ -619,7 +612,7 @@ void UT_HITLS_APP_OptUioOpen_TC002(void)
     }
 
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UIO_Ctrl);
     return;
 }
 /* END_CASE */
@@ -637,9 +630,7 @@ BSL_UIO *STUB_BSL_UIO_New(const BSL_UIO_Method *method)
 /* BEGIN_CASE */
 void UT_HITLS_APP_OptUioOpen_TC003(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_UIO_New, STUB_BSL_UIO_New);
+    STUB_REPLACE(BSL_UIO_New, STUB_BSL_UIO_New);;
 
     OptUioData testData[] = {
         {NULL, 'w', 0},
@@ -654,7 +645,7 @@ void UT_HITLS_APP_OptUioOpen_TC003(void)
     }
 
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UIO_New);
     return;
 }
 /* END_CASE */
@@ -723,9 +714,7 @@ int32_t STUB_BSL_UIO_Write(BSL_UIO *uio, const void *data, uint32_t len, uint32_
 /* BEGIN_CASE */
 void UT_HITLS_APP_OptUioOut_TC002(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_UIO_Write, STUB_BSL_UIO_Write);
+    STUB_REPLACE(BSL_UIO_Write, STUB_BSL_UIO_Write);;
 
     BSL_UIO *uio[] = {
         HITLS_APP_UioOpen(NULL, 'w', 0),
@@ -749,7 +738,7 @@ void UT_HITLS_APP_OptUioOut_TC002(void)
     }
 
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UIO_Write);
     return;
 }
 /* END_CASE */
@@ -771,9 +760,7 @@ int32_t STUB_BSL_Base64Encode(const uint8_t *srcBuf, const uint32_t srcBufLen, c
 /* BEGIN_CASE */
 void UT_HITLS_APP_OptUioOut_TC003(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_BASE64_Encode, STUB_BSL_Base64Encode);
+    STUB_REPLACE(BSL_BASE64_Encode, STUB_BSL_Base64Encode);;
 
     BSL_UIO *uio[] = {
         HITLS_APP_UioOpen(NULL, 'w', 0),
@@ -797,7 +784,7 @@ void UT_HITLS_APP_OptUioOut_TC003(void)
     }
 
 EXIT:
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_BASE64_Encode);
     return;
 }
 /* END_CASE */
@@ -926,12 +913,12 @@ EXIT:
 }
 /* END_CASE */
 
-int32_t STUB_BSL_UIO_Read(BSL_UIO *uio, const void *data, uint32_t len, uint32_t *writeLen)
+int32_t STUB_BSL_UIO_Read(BSL_UIO *uio, void *data, uint32_t len, uint32_t *readLen)
 {
     (void)uio;
     (void)data;
     (void)len;
-    (void)writeLen;
+    (void)readLen;
     return HITLS_APP_UIO_FAIL;
 }
 
@@ -951,9 +938,7 @@ void UT_HITLS_APP_Opt_Uio_Read_TC002(void)
     ASSERT_EQ(CreateFile(testFile, data), 1);
     uio = HITLS_APP_UioOpen(testFile, 'r', 0);
     ASSERT_TRUE(uio != NULL);
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_UIO_Read, STUB_BSL_UIO_Read);
+    STUB_REPLACE(BSL_UIO_Read, STUB_BSL_UIO_Read);;
     ASSERT_EQ(HITLS_APP_OptReadUio(uio, &readBuf, &readBufLen, 0), HITLS_APP_UIO_FAIL);
     testFile = NULL;
     ASSERT_EQ(HITLS_APP_OptReadUio(uio, &readBuf, &readBufLen, 0), HITLS_APP_UIO_FAIL);
@@ -962,7 +947,7 @@ EXIT:
     BSL_UIO_Free(uio);
     BSL_SAL_FREE(readBuf);
     remove(testFile);
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UIO_Read);
     return;
 }
 /* END_CASE */
@@ -975,9 +960,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_Opt_Uio_Read_TC003(void)
 {
-    STUB_Init();
-    FuncStubInfo stubInfo = {0};
-    STUB_Replace(&stubInfo, BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);
+    STUB_REPLACE(BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);;
     char *testFile = "file_read_uio.txt";
     const char *data = "0123456789abcdef";
     BSL_UIO *uio = NULL;
@@ -993,7 +976,7 @@ EXIT:
     BSL_UIO_Free(uio);
     BSL_SAL_FREE(readBuf);
     remove(testFile);
-    STUB_Reset(&stubInfo);
+    STUB_RESTORE(BSL_UIO_Ctrl);
     return;
 }
 /* END_CASE */
