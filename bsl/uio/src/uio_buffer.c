@@ -288,9 +288,7 @@ const BSL_UIO_Method *BSL_UIO_BufferMethod(void)
         NULL,
         NULL,
         BufferCreate,
-        BufferDestroy,
-        NULL,
-        NULL,
+        BufferDestroy
     };
     return &m;
 }

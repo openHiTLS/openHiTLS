@@ -508,22 +508,6 @@ int32_t CRYPT_DSA_Ctrl(CRYPT_DSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
  */
 int32_t CRYPT_DSA_GetSecBits(const CRYPT_DSA_Ctx *ctx);
 
-int32_t CryptDsaFips1864GenPq(CRYPT_DSA_Ctx *ctx, DSA_FIPS186_4_Para *fipsPara, uint32_t type,
-    BSL_Buffer *seed, uint32_t *counter);
-
-int32_t CryptDsaFips1864ValidatePq(int32_t algId, void *libCtx, const char *mdAttr, uint32_t type,
-    BSL_Buffer *seed, CRYPT_DSA_Para *dsaPara, uint32_t counter);
-
-int32_t CryptDsaFips1864GenUnverifiableG(CRYPT_DSA_Para *dsaPara, uint64_t *hRet);
-
-int32_t CryptDsaFips1864GenVerifiableG(void *libCtx, const char *mdAttr, DSA_FIPS186_4_Para *fipsPara, BSL_Buffer *seed,
-    CRYPT_DSA_Para *dsaPara);
-
-int32_t CryptDsaFips1864PartialValidateG(const CRYPT_DSA_Para *dsaPara);
-
-int32_t CryptDsaFips1864ValidateG(void *libCtx, const char *mdAttr, DSA_FIPS186_4_Para *fipsPara, BSL_Buffer *seed,
-    CRYPT_DSA_Para *dsaPara);
-
 #ifdef HITLS_CRYPTO_DSA_CHECK
 
 /**

@@ -424,9 +424,7 @@ const BSL_UIO_Method *BSL_UIO_MemMethod(void)
         MemPuts,
         MemGets,
         MemCreate,
-        MemDestroy,
-        NULL,
-        NULL,
+        MemDestroy
     };
     return &METHOD;
 }

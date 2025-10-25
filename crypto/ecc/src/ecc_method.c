@@ -20,7 +20,6 @@
 #include "bsl_err_internal.h"
 #include "ecp_nistp224.h"
 #include "ecp_nistp256.h"
-#include "ecp_nistp384.h"
 #include "ecp_nistp521.h"
 #include "ecp_sm2.h"
 

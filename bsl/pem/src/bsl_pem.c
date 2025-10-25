@@ -167,44 +167,6 @@ int32_t BSL_PEM_DecodePemToAsn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symb
     return BSL_SUCCESS;
 }
 
-#ifdef HITLS_BSL_PEM_ENCRYPTED
-int32_t BSL_PEM_DecodeEncryptedPemToAsn1(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol,
-    uint8_t **asn1Encode, uint32_t *asn1Len, const uint8_t *pwd, uint32_t pwdLen, EncryptedPemCb cb)
-{
-    char *nextEncode = *encode;
-    uint32_t nextEncodeLen = *encodeLen;
-    char *realEncode = NULL;
-    uint32_t realLen;
-
-    int32_t ret = BSL_PEM_GetPemRealEncode(&nextEncode, &nextEncodeLen, symbol, &realEncode, &realLen);
-    if (ret != BSL_SUCCESS) {
-        return ret;
-    }
-
-    // check
-    static const char procStr[] = "Proc-Type:";
-    uint32_t tmpLen = (uint32_t)strspn(realEncode, " \t\r\n");
-    realEncode += tmpLen;
-    BSL_Buffer asn1Buff = {0};
-
-    if (strncmp(realEncode, procStr, sizeof(procStr) - 1) != 0) {
-        realEncode -= tmpLen;
-        ret = BSL_PEM_GetAsn1Encode(realEncode, realLen, &asn1Buff.data, &asn1Buff.dataLen);
-    } else {
-        ret = cb(realEncode, pwd, pwdLen, &asn1Buff);
-    }
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    *encode = nextEncode;
-    *encodeLen = nextEncodeLen;
-    *asn1Encode = asn1Buff.data;
-    *asn1Len = asn1Buff.dataLen;
-    return BSL_SUCCESS;
-}
-#endif
-
 /**
  *  reference rfc7468
  *  Textual encoding begins with a line comprising "-----BEGIN ", a label, and "-----",

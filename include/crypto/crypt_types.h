@@ -645,9 +645,6 @@ typedef enum {
     CRYPT_CTRL_GET_PUB_KEY_BITS,         /**< Get the number of key bits. */
     CRYPT_CTRL_SET_SIGN_MD,
     CRYPT_CTRL_GET_ECC_POINT_FORMAT,     /**< ECC PKEY get the point format. */
-    CRYPT_CTRL_SET_FLAG,                 /**< ECC PKEY set the enc flag. */
-    CRYPT_CTRL_GET_FLAG,                 /**< ECC PKEY get the enc flag. */
-    CRYPT_CTRL_CLEAR_FLAG,               /**< ECC PKEY clear the enc flag. */
 
     // dh
     CRYPT_CTRL_SET_DH_FLAG = 150,          /**< Set the dh flag.*/

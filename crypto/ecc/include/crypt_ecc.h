@@ -463,15 +463,6 @@ int32_t ECC_PointToMont(const ECC_Para *para, ECC_Point *pt, BN_Optimizer *opt);
  */
 void ECC_PointFromMont(const ECC_Para *para, ECC_Point *r);
 
-#ifdef HITLS_CRYPTO_ECC_PUB_CACHE
-
-int32_t ECC_PointMulWithCache(const ECC_Para *para, ECC_Point *r, const BN_BigNum *scalar1, const ECC_Point *point,
-    const BN_BigNum *scalar2, void **preTable);
-
-int32_t ECC_PointCalCache(const ECC_Point *point, void **preTable);
-
-#endif
-
 #ifdef __cplusplus
 }
 #endif

@@ -99,13 +99,6 @@ int32_t ECP_Sm2OrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a);
 int32_t ECP_Sm2PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2,
     const ECC_Point *pt);
 
-#ifdef HITLS_CRYPTO_ECC_PUB_CACHE
-int32_t CRYPT_SM2_PointMulwithCache(const ECC_Para *para, ECC_Point *r, const BN_BigNum *scalar1,
-    const ECC_Point *point, const BN_BigNum *scalar2, void **preTable);
-
-int32_t CRYPT_SM2_PointCaCheCal(const ECC_Point *point, void **preTable);
-
-#endif
 #ifdef __cplusplus
 }
 #endif

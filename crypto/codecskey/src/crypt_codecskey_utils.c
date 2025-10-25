@@ -284,7 +284,6 @@ static int32_t CRYPT_ENCODE_DECODE_DecryptEncData(CRYPT_EAL_LibCtx *libctx, cons
         return BSL_MALLOC_FAIL;
     }
 
-    (void)CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_DES_NOKEYCHECK, NULL, 0);
     int32_t ret = CRYPT_EAL_CipherInit(ctx, key->data, key->dataLen, ivData->data, ivData->dataLen, isEnc);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

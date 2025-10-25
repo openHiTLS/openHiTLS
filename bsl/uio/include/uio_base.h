@@ -35,8 +35,6 @@ struct BSL_UIO_MethodStruct {
     BslUioGetsCb uioGets;
     BslUioCreateCb uioCreate;
     BslUioDestroyCb uioDestroy;
-    BslUioCbCtrlCb uioCbCtrl;
-    void *userData;
 };
 
 uint32_t UIO_GetCtxLen(const BSL_UIO *uio);

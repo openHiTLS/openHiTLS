@@ -24,6 +24,81 @@
 extern "C" {
 #endif // __cplusplus
 
+typedef struct ThreadCallback {
+    /**
+     * @ingroup bsl_sal
+     * @brief Create a thread lock.
+     *
+     * Create a thread lock.
+     *
+     * @param lock [IN/OUT] Lock handle
+     * @retval #BSL_SUCCESS, created successfully.
+     * @retval #BSL_MALLOC_FAIL, memory space is insufficient and thread lock space cannot be applied for.
+     * @retval #BSL_SAL_ERR_UNKNOWN, thread lock initialization failed.
+     * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
+     */
+    int32_t (*pfThreadLockNew)(BSL_SAL_ThreadLockHandle *lock);
+
+    /**
+     * @ingroup bsl_sal
+     * @brief Release the thread lock.
+     *
+     * Release the thread lock. Ensure that the lock can be released when other threads obtain the lock.
+     *
+     * @param lock [IN] Lock handle
+     */
+    void (*pfThreadLockFree)(BSL_SAL_ThreadLockHandle lock);
+
+    /**
+     * @ingroup bsl_sal
+     * @brief Lock the read operation.
+     *
+     * Lock the read operation.
+     *
+     * @param lock [IN] Lock handle
+     * @retval #BSL_SUCCESS, succeeded.
+     * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
+     * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
+     */
+    int32_t (*pfThreadReadLock)(BSL_SAL_ThreadLockHandle lock);
+
+    /**
+     * @ingroup bsl_sal
+     * @brief Lock the write operation.
+     *
+     * Lock the write operation.
+     *
+     * @param lock [IN] Lock handle
+     * @retval #BSL_SUCCESS, succeeded.
+     * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
+     * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
+     */
+    int32_t (*pfThreadWriteLock)(BSL_SAL_ThreadLockHandle lock);
+
+    /**
+     * @ingroup bsl_sal
+     * @brief Unlock
+     *
+     * Unlock
+     *
+     * @param lock [IN] Lock handle
+     * @retval #BSL_SUCCESS, succeeded.
+     * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
+     * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
+     */
+    int32_t (*pfThreadUnlock)(BSL_SAL_ThreadLockHandle lock);
+
+    /**
+     * @ingroup bsl_sal
+     * @brief Obtain the thread ID.
+     *
+     * Obtain the thread ID.
+     *
+     * @retval Thread ID
+     */
+    uint64_t (*pfThreadGetId)(void);
+} BSL_SAL_ThreadCallback;
+
 typedef struct {
     BslThreadRunOnce pfThreadRunOnce;
     BslThreadCreate pfThreadCreate;

@@ -152,14 +152,7 @@ int32_t CRYPT_EAL_ParsePemPriKey(CRYPT_EAL_LibCtx *libctx, const char *attrName,
         return ret;
     }
     BSL_Buffer asn1 = {0};
-#ifdef HITLS_BSL_PEM_ENCRYPTED
-    uint8_t *pwdData = pwd != NULL ? pwd->data : NULL;
-    uint32_t pwdLen = pwd != NULL ? pwd->dataLen : 0;
-    ret = BSL_PEM_DecodeEncryptedPemToAsn1((char **)&buff, &buffLen,
-        &symbol, &(asn1.data), &(asn1.dataLen), pwdData, pwdLen, CRYPT_EAL_ParseEncryptedPem);
-#else
     ret = BSL_PEM_DecodePemToAsn1((char **)&buff, &buffLen, &symbol, &(asn1.data), &(asn1.dataLen));
-#endif
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

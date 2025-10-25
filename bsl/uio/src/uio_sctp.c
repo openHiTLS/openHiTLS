@@ -421,9 +421,7 @@ const BSL_UIO_Method *BSL_UIO_SctpMethod(void)
         NULL,
         NULL,
         BslSctpNew,
-        BslSctpDestroy,
-        NULL,
-        NULL,
+        BslSctpDestroy
     };
     return &METHOD;
 }

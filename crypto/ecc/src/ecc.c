@@ -23,10 +23,6 @@
 #include "crypt_errno.h"
 #include "ecc_local.h"
 
-#ifdef HITLS_CRYPTO_ECC_PUB_CACHE
-#include "ecp_sm2.h"
-#endif
-
 ECC_Point *ECC_NewPoint(const ECC_Para *para)
 {
     if (para == NULL) {
@@ -476,37 +472,5 @@ int32_t ECC_GetSecBits(const ECC_Para *para)
     }
     return (int32_t)(bits / 2); // If the key length is less than 160, the key strength is equal to the key length / 2.
 }
-
-#ifdef HITLS_CRYPTO_ECC_PUB_CACHE
-
-int32_t ECC_PointMulWithCache(const ECC_Para *para, ECC_Point *r, const BN_BigNum *scalar1, const ECC_Point *point,
-    const BN_BigNum *scalar2, void **preTable)
-{
-    if (para == NULL || r == NULL || point == NULL || preTable == NULL ||
-        (scalar1 == NULL && scalar2 == NULL)) { // scalar1 or scalar2 can be null.
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (para->id == CRYPT_ECC_SM2) {
-        return CRYPT_SM2_PointMulwithCache(para, r, scalar1, point, scalar2, preTable);
-    }
-    BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-    return CRYPT_ECC_POINT_ERR_CURVE_ID;
-}
-
-int32_t ECC_PointCalCache(const ECC_Point *para, void **preTable)
-{
-    if (para == NULL || preTable == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-        }
-    if (para->id == CRYPT_ECC_SM2) {
-        return CRYPT_SM2_PointCaCheCal(para, preTable);
-    }
-    BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-    return CRYPT_ECC_POINT_ERR_CURVE_ID;
-}
-
-#endif
 
 #endif /* HITLS_CRYPTO_ECC */

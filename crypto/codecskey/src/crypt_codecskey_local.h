@@ -210,10 +210,6 @@ static inline bool IsEcdsaEcParaId(int32_t paraId)
 }
 #endif
 
-#ifdef HITLS_BSL_PEM_ENCRYPTED
-int32_t CRYPT_EAL_ParseEncryptedPem(char *header, const uint8_t *pwd, uint32_t pwdLen, BSL_Buffer *asn1Encode);
-#endif
-
 #ifdef __cplusplus
 }
 #endif

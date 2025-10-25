@@ -353,9 +353,7 @@ const BSL_UIO_Method *BSL_UIO_UdpMethod(void)
         NULL,
         NULL,
         UdpNew,
-        UdpSocketDestroy,
-		NULL,
-		NULL
+        UdpSocketDestroy
     };
     return &method;
 }

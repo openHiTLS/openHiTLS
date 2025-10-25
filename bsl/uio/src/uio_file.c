@@ -342,9 +342,7 @@ const BSL_UIO_Method *BSL_UIO_FileMethod(void)
         FilePuts,
         FileGets,
         NULL,
-        FileDestroy,
-        NULL,
-        NULL,
+        FileDestroy
     };
     return &METHOD;
 }

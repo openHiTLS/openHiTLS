@@ -215,9 +215,7 @@ const BSL_UIO_Method *BSL_UIO_TcpMethod(void)
         TcpSocketPuts,
         NULL,
         TcpNew,
-        TcpSocketDestroy,
-        NULL,
-        NULL
+        TcpSocketDestroy
     };
     return &method;
 }

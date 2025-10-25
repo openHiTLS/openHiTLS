@@ -32,10 +32,6 @@
 /* Error information stack size */
 #define SAL_MAX_ERROR_STACK 20
 
-#ifdef HITLS_BSL_ERR_ENHANCE
-#define SAL_MAX_REASON_LENGTH 100
-#endif
-
 /* Error information stack */
 typedef struct {
     /* Current point location to the stack. When the value is -1, the stack is empty. */
@@ -50,10 +46,6 @@ typedef struct {
     /* Error code flag, which is used to partially clear and prevent side channel attack. */
     uint32_t errorFlags[SAL_MAX_ERROR_STACK];
 
-#ifdef HITLS_BSL_ERR_ENHANCE
-    /* store the error reason. */
-    char reason[SAL_MAX_ERROR_STACK][SAL_MAX_REASON_LENGTH];
-#endif
     /* store the error file name. */
     const char *filename[SAL_MAX_ERROR_STACK];
 
@@ -189,65 +181,6 @@ void BSL_ERR_PushError(int32_t err, const char *file, uint32_t lineNo)
     BSL_SAL_ThreadUnlock(g_errLock);
 }
 
-#ifdef HITLS_BSL_ERR_ENHANCE
-__attribute__((format(printf, 2, 3))) void BSL_ERR_SetErrorReason(int32_t err, const char *format, ...)
-{
-    // Initialize error handling
-    (void)BSL_SAL_ThreadRunOnce(&g_isErrInit, ErrAutoInit);
-    
-    if (err == BSL_SUCCESS) {
-        return; // push success is not allowed.
-    }
-    
-    // Acquire write lock
-    int32_t ret = BSL_SAL_ThreadWriteLock(g_errLock);
-    // If lock acquisition fails, log the error and return
-    if (ret != BSL_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05149, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "acquire lock failed when pushing error, threadId %llu, error code %d",
-            BSL_SAL_ThreadGetId(), ret, 0, 0);
-        return;
-    }
-
-    // Get the error stack
-    ErrorCodeStack *stack = GetStack();
-    if (stack != NULL) {
-        // If the stack is full, move the bottom pointer
-        if (stack->top == stack->bottom && stack->errorStack[stack->top] != 0) {
-            stack->bottom = (stack->bottom + 1) % SAL_MAX_ERROR_STACK;
-        }
-        // Clear the error flag
-        stack->errorFlags[stack->top] = 0;
-        // Push the error code onto the stack
-        stack->errorStack[stack->top] = err;
-
-        // Handle variable arguments
-        va_list args;
-        va_start(args, format);
-
-        // Format the reason string
-        errno_t result = vsnprintf_s(stack->reason[stack->top], SAL_MAX_REASON_LENGTH,
-            SAL_MAX_REASON_LENGTH - 1, format, args);
-        if (result < EOK) {
-            // Handling error situations
-            stack->reason[stack->top][0] = '\0'; // Ensure the string ends with a null character.
-        } else {
-            stack->reason[stack->top][SAL_MAX_REASON_LENGTH - 1] = '\0';
-        }
-        const char *file = va_arg(args, const char *);
-        uint32_t lineNo = va_arg(args, uint32_t);
-        va_end(args);
-
-        stack->filename[stack->top] = file;
-        stack->line[stack->top] = lineNo;
-        
-        stack->top = (stack->top + 1) % SAL_MAX_ERROR_STACK;
-    }
-
-    BSL_SAL_ThreadUnlock(g_errLock);
-}
-#endif
-
 void BSL_ERR_ClearError(void)
 {
     (void)BSL_SAL_ThreadRunOnce(&g_isErrInit, ErrAutoInit);
@@ -357,9 +290,6 @@ static int32_t BSLGetErrorInfoCommon(const char **file, uint32_t *lineNo, const 
     uint32_t fileLine = errStack->line[idx]; /* Obtain the specified line number. */
     const char *f = errStack->filename[idx]; /* Obtain the specified file name. */
     char *r = NULL;
-#ifdef HITLS_BSL_ERR_ENHANCE
-    r = (reason != NULL) ? errStack->reason[idx] : NULL; // Obtain the specified error reason if needed.
-#endif
     if (clr) {
         StackResetIndex(errStack, idx);
         if (last) {
@@ -388,12 +318,6 @@ static int32_t BSLGetErrorInfo(const char **file, uint32_t *lineNo, bool clr, bo
     return BSLGetErrorInfoCommon(file, lineNo, NULL, clr, last);
 }
 
-#ifdef HITLS_BSL_ERR_ENHANCE
-static int32_t BSLGetErrorInfoReason(const char **reason, const char **file, uint32_t *lineNo, bool clr, bool last)
-{
-    return BSLGetErrorInfoCommon(file, lineNo, reason, clr, last);
-}
-#endif
 
 static int32_t GetLastErrorInfo(const char **file, uint32_t *lineNo, bool clr)
 {
@@ -404,18 +328,6 @@ static int32_t GetFirstErrorInfo(const char **file, uint32_t *lineNo, bool clr)
 {
     return BSLGetErrorInfo(file, lineNo, clr, false);
 }
-
-#ifdef HITLS_BSL_ERR_ENHANCE
-static int32_t GetLastErrorInfoReason(const char **reason, const char **file, uint32_t *lineNo, bool clr)
-{
-    return BSLGetErrorInfoReason(reason, file, lineNo, clr, true);
-}
-
-static int32_t GetFirstErrorInfoReason(const char **reason, const char **file, uint32_t *lineNo, bool clr)
-{
-    return BSLGetErrorInfoReason(reason, file, lineNo, clr, false);
-}
-#endif
 
 int32_t BSL_ERR_GetLastErrorFileLine(const char **file, uint32_t *lineNo)
 {
@@ -446,28 +358,6 @@ int32_t BSL_ERR_PeekErrorFileLine(const char **file, uint32_t *lineNo)
 {
     return GetFirstErrorInfo(file, lineNo, false);
 }
-
-#ifdef HITLS_BSL_ERR_ENHANCE
-int32_t BSL_ERR_GetLastErrorReason(const char **reason, const char **file, uint32_t *lineNo)
-{
-    return GetLastErrorInfoReason(reason, file, lineNo, true);
-}
-
-int32_t BSL_ERR_PeekLastErrorReason(const char **reason, const char **file, uint32_t *lineNo)
-{
-    return GetLastErrorInfoReason(reason, file, lineNo, false);
-}
-
-int32_t BSL_ERR_GetErrorReason(const char **reason, const char **file, uint32_t *lineNo)
-{
-    return GetFirstErrorInfoReason(reason, file, lineNo, true);
-}
-
-int32_t BSL_ERR_PeekErrorReason(const char **reason, const char **file, uint32_t *lineNo)
-{
-    return GetFirstErrorInfoReason(reason, file, lineNo, false);
-}
-#endif
 
 int32_t BSL_ERR_GetError(void)
 {

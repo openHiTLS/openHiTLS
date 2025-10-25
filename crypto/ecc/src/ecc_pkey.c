@@ -572,32 +572,6 @@ static int32_t SetEccUseCofactorMode(ECC_Pkey *ctx, void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-static int32_t SetFlag(ECC_Pkey *ctx, const void *val, uint32_t len)
-{
-    if (len != sizeof(uint32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_CTRL_LEN);
-        return CRYPT_ECC_PKEY_ERR_CTRL_LEN;
-    }
-    ctx->flag |= *(const uint32_t *)val;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t GetFlag(ECC_Pkey *ctx, void *val, uint32_t len)
-{
-    if (len != sizeof(uint32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_CTRL_LEN);
-        return CRYPT_ECC_PKEY_ERR_CTRL_LEN;
-    }
-    *(uint32_t *)val = ctx->flag;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t ClearFlag(ECC_Pkey *ctx)
-{
-    ctx->flag = 0;
-    return CRYPT_SUCCESS;
-}
-
 int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL || (val == NULL && opt != CRYPT_CTRL_GEN_ECC_PUBLICKEY)) {
@@ -628,12 +602,6 @@ int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t len)
             return CRYPT_CTRL_GET_NUM32_EX(ECC_GetKeyLen, ctx, val, len);
         case CRYPT_CTRL_UP_REFERENCES:
             return BSL_SAL_AtomicRefUpCtrl(&(ctx->references), val, len);
-        case CRYPT_CTRL_SET_FLAG:
-            return SetFlag(ctx, val, len);
-        case CRYPT_CTRL_GET_FLAG:
-            return GetFlag(ctx, val, len);
-        case CRYPT_CTRL_CLEAR_FLAG:
-            return ClearFlag(ctx);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION);
             return CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION;

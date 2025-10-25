@@ -667,42 +667,4 @@ BSL_UIO *BSL_UIO_Next(BSL_UIO *uio)
     return uio->next;
 }
 
-int32_t BSL_UIO_SetFlagsFromNext(BSL_UIO *uio)
-{
-    if (uio == NULL || uio->next == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
-    uio->flags |= (uio->next->flags & (BSL_UIO_FLAGS_RWS | BSL_UIO_FLAGS_SHOULD_RETRY));
-    return BSL_SUCCESS;
-}
-
-void BSL_UIO_SetRetryReason(BSL_UIO *uio, int32_t reason)
-{
-    if (uio != NULL) {
-        uio->retryReason = reason;
-    }
-}
-
-int32_t BSL_UIO_GetRetryReason(BSL_UIO *uio)
-{
-    if (uio != NULL) {
-        return (uio->retryReason);
-    }
-    BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-    return BSL_NULL_INPUT;
-}
-
-int32_t BSL_UIO_CallbackCtrl(BSL_UIO *uio, int32_t cmd, BSL_UIO_InfoCb *callback)
-{
-    if (uio == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
-    if (uio->method.uioCbCtrl == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
-        return BSL_INVALID_ARG;
-    }
-    return uio->method.uioCbCtrl(uio, cmd, callback);
-}
 #endif /* HITLS_BSL_UIO_PLT */
