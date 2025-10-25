@@ -13,13 +13,16 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "hitls_build.h"
+#if defined(HITLS_BSL_SAL_LINUX) && (defined(HITLS_BSL_SAL_LOCK) || defined(HITLS_BSL_SAL_THREAD))
+
 #include <pthread.h>
 #include <unistd.h>
-#include "hitls_build.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 
-#if defined(HITLS_BSL_SAL_LINUX) && defined(HITLS_BSL_SAL_LOCK)
+#ifdef HITLS_BSL_SAL_LOCK
+
 // Used for DEFAULT lock implementation
 typedef struct {
     pthread_rwlock_t rwlock;
@@ -90,7 +93,7 @@ void SAL_RwLockFree(BSL_SAL_ThreadLockHandle rwLock)
 }
 #endif
 
-#if defined(HITLS_BSL_SAL_LINUX) && defined(HITLS_BSL_SAL_THREAD)
+#ifdef HITLS_BSL_SAL_THREAD
 uint64_t SAL_GetThreadId(void)
 {
     // By default, gettid is not used to obtain the global tid corresponding to the thread
@@ -113,7 +116,7 @@ int32_t SAL_PthreadRunOnce(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine init
     return BSL_SUCCESS;
 }
 
-int32_t BSL_SAL_ThreadCreate(BSL_SAL_ThreadId *thread, void *(*startFunc)(void *), void *arg)
+int32_t SAL_ThreadCreate(BSL_SAL_ThreadId *thread, void *(*startFunc)(void *), void *arg)
 {
     if (thread == NULL || startFunc == NULL) {
         return BSL_SAL_ERR_BAD_PARAM;
@@ -125,7 +128,7 @@ int32_t BSL_SAL_ThreadCreate(BSL_SAL_ThreadId *thread, void *(*startFunc)(void *
     return BSL_SUCCESS;
 }
 
-void BSL_SAL_ThreadClose(BSL_SAL_ThreadId thread)
+void SAL_ThreadClose(BSL_SAL_ThreadId thread)
 {
     if (thread == NULL) {
         return;
@@ -133,7 +136,7 @@ void BSL_SAL_ThreadClose(BSL_SAL_ThreadId thread)
     (void)pthread_join((pthread_t)(uintptr_t)thread, NULL);
 }
 
-int32_t BSL_SAL_CreateCondVar(BSL_SAL_CondVar *condVar)
+int32_t SAL_CreateCondVar(BSL_SAL_CondVar *condVar)
 {
     if (condVar == NULL) {
         return BSL_SAL_ERR_BAD_PARAM;
@@ -150,7 +153,7 @@ int32_t BSL_SAL_CreateCondVar(BSL_SAL_CondVar *condVar)
     return BSL_SUCCESS;
 }
 
-int32_t BSL_SAL_CondSignal(BSL_SAL_CondVar condVar)
+int32_t SAL_CondSignal(BSL_SAL_CondVar condVar)
 {
     if (condVar == NULL) {
         return BSL_SAL_ERR_BAD_PARAM;
@@ -165,7 +168,7 @@ int32_t BSL_SAL_CondSignal(BSL_SAL_CondVar condVar)
 #define SAL_SECS_IN_MS 1000        // 1s = 1000ms
 #define SAL_MS_IN_NS 1000000       // 1ms = 1000000ns
 
-int32_t BSL_SAL_CondTimedwaitMs(BSL_SAL_Mutex condMutex, BSL_SAL_CondVar condVar, int32_t timeout)
+int32_t SAL_CondTimedwaitMs(BSL_SAL_Mutex condMutex, BSL_SAL_CondVar condVar, int32_t timeout)
 {
     struct timespec stm = {0};
     struct timespec etm = {0};
@@ -192,7 +195,7 @@ int32_t BSL_SAL_CondTimedwaitMs(BSL_SAL_Mutex condMutex, BSL_SAL_CondVar condVar
     return BSL_SUCCESS;
 }
 
-int32_t BSL_SAL_DeleteCondVar(BSL_SAL_CondVar condVar)
+int32_t SAL_DeleteCondVar(BSL_SAL_CondVar condVar)
 {
     if (condVar == NULL) {
         return BSL_SAL_ERR_BAD_PARAM;
@@ -211,4 +214,5 @@ int32_t SAL_GetPid(void)
 {
     return (int32_t)getpid();
 }
+#endif
 #endif

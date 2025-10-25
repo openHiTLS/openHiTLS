@@ -190,6 +190,5 @@ void OptimizerEnd(BN_Optimizer *opt)
         curChunk->occupied = HITLS_CRYPT_OPTIMIZER_BN_NUM - usedNum;
     }
     opt->curChunk = curChunk;
-    return;
 }
 #endif /* HITLS_CRYPTO_BN */

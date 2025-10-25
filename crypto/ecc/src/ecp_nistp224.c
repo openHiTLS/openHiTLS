@@ -19,15 +19,15 @@
 #include <stdbool.h>
 #include "securec.h"
 #include "bsl_err_internal.h"
-#include "crypt_errno.h"
+#include "bsl_util_internal.h"
 #include "crypt_utils.h"
+#include "crypt_errno.h"
 #include "crypt_bn.h"
 #include "crypt_ecc.h"
 #include "ecc_local.h"
 #include "ecc_utils.h"
-#include "bsl_util_internal.h"
 
-#ifndef __SIZEOF_INT128__
+#ifndef HITLS_INT128
 #error "This nistp224 implementation require the compiler support 128-bits integer."
 #endif
 

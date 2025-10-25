@@ -229,7 +229,7 @@ int32_t BN_U64Array2Bn(BN_BigNum *r, const uint64_t *array, uint32_t len)
 #endif
 
 #if defined(HITLS_CRYPTO_CURVE_SM2_ASM) || (defined(HITLS_CRYPTO_CURVE_NISTP256_ASM) && \
-    defined(HITLS_CRYPTO_NIST_USE_ACCEL))
+    defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE))
 int32_t BN_BN2Array(const BN_BigNum *src, BN_UINT *dst, uint32_t size)
 {
     if (size < src->size) {

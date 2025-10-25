@@ -413,7 +413,7 @@ int32_t BslSctpCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 
 const BSL_UIO_Method *BSL_UIO_SctpMethod(void)
 {
-    static const BSL_UIO_Method method = {
+    static const BSL_UIO_Method METHOD = {
         BSL_UIO_SCTP,
         BslSctpWrite,
         BslSctpRead,
@@ -423,6 +423,6 @@ const BSL_UIO_Method *BSL_UIO_SctpMethod(void)
         BslSctpNew,
         BslSctpDestroy
     };
-    return &method;
+    return &METHOD;
 }
 #endif /* HITLS_BSL_UIO_SCTP */

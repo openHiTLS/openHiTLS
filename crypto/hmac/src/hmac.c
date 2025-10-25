@@ -19,11 +19,11 @@
 #include <stdlib.h>
 #include "securec.h"
 #include "bsl_sal.h"
-#include "crypt_errno.h"
 #include "bsl_err_internal.h"
+#include "crypt_errno.h"
 #include "crypt_utils.h"
+#include "crypt_params_key.h"
 #include "eal_mac_local.h"
-#include "crypt_local_types.h"
 #include "crypt_hmac.h"
 
 struct HMAC_Ctx {
@@ -120,9 +120,8 @@ static inline bool IsMdMethodValid(const EAL_MdMethod *method)
         method->deinit != NULL && method->copyCtx != NULL;
 }
 
-int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len, BSL_Param *param)
+int32_t CRYPT_HMAC_Init(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len)
 {
-    (void)param;
     if (ctx == NULL || (key == NULL && len != 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -173,6 +172,12 @@ ERR:
         ctx->method.deinit(ctx->oCtx);
     }
     return ret;
+}
+
+int32_t CRYPT_HMAC_InitEx(CRYPT_HMAC_Ctx *ctx, const uint8_t *key, uint32_t len, BSL_Param *param)
+{
+    (void)param;
+    return CRYPT_HMAC_Init(ctx, key, len);
 }
 
 int32_t CRYPT_HMAC_Update(CRYPT_HMAC_Ctx *ctx, const uint8_t *in, uint32_t len)
@@ -240,6 +245,20 @@ int32_t CRYPT_HMAC_Deinit(CRYPT_HMAC_Ctx *ctx)
     return CRYPT_SUCCESS;
 }
 
+uint32_t CRYPT_HMAC_GetMacLen(CRYPT_HMAC_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return 0;
+    }
+    int32_t ret = HmacInitMdCtx(ctx, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return 0;
+    }
+    return ctx->method.mdSize;
+}
+
 static int32_t HMAC_GetMacLen(CRYPT_HMAC_Ctx *ctx, void *val, uint32_t len)
 {
     if (val == NULL || len != sizeof(uint32_t)) {
@@ -255,7 +274,7 @@ static int32_t HMAC_GetMacLen(CRYPT_HMAC_Ctx *ctx, void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_HMAC_Ctrl(CRYPT_HMAC_Ctx *ctx, CRYPT_MacCtrl opt, void *val, uint32_t len)
+int32_t CRYPT_HMAC_Ctrl(CRYPT_HMAC_Ctx *ctx, uint32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -265,9 +284,10 @@ int32_t CRYPT_HMAC_Ctrl(CRYPT_HMAC_Ctx *ctx, CRYPT_MacCtrl opt, void *val, uint3
         case CRYPT_CTRL_GET_MACLEN:
             return HMAC_GetMacLen(ctx, val, len);
         default:
-            BSL_ERR_PUSH_ERROR(CRYPT_HMAC_ERR_UNSUPPORTED_CTRL_OPTION);
-            return CRYPT_HMAC_ERR_UNSUPPORTED_CTRL_OPTION;
+            break;
     }
+    BSL_ERR_PUSH_ERROR(CRYPT_HMAC_ERR_UNSUPPORTED_CTRL_OPTION);
+    return CRYPT_HMAC_ERR_UNSUPPORTED_CTRL_OPTION;
 }
 
 static void HmacFreeMdCtx(CRYPT_HMAC_Ctx *ctx)

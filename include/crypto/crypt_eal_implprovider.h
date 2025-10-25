@@ -49,6 +49,10 @@ typedef void (CRYPT_EAL_CvtVoid)(void);
 
 /* get information from mgrCtx, such as entropy source context */
 #define CRYPT_EAL_CAP_MGRCTXCTRL   5
+/* load dynamic library functions */
+#define BSL_SAL_CAP_LOAD_LIB       6
+#define BSL_SAL_CAP_GET_FUNC_ADDR  7
+#define BSL_SAL_CAP_UNLOAD_LIB     8
 
 typedef int32_t (*CRYPT_EAL_ProvMgrCtrlCb)(void *mgrCtx, int32_t cmd, void *val, uint32_t valLen);
 
@@ -150,8 +154,9 @@ typedef void (*CRYPT_EAL_ImplCipherFreeCtx)(void *ctx);
 #define CRYPT_EAL_IMPLPKEYMGMT_COMPARE   11
 #define CRYPT_EAL_IMPLPKEYMGMT_CTRL      12
 #define CRYPT_EAL_IMPLPKEYMGMT_FREECTX   13
-#define CRYPT_EAL_IMPLPKEYMGMT_IMPORT    14
-#define CRYPT_EAL_IMPLPKEYMGMT_EXPORT    15
+#define CRYPT_EAL_IMPLPKEYMGMT_COPYPARAM 14
+#define CRYPT_EAL_IMPLPKEYMGMT_IMPORT    15
+#define CRYPT_EAL_IMPLPKEYMGMT_EXPORT    16
 
 typedef void *(*CRYPT_EAL_ImplPkeyMgmtNewCtx)(void *provCtx, int32_t algId);
 typedef int32_t (*CRYPT_EAL_ImplPkeyMgmtSetParam)(void *ctx, const BSL_Param *param);
@@ -296,7 +301,7 @@ typedef void (*CRYPT_EAL_ImplKdfFreeCtx)(void *ctx);
 typedef void *(*CRYPT_EAL_ImplRandDrbgNewCtx)(void *provCtx, int32_t algId, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgInst)(void *ctx, const uint8_t *pers, uint32_t persLen, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgUnInst)(void *ctx);
-typedef int32_t (*CRYPT_EAL_ImplRandDrbgGen)(void *ctx, uint8_t *out, uint32_t outLen, const uint8_t *addin,
+typedef int32_t (*CRYPT_EAL_ImplRandDrbgGen)(void *ctx, uint8_t *out, uint32_t outLen, const uint8_t *adin,
     uint32_t adinLen, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgReSeed)(void *ctx, const uint8_t *addin, uint32_t addinLen, BSL_Param *param);
 typedef int32_t (*CRYPT_EAL_ImplRandDrbgCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);

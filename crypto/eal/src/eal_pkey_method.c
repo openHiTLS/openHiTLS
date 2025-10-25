@@ -41,11 +41,8 @@
 #ifdef HITLS_CRYPTO_SM2
 #include "crypt_sm2.h"
 #endif
-#ifdef HITLS_CRYPTO_PAILLIER
-#include "crypt_paillier.h"
-#endif
-#ifdef HITLS_CRYPTO_ELGAMAL
-#include "crypt_elgamal.h"
+#ifdef HITLS_CRYPTO_SLH_DSA
+#include "crypt_slh_dsa.h"
 #endif
 #ifdef HITLS_CRYPTO_MLKEM
 #include "crypt_mlkem.h"
@@ -53,11 +50,14 @@
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
 #endif
-#ifdef HITLS_CRYPTO_SLH_DSA
-#include "crypt_slh_dsa.h"
-#endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
 #include "crypt_hybridkem.h"
+#endif
+#ifdef HITLS_CRYPTO_PAILLIER
+#include "crypt_paillier.h"
+#endif
+#ifdef HITLS_CRYPTO_ELGAMAL
+#include "crypt_elgamal.h"
 #endif
 #ifdef HITLS_CRYPTO_XMSS
 #include "crypt_xmss.h"
@@ -677,10 +677,10 @@ static const EAL_PkeyMethod METHODS[] = {
 
 const EAL_PkeyMethod *CRYPT_EAL_PkeyFindMethod(CRYPT_PKEY_AlgId id)
 {
-    uint32_t num = sizeof(METHODS) / sizeof(METHODS[0]);
+    size_t num = sizeof(METHODS) / sizeof(METHODS[0]);
     const EAL_PkeyMethod *pkeyMeth = NULL;
 
-    for (uint32_t i = 0; i < num; i++) {
+    for (size_t i = 0; i < num; i++) {
         if (METHODS[i].id == id) {
             pkeyMeth = &METHODS[i];
             return pkeyMeth;

@@ -17,13 +17,27 @@
 #if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_PKEY_SIGN)
 
 #include "crypt_eal_implprovider.h"
+#ifdef HITLS_CRYPTO_DSA
 #include "crypt_dsa.h"
+#endif
+#if defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_VERIFY)
 #include "crypt_rsa.h"
+#endif
+#ifdef HITLS_CRYPTO_ECDSA
 #include "crypt_ecdsa.h"
+#endif
+#ifdef HITLS_CRYPTO_SM2_SIGN
 #include "crypt_sm2.h"
+#endif
+#ifdef HITLS_CRYPTO_ED25519
 #include "crypt_curve25519.h"
+#endif
+#ifdef HITLS_CRYPTO_SLH_DSA
 #include "crypt_slh_dsa.h"
+#endif
+#ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
+#endif
 
 #ifdef HITLS_CRYPTO_DSA
 const CRYPT_EAL_Func g_defEalSignDsa[] = {

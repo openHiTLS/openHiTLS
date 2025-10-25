@@ -113,6 +113,7 @@
     .global SHA256CompressMultiBlocks
     .type SHA256CompressMultiBlocks, %function
 SHA256CompressMultiBlocks:
+AARCH64_PACIASP
     cbz     x2, .Lend_sha256
     /* If the SHA256 cryptography extension instruction is supported, go to. */
     adrp    x5, g_cryptArmCpuInfo
@@ -301,6 +302,7 @@ SHA256CompressMultiBlocks:
     ldp     x27, x28, [sp, #8*10]
     ldp     x29, x30, [sp], #112
 .Lend_sha256:
+AARCH64_AUTIASP
     ret
     .size SHA256CompressMultiBlocks, .-SHA256CompressMultiBlocks
 
@@ -321,6 +323,7 @@ SHA256CompressMultiBlocks:
     .balign 16
     .type SHA256CryptoExt, %function
 SHA256CryptoExt:
+AARCH64_PACIASP
     ld1     {v4.4s-v5.4s}, [x0]
 .Lloop_compress_64_ext:
     adrp    x4, .K256
@@ -469,6 +472,7 @@ SHA256CryptoExt:
 
     /* Output result */
     st1     {v4.4s-v5.4s}, [x0]
+AARCH64_AUTIASP
     ret
     .size SHA256CryptoExt, .-SHA256CryptoExt
 #endif

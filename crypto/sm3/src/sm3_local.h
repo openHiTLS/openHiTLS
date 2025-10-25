@@ -27,6 +27,10 @@ extern "C" {
 #endif /* __cpluscplus */
 
 void SM3_Compress(uint32_t state[8], const uint8_t *data, uint32_t blockCnt);
+
+/* x86_64 AVX and SSE3 */
+void SM3_CompressSIMD(uint32_t state[8], const uint8_t *data, uint32_t blockCnt);
+
 /* assembly interface */
 void SM3_CompressAsm(uint32_t state[8], const uint8_t *data, uint32_t blockCnt);
 

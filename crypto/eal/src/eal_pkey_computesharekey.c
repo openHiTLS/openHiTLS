@@ -16,13 +16,13 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_PKEY)
 
-#include <securec.h>
+#include "securec.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
 #include "eal_pkey_local.h"
-#include "crypt_eal_pkey.h"
 #include "eal_common.h"
+#include "crypt_eal_pkey.h"
 
 int32_t CRYPT_EAL_PkeyComputeShareKey(const CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyCtx *pubKey,
     uint8_t *share, uint32_t *shareLen)
@@ -32,18 +32,19 @@ int32_t CRYPT_EAL_PkeyComputeShareKey(const CRYPT_EAL_PkeyCtx *pkey, const CRYPT
         return CRYPT_NULL_INPUT;
     }
     if (pkey->id != pubKey->id) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_EAL_ERR_ALGID);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
     if (pkey->method.computeShareKey == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_EAL_ALG_NOT_SUPPORT);
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
 
     int32_t ret = pkey->method.computeShareKey(pkey->key, pubKey->key, share, shareLen);
     if (ret != CRYPT_SUCCESS) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, ret);
+        BSL_ERR_PUSH_ERROR(ret);
     }
+    EAL_EVENT_REPORT(CRYPT_EVENT_KEYAGGREMENT, CRYPT_ALGO_PKEY, pkey->id, ret);
     return ret;
 }
 #endif

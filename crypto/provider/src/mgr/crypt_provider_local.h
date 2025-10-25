@@ -28,7 +28,7 @@
 #include "sal_atomic.h"
 #include "crypt_eal_implprovider.h"
 #include "bsl_list.h"
-#include "crypt_drbg_local.h"
+#include "eal_drbg_local.h"
 #include "crypt_provider.h"
 
 #ifdef __cplusplus

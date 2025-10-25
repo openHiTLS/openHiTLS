@@ -44,17 +44,11 @@ struct DSA_Ctx {
     BN_BigNum *y; // public key
     CRYPT_DSA_Para *para; // key parameter
     BSL_SAL_RefCount references;
+    CRYPT_MD_AlgId signMdId;
+    uint8_t flag;
     void *libCtx;
     char *mdAttr;
-    uint8_t flag;
 };
-
-typedef struct {
-    int32_t algId; // hash algid
-    int32_t index; // gen g need index
-    uint32_t l; // pbits
-    uint32_t n; // qbits
-} DSA_FIPS186_4_Para;
 
 #ifdef __cplusplus
 }

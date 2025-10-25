@@ -22,6 +22,8 @@
 #include <stdint.h>
 #include "crypt_types.h"
 #include "crypt_ecc.h"
+#include "bsl_params.h"
+#include "crypt_params_key.h"
 
 #ifdef __cplusplus
 extern "C" {

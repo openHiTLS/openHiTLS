@@ -15,15 +15,15 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_DRBG_HASH
-
+#include <stdint.h>
 #include <stdlib.h>
 #include <securec.h>
+#include "bsl_sal.h"
+#include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "crypt_local_types.h"
 #include "crypt_utils.h"
-#include "bsl_sal.h"
 #include "crypt_types.h"
-#include "bsl_err_internal.h"
 #include "drbg_local.h"
 
 #define DRBG_HASH_MAX_SEEDLEN  (111)
@@ -67,7 +67,6 @@ static void DRBG_HashAddV(uint8_t *v, uint32_t vLen, uint8_t *src, uint32_t srcL
         c = (r > 0xff) ? 1 : 0;
         d--;
     }
-    return;
 }
 
 static int32_t DRBG_UpdateDataInHashDf(DRBG_HashCtx *ctx,
@@ -241,8 +240,7 @@ EXIT:
     return ret;
 }
 
-int32_t DRBG_HashInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropy,
-                             const CRYPT_Data *nonce, const CRYPT_Data *pers)
+int32_t DRBG_HashInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropy, const CRYPT_Data *nonce, const CRYPT_Data *pers)
 {
     DRBG_HashCtx *ctx = (DRBG_HashCtx*)drbg->ctx;
     CRYPT_Data seed = {ctx->v, (uint32_t)(ctx->seedLen)};
@@ -278,36 +276,15 @@ static int32_t DRBG_HashAdinInHashGenerate(DRBG_HashCtx *ctx, const CRYPT_Data *
     uint8_t w[DRBG_HASH_MAX_MDSIZE];
     uint32_t wLen = DRBG_HASH_MAX_MDSIZE;
 
-    ret = md->init(mdCtx, NULL);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    ret = md->update(mdCtx, &temp, 1);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-    ret = md->update(mdCtx, ctx->v, ctx->seedLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-    ret = md->update(mdCtx, adin->data, adin->len);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-
-    ret = md->final(mdCtx, w, &wLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
+    RETURN_RET_IF_ERR(md->init(mdCtx, NULL), ret);
+    GOTO_ERR_IF(md->update(mdCtx, &temp, 1), ret);
+    GOTO_ERR_IF(md->update(mdCtx, ctx->v, ctx->seedLen), ret);
+    GOTO_ERR_IF(md->update(mdCtx, adin->data, adin->len), ret);
+    GOTO_ERR_IF(md->final(mdCtx, w, &wLen), ret);
 
     DRBG_HashAddV(ctx->v, ctx->seedLen, w, mdSize);
 
-EXIT:
+ERR:
     // Clear MD data.
     md->deinit(mdCtx);
     return ret;
@@ -346,28 +323,11 @@ int32_t DRBG_HashGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
     // H = HASH(0x03 || V)
     uint8_t temp = 0x3;
 
-    ret = md->init(mdCtx, NULL);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    RETURN_RET_IF_ERR(md->init(mdCtx, NULL), ret);
 
-    ret = md->update(mdCtx, &temp, 1);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-    ret = md->update(mdCtx, ctx->v, ctx->seedLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-
-    ret = md->final(mdCtx, h, &mdSize);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
+    GOTO_ERR_IF(md->update(mdCtx, &temp, 1), ret);
+    GOTO_ERR_IF(md->update(mdCtx, ctx->v, ctx->seedLen), ret);
+    GOTO_ERR_IF(md->final(mdCtx, h, &mdSize), ret);
 
     // V = (V + H + C + reseed_counter) mod 2^seedlen
     DRBG_HashAddV(ctx->v, ctx->seedLen, h, mdSize);
@@ -375,7 +335,7 @@ int32_t DRBG_HashGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
     reseedCtrBe = CRYPT_HTONL((uint32_t)(drbg->reseedCtr));
     DRBG_HashAddV(ctx->v, ctx->seedLen, (uint8_t*)&reseedCtrBe, sizeof(reseedCtrBe));
 
-EXIT:
+ERR:
     // Clear MD data.
     md->deinit(mdCtx);
     return ret;
@@ -450,8 +410,8 @@ void DRBG_HashFree(DRBG_Ctx *drbg)
     DRBG_HashUnInstantiate(drbg);
     DRBG_HashCtx *ctx = (DRBG_HashCtx*)drbg->ctx;
     ctx->md->freeCtx(ctx->mdCtx);
+    ctx->mdCtx = NULL;
     BSL_SAL_FREE(drbg);
-    return;
 }
 
 static int32_t DRBG_NewHashCtxBase(uint32_t mdSize, DRBG_Ctx *drbg, DRBG_HashCtx *ctx)
@@ -511,9 +471,9 @@ DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, bool isGm, const CRYPT_RandSee
         return NULL;
     }
     if (DRBG_NewHashCtxBase(md->mdSize, drbg, ctx) != CRYPT_SUCCESS) {
-        BSL_SAL_FREE(drbg);
         md->freeCtx(ctx->mdCtx);
         ctx->mdCtx = NULL;
+        BSL_SAL_FREE(drbg);
         return NULL;
     }
 

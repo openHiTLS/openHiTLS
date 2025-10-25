@@ -23,7 +23,6 @@
 #include "bsl_err_internal.h"
 #include "sha2_core.h"
 #include "bsl_sal.h"
-#include "crypt_types.h"
 
 #define SHA2_512_PADSIZE    112
 
@@ -49,14 +48,6 @@ static int32_t Add128Bit(uint64_t *num1h, uint64_t *num1l, uint64_t num2h, uint6
     *num1l = suml;
     return 0;
 }
-
-struct CryptSha2512Ctx {
-    uint64_t h[CRYPT_SHA2_512_DIGESTSIZE / sizeof(uint64_t)];
-    uint8_t block[CRYPT_SHA2_512_BLOCKSIZE];
-    uint64_t lNum, hNum;
-    uint32_t num, mdlen;
-    uint32_t errorCode; /* error Code */
-};
 
 static int32_t CheckIsCorrupted(CRYPT_SHA2_512_Ctx *ctx, uint32_t nbytes)
 {
@@ -90,13 +81,12 @@ void CRYPT_SHA2_512_FreeCtx(CRYPT_SHA2_512_Ctx *ctx)
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SHA2_512_Ctx));
 }
 
-int32_t CRYPT_SHA2_512_Init(CRYPT_SHA2_512_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA2_512_Init(CRYPT_SHA2_512_Ctx *ctx)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    (void) param;
 
     (void)memset_s(ctx, sizeof(CRYPT_SHA2_512_Ctx), 0, sizeof(CRYPT_SHA2_512_Ctx));
 
@@ -112,6 +102,12 @@ int32_t CRYPT_SHA2_512_Init(CRYPT_SHA2_512_Ctx *ctx, BSL_Param *param)
     ctx->mdlen = CRYPT_SHA2_512_DIGESTSIZE;
 
     return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_SHA2_512_InitEx(CRYPT_SHA2_512_Ctx *ctx, void *param)
+{
+    (void)param;
+    return CRYPT_SHA2_512_Init(ctx);
 }
 
 int32_t CRYPT_SHA2_512_Deinit(CRYPT_SHA2_512_Ctx *ctx)
@@ -280,13 +276,12 @@ int32_t CRYPT_SHA2_512_GetParam(CRYPT_SHA2_512_Ctx *ctx, BSL_Param *param)
 #endif
 
 #ifdef HITLS_CRYPTO_SHA384
-int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    (void) param;
     (void)memset_s(ctx, sizeof(CRYPT_SHA2_384_Ctx), 0, sizeof(CRYPT_SHA2_384_Ctx));
     ctx->h[0] = U64(0xcbbb9d5dc1059ed8);
     ctx->h[1] = U64(0x629a292a367cd507);
@@ -298,6 +293,12 @@ int32_t CRYPT_SHA2_384_Init(CRYPT_SHA2_384_Ctx *ctx, BSL_Param *param)
     ctx->h[7] = U64(0x47b5481dbefa4fa4);
     ctx->mdlen = CRYPT_SHA2_384_DIGESTSIZE;
     return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_SHA2_384_InitEx(CRYPT_SHA2_384_Ctx *ctx, void *param)
+{
+    (void)param;
+    return CRYPT_SHA2_384_Init(ctx);
 }
 
 #ifdef HITLS_CRYPTO_PROVIDER

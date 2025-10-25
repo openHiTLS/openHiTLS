@@ -17,9 +17,11 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include "securec.h"
 
 #include "hitls_build.h"
 #include "bsl_sal.h"
+#include "bsl_errno.h"
 #include "bsl_errno.h"
 #include "crypt_errno.h"
 #include "crypt_types.h"
@@ -28,6 +30,10 @@
 #include "crypt_eal_rand.h"
 #include "crypt_eal_mac.h"
 #include "crypt_eal_init.h"
+#ifdef HITLS_CRYPTO_PROVIDER
+#include "bsl_params.h"
+#include "crypt_params_key.h"
+#endif
 
 #include "test.h"
 #include "helper.h"
@@ -43,6 +49,19 @@ void *TestMalloc(uint32_t len)
 }
 #endif
 
+void *FailedMalloc(uint32_t len)
+{
+    (void)len;
+    return NULL;
+}
+
+void *FailedCalloc(uint32_t num, uint32_t size)
+{
+    (void)num;
+    (void)size;
+    return NULL;
+}
+
 void TestMemInit(void)
 {
 #ifdef HITLS_BSL_SAL_MEM
@@ -51,6 +70,12 @@ void TestMemInit(void)
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, TestMalloc);
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
 #endif
+}
+
+void TestErrMemInit(void)
+{
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, FailedMalloc);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
 }
 
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_DRBG)

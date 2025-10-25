@@ -86,12 +86,12 @@ void MLDSA_ComputesNTT(int32_t w[MLDSA_N]);
 void MLDSA_ComputesINVNTT(int32_t w[MLDSA_N]);
 int32_t MLDSA_MontgomeryReduce(int64_t a);
 
-int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, uint8_t *d);
+int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *d);
 
-int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, CRYPT_Data *msg, uint8_t *out, uint32_t *outLen,
-    uint8_t *rand);
+int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, uint8_t *out, uint32_t *outLen,
+    const uint8_t *rand);
 
-int32_t MLDSA_VerifyInternal(const CRYPT_ML_DSA_Ctx *ctx, CRYPT_Data *msg, const uint8_t *sign, uint32_t signLen);
+int32_t MLDSA_VerifyInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, const uint8_t *sign, uint32_t signLen);
 
 #ifdef HITLS_CRYPTO_MLDSA_CHECK
 // calculate public key from private key

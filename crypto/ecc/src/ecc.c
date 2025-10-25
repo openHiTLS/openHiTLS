@@ -22,7 +22,6 @@
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "ecc_local.h"
-#include "crypt_ecc.h"
 
 ECC_Point *ECC_NewPoint(const ECC_Para *para)
 {
@@ -346,6 +345,11 @@ BN_BigNum *ECC_GetParaY(const ECC_Para *para)
     return BN_Dup(para->y);
 }
 
+int32_t ECC_GetEncodeDataLen(const ECC_Para *para, ECC_Point *pt, CRYPT_PKEY_PointFormat format, uint32_t *dataLen)
+{
+    return ECP_GetEncodeDataLen(para, pt, format, dataLen);
+}
+
 int32_t ECC_PointCheck(const ECC_Point *pt)
 {
     if (pt == NULL) {
@@ -446,7 +450,7 @@ typedef struct {
 /* See the standard document
    https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r4.pdf
    Table 2: Comparable strengths */
-const ComparableStrengths g_strengthsTable[] = {
+const ComparableStrengths STRENGTHS_TABLE[] = {
     {512, 256},
     {384, 192},
     {256, 128},
@@ -461,11 +465,12 @@ int32_t ECC_GetSecBits(const ECC_Para *para)
         return 0;
     }
     uint32_t bits = BN_Bits(para->n);
-    for (size_t i = 0; i < (sizeof(g_strengthsTable) / sizeof(g_strengthsTable[0])); i++) {
-        if (bits >= g_strengthsTable[i].ecKeyLen) {
-            return g_strengthsTable[i].secBits;
+    for (uint32_t i = 0; i < sizeof(STRENGTHS_TABLE) / sizeof(STRENGTHS_TABLE[0]); i++) {
+        if (bits >= STRENGTHS_TABLE[i].ecKeyLen) {
+            return (int32_t)STRENGTHS_TABLE[i].secBits;
         }
     }
-    return bits / 2;
+    return (int32_t)(bits / 2); // If the key length is less than 160, the key strength is equal to the key length / 2.
 }
+
 #endif /* HITLS_CRYPTO_ECC */

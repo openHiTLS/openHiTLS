@@ -19,7 +19,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "securec.h"
 #include "crypt_errno.h"
 #include "crypt_bn.h"
 #include "ecp_nistp256.h"
@@ -27,6 +26,7 @@
 #include "ecc_local.h"
 #include "bsl_err_internal.h"
 #include "asm_ecp_nistp256.h"
+#include "securec.h"
 
 #if defined(HITLS_SIXTY_FOUR_BITS)
     // 1 is on the field with Montgomery, 1 * RR * R' mod P = R mod P = R - P
@@ -462,7 +462,7 @@ static int32_t ECP256_PointMulCheck(ECC_Para *para, ECC_Point *r, const BN_BigNu
 // if pt == NULL, r = k * G, otherwise r = k * pt
 int32_t ECP256_PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
 {
-    P256_Point rTemp;
+    P256_Point rTemp = {0};
     int32_t ret = ECP256_PointMulCheck(para, r, k, pt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -517,12 +517,10 @@ int32_t ECP256_PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, co
     }
 
     P256_Point k2Pt;
-    P256_Point k1G;
+    P256_Point k1G = {0};
 
     ECP256_WindowMul(&k2Pt, k2, pt);
-
     ComputeK1G(&k1G, k1);
-
     ECP256_PointAdd(&k1G, &k1G, &k2Pt);
     ECP256_P256Point2EccPoint(r, &k1G);
     return ret;

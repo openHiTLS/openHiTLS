@@ -49,6 +49,16 @@ struct BASE64_ControlBlock {
 #define BSL_BASE64_ENC_ENOUGH_LEN(len) (((len) + 2) / 3 * 4 + 1)
 #define BSL_BASE64_DEC_ENOUGH_LEN(len) (((len) + 3) / 4 * 3)
 
+/**
+ * @ingroup bsl_base64
+ * @brief Obtain the remaining context buf and determine whether to invoke final().
+ * @par Description: Obtains the remaining length "num" of the context buf.
+ * @param ctx        [IN] Input context.
+ * @param num        [OUT] Obtain the remaining length of the buf.
+ * @retval If it is success, BSL_SUCCESS is returned. Otherwise, a failure error code is returned.
+ */
+int32_t BSL_Base64GetNum(BSL_Base64Ctx *ctx, uint32_t *num);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

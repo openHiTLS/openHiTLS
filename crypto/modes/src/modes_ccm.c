@@ -318,7 +318,7 @@ static int32_t SetTagLen(MODES_CipherCCMCtx *ctx, const void *val, uint32_t len)
      * RFC_3610-2
      * Valid values are 4, 6, 8, 10, 12, 14, and 16 octets
      */
-    uint32_t tagLen = *((const uint32_t *)val);
+    uint32_t tagLen = *(const uint32_t *)val;
     // 4 <= tagLen <= 16 and tagLen is an even number.
     if (tagLen > 16 || tagLen < 4 || ((tagLen & 0x01) != 0)) {
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_CTRL_TAGLEN_ERROR);

@@ -146,6 +146,17 @@ extern "c" {
 /* h|m|l = h|m|l + u * u. Ensure that the value of h is not too large to avoid carry. */
 #define SQRADD_A(h, m, l, u)   MULADD_AB(h, m, l, u, u)
 
+// Modular operation, satisfy d < (1 << BN_UINT_HALF_BITS) r = nh | nl % d
+#define MOD_HALF(r, nh, nl, d)                                  \
+    do {                                                        \
+        BN_UINT macroTmpD = (d);                                      \
+        (r) = (nh) % macroTmpD;                                       \
+        (r) = ((r) << BN_UINT_HALF_BITS) | BN_UINT_HI((nl));  \
+        (r) = (r) % macroTmpD;                                        \
+        (r) = ((r) << BN_UINT_HALF_BITS) | BN_UINT_LO((nl));  \
+        (r) = (r) % macroTmpD;                                        \
+    } while (0)
+
 #ifdef __cplusplus
 }
 #endif

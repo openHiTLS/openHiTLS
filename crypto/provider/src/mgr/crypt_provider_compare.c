@@ -17,6 +17,7 @@
 #ifdef HITLS_CRYPTO_PROVIDER
 
 #include <string.h>
+#include <stdbool.h>
 #include "securec.h"
 #include "bsl_list.h"
 #include "bsl_err_internal.h"
@@ -116,7 +117,7 @@ ERR:
 // Key copy callback function
 static void *KeyDupFunc(void *ptr, size_t size)
 {
-    if (ptr == NULL || size == 0) {
+    if (size > UINT32_MAX) {
         return NULL;
     }
     return BSL_SAL_Dump(ptr, size);
@@ -150,7 +151,7 @@ static int32_t UpdateAttributeValueNode(BSL_HASH_Hash *hash, BSL_HASH_Iterator n
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    BslList *valueList = (BslList *)BSL_HASH_IterValue(hash, node);
+    BslList *valueList = (BslList *)(uintptr_t)BSL_HASH_IterValue(hash, node);
     int32_t ret = BSL_LIST_AddElement(valueList, (AttributeValue *)newValue, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -163,38 +164,38 @@ static int32_t UpdateAttributeValueNode(BSL_HASH_Hash *hash, BSL_HASH_Iterator n
 static int32_t GetAttributePositions(const char *attribute, int32_t start, int32_t *keyStart, int32_t *keyEnd,
                                      int32_t *judgeStart, int32_t *judgeEnd, int32_t *valueStart, int32_t *valueEnd)
 {
-    int32_t temp = start;
-    *keyStart = *keyEnd = *judgeStart = *judgeEnd = *valueStart = *valueEnd = temp;
+    int32_t tmp = start;
+    *keyStart = *keyEnd = *judgeStart = *judgeEnd = *valueStart = *valueEnd = start;
 
     // Find key
-    while (attribute[temp] != '\0' && attribute[temp] != '=' && attribute[temp] != '?' && attribute[temp] != '!') {
-        temp++;
+    while (attribute[tmp] != '\0' && attribute[tmp] != '=' && attribute[tmp] != '?' && attribute[tmp] != '!') {
+        tmp++;
     }
-    *keyEnd = temp;
+    *keyEnd = tmp;
     if (*keyEnd <= *keyStart) {
         return CRYPT_PROVIDER_ERR_ATTRIBUTE;
     }
 
     // Find judge string
-    *judgeStart = temp;
-    if (attribute[temp] == '!' && attribute[temp + 1] == '=') {
-        temp = temp + NOT_EQUAL_SIZE;
-    } else if (attribute[temp] == '=' || attribute[temp] == '?') {
-        temp++;
+    *judgeStart = tmp;
+    if (attribute[tmp] == '!' && attribute[tmp + 1] == '=') {
+        tmp = tmp + NOT_EQUAL_SIZE;
+    } else if (attribute[tmp] == '=' || attribute[tmp] == '?') {
+        tmp++;
     } else {
         return CRYPT_PROVIDER_ERR_ATTRIBUTE;
     }
-    *judgeEnd = temp;
+    *judgeEnd = tmp;
     if (*judgeEnd <= *judgeStart) {
         return CRYPT_PROVIDER_ERR_ATTRIBUTE;
     }
 
     // Find value
-    *valueStart = temp;
-    while (attribute[temp] != '\0' && attribute[temp] != ',') {
-        temp++;
+    *valueStart = tmp;
+    while (attribute[tmp] != '\0' && attribute[tmp] != ',') {
+        tmp++;
     }
-    *valueEnd = temp;
+    *valueEnd = tmp;
     if (*valueEnd <= *valueStart) {
         return CRYPT_PROVIDER_ERR_ATTRIBUTE;
     }
@@ -210,8 +211,10 @@ static int32_t ParseAttributeValue(const char *attribute, int32_t *startPos, cha
 
     // Call the sub-function to get key-value pair positions
     int32_t keyStart, keyEnd, judgeStart, judgeEnd, valueStart, valueEnd;
-    int32_t ret = GetAttributePositions(attribute, start, &keyStart, &keyEnd, &judgeStart, &judgeEnd, &valueStart, &valueEnd);
+    int32_t ret =
+        GetAttributePositions(attribute, start, &keyStart, &keyEnd, &judgeStart, &judgeEnd, &valueStart, &valueEnd);
     if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
@@ -238,7 +241,7 @@ static int32_t ParseAttributeValue(const char *attribute, int32_t *startPos, cha
     if (memcpy_s(tempKey, keyLen + 1, attribute + keyStart, keyLen) != EOK ||
         memcpy_s(tempValue->judgeStr, judgeLen + 1, attribute + judgeStart, judgeLen) != EOK ||
         memcpy_s(tempValue->valueStr, valueLen + 1, attribute + valueStart, valueLen) != EOK) {
-        ret = CRYPT_SECUREC_FAIL;
+        ret = CRYPT_MEM_CPY_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
@@ -358,7 +361,7 @@ static int32_t CompareAttribute(BSL_HASH_Hash *hash, const char *attribute,
             AttributeValueFree(value);
             continue;
         }
-        BslList *valueList = (BslList *)BSL_HASH_IterValue(hash, it);
+        BslList *valueList = (BslList *)(uintptr_t)BSL_HASH_IterValue(hash, it);
         for (void *listValue = BSL_LIST_GET_FIRST(valueList);
             listValue != NULL; listValue = BSL_LIST_GET_NEXT(valueList)) {
             AttributeValue *hashValue = (AttributeValue *)listValue;
@@ -398,7 +401,7 @@ static void FindHighestScoreFunc(CRYPT_EAL_LibCtx *localCtx, int32_t operaId, in
     BSL_HASH_Hash *hash = attrInfo.hash;
     uint32_t attributeNum = attrInfo.attributeNum;
     uint32_t mustAttributeNum = attrInfo.mustAttributeNum;
-    uint32_t repeatFlag = attrInfo.repeatFlag;
+    bool repeatFlag = attrInfo.repeatFlag;
 
     CRYPT_EAL_ProvMgrCtx *node = BSL_LIST_GET_FIRST(localCtx->providers);
     for (; node!= NULL; node = BSL_LIST_GET_NEXT(localCtx->providers)) {

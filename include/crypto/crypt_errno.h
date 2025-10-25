@@ -46,8 +46,10 @@ enum CRYPT_ERROR {
     CRYPT_INVALID_ARG,                  /**< Invalid input parameter. */
     CRYPT_NOT_SUPPORT,                  /**< unsupported operation. */
     CRYPT_INCONSISTENT_OPERATION,       /**< Inconsistent operation. */
+    CRYPT_MEM_CPY_FAIL,                 /**< Failed to copy memory. */
     CRYPT_INVALID_KEY,                  /**< invalid key. */
     CRYPT_PAIRWISE_CHECK_FAIL,          /**< key-pair check failed. */
+    CRYPT_CALLBACK_ERROR,               /**< Get an error in the callback function. */
 
     CRYPT_BN_BUFF_LEN_NOT_ENOUGH = 0x01020001, /**< Insufficient buffer length. */
     CRYPT_BN_SPACE_NOT_ENOUGH,          /**< Insufficient big number space. */
@@ -391,6 +393,7 @@ enum CRYPT_ERROR {
     CRYPT_ECDSA_VERIFY_FAIL,                          /**< Verification failure. */
     CRYPT_ECDSA_ERR_UNSUPPORTED_CTRL_OPTION,          /**< Unsupport the control type. */
     CRYPT_ECDSA_BUFF_LEN_NOT_ENOUGH,                  /**< BUFF insufficient length. */
+    CRYPT_ECDSA_PKEY_ERR_SIGN_DATA_LEN,
     CRYPT_ECDSA_PAIRWISE_CHECK_FAIL,                  /**< The public and private keys are inconsistent. */
     CRYPT_ECDSA_INVALID_PRVKEY,                       /**< Invalid private key. */
 
@@ -404,9 +407,9 @@ enum CRYPT_ERROR {
     CRYPT_SM4_ERR_KEY_LEN,                            /**< Wrong key length is set. */
     CRYPT_SM4_UNSAFE_KEY,                             /**< DataKey is the same as tweakKey. */
 
-    CRYPT_MD5_INPUT_OVERFLOW = 0x011D0001,             /**< The length of the input data exceeds the
+    CRYPT_MD_INPUT_OVERFLOW = 0x011D0001,             /**< The length of the input data exceeds the
                                                            maximum processing range of the MD5. */
-    CRYPT_MD5_OUT_BUFF_LEN_NOT_ENOUGH,                /**< The length of the buffer that storing the
+    CRYPT_MD_OUT_BUFF_LEN_NOT_ENOUGH,                /**< The length of the buffer that storing the
                                                            output result is insufficient. */
     CRYPT_MD_ERR_NEWCTX,                              /**< create md ctx failed. */
 

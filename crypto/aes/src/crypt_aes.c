@@ -26,6 +26,7 @@
 #else
 #include "crypt_aes_sbox.h"
 #endif
+#include "crypt_aes_local.h"
 #include "crypt_aes.h"
 
 void SetEncryptKey128(CRYPT_AES_Key *ctx, const uint8_t *key)

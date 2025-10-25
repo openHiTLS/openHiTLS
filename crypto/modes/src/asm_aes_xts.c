@@ -55,9 +55,23 @@ int32_t MODES_AES_XTS_Decrypt(MODES_CipherXTSCtx *xtsCtx, const uint8_t *in, uin
 
 int32_t AES_XTS_Update(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
+#ifndef HITLS_XTS_STREAM
+    // Except XTS mode. (SM4_XTS is not included and is not cached at the EAL layer.
+    // Therefore, select ProcessStream in CipherUpdate to process stream encryption.)
+    return XtsCipherUpdate(modeCtx, in, inLen, out, outLen,
+        modeCtx->enc ? MODES_AES_XTS_Encrypt : MODES_AES_XTS_Decrypt);
+#else
     return MODES_CipherStreamProcess(modeCtx->enc ? MODES_AES_XTS_Encrypt : MODES_AES_XTS_Decrypt, &modeCtx->xtsCtx,
         in, inLen, out, outLen);
+#endif
 }
 
+#ifndef HITLS_XTS_STREAM
+int32_t AES_XTS_Final(MODES_XTS_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
+{
+    return MODES_XTS_Final(modeCtx, out, outLen,
+        modeCtx->enc ? MODES_AES_XTS_Encrypt : MODES_AES_XTS_Decrypt);
+}
+#endif
 
 #endif

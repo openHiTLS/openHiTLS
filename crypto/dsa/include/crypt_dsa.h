@@ -23,6 +23,8 @@
 #include "crypt_bn.h"
 #include "crypt_types.h"
 #include "bsl_params.h"
+#include "crypt_params_key.h"
+#include "bsl_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,6 +46,13 @@ typedef struct DSA_Para CRYPT_DSA_Para;
 /* DSA key context */
 typedef struct DSA_Ctx CRYPT_DSA_Ctx;
 
+typedef struct {
+    int32_t algId; // hash algid
+    int32_t index; // gen g need index
+    uint32_t l; // pbits
+    uint32_t n; // qbits
+} DSA_FIPS186_4_Para;
+
 /**
  * @ingroup dsa
  * @brief dsa Allocates context memory space.
@@ -53,6 +62,7 @@ typedef struct DSA_Ctx CRYPT_DSA_Ctx;
  */
 CRYPT_DSA_Ctx *CRYPT_DSA_NewCtx(void);
 
+#ifdef HITLS_CRYPTO_PROVIDER
 /**
  * @ingroup dsa
  * @brief dsa Allocates context memory space.
@@ -63,6 +73,7 @@ CRYPT_DSA_Ctx *CRYPT_DSA_NewCtx(void);
  * @retval NULL              Invalid null pointer
  */
 CRYPT_DSA_Ctx *CRYPT_DSA_NewCtxEx(void *libCtx);
+#endif
 
 /**
  * @ingroup dsa
@@ -319,7 +330,6 @@ int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPrv *prv);
  */
 int32_t CRYPT_DSA_GetPubKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPub *pub);
 
-#ifdef HITLS_BSL_PARAMS
 /**
  * @ingroup dsa
  * @brief Set the data of the key parameter structure to the key structure.
@@ -410,7 +420,6 @@ int32_t CRYPT_DSA_GetPrvKeyEx(const CRYPT_DSA_Ctx *ctx, BSL_Param *para);
  * @retval CRYPT_SUCCESS                    Obtained successfully.
  */
 int32_t CRYPT_DSA_GetPubKeyEx(const CRYPT_DSA_Ctx *ctx, BSL_Param *para);
-#endif
 
 #ifdef HITLS_CRYPTO_DSA_CMP
 /**
@@ -431,6 +440,48 @@ int32_t CRYPT_DSA_Cmp(const CRYPT_DSA_Ctx *a, const CRYPT_DSA_Ctx *b);
 #else
 #define CRYPT_DSA_Cmp NULL
 #endif
+
+/**
+ * @ingroup dsa
+ * @brief Obtain the intermediate value r,s for the DSA signature.
+ *
+ * @param ctx [IN] DSA context structure
+ * @param data [IN] Data to be signed
+ * @param dataLen [IN] Length of the data to be signed
+ * @param r [OUT] Signature data structure internal BigNum r, structure DSA_Sign
+ * @param s [OUT] Signature data structure internal BigNum s, structure DSA_Sign
+ *
+ * @retval CRYPT_NULL_INPUT                 Error null pointer input.
+ * @retval CRYPT_DSA_BUFF_LEN_NOT_ENOUGH    The buffer length is insufficient.
+ * @retval CRYPT_DSA_ERR_KEY_INFO           The key information is incorrect.
+ * @retval CRYPT_DSA_ERR_TRY_CNT            Unable to generate results within the specified number of attempts.
+ * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure.
+ * @retval BN error.                        An error occurs in the internal BigNum operation.
+ * @retval CRYPT_SUCCESS                    Signed successfully.
+ */
+int32_t CRYPT_DSASign(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen, BN_BigNum **r,
+    BN_BigNum **s);
+
+/**
+ * @ingroup dsa
+ * @brief The DSA verifies the signature with the intermediate value r,s.
+ *
+ * @param ctx [IN] DSA context structure
+ * @param data [IN] Data to be signed
+ * @param dataLen [IN] Length of the data to be signed
+ * @param r [IN] BigNum r in the signature data structure, structure DSA_Sign
+ * @param s [IN] Signature data structure internal BigNum s, structure DSA_Sign
+ *
+ * @retval CRYPT_NULL_INPUT         Error null pointer input.
+ * @retval CRYPT_DSA_ERR_KEY_INFO   The key information is incorrect.
+ * @retval CRYPT_MEM_ALLOC_FAIL     Memory allocation failure.
+ * @retval CRYPT_DSA_DECODE_FAIL    Signature Data Decoding Failure.
+ * @retval CRYPT_DSA_VERIFY_FAIL    Failed to verify the signature.
+ * @retval BN error.                An error occurred in the internal BigNum calculation.
+ * @retval CRYPT_SUCCESS            The signature is verified successfully.
+ */
+int32_t CRYPT_DSAVerify(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen, BN_BigNum *r,
+    BN_BigNum *s);
 
 /**
  * @ingroup dsa

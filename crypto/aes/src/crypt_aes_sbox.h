@@ -20,10 +20,6 @@
 #if defined(HITLS_CRYPTO_AES) && !defined(HITLS_CRYPTO_AES_PRECALC_TABLES)
 #include "crypt_aes.h"
 
-uint32_t RoundConstArray(int val);
-
-uint8_t InvSubSbox(uint8_t val);
-
 void SetAesKeyExpansionSbox(CRYPT_AES_Key *ctx, uint32_t keyLenBits, const uint8_t *key);
 
 void CRYPT_AES_EncryptSbox(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len);

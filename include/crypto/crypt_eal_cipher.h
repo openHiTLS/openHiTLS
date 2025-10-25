@@ -31,7 +31,7 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef struct CryptEalCipherCtx CRYPT_EAL_CipherCtx;
+typedef struct CRYPT_EAL_CipherCtxLocal CRYPT_EAL_CipherCtx;
 
 /**
  * @ingroup crypt_eal_cipher, Not supported in provider

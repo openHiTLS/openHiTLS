@@ -22,18 +22,9 @@
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
 #include "crypt_sm3.h"
 #include "sm3_local.h"
-#include "bsl_sal.h"
-#include "crypt_types.h"
-
-struct CryptSm3Ctx {
-    uint32_t h[CRYPT_SM3_DIGESTSIZE / sizeof(uint32_t)];  /* store the intermediate data of the hash value */
-    uint32_t hNum, lNum;                                  /* input data counter, maximum value 2 ^ 64 bits */
-    uint8_t block[CRYPT_SM3_BLOCKSIZE];                   /* store the remaining data which less than one block */
-    /* Number of remaining bytes in 'block' arrary that are stored less than one block */
-    uint32_t num;
-};
 
 CRYPT_SM3_Ctx *CRYPT_SM3_NewCtx(void)
 {
@@ -52,13 +43,12 @@ void CRYPT_SM3_FreeCtx(CRYPT_SM3_Ctx *ctx)
     BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SM3_Ctx));
 }
 
-int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    (void) param;
     (void)memset_s(ctx, sizeof(CRYPT_SM3_Ctx), 0, sizeof(CRYPT_SM3_Ctx));
     /* GM/T 0004-2012 chapter 4.1 */
     ctx->h[0] = 0x7380166F;
@@ -70,6 +60,12 @@ int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx, BSL_Param *param)
     ctx->h[6] = 0xE38DEE4D;
     ctx->h[7] = 0xB0FB0E4E;
     return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_SM3_InitEx(CRYPT_SM3_Ctx *ctx, void *param)
+{
+    (void)param;
+    return CRYPT_SM3_Init(ctx);
 }
 
 int32_t CRYPT_SM3_Deinit(CRYPT_SM3_Ctx *ctx)

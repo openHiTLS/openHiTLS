@@ -88,13 +88,12 @@ int32_t BSL_ERR_Init(void)
 
 void BSL_ERR_DeInit(void)
 {
-    g_isErrInit = 0;
     if (g_errLock == NULL) {
         return;
     }
     BSL_SAL_ThreadLockFree(g_errLock);
     g_errLock = NULL;
-    return;
+    g_isErrInit = 0;
 }
 
 static void StackReset(ErrorCodeStack *stack)
@@ -159,7 +158,7 @@ void BSL_ERR_PushError(int32_t err, const char *file, uint32_t lineNo)
         /* push success is not allowed. */
         return;
     }
-
+    (void)BSL_SAL_ThreadRunOnce(&g_isErrInit, ErrAutoInit);
     int32_t ret = BSL_SAL_ThreadWriteLock(g_errLock);
     if (ret != BSL_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05007, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -256,7 +255,7 @@ static uint16_t GetIndex(ErrorCodeStack *errStack, bool last)
    The get operation cleans up after the error information is obtained, while the peek operation does not.
    If last is true, the last error code at the top of the stack is obtained.
    If last is false, the first error code at the bottom of the stack is obtained. */
-static int32_t GetErrorInfo(const char **file, uint32_t *lineNo, bool clr, bool last)
+static int32_t BSLGetErrorInfoCommon(const char **file, uint32_t *lineNo, const char **reason, bool clr, bool last)
 {
     uint16_t idx;
 
@@ -290,6 +289,7 @@ static int32_t GetErrorInfo(const char **file, uint32_t *lineNo, bool clr, bool 
     int32_t errorCode = errStack->errorStack[idx]; /* Obtain the specified error ID. */
     uint32_t fileLine = errStack->line[idx]; /* Obtain the specified line number. */
     const char *f = errStack->filename[idx]; /* Obtain the specified file name. */
+    char *r = NULL;
     if (clr) {
         StackResetIndex(errStack, idx);
         if (last) {
@@ -302,26 +302,31 @@ static int32_t GetErrorInfo(const char **file, uint32_t *lineNo, bool clr, bool 
     BSL_SAL_ThreadUnlock(g_errLock);
 
     if (file != NULL && lineNo != NULL) { /* both together, there's no point in getting only one of them. */
-        if (f == NULL) {
-            *file = "NA";
-            *lineNo = 0;
-        } else {
-            *file = f;
-            *lineNo = fileLine;
-        }
+        *file = (f == NULL) ? "NA" : f;
+        *lineNo = (f == NULL) ? 0 : fileLine;
+    }
+
+    if (reason != NULL) {
+        *reason = (r == NULL) ? "NA" : r;
     }
 
     return errorCode;
 }
 
+static int32_t BSLGetErrorInfo(const char **file, uint32_t *lineNo, bool clr, bool last)
+{
+    return BSLGetErrorInfoCommon(file, lineNo, NULL, clr, last);
+}
+
+
 static int32_t GetLastErrorInfo(const char **file, uint32_t *lineNo, bool clr)
 {
-    return GetErrorInfo(file, lineNo, clr, true);
+    return BSLGetErrorInfo(file, lineNo, clr, true);
 }
 
 static int32_t GetFirstErrorInfo(const char **file, uint32_t *lineNo, bool clr)
 {
-    return GetErrorInfo(file, lineNo, clr, false);
+    return BSLGetErrorInfo(file, lineNo, clr, false);
 }
 
 int32_t BSL_ERR_GetLastErrorFileLine(const char **file, uint32_t *lineNo)
@@ -339,6 +344,11 @@ int32_t BSL_ERR_GetLastError(void)
     return GetLastErrorInfo(NULL, NULL, true);
 }
 
+int32_t BSL_ERR_PeekLastError(void)
+{
+    return GetLastErrorInfo(NULL, NULL, false);
+}
+
 int32_t BSL_ERR_GetErrorFileLine(const char **file, uint32_t *lineNo)
 {
     return GetFirstErrorInfo(file, lineNo, true);
@@ -352,6 +362,20 @@ int32_t BSL_ERR_PeekErrorFileLine(const char **file, uint32_t *lineNo)
 int32_t BSL_ERR_GetError(void)
 {
     return GetFirstErrorInfo(NULL, NULL, true);
+}
+
+int32_t BSL_ERR_PeekError(void)
+{
+    return GetFirstErrorInfo(NULL, NULL, false);
+}
+
+int32_t BSL_ERR_GetErrAll(const char **file, uint32_t *lineNo, const char **desc)
+{
+    int32_t ret = GetFirstErrorInfo(file, lineNo, true);
+    if (ret != BSL_SUCCESS && desc != NULL) {
+        *desc = BSL_ERR_GetString(ret);
+    }
+    return ret;
 }
 
 static int32_t AddErrDesc(const BSL_ERR_Desc *desc)
@@ -393,9 +417,10 @@ int32_t BSL_ERR_AddErrStringBatch(const BSL_ERR_Desc *descList, uint32_t num)
 
 void BSL_ERR_RemoveErrStringBatch(void)
 {
+    (void)BSL_SAL_ThreadRunOnce(&g_isErrInit, ErrAutoInit);
     int32_t ret = BSL_SAL_ThreadWriteLock(g_errLock);
     if (ret != BSL_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05010, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05085, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "acquire lock failed when removing error string, threadId %llu", BSL_SAL_ThreadGetId(), 0, 0, 0);
         return;
     }

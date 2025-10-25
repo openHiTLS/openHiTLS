@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_AES
+#if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_AES_PRECALC_TABLES)
 
 #include "securec.h"
 #include "bsl_err_internal.h"
@@ -48,18 +48,6 @@ static const uint32_t RCON[] = {
     0x36000000,
 };
 
-#ifndef HITLS_CRYPTO_AES_PRECALC_TABLES
-uint32_t RoundConstArray(uint8_t val)
-{
-    return RCON[val];
-}
-
-uint8_t InvSubSbox(uint8_t val)
-{
-    return INV_S[val];
-}
-#endif
-#ifdef HITLS_CRYPTO_AES_PRECALC_TABLES
 #define TESEARCH(t0, t1, t2, t3)                                                    \
     (((uint32_t)TE2[((t0) >> 24)] & 0xff000000) ^ ((uint32_t)TE3[((t1) >> 16) & 0xff] & 0x00ff0000) ^ \
         ((uint32_t)TE0[((t2) >> 8) & 0xff] & 0x0000ff00) ^ ((uint32_t)TE1[(t3) & 0xff] & 0x000000ff))
@@ -625,7 +613,7 @@ static inline uint32_t AES_G(uint32_t w, uint32_t rcon)
     return ret;
 }
 
-void SetEncryptKey128Tbox(CRYPT_AES_Key *ctx, const uint8_t *key)
+static void SetEncryptKey128Tbox(CRYPT_AES_Key *ctx, const uint8_t *key)
 {
     uint32_t *ekey = ctx->key;
     ekey[0] = GET_UINT32_BE(key, 0);  // ekey 0: Four bytes starting from index key 0
@@ -649,7 +637,7 @@ void SetEncryptKey128Tbox(CRYPT_AES_Key *ctx, const uint8_t *key)
     ekey[7] = ekey[6] ^ ekey[3];  // ekey 7 = ekey 6 ^ ekey 3
 }
 
-void SetEncryptKey192Tbox(CRYPT_AES_Key *ctx, const uint8_t *key)
+static void SetEncryptKey192Tbox(CRYPT_AES_Key *ctx, const uint8_t *key)
 {
     uint32_t *ekey = ctx->key;
     ekey[0] = GET_UINT32_BE(key, 0);  // ekey 0: Four bytes starting from index key 0
@@ -677,7 +665,7 @@ void SetEncryptKey192Tbox(CRYPT_AES_Key *ctx, const uint8_t *key)
     ekey[9] = ekey[8] ^ ekey[3];    // ekey 9 = ekey 8 ^ ekey 3
 }
 
-void SetEncryptKey256Tbox(CRYPT_AES_Key *ctx, const uint8_t *key)
+static void SetEncryptKey256Tbox(CRYPT_AES_Key *ctx, const uint8_t *key)
 {
     uint32_t *ekey = ctx->key;
     ekey[0] = GET_UINT32_BE(key, 0);  // ekey 0: Four bytes starting from index key 0
@@ -741,8 +729,7 @@ do { \
     r##3 = GET_UINT32_BE(in, 12) ^ enc##key[3]; \
 } while (0)
 
-#define AES_ENC_ROUND(in, r, i, ekey)    \
-do { \
+#define AES_ENC_ROUND(in, r, i, ekey) do { \
     r##0 = TE0[(in##0 >> 24)] ^ TE1[(in##1 >> 16) & 0xff] ^ TE2[(in##2 >> 8) & 0xff] ^ TE3[(in##3) & 0xff] \
                 ^ (ekey)[((i) << 2) + 0]; \
     r##1 = TE0[(in##1 >> 24)] ^ TE1[(in##2 >> 16) & 0xff] ^ TE2[(in##3 >> 8) & 0xff] ^ TE3[(in##0) & 0xff] \
@@ -797,8 +784,7 @@ void CRYPT_AES_EncryptTbox(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t 
     PUT_UINT32_BE(c3, out, 12); // c3 is converted into four bytes which index is 12 in the out
 }
 
-#define AES_DEC_ROUND(in, r, i, dkey)    \
-do { \
+#define AES_DEC_ROUND(in, r, i, dkey) do { \
     r##0 = TD0[(in##0 >> 24)] ^ TD1[(in##3 >> 16) & 0xff] ^ TD2[(in##2 >> 8) & 0xff] ^ TD3[(in##1) & 0xff] \
             ^ (dkey)[((i) << 2) + 0]; \
     r##1 = TD0[(in##1 >> 24)] ^ TD1[(in##0 >> 16) & 0xff] ^ TD2[(in##3 >> 8) & 0xff] ^ TD3[(in##2) & 0xff] \
@@ -856,5 +842,5 @@ void CRYPT_AES_DecryptTbox(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t 
     BSL_SAL_CleanseData(&p2, sizeof(uint32_t));
     BSL_SAL_CleanseData(&p3, sizeof(uint32_t));
 }
-#endif /* HITLS_CRYPTO_AES_PRECALC_TABLES */
-#endif /* HITLS_CRYPTO_AES */
+
+#endif /* HITLS_CRYPTO_AES && HITLS_CRYPTO_AES_PRECALC_TABLES */

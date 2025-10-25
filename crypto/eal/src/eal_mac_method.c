@@ -25,6 +25,8 @@
 #include "eal_mac_local.h"
 #include "eal_cipher_local.h"
 #include "eal_md_local.h"
+#include "crypt_utils.h"
+
 #ifdef HITLS_CRYPTO_HMAC
 #include "crypt_hmac.h"
 #endif
@@ -50,7 +52,7 @@
 #define CRYPT_MAC_IMPL_METHOD_DECLARE(name)          \
     EAL_MacMethod g_macMethod_##name = {             \
         (MacNewCtx)CRYPT_##name##_NewCtxEx,          \
-        (MacInit)CRYPT_##name##_Init,                \
+        (MacInit)CRYPT_##name##_InitEx,              \
         (MacUpdate)CRYPT_##name##_Update,            \
         (MacFinal)CRYPT_##name##_Final,              \
         (MacDeinit)CRYPT_##name##_Deinit,            \

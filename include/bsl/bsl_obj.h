@@ -24,7 +24,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "bsl_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -696,19 +695,20 @@ int32_t BSL_OBJ_CreateSignId(int32_t signId, int32_t asymId, int32_t hashId);
 
 /**
  * @ingroup bsl_obj
+ * @brief Get the algorithm ID from the object identifier string
+ * @param[in] oid The object identifier string
+ * @return The algorithm ID
+ */
+BslCid BSL_OBJ_GetCID(const BslOidString *oidStr);
+
+/**
+ * @ingroup bsl_obj
  * @brief Get the object identifier string from the algorithm ID
  * @param[in] inputCid The algorithm ID
  * @return The object identifier string
  */
 BslOidString *BSL_OBJ_GetOID(BslCid ulCID);
 
-/**
- * @ingroup bsl_obj
- * @brief Get the algorithm ID from the object identifier string
- * @param[in] oid The object identifier string
- * @return The algorithm ID
- */
-BslCid BSL_OBJ_GetCID(const BslOidString *oidStr);
 
 /**
  * @ingroup bsl_obj

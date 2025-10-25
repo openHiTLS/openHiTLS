@@ -112,7 +112,7 @@ EAL_MdMethod *EAL_MdFindMethodEx(CRYPT_MD_AlgId id, void *libCtx, const char *at
  * @return #CRYPT_EAL_ERR_ALGID Algorithm ID is invalid.
  */
 int32_t EAL_Md(CRYPT_MD_AlgId id, void *libCtx, const char *attr, const uint8_t *in, uint32_t inLen, uint8_t *out,
-    uint32_t *outLen, bool isProvider);
+    uint32_t *outLen, bool checkSignId, bool isProvider);
 
 #ifdef __cplusplus
 }

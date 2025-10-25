@@ -192,8 +192,7 @@ int32_t BSL_PARAM_MAKER_PushValue(BSL_ParamMaker *maker, int32_t key, uint32_t t
  *         - Other values indicate setting failure
  * @note The value will be depth copy.
  */
-int32_t BSL_PARAM_MAKER_DeepPushValue(BSL_ParamMaker *maker, int32_t key, uint32_t type, void *value,
-    uint32_t len);
+int32_t BSL_PARAM_MAKER_DeepPushValue(BSL_ParamMaker *maker, int32_t key, uint32_t type, void *value, uint32_t len);
 
 /**
  * @brief BSL parameter maker to BSL parameter

@@ -28,7 +28,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "bsl_hash_list.h"
-
+#include "list_base.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -82,6 +82,16 @@ typedef bool (*BSL_HASH_MatchFunc)(uintptr_t key1, uintptr_t key2);
  */
 typedef int32_t (*BSL_HASH_UpdateNodeFunc)(BSL_HASH_Hash *hash, BSL_HASH_Iterator node,
     uintptr_t value, uint32_t valueSize);
+
+struct BSL_HASH_Info {
+    ListDupFreeFuncPair keyFunc;       /**< key Copy and release function pair */
+    ListDupFreeFuncPair valueFunc;     /**< value Copy and release function pair */
+    BSL_HASH_MatchFunc matchFunc;      /**< matching function */
+    BSL_HASH_CodeCalcFunc hashFunc;    /**< hash function */
+    uint32_t bucketSize;               /**< hash table size */
+    uint32_t hashCount;                /**< number of entries in the hash table */
+    RawList listArray[0];              /**< linked list control block array*/
+};
 
 /**
  * @ingroup bsl_hash
@@ -366,6 +376,18 @@ BSL_HASH_Iterator BSL_HASH_IterEnd(const BSL_HASH_Hash *hash);
  * @li bsl_hash.h: header file where this function's declaration is located.
  */
 BSL_HASH_Iterator BSL_HASH_IterNext(const BSL_HASH_Hash *hash, BSL_HASH_Iterator it);
+
+/**
+ * @ingroup bsl_hash
+ * @brief Obtain the iterator of the prev node in the hash table.
+ * @par Description: Obtains the iterator of the prev node in the hash table.
+ * @param hash     [IN] Handle of the hash table.
+ * @param it       [IN] Current iterator.
+ * @retval Prev node iterator. If the current node is the last iterator, #BSL_HASH_IterBegin() is returned.
+ * @par Dependency: None
+ * @li bsl_hash.h: header file where this function's declaration is located.
+ */
+BSL_HASH_Iterator BSL_HASH_IterPrev(const BSL_HASH_Hash *hash, BSL_HASH_Iterator it);
 
 /**
  * @ingroup bsl_hash

@@ -26,7 +26,13 @@
 #include "crypt_eal_codecs.h"
 #include "crypt_errno.h"
 #include "crypt_params_key.h"
+#include "crypt_eal_pkey.h"
+#include "bsl_sal.h"
+#include "crypt_eal_md.h"
 #include "securec.h"
+#include "bsl_errno.h"
+#include "stub_replace.h"
+#include "crypto_test_util.h"
 
 /* END_HEADER */
 
@@ -730,6 +736,25 @@ EXIT:
 /* END_CASE */
 
 /**
+* @test SDV_AUTH_PRIVPASS_SET_KEY_TC003
+ * @brief Test case for setting private keys in PrivPass context
+ */
+/* BEGIN_CASE */
+void SDV_AUTH_PRIVPASS_SET_KEY_TC003(Hex *ski)
+{
+#ifndef HITLS_CRYPTO_RSA_EMSA_PKCSV15
+    SKIP_TEST();
+#endif
+    TestMemInit();
+    HITLS_AUTH_PrivPassCtx *ctx = HITLS_AUTH_PrivPassNewCtx(HITLS_AUTH_PRIVPASS_PUB_VERIFY_TOKENS);
+    ASSERT_NE(ctx, NULL);
+    ASSERT_EQ(HITLS_AUTH_PrivPassSetPrvkey(ctx, NULL, ski->x, ski->len), BSL_BASE64_INVALID_ENCODE);
+EXIT:
+    HITLS_AUTH_PrivPassFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
  * @test SDV_AUTH_PRIVPASS_TOKEN_GEN_INVALID_TC001
  * @spec Private Pass Token Generation Invalid Cases
  * @title Test token generation process with invalid parameters and states
@@ -1153,5 +1178,94 @@ void SDV_AUTH_PRIVPASS_CTX_DATA_OBTAIN_TC001(Hex *pki, Hex *nonce)
 
 EXIT:
     HITLS_AUTH_PrivPassFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_HITLS_AUTH_PRIV_PASS_NEW_TOKEN_TC001
+ * @title Test the exception branch of HITLS_AUTH_PrivPassNewToken
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_AUTH_PRIV_PASS_NEW_TOKEN_TC001(void)
+{
+    int32_t tokenType = 0;
+    ASSERT_EQ(HITLS_AUTH_PrivPassNewToken(tokenType), NULL);
+    STUB_Init();
+    FuncStubInfo stubInfo = {0};
+    STUB_Replace(&stubInfo, BSL_SAL_Calloc, FailedCalloc);
+    ASSERT_EQ(HITLS_AUTH_PrivPassNewToken(HITLS_AUTH_PRIVPASS_TOKEN_CHALLENGE), NULL);
+EXIT:
+    STUB_Reset(&stubInfo);
+}
+/* END_CASE */
+
+BSL_Param *BSL_PARAM_FindParam_FAIL(BSL_Param *param, int32_t key)
+{
+    (void)param;
+    (void)key;
+    return NULL;
+}
+
+/**
+ * @test SDV_HITLS_AUTH_PRIV_PASS_GET_CTX_CONTENT_TC001
+ * @title Test the exception branches of HITLS_AUTH_PrivPassCtxCtrl
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_AUTH_PRIV_PASS_GET_CTX_CONTENT_TC001(void)
+{
+    TestMemInit();
+    uint8_t nonceBuffer[MAX_LEN];
+    uint32_t nonceBufferLen = MAX_LEN;
+    uint8_t truncatedTokenKeyId;
+    uint8_t tokenKeyIdBuffer[MAX_LEN];
+    uint32_t tokenKeyIdBufferLen = MAX_LEN;
+    HITLS_AUTH_PrivPassCtx *ctx = NULL;
+    ctx = HITLS_AUTH_PrivPassNewCtx(HITLS_AUTH_PRIVPASS_PUB_VERIFY_TOKENS);
+    BSL_Param param[4] = {
+        {AUTH_PARAM_PRIVPASS_CTX_NONCE, BSL_PARAM_TYPE_OCTETS_PTR, nonceBuffer, nonceBufferLen, 0},
+        {AUTH_PARAM_PRIVPASS_CTX_TOKENKEYID, BSL_PARAM_TYPE_OCTETS_PTR, tokenKeyIdBuffer, tokenKeyIdBufferLen, 0},
+        {AUTH_PARAM_PRIVPASS_CTX_TRUNCATEDTOKENKEYID, BSL_PARAM_TYPE_UINT8, &truncatedTokenKeyId, 1, 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(HITLS_AUTH_PrivPassCtxCtrl(ctx, HITLS_AUTH_PRIVPASS_GET_CTX_NONCE, param, 0), HITLS_AUTH_SUCCESS);
+    
+    STUB_Init();
+    FuncStubInfo stubInfo = {0};
+    STUB_Replace(&stubInfo, BSL_PARAM_FindParam, BSL_PARAM_FindParam_FAIL);
+    ASSERT_EQ(HITLS_AUTH_PrivPassCtxCtrl(ctx, HITLS_AUTH_PRIVPASS_GET_CTX_NONCE, param, 0), 
+        HITLS_AUTH_PRIVPASS_INVALID_INPUT);
+EXIT:
+    HITLS_AUTH_PrivPassFreeCtx(ctx);
+    STUB_Reset(&stubInfo);
+}
+/* END_CASE */
+
+HITLS_AUTH_PrivPassToken *HITLS_AUTH_PrivPassNewToken_FAIL(int32_t tokenType)
+{
+    (void)tokenType;
+    return NULL;
+}
+
+/**
+ * @test SDV_HITLS_AUTH_PRIV_PASS_DESERIALIZATION_TC001
+ * @title Test the exception branch of HITLS_AUTH_PrivPassDeserialization
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_AUTH_PRIV_PASS_DESERIALIZATION_TC001(int type, Hex *buffer)
+{
+    HITLS_AUTH_PrivPassCtx *ctx = HITLS_AUTH_PrivPassNewCtx(HITLS_AUTH_PRIVPASS_PUB_VERIFY_TOKENS);
+    HITLS_AUTH_PrivPassToken *challenge = NULL;
+    ASSERT_EQ(HITLS_AUTH_PrivPassDeserialization(ctx, 0, buffer->x, buffer->len, &challenge),
+        HITLS_AUTH_PRIVPASS_INVALID_TOKEN_TYPE);
+
+    STUB_Init();
+    FuncStubInfo stubInfo = {0};
+    STUB_Replace(&stubInfo, HITLS_AUTH_PrivPassNewToken, HITLS_AUTH_PrivPassNewToken_FAIL);
+    ASSERT_EQ(HITLS_AUTH_PrivPassDeserialization(ctx, type, buffer->x, buffer->len, &challenge), 
+        BSL_MALLOC_FAIL);
+EXIT:
+    HITLS_AUTH_PrivPassFreeToken(challenge);
+    HITLS_AUTH_PrivPassFreeCtx(ctx);
+    STUB_Reset(&stubInfo);
 }
 /* END_CASE */

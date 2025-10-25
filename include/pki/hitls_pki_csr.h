@@ -33,6 +33,21 @@ typedef struct _HITLS_X509_Csr HITLS_X509_Csr;
  */
 HITLS_X509_Csr *HITLS_X509_CsrNew(void);
 
+
+/**
+ * @brief Create a new csr object using the provider mechanism
+ * @attention
+ * Thread safe     : No thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : No time-consuming.
+ *
+ * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
+ * @param attrName [IN] Provider attribute name for capability matching
+ *
+ * @return HITLS_X509_Csr* Csr object or NULL on failure
+ */
+HITLS_X509_Csr *HITLS_X509_ProviderCsrNew(HITLS_PKI_LibCtx *libCtx, const char *attrName);
+
 /**
  * @ingroup pki
  * @brief Release the pkcs10 csr.

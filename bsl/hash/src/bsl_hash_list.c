@@ -99,14 +99,11 @@ int32_t BSL_ListDeinit(BSL_List *list)
 
 static int32_t ListWriteUserdata(const BSL_List *list, ListNode *node, uintptr_t userData, size_t userDataSize)
 {
-    const void *copyBuff = NULL;
-
     if (list->dataFunc.dupFunc == NULL) {
         node->userdata = userData;
         return BSL_SUCCESS;
     }
-
-    copyBuff = list->dataFunc.dupFunc((void *)userData, userDataSize);
+    const void *copyBuff = list->dataFunc.dupFunc((void *)userData, userDataSize);
     if (copyBuff == NULL) {
         return BSL_INTERNAL_EXCEPTION;
     }
@@ -161,7 +158,7 @@ int32_t BSL_ListPushBack(BSL_List *list, uintptr_t userData, size_t userDataSize
 
 int32_t BSL_ListInsert(BSL_List *list, const BSL_ListIterator it, uintptr_t userData, size_t userDataSize)
 {
-    if (it == NULL) {
+    if (list == NULL || it == NULL) {
         return BSL_INTERNAL_EXCEPTION;
     }
 
@@ -215,7 +212,7 @@ BSL_ListIterator BSL_ListIterErase(BSL_List *list, BSL_ListIterator it)
 uintptr_t BSL_ListFront(const BSL_List *list)
 {
     if (BSL_ListIsEmpty(list) == true) {
-        return 0;
+        return (uintptr_t)0;
     }
     const ListNode *node = BSL_CONTAINER_OF(list->rawList.head.next, ListNode, rawNode);
     return node->userdata;
@@ -224,7 +221,7 @@ uintptr_t BSL_ListFront(const BSL_List *list)
 uintptr_t BSL_ListBack(const BSL_List *list)
 {
     if (BSL_ListIsEmpty(list) == true) {
-        return 0;
+        return (uintptr_t)0;
     }
 
     const ListNode *node = BSL_CONTAINER_OF(list->rawList.head.prev, ListNode, rawNode);

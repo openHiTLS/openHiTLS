@@ -20,7 +20,7 @@
 #ifdef HITLS_CRYPTO_CODECSKEY
 
 #include "bsl_types.h"
-#include "bsl_asn1.h"
+#include "bsl_asn1_internal.h"
 #include "crypt_types.h"
 #include "crypt_eal_pkey.h"
 

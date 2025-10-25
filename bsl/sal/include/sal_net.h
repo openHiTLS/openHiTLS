@@ -20,7 +20,7 @@
 #ifdef HITLS_BSL_SAL_NET
 
 #include <stdint.h>
-
+#include <fcntl.h>
 #ifdef HITLS_BSL_SAL_LINUX
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
@@ -34,11 +34,10 @@ int32_t SAL_Write(int32_t fd, const void *buf, uint32_t len, int32_t *err);
 
 int32_t SAL_Read(int32_t fd, void *buf, uint32_t len, int32_t *err);
 
-int32_t SAL_Sendto(int32_t sock, const void *buf, size_t len, int32_t flags, BSL_SAL_SockAddr address, int32_t addrLen,
-                   int32_t *err);
+int32_t SAL_Sendto(int32_t sock, const void *buf, size_t len, int32_t flags, void *address,
+    int32_t addrLen, int32_t *err);
 
-int32_t SAL_RecvFrom(int32_t sock, void *buf, size_t len, int32_t flags, BSL_SAL_SockAddr address, int32_t *addrLen,
-                     int32_t *err);
+int32_t SAL_Recvfrom(int32_t sock, void *buf, size_t len, int32_t flags, void *address, int32_t *addrLen, int32_t *err);
 
 int32_t SAL_SockAddrNew(BSL_SAL_SockAddr *sockAddr);
 int32_t SAL_SockAddrGetFamily(const BSL_SAL_SockAddr sockAddr);
@@ -46,6 +45,11 @@ void SAL_SockAddrFree(BSL_SAL_SockAddr sockAddr);
 uint32_t SAL_SockAddrSize(const BSL_SAL_SockAddr sockAddr);
 void SAL_SockAddrCopy(BSL_SAL_SockAddr dst, BSL_SAL_SockAddr src);
 
+int64_t SAL_LSeek(int32_t fd, int64_t offset, uint32_t origin);
+
+int32_t SAL_Open(const char *path, int32_t flag);
+
+int32_t SAL_Close(int32_t fd);
 
 #ifdef __cplusplus
 }

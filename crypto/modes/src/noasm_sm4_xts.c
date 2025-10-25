@@ -21,6 +21,7 @@
 #include "crypt_sm4.h"
 #include "crypt_modes_xts.h"
 #include "modes_local.h"
+#include "crypt_utils.h"
 
 int32_t SM4_XTS_Update(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
@@ -32,4 +33,13 @@ int32_t SM4_XTS_InitCtx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t key
 {
     return MODES_XTS_InitCtx(modeCtx, key, keyLen, iv, ivLen, enc);
 }
+
+int32_t SM4_XTS_Final(MODES_XTS_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
+{
+    RETURN_RET_IF((modeCtx == NULL || out == NULL || outLen == NULL), CRYPT_NULL_INPUT);
+    /* The SM4 XTS mode does not require the Final. */
+    *outLen = 0;
+    return CRYPT_SUCCESS;
+}
+
 #endif

@@ -557,11 +557,10 @@ Poly1305BlockNeon:
     add     x6, x6, x11, lsl#32
     add     x7, x7, x12, lsl#32
     add     x8, x8, x13, lsl#32
-    add     x9, x9, x14, lsl#32
-    add     x10, x10, x15, lsl#32
-
     fmov    d14, x6
     fmov    d15, x7
+    add     x9, x9, x14, lsl#32
+    add     x10, x10, x15, lsl#32
     fmov    d16, x8
     fmov    d17, x9
     fmov    d18, x10
@@ -594,11 +593,10 @@ Poly1305BlockNeon:
     add     x6, x6, x11, lsl#32
     add     x7, x7, x12, lsl#32
     add     x8, x8, x13, lsl#32
-    add     x9, x9, x14, lsl#32
-    add     x10, x10, x15, lsl#32
-
     fmov    d9, x6
     fmov    d10, x7
+    add     x9, x9, x14, lsl#32
+    add     x10, x10, x15, lsl#32
     fmov    d11, x8
     fmov    d12, x9
     fmov    d13, x10
@@ -625,25 +623,17 @@ Poly1305BlockNeon:
     /* Start loop, vector register has used v0-v8 to hold r value precalculated table, v24-v28 to hold ACC value */
 .Lloop_neon:
     add     x1, x1, #64
+    umull   v19.2d, v14.2s, v0.s[2]
     sub     x4, x4, #64
+    umull   v20.2d, v14.2s, v1.s[2]
 
     /* Compute (m[2 + 4i], m[3 + 4i])*(r^2, r^2), stored in v19-v23 */
     /* Load the (m[6 + 4i], m[7 + 4i]) file and save it in v14-v18. */
     ldp     x9, x10, [x1, #-32]
-
-    umull   v19.2d, v14.2s, v0.s[2]
-    umull   v20.2d, v14.2s, v1.s[2]
     umull   v21.2d, v14.2s, v2.s[2]
     umull   v22.2d, v14.2s, v3.s[2]
     umull   v23.2d, v14.2s, v4.s[2]
-
     ldp     x14, x15, [x1, #-16]
-
-    umlal   v19.2d, v15.2s, v8.s[2]
-    umlal   v20.2d, v15.2s, v0.s[2]
-    umlal   v21.2d, v15.2s, v1.s[2]
-    umlal   v22.2d, v15.2s, v2.s[2]
-    umlal   v23.2d, v15.2s, v3.s[2]
 
 #ifdef	HITLS_BIG_ENDIAN
     rev     x9, x9
@@ -652,40 +642,45 @@ Poly1305BlockNeon:
     rev     x15, x15
 #endif
 
+    umlal   v19.2d, v15.2s, v8.s[2]
     and     x6, x9, #0x03ffffff
+    umlal   v20.2d, v15.2s, v0.s[2]
     and     x11, x14, #0x03ffffff
+    umlal   v21.2d, v15.2s, v1.s[2]
     ubfx    x7, x9, #26, #26
+    umlal   v22.2d, v15.2s, v2.s[2]
     ubfx    x12, x14, #26, #26
+    umlal   v23.2d, v15.2s, v3.s[2]
     extr    x8, x10, x9, #52
-    extr    x13, x15, x14, #52
 
     umlal   v19.2d, v16.2s, v7.s[2]
+    extr    x13, x15, x14, #52
     umlal   v20.2d, v16.2s, v8.s[2]
-    umlal   v21.2d, v16.2s, v0.s[2]
-    umlal   v22.2d, v16.2s, v1.s[2]
-    umlal   v23.2d, v16.2s, v2.s[2]
-
     and     x8, x8, #0x03ffffff
+    umlal   v21.2d, v16.2s, v0.s[2]
     and     x13, x13, #0x03ffffff
+    umlal   v22.2d, v16.2s, v1.s[2]
     ubfx    x9, x10, #14, #26
+    umlal   v23.2d, v16.2s, v2.s[2]
     ubfx    x14, x15, #14, #26
-    extr    x10, x3, x10, #40
-    extr    x15, x3, x15, #40
 
     umlal   v19.2d, v17.2s, v6.s[2]
+    extr    x10, x3, x10, #40
     umlal   v20.2d, v17.2s, v7.s[2]
-    umlal   v21.2d, v17.2s, v8.s[2]
-    umlal   v22.2d, v17.2s, v0.s[2]
-    umlal   v23.2d, v17.2s, v1.s[2]
+    extr    x15, x3, x15, #40
 
+    umlal   v21.2d, v17.2s, v8.s[2]
     add     x6, x6, x11, lsl#32
+    umlal   v22.2d, v17.2s, v0.s[2]
     add     x7, x7, x12, lsl#32
+    umlal   v23.2d, v17.2s, v1.s[2]
     add     x8, x8, x13, lsl#32
-    add     x9, x9, x14, lsl#32
-    add     x10, x10, x15, lsl#32
 
     umlal   v19.2d, v18.2s, v5.s[2]
+    add     x9, x9, x14, lsl#32
     umlal   v20.2d, v18.2s, v6.s[2]
+    add     x10, x10, x15, lsl#32
+
     umlal   v21.2d, v18.2s, v7.s[2]
     umlal   v22.2d, v18.2s, v8.s[2]
     umlal   v23.2d, v18.2s, v0.s[2]
@@ -701,25 +696,18 @@ Poly1305BlockNeon:
     /* Load the (m[4 + 4i], m[5 + 4i]) file and save it in v9-v13. */
     add     v9.2s, v9.2s, v24.2s
     add     v10.2s, v10.2s, v25.2s
+    ldp     x9, x10, [x1, #-64]
     add     v11.2s, v11.2s, v26.2s
     add     v12.2s, v12.2s, v27.2s
     add     v13.2s, v13.2s, v28.2s
 
-    ldp     x9, x10, [x1, #-64]
 
     umlal   v19.2d, v9.2s, v0.s[0]
     umlal   v20.2d, v9.2s, v1.s[0]
+    ldp     x14, x15, [x1, #-48]
     umlal   v21.2d, v9.2s, v2.s[0]
     umlal   v22.2d, v9.2s, v3.s[0]
     umlal   v23.2d, v9.2s, v4.s[0]
-
-    ldp     x14, x15, [x1, #-48]
-
-    umlal   v19.2d, v10.2s, v8.s[0]
-    umlal   v20.2d, v10.2s, v0.s[0]
-    umlal   v21.2d, v10.2s, v1.s[0]
-    umlal   v22.2d, v10.2s, v2.s[0]
-    umlal   v23.2d, v10.2s, v3.s[0]
 
 #ifdef	HITLS_BIG_ENDIAN
     rev     x9, x9
@@ -728,40 +716,47 @@ Poly1305BlockNeon:
     rev     x15, x15
 #endif
 
+
+    umlal   v19.2d, v10.2s, v8.s[0]
     and     x6, x9, #0x03ffffff
+    umlal   v20.2d, v10.2s, v0.s[0]
     and     x11, x14, #0x03ffffff
+    umlal   v21.2d, v10.2s, v1.s[0]
     ubfx    x7, x9, #26, #26
+    umlal   v22.2d, v10.2s, v2.s[0]
     ubfx    x12, x14, #26, #26
+    umlal   v23.2d, v10.2s, v3.s[0]
     extr    x8, x10, x9, #52
-    extr    x13, x15, x14, #52
+
 
     umlal   v19.2d, v11.2s, v7.s[0]
+    extr    x13, x15, x14, #52
     umlal   v20.2d, v11.2s, v8.s[0]
-    umlal   v21.2d, v11.2s, v0.s[0]
-    umlal   v22.2d, v11.2s, v1.s[0]
-    umlal   v23.2d, v11.2s, v2.s[0]
-
     and     x8, x8, #0x03ffffff
+    umlal   v21.2d, v11.2s, v0.s[0]
     and     x13, x13, #0x03ffffff
+    umlal   v22.2d, v11.2s, v1.s[0]
     ubfx    x9, x10, #14, #26
+    umlal   v23.2d, v11.2s, v2.s[0]
     ubfx    x14, x15, #14, #26
-    extr    x10, x3, x10, #40
-    extr    x15, x3, x15, #40
 
     umlal   v19.2d, v12.2s, v6.s[0]
+    extr    x10, x3, x10, #40
     umlal   v20.2d, v12.2s, v7.s[0]
-    umlal   v21.2d, v12.2s, v8.s[0]
-    umlal   v22.2d, v12.2s, v0.s[0]
-    umlal   v23.2d, v12.2s, v1.s[0]
+    extr    x15, x3, x15, #40
 
+    umlal   v21.2d, v12.2s, v8.s[0]
     add     x6, x6, x11, lsl#32
+    umlal   v22.2d, v12.2s, v0.s[0]
     add     x7, x7, x12, lsl#32
+    umlal   v23.2d, v12.2s, v1.s[0]
     add     x8, x8, x13, lsl#32
-    add     x9, x9, x14, lsl#32
-    add     x10, x10, x15, lsl#32
 
     umlal   v19.2d, v13.2s, v5.s[0]
+    add     x9, x9, x14, lsl#32
     umlal   v20.2d, v13.2s, v6.s[0]
+    add     x10, x10, x15, lsl#32
+
     umlal   v21.2d, v13.2s, v7.s[0]
     umlal   v22.2d, v13.2s, v8.s[0]
     umlal   v23.2d, v13.2s, v0.s[0]

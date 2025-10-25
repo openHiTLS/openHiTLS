@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_HKDF
+#if defined(HITLS_CRYPTO_HKDF) || defined(HITLS_CRYPTO_HKDF_EX)
 
 #include <stdint.h>
 #include "securec.h"
@@ -24,10 +24,11 @@
 #include "crypt_errno.h"
 #include "crypt_util_ctrl.h"
 #include "crypt_utils.h"
+#include "crypt_hkdf.h"
 #include "eal_mac_local.h"
+#include "crypt_eal_kdf.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
-#include "crypt_hkdf.h"
 
 #define HKDF_MAX_HMACSIZE 64
 

@@ -17,14 +17,16 @@
 #ifdef HITLS_CRYPTO_MLKEM
 #include "securec.h"
 #include "crypt_errno.h"
-#include "crypt_algid.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "eal_pkey_local.h"
 #include "crypt_util_rand.h"
 #include "crypt_util_ctrl.h"
 #include "crypt_utils.h"
+#include "crypt_algid.h"
 #include "ml_kem_local.h"
+#include "bsl_params.h"
+#include "crypt_params_key.h"
 
 static const CRYPT_MlKemInfo ML_KEM_INFO[] = {
     {2, 3, 2, 10, 4, 128, 800, 1632, 768, 32, 512},
@@ -54,6 +56,7 @@ CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_NewCtx(void)
     return keyCtx;
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
 CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_NewCtxEx(void *libCtx)
 {
     CRYPT_ML_KEM_Ctx *ctx = CRYPT_ML_KEM_NewCtx();
@@ -63,6 +66,7 @@ CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_NewCtxEx(void *libCtx)
     ctx->libCtx = libCtx;
     return ctx;
 }
+#endif
 
 void CRYPT_ML_KEM_FreeCtx(CRYPT_ML_KEM_Ctx *ctx)
 {
@@ -287,7 +291,6 @@ int32_t CRYPT_ML_KEM_GetDecapsKey(const CRYPT_ML_KEM_Ctx *ctx, CRYPT_KemDecapsKe
     return CRYPT_SUCCESS;
 }
 
-#ifdef HITLS_BSL_PARAMS
 int32_t CRYPT_ML_KEM_SetEncapsKeyEx(CRYPT_ML_KEM_Ctx *ctx, const BSL_Param *para)
 {
     if (para == NULL) {
@@ -341,7 +344,6 @@ int32_t CRYPT_ML_KEM_GetDecapsKeyEx(const CRYPT_ML_KEM_Ctx *ctx, BSL_Param *para
     paramPrv->useLen = prv.len;
     return CRYPT_SUCCESS;
 }
-#endif
 
 #ifdef HITLS_CRYPTO_MLKEM_CMP
 static int32_t MlKemCmpKey(uint8_t *a, uint32_t aLen, uint8_t *b, uint32_t bLen)

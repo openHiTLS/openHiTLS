@@ -25,7 +25,6 @@
 void Poly1305InitForAsm(Poly1305Ctx *ctx)
 {
     (void)ctx;
-    return;
 }
 
 

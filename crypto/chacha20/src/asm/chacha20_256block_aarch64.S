@@ -98,52 +98,58 @@
     add WINPUT2, WINPUT2, WINPUT6               // A+B
     eor VREG43.16b, VREG24.16b, VREG21.16b
     add WINPUT3, WINPUT3, WINPUT7               // A+B
-    ushr VREG04.4s, VREG41.4s, #24
+    tbl VREG04.16b, {VREG41.16b}, VCOUN0.16b
 
     eor WINPUT12, WINPUT12, WINPUT0             // D^A
-    ushr VREG14.4s, VREG42.4s, #24
+    tbl VREG14.16b, {VREG42.16b}, VCOUN0.16b
     eor WINPUT13, WINPUT13, WINPUT1             // D^A
-    ushr VREG24.4s, VREG43.4s, #24
+    tbl VREG24.16b, {VREG43.16b}, VCOUN0.16b
     eor WINPUT14, WINPUT14, WINPUT2             // D^A
-    sli VREG04.4s, VREG41.4s, #8
+    add VREG03.4s, VREG03.4s, VREG04.4s
     eor WINPUT15, WINPUT15, WINPUT3             // D^A
-    sli VREG14.4s, VREG42.4s, #8
+    add VREG13.4s, VREG13.4s, VREG14.4s
 
     ror WINPUT12, WINPUT12, #24                 // D>>>24
-    sli VREG24.4s, VREG43.4s, #8
-    ror WINPUT13, WINPUT13, #24                 // D>>>24
-    add VREG03.4s, VREG03.4s, VREG04.4s
-    ror WINPUT14, WINPUT14, #24                 // D>>>24
-    add VREG13.4s, VREG13.4s, VREG14.4s
-    ror WINPUT15, WINPUT15, #24                 // D>>>24
     add VREG23.4s, VREG23.4s, VREG24.4s
+    ror WINPUT13, WINPUT13, #24                 // D>>>24
+    eor VREG41.16b, VREG03.16b, VREG02.16b
+    ror WINPUT14, WINPUT14, #24                 // D>>>24
+    eor VREG42.16b, VREG13.16b, VREG12.16b
+    ror WINPUT15, WINPUT15, #24                 // D>>>24
+    eor VREG43.16b, VREG23.16b, VREG22.16b
 
     add WINPUT8, WINPUT8, WINPUT12              // C+D
-    eor VREG41.16b, VREG03.16b, VREG02.16b
-    add WINPUT9, WINPUT9, WINPUT13              // C+D
-    eor VREG42.16b, VREG13.16b, VREG12.16b
-    add WINPUT10, WINPUT10, WINPUT14            // C+D
-    eor VREG43.16b, VREG23.16b, VREG22.16b
-    add WINPUT11, WINPUT11, WINPUT15            // C+D
     ushr VREG02.4s, VREG41.4s, #25
+    add WINPUT9, WINPUT9, WINPUT13              // C+D
+    ushr VREG12.4s, VREG42.4s, #25
+    add WINPUT10, WINPUT10, WINPUT14            // C+D
+    ushr VREG22.4s, VREG43.4s, #25
+    add WINPUT11, WINPUT11, WINPUT15            // C+D
+    sli VREG02.4s, VREG41.4s, #7
 
     eor WINPUT4, WINPUT4, WINPUT8               // B^C
-    ushr VREG12.4s, VREG42.4s, #25
-    eor WINPUT5, WINPUT5, WINPUT9               // B^C
-    ushr VREG22.4s, VREG43.4s, #25
-    eor WINPUT6, WINPUT6, WINPUT10              // B^C
-    sli VREG02.4s, VREG41.4s, #7
-    eor WINPUT7, WINPUT7, WINPUT11              // B^C
     sli VREG12.4s, VREG42.4s, #7
+    eor WINPUT5, WINPUT5, WINPUT9               // B^C
+    sli VREG22.4s, VREG43.4s, #7
+    eor WINPUT6, WINPUT6, WINPUT10              // B^C
+    ext VREG03.16b, VREG03.16b, VREG03.16b, #8
+    eor WINPUT7, WINPUT7, WINPUT11              // B^C
+    ext VREG13.16b, VREG13.16b, VREG13.16b, #8
 
     ror WINPUT4, WINPUT4, #25                   // B>>>25
-    sli VREG22.4s, VREG43.4s, #7
-    ror WINPUT5, WINPUT5, #25                   // B>>>25
-    ext VREG03.16b, VREG03.16b, VREG03.16b, #8
-    ror WINPUT6, WINPUT6, #25                   // B>>>25
-    ext VREG13.16b, VREG13.16b, VREG13.16b, #8
-    ror WINPUT7, WINPUT7, #25                   // B>>>25
     ext VREG23.16b, VREG23.16b, VREG23.16b, #8
+    ror WINPUT5, WINPUT5, #25                   // B>>>25
+    ext VREG04.16b, VREG04.16b, VREG04.16b, #12
+    ror WINPUT6, WINPUT6, #25                   // B>>>25
+    ext VREG14.16b, VREG14.16b, VREG14.16b, #12
+    ror WINPUT7, WINPUT7, #25                   // B>>>25
+    ext VREG24.16b, VREG24.16b, VREG24.16b, #12
+
+    ext VREG34.16b, VREG34.16b, VREG34.16b, #12
+    ext VREG02.16b, VREG02.16b, VREG02.16b, #4
+    ext VREG12.16b, VREG12.16b, VREG12.16b, #4
+    ext VREG22.16b, VREG22.16b, VREG22.16b, #4
+    ext VREG32.16b, VREG32.16b, VREG32.16b, #4
 .endm
 
 .macro CHA256_ROUND_B
@@ -208,52 +214,58 @@
     add WINPUT2, WINPUT2, WINPUT7               // A+B
     eor VREG43.16b, VREG24.16b, VREG21.16b
     add WINPUT3, WINPUT3, WINPUT4               // A+B
-    ushr VREG04.4s, VREG41.4s, #24
+    tbl VREG04.16b, {VREG41.16b}, VCOUN0.16b
 
     eor WINPUT15, WINPUT15, WINPUT0             // D^A
-    ushr VREG14.4s, VREG42.4s, #24
+    tbl VREG14.16b, {VREG42.16b}, VCOUN0.16b
     eor WINPUT12, WINPUT12, WINPUT1             // D^A
-    ushr VREG24.4s, VREG43.4s, #24
+    tbl VREG24.16b, {VREG43.16b}, VCOUN0.16b
     eor WINPUT13, WINPUT13, WINPUT2             // D^A
-    sli VREG04.4s, VREG41.4s, #8
+    add VREG03.4s, VREG03.4s, VREG04.4s
     eor WINPUT14, WINPUT14, WINPUT3             // D^A
-    sli VREG14.4s, VREG42.4s, #8
+    add VREG13.4s, VREG13.4s, VREG14.4s
 
     ror WINPUT12, WINPUT12, #24                 // D>>>24
-    sli VREG24.4s, VREG43.4s, #8
-    ror WINPUT13, WINPUT13, #24
-    add VREG03.4s, VREG03.4s, VREG04.4s
-    ror WINPUT14, WINPUT14, #24
-    add VREG13.4s, VREG13.4s, VREG14.4s
-    ror WINPUT15, WINPUT15, #24
     add VREG23.4s, VREG23.4s, VREG24.4s
+    ror WINPUT13, WINPUT13, #24
+    eor VREG41.16b, VREG03.16b, VREG02.16b
+    ror WINPUT14, WINPUT14, #24
+    eor VREG42.16b, VREG13.16b, VREG12.16b
+    ror WINPUT15, WINPUT15, #24
+    eor VREG43.16b, VREG23.16b, VREG22.16b
 
     add WINPUT10, WINPUT10, WINPUT15            // C+D
-    eor VREG41.16b, VREG03.16b, VREG02.16b
-    add WINPUT11, WINPUT11, WINPUT12            // C+D
-    eor VREG42.16b, VREG13.16b, VREG12.16b
-    add WINPUT8, WINPUT8, WINPUT13              // C+D
-    eor VREG43.16b, VREG23.16b, VREG22.16b
-    add WINPUT9, WINPUT9, WINPUT14              // C+D
     ushr VREG02.4s, VREG41.4s, #25
+    add WINPUT11, WINPUT11, WINPUT12            // C+D
+    ushr VREG12.4s, VREG42.4s, #25
+    add WINPUT8, WINPUT8, WINPUT13              // C+D
+    ushr VREG22.4s, VREG43.4s, #25
+    add WINPUT9, WINPUT9, WINPUT14              // C+D
+    sli VREG02.4s, VREG41.4s, #7
 
     eor WINPUT5, WINPUT5, WINPUT10              // B^C
-    ushr VREG12.4s, VREG42.4s, #25
-    eor WINPUT6, WINPUT6, WINPUT11
-    ushr VREG22.4s, VREG43.4s, #25
-    eor WINPUT7, WINPUT7, WINPUT8
-    sli VREG02.4s, VREG41.4s, #7
-    eor WINPUT4, WINPUT4, WINPUT9
     sli VREG12.4s, VREG42.4s, #7
+    eor WINPUT6, WINPUT6, WINPUT11
+    sli VREG22.4s, VREG43.4s, #7
+    eor WINPUT7, WINPUT7, WINPUT8
+    ext VREG03.16b, VREG03.16b, VREG03.16b, #8
+    eor WINPUT4, WINPUT4, WINPUT9
+    ext VREG13.16b, VREG13.16b, VREG13.16b, #8
 
     ror WINPUT4, WINPUT4, #25                   // B>>>25
-    sli VREG22.4s, VREG43.4s, #7
-    ror WINPUT5, WINPUT5, #25
-    ext VREG03.16b, VREG03.16b, VREG03.16b, #8
-    ror WINPUT6, WINPUT6, #25
-    ext VREG13.16b, VREG13.16b, VREG13.16b, #8
-    ror WINPUT7, WINPUT7, #25
     ext VREG23.16b, VREG23.16b, VREG23.16b, #8
+    ror WINPUT5, WINPUT5, #25
+    ext VREG04.16b, VREG04.16b, VREG04.16b, #4
+    ror WINPUT6, WINPUT6, #25
+    ext VREG14.16b, VREG14.16b, VREG14.16b, #4
+    ror WINPUT7, WINPUT7, #25
+    ext VREG24.16b, VREG24.16b, VREG24.16b, #4
+
+    ext VREG34.16b, VREG34.16b, VREG34.16b, #4
+    ext VREG02.16b, VREG02.16b, VREG02.16b, #12
+    ext VREG12.16b, VREG12.16b, VREG12.16b, #12
+    ext VREG22.16b, VREG22.16b, VREG22.16b, #12
+    ext VREG32.16b, VREG32.16b, VREG32.16b, #12
 .endm
 
 .macro CHA256_ROUND_END

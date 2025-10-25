@@ -45,6 +45,11 @@ typedef struct {
 } SM2_ParaEx;
 #endif
 
+// The default userId for SM2 signature defined in GMT 0009-2012 SM2.
+#define SM2_DEFAULT_USERID_LEN 16
+static const uint8_t SM2_DEFAULT_USERID[SM2_DEFAULT_USERID_LEN] = {
+    0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38};
+
 /* SM2 key context */
 struct SM2_Ctx {
     ECC_Pkey *pkey;

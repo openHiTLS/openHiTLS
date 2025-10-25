@@ -139,21 +139,60 @@ bool IsOSSupportAVX512(void)
 
 /* ARM */
 #elif defined(__arm__) || defined (__arm) || defined(__aarch64__)
+
+#include <sys/auxv.h>
 #include "crypt_arm.h"
 uint32_t g_cryptArmCpuInfo = 0;
+
+static bool g_supportNEON = {0};
+
+bool IsSupportAES(void)
+{
+    return g_cryptArmCpuInfo & CRYPT_ARM_AES;
+}
+
+bool IsSupportPMULL(void)
+{
+    return g_cryptArmCpuInfo & CRYPT_ARM_PMULL;
+}
+
+bool IsSupportSHA1(void)
+{
+    return g_cryptArmCpuInfo & CRYPT_ARM_SHA1;
+}
+
+bool IsSupportSHA256(void)
+{
+    return g_cryptArmCpuInfo & CRYPT_ARM_SHA256;
+}
+
+bool IsSupportNEON(void)
+{
+    return g_supportNEON;
+}
+
+#if defined(__aarch64__)
+bool IsSupportSM4(void)
+{
+    return g_cryptArmCpuInfo & CRYPT_ARM_SM4;
+}
+
+bool IsSupportSHA512(void)
+{
+    return g_cryptArmCpuInfo & CRYPT_ARM_SHA512;
+}
+#endif // __aarch64__
 
 #if defined(HITLS_CRYPTO_NO_AUXVAL)
 #include <setjmp.h>
 #include <signal.h>
 
 static jmp_buf g_jump_buffer;
-
 void signal_handler(int sig)
 {
     (void)sig;
     longjmp(g_jump_buffer, 1);
 }
-
 void getarmcap(void)
 {
     struct sigaction sa, old_sa;
@@ -206,43 +245,6 @@ void getarmcap(void)
 
     sigaction(SIGILL, &old_sa, NULL);
 }
-#else 
-
-#include <sys/auxv.h>
-
-static bool g_supportNEON = {0};
-
-bool IsSupportAES(void)
-{
-    return g_cryptArmCpuInfo & CRYPT_ARM_AES;
-}
-
-bool IsSupportPMULL(void)
-{
-    return g_cryptArmCpuInfo & CRYPT_ARM_PMULL;
-}
-
-bool IsSupportSHA1(void)
-{
-    return g_cryptArmCpuInfo & CRYPT_ARM_SHA1;
-}
-
-bool IsSupportSHA256(void)
-{
-    return g_cryptArmCpuInfo & CRYPT_ARM_SHA256;
-}
-
-bool IsSupportNEON(void)
-{
-    return g_supportNEON;
-}
-
-#if defined(__aarch64__)
-bool IsSupportSHA512(void)
-{
-    return g_cryptArmCpuInfo & CRYPT_ARM_SHA512;
-}
-#endif // __aarch64__
 
 #endif // HITLS_CRYPTO_NO_AUXVAL
 #endif // x86_64 || __arm__ || __arm || __aarch64__

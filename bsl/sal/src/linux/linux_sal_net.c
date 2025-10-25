@@ -17,7 +17,6 @@
 #if defined(HITLS_BSL_SAL_LINUX) && defined(HITLS_BSL_SAL_NET)
 
 #include <stdbool.h>
-
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -40,7 +39,7 @@ typedef union {
 int32_t SAL_NET_Write(int32_t fd, const void *buf, uint32_t len, int32_t *err)
 {
     if (err == NULL) {
-        return BSL_NULL_INPUT;
+        return -1;
     }
     int32_t ret = (int32_t)write(fd, buf, len);
     if (ret < 0) {
@@ -52,13 +51,31 @@ int32_t SAL_NET_Write(int32_t fd, const void *buf, uint32_t len, int32_t *err)
 int32_t SAL_NET_Read(int32_t fd, void *buf, uint32_t len, int32_t *err)
 {
     if (err == NULL) {
-        return BSL_NULL_INPUT;
+        return -1;
     }
     int32_t ret = (int32_t)read(fd, buf, len);
     if (ret < 0) {
         *err = errno;
     }
     return ret;
+}
+
+int64_t SAL_NET_LSeek(int32_t fd, int64_t offset, uint32_t origin)
+{
+    return (int64_t)lseek(fd, offset, (int32_t)origin);
+}
+
+int32_t SAL_NET_Open(const char *path, int32_t flag)
+{
+    return open(path, flag);
+}
+
+int32_t SAL_NET_Close(int32_t fd)
+{
+    if (close(fd) != 0) {
+        return BSL_SAL_ERR_NET_SOCKCLOSE;
+    }
+    return BSL_SUCCESS;
 }
 
 int32_t SAL_NET_Sendto(int32_t sock, const void *buf, size_t len, int32_t flags, void *address, int32_t addrLen,
@@ -74,7 +91,7 @@ int32_t SAL_NET_Sendto(int32_t sock, const void *buf, size_t len, int32_t flags,
     return ret;
 }
 
-int32_t SAL_NET_RecvFrom(int32_t sock, void *buf, size_t len, int32_t flags, void *address, int32_t *addrLen,
+int32_t SAL_NET_Recvfrom(int32_t sock, void *buf, size_t len, int32_t flags, void *address, int32_t *addrLen,
                          int32_t *err)
 {
     if (err == NULL) {
@@ -135,12 +152,12 @@ void SAL_NET_SockAddrCopy(BSL_SAL_SockAddr dst, BSL_SAL_SockAddr src)
     memcpy_s(dst, sizeof(LinuxSockAddr), src, sizeof(LinuxSockAddr));
 }
 
-int32_t SAL_Socket(int32_t af, int32_t type, int32_t protocol)
+int32_t SAL_NET_Socket(int32_t af, int32_t type, int32_t protocol)
 {
     return (int32_t)socket(af, type, protocol);
 }
 
-int32_t SAL_SockClose(int32_t sockId)
+int32_t SAL_NET_SockClose(int32_t sockId)
 {
     if (close((int32_t)(long)sockId) != 0) {
         return BSL_SAL_ERR_NET_SOCKCLOSE;
@@ -148,7 +165,7 @@ int32_t SAL_SockClose(int32_t sockId)
     return BSL_SUCCESS;
 }
 
-int32_t SAL_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *val, int32_t len)
+int32_t SAL_NET_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *val, int32_t len)
 {
     if (setsockopt((int32_t)sockId, level, name, (char *)(uintptr_t)val, (socklen_t)len) != 0) {
         return BSL_SAL_ERR_NET_SETSOCKOPT;
@@ -156,7 +173,7 @@ int32_t SAL_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *
     return BSL_SUCCESS;
 }
 
-int32_t SAL_GetSockopt(int32_t sockId, int32_t level, int32_t name, void *val, int32_t *len)
+int32_t SAL_NET_GetSockopt(int32_t sockId, int32_t level, int32_t name, void *val, int32_t *len)
 {
     if (getsockopt((int32_t)sockId, level, name, val, (socklen_t *)len) != 0) {
         return BSL_SAL_ERR_NET_GETSOCKOPT;
@@ -164,7 +181,15 @@ int32_t SAL_GetSockopt(int32_t sockId, int32_t level, int32_t name, void *val, i
     return BSL_SUCCESS;
 }
 
-int32_t SAL_SockListen(int32_t sockId, int32_t backlog)
+int32_t SAL_NET_GetSockName(int32_t sockId, BSL_SAL_SockAddr addr, size_t *len)
+{
+    if (getsockname((int32_t)sockId, addr, (socklen_t *)len) != 0) {
+        return BSL_SAL_ERR_NET_GETSOCKOPT;
+    }
+    return BSL_SUCCESS;
+}
+
+int32_t SAL_NET_SockListen(int32_t sockId, int32_t backlog)
 {
     if (listen(sockId, backlog) != 0) {
         return BSL_SAL_ERR_NET_LISTEN;
@@ -172,7 +197,7 @@ int32_t SAL_SockListen(int32_t sockId, int32_t backlog)
     return BSL_SUCCESS;
 }
 
-int32_t SAL_SockBind(int32_t sockId, BSL_SAL_SockAddr addr, size_t len)
+int32_t SAL_NET_SockBind(int32_t sockId, BSL_SAL_SockAddr addr, size_t len)
 {
     if (bind(sockId, (struct sockaddr *)addr, (socklen_t)len) != 0) {
         return BSL_SAL_ERR_NET_BIND;
@@ -180,7 +205,7 @@ int32_t SAL_SockBind(int32_t sockId, BSL_SAL_SockAddr addr, size_t len)
     return BSL_SUCCESS;
 }
 
-int32_t SAL_SockConnect(int32_t sockId, BSL_SAL_SockAddr addr, size_t len)
+int32_t SAL_NET_SockConnect(int32_t sockId, BSL_SAL_SockAddr addr, size_t len)
 {
     if (connect(sockId, (struct sockaddr *)addr, (socklen_t)len) != 0) {
         return BSL_SAL_ERR_NET_CONNECT;
@@ -188,22 +213,27 @@ int32_t SAL_SockConnect(int32_t sockId, BSL_SAL_SockAddr addr, size_t len)
     return BSL_SUCCESS;
 }
 
-int32_t SAL_SockSend(int32_t sockId, const void *msg, size_t len, int32_t flags)
+int32_t SAL_NET_SockAccept(int32_t sockId, BSL_SAL_SockAddr addr, size_t *len)
+{
+    return (int32_t)accept(sockId, (struct sockaddr *)addr, (socklen_t *)len);
+}
+
+int32_t SAL_NET_SockSend(int32_t sockId, const void *msg, size_t len, int32_t flags)
 {
     return (int32_t)send(sockId, msg, len, flags);
 }
 
-int32_t SAL_SockRecv(int32_t sockfd, void *buff, size_t len, int32_t flags)
+int32_t SAL_NET_SockRecv(int32_t sockfd, void *buff, size_t len, int32_t flags)
 {
     return (int32_t)recv(sockfd, (char *)buff, len, flags);
 }
 
-int32_t SAL_Select(int32_t nfds, void *readfds, void *writefds, void *exceptfds, void *timeout)
+int32_t SAL_NET_Select(int32_t nfds, void *readfds, void *writefds, void *exceptfds, void *timeout)
 {
     return select(nfds, (fd_set *)readfds, (fd_set *)writefds, (fd_set *)exceptfds, (struct timeval *)timeout);
 }
 
-int32_t SAL_Ioctlsocket(int32_t sockId, long cmd, unsigned long *arg)
+int32_t SAL_NET_Ioctlsocket(int32_t sockId, long cmd, unsigned long *arg)
 {
     if (ioctl(sockId, (unsigned long)cmd, arg) != 0) {
         return BSL_SAL_ERR_NET_IOCTL;
@@ -211,9 +241,58 @@ int32_t SAL_Ioctlsocket(int32_t sockId, long cmd, unsigned long *arg)
     return BSL_SUCCESS;
 }
 
-int32_t SAL_SockGetLastSocketError(void)
+int32_t SAL_NET_SockGetErrno(void)
 {
     return errno;
 }
 
+int32_t SAL_NET_SetBlockMode(int32_t fd, int32_t isBlock)
+{
+    int32_t flag = fcntl(fd, F_GETFL, 0);
+    if ((bool)isBlock) {
+        flag = (int32_t)(((uint32_t)flag) & ~O_NONBLOCK);
+    } else {
+        flag = (int32_t)(((uint32_t)flag) | O_NONBLOCK);
+    }
+    if (fcntl(fd, F_SETFL, flag) < 0) {
+        return BSL_SAL_ERR_NET_NOBLOCK;
+    }
+    return BSL_SUCCESS;
+}
+
+int32_t SAL_NET_SocketWait(int32_t fd, int32_t forRead, int64_t maxTime)
+{
+    fd_set confds = {0};
+    struct timeval tv = {0};
+    int64_t now = (time_t)BSL_SAL_CurrentSysTimeGet();
+
+    if (fd < 0 || fd >= FD_SETSIZE) {
+        return -1;
+    }
+    if ((time_t)maxTime == 0) {
+        return 1;
+    }
+
+    if ((time_t)maxTime < now) {
+        return 0;
+    }
+
+    FD_ZERO(&confds);
+    FD_SET(fd, &confds);
+    tv.tv_usec = 0;
+    tv.tv_sec = (long)((time_t)maxTime - now);
+    return BSL_SAL_Select(fd + 1, (bool)forRead ? &confds : NULL, (bool)forRead ? NULL : &confds, NULL, &tv);
+}
+
+int32_t SAL_NET_SocketError(int32_t fd)
+{
+    int32_t val = 0;
+    socklen_t size = sizeof(val);
+
+    if (BSL_SAL_GetSockopt(fd, SOL_SOCKET, SO_ERROR, (void *)&val, (int32_t *)&size) != BSL_SUCCESS) {
+        return SAL_NET_SockGetErrno();
+    } else {
+        return val;
+    }
+}
 #endif

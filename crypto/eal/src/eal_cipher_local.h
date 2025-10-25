@@ -22,9 +22,6 @@
 #include "crypt_algid.h"
 #include "crypt_eal_cipher.h"
 #include "crypt_local_types.h"
-#ifdef HITLS_CRYPTO_GCM
-#include "crypt_modes_gcm.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,7 +61,7 @@ typedef struct {
 /**
  * @ingroup  crypt_eal_cipherctx
  * Asymmetric algorithm data type */
-struct CryptEalCipherCtx {
+struct CRYPT_EAL_CipherCtxLocal {
     CRYPT_CIPHER_AlgId id;
     EAL_CipherStates states;                        /**< record status */
     void *ctx;                                      /**< handle of the mode */

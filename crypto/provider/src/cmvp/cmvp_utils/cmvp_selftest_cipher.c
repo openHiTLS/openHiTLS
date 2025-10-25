@@ -51,7 +51,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6bc1bee22e409f96e93d7e117393172a",
         .ciphertext = "7649abac8119b246cee98e9b12e9197d",
         .tag = NULL,
-        .mode = CRYPT_MODE_CBC
+        .mode = HCRYPT_MODE_CBC
     },
     // CRYPT_CIPHER_AES192_CBC
     {
@@ -62,7 +62,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6bc1bee22e409f96e93d7e117393172a",
         .ciphertext = "4f021db243bc633d7178183a9fa071e8",
         .tag = NULL,
-        .mode = CRYPT_MODE_CBC
+        .mode = HCRYPT_MODE_CBC
     },
     // CRYPT_CIPHER_AES256_CBC
     {
@@ -73,7 +73,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6bc1bee22e409f96e93d7e117393172a",
         .ciphertext = "f58c4c04d6e5f1ba779eabfb5f7bfbd6",
         .tag = NULL,
-        .mode = CRYPT_MODE_CBC
+        .mode = HCRYPT_MODE_CBC
     },
     // CRYPT_CIPHER_AES128_CTR
     {
@@ -84,7 +84,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6bc1bee22e409f96e93d7e117393172a",
         .ciphertext = "874d6191b620e3261bef6864990db6ce",
         .tag = NULL,
-        .mode = CRYPT_MODE_CTR
+        .mode = HCRYPT_MODE_CTR
     },
     // CRYPT_CIPHER_AES192_CTR
     {
@@ -95,7 +95,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6bc1bee22e409f96e93d7e117393172a",
         .ciphertext = "1abc932417521ca24f2b0459fe7e6e0b",
         .tag = NULL,
-        .mode = CRYPT_MODE_CTR
+        .mode = HCRYPT_MODE_CTR
     },
     // CRYPT_CIPHER_AES256_CTR
     {
@@ -106,7 +106,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6bc1bee22e409f96e93d7e117393172a",
         .ciphertext = "601ec313775789a5b7a7f504bbf3d228",
         .tag = NULL,
-        .mode = CRYPT_MODE_CTR
+        .mode = HCRYPT_MODE_CTR
     },
     // CRYPT_CIPHER_AES128_ECB
     // https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Algorithm-Validation-Program/documents/
@@ -119,7 +119,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6bc1bee22e409f96e93d7e117393172a",
         .ciphertext = "3ad77bb40d7a3660a89ecaf32466ef97",
         .tag = NULL,
-        .mode = CRYPT_MODE_ECB
+        .mode = HCRYPT_MODE_ECB
     },
     // CRYPT_CIPHER_AES192_ECB
     {
@@ -130,7 +130,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6bc1bee22e409f96e93d7e117393172a",
         .ciphertext = "bd334f1d6e45f25ff712a214571fa5cc",
         .tag = NULL,
-        .mode = CRYPT_MODE_ECB
+        .mode = HCRYPT_MODE_ECB
     },
     // CRYPT_CIPHER_AES256_ECB
     {
@@ -141,7 +141,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6bc1bee22e409f96e93d7e117393172a",
         .ciphertext = "f3eed1bdb5d2a03c064b5a7e3db181f8",
         .tag = NULL,
-        .mode = CRYPT_MODE_ECB
+        .mode = HCRYPT_MODE_ECB
     },
     // CRYPT_CIPHER_AES128_XTS
     {
@@ -152,7 +152,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "ebabce95b14d3c8d6fb350390790311c",
         .ciphertext = "778ae8b43cb98d5a825081d5be471c63",
         .tag = NULL,
-        .mode = CRYPT_MODE_XTS
+        .mode = HCRYPT_MODE_XTS
     },
     // CRYPT_CIPHER_AES256_XTS
     {
@@ -164,7 +164,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "f5f101d8e3a7681b1ddb21bd2826b24e32990bca49b39291b5369a9bca277d75",
         .ciphertext = "5bf2479393cc673306fbb15e72600598e33d4d8a470727ce098730fd80afa959",
         .tag = NULL,
-        .mode = CRYPT_MODE_XTS
+        .mode = HCRYPT_MODE_XTS
     },
     // CRYPT_CIPHER_AES128_CCM
     // http://csrc.nist.gov/groups/STM/cavp/documents/mac/ccmtestvectors.zip
@@ -176,7 +176,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "9759e6f21f5a588010f57e6d6eae178d8b20ab59cda66f42",
         .ciphertext = "f634bf00f1f9f1f93f41049d7f3797b05e805f0b14850f4e78e2a23411147a6187da6818506232ee",
         .tag = NULL,
-        .mode = CRYPT_MODE_CCM
+        .mode = HCRYPT_MODE_CCM
     },
     // CRYPT_CIPHER_AES192_CCM
     {
@@ -187,7 +187,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "262f4ac988812500cb437f52f0c182148e85a0bec67a2736",
         .ciphertext = "e6d43f822ad168aa9c2e29c07f4592d7bbeb0203f418f3020ecdbc200be353112faf20e2be711908",
         .tag = NULL,
-        .mode = CRYPT_MODE_CCM
+        .mode = HCRYPT_MODE_CCM
     },
     // CRYPT_CIPHER_AES256_CCM
     {
@@ -198,7 +198,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "e758796d7db73bccb1697c42df691ac57974b40ca9186a43",
         .ciphertext = "93ad58bd5f4f77ac4f92b0ae16c62489e4074c7f152e2ed8a88179e0d32f4928eff13b4ce2873338",
         .tag = NULL,
-        .mode = CRYPT_MODE_CCM
+        .mode = HCRYPT_MODE_CCM
     },
     // CRYPT_CIPHER_AES128_GCM
     // http://csrc.nist.gov/groups/STM/cavp/documents/mac/gcmtestvectors.zip
@@ -212,7 +212,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "7680b48b5d28f38cdeab2d5851769394a3e141b990ec4bdf79a33e5315ac0338",
         .ciphertext = "095635c7e0eac0fc1059e67e1a936b6f72671121f96699fed520e5f8aff777f0",
         .tag = "b2235f6d4bdd7b9c0901711048859d47",
-        .mode = CRYPT_MODE_GCM
+        .mode = HCRYPT_MODE_GCM
     },
     // CRYPT_CIPHER_AES192_GCM
     {
@@ -223,7 +223,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "8e36651ba5bf9a6f903e01080083feeb",
         .ciphertext = "f96e2cc58714fd512b1fdbeba770b460",
         .tag = "63dfe1bbd756237a43150c82341486",
-        .mode = CRYPT_MODE_GCM
+        .mode = HCRYPT_MODE_GCM
     },
     // CRYPT_CIPHER_AES256_GCM
     {
@@ -236,7 +236,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "24ed8a0023a9e11d127488234c285956",
         .ciphertext = "4df94bd82b1b284e2dda6dccbbe5076f",
         .tag = "241e6c864aabc4a99e344a5d",
-        .mode = CRYPT_MODE_GCM
+        .mode = HCRYPT_MODE_GCM
     },
     // CRYPT_CIPHER_CHACHA20_POLY1305
     {
@@ -247,7 +247,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = NULL,
         .ciphertext = NULL,
         .tag = NULL,
-        .mode = CRYPT_MODE_CHACHA20_POLY1305
+        .mode = HCRYPT_MODE_CHACHA20_POLY1305
     },
     // CRYPT_CIPHER_SM4_CBC
     // http://c.gb688.cn/bzgk/gb/showGb?type=online&hcno=4F89D833626340B1F71068D25EAC737D
@@ -260,7 +260,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6BC1BEE22E409F96E93D7E117393172A",
         .ciphertext = "AC529AF989A62FCE9CDDC5FFB84125CA",
         .tag = NULL,
-        .mode = CRYPT_MODE_CBC
+        .mode = HCRYPT_MODE_CBC
     },
     // CRYPT_CIPHER_SM4_XTS
     // GB/T 17964-2021
@@ -272,7 +272,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6BC1BEE22E409F96E93D7E117393172AAE2D8A571E03AC9C9EB76FAC45AF8E5130C81C46A35CE411E5FBC1191A0A52EFF69F2445DF4F9B17",
         .ciphertext = "E9538251C71D7B80BBE4483FEF497BD12C5C581BD6242FC51E08964FB4F60FDB0BA42F63499279213D318D2C11F6886E903BE7F93A1B3479",
         .tag = NULL,
-        .mode = CRYPT_MODE_XTS
+        .mode = HCRYPT_MODE_XTS
     },
     // CRYPT_CIPHER_SM4_ECB
     // GB/T 17964-2021
@@ -284,7 +284,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6BC1BEE22E409F96E93D7E117393172A",
         .ciphertext = "A51411ff04a711443891fce7ab842a29",
         .tag = NULL,
-        .mode = CRYPT_MODE_ECB
+        .mode = HCRYPT_MODE_ECB
     },
     // CRYPT_CIPHER_SM4_CTR
     // GB/T 17964-2021
@@ -296,7 +296,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6BC1BEE22E409F96E93D7E117393172A",
         .ciphertext = "14AE4A72B97A93CE1216CCD998E371C1",
         .tag = NULL,
-        .mode = CRYPT_MODE_CTR
+        .mode = HCRYPT_MODE_CTR
     },
     // CRYPT_CIPHER_SM4_GCM
     // https://www.rfc-editor.org/rfc/rfc8998.html
@@ -308,7 +308,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDDEEEEEEEEEEEEEEEEFFFFFFFFFFFFFFFFEEEEEEEEEEEEEEEEAAAAAAAAAAAAAAAA",
         .ciphertext = "17F399F08C67D5EE19D0DC9969C4BB7D5FD46FD3756489069157B282BB200735D82710CA5C22F0CCFA7CBF93D496AC15A56834CBCF98C397B4024A2691233B8D",
         .tag = "83DE3541E4C2B58177E065A9BF7B62EC",
-        .mode = CRYPT_MODE_GCM
+        .mode = HCRYPT_MODE_GCM
     },
     // CRYPT_CIPHER_SM4_CFB
     // GB/T 17964-2021
@@ -320,7 +320,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6BC1BEE22E409F96E93D7E117393172A",
         .ciphertext = "bc710d762d070b26361da82b54565e46",
         .tag = NULL,
-        .mode = CRYPT_MODE_CFB
+        .mode = HCRYPT_MODE_CFB
     },
     // CRYPT_CIPHER_SM4_OFB
     // GB/T 17964-2021
@@ -332,7 +332,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .plaintext = "6BC1BEE22E409F96E93D7E117393172A",
         .ciphertext = "BC710D762D070B26361DA82B54565E46",
         .tag = NULL,
-        .mode = CRYPT_MODE_OFB
+        .mode = HCRYPT_MODE_OFB
     },
     // https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
     // CRYPT_CIPHER_AES128_CFB
@@ -346,7 +346,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .ciphertext = "3b3fd92eb72dad20333449f8e83cfb4ac8a64537a0b3a93fcde3cdad9f1ce58b2675"
                 "1f67a3cbb140b1808cf187a4f4dfc04b05357c5d1c0eeac4c66f9ff7f2e6",
         .tag = NULL,
-        .mode = CRYPT_MODE_CFB
+        .mode = HCRYPT_MODE_CFB
     },
     // CRYPT_CIPHER_AES192_CFB
     {
@@ -359,7 +359,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .ciphertext = "cdc80d6fddf18cab34c25909c99a417467ce7f7f81173621961a2b70171d3d7a2e1e"
                 "8a1dd59b88b1c8e60fed1efac4c9c05f9f9ca9834fa042ae8fba584b09ff",
         .tag = NULL,
-        .mode = CRYPT_MODE_CFB
+        .mode = HCRYPT_MODE_CFB
     },
     // CRYPT_CIPHER_AES256_CFB
     {
@@ -372,7 +372,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .ciphertext = "dc7e84bfda79164b7ecd8486985d386039ffed143b28b1c832113c6331e5407bdf10"
                 "132415e54b92a13ed0a8267ae2f975a385741ab9cef82031623d55b1e471",
         .tag = NULL,
-        .mode = CRYPT_MODE_CFB
+        .mode = HCRYPT_MODE_CFB
     },
     // CRYPT_CIPHER_AES128_OFB
     {
@@ -385,7 +385,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .ciphertext = "3b3fd92eb72dad20333449f8e83cfb4a7789508d16918f03f53c52dac54ed8259740"
                 "051e9c5fecf64344f7a82260edcc304c6528f659c77866a510d9c1d6ae5e",
         .tag = NULL,
-        .mode = CRYPT_MODE_OFB
+        .mode = HCRYPT_MODE_OFB
     },
     // CRYPT_CIPHER_AES192_OFB
     {
@@ -398,7 +398,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .ciphertext = "cdc80d6fddf18cab34c25909c99a4174fcc28b8d4c63837c09e81700c11004018d9a"
                 "9aeac0f6596f559c6d4daf59a5f26d9f200857ca6c3e9cac524bd9acc92a",
         .tag = NULL,
-        .mode = CRYPT_MODE_OFB
+        .mode = HCRYPT_MODE_OFB
     },
     // CRYPT_CIPHER_AES256_OFB
     {
@@ -411,7 +411,7 @@ static const CMVP_CIPHER_VECTOR CIPHER_VECTOR[] = {
         .ciphertext = "dc7e84bfda79164b7ecd8486985d38604febdc6740d20b3ac88f6ad82a4fb08d71ab"
                 "47a086e86eedf39d1c5bba97c4080126141d67f37be8538f5a8be740e484",
         .tag = NULL,
-        .mode = CRYPT_MODE_OFB
+        .mode = HCRYPT_MODE_OFB
     }
 };
 

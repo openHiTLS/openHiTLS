@@ -17,9 +17,9 @@
 #ifdef HITLS_CRYPTO_MD5
 
 #include "securec.h"
+#include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
-#include "bsl_err_internal.h"
 #include "md5_core.h"
 #include "crypt_md5.h"
 
