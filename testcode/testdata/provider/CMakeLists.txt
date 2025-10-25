@@ -105,7 +105,7 @@ target_include_directories(provider_new_alg_test PUBLIC ${CMAKE_CURRENT_SOURCE_D
                                                ${OPENHITLS_ROOT}/bsl/asn1/include
                                                ${OPENHITLS_ROOT}/crypto/codecskey/include
                                                ${OPENHITLS_ROOT}/platform/Secure_C/include)
-target_link_libraries(provider_new_alg_test hitls_crypto hitls_bsl boundscheck)
+target_link_libraries(provider_new_alg_test boundscheck)
 target_compile_options(provider_new_alg_test PUBLIC -g -O0 -DHITLS_BSL_OBJ -DHITLS_CRYPTO_CODECSKEY -DHITLS_CRYPTO_KEY_DECODE)
 set_target_properties(provider_new_alg_test PROPERTIES
 LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/path1"

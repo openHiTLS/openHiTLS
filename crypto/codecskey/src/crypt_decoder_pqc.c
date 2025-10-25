@@ -14,19 +14,16 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_MLDSA
+#if defined(HITLS_CRYPTO_MLDSA) && defined(HITLS_CRYPTO_KEY_DECODE)
 #include "crypt_mldsa.h"
-#endif
 #include "crypt_params_key.h"
 #include "bsl_asn1_internal.h"
 #include "bsl_params.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
-#include "crypt_codecskey_local.h"
+#include "crypt_codecskey_local.h" 
 #include "crypt_codecskey.h"
-
-#ifdef HITLS_CRYPTO_MLDSA
 
 int32_t CRYPT_MLDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
     CRYPT_ML_DSA_Ctx **pubKey, bool isComplete)

@@ -39,13 +39,14 @@ typedef struct {
     void *attrs; // HITLS_X509_Attrs *
 } CRYPT_ENCODE_DECODE_Pk8PrikeyInfo;
 
-#ifdef HITLS_CRYPTO_KEY_DECODE
-
 typedef struct {
     BslCid keyType;
     BSL_ASN1_Buffer keyParam;
     BSL_ASN1_BitString pubKey;
 } CRYPT_DECODE_SubPubkeyInfo;
+
+#ifdef HITLS_CRYPTO_KEY_DECODE
+
 
 int32_t CRYPT_DECODE_SubPubkey(uint8_t *buff, uint32_t buffLen, BSL_ASN1_DecTemplCallBack keyInfoCb,
     CRYPT_DECODE_SubPubkeyInfo *subPubkeyInfo, bool isComplete);

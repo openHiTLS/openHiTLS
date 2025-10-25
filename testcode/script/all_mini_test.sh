@@ -74,8 +74,8 @@ test_bsl()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=init test=init
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=list test=list
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=log test=log
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=obj test=obj
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=obj,hash,sal_thread test=obj # depends on thread to init hash
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=obj_default test=obj
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=obj_custom,hash,sal_thread test=obj # depends on thread to init hash
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=params test=params
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=pem test=pem
 
@@ -320,13 +320,13 @@ test_pkey()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,ed25519,drbg_hash,sha2 test=ed25519
 
     # mldsa
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,mldsa,drbg_hash,sha2 test=mldsa
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,mldsa,pkey_cmp,drbg_hash,sha2 test=mldsa
 
     # paillier
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,paillier,drbg_hash,sha2 test=paillier
 
     # mlkem
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,mlkem,drbg_hash,sha2 test=mlkem
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,mlkem,pkey_cmp,drbg_hash,sha2 test=mlkem
 
     # hybridkem
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,hybridkem,x25519,ecdh,ecc,drbg_hash,sha2 test=hybridkem
@@ -386,6 +386,7 @@ test_pki()
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_encode,pem,ed25519,drbg_hash test=key_encode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_encode,sal_file,sm2,sha256,drbg_hash test=key_encode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_encode,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=key_encode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_encode,pem,mldsa,sha256,drbg_hash test=key_encode
 
     #### key parse ####
     echo "Test: key_decode without provider"
@@ -393,18 +394,21 @@ test_pki()
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode,sal_file,pem,ed25519 test=key_decode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode,sal_file,sm2,sha256 test=key_decode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode,sal_file,pem,ecdsa,curve_nistp256,sha256 test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode,sal_file,pem,mldsa,sha256 test=key_decode
 
     echo "Test: key_decode with provider"
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode,provider,sal_file,pem,rsa,sha256,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode,provider,sal_file,pem,ed25519 test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode,provider,sal_file,sm2,sha256 test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode,provider,sal_file,pem,ecdsa,curve_nistp256,sha256 test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode,provider,sal_dl,sal_file,pem,rsa,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode,provider,sal_dl,sal_file,pem,ed25519 test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode,provider,sal_dl,sal_file,sm2,sha256 test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode,provider,sal_dl,sal_file,pem,ecdsa,curve_nistp256,sha256 test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode,provider,sal_dl,sal_file,pem,mldsa,sha256 test=key_decode
 
     echo "Test: key_decode_chain (with provider)"
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode_chain,sal_file,pem,rsa,sha256,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode_chain,sal_file,pem,ed25519 test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode_chain,sal_file,sm2,sha256 test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode_chain,sal_file,pem,ecdsa,curve_nistp256,sha256 test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode_chain,sal_dl,sal_file,pem,rsa,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode_chain,sal_dl,sal_file,pem,ed25519 test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode_chain,sal_dl,sal_file,sm2,sha256 test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode_chain,sal_dl,sal_file,pem,ecdsa,curve_nistp256,sha256 test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,key_decode_chain,sal_dl,sal_file,pem,mldsa,sha256 test=key_decode
 
     #### crl gen ####
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,x509_crl_gen,rsa,sal_file,pem,sha256,drbg_hash test=x509_crl_gen

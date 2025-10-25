@@ -226,7 +226,7 @@ static BSL_ASN1_TemplateItem g_subKeyInfoInnerTempl[] = {
     {BSL_ASN1_TAG_BITSTRING, 0, 0},
 };
 
-#ifdef HITLS_CRYPTO_MLDSA
+#if defined(HITLS_CRYPTO_MLDSA) && defined(HITLS_CRYPTO_KEY_DECODE)
 /**
  * MldsaPrivateKey  :=  CHOICE  {
  *      seed [0]        OCTET STRING (SIZE (32)),

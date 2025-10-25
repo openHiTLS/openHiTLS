@@ -515,7 +515,7 @@ int32_t X509_ParseCrlNumber(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtCrlNumb
     return HITLS_PKI_SUCCESS;
 }
 
-#if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CSR_PARSE) || \
+#if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CSR) || defined(HITLS_PKI_X509_CRL_PARSE) ||\
     defined(HITLS_PKI_INFO_CRT) || defined(HITLS_PKI_INFO_CSR)
 static int32_t ParseExKeyUsageList(uint32_t layer, BSL_ASN1_Buffer *asn, void *param, BSL_ASN1_List *list)
 {
@@ -571,8 +571,6 @@ void HITLS_X509_ClearExtendedKeyUsage(HITLS_X509_ExtExKeyUsage *exku)
 }
 #endif
 
-#if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CSR_PARSE) || \
-    defined(HITLS_PKI_INFO_CRT) || defined(HITLS_PKI_INFO_CSR) || defined(HITLS_PKI_INFO_CRL)
 void HITLS_X509_ClearSubjectAltName(HITLS_X509_ExtSan *san)
 {
     if (san == NULL) {
@@ -614,7 +612,6 @@ int32_t HITLS_X509_ParseSubjectAltName(HITLS_X509_ExtEntry *extEntry, HITLS_X509
     san->critical = extEntry->critical;
     return ret;
 }
-#endif
 
 #if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CRL_PARSE) || defined(HITLS_PKI_X509_CSR)
 static BSL_ASN1_TemplateItem g_x509ExtTempl[] = {

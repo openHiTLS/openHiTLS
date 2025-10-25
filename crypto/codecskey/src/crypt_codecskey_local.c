@@ -535,6 +535,7 @@ static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
     }
     BSL_ASN1_Buffer *oid = algoId; // OID
     BSL_ASN1_Buffer *algParam = algoId + 1; // the parameters
+    (void)algParam;
     BSL_ASN1_Buffer *pubkey = &encode[CRYPT_SUBKEYINFO_BITSTRING_IDX]; // the last BSL_ASN1_Buffer, the pubkey
     BSL_ASN1_BitString bitPubkey = {0};
     ret = BSL_ASN1_DecodePrimitiveItem(pubkey, &bitPubkey);
@@ -554,7 +555,6 @@ static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
     }
 #endif
 #ifdef HITLS_CRYPTO_ED25519
-    (void)algParam;
     if (cid == BSL_CID_ED25519) {
         return ParseEd25519PubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, ealPubKey);
     }

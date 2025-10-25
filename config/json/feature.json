@@ -198,7 +198,7 @@
                         "key_decode" : null,
                         "key_info" : {"deps": ["print"]},
                         "deps": ["asn1", "obj_default"],
-                        "opts":["ecdsa", "sm2_sign", "sm2_crypt", "ed25519", "rsa_sign", "rsa_verify"]
+                        "opts":["ecdsa", "sm2_sign", "sm2_crypt", "ed25519", "rsa_sign", "rsa_verify", "mldsa"]
                     },
                     "key_decode_chain" : {"deps": ["key_decode", "codecs"]},
                     "codecs": {"deps": ["provider"]}
@@ -1287,11 +1287,12 @@
             "sm2": {
                 ".features": ["sm2_crypt", "sm2_sign", "sm2_exch"],
                 ".srcs": "crypto/sm2/src/*.c",
-                ".deps": ["crypto::bn", "bsl::sal", "crypto::codecsdata", "crypto::ecc"],
+                ".deps": ["crypto::bn", "bsl::sal", "crypto::ecc"],
                 ".include": [
                     "crypto/eal/src",
                     "bsl/asn1/include",
-                    "bsl/obj/include"
+                    "bsl/obj/include",
+                    "crypto/codecsdata/include"
                 ]
             },
             "paillier": {
