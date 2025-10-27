@@ -34,23 +34,6 @@
 
 #define CIPHER_SUITES_LEN_SIZE   2u
 
-// Pack the version content of the client Hello message.
-static int32_t PackClientVersion(const TLS_Ctx *ctx, uint16_t version, PackPacket *pkt)
-{
-    (void)ctx;
-#ifdef HITLS_TLS_FEATURE_SECURITY
-    const TLS_Config *tlsConfig = &ctx->config.tlsConfig;
-    int32_t ret = SECURITY_CfgCheck((const HITLS_Config *)tlsConfig, HITLS_SECURITY_SECOP_VERSION, 0, version, NULL);
-    if (ret != SECURITY_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16924, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "CfgCheck fail, ret %d", ret, 0, 0, 0);
-        ctx->method.sendAlert((TLS_Ctx *)(uintptr_t)ctx, ALERT_LEVEL_FATAL, ALERT_INSUFFICIENT_SECURITY);
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_UNSECURE_VERSION);
-        return HITLS_PACK_UNSECURE_VERSION;
-    }
-#endif /* HITLS_TLS_FEATURE_SECURITY */
-    return PackAppendUint16ToBuf(pkt, version);
-}
 #ifdef HITLS_TLS_PROTO_DTLS12
 // Pack the cookie content of the client Hello message.
 static int32_t PackClientCookie(PackPacket *pkt, const uint8_t *cookie, uint8_t cookieLen)
@@ -183,41 +166,6 @@ static int32_t PackClientCompressionMethod(PackPacket *pkt)
     return PackAppendUint8ToBuf(pkt, 0);
 }
 
-// Pack the session and cookie content of the client hello message.
-static int32_t PackSessionAndCookie(const TLS_Ctx *ctx, PackPacket *pkt)
-{
-    int32_t ret = HITLS_SUCCESS;
-    (void)ret;
-    (void)ctx;
-#if defined(HITLS_TLS_FEATURE_SESSION_ID) || defined(HITLS_TLS_PROTO_TLS13)
-    HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
-    ret = PackSessionId(pkt, hsCtx->sessionId, hsCtx->sessionIdSize);
-    if (ret != HITLS_SUCCESS) {
-        (void)memset_s(hsCtx->sessionId, hsCtx->sessionIdSize, 0, hsCtx->sessionIdSize);
-        return ret;
-    }
-#else // Session recovery is not supported.
-    /* SessionId (Session is not supported yet and the length field is initialized with a value of 0) */
-    ret = PackAppendUint8ToBuf(pkt, 0);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-#endif
-
-#ifdef HITLS_TLS_PROTO_DTLS12
-    const TLS_Config *tlsConfig = &ctx->config.tlsConfig;
-    if (IS_SUPPORT_DATAGRAM(tlsConfig->originVersionMask)) {
-        ret = PackClientCookie(pkt, ctx->negotiatedInfo.cookie, (uint8_t)ctx->negotiatedInfo.cookieSize);
-        if (ret != HITLS_SUCCESS) {
-            (void)memset_s(ctx->negotiatedInfo.cookie, ctx->negotiatedInfo.cookieSize,
-                           0, ctx->negotiatedInfo.cookieSize);
-            return ret;
-        }
-    }
-#endif
-    return HITLS_SUCCESS;
-}
-
 // Pack the mandatory content of the ClientHello message.
 static int32_t PackClientHelloMandatoryField(const TLS_Ctx *ctx, PackPacket *pkt)
 {
@@ -234,20 +182,21 @@ static int32_t PackClientHelloMandatoryField(const TLS_Ctx *ctx, PackPacket *pkt
     (tlsConfig->maxVersion == HITLS_VERSION_TLS13) ? HITLS_VERSION_TLS12 :
 #endif
      tlsConfig->maxVersion;
-    ret = PackClientVersion(ctx, version, pkt);
+    ret = PackHelloCommonField(ctx, pkt, version, true);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
-    ret = PackAppendDataToBuf(pkt, ctx->hsCtx->clientRandom, HS_RANDOM_SIZE);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
+#ifdef HITLS_TLS_PROTO_DTLS12
+    if (IS_SUPPORT_DATAGRAM(tlsConfig->originVersionMask)) {
+        ret = PackClientCookie(pkt, ctx->negotiatedInfo.cookie, (uint8_t)ctx->negotiatedInfo.cookieSize);
+        if (ret != HITLS_SUCCESS) {
+            (void)memset_s(ctx->negotiatedInfo.cookie, ctx->negotiatedInfo.cookieSize,
+                           0, ctx->negotiatedInfo.cookieSize);
+            return ret;
+        }
     }
-
-    ret = PackSessionAndCookie(ctx, pkt);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
+#endif
 
     ret = PackClientCipherSuites(ctx, pkt);
     if (ret != HITLS_SUCCESS) {

@@ -367,20 +367,14 @@ int32_t ParseServerExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
 {
     /* Initialize the message parsing length */
     uint32_t bufOffset = 0u;
-    int32_t ret = HITLS_SUCCESS;
+    ParsePacket pkt = {.ctx = ctx, .buf = buf, .bufLen = bufLen, .bufOffset = &bufOffset};
 
     /* Parse the extended message from server */
     while (bufOffset < bufLen) {
         uint32_t extMsgLen = 0u;
         uint16_t extMsgType = HS_EX_TYPE_END;
-        ret = ParseExHeader(ctx, &buf[bufOffset], bufLen - bufOffset, &extMsgType, &extMsgLen);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
-        }
-        bufOffset += HS_EX_HEADER_LEN;
-
-        uint32_t extensionId = HS_GetExtensionTypeId(extMsgType);
-        ret = CheckForDuplicateExtension(msg->extensionTypeMask, extensionId, ctx);
+        uint32_t extensionId = 0;
+        int32_t ret = CheckForDuplicateExtension(&pkt, &extMsgType, &extMsgLen, &extensionId, msg->extensionTypeMask);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }

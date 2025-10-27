@@ -220,3 +220,20 @@ int32_t CheckPeerSignScheme(HITLS_Ctx *ctx, CERT_Pair *peerCert, uint16_t signSc
 
     return HITLS_SUCCESS;
 }
+
+int32_t ParseExtensionCommon(ParsePacket *pkt, uint16_t *exMsgLen)
+{
+    const char *logStr = BINGLOG_STR("parse extension length failed.");
+    int32_t ret = ParseBytesToUint16(pkt, exMsgLen);
+    if (ret != HITLS_SUCCESS) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15707,
+            logStr, ALERT_DECODE_ERROR);
+    }
+
+    if (*exMsgLen != (pkt->bufLen - *pkt->bufOffset)) {
+        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15708,
+            logStr, ALERT_DECODE_ERROR);
+    }
+
+    return HITLS_SUCCESS;
+}

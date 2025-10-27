@@ -33,16 +33,12 @@
 
 bool IsPackNeedCustomExtensions(CustomExtMethods *exts, uint32_t context)
 {
-    uint32_t i = 0;
+    if (exts == NULL || exts->meths == NULL) {
+        return false;
+    }
 
-    if (exts == NULL) {
-        return false;
-    }
     CustomExtMethod *meth = exts->meths;
-    if (meth == NULL) {
-        return false;
-    }
-    for (i = 0; i < exts->methsCount; i++, meth++) {
+    for (uint32_t i = 0; i < exts->methsCount; i++, meth++) {
         if ((context & meth->context) != 0) {
             return true;
         }
@@ -53,19 +49,12 @@ bool IsPackNeedCustomExtensions(CustomExtMethods *exts, uint32_t context)
 
 bool IsParseNeedCustomExtensions(CustomExtMethods *exts, uint16_t extType, uint32_t context)
 {
-    uint32_t i = 0;
-
-    if (exts == NULL) {
+    if (exts == NULL || exts->meths == NULL) {
         return false;
     }
 
     CustomExtMethod *meth = exts->meths;
-
-    if (meth == NULL) {
-        return false;
-    }
-
-    for (i = 0; i < exts->methsCount; i++, meth++) {
+    for (uint32_t i = 0; i < exts->methsCount; i++, meth++) {
         if (extType == meth->extType && (context & meth->context) != 0) {
             return true;
         }
@@ -75,16 +64,12 @@ bool IsParseNeedCustomExtensions(CustomExtMethods *exts, uint16_t extType, uint3
 
 bool IsCustomExtensionTypeAdded(CustomExtMethods *exts, uint16_t extType)
 {
-    uint32_t i = 0;
+    if (exts == NULL || exts->meths == NULL) {
+        return false;
+    }
 
-    if (exts == NULL) {
-        return false;
-    }
     CustomExtMethod *meth = exts->meths;
-    if (meth == NULL) {
-        return false;
-    }
-    for (i = 0; i < exts->methsCount; i++, meth++) {
+    for (uint32_t i = 0; i < exts->methsCount; i++, meth++) {
         if (extType == meth->extType) {
             return true;
         }
@@ -94,19 +79,12 @@ bool IsCustomExtensionTypeAdded(CustomExtMethods *exts, uint16_t extType)
 
 CustomExtMethod *FindCustomExtensions(CustomExtMethods *exts, uint16_t extType, uint32_t context)
 {
-    uint32_t i = 0;
-
-    if (exts == NULL) {
+    if (exts == NULL || exts->meths == NULL) {
         return NULL;
     }
 
     CustomExtMethod *meth = exts->meths;
-
-    if (meth == NULL) {
-        return NULL;
-    }
-
-    for (i = 0; i < exts->methsCount; i++, meth++) {
+    for (uint32_t i = 0; i < exts->methsCount; i++, meth++) {
         if (extType == meth->extType && (context & meth->context) != 0) {
             return meth;
         }

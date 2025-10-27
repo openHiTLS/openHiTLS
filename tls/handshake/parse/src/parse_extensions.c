@@ -24,6 +24,7 @@
 #include "tls.h"
 #include "hs.h"
 #include "hs_ctx.h"
+#include "hs_common.h"
 #include "hs_extensions.h"
 #include "parse_common.h"
 #include "parse_extensions.h"
@@ -233,13 +234,23 @@ bool GetExtensionFlagValue(TLS_Ctx *ctx, uint32_t hsExTypeId)
     return true;
 }
 
-int32_t CheckForDuplicateExtension(uint64_t extensionTypeMask, uint32_t extensionId, TLS_Ctx *ctx)
+int32_t CheckForDuplicateExtension(ParsePacket *pkt, uint16_t *extMsgType, uint32_t *extMsgLen,
+    uint32_t *extensionId, uint64_t extensionTypeMask)
 {
+    TLS_Ctx *ctx = pkt->ctx;
+    int32_t ret = ParseExHeader(pkt->ctx, &pkt->buf[*pkt->bufOffset], pkt->bufLen - *pkt->bufOffset,
+        extMsgType, extMsgLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    *pkt->bufOffset += HS_EX_HEADER_LEN;
+
+    *extensionId = HS_GetExtensionTypeId(*extMsgType);
     // can not process duplication unknown ext, unknown ext is verified elsewhere
-    if (((extensionTypeMask & (1ULL << extensionId)) != 0) && extensionId != HS_EX_TYPE_ID_UNRECOGNIZED) {
+    if (((extensionTypeMask & (1ULL << *extensionId)) != 0) && *extensionId != HS_EX_TYPE_ID_UNRECOGNIZED) {
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17328, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "extension type %u is repeated.", extensionId, 0, 0, 0);
+            "extension type %u is repeated.", *extensionId, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_PARSE_DUPLICATE_EXTENDED_MSG;
     }

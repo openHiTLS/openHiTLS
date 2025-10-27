@@ -295,14 +295,8 @@ int32_t ParseTls13CertificateRequestExtensions(ParsePacket *pkt, CertificateRequ
     while (*pkt->bufOffset < pkt->bufLen) {
         uint16_t extMsgType = HS_EX_TYPE_END;
         uint32_t extMsgLen = 0u;
-        int32_t ret =
-            ParseExHeader(pkt->ctx, &pkt->buf[*pkt->bufOffset], pkt->bufLen - *pkt->bufOffset, &extMsgType, &extMsgLen);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
-        }
-        *pkt->bufOffset += HS_EX_HEADER_LEN;
-        uint32_t extensionId = HS_GetExtensionTypeId(extMsgType);
-        ret = CheckForDuplicateExtension(msg->extensionTypeMask, extensionId, pkt->ctx);
+        uint32_t extensionId = 0;
+        int32_t ret = CheckForDuplicateExtension(pkt, &extMsgType, &extMsgLen, &extensionId, msg->extensionTypeMask);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }

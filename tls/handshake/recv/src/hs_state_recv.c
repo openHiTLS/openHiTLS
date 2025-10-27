@@ -39,6 +39,27 @@
 #include "indicator.h"
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
 
+static int32_t CheckHsMsg(TLS_Ctx *ctx, HS_Msg *hsMsg, int32_t ret)
+{
+    if (ret == HITLS_SUCCESS) {
+        HS_CleanMsg(ctx->hsCtx->hsMsg);
+        if (ctx->hsCtx->hsMsg != hsMsg) {
+            BSL_SAL_FREE(ctx->hsCtx->hsMsg);
+        }
+        ctx->hsCtx->hsMsg = NULL;
+    }
+    if (ctx->hsCtx->hsMsg == hsMsg) {
+        ctx->hsCtx->hsMsg = BSL_SAL_Dump(hsMsg, sizeof(HS_Msg));
+        if (ctx->hsCtx->hsMsg == NULL) {
+            HS_CleanMsg(hsMsg);
+            BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17357, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "hsMsg dump fail.", 0, 0,
+                                  0, 0);
+            return HITLS_MEMALLOC_FAIL;
+        }
+    }
+    return ret;
+}
 
 #ifdef HITLS_TLS_FEATURE_KEY_UPDATE
 static int32_t Tls13RecvKeyUpdateProcess(TLS_Ctx *ctx, const HS_Msg *hsMsg)
@@ -314,25 +335,7 @@ static int32_t Tls12TryRecvHandShakeMsg(TLS_Ctx *ctx)
         ctx->hsCtx->readSubState = TLS_PROCESS_STATE_A;
     }
     ret = ProcessReceivedHandshakeMsg(ctx, ctx->hsCtx->hsMsg);
-    if (ret == HITLS_SUCCESS) {
-        HS_CleanMsg(ctx->hsCtx->hsMsg);
-        if (ctx->hsCtx->hsMsg != &hsMsg) {
-            BSL_SAL_FREE(ctx->hsCtx->hsMsg);
-        }
-        ctx->hsCtx->hsMsg = NULL;
-    }
-    if (ctx->hsCtx->hsMsg == &hsMsg) {
-        ctx->hsCtx->hsMsg = BSL_SAL_Dump(&hsMsg, sizeof(HS_Msg));
-        if (ctx->hsCtx->hsMsg == NULL) {
-            HS_CleanMsg(&hsMsg);
-            BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17357, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "hsMsg dump fail.", 0, 0,
-                                  0, 0);
-            return HITLS_MEMALLOC_FAIL;
-        }
-    }
-
-    return ret;
+    return CheckHsMsg(ctx, &hsMsg, ret);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
 #ifdef HITLS_TLS_PROTO_TLS13
@@ -351,25 +354,7 @@ static int32_t Tls13TryRecvHandShakeMsg(TLS_Ctx *ctx)
         ctx->hsCtx->readSubState = TLS_PROCESS_STATE_A;
     }
     ret = Tls13ProcessReceivedHandshakeMsg(ctx, ctx->hsCtx->hsMsg);
-    if (ret == HITLS_SUCCESS) {
-        HS_CleanMsg(ctx->hsCtx->hsMsg);
-        if (ctx->hsCtx->hsMsg != &hsMsg) {
-            BSL_SAL_FREE(ctx->hsCtx->hsMsg);
-        }
-        ctx->hsCtx->hsMsg = NULL;
-    }
-    if (ctx->hsCtx->hsMsg == &hsMsg) {
-        ctx->hsCtx->hsMsg = BSL_SAL_Dump(&hsMsg, sizeof(HS_Msg));
-        if (ctx->hsCtx->hsMsg == NULL) {
-            HS_CleanMsg(&hsMsg);
-            BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17358, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "hsMsg dump fail.", 0, 0,
-                                  0, 0);
-            return HITLS_MEMALLOC_FAIL;
-        }
-    }
-
-    return ret;
+    return CheckHsMsg(ctx, &hsMsg, ret);
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 #endif /* HITLS_TLS_PROTO_TLS */
@@ -549,24 +534,7 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
     }
 
     ret = ProcessReceivedHandshakeMsg(ctx, ctx->hsCtx->hsMsg);
-    if (ret == HITLS_SUCCESS) {
-        HS_CleanMsg(ctx->hsCtx->hsMsg);
-        if (ctx->hsCtx->hsMsg != &hsMsg) {
-            BSL_SAL_FREE(ctx->hsCtx->hsMsg);
-        }
-        ctx->hsCtx->hsMsg = NULL;
-    }
-    if (ctx->hsCtx->hsMsg == &hsMsg) {
-        ctx->hsCtx->hsMsg = BSL_SAL_Dump(&hsMsg, sizeof(HS_Msg));
-        if (ctx->hsCtx->hsMsg == NULL) {
-            HS_CleanMsg(&hsMsg);
-            BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17359, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "hsMsg dump fail.", 0, 0,
-                                  0, 0);
-            return HITLS_MEMALLOC_FAIL;
-        }
-    }
-    return ret;
+    return CheckHsMsg(ctx, &hsMsg, ret);
 }
 #endif
 

@@ -221,6 +221,7 @@ int32_t ParseErrorProcess(TLS_Ctx *ctx, int32_t err, uint32_t logId, const void 
  */
 int32_t CheckPeerSignScheme(HITLS_Ctx *ctx, CERT_Pair *peerCert, uint16_t signScheme);
 
+int32_t ParseExtensionCommon(ParsePacket *pkt, uint16_t *exMsgLen);
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */

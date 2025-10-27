@@ -56,16 +56,9 @@ static int32_t ParseServerHelloCompressionMethod(ParsePacket *pkt)
 static int32_t ParseServerHelloExtensions(ParsePacket *pkt, ServerHelloMsg *msg)
 {
     uint16_t exMsgLen = 0;
-    const char *logStr = BINGLOG_STR("parse extension length failed.");
-    int32_t ret = ParseBytesToUint16(pkt, &exMsgLen);
+    int32_t ret = ParseExtensionCommon(pkt, &exMsgLen);
     if (ret != HITLS_SUCCESS) {
-        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15788,
-            logStr, ALERT_DECODE_ERROR);
-    }
-
-    if (exMsgLen != (pkt->bufLen - *pkt->bufOffset)) {
-        return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15789,
-            logStr, ALERT_DECODE_ERROR);
+        return ret;
     }
 
     if (exMsgLen == 0u) {

@@ -135,7 +135,8 @@ int32_t ParseErrorExtLengthProcess(TLS_Ctx *ctx, uint32_t logId, const void *for
 
 bool GetExtensionFlagValue(TLS_Ctx *ctx, uint32_t hsExTypeId);
 
-int32_t CheckForDuplicateExtension(uint64_t extensionTypeMask, uint32_t extensionId, TLS_Ctx *ctx);
+int32_t CheckForDuplicateExtension(ParsePacket *pkt, uint16_t *extMsgType, uint32_t *extMsgLen,
+    uint32_t *extensionId, uint64_t extensionTypeMask);
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */

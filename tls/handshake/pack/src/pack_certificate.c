@@ -54,18 +54,9 @@ int32_t PackCertificate(TLS_Ctx *ctx, PackPacket *pkt)
 #ifdef HITLS_TLS_PROTO_TLS13
 int32_t Tls13PackCertificate(TLS_Ctx *ctx, PackPacket *pkt)
 {
-    /* Pack the length of certificate_request_context */
-    int32_t ret = PackAppendUint8ToBuf(pkt, (uint8_t)ctx->certificateReqCtxSize);
+    int32_t ret = PackCertificateReqCtx(ctx, pkt);
     if (ret != HITLS_SUCCESS) {
         return ret;
-    }
-
-    /* Pack the content of certificate_request_context */
-    if (ctx->certificateReqCtxSize > 0) {
-        ret = PackAppendDataToBuf(pkt, ctx->certificateReqCtx, ctx->certificateReqCtxSize);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
-        }
     }
 
     /* Start packing certificate list length */

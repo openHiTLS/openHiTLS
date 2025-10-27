@@ -26,6 +26,9 @@
 #include "hitls_cert_type.h"
 #include "bsl_list.h"
 #include "pack_common.h"
+#ifdef HITLS_TLS_FEATURE_SECURITY
+#include "security.h"
+#endif
 
 #define BUFFER_GROW_FACTOR 2u
 
@@ -113,6 +116,66 @@ int32_t PackTrustedCAList(HITLS_TrustedCAList *caList, PackPacket *pkt)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
+
+#ifdef HITLS_TLS_PROTO_TLS13
+int32_t PackCertificateReqCtx(const TLS_Ctx *ctx, PackPacket *pkt)
+{
+    /* Pack certificate_request_context length */
+    int32_t ret = PackAppendUint8ToBuf(pkt, (uint8_t)ctx->certificateReqCtxSize);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    /* Pack certificate_request_context content */
+    if (ctx->certificateReqCtxSize > 0) {
+        ret = PackAppendDataToBuf(pkt, ctx->certificateReqCtx, ctx->certificateReqCtxSize);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_PROTO_TLS13 */
+
+int32_t PackHelloCommonField(const TLS_Ctx *ctx, PackPacket *pkt, uint16_t version, bool isClient)
+{
+    int32_t ret = HITLS_SUCCESS;
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    ret = SECURITY_CfgCheck(&ctx->config.tlsConfig, HITLS_SECURITY_SECOP_VERSION, 0, version, NULL);
+    if (ret != SECURITY_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16924, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "CfgCheck fail, ret %d", ret, 0, 0, 0);
+        ctx->method.sendAlert((TLS_Ctx *)(uintptr_t)ctx, ALERT_LEVEL_FATAL, ALERT_INSUFFICIENT_SECURITY);
+        BSL_ERR_PUSH_ERROR(HITLS_PACK_UNSECURE_VERSION);
+        return HITLS_PACK_UNSECURE_VERSION;
+    }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
+    ret = PackAppendUint16ToBuf(pkt, version);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    ret = PackAppendDataToBuf(pkt, isClient ? ctx->hsCtx->clientRandom : ctx->hsCtx->serverRandom, HS_RANDOM_SIZE);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+#if defined(HITLS_TLS_FEATURE_SESSION_ID) || defined(HITLS_TLS_PROTO_TLS13)
+    HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
+    ret = PackSessionId(pkt, hsCtx->sessionId, hsCtx->sessionIdSize);
+    if (ret != HITLS_SUCCESS) {
+        (void)memset_s(hsCtx->sessionId, hsCtx->sessionIdSize, 0, hsCtx->sessionIdSize);
+        return ret;
+    }
+#else // Session recovery is not supported.
+    /* SessionId (Session is not supported yet and the length field is initialized with a value of 0) */
+    ret = PackAppendUint8ToBuf(pkt, 0);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif
+    return HITLS_SUCCESS;
+}
 
 static int32_t PackMsBufferGrow(PackPacket *pkt, uint32_t newSize)
 {

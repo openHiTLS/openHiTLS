@@ -50,6 +50,10 @@ int32_t PackSessionId(PackPacket *pkt, const uint8_t *id, uint32_t idSize);
 void PackDtlsMsgHeader(HS_MsgType type, uint16_t sequence, uint32_t length, uint8_t *buf);
 
 int32_t PackTrustedCAList(HITLS_TrustedCAList *caList, PackPacket *pkt);
+
+int32_t PackCertificateReqCtx(const TLS_Ctx *ctx, PackPacket *pkt);
+
+int32_t PackHelloCommonField(const TLS_Ctx *ctx, PackPacket *pkt, uint16_t version, bool isClient);
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */

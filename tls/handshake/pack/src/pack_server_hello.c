@@ -41,39 +41,10 @@ static int32_t PackServerHelloMandatoryField(const TLS_Ctx *ctx, PackPacket *pkt
     (negotiatedVersion == HITLS_VERSION_TLS13) ? HITLS_VERSION_TLS12 :
 #endif
         negotiatedVersion;
-#ifdef HITLS_TLS_FEATURE_SECURITY
-    ret = SECURITY_CfgCheck(&ctx->config.tlsConfig, HITLS_SECURITY_SECOP_VERSION, 0, version, NULL);
-    if (ret != SECURITY_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16940, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "CfgCheck fail, ret %d", ret, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_UNSECURE_VERSION);
-        ctx->method.sendAlert((TLS_Ctx *)(uintptr_t)ctx, ALERT_LEVEL_FATAL, ALERT_INSUFFICIENT_SECURITY);
-        return HITLS_PACK_UNSECURE_VERSION;
-    }
-#endif
-    ret = PackAppendUint16ToBuf(pkt, version);
+    ret = PackHelloCommonField(ctx, pkt, version, false);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
-    ret = PackAppendDataToBuf(pkt, ctx->hsCtx->serverRandom, HS_RANDOM_SIZE);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
-#if defined(HITLS_TLS_FEATURE_SESSION_ID) || defined(HITLS_TLS_PROTO_TLS13)
-    HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
-    ret = PackSessionId(pkt, hsCtx->sessionId, hsCtx->sessionIdSize);
-    if (ret != HITLS_SUCCESS) {
-        (void)memset_s(hsCtx->sessionId, hsCtx->sessionIdSize, 0, hsCtx->sessionIdSize);
-        return ret;
-    }
-#else // Session recovery is not supported.
-    ret = PackAppendUint8ToBuf(pkt, 0);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-#endif
     ret = PackAppendUint16ToBuf(pkt, ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite); // cipher suite
     if (ret != HITLS_SUCCESS) {
         return ret;

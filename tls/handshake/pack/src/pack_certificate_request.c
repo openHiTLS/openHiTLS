@@ -284,18 +284,9 @@ int32_t Tls13PackCertReqExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 
 int32_t Tls13PackCertificateRequest(const TLS_Ctx *ctx, PackPacket *pkt)
 {
-    /* Pack certificate_request_context length */
-    int32_t ret = PackAppendUint8ToBuf(pkt, (uint8_t)ctx->certificateReqCtxSize);
+    int32_t ret = PackCertificateReqCtx(ctx, pkt);
     if (ret != HITLS_SUCCESS) {
         return ret;
-    }
-
-    /* Pack certificate_request_context content */
-    if (ctx->certificateReqCtxSize > 0) {
-        ret = PackAppendDataToBuf(pkt, ctx->certificateReqCtx, ctx->certificateReqCtxSize);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
-        }
     }
 
     ret = Tls13PackCertReqExtensions(ctx, pkt);
