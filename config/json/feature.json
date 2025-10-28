@@ -137,6 +137,8 @@
                 },
                 "riscv64": {
                     "sha2": null,
+                    "aes": {"ins_set":["rvv"]},
+                    "sm4": {"ins_set":["rvv"]},
                     "ecc": null
                 }
             }
@@ -745,7 +747,8 @@
                             "crypto/aes/src/asm/crypt_aes_cbc_x86_64.S",
                             "crypto/aes/src/asm/crypt_aes_ctr_x86_64.S"
                         ]
-                    }
+                    },
+                    "riscv64": {"rvv":[ "crypto/aes/src/crypt_aes_rvv.c", "crypto/aes/src/asm/crypt_aes_riscv64_rvv.S"]}
                 },
                 ".deps": ["platform::Secure_C"]
             },
@@ -791,7 +794,8 @@
                             "crypto/sm4/src/asm/crypt_sm4_xts_x86_64.S",
                             "crypto/sm4/src/crypt_sm4_x86_64.c"
                         ]
-                    }
+                    },
+                    "riscv64":{"rvv":["crypto/sm4/src/crypt_sm4_rvv.c","crypto/sm4/src/asm/crypt_sm4_riscv64_rvv.S"]}
                 },
                 ".deps": ["bsl::sal"]
             },

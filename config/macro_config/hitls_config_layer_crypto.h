@@ -404,11 +404,11 @@
 #define HITLS_CRYPTO_GCM_ASM
 #endif
 
-#if (defined(HITLS_CRYPTO_AES_X8664) || defined(HITLS_CRYPTO_AES_ARMV8)) && !defined(HITLS_CRYPTO_AES_ASM)
+#if (defined(HITLS_CRYPTO_AES_X8664) || defined(HITLS_CRYPTO_AES_ARMV8) || defined(HITLS_CRYPTO_AES_RISCV64)) && !defined(HITLS_CRYPTO_AES_ASM)
 #define HITLS_CRYPTO_AES_ASM
 #endif
 
-#if (defined(HITLS_CRYPTO_SM4_X8664) || defined(HITLS_CRYPTO_SM4_ARMV8)) && !defined(HITLS_CRYPTO_SM4_ASM)
+#if (defined(HITLS_CRYPTO_SM4_X8664) || defined(HITLS_CRYPTO_SM4_ARMV8) || defined(HITLS_CRYPTO_SM4_RISCV64)) && !defined(HITLS_CRYPTO_SM4_ASM)
 #define HITLS_CRYPTO_SM4_ASM
 #endif
 

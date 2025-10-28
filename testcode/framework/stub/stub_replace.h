@@ -25,7 +25,7 @@
  * Short jump instruction is 5 bytes, and Long jump instruction is 14 bytes.
  */
 #define CODESIZE 14U
-#elif defined(__aarch64__) || defined(_M_ARM64)
+#elif defined(__aarch64__) || defined(_M_ARM64) || defined(__riscv) || defined(__riscv64)
 /* ARM64 needs 16 bytes to construct the jump instruction. */
 #define CODESIZE 16U
 #elif defined(__arm__)
