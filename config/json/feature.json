@@ -136,7 +136,8 @@
                     "ecc": null
                 },
                 "riscv64": {
-                    "sha2": null
+                    "sha2": null,
+                    "ecc": null
                 }
             }
         },
@@ -904,7 +905,8 @@
                     "x8664": {
                         "x8664": ["crypto/ecc/src/asm_*.c", "crypto/ecc/src/asm64_ecp_nistp256.c", "crypto/ecc/src/asm/*_x86_64.S"],
                         "avx512": ["crypto/ecc/src/asm_*.c", "crypto/ecc/src/asm64_ecp_nistp256.c", "crypto/ecc/src/asm/*_x86_64.S"]
-                    }
+                    },
+                    "riscv64": ["crypto/ecc/src/noasm_ecp_nistp256.c", "crypto/ecc/src/noasm_ecp_sm2.c", "testcode/sdv/testcase/crypto/ecc/asmrvv_ecc_msm.c", "testcode/sdv/testcase/crypto/ecc/ecc_msm_riscv64.S"]
                 },
                 ".deps": ["crypto::bn", "bsl::sal"],
                 ".include": ["crypto/eal/src"]
