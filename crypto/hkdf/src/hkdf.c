@@ -227,15 +227,15 @@ static int32_t HkdfGetMdSize(CRYPT_HKDF_Ctx *ctx, const char *mdAttr)
     libCtx = ctx->libCtx;
 #endif
 
-    EAL_MdMethod mdMeth = {0};
-    EAL_MacDepMethod depMeth = {.method = {.md = &mdMeth}};
+    EAL_MdMethod tmpMdMeth = {0};
+    EAL_MacDepMethod depMeth = {.method = {.md = &tmpMdMeth}};
     int32_t ret = EAL_MacFindDepMethod(ctx->macId, libCtx, mdAttr, &depMeth, NULL, libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     ctx->hasGetMdSize = true;
-    ctx->mdSize = mdMeth.mdSize;
+    ctx->mdSize = tmpMdMeth.mdSize;
     return CRYPT_SUCCESS;
 }
 

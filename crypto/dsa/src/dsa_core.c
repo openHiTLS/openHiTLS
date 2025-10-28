@@ -477,13 +477,13 @@ int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPrv *prv)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DSA_ERR_KEY_PARA);
-        return CRYPT_DSA_ERR_KEY_PARA;
-    }
     if (ctx->x == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_DSA_ERR_KEY_INFO);
         return CRYPT_DSA_ERR_KEY_INFO;
+    }
+    if (ctx->para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DSA_ERR_KEY_PARA);
+        return CRYPT_DSA_ERR_KEY_PARA;
     }
     if (BN_Bytes(ctx->para->q) > prv->len) {
         BSL_ERR_PUSH_ERROR(CRYPT_DSA_BUFF_LEN_NOT_ENOUGH);
@@ -944,13 +944,13 @@ int32_t CRYPT_DSA_SignData(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DSA_ERR_KEY_PARA);
-        return CRYPT_DSA_ERR_KEY_PARA;
-    }
     if (ctx->x == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_DSA_ERR_KEY_INFO);
         return CRYPT_DSA_ERR_KEY_INFO;
+    }
+    if (ctx->para == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DSA_ERR_KEY_PARA);
+        return CRYPT_DSA_ERR_KEY_PARA;
     }
     if (*signLen < CRYPT_DSA_GetSignLen(ctx)) {
         BSL_ERR_PUSH_ERROR(CRYPT_DSA_BUFF_LEN_NOT_ENOUGH);
@@ -975,14 +975,14 @@ int32_t CRYPT_DSA_Sign(const CRYPT_DSA_Ctx *ctx, int32_t algId, const uint8_t *d
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    uint8_t hash[64]; // 64 is max hash len
-    uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
-    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hash, &hashLen, ctx->libCtx != NULL);
+    uint8_t hashData[64]; // 64 is max hash len
+    uint32_t hashLen = sizeof(hashData) / sizeof(hashData[0]);
+    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hashData, &hashLen, ctx->libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    return CRYPT_DSA_SignData(ctx, hash, hashLen, sign, signLen);
+    return CRYPT_DSA_SignData(ctx, hashData, hashLen, sign, signLen);
 }
 
 static int32_t VerifyCore(const CRYPT_DSA_Ctx *ctx, BN_BigNum *d, BN_BigNum *r, BN_BigNum *s)
@@ -1639,7 +1639,7 @@ int32_t CRYPT_DSA_Ctrl(CRYPT_DSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 
 static int32_t DsaKeyPairCheck(const CRYPT_DSA_Ctx *pub, const CRYPT_DSA_Ctx *prv)
 {
-    if (prv == NULL || pub == NULL) {
+    if (pub == NULL || prv == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }

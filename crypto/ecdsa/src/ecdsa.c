@@ -22,11 +22,11 @@
 #include "crypt_types.h"
 #include "crypt_utils.h"
 #include "crypt_util_ctrl.h"
-#include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_bn.h"
 #include "crypt_encode_internal.h"
 #include "crypt_ecc.h"
+#include "bsl_sal.h"
 #include "crypt_ecc_pkey.h"
 #include "eal_pkey_local.h"
 #include "eal_md_local.h"
@@ -322,13 +322,13 @@ int32_t CRYPT_ECDSA_Sign(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint8_
         return CRYPT_NULL_INPUT;
     }
     uint8_t hash[64]; // 64 is max hash len
-    uint32_t hashLen = sizeof(hash) / sizeof(hash[0]);
-    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hash, &hashLen, ctx->libCtx != NULL);
+    uint32_t hashDataLen = sizeof(hash) / sizeof(hash[0]);
+    int32_t ret = EAL_Md(algId, ctx->libCtx, ctx->mdAttr, data, dataLen, hash, &hashDataLen, ctx->libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    return CRYPT_ECDSA_SignData(ctx, hash, hashLen, sign, signLen);
+    return CRYPT_ECDSA_SignData(ctx, hash, hashDataLen, sign, signLen);
 }
 
 static int32_t VerifyCheckSign(const BN_BigNum *paraN, BN_BigNum *r, BN_BigNum *s)

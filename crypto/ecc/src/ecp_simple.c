@@ -104,7 +104,7 @@ ERR:
     return ret;
 }
 
-int32_t ECP_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt)
+static int32_t CheckECCParameters(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt)
 {
     if (para == NULL || r == NULL || pt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -118,10 +118,18 @@ int32_t ECP_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
     }
+    return CRYPT_SUCCESS;
+}
+
+int32_t ECP_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt)
+{
+    int32_t ret = CheckECCParameters(para, r, pt);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
     if (BN_IsOne(&pt->z)) {
         return ECC_CopyPoint(r, pt);
     }
-    int32_t ret;
     uint32_t bits = BN_Bits(para->p);
     BN_Optimizer *opt = BN_OptimizerCreate();
     BN_BigNum *zz = BN_Create(bits);
@@ -345,25 +353,19 @@ ERR:
 // The z coordinate of point pt multiplied by z.
 int32_t ECP_Point2AffineWithInv(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt, const BN_BigNum *inv)
 {
-    if (para == NULL || r == NULL || pt == NULL || inv == NULL) {
+    if (inv == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (para->id != pt->id || para->id != r->id) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    if (BN_IsZero(&pt->z)) {
-        // Infinite point multiplied by z is meaningless.
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
+    int32_t ret = CheckECCParameters(para, r, pt);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
     BN_Optimizer *opt = BN_OptimizerCreate();
     if (opt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret;
     GOTO_ERR_IF(BN_ModSqr(&r->z, inv, para->p, opt), ret);            // z = inv^2
     GOTO_ERR_IF(BN_ModMul(&r->x, &pt->x, &r->z, para->p, opt), ret);    // x = x * (inv^2)
     GOTO_ERR_IF(BN_ModMul(&r->y, &pt->y, inv, para->p, opt), ret);

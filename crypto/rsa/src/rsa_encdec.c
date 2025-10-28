@@ -880,8 +880,9 @@ int32_t CRYPT_RSA_Sign(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data, u
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    void *libCtx = LIBCTX_FROM_RSA_CTX(ctx);
-    int32_t ret = EAL_Md(algId, libCtx, MDATTR_FROM_RSA_CTX(ctx), data, dataLen, hash, &hashLen, libCtx != NULL);
+    void *tmpLibCtx = LIBCTX_FROM_RSA_CTX(ctx);
+    int32_t ret = EAL_Md(algId, tmpLibCtx, MDATTR_FROM_RSA_CTX(ctx), data, dataLen, hash, &hashLen,
+        tmpLibCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -917,7 +918,6 @@ static int32_t VerifyInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *data, u
 int32_t CRYPT_RSA_VerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen)
 {
-    uint8_t *pad = NULL;
 #ifdef HITLS_CRYPTO_RSA_EMSA_PSS
     uint32_t saltLen = 0;
 #endif
@@ -927,7 +927,7 @@ int32_t CRYPT_RSA_VerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t d
     }
     uint32_t bits = CRYPT_RSA_GetBits(ctx);
     uint32_t padLen = BN_BITS_TO_BYTES(bits);
-    pad = BSL_SAL_Malloc(padLen);
+    uint8_t *pad = BSL_SAL_Malloc(padLen);
     if (pad == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;

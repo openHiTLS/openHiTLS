@@ -350,15 +350,8 @@ CRYPT_SCRYPT_Ctx *CRYPT_SCRYPT_NewCtx(void)
 CRYPT_SCRYPT_Ctx *CRYPT_SCRYPT_NewCtxEx(void *libCtx, int32_t algId)
 {
     (void)algId;
-    CRYPT_SCRYPT_Ctx *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_SCRYPT_Ctx));
+    CRYPT_SCRYPT_Ctx *ctx = CRYPT_SCRYPT_NewCtx();
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return NULL;
-    }
-    int32_t ret = CRYPT_SCRYPT_InitCtx(ctx);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_FREE(ctx);
         return NULL;
     }
     ctx->libCtx = libCtx;

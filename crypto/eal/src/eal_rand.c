@@ -274,8 +274,11 @@ int32_t EAL_DrbgbytesWithAdin(CRYPT_EAL_RndCtx *ctx, uint8_t *byte, uint32_t len
         return CRYPT_NULL_INPUT;
     }
 
-    int32_t ret;
-    RETURN_RAND_LOCK(ctx, ret); // write lock
+    int32_t ret = BSL_SAL_ThreadWriteLock(ctx->lock);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     ret = CheckRndCtxState(ctx);
     if (ret != CRYPT_SUCCESS) {
         RAND_UNLOCK(ctx);
@@ -298,8 +301,11 @@ int32_t EAL_DrbgSeedWithAdin(CRYPT_EAL_RndCtx *ctx, uint8_t *addin, uint32_t add
         return CRYPT_NULL_INPUT;
     }
 
-    int32_t ret;
-    RETURN_RAND_LOCK(ctx, ret); // write lock
+    int32_t ret = BSL_SAL_ThreadWriteLock(ctx->lock);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     ret = CheckRndCtxState(ctx);
     if (ret != CRYPT_SUCCESS) {
         RAND_UNLOCK(ctx);
@@ -973,16 +979,16 @@ int32_t CRYPT_EAL_RandbytesEx(CRYPT_EAL_LibCtx *libCtx, uint8_t *byte, uint32_t 
 int32_t CRYPT_EAL_RandSeedEx(CRYPT_EAL_LibCtx *libCtx)
 {
 #ifdef HITLS_CRYPTO_PROVIDER
-    CRYPT_EAL_LibCtx *localCtx = libCtx;
-    if (localCtx == NULL) {
-        localCtx = CRYPT_EAL_GetGlobalLibCtx();
+    CRYPT_EAL_LibCtx *tempLibCtx = libCtx;
+    if (tempLibCtx == NULL) {
+        tempLibCtx = CRYPT_EAL_GetGlobalLibCtx();
     }
 
-    if (localCtx == NULL) {
+    if (tempLibCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_INVALID_LIB_CTX);
         return CRYPT_PROVIDER_INVALID_LIB_CTX;
     }
-    return EAL_DrbgSeedWithAdin((CRYPT_EAL_RndCtx *)localCtx->drbg, NULL, 0);
+    return EAL_DrbgSeedWithAdin((CRYPT_EAL_RndCtx *)tempLibCtx->drbg, NULL, 0);
 #else
     (void) libCtx;
     return CRYPT_EAL_RandSeed();
