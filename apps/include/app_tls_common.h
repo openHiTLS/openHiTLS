@@ -37,6 +37,7 @@ extern "C" {
 
 /* Protocol types */
 typedef enum {
+    APP_PROTOCOL_TLS,      // International standard TLS protocol (default)
     APP_PROTOCOL_TLCP,
     APP_PROTOCOL_DTLCP,
 } APP_ProtocolType;

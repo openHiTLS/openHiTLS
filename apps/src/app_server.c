@@ -79,8 +79,9 @@ static void *ThreadHeartBeatLoop(void *arg)
 typedef enum {
     HITLS_SERVER_OPT_ACCEPT = 2,
     HITLS_SERVER_OPT_PORT,
-    
+
     /* Protocol options */
+    HITLS_SERVER_OPT_TLS,
     HITLS_SERVER_OPT_TLCP,
     HITLS_SERVER_OPT_DTLCP,
     HITLS_SERVER_OPT_CIPHER,
@@ -119,8 +120,9 @@ static const HITLS_CmdOption g_serverOptions[] = {
     /* Listen options */
     {"accept",      HITLS_SERVER_OPT_ACCEPT,      HITLS_APP_OPT_VALUETYPE_STRING,      "Listen on host:port"},
     {"port",        HITLS_SERVER_OPT_PORT,        HITLS_APP_OPT_VALUETYPE_UINT,        "Listen port (default 4433)"},
-    
+
     /* Protocol options */
+    {"tls",         HITLS_SERVER_OPT_TLS,         HITLS_APP_OPT_VALUETYPE_NO_VALUE,    "Use TLS protocol (default)"},
     {"tlcp",        HITLS_SERVER_OPT_TLCP,        HITLS_APP_OPT_VALUETYPE_NO_VALUE,    "Use TLCP protocol"},
     {"dtlcp",       HITLS_SERVER_OPT_DTLCP,       HITLS_APP_OPT_VALUETYPE_NO_VALUE,    "Use DTLCP protocol"},
     {"cipher",      HITLS_SERVER_OPT_CIPHER,      HITLS_APP_OPT_VALUETYPE_STRING,      "Specify cipher suites"},
@@ -193,6 +195,13 @@ static int HandleServerPort(HITLS_ServerParams *params)
     HITLS_APP_OptGetUint32(HITLS_APP_OptGetValueStr(), (uint32_t*)&params->port);
     return HITLS_APP_SUCCESS;
 }
+
+static int HandleServerTLS(HITLS_ServerParams *params)
+{
+    params->protocol = "tls";
+    return HITLS_APP_SUCCESS;
+}
+
 static int HandleServerTLCP(HITLS_ServerParams *params)
 {
     params->protocol = "tlcp";
@@ -274,6 +283,7 @@ static int HandleServerHelp(HITLS_ServerParams *params)
 static const ServerOptHandleFuncMap g_serverOptHandleFuncMap[] = {
     {HITLS_SERVER_OPT_ACCEPT, HandleServerAccept},
     {HITLS_SERVER_OPT_PORT, HandleServerPort},
+    {HITLS_SERVER_OPT_TLS, HandleServerTLS},
     {HITLS_SERVER_OPT_TLCP, HandleServerTLCP},
     {HITLS_SERVER_OPT_DTLCP, HandleServerDTLCP},
     {HITLS_SERVER_OPT_CIPHER, HandleServerCipher},

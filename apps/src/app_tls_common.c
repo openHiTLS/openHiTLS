@@ -48,23 +48,28 @@
 APP_ProtocolType ParseProtocolType(const char *protocolStr)
 {
     if (protocolStr == NULL) {
-        return APP_PROTOCOL_TLCP;
+        return APP_PROTOCOL_TLS;  // Default to TLS protocol
     }
-    
-    if (strcmp(protocolStr, "tlcp") == 0) {
+
+    if (strcmp(protocolStr, "tls") == 0) {
+        return APP_PROTOCOL_TLS;
+    } else if (strcmp(protocolStr, "tlcp") == 0) {
         return APP_PROTOCOL_TLCP;
     } else if (strcmp(protocolStr, "dtlcp") == 0) {
         return APP_PROTOCOL_DTLCP;
     }
-    
-    return APP_PROTOCOL_TLCP; /* Default fallback */
+
+    return APP_PROTOCOL_TLS; /* Default fallback */
 }
 
 HITLS_Config *CreateProtocolConfig(APP_ProtocolType protocol, AppProvider *provider)
 {
     HITLS_Config *config = NULL;
-    
+
     switch (protocol) {
+        case APP_PROTOCOL_TLS:
+            config = HITLS_CFG_ProviderNewTLSConfig(APP_GetCurrent_LibCtx(), provider->providerAttr);
+            break;
         case APP_PROTOCOL_TLCP:
             config = HITLS_CFG_ProviderNewTLCPConfig(APP_GetCurrent_LibCtx(), provider->providerAttr);
             break;
@@ -75,7 +80,7 @@ HITLS_Config *CreateProtocolConfig(APP_ProtocolType protocol, AppProvider *provi
             AppPrintError("Unsupported protocol type: %d\n", protocol);
             return NULL;
     }
-    
+
     if (config == NULL) {
         AppPrintError("Failed to create protocol configuration\n");
     }
@@ -95,41 +100,88 @@ int ConfigureCipherSuites(HITLS_Config *config, const char *cipherStr, APP_Proto
     if (config == NULL || cipherStr == NULL) {
         return HITLS_APP_INVALID_ARG;
     }
-    
-    /* Parse cipher string and convert to cipher suite array */
-    /* This is a simplified implementation - in practice, you'd need to parse
-       the cipher string and map to actual cipher suite IDs */
-    
-    uint16_t cipherSuites;
+
     int32_t ret;
-    uint32_t protocolVersion;
+    uint32_t protocolVersion = 0;
+    bool needVersionCheck = false;
+
+    // Only check version for TLCP/DTLCP, TLS does not need version check
     if (protocol == APP_PROTOCOL_DTLCP || protocol == APP_PROTOCOL_TLCP) {
         protocolVersion = HITLS_VERSION_TLCP_DTLCP11;
-    }
-    const HITLS_Cipher *cipher = HITLS_CFG_GetCipherSuiteByStdName((const uint8_t *)cipherStr);
-    if (cipher == NULL) {
-        AppPrintError("Invalid cipher suite: %s\n", cipherStr);
-        return HITLS_APP_ERR_SET_CIPHER;
+        needVersionCheck = true;
     }
 
-    if (protocolVersion < cipher->minVersion || protocolVersion > cipher->maxVersion) {
-        AppPrintError("Protocol (%d) not in cipher suite version range [%d, %d]!\n",
-            protocolVersion, cipher->minVersion, cipher->maxVersion);
-        return HITLS_APP_ERR_SET_CIPHER;
+    // Support multiple cipher suites separated by colon
+    // Example: "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384"
+    char *cipherStrCopy = BSL_SAL_Malloc(strlen(cipherStr) + 1);
+    if (cipherStrCopy == NULL) {
+        AppPrintError("Failed to allocate memory for cipher string\n");
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
+    strcpy_s(cipherStrCopy, strlen(cipherStr) + 1, cipherStr);
+
+    // Count number of cipher suites (based on colon count)
+    uint32_t cipherCount = 1;
+    for (const char *p = cipherStr; *p != '\0'; p++) {
+        if (*p == ':') {
+            cipherCount++;
+        }
     }
 
-    ret = HITLS_CFG_GetCipherSuite(cipher, &cipherSuites);
-    if (ret != HITLS_SUCCESS) {
-        AppPrintError("Failed to get cipher suites: 0x%x\n", ret);
-        return HITLS_APP_ERR_SET_CIPHER;
+    // Allocate cipher suite array
+    uint16_t *cipherSuites = BSL_SAL_Malloc(sizeof(uint16_t) * cipherCount);
+    if (cipherSuites == NULL) {
+        BSL_SAL_Free(cipherStrCopy);
+        AppPrintError("Failed to allocate memory for cipher suites\n");
+        return HITLS_APP_MEM_ALLOC_FAIL;
     }
 
-    ret = HITLS_CFG_SetCipherSuites(config, &cipherSuites, 1);
+    // Parse each cipher suite
+    uint32_t index = 0;
+    char *token = strtok(cipherStrCopy, ":");
+    while (token != NULL && index < cipherCount) {
+        const HITLS_Cipher *cipher = HITLS_CFG_GetCipherSuiteByStdName((const uint8_t *)token);
+        if (cipher == NULL) {
+            AppPrintError("Invalid cipher suite: %s\n", token);
+            BSL_SAL_Free(cipherStrCopy);
+            BSL_SAL_Free(cipherSuites);
+            return HITLS_APP_ERR_SET_CIPHER;
+        }
+
+        // Only check version range for TLCP/DTLCP
+        if (needVersionCheck) {
+            if (protocolVersion < cipher->minVersion || protocolVersion > cipher->maxVersion) {
+                AppPrintError("Protocol (%d) not in cipher suite version range [%d, %d]!\n",
+                    protocolVersion, cipher->minVersion, cipher->maxVersion);
+                BSL_SAL_Free(cipherStrCopy);
+                BSL_SAL_Free(cipherSuites);
+                return HITLS_APP_ERR_SET_CIPHER;
+            }
+        }
+
+        ret = HITLS_CFG_GetCipherSuite(cipher, &cipherSuites[index]);
+        if (ret != HITLS_SUCCESS) {
+            AppPrintError("Failed to get cipher suite for %s: 0x%x\n", token, ret);
+            BSL_SAL_Free(cipherStrCopy);
+            BSL_SAL_Free(cipherSuites);
+            return HITLS_APP_ERR_SET_CIPHER;
+        }
+
+        index++;
+        token = strtok(NULL, ":");
+    }
+
+    // Set cipher suite array
+    ret = HITLS_CFG_SetCipherSuites(config, cipherSuites, index);
     if (ret != HITLS_SUCCESS) {
         AppPrintError("Failed to set cipher suites: 0x%x\n", ret);
+        BSL_SAL_Free(cipherStrCopy);
+        BSL_SAL_Free(cipherSuites);
         return HITLS_APP_ERR_SET_CIPHER;
     }
 
+    BSL_SAL_Free(cipherStrCopy);
+    BSL_SAL_Free(cipherSuites);
     return HITLS_APP_SUCCESS;
 }
 

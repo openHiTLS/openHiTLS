@@ -53,8 +53,9 @@
 typedef enum {
     HITLS_CLIENT_OPT_HOST = 2,
     HITLS_CLIENT_OPT_PORT,
-    
+
     /* Protocol options */
+    HITLS_CLIENT_OPT_TLS,
     HITLS_CLIENT_OPT_TLCP,
     HITLS_CLIENT_OPT_DTLCP,
     HITLS_CLIENT_OPT_CIPHER,
@@ -90,8 +91,9 @@ static const HITLS_CmdOption g_clientOptions[] = {
     /* Connection options */
     {"host",        HITLS_CLIENT_OPT_HOST,        HITLS_APP_OPT_VALUETYPE_STRING,  "Target hostname or IP address"},
     {"port",        HITLS_CLIENT_OPT_PORT,        HITLS_APP_OPT_VALUETYPE_UINT,    "Target port number (default 443)"},
-    
+
     /* Protocol options */
+    {"tls",         HITLS_CLIENT_OPT_TLS,         HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Use TLS protocol (default)"},
     {"tlcp",        HITLS_CLIENT_OPT_TLCP,        HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Use TLCP protocol"},
     {"dtlcp",       HITLS_CLIENT_OPT_DTLCP,       HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Use DTLCP protocol"},
     {"cipher",      HITLS_CLIENT_OPT_CIPHER,      HITLS_APP_OPT_VALUETYPE_STRING,   "Specify cipher suites"},
@@ -168,6 +170,12 @@ static int HandleClientHost(HITLS_ClientParams *params)
 static int HandleClientPort(HITLS_ClientParams *params)
 {
     return HITLS_APP_OptGetUint32(HITLS_APP_OptGetValueStr(), (uint32_t*)&params->port);
+}
+
+static int HandleClientTLS(HITLS_ClientParams *params)
+{
+    params->protocol = "tls";
+    return HITLS_APP_SUCCESS;
 }
 
 static int HandleClientTLCP(HITLS_ClientParams *params)
@@ -259,6 +267,7 @@ static int HandleClientHelp(HITLS_ClientParams *params)
 static const ClientOptHandleFuncMap g_clientOptHandleFuncMap[] = {
     {HITLS_CLIENT_OPT_HOST, HandleClientHost},
     {HITLS_CLIENT_OPT_PORT, HandleClientPort},
+    {HITLS_CLIENT_OPT_TLS, HandleClientTLS},
     {HITLS_CLIENT_OPT_TLCP, HandleClientTLCP},
     {HITLS_CLIENT_OPT_DTLCP, HandleClientDTLCP},
     {HITLS_CLIENT_OPT_CIPHER, HandleClientCipher},
