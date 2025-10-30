@@ -296,9 +296,10 @@ int ConfCertVerification(HITLS_Config *config, APP_CertConfig *certConfig,
     if (config == NULL) {
         return HITLS_APP_INVALID_ARG;
     }
-    
+
     int ret = HITLS_SUCCESS;
-    
+    bool hasLoadedCA = false;
+
     /* Load CA certificates */
     if (certConfig && certConfig->caFile) {
         HITLS_X509_Cert *ca_cert = LoadCertFromFile(certConfig->caFile, certConfig->certFormat, certConfig->provider);
@@ -310,9 +311,10 @@ int ConfCertVerification(HITLS_Config *config, APP_CertConfig *certConfig,
                 return HITLS_APP_ERR_LOAD_CA;
             }
             HITLS_X509_CertFree(ca_cert);
+            hasLoadedCA = true;
         }
     }
-    
+
     if (certConfig && certConfig->caChain) {
         HITLS_X509_List *certlist = NULL;
         ret = HITLS_X509_CertParseBundleFile(certConfig->certFormat, certConfig->caChain, &certlist);
@@ -332,8 +334,18 @@ int ConfCertVerification(HITLS_Config *config, APP_CertConfig *certConfig,
         }
 
         BSL_LIST_FREE(certlist, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        hasLoadedCA = true;
     }
-    
+
+    /* If no CA certificate is configured, load default CA path */
+    if (!hasLoadedCA) {
+        ret = HITLS_CFG_LoadDefaultCAPath(config);
+        if (ret != HITLS_SUCCESS) {
+            AppPrintError("Failed to load default CA path: 0x%x\n", ret);
+            // Don't return error, just log warning - allow to continue without CA if needed
+        }
+    }
+
     ret = HITLS_CFG_SetVerifyNoneSupport(config, !verifyPeer);
     if (ret != HITLS_SUCCESS) {
         AppPrintError("Failed to disable server verification: 0x%x\n", ret);
@@ -344,7 +356,7 @@ int ConfCertVerification(HITLS_Config *config, APP_CertConfig *certConfig,
         AppPrintError("Failed to set client verification: 0x%x\n", ret);
         return HITLS_APP_ERR_SET_VERIFY;
     }
-    
+
     /* Set verification depth */
     if (verifyDepth > 0) {
         ret = HITLS_CFG_SetVerifyDepth(config, verifyDepth);
@@ -353,7 +365,7 @@ int ConfCertVerification(HITLS_Config *config, APP_CertConfig *certConfig,
             return HITLS_APP_ERR_SET_VERIFY;
         }
     }
-    
+
     return HITLS_APP_SUCCESS;
 }
 
