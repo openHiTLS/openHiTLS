@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_PKI_X509
+#ifdef HITLS_PKI_X509_CRT
 #include <string.h>
 #include <ctype.h>
 #include "hitls_pki_errno.h"
@@ -227,4 +227,4 @@ int32_t HITLS_X509_VerifyHostname(HITLS_X509_Cert *cert, uint32_t flags, const c
     }
     return ret;
 }
-#endif // HITLS_PKI_X509
+#endif // HITLS_PKI_X509_CRT
