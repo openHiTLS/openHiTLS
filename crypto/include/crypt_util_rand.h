@@ -18,7 +18,7 @@
 
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_DRBG) || defined(HITLS_CRYPTO_CURVE25519) || \
-    defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_BN_RAND)
+    defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_BN_RAND) || defined(HITLS_CRYPTO_SM9)
 
 #include <stdint.h>
 #include "crypt_eal_rand.h"

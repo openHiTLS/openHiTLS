@@ -222,6 +222,13 @@ extern "C" {
 #define CRYPT_PARAM_CMVP_RANDOM                             (CRYPT_PARAM_CMVP_BASE + 3)
 #define CRYPT_PARAM_CMVP_INTERNAL_LIBCTX_FLAG               (CRYPT_PARAM_CMVP_BASE + 4)
 
+#define CRYPT_PARAM_SM9_BASE                                5300
+#define CRYPT_PARAM_SM9_USER_ID                             (CRYPT_PARAM_SM9_BASE + 1)
+#define CRYPT_PARAM_SM9_MASTER_KEY                          (CRYPT_PARAM_SM9_BASE + 2)
+#define CRYPT_PARAM_SM9_USER_KEY                            (CRYPT_PARAM_SM9_BASE + 3)
+#define CRYPT_PARAM_SM9_KEY_TYPE                            (CRYPT_PARAM_SM9_BASE + 4)
+#define CRYPT_PARAM_SM9_MASTER_PUB_KEY                      (CRYPT_PARAM_SM9_BASE + 5)
+
 #ifdef __cplusplus
 }
 #endif

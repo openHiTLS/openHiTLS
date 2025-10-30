@@ -23,6 +23,7 @@
 #include "benchmark.h"
 
 extern BenchCtx Sm2BenchCtx;
+extern BenchCtx Sm9BenchCtx;
 extern BenchCtx SlhDsaBenchCtx;
 extern BenchCtx EcdsaBenchCtx;
 extern BenchCtx MdBenchCtx;
@@ -37,7 +38,7 @@ extern BenchCtx MldsaBenchCtx;
 extern BenchCtx MlkemBenchCtx;
 
 BenchCtx *g_benchs[] = {
-    &Sm2BenchCtx, &SlhDsaBenchCtx, &EcdsaBenchCtx,  &MdBenchCtx,      &CipherBenchCtx, &MacBenchCtx,
+    &Sm2BenchCtx, &Sm9BenchCtx, &SlhDsaBenchCtx, &EcdsaBenchCtx,  &MdBenchCtx,      &CipherBenchCtx, &MacBenchCtx,
     &DhBenchCtx,  &EcdhBenchCtx,   &X25519BenchCtx, &Ed25519BenchCtx, &MldsaBenchCtx,  &MlkemBenchCtx,
 };
 

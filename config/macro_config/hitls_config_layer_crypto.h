@@ -333,6 +333,9 @@
     #ifndef HITLS_CRYPTO_SM2
         #define HITLS_CRYPTO_SM2
     #endif
+    #ifndef HITLS_CRYPTO_SM9
+        #define HITLS_CRYPTO_SM9
+    #endif
     #ifndef HITLS_CRYPTO_CURVE25519
         #define HITLS_CRYPTO_CURVE25519
     #endif
@@ -519,6 +522,30 @@
     #endif
 #endif
 
+#if defined(HITLS_CRYPTO_SM9_SIGN) || defined(HITLS_CRYPTO_SM9_CRYPT) || defined(HITLS_CRYPTO_SM9_EXCH)
+    #ifndef HITLS_CRYPTO_SM9
+        #define HITLS_CRYPTO_SM9
+    #endif
+#endif
+
+#ifdef HITLS_CRYPTO_SM9
+    #ifndef HITLS_CRYPTO_SM3
+        #define HITLS_CRYPTO_SM3
+    #endif
+    #ifndef HITLS_CRYPTO_SM9_SIGN
+        #define HITLS_CRYPTO_SM9_SIGN
+    #endif
+    #ifndef HITLS_CRYPTO_SM9_CRYPT
+        #define HITLS_CRYPTO_SM9_CRYPT
+    #endif
+    #ifndef HITLS_CRYPTO_SM9_EXCH
+        #define HITLS_CRYPTO_SM9_EXCH
+    #endif
+    #ifndef HITLS_CRYPTO_SM9_CHECK
+        #define HITLS_CRYPTO_SM9_CHECK
+    #endif
+#endif
+
 #ifdef HITLS_CRYPTO_XMSS
     #ifndef HITLS_CRYPTO_SLH_DSA
         #define HITLS_CRYPTO_SLH_DSA
@@ -658,7 +685,7 @@
 
 #if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_CURVE25519) || defined(HITLS_CRYPTO_RSA) || \
     defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_ECDH) ||      \
-    defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_PAILLIER)|| defined(HITLS_CRYPTO_ELGAMAL) || \
+    defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_SM9) || defined(HITLS_CRYPTO_PAILLIER)|| defined(HITLS_CRYPTO_ELGAMAL) || \
     defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_MLKEM) || defined(HITLS_CRYPTO_HYBRIDKEM) || \
     defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_XMSS)
     #ifndef HITLS_CRYPTO_PKEY
@@ -670,21 +697,21 @@
 #endif
 
 #if defined(HITLS_CRYPTO_X25519) || defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDH) || \
-    defined(HITLS_CRYPTO_SM2_EXCH)
+    defined(HITLS_CRYPTO_SM2_EXCH) || defined(HITLS_CRYPTO_SM9)
     #ifndef HITLS_CRYPTO_PKEY_EXCH
         #define HITLS_CRYPTO_PKEY_EXCH
     #endif
 #endif
 
 #if defined(HITLS_CRYPTO_RSA_ENCRYPT) || defined(HITLS_CRYPTO_RSA_DECRYPT) || defined(HITLS_CRYPTO_SM2_CRYPT) || \
-    defined(HITLS_CRYPTO_PAILLIER) || defined(HITLS_CRYPTO_ELGAMAL)
+    defined(HITLS_CRYPTO_SM9) || defined(HITLS_CRYPTO_PAILLIER) || defined(HITLS_CRYPTO_ELGAMAL)
     #ifndef HITLS_CRYPTO_PKEY_CRYPT
         #define HITLS_CRYPTO_PKEY_CRYPT
     #endif
 #endif
 
 #if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_VERIFY) || \
-    defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2_SIGN) || defined(HITLS_CRYPTO_ED25519) || \
+    defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2_SIGN) || defined(HITLS_CRYPTO_SM9) || defined(HITLS_CRYPTO_ED25519) || \
     defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_MLDSA)
     #ifndef HITLS_CRYPTO_PKEY_SIGN
         #define HITLS_CRYPTO_PKEY_SIGN

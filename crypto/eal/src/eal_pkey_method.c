@@ -41,6 +41,9 @@
 #ifdef HITLS_CRYPTO_SM2
 #include "crypt_sm2.h"
 #endif
+#ifdef HITLS_CRYPTO_SM9
+#include "crypt_sm9_eal.h"
+#endif
 #ifdef HITLS_CRYPTO_PAILLIER
 #include "crypt_paillier.h"
 #endif
@@ -429,6 +432,59 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL, // blind
         NULL  // unBlind
     ), // CRYPT_PKEY_SM2
+#endif
+#ifdef HITLS_CRYPTO_SM9
+    EAL_PKEY_METHOD_DEFINE(
+        CRYPT_PKEY_SM9,
+        CRYPT_SM9_NewCtx,
+        CRYPT_SM9_DupCtx,
+        CRYPT_SM9_FreeCtx,
+        NULL,  // setPara
+        NULL,  // getPara
+        CRYPT_SM9_Gen,
+        CRYPT_SM9_Ctrl,
+        CRYPT_SM9_SetPubKeyEx,
+        CRYPT_SM9_SetPrvKeyEx,
+        CRYPT_SM9_GetPubKeyEx,
+        CRYPT_SM9_GetPrvKeyEx,
+#ifdef HITLS_CRYPTO_SM9_SIGN
+        CRYPT_SM9_Sign,      // sign
+        NULL,                // signData
+        CRYPT_SM9_Verify,    // verify
+        NULL,                // verifyData
+#else
+        NULL, // sign
+        NULL, // signData
+        NULL, // verify
+        NULL, // verifyData
+#endif
+        NULL,                // recover
+#ifdef HITLS_CRYPTO_SM9_EXCH
+        CRYPT_SM9_ComputeShareKey,   // computeShareKey
+#else
+        NULL, // computeShareKey
+#endif
+#ifdef HITLS_CRYPTO_SM9_CRYPT
+        CRYPT_SM9_Encrypt,   // encrypt
+        CRYPT_SM9_Decrypt,   // decrypt
+#else
+        NULL, // encrypt
+        NULL, // decrypt
+#endif
+        NULL,                // headd
+        NULL,                // hemul
+#ifdef HITLS_CRYPTO_SM9_CHECK
+        CRYPT_SM9_Check,     // check
+#else
+        NULL, // check
+#endif
+        CRYPT_SM9_Cmp,       // cmp
+        NULL,                // copyPara
+        NULL,                // pkeyEncaps
+        NULL,                // pkeyDecaps
+        NULL,                // blind
+        NULL                 // unBlind
+    ), // CRYPT_PKEY_SM9
 #endif
 #ifdef HITLS_CRYPTO_PAILLIER
     EAL_PKEY_METHOD_DEFINE(

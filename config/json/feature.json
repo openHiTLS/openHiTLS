@@ -164,6 +164,12 @@
                             "sm2_exch": null,
                             "deps": ["curve_sm2", "sm3"]
                         },
+                        "sm9": {
+                            "sm9_crypt": null,
+                            "sm9_sign": null,
+                            "sm9_exch": null,
+                            "deps": ["sm3"]
+                        },
                         "kem": {
                             "mlkem": {"deps": ["sha3"]},
                             "hybridkem": {"deps": ["mlkem"], "opts": ["ecdh", "x25519"]}
@@ -778,6 +784,7 @@
                     "crypto/ecdh/include",
                     "crypto/curve25519/include",
                     "crypto/sm2/include",
+                    "crypto/sm9/include",
                     "crypto/paillier/include",
                     "crypto/elgamal/include",
                     "crypto/mlkem/include",
@@ -1297,6 +1304,24 @@
                     "bsl/asn1/include",
                     "bsl/obj/include",
                     "crypto/codecsdata/include"
+                ]
+            },
+            "sm9": {
+                ".features": ["sm9_crypt", "sm9_sign", "sm9_exch"],
+                ".srcs": [
+                    "crypto/sm9/src/*.c",
+                    "crypto/ecc/src/sm9/src/*.c"
+                ],
+                ".deps": ["crypto::sm3", "crypto::util", "bsl::sal"],
+                ".include": [
+                    "crypto/eal/src",
+                    "crypto/ecc/src/sm9/inc",
+                    "crypto/sm9/include",
+                    "crypto/sm3/include",
+                    "crypto/util/include",
+                    "include/crypto",
+                    "include/bsl",
+                    "bsl/sal/include"
                 ]
             },
             "paillier": {

@@ -437,7 +437,24 @@ enum CRYPT_ERROR {
     CRYPT_SM2_INVALID_PRVKEY,                         /**< Invalid private key. */
     CRYPT_SM2_NO_RANDOM_INFO,                         /**< no r value in sm2 exch. */
 
-    CRYPT_KDFTLS12_NOT_SUPPORTED = 0x01210001,        /**< Unsupport the KDFTLS12 algorithm. */
+    CRYPT_SM9_ERR_KEY_ERR = 0x01210000,               /**< SM9 key error. */
+    CRYPT_SM9_ERR_NOT_SUPPORT,                        /**< SM9 operation not supported. */
+    CRYPT_SM9_ERR_SIGN_FAILED,                        /**< SM9 signature failed. */
+    CRYPT_SM9_VERIFY_FAIL,                            /**< SM9 verification failure. */
+    CRYPT_SM9_ERR_INVALID_SIGNATURE_LEN,              /**< SM9 invalid signature length. */
+    CRYPT_SM9_ERR_NO_USER_ID,                         /**< SM9 user ID not set. */
+    CRYPT_SM9_ERR_ENCRYPT_FAILED,                     /**< SM9 encryption failed. */
+    CRYPT_SM9_ERR_DECRYPT_FAILED,                     /**< SM9 decryption failed. */
+    CRYPT_SM9_ERR_KEY_NOT_EQUAL,                      /**< SM9 keys are not equal. */
+    CRYPT_SM9_ERR_BAD_INPUT,                          /**< SM9 bad input parameter. */
+    CRYPT_SM9_ERR_NO_USER_KEY,                        /**< SM9 user key not set. */
+    CRYPT_SM9_ERR_NO_MASTER_KEY,                      /**< SM9 master key not set. */
+    CRYPT_SM9_ERR_KEY_EXCHANGE_FAILED,                /**< SM9 key exchange failed. */
+    CRYPT_SM9_BUFF_LEN_NOT_ENOUGH,                    /**< SM9 buffer length not enough. */
+    CRYPT_SM9_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
+    CRYPT_SM9_INVALID_PRVKEY,                         /**< Invalid private key. */
+
+    CRYPT_KDFTLS12_NOT_SUPPORTED = 0x01220001,        /**< Unsupport the KDFTLS12 algorithm. */
     CRYPT_KDFTLS12_PARAM_ERROR,                       /**< Incorrect input parameter. */
     CRYPT_KDFTLS12_ERR_MAC_METH,                      /**< Mac method err. */
     CRYPT_KDFTLS12_ERR_MAC_ID_NOT_SET,                /**< Mac id not set. */
