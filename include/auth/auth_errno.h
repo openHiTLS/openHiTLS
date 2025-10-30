@@ -70,6 +70,27 @@ typedef enum {
     HITLS_AUTH_OTP_NO_COUNTER,                             /* Counter is missing */
     HITLS_AUTH_OTP_NO_CURTIME,                             /* Current time is missing */
     HITLS_AUTH_OTP_VALIDATE_MISMATCH,                      /* The otp to validate does not match target value. */
+    
+    /* PAKE related error codes */
+    HITLS_AUTH_PAKE_INVALID_ALG_TYPE = 0x05030001,         /* Invalid PAKE algorithm type */
+    HITLS_AUTH_PAKE_INVALID_ROLE,                          /* Invalid PAKE role */
+    HITLS_AUTH_PAKE_INVALID_CIPHER_SUITE,                  /* Invalid cipher suite */
+    HITLS_AUTH_PAKE_INVALID_PASSWORD,                      /* Invalid password */
+    HITLS_AUTH_PAKE_INVALID_IDENTIFIER,                    /* Invalid identifier */
+    HITLS_AUTH_PAKE_INVALID_SHARE,                         /* Invalid share */
+    HITLS_AUTH_PAKE_INVALID_CONFIRMATION,                  /* Invalid confirmation */
+    HITLS_AUTH_PAKE_INVALID_TRANSCRIPT,                    /* Invalid transcript */
+    HITLS_AUTH_PAKE_INVALID_KEY_SCHEDULE,                  /* Invalid key schedule */
+    HITLS_AUTH_PAKE_INVALID_CONTEXT,                       /* Invalid context */
+    HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL,                     /* Memory allocation failed */
+    HITLS_AUTH_PAKE_CRYPTO_OPERATION_FAIL,                 /* Cryptographic operation failed */
+    HITLS_AUTH_PAKE_PROTOCOL_ERROR,                        /* Protocol error */
+    HITLS_AUTH_PAKE_INVALID_PARAM,                         /* Invalid parameter */
+    HITLS_AUTH_PAKE_BUFFER_TOO_SMALL,                      /* Buffer too small */
+    HITLS_AUTH_PAKE_NOT_IMPLEMENTED,                       /* Feature not implemented */
+    HITLS_AUTH_NULL_INPUT,
+    HITLS_AUTH_MEM_ALLOC_FAIL,
+    HITLS_AUTH_INVALID_ARG,
 } HITLS_AUTH_ERRNO;
 
 #ifdef __cplusplus

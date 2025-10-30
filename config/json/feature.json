@@ -697,6 +697,10 @@
                     "otp": {
                         "hotp": null,
                         "totp": null
+                    },
+                    "pake":{
+                        "pake_core": null,
+                        "spake2plus": {"deps": ["pake_core"]}
                     }
                 }
             }
@@ -1669,6 +1673,25 @@
                 ".features" : ["hotp", "totp"],
                 ".srcs" : "auth/otp/src/*",
                 ".deps": ["platform::Secure_C", "bsl::sal"]
+            },
+            "pake_core": {
+                ".features": ["pake_core"],
+                ".srcs": "auth/pake/pake.c",
+                ".deps": ["platform::Secure_C", "bsl::sal","crypto::ecc"],
+                ".include": [
+                    "auth/pake/spake2plus/include",
+                    "include/auth/",
+                    "crypto/ecc/include"
+                ]
+            },
+            "spake2plus": {
+                ".features": ["spake2plus"],
+                ".srcs": "auth/pake/spake2plus/src/*.c",
+                ".deps": ["platform::Secure_C", "bsl::sal","crypto::ecc"],
+                ".include": ["auth/pake/spake2plus/include",
+                "include/auth/",
+                "crypto/ecc/include"
+            ]
             }
         }
     }

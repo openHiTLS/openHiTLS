@@ -351,6 +351,11 @@ typedef enum {
     CRYPT_KDF_MAX = BSL_CID_UNKNOWN
 } CRYPT_KDF_AlgId;
 
+typedef enum {
+    CRYPT_HKDF_SHA256 = BSL_CID_HKDF_SHA256,
+    CRYPT_HKDF_SHA512 = BSL_CID_HKDF_SHA512,
+} CRYPT_KDF_HKDF_AlgId;
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
