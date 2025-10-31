@@ -150,6 +150,18 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx)
     BSL_SAL_Free(storeCtx);
 }
 
+static int32_t X509_CertSignatureCmp(HITLS_X509_Asn1AlgId *certOri, BSL_ASN1_BitString *signOri,
+    HITLS_X509_Asn1AlgId *cert, BSL_ASN1_BitString *sign)
+{
+    if (certOri->algId != cert->algId) {
+        return 1;
+    }
+    if (signOri->len != sign->len) {
+        return 1;
+    }
+    return memcmp(signOri->buff, sign->buff, sign->len);
+}
+
 static int32_t X509_CrlCmp(HITLS_X509_Crl *crlOri, HITLS_X509_Crl *crl)
 {
     if (crlOri == crl) {
@@ -161,7 +173,12 @@ static int32_t X509_CrlCmp(HITLS_X509_Crl *crlOri, HITLS_X509_Crl *crl)
     if (crlOri->tbs.tbsRawDataLen != crl->tbs.tbsRawDataLen) {
         return 1;
     }
-    return memcmp(crlOri->tbs.tbsRawData, crl->tbs.tbsRawData, crl->tbs.tbsRawDataLen);
+    int32_t ret = memcmp(crlOri->tbs.tbsRawData, crl->tbs.tbsRawData, crl->tbs.tbsRawDataLen);
+    if (ret != 0) {
+        return 1;
+    }
+    return X509_CertSignatureCmp(&crlOri->tbs.signAlgId, &crlOri->signature,
+        &crl->tbs.signAlgId, &crl->signature);
 }
 
 static int32_t X509_CertCmp(HITLS_X509_Cert *certOri, HITLS_X509_Cert *cert)
@@ -175,7 +192,12 @@ static int32_t X509_CertCmp(HITLS_X509_Cert *certOri, HITLS_X509_Cert *cert)
     if (certOri->tbs.tbsRawDataLen != cert->tbs.tbsRawDataLen) {
         return 1;
     }
-    return memcmp(certOri->tbs.tbsRawData, cert->tbs.tbsRawData, cert->tbs.tbsRawDataLen);
+    int32_t ret = memcmp(certOri->tbs.tbsRawData, cert->tbs.tbsRawData, cert->tbs.tbsRawDataLen);
+    if (ret != 0) {
+        return 1;
+    }
+    return X509_CertSignatureCmp(&certOri->tbs.signAlgId, &certOri->signature,
+        &cert->tbs.signAlgId, &cert->signature);
 }
 
 HITLS_X509_StoreCtx *HITLS_X509_StoreCtxNew(void)
@@ -740,15 +762,8 @@ int32_t X509_GetIssueFromChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *c
     HITLS_X509_Cert **issue)
 {
     (void)storeCtx;
-    int32_t ret;
     for (HITLS_X509_Cert *tmp = BSL_LIST_GET_FIRST(certChain); tmp != NULL; tmp = BSL_LIST_GET_NEXT(certChain)) {
-        bool res = false;
-        ret = HITLS_X509_CheckIssued(tmp, cert, &res);
-#ifdef HITLS_PKI_X509_VFY_CB
-        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, storeCtx->curDepth, ret);
-#else
-        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, NULL, NULL, 0, ret);
-#endif
+        bool res = HITLS_X509_CheckIssued(tmp, cert);
         if (!res) {
             continue;
         }
@@ -763,12 +778,11 @@ int32_t X509_GetIssueFromChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *c
 static int32_t CheckAndAddIssuerCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *candidateCert,
                                      HITLS_X509_Cert *cert, HITLS_X509_Cert **issue, bool *issueInTrust)
 {
-    bool res = false;
-    int32_t ret = HITLS_X509_CheckIssued(candidateCert, cert, &res);
-    if (ret == HITLS_PKI_SUCCESS && res) {
+    bool res = HITLS_X509_CheckIssued(candidateCert, cert);
+    if (res) {
         *issue = candidateCert;
         *issueInTrust = true;
-        ret = X509_SetCA(storeCtx, candidateCert, false);
+        int32_t ret = X509_SetCA(storeCtx, candidateCert, false);
         if (ret == HITLS_PKI_SUCCESS) {
             return HITLS_PKI_SUCCESS;
         }
@@ -858,7 +872,8 @@ static int32_t FindIssuerByDer(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *c
 }
 #endif /* HITLS_PKI_X509_VFY_LOCATION */
 
-int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certChain, HITLS_X509_Cert *cert,
+/* The function can only return success and CERT NOT FOUND */
+static int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certChain, HITLS_X509_Cert *cert,
     HITLS_X509_Cert **issue, bool *issueInTrust)
 {
     // First try to find issuer in explicitly loaded store
@@ -887,59 +902,54 @@ int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certC
             return ret;
         }
     }
-#ifdef HITLS_PKI_X509_VFY_CB
-    return VerifyCertCbk(storeCtx, cert, storeCtx->curDepth, HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
-#else
     BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
     return HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND;
-#endif
 }
 
-int32_t X509_BuildChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certChain, HITLS_X509_Cert *cert,
+
+int32_t X509_BuildChain(bool isVfy, HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certChain, HITLS_X509_Cert *cert,
     HITLS_X509_List *chain, HITLS_X509_Cert **root)
 {
     HITLS_X509_Cert *cur = cert;
     int32_t ret;
+    int32_t maxFindNum = 100; // prevent dead loops caused by circular certificates
 #ifdef HITLS_PKI_X509_VFY_CB
     storeCtx->curDepth = 0;
     storeCtx->curCert = cur;
 #endif
-    while (cur != NULL) {
-        HITLS_X509_Cert *issue = NULL;
+    while (cur != NULL && maxFindNum > 0) {
+        maxFindNum--;
         bool isTrustCa = false;
+        HITLS_X509_Cert *issue = NULL;
         ret = X509_FindIssueCert(storeCtx, certChain, cur, &issue, &isTrustCa);
         if (ret != HITLS_PKI_SUCCESS) {
-            return ret;
-        }
-        if (issue == NULL) {
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
-            return HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND;
+            break;
         }
         // depth
 #ifdef HITLS_PKI_X509_VFY_CB
-        VFYCBK_FAIL_IF(BSL_LIST_COUNT(chain) + 1 > storeCtx->verifyParam.maxDepth, storeCtx, cur, storeCtx->curDepth,
-            HITLS_X509_ERR_CHAIN_DEPTH_UP_LIMIT);
+        VFYCBK_FAIL_IF(BSL_LIST_COUNT(chain) + 1 > storeCtx->verifyParam.maxDepth, storeCtx,
+            storeCtx->curCert, storeCtx->curDepth, HITLS_X509_ERR_CHAIN_DEPTH_UP_LIMIT);
 #else
         VFYCBK_FAIL_IF(BSL_LIST_COUNT(chain) + 1 > storeCtx->verifyParam.maxDepth, NULL, NULL, 0,
             HITLS_X509_ERR_CHAIN_DEPTH_UP_LIMIT);
 #endif
 
-        bool selfSigned = false;
-        ret = HITLS_X509_CheckIssued(issue, issue, &selfSigned);
-#ifdef HITLS_PKI_X509_VFY_CB
-        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, issue, storeCtx->curDepth, ret);
-#else
-        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, NULL, NULL, 0, ret);
-#endif
+        if (isVfy && ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_PARTIAL_CHAIN) != 0) && isTrustCa) {
+            if (root != NULL) {
+                *root = issue; // set root, possible not a self-signed certificate
+            }
+            return HITLS_PKI_SUCCESS;
+        }
+        bool selfSigned = HITLS_X509_CheckIssued(issue, issue);
         if (selfSigned) {
             if (root != NULL && isTrustCa) {
                 *root = issue;
             }
-            break;
+            return HITLS_PKI_SUCCESS;
         }
         ret = X509_AddCertToChain(chain, issue);
         if (ret != HITLS_PKI_SUCCESS) {
-            return ret;
+            break;
         }
         cur = issue;
 #ifdef HITLS_PKI_X509_VFY_CB
@@ -947,7 +957,8 @@ int32_t X509_BuildChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certChai
         storeCtx->curCert = cur;
 #endif
     }
-    return HITLS_PKI_SUCCESS;
+    // Adding VFY_CB is useless. the call point will verify that there must be a trusted root or ignore the error code
+    return ret;
 }
 
 static HITLS_X509_List *X509_NewCertChain(HITLS_X509_Cert *cert)
@@ -975,11 +986,12 @@ static int32_t HITLS_X509_CertChainBuildWithRoot(HITLS_X509_StoreCtx *storeCtx, 
         return BSL_MALLOC_FAIL;
     }
     HITLS_X509_Cert *root = NULL;
-    int32_t ret = X509_BuildChain(storeCtx, NULL, cert, tmpChain, &root);
+    int32_t ret = X509_BuildChain(false, storeCtx, NULL, cert, tmpChain, &root);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
         return ret;
     }
+    // The root certificate must be found and trusted
     if (root == NULL) {
         BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
         return HITLS_X509_ERR_ROOT_CERT_NOT_FOUND;
@@ -1010,17 +1022,12 @@ int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    bool selfSigned = false;
-    int32_t ret = HITLS_X509_CheckIssued(cert, cert, &selfSigned);
-    if (ret != HITLS_PKI_SUCCESS) {
-        BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        return ret;
-    }
+    bool selfSigned = HITLS_X509_CheckIssued(cert, cert);
     if (selfSigned) {
         *chain = tmpChain;
         return HITLS_PKI_SUCCESS;
     }
-    (void)X509_BuildChain(storeCtx, NULL, cert, tmpChain, NULL);
+    (void)X509_BuildChain(false, storeCtx, NULL, cert, tmpChain, NULL);
     *chain = tmpChain;
 
     return HITLS_PKI_SUCCESS;
@@ -1359,6 +1366,12 @@ int32_t X509_VerifyChainCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
     HITLS_X509_Cert *cur = issue;
     int32_t ret;
     int32_t depth = BSL_LIST_COUNT(chain) - 1;
+    if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_PARTIAL_CHAIN) != 0) {
+        bool selfSigned = HITLS_X509_CheckIssued(issue, issue);
+        if (!selfSigned && depth > 0) {
+            cur = BSL_LIST_GET_PREV(chain);
+        }
+    }
     while (cur != NULL) {
         if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_TIME) != 0) {
             ret = HITLS_X509_CheckCertTime(storeCtx, cur, depth);
@@ -1398,7 +1411,7 @@ static int32_t X509_GetVerifyCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509
         return BSL_MALLOC_FAIL;
     }
     HITLS_X509_Cert *root = NULL;
-    int32_t ret = X509_BuildChain(storeCtx, chain, cert, tmpChain, &root);
+    int32_t ret = X509_BuildChain(true, storeCtx, chain, cert, tmpChain, &root);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
         BSL_ERR_PUSH_ERROR(ret);
@@ -1409,6 +1422,7 @@ static int32_t X509_GetVerifyCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ROOT_CERT_NOT_FOUND);
         return HITLS_X509_ERR_ROOT_CERT_NOT_FOUND;
     }
+    // Add root to chain if it is not the end entity
     if (X509_CertCmp(cert, root) != 0) {
         ret = X509_AddCertToChain(tmpChain, root);
         if (ret != HITLS_PKI_SUCCESS) {

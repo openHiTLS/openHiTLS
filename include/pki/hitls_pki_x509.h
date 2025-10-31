@@ -119,7 +119,8 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
  * @brief Certificate chain build function.
  *
  * @param storeCtx [IN] StoreCtx.
- * @param isWithRoot [IN] whether the root cert is included.
+ * @param isWithRoot [IN] whether the root cert is included and from trusted store.
+ *  It is not affected by the partial certificate chain verification flag.
  * @param cert [IN] certificate.
  * @param chain [OUT] certificate chain.
  * @retval #HITLS_PKI_SUCCESS, success.

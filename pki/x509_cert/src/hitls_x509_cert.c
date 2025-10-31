@@ -579,8 +579,14 @@ static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, u
             return HITLS_X509_GetEncodeDn(cert->tbs.subjectName, val, valLen);
 #endif
 #ifdef HITLS_PKI_X509_VFY
-        case HITLS_X509_IS_SELF_SIGNED:
-            return HITLS_X509_CheckIssued(cert, cert, val);
+        case HITLS_X509_IS_SELF_SIGNED: {
+            if (val == NULL || valLen != sizeof(bool)) {
+                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+                return HITLS_X509_ERR_INVALID_PARAM;
+            }
+            *(bool *)val = HITLS_X509_CheckIssued(cert, cert);
+            return HITLS_PKI_SUCCESS;
+        }
 #endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -740,32 +746,25 @@ HITLS_X509_Cert *HITLS_X509_CertDup(HITLS_X509_Cert *src)
  *   3. Check if the algorithm of the issuer certificate matches that of the sub certificate
  *   4. Check if the certificate keyusage has a certificate sign
  */
-int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject, bool *res)
+bool HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject)
 {
     int32_t ret = HITLS_X509_CmpNameNode(issue->tbs.subjectName, subject->tbs.issuerName);
     if (ret != HITLS_PKI_SUCCESS) {
-        *res = false;
-        return HITLS_PKI_SUCCESS;
+        return false;
     }
     if (issue->tbs.version == HITLS_X509_VERSION_3 && subject->tbs.version == HITLS_X509_VERSION_3) {
         ret = HITLS_X509_CheckAki(&issue->tbs.ext, &subject->tbs.ext, issue->tbs.issuerName, &issue->tbs.serialNum);
-        if (ret != HITLS_PKI_SUCCESS && ret != HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
-            return ret;
-        }
-        if (ret == HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH) {
-            *res = false;
-            return HITLS_PKI_SUCCESS;
+        if (ret != HITLS_PKI_SUCCESS) {
+            return false;
         }
     }
 
     ret = HITLS_X509_CheckAlg(issue->tbs.ealPubKey, &subject->tbs.signAlgId);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        return false;
     }
 
-    *res = true;
-    return HITLS_PKI_SUCCESS;
+    return true;
 }
 
 bool HITLS_X509_CertIsCA(HITLS_X509_Cert *cert)

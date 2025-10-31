@@ -1136,7 +1136,7 @@ static int32_t CheckBslTime(BSL_ASN1_Buffer *asn)
     return BSL_SUCCESS;
 }
 
-static int32_t CheckBMPString(BSL_ASN1_Buffer *asn)
+static int32_t CheckBMPString(const BSL_ASN1_Buffer *asn)
 {
     for (uint32_t i = 0; i < asn->len; i++) {
         if (asn->buff[i] > 127) { // max ascii 127.

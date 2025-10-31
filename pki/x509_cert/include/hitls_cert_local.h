@@ -70,7 +70,7 @@ typedef struct _HITLS_X509_Cert {
 } HITLS_X509_Cert;
 
 #ifdef HITLS_PKI_X509_VFY
-int32_t HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject, bool *res);
+bool HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject);
 bool HITLS_X509_CertIsCA(HITLS_X509_Cert *cert);
 #endif
 

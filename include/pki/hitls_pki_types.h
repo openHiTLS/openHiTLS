@@ -272,7 +272,9 @@ typedef enum {
 
 typedef enum {
     HITLS_X509_VFY_FLAG_CRL_ALL = 1,
-    HITLS_X509_VFY_FLAG_CRL_DEV = 2
+    HITLS_X509_VFY_FLAG_CRL_DEV = 2,
+    // not support certificate chains with a single trusted and non-self-signed certificate.
+    HITLS_X509_VFY_FLAG_PARTIAL_CHAIN = 4,
 } HITLS_X509_VFY_FLAGS;
 
 typedef enum {

@@ -695,6 +695,15 @@ static int32_t X509_STORECTX_VerifyCb2(int32_t err, HITLS_X509_StoreCtx *ctx)
     return HITLS_X509_CBK_ERR;
 }
 
+static int32_t X509_STORECTX_VerifyCb3(int32_t err, HITLS_X509_StoreCtx *ctx)
+{
+    (void)ctx;
+    if (err == HITLS_X509_ERR_CHAIN_DEPTH_UP_LIMIT) {
+        return 0;
+    }
+    return err;
+}
+
 static int32_t X509StoreCtrlCbk(HITLS_X509_StoreCtx *store, int cbkflag)
 {
     if (cbkflag == 0) {
@@ -3426,15 +3435,102 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @brief Test incomplete certificate chain with intermediate trusted CA
+ */
+/* BEGIN_CASE */
+void SDV_X509_PARTIAL_CERT_VFY_FUNC_TC001(char *caCertPath, char *interCertPath, char *entityCertPath)
+{
+    (void) caCertPath;
+    HITLS_X509_Cert *entity = NULL;
+    HITLS_X509_List *chain = NULL;
+    HITLS_X509_Cert *ca = NULL;
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(store != NULL);
+
+    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, entityCertPath, &entity);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 1); // only device cert in chain
+
+    ret = HITLS_AddCertToStoreTest(interCertPath, store, &ca);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+
+    int64_t setFlag = HITLS_X509_VFY_FLAG_PARTIAL_CHAIN;
+    ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &setFlag, sizeof(setFlag));
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    
+    ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(ca);
+    HITLS_X509_CertFree(entity);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/**
+ * @brief Test partial certificate chain with trusted root CA
+*/
+/* BEGIN_CASE */
+void SDV_X509_PARTIAL_CERT_VFY_FUNC_TC002(char *caCertPath, char *interCertPath, char *entityCertPath)
+{
+    HITLS_X509_Cert *entity = NULL;
+    HITLS_X509_List *chain = NULL;
+    HITLS_X509_Cert *interCa = NULL;
+    HITLS_X509_Cert *ca = NULL;
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(store != NULL);
+
+    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, entityCertPath, &entity);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 1); // only device cert in chain
+
+    ret = HITLS_AddCertToStoreTest(interCertPath, store, &interCa);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    ret = HITLS_AddCertToStoreTest(caCertPath, store, &ca);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    int64_t setFlag = HITLS_X509_VFY_FLAG_PARTIAL_CHAIN;
+    ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &setFlag, sizeof(setFlag));
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    // Even if a complete chain can be built, if PARTIAL_CHAIN open, it will still be a partial chain
+    ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(ca);
+    HITLS_X509_CertFree(entity);
+    HITLS_X509_CertFree(interCa);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_X509_VFY_DEPTH_CHAINLEN_FAIL_TC002(void)
 {
     TestMemInit();
-
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter1 = NULL;
+    HITLS_X509_Cert *inter2 = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    HITLS_X509_List *chain = NULL;
     HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
     ASSERT_NE(store, NULL);
 
-    HITLS_X509_Cert *root = NULL;
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM,
         "../testdata/cert/chain/bcExt/depth_suite/depth_root.pem", &root), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root,
@@ -3444,17 +3540,13 @@ void SDV_X509_VFY_DEPTH_CHAINLEN_FAIL_TC002(void)
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_DEPTH,
         &maxDepth, sizeof(maxDepth)), HITLS_PKI_SUCCESS);
 
-    HITLS_X509_Cert *inter1 = NULL;
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM,
         "../testdata/cert/chain/bcExt/depth_suite/depth_inter1.pem", &inter1), HITLS_PKI_SUCCESS);
-    HITLS_X509_Cert *inter2 = NULL;
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM,
         "../testdata/cert/chain/bcExt/depth_suite/depth_inter2.pem", &inter2), HITLS_PKI_SUCCESS);
-    HITLS_X509_Cert *leaf = NULL;
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM,
         "../testdata/cert/chain/bcExt/depth_suite/depth_leaf_lvl2.pem", &leaf), HITLS_PKI_SUCCESS);
 
-    HITLS_X509_List *chain = NULL;
     chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_NE(chain, NULL);
     ASSERT_EQ(X509_AddCertToChainTest(chain, leaf), HITLS_PKI_SUCCESS);
@@ -3484,21 +3576,21 @@ EXIT:
 void SDV_X509_VFY_SIGALG_RSA_ROOT_PASS_TC001(void)
 {
     TestMemInit();
-
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    HITLS_X509_List *chain = NULL;
     HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
     ASSERT_NE(store, NULL);
 
-    HITLS_X509_Cert *root = NULL;
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM,
         "../testdata/cert/chain/sigParam/rsa_root.pem", &root), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root,
         sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
 
-    HITLS_X509_Cert *leaf = NULL;
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM,
         "../testdata/cert/chain/sigParam/rsa_leaf.pem", &leaf), HITLS_PKI_SUCCESS);
 
-    HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     ASSERT_NE(chain, NULL);
     ASSERT_EQ(X509_AddCertToChainTest(chain, leaf), HITLS_PKI_SUCCESS);
     ASSERT_EQ(X509_AddCertToChainTest(chain, root), HITLS_PKI_SUCCESS);
@@ -3552,7 +3644,7 @@ void SDV_X509_VFY_SIGALG_TRUST_ANCHOR_ALG_MISMATCH_FAIL_TC002(void)
         HITLS_PKI_SUCCESS);
 
     int32_t ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+    ASSERT_EQ(ret, HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);
@@ -3817,3 +3909,166 @@ EXIT:
     HITLS_X509_CertFree(loopLeaf);
 }
 /* END_CASE */
+
+/**
+ * @brief Test partial certificate verification, Although there is a root certificate, it is not in the trusted store
+*/
+/* BEGIN_CASE */
+void SDV_X509_PARTIAL_CERT_VFY_FUNC_TC003(char *caCertPath, char *interCertPath, char *entityCertPath)
+{
+    HITLS_X509_Cert *entity = NULL;
+    HITLS_X509_List *chain = NULL;
+    HITLS_X509_Cert *ca = NULL;
+    HITLS_X509_Cert *interCa = NULL;
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(store != NULL);
+
+    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, entityCertPath, &entity);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 1); // only device cert in chain
+
+    ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, caCertPath, &ca);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    int ref = 0;
+    ret = HITLS_X509_CertCtrl(ca, HITLS_X509_REF_UP, &ref, sizeof(int));
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    ret = BSL_LIST_AddElement(chain, ca, BSL_LIST_POS_END);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 2); // device cert and ca cert in chain
+
+    ret = HITLS_AddCertToStoreTest(interCertPath, store, &interCa);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_X509_ERR_ROOT_CERT_NOT_FOUND);
+
+    int64_t setFlag = HITLS_X509_VFY_FLAG_PARTIAL_CHAIN;
+    ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &setFlag, sizeof(setFlag));
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(ca);
+    HITLS_X509_CertFree(entity);
+    HITLS_X509_CertFree(interCa);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/**
+ * @brief Test partial certificate verification, Trusted intermediate certificate comes from trusted directory
+*/
+/* BEGIN_CASE */
+void SDV_X509_PARTIAL_CERT_VFY_FUNC_TC004(void)
+{
+    TestMemInit();
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_List *chain = NULL;
+    HITLS_X509_StoreCtx *storeCtx = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(storeCtx, NULL);
+
+    // Load the certificate to be verified
+    const char *certToVerify = "../testdata/tls/certificate/pem/rsa_sha256_no_ca/client.pem";
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, certToVerify, &cert), HITLS_PKI_SUCCESS);
+
+    // Build certificate chain with on-demand CA loading from multiple paths
+    ASSERT_EQ(HITLS_X509_CertChainBuild(storeCtx, false, cert, &chain), HITLS_PKI_SUCCESS);
+    ASSERT_NE(chain, NULL);
+
+    uint32_t chainLength = BSL_LIST_COUNT(chain);
+    ASSERT_TRUE(chainLength == 1);
+
+    // Add additional CA paths
+    const char *caPath = "../testdata/tls/certificate/pem/rsa_sha256_no_ca";
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_ADD_CA_PATH,
+        (void *)caPath, strlen(caPath)), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertVerify(storeCtx, chain), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+
+    int64_t setFlag = HITLS_X509_VFY_FLAG_PARTIAL_CHAIN;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &setFlag, sizeof(setFlag)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(storeCtx, chain), HITLS_PKI_SUCCESS);
+
+    BSL_LIST_FREE(storeCtx->caPaths, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
+
+    // The test has already cached the trust store
+    setFlag = HITLS_X509_VFY_FLAG_PARTIAL_CHAIN;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &setFlag, sizeof(setFlag)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(storeCtx, chain), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+
+    setFlag = HITLS_X509_VFY_FLAG_PARTIAL_CHAIN;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &setFlag, sizeof(setFlag)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(storeCtx, chain), HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_StoreCtxFree(storeCtx);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    HITLS_X509_CertFree(cert);
+}
+/* END_CASE */
+
+/**
+ * @brief Circular certificate chain, triggering infinite loop, but can exit normally
+*/
+/* BEGIN_CASE */
+void SDV_X509_PARTIAL_CERT_VFY_FUNC_TC005(void)
+{
+    TestMemInit();
+    HITLS_X509_Cert *loopLeaf = NULL;
+    HITLS_X509_Cert *loopIssuer = NULL;
+    HITLS_X509_Cert *loopRoot = NULL;
+    HITLS_X509_List *chain = NULL;
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+
+    int32_t maxDepth = 4;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_DEPTH,
+        &maxDepth, sizeof(maxDepth)), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM,
+        "../testdata/cert/chain/certVer/certVer_cycle_a.pem", &loopLeaf), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM,
+        "../testdata/cert/chain/certVer/certVer_cycle_b.pem", &loopIssuer), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM,
+        "../testdata/cert/chain/certVer/certVer_cycle_a.pem", &loopRoot), HITLS_PKI_SUCCESS);
+
+    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, loopLeaf), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, loopIssuer), HITLS_PKI_SUCCESS);
+    /* Reuse the same certificate as both leaf and root to form a->b->a loop */
+    ASSERT_EQ(X509_AddCertToChainTest(chain, loopRoot), HITLS_PKI_SUCCESS);
+
+    int64_t now = (int64_t)time(NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)),
+        HITLS_PKI_SUCCESS);
+
+    int32_t ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_X509_ERR_CHAIN_DEPTH_UP_LIMIT);
+    
+    // Disable the maximum depth, triggering an infinite loop.
+    int32_t (*testCallback)(int32_t, HITLS_X509_StoreCtx*) = X509_STORECTX_VerifyCb3;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB,
+        testCallback, sizeof(testCallback)), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_ROOT_CERT_NOT_FOUND);
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    if (chain != NULL) {
+        BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    }
+    HITLS_X509_CertFree(loopRoot);
+    HITLS_X509_CertFree(loopIssuer);
+    HITLS_X509_CertFree(loopLeaf);
+}
+/* END_CASE */
+
+

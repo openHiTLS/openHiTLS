@@ -524,21 +524,13 @@ static int32_t AddCertChain(Pkcs12OptCtx *opt)
 
 static int32_t ParseAndAddCertChain(Pkcs12OptCtx *opt)
 {
-    // If the user certificate is a root certificate, no action is required.
-    bool selfSigned = false;
-    int32_t ret = HITLS_X509_CheckIssued(opt->userCert, opt->userCert, &selfSigned);
-    if (ret != HITLS_PKI_SUCCESS) {
-        AppPrintError("pkcs12: Failed to check cert issued, errCode = 0x%x.\n", ret);
-        return HITLS_APP_X509_FAIL;
-    }
-
     opt->store = HITLS_X509_StoreCtxNew();
     if (opt->store == NULL) {
         AppPrintError("pkcs12: Failed to create the store context.\n");
         return HITLS_APP_X509_FAIL;
     }
 
-    ret = HITLS_X509_CertParseBundleFile(BSL_FORMAT_PEM, opt->outPutOpt.caFile, &opt->caCertList);
+    int32_t ret = HITLS_X509_CertParseBundleFile(BSL_FORMAT_PEM, opt->outPutOpt.caFile, &opt->caCertList);
     if (ret != HITLS_PKI_SUCCESS) {
         AppPrintError("pkcs12: Failed to parse certificate %s, errCode = 0x%x.\n", opt->outPutOpt.caFile, ret);
         return HITLS_APP_X509_FAIL;

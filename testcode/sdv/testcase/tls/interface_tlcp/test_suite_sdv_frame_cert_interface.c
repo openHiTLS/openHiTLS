@@ -39,6 +39,7 @@
 #include "hitls_crypt_reg.h"
 #include "hitls_crypt_init.h"
 #include "uio_base.h"
+#include "hitls_pki_types.h"
 /* END_HEADER */
 
 #define BUF_MAX_SIZE 4096
@@ -1090,6 +1091,52 @@ void UT_TLS_CRL_VERIFICATION_HANDSHAKE_TC001(void)
     ASSERT_TRUE(client != NULL);
 
     ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+
+/* @
+* @test    UT_TLS_PARTIAL_CHAIN_VERIFICATION_HANDSHAKE_TC001(void)
+* @title   Partial chain verification in TLS handshake functional test
+* @precon  This test case covers partial chain verification functionality during TLS handshake process
+@ */
+/* BEGIN_CASE */
+void UT_TLS_PARTIAL_CHAIN_VERIFICATION_HANDSHAKE_TC001(int partialChain, int expectRet)
+{
+    HitlsInit();
+    FRAME_Init();
+
+    // Test data paths
+    const char *serverCertPath = "../testdata/tls/certificate/der/ed25519/ed25519.end.der";
+    const char *serverKeyPath = "../testdata/tls/certificate/der/ed25519/ed25519.end.key.der";
+    const char *intCaPath = "../testdata/tls/certificate/der/ed25519/ed25519.intca.der";
+
+    // Test 1: Handshake without CRL - should succeed
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    if (partialChain == 1) {
+        HITLS_CFG_SetVerifyFlags(config, HITLS_X509_VFY_FLAG_PARTIAL_CHAIN);
+    }
+
+    // Configure server with certificate and key
+    ASSERT_EQ(HITLS_CFG_LoadCertFile(config, serverCertPath, TLS_PARSE_FORMAT_ASN1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_LoadKeyFile(config, serverKeyPath, TLS_PARSE_FORMAT_ASN1), HITLS_SUCCESS);
+
+    HITLS_CERT_X509 *caCert = HITLS_CFG_ParseCert(config, (const uint8_t *)intCaPath, strlen(intCaPath),
+        TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(caCert != NULL);
+    ASSERT_EQ(HITLS_CFG_AddCertToStore(config, caCert, TLS_CERT_STORE_TYPE_DEFAULT, false), HITLS_SUCCESS);
+
+    FRAME_LinkObj *server = FRAME_CreateLinkBase(config, BSL_UIO_TCP, false);
+    ASSERT_TRUE(server != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateLinkBase(config, BSL_UIO_TCP, false);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), expectRet);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
