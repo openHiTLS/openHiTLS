@@ -275,7 +275,7 @@ void SESSMGR_InsertSession(TLS_SessionMgr *mgr, HITLS_Session *sess, bool isStor
 
     BSL_SAL_ThreadWriteLock(mgr->lock);
 
-    if (BSL_HASH_Size(mgr->hash) < mgr->sessCacheSize) {
+    if (mgr->sessCacheSize == 0 || BSL_HASH_Size(mgr->hash) < mgr->sessCacheSize) {
         HITLS_Session *tmpSess = NULL;
         if (BSL_HASH_At(mgr->hash, (uintptr_t)&key, (uintptr_t *)&tmpSess) == BSL_SUCCESS) {
             BSL_HASH_Erase(mgr->hash, (uintptr_t)&key);
