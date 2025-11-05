@@ -232,10 +232,6 @@ static void ECP_Sm2FnInv(Sm2Fp r, const Sm2Fp q) {
 }
 
 static void ECP_Sm2FpNaf(Sm2Naf r, const uint8_t w, const Sm2Fp n) {
-    if (r == NULL || w == NULL || n == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
-    }
     if (w > 7)
         return;     // w > 7 is not supported unless the sm2_naf type definition is expanded from int8_t[257] to int[257]
 
@@ -281,18 +277,10 @@ static void ECP_Sm2FpNafP(int8_t K[52], const Sm2Fp k) {
 //**********************************************************************************************************************
 
 static void ECP_Sm2PointCopy(Sm2Point *p, const Sm2Point *q) {
-    if (p == NULL || q == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
-    }
     memcpy_s(p, sizeof(Sm2Point), q, sizeof(Sm2Point));
 }
 
 static void ECP_Sm2PointSet(Sm2Point *p, const Sm2Fp x, const Sm2Fp y, const Sm2Fp z) {
-    if (p == NULL || x == NULL || y == NULL || z == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
-    }
     ECP_Sm2FpSet(p->x, x);
     ECP_Sm2FpSet(p->y, y);
     ECP_Sm2FpSet(p->z, z);
@@ -332,6 +320,40 @@ static void ECP_Sm2PointDouCore(Sm2Point *r, const Sm2Point *a) {
         ECP_Sm2PointCopy(r, a);
         return;
     }
+    // A = 3(x1 - z1²) * (x1 + z1²)
+    // B = 2Y1, z3 = B * z1, C = B²
+    // D = C * x1, x3 = A² - 2D, (D - x3) * A - C²/2
+    const uint32_t *x1 = a->x, *y1 = a->y, *z1 = a->z;
+    Sm2Fp t1, t2, t3, x3, y3, z3;
+    ECP_Sm2FpSqr(t1, z1);                     // t1 = z1²
+    ECP_Sm2FpSub(t2, x1, t1);                 // t2 = x1 - z1²
+    ECP_Sm2FpAdd(t1, x1, t1);                 // t1 = x1 + z1²
+    ECP_Sm2FpMul(t2, t2, t1);                 // t2 = x1² - z1⁴
+    ECP_Sm2FpDou(t3, t2);                     // t3 = 2(x1² - z1⁴)
+    ECP_Sm2FpAdd(t2, t2, t3);                 // t2 = A = 3t2 = 3(x1² - z1⁴)
+    ECP_Sm2FpDou(y3, y1);                     // y3 = B = 2y1
+    ECP_Sm2FpMul(z3, y3, z1);                 // z3 = B * z1
+    ECP_Sm2FpSqr(y3, y3);                     // y3 = C = B²
+    ECP_Sm2FpMul(t3, y3, x1);                 // t3 = D = C * x1
+    ECP_Sm2FpSqr(y3, y3);                     // y3 = C²
+    ECP_Sm2FpHaf(y3, y3);                     // y3 = C²/2
+    ECP_Sm2FpSqr(x3, t2);                     // x3 = A²
+    ECP_Sm2FpDou(t1, t3);                     // t1 = 2D
+    ECP_Sm2FpSub(x3, x3, t1);                 // x3 = A² - 2D
+    ECP_Sm2FpSub(t1, t3, x3);                 // t1 = D - x3
+    ECP_Sm2FpMul(t1, t1, t2);                 // t1 = (D - x3) * A
+    ECP_Sm2FpSub(y3, t1, y3);                 // y3 = (D - x3) * A - C²/2
+    ECP_Sm2PointSet(r, x3, y3, z3);
+}
+
+/**
+ * @brief Adds two jacobian points.
+ * @param [out] r Pointer to the resulting SM2jacobianPoint.
+ * @param [in] p Pointer to the first SM2jacobianPoint.
+ * @param [in] q Pointer to the second SM2jacobianPoint.
+ * @ref https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo-2
+ */
+static void ECP_Sm2PointAddCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
     // Check if one of the points is the point at infinity
     if (ECP_Sm2PointAtInfinity(p)) {
         ECP_Sm2PointCopy(r, q);
@@ -346,14 +368,14 @@ static void ECP_Sm2PointDouCore(Sm2Point *r, const Sm2Point *a) {
     const uint32_t *x2 = q->x, *y2 = q->y, *z2 = q->z;
     Sm2Fp x3, y3, z3, u1, u2, s1, s2, h, n, h2, h3, u1h2, t1, t2;
 
-    ECP_Sm2FpSqr(t1, z1);                     // t1 = z1^2
-    ECP_Sm2FpSqr(t2, z2);                     // t2 = z2^2
-    ECP_Sm2FpMul(u1, x1, t2);                 // u1 = x1 * z2^2
-    ECP_Sm2FpMul(u2, x2, t1);                 // u2 = x2 * z1^2
-    ECP_Sm2FpMul(t1, t1, z1);                 // t1 = z1^3
-    ECP_Sm2FpMul(t2, t2, z2);                 // t2 = z2^3
-    ECP_Sm2FpMul(s1, y1, t2);                 // s1 = y1 * z2^3
-    ECP_Sm2FpMul(s2, y2, t1);                 // s2 = y2 * z1^3
+    ECP_Sm2FpSqr(t1, z1);                     // t1 = z1²
+    ECP_Sm2FpSqr(t2, z2);                     // t2 = z2²
+    ECP_Sm2FpMul(u1, x1, t2);                 // u1 = x1 * z2²
+    ECP_Sm2FpMul(u2, x2, t1);                 // u2 = x2 * z1²
+    ECP_Sm2FpMul(t1, t1, z1);                 // t1 = z1³
+    ECP_Sm2FpMul(t2, t2, z2);                 // t2 = z2³
+    ECP_Sm2FpMul(s1, y1, t2);                 // s1 = y1 * z2³
+    ECP_Sm2FpMul(s2, y2, t1);                 // s2 = y2 * z1³
     if (ECP_Sm2FpEqu(u1, u2)) {
         if (ECP_Sm2FpEqu(s1, s2))
             ECP_Sm2PointDouCore(r, p);
@@ -363,13 +385,13 @@ static void ECP_Sm2PointDouCore(Sm2Point *r, const Sm2Point *a) {
     }
     ECP_Sm2FpSub(h, u2, u1);                  // h = u2 - u1
     ECP_Sm2FpSub(n, s2, s1);                  // n = s2 - s1
-    ECP_Sm2FpSqr(h2, h);                      // h2 = h^2
-    ECP_Sm2FpMul(h3, h2, h);                  // h3 = h^3
-    ECP_Sm2FpMul(u1h2, u1, h2);               // u1h2 = u1 * h^2
+    ECP_Sm2FpSqr(h2, h);                      // h2 = h²
+    ECP_Sm2FpMul(h3, h2, h);                  // h3 = h³
+    ECP_Sm2FpMul(u1h2, u1, h2);               // u1h2 = u1 * h²
     ECP_Sm2FpDou(t1, u1h2);                   // t1 = 2u1h2
-    ECP_Sm2FpSqr(x3, n);                      // x3 = n^2
-    ECP_Sm2FpSub(x3, x3, h3);                 // x3 = n^2 - h3
-    ECP_Sm2FpSub(x3, x3, t1);                 // x3 = n^2 - h3 - 2u1h2
+    ECP_Sm2FpSqr(x3, n);                      // x3 = n²
+    ECP_Sm2FpSub(x3, x3, h3);                 // x3 = n² - h3
+    ECP_Sm2FpSub(x3, x3, t1);                 // x3 = n² - h3 - 2u1h2
     ECP_Sm2FpMul(t1, s1, h3);                 // t1 = s1 * h3
     ECP_Sm2FpSub(y3, u1h2, x3);               // y3 = u1h2 - x3
     ECP_Sm2FpMul(y3, y3, n);                  // y3 = n * (u1h2 - x3)
@@ -414,7 +436,7 @@ static void ECP_Sm2PointAddWithAffineCore(Sm2Point *r, const Sm2Point *p, const 
     const uint32_t *x1 = p->x, *y1 = p->y, *z1 = p->z, *x2 = q->x, *y2 = q->y;
     Sm2Fp x3, y3, z3, t1, t2, t3, t4;
 
-    ECP_Sm2FpSqr(t1, z1);                     // t1 = A = z1^2
+    ECP_Sm2FpSqr(t1, z1);                     // t1 = A = z1²
     ECP_Sm2FpMul(t2, t1, z1);                 // t2 = B = z1 * A
     ECP_Sm2FpMul(t1, t1, x2);                 // t1 = C = x2 * A
     ECP_Sm2FpMul(t2, t2, y2);                 // t2 = D = y2 * B
@@ -431,13 +453,13 @@ static void ECP_Sm2PointAddWithAffineCore(Sm2Point *r, const Sm2Point *p, const 
         return;
     }
     ECP_Sm2FpMul(z3, z1, t1);                 // z3 = z1 * E
-    ECP_Sm2FpSqr(t3, t1);                     // t3 = G = E^2
-    ECP_Sm2FpMul(t4, t3, t1);                 // t4 = H = E^3
+    ECP_Sm2FpSqr(t3, t1);                     // t3 = G = E²
+    ECP_Sm2FpMul(t4, t3, t1);                 // t4 = H = E³
     ECP_Sm2FpMul(t3, t3, x1);                 // t3 = I = x1 * G
     ECP_Sm2FpDou(t1, t3);                     // t1 = 2I
-    ECP_Sm2FpSqr(x3, t2);                     // x3 = F^2
-    ECP_Sm2FpSub(x3, x3, t1);                 // x3 = F^2 - 2I
-    ECP_Sm2FpSub(x3, x3, t4);                 // x3 = F^2 - 2I - H
+    ECP_Sm2FpSqr(x3, t2);                     // x3 = F²
+    ECP_Sm2FpSub(x3, x3, t1);                 // x3 = F² - 2I
+    ECP_Sm2FpSub(x3, x3, t4);                 // x3 = F² - 2I - H
     ECP_Sm2FpSub(t3, t3, x3);                 // t3 = I - x3
     ECP_Sm2FpMul(t3, t3, t2);                 // t3 = (I - x3) * F
     ECP_Sm2FpMul(t4, t4, y1);                 // t4 = y1 * H
@@ -478,26 +500,26 @@ static void ECP_Sm2PointMultDoubleCore(Sm2Point *r, uint32_t m, const Sm2Point *
     ECP_Sm2FpSet(z, p->z);
     ECP_Sm2FpDou(y, y);                   // y = 2y
     ECP_Sm2FpSqr(w, z);
-    ECP_Sm2FpSqr(w, w);                   // w = z^4
+    ECP_Sm2FpSqr(w, w);                   // w = z⁴
     while(m--) {
         ECP_Sm2FpSqr(a, x);
         ECP_Sm2FpSub(a, a, w);
         ECP_Sm2FpDou(t, a);
-        ECP_Sm2FpAdd(a, a, t);            // a = 3(x^2 - w)
+        ECP_Sm2FpAdd(a, a, t);            // a = 3(x² - w)
         ECP_Sm2FpSqr(b, y);
-        ECP_Sm2FpMul(b, x, b);            // b = x * y^2
+        ECP_Sm2FpMul(b, x, b);            // b = x * y²
         ECP_Sm2FpSqr(x, a);
         ECP_Sm2FpSub(x, x, b);
-        ECP_Sm2FpSub(x, x, b);            // x = a^2 - 2b
+        ECP_Sm2FpSub(x, x, b);            // x = a² - 2b
         ECP_Sm2FpMul(z, z, y);            // z = z * y
         ECP_Sm2FpSqr(t, y);
-        ECP_Sm2FpSqr(t, t);               // t = y^4
+        ECP_Sm2FpSqr(t, t);               // t = y⁴
         if (m)
-            ECP_Sm2FpMul(w, w, t);        // w = w * y^4
+            ECP_Sm2FpMul(w, w, t);        // w = w * y⁴
         ECP_Sm2FpSub(y, b, x);
         ECP_Sm2FpMul(y, y, a);
         ECP_Sm2FpDou(y, y);
-        ECP_Sm2FpSub(y, y, t);            // y = 2(b-x) - y^4
+        ECP_Sm2FpSub(y, y, t);            // y = 2(b-x) - y⁴
     }
     ECP_Sm2FpHaf(y, y);
     ECP_Sm2PointSet(r, x, y, z);
