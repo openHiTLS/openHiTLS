@@ -46,14 +46,6 @@ typedef struct SM2Point{
 } Sm2Point;
 
 /**
- * @brief Sets the value of one number to another.
- * @param [out] r The result number.
- * @param [in] a The number to copy from.
- */
-void ECP_Sm2FpSet(Sm2Fp r, const Sm2Fp a);
-
-
-/**
  * @brief Compares two numbers.
  * @param [in] a The first number.
  * @param [in] b The second number.
@@ -115,13 +107,6 @@ void ECP_Sm2FpMul(Sm2Fp r, const Sm2Fp a, const Sm2Fp b);
 void ECP_Sm2FpSqr(Sm2Fp r, const Sm2Fp a);
 
 /**
- * @brief Computes multiplicative inverse modulo sm2_p, i.e., r ≡ a^-1 mod sm2_p.
- * @param [out] r The result number.
- * @param [in] q The number to invert.
- */
-void ECP_Sm2FpInv(Sm2Fp r, const Sm2Fp q);
-
-/**
  * @brief Computes addition modulo sm2_n, i.e., r ≡ a + b mod sm2_n.
  * @param [out] r The result number.
  * @param [in] a The first number.
@@ -137,7 +122,7 @@ void ECP_Sm2FnAdd(Sm2Fp r, const Sm2Fp a, const Sm2Fp b);
  */
 void ECP_Sm2FnSub(Sm2Fp r, const Sm2Fp a, const Sm2Fp b);
 
-    /**
+/**
  * @brief Computes halving modulo sm2_n, i.e., r ≡ a/2 mod sm2_n.
  * @param [out] r The result number.
  * @param [in] a The number to halve.
@@ -152,80 +137,6 @@ void ECP_Sm2FnHaf(Sm2Fp r, const Sm2Fp a);
  */
 void ECP_Sm2FnMul(Sm2Fp r, const Sm2Fp a, const Sm2Fp b);
 
-/**
- * @brief Computes multiplicative inverse modulo sm2_n, i.e., r ≡ a^-1 mod sm2_n.
- * @param [out] r The result number.
- * @param [in] q The number to invert.
- */
-void ECP_Sm2FnInv(Sm2Fp r, const Sm2Fp q);
-
-/**
- * @brief Adds two jacobian points.
- * @param [out] r Pointer to the resulting SM2jacobianPoint.
- * @param [in] p Pointer to the first SM2jacobianPoint.
- * @param [in] q Pointer to the second SM2jacobianPoint.
- */
-void ECP_Sm2PointAddCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q);
-
-/**
- * @brief Subtracts one jacobian point from another.
- * @param [out] r Pointer to the resulting SM2jacobianPoint.
- * @param [in] p Pointer to the minuend SM2jacobianPoint.
- * @param [in] q Pointer to the subtrahend SM2jacobianPoint.
- */
-void ECP_Sm2PointSubCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q);
-
-/**
- * @brief Converts a jacobian point to affine coordinates.
- * @param [in] a Pointer to the jacobian point to convert.
- * @param [out] r Pointer to the resulting affine point.
- */
-void ECP_Sm2PointToAffineCore(const Sm2Point *a, Sm2Point *r);
-
-/**
- * @brief Point addition, affine-jacobian coordinates
- * @param [out] r The result of the addition.
- * @param [in] p The jacobian point.
- * @param [in] q The affine point.
- */
-void ECP_Sm2PointAddWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q);
-
-/**
- * @brief Point subtraction, affine-jacobian coordinates
- * @param [out] r The result of the subtraction.
- * @param [in] p The jacobian point.
- * @param [in] q The affine point.
- */
-void ECP_Sm2PointSubWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q);
-
-/**
- * @brief Doubles a jacobian point.
- * @param [out] r Pointer to the resulting SM2jacobianPoint.
- * @param [in] a Pointer to the SM2jacobianPoint to be doubled.
- */
-void ECP_Sm2PointDouCore(Sm2Point *r, const Sm2Point *a);
-
-/**
- * @brief Performs scalar multiplication on a jacobian point.
- * @param [out] r Pointer to the resulting SM2jacobianPoint.
- * @param [in] m Scalar for multiplication.
- * @param [in] p Pointer to the SM2jacobianPoint to be multiplied.
- */
-void ECP_Sm2PointMultDoubleCore(Sm2Point *r, uint32_t m, const Sm2Point *p);
-
-/**
- * @brief Multiplies a scalar with a given jacobian point.
- * @param [out] r Pointer to the resulting SM2jacobianPoint.
- * @param [in] k Scalar for multiplication.
- * @param [in] g Pointer to the SM2jacobianPoint to be multiplied.
- */
-void ECP_Sm2PointMulCore(Sm2Point *r, const Sm2Fp k, const Sm2Point *g);
-/**
- * @brief Multiplies a scalar with a base jacobian point.
- * @param [out] r Pointer to the resulting SM2jacobianPoint.
- * @param [in] k Scalar used for the generation.
- */
-void ECP_Sm2PointGenCore(Sm2Point *r, const Sm2Fp k);
 #ifdef __cplusplus
 }
 #endif

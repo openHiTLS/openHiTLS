@@ -140,7 +140,7 @@ static const Sm2Point sm2_point_gen_table[52] = {
          {0x0746e1aaU, 0x63d0aca2U, 0xbc547380U, 0x083d8d22U, 0xe5fd9181U, 0xf0ab2ad4U, 0xe629a820U, 0x571adb13U},{1}},
         };
 
-void ECP_Sm2FpSet(Sm2Fp r, const Sm2Fp a) {
+static void ECP_Sm2FpSet(Sm2Fp r, const Sm2Fp a) {
     memcpy_s(r, sizeof(Sm2Fp), a, sizeof(Sm2Fp));
 }
 
@@ -164,12 +164,13 @@ static int ECP_Sm2FpEqu(const Sm2Fp a, const Sm2Fp b) {
     return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3] && a[4] == b[4] && a[5] == b[5] && a[6] == b[6] && a[7] == b[7];
 }
 
-// ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 2.22
-void ECP_Sm2FpInv(Sm2Fp r, const Sm2Fp q) {
-    if (r == NULL || q == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
-    }
+/**
+ * @brief Computes multiplicative inverse modulo sm2_p, i.e., r ≡ a^-1 mod sm2_p.
+ * @param [out] r The result number.
+ * @param [in] q The number to invert.
+ * @ref "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 2.22
+ */
+static void ECP_Sm2FpInv(Sm2Fp r, const Sm2Fp q) {
     Sm2Fp u, v = {0xFFFFFFFFU, 0xFFFFFFFFU, 0x00000000U, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFEU}, a = {1}, c = {0};
     ECP_Sm2FpSet(u, q);
     while (ECP_Sm2FpIsOne(u) == 0 && ECP_Sm2FpIsOne(v) == 0) {
@@ -196,12 +197,14 @@ void ECP_Sm2FpInv(Sm2Fp r, const Sm2Fp q) {
     }
 }
 
-// ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 2.22
-void ECP_Sm2FnInv(Sm2Fp r, const Sm2Fp q) {
-    if (r == NULL || q == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
-    }
+
+/**
+ * @brief Computes multiplicative inverse modulo sm2_n, i.e., r ≡ a^-1 mod sm2_n.
+ * @param [out] r The result number.
+ * @param [in] q The number to invert.
+ * @ref "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 2.22
+ */
+static void ECP_Sm2FnInv(Sm2Fp r, const Sm2Fp q) {
     Sm2Fp u, v = {0x39D54123U, 0x53BBF409U, 0x21C6052BU, 0x7203DF6BU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFEU}, a = {1}, c = {0};
     ECP_Sm2FpSet(u, q);
     while (ECP_Sm2FpIsOne(u) == 0 && ECP_Sm2FpIsOne(v) == 0) {
@@ -277,16 +280,6 @@ static void ECP_Sm2FpNafP(int8_t K[52], const Sm2Fp k) {
 
 //**********************************************************************************************************************
 
-void ECP_Sm2PointToAffineCore(const Sm2Point *a, Sm2Point *r) {
-    Sm2Fp t1, t2;
-    ECP_Sm2FpInv(t1, a->z);
-    ECP_Sm2FpSqr(t2, t1);
-    ECP_Sm2FpMul(r->x, t2, a->x);
-    ECP_Sm2FpMul(t2, t2, t1);
-    ECP_Sm2FpMul(r->y, t2, a->y);
-    ECP_Sm2FpSet(r->z, Sm2One);
-}
-
 static void ECP_Sm2PointCopy(Sm2Point *p, const Sm2Point *q) {
     if (p == NULL || q == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -313,10 +306,30 @@ static int ECP_Sm2PointAtInfinity(const Sm2Point *r){
     return ECP_Sm2FpIsZero(r->z);
 }
 
-// ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo-2
-void ECP_Sm2PointAddCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
-    if (r == NULL || p == NULL || q == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+/**
+ * @brief Converts a jacobian point to affine coordinates.
+ * @param [in] a Pointer to the jacobian point to convert.
+ * @param [out] r Pointer to the resulting affine point.
+ */
+void ECP_Sm2PointToAffineCore(const Sm2Point *a, Sm2Point *r) {
+    Sm2Fp t1, t2;
+    ECP_Sm2FpInv(t1, a->z);
+    ECP_Sm2FpSqr(t2, t1);
+    ECP_Sm2FpMul(r->x, t2, a->x);
+    ECP_Sm2FpMul(t2, t2, t1);
+    ECP_Sm2FpMul(r->y, t2, a->y);
+    ECP_Sm2FpSet(r->z, Sm2One);
+}
+
+/**
+ * @brief Doubles a jacobian point.
+ * @param [out] r Pointer to the resulting SM2jacobianPoint.
+ * @param [in] a Pointer to the SM2jacobianPoint to be doubled.
+ * @ref https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#doubling-dbl-2004-hmv
+ */
+static void ECP_Sm2PointDouCore(Sm2Point *r, const Sm2Point *a) {
+    if (ECP_Sm2PointAtInfinity(a)) {
+        ECP_Sm2PointCopy(r, a);
         return;
     }
     // Check if one of the points is the point at infinity
@@ -366,64 +379,29 @@ void ECP_Sm2PointAddCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
     ECP_Sm2PointSet(r, x3, y3, z3);
 }
 
-// ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo-2
-void ECP_Sm2PointSubCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
-    if (r == NULL || p == NULL || q == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
-    }
-    // Check if one of the points is the point at infinity
-    if (ECP_Sm2PointAtInfinity(p)) {
-        ECP_Sm2PointCopy(r, q);
-        return;
-    }
-    if (ECP_Sm2PointAtInfinity(q)) {
-        ECP_Sm2PointCopy(r, p);
-        return;
-    }
-
-    const uint32_t *x1 = p->x, *y1 = p->y, *z1 = p->z, *x2 = q->x, *z2 = q->z;
-    Sm2Fp y2, x3, y3, z3, u1, u2, s1, s2, h, n, h2, h3, u1h2, t1, t2;
-    ECP_Sm2FpNeg(y2, q->y);
-    ECP_Sm2FpSqr(t1, z1);                     // t1 = z1^2
-    ECP_Sm2FpSqr(t2, z2);                     // t2 = z2^2
-    ECP_Sm2FpMul(u1, x1, t2);                 // u1 = x1 * z2^2
-    ECP_Sm2FpMul(u2, x2, t1);                 // u2 = x2 * z1^2
-    ECP_Sm2FpMul(t1, t1, z1);                 // t1 = z1^3
-    ECP_Sm2FpMul(t2, t2, z2);                 // t2 = z2^3
-    ECP_Sm2FpMul(s1, y1, t2);                 // s1 = y1 * z2^3
-    ECP_Sm2FpMul(s2, y2, t1);                 // s2 = y2 * z1^3
-    if (ECP_Sm2FpEqu(u1, u2)) {
-        if (ECP_Sm2FpEqu(s1, s2))
-            ECP_Sm2PointDouCore(r, p);
-        else
-            ECP_Sm2PointSetInfinity(r);
-        return;
-    }
-    ECP_Sm2FpSub(h, u2, u1);                  // h = u2 - u1
-    ECP_Sm2FpSub(n, s2, s1);                  // n = s2 - s1
-    ECP_Sm2FpSqr(h2, h);                      // h2 = h^2
-    ECP_Sm2FpMul(h3, h2, h);                  // h3 = h^3
-    ECP_Sm2FpMul(u1h2, u1, h2);               // u1h2 = u1 * h^2
-    ECP_Sm2FpDou(t1, u1h2);                   // t1 = 2u1h2
-    ECP_Sm2FpSqr(x3, n);                      // x3 = n^2
-    ECP_Sm2FpSub(x3, x3, h3);                 // x3 = n^2 - h3
-    ECP_Sm2FpSub(x3, x3, t1);                 // x3 = n^2 - h3 - 2u1h2
-    ECP_Sm2FpMul(t1, s1, h3);                 // t1 = s1 * h3
-    ECP_Sm2FpSub(y3, u1h2, x3);               // y3 = u1h2 - x3
-    ECP_Sm2FpMul(y3, y3, n);                  // y3 = n * (u1h2 - x3)
-    ECP_Sm2FpSub(y3, y3, t1);                 // y3 = n * (u1h2 - x3) - s1 * h3
-    ECP_Sm2FpMul(z3, z1, z2);                 // z3 = z1 * z2
-    ECP_Sm2FpMul(z3, z3, h);                  // z3 = h * z1 * z2
-    ECP_Sm2PointSet(r, x3, y3, z3);
+/**
+ * @brief Subtracts one jacobian point from another.
+ * @param [out] r Pointer to the resulting SM2jacobianPoint.
+ * @param [in] p Pointer to the minuend SM2jacobianPoint.
+ * @param [in] q Pointer to the subtrahend SM2jacobianPoint.
+ * @ref https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo-2
+ */
+static void ECP_Sm2PointSubCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
+    Sm2Point t;
+    memcpy_s(t.x, sizeof(Sm2Fp), q->x, sizeof(Sm2Fp));
+    memcpy_s(t.z, sizeof(Sm2Fp), q->z, sizeof(Sm2Fp));
+    ECP_Sm2FpNeg(t.y, q->y);
+    ECP_Sm2PointAddCore(r, p, &t);
 }
 
-// ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-madd-2004-hmv
-void ECP_Sm2PointAddWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
-    if (r == NULL || p == NULL || q == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
-    }
+/**
+ * @brief Point addition, affine-jacobian coordinates
+ * @param [out] r The result of the addition.
+ * @param [in] p The jacobian point.
+ * @param [in] q The affine point.
+ * @ref https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-madd-2004-hmv
+ */
+static void ECP_Sm2PointAddWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
     if (ECP_Sm2PointAtInfinity(p)) {
         ECP_Sm2PointCopy(r, q);
         return;
@@ -467,98 +445,29 @@ void ECP_Sm2PointAddWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Poin
     ECP_Sm2PointSet(r, x3, y3, z3);
 }
 
-// ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-madd-2004-hmv
-void ECP_Sm2PointSubWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
-    if (r == NULL || p == NULL || q == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
-    }
-    const uint32_t *x1 = p->x, *y1 = p->y, *z1 = p->z, *x2 = q->x;
-    Sm2Fp y2, x3, y3, z3, t1, t2, t3, t4;
-    ECP_Sm2FpNeg(y2, q->y);
-
-    if (ECP_Sm2PointAtInfinity(p)) {
-        ECP_Sm2PointSet(r, x2, y2, Sm2One);
-        return;
-    }
-    if (ECP_Sm2FpIsZero(q->x) && ECP_Sm2FpIsZero(q->y)) {
-        ECP_Sm2PointCopy(r, p);
-        return;
-    }
-
-    ECP_Sm2FpSqr(t1, z1);                     // t1 = A = z1^2
-    ECP_Sm2FpMul(t2, t1, z1);                 // t2 = B = z1 * A
-    ECP_Sm2FpMul(t1, t1, x2);                 // t1 = C = x2 * A
-    ECP_Sm2FpMul(t2, t2, y2);                 // t2 = D = y2 * B
-    ECP_Sm2FpSub(t1, t1, x1);                 // t1 = E = C - x1
-    ECP_Sm2FpSub(t2, t2, y1);                 // t2 = F = D - y1
-    if (ECP_Sm2FpEqu(t1, Sm2Zero)) {
-        if (ECP_Sm2FpEqu(t2, Sm2Zero)) {
-            Sm2Point t;
-            ECP_Sm2PointSet(&t, x2, y2, Sm2One);
-            ECP_Sm2PointDouCore(r, &t);
-        } else {
-            ECP_Sm2PointSetInfinity(r);
-        }
-        return;
-    }
-    ECP_Sm2FpMul(z3, z1, t1);                 // z3 = z1 * E
-    ECP_Sm2FpSqr(t3, t1);                     // t3 = G = E^2
-    ECP_Sm2FpMul(t4, t3, t1);                 // t4 = H = E^3
-    ECP_Sm2FpMul(t3, t3, x1);                 // t3 = I = x1 * G
-    ECP_Sm2FpDou(t1, t3);                     // t1 = 2I
-    ECP_Sm2FpSqr(x3, t2);                     // x3 = F^2
-    ECP_Sm2FpSub(x3, x3, t1);                 // x3 = F^2 - 2I
-    ECP_Sm2FpSub(x3, x3, t4);                 // x3 = F^2 - 2I - H
-    ECP_Sm2FpSub(t3, t3, x3);                 // t3 = I - x3
-    ECP_Sm2FpMul(t3, t3, t2);                 // t3 = (I - x3) * F
-    ECP_Sm2FpMul(t4, t4, y1);                 // t4 = y1 * H
-    ECP_Sm2FpSub(y3, t3, t4);                 // y3 = (I - x3) * F - y1 * H
-    ECP_Sm2PointSet(r, x3, y3, z3);
+/**
+ * @brief Point subtraction, affine-jacobian coordinates
+ * @param [out] r The result of the subtraction.
+ * @param [in] p The jacobian point.
+ * @param [in] q The affine point.
+ * @ref https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-madd-2004-hmv
+ */
+static void ECP_Sm2PointSubWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
+    Sm2Point t;
+    memcpy_s(t.x, sizeof(Sm2Fp), q->x, sizeof(Sm2Fp));
+    memcpy_s(t.z, sizeof(Sm2Fp), q->z, sizeof(Sm2Fp));
+    ECP_Sm2FpNeg(t.y, q->y);
+    ECP_Sm2PointAddWithAffineCore(r, p, &t);
 }
 
-// ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#doubling-dbl-2004-hmv
-void ECP_Sm2PointDouCore(Sm2Point *r, const Sm2Point *a) {
-    if (r == NULL || a == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
-    }
-    if (ECP_Sm2PointAtInfinity(a)) {
-        ECP_Sm2PointCopy(r, a);
-        return;
-    }
-    // A = 3(x1 - z1^2) * (x1 + z1^2)
-    // B = 2Y1, z3 = B * z1, C = B^2
-    // D = C * x1, x3 = A^2 - 2D, (D - x3) * A - C^2/2
-    const uint32_t *x1 = a->x, *y1 = a->y, *z1 = a->z;
-    Sm2Fp t1, t2, t3, x3, y3, z3;
-    ECP_Sm2FpSqr(t1, z1);                     // t1 = z1^2
-    ECP_Sm2FpSub(t2, x1, t1);                 // t2 = x1 - z1^2
-    ECP_Sm2FpAdd(t1, x1, t1);                 // t1 = x1 + z1^2
-    ECP_Sm2FpMul(t2, t2, t1);                 // t2 = x1^2 - z1^4
-    ECP_Sm2FpDou(t3, t2);                     // t3 = 2(x1^2 - z1^4)
-    ECP_Sm2FpAdd(t2, t2, t3);                 // t2 = A = 3t2 = 3(x1^2 - z1^4)
-    ECP_Sm2FpDou(y3, y1);                     // y3 = B = 2y1
-    ECP_Sm2FpMul(z3, y3, z1);                 // z3 = B * z1
-    ECP_Sm2FpSqr(y3, y3);                     // y3 = C = B^2
-    ECP_Sm2FpMul(t3, y3, x1);                 // t3 = D = C * x1
-    ECP_Sm2FpSqr(y3, y3);                     // y3 = C^2
-    ECP_Sm2FpHaf(y3, y3);                     // y3 = C^2/2
-    ECP_Sm2FpSqr(x3, t2);                     // x3 = A^2
-    ECP_Sm2FpDou(t1, t3);                     // t1 = 2D
-    ECP_Sm2FpSub(x3, x3, t1);                 // x3 = A^2 - 2D
-    ECP_Sm2FpSub(t1, t3, x3);                 // t1 = D - x3
-    ECP_Sm2FpMul(t1, t1, t2);                 // t1 = (D - x3) * A
-    ECP_Sm2FpSub(y3, t1, y3);                 // y3 = (D - x3) * A - C^2/2
-    ECP_Sm2PointSet(r, x3, y3, z3);
-}
-
-// ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 3.23
-void ECP_Sm2PointMultDoubleCore(Sm2Point *r, uint32_t m, const Sm2Point *p) {
-    if (r == NULL || p == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
-    }
+/**
+ * @brief Performs scalar multiplication on a jacobian point.
+ * @param [out] r Pointer to the resulting SM2jacobianPoint.
+ * @param [in] m Scalar for multiplication.
+ * @param [in] p Pointer to the SM2jacobianPoint to be multiplied.
+ * @ref "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 3.23
+ */
+static void ECP_Sm2PointMultDoubleCore(Sm2Point *r, uint32_t m, const Sm2Point *p) {
     if (ECP_Sm2PointAtInfinity(p)) {
         ECP_Sm2PointSet(r, p->x, p->y, p->z); return;
     }
