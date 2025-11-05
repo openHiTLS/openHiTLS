@@ -8,11 +8,7 @@ The openHiTLS command source code is located in the apps directory, and the comp
 |**Basic Commands**| | |
 ||help|Display help information and list of supported commands|
 ||list|List supported algorithms and functions, including digest, symmetric, asymmetric, MAC, random number, KDF algorithms, etc.|
-|**Random Number Generation**|| |
-||rand|Generate random numbers of specified length, supporting hexadecimal and Base64 encoded output|
-|**Password Processing**|| |
-||passwd|Generate and verify password hashes, supporting algorithms like SHA512|
-|**Encryption and Decryption**|| |
+|**Encryption and Digest**|| |
 ||enc|Symmetric encryption and decryption operations, supporting multiple symmetric algorithms|
 ||mac|Message authentication code calculation and verification|
 ||dgst|Message digest calculation and digital signature operations|
@@ -33,6 +29,9 @@ The openHiTLS command source code is located in the apps directory, and the comp
 |**SSL/TLS Communication**|| |
 ||s_client|SSL/TLS client tool|
 ||s_server|SSL/TLS server tool|
+|**Other Utility Tools**|| |
+||rand|Generate random numbers of specified length, supporting hexadecimal and Base64 encoded output|
+||passwd|Generate and verify password hashes, supporting algorithms like SHA512|
 
 ## 1.2 Command Usage
 
@@ -102,9 +101,68 @@ hitls list -cipher-algorithms
 hitls list -all-curves
 ```
 
-## 3.2 Random Number Generation
+## 3.2 Encryption and Digest
 
-### 3.2.1 rand
+### 3.2.1 enc
+Symmetric encryption and decryption operations, supporting multiple symmetric algorithms
+
+### 3.2.2 mac
+Message authentication code calculation and verification
+
+### 3.2.3 dgst
+Message digest calculation and digital signature operations
+
+### 3.2.4 kdf
+Key derivation function, derive keys from input materials
+
+## 3.3 Key and Parameter Management
+
+### 3.3.1 rsa
+RSA key processing, including format conversion and information display
+
+### 3.3.2 genrsa
+Generate RSA private keys
+
+### 3.3.3 genpkey
+Generate various types of public and private keys
+
+### 3.3.4 pkey
+Public and private key processing tool
+
+### 3.3.5 pkeyutl
+Use keys for encryption, decryption, signing, verification and other operations
+
+### 3.3.6 keymgmt
+Key management functions, including key creation, deletion, querying, etc. (SM mode)
+
+## 3.4 PKI Certificate Management
+
+### 3.4.1 pkcs12
+Processing of PKCS#12 format certificates and key packages
+
+### 3.4.2 x509
+Generation, parsing, conversion and verification of X.509 certificates
+
+### 3.4.3 crl
+Generation and management of certificate revocation lists
+
+### 3.4.4 verify
+Certificate chain verification and trust relationship checking
+
+### 3.4.5 req
+Generation and processing of certificate signing requests
+
+## 3.5 SSL/TLS Communication
+
+### 3.5.1 s_client
+SSL/TLS client tool
+
+### 3.5.2 s_server
+SSL/TLS server tool
+
+## 3.6 Other Utility Tools
+
+### 3.6.1 rand
 
 **Function**: Generate random data
 **Usage**:
@@ -115,12 +173,11 @@ hitls rand [-help] [-out file] [-algorithm alg] [-hex] [-base64] [-provider name
 
 **Supported Options**:
 - `-help`: Display help information
-- `-hex`: Output in hexadecimal format
-- `-base64`: Output in Base64 format
+- `-hex`: Output in hexadecimal format, default format is binary
+- `-base64`: Output in Base64 format, default format is binary
 - `-out <file>`: Write output to specified file, if not specified, output to stdout
 - `-algorithm <algorithm>`: Specify random number generation algorithm, supported random number algorithms can be viewed using [list](#312-list) command
 - `-provider`, `-provider-path`, `-provider-attr`: Please refer to [Provider Options](#21-provider-options)
-- numbytes: 
 
 **Examples**:
 ```bash
@@ -137,66 +194,5 @@ hitls rand -base64 -out rand.txt 64
 hitls rand -algorithm hmac-sha256 -hex 10
 ```
 
-## 3.3 Password Processing
-
-### 3.3.1 passwd
+### 3.6.2 passwd
 Generate and verify password hashes, supporting algorithms like SHA512
-
-## 3.4 Encryption and Decryption
-
-### 3.4.1 enc
-Symmetric encryption and decryption operations, supporting multiple symmetric algorithms
-
-### 3.4.2 mac
-Message authentication code calculation and verification
-
-### 3.4.3 dgst
-Message digest calculation and digital signature operations
-
-### 3.4.4 kdf
-Key derivation function, derive keys from input materials
-
-## 3.5 Key and Parameter Management
-
-### 3.5.1 rsa
-RSA key processing, including format conversion and information display
-
-### 3.5.2 genrsa
-Generate RSA private keys
-
-### 3.5.3 genpkey
-Generate various types of public and private keys
-
-### 3.5.4 pkey
-Public and private key processing tool
-
-### 3.5.5 pkeyutl
-Use keys for encryption, decryption, signing, verification and other operations
-
-### 3.5.6 keymgmt
-Key management functions, including key creation, deletion, querying, etc. (SM mode)
-
-## 3.6 PKI Certificate Management
-
-### 3.6.1 pkcs12
-Processing of PKCS#12 format certificates and key packages
-
-### 3.6.2 x509
-Generation, parsing, conversion and verification of X.509 certificates
-
-### 3.6.3 crl
-Generation and management of certificate revocation lists
-
-### 3.6.4 verify
-Certificate chain verification and trust relationship checking
-
-### 3.6.5 req
-Generation and processing of certificate signing requests
-
-## 3.7 SSL/TLS Communication
-
-### 3.7.1 s_client
-SSL/TLS client tool
-
-### 3.7.2 s_server
-SSL/TLS server tool
