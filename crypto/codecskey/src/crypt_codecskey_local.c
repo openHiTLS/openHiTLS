@@ -329,10 +329,6 @@ static int32_t ParseEccPrikeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
             return CRYPT_DECODE_PKCS8_INVALID_ALGO_PARAM;
         }
     }
-    if (pubkey->len == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ASN1_BUFF_FAILED);
-        return CRYPT_DECODE_ASN1_BUFF_FAILED;
-    }
     int32_t algId;
     CRYPT_EAL_PkeyCtx *pctx = NULL;
     int32_t ret = EccEalKeyNew(libctx, attrName, param, &algId, &pctx); // Changed ecParamOid to param
@@ -343,15 +339,21 @@ static int32_t ParseEccPrikeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
     ret = CRYPT_EAL_PkeySetPrv(pctx, &prv);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_PkeyFreeCtx(pctx);
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    // the tag of public key is BSL_ASN1_TAG_BITSTRING, 1 denote unusedBits
-    CRYPT_EAL_PkeyPub pub = {.id = algId, .key.eccPub = {.data = pubkey->buff + 1, .len = pubkey->len - 1}};
-    ret = CRYPT_EAL_PkeySetPub(pctx, &pub);
+    if (pubkey->len > 0) {
+        // the tag of public key is BSL_ASN1_TAG_BITSTRING, 1 denote unusedBits
+        CRYPT_EAL_PkeyPub pub = {.id = algId, .key.eccPub = {.data = pubkey->buff + 1, .len = pubkey->len - 1}};
+        ret = CRYPT_EAL_PkeySetPub(pctx, &pub);
+    } else {
+        uint32_t flag = CRYPT_ECC_PRIKEY_NO_PUBKEY;
+        ret = CRYPT_EAL_PkeyCtrl(pctx, CRYPT_CTRL_SET_ECC_FLAG, &flag, sizeof(flag));
+        if (ret == CRYPT_SUCCESS) {
+            ret = CRYPT_EAL_PkeyCtrl(pctx, CRYPT_CTRL_GEN_ECC_PUBLICKEY, NULL, 0);
+        }
+    }
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_PkeyFreeCtx(pctx);
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     *ealPriKey = pctx;
@@ -804,10 +806,42 @@ static inline void SetAsn1Buffer(BSL_ASN1_Buffer *asn, uint8_t tag, uint32_t len
     asn->buff = buff;
 }
 
-static int32_t EncodeEccKeyPair(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_PKEY_AlgId cid,
-    BSL_ASN1_Buffer *asn1, BSL_Buffer *encode)
+static int32_t GenAndGetEccPubkey(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_PKEY_AlgId cid, uint32_t keyLen,
+    uint8_t **pubOut, uint32_t *pubLenOut)
+{
+    uint8_t *pub = (uint8_t *)BSL_SAL_Malloc(keyLen);
+    if (pub == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    CRYPT_EAL_PkeyPub pubKey = {.id = cid, .key.eccPub = {.data = pub, .len = keyLen}};
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GEN_ECC_PUBLICKEY, NULL, 0);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_FREE(pub);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = CRYPT_EAL_PkeyGetPub(ealPriKey, &pubKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_FREE(pub);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    *pubOut = pubKey.key.eccPub.data;
+    *pubLenOut = pubKey.key.eccPub.len;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t EncodeEccKeyPair(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_PKEY_AlgId cid, BSL_ASN1_Buffer *asn1, BSL_Buffer *encode)
 {
     int32_t ret;
+    uint32_t flag = 0;
+    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_ECC_FLAG, &flag, sizeof(flag));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    bool includePubKey = flag & CRYPT_ECC_PRIKEY_NO_PUBKEY ? false : true;
     uint32_t keyLen = CRYPT_EAL_PkeyGetKeyLen(ealPriKey);
     if (keyLen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_NOT_SUPPORT);
@@ -828,27 +862,21 @@ static int32_t EncodeEccKeyPair(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_PKEY_AlgId c
         }
         SetAsn1Buffer(asn1 + CRYPT_ECPRIKEY_PRIKEY_IDX, BSL_ASN1_TAG_OCTETSTRING,
             prv.key.eccPrv.len, prv.key.eccPrv.data);
-        pub = (uint8_t *)BSL_SAL_Malloc(keyLen);
-        if (pub == NULL) {
-            ret = CRYPT_MEM_ALLOC_FAIL;
-            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-            break;
+        if (includePubKey) {
+            uint32_t pubLen = 0;
+            ret = GenAndGetEccPubkey(ealPriKey, cid, keyLen, &pub, &pubLen);
+            if (ret != CRYPT_SUCCESS) {
+                break;
+            }
+            BSL_ASN1_BitString bitStr = {pub, pubLen, 0};
+            SetAsn1Buffer(asn1 + CRYPT_ECPRIKEY_PUBKEY_IDX, BSL_ASN1_TAG_BITSTRING,
+                sizeof(BSL_ASN1_BitString), (uint8_t *)&bitStr);
+            ret = CRYPT_ENCODE_EccPrikeyAsn1Buff(asn1, CRYPT_ECPRIKEY_PUBKEY_IDX + 1, encode);
+        } else {
+            // Optional placeholder [1] publicKey
+            asn1[CRYPT_ECPRIKEY_PUBKEY_IDX].tag = BSL_ASN1_TAG_OCTETSTRING;
+            ret = CRYPT_ENCODE_EccPrikeyAsn1Buff(asn1, CRYPT_ECPRIKEY_PUBKEY_IDX + 1, encode);
         }
-        CRYPT_EAL_PkeyPub pubKey = {.id = cid, .key.eccPub = {.data = pub, .len = keyLen}};
-        ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GEN_ECC_PUBLICKEY, NULL, 0);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            break;
-        }
-        ret = CRYPT_EAL_PkeyGetPub(ealPriKey, &pubKey);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            break;
-        }
-        BSL_ASN1_BitString bitStr = {pubKey.key.eccPub.data, pubKey.key.eccPub.len, 0};
-        SetAsn1Buffer(asn1 + CRYPT_ECPRIKEY_PUBKEY_IDX, BSL_ASN1_TAG_BITSTRING,
-            sizeof(BSL_ASN1_BitString), (uint8_t *)&bitStr);
-        ret = CRYPT_ENCODE_EccPrikeyAsn1Buff(asn1, CRYPT_ECPRIKEY_PUBKEY_IDX + 1, encode);
     } while (0);
     BSL_SAL_ClearFree(pri, keyLen);
     BSL_SAL_FREE(pub);

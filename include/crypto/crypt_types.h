@@ -106,6 +106,16 @@ typedef enum {
     CRYPT_RSA_MAXFLAG
 } CRYPT_RSA_Flag;
 
+/**
+ * @ingroup crypt_types
+ *
+ * ECC flag bits for encode behaviors
+ */
+typedef enum {
+    CRYPT_ECC_PRIKEY_NO_PUBKEY = 0x00000002, /**< ECPrivateKey omit publicKey[1] */
+    CRYPT_ECC_MAXFLAG
+} CRYPT_ECC_Flag;
+
 typedef enum {
     CRYPT_DH_NO_PADZERO = 0x00000001, /**< Follow the standard RFC 5246, remove the prefix-0 when cal the
                                            shared key. It takes effect only after local settings are made. */
@@ -677,6 +687,8 @@ typedef enum {
     CRYPT_CTRL_SET_ECC_USE_COFACTOR_MODE, /**< Indicates whether to use the cofactor mode to prevent
                                                man-in-the-middle from tampering with the public key.
                                                Set this parameter to 1 when used or 0 when not used. */
+    CRYPT_CTRL_SET_ECC_FLAG,              /**< Set ECC pkey flags (OR with existing). */
+    CRYPT_CTRL_CLR_ECC_FLAG,              /**< Clear ECC pkey flags (AND NOT). */
 
     CRYPT_CTRL_GET_SM2_SEND_CHECK,      /* SM2 obtain the check value sent from the local end to the peer end. */
     CRYPT_CTRL_GENE_SM2_R,              /* SM2 obtain the R value. */
@@ -689,6 +701,7 @@ typedef enum {
     CRYPT_CTRL_GET_ECC_NAME,            /**< Obtain the name of the ECC curve. */
     CRYPT_CTRL_GEN_X25519_PUBLICKEY,    /**< Use prikey genarate x25519 pubkey. */
     CRYPT_CTRL_GET_SM2_RANDOM,          /**< SM2 get the r value. */
+    CRYPT_CTRL_GET_ECC_FLAG,            /**< Get ECC pkey flags. */
 
     // slh-dsa
     CRYPT_CTRL_GET_SLH_DSA_KEY_LEN = 600,     /**< Get the SLH-DSA key length. */
