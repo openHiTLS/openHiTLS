@@ -286,6 +286,7 @@ static int32_t SetCrlEntry(HITLS_X509_Crl *crl)
     BSL_TIME invalidTime = revokeTime;
     HITLS_X509_RevokeExtTime invalidTimeExt = {false, invalidTime};
     
+    BslList *names = NULL;
     HITLS_X509_CrlEntry *entry = HITLS_X509_CrlEntryNew();
     ASSERT_NE(entry, NULL);
     ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM, serialNum, sizeof(serialNum)),0);
@@ -297,12 +298,25 @@ static int32_t SetCrlEntry(HITLS_X509_Crl *crl)
     HITLS_X509_RevokeExtCertIssuer certIssuer = {true, NULL};
     certIssuer.issuerName = GenGeneralNameList();
     ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_CERTISSUER,
-        &certIssuer, sizeof(HITLS_X509_ExtSan)), 0);
+        &certIssuer, sizeof(HITLS_X509_RevokeExtCertIssuer)), 0);
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_GET_REVOKED_CERTISSUER, &names, sizeof(BslList *)), 0);
+    ASSERT_EQ(names->count, 5);
+    ASSERT_EQ(names->dataSize, 24);
+    HITLS_X509_GeneralName *ptr = names->first->data;
+    ASSERT_EQ(ptr->type, HITLS_X509_GN_EMAIL);
+    ASSERT_EQ(ptr->value.dataLen, 4);
+    ASSERT_EQ(memcmp(ptr->value.data, "test", ptr->value.dataLen), 0);
+    ptr = names->last->data;
+    ASSERT_EQ(ptr->type, HITLS_X509_GN_IP);
+    ASSERT_EQ(ptr->value.dataLen, 4);
+    ASSERT_EQ(memcmp(ptr->value.data, "test", ptr->value.dataLen), 0);
 
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_CRL_ADD_REVOKED_CERT, entry, 0), 0);
 
     ret = 0;
 EXIT:
+    HITLS_X509_ClearGeneralNames(names);
+    BSL_SAL_Free(names);
     HITLS_X509_CrlEntryFree(entry);
     BSL_LIST_FREE(certIssuer.issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     return ret;

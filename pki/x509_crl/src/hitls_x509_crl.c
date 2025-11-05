@@ -1377,18 +1377,13 @@ int32_t HITLS_ParseCrlExtReason(HITLS_X509_ExtEntry *extEntry, void *val)
 
 static int32_t DecodeExtCertIssuer(HITLS_X509_ExtEntry *extEntry, BslList **val)
 {
-    BslList *list = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
-    if (list == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_AKI);
-        return HITLS_X509_ERR_PARSE_AKI;
-    }
-    int32_t ret = HITLS_X509_ParseGeneralNames(extEntry->extnValue.buff, extEntry->extnValue.len, list);
+    HITLS_X509_ExtSan san = {0};
+    int32_t ret = HITLS_X509_ParseSubjectAltName(extEntry, &san);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_SAL_Free(list);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    *val = list;
+    *val = san.names;
     return HITLS_PKI_SUCCESS;
 }
 
