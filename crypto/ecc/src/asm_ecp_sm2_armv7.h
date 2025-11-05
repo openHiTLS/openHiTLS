@@ -25,11 +25,15 @@
 extern "C" {
 #endif
 
+#define SM2_BITS  256
+#define SM2_BYTES 64
+#define SM2_LIMBS 8    /// (SM2_BYTES / sizeof(uint32_t))
+
 /**
  * @brief The type representing a 256-bit number in finite prime field.
  * @note The number is stored in little-endian order and used for underlying (mathematical) operations.
  */
-typedef uint32_t Sm2Fp[8];
+typedef uint32_t Sm2Fp[SM2_LIMBS];
 
 /**
  * @brief The structure representing a jacobian point on the elliptic curve.

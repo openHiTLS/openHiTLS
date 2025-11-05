@@ -24,12 +24,15 @@
 #include "asm_ecp_sm2_armv7.h"
 
 /// The type representing a Non-Adjacent Form (NAF) for efficient scalar multiplication
-typedef int8_t  Sm2Naf[257];
+typedef int8_t  Sm2Naf[SM2_BITS + 1];
 
 static const Sm2Fp Sm2Zero = {0};
 
 static const Sm2Fp Sm2One = {1};
 
+// The following is the table of sm2 base points G: {G, [2^5]G, [2^10]G, [2^15]G, ...[2^255]G}.
+//  Only used in the function ECP_Sm2PointGenCore, which uses optimal parameter (window width) w = 5 is used here.
+// Thus, the number of points in this table is 256/5 + 1 = 52.
 static const Sm2Point sm2_point_gen_table[52] = {
         {{0x334c74c7U, 0x715a4589U, 0xf2660be1U, 0x8fe30bbfU, 0x6a39c994U, 0x5f990446U, 0x1f198119U, 0x32c4ae2cU},
          {0x2139f0a0U, 0x02df32e5U, 0xc62a4740U, 0xd0a9877cU, 0x6b692153U, 0x59bdcee3U, 0xf4f6779cU, 0xbc3736a2U},{1}},
@@ -233,7 +236,7 @@ static void ECP_Sm2FpNaf(Sm2Naf r, const uint8_t w, const Sm2Fp n) {
     if (w > 7)
         return;     // w > 7 is not supported unless the sm2_naf type definition is expanded from int8_t[257] to int[257]
 
-    int i = 256;
+    int i = SM2_BITS;
     Sm2Fp k, t;
     ECP_Sm2FpSet(k, n);
     while (ECP_Sm2FpCmp(k, Sm2One)) {
@@ -260,11 +263,13 @@ static void ECP_Sm2FpNaf(Sm2Naf r, const uint8_t w, const Sm2Fp n) {
     }
 }
 
+// Only used in ECP_Sm2PointGenCore which use optimal parameter (window width) w = 5 is used here.
+// Thus, the number of windows is ⌈256/5⌉ = 52.
 static void ECP_Sm2FpNafP(int8_t K[52], const Sm2Fp k) {
     Sm2Naf kn;
     ECP_Sm2FpNaf(kn, 2, k);
     int i, j = 0;
-    for (i = 256; i > 2; i = i-5){
+    for (i = SM2_BITS; i > 2; i = i-5){
         K[j++] = (int8_t) (kn[i] + (kn[i-1]<<1) + (kn[i-2]<<2) + (kn[i-3]<<3) + (kn[i-4]<<4));
     }
     K[j] = (int8_t) (kn[1] + (kn[0]<<1));
@@ -589,16 +594,17 @@ void ECP_Sm2PointMultDoubleCore(Sm2Point *r, uint32_t m, const Sm2Point *p) {
     ECP_Sm2PointSet(r, x, y, z);
 }
 
-// ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 3.38
-void ECP_Sm2PointMulCore(Sm2Point *r, const Sm2Fp k, const Sm2Point *g) {
-    if (r == NULL || k == NULL || g == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
-    }
-    static Sm2Naf K;
-    static Sm2Point upt[8];
+/**
+ * @brief Multiplies a scalar with a given jacobian point.
+ * @param [out] r Pointer to the resulting SM2jacobianPoint.
+ * @param [in] k Scalar for multiplication.
+ * @param [in] g Pointer to the SM2jacobianPoint to be multiplied.
+ * @ref "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 3.36
+*/
+static void ECP_Sm2PointMulCore(Sm2Point *r, const Sm2Fp k, const Sm2Point *g) {
 
-    // compute the sm2_naf of k
+    // compute the sm2_naf of k, The optimal parameter (window width) w = 4 is used here.
+    static Sm2Naf K;
     ECP_Sm2FpNaf(K, 4, k);
 
     // compute the table of point g: {g, 3g, 5g, 7g, ...}
@@ -622,16 +628,19 @@ void ECP_Sm2PointMulCore(Sm2Point *r, const Sm2Fp k, const Sm2Point *g) {
                 ECP_Sm2PointSubCore(r, r, &upt[-K[i] >> 1]);
             j = 1;
         }
-    } while (++i <= 256);
+    } while (++i <= SM2_BITS);
     ECP_Sm2PointMultDoubleCore(r, j - 1, r);
 }
 
-// ref. "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 3.42
-void ECP_Sm2PointGenCore(Sm2Point *r, const Sm2Fp k) {
-    if (r == NULL || k == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return;
-    }
+/**
+ * @brief Multiplies a scalar with a base jacobian point.
+ * @param [out] r Pointer to the resulting SM2jacobianPoint.
+ * @param [in] k Scalar used for the generation.
+ * @ref "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 3.42.
+*/
+static void ECP_Sm2PointGenCore(Sm2Point *r, const Sm2Fp k) {
+
+    // The optimal parameter (window width) w = 5 is used here. Thus, the number of windows is ⌈256/5⌉ = 52
     static Sm2Point a, b;
     static int8_t K[52];
 
@@ -642,7 +651,7 @@ void ECP_Sm2PointGenCore(Sm2Point *r, const Sm2Fp k) {
     // compute the sm2_naf of k
     ECP_Sm2FpNafP(K, k);
 
-    // compute the result
+    // compute the result, the representation range for each Ki (width-w NAF(k)) is [-I, I], I = (2^{w+1} - 1) / 3 = 21.
     for (int j = 21; j > 0; j--) {
         for (int i = 0; i < 52; i++) {
             if (K[i] == j)
@@ -657,7 +666,7 @@ void ECP_Sm2PointGenCore(Sm2Point *r, const Sm2Fp k) {
 
 static int32_t ECP_SM2FpGet(Sm2Fp dst, const BN_BigNum *src)
 {
-    if (src->size > 8) {
+    if (src->size > SM2_LIMBS) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_SPACE_NOT_ENOUGH);
         return CRYPT_BN_SPACE_NOT_ENOUGH;
     }
@@ -673,12 +682,12 @@ static int32_t ECP_SM2FpGet(Sm2Fp dst, const BN_BigNum *src)
 
 static int32_t ECP_SM2FpPut(const Sm2Fp src, BN_BigNum *dst)
 {
-    int32_t ret = BN_Extend(dst, 8);
+    int32_t ret = BN_Extend(dst, SM2_LIMBS);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
     BN_Zeroize(dst);
-    for (uint32_t i = 0; i < 8; i++) {
+    for (uint32_t i = 0; i < SM2_LIMBS; i++) {
         dst->data[i] = src[i];
         dst->size += dst->data != 0;
     }
@@ -988,7 +997,7 @@ int32_t ECP_Sm2PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, co
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
         return CRYPT_ECC_POINT_ERR_CURVE_ID;
     }
-    if (BN_Bits(k1) > 256 || BN_Bits(k1) > 256) {
+    if (BN_Bits(k1) > SM2_BITS || BN_Bits(k1) > SM2_BITS) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_MUL_ERR_K_LEN);
         return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
     }
