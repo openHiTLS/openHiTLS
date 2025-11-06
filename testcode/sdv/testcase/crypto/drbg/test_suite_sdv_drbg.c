@@ -2255,3 +2255,75 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/** 
+ * @test   SDV_PRIMARY_DRBG_VECTOR_FUN_TC001
+ * @title  DRBG vector function test.
+ * @precon nan
+ * @brief
+ *    1.Initialize the random number with the seed method and the seed context.
+ *    2.Call the CRYPT_EAL_Randbytes function and obtain a random number.
+ *    3.Compare the random number with the vector(witch is generated randomly).
+ * @expect
+ *    1.successful.
+ *    2.successful.
+ *    3.successful.
+ */
+/* BEGIN_CASE */
+void SDV_PRIMARY_DRBG_VECTOR_FUN_TC001(int algId, int entropyLen, Hex *result)
+{
+#if (!defined(HITLS_CRYPTO_ENTROPY) || !defined(HITLS_BSL_PARAMS))
+    (void)algId;
+    (void)entropyLen;
+    (void)result;
+    SKIP_TEST();
+#else
+    if (IsRandAlgDisabled(algId)) {
+        SKIP_TEST();
+    }
+    uint8_t output[32]; // Test Vector length
+    uint32_t len = 32;
+    uint8_t *entropy = BSL_SAL_Malloc(entropyLen);
+    ASSERT_TRUE(entropy != NULL);
+    (void)memset_s(entropy, entropyLen, 0xff, entropyLen);
+    uint8_t nonce[20];
+    (void)memset_s(nonce, sizeof(nonce), 0xff, sizeof(nonce));
+    unsigned char pers[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
+    unsigned char addition[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
+
+    CRYPT_RandSeedMethod seedMeth = {0};
+    regSeedMeth(&seedMeth);
+    DRBG_Vec_t *seedCtx = seedCtxMem();
+    ASSERT_TRUE(seedCtx != NULL);
+    Hex entropyHex = {.x = entropy, .len = entropyLen};
+    Hex persHex = {.x = pers, .len = sizeof(pers)};
+    Hex additionHex = {.x = addition, .len = sizeof(addition)};
+    Hex nonceHex = {.x = nonce, .len = sizeof(nonce)};
+    Hex nullHex = {.x = NULL, .len = 0};
+    seedCtxCfg(seedCtx, &entropyHex, &nonceHex, &persHex, &additionHex, &nullHex, &nullHex, &nullHex, &nullHex);
+
+    BSL_Param param[6] = {0};
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[0],
+        CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR, seedCtx, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[1],
+        CRYPT_PARAM_RAND_SEED_GETENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.getEntropy, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[2],
+        CRYPT_PARAM_RAND_SEED_CLEANENTROPY, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanEntropy, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[3],
+        CRYPT_PARAM_RAND_SEED_GETNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.getNonce, 0), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_InitValue(&param[4],
+        CRYPT_PARAM_RAND_SEED_CLEANNONCE, BSL_PARAM_TYPE_FUNC_PTR, seedMeth.cleanNonce, 0), BSL_SUCCESS);
+   
+    ASSERT_EQ(CRYPT_EAL_ProviderRandInitCtx(NULL, (CRYPT_RAND_AlgId)algId, NULL, pers, sizeof(pers), param),
+        CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_RandbytesEx(NULL, output, len), CRYPT_SUCCESS);
+    ASSERT_EQ(memcmp(output, result->x, result->len), 0);
+EXIT:
+    seedCtxFree(seedCtx);
+    BSL_SAL_Free(entropy);
+    CRYPT_EAL_RandDeinitEx(NULL);
+    return;
+#endif
+}
+/* END_CASE */
