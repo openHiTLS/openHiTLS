@@ -41,6 +41,18 @@ static const CRYPT_MlKemInfo *MlKemGetInfo(uint32_t bits)
     }
     return NULL;
 }
+static void MLKEM_KeyReset(CRYPT_ML_KEM_Ctx *ctx)
+{
+    if (ctx->info == NULL) {
+        return;
+    }
+    uint8_t k = ctx->info->k;
+    BSL_SAL_CleanseData(ctx->dk, ctx->dkLen);
+    BSL_SAL_CleanseData(ctx->keyData.bufAddr, (k * k + 3 * k) * MLKEM_N * sizeof(int16_t));
+    BSL_SAL_FREE(ctx->dk);
+    BSL_SAL_FREE(ctx->ek);
+    BSL_SAL_FREE(ctx->keyData.bufAddr);
+}
 
 CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_NewCtx(void)
 {
@@ -77,6 +89,7 @@ void CRYPT_ML_KEM_FreeCtx(CRYPT_ML_KEM_Ctx *ctx)
     BSL_SAL_CleanseData(ctx->dk, ctx->dkLen);
     BSL_SAL_FREE(ctx->dk);
     BSL_SAL_FREE(ctx->ek);
+    BSL_SAL_FREE(ctx->keyData.bufAddr);
     BSL_SAL_ReferencesFree(&(ctx->references));
     BSL_SAL_FREE(ctx);
 }
@@ -209,9 +222,19 @@ int32_t CRYPT_ML_KEM_SetEncapsKey(CRYPT_ML_KEM_Ctx *ctx, const CRYPT_KemEncapsKe
         BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYLEN_ERROR);
         return CRYPT_MLKEM_KEYLEN_ERROR;
     }
-
+    if (ctx->ek != NULL || ctx->dk != NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEY_REPEATED_SET);
+        return CRYPT_MLKEM_KEY_REPEATED_SET;
+    }
+    int32_t ret =  MLKEM_DecodeEk(ctx, ek->data, ek->len);
+    if (ret != CRYPT_SUCCESS) {
+        MLKEM_KeyReset(ctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     uint8_t *data = BSL_SAL_Dump(ek->data, ek->len);
     if (data == NULL) {
+        MLKEM_KeyReset(ctx);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
@@ -252,9 +275,19 @@ int32_t CRYPT_ML_KEM_SetDecapsKey(CRYPT_ML_KEM_Ctx *ctx, const CRYPT_KemDecapsKe
         BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYLEN_ERROR);
         return CRYPT_MLKEM_KEYLEN_ERROR;
     }
-
+    if (ctx->ek != NULL || ctx->dk != NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEY_REPEATED_SET);
+        return CRYPT_MLKEM_KEY_REPEATED_SET;
+    }
+    int32_t ret = MLKEM_DecodeDk(ctx, dk->data, dk->len);
+    if (ret != CRYPT_SUCCESS) {
+        MLKEM_KeyReset(ctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     uint8_t *data = BSL_SAL_Dump(dk->data, dk->len);
     if (data == NULL) {
+        MLKEM_KeyReset(ctx);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
@@ -501,7 +534,7 @@ static int32_t EncCapsInputCheck(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint3
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_ML_KEM_Encaps(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32_t *cipherLen,
+int32_t CRYPT_ML_KEM_Encaps(CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32_t *cipherLen,
     uint8_t *share, uint32_t *shareLen)
 {
     int32_t ret = EncCapsInputCheck(ctx, cipher, cipherLen, share, shareLen);
@@ -531,7 +564,7 @@ static int32_t DecCapsInputCheck(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint3
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_ML_KEM_Decaps(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32_t cipherLen,
+int32_t CRYPT_ML_KEM_Decaps(CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32_t cipherLen,
     uint8_t *share, uint32_t *shareLen)
 {
     int32_t ret = DecCapsInputCheck(ctx, cipher, cipherLen, share, shareLen);
@@ -542,7 +575,7 @@ int32_t CRYPT_ML_KEM_Decaps(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32
 
 #ifdef HITLS_CRYPTO_MLKEM_CHECK
 
-static int32_t MlKemKeyPairCheck(const CRYPT_ML_KEM_Ctx *pubKey, const CRYPT_ML_KEM_Ctx *prvKey)
+static int32_t MlKemKeyPairCheck(CRYPT_ML_KEM_Ctx *pubKey, CRYPT_ML_KEM_Ctx *prvKey)
 {
     if (pubKey == NULL || prvKey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -596,7 +629,7 @@ static int32_t MlKemPrvKeyCheck(const CRYPT_ML_KEM_Ctx *prvKey)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_ML_KEM_Check(uint32_t checkType, const CRYPT_ML_KEM_Ctx *pkey1, const CRYPT_ML_KEM_Ctx *pkey2)
+int32_t CRYPT_ML_KEM_Check(uint32_t checkType, CRYPT_ML_KEM_Ctx *pkey1, CRYPT_ML_KEM_Ctx *pkey2)
 {
     switch (checkType) {
         case CRYPT_PKEY_CHECK_KEYPAIR:

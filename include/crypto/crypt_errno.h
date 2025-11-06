@@ -489,6 +489,8 @@ enum CRYPT_ERROR {
     CRYPT_MLKEM_CTRL_INIT_REPEATED,                     /**< The CTX cannot be initialized repeatedly.*/
     CRYPT_MLKEM_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
     CRYPT_MLKEM_INVALID_PRVKEY,                         /**< Invalid private key. */
+    CRYPT_MLKEM_DECODE_KEY_OVERFLOW,                    /**< The decoded poly coffs greater than MLKEM_Q */
+    CRYPT_MLKEM_KEY_REPEATED_SET,                       /**< PKey context is repeated set*/
 
     CRYPT_HPKE_ERR_GEN_ASYM_KEY = 0x01310001,            /**< HPKE Generate asymmetric key error. */
     CRYPT_HPKE_ERR_AEAD_TAG,                             /**< Failed to verify AEAD tag when decrypt. */

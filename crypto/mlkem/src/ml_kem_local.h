@@ -33,17 +33,36 @@
 #define MLKEM_XOF_OUTPUT_LENGTH 578
 
 #define MLKEM_Q    3329
+#define MLKEM_Q_INV_BETA (-3327)  //(-MLKEM_Q) ^{-1} mod BETA, BETA = 2^{16}
+#define MLKEM_Q_HALF ((MLKEM_Q + 1) / 2)
 #define MLKEM_BITS_OF_Q 12
 #define MLKEM_INVN 3303  // MLKEM_N_HALF * MLKEM_INVN = 1 mod MLKEM_Q
-
+#define MLKEM_K_MAX    4
 typedef int32_t (*MlKemHashFunc)(uint32_t id, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
-static inline void MlKemAddModQ(int16_t *val)
+
+static inline int16_t BarrettReduction(int16_t a)
 {
-    while (*val < 0) {
-        *val += MLKEM_Q;
-    }
+    const int16_t v = ((1 << 26) + MLKEM_Q / 2) / MLKEM_Q;
+    int16_t t = ((int32_t)v * a + (1 << 25)) >> 26;
+    t *= MLKEM_Q;
+    return a - t;
 }
+
+static inline int16_t MontgomeryReduction(int32_t a)
+{
+    int16_t t = (int16_t)a * MLKEM_Q_INV_BETA;
+    t = (a - (int32_t)t * MLKEM_Q) >> 16;
+    return t;
+}
+
+typedef struct {
+    int16_t *bufAddr;
+    int16_t *matrix[MLKEM_K_MAX][MLKEM_K_MAX];
+    int16_t *vectorS[MLKEM_K_MAX];
+    int16_t *vectorE[MLKEM_K_MAX];
+    int16_t *vectorT[MLKEM_K_MAX];
+} MLKEM_MatrixSt;
 
 typedef struct {
     uint8_t k;
@@ -68,19 +87,24 @@ struct CryptMlKemCtx {
     uint32_t dkLen;
     BSL_SAL_RefCount references;
     void *libCtx;
+    MLKEM_MatrixSt keyData;
 };
-
-void MLKEM_ComputNTT(int16_t *a, const int16_t *psi, uint32_t pruLength);
-void MLKEM_ComputINTT(int16_t *a, const int16_t *psiInv, uint32_t pruLength);
+int32_t MLKEM_DecodeDk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *dk, uint32_t dkLen);
+int32_t MLKEM_DecodeEk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *ek, uint32_t ekLen);
+void MLKEM_ComputNTT(int16_t *a, const int16_t *psi);
+void MLKEM_ComputINTT(int16_t *a, const int16_t *psi);
 void MLKEM_SamplePolyCBD(int16_t *polyF, uint8_t *buf, uint8_t eta);
-void MLKEM_MatrixMulAdd(uint8_t k, int16_t *matrix[], int16_t *vectorS[], int16_t *vectorE,
-    int16_t *vectorT, const int16_t *factor);
+void MLKEM_TransposeMatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut,
+                                 const int16_t *factor);
+void MLKEM_MatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut, const int16_t *factor);
+void MLKEM_VectorInnerProductAdd(uint8_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
+                                 const int16_t *factor);
 
 int32_t MLKEM_KeyGenInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *d, uint8_t *z);
 
-int32_t MLKEM_EncapsInternal(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen, uint8_t *sk, uint32_t *skLen,
+int32_t MLKEM_EncapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen, uint8_t *sk, uint32_t *skLen,
     uint8_t *m);
 
-int32_t MLKEM_DecapsInternal(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen, uint8_t *sk, uint32_t *skLen);
+int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen, uint8_t *sk, uint32_t *skLen);
 
 #endif    // ML_KEM_LOCAL_H

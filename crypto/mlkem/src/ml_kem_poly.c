@@ -17,41 +17,70 @@
 #ifdef HITLS_CRYPTO_MLKEM
 #include "ml_kem_local.h"
 
-// basecase multiplication
-static void BaseMul(int16_t polyH[2], int16_t f0, int16_t f1, int16_t g0, int16_t g1, int16_t factor)
+// basecase multiplication: add to polyH but not override it
+static void BaseMulAdd(int16_t polyH[2], const int16_t f0, const int16_t f1, const int16_t g0, const int16_t g1,
+                       const int16_t factor)
 {
-    polyH[0] = (int16_t)(((int32_t)(f0 * g0) + (int32_t)(((int32_t)(f1 * g1) % MLKEM_Q) * factor)) % MLKEM_Q);
-    polyH[1] = (int16_t)(((int32_t)(f0 * g1) + (int32_t)(f1 * g0)) % MLKEM_Q);
-    MlKemAddModQ(&polyH[0]);
-    MlKemAddModQ(&polyH[1]);
+    polyH[0] += (int16_t)((f0 * g0 + f1 * g1 % MLKEM_Q * factor) % MLKEM_Q);
+    polyH[1] += (int16_t)((f0 * g1 + f1 * g0) % MLKEM_Q);
 }
 
-// circle multiplication
-static void CircMul(int16_t dest[MLKEM_N], int16_t src1[MLKEM_N], int16_t src2[MLKEM_N], const int16_t *factor)
+static void CircMulAdd(int16_t dest[MLKEM_N], const int16_t src1[MLKEM_N], const int16_t src2[MLKEM_N],
+                       const int16_t *factor)
 {
     for (uint32_t i = 0; i < MLKEM_N / 4; i++) {
         // 4-byte data is calculated in each round.
-        BaseMul(&dest[4 * i], src1[4 * i], src1[4 * i + 1], src2[4 * i], src2[4 * i + 1], factor[i]);
-        BaseMul(&dest[4 * i + 2], src1[4 * i + 2], src1[4 * i + 3], src2[4 * i + 2], src2[4 * i + 3], -1 * factor[i]);
+        BaseMulAdd(&dest[4 * i], src1[4 * i], src1[4 * i + 1], src2[4 * i], src2[4 * i + 1], factor[i]);
+        BaseMulAdd(&dest[4 * i + 2], src1[4 * i + 2], src1[4 * i + 3], src2[4 * i + 2], src2[4 * i + 3],
+                   -1 * factor[i]);
     }
 }
 
-void MLKEM_MatrixMulAdd(uint8_t k, int16_t *matrix[], int16_t *vectorS[], int16_t *vectorE,
-    int16_t *vectorT, const int16_t *factor)
+static void PolyReduce(int16_t *poly)
 {
-    int16_t dest[MLKEM_N] = { 0 };
-    for (uint8_t j = 0; j < k; j++) {
-        // factor is a half of the NTT table.
-        CircMul(dest, matrix[j], vectorS[j], factor + MLKEM_N_HALF / 2);
-        for (uint32_t n = 0; n < MLKEM_N; n++) {
-            if (j == 0) {
-                vectorT[n] = (vectorE == NULL) ? dest[n] : (vectorE[n] + dest[n]);
-            } else if (j != 0 && j != (k - 1)) {
-                vectorT[n] += dest[n];
-            } else if (j == (k - 1)) {
-                vectorT[n] = (vectorT[n] + dest[n]) % MLKEM_Q;
-            }
+    for (int i = 0; i < MLKEM_N; ++i) {
+        poly[i] = BarrettReduction(poly[i]);
+    }
+}
+// polyVecOut += (matrix * polyVec): add to polyVecOut but not override it
+void MLKEM_MatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut, const int16_t *factor)
+{
+    int16_t **currOutPoly = polyVecOut;
+    for (int i = 0; i < k; ++i) {
+        int16_t **currMatrixPoly = matrix + i * MLKEM_K_MAX;
+        int16_t **currVecPoly = polyVec;
+        for (int j = 0; j < k; ++j) {
+            CircMulAdd(*currOutPoly, *currMatrixPoly, *currVecPoly, factor + MLKEM_N_HALF / 2);
+            ++currMatrixPoly;
+            ++currVecPoly;
         }
+        PolyReduce(*currOutPoly);
+        ++currOutPoly;
+    }
+}
+
+// polyVecOut += (matrix^T * polyVec): add to polyVecOut but not override it
+void MLKEM_TransposeMatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut,
+                                 const int16_t *factor)
+{
+    int16_t **currOutPoly = polyVecOut;
+    for (int i = 0; i < k; ++i) {
+        int16_t **currMatrixPoly = matrix + i;
+        int16_t **currVecPoly = polyVec;
+        for (int j = 0; j < k; ++j) {
+            CircMulAdd(*currOutPoly, *currMatrixPoly, *currVecPoly, factor + MLKEM_N_HALF / 2);
+            currMatrixPoly += MLKEM_K_MAX;
+            ++currVecPoly;
+        }
+        ++currOutPoly;
+    }
+}
+
+void MLKEM_VectorInnerProductAdd(uint8_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
+                                 const int16_t *factor)
+{
+    for (int i = 0; i < k; ++i) {
+        CircMulAdd(polyOut, polyVec1[i], polyVec2[i], factor + MLKEM_N_HALF / 2);
     }
 }
 
@@ -92,5 +121,4 @@ void MLKEM_SamplePolyCBD(int16_t *polyF, uint8_t *buf, uint8_t eta)
         }
     }
 }
-
 #endif

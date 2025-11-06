@@ -29,7 +29,6 @@
 #include "ml_kem_local.h"
 
 #define BITS_OF_BYTE 8
-#define MLKEM_K_MAX    4
 #define MLKEM_ETA1_MAX    3
 #define MLKEM_ETA2_MAX    2
 
@@ -44,37 +43,30 @@ static const int16_t PRE_COMPUT_TABLE_NTT[MLKEM_N_HALF] = {
     1722, 1212, 1874, 1029, 2110, 2935, 885, 2154
 };
 
-// A LUT of all powers of psi^{-1} in bit-reversed order.
-static const int16_t PRE_COMPUT_TABLE_INTT[MLKEM_N_HALF] = {
-    1, 1600, 40, 749, 2481, 1432, 2699, 687, 1583, 2760, 69, 543, 2532, 3136, 1410, 2267, 2508, 1355, 450, 936, 447,
-    2794, 1235, 1903, 1996, 1089, 3273, 283, 1853, 1990, 882, 3033, 2419, 2102, 219, 855, 2681, 1848, 712, 682, 927,
-    1795, 461, 1891, 2877, 2522, 1894, 1010, 1414, 2009, 3296, 464, 2697, 816, 1352, 2679, 1274, 1052, 1025, 2132,
-    1573, 76, 2998, 3040, 1175, 2444, 394, 1219, 2300, 1455, 2117, 1607, 2443, 554, 1179, 2186, 2303, 2926, 2237,
-    525, 735, 863, 2768, 1230, 2572, 556, 3010, 2266, 1684, 1239, 780, 2954, 109, 1292, 1031, 1745, 2688, 3061,
-    992, 2596, 941, 892, 1021, 2390, 642, 1868, 2377, 1482, 1540, 540, 1678, 1626, 279, 314, 1173, 2573, 3096,
-    48, 667, 1920, 2229, 1041, 2606, 1692, 680, 2746, 568, 3312
-};
-
-typedef struct {
-    int16_t *bufAddr;
-    int16_t *matrix[MLKEM_K_MAX][MLKEM_K_MAX];
-    int16_t *vectorS[MLKEM_K_MAX];
-    int16_t *vectorE[MLKEM_K_MAX];
-    int16_t *vectorT[MLKEM_K_MAX];
-} MLKEM_MatrixSt;  // Intermediate data of the key generation and encryption.
-
-typedef struct {
-    int16_t *bufAddr;
-    int16_t *vectorS[MLKEM_K_MAX];
-    int16_t *vectorC1[MLKEM_K_MAX];
-    int16_t *vectorC2;
-    int16_t *polyM;
-} MLKEM_DecVectorSt;  // Intermediate data of the decryption.
+/* A LUT of the primitive n-th roots of unity (psi) multiplied by montgomery factor in bit-reversed order:
+PRE_COMPUT_TABLE_NTT_MONT[i] = PRE_COMPUT_TABLE_NTT[i] * 2^{16} mod MLKEM_Q;
+if (PRE_COMPUT_TABLE_NTT_MONT[i] >= MLKEM_Q / 2) {
+    PRE_COMPUT_TABLE_NTT_MONT[i] -= MLKEM_Q
+    }
+*/
+static const int16_t PRE_COMPUT_TABLE_NTT_MONT[MLKEM_N_HALF] = {
+    -1044, -758,  -359,  -1517, 1493,  1422,  287,   202,   -171,  622,  1577,  182,   962,   -1202, -1474, 1468,
+    573,   -1325, 264,   383,   -829,  1458,  -1602, -130,  -681,  1017, 732,   608,   -1542, 411,   -205,  -1571,
+    1223,  652,   -552,  1015,  -1293, 1491,  -282,  -1544, 516,   -8,   -320,  -666,  -1618, -1162, 126,   1469,
+    -853,  -90,   -271,  830,   107,   -1421, -247,  -951,  -398,  961,  -1508, -725,  448,   -1065, 677,   -1275,
+    -1103, 430,   555,   843,   -1251, 871,   1550,  105,   422,   587,  177,   -235,  -291,  -460,  1574,  1653,
+    -246,  778,   1159,  -147,  -777,  1483,  -602,  1119,  -1590, 644,  -872,  349,   418,   329,   -156,  -75,
+    817,   1097,  603,   610,   1322,  -1285, -1465, 384,   -1215, -136, 1218,  -1335, -874,  220,   -1187, -1659,
+    -1185, -1530, -1278, 794,   -1510, -854,  -870,  478,   -108,  -308, 996,   991,   958,   -1460, 1522,  1628};
 
 static int32_t CreateMatrixBuf(uint8_t k, MLKEM_MatrixSt *st)
 {
     // A total of (k * k + 3 * k) data blocks are required. Each block has 512 bytes.
-    int16_t *buf = BSL_SAL_Malloc((k * k + 3 * k) * MLKEM_N * sizeof(int16_t));
+    if (st->bufAddr != NULL) {
+        return CRYPT_SUCCESS;
+    }
+    int16_t *buf = BSL_SAL_Calloc((k * k + 3 * k) * MLKEM_N, sizeof(int16_t));
+
     if (buf == NULL) {
         return BSL_MALLOC_FAIL;
     }
@@ -91,35 +83,6 @@ static int32_t CreateMatrixBuf(uint8_t k, MLKEM_MatrixSt *st)
     return CRYPT_SUCCESS;
 }
 
-static void MatrixBufFree(uint8_t k, MLKEM_MatrixSt *st)
-{
-    // A total of (k * k + 3 * k) data blocks, each block has 512 bytes.
-    BSL_SAL_ClearFree(st->bufAddr, (k * k + 3 * k) * MLKEM_N * sizeof(int16_t));
-}
-
-static int32_t CreateDecVectorBuf(uint8_t k, MLKEM_DecVectorSt *st)
-{
-    // A total of (k * 2 + 2) data blocks are required. Each block has 512 bytes.
-    int16_t *buf = BSL_SAL_Malloc((k * 2 + 2) * MLKEM_N * sizeof(int16_t));
-    if (buf == NULL) {
-        return BSL_MALLOC_FAIL;
-    }
-    st->bufAddr = buf;  // Used to release memory.
-    for (uint8_t i = 0; i < k; i++) {
-        st->vectorS[i] = buf + (i) * MLKEM_N;
-        st->vectorC1[i] = buf + (k + i) * MLKEM_N;
-    }
-    // vectorC2 and polyM use 2 * k data blocks.
-    st->vectorC2 = buf + (k * 2) * MLKEM_N;
-    st->polyM = buf + (k * 2 + 1) * MLKEM_N;
-    return CRYPT_SUCCESS;
-}
-
-static void DecVectorBufFree(uint8_t k, MLKEM_DecVectorSt *st)
-{
-    // A total of (k * 2 + 2) data blocks, each block has 512 bytes.
-    BSL_SAL_ClearFree(st->bufAddr, (k * 2 + 2) * MLKEM_N * sizeof(int16_t));
-}
 
 // Compress
 typedef struct {
@@ -149,7 +112,7 @@ static int16_t DivMlKemQ(uint16_t x, uint8_t bits, uint16_t halfQ, uint16_t barr
 static int16_t Compress(int16_t x, uint8_t d)
 {
     int16_t value = 0;
-    uint16_t t = (uint16_t)(x + MLKEM_Q) % MLKEM_Q;
+    uint16_t t = x + ((x >> 15) & MLKEM_Q);
     /* Computing (x << d) / MLKEM_Q by Barret Reduce */
     for (uint32_t i = 0; i < sizeof(MLKEM_BARRETT_TABLE) / sizeof(MLKEM_BARRET_REDUCE); i++) {
         if (d == MLKEM_BARRETT_TABLE[i].bits) {
@@ -336,6 +299,9 @@ static void ByteEncode(uint8_t *r, int16_t *polyF, uint8_t bit)
             EncodeBits11(r, (uint16_t *)polyF);
             break;
         case 12:    // 12 Used for K-PKE.KeyGen Step 19.
+            for (int i = 0; i < MLKEM_N; ++i) {
+                polyF[i] += (polyF[i] >> 15) & MLKEM_Q;
+            }
             EncodeBits12(r, (uint16_t *)polyF);
             break;
         default:
@@ -432,11 +398,11 @@ static int32_t DecodeBits12(int16_t *polyF, const uint8_t *a)
         polyF[2 * i + 1] = ((a[3 * i + 1] >> 4) | ((uint16_t)a[3 * i + 2] << 4)) & 0xFFF;
         /* According to Section 7.2 of NIST.FIPS.203, when decapsulating, use ByteDecode and ByteEncode
          * to check that the data does not change after decoding and re-encoding. This is equivalent to
-         * checking that there is no data that exceeds the modulus q after decoding.
+         * check that there is no data that exceeds the modulus q after decoding.
          */
         if (polyF[2 * i] >= MLKEM_Q || polyF[2 * i + 1] >= MLKEM_Q) {
-            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-            return CRYPT_INVALID_ARG;
+            BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_DECODE_KEY_OVERFLOW);
+            return CRYPT_MLKEM_DECODE_KEY_OVERFLOW;
         }
     }
     return CRYPT_SUCCESS;
@@ -507,7 +473,7 @@ static int32_t SampleEta1(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, int16_t 
         RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
         MLKEM_SamplePolyCBD(polyS[i], prfOut, ctx->info->eta1);
         *nonce = *nonce + 1;
-        MLKEM_ComputNTT(polyS[i], PRE_COMPUT_TABLE_NTT, MLKEM_N_HALF);
+        MLKEM_ComputNTT(polyS[i], PRE_COMPUT_TABLE_NTT_MONT);
     }
     return CRYPT_SUCCESS;
 }
@@ -529,7 +495,7 @@ static int32_t SampleEta2(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, int16_t 
 }
 
 // NIST.FIPS.203 Algorithm 13 K-PKE.KeyGen(𝑑)
-static int32_t PkeKeyGen(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *pk, uint8_t *dk, uint8_t *d)
+static int32_t PkeKeyGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *pk, uint8_t *dk, uint8_t *d)
 {
     uint8_t k = ctx->info->k;
     uint8_t nonce = 0;
@@ -545,34 +511,85 @@ static int32_t PkeKeyGen(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *pk, uint8_t *dk, 
     // expand 32+1 bytes to two pseudorandom 32-byte seeds
     uint8_t *p = digest;
     uint8_t *q = digest + CRYPT_SHA3_512_DIGESTSIZE / 2;
-
-    MLKEM_MatrixSt st = { 0 };
-    ret = CreateMatrixBuf(k, &st);
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
-    GOTO_ERR_IF(GenMatrix(ctx, p, st.matrix, false), ret);  // Step 3 - 7
-    GOTO_ERR_IF(SampleEta1(ctx, q, st.vectorS, &nonce), ret);  // Step 8 - 11
-    GOTO_ERR_IF(SampleEta1(ctx, q, st.vectorE, &nonce), ret);  // Step 12 - 15
-    for (uint8_t i = 0; i < k; i++) {  // Step 18
-        MLKEM_MatrixMulAdd(k, st.matrix[i], st.vectorS, st.vectorE[i], st.vectorT[i], PRE_COMPUT_TABLE_NTT);
-    }
+    GOTO_ERR_IF(GenMatrix(ctx, p, ctx->keyData.matrix, false), ret);  // Step 3 - 7
+    GOTO_ERR_IF(SampleEta1(ctx, q, ctx->keyData.vectorS, &nonce), ret);  // Step 8 - 11
+    GOTO_ERR_IF(SampleEta1(ctx, q, ctx->keyData.vectorT, &nonce), ret);  // Step 12 - 15
+    MLKEM_MatrixMulAdd(k, (int16_t **)ctx->keyData.matrix, ctx->keyData.vectorS, ctx->keyData.vectorT,
+                       PRE_COMPUT_TABLE_NTT);
     // output: pk, dk,  ekPKE ← ByteEncode12(𝐭)‖p.
     for (uint8_t i = 0; i < k; i++) {
         // Step 19
-        ByteEncode(pk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * i, st.vectorT[i], MLKEM_BITS_OF_Q);
+        ByteEncode(pk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * i, ctx->keyData.vectorT[i], MLKEM_BITS_OF_Q);
         // Step 20
-        ByteEncode(dk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * i, st.vectorS[i], MLKEM_BITS_OF_Q);
+        ByteEncode(dk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * i, ctx->keyData.vectorS[i], MLKEM_BITS_OF_Q);
     }
     // The buffer of pk is sufficient, check it before calling this function.
     (void)memcpy_s(pk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * k, MLKEM_SEED_LEN, p, MLKEM_SEED_LEN);
 
 ERR:
-    MatrixBufFree(k, &st);
     return ret;
 }
 
-// NIST.FIPS.203 Algorithm 14 K-PKE.Encrypt(ekPKE,𝑚,𝑟)
-static int32_t PkeEncrypt(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, const uint8_t *ek, uint8_t *m, uint8_t *r)
+int32_t MLKEM_DecodeDk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *dk, uint32_t dkLen)
+{
+    if (ctx == NULL || dk == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->info == NULL) {
+        return CRYPT_MLKEM_KEYINFO_NOT_SET;
+    }
+    if (ctx->info->decapsKeyLen != dkLen) {
+        return CRYPT_MLKEM_KEYLEN_ERROR;
+    }
+    uint8_t k = ctx->info->k;
+    if (CreateMatrixBuf(k, &ctx->keyData) != CRYPT_SUCCESS) {
+        return BSL_MALLOC_FAIL;
+    }
+    for (int i = 0; i < k; ++i) {
+        if (DecodeBits12(ctx->keyData.vectorS[i], dk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * i) != CRYPT_SUCCESS) {
+            return CRYPT_MLKEM_DECODE_KEY_OVERFLOW;
+        }
+    }
+    const uint8_t *ekBuff = dk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * k;
+    int32_t ret = MLKEM_DecodeEk(ctx, ekBuff, ctx->info->encapsKeyLen);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t MLKEM_DecodeEk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *ek, uint32_t ekLen)
+{
+    if (ctx == NULL || ek == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->info == NULL) {
+        return CRYPT_MLKEM_KEYINFO_NOT_SET;
+    }
+    if (ctx->info->encapsKeyLen != ekLen) {
+        return CRYPT_MLKEM_KEYLEN_ERROR;
+    }
+    uint8_t k = ctx->info->k;
+    if (CreateMatrixBuf(k, &ctx->keyData) != CRYPT_SUCCESS) {
+        return BSL_MALLOC_FAIL;
+    }
+    int32_t ret = GenMatrix(ctx, ek + MLKEM_CIPHER_LEN * k, ctx->keyData.matrix, false);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    for (uint8_t i = 0; i < k; i++) {
+        ret = DecodeBits12(ctx->keyData.vectorT[i], ek + MLKEM_CIPHER_LEN * i);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+    return CRYPT_SUCCESS;
+}
+
+// NIST.FIPS.203 Algorithm 14 K-PKE.Encrypt(ekPKE, m, r)
+static int32_t PkeEncrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint8_t *m, uint8_t *r)
 {
     uint8_t i;
     uint32_t n;
@@ -580,103 +597,106 @@ static int32_t PkeEncrypt(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, const uint8_
     uint8_t nonce = 0; // Step 1
     uint8_t seedE[MLKEM_SEED_LEN + 1];
     uint8_t bufEncE[MLKEM_PRF_BLOCKSIZE * MLKEM_ETA1_MAX];
-    int16_t polyVectorE2[MLKEM_N] = { 0 };
-    int16_t polyVectorC2[MLKEM_N] = { 0 };
-    int16_t polyVectorM[MLKEM_N] = { 0 };
-
-    MLKEM_MatrixSt st = { 0 };
-    int32_t ret = CreateMatrixBuf(k, &st);
-    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
-
-    GOTO_ERR_IF(GenMatrix(ctx, ek + MLKEM_CIPHER_LEN * k, st.matrix, true), ret);  // Step 3 - 8
-    GOTO_ERR_IF(SampleEta1(ctx, r, st.vectorS, &nonce), ret);  // Step 9 - 12
-    GOTO_ERR_IF(SampleEta2(ctx, r, st.vectorE, &nonce), ret);  // Step 13 - 16
+    int16_t polyE2[MLKEM_N] = { 0 };
+    int16_t polyC2[MLKEM_N] = { 0 };
+    int16_t polyM[MLKEM_N] = { 0 };
+    int16_t *polyVecY[MLKEM_K_MAX] = { 0 };
+    int16_t *polyVecE1[MLKEM_K_MAX] = { 0 };
+    int16_t *polyVecU[MLKEM_K_MAX] = { 0 };
+    int16_t *tmpPolyVec = BSL_SAL_Calloc(MLKEM_N * k * 3, sizeof(int16_t));
+    if (tmpPolyVec == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    // Reference the memory
+    for (i = 0; i < k; ++i) {
+        polyVecY[i] = tmpPolyVec + MLKEM_N * i;
+        polyVecE1[i] = polyVecY[i] + k * MLKEM_N;
+        polyVecU[i] = polyVecE1[i] + k * MLKEM_N;
+    }
+    int32_t ret = 0;
+    
+    GOTO_ERR_IF(SampleEta1(ctx, r, polyVecY, &nonce), ret);  // Step 9 - 12
+    GOTO_ERR_IF(SampleEta2(ctx, r, polyVecE1, &nonce), ret);  // Step 13 - 16
 
     // Step 17
     (void)memcpy_s(seedE, MLKEM_SEED_LEN, r, MLKEM_SEED_LEN);
     seedE[MLKEM_SEED_LEN] = nonce;
     GOTO_ERR_IF(PRF(ctx->libCtx, seedE, MLKEM_SEED_LEN + 1, bufEncE, MLKEM_PRF_BLOCKSIZE * ctx->info->eta2), ret);
-    MLKEM_SamplePolyCBD(polyVectorE2, bufEncE, ctx->info->eta2);
-
+    MLKEM_SamplePolyCBD(polyE2, bufEncE, ctx->info->eta2);
     // Step 18
-    for (i = 0; i < k; i++) {
-        MLKEM_MatrixMulAdd(k, st.matrix[i], st.vectorS, NULL, st.vectorT[i], PRE_COMPUT_TABLE_NTT);
-    }
-
+    MLKEM_TransposeMatrixMulAdd(k, (int16_t **)ctx->keyData.matrix, polyVecY, polyVecU, PRE_COMPUT_TABLE_NTT);
     // Step 19
     for (i = 0; i < k; i++) {
-        MLKEM_ComputINTT(st.vectorT[i], PRE_COMPUT_TABLE_INTT, MLKEM_N_HALF);
+        MLKEM_ComputINTT(polyVecU[i], PRE_COMPUT_TABLE_NTT_MONT);
         for (n = 0; n < MLKEM_N; n++) {
-            st.vectorT[i][n] = Compress(st.vectorT[i][n] + st.vectorE[i][n], ctx->info->du);
+            polyVecU[i][n] = Compress(polyVecU[i][n] + polyVecE1[i][n], ctx->info->du);
         }
     }
-
     // Step 21
-    for (i = 0; i < k; i++) {
-        GOTO_ERR_IF(DecodeBits12(st.vectorE[i], ek + MLKEM_CIPHER_LEN * i), ret);
-    }
-    MLKEM_MatrixMulAdd(k, st.vectorE, st.vectorS, NULL, polyVectorC2, PRE_COMPUT_TABLE_NTT);
-
-    ByteDecode(polyVectorM, m, 1);
-    MLKEM_ComputINTT(polyVectorC2, PRE_COMPUT_TABLE_INTT, MLKEM_N_HALF);
+    MLKEM_VectorInnerProductAdd(k, ctx->keyData.vectorT, polyVecY, polyC2, PRE_COMPUT_TABLE_NTT);
+    ByteDecode(polyM, m, 1);
+    MLKEM_ComputINTT(polyC2, PRE_COMPUT_TABLE_NTT_MONT);
 
     for (n = 0; n < MLKEM_N; n++) {
-        polyVectorM[n] = DeCompress(polyVectorM[n], 1); // Step 20
+        polyM[n] = DeCompress(polyM[n], 1); // Step 20
         // Step 22
-        polyVectorC2[n] = Compress(polyVectorC2[n] + polyVectorE2[n] + polyVectorM[n], ctx->info->dv);
+        polyC2[n] = Compress(polyC2[n] + polyE2[n] + polyM[n], ctx->info->dv);
     }
 
     // Step 22
     for (i = 0; i < k; i++) {
-        ByteEncode(ct + MLKEM_ENCODE_BLOCKSIZE * ctx->info->du * i, st.vectorT[i], ctx->info->du);
+        ByteEncode(ct + MLKEM_ENCODE_BLOCKSIZE * ctx->info->du * i, polyVecU[i], ctx->info->du);
     }
     // Step 23
-    ByteEncode(ct + MLKEM_ENCODE_BLOCKSIZE * ctx->info->du * k, polyVectorC2, ctx->info->dv);
+    ByteEncode(ct + MLKEM_ENCODE_BLOCKSIZE * ctx->info->du * k, polyC2, ctx->info->dv);
 ERR:
-    MatrixBufFree(k, &st);
+    BSL_SAL_Free(tmpPolyVec);
     return ret;
 }
 
+
 // NIST.FIPS.203 Algorithm 15 K-PKE.Decrypt(dkPKE, 𝑐)
-static int32_t PkeDecrypt(const CRYPT_MlKemInfo *algInfo, uint8_t *result, const uint8_t *dk,
-    const uint8_t *ciphertext)
+static int32_t PkeDecrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *result, const uint8_t *ciphertext)
 {
     uint8_t i;
-    uint8_t k = algInfo->k;
+    uint8_t k = ctx->info->k;
     uint32_t n;
-
-    MLKEM_DecVectorSt st = { 0 };
-    int32_t ret = CreateDecVectorBuf(k, &st);
-    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
-
-    for (i = 0; i < k; i++) {
-        ByteDecode(st.vectorC1[i], ciphertext + MLKEM_ENCODE_BLOCKSIZE * algInfo->du * i, algInfo->du);  // Step 3
-        ByteDecode(st.vectorS[i], dk + MLKEM_ENCODE_BLOCKSIZE * MLKEM_BITS_OF_Q * i, MLKEM_BITS_OF_Q);   // Step 5
+    // tmpPolyVec = polyM || polyC2 || polyVecC1
+    int16_t *tmpPolyVec = BSL_SAL_Calloc((k * 2 + 1) * MLKEM_N, sizeof(int16_t));
+    if (tmpPolyVec == NULL) {
+        return BSL_MALLOC_FAIL;
     }
-    ByteDecode(st.vectorC2, ciphertext + MLKEM_ENCODE_BLOCKSIZE * algInfo->du * k, algInfo->dv);   // Step 4
-
+    int16_t *polyVecC1[MLKEM_K_MAX];
+    int16_t *polyC2;
+    int16_t *polyM;
+    // Reference the stack memory
+    polyM = tmpPolyVec;
+    polyC2 = tmpPolyVec + MLKEM_N;
+    for (i = 0; i < k; ++i) {
+        polyVecC1[i] = tmpPolyVec + MLKEM_N * (i + 2);
+    }
+    for (i = 0; i < k; i++) {
+        ByteDecode(polyVecC1[i], ciphertext + MLKEM_ENCODE_BLOCKSIZE * ctx->info->du * i, ctx->info->du);  // Step 3
+    }
+    ByteDecode(polyC2, ciphertext + MLKEM_ENCODE_BLOCKSIZE * ctx->info->du * k, ctx->info->dv);   // Step 4
     for (i = 0; i < k; i++) {
         for (n = 0; n < MLKEM_N; n++) {
-            st.vectorC1[i][n] = DeCompress(st.vectorC1[i][n], algInfo->du);  // Step 3
+            polyVecC1[i][n] = DeCompress(polyVecC1[i][n], ctx->info->du);  // Step 3
             if (i == 0) {
-                st.vectorC2[n] = DeCompress(st.vectorC2[n], algInfo->dv);  // Step 4
+                polyC2[n] = DeCompress(polyC2[n], ctx->info->dv);  // Step 4
             }
         }
-        MLKEM_ComputNTT(st.vectorC1[i], PRE_COMPUT_TABLE_NTT, MLKEM_N_HALF);
+        MLKEM_ComputNTT(polyVecC1[i], PRE_COMPUT_TABLE_NTT_MONT);
     }
-
-    MLKEM_MatrixMulAdd(k, st.vectorS, st.vectorC1, NULL, st.polyM, PRE_COMPUT_TABLE_NTT);      // Step 6
-
-    // polyM = intt(polyM)
-    MLKEM_ComputINTT(st.polyM, PRE_COMPUT_TABLE_INTT, MLKEM_N_HALF);
-
+    MLKEM_VectorInnerProductAdd(k, ctx->keyData.vectorS, polyVecC1, polyM, PRE_COMPUT_TABLE_NTT);
+    MLKEM_ComputINTT(polyM, PRE_COMPUT_TABLE_NTT_MONT);
     // c2 - polyM
     for (n = 0; n < MLKEM_N; n++) {
-        st.polyM[n] = Compress(st.vectorC2[n] - st.polyM[n], 1);
+        polyM[n] = Compress(polyC2[n] - polyM[n], 1);
     }
 
-    ByteEncode(result, st.polyM, 1);  // Step 7
-    DecVectorBufFree(k, &st);
+    ByteEncode(result, polyM, 1);  // Step 7
+    BSL_SAL_Free(tmpPolyVec);
     return CRYPT_SUCCESS;
 }
 
@@ -685,9 +705,10 @@ int32_t MLKEM_KeyGenInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *d, uint8_t *z)
 {
     const CRYPT_MlKemInfo *algInfo = ctx->info;
     uint32_t dkPkeLen = MLKEM_CIPHER_LEN * algInfo->k;
-
+    int32_t ret = CreateMatrixBuf(algInfo->k, &ctx->keyData);
+    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
     // (ekPKE,dkPKE) ← K-PKE.KeyGen(𝑑)
-    int32_t ret = PkeKeyGen(ctx, ctx->ek, ctx->dk, d);
+    ret = PkeKeyGen(ctx, ctx->ek, ctx->dk, d);
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
     // dk ← (dkPKE‖ek‖H(ek)‖𝑧)
@@ -708,7 +729,7 @@ int32_t MLKEM_KeyGenInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *d, uint8_t *z)
 }
 
 // NIST.FIPS.203 Algorithm 17 ML-KEM.Encaps_internal(ek,𝑚)
-int32_t MLKEM_EncapsInternal(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen, uint8_t *sk, uint32_t *skLen,
+int32_t MLKEM_EncapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen, uint8_t *sk, uint32_t *skLen,
     uint8_t *m)
 {
     uint8_t mhek[MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE];  // m and H(ek)
@@ -725,7 +746,7 @@ int32_t MLKEM_EncapsInternal(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t 
     (void)memcpy_s(sk, *skLen, kr, MLKEM_SHARED_KEY_LEN);
 
     // 𝑐 ← K-PKE.Encrypt(ek,𝑚,𝑟)
-    ret = PkeEncrypt(ctx, ct, ctx->ek, m, kr + MLKEM_SHARED_KEY_LEN);
+    ret = PkeEncrypt(ctx, ct, m, kr + MLKEM_SHARED_KEY_LEN);
     BSL_SAL_CleanseData(kr, CRYPT_SHA3_512_DIGESTSIZE);
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
@@ -735,7 +756,7 @@ int32_t MLKEM_EncapsInternal(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t 
 }
 
 // NIST.FIPS.203 Algorithm 18 ML-KEM.Decaps_internal(dk, 𝑐)
-int32_t MLKEM_DecapsInternal(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen, uint8_t *sk, uint32_t *skLen)
+int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen, uint8_t *sk, uint32_t *skLen)
 {
     const CRYPT_MlKemInfo *algInfo = ctx->info;
     const uint8_t *dk = ctx->dk;                            // Step 1  dkPKE ← dk[0 : 384k]
@@ -754,7 +775,7 @@ int32_t MLKEM_DecapsInternal(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t 
         return CRYPT_MLKEM_INVALID_PRVKEY;
     }
 
-    ret = PkeDecrypt(algInfo, mh, dk, ct);  // Step 5: 𝑚′ ← K-PKE.Decrypt(dkPKE, 𝑐)
+    ret = PkeDecrypt(ctx, mh, ct);  // Step 5: 𝑚′ ← K-PKE.Decrypt(dkPKE, 𝑐)
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
     // Step 6: (K′,r′) ← G(m′ || h)
     (void)memcpy_s(mh + MLKEM_SEED_LEN, CRYPT_SHA3_256_DIGESTSIZE, h, CRYPT_SHA3_256_DIGESTSIZE);
@@ -764,7 +785,7 @@ int32_t MLKEM_DecapsInternal(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t 
     uint8_t *r = kr + MLKEM_SHARED_KEY_LEN;
     uint8_t *newCt = BSL_SAL_Malloc(ctLen + MLKEM_SEED_LEN);
     RETURN_RET_IF(newCt == NULL, BSL_MALLOC_FAIL);
-    GOTO_ERR_IF(PkeEncrypt(ctx, newCt, ek, mh, r), ret);
+    GOTO_ERR_IF(PkeEncrypt(ctx, newCt, mh, r), ret);
 
     // Step 9: if c != c′
     if (memcmp(ct, newCt, ctLen) == 0) {

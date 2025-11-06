@@ -287,7 +287,6 @@ void SDV_CRYPTO_HYBRID_ENCAPS_DECAPS_FUNC_TC002(int algid, int type, int isProvi
     ek.id = algid;
     ek.key.kemEk.len = encapsKeyA->len;
     ek.key.kemEk.data = encapsKeyA->x;
-    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctxA, &ek), CRYPT_SUCCESS);
     CRYPT_EAL_PkeyPrv dk = { 0 };
     dk.id = algid;
     dk.key.kemDk.len = decapsKeyA->len;

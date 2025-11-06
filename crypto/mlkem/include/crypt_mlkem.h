@@ -59,10 +59,10 @@ int32_t CRYPT_ML_KEM_Cmp(const CRYPT_ML_KEM_Ctx *a, const CRYPT_ML_KEM_Ctx *b);
 
 int32_t CRYPT_ML_KEM_GetSecBits(const CRYPT_ML_KEM_Ctx *ctx);
 
-int32_t CRYPT_ML_KEM_Encaps(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32_t *cipherLen,
+int32_t CRYPT_ML_KEM_Encaps(CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32_t *cipherLen,
     uint8_t *share, uint32_t *shareLen);
 
-int32_t CRYPT_ML_KEM_Decaps(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32_t cipherLen,
+int32_t CRYPT_ML_KEM_Decaps(CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32_t cipherLen,
     uint8_t *share, uint32_t *shareLen);
 
 #ifdef HITLS_CRYPTO_MLKEM_CHECK
@@ -78,7 +78,7 @@ int32_t CRYPT_ML_KEM_Decaps(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32
  * @retval CRYPT_SUCCESS    check success.
  * Others. For details, see error code in errno.
  */
-int32_t CRYPT_ML_KEM_Check(uint32_t checkType, const CRYPT_ML_KEM_Ctx *pkey1, const CRYPT_ML_KEM_Ctx *pkey2);
+int32_t CRYPT_ML_KEM_Check(uint32_t checkType, CRYPT_ML_KEM_Ctx *pkey1, CRYPT_ML_KEM_Ctx *pkey2);
 
 #endif // HITLS_CRYPTO_MLKEM_CHECK
 
