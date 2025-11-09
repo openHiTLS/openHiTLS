@@ -313,8 +313,9 @@ static int32_t ReadThenParseTlsHsMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
     }
 #ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_HANDSHAKE, hsMsgInfo.rawMsg, hsMsgInfo.headerAndBodyLen,
-                              ctx, ctx->config.tlsConfig.msgArg);
-
+        ctx, ctx->config.tlsConfig.msgArg);
+    INDICATOR_StatusIndicate(ctx, ctx->isClient ? INDICATE_EVENT_STATE_CONNECT_LOOP : INDICATE_EVENT_STATE_ACCEPT_LOOP,
+        INDICATE_VALUE_SUCCESS);
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
     hsCtx->msgLen = 0;
     return HITLS_SUCCESS;
@@ -514,8 +515,10 @@ static int32_t DtlsReadAndParseHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
     }
     ctx->hsCtx->hsMsg = hsMsg;
 #ifdef HITLS_TLS_FEATURE_INDICATOR
-        INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_HANDSHAKE, hsMsgInfo.rawMsg,
-                                  hsMsgInfo.headerAndBodyLen, ctx, ctx->config.tlsConfig.msgArg);
+    INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_HANDSHAKE, hsMsgInfo.rawMsg,
+        hsMsgInfo.headerAndBodyLen, ctx, ctx->config.tlsConfig.msgArg);
+    INDICATOR_StatusIndicate(ctx, ctx->isClient ? INDICATE_EVENT_STATE_CONNECT_LOOP : INDICATE_EVENT_STATE_ACCEPT_LOOP,
+        INDICATE_VALUE_SUCCESS);
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
     return HITLS_SUCCESS;
 }

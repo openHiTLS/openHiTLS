@@ -189,14 +189,6 @@ int32_t HS_ChangeState(TLS_Ctx *ctx, uint32_t nextState)
     /* when link state is transporting, unexpected hs message should be processed, the log shouldn't be printed during
         the hsCtx initiation */
     if (ctx->state != CM_STATE_TRANSPORTING) {
-#ifdef HITLS_TLS_FEATURE_INDICATOR
-        if (ctx->isClient) {
-            INDICATOR_StatusIndicate(ctx, INDICATE_EVENT_STATE_CONNECT_LOOP, INDICATE_VALUE_SUCCESS);
-        } else {
-            INDICATOR_StatusIndicate(ctx, INDICATE_EVENT_STATE_ACCEPT_LOOP, INDICATE_VALUE_SUCCESS);
-        }
-#endif /* HITLS_TLS_FEATURE_INDICATOR */
-
         BSL_LOG_BINLOG_VARLEN(BINLOG_ID15573, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "handshake state machine change to:%s.", HS_GetStateStr(nextState));
     }
