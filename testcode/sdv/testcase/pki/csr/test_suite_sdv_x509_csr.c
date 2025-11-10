@@ -17,6 +17,8 @@
 #include "hitls_csr_local.h"
 #include "hitls_pki_csr.h"
 #include "hitls_pki_utils.h"
+#include "hitls_pki_cert.h"
+#include "hitls_cert_local.h"
 #include "bsl_list.h"
 #include "sal_file.h"
 #include "bsl_obj_internal.h"
@@ -28,6 +30,8 @@
 #include "crypt_eal_rand.h"
 #include "eal_pkey_local.h"
 #include "bsl_list_internal.h"
+#include "bsl_obj.h"
+#include "crypt_eal_pkey.h"
 
 /* END_HEADER */
 #define MAX_DATA_LEN 128
@@ -147,6 +151,9 @@ void SDV_X509_CSR_PARSE_FUNC_TC001(int format, char *path, int expRawDataLen, in
             strlen(g_sm2DefaultUserid)), HITLS_PKI_SUCCESS);
     }
     ASSERT_EQ(HITLS_X509_CsrVerify(csr), HITLS_PKI_SUCCESS);
+
+    /* Verify CSR version: PKCS#10 v1 => version = 0 */
+    ASSERT_EQ(csr->reqInfo.version, 0);
 
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_ENCODELEN, &rawDataLen, sizeof(rawDataLen)), 0);
     ASSERT_EQ(rawDataLen, expRawDataLen);
@@ -434,6 +441,7 @@ void SDV_X509_CSR_GEN_FUNC_TC002(int csrFormat, char *csrPath, int keyFormat, ch
     uint32_t rawCsrEncodeLen = 0;
     HITLS_X509_SignAlgParam algParam = {0};
     HITLS_X509_SignAlgParam *algParamPtr = NULL;
+    HITLS_X509_Csr *parsed = NULL;
     if (pad == CRYPT_EMSA_PSS) {
         algParam.algId = BSL_CID_RSASSAPSS;
         algParam.rsaPss.mdId = mdId;
@@ -458,6 +466,17 @@ void SDV_X509_CSR_GEN_FUNC_TC002(int csrFormat, char *csrPath, int keyFormat, ch
     ASSERT_EQ(HITLS_X509_CsrSign(mdId, privKey, algParamPtr, new), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrGenBuff(csrFormat, new, &encode), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrVerify(new), HITLS_PKI_SUCCESS);
+
+    /* Parse the generated CSR buffer and verify it can be parsed and verified */
+    ASSERT_EQ(HITLS_X509_CsrParseBuff(csrFormat, &encode, &parsed), HITLS_PKI_SUCCESS);
+    ASSERT_NE(parsed, NULL);
+    if (isUseSm2UserId != 0) {
+        ASSERT_EQ(HITLS_X509_CsrCtrl(parsed, HITLS_X509_SET_VFY_SM2_USER_ID, g_sm2DefaultUserid,
+            strlen(g_sm2DefaultUserid)), HITLS_PKI_SUCCESS);
+    }
+    ASSERT_EQ(HITLS_X509_CsrVerify(parsed), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(parsed->reqInfo.version, 0);
+
     ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_GET_ENCODELEN, &newCsrEncodeLen, sizeof(newCsrEncodeLen)),
         HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(new, HITLS_X509_GET_ENCODE, &newCsrEncode, 0), HITLS_PKI_SUCCESS);
@@ -473,6 +492,7 @@ void SDV_X509_CSR_GEN_FUNC_TC002(int csrFormat, char *csrPath, int keyFormat, ch
         ASSERT_EQ(memcmp(newCsrEncode, rawCsrEncode, rawCsrEncodeLen), 0);
     }
 EXIT:
+    HITLS_X509_CsrFree(parsed);
     HITLS_X509_CsrFree(raw);
     ResetCsrNameList(new);
     ResetCsrAttrsList(new);
@@ -902,8 +922,8 @@ EXIT:
 }
 
 /* BEGIN_CASE */
-void SDV_X509_CSR_AddSubjectName_FUNC_TC001(int keyFormat, int keyType, char *privPath,
-    int mdId, int dnType1, char *dnName1, int dnType2, char *dnName2, int dnType3, char *dnName3, Hex *expectedReqInfo)
+void SDV_X509_CSR_AddSubjectName_FUNC_TC001(int keyFormat, int keyType, char *privPath, int mdId,
+    int dnType1, char *dnName1, int dnType2, char *dnName2, int dnType3, char *dnName3, Hex *expectedReqInfo)
 {
     TestMemInit();
     TestRandInit();
@@ -941,5 +961,390 @@ void SDV_X509_CSR_PARSE_FUNC_TC004(int format, char *path, int expectedRet)
 
 EXIT:
     HITLS_X509_CsrFree(csr);
+}
+/* END_CASE */
+
+static int32_t CertAssertSanEquals(HITLS_X509_Cert *cert, char *dns1, char *dns2, char *email1, char *uri1)
+{
+    int32_t ret = HITLS_X509_ERR_ATTR_UNSUPPORT;
+    HITLS_X509_ExtSan san = {0};
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SAN, &san, sizeof(san)), HITLS_PKI_SUCCESS);
+    bool seenDNS1 = (dns1 == NULL);
+    bool seenDNS2 = (dns2 == NULL);
+    bool seenEMAIL1 = (email1 == NULL);
+    bool seenURI1 = (uri1 == NULL);
+    HITLS_X509_GeneralName *gn = BSL_LIST_GET_FIRST(san.names);
+    for (; gn != NULL; gn = BSL_LIST_GET_NEXT(san.names)) {
+        if (gn->type == HITLS_X509_GN_DNS && gn->value.data != NULL) {
+            if (!seenDNS1 && strlen(dns1) == gn->value.dataLen &&
+                memcmp(gn->value.data, dns1, gn->value.dataLen) == 0) {
+                seenDNS1 = 1;
+            } else if (!seenDNS2 && strlen(dns2) == gn->value.dataLen &&
+                memcmp(gn->value.data, dns2, gn->value.dataLen) == 0) {
+                seenDNS2 = 1;
+            }
+        } else if (gn->type == HITLS_X509_GN_EMAIL && gn->value.data != NULL && email1 != NULL) {
+            if (!seenEMAIL1 && strlen(email1) == gn->value.dataLen &&
+                memcmp(gn->value.data, email1, gn->value.dataLen) == 0) {
+                seenEMAIL1 = 1;
+            }
+        } else if (gn->type == HITLS_X509_GN_URI && gn->value.data != NULL && uri1 != NULL) {
+            if (!seenURI1 && strlen(uri1) == gn->value.dataLen &&
+                memcmp(gn->value.data, uri1, gn->value.dataLen) == 0) {
+                seenURI1 = 1;
+            }
+        }
+    }
+    ASSERT_TRUE(seenDNS1);
+    ASSERT_TRUE(seenDNS2);
+    ASSERT_TRUE(seenEMAIL1);
+    ASSERT_TRUE(seenURI1);
+    ret = HITLS_PKI_SUCCESS;
+EXIT:
+    HITLS_X509_ClearSubjectAltName(&san);
+    return ret;
+}
+
+static int32_t CertAssertEkuFlags(HITLS_X509_Cert *cert, int expectEkuServerAuth, int expectEkuClientAuth)
+{
+    int32_t ret = HITLS_X509_ERR_ATTR_UNSUPPORT;
+    int foundEkuExt = 0;
+    HITLS_X509_ExtExKeyUsage exku = {0};
+    int exkuInited = 0;
+
+    HITLS_X509_ExtEntry *xe = BSL_LIST_GET_FIRST(cert->tbs.ext.extList);
+    for (; xe != NULL; xe = BSL_LIST_GET_NEXT(cert->tbs.ext.extList)) {
+        if (xe->cid != BSL_CID_CE_EXTKEYUSAGE) {
+            continue;
+        }
+        foundEkuExt = 1;
+        ASSERT_EQ(HITLS_X509_ParseExtendedKeyUsage(xe, &exku), HITLS_PKI_SUCCESS);
+        exkuInited = 1;
+
+        int hasServerAuth = 0;
+        int hasClientAuth = 0;
+        BSL_Buffer *oidBuf = BSL_LIST_GET_FIRST(exku.oidList);
+        for (; oidBuf != NULL; oidBuf = BSL_LIST_GET_NEXT(exku.oidList)) {
+            BslCid ocid = BSL_OBJ_GetCidFromOidBuff(oidBuf->data, oidBuf->dataLen);
+            if (ocid == BSL_CID_KP_SERVERAUTH) {
+                hasServerAuth = 1;
+            }
+            if (ocid == BSL_CID_KP_CLIENTAUTH) {
+                hasClientAuth = 1;
+            }
+        }
+        ASSERT_EQ(hasServerAuth, expectEkuServerAuth);
+        ASSERT_EQ(hasClientAuth, expectEkuClientAuth);
+        break;
+    }
+    ASSERT_EQ(foundEkuExt, 1);
+    ret = HITLS_PKI_SUCCESS;
+EXIT:
+    if (exkuInited) {
+        HITLS_X509_ClearExtendedKeyUsage(&exku);
+    }
+    return ret;
+}
+
+/* BEGIN_CASE */
+void SDV_X509_CSR_PARSE_ATTR_EXTS_TC001(int format, char *path, int expectIsCa, int expectPathLen, int expectKuBits,
+    char *dns1, char *dns2, char *email1, char *uri1,
+    Hex *expectedSki, int expectEkuServerAuth, int expectEkuClientAuth)
+{
+    TestMemInit();
+
+    HITLS_X509_Csr *csr = NULL;
+    HITLS_X509_Ext *csrExt = NULL;
+    HITLS_X509_Cert *cert = NULL;
+    ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), HITLS_PKI_SUCCESS);
+
+    /* Get CSR extensionRequest container */
+    HITLS_X509_Attrs *attrs = NULL;
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(attrs)), HITLS_PKI_SUCCESS);
+    ASSERT_NE(attrs, NULL);
+
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS, &csrExt, sizeof(csrExt)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_NE(csrExt, NULL);
+
+    /* 2) Copy CSR extensions to temporary certificate, verify specific values on certificate side */
+    cert = HITLS_X509_CertNew();
+    ASSERT_TRUE(cert != NULL);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_CSR_EXT, csr, 0), HITLS_PKI_SUCCESS);
+
+    /* BasicConstraints */
+    HITLS_X509_ExtBCons bc = {0};
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_BCONS, &bc, sizeof(bc)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(bc.isCa, expectIsCa);
+    ASSERT_EQ(bc.maxPathLen, expectPathLen);
+
+    /* KeyUsage */
+    uint32_t kuBits = 0;
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_KUSAGE, &kuBits, sizeof(kuBits)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(kuBits, expectKuBits);
+
+    /* San */
+    ASSERT_EQ(CertAssertSanEquals(cert, dns1, dns2, email1, uri1), HITLS_PKI_SUCCESS);
+
+    /* SubjectKeyIdentifier */
+    HITLS_X509_ExtSki ski = {0};
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SKI, &ski, sizeof(ski)), HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("SKI", ski.kid.data, ski.kid.dataLen, expectedSki->x, expectedSki->len);
+
+    /* AuthorityKeyIdentifier: if kid exists, try to match with SKI (if CSR is set this way) */
+    HITLS_X509_ExtAki aki = {0};
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_AKI, &aki, sizeof(aki)), HITLS_PKI_SUCCESS);
+    if (aki.kid.data != NULL && aki.kid.dataLen != 0) {
+        ASSERT_COMPARE("AKI.kid", aki.kid.data, aki.kid.dataLen, expectedSki->x, expectedSki->len);
+    }
+
+    /* ExtendedKeyUsage */
+    ASSERT_EQ(CertAssertEkuFlags(cert, expectEkuServerAuth, expectEkuClientAuth), HITLS_PKI_SUCCESS);
+
+EXIT:
+    HITLS_X509_ExtFree(csrExt);
+    HITLS_X509_CertFree(cert);
+    HITLS_X509_CsrFree(csr);
+}
+/* END_CASE */
+
+
+static int32_t GenCsrWithKeyAndAttrExt(HITLS_X509_Ext *ext, char *keyPath, int keyFormat, int keyType, int mdId,
+    HITLS_X509_Csr **outParsed)
+{
+    int32_t ret = -1;
+    HITLS_X509_Csr *csr = NULL;
+    CRYPT_EAL_PkeyCtx *privKey = NULL;
+    BSL_Buffer encode = {0};
+    HITLS_X509_Csr *parsed = NULL;
+    HITLS_X509_Attrs *attrs = NULL;
+    HITLS_X509_DN dnName[1] = {{BSL_CID_AT_COUNTRYNAME, (uint8_t *)"CN", 2}};
+
+    TestMemInit();
+    TestRandInit();
+
+    ASSERT_TRUE(outParsed != NULL);
+    *outParsed = NULL;
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(keyFormat, keyType, keyPath, NULL, 0, &privKey), HITLS_PKI_SUCCESS);
+
+    csr = HITLS_X509_CsrNew();
+    ASSERT_TRUE(csr != NULL);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, privKey, sizeof(CRYPT_EAL_PkeyCtx *)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, dnName, 1), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(HITLS_X509_Attrs *)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(attrs != NULL);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS, ext, 0), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CsrSign(mdId, privKey, NULL, csr), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_ASN1, csr, &encode), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(encode.data != NULL && encode.dataLen > 0);
+
+    /* parse generated CSR, expect success and return to caller */
+    ASSERT_EQ(HITLS_X509_CsrParseBuff(BSL_FORMAT_ASN1, &encode, &parsed), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(parsed != NULL);
+    *outParsed = parsed;
+    parsed = NULL; /* ownership transferred */
+
+    ret = HITLS_PKI_SUCCESS;
+EXIT:
+    BSL_SAL_Free(encode.data);
+    HITLS_X509_CsrFree(csr);
+    HITLS_X509_CsrFree(parsed);
+    CRYPT_EAL_PkeyFreeCtx(privKey);
+    TestRandDeInit();
+    return ret;
+}
+
+/* BEGIN_CASE */
+void SDV_X509_CSR_EncodeAttrList_SetSAN_FUNC_TC001(char *keyPath, int critical, char *dns1, char *dns2,
+    char *email1, char *uri1)
+{
+    TestMemInit();
+
+    HITLS_X509_Csr *parsed = NULL;
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_NE(ext, NULL);
+
+    BslList *names = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
+    ASSERT_NE(names, NULL);
+
+    if (dns1 != NULL) {
+        HITLS_X509_GeneralName *n = BSL_SAL_Calloc(1, sizeof(HITLS_X509_GeneralName));
+        ASSERT_NE(n, NULL);
+        n->type = HITLS_X509_GN_DNS;
+        n->value.data = (uint8_t *)dns1;
+        n->value.dataLen = (uint32_t)strlen(dns1);
+        ASSERT_EQ(BSL_LIST_AddElement(names, n, BSL_LIST_POS_END), 0);
+    }
+    if (dns2 != NULL) {
+        HITLS_X509_GeneralName *n = BSL_SAL_Calloc(1, sizeof(HITLS_X509_GeneralName));
+        ASSERT_NE(n, NULL);
+        n->type = HITLS_X509_GN_DNS;
+        n->value.data = (uint8_t *)dns2;
+        n->value.dataLen = (uint32_t)strlen(dns2);
+        ASSERT_EQ(BSL_LIST_AddElement(names, n, BSL_LIST_POS_END), 0);
+    }
+    if (email1 != NULL) {
+        HITLS_X509_GeneralName *n = BSL_SAL_Calloc(1, sizeof(HITLS_X509_GeneralName));
+        ASSERT_NE(n, NULL);
+        n->type = HITLS_X509_GN_EMAIL;
+        n->value.data = (uint8_t *)email1;
+        n->value.dataLen = (uint32_t)strlen(email1);
+        ASSERT_EQ(BSL_LIST_AddElement(names, n, BSL_LIST_POS_END), 0);
+    }
+    if (uri1 != NULL) {
+        HITLS_X509_GeneralName *n = BSL_SAL_Calloc(1, sizeof(HITLS_X509_GeneralName));
+        ASSERT_NE(n, NULL);
+        n->type = HITLS_X509_GN_URI;
+        n->value.data = (uint8_t *)uri1;
+        n->value.dataLen = (uint32_t)strlen(uri1);
+        ASSERT_EQ(BSL_LIST_AddElement(names, n, BSL_LIST_POS_END), 0);
+    }
+
+    HITLS_X509_ExtSan san = {critical != 0, names};
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(GenCsrWithKeyAndAttrExt(ext, keyPath, BSL_FORMAT_ASN1,
+        CRYPT_PRIKEY_PKCS8_UNENCRYPT, CRYPT_MD_SHA256, &parsed), HITLS_PKI_SUCCESS);
+
+    /* verify parsed CSR: copy CSR extensions to a temp cert and reuse CertAssertSanEquals */
+    HITLS_X509_Cert *cert = HITLS_X509_CertNew();
+    ASSERT_TRUE(cert != NULL);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_CSR_EXT, parsed, 0), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CertAssertSanEquals(cert, dns1, dns2, email1, uri1), HITLS_PKI_SUCCESS);
+    HITLS_X509_CertFree(cert);
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
+    BSL_LIST_FREE(names, NULL);
+    HITLS_X509_CsrFree(parsed);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CSR_EncodeAttrList_SetEKU_FUNC_TC001(char *keyPath, int critical, int withServerAuth, int withClientAuth)
+{
+    TestMemInit();
+    BslOidString *oid = NULL;
+    BslOidString *oid2 = NULL;
+    HITLS_X509_Csr *parsed = NULL;
+
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_NE(ext, NULL);
+
+    BslList *oidList = BSL_LIST_New(sizeof(BSL_Buffer));
+    ASSERT_NE(oidList, NULL);
+
+    if (withServerAuth) {
+        oid = BSL_OBJ_GetOID(BSL_CID_KP_SERVERAUTH);
+        ASSERT_NE(oid, NULL);
+        BSL_Buffer *node = (BSL_Buffer *)BSL_SAL_Malloc(sizeof(BSL_Buffer));
+        ASSERT_NE(node, NULL);
+        node->data = (uint8_t *)oid->octs;   /* 指向静态OID，不释放data */
+        node->dataLen = (uint32_t)oid->octetLen;
+        ASSERT_EQ(BSL_LIST_AddElement(oidList, node, BSL_LIST_POS_END), 0);
+    }
+    if (withClientAuth) {
+        oid2 = BSL_OBJ_GetOID(BSL_CID_KP_CLIENTAUTH);
+        ASSERT_NE(oid2, NULL);
+        BSL_Buffer *node = (BSL_Buffer *)BSL_SAL_Malloc(sizeof(BSL_Buffer));
+        ASSERT_NE(node, NULL);
+        node->data = (uint8_t *)oid2->octs;  /* 指向静态OID，不释放data */
+        node->dataLen = (uint32_t)oid2->octetLen;
+        ASSERT_EQ(BSL_LIST_AddElement(oidList, node, BSL_LIST_POS_END), 0);
+    }
+
+    HITLS_X509_ExtExKeyUsage exku = {critical != 0, oidList};
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_EXKUSAGE, &exku,
+        sizeof(HITLS_X509_ExtExKeyUsage)), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(GenCsrWithKeyAndAttrExt(ext, keyPath, BSL_FORMAT_ASN1,
+        CRYPT_PRIKEY_PKCS8_UNENCRYPT, CRYPT_MD_SHA256, &parsed), HITLS_PKI_SUCCESS);
+
+    /* verify parsed CSR: copy to temp cert and reuse CertAssertEkuFlags */
+    HITLS_X509_Cert *cert = HITLS_X509_CertNew();
+    ASSERT_TRUE(cert != NULL);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_CSR_EXT, parsed, 0), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CertAssertEkuFlags(cert, withServerAuth ? 1 : 0, withClientAuth ? 1 : 0), HITLS_PKI_SUCCESS);
+    HITLS_X509_CertFree(cert);
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
+    BSL_LIST_FREE(oidList, NULL);
+    HITLS_X509_CsrFree(parsed);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */GenCsrWithKeyAndAttrExt
+void SDV_X509_CSR_EncodeAttrList_SetSKI_FUNC_TC001(char *keyPath, int critical, Hex *kid)
+{
+    TestMemInit();
+
+    HITLS_X509_Csr *parsed = NULL;
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_NE(ext, NULL);
+
+    HITLS_X509_ExtSki ski = {critical != 0, {kid->x, kid->len}};
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(GenCsrWithKeyAndAttrExt(ext, keyPath, BSL_FORMAT_ASN1,
+        CRYPT_PRIKEY_PKCS8_UNENCRYPT, CRYPT_MD_SHA256, &parsed), HITLS_PKI_SUCCESS);
+
+    /* verify parsed CSR contains same SKI */
+    HITLS_X509_Attrs *attrs2 = NULL;
+    HITLS_X509_Ext *csrExt2 = NULL;
+    HITLS_X509_ExtSki ski2 = {0};
+    ASSERT_EQ(HITLS_X509_CsrCtrl(parsed, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs2, sizeof(attrs2)), HITLS_PKI_SUCCESS);
+    ASSERT_NE(attrs2, NULL);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs2, HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS, &csrExt2, sizeof(csrExt2)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_NE(csrExt2, NULL);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(csrExt2, HITLS_X509_EXT_GET_SKI, &ski2, sizeof(ski2)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(ski2.kid.dataLen, kid->len);
+    ASSERT_COMPARE("SKI.csr", ski2.kid.data, ski2.kid.dataLen, kid->x, kid->len);
+    HITLS_X509_ExtFree(csrExt2);
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
+    HITLS_X509_CsrFree(parsed);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CSR_EncodeAttrList_SetAKI_FUNC_TC001(char *keyPath, int critical, Hex *kid)
+{
+    TestMemInit();
+
+    HITLS_X509_Csr *parsed = NULL;
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_NE(ext, NULL);
+
+    HITLS_X509_ExtAki aki = {critical != 0, {kid->x, kid->len}, NULL, {0}};
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_AKI, &aki, sizeof(HITLS_X509_ExtAki)), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(GenCsrWithKeyAndAttrExt(ext, keyPath, BSL_FORMAT_ASN1,
+        CRYPT_PRIKEY_PKCS8_UNENCRYPT, CRYPT_MD_SHA256, &parsed), HITLS_PKI_SUCCESS);
+
+    /* verify parsed CSR contains same AKI.kid if present */
+    HITLS_X509_Attrs *attrs2 = NULL;
+    HITLS_X509_Ext *csrExt2 = NULL;
+    HITLS_X509_ExtAki aki2 = {0};
+    ASSERT_EQ(HITLS_X509_CsrCtrl(parsed, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs2, sizeof(attrs2)), HITLS_PKI_SUCCESS);
+    ASSERT_NE(attrs2, NULL);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs2, HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS, &csrExt2, sizeof(csrExt2)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_NE(csrExt2, NULL);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(csrExt2, HITLS_X509_EXT_GET_AKI, &aki2, sizeof(aki2)), HITLS_PKI_SUCCESS);
+    if (aki2.kid.data != NULL && aki2.kid.dataLen != 0) {
+        ASSERT_EQ(aki2.kid.dataLen, kid->len);
+        ASSERT_COMPARE("AKI.csr.kid", aki2.kid.data, aki2.kid.dataLen, kid->x, kid->len);
+    }
+    HITLS_X509_ExtFree(csrExt2);
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
+    HITLS_X509_CsrFree(parsed);
 }
 /* END_CASE */
