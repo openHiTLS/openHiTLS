@@ -4570,3 +4570,77 @@ EXIT:
     HITLS_Free(ctx);
 }
 /* END_CASE */
+
+static void test_msg_callback(int32_t writePoint, int32_t tlsVersion, int32_t contentType,
+                              const void *msg, uint32_t msgLen, HITLS_Ctx *ctx, void *arg)
+{
+    (void)writePoint;
+    (void)contentType;
+    (void)ctx;
+    (void)arg;
+    ASSERT_TRUE(msg != NULL);
+    bool isValid = false;
+    /* Check if tlsVersion is valid */
+    if (tlsVersion == HITLS_VERSION_SSL30 ||
+        tlsVersion == HITLS_VERSION_TLS10 ||
+        tlsVersion == HITLS_VERSION_TLS11 ||
+        tlsVersion == HITLS_VERSION_TLS12 ||
+        tlsVersion == HITLS_VERSION_TLS13 ||
+        tlsVersion == HITLS_VERSION_DTLS12 ||
+        tlsVersion == HITLS_VERSION_TLCP_DTLCP11 ||
+        tlsVersion == 0) { /* 0 is valid for record headers before version negotiation */
+        isValid = true;
+    }
+    ASSERT_TRUE(isValid);
+    ASSERT_TRUE(msgLen > 0);
+EXIT:
+    return;
+}
+
+/* @
+* @test   UT_TLS_CM_SetMsgCb_FUNC_TC001
+* @title  Test HITLS_SetMsgCb callback function to verify tlsVersion and msgLen parameters
+* @precon nan
+* @brief
+*         1. Set up TLS client and server configurations.
+*         2. Set message callback using HITLS_SetMsgCb. (Expected result 1)
+*         3. Establish TLS handshake connection. (Expected result 2)
+*         4. Verify callback was invoked with valid parameters. (Expected result 3)
+* @expect
+*         1. HITLS_SetMsgCb returns HITLS_SUCCESS
+*         2. Handshake completes successfully
+*         3. Callback receives valid tlsVersion and non-zero msgLen
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CM_SetMsgCb_FUNC_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    /* Create TLS12 configurations */
+    clientConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(clientConfig != NULL);
+    serverConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(serverConfig != NULL);
+
+    /* Set message callback on config */
+    ASSERT_EQ(HITLS_CFG_SetMsgCb(clientConfig, test_msg_callback), HITLS_SUCCESS);
+
+    /* Create client and server */
+    client = FRAME_CreateLink(clientConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    /* Establish connection to trigger callback */
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

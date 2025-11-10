@@ -449,7 +449,7 @@ int32_t TlsRecordWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, u
     }
 
 #ifdef HITLS_TLS_FEATURE_INDICATOR
-    INDICATOR_MessageIndicate(1, recordType, RECORD_HEADER, writeBuf->buf, REC_TLS_RECORD_HEADER_LEN, ctx,
+    INDICATOR_MessageIndicate(1, plainMsg.version, RECORD_HEADER, writeBuf->buf, REC_TLS_RECORD_HEADER_LEN, ctx,
                               ctx->config.tlsConfig.msgArg);
 #endif
     OutbufUpdate(&writeBuf->start, 0, &writeBuf->end, outBufLen);

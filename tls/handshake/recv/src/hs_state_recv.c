@@ -312,8 +312,8 @@ static int32_t ReadThenParseTlsHsMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
         }
     }
 #ifdef HITLS_TLS_FEATURE_INDICATOR
-    INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_HANDSHAKE, hsMsgInfo.rawMsg, hsMsgInfo.length, ctx,
-        ctx->config.tlsConfig.msgArg);
+    INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_HANDSHAKE, hsMsgInfo.rawMsg, hsMsgInfo.headerAndBodyLen,
+                              ctx, ctx->config.tlsConfig.msgArg);
 
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
     hsCtx->msgLen = 0;
@@ -515,7 +515,7 @@ static int32_t DtlsReadAndParseHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
     ctx->hsCtx->hsMsg = hsMsg;
 #ifdef HITLS_TLS_FEATURE_INDICATOR
         INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_HANDSHAKE, hsMsgInfo.rawMsg,
-                                  hsMsgInfo.length, ctx, ctx->config.tlsConfig.msgArg);
+                                  hsMsgInfo.headerAndBodyLen, ctx, ctx->config.tlsConfig.msgArg);
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
     return HITLS_SUCCESS;
 }
