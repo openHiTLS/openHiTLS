@@ -115,10 +115,10 @@ static int32_t MODES_CFB128_BytesEncrypt(MODES_CipherCFBCtx *ctx, const uint8_t 
             out[i] = iv[i];
         }
 #else
-        for (uint32_t i = 0; i < blockSize; i += sizeof(uint64_t)) {
-            *((uint64_t *)(iv + i)) ^= *((const uint64_t *)(inp + i));
-            *((uint64_t *)(outp + i)) = *((uint64_t *)(iv + i));
-        }
+        *((uint64_t *)((uintptr_t)iv)) ^= *((const uint64_t *)((uintptr_t)inp));
+        *((uint64_t *)((uintptr_t)iv + sizeof(uint64_t))) ^= *((const uint64_t *)((uintptr_t)inp + sizeof(uint64_t)));
+        *((uint64_t *)((uintptr_t)outp)) = *((uint64_t *)((uintptr_t)iv));
+        *((uint64_t *)((uintptr_t)outp + sizeof(uint64_t))) = *((uint64_t *)((uintptr_t)iv + sizeof(uint64_t)));
 #endif
         UPDATE_VALUES(left, inp, outp, blockSize);
     }
@@ -231,11 +231,12 @@ static int32_t MODES_CFB128_BytesDecrypt(MODES_CipherCFBCtx *ctx, const uint8_t 
             iv[i] = c;
         }
 #else
-        for (uint32_t i = 0; i < blockSize; i += sizeof(uint64_t)) {
-            uint64_t ti = *((const uint64_t *)(inp + i));
-            *((uint64_t *)(outp + i)) = *((uint64_t *)(iv + i)) ^ ti;
-            *((uint64_t *)(iv + i)) = ti;
-        }
+        uint64_t t0 = *((const uint64_t *)((uintptr_t)inp));
+        uint64_t t1 = *((const uint64_t *)((uintptr_t)inp + sizeof(uint64_t)));
+        *((uint64_t *)((uintptr_t)outp)) = *((uint64_t *)((uintptr_t)iv)) ^ t0;
+        *((uint64_t *)((uintptr_t)outp + sizeof(uint64_t))) = *((uint64_t *)((uintptr_t)iv + sizeof(uint64_t))) ^ t1;
+        *((uint64_t *)((uintptr_t)iv)) = t0;
+        *((uint64_t *)((uintptr_t)iv + sizeof(uint64_t))) = t1;
 #endif
         UPDATE_VALUES(left, inp, outp, blockSize);
     }
