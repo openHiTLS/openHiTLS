@@ -74,6 +74,7 @@ ECC_Pkey *ECC_DupCtx(ECC_Pkey *ctx)
 
     GOTO_ERR_IF_SRC_NOT_NULL(newCtx->para, ctx->para, ECC_DupPara(ctx->para), CRYPT_MEM_ALLOC_FAIL);
     newCtx->libCtx = ctx->libCtx;
+    newCtx->flags = ctx->flags;
     return newCtx;
 
 ERR:
@@ -461,6 +462,36 @@ static int32_t SetEccUseCofactorMode(ECC_Pkey *ctx, void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
+static int32_t SetFlag(ECC_Pkey *ctx, const void *val, uint32_t len)
+{
+    if (len != sizeof(uint32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_CTRL_LEN);
+        return CRYPT_ECC_PKEY_ERR_CTRL_LEN;
+    }
+    ctx->flags |= *(const uint32_t *)val;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t ClearFlag(ECC_Pkey *ctx, const void *val, uint32_t len)
+{
+    if (len != sizeof(uint32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_CTRL_LEN);
+        return CRYPT_ECC_PKEY_ERR_CTRL_LEN;
+    }
+    ctx->flags &= ~(*(const uint32_t *)val);
+    return CRYPT_SUCCESS;
+}
+
+static int32_t GetFlag(const ECC_Pkey *ctx, void *val, uint32_t len)
+{
+    if (len != sizeof(uint32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_CTRL_LEN);
+        return CRYPT_ECC_PKEY_ERR_CTRL_LEN;
+    }
+    *(uint32_t *)val = ctx->flags;
+    return CRYPT_SUCCESS;
+}
+
 int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL || (val == NULL && opt != CRYPT_CTRL_GEN_ECC_PUBLICKEY)) {
@@ -477,6 +508,12 @@ int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t len)
             return SetEccPointFormat(ctx, val, len);
         case CRYPT_CTRL_SET_ECC_USE_COFACTOR_MODE:
             return SetEccUseCofactorMode(ctx, val, len);
+        case CRYPT_CTRL_GET_ECC_FLAG:
+            return GetFlag(ctx, val, len);
+        case CRYPT_CTRL_SET_ECC_FLAG:
+            return SetFlag(ctx, val, len);
+        case CRYPT_CTRL_CLR_ECC_FLAG:
+            return ClearFlag(ctx, val, len);
         case CRYPT_CTRL_GEN_ECC_PUBLICKEY:
             return GenPublicKey(ctx);
         case CRYPT_CTRL_GET_ECC_ORDER_BITS:

@@ -41,6 +41,7 @@ typedef struct ECC_PkeyCtx {
     ECC_Para *para;         // Key parameter
     CRYPT_PKEY_PointFormat pointFormat;   // Public key point format
     uint32_t useCofactorMode;   // Indicates whether to use the cofactor mode. 1 indicates yes, and 0 indicates no.
+    uint32_t flags; 
     BSL_SAL_RefCount references;
     void *libCtx;
 } ECC_Pkey;
