@@ -301,7 +301,7 @@ static int32_t SetCrlEntry(HITLS_X509_Crl *crl)
         &certIssuer, sizeof(HITLS_X509_RevokeExtCertIssuer)), 0);
     ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_GET_REVOKED_CERTISSUER, &names, sizeof(BslList *)), 0);
     ASSERT_EQ(names->count, 5);
-    ASSERT_EQ(names->dataSize, 24);
+    ASSERT_EQ(names->dataSize, sizeof(HITLS_X509_GeneralName));
     HITLS_X509_GeneralName *ptr = names->first->data;
     ASSERT_EQ(ptr->type, HITLS_X509_GN_EMAIL);
     ASSERT_EQ(ptr->value.dataLen, 4);
