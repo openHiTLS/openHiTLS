@@ -159,6 +159,15 @@ int32_t DtlsClientSendFinishedProcess(TLS_Ctx *ctx)
             return ret;
         }
     }
+
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_SCTP)
+    if (ctx->negotiatedInfo.isResume) {
+        ret = HS_ActiveSctpAuthKey(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+#endif
     ret = HS_SendMsg(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
@@ -415,6 +424,15 @@ int32_t DtlsServerSendFinishedProcess(TLS_Ctx *ctx)
             return ret;
         }
     }
+
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_SCTP)
+    if (!ctx->negotiatedInfo.isResume) {
+        ret = HS_ActiveSctpAuthKey(ctx);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+#endif
 
     ret = HS_SendMsg(ctx);
     if (ret != HITLS_SUCCESS) {

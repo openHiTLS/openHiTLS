@@ -335,7 +335,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         BSL_CID_ECDSAWITHSHA1,
         HITLS_SIGN_ECDSA,
         HITLS_HASH_SHA1,
-        -1,
+        63,                 // https://eprint.iacr.org/2020/014
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
@@ -347,7 +347,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         BSL_CID_SHA1WITHRSA,
         HITLS_SIGN_RSA_PKCS1_V15,
         HITLS_HASH_SHA1,
-        -1,
+        63,                 // https://eprint.iacr.org/2020/014
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
@@ -359,7 +359,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         BSL_CID_DSAWITHSHA1,
         HITLS_SIGN_DSA,
         HITLS_HASH_SHA1,
-        -1,
+        63,                 // https://eprint.iacr.org/2020/014
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
@@ -455,7 +455,7 @@ static int32_t ProviderAddSignatureSchemeInfo(const BSL_Param *params, void *arg
     if (params == NULL || args == NULL) {
         return HITLS_INVALID_INPUT;
     }
-    
+
     TLS_CapabilityData *data = (TLS_CapabilityData *)args;
     TLS_Config *config = data->config;
     TLS_SigSchemeInfo *scheme = NULL;
@@ -480,7 +480,7 @@ static int32_t ProviderAddSignatureSchemeInfo(const BSL_Param *params, void *arg
     PROCESS_PARAM_INT32(param, scheme, params, CRYPT_PARAM_CAP_TLS_SIGNALG_SEC_BITS, secBits);
     PROCESS_PARAM_UINT32(param, scheme, params, CRYPT_PARAM_CAP_TLS_SIGNALG_CHAIN_VERSION_BITS, chainVersionBits);
     PROCESS_PARAM_UINT32(param, scheme, params, CRYPT_PARAM_CAP_TLS_SIGNALG_CERT_VERSION_BITS, certVersionBits);
-    PROCESS_OPTIONAL_STRING_PARAM(param, params, CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE_OID, keyTypeOid, keyTypeOidLen, 
+    PROCESS_OPTIONAL_STRING_PARAM(param, params, CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE_OID, keyTypeOid, keyTypeOidLen,
         CRYPT_PARAM_CAP_TLS_SIGNALG_KEY_TYPE_NAME, keyTypeName);
     PROCESS_OPTIONAL_STRING_PARAM(param, params, CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_OID, paraOid, paraOidLen,
         CRYPT_PARAM_CAP_TLS_SIGNALG_PARA_NAME, paraName);
@@ -490,10 +490,10 @@ static int32_t ProviderAddSignatureSchemeInfo(const BSL_Param *params, void *arg
         CRYPT_PARAM_CAP_TLS_SIGNALG_MD_NAME, hashName);
 
     if (scheme->keyType == TLS_CERT_KEY_TYPE_RSA_PSS) {
-        pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), TLS_CERT_KEY_TYPE_RSA, 
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), TLS_CERT_KEY_TYPE_RSA,
             CRYPT_EAL_PKEY_SIGN_OPERATE, ATTRIBUTE_FROM_CONFIG(config));
     } else {
-        pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), scheme->keyType, 
+        pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), scheme->keyType,
             CRYPT_EAL_PKEY_SIGN_OPERATE, ATTRIBUTE_FROM_CONFIG(config));
     }
     if (pkey == NULL) {
