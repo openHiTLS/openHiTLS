@@ -1107,7 +1107,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         BSL_CID_ECDSAWITHSHA1,
         HITLS_SIGN_ECDSA,
         HITLS_HASH_SHA1,
-        -1,
+        63,                 // https://eprint.iacr.org/2020/014
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
@@ -1121,7 +1121,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         BSL_CID_SHA1WITHRSA,
         HITLS_SIGN_RSA_PKCS1_V15,
         HITLS_HASH_SHA1,
-        -1,
+        63,                 // https://eprint.iacr.org/2020/014
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
@@ -1135,7 +1135,7 @@ static const TLS_SigSchemeInfo g_signSchemeInfo[] = {
         BSL_CID_DSAWITHSHA1,
         HITLS_SIGN_DSA,
         HITLS_HASH_SHA1,
-        -1,
+        63,                 // https://eprint.iacr.org/2020/014
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },

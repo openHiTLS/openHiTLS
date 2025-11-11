@@ -340,7 +340,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         BSL_CID_ECDSAWITHSHA1,
         HITLS_SIGN_ECDSA,
         HITLS_HASH_SHA1,
-        -1,
+        63,                 // https://eprint.iacr.org/2020/014
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
@@ -352,7 +352,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         BSL_CID_SHA1WITHRSA,
         HITLS_SIGN_RSA_PKCS1_V15,
         HITLS_HASH_SHA1,
-        -1,
+        63,                 // https://eprint.iacr.org/2020/014
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
@@ -364,7 +364,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
         BSL_CID_DSAWITHSHA1,
         HITLS_SIGN_DSA,
         HITLS_HASH_SHA1,
-        -1,
+        63,                 // https://eprint.iacr.org/2020/014
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
         TLS12_VERSION_BIT | DTLS12_VERSION_BIT,
     },
@@ -462,7 +462,7 @@ static int32_t ProviderAddSignatureSchemeInfo(const BSL_Param *params, void *arg
     if (params == NULL || args == NULL) {
         return HITLS_INVALID_INPUT;
     }
-    
+
     TLS_CapabilityData *data = (TLS_CapabilityData *)args;
     TLS_Config *config = data->config;
     TLS_SigSchemeInfo *scheme = NULL;

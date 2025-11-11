@@ -2221,14 +2221,14 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SELECT_PREFER_CIPHER_SUITE_TC001(void)
     HLT_SetCertPath(serverConfig, "NULL", "NULL", "NULL", "NULL", "NULL", "NULL");
     HLT_SetPsk(serverConfig, "1A1A1A1A1A");
     HLT_SetCipherSuites(serverConfig, "HITLS_AES_256_GCM_SHA384:HITLS_AES_128_GCM_SHA256");
-    
+
     HLT_Ctx_Config *clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_SetCertPath(clientConfig, "NULL", "NULL", "NULL", "NULL", "NULL", "NULL");
     HLT_SetPsk(clientConfig, "1A1A1A1A1A");
     HLT_SetCipherSuites(clientConfig, "HITLS_AES_256_GCM_SHA384:HITLS_AES_128_GCM_SHA256");
-    
+
     serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_3, serverConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
 
@@ -2265,7 +2265,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SELECT_PREFER_CIPHER_SUITE_TC002(void)
         ECDSA_SHA256_PRIV_PATH, "NULL", "NULL");
     HLT_SetPsk(serverConfig, "123456789");
     HLT_SetCipherSuites(serverConfig, "HITLS_AES_256_GCM_SHA384:HITLS_AES_128_GCM_SHA256");
-    
+
     HLT_Ctx_Config *clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
 
@@ -2273,7 +2273,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SELECT_PREFER_CIPHER_SUITE_TC002(void)
         ECDSA_SHA256_PRIV_PATH, "NULL", "NULL");
     HLT_SetPsk(clientConfig, "123456789");
     HLT_SetCipherSuites(clientConfig, "HITLS_AES_256_GCM_SHA384:HITLS_AES_128_GCM_SHA256");
-    
+
     serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_3, serverConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
 
@@ -2324,3 +2324,48 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/** @
+* @test SDV_TLS13_RFC8446_SHA1_EE_CERT_TC001
+* @spec -
+* @title Tls1.3 sets up a SHA-1 certificate with a security level of 1, expecting the connection to fail.
+* @precon nan
+* @brief    1. Create a TLS1.3 configuration, first load the SHA1 certificate, then set the security level to 1, and
+                establish the connection. Expected result 1 is obtained.
+* @expect   1.  Link establishment failed, sending SHA1 certificate will be prohibited when checking security
+                level strength.
+@ */
+/* BEGIN_CASE */
+void SDV_TLS13_RFC8446_SHA1_EE_CERT_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FRAME_CertInfo certInfo = {
+        "ecdsa_sha1/ca-nist521.der",
+        "ecdsa_sha1/inter-nist521.der",
+        "ecdsa_sha1/end384-sha1.der",
+        0,
+        "ecdsa_sha1/end384-sha1.key.der",
+        0,
+    };
+
+    config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    server = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_SetSecurityLevel(client->ssl, 1);
+    HITLS_SetSecurityLevel(server->ssl, 1);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_CERT_ERR_INSECURE_SIG_ALG);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+

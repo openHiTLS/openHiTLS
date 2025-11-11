@@ -165,6 +165,9 @@ static int32_t BslSctpActiveAuthKey(BSL_UIO *uio)
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
+    if (!parameters->data.isAddAuthkey) {
+        return BSL_SUCCESS;
+    }
     uint16_t shareKeyId = parameters->data.shareKeyId;
     int32_t ret = parameters->method.uioCtrl(uio, BSL_UIO_SCTP_ACTIVE_AUTH_SHARED_KEY,
         (int32_t)sizeof(shareKeyId), &shareKeyId);
