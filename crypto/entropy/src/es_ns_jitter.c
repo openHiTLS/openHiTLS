@@ -34,7 +34,7 @@
  * Binary WINDOW 1024, 0.8 Entropy CUT off 664 0.6 Entropy CUT off 748
  * reference to SP800-90B sec 4.4.2
  */
-    #define HITLS_JITTER_APT_CUT_OFF 592
+    #define HITLS_JITTER_APT_CUT_OFF 594
 #endif
 #ifndef HITLS_JITTER_RCT_CUT_OFF
 /**
@@ -77,7 +77,6 @@ typedef struct ES_JitterState {
     uint8_t data[NS_ENTROPY_DATA_SIZE];
     uint64_t lastDelta;
     uint32_t remainCount;
-    uint32_t memLocation;
     uint8_t mem[HITLS_CACHE_ROW_COUNT][HITLS_CACHE_LINE_SIZE];
     volatile uint32_t mID;
     uint64_t lastTime;
@@ -144,7 +143,7 @@ static void EntropyMemeryAccess(ES_JitterState *e, uint8_t det)
         uint32_t l = e->mID % HITLS_CACHE_LINE_SIZE;
         volatile uint8_t *volatile cur = e->mem[c] + l;
         *cur ^= det;
-        e->memLocation = (e->memLocation + (*cur & 0x0f) + NS_CACHE_MIN_SIZE) % NS_CACHE_SIZE;
+        e->mID = (e->mID + (*cur & 0x0f) + NS_CACHE_MIN_SIZE) % NS_CACHE_SIZE;
     }
 }
 
@@ -284,11 +283,8 @@ static void *ES_CpuJitterInit(void *para)
     if (e == NULL) {
         return NULL;
     }
-    e->rctCount = 0;
-    e->aptBaseSet = 0;
-    e->mID = 0;
+    memset_s(e, sizeof(ES_JitterState), 0, sizeof(ES_JitterState));
     e->hashFunc = para;
-    e->testFailure = CRYPT_SUCCESS;
     // Try to read 32 bytes once to check whether the environment is normal.
     uint8_t data[32] = {0};
     if (ES_CpuJitterRead(e, true, data, sizeof(data)) != CRYPT_SUCCESS) {
