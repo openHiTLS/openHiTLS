@@ -694,6 +694,82 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_TIME_ADD_DAY_SECOND_TC001
+ * @title   Test of BSL_DateTimeAddDaySecond.
+ * @precon
+ * @brief    1.Add day/second with positive offsets succeeds.
+ *           2.Add day/second with negative offsets succeeds even when dateR == dateA.
+ *           3.Overflow parameters trigger error handling.
+ *           4.Invalid input pointer fails.
+ * @expect   1.Succeed, return BSL_SUCCESS and keep sub-second fields.
+ *           2.Succeed, return BSL_SUCCESS and keep sub-second fields.
+ *           3.Fail, return BSL_INTERNAL_EXCEPTION.
+ *           4.Fail, return BSL_INTERNAL_EXCEPTION.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_TIME_ADD_DAY_SECOND_TC001(void)
+{
+#if defined(HITLS_BSL_SAL_LINUX)
+    BSL_TIME base = {0};
+    BSL_TIME result = {0};
+    BSL_TIME inPlace;
+
+    base.year = 2020;
+    base.month = 1;
+    base.day = 15;
+    base.hour = 10;
+    base.minute = 20;
+    base.second = 30;
+    base.millSec = 123;
+    base.microSec = 456;
+
+    inPlace = base;
+
+    /* 1.Add positive offsets. */
+    ASSERT_EQ(BSL_DateTimeAddDaySecond(&result, &base, 2000, 30), BSL_SUCCESS);
+    ASSERT_EQ(result.year, 2025);
+    ASSERT_EQ(result.month, 7);
+    ASSERT_EQ(result.day, 7);
+    ASSERT_EQ(result.hour, 10);
+    ASSERT_EQ(result.minute, 21);
+    ASSERT_EQ(result.second, 0);
+    ASSERT_EQ(result.millSec, base.millSec);
+    ASSERT_EQ(result.microSec, base.microSec);
+
+    /* 2.Add negative offsets and operate in-place. */
+    ASSERT_EQ(BSL_DateTimeAddDaySecond(&inPlace, &inPlace, -730, -90), BSL_SUCCESS);
+    ASSERT_EQ(inPlace.year, 2018);
+    ASSERT_EQ(inPlace.month, 1);
+    ASSERT_EQ(inPlace.day, 15);
+    ASSERT_EQ(inPlace.hour, 10);
+    ASSERT_EQ(inPlace.minute, 19);
+    ASSERT_EQ(inPlace.second, 0);
+    ASSERT_EQ(inPlace.millSec, base.millSec);
+    ASSERT_EQ(inPlace.microSec, base.microSec);
+
+    /* 3.Overflow guard */
+    ASSERT_EQ(BSL_DateTimeAddDaySecond(&result, &base, 1, INT64_MAX), BSL_INTERNAL_EXCEPTION);
+    ASSERT_EQ(BSL_DateTimeAddDaySecond(&result, &base, -1, INT64_MIN), BSL_INTERNAL_EXCEPTION);
+    int64_t utcBase = 0;
+    ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&base, &utcBase), BSL_SUCCESS);
+    int64_t overflowSecond = INT64_MAX - utcBase;
+    overflowSecond += 1;
+    ASSERT_TRUE(overflowSecond > 0);
+    ASSERT_EQ(BSL_DateTimeAddDaySecond(&result, &base, 0, overflowSecond), BSL_INTERNAL_EXCEPTION);
+    /* Negative utcTime overflow branch cannot be hit because utcTime >= 0 for valid inputs. */
+
+    /* 4.Invalid parameter */
+    ASSERT_EQ(BSL_DateTimeAddDaySecond(NULL, &base, 0, 0), BSL_INTERNAL_EXCEPTION);
+
+EXIT:
+    return;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
 static uint64_t TestTimeGetNSec(void)
 {
     return 0x1122334455667788;

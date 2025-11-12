@@ -256,6 +256,52 @@ uint32_t BSL_DateTimeAddUs(BSL_TIME *dateR, const BSL_TIME *dateA, uint32_t us)
     return BSL_SUCCESS;
 }
 
+uint32_t BSL_DateTimeAddDaySecond(BSL_TIME *dateR, const BSL_TIME *dateA, int32_t offsetDay, int64_t offsetSecond)
+{
+    int64_t utcTime = 0;
+    uint32_t ret;
+
+    if (dateR == NULL || dateA == NULL) {
+        return BSL_INTERNAL_EXCEPTION;
+    }
+
+    /* Preserve sub-second fields even when dateR == dateA. */
+    uint16_t millSec = dateA->millSec;
+    uint16_t microSec = dateA->microSec;
+
+    /* Convert the date into seconds. */
+    ret = BSL_SAL_DateToUtcTimeConvert(dateA, &utcTime);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+
+    int64_t daySec = (int64_t)offsetDay * (int64_t)BSL_TIME_SECS_PER_DAY;
+    /* Check for overflow of daySec + offsetSecond */
+    if ((daySec > 0 && offsetSecond > INT64_MAX - daySec) ||
+        (daySec < 0 && offsetSecond < INT64_MIN - daySec)) {
+        return BSL_INTERNAL_EXCEPTION;
+    }
+    int64_t add = daySec + offsetSecond;
+
+    /* Check utcTime + add for overflow */
+    if (add > 0 && utcTime > INT64_MAX - add) {
+        return BSL_INTERNAL_EXCEPTION;
+    }
+    utcTime += add;
+
+    /* Convert to the date after the number of seconds is added */
+    ret = BSL_SAL_UtcTimeToDateConvert(utcTime, dateR);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+
+    /* Complete milliseconds and microseconds. */
+    dateR->millSec = millSec;
+    dateR->microSec = microSec;
+    
+    return BSL_SUCCESS;
+}
+
 int32_t BSL_SAL_DateToUtcTimeConvert(const BSL_TIME *dateTime, int64_t *utcTime)
 {
     uint32_t ret = BSL_INTERNAL_EXCEPTION;
