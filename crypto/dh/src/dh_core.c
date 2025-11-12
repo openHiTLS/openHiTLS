@@ -805,6 +805,10 @@ int32_t CRYPT_DH_SetParaEx(CRYPT_DH_Ctx *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    // if we find no info in params, return sucess
+    if (BSL_PARAM_FindConstParam(para, CRYPT_PARAM_DH_P) == NULL) {
+        return CRYPT_SUCCESS;
+    }
     CRYPT_DhPara dhPara = {0};
     (void)GetConstParamValue(para, CRYPT_PARAM_DH_P, &(dhPara.p), &(dhPara.pLen));
     (void)GetConstParamValue(para, CRYPT_PARAM_DH_Q, &(dhPara.q), &(dhPara.qLen));

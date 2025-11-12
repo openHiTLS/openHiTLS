@@ -1789,3 +1789,69 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_DH_FUNC_TC001
+ * @title  DH Key exchange vector test.
+ * @precon Registering memory-related functions.
+ *         NIST test vectors.
+ * @brief
+ *    1. Create the contexts(pkey1, pkey2) of the dh algorithm, expected result 1
+ *    2. Set parameters with no info for pkey1, expected result 2
+ *    3. Set parameters with p,p,g info for pkey1, expected result 2
+ *    3. Call the CRYPT_EAL_PkeyComputeShareKey method: pkey1(A.prvKey) and pkey2(B.pubKey), expected result 3
+ *    4. Check whether the generated key is consistent with the vector, expected result 4
+ * @expect
+ *    1. Success, and context is not NULL.
+ *    2. CRYPT_SUCCESS
+ *    3. CRYPT_SUCCESS
+ *    4. Both are consistent.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_DH_FUNC_SET_PARAM_EX_TC001(Hex *p, Hex *g, Hex *q, Hex *prvBuf, Hex *pubBuf, Hex *share, int isProvider)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)p;
+    (void)q;
+    (void)g;
+    (void)prvBuf;
+    (void)pubBuf;
+    (void)share;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    uint8_t shareLocal[1030];
+    uint32_t shareLen = sizeof(shareLocal);
+    
+    CRYPT_EAL_PkeyPrv prv = {0};
+    CRYPT_EAL_PkeyPub pub = {0};
+    Set_DH_Prv(&prv, prvBuf->x, prvBuf->len);
+    Set_DH_Pub(&pub, pubBuf->x, pubBuf->len);
+    
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *pkey1 = TestPkeyNewCtx(NULL, CRYPT_PKEY_DH,
+    CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *pkey2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_DH,
+    CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey1 != NULL && pkey2 != NULL);
+    
+    BSL_Param param[4] = {0};
+    // If no param is set, the setEx is also success
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey1, param) == CRYPT_SUCCESS);
+    (void)BSL_PARAM_InitValue(&param[0], CRYPT_PARAM_DH_P, BSL_PARAM_TYPE_OCTETS, p->x, p->len);
+    (void)BSL_PARAM_InitValue(&param[1], CRYPT_PARAM_DH_Q, BSL_PARAM_TYPE_OCTETS, q->x, q->len);
+    (void)BSL_PARAM_InitValue(&param[2], CRYPT_PARAM_DH_G, BSL_PARAM_TYPE_OCTETS, g->x, g->len);
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaEx(pkey1, param) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(pkey1, &prv) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey2, &pub) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareLocal, &shareLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(shareLen == share->len);
+    ASSERT_TRUE(memcmp(shareLocal, share->x, shareLen) == 0);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey1);
+    CRYPT_EAL_PkeyFreeCtx(pkey2);
+#endif
+}
+/* END_CASE */

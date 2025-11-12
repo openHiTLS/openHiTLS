@@ -98,6 +98,7 @@ int32_t CRYPT_ECDSA_SetParaEx(CRYPT_ECDSA_Ctx *ctx, const BSL_Param *para)
         }
     }
 #endif
+    // satisfying users only want to set the hash attribute.
     if (BSL_PARAM_FindConstParam(para, CRYPT_PARAM_EC_P) == NULL) {
         return CRYPT_SUCCESS;
     }
