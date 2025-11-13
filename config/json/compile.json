@@ -34,8 +34,7 @@
                 "-DHITLS_CRYPTO_BN_COMBA",
                 "-DHITLS_CRYPTO_AES_PRECALC_TABLES",
                 "-DHITLS_AARCH64_PACIASP",
-                "-DHITLS_CRYPTO_SM2_PRECOMPUTE_512K_TBL",
-                "-DHITLS_CRYPTO_DRBG_GM"
+                "-DHITLS_CRYPTO_SM2_PRECOMPUTE_512K_TBL"
             ]
         },
         "gcc": {

@@ -131,8 +131,6 @@ void SAL_RwLockFree(BSL_SAL_ThreadLockHandle rwLock);
 #endif
 
 #ifdef HITLS_BSL_SAL_THREAD
-int32_t SAL_PthreadRunOnce(BSL_SAL_OnceControl *onceControl, BSL_SAL_ThreadInitRoutine initFunc);
-
 uint64_t SAL_GetThreadId(void);
 #endif
 
@@ -140,6 +138,8 @@ uint64_t SAL_GetThreadId(void);
 int32_t SAL_GetPid(void);
 #endif
 #endif
+
+int32_t SAL_PthreadRunOnce(BSL_SAL_OnceControl *onceControl, BSL_SAL_ThreadInitRoutine initFunc);
 
 #ifdef __cplusplus
 }

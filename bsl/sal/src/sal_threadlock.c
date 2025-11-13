@@ -124,7 +124,7 @@ int32_t BSL_SAL_ThreadRunOnce(BSL_SAL_OnceControl *onceControl, BSL_SAL_ThreadIn
     if (onceControl == NULL || initFunc == NULL) {
         return BSL_SAL_ERR_BAD_PARAM;
     }
-#if defined(HITLS_BSL_SAL_THREAD) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
+#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
     return SAL_PthreadRunOnce(onceControl, initFunc);
 #else
     // Fallback for no threading support

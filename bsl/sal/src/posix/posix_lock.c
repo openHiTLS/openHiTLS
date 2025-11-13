@@ -90,21 +90,12 @@ void SAL_RwLockFree(BSL_SAL_ThreadLockHandle rwLock)
 }
 #endif
 
-#if (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)) && defined(HITLS_BSL_SAL_THREAD)
-uint64_t SAL_GetThreadId(void)
-{
-    // By default, gettid is not used to obtain the global tid corresponding to the thread
-    // because other thread functions use the pthread library.
-    // Use pthread_self to obtain the PID used by pthread_create in this process.
-    // However, the pids of the parent and child processes may be the same.
-    return (uint64_t)pthread_self();
-}
-
 /**
  * @brief Thread-safe one-time initialization wrapper
  *
  * Directly wraps pthread_once for posix system
  */
+#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
 int32_t SAL_PthreadRunOnce(BSL_SAL_OnceControl *onceControl, BSL_SAL_ThreadInitRoutine initFunc)
 {
     if (onceControl == NULL || initFunc == NULL) {
@@ -116,6 +107,17 @@ int32_t SAL_PthreadRunOnce(BSL_SAL_OnceControl *onceControl, BSL_SAL_ThreadInitR
     }
 
     return BSL_SUCCESS;
+}
+#endif
+
+#if (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)) && defined(HITLS_BSL_SAL_THREAD)
+uint64_t SAL_GetThreadId(void)
+{
+    // By default, gettid is not used to obtain the global tid corresponding to the thread
+    // because other thread functions use the pthread library.
+    // Use pthread_self to obtain the PID used by pthread_create in this process.
+    // However, the pids of the parent and child processes may be the same.
+    return (uint64_t)pthread_self();
 }
 
 int32_t BSL_SAL_ThreadCreate(BSL_SAL_ThreadId *thread, void *(*startFunc)(void *), void *arg)
