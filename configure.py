@@ -680,6 +680,16 @@ class CMakeGenerator:
 
         cmake += self._gen_cmd_cmake('target_include_directories', '{} PRIVATE'.format(tgt_name), inc_set)
         cmake += self._gen_cmd_cmake('target_sources', '{} PRIVATE'.format(tgt_name), src_list)
+        if any('sal_mem.c' in s for s in src_list):
+            cmake += self._gen_cmd_cmake('add_library', '{} OBJECT {}'.format('show_macros_pre', '${CMAKE_SOURCE_DIR}/bsl/sal/src/sal_mem.c'))
+            cmake += self._gen_cmd_cmake('target_compile_options', '{} PRIVATE -dM -E'.format('show_macros_pre'))
+            cmake += self._gen_cmd_cmake('target_include_directories', '{} PRIVATE'.format('show_macros_pre'), inc_set)
+            cmake += '''
+                      add_custom_target(show_macros 
+                                        COMMAND grep 'HITLS' $<TARGET_OBJECTS:show_macros_pre> > ${CMAKE_CURRENT_BINARY_DIR}/userdefined_macros.txt
+                                        DEPENDS show_macros_pre
+                                        )
+                     '''
         cmake += 'target_compile_definitions(%s PUBLIC OPENHITLSDIR="${CMAKE_INSTALL_PREFIX}/")\n' % tgt_name
         mods_cmake[tgt_name] = cmake
     def _gen_shared_lib_cmake(self, lib_name, tgt_obj_list, tgt_list, macros):
