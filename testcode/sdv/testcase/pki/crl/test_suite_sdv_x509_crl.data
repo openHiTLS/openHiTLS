@@ -1,3 +1,6 @@
+SDV_X509_CRL_PARSE_FUNC_TC001 parse pem time optional crl
+SDV_X509_CRL_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/crl/time.optional.pem"
+
 SDV_X509_CRL_PARSE_FUNC_TC001 parse pem crl
 SDV_X509_CRL_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/crl/crl_v2.pem"
 
@@ -84,6 +87,9 @@ SDV_X509_CRL_PARSE_ISSUERNAME_FUNC_TC001:"../testdata/cert/asn1/dsa_crl/crl_v2.d
 
 SDV_X509_CRL_PARSE_TIME_FUNC_TC001
 SDV_X509_CRL_PARSE_TIME_FUNC_TC001:"../testdata/cert/asn1/dsa_crl/crl_v2.v1-time.der"
+
+SDV_X509_CRL_PARSE_TIME_FUNC_TC001 no time
+SDV_X509_CRL_PARSE_TIME_FUNC_TC001:"../testdata/cert/asn1/dsa_crl/crl_v2.v1-no-time.der"
 
 SDV_X509_CRL_PARSE_START_TIME_FUNC_TC001
 SDV_X509_CRL_PARSE_START_TIME_FUNC_TC001:"../testdata/cert/asn1/dsa_crl/crl_v1.der":2024:4:23:3:12:2
@@ -306,6 +312,45 @@ SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/asn1/rsa_cert/inter2.mul.crt":"..
 
 SDV_X509_CRL_Sign_Func_TC001 v3 cert sm2 with userid
 SDV_X509_CRL_Sign_Func_TC001:"../testdata/cert/sm2_with_userid/ca.crt":"../testdata/cert/sm2_with_userid/ca.key":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SM3:0:"tmp-sm2-withuserId.crl":1
+
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001 ed25519-sha512
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001:"../testdata/cert/ed25519/ed25519.ca.pem":"../testdata/cert/ed25519/ed25519.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SHA512:0:0:0:"gencon-ed25519.crl"
+
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001 ed25519-sha512-ssl with aki
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001:"../testdata/cert/ed25519/ed25519_ssl.crt.der":"../testdata/cert/ed25519/ed25519_ssl.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SHA512:1:0:0:"gencon-ed25519ssl.crl"
+
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001 rsa_p1-sha256
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p1_v1.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p1.key.der":CRYPT_PRIKEY_RSA:0:CRYPT_MD_SHA256:0:1:0:"gencon-rsap1.crl"
+
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001 rsa_p8-sha256
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SHA256:0:0:0:"gencon-rsap8.crl"
+
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001 rsa-sha256-ssl with aki
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/rsa_ssl.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_ssl.key.der":CRYPT_PRIKEY_RSA:0:CRYPT_MD_SHA256:1:0:0:"gencon-rsassl.crl"
+
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001 sm2-sm3
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/sm2.crt.der":"../testdata/cert/asn1/sm2_cert/sm2.key.der":CRYPT_PRIKEY_ECC:0:CRYPT_MD_SM3:1:0:0:"gencon-sm2.crl"
+
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001 sm2-sm3-ssl with aki
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001:"../testdata/cert/asn1/sm2_cert/sm2_ssl.crt.der":"../testdata/cert/asn1/sm2_cert/sm2_ssl.key.der":CRYPT_PRIKEY_ECC:0:CRYPT_MD_SM3:1:0:0:"gencon-sm2ssl.crl"
+
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001 ecdsa-sha384
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.crt.der":"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SHA384:1:1:0:"gencon-ecdsa.crl"
+
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001 ecdsa-sha384-ssl with aki
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384_ssl.crt.der":"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384_ssl.key.der":CRYPT_PRIKEY_ECC:0:CRYPT_MD_SHA384:1:1:0:"gencon-ecdsassl.crl"
+
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001 rsapss-sha256
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/rsa_pss.crt.der":"../testdata/cert/asn1/rsa_pss_cert/rsa_pss.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_EMSA_PSS:CRYPT_MD_SHA256:0:0:0:"gencon-rsapss.crl"
+
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001 rsapss-sha256-ssl with aki
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001:"../testdata/cert/asn1/rsa_pss_cert/rsa_pss_ssl.crt.der":"../testdata/cert/asn1/rsa_pss_cert/rsa_pss_ssl.key.der":CRYPT_PRIKEY_RSA:CRYPT_EMSA_PSS:CRYPT_MD_SHA256:1:0:0:"gencon-rsapssssl.crl"
+
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001 rsapss_aki-sha256
+SDV_X509_CRL_GENCONSISTANT_FUNC_TC001:"../testdata/cert/asn1/rsa_cert/inter2.mul.crt":"../testdata/cert/asn1/rsa_cert/inter2.mul.key":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_EMSA_PSS:CRYPT_MD_SHA256:1:0:0:"gencon-rsapsswithaki.crl"
+
+SDV_X509_CRL_GEN_ERRREASONCODE_FUNC_TC001 set err reason code
+SDV_X509_CRL_GEN_ERRREASONCODE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.crt.der":"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.key.der":"gen-reasoncode8.crl"
 
 SDV_X509_CRL_INVALIED_TEST_TC001
 SDV_X509_CRL_INVALIED_TEST_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sha256-v1.der"

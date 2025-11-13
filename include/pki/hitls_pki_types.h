@@ -247,7 +247,7 @@ typedef enum {
     HITLS_X509_REVOKED_REASON_SUPERSEDED,              /** CRLReason: Superseded. */
     HITLS_X509_REVOKED_REASON_CESSATION_OF_OPERATION,  /** CRLReason: Cessation of operation. */
     HITLS_X509_REVOKED_REASON_CERTIFICATE_HOLD,        /** CRLReason: Certificate hold. */
-    HITLS_X509_REVOKED_REASON_REMOVE_FROM_CRL,         /** CRLReason: Remove from CRL. */
+    HITLS_X509_REVOKED_REASON_REMOVE_FROM_CRL = 8,     /** CRLReason: Remove from CRL. */
     HITLS_X509_REVOKED_REASON_PRIVILEGE_WITHDRAWN,     /** CRLReason: Privilege withdrawn. */
     HITLS_X509_REVOKED_REASON_AA_COMPROMISE,           /** CRLReason: aA compromise. */
 } HITLS_X509_RevokeReason;
