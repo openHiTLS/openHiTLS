@@ -39,7 +39,7 @@
 #ifdef HITLS_PKI_X509_CRL_PARSE
 BSL_ASN1_TemplateItem g_crlTempl[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, /* x509 */
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1}, /* tbs */
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 1}, /* tbs */
             /* 2: version */
             {BSL_ASN1_TAG_INTEGER, BSL_ASN1_FLAG_DEFAULT, 2},
             /* 2: signature info */
@@ -88,7 +88,11 @@ int32_t HITLS_X509_CrlTagGetOrCheck(int32_t type, uint32_t idx, void *data, void
                 *(uint8_t *) expVal = tag;
                 return BSL_SUCCESS;
             }
-            return HITLS_X509_ERR_CHECK_TAG;
+            /**
+             * The tag value cannot be changed, use choice tag to resolve this time not optional.
+             * Subsequent parsing of the choice ASN item fails.
+             */
+            return BSL_SUCCESS; // crl next time optional
         }
         case BSL_ASN1_TYPE_GET_ANY_TAG: {
             BSL_ASN1_Buffer *param = (BSL_ASN1_Buffer *) data;
@@ -770,6 +774,31 @@ int32_t HITLS_X509_CrlGenFile(int32_t format, HITLS_X509_Crl *crl, const char *p
 #endif // HITLS_PKI_X509_CRL_GEN
 
 #ifdef HITLS_PKI_X509_CRL_PARSE
+static int32_t HITLS_X509_ParseCrlTemplate(uint8_t **encode, uint32_t *encodeLen,
+    BSL_ASN1_Buffer *asnArr, uint32_t asnNum)
+{
+    BSL_ASN1_Buffer asnTempArr[4]; // tbs, signId, sign param, sign
+    uint32_t asnTempArrLen = sizeof(asnTempArr) / sizeof(asnTempArr[0]);
+    BSL_ASN1_Template templ = {g_crlTempl, sizeof(g_crlTempl) / sizeof(g_crlTempl[0])};
+    int32_t ret = BSL_ASN1_DecodeTemplate(&templ, HITLS_X509_CrlTagGetOrCheck,
+        encode, encodeLen, asnTempArr, asnTempArrLen);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    BSL_ASN1_Template templTbs = {&g_crlTempl[2], 9}; // tbs parse
+    ret = BSL_ASN1_DecodeTemplate(&templTbs, HITLS_X509_CrlTagGetOrCheck,
+        &(asnTempArr[0].buff), &(asnTempArr[0].len), asnArr, asnNum - 3); // Subtract the already parsed
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    asnArr[HITLS_X509_CRL_SIGNALG_IDX] = asnTempArr[1]; // signId
+    asnArr[HITLS_X509_CRL_SIGNALG_ANY_IDX] = asnTempArr[2]; // sign param
+    asnArr[HITLS_X509_CRL_SIGN_IDX] = asnTempArr[3]; // signature
+    return ret;
+}
+
 int32_t HITLS_X509_ParseAsn1Crl(uint8_t *encode, uint32_t encodeLen, HITLS_X509_Crl *crl)
 {
     uint8_t *temp = encode;
@@ -781,9 +810,7 @@ int32_t HITLS_X509_ParseAsn1Crl(uint8_t *encode, uint32_t encodeLen, HITLS_X509_
     }
     // template parse
     BSL_ASN1_Buffer asnArr[HITLS_X509_CRL_MAX_IDX] = {0};
-    BSL_ASN1_Template templ = {g_crlTempl, sizeof(g_crlTempl) / sizeof(g_crlTempl[0])};
-    int32_t ret = BSL_ASN1_DecodeTemplate(&templ, HITLS_X509_CrlTagGetOrCheck,
-        &temp, &tempLen, asnArr, HITLS_X509_CRL_MAX_IDX);
+    int32_t ret = HITLS_X509_ParseCrlTemplate(&temp, &tempLen, asnArr, HITLS_X509_CRL_MAX_IDX);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -1007,6 +1034,15 @@ static int32_t CrlSetThisUpdateTime(HITLS_X509_ValidTime *time, uint8_t *val, ui
         return ret;
     }
     time->flag |= BSL_TIME_BEFORE_SET;
+    /**
+     * According to Section 5.1.2.4 of RFC 5280.
+     * CRL issuers conforming to this profile MUST encode thisUpdate as UTCTime for dates through the year 2049.
+     * CRL issuers conforming to this profile MUST encode thisUpdate as GeneralizedTime for dates in the year
+     * 2050 or later.
+     */
+    if (time->start.year < 2050) {
+        time->flag |= BSL_TIME_BEFORE_IS_UTC;
+    }
     return HITLS_PKI_SUCCESS;
 }
 
@@ -1017,6 +1053,34 @@ static int32_t CrlSetNextUpdateTime(HITLS_X509_ValidTime *time, uint8_t *val, ui
         return ret;
     }
     time->flag |= BSL_TIME_AFTER_SET;
+    /**
+     * According to Section 5.1.2.5 of RFC 5280.
+     * CRL issuers conforming to this profile MUST encode nextUpdate as UTCTime for dates through the year 2049.
+     * CRL issuers conforming to this profile MUST encode nextUpdate as GeneralizedTime for dates in the year
+     * 2050 or later.
+     */
+    if (time->end.year < 2050) {
+        time->flag |= BSL_TIME_AFTER_IS_UTC;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t CrlSetRevokeTime(HITLS_X509_CrlEntry *revoked, uint8_t *val, uint32_t valLen)
+{
+    int32_t ret = CrlSetTime(&(revoked->time), val, valLen);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    /**
+     * According to Section 5.1.2.6 of RFC 5280, "The time for revocationDate MUST be expressed as described in
+     * Section 5.1.2.4."
+     * CRL issuers conforming to this profile MUST encode revocationDate as UTCTime for dates through the year 2049.
+     * CRL issuers conforming to this profile MUST encode revocationDate as GeneralizedTime for dates in the year
+     * 2050 or later.
+     */
+    if (revoked->time.year >= 2050) {
+        revoked->flag |= BSL_TIME_REVOKE_TIME_IS_GMT;
+    }
     return HITLS_PKI_SUCCESS;
 }
 
@@ -1283,15 +1347,11 @@ static int32_t SetExtInvalidTime(void *param, HITLS_X509_ExtEntry *entry, const 
     entry->critical = invalidTime->critical;
     BSL_ASN1_Buffer asns = {0};
     /**
-     * CRL issuers conforming to this profile MUST encode thisUpdate as UTCTime for dates through the year 2049.
-     * CRL issuers conforming to this profile MUST encode thisUpdate as GeneralizedTime for dates in the year
-     * 2050 or later.
+     * According to Section 5.3.2 of RFC 5280.
+     * The GeneralizedTime values included in this field MUST be expressed in Greenwich Mean Time (Zulu), and MUST
+     * be specified and interpreted as defined in Section 4.1.2.5.2.
      */
-    if (invalidTime->time.year >= 2050) {
-        asns.tag = BSL_ASN1_TAG_GENERALIZEDTIME;
-    } else {
-        asns.tag = BSL_ASN1_TAG_UTCTIME;
-    }
+    asns.tag = BSL_ASN1_TAG_GENERALIZEDTIME;
     asns.len = sizeof(BSL_TIME);
     asns.buff = (uint8_t *)(uintptr_t)&invalidTime->time;
     BSL_ASN1_TemplateItem templItem = {BSL_ASN1_TAG_CHOICE, 0, 0};
@@ -1399,7 +1459,7 @@ static int32_t RevokedSet(HITLS_X509_CrlEntry *revoked, int32_t cmd, void *val, 
         case HITLS_X509_CRL_SET_REVOKED_SERIALNUM:
             return HITLS_X509_SetSerial(&revoked->serialNumber, val, valLen);
         case HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME:
-            return CrlSetTime(&revoked->time, val, valLen);
+            return CrlSetRevokeTime(revoked, val, valLen);
         case HITLS_X509_CRL_SET_REVOKED_INVALID_TIME:
             return X509_CrlSetRevokedExt(revoked, BSL_CID_CE_INVALIDITYDATE, &buff, sizeof(HITLS_X509_RevokeExtTime),
                 (EncodeExtCb)SetExtInvalidTime);

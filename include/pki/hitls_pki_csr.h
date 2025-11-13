@@ -115,6 +115,9 @@ int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, uint32_t
  * @ingroup pki
  * @brief Parse the csr in the buffer.When the parameter is BSL_FORMAT_PEM and
  *  BSL_FORMAT_UNKNOWN, the buff of encode needs to end with '\0'
+ * @attention
+ *  Support character : UTF8String(only English), PrintableString, TeletexString, T61String,
+ *  IA5String.
  *
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1
  * @param encode [IN] The csr data
@@ -127,6 +130,9 @@ int32_t HITLS_X509_CsrParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_
 /**
  * @ingroup pki
  * @brief Parse the csr in the file
+ * @attention
+ *  Support character : UTF8String(only English), PrintableString, TeletexString, T61String,
+ *  IA5String.
  *
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1
  * @param path [IN] The csr file path

@@ -113,7 +113,9 @@ int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, uint3
  *  If the parsing is successful, the memory for the cert is requested from within the function,
  *  and the user needs to free it after use. When the parameter is BSL_FORMAT_PEM and
  *  BSL_FORMAT_UNKNOWN, the buff of encode needs to end with '\0'
- * @attention None
+ * @attention
+ *  Support character : UTF8String(only English), PrintableString, TeletexString, T61String,
+ *  IA5String.
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param encode [IN] CERT data.
  * @param cert   [OUT] CERT after parse.
@@ -128,6 +130,9 @@ int32_t HITLS_X509_CertParseBuff(int32_t format, const BSL_Buffer *encode, HITLS
  * @par Description: Parse the certificate data using a specific provider implementation.
  *  If parsing is successful, memory for the certificate is allocated internally,
  *  and the user needs to free it after use.
+ * @attention
+ *  Support character : UTF8String(only English), PrintableString, TeletexString, T61String,
+ *  IA5String.
  *
  * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
  * @param attrName [IN] Provider attribute name for capability matching
@@ -146,7 +151,9 @@ int32_t HITLS_X509_ProviderCertParseBuff(HITLS_PKI_LibCtx *libCtx, const char *a
  * @par Description: Parse multiple certificates from a buffer.
  *  If parsing is successful, memory for the certificate list is allocated internally,
  *  and the user needs to free it after use.
- * @attention None
+ * @attention
+ *  Support character : UTF8String(only English), PrintableString, TeletexString, T61String,
+ *  IA5String.
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param encode [IN] Certificate data buffer.
  * @param certlist [OUT] Certificate list after parsing.
@@ -161,6 +168,9 @@ int32_t HITLS_X509_CertParseBundleBuff(int32_t format, const BSL_Buffer *encode,
  * @par Description: Parse multiple certificates from a buffer using a specific provider implementation.
  *  If parsing is successful, memory for the certificate list is allocated internally,
  *  and the user needs to free it after use.
+ * @attention
+ *  Support character : UTF8String(only English), PrintableString, TeletexString, T61String,
+ *  IA5String.
  *
  * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
  * @param attrName [IN] Provider attribute name for capability matching
@@ -179,7 +189,9 @@ int32_t HITLS_X509_ProviderCertParseBundleBuff(HITLS_PKI_LibCtx *libCtx, const c
  * @par Description: Parse the CERT in the file.
  *  If the parsing is successful, the memory for the cert is requested from within the function,
  *  and the user needs to free it after use.
- * @attention None
+ * @attention
+ *  Support character : UTF8String(only English), PrintableString, TeletexString, T61String,
+ *  IA5String.
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param path   [IN] CERT file path.
  * @param cert   [OUT] CERT after parse.
@@ -194,6 +206,9 @@ int32_t HITLS_X509_CertParseFile(int32_t format, const char *path, HITLS_X509_Ce
  * @par Description: Parse the certificate from a file using a specific provider implementation.
  *  If parsing is successful, memory for the certificate is allocated internally,
  *  and the user needs to free it after use.
+ * @attention
+ *  Support character : UTF8String(only English), PrintableString, TeletexString, T61String,
+ *  IA5String.
  *
  * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
  * @param attrName [IN] Provider attribute name for capability matching
@@ -212,7 +227,9 @@ int32_t HITLS_X509_ProviderCertParseFile(HITLS_PKI_LibCtx *libCtx, const char *a
  * @par Description: Parse multiple CERTs in the file.
  *  If the parsing is successful, the memory for the certlist is requested from within the function,
  *  and the user needs to free it after use.
- * @attention None
+ * @attention
+ *  Support character : UTF8String(only English), PrintableString, TeletexString, T61String,
+ *  IA5String.
  * @param format  [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param path    [IN] Certificate file path.
  * @param certlist [OUT] Certificate list after parse.
@@ -227,6 +244,9 @@ int32_t HITLS_X509_CertParseBundleFile(int32_t format, const char *path, HITLS_X
  * @par Description: Parse multiple certificates from a file using a specific provider implementation.
  *  If parsing is successful, memory for the certificate list is allocated internally,
  *  and the user needs to free it after use.
+ * @attention
+ *  Support character : UTF8String(only English), PrintableString, TeletexString, T61String,
+ *  IA5String.
  *
  * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx
  * @param attrName [IN] Provider attribute name for capability matching
