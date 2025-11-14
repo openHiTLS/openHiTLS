@@ -281,8 +281,6 @@ EXIT:
 }
 /* END_CASE */
 
-STUB_DEFINE_RET5(int32_t, HITLS_X509_CheckSignature, void *, uint8_t *, uint32_t , const void *, const void *);
-
 static int32_t STUB_HITLS_X509_CheckSignature_Fail(void *pubKey, uint8_t *rawData,
     uint32_t rawDataLen, const void *alg, const void *signature)
 {
@@ -318,16 +316,14 @@ void UT_TLS_TLCP_CERT_VERIFY_FAIL_TC001()
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_SEND_CERTIFICATE), HITLS_SUCCESS);
 
     /* Stub the certificate signature verification function to return failure */
-    STUB_REPLACE(HITLS_X509_CheckSignature, STUB_HITLS_X509_CheckSignature_Fail);
+    FuncStubInfo tmpRpInfo = {0};
+    STUB_Init();
+    STUB_Replace(&tmpRpInfo, HITLS_X509_CheckSignature, STUB_HITLS_X509_CheckSignature_Fail);
 
     /* Continue handshake, should fail due to certificate verification failure */
     ASSERT_NE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
-
-    /* Restore the stub */
-    STUB_RESTORE(HITLS_X509_CheckSignature);
-
 EXIT:
-    STUB_RESTORE(HITLS_X509_CheckSignature);
+    STUB_Reset(&tmpRpInfo);
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

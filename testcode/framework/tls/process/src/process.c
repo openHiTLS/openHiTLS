@@ -296,7 +296,7 @@ HLT_Process *InitSrcProcess(TLS_TYPE tlsType, char *srcDomainPath)
     return (HLT_Process*)process;
 
 ERR:
-    free(process);
+    FreeProcess();
     return NULL;
 }
 
