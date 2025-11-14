@@ -750,7 +750,11 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     ret = HITLS_CFG_SetMiddleBoxCompat(outCfg, (uint32_t)inCtxCfg->isMiddleBoxCompat);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetMiddleBoxCompat ERROR");
 #endif
-
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    LOG_DEBUG("HiTLS Set Dtls Cookie Support is %d", inCtxCfg->isSupportDtlsCookieExchange);
+    ret = HITLS_CFG_SetDtlsCookieExchangeSupport(outCfg, (uint32_t)inCtxCfg->isSupportDtlsCookieExchange);
+    ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetDtlsCookieExchangeSupport ERROR");
+#endif
 #ifdef HITLS_TLS_MAINTAIN_KEYLOG
     // Set the keylogcb callback function on the server.
     if (strncmp("NULL", inCtxCfg->keyLogCb, strlen(inCtxCfg->keyLogCb)) != 0) {

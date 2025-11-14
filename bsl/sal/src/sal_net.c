@@ -145,10 +145,10 @@ uint32_t SAL_SockAddrSize(const BSL_SAL_SockAddr sockAddr)
 void SAL_SockAddrCopy(BSL_SAL_SockAddr dst, BSL_SAL_SockAddr src)
 {
     if (g_netCallback.pfSockAddrCopy != NULL && g_netCallback.pfSockAddrCopy != SAL_SockAddrCopy) {
-        return g_netCallback.pfSockAddrCopy(src, dst);
+        return g_netCallback.pfSockAddrCopy(dst, src);
     }
 #if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
-    SAL_NET_SockAddrCopy(src, dst);
+    SAL_NET_SockAddrCopy(dst, src);
     return;
 #endif
 }

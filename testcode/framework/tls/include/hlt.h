@@ -58,6 +58,7 @@ int HLT_SetPostHandshakeAuth(HLT_Ctx_Config *ctxConfig, bool support);
 int HLT_SetExtenedMasterSecretSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetEncryptThenMac(HLT_Ctx_Config *ctxConfig, int support);
 int HLT_SetMiddleBoxCompat(HLT_Ctx_Config *ctxConfig, int support);
+int HLT_SetDtlsCookieExchangeSupport(HLT_Ctx_Config *ctxConfig, bool isSupport);
 int HLT_SetModeSupport(HLT_Ctx_Config *ctxConfig, uint32_t mode);
 int HLT_SetCipherSuites(HLT_Ctx_Config* ctxConfig, const char* cipherSuites);
 int HLT_SetProviderPath(HLT_Ctx_Config *ctxConfig, char *providerPath);

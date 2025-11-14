@@ -1436,6 +1436,12 @@ int HLT_SetCAList(HLT_Ctx_Config *ctxConfig, HITLS_TrustedCAList *caList)
     return SUCCESS;
 }
 
+int HLT_SetDtlsCookieExchangeSupport(HLT_Ctx_Config *ctxConfig, bool isSupport)
+{
+    ctxConfig->isSupportDtlsCookieExchange = isSupport;
+    return SUCCESS;
+}
+
 int HLT_SetFrameHandle(HLT_FrameHandle *frameHandle)
 {
     return SetFrameHandle(frameHandle);

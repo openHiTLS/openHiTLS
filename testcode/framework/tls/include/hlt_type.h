@@ -269,6 +269,7 @@ typedef struct {
     char attrName[MAX_ATTR_NAME_LEN];
     uint32_t modeSupport;       // support features, such as HITLS_MODE_SEND_FALLBACK_SCSV. All mode at hitls_type.h
     bool isMiddleBoxCompat;     // Indicates whether to enable the middle box compatibility mode.
+    bool isSupportDtlsCookieExchange;
 } HLT_Ctx_Config;
 
 typedef struct {
