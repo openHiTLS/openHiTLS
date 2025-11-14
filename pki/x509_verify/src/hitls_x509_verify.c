@@ -1135,17 +1135,18 @@ static int32_t X509_StoreCheckSignature(const BSL_Buffer *sm2UserId, const CRYPT
 #else
     (void)sm2UserId;
 #endif
+
     int32_t ret = HITLS_X509_CheckSignature(pubKey, rawData, rawDataLen, alg, signature);
-    if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
 #ifdef HITLS_CRYPTO_SM2
     if (!isHasUserId) {
         alg->sm2UserId.data = NULL;
         alg->sm2UserId.dataLen = 0;
     }
 #endif
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     return ret;
 }
 

@@ -280,3 +280,56 @@ EXIT:
     HITLS_SESS_Free(clientSession);
 }
 /* END_CASE */
+
+STUB_DEFINE_RET5(int32_t, HITLS_X509_CheckSignature, void *, uint8_t *, uint32_t , const void *, const void *);
+
+static int32_t STUB_HITLS_X509_CheckSignature_Fail(void *pubKey, uint8_t *rawData,
+    uint32_t rawDataLen, const void *alg, const void *signature)
+{
+    (void)pubKey;
+    (void)rawData;
+    (void)rawDataLen;
+    (void)alg;
+    (void)signature;
+    return -1;
+}
+
+/* @
+* @test  UT_TLS_TLCP_CERT_VERIFY_FAIL_TC001
+* @title TLCP certificate signature verification fails during handshake.
+* @precon  nan
+* @brief   1. Use the default configuration items to configure the client and server. Expected result 1.
+*          2. Stub the HITLS_X509_CheckSignature function to return failure. Expected result 2.
+*          3. Attempt to complete the handshake. Expected result 3.
+* @expect  1. The initialization is successful.
+*          2. The signature verification function is stubbed successfully.
+*          3. The handshake fails due to certificate verification failure.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLCP_CERT_VERIFY_FAIL_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    config = HITLS_CFG_NewTLCPConfig();
+    client = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, true);
+    server = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, false);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_SEND_CERTIFICATE), HITLS_SUCCESS);
+
+    /* Stub the certificate signature verification function to return failure */
+    STUB_REPLACE(HITLS_X509_CheckSignature, STUB_HITLS_X509_CheckSignature_Fail);
+
+    /* Continue handshake, should fail due to certificate verification failure */
+    ASSERT_NE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    /* Restore the stub */
+    STUB_RESTORE(HITLS_X509_CheckSignature);
+
+EXIT:
+    STUB_RESTORE(HITLS_X509_CheckSignature);
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
