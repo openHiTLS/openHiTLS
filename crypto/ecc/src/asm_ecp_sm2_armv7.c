@@ -26,9 +26,9 @@
 /// The type representing a Non-Adjacent Form (NAF) for efficient scalar multiplication
 typedef int8_t  Sm2Naf[SM2_BITS + 1];
 
-static const Sm2Fp Sm2Zero = {0};
+static const Sm2Fp g_Sm2Zero = {0};
 
-static const Sm2Fp Sm2One = {1};
+static const Sm2Fp g_Sm2One = {1};
 
 // The following is the table of sm2 base points G: {G, [2^5]G, [2^10]G, [2^15]G, ...[2^255]G}.
 //  Only used in the function ECP_Sm2PointGenCore, which uses optimal parameter (window width) w = 5 is used here.
@@ -238,9 +238,9 @@ static void ECP_Sm2FpNaf(Sm2Naf r, const uint8_t w, const Sm2Fp n) {
     int i = SM2_BITS;
     Sm2Fp k, t;
     ECP_Sm2FpSet(k, n);
-    while (ECP_Sm2FpCmp(k, Sm2One)) {
+    while (ECP_Sm2FpCmp(k, g_Sm2One)) {
         if (ECP_Sm2FpIsOdd(k)) {
-            ECP_Sm2FpSet(t, Sm2Zero);
+            ECP_Sm2FpSet(t, g_Sm2Zero);
             t[0] = k[0] & ((1 << w) - 1);
             if (t[0] >> (w - 1)) {
                 t[0] = (1 << w) - t[0];
@@ -287,7 +287,7 @@ static void ECP_Sm2PointSet(Sm2Point *p, const Sm2Fp x, const Sm2Fp y, const Sm2
 }
 
 static void ECP_Sm2PointSetInfinity(Sm2Point *r) {
-    ECP_Sm2PointSet(r, Sm2One, Sm2One, Sm2Zero);
+    ECP_Sm2PointSet(r, g_Sm2One, g_Sm2One, g_Sm2Zero);
 }
 
 static int ECP_Sm2PointAtInfinity(const Sm2Point *r){
@@ -306,7 +306,7 @@ void ECP_Sm2PointToAffineCore(const Sm2Point *a, Sm2Point *r) {
     ECP_Sm2FpMul(r->x, t2, a->x);
     ECP_Sm2FpMul(t2, t2, t1);
     ECP_Sm2FpMul(r->y, t2, a->y);
-    ECP_Sm2FpSet(r->z, Sm2One);
+    ECP_Sm2FpSet(r->z, g_Sm2One);
 }
 
 /**
@@ -442,10 +442,10 @@ static void ECP_Sm2PointAddWithAffineCore(Sm2Point *r, const Sm2Point *p, const 
     ECP_Sm2FpMul(t2, t2, y2);                 // t2 = D = y2 * B
     ECP_Sm2FpSub(t1, t1, x1);                 // t1 = E = C - x1
     ECP_Sm2FpSub(t2, t2, y1);                 // t2 = F = D - y1
-    if (ECP_Sm2FpEqu(t1, Sm2Zero)) {
-        if (ECP_Sm2FpEqu(t2, Sm2Zero)) {
+    if (ECP_Sm2FpEqu(t1, g_Sm2Zero)) {
+        if (ECP_Sm2FpEqu(t2, g_Sm2Zero)) {
             Sm2Point t;
-            ECP_Sm2PointSet(&t, x2, y2, Sm2One);
+            ECP_Sm2PointSet(&t, x2, y2, g_Sm2One);
             ECP_Sm2PointDouCore(r, &t);
         } else {
             ECP_Sm2PointSetInfinity(r);
@@ -601,7 +601,7 @@ static int32_t ECP_SM2FpGet(Sm2Fp dst, const BN_BigNum *src)
         BSL_ERR_PUSH_ERROR(CRYPT_BN_SPACE_NOT_ENOUGH);
         return CRYPT_BN_SPACE_NOT_ENOUGH;
     }
-    ECP_Sm2FpSet(dst, Sm2Zero);
+    ECP_Sm2FpSet(dst, g_Sm2Zero);
     if (BN_IsZero(src)) {
         return CRYPT_SUCCESS;
     }
@@ -791,7 +791,7 @@ int32_t ECP_Sm2Point2AffineWithInv(const ECC_Para *para, ECC_Point *r, const ECC
     ECP_Sm2FnMul(p.x, p.z, q.x);
     ECP_Sm2FnMul(p.y, p.z, q.y);
     ECP_Sm2FnMul(p.y, p.y, n);
-    ECP_Sm2FpSet(p.z, Sm2One);
+    ECP_Sm2FpSet(p.z, g_Sm2One);
     GOTO_ERR_IF(ECP_SM2PointPut(&p, r), ret);
 ERR:
     return ret;
