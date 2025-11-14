@@ -4,6 +4,9 @@
             "CC_WARN_FLAGS_REMOVE": [
                 "-Werror"
             ],
+            "CC_SEC_FLAGS_REMOVE": [
+                "-fPIC"
+            ],
             "CC_MD_DEPENDENT_FLAGS_EXTRA": [
                 "-mcpu=cortex-m4",
                 "-mthumb",
@@ -11,7 +14,8 @@
                 "-mfpu=fpv4-sp-d16"
             ],
             "CC_DEFINE_FLAGS_EXTRA": [
-                "-DHITLS_CRYPTO_NO_AUXVAL"
+                "-DHITLS_CRYPTO_NO_AUXVAL",
+                "-DHITLS_CRYPTO_RAND_CB"
             ]
         }
     },
