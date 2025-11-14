@@ -1,0 +1,52 @@
+Certificate:
+    Data:
+        Version: 3 (0x02)
+        Serial Number: 287454020 (0x11223344)
+        Signature Algorithm: SHA256WITHRSA
+        Issuer: C=CN,CN=OH
+        Validity:
+            Not Before: Jan 1 00:00:00 2025 GMT
+            Not After : Jan 1 00:00:00 2035 GMT
+        Subject: C=CN,CN=OH
+        Subject Public Key Info:
+            Public Key Algorithm: RSAENCRYPTION
+                Public-Key: (2048 bit)
+                Modulus:
+                    bb:5e:c7:60:46:0b:49:74:de:dc:f7:ad:cf:4b:86:df
+                    76:9f:2a:6b:4b:4f:8e:62:ba:c3:fd:b5:f4:a3:53:8b
+                    e9:73:f7:ea:d5:a5:fd:69:df:b4:03:fa:ce:60:aa:99
+                    93:11:e3:43:a5:4d:6d:fe:de:3b:08:92:1a:a6:d8:b7
+                    19:eb:10:56:dd:cf:04:8c:e0:c1:61:20:7a:ba:21:0b
+                    56:ef:75:41:d6:71:87:8e:36:67:16:76:45:c3:0e:ad
+                    2b:19:cb:d6:76:a8:75:97:bb:7a:2e:89:e5:2d:d7:e2
+                    49:5b:93:9d:3c:22:9a:23:d8:8d:ce:32:14:37:b0:1d
+                    ce:2c:34:36:0f:6c:8f:7d:cf:4b:4c:30:83:73:01:c7
+                    cf:e0:49:99:75:dd:dc:09:7f:19:91:4d:b5:b9:22:75
+                    24:bf:95:27:a9:79:77:6c:18:d8:d5:08:fa:59:75:43
+                    ad:28:de:bc:9a:88:be:1d:31:af:3c:fc:90:2c:2b:f7
+                    fc:f1:65:31:da:e8:3c:27:32:04:92:21:36:65:9a:1c
+                    1c:e5:61:d9:e8:93:a3:c0:a7:17:d0:61:f9:a4:37:9d
+                    70:74:d5:64:6f:61:aa:09:78:3b:ab:08:e9:13:e2:5a
+                    21:d2:67:c8:71:92:2b:38:92:54:83:3e:a2:65:91:bb
+                Exponent: 65537 (0x10001)
+        X509V3 extensions:
+            ExtendedKeyUsage: critical
+                ServerAuth
+    Signature Algorithm: SHA256WITHRSA
+    Signature Value:
+        2b:bf:98:b9:f6:d0:04:bc:7f:10:a8:b1:f1:c5:fc:d0
+        ce:2d:d5:4c:d7:59:6c:62:ec:bf:b0:6d:6a:d3:da:ef
+        6e:b9:fa:35:88:cc:c9:0d:aa:79:c9:27:f4:eb:fe:ec
+        dd:be:dc:34:23:76:9b:ab:e0:4b:e6:18:87:c0:2d:b1
+        32:ff:34:7d:90:fc:76:d8:70:e3:48:2a:05:4b:35:e1
+        c1:ed:23:24:85:95:00:ba:63:72:08:e5:ee:3d:fe:00
+        d3:7b:24:c7:93:85:04:68:5d:de:60:0d:0d:fc:bf:06
+        84:c5:05:ab:c5:b0:e4:40:39:71:ee:12:d9:96:ef:e1
+        8d:68:63:72:3a:cf:e0:32:0e:a3:04:56:3d:e7:f9:e5
+        8f:55:ed:0e:53:64:32:58:8f:5f:fd:b9:28:0a:3a:82
+        9d:e3:73:b5:d0:29:84:47:ad:b9:84:98:f4:40:77:48
+        3e:55:d1:36:e3:34:00:15:34:9f:11:de:9b:ce:a4:68
+        a7:26:e2:0b:37:5d:bf:9a:22:73:0c:d6:fd:e6:d6:75
+        15:98:dd:e6:d1:5d:2f:25:a5:9b:a5:41:ec:08:1d:0f
+        46:b3:c9:a9:36:21:30:be:c7:50:65:c0:c1:4b:93:33
+        c6:44:28:98:ee:26:49:d5:84:51:ec:96:4b:e1:47:69

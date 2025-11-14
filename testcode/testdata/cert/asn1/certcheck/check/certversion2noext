@@ -1,0 +1,27 @@
+Certificate:
+    Data:
+        Version: 3 (0x02)
+        Serial Number: 287454020 (0x11223344)
+        Signature Algorithm: ECDSAWITHSHA256
+        Issuer: C=CN,CN=OH
+        Validity:
+            Not Before: Jan 1 00:00:00 2025 GMT
+            Not After : Jan 1 00:00:00 2035 GMT
+        Subject: C=CN,CN=OH
+        Subject Public Key Info:
+            Public Key Algorithm: EC-PUBLICKEY
+                Public-Key: (256 bit)
+                Pub:
+                    04:2c:ca:ab:61:dd:ca:dc:a7:0c:33:18:94:fe:70:3a
+                    5e:45:2c:02:5a:3b:d5:b4:f9:19:2d:4b:e3:a9:89:a3
+                    85:7f:ca:02:05:9c:56:80:75:b2:50:98:0f:35:31:13
+                    aa:e6:a8:02:5f:75:1a:d1:78:58:76:7b:fc:50:76:31
+                    71
+                ANS1 OID: PRIME256V1
+    Signature Algorithm: ECDSAWITHSHA256
+    Signature Value:
+        30:46:02:21:00:bc:1f:bd:b4:f6:da:44:db:18:cf:0f
+        69:55:7b:d3:b5:96:5c:ea:d5:8a:4d:dc:cf:c6:15:31
+        da:50:d1:92:f8:02:21:00:e4:b5:af:dd:a3:1a:28:9c
+        c1:a6:b5:cd:e0:32:7c:42:83:d2:98:6a:3a:62:33:96
+        41:59:12:5f:89:02:8c:19

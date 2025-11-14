@@ -1,0 +1,344 @@
+SDV_X509_CERT_VERSIONCHECK_TC001
+SDV_X509_CERT_VERSIONCHECK_TC001:2:1:HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/certversion2withext.der":"../testdata/cert/asn1/certcheck/check/certversion2withext"
+
+SDV_X509_CERT_VERSIONCHECK_TC001
+SDV_X509_CERT_VERSIONCHECK_TC001:1:1:HITLS_X509_ERR_CERT_INACCURACY_VERSION:"":""
+
+SDV_X509_CERT_VERSIONCHECK_TC001
+SDV_X509_CERT_VERSIONCHECK_TC001:0:1:HITLS_X509_ERR_CERT_INACCURACY_VERSION:"":""
+
+SDV_X509_CERT_VERSIONCHECK_TC001
+SDV_X509_CERT_VERSIONCHECK_TC001:2:0:HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/certversion2noext.der":"../testdata/cert/asn1/certcheck/check/certversion2noext"
+
+SDV_X509_CERT_VERSIONCHECK_TC001
+SDV_X509_CERT_VERSIONCHECK_TC001:1:0:HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/certversion1noext.der":"../testdata/cert/asn1/certcheck/check/certversion1noext"
+
+SDV_X509_CERT_VERSIONCHECK_TC001
+SDV_X509_CERT_VERSIONCHECK_TC001:0:0:HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/certversion0noext.der":"../testdata/cert/asn1/certcheck/check/certversion0noext"
+
+SDV_X509_CERT_VERSIONCHECK_TC001
+SDV_X509_CERT_VERSIONCHECK_TC001:4:0:HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/certnoversionnoext.der":"../testdata/cert/asn1/certcheck/check/certnoversionnoext"
+
+SDV_X509_CERT_VERSIONCHECK_TC002
+SDV_X509_CERT_VERSIONCHECK_TC002:
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certwithextversion3.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certwithextversion3"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certwithextversion1.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certwithextversion1"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certwithextversion0.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certwithextversion0"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certnoextversion.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certnoextversion"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certnoserialnum.der":BSL_ASN1_ERR_TAG_EXPECTED:""
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certnopublickey.der":BSL_ASN1_ERR_TAG_EXPECTED:""
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/dsacert.der":CRYPT_DECODE_ERR_NO_USABLE_DECODER:""
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certnosignaturealgorithm.der":BSL_ASN1_ERR_TAG_EXPECTED:""
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certdnvaluenull.der":HITLS_X509_ERR_PARSE_STR:""
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certerrdnoid.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certerrdnoid"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certnodnname.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certnodnname"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certnoissuer.der":HITLS_X509_ERR_CHECK_TAG:""
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certdnvalueIA5String.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certdnvalueIA5String"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certwithsannosubject.der":BSL_ASN1_ERR_TAG_EXPECTED:""
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certsubjectnodnnosan.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certsubjectnodnnosan"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certnosubjectnosan.der":BSL_ASN1_ERR_TAG_EXPECTED:""
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certsubjectwithemail.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certsubjectwithemail"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certsubjectwithemailprintable.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certsubjectwithemailprintable"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certsignaturevalueerr.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certsignaturevalueerr"
+
+SDV_X509_CERT_VERSIONCHECK_TC003
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certsignaturevalueUTF8.der":BSL_ASN1_ERR_TAG_EXPECTED:""
+
+SDV_X509_CERT_SERIALNUMCHECK_TC001- negative
+SDV_X509_CERT_SERIALNUMCHECK_TC001:1:HITLS_PKI_SUCCESS:"FF":"../testdata/cert/asn1/certcheck/certnegativeserialnum.der":"../testdata/cert/asn1/certcheck/check/certnegativeserialnum"
+
+SDV_X509_CERT_SERIALNUMCHECK_TC001-0
+SDV_X509_CERT_SERIALNUMCHECK_TC001:1:HITLS_PKI_SUCCESS:"00":"../testdata/cert/asn1/certcheck/cert0serialnum.der":"../testdata/cert/asn1/certcheck/check/cert0serialnum"
+
+SDV_X509_CERT_SERIALNUMCHECK_TC001-20
+SDV_X509_CERT_SERIALNUMCHECK_TC001:1:HITLS_PKI_SUCCESS:"308206533082053BA00302010202100DC95EA1BD":"../testdata/cert/asn1/certcheck/cert20serialnum.der":"../testdata/cert/asn1/certcheck/check/cert20serialnum"
+
+SDV_X509_CERT_SERIALNUMCHECK_TC001-21
+SDV_X509_CERT_SERIALNUMCHECK_TC001:1:HITLS_PKI_SUCCESS:"308206533082053BA00302010202100DC95EA1BD00":"../testdata/cert/asn1/certcheck/cert21serialnum.der":"../testdata/cert/asn1/certcheck/check/cert21serialnum"
+
+SDV_X509_CERT_KEYCHECK_TC001
+SDV_X509_CERT_KEYCHECK_TC001:1:HITLS_X509_ERR_CERT_SIGN_ALG
+
+SDV_X509_CERT_KEYCHECK_TC001
+SDV_X509_CERT_KEYCHECK_TC001:0:HITLS_X509_ERR_CERT_INVALID_PUBKEY
+
+SDV_X509_CERT_ISSUERCHECK_TC001
+SDV_X509_CERT_ISSUERCHECK_TC001:
+
+SDV_X509_CERT_ISSUERCHECK_TC002
+SDV_X509_CERT_ISSUERCHECK_TC002:
+
+SDV_X509_CERT_SUBJECTCHECK_TC001
+SDV_X509_CERT_SUBJECTCHECK_TC001:0:0
+
+SDV_X509_CERT_SUBJECTCHECK_TC001
+SDV_X509_CERT_SUBJECTCHECK_TC001:1:0
+
+SDV_X509_CERT_SUBJECTCHECK_TC001
+SDV_X509_CERT_SUBJECTCHECK_TC001:1:1
+
+SDV_X509_CERT_SUBJECTCHECK_TC002
+SDV_X509_CERT_SUBJECTCHECK_TC002:0
+
+SDV_X509_CERT_SUBJECTCHECK_TC002
+SDV_X509_CERT_SUBJECTCHECK_TC002:1
+
+SDV_X509_CERT_SUBJECTCHECK_TC003
+SDV_X509_CERT_SUBJECTCHECK_TC003:1:"../testdata/cert/asn1/certcheck/certallsubjectwithsan.der":"../testdata/cert/asn1/certcheck/check/certallsubjectwithsan"
+
+SDV_X509_CERT_SUBJECTCHECK_TC003
+SDV_X509_CERT_SUBJECTCHECK_TC003:0:"../testdata/cert/asn1/certcheck/certallsubjectnosan.der":"../testdata/cert/asn1/certcheck/check/certallsubjectnosan"
+
+SDV_X509_CERT_OIDCHECK_TC001
+SDV_X509_CERT_OIDCHECK_TC001:"../testdata/cert/asn1/certcheck/certrsapss.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certrsapss"
+
+SDV_X509_CERT_OIDCHECK_TC001
+SDV_X509_CERT_OIDCHECK_TC001:"../testdata/cert/asn1/certcheck/certrsapssoiddiff.der":HITLS_X509_ERR_CHECK_TAG:""
+
+SDV_X509_CERT_OIDCHECK_TC001
+SDV_X509_CERT_OIDCHECK_TC001:"../testdata/cert/asn1/certcheck/certrsapssoidparamdiff.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certrsapssoidparamdiff"
+
+SDV_X509_CERT_TELETEXSTRING_PARSEGEN_TC001-certteletexstring.der
+SDV_X509_CERT_TELETEXSTRING_PARSEGEN_TC001:"../testdata/cert/asn1/certcheck/certteletexstring.der":"../testdata/cert/asn1/certcheck/check/certteletexstring"
+
+SDV_X509_CERT_WITH_AKISKI_GEN_TEST_TC001:AKI，kid = 160 bit，RSA, CRYPT_MD_SHA256
+SDV_X509_CERT_WITH_AKISKI_GEN_TEST_TC001:1:"5ED3DB0A721F214C362744058AC56767ADA683DB":"../testdata/cert/asn1/certcheck/cert_ext_aki_exp_1.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:1:0
+
+SDV_X509_CERT_WITH_AKISKI_GEN_TEST_TC001:AKI，kid = 0100 + 60 bit，RSA, CRYPT_MD_SHA256
+SDV_X509_CERT_WITH_AKISKI_GEN_TEST_TC001:1:"4F0123456789ABCD":"../testdata/cert/asn1/certcheck/cert_ext_aki_exp_2.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:1:0
+
+SDV_X509_CERT_WITH_AKISKI_GEN_TEST_TC001:SKI，kid = 160 bit，RSA, CRYPT_MD_SHA256
+SDV_X509_CERT_WITH_AKISKI_GEN_TEST_TC001:1:"5ED3DB0A721F214C362744058AC56767ADA683DB":"../testdata/cert/asn1/certcheck/cert_ext_ski_exp_1.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:0:1
+
+SDV_X509_CERT_WITH_AKISKI_GEN_TEST_TC001:SKI，kid = 0100 + 60 bit，RSA, CRYPT_MD_SHA256
+SDV_X509_CERT_WITH_AKISKI_GEN_TEST_TC001:1:"4F0123456789ABCD":"../testdata/cert/asn1/certcheck/cert_ext_ski_exp_2.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:0:1
+
+SDV_X509_CERT_WITH_ILLEGAL_AKISKI_GEN_TEST_TC001:AKI，kid = 0100 + 52 bit, CRYPT_MD_SHA256
+SDV_X509_CERT_WITH_ILLEGAL_AKISKI_GEN_TEST_TC001:1:"4F0123456789AB":CRYPT_PKEY_RSA:0:1:0
+
+SDV_X509_CERT_WITH_ILLEGAL_AKISKI_GEN_TEST_TC001:AKI，kid = 160 + 8 bit, CRYPT_MD_SHA256
+SDV_X509_CERT_WITH_ILLEGAL_AKISKI_GEN_TEST_TC001:1:"DA39A3EE5E6B4B0D3255BFEF95601890AFD80709E1":CRYPT_PKEY_RSA:0:0:1
+
+SDV_X509_CERT_WITH_ILLEGAL_AKISKI_GEN_TEST_TC001:SKI，kid = 0100 + 52 bit, CRYPT_MD_SHA256
+SDV_X509_CERT_WITH_ILLEGAL_AKISKI_GEN_TEST_TC001:1:"4F0123456789AB":CRYPT_PKEY_RSA:0:1:0
+
+SDV_X509_CERT_WITH_ILLEGAL_AKISKI_GEN_TEST_TC001:SKI，kid = 160 + 8 bit, CRYPT_MD_SHA256
+SDV_X509_CERT_WITH_ILLEGAL_AKISKI_GEN_TEST_TC001:1:"DA39A3EE5E6B4B0D3255BFEF95601890AFD80709E1":CRYPT_PKEY_RSA:0:0:1
+
+SDV_X509_CERT_WITH_EXTAKI_PARSE_TEST_TC001:kid 160 bit
+SDV_X509_CERT_WITH_EXTAKI_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_aki_parse_1.der":0:"83AC14BCB66575109E2B48BFFE89005EF37F4713":1
+
+SDV_X509_CERT_WITH_EXTAKI_PARSE_TEST_TC001:kid 0100 + 60 bit
+SDV_X509_CERT_WITH_EXTAKI_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_aki_parse_6.der":0:"4A1B2C3D4E5F6789":1
+
+SDV_X509_CERT_WITH_EXTAKI_PARSE_TEST_TC001:kid 0100 + 52 bit
+SDV_X509_CERT_WITH_EXTAKI_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_aki_parse_7.der":0:"4A1B2C3D4E5F67":1
+
+SDV_X509_CERT_WITH_EXTAKI_PARSE_TEST_TC001:kid 160 + 8 bit
+SDV_X509_CERT_WITH_EXTAKI_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_aki_parse_8.der":0:"83AC14BCB66575109E2B48BFFE89005EF37F4713AE":1
+
+SDV_X509_CERT_WITH_EXTSKI_PARSE_TEST_TC001:kid 160 bit
+SDV_X509_CERT_WITH_EXTSKI_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_ski_parse_1.der":0:"2CD173137226206F1B90744D618BEE4495D8844B":1
+
+SDV_X509_CERT_WITH_EXTSKI_PARSE_TEST_TC001:kid 0100 + 60 bit
+SDV_X509_CERT_WITH_EXTSKI_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_ski_parse_2.der":0:"43A5B7C9D0E2F4A1":1
+
+SDV_X509_CERT_WITH_EXTSKI_PARSE_TEST_TC001:kid 160 + 8 bit
+SDV_X509_CERT_WITH_EXTSKI_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_ski_parse_3.der":0:"C533D56462EF5CC4C018DFF15C9912CBE1402823A1":1
+
+SDV_X509_CERT_WITH_EXTSKI_PARSE_TEST_TC001:kid 0100 + 52 bit
+SDV_X509_CERT_WITH_EXTSKI_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_ski_parse_4.der":0:"4B1C2D3E4F5A6B":1
+
+SDV_X509_CERT_WITH_KUSAGE_GEN_TEST_TC001:critical, digitailSign
+SDV_X509_CERT_WITH_KUSAGE_GEN_TEST_TC001:1:"../testdata/cert/asn1/certcheck/cert_ext_keyusage_exp_1.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:1:0:0:0:0:0:0:0:0
+
+SDV_X509_CERT_WITH_KUSAGE_GEN_TEST_TC001:not critical, digitailSign + keyEncipherment
+SDV_X509_CERT_WITH_KUSAGE_GEN_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_keyusage_exp_2.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:1:0:1:0:0:0:0:0:0
+
+SDV_X509_CERT_WITH_KUSAGE_GEN_TEST_TC001:not critical, all position
+SDV_X509_CERT_WITH_KUSAGE_GEN_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_keyusage_exp_3.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:1:1:1:1:1:1:1:1:1
+
+SDV_X509_CERT_WITH_ILLEGAL_KUSAGE_GEN_TEST_TC001:KeyUsage = 0, CRYPT_PKEY_RSA
+SDV_X509_CERT_WITH_ILLEGAL_KUSAGE_GEN_TEST_TC001:1:0:CRYPT_PKEY_RSA:0
+
+SDV_X509_CERT_WITH_ILLEGAL_KUSAGE_GEN_TEST_TC001:KeyUsage use unused, CRYPT_PKEY_RSA
+SDV_X509_CERT_WITH_ILLEGAL_KUSAGE_GEN_TEST_TC001:1:256:CRYPT_PKEY_RSA:0
+
+SDV_X509_CERT_WITH_ILLEGAL_KUSAGE_GEN_TEST_TC001:KeyUsage use unused, CRYPT_PKEY_RSA
+SDV_X509_CERT_WITH_ILLEGAL_KUSAGE_GEN_TEST_TC001:1:512:CRYPT_PKEY_RSA:0
+
+SDV_X509_CERT_WITH_KUSAGE_PARSE_TEST_TC001:digitailSign
+SDV_X509_CERT_WITH_KUSAGE_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_keyusage_parse_1.der":1:1:0:0:0:0:0:0:0:0
+
+SDV_X509_CERT_WITH_KUSAGE_PARSE_TEST_TC001:digitailSign + keyEncipherment
+SDV_X509_CERT_WITH_KUSAGE_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_keyusage_parse_2.der":1:1:0:1:0:0:0:0:0:0
+
+SDV_X509_CERT_WITH_KUSAGE_PARSE_TEST_TC001:all position
+SDV_X509_CERT_WITH_KUSAGE_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_keyusage_parse_3.der":1:1:1:1:1:1:1:1:1:1
+
+SDV_X509_CERT_WITH_KUSAGE_PARSE_TEST_TC001:no position
+SDV_X509_CERT_WITH_KUSAGE_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_keyusage_parse_4.der":1:0:0:0:0:0:0:0:0:0
+
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:email
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_exp_1.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:"test@openhitls.com":HITLS_X509_GN_EMAIL
+
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:ipv4
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_exp_2.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:"AC10":HITLS_X509_GN_IP
+
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:ipv6
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_exp_3.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:"20010DB87A3F2C9D":HITLS_X509_GN_IP
+
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:ip 5 octets
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_exp_4.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:"AC101":HITLS_X509_GN_IP
+
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:ip 14 octets
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_exp_5.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:"20010DB87A3F2C":HITLS_X509_GN_IP
+
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:dnsname
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_exp_6.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:"www.openhitls123.com":HITLS_X509_GN_DNS
+
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:uri
+SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_exp_7.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0:"https://www.openhitls.com/api":HITLS_X509_GN_URI
+
+SDV_X509_CERT_WITH_SAN_ALL_GEN_TEST_TC001:all
+SDV_X509_CERT_WITH_SAN_ALL_GEN_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_exp_8.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0
+
+SDV_X509_CERT_WITH_ILLEGAL_SAN_GEN_TEST_TC001
+SDV_X509_CERT_WITH_ILLEGAL_SAN_GEN_TEST_TC001:0:CRYPT_PKEY_RSA:0
+
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:email
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_parse_1.der":1:"test@openhitls.com":HITLS_X509_GN_EMAIL
+
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:ipv4
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_parse_2.der":1:"AC10":HITLS_X509_GN_IP
+
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:ipv6
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_parse_3.der":1:"20010DB87A3F2C9D":HITLS_X509_GN_IP
+
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:ip 5 octets
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_parse_4.der":1:"AC101":HITLS_X509_GN_IP
+
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:ip 14 octets
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_parse_5.der":1:"20010DB87A3F2C":HITLS_X509_GN_IP
+
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:dnsname
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_parse_6.der":1:"www.openhitls123.com":HITLS_X509_GN_DNS
+
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:uri
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_parse_7.der":1:"https://www.openhitls.com/api":HITLS_X509_GN_URI
+
+SDV_X509_CERT_WITH_SAN_ALL_PARSE_TC001:all
+SDV_X509_CERT_WITH_SAN_ALL_PARSE_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_parse_8.der":1
+
+SDV_X509_CERT_WITH_ILLEGAL_SAN_PARSE_TEST_TC001:generalName is empty
+SDV_X509_CERT_WITH_ILLEGAL_SAN_PARSE_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_parse_9.der":1
+
+SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:critical, Ca, maxPathLen = 1
+SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:1:1:1:"../testdata/cert/asn1/certcheck/cert_ext_bcon_exp_1.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0
+
+SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:not critical, Ca, maxPathLen = 1
+SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:0:1:1:"../testdata/cert/asn1/certcheck/cert_ext_bcon_exp_2.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0
+
+SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:critical, not Ca, maxPathLen = 1
+SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:1:0:1:"../testdata/cert/asn1/certcheck/cert_ext_bcon_exp_3.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0
+
+SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:not critical, not Ca, maxPathLen = 1
+SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:0:0:1:"../testdata/cert/asn1/certcheck/cert_ext_bcon_exp_4.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0
+
+SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:critical, Ca, maxPathLen = -1
+SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:1:1:-1:"../testdata/cert/asn1/certcheck/cert_ext_bcon_exp_5.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0
+
+SDV_X509_CERT_WITH_BCON_PARSE_TEST_TC001:critical, Ca, maxPathLen = 1
+SDV_X509_CERT_WITH_BCON_PARSE_TEST_TC001:1:1:1:"../testdata/cert/asn1/certcheck/cert_ext_bcon_parse_1.der":1
+
+SDV_X509_CERT_WITH_BCON_PARSE_TEST_TC001:not critical, Ca, maxPathLen = 1
+SDV_X509_CERT_WITH_BCON_PARSE_TEST_TC001:0:1:1:"../testdata/cert/asn1/certcheck/cert_ext_bcon_parse_2.der":1
+
+SDV_X509_CERT_WITH_BCON_PARSE_TEST_TC001:critical, not Ca, maxPathLen = 1
+SDV_X509_CERT_WITH_BCON_PARSE_TEST_TC001:1:0:1:"../testdata/cert/asn1/certcheck/cert_ext_bcon_parse_3.der":1
+
+SDV_X509_CERT_WITH_BCON_PARSE_TEST_TC001:not critical, not Ca, maxPathLen = 1
+SDV_X509_CERT_WITH_BCON_PARSE_TEST_TC001:0:0:1:"../testdata/cert/asn1/certcheck/cert_ext_bcon_parse_4.der":1
+
+SDV_X509_CERT_WITH_ILLEGAL_BCON_PARSE_TEST_TC001:critical, Ca, maxPathLen = -1
+SDV_X509_CERT_WITH_ILLEGAL_BCON_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_bcon_parse_5.der"
+
+SDV_X509_CERT_WITH_EXTKU_GEN_TEST_TC001:serverAuth
+SDV_X509_CERT_WITH_EXTKU_GEN_TEST_TC001:1:1:"../testdata/cert/asn1/certcheck/cert_ext_extku_exp_1.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0
+
+SDV_X509_CERT_WITH_EXTKU_GEN_TEST_TC001:serverAuth, clientAuth
+SDV_X509_CERT_WITH_EXTKU_GEN_TEST_TC001:1:2:"../testdata/cert/asn1/certcheck/cert_ext_extku_exp_2.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0
+
+SDV_X509_CERT_WITH_EXTKU_GEN_TEST_TC001:serverAuth, clientAuth, codeSigning, emailProtection, timeStamping, OCSPSigning
+SDV_X509_CERT_WITH_EXTKU_GEN_TEST_TC001:1:6:"../testdata/cert/asn1/certcheck/cert_ext_extku_exp_3.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0
+
+SDV_X509_CERT_WITH_EXTKU_WITH_ANYKU_GEN_TEST_TC001:
+SDV_X509_CERT_WITH_EXTKU_WITH_ANYKU_GEN_TEST_TC001:1:"../testdata/cert/asn1/certcheck/cert_ext_extku_exp_4.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0
+
+SDV_X509_CERT_WITH_ILLEGAL_EXTKU_GEN_TEST_TC001:
+SDV_X509_CERT_WITH_ILLEGAL_EXTKU_GEN_TEST_TC001:1:CRYPT_PKEY_RSA:0
+
+SDV_X509_CERT_WITH_EXTKU_PARSE_TEST_TC001:serverAuth
+SDV_X509_CERT_WITH_EXTKU_PARSE_TEST_TC001:0:1:"../testdata/cert/asn1/certcheck/cert_ext_extku_parse_1.der":1
+
+SDV_X509_CERT_WITH_EXTKU_PARSE_TEST_TC001:serverAuth, clientAuth
+SDV_X509_CERT_WITH_EXTKU_PARSE_TEST_TC001:0:2:"../testdata/cert/asn1/certcheck/cert_ext_extku_parse_2.der":1
+
+SDV_X509_CERT_WITH_EXTKU_PARSE_TEST_TC001:serverAuth, clientAuth, codeSigning, emailProtection, timeStamping, OCSPSigning
+SDV_X509_CERT_WITH_EXTKU_PARSE_TEST_TC001:0:6:"../testdata/cert/asn1/certcheck/cert_ext_extku_parse_3.der":1
+
+SDV_X509_CERT_WITH_EXTKU_PARSE_TEST_TC001:empty
+SDV_X509_CERT_WITH_EXTKU_PARSE_TEST_TC001:0:0:"../testdata/cert/asn1/certcheck/cert_ext_extku_parse_4.der":1
+
+SDV_X509_CERT_WITH_EXTKU_WITH_ANYKU_PARSE_TEST_TC001:
+SDV_X509_CERT_WITH_EXTKU_WITH_ANYKU_PARSE_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_extku_parse_5.der":1
+
+SDV_X509_CERT_WITH_DUPLICATE_EXT_GEN_TEST_TC001:
+SDV_X509_CERT_WITH_DUPLICATE_EXT_GEN_TEST_TC001:1:"5ED3DB0A721F214C362744058AC56767ADA683DB":"../testdata/cert/asn1/certcheck/cert_ext_dup_exp_1.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0
+
+SDV_X509_CERT_WITH_DUP_EXTAKI_PARSE_TEST_TC001:dup aki 
+SDV_X509_CERT_WITH_DUP_EXTAKI_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_dup_parse_1.der"
+
+SDV_X509_CERT_WITH_ALL_EXT_GEN_TEST_TC001:
+SDV_X509_CERT_WITH_ALL_EXT_GEN_TEST_TC001:"5ED3DB0A721F214C362744058AC56767ADA683DB":"../testdata/cert/asn1/certcheck/cert_ext_all_gen_exp_1.txt":CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0
+
+SDV_X509_CERT_WITH_ALL_EXT_PARSE_TEST_TC001:
+SDV_X509_CERT_WITH_ALL_EXT_PARSE_TEST_TC001:"8B5D350C42F737C0906C196B6C167CC26AF440E0":"../testdata/cert/asn1/certcheck/cert_ext_all_parse_1.der":1

@@ -1,0 +1,27 @@
+Certificate:
+    Data:
+        Version: 3 (0x02)
+        Serial Number: 287454020 (0x11223344)
+        Signature Algorithm: ECDSAWITHSHA256
+        Issuer: O=Wllill@163.com,C=CN,CN=OH
+        Validity:
+            Not Before: Jan 1 00:00:00 2025 GMT
+            Not After : Jan 1 00:00:00 2035 GMT
+        Subject: 
+        Subject Public Key Info:
+            Public Key Algorithm: EC-PUBLICKEY
+                Public-Key: (256 bit)
+                Pub:
+                    04:97:00:34:02:b4:9f:1d:65:8b:3a:db:89:42:b4:19
+                    82:d0:7a:72:dc:7c:c2:6f:dd:07:16:f5:6c:72:39:9f
+                    86:c7:1f:a0:83:f8:1b:91:ee:92:dd:23:d3:e7:f8:98
+                    ae:61:44:df:4d:f0:4c:06:c6:4f:c4:af:2f:d9:cd:2e
+                    21
+                ANS1 OID: PRIME256V1
+    Signature Algorithm: ECDSAWITHSHA256
+    Signature Value:
+        30:45:02:21:00:bb:d1:fb:a6:8a:b9:88:bf:92:ed:ae
+        f8:3c:65:85:ed:a8:06:1a:e0:b8:d6:54:9a:1e:26:d3
+        37:3c:e7:5c:20:02:20:54:97:b4:eb:3c:ad:e0:e7:fd
+        74:c6:45:87:9b:2e:2c:23:cf:cd:19:a9:ad:90:8c:87
+        f4:85:dc:39:d8:50:6c

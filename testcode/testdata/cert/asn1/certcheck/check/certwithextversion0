@@ -1,0 +1,38 @@
+Certificate:
+    Data:
+        Version: 1 (0x00)
+        Serial Number: 287454020 (0x11223344)
+        Signature Algorithm: ECDSAWITHSHA256
+        Issuer: C=CN,CN=RO
+        Validity:
+            Not Before: Jan 1 00:00:00 2025 GMT
+            Not After : Jan 1 00:00:00 2035 GMT
+        Subject: C=CN,CN=MI
+        Subject Public Key Info:
+            Public Key Algorithm: EC-PUBLICKEY
+                Public-Key: (256 bit)
+                Pub:
+                    04:76:f2:f7:da:7b:7c:e4:bd:9b:07:3b:d9:99:60:e7
+                    4f:76:10:eb:0a:3e:f0:6b:84:12:a9:7f:14:51:7f:97
+                    9a:b2:d6:73:38:b8:26:a1:a2:51:a7:7a:5b:0b:76:56
+                    c1:7b:f6:cb:3e:9c:2c:86:cf:3c:85:d7:97:dd:03:de
+                    69
+                ANS1 OID: PRIME256V1
+        X509V3 extensions:
+            BasicConstraints: critical
+                CA:TRUE
+            KeyUsage: critical
+                Digital Signature, Non Repudiation, Certificate Sign
+            SubjectKeyIdentifier:
+                11:22:33:44:55:66:77:88
+            AuthorityKeyIdentifier:
+                Keyid: 11:22:33:44:55:66:77:88
+            SubjectAltName:
+                Email:test, DNS:test, URI:test, DirName:C=CN,CN=OH, IP Address:116.101.115.116
+    Signature Algorithm: ECDSAWITHSHA256
+    Signature Value:
+        30:44:02:20:49:b5:cc:a4:1c:a4:61:ac:a7:b4:e1:28
+        71:f5:4d:50:e1:8c:fb:db:f6:e4:62:b5:6f:e2:4d:e8
+        ee:6b:7a:e2:02:20:2d:be:29:91:90:72:3e:4a:9f:bf
+        88:d0:e2:d9:98:97:d7:43:98:d7:07:a5:b8:bc:92:a5
+        62:1b:ba:d1:22:e5

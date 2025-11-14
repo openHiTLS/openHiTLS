@@ -1,0 +1,63 @@
+Certificate:
+    Data:
+        Version: 3 (0x02)
+        Serial Number:
+            58:07:c9:90:0f:cb:b6:ae:4c:fa:d5:99:fa:9a:7c:68:3a:9d:ff:e8
+        Signature Algorithm: RSASSAPSS
+            Hash Algorithm: SHA256
+            Mask Algorithm: SHA256
+            Salt Length: 0x20
+        Issuer: CN=certificate.testca.com,OU=testca,O=certificate,L=XX,ST=XX,C=XX
+        Validity:
+            Not Before: Apr 17 02:21:05 2024 GMT
+            Not After : Apr 15 02:21:05 2034 GMT
+        Subject: CN=certificate.testca.com,OU=testca,O=certificate,L=XX,ST=XX,C=XX
+        Subject Public Key Info:
+            Public Key Algorithm: RSAENCRYPTION
+                Public-Key: (2048 bit)
+                Modulus:
+                    cd:47:b0:68:49:7c:4d:4a:97:58:ae:9b:a7:9d:2f:88
+                    e4:94:5e:20:1c:5d:5b:e9:07:ae:7e:d8:2f:ef:02:dd
+                    ff:56:06:2b:8d:86:45:19:8f:27:68:b4:80:0e:87:d7
+                    9b:1f:25:61:8e:69:ab:df:95:7a:7c:46:47:30:bc:e5
+                    ef:cb:59:1a:3e:55:8e:0b:ee:2a:a8:26:d2:ec:5f:4a
+                    35:db:f8:42:c8:8e:de:a9:aa:67:51:24:ee:d0:cc:b8
+                    10:1b:97:d4:bb:71:89:6a:29:09:aa:dc:4f:91:a4:af
+                    89:2a:84:bd:b5:96:af:46:0d:8f:e1:42:e7:54:7f:13
+                    cb:93:0a:3c:67:57:6f:ab:89:92:96:8f:02:54:6d:e5
+                    0e:14:97:36:f8:a5:be:e4:7b:5f:c1:ec:0c:58:17:ec
+                    e2:8e:dc:87:6a:e7:3b:7f:b4:3b:ab:1d:87:5a:d5:fc
+                    50:52:48:68:76:47:2c:a3:86:11:57:02:9b:54:a9:10
+                    83:d0:7d:30:f1:5e:1e:2f:6e:05:6d:bf:80:23:45:40
+                    12:ab:ee:f3:be:e0:21:e7:b7:df:68:96:85:f5:b7:e6
+                    80:ca:0b:e2:0a:4c:5d:a5:cd:c4:72:fc:4b:51:96:4b
+                    1e:aa:e2:33:f8:f5:92:0c:2b:2a:42:b0:28:9c:4c:6d
+                Exponent: 65537 (0x10001)
+        X509V3 extensions:
+            SubjectKeyIdentifier:
+                2c:be:b6:36:31:8d:f6:8d:8d:c0:2b:dd:91:04:cd:65:14:61:96:f4
+            AuthorityKeyIdentifier:
+                Keyid: 2c:be:b6:36:31:8d:f6:8d:8d:c0:2b:dd:91:04:cd:65:14:61:96:f4
+            BasicConstraints: critical
+                CA:TRUE
+    Signature Algorithm: RSASSAPSS
+        Hash Algorithm: SHA256
+        Mask Algorithm: SHA256
+        Salt Length: 0x20
+    Signature Value:
+        4e:26:0f:39:85:9d:cf:e7:de:7b:6d:79:f2:9e:3b:02
+        ed:5f:3a:63:7d:d7:c0:23:5c:92:d6:38:90:a6:42:1b
+        ec:ec:30:f6:02:e6:3b:2f:2a:76:58:98:3b:40:ea:bc
+        6c:34:3b:da:45:79:fb:5f:c2:ed:78:1e:eb:0f:6b:66
+        0e:06:20:12:13:24:85:69:6a:7a:77:9b:90:57:44:c3
+        f5:a8:a3:89:2f:02:d7:99:b5:f4:4e:99:f2:d6:22:09
+        84:fd:fd:bc:9b:91:77:2a:2f:68:62:8e:e7:3d:39:f6
+        8c:b5:77:f3:cb:97:87:cd:7d:e3:c7:81:1c:ac:68:7d
+        bd:b4:d2:56:fa:56:97:44:88:a1:8d:22:1f:f3:db:cb
+        cf:f6:64:fd:96:25:c6:4a:15:63:5b:29:cb:25:11:0a
+        b3:30:79:3e:8a:da:ba:be:88:59:78:4b:d8:c0:47:2b
+        af:05:57:61:6f:71:11:bb:52:4f:d5:77:2f:fb:57:40
+        4f:61:bd:ec:0f:94:f9:57:cb:f7:e2:36:f6:2b:e4:6d
+        f4:ff:c0:bb:76:a4:fa:d7:ab:c7:4e:3d:63:52:76:6b
+        dd:d1:e2:d2:ed:81:a1:2e:44:f5:fa:8c:26:01:23:60
+        3b:70:21:8f:e9:94:5f:6b:90:f3:da:42:81:ba:ca:4e

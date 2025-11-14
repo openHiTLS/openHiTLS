@@ -1,0 +1,27 @@
+Certificate:
+    Data:
+        Version: 3 (0x02)
+        Serial Number: 287454020 (0x11223344)
+        Signature Algorithm: ECDSAWITHSHA256
+        Issuer: UID=TEST,DC=TEST,pseudonym=TEST,dnQualifier=1,generationQualifier=CN,initials=\E6\B5\8B\E8\AF\95,GN=\E8\AF\81\E4\B9\A6,title=TEST,OU=UT,O=TEST,street=\E5\A4\A9\E8\B0\B7\E4\BA\8C\E8\B7\AF,ST=\E9\99\95\E8\A5\BF,L=\E8\BF\99\E9\87\8C,C=CN,serialNumber=11223344,SN=\E8\AF\81\E4\B9\A6,CN=OH
+        Validity:
+            Not Before: Jan 1 00:00:00 2025 GMT
+            Not After : Jan 1 00:00:00 2035 GMT
+        Subject: UID=TEST,DC=TEST,pseudonym=TEST,dnQualifier=1,generationQualifier=CN,initials=\E6\B5\8B\E8\AF\95,GN=\E8\AF\81\E4\B9\A6,title=TEST,OU=UT,O=TEST,street=\E5\A4\A9\E8\B0\B7\E4\BA\8C\E8\B7\AF,ST=\E9\99\95\E8\A5\BF,L=\E8\BF\99\E9\87\8C,C=CN,serialNumber=11223344,SN=\E8\AF\81\E4\B9\A6,CN=OH
+        Subject Public Key Info:
+            Public Key Algorithm: EC-PUBLICKEY
+                Public-Key: (256 bit)
+                Pub:
+                    04:6f:60:bd:01:83:2a:a4:07:39:12:38:6d:33:6c:85
+                    ca:2d:35:7b:05:21:12:73:f2:e7:28:3e:a2:95:9c:d4
+                    28:a4:1a:9d:d0:43:8f:3a:54:7d:af:ca:07:2d:69:06
+                    36:a1:71:1f:15:ee:68:09:83:e6:80:e9:fb:0c:75:a4
+                    d7
+                ANS1 OID: PRIME256V1
+    Signature Algorithm: ECDSAWITHSHA256
+    Signature Value:
+        30:44:02:20:4e:c6:47:1d:9c:03:85:52:31:d0:5c:36
+        1d:e5:fb:f1:24:f4:6f:53:48:05:a8:e2:90:96:40:d4
+        95:c3:1f:d7:02:20:6e:8e:61:4a:a4:f5:cb:d8:6b:a7
+        96:25:c7:10:ad:58:f5:d1:eb:25:2f:ce:47:6f:24:9f
+        34:b7:01:e3:f1:74

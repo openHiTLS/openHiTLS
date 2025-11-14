@@ -856,6 +856,7 @@ static int32_t SetExtKeyUsage(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, c
 
     entry->critical = ku->critical;
     HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)ext->extData;
+    certExt->keyUsage = keyUsage;
     certExt->extFlags |= HITLS_X509_EXT_FLAG_KUSAGE;
     return ret;
 }

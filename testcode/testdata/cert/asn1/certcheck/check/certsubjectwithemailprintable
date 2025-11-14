@@ -1,0 +1,57 @@
+Certificate:
+    Data:
+        Version: 3 (0x02)
+        Serial Number:
+            74:f6:97:8d:7b:10:30:aa:d4:9b:5d:6c:d4:b9:a7:01:c0:27:0b:73
+        Signature Algorithm: SHA256WITHRSA
+        Issuer: emailAddress=CN,CN=www.example.com,OU=TechDept,O=TestOrg,L=Beijing,ST=Beijing,C=CN
+        Validity:
+            Not Before: Nov 3 03:32:21 2025 GMT
+            Not After : Nov 3 03:32:21 2026 GMT
+        Subject: emailAddress=CN,CN=www.example.com,OU=TechDept,O=TestOrg,L=Beijing,ST=Beijing,C=CN
+        Subject Public Key Info:
+            Public Key Algorithm: RSAENCRYPTION
+                Public-Key: (2048 bit)
+                Modulus:
+                    d9:08:83:9a:01:82:0a:7c:08:e1:0e:0e:63:85:28:5a
+                    2b:07:95:6d:86:6a:eb:c0:8b:3b:c7:f7:1f:2b:b8:62
+                    28:13:8d:c1:01:bf:32:51:b4:82:1d:c9:28:8a:00:c3
+                    5e:f2:13:74:74:a2:a1:7d:e7:ae:9c:81:b6:8c:d5:f2
+                    f5:eb:4e:fa:f6:36:24:94:23:be:8a:ed:6a:8e:fc:b5
+                    69:e1:6e:a4:9c:6b:7f:3b:64:f2:6b:4f:77:75:02:57
+                    68:6e:77:33:c4:8d:07:42:a4:1d:d9:51:ed:b1:2a:ec
+                    12:5d:4b:58:b4:64:06:98:6b:7f:17:b4:a6:2d:14:fc
+                    c4:28:1c:91:3d:84:5f:a4:85:cf:82:6c:d8:73:6c:c7
+                    f5:71:b3:77:fb:09:35:e8:18:58:3e:b9:56:c6:9b:b7
+                    ec:48:84:b9:1e:d1:4e:80:97:bf:c7:f4:97:f8:ad:cb
+                    a1:70:6e:e4:38:50:cb:11:06:d3:b0:e2:72:95:69:f0
+                    ab:6a:8e:4e:ef:e5:6a:10:18:bf:8e:94:92:28:80:3a
+                    da:63:42:16:52:1b:d6:d7:ab:86:6d:01:98:cb:c7:54
+                    cc:c3:b6:89:3f:b0:04:46:a1:ab:69:e6:57:2a:d5:ef
+                    2e:af:52:8e:86:56:fa:fd:3e:2a:24:6a:c5:42:11:5b
+                Exponent: 65537 (0x10001)
+        X509V3 extensions:
+            SubjectKeyIdentifier:
+                3a:cf:5b:ed:e3:a8:cc:29:12:32:d1:d6:4d:0b:17:62:71:1b:40:d0
+            AuthorityKeyIdentifier:
+                Keyid: 3a:cf:5b:ed:e3:a8:cc:29:12:32:d1:d6:4d:0b:17:62:71:1b:40:d0
+            BasicConstraints: critical
+                CA:TRUE
+    Signature Algorithm: SHA256WITHRSA
+    Signature Value:
+        19:4d:6a:61:ec:34:c0:18:da:ce:81:f4:bc:d2:cc:8d
+        09:f8:fa:aa:f9:7f:37:71:1e:f5:d4:0e:f5:b8:a5:6f
+        5d:80:91:99:b8:a2:2b:1c:9b:4b:83:2d:1f:36:57:65
+        a9:4f:47:31:cf:3a:9f:cd:ac:fb:1f:35:02:0a:9d:52
+        44:19:02:63:59:45:75:3b:3f:f7:84:8d:e3:55:43:96
+        bc:38:c1:f9:71:6a:7f:86:25:1b:bf:59:33:8d:7e:97
+        08:76:a8:eb:5f:a0:a9:2c:37:55:1e:e6:ad:d9:ba:61
+        71:27:f2:11:2e:ea:f8:4e:63:55:2d:39:41:aa:41:ef
+        bc:7e:19:eb:0f:55:22:80:22:16:f8:fd:b5:ed:35:da
+        82:1a:92:dd:56:65:6a:4e:a3:f4:ed:8f:e4:a0:91:12
+        a7:60:53:01:85:d7:cd:39:f2:6e:6f:78:a8:cd:08:7b
+        9f:f2:8d:1c:43:81:b2:a0:73:53:03:5b:42:e3:16:d0
+        81:67:e0:7e:b2:e0:e6:10:b4:5a:59:37:7e:89:5a:84
+        db:98:02:0e:15:0d:67:fb:00:21:75:99:e0:a8:fb:58
+        0f:43:64:22:cd:97:4b:32:87:12:03:62:4b:be:6f:be
+        4b:4b:54:5b:ae:cc:e0:0e:34:c7:ae:dc:4b:aa:66:e1
