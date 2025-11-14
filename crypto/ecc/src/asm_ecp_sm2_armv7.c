@@ -276,10 +276,6 @@ static void ECP_Sm2FpNafP(int8_t K[52], const Sm2Fp k) {
 
 //**********************************************************************************************************************
 
-static void ECP_Sm2PointCopy(Sm2Point *p, const Sm2Point *q) {
-    memcpy_s(p, sizeof(Sm2Point), q, sizeof(Sm2Point));
-}
-
 static void ECP_Sm2PointSet(Sm2Point *p, const Sm2Fp x, const Sm2Fp y, const Sm2Fp z) {
     ECP_Sm2FpSet(p->x, x);
     ECP_Sm2FpSet(p->y, y);
@@ -317,7 +313,7 @@ void ECP_Sm2PointToAffineCore(const Sm2Point *a, Sm2Point *r) {
  */
 static void ECP_Sm2PointDouCore(Sm2Point *r, const Sm2Point *a) {
     if (ECP_Sm2PointAtInfinity(a)) {
-        ECP_Sm2PointCopy(r, a);
+        *r = *a;
         return;
     }
     // A = 3(x1 - z1²) * (x1 + z1²)
@@ -356,11 +352,11 @@ static void ECP_Sm2PointDouCore(Sm2Point *r, const Sm2Point *a) {
 static void ECP_Sm2PointAddCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
     // Check if one of the points is the point at infinity
     if (ECP_Sm2PointAtInfinity(p)) {
-        ECP_Sm2PointCopy(r, q);
+        *r = *q;
         return;
     }
     if (ECP_Sm2PointAtInfinity(q)) {
-        ECP_Sm2PointCopy(r, p);
+        *r = *p;
         return;
     }
 
@@ -425,11 +421,11 @@ static void ECP_Sm2PointSubCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *
  */
 static void ECP_Sm2PointAddWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
     if (ECP_Sm2PointAtInfinity(p)) {
-        ECP_Sm2PointCopy(r, q);
+        *r = *q;
         return;
     }
     if (ECP_Sm2FpIsZero(q->x) && ECP_Sm2FpIsZero(q->y)) {
-        ECP_Sm2PointCopy(r, p);
+        *r = *p;
         return;
     }
 
@@ -538,8 +534,9 @@ static void ECP_Sm2PointMulCore(Sm2Point *r, const Sm2Fp k, const Sm2Point *g) {
     static Sm2Naf K;
     ECP_Sm2FpNaf(K, 4, k);
 
-    // compute the table of point g: {g, 3g, 5g, 7g, ...}
-    ECP_Sm2PointCopy(&upt[0], g);
+    // compute the table of point g: {g, 3g, 5g, 7g, 9g, 11g, 13g, 15g}, a total of 2^{w-1} - 1 points.
+    static Sm2Point upt[8];
+    upt[0] = *g;
     ECP_Sm2PointDouCore(r, g);
     for (uint32_t i = 1; i < 8; i++) {
         ECP_Sm2PointAddCore(&upt[i], &upt[i - 1], r);
@@ -592,7 +589,7 @@ static void ECP_Sm2PointGenCore(Sm2Point *r, const Sm2Fp k) {
         }
         ECP_Sm2PointAddCore(&a, &a, &b);
     }
-    ECP_Sm2PointCopy(r, &a);
+    *r = a;
 }
 
 static int32_t ECP_SM2FpGet(Sm2Fp dst, const BN_BigNum *src)
