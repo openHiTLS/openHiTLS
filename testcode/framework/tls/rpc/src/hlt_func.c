@@ -1376,6 +1376,12 @@ int HLT_SetAlpnProtosSelectCb(HLT_Ctx_Config *ctxConfig, char *callback, char *u
     return SUCCESS;
 }
 
+int HLT_SetDtlsCookieExchangeSupport(HLT_Ctx_Config *ctxConfig, bool isSupport)
+{
+    ctxConfig->isSupportDtlsCookieExchange = isSupport;
+    return SUCCESS;
+}
+
 int HLT_SetFrameHandle(HLT_FrameHandle *frameHandle)
 {
     return SetFrameHandle(frameHandle);

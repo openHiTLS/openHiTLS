@@ -1069,7 +1069,7 @@ void SDV_BSL_UIO_UDP_API_TC001(void)
     ret = BSL_UIO_Ctrl(uio, BSL_UIO_GET_PEER_IP_ADDR, sizeof(getAddr), &getAddr);
     ASSERT_TRUE(ret == BSL_SUCCESS);
 
-    ASSERT_TRUE(memcmp(getAddr.addr.sa_data, peerAddr.addr.sa_data, IP_V4_LEN) == 0);
+    ASSERT_TRUE(memcmp(getAddr.addr.sa_data, ipv4, IP_V4_LEN) == 0);
 
     ret = BSL_UIO_Ctrl(uio, BSL_UIO_UDP_SET_CONNECTED, sizeof(peerAddr.addr), &peerAddr);
     ASSERT_TRUE(ret == BSL_SUCCESS);

@@ -158,3 +158,62 @@ EXIT:
     HLT_FreeAllProcess();
 }
 /* END_CASE */
+/* @
+* @test SDV_TLS_DTLS_BASIC_HANDSHAKE_TC001
+* @spec -
+* @title Basic DTLS1.2 handshake test
+* @precon nan
+* @brief 1. Initialize client and server with DTLS1.2 configuration. Expected result 1.
+* 2. Create a DTLS connection between client and server. Expected result 2.
+* 3. Verify the handshake completes successfully. Expected result 3.
+* @expect 1. Initialization is successful.
+* 2. Connection is established successfully.
+* 3. Handshake completes with success, both client and server can exchange data.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_DTLS_BASIC_HANDSHAKE_TC001(void)
+{
+    int32_t port = 18889;
+    HLT_Process *localProcess = NULL;
+    HLT_Process *remoteProcess = NULL;
+
+    localProcess = HLT_InitLocalProcess(HITLS);
+    ASSERT_TRUE(localProcess != NULL);
+    remoteProcess = HLT_LinkRemoteProcess(HITLS, UDP, port, true);
+    ASSERT_TRUE(remoteProcess != NULL);
+
+    HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
+    HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
+    HLT_SetDtlsCookieExchangeSupport(serverCtxConfig, true);
+    HLT_SetDtlsCookieExchangeSupport(clientCtxConfig, true);
+    ASSERT_TRUE(serverCtxConfig != NULL);
+    ASSERT_TRUE(clientCtxConfig != NULL);
+
+    HLT_Tls_Res *serverRes = HLT_ProcessTlsAccept(localProcess, DTLS1_2, serverCtxConfig, NULL);
+    ASSERT_TRUE(serverRes != NULL);
+
+    HLT_Tls_Res *clientRes = HLT_ProcessTlsConnect(remoteProcess, DTLS1_2, clientCtxConfig, NULL);
+    ASSERT_TRUE(clientRes != NULL);
+
+    ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
+
+    uint8_t writeData[] = "Hello DTLS1.2";
+    uint8_t readBuf[1024] = {0};
+    uint32_t readLen = 0;
+
+    ASSERT_TRUE(HLT_ProcessTlsWrite(localProcess, serverRes, writeData, sizeof(writeData)) == 0);
+    ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, sizeof(readBuf), &readLen) == 0);
+    ASSERT_TRUE(readLen == sizeof(writeData));
+    ASSERT_TRUE(memcmp(writeData, readBuf, readLen) == 0);
+
+    ASSERT_TRUE(HLT_ProcessTlsWrite(remoteProcess, clientRes, writeData, sizeof(writeData)) == 0);
+    ASSERT_TRUE(HLT_ProcessTlsRead(localProcess, serverRes, readBuf, sizeof(readBuf), &readLen) == 0);
+    ASSERT_TRUE(readLen == sizeof(writeData));
+    ASSERT_TRUE(memcmp(writeData, readBuf, readLen) == 0);
+
+EXIT:
+    HLT_FreeAllProcess();
+}
+/* END_CASE */

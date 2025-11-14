@@ -702,6 +702,11 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     ret = HITLS_CFG_SetLegacyRenegotiateSupport(outCfg, inCtxCfg->allowLegacyRenegotiate);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetLegacyRenegotiateSupport ERROR");
 #endif /* defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    LOG_DEBUG("HiTLS Set Dtls Cookie Support is %d", inCtxCfg->isSupportDtlsCookieExchange);
+    ret = HITLS_CFG_SetDtlsCookieExchangeSupport(outCfg, (uint32_t)inCtxCfg->isSupportDtlsCookieExchange);
+    ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetDtlsCookieExchangeSupport ERROR");
+#endif
 
     return SUCCESS;
 }
