@@ -132,12 +132,12 @@ jobs:
       # Execute tests defined by the CMake configuration.
       # run: bash build_sdv.sh no-sctp && bash execute_sdv.sh
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: openhitls-riscv
-        path: ${{ github.workspace }}/build
-        retention-days: 5
+    # - name: Upload artifacts
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: openhitls-riscv
+    #     path: ${{ github.workspace }}/build
+    #     retention-days: 5
 
   # TODO: fix the 'Illegal instruction' when run on ubuntu-22.04-
   #
