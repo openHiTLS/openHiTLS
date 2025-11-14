@@ -1,0 +1,188 @@
+SDV_X509_CRL_PARSE_FILE_FUNC_TC001
+SDV_X509_CRL_PARSE_FILE_FUNC_TC001:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2.crl":"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_change_cid.crl":BSL_CID_SHA256WITHRSAENCRYPTION
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC002
+SDV_X509_CRL_PARSE_FILE_FUNC_TC002:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_change_ver_v1.crl":"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_change_ver_v5.crl"
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC003
+SDV_X509_CRL_PARSE_FILE_FUNC_TC003:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_change_invalid_cid_1.crl":HITLS_X509_ERR_GET_ANY_TAG
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC003
+SDV_X509_CRL_PARSE_FILE_FUNC_TC003:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_change_invalid_cid_2.crl":HITLS_X509_ERR_GET_ANY_TAG
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC003
+SDV_X509_CRL_PARSE_FILE_FUNC_TC003:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_test_empty.crl":BSL_ASN1_ERR_TAG_EXPECTED
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC004
+SDV_X509_CRL_PARSE_FILE_FUNC_TC004:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_teletex.crl":HITLS_PKI_SUCCESS:"433d45532c4f3d456d70726573612045737061c3b16f6c6120532e412e2c4f553d446570617274616d656e746f2054c3a9636e69636f2c434e3d436572746966696361646f206465205265766f63616369c3b36e2c4c3d42617263656c6f6e612c53543d436174616c75c3b161"
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC004
+SDV_X509_CRL_PARSE_FILE_FUNC_TC004:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_universal.crl":HITLS_X509_ERR_PARSE_STR:""
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC004
+SDV_X509_CRL_PARSE_FILE_FUNC_TC004:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_bmpstring.crl":HITLS_X509_ERR_PARSE_STR:""
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC005
+SDV_X509_CRL_PARSE_FILE_FUNC_TC005:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_last2055.crl":2025:2055
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC006
+SDV_X509_CRL_PARSE_FILE_FUNC_TC006:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_change_timetype.crl":HITLS_X509_ERR_PARSE_NO_ELEMENT
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC006
+SDV_X509_CRL_PARSE_FILE_FUNC_TC006:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_change_time_z.crl":BSL_ASN1_ERR_DECODE_UTC_TIME
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC006
+SDV_X509_CRL_PARSE_FILE_FUNC_TC006:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_change_time_float_ss.crl":BSL_ASN1_ERR_DECODE_GENERAL_TIME
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC006
+SDV_X509_CRL_PARSE_FILE_FUNC_TC006:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_change_time_no_ss.crl":BSL_ASN1_ERR_DECODE_TIME
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC006
+SDV_X509_CRL_PARSE_FILE_FUNC_TC006:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_change_time_invalid.crl":BSL_ASN1_ERR_CHECK_TIME
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC007
+SDV_X509_CRL_PARSE_FILE_FUNC_TC007:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_no_next_time.crl":BSL_ASN1_ERR_DECODE_UTC_TIME
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC007
+SDV_X509_CRL_PARSE_FILE_FUNC_TC007:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_endtime_before_curtime.crl":HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC008
+SDV_X509_CRL_PARSE_FILE_FUNC_TC008:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_empty_crl.crl":HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC008
+SDV_X509_CRL_PARSE_FILE_FUNC_TC008:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_revoked_cert_is_null.crl":BSL_ASN1_ERR_DECODE_UTC_TIME
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC009
+SDV_X509_CRL_PARSE_FILE_FUNC_TC009:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_test_crl_number.crl":0:"0c":HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC009
+SDV_X509_CRL_PARSE_FILE_FUNC_TC009:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_no_crl_number.crl":0:"":HITLS_X509_ERR_EXT_NOT_FOUND
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC009
+SDV_X509_CRL_PARSE_FILE_FUNC_TC009:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_long_crl_number.crl":0:"":HITLS_X509_ERR_EXT_CRLNUMBER
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC009
+SDV_X509_CRL_PARSE_FILE_FUNC_TC009:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_critical_crl_number.crl":1:"01":HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC010
+SDV_X509_CRL_PARSE_FILE_FUNC_TC010:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_authority_key_is_normal.crl":0
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC010
+SDV_X509_CRL_PARSE_FILE_FUNC_TC010:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_authority_key_is_null.crl":0
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC010
+SDV_X509_CRL_PARSE_FILE_FUNC_TC010:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_authority_key_is_critical.crl":1
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011:"../testdata/cert/test_for_crl/crl_parse/crl/reason_code_test/demoCA_rsa2048_v2_critical_reason.crl":HITLS_PKI_SUCCESS:HITLS_X509_REVOKED_REASON_KEY_COMPROMISE
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011:"../testdata/cert/test_for_crl/crl_parse/crl/reason_code_test/demoCA_rsa2048_v2_reason_code_0.crl":HITLS_PKI_SUCCESS:HITLS_X509_REVOKED_REASON_UNSPECIFIED
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011:"../testdata/cert/test_for_crl/crl_parse/crl/reason_code_test/demoCA_rsa2048_v2_reason_code_1.crl":HITLS_PKI_SUCCESS:HITLS_X509_REVOKED_REASON_KEY_COMPROMISE
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011:"../testdata/cert/test_for_crl/crl_parse/crl/reason_code_test/demoCA_rsa2048_v2_reason_code_2.crl":HITLS_PKI_SUCCESS:HITLS_X509_REVOKED_REASON_CA_COMPROMISE
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011:"../testdata/cert/test_for_crl/crl_parse/crl/reason_code_test/demoCA_rsa2048_v2_reason_code_3.crl":HITLS_PKI_SUCCESS:HITLS_X509_REVOKED_REASON_AFFILIATION_CHANGED
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011:"../testdata/cert/test_for_crl/crl_parse/crl/reason_code_test/demoCA_rsa2048_v2_reason_code_4.crl":HITLS_PKI_SUCCESS:HITLS_X509_REVOKED_REASON_SUPERSEDED
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011:"../testdata/cert/test_for_crl/crl_parse/crl/reason_code_test/demoCA_rsa2048_v2_reason_code_5.crl":HITLS_PKI_SUCCESS:HITLS_X509_REVOKED_REASON_CESSATION_OF_OPERATION
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011:"../testdata/cert/test_for_crl/crl_parse/crl/reason_code_test/demoCA_rsa2048_v2_reason_code_6.crl":HITLS_PKI_SUCCESS:HITLS_X509_REVOKED_REASON_CERTIFICATE_HOLD
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011:"../testdata/cert/test_for_crl/crl_parse/crl/reason_code_test/demoCA_rsa2048_v2_reason_code_7.crl":HITLS_PKI_SUCCESS:7
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011:"../testdata/cert/test_for_crl/crl_parse/crl/reason_code_test/demoCA_rsa2048_v2_reason_code_8.crl":HITLS_PKI_SUCCESS:HITLS_X509_REVOKED_REASON_REMOVE_FROM_CRL
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011:"../testdata/cert/test_for_crl/crl_parse/crl/reason_code_test/demoCA_rsa2048_v2_reason_code_9.crl":HITLS_PKI_SUCCESS:HITLS_X509_REVOKED_REASON_PRIVILEGE_WITHDRAWN
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011
+SDV_X509_CRL_PARSE_FILE_FUNC_TC011:"../testdata/cert/test_for_crl/crl_parse/crl/reason_code_test/demoCA_rsa2048_v2_reason_code_10.crl":HITLS_PKI_SUCCESS:HITLS_X509_REVOKED_REASON_AA_COMPROMISE
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC012
+SDV_X509_CRL_PARSE_FILE_FUNC_TC012:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_InvalidityData.crl":2025:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC012
+SDV_X509_CRL_PARSE_FILE_FUNC_TC012:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_InvalidityData_UtcTime.crl":2025:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC012
+SDV_X509_CRL_PARSE_FILE_FUNC_TC012:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_InvalidityData_is_critical.crl":2025:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC013
+SDV_X509_CRL_PARSE_FILE_FUNC_TC013:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_Certifivate_Issuer.crl":HITLS_PKI_SUCCESS:HITLS_X509_ERR_INVALID_PARAM
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC013
+SDV_X509_CRL_PARSE_FILE_FUNC_TC013:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_Certifivate_Issuer_is_null.crl":HITLS_X509_ERR_PARSE_EXT_BUF:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_PARSE_FILE_FUNC_TC013
+SDV_X509_CRL_PARSE_FILE_FUNC_TC013:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_Certifivate_Issuer_change_dn.crl":HITLS_PKI_SUCCESS:HITLS_X509_ERR_INVALID_PARAM
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #1 Test the unrevoked certificates
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/crl/ca.crl":"../testdata/cert/test_for_crl/crl_verify/certs/server1.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #2 Test the revoked certificates, flags is CRL_ALL
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/crl/ca.crl":"../testdata/cert/test_for_crl/crl_verify/certs/server2.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #3 Test the revoked certificates, flags is CRL_DEV
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/crl/ca.crl":"../testdata/cert/test_for_crl/crl_verify/certs/server2.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #4 Test the revoked certificates, flags is 0
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/crl/ca.crl":"../testdata/cert/test_for_crl/crl_verify/certs/server2.crt":0:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #5 Verify revoked certificates with CRL extensions.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/extension_crl/ca_cert.pem":"../testdata/cert/test_for_crl/extension_crl/test_crl.pem":"../testdata/cert/test_for_crl/extension_crl/user_cert.pem":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #6 Test revoked certificates with tampered AKI information.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/extension_crl/ca_cert.pem":"../testdata/cert/test_for_crl/extension_crl/test_crl_change_aki.pem":"../testdata/cert/test_for_crl/extension_crl/user_cert.pem":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CRL_NOT_FOUND
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #7 Test revoked certificates with CRL containing unrecognized critical extensions.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/extension_crl/ca_cert.pem":"../testdata/cert/test_for_crl/extension_crl/test_crl_add_issuer_alternative_name.pem":"../testdata/cert/test_for_crl/extension_crl/user_cert.pem":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_PROCESS_CRITICALEXT
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #8 Verify certificates with expired CRL.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/extension_crl/ca_cert.pem":"../testdata/cert/test_for_crl/extension_crl/test_crl_change_date1.pem":"../testdata/cert/test_for_crl/extension_crl/user_cert.pem":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #9 Verify certificates with a CRL that is not yet valid.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/extension_crl/ca_cert.pem":"../testdata/cert/test_for_crl/extension_crl/test_crl_change_date2.pem":"../testdata/cert/test_for_crl/extension_crl/user_cert.pem":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #1 Test certificate chain validation without intermediate certificate revocation lists.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device1.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_X509_ERR_VFY_CRL_NOT_FOUND:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #2 Test certificate chain validation without intermediate certificate revocation lists.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device1.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #3 Test certificate chain with certificates not revoked.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/crl_verify/crl/root_updated.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device1.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #4 Test certificate chain with intermediate certificate revoked,flags is CRL_ALL
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/crl_verify/crl/ca.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device1.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_X509_ERR_VFY_CERT_REVOKED:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #5 Test certificate chain with intermediate certificate revoked, flags is CRL_DEV
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/crl_verify/crl/ca.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device1.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #6 Test certificate chain with device certificate revoked, flags is CRL_ALL
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/crl_verify/crl/ca.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device2.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_X509_ERR_VFY_CERT_REVOKED:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #7 Test intermediate certificate without CRL signing authority.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate_no_crlsign.crt":"../testdata/cert/test_for_crl/crl_verify/crl/root_updated.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device1.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_X509_ERR_VFY_KU_NO_CRLSIGN:HITLS_X509_ERR_VFY_KU_NO_CRLSIGN
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC003 #1 Verify certificates not in the revocation list.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC003:"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device3.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC003 #2 Verify certificates in the revocation list.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC003:"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate_dev3.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device3.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC003 #3 Tamper with CRL subject and verify certificates.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC003:"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate_dev3_change_dn.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device3.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_X509_ERR_VFY_CRL_NOT_FOUND:HITLS_X509_ERR_VFY_CRL_NOT_FOUND
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC003 #4 Tamper with the CRL signature value and verify certificates.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC003:"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate_dev3_change_sign.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device3.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_X509_ERR_VFY_CRLSIGN_FAIL:HITLS_X509_ERR_VFY_CRLSIGN_FAIL
