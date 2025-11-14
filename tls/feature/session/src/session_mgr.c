@@ -283,7 +283,7 @@ void SESSMGR_InsertSession(TLS_SessionMgr *mgr, HITLS_Session *sess, bool isClie
 
     BSL_SAL_ThreadWriteLock(mgr->lock);
 
-    if (BSL_HASH_Size(mgr->hash) < mgr->sessCacheSize) {
+    if (mgr->sessCacheSize == 0 || BSL_HASH_Size(mgr->hash) < mgr->sessCacheSize) {
         /* Insert a session node */
         BSL_HASH_Insert(mgr->hash, (uintptr_t)&key, sizeof(key), (uintptr_t)sess, 0);
     } else {
