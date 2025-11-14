@@ -153,15 +153,15 @@ static int ECP_Sm2FpIsEven(const Sm2Fp a){
 }
 
 static int ECP_Sm2FpIsZero(const Sm2Fp a) {
-    return a[0] == 0 && a[1] == 0 && a[2] == 0 && a[3] == 0 && a[4] == 0 && a[5] == 0 && a[6] == 0 && a[7] == 0;
+    return !memcmp(a, g_Sm2Zero, sizeof(Sm2Fp));
 }
 
 static int ECP_Sm2FpIsOne(const Sm2Fp a){
-    return a[0] == 1 && a[1] == 0 && a[2] == 0 && a[3] == 0 && a[4] == 0 && a[5] == 0 && a[6] == 0 && a[7] == 0;
+    return !memcmp(a, g_Sm2One, sizeof(Sm2Fp));
 }
 
 static int ECP_Sm2FpEqu(const Sm2Fp a, const Sm2Fp b) {
-    return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3] && a[4] == b[4] && a[5] == b[5] && a[6] == b[6] && a[7] == b[7];
+    return !memcmp(a, b, sizeof(Sm2Fp));
 }
 
 /**
