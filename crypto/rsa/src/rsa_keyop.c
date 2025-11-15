@@ -814,6 +814,7 @@ static int32_t RsaKeyPairCheck(const CRYPT_RSA_Ctx *pubKey, const CRYPT_RSA_Ctx 
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
+    (void)BN_OptimizerSetLibCtx(pubKey->libCtx, opt);
     switch (CheckLevel(prvKey->prvKey)) {
         case RSA_CHECK_PQ_RECOVER:
             ret = RecoverPrimeFactorsAndCheck(pubKey, prvKey, opt);

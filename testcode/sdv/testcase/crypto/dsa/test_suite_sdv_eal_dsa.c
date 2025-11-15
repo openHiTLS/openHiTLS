@@ -659,6 +659,7 @@ EXIT:
  *    8. Compare public keys, expected result 8.
  *    9. Call the CRYPT_EAL_PkeyGetPrv method to obtain the private key from the contexts, expected result 9.
  *    10. Compare privates keys, expected result 10.
+ *    11. Call the sign/verify method to sign the message with the dupkey, expected result 11.
  * @expect
  *    1. Success, and context is not NULL.
  *    2-3. CRYPT_SUCCESS
@@ -669,6 +670,7 @@ EXIT:
  *    8. The two public keys are the same.
  *    9. CRYPT_SUCCESS
  *    10. The two private keys are the same.
+ *    11. CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_DSA_DUP_CTX_FUNC_TC001(Hex *p, Hex *q, Hex *g, int isProvider)
@@ -681,7 +683,10 @@ void SDV_CRYPTO_DSA_DUP_CTX_FUNC_TC001(Hex *p, Hex *q, Hex *g, int isProvider)
     CRYPT_EAL_PkeyPrv prv1, prv2;
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyCtx *dupCtx = NULL;
-
+    uint8_t *sign = NULL;
+    uint32_t signLen;
+    char *msg = "Hello, openHiTLS";
+    uint32_t msgLen = strlen(msg);
     Set_DSA_Para(&para, NULL, NULL, p, q, g, NULL, NULL);
 
     TestMemInit();
@@ -716,13 +721,20 @@ void SDV_CRYPTO_DSA_DUP_CTX_FUNC_TC001(Hex *p, Hex *q, Hex *g, int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prv1), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(dupCtx, &prv2), CRYPT_SUCCESS);
     ASSERT_COMPARE("Compare private key", key1, prv1.key.dsaPrv.len, key2, prv2.key.dsaPrv.len);
-
+    signLen = CRYPT_EAL_PkeyGetSignLen(ctx);
+    ASSERT_TRUE(signLen > 0);
+    sign = (uint8_t *)malloc(signLen);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(dupCtx, CRYPT_MD_SHA256, (uint8_t *)msg, msgLen, sign, &signLen),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(dupCtx, CRYPT_MD_SHA256, (uint8_t *)msg, msgLen, sign, signLen),
+        CRYPT_SUCCESS);
 EXIT:
     TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_PkeyFreeCtx(dupCtx);
     BSL_SAL_Free(key1);
     BSL_SAL_Free(key2);
+    BSL_SAL_Free(sign);
 }
 /* END_CASE */
 

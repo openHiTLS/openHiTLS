@@ -1273,6 +1273,7 @@ int32_t CryptDsaFips1864GenPq(CRYPT_DSA_Ctx *ctx, DSA_FIPS186_4_Para *fipsPara, 
     RETURN_RET_IF(seed->dataLen * 8 < fipsPara->n || outLen * 8 < fipsPara->n, CRYPT_DSA_PARA_ERROR); // from FIPS.186-4
     BN_Optimizer *opt = BN_OptimizerCreate();
     RETURN_RET_IF(opt == NULL, CRYPT_MEM_ALLOC_FAIL);
+    (void)BN_OptimizerSetLibCtx(ctx->libCtx, opt);
     (void)OptimizerStart(opt);
     BN_BigNum *pow = OptimizerGetBn(opt, BITS_TO_BN_UNIT(fipsPara->l));
     BN_BigNum *pTmp = OptimizerGetBn(opt, BITS_TO_BN_UNIT(fipsPara->l));
@@ -1331,6 +1332,7 @@ int32_t CryptDsaFips1864ValidatePq(int32_t algId, void *libCtx, const char *mdAt
     RETURN_RET_IF(seed->dataLen * 8 < qBits || counter > 4 * pBits - 1, CRYPT_DSA_PARA_ERROR); // from FIPS.186-4
     BN_Optimizer *opt = BN_OptimizerCreate();
     RETURN_RET_IF(opt == NULL, CRYPT_MEM_ALLOC_FAIL);
+    (void)BN_OptimizerSetLibCtx(libCtx, opt);
     (void)OptimizerStart(opt);
     BN_BigNum *pow = OptimizerGetBn(opt, BITS_TO_BN_UNIT(pBits));
     BN_BigNum *pTmp = OptimizerGetBn(opt, BITS_TO_BN_UNIT(pBits));

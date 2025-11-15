@@ -59,7 +59,7 @@ static const int16_t PRE_COMPUT_TABLE_NTT_MONT[MLKEM_N_HALF] = {
     817,   1097,  603,   610,   1322,  -1285, -1465, 384,   -1215, -136, 1218,  -1335, -874,  220,   -1187, -1659,
     -1185, -1530, -1278, 794,   -1510, -854,  -870,  478,   -108,  -308, 996,   991,   958,   -1460, 1522,  1628};
 
-static int32_t CreateMatrixBuf(uint8_t k, MLKEM_MatrixSt *st)
+int32_t MLKEM_CreateMatrixBuf(uint8_t k, MLKEM_MatrixSt *st)
 {
     // A total of (k * k + 3 * k) data blocks are required. Each block has 512 bytes.
     if (st->bufAddr != NULL) {
@@ -544,7 +544,7 @@ int32_t MLKEM_DecodeDk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *dk, uint32_t dkLen)
         return CRYPT_MLKEM_KEYLEN_ERROR;
     }
     uint8_t k = ctx->info->k;
-    if (CreateMatrixBuf(k, &ctx->keyData) != CRYPT_SUCCESS) {
+    if (MLKEM_CreateMatrixBuf(k, &ctx->keyData) != CRYPT_SUCCESS) {
         return BSL_MALLOC_FAIL;
     }
     for (int i = 0; i < k; ++i) {
@@ -572,7 +572,7 @@ int32_t MLKEM_DecodeEk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *ek, uint32_t ekLen)
         return CRYPT_MLKEM_KEYLEN_ERROR;
     }
     uint8_t k = ctx->info->k;
-    if (CreateMatrixBuf(k, &ctx->keyData) != CRYPT_SUCCESS) {
+    if (MLKEM_CreateMatrixBuf(k, &ctx->keyData) != CRYPT_SUCCESS) {
         return BSL_MALLOC_FAIL;
     }
     int32_t ret = GenMatrix(ctx, ek + MLKEM_CIPHER_LEN * k, ctx->keyData.matrix, false);
@@ -705,7 +705,7 @@ int32_t MLKEM_KeyGenInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *d, uint8_t *z)
 {
     const CRYPT_MlKemInfo *algInfo = ctx->info;
     uint32_t dkPkeLen = MLKEM_CIPHER_LEN * algInfo->k;
-    int32_t ret = CreateMatrixBuf(algInfo->k, &ctx->keyData);
+    int32_t ret = MLKEM_CreateMatrixBuf(algInfo->k, &ctx->keyData);
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
     // (ekPKE,dkPKE) ← K-PKE.KeyGen(𝑑)
     ret = PkeKeyGen(ctx, ctx->ek, ctx->dk, d);

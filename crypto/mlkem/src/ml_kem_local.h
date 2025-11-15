@@ -107,4 +107,6 @@ int32_t MLKEM_EncapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen
 
 int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen, uint8_t *sk, uint32_t *skLen);
 
+int32_t MLKEM_CreateMatrixBuf(uint8_t k, MLKEM_MatrixSt *st);
+
 #endif    // ML_KEM_LOCAL_H

@@ -122,6 +122,27 @@ static int32_t MlKemSetAlgInfo(CRYPT_ML_KEM_Ctx *ctx, void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
+static int32_t MlKemDupKeyData(CRYPT_ML_KEM_Ctx *ctx, CRYPT_ML_KEM_Ctx *newCtx)
+{
+    int32_t ret = MLKEM_CreateMatrixBuf(ctx->info->k, &newCtx->keyData);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    for (uint8_t i = 0; i < ctx->info->k; i++) {
+        for (uint8_t j = 0; j < ctx->info->k; j++) {
+            (void)memcpy_s(newCtx->keyData.matrix[i][j], MLKEM_N * sizeof(int16_t), ctx->keyData.matrix[i][j],
+                MLKEM_N * sizeof(int16_t));
+        }
+        (void)memcpy_s(newCtx->keyData.vectorS[i], MLKEM_N * sizeof(int16_t), ctx->keyData.vectorS[i],
+            MLKEM_N * sizeof(int16_t));
+        (void)memcpy_s(newCtx->keyData.vectorE[i], MLKEM_N * sizeof(int16_t), ctx->keyData.vectorE[i],
+            MLKEM_N * sizeof(int16_t));
+        (void)memcpy_s(newCtx->keyData.vectorT[i], MLKEM_N * sizeof(int16_t), ctx->keyData.vectorT[i],
+            MLKEM_N * sizeof(int16_t));
+    }
+    return CRYPT_SUCCESS;
+}
+
 CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_DupCtx(CRYPT_ML_KEM_Ctx *ctx)
 {
     if (ctx == NULL) {
@@ -152,7 +173,13 @@ CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_DupCtx(CRYPT_ML_KEM_Ctx *ctx)
         }
         newCtx->dkLen = ctx->dkLen;
     }
+    if (MlKemDupKeyData(ctx, newCtx) != CRYPT_SUCCESS) {
+        CRYPT_ML_KEM_FreeCtx(newCtx);
+        return NULL;
+    }
+
     newCtx->libCtx = ctx->libCtx;
+    (void)BSL_SAL_ReferencesInit(&(newCtx->references));
     return newCtx;
 }
 

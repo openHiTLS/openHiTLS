@@ -544,16 +544,29 @@ EXIT:
  *    4. Call the CRYPT_EAL_PkeyDupCtx method to dup ed25519 context, expected result 2.
  *    5. Call the CRYPT_EAL_PkeyGetPub method to obtain the public key from the contexts, expected result 2.
  *    6. Compare public keys, expected result 3.
+ *    7. Call the CRYPT_EAL_PkeyComputeShareKey method to compute the shared key from the dupCtx and ctx,
+ *      expected result 7.
  * @expect
  *    1. Success, and context is not NULL.
  *    2. CRYPT_SUCCESS
  *    3. The two public keys are the same.
+ *    4. CRYPT_SUCCESS
+ *    5. CRYPT_SUCCESS
+ *    6. The two public keys are the same.
+ *    7. The two shared keys are the same.
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_CURVE25519_DUP_CTX_API_TC001(int id)
 {
     uint8_t key1[CRYPT_CURVE25519_KEYLEN] = {0};
     uint8_t key2[CRYPT_CURVE25519_KEYLEN] = {0};
+    uint8_t data[CRYPT_CURVE25519_KEYLEN] = {0};
+    uint8_t sign[CRYPT_CURVE25519_SIGNLEN] = {0};
+    uint32_t signLen = sizeof(sign);
+    uint8_t sharedKey1[CRYPT_CURVE25519_KEYLEN] = {0};
+    uint32_t sharedLen1 = sizeof(sharedKey1);
+    uint8_t sharedKey2[CRYPT_CURVE25519_KEYLEN] = {0};
+    uint32_t sharedLen2 = sizeof(sharedKey2);
     CRYPT_EAL_PkeyPub pub = {0};
     Set_Curve25519_Pub(&pub, id, key1, CRYPT_CURVE25519_KEYLEN);
 
@@ -573,6 +586,17 @@ void SDV_CRYPTO_CURVE25519_DUP_CTX_API_TC001(int id)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(newPkey, &pub), CRYPT_SUCCESS);
 
     ASSERT_COMPARE("curve25519 copy ctx", key1, CRYPT_CURVE25519_KEYLEN, key2, CRYPT_CURVE25519_KEYLEN);
+
+    if (id == CRYPT_PKEY_ED25519) {
+        ASSERT_EQ(CRYPT_EAL_PkeySign(newPkey, CRYPT_MD_SHA512, data, sizeof(data), sign, &signLen), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyVerify(newPkey, CRYPT_MD_SHA512, data, sizeof(data), sign, signLen), CRYPT_SUCCESS);
+    } else if (id == CRYPT_PKEY_X25519) {
+        ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(newPkey, pkey, sharedKey1, &sharedLen1),
+            CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey, newPkey, sharedKey2, &sharedLen2),
+            CRYPT_SUCCESS);
+        ASSERT_COMPARE("shared key", sharedKey1, CRYPT_CURVE25519_KEYLEN, sharedKey2, CRYPT_CURVE25519_KEYLEN);
+    }
 
 EXIT:
     TestRandDeInit();

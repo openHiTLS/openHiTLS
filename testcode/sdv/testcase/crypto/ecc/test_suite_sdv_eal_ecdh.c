@@ -485,6 +485,7 @@ EXIT:
  *    5. Get the reference count, expected result 5
  *    6. Compare the pkey ids obtained from pKeyCtx and newCtx, , expected result 6
  *    7. Compare the curve ids obtained from pKeyCtx and newCtx, expected result 7
+ *    8. Compute the shared key with pKeyCtx and newCtx, expected result 8
  * @expect
  *    1. Success, and the context is not NULL.
  *    2. CRYPT_SUCCESSY
@@ -492,10 +493,17 @@ EXIT:
  *    4. Return non-null.
  *    5. The reference count is 1.
  *    6-7. Both are the same.
+ *    8. The two shared keys are the same.
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECDH_DUP_CTX_API_TC001(int paraId, int isProvider)
 {
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    uint8_t shareKey1[1030];
+    uint32_t shareKeyLen1 = sizeof(shareKey1);
+    uint8_t shareKey2[1030];
+    uint32_t shareKeyLen2 = sizeof(shareKey2);
+
     CRYPT_EAL_PkeyCtx *pKeyCtx = NULL;
     CRYPT_EAL_PkeyCtx *newCtx = NULL;
 
@@ -505,15 +513,22 @@ void SDV_CRYPTO_ECDH_DUP_CTX_API_TC001(int paraId, int isProvider)
 
     ASSERT_TRUE(CRYPT_EAL_PkeyDupCtx(NULL) == NULL);
 
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pKeyCtx), CRYPT_SUCCESS);
+
     newCtx = CRYPT_EAL_PkeyDupCtx(pKeyCtx);
     ASSERT_TRUE(newCtx != NULL);
 
     ASSERT_EQ(newCtx->references.count, 1);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetId(pKeyCtx) == CRYPT_EAL_PkeyGetId(newCtx));
     ASSERT_TRUE(CRYPT_EAL_PkeyGetParaId(pKeyCtx) == CRYPT_EAL_PkeyGetParaId(newCtx));
+
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pKeyCtx, newCtx, shareKey1, &shareKeyLen1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(newCtx, pKeyCtx, shareKey2, &shareKeyLen2), CRYPT_SUCCESS);
+    ASSERT_COMPARE("shared key", shareKey1, shareKeyLen1, shareKey2, shareKeyLen2);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pKeyCtx);
     CRYPT_EAL_PkeyFreeCtx(newCtx);
+    TestRandDeInit();
 }
 /* END_CASE */
 

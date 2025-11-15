@@ -659,6 +659,10 @@ void SDV_CRYPTO_MLDSA_FUNC_PROVIDER_TC001(int type, Hex *testPubKey, Hex *testPr
     ret = CRYPT_EAL_PkeyCmp(ctx, ctx3);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
+    ret = CRYPT_EAL_PkeySign(ctx3, CRYPT_MD_SHA256, msg->x, msg->len, out, &outLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_PkeyVerify(ctx3, CRYPT_MD_SHA256, msg->x, msg->len, out, outLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
