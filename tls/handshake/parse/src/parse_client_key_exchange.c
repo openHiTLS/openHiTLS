@@ -45,7 +45,7 @@ static int32_t ParseClientKxMsgEcdhe(ParsePacket *pkt, ClientKeyExchangeMsg *msg
 {
     const char *logStr = BINGLOG_STR("clientKeyEx length error.");
 
-    /* Compatible with OpenSSL, add 3 bytes to the client key exchange */
+    /* Considering compatibility, add 3 bytes to the client key exchange */
 #ifdef HITLS_TLS_PROTO_TLCP11
     if (pkt->ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
         // Curve type + Curve ID + Public key length

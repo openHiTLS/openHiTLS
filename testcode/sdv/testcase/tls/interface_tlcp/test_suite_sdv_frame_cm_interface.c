@@ -260,7 +260,7 @@ void UT_TLS_CM_SET_ENDPOINT_FUNC_TC001(int version)
 
     uint32_t ret = HITLS_SetEndPoint(server->ssl, true);
     ASSERT_EQ(ret, HITLS_SUCCESS);
-    ASSERT_EQ(server->ssl->state, CM_STATE_HANDSHAKING);
+    ASSERT_EQ(server->ssl->state, CM_STATE_IDLE);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);

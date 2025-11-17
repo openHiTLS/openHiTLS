@@ -1096,3 +1096,46 @@ EXIT:
     FRAME_FreeLink(client);
 }
 /* END_CASE */
+
+/* @
+* @test SDV_HITLS_TLCP_PATCH_TC005_3
+* @spec -
+* @title    Establish a connection between tlcp client and tlsall server
+* @precon nan
+* @brief    1. Initialize tlsall client configuration. Expected result 1
+            2. Initialize tlcp server configuration. Expected result 2
+            3. The client uses server configuration to establish a connection. Expected result 3
+            4. The server uses client configuration to establish a connection. Expected result 4
+            5. Establish the connection. Expected result 5
+* @expect   1. Initialization successfully.
+            2. Initialization successfully.
+            3. connection creation successfully.
+            4. connection creation successfully.
+            5. The connection is established.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HITLS_TLCP_PATCH_TC005_3()
+{
+    FRAME_Init();
+    HITLS_Config *c_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLCPConfig();
+    ASSERT_TRUE(s_config != NULL);
+
+    HITLS_CFG_SetEndPoint(c_config, false);
+    HITLS_CFG_SetEndPoint(s_config, true);
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(c_config, BSL_UIO_TCP, true);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(s_config, BSL_UIO_TCP, false);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

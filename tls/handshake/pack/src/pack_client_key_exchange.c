@@ -34,7 +34,7 @@
 #ifdef HITLS_TLS_PROTO_TLCP11
 static int32_t PackDtlcpbytes(const TLS_Ctx *ctx, PackPacket *pkt)
 {
-    /* Compatible with OpenSSL. Three bytes are added to the client key exchange. */
+    /* Considering compatibility. Three bytes are added to the client key exchange. */
     int32_t ret = HITLS_SUCCESS;
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
         ret = PackAppendUint8ToBuf(pkt, HITLS_EC_CURVE_TYPE_NAMED_CURVE);
@@ -78,13 +78,13 @@ static int32_t PackClientKxMsgNamedCurve(const TLS_Ctx *ctx, PackPacket *pkt)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    
+
     uint8_t *reservedBuf = NULL;
     ret = PackReserveBytes(pkt, pubKeyLen, &reservedBuf);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    
+
     uint32_t pubKeyUsedLen = 0;
     ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->key, reservedBuf, pubKeyLen, &pubKeyUsedLen);
     if (ret != HITLS_SUCCESS || pubKeyLen != pubKeyUsedLen) {
@@ -93,9 +93,9 @@ static int32_t PackClientKxMsgNamedCurve(const TLS_Ctx *ctx, PackPacket *pkt)
             "encode ecdh key fail.", 0, 0, 0, 0);
         return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
     }
-    
+
     (void)PackSkipBytes(pkt, pubKeyUsedLen);
-    
+
     PackCloseUint8Field(pkt, pubKeyLenPosition);
 
     return HITLS_SUCCESS;
@@ -137,13 +137,13 @@ static int32_t PackClientKxMsgDhe(const TLS_Ctx *ctx, PackPacket *pkt)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    
+
     uint8_t *reservedBuf = NULL;
     ret = PackReserveBytes(pkt, pubkeyLen, &reservedBuf);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    
+
     /* fill pubkey */
     ret = SAL_CRYPT_EncodeDhPubKey(kxCtx->key, reservedBuf, pubkeyLen, &pubkeyLen);
     if (ret != HITLS_SUCCESS) {
@@ -152,12 +152,12 @@ static int32_t PackClientKxMsgDhe(const TLS_Ctx *ctx, PackPacket *pkt)
             "encode dh pub key fail.", 0, 0, 0, 0);
         return HITLS_CRYPT_ERR_ENCODE_DH_KEY;
     }
-    
+
     ret = PackSkipBytes(pkt, pubkeyLen);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    
+
     PackCloseUint16Field(pkt, pubKeyLenPosition);
 
     return HITLS_SUCCESS;
@@ -187,7 +187,7 @@ int32_t PackClientKxMsgRsa(TLS_Ctx *ctx, PackPacket *pkt)
             "CERT_CTRL_GET_PUB_KEY fail", 0, 0, 0, 0);
         return ret;
     }
-    
+
     /* Use CERT_KEY_CTRL_GET_SIGN_LEN to get encrypt length(Only by RSA and ECC) */
     uint32_t encryptLen = MAX_SIGN_SIZE;
     uint8_t *encBuf = NULL;
@@ -241,7 +241,7 @@ static int32_t PackClientKxMsgEcc(TLS_Ctx *ctx, PackPacket *pkt)
             "get encrypt cert public key failed.", 0, 0, 0, 0);
         return ret;
     }
-    
+
     /* Use CERT_KEY_CTRL_GET_SIGN_LEN to get encrypt length(Only by RSA and ECC) */
     uint32_t encryptLen = MAX_SIGN_SIZE;
     uint8_t *encBuf = NULL;

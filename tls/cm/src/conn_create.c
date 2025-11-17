@@ -41,8 +41,6 @@
 #ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 static int32_t PeerInfoInit(HITLS_Ctx *ctx)
 {
-    /* The peerInfo.caList is used to adapt to the OpenSSL behavior. When creating the SSL_CTX object, OpenSSL
-     * initializes the member so that the member is not null */
     ctx->peerInfo.caList = BSL_LIST_New(sizeof(HITLS_TrustedCANode *));
     if (ctx->peerInfo.caList == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16468, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "LIST_New fail", 0, 0, 0, 0);

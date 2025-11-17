@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "hitls_build.h"
+#ifdef HITLS_TLS_PROTO_DTLS
 #include "securec.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
@@ -33,7 +34,9 @@
 #include "config_default.h"
 #include "bsl_list.h"
 #include "rec.h"
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
 #include "hitls_cookie.h"
+#endif
 #include "cert_method.h"
 
 #ifdef HITLS_TLS_PROTO_DTLS12
@@ -58,7 +61,6 @@ HITLS_Config *HITLS_CFG_ProviderNewDTLS12Config(HITLS_Lib_Ctx *libCtx, const cha
 }
 #endif
 
-#ifdef HITLS_TLS_PROTO_DTLS
 HITLS_Config *HITLS_CFG_NewDTLSConfig(void)
 {
     return HITLS_CFG_ProviderNewDTLSConfig(NULL, NULL);
@@ -82,7 +84,16 @@ HITLS_Config *HITLS_CFG_ProviderNewDTLSConfig(HITLS_Lib_Ctx *libCtx, const char 
     newConfig->originVersionMask = newConfig->version;
     return newConfig;
 }
-#endif
+
+int32_t HITLS_CFG_IsDtls(const HITLS_Config *config, bool *isDtls)
+{
+    if (config == NULL || isDtls == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    *isDtls = ((config->originVersionMask & DTLS12_VERSION_BIT) != 0);
+    return HITLS_SUCCESS;
+}
 
 #ifdef HITLS_TLS_PROTO_DTLCP11
 HITLS_Config *HITLS_CFG_NewDTLCPConfig(void)
@@ -168,15 +179,4 @@ int32_t HITLS_CFG_GetDtlsCookieExchangeSupport(const HITLS_Config *config, bool 
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
-
-#ifdef HITLS_TLS_PROTO_DTLS
-int32_t HITLS_CFG_IsDtls(const HITLS_Config *config, bool *isDtls)
-{
-    if (config == NULL || isDtls == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
-    *isDtls = ((config->originVersionMask & DTLS12_VERSION_BIT) != 0);
-    return HITLS_SUCCESS;
-}
-#endif
+#endif /* HITLS_TLS_PROTO_DTLS */
