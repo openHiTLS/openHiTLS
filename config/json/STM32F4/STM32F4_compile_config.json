@@ -13,6 +13,13 @@
                 "-mfloat-abi=hard",
                 "-mfpu=fpv4-sp-d16"
             ],
+            "CC_CDG_FLAGS_EXTRA": [
+                "-fdata-sections",
+                "-ffunction-sections",
+                "-fno-rtti",
+                "-fno-exceptions",
+                "-fno-threadsafe-statics"
+            ],
             "CC_DEFINE_FLAGS_EXTRA": [
                 "-DHITLS_CRYPTO_NO_AUXVAL",
                 "-DHITLS_CRYPTO_RAND_CB"
