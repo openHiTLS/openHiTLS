@@ -1464,6 +1464,8 @@ EXIT:
  *    7. Call the CRYPT_EAL_PkeyGetPub method to obtain the public key from the contexts, expected result 7.
  *    8. Compare public keys, expected result 8.
  *    9. Get para id from dupCtx, expected result 9.
+ *    10. Call the CRYPT_EAL_PkeyComputeShareKey method to compute the shared key from the dupCtx and ctx,
+ *      expected result 10.
  * @expect
  *    1. Success, and context is not NULL.
  *    2-5. CRYPT_SUCCESS
@@ -1471,6 +1473,7 @@ EXIT:
  *    7. CRYPT_SUCCESS
  *    8. The two public keys are the same.
  *    9. Para id is CRYPT_DH_RFC7919_8192.
+ *    10. The two shared keys are the same.
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_DH_DUP_CTX_FUNC_TC001(int isProvider)
@@ -1483,6 +1486,10 @@ void SDV_CRYPTO_DH_DUP_CTX_FUNC_TC001(int isProvider)
     CRYPT_EAL_PkeyPub pub = {0};
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyCtx *dupCtx = NULL;
+    uint8_t share1[1030];
+    uint8_t share2[1030];
+    uint32_t share1Len = sizeof(share1);
+    uint32_t share2Len = sizeof(share2);
 
     TestMemInit();
 
@@ -1515,6 +1522,11 @@ void SDV_CRYPTO_DH_DUP_CTX_FUNC_TC001(int isProvider)
     ASSERT_COMPARE("Compare dup key", pubKey1, keyLen1, pubKey2, keyLen2);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyGetParaId(dupCtx) == paraId);
+
+    ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(ctx, dupCtx, share1, &share1Len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(dupCtx, ctx, share2, &share2Len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(share1Len == share2Len);
+    ASSERT_TRUE(memcmp(share1, share2, share1Len) == 0);
 
 EXIT:
     TestRandDeInit();

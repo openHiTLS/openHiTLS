@@ -164,7 +164,9 @@ int32_t ForsNode(uint32_t idx, uint32_t height, SlhDsaAdrs *adrs, const CryptSlh
         }
         ctx->adrsOps.setTreeHeight(adrs, height);
         ctx->adrsOps.setTreeIndex(adrs, idx);
-        return ctx->hashFuncs.f(ctx, adrs, sk, n, node);
+        ret = ctx->hashFuncs.f(ctx, adrs, sk, n, node);
+        (void)BSL_SAL_CleanseData(sk, SLH_DSA_MAX_N);
+        return ret;
     }
 
     uint8_t dnode[SLH_DSA_MAX_N * 2];

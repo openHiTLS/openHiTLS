@@ -1079,3 +1079,72 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MLKEM_DECAPS_DUP_API_TC001
+* @spec  -
+* @title  CRYPT_EAL_PkeyEncaps test
+* @precon  nan
+* @brief  1.register a random number and generate a context and key pair.
+* 2.call CRYPT_EAL_PkeyDecaps to transfer various abnormal values.
+* 3.duplicate the context and call CRYPT_EAL_PkeyEncaps and CRYPT_EAL_PkeyDecaps to check the returned value.
+* @expect  1.success 2.success 3.success
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLKEM_DECAPS_DUP_API_TC001(int bits)
+{
+    TestMemInit();
+
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyCtx *dupCtx = NULL;
+
+#ifdef HITLS_CRYPTO_PROVIDER
+    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+#else
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+#endif
+    ASSERT_TRUE(ctx != NULL);
+
+    uint32_t val = (uint32_t)bits;
+    int32_t ret = CRYPT_EAL_PkeySetParaById(ctx, val);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_PkeyDecapsInit(ctx, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    uint32_t cipherLen = 0;
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    uint8_t *ciphertext = BSL_SAL_Malloc(cipherLen);
+    uint32_t sharedLen = 32;
+    uint8_t *sharedKey = BSL_SAL_Malloc(sharedLen);
+
+    ret = CRYPT_EAL_PkeyGen(ctx);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ret = CRYPT_EAL_PkeyEncaps(ctx, ciphertext, &cipherLen, sharedKey, &sharedLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ret = CRYPT_EAL_PkeyDecaps(ctx, ciphertext, cipherLen, sharedKey, &sharedLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    dupCtx = CRYPT_EAL_PkeyDupCtx(ctx);
+    ASSERT_TRUE(dupCtx != NULL);
+
+    ret = CRYPT_EAL_PkeyEncaps(dupCtx, ciphertext, &cipherLen, sharedKey, &sharedLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    ret = CRYPT_EAL_PkeyDecaps(dupCtx, ciphertext, cipherLen, sharedKey, &sharedLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_EAL_PkeyFreeCtx(dupCtx);
+    BSL_SAL_Free(ciphertext);
+    BSL_SAL_Free(sharedKey);
+    TestRandDeInit();
+    return;
+}
+/* END_CASE */
