@@ -120,7 +120,6 @@ CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_DupCtx(CRYPT_ML_DSA_Ctx *ctx)
     newCtx->deterministicSignFlag = ctx->deterministicSignFlag;
     newCtx->needPreHash = ctx->needPreHash;
     newCtx->libCtx = ctx->libCtx;
-    (void)BSL_SAL_ReferencesInit(&(newCtx->references));
     return newCtx;
 ERR:
     CRYPT_ML_DSA_FreeCtx(newCtx);

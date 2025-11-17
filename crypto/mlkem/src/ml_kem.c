@@ -179,7 +179,6 @@ CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_DupCtx(CRYPT_ML_KEM_Ctx *ctx)
     }
 
     newCtx->libCtx = ctx->libCtx;
-    (void)BSL_SAL_ReferencesInit(&(newCtx->references));
     return newCtx;
 }
 
