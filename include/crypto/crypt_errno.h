@@ -328,7 +328,6 @@ enum CRYPT_ERROR {
     CRYPT_HKDF_DKLEN_OVERFLOW = 0x01110001,          /**< The length of the derived key exceeds the maximum. */
     CRYPT_HKDF_NOT_SUPPORTED,                        /**< Unsupport HKDF algorithm. */
     CRYPT_HKDF_PARAM_ERROR,                          /**< Incorrect input parameter. */
-    CRYPT_HKDF_ERR_MAC_ID_NOT_SET,                   /**< Mac id not set. */
     CRYPT_HKDF_ERR_MAC_METH,                         /**< Mac method err. */
 
     CRYPT_CMAC_OUT_BUFF_LEN_NOT_ENOUGH = 0x01120001, /**< The length of the buffer that storing the output
@@ -345,7 +344,6 @@ enum CRYPT_ERROR {
     CRYPT_PBKDF2_PARAM_ERROR = 0x01150001,           /**< Incorrect input parameter. */
     CRYPT_PBKDF2_NOT_SUPPORTED,                      /**< Does not support the PBKDF2 algorithm. */
     CRYPT_PBKDF2_ERR_MAC_METH,                       /**< Mac method err. */
-    CRYPT_PBKDF2_ERR_MAC_ID_NOT_SET,                 /**< Mac id not set. */
 
     CRYPT_ECC_POINT_AT_INFINITY = 0x01160001,         /**< Point at infinity. */
     CRYPT_ECC_POINT_NOT_ON_CURVE,                    /**< Point is not on the curve. */
@@ -457,7 +455,6 @@ enum CRYPT_ERROR {
     CRYPT_KDFTLS12_NOT_SUPPORTED = 0x01220001,        /**< Unsupport the KDFTLS12 algorithm. */
     CRYPT_KDFTLS12_PARAM_ERROR,                       /**< Incorrect input parameter. */
     CRYPT_KDFTLS12_ERR_MAC_METH,                      /**< Mac method err. */
-    CRYPT_KDFTLS12_ERR_MAC_ID_NOT_SET,                /**< Mac id not set. */
 
     CRYPT_SIPHASH_OUT_BUFF_LEN_NOT_ENOUGH = 0x01220001, /**< The buffer size for storing the output
                                                              result is insufficient. */
@@ -522,8 +519,6 @@ enum CRYPT_ERROR {
     CRYPT_DECODE_ERR_NO_DECODER,                         /**< No decoder found. */
     CRYPT_DECODE_ERR_NO_USABLE_DECODER,                  /**< No decoder found. */
     CRYPT_DECODE_RETRY,                                  /**< Retry decode. */
-    CRYPT_DECODE_ERR_CURR_NODE_NOT_FOUND,                /**< Current node not found. */
-    CRYPT_DECODE_ERR_NO_KEY_TYPE,                        /**< No key type found. */
     CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH,                 /**< Key type not match. */
 
     CRYPT_ENCODE_NO_SUPPORT_TYPE = 0x01330001,           /**< encode no support key type. */

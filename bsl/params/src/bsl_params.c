@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_PARAMS
 #include "bsl_errno.h"
+#include "bsl_sal.h"
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_params.h"

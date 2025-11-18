@@ -32,7 +32,6 @@
             "-Wstack-usage=8192",
             "-Wframe-larger-than=4096",
             "-Wconversion",
-            "-Wcast-qual",
             "-Wcast-align",
             "-Wvla",
             "-Wunused",
@@ -135,8 +134,7 @@
             "-fpack-struct=4",
             "-fno-exceptions",
             "-fno-delete-null-pointer-checks",
-            "-fno-merge-constants",
-            "-fpack-struct=4"
+            "-fno-merge-constants"
         ],
         "CC_OVERALL_FLAGS": [
             "-pipe"

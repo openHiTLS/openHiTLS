@@ -309,7 +309,7 @@ static int32_t GetObjectFromOutData(BSL_Param *outData, void **object)
     return CRYPT_SUCCESS;
 }
 
-int32_t ProviderDecodeBuffKeyEx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t keyType,
+int32_t ProviderDecodeBuffKeyEx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t pkeyAlgId,
     const char *format, const char *type, BSL_Buffer *encode, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey)
 {
     char *targetType = "HIGH_KEY";
@@ -323,7 +323,7 @@ int32_t ProviderDecodeBuffKeyEx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, 
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    CRYPT_DECODER_PoolCtx *poolCtx = CRYPT_DECODE_PoolNewCtx(libCtx, attrName, keyType, format, type);
+    CRYPT_DECODER_PoolCtx *poolCtx = CRYPT_DECODE_PoolNewCtx(libCtx, attrName, pkeyAlgId, format, type);
     if (poolCtx == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
@@ -346,7 +346,7 @@ int32_t ProviderDecodeBuffKeyEx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, 
         goto EXIT;
     }
     int32_t algId = CRYPT_EAL_PkeyGetId(tmpPKey);
-    if (keyType != BSL_CID_UNKNOWN && algId != keyType) {
+    if (pkeyAlgId != BSL_CID_UNKNOWN && algId != pkeyAlgId) {
         ret = CRYPT_EAL_ERR_ALGID;
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         goto EXIT;
@@ -390,15 +390,15 @@ int32_t ProviderDecodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, in
     }
 }
 
-int32_t CRYPT_EAL_ProviderDecodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t keyType,
+int32_t CRYPT_EAL_ProviderDecodeBuffKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t pkeyAlgId,
     const char *format, const char *type, BSL_Buffer *encode, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey)
 {
 #ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
-    return ProviderDecodeBuffKeyEx(libCtx, attrName, keyType, format, type, encode, pwd, ealPKey);
+    return ProviderDecodeBuffKeyEx(libCtx, attrName, pkeyAlgId, format, type, encode, pwd, ealPKey);
 #else
     (void)libCtx;
     (void)attrName;
-    (void)keyType;
+    (void)pkeyAlgId;
     int32_t encodeType = CRYPT_EAL_GetEncodeType(type);
     int32_t encodeFormat = CRYPT_EAL_GetEncodeFormat(format);
     return ProviderDecodeBuffKey(libCtx, attrName, encodeFormat, encodeType, encode, pwd, ealPKey);
@@ -433,7 +433,7 @@ int32_t CRYPT_EAL_DecodeFileKey(int32_t format, int32_t type, const char *path,
     return ret;
 }
 
-int32_t CRYPT_EAL_ProviderDecodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t keyType,
+int32_t CRYPT_EAL_ProviderDecodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t pkeyAlgId,
     const char *format, const char *type, const char *path, const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPKey)
 {
     if (path == NULL || strlen(path) > PATH_MAX_LEN) {
@@ -448,7 +448,7 @@ int32_t CRYPT_EAL_ProviderDecodeFileKey(CRYPT_EAL_LibCtx *libCtx, const char *at
         return ret;
     }
     BSL_Buffer encode = {data, dataLen};
-    ret = CRYPT_EAL_ProviderDecodeBuffKey(libCtx, attrName, keyType, format, type, &encode, pwd, ealPKey);
+    ret = CRYPT_EAL_ProviderDecodeBuffKey(libCtx, attrName, pkeyAlgId, format, type, &encode, pwd, ealPKey);
     BSL_SAL_Free(data);
     return ret;
 }

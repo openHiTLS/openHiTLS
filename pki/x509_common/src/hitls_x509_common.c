@@ -134,7 +134,7 @@ static int32_t HITLS_X509_ParseNameNode(BSL_ASN1_Buffer *asn, HITLS_X509_NameNod
 int32_t HITLS_X509_ParseListAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, void *cbParam, BSL_ASN1_List *list)
 {
     (void) cbParam;
-    int32_t ret = HITLS_PKI_SUCCESS;
+    int32_t ret;
     HITLS_X509_NameNode *node = BSL_SAL_Calloc(1, sizeof(HITLS_X509_NameNode));
     if (node == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -266,7 +266,7 @@ int32_t HITLS_X509_EncodeSignAlgInfo(HITLS_X509_Asn1AlgId *x509Alg, BSL_ASN1_Buf
     // 2: alg + param
     ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, 2, &(asn->buff), &(asn->len));
     BSL_SAL_FREE(asnArr[1].buff);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -475,7 +475,7 @@ static int32_t HITLS_X509_ParseAsn1(CRYPT_EAL_LibCtx *libCtx, const char *attrNa
     while (dataLen > 0) {
         uint32_t elemLen = dataLen;
         int32_t ret = BSL_ASN1_GetCompleteLen(data, &elemLen);
-        if (ret != HITLS_PKI_SUCCESS) {
+        if (ret != BSL_SUCCESS) {
             return ret;
         }
         BSL_Buffer asn1Buf = {data, elemLen};
@@ -505,7 +505,7 @@ static int32_t HITLS_X509_ParsePem(CRYPT_EAL_LibCtx *libCtx, const char *attrNam
         BSL_Buffer asn1Buf = {0};
         int32_t ret = BSL_PEM_DecodePemToAsn1(&nextEncode, &nextEncodeLen, &symbol, &(asn1Buf.data),
             &(asn1Buf.dataLen));
-        if (ret != HITLS_PKI_SUCCESS) {
+        if (ret != BSL_SUCCESS) {
             break;
         }
         ret = X509_ParseAndAddRes(libCtx, attrName, &asn1Buf, parseFun, list);
@@ -724,7 +724,7 @@ int32_t HITLS_X509_SignAsn1Data(CRYPT_EAL_PkeyCtx *priv, CRYPT_MD_AlgId mdId,
     BSL_ASN1_Template templ = {&templItem, 1};
 
     int32_t ret = BSL_ASN1_EncodeTemplate(&templ, asn1Buff, 1, &rawSignBuff->data, &rawSignBuff->dataLen);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -732,6 +732,7 @@ int32_t HITLS_X509_SignAsn1Data(CRYPT_EAL_PkeyCtx *priv, CRYPT_MD_AlgId mdId,
     sign->len = CRYPT_EAL_PkeyGetSignLen(priv);
     sign->buff = (uint8_t *)BSL_SAL_Malloc(sign->len);
     if (sign->buff == NULL) {
+        sign->len = 0;
         BSL_SAL_FREE(rawSignBuff->data);
         rawSignBuff->dataLen = 0;
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);

@@ -918,7 +918,7 @@ static int32_t EncodeAsn1Cert(HITLS_X509_Cert *cert)
     };
     uint32_t valLen = 0;
     int32_t ret = BSL_ASN1_DecodeTagLen(asns[0].tag, &asns[0].buff, &asns[0].len, &valLen); // 0 is tbs
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }

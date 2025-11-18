@@ -78,12 +78,8 @@ int32_t HITLS_X509_GetEncodeDn(BslList *list, void *val, uint32_t valLen)
     BSL_ASN1_Template templ = {item, 1};
 
     ret = BSL_ASN1_EncodeTemplate(&templ, &tmp, 1, &res->data, &res->dataLen);
-    if (ret != BSL_SUCCESS) {
-        BSL_SAL_Free(tmp.buff);
-        return ret;
-    }
     BSL_SAL_Free(tmp.buff);
-    return HITLS_PKI_SUCCESS;
+    return ret;
 }
 #endif
 
@@ -217,7 +213,7 @@ static int32_t X509EncodeNameNodeEntry(const HITLS_X509_NameNode *nameNode, BSL_
     BSL_ASN1_Template dntTempl = {dnTempl, sizeof(dnTempl) / sizeof(dnTempl[0])};
     int32_t ret = BSL_ASN1_EncodeTemplate(&dntTempl, asnArr, X509_DN_NAME_ELEM_NUMBER,
         &asnDnBuff.buff, &asnDnBuff.len);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }

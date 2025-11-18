@@ -157,11 +157,11 @@ ERR:
     return NULL;
 }
 
-CRYPT_DECODER_Ctx *CRYPT_DECODE_ProviderNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t keyType, const char *attrName)
+CRYPT_DECODER_Ctx *CRYPT_DECODE_ProviderNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t pkeyAlgId, const char *attrName)
 {
     const CRYPT_EAL_Func *funcsDecoder = NULL;
     CRYPT_EAL_ProvMgrCtx *mgrCtx = NULL;
-    int32_t ret = CRYPT_EAL_ProviderGetFuncsAndMgrCtx(libCtx, CRYPT_EAL_OPERAID_DECODER, keyType, attrName,
+    int32_t ret = CRYPT_EAL_ProviderGetFuncsAndMgrCtx(libCtx, CRYPT_EAL_OPERAID_DECODER, pkeyAlgId, attrName,
         &funcsDecoder, &mgrCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

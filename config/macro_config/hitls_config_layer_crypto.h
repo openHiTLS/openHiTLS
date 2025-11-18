@@ -553,9 +553,6 @@
 #endif
 
 #ifdef HITLS_CRYPTO_SLH_DSA
-    #ifndef HITLS_CRYPTO_SHA2
-        #define HITLS_CRYPTO_SHA2
-    #endif
     #ifndef HITLS_CRYPTO_SHA3
         #define HITLS_CRYPTO_SHA3
     #endif

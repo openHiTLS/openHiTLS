@@ -370,7 +370,7 @@ static int32_t X509_SetCA(HITLS_X509_StoreCtx *storeCtx, void *val, bool isCopy)
     }
 
     ret = BSL_LIST_AddElement(storeCtx->store, val, BSL_LIST_POS_BEFORE);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         if (isCopy) {
             HITLS_X509_CertFree(val);
         }
@@ -403,7 +403,7 @@ static int32_t X509_SetCRL(HITLS_X509_StoreCtx *storeCtx, void *val)
         return ret;
     }
     ret = BSL_LIST_AddElement(storeCtx->crl, val, BSL_LIST_POS_BEFORE);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         HITLS_X509_CrlFree(val);
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -422,7 +422,7 @@ static int32_t X509_AddCAPath(HITLS_X509_StoreCtx *storeCtx, const void *val, ui
 
     char *existPath = BSL_LIST_GET_FIRST(storeCtx->caPaths);
     while (existPath != NULL) {
-        if (memcmp(existPath, caPath, valLen) == 0 && strlen(existPath) == valLen) {
+        if (strlen(existPath) == valLen && memcmp(existPath, caPath, valLen) == 0) {
             return HITLS_PKI_SUCCESS;
         }
         existPath = BSL_LIST_GET_NEXT(storeCtx->caPaths);
@@ -751,7 +751,7 @@ static int32_t X509_AddCertToChain(HITLS_X509_List *chain, HITLS_X509_Cert *cert
         return ret;
     }
     ret = BSL_LIST_AddElement(chain, cert, BSL_LIST_POS_END);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         HITLS_X509_CertFree(cert);
         BSL_ERR_PUSH_ERROR(ret);
     }

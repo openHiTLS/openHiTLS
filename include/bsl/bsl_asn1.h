@@ -17,6 +17,7 @@
 #define BSL_ASN1_H
 
 #include <stdint.h>
+#include "bsl_list.h"
 
 #ifdef __cplusplus
 extern "C" {

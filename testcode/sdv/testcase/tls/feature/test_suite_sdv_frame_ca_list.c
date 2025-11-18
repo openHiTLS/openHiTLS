@@ -33,6 +33,7 @@
 #include "rec_wrapper.h"
 #include "hs_ctx.h"
 #include "tls.h"
+#include "bsl_list.h"
 #include "hitls_config.h"
 #include "alert.h"
 #include "hitls_func.h"

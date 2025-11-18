@@ -74,7 +74,7 @@ struct CRYPT_DECODER_PoolCtx {
     const char *attrName;                   /* Attribute name */
     const char *inputFormat;                /* Input data format */
     const char *inputType;                  /* Input data type */
-    int32_t inputKeyType;                   /* Input data key type */
+    int32_t inputPkeyAlgId;                 /* Input pkey algorithm ID */
     BSL_Param *input;                       /* Input data */
     const char *targetFormat;               /* Target format */
     const char *targetType;                 /* Target type */

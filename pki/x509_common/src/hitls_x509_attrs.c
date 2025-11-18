@@ -255,11 +255,6 @@ static int32_t EncodeReqExtAttr(HITLS_X509_Attrs *attributes, void *val, uint32_
 
 static int32_t SetAttr(HITLS_X509_Attrs *attributes, BslCid cid, void *val, uint32_t valLen, EncodeAttrCb encodeAttrCb)
 {
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-
     /* Check if the attribute already exists. */
     if (BSL_LIST_Search(attributes->list, &cid, CmpAttrEntryByCid, NULL) != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_ATTR_REPEAT);
@@ -322,11 +317,6 @@ static int32_t DecodeReqExtAttr(HITLS_X509_Attrs *attributes, HITLS_X509_AttrEnt
 
 static int32_t GetAttr(HITLS_X509_Attrs *attributes, BslCid cid, void *val, uint32_t valLen, DecodeAttrCb decodeAttrCb)
 {
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
-
     HITLS_X509_AttrEntry *attrEntry = BSL_LIST_Search(attributes->list, &cid, CmpAttrEntryByCid, NULL);
     if (attrEntry == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ATTR_NOT_FOUND);
@@ -370,7 +360,7 @@ int32_t HITLS_X509_EncodeAttrEntry(HITLS_X509_AttrEntry *node, BSL_ASN1_Buffer *
     asnBuf[1] = node->attrValue;
     BSL_ASN1_Template templ = {g_x509AttrEntryTempl, sizeof(g_x509AttrEntryTempl) / sizeof(g_x509AttrEntryTempl[0])};
     int32_t ret = BSL_ASN1_EncodeTemplate(&templ, asnBuf, X509_CSR_ATTR_ELEM_NUMBER, &attrBuff->buff, &attrBuff->len);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -378,7 +368,7 @@ int32_t HITLS_X509_EncodeAttrEntry(HITLS_X509_AttrEntry *node, BSL_ASN1_Buffer *
     return ret;
 }
 
-void FreeAsnAttrsBuff(BSL_ASN1_Buffer *asnBuf, uint32_t count)
+static void FreeAsnAttrsBuff(BSL_ASN1_Buffer *asnBuf, uint32_t count)
 {
     for (uint32_t i = 0; i < count; i++) {
         BSL_SAL_FREE(asnBuf[i].buff);
@@ -429,7 +419,7 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X5
     BSL_ASN1_Template templ = {&attrSeqTempl, 1};
     ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, count, &templ, asnBuf, iter, attrAsn1);
     FreeAsnAttrsBuff(asnBuf, count);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }

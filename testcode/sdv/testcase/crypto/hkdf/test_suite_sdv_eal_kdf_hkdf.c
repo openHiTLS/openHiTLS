@@ -19,6 +19,7 @@
 #include "crypt_eal_kdf.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
+#include "bsl_errno.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 /* END_HEADER */

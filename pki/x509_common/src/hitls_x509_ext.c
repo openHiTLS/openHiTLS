@@ -553,7 +553,7 @@ int32_t HITLS_X509_ParseExtendedKeyUsage(HITLS_X509_ExtEntry *extEntry, HITLS_X5
     }
 
     int32_t ret = BSL_ASN1_DecodeListItem(&listParam, &extEntry->extnValue, ParseExKeyUsageList, NULL, list);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_LIST_DeleteAll(list, NULL);
         BSL_SAL_Free(list);
         return ret;
@@ -1411,7 +1411,7 @@ int32_t HITLS_X509_EncodeExt(uint8_t tag, BSL_ASN1_List *list, BSL_ASN1_Buffer *
     BSL_ASN1_Template templ = {extTempl, 1};
     ret = BSL_ASN1_EncodeTemplate(&templ, &extbuff, 1, &(ext->buff), &(ext->len));
     BSL_SAL_Free(extbuff.buff);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }

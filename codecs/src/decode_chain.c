@@ -56,7 +56,7 @@ static void FreeDecoderNode(CRYPT_DECODER_Node *decoderNode)
 }
 
 CRYPT_DECODER_PoolCtx *CRYPT_DECODE_PoolNewCtx(CRYPT_EAL_LibCtx *libCtx, const char *attrName,
-    int32_t keyType, const char *format, const char *type)
+    int32_t pkeyAlgId, const char *format, const char *type)
 {
     CRYPT_DECODER_PoolCtx *poolCtx = BSL_SAL_Calloc(1, sizeof(CRYPT_DECODER_PoolCtx));
     if (poolCtx == NULL) {
@@ -80,7 +80,7 @@ CRYPT_DECODER_PoolCtx *CRYPT_DECODE_PoolNewCtx(CRYPT_EAL_LibCtx *libCtx, const c
     }
     poolCtx->inputFormat = format;
     poolCtx->inputType = type;
-    poolCtx->inputKeyType = keyType;
+    poolCtx->inputPkeyAlgId = pkeyAlgId;
     poolCtx->targetFormat = NULL;
     poolCtx->targetType = NULL;
     return poolCtx;

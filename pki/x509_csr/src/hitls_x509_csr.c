@@ -296,7 +296,7 @@ static int32_t X509CsrPemParse(const BSL_Buffer *encode, HITLS_X509_Csr *csr)
     BSL_PEM_Symbol symbol = {BSL_PEM_CERT_REQ_BEGIN_STR, BSL_PEM_CERT_REQ_END_STR};
     int32_t ret = BSL_PEM_DecodePemToAsn1((char **)&tmpBuf, &tmpBufLen, &symbol, &asn1Buf.data,
         &asn1Buf.dataLen);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -493,7 +493,7 @@ static int32_t X509EncodeAsn1CsrCore(HITLS_X509_Csr *csr)
     };
     uint32_t valLen = 0;
     int32_t ret = BSL_ASN1_DecodeTagLen(asnArr[0].tag, &asnArr[0].buff, &asnArr[0].len, &valLen); // 0 is reqInfo
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -507,7 +507,7 @@ static int32_t X509EncodeAsn1CsrCore(HITLS_X509_Csr *csr)
     BSL_ASN1_Template csrTempl = { g_briefCsrTempl, sizeof(g_briefCsrTempl) / sizeof(g_briefCsrTempl[0]) };
     ret = BSL_ASN1_EncodeTemplate(&csrTempl, asnArr, HITLS_X509_CSR_BRIEF_SIZE, &csr->rawData, &csr->rawDataLen);
     BSL_SAL_FREE(asnArr[1].buff);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
@@ -616,7 +616,7 @@ int32_t HITLS_X509_CsrGenFile(int32_t format, HITLS_X509_Csr *csr, const char *p
 
     ret = BSL_SAL_WriteFile(path, encode.data, encode.dataLen);
     BSL_SAL_Free(encode.data);
-    if (ret != HITLS_PKI_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
 

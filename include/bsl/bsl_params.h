@@ -24,7 +24,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "bsl_list.h"
 
 #ifdef __cplusplus
 extern "C" {

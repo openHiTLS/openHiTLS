@@ -381,7 +381,7 @@ int32_t CRYPT_SM2_Export(const CRYPT_SM2_Ctx *ctx, BSL_Param *params)
     }
     if (ctx->pkey->pubkey != NULL) {
         (void)BSL_PARAM_InitValue(&sm2Params[index], CRYPT_PARAM_EC_PUBKEY, BSL_PARAM_TYPE_OCTETS,
-            buffer, keyBytes);
+            buffer + keyBytes, keyBytes);
         ret = CRYPT_SM2_GetPubKeyEx(ctx, sm2Params);
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_Free(buffer);
