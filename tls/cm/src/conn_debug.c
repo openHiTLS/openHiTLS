@@ -79,6 +79,15 @@ int32_t HITLS_CFG_SetMsgCb(HITLS_Config *config, HITLS_MsgCb callback)
     return HITLS_SUCCESS;
 }
 
+int32_t HITLS_SetMsgCbArg(HITLS_Ctx *ctx, void *arg)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetMsgCbArg(&(ctx->config.tlsConfig), arg);
+}
+
 int32_t HITLS_CFG_SetMsgCbArg(HITLS_Config *config, void *arg)
 {
     if (config == NULL) {

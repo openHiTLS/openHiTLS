@@ -145,6 +145,17 @@ int32_t HITLS_CFG_SetMsgCb(HITLS_Config *config, HITLS_MsgCb callback);
  * @ingroup hitls_debug
  * @brief   Set the related parameters arg required by the protocol message callback function.
  *
+ * @param   ctx   [OUT] Ctx Context.
+ * @param   arg [IN] Related parameters arg.
+ * @retval  HITLS_SUCCESS, if successful.
+ *          For details about other error codes, see hitls_error.h.
+ */
+int32_t HITLS_SetMsgCbArg(HITLS_Ctx *ctx, void *arg);
+
+/**
+ * @ingroup hitls_debug
+ * @brief   Set the related parameters arg required by the protocol message callback function.
+ *
  * @param   config   [OUT] Config Context.
  * @param   arg [IN] Related parameters arg.
  * @retval  HITLS_SUCCESS, if successful.

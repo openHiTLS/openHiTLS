@@ -1367,6 +1367,33 @@ EXIT:
 /* END_CASE */
 
 /* @
+* @test  UT_TLS_SetMsgCbArg_API_TC001
+* @title  HITLS_SetMsgCbArg Interface Parameter Test
+* @precon  nan
+* @brief  1. Set config to NULL. Expected result 1 is obtained.
+2. Use the HITLS_SetMsgCbArg interface to set Arg. Expected result 2 is obtained.
+* @expect 1. The HITLS_NULL_INPUT message is returned.
+2. Return the HITLS_SUCCESS
+@ */
+/* BEGIN_CASE */
+void UT_TLS_SetMsgCbArg_API_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig;
+    tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    HITLS_Ctx *ctx = HITLS_New(tlsConfig);
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_EQ(HITLS_SetMsgCbArg(NULL, msg_callback), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_SetMsgCbArg(ctx, msg_callback), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
 * @test  UT_TLS_CFG_SetMsgCbArg_API_TC001
 * @title  HITLS_CFG_SetMsgCbArg Interface Parameter Test
 * @precon  nan
