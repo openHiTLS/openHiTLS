@@ -1179,3 +1179,57 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
+static int32_t ImportSm2Pkey(const BSL_Param *param, void *args)
+{
+    CRYPT_SM2_Ctx *importSm2Ctx = CRYPT_SM2_NewCtx();
+    if (importSm2Ctx == NULL) {
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    int32_t ret = CRYPT_SM2_Import(importSm2Ctx, param);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_SM2_FreeCtx(importSm2Ctx);
+        return ret;
+    }
+    *((CRYPT_SM2_Ctx **)args) = importSm2Ctx;
+    return CRYPT_SUCCESS;
+}
+#endif
+
+/**
+ * @test   SDV_CRYPTO_SM2_Import_Export_FUNC_TC001
+ * @title  SM2 CRYPT_SM2_Import and CRYPT_SM2_Export test.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM2_Import_Export_FUNC_TC001(void)
+{
+#ifndef HITLS_CRYPTO_KEY_DECODE_CHAIN
+    SKIP_TEST();
+#else
+    CRYPT_SM2_Ctx *srcSm2Ctx = NULL;
+    CRYPT_SM2_Ctx *dstSm2Ctx = NULL;
+    uint8_t msg[2] = {1, 2};
+    uint8_t sign[128];
+    uint32_t signLen = sizeof(sign);
+    BSL_Param param[3] = {
+        {CRYPT_PARAM_PKEY_PROCESS_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ImportSm2Pkey, 0, 0},
+        {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &dstSm2Ctx, 0, 0},
+        BSL_PARAM_END
+    };
+    
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    srcSm2Ctx = CRYPT_SM2_NewCtx();
+    ASSERT_TRUE(srcSm2Ctx != NULL);
+    ASSERT_EQ(CRYPT_SM2_Gen(srcSm2Ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SM2_Export(srcSm2Ctx, param), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_SM2_Sign(srcSm2Ctx, CRYPT_MD_SM3, msg, sizeof(msg), sign, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SM2_Verify(dstSm2Ctx, CRYPT_MD_SM3, msg, sizeof(msg), sign, signLen), CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_SM2_FreeCtx(srcSm2Ctx);
+    CRYPT_SM2_FreeCtx(dstSm2Ctx);
+#endif
+}
+/* END_CASE */
