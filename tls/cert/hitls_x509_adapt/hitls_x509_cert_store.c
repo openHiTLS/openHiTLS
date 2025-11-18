@@ -83,8 +83,7 @@ int32_t HITLS_X509_Adapt_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store
                 }
                 tempCrl = (HITLS_X509_Crl *)BSL_LIST_GET_NEXT(crlList);
             }
-            int64_t setFlag = HITLS_X509_VFY_FLAG_CRL_ALL;
-            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &setFlag, sizeof(int64_t));
+            return HITLS_SUCCESS;
         }
         case CERT_STORE_CTRL_CLEAR_CRL_LIST:
             return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLEAR_CRL, NULL, 0);
