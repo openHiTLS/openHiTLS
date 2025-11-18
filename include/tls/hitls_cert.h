@@ -896,6 +896,20 @@ int32_t HITLS_LogSecret(HITLS_Ctx *ctx, const char *label, const uint8_t *secret
 
 /**
  * @ingroup hitls_cert
+ * @brief  Set certificate verification parameters.
+ * @param   config [OUT] TLS link configuration
+ * @param   store  [IN] Certificate store
+ * @param   cmd    [IN] Operation command, HITLS_CERT_CtrlCmd enum
+ * @param   in     [IN] Input parameter, integer type
+ * @param   inArg  [IN] Input parameter, pointer type
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_CtrlSetVerifyParams(
+    HITLS_Config *config, HITLS_CERT_Store *store, uint32_t cmd, int64_t in, void *inArg);
+
+/**
+ * @ingroup hitls_cert
  * @brief   Load CRL from file and add it into the verify store of the TLS configuration.
  *
  * @param   config [OUT] TLS link configuration
@@ -929,6 +943,17 @@ int32_t HITLS_CFG_LoadCrlBuffer(HITLS_Config *config, const uint8_t *buf, uint32
  */
 int32_t HITLS_CFG_ClearVerifyCrls(HITLS_Config *config);
 
+/**
+ * @ingroup hitls_cert
+ * @brief   Set the certificate verification flags.
+ *
+ * @param   config [OUT] TLS link configuration
+ * @param   verifyFlags   [IN] Verification flags, type: uint32_t
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_CFG_SetVerifyFlags(config, verifyFlags) \
+    HITLS_CFG_CtrlSetVerifyParams(config, NULL, CERT_STORE_CTRL_SET_VERIFY_FLAGS, verifyFlags, NULL)
 /**
  * @ingroup hitls_cert
  * @brief   Load CRL from file and add it into the verify store of the TLS context.

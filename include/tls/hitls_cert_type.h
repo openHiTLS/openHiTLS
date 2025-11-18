@@ -86,7 +86,8 @@ typedef enum {
     CERT_STORE_CTRL_SET_VERIFY_DEPTH = 0,   /**< Set the certificate verification depth. */
     CERT_STORE_CTRL_ADD_CERT_LIST,      /**< Add ca and chain certificate to store */
     CERT_STORE_CTRL_ADD_CRL_LIST,       /**< Add CRL list to store */
-    CERT_STORE_CTRL_CLEAR_CRL_LIST      ,/**< clear all CRL list */
+    CERT_STORE_CTRL_CLEAR_CRL_LIST,     /**< clear all CRL list */
+    CERT_STORE_CTRL_SET_VERIFY_FLAGS,   /**< Set the certificate verification flags. */
     CERT_STORE_CTRL_ADD_CA_PATH,              /**< Set the CA path. */
 
     CERT_CTRL_GET_ENCODE_LEN = 200,           /**< Obtain the length of the certificate code. */

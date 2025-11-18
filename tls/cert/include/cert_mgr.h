@@ -285,6 +285,19 @@ HITLS_CERT_Chain *SAL_CERT_GetExtraChainCerts(CERT_MgrCtx *mgrCtx);
 void SAL_CERT_ClearExtraChainCerts(CERT_MgrCtx *mgrCtx);
 
 /**
+ * @brief   Set or get certificate verification parameters.
+ *
+ * @param config [IN] TLS link configuration
+ * @param store  [IN] Certificate store
+ * @param cmd    [IN] Operation command, HITLS_CERT_CtrlCmd enum
+ * @param in     [IN] Input parameter
+ * @param out    [OUT] Output parameter
+ *
+ * @retval  HITLS_SUCCESS           succeeded.
+ */
+int32_t SAL_CERT_CtrlVerifyParams(HITLS_Config *config, HITLS_CERT_Store *store, uint32_t cmd, void *in, void *out);
+
+/**
  * @brief   Set the verification depth
  *
  * @param   mgrCtx [IN] Certificate management struct

@@ -40,6 +40,7 @@
 #include "hitls_crypt_reg.h"
 #include "hitls_crypt_init.h"
 #include "uio_base.h"
+#include "hitls_pki_types.h"
 /* END_HEADER */
 
 #define BUF_MAX_SIZE 4096
@@ -1086,11 +1087,14 @@ void UT_TLS_CRL_VERIFICATION_HANDSHAKE_TC001(void)
     ASSERT_TRUE(server != NULL);
 
     ASSERT_EQ(HITLS_CFG_LoadCrlFile(config, crlPath, TLS_PARSE_FORMAT_ASN1), HITLS_SUCCESS);
-
     client = FRAME_CreateLinkBase(config, BSL_UIO_TCP, false);
     ASSERT_TRUE(client != NULL);
+    HITLS_CFG_SetVerifyFlags(config, HITLS_X509_VFY_FLAG_CRL_DEV);
 
     ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    HITLS_ERROR ret;
+    HITLS_GetVerifyResult(client->ssl, &ret);
+    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_CERT_REVOKED);
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
