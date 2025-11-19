@@ -313,7 +313,22 @@ int32_t HITLS_CRL_ParseCrlAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, void *pa
         return ret;
     }
     crlEntry.flag |= HITLS_X509_CRL_PARSE_FLAG;
-    return HITLS_X509_AddListItemDefault(&crlEntry, sizeof(HITLS_X509_CrlEntry), list);
+    ret = HITLS_X509_AddListItemDefault(&crlEntry, sizeof(HITLS_X509_CrlEntry), list);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_LIST_FREE(crlEntry.extList, NULL);
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+
+static void FreeEntryList(void *list)
+{
+    if (list == NULL) {
+        return;
+    }
+    HITLS_X509_CrlEntry *crlEntry = (HITLS_X509_CrlEntry *)list;
+    BSL_LIST_FREE(crlEntry->extList, NULL);
+    BSL_SAL_Free(crlEntry);
 }
 
 int32_t HITLS_X509_ParseCrlList(BSL_ASN1_Buffer *crl, BSL_ASN1_List *list)
@@ -327,7 +342,7 @@ int32_t HITLS_X509_ParseCrlList(BSL_ASN1_Buffer *crl, BSL_ASN1_List *list)
     BSL_ASN1_DecodeListParam listParam = {1, &expTag};
     int32_t ret = BSL_ASN1_DecodeListItem(&listParam, crl, &HITLS_CRL_ParseCrlAsnItem, NULL, list);
     if (ret != BSL_SUCCESS) {
-        BSL_LIST_DeleteAll(list, NULL);
+        BSL_LIST_DeleteAll(list, FreeEntryList);
     }
     return ret;
 }
@@ -372,7 +387,7 @@ int32_t HITLS_X509_ParseCrlTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Crl *crl)
     ret = HITLS_X509_ParseCrlList(&asnArr[HITLS_X509_CRL_CRL_LIST_IDX], crl->tbs.revokedCerts);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto ERR;
     }
     // ext
     ret = HITLS_X509_ParseCrlExt(&asnArr[HITLS_X509_CRL_EXT_IDX], crl);
@@ -385,7 +400,7 @@ int32_t HITLS_X509_ParseCrlTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Crl *crl)
 ERR:
 
     BSL_LIST_DeleteAll(crl->tbs.issuerName, NULL);
-    BSL_LIST_DeleteAll(crl->tbs.revokedCerts, NULL);
+    BSL_LIST_DeleteAll(crl->tbs.revokedCerts, FreeEntryList);
     return ret;
 }
 #endif // HITLS_PKI_X509_CRL_PARSE

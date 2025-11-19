@@ -35,6 +35,8 @@
 #include "stub_utils.h"
 #include "hitls_pki_utils.h"
 
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
+
 static char g_sm2DefaultUserid[] = "1234567812345678";
 /* END_HEADER */
 
@@ -1910,5 +1912,41 @@ void SDV_X509_CRL_INVALIED_TEST_TC001(int format, char *path)
 EXIT:
     STUB_RESTORE(HITLS_X509_ParseNameList);
     HITLS_X509_CrlFree(crl);
+}
+/* END_CASE */
+
+static int32_t test = 0;
+static int32_t marked = 0;
+static void *STUB_BSL_SAL_Malloc(uint32_t size)
+{
+    if (marked <= test) {
+        marked++;
+        return malloc(size);
+    }
+    return NULL;
+}
+
+/**
+ * @test SDV_X509_CRL_PARSE_STUB_TC001
+ * title 1. Test the decode crl with stub malloc fail
+ * 
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_STUB_TC001(int format, char *path, int maxTriggers)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    HITLS_X509_Crl *crl = NULL;
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    test = maxTriggers;
+    for (int i = maxTriggers; i > 0; i--) {
+        marked = 0;
+        test--;
+        ASSERT_NE(HITLS_X509_CrlParseFile((int32_t)format, path, &crl), HITLS_PKI_SUCCESS);
+    }
+EXIT:
+    HITLS_X509_CrlFree(crl);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    BSL_GLOBAL_DeInit();
 }
 /* END_CASE */

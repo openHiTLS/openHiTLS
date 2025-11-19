@@ -396,3 +396,21 @@ SDV_X509_CRL_GEN_NULLCERTISSUER_FUNC_TC001:
 
 SDV_X509_CRL_INVALIED_TEST_TC001
 SDV_X509_CRL_INVALIED_TEST_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sha256-v1.der"
+
+SDV_X509_CRL_PARSE_STUB_TC001 parse pem time optional crl
+SDV_X509_CRL_PARSE_STUB_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/crl/time.optional.pem":35
+
+SDV_X509_CRL_PARSE_STUB_TC001 parse unknown(asn1) crl
+SDV_X509_CRL_PARSE_STUB_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":32
+
+SDV_X509_CRL_PARSE_STUB_TC001
+SDV_X509_CRL_PARSE_STUB_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der":32
+
+SDV_X509_CRL_PARSE_STUB_TC001
+SDV_X509_CRL_PARSE_STUB_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sha256-v2.der":34
+
+SDV_X509_CRL_PARSE_STUB_TC001
+SDV_X509_CRL_PARSE_STUB_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sha256-v1.der":32
+
+SDV_X509_CRL_PARSE_STUB_TC001 revokelist ext
+SDV_X509_CRL_PARSE_STUB_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/pem/crl/crl_v2.mul3.crl":49
