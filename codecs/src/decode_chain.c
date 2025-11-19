@@ -258,6 +258,7 @@ static int32_t TryDecodeWithDecoder(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_DECODE
         };
         ret = CRYPT_DECODE_GetParam(currNode->decoderCtx, outParam);
         if (ret != CRYPT_SUCCESS) {
+            CRYPT_DECODE_FreeOutData(currNode->decoderCtx, decoderParam);
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
@@ -268,6 +269,8 @@ static int32_t TryDecodeWithDecoder(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_DECODE
         currNode->decoderCtx->decoderState = CRYPT_DECODER_STATE_SUCCESS;
         ret = UpdateDecoderPath(poolCtx, currNode);
         if (ret != CRYPT_SUCCESS) {
+            CRYPT_DECODE_FreeOutData(currNode->decoderCtx, decoderParam);
+            currNode->outData.data = NULL;
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }

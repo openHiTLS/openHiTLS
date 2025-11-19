@@ -708,7 +708,7 @@ static bool BslEncodeOidValueCheck(uint64_t *parts, uint32_t count)
 #define MAX_OID_PARTS_LEN 128
 uint8_t *BSL_OBJ_GetOidFromNumericString(const char *oid, uint32_t len, uint32_t *outLen)
 {
-    if (len == 0 || oid == NULL || oid[0] == '.' || outLen == NULL) {
+    if (len == 0 || oid == NULL || oid[0] == '.' || outLen == NULL || oid[len - 1] == '.') {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return NULL;
     }

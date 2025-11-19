@@ -82,7 +82,7 @@ void *DECODER_##keyType##Der2KeyNewCtx(void *provCtx) \
     int32_t ret = CRYPT_EAL_SetPkeyMethod(&ctx->method, keyMethod, asyCipherMethod, exchMethod, signMethod, \
         kemMethod); \
     if (ret != CRYPT_SUCCESS) { \
-        BSL_SAL_Free(ctx); \
+        DECODER_DER2KEY_FreeCtx(ctx); \
         return NULL; \
     } \
     ctx->keyAlgId = keyId; \
@@ -181,12 +181,14 @@ static int32_t CheckParams(DECODER_Der2KeyCtx *decoderCtx, const BSL_Param *inPa
 
 static int32_t ConstructOutputParams(DECODER_Der2KeyCtx *decoderCtx, void *key, BSL_Param **outParam)
 {
+    int32_t ret;
     BSL_Param *result = BSL_SAL_Calloc(7, sizeof(BSL_Param));
     if (result == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
+        goto EXIT;
     }
-    int32_t ret = BSL_PARAM_InitValue(&result[0], CRYPT_PARAM_DECODE_OBJECT_DATA, BSL_PARAM_TYPE_CTX_PTR, key, 0);
+    ret = BSL_PARAM_InitValue(&result[0], CRYPT_PARAM_DECODE_OBJECT_DATA, BSL_PARAM_TYPE_CTX_PTR, key, 0);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;

@@ -38,7 +38,12 @@
 #include "crypt_eal_rand.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
+#include "stub_utils.h"
 /* END_HEADER */
+
+#ifdef HITLS_CRYPTO_PROVIDER
+STUB_DEFINE_RET2(void *, BSL_SAL_Calloc, uint32_t, uint32_t);
+#endif
 
 // clang-format off
 /* They are placed in their respective implementations and belong to specific applications, not asn1 modules */
@@ -1045,3 +1050,60 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+#ifdef HITLS_CRYPTO_PROVIDER
+
+static int32_t test = 0;
+static int32_t marked = 0;
+static void *STUB_BSL_SAL_Calloc(uint32_t num, uint32_t size)
+{
+    if (marked <= test) {
+        marked++;
+        return calloc(num, size);
+    }
+    return NULL;
+}
+
+#endif
+
+/**
+ * @test SDV_BSL_ASN1_PARSE_BUFF_STUB_TC001
+ * title 1. Test the decode provider with stub malloc fail
+ * 
+ */
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_BUFF_STUB_TC001(char *formatStr, char *typeStr, char *path, Hex *password, int maxTriggers)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)formatStr;
+    (void)typeStr;
+    (void)path;
+    (void)password;
+    (void)maxTriggers;
+    SKIP_TEST();
+#else
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &data, &dataLen), BSL_SUCCESS);
+    BSL_Buffer encode = {data, dataLen};
+    BSL_Buffer pass = {password->x, password->len};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    test = maxTriggers;
+    marked = 0;
+    STUB_REPLACE(BSL_SAL_Calloc, STUB_BSL_SAL_Calloc);
+    for (int i = maxTriggers; i > 0; i--) {
+        marked = 0;
+        test--;
+        ASSERT_NE(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, formatStr, typeStr, &encode,
+            &pass, &pkeyCtx), CRYPT_SUCCESS);
+    }
+EXIT:
+    BSL_SAL_FREE(data);
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    STUB_RESTORE(BSL_SAL_Calloc);
+    BSL_GLOBAL_DeInit();
+#endif
+}

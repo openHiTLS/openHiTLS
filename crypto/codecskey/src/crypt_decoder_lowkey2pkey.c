@@ -277,6 +277,7 @@ int32_t DECODER_LowKeyObject2PkeyObjectDecode(void *ctx, const BSL_Param *inPara
     }
     CRYPT_EAL_PkeyCtx *ealPKey = CRYPT_EAL_MakeKeyByPkeyAlgInfo(&pkeyAlgInfo, targetKeyRef);
     if (ealPKey == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         goto EXIT;
     }

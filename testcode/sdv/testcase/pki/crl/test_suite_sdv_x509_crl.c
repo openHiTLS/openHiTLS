@@ -1281,16 +1281,16 @@ static int32_t SetAllCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool includ
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)),
         HITLS_PKI_SUCCESS);
 
+    // Set nextUpdate period
+    afterTime = beforeTime;
+    afterTime.year += 1;
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)),
+        HITLS_PKI_SUCCESS);
+
     if (includeOptional) {
         // Set CRL version
         uint32_t version = 1;
         ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
-
-        // Set nextUpdate period
-        afterTime = beforeTime;
-        afterTime.year += 1;
-        ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)),
-            HITLS_PKI_SUCCESS);
 
         // Set revoked certificates
         for (size_t i = 0; i < sizeof(reasonCodes)/sizeof(reasonCodes[0]); i++) {

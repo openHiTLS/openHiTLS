@@ -38,8 +38,6 @@ extern "C" {
 #define BUF_READABLE_BLOCK             32
 #define IS_SUPPORT_GET_EOF              1
 
-#define BSL_SUCCESS 0
-
 typedef struct {
     const int cipherId;
     const char *cipherAlgName;

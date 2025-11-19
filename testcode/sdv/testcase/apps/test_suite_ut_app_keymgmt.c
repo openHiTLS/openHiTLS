@@ -38,6 +38,8 @@
 #include "crypt_eal_cmvp.h"
 #include "eal_cipher_local.h"
 #include "stub_utils.h"
+#include "bsl_errno.h"
+
 /* INCLUDE_SOURCE  ${HITLS_ROOT_PATH}/apps/src/app_print.c ${HITLS_ROOT_PATH}/apps/src/app_enc.c ${HITLS_ROOT_PATH}/apps/src/app_opt.c ${HITLS_ROOT_PATH}/apps/src/app_utils.c */
 /* END_HEADER */
 

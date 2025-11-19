@@ -164,6 +164,11 @@ int32_t CRYPT_RSA_ParsePubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buff
         BSL_PARAM_END
     };
     ret = CRYPT_RSA_SetPubKeyEx(pctx, pubParam);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_RSA_FreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     if (cid != BSL_CID_RSASSAPSS) {
         *rsaPubKey = pctx;
         return CRYPT_SUCCESS;

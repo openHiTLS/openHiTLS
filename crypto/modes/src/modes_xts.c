@@ -501,7 +501,7 @@ int32_t MODES_XTS_InitCtxEx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t
 
 int32_t MODES_XTS_UpdateEx(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    if (modeCtx == NULL || modeCtx->xtsCtx.ciphMeth == NULL) {
+    if (modeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }

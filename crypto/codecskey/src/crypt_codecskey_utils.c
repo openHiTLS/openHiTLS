@@ -354,7 +354,7 @@ int32_t CRYPT_DECODE_PrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_ASN
     uint32_t tmpBuffLen = bufferLen;
     BSL_ASN1_Template templ = {g_ecPriKeyTempl, sizeof(g_ecPriKeyTempl) / sizeof(g_ecPriKeyTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &tmpBuff, &tmpBuffLen, asn1, arrNum);
-    if (ret != CRYPT_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
@@ -380,7 +380,7 @@ int32_t CRYPT_DECODE_MldsaPrikeyAsn1Buff(uint8_t* buffer, uint32_t bufferLen, BS
         sizeof(g_mldsaPrikeyInfoTempl) / sizeof(g_mldsaPrikeyInfoTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, DecodeMldsaPriKeyChoiceAsn1Buff,
         &tmpBuff, &tmpBuffLen, &asn1Tmp, arrNum);
-    if (ret != CRYPT_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -416,7 +416,7 @@ int32_t CRYPT_DECODE_RsaPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1
     
     BSL_ASN1_Template pubTempl = {g_rsaPubTempl, sizeof(g_rsaPubTempl) / sizeof(g_rsaPubTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&pubTempl, NULL, &tmpBuff, &tmpBuffLen, pubAsn1, arrNum);
-    if (ret != CRYPT_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
 
@@ -430,7 +430,7 @@ int32_t CRYPT_DECODE_RsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1
 
     BSL_ASN1_Template templ = {g_rsaPrvTempl, sizeof(g_rsaPrvTempl) / sizeof(g_rsaPrvTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &tmpBuff, &tmpBuffLen, asn1, asn1Num);
-    if (ret != CRYPT_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
@@ -548,7 +548,7 @@ int32_t CRYPT_DECODE_ParseSubKeyInfo(uint8_t *buff, uint32_t buffLen, BSL_ASN1_B
     }
     int32_t ret = BSL_ASN1_DecodeTemplate(&pubTempl, DecSubKeyInfoCb, &tmpBuff, &tmpBuffLen, pubAsn1,
                                           CRYPT_SUBKEYINFO_BITSTRING_IDX + 1);
-    if (ret != CRYPT_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
@@ -587,7 +587,7 @@ int32_t CRYPT_DECODE_SubPubkey(uint8_t *buff, uint32_t buffLen, BSL_ASN1_DecTemp
     BSL_ASN1_Buffer *oid = algoId;
     BSL_ASN1_Buffer *pubkey = &pubAsn1[CRYPT_SUBKEYINFO_BITSTRING_IDX];
     ret = BSL_ASN1_DecodePrimitiveItem(pubkey, &bitPubkey);
-    if (ret != CRYPT_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -639,12 +639,12 @@ int32_t CRYPT_DECODE_Pkcs8Info(uint8_t *buff, uint32_t buffLen, BSL_ASN1_DecTemp
     BSL_ASN1_Buffer asn1[CRYPT_PK8_PRIKEY_PRIKEY_IDX + 1] = {0};
     BSL_ASN1_Template templ = {g_pk8PriKeyTempl, sizeof(g_pk8PriKeyTempl) / sizeof(g_pk8PriKeyTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &tmpBuff, &tmpBuffLen, asn1, CRYPT_PK8_PRIKEY_PRIKEY_IDX + 1);
-    if (ret != CRYPT_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     ret = BSL_ASN1_DecodePrimitiveItem(&asn1[CRYPT_PK8_PRIKEY_VERSION_IDX], &version);
-    if (ret != CRYPT_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -694,7 +694,7 @@ static int32_t ParseDeriveKeyParam(BSL_Buffer *derivekeyData, uint32_t *iter, ui
     BSL_ASN1_Template templ = {g_pbkdf2DerParamTempl, sizeof(g_pbkdf2DerParamTempl) / sizeof(g_pbkdf2DerParamTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL,
         &tmpBuff, &tmpBuffLen, derParam, CRYPT_PKCS_ENC_DERPARAM_MAX);
-    if (ret != CRYPT_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -793,7 +793,7 @@ int32_t CRYPT_DECODE_Pkcs8PrvDecrypt(CRYPT_EAL_LibCtx *libctx, const char *attrN
     BSL_ASN1_Buffer asn1[CRYPT_PKCS_ENCPRIKEY_MAX] = {0};
     BSL_ASN1_Template templ = {g_pk8EncPriKeyTempl, sizeof(g_pk8EncPriKeyTempl) / sizeof(g_pk8EncPriKeyTempl[0])};
     int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &tmpBuff, &tmpBuffLen, asn1, CRYPT_PKCS_ENCPRIKEY_MAX);
-    if (ret != CRYPT_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -844,14 +844,14 @@ int32_t CRYPT_DECODE_ConstructBufferOutParam(const BSL_Param *inParam, BSL_Param
     }
     int32_t ret = BSL_PARAM_InitValue(&result[0], CRYPT_PARAM_DECODE_BUFFER_DATA, BSL_PARAM_TYPE_OCTETS,
         buffer, bufferLen);
-    if (ret != CRYPT_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_SAL_Free(result);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     if (encParam != NULL) {
         ret = BSL_PARAM_InitValue(&result[1], encParam->key, encParam->valueType, encParam->value, encParam->valueLen);
-        if (ret != CRYPT_SUCCESS) {
+        if (ret != BSL_SUCCESS) {
             BSL_SAL_Free(result);
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -881,7 +881,7 @@ int32_t CRYPT_ENCODE_RsaPubkeyAsn1Buff(BSL_ASN1_Buffer *pubAsn1, BSL_Buffer *enc
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t CRYPT_ENCODE_RsaPrikeyAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num, BSL_Buffer *encode)
@@ -918,7 +918,7 @@ int32_t CRYPT_ENCODE_SubPubkeyByInfo(BSL_ASN1_Buffer *algo, BSL_Buffer *bitStr, 
     }
     int32_t ret =  BSL_ASN1_EncodeTemplate(&pubTempl,
         encode, CRYPT_SUBKEYINFO_BITSTRING_IDX + 1, &encodeH->data, &encodeH->dataLen);
-    if (ret != CRYPT_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
@@ -957,14 +957,14 @@ static int32_t EncodeDeriveKeyParam(CRYPT_EAL_LibCtx *libCtx, CRYPT_Pbkdf2Param 
     derParam[CRYPT_PKCS_ENC_DERSALT_IDX].tag = BSL_ASN1_TAG_OCTETSTRING;
     /* iter */
     ret = BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, param->itCnt, &derParam[CRYPT_PKCS_ENC_DERITER_IDX]);
-    if (ret != CRYPT_SUCCESS) {
+    if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     BSL_ASN1_Template templ = {g_pbkdf2DerParamTempl, sizeof(g_pbkdf2DerParamTempl) / sizeof(g_pbkdf2DerParamTempl[0])};
     if (param->hmacId == CRYPT_MAC_HMAC_SHA1) {
         ret = BSL_ASN1_EncodeTemplate(&templ, derParam, CRYPT_PKCS_ENC_DERPRF_IDX + 1, &encode->data, &encode->dataLen);
-        if (ret != CRYPT_SUCCESS) {
+        if (ret != BSL_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
         }
         BSL_SAL_FREE(derParam[CRYPT_PKCS_ENC_DERITER_IDX].buff);

@@ -73,7 +73,7 @@ static inline void LeftShiftOneBit(const uint8_t *in, uint32_t len, uint8_t *out
     } while (i != 0);
 }
 
-static void CMAC_Final(CRYPT_CMAC_Ctx *ctx)
+static int32_t CMAC_Final(CRYPT_CMAC_Ctx *ctx)
 {
     const uint8_t z[CIPHER_MAC_MAXBLOCKSIZE] = {0};
     uint8_t rb;
@@ -85,7 +85,7 @@ static void CMAC_Final(CRYPT_CMAC_Ctx *ctx)
     int32_t ret = method->encryptBlock(ctx->key, z, l, blockSize);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return;
+        return ret;
     }
     LeftShiftOneBit(l, blockSize, k1);
 
@@ -115,6 +115,7 @@ static void CMAC_Final(CRYPT_CMAC_Ctx *ctx)
         DATA_XOR(ctx->left, k2, ctx->left, blockSize);
         ctx->len = blockSize;
     }
+    return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_CMAC_Final(CRYPT_CMAC_Ctx *ctx, uint8_t *out, uint32_t *len)
@@ -130,9 +131,12 @@ int32_t CRYPT_CMAC_Final(CRYPT_CMAC_Ctx *ctx, uint8_t *out, uint32_t *len)
         return CRYPT_CMAC_OUT_BUFF_LEN_NOT_ENOUGH;
     }
 
-    CMAC_Final(ctx);
+    int32_t ret = CMAC_Final(ctx);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
     DATA_XOR(ctx->left, ctx->data, ctx->left, blockSize);
-    int32_t ret = method->encryptBlock(ctx->key, ctx->left, out, blockSize);
+    ret = method->encryptBlock(ctx->key, ctx->left, out, blockSize);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
