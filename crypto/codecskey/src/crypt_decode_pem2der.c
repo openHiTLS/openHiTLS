@@ -98,12 +98,15 @@ int32_t DECODER_Pem2DerDecode(void *ctx, const BSL_Param *inParam, BSL_Param **o
 
     ret = BSL_PEM_DecodePemToAsn1((char **)&encode.data, &encode.dataLen, &symbol, &asn1Encode, &asn1Len);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_Free(asn1Encode);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     decoderCtx->outType = dataType;
-    return CRYPT_DECODE_ConstructBufferOutParam(inParam, outParam, asn1Encode, asn1Len);
+    ret = CRYPT_DECODE_ConstructBufferOutParam(inParam, outParam, asn1Encode, asn1Len);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_Free(asn1Encode);
+    }
+    return ret;
 }
 
 void DECODER_Pem2DerFreeOutData(void *ctx, BSL_Param *outParam)

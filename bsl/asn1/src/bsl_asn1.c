@@ -358,24 +358,6 @@ static int32_t ParseBMPString(const uint8_t *bmp, uint32_t bmpLen, BSL_ASN1_Buff
     return BSL_SUCCESS;
 }
 
-static int32_t ParseT61String(const uint8_t *t61, uint32_t t61Len, BSL_ASN1_Buffer *decode)
-{
-    if (t61 == NULL || t61Len == 0 || decode == NULL) {
-        return BSL_NULL_INPUT;
-    }
-    // Currently only supports single-byte character decoding
-    // The lower 128 characters (0x00 - 0x7F) of T.61 are fully compatible with ASCII.
-    // This means any pure ASCII text is valid in T.61 encoding and retains the same meaning.
-    uint8_t *tmp = (uint8_t *)BSL_SAL_Malloc(t61Len);
-    if (tmp == NULL) {
-        return BSL_MALLOC_FAIL;
-    }
-    (void)memcpy_s(tmp, t61Len, t61, t61Len);
-    decode->buff = tmp;
-    decode->len = t61Len;
-    return BSL_SUCCESS;
-}
-
 static void EncodeT61String(const uint8_t *in, uint32_t inLen, uint8_t *encode, uint32_t *offset)
 {
     (void)memcpy_s(encode + *offset, inLen, in, inLen);
@@ -418,8 +400,6 @@ int32_t BSL_ASN1_DecodePrimitiveItem(BSL_ASN1_Buffer *asn, void *decodeData)
             return ParseTime(asn->tag, asn->buff, asn->len, decodeData);
         case BSL_ASN1_TAG_BMPSTRING:
             return ParseBMPString(asn->buff, asn->len, decodeData);
-        case BSL_ASN1_TAG_T61STRING:
-            return ParseT61String(asn->buff, asn->len, decodeData);
         default:
             break;
     }

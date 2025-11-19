@@ -112,7 +112,11 @@ int32_t DECODER_EPKI2PKI_Decode(void *ctx, const BSL_Param *inParam, BSL_Param *
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    return CRYPT_DECODE_ConstructBufferOutParam(NULL, outParam, decode.data, decode.dataLen);
+    ret = CRYPT_DECODE_ConstructBufferOutParam(NULL, outParam, decode.data, decode.dataLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_ClearFree(decode.data, decode.dataLen);
+    }
+    return ret;
 }
 
 void DECODER_EPKI2PKI_FreeCtx(void *ctx)
