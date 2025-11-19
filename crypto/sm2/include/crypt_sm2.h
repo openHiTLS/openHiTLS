@@ -294,6 +294,7 @@ int32_t CRYPT_SM2_Cmp(const CRYPT_SM2_Ctx *a, const CRYPT_SM2_Ctx *b);
  */
 int32_t CRYPT_SM2_GetSecBits(const CRYPT_SM2_Ctx *ctx);
 
+#ifdef HITLS_CRYPTO_PROVIDER
 /**
  * @ingroup sm2
  * @brief sm2 import key
@@ -311,6 +312,7 @@ int32_t CRYPT_SM2_Import(CRYPT_SM2_Ctx *ctx, const BSL_Param *params);
  * @param params [IN/OUT] key parameters
  */
 int32_t CRYPT_SM2_Export(const CRYPT_SM2_Ctx *ctx, BSL_Param *params);
+#endif
 
 #ifdef __cplusplus
 }

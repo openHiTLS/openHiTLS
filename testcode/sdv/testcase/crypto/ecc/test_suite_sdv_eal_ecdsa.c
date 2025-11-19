@@ -1416,3 +1416,58 @@ EXIT:
 }
 /* END_CASE */
 
+#ifdef HITLS_CRYPTO_PROVIDER
+static int32_t ImportEcdsaPkey(const BSL_Param *param, void *args)
+{
+    CRYPT_ECDSA_Ctx *importEcdsaCtx = CRYPT_ECDSA_NewCtx();
+    if (importEcdsaCtx == NULL) {
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    int32_t ret = CRYPT_ECDSA_Import(importEcdsaCtx, param);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_ECDSA_FreeCtx(importEcdsaCtx);
+        return ret;
+    }
+    *((CRYPT_ECDSA_Ctx **)args) = importEcdsaCtx;
+    return CRYPT_SUCCESS;
+}
+#endif
+
+/**
+ * @test   SDV_CRYPTO_ECDSA_Import_Export_FUNC_TC001
+ * @title  ECDSA CRYPT_ECDSA_Import and CRYPT_ECDSA_Export test.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDSA_Import_Export_FUNC_TC001(void)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    SKIP_TEST();
+#else
+    CRYPT_ECDSA_Ctx *srcEcdsaCtx = NULL;
+    CRYPT_ECDSA_Ctx *dstEcdsaCtx = NULL;
+    CRYPT_PKEY_ParaId eccId = CRYPT_ECC_NISTP256;
+    uint8_t msg[2] = {1, 2};
+    uint8_t sign[130];
+    uint32_t signLen = sizeof(sign);
+    BSL_Param param[3] = {
+        {CRYPT_PARAM_PKEY_PROCESS_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ImportEcdsaPkey, 0, 0},
+        {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &dstEcdsaCtx, 0, 0},
+        BSL_PARAM_END
+    };
+    
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    srcEcdsaCtx = CRYPT_ECDSA_NewCtx();
+    ASSERT_TRUE(srcEcdsaCtx != NULL);
+    CRYPT_ECDSA_Ctrl(srcEcdsaCtx, CRYPT_CTRL_SET_PARA_BY_ID, &eccId, sizeof(CRYPT_PKEY_ParaId));
+    ASSERT_EQ(CRYPT_ECDSA_Gen(srcEcdsaCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_ECDSA_Export(srcEcdsaCtx, param), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_ECDSA_Sign(srcEcdsaCtx, CRYPT_MD_SHA256, msg, sizeof(msg), sign, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_ECDSA_Verify(dstEcdsaCtx, CRYPT_MD_SHA256, msg, sizeof(msg), sign, signLen), CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_ECDSA_FreeCtx(srcEcdsaCtx);
+    CRYPT_ECDSA_FreeCtx(dstEcdsaCtx);
+#endif
+}
+/* END_CASE */

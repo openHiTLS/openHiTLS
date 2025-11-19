@@ -18,6 +18,7 @@
 #include "bsl_params.h"
 #include "bsl_err.h"
 #include "crypt_params_key.h"
+#include "crypt_local_types.h"
 
 /* END_HEADER */
 #define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
@@ -1449,5 +1450,143 @@ void SDV_CRYPTO_RSA_GET_KEY_BITS_FUNC_TC001(int id, int keyBits, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyGetKeyBits(pkey) == (uint32_t)keyBits);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */
+
+#ifdef HITLS_CRYPTO_PROVIDER
+static int32_t ImportRsaKey(const BSL_Param *param, void *args)
+{
+    uint32_t bits = 0;
+    uint32_t bitsLen = sizeof(bits);
+    CRYPT_RSA_Ctx *importRsaCtx = CRYPT_RSA_NewCtx();
+    if (importRsaCtx == NULL) {
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    int32_t ret = CRYPT_RSA_Import(importRsaCtx, param);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_RSA_FreeCtx(importRsaCtx);
+        return ret;
+    }
+    const BSL_Param *keyBitsParam = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RSA_BITS);
+    if (keyBitsParam == NULL) {
+        return CRYPT_INVALID_ARG;
+    }
+    ret = BSL_PARAM_GetValue(keyBitsParam, CRYPT_PARAM_RSA_BITS, BSL_PARAM_TYPE_UINT32, &bits, &bitsLen);
+    if (ret != BSL_SUCCESS || bits < RSA_MIN_MODULUS_BITS || bits > RSA_MAX_MODULUS_BITS) {
+        return CRYPT_INVALID_ARG;
+    }
+
+    *((CRYPT_RSA_Ctx **)args) = importRsaCtx;
+    return CRYPT_SUCCESS;
+}
+#endif
+
+/**
+ * @test   SDV_CRYPTO_RSA_Import_Export_FUNC_TC001
+ * @title  CRYPT_RSA_Import and CRYPT_RSA_Export test.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_Import_Export_FUNC_TC001(void)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    SKIP_TEST();
+#else
+    CRYPT_RSA_Ctx *srcRsaCtx = NULL;
+    CRYPT_RSA_Ctx *dstRsaCtx = NULL;
+    CRYPT_RsaPadType padType = CRYPT_EMSA_PKCSV15;
+    RSA_PkcsV15Para pkcsv15 = { CRYPT_MD_SHA256 };
+    uint8_t data[2] = {1};
+    uint8_t signData[1024] = {};
+    uint32_t signDataLen = sizeof(signData);
+    uint8_t e[] = {0x01, 0x00, 0x01};
+    uint32_t eLen = sizeof(e);
+    uint32_t bits = 2048;
+    BSL_Param param[3] = {
+        {CRYPT_PARAM_PKEY_PROCESS_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ImportRsaKey, 0, 0},
+        {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &dstRsaCtx, 0, 0},
+        BSL_PARAM_END
+    };
+    
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    srcRsaCtx = CRYPT_RSA_NewCtx();
+    ASSERT_TRUE(srcRsaCtx != NULL);
+
+    BSL_Param rsaParam[3] = {
+        {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, e, eLen, 0},
+        {CRYPT_PARAM_RSA_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_RSA_SetPara(srcRsaCtx, rsaParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_RSA_Gen(srcRsaCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_RSA_Ctrl(srcRsaCtx, CRYPT_CTRL_SET_RSA_PADDING, &padType, sizeof(CRYPT_RsaPadType)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_RSA_Ctrl(srcRsaCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_RSA_Export(srcRsaCtx, param), CRYPT_SUCCESS);
+    ASSERT_TRUE(dstRsaCtx != NULL);
+    ASSERT_EQ(CRYPT_RSA_Sign(srcRsaCtx, CRYPT_MD_SHA256, data, sizeof(data), signData, &signDataLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_RSA_Verify(dstRsaCtx, CRYPT_MD_SHA256, data, sizeof(data), signData, signDataLen), CRYPT_SUCCESS);
+EXIT:
+    CRYPT_RSA_FreeCtx(srcRsaCtx);
+    CRYPT_RSA_FreeCtx(dstRsaCtx);
+#endif
+}
+/* END_CASE */
+
+
+/**
+ * @test   SDV_CRYPTO_RSA_Import_Export_FUNC_TC002
+ * @title  CRYPT_RSA_Import and CRYPT_RSA_Export test.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_Import_Export_FUNC_TC002(void)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    SKIP_TEST();
+#else
+    CRYPT_RSA_Ctx *srcRsaCtx = NULL;
+    CRYPT_RSA_Ctx *dstRsaCtx = NULL;
+    CRYPT_RsaPadType padType = CRYPT_EMSA_PSS;
+    RSA_PadingPara pssPara = {
+        .saltLen = -1,
+        .mdId = CRYPT_MD_SHA256,
+        .mgfId = CRYPT_MD_SHA256
+    };
+    uint8_t data[2] = {1};
+    uint8_t signData[1024] = {};
+    uint32_t signDataLen = sizeof(signData);
+    uint8_t e[] = {0x01, 0x00, 0x01};
+    uint32_t eLen = sizeof(e);
+    uint32_t bits = 2048;
+    BSL_Param param[3] = {
+        {CRYPT_PARAM_PKEY_PROCESS_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ImportRsaKey, 0, 0},
+        {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &dstRsaCtx, 0, 0},
+        BSL_PARAM_END
+    };
+    
+    BSL_Param pssParam[4] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &pssPara.mdId, sizeof(pssPara.mdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &pssPara.mgfId, sizeof(pssPara.mgfId), 0},
+        {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &pssPara.saltLen, sizeof(pssPara.saltLen), 0},
+        BSL_PARAM_END};
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    srcRsaCtx = CRYPT_RSA_NewCtx();
+    ASSERT_TRUE(srcRsaCtx != NULL);
+
+    BSL_Param rsaParam[3] = {
+        {CRYPT_PARAM_RSA_E, BSL_PARAM_TYPE_OCTETS, e, eLen, 0},
+        {CRYPT_PARAM_RSA_BITS, BSL_PARAM_TYPE_UINT32, &bits, sizeof(bits), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_RSA_SetPara(srcRsaCtx, rsaParam), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_RSA_Gen(srcRsaCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_RSA_Ctrl(srcRsaCtx, CRYPT_CTRL_SET_RSA_PADDING, &padType, sizeof(CRYPT_RsaPadType)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_RSA_Ctrl(srcRsaCtx, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pssParam, sizeof(pssParam)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_RSA_Export(srcRsaCtx, param), CRYPT_SUCCESS);
+    ASSERT_TRUE(dstRsaCtx != NULL);
+    ASSERT_EQ(CRYPT_RSA_Sign(srcRsaCtx, CRYPT_MD_SHA256, data, sizeof(data), signData, &signDataLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_RSA_Verify(dstRsaCtx, CRYPT_MD_SHA256, data, sizeof(data), signData, signDataLen), CRYPT_SUCCESS);
+EXIT:
+    CRYPT_RSA_FreeCtx(srcRsaCtx);
+    CRYPT_RSA_FreeCtx(dstRsaCtx);
+#endif
 }
 /* END_CASE */

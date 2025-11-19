@@ -988,3 +988,58 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
 /* END_CASE */
+
+#ifdef HITLS_CRYPTO_PROVIDER
+static int32_t ImportCurve25519Pkey(const BSL_Param *param, void *args)
+{
+    CRYPT_CURVE25519_Ctx *importEd25519Ctx = CRYPT_ED25519_NewCtx();
+    if (importEd25519Ctx == NULL) {
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    int32_t ret = CRYPT_CURVE25519_Import(importEd25519Ctx, param);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_CURVE25519_FreeCtx(importEd25519Ctx);
+        return ret;
+    }
+    *((CRYPT_CURVE25519_Ctx **)args) = importEd25519Ctx;
+    return CRYPT_SUCCESS;
+}
+#endif
+
+/**
+ * @test   SDV_CRYPTO_CURVE25519_Import_Export_FUNC_TC001
+ * @title  CRYPT_CURVE25519_Import and CRYPT_CURVE25519_Export test.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_CURVE25519_Import_Export_FUNC_TC001(void)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    SKIP_TEST();
+#else
+    CRYPT_CURVE25519_Ctx *srcCurve25519Ctx = NULL;
+    CRYPT_CURVE25519_Ctx *dstCurve25519Ctx = NULL;
+    BSL_Param param[3] = {
+        {CRYPT_PARAM_PKEY_PROCESS_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ImportCurve25519Pkey, 0, 0},
+        {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &dstCurve25519Ctx, 0, 0},
+        BSL_PARAM_END
+    };
+    uint8_t data[2] = {1};
+    uint32_t dataLen = sizeof(data);
+    uint8_t signBuf[CRYPT_CURVE25519_SIGNLEN] = {0};
+    uint32_t signBufLen = sizeof(signBuf);
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    srcCurve25519Ctx = CRYPT_ED25519_NewCtx();
+    ASSERT_TRUE(srcCurve25519Ctx != NULL);
+    ASSERT_EQ(CRYPT_ED25519_GenKey(srcCurve25519Ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_CURVE25519_Export(srcCurve25519Ctx, param), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_CURVE25519_Sign(srcCurve25519Ctx, CRYPT_MD_SHA512, data, dataLen, signBuf, &signBufLen),
+        CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_CURVE25519_Verify(dstCurve25519Ctx, CRYPT_MD_SHA512, data, dataLen, signBuf, signBufLen),
+        CRYPT_SUCCESS);
+EXIT:
+    CRYPT_CURVE25519_FreeCtx(srcCurve25519Ctx);
+    CRYPT_CURVE25519_FreeCtx(dstCurve25519Ctx);
+#endif
+}
+/* END_CASE */
