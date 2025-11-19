@@ -555,7 +555,7 @@ static int32_t ParamCheckAndInit(HITLS_PKCS12_MacData *macData, BSL_Buffer *pwd,
     }
     *macId = GetMacId(macData->alg);
     *macSize = CRYPT_EAL_MdGetDigestSize((CRYPT_MD_AlgId)macData->alg);
-    if (macId == BSL_CID_UNKNOWN || macSize == 0) {
+    if (*macId == BSL_CID_UNKNOWN || *macSize == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_ALGO);
         return HITLS_PKCS12_ERR_INVALID_ALGO;
     }

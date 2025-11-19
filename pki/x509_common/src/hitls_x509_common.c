@@ -738,6 +738,7 @@ int32_t HITLS_X509_SignAsn1Data(CRYPT_EAL_PkeyCtx *priv, CRYPT_MD_AlgId mdId,
     sign->len = CRYPT_EAL_PkeyGetSignLen(priv);
     sign->buff = (uint8_t *)BSL_SAL_Malloc(sign->len);
     if (sign->buff == NULL) {
+        sign->len = 0;
         BSL_SAL_FREE(rawSignBuff->data);
         rawSignBuff->dataLen = 0;
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
