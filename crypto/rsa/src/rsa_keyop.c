@@ -415,13 +415,25 @@ int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b)
 {
     RETURN_RET_IF(a == NULL || b == NULL, CRYPT_NULL_INPUT);
 
-    RETURN_RET_IF(a->pubKey == NULL || b->pubKey == NULL, CRYPT_RSA_NO_KEY_INFO);
-
-    RETURN_RET_IF(BN_Cmp(a->pubKey->n, b->pubKey->n) != 0 ||
-                  BN_Cmp(a->pubKey->e, b->pubKey->e) != 0,
-                  CRYPT_RSA_PUBKEY_NOT_EQUAL);
-
-    return CRYPT_SUCCESS;
+    if (a->pubKey != NULL && b->pubKey != NULL) {
+        RETURN_RET_IF(BN_Cmp(a->pubKey->n, b->pubKey->n) != 0 ||
+                      BN_Cmp(a->pubKey->e, b->pubKey->e) != 0,
+                      CRYPT_RSA_PUBKEY_NOT_EQUAL);
+        return CRYPT_SUCCESS;
+    }
+    if (a->prvKey != NULL && b->pubKey != NULL) {
+        RETURN_RET_IF(BN_Cmp(a->prvKey->n, b->pubKey->n) != 0 ||
+                      BN_Cmp(a->prvKey->e, b->pubKey->e) != 0,
+                      CRYPT_RSA_PUBKEY_NOT_EQUAL);
+        return CRYPT_SUCCESS;
+    }
+    if (a->pubKey != NULL && b->prvKey != NULL) {
+        RETURN_RET_IF(BN_Cmp(a->pubKey->n, b->prvKey->n) != 0 ||
+                      BN_Cmp(a->pubKey->e, b->prvKey->e) != 0,
+                      CRYPT_RSA_PUBKEY_NOT_EQUAL);
+        return CRYPT_SUCCESS;
+    }
+    return CRYPT_RSA_NO_KEY_INFO;
 }
 #endif
 

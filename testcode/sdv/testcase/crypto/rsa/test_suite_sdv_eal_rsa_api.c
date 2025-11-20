@@ -1269,6 +1269,79 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CRYPTO_RSA_CMP_API_TC002
+ * @title  RSA compare test.
+ * @precon Create the contexts(ctx1, ctx2) of the rsa algorithm, expected result 1
+
+ * @brief
+ *    1. Create the contexts(ctx1, ctx2) of the rsa algorithm, expected result 1
+ *    2. Call the CRYPT_EAL_PkeyCmp to compare ctx1 and ctx2, expected result 2
+ *    3. Set public key for ctx1, expected result 3
+ *    4. Call the CRYPT_EAL_PkeyCmp to compare ctx1 and ctx2, expected result 4
+ *    5. Set public key for ctx2, expected result 5
+ *    6. Call the CRYPT_EAL_PkeyCmp to compare ctx1 and ctx2, expected result 5
+ *    7. Set private key for ctx1, expected result 5
+ *    8. Call the CRYPT_EAL_PkeyCmp to compare ctx1 and ctx2, expected result 5
+ *    12. Call the CRYPT_EAL_PkeyCmp to compare ctx2 and ctx1, expected result 5
+ * @expect
+ *    1. Success, and contexts are not NULL.
+ *    2. CRYPT_RSA_NO_KEY_INFO
+ *    3. CRYPT_SUCCESS
+ *    4. CRYPT_SUCCESS
+ *    5. CRYPT_SUCCESS
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_CMP_API_TC002(int isProvider)
+{
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    SetRsaPara(&para, e, 3, 1024);
+    CRYPT_EAL_PkeyCtx *pkey1 = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default",
+        isProvider);
+    CRYPT_EAL_PkeyCtx *pkey2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default",
+        isProvider);
+    ASSERT_TRUE(pkey1 != NULL);
+    ASSERT_TRUE(pkey2 != NULL);
+
+    uint8_t pubN[600];
+    uint8_t pubE[600];
+    uint8_t prvN[600];
+    uint8_t prvD[600];
+
+    CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPrv prv = {0};
+    SetRsaPubKey(&pub, pubN, 600, pubE, 600);
+    SetRsaPrvKey(&prv, prvN, 600, prvD, 600);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey1, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey1), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey1, &pub), CRYPT_SUCCESS);
+    // pkey2 has no pubkey
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkey1, pkey2), CRYPT_RSA_NO_KEY_INFO);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey2, &pub), CRYPT_SUCCESS);
+    // pkey1 has pubkey + prv, pkey2 has pubkey
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkey1, pkey2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkey2, pkey1), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey1, &prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey1, &prv), CRYPT_SUCCESS);
+    // pkey1 has prv, pkey2 has pubkey
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkey1, pkey2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkey2, pkey1), CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey1);
+    CRYPT_EAL_PkeyFreeCtx(pkey2);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPTO_RSA_GET_SECURITY_BITS_FUNC_TC001
  * @title  RSA CRYPT_EAL_PkeyGetSecurityBits test.
  * @precon nan
