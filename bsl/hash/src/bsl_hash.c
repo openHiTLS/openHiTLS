@@ -302,9 +302,33 @@ static void BSL_HASH_NodeFree(BSL_HASH_Hash *hash, BSL_HASH_Node *node)
     BSL_SAL_FREE(node);
 }
 
+#ifdef HITLS_BIG_ENDIAN
+static uintptr_t BSL_HASH_BigToLittleEndian(uintptr_t value)
+{
+    uintptr_t result = 0;
+    size_t size = sizeof(uintptr_t);
+
+    // Manually flip byte order
+    for (size_t i = 0; i < size; i++) {
+        // Extract the i-th byte from big-endian order (starting from the most significant bit)
+        uintptr_t byte = (value >> CHAR_BIT * (size - 1 - i)) & 0xFF;
+        // Place at the i-th position in little-endian order (starting from the least significant bit)
+        result |= byte << (CHAR_BIT * i);
+    }
+    return result;
+}
+#endif
+
+
 uint32_t BSL_HASH_CodeCalcInt(uintptr_t key, uint32_t bktSize)
 {
-    return BSL_HASH_CodeCalc(&key, sizeof(key)) % bktSize;
+    uintptr_t convertKey =
+#ifdef HITLS_BIG_ENDIAN
+        BSL_HASH_BigToLittleEndian(key);
+#else
+        key;
+#endif
+    return BSL_HASH_CodeCalc(&convertKey, sizeof(convertKey)) % bktSize;
 }
 
 bool BSL_HASH_MatchInt(uintptr_t key1, uintptr_t key2)
