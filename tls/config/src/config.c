@@ -271,6 +271,7 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
         if (destConfig->groupInfo == NULL) {
             return HITLS_MEMALLOC_FAIL;
         }
+        destConfig->groupInfoSize = srcConfig->groupInfolen;
         for (uint32_t i = 0; i < srcConfig->groupInfolen; i++) {
             destConfig->groupInfo[i] = srcConfig->groupInfo[i];
             destConfig->groupInfo[i].name =
@@ -278,9 +279,8 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
             if (destConfig->groupInfo[i].name == NULL) {
                 return HITLS_MEMALLOC_FAIL;
             }
+            destConfig->groupInfolen++;
         }
-        destConfig->groupInfoSize = srcConfig->groupInfolen;
-        destConfig->groupInfolen = srcConfig->groupInfolen;
     }
 #endif
     return HITLS_SUCCESS;
@@ -318,6 +318,7 @@ static int32_t SignAlgorithmsCfgDeepCopy(HITLS_Config *destConfig, const HITLS_C
         if (destConfig->sigSchemeInfo == NULL) {
             return HITLS_MEMALLOC_FAIL;
         }
+        destConfig->sigSchemeInfoSize = srcConfig->sigSchemeInfolen;
         for (uint32_t i = 0; i < srcConfig->sigSchemeInfolen; i++) {
             destConfig->sigSchemeInfo[i] = srcConfig->sigSchemeInfo[i];
             destConfig->sigSchemeInfo[i].name =
@@ -325,9 +326,8 @@ static int32_t SignAlgorithmsCfgDeepCopy(HITLS_Config *destConfig, const HITLS_C
             if (destConfig->sigSchemeInfo[i].name == NULL) {
                 return HITLS_MEMALLOC_FAIL;
             }
+            destConfig->sigSchemeInfolen++;
         }
-        destConfig->sigSchemeInfoSize = srcConfig->sigSchemeInfolen;
-        destConfig->sigSchemeInfolen = srcConfig->sigSchemeInfolen;
     }
 #endif
     return HITLS_SUCCESS;

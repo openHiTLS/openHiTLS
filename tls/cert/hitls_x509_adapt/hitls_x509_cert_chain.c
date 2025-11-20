@@ -29,11 +29,14 @@
 static int32_t BuildArrayFromList(HITLS_X509_List *list, HITLS_CERT_X509 **listArray, uint32_t *num)
 {
     HITLS_X509_Cert *elemt = NULL;
-    int32_t i = 0;
+    uint32_t i = 0;
     int32_t ret;
 
     for (elemt = BSL_LIST_GET_FIRST(list); elemt != NULL; elemt = BSL_LIST_GET_NEXT(list), i++) {
         int ref = 0;
+        if (i >= *num) {
+            break;
+        }
         ret = HITLS_X509_CertCtrl(elemt, HITLS_X509_REF_UP, (void *)&ref, (int32_t)sizeof(int));
         if (ret != HITLS_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
@@ -76,7 +79,6 @@ int32_t HITLS_X509_Adapt_BuildCertChain(HITLS_Config *config, HITLS_CERT_Store *
     HITLS_CERT_X509 **list, uint32_t *num)
 {
     (void)config;
-    *num = 0;
     HITLS_X509_List *certChain = NULL;
     int32_t ret = HITLS_X509_CertChainBuild((HITLS_X509_StoreCtx *)store, false, cert, &certChain);
     if (ret != HITLS_SUCCESS) {
