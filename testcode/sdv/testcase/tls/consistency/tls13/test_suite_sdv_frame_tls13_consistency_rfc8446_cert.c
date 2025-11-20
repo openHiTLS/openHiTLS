@@ -2369,3 +2369,32 @@ EXIT:
 }
 /* END_CASE */
 
+
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_SIGALG_SELECT_TC001(int ecPrefer)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+
+    uint16_t signAlgs1[] = {CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
+    uint16_t signAlgs2[] = {CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256, CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256};
+    uint16_t *clientSign = ecPrefer == 1 ? signAlgs2 : signAlgs1;
+    uint16_t *serverSign = ecPrefer == 1 ? signAlgs1 : signAlgs2;
+
+    HITLS_CFG_SetSignature(config, clientSign, sizeof(signAlgs1) / sizeof(uint16_t));
+    FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    HITLS_CFG_SetSignature(config, serverSign, sizeof(signAlgs2) / sizeof(uint16_t));
+    FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    HITLS_SignHashAlgo peerSignScheme;
+    HITLS_GetPeerSignScheme(client->ssl, &peerSignScheme);
+    ASSERT_EQ(ecPrefer == 1 ? CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256 : CERT_SIG_SCHEME_RSA_PSS_RSAE_SHA256, peerSignScheme);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
