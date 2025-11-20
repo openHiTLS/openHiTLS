@@ -36,6 +36,15 @@
     #error "[HiTLS] Integrity check must work with TLS13"
 #endif
 
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) && defined(HITLS_TLS_FEATURE_SESSION_TICKET) && \
+    !defined(HITLS_TLS_FEATURE_SESSION_ID)
+    #error "[HiTLS] session ticket must work with session id in tls12 and blow"
+#endif
+
+#if defined(HITLS_TLS_FEATURE_SNI) && !defined(HITLS_TLS_FEATURE_SESSION)
+    #error "[HiTLS] SNI must work with session"
+#endif
+
 #if defined(HITLS_TLS_SUITE_AES_128_GCM_SHA256)
 #if !defined(HITLS_CRYPTO_SHA256) || !defined(HITLS_CRYPTO_GCM) || !defined(HITLS_CRYPTO_AES)
 #error "[HiTLS] cipher suite HITLS_TLS_SUITE_AES_128_GCM_SHA256 must work with sha256, gcm, aes"

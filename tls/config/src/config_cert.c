@@ -871,7 +871,7 @@ static int32_t CreateAndAddTrustedCANode(HITLS_Config *config, HITLS_CERT_X509 *
 int32_t HITLS_CFG_ParseCAList(HITLS_Config *config, const char *input, uint32_t inputLen, HITLS_ParseType inputType,
                               HITLS_ParseFormat format, HITLS_TrustedCAList **caList)
 {
-    if (config == NULL || input == NULL || inputLen == 0) {
+    if (config == NULL || input == NULL || inputLen == 0 || caList == NULL) {
         return HITLS_NULL_INPUT;
     }
     int32_t ret;

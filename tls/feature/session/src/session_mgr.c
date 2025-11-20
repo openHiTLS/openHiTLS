@@ -333,8 +333,7 @@ HITLS_Session *SESSMGR_Find(TLS_Ctx *ctx, uint8_t *sessionId, uint8_t sessionIdS
         if (sess != NULL) {
             if (!HITLS_SESS_IsResumable(sess)) {
                 HITLS_SESS_Free(sess);
-                sess = NULL;
-                goto EXIT;
+                return NULL;
             }
             if (copy != 0) {
                 sess = HITLS_SESS_Dup(sess);
@@ -347,11 +346,10 @@ HITLS_Session *SESSMGR_Find(TLS_Ctx *ctx, uint8_t *sessionId, uint8_t sessionIdS
         }
     }
 #endif /* HITLS_TLS_FEATURE_SESSION_CACHE_CB */
-EXIT:
     return sess;
 }
-
 #endif /* HITLS_TLS_FEATURE_SESSION_ID */
+
 /* Search for the matched session without checking the validity of the session */
 bool SESSMGR_HasMacthSessionId(TLS_SessionMgr *mgr, uint8_t *sessionId, uint8_t sessionIdSize)
 {
