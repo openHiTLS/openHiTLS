@@ -2274,7 +2274,15 @@ void SDV_TLS13_RFC8446_SHA1_EE_CERT_TC001(void)
     HITLS_SetSecurityLevel(client->ssl, 1);
     HITLS_SetSecurityLevel(server->ssl, 1);
 
-    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_CERT_ERR_INSECURE_SIG_ALG);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_SEND_CERTIFICATE), HITLS_SUCCESS);
+    int32_t ret = HITLS_Accept(server->ssl);
+    ASSERT_EQ(ret, HITLS_CERT_ERR_INSECURE_SIG_ALG);
+
+    ALERT_Info alertInfo = {0};
+    ALERT_GetInfo(server->ssl, &alertInfo);
+    ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alertInfo.description, ALERT_INTERNAL_ERROR);
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);

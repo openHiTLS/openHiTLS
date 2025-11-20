@@ -33,8 +33,6 @@
 #include "stub_replace.h"
 #include "hitls_pki_utils.h"
 
-STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
-
 static char g_sm2DefaultUserid[] = "1234567812345678";
 /* END_HEADER */
 
@@ -1197,7 +1195,7 @@ static int32_t SetCrlAllRevoked(HITLS_X509_Crl *crl, int8_t reasonCode, bool use
     HITLS_X509_RevokeExtTime invalidTimeExt = {false, invalidTime};
     ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_INVALID_TIME,
         &invalidTimeExt, sizeof(HITLS_X509_RevokeExtTime)), HITLS_PKI_SUCCESS);
-        
+
     // Set certificate issuer
     HITLS_X509_RevokeExtCertIssuer certIssuer = {true, NULL};
     certIssuer.issuerName = GenGeneralNameList();
@@ -1254,7 +1252,7 @@ static int32_t SetAllCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool includ
         for (size_t i = 0; i < sizeof(reasonCodes)/sizeof(reasonCodes[0]); i++) {
             ASSERT_EQ(SetCrlAllRevoked(crl, reasonCodes[i], useGMT), HITLS_PKI_SUCCESS);
         }
-        
+
         // Set AKI extension
         HITLS_X509_ExtSki ski = {0};
         BSL_Buffer serialNum = { NULL, 0 };
@@ -1283,7 +1281,7 @@ static int32_t CompareCrlExtLists(BslList *extList1, BslList *extList2)
     HITLS_X509_ExtEntry **extNode2 = BSL_LIST_First(extList2);
     ASSERT_NE(*extNode1, NULL);
     ASSERT_NE(*extNode2, NULL);
-    
+
     for (int32_t count = 0; count < BSL_LIST_COUNT(extList1); count++) {
         ASSERT_EQ((*extNode1)->critical, (*extNode2)->critical);
         ASSERT_EQ((*extNode1)->extnId.tag, (*extNode2)->extnId.tag);
@@ -1571,7 +1569,7 @@ static void *STUB_BSL_SAL_Malloc(uint32_t size)
 /**
  * @test SDV_X509_CRL_PARSE_STUB_TC001
  * title 1. Test the decode crl with stub malloc fail
- * 
+ *
  */
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_STUB_TC001(int format, char *path, int maxTriggers)
@@ -1579,7 +1577,9 @@ void SDV_X509_CRL_PARSE_STUB_TC001(int format, char *path, int maxTriggers)
     TestMemInit();
     BSL_GLOBAL_Init();
     HITLS_X509_Crl *crl = NULL;
-    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    FuncStubInfo tmpRpInfo = {0};
+    STUB_Init();
+    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
     test = maxTriggers;
     for (int i = maxTriggers; i > 0; i--) {
         marked = 0;
@@ -1588,7 +1588,7 @@ void SDV_X509_CRL_PARSE_STUB_TC001(int format, char *path, int maxTriggers)
     }
 EXIT:
     HITLS_X509_CrlFree(crl);
-    STUB_RESTORE(BSL_SAL_Malloc);
+    STUB_Reset(&tmpRpInfo);
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
