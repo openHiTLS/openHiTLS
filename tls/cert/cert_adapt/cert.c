@@ -446,12 +446,35 @@ static int32_t SelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_UNREGISTERED_CALLBACK, BINLOG_ID16312, "unregistered callback");
     }
 
+    bool supportServer = ctx->config.tlsConfig.isSupportServerPreference;
+    uint32_t baseSignAlgorithmsSize = supportServer ? ctx->config.tlsConfig.signAlgorithmsSize : info->signSchemeNum;
+    const uint16_t *baseSignAlgorithms = supportServer ? ctx->config.tlsConfig.signAlgorithms : info->signSchemeList;
+    for (uint32_t i = 0; i < baseSignAlgorithmsSize; i++) {
+        const TLS_SigSchemeInfo *signInfo = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, baseSignAlgorithms[i]);
+        if (signInfo == NULL || CheckCertType(info->certType, signInfo->keyType) != HITLS_SUCCESS) {
+            continue;
+        }
+        CERT_Pair *certPair = NULL;
+        ret = BSL_HASH_At(mgrCtx->certPairs, (uintptr_t)signInfo->keyType, (uintptr_t *)&certPair);
+        if (ret != HITLS_SUCCESS || certPair == NULL || certPair->cert == NULL || certPair->privateKey == NULL) {
+            continue;
+        }
+        ret = SAL_CERT_CheckCertInfo(ctx, info, certPair->cert, true, true);
+        if (ret != HITLS_SUCCESS) {
+            continue;
+        }
+        mgrCtx->currentCertKeyType = signInfo->keyType;
+        return HITLS_SUCCESS;
+    }
+
     BSL_HASH_Hash *certPairs = mgrCtx->certPairs;
     BSL_HASH_Iterator it = BSL_HASH_IterBegin(certPairs);
     while (it != BSL_HASH_IterEnd(certPairs)) {
         uint32_t keyType = (uint32_t)BSL_HASH_HashIterKey(certPairs, it);
-        CERT_Pair *certPair = (CERT_Pair *)BSL_HASH_IterValue(certPairs, it);
-        if (certPair == NULL || certPair->cert == NULL) {
+        uintptr_t ptr = BSL_HASH_IterValue(certPairs, it);
+        CERT_Pair *certPair = (CERT_Pair *)ptr;
+        if (certPair == NULL || certPair->cert == NULL || certPair->privateKey == NULL ||
+            CheckCertType(info->certType, keyType) != HITLS_SUCCESS) {
             it = BSL_HASH_IterNext(certPairs, it);
             continue;
         }
