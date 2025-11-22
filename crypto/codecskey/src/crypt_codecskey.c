@@ -316,6 +316,13 @@ int32_t ProviderDecodeBuffKeyEx(CRYPT_EAL_LibCtx *libCtx, const char *attrName, 
     char *targetFormat = "OBJECT";
     uint32_t index = 0;
     BSL_Param *outParam = NULL;
+    /**
+     * isFreeOutData controls ownership transfer:
+     * - Initialized to false, meaning poolCtx owns decoded objects by default
+     * - On success: SET_FLAG_FREE_OUT_DATA(false) tells poolCtx to NOT free tmpPKey,
+     *   transferring ownership to caller via *ealPKey = tmpPKey
+     * - On failure: poolCtx retains ownership, CRYPT_DECODE_PoolFreeCtx() cleans up all resources
+     */
     bool isFreeOutData = false;
     BSL_Param input[3] = {{0}, {0}, BSL_PARAM_END};
     CRYPT_EAL_PkeyCtx *tmpPKey = NULL;

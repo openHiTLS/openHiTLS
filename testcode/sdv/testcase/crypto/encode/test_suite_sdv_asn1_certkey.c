@@ -43,6 +43,7 @@
 
 #ifdef HITLS_CRYPTO_PROVIDER
 STUB_DEFINE_RET2(void *, BSL_SAL_Calloc, uint32_t, uint32_t);
+STUB_DEFINE_RET1(CRYPT_PKEY_AlgId, CRYPT_EAL_PkeyGetId, const CRYPT_EAL_PkeyCtx *);
 #endif
 
 // clang-format off
@@ -1107,3 +1108,114 @@ EXIT:
     BSL_GLOBAL_DeInit();
 #endif
 }
+/* END_CASE */
+
+#ifdef HITLS_CRYPTO_PROVIDER
+static CRYPT_PKEY_AlgId g_stubPkeyGetIdRetVal = CRYPT_PKEY_RSA;
+
+static CRYPT_PKEY_AlgId STUB_CRYPT_EAL_PkeyGetId(const CRYPT_EAL_PkeyCtx *pkey)
+{
+    (void)pkey;
+    return g_stubPkeyGetIdRetVal;
+}
+#endif
+
+/**
+ * @test SDV_CRYPT_EAL_PROVIDER_DECODE_FILE_KEY_STUB_TC001
+ * @title Test CRYPT_EAL_ProviderDecodeFileKey with CRYPT_EAL_PkeyGetId stub
+ * @precon None
+ * @brief
+ *    1. Decode a key file with provider, expect success
+ *    2. Replace CRYPT_EAL_PkeyGetId with stub that returns mismatched alg ID
+ *    3. Decode again with specific pkeyAlgId, expect CRYPT_EAL_ERR_ALGID error
+ *    4. Restore stub and verify normal behavior
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_PROVIDER_DECODE_FILE_KEY_STUB_TC001(char *path, char *formatStr, char *typeStr, int expectedAlgId)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)formatStr;
+    (void)typeStr;
+    (void)expectedAlgId;
+    SKIP_TEST();
+#else
+    RegisterLogFunc();
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    CRYPT_EAL_PkeyCtx *pkeyCtx2 = NULL;
+
+    /* Step 1: Normal decode without stub, expect success */
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, BSL_CID_UNKNOWN, formatStr, typeStr, path,
+        NULL, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(pkeyCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(pkeyCtx), expectedAlgId);
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    pkeyCtx = NULL;
+
+    /* Step 2: Replace CRYPT_EAL_PkeyGetId with stub returning different alg ID */
+    g_stubPkeyGetIdRetVal = CRYPT_PKEY_SM2;  /* Return a different alg ID */
+    STUB_REPLACE(CRYPT_EAL_PkeyGetId, STUB_CRYPT_EAL_PkeyGetId);
+
+    /* Step 3: Decode with specific pkeyAlgId (RSA), stub returns SM2 -> should fail with CRYPT_EAL_ERR_ALGID */
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, CRYPT_PKEY_RSA, formatStr, typeStr, path,
+        NULL, &pkeyCtx2), CRYPT_EAL_ERR_ALGID);
+
+    /* Step 4: Restore stub */
+    STUB_RESTORE(CRYPT_EAL_PkeyGetId);
+
+    /* Step 5: Decode again with BSL_CID_UNKNOWN (no alg check), should succeed */
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, BSL_CID_UNKNOWN, formatStr, typeStr, path,
+        NULL, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(pkeyCtx != NULL);
+
+EXIT:
+    STUB_RESTORE(CRYPT_EAL_PkeyGetId);
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx2);
+    BSL_GLOBAL_DeInit();
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPT_EAL_PROVIDER_DECODE_FILE_KEY_STUB_TC002
+ * @title Test CRYPT_EAL_ProviderDecodeFileKey with CRYPT_EAL_PkeyGetId stub returning matching alg ID
+ * @precon None
+ * @brief
+ *    1. Replace CRYPT_EAL_PkeyGetId with stub returning matching alg ID
+ *    2. Decode key file with matching pkeyAlgId, expect success
+ *    3. Restore stub
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_PROVIDER_DECODE_FILE_KEY_STUB_TC002(char *path, char *formatStr, char *typeStr, int pkeyAlgId)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)formatStr;
+    (void)typeStr;
+    (void)pkeyAlgId;
+    SKIP_TEST();
+#else
+    RegisterLogFunc();
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    /* Replace CRYPT_EAL_PkeyGetId with stub returning same alg ID as requested */
+    g_stubPkeyGetIdRetVal = pkeyAlgId;
+    STUB_REPLACE(CRYPT_EAL_PkeyGetId, STUB_CRYPT_EAL_PkeyGetId);
+
+    /* Decode with specific pkeyAlgId, stub returns matching alg ID -> should succeed */
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeFileKey(NULL, NULL, pkeyAlgId, formatStr, typeStr, path,
+        NULL, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(pkeyCtx != NULL);
+
+EXIT:
+    STUB_RESTORE(CRYPT_EAL_PkeyGetId);
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_GLOBAL_DeInit();
+#endif
+}
+/* END_CASE */
