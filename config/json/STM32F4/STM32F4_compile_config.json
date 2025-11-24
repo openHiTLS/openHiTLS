@@ -16,6 +16,7 @@
         },
         "CC_DEFINE_FLAGS": {
             "CC_FLAGS_ADD": [
+                "-DHITLS_CRYPTO_ENTROPY_DEVRANDOM",
                 "-DHITLS_CRYPTO_NO_AUXVAL"
             ]
         }
