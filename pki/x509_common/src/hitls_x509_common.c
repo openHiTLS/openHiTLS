@@ -105,6 +105,10 @@ static int32_t HITLS_X509_ParseNameNode(BSL_ASN1_Buffer *asn, HITLS_X509_NameNod
 {
     uint8_t *temp = asn->buff;
     uint32_t tempLen = asn->len;
+    if (tempLen == 0) {
+        BSL_ERR_PUSH_ERROR(BSL_ASN1_ERR_DECODE_LEN);
+        return BSL_ASN1_ERR_DECODE_LEN;
+    }
     // parse oid
     if (*temp != BSL_ASN1_TAG_OBJECT_ID) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_NAME_OID);
