@@ -1179,7 +1179,7 @@ void SDV_HITLS_GEN_CSR_CERT_TC001()
     defined(HITLS_PKI_X509_CSR)
     char *path = "tmpca.csr";
     char *pathcakey = "tmpcakey.pem";
-    char *path1 = "tmpca.cert";
+    char *path1 = "tmpca1.cert";
     HITLS_X509_Csr *csr = NULL;
     BSL_Buffer encode = {0};
     HITLS_X509_DN dnName1[1] = {{BSL_CID_AT_COMMONNAME, (uint8_t *)"ROOT", 2}};
@@ -1302,7 +1302,7 @@ void SDV_HITLS_GEN_CSR_MIDCERT_TC001()
     csr = HITLS_X509_CsrNew();
     ASSERT_NE(csr, NULL);
 
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, "tmpca.cert", &cacert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, "tmpca1.cert", &cacert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, "tmpcakey.pem", NULL, 0, &capkey), CRYPT_SUCCESS);
 
     // set csr info
@@ -1486,7 +1486,7 @@ void SDV_HITLS_CERT_CHAIN_FUNC_TC001()
     ret = HITLS_AddCertToStoreTest("tmpmid.cert", store, &midcert);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     HITLS_X509_Cert *cacert = NULL;
-    ret = HITLS_AddCertToStoreTest("tmpca.cert", store, &cacert);
+    ret = HITLS_AddCertToStoreTest("tmpca1.cert", store, &cacert);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     HITLS_X509_List *chain = NULL;
     ret = HITLS_X509_CertChainBuild(store, true, entity, &chain);
@@ -1501,7 +1501,7 @@ EXIT:
     HITLS_X509_StoreCtxFree(store);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     remove("tmpee.cert");
-    remove("tmpca.cert");
+    remove("tmpca1.cert");
     remove("tmpmid.cert");
 #else
     SKIP_TEST();

@@ -18,12 +18,12 @@
 
 #include <stdint.h>
 #include <unistd.h>
-#ifdef HITLS_CRYPTO_ENTROPY_GETENTROPY
-#include <sys/random.h>
-#endif
 #ifdef HITLS_CRYPTO_ENTROPY_DEVRANDOM
 #include <fcntl.h>
 #include <errno.h>
+#endif
+#ifdef HITLS_CRYPTO_ENTROPY_GETENTROPY
+#include <sys/syscall.h>
 #endif
 #include "securec.h"
 #include "bsl_err_internal.h"
@@ -38,9 +38,15 @@ uint32_t ENTROPY_SysEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen)
 #if defined(HITLS_CRYPTO_ENTROPY_GETENTROPY) || defined(HITLS_CRYPTO_ENTROPY_DEVRANDOM)
     uint32_t res = 0;
 #if defined(HITLS_CRYPTO_ENTROPY_GETENTROPY)
-    if (getentropy(buf, bufLen) == 0) {
-        return bufLen;
+    extern int getentropy (void *__buffer, size_t __length) __attribute__((weak));
+    if (getentropy != NULL) {
+        if (getentropy(buf, bufLen) == 0) {
+            return bufLen;
+        }
     }
+#if defined(__NR_getrandom)
+    return (uint32_t)syscall(__NR_getrandom, buf, bufLen, 0);
+#endif
 #endif
 
 #if defined(HITLS_CRYPTO_ENTROPY_DEVRANDOM)
