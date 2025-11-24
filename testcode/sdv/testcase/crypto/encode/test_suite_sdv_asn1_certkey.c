@@ -919,11 +919,11 @@ EXIT:
 
 static int32_t test = 0;
 static int32_t marked = 0;
-static void *STUB_BSL_SAL_Calloc(uint32_t num, uint32_t size)
+static void *STUB_BSL_SAL_Malloc(uint32_t size)
 {
     if (marked <= test) {
         marked++;
-        return calloc(num, size);
+        return malloc(size);
     }
     return NULL;
 }
@@ -951,7 +951,6 @@ void SDV_BSL_ASN1_PARSE_BUFF_STUB_TC001(char *formatStr, char *typeStr, char *pa
     CRYPT_RandRegistEx(RandFuncEx);
     uint8_t *data = NULL;
     uint32_t dataLen = 0;
-    FuncStubInfo tmpRpInfo;
     ASSERT_EQ(BSL_SAL_ReadFile(path, &data, &dataLen), BSL_SUCCESS);
     BSL_Buffer encode = {data, dataLen};
     BSL_Buffer pass = {password->x, password->len};
@@ -959,20 +958,18 @@ void SDV_BSL_ASN1_PARSE_BUFF_STUB_TC001(char *formatStr, char *typeStr, char *pa
     test = maxTriggers;
     marked = 0;
     STUB_Init();
-    STUB_Replace(&tmpRpInfo, BSL_SAL_Calloc, STUB_BSL_SAL_Calloc);
+    FuncStubInfo tmpRpInfo;
+    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
     for (int i = maxTriggers; i > 0; i--) {
         marked = 0;
         test--;
         ASSERT_NE(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, formatStr, typeStr, &encode,
             &pass, &pkeyCtx), CRYPT_SUCCESS);
-        CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
-        pkeyCtx = NULL;
     }
 EXIT:
-    printf("final marked=%d, test=%d\n", marked, test);
     STUB_Reset(&tmpRpInfo);
     BSL_SAL_FREE(data);
-    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     BSL_GLOBAL_DeInit();
 #endif
 }
+/* END_CASE */
