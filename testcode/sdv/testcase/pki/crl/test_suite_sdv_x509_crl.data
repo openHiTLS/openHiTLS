@@ -414,3 +414,30 @@ SDV_X509_CRL_PARSE_STUB_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sh
 
 SDV_X509_CRL_PARSE_STUB_TC001 revokelist ext
 SDV_X509_CRL_PARSE_STUB_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/pem/crl/crl_v2.mul3.crl":49
+
+SDV_X509_CRL_ENCODE_STUB_TC001 v1 cert ed25519
+SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/ed25519/ed25519.ca.pem":"../testdata/cert/ed25519/ed25519.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SHA512:0:"tmp-ed25519.crl":0:3
+
+SDV_X509_CRL_ENCODE_STUB_TC001 v1 cert rsa_p1_v1.crt.der
+SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p1_v1.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p1.key.der":CRYPT_PRIKEY_RSA:0:CRYPT_MD_SHA256:0:"tmp-rsav1.crl":0:3
+
+SDV_X509_CRL_ENCODE_STUB_TC001 v3 cert rsa_p8.crt.der
+SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SHA256:1:"tmp-rsav2.crl":0:3
+
+SDV_X509_CRL_ENCODE_STUB_TC001 v3 cert sm2.crt.der
+SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/asn1/sm2_cert/sm2.crt.der":"../testdata/cert/asn1/sm2_cert/sm2.key.der":CRYPT_PRIKEY_ECC:0:CRYPT_MD_SM3:1:"tmp-sm2.crl":0:3
+
+SDV_X509_CRL_ENCODE_STUB_TC001 v3 cert ecdsa_sha384.crt.der
+SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.crt.der":"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SHA384:1:"tmp-ec.crl":0:3
+
+SDV_X509_CRL_ENCODE_STUB_TC001 v3 cert rsa_pss.crt.der
+SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/asn1/rsa_pss_cert/rsa_pss.crt.der":"../testdata/cert/asn1/rsa_pss_cert/rsa_pss.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_EMSA_PSS:CRYPT_MD_SHA256:0:"tmp-pss.crl":0:12
+
+SDV_X509_CRL_ENCODE_STUB_TC001 v3 cert rsa -- rsa_pss.crt.der
+SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_EMSA_PSS:CRYPT_MD_SHA256:1:"tmp-rsa-pss.crl":0:12
+
+SDV_X509_CRL_ENCODE_STUB_TC001 v2 cert rsa -- rsa_pss-aki.crt.der
+SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/asn1/rsa_cert/inter2.mul.crt":"../testdata/cert/asn1/rsa_cert/inter2.mul.key":CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_EMSA_PSS:CRYPT_MD_SHA256:1:"tmp-rsa-pss-aki.crl":0:12
+
+SDV_X509_CRL_ENCODE_STUB_TC001 v3 cert sm2 with userid
+SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/sm2_with_userid/ca.crt":"../testdata/cert/sm2_with_userid/ca.key":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SM3:0:"tmp-sm2-withuserId.crl":1:3

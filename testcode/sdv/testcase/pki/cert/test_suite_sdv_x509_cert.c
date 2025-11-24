@@ -38,6 +38,9 @@
 /* ============================================================================
  * Stub Definitions
  * ============================================================================ */
+#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_CRYPTO_PROVIDER)
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
+#endif
 STUB_DEFINE_RET2(int32_t, HITLS_X509_ParseCertTbs, BSL_ASN1_Buffer *, HITLS_X509_Cert *);
 
 /* BEGIN_CASE */
@@ -1249,5 +1252,50 @@ void SDV_X509_CERT_GET_BCONS_TEST_TC002(int format, char *path)
         HITLS_X509_ERR_EXT_NO_BCONS);
 EXIT:
     HITLS_X509_CertFree(cert);
+}
+/* END_CASE */
+
+#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_CRYPTO_PROVIDER)
+
+static int32_t test = 0;
+static int32_t marked = 0;
+
+static void *STUB_BSL_SAL_Malloc(uint32_t size)
+{
+    if (marked <= test) {
+        marked++;
+        return malloc(size);
+    }
+    return NULL;
+}
+#endif
+
+/**
+ * @test SDV_X509_CERT_PARSE_STUB_TC001
+ * title 1. Test the cert parse with stub malloc fail
+ *
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_STUB_TC001(int format, char *path, int maxTriggers)
+{
+#if !defined(HITLS_PKI_X509_CRT_PARSE) || !defined(HITLS_CRYPTO_PROVIDER)
+    (void)format;
+    (void)path;
+    (void)maxTriggers;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    HITLS_X509_Cert *cert = NULL;
+    test = maxTriggers;
+    marked = 0;
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    for (int i = 208; i > 0; i--) {
+        marked = 0;
+        test--;
+        ASSERT_NE(HITLS_X509_CertParseFile(format, path, &cert), HITLS_PKI_SUCCESS);
+    }
+EXIT:
+    STUB_RESTORE(BSL_SAL_Malloc);
+#endif
 }
 /* END_CASE */

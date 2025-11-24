@@ -1950,3 +1950,62 @@ EXIT:
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
+
+/**
+ * @test SDV_X509_CRL_ENCODE_STUB_TC001
+ * title 1. Test the encode crl with stub malloc fail
+ *
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_ENCODE_STUB_TC001(char *cert, char *key, int keytype, int pad, int mdId, int isV2,
+    char *tmp, int isUseSm2UserId, int maxTriggers)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_Crl *parseCrl = NULL;
+    HITLS_X509_Cert *issuerCert = NULL;
+    CRYPT_EAL_PkeyCtx *prvKey = NULL;
+    HITLS_X509_SignAlgParam algParam = {0};
+    TestRandInit();
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, keytype, key, NULL, 0, &prvKey), 0);
+
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    ASSERT_EQ(SetCrl(crl, issuerCert, (bool)isV2), 0);
+    if (pad == CRYPT_EMSA_PSS) {
+        algParam.algId = BSL_CID_RSASSAPSS;
+        CRYPT_RSA_PssPara pssParam = {0};
+        pssParam.mdId = mdId;
+        pssParam.mgfId = mdId;
+        pssParam.saltLen = 32;
+        algParam.rsaPss = pssParam;
+    } else if (isUseSm2UserId != 0) {
+        algParam.algId = BSL_CID_SM2DSAWITHSM3;
+        algParam.sm2UserId.data = (uint8_t *)g_sm2DefaultUserid;
+        algParam.sm2UserId.dataLen = (uint32_t)strlen(g_sm2DefaultUserid);
+    }
+
+    if (pad == CRYPT_EMSA_PSS || isUseSm2UserId != 0) {
+        ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, &algParam, crl), HITLS_PKI_SUCCESS);
+    } else {
+        ASSERT_EQ(HITLS_X509_CrlSign(mdId, prvKey, NULL, crl), HITLS_PKI_SUCCESS);
+    }
+    test = maxTriggers;
+    marked = 0;
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    ASSERT_NE(crl->signature.buff, NULL);
+    ASSERT_NE(crl->signature.len, 0);
+    for (int i = maxTriggers; i > 0; i--) {
+        marked = 0;
+        test--;
+        ASSERT_NE(HITLS_X509_CrlGenFile(BSL_FORMAT_ASN1, crl, tmp), HITLS_PKI_SUCCESS);
+    }
+
+EXIT:
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CrlFree(parseCrl);
+    HITLS_X509_CertFree(issuerCert);
+    CRYPT_EAL_PkeyFreeCtx(prvKey);
+    STUB_RESTORE(BSL_SAL_Malloc);
+}
+/* END_CASE */

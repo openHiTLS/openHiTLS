@@ -42,7 +42,7 @@
 /* END_HEADER */
 
 #ifdef HITLS_CRYPTO_PROVIDER
-STUB_DEFINE_RET2(void *, BSL_SAL_Calloc, uint32_t, uint32_t);
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 STUB_DEFINE_RET1(CRYPT_PKEY_AlgId, CRYPT_EAL_PkeyGetId, const CRYPT_EAL_PkeyCtx *);
 #endif
 
@@ -1056,11 +1056,11 @@ EXIT:
 
 static int32_t test = 0;
 static int32_t marked = 0;
-static void *STUB_BSL_SAL_Calloc(uint32_t num, uint32_t size)
+static void *STUB_BSL_SAL_Malloc(uint32_t size)
 {
     if (marked <= test) {
         marked++;
-        return calloc(num, size);
+        return malloc(size);
     }
     return NULL;
 }
@@ -1094,7 +1094,7 @@ void SDV_BSL_ASN1_PARSE_BUFF_STUB_TC001(char *formatStr, char *typeStr, char *pa
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
     test = maxTriggers;
     marked = 0;
-    STUB_REPLACE(BSL_SAL_Calloc, STUB_BSL_SAL_Calloc);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
     for (int i = maxTriggers; i > 0; i--) {
         marked = 0;
         test--;
@@ -1103,8 +1103,7 @@ void SDV_BSL_ASN1_PARSE_BUFF_STUB_TC001(char *formatStr, char *typeStr, char *pa
     }
 EXIT:
     BSL_SAL_FREE(data);
-    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
-    STUB_RESTORE(BSL_SAL_Calloc);
+    STUB_RESTORE(BSL_SAL_Malloc);
     BSL_GLOBAL_DeInit();
 #endif
 }

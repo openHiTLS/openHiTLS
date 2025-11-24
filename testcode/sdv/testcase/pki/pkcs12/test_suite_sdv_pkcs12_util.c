@@ -32,7 +32,13 @@
 #include "stub_utils.h"
 #include "bsl_list_internal.h"
 #include "crypt_eal_rand.h"
+#include "stub_utils.h"
+#include "hitls_pki_utils.h"
 /* END_HEADER */
+
+#if (defined(HITLS_PKI_PKCS12_GEN) || defined(HITLS_PKI_PKCS12_PARSE)) && defined(HITLS_CRYPTO_PROVIDER)
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
+#endif
 
 /* Platform-specific dynamic library extension for testing */
 #ifdef __APPLE__
@@ -455,6 +461,95 @@ EXIT:
     HITLS_PKCS12_Free(p12);
     CRYPT_EAL_RandDeinitEx(libCtx);
     CRYPT_EAL_LibCtxFree(libCtx);
+#endif
+}
+/* END_CASE */
+
+#if (defined(HITLS_PKI_PKCS12_GEN) || defined(HITLS_PKI_PKCS12_PARSE)) && defined(HITLS_CRYPTO_PROVIDER)
+static int32_t test = 0;
+static int32_t marked = 0;
+static void *STUB_BSL_SAL_Malloc(uint32_t size)
+{
+    if (marked <= test) {
+        marked++;
+        return malloc(size);
+    }
+    return NULL;
+}
+#endif
+/**
+ * @test SDV_PKCS12_PARSE_STUB_TC001
+ * title 1. Test the parse p12 with stub malloc fail
+ *
+ */
+/* BEGIN_CASE */
+void SDV_PKCS12_PARSE_STUB_TC001(Hex *mulBag, int hasMac, int maxTriggers)
+{
+#if !defined(HITLS_PKI_PKCS12_PARSE) || !defined(HITLS_CRYPTO_PROVIDER)
+    (void)mulBag;
+    (void)hasMac;
+    (void)maxTriggers;
+    SKIP_TEST();
+#else
+    char *pwd = "123456";
+    BSL_Buffer encPwd = {.data = (uint8_t *)pwd, .dataLen = strlen(pwd)};
+    HITLS_PKCS12_PwdParam pwdParam = {.encPwd = &encPwd, .macPwd = &encPwd};
+    HITLS_PKCS12 *p12 = NULL;
+    BSL_Buffer buffer = {.data = (uint8_t *)mulBag->x, .dataLen = mulBag->len};
+    test = maxTriggers;
+    marked = 0;
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    for (int i = maxTriggers; i > 0; i--) {
+        marked = 0;
+        test--;
+        ASSERT_NE(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &buffer, &pwdParam, &p12, hasMac == 1), HITLS_PKI_SUCCESS);
+    }
+EXIT:
+    STUB_RESTORE(BSL_SAL_Malloc);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_PKCS12_ENCODE_STUB_TC001
+ * title 1. Test the encode p12 with stub malloc fail
+ *
+ */
+/* BEGIN_CASE */
+void SDV_PKCS12_ENCODE_STUB_TC001(Hex *mulBag, int hasMac, int maxTriggers)
+{
+#if !defined(HITLS_PKI_PKCS12_PARSE) || !defined(HITLS_CRYPTO_PROVIDER)
+    (void)mulBag;
+    (void)hasMac;
+    (void)maxTriggers;
+    SKIP_TEST();
+#else
+    ASSERT_EQ(TestRandInit(), 0);
+    char *pwd = "123456";
+    BSL_Buffer encPwd = {.data = (uint8_t *)pwd, .dataLen = strlen(pwd)};
+    HITLS_PKCS12_PwdParam pwdParam = {.encPwd = &encPwd, .macPwd = &encPwd};
+    HITLS_PKCS12 *p12 = NULL;
+    BSL_Buffer buffer = {.data = (uint8_t *)mulBag->x, .dataLen = mulBag->len};
+    (void)hasMac;
+    CRYPT_Pbkdf2Param pbParam = {BSL_CID_PBES2, BSL_CID_PBKDF2, CRYPT_MAC_HMAC_SM3, CRYPT_CIPHER_AES256_CBC,
+        16, (uint8_t *)pwd, strlen(pwd), 2048};
+    CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
+    HITLS_PKCS12_KdfParam macParam = {8, 2048, BSL_CID_SHA256, (uint8_t *)pwd, strlen(pwd)};
+    HITLS_PKCS12_MacParam paramTest = {.para = &macParam, .algId = BSL_CID_PKCS12KDF};
+    HITLS_PKCS12_EncodeParam encodeParam = {encParam, paramTest};
+    BSL_Buffer output = {0};
+    ASSERT_EQ(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &buffer, &pwdParam, &p12, hasMac == 1), 0);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    test = maxTriggers;
+    marked = 0;
+    for (int i = maxTriggers; i > 0; i--) {
+        marked = 0;
+        test--;
+        ASSERT_NE(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output), HITLS_PKI_SUCCESS);
+    }
+EXIT:
+    STUB_RESTORE(BSL_SAL_Malloc);
+    HITLS_PKCS12_Free(p12);
 #endif
 }
 /* END_CASE */

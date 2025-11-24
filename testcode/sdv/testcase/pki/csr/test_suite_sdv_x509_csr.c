@@ -32,9 +32,13 @@
 #include "bsl_list_internal.h"
 #include "bsl_obj.h"
 #include "crypt_eal_pkey.h"
+#include "stub_utils.h"
 
 /* END_HEADER */
 #define MAX_DATA_LEN 128
+#ifdef HITLS_CRYPTO_PROVIDER
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
+#endif
 
 static char g_sm2DefaultUserid[] = "1234567812345678";
 
@@ -1346,5 +1350,48 @@ void SDV_X509_CSR_EncodeAttrList_SetAKI_FUNC_TC001(char *keyPath, int critical, 
 EXIT:
     HITLS_X509_ExtFree(ext);
     HITLS_X509_CsrFree(parsed);
+}
+/* END_CASE */
+
+#ifdef HITLS_CRYPTO_PROVIDER
+static int32_t test = 0;
+static int32_t marked = 0;
+static void *STUB_BSL_SAL_Malloc(uint32_t size)
+{
+    if (marked <= test) {
+        marked++;
+        return malloc(size);
+    }
+    return NULL;
+}
+#endif
+
+/**
+ * @test SDV_X509_CSR_PARSE_STUB_TC001
+ * title 1. Test the encode crl with stub malloc fail
+ *
+ */
+/* BEGIN_CASE */
+void SDV_X509_CSR_PARSE_STUB_TC001(int format, char *path, int maxTriggers)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)format;
+    (void)path;
+    (void)maxTriggers;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    HITLS_X509_Csr *csr = NULL;
+    test = maxTriggers;
+    marked = 0;
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    for (int i = maxTriggers; i > 0; i--) {
+        marked = 0;
+        test--;
+        ASSERT_NE(HITLS_X509_CsrParseFile(format, path, &csr), CRYPT_SUCCESS);
+    }
+EXIT:
+    STUB_RESTORE(BSL_SAL_Malloc);
+#endif
 }
 /* END_CASE */

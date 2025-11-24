@@ -216,3 +216,31 @@ SDV_X509_CSR_PARSE_FUNC_TC004:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_sha_c
 
 SDV_X509_CSR_PARSE_ATTR_EXTS_TC001
 SDV_X509_CSR_PARSE_ATTR_EXTS_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa1024_withattr.csr":1:0:HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_KEY_CERT_SIGN:"www.example.com":"example.org":"admin@example.com":"ldap://somehost.com/CN=foo":"507DBCF3A58A7593495FE638A91464A09C602631":1:1
+
+SDV_X509_CSR_PARSE_STUB_TC001 #ed25519 csr without attribute
+SDV_X509_CSR_PARSE_STUB_TC001:BSL_FORMAT_PEM:"../testdata/cert/ed25519/ed25519.ca.csr.pem":137
+
+SDV_X509_CSR_PARSE_STUB_TC001 #rsa sha256 csr without attribute
+SDV_X509_CSR_PARSE_STUB_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/csr.pem":169
+
+SDV_X509_CSR_PARSE_STUB_TC001 #ecdsa sha256 csr pem without attribute
+SDV_X509_CSR_PARSE_STUB_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/ecdsa_sha/ec_app256SHA256.csr":198
+
+SDV_X509_CSR_PARSE_STUB_TC001 #ecdsa sha256 csr asn1 without attribute
+SDV_X509_CSR_PARSE_STUB_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_sha_csr/ec_app256SHA256.csr.der":197
+
+SDV_X509_CSR_PARSE_STUB_TC001 #rsa sha256 csr pem with attribute
+SDV_X509_CSR_PARSE_STUB_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_pss_sha/rsa2048_pss_withattr.csr":163
+
+SDV_X509_CSR_PARSE_STUB_TC001 #sm2 csr pem with userid
+SDV_X509_CSR_PARSE_STUB_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/sm2_with_userid/ca.csr":208
+
+SDV_X509_CSR_PARSE_STUB_TC001 #sm2 csr pem without userid
+SDV_X509_CSR_PARSE_STUB_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/sm2/ca.csr":208
+
+SDV_X509_CSR_PARSE_STUB_TC001 #mldsa_44
+SDV_X509_CSR_PARSE_STUB_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/mldsa/mldsa44.csr":139
+
+SDV_X509_CSR_PARSE_STUB_TC001 #rsa_sha224
+SDV_X509_CSR_PARSE_STUB_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_sha/rsa1024_pkcs8_sha224.csr":149
+
