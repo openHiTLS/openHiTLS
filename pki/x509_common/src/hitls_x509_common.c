@@ -881,10 +881,12 @@ int32_t HITLS_X509_CheckAki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt
     if (ret == HITLS_X509_ERR_EXT_NOT_FOUND) {
         return HITLS_PKI_SUCCESS;
     }
-    if (ski.kid.dataLen != aki.kid.dataLen || memcmp(ski.kid.data, aki.kid.data, ski.kid.dataLen) != 0) {
-        HITLS_X509_ClearAuthorityKeyId(&aki);
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH);
-        return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
+    if (aki.kid.dataLen != 0 && aki.kid.data != NULL) {
+        if (ski.kid.dataLen != aki.kid.dataLen || memcmp(ski.kid.data, aki.kid.data, ski.kid.dataLen) != 0) {
+            HITLS_X509_ClearAuthorityKeyId(&aki);
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH);
+            return HITLS_X509_ERR_VFY_AKI_SKI_NOT_MATCH;
+        }
     }
     if (aki.issuerName != NULL) {
         ret = X509_CheckAuthCertIssuer(aki.issuerName, issueName);
