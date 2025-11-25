@@ -524,7 +524,7 @@ int32_t CRYPT_DSA_GetPubKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPub *pub)
 #ifdef HITLS_BSL_PARAMS
 int32_t CRYPT_DSA_SetParaEx(CRYPT_DSA_Ctx *ctx, const BSL_Param *para)
 {
-    if (para == NULL) {
+    if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }

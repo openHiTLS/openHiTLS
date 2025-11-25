@@ -16,6 +16,7 @@
 /* BEGIN_HEADER */
 #include "bsl_sal.h"
 #include "securec.h"
+#include "stub_utils.h"
 #include "hitls_error.h"
 #include "hitls_pki_cert.h"
 #include "hitls_pki_utils.h"
@@ -41,6 +42,13 @@
 
 /* END_HEADER */
 
+/* ============================================================================
+ * Stub Definitions
+ * ============================================================================ */
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
+STUB_DEFINE_RET3(int32_t, BSL_LIST_AddElement, BslList *, void *, BslListPosition);
+STUB_DEFINE_RET5(int32_t, BSL_ASN1_EncodeTemplate, BSL_ASN1_Template *, BSL_ASN1_Buffer *, uint32_t, uint8_t **, uint32_t *);
+
 static void FreeListData(void *data)
 {
     (void)data;
@@ -55,6 +63,37 @@ static void FreeSanListData(void *data)
     if (name->type == HITLS_X509_GN_DNNAME) {
         HITLS_X509_DnListFree((BslList *)name->value.data);
     }
+}
+
+static int32_t g_mallocFail_index = 0;
+static int32_t g_malloc_index = 0;
+
+static void *STUB_BSL_SAL_Malloc(uint32_t size)
+{
+    if (g_malloc_index == g_mallocFail_index) {
+        return NULL;
+    }
+    g_malloc_index++;
+    return malloc(size);
+}
+
+static int32_t STUB_BSL_LIST_AddElement(BslList *pList, void *pData, BslListPosition enPosition)
+{
+    (void)pList;
+    (void)pData;
+    (void)enPosition;
+    return BSL_LIST_FULL;
+}
+
+static int32_t STUB_BSL_ASN1_EncodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asnArr, uint32_t arrNum,
+    uint8_t **encode, uint32_t *encLen)
+{
+    (void)templ;
+    (void)asnArr;
+    (void)arrNum;
+    (void)encode;
+    (void)encLen;
+    return BSL_ASN1_FAIL;
 }
 
 static int32_t TestSignCb(int32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Asn1AlgId *signAlgId, void *obj)
@@ -414,6 +453,75 @@ EXIT:
     HITLS_X509_CertFree(cert);
     BSL_SAL_Free(name.buff);
     BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_Set_Api_TC001(void)
+{
+    HITLS_X509_Ext *ext = NULL;
+    HITLS_X509_ExtBCons bCons = {true, true, 1};
+
+    TestMemInit();
+
+    /* 1 Test set the bcons once */
+    /* 1.1 Test calloc failure in HITLS_X509_SetExtList */
+    ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_TRUE_AND_LOG("ext != NULL 1", ext != NULL);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    g_malloc_index = 1;
+    g_mallocFail_index = 1;
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), BSL_MALLOC_FAIL);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    HITLS_X509_ExtFree(ext);
+
+    /* 1.2 Test dump failure in HITLS_X509_SetExtList */
+    ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_TRUE_AND_LOG("ext != NULL 2", ext != NULL);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    g_malloc_index = 1;
+    g_mallocFail_index = 2;
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), BSL_DUMP_FAIL);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    HITLS_X509_ExtFree(ext);
+
+    /* 1.3 Test encodeExt failure in HITLS_X509_SetExtList when adding new extension */
+    ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_TRUE_AND_LOG("ext != NULL 3", ext != NULL);
+    STUB_REPLACE(BSL_ASN1_EncodeTemplate, STUB_BSL_ASN1_EncodeTemplate);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), BSL_ASN1_FAIL);
+    STUB_RESTORE(BSL_ASN1_EncodeTemplate);
+    HITLS_X509_ExtFree(ext);
+
+    /* 1.4 Test BSL_LIST_AddElement failure in HITLS_X509_SetExtList */
+    ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_TRUE_AND_LOG("ext != NULL 4", ext != NULL);
+    STUB_REPLACE(BSL_LIST_AddElement, STUB_BSL_LIST_AddElement);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), BSL_LIST_FULL);
+    STUB_RESTORE(BSL_LIST_AddElement);
+    HITLS_X509_ExtFree(ext);
+
+    /* 2 Test set the bcons twice (replace existing extension) */
+    /* 2.1 Test encodeExt failure in HITLS_X509_SetExtList */
+    ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_TRUE_AND_LOG("ext != NULL 5", ext != NULL);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
+    STUB_REPLACE(BSL_ASN1_EncodeTemplate, STUB_BSL_ASN1_EncodeTemplate);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), BSL_ASN1_FAIL);
+    STUB_RESTORE(BSL_ASN1_EncodeTemplate);
+    HITLS_X509_ExtFree(ext);
+
+    /* 2.2 Test set the bcons twice successfully */
+    ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_TRUE_AND_LOG("ext != NULL 6", ext != NULL);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
+    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1);
+    HITLS_X509_ExtFree(ext);
+    ext = NULL;
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
 }
 /* END_CASE */
 

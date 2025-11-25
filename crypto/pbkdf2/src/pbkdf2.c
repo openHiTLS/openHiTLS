@@ -33,7 +33,6 @@
 #include "crypt_pbkdf2.h"
 
 #define PBKDF2_MAX_BLOCKSIZE 64
-#define PBKDF2_MAX_KEYLEN 0xFFFFFFFF
 
 static const uint32_t PBKDF_ID_LIST[] = {
     CRYPT_MAC_HMAC_MD5,
@@ -188,8 +187,12 @@ int32_t CRYPT_PBKDF2_HMAC(void *libCtx, const EAL_MacMethod *macMeth, CRYPT_MAC_
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    // add keyLen limit based on rfc2898
-    if (mdMeth->mdSize == 0 || (keyLen / mdMeth->mdSize) >= PBKDF2_MAX_KEYLEN) {
+    // check mdSize validity: mdSize must be non-zero for PBKDF2 to work correctly
+    // PBKDF2 requires a fixed hash output size (hLen), and mdSize == 0 would cause
+    // logic errors in key derivation
+    // Note: dkLen limit check is not needed here since len is uint32_t (max 0xFFFFFFFF)
+    // so max len/mdSize = 0x0FFFFFFF < 0xFFFFFFFF, satisfying RFC 2898
+    if (mdMeth->mdSize == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_PBKDF2_PARAM_ERROR);
         return CRYPT_PBKDF2_PARAM_ERROR;
     }
@@ -376,8 +379,12 @@ int32_t CRYPT_PBKDF2_Derive(CRYPT_PBKDF2_Ctx *ctx, uint8_t *out, uint32_t len)
         return ret;
     }
 
-    // add keyLen limit based on rfc2898
-    if (ctx->mdSize == 0 || (ctx->passLen / ctx->mdSize) >= PBKDF2_MAX_KEYLEN) {
+    // check mdSize validity: mdSize must be non-zero for PBKDF2 to work correctly
+    // PBKDF2 requires a fixed hash output size (hLen), and mdSize == 0 would cause
+    // logic errors in key derivation
+    // Note: dkLen limit check is not needed here since len is uint32_t (max 0xFFFFFFFF)
+    // so max len/mdSize = 0x0FFFFFFF < 0xFFFFFFFF, satisfying RFC 2898
+    if (ctx->mdSize == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_PBKDF2_PARAM_ERROR);
         return CRYPT_PBKDF2_PARAM_ERROR;
     }

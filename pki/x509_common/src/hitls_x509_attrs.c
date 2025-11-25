@@ -144,7 +144,7 @@ void HITLS_X509_AttrEntryFree(HITLS_X509_AttrEntry *attr)
     if (attr == NULL) {
         return;
     }
-    BSL_SAL_Free(attr->attrValue.buff);
+    BSL_SAL_FREE(attr->attrValue.buff);
     BSL_SAL_Free(attr);
 }
 

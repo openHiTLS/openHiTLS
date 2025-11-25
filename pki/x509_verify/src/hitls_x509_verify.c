@@ -253,7 +253,7 @@ static int32_t X509_SetMaxDepth(HITLS_X509_StoreCtx *storeCtx, int32_t *val, uin
     }
 
     int32_t depth = *val;
-    if (depth > HITLS_X509_MAX_DEPTH) {
+    if (depth < 0 || depth > HITLS_X509_MAX_DEPTH) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
