@@ -38,6 +38,7 @@
 #include "app_client.h"
 #include "app_server.h"
 #include "app_pkeyutl.h"
+#include "app_prime.h"
 
 HITLS_CmdFunc g_cmdFunc[] = {
     {"help",     FUNC_TYPE_GENERAL,   HITLS_HelpMain},
@@ -57,6 +58,7 @@ HITLS_CmdFunc g_cmdFunc[] = {
     {"req",      FUNC_TYPE_GENERAL,   HITLS_ReqMain},
     {"mac",      FUNC_TYPE_GENERAL,   HITLS_MacMain},
     {"kdf",      FUNC_TYPE_GENERAL,   HITLS_KdfMain},
+    {"prime",    FUNC_TYPE_GENERAL,   HITLS_PrimeMain},
 #ifdef HITLS_APP_SM_MODE
     {"keymgmt",  FUNC_TYPE_GENERAL,   HITLS_KeyMgmtMain},
 #endif

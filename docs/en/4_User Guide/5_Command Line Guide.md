@@ -32,6 +32,7 @@ The openHiTLS command source code is located in the apps directory, and the comp
 |**Other Utility Tools**|| |
 ||rand|Generate random numbers of specified length, supporting hexadecimal and Base64 encoded output|
 ||passwd|Generate and verify password hashes, supporting algorithms like SHA512|
+||prime|Generate and test primes, support hexadecimal input/output, and generate safe primes|
 
 ## 1.2 Command Usage
 
@@ -196,3 +197,44 @@ hitls rand -algorithm hmac-sha256 -hex 10
 
 ### 3.6.2 passwd
 Generate and verify password hashes, supporting algorithms like SHA512
+
+### 3.6.3 prime
+
+**Function**: Generate and test primes
+
+**Usage**:
+
+```
+hitls prime [-help] [-generate] [-bits num] [-safe] [-hex] [-checks num] [number]
+```
+
+**Supported Options**:
+
+- `-help`: Show help information
+- `-bits <n>`: Specify the bit length of the prime to be generated
+- `-hex`: Use hexadecimal format for input/output (decimal by default)
+- `-generate`: Enable prime generation mode
+- `-safe`: Generate a safe prime
+- `-check <n>`: Number of iterations for primality testing (default: 64)
+
+**Examples**:
+
+```bash
+# Check if a decimal number is prime
+./hitls prime 17
+
+# Check a hexadecimal number
+./hitls prime -hex 1F
+
+# Customize number of primality test rounds
+./hitls prime -checks 128 97
+
+# Generate a 256-bit prime
+./hitls prime -generate -bits 256
+
+# Generate a 512-bit safe prime
+./hitls prime -generate -bits 512 -safe
+
+# Output in hexadecimal format
+./hitls prime -generate -bits 128 -hex
+```
