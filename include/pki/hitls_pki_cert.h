@@ -118,6 +118,7 @@ int32_t HITLS_X509_CertCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, uint3
  *  IA5String.
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param encode [IN] CERT data.
+ *        BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM: the buff of encode needs to end with '\0'
  * @param cert   [OUT] CERT after parse.
  * @return #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
@@ -138,6 +139,7 @@ int32_t HITLS_X509_CertParseBuff(int32_t format, const BSL_Buffer *encode, HITLS
  * @param attrName [IN] Provider attribute name for capability matching
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN
  * @param encode [IN] Certificate data buffer
+ *        BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM: the buff of encode needs to end with '\0'
  * @param cert [OUT] Parsed certificate object
  * @return #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h
