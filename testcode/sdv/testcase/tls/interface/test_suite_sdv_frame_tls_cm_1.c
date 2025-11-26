@@ -1139,3 +1139,120 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/* @
+* @test  UT_TLS_SERVER_SKIP_DHE_SELECT_ECDHE_TC001
+* @title  Test server skips DHE cipher suite when DH key generation fails
+* @precon nan
+* @brief
+*   1. Configure server with DHE_ANON and ECDHE_ANON cipher suites, server preference enabled
+*   2. Configure client to support both DHE and ECDHE cipher suites
+*   3. Create a scenario where GetDhKey() returns NULL (no DH parameters configured)
+*   4. Establish connection
+* @expect
+*   1. Connection establishment succeeds
+*   2. Server skips DHE cipher suites
+*   3. Server selects HITLS_ECDH_ANON_WITH_AES_128_CBC_SHA instead
+*   4. Final negotiated cipher suite is ECDHE-based
+@ */
+/* BEGIN_CASE */
+void UT_TLS_SERVER_SKIP_DHE_SELECT_ECDHE_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    // Create TLS 1.2 config
+    config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    // Configure server cipher suites: DHE first (preferred), then ECDHE
+    uint16_t serverCipherSuites[] = {
+        HITLS_DH_ANON_WITH_AES_128_GCM_SHA256,  // DHE cipher suite (should be skipped)
+        HITLS_ECDH_ANON_WITH_AES_128_CBC_SHA // ECDHE cipher suite (should be selected)
+    };
+    ASSERT_TRUE(HITLS_CFG_SetCipherSuites(config, serverCipherSuites,
+        sizeof(serverCipherSuites) / sizeof(uint16_t)) == HITLS_SUCCESS);
+
+    // Create client and server links
+    FRAME_CertInfo certInfo = {0, 0, 0, 0, 0, 0};
+    client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+
+    server = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    // Establish connection
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    // Verify connection established successfully
+    ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
+    ASSERT_TRUE(server->ssl->state == CM_STATE_TRANSPORTING);
+
+    // Verify negotiated cipher suite is ECDHE (not DHE)
+    ASSERT_TRUE(server->ssl->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_ECDHE);
+    ASSERT_TRUE(server->ssl->negotiatedInfo.cipherSuiteInfo.cipherSuite ==
+        HITLS_ECDH_ANON_WITH_AES_128_CBC_SHA);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test  UT_TLS_CM_TLS13_NO_KEY_EXCH_MATERIAL_TC001
+* @title  Test TLS 1.3 handshake fails when no PSK or certificate is available
+* @precon nan
+* @brief
+*   1. Create TLS 1.3 config without certificate and PSK. Expected result 1.
+*   2. Client sends TLS 1.3 ClientHello. Expected result 2.
+*   3. Server checks for available key exchange material. Expected result 3.
+* @expect
+*   1. Configuration created successfully.
+*   2. ClientHello sent successfully.
+*   3. Server returns HITLS_MSG_HANDLE_UNSUPPORT_VERSION and sends ALERT_HANDSHAKE_FAILURE.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CM_TLS13_NO_KEY_EXCH_MATERIAL_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    // Create TLS 1.3 config without certificate and PSK
+    config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(config != NULL);
+
+    // Create client and server links (no certificates configured)
+    FRAME_CertInfo certInfo = {0, 0, 0, 0, 0, 0};
+    client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+
+    server = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    // Try to establish connection
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
+
+    // Verify server state is ALERTED
+    ASSERT_EQ(server->ssl->state, CM_STATE_ALERTED);
+
+    // Verify alert was sent
+    ALERT_Info info = { 0 };
+    ALERT_GetInfo(server->ssl, &info);
+    ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(info.description, ALERT_HANDSHAKE_FAILURE);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

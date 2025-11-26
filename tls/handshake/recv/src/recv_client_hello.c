@@ -261,6 +261,14 @@ static int32_t ProcessEcdheCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clien
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_SUITE_KX_ECDHE */
+
+#ifdef HITLS_TLS_CONFIG_MANUAL_DH
+static bool IsDHEAvailable(TLS_Ctx *ctx)
+{
+    return ctx->config.tlsConfig.isSupportDhAuto || ctx->config.tlsConfig.dhTmpCb != NULL ||
+           ctx->config.tlsConfig.dhTmp != NULL;
+}
+#endif /* HITLS_TLS_CONFIG_MANUAL_DH */
 /**
 * @brief Check whether the server supports the cipher suite.
 *
@@ -275,9 +283,8 @@ static int32_t ProcessEcdheCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clien
 static int32_t ServerNegotiateCipher(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint16_t cipher)
 {
     CipherSuiteInfo cipherSuiteInfo = {0};
-    int32_t ret = 0;
 
-    ret = CFG_GetCipherSuiteInfo(cipher, &cipherSuiteInfo);
+    int32_t ret = CFG_GetCipherSuiteInfo(cipher, &cipherSuiteInfo);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15215, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "get cipher suite info fail when processing client hello.", 0, 0, 0, 0);
@@ -304,6 +311,11 @@ static int32_t ServerNegotiateCipher(TLS_Ctx *ctx, const ClientHelloMsg *clientH
 #endif /* HITLS_TLS_SUITE_KX_ECDHE */
         case HITLS_KEY_EXCH_DHE:
         case HITLS_KEY_EXCH_DHE_PSK:
+#ifdef HITLS_TLS_CONFIG_MANUAL_DH
+            /* Check if DH key can be generated for DHE/DHE_PSK cipher suites */
+            ret = IsDHEAvailable(ctx) ? HITLS_SUCCESS : HITLS_MSG_HANDLE_UNSUPPORT_CIPHER_SUITE;
+            break;
+#endif /* HITLS_TLS_CONFIG_MANUAL_DH */
         case HITLS_KEY_EXCH_RSA:
 #ifdef HITLS_TLS_PROTO_TLCP11
         case HITLS_KEY_EXCH_ECC:
@@ -2220,7 +2232,11 @@ static int32_t SelectVersion(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, ui
             if (((version == HITLS_VERSION_TLS13) && (!IsTls13KeyExchAvailable(ctx)))) {
                 /* TLS1.3 must have an available PSK or certificate, and TLS1.3 cannot negotiate SSL versions earlier
                  * than SSL3.0. */
-                continue;
+                BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17380, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "tls1.3 handshake state error: TLS1.3 must have an available PSK or certificate", 0, 0, 0, 0);
+                ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
+                return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
             }
             /* rfc8446 4.2.1 The server must be ready to receive ClientHello that contains the supportedVersions
              * extension but does not contain 0x0304 in the version list, Therefore, if a matching version is found,

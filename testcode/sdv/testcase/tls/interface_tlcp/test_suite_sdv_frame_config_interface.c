@@ -1455,15 +1455,15 @@ void UT_TLS_CFG_SETTMPDH_FUNC_TC001(int level)
 
     ASSERT_TRUE(HITLS_CFG_SetCipherSuites(clientConfig, pfsCipherSuites, sizeof(pfsCipherSuites) / sizeof(uint16_t)) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_CFG_SetCipherSuites(serverConfig, pfsCipherSuites, sizeof(pfsCipherSuites) / sizeof(uint16_t)) == HITLS_SUCCESS);
-    HITLS_CFG_SetSecurityLevel(serverConfig, level);
-    HITLS_CFG_SetSecurityLevel(clientConfig, level);
 
     HITLS_CFG_SetDhAutoSupport(serverConfig, false);
     int32_t secBits = 80;
     key = HITLS_CRYPT_GenerateDhKeyBySecbits(LIBCTX_FROM_CONFIG(serverConfig), ATTRIBUTE_FROM_CONFIG(serverConfig),
         serverConfig, secBits);
     HITLS_CFG_SetTmpDh(serverConfig, key);
-
+    key = NULL;
+    HITLS_CFG_SetSecurityLevel(serverConfig, level);
+    HITLS_CFG_SetSecurityLevel(clientConfig, level);
     FRAME_CertInfo certInfo = {0, 0, 0, 0, 0, 0};
     client = FRAME_CreateLinkWithCert(clientConfig, BSL_UIO_TCP, &certInfo);
     server = FRAME_CreateLinkWithCert(serverConfig, BSL_UIO_TCP, &certInfo);
@@ -1479,9 +1479,7 @@ void UT_TLS_CFG_SETTMPDH_FUNC_TC001(int level)
         ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
     }
 EXIT:
-    if (SECURITY_GetSecbits(level) > secBits) {
-        SAL_CRYPT_FreeDhKey(key);
-    }
+    SAL_CRYPT_FreeDhKey(key);
     HITLS_CFG_FreeConfig(clientConfig);
     HITLS_CFG_FreeConfig(serverConfig);
     FRAME_FreeLink(client);
@@ -1603,11 +1601,11 @@ void UT_TLS_CFG_SET_GET_DHAUTOSUPPORT_FUNC_TC001(void)
     server = FRAME_CreateLinkWithCert(serverConfig, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
-
-    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_SEND_SERVER_KEY_EXCHANGE), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    FRAME_TrasferMsgBetweenLink(client, server);
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_MSG_HANDLE_CIPHER_SUITE_ERR);
     FRAME_TrasferMsgBetweenLink(server, client);
-    HITLS_Connect(client->ssl);
-    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_MSG_HANDLE_ERR_GET_DH_KEY);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
 EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
     HITLS_CFG_FreeConfig(serverConfig);
