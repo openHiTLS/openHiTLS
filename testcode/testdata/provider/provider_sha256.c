@@ -33,7 +33,6 @@
 
 CRYPT_SHA2_256_Ctx *Sha256NewCtx(void *provCtx, int32_t algId)
 {
-    printf("-------------provider_sha256: Sha256NewCtx: algId = %d\n", algId);
     return CRYPT_SHA2_256_NewCtxEx(provCtx, algId);
 }
 // SHA256 algorithm function table
