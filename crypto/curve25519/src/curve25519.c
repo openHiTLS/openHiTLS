@@ -103,6 +103,7 @@ CRYPT_CURVE25519_Ctx *CRYPT_CURVE25519_DupCtx(CRYPT_CURVE25519_Ctx *ctx)
     }
 
     (void)memcpy_s(newCtx, sizeof(CRYPT_CURVE25519_Ctx), ctx, sizeof(CRYPT_CURVE25519_Ctx));
+    (void)memset_s(&(newCtx->references), sizeof(BSL_SAL_RefCount), 0, sizeof(BSL_SAL_RefCount));
     BSL_SAL_ReferencesInit(&(newCtx->references));
     return newCtx;
 }
