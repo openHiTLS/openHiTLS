@@ -121,6 +121,7 @@ int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, uint32_t
  *
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1
  * @param encode [IN] The csr data
+ *        BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM: the buff of encode needs to end with '\0'
  * @param csr [OUT] The csr context after parsing
  * @retval #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h

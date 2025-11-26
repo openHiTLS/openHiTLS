@@ -73,6 +73,7 @@ int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, uint32_t
  *  IA5String.
  * @param format         [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param encode         [IN] CRL data.
+ *        BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM: the buff of encode needs to end with '\0'
  * @param crl           [OUT] CRL after parse.
  * @return Error code
  */
@@ -89,6 +90,7 @@ int32_t HITLS_X509_CrlParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_
  *  IA5String.
  * @param format [IN] Encoding format: BSL_FORMAT_PEM/BSL_FORMAT_ASN1/BSL_FORMAT_UNKNOWN.
  * @param encode [IN] CRL data buffer.
+ *        BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM: the buff of encode needs to end with '\0'
  * @param crlList [OUT] List of parsed CRL objects.
  * @return #HITLS_PKI_SUCCESS, success.
  *         Error codes can be found in hitls_pki_errno.h

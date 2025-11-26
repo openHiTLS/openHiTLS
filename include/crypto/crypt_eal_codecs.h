@@ -163,6 +163,7 @@ int32_t CRYPT_DECODE_PoolCtrl(CRYPT_DECODER_PoolCtx *poolCtx, int32_t cmd, void 
  * @param   format [IN] the buffer format: BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM/BSL_FORMAT_DER
  * @param   type [IN] the type of pkey, see CRYPT_ENCDEC_TYPE
  * @param   encode [IN] the encoded asn1 buffer.
+ *          BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM: the buff of encode needs to end with '\0'
  * @param   pwd [IN] the password, maybe NULL for unencrypted private key / public key.
  * @param   pwdlen [IN] the length of password.
  * @param   ealPKey [OUT] created CRYPT_EAL_PkeyCtx which parsed from the ans1 buffer.
@@ -195,6 +196,7 @@ int32_t CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type,
  *                  "PUBKEY_RSA"
  *                  "PUBKEY_SUBKEY_WITHOUT_SEQ"
  * @param   encode [IN] the encoded asn1 buffer.
+ *          BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM: the buff of encode needs to end with '\0'
  * @param   pwd [IN] the password buffer, maybe NULL for unencrypted private key / public key.
  * @param   ealPKey [OUT] created CRYPT_EAL_PkeyCtx which parsed from the ans1 buffer.
  *
