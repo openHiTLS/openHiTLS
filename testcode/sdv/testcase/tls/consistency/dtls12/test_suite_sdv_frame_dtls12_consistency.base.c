@@ -112,7 +112,7 @@ int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo, int uioType)
     testInfo->config->isSupportExtendMasterSecret = testInfo->isSupportExtendMasterSecret;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
-
+    testInfo->config->isSupportDhAuto = true;
     return StatusPark(testInfo, uioType);
 }
 

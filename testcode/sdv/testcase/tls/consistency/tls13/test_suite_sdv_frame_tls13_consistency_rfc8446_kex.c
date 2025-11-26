@@ -2420,6 +2420,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_DATA_AFTER_COMPRESSION_FUNC_TC001()
     tlsConfig_s->isSupportClientVerify = true;
     HITLS_CFG_SetKeyExchMode(tlsConfig_s, TLS13_KE_MODE_PSK_WITH_DHE);
     HITLS_CFG_SetVersionSupport(tlsConfig_s, 0x00000030U);
+    HITLS_CFG_SetDhAutoSupport(tlsConfig_s, true);
     uint16_t cipherSuites[] = {
         HITLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
         HITLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
