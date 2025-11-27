@@ -97,7 +97,7 @@ Linux系统中的主要步骤有：
 
 1. 准备构建目录:
 ```
-cd openHiTLS && mkdir -p ./build && cd ./build
+cd openhitls && mkdir -p ./build && cd ./build
 ```
 2. 生成构建配置:
 ```

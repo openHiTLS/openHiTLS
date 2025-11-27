@@ -95,7 +95,7 @@ The major steps in Linux:
 
 Step 1 (Prepare the build directory):
 ```
-cd openHiTLS && mkdir -p ./build && cd ./build
+cd openhitls && mkdir -p ./build && cd ./build
 ```
 Step 2 (Generate configurations):
 ```
