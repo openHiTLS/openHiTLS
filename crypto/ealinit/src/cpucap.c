@@ -157,7 +157,7 @@ void signal_handler(int sig)
 void getarmcap(void)
 {
     struct sigaction sa, old_sa;
-    
+
     sa.sa_handler = signal_handler;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
@@ -206,7 +206,7 @@ void getarmcap(void)
 
     sigaction(SIGILL, &old_sa, NULL);
 }
-#else 
+#else
 
 #include <sys/auxv.h>
 

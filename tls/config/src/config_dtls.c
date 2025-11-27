@@ -121,7 +121,7 @@ HITLS_Config *HITLS_CFG_ProviderNewDTLCPConfig(HITLS_Lib_Ctx *libCtx, const char
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
 int32_t HITLS_CFG_SetCookieGenCb(HITLS_Config *config, HITLS_AppGenCookieCb callback)
 {
-    if (config == NULL || callback == NULL) {
+    if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
 
@@ -131,7 +131,7 @@ int32_t HITLS_CFG_SetCookieGenCb(HITLS_Config *config, HITLS_AppGenCookieCb call
 
 int32_t HITLS_CFG_SetCookieVerifyCb(HITLS_Config *config, HITLS_AppVerifyCookieCb callback)
 {
-    if (config == NULL || callback == NULL) {
+    if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
 
@@ -141,7 +141,7 @@ int32_t HITLS_CFG_SetCookieVerifyCb(HITLS_Config *config, HITLS_AppVerifyCookieC
 
 int32_t HITLS_CFG_SetDtlsTimerCb(HITLS_Config *config, HITLS_DtlsTimerCb callback)
 {
-    if (config == NULL || callback == NULL) {
+    if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
 

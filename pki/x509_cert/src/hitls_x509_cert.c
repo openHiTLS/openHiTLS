@@ -447,6 +447,46 @@ int32_t HITLS_X509_CertParseBundleFile(int32_t format, const char *path, HITLS_X
 #endif // HITLS_BSL_SAL_FILE
 #endif // HITLS_PKI_X509_CRT_PARSE
 
+static int32_t X509_GetVersion(HITLS_X509_Cert *cert, int32_t *val, uint32_t valLen)
+{
+    if (val == NULL || valLen != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    *val = cert->tbs.version;
+
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t X509_GetThisUpdate(HITLS_X509_Cert *cert, BSL_TIME *val, uint32_t valLen)
+{
+    if (val == NULL || valLen != sizeof(BSL_TIME)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    if ((cert->tbs.validTime.flag & BSL_TIME_BEFORE_SET) == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_THISUPDATE_UNEXIST);
+        return HITLS_X509_ERR_CERT_THISUPDATE_UNEXIST;
+    }
+    *val = cert->tbs.validTime.start;
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t X509_GetNextUpdate(HITLS_X509_Cert *cert, BSL_TIME *val, uint32_t valLen)
+{
+    if (val == NULL || valLen != sizeof(BSL_TIME)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    if ((cert->tbs.validTime.flag & BSL_TIME_AFTER_SET) == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_NEXTUPDATE_UNEXIST);
+        return HITLS_X509_ERR_CERT_NEXTUPDATE_UNEXIST;
+    }
+    *val = cert->tbs.validTime.end;
+    return HITLS_PKI_SUCCESS;
+}
+
 static int32_t X509_GetSerialNumStr(HITLS_X509_Cert *cert, BSL_Buffer *val)
 {
     if (val == NULL || cert->tbs.serialNum.buff == NULL) {
@@ -468,7 +508,7 @@ static int32_t X509_GetSerialNumStr(HITLS_X509_Cert *cert, BSL_Buffer *val)
 
     static const char HEX_CHARS[] = "0123456789abcdef";
     char *outPtr = (char *)val->data;
-    
+
     for (size_t i = 0; i < serialNum.len - 1; i++) {
         uint8_t byte = serialNum.buff[i];
         *outPtr++ = HEX_CHARS[(byte >> 4) & 0xF];  // High 4 bits
@@ -481,9 +521,9 @@ static int32_t X509_GetSerialNumStr(HITLS_X509_Cert *cert, BSL_Buffer *val)
     *outPtr++ = HEX_CHARS[(lastByte >> 4) & 0xF];  // High 4 bits
     *outPtr++ = HEX_CHARS[lastByte & 0xF];         // Low 4 bits
     *outPtr = '\0';                                // Null terminator
-    
+
     val->dataLen = 3 * serialNum.len - 1;  // 3 chars per byte (xx:) except last byte (xx)
-    
+
     return HITLS_PKI_SUCCESS;
 }
 
@@ -551,6 +591,39 @@ static int32_t X509_GetCNStrFromList(BSL_ASN1_List *nameList, BSL_Buffer *buff, 
     return HITLS_X509_ERR_CERT_CN_NOT_FOUND;
 }
 
+static int32_t X509_CertGetCtrlCmd(HITLS_X509_Cert *cert, int32_t cmd, void *val, uint32_t valLen)
+{
+    switch (cmd) {
+        case HITLS_X509_GET_BEFORE_TIME_STR:
+            return X509_GetAsn1BslTimeStr(&cert->tbs.validTime.start, val);
+        case HITLS_X509_GET_AFTER_TIME_STR:
+            return X509_GetAsn1BslTimeStr(&cert->tbs.validTime.end, val);
+#ifdef HITLS_PKI_X509_CRT_AUTH
+        case HITLS_X509_GET_ENCODE_SUBJECT_DN:
+            return HITLS_X509_GetEncodeDn(cert->tbs.subjectName, val, valLen);
+#endif
+#ifdef HITLS_PKI_X509_VFY
+        case HITLS_X509_IS_SELF_SIGNED: {
+            if (val == NULL || valLen != sizeof(bool)) {
+                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+                return HITLS_X509_ERR_INVALID_PARAM;
+            }
+            *(bool *)val = HITLS_X509_CheckIssued(cert, cert);
+            return HITLS_PKI_SUCCESS;
+        }
+#endif
+        case HITLS_X509_GET_VERSION:
+            return X509_GetVersion(cert, val, valLen);
+        case HITLS_X509_GET_BEFORE_TIME:
+            return X509_GetThisUpdate(cert, val, valLen);
+        case HITLS_X509_GET_AFTER_TIME:
+            return X509_GetNextUpdate(cert, val, valLen);
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+            return HITLS_X509_ERR_INVALID_PARAM;
+    }
+}
+
 static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, uint32_t valLen)
 {
     switch (cmd) {
@@ -578,27 +651,8 @@ static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, u
             return X509_GetCNStrFromList(cert->tbs.subjectName, val, valLen);
         case HITLS_X509_GET_SERIALNUM_STR:
             return X509_GetSerialNumStr(cert, val);
-        case HITLS_X509_GET_BEFORE_TIME_STR:
-            return X509_GetAsn1BslTimeStr(&cert->tbs.validTime.start, val);
-        case HITLS_X509_GET_AFTER_TIME_STR:
-            return X509_GetAsn1BslTimeStr(&cert->tbs.validTime.end, val);
-#ifdef HITLS_PKI_X509_CRT_AUTH
-        case HITLS_X509_GET_ENCODE_SUBJECT_DN:
-            return HITLS_X509_GetEncodeDn(cert->tbs.subjectName, val, valLen);
-#endif
-#ifdef HITLS_PKI_X509_VFY
-        case HITLS_X509_IS_SELF_SIGNED: {
-            if (val == NULL || valLen != sizeof(bool)) {
-                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-                return HITLS_X509_ERR_INVALID_PARAM;
-            }
-            *(bool *)val = HITLS_X509_CheckIssued(cert, cert);
-            return HITLS_PKI_SUCCESS;
-        }
-#endif
         default:
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-            return HITLS_X509_ERR_INVALID_PARAM;
+            return X509_CertGetCtrlCmd(cert, cmd, val, valLen);
     }
 }
 

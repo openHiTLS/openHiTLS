@@ -104,11 +104,10 @@ static HITLS_CRYPT_Key *GetDhKeyBySecBits(TLS_Ctx *ctx)
     }
     int32_t securityLevelBits =
 #ifdef HITLS_TLS_FEATURE_SECURITY
-                    (SECURITY_GetSecbits(ctx->config.tlsConfig.securityLevel) != 0)
-                    ? SECURITY_GetSecbits(ctx->config.tlsConfig.securityLevel)
-                    :
-#endif /* HITLS_TLS_FEATURE_SECURITY */
+                SECURITY_GetSecbits(ctx->config.tlsConfig.securityLevel);
+#else
                 DEFAULT_DHE_PSK_BIT_NUM;
+#endif /* HITLS_TLS_FEATURE_SECURITY */
     if (securityLevelBits > secBits) {
         secBits = securityLevelBits;
     }

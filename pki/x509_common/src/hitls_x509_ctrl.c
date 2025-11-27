@@ -483,7 +483,7 @@ int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, uint32_t 
 #if defined(HITLS_PKI_X509_CRT) || defined(HITLS_PKI_X509_CRL)
 int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, void *val, uint32_t valLen)
 {
-    if (valLen != sizeof(BSL_Buffer)) {
+    if (val == NULL || valLen != sizeof(BSL_Buffer)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -575,7 +575,7 @@ static int32_t X509PrintNameNode(const HITLS_X509_NameNode *nameNode, char *buff
 
 int32_t HITLS_X509_GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Buffer *buff)
 {
-    if (nameList == NULL || BSL_LIST_COUNT(nameList) == 0) {
+    if (buff == NULL || nameList == NULL || BSL_LIST_COUNT(nameList) == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }

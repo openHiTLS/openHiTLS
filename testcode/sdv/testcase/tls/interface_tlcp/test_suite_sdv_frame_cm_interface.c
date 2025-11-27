@@ -1815,7 +1815,7 @@ void UT_TLS_CM_HITLS_GetSharedGroup_FUNC_TC001(int version)
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
-    ret = HITLS_GetSharedGroup(server->ssl, 1, &groupId);
+    ret = HITLS_GetSharedGroup(server->ssl, 0, &groupId);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
     ASSERT_TRUE(groupId == HITLS_EC_GROUP_SECP256R1);
 
@@ -1939,7 +1939,7 @@ void UT_TLS_CM_HITLS_GetSharedGroup_FUNC_TC003(int version)
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
-    ret = HITLS_GetSharedGroup(server->ssl, 2, &groupId);
+    ret = HITLS_GetSharedGroup(server->ssl, 1, &groupId);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
     ASSERT_TRUE(groupId == HITLS_EC_GROUP_SECP384R1);
 

@@ -391,10 +391,6 @@ int32_t HITLS_GetSelectedAlpnProto(HITLS_Ctx *ctx, uint8_t **proto, uint32_t *pr
         return HITLS_NULL_INPUT;
     }
 
-    if (ctx->negotiatedInfo.alpnSelected == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
     *proto = ctx->negotiatedInfo.alpnSelected;
     *protoLen = ctx->negotiatedInfo.alpnSelectedSize;
 
