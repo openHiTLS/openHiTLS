@@ -1829,7 +1829,7 @@ void SDV_X509_CRL_PARSE_NAME_LIST_TC001(Hex *buff)
     name.len = buff->len;
     BSL_ASN1_List *list = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
     ASSERT_TRUE(list != NULL);
-    ASSERT_NE(HITLS_X509_ParseNameList(&name, NULL), BSL_ASN1_ERR_DECODE_LEN);
+    ASSERT_EQ(HITLS_X509_ParseNameList(&name, list), BSL_ASN1_ERR_DECODE_LEN);
 EXIT:
     BSL_LIST_FreeWithoutData(list);
 }
