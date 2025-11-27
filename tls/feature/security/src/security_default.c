@@ -120,8 +120,6 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
 {
     (void)exData;
     int32_t level = HITLS_DEFAULT_SECURITY_LEVEL;
-    const TLS_SigSchemeInfo *schemeInfo = NULL;
-    const TLS_GroupInfo *groupInfo = NULL;
 
     if (config != NULL) {
         (void)HITLS_CFG_GetSecurityLevel(config, &level);
@@ -150,19 +148,6 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
         case HITLS_SECURITY_SECOP_CIPHER_CHECK:
             /* Check the algorithm suite. */
             return CheckCipherSuite(other, level);
-        case HITLS_SECURITY_SECOP_SIGALG_SUPPORTED:
-        case HITLS_SECURITY_SECOP_SIGALG_SHARED:
-        case HITLS_SECURITY_SECOP_SIGALG_CHECK:
-            /* Check the signature algorithm. */
-            schemeInfo = ConfigGetSignatureSchemeInfo(config, (uint16_t)id);
-            return (schemeInfo != NULL && schemeInfo->secBits >= g_minBits[level - 1]) ? SECURITY_SUCCESS :
-                                                                                         SECURITY_ERR;
-        case HITLS_SECURITY_SECOP_CURVE_SUPPORTED:
-        case HITLS_SECURITY_SECOP_CURVE_SHARED:
-        case HITLS_SECURITY_SECOP_CURVE_CHECK:
-            /* Check the group. */
-            groupInfo = ConfigGetGroupInfo(config, (uint16_t)id);
-            return (groupInfo != NULL && groupInfo->secBits >= g_minBits[level - 1]) ? SECURITY_SUCCESS : SECURITY_ERR;
         case HITLS_SECURITY_SECOP_TICKET:
             /* Check the session ticket. */
             return CheckSessionTicket(level);
@@ -192,6 +177,35 @@ int32_t SECURITY_CfgCheck(const HITLS_Config *config, int32_t option, int32_t bi
     if (config->securityCb == NULL) {
         /* The security callback function is empty and does not need to be checked. */
         return SECURITY_SUCCESS;
+    }
+    const TLS_SigSchemeInfo *schemeInfo = NULL;
+    const TLS_GroupInfo *groupInfo = NULL;
+    uint16_t ianaId;
+    switch (option) {
+        case HITLS_SECURITY_SECOP_SIGALG_SUPPORTED:
+        case HITLS_SECURITY_SECOP_SIGALG_SHARED:
+        case HITLS_SECURITY_SECOP_SIGALG_CHECK:
+            schemeInfo = ConfigGetSignatureSchemeInfo(config, (uint16_t)id);
+            if (schemeInfo != NULL) {
+                ianaId = schemeInfo->signatureScheme;
+                return config->securityCb(NULL, config, option, schemeInfo->secBits, schemeInfo->hashAlgId,
+                    &ianaId, config->securityExData);
+            }
+            ianaId = (uint16_t)id;
+            return config->securityCb(NULL, config, option, 0, 0, &ianaId, config->securityExData);
+        case HITLS_SECURITY_SECOP_CURVE_SUPPORTED:
+        case HITLS_SECURITY_SECOP_CURVE_SHARED:
+        case HITLS_SECURITY_SECOP_CURVE_CHECK:
+            groupInfo = ConfigGetGroupInfo(config, (uint16_t)id);
+            if (groupInfo != NULL) {
+                ianaId = groupInfo->groupId;
+                return config->securityCb(NULL, config, option, groupInfo->secBits, groupInfo->paraId,
+                    &ianaId, config->securityExData);
+            }
+            ianaId = (uint16_t)id;
+            return config->securityCb(NULL, config, option, 0, 0, &ianaId, config->securityExData);
+        default:
+            break;
     }
     return config->securityCb(NULL, config, option, bits, id, other, config->securityExData);
 }

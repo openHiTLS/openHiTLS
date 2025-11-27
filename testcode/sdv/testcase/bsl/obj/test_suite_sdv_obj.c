@@ -25,6 +25,7 @@
 #include "bsl_errno.h"
 #include "bsl_obj.h"
 #include "bsl_obj_internal.h"
+#include "bsl_hash.h"
 /* END_HEADER */
 
 extern BslOidInfo g_oidTable[];
@@ -113,6 +114,34 @@ void SDV_BSL_OBJ_CREATE_SIGN_ID_TC001(void)
     ASSERT_EQ(BSL_OBJ_CreateSignId(signId, BSL_CID_UNKNOWN, hashId), BSL_INVALID_ARG);
 
     ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, BSL_CID_UNKNOWN), BSL_INVALID_ARG);
+
+    BSL_OBJ_FreeSignHashTable();
+EXIT:
+    return;
+#endif
+}
+/* END_CASE */
+
+#ifdef HITLS_BSL_OBJ_CUSTOM
+extern BSL_HASH_Hash *g_signHashTable;
+#endif
+
+/* BEGIN_CASE */
+void SDV_BSL_OBJ_CREATE_SIGN_ID_TC002(void)
+{
+#ifndef HITLS_BSL_OBJ_CUSTOM
+    SKIP_TEST();
+#else
+    BslCid signId = BSL_CID_MAX - 1;
+    BslCid asymId = BSL_CID_RSA;
+    BslCid hashId = BSL_CID_MAX - 2;
+    TestMemInit();
+    BSL_OBJ_FreeSignHashTable();
+    ASSERT_TRUE(g_signHashTable == NULL);
+    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_RUN_ONCE_CB_FUNC, PthreadRunOnce);
+    ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, hashId), BSL_SUCCESS);
+    ASSERT_TRUE(g_signHashTable != NULL);
+    ASSERT_EQ(BSL_HASH_Size(g_signHashTable), 1);
 
     BSL_OBJ_FreeSignHashTable();
 EXIT:
