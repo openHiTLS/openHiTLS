@@ -105,6 +105,25 @@ int32_t HITLS_SetAlpnProtos(HITLS_Ctx *ctx, const uint8_t *protos, uint32_t prot
  */
 int32_t HITLS_GetSelectedAlpnProto(HITLS_Ctx *ctx, uint8_t **proto, uint32_t *protoLen);
 
+/**
+ * @ingroup hitls_alpn
+ * @brief   Obtaining the ALPN Negotiation Result
+ * The server selects an appropriate ALPN based on the ALPN provided by the client and its own configured ALPN.
+ * @param   out  [OUT] Outgoing selected protocol.
+ * @param   outLen    [OUT] Length of the outgoing selected protocol.
+ * @param   servAlpnList        [IN] Header address of the server ALPN list.
+ * @param   servAlpnListLen     [IN] Length of the server ALPN list.
+ * @param   clientAlpnList      [IN] Header address of the client ALPN list.
+ * @param   clientAlpnListLen   [IN] Length of the client ALPN list.
+ *
+ * @retval  HITLS_SUCCESS, succeeded. Note: Success does not necessarily mean negotiating ALPN; it requires making a
+ * judgment on out.
+ * @retval  HITLS_NULL_INPUT, the input is NULL.
+ * @retval  HITLS_CONFIG_INVALID_LENGTH, ALPN length does not match the actual length.
+ */
+int32_t HITLS_SelectAlpnProtocol(uint8_t **out, uint8_t *outLen, const uint8_t *servAlpnList, uint32_t servAlpnListLen,
+    const uint8_t *clientAlpnList, uint32_t clientAlpnListLen);
+
 #ifdef __cplusplus
 }
 #endif

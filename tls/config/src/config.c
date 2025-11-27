@@ -1087,7 +1087,7 @@ int32_t HITLS_CFG_SetGroups(HITLS_Config *config, const uint16_t *groups, uint32
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
 int32_t HITLS_CFG_SetCookieGenCb(HITLS_Config *config, HITLS_AppGenCookieCb callback)
 {
-    if (config == NULL || callback == NULL) {
+    if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
 
@@ -1097,7 +1097,7 @@ int32_t HITLS_CFG_SetCookieGenCb(HITLS_Config *config, HITLS_AppGenCookieCb call
 
 int32_t HITLS_CFG_SetCookieVerifyCb(HITLS_Config *config, HITLS_AppVerifyCookieCb callback)
 {
-    if (config == NULL || callback == NULL) {
+    if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
 
@@ -1107,7 +1107,7 @@ int32_t HITLS_CFG_SetCookieVerifyCb(HITLS_Config *config, HITLS_AppVerifyCookieC
 
 int32_t HITLS_CFG_SetDtlsTimerCb(HITLS_Config *config, HITLS_DtlsTimerCb callback)
 {
-    if (config == NULL || callback == NULL) {
+    if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
 
@@ -1528,7 +1528,7 @@ int32_t HITLS_CFG_SetPskIdentityHint(HITLS_Config *config, const uint8_t *hint, 
 // Configure clientCb, which is used to obtain the PSK through identity hints
 int32_t HITLS_CFG_SetPskClientCallback(HITLS_Config *config, HITLS_PskClientCb callback)
 {
-    if (config == NULL || callback == NULL) {
+    if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
 
@@ -1539,7 +1539,7 @@ int32_t HITLS_CFG_SetPskClientCallback(HITLS_Config *config, HITLS_PskClientCb c
 // Set serverCb to obtain the PSK through identity.
 int32_t HITLS_CFG_SetPskServerCallback(HITLS_Config *config, HITLS_PskServerCb callback)
 {
-    if (config == NULL || callback == NULL) {
+    if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
 
@@ -1734,7 +1734,42 @@ int32_t HITLS_CFG_SetAlpnProtosSelectCb(HITLS_Config *config, HITLS_AlpnSelectCb
 
     return HITLS_SUCCESS;
 }
-#endif
+
+int32_t HITLS_SelectAlpnProtocol(uint8_t **out, uint8_t *outLen, const uint8_t *servAlpnList, uint32_t servAlpnListLen,
+    const uint8_t *clientAlpnList, uint32_t clientAlpnListLen)
+{
+     bool nullInput = out == NULL || outLen == NULL || clientAlpnList == NULL || servAlpnList == NULL ||
+        servAlpnListLen == 0 || clientAlpnListLen == 0;
+    if (nullInput == true) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16690, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "intput null", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+        return HITLS_NULL_INPUT;
+    }
+
+    /* Add the check on alpnList. The expected format is |protoLen1|proto1|protoLen2|proto2|...| */
+    if (AlpnListValidationCheck(servAlpnList, servAlpnListLen) != HITLS_SUCCESS ||
+        AlpnListValidationCheck(clientAlpnList, clientAlpnListLen) != HITLS_SUCCESS) {
+        return HITLS_CONFIG_INVALID_LENGTH;
+    }
+
+    for (uint32_t i = 0; i < servAlpnListLen;) {
+        for (uint32_t j = 0; j < clientAlpnListLen;) {
+            if (servAlpnList[i] == clientAlpnList[j] &&
+                (memcmp(&servAlpnList[i + 1], &clientAlpnList[j + 1], servAlpnList[i]) == 0)) {
+                *out = (uint8_t *)(uintptr_t)&servAlpnList[i + 1];
+                *outLen = servAlpnList[i];
+                return HITLS_SUCCESS;
+            }
+            j = j + clientAlpnList[j];
+            ++j;
+        }
+        i = i + servAlpnList[i];
+        ++i;
+    }
+
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_ALPN */
 #if defined(HITLS_TLS_FEATURE_SESSION_ID)
 int32_t HITLS_CFG_SetSessionIdCtx(HITLS_Config *config, const uint8_t *sessionIdCtx, uint32_t len)
 {

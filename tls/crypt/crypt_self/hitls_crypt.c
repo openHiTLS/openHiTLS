@@ -360,7 +360,7 @@ static int32_t GetCipherInitCtx(HITLS_Lib_Ctx *libCtx, const char *attrName,
     if (*ctx != NULL) {
         return CRYPT_EAL_CipherReinit(*ctx, (uint8_t *)(uintptr_t)cipher->iv, cipher->ivLen);
     }
- 
+
     *ctx = CRYPT_EAL_ProviderCipherNewCtx(libCtx, GetCipherAlgId(cipher->algo), attrName);
 
     int32_t ret = CRYPT_EAL_CipherInit(*ctx, cipher->key, cipher->keyLen, cipher->iv, cipher->ivLen, enc);
@@ -607,7 +607,7 @@ CRYPT_EAL_PkeyCtx *GeneratePkeyByParaId(HITLS_Lib_Ctx *libCtx, const char *attrN
     pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, algId, isKem ? CRYPT_EAL_PKEY_KEM_OPERATE : CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
     if (pkey == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16658, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "PkeyNewCtx fail", 0, 0, 0, 0);
+            "PkeyNewCtx fail, algId is %d", algId, 0, 0, 0);
         return NULL;
     }
 
@@ -967,7 +967,6 @@ int32_t HITLS_CRYPT_HkdfExtract(HITLS_Lib_Ctx *libCtx,
     }
     CRYPT_EAL_KdfCTX *kdfCtx = NULL;
     kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_HKDF, attrName);
-    
     if (kdfCtx == NULL) {
         return HITLS_CRYPT_ERR_HKDF_EXTRACT;
     }
@@ -1161,8 +1160,8 @@ int32_t HITLS_CRYPT_KemEncapsulate(HITLS_Lib_Ctx *libCtx, const char *attrName,
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, groupInfo->algId, CRYPT_EAL_PKEY_KEM_OPERATE, attrName);
     if (pkey == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16658, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "PkeyNewCtx fail", 0, 0, 0, 0);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15656, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "PkeyNewCtx fail id is %d", groupInfo->algId, 0, 0, 0);
         return HITLS_CRYPT_ERR_KEM_ENCAPSULATE;
     }
 

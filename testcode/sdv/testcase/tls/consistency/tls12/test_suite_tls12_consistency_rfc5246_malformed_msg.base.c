@@ -49,37 +49,6 @@ int32_t ServernameCbErrOK(HITLS_Ctx *ctx, int *alert, void *arg)
 // for alpn
 #define MAX_PROTOCOL_LEN 65536
 
-/* Protocol matching function at the application layer */
-static int32_t ExampleAlpnSelectProtocol(uint8_t **out, uint8_t *outLen, uint8_t *clientAlpnList,
-    uint8_t clientAlpnListLen, uint8_t *servAlpnList, uint8_t servAlpnListLen)
-{
-    int32_t ret = HITLS_ALPN_ERR_ALERT_FATAL;
-    if (out == NULL || outLen == NULL || clientAlpnList == NULL || servAlpnList == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
-    uint8_t i = 0;
-    uint8_t j = 0;
-    for (i = 0; i < servAlpnListLen;) {
-        for (j = 0; j < clientAlpnListLen;) {
-            if (servAlpnList[i] == clientAlpnList[j] &&
-                (memcmp(&servAlpnList[i + 1], &clientAlpnList[j + 1], servAlpnList[i]) == 0)) {
-                *out = &servAlpnList[i + 1];
-                *outLen = servAlpnList[i];
-                ret = HITLS_ALPN_ERR_OK;
-                goto EXIT;
-            }
-            j = j + clientAlpnList[j];
-            ++j;
-        }
-        i = i + servAlpnList[i];
-        ++i;
-    }
-
-EXIT:
-    return ret;
-}
-
 /* UserData structure transferred by the server to the alpnCb callback. */
 typedef struct TlsAlpnExtCtx_ {
     uint8_t *serverAlpnList;
@@ -96,10 +65,12 @@ int32_t ExampleAlpnCbForLlt(HITLS_Ctx *ctx, uint8_t **selectedProto, uint8_t *se
     uint8_t *selected = NULL;
     uint8_t selectedLen = 0u;
 
-    ret = ExampleAlpnSelectProtocol(&selected, &selectedLen, clientAlpnList, clientAlpnListSize,
-        alpnData->serverAlpnList, alpnData->serverAlpnListLen);
-    if (ret != HITLS_ALPN_ERR_OK) {
+    ret = HITLS_SelectAlpnProtocol(&selected, &selectedLen, alpnData->serverAlpnList, alpnData->serverAlpnListLen,
+        clientAlpnList, clientAlpnListSize);
+    if (ret != HITLS_SUCCESS) {
         return ret;
+    } else if (selected == NULL) {
+        return HITLS_ALPN_ERR_ALERT_FATAL;
     }
 
     *selectedProto = selected;

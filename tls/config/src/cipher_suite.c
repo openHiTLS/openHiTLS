@@ -2110,25 +2110,6 @@ int32_t HITLS_CFG_GetDescription(const HITLS_Cipher *cipher, uint8_t *buf, int32
     return GetCipherSuiteDescription(cipher, buf, len);
 }
 
-/**
- * @brief   Determine whether to use the AEAD algorithm based on the cipher suite information.
- *
- * @param   cipher [IN] Cipher suite information
- * @param   isAead [OUT] Indicates whether to use the AEAD algorithm.
- * @return  HITLS_SUCCESS Obtained successfully.
- *          HITLS_NULL_INPUT The input parameter pointer is NULL.
- */
-int32_t HITLS_CIPHER_IsAead(const HITLS_Cipher *cipher, bool *isAead)
-{
-    if (cipher == NULL || isAead == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
-        return HITLS_NULL_INPUT;
-    }
-
-    *isAead = (cipher->cipherType == HITLS_AEAD_CIPHER);
-    return HITLS_SUCCESS;
-}
-
 const HITLS_Cipher *HITLS_CFG_GetCipherByID(uint16_t cipherSuite)
 {
     int32_t index = FindCipherSuiteIndexByCipherSuite(cipherSuite);
@@ -2151,3 +2132,24 @@ int32_t HITLS_CFG_GetCipherSuite(const HITLS_Cipher *cipher, uint16_t *cipherSui
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_CONFIG_CIPHER_SUITE */
+
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
+/**
+ * @brief   Determine whether to use the AEAD algorithm based on the cipher suite information.
+ *
+ * @param   cipher [IN] Cipher suite information
+ * @param   isAead [OUT] Indicates whether to use the AEAD algorithm.
+ * @return  HITLS_SUCCESS Obtained successfully.
+ *          HITLS_NULL_INPUT The input parameter pointer is NULL.
+ */
+int32_t HITLS_CIPHER_IsAead(const HITLS_Cipher *cipher, bool *isAead)
+{
+    if (cipher == NULL || isAead == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
+        return HITLS_NULL_INPUT;
+    }
+
+    *isAead = (cipher->cipherType == HITLS_AEAD_CIPHER);
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_CONNECTION_INFO_NEGOTIATION */

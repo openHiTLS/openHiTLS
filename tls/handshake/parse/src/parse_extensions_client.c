@@ -194,7 +194,7 @@ int32_t ParseServerSelectedAlpnProtocol(
 
     (void)memcpy_s(*alpnSelected, selectedAlpnLen + 1, &pkt->buf[offset], selectedAlpnLen + 1);
 
-    *alpnSelectedSize = selectedAlpnLen;
+    *alpnSelectedSize = selectedAlpnLen + 1;
     *haveSelectedAlpn = true;
 
     return HITLS_SUCCESS;

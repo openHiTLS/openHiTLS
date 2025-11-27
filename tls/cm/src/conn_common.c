@@ -418,11 +418,11 @@ static uint16_t FindPreference(const HITLS_Ctx *ctx, int32_t nmatch, bool *haveF
     for (uint32_t i = 0; i < preferGroupSize; i++) {
         for (uint32_t j = 0; j < secondPreferGroupSize; j++) {
             if (preferGroups[i] == secondPreferGroups[j]) {
-                intersectionCnt++;
                 // Currently, the preferred nmatch is already matched
                 bool isMatch = (intersectionCnt == nmatch);
                 *haveFound = (isMatch ? true : (*haveFound));
                 ans = (isMatch ? preferGroups[i] : ans);
+                intersectionCnt++;
                 // Jump out of the inner village and change
                 break;
             }
@@ -454,7 +454,7 @@ int32_t HITLS_GetSharedGroup(const HITLS_Ctx *ctx, int32_t nmatch, uint16_t *gro
     *groupId = 0;
     // Check the value range of nmatch and whether the interface is invoked by the server. The client cannot invoke the
     // interface because the client cannot sense the peerInfo.
-    if (nmatch < GET_GROUPS_CNT || nmatch == 0 || ctx->isClient) {
+    if (nmatch < GET_GROUPS_CNT || ctx->isClient) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16464, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "invalid input", 0, 0, 0, 0);
         return HITLS_INVALID_INPUT;
     }

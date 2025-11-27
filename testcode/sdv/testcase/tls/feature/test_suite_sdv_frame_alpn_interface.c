@@ -51,7 +51,7 @@ static int32_t ConfigAlpn(HITLS_Config *tlsConfig, char *AlpnList, bool isCient)
     uint32_t AlpnListLen = 0;
     if (AlpnList != NULL){
         pAlpnList = AlpnList;
-        AlpnListLen = strlen(pAlpnList); 
+        AlpnListLen = strlen(pAlpnList);
     } else {
         pAlpnList = defaultAlpnList;
         AlpnListLen = strlen(pAlpnList);
@@ -79,9 +79,9 @@ EXIT:
  * @test UT_TLS_ALPN_PARSE_PROTO_FUNC_TC001
  * @title  ALPN function test
  * @precon  nan
- * @brief   server set alpn and alpn callback，client set alpn. The server supports the protocol configured on 
+ * @brief   server set alpn and alpn callback，client set alpn. The server supports the protocol configured on
             the client .Expect result 1
- * @expect  1. server returns the protocol supported by the client 
+ * @expect  1. server returns the protocol supported by the client
 */
 /* BEGIN_CASE */
 void UT_TLS_ALPN_PARSE_PROTO_FUNC_TC001(int version)
@@ -124,15 +124,87 @@ void UT_TLS_ALPN_PARSE_PROTO_FUNC_TC001(int version)
     ASSERT_EQ(ret, HITLS_SUCCESS);
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
-    ASSERT_TRUE(memcmp(clientTlsCtx->negotiatedInfo.alpnSelected, "http/1.1", 8) == 0);
-    ASSERT_TRUE(clientTlsCtx->negotiatedInfo.alpnSelectedSize == 8);
-    ASSERT_TRUE(memcmp(serverTlsCtx->negotiatedInfo.alpnSelected, "http/1.1", 8) == 0);
-    ASSERT_TRUE(serverTlsCtx->negotiatedInfo.alpnSelectedSize == 8);
+
+    uint8_t *clientAlpnProtosname = NULL;
+    uint32_t clientAlpnProtosnameLen = 0;
+    HITLS_GetSelectedAlpnProto(clientTlsCtx, &clientAlpnProtosname, &clientAlpnProtosnameLen);
+    ASSERT_TRUE(memcmp(clientAlpnProtosname, "http/1.1", 8) == 0);
+    ASSERT_TRUE(clientAlpnProtosnameLen == 8);
+
+    uint8_t *serverAlpnProtosname = NULL;
+    uint32_t serverAlpnProtosnameLen = 0;
+    HITLS_GetSelectedAlpnProto(serverTlsCtx, &serverAlpnProtosname, &serverAlpnProtosnameLen);
+    ASSERT_TRUE(memcmp(serverAlpnProtosname, "http/1.1", 8) == 0);
+    ASSERT_TRUE(serverAlpnProtosnameLen == 8);
 
 EXIT:
     HITLS_CFG_FreeConfig(s_config);
     HITLS_CFG_FreeConfig(c_config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_ALPN_SELECT_FUNC_TC001
+ * @title  HITLS_SelectAlpnProtocol function test
+ * @precon  nan
+ * @brief  server set alpn, client set alpn. The server supports the protocol configured on the client .Expect result 1.
+ * @expect  1. cmp out with "http/1.1", outLen is 8.
+*/
+/* BEGIN_CASE */
+void UT_TLS_ALPN_SELECT_FUNC_TC001()
+{
+    const char *clientAlpnList = "\x06spdy/3\x08http/1.1";
+    const char *serverAlpnList = "\x08http/1.1\x06spdy/3";
+    uint8_t *out = NULL;
+    uint8_t outLen = 0;
+
+    int32_t ret = HITLS_SelectAlpnProtocol(&out, &outLen, (const uint8_t *)serverAlpnList, strlen(serverAlpnList),
+        (const uint8_t *)clientAlpnList, strlen(clientAlpnList));
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+    ASSERT_EQ(outLen, 8);
+    ASSERT_TRUE(memcmp(out, "http/1.1", 8) == 0);
+
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_ALPN_SELECT_FUNC_TC002
+ * @title  HITLS_SelectAlpnProtocol function test
+ * @precon  nan
+ * @brief  server set alpn, client set alpn. The server supports the protocol configured on the client .Expect result 1.
+ * @expect  1. cmp out with "http/1.1", outLen is 8.
+*/
+/* BEGIN_CASE */
+void UT_TLS_ALPN_SELECT_FUNC_TC002(
+    int serverAlpnLen, Hex *serverAlpnList, int clientAlpnLen, Hex *clientAlpnList, int expectedRet, Hex *expectedOut)
+{
+    uint8_t *out = NULL;
+    uint8_t outLen = 0;
+    uint8_t *tempClientAlpn = clientAlpnList->x;
+    uint32_t tempClientAlpnLen = clientAlpnLen;
+    uint8_t *tempServerAlpn = serverAlpnList->x;
+    uint32_t tempServerAlpnLen = serverAlpnLen;
+
+    if (serverAlpnLen == -1) {
+        tempServerAlpn = NULL;
+        tempServerAlpnLen = 0;
+    }
+    if (clientAlpnLen == -1) {
+        tempClientAlpn = NULL;
+        tempClientAlpnLen = 0;
+    }
+
+    int32_t ret = HITLS_SelectAlpnProtocol(&out, &outLen, (const uint8_t *)tempServerAlpn, tempServerAlpnLen,
+        (const uint8_t *)tempClientAlpn, tempClientAlpnLen);
+    ASSERT_EQ(ret, expectedRet);
+    ASSERT_EQ(outLen, expectedOut->len);
+    ASSERT_TRUE(memcmp(out, expectedOut->x, expectedOut->len) == 0);
+
+EXIT:
+    return;
 }
 /* END_CASE */

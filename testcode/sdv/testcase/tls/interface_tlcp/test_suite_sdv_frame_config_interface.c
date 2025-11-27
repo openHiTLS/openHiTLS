@@ -452,7 +452,7 @@ void UT_TLS_CFG_SET_COOKIEGENERATECB_API_TC001(void)
 
     config = HITLS_CFG_NewDTLS12Config();
 
-    ASSERT_TRUE(HITLS_CFG_SetCookieGenCb(config, NULL) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_SetCookieGenCb(config, NULL) == HITLS_SUCCESS);
 
     ASSERT_TRUE(HITLS_CFG_SetCookieGenCb(config, UT_CookieGenerateCb) == HITLS_SUCCESS);
 
@@ -483,7 +483,7 @@ void UT_TLS_CFG_SET_COOKIEVERIFYCB_API_TC001(void)
 
     config = HITLS_CFG_NewDTLS12Config();
 
-    ASSERT_TRUE(HITLS_CFG_SetCookieVerifyCb(config, NULL) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_SetCookieVerifyCb(config, NULL) == HITLS_SUCCESS);
 
     ASSERT_TRUE(HITLS_CFG_SetCookieVerifyCb(config, UT_CookieVerifyCb) == HITLS_SUCCESS);
 

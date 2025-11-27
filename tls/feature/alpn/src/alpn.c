@@ -26,42 +26,13 @@
 
 #define MAX_PROTOCOL_LEN 65536
 
-int32_t ALPN_SelectProtocol(uint8_t **out, uint32_t *outLen, uint8_t *clientAlpnList, uint32_t clientAlpnListLen,
-    uint8_t *servAlpnList, uint32_t servAlpnListLen)
-{
-    if (out == NULL || outLen == NULL || clientAlpnList == NULL || servAlpnList == NULL ||
-        servAlpnListLen == 0 || clientAlpnListLen == 0) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16690, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "intput null", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
-        return HITLS_NULL_INPUT;
-    }
-
-    uint32_t i, j;
-    for (i = 0; i < servAlpnListLen;) {
-        for (j = 0; j < clientAlpnListLen;) {
-            if (servAlpnList[i] == clientAlpnList[j] &&
-                (memcmp(&servAlpnList[i + 1], &clientAlpnList[j + 1], servAlpnList[i]) == 0)) {
-                *out = &servAlpnList[i + 1];
-                *outLen = servAlpnList[i];
-                return HITLS_SUCCESS;
-            }
-            j = j + clientAlpnList[j];
-            ++j;
-        }
-        i = i + servAlpnList[i];
-        ++i;
-    }
-
-    return HITLS_SUCCESS;
-}
-
 static int32_t SelectProtocol(TLS_Ctx *ctx, uint8_t *alpnSelected, uint16_t alpnSelectedSize)
 {
     uint8_t *protoMatch = NULL;
-    uint32_t protoMatchLen = 0;
+    uint8_t protoMatchLen = 0;
 
-    int32_t ret = ALPN_SelectProtocol(&protoMatch, &protoMatchLen, alpnSelected,
-        alpnSelectedSize, ctx->config.tlsConfig.alpnList, ctx->config.tlsConfig.alpnListSize);
+    int32_t ret = HITLS_SelectAlpnProtocol(&protoMatch, &protoMatchLen, ctx->config.tlsConfig.alpnList,
+        ctx->config.tlsConfig.alpnListSize, alpnSelected, alpnSelectedSize);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15258, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client check proposed protocol fail due to invalid params.", 0, 0, 0, 0);
@@ -74,8 +45,9 @@ static int32_t SelectProtocol(TLS_Ctx *ctx, uint8_t *alpnSelected, uint16_t alpn
             "server proposed protocol is not supported by client", 0, 0, 0, 0);
         return HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH;
     }
+    uint32_t protoLen = protoMatchLen;
 
-    uint8_t *alpnSelectedTmp = (uint8_t *)BSL_SAL_Calloc(1u, (protoMatchLen + 1));
+    uint8_t *alpnSelectedTmp = (uint8_t *)BSL_SAL_Calloc(1u, (protoLen + 1));
     if (alpnSelectedTmp == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15260, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client malloc selected alpn mem failed.", 0, 0, 0, 0);
@@ -84,19 +56,10 @@ static int32_t SelectProtocol(TLS_Ctx *ctx, uint8_t *alpnSelected, uint16_t alpn
         return HITLS_MEMALLOC_FAIL;
     }
 
-    if (memcpy_s(alpnSelectedTmp, protoMatchLen + 1, protoMatch,
-        protoMatchLen) != EOK) {
-        BSL_SAL_FREE(alpnSelectedTmp);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15261, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "client copy selected alpn failed.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
-        return HITLS_MEMCPY_FAIL;
-    }
-
+    (void)memcpy_s(alpnSelectedTmp, protoLen + 1, protoMatch, protoLen);
     BSL_SAL_FREE(ctx->negotiatedInfo.alpnSelected);
     ctx->negotiatedInfo.alpnSelected = alpnSelectedTmp;
-    ctx->negotiatedInfo.alpnSelectedSize = protoMatchLen;
+    ctx->negotiatedInfo.alpnSelectedSize = protoLen;
 
     return HITLS_SUCCESS;
 }
