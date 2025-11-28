@@ -131,7 +131,7 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         KEY_BLOCK_PARTITON_LENGTH(12u, 16u, 0u, 0u, 0u, 8u),
         VERSION_SCOPE(HITLS_VERSION_TLS13, HITLS_VERSION_TLS13, 0u, 0u),
         .cipherType = HITLS_AEAD_CIPHER,
-        .strengthBits = 128},
+        .strengthBits = 64},
 #endif
 #ifdef HITLS_TLS_SUITE_RSA_WITH_AES_128_CBC_SHA
     {.enable = true,
@@ -1397,7 +1397,7 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         KEY_BLOCK_PARTITON_LENGTH(4u, 16u, 0u, 0u, 8u, 8u),
         VERSION_SCOPE(HITLS_VERSION_TLS12, HITLS_VERSION_TLS12, HITLS_VERSION_DTLS12, HITLS_VERSION_DTLS12),
         .cipherType = HITLS_AEAD_CIPHER,
-        .strengthBits = 128},
+        .strengthBits = 64},
 #endif
 #ifdef HITLS_TLS_SUITE_RSA_WITH_AES_256_CCM
     {.enable = true,
@@ -1429,7 +1429,7 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         KEY_BLOCK_PARTITON_LENGTH(4u, 32u, 0u, 0u, 8u, 8u),
         VERSION_SCOPE(HITLS_VERSION_TLS12, HITLS_VERSION_TLS12, HITLS_VERSION_DTLS12, HITLS_VERSION_DTLS12),
         .cipherType = HITLS_AEAD_CIPHER,
-        .strengthBits = 256},
+        .strengthBits = 64},
 #endif
 #ifdef HITLS_TLS_PROTO_TLCP11
 #ifdef HITLS_TLS_SUITE_ECDHE_SM4_CBC_SM3

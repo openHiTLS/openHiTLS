@@ -1772,3 +1772,15 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void UT_TLS_CFG_GET_CCM8_CIPHERSUITE_TC001(char *stdName)
+{
+    const HITLS_Cipher *cipher = NULL;
+    cipher = HITLS_CFG_GetCipherSuiteByStdName((const uint8_t *)stdName);
+    ASSERT_TRUE(cipher != NULL);
+    ASSERT_EQ(cipher->strengthBits, 64);
+EXIT:
+    return;
+}
+/* END_CASE */

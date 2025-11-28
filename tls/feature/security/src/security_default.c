@@ -121,12 +121,8 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
     (void)exData;
     int32_t ret;
     int32_t level = HITLS_DEFAULT_SECURITY_LEVEL;
-    int32_t minBits;
-    const TLS_GroupInfo *groupInfo = NULL;
-    const TLS_SigSchemeInfo *schemeInfo = NULL;
-    if (ctx == NULL && config == NULL) {
-        return SECURITY_ERR;
-    } else if (config != NULL) {
+
+    if (config != NULL) {
         (void)HITLS_CFG_GetSecurityLevel(config, &level);
     } else if (ctx != NULL) {
         (void)HITLS_GetSecurityLevel(ctx, &level);
@@ -141,7 +137,7 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
     }
 
     /* Check the number of security bits. */
-    minBits = SECURITY_GetSecbits(level);
+    int32_t minBits = SECURITY_GetSecbits(level);
     switch (option) {
         case HITLS_SECURITY_SECOP_VERSION:
             /* Check the version. */
@@ -151,30 +147,7 @@ int32_t SECURITY_DefaultCb(const HITLS_Ctx *ctx, const HITLS_Config *config, int
         case HITLS_SECURITY_SECOP_CIPHER_SHARED:
         case HITLS_SECURITY_SECOP_CIPHER_CHECK:
             /* Check the algorithm suite. */
-            ret = CheckCipherSuite(other, level);
-            break;
-        case HITLS_SECURITY_SECOP_SIGALG_SUPPORTED:
-        case HITLS_SECURITY_SECOP_SIGALG_SHARED:
-        case HITLS_SECURITY_SECOP_SIGALG_CHECK:
-            /* Check the signature algorithm. */
-            schemeInfo = ConfigGetSignatureSchemeInfo(config, id);
-            if (schemeInfo != NULL && schemeInfo->secBits >= g_minBits[level - 1]) {
-                ret = SECURITY_SUCCESS;
-            } else {
-                ret = SECURITY_ERR;
-            }
-            break;
-        case HITLS_SECURITY_SECOP_CURVE_SUPPORTED:
-        case HITLS_SECURITY_SECOP_CURVE_SHARED:
-        case HITLS_SECURITY_SECOP_CURVE_CHECK:
-            /* Check the group. */
-            groupInfo = ConfigGetGroupInfo(config, id);
-            if (groupInfo != NULL && groupInfo->secBits >= g_minBits[level - 1]) {
-                ret = SECURITY_SUCCESS;
-            } else {
-                ret = SECURITY_ERR;
-            }
-            break;
+            return CheckCipherSuite(other, level);
         case HITLS_SECURITY_SECOP_TICKET:
             /* Check the session ticket. */
             ret = CheckSessionTicket(level);
@@ -209,6 +182,35 @@ int32_t SECURITY_CfgCheck(const HITLS_Config *config, int32_t option, int32_t bi
     if (config->securityCb == NULL) {
         /* The security callback function is empty and does not need to be checked. */
         return SECURITY_SUCCESS;
+    }
+    const TLS_SigSchemeInfo *schemeInfo = NULL;
+    const TLS_GroupInfo *groupInfo = NULL;
+    uint16_t ianaId;
+    switch (option) {
+        case HITLS_SECURITY_SECOP_SIGALG_SUPPORTED:
+        case HITLS_SECURITY_SECOP_SIGALG_SHARED:
+        case HITLS_SECURITY_SECOP_SIGALG_CHECK:
+            schemeInfo = ConfigGetSignatureSchemeInfo(config, (uint16_t)id);
+            if (schemeInfo != NULL) {
+                ianaId = schemeInfo->signatureScheme;
+                return config->securityCb(NULL, config, option, schemeInfo->secBits, schemeInfo->hashAlgId,
+                    &ianaId, config->securityExData);
+            }
+            ianaId = (uint16_t)id;
+            return config->securityCb(NULL, config, option, 0, 0, &ianaId, config->securityExData);
+        case HITLS_SECURITY_SECOP_CURVE_SUPPORTED:
+        case HITLS_SECURITY_SECOP_CURVE_SHARED:
+        case HITLS_SECURITY_SECOP_CURVE_CHECK:
+            groupInfo = ConfigGetGroupInfo(config, (uint16_t)id);
+            if (groupInfo != NULL) {
+                ianaId = groupInfo->groupId;
+                return config->securityCb(NULL, config, option, groupInfo->secBits, groupInfo->paraId,
+                    &ianaId, config->securityExData);
+            }
+            ianaId = (uint16_t)id;
+            return config->securityCb(NULL, config, option, 0, 0, &ianaId, config->securityExData);
+        default:
+            break;
     }
     return config->securityCb(NULL, config, option, bits, id, other, config->securityExData);
 }
