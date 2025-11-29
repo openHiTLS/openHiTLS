@@ -455,3 +455,56 @@ EXIT:
     BSL_LIST_FREE(certChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
 }
 /* END_CASE */
+
+/* @
+* @test  SDV_X509_CRL_PARSE_FILE_FUNC_TC004
+* @title  Test verification of revoked certificates: set sm2UserId.
+@ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_FILE_VERIFY_FUNC_TC004(char *caPath, char *crlPath, char *certPath, int flags, int crlVerResult,
+    int expResult)
+{
+    TestMemInit();
+    HITLS_X509_StoreCtx *storeCtx = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(storeCtx != NULL);
+    storeCtx->verifyParam.flags = flags; // HITLS_X509_VFY_FLAG_CRL_ALL or HITLS_X509_VFY_FLAG_CRL_DEV
+
+    HITLS_X509_Cert *caCert = NULL;
+    HITLS_X509_Cert *testCert = NULL;
+    int32_t ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, caPath, &caCert);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    ret = BSL_LIST_AddElement(storeCtx->store, caCert, BSL_LIST_POS_END);
+    ASSERT_EQ(ret, BSL_SUCCESS);
+
+    HITLS_X509_Crl *crl = NULL;
+    ret = HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, crlPath, &crl);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    ret = BSL_LIST_AddElement(storeCtx->crl, crl, BSL_LIST_POS_END);
+    ASSERT_EQ(ret, BSL_SUCCESS);
+
+    const char *sm2UserId = "1234567812345678";
+    uint32_t sm2UserIdLen = (uint32_t)strlen(sm2UserId);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_VFY_SM2_USERID,
+        (void *)sm2UserId, sm2UserIdLen), HITLS_PKI_SUCCESS);
+
+    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store);
+    ASSERT_EQ(ret, crlVerResult);
+
+    HITLS_X509_List *certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(certChain != NULL);
+
+    ret = HITLS_X509_CertParseFile(BSL_FORMAT_PEM, certPath, &testCert);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    ret = BSL_LIST_AddElement(certChain, testCert, BSL_LIST_POS_END);
+    ASSERT_EQ(ret, BSL_SUCCESS);
+
+    ret = HITLS_X509_CertVerify(storeCtx, certChain);
+    ASSERT_EQ(ret, expResult);
+EXIT:
+    HITLS_X509_StoreCtxFree(storeCtx);
+    BSL_LIST_FREE(certChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */

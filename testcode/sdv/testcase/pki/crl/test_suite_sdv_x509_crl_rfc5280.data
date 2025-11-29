@@ -154,6 +154,33 @@ SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/extension_crl
 SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #9 Verify certificates with a CRL that is not yet valid.
 SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/extension_crl/ca_cert.pem":"../testdata/cert/test_for_crl/extension_crl/test_crl_change_date2.pem":"../testdata/cert/test_for_crl/extension_crl/user_cert.pem":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CERT_REVOKED
 
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #1 SM2:Test the unrevoked certificates
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/certs/server2.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #2 SM2:Test the revoked certificates, flags is CRL_ALL
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/certs/server1.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #3 SM2:Test the revoked certificates, flags is CRL_DEV
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/certs/server1.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #4 SM2:Test the revoked certificates, flags is 0
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/certs/server1.crt":0:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #5 SM2:Verify revoked certificates with CRL extensions.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/sm2/extension_crl/root.crt":"../testdata/cert/test_for_crl/sm2/extension_crl/root.crl":"../testdata/cert/test_for_crl/sm2/extension_crl/server.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #6 SM2:Test revoked certificates with tampered AKI information.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/sm2/extension_crl/root.crt":"../testdata/cert/test_for_crl/sm2/extension_crl/root_change_aki.crl":"../testdata/cert/test_for_crl/sm2/extension_crl/server.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CRLSIGN_FAIL
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #7 SM2:Test revoked certificates with CRL containing unrecognized critical extensions.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/sm2/extension_crl/root.crt":"../testdata/cert/test_for_crl/sm2/extension_crl/root_add_unrecognized_critical_extension.crl":"../testdata/cert/test_for_crl/sm2/extension_crl/server.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_PROCESS_CRITICALEXT
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #8 SM2:Verify certificates with expired CRL.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/sm2/extension_crl/root.crt":"../testdata/cert/test_for_crl/sm2/extension_crl/root_change_date1.crl":"../testdata/cert/test_for_crl/sm2/extension_crl/server.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CRLSIGN_FAIL
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001 #9 SM2:Verify certificates with a CRL that is not yet valid.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC001:"../testdata/cert/test_for_crl/sm2/extension_crl/root.crt":"../testdata/cert/test_for_crl/sm2/extension_crl/root_change_date2.crl":"../testdata/cert/test_for_crl/sm2/extension_crl/server.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CRLSIGN_FAIL
+
 SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #1 Test certificate chain validation without intermediate certificate revocation lists.
 SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device1.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_X509_ERR_VFY_CRL_NOT_FOUND:HITLS_PKI_SUCCESS
 
@@ -175,6 +202,39 @@ SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/crl_verify/ce
 SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #7 Test intermediate certificate without CRL signing authority.
 SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/crl_verify/certs/ca.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate_no_crlsign.crt":"../testdata/cert/test_for_crl/crl_verify/crl/root_updated.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device1.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_X509_ERR_VFY_KU_NO_CRLSIGN:HITLS_X509_ERR_VFY_KU_NO_CRLSIGN
 
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #1 SM2:Test certificate chain validation without intermediate certificate revocation lists.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/intermediate.crt":"":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/usr2.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_X509_ERR_VFY_CRL_NOT_FOUND:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #2 SM2:Test certificate chain validation without intermediate certificate revocation lists.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/intermediate.crt":"":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/usr2.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #3 SM2:Test certificate chain with certificates not revoked.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root_updated.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/usr2.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #4 SM2:Test certificate chain with intermediate certificate revoked,flags is CRL_ALL
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/usr2.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_X509_ERR_VFY_CERT_REVOKED:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #5 SM2:Test certificate chain with intermediate certificate revoked, flags is CRL_DEV
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/usr2.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #6 SM2:Test certificate chain with device certificate revoked, flags is CRL_ALL
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/usr1.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_X509_ERR_VFY_CERT_REVOKED:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #7 SM2:Test intermediate certificate without CRL signing authority.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/intermediate_no_crlsign.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root_updated.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/usr2.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_X509_ERR_VFY_KU_NO_CRLSIGN:HITLS_X509_ERR_VFY_KU_NO_CRLSIGN
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #8 SM2:Verify certificates not in the revocation list.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root_updated.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/usr3.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #9 SM2:Verify certificates in the revocation list.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root_updated.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/crl/intermediate_usr3.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/usr3.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_X509_ERR_VFY_CERT_REVOKED:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #10 SM2:Tamper with CRL subject and verify certificates.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root_updated.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/crl/intermediate_usr3_change_dn.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/usr3.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_X509_ERR_VFY_CRL_NOT_FOUND:HITLS_X509_ERR_VFY_CRL_NOT_FOUND
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002 #11 SM2:Tamper with the CRL signature value and verify certificates.
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC002:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root_updated.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/crl/intermediate_usr3_change_sign.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/intermediate/certs/usr3.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_X509_ERR_VFY_CRLSIGN_FAIL:HITLS_X509_ERR_VFY_CRLSIGN_FAIL
+
 SDV_X509_CRL_FILE_VERIFY_FUNC_TC003 #1 Verify certificates not in the revocation list.
 SDV_X509_CRL_FILE_VERIFY_FUNC_TC003:"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device3.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
 
@@ -186,3 +246,21 @@ SDV_X509_CRL_FILE_VERIFY_FUNC_TC003:"../testdata/cert/test_for_crl/crl_verify/in
 
 SDV_X509_CRL_FILE_VERIFY_FUNC_TC003 #4 Tamper with the CRL signature value and verify certificates.
 SDV_X509_CRL_FILE_VERIFY_FUNC_TC003:"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/intermediate.crt":"../testdata/cert/test_for_crl/crl_verify/intermediate/crl/intermediate_dev3_change_sign.crl":"../testdata/cert/test_for_crl/crl_verify/intermediate/certs/device3.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_X509_ERR_VFY_CRLSIGN_FAIL:HITLS_X509_ERR_VFY_CRLSIGN_FAIL
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC004 #1 SM2 without userId:Test the unrevoked certificates
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC004:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/certs/server2.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CRLSIGN_FAIL
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC004 #2 SM2 without userId:Test the revoked certificates, flags is CRL_ALL
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC004:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/certs/server1.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CRLSIGN_FAIL
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC004 #3 SM2 without userId:Test the revoked certificates, flags is CRL_DEV
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC004:"../testdata/cert/test_for_crl/sm2/crl_verify/certs/root.crt":"../testdata/cert/test_for_crl/sm2/crl_verify/crl/root.crl":"../testdata/cert/test_for_crl/sm2/crl_verify/certs/server1.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CRLSIGN_FAIL
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC004 #4 SM2 with userId:Test the unrevoked certificates
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC004:"../testdata/cert/test_for_crl/sm2/sm2_userid/ca.crt":"../testdata/cert/test_for_crl/sm2/sm2_userid/ca.crl":"../testdata/cert/test_for_crl/sm2/sm2_userid/user2.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC004 #5 SM2 with userId:Test the revoked certificates, flags is CRL_ALL
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC004:"../testdata/cert/test_for_crl/sm2/sm2_userid/ca.crt":"../testdata/cert/test_for_crl/sm2/sm2_userid/ca.crl":"../testdata/cert/test_for_crl/sm2/sm2_userid/user1.crt":HITLS_X509_VFY_FLAG_CRL_ALL:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC004 #6 SM2 with userId:Test the revoked certificates, flags is CRL_DEV
+SDV_X509_CRL_FILE_VERIFY_FUNC_TC004:"../testdata/cert/test_for_crl/sm2/sm2_userid/ca.crt":"../testdata/cert/test_for_crl/sm2/sm2_userid/ca.crl":"../testdata/cert/test_for_crl/sm2/sm2_userid/user1.crt":HITLS_X509_VFY_FLAG_CRL_DEV:HITLS_PKI_SUCCESS:HITLS_X509_ERR_VFY_CERT_REVOKED
