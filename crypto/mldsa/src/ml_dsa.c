@@ -536,6 +536,10 @@ int32_t CRYPT_ML_DSA_SetPrvKeyEx(CRYPT_ML_DSA_Ctx *ctx, const BSL_Param *para)
         }
         // Consistence Check
         if (prvKey.data != NULL && prvKey.len != 0) {
+            if (prvKey.len != ctx->prvLen) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_KEYLEN_ERROR);
+                return CRYPT_MLDSA_KEYLEN_ERROR;
+            }
             return memcmp(ctx->prvKey, prvKey.data, ctx->prvLen) == 0 ? CRYPT_SUCCESS :
                                                                         CRYPT_MLDSA_PRVKEY_SEED_INCONSISTENT;
         }

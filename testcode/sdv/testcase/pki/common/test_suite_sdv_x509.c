@@ -144,6 +144,11 @@ static CRYPT_EAL_PkeyCtx *GenKey(int32_t algId, int32_t algParam)
         ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algParam), CRYPT_SUCCESS);
     }
 #endif
+#ifdef HITLS_CRYPTO_SLH_DSA
+    if (algId == CRYPT_PKEY_SLH_DSA) {
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algParam), CRYPT_SUCCESS);
+    }
+#endif
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
 
     return pkey;
@@ -1583,6 +1588,36 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(pkeyout);
 #else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/**
+ * Test SLH-DSA certificate encode/decode consistency
+ * Parse certificate from file, re-encode it, and compare with original file
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_SLHDSA_PQCCert_TC001(int format, char *path)
+{
+#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_BSL_SAL_FILE)
+    HITLS_X509_Cert *cert = NULL;
+    BSL_Buffer buff = {0};
+
+    TestMemInit();
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    BSL_SAL_ReadFile(path, &data, &dataLen);
+    ASSERT_EQ(HITLS_X509_CertParseFile(format, path, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertGenBuff(format, cert, &buff), HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("cert", buff.data, buff.dataLen, data, dataLen);
+EXIT:
+    BSL_SAL_Free(buff.data);
+    BSL_SAL_Free(data);
+    HITLS_X509_CertFree(cert);
+#else
+    (void)format;
+    (void)path;
     SKIP_TEST();
 #endif
 }

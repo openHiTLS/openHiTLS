@@ -488,6 +488,10 @@ enum CRYPT_ERROR {
     CRYPT_MLKEM_INVALID_PRVKEY,                         /**< Invalid private key. */
     CRYPT_MLKEM_DECODE_KEY_OVERFLOW,                    /**< The decoded poly coffs greater than MLKEM_Q */
     CRYPT_MLKEM_KEY_REPEATED_SET,                       /**< PKey context is repeated set*/
+    CRYPT_MLKEM_SEED_EXPANDED_KEY_INCONSISTENT,         /**< Seed and expanded key are inconsistent. */
+    CRYPT_MLKEM_Z_MISMATCH,                             /**< Implicit rejection secret z mismatch. */
+    CRYPT_MLKEM_SEED_NOT_SET,                           /**< Seed is not set in the context. */
+    CRYPT_MLKEM_DK_FORMAT_ERROR,                        /**< Invalid decapsulation key format. */
 
     CRYPT_HPKE_ERR_GEN_ASYM_KEY = 0x01310001,            /**< HPKE Generate asymmetric key error. */
     CRYPT_HPKE_ERR_AEAD_TAG,                             /**< Failed to verify AEAD tag when decrypt. */

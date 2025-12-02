@@ -14,6 +14,7 @@
  */
 
 /* BEGIN_HEADER */
+#include <stdio.h>
 #include "bsl_sal.h"
 #include "securec.h"
 #include "stub_utils.h"
@@ -36,6 +37,8 @@
 #include "hitls_print_local.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
+#include "crypt_algid.h"
+#include "crypt_eal_pkey.h"
 #define MAX_BUFF_SIZE 4096
 #define PATH_MAX_LEN 4096
 #define PWD_MAX_LEN 4096
@@ -1456,6 +1459,362 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001
+ * @title Test ML-KEM private key decode/encode with seed-only format
+ * @precon Prepare ML-KEM-512/768/1024 private keys in seed-only format
+ *         (Appendix C.1.1.1, C.1.2.1, C.1.3.1 from draft-ietf-lamps-kyber-certificates-11)
+ * @brief
+ *   1. Decode the private key from file (seed-only format)
+ *   2. Encode the key back to buffer
+ *   3. Compare encoded buffer with original file
+ * @expect
+ *   1. Decode should succeed
+ *   2. Encode should succeed
+ *   3. Encoded data should match original file exactly
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001(int format, int type, char *path)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    BSL_Buffer encodeAsn1 = {0};
+    uint8_t expectBuf[MAX_BUFF_SIZE * 2] = {};
+    uint32_t expectBufLen = sizeof(expectBuf);
+
+    // Decode seed-only private key (CRYPT_PRIKEY_MLKEM_SEED format)
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
+
+    // Set the private key format to seed-only before encoding
+    uint32_t dkFormat = CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_MLKEM_DK_FORMAT, &dkFormat, sizeof(uint32_t)), CRYPT_SUCCESS);
+
+    // Encode back to buffer
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+
+    // Compare with original file
+    ASSERT_EQ(ReadFile(path, expectBuf, encodeAsn1.dataLen, &expectBufLen), 0);
+    ASSERT_COMPARE("seed key ", encodeAsn1.data, encodeAsn1.dataLen, expectBuf, expectBufLen);
+
+EXIT:
+    BSL_SAL_FREE(encodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001
+ * @title Test ML-KEM private key decode/encode with expanded-only format
+ * @precon Prepare ML-KEM-512/768/1024 private keys in expanded-only format
+ *         (Appendix C.1.1.2, C.1.2.2, C.1.3.2 from draft-ietf-lamps-kyber-certificates-11)
+ * @brief
+ *   1. Decode the private key from file (expanded-only format)
+ *   2. Verify H(ek) check is performed (FIPS 203 Section 7.3)
+ *   3. Encode the key back to buffer
+ *   4. Compare encoded buffer with original file
+ * @expect
+ *   1. Decode should succeed with H(ek) validation
+ *   2. Encode should succeed
+ *   3. Encoded data should match original file exactly
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001(int format, int type, char *path)
+{
+    TestMemInit();
+    TestRandInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    BSL_Buffer encodeAsn1 = {0};
+    uint8_t expectBuf[MAX_BUFF_SIZE * 2] = {};
+    uint32_t expectBufLen = sizeof(expectBuf);
+
+    // Decode expanded-only private key (CRYPT_PRIKEY_MLKEM_EXPANDED format)
+    // This should trigger H(ek) validation per FIPS 203 Section 7.3
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
+
+    // Set the private key format to expanded-only before encoding
+    uint32_t dkFormat = CRYPT_ALGO_MLKEM_DK_FORMAT_DK_ONLY;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_MLKEM_DK_FORMAT, &dkFormat, sizeof(uint32_t)), CRYPT_SUCCESS);
+
+    // Encode back to buffer
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+
+    // Compare with original file
+    ASSERT_EQ(ReadFile(path, expectBuf, encodeAsn1.dataLen, &expectBufLen), 0);
+    ASSERT_COMPARE("expanded key ", encodeAsn1.data, encodeAsn1.dataLen, expectBuf, expectBufLen);
+
+EXIT:
+    BSL_SAL_FREE(encodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001
+ * @title Test ML-KEM private key decode/encode with both seed and expanded key
+ * @precon Prepare ML-KEM-512/768/1024 private keys with both seed and expandedKey
+ *         (Appendix C.1.1.3, C.1.2.3, C.1.3.3 from draft-ietf-lamps-kyber-certificates-11)
+ * @brief
+ *   1. Decode the private key from file (both format)
+ *   2. Verify seed consistency check is performed (Draft Section 8 SHOULD)
+ *   3. Verify H(ek) check is performed (FIPS 203 Section 7.3)
+ *   4. Encode the key back to buffer
+ *   5. Compare encoded buffer with original file
+ * @expect
+ *   1. Decode should succeed with both seed and H(ek) validation
+ *   2. Encode should succeed
+ *   3. Encoded data should match original file exactly
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001(int format, int type, char *path)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    BSL_Buffer encodeAsn1 = {0};
+    uint8_t expectBuf[MAX_BUFF_SIZE * 2] = {};
+    uint32_t expectBufLen = sizeof(expectBuf);
+
+    // Decode both format private key (CRYPT_PRIKEY_MLKEM_BOTH format)
+    // This should trigger seed consistency check (memcmp validation)
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
+
+    // Set the private key format to both before encoding
+    uint32_t dkFormat = CRYPT_ALGO_MLKEM_DK_FORMAT_BOTH;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_MLKEM_DK_FORMAT, &dkFormat, sizeof(uint32_t)), CRYPT_SUCCESS);
+
+    // Encode back to buffer
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+
+    // Compare with original file
+    ASSERT_EQ(ReadFile(path, expectBuf, encodeAsn1.dataLen, &expectBufLen), 0);
+    ASSERT_COMPARE("both format key ", encodeAsn1.data, encodeAsn1.dataLen, expectBuf, expectBufLen);
+
+EXIT:
+    BSL_SAL_FREE(encodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_HITLS_MLKEM_PrivateKey_InconsistentBoth_TC001
+ * @title Test ML-KEM private key decode with inconsistent seed and expandedKey (NEGATIVE)
+ * @precon Prepare bad private key with both seed and expandedKey where they don't match
+ *         (Appendix C.4.1 Example 1 from draft-ietf-lamps-kyber-certificates-11)
+ * @brief
+ *   1. Attempt to decode private key with mismatched seed and expandedKey
+ *   2. Verify seed consistency check detects the mismatch
+ * @expect
+ *   1. Decode should fail with CRYPT_MLKEM_SEED_EXPANDED_KEY_INCONSISTENT error
+ *   2. Error indicates that seed-generated key doesn't match provided expandedKey
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_MLKEM_PrivateKey_InconsistentBoth_TC001(int format, int type, char *path)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+
+    // Attempt to decode inconsistent private key (seed != expandedKey)
+    // Expected error: CRYPT_MLKEM_SEED_EXPANDED_KEY_INCONSISTENT
+    int32_t ret = CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key);
+    ASSERT_EQ(ret, CRYPT_MLKEM_SEED_EXPANDED_KEY_INCONSISTENT);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_HITLS_MLKEM_PrivateKey_MutatedHek_TC001
+ * @title Test ML-KEM private key decode with mutated H(ek) (NEGATIVE)
+ * @precon Prepare bad private key with corrupted H(ek) in expandedKey
+ *         (Appendix C.4.1 Example 3 from draft-ietf-lamps-kyber-certificates-11)
+ * @brief
+ *   1. Attempt to decode private key with mutated H(ek)
+ *   2. Verify H(ek) validation detects the corruption
+ * @expect
+ *   1. Decode should fail with CRYPT_MLKEM_INVALID_PRVKEY error
+ *   2. Error indicates that computed H(ek) doesn't match stored H(ek)
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_MLKEM_PrivateKey_MutatedHek_TC001(int format, int type, char *path)
+{
+    TestMemInit();
+    TestRandInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+
+    // Attempt to decode private key with mutated H(ek)
+    // Expected error: CRYPT_MLKEM_INVALID_PRVKEY
+    int32_t ret = CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key);
+    ASSERT_EQ(ret, CRYPT_MLKEM_INVALID_PRVKEY);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_HITLS_MLKEM_PrivateKey_InconsistentZ_TC001
+ * @title Test ML-KEM private key decode with mismatched z value (NEGATIVE)
+ * @precon Prepare bad private key where z in seed differs from z in expandedKey
+ *         (Appendix C.4.1 Example 4 from draft-ietf-lamps-kyber-certificates-11)
+ * @brief
+ *   1. Attempt to decode private key with mismatched z (implicit rejection secret)
+ *   2. Verify seed consistency check detects z mismatch
+ * @expect
+ *   1. Decode should fail with CRYPT_MLKEM_SEED_EXPANDED_KEY_INCONSISTENT error
+ *   2. Even though public/private vectors match, z difference should be detected
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_MLKEM_PrivateKey_InconsistentZ_TC001(int format, int type, char *path)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+
+    // Attempt to decode private key with mismatched z value
+    // Expected error: CRYPT_MLKEM_SEED_EXPANDED_KEY_INCONSISTENT
+    int32_t ret = CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key);
+    ASSERT_EQ(ret, CRYPT_MLKEM_SEED_EXPANDED_KEY_INCONSISTENT);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_HITLS_MLKEM_PrivateKey_MutatedS0_TC001
+ * @title Test ML-KEM private key decode with mutated s_0 (NEGATIVE - pairwise check only)
+ * @precon Prepare bad private key with corrupted s_0 but valid H(ek)
+ *         (Appendix C.4.1 Example 2 from draft-ietf-lamps-kyber-certificates-11)
+ * @brief
+ *   1. Attempt to decode expanded-only private key with mutated s_0
+ *   2. Verify H(ek) check passes (H(ek) is valid)
+ *   3. Verify pairwise consistency check detects s_0 corruption
+ * @expect
+ *   1. If HITLS_CRYPTO_MLKEM_CHECK enabled: decode fails with CRYPT_MLKEM_INVALID_PRVKEY
+ *   2. If HITLS_CRYPTO_MLKEM_CHECK disabled: decode succeeds (H(ek) check passes)
+ *   3. This demonstrates that H(ek) check alone cannot detect secret key corruption
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_MLKEM_PrivateKey_MutatedS0_TC001(int format, int type, char *path)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+
+    // Attempt to decode private key with mutated s_0
+    int32_t ret = CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key);
+
+#ifdef HITLS_CRYPTO_MLKEM_CHECK
+    // With pairwise check enabled: should detect s_0 corruption
+    ASSERT_EQ(ret, CRYPT_MLKEM_INVALID_PRVKEY);
+#else
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+#endif
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_HITLS_MLKEM_PublicKey_TC001
+ * @title ML-KEM public key encoding and decoding test
+ * @precon Prepare valid ML-KEM public key file
+ * @brief
+ *    1. Decode ML-KEM public key from file (PEM or DER format)
+ *    2. Encode the public key back to buffer
+ *    3. Compare encoded buffer with original file content
+ * @expect
+ *    1. Decoding should succeed
+ *    2. Encoding should succeed
+ *    3. Encoded content should exactly match the original file
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_MLKEM_PublicKey_TC001(int format, int type, char *path)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    BSL_Buffer encodeAsn1 = {0};
+    uint8_t expectBuf[MAX_BUFF_SIZE * 2] = {};
+    uint32_t expectBufLen = sizeof(expectBuf);
+
+    // Decode public key from file
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
+
+    // Encode public key to buffer
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+
+    // Read original file and compare
+    ASSERT_EQ(ReadFile(path, expectBuf, encodeAsn1.dataLen, &expectBufLen), 0);
+    ASSERT_COMPARE("public key ", encodeAsn1.data, encodeAsn1.dataLen, expectBuf, expectBufLen);
+
+EXIT:
+    BSL_SAL_FREE(encodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001
+ * @title ML-KEM private key generation and encoding test
+ * @precon None
+ * @brief
+ *    1. Create ML-KEM key context and set parameters
+ *    2. Generate new key pair
+ *    3. Set private key output format (seed-only/expanded-only/both)
+ *    4. Encode private key to buffer and file
+ * @expect
+ *    1. Key generation should succeed
+ *    2. Format setting should succeed
+ *    3. Encoding should succeed
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001(int mlkemType, int format, int type, int dkFormat, char* path)
+{
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    BSL_Buffer encodeAsn1 = {0};
+    CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+    ASSERT_NE(pkey, NULL);
+
+    // Set ML-KEM parameter (512/768/1024)
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, mlkemType), CRYPT_SUCCESS);
+
+    // Generate key pair
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+
+    // Set private key output format
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_MLKEM_DK_FORMAT, &dkFormat, sizeof(uint32_t)), CRYPT_SUCCESS);
+
+    // Encode to buffer
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkey, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+
+    // Encode to file
+    ASSERT_EQ(CRYPT_EAL_EncodeFileKey(pkey, NULL, format, type, path), CRYPT_SUCCESS);
+
+EXIT:
+    TestRandDeInit();
+    BSL_SAL_FREE(encodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_HITLS_MLDSA_PQCCert_TC001(int format, int type, char *path)
 {
@@ -1490,6 +1849,28 @@ void SDV_HITLS_MLDSA_PQCCert_TC005(int format, int type, char *path, int key_for
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT, &key_format, sizeof(uint32_t)), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), err);
+EXIT:
+    BSL_SAL_FREE(encodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(key);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_SLHDSA_PQCCert_TC001(int format, int type, char *path)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    CRYPT_EAL_PkeyCtx *key = NULL;
+    BSL_Buffer encodeAsn1 = {0};
+    uint8_t expectBuf[MAX_BUFF_SIZE * 2] = {};
+    uint32_t expectBufLen = sizeof(expectBuf);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
+
+    ASSERT_EQ(ReadFile(path, expectBuf, encodeAsn1.dataLen, &expectBufLen), 0);
+    ASSERT_COMPARE("key ", encodeAsn1.data, encodeAsn1.dataLen, expectBuf, expectBufLen);
+
 EXIT:
     BSL_SAL_FREE(encodeAsn1.data);
     CRYPT_EAL_PkeyFreeCtx(key);

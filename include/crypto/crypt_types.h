@@ -706,12 +706,17 @@ typedef enum {
     // slh-dsa
     CRYPT_CTRL_GET_SLH_DSA_KEY_LEN = 600,     /**< Get the SLH-DSA key length. */
     CRYPT_CTRL_SET_SLH_DSA_ADDRAND, /**< Set the SLH-DSA additional random bytes. */
-
+    // mldsa
 	CRYPT_CTRL_SET_MLDSA_ENCODE_FLAG = 700,  /**< Set the flag for encode messages. */
     CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG,         /**< Whether to calculate message representative */
     CRYPT_CTRL_GET_MLDSA_SEED,               /**< Get MLDSA private key seed */
     CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT,      /**< Set MLDSA private key encode format */
     CRYPT_CTRL_GET_MLDSA_PRVKEY_FORMAT,      /**< Get MLDSA private key encode format*/
+
+    // mlkem
+    CRYPT_CTRL_GET_MLKEM_SEED = 750,         /**< Get MLKEM private key seed (d||z) */
+    CRYPT_CTRL_SET_MLKEM_DK_FORMAT,          /**< Set MLKEM decapsulation key encode format */
+    CRYPT_CTRL_GET_MLKEM_DK_FORMAT,          /**< Get MLKEM decapsulation key encode format */
 
     // xmss
     CRYPT_CTRL_GET_XMSS_KEY_LEN = 800,     /**< Get the XMSS key length. */
@@ -847,6 +852,14 @@ typedef enum {
     CRYPT_ALGO_MLDSA_PRIV_FORMAT_SEED_ONLY,
     CRYPT_ALGO_MLDSA_PRIV_FORMAT_END,
 } CRYPT_ALGO_MLDSA_PRIV_KEY_FORMAT_TYPE;
+
+typedef enum {
+    CRYPT_ALGO_MLKEM_DK_FORMAT_NOT_SET = 0,
+    CRYPT_ALGO_MLKEM_DK_FORMAT_BOTH,
+    CRYPT_ALGO_MLKEM_DK_FORMAT_DK_ONLY,
+    CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY,
+    CRYPT_ALGO_MLKEM_DK_FORMAT_END,
+} CRYPT_ALGO_MLKEM_DK_FORMAT_TYPE;
 
 /**
  * @ingroup crypt_types

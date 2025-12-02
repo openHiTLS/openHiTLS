@@ -176,6 +176,78 @@ SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNEN
 SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 mldsa87 unencrypt seed-only format
 SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa87_seed_only.der"
 
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 slhdsa-sha2-128s unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_128s.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 slhdsa-sha2-128s unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_128s.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 slhdsa-sha2-128f unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_128f.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 slhdsa-sha2-128f unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_128f.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 slhdsa-sha2-192s unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_192s.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 slhdsa-sha2-192s unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_192s.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 slhdsa-sha2-192f unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_192f.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 slhdsa-sha2-192f unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_192f.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 slhdsa-sha2-256s unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_256s.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 slhdsa-sha2-256s unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_256s.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 slhdsa-sha2-256f unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_256f.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 slhdsa-sha2-256f unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_256f.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 slhdsa-shake-128s unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_128s.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 slhdsa-shake-128s unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_128s.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 slhdsa-shake-128f unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_128f.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 slhdsa-shake-128f unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_128f.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 slhdsa-shake-192s unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_192s.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 slhdsa-shake-192s unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_192s.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 slhdsa-shake-192f unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_192f.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 slhdsa-shake-192f unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_192f.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 slhdsa-shake-256s unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_256s.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 slhdsa-shake-256s unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_256s.der"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse pem pkcs8 slhdsa-shake-256f unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_256f.pem"
+
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001 parse asn1 pkcs8 slhdsa-shake-256f unencrypt key
+SDV_CRYPT_EAL_ParseFilePriKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_256f.der"
+
 SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem pkcs8 ec public key
 SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/secp384r1pub.pem"
 
@@ -202,6 +274,78 @@ SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_UNKNOWN:CRYPT_PUBKEY_RSA:".
 
 SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem mldsa public key
 SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/mldsa65pub.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem slhdsa-sha2-128s public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_128s_publickey.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse asn1 slhdsa-sha2-128s public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_128s_publickey.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem slhdsa-sha2-128f public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_128f_publickey.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse asn1 slhdsa-sha2-128f public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_128f_publickey.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem slhdsa-sha2-192s public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_192s_publickey.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse asn1 slhdsa-sha2-192s public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_192s_publickey.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem slhdsa-sha2-192f public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_192f_publickey.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse asn1 slhdsa-sha2-192f public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_192f_publickey.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem slhdsa-sha2-256s public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_256s_publickey.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse asn1 slhdsa-sha2-256s public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_256s_publickey.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem slhdsa-sha2-256f public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_256f_publickey.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse asn1 slhdsa-sha2-256f public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_256f_publickey.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem slhdsa-shake-128s public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_128s_publickey.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse asn1 slhdsa-shake-128s public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_128s_publickey.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem slhdsa-shake-128f public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_128f_publickey.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse asn1 slhdsa-shake-128f public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_128f_publickey.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem slhdsa-shake-192s public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_192s_publickey.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse asn1 slhdsa-shake-192s public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_192s_publickey.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem slhdsa-shake-192f public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_192f_publickey.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse asn1 slhdsa-shake-192f public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_192f_publickey.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem slhdsa-shake-256s public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_256s_publickey.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse asn1 slhdsa-shake-256s public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_256s_publickey.der"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse pem slhdsa-shake-256f public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_256f_publickey.pem"
+
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse asn1 slhdsa-shake-256f public key
+SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_256f_publickey.der"
 
 SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001 parse unkown(der) rsa public key
 SDV_CRYPT_EAL_ParseFilePubKeyFormat_TC001:BSL_FORMAT_UNKNOWN:CRYPT_PUBKEY_RSA:"../testdata/cert/asn1/keypem/rsa-pub-key.der"
@@ -424,6 +568,229 @@ SDV_HITLS_MLDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../te
 SDV_HITLS_MLDSA_PQCCert_TC001
 SDV_HITLS_MLDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa87_priv_only.pem"
 
+SDV_HITLS_SLHDSA_PQCCert_TC001-sha2-128s-PUBKEY
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_128s_publickey.der"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-sha2-128f-PUBKEY
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_128f_publickey.der"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-sha2-192s-PUBKEY
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_192s_publickey.der"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-sha2-192f-PUBKEY
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_192f_publickey.der"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-sha2-256s-PUBKEY
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_256s_publickey.der"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-sha2-256f-PUBKEY
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_256f_publickey.der"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-shake-128s-PUBKEY
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_128s_publickey.der"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-shake-128f-PUBKEY
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_128f_publickey.der"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-shake-192s-PUBKEY
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_192s_publickey.der"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-shake-192f-PUBKEY
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_192f_publickey.der"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-shake-256s-PUBKEY
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_256s_publickey.der"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-shake-256f-PUBKEY
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_256f_publickey.der"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-sha2-128s
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_128s.pem"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-sha2-128f
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_128f.pem"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-sha2-192s
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_192s.pem"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-sha2-192f
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_192f.pem"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-sha2-256s
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_256s.pem"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-sha2-256f
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_sha2_256f.pem"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-shake-128s
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_128s.pem"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-shake-128f
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_128f.pem"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-shake-192s
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_192s.pem"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-shake-192f
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_192f.pem"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-shake-256s
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_256s.pem"
+
+SDV_HITLS_SLHDSA_PQCCert_TC001-shake-256f
+SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/slhdsa_keys/slh_dsa_shake_256f.pem"
+
+SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001-mlkem512-seed
+SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_prikey_seed.pem"
+
+SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001-mlkem512-expanded
+SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_prikey_expand.pem"
+
+SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001-mlkem512-both
+SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_prikey_both.pem"
+
+SDV_HITLS_MLKEM_PrivateKey_InconsistentBoth_TC001-mlkem512-bad-both-mismatch
+SDV_HITLS_MLKEM_PrivateKey_InconsistentBoth_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_bad_prikey_both_mismatch.pem"
+
+SDV_HITLS_MLKEM_PrivateKey_MutatedHek_TC001-mlkem512-bad-expand-mutated-H
+SDV_HITLS_MLKEM_PrivateKey_MutatedHek_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_bad_prikey_expand_with_mutated_H.pem"
+
+SDV_HITLS_MLKEM_PrivateKey_InconsistentZ_TC001-mlkem512-bad-both-z-inconsistent
+SDV_HITLS_MLKEM_PrivateKey_InconsistentZ_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_bad_prikey_both.pem"
+
+SDV_HITLS_MLKEM_PrivateKey_MutatedS0_TC001-mlkem512-bad-expand-mutated-s0
+SDV_HITLS_MLKEM_PrivateKey_MutatedS0_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_bad_prikey_expand_with_mutated_s_0.pem"
+
+# ========== ML-KEM Public Key Encoding/Decoding Tests ==========
+
+# ML-KEM-512 Public Key - PEM format
+SDV_HITLS_MLKEM_PublicKey_TC001-mlkem512-pem
+SDV_HITLS_MLKEM_PublicKey_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_publickey.pem"
+
+# ML-KEM-512 Public Key - DER format
+SDV_HITLS_MLKEM_PublicKey_TC001-mlkem512-der
+SDV_HITLS_MLKEM_PublicKey_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_publickey.der"
+
+# ML-KEM-768 Public Key - PEM format
+SDV_HITLS_MLKEM_PublicKey_TC001-mlkem768-pem
+SDV_HITLS_MLKEM_PublicKey_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/mlkem_keys/mlkem768/mlkem768_publickey.pem"
+
+# ML-KEM-768 Public Key - DER format
+SDV_HITLS_MLKEM_PublicKey_TC001-mlkem768-der
+SDV_HITLS_MLKEM_PublicKey_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/mlkem_keys/mlkem768/mlkem768_publickey.der"
+
+# ML-KEM-1024 Public Key - PEM format
+SDV_HITLS_MLKEM_PublicKey_TC001-mlkem1024-pem
+SDV_HITLS_MLKEM_PublicKey_TC001:BSL_FORMAT_PEM:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/mlkem_keys/mlkem1024/mlkem1024_publickey.pem"
+
+# ML-KEM-1024 Public Key - DER format
+SDV_HITLS_MLKEM_PublicKey_TC001-mlkem1024-der
+SDV_HITLS_MLKEM_PublicKey_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/mlkem_keys/mlkem1024/mlkem1024_publickey.der"
+
+# ========== ML-KEM-768 Private Key Tests ==========
+
+# ML-KEM-768 seed-only format - PEM
+SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001-mlkem768-seed-pem
+SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem768/mlkem768_prikey_seed.pem"
+
+# ML-KEM-768 seed-only format - DER
+SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001-mlkem768-seed-der
+SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem768/mlkem768_prikey_seed.der"
+
+# ML-KEM-768 expanded-only format - PEM
+SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001-mlkem768-expanded-pem
+SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem768/mlkem768_prikey_expand.pem"
+
+# ML-KEM-768 expanded-only format - DER
+SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001-mlkem768-expanded-der
+SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem768/mlkem768_prikey_expand.der"
+
+# ML-KEM-768 both format - PEM
+SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001-mlkem768-both-pem
+SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem768/mlkem768_prikey_both.pem"
+
+# ML-KEM-768 both format - DER
+SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001-mlkem768-both-der
+SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem768/mlkem768_prikey_both.der"
+
+# ========== ML-KEM-1024 Private Key Tests ==========
+
+# ML-KEM-1024 seed-only format - PEM
+SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001-mlkem1024-seed-pem
+SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem1024/mlkem1024_prikey_seed.pem"
+
+# ML-KEM-1024 seed-only format - DER
+SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001-mlkem1024-seed-der
+SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem1024/mlkem1024_prikey_seed.der"
+
+# ML-KEM-1024 expanded-only format - PEM
+SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001-mlkem1024-expanded-pem
+SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem1024/mlkem1024_prikey_expand.pem"
+
+# ML-KEM-1024 expanded-only format - DER
+SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001-mlkem1024-expanded-der
+SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem1024/mlkem1024_prikey_expand.der"
+
+# ML-KEM-1024 both format - PEM
+SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001-mlkem1024-both-pem
+SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem1024/mlkem1024_prikey_both.pem"
+
+# ML-KEM-1024 both format - DER
+SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001-mlkem1024-both-der
+SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem1024/mlkem1024_prikey_both.der"
+
+# ========== ML-KEM-512 DER Format Private Key Tests ==========
+
+# ML-KEM-512 seed-only format - DER
+SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001-mlkem512-seed-der
+SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_prikey_seed.der"
+
+# ML-KEM-512 expanded-only format - DER
+SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001-mlkem512-expanded-der
+SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_prikey_expand.der"
+
+# ML-KEM-512 both format - DER
+SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001-mlkem512-both-der
+SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001:BSL_FORMAT_ASN1:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_prikey_both.der"
+
+# ========== ML-KEM Private Key Generation and Encoding Tests ==========
+
+# ML-KEM-512 key generation - seed-only format
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001-mlkem512-gen-seed
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001:CRYPT_KEM_TYPE_MLKEM_512:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY:"/tmp/mlkem512_gen_seed.pem"
+
+# ML-KEM-512 key generation - expanded-only format
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001-mlkem512-gen-expanded
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001:CRYPT_KEM_TYPE_MLKEM_512:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_ALGO_MLKEM_DK_FORMAT_DK_ONLY:"/tmp/mlkem512_gen_expanded.pem"
+
+# ML-KEM-512 key generation - both format
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001-mlkem512-gen-both
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001:CRYPT_KEM_TYPE_MLKEM_512:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_ALGO_MLKEM_DK_FORMAT_BOTH:"/tmp/mlkem512_gen_both.pem"
+
+# ML-KEM-768 key generation - seed-only format
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001-mlkem768-gen-seed
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001:CRYPT_KEM_TYPE_MLKEM_768:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY:"/tmp/mlkem768_gen_seed.pem"
+
+# ML-KEM-768 key generation - expanded-only format
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001-mlkem768-gen-expanded
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001:CRYPT_KEM_TYPE_MLKEM_768:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_ALGO_MLKEM_DK_FORMAT_DK_ONLY:"/tmp/mlkem768_gen_expanded.pem"
+
+# ML-KEM-768 key generation - both format
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001-mlkem768-gen-both
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001:CRYPT_KEM_TYPE_MLKEM_768:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_ALGO_MLKEM_DK_FORMAT_BOTH:"/tmp/mlkem768_gen_both.pem"
+
+# ML-KEM-1024 key generation - seed-only format
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001-mlkem1024-gen-seed
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001:CRYPT_KEM_TYPE_MLKEM_1024:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_ALGO_MLKEM_DK_FORMAT_SEED_ONLY:"/tmp/mlkem1024_gen_seed.pem"
+
+# ML-KEM-1024 key generation - expanded-only format
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001-mlkem1024-gen-expanded
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001:CRYPT_KEM_TYPE_MLKEM_1024:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_ALGO_MLKEM_DK_FORMAT_DK_ONLY:"/tmp/mlkem1024_gen_expanded.pem"
+
+# ML-KEM-1024 key generation - both format
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001-mlkem1024-gen-both
+SDV_HITLS_MLKEM_PrivateKey_GenerateEncode_TC001:CRYPT_KEM_TYPE_MLKEM_1024:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:CRYPT_ALGO_MLKEM_DK_FORMAT_BOTH:"/tmp/mlkem1024_gen_both.pem"
+
 SDV_HITLS_MLDSA_PQCCert_TC005
 SDV_HITLS_MLDSA_PQCCert_TC005:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mldsa_keys/mldsa65_priv_only.pem":CRYPT_ALGO_MLDSA_PRIV_FORMAT_NOT_SET:0
 
@@ -483,3 +850,5 @@ SDV_X509_CRL_PARSE_NAME_LIST_TC001:"3100310031023000"
 
 SDV_X509_CRL_PARSE_NAME_LIST_TC001 HITLS_X509_ParseNameNode encounters the error BSL_ASN1_ERR_DECODE_LEN in the middle
 SDV_X509_CRL_PARSE_NAME_LIST_TC001:"311830160614000000000f4d79204f7267616e697a6174696f6e"
+SDV_X509_CRL_PARSE_NAME_LIST_TC001
+SDV_X509_CRL_PARSE_NAME_LIST_TC001:"3100310031023000"

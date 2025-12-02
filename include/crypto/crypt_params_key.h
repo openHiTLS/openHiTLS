@@ -134,6 +134,7 @@ extern "C" {
 #define CRYPT_PARAM_ML_KEM_BASE                             1400
 #define CRYPT_PARAM_ML_KEM_PRVKEY                           (CRYPT_PARAM_ML_KEM_BASE + 1)
 #define CRYPT_PARAM_ML_KEM_PUBKEY                           (CRYPT_PARAM_ML_KEM_BASE + 2)
+#define CRYPT_PARAM_ML_KEM_PRVKEY_SEED                      (CRYPT_PARAM_ML_KEM_BASE + 3)
 
 #define CRYPT_PARAM_ML_DSA_BASE                             1500
 #define CRYPT_PARAM_ML_DSA_PRVKEY                           (CRYPT_PARAM_ML_DSA_BASE + 1)

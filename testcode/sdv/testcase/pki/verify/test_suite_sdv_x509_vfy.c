@@ -1429,6 +1429,212 @@ EXIT:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_X509_BUILD_SLHDSA_CERT_CHAIN_FUNC_TC001(char *variant)
+{
+    char rootPath[256] = {0};
+    char interPath[256] = {0};
+    char endPath[256] = {0};
+    int ret = snprintf_s(rootPath, sizeof(rootPath), sizeof(rootPath) - 1, "../testdata/cert/chain/slhdsa/%s/root.crt",
+                         variant);
+    ASSERT_TRUE(ret > 0);
+    ret = snprintf_s(interPath, sizeof(interPath), sizeof(interPath) - 1, "../testdata/cert/chain/slhdsa/%s/inter.crt",
+                     variant);
+    ASSERT_TRUE(ret > 0);
+    ret =
+        snprintf_s(endPath, sizeof(endPath), sizeof(endPath) - 1, "../testdata/cert/chain/slhdsa/%s/end.crt", variant);
+    ASSERT_TRUE(ret > 0);
+
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(store != NULL);
+
+    // Step 1: Add intermediate CA to store
+    HITLS_X509_Cert *inter = NULL;
+    ASSERT_EQ(HITLS_AddCertToStoreTest(interPath, store, &inter), HITLS_PKI_SUCCESS);
+
+    // Step 2: Parse end entity certificate
+    HITLS_X509_Cert *entity = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, endPath, &entity), HITLS_PKI_SUCCESS);
+
+    // Step 3: Build certificate chain (should succeed)
+    HITLS_X509_List *chain = NULL;
+    ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entity, &chain), HITLS_PKI_SUCCESS);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+
+    // Step 4: Add root CA to store
+    HITLS_X509_Cert *root = NULL;
+    ASSERT_EQ(HITLS_AddCertToStoreTest(rootPath, store, &root), HITLS_PKI_SUCCESS);
+
+    // Step 5: Rebuild certificate chain (should contain full chain)
+    ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entity, &chain), HITLS_PKI_SUCCESS);
+
+    // Step 6: Verify certificate chain (should succeed)
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+
+    // Step 7: Test invalid key usage certificates (only for sha2_128s variant)
+    if (strcmp(variant, "sha2_128s") == 0) {
+        // Test 7a: Certificate with forbidden key usage (keyEncipherment)
+        HITLS_X509_Cert *entityInvalidKu = NULL;
+        char invalidKuPath[256];
+        ret = snprintf_s(invalidKuPath, sizeof(invalidKuPath), sizeof(invalidKuPath) - 1,
+                         "../testdata/cert/chain/slhdsa/%s/end_invalid_ku.crt", variant);
+        ASSERT_TRUE(ret > 0);
+        ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, invalidKuPath, &entityInvalidKu), HITLS_PKI_SUCCESS);
+
+        ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entityInvalidKu, &chain), HITLS_PKI_SUCCESS);
+        // Verification should fail due to forbidden keyEncipherment
+        ASSERT_NE(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+        BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+        HITLS_X509_CertFree(entityInvalidKu);
+
+        // Test 7b: Certificate with missing required key usage
+        HITLS_X509_Cert *entityMissingKu = NULL;
+        char missingKuPath[256] = {0};
+        ret = snprintf_s(missingKuPath, sizeof(missingKuPath), sizeof(missingKuPath) - 1,
+                         "../testdata/cert/chain/slhdsa/%s/end_missing_ku.crt", variant);
+        ASSERT_TRUE(ret > 0);
+        ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, missingKuPath, &entityMissingKu), HITLS_PKI_SUCCESS);
+
+        ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entityMissingKu, &chain), HITLS_PKI_SUCCESS);
+        // Verification should fail due to missing required key usage
+        ASSERT_TRUE(HITLS_X509_CertVerify(store, chain) != HITLS_PKI_SUCCESS);
+        HITLS_X509_CertFree(entityMissingKu);
+    }
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(root);
+    HITLS_X509_CertFree(inter);
+    HITLS_X509_CertFree(entity);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_BUILD_MLKEM_CERT_CHAIN_FUNC_TC001
+ * @title Test ML-KEM certificate chain build and verify
+ * @precon ML-KEM certificate chain: root(ML-DSA-65) -> inter(ML-DSA-65) -> end(ML-KEM-768)
+ * @brief
+ *   1. Add intermediate CA to store
+ *   2. Parse ML-KEM end entity certificate
+ *   3. Build certificate chain
+ *   4. Add root CA to store
+ *   5. Rebuild and verify certificate chain
+ *   6. Test invalid key usage (digitalSignature instead of keyEncipherment)
+ *   7. Test missing key usage
+ * @expect
+ *   1. Certificate chain build should succeed
+ *   2. Certificate chain verify should succeed for valid cert
+ *   3. Certificate chain verify should fail for invalid keyUsage cert
+ */
+/* BEGIN_CASE */
+void SDV_X509_BUILD_MLKEM_CERT_CHAIN_FUNC_TC001(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(store != NULL);
+
+    // Step 1: Add intermediate CA to store
+    HITLS_X509_Cert *inter = NULL;
+    ASSERT_EQ(HITLS_AddCertToStoreTest("../testdata/cert/chain/mlkem/inter.crt", store, &inter), HITLS_PKI_SUCCESS);
+
+    // Step 2: Parse ML-KEM end entity certificate
+    HITLS_X509_Cert *entity = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, "../testdata/cert/chain/mlkem/end.crt", &entity),
+              HITLS_PKI_SUCCESS);
+
+    // Step 3: Build certificate chain (should succeed)
+    HITLS_X509_List *chain = NULL;
+    ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entity, &chain), HITLS_PKI_SUCCESS);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+
+    // Step 4: Add root CA to store
+    HITLS_X509_Cert *root = NULL;
+    ASSERT_EQ(HITLS_AddCertToStoreTest("../testdata/cert/chain/mlkem/root.crt", store, &root), HITLS_PKI_SUCCESS);
+
+    // Step 5: Rebuild certificate chain (should contain full chain)
+    ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entity, &chain), HITLS_PKI_SUCCESS);
+
+    // Step 6: Verify certificate chain (should succeed)
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(root);
+    HITLS_X509_CertFree(inter);
+    HITLS_X509_CertFree(entity);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_VFY_MLKEM_KEYUSAGE_TC001
+ * @title Test ML-KEM certificate keyUsage validation
+ * @precon ML-KEM certificate chain with valid/invalid keyUsage certificates
+ * @brief
+ *   1. Test ML-KEM certificate with correct keyUsage (keyEncipherment only) - should pass
+ *   2. Test ML-KEM certificate with invalid keyUsage (digitalSignature) - should fail
+ *   3. Test ML-KEM certificate with missing keyUsage - behavior depends on implementation
+ * @expect
+ *   1. Valid keyUsage certificate verification succeeds
+ *   2. Invalid keyUsage certificate verification fails with HITLS_X509_ERR_EXT_KU
+ */
+/* BEGIN_CASE */
+void SDV_X509_VFY_MLKEM_KEYUSAGE_TC001(void)
+{
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(store != NULL);
+
+    // Setup: Add CA certificates to store
+    HITLS_X509_Cert *inter = NULL;
+    ASSERT_EQ(HITLS_AddCertToStoreTest("../testdata/cert/chain/mlkem/inter.crt", store, &inter), HITLS_PKI_SUCCESS);
+    HITLS_X509_Cert *root = NULL;
+    ASSERT_EQ(HITLS_AddCertToStoreTest("../testdata/cert/chain/mlkem/root.crt", store, &root), HITLS_PKI_SUCCESS);
+
+    // Test 1: Valid keyUsage (keyEncipherment only) - should pass
+    HITLS_X509_Cert *entityValid = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, "../testdata/cert/chain/mlkem/end.crt", &entityValid),
+              HITLS_PKI_SUCCESS);
+    HITLS_X509_List *chain = NULL;
+    ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entityValid, &chain), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    chain = NULL;
+
+    // Test 2: Invalid keyUsage (digitalSignature - forbidden for ML-KEM) - should fail
+    HITLS_X509_Cert *entityInvalidKu = NULL;
+    ASSERT_EQ(
+        HITLS_X509_CertParseFile(BSL_FORMAT_PEM, "../testdata/cert/chain/mlkem/end_invalid_ku.crt", &entityInvalidKu),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entityInvalidKu, &chain), HITLS_PKI_SUCCESS);
+    // According to draft-ietf-lamps-kyber-certificates-11 Section 5:
+    // ML-KEM certificates MUST have keyEncipherment as the ONLY key usage
+    // digitalSignature is forbidden, verification should fail
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_EXT_KU);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    chain = NULL;
+
+    // Test 3: Missing keyUsage - according to RFC 5280, keyUsage is OPTIONAL
+    // If not present, no restrictions apply (verification should succeed)
+    HITLS_X509_Cert *entityMissingKu = NULL;
+    ASSERT_EQ(
+        HITLS_X509_CertParseFile(BSL_FORMAT_PEM, "../testdata/cert/chain/mlkem/end_missing_ku.crt", &entityMissingKu),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entityMissingKu, &chain), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(root);
+    HITLS_X509_CertFree(inter);
+    HITLS_X509_CertFree(entityValid);
+    HITLS_X509_CertFree(entityInvalidKu);
+    HITLS_X509_CertFree(entityMissingKu);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
 // root(pathLen=0);leaf->inter->root;non-self-issued intermediate CA appears → expected PATHLEN_EXCEEDED
 /* BEGIN_CASE */
 void SDV_X509_VFY_PATHLEN_FAIL_TC001(void)
@@ -4115,5 +4321,3 @@ EXIT:
     HITLS_X509_CertFree(loopLeaf);
 }
 /* END_CASE */
-
-

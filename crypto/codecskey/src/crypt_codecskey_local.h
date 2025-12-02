@@ -37,6 +37,13 @@
 #include "crypt_mldsa.h"
 #define MLDSA_SEED_BYTES_LEN 32
 #endif
+#ifdef HITLS_CRYPTO_MLKEM
+#include "crypt_mlkem.h"
+#define MLKEM_SEED_BYTES_LEN 64
+#endif
+#ifdef HITLS_CRYPTO_SLH_DSA
+#include "crypt_slh_dsa.h"
+#endif
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cpluscplus */
@@ -82,6 +89,15 @@ typedef enum {
     CRYPT_ML_DSA_PRVKEY_SEED_IDX = 0,
     CRYPT_ML_DSA_PRVKEY_IDX = 1,
 } CRYPT_ML_DSA_PRV_TEMPL_IDX;
+
+typedef enum {
+    CRYPT_SLH_DSA_PRVKEY_RAW_IDX = 0,  // Raw private key containing SK.seed || SK.prf || PK.seed || PK.root
+} CRYPT_SLH_DSA_PRV_TEMPL_IDX;
+
+typedef enum {
+    CRYPT_ML_KEM_PRVKEY_SEED_IDX = 0,
+    CRYPT_ML_KEM_PRVKEY_IDX = 1,
+} CRYPT_ML_KEM_PRV_TEMPL_IDX;
 
 typedef enum {
     CRYPT_RSA_PRV_VERSION_IDX = 0,
@@ -159,6 +175,22 @@ int32_t CRYPT_MLDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t
 int32_t CRYPT_DECODE_MldsaPrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
 int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
     CRYPT_ML_DSA_Ctx **mldsaPriKey);
+#endif
+
+#ifdef HITLS_CRYPTO_SLH_DSA
+int32_t CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
+    CryptSlhDsaCtx **pubKey, bool isComplete);
+int32_t CRYPT_DECODE_SlhDsaPrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
+int32_t CRYPT_SLHDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
+    CryptSlhDsaCtx **slhDsaPriKey);
+#endif
+
+#ifdef HITLS_CRYPTO_MLKEM
+int32_t CRYPT_MLKEM_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
+    CRYPT_ML_KEM_Ctx **pubKey, bool isComplete);
+int32_t CRYPT_DECODE_MlkemPrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
+int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
+    CRYPT_ML_KEM_Ctx **mlkemPriKey);
 #endif
 #endif
 

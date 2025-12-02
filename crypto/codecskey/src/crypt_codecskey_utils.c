@@ -1178,4 +1178,95 @@ int32_t CRYPT_ENCODE_Pkcs8Info(CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo,
 }
 
 #endif /* HITLS_CRYPTO_KEY_ENCODE */
+
+#ifdef HITLS_CRYPTO_SLH_DSA
+/**
+ * SLH-DSA Private Key Format (per draft-ietf-lamps-x509-slhdsa):
+ *   SEQUENCE {
+ *     OCTET STRING (containing SK.seed || SK.prf || PK.seed || PK.root)
+ *   }
+ */
+static BSL_ASN1_TemplateItem g_slhDsaPrikeyTempl[] = {
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+    {BSL_ASN1_TAG_OCTETSTRING, 0, 1}  // raw private key (4*n bytes)
+};
+
+int32_t CRYPT_DECODE_SlhDsaPrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum)
+{
+    uint8_t *tmpBuff = buffer;
+    uint32_t tmpBuffLen = bufferLen;
+    BSL_ASN1_Template templ = {g_slhDsaPrikeyTempl, sizeof(g_slhDsaPrikeyTempl) / sizeof(g_slhDsaPrikeyTempl[0])};
+    int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &tmpBuff, &tmpBuffLen, asn1, arrNum);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+#endif /* HITLS_CRYPTO_SLH_DSA */
+
+#ifdef HITLS_CRYPTO_MLKEM
+/**
+ * ML-KEM Private Key Format (based on draft-ietf-lamps-kyber-certificates):
+ * ML-KEM-PrivateKey ::= CHOICE {
+ *   seed [0] OCTET STRING (SIZE (64)),
+ *   decapsKey OCTET STRING (SIZE (n)),  // n = 1632(512), 2400(768), 3168(1024)
+ *   both SEQUENCE {
+ *     seed OCTET STRING (SIZE (64)),
+ *     decapsKey OCTET STRING (SIZE (n))
+ *   }
+ * }
+ */
+static BSL_ASN1_TemplateItem g_mlkemPrikeyInfoTempl[] = {
+    {BSL_ASN1_TAG_CHOICE, 0, 0}
+};
+
+static BSL_ASN1_TemplateItem g_mlkemPrikeyBothFormatTempl[] = {
+    {BSL_ASN1_TAG_OCTETSTRING, 0, 0},  // seed
+    {BSL_ASN1_TAG_OCTETSTRING, 0, 0}   // decapsKey
+};
+
+static int32_t DecodeMlkemPriKeyChoiceAsn1Buff(int32_t type, uint32_t idx, void *data, void *expVal)
+{
+    (void) type;
+    (void) idx;
+    uint8_t realTag = *(uint8_t*)data;
+     *(uint8_t*)expVal = realTag;
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_DECODE_MlkemPrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum)
+{
+    uint8_t *tmpBuff = buffer;
+    uint32_t tmpBuffLen = bufferLen;
+    BSL_ASN1_Buffer asn1Tmp = {0};
+    BSL_ASN1_Template templ = {g_mlkemPrikeyInfoTempl,
+        sizeof(g_mlkemPrikeyInfoTempl) / sizeof(g_mlkemPrikeyInfoTempl[0])};
+    int32_t ret = BSL_ASN1_DecodeTemplate(&templ, DecodeMlkemPriKeyChoiceAsn1Buff,
+        &tmpBuff, &tmpBuffLen, &asn1Tmp, arrNum);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    switch (asn1Tmp.tag) {
+        case BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED:
+            // both format: SEQUENCE { seed, decapsKey }
+            templ.templItems = g_mlkemPrikeyBothFormatTempl;
+            templ.templNum = sizeof(g_mlkemPrikeyBothFormatTempl) / sizeof(g_mlkemPrikeyBothFormatTempl[0]);
+            ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &asn1Tmp.buff, &asn1Tmp.len, asn1, arrNum);
+            break;
+        case BSL_ASN1_TAG_OCTETSTRING:
+            // decapsKey-only format
+            asn1[CRYPT_ML_KEM_PRVKEY_IDX] = asn1Tmp;
+            break;
+        case BSL_ASN1_CLASS_CTX_SPECIFIC:
+            // seed-only format: [0] OCTET STRING
+            asn1[CRYPT_ML_KEM_PRVKEY_SEED_IDX] = asn1Tmp;
+            break;
+        default:
+            return BSL_ASN1_ERR_TAG_EXPECTED;
+    }
+    return ret;
+}
+#endif /* HITLS_CRYPTO_MLKEM */
+
 #endif /* HITLS_CRYPTO_CODECSKEY */

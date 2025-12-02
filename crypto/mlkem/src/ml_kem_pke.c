@@ -725,6 +725,12 @@ int32_t MLKEM_KeyGenInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *d, uint8_t *z)
         BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
         return CRYPT_SECUREC_FAIL;
     }
+
+    // Store seed (d || z) in context
+    ctx->hasSeed = true;
+    (void)memcpy_s(ctx->seed, MLKEM_SEED_LEN, d, MLKEM_SEED_LEN);
+    (void)memcpy_s(ctx->seed + MLKEM_SEED_LEN, MLKEM_SEED_LEN, z, MLKEM_SEED_LEN);
+
     return CRYPT_SUCCESS;
 }
 

@@ -49,6 +49,8 @@ CryptSlhDsaCtx *CRYPT_SLH_DSA_NewCtxEx(void *libCtx);
  */
 void CRYPT_SLH_DSA_FreeCtx(CryptSlhDsaCtx *ctx);
 
+CryptSlhDsaCtx *CRYPT_SLH_DSA_DupCtx(CryptSlhDsaCtx *ctx);
+
 /**
  * @brief Generate a SLH-DSA key pair
  *

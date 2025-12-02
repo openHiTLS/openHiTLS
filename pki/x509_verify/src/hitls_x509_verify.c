@@ -1071,6 +1071,80 @@ static int32_t HITLS_X509_CheckCertExtNode(void *ctx, HITLS_X509_ExtEntry *extNo
     return HITLS_PKI_SUCCESS;
 }
 
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
+static int32_t CheckPqcSigKeyUsage(HITLS_X509_Cert *cert)
+{
+    // Check if the certificate's PUBLIC KEY is a PQC signature algorithm (ML-DSA or SLH-DSA)
+    // Note: We check the public key type, not the signature algorithm used to sign this certificate
+    // This is because keyUsage applies to what the certificate holder's public key can do
+    CRYPT_PKEY_AlgId pubKeyAlgId = CRYPT_EAL_PkeyGetId(cert->tbs.ealPubKey);
+    bool isPqcSignaturePubKey = false;
+#ifdef HITLS_CRYPTO_MLDSA
+    if (pubKeyAlgId == CRYPT_PKEY_ML_DSA) {
+        isPqcSignaturePubKey = true;
+    }
+#endif
+#ifdef HITLS_CRYPTO_SLH_DSA
+    if (pubKeyAlgId == CRYPT_PKEY_SLH_DSA) {
+        isPqcSignaturePubKey = true;
+    }
+#endif
+    if (!isPqcSignaturePubKey) {
+        return HITLS_PKI_SUCCESS;
+    }
+
+    HITLS_X509_CertExt *tmpExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
+    // keyUsage extension is OPTIONAL, if the extension is not present, no key usage restrictions apply.
+    if (tmpExt == NULL || (tmpExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) == 0) {
+        return HITLS_PKI_SUCCESS;
+    }
+
+    uint32_t mustOneOf = (HITLS_X509_EXT_KU_DIGITAL_SIGN |
+                          HITLS_X509_EXT_KU_NON_REPUDIATION |
+                          HITLS_X509_EXT_KU_KEY_CERT_SIGN |
+                          HITLS_X509_EXT_KU_CRL_SIGN);
+    uint32_t forbidden = (HITLS_X509_EXT_KU_KEY_ENCIPHERMENT |
+                          HITLS_X509_EXT_KU_DATA_ENCIPHERMENT |
+                          HITLS_X509_EXT_KU_KEY_AGREEMENT |
+                          HITLS_X509_EXT_KU_ENCIPHER_ONLY |
+                          HITLS_X509_EXT_KU_DECIPHER_ONLY);
+    if ((tmpExt->keyUsage & mustOneOf) == 0) {
+        return HITLS_X509_ERR_EXT_KU;
+    }
+    if ((tmpExt->keyUsage & forbidden) != 0) {
+        return HITLS_X509_ERR_EXT_KU;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+#endif
+
+#ifdef HITLS_CRYPTO_MLKEM
+static int32_t CheckMlKemKeyUsage(HITLS_X509_Cert *cert)
+{
+    // Check ML-KEM keyUsage according to draft-ietf-lamps-kyber-certificates-11 Section 5
+    // keyEncipherment MUST be the only key usage set for ML-KEM-512/768/1024 certificates
+    CRYPT_PKEY_ParaId pubKeyParaId = CRYPT_EAL_PkeyGetParaId(cert->tbs.ealPubKey);
+    if (pubKeyParaId != CRYPT_KEM_TYPE_MLKEM_512 &&
+        pubKeyParaId != CRYPT_KEM_TYPE_MLKEM_768 &&
+        pubKeyParaId != CRYPT_KEM_TYPE_MLKEM_1024) {
+        return HITLS_PKI_SUCCESS;
+    }
+
+    HITLS_X509_CertExt *tmpExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
+    // keyUsage extension is OPTIONAL.
+    // If present in ML-KEM certificates, it MUST be keyEncipherment only (draft-ietf-lamps-kyber-certificates-11).
+    if (tmpExt == NULL || (tmpExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) == 0) {
+        return HITLS_PKI_SUCCESS;
+    }
+
+    // ML-KEM certificates MUST have keyEncipherment as the ONLY key usage
+    if (tmpExt->keyUsage != HITLS_X509_EXT_KU_KEY_ENCIPHERMENT) {
+        return HITLS_X509_ERR_EXT_KU;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+#endif
+
 static int32_t HITLS_X509_CheckCertExt(void *ctx, HITLS_X509_Cert *cert, int32_t depth)
 {
     if (cert->tbs.version != 2) { // no ext v1 cert, 2 : X509 v3
@@ -1083,29 +1157,17 @@ static int32_t HITLS_X509_CheckCertExt(void *ctx, HITLS_X509_Cert *cert, int32_t
 #else
     (void)depth;
 #endif
-#ifdef HITLS_CRYPTO_MLDSA
-if (cert->tbs.signAlgId.algId == BSL_CID_ML_DSA_44 ||
-    cert->tbs.signAlgId.algId == BSL_CID_ML_DSA_65 ||
-    cert->tbs.signAlgId.algId == BSL_CID_ML_DSA_87) {
-    HITLS_X509_CertExt *tmpExt = (HITLS_X509_CertExt *)cert->tbs.ext.extData;
-    if (tmpExt != NULL && (tmpExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) != 0) {
-        uint32_t mustOneOf = (HITLS_X509_EXT_KU_DIGITAL_SIGN |
-                              HITLS_X509_EXT_KU_NON_REPUDIATION |
-                              HITLS_X509_EXT_KU_KEY_CERT_SIGN |
-                              HITLS_X509_EXT_KU_CRL_SIGN);
-        uint32_t forbidden = (HITLS_X509_EXT_KU_KEY_ENCIPHERMENT |
-                              HITLS_X509_EXT_KU_DATA_ENCIPHERMENT |
-                              HITLS_X509_EXT_KU_KEY_AGREEMENT |
-                              HITLS_X509_EXT_KU_ENCIPHER_ONLY |
-                              HITLS_X509_EXT_KU_DECIPHER_ONLY);
-        if ((tmpExt->keyUsage & mustOneOf) == 0) {
-            return HITLS_X509_ERR_EXT_KU;
-        }
-        if ((tmpExt->keyUsage & forbidden) != 0) {
-            return HITLS_X509_ERR_EXT_KU;
-        }
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
+    int32_t pqcSigKeyUsageRet = CheckPqcSigKeyUsage(cert);
+    if (pqcSigKeyUsageRet != HITLS_PKI_SUCCESS) {
+        return pqcSigKeyUsageRet;
     }
-}
+#endif
+#ifdef HITLS_CRYPTO_MLKEM
+    int32_t mlkemKeyUsageRet = CheckMlKemKeyUsage(cert);
+    if (mlkemKeyUsageRet != HITLS_PKI_SUCCESS) {
+        return mlkemKeyUsageRet;
+    }
 #endif
     return HITLS_X509_TrvList(cert->tbs.ext.extList, (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCertExtNode, ctx);
 }

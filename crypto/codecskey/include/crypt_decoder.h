@@ -84,6 +84,20 @@ int32_t DECODER_MldsaSubPubKeyDer2KeyDecode(void *ctx, const BSL_Param *inParam,
 int32_t DECODER_MldsaPkcs8Der2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
 #endif
 
+#ifdef HITLS_CRYPTO_MLKEM
+void* DECODER_MlkemDer2KeyNewCtx(void *provCtx);
+int32_t DECODER_MlkemSubPubKeyWithOutSeqDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+int32_t DECODER_MlkemSubPubKeyDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+int32_t DECODER_MlkemPkcs8Der2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+#endif
+
+#ifdef HITLS_CRYPTO_SLH_DSA
+void* DECODER_SlhDsaDer2KeyNewCtx(void *provCtx);
+int32_t DECODER_SlhDsaSubPubKeyWithOutSeqDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+int32_t DECODER_SlhDsaSubPubKeyDer2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+int32_t DECODER_SlhDsaPkcs8Der2KeyDecode(void *ctx, const BSL_Param *inParam, BSL_Param **outParam);
+#endif
+
 #ifdef HITLS_BSL_PEM
 void *DECODER_Pem2DerNewCtx(void *provCtx);
 int32_t DECODER_Pem2DerGetParam(void *ctx, BSL_Param *param);

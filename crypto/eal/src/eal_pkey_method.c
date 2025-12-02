@@ -630,7 +630,7 @@ static const EAL_PkeyMethod METHODS[] = {
     EAL_PKEY_METHOD_DEFINE(
         CRYPT_PKEY_SLH_DSA,
         CRYPT_SLH_DSA_NewCtx,
-        NULL, // dupCtx
+        CRYPT_SLH_DSA_DupCtx, // dupCtx
         CRYPT_SLH_DSA_FreeCtx,
         NULL, // setPara
         NULL, // getPara

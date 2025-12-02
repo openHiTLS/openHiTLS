@@ -1252,7 +1252,9 @@
                     "crypto/curve25519/include",
                     "crypto/provider/include",
                     "crypto/provider/src/mgr",
-                    "crypto/mldsa/include"
+                    "crypto/mldsa/include",
+                    "crypto/slh_dsa/include",
+                    "crypto/mlkem/include"
                 ]
             },
             "util": {

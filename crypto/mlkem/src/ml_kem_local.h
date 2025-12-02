@@ -65,6 +65,7 @@ typedef struct {
 } MLKEM_MatrixSt;
 
 typedef struct {
+    int32_t paramId;        // Algorithm parameter ID (CRYPT_KEM_TYPE_MLKEM_512/768/1024)
     uint8_t k;
     uint8_t eta1;
     uint8_t eta2;
@@ -88,6 +89,9 @@ struct CryptMlKemCtx {
     BSL_SAL_RefCount references;
     void *libCtx;
     MLKEM_MatrixSt keyData;
+    CRYPT_ALGO_MLKEM_DK_FORMAT_TYPE dkFormat;
+    bool hasSeed;                      // Flag indicating if seed is stored
+    uint8_t seed[MLKEM_SEED_LEN * 2]; // Store 64-byte seed (d || z)
 };
 int32_t MLKEM_DecodeDk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *dk, uint32_t dkLen);
 int32_t MLKEM_DecodeEk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *ek, uint32_t ekLen);

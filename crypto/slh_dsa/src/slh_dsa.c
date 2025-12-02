@@ -286,6 +286,37 @@ void CRYPT_SLH_DSA_FreeCtx(CryptSlhDsaCtx *ctx)
     BSL_SAL_Free(ctx);
 }
 
+CryptSlhDsaCtx *CRYPT_SLH_DSA_DupCtx(CryptSlhDsaCtx *ctx)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return NULL;
+    }
+    CryptSlhDsaCtx *newCtx = CRYPT_SLH_DSA_NewCtx();
+    if (newCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    (void)memcpy_s(newCtx, sizeof(CryptSlhDsaCtx), ctx, sizeof(CryptSlhDsaCtx));
+    newCtx->context = NULL;
+    newCtx->addrand = NULL;
+    if (ctx->context != NULL) {
+        newCtx->context = BSL_SAL_Dump(ctx->context, ctx->contextLen);
+        if (newCtx->context == NULL) {
+            CRYPT_SLH_DSA_FreeCtx(newCtx);
+            return NULL;
+        }
+    }
+    if (ctx->addrand != NULL) {
+        newCtx->addrand = BSL_SAL_Dump(ctx->addrand, ctx->addrandLen);
+        if (newCtx->addrand == NULL) {
+            CRYPT_SLH_DSA_FreeCtx(newCtx);
+            return NULL;
+        }
+    }
+    return newCtx;
+}
+
 static bool CheckNotSlhDsaAlgId(int32_t algId)
 {
     if (algId > CRYPT_SLH_DSA_SHAKE_256F || algId < CRYPT_SLH_DSA_SHA2_128S) {
@@ -677,6 +708,20 @@ static int32_t SetAddrand(CryptSlhDsaCtx *ctx, void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
+static int32_t SlhDsaGetParaId(CryptSlhDsaCtx *ctx, void *val, uint32_t len)
+{
+    if (len != sizeof(int32_t) || val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    if (CheckNotSlhDsaAlgId(ctx->para.algId)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_INVALID_ALGID);
+        return CRYPT_SLHDSA_ERR_INVALID_ALGID;
+    }
+    *(int32_t *)val = ctx->para.algId;
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -686,6 +731,8 @@ int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t
     switch (opt) {
         case CRYPT_CTRL_SET_PARA_BY_ID:
             return SlhDsaSetAlgId(ctx, val, len);
+        case CRYPT_CTRL_GET_PARAID:
+            return SlhDsaGetParaId(ctx, val, len);
         case CRYPT_CTRL_SET_PREHASH_FLAG:
             if (val == NULL || len != sizeof(int32_t)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);

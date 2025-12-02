@@ -438,6 +438,14 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
     {CRYPT_PKEY_ML_DSA, g_defEalP8Der2MldsaKey,
         "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
+#ifdef HITLS_CRYPTO_MLKEM
+    {CRYPT_PKEY_ML_KEM, g_defEalP8Der2MlkemKey,
+        "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
+#ifdef HITLS_CRYPTO_SLH_DSA
+    {CRYPT_PKEY_SLH_DSA, g_defEalP8Der2SlhDsaKey,
+        "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
 #ifdef HITLS_CRYPTO_RSA
     {CRYPT_PKEY_RSA, g_defEalSubPubKeyDer2RsaKey,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
@@ -452,6 +460,14 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
     {CRYPT_PKEY_ML_DSA, g_defEalSubPubKeyDer2MldsaKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
+#ifdef HITLS_CRYPTO_MLKEM
+    {CRYPT_PKEY_ML_KEM, g_defEalSubPubKeyDer2MlkemKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
+#ifdef HITLS_CRYPTO_SLH_DSA
+    {CRYPT_PKEY_SLH_DSA, g_defEalSubPubKeyDer2SlhDsaKey,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
 #ifdef HITLS_CRYPTO_ED25519
@@ -476,6 +492,14 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
     {CRYPT_PKEY_ML_DSA, g_defEalSubPubKeyWithoutSeqDer2MldsaKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
+#ifdef HITLS_CRYPTO_MLKEM
+    {CRYPT_PKEY_ML_KEM, g_defEalSubPubKeyWithoutSeqDer2MlkemKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
+#ifdef HITLS_CRYPTO_SLH_DSA
+    {CRYPT_PKEY_SLH_DSA, g_defEalSubPubKeyWithoutSeqDer2SlhDsaKey,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
     {BSL_CID_DECODE_UNKNOWN, g_defEalLowKeyObject2PkeyObject,
