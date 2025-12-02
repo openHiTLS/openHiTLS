@@ -126,15 +126,57 @@ int32_t CheckCertType(CERT_Type expectCertType, HITLS_CERT_KeyType checkedKeyTyp
     return HITLS_SUCCESS;
 }
 
-static bool IsSignSchemeExist(const uint16_t *signSchemeList, uint32_t signSchemeNum, HITLS_SignHashAlgo signScheme)
+bool SAL_CERT_IsSignAlgorithmAllowed(const TLS_Ctx *ctx, uint16_t signScheme,
+    const uint16_t *allowList, uint32_t allowListSize)
 {
-    for (uint32_t i = 0; i < signSchemeNum; i++) {
-        if (signSchemeList[i] == signScheme) {
-            return true;
+    (void)ctx;
+    if (allowList != NULL) {
+        bool found = false;
+        for (uint32_t i = 0; i < allowListSize; i++) {
+            if (allowList[i] == signScheme) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            return false;
         }
     }
-    return false;
+
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    if (SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_SIGALG_CHECK, 0, signScheme, NULL) != SECURITY_SUCCESS) {
+        return false;
+    }
+#endif
+
+#ifdef HITLS_TLS_PROTO_TLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+        const uint32_t rsaPkcsv15Mask = 0x01;
+        const uint32_t dsaMask = 0x02;
+        const uint32_t sha1Mask = 0x0200;
+        const uint32_t sha224Mask = 0x0300;
+
+        // These algorithms are not defined for use in signed TLS handshake messages in TLS 1.3
+        if (((signScheme & 0xff) == rsaPkcsv15Mask) ||
+            ((signScheme & 0xff) == dsaMask) ||
+            ((signScheme & 0xff00) == sha1Mask) ||
+            ((signScheme & 0xff00) == sha224Mask)) {
+            return false;
+        }
+    }
+#endif
+
+#ifdef HITLS_TLS_FEATURE_SM_TLS13
+    if (IS_SM_TLS13(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite)) {
+        if (signScheme != CERT_SIG_SCHEME_SM2_SM3) {
+            return false;
+        }
+    }
+#endif
+
+    return true;
 }
+
 typedef struct {
     uint32_t baseSignAlgorithmsSize;
     const uint16_t *baseSignAlgorithms;
@@ -165,8 +207,9 @@ static int32_t CheckSelectSignAlgorithms(TLS_Ctx *ctx, const SelectSignAlgorithm
             continue;
         }
 #endif
-        if (!IsSignSchemeExist(selectSignAlgorithms, selectSignAlgorithmsSize, baseSignAlgorithms[i])) {
-            /* The signature algorithm must be the same as the algorithm configured on the peer end. */
+        // Check algorithm in allow list, protocol version and security policy restrictions
+        if (!SAL_CERT_IsSignAlgorithmAllowed(ctx, baseSignAlgorithms[i],
+            selectSignAlgorithms, selectSignAlgorithmsSize)) {
             continue;
         }
         if (info->keyType == TLS_CERT_KEY_TYPE_RSA_PSS) {
@@ -176,41 +219,12 @@ static int32_t CheckSelectSignAlgorithms(TLS_Ctx *ctx, const SelectSignAlgorithm
                 continue;
             }
         }
-#ifdef HITLS_TLS_FEATURE_SECURITY
-        if (SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_SIGALG_CHECK, 0, baseSignAlgorithms[i],
-            NULL) != SECURITY_SUCCESS) {
-            continue;
-        }
-#endif
         if (!isNegotiateSignAlgo) {
             /* Only the signature algorithm in the certificate is checked.
                The signature algorithm in the handshake message is not negotiated. */
             return HITLS_SUCCESS;
         }
 
-#ifdef HITLS_TLS_PROTO_TLS13
-        const uint32_t rsaPkcsv15Mask = 0x01;
-        const uint32_t dsaMask = 0x02;
-        const uint32_t sha1Mask = 0x0200;
-        const uint32_t sha224Mask = 0x0300;
-        /* rfc8446 4.2.3.  Signature Algorithms */
-        if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
-            if (((baseSignAlgorithms[i] & 0xff) == rsaPkcsv15Mask) ||
-                ((baseSignAlgorithms[i] & 0xff) == dsaMask) ||
-                ((baseSignAlgorithms[i] & 0xff00) == sha1Mask) ||
-                ((baseSignAlgorithms[i] & 0xff00) == sha224Mask)) {
-                /* not defined for use in signed TLS handshake messages in TLS1.3 */
-                continue;
-            }
-        }
-#endif
-#ifdef HITLS_TLS_FEATURE_SM_TLS13
-        if (IS_SM_TLS13(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite)) {
-            if (baseSignAlgorithms[i] != CERT_SIG_SCHEME_SM2_SM3) {
-                continue;
-            }
-        }
-#endif
         ctx->negotiatedInfo.signScheme = baseSignAlgorithms[i];
         return HITLS_SUCCESS;
     }

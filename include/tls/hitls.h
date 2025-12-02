@@ -479,6 +479,35 @@ int32_t HITLS_GetLocalSignScheme(const HITLS_Ctx *ctx, HITLS_SignHashAlgo *local
 
 /**
  * @ingroup hitls
+ * @brief   Get shared signature algorithms (negotiated)
+ *
+ * This function returns the list of signature algorithms supported by both client and server.
+ * The algorithms are sorted according to the configured priority policy:
+ * - If server preference is enabled (isSupportServerPreference), sorted by server configuration order
+ * - Otherwise sorted by peer's sending order
+ *
+ * @attention
+ * - Must be called after peer sends signature_algorithms extension
+ * - Only supports TLS 1.2 and above
+ * - Server side: after receiving ClientHello
+ * - Client side: after receiving CertificateRequest
+ *
+ * @param   ctx [IN] TLS connection handle
+ * @param   idx [IN] Index of algorithm to query (starting from 0)
+ *               - idx >= 0: return information for the specified index
+ *               - idx = -1: only return total count, do not fill output parameters
+ * @param   signatureScheme [OUT] IANA-defined signature scheme value (uint16_t), can be NULL
+ * @param   keyType [OUT] Certificate key type (HITLS_CERT_KeyType), can be NULL
+ * @param   paraId [OUT] Key parameter ID (CRYPT_PKEY_ParaId), can be NULL
+ *
+ * @retval  > 0 Total number of shared signature algorithms
+ * @retval  0 Failed (no shared algorithms/idx out of range/version not supported/parameter is NULL)
+ */
+int32_t HITLS_GetSharedSigAlgs(const HITLS_Ctx *ctx, int32_t idx, uint16_t *signatureScheme, int32_t *keyType,
+    int32_t *paraId);
+
+/**
+ * @ingroup hitls
  * @brief Set the group supported by the hitls object.
  *
  * @param ctx [OUT] hitls context

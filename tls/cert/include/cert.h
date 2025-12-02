@@ -89,6 +89,24 @@ int32_t SAL_CERT_CheckCertInfo(HITLS_Ctx *ctx, const CERT_ExpectInfo *expectCert
     bool isNegotiateSignAlgo, bool signCheck);
 
 /**
+ * @brief Check if signature algorithm is allowed by protocol version and security policy
+ *
+ * This function performs comprehensive checks on signature algorithms:
+ * - Check if algorithm is in the allowed list (basic intersection)
+ * - Security policy compliance (via SECURITY_SslCheck)
+ * - TLS 1.3 restrictions (no RSA PKCS#1 v1.5, DSA, SHA1, SHA224)
+ * - SM-TLS13 restrictions (only SM2-SM3 allowed)
+ *
+ * @param ctx [IN] TLS context
+ * @param signScheme [IN] Signature scheme to check
+ * @param allowList [IN] Allowed signature algorithm list (can be NULL to skip list check)
+ * @param allowListSize [IN] Size of the allowed list
+ * @return true if the algorithm is allowed, false otherwise
+ */
+bool SAL_CERT_IsSignAlgorithmAllowed(const TLS_Ctx *ctx, uint16_t signScheme,
+    const uint16_t *allowList, uint32_t allowListSize);
+
+/**
  * @brief Select the certificate chain to be sent to the peer end.
  *
  * @param ctx  [IN] tls Context

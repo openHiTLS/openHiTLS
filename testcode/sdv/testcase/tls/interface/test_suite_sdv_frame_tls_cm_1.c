@@ -1256,3 +1256,197 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/** @
+* @test  UT_TLS_CM_GET_SHARED_SIGALGS_API_TC001
+* @title Test the HITLS_GetSharedSigAlgs interface parameter validation.
+* @precon nan
+* @brief HITLS_GetSharedSigAlgs
+* 1. Input an empty TLS connection handle. Expected result 1.
+* 2. Transfer valid parameters with idx=-1 before handshake. Expected result 2.
+* 3. Transfer valid parameters with idx=0 with NULL pointers before handshake. Expected result 3.
+* @expect 1. Returns 0
+* 2. Returns 0 
+* 3. Returns 0
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CM_GET_SHARED_SIGALGS_API_TC001(int tlsVersion)
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    HITLS_Ctx *ctx = NULL;
+    uint16_t signatureScheme;
+    int32_t keyType;
+    int32_t paraId;
+    int32_t count;
+
+    // Test NULL ctx (OpenSSL style: returns 0)
+    count = HITLS_GetSharedSigAlgs(NULL, -1, NULL, NULL, NULL);
+    ASSERT_TRUE(count == 0);
+
+    config = GetHitlsConfigViaVersion(tlsVersion);
+    ASSERT_TRUE(config != NULL);
+    ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    // Test valid parameters (before handshake, should return 0 algorithms)
+    count = HITLS_GetSharedSigAlgs(ctx, -1, NULL, NULL, NULL);
+    ASSERT_TRUE(count == 0);
+
+    // Test with valid index and NULL pointers (should return 0 before handshake)
+    count = HITLS_GetSharedSigAlgs(ctx, 0, NULL, NULL, NULL);
+    ASSERT_TRUE(count == 0);
+
+    // Test with valid index and valid pointers (should return 0 before handshake)
+    count = HITLS_GetSharedSigAlgs(ctx, 0, &signatureScheme, &keyType, &paraId);
+    ASSERT_TRUE(count == 0);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/** @
+* @test  UT_TLS_CM_GET_SHARED_SIGALGS_FUNC_TC001
+* @title Test HITLS_GetSharedSigAlgs before and after handshake.
+* @precon nan
+* @brief
+* 1. Initialize the client and server. Expected result 1.
+* 2. Before handshake, call HITLS_GetSharedSigAlgs on both sides. Expected result 2.
+* 3. Complete handshake. Expected result 3.
+* 4. After handshake, call HITLS_GetSharedSigAlgs on both sides. Expected result 4.
+* @expect
+* 1. Initialization successful
+* 2. Returns 0 shared algorithms before handshake
+* 3. Handshake completes successfully
+* 4. Returns >= 0 shared algorithms after handshake (depends on peer extension)
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CM_GET_SHARED_SIGALGS_FUNC_TC001(int version)
+{
+    FRAME_Init();
+    HITLS_Config *config_c = NULL;
+    HITLS_Config *config_s = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    config_c = GetHitlsConfigViaVersion(version);
+    config_s = GetHitlsConfigViaVersion(version);
+
+    ASSERT_TRUE(config_c != NULL);
+    ASSERT_TRUE(config_s != NULL);
+
+    // Set signature algorithms
+    uint16_t signAlgs_c[] = {
+        CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256,
+        CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512,
+        CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256,
+        CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384
+    };
+    uint16_t signAlgs_s[] = {
+        CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384,
+        CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256,
+        CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512,
+        CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256
+    };
+    HITLS_CFG_SetSignature(config_c, signAlgs_c, sizeof(signAlgs_c) / sizeof(uint16_t));
+    HITLS_CFG_SetSignature(config_s, signAlgs_s, sizeof(signAlgs_s) / sizeof(uint16_t));
+
+    client = FRAME_CreateLink(config_c, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config_s, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    // Before handshake, should return 0 algorithms
+    int32_t clientCount = HITLS_GetSharedSigAlgs(client->ssl, -1, NULL, NULL, NULL);
+    int32_t serverCount = HITLS_GetSharedSigAlgs(server->ssl, -1, NULL, NULL, NULL);
+    ASSERT_EQ(clientCount, 0);
+    ASSERT_EQ(serverCount, 0);
+
+    // Complete handshake
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    // After handshake, check count (may be 0 if peer extension not received/stored)
+    serverCount = HITLS_GetSharedSigAlgs(server->ssl, -1, NULL, NULL, NULL);
+
+    // Just verify the function works (returns non-negative)
+    ASSERT_TRUE(serverCount == 4);
+
+    // If we have shared algorithms, verify we can retrieve them
+    if (serverCount > 0) {
+        for (int32_t i = 0; i < serverCount; i++) {
+            uint16_t scheme;
+            int32_t keyType, paraId;
+            int32_t ret = HITLS_GetSharedSigAlgs(server->ssl, i, &scheme, &keyType, &paraId);
+            ASSERT_EQ(ret, 4);
+            ASSERT_EQ(scheme, signAlgs_c[i]);
+        }
+    }
+
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test  UT_TLS_CM_GET_SHARED_SIGALGS_FUNC_TC002
+* @title Test HITLS_GetSharedSigAlgs with out-of-bounds index.
+* @precon nan
+* @brief
+* 1. Initialize the client. Expected result 1.
+* 2. Query count before handshake (should be 0). Expected result 2.
+* 3. Try to access index 0 when count is 0. Expected result 3.
+* 4. Try to access negative index other than -1. Expected result 4.
+* @expect
+* 1. Initialization successful
+* 2. Returns 0
+* 3. Returns 0 or error
+* 4. Returns 0 or error
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CM_GET_SHARED_SIGALGS_FUNC_TC002(int version)
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    HITLS_Ctx *ctx = NULL;
+
+    config = GetHitlsConfigViaVersion(version);
+    ASSERT_TRUE(config != NULL);
+
+    // Set signature algorithms
+    uint16_t signAlgs[] = {
+        CERT_SIG_SCHEME_RSA_PKCS1_SHA256,
+        CERT_SIG_SCHEME_RSA_PKCS1_SHA384,
+        CERT_SIG_SCHEME_RSA_PKCS1_SHA512,
+        CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256,
+        CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384,
+        CERT_SIG_SCHEME_ECDSA_SECP521R1_SHA512
+    };
+    HITLS_CFG_SetSignature(config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
+
+    ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    // Get count (should be 0 before handshake)
+    int32_t count = HITLS_GetSharedSigAlgs(ctx, -1, NULL, NULL, NULL);
+    ASSERT_EQ(count, 0);
+
+    // Try to access index 0 when count is 0 (should return 0)
+    uint16_t scheme;
+    int32_t keyType, paraId;
+    int32_t ret = HITLS_GetSharedSigAlgs(ctx, 0, &scheme, &keyType, &paraId);
+    ASSERT_EQ(ret, 0);
+
+    // Try negative index other than -1 (should return 0)
+    ret = HITLS_GetSharedSigAlgs(ctx, -2, &scheme, &keyType, &paraId);
+    ASSERT_EQ(ret, 0);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */

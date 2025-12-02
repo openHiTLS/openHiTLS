@@ -57,20 +57,26 @@ static int32_t ParseSignatureAndHashAlgo(ParsePacket *pkt, CertificateRequestMsg
     }
 
     /* Parse the length of the signature algorithm */
-    pkt->ctx->peerInfo.signatureAlgorithmsSize = signatureAndHashAlgLen / SINGLE_SIG_HASH_ALG_SIZE;
-    BSL_SAL_FREE(pkt->ctx->peerInfo.signatureAlgorithms);
-    pkt->ctx->peerInfo.signatureAlgorithms = (uint16_t *)BSL_SAL_Malloc(signatureAndHashAlgLen);
-    if (pkt->ctx->peerInfo.signatureAlgorithms == NULL) {
+    msg->signatureAlgorithmsSize = signatureAndHashAlgLen / SINGLE_SIG_HASH_ALG_SIZE;
+    BSL_SAL_FREE(msg->signatureAlgorithms);
+    msg->signatureAlgorithms = (uint16_t *)BSL_SAL_Malloc(signatureAndHashAlgLen);
+    if (msg->signatureAlgorithms == NULL) {
         return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15460,
             BINGLOG_STR("signatureAlgorithms malloc fail"), ALERT_UNKNOWN);
     }
     /* Extract the signature algorithm */
-    for (uint16_t index = 0u; index < pkt->ctx->peerInfo.signatureAlgorithmsSize; index++) {
-        pkt->ctx->peerInfo.signatureAlgorithms[index] = BSL_ByteToUint16(&pkt->buf[*pkt->bufOffset]);
+    for (uint16_t index = 0u; index < msg->signatureAlgorithmsSize; index++) {
+        msg->signatureAlgorithms[index] = BSL_ByteToUint16(&pkt->buf[*pkt->bufOffset]);
         *pkt->bufOffset += sizeof(uint16_t);
     }
-    msg->signatureAlgorithms = pkt->ctx->peerInfo.signatureAlgorithms;
-    msg->signatureAlgorithmsSize = pkt->ctx->peerInfo.signatureAlgorithmsSize;
+    BSL_SAL_FREE(pkt->ctx->peerInfo.signatureAlgorithms);
+    pkt->ctx->peerInfo.signatureAlgorithms =
+        BSL_SAL_Dump(msg->signatureAlgorithms, msg->signatureAlgorithmsSize * sizeof(uint16_t));
+    if (pkt->ctx->peerInfo.signatureAlgorithms == NULL) {
+        return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID17381,
+            BINGLOG_STR("signatureAlgorithms malloc fail."), ALERT_UNKNOWN);
+    }
+    pkt->ctx->peerInfo.signatureAlgorithmsSize = msg->signatureAlgorithmsSize;
     msg->haveSignatureAndHashAlgo = true;
     return HITLS_SUCCESS;
 }
@@ -376,6 +382,7 @@ void CleanCertificateRequest(CertificateRequestMsg *msg)
     }
 
     BSL_SAL_FREE(msg->certTypes);
+    BSL_SAL_FREE(msg->signatureAlgorithms);
 #ifdef HITLS_TLS_PROTO_TLS13
     BSL_SAL_FREE(msg->certificateReqCtx);
     BSL_SAL_FREE(msg->signatureAlgorithmsCert);

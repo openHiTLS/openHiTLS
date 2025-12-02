@@ -131,6 +131,14 @@ static int32_t ParseClientSignatureAlgorithms(ParsePacket *pkt, ClientHelloMsg *
 
     msg->extension.content.signatureAlgorithmsSize = signatureAlgorithmsSize;
     msg->extension.content.signatureAlgorithms = signatureAlgorithms;
+    BSL_SAL_FREE(pkt->ctx->peerInfo.signatureAlgorithms);
+    pkt->ctx->peerInfo.signatureAlgorithms =
+        BSL_SAL_Dump(signatureAlgorithms, signatureAlgorithmsSize * sizeof(uint16_t));
+    if (pkt->ctx->peerInfo.signatureAlgorithms == NULL) {
+        return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID17382,
+            BINGLOG_STR("signatureAlgorithms malloc fail."), ALERT_UNKNOWN);
+    }
+    pkt->ctx->peerInfo.signatureAlgorithmsSize = signatureAlgorithmsSize;
     msg->extension.flag.haveSignatureAlgorithms = true;
 
     return HITLS_SUCCESS;

@@ -33,6 +33,7 @@
 #include "bsl_uio.h"
 #include "config.h"
 #include "config_check.h"
+#include "config_type.h"
 #include "conn_common.h"
 #include "conn_init.h"
 #include "crypt.h"
@@ -490,6 +491,99 @@ int32_t HITLS_GetPeerSignScheme(const HITLS_Ctx *ctx, HITLS_SignHashAlgo *peerSi
 
     *peerSignScheme = ctx->peerInfo.peerSignHashAlg;
     return HITLS_SUCCESS;
+}
+
+#define MAX_SHARED_SIGALGS 64  // Maximum number of shared signature algorithms
+static int32_t CalculateSharedSigAlgs(const HITLS_Ctx *ctx, uint16_t *sharedAlgs, int32_t maxCount)
+{
+    // Check if peer's algorithms have been received
+    if (ctx->peerInfo.signatureAlgorithms == NULL || ctx->peerInfo.signatureAlgorithmsSize == 0) {
+        return 0;
+    }
+
+    // Get local configured algorithms
+    const uint16_t *localAlgs = ctx->config.tlsConfig.signAlgorithms;
+    uint16_t localAlgsSize = ctx->config.tlsConfig.signAlgorithmsSize;
+
+    if (localAlgs == NULL || localAlgsSize == 0) {
+        return 0;
+    }
+    bool serverPreference = ctx->config.tlsConfig.isSupportServerPreference;
+
+    const uint16_t *pref = serverPreference ? localAlgs : ctx->peerInfo.signatureAlgorithms;
+    uint16_t prefSize = serverPreference ? localAlgsSize : ctx->peerInfo.signatureAlgorithmsSize;
+    const uint16_t *allow = serverPreference ? ctx->peerInfo.signatureAlgorithms : localAlgs;
+    uint16_t allowSize = serverPreference ? ctx->peerInfo.signatureAlgorithmsSize : localAlgsSize;
+
+    int32_t sharedCount = 0;
+
+    for (uint16_t i = 0; i < prefSize && sharedCount < maxCount; i++) {
+        uint16_t sig = pref[i];
+        const TLS_SigSchemeInfo *info = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, sig);
+        if (info == NULL) {
+            continue;
+        }
+
+        if (!SAL_CERT_IsSignAlgorithmAllowed(ctx, sig, allow, allowSize)) {
+            continue;
+        }
+        sharedAlgs[sharedCount++] = sig;
+    }
+
+    return sharedCount;
+}
+
+int32_t HITLS_GetSharedSigAlgs(const HITLS_Ctx *ctx, int32_t idx, uint16_t *signatureScheme, int32_t *keyType,
+    int32_t *paraId)
+{
+    if (ctx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17001, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "HITLS_GetSharedSigAlgs: ctx is NULL", 0, 0, 0, 0);
+        return 0;
+    }
+    uint16_t version = ctx->negotiatedInfo.version;
+    if (version < HITLS_VERSION_TLS12 && version != HITLS_VERSION_DTLS12) {
+        return 0;
+    }
+
+    uint16_t sharedAlgs[MAX_SHARED_SIGALGS];
+    int32_t sharedCount = CalculateSharedSigAlgs(ctx, sharedAlgs, MAX_SHARED_SIGALGS);
+    if (sharedCount == 0) {
+        return 0;
+    }
+
+    if (idx < 0) {
+        return sharedCount;
+    }
+
+    if (idx >= sharedCount) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17002, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "HITLS_GetSharedSigAlgs: idx %d out of range (max: %d)", idx, sharedCount, 0, 0);
+        return 0;
+    }
+
+    // Extract algorithm information for the specified index
+    uint16_t targetScheme = sharedAlgs[idx];
+
+    // Return signatureScheme
+    if (signatureScheme != NULL) {
+        *signatureScheme = targetScheme;
+    }
+
+    // Get keyType and paraId from TLS_SigSchemeInfo
+    if (keyType != NULL || paraId != NULL) {
+        const TLS_SigSchemeInfo *info = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, targetScheme);
+
+        // Use ternary operator to simplify assignment: return info value if available, otherwise 0
+        if (keyType != NULL) {
+            *keyType = (info != NULL) ? info->keyType : 0;
+        }
+        if (paraId != NULL) {
+            *paraId = (info != NULL) ? info->paraId : 0;
+        }
+    }
+
+    return sharedCount;
 }
 #endif
 
