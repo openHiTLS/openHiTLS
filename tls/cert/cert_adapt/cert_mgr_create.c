@@ -65,7 +65,7 @@ CERT_MgrCtx *SAL_CERT_MgrCtxProviderNew(HITLS_Lib_Ctx *libCtx, const char *attrN
 #endif
     newCtx->certStore = SAL_CERT_StoreNew(newCtx);
     if (newCtx->certStore == NULL) {
-        BSL_HASH_Destory(newCtx->certPairs);
+        BSL_HASH_Destroy(newCtx->certPairs);
         BSL_SAL_FREE(newCtx);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15016, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "new cert manager context error: new store failed.", 0, 0, 0, 0);
@@ -173,7 +173,7 @@ void SAL_CERT_MgrCtxFree(CERT_MgrCtx *mgrCtx)
     mgrCtx->chainStore = NULL;
     SAL_CERT_StoreFree(mgrCtx, mgrCtx->certStore);
     mgrCtx->certStore = NULL;
-    BSL_HASH_Destory(mgrCtx->certPairs);
+    BSL_HASH_Destroy(mgrCtx->certPairs);
     mgrCtx->certPairs = NULL;
     BSL_SAL_FREE(mgrCtx);
     return;

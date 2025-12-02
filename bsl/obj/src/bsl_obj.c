@@ -604,7 +604,7 @@ void BSL_OBJ_FreeHashTable(void)
             BSL_ERR_PUSH_ERROR(ret);
             return;
         }
-        BSL_HASH_Destory(g_oidHashTable);
+        BSL_HASH_Destroy(g_oidHashTable);
         g_oidHashTable = NULL;
         (void)BSL_SAL_ThreadUnlock(g_oidHashRwLock);
         if (g_oidHashRwLock != NULL) {

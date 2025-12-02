@@ -971,6 +971,7 @@ uint32_t BSL_SAL_Strnlen(const char *string, uint32_t count);
 typedef enum {
     BSL_SAL_MEM_MALLOC = 0X0100,
     BSL_SAL_MEM_FREE,
+    BSL_SAL_MEM_REALLOC,
 
     BSL_SAL_THREAD_LOCK_NEW_CB_FUNC = 0X0200,
     BSL_SAL_THREAD_LOCK_FREE_CB_FUNC,
@@ -1055,6 +1056,18 @@ typedef void *(*BslSalMalloc)(uint32_t size);
  * @param addr [IN] Start address of the memory allocated by pfMalloc.
  */
 typedef void (*BslSalFree)(void *addr);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Reallocate a memory block.
+ *
+ * @param addr    [IN] Original memory address.
+ * @param newSize [IN] Extended memory size.
+ * @param oldSize [IN] Memory size before expansion.
+ * @retval void*   indicates successful, the extended memory address is returned.
+ * @retval NULL    indicates failed, return NULL.
+ */
+typedef void *(*BslSalRealloc)(void *addr, uint32_t newSize, uint32_t oldSize);
 
 /**
  * @ingroup bsl_sal

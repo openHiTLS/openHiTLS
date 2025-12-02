@@ -28,6 +28,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "bsl_hash_list.h"
+#include "list_base.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,9 +50,8 @@ typedef struct BSL_HASH_TagNode *BSL_HASH_Iterator;
  * @ingroup bsl_hash
  * @brief Generates a hash table index based on the entered key.
  * @param key [IN] hash key
- * @param bktSize [IN] hash bucket size
  */
-typedef uint32_t (*BSL_HASH_CodeCalcFunc)(uintptr_t key, uint32_t bktSize);
+typedef uint32_t (*BSL_HASH_CodeCalcFunc)(uintptr_t key);
 
 /**
  * @ingroup bsl_hash
@@ -113,7 +113,7 @@ uint32_t BSL_HASH_CodeCalc(void *key, uint32_t keySize);
  * @par Dependency: None
  * @li bsl_hash.h: header file where this function's declaration is located.
  */
-uint32_t BSL_HASH_CodeCalcInt(uintptr_t key, uint32_t bktSize);
+uint32_t BSL_HASH_CodeCalcInt(uintptr_t key);
 
 /**
  * @ingroup bsl_hash
@@ -129,7 +129,7 @@ uint32_t BSL_HASH_CodeCalcInt(uintptr_t key, uint32_t bktSize);
  * @par Dependency: None
  * @li bsl_hash.h: header file where this function's declaration is located.
  */
-uint32_t BSL_HASH_CodeCalcStr(uintptr_t key, uint32_t bktSize);
+uint32_t BSL_HASH_CodeCalcStr(uintptr_t key);
 
 /**
  * @ingroup bsl_hash
@@ -179,7 +179,8 @@ bool BSL_HASH_MatchStr(uintptr_t key1, uintptr_t key2);
  *                             the corresponding free function must be registered.
  * 3. Provide the default integer and string hash functions: #BSL_HASH_CodeCalcInt and #BSL_HASH_CodeCalcStr.
  * 4. Provide default integer and string matching functions: #BSL_HASH_MatchInt and #BSL_HASH_MatchStr.
- * @param bktSize [IN] Number of hash buckets.
+ * 5. The hash table will start with 16 buckets and automatically resize based on load factor.
+ * @param bktSize [IN] Initial hash bucket size. If 0, default size is used.
  * @param hashCalcFunc [IN] Hash value calculation function.
  *                          If the value is NULL, the default key is an integer. Use #BSL_HASH_CodeCalcInt.
  * @param matchFunc [IN] hash key matching function.
@@ -195,6 +196,7 @@ bool BSL_HASH_MatchStr(uintptr_t key1, uintptr_t key2);
  */
 BSL_HASH_Hash *BSL_HASH_Create(uint32_t bktSize, BSL_HASH_CodeCalcFunc hashFunc, BSL_HASH_MatchFunc matchFunc,
     ListDupFreeFuncPair *keyFunc, ListDupFreeFuncPair *valueFunc);
+
 
 /**
  * @ingroup bsl_hash
@@ -330,7 +332,7 @@ void BSL_HASH_Clear(BSL_HASH_Hash *hash);
  * @par Dependency: None
  * @li bsl_hash.h: header file where this function's declaration is located.
  */
-void BSL_HASH_Destory(BSL_HASH_Hash *hash);
+void BSL_HASH_Destroy(BSL_HASH_Hash *hash);
 
 /**
  * @ingroup bsl_hash
@@ -400,6 +402,19 @@ uintptr_t BSL_HASH_HashIterKey(const BSL_HASH_Hash *hash, BSL_HASH_Iterator it);
  * @li bsl_hash.h: header file where this function's declaration is located.
  */
 uintptr_t BSL_HASH_IterValue(const BSL_HASH_Hash *hash, BSL_HASH_Iterator it);
+
+struct BSL_HASH_Info {
+    ListDupFreeFuncPair keyFunc;        /**< key Copy and release function pair */
+    ListDupFreeFuncPair valueFunc;      /**< value Copy and release function pair */
+    BSL_HASH_MatchFunc matchFunc;       /**< matching function */
+    BSL_HASH_CodeCalcFunc hashFunc;     /**< hash function */
+    uint32_t initialSize;               /**< Initial bucket size (N0), must be power of 2 */
+    uint32_t nextLevelSize;             /**< Next hash level size (N0 * 2^(level+1)) */
+    uint32_t nextSplit;                 /**< Split pointer, index of next bucket to split */
+    uint32_t bucketSize;                /**< Current total bucket size: N0 * 2^level + nextSplit */
+    uint32_t hashCount;                 /**< number of entries in the hash table */
+    RawList *listArray;                 /**< Pointer to dynamically allocated bucket array */
+};
 
 #ifdef __cplusplus
 }

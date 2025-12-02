@@ -29,7 +29,7 @@
 #include "hitls.h"
 #include "frame_tls.h"
 #include "hitls_type.h"
-
+#include "bsl_obj_internal.h"
 
 /* END_HEADER */
 
@@ -103,6 +103,7 @@ void SDV_TLS13_PROVIDER_NEW_GROUP_SIGNALG_TC001(char *path, char *providerName, 
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 EXIT:
     HLT_FreeAllProcess();
+    BSL_OBJ_FreeHashTable();
 #endif
 }
 /* END_CASE */

@@ -149,8 +149,9 @@ void SDV_BSL_HASH_LIST_FUNC_TC001(void)
     }
 
     ASSERT_TRUE(BSL_HASH_Size(hash) == (size_t)0);
-    BSL_HASH_Destory(hash);
+   
 EXIT:
+    BSL_HASH_Destroy(hash);
     return;
 }
 /* END_CASE */
@@ -226,8 +227,9 @@ void SDV_BSL_HASH_LIST_FUNC_TC002(void)
     }
 
     ASSERT_TRUE(BSL_HASH_Size(hash) == (size_t)0);
-    BSL_HASH_Destory(hash);
+    
 EXIT:
+    BSL_HASH_Destroy(hash);
     return;
 }
 /* END_CASE */

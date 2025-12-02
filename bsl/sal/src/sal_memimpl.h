@@ -50,6 +50,18 @@ typedef struct MemCallback {
      * @param addr [IN] Start address of the memory allocated by pfMalloc.
      */
     void (*pfFree)(void *addr);
+
+    /**
+     * @ingroup bsl_sal
+     * @brief Reallocate a memory block.
+     *
+     * @param addr    [IN] Original memory address.
+     * @param newSize [IN] Extended memory size.
+     * @param oldSize [IN] Memory size before expansion.
+     * @retval void*   indicates successful, the extended memory address is returned.
+     * @retval NULL    indicates failed, return NULL.
+     */
+    void *(*pfRealloc)(void *addr, uint32_t newSize, uint32_t oldSize);
 } BSL_SAL_MemCallback;
 
 int32_t SAL_MemCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
@@ -58,6 +70,8 @@ int32_t SAL_MemCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 void *SAL_MallocImpl(uint32_t size);
 
 void SAL_FreeImpl(void *value);
+
+void *SAL_ReallocImpl(void *addr, uint32_t newSize);
 #endif
 
 #ifdef __cplusplus

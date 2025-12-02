@@ -47,15 +47,11 @@ typedef struct {
 } SessionKey;
 
 /* For details about the SessKey hash function, see BSL_CstlHashCodeCalcStr */
-static uint32_t SessKeyHashCodeCal(uintptr_t key, uint32_t bktSize)
+static uint32_t SessKeyHashCodeCal(uintptr_t key)
 {
-    if (bktSize == 0) {
-        return 0;
-    }
-
     SessionKey *tmpKey = (SessionKey *)key;
     uint32_t hashCode =  BSL_HASH_CodeCalc(tmpKey, sizeof(SessionKey));
-    return hashCode % bktSize;
+    return hashCode;
 }
 
 static bool SessKeyHashMacth(uintptr_t key1, uintptr_t key2)
@@ -174,7 +170,7 @@ void SESSMGR_Free(TLS_SessionMgr *mgr)
         BSL_SAL_ThreadUnlock(mgr->lock);
 
         // Delete all sessions
-        BSL_HASH_Destory(mgr->hash);
+        BSL_HASH_Destroy(mgr->hash);
         mgr->hash = NULL;
 
         BSL_SAL_ThreadLockFree(mgr->lock);

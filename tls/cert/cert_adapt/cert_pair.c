@@ -74,7 +74,7 @@ static int32_t TlcpCertPairDup(CERT_MgrCtx *mgrCtx, CERT_Pair *srcCertPair, CERT
 
 CERT_Pair *SAL_CERT_PairDup(CERT_MgrCtx *mgrCtx, CERT_Pair *srcCertPair)
 {
-    CERT_Pair *destCertPair = BSL_SAL_Calloc(1, sizeof(CERT_MgrCtx));
+    CERT_Pair *destCertPair = BSL_SAL_Calloc(1, sizeof(CERT_Pair));
     if (destCertPair == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16299, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
         return NULL;

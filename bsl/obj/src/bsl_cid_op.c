@@ -348,7 +348,7 @@ void BSL_OBJ_FreeSignHashTable(void)
             BSL_ERR_PUSH_ERROR(ret);
             return;
         }
-        BSL_HASH_Destory(g_signHashTable);
+        BSL_HASH_Destroy(g_signHashTable);
         g_signHashTable = NULL;
         (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
         if (g_signHashRwLock != NULL) {

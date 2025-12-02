@@ -27,6 +27,7 @@
 #include "cert_callback.h"
 #include "test.h"
 #include "crypt_eal_rand.h"
+#include "bsl_obj_internal.h"
 /* END_HEADER */
 
 
@@ -78,6 +79,7 @@ EXIT:
     if (libCtx != NULL) {
         CRYPT_EAL_LibCtxFree(libCtx);
     }
+    BSL_OBJ_FreeHashTable();
 #endif
 }
 /* END_CASE */
@@ -137,6 +139,7 @@ EXIT:
     if (libCtx != NULL) {
         CRYPT_EAL_LibCtxFree(libCtx);
     }
+    BSL_OBJ_FreeHashTable();
 #endif
 }
 /* END_CASE */

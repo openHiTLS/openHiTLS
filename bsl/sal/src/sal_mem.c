@@ -85,6 +85,13 @@ void *BSL_SAL_Calloc(uint32_t num, uint32_t size)
 
 void *BSL_SAL_Realloc(void *addr, uint32_t newSize, uint32_t oldSize)
 {
+    if (g_memCallback.pfRealloc != NULL && g_memCallback.pfRealloc != BSL_SAL_Realloc) {
+        return g_memCallback.pfRealloc(addr, newSize, oldSize);
+    }
+
+#if defined(HITLS_BSL_SAL_MEM) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
+    return SAL_ReallocImpl(addr, newSize);
+#else
     if (addr == NULL) {
         return BSL_SAL_Malloc(newSize);
     }
@@ -102,6 +109,7 @@ void *BSL_SAL_Realloc(void *addr, uint32_t newSize, uint32_t oldSize)
     }
 
     return ptr;
+#endif
 }
 
 void *BSL_SAL_Dump(const void *src, uint32_t size)
@@ -124,7 +132,7 @@ void *BSL_SAL_Dump(const void *src, uint32_t size)
 
 int32_t SAL_MemCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 {
-    if (type > BSL_SAL_MEM_FREE || type < BSL_SAL_MEM_MALLOC) {
+    if (type > BSL_SAL_MEM_REALLOC || type < BSL_SAL_MEM_MALLOC) {
         return BSL_SAL_ERR_BAD_PARAM;
     }
     uint32_t offset = (uint32_t)(type - BSL_SAL_MEM_MALLOC);

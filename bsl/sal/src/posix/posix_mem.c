@@ -32,4 +32,9 @@ void SAL_FreeImpl(void *value)
     free(value);
 }
 
+void *SAL_ReallocImpl(void *addr, uint32_t newSize)
+{
+    return realloc(addr, newSize);
+}
+
 #endif

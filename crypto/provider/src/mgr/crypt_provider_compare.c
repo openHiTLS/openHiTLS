@@ -279,7 +279,7 @@ static int32_t ParseAttributeString(InputAttributeStrInfo *attrInfo)
         ret = ParseAttributeValue(attribute, &startPos, &key, &value);
         // An unknown error occurred during the lookup
         if (ret != CRYPT_SUCCESS) {
-            BSL_HASH_Destory(hash);
+            BSL_HASH_Destroy(hash);
             return ret;
         }
 
@@ -294,13 +294,13 @@ static int32_t ParseAttributeString(InputAttributeStrInfo *attrInfo)
         AttributeValueFree(value);
         if (ret != BSL_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            BSL_HASH_Destory(hash);
+            BSL_HASH_Destroy(hash);
             return ret;
         }
     }
     if (tempAttributeNum == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_ATTRIBUTE);
-        BSL_HASH_Destory(hash);
+        BSL_HASH_Destroy(hash);
         return CRYPT_PROVIDER_ERR_ATTRIBUTE;
     }
     attrInfo->attributeNum = tempAttributeNum;
@@ -451,14 +451,14 @@ int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
     ret = BSL_SAL_ThreadWriteLock(localCtx->lock);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        BSL_HASH_Destory(attrInfo.hash);
+        BSL_HASH_Destroy(attrInfo.hash);
         return ret;
     }
     
     FindHighestScoreFunc(localCtx, operaId, algId, attrInfo, &implFunc, &ctx);
 
     BSL_SAL_ThreadUnlock(localCtx->lock);
-    BSL_HASH_Destory(attrInfo.hash);
+    BSL_HASH_Destroy(attrInfo.hash);
     if (implFunc == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
         return CRYPT_NOT_SUPPORT;
