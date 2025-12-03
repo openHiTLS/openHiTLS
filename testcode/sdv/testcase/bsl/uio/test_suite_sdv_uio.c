@@ -1368,6 +1368,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_BSL_UIO_APPEND_TC001(void)
 {
+#ifdef HITLS_TLS_PROTO_TLS12
     HitlsInit();
     HITLS_Config *config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(config != NULL);
@@ -1382,6 +1383,9 @@ EXIT:
     BSL_UIO_FreeChain(uio);
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);
+#else
+    SKIP_TEST();
+#endif
 }
 /* END_CASE */
 
