@@ -50,13 +50,13 @@ static void FreeNewArgv(char **newargv, int argc)
 
 static char **CopyArgs(int argc, char **argv, int *newArgc)
 {
-    char **newargv = BSL_SAL_Calloc(argc + 1, sizeof(*newargv));
+    char **newargv = (char **)BSL_SAL_Calloc(argc + 1, sizeof(char *));
     if (newargv == NULL) {
         AppPrintError("SAL malloc failed.\n");
         return NULL;
     }
     int i = 0;
-    for (i = 0; i < argc; i++) {
+    for (; i < argc; i++) {
         newargv[i] = (char *)BSL_SAL_Calloc(strlen(argv[i]) + 1, sizeof(char));
         if (newargv[i] == NULL) {
             AppPrintError("SAL malloc failed.\n");

@@ -640,7 +640,8 @@ static int HandleClientDataExchange(HITLS_Ctx *ctx, HITLS_ClientParams *params)
 static void CleanupClientResources(HITLS_Ctx *ctx, HITLS_Config *config, BSL_UIO *uio)
 {
     if (ctx) {
-        HITLS_Close(ctx);
+        HITLS_Close(ctx); // send close
+        HITLS_Close(ctx); // read close
         HITLS_Free(ctx);
     }
     

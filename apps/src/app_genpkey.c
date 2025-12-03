@@ -457,6 +457,7 @@ static void UnInitGenPkeyOptCtx(GenPkeyOptCtx *optCtx)
     if (optCtx->passout != NULL) {
         BSL_SAL_ClearFree(optCtx->passout, strlen(optCtx->passout));
     }
+    optCtx->passout = NULL;
 }
 
 // genpkey main function

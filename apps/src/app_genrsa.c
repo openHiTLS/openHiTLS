@@ -133,19 +133,19 @@ int32_t HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag, void *userd
             return errLen;
         }
     } else if (userdata != NULL) {
-        if (strlen(userdata) > APP_MAX_PASS_LENGTH) {
+        bufLen = strlen(userdata);
+        if (bufLen > APP_MAX_PASS_LENGTH) {
             HITLS_APP_PrintPassErrlog();
             return errLen;
         }
-        cbRet = HITLS_APP_CheckPasswd((uint8_t *)userdata, strlen(userdata));
+        cbRet = HITLS_APP_CheckPasswd((uint8_t *)userdata, bufLen);
         if (cbRet != HITLS_APP_SUCCESS) {
             return errLen;
         }
-        if (strncpy_s(buf, bufMaxLen, (char *)userdata, strlen(userdata)) != EOK) {
+        if (strncpy_s(buf, bufMaxLen, (char *)userdata, bufLen) != EOK) {
             (void)memset_s(buf, bufMaxLen, 0, bufMaxLen);
             return errLen;
         }
-        bufLen = strlen(buf);
     }
     return bufLen;
 }
