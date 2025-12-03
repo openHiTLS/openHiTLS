@@ -145,9 +145,9 @@ void HITLS_Free(HITLS_Ctx *ctx)
     ctx->rwstate = HITLS_NOTHING;
 #endif
     CONN_Deinit(ctx);
-    BSL_UIO_Free(ctx->uio);
+    BSL_UIO_FreeChain(ctx->uio);
 #ifdef HITLS_TLS_FEATURE_FLIGHT
-    BSL_UIO_Free(ctx->rUio);
+    BSL_UIO_FreeChain(ctx->rUio);
     ctx->rUio = NULL;
 #endif
     ctx->uio = NULL;
@@ -191,7 +191,7 @@ int32_t HITLS_SetReadUio(HITLS_Ctx *ctx, BSL_UIO *uio)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15662, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
             "Warning: Repeated uio setting.", 0, 0, 0, 0);
         /* Release the original UIO */
-        BSL_UIO_Free(ctx->rUio);
+        BSL_UIO_FreeChain(ctx->rUio);
     }
 
     ctx->rUio = uio;
@@ -274,7 +274,7 @@ int32_t HITLS_SetUio(HITLS_Ctx *ctx, BSL_UIO *uio)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15253, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
             "Warning: Repeated uio setting.", 0, 0, 0, 0);
         /* Release the original read UIO */
-        BSL_UIO_Free(ctx->rUio);
+        BSL_UIO_FreeChain(ctx->rUio);
     }
     ctx->rUio = uio;
 #endif

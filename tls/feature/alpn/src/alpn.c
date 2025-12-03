@@ -24,8 +24,6 @@
 #include "tls.h"
 #include "alpn.h"
 
-#define MAX_PROTOCOL_LEN 65536
-
 static int32_t SelectProtocol(TLS_Ctx *ctx, uint8_t *alpnSelected, uint16_t alpnSelectedSize)
 {
     uint8_t *protoMatch = NULL;
