@@ -17,6 +17,7 @@
 #define CONFIG_CHECK_H
 
 #include <stdint.h>
+#include "tls.h"
 #include "hitls_type.h"
 
 #ifdef __cplusplus

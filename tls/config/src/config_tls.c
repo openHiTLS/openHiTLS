@@ -98,11 +98,11 @@ HITLS_Config *HITLS_CFG_ProviderNewTLSConfig(HITLS_Lib_Ctx *libCtx, const char *
     newConfig->libCtx = libCtx;
     newConfig->attrName = attrName;
 
+    newConfig->originVersionMask = newConfig->version;
     if (DefaultTlsAllConfig(newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
     }
-    newConfig->originVersionMask = newConfig->version;
     return newConfig;
 }
 #endif

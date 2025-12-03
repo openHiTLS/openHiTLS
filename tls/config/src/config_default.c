@@ -32,6 +32,7 @@
 #include "security.h"
 #endif
 #include "config_type.h"
+#include "config_check.h"
 
 #ifdef HITLS_TLS_PROTO_TLCP11
 uint16_t g_tlcpCipherSuites[] = {
@@ -381,9 +382,7 @@ static int32_t SetDefaultTlsAllCipherSuites(HITLS_Config *config)
 #ifdef HITLS_TLS_CONFIG_VERSION
 int32_t DefaultTlsAllConfig(HITLS_Config *config)
 {
-    // Support full version
-    config->minVersion = HITLS_VERSION_TLS12;
-    config->maxVersion = HITLS_VERSION_TLS13;
+    ChangeMinMaxVersion(config->version, config->originVersionMask, &config->minVersion, &config->maxVersion);
 
     InitConfig(config);
 

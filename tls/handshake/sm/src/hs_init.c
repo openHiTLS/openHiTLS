@@ -28,10 +28,6 @@
 #include "hs.h"
 #include "parse.h"
 
-#define DTLS_OVER_UDP_DEFAULT_SIZE 2048u
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
-#define EXTRA_DATA_SIZE 128u
-#endif
 #ifdef HITLS_TLS_FEATURE_FLIGHT
 static int32_t UIO_Init(TLS_Ctx *ctx)
 {

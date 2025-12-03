@@ -117,7 +117,7 @@ static void CleanPeerInfo(PeerInfo *peerInfo)
     BSL_SAL_FREE(peerInfo->signatureAlgorithms);
 }
 
-#if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN)
+#if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN) || defined(HITLS_TLS_FEATURE_SNI)
 static void CleanNegotiatedInfo(TLS_NegotiatedInfo *negotiatedInfo)
 {
 #ifdef HITLS_TLS_EXTENSION_COOKIE
@@ -148,9 +148,9 @@ void HITLS_Free(HITLS_Ctx *ctx)
     ctx->rwstate = HITLS_NOTHING;
 #endif
     CONN_Deinit(ctx);
-    BSL_UIO_Free(ctx->uio);
+    BSL_UIO_FreeChain(ctx->uio);
 #ifdef HITLS_TLS_FEATURE_FLIGHT
-    BSL_UIO_Free(ctx->rUio);
+    BSL_UIO_FreeChain(ctx->rUio);
     ctx->rUio = NULL;
 #endif
     ctx->uio = NULL;
@@ -161,7 +161,7 @@ void HITLS_Free(HITLS_Ctx *ctx)
     CFG_CleanConfig(&ctx->config.tlsConfig);
     HITLS_CFG_FreeConfig(ctx->globalConfig);
     CleanPeerInfo(&(ctx->peerInfo));
-#if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN)
+#if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN) || defined(HITLS_TLS_FEATURE_SNI)
     CleanNegotiatedInfo(&ctx->negotiatedInfo);
 #endif
 #ifdef HITLS_TLS_FEATURE_PHA
@@ -206,7 +206,7 @@ int32_t HITLS_SetReadUio(HITLS_Ctx *ctx, BSL_UIO *uio)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15662, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
             "Warning: Repeated uio setting.", 0, 0, 0, 0);
         /* Release the original UIO */
-        BSL_UIO_Free(ctx->rUio);
+        BSL_UIO_FreeChain(ctx->rUio);
     }
 
     ctx->rUio = uio;
@@ -295,7 +295,7 @@ int32_t HITLS_SetUio(HITLS_Ctx *ctx, BSL_UIO *uio)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15253, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
             "Warning: Repeated uio setting.", 0, 0, 0, 0);
         /* Release the original read UIO */
-        BSL_UIO_Free(ctx->rUio);
+        BSL_UIO_FreeChain(ctx->rUio);
     }
     ctx->rUio = uio;
 #endif
