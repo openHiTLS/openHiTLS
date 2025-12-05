@@ -24,6 +24,7 @@
 #include "sal_atomic.h"
 #include "hitls_x509_local.h"
 #include "hitls_pki_cert.h"
+#include "hitls_pki_crl.h"
 #include "crypt_eal_codecs.h"
 
 #ifdef __cplusplus
@@ -49,6 +50,7 @@ typedef struct _HITLS_PKCS12_Bag {
     union {
         CRYPT_EAL_PkeyCtx *key;
         HITLS_X509_Cert *cert;
+        HITLS_X509_Crl *crl;
         BSL_Buffer secret;
     } value;
     HITLS_X509_Attrs *attributes; // localKeyId, friendlyName, ect. Item is HITLS_PKCS12_SafeBagAttr.
@@ -66,6 +68,7 @@ typedef struct _HITLS_PKCS12 {
                                     it will be placed here. */
     BSL_ASN1_List *secretBags;     /* for store secret-bags, we support multiple secret-bags. */
     BSL_ASN1_List *certList;       /* for store cert-bags, we support multiple cert-bags. */
+    BSL_ASN1_List *crlList;        /* for store crl-bags, we support multiple crl-bags. */
     BSL_ASN1_List *keyList;        /* for store key-bags, we support multiple key-bags. */
     HITLS_PKCS12_MacData *macData;
     HITLS_PKI_LibCtx *libCtx;

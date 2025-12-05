@@ -118,6 +118,11 @@ HITLS_PKCS12 *HITLS_PKCS12_New(void)
         HITLS_PKCS12_Free(p12);
         return NULL;
     }
+    p12->crlList = BSL_LIST_New(sizeof(HITLS_PKCS12_Bag));
+    if (p12->crlList == NULL) {
+        HITLS_PKCS12_Free(p12);
+        return NULL;
+    }
     p12->secretBags = BSL_LIST_New(sizeof(HITLS_PKCS12_Bag));
     if (p12->secretBags == NULL) {
         HITLS_PKCS12_Free(p12);
@@ -151,6 +156,7 @@ void HITLS_PKCS12_Free(HITLS_PKCS12 *p12)
     HITLS_PKCS12_BagFree(p12->entityCert);
     HITLS_PKCS12_BagFree(p12->key);
     BSL_LIST_FREE(p12->certList, (BSL_LIST_PFUNC_FREE)HITLS_PKCS12_BagFree);
+    BSL_LIST_FREE(p12->crlList, (BSL_LIST_PFUNC_FREE)HITLS_PKCS12_BagFree);
     BSL_LIST_FREE(p12->secretBags, (BSL_LIST_PFUNC_FREE)HITLS_PKCS12_BagFree);
     BSL_LIST_FREE(p12->keyList, (BSL_LIST_PFUNC_FREE)HITLS_PKCS12_BagFree);
     HITLS_PKCS12_MacDataFree(p12->macData);
@@ -186,6 +192,23 @@ static int32_t SetCertBag(HITLS_PKCS12_Bag *bag, void *value, uint32_t bagType)
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t SetCrlBag(HITLS_PKCS12_Bag *bag, void *value, uint32_t bagType)
+{
+    int32_t ref;
+    if (bagType != BSL_CID_X509CRL) { // now only support x509 crl.
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
+        return HITLS_PKCS12_ERR_INVALID_PARAM;
+    }
+    int32_t ret = HITLS_X509_CrlCtrl((HITLS_X509_Crl *)value, HITLS_X509_REF_UP, &ref, sizeof(int32_t));
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    bag->value.crl = (HITLS_X509_Crl *)value;
+    bag->type = bagType;
+    return HITLS_PKI_SUCCESS;
+}
+
 static int32_t SetSecretBag(HITLS_PKCS12_Bag *bag, void *value, uint32_t bagType)
 {
     BSL_Buffer *tmp = (BSL_Buffer *)value;
@@ -212,6 +235,8 @@ static int32_t BagSetValue(HITLS_PKCS12_Bag *bag, void *value, uint32_t bagId, u
             return SetKeyBag(bag, value);
         case BSL_CID_CERTBAG:
             return SetCertBag(bag, value, bagType);
+        case BSL_CID_CRLBAG:
+            return SetCrlBag(bag, value, bagType);
         case BSL_CID_SECRETBAG:
             return SetSecretBag(bag, value, bagType);
         default:
@@ -258,6 +283,11 @@ void HITLS_PKCS12_BagFree(HITLS_PKCS12_Bag *bag)
         case BSL_CID_CERTBAG:
             if (bag->type == BSL_CID_X509CERTIFICATE) {
                 HITLS_X509_CertFree(bag->value.cert);
+            }
+            break;
+        case BSL_CID_CRLBAG:
+            if (bag->type == BSL_CID_X509CRL) {
+                HITLS_X509_CrlFree(bag->value.crl);
             }
             break;
         case BSL_CID_SECRETBAG:

@@ -34,6 +34,7 @@
 #include "crypt_eal_rand.h"
 #include "stub_utils.h"
 #include "hitls_pki_utils.h"
+#include "hitls_pki_x509.h"
 /* END_HEADER */
 
 #if (defined(HITLS_PKI_PKCS12_GEN) || defined(HITLS_PKI_PKCS12_PARSE)) && defined(HITLS_CRYPTO_PROVIDER)
@@ -149,11 +150,28 @@ EXIT:
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t SetCrlBag(HITLS_PKCS12 *p12, HITLS_X509_Crl *crl)
+{
+    HITLS_PKCS12_Bag *crlBag = HITLS_PKCS12_BagNew(BSL_CID_CRLBAG, BSL_CID_X509CRL, crl); // new a crl Bag
+    ASSERT_NE(crlBag, NULL);
+    char *name = "I am a x509CrlBag";
+    uint32_t nameLen = strlen(name);
+    BSL_Buffer buffer = {0};
+    buffer.data = (uint8_t *)name;
+    buffer.dataLen = nameLen;
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(crlBag, HITLS_PKCS12_BAG_ADD_ATTR, &buffer, BSL_CID_FRIENDLYNAME), 0);
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_ADD_CRLBAG, crlBag, 0), 0);
+EXIT:
+    HITLS_PKCS12_BagFree(crlBag);
+    return HITLS_PKI_SUCCESS;
+}
+
 /**
  * For test generating a .p12 inlcuding keyBag, certBag, p8KeyBag and secretBag.
 */
 /* BEGIN_CASE */
-void SDV_PKCS12_GEN_KEYBAGS_TC001(char *pkeyPath, char *enCertPath, char *ca1CertPath, char *otherCertPath)
+void SDV_PKCS12_GEN_KEYBAGS_TC001(char *pkeyPath, char *enCertPath, char *ca1CertPath, char *otherCertPath,
+    char *crlPath)
 {
 #ifndef HITLS_PKI_PKCS12_GEN
     (void)pkeyPath;
@@ -179,6 +197,7 @@ void SDV_PKCS12_GEN_KEYBAGS_TC001(char *pkeyPath, char *enCertPath, char *ca1Cer
     HITLS_X509_Cert *enCert = NULL;
     HITLS_X509_Cert *ca1Cert = NULL;
     HITLS_X509_Cert *otherCert = NULL;
+    HITLS_X509_Crl *crl = NULL;
     int32_t mdId = CRYPT_MD_SHA1;
     BSL_Buffer output = {0};
     HITLS_PKCS12 *p12 = HITLS_PKCS12_New();
@@ -187,10 +206,12 @@ void SDV_PKCS12_GEN_KEYBAGS_TC001(char *pkeyPath, char *enCertPath, char *ca1Cer
     BSL_ASN1_List *certList = NULL;
     BSL_ASN1_List *keyList = NULL;
     BSL_ASN1_List *secretBags = NULL;
+    BSL_ASN1_List *crlBags = NULL;
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, pkeyPath, NULL, 0, &pkey), 0);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, enCertPath, &enCert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, ca1CertPath, &ca1Cert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, otherCertPath, &otherCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlPath, &crl), HITLS_PKI_SUCCESS);
 
     // Add the entity cert to p12.
     ASSERT_EQ(SetEntityCertBag(p12, enCert), HITLS_PKI_SUCCESS);
@@ -200,6 +221,8 @@ void SDV_PKCS12_GEN_KEYBAGS_TC001(char *pkeyPath, char *enCertPath, char *ca1Cer
     ASSERT_EQ(SetCertBag(p12, ca1Cert), HITLS_PKI_SUCCESS);
     // Add the other cert to p12.
     ASSERT_EQ(SetCertBag(p12, otherCert), HITLS_PKI_SUCCESS);
+    // Add the crl to p12.
+    ASSERT_EQ(SetCrlBag(p12, crl), HITLS_PKI_SUCCESS);
     // Gen and add key bag to p12.
     ASSERT_EQ(NewAndSetKeyBag(p12, BSL_CID_RSA), HITLS_PKI_SUCCESS);
     ASSERT_EQ(NewAndSetKeyBag(p12, BSL_CID_ED25519), HITLS_PKI_SUCCESS);
@@ -207,21 +230,24 @@ void SDV_PKCS12_GEN_KEYBAGS_TC001(char *pkeyPath, char *enCertPath, char *ca1Cer
     ASSERT_EQ(HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(CRYPT_MD_AlgId)), 0);
     // Gen a p12.
     ASSERT_EQ(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output), 0);
-    
 #ifdef HITLS_PKI_PKCS12_PARSE
     ASSERT_EQ(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &output, &pwdParam, &p12_1, true), 0);
     ASSERT_EQ(HITLS_PKCS12_Ctrl(p12_1, HITLS_PKCS12_GET_CERTBAGS, &certList, 0), 0);
     ASSERT_EQ(HITLS_PKCS12_Ctrl(p12_1, HITLS_PKCS12_GET_KEYBAGS, &keyList, 0), 0);
     ASSERT_EQ(HITLS_PKCS12_Ctrl(p12_1, HITLS_PKCS12_GET_SECRETBAGS, &secretBags, 0), 0);
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12_1, HITLS_PKCS12_GET_CRLBAGS, &crlBags, 0), 0);
+
     ASSERT_EQ(BSL_LIST_COUNT(certList), 2);
     ASSERT_EQ(BSL_LIST_COUNT(keyList), 2);
     ASSERT_EQ(BSL_LIST_COUNT(secretBags), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(crlBags), 1);
     ASSERT_NE(p12_1->entityCert, NULL);
     ASSERT_NE(p12_1->key, NULL);
 #endif
     certList = NULL;
     keyList = NULL;
     secretBags = NULL;
+    crlBags = NULL;
     BSL_SAL_FREE(output.data);
     output.dataLen = 0;
     ASSERT_EQ(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, false, &output), 0);
@@ -232,9 +258,11 @@ void SDV_PKCS12_GEN_KEYBAGS_TC001(char *pkeyPath, char *enCertPath, char *ca1Cer
     ASSERT_EQ(HITLS_PKCS12_Ctrl(p12_1, HITLS_PKCS12_GET_CERTBAGS, &certList, 0), 0);
     ASSERT_EQ(HITLS_PKCS12_Ctrl(p12_1, HITLS_PKCS12_GET_KEYBAGS, &keyList, 0), 0);
     ASSERT_EQ(HITLS_PKCS12_Ctrl(p12_1, HITLS_PKCS12_GET_SECRETBAGS, &secretBags, 0), 0);
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12_1, HITLS_PKCS12_GET_CRLBAGS, &crlBags, 0), 0);
     ASSERT_EQ(BSL_LIST_COUNT(certList), 2);
     ASSERT_EQ(BSL_LIST_COUNT(keyList), 2);
     ASSERT_EQ(BSL_LIST_COUNT(secretBags), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(crlBags), 1);
     ASSERT_NE(p12_1->entityCert, NULL);
     ASSERT_NE(p12_1->key, NULL);
 #endif
@@ -243,6 +271,7 @@ EXIT:
     HITLS_X509_CertFree(enCert);
     HITLS_X509_CertFree(ca1Cert);
     HITLS_X509_CertFree(otherCert);
+    HITLS_X509_CrlFree(crl);
     HITLS_PKCS12_Free(p12);
     HITLS_PKCS12_Free(p12_1);
     BSL_SAL_Free(output.data);
@@ -550,6 +579,129 @@ void SDV_PKCS12_ENCODE_STUB_TC001(Hex *mulBag, int hasMac, int maxTriggers)
 EXIT:
     STUB_RESTORE(BSL_SAL_Malloc);
     HITLS_PKCS12_Free(p12);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_PKCS12_CERTCHAIN_BUILD_TC001
+ * title: Test P12 certificate chain encode/decode and chain building
+ * 1. Load certificates from testcode/testdata/cert/chain/sm2-v3 (ca.der, inter.der, end.der)
+ * 2. Add certificates to P12
+ * 3. Encode P12 to buffer
+ * 4. Decode buffer back to P12
+ * 5. Build certificate chain with decoded certificates
+ * 6. Verify chain building succeeds
+ */
+/* BEGIN_CASE */
+void SDV_PKCS12_CERTCHAIN_BUILD_TC001(void)
+{
+#if !defined(HITLS_PKI_PKCS12_GEN) || !defined(HITLS_PKI_PKCS12_PARSE) || !defined(HITLS_PKI_X509_VFY)
+    SKIP_TEST();
+#else
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), 0);
+
+    char *pwd = "123456";
+    CRYPT_Pbkdf2Param pbParam = {BSL_CID_PBES2, BSL_CID_PBKDF2, CRYPT_MAC_HMAC_SHA256, CRYPT_CIPHER_AES256_CBC,
+        16, (uint8_t *)pwd, strlen(pwd), 2048};
+    CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
+    HITLS_PKCS12_KdfParam macParam = {8, 2048, BSL_CID_SHA256, (uint8_t *)pwd, strlen(pwd)};
+    HITLS_PKCS12_MacParam paramTest = {.para = &macParam, .algId = BSL_CID_PKCS12KDF};
+    HITLS_PKCS12_EncodeParam encodeParam = {encParam, paramTest};
+    BSL_Buffer encPwd = {.data = (uint8_t *)pwd, .dataLen = strlen(pwd)};
+    HITLS_PKCS12_PwdParam pwdParam = {.encPwd = &encPwd, .macPwd = &encPwd};
+
+    HITLS_X509_Cert *caCert = NULL;
+    HITLS_X509_Cert *interCert = NULL;
+    HITLS_X509_Cert *endCert = NULL;
+    HITLS_PKCS12 *p12 = NULL;
+    HITLS_PKCS12 *p12Decoded = NULL;
+    BSL_Buffer output = {0};
+    BSL_ASN1_List *certList = NULL;
+    HITLS_X509_StoreCtx *storeCtx = NULL;
+    HITLS_X509_List *chain = NULL;
+
+    // Step 1: Load certificates from sm2-v3 directory
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/sm2-v3/ca.der", &caCert),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/sm2-v3/inter.der", &interCert),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/sm2-v3/end.der", &endCert),
+        HITLS_PKI_SUCCESS);
+
+    // Step 2: Create P12 and add certificates
+    p12 = HITLS_PKCS12_New();
+    ASSERT_NE(p12, NULL);
+
+    ASSERT_EQ(SetCertBag(p12, caCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(SetCertBag(p12, interCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(SetCertBag(p12, endCert), HITLS_PKI_SUCCESS);
+
+    // Encode P12 to buffer
+    ASSERT_EQ(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output), HITLS_PKI_SUCCESS);
+    ASSERT_NE(output.data, NULL);
+    ASSERT_NE(output.dataLen, 0);
+
+    // Decode buffer back to P12
+    ASSERT_EQ(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &output, &pwdParam, &p12Decoded, true), HITLS_PKI_SUCCESS);
+    ASSERT_NE(p12Decoded, NULL);
+
+    // Get certificate list from decoded P12
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12Decoded, HITLS_PKCS12_GET_CERTBAGS, &certList, 0), HITLS_PKI_SUCCESS);
+    ASSERT_NE(certList, NULL);
+    ASSERT_EQ(BSL_LIST_COUNT(certList), 3);
+
+    // Create store context and build certificate chain
+    storeCtx = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(storeCtx, NULL);
+
+    // Extract certificates from decoded P12 and add to store
+    HITLS_PKCS12_Bag *bag = BSL_LIST_GET_FIRST(certList);
+    HITLS_X509_Cert *cert1 = NULL;
+    HITLS_X509_Cert *cert2 = NULL;
+    HITLS_X509_Cert *cert3 = NULL;
+    int certIndex = 0;
+
+    while (bag != NULL) {
+        HITLS_X509_Cert *cert = NULL;
+        ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_VALUE, &cert, 0), HITLS_PKI_SUCCESS);
+        ASSERT_NE(cert, NULL);
+
+        if (certIndex == 0) {
+            cert1 = cert;
+            // Add CA cert to store as trusted certificate
+            ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, 0),
+                HITLS_PKI_SUCCESS);
+        } else if (certIndex == 1) {
+            cert2 = cert;
+            // Add intermediate cert to store
+            ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, 0),
+                HITLS_PKI_SUCCESS);
+        } else if (certIndex == 2) {
+            cert3 = cert;
+        }
+
+        certIndex++;
+        bag = BSL_LIST_GET_NEXT(certList);
+    }
+
+    // Build certificate chain using the end certificate
+    ASSERT_EQ(HITLS_X509_CertChainBuild(storeCtx, true, cert3, &chain), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(storeCtx, chain), HITLS_PKI_SUCCESS);
+
+EXIT:
+    HITLS_X509_CertFree(caCert);
+    HITLS_X509_CertFree(interCert);
+    HITLS_X509_CertFree(endCert);
+    HITLS_PKCS12_Free(p12);
+    HITLS_PKCS12_Free(p12Decoded);
+    BSL_SAL_Free(output.data);
+    HITLS_X509_StoreCtxFree(storeCtx);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    HITLS_X509_CertFree(cert1);
+    HITLS_X509_CertFree(cert2);
+    HITLS_X509_CertFree(cert3);
 #endif
 }
 /* END_CASE */

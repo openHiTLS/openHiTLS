@@ -665,6 +665,7 @@ typedef enum {
     BSL_CID_AES256_CCM8,
     BSL_CID_PBKDF1, /* identifies PBKDF1 */
     BSL_CID_SM4_CCM,
+    BSL_CID_X509CRL,
     BSL_CID_MAX,
     BSL_CID_EXTEND = 0x60000000,
 } BslCid;

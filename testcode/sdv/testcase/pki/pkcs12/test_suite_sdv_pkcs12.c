@@ -1395,6 +1395,7 @@ void SDV_PKCS12_GEN_PARSE_P12FILE_TC001(void)
 EXIT:
     HITLS_PKCS12_Free(p12);
     HITLS_PKCS12_Free(p12_1);
+    remove(writePath);
 #endif
 }
 /* END_CASE */
@@ -1655,6 +1656,7 @@ void SDV_PKCS12_BAG_TEST_TC002(char *pkeyPath)
 #else
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     HITLS_PKCS12_Bag *keyBag = NULL;
+    HITLS_PKCS12_Bag *crlBag = NULL;
 
     BSL_Buffer buffer = {0};
     int32_t ret = CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, pkeyPath, NULL, 0, &pkey);
@@ -1664,6 +1666,8 @@ void SDV_PKCS12_BAG_TEST_TC002(char *pkeyPath)
     ASSERT_EQ(keyBag, NULL);
     keyBag = HITLS_PKCS12_BagNew(BSL_CID_PKCS8SHROUDEDKEYBAG, 0, pkey);
     ASSERT_NE(keyBag, NULL);
+    crlBag = HITLS_PKCS12_BagNew(BSL_CID_CRLBAG, BSL_CID_CRLBAG, pkey);
+    ASSERT_EQ(crlBag, NULL);
 
     ret = HITLS_PKCS12_BagCtrl(keyBag, HITLS_PKCS12_BAG_ADD_ATTR, NULL, BSL_CID_FRIENDLYNAME); // Attribute is null.
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
@@ -1967,6 +1971,7 @@ EXIT:
     HITLS_PKCS12_Free(p12);
     HITLS_PKCS12_Free(p12_1);
     BSL_SAL_Free(output.data);
+    remove(writePath);
 #endif
 }
 /* END_CASE */
@@ -2212,6 +2217,7 @@ EXIT:
     HITLS_PKCS12_Free(p12);
     HITLS_PKCS12_Free(p12_1);
     BSL_SAL_Free(output.data);
+    remove(writePath);
 #endif
 }
 /* END_CASE */

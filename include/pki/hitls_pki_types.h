@@ -421,6 +421,9 @@ typedef enum {
                                                     The list is read-only and should not be modified. */
     HITLS_PKCS12_GET_CERTBAGS,                  /** Get cert-Bags from p12-ctx.
                                                     The list is read-only and should not be modified. */
+    HITLS_PKCS12_ADD_CRLBAG,                    /** Add CRL-Bag to p12-ctx. */
+    HITLS_PKCS12_GET_CRLBAGS,                   /** Get CRL-Bags from p12-ctx.
+                                                    The list is read-only and should not be modified. */
 } HITLS_PKCS12_Cmd;
 
 typedef enum {
