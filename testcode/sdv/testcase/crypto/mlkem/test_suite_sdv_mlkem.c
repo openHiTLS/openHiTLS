@@ -120,8 +120,7 @@ void SDV_CRYPTO_MLKEM_KEYGEN_API_TC001(int bits)
     ret = CRYPT_EAL_PkeyGen(ctx);
     ASSERT_EQ(ret, CRYPT_NO_REGIST_RAND);
 
-    CRYPT_RandRegist(TestSimpleRand);
-    CRYPT_RandRegistEx(TestSimpleRandEx);
+    TestRandInitSelfCheck();
     ret = CRYPT_EAL_PkeyGen(ctx);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
@@ -129,8 +128,7 @@ void SDV_CRYPTO_MLKEM_KEYGEN_API_TC001(int bits)
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
-    CRYPT_RandRegist(NULL);
-    CRYPT_RandRegistEx(NULL);
+    TestRandDeInit();
     return;
 }
 /* END_CASE */
@@ -1377,7 +1375,7 @@ void SDV_CRYPTO_MLKEM_DECAPS_DUP_API_TC001(int bits)
 {
     TestMemInit();
 
-    TestRandInit();
+    TestRandInitSelfCheck();
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyCtx *dupCtx = NULL;
 

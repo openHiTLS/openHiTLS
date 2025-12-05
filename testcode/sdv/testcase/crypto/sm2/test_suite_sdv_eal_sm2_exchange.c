@@ -155,7 +155,11 @@ void SDV_CRYPTO_SM2_EXCHANGE_API_TC003(Hex *prvKey, Hex *pubKey, Hex *R, int isP
 
     TestMemInit();
     CRYPT_RandRegist(RandFunc);
-    CRYPT_RandRegistEx(RandFuncEx);
+    if (isProvider) {
+        CRYPT_RandRegistEx(RandFuncExSelfCheck);
+    } else {
+        CRYPT_RandRegistEx(RandFuncEx);
+    }
 
     CRYPT_EAL_PkeyCtx *ctx1 = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
         CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);

@@ -392,6 +392,11 @@ void SDV_CRYPTO_SM2_SIGN_API_TC001(Hex *prvKey, int isProvider)
 
     TestMemInit();
     CRYPT_RandRegist(RandFunc);
+    if (isProvider) {
+        CRYPT_RandRegistEx(RandFuncExSelfCheck);
+    } else {
+        CRYPT_RandRegistEx(RandFuncEx);
+    }
     CRYPT_EAL_PkeyCtx *ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
         CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(ctx != NULL);
@@ -400,7 +405,8 @@ void SDV_CRYPTO_SM2_SIGN_API_TC001(Hex *prvKey, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeySign(ctx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, &signLen) == CRYPT_SM2_NO_PRVKEY);
 
     CRYPT_EAL_PkeyFreeCtx(ctx);
-    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
+        CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(ctx != NULL);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx, &prv) == CRYPT_SUCCESS);

@@ -620,7 +620,11 @@ void SDV_CRYPTO_DSA_GEN_FUNC_TC001(Hex *p, Hex *q, Hex *g, Hex *data, int isProv
     Set_DSA_Para(&para, NULL, NULL, p, q, g, NULL, NULL);
 
     TestMemInit();
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
 
     ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE,
         "provider=default", isProvider);
@@ -1078,7 +1082,7 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_CRYPTO_DSA_KEY_PAIR_GEN_BY_PARAM_FUNC_TC001(int flag, int gIndex)
+void SDV_CRYPTO_DSA_KEY_PAIR_GEN_BY_PARAM_FUNC_TC001(int flag, int gIndex, int isProvider)
 {
 #ifndef HITLS_CRYPTO_DSA_GEN_PARA
     (void)flag;
@@ -1101,11 +1105,14 @@ void SDV_CRYPTO_DSA_KEY_PAIR_GEN_BY_PARAM_FUNC_TC001(int flag, int gIndex)
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     uint8_t *sign = NULL;
     TestMemInit();
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-#ifdef HITLS_CRYPTO_PROVIDER
-    ASSERT_EQ(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0), CRYPT_SUCCESS);
+    #ifdef HITLS_CRYPTO_DRBG
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
 #endif
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_DSA);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_DSA_ERR_KEY_PARA);
@@ -1124,7 +1131,9 @@ void SDV_CRYPTO_DSA_KEY_PAIR_GEN_BY_PARAM_FUNC_TC001(int flag, int gIndex)
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, data, dataLen, sign, &signLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA256, data, dataLen, sign, signLen), CRYPT_SUCCESS);
 EXIT:
-    CRYPT_EAL_RandDeinit();
+#ifdef HITLS_CRYPTO_DRBG
+    TestRandDeInit();
+#endif
     CRYPT_EAL_PkeyFreeCtx(pkey);
     BSL_SAL_Free(sign);
 #endif

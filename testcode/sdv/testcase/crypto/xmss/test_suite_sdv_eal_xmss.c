@@ -77,7 +77,11 @@ EXIT:
 void SDV_CRYPTO_XMSS_GENKEY_TC001(int isProvider)
 {
     TestMemInit();
-    TestRandInit();
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
     CRYPT_EAL_PkeyCtx *pkey = NULL;
 #ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {

@@ -59,6 +59,14 @@ int32_t RandInjectionEx(void *libCtx, uint8_t *rand, uint32_t randLen)
     return RandInjection(rand, randLen);
 }
 
+int32_t RandInjectionExSelfCheck(void *libCtx, uint8_t *rand, uint32_t randLen)
+{
+    if (libCtx == NULL) {
+        return CRYPT_PROVIDER_INVALID_LIB_CTX;
+    }
+    return RandInjection(rand, randLen);
+}
+
 /* BEGIN_CASE */
 void SDV_CRYPTO_SLH_DSA_API_NEW_TC001(void)
 {
@@ -97,7 +105,11 @@ EXIT:
 void SDV_CRYPTO_SLH_DSA_GENKEY_TC001(int isProvider)
 {
     TestMemInit();
-    TestRandInit();
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
     CRYPT_EAL_PkeyCtx *pkey = NULL;
 #ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == 1) {
@@ -250,7 +262,7 @@ EXIT:
 
 // determinstic and no pre-hashed signature generation
 /* BEGIN_CASE */
-void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC001(int id, Hex *key, Hex *addrand, Hex *msg, Hex *context, Hex *sig)
+void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC001(int isProvider, int id, Hex *key, Hex *addrand, Hex *msg, Hex *context, Hex *sig)
 {
     (void)key;
     (void)addrand;
@@ -258,9 +270,12 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC001(int id, Hex *key, Hex *addrand, Hex *msg,
     (void)context;
     (void)sig;
     TestMemInit();
+    if (isProvider) {
+        CRYPT_RandRegistEx(RandInjectionExSelfCheck);
+    }
 
     CRYPT_EAL_PkeyCtx *pkey = NULL;
-    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_SLH_DSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     int32_t algId = id;
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
@@ -295,6 +310,7 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC001(int id, Hex *key, Hex *addrand, Hex *msg,
     ASSERT_TRUE(memcmp(sigOut, sig->x, sigOutLen) == 0);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_RandRegistEx(RandInjectionEx);
     return;
 }
 /* END_CASE */

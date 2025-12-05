@@ -120,6 +120,14 @@ int32_t TestSimpleRandEx(void *libCtx, uint8_t *buff, uint32_t len)
     return TestSimpleRand(buff, len);
 }
 
+int32_t TestSimpleRandExSelfCheck(void *libCtx, uint8_t *buff, uint32_t len)
+{
+    if (libCtx == NULL) {
+        return CRYPT_PROVIDER_INVALID_LIB_CTX;
+    }
+    return TestSimpleRand(buff, len);
+}
+
 int TestRandInitEx(void *libCtx)
 {
     (void)libCtx;
@@ -169,9 +177,25 @@ int TestRandInit(void)
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    CRYPT_RandRegist(TestSimpleRand);
 #ifdef HITLS_CRYPTO_PROVIDER
     CRYPT_RandRegistEx(TestSimpleRandEx);
+#else
+    CRYPT_RandRegist(TestSimpleRand);
+#endif
+
+    return CRYPT_SUCCESS;
+}
+
+int TestRandInitSelfCheck(void)
+{
+    int32_t ret = TestRandInitEx(NULL);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(TestSimpleRandExSelfCheck);
+#else
+    CRYPT_RandRegist(TestSimpleRand);
 #endif
 
     return CRYPT_SUCCESS;

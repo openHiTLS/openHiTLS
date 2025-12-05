@@ -57,6 +57,18 @@ int32_t RandFuncEx(void *libCtx, uint8_t *randNum, uint32_t randLen)
     return 0;
 }
 
+int32_t RandFuncExSelfCheck(void *libCtx, uint8_t *randNum, uint32_t randLen)
+{
+    if (libCtx == NULL) {
+        return CRYPT_PROVIDER_INVALID_LIB_CTX;
+    }
+    for (uint32_t i = 0; i < randLen; i++) {
+        randNum[i] = (uint8_t)(rand() % UINT8_MAX_NUM);
+    }
+
+    return 0;
+}
+
 int32_t SetFakeRandOutput(uint8_t *in, uint32_t inLen)
 {
     g_RandBufLen = inLen;

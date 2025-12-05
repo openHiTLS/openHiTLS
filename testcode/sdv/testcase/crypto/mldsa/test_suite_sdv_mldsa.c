@@ -577,7 +577,7 @@ EXIT:
 void SDV_CRYPTO_MLDSA_FUNC_PROVIDER_TC001(int type, Hex *testPubKey, Hex *testPrvKey, Hex *msg, Hex *context, Hex *sign)
 {
     TestMemInit();
-    TestRandInit();
+    TestRandInitSelfCheck();
     uint8_t *out = NULL;
     CRYPT_EAL_PkeyCtx *ctx = NULL;
 #ifdef HITLS_CRYPTO_PROVIDER

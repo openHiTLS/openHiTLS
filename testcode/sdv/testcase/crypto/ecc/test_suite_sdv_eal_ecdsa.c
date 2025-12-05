@@ -271,7 +271,11 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC002(int mdId, Hex *plainText, int isProvider)
     CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
 
     TestMemInit();
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
 
     ecdsaPkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
         CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
@@ -1534,7 +1538,11 @@ void SDV_CRYPTO_ECDSA_CHECK_PRVKEY_FUNC_TC001(int paraid, int isProvider)
         CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     ASSERT_TRUE(prvCtx != NULL);
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraid), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvCtx, paraid), CRYPT_SUCCESS);

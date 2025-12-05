@@ -273,7 +273,11 @@ void SDV_CRYPTO_ELGAMAL_GET_PUB_API_TC001( Hex *q, int k_bits, int bits, int isP
     SetElGamalPubKey(&pubKey, pubG, 600, pubP, 600,pubY, 600,pubQ,600);
 
     TestMemInit();
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
 
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
 
@@ -612,7 +616,11 @@ void SDV_CRYPTO_ELGAMAL_ENC_API_TC001(Hex *q,Hex *p, Hex *g, Hex *y, Hex *in, in
     SetElGamalPubKey(&pubkey, g->x, g->len, p->x, p->len, y->x, y->len,q->x,q->len);
 
     TestMemInit();
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
 
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_CIPHER_OPERATE,
         "provider=default", isProvider);

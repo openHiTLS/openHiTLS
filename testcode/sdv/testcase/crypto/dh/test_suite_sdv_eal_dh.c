@@ -50,6 +50,17 @@ static int32_t RandFuncEx(void *libCtx, uint8_t *randNum, uint32_t randLen)
     return 0;
 }
 
+static int32_t RandFuncExSelfCheck(void *libCtx, uint8_t *randNum, uint32_t randLen)
+{
+    if (libCtx == NULL) {
+        return CRYPT_PROVIDER_INVALID_LIB_CTX;
+    }
+    for (uint32_t i = 0; i < randLen; i++) {
+        randNum[i] = (uint8_t)(rand() % UINT8_MAX_NUM);
+    }
+    return 0;
+}
+
 static void Set_DH_Para(
     CRYPT_EAL_PkeyPara *para, uint8_t *p, uint8_t *q, uint8_t *g, uint32_t pLen, uint32_t qLen, uint32_t gLen)
 {
@@ -163,7 +174,11 @@ EXIT:
 void SDV_CRYPTO_DH_FUNC_TC002(Hex *p, Hex *g, Hex *q, int isProvider)
 {
     CRYPT_RandRegist(RandFunc);
-    CRYPT_RandRegistEx(RandFuncEx);
+    if (isProvider) {
+        CRYPT_RandRegistEx(RandFuncExSelfCheck);
+    } else {
+        CRYPT_RandRegistEx(RandFuncEx);
+    }
     uint8_t share1[1030];
     uint8_t share2[1030];
     uint32_t share1Len = sizeof(share1);

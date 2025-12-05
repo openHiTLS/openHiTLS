@@ -498,7 +498,11 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECDH_DUP_CTX_API_TC001(int paraId, int isProvider)
 {
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
     uint8_t shareKey1[1030];
     uint32_t shareKeyLen1 = sizeof(shareKey1);
     uint8_t shareKey2[1030];
@@ -598,7 +602,11 @@ void SDV_CRYPTO_ECDH_EXCH_FUNC_TC001(
     uint32_t shareKeyLen;
 
     TestMemInit();
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
 
     ecdhPkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH,
         CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
@@ -616,7 +624,11 @@ void SDV_CRYPTO_ECDH_EXCH_FUNC_TC001(
     ASSERT_TRUE_AND_LOG("EccPointToVector", ret == CRYPT_SUCCESS);
     Ecc_SetPubKey(&peerEcdhPubkey, CRYPT_PKEY_ECDH, pubKeyVector.data, pubKeyVector.len);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(peerEcdhPubPkey, eccId), CRYPT_SUCCESS);
+    CRYPT_RandRegistEx(TestSimpleRandEx);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(peerEcdhPubPkey, &peerEcdhPubkey), CRYPT_SUCCESS);
+    if (isProvider) {
+        CRYPT_RandRegistEx(TestSimpleRandExSelfCheck);
+    }
 
     /* Compute share secret. */
     shareKeyLen = CRYPT_EAL_PkeyGetKeyLen(ecdhPkey);
@@ -764,7 +776,11 @@ void SDV_CRYPTO_ECDH_CHECK_KEYPAIR_FUNC_TC001(int paraid, int isProvider)
     ASSERT_TRUE(pkey != NULL);
     ASSERT_TRUE(pubCtx != NULL);
     ASSERT_TRUE(prvCtx != NULL);
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraid), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pubCtx, paraid), CRYPT_SUCCESS);
@@ -823,7 +839,11 @@ void SDV_CRYPTO_ECDH_CHECK_PRVKEY_FUNC_TC001(int paraid, int isProvider)
         CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     ASSERT_TRUE(prvCtx != NULL);
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraid), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvCtx, paraid), CRYPT_SUCCESS);
