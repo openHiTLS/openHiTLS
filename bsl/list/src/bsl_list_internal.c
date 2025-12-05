@@ -134,9 +134,8 @@ int32_t BSL_LIST_GetElmtIndex(const void *elmt, BslList *pstList)
         return -1;  // -1 means that the corresponding element is not found
     }
 
-    BslListNode *tmp = (void *)pstList->curr;
-
-    for ((pstList)->curr = (pstList)->first; (pstList)->curr != NULL; (pstList)->curr = (pstList)->curr->next) {
+    BslListNode *tmp = pstList->curr;
+    for (pstList->curr = pstList->first; pstList->curr != NULL; pstList->curr = pstList->curr->next) {
         tmpElmt = pstList->curr->data;
         if (tmpElmt == NULL) {
             break;
@@ -168,15 +167,15 @@ int32_t BSL_ListSortInternal(BslList *pList, BSL_LIST_PFUNC_CMP cmp)
     }
 
     /* Create array of elements so we can qsort the pList */
-    sortArray = BSL_SAL_Calloc((uint32_t)pList->count, sizeof(void *));
+    sortArray = BSL_SAL_Calloc((uint32_t)(pList->count), sizeof(void *));
     if (sortArray == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(BSL_LIST_MALLOC_FAIL);
+        return BSL_LIST_MALLOC_FAIL;
     }
 
     /* Copy the elements from the pList into the sort array */
-    for (pList->curr = pList->first, i = 0; pList->curr; pList->curr = pList->curr->next, i++) {
-        elmt = (void *)pList->curr->data;
+    for (pList->curr = pList->first, i = 0; pList->curr != NULL; pList->curr = pList->curr->next, i++) {
+        elmt = pList->curr->data;
         if (elmt == NULL || i >= pList->count) {
             break;
         }
@@ -184,7 +183,7 @@ int32_t BSL_ListSortInternal(BslList *pList, BSL_LIST_PFUNC_CMP cmp)
         sortArray[i] = elmt;
     }
     /* sort encoded elements */
-    qsort(sortArray, (uint32_t)pList->count, sizeof(void *), cmp);
+    qsort(sortArray, (uint32_t)pList->count, sizeof(void *), (int (*)(const void *, const void *))cmp);
 
     for (pList->curr = pList->first, i = 0; pList->curr != NULL; pList->curr = pList->curr->next, i++) {
         pList->curr->data = sortArray[i];

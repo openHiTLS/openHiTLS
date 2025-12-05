@@ -21,6 +21,11 @@
 
 void SM3_Compress(uint32_t state[8], const uint8_t *data, uint32_t blockCnt)
 {
+#if defined (__x86_64__)
+    if (IsSupportAVX() && IsSupportSSE3()) {
+        return SM3_CompressSIMD(state, data, blockCnt);
+    }
+#endif
     return SM3_CompressAsm(state, data, blockCnt);
 }
 #endif // HITLS_CRYPTO_SM3

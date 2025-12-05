@@ -16,6 +16,8 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SHA512
 
+#include "crypt_arm.h"
+
 .arch    armv8-a+crypto
 /* sha512 used constant value. For the data source, see the RFC4634 document. */
 .section .rodata
@@ -125,6 +127,7 @@
     .global SHA512CompressMultiBlocks
     .type SHA512CompressMultiBlocks, %function
 SHA512CompressMultiBlocks:
+AARCH64_PACIASP
     cbz     x2, .Lend_sha512
     stp     x29, x30, [sp, #-112]!
     add     x29, sp, #0
@@ -304,6 +307,7 @@ SHA512CompressMultiBlocks:
     ldp     x27, x28, [sp, #8*10]
     ldp     x29, x30, [sp], #112
 .Lend_sha512:
+AARCH64_AUTIASP
     ret
     .size SHA512CompressMultiBlocks, .-SHA512CompressMultiBlocks
 

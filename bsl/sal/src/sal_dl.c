@@ -31,9 +31,17 @@ static BSL_SAL_DlCallback g_dlCallback = {0};
 
 // Define macro for path reserve length
 #define BSL_SAL_PATH_RESERVE 10
-
-#define BSL_SAL_PATH_MAX 4095
 #define BSL_SAL_NAME_MAX 255
+
+int32_t SAL_DlCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
+{
+    if (type > BSL_SAL_DL_SYM_CB_FUNC || type < BSL_SAL_DL_OPEN_CB_FUNC) {
+        return BSL_SAL_DL_NO_REG_FUNC;
+    }
+    uint32_t offset = (uint32_t)(type - BSL_SAL_DL_OPEN_CB_FUNC);
+    ((void **)&g_dlCallback)[offset] = funcCb;
+    return BSL_SUCCESS;
+}
 
 int32_t BSL_SAL_LibNameFormat(BSL_SAL_LibFmtCmd cmd, const char *fileName, char **name)
 {
@@ -43,11 +51,12 @@ int32_t BSL_SAL_LibNameFormat(BSL_SAL_LibFmtCmd cmd, const char *fileName, char 
     }
     int32_t ret = 0;
     char *tempName = NULL;
-    uint32_t dlPathLen = strlen(fileName) + BSL_SAL_PATH_RESERVE;
-    if (dlPathLen > BSL_SAL_NAME_MAX) {
+    size_t fileNameLen = strlen(fileName);
+    if (fileNameLen > (BSL_SAL_NAME_MAX - BSL_SAL_PATH_RESERVE)) {
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_DL_PATH_EXCEED);
         return BSL_SAL_ERR_DL_PATH_EXCEED;
     }
+    size_t dlPathLen = fileNameLen + BSL_SAL_PATH_RESERVE;
     tempName = (char *)BSL_SAL_Calloc(1, dlPathLen);
     if (tempName == NULL) {
         return BSL_MALLOC_FAIL;
@@ -100,12 +109,13 @@ int32_t BSL_SAL_LoadLib(const char *fileName, void **handle)
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_BAD_PARAM);
         return BSL_SAL_ERR_BAD_PARAM;
     }
-    if (g_dlCallback.pfLoadLib != NULL && g_dlCallback.pfLoadLib != BSL_SAL_LoadLib) {
-        return g_dlCallback.pfLoadLib(fileName, handle);
+    if (g_dlCallback.pfDlOpen != NULL && g_dlCallback.pfDlOpen != BSL_SAL_LoadLib) {
+        return g_dlCallback.pfDlOpen(fileName, handle);
     }
 #if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_LoadLib(fileName, handle);
 #else
+    BSL_ERR_PUSH_ERROR(BSL_SAL_DL_NO_REG_FUNC);
     return BSL_SAL_DL_NO_REG_FUNC;
 #endif
 }
@@ -116,40 +126,32 @@ int32_t BSL_SAL_UnLoadLib(void *handle)
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_BAD_PARAM);
         return BSL_SAL_ERR_BAD_PARAM;
     }
-    if (g_dlCallback.pfUnLoadLib != NULL && g_dlCallback.pfUnLoadLib != BSL_SAL_UnLoadLib) {
-        return g_dlCallback.pfUnLoadLib(handle);
+    if (g_dlCallback.pfDlClose != NULL && g_dlCallback.pfDlClose != BSL_SAL_UnLoadLib) {
+        return g_dlCallback.pfDlClose(handle);
     }
 #if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_UnLoadLib(handle);
 #else
+    BSL_ERR_PUSH_ERROR(BSL_SAL_DL_NO_REG_FUNC);
     return BSL_SAL_DL_NO_REG_FUNC;
 #endif
 }
 
 int32_t BSL_SAL_GetFuncAddress(void *handle, const char *funcName, void **func)
 {
-    if (handle == NULL || func == NULL) {
+    if (func == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_BAD_PARAM);
         return BSL_SAL_ERR_BAD_PARAM;
     }
-    if (g_dlCallback.pfGetFunc != NULL && g_dlCallback.pfGetFunc != BSL_SAL_GetFuncAddress) {
-        return g_dlCallback.pfGetFunc(handle, funcName, func);
+    if (g_dlCallback.pfDlSym != NULL && g_dlCallback.pfDlSym != BSL_SAL_GetFuncAddress) {
+        return g_dlCallback.pfDlSym(handle, funcName, func);
     }
 #if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     return SAL_GetFunc(handle, funcName, func);
 #else
+    BSL_ERR_PUSH_ERROR(BSL_SAL_DL_NO_REG_FUNC);
     return BSL_SAL_DL_NO_REG_FUNC;
 #endif
-}
-
-int32_t SAL_DlCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
-{
-    if (type > BSL_SAL_DL_SYM_CB_FUNC || type < BSL_SAL_DL_OPEN_CB_FUNC) {
-        return BSL_SAL_ERR_BAD_PARAM;
-    }
-    uint32_t offset = (uint32_t)(type - BSL_SAL_DL_OPEN_CB_FUNC);
-    ((void **)&g_dlCallback)[offset] = funcCb;
-    return BSL_SUCCESS;
 }
 
 #endif /* HITLS_BSL_SAL_DL */

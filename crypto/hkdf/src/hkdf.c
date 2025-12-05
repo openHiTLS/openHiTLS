@@ -24,10 +24,11 @@
 #include "crypt_errno.h"
 #include "crypt_util_ctrl.h"
 #include "crypt_utils.h"
+#include "crypt_hkdf.h"
 #include "eal_mac_local.h"
+#include "crypt_eal_kdf.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
-#include "crypt_hkdf.h"
 
 #define HKDF_MAX_HMACSIZE 64
 
@@ -227,15 +228,15 @@ static int32_t HkdfGetMdSize(CRYPT_HKDF_Ctx *ctx, const char *mdAttr)
     libCtx = ctx->libCtx;
 #endif
 
-    EAL_MdMethod tmpMdMeth = {0};
-    EAL_MacDepMethod depMeth = {.method = {.md = &tmpMdMeth}};
+    EAL_MdMethod mdMeth = {0};
+    EAL_MacDepMethod depMeth = {.method = {.md = &mdMeth}};
     int32_t ret = EAL_MacFindDepMethod(ctx->macId, libCtx, mdAttr, &depMeth, NULL, libCtx != NULL);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     ctx->hasGetMdSize = true;
-    ctx->mdSize = tmpMdMeth.mdSize;
+    ctx->mdSize = mdMeth.mdSize;
     return CRYPT_SUCCESS;
 }
 

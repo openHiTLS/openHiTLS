@@ -223,7 +223,6 @@ int32_t CRYPT_PBKDF2_HMAC(void *libCtx, const EAL_MacMethod *macMeth, CRYPT_MAC_
 
     macMeth->deinit(macCtx);
     macMeth->freeCtx(macCtx);
-    macCtx = NULL;
     return ret;
 }
 

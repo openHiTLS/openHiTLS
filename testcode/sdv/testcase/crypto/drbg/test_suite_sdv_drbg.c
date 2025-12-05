@@ -30,7 +30,7 @@
 #include "crypt_eal_implprovider.h"
 #include "drbg_local.h"
 #include "eal_md_local.h"
-#include "crypt_drbg_local.h"
+#include "eal_drbg_local.h"
 #include "bsl_err_internal.h"
 #include "bsl_err.h"
 #include "bsl_params.h"

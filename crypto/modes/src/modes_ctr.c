@@ -100,6 +100,10 @@ int32_t MODES_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t i
 
 int32_t MODES_CTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen)
 {
+    if (outLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     (void) modeCtx;
     (void) out;
     *outLen = 0;

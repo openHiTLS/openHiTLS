@@ -20,7 +20,6 @@
 #ifdef HITLS_CRYPTO_XTS
 
 #include "crypt_types.h"
-#include "bsl_params.h"
 #include "crypt_modes.h"
 
 #ifdef __cplusplus

@@ -22,14 +22,15 @@
 #include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
+#include "sal_atomic.h"
 #include "crypt_utils.h"
 #include "crypt_util_ctrl.h"
 #include "crypt_bn.h"
 #include "crypt_ecc.h"
 #include "crypt_ecc_pkey.h"
+#include "eal_pkey_local.h"
 #include "crypt_ecdh.h"
-#include "sal_atomic.h"
-#include "crypt_local_types.h"
+#include "bsl_params.h"
 #include "crypt_params_key.h"
 
 CRYPT_ECDH_Ctx *CRYPT_ECDH_NewCtx(void)
@@ -83,7 +84,6 @@ int32_t CRYPT_ECDH_SetPara(CRYPT_ECDH_Ctx *ctx, const CRYPT_EccPara *para)
     return ECC_SetPara(ctx, CRYPT_ECDH_NewPara(para));
 }
 
-#ifdef HITLS_BSL_PARAMS
 int32_t CRYPT_ECDH_SetParaEx(CRYPT_ECDH_Ctx *ctx, const BSL_Param *para)
 {
     if (para == NULL) {
@@ -100,7 +100,6 @@ int32_t CRYPT_ECDH_SetParaEx(CRYPT_ECDH_Ctx *ctx, const BSL_Param *para)
     (void)GetConstParamValue(para, CRYPT_PARAM_EC_Y, &(eccPara.y), &(eccPara.yLen));
     return CRYPT_ECDH_SetPara(ctx, &eccPara);
 }
-#endif
 
 static int32_t ComputeShareKeyInputCheck(const CRYPT_ECDH_Ctx *ctx, const CRYPT_ECDH_Ctx *pubKey,
     const uint8_t *shareKey, const uint32_t *shareKeyLen)
@@ -140,9 +139,8 @@ int32_t CRYPT_ECDH_ComputeShareKey(const CRYPT_ECDH_Ctx *ctx, const CRYPT_ECDH_C
     }
 
     CRYPT_Data shareKeyX = {shareKey, *shareKeyLen};
-    BN_BigNum *tmpPrvkey = BN_Dup(ctx->prvkey);
     ECC_Point *sharePoint = ECC_NewPoint(ctx->para);
-    if ((tmpPrvkey == NULL) || (sharePoint == NULL)) {
+    if (sharePoint == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -172,7 +170,6 @@ int32_t CRYPT_ECDH_ComputeShareKey(const CRYPT_ECDH_Ctx *ctx, const CRYPT_ECDH_C
 
 EXIT:
     ECC_FreePoint(sharePoint);
-    BN_Destroy(tmpPrvkey);
     return ret;
 }
 

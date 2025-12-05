@@ -139,31 +139,31 @@ static int16_t DeCompress(int16_t x, uint8_t bits)
 static int32_t HashFuncH(void *libCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
 {
     uint32_t len = outLen;
-    return EAL_Md(CRYPT_MD_SHA3_256, libCtx, NULL, in, inLen, out, &len, libCtx != NULL);
+    return EAL_Md(CRYPT_MD_SHA3_256, libCtx, NULL, in, inLen, out, &len, false, libCtx != NULL);
 }
 
 static int32_t HashFuncG(void *libCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
 {
     uint32_t len = outLen;
-    return EAL_Md(CRYPT_MD_SHA3_512, libCtx, NULL, in, inLen, out, &len, libCtx != NULL);
+    return EAL_Md(CRYPT_MD_SHA3_512, libCtx, NULL, in, inLen, out, &len, false, libCtx != NULL);
 }
 
 static int32_t HashFuncXOF(void *libCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
 {
     uint32_t len = outLen;
-    return EAL_Md(CRYPT_MD_SHAKE128, libCtx, NULL, in, inLen, out, &len, libCtx != NULL);
+    return EAL_Md(CRYPT_MD_SHAKE128, libCtx, NULL, in, inLen, out, &len, false, libCtx != NULL);
 }
 
 static int32_t HashFuncJ(void *libCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
 {
     uint32_t len = outLen;
-    return EAL_Md(CRYPT_MD_SHAKE256, libCtx, NULL, in, inLen, out, &len, libCtx != NULL);
+    return EAL_Md(CRYPT_MD_SHAKE256, libCtx, NULL, in, inLen, out, &len, false, libCtx != NULL);
 }
 
 static int32_t PRF(void *libCtx, uint8_t *extSeed, uint32_t extSeedLen, uint8_t *outBuf, uint32_t bufLen)
 {
     uint32_t len = bufLen;
-    return EAL_Md(CRYPT_MD_SHAKE256, libCtx, NULL, extSeed, extSeedLen, outBuf, &len, libCtx != NULL);
+    return EAL_Md(CRYPT_MD_SHAKE256, libCtx, NULL, extSeed, extSeedLen, outBuf, &len, false, libCtx != NULL);
 }
 
 static int32_t Parse(uint16_t *polyNtt, uint8_t *arrayB, uint32_t arrayLen, uint32_t n)

@@ -16,9 +16,11 @@
 #ifndef CRYPT_HYBRIDKEM_H
 #define CRYPT_HYBRIDKEM_H
 #include <stdint.h>
-#include "crypt_types.h"
-
 #include "hitls_build.h"
+#include "crypt_types.h"
+#include "bsl_params.h"
+#include "crypt_params_key.h"
+
 #ifdef HITLS_CRYPTO_ECDH
 
 typedef struct HybridKemCtx CRYPT_HybridKemCtx;
@@ -46,10 +48,10 @@ int32_t CRYPT_HYBRID_KEM_SetEncapsKeyEx(CRYPT_HybridKemCtx *ctx, const BSL_Param
 int32_t CRYPT_HYBRID_KEM_SetDecapsKeyEx(CRYPT_HybridKemCtx *ctx, const BSL_Param *para);
 
 int32_t CRYPT_HYBRID_KEM_Encaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, uint32_t *cipherLen,
-    uint8_t *share, uint32_t *shareLen);
+    uint8_t *sharekey, uint32_t *shareLen);
 
 int32_t CRYPT_HYBRID_KEM_Decaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, uint32_t cipherLen,
-    uint8_t *share, uint32_t *shareLen);
+    uint8_t *sharekey, uint32_t *shareLen);
 
 #endif
 #endif    // CRYPT_HYBRIDKEM_H

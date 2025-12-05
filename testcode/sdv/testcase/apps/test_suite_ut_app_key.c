@@ -112,12 +112,12 @@ void UT_HITLS_APP_KEY_TC001(char *algorithm, char *pkeyopt, int hashId)
 
     if (strcasecmp(algorithm, "RSA") == 0) {
         SetRsaKeyInfo(pkeyPrvCtx);
-        CRYPT_RSA_PkcsV15Para pkcsv15 = { CRYPT_MD_SHA256 };
+        int32_t pkcsv15 = CRYPT_MD_SHA256;
         ASSERT_EQ(
-            CRYPT_EAL_PkeyCtrl(pkeyPrvCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para)),
+            CRYPT_EAL_PkeyCtrl(pkeyPrvCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)),
             0);
         ASSERT_EQ(
-            CRYPT_EAL_PkeyCtrl(pkeyPubCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para)),
+            CRYPT_EAL_PkeyCtrl(pkeyPubCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)),
             0);
     }
 
@@ -226,12 +226,12 @@ void UT_HITLS_APP_ENCKEY_TC001(char *algorithm, char *pkeyopt, char *cipherAlg, 
         CRYPT_SUCCESS);
 
     if (strcasecmp(algorithm, "RSA") == 0) {
-        CRYPT_RSA_PkcsV15Para pkcsv15 = { CRYPT_MD_SHA256 };
+        int32_t pkcsv15 = CRYPT_MD_SHA256;
         ASSERT_EQ(
-            CRYPT_EAL_PkeyCtrl(pkeyEncPrvCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para)),
+            CRYPT_EAL_PkeyCtrl(pkeyEncPrvCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)),
             0);
         ASSERT_EQ(
-            CRYPT_EAL_PkeyCtrl(pkeyPubCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(CRYPT_RSA_PkcsV15Para)),
+            CRYPT_EAL_PkeyCtrl(pkeyPubCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)),
             0);
     }
 

@@ -24,7 +24,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "bsl_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -458,13 +457,9 @@ typedef enum {
     BSL_CID_SM4_GCM = 2033,
     BSL_CID_SM4_CFB = 2034,
     BSL_CID_SM4_OFB = 2035,
-    BSL_CID_SM4_HCTR = 2058,
 
     BSL_CID_KDFTLS12 = 2036,
     BSL_CID_HKDF = 2037,
-
-    BSL_CID_HKDF_SHA256 = 2400,
-    BSL_CID_HKDF_SHA512 = 2401,
 
     BSL_CID_RAND_SHA1 = 2038,
     BSL_CID_RAND_SHA224 = 2039,
@@ -487,6 +482,7 @@ typedef enum {
 
     BSL_CID_ED448 = 2056,
     BSL_CID_X448 = 2057,
+    BSL_CID_SM4_HCTR = 2058,
 
     BSL_CID_DH_RFC2409_768 = 2060,
     BSL_CID_DH_RFC2409_1024 = 2061,
@@ -652,6 +648,9 @@ typedef enum {
     BSL_CID_CE_ISSUERALTERNATIVENAME = 2300,
     BSL_CID_CE_AUTHORITYINFORMATIONACCESS = 2301,
 
+    BSL_CID_HKDF_SHA256 = 2400,
+    BSL_CID_HKDF_SHA512 = 2401,
+
     BSL_CID_SM9 = 5201,
     BSL_CID_ECC_SM9 = 5202,
     BSL_CID_PAILLIER = 5203,
@@ -700,19 +699,20 @@ int32_t BSL_OBJ_CreateSignId(int32_t signId, int32_t asymId, int32_t hashId);
 
 /**
  * @ingroup bsl_obj
+ * @brief Get the algorithm ID from the object identifier string
+ * @param[in] oid The object identifier string
+ * @return The algorithm ID
+ */
+BslCid BSL_OBJ_GetCID(const BslOidString *oidStr);
+
+/**
+ * @ingroup bsl_obj
  * @brief Get the object identifier string from the algorithm ID
  * @param[in] inputCid The algorithm ID
  * @return The object identifier string
  */
 BslOidString *BSL_OBJ_GetOID(BslCid ulCID);
 
-/**
- * @ingroup bsl_obj
- * @brief Get the algorithm ID from the object identifier string
- * @param[in] oid The object identifier string
- * @return The algorithm ID
- */
-BslCid BSL_OBJ_GetCID(const BslOidString *oidStr);
 
 /**
  * @ingroup bsl_obj

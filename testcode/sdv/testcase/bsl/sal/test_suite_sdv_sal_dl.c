@@ -117,8 +117,11 @@ void SDV_BSL_SAL_DL_FUNC_TC001(char *test1, char *test2, char *testNoInit, char 
 
     // Test BSL_SAL_GetFuncAddress with invalid input
     ret = BSL_SAL_GetFuncAddress(NULL, funcName, &func);
-    ASSERT_EQ(ret, BSL_SAL_ERR_BAD_PARAM);
-
+#ifdef HITLS_BSL_SAL_DARWIN
+    ASSERT_EQ(ret, BSL_SAL_ERR_DL_LOOKUP_METHOD);
+#else
+    ASSERT_EQ(ret, BSL_SAL_ERR_DL_NON_FUNCTION);
+#endif
     ret = BSL_SAL_GetFuncAddress(handle1, funcName, NULL);
     ASSERT_EQ(ret, BSL_SAL_ERR_BAD_PARAM);
 

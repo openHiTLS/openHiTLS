@@ -191,7 +191,7 @@ static int32_t CoeffFromThreeBytes(uint8_t b0, uint8_t b1, uint8_t b2)
 }
 
 // NIST.FIPS.204 Algorithm 30 RejNTTPoly(ρ)
-static int32_t RejNTTPoly(int32_t a[MLDSA_N], uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN])
+static int32_t RejNTTPoly(int32_t a[MLDSA_N], const uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN])
 {
     int32_t ret;
     unsigned int buflen = CRYPT_SHAKE128_BLOCKSIZE;
@@ -246,7 +246,7 @@ static int32_t ExpandA(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *pubSeed, int3
 }
 
 // NIST.FIPS.204 Algorithm 31 RejBoundedPoly(ρ)
-static int32_t RejBoundedPoly(const CRYPT_ML_DSA_Ctx *ctx, int32_t *a, uint8_t *s)
+static int32_t RejBoundedPoly(const CRYPT_ML_DSA_Ctx *ctx, int32_t *a, const uint8_t *s)
 {
     uint8_t buf[CRYPT_SHAKE256_BLOCKSIZE];
     uint32_t bufLen = CRYPT_SHAKE256_BLOCKSIZE;
@@ -325,23 +325,23 @@ static int32_t ExpandS(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *prvSeed,
     return CRYPT_SUCCESS;
 }
 
-static void ComputesNTT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *s[MLDSA_L_MAX], int32_t *sOut[MLDSA_L_MAX])
+static void ComputesNTT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const s[MLDSA_L_MAX], int32_t *sOut[MLDSA_L_MAX])
 {
     for (uint8_t i = 0; i < ctx->info->l; i++) {
         (void)memcpy_s(sOut[i], sizeof(int32_t) * MLDSA_N, s[i], sizeof(int32_t) * MLDSA_N);
         MLDSA_ComputesNTT(sOut[i]);
     }
-    return;
 }
 
-static void VectorsMul(int32_t *t, int32_t *matrix, int32_t *s)
+static void VectorsMul(int32_t *t, const int32_t *matrix, const int32_t *s)
 {
     for (uint32_t i = 0; i < MLDSA_N; i++) {
         t[i] = MLDSA_MontgomeryReduce((int64_t)matrix[i] * s[i]);
     }
 }
 
-static void MatrixMul(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t, int32_t *matrix[MLDSA_L_MAX], int32_t *s[MLDSA_L_MAX])
+static void MatrixMul(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t, int32_t *const matrix[MLDSA_L_MAX],
+    int32_t *const s[MLDSA_L_MAX])
 {
     int32_t tmp[MLDSA_N] = { 0 };
     VectorsMul(t, matrix[0], s[0]);
@@ -356,15 +356,16 @@ static void MatrixMul(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t, int32_t *matrix[M
     }
 }
 
-static void ComputesT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t[MLDSA_K_MAX], int32_t *matrix[MLDSA_K_MAX][MLDSA_L_MAX],
-    int32_t *s1[MLDSA_L_MAX], int32_t *s2[MLDSA_K_MAX])
+static void ComputesT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t[MLDSA_K_MAX],
+    int32_t *const matrix[MLDSA_K_MAX][MLDSA_L_MAX], int32_t *const s1[MLDSA_L_MAX], int32_t *const s2[MLDSA_K_MAX])
 {
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         MatrixMul(ctx, t[i], matrix[i], s1);
         MLDSA_ComputesINVNTT(t[i]);
         for (int32_t j = 0; j < MLDSA_N; j++) {
             t[i][j] = t[i][j] + s2[i][j];
-            t[i][j] = t[i][j] < 0 ? (t[i][j] + MLDSA_Q) : t[i][j];
+            // if t[i][j] < 0 then t[i][j] >> 31 is 0xFFFFFFFF else t[i][j] >> 31 is 0.
+            t[i][j] = t[i][j] + (MLDSA_Q & (t[i][j] >> 31));
         }
     }
 }
@@ -381,7 +382,7 @@ static void ComputesPower2Round(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t0[MLDSA_K
 }
 
 // The following encoding function encodes MLDSA_N int32_t data into the uint8_t array.
-static void ByteEncode(uint8_t *buf, uint32_t *t, uint32_t bits)
+static void ByteEncode(uint8_t *buf, const uint32_t *t, uint32_t bits)
 {
     if (bits == 10u) {
         for (uint32_t i = 0; i < MLDSA_N / 4; i++) {
@@ -404,7 +405,7 @@ static void ByteEncode(uint8_t *buf, uint32_t *t, uint32_t bits)
     }
 }
 
-static void ByteDecode(uint8_t *buf, uint32_t *t, uint32_t bits)
+static void ByteDecode(const uint8_t *buf, uint32_t *t, uint32_t bits)
 {
     if (bits == 10u) {
         for (uint32_t i = 0; i < MLDSA_N / 4; i++) {
@@ -416,7 +417,7 @@ static void ByteDecode(uint8_t *buf, uint32_t *t, uint32_t bits)
     }
 }
 
-static void BitPack(uint8_t *buf, uint32_t w[MLDSA_N], uint32_t bits, uint32_t b)
+static void BitPack(uint8_t *buf, const uint32_t w[MLDSA_N], uint32_t bits, uint32_t b)
 {
     uint32_t t[8] = {0};
     uint32_t i;
@@ -465,8 +466,6 @@ static void BitPack(uint8_t *buf, uint32_t w[MLDSA_N], uint32_t bits, uint32_t b
             buf[n + 12] = (uint8_t)(t[7] >> 5u);
         }
     }
-    // bits has only this three values.
-    return;
 }
 
 static void BitUnPake(const uint8_t *v, uint32_t w[MLDSA_N], uint32_t bits, uint32_t b)
@@ -519,11 +518,9 @@ static void BitUnPake(const uint8_t *v, uint32_t w[MLDSA_N], uint32_t bits, uint
             }
         }
     }
-    // bits has only this three values.
-    return;
 }
 
-static void SignBitPack(uint8_t *buf, uint32_t w[MLDSA_N], uint32_t bits, uint32_t b)
+static void SignBitPack(uint8_t *buf, const uint32_t w[MLDSA_N], uint32_t bits, uint32_t b)
 {
     uint32_t t[4] = {0};
     uint32_t i;
@@ -556,11 +553,9 @@ static void SignBitPack(uint8_t *buf, uint32_t w[MLDSA_N], uint32_t bits, uint32
             buf[n + 4u] = (uint8_t)(t[1] >> 12u);
         }
     }
-    // bits has only this two values.
-    return;
 }
 
-static void SignBitUnPake(const uint8_t *v, uint32_t w[MLDSA_N], uint32_t bits, uint32_t b)
+static void SignBitUnPack(const uint8_t *v, uint32_t w[MLDSA_N], uint32_t bits, uint32_t b)
 {
     uint32_t t[4] = {0};
     uint32_t i;
@@ -589,12 +584,10 @@ static void SignBitUnPake(const uint8_t *v, uint32_t w[MLDSA_N], uint32_t bits, 
             w[i * 2 + 1u] = b - t[1];
         }
     }
-    // bits has only this two values.
-    return;
 }
 
-// Algorithm 22 pkEncode(ρ, t1)
-static void PkEncode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *seed, int32_t *t[MLDSA_K_MAX])
+// NIST.FIPS.204 Algorithm 22 pkEncode(ρ, t1)
+static void PkEncode(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *seed, int32_t *const t[MLDSA_K_MAX])
 {
     (void)memcpy_s(ctx->pubKey, ctx->pubLen, seed, MLDSA_PUBLIC_SEED_LEN);
     for (int32_t i = 0; i < ctx->info->k; i++) {
@@ -603,7 +596,7 @@ static void PkEncode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *seed, int32_t *t[MLDS
     }
 }
 
-// Algorithm 23 pkDecode(pk)
+// NIST.FIPS.204 Algorithm 23 pkDecode(pk)
 static void PkDecode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *seed, int32_t *t[MLDSA_K_MAX])
 {
     (void)memcpy_s(seed, MLDSA_PUBLIC_SEED_LEN, ctx->pubKey, MLDSA_PUBLIC_SEED_LEN);
@@ -613,9 +606,9 @@ static void PkDecode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *seed, int32_t *t[MLDS
     }
 }
 
-// Algorithm 24 skEncode(ρ, K,tr, 𝐬1, 𝐬2, t0)
-static void SkEncode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pubSeed, uint8_t *signSeed, uint8_t *tr,
-    MLDSA_KeyGenMatrixSt *st)
+// NIST.FIPS.204 Algorithm 24 skEncode(ρ, K,tr, s1, s2, t0)
+static void SkEncode(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *pubSeed, const uint8_t *signSeed, const uint8_t *tr,
+    const MLDSA_KeyGenMatrixSt *st)
 {
     uint32_t i;
     uint32_t bitLen = ctx->info->eta == 2 ? 3 : 4;  // 3 and 4 is bitlen(2𝜂)
@@ -623,8 +616,8 @@ static void SkEncode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pubSeed, uint8_t *sig
     (void)memcpy_s(ctx->prvKey, ctx->prvLen, pubSeed, MLDSA_PUBLIC_SEED_LEN);
     (void)memcpy_s(ctx->prvKey + index, ctx->prvLen - index, signSeed, MLDSA_SIGNING_SEED_LEN);
     index += MLDSA_SIGNING_SEED_LEN;
-    (void)memcpy_s(ctx->prvKey + index, ctx->prvLen - index, tr, MLDSA_PRIVATE_SEED_LEN);
-    index += MLDSA_PRIVATE_SEED_LEN;
+    (void)memcpy_s(ctx->prvKey + index, ctx->prvLen - index, tr, MLDSA_TR_MSG_LEN);
+    index += MLDSA_TR_MSG_LEN;
     for (i = 0; i < ctx->info->l; i++) {
         BitPack(ctx->prvKey + index, (uint32_t *)st->s1[i], bitLen, ctx->info->eta);
         index += MLDSA_N_BYTE * bitLen;
@@ -696,7 +689,7 @@ static int32_t ExpandMask(const CRYPT_ML_DSA_Ctx *ctx, int32_t *y[MLDSA_L_MAX], 
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }
-        SignBitUnPake(v, (uint32_t *)y[i], bits, ctx->info->gamma1);
+        SignBitUnPack(v, (uint32_t *)y[i], bits, ctx->info->gamma1);
     }
     return CRYPT_SUCCESS;
 }
@@ -717,29 +710,29 @@ static void Decompose(const CRYPT_ML_DSA_Ctx *ctx, int32_t r, int32_t *r1, int32
     *r0 = r - t * 2 * ctx->info->gamma2;  // r1 ← (r+ − r0)/(2𝛾2)
     *r0 -= (((MLDSA_Q - 1) / 2 - *r0) >> 31u) & MLDSA_Q;
     *r1 = t;  // high bits.
-    return;
 }
 
 static void ComputesW(const CRYPT_ML_DSA_Ctx *ctx, int32_t *w[MLDSA_L_MAX], int32_t *w1[MLDSA_L_MAX],
-    int32_t *matrix[MLDSA_K_MAX][MLDSA_L_MAX], int32_t *y[MLDSA_L_MAX])
+    int32_t *const matrix[MLDSA_K_MAX][MLDSA_L_MAX], int32_t *const y[MLDSA_L_MAX])
 {
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         MatrixMul(ctx, w[i], matrix[i], y);
         MLDSA_ComputesINVNTT(w[i]);
         for (int32_t j = 0; j < MLDSA_N; j++) {
-            w[i][j] = w[i][j] < 0 ? (w[i][j] + MLDSA_Q) : w[i][j];
+            // if w[i][j] < 0 then w[i][j] >> 31 is 0xFFFFFFFF else w[i][j] >> 31 is 0.
+            w[i][j] = w[i][j] + (MLDSA_Q & (w[i][j] >> 31));
             Decompose(ctx, w[i][j], &w1[i][j], &w[i][j]);
         }
     }
 }
 
-// Algorithm 28 w1Encode(w1)
-static void W1Encode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *buf, int32_t *w[MLDSA_K_MAX])
+// NIST.FIPS.204 Algorithm 28 w1Encode(w1)
+static void W1Encode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *buf, int32_t *const w[MLDSA_K_MAX])
 {
     uint32_t bitLen = ctx->info->k == K_VALUE_OF_MLDSA_44 ? 6 : 4;  // Only the bitLen value of MLDSA44 is 6.
     uint32_t blockSize = ctx->info->k == K_VALUE_OF_MLDSA_44 ? 192 : 128;  // MLDSA44 blockSize is 192, other is 128.
     for (uint32_t i = 0; i < ctx->info->k; i++) {
-        ByteEncode(buf + i * blockSize, (uint32_t *)w[i], bitLen);
+        ByteEncode(buf + i * blockSize, (const uint32_t *)w[i], bitLen);
     }
 }
 
@@ -803,8 +796,9 @@ static void MLDSA_VectorsSub(int32_t *t, int32_t *a, int32_t *b)
     }
 }
 
-static void ComputesZ(const CRYPT_ML_DSA_Ctx *ctx, int32_t *y[MLDSA_L_MAX], int32_t *c, int32_t *s[MLDSA_L_MAX],
-    int32_t *z[MLDSA_L_MAX])
+static void ComputesZ(const CRYPT_ML_DSA_Ctx *ctx, int32_t *y[MLDSA_L_MAX], const int32_t *c,
+    int32_t *const s[MLDSA_L_MAX], int32_t *const z[MLDSA_L_MAX])
+
 {
     for (uint8_t i = 0; i < ctx->info->l; i++) {
         VectorsMul(z[i], c, s[i]);
@@ -813,7 +807,7 @@ static void ComputesZ(const CRYPT_ML_DSA_Ctx *ctx, int32_t *y[MLDSA_L_MAX], int3
     }
 }
 
-static bool ValidityChecks(int32_t *z, uint32_t t)
+static bool ValidityChecks(const int32_t *z, uint32_t t)
 {
     uint32_t n;
     for (uint32_t j = 0; j < MLDSA_N; j++) {
@@ -826,7 +820,7 @@ static bool ValidityChecks(int32_t *z, uint32_t t)
     return true;
 }
 
-static bool ValidityChecksL(const CRYPT_ML_DSA_Ctx *ctx, int32_t *z[MLDSA_L_MAX], uint32_t t)
+static bool ValidityChecksL(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const z[MLDSA_L_MAX], uint32_t t)
 {
     for (uint8_t i = 0; i < ctx->info->l; i++) {
         if (ValidityChecks(z[i], t) == false) {
@@ -836,7 +830,7 @@ static bool ValidityChecksL(const CRYPT_ML_DSA_Ctx *ctx, int32_t *z[MLDSA_L_MAX]
     return true;
 }
 
-static bool ValidityChecksK(const CRYPT_ML_DSA_Ctx *ctx, int32_t *z[MLDSA_K_MAX], uint32_t t)
+static bool ValidityChecksK(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const z[MLDSA_K_MAX], uint32_t t)
 {
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         if (ValidityChecks(z[i], t) == false) {
@@ -846,7 +840,7 @@ static bool ValidityChecksK(const CRYPT_ML_DSA_Ctx *ctx, int32_t *z[MLDSA_K_MAX]
     return true;
 }
 
-static void ComputesR(const CRYPT_ML_DSA_Ctx *ctx, int32_t *c, MLDSA_SignMatrixSt *st)
+static void ComputesR(const CRYPT_ML_DSA_Ctx *ctx, const int32_t *c, MLDSA_SignMatrixSt *st)
 {
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         VectorsMul(st->cs2[i], c, st->s2[i]);
@@ -855,15 +849,12 @@ static void ComputesR(const CRYPT_ML_DSA_Ctx *ctx, int32_t *c, MLDSA_SignMatrixS
     }
 }
 
-static void ComputesCT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *c, int32_t *t[MLDSA_K_MAX], int32_t *ct[MLDSA_K_MAX])
+static void ComputesCT(const CRYPT_ML_DSA_Ctx *ctx, const int32_t *c,
+    int32_t *const t[MLDSA_K_MAX], int32_t *ct[MLDSA_K_MAX])
 {
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         VectorsMul(ct[i], c, t[i]);
         MLDSA_ComputesINVNTT(ct[i]);
-        for (uint32_t j = 0; j < MLDSA_N; j++) {
-            int32_t m = (int32_t)(((uint32_t)ct[i][j] + (1 << 22)) >> 23);  // m = (ct + 2^22) / 2^23
-            ct[i][j] = ct[i][j] - m * MLDSA_Q;
-        }
     }
 }
 
@@ -886,8 +877,8 @@ static uint32_t MakeHint(const CRYPT_ML_DSA_Ctx *ctx, MLDSA_SignMatrixSt *st)
     return num;
 }
 
-static void SigEncode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *out, uint32_t outLen, int32_t *z[MLDSA_L_MAX],
-    int32_t *h[MLDSA_K_MAX])
+static void SigEncode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *out, uint32_t outLen, int32_t *const z[MLDSA_L_MAX],
+    int32_t *const h[MLDSA_K_MAX])
 {
     // // 𝛾1 bits of MLDSA44 is 18，𝛾1 bits of MLDSA65 and MLDSA87 is 20.
     uint32_t bits = (ctx->info->k == K_VALUE_OF_MLDSA_44) ? GAMMA_BITS_OF_MLDSA_44 : GAMMA_BITS_OF_MLDSA_65_87;
@@ -895,7 +886,7 @@ static void SigEncode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *out, uint32_t outLen
     uint8_t *ptr = out;
     uint32_t index = 0;
     for (uint32_t i = 0; i < ctx->info->l; i++) {
-        SignBitPack(ptr, (uint32_t *)z[i], bits, ctx->info->gamma1);
+        SignBitPack(ptr, (const uint32_t *)z[i], bits, ctx->info->gamma1);
         ptr += blockSize;
     }
 
@@ -920,7 +911,7 @@ static int32_t SigDecode(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *in, int32_t
     uint32_t index = 0;
 
     for (int32_t i = 0; i < ctx->info->l; i++) {
-        SignBitUnPake(ptr, (uint32_t *)z[i], bits, ctx->info->gamma1);
+        SignBitUnPack(ptr, (uint32_t *)z[i], bits, ctx->info->gamma1);
         ptr += blockSize;
     }
 
@@ -969,15 +960,14 @@ static void ComputesApproxW(const CRYPT_ML_DSA_Ctx *ctx, MLDSA_VerifyMatrixSt *s
     }
 }
 
-static void UseHint(const CRYPT_ML_DSA_Ctx *ctx, int32_t *h[MLDSA_K_MAX], int32_t *w[MLDSA_K_MAX])
+static void UseHint(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const h[MLDSA_K_MAX], int32_t *w[MLDSA_K_MAX])
 {
     int32_t r1;
     int32_t r0;
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         for (uint32_t j = 0; j < MLDSA_N; j++) {
-            if (w[i][j] < 0) {
-                w[i][j] += MLDSA_Q;
-            }
+            // if w[i][j] < 0 then w[i][j] >> 31 is 0xFFFFFFFF else w[i][j] >> 31 is 0.
+            w[i][j] = w[i][j] + (MLDSA_Q & (w[i][j] >> 31));
             Decompose(ctx, w[i][j], &r1, &r0);
             if (h[i][j] == 0) {
                 w[i][j] = r1;
@@ -995,7 +985,7 @@ static void UseHint(const CRYPT_ML_DSA_Ctx *ctx, int32_t *h[MLDSA_K_MAX], int32_
 }
 
 // Referenced from NIST.FIPS.204 Algorithm 6 ML-DSA.KeyGen_internal(𝑑)
-int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, uint8_t *d)
+int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *d)
 {
     uint8_t k = ctx->info->k;
     uint8_t l = ctx->info->l;
@@ -1045,8 +1035,9 @@ ERR:
     return ret;
 }
 
-// Referenced from NIST.FIPS.204 Algorithm 7 ML-DSA.Sign_internal(sk, 𝑀′, r𝑛𝑑)
-int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, CRYPT_Data *msg, uint8_t *out, uint32_t *outLen, uint8_t *rand)
+// Referenced from NIST.FIPS.204 Algorithm 7 ML-DSA.Sign_internal(sk, M′, rnd)
+int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, uint8_t *out, uint32_t *outLen,
+    const uint8_t *rand)
 {
     int32_t ret = CRYPT_SUCCESS;
     uint8_t pubSeed[MLDSA_PUBLIC_SEED_LEN];
@@ -1135,8 +1126,8 @@ ERR:
     return ret;
 }
 
-// Referenced from NIST.FIPS.204 Algorithm 8 ML-DSA.Verify_internal(pk, 𝑀′, σ)
-int32_t MLDSA_VerifyInternal(const CRYPT_ML_DSA_Ctx *ctx, CRYPT_Data *msg, const uint8_t *sign, uint32_t signLen)
+// Referenced from NIST.FIPS.204 Algorithm 8 ML-DSA.Verify_internal(pk, M′, σ)
+int32_t MLDSA_VerifyInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, const uint8_t *sign, uint32_t signLen)
 {
     (void)signLen;
     uint8_t k = ctx->info->k;

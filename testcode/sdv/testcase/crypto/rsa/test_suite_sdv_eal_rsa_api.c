@@ -824,7 +824,7 @@ void SDV_CRYPTO_RSA_DEC_API_TC001(Hex *n, Hex *d, int hashId, Hex *in, int isPro
     cryptLen = 0;
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, &cryptLen) == CRYPT_RSA_ERR_INPUT_VALUE);
     cryptLen = 2049;  // 2049 is an invalid data length.
-    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, &cryptLen) == CRYPT_RSA_ERR_INPUT_VALUE);
+    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, &cryptLen) == CRYPT_RSA_NOR_VERIFY_FAIL);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -2108,7 +2108,7 @@ void SDV_CRYPTO_RSA_Import_Export_FUNC_TC001(void)
     CRYPT_RSA_Ctx *srcRsaCtx = NULL;
     CRYPT_RSA_Ctx *dstRsaCtx = NULL;
     CRYPT_RsaPadType padType = CRYPT_EMSA_PKCSV15;
-    CRYPT_RSA_PkcsV15Para pkcsv15 = { CRYPT_MD_SHA256 };
+    int32_t pkcsv15 = CRYPT_MD_SHA256;
     uint8_t data[2] = {1};
     uint8_t signData[1024] = {};
     uint32_t signDataLen = sizeof(signData);

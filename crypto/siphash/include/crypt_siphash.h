@@ -60,12 +60,23 @@ CRYPT_SIPHASH_Ctx *CRYPT_SIPHASH_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id);
  * @param ctx [IN] siphash context
  * @param key [IN] MAC symmetric key
  * @param len [IN] Key length. The length of the siphash key is fixed to 128 bits.
+ * @retval #CRYPT_SUCCESS       Succeeded.
+ * @retval #CRYPT_NULL_INPUT    The input parameter is NULL.
+ *         #CRYPT_INVALID_ARG   invalid input parameter. For example, the input key length is not 128 bits.
+ */
+int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen);
+
+/**
+ * @brief Initialize the siphash context by using the key passed by the user.
+ * @param ctx [IN] siphash context
+ * @param key [IN] MAC symmetric key
+ * @param len [IN] Key length. The length of the siphash key is fixed to 128 bits.
  * @param param [IN] param, reserved.
  * @retval #CRYPT_SUCCESS       Succeeded.
  * @retval #CRYPT_NULL_INPUT    The input parameter is NULL.
  *         #CRYPT_INVALID_ARG   invalid input parameter. For example, the input key length is not 128 bits.
  */
-int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen, void *param);
+int32_t CRYPT_SIPHASH_InitEx(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen, void *param);
 
 /**
  * @brief siphash update, supporting streaming update

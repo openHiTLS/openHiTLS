@@ -18,11 +18,11 @@
 #include <stdint.h>
 #include "crypt_types.h"
 #include "bsl_params.h"
+#include "crypt_params_key.h"
 
 typedef struct CryptMlDsaCtx CRYPT_ML_DSA_Ctx;
 
 CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_NewCtx(void);
-
 CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_NewCtxEx(void *libCtx);
 
 void CRYPT_ML_DSA_FreeCtx(CRYPT_ML_DSA_Ctx *ctx);
@@ -47,7 +47,6 @@ int32_t CRYPT_ML_DSA_GetPrvKey(const CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPrv *prv)
 
 int32_t CRYPT_ML_DSA_GetPubKey(const CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPub *pub);
 
-#ifdef HITLS_BSL_PARAMS
 int32_t CRYPT_ML_DSA_SetPrvKeyEx(CRYPT_ML_DSA_Ctx *ctx, const BSL_Param *para);
 
 int32_t CRYPT_ML_DSA_SetPubKeyEx(CRYPT_ML_DSA_Ctx *ctx, const BSL_Param *para);
@@ -55,7 +54,6 @@ int32_t CRYPT_ML_DSA_SetPubKeyEx(CRYPT_ML_DSA_Ctx *ctx, const BSL_Param *para);
 int32_t CRYPT_ML_DSA_GetPrvKeyEx(const CRYPT_ML_DSA_Ctx *ctx, BSL_Param *para);
 
 int32_t CRYPT_ML_DSA_GetPubKeyEx(const CRYPT_ML_DSA_Ctx *ctx, BSL_Param *para);
-#endif
 
 #ifdef HITLS_CRYPTO_MLDSA_CMP
 int32_t CRYPT_ML_DSA_Cmp(const CRYPT_ML_DSA_Ctx *a, const CRYPT_ML_DSA_Ctx *b);

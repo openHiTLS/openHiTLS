@@ -32,7 +32,7 @@
 #include "stub_utils.h"
 #include "crypt_util_rand.h"
 
-#include "crypt_encode_internal.h"
+#include "crypt_encode.h"
 #include "crypt_eal_md.h"
 /* END_HEADER */
 
@@ -57,7 +57,7 @@ extern int32_t CryptDsaFips1864GenPq(CRYPT_DSA_Ctx *ctx, DSA_FIPS186_4_Para *fip
     BSL_Buffer *seed, uint32_t *counter);
 extern int32_t CryptDsaFips1864ValidatePq(int32_t algId, void *libCtx, const char *mdAttr, uint32_t type,
     BSL_Buffer *seed, CRYPT_DSA_Para *dsaPara, uint32_t counter);
-extern int32_t CryptDsaFips1864GenUnverifiableG(CRYPT_DSA_Para *dsaPara);
+extern int32_t CryptDsaFips1864GenUnverifiableG(CRYPT_DSA_Para *dsaPara, uint64_t *hRet);
 extern int32_t CryptDsaFips1864GenVerifiableG(void *libCtx, const char *mdAttr, DSA_FIPS186_4_Para *fipsPara, BSL_Buffer *seed, CRYPT_DSA_Para *dsaPara);
 extern int32_t CryptDsaFips1864PartialValidateG(const CRYPT_DSA_Para *dsaPara);
 extern int32_t CryptDsaFips1864ValidateG(void *libCtx, const char *mdAttr, DSA_FIPS186_4_Para *fipsPara, BSL_Buffer *seed, CRYPT_DSA_Para *dsaPara);
@@ -981,7 +981,8 @@ void SDV_CRYPTO_DSA_GEN_G_FUNC_TC001(char *pHex, char *qHex, char *gHex)
     ASSERT_EQ(BN_Hex2Bn(&q, qHex), CRYPT_SUCCESS);
     ASSERT_EQ(BN_Hex2Bn(&gReq, gHex), CRYPT_SUCCESS);
     CRYPT_DSA_Para dsaPara = {p, q, NULL};
-    ASSERT_EQ(CryptDsaFips1864GenUnverifiableG(&dsaPara), CRYPT_SUCCESS);
+    uint64_t h = 0;
+    ASSERT_EQ(CryptDsaFips1864GenUnverifiableG(&dsaPara, &h), CRYPT_SUCCESS);
     ASSERT_EQ(CryptDsaFips1864PartialValidateG(&dsaPara), CRYPT_SUCCESS);
     ASSERT_EQ(BN_Cmp(dsaPara.g, gReq), 0);
 EXIT:

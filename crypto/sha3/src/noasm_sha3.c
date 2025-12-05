@@ -61,7 +61,7 @@ static const uint64_t g_roundConstant[24] = {
 const uint8_t *SHA3_Absorb(uint8_t *state, const uint8_t *in, uint32_t inLen, uint32_t r)
 {
     const uint8_t *data = (const uint8_t *)in;
-    uint64_t *pSt = (uint64_t *)state;
+    uint64_t *pSt = (uint64_t *)(uintptr_t)state;
     uint32_t dataLen = inLen;
     // Divide one block data into some uint64_t data (8 bytes) and perform XOR with the status variable.
     uint32_t blockInWord = r / 8;
@@ -88,8 +88,8 @@ void SHA3_Squeeze(uint8_t *state, uint8_t *out, uint32_t outLen, uint32_t r, boo
     uint32_t copyLen;
     // Divide one block data into some uint64_t data (8 bytes) and perform XOR with the status variable.
     uint32_t blockInWord = r / 8;
-    uint64_t *oneLane = (uint64_t *)state;
-    uint8_t outTmp[168];
+    uint64_t *oneLane = (uint64_t *)(uintptr_t)state;
+    uint8_t outTmp[168];  // 168 = (1600 - 128 * 2) / 8, blockSize of the shake128 algorithm is the maximum.
 
     while (dataLen > 0) {
         copyLen = (dataLen > r) ? r : dataLen;
@@ -112,8 +112,8 @@ static void SHA3_Keccak(uint8_t *state)
     // See https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
     // SHA3 depends on keccak-p[1600,24] for 24 rounds of cyclic calculation.
     for (uint32_t i = 0; i < 24; i += 2) {
-        Round((uint64_t *)state, (uint64_t *)stTmp, i);
-        Round((uint64_t *)stTmp, (uint64_t *)state, i + 1);
+        Round((uint64_t *)(uintptr_t)state, (uint64_t *)(uintptr_t)stTmp, i);
+        Round((uint64_t *)(uintptr_t)stTmp, (uint64_t *)(uintptr_t)state, i + 1);
     }
 }
 

@@ -264,6 +264,7 @@ CryptSlhDsaCtx *CRYPT_SLH_DSA_NewCtx(void)
     return ctx;
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
 CryptSlhDsaCtx *CRYPT_SLH_DSA_NewCtxEx(void *libCtx)
 {
     CryptSlhDsaCtx *ctx = CRYPT_SLH_DSA_NewCtx();
@@ -273,6 +274,7 @@ CryptSlhDsaCtx *CRYPT_SLH_DSA_NewCtxEx(void *libCtx)
     ctx->libCtx = libCtx;
     return ctx;
 }
+#endif
 
 void CRYPT_SLH_DSA_FreeCtx(CryptSlhDsaCtx *ctx)
 {
@@ -364,8 +366,8 @@ int32_t CRYPT_SLH_DSA_Gen(CryptSlhDsaCtx *ctx)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    (void)memcpy_s(ctx->prvKey.pub.root, n, node, n);
     ctx->keyType = SLH_DSA_PRVKEY | SLH_DSA_PUBKEY;
+    (void)memcpy_s(ctx->prvKey.pub.root, n, node, n);
     return CRYPT_SUCCESS;
 }
 
@@ -809,6 +811,10 @@ int32_t CRYPT_SLH_DSA_GetPubKey(const CryptSlhDsaCtx *ctx, CRYPT_SlhDsaPub *pub)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    if ((ctx->keyType & SLH_DSA_PUBKEY) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_NO_PUBKEY);
+        return CRYPT_SLHDSA_ERR_NO_PUBKEY;
+    }
     pub->len = ctx->para.n;
     (void)memcpy_s(pub->seed, pub->len, ctx->prvKey.pub.seed, ctx->para.n);
     (void)memcpy_s(pub->root, pub->len, ctx->prvKey.pub.root, ctx->para.n);
@@ -823,7 +829,10 @@ int32_t CRYPT_SLH_DSA_GetPrvKey(const CryptSlhDsaCtx *ctx, CRYPT_SlhDsaPrv *prv)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-
+    if ((ctx->keyType & SLH_DSA_PRVKEY) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_NO_PRVKEY);
+        return CRYPT_SLHDSA_ERR_NO_PRVKEY;
+    }
     prv->pub.len = ctx->para.n;
     (void)memcpy_s(prv->seed, prv->pub.len, ctx->prvKey.seed, ctx->para.n);
     (void)memcpy_s(prv->prf, prv->pub.len, ctx->prvKey.prf, ctx->para.n);
@@ -842,7 +851,7 @@ int32_t CRYPT_SLH_DSA_SetPubKey(CryptSlhDsaCtx *ctx, const CRYPT_SlhDsaPub *pub)
     }
     (void)memcpy_s(ctx->prvKey.pub.seed, ctx->para.n, pub->seed, ctx->para.n);
     (void)memcpy_s(ctx->prvKey.pub.root, ctx->para.n, pub->root, ctx->para.n);
-
+    ctx->keyType |= SLH_DSA_PUBKEY;
     return CRYPT_SUCCESS;
 }
 
@@ -858,19 +867,18 @@ int32_t CRYPT_SLH_DSA_SetPrvKey(CryptSlhDsaCtx *ctx, const CRYPT_SlhDsaPrv *prv)
     (void)memcpy_s(ctx->prvKey.prf, sizeof(ctx->prvKey.prf), prv->prf, ctx->para.n);
     (void)memcpy_s(ctx->prvKey.pub.seed, sizeof(ctx->prvKey.pub.seed), prv->pub.seed, ctx->para.n);
     (void)memcpy_s(ctx->prvKey.pub.root, sizeof(ctx->prvKey.pub.root), prv->pub.root, ctx->para.n);
-
+    ctx->keyType |= SLH_DSA_PRVKEY;
     return CRYPT_SUCCESS;
 }
 
-#ifdef HITLS_BSL_PARAMS
 static int32_t PubKeyParamCheck(const CryptSlhDsaCtx *ctx, BSL_Param *para, SlhDsaPubKeyParam *pub)
 {
     if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    pub->pubSeed = BSL_PARAM_FindParam(para, CRYPT_PARAM_SLH_DSA_PUB_SEED);
-    pub->pubRoot = BSL_PARAM_FindParam(para, CRYPT_PARAM_SLH_DSA_PUB_ROOT);
+    pub->pubSeed = EAL_FindParam(para, CRYPT_PARAM_SLH_DSA_PUB_SEED);
+    pub->pubRoot = EAL_FindParam(para, CRYPT_PARAM_SLH_DSA_PUB_ROOT);
     if (pub->pubSeed == NULL || pub->pubSeed->value == NULL || pub->pubRoot == NULL || pub->pubRoot->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -888,10 +896,10 @@ static int32_t PrvKeyParamCheck(const CryptSlhDsaCtx *ctx, BSL_Param *para, SlhD
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    prv->prvSeed = BSL_PARAM_FindParam(para, CRYPT_PARAM_SLH_DSA_PRV_SEED);
-    prv->prvPrf = BSL_PARAM_FindParam(para, CRYPT_PARAM_SLH_DSA_PRV_PRF);
-    prv->pubSeed = BSL_PARAM_FindParam(para, CRYPT_PARAM_SLH_DSA_PUB_SEED);
-    prv->pubRoot = BSL_PARAM_FindParam(para, CRYPT_PARAM_SLH_DSA_PUB_ROOT);
+    prv->prvSeed = EAL_FindParam(para, CRYPT_PARAM_SLH_DSA_PRV_SEED);
+    prv->prvPrf = EAL_FindParam(para, CRYPT_PARAM_SLH_DSA_PRV_PRF);
+    prv->pubSeed = EAL_FindParam(para, CRYPT_PARAM_SLH_DSA_PUB_SEED);
+    prv->pubRoot = EAL_FindParam(para, CRYPT_PARAM_SLH_DSA_PUB_ROOT);
     if (prv->prvSeed == NULL || prv->prvSeed->value == NULL || prv->prvPrf == NULL || prv->prvPrf->value == NULL ||
         prv->pubSeed == NULL || prv->pubSeed->value == NULL || prv->pubRoot == NULL || prv->pubRoot->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -978,7 +986,6 @@ int32_t CRYPT_SLH_DSA_SetPrvKeyEx(CryptSlhDsaCtx *ctx, const BSL_Param *para)
     ctx->keyType |= SLH_DSA_PRVKEY;
     return CRYPT_SUCCESS;
 }
-#endif
 
 #ifdef HITLS_CRYPTO_SLH_DSA_CHECK
 

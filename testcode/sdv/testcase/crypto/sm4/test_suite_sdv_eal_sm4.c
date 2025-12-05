@@ -1738,3 +1738,123 @@ EXIT:
     }
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_EAL_SM4_FUNC_TC005
+ * @title  Verify whether SM4 encryption and decryption will alter the values of registers d8 to d15 and x19 to x28.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_SM4_FUNC_TC005(int algId, Hex *key, Hex *iv, Hex *pt)
+{
+#ifndef HITLS_CRYPTO_SM4_ARMV8
+    (void)algId;
+    (void)key;
+    (void)iv;
+    (void)pt;
+    SKIP_TEST();
+#else
+    if (IsAesAlgDisabled(algId)) {
+        SKIP_TEST();
+    }
+    uint8_t cipher[MAX_OUTPUT] = {0};
+    uint32_t cipherLen = MAX_OUTPUT;
+    uint8_t plain[MAX_OUTPUT] = {0};
+    uint32_t plainLen = MAX_OUTPUT;
+
+    uint8_t outTag[AEAD_MAX_TAG_LEN];
+    uint32_t tagLen = AEAD_MAX_TAG_LEN;
+
+    uint32_t finLen = 0;
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+    TestMemInit();
+
+    double canary = 1.1;
+    register double d8 asm("d8");
+    register double d9 asm("d9");
+    register double d10 asm("d10");
+    register double d11 asm("d11");
+    register double d12 asm("d12");
+    register double d13 asm("d13");
+    register double d14 asm("d14");
+    register double d15 asm("d15");
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d8) : "w"(canary) :);
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d9) : "w"(canary) :);
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d10) : "w"(canary) :);
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d11) : "w"(canary) :);
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d12) : "w"(canary) :);
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d13) : "w"(canary) :);
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d14) : "w"(canary) :);
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d15) : "w"(canary) :);
+
+    long value = 0x12345678;
+    register int x19 asm("x19");
+    register int x20 asm("x20");
+    register int x21 asm("x21");
+    register int x22 asm("x22");
+    register int x23 asm("x23");
+    register int x24 asm("x24");
+    register int x25 asm("x25");
+    register int x26 asm("x26");
+    register int x27 asm("x27");
+    register int x28 asm("x28");
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x19) : "r"(value) :);
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x20) : "r"(value) :);
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x21) : "r"(value) :);
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x22) : "r"(value) :);
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x23) : "r"(value) :);
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x24) : "r"(value) :);
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x25) : "r"(value) :);
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x26) : "r"(value) :);
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x27) : "r"(value) :);
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x28) : "r"(value) :);
+
+    // Encrypt
+    ASSERT_TRUE((ctx = CRYPT_EAL_CipherNewCtx(algId)) != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+    if (algId == CRYPT_CIPHER_SM4_GCM) {
+        ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen)) == CRYPT_SUCCESS);
+    }
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, pt->x, pt->len, cipher, &cipherLen), CRYPT_SUCCESS);
+    if (algId != CRYPT_CIPHER_SM4_GCM) {
+        finLen = MAX_OUTPUT - cipherLen;
+        ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, cipher + cipherLen, &finLen), CRYPT_SUCCESS);
+        cipherLen += finLen;
+    } else {
+        ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, outTag, tagLen) == CRYPT_SUCCESS);
+    }
+
+    // Decrypt
+    CRYPT_EAL_CipherDeinit(ctx);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, false), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, cipher, cipherLen, plain, &plainLen), CRYPT_SUCCESS);
+    if (algId != CRYPT_CIPHER_SM4_GCM) {
+        finLen = MAX_OUTPUT - plainLen;
+        ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, plain + plainLen, &finLen), CRYPT_SUCCESS);
+        plainLen += finLen;
+    }
+
+    ASSERT_COMPARE("SM4:", plain, plainLen, pt->x, pt->len);
+    CRYPT_EAL_CipherFreeCtx(ctx);
+    ctx = NULL;
+    ASSERT_TRUE(d8 == canary);
+    ASSERT_TRUE(d9 == canary);
+    ASSERT_TRUE(d10 == canary);
+    ASSERT_TRUE(d11 == canary);
+    ASSERT_TRUE(d12 == canary);
+    ASSERT_TRUE(d13 == canary);
+    ASSERT_TRUE(d14 == canary);
+    ASSERT_TRUE(d15 == canary);
+    ASSERT_TRUE(x19 == value);
+    ASSERT_TRUE(x20 == value);
+    ASSERT_TRUE(x21 == value);
+    ASSERT_TRUE(x22 == value);
+    ASSERT_TRUE(x23 == value);
+    ASSERT_TRUE(x24 == value);
+    ASSERT_TRUE(x25 == value);
+    ASSERT_TRUE(x26 == value);
+    ASSERT_TRUE(x27 == value);
+    ASSERT_TRUE(x28 == value);
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+#endif
+}

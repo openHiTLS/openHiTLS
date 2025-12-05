@@ -381,7 +381,7 @@ static const CRYPT_EAL_AlgInfo g_defEalSigns[] = {
 };
 #endif
 
-#if defined(HITLS_CRYPTO_MLKEM) || defined(HITLS_CRYPTO_HYBRIDKEM)
+#ifdef HITLS_CRYPTO_PKEY_KEM
 static const CRYPT_EAL_AlgInfo g_defEalKems[] = {
 #ifdef HITLS_CRYPTO_MLKEM
     {CRYPT_PKEY_ML_KEM, g_defEalMlKem, CRYPT_EAL_DEFAULT_ATTR},

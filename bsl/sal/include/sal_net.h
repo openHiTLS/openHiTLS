@@ -20,7 +20,7 @@
 #ifdef HITLS_BSL_SAL_NET
 
 #include <stdint.h>
-
+#include <fcntl.h>
 #ifdef HITLS_BSL_SAL_LINUX
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
@@ -34,11 +34,11 @@ int32_t SAL_Write(int32_t fd, const void *buf, uint32_t len, int32_t *err);
 
 int32_t SAL_Read(int32_t fd, void *buf, uint32_t len, int32_t *err);
 
-int32_t SAL_Sendto(int32_t sock, const void *buf, size_t len, int32_t flags, BSL_SAL_SockAddr address, int32_t addrLen,
-                   int32_t *err);
+int32_t SAL_Sendto(int32_t sock, const void *buf, size_t len, int32_t flags, void *address, int32_t addrLen,
+    int32_t *err);
 
-int32_t SAL_RecvFrom(int32_t sock, void *buf, size_t len, int32_t flags, BSL_SAL_SockAddr address, int32_t *addrLen,
-                     int32_t *err);
+int32_t SAL_Recvfrom(int32_t sock, void *buf, size_t len, int32_t flags, void *address, int32_t *addrLen,
+    int32_t *err);
 
 int32_t SAL_SockAddrNew(BSL_SAL_SockAddr *sockAddr);
 int32_t SAL_SockAddrGetFamily(const BSL_SAL_SockAddr sockAddr);

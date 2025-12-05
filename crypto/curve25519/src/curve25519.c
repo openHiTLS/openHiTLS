@@ -120,6 +120,7 @@ int32_t CRYPT_CURVE25519_Ctrl(CRYPT_CURVE25519_Ctx *pkey, int32_t opt, void *val
         return CRYPT_NULL_INPUT;
     }
     switch (opt) {
+        case CRYPT_CTRL_GET_PUB_KEY_BITS:
         case CRYPT_CTRL_GET_BITS:
             return CRYPT_CTRL_GetNum32(CRYPT_CURVE25519_KEYLEN * 8, val, len); // bits = 8 * bytes
         case CRYPT_CTRL_GET_PUBKEY_LEN:
@@ -621,7 +622,7 @@ int32_t CRYPT_CURVE25519_Verify(const CRYPT_CURVE25519_Ctx *pkey, int32_t algId,
     }
 
     if (PointDecoding(&geA, pkey->pubKey) != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_VERIFY_FAIL);
+        BSL_ERR_PUSH_ERROR(CRYPT_CURVE25519_INVALID_PUBKEY);
         return CRYPT_CURVE25519_INVALID_PUBKEY;
     }
 

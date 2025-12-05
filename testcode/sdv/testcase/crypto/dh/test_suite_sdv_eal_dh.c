@@ -30,6 +30,7 @@
 #include "dh_local.h"
 #include "crypt_dh.h"
 #include "eal_pkey_local.h"
+#include "crypt_params_key.h"
 
 #define UINT8_MAX_NUM 255
 #define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0

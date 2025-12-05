@@ -26,6 +26,24 @@
 extern "C" {
 #endif
 
+bool SAL_FileError(bsl_sal_file_handle stream);
+
+char *SAL_FGets(bsl_sal_file_handle stream, char *buf, int32_t readLen);
+
+bool SAL_FPuts(bsl_sal_file_handle stream, const char *buf);
+
+bool SAL_Flush(bsl_sal_file_handle stream);
+
+int32_t SAL_Feof(bsl_sal_file_handle stream);
+
+int32_t SAL_FSetAttr(bsl_sal_file_handle stream, int cmd, const void *arg);
+
+int32_t SAL_FGetAttr(bsl_sal_file_handle stream, void *arg);
+
+int32_t SAL_FileTell(bsl_sal_file_handle stream, long *pos);
+
+int32_t SAL_FileSeek(bsl_sal_file_handle stream, long offset, int32_t origin);
+
 /**
  * @ingroup bsl_sal
  * @brief Reads the specified file into the buff
@@ -53,25 +71,6 @@ int32_t BSL_SAL_ReadFile(const char *path, uint8_t **buff, uint32_t *len);
  * @retval if the operation is successful, BSL_SUCCESS is returned, for other errors, see bsl_error.h
  */
 int32_t BSL_SAL_WriteFile(const char *path, const uint8_t *buff, uint32_t len);
-
-bool SAL_FileError(bsl_sal_file_handle stream);
-
-char *SAL_FGets(bsl_sal_file_handle stream, char *buf, int32_t readLen);
-
-bool SAL_FPuts(bsl_sal_file_handle stream, const char *buf);
-
-bool SAL_Flush(bsl_sal_file_handle stream);
-
-int32_t SAL_Feof(bsl_sal_file_handle stream);
-
-int32_t SAL_FSetAttr(bsl_sal_file_handle stream, int cmd, const void *arg);
-
-int32_t SAL_FGetAttr(bsl_sal_file_handle stream, void *arg);
-
-int32_t SAL_FileTell(bsl_sal_file_handle stream, long *pos);
-
-int32_t SAL_FileSeek(bsl_sal_file_handle stream, long offset, int32_t origin);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

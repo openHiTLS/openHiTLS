@@ -13,11 +13,12 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#ifndef CRYPT_ML_KEM_H
-#define CRYPT_ML_KEM_H
+#ifndef CRYPT_MLKEM_H
+#define CRYPT_MLKEM_H
 #include <stdint.h>
 #include "crypt_types.h"
 #include "bsl_params.h"
+#include "crypt_params_key.h"
 
 typedef struct CryptMlKemCtx CRYPT_ML_KEM_Ctx;
 
@@ -41,7 +42,6 @@ int32_t CRYPT_ML_KEM_SetDecapsKey(CRYPT_ML_KEM_Ctx *ctx, const CRYPT_KemDecapsKe
 
 int32_t CRYPT_ML_KEM_GetDecapsKey(const CRYPT_ML_KEM_Ctx *ctx, CRYPT_KemDecapsKey *dk);
 
-#ifdef HITLS_BSL_PARAMS
 int32_t CRYPT_ML_KEM_SetEncapsKeyEx(CRYPT_ML_KEM_Ctx *ctx, const BSL_Param *para);
 
 int32_t CRYPT_ML_KEM_GetEncapsKeyEx(const CRYPT_ML_KEM_Ctx *ctx, BSL_Param *para);
@@ -49,7 +49,6 @@ int32_t CRYPT_ML_KEM_GetEncapsKeyEx(const CRYPT_ML_KEM_Ctx *ctx, BSL_Param *para
 int32_t CRYPT_ML_KEM_SetDecapsKeyEx(CRYPT_ML_KEM_Ctx *ctx, const BSL_Param *para);
 
 int32_t CRYPT_ML_KEM_GetDecapsKeyEx(const CRYPT_ML_KEM_Ctx *ctx, BSL_Param *para);
-#endif
 
 #ifdef HITLS_CRYPTO_MLKEM_CMP
 int32_t CRYPT_ML_KEM_Cmp(const CRYPT_ML_KEM_Ctx *a, const CRYPT_ML_KEM_Ctx *b);

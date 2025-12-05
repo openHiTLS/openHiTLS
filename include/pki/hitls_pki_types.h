@@ -342,11 +342,6 @@ typedef enum {
                                                            * match rules similar to  *.a.com matches foo.a.com,
                                                            * f*.com matches foo.com */
 
-typedef struct {
-    BSL_Buffer *macPwd;
-    BSL_Buffer *encPwd;
-} HITLS_PKCS12_PwdParam;
-
 /**
  * @ingroup hitls_pki_types
  * @brief Flags for printing Distinguished Names (DNs) in X509 certificates
@@ -370,6 +365,18 @@ typedef enum {
     HITLS_PKI_PRINT_CSR,
     HITLS_PKI_PRINT_CRL
 } HITLS_PKI_PrintCmd;
+
+/**
+ * @ingroup hitls_pki_types
+ * @brief Structure for PKCS12 password parameters
+ * Only characters in the ASCii code table can be used as input parameters of the password. According to RFC7292,
+ * the bottom-layer p12 implementation does not limit the password length unless the password length + salt length
+ * exceeds the upper limit of int32.
+ */
+typedef struct {
+    BSL_Buffer *macPwd;
+    BSL_Buffer *encPwd;
+} HITLS_PKCS12_PwdParam;
 
 /**
  * While the standard imposes no constraints on password length, (pwdLen + saltLen) should be kept below 2^31

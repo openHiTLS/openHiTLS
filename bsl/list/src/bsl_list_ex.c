@@ -22,20 +22,12 @@
 
 BslListNode *BSL_LIST_FirstNode(const BslList *list)
 {
-    if (list == NULL) {
-        return NULL;
-    }
-
-    return list->first;
+    return list == NULL ? NULL : list->first;
 }
 
 void *BSL_LIST_GetData(const BslListNode *pstNode)
 {
-    if (pstNode == NULL) {
-        return NULL;
-    }
-
-    return pstNode->data;
+    return pstNode == NULL ? NULL : pstNode->data;
 }
 
 BslListNode *BSL_LIST_GetNextNode(const BslList *pstList, const BslListNode *pstListNode)
@@ -43,12 +35,7 @@ BslListNode *BSL_LIST_GetNextNode(const BslList *pstList, const BslListNode *pst
     if (pstList == NULL) {
         return NULL;
     }
-
-    if (pstListNode != NULL) {
-        return pstListNode->next;
-    }
-
-    return pstList->first;
+    return pstListNode != NULL ? pstListNode->next : pstList->first;
 }
 
 void *BSL_LIST_GetIndexNodeEx(uint32_t ulIndex, const BslListNode *pstListNode, const BslList *pstList)
@@ -80,11 +67,7 @@ void *BSL_LIST_GetIndexNodeEx(uint32_t ulIndex, const BslListNode *pstListNode, 
 
 BslListNode *BSL_LIST_GetPrevNode(const BslListNode *pstListNode)
 {
-    if (pstListNode == NULL) {
-        return NULL;
-    }
-
-    return pstListNode->prev;
+    return pstListNode == NULL ? NULL : pstListNode->prev;
 }
 
 void BSL_LIST_DeleteNode(BslList *pstList, const BslListNode *pstListNode, BSL_LIST_PFUNC_FREE pfFreeFunc)
@@ -128,8 +111,6 @@ void BSL_LIST_DeleteNode(BslList *pstList, const BslListNode *pstListNode, BSL_L
 
         pstCurrentNode = pstCurrentNode->next;
     }
-
-    return;
 }
 
 void BSL_LIST_DetachNode(BslList *pstList, BslListNode **pstListNode)
@@ -170,6 +151,5 @@ void BSL_LIST_DetachNode(BslList *pstList, BslListNode **pstListNode)
         BSL_SAL_FREE(pstCurrentNode);
         return;
     }
-    return;
 }
 #endif /* HITLS_BSL_LIST */

@@ -24,18 +24,6 @@
 #include "bsl_sal.h"
 #include "sha3_core.h"
 #include "crypt_sha3.h"
-#include "crypt_types.h"
-
-struct CryptSha3Ctx {
-    uint8_t state[200];     // State array, 200bytes is 1600bits
-    uint32_t num;           // Data length in the remaining buffer.
-    uint32_t blockSize;     // For example, BlockSize(sha3-224) = ((1600 - 224 * 2) / 8) bytes
-    uint32_t mdSize;     // sha3-224 corresponds to 28 bytes, sha3-256: 32 bytes, sha3-384: 48 bytes, sha3-512: 64 bytes
-    // Non-integer multiple data cache. 168 = (1600 - 128 * 2) / 8, that is maximum block size used by shake_*
-    uint8_t buf[168];
-    uint8_t padChr;         // char for padding, sha3_* use 0x06 and shake_* use 0x1f
-    bool squeeze;
-};
 
 CRYPT_SHA3_Ctx *CRYPT_SHA3_NewCtx(void)
 {
@@ -208,42 +196,78 @@ CRYPT_SHA3_Ctx *CRYPT_SHA3_DupCtx(const CRYPT_SHA3_Ctx *src)
     return newCtx;
 }
 
-int32_t CRYPT_SHA3_224_Init(CRYPT_SHA3_224_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA3_224_Init(CRYPT_SHA3_224_Ctx *ctx)
 {
-    (void) param;
     // 0x06 is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
     return CRYPT_SHA3_Init(ctx, CRYPT_SHA3_224_DIGESTSIZE, CRYPT_SHA3_224_BLOCKSIZE, 0x06);
 }
 
-int32_t CRYPT_SHA3_256_Init(CRYPT_SHA3_256_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA3_224_InitEx(CRYPT_SHA3_224_Ctx *ctx, void *param)
 {
-    (void) param;
+    (void)param;
+    // 0x06 is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
+    return CRYPT_SHA3_Init(ctx, CRYPT_SHA3_224_DIGESTSIZE, CRYPT_SHA3_224_BLOCKSIZE, 0x06);
+}
+
+int32_t CRYPT_SHA3_256_Init(CRYPT_SHA3_256_Ctx *ctx)
+{
     // 0x06 is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
     return CRYPT_SHA3_Init(ctx, CRYPT_SHA3_256_DIGESTSIZE, CRYPT_SHA3_256_BLOCKSIZE, 0x06);
 }
 
-int32_t CRYPT_SHA3_384_Init(CRYPT_SHA3_384_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA3_256_InitEx(CRYPT_SHA3_256_Ctx *ctx, void *param)
 {
-    (void) param;
+    (void)param;
+    // 0x06 is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
+    return CRYPT_SHA3_Init(ctx, CRYPT_SHA3_256_DIGESTSIZE, CRYPT_SHA3_256_BLOCKSIZE, 0x06);
+}
+
+int32_t CRYPT_SHA3_384_Init(CRYPT_SHA3_384_Ctx *ctx)
+{
     // 0x06 is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
     return CRYPT_SHA3_Init(ctx, CRYPT_SHA3_384_DIGESTSIZE, CRYPT_SHA3_384_BLOCKSIZE, 0x06);
 }
 
-int32_t CRYPT_SHA3_512_Init(CRYPT_SHA3_512_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA3_384_InitEx(CRYPT_SHA3_384_Ctx *ctx, void *param)
 {
-    (void) param;
+    (void)param;
+    // 0x06 is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
+    return CRYPT_SHA3_Init(ctx, CRYPT_SHA3_384_DIGESTSIZE, CRYPT_SHA3_384_BLOCKSIZE, 0x06);
+}
+
+int32_t CRYPT_SHA3_512_Init(CRYPT_SHA3_512_Ctx *ctx)
+{
     // 0x06 is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
     return CRYPT_SHA3_Init(ctx, CRYPT_SHA3_512_DIGESTSIZE, CRYPT_SHA3_512_BLOCKSIZE, 0x06);
 }
 
-int32_t CRYPT_SHAKE128_Init(CRYPT_SHAKE128_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHA3_512_InitEx(CRYPT_SHA3_512_Ctx *ctx, void *param)
 {
-    (void) param;
+    (void)param;
+    // 0x06 is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
+    return CRYPT_SHA3_Init(ctx, CRYPT_SHA3_512_DIGESTSIZE, CRYPT_SHA3_512_BLOCKSIZE, 0x06);
+}
+
+int32_t CRYPT_SHAKE128_Init(CRYPT_SHAKE128_Ctx *ctx)
+{
     // 0x1f is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
     return CRYPT_SHA3_Init(ctx, 0, CRYPT_SHAKE128_BLOCKSIZE, 0x1F);
 }
 
-int32_t CRYPT_SHAKE256_Init(CRYPT_SHAKE256_Ctx *ctx, BSL_Param *param)
+int32_t CRYPT_SHAKE128_InitEx(CRYPT_SHAKE128_Ctx *ctx, void *param)
+{
+    (void)param;
+    // 0x1f is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
+    return CRYPT_SHA3_Init(ctx, 0, CRYPT_SHAKE128_BLOCKSIZE, 0x1F);
+}
+
+int32_t CRYPT_SHAKE256_Init(CRYPT_SHAKE256_Ctx *ctx)
+{
+    // 0x1f is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
+    return CRYPT_SHA3_Init(ctx, 0, CRYPT_SHAKE256_BLOCKSIZE, 0x1F);
+}
+
+int32_t CRYPT_SHAKE256_InitEx(CRYPT_SHAKE256_Ctx *ctx, void *param)
 {
     (void) param;
     // 0x1f is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html

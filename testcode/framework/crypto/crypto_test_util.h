@@ -32,6 +32,9 @@ int TestRandInitEx(void *libCtx);
 void TestRandDeInit(void);
 
 int TestRandInitSelfCheck(void);
+#ifndef AEAD_MAX_TAG_LEN
+#define AEAD_MAX_TAG_LEN 16
+#endif
 
 bool IsMdAlgDisabled(int id);
 

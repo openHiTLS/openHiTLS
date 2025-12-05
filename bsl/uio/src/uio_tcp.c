@@ -15,6 +15,9 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_BSL_UIO_TCP
+
+#include <unistd.h>
+#include <string.h>
 #include "bsl_binlog_id.h"
 #include "bsl_err_internal.h"
 #include "bsl_log_internal.h"
@@ -32,7 +35,7 @@ typedef struct {
 static int32_t TcpNew(BSL_UIO *uio)
 {
     if (uio->ctx != NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05056, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05079, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Uio: ctx is already existed.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
         return BSL_UIO_FAIL;
@@ -40,7 +43,7 @@ static int32_t TcpNew(BSL_UIO *uio)
 
     TcpPrameters *parameters = (TcpPrameters *)BSL_SAL_Calloc(1u, sizeof(TcpPrameters));
     if (parameters == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05057, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Uio: tcp param malloc fail.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
         return BSL_UIO_FAIL;
@@ -59,7 +62,7 @@ static int32_t TcpSocketDestroy(BSL_UIO *uio)
     if (uio == NULL) {
         return BSL_SUCCESS;
     }
-    uio->init = 0;
+    uio->init = false;
     TcpPrameters *ctx = BSL_UIO_GetCtx(uio);
     if (ctx != NULL) {
         if (BSL_UIO_GetIsUnderlyingClosedByUio(uio) && ctx->fd != -1) {
@@ -126,8 +129,7 @@ static int32_t TcpSocketRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *re
 
 static int32_t TcpSetFd(BSL_UIO *uio, int32_t size, const int32_t *fd)
 {
-    bool invalid = (fd == NULL) || (uio == NULL);
-    if (invalid) {
+    if (fd == NULL || uio == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
@@ -146,14 +148,13 @@ static int32_t TcpSetFd(BSL_UIO *uio, int32_t size, const int32_t *fd)
         }
     }
     ctx->fd = *fd;
-    uio->init = 1;
+    uio->init = true;
     return BSL_SUCCESS;
 }
 
 static int32_t TcpGetFd(BSL_UIO *uio, int32_t size, int32_t *fd)
 {
-    bool invalid = uio == NULL || fd == NULL;
-    if (invalid) {
+    if (fd == NULL || uio == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
@@ -186,6 +187,12 @@ static int32_t TcpSocketCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg
     return BSL_UIO_FAIL;
 }
 
+static int32_t TcpSocketPuts(BSL_UIO *uio, const char *buf, uint32_t *writeLen)
+{
+    uint32_t len = (uint32_t)strlen(buf);
+    return TcpSocketWrite(uio, buf, len, writeLen);
+}
+
 const BSL_UIO_Method *BSL_UIO_TcpMethod(void)
 {
     static const BSL_UIO_Method method = {
@@ -193,7 +200,7 @@ const BSL_UIO_Method *BSL_UIO_TcpMethod(void)
         TcpSocketWrite,
         TcpSocketRead,
         TcpSocketCtrl,
-        NULL,
+        TcpSocketPuts,
         NULL,
         TcpNew,
         TcpSocketDestroy

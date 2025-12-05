@@ -22,12 +22,14 @@
 #include "crypt_utils.h"
 #include "crypt_util_ctrl.h"
 #include "securec.h"
+#include "sal_atomic.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_bn.h"
 #include "crypt_ecc.h"
 #include "ecc_local.h"
 #include "crypt_ecc_pkey.h"
+#include "bsl_params.h"
 #include "crypt_params_key.h"
 
 typedef struct {
@@ -37,10 +39,10 @@ typedef struct {
 
 void ECC_FreeCtx(ECC_Pkey *ctx)
 {
-    int ret = 0;
     if (ctx == NULL) {
         return;
     }
+    int ret = 0;
     BSL_SAL_AtomicDownReferences(&(ctx->references), &ret);
     if (ret > 0) {
         return;
@@ -48,8 +50,10 @@ void ECC_FreeCtx(ECC_Pkey *ctx)
     BSL_SAL_ReferencesFree(&(ctx->references));
     BN_Destroy(ctx->prvkey);
     ECC_FreePoint(ctx->pubkey);
+    ctx->pubkey = NULL;
     ECC_FreePara(ctx->para);
-    BSL_SAL_FREE(ctx->mdAttr);
+    ctx->para = NULL;
+    BSL_SAL_Free(ctx->mdAttr);
     BSL_SAL_Free(ctx);
 }
 
@@ -77,7 +81,7 @@ ECC_Pkey *ECC_DupCtx(ECC_Pkey *ctx)
     GOTO_ERR_IF_SRC_NOT_NULL(newCtx->mdAttr, ctx->mdAttr, BSL_SAL_Dump(ctx->mdAttr, strlen(ctx->mdAttr) + 1),
         CRYPT_MEM_ALLOC_FAIL);
     newCtx->libCtx = ctx->libCtx;
-    newCtx->flags = ctx->flags;
+    newCtx->flag = ctx->flag;
     return newCtx;
 
 ERR:
@@ -496,7 +500,7 @@ static int32_t ECC_GetPubXYBnBin(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t
 }
 static uint32_t ECC_GetKeyLen(const ECC_Pkey *ctx)
 {
-    if ((ctx == NULL) || (ctx->para == NULL)) {
+    if (ctx->para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return 0;
     }
@@ -522,7 +526,12 @@ static int32_t GetEccName(ECC_Pkey *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (memcpy_s(val, len, EcCurveId2nist(ctx->para->id), strlen("P-521") + 1) != EOK) {
+    const char *name = EcCurveId2nist(ctx->para->id);
+    if (name == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
+        return CRYPT_ECC_POINT_ERR_CURVE_ID;
+    }
+    if (memcpy_s(val, len, name, strlen(name) + 1) != EOK) {
         BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
         return CRYPT_SECUREC_FAIL;
     }
@@ -544,6 +553,16 @@ static int32_t SetEccPointFormat(ECC_Pkey *ctx, void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
+static int32_t GetEccPointFormat(ECC_Pkey *ctx, void *val, uint32_t len)
+{
+    if (len != sizeof(uint32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_CTRL_LEN);
+        return CRYPT_ECC_PKEY_ERR_CTRL_LEN;
+    }
+    *(uint32_t *)val = ctx->pointFormat;
+    return CRYPT_SUCCESS;
+}
+
 static int32_t SetEccUseCofactorMode(ECC_Pkey *ctx, void *val, uint32_t len)
 {
     if (len != sizeof(uint32_t)) {
@@ -560,17 +579,7 @@ static int32_t SetFlag(ECC_Pkey *ctx, const void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_CTRL_LEN);
         return CRYPT_ECC_PKEY_ERR_CTRL_LEN;
     }
-    ctx->flags |= *(const uint32_t *)val;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t ClearFlag(ECC_Pkey *ctx, const void *val, uint32_t len)
-{
-    if (len != sizeof(uint32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_CTRL_LEN);
-        return CRYPT_ECC_PKEY_ERR_CTRL_LEN;
-    }
-    ctx->flags &= ~(*(const uint32_t *)val);
+    ctx->flag |= *(const uint32_t *)val;
     return CRYPT_SUCCESS;
 }
 
@@ -580,7 +589,13 @@ static int32_t GetFlag(const ECC_Pkey *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_CTRL_LEN);
         return CRYPT_ECC_PKEY_ERR_CTRL_LEN;
     }
-    *(uint32_t *)val = ctx->flags;
+    *(uint32_t *)val = ctx->flag;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t ClearFlag(ECC_Pkey *ctx)
+{
+    ctx->flag = 0;
     return CRYPT_SUCCESS;
 }
 
@@ -598,17 +613,14 @@ int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t len)
             return ECC_GetPubXYBnBin(ctx, opt, val, len);
         case CRYPT_CTRL_SET_ECC_POINT_FORMAT:
             return SetEccPointFormat(ctx, val, len);
+        case CRYPT_CTRL_GET_ECC_POINT_FORMAT:
+            return GetEccPointFormat(ctx, val, len);
         case CRYPT_CTRL_SET_ECC_USE_COFACTOR_MODE:
             return SetEccUseCofactorMode(ctx, val, len);
-        case CRYPT_CTRL_GET_ECC_FLAG:
-            return GetFlag(ctx, val, len);
-        case CRYPT_CTRL_SET_ECC_FLAG:
-            return SetFlag(ctx, val, len);
-        case CRYPT_CTRL_CLR_ECC_FLAG:
-            return ClearFlag(ctx, val, len);
         case CRYPT_CTRL_GEN_ECC_PUBLICKEY:
             return GenPublicKey(ctx);
         case CRYPT_CTRL_GET_ECC_ORDER_BITS:
+        case CRYPT_CTRL_GET_PUB_KEY_BITS:
             return CRYPT_CTRL_GetNum32(ctx->para == NULL ? 0 : BN_Bits(ctx->para->n), val, len);
         case CRYPT_CTRL_GET_PUBKEY_LEN:
             return CRYPT_CTRL_GET_NUM32_EX(ECC_GetPubKeyLen, ctx, val, len);
@@ -617,6 +629,12 @@ int32_t ECC_PkeyCtrl(ECC_Pkey *ctx, int32_t opt, void *val, uint32_t len)
             return CRYPT_CTRL_GET_NUM32_EX(ECC_GetKeyLen, ctx, val, len);
         case CRYPT_CTRL_UP_REFERENCES:
             return BSL_SAL_AtomicRefUpCtrl(&(ctx->references), val, len);
+        case CRYPT_CTRL_SET_FLAG:
+            return SetFlag(ctx, val, len);
+        case CRYPT_CTRL_GET_FLAG:
+            return GetFlag(ctx, val, len);
+        case CRYPT_CTRL_CLR_FLAG:
+            return ClearFlag(ctx);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION);
             return CRYPT_ECC_PKEY_ERR_UNSUPPORTED_CTRL_OPTION;

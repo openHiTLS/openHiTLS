@@ -22,6 +22,9 @@ SDV_BSL_PEM_ISPEM_FUNC_TC001:"-----BEGIN aaaaa-----\n-----END aaa -----aaaaaaaaa
 SDV_BSL_PEM_ISPEM_FUNC_TC001
 SDV_BSL_PEM_ISPEM_FUNC_TC001:"aaaa-----BEGIN aaaaa-----\n-----END aaa -----aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa":1
 
+SDV_BSL_PEM_ISPEM_FUNC_TC001
+SDV_BSL_PEM_ISPEM_FUNC_TC001:"-----BEGIN -----\n-----END":0
+
 SDV_BSL_PEM_ISPEM_FUNC_TC002
 SDV_BSL_PEM_ISPEM_FUNC_TC002:
 

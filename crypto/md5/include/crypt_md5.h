@@ -31,7 +31,14 @@ extern "C" {
 #define CRYPT_MD5_DIGESTSIZE 16
 #define CRYPT_MD5_BLOCKSIZE  64
 
-typedef struct CryptMdCtx CRYPT_MD5_Ctx;
+/* md5 ctx */
+typedef struct CryptMd5Ctx {
+    uint32_t h[CRYPT_MD5_DIGESTSIZE / sizeof(uint32_t)]; /* store the intermediate data of the hash value */
+    uint8_t block[CRYPT_MD5_BLOCKSIZE];                  /* store the remaining data of less than one block */
+    uint32_t hNum, lNum;                                 /* input data counter, maximum value 2 ^ 64 bits */
+    /* Number of remaining bytes in 'block' arrary that are stored less than one block */
+    uint32_t num;
+} CRYPT_MD5_Ctx;
 
 #define CRYPT_MD5_Squeeze NULL
 
@@ -68,12 +75,23 @@ void CRYPT_MD5_FreeCtx(CRYPT_MD5_Ctx *ctx);
  * @brief This API is used to initialize the MD5 context.
  *
  * @param ctx [in,out] Pointer to the MD5 context.
- * @param param [in] Pointer to the parameter.
  *
  * @retval #CRYPT_SUCCESS       Initialization succeeded.
  * @retval #CRYPT_NULL_INPUT    Pointer ctx is NULL
  */
-int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx, BSL_Param *param);
+int32_t CRYPT_MD5_Init(CRYPT_MD5_Ctx *ctx);
+
+/**
+ * @ingroup MD5
+ * @brief This API is used to initialize the MD5 context.
+ *
+ * @param ctx [in,out] Pointer to the MD5 context.
+ * @param param [in] param.
+ *
+ * @retval #CRYPT_SUCCESS       Initialization succeeded.
+ * @retval #CRYPT_NULL_INPUT    Pointer ctx is NULL
+ */
+int32_t CRYPT_MD5_InitEx(CRYPT_MD5_Ctx *ctx, void *param);
 
 /**
  * @ingroup MD5
@@ -95,7 +113,7 @@ int32_t CRYPT_MD5_Deinit(CRYPT_MD5_Ctx *ctx);
  *
  * @retval #CRYPT_SUCCESS               Succeeded in updating the internal status of the digest.
  * @retval #CRYPT_NULL_INPUT            The input parameter is NULL.
- * @retval #CRYPT_MD5_INPUT_OVERFLOW    The accumulated length of the input data exceeds the maximum (2^64 bits).
+ * @retval #CRYPT_MD_INPUT_OVERFLOW    The accumulated length of the input data exceeds the maximum (2^64 bits).
  */
 int32_t CRYPT_MD5_Update(CRYPT_MD5_Ctx *ctx, const uint8_t *in, uint32_t len);
 
@@ -109,7 +127,7 @@ int32_t CRYPT_MD5_Update(CRYPT_MD5_Ctx *ctx, const uint8_t *in, uint32_t len);
  *
  * @retval #CRYPT_SUCCESS                       succeeded in updating the internal status of the digest.
  * @retval #CRYPT_NULL_INPUT                    The input parameter is NULL.
- * @retval #CRYPT_MD5_OUT_BUFF_LEN_NOT_ENOUGH   The output buffer length is insufficient.
+ * @retval #CRYPT_MD_OUT_BUFF_LEN_NOT_ENOUGH   The output buffer length is insufficient.
  */
 int32_t CRYPT_MD5_Final(CRYPT_MD5_Ctx *ctx, uint8_t *out, uint32_t *outLen);
 

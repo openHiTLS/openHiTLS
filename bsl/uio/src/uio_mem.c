@@ -15,7 +15,9 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_BSL_UIO_MEM
+
 #include "securec.h"
+#include "bsl_sal.h"
 #include "bsl_buffer.h"
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
@@ -153,11 +155,7 @@ static int32_t MemRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
 
 static int32_t MemPending(BSL_UIO *uio, int32_t larg, uint64_t *ret)
 {
-    if (ret == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
-    if (larg != sizeof(uint64_t)) {
+    if (ret == NULL || larg != sizeof(uint64_t)) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
@@ -174,11 +172,7 @@ static int32_t MemPending(BSL_UIO *uio, int32_t larg, uint64_t *ret)
 
 static int32_t MemWpending(int32_t larg, uint64_t *ret)
 {
-    if (ret == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
-    if (larg != sizeof(uint64_t)) {
+    if (larg != sizeof(uint64_t) || ret == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
@@ -186,38 +180,30 @@ static int32_t MemWpending(int32_t larg, uint64_t *ret)
     return BSL_SUCCESS;
 }
 
-static int32_t MemGetInfo(BSL_UIO *uio, int32_t larg, BSL_UIO_CtrlGetInfoParam *param)
+static int32_t MemInfo(BSL_UIO *uio, int32_t larg, BSL_UIO_CtrlGetInfoParam *ret)
 {
-    if (param == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
-    
-    if (larg != sizeof(BSL_UIO_CtrlGetInfoParam)) {
+    if (ret == NULL || larg != sizeof(BSL_UIO_CtrlGetInfoParam)) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
-
     UIO_BufMem *ubm = BSL_UIO_GetCtx(uio);
-    if (ubm == NULL || ubm->buf == NULL) {
+    if (ubm == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
         return BSL_UIO_FAIL;
     }
-
-    param->data = (uint8_t *)(&ubm->buf->data[ubm->readIndex]);
-    param->size = ubm->buf->length - ubm->readIndex;
-
+    BSL_BufMem *bm = ubm->buf;
+    if (bm == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
+        return BSL_UIO_FAIL;
+    }
+    ret->data = (uint8_t *)(&bm->data[ubm->readIndex]);
+    ret->size = bm->length - ubm->readIndex; // overflow error
     return BSL_SUCCESS;
 }
 
-static int32_t MemGetPtr(BSL_UIO *uio, int32_t size, BSL_BufMem **ptr)
+static int32_t MemGetPtr(BSL_UIO *uio, int32_t size, BSL_BufMem **ret)
 {
-    if (ptr == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
-    
-    if (size != sizeof(BSL_BufMem *)) {
+    if (ret == NULL || size != (int32_t)sizeof(BSL_BufMem *)) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
@@ -232,14 +218,14 @@ static int32_t MemGetPtr(BSL_UIO *uio, int32_t size, BSL_BufMem **ptr)
             BSL_ERR_PUSH_ERROR(BSL_MEMMOVE_FAIL);
             return BSL_MEMMOVE_FAIL;
         }
-        *ptr = ubm->buf;
+        *ret = ubm->buf;
     } else {
         /* when reset to read-only mode, can read from the beginning.
          * Temporary buf is not used to manage memory. */
         ubm->tmpBuf->data = ubm->buf->data + ubm->readIndex;
         ubm->tmpBuf->length = ubm->buf->length - ubm->readIndex;
         ubm->tmpBuf->max = ubm->buf->max - ubm->readIndex;
-        *ptr = ubm->tmpBuf;
+        *ret = ubm->tmpBuf;
     }
     return BSL_SUCCESS;
 }
@@ -265,13 +251,13 @@ static int32_t MemSetEof(BSL_UIO *uio, int32_t larg, const int32_t *eof)
     return BSL_SUCCESS;
 }
 
-static int32_t MemGetEof(BSL_UIO *uio, int32_t larg, int32_t *eof)
+static int32_t MemGetEof(BSL_UIO *uio, int32_t size, int32_t *eof)
 {
     if (eof == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
-    if (larg != (int32_t)sizeof(int32_t)) {
+    if (size != (int32_t)sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
@@ -320,7 +306,7 @@ static int32_t MemCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
         case BSL_UIO_PENDING:
             return MemPending(uio, larg, parg);
         case BSL_UIO_MEM_GET_INFO:
-            return MemGetInfo(uio, larg, parg);
+            return MemInfo(uio, larg, parg);
         case BSL_UIO_WPENDING:
             return MemWpending(larg, parg);
         case BSL_UIO_FLUSH:
@@ -355,21 +341,25 @@ static int32_t MemGets(BSL_UIO *uio, char *buf, uint32_t *readLen)
     uint32_t cnt = 0;
     int32_t ret;
     UIO_BufMem *ubm = BSL_UIO_GetCtx(uio);
-    if (ubm == NULL || ubm->buf == NULL) {
+    if (ubm == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
+        return BSL_NULL_INPUT;
+    }
+    BSL_BufMem *bm = ubm->buf;
+    if (bm == NULL) {
         return BSL_NULL_INPUT;
     }
     if (*readLen == 0) {
         return BSL_SUCCESS;
     }
-    uint32_t len = (uint32_t)((*readLen - 1) >= (ubm->buf->length - ubm->readIndex) ?
-        (ubm->buf->length - ubm->readIndex) : (*readLen - 1));
+    uint32_t len = (uint32_t)((*readLen - 1) >= (bm->length - ubm->readIndex) ?
+        (bm->length - ubm->readIndex) : (*readLen - 1));
     if (len == 0) { /* No data to read */
         *buf = '\0';
         *readLen = 0;
         return BSL_SUCCESS;
     }
-    char *pre = ubm->buf->data + ubm->readIndex;
+    char *pre = bm->data + ubm->readIndex;
     /* len greater than 0 */
     while (cnt < len) {
         cnt++;
@@ -406,19 +396,17 @@ static int32_t MemDestroy(BSL_UIO *uio)
 
 static int32_t MemCreate(BSL_UIO *uio)
 {
-    UIO_BufMem *ubm = (UIO_BufMem *)BSL_SAL_Calloc(1, sizeof(UIO_BufMem));
+    UIO_BufMem *ubm = BSL_SAL_Calloc(1, sizeof(UIO_BufMem));
     if (ubm == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-
     ubm->buf = BSL_BufMemNew();
     if (ubm->buf == NULL) {
         BSL_SAL_FREE(ubm);
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-
     ubm->eof = -1;
     BSL_UIO_SetCtx(uio, ubm);
     BSL_UIO_SetIsUnderlyingClosedByUio(uio, true); // memory buffer is created here and will be closed here by default.
@@ -428,7 +416,7 @@ static int32_t MemCreate(BSL_UIO *uio)
 
 const BSL_UIO_Method *BSL_UIO_MemMethod(void)
 {
-    static const BSL_UIO_Method method = {
+    static const BSL_UIO_Method METHOD = {
         BSL_UIO_MEM,
         MemWrite,
         MemRead,
@@ -438,7 +426,7 @@ const BSL_UIO_Method *BSL_UIO_MemMethod(void)
         MemCreate,
         MemDestroy
     };
-    return &method;
+    return &METHOD;
 }
 
 #endif /* HITLS_BSL_UIO_MEM */

@@ -34,6 +34,8 @@
 #include "securec.h"
 
 #include "crypt_codecskey.h"
+#include "crypt_params_key.h"
+
 /* END_HEADER */
 
 /* ============================================================================

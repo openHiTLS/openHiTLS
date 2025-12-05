@@ -347,7 +347,7 @@ static int32_t ParseEccPrikeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
         ret = CRYPT_EAL_PkeySetPub(pctx, &pub);
     } else {
         uint32_t flag = CRYPT_ECC_PRIKEY_NO_PUBKEY;
-        ret = CRYPT_EAL_PkeyCtrl(pctx, CRYPT_CTRL_SET_ECC_FLAG, &flag, sizeof(flag));
+        ret = CRYPT_EAL_PkeyCtrl(pctx, CRYPT_CTRL_SET_FLAG, &flag, sizeof(flag));
         if (ret == CRYPT_SUCCESS) {
             ret = CRYPT_EAL_PkeyCtrl(pctx, CRYPT_CTRL_GEN_ECC_PUBLICKEY, NULL, 0);
         }
@@ -1016,7 +1016,7 @@ static int32_t EncodeEccKeyPair(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_PKEY_AlgId c
 {
     int32_t ret;
     uint32_t flag = 0;
-    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_ECC_FLAG, &flag, sizeof(flag));
+    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_FLAG, &flag, sizeof(flag));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

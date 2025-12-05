@@ -23,6 +23,8 @@
 #include "crypt_bn.h"
 #include "crypt_types.h"
 #include "bsl_params.h"
+#include "crypt_params_key.h"
+#include "bsl_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +45,13 @@ typedef struct DSA_Para CRYPT_DSA_Para;
 
 /* DSA key context */
 typedef struct DSA_Ctx CRYPT_DSA_Ctx;
+
+typedef struct {
+    int32_t algId; // hash algid
+    int32_t index; // gen g need index
+    uint32_t l; // pbits
+    uint32_t n; // qbits
+} DSA_FIPS186_4_Para;
 
 /**
  * @ingroup dsa
@@ -319,7 +328,6 @@ int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPrv *prv);
  */
 int32_t CRYPT_DSA_GetPubKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPub *pub);
 
-#ifdef HITLS_BSL_PARAMS
 /**
  * @ingroup dsa
  * @brief Set the data of the key parameter structure to the key structure.
@@ -410,7 +418,6 @@ int32_t CRYPT_DSA_GetPrvKeyEx(const CRYPT_DSA_Ctx *ctx, BSL_Param *para);
  * @retval CRYPT_SUCCESS                    Obtained successfully.
  */
 int32_t CRYPT_DSA_GetPubKeyEx(const CRYPT_DSA_Ctx *ctx, BSL_Param *para);
-#endif
 
 #ifdef HITLS_CRYPTO_DSA_CMP
 /**

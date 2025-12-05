@@ -30,7 +30,7 @@
 #include "crypt_eal_rand.h"
 #include "securec.h"
 #include "curve25519_local.h"
-#include "crypt_curve25519.h"
+#include "crypt_params_key.h"
 
 #define CRYPT_EAL_PKEY_KEYMGMT_OPERATE  0
 #define CRYPT_EAL_PKEY_CIPHER_OPERATE   1
@@ -1042,6 +1042,103 @@ EXIT:
     TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pubCtx);
     CRYPT_EAL_PkeyFreeCtx(prvCtx);
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_CURVE25519_KEY_PAIR_CHECK_FUNC_TC002
+* @spec  -
+* @title  The client of the cipher suite that requires certificate key signature receives a certificate without the
+* digitalSignature extend.
+* @precon  nan
+* @brief
+1.hitls generates an ed25519/x25519 key pair
+2.hitls calls the CRYPT_EAL_PkeyPairCheck interface to check the key pair
+3.hitls calls the CRYPT_EAL_PkeyPrvCheck interface to pass the private key
+4.Tamper with the public key
+5.hitls calls the CRYPT_EAL_PkeyPairCheck interface to check the key pair
+6.Tamper with the private key
+7.hitls calls the CRYPT_EAL_PkeyPairCheck interface to check the key pair
+8.hitls calls the CRYPT_EAL_PkeyPrvCheck interface to pass the private key
+* @expect
+1.Key pair generation successful
+2.Check key pair match
+3.Check key successful
+4.Tampering successful
+5.Check key pair failed
+6.Tampering successful
+7.Check key pair failed
+8.Check key successful
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_CURVE25519_KEY_PAIR_CHECK_FUNC_TC002(int id, int isProvider, int data)
+{
+#if !defined(HITLS_CRYPTO_ED25519_CHECK) && !defined(HITLS_CRYPTO_X25519_CHECK) || !defined(HITLS_CRYPTO_PKEY_CHECK)
+    (void)id;
+    (void)data;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    CRYPT_EAL_PkeyCtx *Ctx1 = NULL;
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    Ctx1 = TestPkeyNewCtx(NULL, id, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        "provider=default", isProvider);
+    ASSERT_TRUE(Ctx1 != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(Ctx1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(Ctx1, Ctx1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(Ctx1), CRYPT_SUCCESS);
+
+    CRYPT_EAL_PkeyPub pubKey = {0};
+    CRYPT_EAL_PkeyPrv prvKey = {0};
+    CRYPT_EAL_PkeyPub tmp_pubKey = {0};
+    CRYPT_EAL_PkeyPrv tmp_prvKey = {0};
+    uint8_t Pubdata[600];
+    uint8_t Prvdata[600];
+    uint8_t wrong[600] = {data};
+    prvKey.id = id;
+    pubKey.id = id;
+    pubKey.key.curve25519Pub.data = Pubdata;
+    pubKey.key.curve25519Pub.len = sizeof(Pubdata);
+    prvKey.key.curve25519Prv.data = Prvdata;
+    prvKey.key.curve25519Prv.len = sizeof(Prvdata);
+    tmp_prvKey.id = id;
+    tmp_pubKey.id = id;
+    tmp_pubKey.key.curve25519Pub.data = Pubdata;
+    tmp_pubKey.key.curve25519Pub.len = sizeof(Pubdata);
+    tmp_prvKey.key.curve25519Prv.data = Prvdata;
+    tmp_prvKey.key.curve25519Prv.len = sizeof(Prvdata);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(Ctx1, &pubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(Ctx1, &prvKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(Ctx1, &tmp_pubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(Ctx1, &tmp_prvKey), CRYPT_SUCCESS);
+
+    tmp_pubKey.key.curve25519Pub.data = wrong;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(Ctx1, &tmp_pubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(Ctx1, Ctx1), CRYPT_CURVE25519_PAIRWISE_CHECK_FAIL);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(Ctx1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(Ctx1, &pubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(Ctx1, Ctx1), CRYPT_SUCCESS);
+
+    tmp_prvKey.key.curve25519Prv.data = wrong;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(Ctx1, &tmp_prvKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(Ctx1, Ctx1), CRYPT_CURVE25519_PAIRWISE_CHECK_FAIL);
+
+    if (data == 1) {
+        ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(Ctx1), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(Ctx1), CRYPT_CURVE25519_INVALID_PRVKEY);
+    }
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(Ctx1);
 #endif
 }
 /* END_CASE */

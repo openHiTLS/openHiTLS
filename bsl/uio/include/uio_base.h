@@ -26,7 +26,7 @@ extern "C" {
 #endif
 
 struct BSL_UIO_MethodStruct {
-    int32_t uioType;
+    BSL_UIO_TransportType uioType;
     BslUioWriteCb uioWrite;
     BslUioReadCb uioRead;
     BslUioCtrlCb uioCtrl;
@@ -35,6 +35,8 @@ struct BSL_UIO_MethodStruct {
     BslUioCreateCb uioCreate;
     BslUioDestroyCb uioDestroy;
 };
+
+uint32_t UIO_GetCtxLen(const BSL_UIO *uio);
 
 /**
  * @ingroup bsl_uio

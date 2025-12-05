@@ -74,13 +74,13 @@ ERR:
     return ret;
 }
 
-void Sm2CleanR(CRYPT_SM2_Ctx *ctx)
+#ifdef HITLS_CRYPTO_SM2_EXCH
+static void Sm2CleanR(CRYPT_SM2_Ctx *ctx)
 {
     BN_Destroy(ctx->r);
     ctx->r = NULL;
     ECC_FreePoint(ctx->pointR);
     ctx->pointR = NULL;
-    return;
 }
 
 static int32_t Sm2CalculateKey(const CRYPT_SM2_Ctx *selfCtx, const CRYPT_SM2_Ctx *peerCtx, ECC_Point *uorv,
@@ -152,7 +152,7 @@ static int32_t IsParamValid(const CRYPT_SM2_Ctx *selfCtx, const CRYPT_SM2_Ctx *p
     return CRYPT_SUCCESS;
 }
 
-void BnMemDestroy(BN_BigNum *xs, BN_BigNum *xp, BN_BigNum *t, BN_BigNum *twoPowerW, BN_BigNum *order)
+static void BnMemDestroy(BN_BigNum *xs, BN_BigNum *xp, BN_BigNum *t, BN_BigNum *twoPowerW, BN_BigNum *order)
 {
     BN_Destroy(xs);
     BN_Destroy(xp);
@@ -201,7 +201,7 @@ ERR:
     return ret;
 }
 
-int32_t Sm2KapFinalCheck(CRYPT_SM2_Ctx *sCtx, CRYPT_SM2_Ctx *pCtx, ECC_Point *uorv)
+static int32_t Sm2KapFinalCheck(CRYPT_SM2_Ctx *sCtx, CRYPT_SM2_Ctx *pCtx, ECC_Point *uorv)
 {
     int32_t ret;
     uint32_t len = SM3_MD_SIZE;
@@ -319,7 +319,8 @@ ERR:
 int32_t CRYPT_SM2_KapComputeKey(const CRYPT_SM2_Ctx *selfCtx, const CRYPT_SM2_Ctx *peerCtx,
     uint8_t *out, uint32_t *outlen)
 {
-    if (selfCtx == NULL || peerCtx == NULL || out == NULL || outlen == NULL || *outlen == 0) {
+    if (selfCtx == NULL || selfCtx->pkey == NULL || peerCtx == NULL || peerCtx->pkey == NULL ||
+        out == NULL || outlen == NULL || *outlen == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -379,4 +380,5 @@ ERR:
     BN_OptimizerDestroy(opt);
     return ret;
 }
+#endif // HITLS_CRYPTO_SM2_EXCH
 #endif

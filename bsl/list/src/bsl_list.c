@@ -27,7 +27,7 @@
 /* this global var limits the maximum node number of a list */
 static int32_t g_maxListCount = MAX_LIST_ELEM_CNT_DEFAULT;
 
-static uint32_t BslListAddAfterCurr(BslList *pList, void *pData)
+static int32_t BslListAddAfterCurr(BslList *pList, void *pData)
 {
     BslListNode *newNode = NULL;
 
@@ -46,8 +46,8 @@ static uint32_t BslListAddAfterCurr(BslList *pList, void *pData)
     /* allocate memory for new node */
     newNode = BSL_SAL_Calloc(1, sizeof(BslListNode));
     if (newNode == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(BSL_LIST_MALLOC_FAIL);
+        return BSL_LIST_MALLOC_FAIL;
     }
 
     newNode->data = pData;
@@ -68,7 +68,7 @@ static uint32_t BslListAddAfterCurr(BslList *pList, void *pData)
     return BSL_SUCCESS;
 }
 
-static uint32_t BslListInsertBeforeCurr(BslList *pList, void *pData)
+static int32_t BslListInsertBeforeCurr(BslList *pList, void *pData)
 {
     BslListNode *pNewNode = NULL;
 
@@ -87,8 +87,8 @@ static uint32_t BslListInsertBeforeCurr(BslList *pList, void *pData)
     /* allocate memory for new node */
     pNewNode = BSL_SAL_Calloc(1, sizeof(BslListNode));
     if (pNewNode == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(BSL_LIST_MALLOC_FAIL);
+        return BSL_LIST_MALLOC_FAIL;
     }
 
     pNewNode->data = pData;
@@ -109,7 +109,7 @@ static uint32_t BslListInsertBeforeCurr(BslList *pList, void *pData)
     return BSL_SUCCESS;
 }
 
-uint32_t BSL_LIST_AddElementInt(BslList *pList, void *pData, BslListPosition enPosition)
+int32_t BSL_LIST_AddElementInt(BslList *pList, void *pData, BslListPosition enPosition)
 {
     BslListNode *pNewNode = NULL;
 
@@ -123,8 +123,8 @@ uint32_t BSL_LIST_AddElementInt(BslList *pList, void *pData, BslListPosition enP
             /* allocate memory for new node */
             pNewNode = BSL_SAL_Calloc(1, sizeof(BslListNode));
             if (pNewNode == NULL) {
-                BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-                return BSL_MALLOC_FAIL;
+                BSL_ERR_PUSH_ERROR(BSL_LIST_MALLOC_FAIL);
+                return BSL_LIST_MALLOC_FAIL;
             }
 
             pNewNode->data = pData;
@@ -180,7 +180,7 @@ int32_t BSL_LIST_AddElement(BslList *pList, void *pData, BslListPosition enPosit
         return BSL_LIST_DATA_NOT_AVAILABLE;
     }
 
-    return (int32_t)BSL_LIST_AddElementInt(pList, pData, enPosition);
+    return BSL_LIST_AddElementInt(pList, pData, enPosition);
 }
 
 int32_t BSL_LIST_SetMaxElements(int32_t iMaxElements)
@@ -226,7 +226,7 @@ void BSL_LIST_DeleteAll(BslList *pList, BSL_LIST_PFUNC_FREE pfFreeFunc)
         pList->count--;
     }
 
-    pList->first = pList->last = pList->curr = NULL;
+    pList->first = (pList->last = (pList->curr = NULL));
 }
 
 void BSL_LIST_DeleteCurrent(BslList *pList, BSL_LIST_PFUNC_FREE pfFreeFunc)
@@ -332,7 +332,7 @@ static void *BSL_ListSearchInt(BslList *pList, const void *pSearchFor, BSL_LIST_
     pstTempCurr = pList->curr;
 
     /* parse all nodes one by one */
-    for ((pList)->curr = (pList)->first; (pList)->curr != NULL; (pList)->curr = (pList)->curr->next) {
+    for (pList->curr = pList->first; pList->curr != NULL; pList->curr = pList->curr->next) {
         if (pSearcher == NULL) {
             /* if pSearcher is NULL, use memcmp */
             if (memcmp(pList->curr->data, pSearchFor, (uint32_t)pList->dataSize) == 0) {
@@ -409,7 +409,7 @@ BslList *BSL_LIST_Copy(BslList *pSrcList, BSL_LIST_PFUNC_DUP pFuncCpy, BSL_LIST_
         return NULL;
     }
 
-    for (int32_t i = 1; pSrcData != NULL && i <= BSL_LIST_COUNT(pSrcList); i++) {
+    for (int32_t i = 1; (pSrcData != NULL) && i <= BSL_LIST_COUNT(pSrcList); i++) {
         if (pFuncCpy != NULL) {
             pDstData = pFuncCpy(pSrcData);
         } else {
@@ -432,7 +432,6 @@ BslList *BSL_LIST_Copy(BslList *pSrcList, BSL_LIST_PFUNC_DUP pFuncCpy, BSL_LIST_
         if (BSL_LIST_AddElement(pDstList, pDstData, BSL_LIST_POS_AFTER) != BSL_SUCCESS) {
             if (pfFreeFunc != NULL) {
                 pfFreeFunc(pDstData);
-                pDstData = NULL;
             } else {
                 BSL_SAL_FREE(pDstData);
             }
@@ -522,8 +521,6 @@ void BSL_LIST_RevList(BslList *pstList)
     pstList->first = pstList->last;
     pstList->last = pstList->curr;
     pstList->curr = pstList->first;
-
-    return;
 }
 
 BslList *BSL_ListConcatToEmptyList(BslList *pDestList, const BslList *pSrcList)

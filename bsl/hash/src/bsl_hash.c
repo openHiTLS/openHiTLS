@@ -20,6 +20,7 @@
 #include "bsl_sal.h"
 #include "list_base.h"
 #include "bsl_errno.h"
+#include "bsl_util_internal.h"
 #include "bsl_err_internal.h"
 #include "hash_local.h"
 #include "bsl_hash.h"
@@ -51,7 +52,7 @@ typedef struct BSL_HASH_TagNode BSL_HASH_Node;
 #define HASH_HC3 0xC2B2AE35
 #define HASH_HC4 5
 
-#define CHAR_BIT 8
+#define BSL_CHAR_BIT 8
 #define CHAR_FOR_PER_LOOP 4
 #define HASH_V_ROTATE 15
 #define HASH_H_ROTATE 13
@@ -76,7 +77,7 @@ enum BSL_CstlShiftBit { SHIFT8 = 8, SHIFT13 = 13, SHIFT16 = 16, SHIFT24 = 24 };
 
 static uint32_t BSL_HASH_Rotate(uint32_t v, uint32_t offset)
 {
-    return ((v << offset) | (v >> (SYS_BUS_WIDTH * CHAR_BIT - offset)));
+    return ((v << offset) | (v >> (SYS_BUS_WIDTH * BSL_CHAR_BIT - offset)));
 }
 
 static uint32_t BSL_HASH_MixV(uint32_t v)
@@ -124,10 +125,10 @@ uint32_t BSL_HASH_CodeCalc(void *key, uint32_t keySize)
         case BSL_CSTL_HASH_OPTION3:
             v ^= ((uint32_t)tmpKey[i + TWO_BYTE] << SHIFT16);
             /* (keySize % 4) is equals 3, fallthrough, other branches are the same. */
-            /* fall-through */
+            FALLTHROUGH; /* FALLTHROUGH */
         case BSL_CSTL_HASH_OPTION2:
             v ^= ((uint32_t)tmpKey[i + ONE_BYTE] << SHIFT8);
-            /* fall-through */
+            FALLTHROUGH; /* FALLTHROUGH */
         case BSL_CSTL_HASH_OPTION1:
             v ^= tmpKey[i];
             v = BSL_HASH_MixV(v);
@@ -592,7 +593,7 @@ static int32_t BSL_HASH_InsertNode(
         return BSL_INTERNAL_EXCEPTION;
     }
 
-    ListRawPushBack(rawList, &hashNode->node);
+    (void)ListRawPushBack(rawList, &hashNode->node);
     hash->hashCount++;
 
     return BSL_SUCCESS;
@@ -685,7 +686,7 @@ int32_t BSL_HASH_At(const BSL_HASH_Hash *hash, uintptr_t key, uintptr_t *value)
     BSL_HASH_Node *hashNode = BSL_HASH_Find(hash, key);
 
     if (hashNode == BSL_HASH_IterEndGet(hash)) {
-        BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
+        // Sometimes the caller does not wish to push an error(CCA load cert).
         return BSL_INTERNAL_EXCEPTION;
     }
 
@@ -740,7 +741,7 @@ BSL_HASH_Iterator BSL_HASH_Erase(BSL_HASH_Hash *hash, uintptr_t key)
     }
 
     nextHashNode = BSL_HASH_Next(hash, hashNode);
-    ListRawRemove(&hash->listArray[hashCode], &hashNode->node);
+    (void)ListRawRemove(&hash->listArray[hashCode], &hashNode->node);
     BSL_HASH_NodeFree(hash, hashNode);
     --hash->hashCount;
 
@@ -765,7 +766,7 @@ void BSL_HASH_Clear(BSL_HASH_Hash *hash)
         while (!ListRawEmpty(list)) {
             rawListNode = ListRawFront(list);
             hashNode = BSL_CONTAINER_OF(rawListNode, BSL_HASH_Node, node);
-            ListRawRemove(list, rawListNode);
+            (void)ListRawRemove(list, rawListNode);
             BSL_HASH_NodeFree(hash, hashNode);
         }
     }

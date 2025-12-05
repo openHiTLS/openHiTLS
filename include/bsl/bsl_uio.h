@@ -36,15 +36,8 @@ extern "C" {
  */
 typedef struct UIO_ControlBlock BSL_UIO;
 
-/**
- * @ingroup bsl_uio
- * @brief   BSL_UIO_BufMem structure
- */
-typedef struct {
-    size_t length;
-    char *data;
-    size_t max;
-} BSL_UIO_BufMem;
+typedef int32_t BSL_UIO_InfoCb(BSL_UIO *, int32_t, int32_t);
+
 
 typedef int32_t (*BslUioWriteCb)(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen);
 typedef int32_t (*BslUioReadCb)(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen);
@@ -53,14 +46,16 @@ typedef int32_t (*BslUioCreateCb)(BSL_UIO *uio);
 typedef int32_t (*BslUioDestroyCb)(BSL_UIO *uio);
 typedef int32_t (*BslUioPutsCb)(BSL_UIO *uio, const char *buf, uint32_t *writeLen);
 typedef int32_t (*BslUioGetsCb)(BSL_UIO *uio, char *buf, uint32_t *readLen);
+typedef int32_t (*BslUioCbCtrlCb)(BSL_UIO *uio, int cmd, BSL_UIO_InfoCb *callback);
 
 typedef struct BSL_UIO_MethodStruct BSL_UIO_Method;
 
 /**
  * @ingroup bsl_uio
- * @brief   userData release function
+ *
+ * @brief   UIO_Addr structure
  */
-typedef void (*BSL_UIO_USERDATA_FREE_FUNC)(void *);
+typedef union UIO_Address BSL_UIO_Addr;
 
 /**
  * @ingroup bsl_uio
@@ -93,53 +88,137 @@ typedef struct {
 
 /**
  * @ingroup bsl_uio
+ * @brief   userData release function
+ */
+typedef void (*BSL_UIO_USERDATA_FREE_FUNC)(void *);
+
+/**
+ * @ingroup bsl_uio
  * @brief   BSL_UIO_CtrlParameter controls the I/O callback function. Hitls notifies the
  *          user of the function to be implemented
  */
 typedef enum {
     /* The cmd(0-0x99) used by the abstraction layer and the uio
      * implemented by the user cannot reuse these values. */
-    BSL_UIO_GET_INIT = 0x0,
-    BSL_UIO_GET_WRITE_NUM,
-    BSL_UIO_GET_READ_NUM,
 
-    /* Public use 0x100 */
-    BSL_UIO_SET_PEER_IP_ADDR = 0x100,
+    /* Public use 0x000 */
+    /* larg equals the length of array, parg is a pointer type array */
+    BSL_UIO_SET_PEER_IP_ADDR = 0x000,
+    /* larg equals the length of BSL_UIO_CtrlGetPeerIpAddrParam structure,
+     * parg is a pointer type BSL_UIO_CtrlGetPeerIpAddrParam
+     */
     BSL_UIO_GET_PEER_IP_ADDR,
+    /* larg equals the length of 32-bit integer, parg is a pointer type 32-bit integer */
     BSL_UIO_SET_FD,
+    /* larg equals the length of 32-bit integer, parg is a pointer type 32-bit integer */
     BSL_UIO_GET_FD,
-    BSL_UIO_FLUSH,
-    BSL_UIO_RESET,
+    /* larg equals the length of 64-bit integer, parg is a pointer type 64-bit integer */
     BSL_UIO_PENDING,
+    /* not need to set larg and parg. the default values are 0 and null */
+    BSL_UIO_FLUSH,
+    /* larg equals the length of 64-bit integer, parg is a pointer type 64-bit integer */
     BSL_UIO_WPENDING,
+    /* larg equals the length of 64-bit integer,  parg is a pointer type 64-bit integer */
+    BSL_UIO_SEEK,
+    /* not need to set larg and parg. the default values are 0 and null */
+    BSL_UIO_RESET,
+    /* larg equals the length of bool,  parg is a pointer type bool */
+    BSL_UIO_GET_INIT,
+    /* larg equals the length of 64-bit integer, parg is a pointer type 64-bit integer */
+    BSL_UIO_GET_WRITE_NUM,
+    /* larg equals the length of 64-bit integer, parg is a pointer type 64-bit integer */
+    BSL_UIO_GET_READ_NUM,
+    /* larg equals the length of 32-bit integer, parg is a pointer type 32-bit integer */
+    BSL_UIO_GET_PTO_LEN,
+    BSL_UIO_INFO,
+    BIO_UIO_SET_CALLBACK,
+    BSL_UIO_SET_CONNECT,
+    BSL_UIO_GET_CONNECT,
+    BSL_UIO_SET_NOBLOCK,
+    BSL_UIO_DO_HANDSHAKE,
+    BSL_UIO_SET_CTX,
+    BSL_UIO_GET_CTX,
+    BSL_UIO_SET_SSL_RENEGOTIATE_TIMEOUT,
+    BSL_UIO_SET_SSL_RENEGOTIATE_BYTES,
+    BSL_UIO_UDP_SET_CONNECTED,
     BSL_UIO_SET_BUFFER_SIZE,
-
-    /* UDP uses 0x2XX */
-    BSL_UIO_UDP_SET_CONNECTED = 0x200,
     BSL_UIO_UDP_GET_MTU_OVERHEAD,
     BSL_UIO_UDP_QUERY_MTU,
     BSL_UIO_UDP_MTU_EXCEEDED,
+    BSL_UIO_CIPHER_IS_FINISHED,
+    BSL_UIO_SET_CONNECT_MODE,
+    BSL_UIO_SET_ACCEPT,
+    BSL_UIO_GET_ACCEPT,
+    BSL_UIO_SET_BIND_MODE,
+    BSL_UIO_GET_BIND_MODE,
+    BSL_UIO_APPEND,
 
     /* SCTP uses 0x3XX */
-    BSL_UIO_SCTP_CHECK_PEER_AUTH = 0x300,
-    BSL_UIO_SCTP_ADD_AUTH_SHARED_KEY,
-    BSL_UIO_SCTP_ACTIVE_AUTH_SHARED_KEY,
-    BSL_UIO_SCTP_DEL_PRE_AUTH_SHARED_KEY,
-    BSL_UIO_SCTP_SND_BUFF_IS_EMPTY,
+    BSL_UIO_SCTP_CHECK_PEER_AUTH = 0x300,     /**< SCTP Check whether the peer supports authentication */
+    BSL_UIO_SCTP_ADD_AUTH_SHARED_KEY,         /**< Add a new sctp auth key. The sctp can use the new
+                                                   key to receive data */
+    BSL_UIO_SCTP_ACTIVE_AUTH_SHARED_KEY,      /**< activates the new sctp auth key. The sctp needs to
+                                                   use the new key to send data */
+    BSL_UIO_SCTP_DEL_PRE_AUTH_SHARED_KEY,     /**< SCTP Delete the previous shared key */
+    BSL_UIO_SCTP_SND_BUFF_IS_EMPTY,           /**< Whether the SCTP send queue is NULL. ctrl.param is the
+                                                   pointer of uint8_t *. If the value of ctrl.param is greater than 0,
+                                                   it indicates that the queue is NULL.
+                                                   Otherwise, it indicates that the queue is not NULL */
+    BSL_UIO_SCTP_RECV_BUFF_IS_EMPTY,          /**< check whether the SCTP receive queue is NULL.
+                                                   ctrl.param is the pointer of uint8_t *.
+                                                   If the value of ctrl.param is greater than 0,
+                                                   it indicates that the queue is NULL.
+                                                   Otherwise, it indicates that the queue is not NULL */
     BSL_UIO_SCTP_GET_SEND_STREAM_ID,
+    /* larg equals the length of unsigned 16-bit integer, parg is a pointer type unsigned 16-bit integer */
     BSL_UIO_SCTP_SET_APP_STREAM_ID,
+    /* larg equals the length of bool, parg is a pointer type bool */
     BSL_UIO_SCTP_MASK_APP_MESSAGE,
+    /* larg is a func callback type BSL_UIO_METHOD_TYPE,  parg is a pointer type func callback */
     BSL_UIO_SCTP_SET_CALLBACK,
-    /* MEM uses 0x4XX */
+
+    /* MEMÊ¹ÓÃ0x4XX */
+    /* larg equals the length of array, parg is a pointer type array */
     BSL_UIO_MEM_NEW_BUF = 0x400,
+    /* larg equals the length of pointer, parg is a pointer's pointer type BSL_BufMem */
     BSL_UIO_MEM_GET_PTR,
+    /* larg equals the length of 32-bit integer, parg is a pointer type 32-bit integer */
     BSL_UIO_MEM_SET_EOF,
+    /* larg equals the length of 32-bit integer, parg is a pointer type 32-bit integer */
     BSL_UIO_MEM_GET_EOF,
+    /* larg equals the length of BSL_UIO_CtrlGetInfoParam,  parg is a pointer type BSL_UIO_CtrlGetInfoParam */
     BSL_UIO_MEM_GET_INFO,
 
+    /* FILEÊ¹ÓÃ0x5xx */
+    /* larg is the mode for opening a file, parg is a pointer type string */
     BSL_UIO_FILE_OPEN = 0x500,
+    /* larg is of the Boolean type and is used to indicate whether the handle is closed with the release of uio,
+     * parg is a pointer type file */
     BSL_UIO_FILE_PTR,
     BSL_UIO_FILE_GET_EOF,
+    BSL_UIO_FILE_SEEK,
+    BSL_UIO_FILE_TELL,
+    BSL_UIO_FILE_GET_PTR,
+
+    /* FDÊ¹ÓÃ0x6xx */
+    /* larg equals the length of 64-bit integer, parg is a pointer type 64-bit integer */
+
+    BSL_UIO_FD_GET_INFO = 0x600,
+
+    /* Pair uses 0x7xx */
+    BSL_UIO_PAIR_MAKE = 0x700,
+    BSL_UIO_PAIR_SET_BUFFER_SIZE,
+    BSL_UIO_PAIR_GET_BUFFER_SIZE,
+
+    /* TTO uses 0x8xx */
+    BSL_UIO_TTO_SET_READ_CB = 0x800,
+    BSL_UIO_TTO_SET_WRITE_CB,
+    BSL_UIO_TTO_SET_READ_APP_DATA,
+    BSL_UIO_TTO_SET_WRITE_APP_DATA,
+
+    /* DTO uses 0x10xx */
+    BSL_UIO_DTO_SET_KEY = 0x1001,
+    BSL_UIO_DTO_SET_EPOCH_SEQUENCE,
 } BSL_UIO_CtrlParameter;
 
 typedef enum {
@@ -151,6 +230,11 @@ typedef enum {
     BSL_UIO_PUTS_CB,
     BSL_UIO_GETS_CB,
 } BSL_UIO_METHOD_TYPE;
+
+typedef struct {
+    uint8_t *addr;
+    uint32_t size;
+} BSL_UIO_CtrlGetPeerIpAddrParam;
 
 #define BSL_UIO_FILE_READ             0x02
 #define BSL_UIO_FILE_WRITE            0x04
@@ -169,10 +253,6 @@ typedef enum {
 #define BSL_UIO_FLAGS_BASE64_PEM         0x40
 
 
-typedef struct {
-    uint8_t *addr;
-    uint32_t size;
-} BSL_UIO_CtrlGetPeerIpAddrParam;
 
 /**
  * @ingroup bsl_uio
@@ -191,7 +271,7 @@ BSL_UIO_Method *BSL_UIO_NewMethod(void);
  * @retval #BSL_SUCCESS
  * @retval #BSL_NULL_INPUT
  */
-int32_t BSL_UIO_SetMethodType(BSL_UIO_Method *meth, int32_t type);
+int32_t BSL_UIO_SetMethodType(BSL_UIO_Method *meth, BSL_UIO_TransportType type);
 
 /**
  * @ingroup bsl_uio
@@ -413,7 +493,7 @@ void BSL_UIO_SetInit(BSL_UIO *uio, bool init);
  * @param   uio  [IN] UIO object.
  * @retval  protocol type
  */
-int32_t BSL_UIO_GetTransportType(const BSL_UIO *uio);
+BSL_UIO_TransportType BSL_UIO_GetTransportType(const BSL_UIO *uio);
 
 /**
  * @ingroup bsl_uio

@@ -21,8 +21,7 @@
 BSL_BufMem *BSL_BufMemNew(void)
 {
     BSL_BufMem *ret = NULL;
-    
-    ret = (BSL_BufMem *)BSL_SAL_Malloc(sizeof(BSL_BufMem));
+    ret = BSL_SAL_Malloc(sizeof(BSL_BufMem));
     if (ret == NULL) {
         return NULL;
     }

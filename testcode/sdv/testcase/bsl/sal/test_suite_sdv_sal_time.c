@@ -58,47 +58,6 @@ EXIT:
 /* END_HEADER */
 
 /**
- * @test SDV_BSL_TIME_FUNC_GET_DATETIME_TC001
- * @title Function test of obtaining the date as a character string.
- * @precon
- * @brief    1.The input parameter dateTime, timeStr, or len is invalid (less than the storage length).
- *           2.Invalid time.
- *           3.The time is legal.
- * @expect   1.Fail, return BSL_ERR
- *           2.Fail, return BSL_ERR
- *           3.Success, return BSL_SUCCESS
- */
-/* BEGIN_CASE */
-void SDV_BSL_TIME_FUNC_GET_DATETIME_TC001(void)
-{
-    BSL_TIME dateTime = {0};
-    char timeStr[26];
-
-    timeStr[0] = '\0';
-    dateTime.year = BSL_TIME_SYSTEM_EPOCH_YEAR;
-    dateTime.month = 1;
-    dateTime.day = 1;
-    dateTime.hour = 0;
-    dateTime.minute = 0;
-    dateTime.second = 0;
-
-    /* 1.The input parameter dateaTime or timeStr is invalid. */
-    ASSERT_EQ(BSL_DateToStrConvert(NULL, timeStr, 26), (uint32_t)BSL_INTERNAL_EXCEPTION);
-    ASSERT_EQ(BSL_DateToStrConvert(&dateTime, NULL, 26), (uint32_t)BSL_INTERNAL_EXCEPTION);
-
-    /* 2.Invalid time. */
-    dateTime.month = 13;
-    ASSERT_EQ(BSL_DateToStrConvert(&dateTime, timeStr, 26), (uint32_t)BSL_INTERNAL_EXCEPTION);
-    dateTime.month = 1;
-
-    /* 3.The time is legal. */
-    ASSERT_EQ(BSL_DateToStrConvert(&dateTime, timeStr, 26), (uint32_t)BSL_SUCCESS);
-EXIT:
-    return;
-}
-/* END_CASE */
-
-/**
  * @test SDV_BSL_TIME_FUNC_REGISTER_TC001
  * @title Obtaining the current system time
  * @precon
@@ -257,7 +216,7 @@ void SDV_BSL_TIME_SYSTIME_API_TC001(void)
     BSL_SAL_SysTimeFuncReg(TestBslSysTimeFunc1);
 
     ret = BSL_SAL_SysTimeGet(NULL);
-    ASSERT_EQ(ret, BSL_SAL_ERR_BAD_PARAM);
+    ASSERT_EQ(ret, BSL_SAL_TIME_BAD_PARAM);
 
     ret = BSL_SAL_SysTimeGet(&systime);
     ASSERT_TRUE(ret == BSL_SUCCESS);
@@ -556,7 +515,6 @@ EXIT:
  *    6. second is legal ( == 59). Expected result 6 is obtained.
  *    7. millisecond is illegal ( > 999). Expected result 7 is obtained.
  *    8. millisecond is legal ( == 999). Expected result 8 is obtained.
- *    9. call BSL_DateToStrConvert to convert legal time. Expected result 9 is obtained.
  * @expect
  *    1. Return false
  *    2. Return true
@@ -566,7 +524,6 @@ EXIT:
  *    6. Return true
  *    7. Return false
  *    8. Return true
- *    9. Return BSL_SUCCESS
  */
 /* BEGIN_CASE */
 void SDV_BSL_TIME_DATETIME_CHECK_FUNC_TC004(void)
@@ -615,8 +572,6 @@ void SDV_BSL_TIME_DATETIME_CHECK_FUNC_TC004(void)
     dateTime.millSec = 59;
     ret = BSL_DateTimeCheck(&dateTime);
     ASSERT_EQ(ret, true);
-    char buf[256] = {0};
-    ASSERT_EQ(BSL_DateToStrConvert(&dateTime, buf, 256), BSL_SUCCESS);
 EXIT:
     return;
 }

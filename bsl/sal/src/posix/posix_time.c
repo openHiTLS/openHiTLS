@@ -24,7 +24,7 @@
 #include "sal_time.h"
 #include "bsl_errno.h"
 
-int64_t TIME_GetSysTime(void)
+int64_t SAL_TIME_GetSysTime(void)
 {
     return (int64_t)time(NULL);
 }
@@ -45,7 +45,7 @@ uint32_t TIME_DateToStrConvert(const BSL_TIME *dateTime, char *timeStr, size_t l
     return BSL_INTERNAL_EXCEPTION;
 }
 
-uint32_t TIME_SysTimeGet(BSL_TIME *sysTime)
+int32_t SAL_TIME_SysTimeGet(BSL_TIME *sysTime)
 {
     struct timeval tv = {0};
     int timeRet = gettimeofday(&tv, NULL);
@@ -58,18 +58,18 @@ uint32_t TIME_SysTimeGet(BSL_TIME *sysTime)
     if (ret == BSL_SUCCESS) {
         /* milliseconds : non-thread safe */
         sysTime->millSec = (uint16_t)(tv.tv_usec / 1000U);  /* 1000 is multiple */
-        sysTime->microSec = (uint32_t)(tv.tv_usec % 1000U); /* 1000 is multiple */
+        sysTime->microSec = (uint16_t)(tv.tv_usec % 1000U); /* 1000 is multiple */
     }
 
     return ret;
 }
 
-uint32_t TIME_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
+int32_t SAL_TIME_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
 {
     struct tm tempTime;
     time_t utcTimeTmp = (time_t)utcTime;
     if (gmtime_r(&utcTimeTmp, &tempTime) == NULL) {
-        return BSL_SAL_ERR_BAD_PARAM;
+        return BSL_SAL_TIME_BAD_PARAM;
     }
 
     sysTime->year = (uint16_t)((uint16_t)tempTime.tm_year + BSL_TIME_YEAR_START); /* 1900 is base year */
@@ -83,23 +83,24 @@ uint32_t TIME_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
     return BSL_SUCCESS;
 }
 
-void SAL_Sleep(uint32_t time)
+void SAL_TIME_Sleep(uint32_t time)
 {
     sleep(time);
 }
 
-long SAL_Tick(void)
+long SAL_TIME_Tick(void)
 {
     struct tms buf = {0};
     clock_t tickCount = times(&buf);
     return (long)tickCount;
 }
 
-long SAL_TicksPerSec(void)
+long SAL_TIME_TicksPerSec(void)
 {
     return sysconf(_SC_CLK_TCK);
 }
 
+// Get time in nanoseconds.
 uint64_t SAL_TIME_GetNSec(void)
 {
 #if defined(HITLS_BSL_SAL_DARWIN)
@@ -107,13 +108,13 @@ uint64_t SAL_TIME_GetNSec(void)
     return clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
 #elif defined(HITLS_BSL_SAL_LINUX)
     /* Linux: Use CLOCK_MONOTONIC (sufficient precision on Linux) */
-    uint64_t tick = 0;
+    uint64_t ticks = 0;
     struct timespec time;
-    if (clock_gettime(CLOCK_MONOTONIC, &time) == 0) {
-        tick = ((uint64_t)time.tv_sec & 0xFFFFFFFF) * 1000000000UL;
-        tick = tick + (uint64_t)time.tv_nsec;
+    if (clock_gettime(CLOCK_REALTIME, &time) == 0) {
+        ticks = ((uint64_t)time.tv_sec & 0xFFFFFFFF) * 1000000000UL;
+        ticks = ticks + (uint64_t)time.tv_nsec;
     }
-    return tick;
+    return ticks;
 #else
     #error "SAL_TIME_GetNSec not implemented for this platform"
 #endif

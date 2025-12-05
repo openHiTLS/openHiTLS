@@ -46,54 +46,38 @@
 .endm
 
 .macro reduce
-    /* retain the last 51 bits */
-    mov     x8, #0x7ffffffffffff
 
-    /* 计算 h2' */
-    mov     x3, x9
-    lsr     x9, x9, #51               // carry(h2-low)
-    lsl     x10, x10, #13             // (h2-high) << 13
+    /* Compute h2 value' */
+    extr   x10, x10, x9, #51          // h2
+    and   x3, x9, #0x7ffffffffffff
 
-    /* 计算 h0' */
-    mov     x1, x4
-    lsr     x4, x4, #51               // carry(h1-low)
-    lsl     x5, x5, #13               // (h1-high) << 13
+    /* Compute h0 value' */
+    extr   x5, x5, x4, #51            // h2
+    and    x1, x4, #0x7ffffffffffff
 
-    /* 计算 h2' */
-    and     x3, x3, x8                // h2' = rax = h2 & (2^51 - 1) = r12 & (2^51 - 1)
-    orr     x10, x10, x9              // r13 = (h2 >> 51)
-    adds    x11, x11, x10             // h3 += (h2 >> 51)
+    /* Compute h2 value' */
+    adds    x11, x11, x10             // h3 += (h2 >> 51)     h2-high +->h3-low
     adc     x12, x12, XZR             // h3-high carry
 
-    /* 计算 h0' */
-    and     x1, x1, x8                // h0' = rsi = h0 & (2^51 - 1) = r8 & (2^51 - 1)
-    orr     x5, x5, x4                // r9 = (h0 >> 51)
-    adds    x6, x6, x5                // h1 += (h0 >> 51)
+    /* Compute h0 value' */
+    adds    x6, x6, x5                // h1 += (h0 >> 51)     h0-high +->h1-low
     adc     x7, x7, XZR               // h1-high carry
 
-    /* 计算 h3' */
-    mov     x4, x11                   // h3-low -> x4
-    lsr     x11, x11, #51             // h3->low >> 51
-    lsl     x12, x12, #13             // h3-high << 13
-    and     x4, x4, x8                // h3' = r8 = h3 & (2^51 - 1) = r14 & (2^51 - 1)
-    orr     x12, x12, x11             // r15 = (h3 >> 51)
-    adds    x13, x13, x12             // h4 += (h3 >> 51)
+    /* Compute h3 value' */
+    extr   x12, x12, x11, #51         // h2
+    and    x4, x11, #0x7ffffffffffff
+
+    adds    x13, x13, x12             // h4 += (h3 >> 51)      h3-high +->h4-low
     adc     x14, x14, XZR             // h4-high carry
 
-    /* 计算 h1' */
-    mov     x2, x6                    // h1-low -> x2
-    lsr     x6, x6, #51               // h1->low >> 51
-    lsl     x7, x7, #13               // h1-high << 13
-    and     x2, x2, x8                // h1' = rdx = h1 & (2^51 - 1) = r10 & (2^51 - 1)
-    orr     x7, x7, x6                // r11 = (h1 >> 51)
-    adds    x3, x3, x7                // h2 += (h1 >> 51)
+    /* Compute h1 value' */
+    extr   x7, x7, x6, #51            // h2
+    and    x2, x6, #0x7ffffffffffff
+    adds    x3, x3, x7                // h2 += (h1 >> 51)       h1-high +->h2-low
 
-    /* 计算 h4' */
-    mov     x5, x13                   // h4-low -> x5
-    lsr     x13, x13, #51             // h4->low >> 51
-    lsl     x14, x14, #13             // h4-high << 13
-    and     x5, x5, x8                // h4' = r9 = h4 & (2^51 - 1) = rbx & (2^51 - 1)
-    orr     x14, x14, x13             // rcx = (h4 >> 51)
+    /* Compute h4 value' */
+    extr   x14, x14, x13, #51         // h2
+    and    x5, x13, #0x7ffffffffffff
 
     /* out[0] = out[0] + 19 * carry */
     lsl     x6, x14, #3
@@ -101,24 +85,20 @@
     adds    x14, x14, x6, lsl #1      // x6 *2 + x14 => x6 --- h4-high * 9 * 2 +  h4-high
     adds    x1, x1, x14               // h4-high * 19 +->h0-low
 
-    /* h2 剩余 */
-    mov     x6, x3                    // h2-low -> x6
-    and     x3, x8, x3                // h2 &= (2^51 - 1)
-    lsr     x6, x6, #51               // h2-low << 51 
-    adds    x4, x4, x6                // h2-low << 51 -> h3-low
-
-    /* out[1] += out[0] >> 51 */
-    mov     x6, x1                    // h0-low -> x6
+    /* Compute the remainder of h2 */
+    and     x6, x3, #0x7ffffffffffff  // h2 &= (2^51 - 1)  Clear the high 13 bits of h2-low - x3
+    lsr     x3, x3, #51               // h2-low << 51 (carry)
+    adds    x4, x4, x3                // h2-low << 51 -> h3-low
 
     /* out[0] &= (2^51 - 1) */
-    and     x1, x1, x8                // clear the upper 13 bits of h0-low
-    lsr     x6, x6, #51               // h0-low << 51
-    adds    x2, x2, x6                // h0-low << 51 -> h1-low
+    and     x3, x1, #0x7ffffffffffff  // Clear the high 13 bits of h0-low
+    lsr     x1, x1, #51               // h0-low << 51 (carry)
+    adds    x2, x2, x1                // h0-low << 51 -> h1-low
 
-    /* 存储结果 */
-    str     x1, [x0]                  // h0'
+    /* Store the result */
+    str     x3, [x0]                  // h0'
     str     x2, [x0, #8]              // h1'
-    str     x3, [x0, #16]             // h2'
+    str     x6, [x0, #16]             // h2'
     str     x4, [x0, #24]             // h3'
     str     x5, [x0, #32]             // h4'
 .endm
@@ -270,105 +250,102 @@ AARCH64_AUTIASP
 .align  6
 Fp51Square:
 AARCH64_PACIASP
-    push_stack
-
-    /*
-     * x0: out; x1: f; fp51 : array [u64; 5]
-     */
-
-    ldr    x3, [x1]                 // f0
-    ldr    x12, [x1, #16]           // f2
-    ldr    x14, [x1, #32]           // f4
-    mov    x8, #19
-
-    lsl    x2, x3, #1               // 2 * f0
-    str    x0, [sp, #24]
-
-    /* h0 = f0^2 + 38f1f4 + 38f2f3; save in x4, x5 */
-    mul     x4, x3, x3              // (x4, x5) = f0^2
-    umulh   x5, x3, x3
-    ldr     x3, [x1, #8]            // f1
-
-    /* h1 = 19f3^2 + 2f0f1 + 38f2g4; save in x6, x7 */
-    mul     x6, x3, x2              // (x6, x7) = 2f0 * f1
-    umulh   x7, x3, x2
-    str     x12, [sp, #16]          // save f2
-
-    /* h2 = f1^2 + 2f0f2 + 38f3g4; save in x9, x10 */
-    mul     x9, x12, x2             // (x9, x10) = 2f0 * f2
-    umulh   x10, x12, x2
-    ldr     x3, [x1, #24]           // f3
-
-    mul     x0, x14, x8             // 19 * f4
-
-    /* h3 = 19f4^2 + 2f0f3 + 2f1f2; save in r14, r15 */
-    mul     x11, x3, x2             // (x11, x12) = 2f0 * f3
-    umulh   x12, x3, x2
-    mov     x3, x14                 // f4
-
-    /* h4 = f2^2 + 2f0f4 + 2f1f3; save in x13, x14 */
-    mul     x13, x3, x2             // (x13, x14) = 2f0 * f4
-    umulh   x14, x3, x2
-
-    /*
-     * h3: compute 19 * f4
-     */
-    u51mul  x0, x11, x12            // (x11, x12) += 19 * f4^2; load f1
-    ldr     x3, [x1, #8]
-
-    /*
-     * h2 : compute f1
-     */
-    lsl     x15, x3, #1             // 2 * f1
-    u51mul  x3, x9, x10             // (x9, x10) += f1^2; load f2
-    ldr     x3, [sp, #16]
-
-    /* h3 */
-    u51mul  x15, x11, x12           // (x11, x12) += 2 * f1 * f2; load f3
-    ldr     x3, [x1, #24]
-
-    /* h4 */
-    u51mul  x15, x13, x14           // (x13, x14) = 2 * f1 * f3; load 2 * f1
-    mov     x3, x15
-
-    ldr    x1, [x1, #24]            // f3
-    mul    x15, x1, x8              // 19 * f3
-
-    /* h0 */
-    u64mul  x3, x0
-    lsl     x3, x1, #1              // 2 * f3
-    adds    x4, x4, x19             // (x4, x5) += 2 * f1 * 19 * f4
-    adc     x5, x5, x2
-
-    /*
-     * h2: compute f3
-     */
-    u51mul  x0, x9, x10             // (x9, x10) += f3 * 2 * 19 * f4; load f3
-    mov     x3, x1
-    /* h1 */
-    u51mul  x15, x6, x7             // (x6, x7) += 19 * f3 * f3; load f2
-    ldr     x3, [sp, #16]
-
-    /*
-     * h4: compute f2
-     */
-    lsl    x1, x3, #1               // 2 * f2
-    u51mul  x3, x13, x14            // (x13, x14) += f2 * f2; load 19 * f3
-    mov      x3, x15
-    /* h0 */
-    u51mul  x1, x4, x5              // (x4, x5) = 2 * f2 * 19 * f3; load 2 * f2
-    mov     x3, x1
-    /* h1 */                  
-    u64mul  x3, x0                  // (x6, x7) += 2 * f2 * 19 * f4
-    adds    x6, x19, x6
-    adc     x7, x2, x7
-
-    ldr    x0, [sp, #24]
-
-    reduce
-
-    pop_stack
-    AARCH64_AUTIASP
+    stp     x29, x30, [sp, #-32]!
+    mov     x29, sp
+    str     x19, [sp, #16]
+    ldr     x7, [x1, #32]                  // load f4
+    ldp     x2, x17, [x1]                  // load f0, f1
+    ldp     x10, x6, [x1, #16]             // load f2, f3
+    add     x5, x7, x7, lsl #2
+    lsl     x5, x5, #2
+    lsl     x15, x2, #1                    // f0 * 2
+    sub     x5, x5, x7                     // f4 * 19
+    lsl     x13, x17, #1                   // f1 * 2
+    add     x14, x6, x6, lsl #2
+    lsl     x3, x6, #1                     // f3 * 2
+    lsl     x14, x14, #2
+    mul     x16, x15, x6                   // 2 * f0 * f3  - low
+    sub     x14, x14, x6                   // f3 * 19
+    mul     x1, x7, x5                     // 19 * f4 * f4   - low
+    umulh   x11, x15, x6                   // 2 * f0 * f3  - high
+    mul     x18, x6, x13                   // 2 * f1 * f3  - low
+    adds    x16, x16, x1                   // 2 * f0 * f3 + 19 * f4 * f4   h3 - low
+    umulh   x4, x7, x5                     // 19 * f4 * f4   - high
+    mul     x9, x15, x7                    // 2 * f0 * f4   - low
+    umulh   x8, x6, x13                    // 2 * f1 * f3   - high
+    adc     x4, x11, x4                    // 2 * f0 * f3 + 19 * f4 * f4   h3 - high
+    umulh   x7, x15, x7                    // 2 * f0 * f4   - high
+    adds    x9, x18, x9                    // 2 * f1 * f3 + 2 * f0 * f4    h4 - low
+    mul     x1, x6, x14                    // 19 * f3 * f3   - low
+    lsl     x18, x10, #1                   // f2 * 2
+    mul     x12, x15, x17                  // 2 * f0 * f1   - low
+    adc     x8, x8, x7                     // 2 * f1 * f3 + 2 * f0 * f4    h4 - high
+    mul     x19, x15, x10                  // 2 * f0 * f2   - low
+    umulh   x11, x15, x17                  // 2 * f0 * f1  - high
+    adds    x12, x12, x1                   // h1 = 2 * f0 * f1 + 19 * f3 * f3  - low
+    umulh   x6, x6, x14                    // 19 * f3 * f3   - high
+    mul     x7, x3, x5                     // 38 * f3 * f4 - low
+    umulh   x1, x15, x10                   // 2 * f0 * f2   - high
+    adc     x11, x11, x6                   // h1 = 2 * f0 * f1 + 19 * f3 * f3   - high
+    umulh   x3, x3, x5                     // 38 * f3 * f4   - high
+    adds    x7, x7, x19                    // 38 * f3 * f4 + 2 * f0 * f2   h2 - low
+    mul     x15, x17, x17                  // f1 * f1  - low
+    adc     x1, x3, x1                     // 38 * f3 * f4 + 2 * f0 * f2   h2 - high
+    mul     x6, x5, x13                    // 38 * f1 * f4 - low
+    mul     x3, x14, x18                   // 38 * f3 * f2 - low
+    adds    x7, x15, x7                    // 38 * f3 * f4 + 2 * f0 * f2 + f1 * f1  h2 - low
+    umulh   x17, x17, x17                  // f1 * f1  - high
+    mul     x30, x10, x13                  // 2 * f1 * f2  - low
+    adc     x1, x1, x17                    // 38 * f3 * f4 + 2 * f0 * f2 + f1 * f1  h2 - high
+    mul     x19, x2, x2                    // f0 * f0  - low
+    adds    x6, x6, x3                     // 38 * f1 * f4 + 38 * f3 * f2  h0 - low
+    umulh   x14, x14, x18                  // 38 * f3 * f2  - high
+    umulh   x3, x10, x13                   // 2 * f1 * f2  - high
+    extr    x1, x1, x7, #51                // performs a carry operation from the upper 13 bits of the lower 64 bits of h2 to the upper 64 bits of h2. h2 - high
+    umulh   x13, x5, x13                   // 38 * f1 * f4   - high
+    and     x7, x7, #0x7ffffffffffff       // Clears the upper 13 bits of the lower 64 bits of h2
+    umulh   x2, x2, x2                     // f0 * f0  - high
+    adc     x13, x13, x14                  // h0 = 38 * f3 * f2 + 38 * f1 * f4   - high
+    adds    x6, x6, x19                    // h0 = 38 * f1 * f4 + 38 * f3 * f2 + f0 * f0  - low
+    adc     x2, x2, x13                    // h0 = 38 * f3 * f2 + 38 * f1 * f4  + f0 * f0  - high
+    adds    x1, x1, x30                    // carry h2 -> h3 (h2 - high + 2 * f1 * f2  - low)
+    mul     x17, x5, x18                   // 38 * f2 * f4   - low
+    cinc    x3, x3, cs
+    adds    x1, x1, x16                    // 2 * f0 * f3 +  19 * f4 * f4 + 2 * f1 * f2 + h2-carry  h3 - low
+    umulh   x5, x5, x18                    // 38 * f2 * f4   - high
+    adc     x3, x4, x3                     // h3 =  2 * f0 *f3 +  19 * f4 * f4 + 2 * f1 * f2  - high
+    extr    x2, x2, x6, #51                // h0 - high
+    adds    x2, x2, x17                    // carry: h0 -> h1 (38 * f2 * f4   - low)
+    mul     x15, x10, x10                  // f2 * f2  - low
+    umulh   x4, x10, x10                   // f2 * f2  - high
+    cinc    x5, x5, cs
+    adds    x2, x2, x12                    // 2 * f0 * f1 + 19 * f3 * f3 + 38 * f2 * f4 + h0-carry  h1 - low
+    extr    x3, x3, x1, #51                // h3 - high
+    adc     x5, x11, x5                    // 2 * f0 * f1 + 19 * f3 * f3 + 38 * f2 * f4  h1 - high
+    adds    x3, x3, x15                    // carry: h3 -> h4 (f2 * f2  - low)
+    cinc    x4, x4, cs
+    adds    x3, x3, x9                     // 2 * f1 * f3 + 2 * f0 * f4 + f2 * f2 + h3->carry  h4 - low
+    adc     x4, x8, x4                     // 2 * f1 * f3 + 2 * f0 * f4 + f2 * f2  h4 - high
+    extr    x5, x5, x2, #51                // h1 - high
+    add     x7, x7, x5                     // carry: h1 -> h2
+    and     x6, x6, #0x7ffffffffffff       // h0
+    and     x1, x1, #0x7ffffffffffff       // h3
+    extr    x4, x4, x3, #51                // h4 - high
+    add     x5, x4, x4, lsl #2
+    and     x2, x2, #0x7ffffffffffff       // h1
+    add     x6, x6, x5, lsl #2             // carry : h4->h0, h4 - high * 20 + h0-low
+    add     x1, x1, x7, lsr #51            // carry : h2->h3
+    sub     x6, x6, x4                     // carry : h4->h0, h4 - high * 19 + h0-low
+    and     x5, x7, #0x7ffffffffffff       // h1
+    and     x4, x6, #0x7ffffffffffff       // h0
+    add     x2, x2, x6, lsr #51            // carry: h0 -> h1
+    and     x3, x3, #0x7ffffffffffff       // h4
+    ldr     x19, [sp, #16]
+    stp     x4, x2, [x0]
+    ldp     x29, x30, [sp], #32
+    stp     x5, x1, [x0, #16]
+    str     x3, [x0, #32]
+AARCH64_AUTIASP
     ret
 .size   Fp51Square,.-Fp51Square
 

@@ -257,14 +257,9 @@ static int32_t GetPadding(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
 static int32_t GetMd(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
 {
     CRYPT_MD_AlgId *valTmp = val;
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (len != sizeof(int32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
+    RETURN_RET_IF(val == NULL, CRYPT_NULL_INPUT);
+    RETURN_RET_IF(len != sizeof(int32_t), CRYPT_INVALID_ARG);
+
     *valTmp = (ctx->pad.type == EMSA_PKCSV15) ? ctx->pad.para.pkcsv15.mdId : ctx->pad.para.pss.mdId;
     return CRYPT_SUCCESS;
 }
@@ -273,14 +268,8 @@ static int32_t GetMd(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
 static int32_t GetMgf(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
 {
     CRYPT_MD_AlgId *valTmp = val;
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (len != sizeof(int32_t)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
+    RETURN_RET_IF(val == NULL, CRYPT_NULL_INPUT);
+    RETURN_RET_IF(len != sizeof(int32_t), CRYPT_INVALID_ARG);
     if (ctx->pad.type == EMSA_PKCSV15) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_ALGID);
         return CRYPT_RSA_ERR_ALGID;
@@ -466,17 +455,18 @@ static int32_t RsaCommonCtrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_
     switch (opt) {
         case CRYPT_CTRL_UP_REFERENCES:
             return BSL_SAL_AtomicRefUpCtrl(&(ctx->references), val, len);
+        case CRYPT_CTRL_GET_PUB_KEY_BITS:
         case CRYPT_CTRL_GET_BITS:
             return CRYPT_CTRL_GET_NUM32_EX(CRYPT_RSA_GetBits, ctx, val, len);
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_CTRL_GET_NUM32_EX(CRYPT_RSA_GetSecBits, ctx, val, len);
+        case CRYPT_CTRL_GET_PUBKEY_LEN:
+        case CRYPT_CTRL_GET_PRVKEY_LEN:
+            return CRYPT_CTRL_GET_NUM32_EX(RSAGetKeyLen, ctx, val, len);
         case CRYPT_CTRL_SET_RSA_FLAG:
             return SetFlag(ctx, val, len);
         case CRYPT_CTRL_CLR_RSA_FLAG:
             return ClearFlag(ctx, val, len);
-        case CRYPT_CTRL_GET_PUBKEY_LEN:
-        case CRYPT_CTRL_GET_PRVKEY_LEN:
-            return CRYPT_CTRL_GET_NUM32_EX(RSAGetKeyLen, ctx, val, len);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_RSA_CTRL_NOT_SUPPORT_ERROR);
             return CRYPT_RSA_CTRL_NOT_SUPPORT_ERROR;

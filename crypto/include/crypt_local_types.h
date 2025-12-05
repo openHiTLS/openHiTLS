@@ -16,11 +16,10 @@
 #ifndef CRYPT_LOCAL_TYPES_H
 #define CRYPT_LOCAL_TYPES_H
 
-#include "hitls_build.h"
+#include <stdint.h>
+#include <stddef.h>
 #include "crypt_algid.h"
 #include "crypt_types.h"
-#include "bsl_params.h"
-#include "crypt_params_key.h"
 #include "crypt_eal_provider.h"
 
 #ifdef __cplusplus
@@ -108,8 +107,8 @@ typedef int32_t (*PkeyEncapsulate)(const void *key, uint8_t *cipher, uint32_t *c
 typedef int32_t (*PkeyDecapsulate)(const void *key, const uint8_t *cipher, uint32_t cipherLen,
     uint8_t *share, uint32_t *shareLen);
 
-typedef int32_t (*PkeyEncapsulateInit)(const void *key, const BSL_Param *params);
-typedef int32_t (*PkeyDecapsulateInit)(const void *key, const BSL_Param *params);
+typedef int32_t (*PkeyEncapsInit)(const void *key, const void *para);
+typedef int32_t (*PkeyDecapsInit)(const void *key, const void *para);
 typedef int32_t (*PkeyBlind)(void *pkey, int32_t mdAlgId, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen);
 typedef int32_t (*PkeyUnBlind)(const void *pkey, const uint8_t *input, uint32_t inputLen,
@@ -151,8 +150,8 @@ typedef struct EAL_PkeyMethod {
     PkeyCheck check;                        // Check the consistency of the key pair.
     PkeyCmp cmp;                            // Compare keys and parameters.
     PkeyCopyParam copyPara;                 // Copy parameter from source to destination
-    PkeyEncapsulate encaps;                // Key encapsulation.
-    PkeyDecapsulate decaps;                // Key decapsulation.
+    PkeyEncapsulate pkeyEncaps;             // Key encapsulation.
+    PkeyDecapsulate pkeyDecaps;             // Key decapsulation.
     PkeyBlind blind;                        // msg blind
     PkeyUnBlind unBlind;                    // sig unBlind.
 } EAL_PkeyMethod;
@@ -182,10 +181,10 @@ typedef struct EAL_PkeyUnitaryMethod {
     PkeyHEOperation hemul;                  // Multiply
     PkeyCheck check;                        // Check the consistency of the key pair.
     PkeyCmp cmp;                            // Compare keys and parameters.
-    PkeyEncapsulateInit encapsInit;        // Key encapsulation init.
-    PkeyDecapsulateInit decapsInit;        // Key decapsulation init.
-    PkeyEncapsulate encaps;                // Key encapsulation.
-    PkeyDecapsulate decaps;                // Key decapsulation.
+    PkeyEncapsInit encapsInit;              // Init the key encapsulation
+    PkeyDecapsInit decapsInit;              // Init the key decapsulation
+    PkeyEncapsulate pkeyEncaps;             // Key encapsulation.
+    PkeyDecapsulate pkeyDecaps;             // Key decapsulation.
     PkeyBlind blind;                        // msg blind
     PkeyUnBlind unBlind;                    // sig unBlind.
     PkeyImport import;                      // import key
@@ -206,7 +205,7 @@ typedef enum {
 
 typedef void *(*CipherNewCtx)(void *provCtx, int32_t alg);
 typedef int32_t (*CipherInitCtx)(void *ctx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
-    uint32_t ivLen, const BSL_Param *param, bool enc);
+    uint32_t ivLen, void *param, bool enc);
 typedef int32_t (*CipherDeInitCtx)(void *ctx);
 typedef int32_t (*CipherUpdate)(void *ctx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CipherFinal)(void *ctx, uint8_t *out, uint32_t *outLen);
@@ -244,16 +243,38 @@ typedef struct {
     CipherFreeCtx freeCtx;
 } EAL_CipherMethod;
 
+/* Prototype of the KDF algorithm operation functions */
+typedef void* (*KdfNewCtx)(void *provCtx, int32_t algId);
+typedef int32_t (*KdfSetParam)(void *ctx, const BSL_Param *param);
+typedef int32_t (*KdfDerive)(void *ctx, uint8_t *key, uint32_t keyLen);
+typedef int32_t (*KdfDeinit)(void *ctx);
+typedef int32_t (*KdfCtrl)(void *data, int32_t cmd, void *val, uint32_t valLen);
+typedef void (*KdfFreeCtx)(void *ctx);
+
+typedef struct {
+    KdfNewCtx newCtx;
+    KdfSetParam setParam;
+    KdfDerive derive;
+    KdfDeinit deinit;
+    KdfCtrl ctrl;
+    KdfFreeCtx freeCtx;
+} EAL_KdfMethod;
+
+typedef struct {
+    uint32_t id;
+    EAL_KdfMethod *kdfMeth;
+} EAL_CidToKdfMeth;
+
 /* prototype of MAC algorithm operation functions */
 typedef void* (*MacNewCtx)(void *provCtx, int32_t algId);
 // Complete key initialization.
-typedef int32_t (*MacInit)(void *ctx, const uint8_t *key, uint32_t len, const BSL_Param *param);
+typedef int32_t (*MacInit)(void *ctx, const uint8_t *key, uint32_t len, void *param);
 typedef int32_t (*MacUpdate)(void *ctx, const uint8_t *in, uint32_t len);
 typedef int32_t (*MacFinal)(void *ctx, const uint8_t *out, uint32_t *len);
 typedef int32_t (*MacDeinit)(void *ctx);
 // The action is opposite to the initCtx. Sensitive data is deleted.
 typedef int32_t (*MacReinit)(void *ctx);
-typedef int32_t (*MacCtrl)(void *data, int32_t cmd, void *val, uint32_t valLen);
+typedef int32_t (*MacCtrl)(void *ctx, uint32_t opt, void *val, uint32_t len);
 typedef int32_t (*MacSetParam)(void *data, const BSL_Param *param);
 typedef void (*MacFreeCtx)(void *ctx);
 
@@ -288,17 +309,17 @@ typedef struct {
  * Symmetric encryption/decryption mode ID
  */
 typedef enum {
-    CRYPT_MODE_CBC,
-    CRYPT_MODE_ECB,
-    CRYPT_MODE_CTR,
-    CRYPT_MODE_XTS,
-    CRYPT_MODE_CCM,
-    CRYPT_MODE_GCM,
-    CRYPT_MODE_CHACHA20_POLY1305,
-    CRYPT_MODE_CFB,
-    CRYPT_MODE_OFB,
-    CRYPT_MODE_HCTR,
-    CRYPT_MODE_MAX
+    HCRYPT_MODE_CBC,
+    HCRYPT_MODE_ECB,
+    HCRYPT_MODE_CTR,
+    HCRYPT_MODE_XTS,
+    HCRYPT_MODE_CCM,
+    HCRYPT_MODE_GCM,
+    HCRYPT_MODE_CHACHA20_POLY1305,
+    HCRYPT_MODE_CFB,
+    HCRYPT_MODE_OFB,
+    HCRYPT_MODE_HCTR,
+    HCRYPT_MODE_MAX
 } CRYPT_MODE_AlgId;
 
 /**
@@ -316,40 +337,20 @@ typedef struct {
     void *mgfProvCtx;
 } RSA_PadingPara;
 
-/* Prototype of the KDF algorithm operation functions */
-typedef void* (*KdfNewCtx)(void *provCtx, int32_t algId);
-typedef int32_t (*KdfSetParam)(void *ctx, const BSL_Param *param);
-typedef int32_t (*KdfDerive)(void *ctx, uint8_t *key, uint32_t keyLen);
-typedef int32_t (*KdfDeinit)(void *ctx);
-typedef int32_t (*KdfCtrl)(void *data, int32_t cmd, void *val, uint32_t valLen);
-typedef void (*KdfFreeCtx)(void *ctx);
-
-typedef struct {
-    KdfNewCtx newCtx;
-    KdfSetParam setParam;
-    KdfDerive derive;
-    KdfDeinit deinit;
-    KdfCtrl ctrl;
-    KdfFreeCtx freeCtx;
-} EAL_KdfMethod;
-
-typedef struct {
-    uint32_t id;
-    EAL_KdfMethod *kdfMeth;
-} EAL_CidToKdfMeth;
-
 /* Prototype of the RAND algorithm operation functions */
-typedef void *(*RandDrbgNewCtx)(void *libCtx, int32_t algId, BSL_Param *param);
-typedef int32_t (*RandDrbgInst)(void *ctx, const uint8_t *pers, uint32_t persLen, BSL_Param *param);
+typedef void *(*RandNewCtx)(void *libCtx, int32_t algId, CRYPT_RandSeedMethod *seedMethod, void *seedCtx);
+typedef void *(*RandProvNewCtx)(void *provCtx, int32_t algId, BSL_Param *param);
+typedef int32_t (*RandDrbgInst)(void *ctx, const uint8_t *person, uint32_t persLen, void *param);
 typedef int32_t (*RandDrbgUnInst)(void *ctx);
-typedef int32_t (*RandDrbgGen)(void *ctx, uint8_t *bytes, uint32_t len,
-    const uint8_t *addin, uint32_t addinLen, BSL_Param *param);
-typedef int32_t (*RandDrbgReSeed)(void *ctx, const uint8_t *addin, uint32_t addinLen, BSL_Param *param);
+typedef int32_t (*RandDrbgGen)(void *ctx, uint8_t *bytes, uint32_t len, const uint8_t *adin,
+    uint32_t adinLen, void *param);
+typedef int32_t (*RandDrbgReSeed)(void *ctx, const uint8_t *addin, uint32_t addinLen, void *param);
 typedef int32_t (*RandDrbgCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*RandDrbgFreeCtx)(void *ctx);
 
 typedef struct {
-    RandDrbgNewCtx newCtx;
+    RandNewCtx newCtx;
+    RandProvNewCtx provNewCtx;
     RandDrbgInst inst;
     RandDrbgUnInst unInst;
     RandDrbgGen gen;

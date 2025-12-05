@@ -30,6 +30,13 @@ extern "C" {
 
 #define PRE_COMPUTE_WINDOW 5 // Default Window Size
 #define PRE_COMPUTE_MAX_TABLELEN (1 << 5) // Maximum specifications of the pre-calculation table
+// The default ECP window length is 5 bits and only odd points are calculated.
+#define WINDOW_TABLE_SIZE (PRE_COMPUTE_MAX_TABLELEN >> 1)
+
+// Layout format of the pre-computation table.
+// This macro is used to convert values into corresponding offsets.
+// layout rules (1, 3, 5, 7... 15, -1, -3, ... -15)
+#define NUMTOOFFSET(num) (((num) < 0) ? (WINDOW_TABLE_SIZE / 2 - 1 - (((num) - 1) / 2)) : (((num) - 1) / 2))
 
 /**
  * Elliptic Curve Implementation Method
@@ -123,17 +130,6 @@ int32_t ECP_PointAtInfinity(const ECC_Para *para, const ECC_Point *pt);
  */
 int32_t ECP_PointOnCurve(const ECC_Para *para, const ECC_Point *pt);
 
-/**
- * @ingroup ecc
- * @brief   Add salt to the pt point and add random z information.
- *
- * @param   para [IN] Curve parameters
- * @param   pt [IN/OUT] Point information
- *
- * @retval CRYPT_SUCCESS    succeeded.
- * @retval For details about other errors, see crypt_errno.h
- */
-int32_t ECP_PointBlind(const ECC_Para *para, ECC_Point *pt);
 
 /**
  * @ingroup ecc
@@ -147,22 +143,6 @@ int32_t ECP_PointBlind(const ECC_Para *para, ECC_Point *pt);
  * @retval For details about other errors, see crypt_errno.h
  */
 int32_t ECP_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt);
-
-/**
- * @ingroup ecc
- * @brief   Converts all point information on pt to affine coordinate system,
- *          which is used for the coordinate system conversion of the pre-computation table.
- *
- * @attention pt[0] cannot be an infinite point.
- *
- * @param   para [IN] Curve parameters
- * @param   pt [IN/OUT] Point information
- * @param   ptNums [IN] Number of pts
- *
- * @retval CRYPT_SUCCESS    succeeded.
- * @retval For details about other errors, see crypt_errno.h
- */
-int32_t ECP_Points2Affine(const ECC_Para *para, ECC_Point *pt[], uint32_t ptNums);
 
 /**
  * @ingroup ecc
@@ -194,8 +174,23 @@ int32_t ECP_PointInvertAtAffine(const ECC_Para *para, ECC_Point *r, const ECC_Po
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For details about other errors, see crypt_errno.h
  */
-int32_t ECP_Point2AffineWithInv(
-    const ECC_Para *para, ECC_Point *r, const ECC_Point *pt, const BN_BigNum *inv);
+int32_t ECP_Point2AffineWithInv(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt, const BN_BigNum *inv);
+
+/**
+ * @ingroup ecc
+ * @brief   Parameters checks before 'PointMulAdd'
+ *
+ * @param   para [IN] Curve parameters
+ * @param   r [OUT] Output point information
+ * @param   k1 [IN] Scalar 1
+ * @param   k2 [IN] Scalar 2
+ * @param   pt [IN] Point data
+ *
+ * @retval CRYPT_SUCCESS    check successfully
+ * @retval For details about other errors, see crypt_errno.h
+ */
+int32_t ECP_PointMulAddParaCheck(const ECC_Para *para, const ECC_Point *r, const BN_BigNum *k1,
+    const BN_BigNum *k2, const ECC_Point *pt);
 
 /**
  * @ingroup ecc
@@ -210,8 +205,20 @@ int32_t ECP_Point2AffineWithInv(
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For details about other errors, see crypt_errno.h
  */
-int32_t ECP_PointMulAdd(
-    ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt);
+int32_t ECP_PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt);
+
+/**
+ * @ingroup ecc
+ * @brief   Just a simple copy.
+ *
+ * @param   para [IN] Curve parameter information
+ * @param   a [IN] Output point information
+ * @param   b [IN] Input point information
+ *
+ * @retval CRYPT_SUCCESS                Copy successfully.
+ * @retval For details about other errors, see crypt_errno.h
+ */
+int32_t ECP_PointCopy(const ECC_Para *para, ECC_Point *a, const ECC_Point *b);
 
 /**
  * @ingroup ecc
@@ -226,8 +233,7 @@ int32_t ECP_PointMulAdd(
  * @retval CRYPT_SUCCESS    set successfully
  * @retval For details about other errors, see crypt_errno.h
  */
-int32_t ECP_PointMul(ECC_Para *para,  ECC_Point *r,
-    const BN_BigNum *k, const ECC_Point *pt);
+int32_t ECP_PointMul(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt);
 
 /**
  * @ingroup ecc
@@ -321,6 +327,20 @@ int32_t ECP_NistPointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Poi
  * @retval For details about other errors, see crypt_errno.h
  */
 int32_t ECP_NistPointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b);
+
+/**
+ * @ingroup ecc
+ * @brief Obtains the length of the data required by the data stream when the point information is encoded.
+ *
+ * @param para [IN] Curve parameter information
+ * @param pt [IN] Point data
+ * @param format [IN] Encoding format
+ * @param dataLen [OUT] Required data length
+ *
+ * @retval CRYPT_SUCCESS    succeeded.
+ * @retval For details about other errors, see crypt_errno.h
+ */
+int32_t ECP_GetEncodeDataLen(const ECC_Para *para, ECC_Point *pt, CRYPT_PKEY_PointFormat format, uint32_t *dataLen);
 
 /**
  * @brief   Calculate r = 1/a mod para->n

@@ -17,14 +17,14 @@
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_PKEY)
 
 #include <stdbool.h>
-#include <securec.h>
+#include "securec.h"
 #include "bsl_sal.h"
-#include "crypt_eal_pkey.h"
 #include "crypt_errno.h"
 #include "eal_pkey_local.h"
 #include "crypt_algid.h"
 #include "bsl_err_internal.h"
 #include "eal_common.h"
+#include "crypt_eal_pkey.h"
 
 int32_t CRYPT_EAL_PkeyEncrypt(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *data, uint32_t dataLen,
     uint8_t *out, uint32_t *outLen)

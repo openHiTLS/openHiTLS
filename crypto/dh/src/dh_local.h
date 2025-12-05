@@ -45,8 +45,8 @@ struct DH_Ctx {
     BN_BigNum *y; // Public key
     CRYPT_DH_Para *para; // key parameter
     BSL_SAL_RefCount references;
-    void *libCtx;
     uint32_t flags;
+    void *libCtx;
 };
 
 #ifdef __cplusplus

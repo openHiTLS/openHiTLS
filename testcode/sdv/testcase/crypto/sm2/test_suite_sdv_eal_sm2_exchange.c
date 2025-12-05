@@ -971,8 +971,8 @@ EXIT:
  *    10. Compare the output shared secret and shared secret vector, expected result 10
  *    11. Call the CRYPT_EAL_PkeyCtrl method:
  *       (1) opt = CRYPT_CTRL_SM2_DO_CHECK val len not equal to SM3_MD_SIZE, expected result 11
- *       (2) opt = CRYPT_CTRL_GET_SM2_SEND_CHECK, val len not equal to SM3_MD_SIZE, expected result 12
- *       (3) opt = CRYPT_CTRL_GET_SM2_SEND_CHECK, and Other parameters are valid, expected result 13
+ *       (2) opt = CRYPT_CTRL_SM2_GET_SEND_CHECK, val len not equal to SM3_MD_SIZE, expected result 12
+ *       (3) opt = CRYPT_CTRL_SM2_GET_SEND_CHECK, and Other parameters are valid, expected result 13
  *    12. Compare the output of step 11.(3) and selfS vector, expected result 14
  *    13. Call the CRYPT_EAL_PkeyCtrl method, opt = CRYPT_CTRL_SM2_DO_CHECK, expected result 15
  * @expect
@@ -1031,8 +1031,8 @@ void SDV_CRYPTO_SM2_EXCHANGE_CHECK_TC001(Hex *prvKey, Hex *pubKey, Hex *r, Hex *
     ASSERT_TRUE(memcmp(out, shareKey->x, shareKey->len) == 0);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_DO_CHECK, peerS->x, peerS->len - 1) == CRYPT_SM2_ERR_DATA_LEN);
     ASSERT_TRUE(
-        CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GET_SM2_SEND_CHECK, val, selfS->len - 1) == CRYPT_SM2_BUFF_LEN_NOT_ENOUGH);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GET_SM2_SEND_CHECK, val, selfS->len) == CRYPT_SUCCESS);
+        CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GET_SEND_CHECK, val, selfS->len - 1) == CRYPT_SM2_BUFF_LEN_NOT_ENOUGH);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GET_SEND_CHECK, val, selfS->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(val, selfS->x, selfS->len) == 0);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_DO_CHECK, peerS->x, peerS->len) == CRYPT_SUCCESS);
 
@@ -1094,8 +1094,8 @@ void SDV_CRYPTO_SM2_EXCHANGE_CHECK_TC002(Hex *prvKey, Hex *pubKey, Hex *r, Hex *
     ASSERT_TRUE(memcmp(out, shareKey->x, shareKey->len) == 0);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_DO_CHECK, peerS->x, peerS->len - 1) == CRYPT_SM2_ERR_DATA_LEN);
     ASSERT_TRUE(
-        CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GET_SM2_SEND_CHECK, val, selfS->len - 1) == CRYPT_SM2_BUFF_LEN_NOT_ENOUGH);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_GET_SM2_SEND_CHECK, val, selfS->len) == CRYPT_SUCCESS);
+        CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GET_SEND_CHECK, val, selfS->len - 1) == CRYPT_SM2_BUFF_LEN_NOT_ENOUGH);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_GET_SEND_CHECK, val, selfS->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(val, selfS->x, selfS->len) == 0);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SM2_DO_CHECK, peerS->x, peerS->len) == CRYPT_SUCCESS);
 

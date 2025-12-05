@@ -23,6 +23,7 @@
 #include "crypt_utils.h"
 #include "bsl_sal.h"
 #include "crypt_types.h"
+#include "crypt_drbg.h"
 #include "bsl_err_internal.h"
 #include "drbg_local.h"
 
@@ -116,7 +117,7 @@ int32_t DRBG_CtrUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_Data *
     // The lower bits of temp.data are used for ctx->K, and the upper bits are used for ctx->V.
     (void)memcpy_s(ctx->v, AES_BLOCK_LEN, temp.data + ctx->keyLen, AES_BLOCK_LEN);
 EXIT:
-    ciphMeth->cipherDeInitCtx(ctx->ctrCtx);
+    (void)ciphMeth->cipherDeInitCtx(ctx->ctrCtx);
     return ret;
 }
 
@@ -576,10 +577,9 @@ void DRBG_CtrFree(DRBG_Ctx *drbg)
     DRBG_CtrCtx *ctx = (DRBG_CtrCtx*)drbg->ctx;
     BSL_SAL_FREE(ctx->dfCtx);
     BSL_SAL_FREE(drbg);
-    return;
 }
 
-static void DRBG_InitializeRanges(DRBG_Ctx *drbg, DRBG_CtrCtx *ctx, bool isUsedDf, uint32_t keyLen)
+static void DRBG_InitializeRanges(DRBG_Ctx *drbg, const DRBG_CtrCtx *ctx, bool isUsedDf, uint32_t keyLen)
 {
     // NIST.SP.800-90Ar1, Section 10.3.1 Table 3 defined those initial value.
     if (isUsedDf) {
@@ -603,8 +603,8 @@ static void DRBG_InitializeRanges(DRBG_Ctx *drbg, DRBG_CtrCtx *ctx, bool isUsedD
     }
 }
 
-DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, const uint32_t keyLen, bool isGm, const bool isUsedDf,
-    const CRYPT_RandSeedMethod *seedMeth, void *seedCtx)
+DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, uint32_t keyLen, bool isGm,
+    bool isUsedDf, const CRYPT_RandSeedMethod *seedMeth, void *seedCtx)
 {
     static DRBG_Method meth = {
         DRBG_CtrInstantiate,

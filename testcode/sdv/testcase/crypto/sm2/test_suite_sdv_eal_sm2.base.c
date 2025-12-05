@@ -23,7 +23,7 @@
 #include "crypt_eal_rand.h"
 #include "securec.h"
 #include "crypt_util_rand.h"
-#include "crypt_encode_internal.h"
+#include "crypt_encode.h"
 #include "crypt_dsa.h"
 
 /* ============================================================================

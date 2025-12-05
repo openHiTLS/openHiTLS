@@ -46,8 +46,10 @@ enum CRYPT_ERROR {
     CRYPT_INVALID_ARG,                  /**< Invalid input parameter. */
     CRYPT_NOT_SUPPORT,                  /**< unsupported operation. */
     CRYPT_INCONSISTENT_OPERATION,       /**< Inconsistent operation. */
+    CRYPT_MEM_CPY_FAIL,                 /**< Failed to copy memory. */
     CRYPT_INVALID_KEY,                  /**< invalid key. */
     CRYPT_PAIRWISE_CHECK_FAIL,          /**< key-pair check failed. */
+    CRYPT_CALLBACK_ERROR,               /**< Get an error in the callback function. */
 
     CRYPT_BN_BUFF_LEN_NOT_ENOUGH = 0x01020001, /**< Insufficient buffer length. */
     CRYPT_BN_SPACE_NOT_ENOUGH,          /**< Insufficient big number space. */
@@ -239,6 +241,7 @@ enum CRYPT_ERROR {
                                                      contain necessary parameter information. */
     CRYPT_DSA_PUBKEY_NOT_EQUAL,                 /**< Public keys are not equal. */
     CRYPT_DSA_PARA_NOT_EQUAL,                   /**< Key parameters are not equal. */
+    CRYPT_DSA_PKEY_ERR_SIGN_DATA_LEN,
     CRYPT_DSA_INVALID_PRVKEY,                   /**< Invalid private key. */
     CRYPT_DSA_PAIRWISE_CHECK_FAIL,              /**< The public and private keys are inconsistent. */
 
@@ -390,6 +393,7 @@ enum CRYPT_ERROR {
     CRYPT_ECDSA_VERIFY_FAIL,                          /**< Verification failure. */
     CRYPT_ECDSA_ERR_UNSUPPORTED_CTRL_OPTION,          /**< Unsupport the control type. */
     CRYPT_ECDSA_BUFF_LEN_NOT_ENOUGH,                  /**< BUFF insufficient length. */
+    CRYPT_ECDSA_PKEY_ERR_SIGN_DATA_LEN,
     CRYPT_ECDSA_PAIRWISE_CHECK_FAIL,                  /**< The public and private keys are inconsistent. */
     CRYPT_ECDSA_INVALID_PRVKEY,                       /**< Invalid private key. */
 
@@ -403,9 +407,26 @@ enum CRYPT_ERROR {
     CRYPT_SM4_ERR_KEY_LEN,                            /**< Wrong key length is set. */
     CRYPT_SM4_UNSAFE_KEY,                             /**< DataKey is the same as tweakKey. */
 
-    CRYPT_MD5_INPUT_OVERFLOW = 0x011D0001,             /**< The length of the input data exceeds the
+    CRYPT_SM9_BUFF_LEN_NOT_ENOUGH = 0x01210000,       /**< SM9 buffer length not enough. */
+    CRYPT_SM9_ERR_KEY_ERR,                            /**< SM9 key error. */
+    CRYPT_SM9_ERR_NOT_SUPPORT,                        /**< SM9 operation not supported. */
+    CRYPT_SM9_ERR_SIGN_FAILED,                        /**< SM9 signature failed. */
+    CRYPT_SM9_VERIFY_FAIL,                            /**< SM9 verification failure. */
+    CRYPT_SM9_ERR_INVALID_SIGNATURE_LEN,              /**< SM9 invalid signature length. */
+    CRYPT_SM9_ERR_NO_USER_ID,                         /**< SM9 user ID not set. */
+    CRYPT_SM9_ERR_ENCRYPT_FAILED,                     /**< SM9 encryption failed. */
+    CRYPT_SM9_ERR_DECRYPT_FAILED,                     /**< SM9 decryption failed. */
+    CRYPT_SM9_ERR_KEY_NOT_EQUAL,                      /**< SM9 keys are not equal. */
+    CRYPT_SM9_ERR_BAD_INPUT,                          /**< SM9 bad input parameter. */
+    CRYPT_SM9_ERR_NO_USER_KEY,                        /**< SM9 user key not set. */
+    CRYPT_SM9_ERR_NO_MASTER_KEY,                      /**< SM9 master key not set. */
+    CRYPT_SM9_ERR_KEY_EXCHANGE_FAILED,                /**< SM9 key exchange failed. */
+    CRYPT_SM9_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
+    CRYPT_SM9_INVALID_PRVKEY,                         /**< Invalid private key. */
+
+    CRYPT_MD_INPUT_OVERFLOW = 0x011D0001,             /**< The length of the input data exceeds the
                                                            maximum processing range of the MD5. */
-    CRYPT_MD5_OUT_BUFF_LEN_NOT_ENOUGH,                /**< The length of the buffer that storing the
+    CRYPT_MD_OUT_BUFF_LEN_NOT_ENOUGH,                /**< The length of the buffer that storing the
                                                            output result is insufficient. */
     CRYPT_MD_ERR_NEWCTX,                              /**< create md ctx failed. */
 
@@ -434,23 +455,6 @@ enum CRYPT_ERROR {
     CRYPT_SM2_PAIRWISE_CHECK_FAIL,                     /**< The public and private keys are inconsistent. */
     CRYPT_SM2_INVALID_PRVKEY,                         /**< Invalid private key. */
     CRYPT_SM2_NO_RANDOM_INFO,                         /**< no r value in sm2 exch. */
-
-    CRYPT_SM9_ERR_KEY_ERR = 0x01210000,               /**< SM9 key error. */
-    CRYPT_SM9_ERR_NOT_SUPPORT,                        /**< SM9 operation not supported. */
-    CRYPT_SM9_ERR_SIGN_FAILED,                        /**< SM9 signature failed. */
-    CRYPT_SM9_VERIFY_FAIL,                            /**< SM9 verification failure. */
-    CRYPT_SM9_ERR_INVALID_SIGNATURE_LEN,              /**< SM9 invalid signature length. */
-    CRYPT_SM9_ERR_NO_USER_ID,                         /**< SM9 user ID not set. */
-    CRYPT_SM9_ERR_ENCRYPT_FAILED,                     /**< SM9 encryption failed. */
-    CRYPT_SM9_ERR_DECRYPT_FAILED,                     /**< SM9 decryption failed. */
-    CRYPT_SM9_ERR_KEY_NOT_EQUAL,                      /**< SM9 keys are not equal. */
-    CRYPT_SM9_ERR_BAD_INPUT,                          /**< SM9 bad input parameter. */
-    CRYPT_SM9_ERR_NO_USER_KEY,                        /**< SM9 user key not set. */
-    CRYPT_SM9_ERR_NO_MASTER_KEY,                      /**< SM9 master key not set. */
-    CRYPT_SM9_ERR_KEY_EXCHANGE_FAILED,                /**< SM9 key exchange failed. */
-    CRYPT_SM9_BUFF_LEN_NOT_ENOUGH,                    /**< SM9 buffer length not enough. */
-    CRYPT_SM9_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
-    CRYPT_SM9_INVALID_PRVKEY,                         /**< Invalid private key. */
 
     CRYPT_KDFTLS12_NOT_SUPPORTED = 0x01220001,        /**< Unsupport the KDFTLS12 algorithm. */
     CRYPT_KDFTLS12_PARAM_ERROR,                       /**< Incorrect input parameter. */

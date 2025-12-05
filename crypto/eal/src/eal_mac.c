@@ -230,6 +230,14 @@ int32_t CRYPT_EAL_MacReinit(CRYPT_EAL_MacCtx *ctx)
     return CRYPT_SUCCESS;
 }
 
+uint32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx)
+{
+    uint32_t result = 0;
+    int32_t ret = CRYPT_EAL_MacCtrl((CRYPT_EAL_MacCtx *)(uintptr_t)ctx,
+        CRYPT_CTRL_GET_MACLEN, &result, sizeof(uint32_t));
+    return (ret == CRYPT_SUCCESS) ? result : 0;
+}
+
 int32_t CRYPT_EAL_MacCtrl(CRYPT_EAL_MacCtx *ctx, int32_t cmd, void *val, uint32_t valLen)
 {
     if (ctx == NULL || ctx->macMeth.ctrl == NULL) {
@@ -247,14 +255,6 @@ int32_t CRYPT_EAL_MacCtrl(CRYPT_EAL_MacCtx *ctx, int32_t cmd, void *val, uint32_
     }
 
     return ctx->macMeth.ctrl(ctx->ctx, cmd, val, valLen);
-}
-
-uint32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx)
-{
-    uint32_t result = 0;
-    int32_t ret = CRYPT_EAL_MacCtrl((CRYPT_EAL_MacCtx *)(uintptr_t)ctx,
-        CRYPT_CTRL_GET_MACLEN, &result, sizeof(uint32_t));
-    return (ret == CRYPT_SUCCESS) ? result : 0;
 }
 
 /* The function not support provider */

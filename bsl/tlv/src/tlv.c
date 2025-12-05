@@ -47,8 +47,8 @@ int32_t BSL_TLV_Pack(const BSL_Tlv *tlv, uint8_t *buffer, uint32_t bufLen, uint3
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05014, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "TLV build error: write tlv value fail, bufLen = %u, tlv length = %u, tlv type = 0x%x.",
             bufLen, tlv->length, tlv->type, 0);
-        BSL_ERR_PUSH_ERROR(BSL_MEMCPY_FAIL);
-        return BSL_MEMCPY_FAIL;
+        BSL_ERR_PUSH_ERROR(BSL_TLV_ERR_MEMCPY_FAIL);
+        return BSL_TLV_ERR_MEMCPY_FAIL;
     }
 
     *usedLen = TLV_HEADER_LENGTH + tlv->length;
@@ -99,8 +99,8 @@ int32_t BSL_TLV_Parse(uint32_t wantType, const uint8_t *data, uint32_t dataLen, 
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05017, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "Parse TLV error: write tlv value fail, bufLen = %u, tlv length = %u, tlv type = 0x%x.",
                     tlv->length, length, type, 0);
-                BSL_ERR_PUSH_ERROR(BSL_MEMCPY_FAIL);
-                return BSL_MEMCPY_FAIL;
+                BSL_ERR_PUSH_ERROR(BSL_TLV_ERR_MEMCPY_FAIL);
+                return BSL_TLV_ERR_MEMCPY_FAIL;
             }
             tlv->type = type;
             tlv->length = length;

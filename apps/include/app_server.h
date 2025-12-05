@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include "app_provider.h"
 #include "app_sm.h"
+#include "bsl_types.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -14,8 +14,8 @@
  */
 
 #include "hitls_build.h"
+#ifdef HITLS_BSL_SAL_FILE
 
-#if defined(HITLS_BSL_SAL_FILE)
 #include "bsl_err_internal.h"
 #include "sal_fileimpl.h"
 
@@ -23,11 +23,11 @@ static BSL_SAL_FileCallback g_fileCallBack = { 0 };
 
 int32_t SAL_FileCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 {
-    if (type > BSL_SAL_FILE_LENGTH_CB_FUNC || type < BSL_SAL_FILE_OPEN_CB_FUNC) {
+    if (type > BSL_SAL_FILE_GET_ATTR_FUNC || type < BSL_SAL_FILE_OPEN_CB_FUNC) {
         return BSL_SAL_FILE_NO_REG_FUNC;
     }
-    uint32_t offet = (uint32_t)(type - BSL_SAL_FILE_OPEN_CB_FUNC);
-    ((void **)&g_fileCallBack)[offet] = funcCb;
+    uint32_t offset = (uint32_t)(type - BSL_SAL_FILE_OPEN_CB_FUNC);
+    ((void **)&g_fileCallBack)[offset] = funcCb;
     return BSL_SUCCESS;
 }
 

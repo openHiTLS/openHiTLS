@@ -518,7 +518,7 @@ void SDV_CRYPTO_EAL_REINIT_TC001(int id)
     (void)CRYPT_EAL_CipherSetPadding(ctx, CRYPT_PADDING_PKCS7);
     ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, in, inLen, out, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_CipherReinit(ctx, iv, ivLen), CRYPT_SUCCESS);
-    struct ModesCipherCtx *ciphCtx = ((struct CryptEalCipherCtx *)ctx)->ctx;
+    struct ModesCipherCtx *ciphCtx = ((struct CRYPT_EAL_CipherCtxLocal *)ctx)->ctx;
     ASSERT_TRUE(ciphCtx != NULL);
     // Check data dataLen
     ASSERT_EQ(ciphCtx->dataLen, 0);
@@ -551,7 +551,7 @@ void SDV_CRYPTO_EAL_REINIT_TC002(int id)
     ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, keyLen, iv, ivLen, true), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, in, inLen, out, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_CipherReinit(ctx, iv, ivLen), CRYPT_SUCCESS);
-    struct ModesChaChaCtx *ciphCtx = ((struct CryptEalCipherCtx *)ctx)->ctx;
+    struct ModesChaChaCtx *ciphCtx = ((struct CRYPT_EAL_CipherCtxLocal *)ctx)->ctx;
     ASSERT_TRUE(ciphCtx != NULL);
     // Check data dataLen
     ASSERT_EQ(ciphCtx->chachaCtx.polyCtx.lastLen, 0);
@@ -588,7 +588,7 @@ void SDV_CRYPTO_EAL_REINIT_TC003(int id)
     ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, keyLen, iv, ivLen, true), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, in, inLen, out, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_CipherReinit(ctx, iv, ivLen), CRYPT_SUCCESS);
-    struct ModesGcmCtx *ciphCtx = ((struct CryptEalCipherCtx *)ctx)->ctx;
+    struct ModesGcmCtx *ciphCtx = ((struct CRYPT_EAL_CipherCtxLocal *)ctx)->ctx;
     ASSERT_TRUE(ciphCtx != NULL);
     // Check data dataLen
     ASSERT_EQ(ciphCtx->gcmCtx.aadLen, 0);

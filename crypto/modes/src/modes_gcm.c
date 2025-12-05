@@ -270,7 +270,7 @@ static void GcmMultiBlockCrypt(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8
 // enc: true: the encryption operation, false: the decryption operation
 static int32_t MODES_GCM_Crypt(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
 {
-    if (ctx == NULL || out == NULL) {
+    if (ctx == NULL || ctx->ciphCtx == NULL || out == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -341,7 +341,7 @@ static void GcmPad(MODES_CipherGCMCtx *ctx)
     GcmHashMultiBlock(ctx->ghash, ctx->hTable, padBuf, GCM_BLOCKSIZE);
 }
 
-static int32_t SetTagLen(MODES_CipherGCMCtx *ctx, const uint8_t *val, uint32_t len)
+static int32_t SetTagLen(MODES_CipherGCMCtx *ctx, const uint32_t *val, uint32_t len)
 {
     if (val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -359,7 +359,7 @@ static int32_t SetTagLen(MODES_CipherGCMCtx *ctx, const uint8_t *val, uint32_t l
      * requirements on the length of the input data and the lifetime of the ciphCtx in these cases,
      * is given in Appendix C
      */
-    uint32_t tagLen = *((const uint32_t *)val);
+    uint32_t tagLen = *val;
     // 32bit is 4 bytes, 64bit is 8 bytes, 128, 120, 112, 104, or 96 is 12byte - 16byte
     if (tagLen == 4 || tagLen == 8 || (tagLen >= 12 && tagLen <= 16)) {
         ctx->tagLen = (uint8_t)tagLen;
@@ -398,12 +398,12 @@ int32_t MODES_GCM_Decrypt(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8_t *o
     return MODES_GCM_Crypt(ctx, in, out, len, false);
 }
 
-int32_t MODES_GCM_Ctrl(MODES_GCM_Ctx *modeCtx, int32_t opt, void *val, uint32_t len)
+int32_t MODES_GCM_Ctrl(MODES_GCM_Ctx *modeCtx, int32_t cmd, void *val, uint32_t len)
 {
     if (modeCtx == NULL) {
         return CRYPT_NULL_INPUT;
     }
-    switch (opt) {
+    switch (cmd) {
         case CRYPT_CTRL_SET_IV:
         case CRYPT_CTRL_REINIT_STATUS:
             return MODES_GCM_SetIv(&modeCtx->gcmCtx, val, len);

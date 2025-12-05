@@ -108,7 +108,7 @@ static int32_t CheckMacKeyLen(IsoMacCtx *ctx, uint32_t keyLen)
         if (ret != CRYPT_SUCCESS) {                                                                            \
             return ret;                                                                                        \
         }                                                                                                      \
-        return CRYPT_##name##_Init(ctx->ctx, key, len, param);                                                 \
+        return CRYPT_##name##_InitEx(ctx->ctx, key, len, param);                                                 \
     }
 
 #define MAC_Update_FUNC(name)                                                                                  \

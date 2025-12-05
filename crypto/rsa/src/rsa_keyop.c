@@ -24,7 +24,7 @@
 #include "crypt_errno.h"
 #include "securec.h"
 #include "bsl_sal.h"
-#include "crypt_params_key.h"
+
 
 static int32_t SetPrvPara(const CRYPT_RSA_PrvKey *prvKey, const CRYPT_RsaPrv *prv)
 {
@@ -279,24 +279,12 @@ int32_t CRYPT_RSA_GetPrvKey(const CRYPT_RSA_Ctx *ctx, CRYPT_RsaPrv *prv)
     return CRYPT_SUCCESS;
 
 ERR:
-    if (prv->d != NULL && prv->dLen != 0) {
-        BSL_SAL_CleanseData(prv->d, prv->dLen);
-    }
-    if (prv->p != NULL && prv->pLen != 0) {
-        BSL_SAL_CleanseData(prv->p, prv->pLen);
-    }
-    if (prv->q != NULL && prv->qLen != 0) {
-        BSL_SAL_CleanseData(prv->q, prv->qLen);
-    }
-    if (prv->dQ != NULL && prv->dQLen != 0) {
-        BSL_SAL_CleanseData(prv->dQ, prv->dQLen);
-    }
-    if (prv->dP != NULL && prv->dPLen != 0) {
-        BSL_SAL_CleanseData(prv->dP, prv->dPLen);
-    }
-    if (prv->qInv != NULL && prv->qInvLen != 0) {
-        BSL_SAL_CleanseData(prv->qInv, prv->qInvLen);
-    }
+    BSL_SAL_CleanseData(prv->d, prv->dLen);
+    BSL_SAL_CleanseData(prv->p, prv->pLen);
+    BSL_SAL_CleanseData(prv->q, prv->qLen);
+    BSL_SAL_CleanseData(prv->dQ, prv->dQLen);
+    BSL_SAL_CleanseData(prv->dP, prv->dPLen);
+    BSL_SAL_CleanseData(prv->qInv, prv->qInvLen);
     return ret;
 }
 
@@ -318,7 +306,6 @@ int32_t CRYPT_RSA_GetPubKey(const CRYPT_RSA_Ctx *ctx, CRYPT_RsaPub *pub)
     return ret;
 }
 
-#ifdef HITLS_BSL_PARAMS
 int32_t CRYPT_RSA_SetPrvKeyEx(CRYPT_RSA_Ctx *ctx, const BSL_Param *para)
 {
     if (para == NULL) {
@@ -408,7 +395,6 @@ int32_t CRYPT_RSA_GetPubKeyEx(const CRYPT_RSA_Ctx *ctx, BSL_Param *para)
     paramE->useLen = pub.eLen;
     return ret;
 }
-#endif
 
 #ifdef HITLS_CRYPTO_RSA_CMP
 int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b)
@@ -462,11 +448,21 @@ static void CalMaxT(BN_BigNum *bn, uint32_t *res)
     }
     *res = t;
     (void)BN_Rshift(bn, bn, t); // bn will decrease, and the memory will definitely be sufficient
-    return;
 }
 
-static int32_t BasicKeypairCheck(const CRYPT_RSA_PubKey *pubKey, const CRYPT_RSA_PrvKey *prvKey)
+static int32_t BasicKeypairCheck(const CRYPT_RSA_Ctx *pubKeyCtx, const CRYPT_RSA_Ctx *prvKeyCtx)
 {
+    if (pubKeyCtx == NULL || prvKeyCtx == NULL) {
+        return CRYPT_NULL_INPUT;
+    }
+    if (pubKeyCtx->pubKey == NULL) {
+        return CRYPT_RSA_ERR_NO_PUBKEY_INFO;
+    }
+    if (prvKeyCtx->prvKey == NULL) {
+        return CRYPT_RSA_ERR_NO_PRVKEY_INFO;
+    }
+    CRYPT_RSA_PubKey *pubKey = pubKeyCtx->pubKey;
+    CRYPT_RSA_PrvKey *prvKey = prvKeyCtx->prvKey;
     if (pubKey->n == NULL || pubKey->e == NULL) {
         return CRYPT_RSA_ERR_NO_PUBKEY_INFO;
     }
@@ -478,7 +474,7 @@ static int32_t BasicKeypairCheck(const CRYPT_RSA_PubKey *pubKey, const CRYPT_RSA
     uint32_t eBits2 = BN_Bits(prvKey->e); // prvKey->e can be empty, unless in crt mode
     // e <= 2^16 or e >= 2^256 -> e shoule be [17, 256].
     bool flag = (eBits2 != 0 && eBits2 != eBits1) || eBits1 < 17 || eBits1 > 256 || !BN_IsOdd(pubKey->e);
-    if (flag == true) {
+    if (flag) {
         return CRYPT_RSA_ERR_E_VALUE;
     }
     uint32_t nBbits = BN_Bits(pubKey->n);
@@ -556,6 +552,17 @@ ERR:
 }
 #endif
 
+static int32_t PrimalityTest(const BN_BigNum *n, uint32_t checkTimes, BN_Optimizer *opt)
+{
+    int32_t ret = BN_PrimeCheck(n, checkTimes, opt, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        if (ret == CRYPT_BN_NOR_CHECK_PRIME) {
+            ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
+        }
+    }
+    return ret;
+}
+
 static int32_t FactorPrimeCheck(const BN_BigNum *n, const BN_BigNum *e, const BN_BigNum *p, const BN_BigNum *q,
     BN_Optimizer *opt)
 {
@@ -606,21 +613,8 @@ static int32_t FactorPrimeCheck(const BN_BigNum *n, const BN_BigNum *e, const BN
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    ret = BN_PrimeCheck(p, checkTimes, opt, NULL);
-    if (ret != CRYPT_SUCCESS) {
-        if (ret == CRYPT_BN_NOR_CHECK_PRIME) {
-            ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
-            BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
-        }
-    }
-    ret = BN_PrimeCheck(q, checkTimes, opt, NULL);
-    if (ret != CRYPT_SUCCESS) {
-        if (ret == CRYPT_BN_NOR_CHECK_PRIME) {
-            ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
-            BSL_ERR_PUSH_ERROR(ret);
-        }
-    }
+    GOTO_ERR_IF(PrimalityTest(p, checkTimes, opt), ret);
+    GOTO_ERR_IF(PrimalityTest(q, checkTimes, opt), ret);
 ERR:
     OptimizerEnd(opt);
     return ret;
@@ -711,7 +705,11 @@ static int32_t RecoverPrimeFactorsAndCheck(const CRYPT_RSA_Ctx *pubKey, const CR
     CalMaxT(r, &tFactor); // r = m / 2^t
     // step 3: find prime factors p and q.
     for (uint32_t i = 0; i < 100; i++) { // try 100 times
-        GOTO_ERR_IF(BN_RandRangeEx(LIBCTX_FROM_RSA_CTX(pubKey), g, pubKey->pubKey->n), ret); // rand(0, n)
+#ifdef HITLS_CRYPTO_PROVIDER
+        GOTO_ERR_IF(BN_RandRangeEx(pubKey->libCtx, g, pubKey->pubKey->n), ret); // rand(0, n)
+#else
+        GOTO_ERR_IF(BN_RandRangeEx(NULL, g, pubKey->pubKey->n), ret); // rand(0, n)
+#endif
         GOTO_ERR_IF(BN_ModExp(y, g, r, pubKey->pubKey->n, opt), ret); // y = g ^ r % n
         if (BN_IsOne(y) == true || BN_Cmp(y, nSubOne) == 0) { // y == 1 or y == n - 1
             continue;
@@ -803,20 +801,8 @@ static int32_t CheckLevel(const CRYPT_RSA_PrvKey *prvKey)
  */
 static int32_t RsaKeyPairCheck(const CRYPT_RSA_Ctx *pubKey, const CRYPT_RSA_Ctx *prvKey)
 {
-    if (pubKey == NULL || prvKey == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (pubKey->pubKey == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_NO_PUBKEY_INFO);
-        return CRYPT_RSA_ERR_NO_PUBKEY_INFO;
-    }
-    if (prvKey->prvKey == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_NO_PRVKEY_INFO);
-        return CRYPT_RSA_ERR_NO_PRVKEY_INFO;
-    }
     /* basic check */
-    int32_t ret = BasicKeypairCheck(pubKey->pubKey, prvKey->prvKey);
+    int32_t ret = BasicKeypairCheck(pubKey, prvKey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

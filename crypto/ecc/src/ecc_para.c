@@ -23,8 +23,10 @@
 #include "crypt_errno.h"
 #include "ecc_local.h"
 #include "crypt_types.h"
-#include "crypt_params_key.h"
 #include "crypt_ecc_pkey.h"
+#include "bsl_params.h"
+#include "crypt_params_key.h"
+
 
 typedef struct {
     const uint8_t *data;
@@ -510,9 +512,9 @@ ECC_Para *ECC_NewPara(CRYPT_PKEY_ParaId id)
     para->h = BN_Create(1); // The cofactor is usually 1.
     para->x = BN_Create(bits);
     para->y = BN_Create(bits);
-
-    if (para->p == NULL || para->a == NULL || para->b == NULL || para->n == NULL ||
-        para->h == NULL || para->x == NULL || para->y == NULL) {
+    bool invalidPara = para->p == NULL || para->a == NULL || para->b == NULL || para->n == NULL ||
+                       para->h == NULL || para->x == NULL || para->y == NULL;
+    if (invalidPara == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         goto ERR;
     }

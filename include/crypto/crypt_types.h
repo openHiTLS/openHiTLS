@@ -106,21 +106,22 @@ typedef enum {
     CRYPT_RSA_MAXFLAG
 } CRYPT_RSA_Flag;
 
+typedef enum {
+    CRYPT_DH_NO_PADZERO = 0x00000001, /**< Follow the standard RFC 5246, remove the prefix-0 when cal the
+                                           shared key. It takes effect only after local settings are made. */
+    CRYPT_DH_MAXFLAG
+} CRYPT_DH_Flag;
+
 /**
  * @ingroup crypt_types
  *
  * ECC flag bits for encode behaviors
  */
 typedef enum {
+    CRYPT_ECC_CACHE_PUBKEY = 0x00000001,
     CRYPT_ECC_PRIKEY_NO_PUBKEY = 0x00000002, /**< ECPrivateKey omit publicKey[1] */
     CRYPT_ECC_MAXFLAG
 } CRYPT_ECC_Flag;
-
-typedef enum {
-    CRYPT_DH_NO_PADZERO = 0x00000001, /**< Follow the standard RFC 5246, remove the prefix-0 when cal the
-                                           shared key. It takes effect only after local settings are made. */
-    CRYPT_DH_MAXFLAG
-} CRYPT_DH_Flag;
 
 /**
  * @ingroup crypt_types
@@ -629,7 +630,6 @@ typedef enum {
     CRYPT_CTRL_SET_PARA_BY_ID,           /* Asymmetric cipher set para by id. */
     CRYPT_CTRL_SET_NO_PADDING,           /**< RSA Set the padding mode to NO_PADDING. */
 
-    CRYPT_CTRL_GET_PARA,                 /* Asymmetric cipher get para. */
     CRYPT_CTRL_GET_PARAID,               /* Asymmetric cipher get id of para. */
     CRYPT_CTRL_GET_BITS,                 /* Asymmetric cipher get bits . */
     CRYPT_CTRL_GET_SIGNLEN,              /* Asymmetric cipher get signlen . */
@@ -643,7 +643,9 @@ typedef enum {
     CRYPT_CTRL_SET_PREHASH_FLAG,         /**< Change the SLH-DSA or ML-DSA mode to prehash version or pure version. */
     CRYPT_CTRL_GEN_PARA,                 /**< Asymmetric cipher generate para. */
     CRYPT_CTRL_SET_GEN_FLAG,             /**< Set SP800-56Ar3 generate private key flag. */
-    CRYPT_CTRL_PCT_TEST,                 /**< Verify the consistency of the asymmetric key pair. */
+    CRYPT_CTRL_GET_PUB_KEY_BITS,         /**< Get the number of key bits. */
+    CRYPT_CTRL_SET_SIGN_MD,
+    CRYPT_CTRL_GET_ECC_POINT_FORMAT,     /**< ECC PKEY get the point format. */
     CRYPT_CTRL_CLEAN_PUB_KEY,            /**< Clean the pubkey. */
 
     // dh
@@ -687,10 +689,8 @@ typedef enum {
     CRYPT_CTRL_SET_ECC_USE_COFACTOR_MODE, /**< Indicates whether to use the cofactor mode to prevent
                                                man-in-the-middle from tampering with the public key.
                                                Set this parameter to 1 when used or 0 when not used. */
-    CRYPT_CTRL_SET_ECC_FLAG,              /**< Set ECC pkey flags (OR with existing). */
-    CRYPT_CTRL_CLR_ECC_FLAG,              /**< Clear ECC pkey flags (AND NOT). */
 
-    CRYPT_CTRL_GET_SM2_SEND_CHECK,      /* SM2 obtain the check value sent from the local end to the peer end. */
+    CRYPT_CTRL_SM2_GET_SEND_CHECK,      /* SM2 obtain the check value sent from the local end to the peer end. */
     CRYPT_CTRL_GENE_SM2_R,              /* SM2 obtain the R value. */
 
     CRYPT_CTRL_SM2_DO_CHECK,            /* SM2 check the shared key. */
@@ -701,7 +701,9 @@ typedef enum {
     CRYPT_CTRL_GET_ECC_NAME,            /**< Obtain the name of the ECC curve. */
     CRYPT_CTRL_GEN_X25519_PUBLICKEY,    /**< Use prikey genarate x25519 pubkey. */
     CRYPT_CTRL_GET_SM2_RANDOM,          /**< SM2 get the r value. */
-    CRYPT_CTRL_GET_ECC_FLAG,            /**< Get ECC pkey flags. */
+    CRYPT_CTRL_GET_FLAG,                /**< Get ECC pkey flags. */
+    CRYPT_CTRL_SET_FLAG,                /**< Set ECC pkey flags (OR with existing). */
+    CRYPT_CTRL_CLR_FLAG,                /**< Clear ECC pkey flags (AND NOT). */
 
     // slh-dsa
     CRYPT_CTRL_GET_SLH_DSA_KEY_LEN = 600,     /**< Get the SLH-DSA key length. */

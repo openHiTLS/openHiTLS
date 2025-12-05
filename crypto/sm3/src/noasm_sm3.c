@@ -94,7 +94,7 @@
 #define GG0(x, y, z) ((x) ^ (y) ^ (z))
 #define GG1(x, y, z) (((x) & (y)) | (~(x) & (z)))
 
-#define ROUND(A, B, C, D, E, F, G, H, K, FF, GG, Wj, Wi) do {   \
+#define CRYPT_SM3_ROUND(A, B, C, D, E, F, G, H, K, FF, GG, Wj, Wi) do {   \
     uint32_t a12 = ROTL32((A), 12);                            \
     uint32_t ss1 = ROTL32(a12 + (E) + (K), 7);                 \
     uint32_t ss2 = ss1 ^ a12;                                  \
@@ -105,10 +105,10 @@
 } while (0)
 
 #define ROUND00_15(A, B, C, D, E, F, G, H, K, Wj, Wi)  \
-    ROUND(A, B, C, D, E, F, G, H, K, FF0, GG0, Wj, Wi)
+    CRYPT_SM3_ROUND(A, B, C, D, E, F, G, H, K, FF0, GG0, Wj, Wi)
 
 #define ROUND16_63(A, B, C, D, E, F, G, H, K, Wj, Wi)  \
-    ROUND(A, B, C, D, E, F, G, H, K, FF1, GG1, Wj, Wi)
+    CRYPT_SM3_ROUND(A, B, C, D, E, F, G, H, K, FF1, GG1, Wj, Wi)
 
 #define EXPAND(W1, W2, W3, W4, W5)     \
     (P1((W1) ^ (W2) ^ ROTL32((W3), 15)) ^ ROTL32((W4), 7) ^ (W5))

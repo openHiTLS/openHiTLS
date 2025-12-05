@@ -24,10 +24,7 @@
 #include "crypt_curve25519.h"
 #include "crypt_rsa.h"
 #include "crypt_sm2.h"
-#include "crypt_mldsa.h"
-#include "crypt_mlkem.h"
 #include "crypt_eal_implprovider.h"
-#include "crypt_slh_dsa.h"
 
 typedef struct {
     int32_t id;

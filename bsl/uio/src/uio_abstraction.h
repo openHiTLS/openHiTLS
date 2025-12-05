@@ -19,7 +19,8 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_UIO_PLT
 
-#include "bsl_uio.h"
+#include <stdint.h>
+#include <stdbool.h>
 #include "uio_base.h"
 #include "sal_atomic.h"
 
@@ -30,11 +31,6 @@ extern "C" {
 #define IP_ADDR_V4_LEN 4
 #define IP_ADDR_V6_LEN 16
 #define IP_ADDR_MAX_LEN IP_ADDR_V6_LEN
-
-#define SOCK_ADDR_V4_LEN     (sizeof(struct sockaddr_in))
-#define SOCK_ADDR_V6_LEN     (sizeof(struct sockaddr_in6))
-#define SOCK_ADDR_UNIX_LEN   (sizeof(struct sockaddr_un))
-#define DGRAM_SOCKADDR_MAX_LEN SOCK_ADDR_UNIX_LEN
 
 struct UIO_ControlBlock {
     struct BSL_UIO_MethodStruct method;

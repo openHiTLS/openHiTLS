@@ -86,7 +86,7 @@ static uint32_t CRYPT_ASMCAP_Test(int32_t algId)
         if (ret != CRYPT_SUCCESS) {                                                                     \
             return ret;                                                                                 \
         }                                                                                               \
-        return CRYPT_##name##_Init(ctx->ctx, param);                                                    \
+        return CRYPT_##name##_InitEx(ctx->ctx, param);                                                    \
     }                                                                                                   \
                                                                                                         \
     static int32_t CRYPT_##name##_UpdateWrapper(IsoMdCtx *ctx, const uint8_t *data, uint32_t nbytes)    \

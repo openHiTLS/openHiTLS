@@ -27,12 +27,18 @@ extern "C" {
 #endif
 
 typedef struct {
-    BslSalLoadLib pfLoadLib;
-    BslSalUnLoadLib pfUnLoadLib;
-    BslSalGetFunc pfGetFunc;
+    BslDlOpen pfDlOpen;
+    BslDlClose pfDlClose;
+    BslDlSym pfDlSym;
 } BSL_SAL_DlCallback;
 
-int32_t SAL_DlCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
+/**
+ * @brief Control the setting or clearing of a callback function
+ * @param type The type of the callback function, defined by BSL_SAL_CB_FUNC_TYPE
+ * @param funcCb A pointer to the callback function
+ * @return 0 on success, non-zero error code on failure
+ */
+int32_t SAL_DlCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 
 #if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
 /**

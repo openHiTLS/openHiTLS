@@ -22,8 +22,6 @@
 #ifndef CRYPT_EAL_CODECS_H
 #define CRYPT_EAL_CODECS_H
 
-#include <stdint.h>
-
 #include "bsl_params.h"
 #include "bsl_types.h"
 #include "bsl_list.h"

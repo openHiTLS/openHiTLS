@@ -14,15 +14,16 @@
  */
 
 #include <stdlib.h>
-#include "securec.h"
 #include "hitls_build.h"
+#include "securec.h"
 #include "bsl_log_internal.h"
+#include "bsl_util_internal.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "bsl_binlog_id.h"
 #include "sal_memimpl.h"
 
-static BSL_SAL_MemCallback g_memCallback = {0};
+static BSL_SAL_MemCallback g_memCallback = {NULL, NULL};
 
 void *BSL_SAL_Malloc(uint32_t size)
 {
@@ -83,13 +84,24 @@ void *BSL_SAL_Calloc(uint32_t num, uint32_t size)
     return ptr;
 }
 
-void *BSL_SAL_Realloc(void *addr, uint32_t newSize, uint32_t oldSize)
+void *BSL_SAL_Dump(const void *src, uint32_t size)
 {
-    if (g_memCallback.pfRealloc != NULL && g_memCallback.pfRealloc != BSL_SAL_Realloc) {
-        return g_memCallback.pfRealloc(addr, newSize, oldSize);
+    if (src == NULL || size == 0) {
+        return NULL;
+    }
+    void *ptr = BSL_SAL_Malloc(size);
+    if (ptr == NULL) {
+        return NULL;
     }
 
+    (void)memcpy_s(ptr, size, src, size);
+    return ptr;
+}
+
+void *BSL_SAL_Realloc(void *addr, uint32_t newSize, uint32_t oldSize)
+{
 #if defined(HITLS_BSL_SAL_MEM) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
+    (void)oldSize;
     return SAL_ReallocImpl(addr, newSize);
 #else
     if (addr == NULL) {
@@ -112,34 +124,6 @@ void *BSL_SAL_Realloc(void *addr, uint32_t newSize, uint32_t oldSize)
 #endif
 }
 
-void *BSL_SAL_Dump(const void *src, uint32_t size)
-{
-    if (src == NULL) {
-        return NULL;
-    }
-    void *ptr = BSL_SAL_Malloc(size);
-    if (ptr == NULL) {
-        return NULL;
-    }
-
-    if (memcpy_s(ptr, size, src, size) != EOK) {
-        BSL_SAL_FREE(ptr);
-        return NULL;
-    }
-
-    return ptr;
-}
-
-int32_t SAL_MemCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
-{
-    if (type > BSL_SAL_MEM_REALLOC || type < BSL_SAL_MEM_MALLOC) {
-        return BSL_SAL_ERR_BAD_PARAM;
-    }
-    uint32_t offset = (uint32_t)(type - BSL_SAL_MEM_MALLOC);
-    ((void **)&g_memCallback)[offset] = funcCb;
-    return BSL_SUCCESS;
-}
-
 #if !defined(__clang__)
 #pragma GCC push_options
 #pragma GCC optimize("O3")
@@ -150,39 +134,39 @@ static void CleanSensitiveDataLess16Byte(void *buf, uint32_t bufLen)
 {
     uint8_t *tmp = (uint8_t *)buf;
     switch (bufLen) {
-        case 16: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 15: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 14: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 13: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 12: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 11: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 10: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 9: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 8: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 7: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 6: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 5: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 4: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 3: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 2: *(tmp++) = (uint8_t)0;
-        /* FALLTHRU */
-        case 1: *(tmp) = (uint8_t)0;
-        /* FALLTHRU */
-        default:
+        case 16: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-16
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 15: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-15
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 14: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-14
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 13: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-13
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 12: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-12
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 11: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-11
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 10: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-10
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 9: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-9
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 8: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-8
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 7: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-7
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 6: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-6
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 5: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-5
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 4: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-4
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 3: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-3
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 2: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-2
+            FALLTHROUGH; /* FALLTHROUGH */
+        case 1: *(tmp) = (uint8_t)0; // fall-through, Write 0 to bufLen-1
+            FALLTHROUGH; /* FALLTHROUGH */
+        default:                   /* Do nothing */
             break;
     }
 }
@@ -196,7 +180,7 @@ static void CleanSensitiveData(void *buf, uint32_t bufLen)
         // shift rightwards by 4 bits and then leftwards by 4 bits, which is used to calculate an integer multiple of 16
         boundOpt = (bufLen >> 4) << 4;
         for (uint32_t i = 0; i < boundOpt; i += 16) { // Clear 16 pieces of memory each time.
-            uint32_t *ctmp = (uint32_t *)(tmp + i);
+            uint32_t *ctmp = (uint32_t *)(uintptr_t)(tmp + i);
             ctmp[0] = 0;
             ctmp[1] = 0;
             ctmp[2] = 0;
@@ -238,6 +222,20 @@ void BSL_SAL_ClearFree(void *ptr, uint32_t size)
         BSL_SAL_CleanseData(ptr, size);
     }
     BSL_SAL_Free(ptr);
+}
+
+int32_t SAL_MemCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
+{
+    switch (type) {
+        case BSL_SAL_MEM_MALLOC:
+            g_memCallback.pfMalloc = funcCb;
+            return BSL_SUCCESS;
+        case BSL_SAL_MEM_FREE:
+            g_memCallback.pfFree = funcCb;
+            return BSL_SUCCESS;
+        default:
+            return BSL_SAL_ERR_BAD_PARAM;
+    }
 }
 
 #if !defined(__clang__)

@@ -23,6 +23,7 @@
 #include "cmvp_sm.h"
 #include "cmvp_common.h"
 #include "crypt_sm_selftest.h"
+#include "crypt_eal_provider.h"
 
 int32_t CRYPT_SM_Selftest(BSL_Param *param)
 {

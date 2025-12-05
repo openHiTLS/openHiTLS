@@ -1180,7 +1180,7 @@ int32_t BN_ModSqrt(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Opti
 #endif
 
 #if defined(HITLS_CRYPTO_CURVE_SM2_ASM) || (defined(HITLS_CRYPTO_CURVE_NISTP256_ASM) && \
-    defined(HITLS_CRYPTO_NIST_USE_ACCEL))
+    defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE))
 /**
  * @ingroup bn
  * @brief BigNum to BN_UINT array
@@ -1295,7 +1295,7 @@ int32_t BN_ModAddQuick(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
  * @retval For other errors, see crypt_errno.h.
  */
 int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
-    void *mod, BN_Optimizer *opt);
+    void *data, BN_Optimizer *opt);
 
 /**
  * @ingroup bn
@@ -1316,7 +1316,7 @@ int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
  * @retval CRYPT_SUCCESS    succeeded.
  * @retval For details about other errors, see crypt_errno.h.
  */
-int32_t BN_ModNistEccSqr(BN_BigNum *r, const BN_BigNum *a, void *mod, BN_Optimizer *opt);
+int32_t BN_ModNistEccSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimizer *opt);
 #endif
 
 #ifdef HITLS_CRYPTO_CURVE_SM2
@@ -1364,7 +1364,7 @@ int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, vo
 int32_t BN_ModSm2EccSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimizer *opt);
 #endif
 
-#ifdef HITLS_CRYPTO_BN_PRIME_RFC3526
+#ifdef HITLS_CRYPTO_BN_RFC_PRIME
 /**
  * @ingroup bn
  * @brief Return the corresponding length of modulo exponent of the BigNum.
@@ -1375,7 +1375,7 @@ int32_t BN_ModSm2EccSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimiz
  * @retval Not NULL     Success
  * @retval NULL         failure
  */
-BN_BigNum *BN_GetRfc3526Prime(BN_BigNum *r, uint32_t len);
+BN_BigNum *BN_GetRfcConstPrime(BN_BigNum *r, int32_t paraId);
 #endif
 
 /**
@@ -1461,59 +1461,6 @@ void OptimizerEnd(BN_Optimizer *opt);
  */
 BN_BigNum *OptimizerGetBn(BN_Optimizer *opt, uint32_t room);
 
-#if defined(HITLS_CRYPTO_PAILLIER) || defined(HITLS_CRYPTO_RSA_CHECK)
-/**
- * @ingroup bn
- * @brief BigNum Calculate the least common multiple
- * @par Description: lcm(a, b) (a, b!=0)
- *
- * @param r     [OUT] least common multiple
- * @param a     [IN] BigNum
- * @param b     [IN] BigNum
- * @param opt   [IN] Optimizer
- *
- * @retval CRYPT_SUCCESS
- * @retval CRYPT_NULL_INPUT             Invalid null pointer
- * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
- */
-int32_t BN_Lcm(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimizer *opt);
-
-#endif // HITLS_CRYPTO_PAILLIER || HITLS_CRYPTO_RSA_CHECK
-
-/**
- * @ingroup bn
- * @brief   Enabling the big data optimizer
- *
- * @param   opt [IN] Large number optimizer
- *
- * @retval  CRYPT_SUCCESS
- * @retval  For details about other errors, see crypt_errno.h.
- */
-int32_t OptimizerStart(BN_Optimizer *opt);
-
-/**
- * @ingroup bn
- * @brief   Disabling the Large Number Optimizer
- *
- * @param   opt [IN] Large number optimizer
- *
- * @retval  CRYPT_SUCCESS
- * @retval  For details about other errors, see crypt_errno.h.
- */
-void OptimizerEnd(BN_Optimizer *opt);
-
-/**
- * @ingroup bn
- * @brief   Get Bn from the large number optimizer.
- *
- * @param   opt [IN] Large number optimizer
- * @param   room [IN] Length of the big number.
- *
- * @retval  BN_BigNum if success
- * @retval  NULL if failed
- */
-BN_BigNum *OptimizerGetBn(BN_Optimizer *opt, uint32_t room);
-
 #ifdef HITLS_CRYPTO_CURVE_MONT
 
 /**
@@ -1526,7 +1473,7 @@ int32_t BN_EcPrimeMontMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, 
  * a is mont form.
  * r = a ^ 2
  */
-int32_t BN_EcPrimeMontSqr(BN_BigNum *r, const BN_BigNum *a, void *mont, BN_Optimizer *opt);
+int32_t BN_EcPrimeMontSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimizer *opt);
 
 /**
  * r = Reduce(r * RR)
@@ -1546,6 +1493,25 @@ void BnMontDec(BN_BigNum *r, BN_Mont *mont);
 int32_t BN_SwapWithMask(BN_BigNum *a, BN_BigNum *b, BN_UINT mask);
 
 #endif // HITLS_CRYPTO_CURVE_MONT
+
+#if defined(HITLS_CRYPTO_PAILLIER) || defined(HITLS_CRYPTO_RSA_CHECK)
+/**
+ * @ingroup bn
+ * @brief BigNum Calculate the least common multiple
+ * @par Description: lcm(a, b) (a, b!=0)
+ *
+ * @param r     [OUT] least common multiple
+ * @param a     [IN] BigNum
+ * @param b     [IN] BigNum
+ * @param opt   [IN] Optimizer
+ *
+ * @retval CRYPT_SUCCESS
+ * @retval CRYPT_NULL_INPUT             Invalid null pointer
+ * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
+ */
+int32_t BN_Lcm(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimizer *opt);
+
+#endif // HITLS_CRYPTO_PAILLIER || HITLS_CRYPTO_RSA_CHECK
 
 #ifdef __cplusplus
 }

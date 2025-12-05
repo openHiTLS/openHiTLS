@@ -32,6 +32,26 @@ extern "C" {
 
 /**
  * @ingroup bsl_sal
+ * @brief Thread run-once control type
+ *
+ * Platform-specific type for thread-safe one-time initialization.
+ * - POSIX (Linux/macOS): pthread_once_t
+ * - No threading: Simple status flag
+ */
+#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
+    #include <pthread.h>
+    typedef pthread_once_t BSL_SAL_OnceControl;
+    #define BSL_SAL_ONCE_INIT PTHREAD_ONCE_INIT
+#else
+    // Fallback for no threading support
+    typedef struct {
+        volatile int status;  // 0=not initialized, 1=initializing, 2=done
+    } BSL_SAL_OnceControl;
+    #define BSL_SAL_ONCE_INIT {0}
+#endif
+
+/**
+ * @ingroup bsl_sal
  *
  * Thread lock handle, the corresponding structure is provided by the user during registration.
  */
@@ -57,6 +77,123 @@ typedef void *BSL_SAL_Mutex;
  * Condition handle, the corresponding structure is provided by the user during registration.
  */
 typedef void *BSL_SAL_CondVar;
+
+/**
+ * @ingroup bsl_sal
+ * @brief The user registers the function structure for thread-related operations.
+ */
+
+/**
+* @ingroup SAL
+* @brief run once: Use the initialization callback.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+* This function should not be a cancel, otherwise the default implementation of run
+* once seems to have never been called.
+*/
+typedef void (*BSL_SAL_ThreadInitRoutine)(void);
+
+/**
+* @ingroup bsl_sal
+* @brief Run the init Func command only once.
+*
+* @param onceControl [IN] Record the execution status.
+* @param initFunc [IN] Initialization function.
+* @retval #BSL_SUCCESS, success.
+* @retval Otherwise, failure.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+*/
+typedef int32_t (*BslThreadRunOnce)(BSL_SAL_OnceControl *onceControl, BSL_SAL_ThreadInitRoutine initFunc);
+
+/**
+* @ingroup bsl_sal
+* @brief Create a thread.
+*
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+* @param thread [IN/OUT] Thread ID
+* @param startFunc [IN] Thread function
+* @param arg [IN] Thread function parameters
+* @retval #BSL_SUCCESS, success.
+* @retval Otherwise, failure.
+*/
+typedef int32_t (*BslThreadCreate)(BSL_SAL_ThreadId *thread, void *(*startFunc)(void *), void *arg);
+
+/**
+* @ingroup bsl_sal
+* @brief Close the thread.
+*
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+* @param thread [IN] Thread ID
+*/
+typedef void (*BslThreadClose)(BSL_SAL_ThreadId thread);
+
+/**
+* @ingroup bsl_sal
+* @brief Create a condition variable.
+*
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+* @param condVar [IN] Condition variable
+* @retval #BSL_SUCCESS, success.
+* @retval Otherwise, failure.
+*/
+typedef int32_t (*BslCreateCondVar)(BSL_SAL_CondVar *condVar);
+
+/**
+* @ingroup bsl_sal
+* @brief The waiting time ends or the signal is obtained.
+*
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+* @param condVar [IN] Condition variable
+* @retval #BSL_SUCCESS, success.
+* @retval Otherwise, failure.
+*/
+typedef int32_t (*BslCondSignal)(BSL_SAL_CondVar condVar);
+
+/**
+* @ingroup bsl_sal
+* @brief The waiting time ends or the signal is obtained.
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+* @param condMutex [IN] Mutex
+* @param condVar [IN] Condition variable
+* @param timeout [IN] Time
+* @retval #BSL_SUCCESS, success.
+* @retval Otherwise, failure.
+*/
+typedef int32_t (*BslCondTimedwaitMs)(BSL_SAL_Mutex condMutex, BSL_SAL_CondVar condVar, int32_t timeout);
+
+/**
+* @ingroup bsl_sal
+* @brief Delete a condition variable.
+*
+* @attention
+* Thread safe     : Thread-safe function.
+* Blocking risk   : No blocking.
+* Time consuming  : Not time-consuming.
+* @param condVar [IN] Condition variable
+* @retval #BSL_SUCCESS, success.
+* @retval Otherwise, failure.
+*/
+typedef int32_t (*BslDeleteCondVar)(BSL_SAL_CondVar condVar);
 
 /**
  * @ingroup bsl_sal
@@ -147,26 +284,6 @@ void BSL_SAL_ClearFree(void *ptr, uint32_t size);
             (value_) = NULL;                    \
         }                                       \
     } while (0)
-
-/**
- * @ingroup bsl_sal
- * @brief Thread run-once control type
- *
- * Platform-specific type for thread-safe one-time initialization.
- * - POSIX (Linux/macOS): pthread_once_t
- * - No threading: Simple status flag
- */
-#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
-    #include <pthread.h>
-    typedef pthread_once_t BSL_SAL_OnceControl;
-    #define BSL_SAL_ONCE_INIT PTHREAD_ONCE_INIT
-#else
-    // Fallback for no threading support
-    typedef struct {
-        volatile int status;  // 0=not initialized, 1=initializing, 2=done
-    } BSL_SAL_OnceControl;
-    #define BSL_SAL_ONCE_INIT {0}
-#endif
 
 /**
  * @ingroup bsl_sal
@@ -271,15 +388,6 @@ uint64_t BSL_SAL_ThreadGetId(void);
  * @retval Process ID
  */
 int32_t BSL_SAL_GetPid(void);
-
-/**
- * @ingroup bsl_sal
- * @brief run once: Use the initialization callback.
- *
- * @attention This function should not be a cancel, otherwise the default implementation of run
- * once seems to have never been called.
- */
-typedef void (*BSL_SAL_ThreadInitRoutine)(void);
 
 /**
  * @ingroup bsl_sal
@@ -652,23 +760,6 @@ uint64_t BSL_SAL_TIME_GetNSec(void);
  */
 typedef void *BSL_SAL_SockAddr;
 
-/**
- * @ingroup bsl_sal
- * @brief   Socket address information
- * 
- * It should be defined like 'struct addinfo' in linux,
- *        struct addrinfo {
- *            int              ai_flags;
- *            int              ai_family;
- *            int              ai_socktype;
- *            int              ai_protocol;
- *            socklen_t        ai_addrlen;
- *            struct sockaddr *ai_addr;
- *            char            *ai_canonname;
- *            struct addrinfo *ai_next;
- *        };
- */
-typedef void *BSL_SAL_SockAddrInfo;
 
 /**
  * @ingroup bsl_sal
@@ -866,146 +957,49 @@ int32_t BSL_SAL_SockSend(int32_t sockId, const void *msg, size_t len, int32_t fl
  */
 int32_t BSL_SAL_SockRecv(int32_t sockfd, void *buff, size_t len, int32_t flags);
 
-/**
- * @ingroup bsl_sal
- * @brief   Check the socket descriptor.
- *
- * Check the socket descriptor.
- *
- * @attention None
- * @param nfds [IN] Total number of file descriptors that are listened on
- * @param readfds [IN] Readable file descriptor (optional)
- * @param writefds [IN] Descriptor of a writable file. This parameter is optional.
- * @param exceptfds [IN] Exception file descriptor (optional)
- * @param timeout [IN] Set the timeout interval.
- * @retval If the operation succeeds, Number of ready descriptors are returned;
- * @retval If the operation fails, a negative value is returned;
- * @retval If the operation times out, 0 is returned
- */
-int32_t BSL_SAL_Select(int32_t nfds, void *readfds, void *writefds, void *exceptfds, void *timeout);
-
-/**
- * @ingroup bsl_sal
- * @brief   Device control interface function
- *
- * Device control interface function
- *
- * @attention None
- * @param sockId [IN] Socket file descriptor ID
- * @param cmd [IN] Interaction protocol
- * @param arg [IN] Parameter
- * @retval If the operation succeeds, BSL_SUCCESS is returned.
- * @retval If the operation fails, BSL_SAL_ERR_NET_IOCTL is returned.
- */
-int32_t BSL_SAL_Ioctlsocket(int32_t sockId, long cmd, unsigned long *arg);
-
-/**
- * @ingroup bsl_sal
- * @brief   Obtain the last error corresponding to the socket.
- *
- * Obtain the last error corresponding to the socket.
- *
- * @attention none
- * @retval Return the corresponding error.
- */
-int32_t BSL_SAL_SockGetLastSocketError(void);
-
-/**
- * @ingroup bsl_sal
- * @brief String comparison
- *
- * String comparison
- *
- * @attention None.
- * @param str1 [IN] First string to be compared.
- * @param str2 [IN] Second string to be compared.
- * @retval If the parameter is abnormal, BSL_NULL_INPUT is returned.
- * @retval If the strings are the same, 0 is returned;
- * Otherwise, the difference between different characters is returned.
- */
-int32_t BSL_SAL_StrcaseCmp(const char *str1, const char *str2);
-
-/**
- * @ingroup bsl_sal
- * @brief Search for the corresponding character position in a string.
- *
- * Search for the corresponding character position in a string.
- *
- * @attention None.
- * @param str [IN] String
- * @param character [IN] Character to be searched for
- * @param count [IN] Range to be found
- * @retval If a character is found, the position of the character is returned;
- * Otherwise, NULL is returned.
- */
-void *BSL_SAL_Memchr(const char *str, int32_t character, size_t count);
-
-/**
- * @ingroup bsl_sal
- * @brief Convert string to number
- *
- * Convert string to number
- *
- * @attention None.
- * @param str [IN] String to be converted.
- * @retval If the conversion is successful, the corresponding number is returned;
- * Otherwise, the value 0 is returned.
- */
-int32_t BSL_SAL_Atoi(const char *str);
-
-/**
- * @ingroup bsl_sal
- * @brief Obtain the length of a given string.
- *
- * Obtain the length of a given string.
- *
- * @attention None.
- * @param string [IN] String to obtain the length.
- * @param count [IN] Maximum length
- * @retval If the parameter is abnormal, return 0.
- * @retval If the length of a string is greater than the count, return count.
- * Otherwise, the actual length of the string is returned.
- */
-uint32_t BSL_SAL_Strnlen(const char *string, uint32_t count);
-
 typedef enum {
-    BSL_SAL_MEM_MALLOC = 0X0100,
+    BSL_SAL_MEM_MALLOC = 0x0100,
     BSL_SAL_MEM_FREE,
-    BSL_SAL_MEM_REALLOC,
 
-    BSL_SAL_THREAD_LOCK_NEW_CB_FUNC = 0X0200,
+    BSL_SAL_THREAD_LOCK_NEW_CB_FUNC = 0x0200,
     BSL_SAL_THREAD_LOCK_FREE_CB_FUNC,
     BSL_SAL_THREAD_LOCK_READ_LOCK_CB_FUNC,
     BSL_SAL_THREAD_LOCK_WRITE_LOCK_CB_FUNC,
     BSL_SAL_THREAD_LOCK_UNLOCK_CB_FUNC,
     BSL_SAL_THREAD_GET_ID_CB_FUNC,
-    BSL_SAL_THREAD_RUN_ONCE_CB_FUNC,                    /* BslSalThreadRunOnce */
+    BSL_SAL_THREAD_RUN_ONCE_CB_FUNC,
+    BSL_SAL_THREAD_CREATE_CB_FUNC,
+    BSL_SAL_THREAD_CLOSE_CB_FUNC,
+    BSL_SAL_THREAD_CONDVAR_CREATE_LOCK_CB_FUNC,
+    BSL_SAL_THREAD_CONDVAR_SIGNAL_CB_FUNC,
+    BSL_SAL_THREAD_CONDVAR_WAIT_CB_FUNC,
+    BSL_SAL_THREAD_CONDVAR_DELETE_CB_FUNC,
 
-    BSL_SAL_NET_WRITE_CB_FUNC = 0x0300,
-    BSL_SAL_NET_READ_CB_FUNC,
-    BSL_SAL_NET_SOCK_CB_FUNC,
-    BSL_SAL_NET_SOCK_CLOSE_CB_FUNC,
-    BSL_SAL_NET_SET_SOCK_OPT_CB_FUNC,
-    BSL_SAL_NET_GET_SOCK_OPT_CB_FUNC,
-    BSL_SAL_NET_SOCK_LISTEN_CB_FUNC,
-    BSL_SAL_NET_SOCK_BIND_CB_FUNC,
-    BSL_SAL_NET_SOCK_CONNECT_CB_FUNC,
-    BSL_SAL_NET_SOCK_SEND_CB_FUNC,
-    BSL_SAL_NET_SOCK_RECV_CB_FUNC,
-    BSL_SAL_NET_SELECT_CB_FUNC,
-    BSL_SAL_NET_IOCTL_CB_FUNC,
-    BSL_SAL_NET_SOCKGETLASTSOCKETERROR_CB_FUNC,
-    BSL_SAL_NET_SOCKADDR_NEW_CB_FUNC,
-    BSL_SAL_NET_SOCKADDR_FREE_CB_FUNC,
-    BSL_SAL_NET_SOCKADDR_SIZE_CB_FUNC,
-    BSL_SAL_NET_SENDTO_CB_FUNC,
-    BSL_SAL_NET_RECVFROM_CB_FUNC,
-    BSL_SAL_NET_GETFAMILY_CB_FUNC,
+    BSL_SAL_NET_WRITE_CB_FUNC = 0x0300,                 /* BslSalNetWrite */
+    BSL_SAL_NET_READ_CB_FUNC,                           /* BslSalNetRead */
+    BSL_SAL_NET_SOCK_CB_FUNC,                           /* BslSalSocket */
+    BSL_SAL_NET_SOCK_CLOSE_CB_FUNC,                     /* BslSalSockClose */
+    BSL_SAL_NET_SET_SOCK_OPT_CB_FUNC,                   /* BslSalSetSockopt */
+    BSL_SAL_NET_GET_SOCK_OPT_CB_FUNC,                   /* BslSalGetSockopt */
+    BSL_SAL_NET_SOCK_LISTEN_CB_FUNC,                    /* BslSalSockListen */
+    BSL_SAL_NET_SOCK_BIND_CB_FUNC,                      /* BslSalSockBind  */
+    BSL_SAL_NET_SOCK_CONNECT_CB_FUNC,                   /* BslSalSockConnect */
+    BSL_SAL_NET_SOCK_SEND_CB_FUNC,                      /* BslSalSockSend */
+    BSL_SAL_NET_SOCK_RECV_CB_FUNC,                      /* BslSalSockRecv */
+    BSL_SAL_NET_SELECT_CB_FUNC,                         /* BslSelect */
+    BSL_SAL_NET_IOCTL_CB_FUNC,                          /* BslIoctlSocket */
+    BSL_SAL_NET_GET_ERRNO_CB_FUNC,                      /* BslGetErrno */
+    BSL_SAL_NET_SOCKADDR_NEW_CB_FUNC,                   /* BslSalSockAddrNew */
+    BSL_SAL_NET_SOCKADDR_FREE_CB_FUNC,                  /* BslSalSockAddrFree */
+    BSL_SAL_NET_SOCKADDR_SIZE_CB_FUNC,                  /* BslSalSockAddrSize */
+    BSL_SAL_NET_SOCKADDR_COPY_CB_FUNC,                  /* BslSalSockAddrCopy */
+    BSL_SAL_NET_SENDTO_CB_FUNC,                         /* BslSalNetSendTo */
+    BSL_SAL_NET_RECVFROM_CB_FUNC,                       /* BslSalNetRecvFrom */
+    BSL_SAL_NET_GETFAMILY_CB_FUNC,                      /* BslSalSockAddrGetFamily */
 
-    BSL_SAL_TIME_GET_UTC_TIME_CB_FUNC = 0x0400,
-    BSL_SAL_TIME_DATE_TO_STR_CONVERT_CB_FUNC,
-    BSL_SAL_TIME_SYS_TIME_GET_CB_FUNC,
-    BSL_SAL_TIME_UTC_TIME_TO_DATE_CONVERT_CB_FUNC,
+    BSL_SAL_TIME_GET_UTC_TIME_CB_FUNC = 0X0400,
+    BSL_SAL_TIME_GET_BSL_TIME_CB_FUNC,                  /* BslGetBslTime */
+    BSL_SAL_TIME_UTC_TO_BSL_TIME_CB_FUNC,               /* BslUtcTimeToBslTime */
     BSL_SAL_TIME_SLEEP_CB_FUNC,
     BSL_SAL_TIME_TICK_CB_FUNC,
     BSL_SAL_TIME_TICK_PER_SEC_CB_FUNC,
@@ -1037,126 +1031,504 @@ typedef enum {
 
 /**
  * @ingroup bsl_sal
- * @brief Allocate a memory block.
  *
- * Allocate a memory block.
- *
- * @param size [IN] Size of the allocated memory.
- * @retval: Not NULL, The start address of the allocated memory when memory is allocated successfully.
- * @retval  NULL, Memory allocation failure.
+ * Definition of the net callback interface.
  */
-typedef void *(*BslSalMalloc)(uint32_t size);
 
 /**
  * @ingroup bsl_sal
- * @brief Reclaim a memory block allocated by pfMalloc.
+ * @brief Write data to file descriptor.
  *
- * Reclaim a block of memory allocated by pfMalloc.
- *
- * @param addr [IN] Start address of the memory allocated by pfMalloc.
+ * @par Description: Attempt to write len bytes from the buffer to the file associated with the open file descriptor.
+ * @param fd [IN] File descriptor.
+ * @param buffer [IN] The write data buffer.
+ * @param len [IN] The len which want to write.
+ * @param err [OUT] The IO errno.
+ * @return Return the number of bytes actually written to the file.
+ * Otherwise, -1 shall be returned and errno set to indicate the error.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : Not time-consuming.
  */
-typedef void (*BslSalFree)(void *addr);
+typedef int32_t (*BslSalNetWrite)(int32_t fd, const void *buf, uint32_t len, int32_t *err);
 
 /**
  * @ingroup bsl_sal
- * @brief Reallocate a memory block.
+ * @brief Read data from file descriptor.
  *
- * @param addr    [IN] Original memory address.
- * @param newSize [IN] Extended memory size.
- * @param oldSize [IN] Memory size before expansion.
- * @retval void*   indicates successful, the extended memory address is returned.
- * @retval NULL    indicates failed, return NULL.
+ * @par Description: Attempt to read len bytes from the the file associated with the open file descriptor to the buffer.
+ * @param fd [IN] File descriptor.
+ * @param buffer [OUT] The read data buffer.
+ * @param len [IN] The len which want to read.
+ * @param err [OUT] The IO errno.
+ * @return Return the number of bytes actually read from the file.
+ * Otherwise, -1 shall be returned and errno set to indicate the error.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : Not time-consuming.
  */
-typedef void *(*BslSalRealloc)(void *addr, uint32_t newSize, uint32_t oldSize);
+typedef int32_t (*BslSalNetRead)(int32_t fd, void *buf, uint32_t len, int32_t *err);
 
 /**
  * @ingroup bsl_sal
- * @brief Create a thread lock.
+ * @brief Seek interface.
  *
- * Create a thread lock.
- *
- * @param lock [IN/OUT] Lock handle
- * @retval #BSL_SUCCESS, created successfully.
- * @retval #BSL_MALLOC_FAIL, memory space is insufficient and thread lock space cannot be applied for.
- * @retval #BSL_SAL_ERR_UNKNOWN, thread lock initialization failed.
- * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
- */
-typedef int32_t (*BslSalThreadLockNew)(BSL_SAL_ThreadLockHandle *lock);
-
-/**
- * @ingroup bsl_sal
- * @brief Release the thread lock.
- *
- * Release the thread lock. Ensure that the lock can be released when other threads obtain the lock.
- *
- * @param lock [IN] Lock handle
- */
-typedef void (*BslSalThreadLockFree)(BSL_SAL_ThreadLockHandle lock);
-
-/**
- * @ingroup bsl_sal
- * @brief Lock the read operation.
- *
- * Lock the read operation.
- *
- * @param lock [IN] Lock handle
- * @retval #BSL_SUCCESS, succeeded.
- * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
- * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
- */
-typedef int32_t (*BslSalThreadReadLock)(BSL_SAL_ThreadLockHandle lock);
-
-/**
- * @ingroup bsl_sal
- * @brief Lock the write operation.
- *
- * Lock the write operation.
- *
- * @param lock [IN] Lock handle
- * @retval #BSL_SUCCESS, succeeded.
- * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
- * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
- */
-typedef int32_t (*BslSalThreadWriteLock)(BSL_SAL_ThreadLockHandle lock);
-
-/**
- * @ingroup bsl_sal
- * @brief Unlock
- *
- * Unlock
- *
- * @param lock [IN] Lock handle
- * @retval #BSL_SUCCESS, succeeded.
- * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
- * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of lock is NULL.
- */
-typedef int32_t (*BslSalThreadUnlock)(BSL_SAL_ThreadLockHandle lock);
-
-/**
- * @ingroup bsl_sal
- * @brief Obtain the thread ID.
- *
- * Obtain the thread ID.
- *
- * @retval Thread ID
- */
-typedef uint64_t (*BslSalThreadGetId)(void);
-
-/**
- * @ingroup bsl_sal
- * @brief Run the initialization function once.
- *
- * @param onceControl [IN/OUT] Once control
- * @param initFunc [IN] Initialization function
- * @retval #BSL_SUCCESS, succeeded.
- * @retval #BSL_SAL_ERR_UNKNOWN, operation failed.
- * @retval #BSL_SAL_ERR_BAD_PARAM, parameter error. The value of onceControl is NULL.
+ * @par Description: Offsets the file read/write position to a certain position.
+ * @param fd [IN] File descriptor.
+ * @param offset [IN] The offset from the start position.
+ * @param origin [IN] The start position. One of SEEK_SET, SEEK_CUR and SEEK_END.
+ * @return If succeed, return the new read/write position. Otherwise, return -1.
  * @attention
  * Thread safe     : Thread-safe function.
  * Blocking risk   : No blocking.
  * Time consuming  : Not time-consuming.
  */
-typedef int32_t (*BslSalThreadRunOnce)(uint32_t *onceControl, BSL_SAL_ThreadInitRoutine initFunc);
+typedef int64_t (*BslSalNetLSeek)(int32_t fd, int64_t offset, uint32_t origin);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Close file descriptor.
+ *
+ * @par Description: Close file descriptor.
+ * @param path [IN] File path.
+ * @param flag [IN] open mode.
+ * @return Error code in bsl_errno.h.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSalNetOpen)(const char *path, int32_t flag);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Close file descriptor.
+ *
+ * @par Description: Close file descriptor.
+ * @param fd [IN] File descriptor.
+ * @return Error code in bsl_errno.h.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSalNetClose)(int32_t fd);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Socket creation interface.
+ *
+ * @param af [IN] The address family.
+ * @param type [IN] The socket type.
+ * @param protocol [IN] The protocol to be used.
+ * @return If the creation is successful, a non-negative value is returned.
+ * Otherwise, a negative value is returned.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSalSocket)(int32_t af, int32_t type, int32_t protocol);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Socket close interface.
+ *
+ * @param sockId [IN] The identifier of the socket to be closed.
+ * @return  If the operation succeeds, BSL_SUCCESS is returned.
+ *          If the operation fails, BSL_SAL_ERR_NET_SOCKCLOSE is returned.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSalSockClose)(int32_t sockId);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Set the socket.
+ *
+ * @param sockId [IN] The identifier of the socket.
+ * @param level [IN] The option level.
+ * @param name [IN] The specific option name.
+ * @param val [IN] A pointer to the value to set for the option.
+ * @param len [IN] The length of the value pointed to by val.
+ * @return If the operation succeeds, BSL_SUCCESS is returned
+ *         If the operation fails, BSL_SAL_ERR_NET_SETSOCKOPT is returned.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSalSetSockopt)(int32_t sockId, int32_t level, int32_t name, const void *val, int32_t len);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Get socket.
+ *
+ * @param sockId [IN] The identifier of the socket.
+ * @param level [IN] The option level.
+ * @param name [IN] The specific option name.
+ * @param val [OUT] A pointer to store the value of the option.
+ * @param len [OUT] A pointer to store the length of the value.
+ * @return If the operation succeeds, BSL_SUCCESS is returned.
+ *         If the operation fails, BSL_SAL_ERR_NET_GETSOCKOPT is returned.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSalGetSockopt)(int32_t sockId, int32_t level, int32_t name, void *val, int32_t *len);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Get socket.
+ *
+ * @param sockId [IN] The identifier of the socket.
+ * @param addr [OUT] A pointer to store the obtained local protocol address.
+ * @param len [OUT] A pointer to store the the length of the addr buffer when calling,
+                    and the returned value includes the size of the actual address structure.
+ * @return If the operation succeeds, BSL_SUCCESS is returned.
+ *         If the operation fails, BSL_SAL_ERR_NET_GETSOCKNAME is returned.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSalGetSockName)(int32_t sockId, BSL_SAL_SockAddr addr, size_t *len);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Listen socket.
+ *
+ * @param sockId [IN] The identifier of the socket to listen on.
+ * @param backlog [IN] The maximum number of pending connections.
+ * @return If the operation succeeds, BSL_SUCCESS is returned.
+ *         If the operation fails, BSL_SAL_ERR_NET_LISTEN is returned.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : time-consuming.
+ */
+typedef int32_t (*BslSalSockListen)(int32_t sockId, int32_t backlog);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Binding a socket.
+ *
+ * @param sockId [IN] The identifier of the socket to bind.
+ * @param addr [IN] A pointer to the socket address structure.
+ * @param len [IN] The size of the socket address structure.
+ * @return If the operation succeeds, BSL_SUCCESS is returned.
+ *         If the operation fails, BSL_SAL_ERR_NET_BIND is returned.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSalSockBind)(int32_t sockId, BSL_SAL_SockAddr addr, size_t len);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Initiate a connection.
+ *
+ * @param sockId [IN] The identifier of the socket to use for the connection.
+ * @param addr [IN] A pointer to the socket address structure containing the remote host's address.
+ * @param len [IN] The size of the socket address structure.
+ * @return If the operation succeeds, BSL_SUCCESS is returned
+ *         If the operation fails, BSL_SAL_ERR_NET_CONNECT is returned.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSalSockConnect)(int32_t sockId, BSL_SAL_SockAddr addr, size_t len);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Initiate a accept.
+ *
+ * @param sockId [IN] The identifier of the socket to use for the accept.
+ * @param addr [IN] A pointer to the socket address structure accept the remote host's address.
+ * @param len [IN] The size of the socket address structure.
+ * @return If the operation succeeds, BSL_SUCCESS is returned
+ *         If the operation fails, BSL_SAL_ERR_NET_ACCEPT is returned.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSalSockAccept)(int32_t sockId, BSL_SAL_SockAddr addr, size_t *len);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Send a message.
+ *
+ * @param sockId [IN] Identifier of the socket to send the message on.
+ * @param msg [IN] Pointer to the message data buffer.
+ * @param len [IN] Length of the message data to send.
+ * @param flags [IN] Flags to modify the send operation behavior.
+ * @return If the operation succeeds, the length of the sent data is returned.
+ *         If the operation fails, a negative value is returned.
+ *         If the operation times out or the peer end disables the function, the value 0 is returned.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : time-consuming.
+ */
+typedef int32_t (*BslSalSockSend)(int32_t sockId, const void *msg, size_t len, int32_t flags);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Receive the message
+ *
+ * @param sockId [IN] The identifier of the socket to send the message on.
+ * @param buff [IN] A buffer to store the received data.
+ * @param len [IN] The length of the message data.
+ * @param flags [IN] Flags that modify the behavior of the send operation.
+ * @return If the operation succeeds, the received data length is returned.
+ *         If the operation fails, a negative value is returned.
+ *         If the operation times out or the peer end disables the function, the value 0 is returned.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : time-consuming.
+ */
+typedef int32_t (*BslSalSockRecv)(int32_t sockfd, void *buff, size_t len, int32_t flags);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Same as linux function "sendto"
+ *
+ * @param sock [IN] Socket descriptor.
+ * @param buf [IN] Pointer to the buffer containing the data to send.
+ * @param len [IN] Length of the data to send (in bytes).
+ * @param flags [IN] Flags for modifying the operation
+ * @param address [IN] Destination address structure.
+ * @param addrLen [IN] Length of the address structure.
+ * @param err [OUT] Pointer to store the error code (if non-NULL).
+ * @return #BSL_SUCCESS£¬success.
+ *         Otherwise, failure.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSalNetSendTo)(int32_t sock, const void *buf, size_t len, int32_t flags, void *address,
+    int32_t addrLen, int32_t *err);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Same as linux function "recvfrom"
+ *
+ * @param sock [IN] Socket descriptor.
+ * @param buf [IN] Pointer to the buffer containing the data to send.
+ * @param len [IN] Length of the data to send (in bytes).
+ * @param flags [IN] Flags for modifying the operation
+ * @param address [IN] Destination address structure.
+ * @param addrLen [IN] Length of the address structure.
+ * @param err [OUT] Pointer to store the error code (if non-NULL).
+ * @return #BSL_SUCCESS£¬success.
+ *         Otherwise, failure.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSalNetRecvFrom)(int32_t sock, void *buf, size_t len, int32_t flags, void *address,
+    int32_t *addrLen, int32_t *err);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Same as linux function "select"
+ *
+ * @param nfds [IN] Maximum file descriptor value to monitor.
+ * @param readfds [IN] Pointer to read file descriptor set.
+ * @param writefds [IN] Pointer to write file descriptor set.
+ * @param exceptfds [IN] Pointer to exception file descriptor set.
+ * @param timeout [IN] Pointer to timeout structure.
+ * @return #BSL_SUCCESS£¬success.
+ *         Otherwise, failure.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSelect)(int32_t nfds, void *readfds, void *writefds, void *exceptfds, void *timeout);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Same as linux function "ioctl"
+ *
+ * @param sockId [IN] Identifier of the socket to operate on.
+ * @param cmd [IN] IOCTL command code.
+ * @param arg [IN] Pointer to argument buffer.
+ * @return #BSL_SUCCESS£¬success.
+ *         Otherwise, failure.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslIoctlSocket)(int32_t sockId, long cmd, unsigned long *arg);
+
+/**
+ * @ingroup bsl_sal
+ * @brief return "errno"
+ * @return #BSL_SUCCESS£¬success.
+ *         Otherwise, failure.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslGetErrno)(void);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Set block mode.
+ *
+ * @param fd [IN] The file descriptor to set the block mode for.
+ * @param isBlock [IN] Indicating whether to set the file descriptor to block mode or non-blocking mode.
+ * @return If the operation succeeds, BSL_SUCCESS is returned.
+ *         If the file open fails, BSL_SAL_ERR_NET_NOBLOCK is returned.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSetBlockMode)(int32_t fd, int32_t isBlock);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Wait for the socket to read and write data within the period specified by maxTime.
+ *
+ * @param fd [IN] The file descriptor of the socket to wait on.
+ * @param forRead [IN] A flag indicating whether to wait for the socket to be readable (`1`) or writable (`0`).
+ * @param maxTime [IN] The maximum amount of time (in microseconds) to wait before returning.
+ * @return #BSL_SUCCESS£¬success.
+ *         Otherwise, failure.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : time-consuming.
+ */
+typedef int32_t (*BslSocketWait)(int32_t fd, int32_t forRead, int64_t maxTime);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Get the error code of the socket.
+ *
+ * @param fd [IN] The file descriptor of the socket to query.
+ * @return #BSL_SUCCESS£¬success.
+ *         Otherwise, failure.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslSocketError)(int32_t fd);
+
+/**
+ * @ingroup bsl_sal
+ *
+ * Definition of the time callback interface.
+ */
+
+/**
+ * @ingroup bsl_sal
+ * @brief Obtains the current UTC time
+ *
+ * @return Return the utc time.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef BslUnixTime (*BslGetUtcTime)(void);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Obtains the current system time. The time type is BSL_TIME.
+ *
+ * @param bslTime [IN/OUT] Pointer to the BSL_TIME structure.
+ * @return Error code in bsl_errno.h.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslGetBslTime)(BSL_TIME *bslTime);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Convert the utc time to BSL_TIME.
+ *
+ * @param utcTime [IN] UTC time.
+ * @param bslTime [IN/OUT] Pointer to the BSL_TIME structure.
+ * @return Error code in bsl_errno.h.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef int32_t (*BslUtcTimeToBslTime)(int64_t utcTime, BSL_TIME *sysTime);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Sets the program to sleep for a specified time, in seconds.
+ *
+ * @param time [IN] Sleep time.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : It may be blocked.
+ * Time consuming  : time-consuming.
+ */
+typedef void (*BslSleep)(uint32_t time);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Obtain the number of ticks that the system has experienced since startup.
+ *
+ * @return Return tick for success and -1 for failure.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef long (*BslTick)(void);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Obtain the number of system ticks per second.
+ *
+ * @return Return number of ticks per secone for success and -1 for failure.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef long (*BslTicksPerSec)(void);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Obtain the system time in nanoseconds.
+ *
+ * @return Returns the time in nanoseconds; returns 0 if the operation fails.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
+ */
+typedef uint64_t (*BslGetTimeInNS)(void);
+
+/**
+ * @ingroup bsl_sal
+ *
+ * Definition of the file callback interface.
+ */
 
 /**
 * @ingroup bsl_sal
@@ -1379,242 +1751,56 @@ typedef int32_t (*BslSalFGetAttr)(bsl_sal_file_handle stream, void *arg);
 
 /**
  * @ingroup bsl_sal
- * @brief Get the length of the file.
+ * @brief Loading dynamic libraries.
  *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_SAL_ERR_FILE_LENGTH: get file length fails.
- * @retval #BSL_NULL_INPUT: parameter error.
+ * Loading dynamic libraries.
+ *
+ * @param fileName [IN] Path of dl
+ * @param handle [OUT] Dynamic library handle
+ * @retval #BSL_SUCCESS Succeeded.
+ * @retval #BSL_SAL_ERR_DL_NOT_FOUND Library file not found.
+ * @retval #BSL_SAL_DL_NO_REG_FUNC Failed to load the library.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
  */
-typedef int32_t (*BslSalFileLength)(const char *path, size_t *len);
+typedef int32_t (*BslDlOpen)(const char *fileName, void **handle);
 
 /**
  * @ingroup bsl_sal
- * @brief Get the system time.
+ * @brief Close dynamic library.
  *
- * @retval System time in int64_t format.
+ * Close dynamic library.
+ *
+ * @param handle [IN] Dynamic library handle
+ * @retval #BSL_SUCCESS Succeeded.
+ * @retval #BSL_SAL_ERR_DL_UNLOAAD_FAIL Failed to unload the library.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
  */
-typedef int64_t (*BslSalGetSysTime)(void);
+typedef int32_t (*BslDlClose)(void *handle);
 
 /**
  * @ingroup bsl_sal
- * @brief Convert date to string.
+ * @brief Get function symbol from dynamic library.
  *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_INTERNAL_EXCEPTION: conversion fails.
- */
-typedef uint32_t (*BslSalDateToStrConvert)(const BSL_TIME *dateTime, char *timeStr, size_t len);
-
-/**
- * @ingroup bsl_sal
- * @brief Get the system time.
+ * Get function symbol from dynamic library.
  *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_SAL_ERR_BAD_PARAM: parameter error.
- * @retval #BSL_INTERNAL_EXCEPTION: an exception occurred when obtaining the time.
+ * @param handle [IN] Dynamic library handle
+ * @param funcName [IN] Function name
+ * @param func [OUT] Function pointer
+ * @retval #BSL_SUCCESS Succeeded.
+ * @retval #BSL_SAL_ERR_DL_NON_FUNCTION Symbol found but is not a function.
+ * @retval #BSL_SAL_ERR_DL_LOOKUP_METHOD Failed to lookup the function.
+ * @attention
+ * Thread safe     : Thread-safe function.
+ * Blocking risk   : No blocking.
+ * Time consuming  : Not time-consuming.
  */
-typedef uint32_t (*BslSalSysTimeGet)(BSL_TIME *sysTime);
-
-/**
- * @ingroup bsl_sal
- * @brief Convert UTC time to date.
- *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_SAL_ERR_BAD_PARAM: parameter error.
- */
-typedef uint32_t (*BslSalUtcTimeToDateConvert)(int64_t utcTime, BSL_TIME *sysTime);
-
-/**
- * @ingroup bsl_sal
- * @brief Sleep for a specified time.
- */
-typedef void (*BslSalSleep)(uint32_t time);
-
-/**
- * @ingroup bsl_sal
- * @brief Get the system tick count.
- *
- * @retval System tick count.
- */
-typedef long (*BslSalTick)(void);
-
-/**
- * @ingroup bsl_sal
- * @brief Get the number of ticks per second.
- *
- * @retval Number of ticks per second.
- */
-typedef long (*BslSalTicksPerSec)(void);
-
-/**
- * @ingroup bsl_sal
- * @brief Get the system time in nanoseconds.
- *
- * @retval The time in nanoseconds.
- */
-typedef uint64_t (*BslGetTimeInNS)(void);
-
-/**
- * @ingroup bsl_sal
- * @brief Write data.
- *
- * @retval Positive integer: number of bytes written.
- * @retval Negative integer: write operation failed.
- */
-typedef int32_t (*BslSalWrite)(int32_t fd, const void *buf, uint32_t len, int32_t *err);
-
-/**
- * @ingroup bsl_sal
- * @brief Read data.
- *
- * @retval Positive integer: number of bytes read.
- * @retval Negative integer: read operation failed.
- */
-typedef int32_t (*BslSalRead)(int32_t fd, void *buf, uint32_t len, int32_t *err);
-
-/**
- * @ingroup bsl_sal
- * @brief Create a socket.
- *
- * @retval Non-negative integer: socket file descriptor.
- * @retval Negative integer: socket creation failed.
- */
-typedef int32_t (*BslSalSocket)(int32_t af, int32_t type, int32_t protocol);
-
-/**
- * @ingroup bsl_sal
- * @brief Close a socket.
- *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_SAL_ERR_NET_SOCKCLOSE: socket close fails.
- */
-typedef int32_t (*BslSalSockClose)(int32_t sockId);
-
-/**
- * @ingroup bsl_sal
- * @brief Set socket options.
- *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_SAL_ERR_NET_SETSOCKOPT: set socket option fails.
- */
-typedef int32_t (*BslSalSetSockopt)(int32_t sockId, int32_t level, int32_t name, const void *val, int32_t len);
-
-/**
- * @ingroup bsl_sal
- * @brief Get socket options.
- *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_SAL_ERR_NET_GETSOCKOPT: get socket option fails.
- */
-typedef int32_t (*BslSalGetSockopt)(int32_t sockId, int32_t level, int32_t name, void *val, int32_t *len);
-
-/**
- * @ingroup bsl_sal
- * @brief Listen for socket connections.
- *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_SAL_ERR_NET_LISTEN: socket listen fails.
- */
-typedef int32_t (*BslSalSockListen)(int32_t sockId, int32_t backlog);
-
-/**
- * @ingroup bsl_sal
- * @brief Bind a socket to an address.
- *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_SAL_ERR_NET_BIND: socket bind fails.
- */
-typedef int32_t (*BslSalSockBind)(int32_t sockId, BSL_SAL_SockAddr addr, size_t len);
-
-/**
- * @ingroup bsl_sal
- * @brief Connect a socket to a remote address.
- *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_SAL_ERR_NET_CONNECT: socket connect fails.
- */
-typedef int32_t (*BslSalSockConnect)(int32_t sockId, BSL_SAL_SockAddr addr, size_t len);
-
-/**
- * @ingroup bsl_sal
- * @brief Send data through a socket.
- *
- * @retval Positive integer: number of bytes sent.
- * @retval Negative integer: send operation failed.
- */
-typedef int32_t (*BslSalSockSend)(int32_t sockId, const void *msg, size_t len, int32_t flags);
-
-/**
- * @ingroup bsl_sal
- * @brief Receive data from a socket.
- *
- * @retval Positive integer: number of bytes received.
- * @retval Negative integer: receive operation failed.
- */
-typedef int32_t (*BslSalSockRecv)(int32_t sockfd, void *buff, size_t len, int32_t flags);
-
-/**
- * @ingroup bsl_sal
- * @brief Same as linux funciton "sendto"
- *
- * @param sock [IN] Socket descriptor.
- * @param buf [IN] The buffer containing the data to be sent.
- * @param len [IN] Length of the buffer.
- * @param flags [IN] The type of message transmission.
- * @param address [IN] Points to a sockaddr structure containing the destination address.
- * @param addrLen [IN] Length of the sockaddr structure.
- * @param err [OUT] The error code if "sendto" failed.
- * @return BSL_SUCCESS, success.
- *         Otherwise, failure.
- */
-typedef int32_t (*BslSalNetSendTo)(int32_t sock, const void *buf, size_t len, int32_t flags, void *address, int32_t addrLen, int32_t *err);
-
-/**
- * @ingroup bsl_salZ
- * @brief Same as linux funciton "recvfrom"
- * @param sock [IN] Socket descriptor.
- * @param buf [IN] The buffer where the message should be stored.
- * @param len [IN] Length of the buffer.
- * @param flags [IN] The type of message transmission.
- * @param address [IN] A null pointer, or points to a sockaddr structure in
-                   which the sending address is to be stored.
- * @param addrLen [IN] Either a null pointer, if address is a null pointer,
-                   or a pointer to a socklen_t object which on input
-                   specifies the length of the supplied sockaddr
-                   structure, and on output specifies the length of the
-                   stored address.
-
- * @param err [OUT] The error code if "recvfrom" failed.
- * @return BSL_SUCCESS, success.
- *         Otherwise, failure.
- */
-typedef int32_t (*BslSalNetRecvFrom)(int32_t sock, void *buf, size_t len, int32_t flags, void *address, int32_t *addrLen, int32_t *err);
-
-/**
- * @ingroup bsl_sal
- * @brief Monitor multiple file descriptors for readiness.
- *
- * @retval Positive integer: number of ready descriptors.
- * @retval 0: timeout occurred.
- * @retval Negative integer: select operation failed.
- */
-typedef int32_t (*BslSalSelect)(int32_t nfds, void *readfds, void *writefds, void *exceptfds, void *timeout);
-
-/**
- * @ingroup bsl_sal
- * @brief Perform I/O control on a socket.
- *
- * @retval #BSL_SUCCESS: succeeded.
- * @retval #BSL_SAL_ERR_NET_IOCTL: ioctl operation fails.
- */
-typedef int32_t (*BslSalIoctlsocket)(int32_t sockId, long cmd, unsigned long *arg);
-
-/**
- * @ingroup bsl_sal
- * @brief Get the last socket error.
- *
- * @retval Error code of the last socket operation.
- */
-typedef int32_t (*BslSalSockGetLastSocketError)(void);
+typedef int32_t (*BslDlSym)(void *handle, const char *funcName, void **func);
 
 /**
  * @ingroup bsl_sal
@@ -1631,6 +1817,110 @@ typedef int32_t (*BslSalSockGetLastSocketError)(void);
  * @retval Other error codes specific to the SAL module
  */
 int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb);
+
+/**
+ * @ingroup bsl_sal
+ * @brief   Check the socket descriptor.
+ *
+ * Check the socket descriptor.
+ *
+ * @attention None
+ * @param nfds [IN] Total number of file descriptors that are listened on
+ * @param readfds [IN] Readable file descriptor (optional)
+ * @param writefds [IN] Descriptor of a writable file. This parameter is optional.
+ * @param exceptfds [IN] Exception file descriptor (optional)
+ * @param timeout [IN] Set the timeout interval.
+ * @retval If the operation succeeds, Number of ready descriptors are returned;
+ * @retval If the operation fails, a negative value is returned;
+ * @retval If the operation times out, 0 is returned
+ */
+int32_t BSL_SAL_Select(int32_t nfds, void *readfds, void *writefds, void *exceptfds, void *timeout);
+
+/**
+ * @ingroup bsl_sal
+ * @brief   Device control interface function
+ *
+ * Device control interface function
+ *
+ * @attention None
+ * @param sockId [IN] Socket file descriptor ID
+ * @param cmd [IN] Interaction protocol
+ * @param arg [IN] Parameter
+ * @retval If the operation succeeds, BSL_SUCCESS is returned.
+ * @retval If the operation fails, BSL_SAL_ERR_NET_IOCTL is returned.
+ */
+int32_t BSL_SAL_Ioctlsocket(int32_t sockId, long cmd, unsigned long *arg);
+
+/**
+ * @ingroup bsl_sal
+ * @brief   Obtain the last error corresponding to the socket.
+ *
+ * Obtain the last error corresponding to the socket.
+ *
+ * @attention none
+ * @retval Return the corresponding error.
+ */
+int32_t BSL_SAL_SockGetLastSocketError(void);
+
+/**
+ * @ingroup bsl_sal
+ * @brief String comparison
+ *
+ * String comparison
+ *
+ * @attention None.
+ * @param str1 [IN] First string to be compared.
+ * @param str2 [IN] Second string to be compared.
+ * @retval If the parameter is abnormal, BSL_NULL_INPUT is returned.
+ * @retval If the strings are the same, 0 is returned;
+ * Otherwise, the difference between different characters is returned.
+ */
+int32_t BSL_SAL_StrcaseCmp(const char *str1, const char *str2);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Search for the corresponding character position in a string.
+ *
+ * Search for the corresponding character position in a string.
+ *
+ * @attention None.
+ * @param str [IN] String
+ * @param character [IN] Character to be searched for
+ * @param count [IN] Range to be found
+ * @retval If a character is found, the position of the character is returned;
+ * Otherwise, NULL is returned.
+ */
+void *BSL_SAL_Memchr(const char *str, int32_t character, size_t count);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Convert string to number
+ *
+ * Convert string to number
+ *
+ * @attention None.
+ * @param str [IN] String to be converted.
+ * @retval If the conversion is successful, the corresponding number is returned;
+ * Otherwise, the value 0 is returned.
+ */
+int32_t BSL_SAL_Atoi(const char *str);
+
+/**
+ * @ingroup bsl_sal
+ * @brief Obtain the length of a given string.
+ *
+ * Obtain the length of a given string.
+ *
+ * @attention None.
+ * @param string [IN] String to obtain the length.
+ * @param count [IN] Maximum length
+ * @retval If the parameter is abnormal, return 0.
+ * @retval If the length of a string is greater than the count, return count.
+ * Otherwise, the actual length of the string is returned.
+ */
+uint32_t BSL_SAL_Strnlen(const char *string, uint32_t count);
+
+
 /**
  * @ingroup bsl_sal
  * @brief Load a dynamic library for dl.

@@ -19,6 +19,8 @@
 #include "securec.h"
 #include "bsl_sal.h"
 #include "sal_atomic.h"
+#include "bsl_params.h"
+#include "crypt_params_key.h"
 #include "eal_pkey_local.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_utils.h"
@@ -84,35 +86,36 @@ CRYPT_HybridKemCtx *CRYPT_HYBRID_KEM_NewCtx(void)
     return hybridKey;
 }
 
+#ifdef HITLS_CRYPTO_PROVIDER
 CRYPT_HybridKemCtx *CRYPT_HYBRID_KEM_NewCtxEx(void *libCtx)
 {
-    CRYPT_HybridKemCtx *hybridKey = CRYPT_HYBRID_KEM_NewCtx();
-    if (hybridKey == NULL) {
+    CRYPT_HybridKemCtx *ctx = CRYPT_HYBRID_KEM_NewCtx();
+    if (ctx == NULL) {
         return NULL;
-   
     }
-    hybridKey->libCtx = libCtx;
-    return hybridKey;
+    ctx->libCtx = libCtx;
+    return ctx;
 }
+#endif
 
-void CRYPT_HYBRID_KEM_FreeCtx(CRYPT_HybridKemCtx *hybridKey)
+void CRYPT_HYBRID_KEM_FreeCtx(CRYPT_HybridKemCtx *ctx)
 {
-    if (hybridKey == NULL) {
+    if (ctx == NULL) {
         return;
     }
     int ref = 0;
-    BSL_SAL_AtomicDownReferences(&(hybridKey->references), &ref);
+    BSL_SAL_AtomicDownReferences(&(ctx->references), &ref);
     if (ref > 0) {
         return;
     }
-    BSL_SAL_ReferencesFree(&(hybridKey->references));
-    if (hybridKey->pKeyMethod != NULL && hybridKey->pKeyMethod->freeCtx != NULL) {
-        hybridKey->pKeyMethod->freeCtx(hybridKey->pkeyCtx);
+    BSL_SAL_ReferencesFree(&(ctx->references));
+    if (ctx->pKeyMethod != NULL && ctx->pKeyMethod->freeCtx != NULL) {
+        ctx->pKeyMethod->freeCtx(ctx->pkeyCtx);
     }
-    if (hybridKey->kemMethod != NULL && hybridKey->kemMethod->freeCtx != NULL) {
-        hybridKey->kemMethod->freeCtx(hybridKey->kemCtx);
+    if (ctx->kemMethod != NULL && ctx->kemMethod->freeCtx != NULL) {
+        ctx->kemMethod->freeCtx(ctx->kemCtx);
     }
-    BSL_SAL_FREE(hybridKey);
+    BSL_SAL_FREE(ctx);
 }
 
 static void *CRYPT_HybridNewPkeyCtx(CRYPT_HybridKemCtx *ctx, int32_t algId)
@@ -296,10 +299,10 @@ static int32_t CRYPT_HybridGetKeyPtr(const CRYPT_HybridKemCtx *ctx, void *pub, u
     RETURN_RET_IF(pubLen < (pkeyData->valueLen + kemData->valueLen), CRYPT_INVALID_ARG);
     if (ctx->pKeyMethod->id == CRYPT_PKEY_X25519) {
         kemData->value = pub;
-        pkeyData->value = pub + kemData->valueLen;
+        pkeyData->value = (uint8_t *)pub + kemData->valueLen;
     } else {
         pkeyData->value = pub;
-        kemData->value = pub + pkeyData->valueLen;
+        kemData->value = (uint8_t *)pub + pkeyData->valueLen;
     }
     return CRYPT_SUCCESS;
 }
@@ -461,7 +464,8 @@ int32_t CRYPT_HYBRID_KEM_Encaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, 
     GOTO_ERR_IF(CRYPT_HybridGetKeyPtr(ctx, sharekey, *shareLen, &pkeyShared, &kemSK), ret);
     GOTO_ERR_IF(ctx->pKeyMethod->computeShareKey(tmpKey, ctx->pkeyCtx, pkeyShared.value, &pkeyShared.valueLen), ret);
 
-    GOTO_ERR_IF(ctx->kemMethod->encaps(ctx->kemCtx, kemCT.value, &kemCT.valueLen, kemSK.value, &kemSK.valueLen), ret);
+    GOTO_ERR_IF(ctx->kemMethod->pkeyEncaps(ctx->kemCtx, kemCT.value,
+        &kemCT.valueLen, kemSK.value, &kemSK.valueLen), ret);
     *shareLen = pkeyShared.valueLen + kemSK.valueLen;
     *cipherLen = pubKey[0].valueLen + kemCT.valueLen;
 
@@ -494,7 +498,8 @@ int32_t CRYPT_HYBRID_KEM_Decaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, 
     GOTO_ERR_IF(CRYPT_HybridGetKeyPtr(ctx, sharekey, *shareLen, &pkeyShared, &kemSK), ret);
     GOTO_ERR_IF(ctx->pKeyMethod->computeShareKey(ctx->pkeyCtx, tmpKey, pkeyShared.value, &pkeyShared.valueLen), ret);
 
-    GOTO_ERR_IF(ctx->kemMethod->decaps(ctx->kemCtx, kemCT.value, kemCT.valueLen, kemSK.value, &kemSK.valueLen), ret);
+    GOTO_ERR_IF(ctx->kemMethod->pkeyDecaps(ctx->kemCtx, kemCT.value,
+        kemCT.valueLen, kemSK.value, &kemSK.valueLen), ret);
     *shareLen = pkeyShared.valueLen + kemSK.valueLen;
 ERR:
     ctx->pKeyMethod->freeCtx(tmpKey);

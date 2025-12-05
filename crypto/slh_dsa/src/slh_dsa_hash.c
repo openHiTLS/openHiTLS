@@ -19,8 +19,8 @@
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
-#include "crypt_algid.h"
 #include "crypt_types.h"
+#include "crypt_algid.h"
 #include "crypt_eal_md.h"
 #include "crypt_eal_mac.h"
 #include "eal_md_local.h"
@@ -98,7 +98,7 @@ static int32_t Prfmsg(const CryptSlhDsaCtx *ctx, const uint8_t *rand, const uint
     uint32_t n = ctx->para.n;
     uint8_t tmp[MAX_MDSIZE] = {0};
     uint32_t tmpLen = sizeof(tmp);
-    CRYPT_EAL_MacCtx *mdCtx = CRYPT_EAL_ProviderMacNewCtx(ctx->libCtx, macId, NULL);
+    CRYPT_EAL_MacCtx *mdCtx = CRYPT_EAL_MacNewCtx(macId);
     if (mdCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;

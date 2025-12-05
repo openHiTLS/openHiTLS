@@ -64,18 +64,18 @@ int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb)
         case BSL_SAL_MEM_CB:
             return SAL_MemCallBack_Ctrl(funcType, funcCb);
         case BSL_SAL_THREAD_CB:
-            return SAL_ThreadCallback_Ctrl(funcType, funcCb);
+            return SAL_ThreadCallBack_Ctrl(funcType, funcCb);
 #ifdef HITLS_BSL_SAL_PID
         case BSL_SAL_PID_CB:
-            return SAL_PiDCallback_Ctrl(funcType, funcCb);
+            return SAL_PiDCallBack_Ctrl(funcType, funcCb);
 #endif
 #ifdef HITLS_BSL_SAL_NET
         case BSL_SAL_NET_CB:
-            return SAL_NetCallback_Ctrl(funcType, funcCb);
+            return SAL_NetCallBack_Ctrl(funcType, funcCb);
 #endif
 #ifdef HITLS_BSL_SAL_TIME
         case BSL_SAL_TIME_CB:
-            return SAL_TimeCallback_Ctrl(funcType, funcCb);
+            return SAL_TimeCallBack_Ctrl(funcType, funcCb);
 #endif
 #ifdef HITLS_BSL_SAL_FILE
         case BSL_SAL_FILE_CB:
@@ -83,7 +83,7 @@ int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb)
 #endif
 #ifdef HITLS_BSL_SAL_DL
         case BSL_SAL_DL_CB:
-            return SAL_DlCallback_Ctrl(funcType, funcCb);
+            return SAL_DlCallBack_Ctrl(funcType, funcCb);
 #endif
         default:
             return BSL_SAL_ERR_BAD_PARAM;

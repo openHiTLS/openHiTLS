@@ -25,7 +25,6 @@
 extern "C" {
 #endif
 
-typedef int32_t (*QSORT_COMP_FN_TYPE)(const void *, const void *);
 
 /* Sort the list in ascending order of content */
 int32_t BSL_ListSortInternal(BslList *pList, int32_t((*cmp)(const void *, const void *)));
@@ -77,7 +76,7 @@ void *BSL_LIST_SearchEx(BslList *pList, const void *pSearchFor, BSL_LIST_PFUNC_C
  *         BSL_MALLOC_FAIL: If failure to allocate memory for new node
  *         BSL_SUCCESS: If successful
  */
-uint32_t BSL_LIST_AddElementInt(BslList *pList, void *pData, BslListPosition enPosition);
+int32_t BSL_LIST_AddElementInt(BslList *pList, void *pData, BslListPosition enPosition);
 
 #define CURR_LIST_NODE(al) ((al)->curr)
 

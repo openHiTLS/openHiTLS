@@ -21,18 +21,17 @@
 #include "crypt_errno.h"
 #include "modes_local.h"
 #include "crypt_modes_xts.h"
+#include "crypt_utils.h"
 
 int32_t MODES_SM4_XTS_Encrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
+    RETURN_RET_IF((ctx == NULL || in == NULL || out == NULL), CRYPT_NULL_INPUT);
     return CRYPT_SM4_XTS_Encrypt(ctx->ciphCtx, in, out, len, ctx->tweak);
 }
 
 int32_t MODES_SM4_XTS_Decrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    if (ctx == NULL || in == NULL || out == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
+    RETURN_RET_IF((ctx == NULL || in == NULL || out == NULL), CRYPT_NULL_INPUT);
     return CRYPT_SM4_XTS_Decrypt(ctx->ciphCtx, in, out, len, ctx->tweak);
 }
 
@@ -46,10 +45,7 @@ int32_t SM4_XTS_InitCtx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t key
     uint32_t ivLen, bool enc)
 {
     int32_t ret;
-    if (key == NULL || iv == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
+    RETURN_RET_IF((key == NULL || iv == NULL), CRYPT_NULL_INPUT);
     if (enc) {
         ret = CRYPT_SM4_XTS_SetEncryptKey(modeCtx->xtsCtx.ciphCtx, key, keyLen);
     } else {

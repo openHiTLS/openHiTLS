@@ -32,11 +32,11 @@
 #ifdef HITLS_CRYPTO_CBC
 #include "crypt_modes_cbc.h"
 #endif
-#ifdef HITLS_CRYPTO_ECB
-#include "crypt_modes_ecb.h"
-#endif
 #ifdef HITLS_CRYPTO_GCM
 #include "crypt_modes_gcm.h"
+#endif
+#ifdef HITLS_CRYPTO_ECB
+#include "crypt_modes_ecb.h"
 #endif
 #ifdef HITLS_CRYPTO_CCM
 #include "crypt_modes_ccm.h"
@@ -190,43 +190,43 @@ const EAL_CipherMethod *EAL_FindModeMethod(CRYPT_MODE_AlgId id)
 {
     switch (id) {
 #ifdef HITLS_CRYPTO_CBC
-        case CRYPT_MODE_CBC:
+        case HCRYPT_MODE_CBC:
             return &CBC_METHOD;
 #endif
 #ifdef HITLS_CRYPTO_ECB
-        case CRYPT_MODE_ECB:
+        case HCRYPT_MODE_ECB:
             return &ECB_METHOD;
 #endif
 #ifdef HITLS_CRYPTO_CTR
-        case CRYPT_MODE_CTR:
+        case HCRYPT_MODE_CTR:
             return &CTR_METHOD;
 #endif
 #ifdef HITLS_CRYPTO_XTS
-        case CRYPT_MODE_XTS:
+        case HCRYPT_MODE_XTS:
             return &XTS_METHOD;
 #endif
 #ifdef HITLS_CRYPTO_CCM
-        case CRYPT_MODE_CCM:
+        case HCRYPT_MODE_CCM:
             return &CCM_METHOD;
 #endif
 #ifdef HITLS_CRYPTO_GCM
-        case CRYPT_MODE_GCM:
+        case HCRYPT_MODE_GCM:
             return &GCM_METHOD;
 #endif
 #if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
-        case CRYPT_MODE_CHACHA20_POLY1305:
+        case HCRYPT_MODE_CHACHA20_POLY1305:
             return &CHACHA20_POLY1305_METHOD;
 #endif
 #ifdef HITLS_CRYPTO_CFB
-        case CRYPT_MODE_CFB:
+        case HCRYPT_MODE_CFB:
             return &CFB_METHOD;
 #endif
 #ifdef HITLS_CRYPTO_OFB
-        case CRYPT_MODE_OFB:
+        case HCRYPT_MODE_OFB:
             return &OFB_METHOD;
 #endif
 #ifdef HITLS_CRYPTO_HCTR
-        case CRYPT_MODE_HCTR:
+        case HCRYPT_MODE_HCTR:
             return &HCTR_METHOD;
 #endif
         default:
@@ -237,75 +237,75 @@ const EAL_CipherMethod *EAL_FindModeMethod(CRYPT_MODE_AlgId id)
 static const EAL_SymAlgMap SYM_ID_MAP[] = {
 #ifdef HITLS_CRYPTO_AES
 #ifdef HITLS_CRYPTO_CBC
-    {.id = CRYPT_CIPHER_AES128_CBC, .modeId = CRYPT_MODE_CBC },
-    {.id = CRYPT_CIPHER_AES192_CBC, .modeId = CRYPT_MODE_CBC },
-    {.id = CRYPT_CIPHER_AES256_CBC, .modeId = CRYPT_MODE_CBC },
+    {.id = CRYPT_CIPHER_AES128_CBC, .modeId = HCRYPT_MODE_CBC },
+    {.id = CRYPT_CIPHER_AES192_CBC, .modeId = HCRYPT_MODE_CBC },
+    {.id = CRYPT_CIPHER_AES256_CBC, .modeId = HCRYPT_MODE_CBC },
 #endif
 #ifdef HITLS_CRYPTO_ECB
-    {.id = CRYPT_CIPHER_AES128_ECB, .modeId = CRYPT_MODE_ECB },
-    {.id = CRYPT_CIPHER_AES192_ECB, .modeId = CRYPT_MODE_ECB },
-    {.id = CRYPT_CIPHER_AES256_ECB, .modeId = CRYPT_MODE_ECB },
+    {.id = CRYPT_CIPHER_AES128_ECB, .modeId = HCRYPT_MODE_ECB },
+    {.id = CRYPT_CIPHER_AES192_ECB, .modeId = HCRYPT_MODE_ECB },
+    {.id = CRYPT_CIPHER_AES256_ECB, .modeId = HCRYPT_MODE_ECB },
 #endif
 #ifdef HITLS_CRYPTO_CTR
-    {.id = CRYPT_CIPHER_AES128_CTR, .modeId = CRYPT_MODE_CTR },
-    {.id = CRYPT_CIPHER_AES192_CTR, .modeId = CRYPT_MODE_CTR },
-    {.id = CRYPT_CIPHER_AES256_CTR, .modeId = CRYPT_MODE_CTR },
+    {.id = CRYPT_CIPHER_AES128_CTR, .modeId = HCRYPT_MODE_CTR },
+    {.id = CRYPT_CIPHER_AES192_CTR, .modeId = HCRYPT_MODE_CTR },
+    {.id = CRYPT_CIPHER_AES256_CTR, .modeId = HCRYPT_MODE_CTR },
 #endif
 #ifdef HITLS_CRYPTO_CCM
-    {.id = CRYPT_CIPHER_AES128_CCM, .modeId = CRYPT_MODE_CCM },
-    {.id = CRYPT_CIPHER_AES192_CCM, .modeId = CRYPT_MODE_CCM },
-    {.id = CRYPT_CIPHER_AES256_CCM, .modeId = CRYPT_MODE_CCM },
+    {.id = CRYPT_CIPHER_AES128_CCM, .modeId = HCRYPT_MODE_CCM },
+    {.id = CRYPT_CIPHER_AES192_CCM, .modeId = HCRYPT_MODE_CCM },
+    {.id = CRYPT_CIPHER_AES256_CCM, .modeId = HCRYPT_MODE_CCM },
 #endif
 #ifdef HITLS_CRYPTO_GCM
-    {.id = CRYPT_CIPHER_AES128_GCM, .modeId = CRYPT_MODE_GCM },
-    {.id = CRYPT_CIPHER_AES192_GCM, .modeId = CRYPT_MODE_GCM },
-    {.id = CRYPT_CIPHER_AES256_GCM, .modeId = CRYPT_MODE_GCM },
+    {.id = CRYPT_CIPHER_AES128_GCM, .modeId = HCRYPT_MODE_GCM },
+    {.id = CRYPT_CIPHER_AES192_GCM, .modeId = HCRYPT_MODE_GCM },
+    {.id = CRYPT_CIPHER_AES256_GCM, .modeId = HCRYPT_MODE_GCM },
 #endif
 #ifdef HITLS_CRYPTO_CFB
-    {.id = CRYPT_CIPHER_AES128_CFB, .modeId = CRYPT_MODE_CFB },
-    {.id = CRYPT_CIPHER_AES192_CFB, .modeId = CRYPT_MODE_CFB },
-    {.id = CRYPT_CIPHER_AES256_CFB, .modeId = CRYPT_MODE_CFB },
+    {.id = CRYPT_CIPHER_AES128_CFB, .modeId = HCRYPT_MODE_CFB },
+    {.id = CRYPT_CIPHER_AES192_CFB, .modeId = HCRYPT_MODE_CFB },
+    {.id = CRYPT_CIPHER_AES256_CFB, .modeId = HCRYPT_MODE_CFB },
 #endif
 #ifdef HITLS_CRYPTO_OFB
-    {.id = CRYPT_CIPHER_AES128_OFB, .modeId = CRYPT_MODE_OFB },
-    {.id = CRYPT_CIPHER_AES192_OFB, .modeId = CRYPT_MODE_OFB },
-    {.id = CRYPT_CIPHER_AES256_OFB, .modeId = CRYPT_MODE_OFB },
+    {.id = CRYPT_CIPHER_AES128_OFB, .modeId = HCRYPT_MODE_OFB },
+    {.id = CRYPT_CIPHER_AES192_OFB, .modeId = HCRYPT_MODE_OFB },
+    {.id = CRYPT_CIPHER_AES256_OFB, .modeId = HCRYPT_MODE_OFB },
 #endif
 #ifdef HITLS_CRYPTO_XTS
-    {.id = CRYPT_CIPHER_AES128_XTS, .modeId = CRYPT_MODE_XTS },
-    {.id = CRYPT_CIPHER_AES256_XTS, .modeId = CRYPT_MODE_XTS },
+    {.id = CRYPT_CIPHER_AES128_XTS, .modeId = HCRYPT_MODE_XTS },
+    {.id = CRYPT_CIPHER_AES256_XTS, .modeId = HCRYPT_MODE_XTS },
 #endif
 #endif // aes
 #ifdef HITLS_CRYPTO_CHACHA20
-    {.id = CRYPT_CIPHER_CHACHA20_POLY1305, .modeId = CRYPT_MODE_CHACHA20_POLY1305},
+    {.id = CRYPT_CIPHER_CHACHA20_POLY1305, .modeId = HCRYPT_MODE_CHACHA20_POLY1305},
 #endif
 #ifdef HITLS_CRYPTO_SM4
 #ifdef HITLS_CRYPTO_XTS
-    {.id = CRYPT_CIPHER_SM4_XTS, .modeId = CRYPT_MODE_XTS },
+    {.id = CRYPT_CIPHER_SM4_XTS, .modeId = HCRYPT_MODE_XTS },
 #endif
 #ifdef HITLS_CRYPTO_ECB
-    {.id = CRYPT_CIPHER_SM4_ECB, .modeId = CRYPT_MODE_ECB },
+    {.id = CRYPT_CIPHER_SM4_ECB, .modeId = HCRYPT_MODE_ECB },
 #endif
 #ifdef HITLS_CRYPTO_CBC
-    {.id = CRYPT_CIPHER_SM4_CBC, .modeId = CRYPT_MODE_CBC },
+    {.id = CRYPT_CIPHER_SM4_CBC, .modeId = HCRYPT_MODE_CBC },
 #endif
 #ifdef HITLS_CRYPTO_CTR
-    {.id = CRYPT_CIPHER_SM4_CTR, .modeId = CRYPT_MODE_CTR },
+    {.id = CRYPT_CIPHER_SM4_CTR, .modeId = HCRYPT_MODE_CTR },
 #endif
 #ifdef HITLS_CRYPTO_GCM
-    {.id = CRYPT_CIPHER_SM4_GCM, .modeId = CRYPT_MODE_GCM },
+    {.id = CRYPT_CIPHER_SM4_GCM, .modeId = HCRYPT_MODE_GCM },
 #endif
 #ifdef HITLS_CRYPTO_CFB
-    {.id = CRYPT_CIPHER_SM4_CFB, .modeId = CRYPT_MODE_CFB },
+    {.id = CRYPT_CIPHER_SM4_CFB, .modeId = HCRYPT_MODE_CFB },
 #endif
 #ifdef HITLS_CRYPTO_OFB
-    {.id = CRYPT_CIPHER_SM4_OFB, .modeId = CRYPT_MODE_OFB },
+    {.id = CRYPT_CIPHER_SM4_OFB, .modeId = HCRYPT_MODE_OFB },
 #endif
 #ifdef HITLS_CRYPTO_CCM
-    {.id = CRYPT_CIPHER_SM4_CCM, .modeId = CRYPT_MODE_CCM },
+    {.id = CRYPT_CIPHER_SM4_CCM, .modeId = HCRYPT_MODE_CCM },
 #endif
 #ifdef HITLS_CRYPTO_HCTR
-    {.id = CRYPT_CIPHER_SM4_HCTR, .modeId = CRYPT_MODE_HCTR },
+    {.id = CRYPT_CIPHER_SM4_HCTR, .modeId = HCRYPT_MODE_HCTR },
 #endif
 #endif // sm4
 };

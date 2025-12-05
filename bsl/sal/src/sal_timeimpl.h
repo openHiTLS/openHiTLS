@@ -27,29 +27,35 @@ extern "C" {
 #endif // __cplusplus
 
 typedef struct {
-    BslSalGetSysTime pfGetSysTime;
-    BslSalDateToStrConvert pfDateToStrConvert;
-    BslSalSysTimeGet pfSysTimeGet;
-    BslSalUtcTimeToDateConvert pfUtcTimeToDateConvert;
-    BslSalSleep pfSleep;
-    BslSalTick pfTick;
-    BslSalTicksPerSec pfTicksPerSec;
+    BslGetUtcTime pfGetUtcTime;
+    BslGetBslTime pfGetBslTime;
+    BslUtcTimeToBslTime pfUtcTimeToBslTime;
+    BslSleep pfSleep;
+    BslTick pfTick;
+    BslTicksPerSec pfTicksPerSec;
     BslGetTimeInNS pfBslGetTimeInNS;
 } BSL_SAL_TimeCallback;
 
-int32_t SAL_TimeCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
+/**
+ * @brief Register the time-related callback function.
+ * @param type [IN] Callback function type.
+ * @param funcCb [IN] Pointer to the callback function.
+ * @return BSL_SUCCESS is successfully executed.
+ *         BSL_SAL_ERR_BAD_PARAM The parameter is incorrect.
+ */
+int32_t SAL_TimeCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 
 #if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
-int64_t TIME_GetSysTime(void);
+int64_t SAL_TIME_GetSysTime(void);
 uint32_t TIME_DateToStrConvert(const BSL_TIME *dateTime, char *timeStr, size_t len);
-uint32_t TIME_SysTimeGet(BSL_TIME *sysTime);
-uint32_t TIME_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime);
-void SAL_Sleep(uint32_t time);
-long SAL_Tick(void);
-long SAL_TicksPerSec(void);
+int32_t SAL_TIME_SysTimeGet(BSL_TIME *sysTime);
+int32_t SAL_TIME_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime);
+long SAL_TIME_Tick(void);
+long SAL_TIME_TicksPerSec(void);
 uint64_t SAL_TIME_GetNSec(void);
-#endif
 
+void SAL_TIME_Sleep(uint32_t time);
+#endif
 #ifdef __cplusplus
 }
 #endif // __cplusplus

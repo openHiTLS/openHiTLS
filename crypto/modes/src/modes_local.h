@@ -180,6 +180,8 @@ int32_t MODES_SM4_GCM_DecryptBlock(MODES_CipherGCMCtx *ctx, const uint8_t *in, u
 #endif
 #ifdef HITLS_CRYPTO_OFB
 int32_t MODES_OFB_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+int32_t MODE_SM4_OFB_Encrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
+int32_t MODE_SM4_OFB_Decrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);
 #endif
 #ifdef HITLS_CRYPTO_XTS
 int32_t MODES_XTS_Encrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len);

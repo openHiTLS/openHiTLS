@@ -25,7 +25,7 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_bn.h"
-#include "crypt_encode_internal.h"
+#include "crypt_encode.h"
 #include "crypt_ecc.h"
 #include "crypt_ecc_pkey.h"
 #include "crypt_local_types.h"
@@ -948,7 +948,7 @@ int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
             return Sm2SetRandom(ctx, val, len);
         case CRYPT_CTRL_GET_SM2_RANDOM:
             return Sm2GetRandom(ctx, val, len);
-        case CRYPT_CTRL_GET_SM2_SEND_CHECK:
+        case CRYPT_CTRL_SM2_GET_SEND_CHECK:
             return Sm2GetSumSend(ctx, val, len);
         case CRYPT_CTRL_SM2_DO_CHECK:
             return Sm2DoCheck(ctx, val, len);

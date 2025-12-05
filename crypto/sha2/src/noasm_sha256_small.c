@@ -42,7 +42,7 @@ static const uint32_t K256[64] = {
 
 #define R(w, t) (S1((w)[(t) - 2]) + (w)[(t) - 7] + S0((w)[(t) - 15]) + (w)[(t)-16])
 
-#define ROUND(a, b, c, d, e, f, g, h, i, k)
+#define CRYPT_SHA256_ROUND(a, b, c, d, e, f, g, h, i, k) \
     do { \
         uint32_t t1 = (h) + (ROTR32((e), 6) ^ ROTR32((e), 11) ^ ROTR32((e), 25)) + \
             ((g) ^ ((e) & ((f) ^ (g)))) + (k) + (i); \
@@ -83,7 +83,7 @@ static void CompressBlock(uint32_t state[8], const uint8_t block[CRYPT_SHA2_256_
 
     // RFC 6234 6.2.3 Perform the main hash computation
     for (unsigned i = 0; i < 64; i++) {
-        ROUND(a, b, c, d, e, f, g, h, w[i], K256[i]);
+        CRYPT_SHA256_ROUND(a, b, c, d, e, f, g, h, w[i], K256[i]);
     }
 
     // RFC 6234 6.2.4. Compute the intermediate hash value H(i):
@@ -97,7 +97,7 @@ static void CompressBlock(uint32_t state[8], const uint8_t block[CRYPT_SHA2_256_
     state[7] += h;
 }
 #undef ROTR32
-#undef ROUND
+#undef CRYPT_SHA256_ROUND
 
 void SHA256CompressMultiBlocks(uint32_t hash[8], const uint8_t *in, uint32_t num)
 {

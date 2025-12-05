@@ -48,8 +48,8 @@ typedef struct {
     /* the current amount of entropy. */
     uint32_t curEntropy;
     /* external conditioning function algorithm */
-    int32_t ecfuncId;
-    int32_t ecfOutLen;
+    uint32_t ecfuncId;
+    uint32_t ecfOutLen;
     /* external conditioning function */
     ExternalConditioningFunction ecfunc;
     /* the length of the existing entropy data */

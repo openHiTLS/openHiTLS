@@ -38,19 +38,15 @@ int32_t MODES_CBC_DeInitCtx(MODES_CipherCtx *modeCtx);
 int32_t MODES_CBC_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen);
 void MODES_CBC_FreeCtx(MODES_CipherCtx *modeCtx);
 
-#ifdef HITLS_CRYPTO_AES
 // AES CBC optimization implementation
 int32_t AES_CBC_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 int32_t AES_CBC_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
-#endif
 
-#ifdef HITLS_CRYPTO_SM4
 // SM4 CBC optimization implementation
 int32_t SM4_CBC_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 int32_t SM4_CBC_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
 int32_t SM4_CBC_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc);
-#endif
 
 int32_t MODES_CBC_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 int32_t MODES_CBC_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,

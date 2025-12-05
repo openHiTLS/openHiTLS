@@ -21,6 +21,7 @@
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
 #include "bsl_uio.h"
+#include "uio_base.h"
 #include "uio_abstraction.h"
 
 // The write behavior must be the same.
@@ -57,7 +58,7 @@ static int32_t BufferCreate(BSL_UIO *uio)
         return BSL_MALLOC_FAIL;
     }
     BSL_UIO_SetCtx(uio, ctx);
-    uio->init = 1;
+    uio->init = true;
     return BSL_SUCCESS;
 }
 
@@ -74,7 +75,7 @@ static int32_t BufferDestroy(BSL_UIO *uio)
         BSL_UIO_SetCtx(uio, NULL);
     }
     uio->flags = 0;
-    uio->init = 0;
+    uio->init = false;
     return BSL_SUCCESS;
 }
 
@@ -159,11 +160,12 @@ static int32_t BufferSetBufferSize(BSL_UIO *uio, int32_t larg, void *parg)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    ctx->outOff = 0;
     ctx->outLen = 0;
+    ctx->outOff = 0;
     ctx->outSize = len;
     return BSL_SUCCESS;
 }
+
 
 static int32_t BufferCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 {

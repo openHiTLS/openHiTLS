@@ -22,7 +22,7 @@
 REGCTX .req x0
 REGINC .req x1
 REGOUT .req x2
-REGLEN .req x3
+INLEN .req x3
 
 // 64-byte input, temporarily loaded register(0 ~ 15).
 WINPUT0 .req w5
@@ -103,7 +103,9 @@ VCOUN0 .req v27
 VSIGMA .req v28
 VKEY01 .req v29
 VKEY02 .req v30
+QKEY02 .req q30
 VADDER .req v31
+QADDER .req q31
 
 // Counter、sigma、key、adder register.
 WSIG01 .req w22

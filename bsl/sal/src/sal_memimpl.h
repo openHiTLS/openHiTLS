@@ -16,8 +16,10 @@
 #ifndef SAL_MEMIMPL_H
 #define SAL_MEMIMPL_H
 
-#include <stdint.h>
 #include "hitls_build.h"
+
+#include <stdint.h>
+#include "bsl_sal.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,29 +52,17 @@ typedef struct MemCallback {
      * @param addr [IN] Start address of the memory allocated by pfMalloc.
      */
     void (*pfFree)(void *addr);
-
-    /**
-     * @ingroup bsl_sal
-     * @brief Reallocate a memory block.
-     *
-     * @param addr    [IN] Original memory address.
-     * @param newSize [IN] Extended memory size.
-     * @param oldSize [IN] Memory size before expansion.
-     * @retval void*   indicates successful, the extended memory address is returned.
-     * @retval NULL    indicates failed, return NULL.
-     */
-    void *(*pfRealloc)(void *addr, uint32_t newSize, uint32_t oldSize);
 } BSL_SAL_MemCallback;
 
-int32_t SAL_MemCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
-
-#if defined(HITLS_BSL_SAL_MEM) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
+#ifdef HITLS_BSL_SAL_MEM
 void *SAL_MallocImpl(uint32_t size);
 
 void SAL_FreeImpl(void *value);
 
 void *SAL_ReallocImpl(void *addr, uint32_t newSize);
 #endif
+
+int32_t SAL_MemCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 
 #ifdef __cplusplus
 }

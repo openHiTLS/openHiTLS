@@ -46,6 +46,7 @@
 #include "hitls_type.h"
 #include "crypt_eal_entropy.h"
 #include "crypt_util_rand.h"
+#include "crypt_params_key.h"
 /* END_HEADER */
 
 #ifdef HITLS_CRYPTO_CMVP_SM_PURE_C

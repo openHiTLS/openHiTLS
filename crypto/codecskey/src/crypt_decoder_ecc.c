@@ -186,7 +186,7 @@ int32_t CRYPT_ECC_ParsePrikeyAsn1Buff(void *libCtx, uint8_t *buffer, uint32_t bu
         ret = ECC_PkeySetPubKeyEx(pctx, pubParam);
     } else {
         uint32_t flag = CRYPT_ECC_PRIKEY_NO_PUBKEY;
-        ret = ECC_PkeyCtrl(pctx, CRYPT_CTRL_SET_ECC_FLAG, &flag, sizeof(flag));
+        ret = ECC_PkeyCtrl(pctx, CRYPT_CTRL_SET_FLAG, &flag, sizeof(flag));
         if (ret == CRYPT_SUCCESS) {
             ret = ECC_PkeyCtrl(pctx, CRYPT_CTRL_GEN_ECC_PUBLICKEY, NULL, 0);
         }
@@ -311,7 +311,7 @@ int32_t CRYPT_SM2_ParsePrikeyAsn1Buff(void *libCtx, uint8_t *buffer, uint32_t bu
         ret = CRYPT_SM2_SetPubKeyEx(pctx, pubParam);
     } else {
         uint32_t flag = CRYPT_ECC_PRIKEY_NO_PUBKEY;
-        ret = CRYPT_SM2_Ctrl(pctx, CRYPT_CTRL_SET_ECC_FLAG, &flag, sizeof(flag));
+        ret = CRYPT_SM2_Ctrl(pctx, CRYPT_CTRL_SET_FLAG, &flag, sizeof(flag));
         if (ret == CRYPT_SUCCESS) {
             ret = CRYPT_SM2_Ctrl(pctx, CRYPT_CTRL_GEN_ECC_PUBLICKEY, NULL, 0);
         }

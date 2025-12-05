@@ -112,7 +112,7 @@ test_md()
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sha512 test=sha512
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sha3 test=sha3
     elif [ "$ASM_TYPE" = "x8664" ]; then
-        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sm3 test=sm3
+        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sm3,ealinit test=sm3
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,md5 test=md5
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sha1 test=sha1
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sha2 test=sha2

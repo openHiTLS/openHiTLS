@@ -23,6 +23,10 @@
 #include "bsl_err.h"
 #include "avl.h"
 #include "bsl_uio.h"
+#include "hitls_pki_errno.h"
+#include "crypt_errno.h"
+#include "hitls_error.h"
+#include "auth_errno.h"
 
 static int32_t PthreadRWLockNew(BSL_SAL_ThreadLockHandle *lock)
 {
@@ -625,8 +629,493 @@ void SDV_BSL_ERR_AVLRL_FUNC_TC001(void)
     BSL_AVL_DeleteTree(root, NULL);
 
 EXIT:
+    BSL_ERR_ClearError();
     BSL_ERR_DeInit();
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_BSL_ERR_PEEK_FUNC_TC001(void)
+{
+    TestMemInit();
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+
+    // Test peek operations on empty stack
+    ASSERT_TRUE(BSL_ERR_PeekLastError() == BSL_SUCCESS);
+
+    // Push multiple errors to test peek operations
+    BSL_ERR_PushError(BSL_UIO_FAIL, __FILENAME__, __LINE__);
+    BSL_ERR_PushError(BSL_UIO_IO_BUSY, __FILENAME__, __LINE__);
+    BSL_ERR_PushError(BSL_UIO_IO_EXCEPTION, __FILENAME__, __LINE__);
+
+    // Test BSL_ERR_PeekError - should return the first (oldest) error
+    int32_t firstError = BSL_ERR_PeekError();
+    ASSERT_TRUE(firstError == BSL_UIO_FAIL);
+
+    // Test BSL_ERR_PeekLastError - should return the last (newest) error
+    int32_t lastError = BSL_ERR_PeekLastError();
+    ASSERT_TRUE(lastError == BSL_UIO_IO_EXCEPTION);
+
+    // Verify that peek operations don't modify the error stack
+    // The errors should still be there in the same order
+    ASSERT_TRUE(BSL_ERR_PeekError() == BSL_UIO_FAIL);
+    ASSERT_TRUE(BSL_ERR_PeekLastError() == BSL_UIO_IO_EXCEPTION);
+
+    // Verify the stack is intact by getting errors in order
+    ASSERT_TRUE(BSL_ERR_GetError() == BSL_UIO_FAIL);
+    ASSERT_TRUE(BSL_ERR_GetError() == BSL_UIO_IO_BUSY);
+    ASSERT_TRUE(BSL_ERR_GetError() == BSL_UIO_IO_EXCEPTION);
+    ASSERT_TRUE(BSL_ERR_GetError() == BSL_SUCCESS);
+
+    // Test peek operations on empty stack again
+    ASSERT_TRUE(BSL_ERR_PeekError() == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_ERR_PeekLastError() == BSL_SUCCESS);
+
+EXIT:
+    BSL_ERR_ClearError();
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ERR_GET_LIB_FUNC_TC001(void)
+{
+    TestMemInit();
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+
+    // Test BSL_ERR_GET_LIB with BSL_SUCCESS (should return 0)
+    ASSERT_TRUE(BSL_ERR_GET_LIB(BSL_SUCCESS) == 0);
+
+    // Test BSL_ERR_GET_LIB with BSL module errors
+    // BSL module errors have library ID BSL_ERR_LIB_BSL (3)
+    ASSERT_TRUE(BSL_ERR_GET_LIB(BSL_NULL_INPUT) == BSL_ERR_LIB_BSL);
+    ASSERT_TRUE(BSL_ERR_GET_LIB(BSL_MALLOC_FAIL) == BSL_ERR_LIB_BSL);
+    ASSERT_TRUE(BSL_ERR_GET_LIB(BSL_INVALID_ARG) == BSL_ERR_LIB_BSL);
+
+    // Test with UIO errors (also BSL module)
+    ASSERT_TRUE(BSL_ERR_GET_LIB(BSL_UIO_FAIL) == BSL_ERR_LIB_BSL);
+    ASSERT_TRUE(BSL_ERR_GET_LIB(BSL_UIO_IO_BUSY) == BSL_ERR_LIB_BSL);
+    ASSERT_TRUE(BSL_ERR_GET_LIB(BSL_UIO_IO_EXCEPTION) == BSL_ERR_LIB_BSL);
+
+    // Push errors and test BSL_ERR_GET_LIB with peek operations
+    BSL_ERR_PushError(BSL_UIO_FAIL, __FILENAME__, __LINE__);
+    BSL_ERR_PushError(BSL_MALLOC_FAIL, __FILENAME__, __LINE__);
+
+    int32_t error = BSL_ERR_PeekError();
+    ASSERT_TRUE(BSL_ERR_GET_LIB(error) == BSL_ERR_LIB_BSL);
+
+    error = BSL_ERR_PeekLastError();
+    ASSERT_TRUE(BSL_ERR_GET_LIB(error) == BSL_ERR_LIB_BSL);
+EXIT:
+    BSL_ERR_ClearError();
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ERR_PEEK_COMBINED_TC001(void)
+{
+    TestMemInit();
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+
+    // Push a sequence of different errors
+    BSL_ERR_PushError(BSL_NULL_INPUT, __FILENAME__, __LINE__);
+    BSL_ERR_PushError(BSL_MALLOC_FAIL, __FILENAME__, __LINE__);
+    BSL_ERR_PushError(BSL_UIO_FAIL, __FILENAME__, __LINE__);
+    BSL_ERR_PushError(BSL_UIO_IO_EXCEPTION, __FILENAME__, __LINE__);
+
+    // Test peek operations and library identification
+    int32_t firstError = BSL_ERR_PeekError();
+    int32_t lastError = BSL_ERR_PeekLastError();
+
+    ASSERT_TRUE(firstError == BSL_NULL_INPUT);
+    ASSERT_TRUE(lastError == BSL_UIO_IO_EXCEPTION);
+
+    // Verify library identification for peeked errors
+    ASSERT_TRUE(BSL_ERR_GET_LIB(firstError) == BSL_ERR_LIB_BSL);
+    ASSERT_TRUE(BSL_ERR_GET_LIB(lastError) == BSL_ERR_LIB_BSL);
+
+    // Multiple peek operations should return the same results
+    for (int i = 0; i < 3; i++) {
+        ASSERT_TRUE(BSL_ERR_PeekError() == BSL_NULL_INPUT);
+        ASSERT_TRUE(BSL_ERR_PeekLastError() == BSL_UIO_IO_EXCEPTION);
+    }
+
+    // Verify the complete error stack is still intact
+    ASSERT_TRUE(BSL_ERR_GetError() == BSL_NULL_INPUT);
+    ASSERT_TRUE(BSL_ERR_GetError() == BSL_MALLOC_FAIL);
+    ASSERT_TRUE(BSL_ERR_GetError() == BSL_UIO_FAIL);
+    ASSERT_TRUE(BSL_ERR_GetError() == BSL_UIO_IO_EXCEPTION);
+    ASSERT_TRUE(BSL_ERR_GetError() == BSL_SUCCESS);
+
+    // Test edge case: single error
+    BSL_ERR_PushError(BSL_INVALID_ARG, __FILENAME__, __LINE__);
+    
+    int32_t singleError = BSL_ERR_PeekError();
+    int32_t singleLastError = BSL_ERR_PeekLastError();
+    
+    // For single error, both should return the same value
+    ASSERT_TRUE(singleError == BSL_INVALID_ARG);
+    ASSERT_TRUE(singleLastError == BSL_INVALID_ARG);
+    ASSERT_TRUE(singleError == singleLastError);
+    
+    // Verify library identification
+    ASSERT_TRUE(BSL_ERR_GET_LIB(singleError) == BSL_ERR_LIB_BSL);
+
+EXIT:
+    BSL_ERR_ClearError();
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ERR_GET_ERR_ALL_FUNC_TC001(void)
+{
+    TestMemInit();
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+
+    // Register error descriptions
+    const char *uioFailDesc = "UIO operation failed";
+    const char *mallocFailDesc = "Memory allocation failed";
+    const char *invalidArgDesc = "Invalid argument provided";
+    const BSL_ERR_Desc descList[] = {
+        {BSL_UIO_FAIL, uioFailDesc},
+        {BSL_MALLOC_FAIL, mallocFailDesc},
+        {BSL_INVALID_ARG, invalidArgDesc},
+    };
+    ASSERT_TRUE(BSL_ERR_AddErrStringBatch(descList, 3) == BSL_SUCCESS);
+
+    const char *file = NULL;
+    uint32_t lineNo = 0;
+    const char *desc = NULL;
+
+    // Test BSL_ERR_GetErrAll on empty stack
+    int32_t error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_SUCCESS);
+
+    // Push single error and test BSL_ERR_GetErrAll
+    BSL_ERR_PushError(BSL_UIO_FAIL, __FILENAME__, __LINE__);
+    uint32_t expectedLine = __LINE__ - 1;
+    
+    file = NULL;
+    lineNo = 0;
+    desc = NULL;
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_UIO_FAIL);
+    ASSERT_TRUE(file != NULL);
+    ASSERT_TRUE(strcmp(file, __FILENAME__) == 0);
+    ASSERT_TRUE(lineNo == expectedLine);
+    ASSERT_TRUE(desc != NULL);
+    ASSERT_TRUE(strcmp(desc, uioFailDesc) == 0);
+
+    // Verify error was removed from stack
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_SUCCESS);
+
+    // Push multiple errors and test BSL_ERR_GetErrAll multiple times
+    BSL_ERR_PushError(BSL_MALLOC_FAIL, __FILENAME__, __LINE__);
+    uint32_t line1 = __LINE__ - 1;
+    BSL_ERR_PushError(BSL_INVALID_ARG, __FILENAME__, __LINE__);
+    uint32_t line2 = __LINE__ - 1;
+    BSL_ERR_PushError(BSL_UIO_FAIL, __FILENAME__, __LINE__);
+    uint32_t line3 = __LINE__ - 1;
+
+    // First call should return the first error (MALLOC_FAIL)
+    file = NULL;
+    lineNo = 0;
+    desc = NULL;
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_MALLOC_FAIL);
+    ASSERT_TRUE(file != NULL);
+    ASSERT_TRUE(strcmp(file, __FILENAME__) == 0);
+    ASSERT_TRUE(lineNo == line1);
+    ASSERT_TRUE(desc != NULL);
+    ASSERT_TRUE(strcmp(desc, mallocFailDesc) == 0);
+
+    // Second call should return the second error (INVALID_ARG)
+    file = NULL;
+    lineNo = 0;
+    desc = NULL;
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_INVALID_ARG);
+    ASSERT_TRUE(file != NULL);
+    ASSERT_TRUE(strcmp(file, __FILENAME__) == 0);
+    ASSERT_TRUE(lineNo == line2);
+    ASSERT_TRUE(desc != NULL);
+    ASSERT_TRUE(strcmp(desc, invalidArgDesc) == 0);
+
+    // Third call should return the third error (UIO_FAIL)
+    file = NULL;
+    lineNo = 0;
+    desc = NULL;
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_UIO_FAIL);
+    ASSERT_TRUE(file != NULL);
+    ASSERT_TRUE(strcmp(file, __FILENAME__) == 0);
+    ASSERT_TRUE(lineNo == line3);
+    ASSERT_TRUE(desc != NULL);
+    ASSERT_TRUE(strcmp(desc, uioFailDesc) == 0);
+
+    // Fourth call should return success (empty stack)
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_SUCCESS);
+
+    // Test BSL_ERR_GetErrAll with NULL parameters
+    BSL_ERR_PushError(BSL_UIO_FAIL, __FILENAME__, __LINE__);
+    
+    // Test with NULL file parameter
+    error = BSL_ERR_GetErrAll(NULL, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_UIO_FAIL);
+    ASSERT_TRUE(desc != NULL);
+    ASSERT_TRUE(strcmp(desc, uioFailDesc) == 0);
+
+    BSL_ERR_PushError(BSL_MALLOC_FAIL, __FILENAME__, __LINE__);
+    
+    // Test with NULL lineNo parameter
+    error = BSL_ERR_GetErrAll(&file, NULL, &desc);
+    ASSERT_TRUE(error == BSL_MALLOC_FAIL);
+    ASSERT_TRUE(file != NULL);
+    ASSERT_TRUE(strcmp(file, __FILENAME__) == 0);
+    ASSERT_TRUE(desc != NULL);
+    ASSERT_TRUE(strcmp(desc, mallocFailDesc) == 0);
+
+    BSL_ERR_PushError(BSL_INVALID_ARG, __FILENAME__, __LINE__);
+    
+    // Test with NULL desc parameter
+    error = BSL_ERR_GetErrAll(&file, &lineNo, NULL);
+    ASSERT_TRUE(error == BSL_INVALID_ARG);
+    ASSERT_TRUE(file != NULL);
+    ASSERT_TRUE(strcmp(file, __FILENAME__) == 0);
+
+    // Test BSL_ERR_GetErrAll with errors that have no description
+    BSL_ERR_PushError(BSL_UIO_IO_BUSY, __FILENAME__, __LINE__); // This error has no registered description
+    
+    file = NULL;
+    lineNo = 0;
+    desc = NULL;
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_UIO_IO_BUSY);
+    ASSERT_TRUE(file != NULL);
+    ASSERT_TRUE(strcmp(file, __FILENAME__) == 0);
+    ASSERT_TRUE(desc == NULL); // No description registered for this error
+
+EXIT:
+    BSL_ERR_RemoveErrStringBatch();
+    BSL_ERR_ClearError();
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ERR_GET_ERR_ALL_EDGE_TC001(void)
+{
+    TestMemInit();
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+
+    // Register some error descriptions
+    const char *testDesc1 = "Test error 1";
+    const char *testDesc2 = "Test error 2";
+    const BSL_ERR_Desc descList[] = {
+        {BSL_UIO_FAIL, testDesc1},
+        {BSL_MALLOC_FAIL, testDesc2},
+    };
+    ASSERT_TRUE(BSL_ERR_AddErrStringBatch(descList, 2) == BSL_SUCCESS);
+
+    const char *file = NULL;
+    uint32_t lineNo = 0;
+    const char *desc = NULL;
+    int32_t error = 0;
+
+    // Test BSL_ERR_GetErrAll with mixed file and line scenarios
+    // Push error with NULL filename
+    BSL_ERR_PushError(BSL_UIO_FAIL, NULL, 100);
+    
+    file = NULL;
+    lineNo = 0;
+    desc = NULL;
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_UIO_FAIL);
+    ASSERT_TRUE(file != NULL);
+    ASSERT_TRUE(strcmp(file, "NA") == 0); // Should return "NA" for NULL filename
+    ASSERT_TRUE(lineNo == 0); // Should return 0 for line when filename is NULL
+    ASSERT_TRUE(desc != NULL);
+    ASSERT_TRUE(strcmp(desc, testDesc1) == 0);
+
+    // Push error with valid filename and line 0
+    BSL_ERR_PushError(BSL_MALLOC_FAIL, __FILENAME__, 0);
+    
+    file = NULL;
+    lineNo = 0;
+    desc = NULL;
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_MALLOC_FAIL);
+    ASSERT_TRUE(file != NULL);
+    ASSERT_TRUE(strcmp(file, __FILENAME__) == 0);
+    ASSERT_TRUE(lineNo == 0);
+    ASSERT_TRUE(desc != NULL);
+    ASSERT_TRUE(strcmp(desc, testDesc2) == 0);
+
+    // Test BSL_ERR_GetErrAll with all NULL parameters
+    BSL_ERR_PushError(BSL_UIO_FAIL, __FILENAME__, __LINE__);
+    
+    error = BSL_ERR_GetErrAll(NULL, NULL, NULL);
+    ASSERT_TRUE(error == BSL_UIO_FAIL);
+
+    // Test error stack integrity after partial reads
+    BSL_ERR_PushError(BSL_UIO_FAIL, __FILENAME__, __LINE__);
+    BSL_ERR_PushError(BSL_MALLOC_FAIL, __FILENAME__, __LINE__);
+    BSL_ERR_PushError(BSL_INVALID_ARG, __FILENAME__, __LINE__);
+
+    // Read first error
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_UIO_FAIL);
+
+    // Verify remaining errors are still in correct order
+    error = BSL_ERR_GetError(); // Should get MALLOC_FAIL
+    ASSERT_TRUE(error == BSL_MALLOC_FAIL);
+    error = BSL_ERR_GetError(); // Should get INVALID_ARG
+    ASSERT_TRUE(error == BSL_INVALID_ARG);
+    error = BSL_ERR_GetError(); // Should get BSL_SUCCESS (empty)
+    ASSERT_TRUE(error == BSL_SUCCESS);
+
+    // Verify stack is empty
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_SUCCESS);
+
+    // Test interaction with other error functions
+    BSL_ERR_PushError(BSL_UIO_FAIL, __FILENAME__, __LINE__);
+    BSL_ERR_PushError(BSL_MALLOC_FAIL, __FILENAME__, __LINE__);
+
+    // Use BSL_ERR_GetErrAll to get first error
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_UIO_FAIL);
+
+    // Use BSL_ERR_GetLastError to get remaining error
+    error = BSL_ERR_GetLastError();
+    ASSERT_TRUE(error == BSL_MALLOC_FAIL);
+
+    // Stack should be empty now
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_TRUE(error == BSL_SUCCESS);
+
+EXIT:
+    BSL_ERR_RemoveErrStringBatch();
+    BSL_ERR_ClearError();
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_DeInit();
+}
+/* END_CASE */
+
+/** @
+* @test SDV_HITLS_CERT_ENHENCE_027
+* @spec -
+* @title Verifying the Capability of Obtaining Error Codes
+* @precon nan
+* @brief
+1. Construct an error scenario and use BSL_ERR_PeekLastError to obtain the last error code.
+2. Repeatedly invoke the BSL_ERR_PeekLastError interface to obtain the error code.
+3. Use BSL_ERR_PeekError to obtain the first error code.
+4. Repeatedly invoke the BSL_ERR_PeekError interface to obtain the error code.
+5. Invoke the BSL_ERR_GetErrAll interface to obtain the corresponding information.
+* @expect
+1. Obtained successfully.
+2. The obtained value is the same as that obtained for the first time.
+3. The acquisition is successful.
+4. The obtained value is the same as that obtained for the first time.
+5. Obtained successfully.
+* @prior Level 2
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HITLS_CERT_ENHENCE_027(void)
+{
+    TestMemInit();
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+
+    ASSERT_TRUE(BSL_ERR_PeekLastError() == BSL_SUCCESS);
+
+    BSL_ERR_PushError(BSL_UIO_FAIL, "file1.c", 0);
+    BSL_ERR_PushError(BSL_UIO_IO_BUSY, "file2.c", 1);
+    BSL_ERR_PushError(BSL_UIO_IO_EXCEPTION, "file3.c", 2);
+    
+    int32_t lastError = BSL_ERR_PeekLastError();
+    ASSERT_TRUE(lastError == BSL_UIO_IO_EXCEPTION);
+    lastError = BSL_ERR_PeekLastError();
+    ASSERT_TRUE(lastError == BSL_UIO_IO_EXCEPTION);
+
+    int32_t firstError = BSL_ERR_PeekError();
+    ASSERT_TRUE(firstError == BSL_UIO_FAIL);
+    firstError = BSL_ERR_PeekError();
+    ASSERT_TRUE(firstError == BSL_UIO_FAIL);
+
+    const char *uioFailDesc = "UIO operation failed";
+    const char *mallocFailDesc = "Memory allocation failed";
+    const char *invalidArgDesc = "Invalid argument provided";
+    const BSL_ERR_Desc descList[] = {
+        {BSL_UIO_FAIL, uioFailDesc},
+        {BSL_UIO_IO_BUSY, mallocFailDesc},
+        {BSL_INVALID_ARG, invalidArgDesc},
+    };
+    ASSERT_TRUE(BSL_ERR_AddErrStringBatch(descList, 3) == BSL_SUCCESS);
+
+    const char *file = NULL;
+    uint32_t lineNo = 0;
+    const char *desc = NULL;
+    const char *desc1 = NULL;
+    const char *desc2 = NULL;
+
+    int32_t error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
+    ASSERT_EQ(error, BSL_UIO_FAIL);
+    ASSERT_EQ(file, "file1.c");
+    ASSERT_EQ(lineNo, 0);
+    ASSERT_TRUE(desc != NULL);
+    ASSERT_TRUE(strcmp(desc, uioFailDesc) == 0);
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc1);
+    ASSERT_EQ(error, BSL_UIO_IO_BUSY);
+    ASSERT_TRUE(desc1 != NULL);
+    ASSERT_EQ(strcmp(desc1, mallocFailDesc), 0);
+    error = BSL_ERR_GetErrAll(&file, &lineNo, &desc2);
+    ASSERT_EQ(error, BSL_UIO_IO_EXCEPTION);
+    ASSERT_TRUE(desc2 == NULL);
+
+EXIT:
+    BSL_ERR_ClearError();
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_DeInit();
+}
+/* END_CASE */
+
+/** @
+* @test SDV_HITLS_CERT_ENHENCE_028
+* @spec -
+* @title Error code home module verification
+* @precon nan
+* @brief
+1. Set errno to the error codes of the five modules and obtain the corresponding module IDs.
+* @expect
+1. The value is obtained successfully. The ID is the module value corresponding to the error code.
+* @prior Level 2
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HITLS_CERT_ENHENCE_028(void)
+{
+    TestMemInit();
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+
+    ASSERT_TRUE(BSL_ERR_GET_LIB(CRYPT_BN_BITS_TOO_MAX) == BSL_ERR_LIB_CRYPTO);
+    ASSERT_TRUE(BSL_ERR_GET_LIB(HITLS_CRYPT_ERR_ENCRYPT) == BSL_ERR_LIB_TLS);
+    ASSERT_TRUE(BSL_ERR_GET_LIB(BSL_UIO_FAIL) == BSL_ERR_LIB_BSL);
+    ASSERT_TRUE(BSL_ERR_GET_LIB(HITLS_X509_ERR_VFY_GET_THISUPDATE_FAIL) == BSL_ERR_LIB_PKI);
+    ASSERT_TRUE(BSL_ERR_GET_LIB(HITLS_AUTH_PRIVPASS_INVALID_TOKEN_TYPE) == BSL_ERR_LIB_AUTH);
+EXIT:
+    BSL_ERR_ClearError();
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_DeInit();
+}
+/* END_CASE */
 

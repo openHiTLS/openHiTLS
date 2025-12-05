@@ -44,6 +44,7 @@
 #include "hitls_type.h"
 #include "crypt_eal_entropy.h"
 #include "crypt_util_rand.h"
+#include "crypt_params_key.h"
 #include <stdio.h>
 #include <time.h>
 #include <string.h>

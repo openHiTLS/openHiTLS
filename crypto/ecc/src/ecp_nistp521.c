@@ -18,15 +18,16 @@
 
 #include <stdint.h>
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
+#include "bsl_util_internal.h"
 #include "crypt_bn.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "crypt_ecc.h"
 #include "ecc_local.h"
 #include "ecc_utils.h"
-#include "bsl_util_internal.h"
 
-#ifndef __SIZEOF_INT128__
+#ifndef HITLS_INT128
 #error "This nistp521 implementation require the compiler support 128-bits integer."
 #endif
 
@@ -1421,7 +1422,7 @@ int32_t ECP521_PointMulAdd(ECC_Para *para, ECC_Point *r,
     int32_t ret;
     Array64 binG = {0};
     Array64 binP = {0};
-    Point out;
+    Point *out = NULL;
     uint32_t len;
     /* Input parameter check */
     GOTO_ERR_IF(CheckParaValid(para, CRYPT_ECC_NISTP521), ret);
@@ -1439,12 +1440,19 @@ int32_t ECP521_PointMulAdd(ECC_Para *para, ECC_Point *r,
     len = NUM_LIMBS;
     GOTO_ERR_IF(BN_Bn2U64Array(k2, binP.data, &len), ret);
     /* Calculate */
-    GOTO_ERR_IF_EX(ComputePointMulAdd(&out, &binG, &binP, pt), ret);
+
+    out = BSL_SAL_Malloc(sizeof(Point));
+    if (out == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    GOTO_ERR_IF_EX(ComputePointMulAdd(out, &binG, &binP, pt), ret);
     /* Output result */
-    GOTO_ERR_IF_EX(Felem2BN(&r->x, &out.x), ret);
-    GOTO_ERR_IF_EX(Felem2BN(&r->y, &out.y), ret);
-    GOTO_ERR_IF_EX(Felem2BN(&r->z, &out.z), ret);
+    GOTO_ERR_IF_EX(Felem2BN(&r->x, &out->x), ret);
+    GOTO_ERR_IF_EX(Felem2BN(&r->y, &out->y), ret);
+    GOTO_ERR_IF_EX(Felem2BN(&r->z, &out->z), ret);
 ERR:
+    BSL_SAL_Free(out);
     return ret;
 }
 

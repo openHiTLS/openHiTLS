@@ -58,7 +58,16 @@ extern "C" {
 #define CRYPT_SHAKE256_BLOCKSIZE   136  // ((1600 - 256 * 2) / 8)
 #define CRYPT_SHAKE256_DIGESTSIZE  0
 
-typedef struct CryptSha3Ctx CRYPT_SHA3_Ctx;
+typedef struct {
+    uint8_t state[200];     // State array, 200bytes is 1600bits
+    uint32_t num;           // Data length in the remaining buffer.
+    uint32_t blockSize;     // For example, BlockSize(sha3-224) = ((1600 - 224 * 2) / 8) bytes
+    uint32_t mdSize;     // sha3-224 corresponds to 28 bytes, sha3-256: 32 bytes, sha3-384: 48 bytes, sha3-512: 64 bytes
+    // Non-integer multiple data cache. 168 = (1600 - 128 * 2) / 8, that is maximum block size used by shake_*
+    uint8_t buf[168];
+    uint8_t padChr;         // char for padding, sha3_* use 0x06 and shake_* use 0x1f
+    bool squeeze;
+} CRYPT_SHA3_Ctx;
 
 typedef CRYPT_SHA3_Ctx CRYPT_SHA3_224_Ctx;
 
@@ -97,12 +106,23 @@ void CRYPT_SHA3_FreeCtx(CRYPT_SHA3_Ctx *ctx);
 #define CRYPT_SHAKE256_FreeCtx CRYPT_SHA3_FreeCtx
 
 // Initialize the context
-int32_t CRYPT_SHA3_224_Init(CRYPT_SHA3_224_Ctx *ctx, BSL_Param *param);
-int32_t CRYPT_SHA3_256_Init(CRYPT_SHA3_256_Ctx *ctx, BSL_Param *param);
-int32_t CRYPT_SHA3_384_Init(CRYPT_SHA3_384_Ctx *ctx, BSL_Param *param);
-int32_t CRYPT_SHA3_512_Init(CRYPT_SHA3_512_Ctx *ctx, BSL_Param *param);
-int32_t CRYPT_SHAKE128_Init(CRYPT_SHAKE128_Ctx *ctx, BSL_Param *param);
-int32_t CRYPT_SHAKE256_Init(CRYPT_SHAKE256_Ctx *ctx, BSL_Param *param);
+int32_t CRYPT_SHA3_224_Init(CRYPT_SHA3_224_Ctx *ctx);
+int32_t CRYPT_SHA3_224_InitEx(CRYPT_SHA3_224_Ctx *ctx, void *param);
+
+int32_t CRYPT_SHA3_256_Init(CRYPT_SHA3_256_Ctx *ctx);
+int32_t CRYPT_SHA3_256_InitEx(CRYPT_SHA3_256_Ctx *ctx, void *param);
+
+int32_t CRYPT_SHA3_384_Init(CRYPT_SHA3_384_Ctx *ctx);
+int32_t CRYPT_SHA3_384_InitEx(CRYPT_SHA3_384_Ctx *ctx, void *param);
+
+int32_t CRYPT_SHA3_512_Init(CRYPT_SHA3_512_Ctx *ctx);
+int32_t CRYPT_SHA3_512_InitEx(CRYPT_SHA3_512_Ctx *ctx, void *param);
+
+int32_t CRYPT_SHAKE128_Init(CRYPT_SHAKE128_Ctx *ctx);
+int32_t CRYPT_SHAKE128_InitEx(CRYPT_SHAKE128_Ctx *ctx, void *param);
+
+int32_t CRYPT_SHAKE256_Init(CRYPT_SHAKE256_Ctx *ctx);
+int32_t CRYPT_SHAKE256_InitEx(CRYPT_SHAKE256_Ctx *ctx, void *param);
 
 // Data update API
 int32_t CRYPT_SHA3_Update(CRYPT_SHA3_Ctx *ctx, const uint8_t *in, uint32_t len);

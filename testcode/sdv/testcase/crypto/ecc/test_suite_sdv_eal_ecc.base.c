@@ -27,7 +27,7 @@
 #include "crypt_eal_rand.h"
 #include "stub_utils.h"
 #include "crypt_util_rand.h"
-#include "crypt_encode_internal.h"
+#include "crypt_encode.h"
 #include "crypt_eal_md.h"
 #include "crypt_dsa.h"
 #include "crypt_ecdh.h"

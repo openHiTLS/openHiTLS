@@ -547,7 +547,7 @@ void SDV_BSL_ASN1_PARSE_ECCPRIKEY_FILE_TC001(int isProvider, int noPubKey, char 
     ASSERT_EQ(DecodeKeyFile(isProvider, path, BSL_FORMAT_ASN1, "ASN1", fileType, fileTypeStr, NULL, 0, &pkeyCtx), 0);
     ASSERT_EQ(EccPrvSign(pkeyCtx, mdId, alg, msg, rawKey, paraId), CRYPT_SUCCESS);
     if (noPubKey) {
-        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_ECC_FLAG, &flag, sizeof(flag)), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_FLAG, &flag, sizeof(flag)), CRYPT_SUCCESS);
     }
 
     ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkeyCtx, NULL, BSL_FORMAT_ASN1, fileType, &reEnc), CRYPT_SUCCESS);
@@ -558,7 +558,7 @@ void SDV_BSL_ASN1_PARSE_ECCPRIKEY_FILE_TC001(int isProvider, int noPubKey, char 
         NULL, 0, &reDecPkeyCtx), 0);
     ASSERT_EQ(EccPrvSign(reDecPkeyCtx, mdId, alg, msg, rawKey, paraId), CRYPT_SUCCESS);
     if (noPubKey) {
-        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(reDecPkeyCtx, CRYPT_CTRL_GET_ECC_FLAG, &flag, sizeof(flag)), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(reDecPkeyCtx, CRYPT_CTRL_GET_FLAG, &flag, sizeof(flag)), CRYPT_SUCCESS);
         ASSERT_EQ(flag, CRYPT_ECC_PRIKEY_NO_PUBKEY);
     }
 

@@ -24,6 +24,7 @@
 #include "crypt_algid.h"
 #include "crypt_ecc_pkey.h"
 #include "bsl_params.h"
+#include "crypt_params_key.h"
 
 #ifdef __cplusplus
 extern "C" {

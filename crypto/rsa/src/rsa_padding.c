@@ -92,9 +92,8 @@ static int32_t GenPssSalt(void *libCtx, CRYPT_Data *salt,
     uint32_t hashLen = mdMethod->mdSize;
     if (saltLen == CRYPT_RSA_SALTLEN_TYPE_HASHLEN) { // saltLen is -1
         salt->len = hashLen;
-    } else if (saltLen == CRYPT_RSA_SALTLEN_TYPE_MAXLEN ||
-        saltLen == CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) { // saltLen is -2 or -3
-        salt->len = padBuffLen - hashLen - 2; // salt, obtains from the DRBG
+    } else if (saltLen == CRYPT_RSA_SALTLEN_TYPE_MAXLEN || saltLen == CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) {
+        salt->len = padBuffLen - hashLen - 2; // rfc8017 page42: maximum emLen = hLen + sLen + 2
     } else {
         salt->len = (uint32_t)saltLen;
     }
@@ -150,11 +149,8 @@ static int32_t GenPssSalt(void *libCtx, CRYPT_Data *salt,
 int32_t CRYPT_RSA_SetPss(CRYPT_RSA_Ctx *ctx, const EAL_MdMethod *hashMethod, const EAL_MdMethod *mgfMethod,
     uint32_t saltLen, const uint8_t *data, uint32_t dataLen, uint8_t *pad, uint32_t padLen)
 {
-    int32_t ret;
-    if (ctx == NULL || hashMethod == NULL || mgfMethod == NULL || pad == NULL || data == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
+    RETURN_RET_IF(ctx == NULL || hashMethod == NULL || mgfMethod == NULL || pad == NULL || data == NULL,
+        CRYPT_NULL_INPUT);
     CRYPT_Data salt = {0};
     bool kat = false; // mark
     if (ctx->pad.salt.data != NULL) {
@@ -165,13 +161,13 @@ int32_t CRYPT_RSA_SetPss(CRYPT_RSA_Ctx *ctx, const EAL_MdMethod *hashMethod, con
         ctx->pad.salt.len = 0;
     } else if (saltLen != 0) {
         // Generate a salt information to the salt.
-        ret = GenPssSalt(LIBCTX_FROM_RSA_CTX(ctx), &salt, hashMethod, (int32_t)saltLen, padLen);
-        RETURN_RET_IF((ret != CRYPT_SUCCESS), CRYPT_RSA_ERR_GEN_SALT);
+        RETURN_RET_IF(GenPssSalt(LIBCTX_FROM_RSA_CTX(ctx), &salt, hashMethod, (int32_t)saltLen, padLen) !=
+            CRYPT_SUCCESS, CRYPT_RSA_ERR_GEN_SALT);
     }
     RETURN_RET_IF((salt.data == NULL && salt.len != 0), CRYPT_RSA_ERR_PSS_SALT_DATA);
     uint32_t keyBits = CRYPT_RSA_GetBits(ctx);
     uint32_t hLen = hashMethod->mdSize;
-    ret = PssEncodeLengthCheck(keyBits, hLen, salt.len, dataLen, padLen);
+    int32_t ret = PssEncodeLengthCheck(keyBits, hLen, salt.len, dataLen, padLen);
     if (ret != CRYPT_SUCCESS) {
         if ((kat != true) && (saltLen != 0)) {
             BSL_SAL_ClearFree(salt.data, salt.len);
@@ -277,7 +273,8 @@ static int32_t VerifyH(void *provCtx, const EAL_MdMethod *hashMethod, const CRYP
     };
 
     uint32_t hLen = hBuff->len;
-    int32_t ret = CRYPT_CalcHash(provCtx, hashMethod, hashData, sizeof(hashData) / sizeof(hashData[0]), hBuff->data, &hLen);
+    int32_t ret = CRYPT_CalcHash(provCtx, hashMethod, hashData, sizeof(hashData) / sizeof(hashData[0]), hBuff->data,
+        &hLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -594,8 +591,8 @@ static int32_t OaepSetPs(const uint8_t *in, uint32_t inLen, uint8_t *db, uint32_
     return CRYPT_SUCCESS;
 }
 
-static int32_t OaepSetMaskedDB(void *provCtx, const EAL_MdMethod *mgfMethod, uint8_t *db, uint8_t *seed, uint32_t padLen,
-    uint32_t hashLen)
+static int32_t OaepSetMaskedDB(void *provCtx, const EAL_MdMethod *mgfMethod, uint8_t *db, uint8_t *seed,
+    uint32_t padLen, uint32_t hashLen)
 {
     int32_t ret;
     uint32_t i;
@@ -620,8 +617,8 @@ EXIT:
     return ret;
 }
 
-static int32_t OaepSetSeedMask(void *provCtx, const EAL_MdMethod *mgfMethod, uint8_t *db, uint8_t *seed, uint32_t padLen,
-    uint32_t hashLen)
+static int32_t OaepSetSeedMask(void *provCtx, const EAL_MdMethod *mgfMethod, uint8_t *db, uint8_t *seed,
+    uint32_t padLen, uint32_t hashLen)
 {
     uint32_t i;
     int32_t ret;
@@ -668,11 +665,15 @@ EXIT:
 */
 int32_t CRYPT_RSA_SetPkcs1Oaep(CRYPT_RSA_Ctx *ctx, const uint8_t *in, uint32_t inLen, uint8_t *pad, uint32_t padLen)
 {
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     int32_t ret;
     const EAL_MdMethod *hashMethod = &ctx->pad.para.oaep.mdMeth;
     const EAL_MdMethod *mgfMethod = &ctx->pad.para.oaep.mgfMeth;
 
-    if ((in == NULL && inLen != 0) || pad == NULL) {
+    if (hashMethod == NULL || mgfMethod == NULL || (in == NULL && inLen != 0) || pad == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -732,7 +733,7 @@ int32_t CRYPT_RSA_SetPkcs1Oaep(CRYPT_RSA_Ctx *ctx, const uint8_t *in, uint32_t i
 #ifdef HITLS_CRYPTO_RSA_DECRYPT
 static int32_t OaepVerifyLengthCheck(uint32_t outLen, uint32_t inLen, uint32_t hashLen)
 {
-    if (outLen > RSA_MAX_MODULUS_LEN || inLen > RSA_MAX_MODULUS_LEN || hashLen > HASH_MAX_MDSIZE) {
+    if (inLen > RSA_MAX_MODULUS_LEN || hashLen > HASH_MAX_MDSIZE) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
         return CRYPT_RSA_ERR_INPUT_VALUE;
     }
@@ -768,8 +769,8 @@ static int32_t OaepDecodeSeedMask(void *provCtx, const EAL_MdMethod *mgfMethod, 
     return CRYPT_SUCCESS;
 }
 
-static int32_t OaepDecodeMaskedDB(void *provCtx, const EAL_MdMethod *mgfMethod, const CRYPT_Data *in, const uint8_t *seedMask,
-    uint32_t hashLen, const CRYPT_Data *dbMaskData)
+static int32_t OaepDecodeMaskedDB(void *provCtx, const EAL_MdMethod *mgfMethod, const CRYPT_Data *in,
+    const uint8_t *seedMask, uint32_t hashLen, const CRYPT_Data *dbMaskData)
 {
     int32_t ret;
     uint32_t i;
@@ -788,8 +789,8 @@ static int32_t OaepDecodeMaskedDB(void *provCtx, const EAL_MdMethod *mgfMethod, 
     return ret;
 }
 
-static int32_t OaepVerifyHashMaskDB(void *provCtx, const EAL_MdMethod *hashMethod, CRYPT_Data *paramData, CRYPT_Data *dbMaskData,
-    uint32_t hashLen, uint32_t *offset)
+static int32_t OaepVerifyHashMaskDB(void *provCtx, const EAL_MdMethod *hashMethod, CRYPT_Data *paramData,
+    CRYPT_Data *dbMaskData, uint32_t hashLen, uint32_t *offset)
 {
     int32_t ret;
     uint8_t hashVal[HASH_MAX_MDSIZE];
@@ -877,8 +878,7 @@ ERR:
 #if defined(HITLS_CRYPTO_RSA_ENCRYPT) && \
     (defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS) || defined(HITLS_CRYPTO_RSAES_PKCSV15))
 // Pad output format: EM = 00 || 02 || PS || 00 || M; where M indicates message.
-int32_t CRYPT_RSA_SetPkcsV15Type2(void *libCtx, const uint8_t *in, uint32_t inLen,
-    uint8_t *out, uint32_t outLen)
+int32_t CRYPT_RSA_SetPkcsV15Type2(void *libCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
 {
     // If mLen > k - 11, output "message too long" and stop.<rfc8017>
     if (inLen + 11 > outLen) {

@@ -15,7 +15,6 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_DRBG_HMAC
-
 #include <stdlib.h>
 #include <securec.h>
 #include "crypt_errno.h"

@@ -415,14 +415,14 @@ int32_t BSL_ASN1_DecodePrimitiveItem(BSL_ASN1_Buffer *asn, void *decodeData)
 static int32_t BSL_ASN1_AnyOrChoiceTagProcess(bool isAny, BSL_ASN1_AnyOrChoiceParam *tagCbinfo, uint8_t *tag)
 {
     if (tagCbinfo->tagCb == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05065, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05141, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "asn1: callback is null", 0, 0, 0, 0);
         return BSL_ASN1_ERR_NO_CALLBACK;
     }
     int32_t type = isAny == true ? BSL_ASN1_TYPE_GET_ANY_TAG : BSL_ASN1_TYPE_CHECK_CHOICE_TAG;
     int32_t ret = tagCbinfo->tagCb(type, tagCbinfo->idx, tagCbinfo->previousAsnOrTag, tag);
     if (ret != BSL_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05066, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05142, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "asn1: callback is err %x", ret, 0, 0, 0);
     }
     return ret;
@@ -445,7 +445,7 @@ static int32_t BSL_ASN1_ProcessWithoutDefOrOpt(BSL_ASN1_AnyOrChoiceParam *tagCbi
         }
     }
     if (tag != realTag) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05067, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05143, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "asn1: expected tag %x is not match %x", tag, realTag, 0, 0);
         return BSL_ASN1_ERR_TAG_EXPECTED;
     }
@@ -466,7 +466,7 @@ static int32_t BSL_ASN1_ProcessWithoutDefOrOpt(BSL_ASN1_AnyOrChoiceParam *tagCbi
 int32_t ProcessIntegerType(uint8_t *temp, uint32_t len, BSL_ASN1_Buffer *asn)
 {
     // Check if it is a negative number
-    if (*temp & 0x80) {
+    if ((*temp & 0x80) != 0) {
         return BSL_ASN1_ERR_DECODE_INT;
     }
 
@@ -647,7 +647,7 @@ int32_t BSL_ASN1_ProcessConstructResult(BSL_ASN1_Template *templ, uint32_t *temp
     if ((templ->templItems[*templIdx].flags & BSL_ASN1_FLAG_OPTIONAL_DEFAUL) != 0 && asn->tag == 0) {
         ret = BSL_ASN1_SkipChildNodeAndFill(templIdx, templ, asnArr, arrNum, arrIdx);
         if (ret != BSL_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05068, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05144, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "asn1: skip and fill node err %x, idx %u", ret, *templIdx, 0, 0);
             return ret;
         }
@@ -656,7 +656,7 @@ int32_t BSL_ASN1_ProcessConstructResult(BSL_ASN1_Template *templ, uint32_t *temp
 
     if ((templ->templItems[*templIdx].flags & BSL_ASN1_FLAG_HEADERONLY) != 0) {
         if (*arrIdx >= arrNum) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05069, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05145, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "asn1: array idx %u, overflow %u, templ %u", *arrIdx, arrNum, *templIdx, 0);
             return BSL_ASN1_ERR_OVERFLOW;
         } else {
@@ -705,7 +705,7 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
         if (BSL_ASN1_IsConstructItem(&templ->templItems[i])) {
             ret = BSL_ASN1_ProcessNormal(&tagCbinfo, &templ->templItems[i], &temp, &tempLen, &asn);
             if (ret != BSL_SUCCESS) {
-                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05070, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05146, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "asn1: parse construct item err %x, idx %u", ret, i, 0, 0);
                 return ret;
             }
@@ -716,13 +716,13 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
         } else {
             ret = BSL_ASN1_ProcessNormal(&tagCbinfo, &templ->templItems[i], &temp, &tempLen, &asn);
             if (ret != BSL_SUCCESS) {
-                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05071, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05147, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "asn1: parse primitive item err %x, idx %u", ret, i, 0, 0);
                 return ret;
             }
             // Process no construct result
             if (arrIdx >= arrNum) {
-                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05072, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05148, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "asn1: array idx %u, overflow %u, templ %u", arrIdx, arrNum, i, 0);
                 return BSL_ASN1_ERR_OVERFLOW;
             } else {
@@ -766,7 +766,8 @@ static int32_t EncodeInitItemFlag(BSL_ASN1_EncodeItem *eItems, BSL_ASN1_Template
         if (tItems[i].tag != BSL_ASN1_TAG_NULL) {
             eItems[i].optional |= (tItems[i].flags & BSL_ASN1_FLAG_OPTIONAL_DEFAUL);
         }
-        eItems[i].skip = eItems[stack[peek]].skip == 1 || (tItems[stack[peek]].flags & BSL_ASN1_FLAG_HEADERONLY) != 0;
+        eItems[i].skip = (uint8_t)((eItems[stack[peek]].skip == 1) ||
+            ((tItems[stack[peek]].flags & BSL_ASN1_FLAG_HEADERONLY) != 0));
         stack[++peek] = i;
     }
     return BSL_SUCCESS;
@@ -810,7 +811,7 @@ static int32_t GetContentLenOfInt(uint8_t *buff, uint32_t len, uint32_t *outLen)
     }
 
     uint8_t high = buff[len - res] & 0x80;
-    if (high) {
+    if (high != 0) {
         if (res == UINT32_MAX) {
             return BSL_ASN1_ERR_LEN_OVERFLOW;
         }
@@ -833,7 +834,7 @@ static int32_t GetContentLen(BSL_ASN1_Buffer *asn, uint32_t *len)
         case BSL_ASN1_TAG_ENUMERATED:
             return GetContentLenOfInt(asn->buff, asn->len, len);
         case BSL_ASN1_TAG_BITSTRING:
-            *len = ((BSL_ASN1_BitString *)asn->buff)->len;
+            *len = ((BSL_ASN1_BitString *)(uintptr_t)asn->buff)->len;
             if (*len == UINT32_MAX) {
                 return BSL_ASN1_ERR_LEN_OVERFLOW;
             }
@@ -932,7 +933,7 @@ static int32_t EncodeInitItemContent(BSL_ASN1_EncodeItem *eItems, BSL_ASN1_Templ
         }
         if (tItems[i].depth < lastDepth) {
             eItems[i].tag = tItems[i].tag;
-            ret = ComputeConstructAsnOctetNum(eItems[i].optional, tItems, eItems, itemNum, i);
+            ret = ComputeConstructAsnOctetNum(eItems[i].optional, tItems, eItems, itemNum, (uint32_t)i);
             if (ret != BSL_SUCCESS) {
                 return ret;
             }
@@ -1054,11 +1055,11 @@ static void EncodeContent(BSL_ASN1_Buffer *asn, uint32_t encodeLen, uint8_t *enc
             EncodeInt(asn, encodeLen, encode, offset);
             return;
         case BSL_ASN1_TAG_BITSTRING:
-            EncodeBitString((BSL_ASN1_BitString *)asn->buff, encodeLen, encode, offset);
+            EncodeBitString((BSL_ASN1_BitString *)(uintptr_t)asn->buff, encodeLen, encode, offset);
             return;
         case BSL_ASN1_TAG_UTCTIME:
         case BSL_ASN1_TAG_GENERALIZEDTIME:
-            EncodeTime((BSL_TIME *)asn->buff, asn->tag, encode, offset);
+            EncodeTime((BSL_TIME *)(uintptr_t)asn->buff, asn->tag, encode, offset);
             return;
         case BSL_ASN1_TAG_BMPSTRING:
             EncodeBMPString(asn->buff, asn->len, encode, offset);
@@ -1102,7 +1103,7 @@ static int32_t CheckBslTime(BSL_ASN1_Buffer *asn)
     if (asn->len != sizeof(BSL_TIME)) {
         return BSL_ASN1_ERR_CHECK_TIME;
     }
-    BSL_TIME *time = (BSL_TIME *)asn->buff;
+    BSL_TIME *time = (BSL_TIME *)(uintptr_t)asn->buff;
     if (BSL_DateTimeCheck(time) == false) {
         return BSL_ASN1_ERR_CHECK_TIME;
     }
@@ -1135,7 +1136,7 @@ static int32_t CheckAsn(BSL_ASN1_Buffer *asn)
             if (asn->len != sizeof(BSL_ASN1_BitString)) {
                 return BSL_ASN1_ERR_ENCODE_BIT_STRING;
             }
-            BSL_ASN1_BitString *bs = (BSL_ASN1_BitString *)asn->buff;
+            BSL_ASN1_BitString *bs = (BSL_ASN1_BitString *)(uintptr_t)asn->buff;
             return bs->unusedBits > BSL_ASN1_VAL_MAX_BIT_STRING_LEN ? BSL_ASN1_ERR_ENCODE_BIT_STRING : BSL_SUCCESS;
         case BSL_ASN1_TAG_UTCTIME:
         case BSL_ASN1_TAG_GENERALIZEDTIME:

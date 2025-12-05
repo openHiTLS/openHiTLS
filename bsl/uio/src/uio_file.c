@@ -121,7 +121,7 @@ static int32_t FileOpen(BSL_UIO *uio, uint32_t flags, const char *filename)
 
 static int32_t FilePending(BSL_UIO *uio, int32_t larg, uint64_t *ret)
 {
-    if (ret == NULL || larg != sizeof(*ret)) {
+    if (ret == NULL || larg != sizeof(uint64_t)) {
         return BSL_INVALID_ARG;
     }
     bsl_sal_file_handle f = BSL_UIO_GetCtx(uio);
@@ -151,9 +151,9 @@ static int32_t FilePending(BSL_UIO *uio, int32_t larg, uint64_t *ret)
     return BSL_SUCCESS;
 }
 
-static int32_t FileWpending(int32_t larg, int64_t *ret)
+static int32_t FileWpending(int32_t larg, uint64_t *ret)
 {
-    if (larg != sizeof(int64_t) || ret == NULL) {
+    if (larg != sizeof(uint64_t) || ret == NULL) {
         return BSL_INVALID_ARG;
     }
     *ret = 0; // should return 0 if it's file UIO
@@ -180,15 +180,32 @@ static int32_t FileSetPtr(BSL_UIO *uio, int32_t isClosed, FILE *fp)
     return BSL_SUCCESS;
 }
 
-static int32_t FileReset(BSL_UIO *uio)
+static int32_t FileGetPtr(BSL_UIO *uio, FILE **fp)
 {
+    if (fp == NULL) {
+        return BSL_INVALID_ARG;
+    }
+    bsl_sal_file_handle file = BSL_UIO_GetCtx(uio);
+    if (file != NULL) {
+        *fp = file;
+    }
+    return BSL_SUCCESS;
+}
+
+static int32_t FileReset(BSL_UIO *uio, int32_t larg, void *offset)
+{
+    if (larg != sizeof(long)) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return BSL_INVALID_ARG;
+    }
+
     if (BSL_UIO_GetCtx(uio) == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
 
     bsl_sal_file_handle *f = BSL_UIO_GetCtx(uio);
-    if (SAL_FileSeek(f, 0, SEEK_SET) != 0) {
+    if (SAL_FileSeek(f, *(long *)offset, SEEK_SET) != 0) {
         BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
         return BSL_INTERNAL_EXCEPTION;
     }
@@ -227,6 +244,26 @@ static int32_t FileFlush(BSL_UIO *uio)
     return BSL_SUCCESS;
 }
 
+static int32_t FileTell(BSL_UIO *uio, int32_t larg, void *current)
+{
+    if (current == NULL) {
+        return BSL_NULL_INPUT;
+    }
+
+    if (larg != sizeof(long)) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return BSL_INVALID_ARG;
+    }
+
+    FILE *file = BSL_UIO_GetCtx(uio);
+    if (file == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
+        return BSL_NULL_INPUT;
+    }
+
+    return SAL_FileTell(file, (long *)current);
+}
+
 static int32_t FileCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 {
     if (larg < 0) {
@@ -242,12 +279,21 @@ static int32_t FileCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
             return FileWpending(larg, parg);
         case BSL_UIO_FILE_PTR:
             return FileSetPtr(uio, larg, parg);
+        case BSL_UIO_FILE_GET_PTR:
+            return FileGetPtr(uio, parg);
         case BSL_UIO_RESET:
-            return FileReset(uio);
+            {
+                long offset = 0;
+                return FileReset(uio, sizeof(long), &offset);
+            }
+        case BSL_UIO_FILE_SEEK:
+            return FileReset(uio, larg, parg);
         case BSL_UIO_FILE_GET_EOF:
             return FileGetEof(uio, larg, parg);
         case BSL_UIO_FLUSH:
             return FileFlush(uio);
+        case BSL_UIO_FILE_TELL:
+            return FileTell(uio, larg, parg);
         default:
             break;
     }
@@ -296,7 +342,7 @@ const BSL_UIO_Method *BSL_UIO_FileMethod(void)
         FilePuts,
         FileGets,
         NULL,
-        FileDestroy,
+        FileDestroy
     };
     return &METHOD;
 }

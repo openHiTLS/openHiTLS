@@ -21,8 +21,9 @@
 #include "crypt_cmvp.h"
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
-#include "crypt_eal_implprovider.h"
+#include "crypt_eal_provider.h"
 #include "crypt_eal_cmvp.h"
+#include "bsl_sal.h"
 
 #ifdef HITLS_CRYPTO_PROVIDER
 static int32_t CRYPT_EAL_SetCmvpSelftestMethod(CRYPT_SelftestCtx *ctx, const CRYPT_EAL_Func *funcs)

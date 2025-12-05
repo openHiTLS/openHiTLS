@@ -39,7 +39,7 @@ static const uint32_t K256[64] = {
     (S1((w)[(t) -  2]) + (w)[(t) -  7] +    \
      S0((w)[(t) - 15]) + (w)[(t) - 16])
 
-#define ROUND(a, b, c, d, e, f, g, h, i, k)                                                                   \
+#define CRYPT_SHA256_ROUND(a, b, c, d, e, f, g, h, i, k)                                                      \
     do {                                                                                                      \
         /* constants: 6, 11, 25 */                                                                            \
         (h) += (ROTR32((e), 6) ^ ROTR32((e), 11) ^ ROTR32((e), 25)) +                                         \
@@ -78,33 +78,33 @@ static void CompressBlock(uint32_t state[8], const uint8_t block[CRYPT_SHA2_256_
 
     // RFC 6.2.3. Perform the main hash computation:
     for (unsigned i = 0; i < 16; i += 8) {  /* 0 ~ 16 rounds to do hash computation, 8 rounds pre loop */
-        ROUND(a, b, c, d, e, f, g, h, w[i + 0], K256[i + 0]);
-        ROUND(h, a, b, c, d, e, f, g, w[i + 1], K256[i + 1]);
-        ROUND(g, h, a, b, c, d, e, f, w[i + 2], K256[i + 2]);
-        ROUND(f, g, h, a, b, c, d, e, w[i + 3], K256[i + 3]);
-        ROUND(e, f, g, h, a, b, c, d, w[i + 4], K256[i + 4]);
-        ROUND(d, e, f, g, h, a, b, c, w[i + 5], K256[i + 5]);
-        ROUND(c, d, e, f, g, h, a, b, w[i + 6], K256[i + 6]);
-        ROUND(b, c, d, e, f, g, h, a, w[i + 7], K256[i + 7]);
+        CRYPT_SHA256_ROUND(a, b, c, d, e, f, g, h, w[i + 0], K256[i + 0]);
+        CRYPT_SHA256_ROUND(h, a, b, c, d, e, f, g, w[i + 1], K256[i + 1]);
+        CRYPT_SHA256_ROUND(g, h, a, b, c, d, e, f, w[i + 2], K256[i + 2]);
+        CRYPT_SHA256_ROUND(f, g, h, a, b, c, d, e, w[i + 3], K256[i + 3]);
+        CRYPT_SHA256_ROUND(e, f, g, h, a, b, c, d, w[i + 4], K256[i + 4]);
+        CRYPT_SHA256_ROUND(d, e, f, g, h, a, b, c, w[i + 5], K256[i + 5]);
+        CRYPT_SHA256_ROUND(c, d, e, f, g, h, a, b, w[i + 6], K256[i + 6]);
+        CRYPT_SHA256_ROUND(b, c, d, e, f, g, h, a, w[i + 7], K256[i + 7]);
     }
 
     for (unsigned i = 16; i < 64; i += 8) {  /* 16 ~ 64 rounds to do hash computation, 8 rounds pre loop */
-        w[i + 0] = R(w, i + 0);
-        ROUND(a, b, c, d, e, f, g, h, w[i + 0], K256[i + 0]);
-        w[i + 1] = R(w, i + 1);
-        ROUND(h, a, b, c, d, e, f, g, w[i + 1], K256[i + 1]);
-        w[i + 2] = R(w, i + 2);
-        ROUND(g, h, a, b, c, d, e, f, w[i + 2], K256[i + 2]);
-        w[i + 3] = R(w, i + 3);
-        ROUND(f, g, h, a, b, c, d, e, w[i + 3], K256[i + 3]);
-        w[i + 4] = R(w, i + 4);
-        ROUND(e, f, g, h, a, b, c, d, w[i + 4], K256[i + 4]);
-        w[i + 5] = R(w, i + 5);
-        ROUND(d, e, f, g, h, a, b, c, w[i + 5], K256[i + 5]);
-        w[i + 6] = R(w, i + 6);
-        ROUND(c, d, e, f, g, h, a, b, w[i + 6], K256[i + 6]);
-        w[i + 7] = R(w, i + 7);
-        ROUND(b, c, d, e, f, g, h, a, w[i + 7], K256[i + 7]);
+        w[i + 0] = R(w, i + 0); /* 8 rounds pre loop, the NO.1 computation shift 0 bytes */
+        CRYPT_SHA256_ROUND(a, b, c, d, e, f, g, h, w[i + 0], K256[i + 0]);
+        w[i + 1] = R(w, i + 1); /* 8 rounds pre loop, the NO.2 computation shift 1 bytes */
+        CRYPT_SHA256_ROUND(h, a, b, c, d, e, f, g, w[i + 1], K256[i + 1]);
+        w[i + 2] = R(w, i + 2); /* 8 rounds pre loop, the NO.3 computation shift 2 bytes */
+        CRYPT_SHA256_ROUND(g, h, a, b, c, d, e, f, w[i + 2], K256[i + 2]);
+        w[i + 3] = R(w, i + 3); /* 8 rounds pre loop, the NO.4 computation shift 3 bytes */
+        CRYPT_SHA256_ROUND(f, g, h, a, b, c, d, e, w[i + 3], K256[i + 3]);
+        w[i + 4] = R(w, i + 4); /* 8 rounds pre loop, the NO.5 computation shift 4 bytes */
+        CRYPT_SHA256_ROUND(e, f, g, h, a, b, c, d, w[i + 4], K256[i + 4]);
+        w[i + 5] = R(w, i + 5); /* 8 rounds pre loop, the NO.6 computation shift 5 bytes */
+        CRYPT_SHA256_ROUND(d, e, f, g, h, a, b, c, w[i + 5], K256[i + 5]);
+        w[i + 6] = R(w, i + 6); /* 8 rounds pre loop, the NO.7 computation shift 6 bytes */
+        CRYPT_SHA256_ROUND(c, d, e, f, g, h, a, b, w[i + 6], K256[i + 6]);
+        w[i + 7] = R(w, i + 7); /* 8 rounds pre loop, the NO.8 computation shift 7 bytes */
+        CRYPT_SHA256_ROUND(b, c, d, e, f, g, h, a, w[i + 7], K256[i + 7]);
     }
 
     // RFC 6.2.4. Compute the intermediate hash value H(i):
@@ -119,7 +119,7 @@ static void CompressBlock(uint32_t state[8], const uint8_t block[CRYPT_SHA2_256_
     state[7] += h;
 }
 #undef ROTR32
-#undef ROUND
+#undef CRYPT_SHA256_ROUND
 
 void SHA256CompressMultiBlocks(uint32_t hash[8], const uint8_t *in, uint32_t num)
 {

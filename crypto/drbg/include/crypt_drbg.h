@@ -23,6 +23,10 @@
 #include <stdbool.h>
 #include "crypt_types.h"
 #include "crypt_local_types.h"
+#ifdef HITLS_BSL_PARAMS
+#include "bsl_params.h"
+#include "crypt_params_key.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -100,12 +104,6 @@ typedef struct DrbgCtx DRBG_Ctx;
 
 #define DRBG_HASH_MAX_MDSIZE  (64)
 
-#define RAND_TYPE_MD 1
-#define RAND_TYPE_MAC 2
-#define RAND_TYPE_AES 3
-#define RAND_TYPE_AES_DF 4
-#define RAND_TYPE_SM4_DF 5
-
 typedef struct {
     CRYPT_RAND_AlgId  drbgId;
     int32_t depId;
@@ -118,13 +116,30 @@ typedef struct {
  * @brief This API does not support multiple threads.
  *
  * @param libCtx    Library context
- * @param algId     Algorithm ID for the DRBG
- * @param param     DRBG parameters
+ * @param algId  RAND algorithm ID.
+ * @param seedMethod  DRBG seed hook
+ * @param seedCtx   DRBG seed context
  *
  * @retval DRBG_Ctx* Success
- * @retval NULL      Failure
+ * @retval NULL      failure
  */
-DRBG_Ctx *DRBG_New(void *libCtx, int32_t algId, BSL_Param *param);
+DRBG_Ctx *DRBG_New(void *libCtx, int32_t algId, CRYPT_RandSeedMethod *seedMethod, void *seedCtx);
+
+#ifdef HITLS_BSL_PARAMS
+/**
+ * @ingroup drbg
+ * @brief Apply for a context for the CTR_DRBG.
+ * @brief This API does not support multiple threads.
+ *
+ * @param libCtx    Library context
+ * @param algId  RAND algorithm ID.
+ * @param param  DRBG seed hook and seed context.
+ *
+ * @retval DRBG_Ctx* Success
+ * @retval NULL      failure
+ */
+DRBG_Ctx *DRBG_NewEx(void *libCtx, int32_t algId, BSL_Param *param);
+#endif
 
 /**
  * @ingroup drbg
@@ -144,8 +159,7 @@ void DRBG_Free(DRBG_Ctx *ctx);
  *
  * @param ctx       DRBG context
  * @param person    Personalization string. The personalization string can be NULL.
- * @param persLen   Personalization string length,
- * @param param     DRBG parameters,Not in use yet
+ * @param persLen   Personalization string length
  *
  * @retval CRYPT_SUCCESS                Instantiation succeeded.
  * @retval CRYPT_NULL_INPUT             Invalid null pointer
@@ -154,7 +168,7 @@ void DRBG_Free(DRBG_Ctx *ctx);
  * @retval CRYPT_DRBG_FAIL_GET_NONCE    Failed to obtain the nonce.
  * @retval Hash function error code:    Failed to invoke the hash function.
  */
-int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen, BSL_Param *param);
+int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen);
 
 /**
  * @ingroup drbg
@@ -162,7 +176,7 @@ int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen,
  * @brief The additional input can be NULL. This API does not support multiple threads.
  *
  * @param ctx           DRBG context
- * @param adin          Additional input. The data can be empty.
+ * @param adin          Additional input. The data can be NULL.
  * @param adinLen       Additional input length
  * @param param         DRBG parameters,Not in use yet
  *
@@ -172,7 +186,7 @@ int32_t DRBG_Instantiate(DRBG_Ctx *ctx, const uint8_t *person, uint32_t persLen,
  * @retval CRYPT_DRBG_FAIL_GET_ENTROPY  Failed to obtain the entropy.
  * @retval Hash function error code:    Failed to invoke the hash function.
  */
-int32_t DRBG_Reseed(DRBG_Ctx *ctx, const uint8_t *adin, uint32_t adinLen, BSL_Param *param);
+int32_t DRBG_Reseed(DRBG_Ctx *ctx, const uint8_t *adin, uint32_t adinLen);
 
 /**
  * @ingroup drbg
@@ -186,8 +200,29 @@ int32_t DRBG_Reseed(DRBG_Ctx *ctx, const uint8_t *adin, uint32_t adinLen, BSL_Pa
  * @param outLen        Output length
  * @param adin          Additional input. The data can be empty.
  * @param adinLen       Additional input length
- * @param param         DRBG parameters,involve:
- *     pr            Predicted resistance. If this parameter is set to true, reseed is executed each time.
+ * @param pr            Predicted resistance. If this parameter is set to true, reseed is executed each time.
+ *
+ * @retval CRYPT_SUCCESS        Instantiation succeeded.
+ * @retval CRYPT_NULL_INPUT     Invalid null pointer
+ * @retval CRYPT_DRBG_ERR_STATE The DRBG status is incorrect.
+ * @retval Hash function error code: Failed to invoke the hash function.
+ */
+int32_t DRBG_Generate(DRBG_Ctx *ctx,
+                      uint8_t *out, uint32_t outLen,
+                      const uint8_t *adin, uint32_t adinLen, bool pr);
+
+/**
+ * @ingroup drbg
+ * @brief Generating pseudorandom bits using a DRBG, output can be any length.
+ * @brief The additional input can be null. The user specifies the additional obfuscation data.
+ *        This API does not support multiple threads.
+ * @brief External invoking must have a recovery mechanism after the status is abnormal.
+ *
+ * @param ctx           DRBG context
+ * @param out           Output BUF
+ * @param outLen        Output length
+ * @param adin          Additional input. The data can be empty.
+ * @param adinLen       Additional input length
  *
  * @retval CRYPT_SUCCESS        Instantiation succeeded.
  * @retval CRYPT_NULL_INPUT     Invalid null pointer
@@ -195,7 +230,7 @@ int32_t DRBG_Reseed(DRBG_Ctx *ctx, const uint8_t *adin, uint32_t adinLen, BSL_Pa
  * @retval Hash function error code: Failed to invoke the hash function.
  */
 int32_t DRBG_GenerateBytes(DRBG_Ctx *ctx, uint8_t *out, uint32_t outLen,
-    const uint8_t *adin, uint32_t adinLen, BSL_Param *param);
+    const uint8_t *adin, uint32_t adinLen);
 
 /**
  * @ingroup drbg
@@ -211,17 +246,16 @@ int32_t DRBG_Uninstantiate(DRBG_Ctx *ctx);
 
 /**
  * @ingroup drbg
- * @brief get or set drbg param
+ * @brief Set reseed properties for DRBG
  *
- * @param ctx [IN] drbg context
- * @param cmd [IN] Option information
- * @param val [IN/OUT] Data to be set/obtained
- * @param valLen [IN] Length of the data marked as "val"
+ * @param opt options
+ * @param val value
+ * @param len length for val
  *
- * @retval  #CRYPT_SUCCESS.
- *          For other error codes, see crypt_errno.h.
+ * @retval CRYPT_SUCCESS    set successfully.
+ * @retval CRYPT_INVALID_ARG Invalid arguments
  */
-int32_t DRBG_Ctrl(DRBG_Ctx *ctx, int32_t cmd, void *val, uint32_t valLen);
+int32_t DRBG_Ctrl(DRBG_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
 /**
  * @ingroup drbg

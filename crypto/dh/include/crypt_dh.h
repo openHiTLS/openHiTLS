@@ -133,7 +133,7 @@ int32_t CRYPT_DH_GetPara(const CRYPT_DH_Ctx *ctx, CRYPT_DhPara *para);
  * @retval (CRYPT_DH_Para *) Pointer to the memory space of the allocated context
  * @retval NULL              Invalid null pointer
  */
-CRYPT_DH_Para *CRYPT_DH_NewParaById(CRYPT_PKEY_ParaId id);
+CRYPT_DH_Para *CRYPT_DH_NewParaById(int32_t id);
 
 /**
  * @ingroup dh
@@ -395,6 +395,18 @@ int32_t CRYPT_DH_Cmp(const CRYPT_DH_Ctx *a, const CRYPT_DH_Ctx *b);
  * @retval CRYPT_SUCCESS    obtained successfully.
  */
 int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, int32_t opt, void *val, uint32_t len);
+
+/**
+ * @ingroup dh
+ * @brief   copy param from src to dest.
+ *
+ * @param   src [IN] Key session
+ * @param   dest [IN] Key session
+ *
+ * @return  CRYPT_SUCCESS.
+ *          For other error codes see crypt_errno.h.
+ */
+int32_t CRYPT_DH_CopyParam(const CRYPT_DH_Ctx *src, CRYPT_DH_Ctx *dest);
 
 /**
  * @ingroup dh

@@ -18,7 +18,7 @@
 
 #include "crypt_local_types.h"
 #include "crypt_sm2.h"
-#include "crypt_encode_internal.h"
+#include "crypt_encode.h"
 
 #define MAX_PLAIN_TEXT_LEN 2048
 #define CIPHER_TEXT_EXTRA_LEN 97

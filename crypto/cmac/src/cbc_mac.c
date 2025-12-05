@@ -52,7 +52,16 @@ CRYPT_CBC_MAC_Ctx *CRYPT_CBC_MAC_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id)
     return CRYPT_CBC_MAC_NewCtx(id);
 }
 
-int32_t CRYPT_CBC_MAC_Init(CRYPT_CBC_MAC_Ctx *ctx, const uint8_t *key, uint32_t len, void *param)
+int32_t CRYPT_CBC_MAC_Init(CRYPT_CBC_MAC_Ctx *ctx, const uint8_t *key, uint32_t len)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    return CipherMacInit(&ctx->common, key, len);
+}
+
+int32_t CRYPT_CBC_MAC_InitEx(CRYPT_CBC_MAC_Ctx *ctx, const uint8_t *key, uint32_t len, void *param)
 {
     (void)param;
     if (ctx == NULL) {

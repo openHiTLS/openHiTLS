@@ -24,10 +24,10 @@
 #include "modes_local.h"
 #include "securec.h"
 
-int32_t MODES_ECB_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
+static int32_t MODES_ECB_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
 {
     // ctx, in, out, these pointer have been judged at the EAL layer and is not judged again here.
-    if (ctx->ciphCtx == NULL || len == 0) {
+    if (ctx == NULL || ctx->ciphCtx == NULL || len == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -113,13 +113,13 @@ int32_t MODES_ECB_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_
             modeCtx->pad = CRYPT_PADDING_NONE;
             return CRYPT_SUCCESS;
         case CRYPT_CTRL_SET_PADDING:
-            if (val == NULL || valLen != sizeof(int32_t)) {
-                BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-                return CRYPT_INVALID_ARG;
-            }
             if (modeCtx->commonCtx.blockSize == 1) {
                 BSL_ERR_PUSH_ERROR(CRYPT_EAL_PADDING_NOT_SUPPORT);
                 return CRYPT_EAL_PADDING_NOT_SUPPORT;
+            }
+            if (val == NULL || valLen != sizeof(int32_t)) {
+                BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+                return CRYPT_INVALID_ARG;
             }
             ret = MODES_SetPaddingCheck(*(int32_t *)val);
             if (ret != CRYPT_SUCCESS) {

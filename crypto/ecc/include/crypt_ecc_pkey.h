@@ -22,9 +22,9 @@
 #include "crypt_bn.h"
 #include "crypt_ecc.h"
 #include "crypt_algid.h"
-#include "bsl_params.h"
 #include "sal_atomic.h"
 #include "bsl_params.h"
+#include "crypt_params_key.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,8 +41,9 @@ typedef struct ECC_PkeyCtx {
     ECC_Para *para;         // Key parameter
     CRYPT_PKEY_PointFormat pointFormat;   // Public key point format
     uint32_t useCofactorMode;   // Indicates whether to use the cofactor mode. 1 indicates yes, and 0 indicates no.
-    uint32_t flags;         // behavior flags, see CRYPT_ECC_Flag
     BSL_SAL_RefCount references;
+    CRYPT_MD_AlgId signMdId; // For SignData Function
+    uint32_t flag;
     void *libCtx;
     char *mdAttr;
 } ECC_Pkey;
@@ -173,7 +174,6 @@ int32_t ECC_PkeyGetPrvKey(const ECC_Pkey *ctx, CRYPT_EccPrv *prv);
  */
 int32_t ECC_PkeyGetPubKey(const ECC_Pkey *ctx, CRYPT_EccPub *pub);
 
-#ifdef HITLS_BSL_PARAMS
 /**
  * @ingroup ecc
  * @brief ECC Set the private key data.
@@ -242,7 +242,7 @@ int32_t ECC_PkeyGetPubKeyEx(const ECC_Pkey *ctx, BSL_Param *para);
  * @retval Other            failure
  */
 int32_t ECC_GetParaEx(const ECC_Pkey *ctx, BSL_Param *para);
-#endif
+
 /**
  * @ingroup ecc
  * @brief ECC control interface

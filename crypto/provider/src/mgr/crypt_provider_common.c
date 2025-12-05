@@ -14,17 +14,17 @@
  */
 
 #ifdef HITLS_CRYPTO_PROVIDER
-
+#include <string.h>
 #include "securec.h"
-#include "bsl_list.h"
 #include "bsl_err_internal.h"
-#include "crypt_errno.h"
-#include "eal_entropy.h"
+#include "bsl_list.h"
+#include "eal_drbg_local.h"
 #include "crypt_eal_entropy.h"
-#include "crypt_drbg_local.h"
+#include "crypt_errno.h"
 #include "crypt_drbg.h"
 #include "crypt_provider_local.h"
 #include "crypt_provider.h"
+#include "crypt_utils.h"
 
 static CRYPT_EAL_LibCtx *g_libCtx = NULL;
 
@@ -140,35 +140,27 @@ int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, BSL_Param *param
 {
     int32_t ret;
 #ifdef HITLS_CRYPTO_ENTROPY_DEFAULT
-    CRYPT_RandSeedMethod meth = {0};
     // The implementer of provider may not use the default entropy source
-    (void)EAL_SeedDrbgEntropyMeth(&meth);
+    CRYPT_RandSeedMethod method = {0};
+    EAL_SeedDrbgEntropyMeth(&method);
     ctx->providerSeed.id = HITLS_SEED_DRBG_INIT_RAND_ALG;
-    ret = EAL_SeedDrbgInit(&(ctx->providerSeed));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    RETURN_RET_IF_ERR(EAL_SeedDrbgInit(&(ctx->providerSeed)), ret);
 #endif
     // Construct input method structure array
     CRYPT_EAL_Func capFuncs[] = {
 #ifdef HITLS_CRYPTO_ENTROPY_DEFAULT
-        {CRYPT_EAL_CAP_GETENTROPY, (CRYPT_EAL_GetEntropyCb)meth.getEntropy},
-        {CRYPT_EAL_CAP_CLEANENTROPY, (CRYPT_EAL_CleanEntropyCb)meth.cleanEntropy},
-        {CRYPT_EAL_CAP_GETNONCE, (CRYPT_EAL_GetNonceCb)meth.getNonce},
-        {CRYPT_EAL_CAP_CLEANNONCE, (CRYPT_EAL_CleanNonceCb)meth.cleanNonce},
+        {CRYPT_EAL_CAP_GETENTROPY, method.getEntropy},
+        {CRYPT_EAL_CAP_CLEANENTROPY, method.cleanEntropy},
+        {CRYPT_EAL_CAP_GETNONCE, method.getNonce},
+        {CRYPT_EAL_CAP_CLEANNONCE, method.cleanNonce},
 #endif
-        {CRYPT_EAL_CAP_MGRCTXCTRL, (CRYPT_EAL_ProvMgrCtrlCb)CRYPT_EAL_ProvMgrCtrl},
+        {CRYPT_EAL_CAP_MGRCTXCTRL, CRYPT_EAL_ProvMgrCtrl},
         CRYPT_EAL_FUNC_END  // End marker
     };
 
     CRYPT_EAL_Func *outFuncs = NULL;
     // Call CRYPT_EAL_ImplProviderInit to get methods
-    ret = providerInit(ctx, param, capFuncs, &outFuncs, &ctx->provCtx);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
+    GOTO_ERR_IF(providerInit(ctx, param, capFuncs, &outFuncs, &ctx->provCtx), ret);
     if (outFuncs == NULL) {
         ret = CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL;
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);

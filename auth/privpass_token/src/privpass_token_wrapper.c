@@ -21,7 +21,6 @@
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
 #include "crypt_eal_md.h"
-#include "crypt_eal_rand.h"
 #include "crypt_errno.h"
 #include "crypt_eal_codecs.h"
 #include "auth_privpass_token.h"
@@ -40,7 +39,7 @@ static void PrivPassFreePkeyCtx(void *pkeyCtx)
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
 }
 
-int32_t PrivPassPubDigest(void *libCtx, const char *attrName, int32_t algId, const uint8_t *input,
+static int32_t PrivPassPubDigest(void *libCtx, const char *attrName, int32_t algId, const uint8_t *input,
     uint32_t inputLen, uint8_t *digest, uint32_t *digestLen)
 {
     (void)libCtx;

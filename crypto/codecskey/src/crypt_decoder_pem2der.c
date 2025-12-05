@@ -76,7 +76,7 @@ int32_t DECODER_Pem2DerDecode(void *ctx, const BSL_Param *inParam, BSL_Param **o
         return CRYPT_NULL_INPUT;
     }
     BSL_PEM_Symbol symbol = {0};
-    char *dataType = NULL;
+    const char *dataType = NULL;
     DECODER_Pem2DerCtx *decoderCtx = (DECODER_Pem2DerCtx *)ctx;
     const BSL_Param *input = BSL_PARAM_FindConstParam(inParam, CRYPT_PARAM_DECODE_BUFFER_DATA);
     if (input == NULL) {

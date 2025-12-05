@@ -49,8 +49,7 @@ int32_t ECP224_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point 
  * @retval CRYPT_SUCCESS    succeeded
  * @retval For details about other errors, see crypt_errno.h
  */
-int32_t ECP224_PointMulAdd(
-    ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt);
+int32_t ECP224_PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt);
 
 /**
  * @brief   If pt != NULL, calculate r = k * pt; otherwise, calculate r = k * G

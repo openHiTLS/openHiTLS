@@ -17,15 +17,17 @@
 #ifdef HITLS_CRYPTO_MLDSA
 #include "securec.h"
 #include "crypt_errno.h"
+#include "crypt_algid.h"
 #include "crypt_util_rand.h"
 #include "crypt_utils.h"
-#include "crypt_algid.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
 #include "ml_dsa_local.h"
 #include "eal_md_local.h"
+#include "bsl_params.h"
+#include "crypt_params_key.h"
 
 // These data from NIST.FIPS.204 Table 1 and Table 2.
 static const CRYPT_ML_DSA_Info MLDSA_PARAMETERTER_44 = {CRYPT_MLDSA_TYPE_MLDSA_44, 4,  4,   2,    39,   78,  (1 << 17),
@@ -802,11 +804,7 @@ static int32_t MLDSAEncodeInputData(CRYPT_ML_DSA_Ctx *ctx, int32_t hashId, const
 
     msg->len = dataLen + ctx->ctxLen + MLDSA_SIGN_PREFIX_BYTES;
     msg->data = BSL_SAL_Malloc(msg->len);
-    if (msg->data == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-
+    RETURN_RET_IF(msg->data == NULL, CRYPT_MEM_ALLOC_FAIL);
     msg->data[0] = 0;
     msg->data[1] = (uint8_t)ctx->ctxLen;
     if (ctx->ctxInfo != NULL && ctx->ctxLen > 0) {

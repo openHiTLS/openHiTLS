@@ -52,7 +52,7 @@ static void *DefaultDrbgNew(CRYPT_EAL_IsoProvCtx *provCtx, int32_t algId)
     (void)BSL_PARAM_InitValue(&randParam[index++], CRYPT_PARAM_RAND_SEEDCTX, BSL_PARAM_TYPE_CTX_PTR,
         provCtx->seedCtx, 0);
 
-    void *randCtx = DRBG_New(provCtx->libCtx, algId, randParam);
+    void *randCtx = DRBG_NewEx(provCtx->libCtx, algId, randParam);
     if (randCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);
         return NULL;
@@ -84,7 +84,7 @@ static void *CRYPT_EAL_IsoRandNewCtx(CRYPT_EAL_IsoProvCtx *provCtx, int32_t algI
     if (param == NULL || getEnt == NULL) {
         return DefaultDrbgNew(provCtx, algId);
     }
-    randCtx = DRBG_New(provCtx->libCtx, algId, param);
+    randCtx = DRBG_NewEx(provCtx->libCtx, algId, param);
     if (randCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);
         return NULL;
@@ -117,6 +117,7 @@ static void *CRYPT_EAL_IsoRandNewCtxWrapper(CRYPT_EAL_IsoProvCtx *provCtx, int32
 
 static int32_t DRBG_InstantiateWrapper(IsoRandCtx *ctx, const uint8_t *person, uint32_t persLen, BSL_Param *param)
 {
+    (void)param;
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -125,7 +126,7 @@ static int32_t DRBG_InstantiateWrapper(IsoRandCtx *ctx, const uint8_t *person, u
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    return DRBG_Instantiate(ctx->ctx, person, persLen, param);
+    return DRBG_Instantiate(ctx->ctx, person, persLen);
 }
 
 static int32_t DRBG_UninstantiateWrapper(IsoRandCtx *ctx)
@@ -144,6 +145,7 @@ static int32_t DRBG_UninstantiateWrapper(IsoRandCtx *ctx)
 static int32_t DRBG_GenerateBytesWrapper(IsoRandCtx *ctx, uint8_t *out, uint32_t outLen, const uint8_t *adin,
     uint32_t adinLen, BSL_Param *param)
 {
+    (void)param;
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -152,11 +154,12 @@ static int32_t DRBG_GenerateBytesWrapper(IsoRandCtx *ctx, uint8_t *out, uint32_t
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    return DRBG_GenerateBytes(ctx->ctx, out, outLen, adin, adinLen, param);
+    return DRBG_GenerateBytes(ctx->ctx, out, outLen, adin, adinLen);
 }
 
 static int32_t DRBG_ReseedWrapper(IsoRandCtx *ctx, const uint8_t *adin, uint32_t adinLen, BSL_Param *param)
 {
+    (void)param;
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -165,7 +168,7 @@ static int32_t DRBG_ReseedWrapper(IsoRandCtx *ctx, const uint8_t *adin, uint32_t
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    return DRBG_Reseed(ctx->ctx, adin, adinLen, param);
+    return DRBG_Reseed(ctx->ctx, adin, adinLen);
 }
 
 static int32_t DRBG_CtrlWrapper(IsoRandCtx *ctx, int32_t opt, void *val, uint32_t len)

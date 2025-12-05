@@ -73,10 +73,12 @@ enum BSL_ERROR {
 
     /* The return value of the LOG submodule starts from 0x03020001. */
     BSL_LOG_ERR_BAD_PARAM = 0x03020001,      /**< Bad parameter. */
+    BSL_LOG_ERR_MEMCPY_FAIL,                 /**< Memory Copy Failure. */
 
     /* The return value of the TLV submodule starts from 0x03030001. */
     BSL_TLV_ERR_BAD_PARAM = 0x03030001,      /**< Bad parameter. */
     BSL_TLV_ERR_NO_WANT_TYPE,                /**< No TLV found. */
+    BSL_TLV_ERR_MEMCPY_FAIL,                 /**< Memory Copy Failure. */
 
     /* The return value of the ERR submodule starts from 0x03040001. */
     BSL_ERR_ERR_ACQUIRE_READ_LOCK_FAIL = 0x03040001,  /**< Failed to obtain the read lock. */
@@ -85,8 +87,9 @@ enum BSL_ERROR {
     BSL_ERR_ERR_NO_ERROR,                             /**< Error stack is NULL.  */
     BSL_ERR_ERR_NO_MARK,                              /**< Error stack has no mark. */
 
-    BSL_SAL_TIME_NO_REG_FUNC = 0x03050001,
-    BSL_SAL_TIME_SYS_ERROR,                 /**< Function gettimeofday failed. */
+    BSL_SAL_TIME_BAD_PARAM = 0x03050001,
+    BSL_SAL_TIME_NO_REG_FUNC,                /** The time-related function is not registered. */
+    BSL_SAL_TIME_SYS_ERROR,                  /** Function gettimeofday failed */
 
     /* The return value of the UIO submodule starts from 0x03060001. */
     BSL_UIO_FAIL = 0x03060001,
@@ -104,6 +107,15 @@ enum BSL_ERROR {
     BSL_UIO_FILE_OPEN_FAIL,
     BSL_UIO_EXIST_CONTEXT_NOT_RELEASED,
     BSL_UIO_BUF_TOO_LONG,
+    BSL_UIO_CIPHER_UPDATE_FAIL,
+    BSL_UIO_CIPHER_FINAL_FAIL,
+    BSL_UIO_CIPHER_GET_BLOCK_SIZE_FAIL,
+    BSL_UIO_CIPHER_SET_PADDING_FAIL,
+    BSL_UIO_CIPHER_SHOULD_NOT_WRITE,
+    BSL_UIO_CIPHER_SHOULD_NOT_READ,
+    BSL_UIO_CIPHER_SHOULD_NOT_FLUSH,
+    BSL_UIO_NEXT_IS_NULL,
+    BSL_UIO_SET_CIPHER_CTX_AGAIN,
 
     /* The return value of the LIST submodule starts from 0x03070001. */
     BSL_LIST_INVALID_LIST_CURRENT = 0x03070001, /**< Current node pointer is NULL */
@@ -128,6 +140,13 @@ enum BSL_ERROR {
     BSL_UI_VERIFY_BUFF_FAILED,
     BSL_UI_MEM_ALLOC_FAIL,
 
+    /* The return value of the OID submodule starts from 0x03090001. */
+    BSL_OID_INVALID = 0x03090001,
+    BSL_OID_TYPE_CODE_INVALID,
+    BSL_OID_NAME_LENGTH_INVALID,
+    BSL_OID_DUPLICATE,
+    BSL_OID_OBJ_INTERNAL_USE,
+
     /* The return value of the BASE64 submodule starts from 0x030a0001. */
     BSL_BASE64_INVALID = 0x030a0001,
     BSL_BASE64_BUF_NOT_ENOUGH,
@@ -151,6 +170,8 @@ enum BSL_ERROR {
     BSL_SAL_ERR_NET_CONNECT,                 /**< Error occured when building a connection. */
     BSL_SAL_ERR_NET_IOCTL,                   /**< Error occured when calling ioctl. */
     BSL_SAL_NET_NO_REG_FUNC,
+    BSL_SAL_ERR_NET_ACCEPT,
+    BSL_SAL_ERR_NET_GETSOCKNAME,
 
     BSL_CONF_FAIL = 0x030c0001,
     BSL_CONF_INIT_FAIL,
@@ -199,6 +220,10 @@ enum BSL_ERROR {
     BSL_ASN1_ERR_ENCODE_UTC_TIME,
     BSL_ASN1_ERR_ENCODE_GENERALIZED_TIME,
     BSL_ASN1_ERR_LEN_OVERFLOW,
+    BSL_ASN1_ERR_PRINTF,
+    BSL_ASN1_ERR_PRINTF_IO_ERR,
+    BSL_ASN1_ERR_DECODE_T61_STRING,
+    BSL_ASN1_ERR_ENCODE_T61_STRING,
 
     BSL_PEM_INVALID = 0x03110001,
     BSL_PEM_DATA_NOT_ENOUGH,

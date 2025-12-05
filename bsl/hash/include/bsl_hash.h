@@ -29,7 +29,6 @@
 #include <stdint.h>
 #include "bsl_hash_list.h"
 #include "list_base.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

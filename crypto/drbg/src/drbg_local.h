@@ -29,6 +29,13 @@ extern "C" {
 // Relationship between the number of NONCE and ENTROPY
 #define DRBG_NONCE_FROM_ENTROPY (2)
 
+/* Mapping between RAND and specific random number generation algorithms */
+#define RAND_TYPE_MD     1
+#define RAND_TYPE_MAC    2
+#define RAND_TYPE_AES    3
+#define RAND_TYPE_AES_DF 4
+#define RAND_TYPE_SM4_DF 5
+
 typedef enum {
     DRBG_STATE_UNINITIALISED,
     DRBG_STATE_READY,
@@ -72,12 +79,29 @@ struct DrbgCtx {
        When seedMeth and seedCtx are empty, the default entropy source is used. */
     CRYPT_RandSeedMethod seedMeth;
     void *seedCtx; /* Seed context */
+    bool predictionResistance;
 
     void *libCtx; /* Library context */
-    bool predictionResistance;
 
     int32_t forkId;
 };
+
+#ifdef HITLS_CRYPTO_DRBG_HASH
+/**
+ * @ingroup drbg
+ * @brief Apply for a context for the Hash_DRBG.
+ * @brief This API does not support multiple threads.
+ *
+ * @param md        HASH method
+ * @param seedMeth  DRBG seed hook
+ * @param isGM      SM3 DRBG or not
+ * @param seedCtx   DRBG seed context
+ *
+ * @retval DRBG_Ctx* Success
+ * @retval NULL      failure
+ */
+DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, bool isGm, const CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
+#endif
 
 #ifdef HITLS_CRYPTO_DRBG_HMAC
 /**
@@ -98,24 +122,6 @@ DRBG_Ctx *DRBG_NewHmacCtx(void *libCtx, const EAL_MacMethod *hmacMeth, CRYPT_MAC
     const CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
 #endif
 
-#ifdef HITLS_CRYPTO_DRBG_HASH
-/**
- * @ingroup drbg
- * @brief Apply for a context for the Hash_DRBG.
- * @brief This API does not support multiple threads.
- *
- * @param md        HASH method
- * @param isGm      is sm3
- * @param seedMeth  DRBG seed hook
- * @param seedCtx   DRBG seed context
- *
- * @retval DRBG_Ctx* Success
- * @retval NULL      failure
- */
-DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, bool isGm, const CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
-#endif
-
-
 #ifdef HITLS_CRYPTO_DRBG_CTR
 /**
  * @ingroup drbg
@@ -132,8 +138,8 @@ DRBG_Ctx *DRBG_NewHashCtx(const EAL_MdMethod *md, bool isGm, const CRYPT_RandSee
  * @retval DRBG_Ctx* Success
  * @retval NULL      failure
  */
-DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, const uint32_t keyLen, bool isGm, const bool isUsedDf,
-    const CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
+DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, uint32_t keyLen, bool isGm,
+    bool isUsedDf, const CRYPT_RandSeedMethod *seedMeth, void *seedCtx);
 #endif
 
 #ifdef __cplusplus

@@ -27,6 +27,8 @@
 #include "crypt_eal_pkey.h"
 #include "crypt_eal_codecs.h"
 #include "bsl_types.h"
+#include "bsl_params.h"
+#include "crypt_params_key.h"
 #include "crypt_types.h"
 #include "crypt_utils.h"
 #include "decode_local.h"

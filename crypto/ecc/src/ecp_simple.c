@@ -23,11 +23,6 @@
 #include "crypt_errno.h"
 #include "ecc_local.h"
 
-static bool BN_IsZeroOrOne(const BN_BigNum *bn)
-{
-    return (BN_IsZero(bn) || BN_IsOne(bn));
-}
-
 int32_t ECP_PointAtInfinity(const ECC_Para *para, const ECC_Point *pt)
 {
     if (para == NULL || pt == NULL) {
@@ -155,113 +150,6 @@ ERR:
     return ret;
 }
 
-static int32_t Points2AffineParaCheck(const ECC_Para *para, ECC_Point *pt[], uint32_t ptNums)
-{
-    if (para == NULL || pt == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (ptNums == 0 || ptNums > PRE_COMPUTE_MAX_TABLELEN) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_WINDOW_TOO_MAX);
-        return CRYPT_ECC_POINT_WINDOW_TOO_MAX;
-    }
-    if (BN_IsZero(&pt[0]->z)) {
-        // If the first point is an infinite point, exit directly.
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
-    // Check whether the point ID matches.
-    uint32_t i;
-    for (i = 0; i < ptNums; i++) {
-        if (para->id != pt[i]->id) {
-            BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-            return CRYPT_ECC_POINT_ERR_CURVE_ID;
-        }
-    }
-    return CRYPT_SUCCESS;
-}
-
-static int32_t Points2AffineCreatTmpData(BN_BigNum *pt[PRE_COMPUTE_MAX_TABLELEN], uint32_t ptNums,
-    BN_BigNum **inv, BN_Optimizer **opt, const BN_BigNum *p)
-{
-    uint32_t bits = BN_Bits(p);
-    *opt = BN_OptimizerCreate();
-    *inv = BN_Create(bits);
-    if (*opt == NULL || *inv == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    uint32_t i;
-    // Apply for pre-calculation table data.
-    for (i = 0; i < ptNums; i++) {
-        pt[i] = BN_Create(bits);
-        if (pt[i] == NULL) {
-            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-            return CRYPT_MEM_ALLOC_FAIL;
-        }
-    }
-    return CRYPT_SUCCESS;
-}
-
-static void Points2AffineDestroyTmpData(BN_BigNum *pt[PRE_COMPUTE_MAX_TABLELEN], uint32_t ptNums,
-    BN_BigNum *inv, BN_Optimizer *opt)
-{
-    for (uint32_t i = 0; i < ptNums; i++) {
-        BN_Destroy(pt[i]);
-    }
-    BN_Destroy(inv);
-    BN_OptimizerDestroy(opt);
-}
-
-// Multiple points are converted to the affine coordinate system. pt[0] cannot be infinite.
-int32_t ECP_Points2Affine(const ECC_Para *para, ECC_Point *pt[], uint32_t ptNums)
-{
-    int32_t ret = Points2AffineParaCheck(para, pt, ptNums);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    BN_BigNum *t[PRE_COMPUTE_MAX_TABLELEN] = { 0 }; // pre-calculation table
-    BN_BigNum *inv = NULL;
-    BN_Optimizer *opt = NULL;
-    GOTO_ERR_IF(Points2AffineCreatTmpData(t, ptNums, &inv, &opt, para->p), ret);
-    // t[i] = z[0] * z[1]* ... * z[i]
-    GOTO_ERR_IF(BN_Copy(t[0], &pt[0]->z), ret);
-    uint32_t i;
-    for (i = 1; i < ptNums; i++) {
-        if (BN_IsZeroOrOne(&pt[i]->z)) {
-            GOTO_ERR_IF(BN_Copy(t[i], t[i - 1]), ret); // copy last one
-            continue;
-        }
-        GOTO_ERR_IF(BN_ModMul(t[i], t[i - 1], &pt[i]->z, para->p, opt), ret);
-    }
-
-    // inv = 1 / (z[0] * z[1] * .... * z[ptNums - 1])
-    GOTO_ERR_IF(BN_ModInv(inv, t[ptNums - 1], para->p, opt), ret);
-
-    // t[i] = 1/z[i]
-    for (i = ptNums - 1; i > 0; i--) {
-        if (BN_IsZeroOrOne(&pt[i]->z)) {
-            continue;
-        }
-        // t[i] *= z[0]*z[1]*...*z[i - 1] = 1/z[i]
-        GOTO_ERR_IF(BN_ModMul(t[i], t[i - 1], inv, para->p, opt), ret);
-        // inv *= z[i] = 1/(z[0]*z[1]*...z[i - 1])
-        GOTO_ERR_IF(BN_ModMul(inv, &pt[i]->z, inv, para->p, opt), ret);
-    }
-    GOTO_ERR_IF(BN_Copy(t[0], inv), ret); // inv = 1/z[0]
-
-    // Calculate x = x/(z^2); y = y/(z^3)
-    for (i = 0; i < ptNums; i++) {
-        if (BN_IsZeroOrOne(&pt[i]->z)) {
-            continue;
-        }
-        GOTO_ERR_IF(ECP_Point2AffineWithInv(para, pt[i], pt[i], t[i]), ret);
-    }
-ERR:
-    Points2AffineDestroyTmpData(t, ptNums, inv, opt);
-    return ret;
-}
-
 // consttime
 static int32_t ECP_PointCopyWithMask(ECC_Point *r, const ECC_Point *a, const ECC_Point *b, BN_UINT mask)
 {
@@ -309,13 +197,11 @@ int32_t ECP_PointMul(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const EC
         goto ERR;
     }
     // Convert base to affine.
-    if ((ret = ECP_Point2Affine(para, base, base)) != CRYPT_SUCCESS ||
-        (ret = ECC_PointToMont(para, base, opt)) != CRYPT_SUCCESS || // Add salt to prevent side channels.
-        (ret = ECC_CopyPoint(r, base)) != CRYPT_SUCCESS ||
-        (ret = ECC_PointBlind(para, r)) != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
+    GOTO_ERR_IF(ECP_Point2Affine(para, base, base), ret);
+    // Add salt to prevent side channels.
+    GOTO_ERR_IF(ECC_PointToMont(para, base, opt), ret);
+    GOTO_ERR_IF(ECC_CopyPoint(r, base), ret);
+    GOTO_ERR_IF(ECC_PointBlind(para, r), ret);
     bits = BN_Bits(k);
     for (i = bits - 1; i > 0; i--) {
         GOTO_ERR_IF(para->method->pointDouble(para, r, r), ret);
@@ -443,10 +329,7 @@ ERR:
 // Currently, only prime number curves are supported. Other curves need to be expanded.
 int32_t ECC_PointCmp(const ECC_Para *para, const ECC_Point *a, const ECC_Point *b)
 {
-    if (para == NULL || a == NULL || b == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
+    RETURN_RET_IF(para == NULL || a == NULL || b == NULL, CRYPT_NULL_INPUT);
     if (para->id != a->id || para->id != b->id) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
         return CRYPT_ECC_POINT_ERR_CURVE_ID;
@@ -518,9 +401,6 @@ int32_t ECP_PointInvertAtAffine(const ECC_Para *para, ECC_Point *r, const ECC_Po
 ERR:
     return ret;
 }
-
-// The default ECP window length is 5 bits and only odd points are calculated.
-#define WINDOW_TABLE_SIZE (PRE_COMPUTE_MAX_TABLELEN >> 1)
 
 static int32_t ECP_PointPreCompute(const ECC_Para *para, ECC_Point *windows[], const ECC_Point *pt)
 {
@@ -659,7 +539,7 @@ ReCodeData *ECC_ReCodeK(const BN_BigNum *k, uint32_t window)
         uint32_t shift = 0;
         // Obtain the item of the window length.
         while ((shift < window) && (base != bits)) {
-            int8_t add = (((BN_GetBit(k, base) ? 1 : 0)) << shift);
+            int8_t add = (BN_GetBit(k, base) ? 1 : 0) << shift;
             num += add;
             base++;
             shift++;
@@ -689,11 +569,6 @@ ReCodeData *ECC_ReCodeK(const BN_BigNum *k, uint32_t window)
     }
     return code;
 }
-
-// Layout format of the pre-computation table.
-// This macro is used to convert values into corresponding offsets.
-// layout rules (1, 3, 5, 7... 15, -1, -3, ... -15)
-#define NUMTOOFFSET(num) (((num) < 0) ? (WINDOW_TABLE_SIZE / 2 - 1 - (((num) - 1) / 2)) : (((num) - 1) / 2))
 
 typedef struct {
     uint32_t baseBits;
@@ -741,7 +616,7 @@ ERR:
     return ret;
 }
 
-static int32_t PointMulAddParaCheck(const ECC_Para *para, const ECC_Point *r, const BN_BigNum *k1,
+int32_t ECP_PointMulAddParaCheck(const ECC_Para *para, const ECC_Point *r, const BN_BigNum *k1,
     const BN_BigNum *k2, const ECC_Point *pt)
 {
     if (para == NULL || r == NULL || k1 == NULL || k2 == NULL || pt == NULL) {
@@ -831,7 +706,7 @@ static int32_t KZeroHandle(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1,
 int32_t ECP_PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1,
     const BN_BigNum *k2, const ECC_Point *pt)
 {
-    int32_t ret = PointMulAddParaCheck(para, r, k1, k2, pt);
+    int32_t ret = ECP_PointMulAddParaCheck(para, r, k1, k2, pt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -898,6 +773,24 @@ static int32_t PointParaCheck(const ECC_Para *para, const ECC_Point *pt, int32_t
     return CRYPT_SUCCESS;
 }
 
+int32_t ECP_GetEncodeDataLen(const ECC_Para *para, ECC_Point *pt, CRYPT_PKEY_PointFormat format, uint32_t *dataLen)
+{
+    int32_t ret = PointParaCheck(para, pt, format);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    if (dataLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    uint32_t curveBytes = BN_Bytes(para->p);
+    uint32_t needBytes = (format == CRYPT_POINT_COMPRESSED) ? (curveBytes + 1) : ((curveBytes << 1) + 1);
+    *dataLen = needBytes;
+    return CRYPT_SUCCESS;
+}
+
 static int32_t EncodePointParaCheck(const ECC_Para *para, const ECC_Point *pt, const uint8_t *data,
     const uint32_t *dataLen, CRYPT_PKEY_PointFormat format)
 {
@@ -926,7 +819,7 @@ int32_t ECC_EncodePoint(const ECC_Para *para, ECC_Point *pt, uint8_t *data, uint
     CRYPT_PKEY_PointFormat format)
 {
     int32_t ret;
-    bool z = 0;
+    bool z = false;
     uint32_t bytes, off, lastLen, i, curveBytes;
     GOTO_ERR_IF(EncodePointParaCheck(para, pt, data, dataLen, format), ret);
     // Convert the point to affine.

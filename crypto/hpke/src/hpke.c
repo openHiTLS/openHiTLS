@@ -382,6 +382,15 @@ EXIT:
     return ret;
 }
 
+static inline void HpkeGenerateKemSuiteId(uint8_t kemIdex, uint8_t *suiteId, uint32_t suiteIdLen)
+{
+    uint16_t kemId = g_hpkeKemAlgInfo[kemIdex].hpkeKemId;
+    (void)memcpy_s(suiteId, suiteIdLen, "KEM", strlen("KEM"));
+    uint32_t offset = strlen("KEM");
+
+    BSL_Uint16ToByte(kemId, suiteId + offset);
+}
+
 static inline void HpkeGenerateHpkeSuiteId(uint8_t kemIndex, uint8_t kdfIndex, uint8_t aeadIndex, uint8_t *suiteId,
     uint32_t suiteIdLen)
 {
@@ -395,15 +404,6 @@ static inline void HpkeGenerateHpkeSuiteId(uint8_t kemIndex, uint8_t kdfIndex, u
     offset += sizeof(uint16_t);
 
     BSL_Uint16ToByte(g_hpkeAeadAlgInfo[aeadIndex].hpkeAeadId, suiteId + offset);
-}
-
-static inline void HpkeGenerateKemSuiteId(uint8_t kemIdex, uint8_t *suiteId, uint32_t suiteIdLen)
-{
-    uint16_t kemId = g_hpkeKemAlgInfo[kemIdex].hpkeKemId;
-    (void)memcpy_s(suiteId, suiteIdLen, "KEM", strlen("KEM"));
-    uint32_t offset = strlen("KEM");
-
-    BSL_Uint16ToByte(kemId, suiteId + offset);
 }
 
 typedef struct {

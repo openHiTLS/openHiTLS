@@ -85,17 +85,6 @@ extern "c" {
         for (; macroTmpI < (dstlen); macroTmpI++) { (dst)[macroTmpI] = 0; }                   \
     } while (0)
 
-// Modular operation, satisfy d < (1 << BN_UINT_HALF_BITS) r = nh | nl % d
-#define MOD_HALF(r, nh, nl, d)                                  \
-    do {                                                        \
-        BN_UINT macroTmpD = (d);                                      \
-        (r) = (nh) % macroTmpD;                                       \
-        (r) = ((r) << BN_UINT_HALF_BITS) | BN_UINT_HI((nl));  \
-        (r) = (r) % macroTmpD;                                        \
-        (r) = ((r) << BN_UINT_HALF_BITS) | BN_UINT_LO((nl));  \
-        (r) = (r) % macroTmpD;                                        \
-    } while (0)
-
 /* r = a * b + r + c, where c is refreshed as the new carry value */
 #define MULADD_ABC(c, r, a, b)                  \
 do {                                            \

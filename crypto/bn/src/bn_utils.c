@@ -110,7 +110,7 @@ int32_t BN_Extend(BN_BigNum *a, uint32_t words)
 // Padded 0s before bin to obtain the output data whose length is binLen.
 int32_t BN_Bn2BinFixZero(const BN_BigNum *a, uint8_t *bin, uint32_t binLen)
 {
-    if (a == NULL || bin == NULL || binLen == 0) {
+    if (a == NULL || bin == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -229,7 +229,7 @@ int32_t BN_U64Array2Bn(BN_BigNum *r, const uint64_t *array, uint32_t len)
 #endif
 
 #if defined(HITLS_CRYPTO_CURVE_SM2_ASM) || (defined(HITLS_CRYPTO_CURVE_NISTP256_ASM) && \
-    defined(HITLS_CRYPTO_NIST_USE_ACCEL))
+    defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE))
 int32_t BN_BN2Array(const BN_BigNum *src, BN_UINT *dst, uint32_t size)
 {
     if (size < src->size) {

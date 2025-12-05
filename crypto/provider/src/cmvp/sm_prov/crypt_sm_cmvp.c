@@ -18,6 +18,7 @@
 
 #include "crypt_eal_implprovider.h"
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_cmvp_selftest.h"
 #include "cmvp_sm.h"

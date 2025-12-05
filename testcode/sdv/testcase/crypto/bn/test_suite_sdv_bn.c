@@ -1923,7 +1923,7 @@ void SDV_CRYPTO_BN_TO_BIN_FIX_ZERO_API_TC001(void)
 
     ASSERT_EQ(BN_Bn2BinFixZero(NULL, bin, 1), CRYPT_NULL_INPUT);
     ASSERT_EQ(BN_Bn2BinFixZero(bn, NULL, 1), CRYPT_NULL_INPUT);
-    ASSERT_EQ(BN_Bn2BinFixZero(bn, bin, 0), CRYPT_NULL_INPUT);
+    ASSERT_EQ(BN_Bn2BinFixZero(bn, bin, 0), CRYPT_SUCCESS);
 
     // bn bytes is 0
     ASSERT_EQ(BN_Bn2BinFixZero(bn, bin, 1), CRYPT_SUCCESS);

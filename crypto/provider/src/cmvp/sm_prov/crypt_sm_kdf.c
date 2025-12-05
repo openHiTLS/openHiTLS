@@ -25,6 +25,8 @@
 #include "cmvp_sm.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
+#include "bsl_params.h"
+#include "crypt_params_key.h"
 
 /* Constants for parameter validation */
 #define KDF_DEF_MAC_ALGID   CRYPT_MAC_HMAC_SM3

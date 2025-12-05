@@ -41,6 +41,9 @@
 #ifdef HITLS_CRYPTO_SM2
 #include "crypt_sm2.h"
 #endif
+#ifdef HITLS_CRYPTO_SLH_DSA
+#include "crypt_slh_dsa.h"
+#endif
 #ifdef HITLS_CRYPTO_SM9
 #include "crypt_sm9_eal.h"
 #endif
@@ -56,11 +59,14 @@
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
 #endif
-#ifdef HITLS_CRYPTO_SLH_DSA
-#include "crypt_slh_dsa.h"
-#endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
 #include "crypt_hybridkem.h"
+#endif
+#ifdef HITLS_CRYPTO_PAILLIER
+#include "crypt_paillier.h"
+#endif
+#ifdef HITLS_CRYPTO_ELGAMAL
+#include "crypt_elgamal.h"
 #endif
 #ifdef HITLS_CRYPTO_XMSS
 #include "crypt_xmss.h"

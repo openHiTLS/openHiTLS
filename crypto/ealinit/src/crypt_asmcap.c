@@ -36,7 +36,7 @@ static int32_t ProviderModuleInit(uint64_t initOpt, int32_t alg)
 {
     (void) alg;
     int32_t ret = CRYPT_SUCCESS;
-    if (initOpt & CRYPT_EAL_INIT_PROVIDER && (g_ealInitOpts & CRYPT_EAL_INIT_PROVIDER) == 0) {
+    if ((initOpt & CRYPT_EAL_INIT_PROVIDER) && ((g_ealInitOpts & CRYPT_EAL_INIT_PROVIDER) == 0)) {
         ret = CRYPT_EAL_InitPreDefinedProviders();
         if (ret != CRYPT_SUCCESS) {
             return ret;
@@ -44,7 +44,7 @@ static int32_t ProviderModuleInit(uint64_t initOpt, int32_t alg)
         g_ealInitOpts |= CRYPT_EAL_INIT_PROVIDER;
     }
 #if defined(HITLS_CRYPTO_DRBG)
-    if (initOpt & CRYPT_EAL_INIT_PROVIDER_RAND && (g_ealInitOpts & CRYPT_EAL_INIT_PROVIDER_RAND) == 0) {
+    if ((initOpt & CRYPT_EAL_INIT_PROVIDER_RAND) && ((g_ealInitOpts & CRYPT_EAL_INIT_PROVIDER_RAND) == 0)) {
         ret = CRYPT_EAL_ProviderRandInitCtx(NULL, alg, "provider=default", NULL, 0, NULL);
         if (ret != CRYPT_SUCCESS) {
             return ret;
@@ -58,7 +58,7 @@ static int32_t ProviderModuleInit(uint64_t initOpt, int32_t alg)
 
 static void ProviderModuleFree(uint64_t initOpt)
 {
-    if (!(initOpt & CRYPT_EAL_INIT_PROVIDER)) {
+    if ((initOpt & CRYPT_EAL_INIT_PROVIDER) == 0) {
         return;
     }
     CRYPT_EAL_FreePreDefinedProviders();
@@ -74,48 +74,13 @@ static int32_t ProviderModuleInit(uint64_t initOpt, int32_t alg)
 static void ProviderModuleFree(uint64_t initOpt)
 {
     (void) initOpt;
-    return;
-}
-#endif
-
-#if defined(HITLS_BSL_INIT)
-static int32_t BslModuleInit(uint64_t initOpt)
-{
-    if (!(initOpt & CRYPT_EAL_INIT_BSL) || (g_ealInitOpts & CRYPT_EAL_INIT_BSL) != 0) {
-        return BSL_SUCCESS;
-    }
-    int32_t ret = BSL_GLOBAL_Init();
-    if (ret == BSL_SUCCESS) {
-        g_ealInitOpts |= CRYPT_EAL_INIT_BSL;
-    }
-    return ret;
-}
-
-static void BslModuleFree(uint64_t initOpt)
-{
-    if (!(initOpt & CRYPT_EAL_INIT_BSL)) {
-        return;
-    }
-    BSL_GLOBAL_DeInit();
-}
-#else
-static int32_t BslModuleInit(uint64_t initOpt)
-{
-    (void) initOpt;
-    return CRYPT_SUCCESS;
-}
-
-static void BslModuleFree(uint64_t initOpt)
-{
-    (void) initOpt;
-    return;
 }
 #endif
 
 #if defined(HITLS_CRYPTO_DRBG)
 static void RandModuleFree(uint64_t initOpt)
 {
-    if (!(initOpt & CRYPT_EAL_INIT_RAND)) {
+    if ((initOpt & CRYPT_EAL_INIT_RAND) == 0) {
         return;
     }
     CRYPT_EAL_RandDeinit();
@@ -136,20 +101,51 @@ static int32_t RandModuleInit(uint64_t initOpt, int32_t alg)
 static void RandModuleFree(uint64_t initOpt)
 {
     (void) initOpt;
-    return;
 }
 
 static int32_t RandModuleInit(uint64_t initOpt, int32_t alg)
 {
-    (void) alg;
     (void) initOpt;
+    (void) alg;
     return CRYPT_SUCCESS;
 }
 #endif
 
-static int32_t GlobalLockInit(uint64_t initOpt, int32_t alg)
+#if defined(HITLS_BSL_INIT)
+static int32_t BslModuleInit(uint64_t initOpt)
 {
-	(void) alg;
+    if (!(initOpt & CRYPT_EAL_INIT_BSL) || (g_ealInitOpts & CRYPT_EAL_INIT_BSL) != 0) {
+        return BSL_SUCCESS;
+    }
+    int32_t ret = BSL_GLOBAL_Init();
+    if (ret == BSL_SUCCESS) {
+        g_ealInitOpts |= CRYPT_EAL_INIT_BSL;
+    }
+    return ret;
+}
+
+static void BslModuleFree(uint64_t initOpt)
+{
+    if ((initOpt & CRYPT_EAL_INIT_BSL) == 0) {
+        return;
+    }
+    BSL_GLOBAL_DeInit();
+}
+#else
+static int32_t BslModuleInit(uint64_t initOpt)
+{
+    (void) initOpt;
+    return CRYPT_SUCCESS;
+}
+
+static void BslModuleFree(uint64_t initOpt)
+{
+    (void) initOpt;
+}
+#endif
+
+static int32_t GlobalLockInit(uint64_t initOpt)
+{
     if ((initOpt & CRYPT_EAL_INIT_LOCK) == 0 || (g_ealInitOpts & CRYPT_EAL_INIT_LOCK) != 0) {
         return CRYPT_SUCCESS;
     }
@@ -171,7 +167,6 @@ static void GlobalLockFree(uint64_t initOpt)
 #ifdef HITLS_CRYPTO_ENTROPY
     EAL_SeedDrbgLockDeInit();
 #endif
-    return;
 }
 
 #if defined(HITLS_EAL_INIT_OPTS)
@@ -222,7 +217,7 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
         return ret;
     }
 
-    ret = GlobalLockInit(initOpt, alg);
+    ret = GlobalLockInit(initOpt);
     if (ret != CRYPT_SUCCESS) {
         RandModuleFree(initOpt);
         BslModuleFree(initOpt);

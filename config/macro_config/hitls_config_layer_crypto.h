@@ -657,7 +657,15 @@
     #undef HITLS_CRYPTO_NIST_ECC_ACCELERATE // Avoid turning on unnecessary functions.
 #endif
 
-#if defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE) && defined(__SIZEOF_INT128__) && (__SIZEOF_INT128__ == 16)
+#if (defined(__SIZEOF_INT128__) && (__SIZEOF_INT128__ == 16)) && !defined(HITLS_INT128)
+        #define HITLS_INT128
+#endif
+
+#ifdef HITLS_NO_INT128
+#undef HITLS_INT128
+#endif
+
+#if defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE) && defined(HITLS_INT128)
     #define HITLS_CRYPTO_NIST_USE_ACCEL
 #endif
 

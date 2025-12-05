@@ -51,7 +51,12 @@ CRYPT_CMAC_Ctx *CRYPT_CMAC_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id)
     return CRYPT_CMAC_NewCtx(id);
 }
 
-int32_t CRYPT_CMAC_Init(CRYPT_CMAC_Ctx *ctx, const uint8_t *key, uint32_t len, void *param)
+int32_t CRYPT_CMAC_Init(CRYPT_CMAC_Ctx *ctx, const uint8_t *key, uint32_t len)
+{
+    return CipherMacInit((Cipher_MAC_Common_Ctx *)ctx, key, len);
+}
+
+int32_t CRYPT_CMAC_InitEx(CRYPT_CMAC_Ctx *ctx, const uint8_t *key, uint32_t len, void *param)
 {
     (void)param;
     return CipherMacInit((Cipher_MAC_Common_Ctx *)ctx, key, len);

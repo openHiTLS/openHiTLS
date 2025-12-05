@@ -17,7 +17,7 @@
 #define ECP_SM2_H
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_ECC) && defined(HITLS_CRYPTO_SM2)
+#ifdef HITLS_CRYPTO_CURVE_SM2
 
 #include "crypt_ecc.h"
 #include "crypt_bn.h"

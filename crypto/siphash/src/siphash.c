@@ -166,9 +166,8 @@ CRYPT_SIPHASH_Ctx *CRYPT_SIPHASH_NewCtxEx(void *libCtx, CRYPT_MAC_AlgId id)
     return CRYPT_SIPHASH_NewCtx(id);
 }
 
-int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen, void *param)
+int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen)
 {
-    (void)param;
     if (ctx == NULL || key == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -197,6 +196,12 @@ int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t 
         ctx->state1 ^= 0xee;
     }
     return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_SIPHASH_InitEx(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t keyLen, void *param)
+{
+    (void)param;
+    return CRYPT_SIPHASH_Init(ctx, key, keyLen);
 }
 
 int32_t CRYPT_SIPHASH_Update(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *in, uint32_t inlen)

@@ -108,10 +108,6 @@ static int32_t SetOtherValues(BSL_Param *param, uint32_t type, void *val, uint32
             *(uint64_t *)param->value = *(uint64_t *)val;
             param->useLen = len;
             return BSL_SUCCESS;
-        case BSL_PARAM_TYPE_OCTETS:
-            (void)memcpy_s(param->value, len, val, len);
-            param->useLen = len;
-            return BSL_SUCCESS;
         case BSL_PARAM_TYPE_BOOL:
             *(bool *)param->value = *(bool *)val;
             param->useLen = len;
@@ -136,8 +132,17 @@ int32_t BSL_PARAM_SetValue(BSL_Param *param, int32_t key, uint32_t type, void *v
         case BSL_PARAM_TYPE_OCTETS_PTR:
         case BSL_PARAM_TYPE_FUNC_PTR:
         case BSL_PARAM_TYPE_CTX_PTR:
+        case BSL_PARAM_TYPE_UTF8_STR:
         case BSL_PARAM_TYPE_SIZE_T_PTR:
             param->value = val;
+            param->useLen = len;
+            return BSL_SUCCESS;
+        case BSL_PARAM_TYPE_OCTETS:
+            if (param->valueLen < len || val == NULL || param->value == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+                return BSL_INVALID_ARG;
+            }
+            (void)memcpy_s(param->value, len, val, len);
             param->useLen = len;
             return BSL_SUCCESS;
         default:
@@ -169,6 +174,7 @@ int32_t BSL_PARAM_GetPtrValue(const BSL_Param *param, int32_t key, uint32_t type
         case BSL_PARAM_TYPE_UINT32_PTR:
         case BSL_PARAM_TYPE_OCTETS_PTR:
         case BSL_PARAM_TYPE_SIZE_T_PTR:
+        case BSL_PARAM_TYPE_UTF8_STR:
             *val = param->value;
             *valueLen = param->valueLen;
             return BSL_SUCCESS;
@@ -197,6 +203,7 @@ int32_t BSL_PARAM_GetValue(const BSL_Param *param, int32_t key, uint32_t type, v
         return BSL_PARAMS_MISMATCH;
     }
     switch (type) {
+        case BSL_PARAM_TYPE_UINT8:
         case BSL_PARAM_TYPE_UINT16:
         case BSL_PARAM_TYPE_UINT32:
         case BSL_PARAM_TYPE_UINT64:

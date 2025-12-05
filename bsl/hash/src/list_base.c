@@ -151,7 +151,7 @@ int32_t ListRawPushBack(RawList *list, ListRawNode *node)
 
 int32_t ListRawInsert(const ListRawNode *curNode, ListRawNode *newNode)
 {
-    if ((curNode != NULL) && (newNode != NULL) && (ListRawNodeInList(curNode))) {
+    if ((curNode != NULL) && (newNode != NULL) && (curNode != newNode) && (ListRawNodeInList(curNode))) {
         ListRawAddBeforeNode(newNode, curNode);
         return BSL_SUCCESS;
     }
@@ -181,6 +181,9 @@ int32_t ListRawPopBack(RawList *list)
 
 static void ListRawRemoveInner(RawList *list, ListRawNode *node)
 {
+    if (node == NULL) {
+        return;
+    }
     node->prev->next = node->next;
     node->next->prev = node->prev;
 
@@ -191,7 +194,7 @@ static void ListRawRemoveInner(RawList *list, ListRawNode *node)
 
 int32_t ListRawRemove(RawList *list, ListRawNode *node)
 {
-    if (node == NULL || ListRawNodeInList(node) == false) {
+    if (list == NULL || IsListRawEmptyCheck(list) == true) {
         return BSL_INTERNAL_EXCEPTION;
     }
     ListRawRemoveInner(list, node);

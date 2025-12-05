@@ -28,7 +28,7 @@
 #include "crypt_local_types.h"
 #include "sm2_local.h"
 #include "crypt_sm2.h"
-#include "crypt_encode_internal.h"
+#include "crypt_encode.h"
 
 #define SM2_POINT_SINGLE_COORDINATE_LEN 32
 #define SM2_POINT_COORDINATE_LEN 65
