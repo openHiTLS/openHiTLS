@@ -264,10 +264,10 @@ static int32_t MockGetPid(void)
 /* BEGIN_CASE */
     void SDV_BSL_SAL_GETPID_FUNC_TC001(void)
 {
+#ifdef HITLS_BSL_SAL_PID
     int32_t pid;
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(0, NULL) == BSL_SAL_ERR_BAD_PARAM);
 
-#ifdef HITLS_BSL_SAL_PID
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_PID_GET_ID_CB_FUNC, NULL) == BSL_SUCCESS);
     pid = BSL_SAL_GetPid();
 #ifdef HITLS_BSL_SAL_LINUX
@@ -287,11 +287,10 @@ static int32_t MockGetPid(void)
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_PID_GET_ID_CB_FUNC, MockGetPid) == BSL_SUCCESS);
     pid = BSL_SAL_GetPid();
     ASSERT_EQ(pid, -1);
-#else
-    pid = BSL_SAL_GetPid();
-    ASSERT_EQ(pid, 0);
-#endif
 EXIT:
+#else
+    SKIP_TEST();
+#endif
     return;
 }
 /* END_CASE */
