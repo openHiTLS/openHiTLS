@@ -731,6 +731,9 @@ int32_t CRYPT_RSA_SetPkcs1Oaep(CRYPT_RSA_Ctx *ctx, const uint8_t *in, uint32_t i
 #endif // HITLS_CRYPTO_RSA_ENCRYPT
 
 #ifdef HITLS_CRYPTO_RSA_DECRYPT
+
+#define RSA_MASK 0xFFFFFFFFu
+
 static int32_t OaepVerifyLengthCheck(uint32_t outLen, uint32_t inLen, uint32_t hashLen)
 {
     if (outLen > RSA_MAX_MODULUS_LEN || inLen > RSA_MAX_MODULUS_LEN || hashLen > HASH_MAX_MDSIZE) {
@@ -790,7 +793,7 @@ static int32_t OaepDecodeMaskedDB(const EAL_MdMethod *mgfMethod, const CRYPT_Dat
 }
 
 static int32_t OaepVerifyHashMaskDB(const EAL_MdMethod *hashMethod, CRYPT_Data *paramData, CRYPT_Data *dbMaskData,
-    uint32_t hashLen, uint32_t *offset)
+    uint32_t hashLen, uint32_t *offset, uint32_t *valid)
 {
     int32_t ret;
     uint8_t hashVal[HASH_MAX_MDSIZE];
@@ -800,28 +803,24 @@ static int32_t OaepVerifyHashMaskDB(const EAL_MdMethod *hashMethod, CRYPT_Data *
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-
-    if (memcmp(dbMaskData->data, hashVal, hashLen) != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NOR_VERIFY_FAIL);
-        return CRYPT_RSA_NOR_VERIFY_FAIL;
+    // if hashVal == lHash, valid = 0xFFFFFFFF, else valid = 0
+    *valid &= ConstTimeMemcmp(dbMaskData->data, hashVal, hashLen);
+    uint32_t firstFind = 0;
+    uint32_t index = 0;
+    // Scan from end of lHash to end of DB
+    for (uint32_t i = hashLen; i < dbMaskData->len; i++) {
+        // if data != 0x00, return 0xFFFFFFFF
+        uint32_t notZero = ~Uint32ConstTimeIsZero(dbMaskData->data[i]);
+        firstFind = Uint32ConstTimeIsZero(index);
+        index = Uint32ConstTimeSelect(firstFind, notZero & i, index);
     }
-
-    *offset = hashLen;
-    while ((*offset) < dbMaskData->len && dbMaskData->data[(*offset)] == 0) {
-        (*offset)++;
-    }
-    if ((*offset) >= dbMaskData->len) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NOR_VERIFY_FAIL);
-        return CRYPT_RSA_NOR_VERIFY_FAIL;
-    }
-
-    if (dbMaskData->data[(*offset)] != 0x01) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NOR_VERIFY_FAIL);
-        return CRYPT_RSA_NOR_VERIFY_FAIL;
-    }
-
-    (*offset)++;
-    return ret;
+    *valid &= ~Uint32ConstTimeIsZero(index);
+    // if len >= dbMaskData->len, return 0.
+    *valid &= Uint32ConstTimeLt(index, dbMaskData->len);
+    // if index == 0, return err.
+    *valid &= Uint32ConstTimeEqual(dbMaskData->data[index], 0x01);
+    *offset = index + 1; // point to the message.
+    return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_RSA_VerifyPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMethod *mgfMethod, const uint8_t *in,
@@ -838,8 +837,10 @@ int32_t CRYPT_RSA_VerifyPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMe
     }
     uint32_t maskedDBLen = inLen - hashLen - 1;
     int32_t ret;
-    uint32_t offset;
+    uint32_t offset = 0;
     uint8_t seedMask[HASH_MAX_MDSIZE];
+    uint32_t copyMask;
+    uint32_t copyLen;
     CRYPT_Data seedData = { (uint8_t *)(uintptr_t)seedMask, HASH_MAX_MDSIZE };
     CRYPT_Data paramData = { (uint8_t *)(uintptr_t)param, paramLen };
     CRYPT_Data inData = { (uint8_t *)(uintptr_t)in, inLen };
@@ -854,19 +855,27 @@ int32_t CRYPT_RSA_VerifyPkcs1Oaep(const EAL_MdMethod *hashMethod, const EAL_MdMe
         k is intLen , hLen is hashLen
     */
     GOTO_ERR_IF_EX(OaepVerifyLengthCheck(*msgLen, inLen, hashLen), ret);
+    // Initialize valid flag to 0xFFFFFFFF (all checks pass initially)
+    uint32_t valid = RSA_MASK;
+    // rfc8017 section 7.1.2 requires the first byte must be 0x00
+    valid &= Uint32ConstTimeIsZero(in[0]); // if not, valid = 0
 
     GOTO_ERR_IF_EX(OaepDecodeSeedMask(mgfMethod, in, inLen, &seedData, hashLen), ret);
 
     GOTO_ERR_IF_EX(OaepDecodeMaskedDB(mgfMethod, &inData, seedMask, hashLen, &dbMaskData), ret);
 
-    GOTO_ERR_IF_EX(OaepVerifyHashMaskDB(hashMethod, &paramData, &dbMaskData, hashLen, &offset), ret);
+    GOTO_ERR_IF_EX(OaepVerifyHashMaskDB(hashMethod, &paramData, &dbMaskData, hashLen, &offset, &valid), ret);
 
-    if (memcpy_s(msg, *msgLen, maskDB + offset, maskedDBLen - offset) != EOK) {
-        ret = CRYPT_RSA_NOR_VERIFY_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+    // find Min(msgLen, maskedDBLen - offset), to do copy of const time.
+    copyMask = Uint32ConstTimeGe(*msgLen, maskedDBLen - offset);
+    valid &= copyMask; // if msg len is not enough, valid = 0
+    copyLen = Uint32ConstTimeSelect(copyMask, maskedDBLen - offset, *msgLen);
+    for (uint32_t i = 0; i < copyLen; i++) {
+        uint8_t byte = maskDB[offset + i];
+        msg[i] = Uint8ConstTimeSelect(valid, byte, msg[i]);
     }
-    *msgLen = maskedDBLen - offset;
+    *msgLen = Uint32ConstTimeSelect(valid, maskedDBLen - offset, *msgLen);
+    ret = Uint32ConstTimeIsZero(valid) & CRYPT_RSA_NOR_VERIFY_FAIL;
 ERR:
     BSL_SAL_CleanseData(maskDB, maskedDBLen);
     BSL_SAL_FREE(maskDB);

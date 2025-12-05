@@ -250,6 +250,7 @@ static inline uint32_t Uint32ConstTimeGt(uint32_t a, uint32_t b)
     return Uint32ConstTimeLt(b, a);
 }
 
+// if a <= b, output 0xffffffff, else output 0
 static inline uint32_t Uint32ConstTimeLe(uint32_t a, uint32_t b)
 {
     return Uint32ConstTimeGe(b, a);
