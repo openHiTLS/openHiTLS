@@ -346,9 +346,9 @@ static const EAL_PkeyMethod METHODS[] = {
         CRYPT_SM2_GetPrvKey,
 #ifdef HITLS_CRYPTO_SM2_SIGN
         CRYPT_SM2_Sign,
-        NULL,
+        CRYPT_SM2_SignData,
         CRYPT_SM2_Verify,
-        NULL,
+        CRYPT_SM2_VerifyData,
 #else
         NULL, // sign
         NULL, // signData

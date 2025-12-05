@@ -21,6 +21,7 @@
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "modes_local.h"
+#include "crypt_utils.h"
 #ifdef HITLS_CRYPTO_CTR
 #include "crypt_modes_ctr.h"
 #endif
@@ -120,19 +121,6 @@ int32_t MODES_CipherInitCtx(MODES_CipherCtx *ctx, void *setSymKey, void *keyCtx,
 {
     ctx->enc = enc;
     return MODES_CipherInitCommonCtx(&ctx->commonCtx, setSymKey, keyCtx, key, keyLen, iv, ivLen);
-}
-
-int32_t MODE_CheckUpdateParam(uint8_t blockSize, uint32_t cacheLen, uint32_t inLen, uint32_t *outLen)
-{
-    if (inLen + cacheLen < inLen) { // Integer flipping
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_TOO_LONG);
-        return CRYPT_EAL_BUFF_LEN_TOO_LONG;
-    }
-    if ((*outLen) < ((inLen + cacheLen) / blockSize * blockSize)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
-        return CRYPT_EAL_BUFF_LEN_NOT_ENOUGH;
-    }
-    return CRYPT_SUCCESS;
 }
 
 static bool IfXts(CRYPT_CIPHER_AlgId id)
@@ -268,7 +256,7 @@ int32_t MODES_BlockPadding(int32_t algId, int32_t padding, uint8_t blockSize, ui
     return CRYPT_SUCCESS;
 }
 
-int32_t MODES_CipherUpdateCache(MODES_CipherCtx *ctx,  void *blockUpdate, const uint8_t **in, uint32_t *inLen,
+static int32_t MODES_CipherUpdateCache(MODES_CipherCtx *ctx,  void *blockUpdate, const uint8_t **in, uint32_t *inLen,
     uint8_t **out, uint32_t *outLen)
 {
     int32_t ret;
@@ -286,11 +274,13 @@ int32_t MODES_CipherUpdateCache(MODES_CipherCtx *ctx,  void *blockUpdate, const 
     }
     // No block is formed, return.
     if (ctx->dataLen != blockSize) {
+        (*outLen) = 0;
         return CRYPT_SUCCESS;
     }
 
     // If the block is padded, perform operations on this block first.
     if (ctx->enc) {
+        RETURN_RET_IF((*outLen < blockSize), CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
         ret = ((EncryptBlock)blockUpdate)(&ctx->commonCtx, ctx->data, *out, blockSize);
     } else {
         // If it's decryption and the cached data + input data is equal to blockSize,
@@ -299,13 +289,11 @@ int32_t MODES_CipherUpdateCache(MODES_CipherCtx *ctx,  void *blockUpdate, const 
             (*outLen) = 0;
             return CRYPT_SUCCESS;
         }
+        RETURN_RET_IF((*outLen < blockSize), CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
         ret = ((DecryptBlock)blockUpdate)(&ctx->commonCtx, ctx->data, *out, blockSize);
     }
 
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    RETURN_RET_IF((ret != CRYPT_SUCCESS), ret);
     ctx->dataLen = 0;
     (*outLen) = blockSize;
     (*out) += blockSize;
@@ -317,16 +305,12 @@ int32_t MODES_CipherFinal(MODES_CipherCtx *modeCtx, void *blockUpdate, uint8_t *
 {
     int32_t ret;
     uint32_t outLenTemp;
-    if (out == NULL || outLen == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (modeCtx->pad != CRYPT_PADDING_NONE && (*outLen) < modeCtx->commonCtx.blockSize) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
-        return CRYPT_EAL_BUFF_LEN_NOT_ENOUGH;
-    }
-
+    RETURN_RET_IF((out == NULL || outLen == NULL), CRYPT_NULL_INPUT);
     if (modeCtx->enc) {
+        if (modeCtx->pad != CRYPT_PADDING_NONE && (*outLen) < modeCtx->commonCtx.blockSize) {
+            BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
+            return CRYPT_EAL_BUFF_LEN_NOT_ENOUGH;
+        }
         ret = MODES_BlockPadding(modeCtx->algId, modeCtx->pad,
             modeCtx->commonCtx.blockSize, modeCtx->data, &modeCtx->dataLen);
         if (ret != CRYPT_SUCCESS) {
@@ -348,18 +332,25 @@ int32_t MODES_CipherFinal(MODES_CipherCtx *modeCtx, void *blockUpdate, uint8_t *
             *outLen = modeCtx->dataLen;
             return CRYPT_SUCCESS;
         }
-        
-        ret = ((DecryptBlock)blockUpdate)(&modeCtx->commonCtx, modeCtx->data, out, modeCtx->dataLen);
+        uint8_t tmpBuf[EAL_MAX_BLOCK_LENGTH];
+        ret = ((DecryptBlock)blockUpdate)(&modeCtx->commonCtx, modeCtx->data, tmpBuf, modeCtx->dataLen);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
         outLenTemp = modeCtx->dataLen;
-        ret = MODES_BlockUnPadding(modeCtx->pad, out, modeCtx->commonCtx.blockSize, &outLenTemp);
+        ret = MODES_BlockUnPadding(modeCtx->pad, tmpBuf, modeCtx->commonCtx.blockSize, &outLenTemp);
         if (ret != CRYPT_SUCCESS) {
+            (void)memset_s(tmpBuf, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
+        if (memcpy_s(out, *outLen, tmpBuf, outLenTemp) != EOK) {
+            (void)memset_s(tmpBuf, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+            BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
+            return CRYPT_EAL_BUFF_LEN_NOT_ENOUGH;
+        }
+        (void)memset_s(tmpBuf, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
         *outLen = outLenTemp;
     }
     modeCtx->dataLen = 0;
@@ -371,15 +362,10 @@ int32_t MODES_CipherUpdate(MODES_CipherCtx *modeCtx, void *blockUpdate, const ui
 {
     int32_t ret;
     uint32_t tmpLen = inLen;
+    uint32_t outBuflen = *outLen;
     const uint8_t *tmpIn = in;
     uint8_t *tmpOut = (uint8_t *)out;
-    
-    ret = MODE_CheckUpdateParam(modeCtx->commonCtx.blockSize, modeCtx->dataLen, inLen, outLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    *outLen = 0;
+    RETURN_RET_IF((inLen + modeCtx->dataLen < inLen), CRYPT_EAL_BUFF_LEN_TOO_LONG);
     ret = MODES_CipherUpdateCache(modeCtx, blockUpdate, &tmpIn, &tmpLen, &tmpOut, outLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -393,6 +379,7 @@ int32_t MODES_CipherUpdate(MODES_CipherCtx *modeCtx, void *blockUpdate, const ui
     uint32_t len = tmpLen - left;
     if (len > 0) {
         if (modeCtx->enc) {
+            RETURN_RET_IF((len > (outBuflen - *outLen)), CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
             ret = ((EncryptBlock)blockUpdate)(&modeCtx->commonCtx, tmpIn, tmpOut, len);
         } else {
             // If it's decryption and the cached data + input data is equal to blockSize,
@@ -402,6 +389,7 @@ int32_t MODES_CipherUpdate(MODES_CipherCtx *modeCtx, void *blockUpdate, const ui
                 len -= modeCtx->commonCtx.blockSize;
             }
             if (len > 0) {
+                RETURN_RET_IF((len > (outBuflen - *outLen)), CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
                 ret = ((DecryptBlock)blockUpdate)(&modeCtx->commonCtx, tmpIn, tmpOut, len);
             }
         }

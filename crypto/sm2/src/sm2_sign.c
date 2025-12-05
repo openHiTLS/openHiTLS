@@ -508,6 +508,41 @@ ERR:
     return ret;
 }
 
+int32_t CRYPT_SM2_SignData(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+    uint8_t *sign, uint32_t *signLen)
+{
+    int32_t ret = CRYPT_SUCCESS;
+    RETURN_RET_IF((ctx == NULL || sign == NULL || signLen == NULL || ((data == NULL) && (dataLen != 0))),
+        CRYPT_NULL_INPUT);
+
+    RETURN_RET_IF((ctx->pkey == NULL || ctx->pkey->prvkey == NULL), CRYPT_SM2_NO_PRVKEY);
+    RETURN_RET_IF((dataLen != SM3_MD_SIZE), CRYPT_INVALID_ARG);
+
+    if (*signLen < CRYPT_SM2_GetSignLen(ctx)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_BUFF_LEN_NOT_ENOUGH);
+        return CRYPT_SM2_BUFF_LEN_NOT_ENOUGH;
+    }
+
+    uint32_t keyBits = CRYPT_SM2_GetBits(ctx);
+    BN_BigNum *d = BN_Create(keyBits);
+    BN_BigNum *r = BN_Create(keyBits);
+    BN_BigNum *s = BN_Create(keyBits);
+    if (r == NULL || s == NULL || d == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+
+    GOTO_ERR_IF_EX(BN_Bin2Bn(d, data, dataLen), ret);
+    GOTO_ERR_IF_EX(Sm2SignCore(ctx, d, r, s), ret);
+    GOTO_ERR_IF_EX(CRYPT_EAL_EncodeSign(r, s, sign, signLen), ret);
+ERR:
+    BN_Destroy(d);
+    BN_Destroy(r);
+    BN_Destroy(s);
+    return ret;
+}
+
 static int32_t VerifyCheckSign(const CRYPT_SM2_Ctx *ctx, BN_BigNum *r, BN_BigNum *s)
 {
     if (ctx->pkey->para == NULL) {
@@ -627,6 +662,37 @@ ERR:
     BN_Destroy(r);
     BN_Destroy(s);
     BN_Destroy(e);
+    return ret;
+}
+
+int32_t CRYPT_SM2_VerifyData(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+    const uint8_t *sign, uint32_t signLen)
+{
+    int32_t ret = CRYPT_SUCCESS;
+    RETURN_RET_IF(((ctx == NULL) || ((data == NULL) && (dataLen != 0)) || (sign == NULL) || (signLen == 0)),
+        CRYPT_NULL_INPUT);
+    RETURN_RET_IF((ctx->pkey == NULL || ctx->pkey->pubkey == NULL), CRYPT_SM2_NO_PUBKEY);
+    RETURN_RET_IF((dataLen != SM3_MD_SIZE), CRYPT_INVALID_ARG);
+
+    uint32_t keyBits = CRYPT_SM2_GetBits(ctx);
+    BN_BigNum *e = BN_Create(keyBits);
+    BN_BigNum *r = BN_Create(keyBits);
+    BN_BigNum *s = BN_Create(keyBits);
+    if (r == NULL || s == NULL || e == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+
+    GOTO_ERR_IF_EX(BN_Bin2Bn(e, data, dataLen), ret);
+    GOTO_ERR_IF(CRYPT_EAL_DecodeSign(sign, signLen, r, s), ret);
+    // Verify that r->s and s->s are within the range of 1~n-1.
+    GOTO_ERR_IF_EX(VerifyCheckSign(ctx, r, s), ret);
+    GOTO_ERR_IF_EX(Sm2VerifyCore(ctx, e, r, s), ret);
+ERR:
+    BN_Destroy(e);
+    BN_Destroy(r);
+    BN_Destroy(s);
     return ret;
 }
 #endif

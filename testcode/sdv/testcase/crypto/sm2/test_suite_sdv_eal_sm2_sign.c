@@ -18,6 +18,8 @@
 
 #include "crypt_eal_pkey.h"
 #include "eal_pkey_local.h"
+#include "eal_md_local.h"
+#include "sm2_local.h"
 #include "crypt_sm2.h"
 
 #define SM2_SIGN_MAX_LEN 74
@@ -438,7 +440,7 @@ void SDV_CRYPTO_SM2_SIGN_DATA_API_TC001(Hex *prvKey, int isProvider)
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx, &prv) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeySignData(ctx, msg, sizeof(msg), signBuf, &signLen) == CRYPT_EAL_ALG_NOT_SUPPORT);
+    ASSERT_TRUE(CRYPT_EAL_PkeySignData(ctx, msg, sizeof(msg), signBuf, &signLen) == CRYPT_SUCCESS);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
@@ -1079,5 +1081,60 @@ EXIT:
     CRYPT_SM2_FreeCtx(srcSm2Ctx);
     CRYPT_SM2_FreeCtx(dstSm2Ctx);
 #endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SM2_SIGN_DATA_FUNC_TC001
+ * @title  Test SM2 signing and verifying hash values.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM2_SIGN_DATA_FUNC_TC001(int mdId, Hex *pubKey, Hex *prvKey, int isProvider)
+{
+    TestMemInit();
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+
+    uint8_t signBuf[SM2_SIGN_MAX_LEN] = {0};  // legal id
+    uint8_t msg[SM2_PRVKEY_MAX_LEN];
+    uint32_t signLen = SM2_SIGN_MAX_LEN;
+    CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPrv prv = {0};
+
+    SetSm2PubKey(&pub, pubKey->x, pubKey->len);
+    SetSm2PrvKey(&prv, prvKey->x, prvKey->len);
+    CRYPT_EAL_PkeyCtx *ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
+        CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pub), CRYPT_SUCCESS);
+
+    const EAL_MdMethod *mdMethod = EAL_MdFindMethod(CRYPT_MD_SM3);
+    ASSERT_TRUE(mdMethod != NULL);
+    void *mdCtx = mdMethod->newCtx();
+    ASSERT_TRUE(mdCtx != NULL);
+
+    uint8_t hashData[MAX_MD_SIZE];
+    uint32_t hashLen = MAX_MD_SIZE;
+
+    ASSERT_EQ(Sm2ComputeZDigest((CRYPT_SM2_Ctx *)ctx->key, hashData, &hashLen), CRYPT_SUCCESS);
+    ASSERT_EQ(mdMethod->init(mdCtx, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(mdMethod->update(mdCtx, hashData, hashLen), CRYPT_SUCCESS);
+    ASSERT_EQ(mdMethod->update(mdCtx, msg, sizeof(msg)), CRYPT_SUCCESS);
+    hashLen = MAX_MD_SIZE;
+    ASSERT_EQ(mdMethod->final(mdCtx, hashData, &hashLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &prv), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(ctx, hashData, hashLen, signBuf, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(ctx, hashData, hashLen, signBuf, signLen), CRYPT_SUCCESS);
+
+    if (mdId == CRYPT_MD_SM3) {
+        ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, msg, sizeof(msg), signBuf, signLen), CRYPT_SUCCESS);
+    }
+
+EXIT:
+    mdMethod->freeCtx(mdCtx);
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
 }
 /* END_CASE */

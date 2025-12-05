@@ -77,7 +77,9 @@ const CRYPT_EAL_Func g_defEalSignEcdsa[] = {
 const CRYPT_EAL_Func g_defEalSignSm2[] = {
 #ifdef HITLS_CRYPTO_SM2_SIGN
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_SM2_Sign},
+    {CRYPT_EAL_IMPLPKEYSIGN_SIGNDATA, (CRYPT_EAL_ImplPkeySignData)CRYPT_SM2_SignData},
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_SM2_Verify},
+    {CRYPT_EAL_IMPLPKEYSIGN_VERIFYDATA, (CRYPT_EAL_ImplPkeyVerifyData)CRYPT_SM2_VerifyData},
 #endif
     CRYPT_EAL_FUNC_END,
 };
