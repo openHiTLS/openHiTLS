@@ -219,3 +219,69 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_EAL_CIPHER_FUNC_TC001
+* @spec  -
+* @title  Testing the AES algorithm with multiple updates, setting different single-operation data lengths and
+* output buffer sizes, verifying decryption correctness and ensuring no memory out-of-bounds access.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_CIPHER_FUNC_TC001(int padding, int algId, Hex *key, Hex *iv, int len1, int len2, int res)
+{
+    TestMemInit();
+    int32_t ret;
+    uint8_t testData[1025];  // The total length of data to be encrypted is 1025 bytes.
+    uint8_t encData[1040];   // The encrypted data (with a maximum of 15 bytes padding) can be up to 1040 bytes.
+    uint8_t decData[1040];
+    uint32_t inLen = sizeof(testData);
+    uint32_t encLen = sizeof(encData);
+    uint32_t tmplen = 0;
+    uint32_t totalLen = 0;
+
+    CRYPT_EAL_CipherCtx *ctx = TestCipherNewCtx(NULL, algId, "provider=default", 0);
+    ASSERT_TRUE(ctx != NULL);
+    ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, 1);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_CipherSetPadding(ctx, padding);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_CipherUpdate(ctx, testData, inLen, encData, &encLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    tmplen = sizeof(encData) - encLen;
+    ret = CRYPT_EAL_CipherFinal(ctx, encData + encLen, &tmplen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    encLen += tmplen;
+
+    CRYPT_EAL_CipherDeinit(ctx);
+    ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, 0);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_CipherSetPadding(ctx, padding);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    tmplen = len1;
+    ret = CRYPT_EAL_CipherUpdate(ctx, encData, len1, decData, &tmplen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    totalLen = tmplen;
+
+    tmplen = len2;
+    ret = CRYPT_EAL_CipherUpdate(ctx, encData + len1, len2, decData + totalLen, &tmplen);
+    ASSERT_EQ(ret, res);
+    if (ret == CRYPT_SUCCESS) {  // Decryption has already failed, No further decryption needed.
+        totalLen += tmplen;
+        tmplen = encLen - len1 - len2;
+        ret = CRYPT_EAL_CipherUpdate(ctx, encData + len1 + len2, tmplen, decData + totalLen, &tmplen);
+        ASSERT_EQ(ret, CRYPT_SUCCESS);
+        totalLen += tmplen;
+
+        tmplen = sizeof(testData) - totalLen;  // tmplen is exactly the remaining data length.
+        ret = CRYPT_EAL_CipherFinal(ctx, decData + totalLen, &tmplen);
+        ASSERT_EQ(ret, CRYPT_SUCCESS);
+        ASSERT_TRUE(memcmp(testData, decData, sizeof(testData)) == 0);
+    }
+EXIT:
+    CRYPT_EAL_CipherDeinit(ctx);
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */

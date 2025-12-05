@@ -52,7 +52,6 @@ int32_t MODES_CipherInitCommonCtx(MODES_CipherCommonCtx *modeCtx, void *setSymKe
 int32_t MODES_CipherInitCtx(MODES_CipherCtx *ctx, void *setSymKey, void *keyCtx, const uint8_t *key,
     uint32_t keyLen, const uint8_t *iv, uint32_t ivLen, bool enc);
 
-int32_t MODE_CheckUpdateParam(uint8_t blockSize, uint32_t cacheLen, uint32_t inLen, uint32_t *outLen);
 /* Block cipher processing */
 int32_t MODES_CipherUpdate(MODES_CipherCtx *modeCtx, void *blockUpdate, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen);
