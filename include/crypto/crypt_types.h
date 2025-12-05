@@ -721,7 +721,8 @@ typedef enum {
     CRYPT_CTRL_GET_MLKEM_DK_FORMAT,          /**< Get MLKEM decapsulation key encode format */
 
     // xmss
-    CRYPT_CTRL_GET_XMSS_KEY_LEN = 800,     /**< Get the XMSS key length. */
+    CRYPT_CTRL_GET_XMSS_XDR_ALG_TYPE = 800,     /**< Get the XMSS xdr algId. */
+    CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE = 801,     /**< Set the XMSS xdr algId. */
 } CRYPT_PkeyCtrl;
 
 
@@ -920,8 +921,6 @@ typedef enum {
     CRYPT_PUBKEY_SUBKEY,
     CRYPT_PUBKEY_RSA,
     CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ,
-    CRYPT_PRIKEY_XMSS,
-    CRYPT_PUBKEY_XMSS
 } CRYPT_ENCDEC_TYPE;
 
 typedef enum {

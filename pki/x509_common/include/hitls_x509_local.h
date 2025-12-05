@@ -310,6 +310,8 @@ int32_t HITLS_X509_GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Bu
 
 int32_t HITLS_X509_MatchPattern(uint32_t flags, const char *pattern, const char *hostname);
 
+int32_t X509_GetHashId(const HITLS_X509_Asn1AlgId *alg, int32_t *hashId);
+
 #ifdef __cplusplus
 }
 #endif

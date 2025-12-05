@@ -78,6 +78,7 @@ static BSL_SignIdMap g_signIdMap[] = {
     {BSL_CID_SLH_DSA_SHAKE_256S, BSL_CID_SLH_DSA, BSL_CID_SHAKE256},
     {BSL_CID_SLH_DSA_SHA2_256F, BSL_CID_SLH_DSA, BSL_CID_SHA256},
     {BSL_CID_SLH_DSA_SHAKE_256F, BSL_CID_SLH_DSA, BSL_CID_SHAKE256},
+    {BSL_CID_XMSS, BSL_CID_XMSS, BSL_CID_UNKNOWN},
 };
 
 #ifdef HITLS_BSL_OBJ_CUSTOM
@@ -123,41 +124,42 @@ static void InitSignHashTableOnce(void)
 }
 #endif
 
-BslCid BSL_OBJ_GetHashIdFromSignId(BslCid signAlg)
+int32_t OBJ_GetHashIdFromSignId(BslCid signAlg, BslCid *hashId)
 {
     if (signAlg == BSL_CID_UNKNOWN) {
-        return BSL_CID_UNKNOWN;
+        return BSL_OBJ_INVALID_ALGID;
     }
 
     // First, search in the static g_signIdMap table
     for (uint32_t iter = 0; iter < sizeof(g_signIdMap) / sizeof(BSL_SignIdMap); iter++) {
         if (signAlg == g_signIdMap[iter].signId) {
-            return g_signIdMap[iter].hashId;
+            *hashId = g_signIdMap[iter].hashId;
+            return BSL_SUCCESS;
         }
     }
 #ifndef HITLS_BSL_OBJ_CUSTOM
-    return BSL_CID_UNKNOWN;
+    return BSL_OBJ_INVALID_ALGID;
 #else
     if (g_signHashTable == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
-        return BSL_CID_UNKNOWN;
+        return BSL_OBJ_INVALID_HASH_TABLE;
     }
     // Second, search in the dynamic hash table with read lock
     BSL_SignIdMap *signIdMap = NULL;
     int32_t ret = BSL_SAL_ThreadReadLock(g_signHashRwLock);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return BSL_CID_UNKNOWN;
+        return ret;
     }
     ret = BSL_HASH_At(g_signHashTable, (uintptr_t)signAlg, (uintptr_t *)&signIdMap);
-    BslCid result = (ret == BSL_SUCCESS && signIdMap != NULL) ? signIdMap->hashId : BSL_CID_UNKNOWN;
-    (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
-
     if (ret != BSL_SUCCESS) {
+        (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
         BSL_ERR_PUSH_ERROR(BSL_OBJ_ERR_FIND_HASH_TABLE);
+        return ret;
     }
-
-    return result;
+    *hashId = signIdMap->hashId;
+    (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
+    return BSL_SUCCESS;
 #endif
 }
 

@@ -134,9 +134,24 @@ int32_t CRYPT_XMSS_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para);
  */
 int32_t CRYPT_XMSS_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para);
 
-int32_t CRYPT_XMSS_ParseSubPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CryptXmssCtx **pubKey, bool isComplete);
-
 CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx);
+
+#ifdef HITLS_CRYPTO_XMSS_CHECK
+
+/**
+ * @ingroup xmss
+ * @brief check the key pair consistency
+ *
+ * @param checkType [IN] check type
+ * @param pkey1 [IN] xmss key context structure
+ * @param pkey2 [IN] xmss key context structure
+ *
+ * @retval CRYPT_SUCCESS    check success.
+ * Others. For details, see error code in errno.
+ */
+int32_t CRYPT_XMSS_Check(uint32_t checkType, const CryptXmssCtx *pkey1, const CryptXmssCtx *pkey2);
+
+#endif // HITLS_CRYPTO_XMSS_CHECK
 
 #ifdef __cplusplus
 }

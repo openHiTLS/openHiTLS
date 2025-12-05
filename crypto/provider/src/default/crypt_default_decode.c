@@ -343,7 +343,7 @@ const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2SlhDsaKey[] = {
 };
 #endif
 
-
+#ifdef HITLS_CRYPTO_XMSS
 const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2XmssKey[] = {
     {CRYPT_DECODER_IMPL_NEWCTX, (CRYPT_DECODER_IMPL_NewCtx)DECODER_XmssDer2KeyNewCtx},
     {CRYPT_DECODER_IMPL_GETPARAM, (CRYPT_DECODER_IMPL_GetParam)DECODER_DER2KEY_GetParam},
@@ -353,6 +353,7 @@ const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2XmssKey[] = {
     {CRYPT_DECODER_IMPL_FREECTX, (CRYPT_DECODER_IMPL_FreeCtx)DECODER_DER2KEY_FreeCtx},
     CRYPT_EAL_FUNC_END,
 };
+#endif
 
 const CRYPT_EAL_Func g_defEalLowKeyObject2PkeyObject[] = {
     {CRYPT_DECODER_IMPL_NEWCTX, (CRYPT_DECODER_IMPL_NewCtx)DECODER_LowKeyObject2PkeyObjectNewCtx},

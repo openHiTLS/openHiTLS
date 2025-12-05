@@ -99,7 +99,8 @@ void SDV_BSL_OBJ_CREATE_SIGN_ID_TC001(void)
     BslCid retrievedAsymId = BSL_OBJ_GetAsymAlgIdFromSignId(signId);
     ASSERT_EQ(asymId, retrievedAsymId);
 
-    BslCid retrievedHashId = BSL_OBJ_GetHashIdFromSignId(signId);
+    BslCid retrievedHashId = 0;
+    ASSERT_EQ(OBJ_GetHashIdFromSignId(signId, &retrievedHashId), BSL_SUCCESS);
     ASSERT_EQ(hashId, retrievedHashId);
 
     BslCid retrievedSignId = BSL_OBJ_GetSignIdFromHashAndAsymId(asymId, hashId);

@@ -53,7 +53,7 @@
 #define PKEY_MAX_PARAM_NUM 20
 
 #if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) || \
-    defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_MLDSA)
+    defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_XMSS)
 typedef struct {
     CRYPT_EAL_ProvMgrCtx *provMgrCtx;
     EAL_PkeyUnitaryMethod method;
@@ -403,7 +403,6 @@ DECODER_DEFINE_PKCS8_DECODE(Mlkem, CRYPT_ML_KEM_Ctx, CRYPT_MLKEM_ParsePkcs8key)
 #endif
 
 #ifdef HITLS_CRYPTO_XMSS
-DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(Xmss, CryptXmssCtx, CRYPT_XMSS_ParseSubPubkeyAsn1Buff)
 DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Xmss, CryptXmssCtx, CRYPT_XMSS_ParseSubPubkeyAsn1Buff)
 #endif
 #endif /* HITLS_CRYPTO_PROVIDER */

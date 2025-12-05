@@ -121,9 +121,9 @@ typedef struct {
 // b can be 4, 6, 8, 9, 12, 14
 // so use uint32_t to receive the BaseB value
 void BaseB(const uint8_t *x, uint32_t xLen, uint32_t b, uint32_t *out, uint32_t outLen);
-
+#define HASH_SIGN_XDR_ALG_TYPE_LEN 4
 typedef struct {
-    int algId; // CRYPT_PKEY_ParaId (SLH_DSA_AlgId or XMSS_AlgId)
+    int32_t algId; // CRYPT_PKEY_ParaId (SLH_DSA_AlgId or XMSS_AlgId)
     bool isCompressed;
     uint32_t n;
     uint32_t h;
@@ -135,6 +135,7 @@ typedef struct {
     uint32_t secCategory;
     uint32_t pkBytes;
     uint32_t sigBytes;
+    uint8_t xdrAlgId[HASH_SIGN_XDR_ALG_TYPE_LEN]; // RFC8391 Parameter Sets enum, length:4
 } SlhDsaPara;
 
 typedef struct {

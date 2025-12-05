@@ -253,12 +253,7 @@ int32_t HITLS_X509_EncodeSignAlgInfo(HITLS_X509_Asn1AlgId *x509Alg, BSL_ASN1_Buf
         asnArr[1].buff = NULL;
         asnArr[1].len = 0;
         asnArr[1].tag = BSL_ASN1_TAG_NULL;
-    } else if(x509Alg->algId == BSL_CID_XMSS) {
-        asnArr[1].buff = NULL;
-        asnArr[1].len = 0;
-        asnArr[1].tag = BSL_ASN1_TAG_NULL;
-    }
-    else {
+    } else {
         /**
          * RFC5758 sec 3.2
          * When the ecdsa-with-SHA224, ecdsa-with-SHA256, ecdsa-with-SHA384, or
@@ -275,7 +270,7 @@ int32_t HITLS_X509_EncodeSignAlgInfo(HITLS_X509_Asn1AlgId *x509Alg, BSL_ASN1_Buf
         {BSL_ASN1_TAG_ANY, BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY, 0},
     };
     BSL_ASN1_Template templ = {algTempl, sizeof(algTempl) / sizeof(algTempl[0])};
-    // 2: alg + param 
+    // 2: alg + param
     ret = BSL_ASN1_EncodeTemplate(&templ, asnArr, 2, &(asn->buff), &(asn->len));
     BSL_SAL_FREE(asnArr[1].buff);
     if (ret != BSL_SUCCESS) {
@@ -763,16 +758,17 @@ int32_t HITLS_X509_SignAsn1Data(CRYPT_EAL_PkeyCtx *priv, CRYPT_MD_AlgId mdId,
 }
 #endif
 
-static uint32_t X509_GetHashId(const HITLS_X509_Asn1AlgId *alg)
+int32_t X509_GetHashId(const HITLS_X509_Asn1AlgId *alg, int32_t *hashId)
 {
-    uint32_t hashId = BSL_OBJ_GetHashIdFromSignId(alg->algId);
-    if (hashId != BSL_CID_UNKNOWN) {
-        return hashId;
+    int32_t ret = OBJ_GetHashIdFromSignId(alg->algId, (BslCid *)hashId);
+    if (ret != BSL_SUCCESS) {
+        return ret;
     }
     if (alg->algId == BSL_CID_RSASSAPSS) {
-        return alg->rsaPssParam.mdId;
+        *hashId = alg->rsaPssParam.mdId;
+        return BSL_SUCCESS;
     }
-    return BSL_CID_UNKNOWN;
+    return BSL_SUCCESS;
 }
 
 #if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_SM2)
@@ -822,9 +818,9 @@ static int32_t X509_CtrlAlgInfo(const CRYPT_EAL_PkeyCtx *pubKey, uint32_t hashId
 int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawData, uint32_t rawDataLen,
     const HITLS_X509_Asn1AlgId *alg, const BSL_ASN1_BitString *signature)
 {
-    int32_t ret;
-    uint32_t hashId = X509_GetHashId(alg);
-    if (hashId == BSL_CID_UNKNOWN) {
+    int32_t hashId = BSL_CID_UNKNOWN;
+    int32_t ret = X509_GetHashId(alg, &hashId);
+    if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_GET_HASHID);
         return HITLS_X509_ERR_VFY_GET_HASHID;
     }
@@ -1150,6 +1146,11 @@ int32_t HITLS_X509_Sign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HIT
                 BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_SIGN_ALG);
                 return HITLS_X509_ERR_CERT_SIGN_ALG;
             }
+            break;
+#endif
+#ifdef HITLS_CRYPTO_XMSS
+        case CRYPT_PKEY_XMSS:
+            signAlgId.algId = (uint32_t)CRYPT_PKEY_XMSS;
             break;
 #endif
 #ifdef HITLS_CRYPTO_SLH_DSA

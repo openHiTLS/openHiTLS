@@ -114,9 +114,7 @@ int32_t HITLS_X509_GetSignMdAlg(const HITLS_X509_Asn1AlgId *signAlgId, int32_t *
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    *val = signAlgId->algId == BSL_CID_RSASSAPSS ?
-        signAlgId->rsaPssParam.mdId : BSL_OBJ_GetHashIdFromSignId(signAlgId->algId);
-    return HITLS_PKI_SUCCESS;
+    return X509_GetHashId(signAlgId, val);
 }
 
 int32_t HITLS_X509_GetEncodeLen(uint32_t encodeLen, uint32_t *val, uint32_t valLen)

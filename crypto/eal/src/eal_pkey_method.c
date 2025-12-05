@@ -688,18 +688,22 @@ static const EAL_PkeyMethod METHODS[] = {
         CRYPT_XMSS_Verify,
         NULL,
         NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL
+        NULL, // verifyData
+        NULL, // recover
+        NULL, // computeShareKey
+        NULL, // encrypt
+        NULL, // decrypt
+#ifdef HITLS_CRYPTO_XMSS_CHECK
+        CRYPT_XMSS_Check,
+#else
+        NULL, // check
+#endif
+        NULL, // cmp
+        NULL, // copyPara
+        NULL, // pkeyEncaps
+        NULL, // pkeyDecaps
+        NULL, // blind
+        NULL  // unBlind
     ),
 #endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM

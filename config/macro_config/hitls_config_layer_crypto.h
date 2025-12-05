@@ -551,6 +551,9 @@
     #ifndef HITLS_CRYPTO_SLH_DSA
         #define HITLS_CRYPTO_SLH_DSA
     #endif
+    #ifndef HITLS_CRYPTO_XMSS_CHECK
+        #define HITLS_CRYPTO_XMSS_CHECK
+    #endif
 #endif
 
 #ifdef HITLS_CRYPTO_SLH_DSA

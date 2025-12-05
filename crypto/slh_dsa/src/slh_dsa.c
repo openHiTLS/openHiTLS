@@ -723,6 +723,15 @@ static int32_t SlhDsaGetParaId(CryptSlhDsaCtx *ctx, void *val, uint32_t len)
     *(int32_t *)val = ctx->para.algId;
     return CRYPT_SUCCESS;
 }
+static int32_t GetSignLen(const CryptSlhDsaCtx *ctx, void *val, uint32_t len)
+{
+    if (len != sizeof(uint32_t) || val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    *(uint32_t *)val = ctx->para.sigBytes;
+    return CRYPT_SUCCESS;
+}
 
 int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t len)
 {
@@ -764,6 +773,8 @@ int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t
             BSL_SAL_CleanseData(ctx->prvKey.pub.seed, sizeof(ctx->prvKey.pub.seed));
             BSL_SAL_CleanseData(ctx->prvKey.pub.root, sizeof(ctx->prvKey.pub.root));
             return CRYPT_SUCCESS;
+        case CRYPT_CTRL_GET_SIGNLEN:
+            return GetSignLen(ctx, val, len);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
             return CRYPT_NOT_SUPPORT;

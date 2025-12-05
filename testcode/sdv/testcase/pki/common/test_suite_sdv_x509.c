@@ -32,7 +32,11 @@
 #include "hitls_pki_cert.h"
 #include "hitls_pki_crl.h"
 #include "hitls_pki_csr.h"
+#include "bsl_init.h"
 #include "hitls_pki_x509.h"
+#include "hitls_cert_local.h"
+#include "hitls_crl_local.h"
+#include "hitls_csr_local.h"
 #include "hitls_pki_errno.h"
 #include "hitls_pki_types.h"
 #include "hitls_pki_utils.h"
@@ -88,6 +92,18 @@ static bool PkiSkipTest(int32_t algId, int32_t format)
         case CRYPT_PKEY_ED25519:
             return false;
 #endif
+#ifdef HITLS_CRYPTO_XMSS
+        case CRYPT_PKEY_XMSS:
+            return false;
+#endif
+#ifdef HITLS_CRYPTO_MLDSA
+        case CRYPT_PKEY_ML_DSA:
+            return false;   // mldsa is not supported in this version
+#endif
+#ifdef HITLS_CRYPTO_SLH_DSA
+        case CRYPT_PKEY_SLH_DSA:
+            return false;   // slhdsa is not supported in this version
+#endif
         default:
             return true;
     }
@@ -141,6 +157,11 @@ static CRYPT_EAL_PkeyCtx *GenKey(int32_t algId, int32_t algParam)
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
     if (algId == CRYPT_PKEY_ML_DSA) {
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algParam), CRYPT_SUCCESS);
+    }
+#endif
+#ifdef HITLS_CRYPTO_XMSS
+    if (algId == CRYPT_PKEY_XMSS) {
         ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algParam), CRYPT_SUCCESS);
     }
 #endif
@@ -1975,6 +1996,246 @@ EXIT:
     HITLS_X509_ExtFree(testExt);
 #else
     UnusedParam1(algId, hashId, curveId);
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
+static int32_t GenKeyAndSelfCert(int32_t algId, int paraId, CRYPT_EAL_PkeyCtx **key, HITLS_X509_Cert **cert)
+{
+    HITLS_X509_Cert *tmpCert = NULL;
+    CRYPT_EAL_PkeyCtx *privKey = NULL;
+    uint8_t serialNum[] = {0x01, 0x02, 0x03, 0x04};
+    BSL_TIME beforeTime = {2024, 1, 1, 0, 0, 0, 1, 0};
+    BSL_TIME afterTime = {2050, 12, 31, 23, 59, 59, 1, 0};
+    uint8_t kid[20] = {0}; // SHA-1 hash for SKI
+    HITLS_X509_ExtSki ski = {false, {kid, sizeof(kid)}};
+    HITLS_X509_ExtBCons bCons = {true, true, -1}; // CA=true, maxPathLen=-1 (no limit)
+    HITLS_X509_ExtKeyUsage ku = {true, HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_KEY_CERT_SIGN};
+    
+    // Create XMSS private key context
+    privKey = CRYPT_EAL_PkeyNewCtx(algId);
+    ASSERT_NE(privKey, NULL);
+
+    // Set XMSS parameters
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(privKey, paraId), CRYPT_SUCCESS);
+    
+    // Generate XMSS key pair
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(privKey), CRYPT_SUCCESS);
+    
+    // Create new certificate
+    tmpCert = HITLS_X509_CertNew();
+    ASSERT_NE(tmpCert, NULL);
+    
+    // Set version (v3)
+    int32_t version = HITLS_X509_VERSION_3;
+    ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_VERSION, &version, sizeof(int32_t)), HITLS_PKI_SUCCESS);
+    
+    // Set serial number
+    ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_SERIALNUM, serialNum, sizeof(serialNum)), HITLS_PKI_SUCCESS);
+    
+    // Set validity time
+    ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)),
+        HITLS_PKI_SUCCESS);
+    
+    // Set public key
+    ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_PUBKEY, privKey, 0), HITLS_PKI_SUCCESS);
+    
+    // Create and set subject DN: C=CN, O=Test, CN=test xmss root
+    BslList *subjectDN = HITLS_X509_DnListNew();
+    ASSERT_NE(subjectDN, NULL);
+    HITLS_X509_DN dnCountry = {BSL_CID_AT_COUNTRYNAME, (uint8_t *)"CN", 2};
+    HITLS_X509_DN dnOrg = {BSL_CID_AT_ORGANIZATIONNAME, (uint8_t *)"Test", 4};
+    HITLS_X509_DN dnCN = {BSL_CID_AT_COMMONNAME, (uint8_t *)"test pqc root", 14};
+    ASSERT_EQ(HITLS_X509_AddDnName(subjectDN, &dnCountry, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_AddDnName(subjectDN, &dnOrg, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_AddDnName(subjectDN, &dnCN, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_SUBJECT_DN, subjectDN, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    
+    // Set issuer DN (same as subject for self-signed certificate)
+    ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_ISSUER_DN, subjectDN, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    
+    // Generate SKI from public key (simplified - using a hash of public key)
+    // In real implementation, this should use SHA-1 or SHA-256 hash of the public key
+    // For now, we'll use a placeholder
+    ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_EXT_SET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), HITLS_PKI_SUCCESS);
+    
+    // Set Basic Constraints
+    ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)),
+        HITLS_PKI_SUCCESS);
+    
+    // Set Key Usage
+    ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_EXT_SET_KUSAGE, &ku, sizeof(HITLS_X509_ExtKeyUsage)),
+        HITLS_PKI_SUCCESS);
+    
+    // Sign certificate (self-signed, using private key)
+    // For XMSS, we typically use SHA-256 or SHA-512
+    ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, privKey, NULL, tmpCert), HITLS_PKI_SUCCESS);
+    HITLS_X509_DnListFree(subjectDN);
+    *cert = tmpCert;
+    *key = privKey;
+    return 0;
+EXIT:
+    HITLS_X509_DnListFree(subjectDN);
+    HITLS_X509_CertFree(tmpCert);
+    CRYPT_EAL_PkeyFreeCtx(privKey);
+    return -1;
+}
+
+static int32_t GenCrl(CRYPT_EAL_PkeyCtx *privKey, HITLS_X509_Cert *cert, HITLS_X509_Crl **crl)
+{
+    HITLS_X509_Crl *tmpCrl = NULL;
+    BslList *issuerDN = NULL;
+    uint8_t serialNum[] = {0x01, 0x02, 0x03, 0x04, 0x05};
+    uint8_t crlNumber[] = {0x01};
+    BSL_TIME revokeTime = {2024, 6, 1, 0, 0, 0, 1, 0};
+    BSL_TIME beforeTime = {2024, 1, 1, 0, 0, 0, 1, 0};
+    BSL_TIME afterTime = {2050, 12, 31, 23, 59, 59, 1, 0};
+    int32_t version = HITLS_X509_VERSION_2;
+    HITLS_X509_RevokeExtReason reason = {true, HITLS_X509_REVOKED_REASON_KEY_COMPROMISE};
+    HITLS_X509_ExtCrlNumber crlNumberExt = {false, {crlNumber, 1}};
+
+    // Create new CRL
+    tmpCrl = HITLS_X509_CrlNew();
+    ASSERT_NE(tmpCrl, NULL);
+
+    // Get issuer DN from certificate
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &issuerDN, sizeof(BslList *)), HITLS_PKI_SUCCESS);
+
+    // Set CRL fields
+    ASSERT_EQ(HITLS_X509_CrlCtrl(tmpCrl, HITLS_X509_SET_ISSUER_DN, issuerDN, sizeof(BslList)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(tmpCrl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(tmpCrl, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(tmpCrl, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
+
+    // Add a revoked certificate entry
+    HITLS_X509_CrlEntry *entry = HITLS_X509_CrlEntryNew();
+    ASSERT_NE(entry, NULL);
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_SERIALNUM, serialNum, sizeof(serialNum)), 0);
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REVOKE_TIME, &revokeTime, sizeof(BSL_TIME)), 0);
+    ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_REASON, &reason,
+        sizeof(HITLS_X509_RevokeExtReason)), 0);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(tmpCrl, HITLS_X509_CRL_ADD_REVOKED_CERT, entry, 0), 0);
+
+    // Set CRL number extension
+    ASSERT_EQ(HITLS_X509_CrlCtrl(tmpCrl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt, sizeof(HITLS_X509_ExtCrlNumber)), 0);
+
+    // Sign CRL
+    ASSERT_EQ(HITLS_X509_CrlSign(CRYPT_MD_SHA256, privKey, NULL, tmpCrl), HITLS_PKI_SUCCESS);
+
+    HITLS_X509_CrlEntryFree(entry);
+    *crl = tmpCrl;
+    return 0;
+EXIT:
+    HITLS_X509_CrlEntryFree(entry);
+    HITLS_X509_CrlFree(tmpCrl);
+    return -1;
+}
+
+static int32_t GenCsr(CRYPT_EAL_PkeyCtx *privKey, HITLS_X509_Csr **csr)
+{
+    HITLS_X509_Csr *tmpCsr = NULL;
+
+    // Create new CSR
+    tmpCsr = HITLS_X509_CsrNew();
+    ASSERT_NE(tmpCsr, NULL);
+
+    // Set public key
+    ASSERT_EQ(HITLS_X509_CsrCtrl(tmpCsr, HITLS_X509_SET_PUBKEY, privKey, 0), HITLS_PKI_SUCCESS);
+
+    // Create and set subject DN: C=CN, O=Test, CN=test pqc end
+    HITLS_X509_DN dnCountry = {BSL_CID_AT_COUNTRYNAME, (uint8_t *)"CN", 2};
+    HITLS_X509_DN dnOrg = {BSL_CID_AT_ORGANIZATIONNAME, (uint8_t *)"Test", 4};
+    HITLS_X509_DN dnCN = {BSL_CID_AT_COMMONNAME, (uint8_t *)"test pqc end", 12};
+
+    ASSERT_EQ(HITLS_X509_CsrCtrl(tmpCsr, HITLS_X509_ADD_SUBJECT_NAME, &dnCountry, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(tmpCsr, HITLS_X509_ADD_SUBJECT_NAME, &dnOrg, 1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(tmpCsr, HITLS_X509_ADD_SUBJECT_NAME, &dnCN, 1), HITLS_PKI_SUCCESS);
+
+    // Sign CSR
+    ASSERT_EQ(HITLS_X509_CsrSign(CRYPT_MD_SHA256, privKey, NULL, tmpCsr), HITLS_PKI_SUCCESS);
+
+    *csr = tmpCsr;
+    return 0;
+EXIT:
+    HITLS_X509_CsrFree(tmpCsr);
+    return -1;
+}
+#endif
+
+/* BEGIN_CASE */
+void SDV_X509_PQ_CERT_GEN_PKI_TC001(int algId, int paraId, char *root, char *crl, char *csr)
+{
+#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
+    if (PkiSkipTest(algId, BSL_FORMAT_ASN1)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    TestRandInit();
+    BSL_GLOBAL_Init();
+
+    HITLS_X509_Cert *cert = NULL;
+    CRYPT_EAL_PkeyCtx *privKey = NULL;
+    HITLS_X509_Crl *crlObj = NULL;
+    HITLS_X509_Csr *csrObj = NULL;
+    HITLS_X509_Cert *pcert = NULL;
+    HITLS_X509_Crl *pcrl = NULL;
+    HITLS_X509_Csr *pcsr = NULL;
+
+    // 1. Generate key and self-signed certificate
+    ASSERT_EQ(GenKeyAndSelfCert(algId, paraId, &privKey, &cert), 0);
+
+    // 2. Generate CRL using the key and self-signed certificate
+    ASSERT_EQ(GenCrl(privKey, cert, &crlObj), 0);
+
+    // 3. Generate CSR with subject name: C=CN, O=Test, CN=test pqc end
+    ASSERT_EQ(GenCsr(privKey, &csrObj), 0);
+
+    // 4. Encode and output self-signed certificate to file
+    ASSERT_EQ(HITLS_X509_CertGenFile(BSL_FORMAT_ASN1, cert, root), HITLS_PKI_SUCCESS);
+
+    // 5. Encode and output CSR to file
+    ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_ASN1, csrObj, csr), HITLS_PKI_SUCCESS);
+
+    // 6. Encode and output CRL to file
+    ASSERT_EQ(HITLS_X509_CrlGenFile(BSL_FORMAT_ASN1, crlObj, crl), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, root, &pcert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrParseFile(BSL_FORMAT_ASN1, csr, &pcsr), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crl, &pcrl), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pcert->tbs.ealPubKey, 0, pcert->tbs.tbsRawData, pcert->tbs.tbsRawDataLen,
+        pcert->signature.buff, pcert->signature.len), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pcert->tbs.ealPubKey, CRYPT_MD_SHA256, pcsr->reqInfo.reqInfoRawData,
+        pcsr->reqInfo.reqInfoRawDataLen, pcsr->signature.buff, pcsr->signature.len), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pcert->tbs.ealPubKey, CRYPT_MD_SHA256, pcrl->tbs.tbsRawData, pcrl->tbs.tbsRawDataLen,
+        pcrl->signature.buff, pcrl->signature.len), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlVerify(pcert->tbs.ealPubKey, pcrl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrVerify(pcsr), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CheckSignature(pcert->tbs.ealPubKey, pcert->tbs.tbsRawData, pcert->tbs.tbsRawDataLen,
+        &(pcert->signAlgId), &(pcert->signature)), HITLS_PKI_SUCCESS);
+    remove(root);
+    remove(crl);
+    remove(csr);
+EXIT:
+    HITLS_X509_CertFree(cert);
+    CRYPT_EAL_PkeyFreeCtx(privKey);
+    HITLS_X509_CrlFree(crlObj);
+    HITLS_X509_CsrFree(csrObj);
+    HITLS_X509_CertFree(pcert);
+    HITLS_X509_CrlFree(pcrl);
+    HITLS_X509_CsrFree(pcsr);
+    BSL_GLOBAL_DeInit();
+    TestRandDeInit();
+#else
+    (void)algId;
+    (void)paraId;
+    (void)root;
+    (void)crl;
+    (void)csr;
     SKIP_TEST();
 #endif
 }

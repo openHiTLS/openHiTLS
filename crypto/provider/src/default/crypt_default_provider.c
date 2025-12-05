@@ -75,73 +75,6 @@ static const CRYPT_EAL_AlgInfo g_defEalMds[] = {
 };
 #endif // HITLS_CRYPTO_MD
 
-#ifdef HITLS_CRYPTO_KDF
-static const CRYPT_EAL_AlgInfo g_defEalKdfs[] = {
-    {CRYPT_KDF_SCRYPT, g_defEalKdfScrypt, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_KDF_PBKDF2, g_defEalKdfPBKdf2, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_KDF_KDFTLS12, g_defEalKdfKdfTLS12, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_KDF_HKDF, g_defEalKdfHkdf, CRYPT_EAL_DEFAULT_ATTR},
-    CRYPT_EAL_ALGINFO_END
-};
-#endif
-
-#ifdef HITLS_CRYPTO_PKEY
-static const CRYPT_EAL_AlgInfo g_defEalKeyMgmt[] = {
-    {CRYPT_PKEY_DSA, g_defEalKeyMgmtDsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ED25519, g_defEalKeyMgmtEd25519, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_X25519, g_defEalKeyMgmtX25519, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_RSA, g_defEalKeyMgmtRsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_DH, g_defEalKeyMgmtDh, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ECDSA, g_defEalKeyMgmtEcdsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ECDH, g_defEalKeyMgmtEcdh, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_SM2, g_defEalKeyMgmtSm2, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_PAILLIER, g_defEalKeyMgmtPaillier, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ELGAMAL, g_defEalKeyMgmtElGamal, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_SLH_DSA, g_defEalKeyMgmtSlhDsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ML_KEM, g_defEalKeyMgmtMlKem, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ML_DSA, g_defEalKeyMgmtMlDsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_HYBRID_KEM, g_defEalKeyMgmtHybridKem, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_XMSS, g_defEalKeyMgmtXmss, CRYPT_EAL_DEFAULT_ATTR},
-    CRYPT_EAL_ALGINFO_END
-};
-
-static const CRYPT_EAL_AlgInfo g_defEalAsymCiphers[] = {
-    {CRYPT_PKEY_RSA, g_defEalAsymCipherRsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_SM2, g_defEalAsymCipherSm2, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_PAILLIER, g_defEalAsymCipherPaillier, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ELGAMAL, g_defEalAsymCipherElGamal, CRYPT_EAL_DEFAULT_ATTR},
-    CRYPT_EAL_ALGINFO_END
-};
-
-static const CRYPT_EAL_AlgInfo g_defEalKeyExch[] = {
-    {CRYPT_PKEY_X25519, g_defEalExchX25519, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_DH, g_defEalExchDh, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ECDH, g_defEalExchEcdh, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_SM2, g_defEalExchSm2, CRYPT_EAL_DEFAULT_ATTR},
-    CRYPT_EAL_ALGINFO_END
-};
-
-static const CRYPT_EAL_AlgInfo g_defEalSigns[] = {
-    {CRYPT_PKEY_DSA, g_defEalSignDsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ED25519, g_defEalSignEd25519, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_RSA, g_defEalSignRsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ECDSA, g_defEalSignEcdsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_SM2, g_defEalSignSm2, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_SLH_DSA, g_defEalSignSlhDsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_ML_DSA, g_defEalSignMlDsa, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_XMSS,g_defEalSignXmss,CRYPT_EAL_DEFAULT_ATTR},
-    CRYPT_EAL_ALGINFO_END
-};
-
-#if defined(HITLS_CRYPTO_MLKEM) || defined(HITLS_CRYPTO_HYBRIDKEM)
-static const CRYPT_EAL_AlgInfo g_defEalKems[] = {
-    {CRYPT_PKEY_ML_KEM, g_defEalMlKem, CRYPT_EAL_DEFAULT_ATTR},
-    {CRYPT_PKEY_HYBRID_KEM, g_defEalHybridKeyKem, CRYPT_EAL_DEFAULT_ATTR},
-    CRYPT_EAL_ALGINFO_END
-};
-#endif
-#endif
-
 #ifdef HITLS_CRYPTO_MAC
 static const CRYPT_EAL_AlgInfo g_defEalMacs[] = {
 #ifdef HITLS_CRYPTO_HMAC
@@ -379,6 +312,9 @@ static const CRYPT_EAL_AlgInfo g_defEalKeyMgmt[] = {
 #ifdef HITLS_CRYPTO_MLDSA
     {CRYPT_PKEY_ML_DSA, g_defEalKeyMgmtMlDsa, CRYPT_EAL_DEFAULT_ATTR},
 #endif
+#ifdef HITLS_CRYPTO_XMSS
+    {CRYPT_PKEY_XMSS, g_defEalKeyMgmtXmss, CRYPT_EAL_DEFAULT_ATTR},
+#endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
     {CRYPT_PKEY_HYBRID_KEM, g_defEalKeyMgmtHybridKem, CRYPT_EAL_DEFAULT_ATTR},
 #endif
@@ -443,6 +379,9 @@ static const CRYPT_EAL_AlgInfo g_defEalSigns[] = {
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
     {CRYPT_PKEY_ML_DSA, g_defEalSignMlDsa, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_XMSS
+    {CRYPT_PKEY_XMSS, g_defEalSignXmss, CRYPT_EAL_DEFAULT_ATTR},
 #endif
     CRYPT_EAL_ALGINFO_END
 };
@@ -561,6 +500,10 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
     {CRYPT_PKEY_ML_DSA, g_defEalSubPubKeyWithoutSeqDer2MldsaKey,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
+#ifdef HITLS_CRYPTO_XMSS
+    {CRYPT_PKEY_XMSS, g_defEalSubPubKeyWithoutSeqDer2XmssKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
 #ifdef HITLS_CRYPTO_MLKEM
     {CRYPT_PKEY_ML_KEM, g_defEalSubPubKeyWithoutSeqDer2MlkemKey,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
@@ -571,8 +514,6 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
 #endif
     {BSL_CID_DECODE_UNKNOWN, g_defEalLowKeyObject2PkeyObject,
         "provider=default, inFormat=OBJECT, inType=LOW_KEY, outFormat=OBJECT, outType=HIGH_KEY"},
-    {CRYPT_PKEY_XMSS, g_defEalSubPubKeyWithoutSeqDer2XmssKey,
-        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
     CRYPT_EAL_ALGINFO_END
 };
 #endif

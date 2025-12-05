@@ -204,7 +204,7 @@
                         "key_decode" : null,
                         "key_info" : {"deps": ["print"]},
                         "deps": ["asn1", "obj_default"],
-                        "opts":["ecdsa", "sm2_sign", "sm2_crypt", "ed25519", "rsa_sign", "rsa_verify", "mldsa"]
+                        "opts":["ecdsa", "sm2_sign", "sm2_crypt", "ed25519", "rsa_sign", "rsa_verify", "mldsa", "xmss"]
                     },
                     "key_decode_chain" : {"deps": ["key_decode", "codecs"]},
                     "codecs": {"deps": ["provider"]}

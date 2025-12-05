@@ -44,7 +44,7 @@ typedef struct {
     const char *shortName;
 } BslAsn1DnInfo;
 
-BslCid BSL_OBJ_GetHashIdFromSignId(BslCid signAlg);
+int32_t OBJ_GetHashIdFromSignId(BslCid signAlg, BslCid *hashId);
 
 BslCid BSL_OBJ_GetAsymAlgIdFromSignId(BslCid signAlg);
 

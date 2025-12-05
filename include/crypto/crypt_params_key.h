@@ -162,6 +162,7 @@ extern "C" {
 #define CRYPT_PARAM_XMSS_PRV_PRF                            (CRYPT_PARAM_XMSS_BASE + 3)
 #define CRYPT_PARAM_XMSS_PUB_SEED                           (CRYPT_PARAM_XMSS_BASE + 4)
 #define CRYPT_PARAM_XMSS_PUB_ROOT                           (CRYPT_PARAM_XMSS_BASE + 5)
+#define CRYPT_PARAM_XMSS_XDR_TYPE                           (CRYPT_PARAM_XMSS_BASE + 6)
 
 #define CRYPT_PARAM_DECODE_BASE                             4000
 #define CRYPT_PARAM_DECODE_OUTPUT_FORMAT                    (CRYPT_PARAM_DECODE_BASE + 1)

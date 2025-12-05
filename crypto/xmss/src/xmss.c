@@ -32,6 +32,7 @@
 typedef SlhDsaPara XmssPara;
 
 typedef struct {
+    BSL_Param *pubXdr;
     BSL_Param *pubSeed;
     BSL_Param *pubRoot;
 } XmssPubKeyParam;
@@ -45,95 +46,95 @@ typedef struct {
 } XmssPrvKeyParam;
 
 /* params isCompressed, a, k, m, secCategory are not used for xmss */
-static const XmssPara XmssParaTable[] = {
+static const XmssPara g_xmssParaTable[] = {
     /* { algId, isCompressed, n, h, d, hp, a, k, m, secCategory, pkBytes, sigBytes }, */
     
-    { CRYPT_XMSS_SHA2_10_256, 0, 32, 10, 1, 10, 0, 0, 0, 0,  68, 2500 },
-    { CRYPT_XMSS_SHA2_16_256, 0, 32, 16, 1, 16, 0, 0, 0, 0,  68, 2692 },
-    { CRYPT_XMSS_SHA2_20_256, 0, 32, 20, 1, 20, 0, 0, 0, 0,  68, 2820 },
-    { CRYPT_XMSS_SHA2_10_512, 0, 64, 10, 1, 10, 0, 0, 0, 0, 132, 9092 },
-    { CRYPT_XMSS_SHA2_16_512, 0, 64, 16, 1, 16, 0, 0, 0, 0, 132, 9476 },
-    { CRYPT_XMSS_SHA2_20_512, 0, 64, 20, 1, 20, 0, 0, 0, 0, 132, 9732 },
+    { CRYPT_XMSS_SHA2_10_256, 0, 32, 10, 1, 10, 0, 0, 0, 0,  68, 2500, {0x0, 0x0, 0x0, 0x01}},
+    { CRYPT_XMSS_SHA2_16_256, 0, 32, 16, 1, 16, 0, 0, 0, 0,  68, 2692, {0x0, 0x0, 0x0, 0x02}},
+    { CRYPT_XMSS_SHA2_20_256, 0, 32, 20, 1, 20, 0, 0, 0, 0,  68, 2820, {0x0, 0x0, 0x0, 0x03}},
+    { CRYPT_XMSS_SHA2_10_512, 0, 64, 10, 1, 10, 0, 0, 0, 0, 132, 9092, {0x0, 0x0, 0x0, 0x04}},
+    { CRYPT_XMSS_SHA2_16_512, 0, 64, 16, 1, 16, 0, 0, 0, 0, 132, 9476, {0x0, 0x0, 0x0, 0x05}},
+    { CRYPT_XMSS_SHA2_20_512, 0, 64, 20, 1, 20, 0, 0, 0, 0, 132, 9732, {0x0, 0x0, 0x0, 0x06}},
 
-    { CRYPT_XMSS_SHAKE_10_256, 0, 32, 10, 1, 10, 0, 0, 0, 0,  68, 2500 },
-    { CRYPT_XMSS_SHAKE_16_256, 0, 32, 16, 1, 16, 0, 0, 0, 0,  68, 2692 },
-    { CRYPT_XMSS_SHAKE_20_256, 0, 32, 20, 1, 20, 0, 0, 0, 0,  68, 2820 },
-    { CRYPT_XMSS_SHAKE_10_512, 0, 64, 10, 1, 10, 0, 0, 0, 0, 132, 9092 },
-    { CRYPT_XMSS_SHAKE_16_512, 0, 64, 16, 1, 16, 0, 0, 0, 0, 132, 9476 },
-    { CRYPT_XMSS_SHAKE_20_512, 0, 64, 20, 1, 20, 0, 0, 0, 0, 132, 9732 },
+    { CRYPT_XMSS_SHAKE_10_256, 0, 32, 10, 1, 10, 0, 0, 0, 0,  68, 2500, {0x0, 0x0, 0x0, 0x07}},
+    { CRYPT_XMSS_SHAKE_16_256, 0, 32, 16, 1, 16, 0, 0, 0, 0,  68, 2692, {0x0, 0x0, 0x0, 0x08}},
+    { CRYPT_XMSS_SHAKE_20_256, 0, 32, 20, 1, 20, 0, 0, 0, 0,  68, 2820, {0x0, 0x0, 0x0, 0x09}},
+    { CRYPT_XMSS_SHAKE_10_512, 0, 64, 10, 1, 10, 0, 0, 0, 0, 132, 9092, {0x0, 0x0, 0x0, 0x0a}},
+    { CRYPT_XMSS_SHAKE_16_512, 0, 64, 16, 1, 16, 0, 0, 0, 0, 132, 9476, {0x0, 0x0, 0x0, 0x0b}},
+    { CRYPT_XMSS_SHAKE_20_512, 0, 64, 20, 1, 20, 0, 0, 0, 0, 132, 9732, {0x0, 0x0, 0x0, 0x0c}},
 
-    { CRYPT_XMSS_SHA2_10_192, 0, 24, 10, 1, 10, 0, 0, 0, 0, 52, 1492 },
-    { CRYPT_XMSS_SHA2_16_192, 0, 24, 16, 1, 16, 0, 0, 0, 0, 52, 1636 },
-    { CRYPT_XMSS_SHA2_20_192, 0, 24, 20, 1, 20, 0, 0, 0, 0, 52, 1732 },
+    { CRYPT_XMSS_SHA2_10_192, 0, 24, 10, 1, 10, 0, 0, 0, 0, 52, 1492, {0x0, 0x0, 0x0, 0x0d}},
+    { CRYPT_XMSS_SHA2_16_192, 0, 24, 16, 1, 16, 0, 0, 0, 0, 52, 1636, {0x0, 0x0, 0x0, 0x0e}},
+    { CRYPT_XMSS_SHA2_20_192, 0, 24, 20, 1, 20, 0, 0, 0, 0, 52, 1732, {0x0, 0x0, 0x0, 0x0f}},
  
-    { CRYPT_XMSS_SHAKE256_10_256, 0, 32, 10, 1, 10, 0, 0, 0, 0, 68, 2500 },
-    { CRYPT_XMSS_SHAKE256_16_256, 0, 32, 16, 1, 16, 0, 0, 0, 0, 68, 2692 },
-    { CRYPT_XMSS_SHAKE256_20_256, 0, 32, 20, 1, 20, 0, 0, 0, 0, 68, 2820 },
- 
-    { CRYPT_XMSS_SHAKE256_10_192, 0, 24, 10, 1, 10, 0, 0, 0, 0, 52, 1492 },
-    { CRYPT_XMSS_SHAKE256_16_192, 0, 24, 16, 1, 16, 0, 0, 0, 0, 52, 1636 },
-    { CRYPT_XMSS_SHAKE256_20_192, 0, 24, 20, 1, 20, 0, 0, 0, 0, 52, 1732 },
+    { CRYPT_XMSS_SHAKE256_10_256, 0, 32, 10, 1, 10, 0, 0, 0, 0, 68, 2500, {0x0, 0x0, 0x0, 0x10}},
+    { CRYPT_XMSS_SHAKE256_16_256, 0, 32, 16, 1, 16, 0, 0, 0, 0, 68, 2692, {0x0, 0x0, 0x0, 0x11}},
+    { CRYPT_XMSS_SHAKE256_20_256, 0, 32, 20, 1, 20, 0, 0, 0, 0, 68, 2820, {0x0, 0x0, 0x0, 0x12}},
 
-    { CRYPT_XMSSMT_SHA2_20_2_256,  0, 32, 20,  2, 10, 0, 0, 0, 0,  68,   4963 },
-    { CRYPT_XMSSMT_SHA2_20_4_256,  0, 32, 20,  4,  5, 0, 0, 0, 0,  68,   9251 },
-    { CRYPT_XMSSMT_SHA2_40_2_256,  0, 32, 40,  2, 20, 0, 0, 0, 0,  68,   5605 },
-    { CRYPT_XMSSMT_SHA2_40_4_256,  0, 32, 40,  4, 10, 0, 0, 0, 0,  68,   9893 },
-    { CRYPT_XMSSMT_SHA2_40_8_256,  0, 32, 40,  8,  5, 0, 0, 0, 0,  68,  18469 },
-    { CRYPT_XMSSMT_SHA2_60_3_256,  0, 32, 60,  3, 20, 0, 0, 0, 0,  68,   8392 },
-    { CRYPT_XMSSMT_SHA2_60_6_256,  0, 32, 60,  6, 10, 0, 0, 0, 0,  68,  14824 },
-    { CRYPT_XMSSMT_SHA2_60_12_256, 0, 32, 60, 12,  5, 0, 0, 0, 0,  68,  27688 },
-    { CRYPT_XMSSMT_SHA2_20_2_512,  0, 64, 20,  2, 10, 0, 0, 0, 0, 132,  18115 },
-    { CRYPT_XMSSMT_SHA2_20_4_512,  0, 64, 20,  4,  5, 0, 0, 0, 0, 132,  34883 },
-    { CRYPT_XMSSMT_SHA2_40_2_512,  0, 64, 40,  2, 20, 0, 0, 0, 0, 132,  19397 },
-    { CRYPT_XMSSMT_SHA2_40_4_512,  0, 64, 40,  4, 10, 0, 0, 0, 0, 132,  36165 },
-    { CRYPT_XMSSMT_SHA2_40_8_512,  0, 64, 40,  8,  5, 0, 0, 0, 0, 132,  69701 },
-    { CRYPT_XMSSMT_SHA2_60_3_512,  0, 64, 60,  3, 20, 0, 0, 0, 0, 132,  29064 },
-    { CRYPT_XMSSMT_SHA2_60_6_512,  0, 64, 60,  6, 10, 0, 0, 0, 0, 132,  54216 },
-    { CRYPT_XMSSMT_SHA2_60_12_512, 0, 64, 60, 12,  5, 0, 0, 0, 0, 132, 104520 },
+    { CRYPT_XMSS_SHAKE256_10_192, 0, 24, 10, 1, 10, 0, 0, 0, 0, 52, 1492, {0x0, 0x0, 0x0, 0x13}},
+    { CRYPT_XMSS_SHAKE256_16_192, 0, 24, 16, 1, 16, 0, 0, 0, 0, 52, 1636, {0x0, 0x0, 0x0, 0x14}},
+    { CRYPT_XMSS_SHAKE256_20_192, 0, 24, 20, 1, 20, 0, 0, 0, 0, 52, 1732, {0x0, 0x0, 0x0, 0x15}},
 
-    { CRYPT_XMSSMT_SHAKE_20_2_256,  0, 32, 20,  2, 10, 0, 0, 0, 0,  68,   4963 },
-    { CRYPT_XMSSMT_SHAKE_20_4_256,  0, 32, 20,  4,  5, 0, 0, 0, 0,  68,   9251 },
-    { CRYPT_XMSSMT_SHAKE_40_2_256,  0, 32, 40,  2, 20, 0, 0, 0, 0,  68,   5605 },
-    { CRYPT_XMSSMT_SHAKE_40_4_256,  0, 32, 40,  4, 10, 0, 0, 0, 0,  68,   9893 },
-    { CRYPT_XMSSMT_SHAKE_40_8_256,  0, 32, 40,  8,  5, 0, 0, 0, 0,  68,  18469 },
-    { CRYPT_XMSSMT_SHAKE_60_3_256,  0, 32, 60,  3, 20, 0, 0, 0, 0,  68,   8392 },
-    { CRYPT_XMSSMT_SHAKE_60_6_256,  0, 32, 60,  6, 10, 0, 0, 0, 0,  68,  14824 },
-    { CRYPT_XMSSMT_SHAKE_60_12_256, 0, 32, 60, 12,  5, 0, 0, 0, 0,  68,  27688 },
-    { CRYPT_XMSSMT_SHAKE_20_2_512,  0, 64, 20,  2, 10, 0, 0, 0, 0, 132,  18115 },
-    { CRYPT_XMSSMT_SHAKE_20_4_512,  0, 64, 20,  4,  5, 0, 0, 0, 0, 132,  34883 },
-    { CRYPT_XMSSMT_SHAKE_40_2_512,  0, 64, 40,  2, 20, 0, 0, 0, 0, 132,  19397 },
-    { CRYPT_XMSSMT_SHAKE_40_4_512,  0, 64, 40,  4, 10, 0, 0, 0, 0, 132,  36165 },
-    { CRYPT_XMSSMT_SHAKE_40_8_512,  0, 64, 40,  8,  5, 0, 0, 0, 0, 132,  69701 },
-    { CRYPT_XMSSMT_SHAKE_60_3_512,  0, 64, 60,  3, 20, 0, 0, 0, 0, 132,  29064 },
-    { CRYPT_XMSSMT_SHAKE_60_6_512,  0, 64, 60,  6, 10, 0, 0, 0, 0, 132,  54216 },
-    { CRYPT_XMSSMT_SHAKE_60_12_512, 0, 64, 60, 12,  5, 0, 0, 0, 0, 132, 104520 },
+    { CRYPT_XMSSMT_SHA2_20_2_256,  0, 32, 20,  2, 10, 0, 0, 0, 0,  68,   4963, {0x0, 0x0, 0x0, 0x01}},
+    { CRYPT_XMSSMT_SHA2_20_4_256,  0, 32, 20,  4,  5, 0, 0, 0, 0,  68,   9251, {0x0, 0x0, 0x0, 0x02}},
+    { CRYPT_XMSSMT_SHA2_40_2_256,  0, 32, 40,  2, 20, 0, 0, 0, 0,  68,   5605, {0x0, 0x0, 0x0, 0x03}},
+    { CRYPT_XMSSMT_SHA2_40_4_256,  0, 32, 40,  4, 10, 0, 0, 0, 0,  68,   9893, {0x0, 0x0, 0x0, 0x04}},
+    { CRYPT_XMSSMT_SHA2_40_8_256,  0, 32, 40,  8,  5, 0, 0, 0, 0,  68,  18469, {0x0, 0x0, 0x0, 0x05}},
+    { CRYPT_XMSSMT_SHA2_60_3_256,  0, 32, 60,  3, 20, 0, 0, 0, 0,  68,   8392, {0x0, 0x0, 0x0, 0x06}},
+    { CRYPT_XMSSMT_SHA2_60_6_256,  0, 32, 60,  6, 10, 0, 0, 0, 0,  68,  14824, {0x0, 0x0, 0x0, 0x07}},
+    { CRYPT_XMSSMT_SHA2_60_12_256, 0, 32, 60, 12,  5, 0, 0, 0, 0,  68,  27688, {0x0, 0x0, 0x0, 0x08}},
+    { CRYPT_XMSSMT_SHA2_20_2_512,  0, 64, 20,  2, 10, 0, 0, 0, 0, 132,  18115, {0x0, 0x0, 0x0, 0x09}},
+    { CRYPT_XMSSMT_SHA2_20_4_512,  0, 64, 20,  4,  5, 0, 0, 0, 0, 132,  34883, {0x0, 0x0, 0x0, 0x0a}},
+    { CRYPT_XMSSMT_SHA2_40_2_512,  0, 64, 40,  2, 20, 0, 0, 0, 0, 132,  19397, {0x0, 0x0, 0x0, 0x0b}},
+    { CRYPT_XMSSMT_SHA2_40_4_512,  0, 64, 40,  4, 10, 0, 0, 0, 0, 132,  36165, {0x0, 0x0, 0x0, 0x0c}},
+    { CRYPT_XMSSMT_SHA2_40_8_512,  0, 64, 40,  8,  5, 0, 0, 0, 0, 132,  69701, {0x0, 0x0, 0x0, 0x0d}},
+    { CRYPT_XMSSMT_SHA2_60_3_512,  0, 64, 60,  3, 20, 0, 0, 0, 0, 132,  29064, {0x0, 0x0, 0x0, 0x0e}},
+    { CRYPT_XMSSMT_SHA2_60_6_512,  0, 64, 60,  6, 10, 0, 0, 0, 0, 132,  54216, {0x0, 0x0, 0x0, 0x0f}},
+    { CRYPT_XMSSMT_SHA2_60_12_512, 0, 64, 60, 12,  5, 0, 0, 0, 0, 132, 104520, {0x0, 0x0, 0x0, 0x10}},
 
-    { CRYPT_XMSSMT_SHA2_20_2_192,  0, 24, 20,  2, 10, 0, 0, 0, 0, 52,  2955 },
-    { CRYPT_XMSSMT_SHA2_20_4_192,  0, 24, 20,  4,  5, 0, 0, 0, 0, 52,  5403 },
-    { CRYPT_XMSSMT_SHA2_40_2_192,  0, 24, 40,  2, 20, 0, 0, 0, 0, 52,  3437 },
-    { CRYPT_XMSSMT_SHA2_40_4_192,  0, 24, 40,  4, 10, 0, 0, 0, 0, 52,  5885 },
-    { CRYPT_XMSSMT_SHA2_40_8_192,  0, 24, 40,  8,  5, 0, 0, 0, 0, 52, 10781 },
-    { CRYPT_XMSSMT_SHA2_60_3_192,  0, 24, 60,  3, 20, 0, 0, 0, 0, 52,  5144 },
-    { CRYPT_XMSSMT_SHA2_60_6_192,  0, 24, 60,  6, 10, 0, 0, 0, 0, 52,  8816 },
-    { CRYPT_XMSSMT_SHA2_60_12_192, 0, 24, 60, 12,  5, 0, 0, 0, 0, 52, 16160 },
+    { CRYPT_XMSSMT_SHAKE_20_2_256,  0, 32, 20,  2, 10, 0, 0, 0, 0,  68,   4963, {0x0, 0x0, 0x0, 0x11}},
+    { CRYPT_XMSSMT_SHAKE_20_4_256,  0, 32, 20,  4,  5, 0, 0, 0, 0,  68,   9251, {0x0, 0x0, 0x0, 0x12}},
+    { CRYPT_XMSSMT_SHAKE_40_2_256,  0, 32, 40,  2, 20, 0, 0, 0, 0,  68,   5605, {0x0, 0x0, 0x0, 0x13}},
+    { CRYPT_XMSSMT_SHAKE_40_4_256,  0, 32, 40,  4, 10, 0, 0, 0, 0,  68,   9893, {0x0, 0x0, 0x0, 0x14}},
+    { CRYPT_XMSSMT_SHAKE_40_8_256,  0, 32, 40,  8,  5, 0, 0, 0, 0,  68,  18469, {0x0, 0x0, 0x0, 0x15}},
+    { CRYPT_XMSSMT_SHAKE_60_3_256,  0, 32, 60,  3, 20, 0, 0, 0, 0,  68,   8392, {0x0, 0x0, 0x0, 0x16}},
+    { CRYPT_XMSSMT_SHAKE_60_6_256,  0, 32, 60,  6, 10, 0, 0, 0, 0,  68,  14824, {0x0, 0x0, 0x0, 0x17}},
+    { CRYPT_XMSSMT_SHAKE_60_12_256, 0, 32, 60, 12,  5, 0, 0, 0, 0,  68,  27688, {0x0, 0x0, 0x0, 0x18}},
+    { CRYPT_XMSSMT_SHAKE_20_2_512,  0, 64, 20,  2, 10, 0, 0, 0, 0, 132,  18115, {0x0, 0x0, 0x0, 0x19}},
+    { CRYPT_XMSSMT_SHAKE_20_4_512,  0, 64, 20,  4,  5, 0, 0, 0, 0, 132,  34883, {0x0, 0x0, 0x0, 0x1a}},
+    { CRYPT_XMSSMT_SHAKE_40_2_512,  0, 64, 40,  2, 20, 0, 0, 0, 0, 132,  19397, {0x0, 0x0, 0x0, 0x1b}},
+    { CRYPT_XMSSMT_SHAKE_40_4_512,  0, 64, 40,  4, 10, 0, 0, 0, 0, 132,  36165, {0x0, 0x0, 0x0, 0x1c}},
+    { CRYPT_XMSSMT_SHAKE_40_8_512,  0, 64, 40,  8,  5, 0, 0, 0, 0, 132,  69701, {0x0, 0x0, 0x0, 0x1d}},
+    { CRYPT_XMSSMT_SHAKE_60_3_512,  0, 64, 60,  3, 20, 0, 0, 0, 0, 132,  29064, {0x0, 0x0, 0x0, 0x1e}},
+    { CRYPT_XMSSMT_SHAKE_60_6_512,  0, 64, 60,  6, 10, 0, 0, 0, 0, 132,  54216, {0x0, 0x0, 0x0, 0x1f}},
+    { CRYPT_XMSSMT_SHAKE_60_12_512, 0, 64, 60, 12,  5, 0, 0, 0, 0, 132, 104520, {0x0, 0x0, 0x0, 0x20}},
 
-    { CRYPT_XMSSMT_SHAKE256_20_2_256,  0, 32, 20,  2, 10, 0, 0, 0, 0, 68,  4963 },
-    { CRYPT_XMSSMT_SHAKE256_20_4_256,  0, 32, 20,  4,  5, 0, 0, 0, 0, 68,  9251 },
-    { CRYPT_XMSSMT_SHAKE256_40_2_256,  0, 32, 40,  2, 20, 0, 0, 0, 0, 68,  5605 },
-    { CRYPT_XMSSMT_SHAKE256_40_4_256,  0, 32, 40,  4, 10, 0, 0, 0, 0, 68,  9893 },
-    { CRYPT_XMSSMT_SHAKE256_40_8_256,  0, 32, 40,  8,  5, 0, 0, 0, 0, 68, 18469 },
-    { CRYPT_XMSSMT_SHAKE256_60_3_256,  0, 32, 60,  3, 20, 0, 0, 0, 0, 68,  8392 },
-    { CRYPT_XMSSMT_SHAKE256_60_6_256,  0, 32, 60,  6, 10, 0, 0, 0, 0, 68, 14824 },
-    { CRYPT_XMSSMT_SHAKE256_60_12_256, 0, 32, 60, 12,  5, 0, 0, 0, 0, 68, 27688 },
+    { CRYPT_XMSSMT_SHA2_20_2_192,  0, 24, 20,  2, 10, 0, 0, 0, 0, 52,  2955, {0x0, 0x0, 0x0, 0x21}},
+    { CRYPT_XMSSMT_SHA2_20_4_192,  0, 24, 20,  4,  5, 0, 0, 0, 0, 52,  5403, {0x0, 0x0, 0x0, 0x22}},
+    { CRYPT_XMSSMT_SHA2_40_2_192,  0, 24, 40,  2, 20, 0, 0, 0, 0, 52,  3437, {0x0, 0x0, 0x0, 0x23}},
+    { CRYPT_XMSSMT_SHA2_40_4_192,  0, 24, 40,  4, 10, 0, 0, 0, 0, 52,  5885, {0x0, 0x0, 0x0, 0x24}},
+    { CRYPT_XMSSMT_SHA2_40_8_192,  0, 24, 40,  8,  5, 0, 0, 0, 0, 52, 10781, {0x0, 0x0, 0x0, 0x25}},
+    { CRYPT_XMSSMT_SHA2_60_3_192,  0, 24, 60,  3, 20, 0, 0, 0, 0, 52,  5144, {0x0, 0x0, 0x0, 0x26}},
+    { CRYPT_XMSSMT_SHA2_60_6_192,  0, 24, 60,  6, 10, 0, 0, 0, 0, 52,  8816, {0x0, 0x0, 0x0, 0x27}},
+    { CRYPT_XMSSMT_SHA2_60_12_192, 0, 24, 60, 12,  5, 0, 0, 0, 0, 52, 16160, {0x0, 0x0, 0x0, 0x28}},
 
-    { CRYPT_XMSSMT_SHAKE256_20_2_192,  0, 24, 20,  2, 10, 0, 0, 0, 0, 52,  2955 },
-    { CRYPT_XMSSMT_SHAKE256_20_4_192,  0, 24, 20,  4,  5, 0, 0, 0, 0, 52,  5403 },
-    { CRYPT_XMSSMT_SHAKE256_40_2_192,  0, 24, 40,  2, 20, 0, 0, 0, 0, 52,  3437 },
-    { CRYPT_XMSSMT_SHAKE256_40_4_192,  0, 24, 40,  4, 10, 0, 0, 0, 0, 52,  5885 },
-    { CRYPT_XMSSMT_SHAKE256_40_8_192,  0, 24, 40,  8,  5, 0, 0, 0, 0, 52, 10781 },
-    { CRYPT_XMSSMT_SHAKE256_60_3_192,  0, 24, 60,  3, 20, 0, 0, 0, 0, 52,  5144 },
-    { CRYPT_XMSSMT_SHAKE256_60_6_192,  0, 24, 60,  6, 10, 0, 0, 0, 0, 52,  8816 },
-    { CRYPT_XMSSMT_SHAKE256_60_12_192, 0, 24, 60, 12,  5, 0, 0, 0, 0, 52, 16160 },
+    { CRYPT_XMSSMT_SHAKE256_20_2_256,  0, 32, 20,  2, 10, 0, 0, 0, 0, 68,  4963, {0x0, 0x0, 0x0, 0x29}},
+    { CRYPT_XMSSMT_SHAKE256_20_4_256,  0, 32, 20,  4,  5, 0, 0, 0, 0, 68,  9251, {0x0, 0x0, 0x0, 0x2a}},
+    { CRYPT_XMSSMT_SHAKE256_40_2_256,  0, 32, 40,  2, 20, 0, 0, 0, 0, 68,  5605, {0x0, 0x0, 0x0, 0x2b}},
+    { CRYPT_XMSSMT_SHAKE256_40_4_256,  0, 32, 40,  4, 10, 0, 0, 0, 0, 68,  9893, {0x0, 0x0, 0x0, 0x2c}},
+    { CRYPT_XMSSMT_SHAKE256_40_8_256,  0, 32, 40,  8,  5, 0, 0, 0, 0, 68, 18469, {0x0, 0x0, 0x0, 0x2d}},
+    { CRYPT_XMSSMT_SHAKE256_60_3_256,  0, 32, 60,  3, 20, 0, 0, 0, 0, 68,  8392, {0x0, 0x0, 0x0, 0x2e}},
+    { CRYPT_XMSSMT_SHAKE256_60_6_256,  0, 32, 60,  6, 10, 0, 0, 0, 0, 68, 14824, {0x0, 0x0, 0x0, 0x2f}},
+    { CRYPT_XMSSMT_SHAKE256_60_12_256, 0, 32, 60, 12,  5, 0, 0, 0, 0, 68, 27688, {0x0, 0x0, 0x0, 0x30}},
+
+    { CRYPT_XMSSMT_SHAKE256_20_2_192,  0, 24, 20,  2, 10, 0, 0, 0, 0, 52,  2955, {0x0, 0x0, 0x0, 0x31}},
+    { CRYPT_XMSSMT_SHAKE256_20_4_192,  0, 24, 20,  4,  5, 0, 0, 0, 0, 52,  5403, {0x0, 0x0, 0x0, 0x32}},
+    { CRYPT_XMSSMT_SHAKE256_40_2_192,  0, 24, 40,  2, 20, 0, 0, 0, 0, 52,  3437, {0x0, 0x0, 0x0, 0x33}},
+    { CRYPT_XMSSMT_SHAKE256_40_4_192,  0, 24, 40,  4, 10, 0, 0, 0, 0, 52,  5885, {0x0, 0x0, 0x0, 0x34}},
+    { CRYPT_XMSSMT_SHAKE256_40_8_192,  0, 24, 40,  8,  5, 0, 0, 0, 0, 52, 10781, {0x0, 0x0, 0x0, 0x35}},
+    { CRYPT_XMSSMT_SHAKE256_60_3_192,  0, 24, 60,  3, 20, 0, 0, 0, 0, 52,  5144, {0x0, 0x0, 0x0, 0x36}},
+    { CRYPT_XMSSMT_SHAKE256_60_6_192,  0, 24, 60,  6, 10, 0, 0, 0, 0, 52,  8816, {0x0, 0x0, 0x0, 0x37}},
+    { CRYPT_XMSSMT_SHAKE256_60_12_192, 0, 24, 60, 12,  5, 0, 0, 0, 0, 52, 16160, {0x0, 0x0, 0x0, 0x38}},
 };
 
 // “X” means xmss
@@ -477,9 +478,9 @@ int32_t CRYPT_XMSS_Verify(const CryptXmssCtx *ctx, int32_t algId, const uint8_t 
 
 static const XmssPara *FindXmssPara(CRYPT_PKEY_ParaId algId)
 {
-    for (uint32_t i = 0; i < sizeof(XmssParaTable)/sizeof(XmssParaTable[0]); i++) {
-        if ((CRYPT_PKEY_ParaId)XmssParaTable[i].algId == algId) {
-            return &XmssParaTable[i];
+    for (uint32_t i = 0; i < sizeof(g_xmssParaTable)/sizeof(g_xmssParaTable[0]); i++) {
+        if ((CRYPT_PKEY_ParaId)g_xmssParaTable[i].algId == algId) {
+            return &g_xmssParaTable[i];
         }
     }
     return NULL;
@@ -522,6 +523,91 @@ static int32_t XmssSetAlgId(CryptXmssCtx *ctx, CRYPT_PKEY_ParaId algId)
     return CRYPT_SUCCESS;
 }
 
+static inline uint32_t BigEndian2U32(const uint8_t in[4])
+{
+    return ((uint32_t)in[0] << 24)
+         | ((uint32_t)in[1] << 16)
+         | ((uint32_t)in[2] <<  8)
+         |  (uint32_t)in[3];
+}
+
+static int32_t XmssSetParaId(CryptXmssCtx *ctx, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    CRYPT_PKEY_ParaId algId = *(CRYPT_PKEY_ParaId *)val;
+    if (CheckNotXmssAlgId(algId)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_ALGID);
+        return CRYPT_XMSS_ERR_INVALID_ALGID;
+    }
+    return XmssSetAlgId(ctx, algId);
+}
+
+static int32_t XmssGetPubkeyLen(CryptXmssCtx *ctx, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(uint32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    *(uint32_t *)val = ctx->para.n * 2 + HASH_SIGN_XDR_ALG_TYPE_LEN;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t XmssGetSignatureLen(CryptXmssCtx *ctx, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(uint32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    *(uint32_t *)val = ctx->para.sigBytes;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t XmssGetParaId(CryptXmssCtx *ctx, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    *(int32_t *)val = (int32_t)ctx->para.algId;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t XmssGetXdrAlgBuff(CryptXmssCtx *ctx, void *val, uint32_t len)
+{
+    if (val == NULL || len < HASH_SIGN_XDR_ALG_TYPE_LEN) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    (void)memcpy_s(val, len, ctx->para.xdrAlgId, HASH_SIGN_XDR_ALG_TYPE_LEN);
+    return CRYPT_SUCCESS;
+}
+
+static int32_t XmssSetXdrAlgId(CryptXmssCtx *ctx, void *val, uint32_t len)
+{
+    if (val == NULL || len < HASH_SIGN_XDR_ALG_TYPE_LEN) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    uint32_t xdrId = BigEndian2U32(val);
+    if (xdrId == 0 || xdrId >= sizeof(g_xmssParaTable)/sizeof(g_xmssParaTable[0])) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_XDR_ID);
+        return CRYPT_XMSS_ERR_INVALID_XDR_ID;
+    }
+    const XmssPara *para = &g_xmssParaTable[xdrId - 1];
+    if (ctx->para.algId == 0) {
+        return XmssSetAlgId(ctx, para->algId);
+    } else {
+        if (ctx->para.algId != para->algId) {
+            BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_XDR_ID_UNMATCH);
+            return CRYPT_XMSS_ERR_XDR_ID_UNMATCH;
+        }
+    }
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_XMSS_Ctrl(CryptXmssCtx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -530,23 +616,17 @@ int32_t CRYPT_XMSS_Ctrl(CryptXmssCtx *ctx, int32_t opt, void *val, uint32_t len)
     }
     switch (opt) {
         case CRYPT_CTRL_SET_PARA_BY_ID:
-            if (val == NULL || len != sizeof(int32_t)) {
-                BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-                return CRYPT_INVALID_ARG;
-            }
-            CRYPT_PKEY_ParaId algId = *(CRYPT_PKEY_ParaId *)val;
-            if (CheckNotXmssAlgId(algId)) {
-                BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_ALGID);
-                return CRYPT_XMSS_ERR_INVALID_ALGID;
-            }
-            return XmssSetAlgId(ctx, algId);
-        case CRYPT_CTRL_GET_XMSS_KEY_LEN:
-            if (val == NULL || len != sizeof(uint32_t)) {
-                BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-                return CRYPT_INVALID_ARG;
-            }
-            *(uint32_t *)val = ctx->para.n;
-            return CRYPT_SUCCESS;
+            return XmssSetParaId(ctx, val, len);
+        case CRYPT_CTRL_GET_PARAID:
+            return XmssGetParaId(ctx, val, len);
+        case CRYPT_CTRL_GET_XMSS_XDR_ALG_TYPE:
+            return XmssGetXdrAlgBuff(ctx, val, len);
+        case CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE:
+            return XmssSetXdrAlgId(ctx, val, len);
+        case CRYPT_CTRL_GET_SIGNLEN:
+            return XmssGetSignatureLen(ctx, val, len);
+        case CRYPT_CTRL_GET_PUBKEY_LEN:
+            return XmssGetPubkeyLen(ctx, val, len);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
             return CRYPT_NOT_SUPPORT;
@@ -561,7 +641,12 @@ static int32_t XPubKeyParamCheck(const CryptXmssCtx *ctx, BSL_Param *para, XmssP
     }
     pub->pubSeed = BSL_PARAM_FindParam(para, CRYPT_PARAM_XMSS_PUB_SEED);
     pub->pubRoot = BSL_PARAM_FindParam(para, CRYPT_PARAM_XMSS_PUB_ROOT);
+    pub->pubXdr = BSL_PARAM_FindParam(para, CRYPT_PARAM_XMSS_XDR_TYPE);
     if (pub->pubSeed == NULL || pub->pubSeed->value == NULL || pub->pubRoot == NULL || pub->pubRoot->value == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (pub->pubXdr != NULL && (pub->pubXdr->value == NULL || pub->pubXdr->valueLen != HASH_SIGN_XDR_ALG_TYPE_LEN)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -576,10 +661,27 @@ int32_t CRYPT_XMSS_GetPubKey(const CryptXmssCtx *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    pub.pubSeed->useLen = pub.pubRoot->useLen = ctx->para.n;
-    (void)memcpy_s(pub.pubSeed->value, pub.pubSeed->valueLen, ctx->prvKey.pub.seed, ctx->para.n);
-    (void)memcpy_s(pub.pubRoot->value, pub.pubRoot->valueLen, ctx->prvKey.pub.root, ctx->para.n);
-
+    if (ctx->para.n == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
+        return CRYPT_XMSS_KEYINFO_NOT_SET;
+    }
+    if (pub.pubXdr != NULL) {
+        if (memcpy_s(pub.pubXdr->value, pub.pubXdr->valueLen, ctx->para.xdrAlgId, HASH_SIGN_XDR_ALG_TYPE_LEN) != 0) {
+            BSL_ERR_PUSH_ERROR(CRYPT_XMSS_LEN_NOT_ENOUGH);
+            return CRYPT_XMSS_LEN_NOT_ENOUGH;
+        }
+        pub.pubXdr->useLen = HASH_SIGN_XDR_ALG_TYPE_LEN;
+    }
+    if (memcpy_s(pub.pubSeed->value, pub.pubSeed->valueLen, ctx->prvKey.pub.seed, ctx->para.n) != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_LEN_NOT_ENOUGH);
+        return CRYPT_XMSS_LEN_NOT_ENOUGH;
+    }
+    pub.pubSeed->useLen = ctx->para.n;
+    if (memcpy_s(pub.pubRoot->value, pub.pubRoot->valueLen, ctx->prvKey.pub.root, ctx->para.n) != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_LEN_NOT_ENOUGH);
+        return CRYPT_XMSS_LEN_NOT_ENOUGH;
+    }
+    pub.pubRoot->useLen = ctx->para.n;
     return CRYPT_SUCCESS;
 }
 
@@ -638,6 +740,17 @@ int32_t CRYPT_XMSS_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    if (pub.pubXdr != NULL) {
+        ret = XmssSetXdrAlgId(ctx, pub.pubXdr->value, pub.pubXdr->valueLen);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    if (pub.pubSeed->valueLen != ctx->para.n || pub.pubRoot->valueLen != ctx->para.n) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_KEYLEN);
+        return CRYPT_XMSS_ERR_INVALID_KEYLEN;
+    }
     (void)memcpy_s(ctx->prvKey.pub.seed, MAX_MDSIZE, pub.pubSeed->value, pub.pubSeed->valueLen);
     (void)memcpy_s(ctx->prvKey.pub.root, MAX_MDSIZE, pub.pubRoot->value, pub.pubRoot->valueLen);
     return CRYPT_SUCCESS;
@@ -672,14 +785,89 @@ CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx)
         return NULL;
     }
     memcpy_s(newCtx, sizeof(CryptXmssCtx), ctx, sizeof(CryptXmssCtx));
-    if (ctx->addrand != NULL) {
-        newCtx->addrand = BSL_SAL_Calloc(1, ctx->addrandLen);
-        if (newCtx->addrand == NULL) {
-            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-            return NULL;
-        }
-        (void)memcpy_s(newCtx->addrand, ctx->addrandLen, ctx->addrand, ctx->addrandLen);
-    }
+    newCtx->addrand = NULL;
+    newCtx->addrandLen = 0;
+    newCtx->context = NULL;
+    newCtx->contextLen = 0;
     return newCtx;
 }
+
+#ifdef HITLS_CRYPTO_XMSS_CHECK
+
+static int32_t XMSSKeyPairCheck(const CryptXmssCtx *pubKey, const CryptXmssCtx *prvKey)
+{
+    if (pubKey == NULL || prvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (pubKey->para.algId == 0 || prvKey->para.algId == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
+        return CRYPT_XMSS_KEYINFO_NOT_SET;
+    }
+    if (pubKey->para.algId != prvKey->para.algId) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_PAIRWISE_CHECK_FAIL);
+        return CRYPT_XMSS_PAIRWISE_CHECK_FAIL;
+    }
+
+    uint32_t n = prvKey->para.n;
+    uint32_t d = prvKey->para.d;
+    uint32_t hp = prvKey->para.hp;
+
+    // Recalculate root from private key
+    XmssAdrs adrs;
+    (void)memset_s(&adrs, sizeof(XmssAdrs), 0, sizeof(XmssAdrs));
+    prvKey->adrsOps.setLayerAddr(&adrs, d - 1);
+    uint8_t node[MAX_MDSIZE] = {0};
+    int32_t ret = XmssNode(node, 0, hp, &adrs, prvKey, NULL, 0);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    // Compare recalculated root with public key root
+    if (memcmp(node, pubKey->prvKey.pub.root, n) != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_PAIRWISE_CHECK_FAIL);
+        return CRYPT_XMSS_PAIRWISE_CHECK_FAIL;
+    }
+    // Compare public seeds
+    if (memcmp(prvKey->prvKey.pub.seed, pubKey->prvKey.pub.seed, n) != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_PAIRWISE_CHECK_FAIL);
+        return CRYPT_XMSS_PAIRWISE_CHECK_FAIL;
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+static int32_t XMSSPrvKeyCheck(const CryptXmssCtx *prvKey)
+{
+    if (prvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (prvKey->para.algId == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
+        return CRYPT_XMSS_KEYINFO_NOT_SET;
+    }
+    if (prvKey->para.n == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_INVALID_PRVKEY);
+        return CRYPT_XMSS_INVALID_PRVKEY;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_XMSS_Check(uint32_t checkType, const CryptXmssCtx *pkey1, const CryptXmssCtx *pkey2)
+{
+    switch (checkType) {
+        case CRYPT_PKEY_CHECK_KEYPAIR:
+            return XMSSKeyPairCheck(pkey1, pkey2);
+        case CRYPT_PKEY_CHECK_PRVKEY:
+            return XMSSPrvKeyCheck(pkey1);
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+    }
+}
+
+#endif // HITLS_CRYPTO_XMSS_CHECK
+
 #endif // HITLS_CRYPTO_XMSS

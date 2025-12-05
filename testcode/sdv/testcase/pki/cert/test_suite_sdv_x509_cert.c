@@ -21,6 +21,10 @@
 #include "hitls_pki_cert.h"
 #include "hitls_pki_csr.h"
 #include "hitls_pki_errno.h"
+#include "crypt_errno.h"
+#include "crypt_eal_pkey.h"
+#include "hitls_pki_utils.h"
+#include "hitls_pki_types.h"
 #include "bsl_types.h"
 #include "bsl_log.h"
 #include "hitls_cert_local.h"
@@ -51,6 +55,29 @@ void SDV_X509_CERT_PARSE_FUNC_TC001(int format, char *path)
     HITLS_X509_Cert *cert = NULL;
     int32_t ret = HITLS_X509_CertParseFile(format, path, &cert);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_CertFree(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_PUBKEY_FUNC_TC002(int format, char *path, Hex *key)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    HITLS_X509_Cert *cert = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(format, path, &cert), HITLS_PKI_SUCCESS);
+    void *pkey = cert->tbs.ealPubKey;
+    uint8_t buf[68] = {0};
+    CRYPT_EAL_PkeyPub pubKey = {.id = CRYPT_PKEY_XMSS, .key.xmssPub = {.seed = buf + 4 + 32,
+        .root = buf + 4, .len = 32}};
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pubKey), HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("root", pubKey.key.xmssPub.root, 32, key->x + 4, (key->len - 4) / 2);
+    ASSERT_COMPARE("seed", pubKey.key.xmssPub.seed, 32, key->x + 36, (key->len - 4) / 2);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_XMSS_XDR_ALG_TYPE, buf, 4), HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("xdr", buf, 4, key->x, 4);
+
 EXIT:
     HITLS_X509_CertFree(cert);
     BSL_GLOBAL_DeInit();

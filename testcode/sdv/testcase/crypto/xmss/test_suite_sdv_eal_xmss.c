@@ -126,7 +126,7 @@ void SDV_CRYPTO_XMSS_GETSET_KEY_TC001(void)
     pub.key.xmssPub.seed = pubSeed;
     pub.key.xmssPub.root = pubRoot;
     pub.key.xmssPub.len = 16;
-    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pub), CRYPT_XMSS_ERR_INVALID_KEYLEN);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pub), CRYPT_XMSS_LEN_NOT_ENOUGH);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pub), CRYPT_XMSS_ERR_INVALID_KEYLEN);
 
     CRYPT_EAL_PkeyPrv prv;
@@ -205,10 +205,11 @@ void SDV_CRYPTO_XMSS_GENKEY_KAT_TC001(int id, Hex *key, Hex *root)
     int32_t algId = id;
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
     uint32_t keyLen = 0;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_XMSS_KEY_LEN, (void *)&keyLen, sizeof(keyLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_PUBKEY_LEN, (void *)&keyLen, sizeof(keyLen)), CRYPT_SUCCESS);
     RandInjectionInit();
-    uint8_t *stubRand[3] = {key->x, key->x + keyLen, key->x + keyLen * 2};
-    uint32_t stubRandLen[3] = {keyLen, keyLen, keyLen};
+    uint32_t hashLen = (keyLen - 4) / 2;
+    uint8_t *stubRand[3] = {key->x, key->x + hashLen, key->x + hashLen * 2};
+    uint32_t stubRandLen[3] = {hashLen, hashLen, hashLen};
     RandInjectionSet(stubRand, stubRandLen);
     CRYPT_RandRegist(RandInjection);
     CRYPT_RandRegistEx(RandInjectionEx);
@@ -222,10 +223,10 @@ void SDV_CRYPTO_XMSS_GENKEY_KAT_TC001(int id, Hex *key, Hex *root)
     pubOut.key.xmssPub.seed = pubSeed;
     pubOut.key.xmssPub.root = pubRoot;
 
-    pubOut.key.xmssPub.len = keyLen;
+    pubOut.key.xmssPub.len = hashLen;
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pubOut), CRYPT_SUCCESS);
-    ASSERT_EQ(memcmp(pubOut.key.xmssPub.seed, root->x, keyLen), 0);
-    ASSERT_EQ(memcmp(pubOut.key.xmssPub.root, root->x + keyLen, keyLen), 0);
+    ASSERT_EQ(memcmp(pubOut.key.xmssPub.seed, root->x, hashLen), 0);
+    ASSERT_EQ(memcmp(pubOut.key.xmssPub.root, root->x + hashLen, hashLen), 0);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -246,9 +247,9 @@ void SDV_CRYPTO_XMSS_SIGN_KAT_TC001(int id, int index, Hex *key, Hex *msg, Hex *
     ASSERT_TRUE(pkey != NULL);
     int32_t algId = id;
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
-    uint32_t keyLen = 0;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_XMSS_KEY_LEN, (void *)&keyLen, sizeof(keyLen)), CRYPT_SUCCESS);
-
+    uint32_t pubLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_PUBKEY_LEN, (void *)&pubLen, sizeof(pubLen)), CRYPT_SUCCESS);
+    uint32_t keyLen = (pubLen - 4) / 2;
     CRYPT_EAL_PkeyPrv prv;
     (void)memset_s(&prv, sizeof(CRYPT_EAL_PkeyPrv), 0, sizeof(CRYPT_EAL_PkeyPrv));
     prv.id = CRYPT_PKEY_XMSS;
@@ -283,9 +284,9 @@ void SDV_CRYPTO_XMSS_VERIFY_KAT_TC001(int id, Hex *key, Hex *msg, Hex *sig, int 
     ASSERT_TRUE(pkey != NULL);
     int32_t algId = id;
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, algId), CRYPT_SUCCESS);
-    uint32_t keyLen = 0;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_XMSS_KEY_LEN, (void *)&keyLen, sizeof(keyLen)), CRYPT_SUCCESS);
-
+    uint32_t pubLen = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_PUBKEY_LEN, (void *)&pubLen, sizeof(pubLen)), CRYPT_SUCCESS);
+    uint32_t keyLen = (pubLen - 4) / 2;
     CRYPT_EAL_PkeyPub pub;
     (void)memset_s(&pub, sizeof(CRYPT_EAL_PkeyPub), 0, sizeof(CRYPT_EAL_PkeyPub));
     pub.id = CRYPT_PKEY_XMSS;
