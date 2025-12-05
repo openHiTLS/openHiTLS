@@ -117,6 +117,7 @@ int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, uint32_t va
  * @param format         [IN] Decoding format: BSL_FORMAT_ASN.
  * @param encode         [IN] encode data
  *        BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM: the buff of encode needs to end with '\0'
+ *        the dataLen should exclude the end '\0'
  * @param pwdParam       [IN] include MAC-pwd, enc-pwd, they can be different.
  * @param p12            [OUT] the p12 struct.
  * @param needMacVerify  [IN] true, need verify mac; false, skip mac check.
@@ -137,6 +138,7 @@ int32_t HITLS_PKCS12_ParseBuff(int32_t format, const BSL_Buffer *encode, const H
  * @param format         [IN] Encoding format: "ASN1"
  * @param encode         [IN] encode data
  *        BSL_FORMAT_UNKNOWN/BSL_FORMAT_PEM: the buff of encode needs to end with '\0'
+ *        the dataLen should exclude the end '\0'
  * @param pwdParam       [IN] include MAC-pwd, enc-pwd, they can be different.
  * @param p12            [OUT] the p12 struct.
  * @param needMacVerify  [IN] true, need verify mac; false, skip mac check.
