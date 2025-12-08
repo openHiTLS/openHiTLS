@@ -523,3 +523,33 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/**
+ * @test UT_HITLS_APP_dgst_STDIN_TC001
+ * @spec  -
+ * @title  Read message to be signed from standard input
+ */
+/* BEGIN_CASE */
+void UT_HITLS_APP_dgst_STDIN_TC001(char *keyPath, char *md)
+{
+    ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);
+
+    /* Redirect stdin to message file, simulating:
+       cat message_file | ./hitls dgst -md <md> -sign <keyPath> -out <out> */
+    ASSERT_NE(freopen(PRV_PATH, "r", stdin), NULL);
+
+    /* dgst -md <md> -sign <keyPath> -out <OUT_FILE_PATH> */
+    char *argv[] = {"dgst", "-md", md, "-sign", keyPath, "-out", OUT_FILE_PATH, NULL};
+    int argc = 7;
+
+    int ret = HITLS_DgstMain(argc, argv);
+    ASSERT_EQ(ret, HITLS_APP_SUCCESS);
+
+EXIT:
+    (void)fflush(stdout);
+    /* Restore stdin to terminal to avoid affecting subsequent test cases */
+    (void)freopen("/dev/tty", "r", stdin);
+    AppUninit();
+    return;
+}
+/* END_CASE */

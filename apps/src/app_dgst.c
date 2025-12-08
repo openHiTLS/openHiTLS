@@ -33,7 +33,6 @@
 #include "app_keymgmt.h"
 #include "app_provider.h"
 
-#define MAX_BUFSIZE (1024 * 8)  // Indicates the length of a single digest during digest calculation.
 #define IS_SUPPORT_GET_EOF 1
 #define MAX_CERT_KEY_SIZE (256 * 1024)
 
@@ -146,6 +145,17 @@ static int32_t GetReadBuf(uint8_t **buf, uint64_t *bufLen, char *inFile, uint32_
         AppPrintError("dgst: Invalid parameters for GetReadBuf\n");
         return HITLS_APP_INVALID_ARG;
     }
+    if (inFile == NULL) {
+        BSL_Buffer data = {0};
+        int32_t ret = HITLS_APP_ReadData(NULL, NULL, "msg", &data);
+        if (ret != HITLS_APP_SUCCESS) {
+            AppPrintError("dgst: Failed to read the content from stdin\n");
+            return ret;
+        }
+        *buf = data.data;
+        *bufLen = data.dataLen;
+        return HITLS_APP_SUCCESS;
+    }
     BSL_UIO *readUio = HITLS_APP_UioOpen(inFile, 'r', 0);
     BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
     if (readUio == NULL) {
@@ -214,11 +224,13 @@ static int32_t CalculateSign(char *outfile, uint8_t *msgBuf, uint32_t msgBufLen)
 #ifdef HITLS_APP_SM_MODE
         }
 #endif
-        ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, g_signInfo.userid, strlen(g_signInfo.userid));
-        if (ret != CRYPT_SUCCESS) {
-            (void)AppPrintError("dgst: Failed to set the SM2 user ID, ret=%d\n", ret);
-            ret = HITLS_APP_CRYPTO_FAIL;
-            break;
+        if (CRYPT_EAL_PkeyGetId(ctx) == CRYPT_PKEY_SM2) {
+            ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, g_signInfo.userid, strlen(g_signInfo.userid));
+            if (ret != CRYPT_SUCCESS) {
+                (void)AppPrintError("dgst: Failed to set the SM2 user ID, ret=%d\n", ret);
+                ret = HITLS_APP_CRYPTO_FAIL;
+                break;
+            }
         }
 #ifdef HITLS_APP_SM_MODE
         if (g_signInfo.smParam->smTag == 1) {
@@ -326,11 +338,13 @@ static int32_t VerifySign(uint8_t *msgBuf, uint32_t msgBufLen)
             break;
         }
 
-        ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, g_signInfo.userid, strlen(g_signInfo.userid));
-        if (ret != CRYPT_SUCCESS) {
-            (void)AppPrintError("dgst: Failed to set the SM2 user ID, ret=%d\n", ret);
-            ret = HITLS_APP_CRYPTO_FAIL;
-            break;
+        if (CRYPT_EAL_PkeyGetId(ctx) == CRYPT_PKEY_SM2) {
+            ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, g_signInfo.userid, strlen(g_signInfo.userid));
+            if (ret != CRYPT_SUCCESS) {
+                (void)AppPrintError("dgst: Failed to set the SM2 user ID, ret=%d\n", ret);
+                ret = HITLS_APP_CRYPTO_FAIL;
+                break;
+            }
         }
 #ifdef HITLS_APP_SM_MODE
         if (g_signInfo.smParam->smTag == 1) {
@@ -438,12 +452,12 @@ static int32_t StdSumAndOut(CRYPT_EAL_MdCTX *ctx, const char *outfile)
         return HITLS_APP_UIO_FAIL;
     }
 
-    uint32_t readLen = MAX_BUFSIZE;
-    uint8_t readBuf[MAX_BUFSIZE] = {0};
+    uint32_t readLen = MAX_DIGEST_SIZE;
+    uint8_t readBuf[MAX_DIGEST_SIZE] = {0};
 
     bool isEof = false;
     while (BSL_UIO_Ctrl(readUio, BSL_UIO_FILE_GET_EOF, IS_SUPPORT_GET_EOF, &isEof) == BSL_SUCCESS && !isEof) {
-        if (BSL_UIO_Read(readUio, readBuf, MAX_BUFSIZE, &readLen) != BSL_SUCCESS) {
+        if (BSL_UIO_Read(readUio, readBuf, MAX_DIGEST_SIZE, &readLen) != BSL_SUCCESS) {
             BSL_UIO_Free(readUio);
             (void)AppPrintError("dgst: Failed to obtain the content from the STDIN\n");
             return HITLS_APP_STDIN_FAIL;
@@ -500,8 +514,8 @@ static int32_t ReadFileToBuf(CRYPT_EAL_MdCTX *ctx, const char *filename)
     }
 
     while (readFileLen > 0) {
-        uint8_t readBuf[MAX_BUFSIZE] = {0};
-        uint32_t bufLen = (readFileLen > MAX_BUFSIZE) ? MAX_BUFSIZE : (uint32_t)readFileLen;
+        uint8_t readBuf[MAX_DIGEST_SIZE] = {0};
+        uint32_t bufLen = (readFileLen > MAX_DIGEST_SIZE) ? MAX_DIGEST_SIZE : (uint32_t)readFileLen;
         uint32_t readLen = 0;
         readRet = BSL_UIO_Read(readUio, readBuf, bufLen, &readLen); // read content to memory
         if (readRet != BSL_SUCCESS || bufLen != readLen) {

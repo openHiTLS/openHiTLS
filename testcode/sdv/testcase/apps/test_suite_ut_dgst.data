@@ -37,3 +37,5 @@ UT_HITLS_APP_dgst_TC0012:
 UT_HITLS_APP_dgst_TC0013 test13
 UT_HITLS_APP_dgst_TC0013:
 
+UT_HITLS_APP_dgst_STDIN_TC001
+UT_HITLS_APP_dgst_STDIN_TC001:"../testdata/cert/asn1/pkcs8_unencrypted/mldsa_44_p8_unencrypted.pem":"sha256"

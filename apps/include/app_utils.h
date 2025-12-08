@@ -24,6 +24,7 @@
 #include "app_provider.h"
 #include "app_sm.h"
 #include "hitls_csr_local.h"
+#include "bsl_pem_internal.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,6 +38,8 @@ extern "C" {
 
 #define DEFAULT_SALTLEN 16
 #define DEFAULT_ITCNT 2048
+
+#define MAX_DIGEST_SIZE (1024 * 8)  // Indicates the length of a single digest during digest calculation.
 
 void *ExpandingMem(void *oldPtr, size_t newSize, size_t oldSize);
 
@@ -236,6 +239,8 @@ int32_t HITLS_APP_HexToByte(const char *hex, uint8_t **bin, uint32_t *len);
 CRYPT_EAL_PkeyCtx *HITLS_APP_GenRsaPkeyCtx(uint32_t bits);
 
 int32_t HITLS_APP_StrToHex(const char *str, uint8_t *hex, uint32_t *hexLen);
+
+int32_t HITLS_APP_ReadData(const char *path, BSL_PEM_Symbol *symbol, char *fileName, BSL_Buffer *data);
 
 typedef struct {
     int32_t randAlgId;

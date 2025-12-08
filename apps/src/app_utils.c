@@ -89,8 +89,6 @@ typedef struct defaultPassCBData {
     uint32_t minLen;
 } APP_DefaultPassCBData;
 
-static int32_t ReadData(const char *path, BSL_PEM_Symbol *symbol, char *fileName, BSL_Buffer *data);
-
 void *ExpandingMem(void *oldPtr, size_t newSize, size_t oldSize)
 {
     if (newSize <= 0) {
@@ -231,7 +229,7 @@ static int32_t ReadPemKeyFile(const char *inFilePath, uint8_t **inData, uint32_t
     bool isParseHeader = false;
     BSL_Buffer dataBuff = {0};
     BSL_PEM_Symbol symbol = {PEM_BEGIN_STR, PEM_END_STR};
-    int32_t ret = ReadData(inFilePath, &symbol, "key", &dataBuff);
+    int32_t ret = HITLS_APP_ReadData(inFilePath, &symbol, "key", &dataBuff);
     if (ret != HITLS_APP_SUCCESS) {
         return ret;
     }
@@ -743,6 +741,30 @@ static int32_t ReadPemByUioSymbol(BSL_UIO *memUio, BSL_UIO *rUio, BSL_PEM_Symbol
     return ret;
 }
 
+static int32_t ReadBlockFromStdin(BSL_UIO *memUio, BSL_UIO *rUio)
+{
+    int32_t ret = HITLS_APP_UIO_FAIL;
+    uint8_t buf[MAX_DIGEST_SIZE] = {0};
+    uint32_t readLen;
+    uint32_t writeLen;
+
+    while (true) {
+        readLen = MAX_DIGEST_SIZE;
+        if (BSL_UIO_Read(rUio, buf, MAX_DIGEST_SIZE, &readLen) != BSL_SUCCESS) {
+            break;
+        }
+        if (readLen == 0) {
+            /* EOF */
+            ret = HITLS_APP_SUCCESS;
+            break;
+        }
+        if (BSL_UIO_Write(memUio, buf, readLen, &writeLen) != BSL_SUCCESS || writeLen != readLen) {
+            break;
+        }
+    }
+    return ret;
+}
+
 static int32_t ReadPemFromStdin(BSL_BufMem **data, BSL_PEM_Symbol *symbol)
 {
     int32_t ret = HITLS_APP_UIO_FAIL;
@@ -759,7 +781,11 @@ static int32_t ReadPemFromStdin(BSL_BufMem **data, BSL_PEM_Symbol *symbol)
     }
     BSL_UIO_SetIsUnderlyingClosedByUio(rUio, true);
 
-    ret = ReadPemByUioSymbol(memUio, rUio, symbol);
+    if (symbol == NULL || symbol->head == NULL || symbol->tail == NULL) {
+        ret = ReadBlockFromStdin(memUio, rUio);
+    } else {
+        ret = ReadPemByUioSymbol(memUio, rUio, symbol);
+    }
     BSL_UIO_Free(rUio);
     if (ret == HITLS_APP_SUCCESS) {
         if (BSL_UIO_Ctrl(memUio, BSL_UIO_MEM_GET_PTR, sizeof(BSL_BufMem *), data) == BSL_SUCCESS) {
@@ -787,8 +813,11 @@ static int32_t ReadFileData(const char *path, BSL_Buffer *data)
     return ret;
 }
 
-static int32_t ReadData(const char *path, BSL_PEM_Symbol *symbol, char *fileName, BSL_Buffer *data)
+int32_t HITLS_APP_ReadData(const char *path, BSL_PEM_Symbol *symbol, char *fileName, BSL_Buffer *data)
 {
+    if (data == NULL || fileName == NULL) {
+        return HITLS_APP_INVALID_ARG;
+    }
     if (path == NULL) {
         BSL_BufMem *buf = NULL;
         if (ReadPemFromStdin(&buf, symbol) != HITLS_APP_SUCCESS) {
@@ -816,7 +845,7 @@ HITLS_X509_Cert *HITLS_APP_LoadCert(const char *inPath, BSL_ParseFormat inform)
     }
     BSL_Buffer data = { 0 };
     BSL_PEM_Symbol symbol = { BSL_PEM_CERT_BEGIN_STR, BSL_PEM_CERT_END_STR };
-    int32_t ret = ReadData(inPath, &symbol, "cert", &data);
+    int32_t ret = HITLS_APP_ReadData(inPath, &symbol, "cert", &data);
     if (ret != HITLS_APP_SUCCESS) {
         return NULL;
     }
@@ -844,7 +873,7 @@ HITLS_X509_Csr *HITLS_APP_LoadCsr(const char *inPath, BSL_ParseFormat inform)
 
     BSL_Buffer data = { 0 };
     BSL_PEM_Symbol symbol = { BSL_PEM_CERT_REQ_BEGIN_STR, BSL_PEM_CERT_REQ_END_STR };
-    int32_t ret = ReadData(inPath, &symbol, "csr", &data);
+    int32_t ret = HITLS_APP_ReadData(inPath, &symbol, "csr", &data);
     if (ret != HITLS_APP_SUCCESS) {
         return NULL;
     }
