@@ -257,7 +257,7 @@ ERR:
     return ret;
 }
 
-#if defined(HITLS_CRYPTO_RSA_CHECK)
+#if defined(HITLS_CRYPTO_PAILLIER) || defined(HITLS_CRYPTO_RSA_CHECK)
 
 int32_t BN_Lcm(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_Optimizer *opt)
 {

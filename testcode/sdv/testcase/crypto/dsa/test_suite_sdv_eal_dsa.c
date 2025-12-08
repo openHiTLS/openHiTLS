@@ -1088,6 +1088,7 @@ void SDV_CRYPTO_DSA_KEY_PAIR_GEN_BY_PARAM_FUNC_TC001(int flag, int gIndex, int i
 #ifndef HITLS_CRYPTO_DSA_GEN_PARA
     (void)flag;
     (void)gIndex;
+    (void)isProvider;
     SKIP_TEST();
 #else
     int32_t algId = CRYPT_MD_SHA256;

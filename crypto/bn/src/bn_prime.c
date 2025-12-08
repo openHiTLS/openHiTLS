@@ -109,7 +109,7 @@ static const uint8_t PRIME_DIFF_TABLE[1024] = {
 static uint32_t DivisorsCnt(uint32_t bits)
 {
     if (bits <= 1024) { /* 1024bit */
-        return 128; /* 128 times check */
+        return 512; /* 512 times check */
     }
     return 1024; /* 1024 times check */
 }

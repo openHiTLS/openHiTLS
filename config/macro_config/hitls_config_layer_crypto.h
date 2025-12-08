@@ -577,7 +577,7 @@
     #endif
 #endif
 
-#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_ELGAMAL)
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_ELGAMAL) || defined(HITLS_CRYPTO_PAILLIER)
     #ifndef HITLS_CRYPTO_BN_RAND
         #define HITLS_CRYPTO_BN_RAND
     #endif
