@@ -68,18 +68,6 @@ static void FreeSanListData(void *data)
     }
 }
 
-static int32_t g_mallocFail_index = 0;
-static int32_t g_malloc_index = 0;
-
-static void *STUB_BSL_SAL_Malloc(uint32_t size)
-{
-    if (g_malloc_index == g_mallocFail_index) {
-        return NULL;
-    }
-    g_malloc_index++;
-    return malloc(size);
-}
-
 static int32_t STUB_BSL_LIST_AddElement(BslList *pList, void *pData, BslListPosition enPosition)
 {
     (void)pList;
@@ -472,8 +460,8 @@ void SDV_X509_EXT_Set_Api_TC001(void)
     ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
     ASSERT_TRUE_AND_LOG("ext != NULL 1", ext != NULL);
     STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
-    g_malloc_index = 1;
-    g_mallocFail_index = 1;
+    STUB_ResetMallocCount();
+    STUB_SetMallocFailIndex(0);
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), BSL_MALLOC_FAIL);
     STUB_RESTORE(BSL_SAL_Malloc);
     HITLS_X509_ExtFree(ext);
@@ -482,8 +470,8 @@ void SDV_X509_EXT_Set_Api_TC001(void)
     ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
     ASSERT_TRUE_AND_LOG("ext != NULL 2", ext != NULL);
     STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
-    g_malloc_index = 1;
-    g_mallocFail_index = 2;
+    STUB_ResetMallocCount();
+    STUB_SetMallocFailIndex(1);
     ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), BSL_DUMP_FAIL);
     STUB_RESTORE(BSL_SAL_Malloc);
     HITLS_X509_ExtFree(ext);

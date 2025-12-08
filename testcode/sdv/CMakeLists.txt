@@ -21,6 +21,7 @@ set(TEST_SOURCE
     ${openHiTLS_SRC}/testcode/framework/gen_test/test.c
     ${openHiTLS_SRC}/testcode/framework/crypto/alg_check.c
     ${openHiTLS_SRC}/testcode/framework/crypto/crypto_test_util.c
+    ${openHiTLS_SRC}/testcode/framework/common/test_util.c
 )
 
 add_library(TEST_INTF INTERFACE)

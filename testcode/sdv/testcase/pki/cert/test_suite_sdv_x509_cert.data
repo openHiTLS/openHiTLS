@@ -3426,7 +3426,7 @@ SDV_X509_CERT_GET_BCONS_TEST_TC002 v1 cert
 SDV_X509_CERT_GET_BCONS_TEST_TC002:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/ca.v1.der"
 
 SDV_X509_CERT_PARSE_STUB_TC001 v1 cert
-SDV_X509_CERT_PARSE_STUB_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/ca.v1.der":233
+SDV_X509_CERT_PARSE_STUB_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ecdsa_cert/ca.v1.der"
 # SLH-DSA Certificate Signature Parsing Tests
 
 

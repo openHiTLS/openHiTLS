@@ -1353,44 +1353,44 @@ EXIT:
 }
 /* END_CASE */
 
-#ifdef HITLS_CRYPTO_PROVIDER
-static int32_t test = 0;
-static int32_t marked = 0;
-static void *STUB_BSL_SAL_Malloc(uint32_t size)
-{
-    if (marked <= test) {
-        marked++;
-        return malloc(size);
-    }
-    return NULL;
-}
-#endif
-
 /**
  * @test SDV_X509_CSR_PARSE_STUB_TC001
- * title 1. Test the encode crl with stub malloc fail
+ * title 1. Test the decode csr with stub malloc fail (adaptive)
  *
  */
 /* BEGIN_CASE */
-void SDV_X509_CSR_PARSE_STUB_TC001(int format, char *path, int maxTriggers)
+void SDV_X509_CSR_PARSE_STUB_TC001(int format, char *path)
 {
 #ifndef HITLS_CRYPTO_PROVIDER
     (void)format;
     (void)path;
-    (void)maxTriggers;
     SKIP_TEST();
 #else
     TestMemInit();
     HITLS_X509_Csr *csr = NULL;
-    test = maxTriggers;
-    marked = 0;
+    uint32_t totalMallocCount = 0;
+
     STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
-    for (int i = maxTriggers; i > 0; i--) {
-        marked = 0;
-        test--;
+
+    /* Phase 1: Probe - count malloc calls during successful execution */
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), CRYPT_SUCCESS);
+    totalMallocCount = STUB_GetMallocCallCount();
+    HITLS_X509_CsrFree(csr);
+    csr = NULL;
+
+    /* Phase 2: Test - iteratively fail each malloc */
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
         ASSERT_NE(HITLS_X509_CsrParseFile(format, path, &csr), CRYPT_SUCCESS);
+        csr = NULL;
     }
+
 EXIT:
+    HITLS_X509_CsrFree(csr);
     STUB_RESTORE(BSL_SAL_Malloc);
 #endif
 }

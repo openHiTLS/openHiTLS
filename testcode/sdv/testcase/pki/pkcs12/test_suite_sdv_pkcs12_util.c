@@ -494,30 +494,23 @@ EXIT:
 }
 /* END_CASE */
 
-#if (defined(HITLS_PKI_PKCS12_GEN) || defined(HITLS_PKI_PKCS12_PARSE)) && defined(HITLS_CRYPTO_PROVIDER)
-static int32_t test = 0;
-static int32_t marked = 0;
-static void *STUB_BSL_SAL_Malloc(uint32_t size)
-{
-    if (marked <= test) {
-        marked++;
-        return malloc(size);
-    }
-    return NULL;
-}
-#endif
 /**
  * @test SDV_PKCS12_PARSE_STUB_TC001
- * title 1. Test the parse p12 with stub malloc fail
- *
+ * title 1. Test the parse p12 with stub malloc fail (adaptive)
+ * preCondition NA
+ * @brief
+ *   1. Probe phase: Run once successfully to count total malloc calls
+ *   2. Test phase: Iteratively fail each malloc and verify proper error handling
+ * @expect
+ *   1. Probe phase succeeds and counts n malloc calls
+ *   2. Each malloc failure is handled correctly without memory leaks
  */
 /* BEGIN_CASE */
-void SDV_PKCS12_PARSE_STUB_TC001(Hex *mulBag, int hasMac, int maxTriggers)
+void SDV_PKCS12_PARSE_STUB_TC001(Hex *mulBag, int hasMac)
 {
 #if !defined(HITLS_PKI_PKCS12_PARSE) || !defined(HITLS_CRYPTO_PROVIDER)
     (void)mulBag;
     (void)hasMac;
-    (void)maxTriggers;
     SKIP_TEST();
 #else
     char *pwd = "123456";
@@ -525,32 +518,44 @@ void SDV_PKCS12_PARSE_STUB_TC001(Hex *mulBag, int hasMac, int maxTriggers)
     HITLS_PKCS12_PwdParam pwdParam = {.encPwd = &encPwd, .macPwd = &encPwd};
     HITLS_PKCS12 *p12 = NULL;
     BSL_Buffer buffer = {.data = (uint8_t *)mulBag->x, .dataLen = mulBag->len};
-    test = maxTriggers;
-    marked = 0;
+    uint32_t totalMallocCount = 0;
+
     STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
-    for (int i = maxTriggers; i > 0; i--) {
-        marked = 0;
-        test--;
+
+    /* Phase 1: Probe - count malloc calls during successful execution */
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &buffer, &pwdParam, &p12, hasMac == 1), HITLS_PKI_SUCCESS);
+    totalMallocCount = STUB_GetMallocCallCount();
+    HITLS_PKCS12_Free(p12);
+    p12 = NULL;
+
+    /* Phase 2: Test - iteratively fail each malloc */
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
         ASSERT_NE(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &buffer, &pwdParam, &p12, hasMac == 1), HITLS_PKI_SUCCESS);
+        p12 = NULL;
     }
 EXIT:
     STUB_RESTORE(BSL_SAL_Malloc);
+    HITLS_PKCS12_Free(p12);
 #endif
 }
 /* END_CASE */
 
 /**
  * @test SDV_PKCS12_ENCODE_STUB_TC001
- * title 1. Test the encode p12 with stub malloc fail
+ * title 1. Test the encode p12 with stub malloc fail (adaptive)
  *
  */
 /* BEGIN_CASE */
-void SDV_PKCS12_ENCODE_STUB_TC001(Hex *mulBag, int hasMac, int maxTriggers)
+void SDV_PKCS12_ENCODE_STUB_TC001(Hex *mulBag, int hasMac)
 {
 #if !defined(HITLS_PKI_PKCS12_PARSE) || !defined(HITLS_CRYPTO_PROVIDER)
     (void)mulBag;
     (void)hasMac;
-    (void)maxTriggers;
     SKIP_TEST();
 #else
     ASSERT_EQ(TestRandInit(), 0);
@@ -567,13 +572,25 @@ void SDV_PKCS12_ENCODE_STUB_TC001(Hex *mulBag, int hasMac, int maxTriggers)
     HITLS_PKCS12_MacParam paramTest = {.para = &macParam, .algId = BSL_CID_PKCS12KDF};
     HITLS_PKCS12_EncodeParam encodeParam = {encParam, paramTest};
     BSL_Buffer output = {0};
+    uint32_t totalMallocCount = 0;
+
     ASSERT_EQ(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &buffer, &pwdParam, &p12, hasMac == 1), 0);
+
     STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
-    test = maxTriggers;
-    marked = 0;
-    for (int i = maxTriggers; i > 0; i--) {
-        marked = 0;
-        test--;
+
+    /* Phase 1: Probe - run once successfully to count malloc calls */
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output), HITLS_PKI_SUCCESS);
+    totalMallocCount = STUB_GetMallocCallCount();
+    BSL_SAL_Free(output.data);
+    output.data = NULL;
+
+    /* Phase 2: Test - iteratively fail each malloc */
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
         ASSERT_NE(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output), HITLS_PKI_SUCCESS);
     }
 EXIT:
