@@ -47,7 +47,6 @@ STUB_DEFINE_RET3(int32_t, BN_RandRangeEx, void *, BN_BigNum *, const BN_BigNum *
 #define PUBKEY_MAX_LEN 133  // 521(The public key length of the longest curve.) * 2 + 1 1043
 #define PRVKEY_MAX_LEN 65
 #define ECC_MAX_BIT_LEN 521
-#define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
 static uint8_t gkRandBuf[80];
 static uint32_t gkRandBufLen = 0;
 
@@ -202,7 +201,7 @@ static int Ecc_GenKey(
     TestMemInit();
 
     /* Create a key structure. */
-    pkey = TestPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    pkey = TestPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, eccId), CRYPT_SUCCESS);
@@ -493,7 +492,7 @@ int EAL_PkeyGetPrv_Provider_Api_TC001(int algId, Hex *prvKey)
     TestMemInit();
 
     /* Create a key structure. */
-    ctx = TestPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", true);
+    ctx = TestPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", true);
     ASSERT_TRUE_AND_LOG("NewCtx", ctx != NULL);
     ASSERT_TRUE_AND_LOG("SetParaById", CRYPT_EAL_PkeySetParaById(ctx, CRYPT_ECC_NISTP224) == CRYPT_SUCCESS);
 
@@ -569,7 +568,7 @@ int EAL_PkeyGetPub_Provider_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
     TestMemInit();
 
     /* Create a key structure. */
-    ctx = TestPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", true);
+    ctx = TestPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", true);
     ASSERT_TRUE_AND_LOG("NewCtx", ctx != NULL);
     ASSERT_TRUE_AND_LOG("SetParaById", CRYPT_EAL_PkeySetParaById(ctx, CRYPT_ECC_NISTP224) == CRYPT_SUCCESS);
 
@@ -745,7 +744,7 @@ int EAL_PkeySetPub_Api_TC003(int algId, int eccId, Hex *pubKey, Hex *errorPubKey
 
     TestMemInit();
     /* Create a key structure. */
-    pkey = TestPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    pkey = TestPkeyNewCtx(NULL, algId, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE_AND_LOG("NewCtx", pkey != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(pkey, eccId) == CRYPT_SUCCESS);
 
@@ -856,9 +855,9 @@ int EAL_PkeyCmp_Provider_Api_TC001(int algId, Hex *pubKeyX, Hex *pubKeyY)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     CRYPT_EAL_PkeyCtx *ctx1 = TestPkeyNewCtx(NULL, algId,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", true);
+         CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", true);
     CRYPT_EAL_PkeyCtx *ctx2 = TestPkeyNewCtx(NULL, algId,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", true);
+         CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", true);
     ASSERT_TRUE(ctx1 != NULL && ctx2 != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx1, ctx2), CRYPT_ECC_KEY_PUBKEY_NOT_EQUAL);

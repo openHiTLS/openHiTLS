@@ -511,7 +511,7 @@ void SDV_CRYPTO_ECDH_DUP_CTX_API_TC001(int paraId, int isProvider)
     CRYPT_EAL_PkeyCtx *pKeyCtx = NULL;
     CRYPT_EAL_PkeyCtx *newCtx = NULL;
 
-    pKeyCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    pKeyCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pKeyCtx != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(pKeyCtx, (CRYPT_PKEY_ParaId)paraId) == CRYPT_SUCCESS);
 
@@ -609,7 +609,7 @@ void SDV_CRYPTO_ECDH_EXCH_FUNC_TC001(
     }
 
     ecdhPkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
+         CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
     peerEcdhPubPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
     ASSERT_TRUE(ecdhPkey != NULL && peerEcdhPubPkey != NULL);
 
@@ -714,7 +714,7 @@ void SDV_CRYPTO_ECDH_GEN_KEY_FUNC_TC001(
 void SDV_CRYPTO_ECDH_GET_KEY_BITS_FUNC_TC001(int paraid, int keyBits, int isProvider)
 {
     CRYPT_EAL_PkeyCtx *pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+         CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraid), CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetKeyBits(pkey) == (uint32_t)keyBits);
@@ -768,11 +768,11 @@ void SDV_CRYPTO_ECDH_CHECK_KEYPAIR_FUNC_TC001(int paraid, int isProvider)
     KeyData pubKeyVector = {{0}, KEY_MAX_LEN};
     KeyData prvKeyVector = {{0}, KEY_MAX_LEN};
     CRYPT_EAL_PkeyCtx *pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+         CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     CRYPT_EAL_PkeyCtx *pubCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+         CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     CRYPT_EAL_PkeyCtx *prvCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+         CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     ASSERT_TRUE(pubCtx != NULL);
     ASSERT_TRUE(prvCtx != NULL);
@@ -834,9 +834,9 @@ void SDV_CRYPTO_ECDH_CHECK_PRVKEY_FUNC_TC001(int paraid, int isProvider)
 
     KeyData prvKeyVector = {{0}, KEY_MAX_LEN};
     CRYPT_EAL_PkeyCtx *pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+         CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     CRYPT_EAL_PkeyCtx *prvCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDH,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+         CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     ASSERT_TRUE(prvCtx != NULL);
     if (isProvider) {

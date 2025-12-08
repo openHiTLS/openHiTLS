@@ -40,12 +40,6 @@
  * ============================================================================ */
 STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 
-
-#define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
-#define CRYPT_EAL_PKEY_CIPHER_OPERATE  1
-#define CRYPT_EAL_PKEY_EXCH_OPERATE    2
-#define CRYPT_EAL_PKEY_SIGN_OPERATE    4
-
 void *malloc_fail(uint32_t size)
 {
     (void)size;
@@ -116,7 +110,7 @@ void SDV_CRYPTO_ELGAMAL_NEW_API_TC001(int isProvider)
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     /* Run 100 times */
     for (int i = 0; i < 100; i++) {
-        pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+        pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
 
         ASSERT_TRUE(pkey != NULL);
 
@@ -147,7 +141,7 @@ void SDV_CRYPTO_ELGAMAL_NEW_API_TC002(int isProvider)
 
     TestMemInit();
 
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey == NULL);
 
 EXIT:
@@ -182,7 +176,7 @@ void SDV_CRYPTO_ELGAMAL_SET_PARA_API_TC001(Hex *q,int k_bits, int bits, int isPr
 
     TestMemInit();
 
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, NULL), CRYPT_NULL_INPUT);
 
@@ -225,7 +219,7 @@ void SDV_CRYPTO_ELGAMAL_GEN_API_TC001( Hex *q,int k_bits, int bits, int isProvid
 
     TestMemInit();
     CRYPT_EAL_PkeyCtx *pkey;
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
@@ -279,7 +273,7 @@ void SDV_CRYPTO_ELGAMAL_GET_PUB_API_TC001( Hex *q, int k_bits, int bits, int isP
         ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     }
 
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
 
     ASSERT_TRUE(pkey != NULL);
     /* Missing public key */
@@ -369,7 +363,7 @@ void SDV_CRYPTO_ELGAMAL_GET_PRV_API_TC001(Hex *q, int k_bits,int bits, int isPro
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
     /* Missing private key */
@@ -437,8 +431,8 @@ void SDV_CRYPTO_ELGAMAL_SET_PRV_API_TC001(Hex *q,int k_bits, int bits, int isPro
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
-    pkey2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
+    pkey2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL && pkey2 != NULL);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
@@ -534,8 +528,8 @@ void SDV_CRYPTO_ELGAMAL_SET_PUB_API_TC001( Hex *q,int k_bits, int bits, int isPr
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
 
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
-    pkey2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
+    pkey2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL && pkey2 != NULL);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
@@ -622,10 +616,9 @@ void SDV_CRYPTO_ELGAMAL_ENC_API_TC001(Hex *q,Hex *p, Hex *g, Hex *y, Hex *in, in
         ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     }
 
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_CIPHER_OPERATE,
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_CIPHER_OPERATE,
         "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
-    
 
     ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pkey, in->x, in->len, crypt, &cryptLen), CRYPT_ELGAMAL_NO_KEY_INFO);
     
@@ -687,7 +680,7 @@ void SDV_CRYPTO_ELGAMAL_DEC_API_TC001(Hex *p, Hex *g ,Hex *x,  Hex *in, int isPr
 
     TestMemInit();
 
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE  + CRYPT_EAL_PKEY_CIPHER_OPERATE,
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_CIPHER_OPERATE,
         "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
@@ -786,9 +779,9 @@ void SDV_CRYPTO_ELGAMAL_SET_KEY_API_TC001( Hex *q, int k_bits, int bits, int isP
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);
 
-    CRYPT_EAL_PkeyCtx *pkey1 = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE,
+    CRYPT_EAL_PkeyCtx *pkey1 = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
         "provider=default", isProvider);
-    CRYPT_EAL_PkeyCtx *pkey2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE,
+    CRYPT_EAL_PkeyCtx *pkey2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
         "provider=default", isProvider);
     ASSERT_TRUE(pkey1 != NULL && pkey2 != NULL);
 
@@ -856,7 +849,7 @@ void SDV_CRYPTO_ELGAMAL_DUP_CTX_API_TC001( Hex *q,int k_bits, int bits, int isPr
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);
 
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), 0);
@@ -907,7 +900,7 @@ void SDV_CRYPTO_ELGAMAL_GET_SECURITY_BITS_FUNC_TC001(Hex *q,Hex *p, Hex *g, Hex 
 
     TestMemInit();
 
-    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pubkey), CRYPT_SUCCESS);
 

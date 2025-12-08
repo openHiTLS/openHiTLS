@@ -27,8 +27,6 @@ STUB_DEFINE_RET6(int32_t, CRYPT_Mgf1, void *, const EAL_MdMethod *, const uint8_
 STUB_DEFINE_RET5(int32_t, CRYPT_RSA_PrvDec, const CRYPT_RSA_Ctx *, const uint8_t *, uint32_t , uint8_t *, uint32_t *);
 STUB_DEFINE_RET3(int32_t, CRYPT_RandEx, void *, uint8_t *, uint32_t );
 
-#define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
-
 static bool NeedPadSkip(int padMode)
 {
     switch (padMode) {
@@ -121,7 +119,7 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC001(
     TestMemInit();
 
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+        CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
 #ifdef HITLS_CRYPTO_DRBG
@@ -205,7 +203,7 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC002(Hex *n, Hex *e, Hex *d, Hex *plaintext, int
     SetRsaPubKey(&pubkey, n->x, n->len, e->x, e->len);
 
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+        CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
 #ifdef HITLS_CRYPTO_DRBG
@@ -283,7 +281,7 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC003(Hex *n, Hex *e, Hex *d, Hex *plaintext, Hex
     TestMemInit();
 
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+        CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
 #ifdef HITLS_CRYPTO_DRBG
@@ -303,7 +301,7 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC003(Hex *n, Hex *e, Hex *d, Hex *plaintext, Hex
 
     /* HiTLS copy ctx, pubenc, prvdec */
     cpyCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+        CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(cpyCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx, pkey), CRYPT_SUCCESS);
 
@@ -360,7 +358,7 @@ void SDV_CRYPTO_RSA_CRYPT_FUNC_TC004(int bits, Hex *in, int isProvider)
     SetRsaPara(&para, e, 3, bits);
 
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+        CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
 #ifdef HITLS_CRYPTO_DRBG
@@ -600,7 +598,7 @@ void SDV_CRYPTO_RSA_INVLAID_DECRYPT_TEST(Hex *n, Hex *e, Hex *d, Hex *plaintext,
     SetRsaPubKey(&pubkey, n->x, n->len, e->x, e->len);
 
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
-        CRYPT_EAL_PKEY_KEYMGMT_OPERATE + CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+        CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey, &pubkey) == CRYPT_SUCCESS);
