@@ -553,7 +553,7 @@ ERR:
 int32_t CRYPT_SM2_SignData(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen)
 {
-    int32_t ret = CRYPT_SUCCESS;
+    int32_t ret = CRYPT_MEM_ALLOC_FAIL;
     RETURN_RET_IF((ctx == NULL || sign == NULL || signLen == NULL || ((data == NULL) && (dataLen != 0))),
         CRYPT_NULL_INPUT);
 
@@ -706,7 +706,7 @@ ERR:
 int32_t CRYPT_SM2_VerifyData(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen)
 {
-    int32_t ret = CRYPT_SUCCESS;
+    int32_t ret = CRYPT_MEM_ALLOC_FAIL;
     RETURN_RET_IF(((ctx == NULL) || ((data == NULL) && (dataLen != 0)) || (sign == NULL) || (signLen == 0)),
         CRYPT_NULL_INPUT);
     RETURN_RET_IF((ctx->pkey == NULL || ctx->pkey->pubkey == NULL), CRYPT_SM2_NO_PUBKEY);
