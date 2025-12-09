@@ -15,18 +15,19 @@
 
 #include "test.h"
 
-static uint32_t g_malloc_called_idx = 0;
-static uint32_t g_malloc_failed_idx = 0;
-static bool g_malloc_fail_enabled = true;
+static volatile uint32_t g_malloc_called_idx = 0;
+static volatile uint32_t g_malloc_failed_idx = 0;
+static volatile bool g_malloc_fail_enabled = true;
 
 void *STUB_BSL_SAL_Malloc(uint32_t size)
 {
-    if (g_malloc_fail_enabled && g_malloc_called_idx++ == g_malloc_failed_idx) {
+    uint32_t current_call_index = g_malloc_called_idx;
+    g_malloc_called_idx = current_call_index + 1;
+
+    if (g_malloc_fail_enabled && current_call_index == g_malloc_failed_idx) {
         return NULL;
     }
-    if (!g_malloc_fail_enabled) {
-        g_malloc_called_idx++;
-    }
+
     return malloc(size);
 }
 
