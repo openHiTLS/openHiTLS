@@ -4321,3 +4321,47 @@ EXIT:
     HITLS_X509_CertFree(loopLeaf);
 }
 /* END_CASE */
+
+/**
+ * @brief Test HITLS_X509_CertVerifyByPubKey:
+ *        - Use issuer certificate's public key to verify end-entity certificate (success case)
+ *        - Use an unrelated certificate's public key to verify the same certificate (fail case)
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001(char *CertPath, char *CertPathVerify, char *otherCertPath)
+{
+    TestMemInit();
+
+    HITLS_X509_Cert *certTest = NULL;
+    HITLS_X509_Cert *certVrtify = NULL;
+    HITLS_X509_Cert *otherCert = NULL;
+
+    /* Parse end-entity certificate, its issuer certificate, and an unrelated certificate */
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, CertPath, &certTest), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, CertPathVerify, &certVrtify), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, otherCertPath, &otherCert), HITLS_PKI_SUCCESS);
+
+    /* Get public key contexts from issuer certificate and unrelated certificate via CertCtrl */
+    CRYPT_EAL_PkeyCtx *issuerPubKey = NULL;
+    CRYPT_EAL_PkeyCtx *otherPubKey = NULL;
+    ASSERT_EQ(HITLS_X509_CertCtrl(certVrtify, HITLS_X509_GET_PUBKEY, &issuerPubKey, sizeof(CRYPT_EAL_PkeyCtx *)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(otherCert, HITLS_X509_GET_PUBKEY, &otherPubKey, sizeof(CRYPT_EAL_PkeyCtx *)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_NE(issuerPubKey, NULL);
+    ASSERT_NE(otherPubKey, NULL);
+
+    /* Positive case: verify end-entity certificate with issuer's public key */
+    ASSERT_EQ(HITLS_X509_CertVerifyByPubKey(certTest, issuerPubKey), HITLS_PKI_SUCCESS);
+
+    /* Negative case: verify the same end-entity certificate with an unrelated certificate's public key */
+    ASSERT_NE(HITLS_X509_CertVerifyByPubKey(certTest, otherPubKey), HITLS_PKI_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(issuerPubKey);
+    CRYPT_EAL_PkeyFreeCtx(otherPubKey);
+    HITLS_X509_CertFree(certTest);
+    HITLS_X509_CertFree(certVrtify);
+    HITLS_X509_CertFree(otherCert);
+}
+/* END_CASE */
