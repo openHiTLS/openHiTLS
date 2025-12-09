@@ -102,3 +102,6 @@ SDV_X509_VFY_AKI_SKI_CRITICAL_PASS_TC007:
 
 SDV_X509_VFY_NOAKID_CERT_PASS_TC009 intermediate missing AKID certchain verify succeeds
 SDV_X509_VFY_NOAKID_CERT_PASS_TC009:
+
+SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001
+SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001:"../testdata/cert/chain/rsa-pss-v3/end.der":"../testdata/cert/chain/rsa-pss-v3/inter.der":"../testdata/cert/chain/rsa-pss-v3/ca.der"

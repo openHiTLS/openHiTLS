@@ -91,6 +91,17 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
 
 /**
  * @ingroup pki
+ * @brief Verify a single certificate's signature using an external public key.
+ *
+ * @param cert   [IN] Certificate to be verified.
+ * @param pubKey [IN] Public key context used to verify the certificate.
+ * @retval #HITLS_PKI_SUCCESS, success.
+ *         Error codes can be found in hitls_pki_errno.h
+ */
+int32_t HITLS_X509_CertVerifyByPubKey(HITLS_X509_Cert *cert, CRYPT_EAL_PkeyCtx *pubKey);
+
+/**
+ * @ingroup pki
  * @brief Certificate chain build function.
  *
  * @param storeCtx [IN] StoreCtx.

@@ -973,6 +973,17 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
     return ret;
 }
 
+int32_t HITLS_X509_CertVerifyByPubKey(HITLS_X509_Cert *cert, CRYPT_EAL_PkeyCtx *pubKey)
+{
+    if (cert == NULL || pubKey == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    return X509_StoreCheckSignature(NULL, pubKey, cert->tbs.tbsRawData,
+        cert->tbs.tbsRawDataLen, &cert->signAlgId, &cert->signature);
+}
+
 HITLS_X509_StoreCtx *HITLS_X509_ProviderStoreCtxNew(HITLS_PKI_LibCtx *libCtx, const char *attrName)
 {
     HITLS_X509_StoreCtx *storeCtx = HITLS_X509_StoreCtxNew();
