@@ -1164,15 +1164,17 @@ void SDV_CRYPTO_RSA_DUP_CTX_API_TC001(Hex *e, int bits, int isProvider)
     CRYPT_EAL_PkeyPara para = {0};
     CRYPT_EAL_PkeyCtx *newPkey = NULL;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
+    TestMemInit();
     SetRsaPara(&para, e->x, e->len, bits);
+#if defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15) && defined(HITLS_CRYPTO_SHA224)
     uint8_t *sign = BSL_SAL_Malloc(bits / 8);
     uint32_t signLen = bits / 8;
     char *data = "Hello, openHiTLS";
     uint32_t dataLen = strlen(data);
-    TestMemInit();
+    int32_t pkcsv15 = CRYPT_MD_SHA224;
+#endif
     CRYPT_RandRegist(RandFunc);
     CRYPT_RandRegistEx(RandFuncEx);
-    int32_t pkcsv15 = CRYPT_MD_SHA224;
 
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
@@ -1201,12 +1203,16 @@ void SDV_CRYPTO_RSA_DUP_CTX_API_TC001(Hex *e, int bits, int isProvider)
         rsaCtx2->prvKey->d->data,
         rsaCtx2->prvKey->d->size * sizeof(BN_UINT));
 
+#if defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15) && defined(HITLS_CRYPTO_SHA224)
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(newPkey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySign(newPkey, CRYPT_MD_SHA224, (uint8_t *)data, dataLen, sign, &signLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(newPkey, CRYPT_MD_SHA224, (uint8_t *)data, dataLen, sign, signLen), CRYPT_SUCCESS);
-    
+#endif
+
 EXIT:
+#if defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15) && defined(HITLS_CRYPTO_SHA224)
     BSL_SAL_FREE(sign);
+#endif
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(newPkey);
     TestRandDeInit();

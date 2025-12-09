@@ -381,6 +381,7 @@ EXIT:
 }
 /* END_CASE */
 
+#if defined(HITLS_CRYPTO_RSA_EMSA_PSS) || defined(HITLS_CRYPTO_RSAES_OAEP) || defined(HITLS_CRYPTO_SLH_DSA)
 static uint8_t randBuf[] = {
     0xA3,0x97,0xA2,0x55,0x53,0xBE,0xF1,0xFC,0xF9,0x79,0x6B,0x52,0x14,0x13,0xE9,0xE2,0x2D,0x51,0x8E,0x1F,
 };
@@ -537,6 +538,7 @@ static int32_t STUB_CRYPT_RSA_PrvDec(const CRYPT_RSA_Ctx *ctx, const uint8_t *in
     *outLen = sizeof(decBuf);
     return 0;
 }
+#endif
 
 /**
  * @test   SDV_CRYPTO_RSA_INVLAID_DECRYPT_TEST
@@ -576,6 +578,7 @@ static int32_t STUB_CRYPT_RSA_PrvDec(const CRYPT_RSA_Ctx *ctx, const uint8_t *in
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_INVLAID_DECRYPT_TEST(Hex *n, Hex *e, Hex *d, Hex *plaintext, int isProvider)
 {
+#if defined(HITLS_CRYPTO_RSA_EMSA_PSS) || defined(HITLS_CRYPTO_RSAES_OAEP) || defined(HITLS_CRYPTO_SLH_DSA)
     TestMemInit();
     uint8_t ct[MAX_CIPHERTEXT_LEN] = {1};
     uint8_t pt[MAX_CIPHERTEXT_LEN] = {0};
@@ -656,6 +659,14 @@ void SDV_CRYPTO_RSA_INVLAID_DECRYPT_TEST(Hex *n, Hex *e, Hex *d, Hex *plaintext,
 EXIT:
     STUB_Reset(&g_tmpRpInfo[3]);
     CRYPT_EAL_PkeyFreeCtx(pkey);
+#else
+    (void)n;
+    (void)e;
+    (void)d;
+    (void)plaintext;
+    (void)isProvider;
+    SKIP_TEST();
+#endif
 }
 /* END_CASE */
 

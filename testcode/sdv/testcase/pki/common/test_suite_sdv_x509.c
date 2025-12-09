@@ -888,7 +888,7 @@ EXIT:
 }
 /* END_CASE */
 
-
+#if (defined(HITLS_CRYPTO_KEY_ENCODE) && defined(HITLS_CRYPTO_KEY_EPKI)) || defined(HITLS_PKI_X509_CRT_GEN) || defined(HITLS_PKI_X509_CSR_GEN)
 static int32_t test = 0;
 static int32_t marked = 0;
 static void *STUB_BSL_SAL_Malloc(uint32_t size)
@@ -899,6 +899,7 @@ static void *STUB_BSL_SAL_Malloc(uint32_t size)
     }
     return NULL;
 }
+#endif
 
 /**
  * @test SDV_PKI_GEN_ENCKEY_STUB_TC001
