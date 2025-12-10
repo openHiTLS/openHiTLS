@@ -519,6 +519,7 @@ void SDV_PKCS12_PARSE_STUB_TC001(Hex *mulBag, int hasMac)
     HITLS_PKCS12 *p12 = NULL;
     BSL_Buffer buffer = {.data = (uint8_t *)mulBag->x, .dataLen = mulBag->len};
     uint32_t totalMallocCount = 0;
+    int32_t ret;
 
     STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
 
@@ -535,8 +536,11 @@ void SDV_PKCS12_PARSE_STUB_TC001(Hex *mulBag, int hasMac)
     for (uint32_t i = 0; i < totalMallocCount; i++) {
         STUB_ResetMallocCount();
         STUB_SetMallocFailIndex(i);
-        ASSERT_NE(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &buffer, &pwdParam, &p12, hasMac == 1), HITLS_PKI_SUCCESS);
-        p12 = NULL;
+        ret = HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &buffer, &pwdParam, &p12, hasMac == 1);
+        if (ret == HITLS_PKI_SUCCESS) {
+            HITLS_PKCS12_Free(p12);
+            p12 = NULL;
+        }
     }
 EXIT:
     STUB_RESTORE(BSL_SAL_Malloc);

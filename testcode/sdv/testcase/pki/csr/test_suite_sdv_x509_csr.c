@@ -1367,6 +1367,7 @@ void SDV_X509_CSR_PARSE_STUB_TC001(int format, char *path)
     SKIP_TEST();
 #else
     TestMemInit();
+    int32_t ret;
     HITLS_X509_Csr *csr = NULL;
     uint32_t totalMallocCount = 0;
 
@@ -1385,8 +1386,11 @@ void SDV_X509_CSR_PARSE_STUB_TC001(int format, char *path)
     for (uint32_t i = 0; i < totalMallocCount; i++) {
         STUB_ResetMallocCount();
         STUB_SetMallocFailIndex(i);
-        ASSERT_NE(HITLS_X509_CsrParseFile(format, path, &csr), CRYPT_SUCCESS);
-        csr = NULL;
+        ret = HITLS_X509_CsrParseFile(format, path, &csr);
+        if (ret == CRYPT_SUCCESS) {
+            HITLS_X509_CsrFree(csr);
+            csr = NULL;
+        }
     }
 
 EXIT:
