@@ -120,7 +120,6 @@ int32_t DefaultCfgStatusParkWithSuite(HandshakeTestInfo *testInfo, int uioType)
 {
     FRAME_Init();
 
-
     testInfo->config = HITLS_CFG_NewDTLS12Config();
     if (testInfo->config == NULL) {
         return HITLS_INTERNAL_EXCEPTION;

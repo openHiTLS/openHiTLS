@@ -84,6 +84,7 @@ enum BSL_ERROR {
     BSL_ERR_ERR_NO_MARK,                              /**< Error stack has no mark. */
 
     BSL_SAL_TIME_NO_REG_FUNC = 0x03050001,
+    BSL_SAL_TIME_SYS_ERROR,                 /**< Function gettimeofday failed. */
 
     /* The return value of the UIO submodule starts from 0x03060001. */
     BSL_UIO_FAIL = 0x03060001,              /**< Invalid parameters. */

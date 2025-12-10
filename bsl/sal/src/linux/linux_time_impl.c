@@ -47,20 +47,18 @@ uint32_t TIME_DateToStrConvert(const BSL_TIME *dateTime, char *timeStr, size_t l
 
 uint32_t TIME_SysTimeGet(BSL_TIME *sysTime)
 {
-    time_t currentTime;
-    struct timeval tv;
-    uint32_t ret = BSL_SAL_ERR_BAD_PARAM;
+    struct timeval tv = {0};
+    int timeRet = gettimeofday(&tv, NULL);
+    if (timeRet != 0) {
+        return BSL_SAL_TIME_SYS_ERROR;
+    }
 
     tzset();
-    currentTime = (time_t)BSL_SAL_CurrentSysTimeGet();
-    if (currentTime != 0) {
-        ret = BSL_SAL_UtcTimeToDateConvert(currentTime, sysTime);
-        if (ret == BSL_SUCCESS) {
-            /* milliseconds : non-thread safe */
-            (void)gettimeofday(&tv, NULL);
-            sysTime->millSec = (uint16_t)tv.tv_usec / 1000U;  /* 1000 is multiple */
-            sysTime->microSec = (uint32_t)tv.tv_usec % 1000U; /* 1000 is multiple */
-        }
+    int32_t ret = BSL_SAL_UtcTimeToDateConvert((int64_t)tv.tv_sec, sysTime);
+    if (ret == BSL_SUCCESS) {
+        /* milliseconds : non-thread safe */
+        sysTime->millSec = (uint16_t)(tv.tv_usec / 1000U);  /* 1000 is multiple */
+        sysTime->microSec = (uint32_t)(tv.tv_usec % 1000U); /* 1000 is multiple */
     }
 
     return ret;
