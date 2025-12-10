@@ -185,7 +185,7 @@ int32_t HITLS_AUTH_OtpGen(HITLS_AUTH_OtpCtx *ctx, const BSL_Param *param, char *
 int32_t HotpValidate(HITLS_AUTH_OtpCtx *ctx, const BSL_Param *param, const char *otp, const uint32_t otpLen,
                      uint64_t *matched)
 {
-    char targetOtp[OTP_MAX_DIGITS];
+    char targetOtp[OTP_MAX_DIGITS + 1] = {0};
     uint32_t targetOtpLen = sizeof(targetOtp);
     uint64_t movingFactor;
     int32_t ret = HotpGen(ctx, param, targetOtp, &targetOtpLen, &movingFactor);
@@ -209,7 +209,7 @@ int32_t TotpValidate(HITLS_AUTH_OtpCtx *ctx, const BSL_Param *param, const char 
                      uint64_t *matched)
 {
     int32_t ret;
-    char targetOtp[OTP_MAX_DIGITS];
+    char targetOtp[OTP_MAX_DIGITS + 1] = {0};
     uint32_t targetOtpLen = sizeof(targetOtp);
     uint32_t validWindow = ((TotpCtx *)ctx->ctx)->validWindow;
     uint64_t movingFactor;
