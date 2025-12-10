@@ -245,7 +245,7 @@ void UT_HITLS_APP_kdf_TC003(char *outFile, Hex *expectData)
     STUB_REPLACE(HITLS_APP_SM_IntegrityCheck, STUB_HITLS_APP_SM_IntegrityCheck);;
     STUB_REPLACE(HITLS_APP_SM_RootUserCheck, STUB_HITLS_APP_SM_RootUserCheck);;
 
-    char *argv[] = {"kdf", SM_PARAM, "-mac", "hmac-sm3", "-pass", "passwordPASSWORDpassword",
+    char *argv[] = {"kdf", SM_PARAM, "-mac", "hmac_sm3", "-pass", "passwordPASSWORDpassword",
         "-salt", "saltSALTsaltSALTsaltSALTsaltSALTsalt", "-keylen", "40", "-out", outFile,
         "-iter", "1024", "pbkdf2", NULL};
     ASSERT_EQ(AppInit(), HITLS_APP_SUCCESS);

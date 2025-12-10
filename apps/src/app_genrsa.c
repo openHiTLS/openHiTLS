@@ -27,6 +27,7 @@
 #include "app_utils.h"
 #include "app_print.h"
 #include "app_opt.h"
+#include "app_list.h"
 #include "app_errno.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -61,48 +62,12 @@ uint8_t g_e[] = {0x01, 0x00, 0x01}; // Default E value
 
 const uint32_t g_numBitsArray[] = {1024, 2048, 3072, 4096};
 
-const HITLS_APPAlgList g_IdList[] = {
-    {CRYPT_CIPHER_AES128_CBC, "aes128-cbc"},
-    {CRYPT_CIPHER_AES192_CBC, "aes192-cbc"},
-    {CRYPT_CIPHER_AES256_CBC, "aes256-cbc"},
-    {CRYPT_CIPHER_AES128_XTS, "aes128-xts"},
-    {CRYPT_CIPHER_AES256_XTS, "aes256-xts"},
-    {CRYPT_CIPHER_SM4_XTS, "sm4-xts"},
-    {CRYPT_CIPHER_SM4_CBC, "sm4-cbc"},
-    {CRYPT_CIPHER_SM4_CTR, "sm4-ctr"},
-    {CRYPT_CIPHER_SM4_CFB, "sm4-cfb"},
-    {CRYPT_CIPHER_SM4_OFB, "sm4-ofb"},
-    {CRYPT_CIPHER_AES128_CFB, "aes128-cfb"},
-    {CRYPT_CIPHER_AES192_CFB, "aes192-cfb"},
-    {CRYPT_CIPHER_AES256_CFB, "aes256-cfb"},
-    {CRYPT_CIPHER_AES128_OFB, "aes128-ofb"},
-    {CRYPT_CIPHER_AES192_OFB, "aes192-ofb"},
-    {CRYPT_CIPHER_AES256_OFB, "aes256-ofb"},
-};
-
-static void PrintAlgList(void)
-{
-    AppPrintError("The current version supports only the following Pkey algorithms:\n");
-    for (size_t i = 0; i < sizeof(g_IdList) / sizeof(g_IdList[0]); i++) {
-        AppPrintError("%-19s", g_IdList[i].algName);
-        // Four algorithm names are displayed in each row.
-        if ((i + 1) % REC_ALG_NUM_EACHLINE == 0 && i != sizeof(g_IdList) - 1) {
-            AppPrintError("\n");
-        }
-    }
-    AppPrintError("\n");
-    return;
-}
-
 static int32_t GetAlgId(const char *name)
 {
-    for (size_t i = 0; i < sizeof(g_IdList) / sizeof(g_IdList[0]); i++) {
-        if (strcmp(g_IdList[i].algName, name) == 0) {
-            return g_IdList[i].id;
-        }
-    }
-    (void)PrintAlgList();
-    return -1;
+    HITLS_APP_PrintStdoutUioInit();
+    HITLS_APP_PrintRsaIdAlg();
+    HITLS_APP_PrintStdoutUioUnInit();
+    return HITLS_APP_GetCidByName(name, HITLS_APP_LIST_OPT_RSA_ALG);
 }
 
 int32_t HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag, void *userdata)
@@ -164,7 +129,7 @@ static int32_t HandleOpt(GenrsaInOpt *opt)
                 HITLS_APP_OptHelpPrint(g_genrsaOpts);
                 return HITLS_APP_HELP;
             case HITLS_APP_OPT_CIPHER:
-                if ((opt->cipherId = GetAlgId(HITLS_APP_OptGetValueStr())) == -1) {
+                if ((opt->cipherId = GetAlgId(HITLS_APP_OptGetValueStr())) == BSL_CID_UNKNOWN) {
                     return HITLS_APP_OPT_VALUE_INVALID;
                 }
                 break;

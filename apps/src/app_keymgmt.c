@@ -34,6 +34,7 @@
 #include "app_errno.h"
 #include "app_function.h"
 #include "app_sm.h"
+#include "app_list.h"
 #include "hitls_pki_pkcs12.h"
 #include "hitls_pki_errno.h"
 #include "bsl_bytes.h"
@@ -95,7 +96,6 @@ typedef struct {
     uint8_t key[APP_KEYMGMT_MAX_KEY_LEN];
 } HITLS_SyncKeyInfo;
 
-static int32_t GetAlgId(const char *name);
 static void FreeKeyInfo(HITLS_APP_KeyInfo *keyInfo);
 static int32_t CheckAlgMatchForFind(int32_t requestAlgId, int32_t storedAlgId);
 static int32_t ReadAsymKey(AppProvider *provider, HITLS_APP_SM_Param *smParam, HITLS_APP_KeyInfo *keyInfo);
@@ -536,6 +536,14 @@ static void HandleSomeOpt(KeyMgmtCmdOpt *keyMgmtOpt, HITLSOptType optType)
     return;
 }
 
+static int32_t GetAlgId(const char *name)
+{
+    HITLS_APP_PrintStdoutUioInit();
+    HITLS_APP_PrintKeyMgmtIdAlg();
+    HITLS_APP_PrintStdoutUioUnInit();
+    return HITLS_APP_GetCidByName(name, HITLS_APP_LIST_OPT_KEY_MGMT_ALG);
+}
+
 static int32_t HandleOpt(KeyMgmtCmdOpt *keyMgmtOpt)
 {
     int32_t ret;
@@ -551,7 +559,7 @@ static int32_t HandleOpt(KeyMgmtCmdOpt *keyMgmtOpt)
                 HITLS_APP_OptHelpPrint(g_keyMgmtOpts);
                 return HITLS_APP_HELP;
             case HITLS_APP_OPT_KEYMGMT_ALGID:
-                if ((keyMgmtOpt->algId = GetAlgId(HITLS_APP_OptGetValueStr())) == -1) {
+                if ((keyMgmtOpt->algId = GetAlgId(HITLS_APP_OptGetValueStr())) == BSL_CID_UNKNOWN) {
                     AppPrintError("keymgmt: Invalid algorithm id: %s.\n", HITLS_APP_OptGetValueStr());
                     return HITLS_APP_OPT_VALUE_INVALID;
                 }
@@ -1506,46 +1514,6 @@ int32_t HITLS_APP_ReceiveKey(AppProvider *provider, HITLS_APP_SM_Param *smParam,
         }
     }
     return HITLS_APP_SUCCESS;
-}
-
-typedef struct {
-    const int cipherId;
-    const char *cipherAlgName;
-} KeyMgmtAlgList;
-
-static const KeyMgmtAlgList g_algIdList[] = {
-    // For SM4, only expose "sm4" (normal 16-byte key) and "sm4_xts" (32-byte key)
-    // Map "sm4" to SM4_CBC internally to reuse existing creation logic.
-    {CRYPT_CIPHER_SM4_CBC, "sm4"},
-    {CRYPT_CIPHER_SM4_XTS, "sm4_xts"},
-    {CRYPT_MAC_HMAC_SM3, "hmac-sm3"},
-    {CRYPT_MAC_CBC_MAC_SM4, "sm4-cbc-mac"},
-    {CRYPT_PKEY_SM2, "sm2"},
-};
-
-static void PrintAlgList(void)
-{
-    AppPrintError("The current version supports only the following algorithms:\n");
-    for (size_t i = 0; i < sizeof(g_algIdList) / sizeof(g_algIdList[0]); i++) {
-        AppPrintError("%-19s", g_algIdList[i].cipherAlgName);
-        // 4 algorithm names are displayed in each row
-        if ((i + 1) % 4 == 0 && i != sizeof(g_algIdList) - 1) {
-            AppPrintError("\n");
-        }
-    }
-    AppPrintError("\n");
-    return;
-}
-
-static int32_t GetAlgId(const char *name)
-{
-    for (size_t i = 0; i < sizeof(g_algIdList) / sizeof(g_algIdList[0]); i++) {
-        if (strcmp(g_algIdList[i].cipherAlgName, name) == 0) {
-            return g_algIdList[i].cipherId;
-        }
-    }
-    PrintAlgList();
-    return -1;
 }
 
 // Determine whether an algorithm ID is an SM4 non-XTS mode

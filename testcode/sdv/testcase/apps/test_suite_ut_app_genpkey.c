@@ -54,25 +54,25 @@ typedef struct {
 void UT_HITLS_APP_GENPKEY_TC001()
 {
     char *argv[][20] = {
-        {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P-224"},
-        {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P-256"},
-        {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P-384"},
-        {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P-521"},
+        {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P_224"},
+        {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P_256"},
+        {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P_384"},
+        {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P_521"},
         {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:brainpoolp256r1"},
         {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:brainpoolp384r1"},
         {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:brainpoolp512r1"},
         {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:sm2"},
         {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:sm2", "-out", GENPKEY_TEST_FILE_PATH},
-        {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:sm2", "-aes256-cbc", "-pass", "pass:123456"},
-        {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:sm2", "-aes256-cbc", "-pass", "pass:123456", "-out", GENPKEY_TEST_FILE_PATH},
+        {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:sm2", "-aes256_cbc", "-pass", "pass:123456"},
+        {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:sm2", "-aes256_cbc", "-pass", "pass:123456", "-out", GENPKEY_TEST_FILE_PATH},
         {"genpkey", "-algorithm", "RSA"},
         {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:1024"},
         {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048"},
         {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:3072"},
         {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:4096"},
         {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:4096", "-out", "out_test.pem"},
-        {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:4096", "-aes256-cbc", "-pass", "pass:123456"},
-        {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:4096", "-aes256-cbc", "-pass", "pass:123456", "-out", GENPKEY_TEST_FILE_PATH},
+        {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:4096", "-aes256_cbc", "-pass", "pass:123456"},
+        {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:4096", "-aes256_cbc", "-pass", "pass:123456", "-out", GENPKEY_TEST_FILE_PATH},
     };
 
     OptTestData testData[] = {
@@ -129,7 +129,7 @@ void UT_HITLS_APP_GENPKEY_TC002()
         {"genpkey", "-algorithm", "RSA", "-pkeyopt", "ttt"},
         {"genpkey", "-algorithm", "EC", "-pkeyopt", "rsa_keygen_bits:1024"},
         {"genpkey", "-algorithm", "EC", "-pkeyopt", "ttt"},
-        {"genpkey", "-algorithm", "RSA", "-aes256-cbc", "-pass", "pass:"},
+        {"genpkey", "-algorithm", "RSA", "-aes256_cbc", "-pass", "pass:"},
         {"genpkey", "-algorithm", "RSA", "-out", GENPKEY_TEST_DIR_PATH},
     };
 
@@ -209,9 +209,9 @@ void UT_HITLS_APP_GENPKEY_TC004()
         {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-44", "-out", GENPKEY_TEST_FILE_PATH},
         {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-65", "-out", GENPKEY_TEST_FILE_PATH},
         {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-87", "-out", GENPKEY_TEST_FILE_PATH},
-        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-44", "-aes256-cbc", "-pass", "pass:123456"},
-        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-65", "-aes256-cbc", "-pass", "pass:123456", "-out", GENPKEY_TEST_FILE_PATH},
-        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-87", "-aes256-cbc", "-pass", "pass:123456", "-out", GENPKEY_TEST_FILE_PATH},
+        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-44", "-aes256_cbc", "-pass", "pass:123456"},
+        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-65", "-aes256_cbc", "-pass", "pass:123456", "-out", GENPKEY_TEST_FILE_PATH},
+        {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-87", "-aes256_cbc", "-pass", "pass:123456", "-out", GENPKEY_TEST_FILE_PATH},
     };
 
     OptTestData testData[] = {

@@ -275,7 +275,7 @@ int32_t HITLS_APP_OptToHex(uint8_t *buf, uint32_t inBufLen, char *outBuf, uint32
  *
  * @retval  int32_t success or not
 */
-int32_t HITLS_APP_OptWriteUio(BSL_UIO* uio, uint8_t* buf, uint32_t outLen, int32_t format);
+int32_t HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t bufLen, int32_t format);
 
 /**
  * @ingroup HITLS_APP

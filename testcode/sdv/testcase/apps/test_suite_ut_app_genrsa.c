@@ -65,14 +65,14 @@ void UT_HITLS_APP_genrsa_TC001(void)
     STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
     char *argv[][10] = {
         {"genrsa", "-help"},
-        {"genrsa", "-cipher", "aes128-cbc", "1024"},
-        {"genrsa", "-cipher", "aes128-ctr", "-out", "GenrsaOutFile_1", "2048"},
-        {"genrsa", "-cipher", "aes128-xts", "-out", "GenrsaOutFile_2", "3072"},
-        {"genrsa", "-cipher", "sm4-cfb", "-out", "GenrsaOutFile_3", "4096"},
-        {"genrsa", "-cipher", "rc2-ofb", "-out", "GenrsaOutFile_4", "1024"},
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_5", "1024"},
-        {"genrsa", "-cipher", "aes666-cbc", "3072"},
-        {"genrsa", "-cipher", "aes128-cbc", "1234"}
+        {"genrsa", "-cipher", "aes128_cbc", "1024"},
+        {"genrsa", "-cipher", "aes128_ctr", "-out", "GenrsaOutFile_1", "2048"},
+        {"genrsa", "-cipher", "aes128_xts", "-out", "GenrsaOutFile_2", "3072"},
+        {"genrsa", "-cipher", "sm4_cfb", "-out", "GenrsaOutFile_3", "4096"},
+        {"genrsa", "-cipher", "rc2_ofb", "-out", "GenrsaOutFile_4", "1024"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_5", "1024"},
+        {"genrsa", "-cipher", "aes666_cbc", "3072"},
+        {"genrsa", "-cipher", "aes128_cbc", "1234"}
     };
 
     GenrsaTestData testData[] = {
@@ -104,12 +104,12 @@ void UT_HITLS_APP_genrsa_TC002(void)
 {
     STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
     char *argv[][10] = {
-        {"",       "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "2048"},
-        {"genrsa", "",        "aes128-cbc", "-out", "GenrsaOutFile_1", "2048"},
+        {"",       "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "2048"},
+        {"genrsa", "",        "aes128_cbc", "-out", "GenrsaOutFile_1", "2048"},
         {"genrsa", "-cipher", "",           "-out", "GenrsaOutFile_1", "2048"},
-        {"genrsa", "-cipher", "aes128-cbc", "",     "GenrsaOutFile_1", "2048"},
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "",                "2048"},
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", ""},
+        {"genrsa", "-cipher", "aes128_cbc", "",     "GenrsaOutFile_1", "2048"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "",                "2048"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", ""},
     };
 
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
@@ -131,7 +131,7 @@ void UT_HITLS_APP_genrsa_TC003(void)
 {
     STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
     char *argv[][10] = {
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "2048"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "2048"},
     };
 
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
@@ -149,15 +149,15 @@ void UT_HITLS_APP_genrsa_TC004(void)
 {
     STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
     char *argv[][10] = {
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "1023"},
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "1025"},
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "2047"},
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "2049"},
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "3071"},
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "3073"},
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "4095"},
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "4097"},
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile_1", "abcdefgh"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "1023"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "1025"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "2047"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "2049"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "3071"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "3073"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "4095"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "4097"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "abcdefgh"},
     };
 
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
@@ -182,22 +182,22 @@ void UT_HITLS_APP_genrsa_TC005(void)
 {
     STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
     char *argv[][10] = {
-        {"genrsa", "-cipher", "aes128-cbc", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "aes192-cbc", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "aes256-cbc", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "aes128-xts", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "aes256-xts", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "sm4-xts", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "sm4-cbc", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "sm4-ctr", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "sm4-cfb", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "sm4-ofb", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "aes128-cfb", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "aes192-cfb", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "aes256-cfb", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "aes128-ofb", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "aes192-ofb", "-out", "GenrsaOutFile", "1024"},
-        {"genrsa", "-cipher", "aes256-ofb", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "aes192_cbc", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "aes256_cbc", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "aes128_xts", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "aes256_xts", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "sm4_xts", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "sm4_cbc", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "sm4_ctr", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "sm4_cfb", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "sm4_ofb", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "aes128_cfb", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "aes192_cfb", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "aes256_cfb", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "aes128_ofb", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "aes192_ofb", "-out", "GenrsaOutFile", "1024"},
+        {"genrsa", "-cipher", "aes256_ofb", "-out", "GenrsaOutFile", "1024"},
     };
     char *rsaArg[][10] = {
         {"rsa", "-in", "GenrsaOutFile", "-noout"},

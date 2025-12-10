@@ -28,10 +28,31 @@ typedef enum {
     HITLS_APP_LIST_OPT_MAC_ALG,
     HITLS_APP_LIST_OPT_RAND_ALG,
     HITLS_APP_LIST_OPT_KDF_ALG,
-    HITLS_APP_LIST_OPT_CURVES
+    HITLS_APP_LIST_OPT_CURVES,
+    HITLS_APP_LIST_OPT_MD_TO_MAC_ALG,
+    HITLS_APP_LIST_OPT_PKCS12_MAC_ALG,
+    HITLS_APP_LIST_OPT_PBE_ALG,
+    HITLS_APP_LIST_OPT_KEY_MGMT_ALG,
+    HITLS_APP_LIST_OPT_RSA_ALG
 } HITLSListOptType;
 
 int HITLS_ListMain(int argc, char *argv[]);
+
+int32_t HITLS_APP_PrintStdoutUioInit(void);
+
+void HITLS_APP_PrintStdoutUioUnInit(void);
+
+void HITLS_APP_PrintCipherAlg(void);
+
+void HITLS_APP_PrintMdToHmacAlg(void);
+
+void HITLS_APP_PrintPkcs12MacIdAlg(void);
+
+void HITLS_APP_PrintPbeAlg(void);
+
+void HITLS_APP_PrintKeyMgmtIdAlg(void);
+
+void HITLS_APP_PrintRsaIdAlg(void);
 
 int32_t HITLS_APP_GetCidByName(const char *name, int32_t type);
 

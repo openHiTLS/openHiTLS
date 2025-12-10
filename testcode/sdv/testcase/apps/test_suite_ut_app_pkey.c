@@ -92,8 +92,8 @@ void UT_HITLS_APP_PKEY_TC001(char *encKeyPath)
     char *argv[][20] = {
         {"pkey", "-in", encKeyPath, "-passin", "pass:123456"},
         {"pkey", "-in", encKeyPath, "-passin", "pass:123456", "-out", PKEY_TEST_FILE_PATH},
-        {"pkey", "-in", encKeyPath, "-passin", "pass:123456", "-aes256-cbc", "-passout", "pass:123456"},
-        {"pkey", "-in", encKeyPath, "-passin", "pass:123456", "-aes256-cbc", "-passout", "pass:123456",
+        {"pkey", "-in", encKeyPath, "-passin", "pass:123456", "-aes256_cbc", "-passout", "pass:123456"},
+        {"pkey", "-in", encKeyPath, "-passin", "pass:123456", "-aes256_cbc", "-passout", "pass:123456",
          "-out", PKEY_TEST_FILE_PATH},
         {"pkey", "-in", encKeyPath, "-passin", "pass:123456", "-pubout"},
         {"pkey", "-in", encKeyPath, "-passin", "pass:123456", "-out", PKEY_TEST_FILE_PATH},
@@ -176,7 +176,7 @@ void UT_HITLS_APP_PKEY_TC003(char *encKeyPath, char *keyPath)
         {"pkey", "-in", encKeyPath, "-passin", "err:12"},
         {"pkey", "-in", encKeyPath, "-passin", "pass:"},
         {"pkey", "-in", keyPath, "-passout", "err:12"},
-        {"pkey", "-in", keyPath, "-aes256-cbc", "-passout", "pass:"},
+        {"pkey", "-in", keyPath, "-aes256_cbc", "-passout", "pass:"},
         {"pkey", "-in", keyPath, "-out", PKEY_TEST_DIR_PATH},
         {"pkey", "-in", keyPath, "-pubout", "-out", PKEY_TEST_DIR_PATH},
     };
@@ -237,9 +237,9 @@ void UT_HITLS_APP_PKEY_TC004(char *encKeyPath, char *keyPath)
         {"pkey", "-in", encKeyPath, "-passin", "pass:"},
         {"pkey", "-in", encKeyPath, "-passin", "stdin"},
         {"pkey", "-in", encKeyPath},
-        {"pkey", "-in", keyPath, "-aes256-cbc", "-passout", "pass:"},
-        {"pkey", "-in", keyPath, "-aes256-cbc", "-passout", "stdin"},
-        {"pkey", "-in", keyPath, "-aes256-cbc"},
+        {"pkey", "-in", keyPath, "-aes256_cbc", "-passout", "pass:"},
+        {"pkey", "-in", keyPath, "-aes256_cbc", "-passout", "stdin"},
+        {"pkey", "-in", keyPath, "-aes256_cbc"},
     };
 
     OptTestData testData[] = {

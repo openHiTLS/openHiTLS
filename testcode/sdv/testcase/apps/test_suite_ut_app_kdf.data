@@ -8,46 +8,46 @@ UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac":HITLS_APP_OPT_UNKOWN
 UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac unknownmac -pass 123456 -salt abcdef -keylen 32 -iter 1000 pbkdf2":HITLS_APP_OPT_VALUE_INVALID
 
 "-pass": missing value
-UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac-sha256 -pass -salt abcdef -keylen 32 -iter 1000 pbkdf2":HITLS_APP_OPT_VALUE_INVALID
+UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac_sha256 -pass -salt abcdef -keylen 32 -iter 1000 pbkdf2":HITLS_APP_OPT_VALUE_INVALID
 
 "-salt": missing value
-UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac-sha256 -pass 123456 -salt -keylen 32 -iter 1000 pbkdf2":HITLS_APP_OPT_VALUE_INVALID
+UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac_sha256 -pass 123456 -salt -keylen 32 -iter 1000 pbkdf2":HITLS_APP_OPT_VALUE_INVALID
 
 "-keylen": missing value
-UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac-sha256 -pass 123456 -salt abcdef -keylen -iter 1000 pbkdf2":HITLS_APP_OPT_UNKOWN
+UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac_sha256 -pass 123456 -salt abcdef -keylen -iter 1000 pbkdf2":HITLS_APP_OPT_UNKOWN
 
 "-keylen": not number
-UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac-sha256 -pass 123456 -salt abcdef -keylen abc -iter 1000 pbkdf2":HITLS_APP_OPT_UNKOWN
+UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac_sha256 -pass 123456 -salt abcdef -keylen abc -iter 1000 pbkdf2":HITLS_APP_OPT_UNKOWN
 
 "-iter": missing value
-UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac-sha256 -pass 123456 -salt abcdef -keylen 32 -iter pbkdf2":HITLS_APP_OPT_UNKOWN
+UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac_sha256 -pass 123456 -salt abcdef -keylen 32 -iter pbkdf2":HITLS_APP_OPT_UNKOWN
 
 "-iter": not number
-UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac-sha256 -pass 123456 -salt abcdef -keylen 32 -iter abc pbkdf2":HITLS_APP_OPT_UNKOWN
+UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac_sha256 -pass 123456 -salt abcdef -keylen 32 -iter abc pbkdf2":HITLS_APP_OPT_UNKOWN
 
 "-hexpass": invalid hex
-UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac-sha256 -hexpass 0x1234G -salt abcdef -keylen 32 -iter 1000 pbkdf2":HITLS_APP_OPT_VALUE_INVALID
+UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac_sha256 -hexpass 0x1234G -salt abcdef -keylen 32 -iter 1000 pbkdf2":HITLS_APP_OPT_VALUE_INVALID
 
 "-hexsalt": invalid hex
-UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac-sha256 -pass 123456 -hexsalt 0x1234G -keylen 32 -iter 1000 pbkdf2":HITLS_APP_OPT_VALUE_INVALID
+UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac_sha256 -pass 123456 -hexsalt 0x1234G -keylen 32 -iter 1000 pbkdf2":HITLS_APP_OPT_VALUE_INVALID
 
 "-pass and hexpass": both specified
-UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac-sha256 -pass 123456 -hexpass 0x1234 -salt abcdef -keylen 32 -iter 1000 pbkdf2":HITLS_APP_OPT_VALUE_INVALID
+UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac_sha256 -pass 123456 -hexpass 0x1234 -salt abcdef -keylen 32 -iter 1000 pbkdf2":HITLS_APP_OPT_VALUE_INVALID
 
 "-salt and hexsalt": both specified
-UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac-sha256 -pass 123456 -salt abcdef -hexsalt 0x1234 -keylen 32 -iter 1000 pbkdf2":HITLS_APP_OPT_VALUE_INVALID
+UT_HITLS_APP_KDF_InvalidOpt_TC001:"kdf -mac hmac_sha256 -pass 123456 -salt abcdef -hexsalt 0x1234 -keylen 32 -iter 1000 pbkdf2":HITLS_APP_OPT_VALUE_INVALID
 
 normal pbkdf2 with hexpass/hexsalt
-UT_HITLS_APP_KDF_NormalOpt_TC001:"kdf -mac hmac-sha1 -hexpass 0x70617373776f7264 -hexsalt 0x73616c74 -keylen 20 -out ./kdf.out -iter 1 pbkdf2":"./kdf.out":"0c60c80f961f0e71f3a9b524af6012062fe037a6"
+UT_HITLS_APP_KDF_NormalOpt_TC001:"kdf -mac hmac_sha1 -hexpass 0x70617373776f7264 -hexsalt 0x73616c74 -keylen 20 -out ./kdf.out -iter 1 pbkdf2":"./kdf.out":"0c60c80f961f0e71f3a9b524af6012062fe037a6"
 
 normal pbkdf2
-UT_HITLS_APP_KDF_NormalOpt_TC001:"kdf -mac hmac-sha256 -pass 123456 -salt abcdef -keylen 32 -out ./kdf.out -iter 1000 pbkdf2":"./kdf.out":"91d1b0b6b1a8b67396d878f5a2b4b844387672ce358039d5caad1350e96a14f9"
+UT_HITLS_APP_KDF_NormalOpt_TC001:"kdf -mac hmac_sha256 -pass 123456 -salt abcdef -keylen 32 -out ./kdf.out -iter 1000 pbkdf2":"./kdf.out":"91d1b0b6b1a8b67396d878f5a2b4b844387672ce358039d5caad1350e96a14f9"
 
-normal pbkdf2 with hamc-sm3
-UT_HITLS_APP_KDF_NormalOpt_TC001:"kdf -mac hmac-sm3 -hexpass 0x70617373776f7264 -hexsalt 0x73616c74 -keylen 20 -out ./kdf.out -iter 1 pbkdf2":"./kdf.out":"4612f922a1fdcefaf4312fc6f8f3322b489cbf24"
+normal pbkdf2 with hamc_sm3
+UT_HITLS_APP_KDF_NormalOpt_TC001:"kdf -mac hmac_sm3 -hexpass 0x70617373776f7264 -hexsalt 0x73616c74 -keylen 20 -out ./kdf.out -iter 1 pbkdf2":"./kdf.out":"4612f922a1fdcefaf4312fc6f8f3322b489cbf24"
 
 UT_HITLS_APP_kdf_TC002
 UT_HITLS_APP_kdf_TC002:
 
-sm mode pbkdf2 with hamc-sm3
+sm mode pbkdf2 with hmac_sm3
 UT_HITLS_APP_kdf_TC003:"./kdf.out":"1e0d8ab1b32bb96dff58ff89ab171e643a425fd87f26261b56f9d38c992f2593a713f9c1772f8bf2"

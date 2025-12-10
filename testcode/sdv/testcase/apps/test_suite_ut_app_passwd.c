@@ -96,8 +96,9 @@ int32_t STUB_BSL_UI_ReadPwdUtilIsZero(BSL_UI_ReadPwdParam *param, char *buff, ui
     (void)param;
     (void)checkDataCallBack;
     (void)callBackData;
-    (void)buff;
-    (void)buffLen;
+    buff[0] = '\n';
+    buff[1] = 0;
+    *buffLen = 2;
     return BSL_SUCCESS;
 }
 

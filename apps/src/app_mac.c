@@ -280,7 +280,7 @@ static int32_t GetMacKey(MacOpt *macOpt, uint8_t **key, uint32_t *keyLen)
         *keyLen = strlen(macOpt->key);
         return HITLS_APP_SUCCESS;
     } else if (macOpt->hexKey != NULL) {
-        int32_t ret = HITLS_APP_HexToByte(macOpt->hexKey, key, keyLen);
+        int32_t ret = HITLS_APP_HexToByte(macOpt->hexKey, 1, key, keyLen);
         if (ret == HITLS_APP_OPT_VALUE_INVALID) {
             AppPrintError("mac: Get key from hexkey failed, errCode: 0x%x.\n", ret);
             return ret;

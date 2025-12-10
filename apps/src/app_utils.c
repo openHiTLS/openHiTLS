@@ -965,14 +965,17 @@ void HITLS_APP_PrintPassErrlog(void)
         APP_MAX_PASS_LENGTH);
 }
 
-int32_t HITLS_APP_HexToByte(const char *hex, uint8_t **bin, uint32_t *len)
+int32_t HITLS_APP_HexToByte(const char *hex, int32_t useHeader, uint8_t **bin, uint32_t *len)
 {
     uint32_t prefixLen = strlen(APP_HEX_HEAD);
-    if (strncmp(hex, APP_HEX_HEAD, prefixLen) != 0 || strlen(hex) <= prefixLen) {
+    if (useHeader != 0 && (strlen(hex) <= prefixLen || strncmp(hex, APP_HEX_HEAD, prefixLen) != 0)) {
         AppPrintError("Invalid hex value, should start with '0x'.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
-    const char *num = hex + prefixLen;
+    const char *num = hex;
+    if (useHeader != 0) {
+        num += prefixLen;
+    }
     uint32_t hexLen = strlen(num);
     // Skip the preceding zeros.
     for (uint32_t i = 0; i < hexLen; ++i) {

@@ -78,7 +78,7 @@ static void AppGetFuncPrintfLen(size_t *maxLen)
 
 void AppPrintFuncList(void)
 {
-    AppPrintError("HiTLS supports the following commands:\n");
+    AppPrintError("function: HiTLS supports the following commands:\n");
     size_t maxLen = 0;
     AppGetFuncPrintfLen(&maxLen);
     for (size_t i = 0; g_cmdFunc[i].name != NULL; i++) {
@@ -101,7 +101,7 @@ int AppGetProgFunc(const char *proName, HITLS_CmdFunc *func)
     }
 
     if (func->main == NULL) {
-        AppPrintError("Can not find the function : %s. ", proName);
+        AppPrintError("function: Can not find the function : %s. ", proName);
         return HITLS_APP_OPT_NAME_INVALID;
     }
 

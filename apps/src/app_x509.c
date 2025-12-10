@@ -456,7 +456,7 @@ static int32_t X509OptSetSerial(X509OptCtx *optCtx)
 {
     char *str = HITLS_APP_OptGetValueStr();
 
-    int32_t ret = HITLS_APP_HexToByte(str, &optCtx->certOpts.serial, &optCtx->certOpts.serialLen);
+    int32_t ret = HITLS_APP_HexToByte(str, 1, &optCtx->certOpts.serial, &optCtx->certOpts.serialLen);
     if (ret != HITLS_APP_SUCCESS) {
         AppPrintError("x509: Invalid serial: %s.\n", str);
     }

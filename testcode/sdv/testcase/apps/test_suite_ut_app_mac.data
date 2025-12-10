@@ -5,25 +5,25 @@ UT_HITLS_APP_MAC_InvalidOpt_TC001:"mac -unknownopt -in ../testdata/apps/mac/test
 UT_HITLS_APP_MAC_InvalidOpt_TC001:"mac -name -in ../testdata/apps/mac/test.txt":HITLS_APP_OPT_VALUE_INVALID
 
 "-key": missing value
-UT_HITLS_APP_MAC_InvalidOpt_TC001:"mac -name hmac-sha256 -key -in ../testdata/apps/mac/test.txt":HITLS_APP_OPT_UNKOWN
+UT_HITLS_APP_MAC_InvalidOpt_TC001:"mac -name hmac_sha256 -key -in ../testdata/apps/mac/test.txt":HITLS_APP_OPT_UNKOWN
 
 "-hexkey": invalid hex
-UT_HITLS_APP_MAC_InvalidOpt_TC001:"mac -name hmac-sha256 -hexkey 0x1234G -in ../testdata/apps/mac/test.txt":HITLS_APP_CRYPTO_FAIL
+UT_HITLS_APP_MAC_InvalidOpt_TC001:"mac -name hmac_sha256 -hexkey 0x1234G -in ../testdata/apps/mac/test.txt":HITLS_APP_CRYPTO_FAIL
 
 "-key and hexkey": both specified
-UT_HITLS_APP_MAC_InvalidOpt_TC001:"mac -name hmac-sha256 -key 123456 -hexkey 0x1234 -in ../testdata/apps/mac/test.txt":HITLS_APP_OPT_VALUE_INVALID
+UT_HITLS_APP_MAC_InvalidOpt_TC001:"mac -name hmac_sha256 -key 123456 -hexkey 0x1234 -in ../testdata/apps/mac/test.txt":HITLS_APP_OPT_VALUE_INVALID
 
 normal mac
-UT_HITLS_APP_MAC_NormalOpt_TC001:"mac -name hmac-sha256 -key 123456 -in ../testdata/apps/mac/test.txt -out mac_out.out":"mac_out.out":"f959b969e71d0f3778b6265a2b06a032c9ac9dd20b51d33a7adc700a3e5df20b"
+UT_HITLS_APP_MAC_NormalOpt_TC001:"mac -name hmac_sha256 -key 123456 -in ../testdata/apps/mac/test.txt -out mac_out.out":"mac_out.out":"f959b969e71d0f3778b6265a2b06a032c9ac9dd20b51d33a7adc700a3e5df20b"
 
 normal mac with hexkey
-UT_HITLS_APP_MAC_NormalOpt_TC001:"mac -name hmac-sha256 -hexkey 0x313233343536 -in ../testdata/apps/mac/test.txt -out mac_out.out":"mac_out.out":"f959b969e71d0f3778b6265a2b06a032c9ac9dd20b51d33a7adc700a3e5df20b"
+UT_HITLS_APP_MAC_NormalOpt_TC001:"mac -name hmac_sha256 -hexkey 0x313233343536 -in ../testdata/apps/mac/test.txt -out mac_out.out":"mac_out.out":"f959b969e71d0f3778b6265a2b06a032c9ac9dd20b51d33a7adc700a3e5df20b"
 
 normal CBC-SM4
-UT_HITLS_APP_MAC_NormalOpt_TC001:"mac -name sm4-cbc-mac -hexkey 0x35390bae65be0105132142c864b013db -in ../testdata/apps/mac/test.txt -out mac_out.out":"mac_out.out":"19cb130d3019744a2fc427f4bc2c90f4"
+UT_HITLS_APP_MAC_NormalOpt_TC001:"mac -name sm4_cbc_mac -hexkey 0x35390bae65be0105132142c864b013db -in ../testdata/apps/mac/test.txt -out mac_out.out":"mac_out.out":"19cb130d3019744a2fc427f4bc2c90f4"
 
 normal hmac-md5
-UT_HITLS_APP_MAC_NormalOpt_TC001:"mac -name hmac-md5 -hexkey 0x4a656665 -in ../testdata/apps/mac/test.txt -out mac_out.out":"mac_out.out":"750c783e6ab0b503eaa86e310a5db738"
+UT_HITLS_APP_MAC_NormalOpt_TC001:"mac -name hmac_md5 -hexkey 0x4a656665 -in ../testdata/apps/mac/test.txt -out mac_out.out":"mac_out.out":"750c783e6ab0b503eaa86e310a5db738"
 
 UT_HITLS_APP_mac_TC002
 UT_HITLS_APP_mac_TC002:

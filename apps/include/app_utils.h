@@ -234,7 +234,7 @@ int32_t HITLS_APP_GetAndCheckHashOpt(const char *name, int32_t *hashId);
 
 int32_t HITLS_APP_PrintText(const BSL_Buffer *csrBuf, const char *outFileName);
 
-int32_t HITLS_APP_HexToByte(const char *hex, uint8_t **bin, uint32_t *len);
+int32_t HITLS_APP_HexToByte(const char *hex, int32_t useHeader, uint8_t **bin, uint32_t *len);
 
 CRYPT_EAL_PkeyCtx *HITLS_APP_GenRsaPkeyCtx(uint32_t bits);
 

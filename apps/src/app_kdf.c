@@ -319,7 +319,7 @@ static int32_t KdfParsePass(KdfOpt *kdfOpt, uint8_t **pass, uint32_t *passLen)
         *passLen = (uint32_t)len;
         *pass = (uint8_t *)kdfOpt->pass;
     } else {
-        int32_t ret = HITLS_APP_HexToByte(kdfOpt->hexPass, pass, passLen);
+        int32_t ret = HITLS_APP_HexToByte(kdfOpt->hexPass, 1, pass, passLen);
         if (ret != HITLS_APP_SUCCESS) {
             AppPrintError("kdf:Invalid pass: %s.\n", kdfOpt->hexPass);
             return ret;
@@ -344,7 +344,7 @@ static int32_t KdfParseSalt(KdfOpt *kdfOpt, uint8_t **salt, uint32_t *saltLen)
         *saltLen = (uint32_t)len;
         *salt = (uint8_t *)kdfOpt->salt;
     } else {
-        int32_t ret = HITLS_APP_HexToByte(kdfOpt->hexSalt, salt, saltLen);
+        int32_t ret = HITLS_APP_HexToByte(kdfOpt->hexSalt, 1, salt, saltLen);
         if (ret != HITLS_APP_SUCCESS) {
             AppPrintError("kdf:Invalid salt: %s.\n", kdfOpt->hexSalt);
             return ret;

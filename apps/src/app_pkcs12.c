@@ -24,6 +24,7 @@
 #include "app_print.h"
 #include "app_opt.h"
 #include "app_utils.h"
+#include "app_list.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "bsl_err.h"
@@ -103,11 +104,6 @@ typedef struct {
     BSL_UIO *wUio;
 } Pkcs12OptCtx;
 
-typedef struct {
-    const uint32_t id;
-    const char *name;
-} AlgList;
-
 typedef int32_t (*OptHandleFunc)(Pkcs12OptCtx *);
 
 typedef struct {
@@ -136,21 +132,6 @@ static const HITLS_CmdOption OPTS[] = {
     {"CAfile", HITLS_APP_OPT_CA_FILE, HITLS_APP_OPT_VALUETYPE_STRING, "PEM-format file of CA's"},
     {"", HITLS_APP_OPT_CIPHER_ALG, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Any supported cipher"},
     {NULL, 0, 0, NULL}
-};
-
-static const AlgList MAC_ALG_LIST[] = {
-    {CRYPT_MD_SHA224, "sha224"},
-    {CRYPT_MD_SHA256, "sha256"},
-    {CRYPT_MD_SHA384, "sha384"},
-    {CRYPT_MD_SHA512, "sha512"}
-};
-
-static const AlgList CERT_PBE_LIST[] = {
-    {BSL_CID_PBES2,   "PBES2"}
-};
-
-static const AlgList KEY_PBE_LIST[] = {
-    {BSL_CID_PBES2,   "PBES2"}
 };
 
 static int32_t DisplayHelp(Pkcs12OptCtx *opt)
@@ -212,26 +193,12 @@ static int32_t ParseClcerts(Pkcs12OptCtx *opt)
 static int32_t ParseKeyPbe(Pkcs12OptCtx *opt)
 {
     opt->outPutOpt.keyPbeArg = HITLS_APP_OptGetValueStr();
-    bool find = false;
-    for (size_t i = 0; i < sizeof(KEY_PBE_LIST) / sizeof(KEY_PBE_LIST[0]); i++) {
-        if (strcmp(KEY_PBE_LIST[i].name, opt->outPutOpt.keyPbeArg) == 0) {
-            find = true;
-            opt->keyPbe = KEY_PBE_LIST[i].id;
-            break;
-        }
-    }
-
-    // If the supported algorithm list is not found, print the supported algorithm list and return an error.
-    if (!find) {
+    int32_t ret = HITLS_APP_GetCidByName(opt->outPutOpt.keyPbeArg, HITLS_APP_LIST_OPT_PBE_ALG);
+    if (ret == BSL_CID_UNKNOWN) {
         AppPrintError("pkcs12: The current private key PBE algorithm supports only the following algorithms:\n");
-        for (size_t i = 0; i < sizeof(KEY_PBE_LIST) / sizeof(KEY_PBE_LIST[0]); i++) {
-            AppPrintError("%-19s", KEY_PBE_LIST[i].name);
-            // 4 algorithm names are displayed in each row.
-            if ((i + 1) % 4 == 0 && i != ((sizeof(KEY_PBE_LIST) / sizeof(KEY_PBE_LIST[0])) - 1)) {
-                AppPrintError("\n");
-            }
-        }
-        AppPrintError("\n");
+        HITLS_APP_PrintStdoutUioInit();
+        HITLS_APP_PrintPbeAlg();
+        HITLS_APP_PrintStdoutUioUnInit();
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     return HITLS_APP_SUCCESS;
@@ -240,26 +207,12 @@ static int32_t ParseKeyPbe(Pkcs12OptCtx *opt)
 static int32_t ParseCertPbe(Pkcs12OptCtx *opt)
 {
     opt->outPutOpt.certPbeArg = HITLS_APP_OptGetValueStr();
-    bool find = false;
-    for (size_t i = 0; i < sizeof(CERT_PBE_LIST) / sizeof(CERT_PBE_LIST[0]); i++) {
-        if (strcmp(CERT_PBE_LIST[i].name, opt->outPutOpt.certPbeArg) == 0) {
-            find = true;
-            opt->certPbe = CERT_PBE_LIST[i].id;
-            break;
-        }
-    }
-
-    // If the supported algorithm list is not found, print the supported algorithm list and return an error.
-    if (!find) {
+    int32_t ret = HITLS_APP_GetCidByName(opt->outPutOpt.certPbeArg, HITLS_APP_LIST_OPT_PBE_ALG);
+    if (ret == BSL_CID_UNKNOWN) {
         AppPrintError("pkcs12: The current certificate PBE algorithm supports only the following algorithms:\n");
-        for (size_t i = 0; i < sizeof(CERT_PBE_LIST) / sizeof(CERT_PBE_LIST[0]); i++) {
-            AppPrintError("%-19s", CERT_PBE_LIST[i].name);
-            // 4 algorithm names are displayed in each row.
-            if ((i + 1) % 4 == 0 && i != ((sizeof(CERT_PBE_LIST) / sizeof(CERT_PBE_LIST[0])) - 1)) {
-                AppPrintError("\n");
-            }
-        }
-        AppPrintError("\n");
+        HITLS_APP_PrintStdoutUioInit();
+        HITLS_APP_PrintPbeAlg();
+        HITLS_APP_PrintStdoutUioUnInit();
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     return HITLS_APP_SUCCESS;
@@ -268,26 +221,12 @@ static int32_t ParseCertPbe(Pkcs12OptCtx *opt)
 static int32_t ParseMacAlg(Pkcs12OptCtx *opt)
 {
     opt->outPutOpt.macAlgArg = HITLS_APP_OptGetValueStr();
-    bool find = false;
-    for (size_t i = 0; i < sizeof(MAC_ALG_LIST) / sizeof(MAC_ALG_LIST[0]); i++) {
-        if (strcmp(MAC_ALG_LIST[i].name, opt->outPutOpt.macAlgArg) == 0) {
-            find = true;
-            opt->macAlg = MAC_ALG_LIST[i].id;
-            break;
-        }
-    }
-
-    // If the supported algorithm list is not found, print the supported algorithm list and return an error.
-    if (!find) {
+    int32_t ret = HITLS_APP_GetCidByName(opt->outPutOpt.macAlgArg, HITLS_APP_LIST_OPT_PKCS12_MAC_ALG);
+    if (ret == BSL_CID_UNKNOWN) {
         AppPrintError("pkcs12: The current digest algorithm supports only the following algorithms:\n");
-        for (size_t i = 0; i < sizeof(MAC_ALG_LIST) / sizeof(MAC_ALG_LIST[0]); i++) {
-            AppPrintError("%-19s", MAC_ALG_LIST[i].name);
-            // 4 algorithm names are displayed in each row.
-            if ((i + 1) % 4 == 0 && i != ((sizeof(MAC_ALG_LIST) / sizeof(MAC_ALG_LIST[0])) - 1)) {
-                AppPrintError("\n");
-            }
-        }
-        AppPrintError("\n");
+        HITLS_APP_PrintStdoutUioInit();
+        HITLS_APP_PrintPkcs12MacIdAlg();
+        HITLS_APP_PrintStdoutUioUnInit();
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     return HITLS_APP_SUCCESS;

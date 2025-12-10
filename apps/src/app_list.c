@@ -53,37 +53,37 @@ typedef struct {
 } CidInfo;
 
 static const CidInfo g_allCipherAlgInfo [] = {
-    {CRYPT_CIPHER_AES128_CBC, "aes128-cbc"},
-    {CRYPT_CIPHER_AES128_CCM, "aes128-ccm"},
-    {CRYPT_CIPHER_AES128_CFB, "aes128-cfb"},
-    {CRYPT_CIPHER_AES128_CTR, "aes128-ctr"},
-    {CRYPT_CIPHER_AES128_ECB, "aes128-ecb"},
-    {CRYPT_CIPHER_AES128_GCM, "aes128-gcm"},
-    {CRYPT_CIPHER_AES128_OFB, "aes128-ofb"},
-    {CRYPT_CIPHER_AES128_XTS, "aes128-xts"},
-    {CRYPT_CIPHER_AES192_CBC, "aes192-cbc"},
-    {CRYPT_CIPHER_AES192_CCM, "aes192-ccm"},
-    {CRYPT_CIPHER_AES192_CFB, "aes192-cfb"},
-    {CRYPT_CIPHER_AES192_CTR, "aes192-ctr"},
-    {CRYPT_CIPHER_AES192_ECB, "aes192-ecb"},
-    {CRYPT_CIPHER_AES192_GCM, "aes192-gcm"},
-    {CRYPT_CIPHER_AES192_OFB, "aes192-ofb"},
-    {CRYPT_CIPHER_AES256_CBC, "aes256-cbc"},
-    {CRYPT_CIPHER_AES256_CCM, "aes256-ccm"},
-    {CRYPT_CIPHER_AES256_CFB, "aes256-cfb"},
-    {CRYPT_CIPHER_AES256_CTR, "aes256-ctr"},
-    {CRYPT_CIPHER_AES256_ECB, "aes256-ecb"},
-    {CRYPT_CIPHER_AES256_GCM, "aes256-gcm"},
-    {CRYPT_CIPHER_AES256_OFB, "aes256-ofb"},
-    {CRYPT_CIPHER_AES256_XTS, "aes256-xts"},
-    {CRYPT_CIPHER_CHACHA20_POLY1305, "chacha20-poly1305"},
-    {CRYPT_CIPHER_SM4_CBC, "sm4-cbc"},
-    {CRYPT_CIPHER_SM4_CFB, "sm4-cfb"},
-    {CRYPT_CIPHER_SM4_CTR, "sm4-ctr"},
-    {CRYPT_CIPHER_SM4_ECB, "sm4-ecb"},
-    {CRYPT_CIPHER_SM4_GCM, "sm4-gcm"},
-    {CRYPT_CIPHER_SM4_OFB, "sm4-ofb"},
-    {CRYPT_CIPHER_SM4_XTS, "sm4-xts"},
+    {CRYPT_CIPHER_AES128_CBC, "aes128_cbc"},
+    {CRYPT_CIPHER_AES128_CCM, "aes128_ccm"},
+    {CRYPT_CIPHER_AES128_CFB, "aes128_cfb"},
+    {CRYPT_CIPHER_AES128_CTR, "aes128_ctr"},
+    {CRYPT_CIPHER_AES128_ECB, "aes128_ecb"},
+    {CRYPT_CIPHER_AES128_GCM, "aes128_gcm"},
+    {CRYPT_CIPHER_AES128_OFB, "aes128_ofb"},
+    {CRYPT_CIPHER_AES128_XTS, "aes128_xts"},
+    {CRYPT_CIPHER_AES192_CBC, "aes192_cbc"},
+    {CRYPT_CIPHER_AES192_CCM, "aes192_ccm"},
+    {CRYPT_CIPHER_AES192_CFB, "aes192_cfb"},
+    {CRYPT_CIPHER_AES192_CTR, "aes192_ctr"},
+    {CRYPT_CIPHER_AES192_ECB, "aes192_ecb"},
+    {CRYPT_CIPHER_AES192_GCM, "aes192_gcm"},
+    {CRYPT_CIPHER_AES192_OFB, "aes192_ofb"},
+    {CRYPT_CIPHER_AES256_CBC, "aes256_cbc"},
+    {CRYPT_CIPHER_AES256_CCM, "aes256_ccm"},
+    {CRYPT_CIPHER_AES256_CFB, "aes256_cfb"},
+    {CRYPT_CIPHER_AES256_CTR, "aes256_ctr"},
+    {CRYPT_CIPHER_AES256_ECB, "aes256_ecb"},
+    {CRYPT_CIPHER_AES256_GCM, "aes256_gcm"},
+    {CRYPT_CIPHER_AES256_OFB, "aes256_ofb"},
+    {CRYPT_CIPHER_AES256_XTS, "aes256_xts"},
+    {CRYPT_CIPHER_CHACHA20_POLY1305, "chacha20_poly1305"},
+    {CRYPT_CIPHER_SM4_CBC, "sm4_cbc"},
+    {CRYPT_CIPHER_SM4_CFB, "sm4_cfb"},
+    {CRYPT_CIPHER_SM4_CTR, "sm4_ctr"},
+    {CRYPT_CIPHER_SM4_ECB, "sm4_ecb"},
+    {CRYPT_CIPHER_SM4_GCM, "sm4_gcm"},
+    {CRYPT_CIPHER_SM4_OFB, "sm4_ofb"},
+    {CRYPT_CIPHER_SM4_XTS, "sm4_xts"},
 };
 
 #define CIPHER_ALG_CNT (sizeof(g_allCipherAlgInfo) / sizeof(CidInfo))
@@ -95,10 +95,10 @@ static const CidInfo g_allMdAlgInfo[] = {
     {CRYPT_MD_SHA256, "sha256"},
     {CRYPT_MD_SHA384, "sha384"},
     {CRYPT_MD_SHA512, "sha512"},
-    {CRYPT_MD_SHA3_224, "sha3-224"},
-    {CRYPT_MD_SHA3_256, "sha3-256"},
-    {CRYPT_MD_SHA3_384, "sha3-384"},
-    {CRYPT_MD_SHA3_512, "sha3-512"},
+    {CRYPT_MD_SHA3_224, "sha3_224"},
+    {CRYPT_MD_SHA3_256, "sha3_256"},
+    {CRYPT_MD_SHA3_384, "sha3_384"},
+    {CRYPT_MD_SHA3_512, "sha3_512"},
     {CRYPT_MD_SHAKE128, "shake128"},
     {CRYPT_MD_SHAKE256, "shake256"},
     {CRYPT_MD_SM3, "sm3"},
@@ -120,29 +120,45 @@ static const CidInfo g_allPkeyAlgInfo[] = {
 #define PKEY_ALG_CNT (sizeof(g_allPkeyAlgInfo) / sizeof(CidInfo))
 
 static const CidInfo g_allMacAlgInfo[] = {
-    {CRYPT_MAC_HMAC_MD5, "hmac-md5"},
-    {CRYPT_MAC_HMAC_SHA1, "hmac-sha1"},
-    {CRYPT_MAC_HMAC_SHA224, "hmac-sha224"},
-    {CRYPT_MAC_HMAC_SHA256, "hmac-sha256"},
-    {CRYPT_MAC_HMAC_SHA384, "hmac-sha384"},
-    {CRYPT_MAC_HMAC_SHA512, "hmac-sha512"},
-    {CRYPT_MAC_HMAC_SHA3_224, "hmac-sha3-224"},
-    {CRYPT_MAC_HMAC_SHA3_256, "hmac-sha3-256"},
-    {CRYPT_MAC_HMAC_SHA3_384, "hmac-sha3-384"},
-    {CRYPT_MAC_HMAC_SHA3_512, "hmac-sha3-512"},
-    {CRYPT_MAC_HMAC_SM3, "hmac-sm3"},
-    {CRYPT_MAC_CMAC_AES128, "cmac-aes128"},
-    {CRYPT_MAC_CMAC_AES192, "cmac-aes192"},
-    {CRYPT_MAC_CMAC_AES256, "cmac-aes256"},
-    {CRYPT_MAC_GMAC_AES128, "gmac-aes128"},
-    {CRYPT_MAC_GMAC_AES192, "gmac-aes192"},
-    {CRYPT_MAC_GMAC_AES256, "gmac-aes256"},
+    {CRYPT_MAC_HMAC_MD5, "hmac_md5"},
+    {CRYPT_MAC_HMAC_SHA1, "hmac_sha1"},
+    {CRYPT_MAC_HMAC_SHA224, "hmac_sha224"},
+    {CRYPT_MAC_HMAC_SHA256, "hmac_sha256"},
+    {CRYPT_MAC_HMAC_SHA384, "hmac_sha384"},
+    {CRYPT_MAC_HMAC_SHA512, "hmac_sha512"},
+    {CRYPT_MAC_HMAC_SHA3_224, "hmac_sha3_224"},
+    {CRYPT_MAC_HMAC_SHA3_256, "hmac_sha3_256"},
+    {CRYPT_MAC_HMAC_SHA3_384, "hmac_sha3_384"},
+    {CRYPT_MAC_HMAC_SHA3_512, "hmac_sha3_512"},
+    {CRYPT_MAC_HMAC_SM3, "hmac_sm3"},
+    {CRYPT_MAC_CMAC_AES128, "cmac_aes128"},
+    {CRYPT_MAC_CMAC_AES192, "cmac_aes192"},
+    {CRYPT_MAC_CMAC_AES256, "cmac_aes256"},
+    {CRYPT_MAC_GMAC_AES128, "gmac_aes128"},
+    {CRYPT_MAC_GMAC_AES192, "gmac_aes192"},
+    {CRYPT_MAC_GMAC_AES256, "gmac_aes256"},
     {CRYPT_MAC_SIPHASH64, "siphash64"},
     {CRYPT_MAC_SIPHASH128, "siphash128"},
-    {CRYPT_MAC_CBC_MAC_SM4, "sm4-cbc-mac"},
+    {CRYPT_MAC_CBC_MAC_SM4, "sm4_cbc_mac"},
 };
 
 #define MAC_ALG_CNT (sizeof(g_allMacAlgInfo) / sizeof(CidInfo))
+
+static const CidInfo g_MdToHmacInfo[] = {
+    {CRYPT_MAC_HMAC_MD5, "md5"},
+    {CRYPT_MAC_HMAC_SHA1, "sha1"},
+    {CRYPT_MAC_HMAC_SHA224, "sha224"},
+    {CRYPT_MAC_HMAC_SHA256, "sha256"},
+    {CRYPT_MAC_HMAC_SHA384, "sha384"},
+    {CRYPT_MAC_HMAC_SHA512, "sha512"},
+    {CRYPT_MAC_HMAC_SHA3_224, "sha3_224"},
+    {CRYPT_MAC_HMAC_SHA3_256, "sha3_256"},
+    {CRYPT_MAC_HMAC_SHA3_384, "sha3_384"},
+    {CRYPT_MAC_HMAC_SHA3_512, "sha3_512"},
+    {CRYPT_MAC_HMAC_SM3, "sm3"}
+};
+
+#define MD_TO_HMAC_ALG_CNT (sizeof(g_MdToHmacInfo) / sizeof(CidInfo))
 
 static const CidInfo g_allRandAlgInfo[] = {
     {CRYPT_RAND_SHA1, "sha1"},
@@ -151,44 +167,44 @@ static const CidInfo g_allRandAlgInfo[] = {
     {CRYPT_RAND_SHA384, "sha384"},
     {CRYPT_RAND_SHA512, "sha512"},
     {CRYPT_RAND_SM3, "sm3"},
-    {CRYPT_RAND_HMAC_SHA1, "hmac-sha1"},
-    {CRYPT_RAND_HMAC_SHA224, "hmac-sha224"},
-    {CRYPT_RAND_HMAC_SHA256, "hmac-sha256"},
-    {CRYPT_RAND_HMAC_SHA384, "hmac-sha384"},
-    {CRYPT_RAND_HMAC_SHA512, "hmac-sha512"},
-    {CRYPT_RAND_AES128_CTR, "aes128-ctr"},
-    {CRYPT_RAND_AES192_CTR, "aes192-ctr"},
-    {CRYPT_RAND_AES256_CTR, "aes256-ctr"},
-    {CRYPT_RAND_AES128_CTR_DF, "aes128-ctr-df"},
-    {CRYPT_RAND_AES192_CTR_DF, "aes192-ctr-df"},
-    {CRYPT_RAND_AES256_CTR_DF, "aes256-ctr-df"},
-    {CRYPT_RAND_SM4_CTR_DF, "sm4-ctr-df"},
+    {CRYPT_RAND_HMAC_SHA1, "hmac_sha1"},
+    {CRYPT_RAND_HMAC_SHA224, "hmac_sha224"},
+    {CRYPT_RAND_HMAC_SHA256, "hmac_sha256"},
+    {CRYPT_RAND_HMAC_SHA384, "hmac_sha384"},
+    {CRYPT_RAND_HMAC_SHA512, "hmac_sha512"},
+    {CRYPT_RAND_AES128_CTR, "aes128_ctr"},
+    {CRYPT_RAND_AES192_CTR, "aes192_ctr"},
+    {CRYPT_RAND_AES256_CTR, "aes256_ctr"},
+    {CRYPT_RAND_AES128_CTR_DF, "aes128_ctr_df"},
+    {CRYPT_RAND_AES192_CTR_DF, "aes192_ctr_df"},
+    {CRYPT_RAND_AES256_CTR_DF, "aes256_ctr_df"},
+    {CRYPT_RAND_SM4_CTR_DF, "sm4_ctr_df"},
 };
 
 #define RAND_ALG_CNT (sizeof(g_allRandAlgInfo) / sizeof(CidInfo))
 
 static const CidInfo g_allKdfAlgInfo[] = {
-    {CRYPT_MAC_HMAC_MD5, "hmac-md5"},
-    {CRYPT_MAC_HMAC_SHA1, "hmac-sha1"},
-    {CRYPT_MAC_HMAC_SHA224, "hmac-sha224"},
-    {CRYPT_MAC_HMAC_SHA256, "hmac-sha256"},
-    {CRYPT_MAC_HMAC_SHA384, "hmac-sha384"},
-    {CRYPT_MAC_HMAC_SHA512, "hmac-sha512"},
-    {CRYPT_MAC_HMAC_SHA3_224, "hmac-sha3-224"},
-    {CRYPT_MAC_HMAC_SHA3_256, "hmac-sha3-256"},
-    {CRYPT_MAC_HMAC_SHA3_384, "hmac-sha3-384"},
-    {CRYPT_MAC_HMAC_SHA3_512, "hmac-sha3-512"},
-    {CRYPT_MAC_HMAC_SM3, "hmac-sm3"},
+    {CRYPT_MAC_HMAC_MD5, "hmac_md5"},
+    {CRYPT_MAC_HMAC_SHA1, "hmac_sha1"},
+    {CRYPT_MAC_HMAC_SHA224, "hmac_sha224"},
+    {CRYPT_MAC_HMAC_SHA256, "hmac_sha256"},
+    {CRYPT_MAC_HMAC_SHA384, "hmac_sha384"},
+    {CRYPT_MAC_HMAC_SHA512, "hmac_sha512"},
+    {CRYPT_MAC_HMAC_SHA3_224, "hmac_sha3_224"},
+    {CRYPT_MAC_HMAC_SHA3_256, "hmac_sha3_256"},
+    {CRYPT_MAC_HMAC_SHA3_384, "hmac_sha3_384"},
+    {CRYPT_MAC_HMAC_SHA3_512, "hmac_sha3_512"},
+    {CRYPT_MAC_HMAC_SM3, "hmac_sm3"},
     {CRYPT_KDF_PBKDF2, "pbkdf2"},
 };
 
 #define KDF_ALG_CNT (sizeof(g_allKdfAlgInfo) / sizeof(CidInfo))
 
 static CidInfo g_allCurves[] = {
-    {CRYPT_ECC_NISTP224, "P-224"},
-    {CRYPT_ECC_NISTP256, "P-256"},
-    {CRYPT_ECC_NISTP384, "P-384"},
-    {CRYPT_ECC_NISTP521, "P-521"},
+    {CRYPT_ECC_NISTP224, "P_224"},
+    {CRYPT_ECC_NISTP256, "P_256"},
+    {CRYPT_ECC_NISTP384, "P_384"},
+    {CRYPT_ECC_NISTP521, "P_521"},
     {CRYPT_ECC_NISTP224, "prime224v1"},
     {CRYPT_ECC_NISTP256, "prime256v1"},
     {CRYPT_ECC_NISTP384, "secp384r1"},
@@ -201,6 +217,50 @@ static CidInfo g_allCurves[] = {
 
 #define CURVES_SPLIT_LINE 6
 #define CURVES_CNT (sizeof(g_allCurves) / sizeof(CidInfo))
+
+static const CidInfo g_pkcs12MacIdList[] = {
+    {CRYPT_MD_SHA224, "sha224"},
+    {CRYPT_MD_SHA256, "sha256"},
+    {CRYPT_MD_SHA384, "sha384"},
+    {CRYPT_MD_SHA512, "sha512"}
+};
+#define PKCS12_MAC_ID_CNT (sizeof(g_pkcs12MacIdList) / sizeof(CidInfo))
+
+static const CidInfo g_keyPbeList[] = {
+    {BSL_CID_PBES2,   "PBES2"}
+};
+#define KEY_PBE_CNT (sizeof(g_keyPbeList) / sizeof(CidInfo))
+
+static const CidInfo g_keymgmtIdList[] = {
+    // For SM4, only expose "sm4" (normal 16-byte key) and "sm4_xts" (32-byte key)
+    // Map "sm4" to SM4_CBC internally to reuse existing creation logic.
+    {CRYPT_CIPHER_SM4_CBC, "sm4"},
+    {CRYPT_CIPHER_SM4_XTS, "sm4_xts"},
+    {CRYPT_MAC_HMAC_SM3, "hmac_sm3"},
+    {CRYPT_MAC_CBC_MAC_SM4, "sm4_cbc_mac"},
+    {CRYPT_PKEY_SM2, "sm2"},
+};
+#define KEY_MGMT_CNT (sizeof(g_keymgmtIdList) / sizeof(CidInfo))
+
+static const CidInfo g_rsaIdList[] = {
+    {CRYPT_CIPHER_AES128_CBC, "aes128_cbc"},
+    {CRYPT_CIPHER_AES192_CBC, "aes192_cbc"},
+    {CRYPT_CIPHER_AES256_CBC, "aes256_cbc"},
+    {CRYPT_CIPHER_AES128_XTS, "aes128_xts"},
+    {CRYPT_CIPHER_AES256_XTS, "aes256_xts"},
+    {CRYPT_CIPHER_SM4_XTS, "sm4_xts"},
+    {CRYPT_CIPHER_SM4_CBC, "sm4_cbc"},
+    {CRYPT_CIPHER_SM4_CTR, "sm4_ctr"},
+    {CRYPT_CIPHER_SM4_CFB, "sm4_cfb"},
+    {CRYPT_CIPHER_SM4_OFB, "sm4_ofb"},
+    {CRYPT_CIPHER_AES128_CFB, "aes128_cfb"},
+    {CRYPT_CIPHER_AES192_CFB, "aes192_cfb"},
+    {CRYPT_CIPHER_AES256_CFB, "aes256_cfb"},
+    {CRYPT_CIPHER_AES128_OFB, "aes128_ofb"},
+    {CRYPT_CIPHER_AES192_OFB, "aes192_ofb"},
+    {CRYPT_CIPHER_AES256_OFB, "aes256_ofb"},
+};
+#define RSA_ID_CNT (sizeof(g_rsaIdList) / sizeof(CidInfo))
 
 typedef void (*PrintAlgFunc)(void);
 PrintAlgFunc g_printAlgFuncList[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
@@ -234,7 +294,7 @@ static void ResetPrintAlgFuncList(void)
 
 static BSL_UIO *g_stdout = NULL;
 
-static int32_t AppPrintStdoutUioInit(void)
+int32_t HITLS_APP_PrintStdoutUioInit(void)
 {
     g_stdout = BSL_UIO_New(BSL_UIO_FileMethod());
     if (BSL_UIO_Ctrl(g_stdout, BSL_UIO_FILE_PTR, 0, (void *)stdout) != BSL_SUCCESS) {
@@ -244,12 +304,12 @@ static int32_t AppPrintStdoutUioInit(void)
     return HITLS_APP_SUCCESS;
 }
 
-static void AppPrintStdoutUioUnInit(void)
+void HITLS_APP_PrintStdoutUioUnInit(void)
 {
     BSL_UIO_Free(g_stdout);
 }
 
-static void PrintCipherAlg(void)
+void HITLS_APP_PrintCipherAlg(void)
 {
     AppPrint(g_stdout, "List Cipher Algorithms:\n");
     AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
@@ -259,6 +319,60 @@ static void PrintCipherAlg(void)
             continue;
         }
         AppPrint(g_stdout, "%-20s\t%3zu\n", g_allCipherAlgInfo[i].name, g_allCipherAlgInfo[i].cid);
+    }
+}
+
+void HITLS_APP_PrintMdToHmacAlg(void)
+{
+    AppPrint(g_stdout, "List md to hmac Algorithms:\n");
+    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+    for (size_t i = 0; i < MD_TO_HMAC_ALG_CNT; ++i) {
+        if (!CRYPT_EAL_MacIsValidAlgId(g_MdToHmacInfo[i].cid)) {
+            continue;
+        }
+        AppPrint(g_stdout, "%-20s\t%3zu\n", g_MdToHmacInfo[i].name, g_MdToHmacInfo[i].cid);
+    }
+}
+
+void HITLS_APP_PrintPkcs12MacIdAlg(void)
+{
+    AppPrint(g_stdout, "List pkcs12 mac id Algorithms:\n");
+    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+    for (size_t i = 0; i < PKCS12_MAC_ID_CNT; ++i) {
+        if (!CRYPT_EAL_MdIsValidAlgId(g_pkcs12MacIdList[i].cid)) {
+            continue;
+        }
+        AppPrint(g_stdout, "%-20s\t%3zu\n", g_pkcs12MacIdList[i].name, g_pkcs12MacIdList[i].cid);
+    }
+}
+
+void HITLS_APP_PrintPbeAlg(void)
+{
+    AppPrint(g_stdout, "List key pbe Algorithms:\n");
+    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+    for (size_t i = 0; i < KEY_PBE_CNT; ++i) {
+        AppPrint(g_stdout, "%-20s\t%3zu\n", g_keyPbeList[i].name, g_keyPbeList[i].cid);
+    }
+}
+
+void HITLS_APP_PrintKeyMgmtIdAlg(void)
+{
+    AppPrint(g_stdout, "List key mgmt Algorithms:\n");
+    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+    for (size_t i = 0; i < KEY_MGMT_CNT; ++i) {
+        AppPrint(g_stdout, "%-20s\t%3zu\n", g_keymgmtIdList[i].name, g_keymgmtIdList[i].cid);
+    }
+}
+
+void HITLS_APP_PrintRsaIdAlg(void)
+{
+    AppPrint(g_stdout, "List rsa id Algorithms:\n");
+    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
+    for (size_t i = 0; i < RSA_ID_CNT; ++i) {
+        if (!CRYPT_EAL_CipherIsValidAlgId(g_rsaIdList[i].cid)) {
+            continue;
+        }
+        AppPrint(g_stdout, "%-20s\t%3zu\n", g_rsaIdList[i].name, g_rsaIdList[i].cid);
     }
 }
 
@@ -286,7 +400,7 @@ static void PrintPkeyAlg(void)
     }
 }
 
-static void PrintMacAlg(void)
+void PrintMacAlg(void)
 {
     AppPrint(g_stdout, "List Mac Algorithms:\n");
     AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
@@ -357,7 +471,7 @@ static void PrintKdfAlg(void)
 
 static void PrintAllAlg(void)
 {
-    PrintCipherAlg();
+    HITLS_APP_PrintCipherAlg();
     AppPrint(g_stdout, "\n");
     PrintMdAlg();
     AppPrint(g_stdout, "\n");
@@ -399,7 +513,7 @@ static int32_t ParseListOpt(void)
                 AppPushPrintFunc(PrintMdAlg);
                 break;
             case HITLS_APP_LIST_OPT_CIPHER_ALG:
-                AppPushPrintFunc(PrintCipherAlg);
+                AppPushPrintFunc(HITLS_APP_PrintCipherAlg);
                 break;
             case HITLS_APP_LIST_OPT_ASYM_ALG:
                 AppPushPrintFunc(PrintPkeyAlg);
@@ -436,7 +550,7 @@ int32_t HITLS_ListMain(int argc, char *argv[])
     ResetPrintAlgFuncList();
     int32_t ret = HITLS_APP_SUCCESS;
     do {
-        ret = AppPrintStdoutUioInit();
+        ret = HITLS_APP_PrintStdoutUioInit();
         if (ret != HITLS_APP_SUCCESS) {
             break;
         }
@@ -452,7 +566,7 @@ int32_t HITLS_ListMain(int argc, char *argv[])
         AppPrintList();
     } while (false);
     HITLS_APP_OptEnd();
-    AppPrintStdoutUioUnInit();
+    HITLS_APP_PrintStdoutUioUnInit();
     return ret;
 }
 
@@ -493,6 +607,31 @@ static int32_t GetInfoByType(int32_t type, const CidInfo **cidInfos, uint32_t *c
             *cidInfos = g_allCurves;
             *cnt = CURVES_CNT;
             *typeName = "curves";
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_LIST_OPT_MD_TO_MAC_ALG:
+            *cidInfos = g_MdToHmacInfo;
+            *cnt = MD_TO_HMAC_ALG_CNT;
+            *typeName = "md";
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_LIST_OPT_PKCS12_MAC_ALG:
+            *cidInfos = g_pkcs12MacIdList;
+            *cnt = PKCS12_MAC_ID_CNT;
+            *typeName = "pk12mac";
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_LIST_OPT_PBE_ALG:
+            *cidInfos = g_keyPbeList;
+            *cnt = KEY_PBE_CNT;
+            *typeName = "keypbe";
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_LIST_OPT_KEY_MGMT_ALG:
+            *cidInfos = g_keymgmtIdList;
+            *cnt = KEY_MGMT_CNT;
+            *typeName = "keymgmt";
+            return HITLS_APP_SUCCESS;
+        case HITLS_APP_LIST_OPT_RSA_ALG:
+            *cidInfos = g_rsaIdList;
+            *cnt = RSA_ID_CNT;
+            *typeName = "rsa";
             return HITLS_APP_SUCCESS;
         default:
             return HITLS_APP_INVALID_ARG;

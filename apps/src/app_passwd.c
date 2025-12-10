@@ -68,9 +68,7 @@ typedef struct {
 static const char g_b64Table[] = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 static int32_t HandleOpt(PasswdOpt *opt);
-static int32_t CheckPara(PasswdOpt *opt, BSL_UIO *outUio);
 static int32_t GetSalt(PasswdOpt *opt);
-static int32_t GetPasswd(PasswdOpt *opt);
 static int32_t Sha512Crypt(PasswdOpt *opt, char *resBuf, uint32_t bufMaxLen);
 static int32_t OutputResult(BSL_UIO *outUio, char *resBuf, uint32_t bufLen);
 static bool IsSaltValid(char *salt);
@@ -90,6 +88,70 @@ static int32_t Sha512GetMdPBuf(PasswdOpt *opt, uint8_t *mdPBuf, uint32_t mdPBufL
 static int32_t Sha512GetMdSBuf(PasswdOpt *opt, uint8_t *mdSBuf, uint32_t mdSBufLen, uint8_t nForMdS);
 static int32_t Sha512IterHash(long rounds, BufLen *md1HashRes, BufLen *mdPBuf, BufLen *mdSBuf);
 static int32_t Sha512MdCrypt(PasswdOpt *opt, char *resBuf, uint32_t bufLen);
+
+static int32_t GetPasswd(PasswdOpt *opt)
+{
+    char *pwd = NULL;
+    uint32_t pwdLen;
+    int32_t ret = HITLS_APP_ParsePasswd("stdin", &pwd);
+    if (ret != HITLS_APP_SUCCESS) {
+        AppPrintError("Failed to read passwd from stdin.\n");
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    pwdLen = (uint32_t)strlen(pwd);
+    if (pwdLen < APP_MIN_PASS_LENGTH || pwdLen > APP_MAX_PASS_LENGTH) {
+        BSL_SAL_ClearFree(pwd, pwdLen);
+        AppPrintError("Invalid passwd length.\n");
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    if (HITLS_APP_CheckPasswd((uint8_t *)pwd, pwdLen) != HITLS_APP_SUCCESS) {
+        BSL_SAL_ClearFree(pwd, pwdLen);
+        AppPrintError("Failed to check passwd.\n");
+        return HITLS_APP_PASSWD_FAIL;
+    }
+    opt->pass = pwd;
+    opt->passwdLen = pwdLen;
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t CheckPara(PasswdOpt *passwdOpt, BSL_UIO *outUio)
+{
+    if (passwdOpt->algTag == -1 || passwdOpt->saltLen == -1) {
+        AppPrintError("The hash algorithm is not specified.\n");
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    if (passwdOpt->iter != -1) {
+        if (passwdOpt->iter < REC_MIN_ITER_TIMES || passwdOpt->iter > REC_MAX_ITER_TIMES) {
+            AppPrintError("Invalid iterations number, valid range[1000, 999999999].\n");
+            return HITLS_APP_OPT_VALUE_INVALID;
+        }
+    }
+    int32_t checkRet = HITLS_APP_SUCCESS;
+    if ((checkRet = GetSalt(passwdOpt)) != HITLS_APP_SUCCESS) {
+        return checkRet;
+    }
+    if ((checkRet = GetPasswd(passwdOpt)) != HITLS_APP_SUCCESS) {
+        return checkRet;
+    }
+    // Obtains the post-value of the OUT option. If there is no post-value or this option, stdout.
+    if (passwdOpt->outFile == NULL) {
+        if (BSL_UIO_Ctrl(outUio, BSL_UIO_FILE_PTR, 0, (void *)stdout) != BSL_SUCCESS) {
+            AppPrintError("Failed to set stdout mode.\n");
+            return HITLS_APP_UIO_FAIL;
+        }
+    } else {
+        // User input file path, which is bound to the output file.
+        if (strlen(passwdOpt->outFile) >= PATH_MAX || strlen(passwdOpt->outFile) == 0) {
+            AppPrintError("The length of outfile error, range is (0, 4096].\n");
+            return HITLS_APP_OPT_VALUE_INVALID;
+        }
+        if (BSL_UIO_Ctrl(outUio, BSL_UIO_FILE_OPEN, BSL_UIO_FILE_WRITE, passwdOpt->outFile) != BSL_SUCCESS) {
+            AppPrintError("Failed to set outfile mode.\n");
+            return HITLS_APP_UIO_FAIL;
+        }
+    }
+    return HITLS_APP_SUCCESS;
+}
 
 int32_t HITLS_PasswdMain(int argc, char *argv[])
 {
@@ -191,78 +253,6 @@ static int32_t GetSalt(PasswdOpt *opt)
         }
         opt->salt[count] = '\0';
         CRYPT_EAL_RandDeinitEx(NULL);
-    }
-    return HITLS_APP_SUCCESS;
-}
-
-static int32_t GetPasswd(PasswdOpt *opt)
-{
-    uint32_t bufLen = APP_MAX_PASS_LENGTH + 1;
-    BSL_UI_ReadPwdParam param = {"password", NULL, true};
-    if (opt->pass == NULL) {
-        char *tmpPasswd = (char *)BSL_SAL_Calloc(APP_MAX_PASS_LENGTH + 1, sizeof(char));
-        if (tmpPasswd == NULL) {
-            return HITLS_APP_MEM_ALLOC_FAIL;
-        }
-        int32_t readPassRet = BSL_UI_ReadPwdUtil(&param, tmpPasswd, &bufLen, HITLS_APP_DefaultPassCB, NULL);
-        if (readPassRet == BSL_UI_READ_BUFF_TOO_LONG || readPassRet == BSL_UI_READ_LEN_TOO_SHORT) {
-            HITLS_APP_PrintPassErrlog();
-            BSL_SAL_FREE(tmpPasswd);
-            return HITLS_APP_PASSWD_FAIL;
-        }
-        if (readPassRet != BSL_SUCCESS) {
-            BSL_SAL_FREE(tmpPasswd);
-            return HITLS_APP_PASSWD_FAIL;
-        }
-        bufLen -= 1; // The interface also reads the Enter, so the last digit needs to be replaced with the '\0'.
-        tmpPasswd[bufLen] = '\0';
-        opt->pass = tmpPasswd;
-    } else {
-        bufLen = strlen(opt->pass);
-    }
-    opt->passwdLen = bufLen;
-    if (HITLS_APP_CheckPasswd((uint8_t *)opt->pass, opt->passwdLen) != HITLS_APP_SUCCESS) {
-        opt->passwdLen = 0;
-        return HITLS_APP_PASSWD_FAIL;
-    }
-    return HITLS_APP_SUCCESS;
-}
-
-static int32_t CheckPara(PasswdOpt *passwdOpt, BSL_UIO *outUio)
-{
-    if (passwdOpt->algTag == -1 || passwdOpt->saltLen == -1) {
-        AppPrintError("The hash algorithm is not specified.\n");
-        return HITLS_APP_OPT_VALUE_INVALID;
-    }
-    if (passwdOpt->iter != -1) {
-        if (passwdOpt->iter < REC_MIN_ITER_TIMES || passwdOpt->iter > REC_MAX_ITER_TIMES) {
-            AppPrintError("Invalid iterations number, valid range[1000, 999999999].\n");
-            return HITLS_APP_OPT_VALUE_INVALID;
-        }
-    }
-    int32_t checkRet = HITLS_APP_SUCCESS;
-    if ((checkRet = GetSalt(passwdOpt)) != HITLS_APP_SUCCESS) {
-        return checkRet;
-    }
-    if ((checkRet = GetPasswd(passwdOpt)) != HITLS_APP_SUCCESS) {
-        return checkRet;
-    }
-    // Obtains the post-value of the OUT option. If there is no post-value or this option, stdout.
-    if (passwdOpt->outFile == NULL) {
-        if (BSL_UIO_Ctrl(outUio, BSL_UIO_FILE_PTR, 0, (void *)stdout) != BSL_SUCCESS) {
-            AppPrintError("Failed to set stdout mode.\n");
-            return HITLS_APP_UIO_FAIL;
-        }
-    } else {
-        // User input file path, which is bound to the output file.
-        if (strlen(passwdOpt->outFile) >= PATH_MAX || strlen(passwdOpt->outFile) == 0) {
-            AppPrintError("The length of outfile error, range is (0, 4096].\n");
-            return HITLS_APP_OPT_VALUE_INVALID;
-        }
-        if (BSL_UIO_Ctrl(outUio, BSL_UIO_FILE_OPEN, BSL_UIO_FILE_WRITE, passwdOpt->outFile) != BSL_SUCCESS) {
-            AppPrintError("Failed to set outfile mode.\n");
-            return HITLS_APP_UIO_FAIL;
-        }
     }
     return HITLS_APP_SUCCESS;
 }
