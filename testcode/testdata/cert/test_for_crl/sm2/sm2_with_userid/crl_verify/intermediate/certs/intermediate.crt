@@ -1,0 +1,49 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            5b:08:67:bf:c2:6d:d4:d2:04:48:af:ff:0c:1c:3a:8b:d9:f7:76:60
+        Signature Algorithm: SM2-with-SM3
+        Issuer: C=CN, O=My Root CA, CN=Root CA
+        Validity
+            Not Before: Dec 11 03:59:55 2025 GMT
+            Not After : Dec  9 03:59:55 2035 GMT
+        Subject: C=CN, O=My Intermediate CA, CN=Intermediate CA
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: (256 bit)
+                pub:
+                    04:5e:4b:83:c0:84:ca:36:aa:ea:74:a5:b1:35:f9:
+                    87:06:6a:58:1c:a5:32:54:77:12:29:83:81:4d:eb:
+                    30:1b:9d:16:68:56:e5:62:98:48:49:a8:f7:eb:26:
+                    fb:db:75:be:32:09:37:76:9a:72:92:bf:4c:07:6f:
+                    91:ad:6d:89:6d
+                ASN1 OID: SM2
+        X509v3 extensions:
+            X509v3 Basic Constraints: critical
+                CA:TRUE
+            X509v3 Key Usage: critical
+                Certificate Sign, CRL Sign
+            X509v3 Subject Key Identifier: 
+                9B:97:FA:23:F0:FD:50:62:11:97:BB:7E:DB:03:A3:A4:B0:4E:0C:E1
+            X509v3 Authority Key Identifier: 
+                39:A6:B3:4D:DD:39:F3:F2:BA:1E:74:F3:B3:7C:DB:BC:8C:B1:C6:9E
+    Signature Algorithm: SM2-with-SM3
+    Signature Value:
+        30:46:02:21:00:f7:12:cb:c8:d8:fb:5e:c5:19:16:12:5e:61:
+        4b:78:b1:58:0b:34:27:63:9d:c2:54:c9:e1:98:f7:e0:4e:f4:
+        5c:02:21:00:b7:0f:ea:2c:cb:fc:ad:f9:cb:68:93:4d:7f:47:
+        e8:01:fb:a0:2e:4a:40:24:d0:26:f5:1b:13:c8:47:f5:07:ac
+-----BEGIN CERTIFICATE-----
+MIIB3jCCAYOgAwIBAgIUWwhnv8Jt1NIESK//DBw6i9n3dmAwCgYIKoEcz1UBg3Uw
+NDELMAkGA1UEBhMCQ04xEzARBgNVBAoMCk15IFJvb3QgQ0ExEDAOBgNVBAMMB1Jv
+b3QgQ0EwHhcNMjUxMjExMDM1OTU1WhcNMzUxMjA5MDM1OTU1WjBEMQswCQYDVQQG
+EwJDTjEbMBkGA1UECgwSTXkgSW50ZXJtZWRpYXRlIENBMRgwFgYDVQQDDA9JbnRl
+cm1lZGlhdGUgQ0EwWTATBgcqhkjOPQIBBggqgRzPVQGCLQNCAAReS4PAhMo2qup0
+pbE1+YcGalgcpTJUdxIpg4FN6zAbnRZoVuVimEhJqPfrJvvbdb4yCTd2mnKSv0wH
+b5GtbYlto2MwYTAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBBjAdBgNV
+HQ4EFgQUm5f6I/D9UGIRl7t+2wOjpLBODOEwHwYDVR0jBBgwFoAUOaazTd058/K6
+HnTzs3zbvIyxxp4wCgYIKoEcz1UBg3UDSQAwRgIhAPcSy8jY+17FGRYSXmFLeLFY
+CzQnY53CVMnhmPfgTvRcAiEAtw/qLMv8rfnLaJNNf0foAfugLkpAJNAm9RsTyEf1
+B6w=
+-----END CERTIFICATE-----
