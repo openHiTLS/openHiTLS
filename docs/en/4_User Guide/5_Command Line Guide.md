@@ -31,7 +31,6 @@ The openHiTLS command source code is located in the apps directory, and the comp
 ||s_server|SSL/TLS server tool|
 |**Other Utility Tools**|| |
 ||rand|Generate random numbers of specified length, supporting hexadecimal and Base64 encoded output|
-||passwd|Generate and verify password hashes, supporting algorithms like SHA512|
 ||prime|Generate and test primes, support hexadecimal input/output, and generate safe primes|
 
 ## 1.2 Command Usage
@@ -195,10 +194,7 @@ hitls rand -base64 -out rand.txt 64
 hitls rand -algorithm hmac-sha256 -hex 10
 ```
 
-### 3.6.2 passwd
-Generate and verify password hashes, supporting algorithms like SHA512
-
-### 3.6.3 prime
+### 3.6.2 prime
 
 **Function**: Generate and test primes
 

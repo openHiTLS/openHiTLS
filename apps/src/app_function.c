@@ -28,7 +28,6 @@
 #include "app_crl.h"
 #include "app_genrsa.h"
 #include "app_verify.h"
-#include "app_passwd.h"
 #include "app_pkey.h"
 #include "app_genpkey.h"
 #include "app_req.h"
@@ -52,7 +51,6 @@ HITLS_CmdFunc g_cmdFunc[] = {
     {"crl",      FUNC_TYPE_GENERAL,   HITLS_CrlMain},
     {"genrsa",   FUNC_TYPE_GENERAL,   HITLS_GenRSAMain},
     {"verify",   FUNC_TYPE_GENERAL,   HITLS_VerifyMain},
-    {"passwd",   FUNC_TYPE_GENERAL,   HITLS_PasswdMain},
     {"pkey",     FUNC_TYPE_GENERAL,   HITLS_PkeyMain},
     {"genpkey",  FUNC_TYPE_GENERAL,   HITLS_GenPkeyMain},
     {"req",      FUNC_TYPE_GENERAL,   HITLS_ReqMain},
