@@ -107,6 +107,18 @@ int32_t BSL_ASN1_EncodeLimb(uint8_t tag, uint64_t limb, BSL_ASN1_Buffer *asn);
  */
 int32_t BSL_ASN1_GetEncodeLen(uint32_t contentLen, uint32_t *encodeLen);
 
+/**
+ * @ingroup bsl_asn1
+ * @brief Convert ASN.1 string content encoded in various ASN.1 string forms to UTF-8 encoded octets.
+ *
+ * @param in     [IN]  Input ASN.1 buffer.
+ * @param out    [OUT] Output ASN.1 buffer receiving the UTF-8 encoded octets.
+ * @retval  BSL_SUCCESS, success.
+ *          Other error codes see the bsl_errno.h.
+ */
+int32_t BSL_ASN1_ToUtf8String(const BSL_ASN1_Buffer *in, BSL_ASN1_Buffer *out);
+
+
 #ifdef __cplusplus
 }
 #endif

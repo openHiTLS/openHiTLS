@@ -1350,3 +1350,190 @@ int32_t BSL_ASN1_GetEncodeLen(uint32_t contentLen, uint32_t *encodeLen)
     *encodeLen = 1 + lenOctetNum + contentLen;
     return BSL_SUCCESS;
 }
+
+static bool IsUnicodeScalarValue(uint32_t codePoint)
+{
+    /* Unicode code space range: U+0000 .. U+10FFFF */
+    if (codePoint > 0x10FFFFU) {
+        return false;
+    }
+    /* UTF-16 surrogate code point range: 0xD800 .. 0xDFFF
+       These values are NOT valid Unicode scalar values */
+    if (codePoint >= 0xD800U && codePoint <= 0xDFFFU) {
+        return false;
+    }
+    return true;
+}
+
+typedef struct {
+    /* Length of the UTF-8 sequence in bytes. */
+    uint32_t len;
+    /*
+     * Fixed prefix bits of the UTF-8 lead byte.
+     * len = 1 -> 0x00  (0xxxxxxx)
+     * len = 2 -> 0xC0  (110xxxxx)
+     * len = 3 -> 0xE0  (1110xxxx)
+     * len = 4 -> 0xF0  (11110xxx)
+     */
+    uint8_t leadPrefix;
+    /*
+     * Mask used to extract payload bits from the UTF-8 lead byte.
+     * len = 1 -> 7 payload bits  -> 0x7F
+     * len = 2 -> 5 payload bits  -> 0x1F
+     * len = 3 -> 4 payload bits  -> 0x0F
+     * len = 4 -> 3 payload bits  -> 0x07
+     */
+    uint8_t leadMask;
+    /*
+     * Minimum Unicode code point representable by this UTF-8 length.
+     * len = 1 -> 0x0000
+     * len = 2 -> 0x0080
+     * len = 3 -> 0x0800
+     * len = 4 -> 0x10000
+     */
+    uint32_t minCodePoint;
+} BSL_ASN1_Utf8FormInfo;
+
+static const BSL_ASN1_Utf8FormInfo g_utf8FormTable[] = {
+    { 1U, 0x00U, 0x7FU, 0x00000000U }, /* 0xxxxxxx */
+    { 2U, 0xC0U, 0x1FU, 0x00000080U }, /* 110xxxxx */
+    { 3U, 0xE0U, 0x0FU, 0x00000800U }, /* 1110xxxx */
+    { 4U, 0xF0U, 0x07U, 0x00010000U }  /* 11110xxx */
+};
+
+#define BSL_ASN1_UTF8_FORM_TABLE_SIZE ((uint32_t)(sizeof(g_utf8FormTable) / sizeof(g_utf8FormTable[0])))
+
+static int32_t CodePointToUtf8(uint32_t codePoint, uint8_t *out, uint32_t *needLen)
+{
+    uint32_t i;
+    uint32_t len = 0;
+    uint8_t  leadPrefix = 0;
+    uint32_t tempCodePoint = codePoint;
+
+    if (out == NULL && !IsUnicodeScalarValue(codePoint)) {
+        return BSL_ASN1_ERR_INVALID_UTF8_CODE_POINT;
+    }
+    for (i = BSL_ASN1_UTF8_FORM_TABLE_SIZE; i > 0; i--) {
+        const BSL_ASN1_Utf8FormInfo *form = &g_utf8FormTable[i - 1];
+        if (codePoint >= form->minCodePoint) {
+            len = form->len;
+            leadPrefix = form->leadPrefix;
+            break;
+        }
+    }
+    *needLen = len;
+    if (out == NULL) {
+        return BSL_SUCCESS;
+    }
+    for (i = len - 1; i > 0; i--) {
+        /* 0x80: 1000 0000 0x3F: 0011 1111
+           Take the lowest 6 bits of the code point and prepend '10' */
+        out[i] = (uint8_t)(0x80U | (tempCodePoint & 0x3FU));
+
+        /* Shift code point right by 6 bits */
+        tempCodePoint >>= 6;
+    }
+    out[0] = (uint8_t)(leadPrefix | tempCodePoint);
+    return BSL_SUCCESS;
+}
+
+static int32_t EncodeCodePointToUtf8(const uint8_t *data, uint32_t dataLen, uint32_t charSize,
+    uint8_t *out, uint32_t *outLen)
+{
+    uint32_t needLen;
+    uint32_t tempLen = dataLen;
+    int32_t ret;
+
+    *outLen = 0;
+    while (tempLen > 0) {
+        uint32_t codePoint = 0;
+        for (uint32_t i = 0; i < charSize; i++) {
+            /* Shift left by 8 (one byte) to append the next byte in big-endian order. */
+            codePoint = (codePoint << 8) | (uint32_t)data[i];
+        }
+        ret = CodePointToUtf8(codePoint, out, &needLen);
+        if (ret != BSL_SUCCESS) {
+            return ret;
+        }
+        if (out != NULL) {
+            out += needLen;
+        }
+        *outLen += needLen;
+        data += charSize;
+        tempLen -= charSize;
+    }
+    return BSL_SUCCESS;
+}
+
+/* Converts only non-UTF8 encoded string types to UTF-8 (UTF8String is not handled here). */
+static int32_t ConvertToUtf8String(const uint8_t *data, uint32_t dataLen, uint32_t charSize,
+    BSL_ASN1_Buffer *out)
+{
+    int32_t ret = EncodeCodePointToUtf8(data, dataLen, charSize, NULL, &out->len);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    out->buff = (uint8_t *)BSL_SAL_Calloc(1, out->len);
+    if (out->buff == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    ret = EncodeCodePointToUtf8(data, dataLen, charSize, out->buff, &out->len);
+    if (ret != BSL_SUCCESS) {
+        BSL_SAL_FREE(out->buff);
+        return ret;
+    }
+    out->tag = BSL_ASN1_TAG_UTF8STRING;
+    return BSL_SUCCESS;
+}
+
+static int32_t GetAndValidateCharSize(const BSL_ASN1_Buffer *in, uint32_t *charSize)
+{
+    switch (in->tag) {
+        case BSL_ASN1_TAG_UTF8STRING:
+            *charSize = 0;
+            break;
+        case BSL_ASN1_TAG_PRINTABLESTRING:
+        case BSL_ASN1_TAG_IA5STRING:
+        /* T61 character set is regarded as Latin-1.
+           This is a common approximation as T61 is largely compatible with Latin-1. */
+        case BSL_ASN1_TAG_TELETEXSTRING:
+            *charSize = 1;
+            break;
+        case BSL_ASN1_TAG_BMPSTRING:
+            *charSize = 2;   /* BMPString (2 bytes per char) */
+            break;
+        case BSL_ASN1_TAG_UNIVERSALSTRING:
+            *charSize = 4;   /* UniversalString (4 bytes per char) */
+            break;
+        default:
+            return BSL_ASN1_ERR_UNSUPPORTED_STRING_TAG;
+    }
+    if (*charSize > 1 && (in->len % (*charSize)) != 0) {
+        return BSL_ASN1_ERR_INVALID_STRING_LEN;
+    }
+    return BSL_SUCCESS;
+}
+
+int32_t BSL_ASN1_ToUtf8String(const BSL_ASN1_Buffer *in, BSL_ASN1_Buffer *out)
+{
+    uint32_t charSize;
+    int32_t ret = GetAndValidateCharSize(in, &charSize);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    /* Empty content is valid */
+    if (in->len == 0) {
+        out->tag = BSL_ASN1_TAG_UTF8STRING;
+        return BSL_SUCCESS;
+    }
+    if (in->tag == BSL_ASN1_TAG_UTF8STRING) {
+        out->buff = (uint8_t *)BSL_SAL_Dump(in->buff, in->len);
+        if (out->buff == NULL) {
+            return BSL_MALLOC_FAIL;
+        }
+        out->tag = BSL_ASN1_TAG_UTF8STRING;
+        out->len = in->len;
+        return BSL_SUCCESS;
+    }
+    return ConvertToUtf8String(in->buff, in->len, charSize, out);
+}

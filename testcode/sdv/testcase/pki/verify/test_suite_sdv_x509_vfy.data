@@ -315,3 +315,72 @@ SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001:"../testdata/cert/chain/verify/ed25519
 
 SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001 RSA
 SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001:"../testdata/cert/chain/verify/rsa_cert_test.pem":"../testdata/cert/chain/verify/rsa_cert_verify.pem":"../testdata/cert/chain/rsa-pss-v3/ca.der"
+
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset user cert
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":HITLS_PKI_SUCCESS
+
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 user cert
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":HITLS_PKI_SUCCESS
+
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset user cert with error issuer
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8":"../testdata/cert/chain/charset/convert_to_utf8/user_err_issuer.der":HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND
+
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset user cert with error aki
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8":"../testdata/cert/chain/charset/convert_to_utf8/user_err_aki.der":HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND
+
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001 Standardization of content:CA paths
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/string_canon":"../testdata/cert/chain/charset/string_canon/user_string_canon.crt":HITLS_PKI_SUCCESS
+
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and user
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":HITLS_PKI_SUCCESS
+
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and user
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":HITLS_PKI_SUCCESS
+
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and utf8 user
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":HITLS_PKI_SUCCESS
+
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and mix charset user
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":HITLS_PKI_SUCCESS
+
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset user cert with error issuer
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_err_issuer.der":HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND
+
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset user cert with error aki
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_err_aki.der":HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND
+
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 Standardization of content:store
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/string_canon/ca_string_canon.crt":"../testdata/cert/chain/charset/string_canon/user_string_canon.crt":HITLS_PKI_SUCCESS
+
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC002 Standardization of content:cert chain
+SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC002:"../testdata/cert/chain/charset/string_canon/ca_string_canon.crt":"../testdata/cert/chain/charset/string_canon/inter_string_canon.crt":"../testdata/cert/chain/charset/string_canon/end_string_canon.crt"
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and mix charset user not in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and mix charset user not in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and utf8 user not in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and utf8 user not in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_PKI_SUCCESS
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and mix charset user in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and mix charset user in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_mix.crl":HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 utf8 ca and utf8 user in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset ca and utf8 user in the revocation list
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_utf8.crl":HITLS_X509_ERR_VFY_CERT_REVOKED
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset crl with error issuer
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_err_issuer.der":HITLS_X509_ERR_VFY_CRL_NOT_FOUND
+
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset crl with error aki
+SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_utf8.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/crl_err_aki.der":HITLS_X509_ERR_VFY_CRL_NOT_FOUND

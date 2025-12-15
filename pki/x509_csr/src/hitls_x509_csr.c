@@ -130,7 +130,7 @@ void HITLS_X509_CsrFree(HITLS_X509_Csr *csr)
         BSL_SAL_FREE(csr->reqInfo.reqInfoRawData);
         BSL_SAL_FREE(csr->signature.buff);
     } else {
-        BSL_LIST_FREE(csr->reqInfo.subjectName, NULL);
+        BSL_LIST_FREE(csr->reqInfo.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     }
 #ifdef HITLS_CRYPTO_SM2
     if (csr->signAlgId.algId == BSL_CID_SM2DSAWITHSM3) {
@@ -205,7 +205,7 @@ ERR:
         CRYPT_EAL_PkeyFreeCtx(csr->reqInfo.ealPubKey);
         csr->reqInfo.ealPubKey = NULL;
     }
-    BSL_LIST_FREE(csr->reqInfo.subjectName, NULL);
+    BSL_LIST_FREE(csr->reqInfo.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     return ret;
 }
 
@@ -253,7 +253,7 @@ static int32_t X509CsrBuffAsn1Parse(uint8_t *encode, uint32_t encodeLen, HITLS_X
 ERR:
     HITLS_X509_AttrsFree(csr->reqInfo.attributes, NULL);
     csr->reqInfo.attributes = NULL;
-    BSL_LIST_FREE(csr->reqInfo.subjectName, NULL);
+    BSL_LIST_FREE(csr->reqInfo.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     if (csr->reqInfo.ealPubKey != NULL) {
         CRYPT_EAL_PkeyFreeCtx(csr->reqInfo.ealPubKey);
         csr->reqInfo.ealPubKey = NULL;

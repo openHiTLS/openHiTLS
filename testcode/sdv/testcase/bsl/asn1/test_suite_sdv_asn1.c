@@ -1432,3 +1432,131 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_BSL_ASN1_TO_UTF8_STRING_INLEN_EMPTY_FUNC_TC001
+ * @title  Test BSL_ASN1_ToUtf8String with empty input length.
+ * @brief  Input ASN.1 buffer has valid UTF8String tag but length is 0.
+ * @expect Convert successful and output buffer is empty.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_TO_UTF8_STRING_INLEN_EMPTY_FUNC_TC001(void)
+{
+    BSL_ASN1_Buffer in = {0};
+    BSL_ASN1_Buffer out = {0};
+
+    in.tag = BSL_ASN1_TAG_UTF8STRING;
+    ASSERT_EQ(BSL_ASN1_ToUtf8String(&in, &out), BSL_SUCCESS);
+
+    ASSERT_EQ(out.tag, BSL_ASN1_TAG_UTF8STRING);
+    ASSERT_EQ(out.len, 0);
+    ASSERT_EQ(out.buff, NULL);
+
+EXIT:
+    return;
+}
+/* END_CASE */
+
+static int32_t ReadHexFileAsBytes(const char *path, BSL_ASN1_Buffer *data)
+{
+    BSL_ASN1_Buffer temp = {0};
+    int32_t ret = BSL_SAL_ReadFile(path, &temp.buff, &temp.len);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+
+    Hex hex = {0};
+    if (ConvertHex((const char *)temp.buff, &hex) != 0) {
+        BSL_SAL_FREE(temp.buff);
+        return BSL_INVALID_ARG;
+    }
+    BSL_SAL_FREE(temp.buff);
+
+    data->buff = hex.x;
+    data->len = hex.len;
+    return BSL_SUCCESS;
+}
+
+/**
+ * @test   SDV_BSL_ASN1_TO_UTF8_STRING_FUNC_TC001
+ * @title  Test BSL_ASN1_ToUtf8String with normal ASN.1 input from file.
+ * @brief  Input data is read from hex file, converted to UTF8 string.
+ * @expect Convert successful and output matches expected UTF8 data.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_TO_UTF8_STRING_FUNC_TC001(int tag, char *path, char *expectPath)
+{
+    BSL_ERR_Init();
+    BSL_ASN1_Buffer in = {0};
+    BSL_ASN1_Buffer out = {0};
+    BSL_ASN1_Buffer expectOut = {0};
+    in.tag = (uint8_t)tag;
+    ASSERT_EQ(ReadHexFileAsBytes(path, &in), BSL_SUCCESS);
+    ASSERT_EQ(ReadHexFileAsBytes(expectPath, &expectOut), BSL_SUCCESS);
+
+    ASSERT_EQ(BSL_ASN1_ToUtf8String(&in, &out), BSL_SUCCESS);
+
+    ASSERT_EQ(out.tag, BSL_ASN1_TAG_UTF8STRING);
+    ASSERT_EQ(out.len, expectOut.len);
+    ASSERT_TRUE(out.buff != in.buff);
+    ASSERT_COMPARE("Convert String", expectOut.buff, expectOut.len, out.buff, out.len);
+
+EXIT:
+    BSL_SAL_FREE(in.buff);
+    BSL_SAL_FREE(out.buff);
+    BSL_SAL_FREE(expectOut.buff);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_BSL_ASN1_TO_UTF8_STRING_FUNC_TC002
+ * @title  Test BSL_ASN1_ToUtf8String with PrintableString and IA5String extended characters.
+ * @brief  Input data uses PrintableString and IA5String encoding types and contains
+ *         single-byte Unicode characters that are outside the valid character set
+ *         defined for these types.
+ * @expect Convert successful and extended characters are preserved in UTF8 output.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_TO_UTF8_STRING_FUNC_TC002(int tag, Hex *data, Hex *expectData)
+{
+    BSL_ASN1_Buffer in = {0};
+    BSL_ASN1_Buffer out = {0};
+
+    in.tag = (uint8_t)tag;
+    in.len  = data->len;
+    in.buff = data->x;
+
+    ASSERT_EQ(BSL_ASN1_ToUtf8String(&in, &out), BSL_SUCCESS);
+    ASSERT_EQ(out.tag, BSL_ASN1_TAG_UTF8STRING);
+    ASSERT_EQ(out.len, expectData->len);
+    ASSERT_TRUE(out.buff != in.buff);
+    ASSERT_COMPARE("Convert String", expectData->x, expectData->len, out.buff, out.len);
+
+EXIT:
+    BSL_SAL_FREE(out.buff);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_BSL_ASN1_TO_UTF8_STRING_ERR_API_TC001
+ * @title  Test BSL_ASN1_ToUtf8String with invalid input parameters.
+ * @brief  Input parameters are abnormal.
+ * @expect Return corresponding error code.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_TO_UTF8_STRING_ERR_API_TC001(int tag, Hex *data, int expect)
+{
+    BSL_ASN1_Buffer in = {0};
+    BSL_ASN1_Buffer out = {0};
+
+    in.tag = (uint8_t)tag;
+    in.len  = data->len;
+    in.buff = data->x;
+
+    ASSERT_EQ(BSL_ASN1_ToUtf8String(&in, &out), expect);
+EXIT:
+    return;
+}
+/* END_CASE */

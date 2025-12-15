@@ -172,8 +172,8 @@ void HITLS_X509_CertFree(HITLS_X509_Cert *cert)
         BSL_LIST_FREE(cert->tbs.issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
         BSL_LIST_FREE(cert->tbs.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
     } else {
-        BSL_LIST_FREE(cert->tbs.issuerName, NULL);
-        BSL_LIST_FREE(cert->tbs.subjectName, NULL);
+        BSL_LIST_FREE(cert->tbs.issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+        BSL_LIST_FREE(cert->tbs.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     }
 #ifdef HITLS_CRYPTO_SM2
     if (cert->signAlgId.algId == BSL_CID_SM2DSAWITHSM3) {
@@ -283,8 +283,8 @@ ERR:
         CRYPT_EAL_PkeyFreeCtx(cert->tbs.ealPubKey);
         cert->tbs.ealPubKey = NULL;
     }
-    BSL_LIST_DeleteAll(cert->tbs.issuerName, NULL);
-    BSL_LIST_DeleteAll(cert->tbs.subjectName, NULL);
+    BSL_LIST_DeleteAll(cert->tbs.issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+    BSL_LIST_DeleteAll(cert->tbs.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     return ret;
 }
 
@@ -333,8 +333,8 @@ int32_t HITLS_X509_ParseAsn1Cert(uint8_t *encode, uint32_t encodeLen, HITLS_X509
 ERR:
     CRYPT_EAL_PkeyFreeCtx(cert->tbs.ealPubKey);
     cert->tbs.ealPubKey = NULL;
-    BSL_LIST_DeleteAll(cert->tbs.issuerName, NULL);
-    BSL_LIST_DeleteAll(cert->tbs.subjectName, NULL);
+    BSL_LIST_DeleteAll(cert->tbs.issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+    BSL_LIST_DeleteAll(cert->tbs.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     BSL_LIST_DeleteAll(cert->tbs.ext.extList, NULL);
     return ret;
 }
