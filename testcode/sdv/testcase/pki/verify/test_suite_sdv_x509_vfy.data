@@ -1,4 +1,4 @@
-SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001 1
+﻿SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001 1
 SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001:"../testdata/cert/sm2/sign.mul.der":"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/ca.mul.der":128:HITLS_PKI_SUCCESS
 
 SDV_X509_STORE_VFY_PARAM_EXR_FUNC_TC001 2
@@ -103,5 +103,17 @@ SDV_X509_VFY_AKI_SKI_CRITICAL_PASS_TC007:
 SDV_X509_VFY_NOAKID_CERT_PASS_TC009 intermediate missing AKID certchain verify succeeds
 SDV_X509_VFY_NOAKID_CERT_PASS_TC009:
 
-SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001
+SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001 RSAPSS
 SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001:"../testdata/cert/chain/rsa-pss-v3/end.der":"../testdata/cert/chain/rsa-pss-v3/inter.der":"../testdata/cert/chain/rsa-pss-v3/ca.der"
+
+SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001 ECDSA
+SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001:"../testdata/cert/chain/verify/ecdsa_cert_test.pem":"../testdata/cert/chain/verify/ecdsa_cert_verify.pem":"../testdata/cert/chain/rsa-pss-v3/ca.der"
+
+SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001 SM2
+SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001:"../testdata/cert/chain/verify/sm2_cert_test.pem":"../testdata/cert/chain/verify/sm2_cert_verify.pem":"../testdata/cert/chain/rsa-pss-v3/ca.der"
+
+SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001 ED25519
+SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001:"../testdata/cert/chain/verify/ed25519_cert_test.pem":"../testdata/cert/chain/verify/ed25519_cert_verify.pem":"../testdata/cert/chain/rsa-pss-v3/ca.der"
+
+SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001 RSA
+SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001:"../testdata/cert/chain/verify/rsa_cert_test.pem":"../testdata/cert/chain/verify/rsa_cert_verify.pem":"../testdata/cert/chain/rsa-pss-v3/ca.der"
