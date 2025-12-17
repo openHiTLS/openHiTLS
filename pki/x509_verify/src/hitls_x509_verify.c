@@ -1197,7 +1197,7 @@ static int32_t X509_StoreCheckSignature(const BSL_Buffer *sm2UserId, const CRYPT
 {
 #ifdef HITLS_CRYPTO_SM2
     bool isHasUserId = true;
-    if (alg->sm2UserId.data == NULL) {
+    if (alg->sm2UserId.data == NULL && sm2UserId != NULL) {
         alg->sm2UserId = *sm2UserId;
         isHasUserId = false;
     }
