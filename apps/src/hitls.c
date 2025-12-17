@@ -57,7 +57,7 @@ static char **CopyArgs(int argc, char **argv, int *newArgc)
     }
     int i = 0;
     for (; i < argc; i++) {
-        newargv[i] = (char *)BSL_SAL_Calloc(strlen(argv[i]) + 1, sizeof(char));
+        newargv[i] = (char *)BSL_SAL_Calloc(strlen(argv[i]) + 1, 1);
         if (newargv[i] == NULL) {
             AppPrintError("SAL malloc failed.\n");
             goto EXIT;
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 
     if (APP_GetCurrent_LibCtx() == NULL) {
         if (APP_Create_LibCtx() == NULL) {
-            (void)AppPrintError("Create g_libCtx failed\n");
+            AppPrintError("Create g_libCtx failed\n");
             ret = HITLS_APP_INVALID_ARG;
             goto end;
         }

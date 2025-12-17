@@ -52,7 +52,7 @@ typedef enum OptionChoice {
 #endif
 } HITLSOptType;
 
-const HITLS_CmdOption g_kdfOpts[] = {
+static const HITLS_CmdOption g_kdfOpts[] = {
     {"help", HITLS_APP_OPT_KDF_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Show usage information for KDF command."},
     {"mac", HITLS_APP_OPT_KDF_MAC_ALG, HITLS_APP_OPT_VALUETYPE_STRING,
         "Specify MAC algorithm used in KDF (e.g.: hmac-sha256)."},
@@ -73,7 +73,8 @@ const HITLS_CmdOption g_kdfOpts[] = {
     HITLS_SM_OPTIONS,
 #endif
     {"kdfalg...", HITLS_APP_OPT_KDF_ALG, HITLS_APP_OPT_VALUETYPE_PARAMTERS, "Specify KDF algorithm (e.g.: pbkdf2)."},
-    {NULL, 0, 0, NULL}};
+    {NULL, 0, 0, NULL}
+};
 
 typedef struct {
     int32_t macId;
@@ -298,7 +299,7 @@ static CRYPT_EAL_KdfCTX *InitAlgKdf(KdfOpt *kdfOpt)
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_ProviderKdfNewCtx(APP_GetCurrent_LibCtx(), kdfOpt->kdfId,
         kdfOpt->provider->providerAttr);
     if (ctx == NULL) {
-        (void)AppPrintError("Failed to create the algorithm(%s) context\n", kdfOpt->kdfName);
+        AppPrintError("Failed to create the algorithm(%s) context\n", kdfOpt->kdfName);
     }
     return ctx;
 }
@@ -372,33 +373,33 @@ static int32_t Pbkdf2Params(CRYPT_EAL_KdfCTX *ctx, BSL_Param *params, KdfOpt *kd
         }
         ret = BSL_PARAM_InitValue(&params[index++], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32,
             &(kdfOpt->macId), sizeof(kdfOpt->macId));
-        if (ret != CRYPT_SUCCESS) {
-            (void)AppPrintError("kdf:Init macId failed. ERROR:%d\n", ret);
+        if (ret != BSL_SUCCESS) {
+            AppPrintError("kdf:Init macId failed. ERROR:%d\n", ret);
             ret = HITLS_APP_CRYPTO_FAIL;
             break;
         }
         ret = BSL_PARAM_InitValue(&params[index++], CRYPT_PARAM_KDF_PASSWORD, BSL_PARAM_TYPE_OCTETS, pass, passLen);
-        if (ret != CRYPT_SUCCESS) {
-            (void)AppPrintError("kdf:Init pass failed. ERROR:%d\n", ret);
+        if (ret != BSL_SUCCESS) {
+            AppPrintError("kdf:Init pass failed. ERROR:%d\n", ret);
             ret = HITLS_APP_CRYPTO_FAIL;
             break;
         }
         ret = BSL_PARAM_InitValue(&params[index++], CRYPT_PARAM_KDF_SALT, BSL_PARAM_TYPE_OCTETS, salt, saltLen);
-        if (ret != CRYPT_SUCCESS) {
-            (void)AppPrintError("kdf:Init salt failed. ERROR:%d\n", ret);
+        if (ret != BSL_SUCCESS) {
+            AppPrintError("kdf:Init salt failed. ERROR:%d\n", ret);
             ret = HITLS_APP_CRYPTO_FAIL;
             break;
         }
         ret = BSL_PARAM_InitValue(&params[index++], CRYPT_PARAM_KDF_ITER, BSL_PARAM_TYPE_UINT32,
             &kdfOpt->iter, sizeof(kdfOpt->iter));
-        if (ret != CRYPT_SUCCESS) {
-            (void)AppPrintError("kdf:Init iter failed. ERROR:%d\n", ret);
+        if (ret != BSL_SUCCESS) {
+            AppPrintError("kdf:Init iter failed. ERROR:%d\n", ret);
             ret = HITLS_APP_CRYPTO_FAIL;
             break;
         }
         ret = CRYPT_EAL_KdfSetParam(ctx, params);
         if (ret != CRYPT_SUCCESS) {
-            (void)AppPrintError("kdf:KdfSetParam failed. ERROR:%d\n", ret);
+            AppPrintError("kdf:KdfSetParam failed. ERROR:%d\n", ret);
             ret = HITLS_APP_CRYPTO_FAIL;
         }
     } while (0);
@@ -417,7 +418,7 @@ static int32_t PbkdfParamSet(CRYPT_EAL_KdfCTX *ctx, KdfOpt *kdfOpt)
         BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
         return Pbkdf2Params(ctx, params, kdfOpt);
     }
-    (void)AppPrintError("kdf: Unsupported KDF algorithm: %s\n", kdfOpt->kdfName);
+    AppPrintError("kdf: Unsupported KDF algorithm: %s\n", kdfOpt->kdfName);
     return HITLS_APP_OPT_VALUE_INVALID;
 }
 
@@ -428,7 +429,7 @@ static int32_t KdfResult(CRYPT_EAL_KdfCTX *ctx, KdfOpt *kdfOpt)
 
     int32_t ret = PbkdfParamSet(ctx, kdfOpt);
     if (ret != HITLS_APP_SUCCESS) {
-        (void)AppPrintError("PbkdfParamSet failed. \n");
+        AppPrintError("PbkdfParamSet failed. \n");
         return ret;
     }
 #ifdef HITLS_APP_SM_MODE
@@ -436,12 +437,12 @@ static int32_t KdfResult(CRYPT_EAL_KdfCTX *ctx, KdfOpt *kdfOpt)
 #endif
     out = BSL_SAL_Malloc(outLen);
     if (out == NULL) {
-        (void)AppPrintError("kdf: Allocate memory failed. \n");
+        AppPrintError("kdf: Allocate memory failed. \n");
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
     ret = CRYPT_EAL_KdfDerive(ctx, out, outLen);
     if (ret != CRYPT_SUCCESS) {
-        (void)AppPrintError("KdfDeriv failed. ERROR:%d\n", ret);
+        AppPrintError("KdfDeriv failed. ERROR:%d\n", ret);
         BSL_SAL_ClearFree(out, outLen);
         return HITLS_APP_CRYPTO_FAIL;
     }
@@ -449,7 +450,7 @@ static int32_t KdfResult(CRYPT_EAL_KdfCTX *ctx, KdfOpt *kdfOpt)
     BSL_UIO *fileOutUio = HITLS_APP_UioOpen(kdfOpt->outFile, 'w', 0);
     if (fileOutUio == NULL) {
         BSL_SAL_ClearFree(out, outLen);
-        (void)AppPrintError("kdf:UioOpen failed\n");
+        AppPrintError("kdf:UioOpen failed\n");
         return HITLS_APP_UIO_FAIL;
     }
     if (kdfOpt->outFile != NULL) {
@@ -458,7 +459,7 @@ static int32_t KdfResult(CRYPT_EAL_KdfCTX *ctx, KdfOpt *kdfOpt)
     ret = HITLS_APP_OptWriteUio(fileOutUio, out, outLen,
         kdfOpt->isBinary == 1 ? HITLS_APP_FORMAT_TEXT: HITLS_APP_FORMAT_HEX);
     if (ret != HITLS_APP_SUCCESS) {
-        (void)AppPrintError("kdf:Failed to output the content to the screen\n");
+        AppPrintError("kdf:Failed to output the content to the screen\n");
     }
 
     BSL_UIO_Free(fileOutUio);
@@ -482,7 +483,7 @@ int32_t HITLS_KdfMain(int argc, char *argv[])
     do {
         mainRet = HITLS_APP_OptBegin(argc, argv, g_kdfOpts);
         if (mainRet != HITLS_APP_SUCCESS) {
-            (void)AppPrintError("error in opt begin.\n");
+            AppPrintError("error in opt begin.\n");
             break;
         }
         mainRet = ParseKdfOpt(&kdfOpt);
@@ -499,7 +500,7 @@ int32_t HITLS_KdfMain(int argc, char *argv[])
         }
         mainRet = HITLS_APP_Init(&initParam);
         if (mainRet != HITLS_APP_SUCCESS) {
-            (void)AppPrintError("kdf: Failed to init, errCode: 0x%x.\n", mainRet);
+            AppPrintError("kdf: Failed to init, errCode: 0x%x.\n", mainRet);
             break;
         }
         ctx = InitAlgKdf(&kdfOpt);

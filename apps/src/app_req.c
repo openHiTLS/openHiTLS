@@ -53,7 +53,7 @@ typedef enum {
     HITLS_REQ_APP_OPT_OUTFORM,
 } HITLSOptType;
 
-const HITLS_CmdOption g_reqOpts[] = {
+static const HITLS_CmdOption g_reqOpts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"new", HITLS_REQ_APP_OPT_NEW, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "New request"},
     {"verify", HITLS_REQ_APP_OPT_VERIFY, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Verify self-signature on the request"},
@@ -353,19 +353,19 @@ static int32_t ParseConf(ReqOptCtx *optCtx)
     }
     optCtx->ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
     if (optCtx->ext == NULL) {
-        (void)AppPrintError("req: Failed to create the ext context.\n");
+        AppPrintError("req: Failed to create the ext context.\n");
         return HITLS_APP_X509_FAIL;
     }
     optCtx->conf = BSL_CONF_New(BSL_CONF_DefaultMethod());
     if (optCtx->conf == NULL) {
-        (void)AppPrintError("req: Failed to create profile context.\n");
+        AppPrintError("req: Failed to create profile context.\n");
         return HITLS_APP_CONF_FAIL;
     }
     char extSectionStr[BSL_CONF_SEC_SIZE + 1] = {0};
     uint32_t extSectionStrLen = sizeof(extSectionStr);
     int32_t ret = BSL_CONF_Load(optCtx->conf, optCtx->certOpt.configFilePath);
     if (ret != BSL_SUCCESS) {
-        (void)AppPrintError("req: Failed to load the config file %s.\n", optCtx->certOpt.configFilePath);
+        AppPrintError("req: Failed to load the config file %s.\n", optCtx->certOpt.configFilePath);
         return HITLS_APP_CONF_FAIL;
     }
     ret = BSL_CONF_GetString(optCtx->conf, HITLS_APP_REQ_SECTION, HITLS_APP_REQ_EXTENSION_SECTION,
@@ -373,14 +373,14 @@ static int32_t ParseConf(ReqOptCtx *optCtx)
     if (ret == BSL_CONF_VALUE_NOT_FOUND) {
         return HITLS_APP_SUCCESS;
     } else if (ret != BSL_SUCCESS) {
-        (void)AppPrintError("req: Failed to get req_extensions, config file %s.\n", optCtx->certOpt.configFilePath);
+        AppPrintError("req: Failed to get req_extensions, config file %s.\n", optCtx->certOpt.configFilePath);
         return HITLS_APP_CONF_FAIL;
     }
     ret = HITLS_APP_CONF_ProcExt(optCtx->conf, extSectionStr, ProcSanExt, optCtx->ext);
     if (ret == HITLS_APP_NO_EXT) {
         return HITLS_APP_SUCCESS;
     } else if (ret != BSL_SUCCESS) {
-        (void)AppPrintError("req: Failed to parse SAN from config file %s.\n", optCtx->certOpt.configFilePath);
+        AppPrintError("req: Failed to parse SAN from config file %s.\n", optCtx->certOpt.configFilePath);
         return HITLS_APP_CONF_FAIL;
     }
     return HITLS_APP_SUCCESS;
@@ -403,7 +403,7 @@ static int32_t ReqGen(ReqOptCtx *optCtx)
 
     optCtx->csr = HITLS_X509_CsrNew();
     if (optCtx->csr == NULL) {
-        (void)AppPrintError("req: Failed to create the csr context.\n");
+        AppPrintError("req: Failed to create the csr context.\n");
         return HITLS_APP_X509_FAIL;
     }
 
@@ -456,9 +456,9 @@ static void ReqVerify(ReqOptCtx *optCtx)
 {
     int32_t ret = HITLS_X509_CsrVerify(optCtx->csr);
     if (ret == HITLS_PKI_SUCCESS) {
-        (void)AppPrintError("req: verify ok.\n");
+        AppPrintError("req: verify ok.\n");
     } else {
-        (void)AppPrintError("req: verify failure, errCode = %d.\n", ret);
+        AppPrintError("req: verify failure, errCode = %d.\n", ret);
     }
 }
 

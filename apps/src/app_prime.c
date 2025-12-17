@@ -52,13 +52,15 @@ typedef enum OptionChoice {
     OPT_CHECKS = 6,
 } OPTION_CHOICE;
 
-HITLS_CmdOption prime_options[] = {{"help", OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this summary"},
-                                   {"bits", OPT_BITS, HITLS_APP_OPT_VALUETYPE_POSITIVE_INT, "Size of number in bits"},
-                                   {"hex", OPT_HEX, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Hex output"},
-                                   {"generate", OPT_GENERATE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Generate a prime"},
-                                   {"safe", OPT_SAFE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Generate a safe prime"},
-                                   {"checks", OPT_CHECKS, HITLS_APP_OPT_VALUETYPE_POSITIVE_INT, "Number of checks"},
-                                   {NULL, 0, 0, NULL}};
+static const HITLS_CmdOption g_primeOpts[] = {
+    {"help", OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this summary"},
+    {"bits", OPT_BITS, HITLS_APP_OPT_VALUETYPE_POSITIVE_INT, "Size of number in bits"},
+    {"hex", OPT_HEX, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Hex output"},
+    {"generate", OPT_GENERATE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Generate a prime"},
+    {"safe", OPT_SAFE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Generate a safe prime"},
+    {"checks", OPT_CHECKS, HITLS_APP_OPT_VALUETYPE_POSITIVE_INT, "Number of checks"},
+    {NULL, 0, 0, NULL}
+};
 
 static int32_t CheckPrime(const char *numStr, int32_t hex, int32_t checks)
 {
@@ -73,14 +75,14 @@ static int32_t CheckPrime(const char *numStr, int32_t hex, int32_t checks)
     }
 
     if (ret != CRYPT_SUCCESS || bn == NULL) {
-        (void)AppPrintError("prime: Invalid number format\n");
+        AppPrintError("prime: Invalid number format\n");
         ret = HITLS_APP_INVALID_ARG;
         goto EXIT;
     }
 
     optimizer = BN_OptimizerCreate();
     if (optimizer == NULL) {
-        (void)AppPrintError("prime: Failed to create optimizer\n");
+        AppPrintError("prime: Failed to create optimizer\n");
         ret = HITLS_APP_BSL_FAIL;
         goto EXIT;
     }
@@ -95,7 +97,7 @@ static int32_t CheckPrime(const char *numStr, int32_t hex, int32_t checks)
         AppPrintInfo("%s is not prime\n", numStr);
         ret = HITLS_APP_SUCCESS;
     } else {
-        (void)AppPrintError("prime: Failed to check prime, errCode: 0x%x\n", ret);
+        AppPrintError("prime: Failed to check prime, errCode: 0x%x\n", ret);
         ret = HITLS_APP_CRYPTO_FAIL;
     }
 
@@ -116,7 +118,7 @@ static int32_t ConvertPrimeToString(BN_BigNum *bn, int32_t hex)
     }
 
     if (output == NULL) {
-        (void)AppPrintError("prime: Out of memory\n");
+        AppPrintError("prime: Out of memory\n");
         return HITLS_APP_BSL_FAIL;
     }
 
@@ -134,22 +136,22 @@ static int32_t GeneratePrime(int32_t bits, int32_t hex, int32_t safe)
 
     bn = BN_Create((uint32_t)bits);
     if (bn == NULL) {
-        (void)AppPrintError("prime: Out of memory\n");
+        AppPrintError("prime: Out of memory\n");
         return HITLS_APP_BSL_FAIL;
     }
 
     optimizer = BN_OptimizerCreate();
     if (optimizer == NULL) {
-        (void)AppPrintError("prime: Failed to create optimizer\n");
+        AppPrintError("prime: Failed to create optimizer\n");
         ret = HITLS_APP_BSL_FAIL;
         goto EXIT;
     }
 
     ret = BN_GenPrime(bn, NULL, (uint32_t)bits, (bool)safe, optimizer, NULL);
     if (ret != CRYPT_SUCCESS) {
-        (void)AppPrintError("prime: Failed to generate prime, errCode: 0x%x\n", ret);
+        AppPrintError("prime: Failed to generate prime, errCode: 0x%x\n", ret);
         if (safe && bits < MIN_SAFE_PRIME_BITS) {
-            (void)AppPrintError("prime: Safe prime generation may require more bits (minimum %d)\n",
+            AppPrintError("prime: Safe prime generation may require more bits (minimum %d)\n",
                                 MIN_SAFE_PRIME_BITS);
         }
         ret = HITLS_APP_CRYPTO_FAIL;
@@ -168,7 +170,7 @@ static int32_t HandleOptionBits(int32_t *bits)
 {
     int32_t ret = HITLS_APP_OptGetInt(HITLS_APP_OptGetValueStr(), bits);
     if (ret != HITLS_APP_SUCCESS || *bits <= 0) {
-        (void)AppPrintError("prime: Invalid bits value\n");
+        AppPrintError("prime: Invalid bits value\n");
         return HITLS_APP_INVALID_ARG;
     }
     return HITLS_APP_SUCCESS;
@@ -178,7 +180,7 @@ static int32_t HandleOptionChecks(int32_t *checks)
 {
     int32_t ret = HITLS_APP_OptGetInt(HITLS_APP_OptGetValueStr(), checks);
     if (ret != HITLS_APP_SUCCESS || *checks <= 0) {
-        (void)AppPrintError("prime: Invalid checks value\n");
+        AppPrintError("prime: Invalid checks value\n");
         return HITLS_APP_INVALID_ARG;
     }
     return HITLS_APP_SUCCESS;
@@ -188,10 +190,10 @@ static int32_t ProcessOptionSwitch(OPTION_CHOICE option, AppPrimeCtx *ctx)
 {
     switch (option) {
         case OPT_ERR:
-            (void)AppPrintError("prime: Use -help for summary.\n");
+            AppPrintError("prime: Use -help for summary.\n");
             return HITLS_APP_INVALID_ARG;
         case OPT_HELP:
-            (void)HITLS_APP_OptHelpPrint(prime_options);
+            (void)HITLS_APP_OptHelpPrint(g_primeOpts);
             return HITLS_APP_HELP;
         case OPT_BITS:
             return HandleOptionBits(&ctx->bits);
@@ -207,7 +209,7 @@ static int32_t ProcessOptionSwitch(OPTION_CHOICE option, AppPrimeCtx *ctx)
         case OPT_CHECKS:
             return HandleOptionChecks(&ctx->checks);
         default:
-            (void)AppPrintError("prime: Unknown option\n");
+            AppPrintError("prime: Unknown option\n");
             return HITLS_APP_INVALID_ARG;
     }
 }
@@ -217,7 +219,7 @@ static int32_t ParsePrimeOptions(int32_t argc, char **argv, AppPrimeCtx *ctx, ch
     int32_t ret;
     OPTION_CHOICE option;
 
-    ret = HITLS_APP_OptBegin(argc, argv, prime_options);
+    ret = HITLS_APP_OptBegin(argc, argv, g_primeOpts);
     if (ret != HITLS_APP_SUCCESS) {
         return ret;
     }
@@ -243,17 +245,17 @@ static int32_t ParsePrimeOptions(int32_t argc, char **argv, AppPrimeCtx *ctx, ch
 static int32_t ValidatePrimeArgs(int32_t generate, int32_t bits, const char *checkNumber)
 {
     if (!generate && checkNumber == NULL) {
-        (void)AppPrintError("prime: Must specify -generate or provide a number to check\n");
+        AppPrintError("prime: Must specify -generate or provide a number to check\n");
         return HITLS_APP_INVALID_ARG;
     }
 
     if (generate && checkNumber != NULL) {
-        (void)AppPrintError("prime: Cannot specify both -generate and a number to check\n");
+        AppPrintError("prime: Cannot specify both -generate and a number to check\n");
         return HITLS_APP_INVALID_ARG;
     }
 
     if (generate && bits == 0) {
-        (void)AppPrintError("prime: Specify the number of bits with -bits\n");
+        AppPrintError("prime: Specify the number of bits with -bits\n");
         return HITLS_APP_INVALID_ARG;
     }
 
@@ -263,7 +265,7 @@ static int32_t ValidatePrimeArgs(int32_t generate, int32_t bits, const char *che
 static int32_t InitRandGenerator(void)
 {
     if (CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL) != CRYPT_SUCCESS) {
-        (void)AppPrintError("prime: Failed to initialize random generator\n");
+        AppPrintError("prime: Failed to initialize random generator\n");
         return HITLS_APP_CRYPTO_FAIL;
     }
     return HITLS_APP_SUCCESS;

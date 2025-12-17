@@ -13,8 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#ifndef APP_TLS_COMMON_H
-#define APP_TLS_COMMON_H
+#ifndef HITLS_APP_TLS_COMMON_H
+#define HITLS_APP_TLS_COMMON_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -34,6 +34,7 @@ extern "C" {
 
 #define APP_HEARTBEAT_LEN 17
 #define DEFAULT_DTLCP_PORT 54000
+#define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */
 
 /* Protocol types */
 typedef enum {
@@ -193,4 +194,4 @@ int32_t ParseHeartBeat(uint8_t *buffer, uint32_t len);
 }
 #endif
 
-#endif /* APP_TLS_COMMON_H */
+#endif /* HITLS_APP_TLS_COMMON_H */

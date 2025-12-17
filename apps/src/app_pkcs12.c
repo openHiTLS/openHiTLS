@@ -114,7 +114,7 @@ typedef struct {
 #define MIN_NAME_LEN 1U
 #define MAX_NAME_LEN 1024U
 
-static const HITLS_CmdOption OPTS[] = {
+static const HITLS_CmdOption g_pkcs12Opts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"in", HITLS_APP_OPT_IN_FILE, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Input file"},
     {"out", HITLS_APP_OPT_OUT_FILE, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output file"},
@@ -137,7 +137,7 @@ static const HITLS_CmdOption OPTS[] = {
 static int32_t DisplayHelp(Pkcs12OptCtx *opt)
 {
     (void)opt;
-    HITLS_APP_OptHelpPrint(OPTS);
+    HITLS_APP_OptHelpPrint(g_pkcs12Opts);
     return HITLS_APP_HELP;
 }
 
@@ -301,7 +301,7 @@ static const OptHandleTable OPT_HANDLE_TABLE[] = {
 
 static int32_t ParseOpt(int argc, char *argv[], Pkcs12OptCtx *opt)
 {
-    int32_t ret = HITLS_APP_OptBegin(argc, argv, OPTS);
+    int32_t ret = HITLS_APP_OptBegin(argc, argv, g_pkcs12Opts);
     if (ret != HITLS_APP_SUCCESS) {
         AppPrintError("pkcs12: error in opt begin.\n");
         return ret;

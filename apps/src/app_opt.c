@@ -45,6 +45,21 @@ static HITLS_CmdOptState g_cmdOptState = {0};
 static const HITLS_CmdOption *g_unKnownOpt = NULL;
 static char *g_unKownName = NULL;
 
+static int32_t AppIsDir(const char *path)
+{
+    struct stat st = {0};
+    if (path == NULL) {
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    if (stat(path, &st) != 0) {
+        return HITLS_APP_INTERNAL_EXCEPTION;
+    }
+    if (S_ISDIR(st.st_mode)) {
+        return HITLS_APP_SUCCESS;
+    }
+    return HITLS_APP_OPT_VALUE_INVALID;
+}
+
 const char *HITLS_APP_OptGetUnKownOptName(void)
 {
     return g_unKownName;
@@ -94,7 +109,7 @@ char *HITLS_APP_GetProgName(void)
 int32_t HITLS_APP_OptBegin(int32_t argc, char **argv, const HITLS_CmdOption *opts)
 {
     if (argc == 0 || argv == NULL || opts == NULL) {
-        (void)AppPrintError("incorrect command \n");
+        AppPrintError("incorrect command \n");
         return HITLS_APP_OPT_UNKOWN;
     }
 
@@ -109,7 +124,7 @@ int32_t HITLS_APP_OptBegin(int32_t argc, char **argv, const HITLS_CmdOption *opt
         if ((strlen(opt->name) == 0) && (opt->valueType == HITLS_APP_OPT_VALUETYPE_NO_VALUE)) {
             g_unKnownOpt = opt;
         } else if ((strlen(opt->name) == 0) || (opt->name[0] == '-')) {
-            (void)AppPrintError("Invalid optname %s \n", opt->name);
+            AppPrintError("Invalid optname %s \n", opt->name);
             return HITLS_APP_OPT_NAME_INVALID;
         }
         if (opt->valueType <= HITLS_APP_OPT_VALUETYPE_NONE || opt->valueType >= HITLS_APP_OPT_VALUETYPE_MAX) {
@@ -122,7 +137,7 @@ int32_t HITLS_APP_OptBegin(int32_t argc, char **argv, const HITLS_CmdOption *opt
 
         for (const HITLS_CmdOption *nextOpt = opt + 1; nextOpt->name != NULL; ++nextOpt) {
             if (strcmp(opt->name, nextOpt->name) == 0) {
-                (void)AppPrintError("Invalid duplicate name : %s\n", opt->name);
+                AppPrintError("Invalid duplicate name : %s\n", opt->name);
                 return HITLS_APP_OPT_NAME_INVALID;
             }
         }
@@ -136,21 +151,6 @@ char *HITLS_APP_OptGetValueStr(void)
     return g_cmdOptState.valueStr;
 }
 
-static int32_t IsDir(const char *path)
-{
-    struct stat st = {0};
-    if (path == NULL) {
-        return HITLS_APP_OPT_VALUE_INVALID;
-    }
-    if (stat(path, &st) != 0) {
-        return HITLS_APP_INTERNAL_EXCEPTION;
-    }
-    if (S_ISDIR(st.st_mode)) {
-        return HITLS_APP_SUCCESS;
-    }
-    return HITLS_APP_OPT_VALUE_INVALID;
-}
-
 int32_t HITLS_APP_OptGetLong(const char *valueS, long *valueL)
 {
     char *endPtr = NULL;
@@ -158,7 +158,7 @@ int32_t HITLS_APP_OptGetLong(const char *valueS, long *valueL)
     long l = strtol(valueS, &endPtr, 0);
     if (strlen(endPtr) > 0 || endPtr == valueS || (l == LONG_MAX || l == LONG_MIN) || errno == ERANGE ||
         (l == 0 && errno != 0)) {
-        (void)AppPrintError("The parameter: %s is not a number or out of range\n", valueS);
+        AppPrintError("The parameter: %s is not a number or out of range\n", valueS);
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     *valueL = l;
@@ -174,7 +174,7 @@ int32_t HITLS_APP_OptGetInt(const char *valueS, int32_t *valueI)
     *valueI = (int32_t)valueL;
     // value outside integer range
     if ((long)(*valueI) != valueL) {
-        (void)AppPrintError("The number %ld out the int bound \n", valueL);
+        AppPrintError("The number %ld out the int bound \n", valueL);
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     return HITLS_APP_SUCCESS;
@@ -189,7 +189,7 @@ int32_t HITLS_APP_OptGetUint32(const char *valueS, uint32_t *valueU)
     *valueU = (uint32_t)valueL;
     // value outside integer range
     if ((long)(*valueU) != valueL) {
-        (void)AppPrintError("The number %ld out the int bound \n", valueL);
+        AppPrintError("The number %ld out the int bound \n", valueL);
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     return HITLS_APP_SUCCESS;
@@ -198,7 +198,7 @@ int32_t HITLS_APP_OptGetUint32(const char *valueS, uint32_t *valueU)
 int32_t HITLS_APP_OptGetFormatType(const char *valueS, HITLS_ValueType type, BSL_ParseFormat *formatType)
 {
     if (type != HITLS_APP_OPT_VALUETYPE_FMT_PEMDER && type != HITLS_APP_OPT_VALUETYPE_FMT_ANY) {
-        (void)AppPrintError("Invalid Format Type\n");
+        AppPrintError("Invalid Format Type\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
     if (strcasecmp(valueS, "DER") == 0) {
@@ -208,7 +208,7 @@ int32_t HITLS_APP_OptGetFormatType(const char *valueS, HITLS_ValueType type, BSL
         *formatType = BSL_FORMAT_PEM;
         return HITLS_APP_SUCCESS;
     }
-    (void)AppPrintError("Invalid format \"%s\".\n", valueS);
+    AppPrintError("Invalid format \"%s\".\n", valueS);
     return HITLS_APP_OPT_VALUE_INVALID;
 }
 
@@ -255,7 +255,7 @@ static int32_t CheckOptValueType(const HITLS_CmdOption *opt, const char *valStr)
         case HITLS_APP_OPT_VALUECLASS_STR:
             break;
         case HITLS_APP_OPT_VALUECLASS_DIR: {
-            if (IsDir(valStr) != HITLS_APP_SUCCESS) {
+            if (AppIsDir(valStr) != HITLS_APP_SUCCESS) {
                 AppPrintError("%s: Invalid dir \"%s\" for -%s\n", g_cmdOptState.progName, valStr, opt->name);
                 return HITLS_APP_OPT_VALUE_INVALID;
             }
@@ -428,11 +428,11 @@ static void OptPrint(const HITLS_CmdOption *opt, int width)
     start[pos++] = ' ';
     if (pos >= MAX_HITLS_APP_OPT_NAME_WIDTH) {
         start[pos] = '\0';
-        (void)AppPrintError("%s\n", start);
+        AppPrintError("%s\n", start);
         (void)memset_s(start, sizeof(start) - 1, ' ', sizeof(start) - 1);
     }
     start[width] = '\0';
-    (void)AppPrintError("%s  %s\n", start, help);
+    AppPrintError("%s  %s\n", start, help);
 }
 
 void HITLS_APP_OptHelpPrint(const HITLS_CmdOption *opts)
@@ -449,7 +449,7 @@ void HITLS_APP_OptHelpPrint(const HITLS_CmdOption *opts)
             width = len;
         }
     }
-    (void)AppPrintError("Usage: %s \n", g_cmdOptState.progName);
+    AppPrintError("Usage: %s \n", g_cmdOptState.progName);
 
     for (opt = opts; opt->name != NULL; opt++) {
         (void)OptPrint(opt, width);
@@ -464,7 +464,7 @@ void HITLS_APP_OptEnd(void)
 BSL_UIO *HITLS_APP_UioOpen(const char *filename, char mode, int32_t flag)
 {
     if (mode != 'w' && mode != 'r' && mode != 'a') {
-        (void)AppPrintError("Invalid mode, only support a/w/r\n");
+        AppPrintError("Invalid mode, only support a/w/r\n");
         return NULL;
     }
     BSL_UIO *uio = BSL_UIO_New(BSL_UIO_FileMethod());
@@ -484,7 +484,7 @@ BSL_UIO *HITLS_APP_UioOpen(const char *filename, char mode, int32_t flag)
                 break;
             default:
                 BSL_UIO_Free(uio);
-                (void)AppPrintError("Only standard I/O is supported\n");
+                AppPrintError("Only standard I/O is supported\n");
                 return NULL;
         }
     } else {
@@ -499,13 +499,13 @@ BSL_UIO *HITLS_APP_UioOpen(const char *filename, char mode, int32_t flag)
                 break;
             default:
                 BSL_UIO_Free(uio);
-                (void)AppPrintError("Only standard I/O is supported\n");
+                AppPrintError("Only standard I/O is supported\n");
                 return NULL;
         }
     }
     int32_t ctrlRet = BSL_UIO_Ctrl(uio, cmd, larg, parg);
     if (ctrlRet != BSL_SUCCESS) {
-        (void)AppPrintError("Failed to bind the filepath\n");
+        AppPrintError("Failed to bind the filepath\n");
         BSL_UIO_Free(uio);
         uio = NULL;
     }
@@ -520,7 +520,7 @@ int32_t HITLS_APP_OptToBase64(uint8_t *inBuf, uint32_t inBufLen, char *outBuf, u
     // encode conversion
     int32_t encodeRet = BSL_BASE64_Encode(inBuf, inBufLen, outBuf, &outBufLen);
     if (encodeRet != BSL_SUCCESS) {
-        (void)AppPrintError("Failed to convert to Base64 format\n");
+        AppPrintError("Failed to convert to Base64 format\n");
         return HITLS_APP_ENCODE_FAIL;
     }
     return HITLS_APP_SUCCESS;
@@ -531,7 +531,7 @@ int32_t HITLS_APP_OptToHex(uint8_t *inBuf, uint32_t inBufLen, char *outBuf, uint
     // One byte is encoded into hex and becomes 2 bytes.
     int32_t hexCharSize = 2;
     if (inBuf == NULL || outBuf == NULL || inBufLen == 0 || outBufLen < hexCharSize * inBufLen + 1) {
-        (void)AppPrintError("opt: Invalid input buffer or output buffer.\n");
+        AppPrintError("opt: Invalid input buffer or output buffer.\n");
         return HITLS_APP_INTERNAL_EXCEPTION;
     }
     const char *hexChars = "0123456789abcdef";
@@ -556,34 +556,34 @@ int32_t HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t bufLen, int32
     switch (format) {
         case HITLS_APP_FORMAT_BASE64:
             /* In the Base64 format, three 8-bit bytes are converted into four 6-bit bytes. Therefore, the length
-               of the data in the Base64 format must be at least (Length of the original data + 2)/3 x 4 + 1.
+               of the data in the Base64 format must be at least (Length of the original data + 2)/3 x 4.
                The original data length plus 2 is used to ensure that
                the remainder of buflen divided by 3 after rounding down is not lost. */
-            outBufLen = (bufLen + 2) / 3 * 4 + 1;
+            outBufLen = (bufLen + 2) / 3 * 4;
             break;
         // One byte is encoded into hex and becomes 2 bytes.
         case HITLS_APP_FORMAT_HEX:
-            outBufLen = bufLen * 2 + 1; // The length of the encoded data is 2 times the length of the original data.
+            outBufLen = bufLen * 2; // The length of the encoded data is 2 times the length of the original data.
             break;
         default: // The original length of bufLen is used by the default type.
             outBufLen = bufLen;
     }
-    char *outBuf = (char *)BSL_SAL_Calloc(outBufLen, sizeof(char));
+    char *outBuf = (char *)BSL_SAL_Calloc(outBufLen + 1, 1);
     if (outBuf == NULL) {
-        (void)AppPrintError("Failed to read the UIO content to calloc space\n");
+        AppPrintError("Failed to read the UIO content to calloc space\n");
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
     int32_t outRet = HITLS_APP_SUCCESS;
     switch (format) {
         case HITLS_APP_FORMAT_BASE64:
-            outRet = HITLS_APP_OptToBase64(buf, bufLen, outBuf, outBufLen);
+            outRet = HITLS_APP_OptToBase64(buf, bufLen, outBuf, outBufLen + 1);
             break;
         case HITLS_APP_FORMAT_HEX:
-            outRet = HITLS_APP_OptToHex(buf, bufLen, outBuf, outBufLen);
-            outBufLen = strlen(outBuf);
+            outRet = HITLS_APP_OptToHex(buf, bufLen, outBuf, outBufLen + 1);
             break;
         default:
             outRet = memcpy_s(outBuf, outBufLen, buf, bufLen);
+            break;
     }
     if (outRet != HITLS_APP_SUCCESS) {
         BSL_SAL_FREE(outBuf);
@@ -592,7 +592,7 @@ int32_t HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t bufLen, int32
     int32_t writeRet = BSL_UIO_Write(uio, outBuf, outBufLen, &writeLen);
     BSL_SAL_FREE(outBuf);
     if (writeRet != BSL_SUCCESS || outBufLen != writeLen) {
-        (void)AppPrintError("Failed to output the content.\n");
+        AppPrintError("Failed to output the content.\n");
         return HITLS_APP_UIO_FAIL;
     }
     (void)BSL_UIO_Ctrl(uio, BSL_UIO_FLUSH, 0, NULL);
@@ -606,24 +606,24 @@ int32_t HITLS_APP_OptReadUio(BSL_UIO *uio, uint8_t **readBuf, uint64_t *readBufL
     }
     int32_t readRet = BSL_UIO_Ctrl(uio, BSL_UIO_PENDING, sizeof(*readBufLen), readBufLen);
     if (readRet != BSL_SUCCESS) {
-        (void)AppPrintError("Failed to obtain the content length\n");
+        AppPrintError("Failed to obtain the content length\n");
         return HITLS_APP_UIO_FAIL;
     }
     if (*readBufLen == 0 || *readBufLen > maxBufLen) {
-        (void)AppPrintError("Invalid content length\n");
+        AppPrintError("Invalid content length\n");
         return HITLS_APP_UIO_FAIL;
     }
     // obtain the length of the UIO content, the pointer of the input parameter points to the allocated memory
-    uint8_t *buf = (uint8_t *)BSL_SAL_Calloc(*readBufLen + 1, sizeof(uint8_t));
+    uint8_t *buf = (uint8_t *)BSL_SAL_Calloc(*readBufLen + 1, 1);
     if (buf == NULL) {
-        (void)AppPrintError("Failed to create the space.\n");
+        AppPrintError("Failed to create the space.\n");
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
     uint32_t readLen = 0;
     readRet = BSL_UIO_Read(uio, buf, *readBufLen, &readLen); // read content to memory
     if (readRet != BSL_SUCCESS || *readBufLen != readLen) {
         BSL_SAL_FREE(buf);
-        (void)AppPrintError("Failed to read UIO content.\n");
+        AppPrintError("Failed to read UIO content.\n");
         return HITLS_APP_UIO_FAIL;
     }
     buf[*readBufLen] = '\0';

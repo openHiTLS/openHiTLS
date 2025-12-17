@@ -34,7 +34,7 @@ int32_t AppUioVPrint(BSL_UIO *uio, const char *format, va_list args)
         return HITLS_APP_INVALID_ARG;
     }
     uint32_t writeLen = 0;
-    char *buf = (char *)BSL_SAL_Calloc(LOG_BUFFER_LEN + 1, sizeof(char));
+    char *buf = (char *)BSL_SAL_Calloc(LOG_BUFFER_LEN + 1, 1);
     if (buf == NULL) {
         return HITLS_APP_MEM_ALLOC_FAIL;
     }

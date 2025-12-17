@@ -35,7 +35,7 @@
 /* ============================================================================
  * Stub Definitions
  * ============================================================================ */
-STUB_DEFINE_RET4(int32_t, HITLS_APP_Passwd, char *, int32_t, int32_t, void *);
+STUB_DEFINE_RET3(int32_t, HITLS_APP_Passwd, char *, int32_t, int32_t);
 
 
 #define BSL_SUCCESS 0
@@ -46,10 +46,9 @@ typedef struct {
     int expect;
 } GenrsaTestData;
 
-int32_t STUB_HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag, void *userdata)
+int32_t STUB_HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag)
 {
     (void)flag;
-    (void)userdata;
     (void)memcpy_s(buf, bufMaxLen, "12345678", 8);
     return 8;
 }

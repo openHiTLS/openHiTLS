@@ -33,7 +33,7 @@
 #include "crypt_eal_kdf.h"
 #include "app_list.h"
 
-const HITLS_CmdOption g_listOpts[] = {
+static const HITLS_CmdOption g_listOpts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"all-algorithms", HITLS_APP_LIST_OPT_ALL_ALG, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "List supported all algorthms"},
     {"digest-algorithms", HITLS_APP_LIST_OPT_DGST_ALG, HITLS_APP_OPT_VALUETYPE_NO_VALUE,
@@ -45,7 +45,8 @@ const HITLS_CmdOption g_listOpts[] = {
     {"rand-algorithms", HITLS_APP_LIST_OPT_RAND_ALG, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "List supported rand algorthms"},
     {"kdf-algorithms", HITLS_APP_LIST_OPT_KDF_ALG, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "List supported kdf algorthms"},
     {"all-curves", HITLS_APP_LIST_OPT_CURVES, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "List supported curves"},
-    {NULL, 0, 0, NULL}};
+    {NULL, 0, 0, NULL}
+};
 
 typedef struct {
     int32_t cid;
@@ -348,7 +349,7 @@ void HITLS_APP_PrintPkcs12MacIdAlg(void)
 
 void HITLS_APP_PrintPbeAlg(void)
 {
-    AppPrint(g_stdout, "List key pbe Algorithms:\n");
+    AppPrint(g_stdout, "List pbe Algorithms:\n");
     AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
     for (size_t i = 0; i < KEY_PBE_CNT; ++i) {
         AppPrint(g_stdout, "%-20s\t%3zu\n", g_keyPbeList[i].name, g_keyPbeList[i].cid);

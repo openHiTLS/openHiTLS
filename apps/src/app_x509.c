@@ -69,7 +69,7 @@ typedef enum {
     HITLS_APP_OPT_USERID,
 } HITLSOptType;
 
-const HITLS_CmdOption g_x509Opts[] = {
+static const HITLS_CmdOption g_x509Opts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     /* General opts */
     {"in", HITLS_APP_OPT_IN, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Input file"},

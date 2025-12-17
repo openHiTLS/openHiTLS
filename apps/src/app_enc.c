@@ -393,7 +393,7 @@ static int32_t ApplyForSpace(EncCmdOpt *encOpt)
     if (encOpt == NULL || encOpt->keySet == NULL) {
         return HITLS_APP_INVALID_ARG;
     }
-    encOpt->keySet->pass = (char *)BSL_SAL_Calloc(APP_MAX_PASS_LENGTH + 1, sizeof(char));
+    encOpt->keySet->pass = (char *)BSL_SAL_Calloc(APP_MAX_PASS_LENGTH + 1, 1);
     if (encOpt->keySet->pass == NULL) {
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
@@ -424,16 +424,16 @@ static int32_t HandlePasswd(EncCmdOpt *encOpt)
     // If the user enters the last value of -pass, the system parses the value directly.
     // If the user does not enter the value, the system reads the value from the standard input.
     int32_t ret;
+    char *tmp = NULL;
     char *pwd = NULL;
     uint32_t pwdLen;
+    BSL_UI_ReadPwdParam param = {"password", NULL, true};
     if (encOpt->passOptStr == NULL) {
         AppPrintError("enc: The password can contain the following characters:\n");
         AppPrintError("a~z A~Z 0~9 ! \" # $ %% & ' ( ) * + , - . / : ; < = > ? @ [ \\ ] ^ _ ` { | } ~\n");
         AppPrintError("The space is not supported.\n");
-
-        ret = HITLS_APP_ParsePasswd("stdin", &pwd);
-        if (ret != HITLS_APP_SUCCESS) {
-            AppPrintError("enc: Failed to read passwd from stdin.\n");
+        if (HITLS_APP_GetPasswd(&param, &tmp, (uint8_t **)&pwd, &pwdLen) != HITLS_APP_SUCCESS) {
+            AppPrintError("Failed to read passwd from stdin.\n");
             return HITLS_APP_PASSWD_FAIL;
         }
     } else {
@@ -442,12 +442,12 @@ static int32_t HandlePasswd(EncCmdOpt *encOpt)
             AppPrintError("enc: Failed to read passwd. Enter '-pass file:filePath' or '-pass pass:passwd'.\n");
             return HITLS_APP_PASSWD_FAIL;
         }
-    }
-    pwdLen = (uint32_t)strlen(pwd);
-    if (pwdLen < APP_MIN_PASS_LENGTH || pwdLen > APP_MAX_PASS_LENGTH) {
-        BSL_SAL_ClearFree(pwd, pwdLen);
-        AppPrintError("enc: Invalid passwd length.\n");
-        return HITLS_APP_PASSWD_FAIL;
+        pwdLen = (uint32_t)strlen(pwd);
+        if (pwdLen < APP_MIN_PASS_LENGTH || pwdLen > APP_MAX_PASS_LENGTH) {
+            BSL_SAL_ClearFree(pwd, pwdLen);
+            AppPrintError("enc: Invalid passwd length.\n");
+            return HITLS_APP_PASSWD_FAIL;
+        }
     }
     ret = HITLS_APP_CheckPasswd((uint8_t *)pwd, pwdLen);
     if (ret != HITLS_APP_SUCCESS || pwdLen <= 0) {
@@ -771,39 +771,46 @@ static int32_t UpdateEncStdinEnd(EncCmdOpt *encOpt, uint8_t *cache, uint32_t cac
 static int32_t UpdateEncStdin(EncCmdOpt *encOpt)
 {
     // now readFileLen == 0
-    int32_t ret = HITLS_APP_SUCCESS;
     // Because the standard input is read in each 4K, the data required by the XTS update cannot be less than 16.
     // Therefore, the remaining data cannot be less than 16 bytes. The buffer behavior is required.
     // In the common buffer logic, the remaining data may be less than 16. As a result, the XTS algorithm update fails.
     // Set the cacheArea, the size is maximum data length of each row (4 KB) plus the readable block size (32 bytes).
     // If the length of the read data exceeds 32 bytes, the length of the last 16-byte secure block is reserved,
     // the rest of the data is updated to avoid the failure of updating the rest and tail data.
-    uint8_t cacheArea[MAX_BUFSIZE + BUF_READABLE_BLOCK] = {0};
+    int32_t ret = HITLS_APP_SUCCESS;
+    uint32_t readLen;
     uint32_t cacheLen = 0;
-    uint8_t readBuf[MAX_BUFSIZE] = {0};
-    uint8_t resBuf[MAX_BUFSIZE + BUF_READABLE_BLOCK] = {0};
-    uint32_t readLen = MAX_BUFSIZE;
+    uint8_t *cacheArea = (uint8_t *)BSL_SAL_Malloc(MAX_BUFSIZE + BUF_READABLE_BLOCK);
+    uint8_t *readBuf = (uint8_t *)BSL_SAL_Calloc(MAX_BUFSIZE, 1);
+    uint8_t *resBuf = (uint8_t *)BSL_SAL_Malloc(MAX_BUFSIZE + BUF_READABLE_BLOCK);
+    if (cacheArea == NULL || readBuf == NULL || resBuf == NULL) {
+        BSL_SAL_FREE(cacheArea);
+        BSL_SAL_FREE(readBuf);
+        BSL_SAL_FREE(resBuf);
+        AppPrintError("enc: Failed to alloc memory.\n");
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
     bool isEof = false;
     while (BSL_UIO_Ctrl(encOpt->encUio->rUio, BSL_UIO_FILE_GET_EOF, IS_SUPPORT_GET_EOF, &isEof) == BSL_SUCCESS) {
         readLen = MAX_BUFSIZE;
         if (isEof) {
             // End stdin. Update the remaining data. If the remaining data size is 16 ≤ dataLen < 32, the XTS is valid.
-            ret = UpdateEncStdinEnd(encOpt, cacheArea, cacheLen, resBuf, sizeof(resBuf));
-            if (ret != HITLS_APP_SUCCESS) {
-                return ret;
-            }
+            ret = UpdateEncStdinEnd(encOpt, cacheArea, cacheLen, resBuf, MAX_BUFSIZE + BUF_READABLE_BLOCK);
             break;
         }
         if (BSL_UIO_Read(encOpt->encUio->rUio, readBuf, MAX_BUFSIZE, &readLen) != BSL_SUCCESS) {
             AppPrintError("enc: Failed to obtain the content from the STDIN\n");
-            return HITLS_APP_UIO_FAIL;
+            ret = HITLS_APP_UIO_FAIL;
+            break;
         }
         if (readLen == 0) {
             AppPrintError("enc: Failed to read the input content\n");
-            return HITLS_APP_STDIN_FAIL;
+            ret = HITLS_APP_STDIN_FAIL;
+            break;
         }
         if (memcpy_s(cacheArea + cacheLen, MAX_BUFSIZE + BUF_READABLE_BLOCK - cacheLen, readBuf, readLen) != EOK) {
-            return HITLS_APP_COPY_ARGS_FAILED;
+            ret = HITLS_APP_COPY_ARGS_FAILED;
+            break;
         }
         cacheLen += readLen;
         if (cacheLen < BUF_READABLE_BLOCK) {
@@ -811,20 +818,25 @@ static int32_t UpdateEncStdin(EncCmdOpt *encOpt)
         }
         uint32_t readableLen = cacheLen - BUF_SAFE_BLOCK;
         if (IsXtsCipher(encOpt->cipherId)) {
-            ret = XTSCipherUpdate(encOpt, cacheArea, readableLen, resBuf, sizeof(resBuf));
+            ret = XTSCipherUpdate(encOpt, cacheArea, readableLen, resBuf, MAX_BUFSIZE + BUF_READABLE_BLOCK);
         } else {
-            ret = StreamCipherUpdate(encOpt, cacheArea, readableLen, resBuf, sizeof(resBuf));
+            ret = StreamCipherUpdate(encOpt, cacheArea, readableLen, resBuf, MAX_BUFSIZE + BUF_READABLE_BLOCK);
         }
         if (ret != HITLS_APP_SUCCESS) {
-            return ret;
+            break;
         }
         // Place the secure block data in the cacheArea at the top and reset cacheLen.
-        if (memcpy_s(cacheArea, sizeof(cacheArea) - BUF_SAFE_BLOCK, cacheArea + readableLen, BUF_SAFE_BLOCK) != EOK) {
-            return HITLS_APP_COPY_ARGS_FAILED;
+        if (memcpy_s(cacheArea, MAX_BUFSIZE + BUF_READABLE_BLOCK - BUF_SAFE_BLOCK,
+            cacheArea + readableLen, BUF_SAFE_BLOCK) != EOK) {
+            ret = HITLS_APP_COPY_ARGS_FAILED;
+            break;
         }
         cacheLen = BUF_SAFE_BLOCK;
     }
-    return HITLS_APP_SUCCESS;
+    BSL_SAL_FREE(cacheArea);
+    BSL_SAL_FREE(readBuf);
+    BSL_SAL_FREE(resBuf);
+    return ret;
 }
 
 static int32_t UpdateEncFile(EncCmdOpt *encOpt, uint64_t readFileLen)
@@ -835,8 +847,14 @@ static int32_t UpdateEncFile(EncCmdOpt *encOpt, uint64_t readFileLen)
     }
     // now readFileLen != 0
     int32_t ret = HITLS_APP_SUCCESS;
-    uint8_t readBuf[MAX_BUFSIZE * REC_DOUBLE] = {0};
-    uint8_t resBuf[MAX_BUFSIZE * REC_DOUBLE] = {0};
+    uint8_t *readBuf = (uint8_t *)BSL_SAL_Calloc(MAX_BUFSIZE * REC_DOUBLE, 1);
+    uint8_t *resBuf = (uint8_t *)BSL_SAL_Malloc(MAX_BUFSIZE * REC_DOUBLE);
+    if (readBuf == NULL || resBuf == NULL) {
+        BSL_SAL_FREE(readBuf);
+        BSL_SAL_FREE(resBuf);
+        AppPrintError("enc: Failed to alloc memory.\n");
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
     uint32_t readLen = MAX_BUFSIZE * REC_DOUBLE;
     uint32_t bufLen = MAX_BUFSIZE * REC_DOUBLE;
     while (readFileLen > 0) {
@@ -854,19 +872,22 @@ static int32_t UpdateEncFile(EncCmdOpt *encOpt, uint64_t readFileLen)
         }
         if (BSL_UIO_Read(encOpt->encUio->rUio, readBuf, bufLen, &readLen) != BSL_SUCCESS || bufLen != readLen) {
             AppPrintError("enc: Failed to read the input content\n");
-            return HITLS_APP_UIO_FAIL;
+            ret = HITLS_APP_UIO_FAIL;
+            break;
         }
         readFileLen -= readLen;
         if (IsXtsCipher(encOpt->cipherId)) {
-            ret = XTSCipherUpdate(encOpt, readBuf, readLen, resBuf, sizeof(resBuf));
+            ret = XTSCipherUpdate(encOpt, readBuf, readLen, resBuf, MAX_BUFSIZE * REC_DOUBLE);
         } else {
-            ret = StreamCipherUpdate(encOpt, readBuf, readLen, resBuf, sizeof(resBuf));
+            ret = StreamCipherUpdate(encOpt, readBuf, readLen, resBuf, MAX_BUFSIZE * REC_DOUBLE);
         }
         if (ret != HITLS_APP_SUCCESS) {
-            return ret;
+            break;
         }
     }
-    return HITLS_APP_SUCCESS;
+    BSL_SAL_FREE(readBuf);
+    BSL_SAL_FREE(resBuf);
+    return ret;
 }
 
 static int32_t DoCipherUpdateEnc(EncCmdOpt *encOpt, uint64_t readFileLen)
@@ -894,44 +915,53 @@ static int32_t DoCipherUpdateDec(EncCmdOpt *encOpt, uint64_t readFileLen)
         return HITLS_APP_CRYPTO_FAIL;
     }
     // now readFileLen != 0
-    uint8_t readBuf[MAX_BUFSIZE * REC_DOUBLE] = {0};
-    uint8_t resBuf[MAX_BUFSIZE * REC_DOUBLE] = {0};
-    uint32_t readLen = MAX_BUFSIZE * REC_DOUBLE;
+    int32_t ret = HITLS_APP_SUCCESS;
+    uint8_t *readBuf = (uint8_t *)BSL_SAL_Calloc(MAX_BUFSIZE * REC_DOUBLE + 1, 1);
+    uint8_t *resBuf = (uint8_t *)BSL_SAL_Malloc(MAX_BUFSIZE * REC_DOUBLE);
+    if (readBuf == NULL || resBuf == NULL) {
+        BSL_SAL_FREE(readBuf);
+        BSL_SAL_FREE(resBuf);
+        AppPrintError("enc: Failed to alloc memory.\n");
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
+    uint32_t readLen;
     uint32_t bufLen = MAX_BUFSIZE * REC_DOUBLE;
     while (readFileLen > 0) {
-        if (readFileLen < MAX_BUFSIZE * REC_DOUBLE) {
-            bufLen = readFileLen;
-        }
-        if (readFileLen >= MAX_BUFSIZE * REC_DOUBLE) {
-            bufLen = MAX_BUFSIZE;
-        }
+        readLen = 0;
         if (!IsXtsCipher(encOpt->cipherId)) {
             bufLen = (readFileLen >= MAX_BUFSIZE) ? MAX_BUFSIZE : readFileLen;
+        } else {
+            bufLen = (readFileLen >= MAX_BUFSIZE * REC_DOUBLE) ? MAX_BUFSIZE * REC_DOUBLE : readFileLen;
         }
-        readLen = 0;
         if (BSL_UIO_Read(encOpt->encUio->rUio, readBuf, bufLen, &readLen) != BSL_SUCCESS || bufLen != readLen) {
             AppPrintError("enc: Failed to read the input content\n");
-            return HITLS_APP_UIO_FAIL;
+            ret = HITLS_APP_UIO_FAIL;
+            break;
         }
         readFileLen -= readLen;
         if (HexToStr((char *)readBuf, readBuf, MAX_BUFSIZE * REC_DOUBLE) != CRYPT_SUCCESS) {
             AppPrintError("enc: Failed to decode the hex.\n");
-            return HITLS_APP_CRYPTO_FAIL;
+            ret = HITLS_APP_CRYPTO_FAIL;
+            break;
         }
         uint32_t updateLen = readLen + encOpt->keySet->blockSize;
         if (CRYPT_EAL_CipherUpdate(encOpt->keySet->ctx, readBuf, readLen / 2, resBuf, &updateLen) != CRYPT_SUCCESS) {
             AppPrintError("enc: Failed to update the cipher.\n");
-            return HITLS_APP_CRYPTO_FAIL;
+            ret = HITLS_APP_CRYPTO_FAIL;
+            break;
         }
         uint32_t writeLen = 0;
         if (updateLen != 0 &&
             (BSL_UIO_Write(encOpt->encUio->wUio, resBuf, updateLen, &writeLen) != BSL_SUCCESS ||
             writeLen != updateLen)) {
             AppPrintError("enc: Failed to write the cipher text.\n");
-            return HITLS_APP_UIO_FAIL;
+            ret = HITLS_APP_UIO_FAIL;
+            break;
         }
     }
-    return HITLS_APP_SUCCESS;
+    BSL_SAL_FREE(readBuf);
+    BSL_SAL_FREE(resBuf);
+    return ret;
 }
 
 static int32_t DoCipherUpdate(EncCmdOpt *encOpt)

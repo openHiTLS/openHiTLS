@@ -41,7 +41,6 @@
 #include "bsl_err.h"
 #include "bsl_log.h"
 
-#define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */
 #define DEFAULT_DTLCP_TIMEOUT 5
 
 static volatile bool g_loopFlag = true;
@@ -560,11 +559,15 @@ static int HandleClientConnection(HITLS_Ctx *ctx, HITLS_ServerParams *params)
     }
 #endif
     /* Handle data exchange */
-    uint8_t buffer[HTTP_BUF_MAXLEN];
+    uint8_t *buffer = (uint8_t *)BSL_SAL_Malloc(HTTP_BUF_MAXLEN + 1);
+    if (buffer == NULL) {
+        AppPrintError("Failed to alloc memory.\n");
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
     uint32_t read_len = 0;
     
     /* Read client data */
-    ret = HITLS_Read(ctx, buffer, sizeof(buffer) - 1, &read_len);
+    ret = HITLS_Read(ctx, buffer, HTTP_BUF_MAXLEN, &read_len);
     if (ret == HITLS_SUCCESS && read_len > 0) {
         buffer[read_len] = '\0';
         
@@ -587,7 +590,7 @@ static int HandleClientConnection(HITLS_Ctx *ctx, HITLS_ServerParams *params)
     } else if (ret != HITLS_SUCCESS) {
         AppPrintError("Failed to read client data: 0x%x\n", ret);
     }
-    
+    BSL_SAL_FREE(buffer);
     return HITLS_APP_SUCCESS;
 }
 

@@ -13,8 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#ifndef APP_SERVER_H
-#define APP_SERVER_H
+#ifndef HITLS_APP_SERVER_H
+#define HITLS_APP_SERVER_H
 
 #include <stdint.h>
 #include "app_provider.h"
@@ -77,4 +77,4 @@ int HITLS_ServerMain(int argc, char *argv[]);
 }
 #endif
 
-#endif /* APP_SERVER_H */
+#endif /* HITLS_APP_SERVER_H */

@@ -50,7 +50,7 @@ typedef enum {
     HITLS_APP_OPT_OUTFORM,
 } HITLSOptType;
 
-const HITLS_CmdOption g_genPkeyOpts[] = {
+static const HITLS_CmdOption g_genPkeyOpts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"algorithm", HITLS_APP_OPT_ALGORITHM, HITLS_APP_OPT_VALUETYPE_STRING, "Key algorithm (RSA, EC, ML-DSA)"},
     {"pkeyopt", HITLS_APP_OPT_PKEYOPT, HITLS_APP_OPT_VALUETYPE_STRING, "Set key options (e.g., mldsa_param:ML-DSA-65)"},
@@ -180,7 +180,7 @@ static int32_t GetRsaKeygenBits(const char *algorithm, const char *pkeyOptArg, u
     uint32_t numBits = 0;
     if ((strcasecmp(algorithm, "RSA") != 0) || (strlen(pkeyOptArg) <= RSA_KEYGEN_BITS_STR_LEN) ||
         (HITLS_APP_OptGetUint32(pkeyOptArg + RSA_KEYGEN_BITS_STR_LEN, &numBits) != HITLS_APP_SUCCESS)) {
-        (void)AppPrintError("genpkey: The %s algorithm parameter %s is incorrect.\n", algorithm, pkeyOptArg);
+        AppPrintError("genpkey: The %s algorithm parameter %s is incorrect.\n", algorithm, pkeyOptArg);
         return HITLS_APP_INVALID_ARG;
     }
 
@@ -198,13 +198,13 @@ static int32_t GetRsaKeygenBits(const char *algorithm, const char *pkeyOptArg, u
 static int32_t GetParamGenCurve(const char *algorithm, const char *pkeyOptArg, uint32_t *pkeyParaId)
 {
     if ((strcasecmp(algorithm, "EC") != 0) || (strlen(pkeyOptArg) <= EC_PARAMGEN_CURVE_LEN)) {
-        (void)AppPrintError("genpkey: The %s algorithm parameter %s is incorrect.\n", algorithm, pkeyOptArg);
+        AppPrintError("genpkey: The %s algorithm parameter %s is incorrect.\n", algorithm, pkeyOptArg);
         return HITLS_APP_INVALID_ARG;
     }
     const char *curesName = pkeyOptArg + EC_PARAMGEN_CURVE_LEN;
     int32_t cid = HITLS_APP_GetCidByName(curesName, HITLS_APP_LIST_OPT_CURVES);
     if (cid == CRYPT_PKEY_PARAID_MAX) {
-        (void)AppPrintError("genpkey: The %s algorithm parameter %s is incorrect, Use the [list -all-curves] command "
+        AppPrintError("genpkey: The %s algorithm parameter %s is incorrect, Use the [list -all-curves] command "
             "to view supported curves.\n",
             algorithm, pkeyOptArg);
         return HITLS_APP_INVALID_ARG;
@@ -218,26 +218,26 @@ static int32_t GetMlDsaParam(const char *algorithm, const char *pkeyOptArg, uint
 {
     // Validate input parameters
     if (algorithm == NULL || pkeyOptArg == NULL || pkeyParaId == NULL) {
-        (void)AppPrintError("genpkey: Internal error - NULL parameter passed to GetMlDsaParam.\n");
+        AppPrintError("genpkey: Internal error - NULL parameter passed to GetMlDsaParam.\n");
         return HITLS_APP_INVALID_ARG;
     }
 
     // Validate algorithm type
     if (strcasecmp(algorithm, "ML-DSA") != 0) {
-        (void)AppPrintError("genpkey: Algorithm mismatch - expected ML-DSA, got %s.\n", algorithm);
+        AppPrintError("genpkey: Algorithm mismatch - expected ML-DSA, got %s.\n", algorithm);
         return HITLS_APP_INVALID_ARG;
     }
 
     // Validate parameter format
     if (strlen(pkeyOptArg) <= MLDSA_PARAM_LEN) {
-        (void)AppPrintError("genpkey: ML-DSA parameter string too short: %s\n", pkeyOptArg);
-        (void)AppPrintError("Expected format: mldsa_param:ML-DSA-XX\n");
+        AppPrintError("genpkey: ML-DSA parameter string too short: %s\n", pkeyOptArg);
+        AppPrintError("Expected format: mldsa_param:ML-DSA-XX\n");
         return HITLS_APP_INVALID_ARG;
     }
 
     // Validate parameter prefix
     if (strncmp(pkeyOptArg, MLDSA_PARAM_STR, MLDSA_PARAM_LEN) != 0) {
-        (void)AppPrintError("genpkey: ML-DSA parameter must start with 'mldsa_param:'\n");
+        AppPrintError("genpkey: ML-DSA parameter must start with 'mldsa_param:'\n");
         return HITLS_APP_INVALID_ARG;
     }
 
@@ -245,7 +245,7 @@ static int32_t GetMlDsaParam(const char *algorithm, const char *pkeyOptArg, uint
 
     // Validate parameter name is not empty
     if (strlen(paramName) == 0) {
-        (void)AppPrintError("genpkey: ML-DSA parameter name is empty.\n"
+        AppPrintError("genpkey: ML-DSA parameter name is empty.\n"
             "Supported parameters: ML-DSA-44, ML-DSA-65, ML-DSA-87\n");
         return HITLS_APP_INVALID_ARG;
     }
@@ -258,8 +258,8 @@ static int32_t GetMlDsaParam(const char *algorithm, const char *pkeyOptArg, uint
     } else if (strcasecmp(paramName, "ML-DSA-87") == 0) {
         *pkeyParaId = CRYPT_MLDSA_TYPE_MLDSA_87;
     } else {
-        (void)AppPrintError("genpkey: ML-DSA parameter '%s' is not supported.\n", paramName);
-        (void)AppPrintError("Supported parameters: ML-DSA-44, ML-DSA-65, ML-DSA-87\n");
+        AppPrintError("genpkey: ML-DSA parameter '%s' is not supported.\n", paramName);
+        AppPrintError("Supported parameters: ML-DSA-44, ML-DSA-65, ML-DSA-87\n");
         return HITLS_APP_INVALID_ARG;
     }
 
@@ -269,7 +269,7 @@ static int32_t GetMlDsaParam(const char *algorithm, const char *pkeyOptArg, uint
 static int32_t SetPkeyPara(GenPkeyOptCtx *optCtx)
 {
     if (optCtx->genPkeyCtxFunc == NULL) {
-        (void)AppPrintError("genpkey: Algorithm not specified.\n");
+        AppPrintError("genpkey: Algorithm not specified.\n");
         return HITLS_APP_INVALID_ARG;
     }
 
@@ -289,7 +289,7 @@ static int32_t SetPkeyPara(GenPkeyOptCtx *optCtx)
             // mldsa_param:ML-DSA-44/ML-DSA-65/ML-DSA-87
             return GetMlDsaParam(algorithm, pkeyOptArg, &optCtx->genPkeyOptPara.pkeyParaId);
         } else {
-            (void)AppPrintError("genpkey: The %s algorithm parameter %s is incorrect.\n", algorithm, pkeyOptArg);
+            AppPrintError("genpkey: The %s algorithm parameter %s is incorrect.\n", algorithm, pkeyOptArg);
             return HITLS_APP_INVALID_ARG;
         }
     }
@@ -306,7 +306,7 @@ static int32_t GenPkeyOptAlgorithm(GenPkeyOptCtx *optCtx)
     } else if (strcasecmp(optCtx->inPara.algorithm, "ML-DSA") == 0) {
         optCtx->genPkeyCtxFunc = GenMlDsaPkeyCtx;
     } else {
-        (void)AppPrintError("genpkey: The %s algorithm is not supported.\n"
+        AppPrintError("genpkey: The %s algorithm is not supported.\n"
             "Supported algorithms: RSA, EC, ML-DSA\n", optCtx->inPara.algorithm);
         return HITLS_APP_INVALID_ARG;
     }
@@ -355,7 +355,7 @@ static int32_t GenPkeyOptOutForm(GenPkeyOptCtx *optCtx)
     } else if (strcasecmp(format, "DER") == 0) {
         optCtx->outPara.outFormat = BSL_FORMAT_ASN1;
     } else {
-        (void)AppPrintError("genpkey: Invalid output format %s. Supported formats: PEM, DER\n", format);
+        AppPrintError("genpkey: Invalid output format %s. Supported formats: PEM, DER\n", format);
         return HITLS_APP_INVALID_ARG;
     }
     return HITLS_APP_SUCCESS;

@@ -55,21 +55,22 @@ typedef struct {
     char *outfile;
 } OutputInfo;
 
-HITLS_CmdOption g_rsaOpts[] = {
+static const HITLS_CmdOption g_rsaOpts[] = {
     {"help", HITLS_APP_OPT_RSA_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"in", HITLS_APP_OPT_RSA_IN, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Input file"},
     {"out", HITLS_APP_OPT_RSA_OUT, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output file"},
     {"noout", HITLS_APP_OPT_RSA_NOOUT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "No RSA output "},
     {"text", HITLS_APP_OPT_RSA_TEXT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print RSA key in text"},
-    {NULL, 0, 0, NULL}};
+    {NULL, 0, 0, NULL}
+};
 
 static int32_t OutPemFormat(BSL_UIO *uio, void *encode)
 {
     BSL_Buffer *outBuf = encode;  // Encode data into the PEM format.
-    (void)AppPrintError("writing RSA key\n");
+    AppPrintError("writing RSA key\n");
     int32_t writeRet = HITLS_APP_OptWriteUio(uio, outBuf->data, outBuf->dataLen, HITLS_APP_FORMAT_PEM);
     if (writeRet != HITLS_APP_SUCCESS) {
-        (void)AppPrintError("Failed to export data in PEM format\n");
+        AppPrintError("Failed to export data in PEM format\n");
     }
     return writeRet;
 }
@@ -79,13 +80,13 @@ static int32_t BufWriteToUio(void *pkey, OutputInfo outInfo)
     int32_t writeRet = HITLS_APP_SUCCESS;
     BSL_UIO *uio = HITLS_APP_UioOpen(outInfo.outfile, 'w', 0);  // Open the file and overwrite the file content.
     if (uio == NULL) {
-        (void)AppPrintError("Failed to open the file <%s> \n", outInfo.outfile);
+        AppPrintError("Failed to open the file <%s> \n", outInfo.outfile);
         return HITLS_APP_UIO_FAIL;
     }
     if (outInfo.text == true) {
         writeRet = CRYPT_EAL_PrintPrikey(0, pkey, uio);
         if (writeRet != HITLS_APP_SUCCESS) {
-            (void)AppPrintError("Failed to export data in text format to a file <%s> \n", outInfo.outfile);
+            AppPrintError("Failed to export data in text format to a file <%s> \n", outInfo.outfile);
             goto end;
         }
     }
@@ -93,13 +94,13 @@ static int32_t BufWriteToUio(void *pkey, OutputInfo outInfo)
         BSL_Buffer encodeBuffer = {0};
         writeRet = CRYPT_EAL_EncodeBuffKey(pkey, NULL, BSL_FORMAT_PEM, CRYPT_PRIKEY_RSA, &encodeBuffer);
         if (writeRet != CRYPT_SUCCESS) {
-            (void)AppPrintError("Failed to encode pem format data\n");
+            AppPrintError("Failed to encode pem format data\n");
             goto end;
         }
         writeRet = OutPemFormat(uio, &encodeBuffer);
         BSL_SAL_FREE(encodeBuffer.data);
-        if (writeRet != CRYPT_SUCCESS) {
-            (void)AppPrintError("Failed to export data in pem format to a file <%s> \n", outInfo.outfile);
+        if (writeRet != HITLS_APP_SUCCESS) {
+            AppPrintError("Failed to export data in pem format to a file <%s> \n", outInfo.outfile);
         }
     }
 end:
@@ -110,9 +111,9 @@ end:
 
 static int32_t GetRsaByStd(uint8_t **readBuf, uint64_t *readBufLen)
 {
-    (void)AppPrintError("Please enter the key content\n");
+    AppPrintError("Please enter the key content\n");
     size_t rsaDataCapacity = DEFAULT_RSA_SIZE;
-    void *rsaData = BSL_SAL_Calloc(rsaDataCapacity, sizeof(uint8_t));
+    void *rsaData = BSL_SAL_Calloc(rsaDataCapacity, 1);
     if (rsaData == NULL) {
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
@@ -130,7 +131,7 @@ static int32_t GetRsaByStd(uint8_t **readBuf, uint64_t *readBufLen)
         ssize_t readLen = getline(&buf, &bufLen, stdin);
         if (readLen <= 0) {
             BSL_SAL_FREE(buf);
-            (void)AppPrintError("Failed to obtain the standard input.\n");
+            AppPrintError("Failed to obtain the standard input.\n");
             break;
         }
         if ((rsaDataSize + readLen) > rsaDataCapacity) {
@@ -200,7 +201,7 @@ static int32_t OptParse(char **infile, OutputInfo *outInfo)
             case HITLS_APP_OPT_RSA_ROF:
             case HITLS_APP_OPT_RSA_ERR:
                 ret = HITLS_APP_OPT_UNKOWN;
-                (void)AppPrintError("rsa: Use -help for summary.\n");
+                AppPrintError("rsa: Use -help for summary.\n");
                 return ret;
             case HITLS_APP_OPT_RSA_HELP:
                 ret = HITLS_APP_HELP;
@@ -252,8 +253,8 @@ int32_t HITLS_RsaMain(int argc, char *argv[])
     }
     int unParseParamNum = HITLS_APP_GetRestOptNum();
     if (unParseParamNum != 0) {  // The input parameters are not completely parsed.
-        (void)AppPrintError("Extra arguments given.\n");
-        (void)AppPrintError("rsa: Use -help for summary.\n");
+        AppPrintError("Extra arguments given.\n");
+        AppPrintError("rsa: Use -help for summary.\n");
         mainRet = HITLS_APP_OPT_UNKOWN;
         goto end;
     }
@@ -269,7 +270,7 @@ int32_t HITLS_RsaMain(int argc, char *argv[])
     }
     if (mainRet == BSL_PEM_SYMBOL_NOT_FOUND || mainRet == BSL_PEM_NO_PWD) {
         char pwd[APP_MAX_PASS_LENGTH + 1] = {0};
-        int32_t pwdLen = HITLS_APP_Passwd(pwd, APP_MAX_PASS_LENGTH + 1, 0, NULL);
+        int32_t pwdLen = HITLS_APP_Passwd(pwd, APP_MAX_PASS_LENGTH + 1, 0);
         if (pwdLen == -1) {
             mainRet = HITLS_APP_PASSWD_FAIL;
             goto end;
@@ -284,7 +285,7 @@ int32_t HITLS_RsaMain(int argc, char *argv[])
         (void)memset_s(pwd, APP_MAX_PASS_LENGTH, 0, APP_MAX_PASS_LENGTH);
     }
     if (mainRet != CRYPT_SUCCESS) {
-        (void)AppPrintError("Decode failed.\n");
+        AppPrintError("Decode failed.\n");
         mainRet = HITLS_APP_DECODE_FAIL;
         goto end;
     }

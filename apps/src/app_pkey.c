@@ -42,7 +42,7 @@ typedef enum {
     HITLS_APP_OPT_NOOUT,
 } HITLSOptType;
 
-const HITLS_CmdOption g_pKeyOpts[] = {
+static const HITLS_CmdOption g_pKeyOpts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"in", HITLS_APP_OPT_IN, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Input key"},
     {"passin", HITLS_APP_OPT_PASSIN, HITLS_APP_OPT_VALUETYPE_STRING, "Input file pass phrase source"},

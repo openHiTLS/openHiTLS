@@ -39,7 +39,6 @@
 
 #define DEFAULT_PEM_FILE_SIZE 1024U
 #define RSA_PRV_CTX_LEN 8
-#define HEX_TO_BYTE 2
 
 #define APP_HEX_HEAD "0x"
 #define APP_LINESIZE 255
@@ -94,7 +93,7 @@ void *ExpandingMem(void *oldPtr, size_t newSize, size_t oldSize)
     if (newSize <= 0) {
         return oldPtr;
     }
-    void *newPtr = BSL_SAL_Calloc(newSize, sizeof(uint8_t));
+    void *newPtr = BSL_SAL_Calloc(newSize, 1);
     if (newPtr == NULL) {
         return oldPtr;
     }
@@ -123,7 +122,7 @@ int32_t HITLS_APP_CheckPasswd(const uint8_t *password, const uint32_t passwordLe
 int32_t HITLS_APP_DefaultPassCB(BSL_UI *ui, char *buff, uint32_t buffLen, void *callBackData)
 {
     if (ui == NULL || buff == NULL || buffLen == 1) {
-        (void)AppPrintError("You have not entered a password.\n");
+        AppPrintError("You have not entered a password.\n");
         return BSL_UI_INVALID_DATA_ARG;
     }
     uint32_t passLen = buffLen - 1;
@@ -168,7 +167,7 @@ static char *GetPemKeyFileName(const char *buf, size_t readLen)
     }
 
     int32_t len = readLen - PEM_BEGIN_STR_LEN - PEM_TAIL_STR_LEN;
-    char *name = BSL_SAL_Calloc(len + 1, sizeof(char));
+    char *name = BSL_SAL_Calloc(len + 1, 1);
     if (name == NULL) {
         return name;
     }
@@ -271,7 +270,7 @@ static int32_t GetPasswdByFile(const char *passwdArg, size_t passwdArgLen, char 
     }
     // Apply for a new memory and copy the unprocessed character string.
     char filePath[PATH_MAX] = {0};
-    if (strcpy_s(filePath, PATH_MAX - 1, passwdArg + APP_PASS_FILE_STR_LEN) != EOK) {
+    if (strcpy_s(filePath, PATH_MAX, passwdArg + APP_PASS_FILE_STR_LEN) != EOK) {
         AppPrintError("Failed to read passwd from file.\n");
         return HITLS_APP_SECUREC_FAIL;
     }
@@ -287,7 +286,7 @@ static int32_t GetPasswdByFile(const char *passwdArg, size_t passwdArgLen, char 
         BSL_UIO_Free(passUio);
         return HITLS_APP_UIO_FAIL;
     }
-    char *passBuf = (char *)BSL_SAL_Calloc(APP_MAX_PASS_LENGTH + 1 + 1, sizeof(char));
+    char *passBuf = (char *)BSL_SAL_Calloc(APP_MAX_PASS_LENGTH + 1 + 1, 1);
     if (passBuf == NULL) {
         BSL_UIO_Free(passUio);
         AppPrintError("Failed to read passwd from file.\n");
@@ -314,17 +313,17 @@ static int32_t GetPasswdByFile(const char *passwdArg, size_t passwdArgLen, char 
 
 static char *GetPasswdByStdin(BSL_UI_ReadPwdParam *param)
 {
-    char *pass = (char *)BSL_SAL_Calloc(APP_MAX_PASS_LENGTH + 1, sizeof(char));
+    uint32_t passLen = APP_MAX_PASS_LENGTH + 1;
+    char *pass = (char *)BSL_SAL_Calloc(APP_MAX_PASS_LENGTH + 1, 1);
     if (pass == NULL) {
+        AppPrintError("Fail to alloc memory.\n");
         return NULL;
     }
-    uint32_t passLen = APP_MAX_PASS_LENGTH + 1;
-    int32_t ret = BSL_UI_ReadPwdUtil(param, pass, &passLen, NULL, NULL);
-    if (ret != BSL_SUCCESS) {
-        pass[0] = '\0';
-        return pass;
+    if (BSL_UI_ReadPwdUtil(param, pass, &passLen, NULL, NULL) != BSL_SUCCESS) {
+        BSL_SAL_FREE(pass);
+        AppPrintError("Fail to read pwd from stdin.\n");
+        return NULL;
     }
-    pass[passLen - 1] = '\0';
     return pass;
 }
 
@@ -334,7 +333,7 @@ static char *GetStrAfterPreFix(const char *inputArg, uint32_t inputArgLen, uint3
         return NULL;
     }
     uint32_t len = inputArgLen - prefixLen;
-    char *str = (char *)BSL_SAL_Calloc(len + 1, sizeof(char));
+    char *str = (char *)BSL_SAL_Calloc(len + 1, 1);
     if (str == NULL) {
         return NULL;
     }
@@ -359,7 +358,9 @@ int32_t HITLS_APP_ParsePasswd(const char *passArg, char **pass)
         AppPrintError("The %s password parameter is not supported.\n", passArg);
         return HITLS_APP_PASSWD_FAIL;
     }
-
+    if (*pass == NULL) {
+        return HITLS_APP_PASSWD_FAIL;
+    }
     return HITLS_APP_SUCCESS;
 }
 
@@ -671,7 +672,7 @@ int32_t HITLS_APP_GetAndCheckCipherOpt(const char *name, int32_t *symId)
     }
     uint32_t cid = (uint32_t)HITLS_APP_GetCidByName(name, HITLS_APP_LIST_OPT_CIPHER_ALG);
     if (cid == CRYPT_CIPHER_MAX) {
-        (void)AppPrintError("%s: Use the [list -cipher-algorithms] command to view supported encryption algorithms.\n",
+        AppPrintError("%s: Use the [list -cipher-algorithms] command to view supported encryption algorithms.\n",
             HITLS_APP_GetProgName());
         return HITLS_APP_OPT_UNKOWN;
     }
@@ -744,9 +745,12 @@ static int32_t ReadPemByUioSymbol(BSL_UIO *memUio, BSL_UIO *rUio, BSL_PEM_Symbol
 static int32_t ReadBlockFromStdin(BSL_UIO *memUio, BSL_UIO *rUio)
 {
     int32_t ret = HITLS_APP_UIO_FAIL;
-    uint8_t buf[MAX_DIGEST_SIZE] = {0};
     uint32_t readLen;
     uint32_t writeLen;
+    uint8_t *buf = (uint8_t *)BSL_SAL_Calloc(MAX_DIGEST_SIZE + 1, 1);
+    if (buf == NULL) {
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
 
     while (true) {
         readLen = MAX_DIGEST_SIZE;
@@ -762,6 +766,7 @@ static int32_t ReadBlockFromStdin(BSL_UIO *memUio, BSL_UIO *rUio)
             break;
         }
     }
+    BSL_SAL_FREE(buf);
     return ret;
 }
 
@@ -895,7 +900,7 @@ int32_t HITLS_APP_GetAndCheckHashOpt(const char *name, int32_t *hashId)
     }
     uint32_t cid = (uint32_t)HITLS_APP_GetCidByName(name, HITLS_APP_LIST_OPT_DGST_ALG);
     if (cid == BSL_CID_UNKNOWN) {
-        (void)AppPrintError("%s: Use the [list -digest-algorithms] command to view supported digest algorithms.\n",
+        AppPrintError("%s: Use the [list -digest-algorithms] command to view supported digest algorithms.\n",
             HITLS_APP_GetProgName());
         return HITLS_APP_OPT_UNKOWN;
     }
@@ -985,7 +990,7 @@ int32_t HITLS_APP_HexToByte(const char *hex, int32_t useHeader, uint8_t **bin, u
             break;
         }
     }
-    *len = (hexLen + 1) / HEX_TO_BYTE;
+    *len = (hexLen + 1) / APP_HEX_TO_BYTE;
     uint8_t *res = BSL_SAL_Malloc(*len);
     if (res == NULL) {
         AppPrintError("Allocate memory failed.\n");
@@ -993,7 +998,7 @@ int32_t HITLS_APP_HexToByte(const char *hex, int32_t useHeader, uint8_t **bin, u
     }
 
     int32_t ret = HITLS_APP_SUCCESS;
-    if (hexLen % HEX_TO_BYTE == 1) {
+    if (hexLen % APP_HEX_TO_BYTE == 1) {
         char *tmp = BSL_SAL_Malloc(hexLen + 2); // 2: '0' + '\0'
         if (tmp == NULL) {
             AppPrintError("Allocate memory failed.\n");

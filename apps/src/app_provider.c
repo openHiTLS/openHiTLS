@@ -45,20 +45,20 @@ int32_t HITLS_APP_LoadProvider(const char *searchPath, const char *providerName)
     CRYPT_EAL_LibCtx *ctx = g_libCtx;
     int32_t ret = HITLS_APP_SUCCESS;
     if (ctx == NULL) {
-        (void)AppPrintError("Lib not initialized\n");
+        AppPrintError("Lib not initialized\n");
         return HITLS_APP_INVALID_ARG;
     }
     if (searchPath != NULL) {
         ret = CRYPT_EAL_ProviderSetLoadPath(ctx, searchPath);
         if (ret != HITLS_APP_SUCCESS) {
-            (void)AppPrintError("Load SetSearchPath failed. ERR:%d\n", ret);
+            AppPrintError("Load SetSearchPath failed. ERR:%d\n", ret);
             return HITLS_APP_CRYPTO_FAIL;
         }
     }
     if (providerName != NULL) {
         ret = CRYPT_EAL_ProviderLoad(ctx, BSL_SAL_LIB_FMT_OFF, providerName, NULL, NULL);
         if (ret != HITLS_APP_SUCCESS) {
-            (void)AppPrintError("Load provider failed. ERR:%d\n", ret);
+            AppPrintError("Load provider failed. ERR:%d\n", ret);
             return HITLS_APP_CRYPTO_FAIL;
         }
     }

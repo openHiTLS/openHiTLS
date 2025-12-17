@@ -45,7 +45,7 @@ STUB_DEFINE_RET4(int32_t, BSL_UIO_Ctrl, BSL_UIO *, int32_t, int32_t, void *);
 STUB_DEFINE_RET0(char *, HITLS_APP_OptGetValueStr);
 STUB_DEFINE_RET4(int32_t, HITLS_APP_OptWriteUio, BSL_UIO *, uint8_t *, uint32_t, int32_t);
 STUB_DEFINE_RET5(int32_t, CRYPT_EAL_EncodeBuffKey, CRYPT_EAL_PkeyCtx *, const CRYPT_EncodeParam *, int32_t, int32_t, BSL_Buffer *);
-STUB_DEFINE_RET4(int32_t, HITLS_APP_Passwd, char *, int32_t, int32_t, void *);
+STUB_DEFINE_RET3(int32_t, HITLS_APP_Passwd, char *, int32_t, int32_t);
 
 #define PRV_PATH "../testdata/certificate/rsa_key/prvKey.pem"
 #define PRV_PASSWD_PATH "../testdata/cert/asn1/keypem/rsa-pri-key-p8-2048.pem"
@@ -441,9 +441,8 @@ EXIT:
 }
 /* END_CASE */
 
-int32_t STUB_HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag, void *userdata)
+int32_t STUB_HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag)
 {
-    (void)userdata;
     (void)flag;
     (void)memcpy_s(buf, bufMaxLen, "123456", 6);
     return 6;

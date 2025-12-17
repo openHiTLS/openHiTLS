@@ -13,8 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#ifndef APP_CLIENT_H
-#define APP_CLIENT_H
+#ifndef HITLS_APP_CLIENT_H
+#define HITLS_APP_CLIENT_H
 #include "app_provider.h"
 #include "app_sm.h"
 #include "bsl_types.h"
@@ -72,4 +72,4 @@ int HITLS_ClientMain(int argc, char *argv[]);
 }
 #endif
 
-#endif /* APP_CLIENT_H */
+#endif /* HITLS_APP_CLIENT_H */

@@ -167,32 +167,20 @@ static int32_t CheckPassword(const uint8_t *password, const uint32_t passwordLen
 
 static int32_t GetPassword(char **password)
 {
-    char buf[APP_MAX_PASS_LENGTH + 1] = {0};
-    uint32_t bufLen = APP_MAX_PASS_LENGTH + 1;
-    BSL_UI_ReadPwdParam param = {"passwd", NULL, true};
-
-    int32_t ret = BSL_UI_ReadPwdUtil(&param, buf, &bufLen, HITLS_APP_DefaultPassCB, NULL);
-    if (ret == BSL_UI_READ_BUFF_TOO_LONG || ret == BSL_UI_READ_LEN_TOO_SHORT) {
-        HITLS_APP_PrintPassErrlog();
-        return HITLS_APP_PASSWD_FAIL;
-    }
-    if (ret != BSL_SUCCESS) {
+    char *tmp = NULL;
+    char *pwd = NULL;
+    uint32_t pwdLen;
+    BSL_UI_ReadPwdParam param = {"password", NULL, true};
+    if (HITLS_APP_GetPasswd(&param, &tmp, (uint8_t **)&pwd, &pwdLen) != HITLS_APP_SUCCESS) {
         AppPrintError("Failed to read passwd from stdin.\n");
         return HITLS_APP_PASSWD_FAIL;
     }
-    buf[bufLen - 1] = '\0';
-    ret = CheckPassword((const uint8_t *)buf, bufLen - 1);
-    if (ret != HITLS_APP_SUCCESS) {
-        BSL_SAL_CleanseData(buf, bufLen);
-        return ret;
+    if (CheckPassword((uint8_t *)pwd, pwdLen) != HITLS_APP_SUCCESS) {
+        BSL_SAL_ClearFree(pwd, pwdLen);
+        AppPrintError("Failed to check passwd.\n");
+        return HITLS_APP_PASSWD_FAIL;
     }
-
-    *password = (char *)BSL_SAL_Dump(buf, bufLen);
-    BSL_SAL_CleanseData(buf, bufLen);
-    if (*password == NULL) {
-        AppPrintError("Failed to allocate memory, bufLen: %u.\n", bufLen);
-        return HITLS_APP_MEM_ALLOC_FAIL;
-    }
+    *password = pwd;
     return HITLS_APP_SUCCESS;
 }
 
@@ -524,9 +512,9 @@ int32_t HITLS_APP_SM_Init(AppProvider *provider, const char *workPath, char **pa
 
 char *HITLS_APP_GetAppPath(void)
 {
-    char *tempPath = BSL_SAL_Malloc(APP_MAX_PATH_LEN);
+    char *tempPath = BSL_SAL_Malloc(APP_MAX_PATH_LEN + 1);
     if (tempPath == NULL) {
-        (void)AppPrintError("Failed to allocate memory.\n");
+        AppPrintError("Failed to allocate memory.\n");
         return NULL;
     }
     ssize_t count = readlink("/proc/self/exe", tempPath, APP_MAX_PATH_LEN);
@@ -538,7 +526,7 @@ char *HITLS_APP_GetAppPath(void)
     tempPath[count] = '\0';
 
     // realpath() need to use PATH_MAX.
-    char *path = BSL_SAL_Malloc(PATH_MAX);
+    char *path = BSL_SAL_Malloc(PATH_MAX + 1);
     if (path == NULL) {
         BSL_SAL_Free(tempPath);
         AppPrintError("Failed to allocate app path memory.\n");

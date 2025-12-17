@@ -71,7 +71,7 @@ typedef enum OptionChoice {
 #endif
 } HITLSOptType;
 
-const HITLS_CmdOption g_pkeyUtlOpts[] = {
+static const HITLS_CmdOption g_pkeyUtlOpts[] = {
     {"help", HITLS_APP_OPT_PKEYUTL_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Show usage information for command."},
     {"encrypt", HITLS_APP_OPT_PKEYUTL_ENCRYPT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Public key encryption."},
     {"decrypt", HITLS_APP_OPT_PKEYUTL_DECRYPT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Private key decryption."},
@@ -95,7 +95,8 @@ const HITLS_CmdOption g_pkeyUtlOpts[] = {
 #ifdef HITLS_APP_SM_MODE
     HITLS_SM_OPTIONS,
 #endif
-    {NULL, 0, 0, NULL}};
+    {NULL, 0, 0, NULL}
+};
 
 typedef struct {
         int32_t optEncrypt;   // Flag for encrypt
@@ -340,7 +341,7 @@ static int32_t GetReadBuf(uint8_t **buf, uint64_t *bufLen, char *inFile, uint32_
     }
     int32_t ret = HITLS_APP_OptReadUio(readUio, buf, bufLen, maxSize);
     if (ret != HITLS_APP_SUCCESS) {
-        (void)AppPrintError("pkeyutl: Failed to read the content from the file <%s>\n", inFile);
+        AppPrintError("pkeyutl: Failed to read the content from the file <%s>\n", inFile);
     }
     BSL_UIO_Free(readUio);
     return ret;
@@ -479,7 +480,7 @@ static int32_t GetPubKeyCtx(PkeyUtlOpt *pkeyUtlOpt, CRYPT_EAL_PkeyCtx **ctx)
 #endif
     ret = GetReadBuf(&pubBuf, &bufLen, pkeyUtlOpt->pubinFile, MAX_CERT_KEY_SIZE);
     if (ret != HITLS_APP_SUCCESS) {
-        (void)AppPrintError("pkeyutl: Failed to read the public key file\n");
+        AppPrintError("pkeyutl: Failed to read the public key file\n");
         return ret;
     }
     pub.data = pubBuf;
@@ -487,13 +488,13 @@ static int32_t GetPubKeyCtx(PkeyUtlOpt *pkeyUtlOpt, CRYPT_EAL_PkeyCtx **ctx)
     ret = CRYPT_EAL_ProviderDecodeBuffKey(APP_GetCurrent_LibCtx(), pkeyUtlOpt->provider->providerAttr,
         BSL_CID_UNKNOWN, "PEM", "PRIKEY_PKCS8_UNENCRYPT", &pub, NULL, &pkeyCtx);
     if (ret != CRYPT_SUCCESS) {
-        (void)AppPrintError("pkeyutl: Failed to decode the private key, ret=%d\n", ret);
+        AppPrintError("pkeyutl: Failed to decode the private key, ret=%d\n", ret);
         BSL_SAL_ClearFree(pubBuf, bufLen);
         return HITLS_APP_CRYPTO_FAIL;
     }
     BSL_SAL_ClearFree(pubBuf, bufLen);
     *ctx = pkeyCtx;
-    (void)AppPrintError("pkeyutl: Get pub key ctx success!\n");
+    AppPrintInfo("pkeyutl: Get pub key ctx success!\n");
     return HITLS_APP_SUCCESS;
 }
 
@@ -522,13 +523,13 @@ static int32_t PkeyEncrypt(PkeyUtlOpt *pkeyUtlOpt)
         outLen += plainTextLen;
         cipherText = BSL_SAL_Malloc(outLen);
         if (cipherText == NULL) {
-            (void)AppPrintError("Failed to allocate memory for ciphertext\n");
+            AppPrintError("Failed to allocate memory for ciphertext\n");
             ret = HITLS_APP_MEM_ALLOC_FAIL;
             break;
         }
         ret = CRYPT_EAL_PkeyEncrypt(ctx, plainText, plainTextLen, cipherText, &outLen);
         if (ret != CRYPT_SUCCESS) {
-            (void)AppPrintError("Failed to encrypt the plaintext, ret=%d\n", ret);
+            AppPrintError("Failed to encrypt the plaintext, ret=%d\n", ret);
             ret = HITLS_APP_CRYPTO_FAIL;
             break;
         }
@@ -536,13 +537,13 @@ static int32_t PkeyEncrypt(PkeyUtlOpt *pkeyUtlOpt)
         BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(pkeyUtlOpt->outFile, 'w', 0);  // overwrite the original content
         BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
         if (fileWriteUio == NULL) {
-            (void)AppPrintError("Failed to open the outfile\n");
+            AppPrintError("Failed to open the outfile\n");
             ret = HITLS_APP_UIO_FAIL;
             break;
         }
         ret = HITLS_APP_OptWriteUio(fileWriteUio, cipherText, outLen, HITLS_APP_FORMAT_HEX);
         if (ret != HITLS_APP_SUCCESS) {
-            (void)AppPrintError("dgst:Failed to export data to the outfile path\n");
+            AppPrintError("dgst:Failed to export data to the outfile path\n");
         }
         BSL_UIO_Free(fileWriteUio);
     } while (0);
@@ -599,18 +600,24 @@ static int32_t PkeyDecrypt(PkeyUtlOpt *pkeyUtlOpt)
             AppPrintError("pkeyutl: Failed to read input ciphertext file.\n");
             break;
         }
-        hexBuf = BSL_SAL_Malloc(cipherLen * 2 + 1);
-        hexLen = cipherLen * 2;
+        hexLen = cipherLen / APP_HEX_TO_BYTE + 1;
+        hexBuf = (uint8_t *)BSL_SAL_Malloc(hexLen);
+        if (hexBuf == NULL) {
+            AppPrintError("pkeyutl: Failed to alloc memory.\n");
+            ret = HITLS_APP_MEM_ALLOC_FAIL;
+            break;
+        }
         ret = HITLS_APP_StrToHex((const char *)cipherText, hexBuf, &hexLen);
         if (ret != HITLS_APP_SUCCESS) {
-            (void)AppPrintError("pkeyutl: Failed to convert signature to hex.");
+            AppPrintError("pkeyutl: Failed to convert signature to hex.");
             break;
         }
         outLen = cipherLen;
         plainText = BSL_SAL_Malloc(outLen);
         if (plainText == NULL) {
-            AppPrintError("Failed to allocate memory for plaintext\n");
-            return HITLS_APP_MEM_ALLOC_FAIL;
+            AppPrintError("pkeyutl: Failed to allocate memory for plaintext\n");
+            ret = HITLS_APP_MEM_ALLOC_FAIL;
+            break;
         }
 
         ret = CRYPT_EAL_PkeyDecrypt(ctx, hexBuf, hexLen, plainText, &outLen);
@@ -671,11 +678,16 @@ static int32_t GetPeerCtx(CRYPT_EAL_PkeyCtx **peerCtx, PkeyUtlOpt *pkeyUtlOpt)
             AppPrintError("pkeyutl: Failed to read R file for exchange.\n");
             break;
         }
-        hexBuf = BSL_SAL_Malloc(inRLen * 2 + 1);
-        hexLen = inRLen * 2;
+        hexLen = inRLen / APP_HEX_TO_BYTE + 1;
+        hexBuf = (uint8_t *)BSL_SAL_Malloc(hexLen);
+        if (hexBuf == NULL) {
+            AppPrintError("pkeyutl: Failed to alloc memory.\n");
+            ret = HITLS_APP_MEM_ALLOC_FAIL;
+            break;
+        }
         ret = HITLS_APP_StrToHex((const char *)inRBuf, hexBuf, &hexLen);
         if (ret != HITLS_APP_SUCCESS) {
-            (void)AppPrintError("pkeyutl: Failed to convert R to hex.");
+            AppPrintError("pkeyutl: Failed to convert R to hex.");
             break;
         }
         ret = CRYPT_EAL_PkeyCtrl(*peerCtx, CRYPT_CTRL_SET_SM2_USER_ID, pkeyUtlOpt->userid, strlen(pkeyUtlOpt->userid));
@@ -1024,7 +1036,7 @@ int32_t HITLS_PkeyUtlMain(int argc, char *argv[])
         }
         ret = HITLS_APP_Init(&initParam);
         if (ret != HITLS_APP_SUCCESS) {
-            (void)AppPrintError("pkeyutl: Failed to init app, errCode: 0x%x.\n", ret);
+            AppPrintError("pkeyutl: Failed to init app, errCode: 0x%x.\n", ret);
             break;
         }
         if (pkeyUtlOpt.optEncrypt) {

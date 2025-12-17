@@ -43,9 +43,8 @@
 #include "sal_net.h"
 #include "bsl_log.h"
 
-#define HTTP_BUF_MAXLEN (18 * 1024)
-#define IS_SUPPORT_GET_EOF 1
 #define MAX_BUFSIZE (1024 * 8)
+#define IS_SUPPORT_GET_EOF 1
 #define HEARTBEAT_MISS_COUNT 3
 #define HEARTBEAT_INTERVAL 1
 
@@ -558,10 +557,14 @@ static int32_t HandleSm(HITLS_Ctx *ctx, HITLS_ClientParams *params)
         return ret;
     }
     AppPrintError("client: Sent key to server successfully!\n");
-    uint8_t buffer[8192];
+    uint8_t *buffer = (uint8_t *)BSL_SAL_Malloc(MAX_BUFSIZE);
+    if (buffer == NULL) {
+        AppPrintError("client: Failed to alloc memory.\n");
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
     uint32_t readLen = 0;
-    
-    ret = HITLS_Read(ctx, buffer, sizeof(buffer) - 1, &readLen);
+
+    ret = HITLS_Read(ctx, buffer, MAX_BUFSIZE - 1, &readLen);
     if (ret == HITLS_SUCCESS && readLen > 0) {
         buffer[readLen] = '\0';
         if (!params->quiet) {
@@ -570,7 +573,8 @@ static int32_t HandleSm(HITLS_Ctx *ctx, HITLS_ClientParams *params)
     } else if (ret != HITLS_SUCCESS) {
         AppPrintError("client: Failed to read response: 0x%x\n", ret);
     }
-    return HITLS_APP_SUCCESS;
+    BSL_SAL_FREE(buffer);
+    return ret;
 }
 #endif
 
@@ -601,13 +605,24 @@ static int HandleClientDataExchange(HITLS_Ctx *ctx, HITLS_ClientParams *params)
         if (!params->quiet) {
             AppPrintInfo("Interactive mode - type messages (Ctrl+C to exit):\n");
         }
-        
-        char inputBuffer[HTTP_BUF_MAXLEN];
+        char *inputBuffer = (char *)BSL_SAL_Malloc(HTTP_BUF_MAXLEN + 1);
+        if (inputBuffer == NULL) {
+            BSL_UIO_Free(readUio);
+            AppPrintError("s_client: Failed to alloc memory.\n");
+            return HITLS_APP_MEM_ALLOC_FAIL;
+        }
+        uint8_t *response = (uint8_t *)BSL_SAL_Malloc(HTTP_BUF_MAXLEN + 1);
+        if (response == NULL) {
+            BSL_UIO_Free(readUio);
+            BSL_SAL_FREE(inputBuffer);
+            AppPrintError("s_client: Failed to alloc memory.\n");
+            return HITLS_APP_MEM_ALLOC_FAIL;
+        }
         while (BSL_UIO_Ctrl(readUio, BSL_UIO_FILE_GET_EOF, IS_SUPPORT_GET_EOF, &isEof) == BSL_SUCCESS && !isEof) {
             if (BSL_UIO_Read(readUio, inputBuffer, HTTP_BUF_MAXLEN, &readLen) != BSL_SUCCESS) {
-                BSL_UIO_Free(readUio);
-                (void)AppPrintError("Failed to obtain the content from the STDIN\n");
-                return HITLS_APP_STDIN_FAIL;
+                AppPrintError("s_client: Failed to obtain the content from the STDIN\n");
+                ret = HITLS_APP_STDIN_FAIL;
+                break;
             }
             if (readLen > 0 && inputBuffer[readLen - 1] == '\n') {
                 inputBuffer[readLen - 1] = '\0';
@@ -619,22 +634,24 @@ static int HandleClientDataExchange(HITLS_Ctx *ctx, HITLS_ClientParams *params)
             uint32_t written = 0;
             ret = HITLS_Write(ctx, (const uint8_t *)inputBuffer, readLen, &written);
             if (ret != HITLS_SUCCESS) {
-                AppPrintError("Failed to send data: 0x%x\n", ret);
+                AppPrintError("s_client: Failed to send data: 0x%x\n", ret);
                 break;
             }
             
             /* Try to read response */
-            uint8_t response[HTTP_BUF_MAXLEN];
             uint32_t read_len = 0;
-            ret = HITLS_Read(ctx, response, sizeof(response) - 1, &read_len);
+            ret = HITLS_Read(ctx, response, HTTP_BUF_MAXLEN, &read_len);
             if (ret == HITLS_SUCCESS && read_len > 0) {
                 response[read_len] = '\0';
                 AppPrintInfo("Response: %s\n", response);
             }
+            ret = HITLS_APP_SUCCESS;
         }
+        BSL_SAL_FREE(inputBuffer);
+        BSL_SAL_FREE(response);
     }
     BSL_UIO_Free(readUio);
-    return HITLS_APP_SUCCESS;
+    return ret;
 }
 
 static void CleanupClientResources(HITLS_Ctx *ctx, HITLS_Config *config, BSL_UIO *uio)
@@ -748,33 +765,32 @@ static void *ThreadClientMainLoop(void *arg)
 
 static int32_t ConfirmAction(void)
 {
-    int ret = HITLS_APP_SUCCESS;
-    AppPrintError("Please enter 'y' to confirm send key to server\n");
-    char readBuf[MAX_BUFSIZE] = {0};
-    uint32_t readLen = MAX_BUFSIZE;
+    char readBuf[4] = {0}; // 4 byte for 'yes'.
+    uint32_t readLen = 0;
+    AppPrintInfo("Please enter 'y' to confirm send key to server\n");
 
     BSL_UIO *rUio = HITLS_APP_UioOpen(NULL, 'r', 1);
+    BSL_UIO_SetIsUnderlyingClosedByUio(rUio, true);
     if (rUio == NULL) {
         AppPrintError("Failed to open the stdin.\n");
         return HITLS_APP_UIO_FAIL;
     }
-    if (BSL_UIO_Read(rUio, readBuf, MAX_BUFSIZE, &readLen) != BSL_SUCCESS) {
-        (void)AppPrintError("Failed to obtain the content from the STDIN\n");
+    if (BSL_UIO_Read(rUio, readBuf, sizeof(readBuf) - 1, &readLen) != BSL_SUCCESS) {
+        AppPrintError("Failed to obtain the content from the STDIN\n");
         BSL_UIO_Free(rUio);
         return HITLS_APP_UIO_FAIL;
     }
-    if (readLen == 0 || readLen == MAX_BUFSIZE) {
+    BSL_UIO_Free(rUio);
+    if (readLen == 0) {
         AppPrintError("Failed to read the input content\n");
-        BSL_UIO_Free(rUio);
         return HITLS_APP_STDIN_FAIL;
     }
     if (strcmp(readBuf, "y") != 0 && strcmp(readBuf, "Y") != 0 && strcmp(readBuf, "yes") != 0 &&
         strcmp(readBuf, "YES") != 0 && strcmp(readBuf, "Yes") != 0) {
-        ret = HITLS_APP_INVALID_ARG;
         AppPrintError("cancel send key to server.\n");
+        return HITLS_APP_INVALID_ARG;
     }
-    BSL_UIO_Free(rUio);
-    return ret;
+    return HITLS_APP_SUCCESS;
 }
 
 static int32_t SendHeartBeatAndConfirm(HITLS_ClientParams *params)

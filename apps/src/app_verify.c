@@ -40,7 +40,7 @@ typedef enum OptionChoice {
     HITLS_APP_OPT_VERIFY_NOKEYUSAGE
 } HITLSOptType;
 
-const HITLS_CmdOption g_verifyOpts[] = {
+static const HITLS_CmdOption g_verifyOpts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"nokeyusage", HITLS_APP_OPT_VERIFY_NOKEYUSAGE, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Set not to verify keyUsage"},
     {"CAfile", HITLS_APP_OPT_VERIFY_CAFILE, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Input ca file"},
@@ -60,7 +60,7 @@ void PrintCertErr(HITLS_X509_Cert *cert)
     BSL_Buffer subjectName = { NULL, 0 };
     if (HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DN_STR, &subjectName, sizeof(BSL_Buffer)) ==
         HITLS_PKI_SUCCESS) {
-        (void)AppPrintError("%s\n", subjectName.data);
+        AppPrintError("%s\n", subjectName.data);
         BSL_SAL_FREE(subjectName.data);
     }
 }
@@ -74,7 +74,7 @@ bool CheckCertKeyUsage(HITLS_X509_Cert *cert, const char *certfile, uint32_t usa
     uint32_t keyUsage = 0;
     int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_KUSAGE, &keyUsage, sizeof(keyUsage));
     if (ret != HITLS_PKI_SUCCESS) {
-        (void)AppPrintError("Failed to get the key usage of file %s, errCode = %d.\n", certfile, ret);
+        AppPrintError("Failed to get the key usage of file %s, errCode = %d.\n", certfile, ret);
         return false;
     }
 
@@ -84,7 +84,7 @@ bool CheckCertKeyUsage(HITLS_X509_Cert *cert, const char *certfile, uint32_t usa
     }
     if ((keyUsage & usage) == 0) {
         PrintCertErr(cert);
-        (void)AppPrintError("Failed to check the key usage of file %s.\n", certfile);
+        AppPrintError("Failed to check the key usage of file %s.\n", certfile);
         return false;
     }
     return true;
@@ -95,20 +95,20 @@ int32_t InitVerify(HITLS_X509_StoreCtx *store, const char *cafile)
     int32_t depth = 20; // HITLS_X509_STORECTX_SET_PARAM_DEPTH can be set to a maximum of 20
     int32_t ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_DEPTH, &depth, sizeof(int32_t));
     if (ret != HITLS_PKI_SUCCESS) {
-        (void)AppPrintError("Failed to set the maximum depth of the certificate chain, errCode = %d.\n", ret);
+        AppPrintError("Failed to set the maximum depth of the certificate chain, errCode = %d.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
     int64_t timeval = BSL_SAL_CurrentSysTimeGet();
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval));
     if (ret != HITLS_PKI_SUCCESS) {
-        (void)AppPrintError("Failed to set time of the certificate chain, errCode = %d.\n", ret);
+        AppPrintError("Failed to set time of the certificate chain, errCode = %d.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
 
     HITLS_X509_List *certlist = NULL;
     ret = HITLS_X509_CertParseBundleFile(BSL_FORMAT_PEM, cafile, &certlist);
     if (ret != HITLS_PKI_SUCCESS) {
-        (void)AppPrintError("Failed to parse certificate <%s>, errCode = %d.\n", cafile, ret);
+        AppPrintError("Failed to parse certificate <%s>, errCode = %d.\n", cafile, ret);
         return HITLS_APP_X509_FAIL;
     }
     HITLS_X509_Cert **cert = BSL_LIST_First(certlist);
@@ -121,7 +121,7 @@ int32_t InitVerify(HITLS_X509_StoreCtx *store, const char *cafile)
         if (ret != HITLS_PKI_SUCCESS) {
             PrintCertErr(*cert);
             ret = HITLS_APP_X509_FAIL;
-            (void)AppPrintError("Failed to add the certificate <%s> to the trust store, errCode = %d.\n", cafile, ret);
+            AppPrintError("Failed to add the certificate <%s> to the trust store, errCode = %d.\n", cafile, ret);
             break;
         }
         cert = BSL_LIST_Next(certlist);
@@ -170,12 +170,12 @@ static int32_t VerifyCert(HITLS_X509_StoreCtx *storeCtx, const char *fileName)
         PrintCertErr(cert);
         HITLS_X509_CertFree(cert);
         BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        (void)AppPrintError("error %s: verification failed, errCode = %d.\n", errStr, ret);
+        AppPrintError("error %s: verification failed, errCode = %d.\n", errStr, ret);
         return HITLS_APP_X509_FAIL;
     }
     HITLS_X509_CertFree(cert);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-    (void)AppPrintError("%s: OK\n", errStr);
+    AppPrintError("%s: OK\n", errStr);
     return HITLS_APP_SUCCESS;
 }
 
@@ -204,7 +204,7 @@ static int32_t OptParse(char **cafile)
             case HITLS_APP_OPT_VERIFY_EOF:
             case HITLS_APP_OPT_VERIFY_ERR:
                 ret = HITLS_APP_OPT_UNKOWN;
-                (void)AppPrintError("verify: Use -help for summary.\n");
+                AppPrintError("verify: Use -help for summary.\n");
                 return ret;
             case HITLS_APP_OPT_VERIFY_HELP:
                 ret = HITLS_APP_HELP;
@@ -242,7 +242,7 @@ int32_t HITLS_VerifyMain(int argc, char *argv[])
     }
     mainRet = HITLS_APP_OptBegin(argc, argv, g_verifyOpts);
     if (mainRet != HITLS_APP_SUCCESS) {
-        (void)AppPrintError("error in opt begin.\n");
+        AppPrintError("error in opt begin.\n");
         goto end;
     }
     mainRet = OptParse(&cafile);
@@ -252,14 +252,14 @@ int32_t HITLS_VerifyMain(int argc, char *argv[])
 
     if (cafile == NULL) {
         mainRet = HITLS_APP_OPT_UNKOWN;
-        (void)AppPrintError("Failed to complete the verification because the CAfile file is not obtained\n");
+        AppPrintError("Failed to complete the verification because the CAfile file is not obtained\n");
         goto end;
     }
 
     store = HITLS_X509_StoreCtxNew();
     if (store == NULL) {
         mainRet = HITLS_APP_X509_FAIL;
-        (void)AppPrintError("Failed to create the store context.\n");
+        AppPrintError("Failed to create the store context.\n");
         goto end;
     }
 

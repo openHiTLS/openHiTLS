@@ -244,11 +244,11 @@ void UT_HITLS_APP_PKEY_TC004(char *encKeyPath, char *keyPath)
 
     OptTestData testData[] = {
         {5, argv[0], HITLS_APP_SUCCESS},
-        {5, argv[1], HITLS_APP_SUCCESS},
+        {5, argv[1], HITLS_APP_PASSWD_FAIL},
         {5, argv[2], HITLS_APP_SUCCESS},
-        {5, argv[3], HITLS_APP_SUCCESS},
+        {5, argv[3], HITLS_APP_PASSWD_FAIL},
         {5, argv[4], HITLS_APP_LOAD_KEY_FAIL},
-        {5, argv[5], HITLS_APP_LOAD_KEY_FAIL},
+        {5, argv[5], HITLS_APP_PASSWD_FAIL},
         {3, argv[6], HITLS_APP_LOAD_KEY_FAIL},
         {6, argv[7], HITLS_APP_PASSWD_FAIL},
         {6, argv[8], HITLS_APP_PASSWD_FAIL},

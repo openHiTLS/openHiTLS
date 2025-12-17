@@ -50,7 +50,7 @@ typedef struct {
     int32_t cipherId; // Indicates the symmetric encryption algorithm ID entered by the user.
 } GenrsaInOpt;
 
-const HITLS_CmdOption g_genrsaOpts[] = {
+static const HITLS_CmdOption g_genrsaOpts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"cipher", HITLS_APP_OPT_CIPHER, HITLS_APP_OPT_VALUETYPE_STRING, "Secret key cryptography"},
     {"out", HITLS_APP_OPT_OUT_FILE, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output the rsa key to specified file"},
@@ -70,49 +70,31 @@ static int32_t GetAlgId(const char *name)
     return HITLS_APP_GetCidByName(name, HITLS_APP_LIST_OPT_RSA_ALG);
 }
 
-int32_t HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag, void *userdata)
+int32_t HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag)
 {
+    BSL_UI_ReadPwdParam param = {"password", NULL, flag};
+    char *tmp = NULL;
+    char *pwd = NULL;
+    uint32_t pwdLen;
     int32_t errLen = -1;
     if (buf == NULL) {
         return errLen;
     }
-    int32_t cbRet = HITLS_APP_SUCCESS;
-    uint32_t bufLen = bufMaxLen;
-    BSL_UI_ReadPwdParam param = {"password", NULL, flag};
-    if (userdata == NULL) {
-        cbRet = BSL_UI_ReadPwdUtil(&param, buf, &bufLen, HITLS_APP_DefaultPassCB, NULL);
-        if (cbRet == BSL_UI_READ_BUFF_TOO_LONG || cbRet == BSL_UI_READ_LEN_TOO_SHORT) {
-            (void)memset_s(buf, bufMaxLen, 0, bufMaxLen);
-            HITLS_APP_PrintPassErrlog();
-            return errLen;
-        }
-        if (cbRet != BSL_SUCCESS) {
-            (void)memset_s(buf, bufMaxLen, 0, bufMaxLen);
-            return errLen;
-        }
-        bufLen -= 1;
-        buf[bufLen] = '\0';
-        cbRet = HITLS_APP_CheckPasswd((uint8_t *)buf, bufLen);
-        if (cbRet != HITLS_APP_SUCCESS) {
-            (void)memset_s(buf, bufMaxLen, 0, bufMaxLen);
-            return errLen;
-        }
-    } else if (userdata != NULL) {
-        bufLen = strlen(userdata);
-        if (bufLen > APP_MAX_PASS_LENGTH) {
-            HITLS_APP_PrintPassErrlog();
-            return errLen;
-        }
-        cbRet = HITLS_APP_CheckPasswd((uint8_t *)userdata, bufLen);
-        if (cbRet != HITLS_APP_SUCCESS) {
-            return errLen;
-        }
-        if (strncpy_s(buf, bufMaxLen, (char *)userdata, bufLen) != EOK) {
-            (void)memset_s(buf, bufMaxLen, 0, bufMaxLen);
-            return errLen;
-        }
+    if (HITLS_APP_GetPasswd(&param, &tmp, (uint8_t **)&pwd, &pwdLen) != HITLS_APP_SUCCESS) {
+        AppPrintError("Failed to read passwd from stdin.\n");
+        return errLen;
     }
-    return bufLen;
+    if (HITLS_APP_CheckPasswd((uint8_t *)pwd, pwdLen) != HITLS_APP_SUCCESS) {
+        BSL_SAL_ClearFree(pwd, pwdLen);
+        AppPrintError("Failed to check passwd.\n");
+        return errLen;
+    }
+    if (strncpy_s(buf, bufMaxLen, (char *)pwd, pwdLen) != EOK) {
+        BSL_SAL_ClearFree(pwd, pwdLen);
+        return errLen;
+    }
+    BSL_SAL_ClearFree(pwd, pwdLen);
+    return pwdLen;
 }
 
 static int32_t HandleOpt(GenrsaInOpt *opt)
@@ -149,9 +131,9 @@ static int32_t HandleOpt(GenrsaInOpt *opt)
         }
     } else {
         if (restOptNum > 1) {
-            (void)AppPrintError("Extra arguments given.\n");
+            AppPrintError("Extra arguments given.\n");
         } else {
-            (void)AppPrintError("The command is incorrectly used.\n");
+            AppPrintError("The command is incorrectly used.\n");
         }
         AppPrintError("genrsa: Use -help for summary.\n");
         return HITLS_APP_OPT_UNKOWN;
@@ -244,7 +226,7 @@ static int32_t HandlePkey(GenrsaInOpt *opt, char *resBuf, uint32_t bufLen)
         goto hpEnd;
     }
     char pwd[APP_MAX_PASS_LENGTH + 1] = {0};
-    int32_t pwdLen = HITLS_APP_Passwd(pwd, APP_MAX_PASS_LENGTH + 1, 1, NULL);
+    int32_t pwdLen = HITLS_APP_Passwd(pwd, APP_MAX_PASS_LENGTH + 1, 1);
     if (pwdLen == -1) {
         ret = HITLS_APP_PASSWD_FAIL;
         goto hpEnd;
@@ -256,7 +238,7 @@ static int32_t HandlePkey(GenrsaInOpt *opt, char *resBuf, uint32_t bufLen)
     ret = CRYPT_EAL_EncodeBuffKey(pkey, &encodeParam, BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_ENCRYPT, &encode);
     (void)memset_s(pwd, APP_MAX_PASS_LENGTH, 0, APP_MAX_PASS_LENGTH);
     if (ret != CRYPT_SUCCESS) {
-        (void)AppPrintError("Encode failed.\n");
+        AppPrintError("Encode failed.\n");
         ret = HITLS_APP_ENCODE_FAIL;
         goto hpEnd;
     }
@@ -280,6 +262,7 @@ int32_t HITLS_GenRSAMain(int argc, char *argv[])
         return HITLS_APP_UIO_FAIL;
     }
     int32_t ret = HITLS_APP_SUCCESS;
+    char *resBuf = NULL;
     if ((ret = HITLS_APP_OptBegin(argc, argv, g_genrsaOpts)) != HITLS_APP_SUCCESS) {
         AppPrintError("error in opt begin.\n");
         goto GenRsaEnd;
@@ -290,12 +273,17 @@ int32_t HITLS_GenRSAMain(int argc, char *argv[])
     if ((ret = CheckPara(&opt, outUio)) != HITLS_APP_SUCCESS) {
         goto GenRsaEnd;
     }
-    char resBuf[REC_MAX_PEM_FILELEN] = {0};
-    uint32_t bufLen = sizeof(resBuf);
-    uint32_t writeLen = 0;
-    if ((ret = HandlePkey(&opt, resBuf, bufLen)) != HITLS_APP_SUCCESS) {
+    resBuf = (char *)BSL_SAL_Calloc(REC_MAX_PEM_FILELEN + 1, 1);
+    if (resBuf == NULL) {
+        AppPrintError("genrsa: Failed to alloc memory.\n");
+        ret = HITLS_APP_MEM_ALLOC_FAIL;
         goto GenRsaEnd;
     }
+
+    if ((ret = HandlePkey(&opt, resBuf, REC_MAX_PEM_FILELEN)) != HITLS_APP_SUCCESS) {
+        goto GenRsaEnd;
+    }
+    uint32_t writeLen = 0;
     if (BSL_UIO_Write(outUio, resBuf, strlen(resBuf), &writeLen) != BSL_SUCCESS || writeLen == 0) {
         ret = HITLS_APP_UIO_FAIL;
         goto GenRsaEnd;
@@ -307,5 +295,6 @@ GenRsaEnd:
     }
     BSL_UIO_Free(outUio);
     HITLS_APP_OptEnd();
+    BSL_SAL_FREE(resBuf);
     return ret;
 }

@@ -46,7 +46,7 @@ typedef enum OptionChoice {
     HITLS_APP_OPT_CRL_OUTFORM,
 } HITLSOptType;
 
-const HITLS_CmdOption g_crlOpts[] = {
+static const HITLS_CmdOption g_crlOpts[] = {
     {"help", HITLS_APP_OPT_CRL_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
     {"in", HITLS_APP_OPT_CRL_IN, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Input file"},
     {"noout", HITLS_APP_OPT_CRL_NOOUT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "No CRL output "},
@@ -129,9 +129,9 @@ static int32_t VerifyCrlFile(const char *caFile, const HITLS_X509_Crl *crl)
 
 static int32_t GetCrlInfoByStd(uint8_t **infileBuf, uint64_t *infileBufLen)
 {
-    (void)AppPrintError("Please enter the key content\n");
+    AppPrintError("Please enter the key content\n");
     size_t crlDataCapacity = DEFAULT_CERT_SIZE;
-    void *crlData = BSL_SAL_Calloc(crlDataCapacity, sizeof(uint8_t));
+    void *crlData = BSL_SAL_Calloc(crlDataCapacity, 1);
     if (crlData == NULL) { return HITLS_APP_MEM_ALLOC_FAIL; }
     size_t crlDataSize = 0;
     bool isMatchCrlData = false;
@@ -141,7 +141,7 @@ static int32_t GetCrlInfoByStd(uint8_t **infileBuf, uint64_t *infileBufLen)
         ssize_t readLen = getline(&buf, &bufLen, stdin);
         if (readLen <= 0) {
             BSL_SAL_FREE(buf);
-            (void)AppPrintError("Failed to obtain the standard input.\n");
+            AppPrintError("Failed to obtain the standard input.\n");
             break;
         }
         if ((crlDataSize + readLen) > MAX_CRLFILE_SIZE) {
@@ -238,7 +238,7 @@ static int32_t OutCrlFileInfo(BSL_UIO *uio, HITLS_X509_Crl *crl, uint32_t format
     ret = HITLS_APP_OptWriteUio(uio, encode.data, encode.dataLen, HITLS_APP_FORMAT_PEM);
     BSL_SAL_FREE(encode.data);
     if (ret != HITLS_APP_SUCCESS) {
-        (void)AppPrintError("Failed to print the CRL content\n");
+        AppPrintError("Failed to print the CRL content\n");
     }
     return ret;
 }
@@ -248,13 +248,13 @@ static int32_t PrintNextUpdate(BSL_UIO *uio, HITLS_X509_Crl *crl)
     BSL_TIME time = {0};
     int32_t ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_AFTER_TIME, &time, sizeof(BSL_TIME));
     if (ret != HITLS_PKI_SUCCESS && ret != HITLS_X509_ERR_CRL_NEXTUPDATE_UNEXIST) {
-        (void)AppPrintError("Failed to get character string\n");
+        AppPrintError("Failed to get character string\n");
         return HITLS_APP_X509_FAIL;
     }
 
     ret = HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_NEXTUPDATE, &time, sizeof(BSL_TIME), uio);
     if (ret != HITLS_PKI_SUCCESS) {
-        (void)AppPrintError("Failed to get print string\n");
+        AppPrintError("Failed to get print string\n");
         return HITLS_APP_X509_FAIL;
     }
     return HITLS_APP_SUCCESS;
@@ -270,7 +270,7 @@ static int32_t OptParse(CrlInfo *outInfo)
             case HITLS_APP_OPT_CRL_EOF:
             case HITLS_APP_OPT_CRL_ERR:
                 ret = HITLS_APP_OPT_UNKOWN;
-                (void)AppPrintError("crl: Use -help for summary.\n");
+                AppPrintError("crl: Use -help for summary.\n");
                 return ret;
             case HITLS_APP_OPT_CRL_HELP:
                 ret = HITLS_APP_HELP;
@@ -332,7 +332,7 @@ int32_t  HITLS_CrlMain(int argc, char *argv[])
     uint64_t infileBufLen = 0;
     int32_t mainRet = HITLS_APP_OptBegin(argc, argv, g_crlOpts);
     if (mainRet != HITLS_APP_SUCCESS) {
-        (void)AppPrintError("error in opt begin.\n");
+        AppPrintError("error in opt begin.\n");
         goto end;
     }
     mainRet = OptParse(&crlInfo);
@@ -341,8 +341,8 @@ int32_t  HITLS_CrlMain(int argc, char *argv[])
     }
     int unParseParamNum = HITLS_APP_GetRestOptNum();
     if (unParseParamNum != 0) {  // The input parameters are not completely parsed.
-        (void)AppPrintError("Extra arguments given.\n");
-        (void)AppPrintError("crl: Use -help for summary.\n");
+        AppPrintError("Extra arguments given.\n");
+        AppPrintError("crl: Use -help for summary.\n");
         mainRet = HITLS_APP_OPT_UNKOWN;
         goto end;
     }
@@ -353,7 +353,7 @@ int32_t  HITLS_CrlMain(int argc, char *argv[])
     }
     crlInfo.uio = HITLS_APP_UioOpen(crlInfo.outfile, 'w', 0);
     if (crlInfo.uio == NULL) {
-        (void)AppPrintError("Failed to open the standard output.");
+        AppPrintError("Failed to open the standard output.");
         mainRet = HITLS_APP_UIO_FAIL;
         goto end;
     }

@@ -13,7 +13,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include "app_tls_common.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,7 +29,6 @@
 #include "app_utils.h"
 #include "app_provider.h"
 #include "app_keymgmt.h"
-#include "app_utils.h"
 #include "hitls_config.h"
 #include "hitls_cert.h"
 #include "hitls_pki_cert.h"
@@ -42,6 +40,7 @@
 #include "bsl_sal.h"
 #include "bsl_err.h"
 #include "sal_file.h"
+#include "app_tls_common.h"
 
 #define HEARTBEAT_STR "heartbeat"
 
@@ -173,15 +172,12 @@ int ConfigureCipherSuites(HITLS_Config *config, const char *cipherStr, APP_Proto
 
     // Set cipher suite array
     ret = HITLS_CFG_SetCipherSuites(config, cipherSuites, index);
-    if (ret != HITLS_SUCCESS) {
-        AppPrintError("Failed to set cipher suites: 0x%x\n", ret);
-        BSL_SAL_Free(cipherStrCopy);
-        BSL_SAL_Free(cipherSuites);
-        return HITLS_APP_ERR_SET_CIPHER;
-    }
-
     BSL_SAL_Free(cipherStrCopy);
     BSL_SAL_Free(cipherSuites);
+    if (ret != HITLS_SUCCESS) {
+        AppPrintError("Failed to set cipher suites: 0x%x\n", ret);
+        return HITLS_APP_ERR_SET_CIPHER;
+    }
     return HITLS_APP_SUCCESS;
 }
 
@@ -319,7 +315,7 @@ int ConfCertVerification(HITLS_Config *config, APP_CertConfig *certConfig,
         HITLS_X509_List *certlist = NULL;
         ret = HITLS_X509_CertParseBundleFile(certConfig->certFormat, certConfig->caChain, &certlist);
         if (ret != BSL_SUCCESS) {
-            (void)AppPrintError("Failed to parse certificate <%s>, errCode = %d.\n", certConfig->caChain, ret);
+            AppPrintError("Failed to parse certificate <%s>, errCode = %d.\n", certConfig->caChain, ret);
             return HITLS_APP_X509_FAIL;
         }
         HITLS_X509_Cert **cert = BSL_LIST_First(certlist);
@@ -686,6 +682,7 @@ int ParseConnectString(const char *connectStr, APP_NetworkAddr *addr)
     size_t len = strlen(connectStr) + 1;
     char *strCopy = BSL_SAL_Malloc(len);
     if (strCopy == NULL) {
+        AppPrintError("Failed to alloc memory.\n");
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
     strcpy_s(strCopy, len, connectStr);

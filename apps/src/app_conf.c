@@ -18,6 +18,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <ctype.h>
 #if defined(__linux__) || defined(__unix__) || defined(__APPLE__) || defined(__MACH__)
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -45,7 +46,8 @@
 #define IPV6_VALUE_MAX_CNT 16
 #define IPV6_EACH_VALUE_STR_LEN 4
 
-#define EXT_STR_CRITICAL "critical"
+#define EXT_CRITICAL_STR "critical"
+#define EXT_CRITICAL_LEN 8
 
 typedef int32_t (*ProcExtCnfFunc)(BSL_CONF *cnf, bool critical, const char *cnfValue, ProcExtCallBack procExt,
     void *ctx);
@@ -62,13 +64,11 @@ typedef struct {
 
 #define X509_EXT_BCONS_VALUE_MAX_CNT 2      // ca and pathlen
 #define X509_EXT_BCONS_SUB_VALUE_MAX_CNT 2  // ca:TRUE|FALSE or pathlen:num
-#define X509_EXT_KU_VALUE_MAX_CNT 9         // 9 key usages
-#define X509_EXT_EXKU_VALUE_MAX_CNT 6       // 6 extended key usages
 #define X509_EXT_SKI_VALUE_MAX_CNT 1        // kid
 #define X509_EXT_AKI_VALUE_MAX_CNT 1        // kid
 #define X509_EXT_AKI_SUB_VALUE_MAX_CNT 2    // keyid:always
 
-static X509KeyUsageMap g_kuMap[X509_EXT_KU_VALUE_MAX_CNT] = {
+static X509KeyUsageMap g_kuMap[] = {
     {HITLS_CFG_X509_EXT_KU_DIGITAL_SIGN, HITLS_X509_EXT_KU_DIGITAL_SIGN},
     {HITLS_CFG_X509_EXT_KU_NON_REPUDIATION, HITLS_X509_EXT_KU_NON_REPUDIATION},
     {HITLS_CFG_X509_EXT_KU_KEY_ENCIPHERMENT, HITLS_X509_EXT_KU_KEY_ENCIPHERMENT},
@@ -80,7 +80,9 @@ static X509KeyUsageMap g_kuMap[X509_EXT_KU_VALUE_MAX_CNT] = {
     {HITLS_CFG_X509_EXT_KU_DECIPHER_ONLY, HITLS_X509_EXT_KU_DECIPHER_ONLY},
 };
 
-static X509KeyUsageMap g_exKuMap[X509_EXT_EXKU_VALUE_MAX_CNT] = {
+#define X509_EXT_KU_VALUE_MAX_CNT (sizeof(g_kuMap) / sizeof(g_kuMap[0]))
+
+static X509KeyUsageMap g_exKuMap[] = {
     {HITLS_CFG_X509_EXT_EXKU_SERVER_AUTH, BSL_CID_KP_SERVERAUTH},
     {HITLS_CFG_X509_EXT_EXKU_CLIENT_AUTH, BSL_CID_KP_CLIENTAUTH},
     {HITLS_CFG_X509_EXT_EXKU_CODE_SING, BSL_CID_KP_CODESIGNING},
@@ -89,24 +91,11 @@ static X509KeyUsageMap g_exKuMap[X509_EXT_EXKU_VALUE_MAX_CNT] = {
     {HITLS_CFG_X509_EXT_EXKU_OCSP_SIGN, BSL_CID_KP_OCSPSIGNING},
 };
 
-static bool isSpace(char c)
-{
-    return c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r' || c == ' ';
-}
-
-static void SkipSpace(char **value)
-{
-    char *tmp = *value;
-    char *end = *value + strlen(*value);
-    while (isSpace(*tmp) && tmp != end) {
-        tmp++;
-    }
-    *value = tmp;
-}
+#define X509_EXT_EXKU_VALUE_MAX_CNT (sizeof(g_exKuMap) / sizeof(g_exKuMap[0]))
 
 static int32_t FindEndIdx(char *str, char separator, int32_t beginIdx, int32_t currIdx, bool allowEmpty)
 {
-    while (currIdx >= 0 && (isSpace(str[currIdx]) || str[currIdx] == separator)) {
+    while (currIdx >= 0 && (isspace(str[currIdx]) || str[currIdx] == separator)) {
         currIdx--;
     }
     if (beginIdx < currIdx) {
@@ -123,13 +112,13 @@ static int32_t FindEndIdx(char *str, char separator, int32_t beginIdx, int32_t c
 int32_t HITLS_APP_SplitString(const char *str, char separator, bool allowEmpty, char **strArr, uint32_t maxArrCnt,
     uint32_t *realCnt)
 {
-    if (str == NULL || strlen(str) == 0 || isSpace(separator) || strArr == NULL || maxArrCnt == 0 || realCnt == NULL) {
+    if (str == NULL || strlen(str) == 0 || isspace(separator) || strArr == NULL || maxArrCnt == 0 || realCnt == NULL) {
         return HITLS_APP_INVALID_ARG;
     }
 
     // Delete leading spaces from input str.
     char *tmp = (char *)(uintptr_t)str;
-    SkipSpace(&tmp);
+    tmp += strspn(tmp, " \t\n\v\f\r");
 
     // split
     int32_t ret = HITLS_APP_SUCCESS;
@@ -144,7 +133,7 @@ int32_t HITLS_APP_SplitString(const char *str, char separator, bool allowEmpty, 
     *realCnt = 0;
     for (int32_t i = 0; i < len; i++) {
         if (!hasBegin) {
-            if (isSpace(res[i])) {
+            if (isspace(res[i])) {
                 continue;
             }
             if (*realCnt == maxArrCnt) {
@@ -175,16 +164,17 @@ int32_t HITLS_APP_SplitString(const char *str, char separator, bool allowEmpty, 
 
 static bool ExtGetCritical(char **value)
 {
-    SkipSpace(value);
-    uint32_t criticalLen = strlen(EXT_STR_CRITICAL);
-    if (strlen(*value) < criticalLen || strncmp(*value, EXT_STR_CRITICAL, criticalLen) != 0) {
+    char *tmp = *value;
+    tmp += strspn(tmp, " \t\n\v\f\r");
+    if (strlen(tmp) < EXT_CRITICAL_LEN || strncmp(tmp, EXT_CRITICAL_STR, EXT_CRITICAL_LEN) != 0) {
         return false;
     }
-    *value += criticalLen;
-    SkipSpace(value);
-    if (**value == ',') {
-        (*value)++;
+    tmp += EXT_CRITICAL_LEN;
+    tmp += strspn(tmp, " \t\n\v\f\r");
+    if (tmp[0] == ',') {
+        tmp++;
     }
+    *value = tmp;
     return true;
 }
 
@@ -548,7 +538,7 @@ static int32_t ParseIPValue(char *value, HITLS_X509_GeneralName *generalName)
         AppPrintError("Invalid IP format for directory name, IP: %s.\n", value);
         return HITLS_APP_INVALID_IP;
     }
-    generalName->value.data = BSL_SAL_Calloc(ipSize, sizeof(uint8_t));
+    generalName->value.data = BSL_SAL_Calloc(ipSize, 1);
     if (generalName->value.data == NULL) {
         AppPrintError("Invalid IP format for directory name, IP: %s.\n", value);
         BSL_SAL_FREE(ipv4ValueList[0]);

@@ -13,8 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#ifndef APP_UTILS_H
-#define APP_UTILS_H
+#ifndef HITLS_APP_UTILS_H
+#define HITLS_APP_UTILS_H
 #include <stddef.h>
 #include <stdint.h>
 #include "bsl_ui.h"
@@ -33,6 +33,7 @@ extern "C" {
 #define APP_MIN_PASS_LENGTH 1
 #define APP_FILE_MAX_SIZE_KB 256
 #define APP_FILE_MAX_SIZE (APP_FILE_MAX_SIZE_KB * 1024) // 256KB
+#define APP_HEX_TO_BYTE 2
 
 #define APP_MAX_PATH_LEN PATH_MAX
 
@@ -75,7 +76,7 @@ int32_t HITLS_APP_CheckPasswd(const uint8_t *password, const uint32_t passwordLe
  */
 int32_t HITLS_APP_DefaultPassCB(BSL_UI *ui, char *buff, uint32_t buffLen, void *callBackData);
 
-int32_t HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag, void *userdata);
+int32_t HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag);
 
 void HITLS_APP_PrintPassErrlog(void);
 /**
@@ -259,4 +260,4 @@ int32_t HITLS_APP_GetTime(int64_t *time);
 #ifdef __cplusplus
 }
 #endif
-#endif // APP_UTILS_H
+#endif // HITLS_APP_UTILS_H
