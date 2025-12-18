@@ -238,7 +238,7 @@ void UT_HITLS_APP_OptNext_TC001(void)
     };
     char *argv[3][2] = {{"help", "-"}, {"help", "--"}, {"help", NULL}};
     OptTestData testData[] = {
-        {1, argv[0], opts, HITLS_APP_OPT_ERR}, // case1： input arg only contain "-"
+        {2, argv[0], opts, HITLS_APP_OPT_ERR}, // case1： input arg only contain "-"
         {2, argv[1], opts, HITLS_APP_OPT_ERR}, // case2： input arg only contain "--"
         {2, argv[2], opts, HITLS_APP_OPT_EOF}
     }; // case3： input arg is  NULL

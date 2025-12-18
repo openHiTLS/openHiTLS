@@ -297,7 +297,7 @@ static int32_t CheckOptValueType(const HITLS_CmdOption *opt, const char *valStr)
 
 int32_t HITLS_APP_OptNext(void)
 {
-    if (g_cmdOptState.optIndex > g_cmdOptState.argc) {
+    if (g_cmdOptState.optIndex >= g_cmdOptState.argc) {
         return HITLS_APP_OPT_EOF;
     }
 
