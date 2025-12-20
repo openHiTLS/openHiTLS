@@ -39,7 +39,7 @@
 #ifdef HITLS_PKI_X509_CRL_PARSE
 BSL_ASN1_TemplateItem g_crlTempl[] = {
     {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, /* x509 */
-        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, BSL_ASN1_FLAG_HEADERONLY, 1}, /* tbs */
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1}, /* tbs */
             /* 2: version */
             {BSL_ASN1_TAG_INTEGER, BSL_ASN1_FLAG_DEFAULT, 2},
             /* 2: signature info */
@@ -789,31 +789,6 @@ int32_t HITLS_X509_CrlGenFile(int32_t format, HITLS_X509_Crl *crl, const char *p
 #endif // HITLS_PKI_X509_CRL_GEN
 
 #ifdef HITLS_PKI_X509_CRL_PARSE
-static int32_t HITLS_X509_ParseCrlTemplate(uint8_t **encode, uint32_t *encodeLen,
-    BSL_ASN1_Buffer *asnArr, uint32_t asnNum)
-{
-    BSL_ASN1_Buffer asnTempArr[4]; // tbs, signId, sign param, sign
-    uint32_t asnTempArrLen = sizeof(asnTempArr) / sizeof(asnTempArr[0]);
-    BSL_ASN1_Template templ = {g_crlTempl, sizeof(g_crlTempl) / sizeof(g_crlTempl[0])};
-    int32_t ret = BSL_ASN1_DecodeTemplate(&templ, HITLS_X509_CrlTagGetOrCheck,
-        encode, encodeLen, asnTempArr, asnTempArrLen);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    BSL_ASN1_Template templTbs = {&g_crlTempl[2], 9}; // tbs parse
-    ret = BSL_ASN1_DecodeTemplate(&templTbs, HITLS_X509_CrlTagGetOrCheck,
-        &(asnTempArr[0].buff), &(asnTempArr[0].len), asnArr, asnNum - 3); // Subtract the already parsed
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    asnArr[HITLS_X509_CRL_SIGNALG_IDX] = asnTempArr[1]; // signId
-    asnArr[HITLS_X509_CRL_SIGNALG_ANY_IDX] = asnTempArr[2]; // sign param
-    asnArr[HITLS_X509_CRL_SIGN_IDX] = asnTempArr[3]; // signature
-    return ret;
-}
-
 int32_t HITLS_X509_ParseAsn1Crl(uint8_t *encode, uint32_t encodeLen, HITLS_X509_Crl *crl)
 {
     uint8_t *temp = encode;
@@ -825,7 +800,9 @@ int32_t HITLS_X509_ParseAsn1Crl(uint8_t *encode, uint32_t encodeLen, HITLS_X509_
     }
     // template parse
     BSL_ASN1_Buffer asnArr[HITLS_X509_CRL_MAX_IDX] = {0};
-    int32_t ret = HITLS_X509_ParseCrlTemplate(&temp, &tempLen, asnArr, HITLS_X509_CRL_MAX_IDX);
+    BSL_ASN1_Template templ = {g_crlTempl, sizeof(g_crlTempl) / sizeof(g_crlTempl[0])};
+    int32_t ret = BSL_ASN1_DecodeTemplate(&templ, HITLS_X509_CrlTagGetOrCheck,
+        &temp, &tempLen, asnArr, HITLS_X509_CRL_MAX_IDX);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

@@ -68,7 +68,7 @@ SDV_X509_CERT_VERSIONCHECK_TC003
 SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certsubjectnodnnosan.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certsubjectnodnnosan"
 
 SDV_X509_CERT_VERSIONCHECK_TC003
-SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certnosubjectnosan.der":BSL_ASN1_ERR_TAG_EXPECTED:""
+SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certnosubjectnosan.der":BSL_ASN1_ERR_DECODE_LEN:""
 
 SDV_X509_CERT_VERSIONCHECK_TC003
 SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certsubjectwithemail.der":HITLS_PKI_SUCCESS:"../testdata/cert/asn1/certcheck/check/certsubjectwithemail"

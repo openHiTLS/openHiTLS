@@ -332,6 +332,109 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_TEMPLATE_DEPTH_MAX_SUCCESS_TC001(Hex *encode)
+{
+    BSL_ASN1_TemplateItem items[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1},
+                {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 2},
+                    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 3},
+                        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 4},
+                            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 5},
+                                {BSL_ASN1_TAG_INTEGER, 0, 6},
+    };
+    BSL_ASN1_Template templ = {items, sizeof(items) / sizeof(items[0])};
+    BSL_ASN1_Buffer asnArr[1] = {0}; /* only one primitive item */
+
+    uint8_t *tmp = encode->x;
+    uint32_t tmpLen = encode->len;
+    ASSERT_EQ(BSL_ASN1_DecodeTemplate(&templ, NULL, &tmp, &tmpLen, asnArr, 1), BSL_SUCCESS);
+    ASSERT_EQ(tmpLen, 0);
+    ASSERT_EQ(asnArr[0].tag, BSL_ASN1_TAG_INTEGER);
+    ASSERT_EQ(asnArr[0].len, 1);
+    ASSERT_EQ(asnArr[0].buff[0], 0x01);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_TEMPLATE_LAYER_END_OPTIONAL_TC001(Hex *encode)
+{
+    BSL_ASN1_TemplateItem items[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0}, /* outer */
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1}, /* inner */
+                {BSL_ASN1_TAG_INTEGER, 0, 2}, /* inner int */
+                {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
+                    BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY, 2}, /* OPTIONAL inner seq */
+                    {BSL_ASN1_TAG_INTEGER, 0, 3}, /* child (skipped by HEADERONLY) */
+            {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 1}, /* outer sibling seq */
+                {BSL_ASN1_TAG_INTEGER, 0, 2}, /* sibling int */
+    };
+    BSL_ASN1_Template templ = {items, sizeof(items) / sizeof(items[0])};
+    BSL_ASN1_Buffer asnArr[3] = {0}; /* inner int, optional seq(headeronly), sibling int */
+
+    uint8_t *tmp = encode->x;
+    uint32_t tmpLen = encode->len;
+    ASSERT_EQ(BSL_ASN1_DecodeTemplate(&templ, NULL, &tmp, &tmpLen, asnArr, 3), BSL_SUCCESS);
+    ASSERT_EQ(tmpLen, 0);
+
+    ASSERT_EQ(asnArr[0].tag, BSL_ASN1_TAG_INTEGER);
+    ASSERT_EQ(asnArr[0].len, 1);
+    ASSERT_EQ(asnArr[0].buff[0], 0x01);
+
+    /* optional SEQUENCE not present => tag 0 */
+    ASSERT_EQ(asnArr[1].tag, 0);
+    ASSERT_EQ(asnArr[1].len, 0);
+    ASSERT_EQ(asnArr[1].buff, NULL);
+
+    ASSERT_EQ(asnArr[2].tag, BSL_ASN1_TAG_INTEGER);
+    ASSERT_EQ(asnArr[2].len, 1);
+    ASSERT_EQ(asnArr[2].buff[0], 0x02);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_TEMPLATE_LAYER_END_REQUIRED_TC001(Hex *encode, int expectRet)
+{
+    BSL_ASN1_TemplateItem items[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+            {BSL_ASN1_TAG_INTEGER, 0, 1},
+            {BSL_ASN1_TAG_NULL, BSL_ASN1_FLAG_OPTIONAL, 1},
+            {BSL_ASN1_TAG_INTEGER, 0, 1},
+    };
+    BSL_ASN1_Template templ = {items, sizeof(items) / sizeof(items[0])};
+    BSL_ASN1_Buffer asnArr[3] = {0}; /* INTEGER, optional NULL, INTEGER */
+
+    uint8_t *tmp = encode->x;
+    uint32_t tmpLen = encode->len;
+    ASSERT_EQ(BSL_ASN1_DecodeTemplate(&templ, NULL, &tmp, &tmpLen, asnArr, 3), expectRet);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_TEMPLATE_INVALID_DEPTH_SKIP_TC001(Hex *encode, int expectRet)
+{
+    BSL_ASN1_TemplateItem items[] = {
+        {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+            {BSL_ASN1_TAG_INTEGER, 0, 2},  /* Invalid: depth jumps from 0 to 2 */
+    };
+    BSL_ASN1_Template templ = {items, sizeof(items) / sizeof(items[0])};
+    BSL_ASN1_Buffer asnArr[1] = {0};
+
+    uint8_t *tmp = encode->x;
+    uint32_t tmpLen = encode->len;
+    ASSERT_EQ(BSL_ASN1_DecodeTemplate(&templ, NULL, &tmp, &tmpLen, asnArr, 1), expectRet);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_BSL_ASN1_PARSE_CERT_FUNC_TC001(char *path, Hex *version, Hex *serial, Hex *algId, Hex *anyAlgId,
     Hex *issuer, Hex *before, Hex *after, Hex *subject, Hex *pubId, Hex *pubAny, Hex *pubKey, Hex *issuerId,
     Hex *subjectId, Hex *ext, Hex *signAlg, Hex *signAlgAny, Hex *sign)

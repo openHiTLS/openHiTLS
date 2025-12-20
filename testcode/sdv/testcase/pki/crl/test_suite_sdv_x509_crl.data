@@ -353,7 +353,7 @@ SDV_X509_CRL_PARSE_ERRORPARAM_FUNC_TC001 issuername parse fail
 SDV_X509_CRL_PARSE_ERRORPARAM_FUNC_TC001:"../testdata/cert/asn1/rsa_crl/rsawithparam1.der":BSL_ASN1_ERR_MISMATCH_TAG
 
 SDV_X509_CRL_PARSE_ERRORPARAM_FUNC_TC001 thisupdatetime parse fail
-SDV_X509_CRL_PARSE_ERRORPARAM_FUNC_TC001:"../testdata/cert/asn1/rsa_crl/rsawithparam2.der":BSL_ASN1_FAIL
+SDV_X509_CRL_PARSE_ERRORPARAM_FUNC_TC001:"../testdata/cert/asn1/rsa_crl/rsawithparam2.der":BSL_ASN1_ERR_TAG_EXPECTED
 
 SDV_X509_CRL_GEN_SETVER0NOEXT_FUNC_TC001 set version 0 without extensions
 SDV_X509_CRL_GEN_SETVER0NOEXT_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.crt.der":"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.key.der":"gen-setver0-noext.crl"

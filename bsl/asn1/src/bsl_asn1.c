@@ -696,30 +696,48 @@ int32_t BSL_ASN1_DecodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_DecTemplCallB
     BSL_ASN1_Buffer previousAsn = {0};
     BSL_ASN1_AnyOrChoiceParam tagCbinfo = {0, NULL, decTemlCb};
 
+    uint8_t *layerEnd[BSL_ASN1_MAX_TEMPLATE_DEPTH + 2] = {0};
+    layerEnd[0] = temp + tempLen;
+
     for (uint32_t i = 0; i < templ->templNum;) {
         if (templ->templItems[i].depth > BSL_ASN1_MAX_TEMPLATE_DEPTH) {
             return BSL_ASN1_ERR_MAX_DEPTH;
         }
         tagCbinfo.previousAsnOrTag = &previousAsn;
         tagCbinfo.idx = i;
+        /* Remaining length in current layer (depth boundary). */
+        uint8_t *curEnd = layerEnd[templ->templItems[i].depth];
+        uint32_t curRemain = 0;
+        if (curEnd != NULL && curEnd > temp) {
+            curRemain = (uint32_t)(curEnd - temp);
+        }
+
+        /* Use a layer-limited view to decode this item, then update the global cursor by consumed bytes. */
+        uint8_t *beforeTemp = temp;
         if (BSL_ASN1_IsConstructItem(&templ->templItems[i])) {
-            ret = BSL_ASN1_ProcessNormal(&tagCbinfo, &templ->templItems[i], &temp, &tempLen, &asn);
+            ret = BSL_ASN1_ProcessNormal(&tagCbinfo, &templ->templItems[i], &temp, &curRemain, &asn);
             if (ret != BSL_SUCCESS) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05146, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "asn1: parse construct item err %x, idx %u", ret, i, 0, 0);
                 return ret;
+            }
+            tempLen -= (uint32_t)(temp - beforeTemp);
+            /* Record the end boundary for child layer when traversing children. */
+            if (asn.tag != 0 && (templ->templItems[i].flags & BSL_ASN1_FLAG_HEADERONLY) == 0) {
+                layerEnd[templ->templItems[i].depth + 1] = temp + asn.len;
             }
             ret = BSL_ASN1_ProcessConstructResult(templ, &i, &asn, asnArr, arrNum, &arrIdx);
             if (ret != BSL_SUCCESS) {
                 return ret;
             }
         } else {
-            ret = BSL_ASN1_ProcessNormal(&tagCbinfo, &templ->templItems[i], &temp, &tempLen, &asn);
+            ret = BSL_ASN1_ProcessNormal(&tagCbinfo, &templ->templItems[i], &temp, &curRemain, &asn);
             if (ret != BSL_SUCCESS) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05147, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "asn1: parse primitive item err %x, idx %u", ret, i, 0, 0);
                 return ret;
             }
+            tempLen -= (uint32_t)(temp - beforeTemp);
             // Process no construct result
             if (arrIdx >= arrNum) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05148, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
