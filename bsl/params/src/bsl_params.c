@@ -213,7 +213,6 @@ const BSL_Param *BSL_PARAM_FindConstParam(const BSL_Param *param, int32_t key)
         }
         index++;
     }
-    BSL_ERR_PUSH_ERROR(BSL_PARAMS_MISMATCH);
     return NULL;
 }
 
@@ -234,7 +233,6 @@ BSL_Param *BSL_PARAM_FindParam(BSL_Param *param, int32_t key)
         }
         index++;
     }
-    BSL_ERR_PUSH_ERROR(BSL_PARAMS_MISMATCH);
     return NULL;
 }
 
