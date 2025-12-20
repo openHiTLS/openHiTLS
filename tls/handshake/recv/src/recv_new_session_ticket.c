@@ -102,6 +102,7 @@ int32_t Tls12ClientRecvNewSeesionTicketProcess(TLS_Ctx *ctx, HS_Msg *hsMsg)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15971, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client Calculate server finished data error.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+        (void)memset_s(hsCtx->masterKey, sizeof(hsCtx->masterKey), 0, sizeof(hsCtx->masterKey));
         return ret;
     }
 
