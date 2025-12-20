@@ -62,8 +62,8 @@ static const HITLS_CmdOption g_encOpts[] = {
     {"cipher", HITLS_APP_OPT_CIPHER_ALG, HITLS_APP_OPT_VALUETYPE_STRING, "Cipher algorthm"},
     {"in", HITLS_APP_OPT_IN_FILE, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Input file"},
     {"out", HITLS_APP_OPT_OUT_FILE, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output file"},
-    {"dec", HITLS_APP_OPT_DEC, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Encryption operation"},
-    {"enc", HITLS_APP_OPT_ENC, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Decryption operation"},
+    {"dec", HITLS_APP_OPT_DEC, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Decryption operation"},
+    {"enc", HITLS_APP_OPT_ENC, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Encryption operation"},
     {"md", HITLS_APP_OPT_MD, HITLS_APP_OPT_VALUETYPE_STRING, "Specified digest to create a key"},
     {"pass", HITLS_APP_OPT_PASS, HITLS_APP_OPT_VALUETYPE_STRING, "Passphrase source, such as stdin ,file etc"},
     HITLS_APP_PROV_OPTIONS,
@@ -124,24 +124,6 @@ typedef struct {
     HITLS_APP_SM_Param *smParam;
 #endif
 } EncCmdOpt;
-
-static int32_t HexToStr(const char *hex, unsigned char *buf, uint32_t maxBufLen)
-{
-    uint8_t *bin = NULL;
-    uint32_t len;
-    int32_t ret = HITLS_APP_HexToByte(hex, 0, &bin, &len);
-    if (ret != HITLS_APP_SUCCESS) {
-        AppPrintError("enc: Error convert hex to str.\n");
-        return HITLS_APP_ENCODE_FAIL;
-    }
-    if (memcpy_s(buf, maxBufLen, bin, len) != EOK) {
-        BSL_SAL_FREE(bin);
-        AppPrintError("enc: Error copy hex to str.\n");
-        return HITLS_APP_ENCODE_FAIL;
-    }
-    BSL_SAL_FREE(bin);
-    return HITLS_APP_SUCCESS;
-}
 
 static int32_t Int2Hex(int32_t num, char *hexBuf)
 {
@@ -424,7 +406,6 @@ static int32_t HandlePasswd(EncCmdOpt *encOpt)
     // If the user enters the last value of -pass, the system parses the value directly.
     // If the user does not enter the value, the system reads the value from the standard input.
     int32_t ret;
-    char *tmp = NULL;
     char *pwd = NULL;
     uint32_t pwdLen;
     BSL_UI_ReadPwdParam param = {"password", NULL, true};
@@ -432,7 +413,7 @@ static int32_t HandlePasswd(EncCmdOpt *encOpt)
         AppPrintError("enc: The password can contain the following characters:\n");
         AppPrintError("a~z A~Z 0~9 ! \" # $ %% & ' ( ) * + , - . / : ; < = > ? @ [ \\ ] ^ _ ` { | } ~\n");
         AppPrintError("The space is not supported.\n");
-        if (HITLS_APP_GetPasswd(&param, &tmp, (uint8_t **)&pwd, &pwdLen) != HITLS_APP_SUCCESS) {
+        if (HITLS_APP_GetPasswd(&param, &pwd, &pwdLen) != HITLS_APP_SUCCESS) {
             AppPrintError("Failed to read passwd from stdin.\n");
             return HITLS_APP_PASSWD_FAIL;
         }
@@ -548,7 +529,9 @@ static int32_t HandleDecFileIv(EncCmdOpt *encOpt)
         readLen != encOpt->keySet->ivLen * REC_DOUBLE) {
         return HITLS_APP_UIO_FAIL;
     }
-    if (HexToStr(hIvBuf, encOpt->keySet->iv, REC_MAX_IV_LENGTH) != HITLS_APP_SUCCESS) {
+    uint32_t ivLen = REC_MAX_IV_LENGTH;
+    if (HITLS_APP_HexToBytes(hIvBuf, encOpt->keySet->iv, &ivLen) != HITLS_APP_SUCCESS) {
+        AppPrintError("enc: Failed to convert IV from hex.\n");
         return HITLS_APP_ENCODE_FAIL;
     }
     return ret;
@@ -600,7 +583,9 @@ static int32_t HandleDecFileHeader(EncCmdOpt *encOpt)
         readLen != REC_SALT_LEN * REC_DOUBLE) {
         return HITLS_APP_UIO_FAIL;
     }
-    if (HexToStr(hSaltBuf, encOpt->keySet->salt, REC_SALT_LEN) != HITLS_APP_SUCCESS) {
+    uint32_t saltLen = REC_SALT_LEN;
+    if (HITLS_APP_HexToBytes(hSaltBuf, encOpt->keySet->salt, &saltLen) != HITLS_APP_SUCCESS) {
+        AppPrintError("enc: Failed to convert salt from hex.\n");
         return HITLS_APP_ENCODE_FAIL;
     }
     // Read the times of iteration, convert the number to decimal, and store the number.
@@ -808,6 +793,15 @@ static int32_t UpdateEncStdin(EncCmdOpt *encOpt)
             ret = HITLS_APP_STDIN_FAIL;
             break;
         }
+        // Check for potential overflow before copying
+        // 1. Check if cacheLen exceeds buffer size
+        // 2. Check if cacheLen + readLen would overflow uint32_t
+        // 3. Check if cacheLen + readLen would exceed buffer size
+        if (cacheLen > MAX_BUFSIZE + BUF_READABLE_BLOCK || readLen > UINT32_MAX - cacheLen ||
+            readLen > MAX_BUFSIZE + BUF_READABLE_BLOCK - cacheLen) {
+            AppPrintError("enc: Buffer overflow detected\n");
+            return HITLS_APP_COPY_ARGS_FAILED;
+        }
         if (memcpy_s(cacheArea + cacheLen, MAX_BUFSIZE + BUF_READABLE_BLOCK - cacheLen, readBuf, readLen) != EOK) {
             ret = HITLS_APP_COPY_ARGS_FAILED;
             break;
@@ -939,7 +933,13 @@ static int32_t DoCipherUpdateDec(EncCmdOpt *encOpt, uint64_t readFileLen)
             break;
         }
         readFileLen -= readLen;
-        if (HexToStr((char *)readBuf, readBuf, MAX_BUFSIZE * REC_DOUBLE) != CRYPT_SUCCESS) {
+        // Check if hex string length is even
+        if (readLen % 2 != 0) {
+            AppPrintError("enc: Invalid hex string length, must be even.\n");
+            return HITLS_APP_CRYPTO_FAIL;
+        }
+        uint32_t decodedLen = MAX_BUFSIZE * REC_DOUBLE;
+        if (HITLS_APP_HexToBytes((char *)readBuf, readBuf, &decodedLen) != HITLS_APP_SUCCESS) {
             AppPrintError("enc: Failed to decode the hex.\n");
             ret = HITLS_APP_CRYPTO_FAIL;
             break;

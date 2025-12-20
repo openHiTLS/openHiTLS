@@ -281,7 +281,7 @@ static int32_t GetMacKey(MacOpt *macOpt, uint8_t **key, uint32_t *keyLen)
         *keyLen = strlen(macOpt->key);
         return HITLS_APP_SUCCESS;
     } else if (macOpt->hexKey != NULL) {
-        int32_t ret = HITLS_APP_HexToByte(macOpt->hexKey, 1, key, keyLen);
+        int32_t ret = HITLS_APP_ParseHex(macOpt->hexKey, true, key, keyLen);
         if (ret == HITLS_APP_OPT_VALUE_INVALID) {
             AppPrintError("mac: Get key from hexkey failed, errCode: 0x%x.\n", ret);
             return ret;
@@ -335,7 +335,7 @@ static int32_t MacParamSet(CRYPT_EAL_MacCtx *ctx, MacOpt *macOpt)
     return ret;
 }
 
-static int32_t GetReadBuf(CRYPT_EAL_MacCtx *ctx, MacOpt *macOpt)
+static int32_t MacProcessInputAndUpdate(CRYPT_EAL_MacCtx *ctx, MacOpt *macOpt)
 {
     int32_t ret;
     bool isEof = false;
@@ -470,7 +470,7 @@ static int32_t HandleMac(MacOpt *macOpt)
             macOpt->smParam->status = HITLS_APP_SM_STATUS_APPORVED;
         }
 #endif
-        ret = GetReadBuf(ctx, macOpt);
+        ret = MacProcessInputAndUpdate(ctx, macOpt);
         if (ret != HITLS_APP_SUCCESS) {
             break;
         }

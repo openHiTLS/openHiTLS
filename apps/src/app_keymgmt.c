@@ -208,7 +208,7 @@ static int32_t AddAttrToBag(HITLS_PKCS12_Bag *bag, HITLS_APP_KeyInfo *keyInfo)
     KeyAttrOrderCvt(&attr, true);
     char attrValue[2 * sizeof(attr) + 1] = {0}; // 2: one byte to two hex chars.
 
-    int32_t ret = HITLS_APP_OptToHex((uint8_t *)&attr, sizeof(attr), attrValue, sizeof(attrValue));
+    int32_t ret = HITLS_APP_BytesToHex((uint8_t *)&attr, sizeof(attr), attrValue, sizeof(attrValue));
     if (ret != HITLS_APP_SUCCESS) {
         AppPrintError("keymgmt: Failed to convert attr to hex, errCode: 0x%x.\n", ret);
         return ret;
@@ -320,7 +320,7 @@ static int32_t GenerateKeyAttr(int32_t algId, HITLS_APP_KeyAttr *attr,
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
 
-    ret = HITLS_APP_OptToHex(attr->uuid, sizeof(attr->uuid), uuidStr, APP_KEYMGMT_UUID_STR_SIZE);
+    ret = HITLS_APP_BytesToHex(attr->uuid, sizeof(attr->uuid), uuidStr, APP_KEYMGMT_UUID_STR_SIZE);
     if (ret != HITLS_APP_SUCCESS) {
         BSL_SAL_Free(uuidStr);
         AppPrintError("keymgmt: Failed to convert uuid to hex, errCode: 0x%x.\n", ret);
@@ -893,7 +893,7 @@ static int32_t GetKeyAttr(HITLS_PKCS12_Bag *bag, HITLS_APP_KeyAttr *attr)
         return HITLS_APP_X509_FAIL;
     }
     uint32_t attrLen = sizeof(HITLS_APP_KeyAttr);
-    ret = HITLS_APP_StrToHex(attrValue, (uint8_t *)attr, &attrLen);
+    ret = HITLS_APP_HexToBytes(attrValue, (uint8_t *)attr, &attrLen);
     if (ret != HITLS_APP_SUCCESS) {
         AppPrintError("keymgmt: Failed to convert attr to hex, errCode: 0x%x.\n", ret);
         return ret;
@@ -1448,18 +1448,15 @@ static int32_t ParseAndWriteKeyFile(KeyMgmtCmdOpt *keyMgmtOpt, HITLS_SyncKeyInfo
 
     HITLS_APP_KeyInfo keyInfo = {0};
     (void)memcpy_s(&keyInfo.attr, sizeof(keyInfo.attr), &info->attr, sizeof(info->attr));
-    int32_t ret;
-    if (keyInfo.attr.algId == CRYPT_PKEY_SM2) {
-        ret = CreateAsymKeyFromSyncInfo(keyMgmtOpt->provider, info, &keyInfo);
-    } else {
-        ret = CreateCipherKeyFromSyncInfo(info, &keyInfo);
-    }
+    int32_t ret =
+        keyInfo.attr.algId == CRYPT_PKEY_SM2 ? CreateAsymKeyFromSyncInfo(keyMgmtOpt->provider, info, &keyInfo)
+                                             : CreateCipherKeyFromSyncInfo(info, &keyInfo);
     if (ret != HITLS_APP_SUCCESS) {
         return ret;
     }
 
     char uuidStr[APP_KEYMGMT_UUID_STR_SIZE];
-    ret = HITLS_APP_OptToHex(keyInfo.attr.uuid, sizeof(keyInfo.attr.uuid), uuidStr, APP_KEYMGMT_UUID_STR_SIZE);
+    ret = HITLS_APP_BytesToHex(keyInfo.attr.uuid, sizeof(keyInfo.attr.uuid), uuidStr, APP_KEYMGMT_UUID_STR_SIZE);
     if (ret != HITLS_APP_SUCCESS) {
         FreeKeyInfo(&keyInfo);
         AppPrintError("keymgmt: Failed to convert uuid to hex, errCode: 0x%x.\n", ret);

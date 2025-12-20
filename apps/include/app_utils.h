@@ -42,8 +42,6 @@ extern "C" {
 
 #define MAX_DIGEST_SIZE (1024 * 8)  // Indicates the length of a single digest during digest calculation.
 
-void *ExpandingMem(void *oldPtr, size_t newSize, size_t oldSize);
-
 /**
  * @ingroup apps
  *
@@ -94,7 +92,18 @@ void HITLS_APP_PrintPassErrlog(void);
  */
 int32_t HITLS_APP_ParsePasswd(const char *passArg, char **pass);
 
-int32_t HITLS_APP_GetPasswd(BSL_UI_ReadPwdParam *param, char **passin, uint8_t **pass, uint32_t *passLen);
+/**
+ * @ingroup apps
+ *
+ * @brief Get the password from the command line argument.
+ *
+ * @param param            [IN] Password parameter
+ * @param passin           [OUT] Parsed password
+ * @param passLen          [OUT] Length of the password
+ * @return HITLS_APP_SUCCESS on success, error code otherwise
+ */
+int32_t HITLS_APP_GetPasswd(BSL_UI_ReadPwdParam *param, char **passin, uint32_t *passLen);
+
 /**
  * @ingroup apps
  *
@@ -231,17 +240,83 @@ HITLS_X509_Cert *HITLS_APP_LoadCert(const char *inPath, BSL_ParseFormat inform);
  */
 HITLS_X509_Csr *HITLS_APP_LoadCsr(const char *inPath, BSL_ParseFormat inform);
 
+/**
+ * @ingroup apps
+ *
+ * @brief Load the crl.
+ *
+ * @param inPath           [IN] crl path
+ * @param inform           [IN] crl format
+ *
+ * @retval HITLS_X509_Crl
+ */
+HITLS_X509_Crl *HITLS_APP_LoadCrl(const char *inPath, BSL_ParseFormat inform);
+
 int32_t HITLS_APP_GetAndCheckHashOpt(const char *name, int32_t *hashId);
 
 int32_t HITLS_APP_PrintText(const BSL_Buffer *csrBuf, const char *outFileName);
 
-int32_t HITLS_APP_HexToByte(const char *hex, int32_t useHeader, uint8_t **bin, uint32_t *len);
+/**
+ * @ingroup apps
+ * @brief Parse hexadecimal string to byte array (with optional "0x" prefix support)
+ *
+ * @param hexStr        [IN] Hexadecimal string (e.g., "0x1a2b" or "1a2b")
+ * @param expectPrefix  [IN] Whether to expect "0x" prefix (true: must have "0x", false: no prefix)
+ * @param bytes         [OUT] Allocated byte array (caller must free)
+ * @param bytesLen      [OUT] Length of byte array
+ *
+ * @retval HITLS_APP_SUCCESS on success
+ * @retval HITLS_APP_OPT_VALUE_INVALID if format is invalid
+ * @retval HITLS_APP_MEM_ALLOC_FAIL if memory allocation fails
+ *
+ * @note This function allocates memory internally. Caller must free the returned bytes.
+ * @note Leading zeros are automatically skipped.
+ * @note Odd-length hex strings are handled by prepending '0'.
+ */
+int32_t HITLS_APP_ParseHex(const char *hexStr, bool expectPrefix, uint8_t **bytes, uint32_t *bytesLen);
 
 CRYPT_EAL_PkeyCtx *HITLS_APP_GenRsaPkeyCtx(uint32_t bits);
 
-int32_t HITLS_APP_StrToHex(const char *str, uint8_t *hex, uint32_t *hexLen);
+/**
+ * @ingroup apps
+ * @brief Convert hexadecimal string to byte array
+ *
+ * @param hexStr        [IN] Hexadecimal string (e.g., "1a2b3c")
+ * @param bytes         [OUT] Output byte array (caller provides buffer)
+ * @param bytesLen      [IN/OUT] Input: buffer size, Output: actual bytes written
+ *
+ * @retval HITLS_APP_SUCCESS on success
+ * @retval HITLS_APP_INVALID_ARG if parameters are invalid
+ * @retval HITLS_APP_OPT_VALUE_INVALID if hex string format is invalid
+ *
+ * @note Hex string must have even length and contain only [0-9a-fA-F].
+ * @note Caller must provide buffer with sufficient size (hexLen/2 bytes).
+ */
+int32_t HITLS_APP_HexToBytes(const char *hexStr, uint8_t *bytes, uint32_t *bytesLen);
 
 int32_t HITLS_APP_ReadData(const char *path, BSL_PEM_Symbol *symbol, char *fileName, BSL_Buffer *data);
+
+/**
+ * @ingroup apps
+ * @brief Read data from file or stdin into buffer
+ *
+ * @param buf      [OUT] Allocated buffer pointer (caller must free)
+ * @param bufLen   [IN/OUT] Input: buffer capacity, Output: actual bytes read
+ * @param inFile   [IN] File path to read from (NULL for stdin)
+ * @param maxSize  [IN] Maximum allowed read size in bytes
+ * @param module   [IN] Module name for error messages (e.g., "dgst", "pkeyutl")
+ *
+ * @retval HITLS_APP_SUCCESS on success
+ * @retval HITLS_APP_INVALID_ARG if parameters are invalid
+ * @retval HITLS_APP_UIO_FAIL if file open or read fails
+ * @retval HITLS_APP_STDIN_FAIL if stdin read fails
+ *
+ * @note This function allocates memory for the buffer. Caller must free it.
+ * @note When inFile is NULL, reads from stdin using HITLS_APP_ReadData
+ * @note When inFile is provided, uses HITLS_APP_OptReadUio for reading
+ */
+int32_t HITLS_APP_ReadFileOrStdin(uint8_t **buf, uint64_t *bufLen, const char *inFile,
+                                   uint32_t maxSize, const char *module);
 
 typedef struct {
     int32_t randAlgId;

@@ -253,16 +253,20 @@ int32_t HITLS_APP_OptToBase64(uint8_t *buf, uint32_t inBufLen, char *outBuf, uin
 
 /**
  * @ingroup HITLS_APP
- * @brief   Converts a character string to a hexadecimal character string and output the buf to UIO
+ * @brief   Convert byte array to hexadecimal string
  *
- * @param   buf     [IN]  content to be encoded
- * @param   inBufLen  [IN]  the length of content to be encoded
- * @param   outBuf  [IN]  Encoded content
- * @param   outBufLen  [IN] the length of encoded content
+ * @param   bytes       [IN]  Byte array to be converted
+ * @param   bytesLen    [IN]  Length of byte array
+ * @param   hexStr      [OUT] Output hexadecimal string buffer
+ * @param   hexStrSize  [IN]  Size of output buffer (must be >= bytesLen*2 + 1)
  *
- * @retval  int32_t success or not
+ * @retval  HITLS_APP_SUCCESS on success
+ * @retval  HITLS_APP_INTERNAL_EXCEPTION if parameters are invalid
+ *
+ * @note Output format: lowercase hex without "0x" prefix (e.g., "1a2b3c")
+ * @note Output buffer must have space for null terminator
 */
-int32_t HITLS_APP_OptToHex(uint8_t *buf, uint32_t inBufLen, char *outBuf, uint32_t outBufLen);
+int32_t HITLS_APP_BytesToHex(const uint8_t *bytes, uint32_t bytesLen, char *hexStr, uint32_t hexStrSize);
 
 /**
  * @ingroup HITLS_APP

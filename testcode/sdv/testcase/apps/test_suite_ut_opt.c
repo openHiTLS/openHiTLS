@@ -128,7 +128,7 @@ EXIT:
 /**
  * @test UT_HITLS_APP_OptBegin_TC004
  * @spec  -
- * @title  测试HITLS_APP_OptBegine异常
+ * @title  测试HITLS_APP_OptBegin异常
  */
 /* BEGIN_CASE */
 void UT_HITLS_APP_OptBegin_TC004(void)
@@ -176,7 +176,7 @@ EXIT:
 /**
  * @test UT_HITLS_APP_OptBegin_TC005
  * @spec  -
- * @title  测试HITLS_APP_OptBegine异常
+ * @title  测试HITLS_APP_OptBegin异常
  */
 /* BEGIN_CASE */
 void UT_HITLS_APP_OptBegin_TC005(void)
@@ -199,7 +199,7 @@ EXIT:
 /**
  * @test UT_HITLS_APP_OptBegin_TC006
  * @spec  -
- * @title  测试HITLS_APP_OptBegine正常
+ * @title  测试HITLS_APP_OptBegin正常
  */
 /* BEGIN_CASE */
 void UT_HITLS_APP_OptBegin_TC006(void)
@@ -813,24 +813,24 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test UT_HITLS_APP_OptToHex_TC001
+ * @test UT_HITLS_APP_BytesToHex_TC001
  * @spec  -
  * @title   测试UT_HITLS_APP_OptToHex_TC001函数
  */
 /* BEGIN_CASE */
-void UT_HITLS_APP_OptToHex_TC001(void)
+void UT_HITLS_APP_BytesToHex_TC001(void)
 {
     uint8_t str[] = "hello, world";
     char outBuf[1024] = {0};
-    int ret = HITLS_APP_OptToHex(str, 0, outBuf, 1024);
+    int ret = HITLS_APP_BytesToHex(str, 0, outBuf, 1024);
     ASSERT_EQ(ret, HITLS_APP_INTERNAL_EXCEPTION);
-    int ret1 = HITLS_APP_OptToHex(NULL, 12, outBuf, 1024);
+    int ret1 = HITLS_APP_BytesToHex(NULL, 12, outBuf, 1024);
     ASSERT_EQ(ret1, HITLS_APP_INTERNAL_EXCEPTION);
-    int ret2 = HITLS_APP_OptToHex(str, 12, NULL, 1024);
+    int ret2 = HITLS_APP_BytesToHex(str, 12, NULL, 1024);
     ASSERT_EQ(ret2, HITLS_APP_INTERNAL_EXCEPTION);
-    int ret3 = HITLS_APP_OptToHex(str, 12, outBuf, 0);
+    int ret3 = HITLS_APP_BytesToHex(str, 12, outBuf, 0);
     ASSERT_EQ(ret3, HITLS_APP_INTERNAL_EXCEPTION);
-    int ret4 = HITLS_APP_OptToHex(str, 12, outBuf, 4);
+    int ret4 = HITLS_APP_BytesToHex(str, 12, outBuf, 4);
     ASSERT_EQ(ret4, HITLS_APP_INTERNAL_EXCEPTION);
 EXIT:
     return;

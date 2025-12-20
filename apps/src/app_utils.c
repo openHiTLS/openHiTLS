@@ -88,25 +88,6 @@ typedef struct defaultPassCBData {
     uint32_t minLen;
 } APP_DefaultPassCBData;
 
-void *ExpandingMem(void *oldPtr, size_t newSize, size_t oldSize)
-{
-    if (newSize <= 0) {
-        return oldPtr;
-    }
-    void *newPtr = BSL_SAL_Calloc(newSize, 1);
-    if (newPtr == NULL) {
-        return oldPtr;
-    }
-    if (oldPtr != NULL) {
-        if (memcpy_s(newPtr, newSize, oldPtr, oldSize) != 0) {
-            BSL_SAL_FREE(newPtr);
-            return oldPtr;
-        }
-        BSL_SAL_FREE(oldPtr);
-    }
-    return newPtr;
-}
-
 int32_t HITLS_APP_CheckPasswd(const uint8_t *password, const uint32_t passwordLen)
 {
     for (uint32_t i = 0; i < passwordLen; ++i) {
@@ -402,7 +383,7 @@ static CRYPT_EAL_PkeyCtx *ReadPemPubKey(BSL_Buffer *encode, const char *name)
     return pkey;
 }
 
-int32_t HITLS_APP_GetPasswd(BSL_UI_ReadPwdParam *param, char **passin, uint8_t **pass, uint32_t *passLen)
+int32_t HITLS_APP_GetPasswd(BSL_UI_ReadPwdParam *param, char **passin, uint32_t *passLen)
 {
     if (*passin == NULL) {
         *passin = GetPasswdByStdin(param);
@@ -411,7 +392,6 @@ int32_t HITLS_APP_GetPasswd(BSL_UI_ReadPwdParam *param, char **passin, uint8_t *
         HITLS_APP_PrintPassErrlog();
         return HITLS_APP_PASSWD_FAIL;
     }
-    *pass = (uint8_t *)*passin;
     *passLen = strlen(*passin);
     return HITLS_APP_SUCCESS;
 }
@@ -503,11 +483,12 @@ CRYPT_EAL_PkeyCtx *HITLS_APP_ProviderLoadPrvKey(CRYPT_EAL_LibCtx *libCtx, const 
     uint8_t *pass = NULL;
     uint32_t passLen = 0;
     BSL_UI_ReadPwdParam passParam = { "passwd", inFilePath, false };
-    if (isEncrypted && (HITLS_APP_GetPasswd(&passParam, passin, &pass, &passLen) != HITLS_APP_SUCCESS)) {
+    if (isEncrypted && (HITLS_APP_GetPasswd(&passParam, passin, &passLen) != HITLS_APP_SUCCESS)) {
         BSL_SAL_FREE(data);
         BSL_SAL_FREE(prvkeyName);
         return NULL;
     }
+    pass = (uint8_t *)*passin;
     BSL_Buffer encode = { data, dataLen };
     CRYPT_EAL_PkeyCtx *pkey = ProviderReadPemPrvKey(libCtx, attrName, &encode, pass, passLen);
     if (pkey == NULL) {
@@ -543,11 +524,12 @@ CRYPT_EAL_PkeyCtx *HITLS_APP_LoadPrvKey(const char *inFilePath, BSL_ParseFormat 
     uint8_t *pass = NULL;
     uint32_t passLen = 0;
     BSL_UI_ReadPwdParam passParam = { "passwd", inFilePath, false };
-    if (isEncrypted && (HITLS_APP_GetPasswd(&passParam, passin, &pass, &passLen) != HITLS_APP_SUCCESS)) {
+    if (isEncrypted && (HITLS_APP_GetPasswd(&passParam, passin, &passLen) != HITLS_APP_SUCCESS)) {
         BSL_SAL_FREE(data);
         BSL_SAL_FREE(prvkeyName);
         return NULL;
     }
+    pass = (uint8_t *)*passin;
     BSL_Buffer encode = { data, dataLen };
     CRYPT_EAL_PkeyCtx *pkey = ReadPemPrvKey(&encode, prvkeyName, pass, passLen);
     if (pkey == NULL) {
@@ -642,9 +624,10 @@ int32_t HITLS_APP_PrintPrvKeyByUio(BSL_UIO *uio, CRYPT_EAL_PkeyCtx *pkey, AppKey
     uint32_t passLen = 0;
     BSL_UI_ReadPwdParam passParam = { "passwd", printKeyParam->name, true };
     if ((type == CRYPT_PRIKEY_PKCS8_ENCRYPT) &&
-        (HITLS_APP_GetPasswd(&passParam, passout, &pass, &passLen) != HITLS_APP_SUCCESS)) {
+        (HITLS_APP_GetPasswd(&passParam, passout, &passLen) != HITLS_APP_SUCCESS)) {
         return HITLS_APP_PASSWD_FAIL;
     }
+    pass = (uint8_t *)*passout;
     CRYPT_Pbkdf2Param param = { 0 };
     param.pbesId = BSL_CID_PBES2;
     param.pbkdfId = BSL_CID_PBKDF2;
@@ -698,7 +681,7 @@ int32_t HITLS_APP_GetAndCheckCipherOpt(const char *name, int32_t *symId)
 static int32_t ReadPemByUioSymbol(BSL_UIO *memUio, BSL_UIO *rUio, BSL_PEM_Symbol *symbol)
 {
     int32_t ret = HITLS_APP_UIO_FAIL;
-    char buf[APP_LINESIZE + 1];
+    char buf[APP_LINESIZE + 1 + 1] = {0}; // +1+1 for '\n' '\0'
     uint32_t lineLen;
     bool hasHead = false;
     uint32_t writeMemLen;
@@ -729,13 +712,16 @@ static int32_t ReadPemByUioSymbol(BSL_UIO *memUio, BSL_UIO *rUio, BSL_PEM_Symbol
             hasHead = true;
             continue;
         }
-        // Copy the intermediate content.
-        if (BSL_UIO_Puts(memUio, (const char *)buf, &writeMemLen) != BSL_SUCCESS || writeMemLen != lineLen) {
-            break;
-        }
         // Check whether it is the tail.
         if (strncmp(buf, symbol->tail, strlen(symbol->tail)) == 0) {
-            ret = HITLS_APP_SUCCESS;
+            if (BSL_UIO_Write(memUio, (const uint8_t *)buf, lineLen + 1, &writeMemLen) != BSL_SUCCESS ||
+                writeMemLen == lineLen + 1) {
+                ret = HITLS_APP_SUCCESS;
+            }
+            break;
+        }
+        // Copy the intermediate content.
+        if (BSL_UIO_Puts(memUio, (const char *)buf, &writeMemLen) != BSL_SUCCESS || writeMemLen != lineLen) {
             break;
         }
     }
@@ -893,6 +879,34 @@ HITLS_X509_Csr *HITLS_APP_LoadCsr(const char *inPath, BSL_ParseFormat inform)
     return csr;
 }
 
+HITLS_X509_Crl *HITLS_APP_LoadCrl(const char *inPath, BSL_ParseFormat inform)
+{
+    if (inPath == NULL && inform == BSL_FORMAT_ASN1) {
+        AppPrintError("Reading DER files from stdin is not supported.\n");
+        return NULL;
+    }
+    if (!CheckFilePath(inPath)) {
+        AppPrintError("Invalid crl path: \"%s\".", inPath == NULL ? "" : inPath);
+        return NULL;
+    }
+
+    BSL_Buffer data = { 0 };
+    BSL_PEM_Symbol symbol = { BSL_PEM_CRL_BEGIN_STR, BSL_PEM_CRL_END_STR };
+    int32_t ret = HITLS_APP_ReadData(inPath, &symbol, "crl", &data);
+    if (ret != HITLS_APP_SUCCESS) {
+        return NULL;
+    }
+
+    HITLS_X509_Crl *crl = NULL;
+    if (HITLS_X509_CrlParseBuff(inform, &data, &crl) != 0) {
+        AppPrintError("Failed to parse crl: \"%s\".\n", inPath == NULL ? "stdin" : inPath);
+        BSL_SAL_Free(data.data);
+        return NULL;
+    }
+    BSL_SAL_Free(data.data);
+    return crl;
+}
+
 int32_t HITLS_APP_GetAndCheckHashOpt(const char *name, int32_t *hashId)
 {
     if (hashId == NULL) {
@@ -970,15 +984,20 @@ void HITLS_APP_PrintPassErrlog(void)
         APP_MAX_PASS_LENGTH);
 }
 
-int32_t HITLS_APP_HexToByte(const char *hex, int32_t useHeader, uint8_t **bin, uint32_t *len)
+int32_t HITLS_APP_ParseHex(const char *hexStr, bool expectPrefix, uint8_t **bytes, uint32_t *bytesLen)
 {
+    if (hexStr == NULL || bytes == NULL || bytesLen == NULL) {
+        AppPrintError("Invalid input parameters.\n");
+        return HITLS_APP_INVALID_ARG;
+    }
+
     uint32_t prefixLen = strlen(APP_HEX_HEAD);
-    if (useHeader != 0 && (strlen(hex) <= prefixLen || strncmp(hex, APP_HEX_HEAD, prefixLen) != 0)) {
+    if (expectPrefix && (strlen(hexStr) <= prefixLen || strncmp(hexStr, APP_HEX_HEAD, prefixLen) != 0)) {
         AppPrintError("Invalid hex value, should start with '0x'.\n");
         return HITLS_APP_OPT_VALUE_INVALID;
     }
-    const char *num = hex;
-    if (useHeader != 0) {
+    const char *num = hexStr;
+    if (expectPrefix) {
         num += prefixLen;
     }
     uint32_t hexLen = strlen(num);
@@ -990,8 +1009,8 @@ int32_t HITLS_APP_HexToByte(const char *hex, int32_t useHeader, uint8_t **bin, u
             break;
         }
     }
-    *len = (hexLen + 1) / APP_HEX_TO_BYTE;
-    uint8_t *res = BSL_SAL_Malloc(*len);
+    *bytesLen = (hexLen + 1) / APP_HEX_TO_BYTE;
+    uint8_t *res = BSL_SAL_Malloc(*bytesLen);
     if (res == NULL) {
         AppPrintError("Allocate memory failed.\n");
         return HITLS_APP_MEM_ALLOC_FAIL;
@@ -1008,47 +1027,90 @@ int32_t HITLS_APP_HexToByte(const char *hex, int32_t useHeader, uint8_t **bin, u
         tmp[0] = '0';
         (void)memcpy_s(tmp + 1, hexLen, num, hexLen);
         tmp[hexLen + 1] = '\0';
-        ret = HITLS_APP_StrToHex(tmp, res, len);
+        ret = HITLS_APP_HexToBytes(tmp, res, bytesLen);
         BSL_SAL_Free(tmp);
     } else {
-        ret = HITLS_APP_StrToHex(num, res, len);
+        ret = HITLS_APP_HexToBytes(num, res, bytesLen);
     }
     if (ret != HITLS_APP_SUCCESS) {
         BSL_SAL_Free(res);
         return ret;
     }
-    *bin = res;
+    *bytes = res;
     return HITLS_APP_SUCCESS;
 }
 
-int32_t HITLS_APP_StrToHex(const char *str, uint8_t *hex, uint32_t *hexLen)
+int32_t HITLS_APP_HexToBytes(const char *hexStr, uint8_t *bytes, uint32_t *bytesLen)
 {
-    if (str == NULL || hex == NULL || hexLen == NULL) {
+    if (hexStr == NULL || bytes == NULL || bytesLen == NULL) {
         AppPrintError("Invalid input buffer or output buffer.\n");
         return HITLS_APP_INVALID_ARG;
     }
-    size_t inLen = strlen(str);
-    if (inLen == 0 || inLen % 2 != 0 || *hexLen < inLen / 2) { // 2: one byte to two hex chars.
+    size_t inLen = strlen(hexStr);
+    if (inLen == 0 || inLen % 2 != 0 || *bytesLen < inLen / 2) { // 2: one byte to two hex chars.
         return HITLS_APP_INVALID_ARG;
     }
 
     // A group of 2 bytes
     for (size_t i = 0; i < inLen; i += 2) {
-        if (!((str[i] >= '0' && str[i] <= '9') || (str[i] >= 'a' && str[i] <= 'f') ||
-            (str[i] >= 'A' && str[i] <= 'F'))) {
+        if (!((hexStr[i] >= '0' && hexStr[i] <= '9') || (hexStr[i] >= 'a' && hexStr[i] <= 'f') ||
+            (hexStr[i] >= 'A' && hexStr[i] <= 'F'))) {
             AppPrintError("Input string is not a valid hex string.\n");
             return HITLS_APP_OPT_VALUE_INVALID;
         }
-        if (!((str[i + 1] >= '0' && str[i + 1] <= '9') || (str[i + 1] >= 'a' && str[i + 1] <= 'f') ||
-            (str[i + 1] >= 'A' && str[i + 1] <= 'F'))) {
+        if (!((hexStr[i + 1] >= '0' && hexStr[i + 1] <= '9') || (hexStr[i + 1] >= 'a' && hexStr[i + 1] <= 'f') ||
+            (hexStr[i + 1] >= 'A' && hexStr[i + 1] <= 'F'))) {
             AppPrintError("Input string is not a valid hex string.\n");
             return HITLS_APP_OPT_VALUE_INVALID;
         }
         // Formula for converting hex to int: (Hex% 32 + 9)% 25 = int, hexadecimal, 16: high 4 bits.
-        hex[i / 2] = ((uint8_t)str[i] % 32 + 9) % 25 * 16 + ((uint8_t)str[i + 1] % 32 + 9) % 25;
+        bytes[i / 2] = ((uint8_t)hexStr[i] % 32 + 9) % 25 * 16 + ((uint8_t)hexStr[i + 1] % 32 + 9) % 25;
     }
-    *hexLen = inLen / 2; // 2: one byte to two hex chars.
+    *bytesLen = inLen / 2; // 2: one byte to two hex chars.
     return HITLS_APP_SUCCESS;
+}
+
+int32_t HITLS_APP_ReadFileOrStdin(uint8_t **buf, uint64_t *bufLen, const char *inFile,
+                                   uint32_t maxSize, const char *module)
+{
+    if (buf == NULL || bufLen == NULL || module == NULL) {
+        AppPrintError("%s: Invalid parameters for ReadFileOrStdin\n", module);
+        return HITLS_APP_INVALID_ARG;
+    }
+
+    // Validate bufLen to prevent overflow
+    if (*bufLen > UINT32_MAX) {
+        AppPrintError("%s: Buffer length exceeds maximum allowed size\n", module);
+        return HITLS_APP_INVALID_ARG;
+    }
+
+    // Special handling for stdin
+    if (inFile == NULL) {
+        BSL_Buffer data = {0};
+        int32_t ret = HITLS_APP_ReadData(NULL, NULL, "data", &data);
+        if (ret != HITLS_APP_SUCCESS) {
+            AppPrintError("%s: Failed to read content from stdin\n", module);
+            return ret;
+        }
+        *buf = data.data;
+        *bufLen = data.dataLen;
+        return HITLS_APP_SUCCESS;
+    }
+
+    // Read from file
+    BSL_UIO *readUio = HITLS_APP_UioOpen(inFile, 'r', 0);
+    if (readUio == NULL) {
+        AppPrintError("%s: Failed to open file <%s>, no such file or directory\n", module, inFile);
+        return HITLS_APP_UIO_FAIL;
+    }
+
+    BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
+    int32_t ret = HITLS_APP_OptReadUio(readUio, buf, bufLen, maxSize);
+    if (ret != HITLS_APP_SUCCESS) {
+        AppPrintError("%s: Failed to read content from file <%s>\n", module, inFile);
+    }
+    BSL_UIO_Free(readUio);
+    return ret;
 }
 
 static int32_t InitRand(AppInitParam *param)

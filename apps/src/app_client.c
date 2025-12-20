@@ -58,12 +58,12 @@ typedef enum {
     HITLS_CLIENT_OPT_TLCP,
     HITLS_CLIENT_OPT_DTLCP,
     HITLS_CLIENT_OPT_CIPHER,
-    
+
     /* Certificate options */
     HITLS_CLIENT_OPT_CAFILE,
     HITLS_CLIENT_OPT_CHAINCAFILE,
     HITLS_CLIENT_OPT_NO_VERIFY,
-    
+
     /* TLCP options */
     HITLS_CLIENT_OPT_TLCP_ENC_CERT,
     HITLS_CLIENT_OPT_TLCP_ENC_KEY,
@@ -74,7 +74,7 @@ typedef enum {
     HITLS_CLIENT_OPT_QUIET,
     HITLS_CLIENT_OPT_STATE,
     HITLS_CLIENT_OPT_PREXIT,
-    
+
     /* Format options */
     HITLS_CLIENT_OPT_CERTFORM,
     HITLS_CLIENT_OPT_KEYFORM,
@@ -85,7 +85,7 @@ typedef enum {
     HITLS_CLIENT_OPT_MAX,
 } HITLS_ClientOptType;
 
-/* Command line options for s_client */
+/* Command line options for client */
 static const HITLS_CmdOption g_clientOptions[] = {
     /* Connection options */
     {"host",        HITLS_CLIENT_OPT_HOST,        HITLS_APP_OPT_VALUETYPE_STRING,  "Target hostname or IP address"},
@@ -96,27 +96,27 @@ static const HITLS_CmdOption g_clientOptions[] = {
     {"tlcp",        HITLS_CLIENT_OPT_TLCP,        HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Use TLCP protocol"},
     {"dtlcp",       HITLS_CLIENT_OPT_DTLCP,       HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Use DTLCP protocol"},
     {"cipher",      HITLS_CLIENT_OPT_CIPHER,      HITLS_APP_OPT_VALUETYPE_STRING,   "Specify cipher suites"},
-    
+
     /* Certificate options */
     {"CAfile",      HITLS_CLIENT_OPT_CAFILE,      HITLS_APP_OPT_VALUETYPE_IN_FILE,  "CA certificate file"},
     {"chainCAfile", HITLS_CLIENT_OPT_CHAINCAFILE, HITLS_APP_OPT_VALUETYPE_IN_FILE,  "CA file for certificate chain"},
     {"noverify",    HITLS_CLIENT_OPT_NO_VERIFY,   HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Don't verify server certificate"},
-    
+
     /* TLCP options */
     {"tlcp_enc_cert", HITLS_CLIENT_OPT_TLCP_ENC_CERT, HITLS_APP_OPT_VALUETYPE_IN_FILE, "TLCP encryption certificate"},
     {"tlcp_enc_key",  HITLS_CLIENT_OPT_TLCP_ENC_KEY,  HITLS_APP_OPT_VALUETYPE_IN_FILE, "TLCP encryption private key"},
     {"tlcp_sign_cert", HITLS_CLIENT_OPT_TLCP_SIGN_CERT, HITLS_APP_OPT_VALUETYPE_IN_FILE, "TLCP signature certificate"},
     {"tlcp_sign_key",  HITLS_CLIENT_OPT_TLCP_SIGN_KEY,  HITLS_APP_OPT_VALUETYPE_IN_FILE, "TLCP signature private key"},
-    
+
     /* Output options */
     {"quiet",       HITLS_CLIENT_OPT_QUIET,       HITLS_APP_OPT_VALUETYPE_NO_VALUE,    "Quiet mode"},
     {"state",       HITLS_CLIENT_OPT_STATE,       HITLS_APP_OPT_VALUETYPE_NO_VALUE,    "Show handshake state"},
     {"prexit",      HITLS_CLIENT_OPT_PREXIT,      HITLS_APP_OPT_VALUETYPE_NO_VALUE,    "Exit after handshake"},
-    
+
     /* Format options */
     {"certform",    HITLS_CLIENT_OPT_CERTFORM,    HITLS_APP_OPT_VALUETYPE_FMT_PEMDER,  "Certificate format (PEM|DER)"},
     {"keyform",     HITLS_CLIENT_OPT_KEYFORM,     HITLS_APP_OPT_VALUETYPE_FMT_PEMDER,  "Private key format (PEM|DER)"},
-    
+
     {"help",        HITLS_APP_OPT_HELP,           HITLS_APP_OPT_VALUETYPE_NO_VALUE,    "Show help"},
     HITLS_APP_PROV_OPTIONS,
 
@@ -302,8 +302,8 @@ static int ParseClientOptLoop(HITLS_ClientParams *params)
 #endif
     }
     if (HITLS_APP_GetRestOptNum() != 0) {
-        AppPrintError("Extra arguments given.\n");
-        AppPrintError("pkeyutl: Use -help for summary.\n");
+        AppPrintError("client: Extra arguments given.\n");
+        AppPrintError("client: Use -help for summary.\n");
         return HITLS_APP_OPT_UNKOWN;
     }
     return ret;
@@ -338,23 +338,23 @@ int ParseClientOptions(int argc, char *argv[], HITLS_ClientParams *params, AppPr
 
     int opt = HITLS_APP_OptBegin(argc, argv, g_clientOptions);
     if (opt !=  HITLS_APP_SUCCESS) {
-        AppPrintError("Failed to initialize option parser\n");
+        AppPrintError("client: Failed to initialize option parser\n");
         return opt;
     }
 
     int loopRet = ParseClientOptLoop(params);
     if (loopRet != HITLS_APP_SUCCESS) {
         if (loopRet != HITLS_APP_HELP) {
-            AppPrintError("Failed to parse client options: 0x%x\n", loopRet);
+            AppPrintError("client: Failed to parse client options: 0x%x\n", loopRet);
         }
         return loopRet;
     }
-    
+
     HITLS_APP_OptEnd();
-    
+
     /* Validate required parameters */
     if (params->host == NULL) {
-        AppPrintError("Host must be specified\n");
+        AppPrintError("client: Host must be specified\n");
         return HITLS_APP_INVALID_ARG;
     }
 
@@ -371,18 +371,18 @@ static HITLS_Config *CreateClientConfig(HITLS_ClientParams *params)
     if (params == NULL) {
         return NULL;
     }
-    
+
     /* Determine protocol type */
     APP_ProtocolType protocol = ParseProtocolType(params->protocol);
-    
+
     /* Create base configuration */
     HITLS_Config *config = CreateProtocolConfig(protocol, params->provider);
     if (config == NULL) {
         return NULL;
     }
-    
+
     int ret = HITLS_SUCCESS;
-    
+
     /* Configure cipher suites */
     if (params->cipherSuites) {
         ret = ConfigureCipherSuites(config, params->cipherSuites, protocol);
@@ -391,7 +391,7 @@ static HITLS_Config *CreateClientConfig(HITLS_ClientParams *params)
             return NULL;
         }
     }
-    
+
     /* Configure certificate verification */
     APP_CertConfig certConfig = {
         .caFile = params->caFile,
@@ -407,21 +407,20 @@ static HITLS_Config *CreateClientConfig(HITLS_ClientParams *params)
         .smParam = params->smParam,
 #endif
     };
-    
+
     ret = ConfCertVerification(config, &certConfig, !params->verifyNone, params->verifyDepth);
     if (ret != HITLS_APP_SUCCESS) {
         HITLS_CFG_FreeConfig(config);
         return NULL;
     }
-    
+
     /* Configure client certificate if provided */
     if (protocol == APP_PROTOCOL_TLCP || protocol == APP_PROTOCOL_DTLCP) {
         ret = ConfigureTLCPCertificates(config, &certConfig);
-    }
-    
-    if (ret != HITLS_APP_SUCCESS) {
-        HITLS_CFG_FreeConfig(config);
-        return NULL;
+        if (ret != HITLS_APP_SUCCESS) {
+            HITLS_CFG_FreeConfig(config);
+            return NULL;
+        }
     }
 
     return config;
@@ -432,15 +431,15 @@ static BSL_UIO *CreateClientConnection(HITLS_ClientParams *params)
     if (params == NULL || params->host == NULL) {
         return NULL;
     }
-    
+
     APP_NetworkAddr addr = {
         .host = params->host,
         .port = params->port,
     };
-    
+
     int sockfd = -1;
     BSL_UIO *uio = NULL;
-    
+
     /* Create socket based on protocol */
     APP_ProtocolType protocol = ParseProtocolType(params->protocol);
     if (protocol == APP_PROTOCOL_DTLCP) {
@@ -450,7 +449,7 @@ static BSL_UIO *CreateClientConnection(HITLS_ClientParams *params)
         sockfd = CreateTCPSocket(&addr, params->connectTimeout);
         uio = BSL_UIO_New(BSL_UIO_TcpMethod());
     }
-    
+
     if (sockfd < 0 || uio == NULL) {
         if (sockfd >= 0) {
             BSL_SAL_SockClose(sockfd);
@@ -460,11 +459,11 @@ static BSL_UIO *CreateClientConnection(HITLS_ClientParams *params)
         }
         return NULL;
     }
-    
+
     /* Set socket to UIO */
     int ret = BSL_UIO_Ctrl(uio, BSL_UIO_SET_FD, sizeof(sockfd), &sockfd);
     if (ret != BSL_SUCCESS) {
-        AppPrintError("Failed to set socket to UIO: 0x%x\n", ret);
+        AppPrintError("client: Failed to set socket to UIO: 0x%x\n", ret);
         BSL_SAL_SockClose(sockfd);
         BSL_UIO_Free(uio);
         return NULL;
@@ -492,11 +491,11 @@ static BSL_UIO *CreateClientConnection(HITLS_ClientParams *params)
     }
 
     BSL_UIO_SetInit(uio, true);
-    
+
     if (!params->quiet) {
         AppPrintInfo("Connected to %s:%d\n", params->host, params->port);
     }
-    
+
     return uio;
 }
 
@@ -505,11 +504,11 @@ static int PerformClientHandshake(HITLS_Ctx *ctx, HITLS_ClientParams *params)
     if (ctx == NULL || params == NULL) {
         return HITLS_APP_INVALID_ARG;
     }
-    
+
     if (!params->quiet) {
         AppPrintInfo("Starting TLS handshake...\n");
     }
-    
+
     /* Perform handshake */
     int ret;
     do {
@@ -518,20 +517,20 @@ static int PerformClientHandshake(HITLS_Ctx *ctx, HITLS_ClientParams *params)
             break;
         }
         if (ret != HITLS_REC_NORMAL_RECV_BUF_EMPTY && ret != HITLS_REC_NORMAL_IO_BUSY) {
-            AppPrintError("TLS handshake failed: 0x%x\n", ret);
+            AppPrintError("client: TLS handshake failed: 0x%x\n", ret);
             return HITLS_APP_ERR_HANDSHAKE;
         }
         /* Non-blocking I/O, retry */
         usleep(10000); /* Sleep 10000us. */
     } while (ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY || ret == HITLS_REC_NORMAL_IO_BUSY);
-    
+
     if (!params->quiet) {
         AppPrintInfo("TLS handshake completed successfully\n");
         
         /* Print connection information */
         PrintConnectionInfo(ctx, params->state);
     }
-    
+
     return HITLS_APP_SUCCESS;
 }
 
@@ -596,7 +595,7 @@ static int HandleClientDataExchange(HITLS_Ctx *ctx, HITLS_ClientParams *params)
     BSL_UIO *readUio = HITLS_APP_UioOpen(NULL, 'r', 0);
     BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
     if (readUio == NULL) {
-        AppPrintError("s_client: Failed to open stdin\n");
+        AppPrintError("client: Failed to open stdin\n");
         return HITLS_APP_UIO_FAIL;
     }
 
@@ -608,19 +607,19 @@ static int HandleClientDataExchange(HITLS_Ctx *ctx, HITLS_ClientParams *params)
         char *inputBuffer = (char *)BSL_SAL_Malloc(HTTP_BUF_MAXLEN + 1);
         if (inputBuffer == NULL) {
             BSL_UIO_Free(readUio);
-            AppPrintError("s_client: Failed to alloc memory.\n");
+            AppPrintError("client: Failed to alloc memory.\n");
             return HITLS_APP_MEM_ALLOC_FAIL;
         }
         uint8_t *response = (uint8_t *)BSL_SAL_Malloc(HTTP_BUF_MAXLEN + 1);
         if (response == NULL) {
             BSL_UIO_Free(readUio);
             BSL_SAL_FREE(inputBuffer);
-            AppPrintError("s_client: Failed to alloc memory.\n");
+            AppPrintError("client: Failed to alloc memory.\n");
             return HITLS_APP_MEM_ALLOC_FAIL;
         }
         while (BSL_UIO_Ctrl(readUio, BSL_UIO_FILE_GET_EOF, IS_SUPPORT_GET_EOF, &isEof) == BSL_SUCCESS && !isEof) {
             if (BSL_UIO_Read(readUio, inputBuffer, HTTP_BUF_MAXLEN, &readLen) != BSL_SUCCESS) {
-                AppPrintError("s_client: Failed to obtain the content from the STDIN\n");
+                AppPrintError("client: Failed to obtain the content from the STDIN\n");
                 ret = HITLS_APP_STDIN_FAIL;
                 break;
             }
@@ -634,7 +633,7 @@ static int HandleClientDataExchange(HITLS_Ctx *ctx, HITLS_ClientParams *params)
             uint32_t written = 0;
             ret = HITLS_Write(ctx, (const uint8_t *)inputBuffer, readLen, &written);
             if (ret != HITLS_SUCCESS) {
-                AppPrintError("s_client: Failed to send data: 0x%x\n", ret);
+                AppPrintError("client: Failed to send data: 0x%x\n", ret);
                 break;
             }
             
@@ -661,11 +660,11 @@ static void CleanupClientResources(HITLS_Ctx *ctx, HITLS_Config *config, BSL_UIO
         HITLS_Close(ctx); // read close
         HITLS_Free(ctx);
     }
-    
+
     if (config) {
         HITLS_CFG_FreeConfig(config);
     }
-    
+
     if (uio) {
         /* Close socket */
         int fd = -1;
@@ -758,7 +757,7 @@ static void *ThreadClientMainLoop(void *arg)
     if (threadArgs == NULL) {
         return NULL;
     }
-    
+
     threadArgs->ret = HandleOneHeartBeat(threadArgs->ctx);
     return NULL;
 }
@@ -767,27 +766,33 @@ static int32_t ConfirmAction(void)
 {
     char readBuf[4] = {0}; // 4 byte for 'yes'.
     uint32_t readLen = 0;
-    AppPrintInfo("Please enter 'y' to confirm send key to server\n");
+    AppPrintInfo("client: Please enter 'y' to confirm send key to server\n");
 
     BSL_UIO *rUio = HITLS_APP_UioOpen(NULL, 'r', 1);
     BSL_UIO_SetIsUnderlyingClosedByUio(rUio, true);
     if (rUio == NULL) {
-        AppPrintError("Failed to open the stdin.\n");
+        AppPrintError("client: Failed to open the stdin.\n");
         return HITLS_APP_UIO_FAIL;
     }
     if (BSL_UIO_Read(rUio, readBuf, sizeof(readBuf) - 1, &readLen) != BSL_SUCCESS) {
-        AppPrintError("Failed to obtain the content from the STDIN\n");
+        AppPrintError("client: Failed to obtain the content from the STDIN\n");
         BSL_UIO_Free(rUio);
         return HITLS_APP_UIO_FAIL;
     }
     BSL_UIO_Free(rUio);
     if (readLen == 0) {
-        AppPrintError("Failed to read the input content\n");
+        AppPrintError("client: Failed to read the input content\n");
         return HITLS_APP_STDIN_FAIL;
     }
+
+    /* Remove trailing newline if present */
+    if (readLen > 0 && readBuf[readLen - 1] == '\n') {
+        readBuf[readLen - 1] = '\0';
+    }
+
     if (strcmp(readBuf, "y") != 0 && strcmp(readBuf, "Y") != 0 && strcmp(readBuf, "yes") != 0 &&
         strcmp(readBuf, "YES") != 0 && strcmp(readBuf, "Yes") != 0) {
-        AppPrintError("cancel send key to server.\n");
+        AppPrintError("client: Cancel send key to server.\n");
         return HITLS_APP_INVALID_ARG;
     }
     return HITLS_APP_SUCCESS;
@@ -845,7 +850,7 @@ static int32_t CreateConfigAndConnection(HITLS_ClientParams *params, HITLS_Confi
     HITLS_Ctx **ctx)
 {
     int ret = HITLS_APP_SUCCESS;
-    
+
     HITLS_Config *configTmp = NULL;
     BSL_UIO *uioTmp = NULL;
     HITLS_Ctx *ctxTmp = NULL;
@@ -909,26 +914,29 @@ int HITLS_ClientMain(int argc, char *argv[])
     HITLS_Ctx *ctx = NULL;
     BSL_UIO *uio = NULL;
     int ret = HITLS_APP_SUCCESS;
-    
+
     /* Initialize library */
     /* BSL memory callbacks are already set up in BSL module */
     BSL_ERR_Init();
-    
+
     /* Initialize print UIO for error and info output */
     ret = AppPrintErrorUioInit(stderr);
     if (ret != HITLS_APP_SUCCESS) {
+        AppPrintError("client: Failed to initialize err uio: 0x%x\n", ret);
+        AppPrintErrorUioUnInit();
         return HITLS_APP_INIT_FAILED;
     }
-    
+
     ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_ALL);
     if (ret != CRYPT_SUCCESS) {
-        AppPrintError("Failed to initialize crypto library: 0x%x\n", ret);
+        AppPrintError("client: Failed to initialize crypto library: 0x%x\n", ret);
+        AppPrintErrorUioUnInit();
         return HITLS_APP_INIT_FAILED;
     }
-    
+
     HITLS_CertMethodInit();
     HITLS_CryptMethodInit();
-    
+
     /* Parse command line options */
     ret = ParseClientOptions(argc, argv, &params, &appProvider);
     if (ret != HITLS_APP_SUCCESS) {
@@ -954,7 +962,7 @@ int HITLS_ClientMain(int argc, char *argv[])
         AppPrintError("client: Failed to create config and connection: 0x%x\n", ret);
         goto cleanup;
     }
-    
+
     /* Exit after handshake if requested */
     if (params.prexit) {
         if (!params.quiet) {
@@ -963,19 +971,19 @@ int HITLS_ClientMain(int argc, char *argv[])
         ret = HITLS_APP_SUCCESS;
         goto cleanup;
     }
-    
+
     /* Handle data exchange */
     ret = HandleClientDataExchange(ctx, &params);
     
 cleanup:
     CleanupClientResources(ctx, config, uio);
-    
+
     if (!params.quiet && ret == HITLS_APP_SUCCESS) {
         AppPrintInfo("Client completed successfully\n");
     }
     HITLS_APP_Deinit(&initParam, ret);
     /* Cleanup print UIO */
     AppPrintErrorUioUnInit();
-    
+
     return ret;
 }

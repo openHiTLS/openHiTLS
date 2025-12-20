@@ -88,13 +88,16 @@ void UT_HITLS_APP_crl_TC001(void)
         {5, argv[2], HITLS_APP_SUCCESS},
         {7, argv[3], HITLS_APP_SUCCESS},
         {6, argv[4], HITLS_APP_UIO_FAIL},
-        {6, argv[5], HITLS_APP_UIO_FAIL},
+        {6, argv[5], HITLS_APP_DECODE_FAIL},
         {9, argv[6], HITLS_APP_SUCCESS},
         {9, argv[7], HITLS_APP_SUCCESS}
     };
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_CrlMain(testData[i].argc, testData[i].argv);
+        if (ret != testData[i].expect) {
+            printf("I is %d\n", i);
+        }
         ASSERT_EQ(ret, testData[i].expect);
     }
 
@@ -122,8 +125,8 @@ void UT_HITLS_APP_crl_TC002(void)
     };
 
     OptTestData testData[] = {{2, argv[0], HITLS_APP_OPT_UNKOWN},
-        {3, argv[1], HITLS_APP_UIO_FAIL},
-        {5, argv[2], HITLS_APP_UIO_FAIL},
+        {3, argv[1], HITLS_APP_DECODE_FAIL},
+        {5, argv[2], HITLS_APP_DECODE_FAIL},
         {5, argv[3], HITLS_APP_OPT_UNKOWN},
         {6, argv[4], HITLS_APP_UIO_FAIL},
         {8, argv[5], HITLS_APP_UIO_FAIL}};
@@ -131,6 +134,9 @@ void UT_HITLS_APP_crl_TC002(void)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_CrlMain(testData[i].argc, testData[i].argv);
+        if (ret != testData[i].expect) {
+            printf("I is %d\n", i);
+        }
         ASSERT_EQ(ret, testData[i].expect);
     }
 

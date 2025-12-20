@@ -99,7 +99,7 @@ static const HITLS_CmdOption g_x509Opts[] = {
     {"passin", HITLS_APP_OPT_PASSIN, HITLS_APP_OPT_VALUETYPE_STRING, "Private key and cert file pass-phrase source"},
     {"CA", HITLS_APP_OPT_CA, HITLS_APP_OPT_VALUETYPE_IN_FILE, "CA certificate, must be PEM format"},
     {"CAkey", HITLS_APP_OPT_CA_KEY, HITLS_APP_OPT_VALUETYPE_IN_FILE, "CA key, must be PEM format"},
-    {"userId", HITLS_APP_OPT_USERID, HITLS_APP_OPT_VALUETYPE_STRING, "sm2 userId, default is null"},
+    {"userid", HITLS_APP_OPT_USERID, HITLS_APP_OPT_VALUETYPE_STRING, "User ID for SM2"},
     {NULL, 0, 0, NULL},
 };
 
@@ -456,7 +456,7 @@ static int32_t X509OptSetSerial(X509OptCtx *optCtx)
 {
     char *str = HITLS_APP_OptGetValueStr();
 
-    int32_t ret = HITLS_APP_HexToByte(str, 1, &optCtx->certOpts.serial, &optCtx->certOpts.serialLen);
+    int32_t ret = HITLS_APP_ParseHex(str, true, &optCtx->certOpts.serial, &optCtx->certOpts.serialLen);
     if (ret != HITLS_APP_SUCCESS) {
         AppPrintError("x509: Invalid serial: %s.\n", str);
     }

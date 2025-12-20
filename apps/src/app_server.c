@@ -114,7 +114,7 @@ typedef enum {
     HITLS_SERVER_OPT_MAX,
 } HITLS_ServerOptType;
 
-/* Command line options for s_server */
+/* Command line options for server */
 static const HITLS_CmdOption g_serverOptions[] = {
     /* Listen options */
     {"accept",      HITLS_SERVER_OPT_ACCEPT,      HITLS_APP_OPT_VALUETYPE_STRING,      "Listen on host:port"},

@@ -53,7 +53,7 @@ UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in":HITLS_APP_OPT_UNKOWN
 UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in no_exist.pem":HITLS_APP_LOAD_CERT_FAIL
 
 "-in": dir
-UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ./testdata1":HITLS_APP_LOAD_CERT_FAIL
+UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ./testdata":HITLS_APP_LOAD_CERT_FAIL
 
 "-in": expect cert but csr
 UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/sm2.ca_v1.csr":HITLS_APP_LOAD_CERT_FAIL
@@ -189,7 +189,7 @@ UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss
 UT_HITLS_APP_X509_InvalidOpt_TC001:"x509 -in ../testdata/cert/asn1/print/rsa.intca.crt -fingerprint -noout -md shake128":HITLS_APP_SUCCESS
 
 UT_HITLS_APP_X509_NormalOpt_TC001
-UT_HITLS_APP_X509_NormalOpt_TC001:"x509 -req -days 3650 -signkey ../testdata/apps/x509/sm2.key -in ../testdata/apps/x509/sm2.csr -userId 1234567812345678 -out sm2.crt -md sm3"
+UT_HITLS_APP_X509_NormalOpt_TC001:"x509 -req -days 3650 -signkey ../testdata/apps/x509/sm2.key -in ../testdata/apps/x509/sm2.csr -userid 1234567812345678 -out sm2.crt -md sm3"
 
 FormatConvert: PEM->PEM
 UT_HITLS_APP_X509_FormatConvert_TC001:"x509 -in ../testdata/cert/asn1/print/rsa_pss.root.big.crt -inform PEM -out x509.out -outform PEM":"./x509.out":"../testdata/cert/asn1/print/rsa_pss.root.crt"

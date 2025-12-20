@@ -137,7 +137,8 @@ int ConfigureCipherSuites(HITLS_Config *config, const char *cipherStr, APP_Proto
 
     // Parse each cipher suite
     uint32_t index = 0;
-    char *token = strtok(cipherStrCopy, ":");
+    char *nextTmp = NULL;
+    char *token = strtok_s(cipherStrCopy, ":", &nextTmp);
     while (token != NULL && index < cipherCount) {
         const HITLS_Cipher *cipher = HITLS_CFG_GetCipherSuiteByStdName((const uint8_t *)token);
         if (cipher == NULL) {
@@ -167,7 +168,7 @@ int ConfigureCipherSuites(HITLS_Config *config, const char *cipherStr, APP_Proto
         }
 
         index++;
-        token = strtok(NULL, ":");
+        token = strtok_s(NULL, ":", &nextTmp);
     }
 
     // Set cipher suite array

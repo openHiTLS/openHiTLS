@@ -52,8 +52,8 @@ typedef struct {
 
 static const HITLS_CmdOption g_genrsaOpts[] = {
     {"help", HITLS_APP_OPT_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Display this function summary"},
-    {"cipher", HITLS_APP_OPT_CIPHER, HITLS_APP_OPT_VALUETYPE_STRING, "Secret key cryptography"},
-    {"out", HITLS_APP_OPT_OUT_FILE, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output the rsa key to specified file"},
+    {"cipher", HITLS_APP_OPT_CIPHER, HITLS_APP_OPT_VALUETYPE_STRING, "Cipher algorithm to encrypt the private key"},
+    {"out", HITLS_APP_OPT_OUT_FILE, HITLS_APP_OPT_VALUETYPE_OUT_FILE, "Output file"},
     {"numbits", HITLS_APP_OPT_NUMBITS, HITLS_APP_OPT_VALUETYPE_PARAMTERS, "RSA key length, command line tail value"},
     {NULL, 0, 0, NULL}
 };
@@ -73,14 +73,13 @@ static int32_t GetAlgId(const char *name)
 int32_t HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag)
 {
     BSL_UI_ReadPwdParam param = {"password", NULL, flag};
-    char *tmp = NULL;
     char *pwd = NULL;
     uint32_t pwdLen;
     int32_t errLen = -1;
     if (buf == NULL) {
         return errLen;
     }
-    if (HITLS_APP_GetPasswd(&param, &tmp, (uint8_t **)&pwd, &pwdLen) != HITLS_APP_SUCCESS) {
+    if (HITLS_APP_GetPasswd(&param, &pwd, &pwdLen) != HITLS_APP_SUCCESS) {
         AppPrintError("Failed to read passwd from stdin.\n");
         return errLen;
     }

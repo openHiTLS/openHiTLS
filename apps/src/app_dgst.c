@@ -122,7 +122,7 @@ static int32_t HashValToFinal(
         AppPrintError("dgst: Failed to alloc memory.\n");
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
-    if (HITLS_APP_OptToHex(hashBuf, hashBufLen, hexBuf, hexBufLen + 1) != HITLS_APP_SUCCESS) {
+    if (HITLS_APP_BytesToHex(hashBuf, hashBufLen, hexBuf, hexBufLen + 1) != HITLS_APP_SUCCESS) {
         BSL_SAL_FREE(hexBuf);
         return HITLS_APP_ENCODE_FAIL;
     }
@@ -470,41 +470,6 @@ static int32_t CalculateDgst(char *outfile)
     return ret;
 }
 
-static int32_t GetReadBuf(uint8_t **buf, uint64_t *bufLen, char *inFile, uint32_t maxSize)
-{
-    if (buf == NULL || bufLen == NULL || *bufLen > UINT32_MAX) {
-        AppPrintError("dgst: Invalid parameters for GetReadBuf\n");
-        return HITLS_APP_INVALID_ARG;
-    }
-    if (inFile == NULL) {
-        BSL_Buffer data = {0};
-        int32_t ret = HITLS_APP_ReadData(NULL, NULL, "msg", &data);
-        if (ret != HITLS_APP_SUCCESS) {
-            AppPrintError("dgst: Failed to read the content from stdin\n");
-            return ret;
-        }
-        *buf = data.data;
-        *bufLen = data.dataLen;
-        return HITLS_APP_SUCCESS;
-    }
-    BSL_UIO *readUio = HITLS_APP_UioOpen(inFile, 'r', 0);
-    if (readUio == NULL) {
-        if (inFile == NULL) {
-            AppPrintError("dgst: Failed to open stdin\n");
-        } else {
-            AppPrintError("dgst: Failed to open the file <%s>, No such file or directory\n", inFile);
-        }
-        return HITLS_APP_UIO_FAIL;
-    }
-    int32_t ret = HITLS_APP_OptReadUio(readUio, buf, bufLen, maxSize);
-    if (ret != HITLS_APP_SUCCESS) {
-        AppPrintError("dgst: Failed to read the content from the file <%s>\n", inFile);
-    }
-    BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
-    BSL_UIO_Free(readUio);
-    return ret;
-}
-
 #ifdef HITLS_APP_SM_MODE
 static int32_t GetPkeyCtxFromUuid(SignInfo *signInfo, char *uuid, CRYPT_EAL_PkeyCtx **ctx)
 {
@@ -538,9 +503,8 @@ static int32_t CalculateSign(char *outfile, uint8_t *msgBuf, uint32_t msgBufLen)
             }
         } else {
 #endif
-            ret = GetReadBuf(&prvBuf, &bufLen, g_signInfo.privateKeyFile, MAX_CERT_KEY_SIZE);
+            ret = HITLS_APP_ReadFileOrStdin(&prvBuf, &bufLen, g_signInfo.privateKeyFile, MAX_CERT_KEY_SIZE, "dgst");
             if (ret != HITLS_APP_SUCCESS) {
-                AppPrintError("dgst: Failed to read the private key file\n");
                 break;
             }
             prv.data = prvBuf;
@@ -623,9 +587,8 @@ static int32_t GetPubKeyCtx(CRYPT_EAL_PkeyCtx **ctx)
         }
     }
 #endif
-    ret = GetReadBuf(&pubBuf, &bufLen, g_signInfo.publicKeyFile, MAX_CERT_KEY_SIZE);
+    ret = HITLS_APP_ReadFileOrStdin(&pubBuf, &bufLen, g_signInfo.publicKeyFile, MAX_CERT_KEY_SIZE, "dgst");
     if (ret != HITLS_APP_SUCCESS) {
-        AppPrintError("dgst: Failed to read the public key file\n");
         return ret;
     }
     pub.data = pubBuf;
@@ -656,9 +619,8 @@ static int32_t VerifySign(uint8_t *msgBuf, uint32_t msgBufLen)
         if (ret != HITLS_APP_SUCCESS) {
             break;
         }
-        ret = GetReadBuf(&signBuf, &signLen, g_signInfo.signatureFile, UINT32_MAX);
+        ret = HITLS_APP_ReadFileOrStdin(&signBuf, &signLen, g_signInfo.signatureFile, UINT32_MAX, "dgst");
         if (ret != HITLS_APP_SUCCESS) {
-            AppPrintError("dgst: Failed to read the signature file\n");
             break;
         }
         hexLen = signLen / APP_HEX_TO_BYTE + 1;
@@ -668,7 +630,7 @@ static int32_t VerifySign(uint8_t *msgBuf, uint32_t msgBufLen)
             ret = HITLS_APP_MEM_ALLOC_FAIL;
             break;
         }
-        ret = HITLS_APP_StrToHex((const char *)signBuf, hexBuf, &hexLen);
+        ret = HITLS_APP_HexToBytes((const char *)signBuf, hexBuf, &hexLen);
         if (ret != HITLS_APP_SUCCESS) {
             AppPrintError("dgst: Failed to convert signature to hex, ret=%d\n", ret);
             break;
@@ -834,13 +796,13 @@ int32_t HITLS_DgstMain(int argc, char *argv[])
     if (g_signInfo.privateKeyFile == NULL && g_signInfo.publicKeyFile == NULL) {
         mainRet = CalculateDgst(outfile);
     } else if (g_signInfo.privateKeyFile != NULL && g_signInfo.publicKeyFile == NULL) {
-        mainRet = GetReadBuf(&msgBuf, &msgBufLen, msgFile, UINT32_MAX);
+        mainRet = HITLS_APP_ReadFileOrStdin(&msgBuf, &msgBufLen, msgFile, UINT32_MAX, "dgst");
         if (mainRet != HITLS_APP_SUCCESS) {
             goto end;
         }
         mainRet = CalculateSign(outfile, msgBuf, (uint32_t)msgBufLen);
     } else if (g_signInfo.publicKeyFile != NULL && g_signInfo.signatureFile != NULL) {
-        mainRet = GetReadBuf(&msgBuf, &msgBufLen, msgFile, UINT32_MAX);
+        mainRet = HITLS_APP_ReadFileOrStdin(&msgBuf, &msgBufLen, msgFile, UINT32_MAX, "dgst");
         if (mainRet != HITLS_APP_SUCCESS) {
             goto end;
         }

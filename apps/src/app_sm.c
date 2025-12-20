@@ -167,11 +167,10 @@ static int32_t CheckPassword(const uint8_t *password, const uint32_t passwordLen
 
 static int32_t GetPassword(char **password)
 {
-    char *tmp = NULL;
     char *pwd = NULL;
     uint32_t pwdLen;
     BSL_UI_ReadPwdParam param = {"password", NULL, true};
-    if (HITLS_APP_GetPasswd(&param, &tmp, (uint8_t **)&pwd, &pwdLen) != HITLS_APP_SUCCESS) {
+    if (HITLS_APP_GetPasswd(&param, &pwd, &pwdLen) != HITLS_APP_SUCCESS) {
         AppPrintError("Failed to read passwd from stdin.\n");
         return HITLS_APP_PASSWD_FAIL;
     }
@@ -280,22 +279,17 @@ static int32_t VerifyHMAC(AppProvider *provider, int32_t macId, const uint8_t *d
 
 static int32_t WriteUserFile(char *userFile, UserInfo *userInfo)
 {
-    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_FileMethod());
+    // Simplified: use HITLS_APP_UioOpen instead of manual BSL_UIO_New + Ctrl
+    BSL_UIO *uio = HITLS_APP_UioOpen(userFile, 'w', 0);
     if (uio == NULL) {
-        AppPrintError("Failed to create uio.\n");
-        return HITLS_APP_UIO_FAIL;
-    }
-    int32_t ret = BSL_UIO_Ctrl(uio, BSL_UIO_FILE_OPEN, BSL_UIO_FILE_WRITE, userFile);
-    if (ret != BSL_SUCCESS) {
-        AppPrintError("Failed to open userFile, errCode: 0x%x.\n", ret);
-        BSL_UIO_Free(uio);
+        AppPrintError("Failed to open userFile for writing: %s\n", userFile);
         return HITLS_APP_UIO_FAIL;
     }
     BSL_UIO_SetIsUnderlyingClosedByUio(uio, true);
 
     UserInfoOrderCvt(userInfo, true);
     uint32_t writeLen = 0;
-    ret = BSL_UIO_Write(uio, userInfo, sizeof(UserInfo), &writeLen);
+    int32_t ret = BSL_UIO_Write(uio, userInfo, sizeof(UserInfo), &writeLen);
     if (ret != BSL_SUCCESS || writeLen != sizeof(UserInfo)) {
         BSL_UIO_Free(uio);
         AppPrintError("Failed to write userFile, errCode: 0x%x, writeLen: %u.\n", ret, writeLen);
@@ -307,22 +301,17 @@ static int32_t WriteUserFile(char *userFile, UserInfo *userInfo)
 
 static int32_t ReadUserFile(char *userFile, UserInfo *userInfo)
 {
-    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_FileMethod());
+    // Simplified: use HITLS_APP_UioOpen instead of manual BSL_UIO_New + Ctrl
+    BSL_UIO *uio = HITLS_APP_UioOpen(userFile, 'r', 0);
     if (uio == NULL) {
-        AppPrintError("Failed to create uio.\n");
-        return HITLS_APP_UIO_FAIL;
-    }
-    int32_t ret = BSL_UIO_Ctrl(uio, BSL_UIO_FILE_OPEN, BSL_UIO_FILE_READ, userFile);
-    if (ret != BSL_SUCCESS) {
-        AppPrintError("Failed to open userFile, errCode: 0x%x.\n", ret);
-        BSL_UIO_Free(uio);
+        AppPrintError("Failed to open userFile: %s\n", userFile);
         return HITLS_APP_UIO_FAIL;
     }
 
     BSL_UIO_SetIsUnderlyingClosedByUio(uio, true);
 
     uint32_t readLen = 0;
-    ret = BSL_UIO_Read(uio, userInfo, sizeof(UserInfo), &readLen);
+    int32_t ret = BSL_UIO_Read(uio, userInfo, sizeof(UserInfo), &readLen);
     if (ret != BSL_SUCCESS || readLen != sizeof(UserInfo)) {
         BSL_UIO_Free(uio);
         AppPrintError("Failed to read userFile, errCode: 0x%x, readLen: %u.\n", ret, readLen);
@@ -582,7 +571,7 @@ static int32_t GetAppExpectHmac(const char *appPath, uint8_t *hmac, uint32_t *hm
             ret = HITLS_APP_INVALID_ARG;
             break;
         }
-        ret = HITLS_APP_StrToHex(tmp, hmac, hmacLen);
+        ret = HITLS_APP_HexToBytes(tmp, hmac, hmacLen);
         if (ret != HITLS_APP_SUCCESS) {
             AppPrintError("Failed to convert hmac, errCode: 0x%x.\n", ret);
             break;

@@ -109,87 +109,6 @@ end:
     return writeRet;
 }
 
-static int32_t GetRsaByStd(uint8_t **readBuf, uint64_t *readBufLen)
-{
-    AppPrintError("Please enter the key content\n");
-    size_t rsaDataCapacity = DEFAULT_RSA_SIZE;
-    void *rsaData = BSL_SAL_Calloc(rsaDataCapacity, 1);
-    if (rsaData == NULL) {
-        return HITLS_APP_MEM_ALLOC_FAIL;
-    }
-    size_t rsaDataSize = 0;
-    bool isMatchRsaData = false;
-    uint32_t i = 0;
-    char *header[] = {"-----BEGIN RSA PRIVATE KEY-----\n",
-        "-----BEGIN PRIVATE KEY-----\n", "-----BEGIN ENCRYPTED PRIVATE KEY-----\n"};
-    char *tail[] = {"-----END RSA PRIVATE KEY-----\n",
-        "-----END PRIVATE KEY-----\n", "-----END ENCRYPTED PRIVATE KEY-----\n"};
-    uint32_t num = (uint32_t)sizeof(header) / sizeof(header[0]);
-    while (true) {
-        char *buf = NULL;
-        size_t bufLen = 0;
-        ssize_t readLen = getline(&buf, &bufLen, stdin);
-        if (readLen <= 0) {
-            BSL_SAL_FREE(buf);
-            AppPrintError("Failed to obtain the standard input.\n");
-            break;
-        }
-        if ((rsaDataSize + readLen) > rsaDataCapacity) {
-            // If the space is insufficient, expand the capacity by twice.
-            size_t newRsaDataCapacity = rsaDataCapacity << 1;
-            /* If the space is insufficient for two times of capacity expansion,
-            expand the capacity based on the actual length. */
-            if ((rsaDataSize + readLen) > newRsaDataCapacity) {
-                newRsaDataCapacity = rsaDataSize + readLen;
-            }
-            rsaData = ExpandingMem(rsaData, newRsaDataCapacity, rsaDataCapacity);
-            rsaDataCapacity = newRsaDataCapacity;
-        }
-        if (memcpy_s(rsaData + rsaDataSize, rsaDataCapacity - rsaDataSize, buf, readLen) != 0) {
-            BSL_SAL_FREE(buf);
-            BSL_SAL_FREE(rsaData);
-            return HITLS_APP_SECUREC_FAIL;
-        }
-        rsaDataSize += readLen;
-        i *= (uint32_t)isMatchRsaData; // reset 0 if false.
-        while (!isMatchRsaData && (i < num)) {
-            if (strcmp(buf, header[i]) == 0) {
-                isMatchRsaData = true;
-                break;
-            }
-            i++;
-        }
-        if (isMatchRsaData && (strcmp(buf, tail[i]) == 0)) {
-            BSL_SAL_FREE(buf);
-            break;
-        }
-        BSL_SAL_FREE(buf);
-    }
-    *readBuf = rsaData;
-    *readBufLen = rsaDataSize;
-    return (rsaDataSize > 0) ? HITLS_APP_SUCCESS : HITLS_APP_STDIN_FAIL;
-}
-
-static int32_t UioReadToBuf(uint8_t **readBuf, uint64_t *readBufLen, const char *infile, int32_t flag)
-{
-    int32_t readRet = HITLS_APP_SUCCESS;
-    if (infile == NULL) {
-        readRet = GetRsaByStd(readBuf, readBufLen);
-    } else {
-        BSL_UIO *uio = HITLS_APP_UioOpen(infile, 'r', flag);
-        if (uio == NULL) {
-            AppPrintError("Failed to open the file <%s>, No such file or directory\n", infile);
-            return HITLS_APP_UIO_FAIL;
-        }
-        readRet = HITLS_APP_OptReadUio(uio, readBuf, readBufLen, RSA_MAX_LEN);
-        BSL_UIO_SetIsUnderlyingClosedByUio(uio, true);
-        BSL_UIO_Free(uio);
-        if (readRet != HITLS_APP_SUCCESS) {
-            AppPrintError("Failed to read the file: <%s>\n", infile);
-        }
-    }
-    return readRet;
-}
 
 static int32_t OptParse(char **infile, OutputInfo *outInfo)
 {
@@ -238,8 +157,7 @@ static int32_t OptParse(char **infile, OutputInfo *outInfo)
 int32_t HITLS_RsaMain(int argc, char *argv[])
 {
     char *infile = NULL;
-    uint64_t readBufLen = 0;
-    uint8_t *readBuf = NULL;
+    char *passin = NULL;
     int32_t mainRet = HITLS_APP_SUCCESS;
     OutputInfo outInfo = {HITLS_APP_FORMAT_PEM, false, false, NULL};
     CRYPT_EAL_PkeyCtx *ealPKey = NULL;
@@ -258,41 +176,16 @@ int32_t HITLS_RsaMain(int argc, char *argv[])
         mainRet = HITLS_APP_OPT_UNKOWN;
         goto end;
     }
-    mainRet = UioReadToBuf(
-        &readBuf, &readBufLen, infile, 0);  // Read the content of the input file from the file to the buffer.
-    if (mainRet != HITLS_APP_SUCCESS) {
-        goto end;
-    }
-    BSL_Buffer read = {readBuf, readBufLen};
-    mainRet = CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_RSA, &read, NULL, 0, &ealPKey);
-    if (mainRet == BSL_PEM_SYMBOL_NOT_FOUND) {
-        mainRet = CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &read, NULL, 0, &ealPKey);
-    }
-    if (mainRet == BSL_PEM_SYMBOL_NOT_FOUND || mainRet == BSL_PEM_NO_PWD) {
-        char pwd[APP_MAX_PASS_LENGTH + 1] = {0};
-        int32_t pwdLen = HITLS_APP_Passwd(pwd, APP_MAX_PASS_LENGTH + 1, 0);
-        if (pwdLen == -1) {
-            mainRet = HITLS_APP_PASSWD_FAIL;
-            goto end;
-        }
-        if (mainRet == BSL_PEM_SYMBOL_NOT_FOUND) {
-            mainRet = CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_ENCRYPT,
-                &read, (uint8_t *)pwd, pwdLen, &ealPKey);
-        } else {
-            mainRet = CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_RSA,
-                &read, (uint8_t *)pwd, pwdLen, &ealPKey);
-        }
-        (void)memset_s(pwd, APP_MAX_PASS_LENGTH, 0, APP_MAX_PASS_LENGTH);
-    }
-    if (mainRet != CRYPT_SUCCESS) {
-        AppPrintError("Decode failed.\n");
+    ealPKey = HITLS_APP_LoadPrvKey(infile, BSL_FORMAT_PEM, &passin);
+    if (ealPKey == NULL) {
+        AppPrintError("Failed to load RSA private key.\n");
         mainRet = HITLS_APP_DECODE_FAIL;
         goto end;
     }
     mainRet = BufWriteToUio(ealPKey, outInfo);  // Selective output based on command line parameters.
 end:
     CRYPT_EAL_PkeyFreeCtx(ealPKey);
-    BSL_SAL_FREE(readBuf);
+    BSL_SAL_FREE(passin);
     HITLS_APP_OptEnd();
     return mainRet;
 }

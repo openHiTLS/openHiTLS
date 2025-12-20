@@ -323,30 +323,6 @@ static int32_t ParsepkeyUtlOpt(PkeyUtlOpt *pkeyUtlOpt)
     return ret;
 }
 
-static int32_t GetReadBuf(uint8_t **buf, uint64_t *bufLen, char *inFile, uint32_t maxSize)
-{
-    if (buf == NULL || bufLen == NULL) {
-        AppPrintError("pkeyutl: Invalid parameters for GetReadBuf\n");
-        return HITLS_APP_INVALID_ARG;
-    }
-    BSL_UIO *readUio = HITLS_APP_UioOpen(inFile, 'r', 0);
-    BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
-    if (readUio == NULL) {
-        if (inFile == NULL) {
-            AppPrintError("pkeyutl: Failed to open stdin\n");
-        } else {
-            AppPrintError("pkeyutl: Failed to open the file <%s>, No such file or directory\n", inFile);
-        }
-        return HITLS_APP_UIO_FAIL;
-    }
-    int32_t ret = HITLS_APP_OptReadUio(readUio, buf, bufLen, maxSize);
-    if (ret != HITLS_APP_SUCCESS) {
-        AppPrintError("pkeyutl: Failed to read the content from the file <%s>\n", inFile);
-    }
-    BSL_UIO_Free(readUio);
-    return ret;
-}
-
 static int32_t CheckFilePathLength(const PkeyUtlOpt *opt)
 {
     // Check all file path length
@@ -478,9 +454,8 @@ static int32_t GetPubKeyCtx(PkeyUtlOpt *pkeyUtlOpt, CRYPT_EAL_PkeyCtx **ctx)
         }
     }
 #endif
-    ret = GetReadBuf(&pubBuf, &bufLen, pkeyUtlOpt->pubinFile, MAX_CERT_KEY_SIZE);
+    ret = HITLS_APP_ReadFileOrStdin(&pubBuf, &bufLen, pkeyUtlOpt->pubinFile, MAX_CERT_KEY_SIZE, "pkeyutl");
     if (ret != HITLS_APP_SUCCESS) {
-        AppPrintError("pkeyutl: Failed to read the public key file\n");
         return ret;
     }
     pub.data = pubBuf;
@@ -516,7 +491,7 @@ static int32_t PkeyEncrypt(PkeyUtlOpt *pkeyUtlOpt)
             pkeyUtlOpt->smParam->status = HITLS_APP_SM_STATUS_APPORVED;
         }
 #endif
-        ret = GetReadBuf(&plainText, &plainTextLen, pkeyUtlOpt->inFile, MAX_CERT_KEY_SIZE);
+        ret = HITLS_APP_ReadFileOrStdin(&plainText, &plainTextLen, pkeyUtlOpt->inFile, MAX_CERT_KEY_SIZE, "pkeyutl");
         if (ret != HITLS_APP_SUCCESS) {
             break;
         }
@@ -575,9 +550,8 @@ static int32_t PkeyDecrypt(PkeyUtlOpt *pkeyUtlOpt)
             }
         } else {
 #endif
-            ret = GetReadBuf(&priBuf, &priLen, pkeyUtlOpt->prvinFile, MAX_CERT_KEY_SIZE);
+            ret = HITLS_APP_ReadFileOrStdin(&priBuf, &priLen, pkeyUtlOpt->prvinFile, MAX_CERT_KEY_SIZE, "pkeyutl");
             if (ret != HITLS_APP_SUCCESS) {
-                AppPrintError("pkeyutl: Failed to read private key file for decryption.\n");
                 break;
             }
             prv.data = priBuf;
@@ -595,9 +569,8 @@ static int32_t PkeyDecrypt(PkeyUtlOpt *pkeyUtlOpt)
             pkeyUtlOpt->smParam->status = HITLS_APP_SM_STATUS_APPORVED;
         }
 #endif
-        ret = GetReadBuf(&cipherText, &cipherLen, pkeyUtlOpt->inFile, UINT32_MAX);
+        ret = HITLS_APP_ReadFileOrStdin(&cipherText, &cipherLen, pkeyUtlOpt->inFile, UINT32_MAX, "pkeyutl");
         if (ret != HITLS_APP_SUCCESS) {
-            AppPrintError("pkeyutl: Failed to read input ciphertext file.\n");
             break;
         }
         hexLen = cipherLen / APP_HEX_TO_BYTE + 1;
@@ -607,7 +580,7 @@ static int32_t PkeyDecrypt(PkeyUtlOpt *pkeyUtlOpt)
             ret = HITLS_APP_MEM_ALLOC_FAIL;
             break;
         }
-        ret = HITLS_APP_StrToHex((const char *)cipherText, hexBuf, &hexLen);
+        ret = HITLS_APP_HexToBytes((const char *)cipherText, hexBuf, &hexLen);
         if (ret != HITLS_APP_SUCCESS) {
             AppPrintError("pkeyutl: Failed to convert signature to hex.");
             break;
@@ -659,9 +632,8 @@ static int32_t GetPeerCtx(CRYPT_EAL_PkeyCtx **peerCtx, PkeyUtlOpt *pkeyUtlOpt)
     uint32_t hexLen;
     BSL_Buffer pub = {0};
     do {
-        ret = GetReadBuf(&pubBuf, &pubLen, pkeyUtlOpt->peerkeyFile, MAX_CERT_KEY_SIZE);
+        ret = HITLS_APP_ReadFileOrStdin(&pubBuf, &pubLen, pkeyUtlOpt->peerkeyFile, MAX_CERT_KEY_SIZE, "pkeyutl");
         if (ret != HITLS_APP_SUCCESS) {
-            AppPrintError("pkeyutl: Failed to read peer public key file for exchange.\n");
             break;
         }
         pub.data = pubBuf;
@@ -673,9 +645,8 @@ static int32_t GetPeerCtx(CRYPT_EAL_PkeyCtx **peerCtx, PkeyUtlOpt *pkeyUtlOpt)
             ret = HITLS_APP_CRYPTO_FAIL;
             break;
         }
-        ret = GetReadBuf(&inRBuf, &inRLen, pkeyUtlOpt->inRFile, MAX_CERT_KEY_SIZE);
+        ret = HITLS_APP_ReadFileOrStdin(&inRBuf, &inRLen, pkeyUtlOpt->inRFile, MAX_CERT_KEY_SIZE, "pkeyutl");
         if (ret != HITLS_APP_SUCCESS) {
-            AppPrintError("pkeyutl: Failed to read R file for exchange.\n");
             break;
         }
         hexLen = inRLen / APP_HEX_TO_BYTE + 1;
@@ -685,7 +656,7 @@ static int32_t GetPeerCtx(CRYPT_EAL_PkeyCtx **peerCtx, PkeyUtlOpt *pkeyUtlOpt)
             ret = HITLS_APP_MEM_ALLOC_FAIL;
             break;
         }
-        ret = HITLS_APP_StrToHex((const char *)inRBuf, hexBuf, &hexLen);
+        ret = HITLS_APP_HexToBytes((const char *)inRBuf, hexBuf, &hexLen);
         if (ret != HITLS_APP_SUCCESS) {
             AppPrintError("pkeyutl: Failed to convert R to hex.");
             break;
@@ -898,9 +869,8 @@ static int32_t PkeyDerive(PkeyUtlOpt *pkeyUtlOpt)
             }
         } else {
 #endif
-            ret = GetReadBuf(&priBuf, &priLen, pkeyUtlOpt->inkeyFile, MAX_CERT_KEY_SIZE);
+            ret = HITLS_APP_ReadFileOrStdin(&priBuf, &priLen, pkeyUtlOpt->inkeyFile, MAX_CERT_KEY_SIZE, "pkeyutl");
             if (ret != HITLS_APP_SUCCESS) {
-                AppPrintError("pkeyutl: Failed to read private key file for exchange.\n");
                 break;
             }
             prv.data = priBuf;

@@ -306,12 +306,7 @@ static CRYPT_EAL_KdfCTX *InitAlgKdf(KdfOpt *kdfOpt)
 
 static int32_t KdfParsePass(KdfOpt *kdfOpt, uint8_t **pass, uint32_t *passLen)
 {
-    size_t len;
-    if (kdfOpt->pass != NULL) {
-        len = strlen((const char *)kdfOpt->pass);
-    } else {
-        len = strlen((const char *)kdfOpt->hexPass);
-    }
+    size_t len = kdfOpt->pass != NULL ? strlen((const char *)kdfOpt->pass) : strlen((const char *)kdfOpt->hexPass);
     if (len > UINT32_MAX) {
         AppPrintError("kdf: pass length overflow.\n");
         return HITLS_APP_INVALID_ARG;
@@ -320,7 +315,7 @@ static int32_t KdfParsePass(KdfOpt *kdfOpt, uint8_t **pass, uint32_t *passLen)
         *passLen = (uint32_t)len;
         *pass = (uint8_t *)kdfOpt->pass;
     } else {
-        int32_t ret = HITLS_APP_HexToByte(kdfOpt->hexPass, 1, pass, passLen);
+        int32_t ret = HITLS_APP_ParseHex(kdfOpt->hexPass, true, pass, passLen);
         if (ret != HITLS_APP_SUCCESS) {
             AppPrintError("kdf:Invalid pass: %s.\n", kdfOpt->hexPass);
             return ret;
@@ -331,12 +326,7 @@ static int32_t KdfParsePass(KdfOpt *kdfOpt, uint8_t **pass, uint32_t *passLen)
 
 static int32_t KdfParseSalt(KdfOpt *kdfOpt, uint8_t **salt, uint32_t *saltLen)
 {
-    size_t len;
-    if (kdfOpt->salt != NULL) {
-        len = strlen((const char *)kdfOpt->salt);
-    } else {
-        len = strlen((const char *)kdfOpt->hexSalt);
-    }
+    size_t len = kdfOpt->salt != NULL ? strlen((const char *)kdfOpt->salt) : strlen((const char *)kdfOpt->hexSalt);
     if (len > UINT32_MAX) {
         AppPrintError("kdf: salt length overflow.\n");
         return HITLS_APP_INVALID_ARG;
@@ -345,7 +335,7 @@ static int32_t KdfParseSalt(KdfOpt *kdfOpt, uint8_t **salt, uint32_t *saltLen)
         *saltLen = (uint32_t)len;
         *salt = (uint8_t *)kdfOpt->salt;
     } else {
-        int32_t ret = HITLS_APP_HexToByte(kdfOpt->hexSalt, 1, salt, saltLen);
+        int32_t ret = HITLS_APP_ParseHex(kdfOpt->hexSalt, true, salt, saltLen);
         if (ret != HITLS_APP_SUCCESS) {
             AppPrintError("kdf:Invalid salt: %s.\n", kdfOpt->hexSalt);
             return ret;

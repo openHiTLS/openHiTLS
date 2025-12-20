@@ -526,23 +526,23 @@ int32_t HITLS_APP_OptToBase64(uint8_t *inBuf, uint32_t inBufLen, char *outBuf, u
     return HITLS_APP_SUCCESS;
 }
 
-int32_t HITLS_APP_OptToHex(uint8_t *inBuf, uint32_t inBufLen, char *outBuf, uint32_t outBufLen)
+int32_t HITLS_APP_BytesToHex(const uint8_t *bytes, uint32_t bytesLen, char *hexStr, uint32_t hexStrSize)
 {
     // One byte is encoded into hex and becomes 2 bytes.
     int32_t hexCharSize = 2;
-    if (inBuf == NULL || outBuf == NULL || inBufLen == 0 || outBufLen < hexCharSize * inBufLen + 1) {
+    if (bytes == NULL || hexStr == NULL || bytesLen == 0 || hexStrSize < hexCharSize * bytesLen + 1) {
         AppPrintError("opt: Invalid input buffer or output buffer.\n");
         return HITLS_APP_INTERNAL_EXCEPTION;
     }
     const char *hexChars = "0123456789abcdef";
     size_t pos = 0;
 
-    for (size_t i = 0; i < inBufLen; ++i) {
-        outBuf[pos++] = hexChars[(inBuf[i] >> 4) & 0xF]; // high 4 bits.
-        outBuf[pos++] = hexChars[inBuf[i] & 0xF]; // low 4 bits.
+    for (size_t i = 0; i < bytesLen; ++i) {
+        hexStr[pos++] = hexChars[(bytes[i] >> 4) & 0xF]; // high 4 bits.
+        hexStr[pos++] = hexChars[bytes[i] & 0xF]; // low 4 bits.
     }
 
-    outBuf[pos] = '\0';
+    hexStr[pos] = '\0';
     return HITLS_APP_SUCCESS;
 }
 
@@ -579,7 +579,7 @@ int32_t HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t bufLen, int32
             outRet = HITLS_APP_OptToBase64(buf, bufLen, outBuf, outBufLen + 1);
             break;
         case HITLS_APP_FORMAT_HEX:
-            outRet = HITLS_APP_OptToHex(buf, bufLen, outBuf, outBufLen + 1);
+            outRet = HITLS_APP_BytesToHex(buf, bufLen, outBuf, outBufLen + 1);
             break;
         default:
             outRet = memcpy_s(outBuf, outBufLen, buf, bufLen);

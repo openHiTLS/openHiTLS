@@ -35,7 +35,7 @@
 /* ============================================================================
  * Stub Definitions
  * ============================================================================ */
-STUB_DEFINE_RET3(int32_t, HITLS_APP_Passwd, char *, int32_t, int32_t);
+STUB_DEFINE_RET3(int32_t, HITLS_APP_GetPasswd, BSL_UI_ReadPwdParam *, char **, uint32_t *);
 
 
 #define BSL_SUCCESS 0
@@ -46,13 +46,13 @@ typedef struct {
     int expect;
 } GenrsaTestData;
 
-int32_t STUB_HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag)
+int32_t STUB_HITLS_APP_GetPasswd(BSL_UI_ReadPwdParam *param, char **passin, uint32_t *passLen)
 {
-    (void)flag;
-    (void)memcpy_s(buf, bufMaxLen, "12345678", 8);
-    return 8;
+    (void)param;
+    *passin = strdup("12345678");
+    *passLen = strlen(*passin);
+    return HITLS_APP_SUCCESS;
 }
-
 /**
  * @test UT_HITLS_APP_genrsa_TC001
  * @spec  -
@@ -61,7 +61,7 @@ int32_t STUB_HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag)
 /* BEGIN_CASE */
 void UT_HITLS_APP_genrsa_TC001(void)
 {
-    STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
+    STUB_REPLACE(HITLS_APP_GetPasswd, STUB_HITLS_APP_GetPasswd);;
     char *argv[][10] = {
         {"genrsa", "-help"},
         {"genrsa", "-cipher", "aes128_cbc", "1024"},
@@ -93,7 +93,7 @@ void UT_HITLS_APP_genrsa_TC001(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_RESTORE(HITLS_APP_Passwd);
+    STUB_RESTORE(HITLS_APP_GetPasswd);
     return;
 }
 /* END_CASE */
@@ -101,7 +101,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_genrsa_TC002(void)
 {
-    STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
+    STUB_REPLACE(HITLS_APP_GetPasswd, STUB_HITLS_APP_GetPasswd);;
     char *argv[][10] = {
         {"",       "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "2048"},
         {"genrsa", "",        "aes128_cbc", "-out", "GenrsaOutFile_1", "2048"},
@@ -120,7 +120,7 @@ void UT_HITLS_APP_genrsa_TC002(void)
     ASSERT_EQ(HITLS_GenRSAMain(6, argv[5]), HITLS_APP_OPT_VALUE_INVALID);
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_RESTORE(HITLS_APP_Passwd);
+    STUB_RESTORE(HITLS_APP_GetPasswd);
     return;
 }
 /* END_CASE */
@@ -128,7 +128,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_genrsa_TC003(void)
 {
-    STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
+    STUB_REPLACE(HITLS_APP_GetPasswd, STUB_HITLS_APP_GetPasswd);;
     char *argv[][10] = {
         {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "2048"},
     };
@@ -138,7 +138,7 @@ void UT_HITLS_APP_genrsa_TC003(void)
     ASSERT_EQ(HITLS_GenRSAMain(7, argv[0]), HITLS_APP_OPT_UNKOWN);
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_RESTORE(HITLS_APP_Passwd);
+    STUB_RESTORE(HITLS_APP_GetPasswd);
     return;
 }
 /* END_CASE */
@@ -146,7 +146,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_genrsa_TC004(void)
 {
-    STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
+    STUB_REPLACE(HITLS_APP_GetPasswd, STUB_HITLS_APP_GetPasswd);;
     char *argv[][10] = {
         {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "1023"},
         {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile_1", "1025"},
@@ -171,7 +171,7 @@ void UT_HITLS_APP_genrsa_TC004(void)
     ASSERT_EQ(HITLS_GenRSAMain(6, argv[8]), HITLS_APP_OPT_VALUE_INVALID);
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_RESTORE(HITLS_APP_Passwd);
+    STUB_RESTORE(HITLS_APP_GetPasswd);
     return;
 }
 /* END_CASE */
@@ -179,7 +179,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_genrsa_TC005(void)
 {
-    STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
+    STUB_REPLACE(HITLS_APP_GetPasswd, STUB_HITLS_APP_GetPasswd);;
     char *argv[][10] = {
         {"genrsa", "-cipher", "aes128_cbc", "-out", "GenrsaOutFile", "1024"},
         {"genrsa", "-cipher", "aes192_cbc", "-out", "GenrsaOutFile", "1024"},
@@ -209,11 +209,14 @@ void UT_HITLS_APP_genrsa_TC005(void)
         ret = HITLS_RsaMain(4, rsaArg[0]);
         fflush(stdout);
         freopen("/dev/tty", "w", stdout);
+        if (ret != HITLS_APP_SUCCESS) {
+            printf("I is %d\n", i);
+        }
         ASSERT_EQ(ret, HITLS_APP_SUCCESS);
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_RESTORE(HITLS_APP_Passwd);
+    STUB_RESTORE(HITLS_APP_GetPasswd);
     return;
 }
 /* END_CASE */

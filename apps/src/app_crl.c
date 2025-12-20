@@ -126,106 +126,6 @@ static int32_t VerifyCrlFile(const char *caFile, const HITLS_X509_Crl *crl)
     return HITLS_APP_SUCCESS;
 }
 
-
-static int32_t GetCrlInfoByStd(uint8_t **infileBuf, uint64_t *infileBufLen)
-{
-    AppPrintError("Please enter the key content\n");
-    size_t crlDataCapacity = DEFAULT_CERT_SIZE;
-    void *crlData = BSL_SAL_Calloc(crlDataCapacity, 1);
-    if (crlData == NULL) { return HITLS_APP_MEM_ALLOC_FAIL; }
-    size_t crlDataSize = 0;
-    bool isMatchCrlData = false;
-    while (true) {
-        char *buf = NULL;
-        size_t bufLen = 0;
-        ssize_t readLen = getline(&buf, &bufLen, stdin);
-        if (readLen <= 0) {
-            BSL_SAL_FREE(buf);
-            AppPrintError("Failed to obtain the standard input.\n");
-            break;
-        }
-        if ((crlDataSize + readLen) > MAX_CRLFILE_SIZE) {
-            BSL_SAL_FREE(buf);
-            BSL_SAL_FREE(crlData);
-            AppPrintError("The stdin supports a maximum of %zu bytes.\n", MAX_CRLFILE_SIZE);
-            return HITLS_APP_STDIN_FAIL;
-        }
-        if ((crlDataSize + readLen) > crlDataCapacity) {
-            // If the space is insufficient, expand the capacity by twice.
-            size_t newCrlDataCapacity = crlDataCapacity << 1;
-            /* If the space is insufficient for two times of capacity expansion,
-            expand the capacity based on the actual length. */
-            if ((crlDataSize + readLen) > newCrlDataCapacity) {
-                newCrlDataCapacity = crlDataSize + readLen;
-            }
-            crlData = ExpandingMem(crlData, newCrlDataCapacity, crlDataCapacity);
-            crlDataCapacity = newCrlDataCapacity;
-        }
-        if (memcpy_s(crlData + crlDataSize, crlDataCapacity - crlDataSize, buf, readLen) != 0) {
-            BSL_SAL_FREE(buf);
-            BSL_SAL_FREE(crlData);
-            return HITLS_APP_SECUREC_FAIL;
-        }
-        crlDataSize += readLen;
-        if (strcmp(buf, "-----BEGIN X509 CRL-----\n") == 0) {
-            isMatchCrlData = true;
-        }
-        if (isMatchCrlData && (strcmp(buf, "-----END X509 CRL-----\n") == 0)) {
-            BSL_SAL_FREE(buf);
-            break;
-        }
-        BSL_SAL_FREE(buf);
-    }
-    *infileBuf = crlData;
-    *infileBufLen = crlDataSize;
-    return (crlDataSize > 0) ? HITLS_APP_SUCCESS : HITLS_APP_STDIN_FAIL;
-}
-
-static int32_t GetCrlInfoByFile(char *infile, uint8_t **infileBuf, uint64_t *infileBufLen)
-{
-    int32_t readRet = HITLS_APP_SUCCESS;
-    BSL_UIO *uio = HITLS_APP_UioOpen(infile, 'r', 0);
-    if (uio == NULL) {
-        AppPrintError("Failed to open the CRL from <%s>, No such file or directory\n", infile);
-        return HITLS_APP_UIO_FAIL;
-    }
-    readRet = HITLS_APP_OptReadUio(uio, infileBuf, infileBufLen, MAX_CRLFILE_SIZE);
-    BSL_UIO_SetIsUnderlyingClosedByUio(uio, true);
-    BSL_UIO_Free(uio);
-    if (readRet != HITLS_APP_SUCCESS) {
-        AppPrintError("Failed to read the CRL from <%s>\n", infile);
-        return readRet;
-    }
-    return HITLS_APP_SUCCESS;
-}
-
-static int32_t GetCrlInfo(char *infile, uint8_t **infileBuf, uint64_t *infileBufLen)
-{
-    int32_t getRet = HITLS_APP_SUCCESS;
-    if (infile == NULL) {
-        getRet = GetCrlInfoByStd(infileBuf, infileBufLen);
-    } else {
-        getRet = GetCrlInfoByFile(infile, infileBuf, infileBufLen);
-    }
-    return getRet;
-}
-
-static int32_t GetAndDecCRL(CrlInfo *outInfo, uint8_t **infileBuf, uint64_t *infileBufLen, HITLS_X509_Crl **crl)
-{
-    int32_t ret = GetCrlInfo(outInfo->infile, infileBuf, infileBufLen);  // Obtaining the CRL File Content
-    if (ret != HITLS_APP_SUCCESS) {
-        AppPrintError("Failed to obtain the content of the CRL file.\n");
-        return ret;
-    }
-    BSL_Buffer buff = {*infileBuf, *infileBufLen};
-    ret = HITLS_X509_CrlParseBuff(outInfo->inform, &buff, crl);
-    if (ret != HITLS_PKI_SUCCESS) {
-        AppPrintError("Failed to decode the CRL file.\n");
-        return HITLS_APP_DECODE_FAIL;
-    }
-    return HITLS_APP_SUCCESS;
-}
-
 static int32_t OutCrlFileInfo(BSL_UIO *uio, HITLS_X509_Crl *crl, uint32_t format)
 {
     BSL_Buffer encode = {0};
@@ -328,8 +228,6 @@ int32_t  HITLS_CrlMain(int argc, char *argv[])
 {
     CrlInfo crlInfo = {0, BSL_FORMAT_PEM, NULL, NULL, NULL, false, false, NULL};
     HITLS_X509_Crl *crl = NULL;
-    uint8_t *infileBuf = NULL;
-    uint64_t infileBufLen = 0;
     int32_t mainRet = HITLS_APP_OptBegin(argc, argv, g_crlOpts);
     if (mainRet != HITLS_APP_SUCCESS) {
         AppPrintError("error in opt begin.\n");
@@ -346,9 +244,10 @@ int32_t  HITLS_CrlMain(int argc, char *argv[])
         mainRet = HITLS_APP_OPT_UNKOWN;
         goto end;
     }
-    mainRet = GetAndDecCRL(&crlInfo, &infileBuf, &infileBufLen, &crl);
-    if (mainRet != HITLS_APP_SUCCESS) {
-        HITLS_X509_CrlFree(crl);
+    crl = HITLS_APP_LoadCrl(crlInfo.infile, crlInfo.inform);
+    if (crl == NULL) {
+        AppPrintError("Failed to load CRL.\n");
+        mainRet = HITLS_APP_DECODE_FAIL;
         goto end;
     }
     crlInfo.uio = HITLS_APP_UioOpen(crlInfo.outfile, 'w', 0);
@@ -377,7 +276,6 @@ int32_t  HITLS_CrlMain(int argc, char *argv[])
 
 end:
     HITLS_X509_CrlFree(crl);
-    BSL_SAL_FREE(infileBuf);
     BSL_UIO_Free(crlInfo.uio);
     HITLS_APP_OptEnd();
     return mainRet;

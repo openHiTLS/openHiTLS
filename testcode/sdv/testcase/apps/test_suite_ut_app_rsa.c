@@ -45,7 +45,7 @@ STUB_DEFINE_RET4(int32_t, BSL_UIO_Ctrl, BSL_UIO *, int32_t, int32_t, void *);
 STUB_DEFINE_RET0(char *, HITLS_APP_OptGetValueStr);
 STUB_DEFINE_RET4(int32_t, HITLS_APP_OptWriteUio, BSL_UIO *, uint8_t *, uint32_t, int32_t);
 STUB_DEFINE_RET5(int32_t, CRYPT_EAL_EncodeBuffKey, CRYPT_EAL_PkeyCtx *, const CRYPT_EncodeParam *, int32_t, int32_t, BSL_Buffer *);
-STUB_DEFINE_RET3(int32_t, HITLS_APP_Passwd, char *, int32_t, int32_t);
+STUB_DEFINE_RET3(int32_t, HITLS_APP_GetPasswd, BSL_UI_ReadPwdParam *, char **, uint32_t *);
 
 #define PRV_PATH "../testdata/certificate/rsa_key/prvKey.pem"
 #define PRV_PASSWD_PATH "../testdata/cert/asn1/keypem/rsa-pri-key-p8-2048.pem"
@@ -88,7 +88,7 @@ void UT_HITLS_APP_rsa_TC001(void)
         {6, argv[2], HITLS_APP_SUCCESS},
         {7, argv[3], HITLS_APP_SUCCESS},
         {5, argv[4], HITLS_APP_UIO_FAIL},
-        {4, argv[5], HITLS_APP_UIO_FAIL}
+        {4, argv[5], HITLS_APP_DECODE_FAIL}
 
     };
 
@@ -97,6 +97,9 @@ void UT_HITLS_APP_rsa_TC001(void)
         int ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
         fflush(stdout);
         freopen("/dev/tty", "w", stdout);
+        if (ret != testData[i].expect) {
+            printf("I is %d\n", i);
+        }
         ASSERT_EQ(ret, testData[i].expect);
     }
 EXIT:
@@ -441,17 +444,19 @@ EXIT:
 }
 /* END_CASE */
 
-int32_t STUB_HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag)
+int32_t STUB_HITLS_APP_GetPasswd(BSL_UI_ReadPwdParam *param, char **passin, uint32_t *passLen)
 {
-    (void)flag;
-    (void)memcpy_s(buf, bufMaxLen, "123456", 6);
-    return 6;
+    (void)param;
+    *passin = (char *)malloc(6);
+    memcpy_s(*passin, 6, "123456", 6);
+    *passLen = 6;
+    return HITLS_APP_SUCCESS;
 }
 
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T0011(void)
 {
-    STUB_REPLACE(HITLS_APP_Passwd, STUB_HITLS_APP_Passwd);;
+    STUB_REPLACE(HITLS_APP_GetPasswd, STUB_HITLS_APP_GetPasswd);;
     char *argv[][10] = {
         {"rsa", "-in", PRV_PASSWD_PATH, "-noout"},
         {"rsa", "-in", PRV_DER_PATH, "-noout"},
@@ -474,7 +479,7 @@ void UT_HITLS_APP_rsa_T0011(void)
     }
 EXIT:
     AppPrintErrorUioUnInit();
-    STUB_RESTORE(HITLS_APP_Passwd);
+    STUB_RESTORE(HITLS_APP_GetPasswd);
     return;
 }
 /* END_CASE */
