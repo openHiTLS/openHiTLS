@@ -309,6 +309,12 @@ static const CRYPT_EAL_AlgInfo g_defEalKeyMgmt[] = {
 #ifdef HITLS_CRYPTO_MLKEM
     {CRYPT_PKEY_ML_KEM, g_defEalKeyMgmtMlKem, CRYPT_EAL_DEFAULT_ATTR},
 #endif
+#ifdef HITLS_CRYPTO_FRODOKEM
+    {CRYPT_PKEY_FRODOKEM, g_defEalKeyMgmtFrodoKem, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+    {CRYPT_PKEY_MCELIECE, g_defEalKeyMgmtMceliece, CRYPT_EAL_DEFAULT_ATTR},
+#endif
 #ifdef HITLS_CRYPTO_MLDSA
     {CRYPT_PKEY_ML_DSA, g_defEalKeyMgmtMlDsa, CRYPT_EAL_DEFAULT_ATTR},
 #endif
@@ -391,6 +397,12 @@ static const CRYPT_EAL_AlgInfo g_defEalSigns[] = {
 static const CRYPT_EAL_AlgInfo g_defEalKems[] = {
 #ifdef HITLS_CRYPTO_MLKEM
     {CRYPT_PKEY_ML_KEM, g_defEalMlKem, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_FRODOKEM
+    {CRYPT_PKEY_FRODOKEM, g_defEalFrodoKem, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+    {CRYPT_PKEY_MCELIECE, g_defEalMceliece, CRYPT_EAL_DEFAULT_ATTR},
 #endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
     {CRYPT_PKEY_HYBRID_KEM, g_defEalHybridKeyKem, CRYPT_EAL_DEFAULT_ATTR},

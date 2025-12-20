@@ -18,7 +18,8 @@
     defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDSA) || \
     defined(HITLS_CRYPTO_ECDH) || defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_PAILLIER) || \
     defined(HITLS_CRYPTO_ELGAMAL) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_MLKEM) || \
-    defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_HYBRIDKEM)) && defined(HITLS_CRYPTO_PROVIDER)
+    defined(HITLS_CRYPTO_MLDSA) || defined(HILTS_CRYPTO_FRODOKEM) || defined(HITLS_CRYPTO_CLASSIC_MCELIECE) || \
+    defined(HITLS_CRYPTO_HYBRIDKEM)) && defined(HITLS_CRYPTO_PROVIDER)
 
 #include "crypt_eal_implprovider.h"
 #ifdef HITLS_CRYPTO_DSA
@@ -54,6 +55,13 @@
 #ifdef HITLS_CRYPTO_MLKEM
 #include "crypt_mlkem.h"
 #endif
+#ifdef HITLS_CRYPTO_FRODOKEM
+#include "crypt_frodokem.h"
+#endif
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#include "crypt_mceliece.h"
+#endif
+
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
 #endif
@@ -129,6 +137,14 @@ void *CRYPT_EAL_DefPkeyMgmtNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
 #ifdef HITLS_CRYPTO_XMSS
         case CRYPT_PKEY_XMSS:
             return CRYPT_XMSS_NewCtxEx(provCtx->libCtx);
+#endif
+#ifdef HITLS_CRYPTO_FRODOKEM
+        case CRYPT_PKEY_FRODOKEM:
+            return CRYPT_FRODOKEM_NewCtxEx(provCtx->libCtx);
+#endif
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+        case CRYPT_PKEY_MCELIECE:
+            return CRYPT_MCELIECE_NewCtxEx(provCtx->libCtx);
 #endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
         case CRYPT_PKEY_HYBRID_KEM:
@@ -388,6 +404,38 @@ const CRYPT_EAL_Func g_defEalKeyMgmtMlKem[] = {
 #endif
     {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_ML_KEM_Ctrl},
     {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)CRYPT_ML_KEM_FreeCtx},
+    CRYPT_EAL_FUNC_END,
+};
+#endif
+
+#ifdef HITLS_CRYPTO_FRODOKEM
+const CRYPT_EAL_Func g_defEalKeyMgmtFrodoKem[] = {
+    {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_DefPkeyMgmtNewCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)CRYPT_FRODOKEM_Gen},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, (CRYPT_EAL_ImplPkeyMgmtSetPrv)CRYPT_FRODOKEM_SetPrvKeyEx},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPUB, (CRYPT_EAL_ImplPkeyMgmtSetPub)CRYPT_FRODOKEM_SetPubKeyEx},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPRV, (CRYPT_EAL_ImplPkeyMgmtGetPrv)CRYPT_FRODOKEM_GetPrvKeyEx},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPUB, (CRYPT_EAL_ImplPkeyMgmtGetPub)CRYPT_FRODOKEM_GetPubKeyEx},
+    {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, (CRYPT_EAL_ImplPkeyMgmtDupCtx)CRYPT_FRODOKEM_DupCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_FRODOKEM_Ctrl},
+    {CRYPT_EAL_IMPLPKEYMGMT_COMPARE, (CRYPT_EAL_ImplPkeyMgmtCompare)CRYPT_FRODOKEM_Cmp},
+    {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)CRYPT_FRODOKEM_FreeCtx},
+    CRYPT_EAL_FUNC_END,
+};
+#endif
+
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+const CRYPT_EAL_Func g_defEalKeyMgmtMceliece[] = {
+    {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_DefPkeyMgmtNewCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)CRYPT_MCELIECE_Gen},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, (CRYPT_EAL_ImplPkeyMgmtSetPrv)CRYPT_MCELIECE_SetPrvKeyEx},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPUB, (CRYPT_EAL_ImplPkeyMgmtSetPub)CRYPT_MCELIECE_SetPubKeyEx},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPRV, (CRYPT_EAL_ImplPkeyMgmtGetPrv)CRYPT_MCELIECE_GetPrvKeyEx},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPUB, (CRYPT_EAL_ImplPkeyMgmtGetPub)CRYPT_MCELIECE_GetPubKeyEx},
+    {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, (CRYPT_EAL_ImplPkeyMgmtDupCtx)CRYPT_MCELIECE_DupCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_MCELIECE_Ctrl},
+    {CRYPT_EAL_IMPLPKEYMGMT_COMPARE, (CRYPT_EAL_ImplPkeyMgmtCompare)CRYPT_MCELIECE_Cmp},
+    {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)CRYPT_MCELIECE_FreeCtx},
     CRYPT_EAL_FUNC_END,
 };
 #endif

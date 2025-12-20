@@ -172,6 +172,8 @@
                         },
                         "kem": {
                             "mlkem": {"deps": ["sha3"]},
+                            "frodokem": {"deps": ["sha3", "aes"]},
+                            "mceliece": {"deps": ["sha3"]},
                             "hybridkem": {"deps": ["mlkem"], "opts": ["ecdh", "x25519"]}
                         },
                         "mldsa": {"deps": ["sha3", "obj_default"]},
@@ -794,6 +796,8 @@
                     "crypto/paillier/include",
                     "crypto/elgamal/include",
                     "crypto/mlkem/include",
+                    "crypto/frodokem/include",
+                    "crypto/mceliece/include",
                     "crypto/mldsa/include",
                     "crypto/hybridkem/include",
                     "crypto/provider/include",
@@ -1147,6 +1151,8 @@
                     "crypto/ecdh/include",
                     "crypto/sm2/include",
                     "crypto/mlkem/include",
+                    "crypto/frodokem/include",
+                    "crypto/mceliece/include",
                     "crypto/bn/include",
                     "crypto/ecc/include",
                     "crypto/hmac/include",
@@ -1351,6 +1357,18 @@
                 ".features": ["mlkem"],
                 ".srcs": "crypto/mlkem/src/*.c",
                 ".deps": ["crypto::sha3", "bsl::sal"],
+                ".include": ["crypto/eal/src"]
+            },
+            "frodokem": {
+                ".features": ["frodokem"],
+                ".srcs": "crypto/frodokem/src/*.c",
+                ".deps": ["crypto::sha3", "bsl::sal"],
+                ".include": ["crypto/eal/src"]
+            },
+            "mceliece": {
+                ".features": ["mceliece"],
+                ".srcs": "crypto/mceliece/src/*.c",
+                ".deps": ["crypto::sha3", "bsl::sal", "crypto::drbg"],
                 ".include": ["crypto/eal/src"]
             },
             "mldsa": {

@@ -343,6 +343,12 @@
     #ifndef HITLS_CRYPTO_MLKEM
         #define HITLS_CRYPTO_MLKEM
     #endif
+    #ifndef HITLS_CRYPTO_FRODOKEM
+        #define HITLS_CRYPTO_FRODOKEM
+    #endif
+    #ifndef HITLS_CRYPTO_CLASSIC_MCELIECE
+        #define HITLS_CRYPTO_CLASSIC_MCELIECE
+    #endif
     #ifndef HITLS_CRYPTO_HYBRIDKEM
         #define HITLS_CRYPTO_HYBRIDKEM
     #endif
@@ -602,6 +608,21 @@
     #endif
 #endif
 
+#ifdef HITLS_CRYPTO_FRODOKEM
+    #ifndef HITLS_CRYPTO_SHA3
+        #define HITLS_CRYPTO_SHA3
+    #endif
+    #ifndef HITLS_CRYPTO_AES
+        #define HITLS_CRYPTO_AES
+    #endif
+#endif
+
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+    #ifndef HITLS_CRYPTO_SHA3
+        #define HITLS_CRYPTO_SHA3
+    #endif
+#endif
+
 #ifdef HITLS_CRYPTO_MLDSA
     #ifndef HITLS_CRYPTO_SHA3
         #define HITLS_CRYPTO_SHA3
@@ -692,11 +713,12 @@
     #define HITLS_CRYPTO_DSA_CHECK
 #endif
 
-#if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_CURVE25519) || defined(HITLS_CRYPTO_RSA) || \
-    defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_ECDH) ||      \
-    defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_SM9) || defined(HITLS_CRYPTO_PAILLIER)|| defined(HITLS_CRYPTO_ELGAMAL) || \
-    defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_MLKEM) || defined(HITLS_CRYPTO_HYBRIDKEM) || \
-    defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_XMSS)
+#if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_CURVE25519) || defined(HITLS_CRYPTO_RSA) ||     \
+    defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_ECDH) ||          \
+    defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_SM9) || defined(HITLS_CRYPTO_PAILLIER) ||       \
+    defined(HITLS_CRYPTO_ELGAMAL) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_MLKEM) ||    \
+    defined(HITLS_CRYPTO_HYBRIDKEM) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_XMSS) || \
+    defined(HITLS_CRYPTO_FRODOKEM) || defined(HITLS_CRYPTO_CLASSIC_MCELIECE)
     #ifndef HITLS_CRYPTO_PKEY
         #define HITLS_CRYPTO_PKEY
     #endif
@@ -727,8 +749,9 @@
     #endif
 #endif
 
-#if (defined(HITLS_CRYPTO_MLKEM) || defined(HITLS_CRYPTO_HYBRIDKEM)) && !defined(HITLS_CRYPTO_PKEY_KEM)
-    #define HITLS_CRYPTO_PKEY_KEM
+#if (defined(HITLS_CRYPTO_MLKEM) || defined(HITLS_CRYPTO_FRODOKEM) || defined(HITLS_CRYPTO_CLASSIC_MCELIECE) || \
+     defined(HITLS_CRYPTO_HYBRIDKEM)) && !defined(HITLS_CRYPTO_PKEY_KEM)
+#define HITLS_CRYPTO_PKEY_KEM
 #endif
 
 #ifdef HITLS_CRYPTO_PKEY_CMP

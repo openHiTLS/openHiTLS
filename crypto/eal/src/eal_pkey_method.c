@@ -71,6 +71,13 @@
 #ifdef HITLS_CRYPTO_XMSS
 #include "crypt_xmss.h"
 #endif
+#ifdef HITLS_CRYPTO_FRODOKEM
+#include "crypt_frodokem.h"
+#endif
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#include "crypt_mceliece.h"
+#endif
+
 #include "bsl_err_internal.h"
 #include "crypt_types.h"
 #include "crypt_errno.h"
@@ -274,6 +281,43 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL  // unBlind
 #endif
     ),
+#endif
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+        EAL_PKEY_METHOD_DEFINE(
+                CRYPT_PKEY_MCELIECE,
+                CRYPT_MCELIECE_NewCtx,
+                CRYPT_MCELIECE_DupCtx,
+                CRYPT_MCELIECE_FreeCtx,
+                NULL, // setPara
+                NULL, // getPara
+                CRYPT_MCELIECE_Gen,
+                CRYPT_MCELIECE_Ctrl,
+                CRYPT_MCELIECE_SetPubKeyEx,
+                CRYPT_MCELIECE_SetPrvKeyEx,
+                CRYPT_MCELIECE_GetPubKeyEx,
+                CRYPT_MCELIECE_GetPrvKeyEx,
+                NULL, // sign
+                NULL, // signData
+                NULL, // verify
+                NULL, // verifyData
+                NULL, // recover
+                NULL, // computeShareKey
+                NULL, // encrypt
+                NULL, // decrypt
+                NULL, // headd
+                NULL, // hemul
+#ifdef HITLS_CRYPTO_MCELIECE_CHECK
+                CRYPT_MCELIECE_Check,
+#else
+                NULL, // check
+#endif
+                CRYPT_MCELIECE_Cmp,
+                NULL, // copyPara
+                CRYPT_MCELIECE_Encaps,
+                CRYPT_MCELIECE_Decaps,
+                NULL, // blind
+                NULL  // unBlind
+        ),
 #endif
 #ifdef HITLS_CRYPTO_DH
     EAL_PKEY_METHOD_DEFINE(
@@ -591,6 +635,43 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL, // copyPara
         CRYPT_ML_KEM_Encaps,
         CRYPT_ML_KEM_Decaps,
+        NULL, // blind
+        NULL  // unBlind
+    ),
+#endif
+#ifdef HITLS_CRYPTO_FRODOKEM
+    EAL_PKEY_METHOD_DEFINE(
+        CRYPT_PKEY_FRODOKEM,
+        CRYPT_FRODOKEM_NewCtx,
+        CRYPT_FRODOKEM_DupCtx,
+        CRYPT_FRODOKEM_FreeCtx,
+        NULL, // setPara
+        NULL, // getPara
+        CRYPT_FRODOKEM_Gen,
+        CRYPT_FRODOKEM_Ctrl,
+        CRYPT_FRODOKEM_SetPubKeyEx,
+        CRYPT_FRODOKEM_SetPrvKeyEx,
+        CRYPT_FRODOKEM_GetPubKeyEx,
+        CRYPT_FRODOKEM_GetPrvKeyEx,
+        NULL, // sign
+        NULL, // signData
+        NULL, // verify
+        NULL, // verifyData
+        NULL, // recover
+        NULL, // computeShareKey
+        NULL, // encrypt
+        NULL, // decrypt
+        NULL, // headd
+        NULL, // hemul
+#ifdef HITLS_CRYPTO_FRODOKEM_CHECK
+        CRYPT_FRODOKEM_Check,
+#else
+        NULL, // check
+#endif
+        CRYPT_FRODOKEM_Cmp,
+        NULL, // copyPara
+        CRYPT_FRODOKEM_Encaps,
+        CRYPT_FRODOKEM_Decaps,
         NULL, // blind
         NULL  // unBlind
     ),

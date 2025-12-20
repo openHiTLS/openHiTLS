@@ -349,6 +349,22 @@ int32_t PkeyProviderSetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *key
             return pkey->method.setPrv(pkey->key, &paParam);
         }
 #endif
+#ifdef HITLS_CRYPTO_FRODOKEM
+        case CRYPT_PKEY_FRODOKEM : {
+            BSL_Param paParam[2] = {
+                {CRYPT_PARAM_FRODOKEM_PRVKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemDk.data, key->key.kemDk.len, 0},
+                BSL_PARAM_END};
+            return pkey->method.setPrv(pkey->key, &paParam);
+        }
+#endif
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+        case CRYPT_PKEY_MCELIECE: {
+            BSL_Param paParam[2] = {
+                {CRYPT_PARAM_MCELIECE_PRVKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemDk.data, key->key.kemDk.len, 0},
+                BSL_PARAM_END};
+            return pkey->method.setPrv(pkey->key, &paParam);
+        }
+#endif
 #ifdef HITLS_CRYPTO_MLDSA
         case CRYPT_PKEY_ML_DSA: {
             BSL_Param paParam[2] = {
@@ -473,6 +489,38 @@ static int32_t GetMlkemPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemDecapsKey *ke
 }
 #endif
 
+#ifdef HITLS_CRYPTO_FRODOKEM
+static int32_t GetFrodoKemPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemDecapsKey *kemDk)
+{
+    BSL_Param param[2] = {
+        {CRYPT_PARAM_FRODOKEM_PRVKEY, BSL_PARAM_TYPE_OCTETS, kemDk->data, kemDk->len, 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = pkey->method.getPrv(pkey->key, &param);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    kemDk->len = param[0].useLen;
+    return CRYPT_SUCCESS;
+}
+#endif
+
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+static int32_t GetMceliecePrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemDecapsKey *kemDk)
+{
+    BSL_Param param[2] = {
+        {CRYPT_PARAM_MCELIECE_PRVKEY, BSL_PARAM_TYPE_OCTETS, kemDk->data, kemDk->len, 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = pkey->method.getPrv(pkey->key, &param);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    kemDk->len = param[0].useLen;
+    return CRYPT_SUCCESS;
+}
+#endif
+
 #ifdef HITLS_CRYPTO_MLDSA
 static int32_t GetMldsaPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_MlDsaPrv *dsaPrv)
 {
@@ -579,6 +627,14 @@ int32_t PkeyProviderGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *key
         case CRYPT_PKEY_ML_KEM:
             return GetMlkemPrv(pkey, &key->key.kemDk);
 #endif
+#ifdef HITLS_CRYPTO_FRODOKEM
+        case CRYPT_PKEY_FRODOKEM:
+            return GetFrodoKemPrv(pkey, &key->key.kemDk);
+#endif
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+        case CRYPT_PKEY_MCELIECE:
+            return GetMceliecePrv(pkey, &key->key.kemDk);
+#endif
 #ifdef HITLS_CRYPTO_MLDSA
         case CRYPT_PKEY_ML_DSA:
             return GetMldsaPrv(pkey, &key->key.mldsaPrv);
@@ -665,6 +721,22 @@ int32_t PkeyProviderSetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *key
         case CRYPT_PKEY_ML_KEM: {
             BSL_Param paParam[2] = {
                 {CRYPT_PARAM_ML_KEM_PUBKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemEk.data, key->key.kemEk.len, 0},
+                BSL_PARAM_END};
+            return pkey->method.setPub(pkey->key, &paParam);
+        }
+#endif
+#ifdef HITLS_CRYPTO_FRODOKEM
+        case CRYPT_PKEY_FRODOKEM : {
+            BSL_Param paParam[2] = {
+                {CRYPT_PARAM_FRODOKEM_PUBKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemEk.data, key->key.kemEk.len, 0},
+                BSL_PARAM_END};
+            return pkey->method.setPub(pkey->key, &paParam);
+        }
+#endif
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+        case CRYPT_PKEY_MCELIECE : {
+            BSL_Param paParam[2] = {
+                {CRYPT_PARAM_MCELIECE_PUBKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemEk.data, key->key.kemEk.len, 0},
                 BSL_PARAM_END};
             return pkey->method.setPub(pkey->key, &paParam);
         }
@@ -812,6 +884,36 @@ static int32_t GetMlkemPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemEncapsKey *ke
 }
 #endif
 
+#ifdef HITLS_CRYPTO_FRODOKEM
+static int32_t GetFrodoKemPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemEncapsKey *kemEk)
+{
+    BSL_Param param[2] = {
+        {CRYPT_PARAM_FRODOKEM_PUBKEY, BSL_PARAM_TYPE_OCTETS, kemEk->data, kemEk->len, 0},
+        BSL_PARAM_END};
+    int32_t ret = pkey->method.getPub(pkey->key, &param);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    kemEk->len = param[0].useLen;
+    return CRYPT_SUCCESS;
+}
+#endif
+
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+static int32_t GetMceliecePub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemEncapsKey *kemEk)
+{
+    BSL_Param param[2] = {
+        {CRYPT_PARAM_MCELIECE_PUBKEY, BSL_PARAM_TYPE_OCTETS, kemEk->data, kemEk->len, 0},
+        BSL_PARAM_END};
+    int32_t ret = pkey->method.getPub(pkey->key, &param);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    kemEk->len = param[0].useLen;
+    return CRYPT_SUCCESS;
+}
+#endif
+
 #ifdef HITLS_CRYPTO_MLDSA
 static int32_t GetMldsaPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_MlDsaPub *dsaPub)
 {
@@ -912,6 +1014,14 @@ int32_t PkeyProviderGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *key
 #ifdef HITLS_CRYPTO_MLKEM
         case CRYPT_PKEY_ML_KEM:
             return GetMlkemPub(pkey, &key->key.kemEk);
+#endif
+#ifdef HITLS_CRYPTO_FRODOKEM
+        case CRYPT_PKEY_FRODOKEM:
+            return GetFrodoKemPub(pkey, &key->key.kemEk);
+#endif
+#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+        case CRYPT_PKEY_MCELIECE:
+            return GetMceliecePub(pkey, &key->key.kemEk);
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
         case CRYPT_PKEY_ML_DSA:
