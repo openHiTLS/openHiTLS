@@ -711,6 +711,7 @@ int32_t ClientRecvServerHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         /* Calculate the 'server verify data' for verifying the 'finished' message of the server. */
         ret = VERIFY_CalcVerifyData(ctx, false, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
         if (ret != HITLS_SUCCESS) {
+            (void)memset_s(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey), 0, sizeof(ctx->hsCtx->masterKey));
             return RETURN_ALERT_PROCESS(ctx, ret, BINLOG_ID15278,
                 "client Calculate server finished data error", ALERT_INTERNAL_ERROR);
         }

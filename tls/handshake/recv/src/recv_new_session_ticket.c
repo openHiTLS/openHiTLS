@@ -61,7 +61,7 @@ static int32_t UpdateTicket(TLS_Ctx *ctx, NewSessionTicketMsg *msg, uint8_t *psk
 
     HITLS_SESS_Free(ctx->session);
     ctx->session = newSession;
-    
+
 #if defined(HITLS_TLS_FEATURE_SESSION) && defined(HITLS_TLS_PROTO_TLS13)
     if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
         return HITLS_SUCCESS;
@@ -119,6 +119,7 @@ int32_t Tls12ClientRecvNewSeesionTicketProcess(TLS_Ctx *ctx, HS_Msg *hsMsg)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15971, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client Calculate server finished data error.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+        (void)memset_s(hsCtx->masterKey, sizeof(hsCtx->masterKey), 0, sizeof(hsCtx->masterKey));
         return ret;
     }
 
