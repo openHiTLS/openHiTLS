@@ -57,23 +57,6 @@ extern "C" {
  */
 int32_t HITLS_APP_CheckPasswd(const uint8_t *password, const uint32_t passwordLen);
 
-/**
- * @ingroup apps
- *
- * @brief Apps Function for Verifying Passwd Received by the BSL_UI_ReadPwdUtil()
- *
- * @attention callBackData is the default callback structure APP_DefaultPassCBData.
- *
- * @param ui             [IN] Input/Output Stream
- * @param buff           [IN] Buffer for receiving passwd
- * @param buffLen        [IN] Length of the buffer for receiving passwd
- * @param callBackData   [IN] Key verification information.
- *
- * @retval The key is valid：HITLS_APP_SUCCESS
- * @retval The key is invalid：HITLS_APP_PASSWD_FAIL
- */
-int32_t HITLS_APP_DefaultPassCB(BSL_UI *ui, char *buff, uint32_t buffLen, void *callBackData);
-
 int32_t HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag);
 
 void HITLS_APP_PrintPassErrlog(void);

@@ -100,27 +100,6 @@ int32_t HITLS_APP_CheckPasswd(const uint8_t *password, const uint32_t passwordLe
     return HITLS_APP_SUCCESS;
 }
 
-int32_t HITLS_APP_DefaultPassCB(BSL_UI *ui, char *buff, uint32_t buffLen, void *callBackData)
-{
-    if (ui == NULL || buff == NULL || buffLen == 1) {
-        AppPrintError("You have not entered a password.\n");
-        return BSL_UI_INVALID_DATA_ARG;
-    }
-    uint32_t passLen = buffLen - 1;
-    uint32_t maxLength = 0;
-    if (callBackData == NULL) {
-        maxLength = APP_MAX_PASS_LENGTH;
-    } else {
-        APP_DefaultPassCBData *data = callBackData;
-        maxLength = data->maxLen;
-    }
-    if (passLen > maxLength) {
-        HITLS_APP_PrintPassErrlog();
-        return BSL_UI_INVALID_DATA_RESULT;
-    }
-    return BSL_SUCCESS;
-}
-
 static int32_t CheckFileSizeByPath(const char *inFilePath, uint32_t *fileSize)
 {
     size_t getFileSize = 0;

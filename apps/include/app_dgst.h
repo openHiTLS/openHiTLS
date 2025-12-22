@@ -22,12 +22,6 @@
 extern "C" {
 #endif
 
-typedef struct {
-    const int mdId;
-    const char *mdAlgName;
-} HITLS_AlgList;
-
-
 int32_t HITLS_DgstMain(int argc, char *argv[]);
 
 #ifdef __cplusplus

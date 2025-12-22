@@ -38,16 +38,6 @@ extern "C" {
 #define BUF_READABLE_BLOCK             32
 #define IS_SUPPORT_GET_EOF              1
 
-typedef struct {
-    const int cipherId;
-    const char *cipherAlgName;
-} HITLS_CipherAlgList;
-
-typedef struct {
-    const int macId;
-    const char *macAlgName;
-} HITLS_MacAlgList;
-
 int32_t HITLS_EncMain(int argc, char *argv[]);
 
 #ifdef __cplusplus

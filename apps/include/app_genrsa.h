@@ -26,11 +26,6 @@ extern "C" {
 #define REC_MIN_PKEY_LENGTH    512
 #define REC_ALG_NUM_EACHLINE     4
 
-typedef struct {
-    const int id;
-    const char *algName;
-} HITLS_APPAlgList;
-
 int32_t HITLS_GenRSAMain(int argc, char *argv[]);
 
 #ifdef __cplusplus
