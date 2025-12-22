@@ -312,6 +312,10 @@ int32_t HITLS_X509_MatchPattern(uint32_t flags, const char *pattern, const char 
 
 int32_t X509_GetHashId(const HITLS_X509_Asn1AlgId *alg, int32_t *hashId);
 
+int32_t HITLS_X509_CtrlAlgInfo(CRYPT_EAL_PkeyCtx *pubKey, uint32_t hashId, const HITLS_X509_Asn1AlgId *alg);
+
+int32_t HITLS_X509_EncodeObjIdentity(BslCid cid, BSL_ASN1_Buffer *asnBuff);
+
 #ifdef __cplusplus
 }
 #endif

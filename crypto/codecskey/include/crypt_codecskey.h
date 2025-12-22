@@ -78,17 +78,15 @@ void CRYPT_EAL_DeinitRsaPrv(CRYPT_EAL_PkeyPrv *rsaPrv);
 int32_t CRYPT_EAL_GetRsaPssPara(CRYPT_EAL_PkeyCtx *key, CRYPT_RSA_PssPara *para);
 #endif
 
-#ifdef HITLS_PKI_PKCS12_PARSE
+#ifdef HITLS_PKI_CMS_ENCRYPTDATA
 // parse PKCS7-EncryptData：only support PBES2 + PBKDF2.
 int32_t CRYPT_EAL_ParseAsn1PKCS7EncryptedData(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_Buffer *encode,
     const uint8_t *pwd, uint32_t pwdlen, BSL_Buffer *output);
-#endif
 
-#ifdef HITLS_PKI_PKCS12_GEN
 // encode PKCS7-EncryptData：only support PBES2 + PBKDF2.
 int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_Buffer *data,
     const void *encodeParam, BSL_Buffer *encode);
-#endif
+#endif // HITLS_PKI_CMS_ENCRYPTDATA
 
 #ifdef HITLS_CRYPTO_KEY_INFO
 int32_t CRYPT_EAL_PrintPubkey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio);

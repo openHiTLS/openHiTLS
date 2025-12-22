@@ -676,10 +676,23 @@
                             }
                         }
                     },
+                    "cms": {
+                        "cms_data" : {"deps": ["asn1"]},
+                        "cms_digestinfo" : {
+                            "deps": ["asn1"]
+                        },
+                        "cms_signeddata" : {
+                            "deps": ["asn1"]
+                        },
+                        "cms_encryptdata" : {
+                            "deps": ["key_epki"]
+                        },
+                        "deps": ["asn1"]
+                    },
                     "pkcs12" : {
-                        "pkcs12_gen" : {"deps": ["x509_crt_gen", "x509_crt_parse", "key_encode"]},
-                        "pkcs12_parse" : {"deps": ["x509_crt_parse", "key_decode"]},
-                        "deps": ["key_epki"]
+                        "pkcs12_gen" : {"deps": ["x509_crt_gen", "x509_crt_parse"]},
+                        "pkcs12_parse" : {"deps": ["x509_crt_parse"]},
+                        "deps": ["asn1", "cms"]
                     },
                     "info": {
                         "info_dn_conf": {"help": "Configure the print format for DN."},
@@ -1678,7 +1691,8 @@
                     "x509", "x509_crt", "x509_crt_gen", "x509_crt_parse",
                     "x509_crl", "x509_crl_gen", "x509_crl_parse",
                     "x509_csr", "x509_csr_gen", "x509_csr_parse",
-                    "pkcs12", "pkcs12_gen", "pkcs12_parse"
+                    "pkcs12", "pkcs12_gen", "pkcs12_parse", "cms", "cms_data", "cms_digestinfo", "cms_signeddata",
+                    "cms_encryptdata"
                 ],
                 ".srcs" : "pki/x509_common/src/*",
                 ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "crypto::codecskey"],
@@ -1712,9 +1726,15 @@
                 ".deps" : ["platform::Secure_C", "pki::x509_common", "crypto::codecskey", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "pki::x509_cert", "pki::cms"]
             },
             "cms" : {
-                ".features" : ["pkcs12_gen", "pkcs12_parse"],
+                ".features" : ["cms_data", "cms_digestinfo", "cms_signeddata", "cms_encryptdata"],
                 ".srcs" : "pki/cms/src/*",
-                ".deps" : ["platform::Secure_C", "crypto::codecskey"]
+                ".deps" : ["platform::Secure_C", "crypto::codecskey", "pki::x509_common", "pki::x509_crl", "pki::x509_cert", "pki::x509_verify" ],
+                ".include": ["pki/x509_common/include",
+                            "pki/cms/include",
+                            "pki/x509_crl/include",
+                            "pki/x509_cert/include",
+                            "pki/x509_common/include",
+                            "pki/x509_verify/include"]
             }
         },
         "auth" : {

@@ -23,6 +23,30 @@
     #ifndef HITLS_PKI_PKCS12_PARSE
         #define HITLS_PKI_PKCS12_PARSE
     #endif
+    #ifndef HITLS_PKI_CMS_DIGESTINFO
+        #define HITLS_PKI_CMS_DIGESTINFO
+    #endif
+    #ifndef HITLS_PKI_CMS_DATA
+        #define HITLS_PKI_CMS_DATA
+    #endif
+    #ifndef HITLS_PKI_CMS_ENCRYPTDATA
+        #define HITLS_PKI_CMS_ENCRYPTDATA
+    #endif
+#endif
+
+#ifdef HITLS_PKI_CMS
+    #ifndef HITLS_PKI_CMS_DATA
+        #define HITLS_PKI_CMS_DATA
+    #endif
+    #ifndef HITLS_PKI_CMS_DIGESTINFO
+        #define HITLS_PKI_CMS_DIGESTINFO
+    #endif
+    #ifndef HITLS_PKI_CMS_SIGNEDDATA
+        #define HITLS_PKI_CMS_SIGNEDDATA
+    #endif
+    #ifndef HITLS_PKI_CMS_ENCRYPTDATA
+        #define HITLS_PKI_CMS_ENCRYPTDATA
+    #endif
 #endif
 
 #ifdef HITLS_PKI_PKCS12_GEN
@@ -35,6 +59,12 @@
     #ifndef HITLS_CRYPTO_KEY_ENCODE
         #define HITLS_CRYPTO_KEY_ENCODE
     #endif
+    #ifndef HITLS_PKI_CMS_DIGESTINFO
+        #define HITLS_PKI_CMS_DIGESTINFO
+    #endif
+    #ifndef HITLS_PKI_CMS_ENCRYPTDATA
+        #define HITLS_PKI_CMS_ENCRYPTDATA
+    #endif
 #endif
 
 #ifdef HITLS_PKI_PKCS12_PARSE
@@ -44,6 +74,15 @@
     #ifndef HITLS_CRYPTO_KEY_DECODE
         #define HITLS_CRYPTO_KEY_DECODE
     #endif
+    #ifndef HITLS_PKI_CMS_SIGNEDDATA
+        #define HITLS_PKI_CMS_SIGNEDDATA
+    #endif
+    #ifndef HITLS_PKI_CMS_DIGESTINFO
+        #define HITLS_PKI_CMS_DIGESTINFO
+    #endif
+    #ifndef HITLS_PKI_CMS_ENCRYPTDATA
+        #define HITLS_PKI_CMS_ENCRYPTDATA
+    #endif
 #endif
 
 #if defined(HITLS_PKI_PKCS12_GEN) || defined(HITLS_PKI_PKCS12_PARSE)
@@ -52,6 +91,13 @@
     #endif
     #ifndef HITLS_CRYPTO_KEY_EPKI
         #define HITLS_CRYPTO_KEY_EPKI
+    #endif
+#endif
+
+#if defined(HITLS_PKI_CMS_DATA) || defined(HITLS_PKI_CMS_SIGNEDDATA) || defined(HITLS_PKI_CMS_DIGESTINFO) || \
+    defined(HITLS_PKI_CMS_ENCRYPTDATA)
+    #ifndef HITLS_PKI_CMS
+        #define HITLS_PKI_CMS
     #endif
 #endif
 

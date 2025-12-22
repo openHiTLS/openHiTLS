@@ -772,13 +772,14 @@ int32_t X509_GetHashId(const HITLS_X509_Asn1AlgId *alg, int32_t *hashId)
 }
 
 #if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_SM2)
-static int32_t X509_CtrlAlgInfo(const CRYPT_EAL_PkeyCtx *pubKey, uint32_t hashId, const HITLS_X509_Asn1AlgId *alg)
+int32_t HITLS_X509_CtrlAlgInfo(CRYPT_EAL_PkeyCtx *pubKey, uint32_t hashId, const HITLS_X509_Asn1AlgId *alg)
 {
 #ifndef HITLS_CRYPTO_RSA
     (void)hashId;
 #endif
     switch (alg->algId) {
 #ifdef HITLS_CRYPTO_RSA
+        case BSL_CID_RSA:
         case BSL_CID_MD5WITHRSA:
         case BSL_CID_SHA1WITHRSA:
         case BSL_CID_SHA224WITHRSAENCRYPTION:
@@ -786,7 +787,7 @@ static int32_t X509_CtrlAlgInfo(const CRYPT_EAL_PkeyCtx *pubKey, uint32_t hashId
         case BSL_CID_SHA384WITHRSAENCRYPTION:
         case BSL_CID_SHA512WITHRSAENCRYPTION:
         case BSL_CID_SM3WITHRSAENCRYPTION:
-            return CRYPT_EAL_PkeyCtrl((CRYPT_EAL_PkeyCtx *)(uintptr_t)pubKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15,
+            return CRYPT_EAL_PkeyCtrl(pubKey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15,
                 &hashId, sizeof(hashId));
         case BSL_CID_RSASSAPSS: {
             BSL_Param param[4] = {
@@ -798,13 +799,13 @@ static int32_t X509_CtrlAlgInfo(const CRYPT_EAL_PkeyCtx *pubKey, uint32_t hashId
                     sizeof(alg->rsaPssParam.saltLen), 0},
                 BSL_PARAM_END
             };
-            return CRYPT_EAL_PkeyCtrl((CRYPT_EAL_PkeyCtx *)(uintptr_t)pubKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, param, 0);
+            return CRYPT_EAL_PkeyCtrl(pubKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, param, 0);
         }
 #endif
 #ifdef HITLS_CRYPTO_SM2
         case BSL_CID_SM2DSAWITHSM3:
             if (alg->sm2UserId.data != NULL) {
-                return CRYPT_EAL_PkeyCtrl((CRYPT_EAL_PkeyCtx *)(uintptr_t)pubKey, CRYPT_CTRL_SET_SM2_USER_ID,
+                return CRYPT_EAL_PkeyCtrl(pubKey, CRYPT_CTRL_SET_SM2_USER_ID,
                     alg->sm2UserId.data, alg->sm2UserId.dataLen);
             }
             return HITLS_PKI_SUCCESS;
@@ -830,7 +831,7 @@ int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawD
         return HITLS_X509_ERR_VFY_DUP_PUBKEY;
     }
 #if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_SM2)
-    ret = X509_CtrlAlgInfo(verifyPubKey, hashId, alg);
+    ret = HITLS_X509_CtrlAlgInfo(verifyPubKey, hashId, alg);
     if (ret != HITLS_PKI_SUCCESS) {
         CRYPT_EAL_PkeyFreeCtx(verifyPubKey);
         BSL_ERR_PUSH_ERROR(ret);

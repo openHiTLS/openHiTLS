@@ -162,7 +162,7 @@ static int32_t X509_CertSignatureCmp(HITLS_X509_Asn1AlgId *certOri, BSL_ASN1_Bit
     return memcmp(signOri->buff, sign->buff, sign->len);
 }
 
-static int32_t X509_CrlCmp(HITLS_X509_Crl *crlOri, HITLS_X509_Crl *crl)
+int32_t HITLS_X509_CrlCmp(HITLS_X509_Crl *crlOri, HITLS_X509_Crl *crl)
 {
     if (crlOri == crl) {
         return 0;
@@ -181,7 +181,7 @@ static int32_t X509_CrlCmp(HITLS_X509_Crl *crlOri, HITLS_X509_Crl *crl)
         &crl->tbs.signAlgId, &crl->signature);
 }
 
-static int32_t X509_CertCmp(HITLS_X509_Cert *certOri, HITLS_X509_Cert *cert)
+int32_t HITLS_X509_CertCmp(HITLS_X509_Cert *certOri, HITLS_X509_Cert *cert)
 {
     if (certOri == cert) {
         return 0;
@@ -273,7 +273,7 @@ static int32_t X509_GetMaxDepth(HITLS_X509_StoreCtx *storeCtx, int32_t *val, uin
 
 static int32_t X509_SetParamFlag(HITLS_X509_StoreCtx *storeCtx, uint64_t *val, uint32_t valLen)
 {
-    if (valLen != sizeof(uint64_t)) {
+    if (valLen != sizeof(uint64_t) && valLen != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -346,7 +346,7 @@ static int32_t X509_CheckCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *ce
         return HITLS_X509_ERR_CERT_NOT_CA;
     }
     HITLS_X509_List *certStore = storeCtx->store;
-    HITLS_X509_Cert *tmp = BSL_LIST_SearchEx(certStore, cert, (BSL_LIST_PFUNC_CMP)X509_CertCmp);
+    HITLS_X509_Cert *tmp = BSL_LIST_SearchEx(certStore, cert, (BSL_LIST_PFUNC_CMP)HITLS_X509_CertCmp);
     if (tmp != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_EXIST);
         return HITLS_X509_ERR_CERT_EXIST;
@@ -382,7 +382,7 @@ static int32_t X509_SetCA(HITLS_X509_StoreCtx *storeCtx, void *val, bool isCopy)
 static int32_t X509_CheckCRL(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Crl *crl)
 {
     HITLS_X509_List *crlStore = storeCtx->crl;
-    HITLS_X509_Crl *tmp = BSL_LIST_SearchEx(crlStore, crl, (BSL_LIST_PFUNC_CMP)X509_CrlCmp);
+    HITLS_X509_Crl *tmp = BSL_LIST_SearchEx(crlStore, crl, (BSL_LIST_PFUNC_CMP)HITLS_X509_CrlCmp);
     if (tmp != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_EXIST);
         return HITLS_X509_ERR_CRL_EXIST;
@@ -996,7 +996,7 @@ static int32_t HITLS_X509_CertChainBuildWithRoot(HITLS_X509_StoreCtx *storeCtx, 
         BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
         return HITLS_X509_ERR_ROOT_CERT_NOT_FOUND;
     }
-    if (X509_CertCmp(cert, root) != 0) {
+    if (HITLS_X509_CertCmp(cert, root) != 0) {
         ret = X509_AddCertToChain(tmpChain, root);
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
@@ -1485,7 +1485,7 @@ static int32_t X509_GetVerifyCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509
         return HITLS_X509_ERR_ROOT_CERT_NOT_FOUND;
     }
     // Add root to chain if it is not the end entity
-    if (X509_CertCmp(cert, root) != 0) {
+    if (HITLS_X509_CertCmp(cert, root) != 0) {
         ret = X509_AddCertToChain(tmpChain, root);
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_LIST_FREE(tmpChain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);

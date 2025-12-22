@@ -161,6 +161,24 @@ int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot
  */
 int32_t HITLS_X509_VerifyHostname(HITLS_X509_Cert *cert, uint32_t flags, const char *hostname, uint32_t hostnameLen);
 
+/**
+ * @ingroup pki
+ * @brief Verify that a certificate's public key matches a given private key.
+ * @par Description:
+ * This function checks whether the public key in the certificate corresponds to the
+ * provided private key by performing a sign-verify operation with test data.
+ *
+ * @attention This function performs cryptographic operations (sign and verify) which
+ *            may be computationally expensive.
+ *
+ * @param cert [IN] Certificate containing the public key to check
+ * @param prvKey [IN] Private key to verify against the certificate
+ * @retval #HITLS_PKI_SUCCESS if the private key matches the certificate's public key.
+ * @retval #HITLS_X509_ERR_CERT_INVALID_PUBKEY if the keys do not match or signing/verification fails.
+ * @retval Other error codes can be found in hitls_pki_errno.h
+ */
+int32_t HITLS_X509_CheckKey(HITLS_X509_Cert *cert, CRYPT_EAL_PkeyCtx *prvKey);
+
 #ifdef __cplusplus
 }
 #endif

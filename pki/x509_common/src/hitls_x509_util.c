@@ -25,6 +25,7 @@
 #include "hitls_x509_local.h"
 #include "hitls_pki_cert.h"
 #include "bsl_err_internal.h"
+#include "crypt_errno.h"
 
 /**
  *  Matches a string against a pattern containing exactly one wildcard ('*').
@@ -226,5 +227,29 @@ int32_t HITLS_X509_VerifyHostname(HITLS_X509_Cert *cert, uint32_t flags, const c
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
+}
+
+int32_t HITLS_X509_CheckKey(HITLS_X509_Cert *cert, CRYPT_EAL_PkeyCtx *prvKey)
+{
+    if (cert == NULL || prvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    // Get public key from certificate
+    CRYPT_EAL_PkeyCtx *pubKey = NULL;
+    int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, &pubKey, sizeof(CRYPT_EAL_PkeyCtx *));
+    if (ret != HITLS_PKI_SUCCESS || pubKey == NULL) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    ret = CRYPT_EAL_PkeyPairCheck(pubKey, prvKey); // cmp cal speed is higher than CheckPair's.
+    CRYPT_EAL_PkeyFreeCtx(pubKey);
+    if (ret != CRYPT_SUCCESS ) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_NOT_MATCH_KEY);
+        return HITLS_X509_ERR_CERT_NOT_MATCH_KEY;
+    }
+    return HITLS_PKI_SUCCESS;
 }
 #endif // HITLS_PKI_X509_CRT

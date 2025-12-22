@@ -2010,7 +2010,7 @@ EXIT:
 #endif // HITLS_CRYPTO_RSA
 #endif // HITLS_CRYPTO_KEY_ENCODE
 
-#ifdef HITLS_PKI_PKCS12
+#ifdef HITLS_PKI_CMS_ENCRYPTDATA
 #define HITLS_P7_SPECIFIC_ENCONTENTINFO_EXTENSION 0
 
 /**
@@ -2077,7 +2077,6 @@ typedef enum {
     HITLS_P7_ENCRYPTDATA_MAX_IDX,
 } HITLS_P7_ENCRYPTDATA_IDX;
 
-#ifdef HITLS_PKI_PKCS12_PARSE
 static int32_t ParsePKCS7EncryptedContentInfo(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_Buffer *encode,
     const uint8_t *pwd, uint32_t pwdlen, BSL_Buffer *output)
 {
@@ -2165,9 +2164,7 @@ int32_t CRYPT_EAL_ParseAsn1PKCS7EncryptedData(CRYPT_EAL_LibCtx *libCtx, const ch
     }
     return ret;
 }
-#endif // HITLS_PKI_PKCS12_PARSE
 
-#ifdef HITLS_PKI_PKCS12_GEN
 /* Encode PKCS7-EncryptData：only support PBES2 + PBKDF2, the param check ref CheckEncodeParam. */
 static int32_t EncodePKCS7EncryptedContentInfo(CRYPT_EAL_LibCtx *libCtx, const char *attrName, BSL_Buffer *data,
     const CRYPT_EncodeParam *encodeParam, BSL_Buffer *encode)
@@ -2247,8 +2244,6 @@ int32_t CRYPT_EAL_EncodePKCS7EncryptDataBuff(CRYPT_EAL_LibCtx *libCtx, const cha
     encode->dataLen = tmp.dataLen;
     return ret;
 }
-#endif // HITLS_PKI_PKCS12_GEN
-
-#endif // HITLS_PKI_PKCS12
+#endif // HITLS_PKI_CMS_ENCRYPTDATA
 
 #endif // HITLS_CRYPTO_CODECSKEY

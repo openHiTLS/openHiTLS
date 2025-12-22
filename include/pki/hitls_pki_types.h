@@ -434,6 +434,21 @@ typedef enum {
     HITLS_PKCS12_BAG_GET_TYPE,                  /** Get type from safeBag. */
 } HITLS_PKCS12_BagCmd;
 
+typedef enum {
+    HITLS_CMS_ADD_CERT = 0,                  /** Add certificate to cms struct. */
+    HITLS_CMS_ADD_CRL,                       /** Add CRL to cms struct. */
+    
+    HITLS_CMS_SET_MSG_MD          = 0x0101,           /** set SignedData message digest alg */
+} HITLS_CMS_Cmd;
+
+/**
+ * @brief Option values for HITLS_CMS_Init
+ */
+typedef enum {
+    HITLS_CMS_OPT_SIGN   = 0x01,  /**< Initialize for signing */
+    HITLS_CMS_OPT_VERIFY  = 0x02,  /**< Initialize for verification */
+} HITLS_CMS_Option;
+
 #ifdef __cplusplus
 }
 #endif

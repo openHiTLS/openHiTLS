@@ -92,7 +92,7 @@ void HITLS_X509_AttrsFree(HITLS_X509_Attrs *attrs, HITLS_X509_FreeAttrItemCb fre
     BSL_SAL_Free(attrs);
 }
 
-#if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_PKCS12_GEN)
+#if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_PKCS12_GEN) || defined(HITLS_PKI_CMS_SIGNEDDATA)
 int32_t HITLS_X509_EncodeObjIdentity(BslCid cid, BSL_ASN1_Buffer *asnBuff)
 {
     BslOidString *oidStr = BSL_OBJ_GetOID(cid);
