@@ -40,12 +40,16 @@
  *    3. Set user keys for Alice and Bob via EAL, expected result 3
  *    4. Compute shared key via EAL interface, expected result 4
  *    5. Compare shared keys, expected result 5
+ *    6. Test ComputeShareKey with longer shareLen, expected result 6
+ *    6. Test ComputeShareKey with shorter shareLen, expected result 7
  * @expect
  *    1. Success, contexts are not NULL
  *    2. CRYPT_SUCCESS
  *    3. CRYPT_SUCCESS
  *    4. CRYPT_SUCCESS
  *    5. Shared keys match
+ *    6. CRYPT_SUCCESS
+ *    7. CRYPT_SUCCESS
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_SM9_KEYEX_API_TC001(Hex *masterKey, Hex *userIdA, Hex *userIdB)
@@ -56,6 +60,10 @@ void SDV_CRYPTO_SM9_KEYEX_API_TC001(Hex *masterKey, Hex *userIdA, Hex *userIdB)
     uint8_t SK_B[SM9_SHARED_KEY_LEN] = {0};
     uint32_t keyLen_A = SM9_SHARED_KEY_LEN;
     uint32_t keyLen_B = SM9_SHARED_KEY_LEN;
+    uint8_t SK_Long[2 * SM9_SHARED_KEY_LEN  - 1] = {0};
+    uint8_t SK_Short[SM9_SHARED_KEY_LEN - 1] = {0};
+    uint32_t longKeyLen = sizeof(SK_Long);
+    uint32_t shortKeyLen = sizeof(SK_Short);
     int ret;
     int32_t keyType = SM9_KEY_TYPE_ENC;
 
@@ -128,6 +136,9 @@ void SDV_CRYPTO_SM9_KEYEX_API_TC001(Hex *masterKey, Hex *userIdA, Hex *userIdB)
     ASSERT_EQ(keyLen_A, keyLen_B);
     ASSERT_TRUE(memcmp(SK_A, SK_B, keyLen_A) == 0);
 
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(ctx_a, ctx_b, SK_Long, &longKeyLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(ctx_a, ctx_b, SK_Short, &shortKeyLen), CRYPT_SUCCESS);
+
 EXIT:
     SM9_FreeCtx(tmpCtx_a);
     SM9_FreeCtx(tmpCtx_b);
@@ -146,12 +157,14 @@ EXIT:
  *    3. Test ComputeShareKey with NULL peerCtx, expected result 3
  *    4. Test ComputeShareKey with NULL output buffer, expected result 4
  *    5. Test ComputeShareKey with NULL outLen, expected result 5
+ *    6. Test ComputeShareKey, expected result 6
  * @expect
  *    1. CRYPT_SUCCESS
  *    2. CRYPT_NULL_INPUT
  *    3. CRYPT_NULL_INPUT
  *    4. CRYPT_NULL_INPUT
  *    5. CRYPT_NULL_INPUT
+ *    6. CRYPT_SM9_ERR_NO_MASTER_KEY
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_SM9_KEYEX_API_TC002(Hex *masterKey, Hex *userIdA, Hex *userIdB)
@@ -214,6 +227,8 @@ void SDV_CRYPTO_SM9_KEYEX_API_TC002(Hex *masterKey, Hex *userIdA, Hex *userIdB)
     // Test NULL outLen
     ret = CRYPT_EAL_PkeyComputeShareKey(ctx_a, ctx_b, SK, NULL);
     ASSERT_EQ(ret, CRYPT_NULL_INPUT);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(ctx_a, ctx_b, SK, &keyLen), CRYPT_SM9_ERR_NO_MASTER_KEY);
 
 EXIT:
     SM9_FreeCtx(tmpCtx_a);

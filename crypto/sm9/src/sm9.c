@@ -22,7 +22,7 @@
 #include "sm9_fp.h"
 #include "crypt_util_rand.h"
 
-#include <memory.h>
+#include <string.h>
 
 /***************************Compiler-Switches**********************************/
 
@@ -30,7 +30,7 @@
 
 #define SM9_PAIR_ENABLE
 
-#define    SM9_SIG_SYS_ENABLE
+#define SM9_SIG_SYS_ENABLE
 #define SM9_SIG_USR_ENABLE
 
 #define SM9_ENC_SYS_ENABLE
@@ -41,17 +41,15 @@
 #define SM9_HByteLen        40
 #define SM9_HWordLen        (SM9_HByteLen/4)
 
-#define    SM9_C1_ByteLen        (2*BNByteLen)
+#define SM9_C1_ByteLen        (2*BNByteLen)
 
 #define SM9_C3_ByteLen        (BNByteLen)
 
-#define    SM9_Alg_Pair_Mont(pG, pP1, pP2)    SM9_Pairing_R_Ate(pG, pP1, pP2)
-
 /*******************************Static Global *********************************/
-static uint8_t    SM9_HID_Sign[1]    = {0x01};
-static uint8_t    SM9_HID_Enc[1]    = {0x03};
+static uint8_t SM9_HID_Sign[1] = {0x01};
+static uint8_t SM9_HID_Enc[1]  = {0x03};
 
-static uint8_t    g_RandBuf[BNByteLen] __attribute__((used));
+static uint8_t g_RandBuf[BNByteLen] __attribute__((used));
 
 /******************************************************************************/
 /*                    SM3 Adaptation Layer for SM9                           */
@@ -60,6 +58,11 @@ static uint8_t    g_RandBuf[BNByteLen] __attribute__((used));
 // Forward declarations from SM3 library
 extern int32_t CRYPT_SM3_Update(void *ctx, const uint8_t *in, uint32_t len);
 extern int32_t CRYPT_SM3_Final(void *ctx, uint8_t *out, uint32_t *outLen);
+
+static void SM9_Alg_Pair_Mont(SM9_Fp12 *pFp12_R, SM9_ECP_A *pEcp_P1, SM9_ECP2_A *pEcp2_P2)
+{
+    return SM9_Pairing_R_Ate(pFp12_R, pEcp_P1, pEcp2_P2);
+}
 
 void SM9_Hash_Init(SM9_Hash_Ctx *ctx)
 {
@@ -77,32 +80,25 @@ void SM9_Hash_Init(SM9_Hash_Ctx *ctx)
     ctx->sm3State.h[7] = 0xB0FB0E4E;
 }
 
-void SM9_Hash_Update(SM9_Hash_Ctx *ctx, const unsigned char *data, unsigned int len)
+void SM9_Hash_Update(SM9_Hash_Ctx *ctx, const uint8_t *data, uint32_t len)
 {
     CRYPT_SM3_Update(&ctx->sm3State, data, len);
 }
 
-void SM9_Hash_Final(SM9_Hash_Ctx *ctx, unsigned char *digest)
+void SM9_Hash_Final(SM9_Hash_Ctx *ctx, uint8_t *digest)
 {
     uint32_t outLen = 32;
     CRYPT_SM3_Final(&ctx->sm3State, digest, &outLen);
 }
 
-void SM9_Hash_Final_and_Xor(SM9_Hash_Ctx *ctx, unsigned char *pbXor, unsigned char *pbMsg)
+void SM9_Xor(uint8_t *pbXor, uint32_t len, const uint8_t *digest, uint8_t *pbMsg)
 {
-    unsigned char digest[32];
-    unsigned int i;
-
-    uint32_t outLen = 32;
-    CRYPT_SM3_Final(&ctx->sm3State, digest, &outLen);
-
-    // XOR the digest with the input message
-    for (i = 0; i < 32; i++) {
+    for (uint32_t i = 0; i < len; i++) {
         pbXor[i] = digest[i] ^ pbMsg[i];
     }
 }
 
-void SM9_Hash_Data(const unsigned char *data, unsigned int len, unsigned char *digest)
+void SM9_Hash_Data(const uint8_t *data, uint32_t len, uint8_t *digest)
 {
     SM9_Hash_Ctx ctx;
     SM9_Hash_Init(&ctx);
@@ -114,17 +110,17 @@ void SM9_Hash_Data(const unsigned char *data, unsigned int len, unsigned char *d
 /*                    Random Number Generation for SM9                       */
 /******************************************************************************/
 
-void sm9_rand(unsigned char *p, int len)
+void sm9_rand(uint8_t *p, uint32_t len)
 {
     // Use library's cryptographic random number generator
-    (void)CRYPT_Rand(p, (uint32_t)len);
+    (void)CRYPT_Rand(p, len);
 }
 
 /******************************************************************************/
 
-void _ibc_alg_rand(unsigned char *r, unsigned int len)
+void _ibc_alg_rand(uint8_t *r, uint32_t len) // static
 {
-    unsigned int i;
+    uint32_t i;
 
     for (i = 0; i < len; i++)
         *r++ = i;
@@ -132,22 +128,21 @@ void _ibc_alg_rand(unsigned char *r, unsigned int len)
 
 static void _ibc_write_fpbytes(uint8_t *dst, uint32_t *src)
 {
-    int32_t    bytelen;
+    int32_t bytelen;
     BNToByte(src, BNWordLen, dst, &bytelen);
 }
 
 static void _sm9_hash_h(uint32_t *pwH, uint8_t tag, const uint8_t * msg, uint32_t mlen, uint8_t *add, uint32_t alen)
 {
-    SM9_Hash_Ctx    ctx;
-    uint8_t    ct[4] = {0x00, 0x00, 0x00, 0x01};
-    uint8_t    Ha[2*BNByteLen];
-    uint32_t    pwHa[SM9_HWordLen+1];
+    SM9_Hash_Ctx ctx;
+    uint8_t ct[4] = {0x00, 0x00, 0x00, 0x01};
+    uint8_t Ha[2*BNByteLen];
+    uint32_t pwHa[SM9_HWordLen + 1];
     uint32_t pwN1[BNWordLen];
     // U64 carry = 0;
-    int i;
+    int32_t i;
 
-    for (i = 0; i < 2; i++)
-    {
+    for (i = 0; i < 2; i++) {
         SM9_Hash_Init(&ctx);
         SM9_Hash_Update(&ctx, &tag, 1);
         SM9_Hash_Update(&ctx, msg, mlen);
@@ -179,12 +174,12 @@ static void SM9_Hash_H2(uint32_t *pwH, const uint8_t *msg, uint32_t mlen, uint8_
 
 /******************************************************************************/
 
-SM9_API int SM9_Alg_GetVersion()
+int32_t SM9_Alg_GetVersion()
 {
-    int ret = 0;
-    unsigned char a = 1;
-    unsigned char b = 1;
-    unsigned char c = 0;
+    int32_t ret = 0;
+    uint8_t a = 1;
+    uint8_t b = 1;
+    uint8_t c = 0;
 
 #ifdef SM9_ALG_RND_ENABLE
     ret |= 0x01;
@@ -210,12 +205,12 @@ SM9_API int SM9_Alg_GetVersion()
     return ret;
 }
 
-SM9_API int SM9_Alg_Pair(unsigned char *g, unsigned char *p1, unsigned char *p2)
+int32_t SM9_Alg_Pair(uint8_t *g, uint8_t *p1, uint8_t *p2)
 {
-#ifdef    SM9_PAIR_ENABLE
-    SM9_ECP_A    Ecp_P1;
-    SM9_ECP2_A    Ecp2_P2;
-    SM9_Fp12        Fp12_G;
+#ifdef SM9_PAIR_ENABLE
+    SM9_ECP_A Ecp_P1;
+    SM9_ECP2_A Ecp2_P2;
+    SM9_Fp12 Fp12_G;
 
     // Read ecpoint P1 and convert to MontMode
     SM9_Ecp_A_ReadBytes(&Ecp_P1, p1);
@@ -232,21 +227,21 @@ SM9_API int SM9_Alg_Pair(unsigned char *g, unsigned char *p1, unsigned char *p2)
 #endif /* SM9_PAIR_ENABLE */
 }
 
-SM9_API int SM9_Get_Sig_G(unsigned char *g, unsigned char *mpk)
+int32_t SM9_Get_Sig_G(uint8_t *g, uint8_t *mpk)
 {
     return SM9_Alg_Pair(g, g_SM9_G1, mpk);
 }
 
-SM9_API int SM9_Get_Enc_G(unsigned char *g, unsigned char *mpk)
+int32_t SM9_Get_Enc_G(uint8_t *g, uint8_t *mpk)
 {
     return SM9_Alg_Pair(g, mpk, g_SM9_G2);
 }
 
-SM9_API int SM9_Alg_MSKG(unsigned char *ks, unsigned char *mpk)
+int32_t SM9_Alg_MSKG(uint8_t *ks, uint8_t *mpk)
 {
-#ifdef    SM9_SIG_SYS_ENABLE
-    uint32_t                BN_SK[BNWordLen];
-    SM9_ECP2_A    Point_PK;
+#ifdef SM9_SIG_SYS_ENABLE
+    uint32_t BN_SK[BNWordLen];
+    SM9_ECP2_A Point_PK;
 
     // Read System PriKey to BN
     SM9_Bn_ReadBytes(BN_SK, ks);
@@ -261,12 +256,12 @@ SM9_API int SM9_Alg_MSKG(unsigned char *ks, unsigned char *mpk)
 #endif /* SM9_SIG_SYS_ENABLE */
 }
 
-SM9_API int SM9_Alg_USKG(const unsigned char *id, unsigned int ilen, unsigned char *ks, unsigned char *ds)
+int32_t SM9_Alg_USKG(const uint8_t *id, uint32_t ilen, uint8_t *ks, uint8_t *ds)
 {
-#ifdef    SM9_SIG_SYS_ENABLE
-    uint32_t                BN_t1[BNWordLen];
-    uint32_t                BN_t2[BNWordLen];
-    SM9_ECP_A    Ecp_ds;
+#ifdef SM9_SIG_SYS_ENABLE
+    uint32_t BN_t1[BNWordLen];
+    uint32_t BN_t2[BNWordLen];
+    SM9_ECP_A Ecp_ds;
 
     // Read System PriKey to BN
     SM9_Bn_ReadBytes(BN_t2, ks);
@@ -292,38 +287,38 @@ SM9_API int SM9_Alg_USKG(const unsigned char *id, unsigned int ilen, unsigned ch
 #endif /* SM9_SIG_SYS_ENABLE */
 }
 
-#ifdef    SM9_SIG_USR_ENABLE
-int _sm9_alg_sign(
-    const unsigned char *msg, unsigned int mlen,
-    const unsigned char *ds, unsigned char *r,
-    const unsigned char *g, const unsigned char *mpk,
+#ifdef SM9_SIG_USR_ENABLE
+static int32_t _sm9_alg_sign(
+    const uint8_t *msg, uint32_t mlen,
+    const uint8_t *ds, uint8_t *r,
+    const uint8_t *g, const uint8_t *mpk,
     uint32_t *BN_h, SM9_ECP_A *Ecp_s)
 {
-    uint32_t                BN_r[BNWordLen];
-    uint8_t                pbW[12 * BNByteLen];
-    SM9_Fp12        Fp12_g;
-    SM9_ECP2_A    Ecp2_P;
+    uint32_t BN_r[BNWordLen];
+    uint8_t pbW[12 * BNByteLen];
+    SM9_Fp12 Fp12_g;
+    SM9_ECP2_A Ecp2_P;
 
     // Read Random number r(in NormMode)
     SM9_Bn_ReadBytes(BN_r, r);
 
     SM9_Fn_LastRes(BN_r);
 
-    while(SM9_Bn_IsZero(BN_r)==1){
-        sm9_rand(r,BNByteLen);
+    while (SM9_Bn_IsZero(BN_r)==1) {
+        sm9_rand(r, BNByteLen);
         SM9_Bn_ReadBytes(BN_r, r);
         SM9_Fn_LastRes(BN_r);
     }
 
     // Get System Element g and compute g^r
-    if (g)//If g is given
+    if (g) // If g is given
     {
         // Read g from input and convert to MontMode
         SM9_Fp12_ReadBytes(&Fp12_g, g);
         // w = g^r
         SM9_Fp12_Exp(&Fp12_g, &Fp12_g, BN_r);
     }
-    else//If g is not given
+    else // If g is not given
     {
         // Read Ppub from input
         SM9_Ecp2_A_ReadBytes(&Ecp2_P, mpk);
@@ -349,23 +344,23 @@ int _sm9_alg_sign(
 }
 #endif /* SM9_SIG_USR_ENABLE */
 
-SM9_API int SM9_Sign(
-    unsigned int  opt,
-    const unsigned char *msg,
-    unsigned int  mlen,
-    const unsigned char *ds,
-    unsigned char *r,
-    const unsigned char *g,
-    const unsigned char *mpk,
-    unsigned char *sign,
-    unsigned int  *slen)
+int32_t SM9_Sign(
+    uint32_t opt,
+    const uint8_t *msg,
+    uint32_t mlen,
+    const uint8_t *ds,
+    uint8_t *r,
+    const uint8_t *g,
+    const uint8_t *mpk,
+    uint8_t *sign,
+    uint32_t *slen)
 {
-#ifdef    SM9_SIG_USR_ENABLE
+#ifdef SM9_SIG_USR_ENABLE
     // Signature buf
-    uint32_t                BN_h[BNWordLen];
-    SM9_ECP_A    Ecp_s;
-    int ret;
-    int len;
+    uint32_t BN_h[BNWordLen];
+    SM9_ECP_A Ecp_s;
+    int32_t ret;
+    int32_t len;
 
 #ifndef SM9_ALG_RND_ENABLE
     r = g_RandBuf;
@@ -378,7 +373,7 @@ SM9_API int SM9_Sign(
 
     // Output Signature to bytes
     _ibc_write_fpbytes(sign, BN_h);
-    len = SM9_Fp_ECP_A_WriteBytesWithPC(sign + sm9_sys_para.wsize*WordByteLen, opt, &Ecp_s);
+    len = SM9_Fp_ECP_A_WriteBytesWithPC(sign + sm9_sys_para.wsize * WordByteLen, opt, &Ecp_s);
     if (len < 0)
         return SM9_ERR_BAD_INPUT;
     *slen = len + sm9_sys_para.wsize*WordByteLen;
@@ -389,35 +384,35 @@ SM9_API int SM9_Sign(
 #endif /* SM9_SIG_USR_ENABLE */
 }
 
-SM9_API int SM9_Alg_Sign(const unsigned char *msg, unsigned int mlen,
-    const unsigned char *ds, unsigned char *r,
-    const unsigned char *g, const unsigned char *mpk,
-    unsigned char *sign)
+int32_t SM9_Alg_Sign(const uint8_t *msg, uint32_t mlen,
+    const uint8_t *ds, uint8_t *r,
+    const uint8_t *g, const uint8_t *mpk,
+    uint8_t *sign)
 {
-    unsigned int slen;
+    uint32_t slen;
     return SM9_Sign(SM9_OPT_DM_MODE0, msg, mlen, ds, r, g, mpk, sign, &slen);
 }
 
-#ifdef    SM9_SIG_USR_ENABLE
-static int _sm9_alg_vefiry(
-    const unsigned char *msg,    unsigned int mlen,
-    const unsigned char *id,    unsigned int ilen,
-    const unsigned char *g,    const unsigned char *mpk,
+#ifdef SM9_SIG_USR_ENABLE
+static int32_t _sm9_alg_vefiry(
+    const uint8_t *msg, uint32_t mlen,
+    const uint8_t *id, uint32_t ilen,
+    const uint8_t *g, const uint8_t *mpk,
     uint32_t *BN_h, SM9_ECP_A *Ecp_s)
 {
-    SM9_Fp12        Fp12_g;
-    SM9_Fp12        Fp12_u;
-    uint8_t                pbW[12 * BNByteLen];
+    SM9_Fp12 Fp12_g;
+    SM9_Fp12 Fp12_u;
+    uint8_t pbW[12 * BNByteLen];
 
-    // uint32_t                BN_h[BNWordLen];
-    // SM9_ECP_A    Ecp_s;
-    uint32_t                BN_h1[BNWordLen];
-    SM9_ECP2_A    Ecp2_P;
+    // uint32_t BN_h[BNWordLen];
+    // SM9_ECP_A Ecp_s;
+    uint32_t BN_h1[BNWordLen];
+    SM9_ECP2_A Ecp2_P;
 
-    SM9_ECP2_J    Ecp2_J;
+    SM9_ECP2_J Ecp2_J;
 
-    SM9_ECP_J    Ecp_J;
-    SM9_ECP_A    Ecp_A;
+    SM9_ECP_J Ecp_J;
+    SM9_ECP_A Ecp_A;
 
     // Read System PubKey to JPoint in MontMode
     SM9_Ecp2_A_ReadBytes(&Ecp2_P, mpk);
@@ -426,8 +421,8 @@ static int _sm9_alg_vefiry(
     SM9_Hash_H1(BN_h1, id, ilen, SM9_HID_Sign, 1);
 
     // Get System Element g and convert to MontMode
-    if (g)
-    {//Read from input
+    if (g) {
+        // Read from input
         SM9_Fp12_ReadBytes(&Fp12_g, g);
         // t = g^h
         SM9_Fp12_Exp(&Fp12_g, &Fp12_g, BN_h);
@@ -439,9 +434,8 @@ static int _sm9_alg_vefiry(
         SM9_Ecp2_J_ToA(&Ecp2_P, &Ecp2_J);
         // u = e(S', P)
         SM9_Alg_Pair_Mont(&Fp12_u, Ecp_s, &Ecp2_P);
-    }
-    else
-    {//Compute by input
+    } else {
+        // Compute by input
         // t = e([h]P1 + S, Ppub-s)
         SM9_Ecp_KP(&Ecp_A, &sm9_sys_para.EC_Fp_G_Mont, BN_h);
         SM9_Ecp_A_ToJ(&Ecp_J, &Ecp_A);
@@ -466,33 +460,25 @@ static int _sm9_alg_vefiry(
 }
 #endif /* SM9_SIG_USR_ENABLE */
 
-SM9_API int SM9_Verify(
-    unsigned int  opt,
-    const unsigned char *msg,
-    unsigned int  mlen,
-    const unsigned char *id,
-    unsigned int  ilen,
-    const unsigned char *g,
-    const unsigned char *mpk,
-    const unsigned char *sign,
-    unsigned char slen)
+int32_t SM9_Verify(
+    uint32_t opt,
+    const uint8_t *msg,
+    uint32_t mlen,
+    const uint8_t *id,
+    uint32_t ilen,
+    const uint8_t *g,
+    const uint8_t *mpk,
+    const uint8_t *sign,
+    uint8_t slen)
 {
-    int ret;
-    uint32_t                BN_h[BNWordLen];
-    SM9_ECP_A    Ecp_s;
+    int32_t ret;
+    uint32_t BN_h[BNWordLen];
+    SM9_ECP_A Ecp_s;
 
-    if ((opt == SM9_OPT_DM_MODE1) || (opt == SM9_OPT_DM_MODE3))
-    {
+    if (opt == SM9_OPT_DM_MODE1) {
         if (slen != SM9_SIGNATURE_BYTES + 1)
             return SM9_ERR_BAD_INPUT;
-    }
-    else if (opt == SM9_OPT_DM_MODE2)
-    {
-        if (slen != SM9_SIGNATURE_BYTES - SM9_CURVE_MODULE_BYTES + 1)
-            return SM9_ERR_BAD_INPUT;
-    }
-    else
-    {
+    } else {
         if (slen != SM9_SIGNATURE_BYTES)
             return SM9_ERR_BAD_INPUT;
     }
@@ -508,23 +494,23 @@ SM9_API int SM9_Verify(
     return ret;
 }
 
-SM9_API int SM9_Alg_Verify(
-    const unsigned char *msg,
-    unsigned int mlen,
-    const unsigned char *id,
-    unsigned int ilen,
-    const unsigned char *g,
-    const unsigned char *mpk,
-    const unsigned char *sign)
+int32_t SM9_Alg_Verify(
+    const uint8_t *msg,
+    uint32_t mlen,
+    const uint8_t *id,
+    uint32_t ilen,
+    const uint8_t *g,
+    const uint8_t *mpk,
+    const uint8_t *sign)
 {
     return SM9_Verify(SM9_OPT_DM_MODE0, msg, mlen, id, ilen, g, mpk, sign, SM9_SIGNATURE_BYTES);
 }
 
-SM9_API int SM9_Alg_MEKG(unsigned char *ke, unsigned char *mpk)
+int32_t SM9_Alg_MEKG(uint8_t *ke, uint8_t *mpk)
 {
-#ifdef    SM9_ENC_SYS_ENABLE
-    uint32_t            BN_SK[BNWordLen];
-    SM9_ECP_A    Point_PK;
+#ifdef SM9_ENC_SYS_ENABLE
+    uint32_t BN_SK[BNWordLen];
+    SM9_ECP_A Point_PK;
 
     // Read System PriKey to BN
     SM9_Bn_ReadBytes(BN_SK, ke);
@@ -539,12 +525,12 @@ SM9_API int SM9_Alg_MEKG(unsigned char *ke, unsigned char *mpk)
 #endif /* SM9_ENC_SYS_ENABLE */
 }
 
-SM9_API int SM9_Alg_UEKG(const unsigned char *id, unsigned int ilen, unsigned char *ke, unsigned char *de)
+int32_t SM9_Alg_UEKG(const uint8_t *id, uint32_t ilen, uint8_t *ke, uint8_t *de)
 {
-#ifdef    SM9_ENC_SYS_ENABLE
-    uint32_t                BN_t1[BNWordLen];
-    uint32_t                BN_t2[BNWordLen];
-    SM9_ECP2_A    Ecp2_ds;
+#ifdef SM9_ENC_SYS_ENABLE
+    uint32_t BN_t1[BNWordLen];
+    uint32_t BN_t2[BNWordLen];
+    SM9_ECP2_A Ecp2_ds;
 
     // Read System PriKey to BN
     SM9_Bn_ReadBytes(BN_t2, ke);
@@ -570,7 +556,7 @@ SM9_API int SM9_Alg_UEKG(const unsigned char *id, unsigned int ilen, unsigned ch
 #endif /* SM9_ENC_SYS_ENABLE */
 }
 
-void SM9_Hash_KDF_Init(SM9_CTX *ctx, const unsigned char *C1, unsigned char *w, const unsigned char *id, unsigned int ilen)
+void SM9_Hash_KDF_Init(SM9_CTX *ctx, const uint8_t *C1, uint8_t *w, const uint8_t *id, uint32_t ilen)
 {
     SM9_Hash_Init(&ctx->enc.xor_ctx);
     SM9_Hash_Update(&ctx->enc.xor_ctx, C1, 2 * BNByteLen);
@@ -580,30 +566,30 @@ void SM9_Hash_KDF_Init(SM9_CTX *ctx, const unsigned char *C1, unsigned char *w, 
     ctx->enc.cnt[3] = 1;
 }
 
-void SM9_Hash_KDF_Block(SM9_CTX *ctx, unsigned int cnt, unsigned char *k)
+void SM9_Hash_KDF_Block(SM9_CTX *ctx, uint32_t cnt, uint8_t *k)
 {
     SM9_Hash_Ctx tmp_ctx;
-    unsigned char c[4];
+    uint8_t c[4];
 
-    c[0] = (unsigned char)((cnt & 0xFF000000) >> 24);
-    c[1] = (unsigned char)((cnt & 0x00FF0000) >> 16);
-    c[2] = (unsigned char)((cnt & 0x0000FF00) >> 8);
-    c[3] = (unsigned char)(cnt & 0x000000FF);
+    c[0] = (cnt & 0xFF000000) >> 24;
+    c[1] = (cnt & 0x00FF0000) >> 16;
+    c[2] = (cnt & 0x0000FF00) >> 8;
+    c[3] = cnt & 0x000000FF;
     memcpy(&tmp_ctx, &ctx->enc.xor_ctx, sizeof(SM9_Hash_Ctx));
 
     SM9_Hash_Update(&tmp_ctx, c, 4);
     SM9_Hash_Final(&tmp_ctx, k);
 }
 
-void _sm9_enc_init(SM9_CTX *ctx, const unsigned char *id, unsigned int ilen, unsigned char *r,
-    const unsigned char *g, const unsigned char *mpk, unsigned char *C1)
+static void _sm9_enc_init(SM9_CTX *ctx, const uint8_t *id, uint32_t ilen, uint8_t *r,
+    const uint8_t *g, const uint8_t *mpk, uint8_t *C1)
 {
     uint32_t BN_r[BNWordLen];
     uint32_t BN_h[BNWordLen];
     SM9_ECP_A Ecp_P;
     SM9_ECP_A Ecp_T;
     SM9_Fp12 Fp12_g;
-    unsigned char pbW[12 * BNByteLen];
+    uint8_t pbW[12 * BNByteLen];
 
     // Read Random number r(in NormMode)
     SM9_Bn_ReadBytes(BN_r, r);
@@ -611,14 +597,13 @@ void _sm9_enc_init(SM9_CTX *ctx, const unsigned char *id, unsigned int ilen, uns
     SM9_Ecp_A_ReadBytes(&Ecp_P, mpk);
 
     // Get System Element g and convert to MontMode
-    if (g)
-    {//Read from input
+    if (g) {
+        // Read from input
         SM9_Fp12_ReadBytes(&Fp12_g, g);
         // w = g^r
         SM9_Fp12_Exp(&Fp12_g, &Fp12_g, BN_r);
-    }
-    else
-    {//Compute by input
+    } else {
+        // Compute by input
         SM9_Ecp_KP(&Ecp_T, &Ecp_P, BN_r);
         SM9_Alg_Pair_Mont(&Fp12_g, &Ecp_T, &sm9_sys_para.EC_Fp2_G_Mont);
     }
@@ -642,55 +627,47 @@ void _sm9_enc_init(SM9_CTX *ctx, const unsigned char *id, unsigned int ilen, uns
 // Mode-1: msg is not null, generate key stream and xor msg to enc
 // Mode-2: msg is null and mlen is null, generate key stream with ctx's bytes record to enc
 // Mode-3: msg is null and mlen is not null, generate key stream with mlen to enc
-static void _sm9_pke_kdf(SM9_CTX *ctx, const unsigned char *msg, unsigned int mlen, unsigned char *enc)
+static void _sm9_pke_kdf(SM9_CTX *ctx, const uint8_t *msg, uint32_t mlen, uint8_t *enc)
 {
-    uint8_t    k[2*SM9_Hash_Size];
-    unsigned int i, j;
-    unsigned int cnt, res;
+    uint8_t k[2*SM9_Hash_Size];
+    uint32_t i;
+    uint32_t cnt;
+    uint32_t res;
 
     cnt = ctx->enc.bytes / SM9_Hash_Size + 1;
     res = ctx->enc.bytes % SM9_Hash_Size;
 
-    if (!msg)
-    {
-        if (mlen)
-        {
+    if (!msg) {
+        if (mlen) {
             cnt = mlen / SM9_Hash_Size + 1;
             res = mlen % SM9_Hash_Size;
         }
         SM9_Hash_KDF_Block(ctx, cnt++, k);
-        if (res)
-        {
+        if (res) {
             SM9_Hash_KDF_Block(ctx, cnt++, k + SM9_Hash_Size);
         }
         memcpy(enc, k + res, SM9_Hash_Size);
         return;
     }
 
-    if (res)
-    {
+    if (res) {
         SM9_Hash_KDF_Block(ctx, cnt++, k);
-        for (j = res; j < SM9_Hash_Size; j++)
-            enc[j] = msg[j] ^ k[j];
+        SM9_Xor(&enc[res], SM9_Hash_Size - res, msg, k);
         enc += SM9_Hash_Size - res;
         msg += SM9_Hash_Size - res;
         mlen -= SM9_Hash_Size - res;
         ctx->enc.bytes += SM9_Hash_Size - res;
     }
 
-    for (i = 1; i <= mlen / SM9_Hash_Size; i++)
-    {
+    for (i = 1; i <= mlen / SM9_Hash_Size; i++) {
         SM9_Hash_KDF_Block(ctx, cnt++, k);
-        for (j = 0; j < SM9_Hash_Size; j++)
-            enc[j] = msg[j] ^ k[j];
+        SM9_Xor(enc, SM9_Hash_Size, msg, k);
         enc += SM9_Hash_Size;
         msg += SM9_Hash_Size;
     }
-    if ((res = mlen % SM9_Hash_Size) != 0)
-    {
+    if ((res = mlen % SM9_Hash_Size) != 0) {
         SM9_Hash_KDF_Block(ctx, cnt++, k);
-        for (j = 0; j < res; j++)
-            enc[j] = msg[j] ^ k[j];
+        SM9_Xor(enc, res, msg, k);
     }
     ctx->enc.bytes += mlen;
 }
@@ -700,26 +677,28 @@ void SM9_Mac_Init(SM9_CTX *ctx)
     SM9_Hash_Init(&ctx->mac_ctx);
 }
 
-void SM9_Mac_Update(SM9_CTX *ctx, const unsigned char *msg, unsigned int mlen)
+void SM9_Mac_Update(SM9_CTX *ctx, const uint8_t *msg, uint32_t mlen)
 {
     SM9_Hash_Update(&ctx->mac_ctx, msg, mlen);
 }
 
-void SM9_Mac_Final(SM9_CTX *ctx, unsigned char *key, unsigned int klen, unsigned char *mac)
+void SM9_Mac_Final(SM9_CTX *ctx, uint8_t *key, uint32_t klen, uint8_t *mac)
 {
     SM9_Hash_Update(&ctx->mac_ctx, key, klen);
     SM9_Hash_Final(&ctx->mac_ctx, mac);
 }
 
-SM9_API int SM9_Alg_Enc(const unsigned char *msg, unsigned int mlen,
-                const unsigned char *id,  unsigned int ilen, unsigned char *r,
-                const unsigned char *g,   const unsigned char *mpk,
-                unsigned char *enc, unsigned int *elen)
+int32_t SM9_Alg_Enc(const uint8_t *msg, uint32_t mlen,
+                    const uint8_t *id, uint32_t ilen, uint8_t *r,
+                    const uint8_t *g, const uint8_t *mpk,
+                    uint8_t *enc, uint32_t *elen)
 {
-#ifdef    SM9_ENC_USR_ENABLE
-    SM9_CTX    sm9_ctx;
-    uint8_t    *C1, *C2, *C3;
-    unsigned char mkey[SM9_Hash_Size];
+#ifdef SM9_ENC_USR_ENABLE
+    SM9_CTX sm9_ctx;
+    uint8_t *C1;
+    uint8_t *C2;
+    uint8_t *C3;
+    uint8_t mkey[SM9_Hash_Size];
 
 #ifndef SM9_ALG_RND_ENABLE
     r = g_RandBuf;
@@ -758,12 +737,12 @@ SM9_API int SM9_Alg_Enc(const unsigned char *msg, unsigned int mlen,
 #endif /* SM9_ENC_USR_ENABLE */
 }
 
-int SM9_Dec_Init(SM9_CTX *ctx, const unsigned char *de, const unsigned char *id, unsigned int ilen, const unsigned char *C1)
+int32_t SM9_Dec_Init(SM9_CTX *ctx, const uint8_t *de, const uint8_t *id, uint32_t ilen, const uint8_t *C1)
 {
-    SM9_ECP_A    Ecp_P;
-    SM9_ECP2_A    Ecp2_D;
-    SM9_Fp12        Fp12_g;
-    uint8_t                pbW[12 * BNByteLen];
+    SM9_ECP_A Ecp_P;
+    SM9_ECP2_A Ecp2_D;
+    SM9_Fp12 Fp12_g;
+    uint8_t pbW[12 * BNByteLen];
 
     // Read User Prikey and convert to MontMode
     SM9_Ecp2_A_ReadBytes(&Ecp2_D, de);
@@ -784,17 +763,20 @@ int SM9_Dec_Init(SM9_CTX *ctx, const unsigned char *de, const unsigned char *id,
     return SM9_OK;
 }
 
-SM9_API int SM9_Alg_Dec(const unsigned char *enc, unsigned int elen,
-                const unsigned char *de, const unsigned char *id, unsigned int ilen,
-                unsigned char *msg, unsigned int *mlen)
+int32_t SM9_Alg_Dec(const uint8_t *enc, uint32_t elen,
+                    const uint8_t *de, const uint8_t *id, uint32_t ilen,
+                    uint8_t *msg, uint32_t *mlen)
 {
-#ifdef    SM9_ENC_USR_ENABLE
-    SM9_CTX    sm9_ctx;
-    const uint8_t    *C1, *C2, *C3;
-    uint8_t    k[2 * SM9_Hash_Size];
-    uint8_t    mac[SM9_C3_ByteLen];
-    unsigned int i, len;
-    int ret;
+#ifdef SM9_ENC_USR_ENABLE
+    SM9_CTX sm9_ctx;
+    const uint8_t *C1;
+    const uint8_t *C2;
+    const uint8_t *C3;
+    uint8_t k[2 * SM9_Hash_Size];
+    uint8_t mac[SM9_C3_ByteLen];
+    uint32_t i;
+    uint32_t len;
+    int32_t ret;
 
     if (elen < SM9_C1_ByteLen + SM9_C3_ByteLen)
         return SM9_ERR_INPUT;
@@ -814,8 +796,7 @@ SM9_API int SM9_Alg_Dec(const unsigned char *enc, unsigned int elen,
     SM9_Mac_Final(&sm9_ctx, k, SM9_Hash_Size, mac);
 
     // Compute MAC(K2', C2) and Compare to C3
-    for (i = 0; i < SM9_C3_ByteLen; i++)
-    {
+    for (i = 0; i < SM9_C3_ByteLen; i++) {
         if (mac[i] != C3[i])
             return SM9_ERR_MAC_FAILED;
     }
@@ -847,12 +828,11 @@ static void _sm9_keyex_kdf(uint8_t *Z, uint32_t Zlen, uint32_t klen, uint8_t *K)
     uint32_t rbit = klen % SM9_Hash_Size;
     uint32_t i;
 
-    for (i = 0; i < rcnt; i++)
-    {
-        ct[0] = (unsigned char)((cnt & 0xFF000000) >> 24);
-        ct[1] = (unsigned char)((cnt & 0x00FF0000) >> 16);
-        ct[2] = (unsigned char)((cnt & 0x0000FF00) >> 8);
-        ct[3] = (unsigned char)(cnt & 0x000000FF);
+    for (i = 0; i < rcnt; i++) {
+        ct[0] = (cnt & 0xFF000000) >> 24;
+        ct[1] = (cnt & 0x00FF0000) >> 16;
+        ct[2] = (cnt & 0x0000FF00) >> 8;
+        ct[3] = cnt & 0x000000FF;
 
         SM9_Hash_Init(&ctx);
         SM9_Hash_Update(&ctx, Z, Zlen);
@@ -861,13 +841,12 @@ static void _sm9_keyex_kdf(uint8_t *Z, uint32_t Zlen, uint32_t klen, uint8_t *K)
         cnt++;
     }
 
-    if (rbit)
-    {
+    if (rbit) {
         uint8_t tmp[SM9_Hash_Size];
-        ct[0] = (unsigned char)((cnt & 0xFF000000) >> 24);
-        ct[1] = (unsigned char)((cnt & 0x00FF0000) >> 16);
-        ct[2] = (unsigned char)((cnt & 0x0000FF00) >> 8);
-        ct[3] = (unsigned char)(cnt & 0x000000FF);
+        ct[0] = (cnt & 0xFF000000) >> 24;
+        ct[1] = (cnt & 0x00FF0000) >> 16;
+        ct[2] = (cnt & 0x0000FF00) >> 8;
+        ct[3] = cnt & 0x000000FF;
 
         SM9_Hash_Init(&ctx);
         SM9_Hash_Update(&ctx, Z, Zlen);
@@ -890,15 +869,15 @@ __attribute__((unused)) static void _sm9_keyex_hash(uint8_t tag, uint8_t *Z, uin
     SM9_Hash_Final(&ctx, hash);
 }
 
-SM9_API int SM9_Alg_KeyEx_InitA(
-    unsigned char *ida,
-    unsigned int  ilen_a,
-    unsigned char *idb,
-    unsigned int  ilen_b,
-    unsigned char *ra,
-    unsigned char *da,
-    unsigned char *mpk,
-    unsigned char *RA)
+int32_t SM9_Alg_KeyEx_InitA(
+    uint8_t *ida,
+    uint32_t ilen_a,
+    uint8_t *idb,
+    uint32_t ilen_b,
+    uint8_t *ra,
+    uint8_t *da,
+    uint8_t *mpk,
+    uint8_t *RA)
 {
 #ifdef SM9_KEYEX_ENABLE
     uint32_t BN_ra[BNWordLen];
@@ -937,15 +916,15 @@ SM9_API int SM9_Alg_KeyEx_InitA(
 #endif
 }
 
-SM9_API int SM9_Alg_KeyEx_InitB(
-    unsigned char *ida,
-    unsigned int  ilen_a,
-    unsigned char *idb,
-    unsigned int  ilen_b,
-    unsigned char *rb,
-    unsigned char *db,
-    unsigned char *mpk,
-    unsigned char *RB)
+int32_t SM9_Alg_KeyEx_InitB(
+    uint8_t *ida,
+    uint32_t ilen_a,
+    uint8_t *idb,
+    uint32_t ilen_b,
+    uint8_t *rb,
+    uint8_t *db,
+    uint8_t *mpk,
+    uint8_t *RB)
 {
 #ifdef SM9_KEYEX_ENABLE
     uint32_t BN_rb[BNWordLen];
@@ -984,19 +963,19 @@ SM9_API int SM9_Alg_KeyEx_InitB(
 #endif
 }
 
-SM9_API int SM9_Alg_KeyEx_ConfirmA(
-    unsigned char *ida,
-    unsigned int  ilen_a,
-    unsigned char *idb,
-    unsigned int  ilen_b,
-    unsigned char *ra,
-    unsigned char *RA,
-    unsigned char *RB,
-    unsigned char *da,
-    unsigned char *mpk,
-    unsigned int  klen,
-    unsigned char *SK,
-    unsigned char *SA)
+int32_t SM9_Alg_KeyEx_ConfirmA(
+    uint8_t *ida,
+    uint32_t ilen_a,
+    uint8_t *idb,
+    uint32_t ilen_b,
+    uint8_t *ra,
+    uint8_t *RA,
+    uint8_t *RB,
+    uint8_t *da,
+    uint8_t *mpk,
+    uint32_t klen,
+    uint8_t *SK,
+    uint8_t *SA)
 {
 #ifdef SM9_KEYEX_ENABLE
     uint32_t BN_ra[BNWordLen];
@@ -1048,7 +1027,8 @@ SM9_API int SM9_Alg_KeyEx_ConfirmA(
     SM9_Hash_Update(&ctx, RB, 2 * BNByteLen);
     SM9_Hash_Final(&ctx, inner_hash);
 
-    // Compute Z = g1 || Hash(g2||g3||IDA||IDB||RA||RB)  (according to diagram note: X=g1||Hash(g2||g3||IDA||IDB||RA||RB))
+    // Compute Z = g1 || Hash(g2||g3||IDA||IDB||RA||RB)
+    // (according to diagram note: X=g1||Hash(g2||g3||IDA||IDB||RA||RB))
     memcpy(Z + Zlen, g1_bytes, 12 * BNByteLen);
     Zlen += 12 * BNByteLen;
     memcpy(Z + Zlen, inner_hash, SM9_Hash_Size);
@@ -1058,8 +1038,7 @@ SM9_API int SM9_Alg_KeyEx_ConfirmA(
     _sm9_keyex_kdf(Z, Zlen, klen, SK);
 
     // Compute SA = Hash(0x82 || g1 || Hash(g2||g3||IDA||IDB||RA||RB))
-    if (SA)
-    {
+    if (SA) {
         uint8_t temp[1 + 12 * BNByteLen + SM9_Hash_Size];
         temp[0] = 0x82;
         memcpy(temp + 1, g1_bytes, 12 * BNByteLen);
@@ -1076,19 +1055,19 @@ SM9_API int SM9_Alg_KeyEx_ConfirmA(
 #endif
 }
 
-SM9_API int SM9_Alg_KeyEx_ConfirmB(
-    unsigned char *ida,
-    unsigned int  ilen_a,
-    unsigned char *idb,
-    unsigned int  ilen_b,
-    unsigned char *rb,
-    unsigned char *RA,
-    unsigned char *RB,
-    unsigned char *db,
-    unsigned char *mpk,
-    unsigned int  klen,
-    unsigned char *SK,
-    unsigned char *SB)
+int32_t SM9_Alg_KeyEx_ConfirmB(
+    uint8_t *ida,
+    uint32_t ilen_a,
+    uint8_t *idb,
+    uint32_t ilen_b,
+    uint8_t *rb,
+    uint8_t *RA,
+    uint8_t *RB,
+    uint8_t *db,
+    uint8_t *mpk,
+    uint32_t klen,
+    uint8_t *SK,
+    uint8_t *SB)
 {
 #ifdef SM9_KEYEX_ENABLE
     uint32_t BN_rb[BNWordLen];
@@ -1150,8 +1129,7 @@ SM9_API int SM9_Alg_KeyEx_ConfirmB(
     _sm9_keyex_kdf(Z, Zlen, klen, SK);
 
     // Compute SB = Hash(0x83 || g1 || Hash(g2||g3||IDA||IDB||RA||RB))
-    if (SB)
-    {
+    if (SB) {
         uint8_t temp[1 + 12 * BNByteLen + SM9_Hash_Size];
 
         temp[0] = 0x83;
@@ -1170,17 +1148,17 @@ SM9_API int SM9_Alg_KeyEx_ConfirmB(
 }
 
 // Verify SA received from User A (for User B to verify A's confirmation)
-SM9_API int SM9_Alg_KeyEx_VerifySA(
-    unsigned char *ida,
-    unsigned int  ilen_a,
-    unsigned char *idb,
-    unsigned int  ilen_b,
-    unsigned char *rb,
-    unsigned char *RA,
-    unsigned char *RB,
-    unsigned char *db,
-    unsigned char *mpk,
-    unsigned char *SA)
+int32_t SM9_Alg_KeyEx_VerifySA(
+    uint8_t *ida,
+    uint32_t ilen_a,
+    uint8_t *idb,
+    uint32_t ilen_b,
+    uint8_t *rb,
+    uint8_t *RA,
+    uint8_t *RB,
+    uint8_t *db,
+    uint8_t *mpk,
+    uint8_t *SA)
 {
 #ifdef SM9_KEYEX_ENABLE
     uint32_t BN_rb[BNWordLen];
@@ -1246,8 +1224,7 @@ SM9_API int SM9_Alg_KeyEx_VerifySA(
     }
 
     // Verify SA
-    for (i = 0; i < SM9_Hash_Size; i++)
-    {
+    for (i = 0; i < SM9_Hash_Size; i++)  {
         if (SA[i] != expected_sa[i])
             return SM9_ERR_VERIFY_FAILED;
     }
@@ -1259,17 +1236,17 @@ SM9_API int SM9_Alg_KeyEx_VerifySA(
 }
 
 // Verify SB received from User B (for User A to verify B's confirmation)
-SM9_API int SM9_Alg_KeyEx_VerifySB(
-    unsigned char *ida,
-    unsigned int  ilen_a,
-    unsigned char *idb,
-    unsigned int  ilen_b,
-    unsigned char *ra,
-    unsigned char *RA,
-    unsigned char *RB,
-    unsigned char *da,
-    unsigned char *mpk,
-    unsigned char *SB)
+int32_t SM9_Alg_KeyEx_VerifySB(
+    uint8_t *ida,
+    uint32_t ilen_a,
+    uint8_t *idb,
+    uint32_t ilen_b,
+    uint8_t *ra,
+    uint8_t *RA,
+    uint8_t *RB,
+    uint8_t *da,
+    uint8_t *mpk,
+    uint8_t *SB)
 {
 #ifdef SM9_KEYEX_ENABLE
     uint32_t BN_ra[BNWordLen];
@@ -1335,8 +1312,7 @@ SM9_API int SM9_Alg_KeyEx_VerifySB(
     }
 
     // Verify SB
-    for (i = 0; i < SM9_Hash_Size; i++)
-    {
+    for (i = 0; i < SM9_Hash_Size; i++) {
         if (SB[i] != expected_sb[i])
             return SM9_ERR_VERIFY_FAILED;
     }

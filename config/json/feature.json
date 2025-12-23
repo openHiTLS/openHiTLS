@@ -1339,13 +1339,11 @@
             "sm9": {
                 ".features": ["sm9_crypt", "sm9_sign", "sm9_exch"],
                 ".srcs": [
-                    "crypto/sm9/src/*.c",
-                    "crypto/ecc/src/sm9/src/*.c"
+                    "crypto/sm9/src/*.c"
                 ],
                 ".deps": ["crypto::sm3", "crypto::util", "bsl::sal"],
                 ".include": [
                     "crypto/eal/src",
-                    "crypto/ecc/src/sm9/inc",
                     "crypto/sm9/include",
                     "crypto/sm3/include",
                     "crypto/util/include",

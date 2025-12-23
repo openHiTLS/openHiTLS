@@ -23,8 +23,8 @@
 #include "sm9_fp.h"
 #include <string.h>
 
-SM9_API int SM9_KeyExchangeInit(SM9_Ctx *ctx, unsigned char *peer_id, unsigned int peer_id_len,
-                                int is_initiator, unsigned char *rand, unsigned char *R)
+int32_t SM9_KeyExchangeInit(SM9_Ctx *ctx, uint8_t *peer_id, uint32_t peer_id_len,
+                            int32_t is_initiator, uint8_t *rand, uint8_t *R)
 {
     if (!ctx || !peer_id || !R) {
         return SM9_ERR_BAD_INPUT;
@@ -40,7 +40,7 @@ SM9_API int SM9_KeyExchangeInit(SM9_Ctx *ctx, unsigned char *peer_id, unsigned i
         sm9_rand(ctx->keyex_r, SM9_CURVE_MODULE_BYTES);
     }
 
-    int ret;
+    int32_t ret;
     if (is_initiator) {
         ret = SM9_Alg_KeyEx_InitA(
             ctx->user_id, ctx->user_id_len,
@@ -62,9 +62,9 @@ SM9_API int SM9_KeyExchangeInit(SM9_Ctx *ctx, unsigned char *peer_id, unsigned i
     return ret;
 }
 
-SM9_API int SM9_KeyExchangeConfirm(SM9_Ctx *ctx, unsigned char *peer_id, unsigned int peer_id_len,
-                                   int is_initiator, unsigned char *peer_R, unsigned int klen,
-                                   unsigned char *shared_key, unsigned char *confirm_value)
+int32_t SM9_KeyExchangeConfirm(SM9_Ctx *ctx, uint8_t *peer_id, uint32_t peer_id_len,
+                               int32_t is_initiator, uint8_t *peer_R, uint32_t klen,
+                               uint8_t *shared_key, uint8_t *confirm_value)
 {
     if (!ctx || !peer_id || !peer_R || !shared_key || !confirm_value) {
         return SM9_ERR_BAD_INPUT;
@@ -91,8 +91,8 @@ SM9_API int SM9_KeyExchangeConfirm(SM9_Ctx *ctx, unsigned char *peer_id, unsigne
     }
 }
 
-SM9_API int SM9_KeyExchangeVerify(SM9_Ctx *ctx, unsigned char *peer_id, unsigned int peer_id_len,
-                                  int is_initiator, unsigned char *peer_R, unsigned char *peer_confirm)
+int32_t SM9_KeyExchangeVerify(SM9_Ctx *ctx, uint8_t *peer_id, uint32_t peer_id_len,
+                              int32_t is_initiator, uint8_t *peer_R, uint8_t *peer_confirm)
 {
     if (!ctx || !peer_id || !peer_R || !peer_confirm) {
         return SM9_ERR_BAD_INPUT;

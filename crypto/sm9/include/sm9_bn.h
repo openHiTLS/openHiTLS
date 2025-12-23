@@ -34,13 +34,11 @@
 #define BNWordLen                    (BNBitLen/WordLen)
 
 #define WORDBITS    32
-#define    WORDBYTES    (WORDBITS/8)
-#define BN_MAX_WORDSIZE                16
+#define WORDBYTES    (WORDBITS/8)
+#define BN_MAX_WORDSIZE    16
 
 #define BN_MSB(x, w)        (((x)[w] >> (WORDBITS - 1)) & 1)
-
 #define BN_LSB(x, w)        ((x)[0] & 1)
-
 #define BN_BIT(x, i)        (((x)[(i) / WORDBITS] >> ((i) % WORDBITS)) & 1)
 
 #ifdef  __cplusplus
@@ -50,44 +48,31 @@ extern "C" {
 /*============================Part_1: Basic Functions=========================*/
 
 // x <= 0
-void bn_reset(uint32_t *x, int wsize);
+void bn_reset(uint32_t *x, int32_t wsize);
 
 // x <= n
-void bn_set_int(uint32_t *x, int n, int wsize);
+void bn_set_int(uint32_t *x, int32_t n, int32_t wsize);
 
 // y <= x
-void bn_assign(uint32_t *y, const uint32_t *x, int wsize);
+void bn_assign(uint32_t *y, const uint32_t *x, int32_t wsize);
 
-int bn_get_bytes(uint32_t *pWord, int wordlen, unsigned char *pByte, int bytelen);
+int32_t bn_get_bitlen(const uint32_t *x, int32_t wsize);
 
-int bn_put_bytes(unsigned char *pByte, int bytelen, uint32_t *pWord, int wordlen);
-
-int bn_get_bitlen(const uint32_t *x, int wsize);
-
-int bn_get_wordlen(const uint32_t *x, int wsize);
+int32_t bn_get_wordlen(const uint32_t *x, int32_t wsize);
 
 /*==================    Section: Comparison Operations    ======================
 @Brief
 ==============================================================================*/
 
-int bn_equal(const uint32_t *x, const uint32_t *y, int wsize);
+int32_t bn_equal(const uint32_t *x, const uint32_t *y, int32_t wsize);
 
 // Big number compare function 1(x > y) 0(x = y) -1(x < y)
-int bn_cmp(const uint32_t *x, const uint32_t *y, int wsize);
-
-int bn_cmp_int(const uint32_t *x, unsigned int n, int wsize);
+int32_t bn_cmp(const uint32_t *x, const uint32_t *y, int32_t wsize);
 
 // if x equal 0 return 1, else return 0
-int bn_is_zero(uint32_t *x, int wsize);
+int32_t bn_is_zero(uint32_t *x, int32_t wsize);
 
-int bn_is_nonzero(uint32_t *x, int wsize);
-
-// if x equal 1 return 1, else return 0
-int bn_is_one(uint32_t *x, int wsize);
-
-int bn_is_even(uint32_t *x);
-
-int bn_is_odd(uint32_t *x);
+int32_t bn_is_nonzero(uint32_t *x, int32_t wsize);
 
 /*==============================================================================
 @Section    Logical Operations
@@ -95,43 +80,40 @@ int bn_is_odd(uint32_t *x);
             simple shifts or boolean operators such as AND, XOR and OR directly.
 ==============================================================================*/
 
-// y = x * 2 or y = x << 1
-int bn_mul_2(uint32_t *y, const uint32_t *x, int wsize);
-
 // y = x / 2 or y = x >> 1
-int bn_div_2(uint32_t *y, const uint32_t *x, int wsize);
+int32_t bn_div_2(uint32_t *y, const uint32_t *x, int32_t wsize);
 
 // Addition: r = x + y
-uint32_t bn_add(uint32_t *r, const uint32_t *x, const uint32_t *y, int wsize);
+uint32_t bn_add(uint32_t *r, const uint32_t *x, const uint32_t *y, int32_t wsize);
 
 // Subtraction: r = x - y
-uint32_t bn_sub(uint32_t *r, const uint32_t *x, const uint32_t *y, int wsize);
+uint32_t bn_sub(uint32_t *r, const uint32_t *x, const uint32_t *y, int32_t wsize);
 
 // r = x + n
-uint32_t bn_add_int(uint32_t *r, const uint32_t *x, unsigned int n, int wsize);
+uint32_t bn_add_int(uint32_t *r, const uint32_t *x, uint32_t n, int32_t wsize);
 
 // r = x - n
-uint32_t bn_sub_int(uint32_t *r, const uint32_t *x, unsigned int n, int wsize);
+uint32_t bn_sub_int(uint32_t *r, const uint32_t *x, uint32_t n, int32_t wsize);
 
 /*============================Part_2: Mod Functions============================*/
 
 // r = x + y mod m
-void bn_mod_add(uint32_t *r, const uint32_t *x, const uint32_t *y, const uint32_t *m, int wsize);
+void bn_mod_add(uint32_t *r, const uint32_t *x, const uint32_t *y, const uint32_t *m, int32_t wsize);
 
 // r = x - y mod m
-void bn_mod_sub(uint32_t *r, const uint32_t *x, const uint32_t *y, const uint32_t *m, int wsize);
+void bn_mod_sub(uint32_t *r, const uint32_t *x, const uint32_t *y, const uint32_t *m, int32_t wsize);
 
 // r = - y mod m
-void bn_mod_neg(uint32_t *r, const uint32_t *x, const uint32_t *m, int wsize);
+void bn_mod_neg(uint32_t *r, const uint32_t *x, const uint32_t *m, int32_t wsize);
 
 // r = y ^ -1 mod m
-void bn_mod_inv(uint32_t *r, uint32_t *x, uint32_t *m, int wsize);
+void bn_mod_inv(uint32_t *r, uint32_t *x, uint32_t *m, int32_t wsize);
 
 // r = x >> 1 mod m
-void bn_mod_div_2(uint32_t *r, const uint32_t *x, const uint32_t *m, int wsize);
+void bn_mod_div_2(uint32_t *r, const uint32_t *x, const uint32_t *m, int32_t wsize);
 
 // x = x mod m
-void bn_get_res(uint32_t *x, const uint32_t *m, int wsize);
+void bn_get_res(uint32_t *x, const uint32_t *m, int32_t wsize);
 
 /*==================____Section: Montgomery Reduction____========================
 @Brief     Montgomery is a specialized reduction algorithm for any odd moduli.
@@ -140,43 +122,20 @@ void bn_get_res(uint32_t *x, const uint32_t *m, int wsize);
 ----and b is radix used (default is 2^32).
 ==============================================================================*/
 
-/* Fast Montgomery initialization to get montgomery const(mc)*/
-int bn_mont_init(uint32_t *mc, const uint32_t *m);
-
 /* Montgomery multiplication: r = x * y * R^-1 mod m  (HAC 14.36) */
-void bn_mont_mul(uint32_t *r, const uint32_t *x, const uint32_t *y, const uint32_t *m, uint32_t mc, int wsize);
+void bn_mont_mul(uint32_t *r, const uint32_t *x, const uint32_t *y, const uint32_t *m, uint32_t mc, int32_t wsize);
 
 /* Montgomery reduction: r = x^2 * R^-1 mod m */
-void bn_mont_redc(uint32_t *r, const uint32_t *x, const uint32_t *m, uint32_t mc, int wsize);
-
-/* r = x^2 * R^-1 mod m */
-void bn_mont_squ(uint32_t *r, const uint32_t *x, const uint32_t *m, uint32_t mc, int wsize);
-
-// r = x ^ e mod m ( e is normal mode )
-void bn_mont_exp(uint32_t *r, const uint32_t *x, const uint32_t *e, const uint32_t *m, uint32_t mc, int wsize);
-
-// r = x ^ 1/2 mod m (sometime not exist square root, return -1)
-int bn_mont_sqrt(uint32_t* r, const uint32_t *x, const uint32_t *m, uint32_t mc, int wsize);
-
-// Get parity of integer x (If x is odd, return 1, else return 0)
-int bn_mont_parity(uint32_t *x, const uint32_t *m, uint32_t mc, int wsize);
-
+void bn_mont_redc(uint32_t *r, const uint32_t *x, const uint32_t *m, uint32_t mc, int32_t wsize);
 /*============================================================================*/
 
-void BN_Print(uint32_t *pwBN, int32_t wsize);
+void BN_GetInv_Mont(uint32_t *r, uint32_t *x, uint32_t *m, uint32_t wModuleConst, uint32_t *pwRRModule, int32_t wsize);
 
-void BN_GetLen(int32_t *pBitLen, int32_t *pWordLen, uint32_t *pwBN, int32_t wsize);
-
-void BN_GetInv_Mont(uint32_t *r, uint32_t *x, uint32_t *m, uint32_t wModuleConst, uint32_t *pwRRModule, int wsize);
-
-void BN_Random(uint32_t *pwBN, int32_t wsize);
-
-int32_t BN_Mod_Basic(uint32_t *rem, int32_t iBNWordLen_r, uint32_t *pwBNX, int32_t iBNWordLen_X, uint32_t *pwBNM, int32_t iBNWordLen_M);
+int32_t BN_Mod_Basic(uint32_t *rem, int32_t iBNWordLen_r, uint32_t *pwBNX,
+                     int32_t iBNWordLen_X, uint32_t *pwBNM, int32_t iBNWordLen_M);
 
 int32_t ByteToBN(const uint8_t *pByteBuf, int32_t bytelen, uint32_t *pwBN, int32_t wsize);
 int32_t BNToByte(uint32_t *pwBN, int32_t wsize, uint8_t *pByteBuf, int32_t *bytelen);
-
-int BN_WriteBytes(unsigned char *pbDst, int iWords, uint32_t *pwSrc);
 
 #ifdef  __cplusplus
 }

@@ -180,7 +180,7 @@ int32_t CRYPT_SM9_Decrypt(const CRYPT_SM9_Ctx *ctx,
  * @return CRYPT_SUCCESS on success, error code otherwise
  */
 int32_t CRYPT_SM9_ComputeShareKey(const CRYPT_SM9_Ctx *selfCtx, const CRYPT_SM9_Ctx *peerCtx,
-                                   uint8_t *out, uint32_t *outLen);
+                                  uint8_t *out, uint32_t *outLen);
 
 /**
  * @brief Control function for SM9 operations

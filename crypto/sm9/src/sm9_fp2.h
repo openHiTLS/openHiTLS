@@ -26,13 +26,10 @@
 extern "C" {
 #endif
 
-void SM9_Fp2_Print( SM9_Fp2 *pElement, int32_t  wsize);
-void SM9_Fp2_Reset( SM9_Fp2 *pElement);
+void SM9_Fp2_Reset(SM9_Fp2 *pElement);
 void SM9_Fp2_Assign(SM9_Fp2 *pFp2_D, SM9_Fp2 *pFp2_S);
 void SM9_Fp2_SetOne(SM9_Fp2 *pFp2_E);
-int  SM9_Fp2_IsZero(SM9_Fp2 *pElement);
-
-int32_t  SM9_Fp2_JE(SM9_Fp2 *pElement1, SM9_Fp2 *pElement2, int32_t  wsize);
+int32_t SM9_Fp2_IsZero(SM9_Fp2 *pElement);
 
 // pFp2_R = pFp2_A + pFp2_B
 void SM9_Fp2_Add(SM9_Fp2 *pFp2_R, SM9_Fp2 *pFp2_A, SM9_Fp2 *pFp2_B);
@@ -41,17 +38,12 @@ void SM9_Fp2_Sub(SM9_Fp2 *pFp2_R, SM9_Fp2 *pFp2_A, SM9_Fp2 *pFp2_B);
 // pFp2_R = - pFp2_A
 void SM9_Fp2_Neg(SM9_Fp2 *pFp2_R, SM9_Fp2 *pFp2_A);
 
-void SM9_Fp2_LastRes(SM9_Fp2 *pFp2_A);
-
 // pFp2_R = pFp2_A * pFp2_B
 void SM9_Fp2_Mul(SM9_Fp2 *pFp2_R, SM9_Fp2 *pFp2_A, SM9_Fp2 *pFp2_B);
 // pFp2_R = pFp2_A ^ 2
 void SM9_Fp2_Squ(SM9_Fp2 *pFp2_R, SM9_Fp2 *pFp2_A);
 // pFp2_R = pFp2_A ^ -1
 void SM9_Fp2_Inv(SM9_Fp2 *pFp2_R, SM9_Fp2 *pFp2_A);
-
-// pFp2_R = pFp2_X ^ pBn_E
-void SM9_Fp2_Exp(SM9_Fp2 *pFp2_R, SM9_Fp2 *pFp2_X, uint32_t *pBn_E, uint32_t *pwMod, uint32_t wModuleConst, int32_t wsize);
 
 // r = a * b = (a0 + a1*u) * (b0 + 0*u)
 void SM9_Fp2_Mul_Coef0(SM9_Fp2 *pFp2_R, SM9_Fp2 *pFp2_A, uint32_t *pFp_B);
@@ -62,8 +54,6 @@ void SM9_Fp2_Mul_Vq(SM9_Fp2 *pFp2_R, SM9_Fp2 *pFp2_A);
 // r = a * w^q = (a0 + a1*u) * w^q
 void SM9_Fp2_Mul_Wq(SM9_Fp2 *pFp2_R, SM9_Fp2 *pFp2_A);
 
-void SM9_Fp2_Random(SM9_Fp2 *pwA, int32_t wsize);
-
 void SM9_Fp2_FrobMap(SM9_Fp2 *pwRes, SM9_Fp2 *pwA);
 
 #ifdef  __cplusplus
@@ -72,5 +62,5 @@ void SM9_Fp2_FrobMap(SM9_Fp2 *pwRes, SM9_Fp2 *pwA);
 
 #endif // HITLS_CRYPTO_SM9
 
-#endif //!_SM9_FP2_H_
+#endif // !_SM9_FP2_H_
 

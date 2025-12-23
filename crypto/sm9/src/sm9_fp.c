@@ -17,15 +17,15 @@
 #ifdef HITLS_CRYPTO_SM9
 
 #include "sm9_fp.h"
-#include "bn.h"
+#include "sm9_bn.h"
 
-void SM9_Fp_ReadBytes(uint32_t *dst, const unsigned char *src)
+void SM9_Fp_ReadBytes(uint32_t *dst, const uint8_t *src)
 {
     ByteToBN(src, BNByteLen, dst, BNWordLen);
     bn_mont_mul(dst, dst, sm9_sys_para.Q_R2, sm9_sys_para.EC_Q, sm9_sys_para.Q_Mc, sm9_sys_para.wsize);
 }
 
-void SM9_Fp_WriteBytes(unsigned char *dst, uint32_t *src)
+void SM9_Fp_WriteBytes(uint8_t *dst, uint32_t *src)
 {
     uint32_t tmp[BNWordLen];
 

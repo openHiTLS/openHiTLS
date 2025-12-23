@@ -26,33 +26,31 @@
 
 /*============================================================================*/
 
-SM9_API SM9_Ctx* SM9_NewCtx(void)
+void SM9_ResetCtx(SM9_Ctx *ctx)
 {
-    SM9_Ctx *ctx = (SM9_Ctx*)malloc(sizeof(SM9_Ctx));
     if (ctx) {
         memset(ctx, 0, sizeof(SM9_Ctx));
     }
+}
+
+SM9_Ctx* SM9_NewCtx(void)
+{
+    SM9_Ctx *ctx = (SM9_Ctx*)malloc(sizeof(SM9_Ctx));
+    SM9_ResetCtx(ctx);
     return ctx;
 }
 
-SM9_API void SM9_FreeCtx(SM9_Ctx *ctx)
+void SM9_FreeCtx(SM9_Ctx *ctx)
 {
+    SM9_ResetCtx(ctx);
     if (ctx) {
-        memset(ctx, 0, sizeof(SM9_Ctx));
         free(ctx);
-    }
-}
-
-SM9_API void SM9_ResetCtx(SM9_Ctx *ctx)
-{
-    if (ctx) {
-        memset(ctx, 0, sizeof(SM9_Ctx));
     }
 }
 
 /*============================================================================*/
 
-SM9_API int SM9_SetSignMasterKey(SM9_Ctx *ctx, unsigned char *msk)
+int32_t SM9_SetSignMasterKey(SM9_Ctx *ctx, uint8_t *msk)
 {
     if (!ctx || !msk) {
         return SM9_ERR_BAD_INPUT;
@@ -60,7 +58,7 @@ SM9_API int SM9_SetSignMasterKey(SM9_Ctx *ctx, unsigned char *msk)
 
     memcpy(ctx->sig_msk, msk, SM9_SIG_SYS_PRIKEY_BYTES);
 
-    int ret = SM9_Alg_MSKG(ctx->sig_msk, ctx->sig_mpk);
+    int32_t ret = SM9_Alg_MSKG(ctx->sig_msk, ctx->sig_mpk);
     if (ret != SM9_OK) {
         return ret;
     }
@@ -76,7 +74,7 @@ SM9_API int SM9_SetSignMasterKey(SM9_Ctx *ctx, unsigned char *msk)
     return SM9_OK;
 }
 
-SM9_API int SM9_GenSignUserKey(SM9_Ctx *ctx, const unsigned char *user_id, unsigned int id_len)
+int32_t SM9_GenSignUserKey(SM9_Ctx *ctx, const uint8_t *user_id, uint32_t id_len)
 {
     if (!ctx || !user_id || id_len == 0 || id_len > 256) {
         return SM9_ERR_BAD_INPUT;
@@ -89,7 +87,7 @@ SM9_API int SM9_GenSignUserKey(SM9_Ctx *ctx, const unsigned char *user_id, unsig
     memcpy(ctx->user_id, user_id, id_len);
     ctx->user_id_len = id_len;
 
-    int ret = SM9_Alg_USKG(user_id, id_len, ctx->sig_msk, ctx->sig_dsk);
+    int32_t ret = SM9_Alg_USKG(user_id, id_len, ctx->sig_msk, ctx->sig_dsk);
     if (ret != SM9_OK) {
         return ret;
     }
@@ -99,7 +97,7 @@ SM9_API int SM9_GenSignUserKey(SM9_Ctx *ctx, const unsigned char *user_id, unsig
     return SM9_OK;
 }
 
-SM9_API int SM9_SetSignUserKey(SM9_Ctx *ctx, unsigned char *user_id, unsigned int id_len, unsigned char *dsk)
+int32_t SM9_SetSignUserKey(SM9_Ctx *ctx, uint8_t *user_id, uint32_t id_len, uint8_t *dsk)
 {
     if (!ctx || !user_id || id_len == 0 || id_len > 256 || !dsk) {
         return SM9_ERR_BAD_INPUT;
@@ -117,10 +115,9 @@ SM9_API int SM9_SetSignUserKey(SM9_Ctx *ctx, unsigned char *user_id, unsigned in
 
 /*============================================================================*/
 
-SM9_API int SM9_SignCtx(const SM9_Ctx *ctx, const unsigned char *msg, unsigned int mlen,
-                        unsigned char *rand, unsigned char *sign)
+int32_t SM9_SignCtx(const SM9_Ctx *ctx, const uint8_t *msg, uint32_t mlen, uint8_t *rand, uint8_t *sign)
 {
-    static unsigned char default_rand[32];
+    static uint8_t default_rand[32];
 
     if (!ctx || !msg || !sign) {
         return SM9_ERR_BAD_INPUT;
@@ -135,14 +132,14 @@ SM9_API int SM9_SignCtx(const SM9_Ctx *ctx, const unsigned char *msg, unsigned i
         rand = default_rand;
     }
 
-    const unsigned char *g_ptr = ctx->has_sig_g ? ctx->sig_g : NULL;
-    const unsigned char *mpk_ptr = ctx->has_sig_sys ? ctx->sig_mpk : NULL;
+    const uint8_t *g_ptr = ctx->has_sig_g ? ctx->sig_g : NULL;
+    const uint8_t *mpk_ptr = ctx->has_sig_sys ? ctx->sig_mpk : NULL;
 
     return SM9_Alg_Sign(msg, mlen, ctx->sig_dsk, rand, g_ptr, mpk_ptr, sign);
 }
 
-SM9_API int SM9_VerifyCtx(const SM9_Ctx *ctx, const unsigned char *user_id, unsigned int id_len,
-                          const unsigned char *msg, unsigned int mlen, const unsigned char *sign)
+int32_t SM9_VerifyCtx(const SM9_Ctx *ctx, const uint8_t *user_id, uint32_t id_len,
+                      const uint8_t *msg, uint32_t mlen, const uint8_t *sign)
 {
     if (!ctx || !user_id || !msg || !sign) {
         return SM9_ERR_BAD_INPUT;
@@ -152,7 +149,7 @@ SM9_API int SM9_VerifyCtx(const SM9_Ctx *ctx, const unsigned char *user_id, unsi
         return SM9_ERR_BAD_INPUT;
     }
 
-    const unsigned char *g_ptr = ctx->has_sig_g ? ctx->sig_g : NULL;
+    const uint8_t *g_ptr = ctx->has_sig_g ? ctx->sig_g : NULL;
 
     return SM9_Alg_Verify(msg, mlen, user_id, id_len, g_ptr, ctx->sig_mpk, sign);
 }

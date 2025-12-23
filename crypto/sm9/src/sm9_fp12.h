@@ -25,28 +25,14 @@
 extern "C" {
 #endif
 
-void SM9_Fp12_ReadBytes(SM9_Fp12 *dst, const unsigned char *src);
+void SM9_Fp12_ReadBytes(SM9_Fp12 *dst, const uint8_t *src);
 
-void SM9_Fp12_WriteBytes(unsigned char *dst, SM9_Fp12 *src);
+void SM9_Fp12_WriteBytes(uint8_t *dst, SM9_Fp12 *src);
 
-void SM9_Fp12_Print(SM9_Fp12 *pFp12_E, int32_t  wsize);
 void SM9_Fp12_Reset(SM9_Fp12 *pFp12_E);
 void SM9_Fp12_Assign(SM9_Fp12 *pDest, SM9_Fp12 *pSource);
 void SM9_Fp12_SetOne(SM9_Fp12 *pFp12_E);
 
-int SM9_Fp12_IsZero(SM9_Fp12 *pFp12_E);
-
-int32_t SM9_Fp12_JE(SM9_Fp12 *pElement1, SM9_Fp12 *pElement2, int32_t  wsize);
-
-// pFp12_R = pFp12_A + pFp12_B mod pBN_M
-void SM9_Fp12_Add(SM9_Fp12 *pFp12_R, SM9_Fp12 *pFp12_A, SM9_Fp12 *pFp12_B);
-
-// pFp12_R = pFp12_A - pFp12_B mod pBN_M
-void SM9_Fp12_Sub(SM9_Fp12 *pFp12_R, SM9_Fp12 *pFp12_A, SM9_Fp12 *pFp12_B);
-// pFp12_R = -pFp12_A mod pBN_M
-void SM9_Fp12_Neg(SM9_Fp12 *pFp12_R, SM9_Fp12 *pFp12_A);
-// pFp12_R = pFp12_R mod Q
-void SM9_Fp12_Res(SM9_Fp12 *pFp12_R);
 // pFp12_Prod = pFp12_A * pFp12_B mod pBN_M
 void SM9_Fp12_Mul(SM9_Fp12 *pFp12_R, SM9_Fp12 *pFp12_A, SM9_Fp12 *pFp12_B);
 // pFp12_Prod = pFp12_A ^ 2 mod pBN_M
@@ -70,5 +56,5 @@ void SM9_Fp12_GetConj(SM9_Fp12 *pwRes, SM9_Fp12 *pwA);
 
 #endif // HITLS_CRYPTO_SM9
 
-#endif //!_SM9_FP12_H_
+#endif // !_SM9_FP12_H_
 

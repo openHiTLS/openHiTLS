@@ -30,14 +30,8 @@ extern "C" {
 void SM9_Ecp2_A_ReadBytes(SM9_ECP2_A *dst, const uint8_t *src);
 void SM9_Ecp2_A_WriteBytes(uint8_t *dst, SM9_ECP2_A *src);
 
-void SM9_Fp2_ECP_A_Print(SM9_ECP2_A *pECP_A, SM9_Sys_Para *pSysPara);
-void SM9_Fp2_ECP_J_Print(SM9_ECP2_J *pECP_A, SM9_Sys_Para *pSysPara);
-
 void SM9_Ecp2_A_Reset(SM9_ECP2_A *pEcp2_A);
 void SM9_Ecp2_J_Reset(SM9_ECP2_J *pEcp2_J);
-
-int32_t SM9_Fp2_ECP_A_JE(SM9_ECP2_A *pPointA, SM9_ECP2_A *pPointB, SM9_Sys_Para *pSysPara);
-int32_t SM9_Fp2_ECP_J_JE(SM9_ECP2_J *pPointA, SM9_ECP2_J *pPointB, SM9_Sys_Para *pSysPara);
 
 void SM9_Ecp2_A_Assign(SM9_ECP2_A *pPointA, SM9_ECP2_A *pPointB);
 void SM9_Ecp2_J_Assign(SM9_ECP2_J *pPointA, SM9_ECP2_J *pPointB);

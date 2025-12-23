@@ -19,14 +19,16 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM9
 
-#include "bn.h"
+#include "sm9_bn.h"
 #include "sm9_curve.h"
-#include <memory.h>
+#include <string.h>
 
 // Field P
 #define SM9_Fp_Assign(Fpz, Fp_x)        \
-    if ((Fpz) != (Fp_x))    \
-        {memcpy(Fpz, Fp_x, 4 * sm9_sys_para.wsize); }
+    do {    \
+        if ((Fpz) != (Fp_x))    \
+            memcpy((Fpz), (Fp_x), 4 * sm9_sys_para.wsize);    \
+    } while (0)
 #define SM9_Fp_SetOne(Fpz)        \
     memcpy(Fpz, sm9_sys_para.Q_R1, 4 * sm9_sys_para.wsize)
 #define SM9_Fq_IsZero(Fpx)        \
@@ -51,8 +53,10 @@
     bn_mont_mul(Fp_z, Fp_x, Fp_x, sm9_sys_para.EC_Q, sm9_sys_para.Q_Mc, sm9_sys_para.wsize)
 
 #define SM9_Fp_Inv(Fp_z, Fp_x)    \
-    bn_mont_mul(Fp_z, Fp_x, sm9_sys_para.EC_One, sm9_sys_para.EC_Q, sm9_sys_para.Q_Mc, sm9_sys_para.wsize); \
-    BN_GetInv_Mont(Fp_z, Fp_z, sm9_sys_para.EC_Q, sm9_sys_para.Q_Mc, sm9_sys_para.Q_R2, sm9_sys_para.wsize);
+    do {    \
+        bn_mont_mul(Fp_z, Fp_x, sm9_sys_para.EC_One, sm9_sys_para.EC_Q, sm9_sys_para.Q_Mc, sm9_sys_para.wsize); \
+        BN_GetInv_Mont(Fp_z, Fp_z, sm9_sys_para.EC_Q, sm9_sys_para.Q_Mc, sm9_sys_para.Q_R2, sm9_sys_para.wsize); \
+    } while (0)
 
 #define SM9_Fp_MulRoot(Fp_z, Fp_x)    \
     bn_mont_mul(Fp_z, Fp_x, sm9_sys_para.EC_Root_Mont, sm9_sys_para.EC_Q, sm9_sys_para.Q_Mc, sm9_sys_para.wsize);
@@ -77,9 +81,9 @@
 extern "C" {
 #endif
 
-void SM9_Fp_ReadBytes(uint32_t *dst, const unsigned char *src);
+void SM9_Fp_ReadBytes(uint32_t *dst, const uint8_t *src);
 
-void SM9_Fp_WriteBytes(unsigned char *dst, uint32_t *src);
+void SM9_Fp_WriteBytes(uint8_t *dst, uint32_t *src);
 
 #ifdef  __cplusplus
 }

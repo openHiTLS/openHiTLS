@@ -22,7 +22,7 @@
 
 /*============================================================================*/
 
-SM9_API int SM9_SetEncMasterKey(SM9_Ctx *ctx, unsigned char *msk)
+int32_t SM9_SetEncMasterKey(SM9_Ctx *ctx, uint8_t *msk)
 {
     if (!ctx || !msk) {
         return SM9_ERR_BAD_INPUT;
@@ -30,7 +30,7 @@ SM9_API int SM9_SetEncMasterKey(SM9_Ctx *ctx, unsigned char *msk)
 
     memcpy(ctx->enc_msk, msk, SM9_ENC_SYS_PRIKEY_BYTES);
 
-    int ret = SM9_Alg_MEKG(ctx->enc_msk, ctx->enc_mpk);
+    int32_t ret = SM9_Alg_MEKG(ctx->enc_msk, ctx->enc_mpk);
     if (ret != SM9_OK) {
         return ret;
     }
@@ -46,7 +46,7 @@ SM9_API int SM9_SetEncMasterKey(SM9_Ctx *ctx, unsigned char *msk)
     return SM9_OK;
 }
 
-SM9_API int SM9_GenEncUserKey(SM9_Ctx *ctx, const unsigned char *user_id, unsigned int id_len)
+ int32_t SM9_GenEncUserKey(SM9_Ctx *ctx, const uint8_t *user_id, uint32_t id_len)
 {
     if (!ctx || !user_id || id_len == 0 || id_len > 256) {
         return SM9_ERR_BAD_INPUT;
@@ -59,7 +59,7 @@ SM9_API int SM9_GenEncUserKey(SM9_Ctx *ctx, const unsigned char *user_id, unsign
     memcpy(ctx->user_id, user_id, id_len);
     ctx->user_id_len = id_len;
 
-    int ret = SM9_Alg_UEKG(user_id, id_len, ctx->enc_msk, ctx->enc_dek);
+    int32_t ret = SM9_Alg_UEKG(user_id, id_len, ctx->enc_msk, ctx->enc_dek);
     if (ret != SM9_OK) {
         return ret;
     }
@@ -69,7 +69,7 @@ SM9_API int SM9_GenEncUserKey(SM9_Ctx *ctx, const unsigned char *user_id, unsign
     return SM9_OK;
 }
 
-SM9_API int SM9_SetEncUserKey(SM9_Ctx *ctx, unsigned char *user_id, unsigned int id_len, unsigned char *dek)
+int32_t SM9_SetEncUserKey(SM9_Ctx *ctx, uint8_t *user_id, uint32_t id_len, uint8_t *dek)
 {
     if (!ctx || !user_id || id_len == 0 || id_len > 256 || !dek) {
         return SM9_ERR_BAD_INPUT;
@@ -88,11 +88,10 @@ SM9_API int SM9_SetEncUserKey(SM9_Ctx *ctx, unsigned char *user_id, unsigned int
 /*============================================================================*/
 /*============================================================================*/
 
-SM9_API int SM9_EncryptCtx(const SM9_Ctx *ctx, const unsigned char *user_id, unsigned int id_len,
-                           const unsigned char *msg, unsigned int mlen,
-                           unsigned char *rand, unsigned char *cipher, unsigned int *clen)
+int32_t SM9_EncryptCtx(const SM9_Ctx *ctx, const uint8_t *user_id, uint32_t id_len,
+                       const uint8_t *msg, uint32_t mlen, uint8_t *rand, uint8_t *cipher, uint32_t *clen)
 {
-    static unsigned char default_rand[32];
+    static uint8_t default_rand[32];
 
     if (!ctx || !user_id || !msg || !cipher || !clen) {
         return SM9_ERR_BAD_INPUT;
@@ -107,13 +106,12 @@ SM9_API int SM9_EncryptCtx(const SM9_Ctx *ctx, const unsigned char *user_id, uns
         rand = default_rand;
     }
 
-    const unsigned char *g_ptr = ctx->has_enc_g ? ctx->enc_g : NULL;
+    const uint8_t *g_ptr = ctx->has_enc_g ? ctx->enc_g : NULL;
 
     return SM9_Alg_Enc(msg, mlen, user_id, id_len, rand, g_ptr, ctx->enc_mpk, cipher, clen);
 }
 
-SM9_API int SM9_DecryptCtx(const SM9_Ctx *ctx, const unsigned char *cipher, unsigned int clen,
-                           unsigned char *msg, unsigned int *mlen)
+int32_t SM9_DecryptCtx(const SM9_Ctx *ctx, const uint8_t *cipher, uint32_t clen, uint8_t *msg, uint32_t *mlen)
 {
     if (!ctx || !cipher || !msg || !mlen) {
         return SM9_ERR_BAD_INPUT;

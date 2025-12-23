@@ -64,9 +64,9 @@ int32_t CRYPT_SM9_Gen(CRYPT_SM9_Ctx *ctx)
         return CRYPT_NULL_INPUT;
     }
 
-    int ret;
-    unsigned char sig_msk[SM9_SIG_SYS_PRIKEY_BYTES];
-    unsigned char enc_msk[SM9_ENC_SYS_PRIKEY_BYTES];
+    int32_t ret;
+    uint8_t sig_msk[SM9_SIG_SYS_PRIKEY_BYTES];
+    uint8_t enc_msk[SM9_ENC_SYS_PRIKEY_BYTES];
 
     /* Generate random master private key for signature */
     sm9_rand(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
@@ -430,7 +430,7 @@ int32_t CRYPT_SM9_Sign(const CRYPT_SM9_Ctx *ctx, int32_t mdId,
     /* SM9 signature always uses SM3, mdId is ignored for compatibility */
     (void)mdId;
 
-    int ret = SM9_SignCtx(ctx, data, dataLen, NULL, sign);
+    int32_t ret = SM9_SignCtx(ctx, data, dataLen, NULL, sign);
     if (ret != SM9_OK) {
         return CRYPT_SM9_ERR_SIGN_FAILED;
     }
@@ -461,8 +461,7 @@ int32_t CRYPT_SM9_Verify(const CRYPT_SM9_Ctx *ctx, int32_t mdId,
         return CRYPT_SM9_ERR_NO_USER_ID;
     }
 
-    int ret = SM9_VerifyCtx(ctx, ctx->user_id, ctx->user_id_len,
-                            data, dataLen, sign);
+    int32_t ret = SM9_VerifyCtx(ctx, ctx->user_id, ctx->user_id_len, data, dataLen, sign);
     if (ret != SM9_OK) {
         return CRYPT_SM9_VERIFY_FAIL;
     }
@@ -483,9 +482,8 @@ int32_t CRYPT_SM9_Encrypt(const CRYPT_SM9_Ctx *ctx,
         return CRYPT_SM9_ERR_NO_USER_ID;
     }
 
-    unsigned int cipherLen = *outLen;
-    int ret = SM9_EncryptCtx(ctx, ctx->user_id, ctx->user_id_len,
-                             data, dataLen, NULL, out, &cipherLen);
+    uint32_t cipherLen = *outLen;
+    int32_t ret = SM9_EncryptCtx(ctx, ctx->user_id, ctx->user_id_len, data, dataLen, NULL, out, &cipherLen);
     if (ret != SM9_OK) {
         return CRYPT_SM9_ERR_ENCRYPT_FAILED;
     }
@@ -502,8 +500,8 @@ int32_t CRYPT_SM9_Decrypt(const CRYPT_SM9_Ctx *ctx,
         return CRYPT_NULL_INPUT;
     }
 
-    unsigned int plainLen = *outLen;
-    int ret = SM9_DecryptCtx(ctx, data, dataLen, out, &plainLen);
+    uint32_t plainLen = *outLen;
+    int32_t ret = SM9_DecryptCtx(ctx, data, dataLen, out, &plainLen);
     if (ret != SM9_OK) {
         return CRYPT_SM9_ERR_DECRYPT_FAILED;
     }
@@ -513,7 +511,7 @@ int32_t CRYPT_SM9_Decrypt(const CRYPT_SM9_Ctx *ctx,
 }
 
 int32_t CRYPT_SM9_ComputeShareKey(const CRYPT_SM9_Ctx *selfCtx, const CRYPT_SM9_Ctx *peerCtx,
-                                   uint8_t *out, uint32_t *outLen)
+                                  uint8_t *out, uint32_t *outLen)
 {
     if (selfCtx == NULL || peerCtx == NULL || out == NULL || outLen == NULL) {
         return CRYPT_NULL_INPUT;
@@ -538,13 +536,13 @@ int32_t CRYPT_SM9_ComputeShareKey(const CRYPT_SM9_Ctx *selfCtx, const CRYPT_SM9_
     }
 
     /* Determine initiator/responder roles by comparing user IDs (lexicographic order) */
-    int cmp = memcmp(selfCtx->user_id, peerCtx->user_id,
-                     selfCtx->user_id_len < peerCtx->user_id_len ? selfCtx->user_id_len : peerCtx->user_id_len);
+    int32_t cmp = memcmp(selfCtx->user_id, peerCtx->user_id,
+                         selfCtx->user_id_len < peerCtx->user_id_len ? selfCtx->user_id_len : peerCtx->user_id_len);
     if (cmp == 0 && selfCtx->user_id_len != peerCtx->user_id_len) {
         cmp = (selfCtx->user_id_len < peerCtx->user_id_len) ? -1 : 1;
     }
 
-    int is_initiator = (cmp < 0) ? 1 : 0;  /* Self is initiator if self_id < peer_id */
+    int32_t is_initiator = (cmp < 0) ? 1 : 0;  /* Self is initiator if self_id < peer_id */
 
     /* Create temporary contexts for the key exchange process */
     SM9_Ctx *tmpSelfCtx = (SM9_Ctx *)CRYPT_SM9_DupCtx(selfCtx);
@@ -555,18 +553,18 @@ int32_t CRYPT_SM9_ComputeShareKey(const CRYPT_SM9_Ctx *selfCtx, const CRYPT_SM9_
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    int ret;
-    unsigned char RA[SM9_KEYEX_RA_BYTES];
-    unsigned char RB[SM9_KEYEX_RB_BYTES];
-    unsigned char SA[SM9_KEYEX_RA_BYTES];
-    unsigned char SB[SM9_KEYEX_RB_BYTES];
+    int32_t ret;
+    uint8_t RA[SM9_KEYEX_RA_BYTES];
+    uint8_t RB[SM9_KEYEX_RB_BYTES];
+    uint8_t SA[SM9_KEYEX_RA_BYTES];
+    uint8_t SB[SM9_KEYEX_RB_BYTES];
 
     /* Generate deterministic random seeds based on user IDs to ensure consistent key exchange */
-    unsigned char seed_buffer[512]; /* Buffer to hold both user IDs */
-    unsigned int seed_len = 0;
-    unsigned char hash[32];
-    unsigned char rand_A[SM9_CURVE_MODULE_BYTES];
-    unsigned char rand_B[SM9_CURVE_MODULE_BYTES];
+    uint8_t seed_buffer[512]; /* Buffer to hold both user IDs */
+    uint32_t seed_len = 0;
+    uint8_t hash[32];
+    uint8_t rand_A[SM9_CURVE_MODULE_BYTES];
+    uint8_t rand_B[SM9_CURVE_MODULE_BYTES];
 
     /* Create seed for initiator: H(initiator_id || responder_id || "A") */
     if (is_initiator) {
@@ -618,8 +616,8 @@ int32_t CRYPT_SM9_ComputeShareKey(const CRYPT_SM9_Ctx *selfCtx, const CRYPT_SM9_
     }
 
     /* Step 4: Peer computes shared key and S_peer (for verification) */
-    unsigned char tmpKey[256];
-    unsigned int tmpKeyLen = sizeof(tmpKey);
+    uint8_t tmpKey[256];
+    uint32_t tmpKeyLen = sizeof(tmpKey);
     ret = SM9_KeyExchangeConfirm(tmpPeerCtx, tmpSelfCtx->user_id, tmpSelfCtx->user_id_len,
                                  !is_initiator, is_initiator ? RA : RB, tmpKeyLen, tmpKey,
                                  is_initiator ? SB : SA);
