@@ -117,7 +117,7 @@ void HITLS_SESS_Free(HITLS_Session *sess)
 #ifdef HITLS_TLS_FEATURE_SNI
         BSL_SAL_FREE(sess->hostName);
 #endif
-        memset_s(sess->masterKey, MAX_MASTER_KEY_SIZE, 0, MAX_MASTER_KEY_SIZE);
+        BSL_SAL_CleanseData(sess->masterKey, MAX_MASTER_KEY_SIZE);
         SAL_CERT_MgrCtxFree(sess->certMgrCtx);
         BSL_SAL_ThreadLockFree(sess->lock);
         BSL_SAL_FREE(sess);

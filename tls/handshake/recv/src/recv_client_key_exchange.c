@@ -208,7 +208,6 @@ int32_t ServerRecvClientKxProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15823, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "server Calculate client finished data error.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        (void)memset_s(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey), 0, sizeof(ctx->hsCtx->masterKey));
         return ret;
     }
 

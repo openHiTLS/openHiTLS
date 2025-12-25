@@ -170,6 +170,7 @@ void HITLS_Free(HITLS_Ctx *ctx)
     BSL_SAL_FREE(ctx->certificateReqCtx);
     ctx->certificateReqCtxSize = 0;
 #endif
+    ConnCleanSensitiveData(ctx);
     BSL_SAL_FREE(ctx);
     return;
 }

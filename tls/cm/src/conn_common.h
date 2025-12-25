@@ -63,6 +63,8 @@ int32_t AlertEventProcess(HITLS_Ctx *ctx);
 
 void ChangeConnState(HITLS_Ctx *ctx, CM_State state);
 
+void ConnCleanSensitiveData(TLS_Ctx *ctx);
+
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
 /**
  * @ingroup hitls

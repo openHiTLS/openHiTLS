@@ -211,6 +211,12 @@ void HS_DeInit(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_PROTO_TLS13 */
 	/* clear sensitive information */
     BSL_SAL_CleanseData(hsCtx->masterKey, MAX_DIGEST_SIZE);
+#ifdef HITLS_TLS_PROTO_TLS13
+    BSL_SAL_CleanseData(ctx->hsCtx->earlySecret, MAX_DIGEST_SIZE);
+    BSL_SAL_CleanseData(ctx->hsCtx->handshakeSecret, MAX_DIGEST_SIZE);
+    BSL_SAL_CleanseData(ctx->hsCtx->serverHsTrafficSecret, MAX_DIGEST_SIZE);
+    BSL_SAL_CleanseData(ctx->hsCtx->clientHsTrafficSecret, MAX_DIGEST_SIZE);
+#endif
     if (hsCtx->peerCert != NULL) {
         SAL_CERT_PairFree(ctx->config.tlsConfig.certMgrCtx, hsCtx->peerCert);
         hsCtx->peerCert = NULL;

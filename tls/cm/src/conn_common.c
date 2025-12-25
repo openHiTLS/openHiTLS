@@ -67,8 +67,29 @@ static const char *GetStateString(uint32_t state)
     return stateMachineStr[state];
 }
 
+void ConnCleanSensitiveData(TLS_Ctx *ctx)
+{
+    if (ctx->hsCtx != NULL) {
+        BSL_SAL_CleanseData(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey));
+#ifdef HITLS_TLS_PROTO_TLS13
+        BSL_SAL_CleanseData(ctx->hsCtx->earlySecret, MAX_DIGEST_SIZE);
+        BSL_SAL_CleanseData(ctx->hsCtx->handshakeSecret, MAX_DIGEST_SIZE);
+        BSL_SAL_CleanseData(ctx->hsCtx->serverHsTrafficSecret, MAX_DIGEST_SIZE);
+        BSL_SAL_CleanseData(ctx->hsCtx->clientHsTrafficSecret, MAX_DIGEST_SIZE);
+#endif
+    }
+#ifdef HITLS_TLS_PROTO_TLS13
+    BSL_SAL_CleanseData(ctx->clientAppTrafficSecret, MAX_DIGEST_SIZE);
+    BSL_SAL_CleanseData(ctx->serverAppTrafficSecret, MAX_DIGEST_SIZE);
+    BSL_SAL_CleanseData(ctx->resumptionMasterSecret, MAX_DIGEST_SIZE);
+#endif
+}
+
 void ChangeConnState(HITLS_Ctx *ctx, CM_State state)
 {
+    if (state == CM_STATE_ALERTED) {
+        ConnCleanSensitiveData(ctx);
+    }
     if (GetConnState(ctx) == state) {
         return;
     }
