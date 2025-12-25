@@ -39,7 +39,6 @@ int32_t PrepareClientFinishedMsg(TLS_Ctx *ctx)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15357, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client Calculate client finished data error.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        (void)memset_s(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey), 0, sizeof(ctx->hsCtx->masterKey));
         return ret;
     }
 
@@ -89,7 +88,6 @@ int32_t Tls12ClientSendFinishedProcess(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
     ret = VERIFY_CalcVerifyData(ctx, false, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
     if (ret != HITLS_SUCCESS) {
-        (void)memset_s(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey), 0, sizeof(ctx->hsCtx->masterKey));
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15361, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client Calculate server finished data error.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
@@ -123,7 +121,6 @@ static int32_t DtlsClientChangeStateAfterSendFinished(TLS_Ctx *ctx)
 
     ret = VERIFY_CalcVerifyData(ctx, false, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
     if (ret != HITLS_SUCCESS) {
-        (void)memset_s(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey), 0, sizeof(ctx->hsCtx->masterKey));
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15367, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client Calculate server finished data error.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
@@ -299,7 +296,6 @@ static int32_t CalcVerifyData(TLS_Ctx *ctx)
 {
     int32_t ret = VERIFY_CalcVerifyData(ctx, false, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
     if (ret != HITLS_SUCCESS) {
-        (void)memset_s(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey), 0, sizeof(ctx->hsCtx->masterKey));
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15362, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "server Calculate server finished data error.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
@@ -344,7 +340,6 @@ int32_t Tls12ServerSendFinishedProcess(TLS_Ctx *ctx)
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15366, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "server Calculate client finished data error.", 0, 0, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-            (void)memset_s(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey), 0, sizeof(ctx->hsCtx->masterKey));
             return ret;
         }
         ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_ACTIVE_CIPHER_SPEC);
@@ -374,7 +369,6 @@ static int32_t DtlsServerChangeStateAfterSendFinished(TLS_Ctx *ctx)
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15371, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "server Calculate client finished data error.", 0, 0, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-            (void)memset_s(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey), 0, sizeof(ctx->hsCtx->masterKey));
             return ret;
         }
         ctx->method.ctrlCCS(ctx, CCS_CMD_RECV_READY);
@@ -413,7 +407,6 @@ int32_t DtlsServerSendFinishedProcess(TLS_Ctx *ctx)
     if (hsCtx->msgLen == 0) {
         ret = VERIFY_CalcVerifyData(ctx, false, ctx->hsCtx->masterKey, MASTER_SECRET_LEN);
         if (ret != HITLS_SUCCESS) {
-            (void)memset_s(ctx->hsCtx->masterKey, sizeof(ctx->hsCtx->masterKey), 0, sizeof(ctx->hsCtx->masterKey));
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15372, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "server Calculate server finished data error.", 0, 0, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);

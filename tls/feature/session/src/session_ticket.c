@@ -405,13 +405,12 @@ static int32_t GenerateSessFromTicket(HITLS_Lib_Ctx *libCtx, const char *attrNam
     uint8_t *plaintext = BSL_SAL_Calloc(1u, ticketBufSize);
     if (plaintext == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16037, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "plaintext malloc fail when decrypt session ticket.", 0, 0, 0, 0);
-        return HITLS_MEMALLOC_FAIL;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16037, "plaintext malloc fail");
     }
     int32_t ret = SAL_CRYPT_Decrypt(libCtx, attrName,
         cipher, ticket->encryptedState, ticket->encryptedStateSize, plaintext, &plaintextLen);
     if (ret != HITLS_SUCCESS) {
+        BSL_SAL_CleanseData(plaintext, plaintextLen);
         BSL_SAL_FREE(plaintext);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16038, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "SAL_CRYPT_Decrypt fail when decrypt session ticket.", 0, 0, 0, 0);
@@ -427,6 +426,7 @@ static int32_t GenerateSessFromTicket(HITLS_Lib_Ctx *libCtx, const char *attrNam
         uint8_t paddingLen = plaintext[plaintextLen - 1];
         for (uint32_t i = 1; i <= paddingLen; i++) {
             if (plaintext[plaintextLen - 1 - i] != paddingLen) {
+                BSL_SAL_CleanseData(plaintext, plaintextLen);
                 BSL_SAL_FREE(plaintext);
                 return HITLS_SUCCESS;
             }
@@ -438,11 +438,10 @@ static int32_t GenerateSessFromTicket(HITLS_Lib_Ctx *libCtx, const char *attrNam
     /* Parse the ticket content to the SESS. */
     HITLS_Session *session = HITLS_SESS_New();
     if (session == NULL) {
+        BSL_SAL_CleanseData(plaintext, plaintextLen);
         BSL_SAL_FREE(plaintext);
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16039, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "HITLS_SESS_New fail when decrypt session ticket.", 0, 0, 0, 0);
-        return HITLS_MEMALLOC_FAIL;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16039, "HITLS_SESS_New fail");
     }
     ret = SESS_Decode(session, plaintext, plaintextLen);
     BSL_SAL_FREE(plaintext);
