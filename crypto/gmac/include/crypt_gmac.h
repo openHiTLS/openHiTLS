@@ -47,6 +47,8 @@ int32_t CRYPT_GMAC_Deinit(MODES_GCM_Ctx *ctx);
 
 int32_t CRYPT_GMAC_Ctrl(MODES_GCM_Ctx *ctx, int32_t opt, void *val, uint32_t len);
 
+#define CRYPT_GMAC_DupCtx MODES_GCM_DupCtx
+
 #ifdef __cplusplus
 }
 #endif /* __cpluscplus */

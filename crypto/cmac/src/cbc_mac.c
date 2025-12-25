@@ -178,4 +178,27 @@ void CRYPT_CBC_MAC_FreeCtx(CRYPT_CBC_MAC_Ctx *ctx)
     CipherMacDeinitCtx(&ctx->common);
     BSL_SAL_Free(ctx);
 }
+
+CRYPT_CBC_MAC_Ctx *CRYPT_CBC_MAC_DupCtx(const CRYPT_CBC_MAC_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return NULL;
+    }
+
+    CRYPT_CBC_MAC_Ctx *newCtx = BSL_SAL_Dump(ctx, sizeof(CRYPT_CBC_MAC_Ctx));
+    if (newCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+
+    void *key = BSL_SAL_Dump(ctx->common.key, ctx->common.method->ctxSize);
+    if (key == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newCtx);
+        return NULL;
+    }
+    newCtx->common.key = key;
+    return newCtx;
+}
 #endif

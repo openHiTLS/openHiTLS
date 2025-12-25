@@ -566,4 +566,26 @@ int32_t MODES_SetDecryptKey(MODES_CipherCommonCtx *ctx, const uint8_t *key, uint
     return ctx->ciphMeth->setDecryptKey(ctx->ciphCtx, key, len);
 }
 
+MODES_CipherCtx *MODES_CipherDupCtx(const MODES_CipherCtx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        return NULL;
+    }
+    MODES_CipherCtx *ctx = BSL_SAL_Dump(modeCtx, sizeof(MODES_CipherCtx));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return ctx;
+    }
+
+    void *ciphCtx = BSL_SAL_Dump(modeCtx->commonCtx.ciphCtx, modeCtx->commonCtx.ciphMeth->ctxSize);
+    if (ciphCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_ClearFree(ctx, sizeof(MODES_CipherCtx));
+        return NULL;
+    }
+
+    ctx->commonCtx.ciphCtx = ciphCtx;
+    return ctx;
+}
+
 #endif // HITLS_CRYPTO_MODES

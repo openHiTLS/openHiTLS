@@ -411,8 +411,8 @@ int32_t MODES_WRAP_Final(MODES_WRAP_Ctx *modeCtx, uint8_t *out, uint32_t *outLen
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    (void) modeCtx;
-    (void) out;
+    (void)modeCtx;
+    (void)out;
     *outLen = 0;
     return CRYPT_SUCCESS;
 }
@@ -451,6 +451,29 @@ int32_t MODE_WRAP_Ctrl(MODES_WRAP_Ctx *modeCtx, int32_t opt, void *val, uint32_t
             BSL_ERR_PUSH_ERROR(CRYPT_MODES_CTRL_TYPE_ERROR);
             return CRYPT_MODES_CTRL_TYPE_ERROR;
     }
+}
+
+MODES_WRAP_Ctx *MODES_WRAP_DupCtx(const MODES_WRAP_Ctx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        return NULL;
+    }
+    MODES_WRAP_Ctx *ctx = BSL_SAL_Dump(modeCtx, sizeof(MODES_WRAP_Ctx));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return ctx;
+    }
+
+    void *ciphCtx = BSL_SAL_Dump(modeCtx->wrapCtx.ciphCtx, modeCtx->wrapCtx.ciphMeth->ctxSize);
+    if (ciphCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_CleanseData(ctx->wrapCtx.iv, CRYPT_WRAP_BLOCKSIZE);
+        BSL_SAL_Free(ctx);
+        return NULL;
+    }
+
+    ctx->wrapCtx.ciphCtx = ciphCtx;
+    return ctx;
 }
 
 #endif

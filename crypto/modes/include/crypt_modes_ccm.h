@@ -65,6 +65,7 @@ void MODES_CCM_FreeCtx(MODES_CCM_Ctx *modeCtx);
 int32_t AES_CCM_Update(MODES_CCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
 int32_t MODES_CCM_UpdateEx(MODES_CCM_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
+MODES_CCM_Ctx *MODES_CCM_DupCtx(const MODES_CCM_Ctx *modeCtx);
 
 #ifdef __cplusplus
 }

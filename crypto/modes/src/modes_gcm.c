@@ -565,4 +565,26 @@ int32_t MODES_GCM_UpdateEx(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t i
     }
 }
 
+MODES_GCM_Ctx *MODES_GCM_DupCtx(const MODES_GCM_Ctx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        return NULL;
+    }
+    MODES_GCM_Ctx *ctx = BSL_SAL_Dump(modeCtx, sizeof(MODES_GCM_Ctx));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return ctx;
+    }
+
+    void *ciphCtx = BSL_SAL_Dump(modeCtx->gcmCtx.ciphCtx, modeCtx->gcmCtx.ciphMeth->ctxSize);
+    if (ciphCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_ClearFree(ctx, sizeof(MODES_GCM_Ctx));
+        return NULL;
+    }
+
+    ctx->gcmCtx.ciphCtx = ciphCtx;
+    return ctx;
+}
+
 #endif

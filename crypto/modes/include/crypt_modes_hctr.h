@@ -41,6 +41,7 @@ int32_t MODES_HCTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLe
 int32_t MODES_HCTR_DeInit(MODES_CipherCtx *modeCtx);
 int32_t MODES_HCTR_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen);
 void MODES_HCTR_Free(MODES_CipherCtx *modeCtx);
+MODES_CipherCtx *MODES_HCTR_DupCtx(const MODES_CipherCtx *modeCtx);
 
 #ifdef __cplusplus
 }

@@ -437,4 +437,52 @@ int32_t CRYPT_EAL_CipherGetInfo(CRYPT_CIPHER_AlgId id, int32_t type, uint32_t *i
     return CRYPT_SUCCESS;
 }
 
+int32_t CRYPT_EAL_CipherCopyCtx(CRYPT_EAL_CipherCtx *to, const CRYPT_EAL_CipherCtx *from)
+{
+    if (to == NULL || from == NULL || from->method.dupCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, CRYPT_CIPHER_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    if (to->ctx != NULL) {
+        if (to->method.freeCtx == NULL) {
+            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, from->id, CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+        }
+        to->method.freeCtx(to->ctx);
+        to->ctx = NULL;
+    }
+    void *ctx = from->method.dupCtx(from->ctx);
+    if (ctx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, from->id, CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    (void)memcpy_s(to, sizeof(CRYPT_EAL_CipherCtx), from, sizeof(CRYPT_EAL_CipherCtx));
+    to->ctx = ctx;
+    return CRYPT_SUCCESS;
+}
+
+CRYPT_EAL_CipherCtx *CRYPT_EAL_CipherDupCtx(const CRYPT_EAL_CipherCtx *from)
+{
+    if (from == NULL || from->method.dupCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, CRYPT_CIPHER_MAX, CRYPT_NULL_INPUT);
+        return NULL;
+    }
+
+    CRYPT_EAL_CipherCtx *newCtx = BSL_SAL_Dump(from, sizeof(CRYPT_EAL_CipherCtx));
+    if (newCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, from->id, CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+
+    void *ctx = from->method.dupCtx(from->ctx);
+    if (ctx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, from->id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newCtx);
+        return NULL;
+    }
+    newCtx->ctx = ctx;
+    return newCtx;
+}
+
 #endif

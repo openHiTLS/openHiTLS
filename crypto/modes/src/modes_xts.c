@@ -542,4 +542,29 @@ int32_t MODES_XTS_UpdateEx(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t i
     }
 }
 
+MODES_XTS_Ctx *MODES_XTS_DupCtx(const MODES_XTS_Ctx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        return NULL;
+    }
+    MODES_XTS_Ctx *ctx = BSL_SAL_Dump(modeCtx, sizeof(MODES_XTS_Ctx));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return ctx;
+    }
+    // In the MODES_XTS_NewCtx function, memory allocated for ciphCtx is ctxSize * 2.
+    void *ciphCtx = BSL_SAL_Dump(modeCtx->xtsCtx.ciphCtx, modeCtx->xtsCtx.ciphMeth->ctxSize * 2);
+    if (ciphCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_CleanseData(ctx->xtsCtx.iv, MODES_MAX_IV_LENGTH);
+        BSL_SAL_CleanseData(ctx->xtsCtx.tweak, MODES_MAX_IV_LENGTH);
+        (void)memset_s(ctx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+        BSL_SAL_Free(ctx);
+        return NULL;
+    }
+
+    ctx->xtsCtx.ciphCtx = ciphCtx;
+    return ctx;
+}
+
 #endif // HITLS_CRYPTO_XTS

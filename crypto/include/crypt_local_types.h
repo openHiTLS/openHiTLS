@@ -211,6 +211,7 @@ typedef int32_t (*CipherUpdate)(void *ctx, const uint8_t *in, uint32_t inLen, ui
 typedef int32_t (*CipherFinal)(void *ctx, uint8_t *out, uint32_t *outLen);
 typedef int32_t (*CipherCtrl)(void *ctx, int32_t opt, void *val, uint32_t len);
 typedef void (*CipherFreeCtx)(void *ctx);
+typedef void *(*CipherDupCtx)(const void *ctx);
 
 typedef int32_t (*SetEncryptKey)(void *ctx, const uint8_t *key, uint32_t len);
 typedef int32_t (*SetDecryptKey)(void *ctx, const uint8_t *key, uint32_t len);
@@ -241,6 +242,7 @@ typedef struct {
     CipherFinal final;
     CipherCtrl ctrl;
     CipherFreeCtx freeCtx;
+    CipherDupCtx dupCtx;
 } EAL_CipherMethod;
 
 /* Prototype of the KDF algorithm operation functions */
@@ -250,6 +252,7 @@ typedef int32_t (*KdfDerive)(void *ctx, uint8_t *key, uint32_t keyLen);
 typedef int32_t (*KdfDeinit)(void *ctx);
 typedef int32_t (*KdfCtrl)(void *data, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*KdfFreeCtx)(void *ctx);
+typedef void *(*KdfDupCtx)(const void *ctx);
 
 typedef struct {
     KdfNewCtx newCtx;
@@ -258,6 +261,7 @@ typedef struct {
     KdfDeinit deinit;
     KdfCtrl ctrl;
     KdfFreeCtx freeCtx;
+    KdfDupCtx dupCtx;
 } EAL_KdfMethod;
 
 typedef struct {
@@ -277,6 +281,7 @@ typedef int32_t (*MacReinit)(void *ctx);
 typedef int32_t (*MacCtrl)(void *ctx, uint32_t opt, void *val, uint32_t len);
 typedef int32_t (*MacSetParam)(void *data, const BSL_Param *param);
 typedef void (*MacFreeCtx)(void *ctx);
+typedef void* (*MacDupCtx)(const void *ctx);
 
 /* set of MAC algorithm operation methods */
 typedef struct {
@@ -290,6 +295,7 @@ typedef struct {
     MacCtrl ctrl;
     MacSetParam setParam;
     MacFreeCtx freeCtx;
+    MacDupCtx dupCtx;
 } EAL_MacMethod;
 
 typedef struct {

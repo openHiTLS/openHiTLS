@@ -22,9 +22,11 @@
 #include "crypt_eal_mac.h"
 #include "bsl_sal.h"
 #include "eal_mac_local.h"
+#include "stub_utils.h"
 
 /* END_HEADER */
 #define GMAC_DEFAULT_TAGLEN 16
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 
 /* BEGIN_CASE */
 void SDV_CRYPTO_EAL_GMAC_FUNC_TC001(int id, Hex *key, Hex *iv, Hex *msg, Hex *mac)
@@ -263,5 +265,150 @@ EXIT:
     free(ivTmp);
     free(dataTmp);
     CRYPT_EAL_MacFreeCtx(ctx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_GMAC_COPY_CTX_API_TC001(int algId, int isProvider)
+{
+    TestMemInit();
+    CRYPT_EAL_MacCtx *ctxA = (isProvider == 0) ? CRYPT_EAL_MacNewCtx(algId) :
+        CRYPT_EAL_ProviderMacNewCtx(NULL, algId, "provider=default");
+    ASSERT_TRUE(ctxA != NULL);
+
+    CRYPT_EAL_MacCtx *ctxB = (isProvider == 0) ? CRYPT_EAL_MacNewCtx(algId) :
+        CRYPT_EAL_ProviderMacNewCtx(NULL, algId, "provider=default");
+    ASSERT_TRUE(ctxB != NULL);
+
+    CRYPT_EAL_MacCtx ctxC = { 0 };
+
+    ASSERT_EQ(CRYPT_EAL_MacCopyCtx(NULL, ctxA), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_MacCopyCtx(ctxB, NULL), CRYPT_NULL_INPUT);
+    // Copy failed because ctxC lacks a method.
+    ASSERT_EQ(CRYPT_EAL_MacCopyCtx(ctxB, &ctxC), CRYPT_NULL_INPUT);
+
+    // A directly created context can also be used as the destination for copying.
+    ASSERT_EQ(CRYPT_EAL_MacCopyCtx(&ctxC, ctxA), CRYPT_SUCCESS);
+    ctxC.macMeth.freeCtx(ctxC.ctx);
+EXIT:
+    CRYPT_EAL_MacFreeCtx(ctxA);
+    CRYPT_EAL_MacFreeCtx(ctxB);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_GMAC_COPY_CTX_TC001(int algId, Hex *key, Hex *iv, Hex *data, Hex *vecMac, int isProvider)
+{
+    if (IsHmacAlgDisabled(algId)) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    uint32_t macLen = vecMac->len;
+    uint8_t mac[64];
+
+    CRYPT_EAL_MacCtx *copyCtx1 = NULL;
+    CRYPT_EAL_MacCtx *copyCtx2 = NULL;
+    CRYPT_EAL_MacCtx *ctx = (isProvider == 0) ? CRYPT_EAL_MacNewCtx(algId) :
+        CRYPT_EAL_ProviderMacNewCtx(NULL, algId, "provider=default");
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_MacInit(ctx, key->x, key->len), CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_IV, iv->x, iv->len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &macLen, sizeof(uint32_t)) == CRYPT_SUCCESS);
+
+    copyCtx1 = (isProvider == 0) ? CRYPT_EAL_MacNewCtx(algId) :
+        CRYPT_EAL_ProviderMacNewCtx(NULL, algId, "provider=default");
+    ASSERT_TRUE(copyCtx1 != NULL);
+    copyCtx2 = (isProvider == 0) ? CRYPT_EAL_MacNewCtx(algId) :
+        CRYPT_EAL_ProviderMacNewCtx(NULL, algId, "provider=default");
+    ASSERT_TRUE(copyCtx2 != NULL);
+
+    // Test that the copied context functions correctly and is independent of the original context.
+    ASSERT_EQ(CRYPT_EAL_MacCopyCtx(copyCtx1, ctx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_MacUpdate(copyCtx1, data->x, data->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MacFinal(copyCtx1, mac, &macLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("mac1 cmp", mac, macLen, vecMac->x, vecMac->len);
+    CRYPT_EAL_MacFreeCtx(copyCtx1);
+    copyCtx1 = NULL;
+
+    macLen = vecMac->len;
+    ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, data->x, data->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MacCopyCtx(copyCtx2, ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac, &macLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("mac2 cmp", mac, macLen, vecMac->x, vecMac->len);
+    CRYPT_EAL_MacFreeCtx(ctx);
+    ctx = NULL;
+
+    macLen = vecMac->len;
+    ASSERT_EQ(CRYPT_EAL_MacFinal(copyCtx2, mac, &macLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("mac3 cmp", mac, macLen, vecMac->x, vecMac->len);
+
+EXIT:
+    CRYPT_EAL_MacFreeCtx(copyCtx2);
+    CRYPT_EAL_MacFreeCtx(copyCtx1);
+    CRYPT_EAL_MacFreeCtx(ctx);
+}
+/* END_CASE */
+
+static int32_t TestMacCopyCtxMemCheck(int32_t algId, Hex *key, Hex *iv, Hex *vecMac, int isProvider)
+{
+    CRYPT_EAL_MacCtx *ctxA = NULL;
+    CRYPT_EAL_MacCtx *ctxB = NULL;
+    CRYPT_EAL_MacCtx *srcCtx = (isProvider == 0) ? CRYPT_EAL_MacNewCtx(algId) :
+        CRYPT_EAL_ProviderMacNewCtx(NULL, algId, "provider=default");
+    /* Set key in srcCtx */
+    int32_t ret = CRYPT_EAL_MacInit(srcCtx, key->x, key->len);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+    uint32_t macLen = vecMac->len;
+    ASSERT_TRUE(CRYPT_EAL_MacCtrl(srcCtx, CRYPT_CTRL_SET_IV, iv->x, iv->len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_MacCtrl(srcCtx, CRYPT_CTRL_SET_TAGLEN, &macLen, sizeof(uint32_t)) == CRYPT_SUCCESS);
+
+    ctxA = (isProvider == 0) ? CRYPT_EAL_MacNewCtx(algId) :
+        CRYPT_EAL_ProviderMacNewCtx(NULL, algId, "provider=default");
+    ret = CRYPT_EAL_MacCopyCtx(ctxA, srcCtx);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+    ctxB = CRYPT_EAL_MacDupCtx(srcCtx);
+    if (ctxB == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        goto EXIT;
+    }
+
+EXIT:
+    CRYPT_EAL_MacFreeCtx(ctxA);
+    CRYPT_EAL_MacFreeCtx(ctxB);
+    CRYPT_EAL_MacFreeCtx(srcCtx);
+    return ret;
+}
+
+/**
+ * @test SDV_CRYPTO_CBC_MAC_COPY_CTX_STUB_TC001
+ * title 1. Test the mac copy context with stub malloc fail
+ *
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_GMAC_COPY_CTX_STUB_TC001(int algId, Hex *key, Hex *iv, Hex *vecMac, int isProvider)
+{
+    TestMemInit();
+    uint32_t totalMallocCount = 0;
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(TestMacCopyCtxMemCheck((int32_t)algId, key, iv, vecMac, isProvider), CRYPT_SUCCESS);
+    totalMallocCount = STUB_GetMallocCallCount();
+
+    STUB_EnableMallocFail(true);
+    for (uint32_t j = 0; j < totalMallocCount; j++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(j);
+        ASSERT_NE(TestMacCopyCtxMemCheck((int32_t)algId, key, iv, vecMac, isProvider), CRYPT_SUCCESS);
+    }
+
+EXIT:
+    STUB_RESTORE(BSL_SAL_Malloc);
 }
 /* END_CASE */

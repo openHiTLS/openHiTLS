@@ -535,4 +535,44 @@ int32_t MODES_HCTR_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32
     }
 }
 
+MODES_CipherCtx *MODES_HCTR_DupCtx(const MODES_CipherCtx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        return NULL;
+    }
+    MODES_CipherCtx *ctx = BSL_SAL_Dump(modeCtx, sizeof(MODES_CipherCtx));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return ctx;
+    }
+
+    HCTR_Pack_Ctx *packCtx = (HCTR_Pack_Ctx *)modeCtx->commonCtx.ciphCtx;
+    HCTR_Pack_Ctx *newPackCtx = BSL_SAL_Dump(packCtx, sizeof(HCTR_Pack_Ctx));
+    if (newPackCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_ClearFree(ctx, sizeof(MODES_CipherCtx));
+        return NULL;
+    }
+
+    newPackCtx->hctrCtx.dataBuffer.buffer = BSL_SAL_Dump(packCtx->hctrCtx.dataBuffer.buffer, HCTR_DEFAULT_BUF_SIZE);
+    if (newPackCtx->hctrCtx.dataBuffer.buffer == NULL) {
+        BSL_SAL_ClearFree(newPackCtx, sizeof(HCTR_Pack_Ctx));
+        BSL_SAL_ClearFree(ctx, sizeof(MODES_CipherCtx));
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+
+    newPackCtx->algCtx = BSL_SAL_Dump(packCtx->algCtx, modeCtx->commonCtx.ciphMeth->ctxSize);
+    if (packCtx->algCtx == NULL) {
+        BSL_SAL_ClearFree(newPackCtx->hctrCtx.dataBuffer.buffer, HCTR_DEFAULT_BUF_SIZE);
+        BSL_SAL_ClearFree(newPackCtx, sizeof(HCTR_Pack_Ctx));
+        BSL_SAL_ClearFree(ctx, sizeof(MODES_CipherCtx));
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+
+    ctx->commonCtx.ciphCtx = newPackCtx;
+    return ctx;
+}
+
 #endif /* HITLS_CRYPTO_HCTR */
