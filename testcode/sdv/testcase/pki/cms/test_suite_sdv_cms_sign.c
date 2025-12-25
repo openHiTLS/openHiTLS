@@ -1937,6 +1937,7 @@ void SDV_CMS_SIGNEDDATA_PARSE_ENCODE_STUB_TC001(Hex *buff)
 #else
     HITLS_CMS *cms = NULL;
     HITLS_CMS *cms1 = NULL;
+    TestRandInit();
     BSL_Buffer encode = {0};
     uint32_t totalMallocCount = 0;
 
