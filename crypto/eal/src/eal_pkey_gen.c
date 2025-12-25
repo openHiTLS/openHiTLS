@@ -116,6 +116,7 @@ static int32_t PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *from)
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
     (void)memcpy_s(to, sizeof(CRYPT_EAL_PkeyCtx), from, sizeof(CRYPT_EAL_PkeyCtx));
+    (void)memset_s(&(to->references), sizeof(BSL_SAL_RefCount), 0, sizeof(BSL_SAL_RefCount));
     to->key = from->method.dupCtx(from->key);
     if (to->key == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, from->id, CRYPT_EAL_PKEY_DUP_ERROR);

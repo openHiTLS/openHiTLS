@@ -126,7 +126,7 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx)
     if (storeCtx == NULL) {
         return;
     }
-    int ret;
+    int ret = 0;
     (void)BSL_SAL_AtomicDownReferences(&storeCtx->references, &ret);
     if (ret > 0) {
         return;

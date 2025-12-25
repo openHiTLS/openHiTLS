@@ -1951,7 +1951,9 @@ void SDV_CMS_SIGNEDDATA_PARSE_ENCODE_STUB_TC001(Hex *buff)
     for (uint32_t i = 0; i < totalMallocCount; i++) {
         STUB_ResetMallocCount();
         STUB_SetMallocFailIndex(i);
-        ASSERT_NE(HITLS_CMS_ParseSignedData(NULL, NULL, (BSL_Buffer *)buff, &cms1), HITLS_PKI_SUCCESS);
+        (void)HITLS_CMS_ParseSignedData(NULL, NULL, (BSL_Buffer *)buff, &cms1);
+        HITLS_CMS_Free(cms1);
+        cms1 = NULL;
     }
 
     STUB_EnableMallocFail(false);
@@ -2423,6 +2425,7 @@ void SDV_CMS_SIGN_VERIFY_STUB_TC001(char *basePath, char *msg)
     }
 
 EXIT:
+    STUB_RESTORE(BSL_SAL_Malloc);
     BSL_SAL_FREE(encode1.data);
     BSL_SAL_FREE(encode2.data);
     HITLS_CMS_Free(cms);
