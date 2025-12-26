@@ -1,0 +1,59 @@
+name: 🐞 Bug report
+description: Create a report to help us reproduce and fix the bug
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: 1. 我已经搜索过相关问题，但没有得到预期的帮助. (https://gitcode.com/openHiTLS/openhitls/issues)
+        - label: 2. 最新版本中该错误尚未修复.
+        - label: 3. 请注意，如果您提交的Bug描述缺少相应的环境信息和最小可复现的demo，我们将很难复现和解决该问题，从而降低收到反馈的可能性，甚至该问题将被关闭.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 🐞 问题详细描述
+      description: |
+        请提供关于错误是什么的清晰而简洁的描述。
+
+
+        请添加一个最简洁的示例，以便我们通过运行代码重现错误。代码片段尽可能简洁（最小化）非常重要，因此请花时间精简任何不相关的代码，以帮助我们高效调试。您的示例应完全独立，并且不依赖于任何需要下载的构件。**否则，该问题将被关闭** 
+
+        请粘贴或描述您观察到的结果，如果您发现错误，请粘贴错误消息，包括异常的**完整**栈信息，将错误信息包含在```` ```triple quotes blocks``` ````内.
+      placeholder: |
+        对 bug 的清晰、简洁的描述.
+
+            ```python
+            # Sample code to reproduce the problem
+            ```
+
+            ```
+            The error message you got, with the full traceback and the error logs.
+            ```
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 详细的环境信息描述
+      description: 请提供必要的全部环境信息，包括所有的软件、硬件、驱动等信息. **否则，该问题将被关闭** 
+      placeholder: "包括但不限于该问题出现所依赖的软件及版本、硬件、驱动等信息，尽可能的详细."
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 其他辅助信息
+      description: 任何其他有助于我们定位问题的信息，请您提供 
+      placeholder: "Any other things you would like to mention."
+  - type: textarea
+    attributes:
+      label: 版本信息
+      description: 如果涉及多个版本，请悉数告知我们对应的版本号信息，以方便我们复现问题
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: >
+        Thanks for contributing 🎉!

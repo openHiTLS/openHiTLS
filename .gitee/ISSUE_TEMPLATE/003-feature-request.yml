@@ -1,0 +1,46 @@
+name: 🚀 Feature request
+description: Submit a proposal/request for a new openHiTLS feature
+title: "[Feature]: "
+labels: ["feature"]
+
+body:
+- type: textarea
+  attributes:
+    label: 🚀 背景描述
+    description: >
+      A clear and concise description of the feature proposal. Please outline the motivation for the proposal. Is your feature request related to a specific problem? e.g., *"I'm working on X and would like Y to be possible"*. If this is related to another Gitee issue, please link here too.
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: 设计思路
+    description: >
+      A description of any alternative solutions or features you've considered, if any.
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: 涉及到的对外API
+    description: >
+      描述该特性是否会有对外API的增加与变更情况的发生，以及变更可能会造成的周边影响.    
+- type: textarea
+  attributes:
+    label: 与其他模块的相关性描述
+    description: >
+      描述与其他模块存在的可能关联性，以方便补充对应的场景验证.
+- type: textarea
+  attributes:
+    label: 测试设计与测试计划
+    description: >
+      详细描述如何开展测试验证，以保证该特性的能力得到充分的验证，包括到不限于功能、性能、可靠性、安全等.
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: 其他信息
+    description: >
+      添加例如辅助信息、场景等内容.
+- type: markdown
+  attributes:
+    value: >
+      Thanks for contributing 🎉!

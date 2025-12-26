@@ -1,0 +1,29 @@
+name: ⚡Report a security vulnerability
+labels: ["security"]
+body:
+  - type: textarea
+    attributes:
+      label: 漏洞信息
+      description: |
+        Please clearly describe the vulnerability number, component, and version number, and clearly describe the main background and content of the vulnerability. Also note the time of disclosure, creation, and reference link for vulnerability details and analysis link.
+      placeholder: "Vulnerability information."
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 漏洞分析结构反馈
+      description: |
+        Provide a thorough analysis of the vulnerability's impact, including vulnerability scoring for the MindSpore.
+      placeholder: "Vulnerability analysis."
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 版本信息
+      description: 如果涉及多个版本，请悉数告知我们对应的版本号信息，以方便我们复现问题
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: >
+        Thanks for contributing 🎉!
