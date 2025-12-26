@@ -434,6 +434,9 @@
     #ifndef HITLS_CRYPTO_RSA_EMSA_PSS
         #define HITLS_CRYPTO_RSA_EMSA_PSS
     #endif
+    #ifndef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+        #define HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+    #endif
     #ifndef HITLS_CRYPTO_RSA_EMSA_PKCSV15
         #define HITLS_CRYPTO_RSA_EMSA_PKCSV15
     #endif
@@ -452,6 +455,7 @@
 #endif
 
 #if defined(HITLS_CRYPTO_RSA_EMSA_PSS) || defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15) || \
+    defined(HITLS_CRYPTO_RSA_EMSA_ISO9796_2) || \
     defined(HITLS_CRYPTO_RSAES_OAEP) || defined(HITLS_CRYPTO_RSAES_PKCSV15) || \
     defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS) || defined(HITLS_CRYPTO_RSA_NO_PAD)
     #ifndef HITLS_CRYPTO_RSA_PAD

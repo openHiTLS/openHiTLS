@@ -90,6 +90,21 @@ static int32_t SetEmsaPss(CRYPT_RSA_Ctx *ctx, RSA_PadingPara *pad, void *mdProvC
 }
 #endif // HITLS_CRYPTO_RSA_EMSA_PSS
 
+#ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+static int32_t SetEmsaIso9796_2(CRYPT_RSA_Ctx *ctx, RSA_PadingPara *pad)
+{
+    uint32_t bits = CRYPT_RSA_GetBits(ctx);
+    if (bits == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
+        return CRYPT_RSA_NO_KEY_INFO;
+    }
+    (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
+    (void)memcpy_s(&(ctx->pad.para.iso9796_2), sizeof(RSA_PadingPara), pad, sizeof(RSA_PadingPara));
+    ctx->pad.type = EMSA_ISO9796_2;
+    return CRYPT_SUCCESS;
+}
+#endif // HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+
 #ifdef HITLS_CRYPTO_RSAES_OAEP
 
 void SetOaep(CRYPT_RSA_Ctx *ctx, const RSA_PadingPara *val)
@@ -260,7 +275,26 @@ static int32_t GetMd(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
     RETURN_RET_IF(val == NULL, CRYPT_NULL_INPUT);
     RETURN_RET_IF(len != sizeof(int32_t), CRYPT_INVALID_ARG);
 
-    *valTmp = (ctx->pad.type == EMSA_PKCSV15) ? ctx->pad.para.pkcsv15.mdId : ctx->pad.para.pss.mdId;
+    switch (ctx->pad.type) {
+#ifdef HITLS_CRYPTO_RSA_EMSA_PKCSV15
+        case EMSA_PKCSV15:
+            *valTmp = ctx->pad.para.pkcsv15.mdId;
+            break;
+#endif
+#ifdef HITLS_CRYPTO_RSA_EMSA_PSS
+        case EMSA_PSS:
+            *valTmp = ctx->pad.para.pss.mdId;
+            break;
+#endif
+#ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+        case EMSA_ISO9796_2:
+            *valTmp = ctx->pad.para.iso9796_2.mdId;
+            break;
+#endif
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_RSA_PAD_NO_SET_ERROR);
+            return CRYPT_RSA_PAD_NO_SET_ERROR;
+    }
     return CRYPT_SUCCESS;
 }
 
@@ -341,7 +375,8 @@ static int32_t SetRsaPad(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-#if defined(HITLS_CRYPTO_RSAES_OAEP) || defined(HITLS_CRYPTO_RSA_EMSA_PSS)
+#if defined(HITLS_CRYPTO_RSAES_OAEP) || defined(HITLS_CRYPTO_RSA_EMSA_PSS) || \
+    defined(HITLS_CRYPTO_RSA_EMSA_ISO9796_2)
 static inline bool MdIdCheckSha1Sha2(CRYPT_MD_AlgId id)
 {
     return (id >= CRYPT_MD_MD5 && id <= CRYPT_MD_SHA512);
@@ -442,6 +477,42 @@ static int32_t RsaSetPss(CRYPT_RSA_Ctx *ctx, BSL_Param *param)
         return CRYPT_EAL_ERR_ALGID;
     }
     ret = SetEmsaPss(ctx, &padPara, mdProvCtx, mgfProvCtx);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+ERR:
+    return ret;
+}
+#endif
+
+#ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+static int32_t RsaSetIso9796_2(CRYPT_RSA_Ctx *ctx, BSL_Param *param)
+{
+    RSA_PadingPara padPara = {0};
+    if (param == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    const BSL_Param *temp = BSL_PARAM_FindConstParam(param, CRYPT_PARAM_RSA_MD_ID);
+    if (temp == NULL || temp->value == NULL || temp->valueLen == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
+        return CRYPT_RSA_ERR_INPUT_VALUE;
+    }
+    uint32_t len = sizeof(padPara.mdId);
+    int32_t ret = CRYPT_SUCCESS;
+    GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &padPara.mdId, &len), ret);
+
+    void *mdProvCtx = NULL;
+    void *libCtx = LIBCTX_FROM_RSA_CTX(ctx);
+    EAL_MdMethod *mdMeth = EAL_MdFindMethodEx(padPara.mdId, libCtx, MDATTR_FROM_RSA_CTX(ctx),
+        &padPara.mdMeth, &mdProvCtx, libCtx != NULL);
+    if (mdMeth == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
+    padPara.mdProvCtx = mdProvCtx;
+    ret = SetEmsaIso9796_2(ctx, &padPara);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -561,6 +632,10 @@ int32_t CRYPT_RSA_Ctrl(CRYPT_RSA_Ctx *ctx, int32_t opt, void *val, uint32_t len)
             return GetSaltLen(ctx, val, len);
         case CRYPT_CTRL_GET_RSA_MGF:
             return GetMgf(ctx, val, len);
+#endif
+#ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+        case CRYPT_CTRL_SET_RSA_EMSA_ISO9796_2:
+            return RsaSetIso9796_2(ctx, val);
 #endif
         case CRYPT_CTRL_GET_RSA_PADDING:
             return GetPadding(ctx, val, len);
