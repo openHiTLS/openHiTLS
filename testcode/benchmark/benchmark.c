@@ -147,7 +147,9 @@ static StrIdMap g_strIdMap[] = {
     {"dh-rfc7919-4096", CRYPT_DH_RFC7919_4096},
     {"dh-rfc7919-6144", CRYPT_DH_RFC7919_6144},
     {"dh-rfc7919-8192", CRYPT_DH_RFC7919_8192},
-
+    {"mlkem-512", CRYPT_KEM_TYPE_MLKEM_512},
+    {"mlkem-768", CRYPT_KEM_TYPE_MLKEM_768},
+    {"mlkem-1024", CRYPT_KEM_TYPE_MLKEM_1024},
 };
 
 static int32_t AlgStr2Id(char *str)

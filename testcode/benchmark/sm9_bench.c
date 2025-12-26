@@ -60,14 +60,6 @@ static unsigned char g_enc_master_key[32] = {
 
 static unsigned char g_user_id[] = "BenchmarkUser";
 
-// Random number generator callback
-static int32_t RandFunc(uint8_t *randNum, uint32_t randLen)
-{
-    for (uint32_t i = 0; i < randLen; i++) {
-        randNum[i] = (uint8_t)(rand() % 255);
-    }
-    return 0;
-}
 
 static int32_t Sm9SetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t paraId)
 {
@@ -83,10 +75,6 @@ static int32_t Sm9SetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t 
         return CRYPT_MEM_ALLOC_FAIL;
     }
     memset(sm9Ctx, 0, sizeof(Sm9Context));
-
-    // Register random number generator
-    CRYPT_RandRegist(RandFunc);
-
     // Create SM9 context
     sm9Ctx->ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
     if (sm9Ctx->ctx == NULL) {
@@ -170,7 +158,7 @@ static int32_t Sm9Sign(void *ctx, BenchCtx *bench, BenchOptions *opts)
     BENCH_TIMES(
         CRYPT_EAL_PkeySign(sm9Ctx->ctx, CRYPT_MD_SM3, g_msg, sizeof(g_msg),
                           sm9Ctx->sign, &sm9Ctx->signLen),
-        rc, CRYPT_SUCCESS, sizeof(g_msg), opts->times, "sm9 sign"
+        rc, CRYPT_SUCCESS, (int32_t)sizeof(g_msg), opts->times, "sm9 sign"
     );
 
     return rc;
@@ -193,7 +181,7 @@ static int32_t Sm9Verify(void *ctx, BenchCtx *bench, BenchOptions *opts)
     BENCH_TIMES(
         CRYPT_EAL_PkeyVerify(sm9Ctx->ctx, CRYPT_MD_SM3, g_msg, sizeof(g_msg),
                             sm9Ctx->sign, sm9Ctx->signLen),
-        rc, CRYPT_SUCCESS, sizeof(g_msg), opts->times, "sm9 verify"
+        rc, CRYPT_SUCCESS, (int32_t)sizeof(g_msg), opts->times, "sm9 verify"
     );
 
     return rc;
@@ -236,7 +224,7 @@ static int32_t Sm9Enc(void *ctx, BenchCtx *bench, BenchOptions *opts)
     BENCH_TIMES(
         CRYPT_EAL_PkeyEncrypt(sm9Ctx->ctx, g_plaintext, sizeof(g_plaintext),
                              sm9Ctx->ciphertext, &sm9Ctx->cipherLen),
-        rc, CRYPT_SUCCESS, sizeof(g_plaintext), opts->times, "sm9 encrypt"
+        rc, CRYPT_SUCCESS, (int32_t)sizeof(g_plaintext), opts->times, "sm9 encrypt"
     );
 
     return rc;
@@ -287,7 +275,7 @@ static int32_t Sm9Dec(void *ctx, BenchCtx *bench, BenchOptions *opts)
     BENCH_TIMES(
         CRYPT_EAL_PkeyDecrypt(sm9Ctx->ctx, sm9Ctx->ciphertext, sm9Ctx->cipherLen,
                              decrypted, &decryptLen),
-        rc, CRYPT_SUCCESS, sizeof(g_plaintext), opts->times, "sm9 decrypt"
+        rc, CRYPT_SUCCESS, (int32_t)sizeof(g_plaintext), opts->times, "sm9 decrypt"
     );
 
     return rc;

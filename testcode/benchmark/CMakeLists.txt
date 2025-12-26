@@ -16,7 +16,7 @@ PROJECT(openHiTLS_BENCHMARK)
 
 set(OPENHITLS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 set(BENCHS sm2_bench.c slh_dsa_bench.c ecdsa_bench.c md_bench.c cipher_bench.c mac_bench.c
-           dh_bench.c ecdh_bench.c 25519_bench.c mldsa_bench.c mlkem_bench.c)
+           dh_bench.c ecdh_bench.c 25519_bench.c mldsa_bench.c mlkem_bench.c sm9_bench.c)
 
 add_compile_options(-g)
 # -z noexecstack: Mark the stack as non-executable (ELF security feature)
