@@ -276,21 +276,15 @@ static int32_t GetMd(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
     RETURN_RET_IF(len != sizeof(int32_t), CRYPT_INVALID_ARG);
 
     switch (ctx->pad.type) {
-#ifdef HITLS_CRYPTO_RSA_EMSA_PKCSV15
         case EMSA_PKCSV15:
             *valTmp = ctx->pad.para.pkcsv15.mdId;
             break;
-#endif
-#ifdef HITLS_CRYPTO_RSA_EMSA_PSS
         case EMSA_PSS:
             *valTmp = ctx->pad.para.pss.mdId;
             break;
-#endif
-#ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
         case EMSA_ISO9796_2:
             *valTmp = ctx->pad.para.iso9796_2.mdId;
             break;
-#endif
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_RSA_PAD_NO_SET_ERROR);
             return CRYPT_RSA_PAD_NO_SET_ERROR;

@@ -780,6 +780,8 @@ int32_t CRYPT_RSA_UnBlind(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32
 #endif // HITLS_CRYPTO_RSA_VERIFY
 #endif // HITLS_CRYPTO_RSA_BSSA
 
+#if defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_VERIFY)
+#ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
 static int32_t Iso9796_2_CheckMlHashLen(const CRYPT_RSA_Ctx *ctx, uint32_t mlHashLen)
 {
     uint32_t bits = CRYPT_RSA_GetBits(ctx);
@@ -798,6 +800,7 @@ static int32_t Iso9796_2_CheckMlHashLen(const CRYPT_RSA_Ctx *ctx, uint32_t mlHas
     }
     return CRYPT_SUCCESS;
 }
+#endif // HITLS_CRYPTO_RSA_EMSA_ISO9796_2
 
 static int32_t RsaGetSignVerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *hash, uint32_t hashLen,
     const uint8_t *msg, uint32_t msgLen, uint8_t **data, uint32_t *dataLen, bool *needFree)
@@ -847,6 +850,7 @@ static int32_t RsaGetSignVerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *hash, uin
     *needFree = true;
     return CRYPT_SUCCESS;
 }
+#endif
 
 #ifdef HITLS_CRYPTO_RSA_SIGN
 static int32_t SignInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
