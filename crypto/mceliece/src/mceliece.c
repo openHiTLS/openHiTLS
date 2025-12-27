@@ -172,6 +172,7 @@ int32_t CRYPT_MCELIECE_Gen(CRYPT_MCELIECE_Ctx *ctx)
     }
     if (ctx->privateKey != NULL) {
         PrivateKeyFree(ctx->privateKey, ctx->para);
+        ctx->privateKey = NULL;
     }
     ctx->publicKey = PublicKeyCreate(ctx->para);
     if (ctx->publicKey == NULL) {
