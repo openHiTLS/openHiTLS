@@ -90,6 +90,7 @@ typedef enum {
     RSA_NO_PAD,
     RSAES_PKCSV15_TLS, /* Specific RSA pkcs1.5 padding verification process
                           to prevent possible Bleichenbacher attacks */
+    EMSA_ISO9796_2,    /**< ISO/IEC 9796-2:1997 partial message recovery */
 } RSA_PadType;
 
 /**
@@ -106,6 +107,7 @@ typedef struct {
     union {
         RSA_PkcsV15Para pkcsv15; /**< pkcsv15 padding mode */
         RSA_PadingPara pss;         /**< pss padding mode */
+        RSA_PadingPara iso9796_2; /**< ISO9796-2:1997 partial message recovery */
         RSA_PadingPara oaep; /**< oaep padding mode */
     } para;                            /**< padding mode combination, including pss and pkcsv15 */
     CRYPT_Data salt; // Used for the KAT test.
@@ -138,6 +140,13 @@ void ShallowCopyCtx(CRYPT_RSA_Ctx *ctx, CRYPT_RSA_Ctx *newCtx);
 CRYPT_RSA_Para *CRYPT_RSA_DupPara(const CRYPT_RSA_Para *para);
 #ifdef HITLS_CRYPTO_RSA_EMSA_PKCSV15
 int32_t CRYPT_RSA_UnPackPkcsV15Type1(uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen);
+#endif
+
+#ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+int32_t CRYPT_RSA_SetIso9796_2(const uint8_t *mlHash, uint32_t mlHashLen,
+    uint8_t *pad, uint32_t padLen);
+int32_t CRYPT_RSA_VerifyIso9796_2(const uint8_t *mlHash, uint32_t mlHashLen,
+    const uint8_t *pad, uint32_t padLen);
 #endif
 
 #if defined(HITLS_CRYPTO_RSA_BLINDING) || defined(HITLS_CRYPTO_RSA_BSSA)

@@ -640,6 +640,7 @@ typedef enum {
     CRYPT_CTRL_GET_RSA_MGF,             /**< Obtain the mgf algorithm when the RSA algorithm padding mode is PSS. */
     CRYPT_CTRL_CLR_RSA_FLAG,            /**< RSA clear the flag. */
     CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R,   /**< Set the random bytes for RSA-BSSA. */
+    CRYPT_CTRL_SET_RSA_EMSA_ISO9796_2,    /**< RSA set the signature padding mode to ISO/IEC 9796-2. */
 
     // ecc
     CRYPT_CTRL_SET_SM2_USER_ID = 300,
@@ -743,6 +744,7 @@ typedef enum {
     CRYPT_RSA_NO_PAD,
     CRYPT_RSAES_PKCSV15_TLS, /* Specific RSA pkcs1.5 padding verification process to
                                 prevent possible Bleichenbacher attacks */
+    CRYPT_EMSA_ISO9796_2,   /**< ISO/IEC 9796-2:1997 partial message recovery. */
     CRYPT_RSA_PADDINGMAX,
 } CRYPT_RsaPadType;
 

@@ -507,6 +507,9 @@ static uint32_t GetHashLen(const CRYPT_RSA_Ctx *ctx)
     if (ctx->pad.type == EMSA_PKCSV15) {
         return CRYPT_GetMdSizeById(ctx->pad.para.pkcsv15.mdId);
     }
+    if (ctx->pad.type == EMSA_ISO9796_2) {
+        return (uint32_t)(ctx->pad.para.iso9796_2.mdMeth->mdSize);
+    }
 
     return (uint32_t)(ctx->pad.para.pss.mdMeth->mdSize);
 }
@@ -795,6 +798,78 @@ int32_t CRYPT_RSA_UnBlind(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32
 #endif // HITLS_CRYPTO_RSA_VERIFY
 #endif // HITLS_CRYPTO_RSA_BSSA
 
+#if defined(HITLS_CRYPTO_RSA_SIGN) || defined(HITLS_CRYPTO_RSA_VERIFY)
+#ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+static int32_t Iso9796_2_CheckMlHashLen(const CRYPT_RSA_Ctx *ctx, uint32_t mlHashLen)
+{
+    uint32_t bits = CRYPT_RSA_GetBits(ctx);
+    uint32_t emLen = BN_BITS_TO_BYTES(bits);
+    uint32_t hLen = (uint32_t)ctx->pad.para.iso9796_2.mdMeth->mdSize;
+
+    // Verify whether the signature algorithm and hash algorithm match reasonably.
+    if (emLen < hLen + 2) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
+        return CRYPT_RSA_ERR_INPUT_VALUE;
+    }
+    // To check if the length of mlHashLen is valid: mlHashLen == emLen - 2
+    if (mlHashLen != emLen - 2) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
+        return CRYPT_RSA_ERR_INPUT_VALUE;
+    }
+    return CRYPT_SUCCESS;
+}
+#endif // HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+
+static int32_t RsaGetSignVerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *hash, uint32_t hashLen,
+    const uint8_t *msg, uint32_t msgLen, uint8_t **data, uint32_t *dataLen, bool *needFree)
+{
+    if (ctx->pad.type != EMSA_ISO9796_2) {
+        *data = (uint8_t *)(uintptr_t)hash;
+        *dataLen = hashLen;
+        *needFree = false;
+        return CRYPT_SUCCESS;
+    }
+    uint32_t bits = CRYPT_RSA_GetBits(ctx);
+    uint32_t emLen = BN_BITS_TO_BYTES(bits);
+
+    uint32_t hLen = (uint32_t)ctx->pad.para.iso9796_2.mdMeth->mdSize;
+
+    // Verify whether the signature algorithm and hash algorithm match reasonably.
+    if (emLen < hLen + 2) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
+        return CRYPT_RSA_ERR_INPUT_VALUE;
+    }
+    // message length verification
+    uint32_t mLLen = emLen - hLen - 2;
+    if (msgLen < mLLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
+        return CRYPT_RSA_ERR_INPUT_VALUE;
+    }
+
+    // mL + hash
+    uint32_t mlHashLen = mLLen + hLen;
+    uint8_t *mlHash = BSL_SAL_Malloc(mlHashLen);
+    if (mlHash == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    if (mLLen > 0 && memcpy_s(mlHash, mlHashLen, msg, mLLen) != EOK) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
+        BSL_SAL_FREE(mlHash);
+        return CRYPT_SECUREC_FAIL;
+    }
+    if (memcpy_s(mlHash + mLLen, mlHashLen - mLLen, hash, hLen) != EOK) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
+        BSL_SAL_FREE(mlHash);
+        return CRYPT_SECUREC_FAIL;
+    }
+    *data = mlHash;
+    *dataLen = mlHashLen;
+    *needFree = true;
+    return CRYPT_SUCCESS;
+}
+#endif
+
 #ifdef HITLS_CRYPTO_RSA_SIGN
 static int32_t SignInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
     const uint8_t *out, const uint32_t *outLen)
@@ -814,7 +889,7 @@ static int32_t SignInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, ui
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_RSA_BUFF_LEN_NOT_ENOUGH;
     }
-    if (ctx->pad.type != EMSA_PKCSV15 && ctx->pad.type != EMSA_PSS) {
+    if (ctx->pad.type != EMSA_PKCSV15 && ctx->pad.type != EMSA_PSS && ctx->pad.type != EMSA_ISO9796_2) {
         // No padding type is set.
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_PAD_NO_SET_ERROR);
         return CRYPT_RSA_PAD_NO_SET_ERROR;
@@ -826,6 +901,11 @@ static int32_t SignInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, ui
             return CRYPT_RSA_ERR_INPUT_VALUE;
         }
         return CRYPT_SUCCESS;
+    }
+#endif
+#ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+    if (ctx->pad.type == EMSA_ISO9796_2) {
+        return Iso9796_2_CheckMlHashLen(ctx, inputLen);
     }
 #endif
     if (GetHashLen(ctx) != inputLen) {
@@ -858,6 +938,11 @@ int32_t CRYPT_RSA_SignData(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dat
         case EMSA_PKCSV15:
             ret = CRYPT_RSA_SetPkcsV15Type1(ctx->pad.para.pkcsv15.mdId, data,
                 dataLen, pad, padLen);
+            break;
+#endif
+#ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+        case EMSA_ISO9796_2:
+            ret = CRYPT_RSA_SetIso9796_2(data, dataLen, pad, padLen);
             break;
 #endif
 #ifdef HITLS_CRYPTO_RSA_EMSA_PSS
@@ -893,7 +978,18 @@ int32_t CRYPT_RSA_Sign(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data, u
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    return CRYPT_RSA_SignData(ctx, hash, hashLen, sign, signLen);
+    uint8_t *signData = NULL;
+    uint32_t signDataLen = 0;
+    bool needFree = false;
+    ret = RsaGetSignVerifyData(ctx, hash, hashLen, data, dataLen, &signData, &signDataLen, &needFree);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ret = CRYPT_RSA_SignData(ctx, signData, signDataLen, sign, signLen);
+    if (needFree) {
+        BSL_SAL_FREE(signData);
+    }
+    return ret;
 }
 #endif // HITLS_CRYPTO_RSA_SIGN
 
@@ -910,11 +1006,16 @@ static int32_t VerifyInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *data, u
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
         return CRYPT_RSA_NO_KEY_INFO;
     }
-    if (ctx->pad.type != EMSA_PKCSV15 && ctx->pad.type != EMSA_PSS) {
+    if (ctx->pad.type != EMSA_PKCSV15 && ctx->pad.type != EMSA_PSS && ctx->pad.type != EMSA_ISO9796_2) {
         // No padding type is set.
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_PAD_NO_SET_ERROR);
         return CRYPT_RSA_PAD_NO_SET_ERROR;
     }
+#ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+    if (ctx->pad.type == EMSA_ISO9796_2) {
+        return Iso9796_2_CheckMlHashLen(ctx, dataLen);
+    }
+#endif
     if (GetHashLen(ctx) != dataLen) {
         return CheckHashLen(dataLen);
     }
@@ -950,6 +1051,11 @@ int32_t CRYPT_RSA_VerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t d
         case EMSA_PKCSV15:
             ret = CRYPT_RSA_VerifyPkcsV15Type1(ctx->pad.para.pkcsv15.mdId, pad, padLen,
                 data, dataLen);
+            break;
+#endif
+#ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+        case EMSA_ISO9796_2:
+            ret = CRYPT_RSA_VerifyIso9796_2(data, dataLen, pad, padLen);
             break;
 #endif
 #ifdef HITLS_CRYPTO_RSA_EMSA_PSS
@@ -988,7 +1094,18 @@ int32_t CRYPT_RSA_Verify(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data,
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    return CRYPT_RSA_VerifyData(ctx, hash, hashLen, sign, signLen);
+    uint8_t *verifyData = NULL;
+    uint32_t verifyDataLen = 0;
+    bool needFree = false;
+    ret = RsaGetSignVerifyData(ctx, hash, hashLen, data, dataLen, &verifyData, &verifyDataLen, &needFree);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ret = CRYPT_RSA_VerifyData(ctx, verifyData, verifyDataLen, sign, signLen);
+    if (needFree) {
+        BSL_SAL_FREE(verifyData);
+    }
+    return ret;
 }
 #endif // HITLS_CRYPTO_RSA_VERIFY
 

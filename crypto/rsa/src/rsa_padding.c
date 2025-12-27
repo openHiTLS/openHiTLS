@@ -350,6 +350,35 @@ int32_t CRYPT_RSA_VerifyPss(const EAL_MdMethod *hashMethod, const EAL_MdMethod *
 #endif // HITLS_CRYPTO_RSA_VERIFY
 #endif // HITLS_CRYPTO_RSA_EMSA_PSS
 
+#ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+// EM = 0x6A || mL || h || 0xBC
+int32_t CRYPT_RSA_SetIso9796_2(const uint8_t *mlHash, uint32_t mlHashLen,
+    uint8_t *pad, uint32_t padLen)
+{
+    pad[0] = 0x6A;
+    if (memcpy_s(&pad[1], padLen - 2, mlHash, mlHashLen) != EOK) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
+        return CRYPT_SECUREC_FAIL;
+    }
+    pad[padLen - 1] = 0xBC;
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_RSA_VerifyIso9796_2(const uint8_t *mlHash, uint32_t mlHashLen,
+    const uint8_t *pad, uint32_t padLen)
+{
+    if (pad[0] != 0x6A || pad[padLen - 1] != 0xBC) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NOR_VERIFY_FAIL);
+        return CRYPT_RSA_NOR_VERIFY_FAIL;
+    }
+    if (memcmp(&pad[1], mlHash, mlHashLen) != EOK) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NOR_VERIFY_FAIL);
+        return CRYPT_RSA_NOR_VERIFY_FAIL;
+    }
+    return CRYPT_SUCCESS;
+}
+#endif // HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+
 #ifdef HITLS_CRYPTO_RSA_EMSA_PKCSV15
 static int32_t PkcsSetLengthCheck(uint32_t emLen, uint32_t hashLen, uint32_t algIdentLen)
 {
