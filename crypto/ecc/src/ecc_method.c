@@ -30,11 +30,12 @@ typedef struct {
 } ECC_MethodMap;
 
 #if defined(HITLS_SIXTY_FOUR_BITS)
-#if (((defined(HITLS_CRYPTO_CURVE_NISTP224) || defined(HITLS_CRYPTO_CURVE_NISTP521)) && \
+#if defined(HITLS_CRYPTO_CURVE_NISTP192) || \
+    ((defined(HITLS_CRYPTO_CURVE_NISTP224) || defined(HITLS_CRYPTO_CURVE_NISTP521)) && \
         !defined(HITLS_CRYPTO_NIST_USE_ACCEL)) || \
     defined(HITLS_CRYPTO_CURVE_NISTP384) || \
     (defined(HITLS_CRYPTO_CURVE_NISTP256) && (!defined(HITLS_CRYPTO_CURVE_NISTP256_ASM) || \
-        (!defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE))) && (!defined(HITLS_CRYPTO_NIST_USE_ACCEL))))
+        (!defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE))) && (!defined(HITLS_CRYPTO_NIST_USE_ACCEL)))
 static const ECC_Method EC_METHOD_NIST = {
     .pointMulAdd = ECP_PointMulAdd,
     .pointMul = ECP_PointMul,
@@ -187,6 +188,15 @@ static const ECC_Method EC_METHOD_NIST_P256 = {
 #endif
 
 static const ECC_MethodMap EC_METHODS[] = {
+// p192
+#ifdef HITLS_CRYPTO_CURVE_NISTP192
+    #ifdef HITLS_SIXTY_FOUR_BITS
+        { CRYPT_ECC_NISTP192, &EC_METHOD_NIST }, // Common nist cal + fast modulus reduction of Bn
+    #else
+        { CRYPT_ECC_NISTP192, &EC_METHOD_NIST_MONT },
+    #endif
+#endif
+
 // p224
 #ifdef HITLS_CRYPTO_CURVE_NISTP224
     #ifdef HITLS_CRYPTO_NIST_USE_ACCEL

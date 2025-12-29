@@ -750,32 +750,15 @@ int32_t ModSm2P256(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Opti
 
 #elif defined(HITLS_THIRTY_TWO_BITS)
 
-int32_t ModNistP224(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
-{
-    return BN_Mod(r, a, m, opt);
-}
-
-int32_t ModNistP256(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
-{
-    return BN_Mod(r, a, m, opt);
-}
+#define ModNistP192(r, a, m, opt) BN_Mod(r, a, m, opt)
+#define ModNistP224(r, a, m, opt) BN_Mod(r, a, m, opt)
+#define ModNistP256(r, a, m, opt) BN_Mod(r, a, m, opt)
+#define ModNistP384(r, a, m, opt) BN_Mod(r, a, m, opt)
+#define ModNistP521(r, a, m, opt) BN_Mod(r, a, m, opt)
 
 #ifdef HITLS_CRYPTO_CURVE_SM2
-int32_t ModSm2P256(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
-{
-    return BN_Mod(r, a, m, opt);
-}
+#define ModSm2P256(r, a, m, opt) BN_Mod(r, a, m, opt)
 #endif
-
-int32_t ModNistP384(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
-{
-    return BN_Mod(r, a, m, opt);
-}
-
-int32_t ModNistP521(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *m, BN_Optimizer *opt)
-{
-    return BN_Mod(r, a, m, opt);
-}
 
 #endif
 
@@ -848,27 +831,11 @@ static uint32_t SqrNistP384(BN_UINT *r, uint32_t rSize, const BN_UINT *a, uint32
     return size;
 }
 #else
-static uint32_t MulNistP256P224(BN_UINT *r, uint32_t rSize, const BN_UINT *a, uint32_t aSize,
-    const BN_UINT *b, uint32_t bSize)
-{
-    return BinMul(r, rSize, a, aSize, b, bSize);
-}
 
-static uint32_t SqrNistP256P224(BN_UINT *r, uint32_t rSize, const BN_UINT *a, uint32_t aSize)
-{
-    return BinSqr(r, rSize, a, aSize);
-}
-
-static uint32_t MulNistP384(BN_UINT *r, uint32_t rSize, const BN_UINT *a, uint32_t aSize,
-    const BN_UINT *b, uint32_t bSize)
-{
-    return BinMul(r, rSize, a, aSize, b, bSize);
-}
-
-static uint32_t SqrNistP384(BN_UINT *r, uint32_t rSize, const BN_UINT *a, uint32_t aSize)
-{
-    return BinSqr(r, rSize, a, aSize);
-}
+#define MulNistP256P224(r, rSize, a, aSize, b, bSize) BinMul(r, rSize, a, aSize, b, bSize)
+#define SqrNistP256P224(r, rSize, a, aSize)           BinSqr(r, rSize, a, aSize)
+#define MulNistP384(r, rSize, a, aSize, b, bSize)     BinMul(r, rSize, a, aSize, b, bSize)
+#define SqrNistP384(r, rSize, a, aSize)               BinSqr(r, rSize, a, aSize)
 
 #endif
 
@@ -972,6 +939,8 @@ int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, v
     } else if (bits == 521) { // 521bit
         rMul.size = BinMul(rMul.data, size, a->data, mod->size, b->data, mod->size);
         ModNistP521(r, &rMul, mod, opt);
+    } else if (bits == 192) { // 192bit
+        return BN_ModMul(r, a, b, mod, opt);
     } else {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_QUICK_MODDATA);
         return CRYPT_BN_ERR_QUICK_MODDATA;
@@ -1026,6 +995,8 @@ int32_t BN_ModNistEccSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimi
     } else if (bits == 521) { // 521bit
         rSqr.size = BinSqr(rSqr.data, size, a->data, mod->size);
         ModNistP521(r, &rSqr, mod, opt);
+    } else if (bits == 192) { // 192bit
+        return BN_ModSqr(r, a, mod, opt);
     } else {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_QUICK_MODDATA);
         return CRYPT_BN_ERR_QUICK_MODDATA;

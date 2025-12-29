@@ -249,3 +249,25 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/**
+ * @test SDV_BSL_OBJ_GETOID_FROM_NUMBERIC_FUNC_TC001
+ * @title Exception Parameter Testing for the BSL_OBJ_GetOidFromNumericString Function.
+ * @expect success
+ */
+/* BEGIN_CASE */
+void SDV_BSL_OBJ_GETOID_FROM_NUMBERIC_FUNC_TC001(char *expect)
+{
+    TestMemInit();
+    uint32_t outLen = 0;
+    uint8_t *hexOid = NULL;
+    ASSERT_TRUE(BSL_OBJ_GetOidFromNumericString(NULL, 0, &outLen) == NULL);
+    ASSERT_TRUE(BSL_OBJ_GetOidFromNumericString(expect, strlen(expect), NULL) == NULL);
+    hexOid = BSL_OBJ_GetOidFromNumericString(expect, strlen(expect), &outLen);
+    ASSERT_TRUE(hexOid == NULL);
+    free(hexOid);
+EXIT:
+    return;
+}
+/* END_CASE */
+

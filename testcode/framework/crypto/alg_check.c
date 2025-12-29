@@ -510,6 +510,10 @@ bool IsCmacAlgDisabled(int id)
 bool IsCurveDisabled(int eccId)
 {
     switch (eccId) {
+#ifdef HITLS_CRYPTO_CURVE_NISTP192
+        case CRYPT_ECC_NISTP192:
+            return false;
+#endif
 #ifdef HITLS_CRYPTO_CURVE_NISTP224
         case CRYPT_ECC_NISTP224:
             return false;

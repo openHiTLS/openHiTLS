@@ -482,7 +482,7 @@ EXIT:
  * @precon public key point
  * @brief
  *    1. Create the context of the ecdsa algorithm, expected result 1
- *    2. Set the para by eccId(p-224/256/384/512, bp256r1/384r1/512/r1), expected result 2
+ *    2. Set the para by eccId(p-192/224/256/384/512, bp256r1/384r1/512/r1), expected result 2
  *    3. Convert the format of the public key vector to COMPRESSED, expected result 3
  *    4. Set the public key, expected result 4
  *    5. Call the CRYPT_EAL_PkeyCtrl method to set point format to COMPRESSED, expected result 5
@@ -682,7 +682,7 @@ EXIT:
  * @precon Public keys of different lengths.
  * @brief
  *    1. Create the context of the ecdsa algorithm, expected result 1
- *    2. Set the para by eccId(p-224/256/384/512, bp256r1/384r1/512/r1), expected result 2
+ *    2. Set the para by eccId(p-192/224/256/384/512, bp256r1/384r1/512/r1), expected result 2
  *    3. Set public keys of different lengths, expected result 3
  * @expect
  *    1. Success, and the context is not NULL.
@@ -705,7 +705,7 @@ EXIT:
  * @brief
  *    1. Get para id before creating context, expected result 1
  *    2. Create the context of the ECDSA algorithm, expected result 2
- *    3. Set para id(p-224/256/384/512), expected result 3
+ *    3. Set para id(p-192/224/256/384/512), expected result 3
  *    4. Get para id, expected result 4
  * @expect
  *    1. CRYPT_PKEY_PARAID_MAX

@@ -106,6 +106,7 @@
                     },
                     "pkey": {
                         "ecc": {
+                            "curve_nistp192": null,
                             "curve_nistp224": null,
                             "curve_nistp256": null,
                             "curve_nistp384": null,
@@ -139,10 +140,10 @@
                         },
                         "dsa": {"deps": ["bn_rand", "asn1", "obj"]},
                         "dh": {"deps": ["bn_rand"]},
-                        "ecdh": {"opts": ["curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521", "curve_bp256r1", "curve_bp384r1", "curve_bp512r1"]},
+                        "ecdh": {"opts": ["curve_nistp192", "curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521", "curve_bp256r1", "curve_bp384r1", "curve_bp512r1"]},
                         "ecdsa": {
                             "deps": ["asn1", "obj"],
-                            "opts": ["curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521", "curve_bp256r1", "curve_bp384r1", "curve_bp512r1"]
+                            "opts": ["curve_nistp192", "curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521", "curve_bp256r1", "curve_bp384r1", "curve_bp512r1"]
                         },
                         "curve25519": {
                             "ed25519": {"deps": ["sha512"]},
@@ -1133,7 +1134,7 @@
             "ecc": {
                 ".features": [
                     "ecc",
-                    "curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521",
+                    "curve_nistp192", "curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521",
                     "curve_bp256r1", "curve_bp384r1", "curve_bp512r1",
                     "curve_sm2"
                 ],

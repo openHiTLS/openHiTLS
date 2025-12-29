@@ -70,6 +70,7 @@
         "bn": ["test_suite_sdv_bn"],
 
         "ecc": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
+        "curve_nistp192": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
         "curve_nistp224": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
         "curve_nistp256": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],
         "curve_nistp384": ["test_suite_sdv_eal_ecdh", "test_suite_sdv_eal_ecdsa"],

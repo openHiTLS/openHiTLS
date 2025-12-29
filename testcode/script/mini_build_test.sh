@@ -26,7 +26,7 @@ FEATURES=()
 TEST_FEATURE=""
 BUILD_HITLS="on"
 EXE_TEST="on"
-SHOW_SIZE="on" # size libhitls_*.a
+SHOW_SIZE="off" # size libhitls_*.a
 SHOW_MACRO="off"
 
 ASM_TYPE=""
@@ -81,8 +81,8 @@ parse_option()
                 ADD_OPTIONS="${ADD_OPTIONS} -E -dM"
                 LIB_TYPE="static"
                 ;;
-            "no-size")
-                SHOW_SIZE="off"
+            "size")
+                SHOW_SIZE="on"
                 ;;
             "no-build")
                 BUILD_HITLS="off"

@@ -49,9 +49,9 @@ int32_t ECP_PointAtInfinity(const ECC_Para *para, const ECC_Point *pt)
 // Check whether the point is on the curve.
 int32_t ECP_PointOnCurve(const ECC_Para *para, const ECC_Point *pt)
 {
-    int32_t ret = 0;
-    uint32_t nistList[] = {CRYPT_ECC_NISTP224, CRYPT_ECC_NISTP256, CRYPT_ECC_NISTP384, CRYPT_ECC_NISTP521};
-    ret = ECP_PointAtInfinity(para, pt);
+    uint32_t nistList[] = {CRYPT_ECC_NISTP192, CRYPT_ECC_NISTP224, CRYPT_ECC_NISTP256, CRYPT_ECC_NISTP384,
+        CRYPT_ECC_NISTP521};
+    int32_t ret = ECP_PointAtInfinity(para, pt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

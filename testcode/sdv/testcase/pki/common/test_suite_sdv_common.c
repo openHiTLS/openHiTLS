@@ -17,6 +17,7 @@
 #include "bsl_sal.h"
 #include "securec.h"
 #include "hitls_error.h"
+#include "stub_replace.h"
 #include "hitls_pki_cert.h"
 #include "hitls_pki_utils.h"
 #include "hitls_pki_errno.h"
@@ -55,6 +56,62 @@ static void FreeSanListData(void *data)
     if (name->type == HITLS_X509_GN_DNNAME) {
         HITLS_X509_DnListFree((BslList *)name->value.data);
     }
+}
+
+static volatile uint32_t g_malloc_called_idx = 0;
+static volatile uint32_t g_malloc_failed_idx = 0;
+static volatile bool g_malloc_fail_enabled = true;
+
+void *STUB_BSL_SAL_Malloc(uint32_t size)
+{
+    uint32_t current_call_index = g_malloc_called_idx;
+    g_malloc_called_idx = current_call_index + 1;
+
+    if (g_malloc_fail_enabled && current_call_index == g_malloc_failed_idx) {
+        return NULL;
+    }
+
+    return malloc(size);
+}
+
+void STUB_ResetMallocCount(void)
+{
+    g_malloc_called_idx = 0;
+}
+
+void STUB_SetMallocFailIndex(uint32_t failIdx)
+{
+    g_malloc_failed_idx = failIdx;
+}
+
+uint32_t STUB_GetMallocCallCount(void)
+{
+    return g_malloc_called_idx;
+}
+
+void STUB_EnableMallocFail(bool enable)
+{
+    g_malloc_fail_enabled = enable;
+}
+
+
+static int32_t STUB_BSL_LIST_AddElement(BslList *pList, void *pData, BslListPosition enPosition)
+{
+    (void)pList;
+    (void)pData;
+    (void)enPosition;
+    return BSL_LIST_FULL;
+}
+
+static int32_t STUB_BSL_ASN1_EncodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asnArr, uint32_t arrNum,
+    uint8_t **encode, uint32_t *encLen)
+{
+    (void)templ;
+    (void)asnArr;
+    (void)arrNum;
+    (void)encode;
+    (void)encLen;
+    return BSL_ASN1_FAIL;
 }
 
 static int32_t TestSignCb(int32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Asn1AlgId *signAlgId, void *obj)
@@ -413,6 +470,218 @@ EXIT:
     HITLS_X509_CertFree(cert);
     BSL_SAL_Free(name.buff);
     BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_Set_Api_TC001(void)
+{
+    HITLS_X509_Ext *ext = NULL;
+    HITLS_X509_ExtBCons bCons = {true, true, 1};
+    FuncStubInfo tmpRpInfo = {0};
+
+    TestMemInit();
+
+    /* 1 Test set the bcons once */
+    /* 1.1 Test calloc failure in HITLS_X509_SetExtList */
+    ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_TRUE_AND_LOG("ext != NULL 1", ext != NULL);
+    STUB_Init();
+    STUB_ResetMallocCount();
+    STUB_SetMallocFailIndex(0);
+    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc) == 0);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), BSL_MALLOC_FAIL);
+    STUB_Reset(&tmpRpInfo);
+    HITLS_X509_ExtFree(ext);
+
+    /* 1.2 Test dump failure in HITLS_X509_SetExtList */
+    ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_TRUE_AND_LOG("ext != NULL 2", ext != NULL);
+    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc) == 0);
+    STUB_ResetMallocCount();
+    STUB_SetMallocFailIndex(1);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), BSL_DUMP_FAIL);
+    STUB_Reset(&tmpRpInfo);
+    HITLS_X509_ExtFree(ext);
+
+    /* 1.3 Test encodeExt failure in HITLS_X509_SetExtList when adding new extension */
+    ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_TRUE_AND_LOG("ext != NULL 3", ext != NULL);
+    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, BSL_ASN1_EncodeTemplate, STUB_BSL_ASN1_EncodeTemplate) == 0);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), BSL_ASN1_FAIL);
+    STUB_Reset(&tmpRpInfo);
+    HITLS_X509_ExtFree(ext);
+
+    /* 1.4 Test BSL_LIST_AddElement failure in HITLS_X509_SetExtList */
+    ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_TRUE_AND_LOG("ext != NULL 4", ext != NULL);
+    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, BSL_LIST_AddElement, STUB_BSL_LIST_AddElement) == 0);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), BSL_LIST_FULL);
+    STUB_Reset(&tmpRpInfo);
+    HITLS_X509_ExtFree(ext);
+
+    /* 2 Test set the bcons twice (replace existing extension) */
+    /* 2.1 Test encodeExt failure in HITLS_X509_SetExtList */
+    ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_TRUE_AND_LOG("ext != NULL 5", ext != NULL);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
+    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, BSL_ASN1_EncodeTemplate, STUB_BSL_ASN1_EncodeTemplate) == 0);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), BSL_ASN1_FAIL);
+    STUB_Reset(&tmpRpInfo);
+    HITLS_X509_ExtFree(ext);
+
+    /* 2.2 Test set the bcons twice successfully */
+    ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_TRUE_AND_LOG("ext != NULL 6", ext != NULL);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)), 0);
+    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1);
+    HITLS_X509_ExtFree(ext);
+    ext = NULL;
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
+    STUB_Reset(&tmpRpInfo);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_SetGeneric_Api_TC001(void)
+{
+    int32_t invalid = HITLS_X509_ERR_INVALID_PARAM;
+    uint8_t oid[] = {0x01};
+    uint8_t value[] = {0x01};
+    HITLS_X509_ExtGeneric generic = {true, {oid, sizeof(oid)}, {value, sizeof(value)}};
+    HITLS_X509_Ext *ext = NULL;
+    HITLS_X509_Ext *extForMalloc = NULL;
+    uint32_t totalMallocCount = 0;
+    FuncStubInfo tmpRpInfo = {0};
+
+    TestMemInit();
+    ext = X509_ExtNew(NULL, HITLS_X509_EXT_TYPE_CERT);
+    ASSERT_TRUE_AND_LOG("new cert ext", ext != NULL);
+    extForMalloc = X509_ExtNew(NULL, HITLS_X509_EXT_TYPE_CERT);
+    ASSERT_TRUE_AND_LOG("new cert ext for malloc", extForMalloc != NULL);
+
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, 0), invalid);
+
+    // error: oid is null
+    generic.oid.data = NULL;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.oid.data = oid;
+
+    // error: oid is empty
+    generic.oid.dataLen = 0;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.oid.dataLen = sizeof(oid);
+
+    // error: value is null
+    generic.value.data = NULL;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.value.data = value;
+
+    // error: value is empty
+    generic.value.dataLen = 0;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.value.dataLen = sizeof(value);
+
+    /* Mock malloc fail in X509_ExtCtrl */
+    STUB_Init();
+    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc) == 0);
+    // success: first set generic extension
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1);
+    totalMallocCount = STUB_GetMallocCallCount();
+
+    // error: first set generic extension with malloc fail
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ASSERT_NE(X509_ExtCtrl(extForMalloc, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+    }
+
+    STUB_EnableMallocFail(false);
+    ASSERT_EQ(X509_ExtCtrl(extForMalloc, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+
+    // success: replace existing extension
+    STUB_ResetMallocCount();
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1);
+    totalMallocCount = STUB_GetMallocCallCount();
+
+    // error: replace existing extension with malloc fail
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ASSERT_NE(X509_ExtCtrl(extForMalloc, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+    }
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
+    HITLS_X509_ExtFree(extForMalloc);
+    STUB_Reset(&tmpRpInfo);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_GetGeneric_Api_TC001(void)
+{
+    int32_t invalid = HITLS_X509_ERR_INVALID_PARAM;
+    int32_t notFound = HITLS_X509_ERR_EXT_NOT_FOUND;
+    uint8_t oid[] = {0x01};
+    uint8_t value[] = {0x01};
+    HITLS_X509_ExtGeneric generic = {true, {oid, sizeof(oid)}, {value, sizeof(value)}};
+    HITLS_X509_Ext *ext = NULL;
+    FuncStubInfo tmpRpInfo = {0};
+
+    TestMemInit();
+    ext = X509_ExtNew(NULL, HITLS_X509_EXT_TYPE_CERT);
+    ASSERT_TRUE_AND_LOG("new cert ext", ext != NULL);
+
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, 0), invalid);
+
+    // error: oid is null
+    generic.oid.data = NULL;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.oid.data = oid;
+
+    // error: oid is empty
+    generic.oid.dataLen = 0;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.oid.dataLen = sizeof(oid);
+
+    // error: value is not null
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.value.data = NULL;
+
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), notFound);
+
+    // success: set generic extension
+    generic.value.data = value;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+
+    // error: get generic extension with malloc fail
+    ASSERT_TRUE(STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc) == 0);
+    STUB_EnableMallocFail(true);
+    STUB_ResetMallocCount();
+    STUB_SetMallocFailIndex(0); // mock malloc fail in BSL_SAL_Dump
+    generic.value.data = NULL;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), BSL_DUMP_FAIL);
+
+    // success: get generic extension
+    STUB_EnableMallocFail(false);
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+
+    ASSERT_COMPARE("generic.value.data", generic.value.data, generic.value.dataLen, value, sizeof(value));
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
+    BSL_SAL_Free(generic.value.data);
+    STUB_Reset(&tmpRpInfo);
 }
 /* END_CASE */
 
@@ -1327,5 +1596,65 @@ void SDV_X509_CRL_PARSE_NAME_LIST_TC001(Hex *buff)
     ASSERT_EQ(HITLS_X509_ParseNameList(&name, list), BSL_ASN1_ERR_DECODE_LEN);
 EXIT:
     BSL_LIST_FreeWithoutData(list);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_WITH_CUSTOM_EXT_PARSE_TEST_TC001(char *path, Hex *customExtValue1, Hex *customExtValue2,
+    Hex *expectKeyUsage)
+{
+    HITLS_X509_Cert *parsedCert = NULL;
+    BslCid keyUsageCid = BSL_CID_CE_KEYUSAGE;
+    char *customOid1 = "1.2.3.4.5.6.7.8.9.1";
+    char *customOid2 = "1.2.3.4.5.6.7.8.9.2";
+    uint8_t *customOidData = NULL;
+    uint32_t customOidLen = 0;
+    BslOidString *keyUsageOid = NULL;
+    HITLS_X509_ExtGeneric customExt = {0};
+    HITLS_X509_ExtGeneric keyUsageExt = {0};
+
+    TestMemInit();
+
+    // SetUp
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &parsedCert), HITLS_PKI_SUCCESS);
+
+    // Get and check custom ext 1
+    customOidData = BSL_OBJ_GetOidFromNumericString(customOid1, strlen(customOid1), &customOidLen);
+    ASSERT_NE(customOidData, NULL);
+    customExt.oid.data = customOidData;
+    customExt.oid.dataLen = customOidLen;
+    ASSERT_EQ(HITLS_X509_CertCtrl(parsedCert, HITLS_X509_EXT_GET_GENERIC, &customExt, sizeof(HITLS_X509_ExtGeneric)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("custom ext1", customExt.value.data, customExt.value.dataLen, customExtValue1->x,
+        customExtValue1->len);
+    ASSERT_EQ(customExt.critical, true);
+    BSL_SAL_FREE(customOidData);
+    BSL_SAL_FREE(customExt.value.data);
+
+    // Get and check custom ext 2
+    customOidData = BSL_OBJ_GetOidFromNumericString(customOid2, strlen(customOid2), &customOidLen);
+    ASSERT_NE(customOidData, NULL);
+    customExt.oid.data = customOidData;
+    customExt.oid.dataLen = customOidLen;
+    ASSERT_EQ(HITLS_X509_CertCtrl(parsedCert, HITLS_X509_EXT_GET_GENERIC, &customExt, sizeof(HITLS_X509_ExtGeneric)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("custom ext2", customExt.value.data, customExt.value.dataLen, customExtValue2->x,
+        customExtValue2->len);
+    ASSERT_EQ(customExt.critical, false);
+
+    // Get keyusage byt HITLS_X509_EXT_GET_GENERIC
+    keyUsageOid = BSL_OBJ_GetOID(keyUsageCid);
+    keyUsageExt.oid.data = (uint8_t *)keyUsageOid->octs;
+    keyUsageExt.oid.dataLen = keyUsageOid->octetLen;
+    ASSERT_EQ(HITLS_X509_CertCtrl(parsedCert, HITLS_X509_EXT_GET_GENERIC, &keyUsageExt, sizeof(HITLS_X509_ExtGeneric)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("key usage", keyUsageExt.value.data, keyUsageExt.value.dataLen, expectKeyUsage->x,
+        expectKeyUsage->len);
+
+EXIT:
+    HITLS_X509_CertFree(parsedCert);
+    BSL_SAL_FREE(customOidData);
+    BSL_SAL_FREE(customExt.value.data);
+    BSL_SAL_FREE(keyUsageExt.value.data);
 }
 /* END_CASE */

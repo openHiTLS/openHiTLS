@@ -47,13 +47,14 @@ EXIT:
  *    1. Create the context of the ecdh algorithm, expected result 1
  *    2. Call the CRYPT_EAL_PkeySetParaById method:
  *       (1) context = NULL, expected result 2.
- *       (2) CRYPT_PKEY_ParaId = CRYPT_ECC_NISTP224, expected result 3.
- *       (3) CRYPT_PKEY_ParaId = CRYPT_ECC_NISTP256, expected result 3.
- *       (4) CRYPT_PKEY_ParaId = CRYPT_ECC_NISTP384, expected result 3.
- *       (5) CRYPT_PKEY_ParaId = CRYPT_ECC_NISTP521, expected result 3.
- *       (6) CRYPT_PKEY_ParaId = CRYPT_ECC_BRAINPOOLP256R1, expected result 3.
- *       (7) CRYPT_PKEY_ParaId = CRYPT_ECC_BRAINPOOLP384R1, expected result 3.
- *       (8) CRYPT_PKEY_ParaId = CRYPT_ECC_BRAINPOOLP512R1, expected result 3.
+ *       (2) CRYPT_PKEY_ParaId = CRYPT_ECC_NISTP192, expected result 3.
+ *       (3) CRYPT_PKEY_ParaId = CRYPT_ECC_NISTP224, expected result 3.
+ *       (4) CRYPT_PKEY_ParaId = CRYPT_ECC_NISTP256, expected result 3.
+ *       (5) CRYPT_PKEY_ParaId = CRYPT_ECC_NISTP384, expected result 3.
+ *       (6) CRYPT_PKEY_ParaId = CRYPT_ECC_NISTP521, expected result 3.
+ *       (7) CRYPT_PKEY_ParaId = CRYPT_ECC_BRAINPOOLP256R1, expected result 3.
+ *       (8) CRYPT_PKEY_ParaId = CRYPT_ECC_BRAINPOOLP384R1, expected result 3.
+ *       (9) CRYPT_PKEY_ParaId = CRYPT_ECC_BRAINPOOLP512R1, expected result 3.
  * @expect
  *    1. Success, and the context is not NULL.
  *    2. CRYPT_NULL_INPUT
@@ -223,7 +224,7 @@ EXIT:
  *         public key point
  * @brief
  *    1. Create the context of the ecdh algorithm, expected result 1
- *    2. Set the para by eccId(p-224/256/384/512, bp256r1/384r1/512/r1), expected result 2
+ *    2. Set the para by eccId(p-192/224/256/384/512, bp256r1/384r1/512/r1), expected result 2
  *    3. Convert the format of the public key vector to COMPRESSED, expected result 3
  *    4. Set the public key, expected result 4
  *    5. Call the CRYPT_EAL_PkeyCtrl method to set point format to COMPRESSED, expected result 5
@@ -431,7 +432,7 @@ EXIT:
  * @precon Public keys of different lengths.
  * @brief
  *    1. Create the context of the ecdh algorithm, expected result 1
- *    2. Set the para by eccId(p-224/256/384/512, bp256r1/384r1/512/r1), expected result 2
+ *    2. Set the para by eccId(p-192/224/256/384/512, bp256r1/384r1/512/r1), expected result 2
  *    3. Set public keys of different lengths, expected result 3
  * @expect
  *    1. Success, and the context is not NULL.
@@ -441,7 +442,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_ECDH_SET_PUB_API_TC003(int eccId, Hex *pubKey, Hex *errorPubKey, int isProvider)
 {
-    ASSERT_TRUE(EAL_PkeySetPub_Api_TC003(CRYPT_PKEY_ECDSA, eccId, pubKey, errorPubKey, isProvider) == 0);
+    ASSERT_TRUE(EAL_PkeySetPub_Api_TC003(CRYPT_PKEY_ECDH, eccId, pubKey, errorPubKey, isProvider) == 0);
 EXIT:
     return;
 }
@@ -454,7 +455,7 @@ EXIT:
  * @brief
  *    1. Get para id before creating context, expected result 1
  *    1. Create the context of the ecdh algorithm, expected result 2
- *    2. Set para id(p-224/256/384/512), expected result 3
+ *    2. Set para id(p-192/224/256/384/512), expected result 3
  *    3. Get para id, expected result 4
  * @expect
  *    1. CRYPT_PKEY_PARAID_MAX
@@ -478,7 +479,7 @@ EXIT:
  * @precon Registering memory-related functions.
  * @brief
  *    1. Create the context(pKeyCtx) of the ecdh algorithm, expected result 1
- *    2. Set the para by eccId(p-224/256/384/512, bp256r1/384r1/512/r1), expected result 2
+ *    2. Set the para by eccId(p-192/224/256/384/512, bp256r1/384r1/512/r1), expected result 2
  *    3. Call the CRYPT_EAL_PkeyDupCtx to dup context where the parameter is null, expected result 3
  *    4. Call the CRYPT_EAL_PkeyDupCtx to dup context(newCtx), expected result 4
  *    5. Get the reference count, expected result 5
@@ -570,8 +571,8 @@ EXIT:
  * @brief
  *    1. Create two contexts(ecdhPkey, peerEcdhPubPkey) of the ECDH algorithm, expected result 1
  *    2. Init the drbg, expected result 2
- *    3. ecdhPkey: Set elliptic curve type(p-224/256/384/512, bp256r1/384r1/512/r1) and private key, expected result 3
- *    4. peerEcdhPubPkey: Set elliptic curve type(p-224/256/384/512, bp256r1/384r1/512/r1) and public key(compressed/
+ *    3. ecdhPkey: Set elliptic curve type(p-192/224/256/384/512, bp256r1/384r1/512/r1) and private key, expected result 3
+ *    4. peerEcdhPubPkey: Set elliptic curve type(p-192/224/256/384/512, bp256r1/384r1/512/r1) and public key(compressed/
  *       uncompressed/hybrid), expected result 4
  *    5. Compute the shared key, expected result 5
  *    6. Compare the output shared secret and shared secret vector, expected result 6

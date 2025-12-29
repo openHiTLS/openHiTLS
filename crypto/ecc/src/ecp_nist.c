@@ -24,7 +24,8 @@
 #include "ecc_local.h"
 
 #if defined(HITLS_CRYPTO_CURVE_NISTP224) || defined(HITLS_CRYPTO_CURVE_NISTP256) || \
-    defined(HITLS_CRYPTO_CURVE_NISTP384) || defined(HITLS_CRYPTO_CURVE_NISTP521) || defined(HITLS_CRYPTO_CURVE_SM2)
+    defined(HITLS_CRYPTO_CURVE_NISTP384) || defined(HITLS_CRYPTO_CURVE_NISTP521) || defined(HITLS_CRYPTO_CURVE_SM2) || \
+    defined(HITLS_CRYPTO_CURVE_NISTP192)
 
 static int32_t CreatTmpBn(BN_BigNum **t1, BN_BigNum **t2, BN_BigNum **t3, BN_BigNum **t4, uint32_t bits)
 {
