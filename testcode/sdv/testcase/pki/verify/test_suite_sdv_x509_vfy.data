@@ -37,6 +37,9 @@ SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-v3/rootca.der":
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 rsa-pss-nocrl
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/rsa-pss-v3/ca.der":"../testdata/cert/chain/rsa-pss-v3/inter.der":"../testdata/cert/chain/rsa-pss-v3/end.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
 
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 ecdsa-prime192v1-nocrl
+SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/nistp192_certs/root_ca_nistp192_cert.der":"../testdata/cert/chain/nistp192_certs/int_ca_nistp192_cert.der":"../testdata/cert/chain/nistp192_certs/ee_nistp192_cert.der":"../testdata/cert/chain/nistp192_certs/root_ca_nistp192.crl"
+
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001 ecdsa-nocrl
 SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001:"../testdata/cert/chain/ecdsa-v3/ca.der":"../testdata/cert/chain/ecdsa-v3/inter.der":"../testdata/cert/chain/ecdsa-v3/end.der":"../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der"
 

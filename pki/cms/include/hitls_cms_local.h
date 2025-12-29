@@ -21,7 +21,7 @@
 #include "hitls_x509_local.h"
 #include "crypt_eal_md.h"
 #include "hitls_cert_local.h"
-#include "hitls_crl_local.h"
+#include "hitls_pki_crl.h"
 
 #ifdef __cplusplus
 extern "C" {

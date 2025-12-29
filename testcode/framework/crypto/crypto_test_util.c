@@ -28,6 +28,7 @@
 #include "crypt_eal_rand.h"
 #include "crypt_eal_mac.h"
 #include "crypt_eal_init.h"
+#include "crypt_params_key.h"
 
 #include "test.h"
 #include "helper.h"

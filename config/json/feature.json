@@ -114,6 +114,7 @@
                     "pkey": {
                         "pkey_cmp": null,
                         "ecc": {
+                            "curve_nistp192": null,
                             "curve_nistp224": null,
                             "curve_nistp256": null,
                             "curve_nistp384": null,
@@ -148,10 +149,10 @@
                         "rsa_bssa": {"deps": ["rsa_emsa_pss", "rsa_blinding"]},
                         "dsa": {"deps": ["bn_rand", "asn1", "obj_default"]},
                         "dh": {"deps": ["bn_rand"]},
-                        "ecdh": {"opts": ["curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521", "curve_bp256r1", "curve_bp384r1", "curve_bp512r1"]},
+                        "ecdh": {"opts": ["curve_nistp192", "curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521", "curve_bp256r1", "curve_bp384r1", "curve_bp512r1"]},
                         "ecdsa": {
                             "deps": ["asn1", "obj_default"],
-                            "opts": ["curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521", "curve_bp256r1", "curve_bp384r1", "curve_bp512r1"]
+                            "opts": ["curve_nistp192", "curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521", "curve_bp256r1", "curve_bp384r1", "curve_bp512r1"]
                         },
                         "curve25519": {
                             "ed25519": {"deps": ["sha512"]},
@@ -682,7 +683,7 @@
                             "deps": ["asn1"]
                         },
                         "cms_signeddata" : {
-                            "deps": ["asn1"]
+                            "deps": ["asn1", "x509_vfy_default", "x509_crl", "x509_crt"]
                         },
                         "cms_encryptdata" : {
                             "deps": ["key_epki"]
@@ -1296,7 +1297,7 @@
             "ecc": {
                 ".features": [
                     "ecc",
-                    "curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521",
+                    "curve_nistp192", "curve_nistp224", "curve_nistp256", "curve_nistp384", "curve_nistp521",
                     "curve_bp256r1", "curve_bp384r1", "curve_bp512r1",
                     "curve_sm2"
                 ],
@@ -1721,14 +1722,14 @@
             "pkcs12" : {
                 ".features" : ["pkcs12", "pkcs12_gen", "pkcs12_parse"],
                 ".srcs" : "pki/pkcs12/src/*",
-                ".deps" : ["platform::Secure_C", "pki::x509_common", "crypto::codecskey", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "pki::x509_cert", "pki::cms"]
+                ".deps" : ["platform::Secure_C", "pki::x509_common", "crypto::codecskey", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "pki::x509_cert"],
+                ".include": ["pki/cms/include"]
             },
             "cms" : {
                 ".features" : ["cms_data", "cms_digestinfo", "cms_signeddata", "cms_encryptdata"],
                 ".srcs" : "pki/cms/src/*",
-                ".deps" : ["platform::Secure_C", "crypto::codecskey", "pki::x509_common", "pki::x509_crl", "pki::x509_cert", "pki::x509_verify" ],
-                ".include": ["pki/x509_common/include",
-                            "pki/cms/include",
+                ".deps" : ["platform::Secure_C", "crypto::codecskey"],
+                ".include": [
                             "pki/x509_crl/include",
                             "pki/x509_cert/include",
                             "pki/x509_common/include",

@@ -47,6 +47,7 @@
 #include "bsl_sal.h"
 #include "bsl_obj.h"
 #include "bsl_err_internal.h"
+#include "crypt_params_key.h"
 #include "crypt_codecskey_local.h"
 #include "crypt_decoder_local.h"
 #include "crypt_decoder.h"

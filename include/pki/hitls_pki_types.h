@@ -92,6 +92,8 @@ typedef enum {
     HITLS_X509_EXT_SET_BCONS,                   /** Set the basic constraints extension. */
     HITLS_X509_EXT_SET_EXKUSAGE,                /** Set the extended key usage extension. */
     HITLS_X509_EXT_SET_CRLNUMBER,               /** Set the crlnumber extension. */
+    HITLS_X509_EXT_SET_GENERIC,                 /** Set a generic extension by OID.
+                                                    Note: Only supported for custom extensions. */
 
     HITLS_X509_EXT_GET_SKI = 0x0500,            /** Get Subject Key Identifier from extensions.
                                                     Note: Kid is a shallow copy. */
@@ -102,6 +104,8 @@ typedef enum {
     HITLS_X509_EXT_GET_BCONS,                   /** Get the basic constraints extension. */
     HITLS_X509_EXT_GET_SAN,                     /** Get Subject Alternative Name from extensions.
                                                     Note: Returns a list of HITLS_X509_GeneralName. */
+    HITLS_X509_EXT_GET_GENERIC,                 /** Get a generic extension by OID.
+                                                    Note: Only supported for custom extensions. */
 
     HITLS_X509_EXT_CHECK_SKI = 0x0600,          /** Check if ski is exists. */
 
@@ -225,6 +229,29 @@ typedef struct {
     bool critical;        // Default to false.
     BSL_Buffer crlNumber; // crlNumber
 } HITLS_X509_ExtCrlNumber;
+
+/**
+ * Generic extension for setting/getting arbitrary extensions by OID
+ *
+ * For SET operation (HITLS_X509_EXT_SET_GENERIC):
+ *   - oid: Input, DER-encoded OID buffer (can be converted from dot-notation using BSL_OBJ_GetOidFromNumericString)
+ *   - value: Input, DER-encoded extension value
+ *   - critical: Input, critical flag
+ *
+ * For GET operation (HITLS_X509_EXT_GET_GENERIC):
+ *   - oid: Input, DER-encoded OID buffer (used to search for the extension)
+ *   - value: Must be NULL on input (function will allocate memory and fill it
+ *            with DER-encoded extension value)
+ *   - critical: Output, critical flag
+ *
+ * Note: After GET operation, caller must free the memory allocated for value
+ *       field using the appropriate buffer free function.
+ */
+typedef struct {
+    bool critical;      /**< Critical flag of the extension */
+    BSL_Buffer oid;     /**< DER-encoded OID buffer */
+    BSL_Buffer value;   /**< DER-encoded extension value */
+} HITLS_X509_ExtGeneric;
 
 typedef struct {
     bool critical;

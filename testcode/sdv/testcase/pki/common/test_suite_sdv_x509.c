@@ -388,6 +388,10 @@ static int32_t SetCertExt(HITLS_X509_Cert *cert)
     HITLS_X509_ExtSan san = {true, NULL};
     BSL_Buffer oidBuff = {0};
     BslOidString *oid = NULL;
+    HITLS_X509_ExtGeneric customExt = {0};
+    char *customOid1 = "1.2.3.4.5.6.7.8.9.1";
+    uint8_t *customOidData = NULL;
+    uint32_t customOidLen = 0;
 
     BslList *oidList = BSL_LIST_New(sizeof(BSL_Buffer));
     ASSERT_TRUE(oidList != NULL);
@@ -408,10 +412,20 @@ static int32_t SetCertExt(HITLS_X509_Cert *cert)
     san.names = GenGeneralNameList();
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_SAN, &san, sizeof(HITLS_X509_ExtSan)), 0);
 
+    customOidData = BSL_OBJ_GetOidFromNumericString(customOid1, strlen(customOid1), &customOidLen);
+    ASSERT_NE(customOidData, NULL);
+    customExt.oid.data = customOidData;
+    customExt.oid.dataLen = customOidLen;
+    customExt.value.data = kid;
+    customExt.value.dataLen = sizeof(kid);
+    customExt.critical = true;
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_GENERIC, &customExt, sizeof(HITLS_X509_ExtGeneric)), 0);
+
     ret = 0;
 EXIT:
     BSL_LIST_FREE(oidList, (BSL_LIST_PFUNC_FREE)FreeListData);
     BSL_LIST_FREE(san.names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
+    BSL_SAL_FREE(customOidData);
     return ret;
 }
 #endif // HITLS_PKI_X509_CRT_GEN
@@ -1804,6 +1818,7 @@ EXIT:
     (void)curveId;
     (void)symId;
     (void)pwd;
+    (void)sm2Pub;
     SKIP_TEST();
 #endif
 }
@@ -1882,7 +1897,7 @@ void SDV_PKI_GEN_CERT_STUB_TC001(int algId, int hashId, int curveId)
     /* Phase 1: Probe - count malloc calls during successful execution */
     STUB_EnableMallocFail(false);
     STUB_ResetMallocCount();
-    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_PEM, cert, &encode), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, cert, &encode), HITLS_PKI_SUCCESS);
     totalMallocCount = STUB_GetMallocCallCount();
     BSL_SAL_Free(encode.data);
     encode.data = NULL;
@@ -1893,7 +1908,7 @@ void SDV_PKI_GEN_CERT_STUB_TC001(int algId, int hashId, int curveId)
     for (uint32_t i = 0; i < totalMallocCount - 1; i++) {
         STUB_ResetMallocCount();
         STUB_SetMallocFailIndex(i);
-        ASSERT_NE(HITLS_X509_CertGenBuff(BSL_FORMAT_PEM, testCert, &encode), HITLS_PKI_SUCCESS);
+        ASSERT_NE(HITLS_X509_CertGenBuff(BSL_FORMAT_ASN1, testCert, &encode), HITLS_PKI_SUCCESS);
     }
 EXIT:
     TestRandDeInit();
@@ -2001,7 +2016,8 @@ EXIT:
 }
 /* END_CASE */
 
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
+#if (defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)) && \
+    (defined(HITLS_PKI_X509_CSR_GEN) && defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_PKI_X509_CRL_GEN))
 static int32_t GenKeyAndSelfCert(int32_t algId, int paraId, CRYPT_EAL_PkeyCtx **key, HITLS_X509_Cert **cert)
 {
     HITLS_X509_Cert *tmpCert = NULL;
@@ -2169,7 +2185,8 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_PQ_CERT_GEN_PKI_TC001(int algId, int paraId, char *root, char *crl, char *csr)
 {
-#if defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
+#if (defined(HITLS_CRYPTO_XMSS) || defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)) && \
+    (defined(HITLS_PKI_X509_CSR_GEN) && defined(HITLS_PKI_X509_CRT_GEN) && defined(HITLS_PKI_X509_CRL_GEN))
     if (PkiSkipTest(algId, BSL_FORMAT_ASN1)) {
         SKIP_TEST();
     }

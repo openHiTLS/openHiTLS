@@ -35,6 +35,7 @@
 #include "stub_utils.h"
 
 /* END_HEADER */
+#define MAX_BUFF_SIZE 4096
 #define MAX_DATA_LEN 128
 #ifdef HITLS_CRYPTO_PROVIDER
 STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
@@ -63,6 +64,58 @@ static void TestMemInitCorrect()
 {
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, TestMalloc);
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
+}
+
+static int32_t ReadFile(const char *filePath, uint8_t *buff, uint32_t buffLen, uint32_t *outLen)
+{
+    FILE *fp = NULL;
+    int32_t ret = -1;
+
+    fp = fopen(filePath, "rb");
+    if (fp == NULL) {
+        return ret;
+    }
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        goto EXIT;
+    }
+    long fileSize = ftell(fp);
+    if (fileSize < 0 || (uint32_t)fileSize > buffLen) {
+        goto EXIT;
+    }
+    rewind(fp);
+    size_t readSize = fread(buff, 1, fileSize, fp);
+    if (readSize != (size_t)fileSize) {
+        goto EXIT;
+    }
+    *outLen = (uint32_t)fileSize;
+    ret = 0;
+
+EXIT:
+    (void)fclose(fp);
+    return ret;
+}
+
+static int32_t PrintBuffTest(int cmd, BSL_Buffer *data, char *log, Hex *expect, bool isExpectFile)
+{
+    int32_t ret = -1;
+    uint8_t printBuf[MAX_BUFF_SIZE] = {};
+    uint32_t printBufLen = sizeof(printBuf);
+    uint8_t expectBuf[MAX_BUFF_SIZE] = {};
+    uint32_t expectBufLen = sizeof(expectBuf);
+    BSL_UIO *uio = BSL_UIO_New(BSL_UIO_MemMethod());
+    ASSERT_NE(uio, NULL);
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(cmd, data->data, data->dataLen, uio), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_UIO_Read(uio, printBuf, MAX_BUFF_SIZE, &printBufLen), 0);
+    if (isExpectFile) {
+        ASSERT_EQ(ReadFile((char *)expect->x, expectBuf, MAX_BUFF_SIZE, &expectBufLen), 0);
+        ASSERT_COMPARE(log, expectBuf, expectBufLen, printBuf, printBufLen - 1); // Ignore line break differences
+    } else {
+        ASSERT_COMPARE(log, expect->x, expect->len, printBuf, printBufLen - 1); // Ignore line break differences
+    }
+    ret = 0;
+EXIT:
+    BSL_UIO_Free(uio);
+    return ret;
 }
 
 /* BEGIN_CASE */
@@ -1397,5 +1450,64 @@ EXIT:
     HITLS_X509_CsrFree(csr);
     STUB_RESTORE(BSL_SAL_Malloc);
 #endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CSR_WITH_CUSTOM_EXT_PARSE_TEST_TC001(char *path, Hex *customExtValue1, Hex *customExtValue2,
+    char *exceptPrintFile)
+{
+    HITLS_X509_Csr *parsedCsr = NULL;
+    HITLS_X509_Attrs *attrs = NULL;
+    HITLS_X509_Ext *ext = NULL;
+    char *customOid = "1.2.3.4.5.6.7.8.9.1";
+    char *customOid2 = "1.2.3.4.5.6.7.8.9.2";
+    uint8_t *customOidData = NULL;
+    uint32_t customOidLen = 0;
+    HITLS_X509_ExtGeneric customExt = {0};
+    BSL_Buffer data = {0};
+    Hex expect = {(uint8_t *)exceptPrintFile, 0};
+
+    TestMemInit();
+
+    // SetUp
+    ASSERT_EQ(HITLS_X509_CsrParseFile(BSL_FORMAT_ASN1, path, &parsedCsr), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CsrCtrl(parsedCsr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(HITLS_X509_Attrs *)), 0);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_GET_REQUESTED_EXTENSIONS, &ext, sizeof(HITLS_X509_Ext *)), 0);
+    ASSERT_NE(ext, NULL);
+
+    // Get and check custom ext1
+    customOidData = BSL_OBJ_GetOidFromNumericString(customOid, strlen(customOid), &customOidLen);
+    ASSERT_NE(customOidData, NULL);
+    customExt.oid.data = customOidData;
+    customExt.oid.dataLen = customOidLen;
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &customExt, sizeof(HITLS_X509_ExtGeneric)), 0);
+    ASSERT_COMPARE("custom ext1", customExt.value.data, customExt.value.dataLen, customExtValue1->x,
+        customExtValue1->len);
+    ASSERT_EQ(customExt.critical, true);
+    BSL_SAL_FREE(customOidData);
+    BSL_SAL_FREE(customExt.value.data);
+
+    // Get and check custom ext2
+    customOidData = BSL_OBJ_GetOidFromNumericString(customOid2, strlen(customOid2), &customOidLen);
+    ASSERT_NE(customOidData, NULL);
+    customExt.oid.data = customOidData;
+    customExt.oid.dataLen = customOidLen;
+    ASSERT_EQ(HITLS_X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &customExt, sizeof(HITLS_X509_ExtGeneric)), 0);
+    ASSERT_COMPARE("custom ext2", customExt.value.data, customExt.value.dataLen, customExtValue2->x,
+        customExtValue2->len);
+    ASSERT_EQ(customExt.critical, false);
+    BSL_SAL_FREE(customOidData);
+
+    // Print csr buffer compare
+    data.data = (uint8_t *)parsedCsr;
+    data.dataLen = sizeof(HITLS_X509_Csr *);
+    ASSERT_EQ(PrintBuffTest(HITLS_PKI_PRINT_CSR, &data, "Print csr buffer", &expect, true), 0);
+
+EXIT:
+    HITLS_X509_CsrFree(parsedCsr);
+    HITLS_X509_ExtFree(ext);
+    BSL_SAL_FREE(customOidData);
+    BSL_SAL_FREE(customExt.value.data);
 }
 /* END_CASE */

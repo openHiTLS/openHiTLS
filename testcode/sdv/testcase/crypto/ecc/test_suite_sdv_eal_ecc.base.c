@@ -137,6 +137,8 @@ EXIT:
 static int GetPubKeyLen(int eccId)
 {
     switch (eccId) {
+        case CRYPT_ECC_NISTP192:
+            return 49;           /* SECP192R1 */
         case CRYPT_ECC_NISTP224:
             return 57;           /* SECP224R1 */
         case CRYPT_ECC_NISTP256: /* (32 * 2) + 1 SECP256R1, brainpoolP256r1 */
@@ -157,6 +159,8 @@ static int GetPubKeyLen(int eccId)
 static int GetPrvKeyLen(int eccId)
 {
     switch (eccId) {
+        case CRYPT_ECC_NISTP192:
+            return 24;
         case CRYPT_ECC_NISTP224:
             return 28;
         case CRYPT_ECC_NISTP256:
@@ -310,6 +314,7 @@ int EAL_PkeySetParaById_Api_TC001(int algId)
     pkeyCtx = CRYPT_EAL_PkeyNewCtx(algId);
     ASSERT_TRUE_AND_LOG("CRYPT_EAL_PkeyNewCtx", pkeyCtx != NULL);
     ASSERT_TRUE_AND_LOG("Invalid Pkey", CRYPT_EAL_PkeySetParaById(NULL, CRYPT_ECC_NISTP224) == CRYPT_NULL_INPUT);
+    ASSERT_TRUE_AND_LOG("CRYPT_ECC_NISTP192", CRYPT_EAL_PkeySetParaById(pkeyCtx, CRYPT_ECC_NISTP192) == CRYPT_SUCCESS);
     ASSERT_TRUE_AND_LOG("CRYPT_ECC_NISTP224", CRYPT_EAL_PkeySetParaById(pkeyCtx, CRYPT_ECC_NISTP224) == CRYPT_SUCCESS);
     ASSERT_TRUE_AND_LOG("CRYPT_ECC_NISTP256", CRYPT_EAL_PkeySetParaById(pkeyCtx, CRYPT_ECC_NISTP256) == CRYPT_SUCCESS);
     ASSERT_TRUE_AND_LOG("CRYPT_ECC_NISTP384", CRYPT_EAL_PkeySetParaById(pkeyCtx, CRYPT_ECC_NISTP384) == CRYPT_SUCCESS);

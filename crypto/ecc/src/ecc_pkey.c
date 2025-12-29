@@ -452,6 +452,7 @@ int32_t ECC_PkeyCheck(const ECC_Pkey *pkey1, const ECC_Pkey *pkey2, uint32_t che
 static const char *EcCurveId2nist(CRYPT_PKEY_ParaId id)
 {
     static EC_NAME nistCurves[] = {
+        {"P-192", CRYPT_ECC_NISTP192},
         {"P-224", CRYPT_ECC_NISTP224},
         {"P-256", CRYPT_ECC_NISTP256},
         {"P-384", CRYPT_ECC_NISTP384},

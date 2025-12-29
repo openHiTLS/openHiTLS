@@ -386,7 +386,6 @@ static int32_t CheckCsrValid(HITLS_X509_Csr *csr)
 static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer *subject,
     BSL_ASN1_Buffer *publicKey, BSL_ASN1_Buffer *attributes)
 {
-    (void)attributes;
     /* encode subject name */
     int32_t ret = HITLS_X509_EncodeNameList(reqInfo->subjectName, subject);
     if (ret != HITLS_PKI_SUCCESS) {
@@ -411,6 +410,8 @@ static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
+#else
+    attributes->tag = BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | HITLS_CSR_CTX_SPECIFIC_TAG_ATTRIBUTE;
 #endif // HITLS_PKI_X509_CSR_ATTR
 
     publicKey->buff = pub.data;

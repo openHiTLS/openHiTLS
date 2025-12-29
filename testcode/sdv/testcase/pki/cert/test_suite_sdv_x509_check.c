@@ -298,20 +298,19 @@ EXIT:
 static int32_t PrintBuffTest(int cmd, BSL_Buffer *data, char *log, Hex *expect, bool isExpectFile)
 {
     int32_t ret = -1;
-    uint8_t dnBuf[MAX_BUFF_SIZE] = {};
-    uint32_t dnBufLen = sizeof(dnBuf);
+    uint8_t printBuf[MAX_BUFF_SIZE] = {};
+    uint32_t printBufLen = sizeof(printBuf);
     uint8_t expectBuf[MAX_BUFF_SIZE] = {};
     uint32_t expectBufLen = sizeof(expectBuf);
     BSL_UIO *uio = BSL_UIO_New(BSL_UIO_MemMethod());
     ASSERT_NE(uio, NULL);
-    ASSERT_EQ(HITLS_PKI_PrintCtrl(cmd, data->data, data->dataLen, uio),
-        HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BSL_UIO_Read(uio, dnBuf, MAX_BUFF_SIZE, &dnBufLen), 0);
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(cmd, data->data, data->dataLen, uio), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_UIO_Read(uio, printBuf, MAX_BUFF_SIZE, &printBufLen), 0);
     if (isExpectFile) {
         ASSERT_EQ(ReadFile((char *)expect->x, expectBuf, MAX_BUFF_SIZE, &expectBufLen), 0);
-        ASSERT_COMPARE(log, expectBuf, expectBufLen, dnBuf, dnBufLen - 1); // Ignore line break differences
+        ASSERT_COMPARE(log, expectBuf, expectBufLen, printBuf, printBufLen - 1); // Ignore line break differences
     } else {
-        ASSERT_COMPARE(log, expect->x, expect->len, dnBuf, dnBufLen - 1); // Ignore line break differences
+        ASSERT_COMPARE(log, expect->x, expect->len, printBuf, printBufLen - 1); // Ignore line break differences
     }
     ret = 0;
 EXIT:
@@ -2303,5 +2302,72 @@ EXIT:
     HITLS_X509_CertFree(parsedCert);
     HITLS_X509_DnListFree(dnList);
     HITLS_X509_ClearSubjectAltName(&parsedSan);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CERT_WITH_CUSTOM_EXT_PARSE_TEST_TC001(char *path, Hex *customExtValue1, Hex *customExtValue2,
+    char *exceptPrintFile, Hex *expectKeyUsage)
+{
+    HITLS_X509_Cert *parsedCert = NULL;
+    BslCid keyUsageCid = BSL_CID_CE_KEYUSAGE;
+    char *customOid1 = "1.2.3.4.5.6.7.8.9.1";
+    char *customOid2 = "1.2.3.4.5.6.7.8.9.2";
+    uint8_t *customOidData = NULL;
+    uint32_t customOidLen = 0;
+    BslOidString *keyUsageOid = NULL;
+    HITLS_X509_ExtGeneric customExt = {0};
+    HITLS_X509_ExtGeneric keyUsageExt = {0};
+    BSL_Buffer data = {0};
+    Hex expect = {(uint8_t *)exceptPrintFile, 0};
+
+    TestMemInit();
+
+    // SetUp
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &parsedCert), HITLS_PKI_SUCCESS);
+
+    // Get and check custom ext 1
+    customOidData = BSL_OBJ_GetOidFromNumericString(customOid1, strlen(customOid1), &customOidLen);
+    ASSERT_NE(customOidData, NULL);
+    customExt.oid.data = customOidData;
+    customExt.oid.dataLen = customOidLen;
+    ASSERT_EQ(HITLS_X509_CertCtrl(parsedCert, HITLS_X509_EXT_GET_GENERIC, &customExt, sizeof(HITLS_X509_ExtGeneric)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("custom ext1", customExt.value.data, customExt.value.dataLen, customExtValue1->x,
+        customExtValue1->len);
+    ASSERT_EQ(customExt.critical, true);
+    BSL_SAL_FREE(customOidData);
+    BSL_SAL_FREE(customExt.value.data);
+
+    // Get and check custom ext 2
+    customOidData = BSL_OBJ_GetOidFromNumericString(customOid2, strlen(customOid2), &customOidLen);
+    ASSERT_NE(customOidData, NULL);
+    customExt.oid.data = customOidData;
+    customExt.oid.dataLen = customOidLen;
+    ASSERT_EQ(HITLS_X509_CertCtrl(parsedCert, HITLS_X509_EXT_GET_GENERIC, &customExt, sizeof(HITLS_X509_ExtGeneric)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("custom ext2", customExt.value.data, customExt.value.dataLen, customExtValue2->x,
+        customExtValue2->len);
+    ASSERT_EQ(customExt.critical, false);
+
+    // Get keyusage byt HITLS_X509_EXT_GET_GENERIC
+    keyUsageOid = BSL_OBJ_GetOID(keyUsageCid);
+    keyUsageExt.oid.data = (uint8_t *)keyUsageOid->octs;
+    keyUsageExt.oid.dataLen = keyUsageOid->octetLen;
+    ASSERT_EQ(HITLS_X509_CertCtrl(parsedCert, HITLS_X509_EXT_GET_GENERIC, &keyUsageExt, sizeof(HITLS_X509_ExtGeneric)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("key usage", keyUsageExt.value.data, keyUsageExt.value.dataLen, expectKeyUsage->x,
+        expectKeyUsage->len);
+
+    // Print cert buffer compare
+    data.data = (uint8_t *)parsedCert;
+    data.dataLen = sizeof(HITLS_X509_Cert *);
+    ASSERT_EQ(PrintBuffTest(HITLS_PKI_PRINT_CERT, &data, "Print cert buffer", &expect, true), 0);
+
+EXIT:
+    HITLS_X509_CertFree(parsedCert);
+    BSL_SAL_FREE(customOidData);
+    BSL_SAL_FREE(customExt.value.data);
+    BSL_SAL_FREE(keyUsageExt.value.data);
 }
 /* END_CASE */

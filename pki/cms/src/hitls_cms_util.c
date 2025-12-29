@@ -19,7 +19,6 @@
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "bsl_list.h"
-#include "bsl_list_internal.h"
 #include "bsl_asn1_internal.h"
 #include "bsl_obj_internal.h"
 #include "crypt_eal_codecs.h"
@@ -27,6 +26,7 @@
 #include "hitls_pki_errno.h"
 #include "hitls_cms_local.h"
 #include "hitls_pki_cms.h"
+#include "hitls_pki_crl.h"
 #include "hitls_pki_x509.h"
 #include "hitls_x509_verify.h"
 #ifdef HITLS_PKI_CMS_SIGNEDDATA
@@ -195,7 +195,7 @@ static int32_t SignedDataAddItem(HITLS_X509_List **ppList, void *item,
     }
 
     // Check if item already exists
-    if (BSL_LIST_SearchEx(*ppList, item, pfnCmp) != NULL) {
+    if (BSL_LIST_Search(*ppList, item, pfnCmp, NULL) != NULL) {
         return HITLS_PKI_SUCCESS;
     }
 
@@ -246,7 +246,7 @@ int32_t HITLS_CMS_AddMd(HITLS_X509_List *list, int32_t mdId)
         return HITLS_CMS_ERR_NULL_POINTER;
     }
     // Check if algorithm already exists.
-    CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_SearchEx(list, &mdId, (BSL_LIST_PFUNC_CMP)CmpAlgId);
+    CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_Search(list, &mdId, (BSL_LIST_PFUNC_CMP)CmpAlgId, NULL);
     if (alg != NULL) {
         return HITLS_PKI_SUCCESS;
     }

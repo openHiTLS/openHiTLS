@@ -426,27 +426,42 @@ static int32_t HITLS_AddCrlToStoreTest(char *path, HITLS_X509_StoreCtx *store, H
 /* BEGIN_CASE */
 void SDV_X509_BUILD_CERT_CHAIN_FUNC_TC001(char *rootPath, char *caPath, char *cert, char *crlPath)
 {
-    TestMemInit();
-    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
-    ASSERT_TRUE(store != NULL);
     HITLS_X509_Cert *root = NULL;
-    ASSERT_EQ(HITLS_AddCertToStoreTest(rootPath, store, &root), HITLS_PKI_SUCCESS);
     HITLS_X509_Cert *ca = NULL;
-    ASSERT_EQ(HITLS_AddCertToStoreTest(caPath, store, &ca), HITLS_PKI_SUCCESS);
+    HITLS_X509_StoreCtx *store = NULL;
     HITLS_X509_Cert *entity = NULL;
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_List *chain = NULL;
+    int64_t timeval = time(NULL);
+    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
+    bool withIntCa = strlen(caPath) > 0;
+
+    TestMemInit();
+
+    store = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(store != NULL);
+
+    ASSERT_EQ(HITLS_AddCertToStoreTest(rootPath, store, &root), HITLS_PKI_SUCCESS);
+    if (withIntCa) {
+        ASSERT_EQ(HITLS_AddCertToStoreTest(caPath, store, &ca), HITLS_PKI_SUCCESS);
+    }
 
     ASSERT_TRUE(HITLS_AddCertToStoreTest(cert, store, &entity) != HITLS_PKI_SUCCESS);
-    HITLS_X509_Crl *crl = NULL;
     ASSERT_EQ(HITLS_AddCrlToStoreTest(crlPath, store, &crl), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(BSL_LIST_COUNT(store->crl), 1);
-    ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
-    HITLS_X509_List *chain = NULL;
+    if (withIntCa) {
+        ASSERT_EQ(BSL_LIST_COUNT(store->store), 2);
+    } else {
+        ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    }
     ASSERT_TRUE(HITLS_X509_CertChainBuild(store, false, entity, &chain) == HITLS_PKI_SUCCESS);
-    ASSERT_EQ(BSL_LIST_COUNT(chain), 2);
-    int64_t timeval = time(NULL);
+    if (withIntCa) {
+        ASSERT_EQ(BSL_LIST_COUNT(chain), 2);
+    } else {
+        ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
+    }
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval)), 0);
-    int64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLR_PARAM_FLAGS, &flag, sizeof(flag)), 0);
     ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
 

@@ -18,7 +18,6 @@
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_asn1_internal.h"
-#include "bsl_list_internal.h"
 #include "bsl_obj_internal.h"
 #include "hitls_pki_errno.h"
 #include "hitls_pki_params.h"
@@ -1970,8 +1969,8 @@ static int32_t VerifySignerInfo(CMS_SignedData *sigData, CMS_SignerInfo *si, BSL
         }
     }
     // Check if signerInfo's digest algorithm is in SignedData's digestAlgorithms list
-    CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_SearchEx(sigData->digestAlg, &si->digestAlg.id,
-        (BSL_LIST_PFUNC_CMP)CmpAlgId);
+    CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_Search(sigData->digestAlg, &si->digestAlg.id,
+        (BSL_LIST_PFUNC_CMP)CmpAlgId, NULL);
     if (alg == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH);
         return HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH;
@@ -2327,8 +2326,8 @@ static int32_t VerifyAllSignerInfos(CMS_SignedData *signedData, ChainVerifyParam
             }
         }
 
-        CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_SearchEx(signedData->digestAlg, &si->digestAlg.id,
-            (BSL_LIST_PFUNC_CMP)CmpAlgId);
+        CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_Search(signedData->digestAlg, &si->digestAlg.id,
+            (BSL_LIST_PFUNC_CMP)CmpAlgId, NULL);
         if (alg == NULL) {
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH);
             return HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH;

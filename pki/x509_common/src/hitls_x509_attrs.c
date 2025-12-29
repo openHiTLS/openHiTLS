@@ -27,7 +27,7 @@
 #include "hitls_pki_errno.h"
 #include "hitls_pki_utils.h"
 
-#if defined(HITLS_PKI_X509_CSR_PARSE) || defined(HITLS_PKI_PKCS12_PARSE)
+#if defined(HITLS_PKI_X509_CSR_PARSE) || defined(HITLS_PKI_PKCS12_PARSE) || defined(HITLS_PKI_CMS_SIGNEDDATA)
 /**
  * RFC 2985: section-5.4.2
  *  extensionRequest ATTRIBUTE ::= {
@@ -148,7 +148,7 @@ void HITLS_X509_AttrEntryFree(HITLS_X509_AttrEntry *attr)
     BSL_SAL_Free(attr);
 }
 
-#if defined(HITLS_PKI_X509_CSR_PARSE) || defined(HITLS_PKI_PKCS12_PARSE)
+#if defined(HITLS_PKI_X509_CSR_PARSE) || defined(HITLS_PKI_PKCS12_PARSE) || defined(HITLS_PKI_CMS_SIGNEDDATA)
 int32_t HITLS_X509_ParseAttr(BSL_ASN1_Buffer *attrItem, HITLS_X509_AttrEntry *attrEntry)
 {
     uint8_t *temp = attrItem->buff;
@@ -345,7 +345,7 @@ int32_t HITLS_X509_AttrCtrl(HITLS_X509_Attrs *attributes, HITLS_X509_AttrCmd cmd
     }
 }
 
-#if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_PKCS12_GEN)
+#if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_PKCS12_GEN) || defined(HITLS_PKI_CMS_SIGNEDDATA)
 
 #define X509_CSR_ATTR_ELEM_NUMBER 2
 static BSL_ASN1_TemplateItem g_x509AttrEntryTempl[] = {
@@ -427,6 +427,6 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X5
     attrAsn1->tag = tag;
     return ret;
 }
-#endif // HITLS_PKI_X509_CSR_GEN || HITLS_PKI_PKCS12_GEN
+#endif // HITLS_PKI_X509_CSR_GEN || HITLS_PKI_PKCS12_GEN || HITLS_PKI_CMS_SIGNEDDATA
 
 #endif // (HITLS_PKI_X509_CSR && HITLS_PKI_X509_CSR_ATTR) || HITLS_PKI_PKCS12

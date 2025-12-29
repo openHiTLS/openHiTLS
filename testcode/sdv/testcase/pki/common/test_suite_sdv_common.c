@@ -512,7 +512,145 @@ void SDV_X509_EXT_Set_Api_TC001(void)
     ext = NULL;
 
 EXIT:
+    STUB_RESTORE(BSL_SAL_Malloc);
     HITLS_X509_ExtFree(ext);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_SetGeneric_Api_TC001(void)
+{
+    int32_t invalid = HITLS_X509_ERR_INVALID_PARAM;
+    uint8_t oid[] = {0x01};
+    uint8_t value[] = {0x01};
+    HITLS_X509_ExtGeneric generic = {true, {oid, sizeof(oid)}, {value, sizeof(value)}};
+    HITLS_X509_Ext *ext = NULL;
+    HITLS_X509_Ext *extForMalloc = NULL;
+    uint32_t totalMallocCount = 0;
+
+    TestMemInit();
+    ext = X509_ExtNew(NULL, HITLS_X509_EXT_TYPE_CERT);
+    ASSERT_TRUE_AND_LOG("new cert ext", ext != NULL);
+    extForMalloc = X509_ExtNew(NULL, HITLS_X509_EXT_TYPE_CERT);
+    ASSERT_TRUE_AND_LOG("new cert ext for malloc", extForMalloc != NULL);
+
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, 0), invalid);
+
+    // error: oid is null
+    generic.oid.data = NULL;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.oid.data = oid;
+
+    // error: oid is empty
+    generic.oid.dataLen = 0;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.oid.dataLen = sizeof(oid);
+
+    // error: value is null
+    generic.value.data = NULL;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.value.data = value;
+
+    // error: value is empty
+    generic.value.dataLen = 0;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.value.dataLen = sizeof(value);
+
+    /* Mock malloc fail in X509_ExtCtrl */
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    // success: first set generic extension
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1);
+    totalMallocCount = STUB_GetMallocCallCount();
+
+    // error: first set generic extension with malloc fail
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ASSERT_NE(X509_ExtCtrl(extForMalloc, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+    }
+
+    STUB_EnableMallocFail(false);
+    ASSERT_EQ(X509_ExtCtrl(extForMalloc, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+
+    // success: replace existing extension
+    STUB_ResetMallocCount();
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+    ASSERT_EQ(BSL_LIST_COUNT(ext->extList), 1);
+    totalMallocCount = STUB_GetMallocCallCount();
+
+    // error: replace existing extension with malloc fail
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ASSERT_NE(X509_ExtCtrl(extForMalloc, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+    }
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
+    HITLS_X509_ExtFree(extForMalloc);
+    STUB_RESTORE(BSL_SAL_Malloc);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_EXT_GetGeneric_Api_TC001(void)
+{
+    int32_t invalid = HITLS_X509_ERR_INVALID_PARAM;
+    int32_t notFound = HITLS_X509_ERR_EXT_NOT_FOUND;
+    uint8_t oid[] = {0x01};
+    uint8_t value[] = {0x01};
+    HITLS_X509_ExtGeneric generic = {true, {oid, sizeof(oid)}, {value, sizeof(value)}};
+    HITLS_X509_Ext *ext = NULL;
+
+    TestMemInit();
+    ext = X509_ExtNew(NULL, HITLS_X509_EXT_TYPE_CERT);
+    ASSERT_TRUE_AND_LOG("new cert ext", ext != NULL);
+
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, 0), invalid);
+
+    // error: oid is null
+    generic.oid.data = NULL;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.oid.data = oid;
+
+    // error: oid is empty
+    generic.oid.dataLen = 0;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.oid.dataLen = sizeof(oid);
+
+    // error: value is not null
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), invalid);
+    generic.value.data = NULL;
+
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), notFound);
+
+    // success: set generic extension
+    generic.value.data = value;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_SET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+
+    // error: get generic extension with malloc fail
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_EnableMallocFail(true);
+    STUB_ResetMallocCount();
+    STUB_SetMallocFailIndex(0); // mock malloc fail in BSL_SAL_Dump
+    generic.value.data = NULL;
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), BSL_DUMP_FAIL);
+
+    // success: get generic extension
+    STUB_EnableMallocFail(false);
+    ASSERT_EQ(X509_ExtCtrl(ext, HITLS_X509_EXT_GET_GENERIC, &generic, sizeof(HITLS_X509_ExtGeneric)), 0);
+
+    ASSERT_COMPARE("generic.value.data", generic.value.data, generic.value.dataLen, value, sizeof(value));
+
+EXIT:
+    HITLS_X509_ExtFree(ext);
+    BSL_SAL_Free(generic.value.data);
+    STUB_RESTORE(BSL_SAL_Malloc);
 }
 /* END_CASE */
 
@@ -1800,6 +1938,7 @@ EXIT:
     TestRandDeInit();
     BSL_SAL_FREE(encodeAsn1.data);
     CRYPT_EAL_PkeyFreeCtx(pkey);
+    remove(path);
 }
 /* END_CASE */
 

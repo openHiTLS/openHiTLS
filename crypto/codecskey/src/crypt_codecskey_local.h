@@ -243,7 +243,7 @@ int32_t CRYPT_ENCODE_RsaPubkeyAsn1Buff(BSL_ASN1_Buffer *pubAsn1, BSL_Buffer *enc
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
 static inline bool IsEcdsaEcParaId(int32_t paraId)
 {
-    return paraId == CRYPT_ECC_NISTP224 || paraId == CRYPT_ECC_NISTP256 ||
+    return paraId == CRYPT_ECC_NISTP192 || paraId == CRYPT_ECC_NISTP224 || paraId == CRYPT_ECC_NISTP256 ||
         paraId == CRYPT_ECC_NISTP384 || paraId == CRYPT_ECC_NISTP521 ||
         paraId == CRYPT_ECC_BRAINPOOLP256R1 || paraId == CRYPT_ECC_BRAINPOOLP384R1 ||
         paraId == CRYPT_ECC_BRAINPOOLP512R1;
