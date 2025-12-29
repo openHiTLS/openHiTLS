@@ -273,14 +273,14 @@ EXIT:
 
 /**
  * @test   SDV_CRYPTO_CIPHER_AES_WRAP_NOT_ALIGN_TC001
- * @title  AES-WRAP非地址对齐加解密测试
+ * @title  AES-WRAP Non-Aligned Address Encryption and Decryption Test.
  * @precon nan
  * @brief
- *    1.使用EAL层接口进行AES-WRAP加密,其中所有的buffer地址未对齐,有预期结果1
- *    2.使用EAL层接口进行AES-WRAP解密,其中所有的buffer地址未对齐,有预期结果2
+ *    1.Test for AES-WRAP encryption, where all buffer addresses are not aligned, with expected result 1.
+ *    2.Test for AES-WRAP decryption, where all buffer addresses are not aligned, with expected result 2.
  * @expect
- *    1.加密成功，密文与向量一致
- *    2.解密成功，明文与向量一致
+ *    1.Encryption succeeds and ciphertext matches the vector
+ *    2.Decryption succeeds and plaintext matches the vector
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_CIPHER_AES_WRAP_NOT_ALIGN_TC001(int algId, Hex *key, Hex *plainText, Hex *cipherText)
