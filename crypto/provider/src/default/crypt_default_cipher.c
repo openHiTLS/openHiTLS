@@ -26,6 +26,7 @@
 #include "crypt_modes_ofb.h"
 #include "crypt_modes_cfb.h"
 #include "crypt_modes_xts.h"
+#include "crypt_modes_aes_wrap.h"
 #include "crypt_local_types.h"
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
@@ -72,6 +73,14 @@ static void *CRYPT_EAL_DefCipherNewCtx(void *provCtx, int32_t algId)
         {CRYPT_CIPHER_SM4_GCM, MODES_GCM_NewCtx},
         {CRYPT_CIPHER_SM4_CFB, MODES_CFB_NewCtx},
         {CRYPT_CIPHER_SM4_OFB, MODES_OFB_NewCtx},
+#ifdef HITLS_CRYPTO_WRAP
+        {CRYPT_CIPHER_AES128_WRAP_PAD, MODES_WRAP_PadNewCtx},
+        {CRYPT_CIPHER_AES192_WRAP_PAD, MODES_WRAP_PadNewCtx},
+        {CRYPT_CIPHER_AES256_WRAP_PAD, MODES_WRAP_PadNewCtx},
+        {CRYPT_CIPHER_AES128_WRAP_NOPAD, MODES_WRAP_NoPadNewCtx},
+        {CRYPT_CIPHER_AES192_WRAP_NOPAD, MODES_WRAP_NoPadNewCtx},
+        {CRYPT_CIPHER_AES256_WRAP_NOPAD, MODES_WRAP_NoPadNewCtx},
+#endif
     };
     for (size_t i = 0; i < sizeof(cipherNewCtxFunc)/sizeof(cipherNewCtxFunc[0]); i++) {
         if (cipherNewCtxFunc[i].id == algId) {
@@ -198,5 +207,18 @@ const CRYPT_EAL_Func g_defEalXts[] = {
 #endif
     CRYPT_EAL_FUNC_END,
 };
+
+#ifdef HITLS_CRYPTO_WRAP
+const CRYPT_EAL_Func g_defEalWrap[] = {
+    {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
+    {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_WRAP_InitCtx},
+    {CRYPT_EAL_IMPLCIPHER_UPDATE, (CRYPT_EAL_ImplCipherUpdate)MODES_WRAP_Update},
+    {CRYPT_EAL_IMPLCIPHER_FINAL, (CRYPT_EAL_ImplCipherFinal)MODES_WRAP_Final},
+    {CRYPT_EAL_IMPLCIPHER_DEINITCTX, (CRYPT_EAL_ImplCipherDeinitCtx)MODE_WRAP_DeInitCtx},
+    {CRYPT_EAL_IMPLCIPHER_CTRL, (CRYPT_EAL_ImplCipherCtrl)MODE_WRAP_Ctrl},
+    {CRYPT_EAL_IMPLCIPHER_FREECTX, (CRYPT_EAL_ImplCipherFreeCtx)MODES_WRAP_FreeCtx},
+    CRYPT_EAL_FUNC_END,
+};
+#endif
 
 #endif /* HITLS_CRYPTO_PROVIDER */

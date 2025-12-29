@@ -100,6 +100,7 @@ extern const CRYPT_EAL_Func g_defEalEcb[];
 extern const CRYPT_EAL_Func g_defEalGcm[];
 extern const CRYPT_EAL_Func g_defEalOfb[];
 extern const CRYPT_EAL_Func g_defEalXts[];
+extern const CRYPT_EAL_Func g_defEalWrap[];
 extern const CRYPT_EAL_Func g_defEalMlKem[];
 extern const CRYPT_EAL_Func g_defEalHybridKeyKem[];
 
@@ -122,7 +123,6 @@ extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2Sm2Key[];
 extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2Ed25519Key[];
 extern const CRYPT_EAL_Func g_defEalLowKeyObject2PkeyObject[];
 extern const CRYPT_EAL_Func g_defEalRsaPubDer2Key[];
-
 #ifdef __cplusplus
 }
 #endif // __cplusplus

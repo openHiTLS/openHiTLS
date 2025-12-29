@@ -308,6 +308,7 @@ enum CRYPT_ERROR {
     CRYPT_MODES_ERR_FEEDBACKSIZE,                    /**< The operation are not support by the algorithm
                                                           on which the pattern depends on. */
     CRYPT_MODES_METHODS_NOT_SUPPORT,                 /**< Mode depends does not support the behavior. */
+    CRYPT_MODES_WRAP_DEC_ERROR,                      /**< wrap mode decrypt failed. */
     CRYPT_MODES_FEEDBACKSIZE_NOT_SUPPORT,            /**< The algorithm does not support the setting of feedbacksize. */
     CRYPT_MODES_PADDING_NOT_SUPPORT,                 /**< Unsupported padding. */
 
