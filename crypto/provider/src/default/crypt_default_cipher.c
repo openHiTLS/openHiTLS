@@ -30,6 +30,7 @@
 #include "crypt_modes_cfb.h"
 #include "crypt_modes_hctr.h"
 #include "crypt_modes_xts.h"
+#include "crypt_modes_aes_wrap.h"
 #include "crypt_local_types.h"
 #include "crypt_default_provider.h"
 
@@ -126,6 +127,16 @@ static void *GetNewCtxFunc(int32_t algId)
 #if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
         case CRYPT_CIPHER_CHACHA20_POLY1305:
             return MODES_CHACHA20POLY1305_NewCtxEx;
+#endif
+#ifdef HITLS_CRYPTO_WRAP
+        case CRYPT_CIPHER_AES128_WRAP_PAD:
+        case CRYPT_CIPHER_AES192_WRAP_PAD:
+        case CRYPT_CIPHER_AES256_WRAP_PAD:
+            return MODES_WRAP_PadNewCtxEx;
+        case CRYPT_CIPHER_AES128_WRAP_NOPAD:
+        case CRYPT_CIPHER_AES192_WRAP_NOPAD:
+        case CRYPT_CIPHER_AES256_WRAP_NOPAD:
+            return MODES_WRAP_NoPadNewCtxEx;
 #endif
         default:
             return NULL;
@@ -262,6 +273,19 @@ const CRYPT_EAL_Func g_defEalXts[] = {
     {CRYPT_EAL_IMPLCIPHER_DEINITCTX, (CRYPT_EAL_ImplCipherDeinitCtx)MODES_XTS_DeInitCtx},
     {CRYPT_EAL_IMPLCIPHER_CTRL, (CRYPT_EAL_ImplCipherCtrl)MODES_XTS_Ctrl},
     {CRYPT_EAL_IMPLCIPHER_FREECTX, (CRYPT_EAL_ImplCipherFreeCtx)MODES_XTS_FreeCtx},
+    CRYPT_EAL_FUNC_END,
+};
+#endif
+
+#ifdef HITLS_CRYPTO_WRAP
+const CRYPT_EAL_Func g_defEalWrap[] = {
+    {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
+    {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_WRAP_InitCtx},
+    {CRYPT_EAL_IMPLCIPHER_UPDATE, (CRYPT_EAL_ImplCipherUpdate)MODES_WRAP_Update},
+    {CRYPT_EAL_IMPLCIPHER_FINAL, (CRYPT_EAL_ImplCipherFinal)MODES_WRAP_Final},
+    {CRYPT_EAL_IMPLCIPHER_DEINITCTX, (CRYPT_EAL_ImplCipherDeinitCtx)MODE_WRAP_DeInitCtx},
+    {CRYPT_EAL_IMPLCIPHER_CTRL, (CRYPT_EAL_ImplCipherCtrl)MODE_WRAP_Ctrl},
+    {CRYPT_EAL_IMPLCIPHER_FREECTX, (CRYPT_EAL_ImplCipherFreeCtx)MODES_WRAP_FreeCtx},
     CRYPT_EAL_FUNC_END,
 };
 #endif

@@ -62,6 +62,9 @@
 #ifdef HITLS_CRYPTO_OFB
 #include "crypt_modes_ofb.h"
 #endif
+#ifdef HITLS_CRYPTO_WRAP
+#include "crypt_modes_aes_wrap.h"
+#endif
 #include "eal_common.h"
 #include "bsl_sal.h"
 
@@ -174,6 +177,28 @@ static const EAL_CipherMethod XTS_METHOD = {
 };
 #endif
 
+#ifdef HITLS_CRYPTO_WRAP
+static const EAL_CipherMethod AES_WRAP_NOPAD_METHOD = {
+    (CipherNewCtx)MODES_WRAP_NoPadNewCtxEx,
+    (CipherInitCtx)MODES_WRAP_InitCtx,
+    (CipherDeInitCtx)MODE_WRAP_DeInitCtx,
+    (CipherUpdate)MODES_WRAP_Update,
+    (CipherFinal)MODES_WRAP_Final,
+    (CipherCtrl)MODE_WRAP_Ctrl,
+    (CipherFreeCtx)MODES_WRAP_FreeCtx
+};
+
+static const EAL_CipherMethod AES_WRAP_PAD_METHOD = {
+    (CipherNewCtx)MODES_WRAP_PadNewCtxEx,
+    (CipherInitCtx)MODES_WRAP_InitCtx,
+    (CipherDeInitCtx)MODE_WRAP_DeInitCtx,
+    (CipherUpdate)MODES_WRAP_Update,
+    (CipherFinal)MODES_WRAP_Final,
+    (CipherCtrl)MODE_WRAP_Ctrl,
+    (CipherFreeCtx)MODES_WRAP_FreeCtx
+};
+#endif // HITLS_CRYPTO_WRAP
+
 #ifdef HITLS_CRYPTO_HCTR
 static const EAL_CipherMethod HCTR_METHOD = {
     (CipherNewCtx)MODES_HCTR_NewCtx,
@@ -225,6 +250,12 @@ const EAL_CipherMethod *EAL_FindModeMethod(CRYPT_MODE_AlgId id)
         case HCRYPT_MODE_OFB:
             return &OFB_METHOD;
 #endif
+#ifdef HITLS_CRYPTO_WRAP
+        case HCRYPT_MODE_WRAP_NOPAD:
+            return &AES_WRAP_NOPAD_METHOD;
+        case HCRYPT_MODE_WRAP_PAD:
+            return &AES_WRAP_PAD_METHOD;
+#endif
 #ifdef HITLS_CRYPTO_HCTR
         case HCRYPT_MODE_HCTR:
             return &HCTR_METHOD;
@@ -274,6 +305,14 @@ static const EAL_SymAlgMap SYM_ID_MAP[] = {
 #ifdef HITLS_CRYPTO_XTS
     {.id = CRYPT_CIPHER_AES128_XTS, .modeId = HCRYPT_MODE_XTS },
     {.id = CRYPT_CIPHER_AES256_XTS, .modeId = HCRYPT_MODE_XTS },
+#endif
+#ifdef HITLS_CRYPTO_WRAP
+    {.id = CRYPT_CIPHER_AES128_WRAP_NOPAD, .modeId = HCRYPT_MODE_WRAP_NOPAD},
+    {.id = CRYPT_CIPHER_AES192_WRAP_NOPAD, .modeId = HCRYPT_MODE_WRAP_NOPAD},
+    {.id = CRYPT_CIPHER_AES256_WRAP_NOPAD, .modeId = HCRYPT_MODE_WRAP_NOPAD},
+    {.id = CRYPT_CIPHER_AES128_WRAP_PAD, .modeId = HCRYPT_MODE_WRAP_PAD},
+    {.id = CRYPT_CIPHER_AES192_WRAP_PAD, .modeId = HCRYPT_MODE_WRAP_PAD},
+    {.id = CRYPT_CIPHER_AES256_WRAP_PAD, .modeId = HCRYPT_MODE_WRAP_PAD},
 #endif
 #endif // aes
 #ifdef HITLS_CRYPTO_CHACHA20
@@ -388,6 +427,8 @@ const EAL_SymMethod *EAL_GetSymMethod(int32_t algId)
         case CRYPT_CIPHER_AES128_GCM:
         case CRYPT_CIPHER_AES128_CFB:
         case CRYPT_CIPHER_AES128_OFB:
+        case CRYPT_CIPHER_AES128_WRAP_NOPAD:
+        case CRYPT_CIPHER_AES128_WRAP_PAD:
             return &AES128_METHOD;
         case CRYPT_CIPHER_AES192_CBC:
         case CRYPT_CIPHER_AES192_ECB:
@@ -396,6 +437,8 @@ const EAL_SymMethod *EAL_GetSymMethod(int32_t algId)
         case CRYPT_CIPHER_AES192_GCM:
         case CRYPT_CIPHER_AES192_CFB:
         case CRYPT_CIPHER_AES192_OFB:
+        case CRYPT_CIPHER_AES192_WRAP_NOPAD:
+        case CRYPT_CIPHER_AES192_WRAP_PAD:
             return &AES192_METHOD;
         case CRYPT_CIPHER_AES256_CBC:
         case CRYPT_CIPHER_AES256_ECB:
@@ -405,6 +448,8 @@ const EAL_SymMethod *EAL_GetSymMethod(int32_t algId)
         case CRYPT_CIPHER_AES256_GCM:
         case CRYPT_CIPHER_AES256_CFB:
         case CRYPT_CIPHER_AES256_OFB:
+        case CRYPT_CIPHER_AES256_WRAP_NOPAD:
+        case CRYPT_CIPHER_AES256_WRAP_PAD:
             return &AES256_METHOD;
 #endif
 #ifdef HITLS_CRYPTO_SM4
@@ -468,6 +513,14 @@ static CRYPT_CipherInfo g_cipherInfo[] = {
 #ifdef HITLS_CRYPTO_XTS
     {.id = CRYPT_CIPHER_AES128_XTS, .blockSize = 1, .keyLen = 32, .ivLen = 16},
     {.id = CRYPT_CIPHER_AES256_XTS, .blockSize = 1, .keyLen = 64, .ivLen = 16},
+#endif
+#ifdef HITLS_CRYPTO_WRAP
+    {.id = CRYPT_CIPHER_AES128_WRAP_NOPAD, .blockSize = 8, .keyLen = 16, .ivLen = 8},
+    {.id = CRYPT_CIPHER_AES192_WRAP_NOPAD, .blockSize = 8, .keyLen = 24, .ivLen = 8},
+    {.id = CRYPT_CIPHER_AES256_WRAP_NOPAD, .blockSize = 8, .keyLen = 32, .ivLen = 8},
+    {.id = CRYPT_CIPHER_AES128_WRAP_PAD, .blockSize = 8, .keyLen = 16, .ivLen = 4},
+    {.id = CRYPT_CIPHER_AES192_WRAP_PAD, .blockSize = 8, .keyLen = 24, .ivLen = 4},
+    {.id = CRYPT_CIPHER_AES256_WRAP_PAD, .blockSize = 8, .keyLen = 32, .ivLen = 4},
 #endif
 #endif
 #ifdef HITLS_CRYPTO_CHACHA20
