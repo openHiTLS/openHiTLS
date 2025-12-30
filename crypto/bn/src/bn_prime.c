@@ -520,8 +520,6 @@ int32_t BN_GenPrime(BN_BigNum *r, BN_BigNum *e, uint32_t bits, bool half, BN_Opt
     int32_t time = 0;
 #ifndef HITLS_CRYPTO_BN_CB
     (void)cb;
-    const int32_t maxTime = 256; /* The maximum number of cycles is 256. If no prime number is generated after the
-                                  * maximum number of cycles, the operation fails. */
 #endif
     int32_t ret = GenCheck(r, bits, opt);
     if (ret != CRYPT_SUCCESS) {
@@ -546,13 +544,11 @@ int32_t BN_GenPrime(BN_BigNum *r, BN_BigNum *e, uint32_t bits, bool half, BN_Opt
     do {
 #ifdef HITLS_CRYPTO_BN_CB
         if (BN_CbCtxCall(cb, time, 0) != CRYPT_SUCCESS) {
-#else
-        if (time == maxTime) {
-#endif
             OptimizerEnd(opt);
             BSL_ERR_PUSH_ERROR(CRYPT_BN_NOR_GEN_PRIME);
             return CRYPT_BN_NOR_GEN_PRIME;
         }
+#endif
         // Generate a random number bn that may be a prime.
         ret = ProbablePrime(rnd, e, bits, half, opt);
         if (ret != CRYPT_SUCCESS) {
