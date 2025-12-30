@@ -249,7 +249,10 @@ ERR_NONCE:
 static inline bool DRBG_IsNeedReseed(DRBG_Ctx *ctx, bool pr)
 {
     int32_t forkId = BSL_SAL_GetPid();
-
+    if (ctx->forkId != forkId) {
+        ctx->forkId = forkId;
+        return true;
+    }
     if (pr) {
         return true;
     }
@@ -262,10 +265,6 @@ static inline bool DRBG_IsNeedReseed(DRBG_Ctx *ctx, bool pr)
         return ((time - ctx->lastReseedTime) > ctx->reseedIntervalTime) ? true : false;
     }
 #endif
-    if (ctx->forkId != forkId) {
-        ctx->forkId = forkId;
-        return true;
-    }
     return false;
 }
 

@@ -33,7 +33,7 @@ typedef enum {
 static BSL_SAL_ThreadCallback g_threadCallback = {NULL, NULL, NULL, NULL, NULL, NULL};
 static BSL_SAL_ThreadCondCallback g_threadCondCallback = {NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 #ifdef HITLS_BSL_SAL_PID
-static BSL_SAL_PiDCallback g_pidCallback = {0};
+static BSL_SAL_PidCallback g_pidCallback = {0};
 #endif
 
 int32_t BSL_SAL_ThreadLockNew(BSL_SAL_ThreadLockHandle *lock)
@@ -228,7 +228,7 @@ int32_t SAL_ThreadCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 }
 
 #ifdef HITLS_BSL_SAL_PID
-int32_t SAL_PiDCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
+int32_t SAL_PidCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 {
     if (type != BSL_SAL_PID_GET_ID_CB_FUNC) {
         return BSL_SAL_ERR_BAD_PARAM;

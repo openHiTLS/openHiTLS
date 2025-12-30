@@ -111,7 +111,7 @@ typedef struct {
     BslDeleteCondVar pfDeleteCondVar;
 } BSL_SAL_ThreadCondCallback;
 
-typedef struct PiDCallback {
+typedef struct PidCallback {
     /**
      * @ingroup bsl_sal
      * @brief Obtain the process ID.
@@ -121,10 +121,10 @@ typedef struct PiDCallback {
      * @retval Process ID
      */
     int32_t (*pfGetId)(void);
-} BSL_SAL_PiDCallback;
+} BSL_SAL_PidCallback;
 
 #ifdef HITLS_BSL_SAL_PID
-int32_t SAL_PiDCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
+int32_t SAL_PidCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 #endif
 
 #if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
