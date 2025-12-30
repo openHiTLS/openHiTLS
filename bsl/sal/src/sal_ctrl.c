@@ -67,7 +67,7 @@ int32_t BSL_SAL_CallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE funcType, void *funcCb)
             return SAL_ThreadCallback_Ctrl(funcType, funcCb);
 #ifdef HITLS_BSL_SAL_PID
         case BSL_SAL_PID_CB:
-            return SAL_PiDCallback_Ctrl(funcType, funcCb);
+            return SAL_PidCallback_Ctrl(funcType, funcCb);
 #endif
 #ifdef HITLS_BSL_SAL_NET
         case BSL_SAL_NET_CB:

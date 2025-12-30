@@ -101,7 +101,7 @@ typedef struct ThreadCallback {
 
 int32_t SAL_ThreadCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 
-typedef struct PiDCallback {
+typedef struct PidCallback {
     /**
      * @ingroup bsl_sal
      * @brief Obtain the process ID.
@@ -111,10 +111,10 @@ typedef struct PiDCallback {
      * @retval Process ID
      */
     int32_t (*pfGetId)(void);
-} BSL_SAL_PiDCallback;
+} BSL_SAL_PidCallback;
 
 #ifdef HITLS_BSL_SAL_PID
-int32_t SAL_PiDCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
+int32_t SAL_PidCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 #endif
 
 #ifdef HITLS_BSL_SAL_LINUX

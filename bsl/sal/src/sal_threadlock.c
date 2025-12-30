@@ -26,7 +26,7 @@
 #include "bsl_sal.h"
 
 static BSL_SAL_ThreadCallback g_threadCallback = {0};
-static BSL_SAL_PiDCallback g_pidCallback = {0};
+static BSL_SAL_PidCallback g_pidCallback = {0};
 
 int32_t BSL_SAL_ThreadLockNew(BSL_SAL_ThreadLockHandle *lock)
 {
@@ -140,7 +140,7 @@ int32_t SAL_ThreadCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 }
 
 #ifdef HITLS_BSL_SAL_PID
-int32_t SAL_PiDCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
+int32_t SAL_PidCallback_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
 {
     if (type != BSL_SAL_PID_GET_ID_CB_FUNC) {
         return BSL_SAL_ERR_BAD_PARAM;

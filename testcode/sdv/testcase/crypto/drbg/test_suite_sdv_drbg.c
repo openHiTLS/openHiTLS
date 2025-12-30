@@ -1077,7 +1077,74 @@ void SDV_CRYPT_DRBG_FORK_RESEED_FUNC_TC001(void)
 EXIT:
     CRYPT_EAL_DrbgDeinit(drbg);
     drbgDataFree(&data);
-    free(output);
+    BSL_SAL_Free(output);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_DRBG_FORK_RESEED_FUNC_TC002
+ * @title  Fork reseed behavior test with two DRBG instances.
+ * @precon nan
+ * @brief
+ *    1.Initialize two DRBG instances with the same seed parameters, expected result 1.
+ *    2.Call CRYPT_EAL_Drbgbytes for both instances, expected result 2.
+ *    3.Modify the forkId of one DRBG instance and call CRYPT_EAL_Drbgbytes, expected result 3.
+ * @expect
+ *    1.Both DRBG instances are initialized successfully.
+ *    2.The generated random numbers are identical before fork reseed.
+ *    3.The fork reseed is triggered and the generated random numbers are different.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_DRBG_FORK_RESEED_FUNC_TC002(int algId)
+{
+    uint8_t *out1 = malloc(DRBG_MAX_OUTPUT_SIZE + 1);
+    uint8_t *out2 = malloc(DRBG_MAX_OUTPUT_SIZE + 1);
+    ASSERT_TRUE(out1 != NULL && out2 != NULL);
+
+    CRYPT_RandSeedMethod seedMeth = {0};
+    CRYPT_Data data = {0};
+    DRBG_Vec_t seedCtx = {0};
+
+    void *drbg1 = NULL;
+    void *drbg2 = NULL;
+    int32_t forkId;
+
+    DRBG_Ctx *ctx1 = NULL;
+    DRBG_Ctx *ctx2 = NULL;
+
+    TestMemInit();
+    regSeedMeth(&seedMeth);
+    InitSeedCtx(algId, &seedCtx, &data);
+
+    drbg1 = CRYPT_EAL_DrbgNew(algId, &seedMeth, &seedCtx);
+    drbg2 = CRYPT_EAL_DrbgNew(algId, &seedMeth, &seedCtx);
+    ASSERT_TRUE(drbg1 != NULL && drbg2 != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_DrbgInstantiate(drbg1, NULL, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DrbgInstantiate(drbg2, NULL, 0), CRYPT_SUCCESS);
+
+    ctx1 = (DRBG_Ctx *)((CRYPT_EAL_RndCtx *)drbg1)->ctx;
+    ctx2 = (DRBG_Ctx *)((CRYPT_EAL_RndCtx *)drbg2)->ctx;
+    ASSERT_TRUE(ctx1 != NULL && ctx2 != NULL);
+
+    ASSERT_EQ(ctx1->forkId, ctx2->forkId);
+    ASSERT_EQ(CRYPT_EAL_Drbgbytes(drbg1, out1, DRBG_OUTPUT_SIZE), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_Drbgbytes(drbg2, out2, DRBG_OUTPUT_SIZE), CRYPT_SUCCESS);
+    ASSERT_EQ(memcmp(out1, out2, DRBG_OUTPUT_SIZE), 0);
+
+    forkId = ++ctx2->forkId;
+    ASSERT_EQ(CRYPT_EAL_Drbgbytes(drbg2, out2, DRBG_OUTPUT_SIZE), CRYPT_SUCCESS);
+    ASSERT_NE(ctx2->forkId, forkId);
+    ASSERT_EQ(CRYPT_EAL_Drbgbytes(drbg1, out1, DRBG_OUTPUT_SIZE), CRYPT_SUCCESS);
+    ASSERT_NE(memcmp(out1, out2, DRBG_OUTPUT_SIZE), 0);
+
+EXIT:
+    CRYPT_EAL_DrbgDeinit(drbg1);
+    CRYPT_EAL_DrbgDeinit(drbg2);
+    drbgDataFree(&data);
+    BSL_SAL_Free(out1);
+    BSL_SAL_Free(out2);
     return;
 }
 /* END_CASE */
