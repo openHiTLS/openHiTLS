@@ -166,7 +166,7 @@ int32_t HITLS_X509_SignAsn1Data(CRYPT_EAL_PkeyCtx *priv, CRYPT_MD_AlgId mdId,
 
 typedef int32_t (*EncodeExtCb)(void *, HITLS_X509_ExtEntry *, const void *);
 
-int32_t HITLS_X509_SetExtList(void *param, BslList *extList, BslCid cid, BSL_Buffer *val, EncodeExtCb encodeExt);
+int32_t HITLS_X509_SetExtList(void *param, BslList *extList, BslCid cid, void *val, EncodeExtCb encodeExt);
 
 int32_t HITLS_X509_SetGeneralNames(HITLS_X509_ExtEntry *extEntry, void *val);
 
