@@ -156,7 +156,7 @@ extern "C" {
 #define CRYPT_PARAM_MD_BLOCK_SIZE                           (CRYPT_PARAM_MD_BASE + 2)
 #define CRYPT_PARAM_MD_ATTR                                 (CRYPT_PARAM_MD_BASE + 3)
 
-#define CRYPT_PARAM_XMSS_BASE                               1900
+#define CRYPT_PARAM_XMSS_BASE                               1950
 #define CRYPT_PARAM_XMSS_PRV_INDEX                          (CRYPT_PARAM_XMSS_BASE + 1)
 #define CRYPT_PARAM_XMSS_PRV_SEED                           (CRYPT_PARAM_XMSS_BASE + 2)
 #define CRYPT_PARAM_XMSS_PRV_PRF                            (CRYPT_PARAM_XMSS_BASE + 3)
@@ -164,11 +164,11 @@ extern "C" {
 #define CRYPT_PARAM_XMSS_PUB_ROOT                           (CRYPT_PARAM_XMSS_BASE + 5)
 #define CRYPT_PARAM_XMSS_XDR_TYPE                           (CRYPT_PARAM_XMSS_BASE + 6)
 
-#define CRYPT_PARAM_FRODOKEM_BASE                           1950
+#define CRYPT_PARAM_FRODOKEM_BASE                           2000
 #define CRYPT_PARAM_FRODOKEM_PRVKEY                         (CRYPT_PARAM_FRODOKEM_BASE + 1)
 #define CRYPT_PARAM_FRODOKEM_PUBKEY                         (CRYPT_PARAM_FRODOKEM_BASE + 2)
 
-#define CRYPT_PARAM_MCELIECE_BASE                           2000
+#define CRYPT_PARAM_MCELIECE_BASE                           2050
 #define CRYPT_PARAM_MCELIECE_PRVKEY                         (CRYPT_PARAM_MCELIECE_BASE + 1)
 #define CRYPT_PARAM_MCELIECE_PUBKEY                         (CRYPT_PARAM_MCELIECE_BASE + 2)
 
