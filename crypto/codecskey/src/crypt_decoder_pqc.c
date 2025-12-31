@@ -367,6 +367,12 @@ int32_t CRYPT_XMSS_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t 
         {CRYPT_PARAM_XMSS_PUB_SEED, BSL_PARAM_TYPE_OCTETS, seedHash, hashLen, 0},
         BSL_PARAM_END
     };
+    ret = CRYPT_XMSS_Ctrl(pctx, CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE, subPubkeyInfo.pubKey.buff, 4);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_XMSS_FreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     ret = CRYPT_XMSS_SetPubKey(pctx, pubParam);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

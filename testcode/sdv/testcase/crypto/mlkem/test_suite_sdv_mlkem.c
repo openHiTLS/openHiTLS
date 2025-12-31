@@ -920,7 +920,9 @@ void SDV_CRYPTO_MLKEM_ABNORMAL_DECAPS_FUNC_TC002(int bits, Hex *m, Hex *testEK, 
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pubKeyCtx, &dk), CRYPT_MLKEM_KEY_REPEATED_SET);
     // validity check of private key is performed when setting the private key via decaps
-    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvKeyCtx, &dk), CRYPT_MLKEM_INVALID_PRVKEY);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvKeyCtx, &dk), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(prvKeyCtx, testCT->x, testCT->len, decSharedKey, &decSharedLen),
+              CRYPT_MLKEM_INVALID_PRVKEY);
 EXIT:
     BSL_SAL_Free(ek.key.kemEk.data);
     BSL_SAL_Free(dk.key.kemDk.data);
@@ -1227,45 +1229,58 @@ void SDV_CRYPTO_MLKEM_PRV_KEY_FUNC_TC001(int bits)
     TestRandInit();
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyCtx *prvCtx = NULL;
+    CRYPT_EAL_PkeyCtx *invalidPrvCtx = NULL;
     CRYPT_EAL_PkeyPrv dk = { 0 };
+    CRYPT_EAL_PkeyPub ek = { 0 };
     uint32_t decapsKeyLen = 0;
-    CRYPT_ML_KEM_Ctx *tmp = NULL;
+    uint32_t encapsKeyLen = 0;
 #ifdef HITLS_CRYPTO_PROVIDER
     ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
     prvCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+    invalidPrvCtx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
 #else
     ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
     prvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+    invalidPrvCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
 #endif
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(prvCtx != NULL);
+    ASSERT_TRUE(invalidPrvCtx != NULL);
     uint32_t val = (uint32_t)bits;
     dk.id = CRYPT_PKEY_ML_KEM;
+    ek.id = CRYPT_PKEY_ML_KEM;
 
     ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(NULL), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(prvCtx), CRYPT_MLKEM_KEYINFO_NOT_SET);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx, val), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvCtx, val), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(invalidPrvCtx, val), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PRVKEY_LEN, &decapsKeyLen, sizeof(decapsKeyLen)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_PUBKEY_LEN, &encapsKeyLen, sizeof(encapsKeyLen)), CRYPT_SUCCESS);
     dk.key.kemDk.len = decapsKeyLen;
     dk.key.kemDk.data =  BSL_SAL_Malloc(decapsKeyLen);
+    ek.key.kemEk.len = encapsKeyLen;
+    ek.key.kemEk.data =  BSL_SAL_Malloc(encapsKeyLen);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &dk), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(prvCtx), CRYPT_MLKEM_INVALID_PRVKEY); // no dk
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &dk), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(prvCtx), CRYPT_SUCCESS); // dk is set
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(prvCtx, &ek), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(prvCtx), CRYPT_SUCCESS);
 
-    tmp = (CRYPT_ML_KEM_Ctx *)prvCtx->key;
-    tmp->dkLen = 1;
-    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(prvCtx), CRYPT_MLKEM_INVALID_PRVKEY); // dk is set
+    dk.key.kemDk.data[0] = 1u; // tamper dk
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(invalidPrvCtx, &dk), CRYPT_SUCCESS);
 
+    ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(invalidPrvCtx), CRYPT_MLKEM_INVALID_PRVKEY); // dk is set, but is invalid
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    CRYPT_EAL_PkeyFreeCtx(invalidPrvCtx);
     BSL_SAL_Free(dk.key.kemDk.data);
+    BSL_SAL_Free(ek.key.kemEk.data);
     TestRandDeInit();
 #endif
 }
@@ -1342,13 +1357,15 @@ void SDV_CRYPTO_MLKEM_INVALID_KEY_DECAPS_API_TC001(int bits, int res, Hex *testD
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     uint8_t *ciphertext = BSL_SAL_Malloc(cipherLen);
-
+    uint8_t sharedKey[32];
+    uint32_t sharedLen = 32;
     CRYPT_EAL_PkeyPrv dk = { 0 };
     dk.id = CRYPT_PKEY_ML_KEM;
     dk.key.kemDk.len = testDK->len;
     dk.key.kemDk.data =  testDK->x;
     // validity check of private key is performed when setting the private key via decaps
-    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &dk), res);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &dk), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, ciphertext, cipherLen, sharedKey, &sharedLen), res);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);

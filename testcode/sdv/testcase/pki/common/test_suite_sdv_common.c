@@ -1604,6 +1604,7 @@ void SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001(int format, int type, char *pat
 {
     TestMemInit();
     BSL_GLOBAL_Init();
+    TestRandInit();
     CRYPT_EAL_PkeyCtx *key = NULL;
     BSL_Buffer encodeAsn1 = {0};
     uint8_t expectBuf[MAX_BUFF_SIZE * 2] = {};
@@ -1627,6 +1628,7 @@ EXIT:
     BSL_SAL_FREE(encodeAsn1.data);
     CRYPT_EAL_PkeyFreeCtx(key);
     BSL_GLOBAL_DeInit();
+    TestRandDeInit();
 }
 /* END_CASE */
 
@@ -1700,6 +1702,7 @@ void SDV_HITLS_MLKEM_PrivateKey_BothFormat_TC001(int format, int type, char *pat
 {
     TestMemInit();
     BSL_GLOBAL_Init();
+    TestRandInit();
     CRYPT_EAL_PkeyCtx *key = NULL;
     BSL_Buffer encodeAsn1 = {0};
     uint8_t expectBuf[MAX_BUFF_SIZE * 2] = {};
@@ -1724,6 +1727,7 @@ EXIT:
     BSL_SAL_FREE(encodeAsn1.data);
     CRYPT_EAL_PkeyFreeCtx(key);
     BSL_GLOBAL_DeInit();
+    TestRandDeInit();
 }
 /* END_CASE */
 

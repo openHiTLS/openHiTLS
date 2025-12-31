@@ -610,6 +610,7 @@ enum CRYPT_ERROR {
     CRYPT_XMSS_ERR_XDR_ID_UNMATCH,                     /**< XDR parameter design does not match CTX. */
     CRYPT_XMSS_ERR_INVALID_XDR_ID,                     /**< XDR parameter is invalid. */
     CRYPT_XMSS_LEN_NOT_ENOUGH,                         /**< The buffer size of output is insufficient. */
+    CRYPT_XMSS_ERR_XDR_ID_ALREADY_SET,                  /**< XDR parameter is already set. */
     CRYPT_XMSS_KEYINFO_NOT_SET,                        /**< The key info is not set. */
     CRYPT_XMSS_PAIRWISE_CHECK_FAIL,                    /**< The public and private keys are inconsistent. */
     CRYPT_XMSS_INVALID_PRVKEY,                         /**< Invalid private key. */

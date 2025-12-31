@@ -359,8 +359,8 @@ int32_t CRYPT_HYBRID_KEM_SetEncapsKey(CRYPT_HybridKemCtx *ctx, const CRYPT_KemEn
     if (ctx->pKeyMethod->id == CRYPT_PKEY_X25519) {
         pubKey[0].key = CRYPT_PARAM_CURVE25519_PUBKEY;
     }
-    RETURN_RET_IF_ERR(ctx->kemMethod->setPub(ctx->kemCtx, kemEK), ret);
-    return ctx->pKeyMethod->setPub(ctx->pkeyCtx, pubKey);
+    RETURN_RET_IF_ERR(ctx->pKeyMethod->setPub(ctx->pkeyCtx, pubKey), ret);
+    return ctx->kemMethod->setPub(ctx->kemCtx, kemEK);
 }
 
 int32_t CRYPT_HYBRID_KEM_SetDecapsKey(CRYPT_HybridKemCtx *ctx, const CRYPT_KemDecapsKey *dk)
@@ -375,8 +375,8 @@ int32_t CRYPT_HYBRID_KEM_SetDecapsKey(CRYPT_HybridKemCtx *ctx, const CRYPT_KemDe
     if (ctx->pKeyMethod->id == CRYPT_PKEY_X25519) {
         prvKey[0].key = CRYPT_PARAM_CURVE25519_PRVKEY;
     }
-    RETURN_RET_IF_ERR(ctx->kemMethod->setPrv(ctx->kemCtx, kemDK), ret);
-    return ctx->pKeyMethod->setPrv(ctx->pkeyCtx, prvKey);
+    RETURN_RET_IF_ERR(ctx->pKeyMethod->setPrv(ctx->pkeyCtx, prvKey), ret);
+    return ctx->kemMethod->setPrv(ctx->kemCtx, kemDK);
 }
 
 int32_t CRYPT_HYBRID_KEM_GetEncapsKeyEx(const CRYPT_HybridKemCtx *ctx, BSL_Param *para)

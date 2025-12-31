@@ -557,6 +557,12 @@ static int32_t ParseMlKemPrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *at
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    ret = CRYPT_EAL_PkeyPrvCheck(pctx);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
     *ealPrikey = pctx;
     return CRYPT_SUCCESS;
 }
@@ -1173,6 +1179,17 @@ static int32_t EncodeEccPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1_Bu
 }
 #endif // HITLS_CRYPTO_ECDSA || HITLS_CRYPTO_SM2
 
+#if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_MLKEM)
+static void CleanSeedAndPrivKeyAsn1Buff(BSL_ASN1_Buffer *seedAsn1, BSL_ASN1_Buffer *prvKeyAsn1)
+{
+    BSL_SAL_CleanseData(seedAsn1->buff, seedAsn1->len);
+    if (prvKeyAsn1->buff != NULL) {
+        BSL_SAL_CleanseData(prvKeyAsn1->buff, prvKeyAsn1->len);
+        BSL_SAL_FREE(prvKeyAsn1->buff);
+    }
+}
+#endif
+
 #ifdef HITLS_CRYPTO_MLDSA
 static int32_t EncodeMldsaPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buffer *bitStr, BslCid *bslCid)
 {
@@ -1271,15 +1288,6 @@ static int32_t GetMldsaSkInfo(CRYPT_EAL_PkeyCtx *ealPriKey, uint32_t *format, bo
         prvKeyAsn1->buff = prvKey.key.mldsaPrv.data;
     }
     return CRYPT_SUCCESS;
-}
-
-static void CleanSeedAndPrivKeyAsn1Buff(BSL_ASN1_Buffer *seedAsn1, BSL_ASN1_Buffer *prvKeyAsn1)
-{
-    BSL_SAL_CleanseData(seedAsn1->buff, seedAsn1->len);
-    if (prvKeyAsn1->buff != NULL) {
-        BSL_SAL_CleanseData(prvKeyAsn1->buff, prvKeyAsn1->len);
-        BSL_SAL_FREE(prvKeyAsn1->buff);
-    }
 }
 
 static int32_t ProcessMldsaPrvkeyFormat(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *bitStr, uint32_t prvKeyLen)

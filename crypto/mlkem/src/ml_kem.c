@@ -313,123 +313,6 @@ static int32_t MlKemGetSharedLen(CRYPT_ML_KEM_Ctx *ctx, void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-/**
- * @brief Verify that a public key and private key form a valid key pair
- *
- * Performs a cryptographic key pair consistency check (pairwise consistency check)
- * by executing a complete Encaps/Decaps cycle and verifying that both operations
- * produce the same shared secret.
- *
- * @details
- * Test procedure:
- * 1. Encaps(pubKey) → (ciphertext, sharedSecret1)
- * 2. Decaps(prvKey, ciphertext) → sharedSecret2
- * 3. Verify: sharedSecret1 == sharedSecret2
- *
- * This pairwise consistency check validates:
- * - H(ek) correctness (performed inside MLKEM_DecapsInternal)
- * - Secret key components (s_0, s_1, ..., s_{k-1}) correctness
- * - Implicit rejection secret (z) correctness
- * - Overall cryptographic consistency between public and private key
- *
- * Relation to draft-ietf-lamps-kyber-certificates-11:
- * - This check is NOT required by the draft (only H(ek) check is MUST per FIPS 203 §7.3)
- * - It provides additional security by detecting secret key corruption that H(ek) check cannot detect
- * - Can be used by MlKemPairwiseConsistencyCheck() for expanded-only private key format validation
- * - Can detect mutated s_0 as described in draft-ietf-lamps-kyber-certificates-11 Appendix C.4.1 Example 2
- *
- *
- * @param pubKey Public key context (encapsulation key)
- * @param prvKey Private key context (decapsulation key)
- * @return CRYPT_SUCCESS if key pair is valid and consistent, error code otherwise
- */
-static int32_t MlKemKeyPairCheck(CRYPT_ML_KEM_Ctx *pubKey, CRYPT_ML_KEM_Ctx *prvKey)
-{
-    if (pubKey == NULL || prvKey == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (pubKey->info == NULL || prvKey->info == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYINFO_NOT_SET);
-        return CRYPT_MLKEM_KEYINFO_NOT_SET;
-    }
-    if (pubKey->info->bits != prvKey->info->bits) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_PAIRWISE_CHECK_FAIL);
-        return CRYPT_MLKEM_PAIRWISE_CHECK_FAIL;
-    }
-    uint32_t cipherLen = pubKey->info->cipherLen;
-    uint8_t *ciphertext = BSL_SAL_Malloc(pubKey->info->cipherLen);
-    if (ciphertext == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    int32_t ret;
-    uint32_t sharedLen1 = MLKEM_SHARED_KEY_LEN;
-    uint8_t sharedKey1[MLKEM_SHARED_KEY_LEN] = {0};
-    uint32_t sharedLen2 = MLKEM_SHARED_KEY_LEN;
-    uint8_t sharedKey2[MLKEM_SHARED_KEY_LEN] = {0};
-    GOTO_ERR_IF(CRYPT_ML_KEM_Encaps(pubKey, ciphertext, &cipherLen, sharedKey1, &sharedLen1), ret);
-    GOTO_ERR_IF(CRYPT_ML_KEM_Decaps(prvKey, ciphertext, cipherLen, sharedKey2, &sharedLen2), ret);
-    if (sharedLen1 != sharedLen2 || memcmp(sharedKey1, sharedKey2, sharedLen1) != 0) {
-        ret = CRYPT_MLKEM_PAIRWISE_CHECK_FAIL;
-        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_PAIRWISE_CHECK_FAIL);
-    }
-ERR:
-    BSL_SAL_CleanseData(sharedKey1, MLKEM_SHARED_KEY_LEN);
-    BSL_SAL_ClearFree(ciphertext, pubKey->info->cipherLen);
-    return ret;
-}
-
-/**
- * @brief Perform pairwise consistency check using embedded public key
- * Detects corrupted secret key components (s_0, s_1, etc.) by verifying
- * cryptographic consistency between dkPKE and embedded ek.
- *
- * @param prvKey Private key context containing dk
- * @return CRYPT_SUCCESS if pairwise check passes, error code otherwise
- */
-static int32_t MlKemPairwiseConsistencyCheck(CRYPT_ML_KEM_Ctx *prvKey)
-{
-    if (prvKey == NULL || prvKey->dk == NULL || prvKey->info == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    // Private key format: dk = dkPKE || ek || H(ek) || z
-    // Extract embedded ek from dk
-    uint32_t dkPkeLen = MLKEM_CIPHER_LEN * prvKey->info->k;
-    uint32_t ekOffset = dkPkeLen;
-    const uint8_t *embeddedEk = prvKey->dk + ekOffset;
-    uint32_t ekLen = prvKey->info->encapsKeyLen;
-
-    // Create temporary context with embedded public key
-    CRYPT_ML_KEM_Ctx *pubKeyCtx = CRYPT_ML_KEM_DupCtx(prvKey);
-    if (pubKeyCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-
-    // Set the embedded public key
-    uint8_t *ekCopy = BSL_SAL_Dump(embeddedEk, ekLen);
-    if (ekCopy == NULL) {
-        CRYPT_ML_KEM_FreeCtx(pubKeyCtx);
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    pubKeyCtx->ek = ekCopy; // pubKeyCtx->ek is ensured NULL before
-    pubKeyCtx->ekLen = ekLen;
-
-    // Perform pairwise consistency check: Encaps(ek) + Decaps(dk) and compare shared secrets
-    int32_t ret = MlKemKeyPairCheck(pubKeyCtx, prvKey);
-    CRYPT_ML_KEM_FreeCtx(pubKeyCtx);
-
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_INVALID_PRVKEY);
-        return CRYPT_MLKEM_INVALID_PRVKEY;
-    }
-    return CRYPT_SUCCESS;
-}
-
 int32_t CRYPT_ML_KEM_SetEncapsKey(CRYPT_ML_KEM_Ctx *ctx, const CRYPT_KemEncapsKey *ek)
 {
     if (ctx == NULL || ctx->info == NULL || ek == NULL || ek->data == NULL) {
@@ -456,9 +339,6 @@ int32_t CRYPT_ML_KEM_SetEncapsKey(CRYPT_ML_KEM_Ctx *ctx, const CRYPT_KemEncapsKe
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    if (ctx->ek != NULL) {
-        BSL_SAL_Free(ctx->ek);
-    }
     ctx->ek = data;
     ctx->ekLen = ek->len;
     return CRYPT_SUCCESS;
@@ -474,7 +354,6 @@ int32_t CRYPT_ML_KEM_GetEncapsKey(const CRYPT_ML_KEM_Ctx *ctx, CRYPT_KemEncapsKe
         BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEY_NOT_SET);
         return CRYPT_MLKEM_KEY_NOT_SET;
     }
-
     if (memcpy_s(ek->data, ek->len, ctx->ek, ctx->ekLen) != EOK) {
         BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYLEN_ERROR);
         return CRYPT_MLKEM_KEYLEN_ERROR;
@@ -503,18 +382,20 @@ int32_t CRYPT_ML_KEM_SetDecapsKey(CRYPT_ML_KEM_Ctx *ctx, const CRYPT_KemDecapsKe
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    uint8_t *data = BSL_SAL_Dump(dk->data, dk->len);
-    if (data == NULL) {
+    uint8_t *dkData = BSL_SAL_Dump(dk->data, dk->len);
+    // Extract ek from dk
+    uint8_t *ekData = BSL_SAL_Dump(dk->data + MLKEM_CIPHER_LEN * ctx->info->k, ctx->info->encapsKeyLen);
+    if (dkData == NULL || ekData == NULL) {
         MLKEM_KeyReset(ctx);
+        BSL_SAL_FREE(dkData);
+        BSL_SAL_FREE(ekData);
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    if (ctx->dk != NULL) {
-        BSL_SAL_CleanseData(ctx->dk, ctx->dkLen);
-        BSL_SAL_Free(ctx->dk);
-    }
-    ctx->dk = data;
-    ctx->dkLen = dk->len;
+    ctx->dk = dkData;
+    ctx->dkLen = ctx->info->decapsKeyLen;
+    ctx->ek = ekData;
+    ctx->ekLen = ctx->info->encapsKeyLen;
     return CRYPT_SUCCESS;
 }
 
@@ -538,7 +419,6 @@ int32_t CRYPT_ML_KEM_GetDecapsKey(const CRYPT_ML_KEM_Ctx *ctx, CRYPT_KemDecapsKe
     return CRYPT_SUCCESS;
 }
 
-#ifdef HITLS_BSL_PARAMS
 static int32_t MlKemCreateKeyBuf(CRYPT_ML_KEM_Ctx *ctx)
 {
     if (ctx->dk == NULL) {
@@ -564,20 +444,8 @@ static int32_t MlKemCreateKeyBuf(CRYPT_ML_KEM_Ctx *ctx)
 
 static int32_t MLKEM_RecomputeKeyFromSeed(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *seed, uint32_t len)
 {
-    if (ctx == NULL || seed == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (ctx->info == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYINFO_NOT_SET);
-        return CRYPT_MLKEM_KEYINFO_NOT_SET;
-    }
-    if (ctx->dk != NULL || ctx->ek != NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEY_REPEATED_SET);
-        return CRYPT_MLKEM_KEY_REPEATED_SET;
-    }
-    // 64: mlkem seed length
-    if (len != 64) {
+    // 64: mlkem seed length: 32 bytes (d) + 32 bytes (z)
+    if (len < MLKEM_SEED_LEN * 2) {
         BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYLEN_ERROR);
         return CRYPT_MLKEM_KEYLEN_ERROR;
     }
@@ -623,20 +491,28 @@ int32_t CRYPT_ML_KEM_GetEncapsKeyEx(const CRYPT_ML_KEM_Ctx *ctx, BSL_Param *para
 
 int32_t CRYPT_ML_KEM_SetDecapsKeyEx(CRYPT_ML_KEM_Ctx *ctx, const BSL_Param *para)
 {
-    if (para == NULL) {
+    if (ctx == NULL || para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
+    }
+    if (ctx->info == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYINFO_NOT_SET);
+        return CRYPT_MLKEM_KEYINFO_NOT_SET;
+    }
+    if (ctx->ek != NULL || ctx->dk != NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEY_REPEATED_SET);
+        return CRYPT_MLKEM_KEY_REPEATED_SET;
     }
     CRYPT_KemDecapsKey prv = {0};
     CRYPT_KemDecapsKey prvSeed = {0};
     (void)GetConstParamValue(para, CRYPT_PARAM_ML_KEM_PRVKEY, &prv.data, &prv.len);
     (void)GetConstParamValue(para, CRYPT_PARAM_ML_KEM_PRVKEY_SEED, &prvSeed.data, &prvSeed.len);
-
     int32_t ret;
     // Case 1: seed-only format (prvSeed != NULL, prv == NULL)
     if (prvSeed.data != NULL && prv.data == NULL) {
         ret = MLKEM_RecomputeKeyFromSeed(ctx, prvSeed.data, prvSeed.len);
         if (ret != CRYPT_SUCCESS) {
+            MLKEM_KeyReset(ctx);
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
@@ -646,42 +522,31 @@ int32_t CRYPT_ML_KEM_SetDecapsKeyEx(CRYPT_ML_KEM_Ctx *ctx, const BSL_Param *para
     // Case 2: both format (prvSeed != NULL, prv != NULL)
     // Seed consistency check: recompute key from seed and compare with provided expanded key
     if (prvSeed.data != NULL && prv.data != NULL) {
+        if (prv.len != ctx->info->decapsKeyLen) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYLEN_ERROR);
+            return CRYPT_MLKEM_KEYLEN_ERROR;
+        }
         // Recompute key from seed
         ret = MLKEM_RecomputeKeyFromSeed(ctx, prvSeed.data, prvSeed.len);
         if (ret != CRYPT_SUCCESS) {
+            MLKEM_KeyReset(ctx);
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
-        }
-        // Verify length matches
-        if (prv.len != ctx->dkLen) {
-            BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYLEN_ERROR);
-            return CRYPT_MLKEM_KEYLEN_ERROR;
         }
         // Bytewise comparison: recomputed dk vs provided dk
         // This check validates ALL components: dkPKE || ek || H(ek) || z
         if (memcmp(ctx->dk, prv.data, ctx->dkLen) != 0) {
             BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_SEED_EXPANDED_KEY_INCONSISTENT);
+            MLKEM_KeyReset(ctx);
             return CRYPT_MLKEM_SEED_EXPANDED_KEY_INCONSISTENT;
         }
         return CRYPT_SUCCESS;
     }
-
     // Case 3: expanded-only format (prvSeed == NULL, prv != NULL)
     if (prvSeed.data == NULL && prv.data != NULL) {
         // Set the expanded key
-        ret = CRYPT_ML_KEM_SetDecapsKey(ctx, &prv);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-        ret = MlKemPairwiseConsistencyCheck(ctx);
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-        return CRYPT_SUCCESS;
+        return CRYPT_ML_KEM_SetDecapsKey(ctx, &prv);
     }
-
     // Case 4: neither seed nor expanded key provided
     BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
     return CRYPT_NULL_INPUT;
@@ -702,7 +567,6 @@ int32_t CRYPT_ML_KEM_GetDecapsKeyEx(const CRYPT_ML_KEM_Ctx *ctx, BSL_Param *para
     paramPrv->useLen = prv.len;
     return CRYPT_SUCCESS;
 }
-#endif
 
 #ifdef HITLS_CRYPTO_MLKEM_CMP
 static int32_t MlKemCmpKey(uint8_t *a, uint32_t aLen, uint8_t *b, uint32_t bLen)
@@ -825,6 +689,9 @@ int32_t CRYPT_ML_KEM_GenKey(CRYPT_ML_KEM_Ctx *ctx)
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
     ret = MLKEM_KeyGenInternal(ctx, d, z);
+    if (ret != CRYPT_SUCCESS) {
+        MLKEM_KeyReset(ctx);
+    }
     BSL_SAL_CleanseData(d, MLKEM_SEED_LEN);
     BSL_SAL_CleanseData(z, MLKEM_SEED_LEN);
     return ret;
@@ -887,7 +754,121 @@ int32_t CRYPT_ML_KEM_Decaps(CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32_t cip
 }
 
 #ifdef HITLS_CRYPTO_MLKEM_CHECK
-static int32_t MlKemPrvKeyCheck(const CRYPT_ML_KEM_Ctx *prvKey)
+/**
+ * @brief Verify that a public key and private key form a valid key pair
+ *
+ * Performs a cryptographic key pair consistency check (pairwise consistency check)
+ * by executing a complete Encaps/Decaps cycle and verifying that both operations
+ * produce the same shared secret.
+ *
+ * @details
+ * Test procedure:
+ * 1. Encaps(pubKey) → (ciphertext, sharedSecret1)
+ * 2. Decaps(prvKey, ciphertext) → sharedSecret2
+ * 3. Verify: sharedSecret1 == sharedSecret2
+ *
+ * This pairwise consistency check validates:
+ * - H(ek) correctness (performed inside MLKEM_DecapsInternal)
+ * - Secret key components (s_0, s_1, ..., s_{k-1}) correctness
+ * - Implicit rejection secret (z) correctness
+ * - Overall cryptographic consistency between public and private key
+ *
+ * Relation to draft-ietf-lamps-kyber-certificates-11:
+ * - This check is NOT required by the draft (only H(ek) check is MUST per FIPS 203 §7.3)
+ * - It provides additional security by detecting secret key corruption that H(ek) check cannot detect
+ * - Can be used by MlKemPairwiseConsistencyCheck() for expanded-only private key format validation
+ * - Can detect mutated s_0 as described in draft-ietf-lamps-kyber-certificates-11 Appendix C.4.1 Example 2
+ *
+ *
+ * @param pubKey Public key context (encapsulation key)
+ * @param prvKey Private key context (decapsulation key)
+ * @return CRYPT_SUCCESS if key pair is valid and consistent, error code otherwise
+ */
+static int32_t MlKemKeyPairCheck(CRYPT_ML_KEM_Ctx *pubKey, CRYPT_ML_KEM_Ctx *prvKey)
+{
+    if (pubKey == NULL || prvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (pubKey->info == NULL || prvKey->info == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYINFO_NOT_SET);
+        return CRYPT_MLKEM_KEYINFO_NOT_SET;
+    }
+    if (pubKey->info->bits != prvKey->info->bits) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_PAIRWISE_CHECK_FAIL);
+        return CRYPT_MLKEM_PAIRWISE_CHECK_FAIL;
+    }
+    uint32_t cipherLen = pubKey->info->cipherLen;
+    uint8_t *ciphertext = BSL_SAL_Malloc(pubKey->info->cipherLen);
+    if (ciphertext == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    int32_t ret;
+    uint32_t sharedLen1 = MLKEM_SHARED_KEY_LEN;
+    uint8_t sharedKey1[MLKEM_SHARED_KEY_LEN] = {0};
+    uint32_t sharedLen2 = MLKEM_SHARED_KEY_LEN;
+    uint8_t sharedKey2[MLKEM_SHARED_KEY_LEN] = {0};
+    GOTO_ERR_IF(CRYPT_ML_KEM_Encaps(pubKey, ciphertext, &cipherLen, sharedKey1, &sharedLen1), ret);
+    GOTO_ERR_IF(CRYPT_ML_KEM_Decaps(prvKey, ciphertext, cipherLen, sharedKey2, &sharedLen2), ret);
+    if (sharedLen1 != sharedLen2 || memcmp(sharedKey1, sharedKey2, sharedLen1) != 0) {
+        ret = CRYPT_MLKEM_PAIRWISE_CHECK_FAIL;
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_PAIRWISE_CHECK_FAIL);
+    }
+ERR:
+    BSL_SAL_CleanseData(sharedKey1, MLKEM_SHARED_KEY_LEN);
+    BSL_SAL_ClearFree(ciphertext, pubKey->info->cipherLen);
+    return ret;
+}
+
+/**
+ * @brief Perform pairwise consistency check using embedded public key
+ * Detects corrupted secret key components (s_0, s_1, etc.) by verifying
+ * cryptographic consistency between dkPKE and embedded ek.
+ *
+ * @param prvKey Private key context containing dk
+ * @return CRYPT_SUCCESS if pairwise check passes, error code otherwise
+ */
+static int32_t MlKemPairwiseConsistencyCheck(CRYPT_ML_KEM_Ctx *prvKey)
+{
+    // Private key format: dk = dkPKE || ek || H(ek) || z
+    // Extract embedded ek from dk
+    uint32_t dkPkeLen = MLKEM_CIPHER_LEN * prvKey->info->k;
+    uint8_t *embeddedEk = prvKey->dk + dkPkeLen;
+    uint32_t ekLen = prvKey->info->encapsKeyLen;
+
+    // Create temporary context with embedded public key
+    CRYPT_ML_KEM_Ctx *pubKeyCtx = CRYPT_ML_KEM_NewCtx();
+    if (pubKeyCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    pubKeyCtx->info = prvKey->info;
+    uint8_t *ekCopy = BSL_SAL_Dump(embeddedEk, ekLen);
+    if (ekCopy == NULL) {
+        CRYPT_ML_KEM_FreeCtx(pubKeyCtx);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    pubKeyCtx->ek = ekCopy;
+    pubKeyCtx->ekLen = ekLen;
+    // Decode the embedded public key
+    int32_t ret = MLKEM_DecodeEk(pubKeyCtx, pubKeyCtx->ek, ekLen);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_ML_KEM_FreeCtx(pubKeyCtx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    // Perform pairwise consistency check: Encaps(ek) + Decaps(dk) and compare shared secrets
+    ret = MlKemKeyPairCheck(pubKeyCtx, prvKey);
+    CRYPT_ML_KEM_FreeCtx(pubKeyCtx);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+
+static int32_t MlKemPrvKeyCheck(CRYPT_ML_KEM_Ctx *prvKey)
 {
     if (prvKey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -898,6 +879,10 @@ static int32_t MlKemPrvKeyCheck(const CRYPT_ML_KEM_Ctx *prvKey)
         return CRYPT_MLKEM_KEYINFO_NOT_SET;
     }
     if (prvKey->dk == NULL || prvKey->dkLen != prvKey->info->decapsKeyLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_INVALID_PRVKEY);
+        return CRYPT_MLKEM_INVALID_PRVKEY;
+    }
+    if (MlKemPairwiseConsistencyCheck(prvKey) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_INVALID_PRVKEY);
         return CRYPT_MLKEM_INVALID_PRVKEY;
     }
