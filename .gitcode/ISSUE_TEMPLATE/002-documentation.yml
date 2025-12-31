@@ -6,20 +6,20 @@ labels: ["documentation"]
 body:
 - type: textarea
   attributes:
-    label: 📚 文档问题描述
+    label: 📚 Documentation Issue
     description: >
-      A clear and concise description of what content in https://gitcode.com/openHiTLS/openhitls is an issue.
+      Describe the documentation issue.
   validations:
     required: true
 - type: textarea
   attributes:
-    label: 改进与修复建议
+    label: Improvement Suggestions
     description: >
-      Tell us how we could improve the documentation in this regard.
+      Suggest improvements, if any.
 - type: textarea
   attributes:
-    label: 版本信息
-    description: 如果涉及多个版本，请悉数告知我们对应的版本号信息，以方便我们复现问题
+    label: Version Information
+    description: If multiple versions are involved, please provide all version numbers.
   validations:
     required: true
 - type: markdown

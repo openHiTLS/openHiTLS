@@ -6,26 +6,26 @@
 
 
 **What does this PR do / why do we need it**:
-* Need to describe clearly
 
+---
 
 **Which issue(s) this PR fixes**:
 <!-- 
-*Automatically closes linked issue when PR is merged.
-Usage: `Fixes #<issue number>`, or `Fixes (paste link of issue)`.
+Note: Only enter the issue number or SR/AR number after the # sign below. Pasting issue links is invalid.
 -->
 Fixes #
 
+---
 
-**What scenarios were tested, and what were the verification results（Function, performance, reliability, etc.）**：
-* Need to describe clearly
+**Test Plan and Test Result**:
 
+---
 
-**Self-checklist**:（**Please check carefully,and mark an x in the [] brackets. We will review your completion status.**）
+**Self-checklist**:
 
-+ - [ ] **Test**: Has the code in the PR been fully covered by UT/ST test cases, and have the newly added test cases been uploaded to the repository along with this PR or already uploaded.
-+ - [ ] **Interface**: Does it involve changes to external interfaces? The corresponding changes have been approved by the interface review organization, and the annotation information for the API has been correctly refreshed.
-+ - [ ] **Document**: Does it involve modifications to the official website documentation? If so, please submit the materials to the Doc repository in a timely manner.
+- [ ] **Test**: Code is covered by UT/ST test cases, and new test cases are included.
+- [ ] **Interface**: If external interface changes are involved, changes have been approved by the TC.
+- [ ] **Document**: If official website documentation changes are involved
 
 <!-- **Special notes for your reviewers**: -->
 <!-- + - [ ] Whether it causes forward compatibility failure -->
