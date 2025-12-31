@@ -1329,7 +1329,7 @@ static int32_t X509_CrlSetRevokedExt(HITLS_X509_CrlEntry *entry, BslCid cid, BSL
         }
     }
 
-    return HITLS_X509_SetExtList(NULL, entry->extList, cid, buff, encodeExt);
+    return HITLS_X509_SetExtList(NULL, entry->extList, cid, buff->data, encodeExt);
 }
 
 static int32_t SetExtInvalidTime(void *param, HITLS_X509_ExtEntry *entry, const void *val)
