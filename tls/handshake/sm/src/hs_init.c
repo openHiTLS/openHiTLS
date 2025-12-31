@@ -149,14 +149,14 @@ int32_t HS_Init(TLS_Ctx *ctx)
     hsCtx->msgBuf = BSL_SAL_Malloc(hsCtx->bufferLen);
     if (hsCtx->msgBuf == NULL) {
         (void)RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17177, "Malloc fail");
-        goto ERR;
+        goto exit;
     }
     ret = NewHsCtxConfig(ctx, hsCtx);
     if (ret != HITLS_SUCCESS) {
-        goto ERR;
+        goto exit;
     }
     return HsInitChangeState(ctx);
-ERR:
+exit:
     HS_DeInit(ctx);
     BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
     return HITLS_MEMALLOC_FAIL;

@@ -116,7 +116,7 @@ static int32_t DefaultEncryptPreProcess(TLS_Ctx *ctx, uint8_t recordType, const 
     }
 #ifdef HITLS_TLS_FEATURE_INDICATOR
     INDICATOR_MessageIndicate(
-        0, HS_GetVersion(ctx), RECORD_INNER_CONTENT_TYPE, &recordType, 1, ctx, ctx->config.tlsConfig.msgArg);
+        0, GET_VERSION_FROM_CTX(ctx), RECORD_INNER_CONTENT_TYPE, &recordType, 1, ctx, ctx->config.tlsConfig.msgArg);
 #endif
 
     /* TlsInnerPlaintext see rfc 8446 section 5.2 */
@@ -214,11 +214,11 @@ static int32_t UnsupoortDecrypt(TLS_Ctx *ctx, RecConnState *suiteInfo, const REC
     return HITLS_REC_ERR_NOT_SUPPORT_CIPHER;
 }
 
-static int32_t UnsupoortEncrypt(TLS_Ctx *ctx, RecConnState *State, const REC_TextInput *plainMsg,
+static int32_t UnsupoortEncrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *plainMsg,
     uint8_t *cipherText, uint32_t cipherTextLen)
 {
     (void)ctx;
-    (void)State;
+    (void)state;
     (void)plainMsg;
     (void)cipherText;
     (void)cipherTextLen;

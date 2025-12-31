@@ -50,6 +50,7 @@ typedef struct TlsSessCtx HITLS_Session;
 
 /**
 * @ingroup hitls_type
+*
 * @brief   DTLS SCTP authkey length, which is specified in the protocol and can be used to determine the length
 * when the auth key is set.
 */
@@ -57,17 +58,20 @@ typedef struct TlsSessCtx HITLS_Session;
 
 /**
 * @ingroup hitls_type
+*
 * @brief   TLS1.3 key exchange mode: Only PSKs are used for key negotiation.
 */
 #define TLS13_KE_MODE_PSK_ONLY 1u
 
 /**
 * @ingroup hitls_type
+*
 * @brief   TLS1.3 key exchange mode: Both PSK and (EC)DHE are used for key negotiation.
 */
 #define TLS13_KE_MODE_PSK_WITH_DHE 2u
 /**
 * @ingroup hitls_type
+*
 * @brief   TLS1.3 certificate authentication: The certificate authentication is used and
 * the (EC)DHE negotiation key is required.
 */
@@ -99,6 +103,7 @@ typedef struct TlsSessCtx HITLS_Session;
 
 /**
  * @ingroup hitls_type
+ *
  * @brief   HITLS_SESS_CACHE_MODE: mode for storing hitls sessions.
  */
 typedef enum {
@@ -114,6 +119,7 @@ typedef enum {
 
 /**
  * @ingroup hitls_type
+ *
  * @brief   key update message type
  */
 typedef enum {

@@ -53,7 +53,6 @@ void ALERT_GetInfo(const TLS_Ctx *ctx, ALERT_Info *info)
     info->flag = alertCtx->flag;
     info->level = alertCtx->level;
     info->description = alertCtx->description;
-    return;
 }
 
 void ALERT_CleanInfo(const TLS_Ctx *ctx)
@@ -61,7 +60,6 @@ void ALERT_CleanInfo(const TLS_Ctx *ctx)
     uint8_t alertCount = ctx->alertCtx->warnCount;
     (void)memset_s(ctx->alertCtx, sizeof(struct AlertCtx), 0, sizeof(struct AlertCtx));
     ctx->alertCtx->warnCount = alertCount;
-    return;
 }
 
 /* check whether the operation is abnormal */
@@ -96,7 +94,6 @@ void ALERT_Send(const TLS_Ctx *ctx, ALERT_Level level, ALERT_Description descrip
     alertCtx->description = (uint8_t)description;
     alertCtx->flag = ALERT_FLAG_SEND;
     alertCtx->isFlush = false;
-    return;
 }
 
 int32_t ALERT_Flush(TLS_Ctx *ctx)
@@ -193,7 +190,6 @@ void ALERT_Deinit(TLS_Ctx *ctx)
         return;
     }
     BSL_SAL_FREE(ctx->alertCtx);
-    return;
 }
 
 int32_t ProcessDecryptedAlert(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
@@ -254,10 +250,12 @@ int32_t ProcessPlainAlert(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
     return ProcessDecryptedAlert(ctx, data, dataLen);
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
-void ALERT_ClearWarnCount(TLS_Ctx *ctx)
+
+void ALERT_ClearWarnCount(TLS_Ctx *ctx, uint32_t recordType)
 {
-    ctx->alertCtx->warnCount = 0;
-    return;
+    if (recordType != REC_TYPE_ALERT) {
+        ctx->alertCtx->warnCount = 0;
+    }
 }
 
 bool ALERT_HaveExceeded(TLS_Ctx *ctx, uint8_t threshold)

@@ -310,36 +310,6 @@ int32_t HITLS_CFG_GetResumptionOnRenegoSupport(HITLS_Config *config, bool *isSup
 #endif /* HITLS_TLS_FEATURE_RENEGOTIATION && HITLS_TLS_FEATURE_SESSION */
 
 #ifdef HITLS_TLS_FEATURE_SESSION
-int32_t HITLS_CFG_SetSessionTimeout(HITLS_Config *config, uint64_t timeout)
-{
-    if (config == NULL || config->sessMgr == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
-    SESSMGR_SetTimeout(config->sessMgr, timeout);
-    return HITLS_SUCCESS;
-}
-
-int32_t HITLS_CFG_GetSessionTimeout(const HITLS_Config *config, uint64_t *timeout)
-{
-    if (config == NULL || config->sessMgr == NULL || timeout == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
-    *timeout = SESSMGR_GetTimeout(config->sessMgr);
-    return HITLS_SUCCESS;
-}
-
-int32_t HITLS_CFG_SetNewSessionCb(HITLS_Config *config, const HITLS_NewSessionCb newSessionCb)
-{
-    if (config == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
-    config->newSessionCb = newSessionCb;
-    return HITLS_SUCCESS;
-}
-
 int32_t HITLS_CFG_SetSessionCacheMode(HITLS_Config *config, uint32_t mode)
 {
     if (config == NULL || config->sessMgr == NULL) {
@@ -396,9 +366,58 @@ int32_t HITLS_CFG_RemoveSession(HITLS_Config *config, HITLS_Session *sess)
     }
     return SESSMGR_RemoveSession(config, sess);
 }
+
+int32_t HITLS_CFG_SetSessionTimeout(HITLS_Config *config, uint64_t timeout)
+{
+    if (config == NULL || config->sessMgr == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    SESSMGR_SetTimeout(config->sessMgr, timeout);
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetSessionTimeout(const HITLS_Config *config, uint64_t *timeout)
+{
+    if (config == NULL || config->sessMgr == NULL || timeout == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    *timeout = SESSMGR_GetTimeout(config->sessMgr);
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_SetNewSessionCb(HITLS_Config *config, const HITLS_NewSessionCb newSessionCb)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->newSessionCb = newSessionCb;
+    return HITLS_SUCCESS;
+}
 #endif /* HITLS_TLS_FEATURE_SESSION */
 
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
+int32_t HITLS_CFG_SetTicketNums(HITLS_Config *config, uint32_t ticketNums)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->ticketNums = ticketNums;
+    return HITLS_SUCCESS;
+}
+
+uint32_t HITLS_CFG_GetTicketNums(HITLS_Config *config)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return config->ticketNums;
+}
+
 int32_t HITLS_CFG_SetSessionTicketSupport(HITLS_Config *config, bool support)
 {
     if (config == NULL) {
@@ -447,25 +466,6 @@ int32_t HITLS_CFG_SetSessionTicketKey(HITLS_Config *config, const uint8_t *key, 
 
     return SESSMGR_SetTicketKey(config->sessMgr, key, keySize);
 }
-
-int32_t HITLS_CFG_SetTicketNums(HITLS_Config *config, uint32_t ticketNums)
-{
-    if (config == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
-    config->ticketNums = ticketNums;
-    return HITLS_SUCCESS;
-}
-
-uint32_t HITLS_CFG_GetTicketNums(HITLS_Config *config)
-{
-    if (config == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
-    return config->ticketNums;
-}
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
 
 #ifdef HITLS_TLS_FEATURE_SESSION_ID
@@ -507,7 +507,7 @@ int32_t HITLS_CFG_SetSessionRemoveCb(HITLS_Config *config, const HITLS_SessionRe
 }
 #endif /* HITLS_TLS_FEATURE_SESSION_CACHE_CB */
 
-#if defined(HITLS_TLS_FEATURE_CERT_MODE) && defined(HITLS_TLS_FEATURE_RENEGOTIATION)
+#ifdef HITLS_TLS_FEATURE_CERT_MODE
 int32_t HITLS_CFG_SetClientOnceVerifySupport(HITLS_Config *config, bool support)
 {
     if (config == NULL) {
@@ -526,7 +526,7 @@ int32_t HITLS_CFG_GetClientOnceVerifySupport(HITLS_Config *config, bool *isSuppo
     *isSupport = config->isSupportClientOnceVerify;
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_FEATURE_CERT_MODE && HITLS_TLS_FEATURE_RENEGOTIATION */
+#endif /* HITLS_TLS_FEATURE_CERT_MODE */
 
 #ifdef HITLS_TLS_FEATURE_FLIGHT
 int32_t HITLS_CFG_SetFlightTransmitSwitch(HITLS_Config *config, bool isEnable)
@@ -549,6 +549,31 @@ int32_t HITLS_CFG_GetFlightTransmitSwitch(const HITLS_Config *config, bool *isEn
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_FEATURE_FLIGHT */
+
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+int32_t HITLS_CFG_SetRecordSizeLimit(HITLS_Config *config, uint16_t recordSize)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    if (recordSize < 64u || recordSize > REC_MAX_PLAIN_LENGTH + 1u) {
+        return HITLS_CONFIG_INVALID_LENGTH;
+    }
+    config->recordSizeLimit = recordSize;
+
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetRecordSizeLimit(HITLS_Config *config, uint16_t *recordSize)
+{
+    if (config == NULL || recordSize == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *recordSize = config->recordSizeLimit;
+
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT */
 
 #ifdef HITLS_TLS_FEATURE_MAX_SEND_FRAGMENT
 int32_t HITLS_CFG_SetMaxSendFragment(HITLS_Config *config, uint16_t maxSendFragment)

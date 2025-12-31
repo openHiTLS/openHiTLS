@@ -129,7 +129,6 @@ static void AeadGetAad(uint8_t *aad, uint32_t *aadLen, const REC_TextInput *inpu
     offset += sizeof(uint16_t);
     BSL_Uint16ToByte((uint16_t)plainDataLen, &aad[offset]);  // The 11th and 12th bytse indicate the data length.
     *aadLen = AEAD_AAD_TLS12_SIZE;
-    return;
 }
 
 static uint32_t AeadCalCiphertextLen(const TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, uint32_t plantextLen, bool isRead)

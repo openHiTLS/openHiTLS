@@ -41,7 +41,7 @@ static int32_t SetMdAttr(CRYPT_EAL_PkeyCtx *ctx, const char *attrName)
     }
     BSL_Param param[] = {
         {.key = CRYPT_PARAM_MD_ATTR, .valueType = BSL_PARAM_TYPE_UTF8_STR,
-        .value = (void *)(uintptr_t)attrName, .valueLen = strlen(attrName), .useLen = 0},
+            .value = (void *)(uintptr_t)attrName, .valueLen = strlen(attrName), .useLen = 0},
         BSL_PARAM_END
     };
     return CRYPT_EAL_PkeySetParaEx(ctx, param);
@@ -152,7 +152,7 @@ int32_t HITLS_X509_Adapt_Decrypt(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint
 }
 #endif
 
-int32_t HITLS_X509_Adapt_CheckPrivateKey(const HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CERT_Key *key)
+int32_t HITLS_X509_Adapt_CheckPrivateKey(HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CERT_Key *key)
 {
     (void)config;
     CRYPT_EAL_PkeyCtx *ealPubKey = NULL;

@@ -48,16 +48,6 @@ int32_t HS_SendMsg(TLS_Ctx *ctx);
 int32_t ServerSendHelloRequestProcess(TLS_Ctx *ctx);
 
 /**
- * @brief   Server sends Hello Verify Request messsage
- *
- * @param   ctx [IN] TLS context
- *
- * @retval  HITLS_SUCCESS
- * @retval  For details, see hitls_error.h
- */
-int32_t DtlsServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx);
-
-/**
  * @brief   Client sends client hello messsage
  *
  * @param   ctx [IN] TLS context
@@ -66,6 +56,16 @@ int32_t DtlsServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx);
  * @retval  For details, see hitls_error.h
  */
 int32_t ClientSendClientHelloProcess(TLS_Ctx *ctx);
+
+/**
+ * @brief   Server sends hello verify request messsage
+ *
+ * @param   ctx [IN] TLS context
+ *
+ * @retval  HITLS_SUCCESS
+ * @retval  For details, see hitls_error.h
+ */
+int32_t DtlsServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx);
 
 /**
  * @brief   Server sends server hello messsage

@@ -15,7 +15,6 @@
 #ifndef CUSTOM_EXTENSIONS_H
 #define CUSTOM_EXTENSIONS_H
 
-#include "hitls_build.h"
 #include "hitls.h"
 #include "hitls_custom_extensions.h"
 #include "tls.h"

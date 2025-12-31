@@ -49,7 +49,7 @@ int32_t PackHelloVerifyRequest(const TLS_Ctx *ctx, PackPacket *pkt);
  * @brief   Pack ServertHello message
  *
  * @param   ctx  [IN] TLS context
- * @param   pkt  [IN/OUT] Context for packing
+ * @param   pkt [IN/OUT] Context for packing
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h

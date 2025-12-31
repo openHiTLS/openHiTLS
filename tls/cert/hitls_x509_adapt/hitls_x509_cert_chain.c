@@ -24,6 +24,7 @@
 #include "bsl_list.h"
 #include "hitls_cert.h"
 #include "hitls_error.h"
+#include "tls.h"
 
 static int32_t BuildArrayFromList(HITLS_X509_List *list, HITLS_CERT_X509 **listArray, uint32_t *num)
 {
@@ -96,8 +97,7 @@ int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store
         BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_INVALID_TIME);
         return HITLS_CERT_SELF_ADAPT_INVALID_TIME;
     }
-    int32_t ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_TIME, &sysTime,
-        sizeof(sysTime));
+    int32_t ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_TIME, &sysTime, sizeof(sysTime));
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -110,7 +110,9 @@ int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-#endif
+#endif /* HITLS_CRYPTO_SM2 */
+    int32_t purpose = ctx->isClient ? HITLS_X509_VFY_PURPOSE_TLS_SERVER : HITLS_X509_VFY_PURPOSE_TLS_CLIENT;
+    HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PURPOSE, &purpose, sizeof(purpose));
 #ifdef HITLS_TLS_CONFIG_CERT_CALLBACK
     HITLS_VerifyCb verCb = NULL;
     ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_USR_DATA, ctx, sizeof(void *));
@@ -140,7 +142,6 @@ int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store
         HITLS_SetVerifyResult(ctx, x509Err != HITLS_SUCCESS ? x509Err : ret);
         BSL_ERR_PUSH_ERROR(ret);
     }
-
     return ret;
 }
 #endif /* defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER) */

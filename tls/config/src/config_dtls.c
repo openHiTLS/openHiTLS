@@ -34,10 +34,10 @@
 #include "config_default.h"
 #include "bsl_list.h"
 #include "rec.h"
+#include "cert_method.h"
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
 #include "hitls_cookie.h"
 #endif
-#include "cert_method.h"
 
 #ifdef HITLS_TLS_PROTO_DTLS12
 HITLS_Config *HITLS_CFG_NewDTLS12Config(void)

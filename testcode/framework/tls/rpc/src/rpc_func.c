@@ -73,6 +73,7 @@ RpcFunList g_rpcFuncList[] = {
     {"HLT_RpcTlsGetErrorCode", RpcTlsGetErrorCode},
     {"HLT_RpcDataChannelBind", RpcDataChannelBind},
     {"HLT_RpcTlsVerifyClientPostHandshake", RpcTlsVerifyClientPostHandshake},
+    {"HLT_RpcTlsWriteExportMaterial", RpcTlsWriteExportMaterial},
 };
 
 RpcFunList *GetRpcFuncList(void)
@@ -776,6 +777,79 @@ int RpcTlsGetErrorCode(CmdData *cmdData)
     errorCode = HLT_TlsGetErrorCode(ssl);
 
     int ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, errorCode);
+    ASSERT_RETURN(ret > 0);
+    return SUCCESS;
+}
+
+static uint8_t *Convert2Buf(char *buf, size_t *len)
+{
+    static uint8_t ret[MAX_EXPORT_MATERIAL_BUF] = {0};
+    memset_s(ret, MAX_EXPORT_MATERIAL_BUF, 0, MAX_EXPORT_MATERIAL_BUF);
+    if (strcmp(buf, "NULL") == 0) {
+        *len = 0;
+        return NULL;
+    }
+    for (size_t i = 0; i < strlen(buf) / 2; ++i) {
+        size_t tmpVal = 0;
+#if (__SIZEOF_SIZE_T__ == 8)
+        sscanf(&buf[i * 2], "%02lx", &tmpVal);
+#else
+        sscanf(&buf[i * 2], "%02x", &tmpVal);
+#endif
+        ret[i] = tmpVal;
+    }
+    *len = strlen(buf) / 2;
+    return ret;
+}
+
+static void Convert2Data(const char *buf, ExportMaterialParam *data)
+{
+#if (__SIZEOF_SIZE_T__ == 8)
+    sscanf(buf, "outLen=%lu label=%s labelLen=%lu context=%s contextLen=%lu useContext=%d",
+        &data->outLen, data->label, &data->labelLen,
+        data->context, &data->contextLen, &data->useContext);
+#else
+    sscanf(buf, "outLen=%u label=%s labelLen=%u context=%s contextLen=%u useContext=%d",
+        &data->outLen, data->label, &data->labelLen,
+        data->context, &data->contextLen, &data->useContext);
+#endif
+
+    size_t len = 0;
+    uint8_t *value = Convert2Buf(data->label, &len);
+    if (value != NULL) {
+        memset_s(data->label, MAX_EXPORT_MATERIAL_BUF, 0, MAX_EXPORT_MATERIAL_BUF);
+        memcpy_s(data->label, MAX_EXPORT_MATERIAL_BUF, value, len);
+    }
+    value = Convert2Buf(data->context, &len);
+    if (value != NULL) {
+        memset_s(data->context, MAX_EXPORT_MATERIAL_BUF, 0, MAX_EXPORT_MATERIAL_BUF);
+        memcpy_s(data->context, MAX_EXPORT_MATERIAL_BUF, value, len);
+    }
+    return;
+}
+
+int RpcTlsWriteExportMaterial(CmdData *cmdData)
+{
+    int ret;
+    (void)memset_s(cmdData->result, sizeof(cmdData->result), 0, sizeof(cmdData->result));
+
+    ResList *sslList = GetSslList();
+    int sslId = atoi((char *)cmdData->paras[0]);
+    void *ssl = GetTlsResFromId(sslList, sslId);
+    if (ssl == NULL) {
+        LOG_ERROR("Not Find Ssl");
+        ret = ERROR;
+        goto ERR;
+    }
+    ExportMaterialParam param = {0};
+    Convert2Data((char *)cmdData->paras[1], &param);
+    ret =  HLT_TLSWriteExportMaterial(ssl, &param);
+    ret = sprintf_s((char *)cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ret);
+    ASSERT_RETURN(ret > 0);
+    return SUCCESS;
+ERR:
+    // Return the result
+    ret = sprintf_s((char *)cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ret);
     ASSERT_RETURN(ret > 0);
     return SUCCESS;
 }

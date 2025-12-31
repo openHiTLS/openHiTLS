@@ -71,14 +71,12 @@ void RecBufFree(RecBuf *buf)
         }
         BSL_SAL_FREE(buf);
     }
-    return;
 }
 
 void RecBufClean(RecBuf *buf)
 {
     buf->start = 0;
     buf->end = 0;
-    return;
 }
 
 RecBufList *RecBufListNew(void)

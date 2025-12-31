@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#define MAX_MASTER_KEY_SIZE 512u
+#define MAX_MASTER_KEY_SIZE 512u        /* <= tls1.2 master keyis 48 bytes. TLS1.3 can be to 256 bytes. */
 
 /* Increments the reference count for session */
 void HITLS_SESS_UpRef(HITLS_Session *sess);
@@ -66,7 +66,6 @@ int32_t SESS_SetStartTime(HITLS_Session *sess, uint64_t startTime);
 int32_t SESS_SetTicketAgeAdd(HITLS_Session *sess, uint32_t ticketAgeAdd);
 
 uint32_t SESS_GetTicketAgeAdd(const HITLS_Session *sess);
-
 #ifdef __cplusplus
 }
 #endif

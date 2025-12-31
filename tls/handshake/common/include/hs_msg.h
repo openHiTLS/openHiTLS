@@ -28,7 +28,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+#define UINT24_SIZE 3u
 #define HS_MSG_HEADER_SIZE 4u
 #define DTLS_HS_MSG_HEADER_SIZE 12u
 #define HS_RANDOM_SIZE 32u
@@ -115,6 +115,7 @@ typedef struct {
     uint16_t signatureAlgorithmsCertSize;
     uint16_t alpnListSize; /* application-layer protocol negotiation list len */
     uint16_t serverNameSize;
+    uint16_t recordSizeLimit;
     uint8_t pointFormatsSize;
     uint8_t serverNameType;    /* Type of the parsed serverName. */
     uint8_t secRenegoInfoSize; /* Length of the security renegotiation information */
@@ -153,6 +154,7 @@ typedef struct {
     bool haveSecRenego;      /* Whether security renegotiation exists. */
     bool haveTicket;         /* Indicates whether a ticket is available. */
     bool haveEncryptThenMac; /* Indicates whether EncryptThenMac is supported. */
+    bool haveRecordSizeLimit;
 } ExtensionFlag;
 
 typedef struct {
@@ -200,6 +202,7 @@ typedef struct {
     uint16_t supportedVersion;
     uint16_t cookieLen;
     uint16_t selectedIdentity; /* TLS 1.3 psk required */
+    uint16_t recordSizeLimit;
     uint8_t sessionIdSize;
     uint8_t pointFormatsSize;
     uint8_t secRenegoInfoSize; /* Length of the security renegotiation information */
@@ -215,6 +218,7 @@ typedef struct {
     bool haveSecRenego;
     bool haveTicket;
     bool haveEncryptThenMac;
+    bool haveRecordSizeLimit;
     bool reserved[2]; /* Four-byte alignment */
 } ServerHelloMsg;
 
@@ -337,6 +341,7 @@ typedef struct {
 typedef struct {
     uint16_t *supportedGroups;
     uint16_t supportedGroupsSize;
+    uint16_t recordSizeLimit;
     uint16_t alpnSelectedSize; /* selected alpn protocol length */
     uint8_t *alpnSelected; /* selected alpn protocol */
     uint64_t extensionTypeMask;
@@ -344,6 +349,7 @@ typedef struct {
     bool haveSupportedGroups;
     bool haveEarlyData;
     bool haveServerName;
+    bool haveRecordSizeLimit;
     bool haveSelectedAlpn;
 } EncryptedExtensions;
 

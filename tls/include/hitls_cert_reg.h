@@ -36,7 +36,7 @@ extern "C" {
  *
  * @param   void
  *
- * @retval  Certificate store
+ * @return  Certificate store, the memory is released using CERT_StoreFreeCallBack.
  */
 typedef HITLS_CERT_Store *(*CERT_StoreNewCallBack)(void);
 
@@ -46,7 +46,7 @@ typedef HITLS_CERT_Store *(*CERT_StoreNewCallBack)(void);
  *
  * @param   store [IN] Certificate store.
  *
- * @retval  New certificate store.
+ * @return  New certificate store, the memory is released using CERT_StoreFreeCallBack.
  */
 typedef HITLS_CERT_Store *(*CERT_StoreDupCallBack)(HITLS_CERT_Store *store);
 
@@ -56,7 +56,7 @@ typedef HITLS_CERT_Store *(*CERT_StoreDupCallBack)(HITLS_CERT_Store *store);
  *
  * @param   store [IN] Certificate store.
  *
- * @retval  void
+ * @return  void
  */
 typedef void (*CERT_StoreFreeCallBack)(HITLS_CERT_Store *store);
 
@@ -70,7 +70,7 @@ typedef void (*CERT_StoreFreeCallBack)(HITLS_CERT_Store *store);
  * @param   input [IN] Input.
  * @param   output [IN] Output.
  *
- * @retval  HITLS_SUCCESS indicates success. Other values are considered as failure.
+ * @return  HITLS_SUCCESS indicates success. Other values are considered as failure.
  */
 typedef int32_t (*CERT_StoreCtrlCallBack)(HITLS_Config *config, HITLS_CERT_Store *store, HITLS_CERT_CtrlCmd cmd,
     void *input, void *output);
@@ -78,18 +78,17 @@ typedef int32_t (*CERT_StoreCtrlCallBack)(HITLS_Config *config, HITLS_CERT_Store
 /**
  * @ingroup hitls_cert_reg
  * @brief   Create a certificate chain based on the device certificate in use.
- *
  * @attention If the function is successful, the certificate in the certificate chain is managed by the HiTLS,
- *            and the user does not need to release the memory. Otherwise, the certificate chain is an empty pointer
- *            array.
+ * and the user does not need to release the memory. Otherwise, the certificate chain is an empty pointer array.
+ *
  * @param   config [IN] TLS link configuration
  * @param   store [IN] Certificate store
  * @param   cert [IN] Device certificate
  * @param   certList [OUT] Certificate chain, which is a pointer array. Each element indicates a certificate.
- *                         The first element is the device certificate.
+ *  The first element is the device certificate.
  * @param   num [IN/OUT] IN: maximum length of the certificate chain OUT: length of the certificate chain
  *
- * @retval  HITLS_SUCCESS indicates success. Other values are considered as failure.
+ * @return  HITLS_SUCCESS indicates success. Other values are considered as failure.
  */
 typedef int32_t (*CERT_BuildCertChainCallBack)(HITLS_Config *config, HITLS_CERT_Store *store, HITLS_CERT_X509 *cert,
     HITLS_CERT_X509 **certList, uint32_t *num);
@@ -104,7 +103,7 @@ typedef int32_t (*CERT_BuildCertChainCallBack)(HITLS_Config *config, HITLS_CERT_
  * The first element indicates the device certificate.
  * @param   num [IN] Certificate chain length.
  *
- * @retval  HITLS_SUCCESS indicates success. Other values are considered as failure.
+ * @return  HITLS_SUCCESS indicates success. Other values are considered as failure.
  */
 typedef int32_t (*CERT_VerifyCertChainCallBack)(HITLS_Ctx *ctx, HITLS_CERT_Store *store,
     HITLS_CERT_X509 **certList, uint32_t num);
@@ -119,7 +118,7 @@ typedef int32_t (*CERT_VerifyCertChainCallBack)(HITLS_Ctx *ctx, HITLS_CERT_Store
  * @param   len [IN] Maximum encoding length.
  * @param   usedLen [OUT] Actual encoding length.
  *
- * @retval  HITLS_SUCCESS indicates success. Other values are considered as failure.
+ * @return  HITLS_SUCCESS indicates success. Other values are considered as failure.
  */
 typedef int32_t (*CERT_CertEncodeCallBack)(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint8_t *buf, uint32_t len,
     uint32_t *usedLen);
@@ -127,7 +126,6 @@ typedef int32_t (*CERT_CertEncodeCallBack)(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert
 /**
  * @ingroup hitls_cert_reg
  * @brief   Read the certificate.
- *
  * @attention If the data is loaded to config, config points to the TLS configuration.
  * If the data is loaded to the TLS object, the config command is used only for a single link.
  *
@@ -137,7 +135,7 @@ typedef int32_t (*CERT_CertEncodeCallBack)(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert
  * @param   type [IN] Parsing type.
  * @param   format [IN] Data format.
  *
- * @retval  Certificate
+ * @return  Certificate
  */
 typedef HITLS_CERT_X509 *(*CERT_CertParseCallBack)(HITLS_Config *config, const uint8_t *buf, uint32_t len,
     HITLS_ParseType type, HITLS_ParseFormat format);
@@ -148,7 +146,7 @@ typedef HITLS_CERT_X509 *(*CERT_CertParseCallBack)(HITLS_Config *config, const u
  *
  * @param   cert [IN] Certificate
  *
- * @retval  New certificate
+ * @return  New certificate, the memory is released using CERT_CertFreeCallBack.
  */
 typedef HITLS_CERT_X509 *(*CERT_CertDupCallBack)(HITLS_CERT_X509 *cert);
 
@@ -158,7 +156,7 @@ typedef HITLS_CERT_X509 *(*CERT_CertDupCallBack)(HITLS_CERT_X509 *cert);
  *
  * @param   cert [IN] Certificate
  *
- * @retval  certificate
+ * @return certificate, the memory is released using CERT_CertFreeCallBack.
  */
 typedef HITLS_CERT_X509 *(*CERT_CertRefCallBack)(HITLS_CERT_X509 *cert);
 
@@ -168,7 +166,7 @@ typedef HITLS_CERT_X509 *(*CERT_CertRefCallBack)(HITLS_CERT_X509 *cert);
  *
  * @param   cert [IN] Certificate
  *
- * @retval  void
+ * @return  void
  */
 typedef void (*CERT_CertFreeCallBack)(HITLS_CERT_X509 *cert);
 
@@ -182,7 +180,7 @@ typedef void (*CERT_CertFreeCallBack)(HITLS_CERT_X509 *cert);
  * @param   input [IN] Input
  * @param   output [IN] Output
  *
- * @retval  HITLS_SUCCESS indicates success. Other values are considered as failure.
+ * @return  HITLS_SUCCESS indicates success. Other values are considered as failure.
  */
 typedef int32_t (*CERT_CertCtrlCallBack)(HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CERT_CtrlCmd cmd,
     void *input, void *output);
@@ -199,7 +197,7 @@ typedef int32_t (*CERT_CertCtrlCallBack)(HITLS_Config *config, HITLS_CERT_X509 *
  * @param   type [IN] Parsing type
  * @param   format [IN] Data format
  *
- * @retval  Certificate key
+ * @return  Certificate key
  */
 typedef HITLS_CERT_Key *(*CERT_KeyParseCallBack)(HITLS_Config *config, const uint8_t *buf, uint32_t len,
     HITLS_ParseType type, HITLS_ParseFormat format);
@@ -210,7 +208,7 @@ typedef HITLS_CERT_Key *(*CERT_KeyParseCallBack)(HITLS_Config *config, const uin
  *
  * @param   key [IN] Certificate key
  *
- * @retval  New certificate key
+ * @return  New certificate key, the memory is released using CERT_KeyFreeCallBack.
  */
 typedef HITLS_CERT_Key *(*CERT_KeyDupCallBack)(HITLS_CERT_Key *key);
 
@@ -220,7 +218,7 @@ typedef HITLS_CERT_Key *(*CERT_KeyDupCallBack)(HITLS_CERT_Key *key);
  *
  * @param   key [IN] Certificate key
  *
- * @retval  void
+ * @return  void
  */
 typedef void (*CERT_KeyFreeCallBack)(HITLS_CERT_Key *key);
 
@@ -234,7 +232,7 @@ typedef void (*CERT_KeyFreeCallBack)(HITLS_CERT_Key *key);
  * @param   input [IN] Input.
  * @param   output [IN] Output.
  *
- * @retval  HITLS_SUCCESS indicates success. Other values are considered as failure.
+ * @return  HITLS_SUCCESS indicates success. Other values are considered as failure.
  */
 typedef int32_t (*CERT_KeyCtrlCallBack)(HITLS_Config *config, HITLS_CERT_Key *key, HITLS_CERT_CtrlCmd cmd,
     void *input, void *output);
@@ -252,7 +250,7 @@ typedef int32_t (*CERT_KeyCtrlCallBack)(HITLS_Config *config, HITLS_CERT_Key *ke
  * @param   sign [OUT] Signature
  * @param   signLen [IN/OUT] IN: maximum signature length OUT: actual signature length
  *
- * @retval  HITLS_SUCCESS indicates success. Other values are considered as failure.
+ * @return  HITLS_SUCCESS indicates success. Other values are considered as failure.
  */
 typedef int32_t (*CERT_CreateSignCallBack)(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_SignAlgo signAlgo,
     HITLS_HashAlgo hashAlgo, const uint8_t *data, uint32_t dataLen, uint8_t *sign, uint32_t *signLen);
@@ -270,7 +268,7 @@ typedef int32_t (*CERT_CreateSignCallBack)(HITLS_Ctx *ctx, HITLS_CERT_Key *key, 
  * @param   sign [IN] Signature
  * @param   signLen [IN] Signature length
  *
- * @retval  HITLS_SUCCESS indicates success. Other values are considered as failure.
+ * @return  HITLS_SUCCESS indicates success. Other values are considered as failure.
  */
 typedef int32_t (*CERT_VerifySignCallBack)(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_SignAlgo signAlgo,
     HITLS_HashAlgo hashAlgo, const uint8_t *data, uint32_t dataLen, const uint8_t *sign, uint32_t signLen);
@@ -286,7 +284,7 @@ typedef int32_t (*CERT_VerifySignCallBack)(HITLS_Ctx *ctx, HITLS_CERT_Key *key, 
  * @param   out [OUT] Ciphertext.
  * @param   outLen [IN/OUT] IN: maximum ciphertext length OUT: actual ciphertext length.
  *
- * @retval  HITLS_SUCCESS indicates success. Other values are considered as failure.
+ * @return  HITLS_SUCCESS indicates success. Other values are considered as failure.
  */
 typedef int32_t (*CERT_EncryptCallBack)(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen);
@@ -302,7 +300,7 @@ typedef int32_t (*CERT_EncryptCallBack)(HITLS_Ctx *ctx, HITLS_CERT_Key *key, con
  * @param   out [OUT] Plaintext.
  * @param   outLen [IN/OUT] IN: maximum plaintext length OUT: actual plaintext length.
  *
- * @retval  HITLS_SUCCESS indicates success. Other values are considered as failure.
+ * @return  HITLS_SUCCESS indicates success. Other values are considered as failure.
  */
 typedef int32_t (*CERT_DecryptCallBack)(HITLS_Ctx *ctx, HITLS_CERT_Key *key, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen);
@@ -315,10 +313,14 @@ typedef int32_t (*CERT_DecryptCallBack)(HITLS_Ctx *ctx, HITLS_CERT_Key *key, con
  * @param   cert [IN] Certificate.
  * @param   key [IN] Private key.
  *
- * @retval  HITLS_SUCCESS indicates success. Other values are considered as failure.
+ * @return  HITLS_SUCCESS indicates success. Other values are considered as failure.
  */
-typedef int32_t (*CERT_CheckPrivateKeyCallBack)(const HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CERT_Key *key);
+typedef int32_t (*CERT_CheckPrivateKeyCallBack)(HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CERT_Key *key);
 
+/**
+ * @ingroup hitls_cert_reg
+ * @brief Structure for certificate management methods
+ */
 typedef struct {
     CERT_StoreNewCallBack certStoreNew;             /**< REQUIRED, Creating a certificate store. */
     CERT_StoreDupCallBack certStoreDup;             /**< REQUIRED, duplicate certificate store. */
@@ -330,7 +332,7 @@ typedef struct {
     CERT_CertEncodeCallBack certEncode;             /**< REQUIRED, certificate encode. */
     CERT_CertParseCallBack certParse;               /**< REQUIRED, certificate decoding. */
     CERT_CertDupCallBack certDup;                   /**< REQUIRED, duplicate the certificate. */
-    CERT_CertRefCallBack certRef;                   /**< OPTIONAL, Certificate reference counting plus one. */
+    CERT_CertRefCallBack certRef;                   /**< REQUIRED, Certificate reference counting plus one. */
     CERT_CertFreeCallBack certFree;                 /**< REQUIRED, release certificate. */
     CERT_CertCtrlCallBack certCtrl;                 /**< REQUIRED, certificate interface ctrl. */
 
@@ -372,10 +374,12 @@ void HITLS_CERT_DeinitMgrMethod(void);
  * @brief   Register the private key with the config file and certificate matching Check Interface.
  *
  * @param   config [IN/OUT] Config context
- * @param   checkPrivateKey API registration
+ *
+ * @param   checkPrivateKey [IN] API registration
  * @retval  HITLS_SUCCESS.
  * @retval  For other error codes, see hitls_error.h.
 */
+
 int32_t HITLS_CFG_SetCheckPriKeyCb(HITLS_Config *config, CERT_CheckPrivateKeyCallBack checkPrivateKey);
 
 /**
@@ -385,7 +389,7 @@ int32_t HITLS_CFG_SetCheckPriKeyCb(HITLS_Config *config, CERT_CheckPrivateKeyCal
  * @param   config [IN]  Config context
  *
  * @retval  The interface for checking whether the registered private key matches the certificate is returned.
- *          If the registered private key does not match the certificate, NULL is returned.
+ * If the registered private key does not match the certificate, NULL is returned.
  */
 CERT_CheckPrivateKeyCallBack HITLS_CFG_GetCheckPriKeyCb(HITLS_Config *config);
 
@@ -393,7 +397,7 @@ CERT_CheckPrivateKeyCallBack HITLS_CFG_GetCheckPriKeyCb(HITLS_Config *config);
  * @ingroup hitls_cert_reg
  * @brief   Get certificate callback function
  *
- * @retval Cert callback function
+ * @return Cert callback function
  */
 HITLS_CERT_MgrMethod *HITLS_CERT_GetMgrMethod(void);
 

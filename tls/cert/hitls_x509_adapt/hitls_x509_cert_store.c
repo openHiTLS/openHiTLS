@@ -21,10 +21,13 @@
 #include "hitls_cert_type.h"
 #include "hitls_type.h"
 #include "hitls_pki_x509.h"
+#ifdef HITLS_TLS_CONFIG_CERT_CRL
 #include "hitls_pki_crl.h"
+#endif
 #include "hitls_cert_local.h"
 #include "hitls_error.h"
 #include "hitls_x509_adapt.h"
+#include "cert.h"
 
 HITLS_CERT_Store *HITLS_X509_Adapt_StoreDup(HITLS_CERT_Store *store)
 {
@@ -38,6 +41,26 @@ HITLS_CERT_Store *HITLS_X509_Adapt_StoreDup(HITLS_CERT_Store *store)
 
     return store;
 }
+#ifdef HITLS_TLS_CONFIG_CERT_CRL
+static int32_t AddCrlList(HITLS_CERT_Store *store, void *input)
+{
+    /* Input is a HITLS_CERT_CRLList (BSL_LIST), need to iterate and add each CRL */
+    HITLS_CERT_CRLList *crlList = (HITLS_CERT_CRLList *)input;
+    if (crlList == NULL) {
+        return HITLS_CERT_STORE_CTRL_ERR_ADD_CRL_LIST;
+    }
+    HITLS_X509_Crl *tempCrl = (HITLS_X509_Crl *)BSL_LIST_GET_FIRST(crlList);
+    while (tempCrl != NULL) {
+        int32_t ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_CRL, tempCrl, 0);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+        tempCrl = (HITLS_X509_Crl *)BSL_LIST_GET_NEXT(crlList);
+    }
+
+    return HITLS_SUCCESS;
+}
+#endif
 
 int32_t HITLS_X509_Adapt_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store, HITLS_CERT_CtrlCmd cmd,
     void *input, void *output)
@@ -69,27 +92,15 @@ int32_t HITLS_X509_Adapt_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store
         case CERT_STORE_CTRL_ADD_CERT_LIST:
             return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SHALLOW_COPY_SET_CA, input,
                 sizeof(HITLS_X509_Cert));
-        case CERT_STORE_CTRL_ADD_CRL_LIST: {
-            /* Input is a HITLS_CERT_CRLList (BSL_LIST), need to iterate and add each CRL */
-            HITLS_CERT_CRLList *crlList = (HITLS_CERT_CRLList *)input;
-            if (crlList == NULL) {
-                return HITLS_CERT_STORE_CTRL_ERR_ADD_CRL_LIST;
-            }
-            HITLS_X509_Crl *tempCrl = (HITLS_X509_Crl *)BSL_LIST_GET_FIRST(crlList);
-            while (tempCrl != NULL) {
-                ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_CRL, tempCrl, 0);
-                if (ret != CRYPT_SUCCESS) {
-                    return ret;
-                }
-                tempCrl = (HITLS_X509_Crl *)BSL_LIST_GET_NEXT(crlList);
-            }
-            return HITLS_SUCCESS;
-        }
-        case CERT_STORE_CTRL_CLEAR_CRL_LIST:
-            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLEAR_CRL, NULL, 0);
         case CERT_STORE_CTRL_ADD_CA_PATH:
             return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_ADD_CA_PATH, input, strlen(input));
-        case CERT_STORE_CTRL_SET_DEFAULT_PATH:
+#ifdef HITLS_TLS_CONFIG_CERT_CRL
+        case CERT_STORE_CTRL_ADD_CRL_LIST:
+            return AddCrlList(store, input);
+        case CERT_STORE_CTRL_CLEAR_CRL_LIST:
+            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_CLEAR_CRL, NULL, 0);
+#endif
+		case CERT_STORE_CTRL_SET_DEFAULT_PATH:
             return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_DEFAULT_PATH, NULL, 0);
         default:
             return HITLS_CERT_SELF_ADAPT_ERR;

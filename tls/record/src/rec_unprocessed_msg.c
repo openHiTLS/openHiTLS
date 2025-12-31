@@ -47,7 +47,6 @@ void CacheNextEpochHsMsg(UnprocessedHsMsg *unprocessedHsMsg, const RecHdr *hdr, 
     (void)memcpy_s(&unprocessedHsMsg->hdr, sizeof(RecHdr), hdr, sizeof(RecHdr));
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15446, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN,
         "cache next epoch hs msg", 0, 0, 0, 0);
-    return;
 }
 #endif /* HITLS_BSL_UIO_UDP */
 
@@ -68,7 +67,6 @@ void UnprocessedAppMsgFree(UnprocessedAppMsg *msg)
         BSL_SAL_FREE(msg->recordBody);
         BSL_SAL_FREE(msg);
     }
-    return;
 }
 
 void UnprocessedAppMsgListInit(UnprocessedAppMsg *appMsgList)
@@ -79,7 +77,6 @@ void UnprocessedAppMsgListInit(UnprocessedAppMsg *appMsgList)
     appMsgList->count = 0;
     appMsgList->recordBody = NULL;
     LIST_INIT(&appMsgList->head);
-    return;
 }
 
 void UnprocessedAppMsgListDeinit(UnprocessedAppMsg *appMsgList)
@@ -95,7 +92,6 @@ void UnprocessedAppMsgListDeinit(UnprocessedAppMsg *appMsgList)
         UnprocessedAppMsgFree(cur);
     }
     appMsgList->count = 0;
-    return;
 }
 
 int32_t UnprocessedAppMsgListAppend(UnprocessedAppMsg *appMsgList, const RecHdr *hdr, const uint8_t *recordBody)

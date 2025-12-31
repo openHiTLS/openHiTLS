@@ -41,13 +41,6 @@ typedef struct {
     const char *attrName;
 } CRYPT_KeyDeriveParameters;
 
-enum HITLS_CryptInfoCmd {
-    HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN = 0, /* Get the length of the public key, param is HITLS_NamedGroup */
-    HITLS_CRYPT_INFO_CMD_GET_SHARED_KEY_LEN,     /* Get the length of the shared key, param is HITLS_NamedGroup */
-    HITLS_CRYPT_INFO_CMD_GET_CIPHERTEXT_LEN,     /* Get the length of the ciphertext, param is HITLS_NamedGroup */
-    HITLS_CRYPT_INFO_CMD_GET_HASH_LEN,           /* Get the length of the hash, param is HITLS_HashAlgo */
-};
-
 enum HITLS_CryptoCallBack {
     HITLS_CRYPT_CALLBACK_RAND_BYTES = 0,
     HITLS_CRYPT_CALLBACK_HMAC_SIZE,
@@ -174,11 +167,11 @@ int32_t SAL_CRYPT_HmacFinal(HITLS_HMAC_Ctx *hmac, uint8_t *out, uint32_t *len);
 /**
  * @brief HMAC function
  *
- * This function calculates the HMAC (Hash-based Message Authentication Code) using the specified hash algorithm and key.
- * It takes input data and produces an output HMAC value.
+ * This function calculates the HMAC (Hash-based Message Authentication Code) using the specified hash algorithm and
+ * key. It takes input data and produces an output HMAC value.
  *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
- * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic
  *                      algorithm provided by the algorithm provider
  * @param hashAlgo   [IN] Hash algorithm to be used in the HMAC operation, e.g., HITLS_SHA256.
  * @param key        [IN] Secret key used for HMAC calculation.
@@ -225,7 +218,7 @@ uint32_t SAL_CRYPT_DigestSize(HITLS_HashAlgo hashAlgo);
  * This function initializes a new hash context using the specified hash algorithm.
  *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
- * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic
  *                        algorithm provided by the algorithm provider
  * @param hashAlgo   [IN] hash algorithm
  *                   The hash algorithm to be used for the calculation. This can be
@@ -287,7 +280,7 @@ int32_t SAL_CRYPT_DigestFinal(HITLS_HASH_Ctx *ctx, uint8_t *out, uint32_t *len);
  * It takes input data and produces an output hash value.
  *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
- * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic
  *                    algorithm provided by the algorithm provider
  * @param hashAlgo   [IN] hash algorithm
  *                   The hash algorithm to be used for the calculation. This can be
@@ -314,7 +307,7 @@ int32_t SAL_CRYPT_Digest(HITLS_Lib_Ctx *libCtx, const char *attrName,
  * @brief Encryption
  *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
- * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic
  *                      algorithm provided by the algorithm provider
  * @param cipher [IN] Key parameters
  * @param in     [IN] Plaintext data
@@ -332,9 +325,9 @@ int32_t SAL_CRYPT_Encrypt(HITLS_Lib_Ctx *libCtx, const char *attrName,
 
 /**
  * @brief Decrypt
- * 
+ *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
- * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic
  *                      algorithm provided by the algorithm provider
  * @param cipher [IN] Key parameters
  * @param in     [IN] Ciphertext data
@@ -391,7 +384,7 @@ int32_t SAL_CRYPT_EncodeEcdhPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uin
  * @brief Calculate the ECDH shared key.
  *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
- * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic
  *                      algorithm provided by the algorithm provider
  * @param key               [IN] Local key handle
  * @param peerPubkey        [IN] Peer public key data
@@ -411,7 +404,7 @@ int32_t SAL_CRYPT_CalcEcdhSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrNa
  * @brief SM2 calculates the ECDH shared key.
  *
  * @param libCtx            [IN] Library context, used to manage cryptographic operations.
- * @param attrName          [IN] Attribute name, used to configure the cryptographic 
+ * @param attrName          [IN] Attribute name, used to configure the cryptographic
  *                              algorithm provided by the algorithm provider
  * @param sm2ShareKeyParam  [IN] Parameters required for calculating the shared key
  * @param sharedSecret      [OUT] Shared key
@@ -427,7 +420,7 @@ int32_t SAL_CRYPT_CalcSm2dhSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrN
 
 /**
  * @brief Generate a DH key pair.
- * 
+ *
  * @param ctx      [IN] TLS context
  * @param secbits  [IN] Key security level
  *
@@ -440,7 +433,7 @@ HITLS_CRYPT_Key *SAL_CRYPT_GenerateDhKeyBySecbits(TLS_Ctx *ctx,
  * @brief Generate a DH key pair.
  *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
- * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic
  *                      algorithm provided by the algorithm provider
  * @param p          [IN] p Parameter
  * @param plen       [IN] p Parameter length
@@ -500,7 +493,7 @@ int32_t SAL_CRYPT_EncodeDhPubKey(HITLS_CRYPT_Key *key, uint8_t *pubKeyBuf, uint3
  * @brief Calculate the DH shared key.
  *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
- * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic
  *                      algorithm provided by the algorithm provider
  * @param key                [IN] Local key handle
  * @param peerPubkey         [IN] Peer public key data
@@ -520,7 +513,7 @@ int32_t SAL_CRYPT_CalcDhSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName
  * @brief HKDF-Extract
  *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
- * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic
  *                      algorithm provided by the algorithm provider
  * @param input      [IN] Input key material
  * @param prk        [OUT] Output key
@@ -537,7 +530,7 @@ int32_t SAL_CRYPT_HkdfExtract(HITLS_Lib_Ctx *libCtx, const char *attrName,
  * @brief   HKDF-Expand
  *
  * @param libCtx     [IN] Library context, used to manage cryptographic operations.
- * @param attrName   [IN] Attribute name, used to configure the cryptographic 
+ * @param attrName   [IN] Attribute name, used to configure the cryptographic
  *                      algorithm provided by the algorithm provider
  * @param input      [IN] Input key material
  * @param okm        [OUT] Output key
@@ -560,21 +553,10 @@ int32_t SAL_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx, const char *attrName,
  * @retval HITLS_SUCCESS                succeeded.
  * @retval HITLS_UNREGISTERED_CALLBACK  Unregistered callback
  * @retval HITLS_CRYPT_ERR_HKDF_EXTRACT calculation fails.
- * @retval HITLS_MEMCPY_FAIL            Memory copy failure
+ * @retval HITLS_MEMCPY_FAIL            Memory Copy Failure
  */
 int32_t SAL_CRYPT_HkdfExpandLabel(CRYPT_KeyDeriveParameters *deriveInfo,
     uint8_t *outSecret, uint32_t outLen);
-
-/**
- * @brief   Get cryptographic information about length
- *
- * @param ctx   [IN] TLS context
- * @param cmd   [IN] Command type, see enum HITLS_CryptInfoCmd
- * @param param [IN] Input parameter
- *
- * @return Returns key length and other info, returns 0 on failure
- */
-uint32_t SAL_CRYPT_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param);
 
 /**
  * @brief Encapsulate a shared secret using KEM

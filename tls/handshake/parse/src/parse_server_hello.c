@@ -99,7 +99,8 @@ int32_t ParseServerHello(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_M
         return ret;
     }
 
-    /* If the buf length is equal to the offset length, return HITLS_SUCCESS. */
+    /* If the buf length is equal to the offset length, success is returned, ssl3.0 does not resolve the extension, and
+     * if there are any extensions, ignore them */
     if (bufLen == bufOffset) {
         // ServerHello is optionally followed by extension data
         return HITLS_SUCCESS;
@@ -117,7 +118,5 @@ void CleanServerHello(ServerHelloMsg *msg)
     BSL_SAL_FREE(msg->sessionId);
 
     CleanServerHelloExtension(msg);
-
-    return;
 }
 #endif /* HITLS_TLS_HOST_CLIENT */

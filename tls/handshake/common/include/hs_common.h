@@ -44,6 +44,13 @@ extern "C" {
 #define HITLS_FINISHED_MAX_SIZE             64
 #define HITLS_HELLO_REQUEST_MAX_SIZE        0
 
+enum HITLS_CryptInfoCmd {
+    HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN = 0, /* Get the length of the public key, param is HITLS_NamedGroup */
+    HITLS_CRYPT_INFO_CMD_GET_SHARED_KEY_LEN,     /* Get the length of the shared key, param is HITLS_NamedGroup */
+    HITLS_CRYPT_INFO_CMD_GET_CIPHERTEXT_LEN,     /* Get the length of the ciphertext, param is HITLS_NamedGroup */
+    HITLS_CRYPT_INFO_CMD_GET_HASH_LEN,           /* Get the length of the hash, param is HITLS_HashAlgo */
+};
+
 /**
 * @brief Obtain the random number of the hello retry request.
 *
@@ -232,6 +239,27 @@ uint32_t HS_GetExtensionTypeId(uint32_t hsExtensionsType);
 
 int32_t HS_CheckReceivedExtension(HITLS_Ctx *ctx, HS_MsgType hsType, uint64_t hsMsgExtensionsMask,
     uint64_t hsMsgAllowedExtensionsMask);
+
+
+/**
+ * @brief   Get cryptographic information about length
+ *
+ * @param ctx   [IN] TLS context
+ * @param cmd   [IN] Command type, see enum HITLS_CryptInfoCmd
+ * @param param [IN] Input parameter
+ *
+ * @return Returns key length and other info, returns 0 on failure
+ */
+uint32_t HS_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param);
+
+/**
+ * @brief   get cert key type based on signScheme
+ *
+ * @param   signScheme [IN] signature algorithm
+ *
+ * @retval  cert key type
+ */
+HITLS_CERT_KeyType HS_SignScheme2CertKeyType(const HITLS_Ctx *ctx, HITLS_SignHashAlgo signScheme);
 
 #ifdef __cplusplus
 }

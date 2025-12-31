@@ -80,16 +80,6 @@ int32_t HS_ResumeKeyEstablish(TLS_Ctx *ctx);
 uint32_t HS_GetState(const TLS_Ctx *ctx);
 
 /**
- * @brief Obtain the version number. If the version number is not negotiated, the latest version
- * supported by the local is returned.
- *
- * @param ctx [IN] TLS context
- *
- * @return Return the version number.
- */
-uint32_t HS_GetVersion(const TLS_Ctx *ctx);
-
-/**
  * @brief Obtain the handshake status character string.
  *
  * @param state [IN] Handshake status
@@ -155,7 +145,7 @@ int32_t HS_CheckPostHandshakeAuth(TLS_Ctx *ctx);
 
 #define TLS_IS_FIRST_HANDSHAKE(ctx) ((ctx)->negotiatedInfo.clientVerifyDataSize == 0 \
                                     || (ctx)->negotiatedInfo.serverVerifyDataSize == 0)
-
+                                    
 #ifdef __cplusplus
 }
 #endif

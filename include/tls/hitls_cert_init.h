@@ -17,7 +17,6 @@
  * @ingroup  hitls
  * @brief    TLS certificate abstraction layer initialization
  */
-
 #ifndef HITLS_CERT_INIT_H
 #define HITLS_CERT_INIT_H
 
@@ -29,20 +28,19 @@ extern "C" {
 
 /**
  * @ingroup hitls_cert_init
- * @brief   Certificate initialization interface, default use the HITLS X509 interface.
  *
- * @attention If HITLS X509 not be used, do not need to call this interface.
+ * @brief   Certificate initialization interface, default use the HITLS X509 interface.
  * @param   NA
- * @retval  void
+ * @return  void
  */
 int32_t HITLS_CertMethodInit(void);
 
 /**
  * @ingroup hitls_cert_init
- * @brief   Deinitialize the certificate, set the certificate registration interface to NULL.
  *
+ * @brief   Deinitialize the certificate, set the certificate registration interface to NULL.
  * @param   NA
- * @retval  void
+ * @return  void
  */
 void HITLS_CertMethodDeinit(void);
 

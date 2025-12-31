@@ -225,6 +225,7 @@ static int32_t UdpGetMtuOverhead(UdpParameters *parameters, int32_t size, uint8_
     return BSL_SUCCESS;
 }
 
+#ifdef HITLS_BSL_UIO_MTU_QUERY
 static int32_t UdpQueryMtu(UdpParameters *parameters, int32_t size, uint32_t *mtu)
 {
     if (mtu == NULL) {
@@ -288,6 +289,7 @@ static int32_t UdpIsMtuExceeded(UdpParameters *parameters, int32_t size, bool *e
 #endif
     return BSL_SUCCESS;
 }
+#endif /* HITLS_BSL_UIO_MTU_QUERY */
 
 static int32_t UdpGetFd(BSL_UIO *uio, int32_t size, int32_t *fd)
 {
@@ -330,10 +332,12 @@ int32_t UdpSocketCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
             }
         case BSL_UIO_UDP_GET_MTU_OVERHEAD:
             return UdpGetMtuOverhead(ctx, larg, parg);
+#ifdef HITLS_BSL_UIO_MTU_QUERY
         case BSL_UIO_UDP_QUERY_MTU:
             return UdpQueryMtu(ctx, larg, parg);
         case BSL_UIO_UDP_MTU_EXCEEDED:
             return UdpIsMtuExceeded(ctx, larg, parg);
+#endif /* HITLS_BSL_UIO_MTU_QUERY */
         case BSL_UIO_FLUSH:
             return BSL_SUCCESS;
         default:

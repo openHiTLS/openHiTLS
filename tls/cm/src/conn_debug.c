@@ -21,6 +21,14 @@
 #include "bsl_err_internal.h"
 #include "hitls_debug.h"
 
+/**
+ * @ingroup hitls_debug
+ * @brief Set the callback for prompt information.
+ * @param ctx [OUT] ctx context
+ * @param callback [IN] Callback function for prompting information
+ * @return HITLS_SUCCESS succeeded.
+ * For other error codes, see hitls_error.h.
+ */
 int32_t HITLS_SetInfoCb(HITLS_Ctx *ctx, HITLS_InfoCb callback)
 {
     if (ctx == NULL) {
@@ -31,6 +39,12 @@ int32_t HITLS_SetInfoCb(HITLS_Ctx *ctx, HITLS_InfoCb callback)
     return HITLS_SUCCESS;
 }
 
+/**
+ * @ingroup hitls_debug
+ * @brief Callback for obtaining information.
+ * @param ctx [IN] ctx context
+ * @return Callback function of the current information prompt
+ */
 HITLS_InfoCb HITLS_GetInfoCb(const HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
@@ -40,6 +54,14 @@ HITLS_InfoCb HITLS_GetInfoCb(const HITLS_Ctx *ctx)
     return ctx->config.tlsConfig.infoCb;
 }
 
+/**
+ * @ingroup hitls_debug
+ * @brief  Set the callback function for prompting information.
+ * @param  config [OUT] config Context
+ * @param  callback [IN] Client callback
+ * @return HITLS_SUCCESS succeeded.
+ *         For other error codes, see hitls_error.h.
+ */
 int32_t HITLS_CFG_SetInfoCb(HITLS_Config *config, HITLS_InfoCb callback)
 {
     /* support NULL callback */
@@ -51,6 +73,12 @@ int32_t HITLS_CFG_SetInfoCb(HITLS_Config *config, HITLS_InfoCb callback)
     return HITLS_SUCCESS;
 }
 
+/**
+ * @ingroup hitls_debug
+ * @brief  Callback function for obtaining information prompts
+ * @param  config [IN] config Context
+ * @return Callback function of the current information prompt
+ */
 HITLS_InfoCb HITLS_CFG_GetInfoCb(const HITLS_Config *config)
 {
     if (config == NULL) {
@@ -59,6 +87,14 @@ HITLS_InfoCb HITLS_CFG_GetInfoCb(const HITLS_Config *config)
     return config->infoCb;
 }
 
+/**
+ * @ingroup hitls_debug
+ * @brief Set the protocol message callback function.
+ * @param ctx [OUT] ctx context
+ * @param callback [IN] Protocol message callback function
+ * @return HITLS_SUCCESS succeeded.
+ * For details about other error codes, see hitls_error.h
+ */
 int32_t HITLS_SetMsgCb(HITLS_Ctx *ctx, HITLS_MsgCb callback)
 {
     if (ctx == NULL) {
@@ -68,6 +104,14 @@ int32_t HITLS_SetMsgCb(HITLS_Ctx *ctx, HITLS_MsgCb callback)
     return HITLS_CFG_SetMsgCb(&(ctx->config.tlsConfig), callback);
 }
 
+/**
+ * @ingroup hitls_debug
+ * @brief Set the protocol message callback function.
+ * @param config [OUT] config Context
+ * @param callback [IN] Protocol message callback
+ * @return HITLS_SUCCESS succeeded.
+ * For details about other error codes, see hitls_error.h
+ */
 int32_t HITLS_CFG_SetMsgCb(HITLS_Config *config, HITLS_MsgCb callback)
 {
     /* support NULL callback */
@@ -79,6 +123,14 @@ int32_t HITLS_CFG_SetMsgCb(HITLS_Config *config, HITLS_MsgCb callback)
     return HITLS_SUCCESS;
 }
 
+/**
+ * @ingroup hitls_debug
+ * @brief Set the parameters required by the protocol message callback function. arg
+ * @param ctx [OUT] ctx context
+ * @param arg [IN] Related parameters arg
+ * @return HITLS_SUCCESS succeeded.
+ * For details about other error codes, see hitls_error.h
+ */
 int32_t HITLS_SetMsgCbArg(HITLS_Ctx *ctx, void *arg)
 {
     if (ctx == NULL) {
@@ -88,6 +140,14 @@ int32_t HITLS_SetMsgCbArg(HITLS_Ctx *ctx, void *arg)
     return HITLS_CFG_SetMsgCbArg(&(ctx->config.tlsConfig), arg);
 }
 
+/**
+ * @ingroup hitls_debug
+ * @brief Set the parameters required by the protocol message callback function. arg
+ * @param config [OUT] config Context
+ * @param arg [IN] Related parameters arg
+ * @return HITLS_SUCCESS succeeded.
+ * For details about other error codes, see hitls_error.h
+ */
 int32_t HITLS_CFG_SetMsgCbArg(HITLS_Config *config, void *arg)
 {
     if (config == NULL) {

@@ -60,44 +60,32 @@ int32_t PackNewSessionTicket(const TLS_Ctx *ctx, PackPacket *pkt)
 int32_t Tls13PackNewSessionTicket(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     HS_Ctx *hsCtx = ctx->hsCtx;
+    uint32_t reserveLen = sizeof(uint32_t) * 2 + sizeof(uint8_t) + sizeof(uint64_t) +
+                          sizeof(uint16_t) + hsCtx->ticketSize;
+    int32_t ret = PackReserveBytes(pkt, reserveLen, NULL);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
 
     /* Pack ticket lifetime */
-    int32_t ret = PackAppendUint32ToBuf(pkt, hsCtx->ticketLifetimeHint);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
+    (void)PackAppendUint32ToBuf(pkt, hsCtx->ticketLifetimeHint);
 
     /* Pack ticket age add */
-    ret = PackAppendUint32ToBuf(pkt, hsCtx->ticketAgeAdd);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
+    (void)PackAppendUint32ToBuf(pkt, hsCtx->ticketAgeAdd);
 
     /* Pack ticket nonce length (1 byte) */
-    ret = PackAppendUint8ToBuf(pkt, sizeof(hsCtx->nextTicketNonce));
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
+    (void)PackAppendUint8ToBuf(pkt, sizeof(hsCtx->nextTicketNonce));
 
     /* Pack ticket nonce (8 bytes) */
-    ret = PackAppendUint64ToBuf(pkt, hsCtx->nextTicketNonce);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
+    (void)PackAppendUint64ToBuf(pkt, hsCtx->nextTicketNonce);
 
     /* Pack ticket length */
-    ret = PackAppendUint16ToBuf(pkt, (uint16_t)hsCtx->ticketSize);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
+    (void)PackAppendUint16ToBuf(pkt, (uint16_t)hsCtx->ticketSize);
 
     /* In TLS1.3, no empty new session ticket is sent
        because we ensure that hsCtx->ticketSize is not empty at the invoking point.
        Therefore, you do not need to check whether hsCtx->ticketSize is empty. */
-    ret = PackAppendDataToBuf(pkt, hsCtx->ticket, hsCtx->ticketSize);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
+    (void)PackAppendDataToBuf(pkt, hsCtx->ticket, hsCtx->ticketSize);
 
     /* Pack extensions length field */
     uint32_t extensionsLenPosition = 0u;

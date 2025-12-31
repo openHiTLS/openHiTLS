@@ -44,14 +44,12 @@ int32_t PackCertificateVerify(const TLS_Ctx *ctx, PackPacket *pkt)
         }
     }
 #endif
-
-    /* Pack signature data length */
+    /* Verify the data is the signature data. The maximum length of the signature data is 1024 bytes */
     ret = PackAppendUint16ToBuf(pkt, (uint16_t)hsCtx->verifyCtx->verifyDataSize);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
-    /* Pack signature data */
     return PackAppendDataToBuf(pkt, hsCtx->verifyCtx->verifyData, hsCtx->verifyCtx->verifyDataSize);
 }
 #endif /* HITLS_TLS_HOST_CLIENT || HITLS_TLS_PROTO_TLS13 */

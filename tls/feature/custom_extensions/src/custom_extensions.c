@@ -27,9 +27,9 @@
 #include "hs.h"
 #include "securec.h"
 #include "bsl_sal.h"
-#include "custom_extensions.h"
 #include "alert.h"
 #include "pack.h"
+#include "custom_extensions.h"
 
 bool IsPackNeedCustomExtensions(CustomExtMethods *exts, uint32_t context)
 {
@@ -167,6 +167,7 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, PackPacket *pkt, uint32_t
 
     CustomExtMethods *exts = CUSTOM_EXT_FROM_CTX(ctx);
     CustomExtMethod *meth = NULL;
+
     if (exts == NULL) {
         return HITLS_SUCCESS;
     }
@@ -198,7 +199,6 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, PackPacket *pkt, uint32_t
             }
             return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
         }
-
         ret = PackReserveBytes(pkt, sizeof(uint16_t) + sizeof(uint16_t) + outLen, NULL);
         if (ret != HITLS_SUCCESS) {
             if (meth->freeCb != NULL) {
@@ -209,7 +209,7 @@ int32_t PackCustomExtensions(const struct TlsCtx *ctx, PackPacket *pkt, uint32_t
         (void)PackAppendUint16ToBuf(pkt, meth->extType);
 
         (void)PackAppendUint16ToBuf(pkt, outLen);
-        
+
         (void)PackAppendDataToBuf(pkt, out, outLen);
 
         if (meth->freeCb != NULL) {
@@ -233,8 +233,8 @@ int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint
 
     // Create a local pointer starting from the position after the type byte
     if (meth->parseCb != NULL) {
-        int32_t ret = meth->parseCb(ctx, meth->extType, context, &buf, &extLen, cert, certIndex, &alert,
-            meth->parseArg);
+        int32_t ret = meth->parseCb(ctx, meth->extType, context,
+            &buf, &extLen, cert, certIndex, &alert, meth->parseArg);
         if (ret != HITLS_SUCCESS) {
             ALERT_Send(ctx, ALERT_LEVEL_FATAL, alert);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17351, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

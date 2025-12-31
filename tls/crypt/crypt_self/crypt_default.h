@@ -281,7 +281,6 @@ HITLS_CRYPT_Key *CRYPT_DEFAULT_GenerateDhKeyByParameters(uint8_t *p, uint16_t pL
  * @brief Deep copy key
  *
  * @param key [IN] Key handle
- * @retval Key handle
  */
 #ifdef HITLS_TLS_CONFIG_MANUAL_DH
 #define CRYPT_DEFAULT_DupKey HITLS_CRYPT_DupKey

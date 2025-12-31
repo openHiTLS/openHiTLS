@@ -245,33 +245,6 @@ HITLS_VerifyCb HITLS_GetVerifyCb(HITLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_CONFIG_CERT_CALLBACK */
 
-int32_t HITLS_LoadCrlFile(HITLS_Ctx *ctx, const char *file, HITLS_ParseFormat format)
-{
-    if (ctx == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
-    return HITLS_CFG_LoadCrlFile(&(ctx->config.tlsConfig), file, format);
-}
-
-int32_t HITLS_LoadCrlBuffer(HITLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HITLS_ParseFormat format)
-{
-    if (ctx == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
-    return HITLS_CFG_LoadCrlBuffer(&(ctx->config.tlsConfig), buf, bufLen, format);
-}
-
-int32_t HITLS_ClearVerifyCrls(HITLS_Ctx *ctx)
-{
-    if (ctx == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
-    return HITLS_CFG_ClearVerifyCrls(&(ctx->config.tlsConfig));
-}
-
 #ifdef HITLS_TLS_CONFIG_CERT_LOAD_FILE
 int32_t HITLS_UseCertificateChainFile(HITLS_Ctx *ctx,  const char *file)
 {
@@ -304,3 +277,32 @@ int32_t HITLS_LoadVerifyBuffer(HITLS_Ctx *ctx, const uint8_t *buf,
     return HITLS_CFG_LoadVerifyBuffer(&(ctx->config.tlsConfig), buf, bufLen, format);
 }
 #endif /* HITLS_TLS_CONFIG_CERT_VERIFY_LOCATION */
+
+#ifdef HITLS_TLS_CONFIG_CERT_CRL
+int32_t HITLS_LoadCrlFile(HITLS_Ctx *ctx, const char *file, HITLS_ParseFormat format)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_LoadCrlFile(&(ctx->config.tlsConfig), file, format);
+}
+
+int32_t HITLS_LoadCrlBuffer(HITLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HITLS_ParseFormat format)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_LoadCrlBuffer(&(ctx->config.tlsConfig), buf, bufLen, format);
+}
+
+int32_t HITLS_ClearVerifyCrls(HITLS_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_ClearVerifyCrls(&(ctx->config.tlsConfig));
+}
+#endif /* HITLS_TLS_CONFIG_CERT_CRL */

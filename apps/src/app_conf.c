@@ -578,9 +578,6 @@ static int32_t ParseGeneralNameValue(BSL_CONF *conf, HITLS_X509_GeneralNameType 
             AppPrintError("Unsupported the type of general name, type: %u.\n", generalName->type);
             return HITLS_APP_INVALID_GENERAL_NAME_TYPE;
     }
-    if (ret != HITLS_APP_SUCCESS) {
-        return ret;
-    }
     return ret;
 }
 

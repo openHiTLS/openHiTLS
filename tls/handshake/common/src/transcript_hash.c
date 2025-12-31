@@ -30,6 +30,7 @@ int32_t VERIFY_SetHash(HITLS_Lib_Ctx *libCtx, const char *attrName, VerifyCtx *c
     /* the value must be the same as the PRF function, use the digest algorithm with SHA-256 or higher strength */
     HITLS_HashAlgo prfAlgo = (hashAlgo == HITLS_HASH_SHA1) ? HITLS_HASH_SHA_256 : hashAlgo;
 
+    SAL_CRYPT_DigestFree(ctx->hashCtx);
     ctx->hashCtx = SAL_CRYPT_DigestInit(libCtx, attrName, prfAlgo);
     if (ctx->hashCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_DIGEST);
@@ -141,5 +142,4 @@ void VERIFY_FreeMsgCache(VerifyCtx *ctx)
         dataBuf = nextBuf;
     }
     ctx->dataBuf = NULL;
-    return;
 }

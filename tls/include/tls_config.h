@@ -27,8 +27,8 @@
 #include "hitls_psk.h"
 #include "hitls_security.h"
 #include "hitls_sni.h"
-#include "hitls_alpn.h"
 #include "hitls_cookie.h"
+#include "hitls_alpn.h"
 #include "sal_atomic.h"
 #ifdef HITLS_TLS_FEATURE_PROVIDER
 #include "crypt_eal_provider.h"
@@ -73,7 +73,7 @@ typedef struct TlsSessionManager TLS_SessionMgr;
  * @brief Group information
  */
 typedef struct {
-    char *name;           // group name
+    char *name;                 // group name
     int32_t paraId;             // parameter id CRYPT_PKEY_ParaId
     int32_t algId;              // algorithm id CRYPT_PKEY_AlgId
     int32_t secBits;            // security bits
@@ -175,7 +175,7 @@ typedef struct TlsConfig {
     uint32_t dtlsPostHsTimeoutVal;      /* DTLS over UDP completed handshake timeout */
 
     HITLS_CRYPT_Key *dhTmp;             /* Temporary DH key set by the user */
-    HITLS_DhTmpCb dhTmpCb;              /* Temporary ECDH key set by the user */
+    HITLS_DhTmpCb dhTmpCb;              /* the callback for generating the DH key */
 
     HITLS_InfoCb infoCb;                /* information indicator callback */
     HITLS_MsgCb msgCb;                  /* message callback function cb for observing all SSL/TLS protocol messages */
@@ -202,6 +202,8 @@ typedef struct TlsConfig {
     void *userData;                     /* user data */
     HITLS_ConfigUserDataFreeCb userDataFreeCb;
 
+    uint16_t recordSizeLimit;           /* record size limit RFC 8449 */
+
     bool needCheckKeyUsage;             /* whether to check keyusage, default on */
     bool needCheckPmsVersion;           /* whether to verify the version in premastersecret */
     bool isSupportRenegotiation;        /* support renegotiation */
@@ -221,17 +223,17 @@ typedef struct TlsConfig {
 
     bool isQuietShutdown;               /* is support the quiet shutdown mode */
     bool isEncryptThenMac;              /* is EncryptThenMac on */
+    /* DTLS */
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    bool isSupportDtlsCookieExchange;    /* is dtls support cookie exchange */
+#endif
     bool isFlightTransmitEnable;        /* sending of handshake information in one flighttransmit */
 
     bool isSupportExtendMasterSecret;   /* is support extended master secret */
     bool isSupportSessionTicket;        /* is support session ticket */
     bool isSupportServerPreference;     /* server cipher suites can be preferentially selected */
 
-    /* DTLS */
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
-    bool isSupportDtlsCookieExchange;    /* is dtls support cookie exchange */
-#endif
-    /**
+    /*
      * Configurations in the HITLS_Ctx are classified into private configuration and global configuration.
      * The following parameters directly reference the global configuration in tls.
      * Private configuration: ctx->config.tlsConfig
@@ -242,36 +244,26 @@ typedef struct TlsConfig {
     void *alpnUserData;                 /* the user data for alpn callback */
     void *sniArg;			            /* the args for servername callback */
     HITLS_SniDealCb sniDealCb;          /* server name callback function */
-#ifdef HITLS_TLS_FEATURE_CLIENT_HELLO_CB
+    HITLS_AppVerifyCookieCb appVerifyCookieCb; /* the callback to verify the cookie */
+    HITLS_AppGenCookieCb appGenCookieCb;       /* the callback to generate the cookie */
     HITLS_ClientHelloCb clientHelloCb;          /* ClientHello callback */
     void *clientHelloCbArg;                     /* the args for ClientHello callback */
-#endif /* HITLS_TLS_FEATURE_CLIENT_HELLO_CB */
-#ifdef HITLS_TLS_PROTO_DTLS12
-    HITLS_AppGenCookieCb appGenCookieCb;
-    HITLS_AppVerifyCookieCb appVerifyCookieCb;
-#endif
     HITLS_NewSessionCb newSessionCb;    /* negotiates to generate a session */
-#ifdef HITLS_TLS_FEATURE_SESSION
-#ifdef HITLS_TLS_FEATURE_SESSION_CACHE_CB
     HITLS_SessionRemoveCb sessionRemoveCb; /* session removal callback */
     HITLS_SessionGetCb sessionGetCb;       /* obtains a session based on the session ID */
-#endif /* HITLS_TLS_FEATURE_SESSION_CACHE_CB */
-#ifdef HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET
     uint8_t *sessionTicketExt;
     uint32_t sessionTicketExtSize;
     HITLS_SessionTicketExtProcessCb sessionTicketExtCb;
     void *sessionTicketExtCbArg;
-#endif /* HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET */
-#endif /* HITLS_TLS_FEATURE_SESSION */
     HITLS_KeyLogCb keyLogCb;            /* the key log callback */
     bool isKeepPeerCert;                /* whether to save the peer certificate */
+    bool isMiddleBoxCompat;             /* whether to support middlebox compatibility */
 
     HITLS_CustomExts *customExts;
-    bool isMiddleBoxCompat;             /* whether to support middlebox compatibility */
 } TLS_Config;
 
-#define LIBCTX_FROM_CONFIG(config) ((config == NULL) ? NULL : (config)->libCtx)
-#define ATTRIBUTE_FROM_CONFIG(config) ((config == NULL) ? NULL : (config)->attrName)
+#define LIBCTX_FROM_CONFIG(config) (((config) == NULL) ? NULL : (config)->libCtx)
+#define ATTRIBUTE_FROM_CONFIG(config) (((config) == NULL) ? NULL : (config)->attrName)
 
 #ifdef __cplusplus
 }

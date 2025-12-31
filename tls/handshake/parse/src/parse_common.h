@@ -20,7 +20,6 @@
 #include "tls.h"
 #include "hs_msg.h"
 #include "cert_method.h"
-#include "cert_mgr_ctx.h"
 #include "security.h"
 
 #ifdef __cplusplus

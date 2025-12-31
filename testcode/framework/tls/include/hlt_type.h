@@ -51,6 +51,7 @@ extern "C" {
 #define MAX_PROVIDER_PATH_LEN (256)
 #define MAX_PROVIDER_COUNT (10)
 #define KEY_LOG_CB_LEN (1024)
+#define MAX_EXPORT_MATERIAL_BUF (1024)
 
 #define DEFAULT_CERT_PATH       "../../testcode/testdata/tls/certificate/der/"
 
@@ -270,6 +271,7 @@ typedef struct {
     uint32_t modeSupport;       // support features, such as HITLS_MODE_SEND_FALLBACK_SCSV. All mode at hitls_type.h
     bool isMiddleBoxCompat;     // Indicates whether to enable the middle box compatibility mode.
     bool isSupportDtlsCookieExchange;
+    uint16_t recordSizeLimit;
 } HLT_Ctx_Config;
 
 typedef struct {

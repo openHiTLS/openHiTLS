@@ -66,7 +66,6 @@ void REC_RetransmitListClean(REC_Ctx *recCtx)
         BSL_SAL_FREE(retransmitNode->msg);
         BSL_SAL_FREE(retransmitNode);
     }
-    return;
 }
 
 static int32_t WriteSingleRetransmitNode(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num)

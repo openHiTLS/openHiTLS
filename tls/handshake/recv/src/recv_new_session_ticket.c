@@ -84,7 +84,7 @@ static int32_t UpdateTicket(TLS_Ctx *ctx, NewSessionTicketMsg *msg, uint8_t *psk
             HITLS_SESS_Free(newSession);
         }
     }
-#endif /* HITLS_TLS_FEATURE_SESSION && HITLS_TLS_PROTO_TLS13*/
+#endif /* HITLS_TLS_FEATURE_SESSION && HITLS_TLS_PROTO_TLS13 */
     return HITLS_SUCCESS;
 }
 #ifdef HITLS_TLS_PROTO_TLS_BASIC

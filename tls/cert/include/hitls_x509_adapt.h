@@ -17,6 +17,7 @@
 #define HITLS_X509_ADAPT_LOCAL_H
 
 #include <stdint.h>
+#include "hitls_build.h"
 #include "hitls_pki_cert.h"
 #include "hitls_pki_x509.h"
 #include "hitls_type.h"

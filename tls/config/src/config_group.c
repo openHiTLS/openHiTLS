@@ -63,6 +63,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         false,
     },
 #ifdef HITLS_TLS_FEATURE_KEM
+#ifdef HITLS_TLS_PROTO_TLS13
     {
         CONST_CAST("X25519MLKEM768"),
         CRYPT_HYBRID_X25519_MLKEM768,
@@ -93,6 +94,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         TLS13_VERSION_BIT,                     // versionBits
         true,
     },
+#endif /* HITLS_TLS_PROTO_TLS13 */
 #endif /* HITLS_TLS_FEATURE_KEM */
     {
         CONST_CAST("secp256r1"),
@@ -235,6 +237,7 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
     if (config == NULL) {
         return HITLS_INVALID_INPUT;
     }
+    // Load default group configuration
     return HITLS_CFG_SetGroups(config, DEFAULT_GROUP_ID, sizeof(DEFAULT_GROUP_ID) / sizeof(DEFAULT_GROUP_ID[0]));
 }
 
@@ -300,7 +303,10 @@ static int32_t ProviderAddGroupInfo(const BSL_Param *params, void *args)
     PROCESS_PARAM_INT32(param, group, params, CRYPT_PARAM_CAP_TLS_GROUP_CIPHERTEXT_LEN, ciphertextLen);
 
     ret = HITLS_SUCCESS;
-    pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), group->algId, group->isKem ? CRYPT_EAL_PKEY_KEM_OPERATE : CRYPT_EAL_PKEY_EXCH_OPERATE,
+    // Test the availability of the current algorithm
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config),
+        group->algId,
+        group->isKem ? CRYPT_EAL_PKEY_KEM_OPERATE : CRYPT_EAL_PKEY_EXCH_OPERATE,
         ATTRIBUTE_FROM_CONFIG(config));
     if (pkey != NULL) {
         config->groupInfolen++;
@@ -335,6 +341,7 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+    // Load default group configuration
     return HITLS_CFG_SetGroups(config, DEFAULT_GROUP_ID, sizeof(DEFAULT_GROUP_ID) / sizeof(DEFAULT_GROUP_ID[0]));
 }
 

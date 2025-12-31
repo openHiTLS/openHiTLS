@@ -148,10 +148,10 @@ CERT_MgrCtx *SAL_CERT_MgrCtxDup(CERT_MgrCtx *mgrCtx)
     newCtx->defaultPasswdCbUserData = mgrCtx->defaultPasswdCbUserData;
 #ifdef HITLS_TLS_CONFIG_CERT_CALLBACK
     newCtx->verifyCb = mgrCtx->verifyCb;
-#endif
+#endif /* HITLS_TLS_CONFIG_CERT_CALLBACK */
 
-    newCtx->libCtx = LIBCTX_FROM_CERT_MGR_CTX(mgrCtx);
-    newCtx->attrName = ATTRIBUTE_FROM_CERT_MGR_CTX(mgrCtx);
+    newCtx->libCtx = mgrCtx->libCtx;
+    newCtx->attrName = mgrCtx->attrName;
 #ifdef HITLS_TLS_FEATURE_CERT_CB
     newCtx->certCb = mgrCtx->certCb;
     newCtx->certCbArg = mgrCtx->certCbArg;

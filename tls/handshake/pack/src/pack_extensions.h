@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-/**
+/*
  * Hook function for packing extensions of client and server.
  */
 typedef int32_t (*PACK_EXT_FUNC)(const TLS_Ctx *ctx, PackPacket *pkt);
@@ -88,6 +88,8 @@ int32_t PackEmptyExtension(uint16_t exMsgType, bool needPack, PackPacket *pkt);
  * @retval  For other error codes, see hitls_error.h
  */
 int32_t PackExtensionHeader(uint16_t exMsgType, uint16_t exMsgLen, PackPacket *pkt);
+
+int32_t PackRecordSizeLimit(const TLS_Ctx *ctx, PackPacket *pkt);
 
 int32_t PackServerSelectAlpnProto(const TLS_Ctx *ctx, PackPacket *pkt);
 

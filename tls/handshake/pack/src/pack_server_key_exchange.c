@@ -138,33 +138,13 @@ static uint32_t GetNamedCurveMsgLen(TLS_Ctx *ctx, uint32_t pubKeyLen)
     return dataLen;
 }
 
-static int32_t PackServerKxMsgNamedCurve(TLS_Ctx *ctx, PackPacket *pkt)
+static int32_t PackEcdhPublicKey(TLS_Ctx *ctx, uint32_t pubKeyLen, PackPacket *pkt)
 {
     KeyExchCtx *kxCtx = ctx->hsCtx->kxCtx;
     HITLS_ECParameters *ecParam = &(kxCtx->keyExchParam.ecdh.curveParams);
-    uint32_t pubKeyLen = SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, ecParam->param.namedcurve);
-    if (pubKeyLen == 0u) {
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15498, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "pack ske error: unsupport named curve = %u.", ecParam->param.namedcurve, 0, 0, 0);
-        return HITLS_PACK_INVALID_KX_PUBKEY_LENGTH;
-    }
-    uint32_t dataLen = GetNamedCurveMsgLen(ctx, pubKeyLen);
-    if (dataLen == 0) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16941, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "GetNamedCurveMsgLen err", 0, 0, 0, 0);
-        return HITLS_PACK_SIGNATURE_ERR;
-    }
-
-    uint32_t dataOffset = 0;
-    int32_t ret = PackGetSubBuffer(pkt, 0, &dataOffset, NULL);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
     /* Curve type and curve ID. Although these parameters are ignored in the TLCP, they are
      * filled in to ensure the uniform style. However, the client cannot depend on the value of this parameter */
-    ret = PackAppendUint8ToBuf(pkt, (uint8_t)(ecParam->type));
+    int32_t ret = PackAppendUint8ToBuf(pkt, (uint8_t)(ecParam->type));
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -198,6 +178,38 @@ static int32_t PackServerKxMsgNamedCurve(TLS_Ctx *ctx, PackPacket *pkt)
     (void)PackSkipBytes(pkt, pubKeyUsedLen);
 
     PackCloseUint8Field(pkt, pubKeyLenOffset);
+	
+    return HITLS_SUCCESS;
+}
+static int32_t PackServerKxMsgNamedCurve(TLS_Ctx *ctx, PackPacket *pkt)
+{
+    KeyExchCtx *kxCtx = ctx->hsCtx->kxCtx;
+    HITLS_ECParameters *ecParam = &(kxCtx->keyExchParam.ecdh.curveParams);
+    uint32_t pubKeyLen =
+        HS_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, ecParam->param.namedcurve);
+    if (pubKeyLen == 0u) {
+        BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15498, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "pack ske error: unsupport named curve = %u.", ecParam->param.namedcurve, 0, 0, 0);
+        return HITLS_PACK_INVALID_KX_PUBKEY_LENGTH;
+    }
+    uint32_t dataLen = GetNamedCurveMsgLen(ctx, pubKeyLen);
+    if (dataLen == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16941, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "GetNamedCurveMsgLen err", 0, 0, 0, 0);
+        return HITLS_PACK_SIGNATURE_ERR;
+    }
+
+    /* If the length of bufLen does not meet the requirements, an error code is returned */
+    uint32_t dataOffset = 0;
+    int32_t ret = PackGetSubBuffer(pkt, 0, &dataOffset, NULL);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = PackEcdhPublicKey(ctx, pubKeyLen, pkt);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
 
     if (IsNeedKeyExchParamSignature(ctx)) {
         uint32_t signDataLen = 0;
@@ -219,6 +231,7 @@ static int32_t PackServerKxMsgNamedCurve(TLS_Ctx *ctx, PackPacket *pkt)
         }
         (void)PackSkipBytes(pkt, signatureLen);
     }
+
     return HITLS_SUCCESS;
 }
 
@@ -336,25 +349,15 @@ static int32_t PackKxPrimaryData(const TLS_Ctx *ctx, PackPacket *pkt)
     uint16_t plen = dh->plen;
     uint16_t glen = dh->glen;
 
-    int32_t ret = PackAppendUint16ToBuf(pkt, plen);
+    int32_t ret = PackReserveBytes(pkt, sizeof(uint16_t) + plen + sizeof(uint16_t) + glen, NULL);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
-    ret = PackAppendDataToBuf(pkt, dh->p, plen);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
-    ret = PackAppendUint16ToBuf(pkt, glen);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
-    ret = PackAppendDataToBuf(pkt, dh->g, glen);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
+    (void)PackAppendUint16ToBuf(pkt, plen);
+    (void)PackAppendDataToBuf(pkt, dh->p, plen);
+    (void)PackAppendUint16ToBuf(pkt, glen);
+    (void)PackAppendDataToBuf(pkt, dh->g, glen);
 
     uint32_t pubKeyLenPosition = 0u;
     ret = PackStartLengthField(pkt, sizeof(uint16_t), &pubKeyLenPosition);

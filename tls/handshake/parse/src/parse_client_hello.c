@@ -184,7 +184,6 @@ static int32_t ParseClientHelloExtensions(ParsePacket *pkt, ClientHelloMsg *msg)
     if (exMsgLen == 0u) {
         return HITLS_SUCCESS;
     }
-
     return ParseClientExtension(pkt->ctx, &pkt->buf[*pkt->bufOffset], exMsgLen, msg);
 }
 
@@ -250,7 +249,5 @@ void CleanClientHello(ClientHelloMsg *msg)
     BSL_SAL_FREE(msg->compressionMethods);
     BSL_SAL_FREE(msg->extensionBuff);
     CleanClientHelloExtension(msg);
-
-    return;
 }
 #endif /* HITLS_TLS_HOST_SERVER */

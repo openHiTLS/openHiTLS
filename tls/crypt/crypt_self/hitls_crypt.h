@@ -320,10 +320,9 @@ void HITLS_CRYPT_FreeKey(HITLS_CRYPT_Key *key);
  */
 int32_t HITLS_CRYPT_GetDhParameters(HITLS_CRYPT_Key *key, uint8_t *p, uint16_t *pLen, uint8_t *g, uint16_t *gLen);
 
-
 /**
  * @brief Reinitialize an HMAC context for reuse.
- * 
+ *
  * @param ctx [IN] HMAC context to reinitialize.
  * @retval HITLS_SUCCESS  Reinitialization succeeded.
  * @retval Other          Failed to reinitialize context.
@@ -332,14 +331,14 @@ int32_t HITLS_CRYPT_HMAC_ReInit(HITLS_HMAC_Ctx *ctx);
 
 /**
  * @brief Free an HMAC context.
- * 
+ *
  * @param ctx [IN] HMAC context to free.
  */
 void HITLS_CRYPT_HMAC_Free(HITLS_HMAC_Ctx *ctx);
 
 /**
  * @brief Update HMAC computation with input data.
- * 
+ *
  * @param ctx  [IN] HMAC context.
  * @param data [IN] Input data to process.
  * @param len  [IN] Length of input data in bytes.
@@ -350,7 +349,7 @@ int32_t HITLS_CRYPT_HMAC_Update(HITLS_HMAC_Ctx *ctx, const uint8_t *data, uint32
 
 /**
  * @brief Finalize HMAC computation and get the MAC value.
- * 
+ *
  * @param ctx [IN] HMAC context.
  * @param out [OUT] Buffer to store the MAC value.
  * @param len [IN/OUT] IN: Buffer size, OUT: Actual MAC length.
@@ -361,7 +360,7 @@ int32_t HITLS_CRYPT_HMAC_Final(HITLS_HMAC_Ctx *ctx, uint8_t *out, uint32_t *len)
 
 /**
  * @brief Get the output size of a hash algorithm.
- * 
+ *
  * @param hashAlgo [IN] Hash algorithm identifier.
  * @return Digest size in bytes. Returns 0 for unsupported algorithms.
  */
@@ -369,7 +368,7 @@ uint32_t HITLS_CRYPT_DigestSize(HITLS_HashAlgo hashAlgo);
 
 /**
  * @brief Create a copy of a hash context.
- * 
+ *
  * @param ctx [IN] Original hash context to copy.
  * @return New hash context copy. Returns NULL on failure.
  */
@@ -377,14 +376,14 @@ HITLS_HASH_Ctx *HITLS_CRYPT_DigestCopy(HITLS_HASH_Ctx *ctx);
 
 /**
  * @brief Free a hash context.
- * 
+ *
  * @param ctx [IN] Hash context to free.
  */
 void HITLS_CRYPT_DigestFree(HITLS_HASH_Ctx *ctx);
 
 /**
  * @brief Update hash computation with input data.
- * 
+ *
  * @param ctx  [IN] Hash context.
  * @param data [IN] Input data to process.
  * @param len  [IN] Length of input data in bytes.
@@ -395,7 +394,7 @@ int32_t HITLS_CRYPT_DigestUpdate(HITLS_HASH_Ctx *ctx, const uint8_t *data, uint3
 
 /**
  * @brief Finalize hash computation and get the digest.
- * 
+ *
  * @param ctx [IN] Hash context.
  * @param out [OUT] Buffer to store the digest.
  * @param len [IN/OUT] IN: Buffer size, OUT: Actual digest length.
@@ -406,14 +405,14 @@ int32_t HITLS_CRYPT_DigestFinal(HITLS_HASH_Ctx *ctx, uint8_t *out, uint32_t *len
 
 /**
  * @brief Free a cipher context.
- * 
+ *
  * @param ctx [IN] Cipher context to free.
  */
 void HITLS_CRYPT_CipherFree(HITLS_Cipher_Ctx *ctx);
 
 /**
  * @brief Create a copy of a cryptographic key.
- * 
+ *
  * @param key [IN] Original key to duplicate.
  * @return New key handle copy. Returns NULL on failure.
  */
@@ -421,7 +420,7 @@ HITLS_CRYPT_Key *HITLS_CRYPT_DupKey(HITLS_CRYPT_Key *key);
 
 /**
  * @brief Get the public key of a cryptographic key.
- * 
+ *
  * @param key [IN] Key to get public key from.
  * @param pubKeyBuf [OUT] Buffer to store the public key.
  * @param bufLen [IN] Buffer length.

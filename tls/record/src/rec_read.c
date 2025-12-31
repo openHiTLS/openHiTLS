@@ -24,15 +24,11 @@
 #include "bsl_errno.h"
 #include "bsl_uio.h"
 #include "rec_alert.h"
-#ifdef HITLS_TLS_PROTO_TLS13
-#include "hs_common.h"
-#endif
 #include "tls_config.h"
 #include "record.h"
 #ifdef HITLS_TLS_FEATURE_INDICATOR
 #include "indicator.h"
 #endif
-#include "hs_ctx.h"
 #include "hs.h"
 #include "rec_crypto.h"
 #include "bsl_list.h"
@@ -99,7 +95,7 @@ static REC_Type RecCastUintToRecType(TLS_Ctx *ctx, uint8_t value)
     }
 #ifdef HITLS_TLS_PROTO_TLS13
     RecConnState *state = GetReadConnState(ctx);
-    if (HS_GetVersion(ctx) == HITLS_VERSION_TLS13 && state->suiteInfo != NULL) {
+    if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13 && state->suiteInfo != NULL) {
         if (type != REC_TYPE_APP && type != REC_TYPE_ALERT &&
             (type != REC_TYPE_CHANGE_CIPHER_SPEC || ctx->hsCtx == NULL)) {
             type = REC_TYPE_UNKNOWN;
@@ -108,7 +104,21 @@ static REC_Type RecCastUintToRecType(TLS_Ctx *ctx, uint8_t value)
 #endif /* HITLS_TLS_PROTO_TLS13 */
     return type;
 }
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+uint32_t REC_GetMaxReadSize(TLS_Ctx *ctx)
+{
+    uint32_t readSize = REC_MAX_PLAIN_LENGTH;
+    if (ctx != NULL && ctx->negotiatedInfo.recordSizeLimit != 0) {
+        readSize = ctx->negotiatedInfo.recordSizeLimit;
+        if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13) {
+            readSize--;
+        }
+    }
+    return readSize;
+}
+#else
 #define REC_GetMaxReadSize(ctx) REC_MAX_PLAIN_LENGTH
+#endif
 static int32_t ProcessDecryptedRecord(TLS_Ctx *ctx, uint32_t dataLen,
     const REC_TextInput *encryptedMsg)
 {
@@ -168,9 +178,8 @@ static int32_t RecordDecrypt(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_TextInput *en
     RecConnState *state = GetReadConnState(ctx);
     const RecCryptoFunc *funcs = RecGetCryptoFuncs(state->suiteInfo);
     uint32_t offset = 0;
-    int32_t ret = HITLS_SUCCESS;
     uint32_t minBufLen = 0;
-    ret = funcs->calPlantextBufLen(ctx, state->suiteInfo, encryptedMsg->textLen, &offset, &minBufLen);
+    int32_t ret = funcs->calPlantextBufLen(ctx, state->suiteInfo, encryptedMsg->textLen, &offset, &minBufLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16266, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Invalid record length %u", encryptedMsg->textLen, 0, 0, 0);
@@ -299,7 +308,7 @@ int32_t DtlsCheckRecordHeader(TLS_Ctx *ctx, const RecHdr *hdr)
             "get a record with invalid length", 0, 0, 0, 0);
         return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_RECORD_OVERFLOW);
     }
-
+#ifdef HITLS_BSL_UIO_SCTP
     uint16_t epoch = REC_EPOCH_GET(hdr->epochSeq);
     if (epoch == 0 && hdr->type == REC_TYPE_APP && BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
         BSL_ERR_PUSH_ERROR(HITLS_REC_ERR_RECV_UNEXPECTED_MSG);
@@ -308,7 +317,7 @@ int32_t DtlsCheckRecordHeader(TLS_Ctx *ctx, const RecHdr *hdr)
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
         return HITLS_REC_ERR_RECV_UNEXPECTED_MSG;
     }
-
+#endif /* HITLS_BSL_UIO_SCTP */
     return HITLS_SUCCESS;
 }
 
@@ -537,10 +546,12 @@ static int32_t DtlsRecordHeaderProcess(TLS_Ctx *ctx, uint8_t *recordBody, RecHdr
     }
     uint16_t epoch = REC_EPOCH_GET(hdr->epochSeq);
     if (epoch != recordCtx->readEpoch) {
+#ifdef HITLS_BSL_UIO_SCTP
         /* Discard out-of-order messages in SCTP scenarios */
         if (BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
             return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
         }
+#endif /* HITLS_BSL_UIO_SCTP */
 #if defined(HITLS_BSL_UIO_UDP)
         /* Only the messages of the next epoch are cached */
         if ((recordCtx->readEpoch + 1) == epoch) {
@@ -639,7 +650,7 @@ static int32_t DtlsGetRecord(TLS_Ctx *ctx, REC_Type recordType, RecHdr *hdr, uin
             return ret;
         }
     }
-#if defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
     ret = AntiReplay(ctx, hdr);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(*cachRecord);
@@ -662,8 +673,7 @@ static int32_t DtlsProcessBufList(TLS_Ctx *ctx, REC_Type recordType, RecBufList 
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
-return HITLS_SUCCESS;
+    return HITLS_SUCCESS;
 }
 
 /**
@@ -711,7 +721,7 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
         RecAntiReplayUpdate(&GetReadConnState(ctx)->window, REC_SEQ_GET(hdr.epochSeq));
     }
 #endif
-    RecClearAlertCount(ctx, cryptMsg.type);
+    ctx->method.clearAlert(ctx, cryptMsg.type);
 #ifdef HITLS_TLS_FEATURE_MODE_RELEASE_BUFFERS
     if ((ctx->config.tlsConfig.modeSupport & HITLS_MODE_RELEASE_BUFFERS) != 0 && (recordType == REC_TYPE_APP)) {
         RecTryFreeRecBuf(ctx, false);
@@ -727,7 +737,6 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
     if (decryptBuf.buf == data) {
         /* Update the read length */
         *len = decryptBuf.end;
-
         return HITLS_SUCCESS;
     }
     ret = DtlsProcessBufList(ctx, recordType, bufList, &decryptBuf);
@@ -807,7 +816,6 @@ int32_t TlsCheckRecordHeader(TLS_Ctx *ctx, const RecHdr *recordHdr)
             return ret;
         }
     }
-
 #ifdef HITLS_TLS_PROTO_TLS13
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 && recordHdr->bodyLen > REC_MAX_TLS13_ENCRYPTED_LEN) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16125, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -977,7 +985,7 @@ int32_t RecordDecryptPrepare(TLS_Ctx *ctx, uint16_t version, REC_Type recordType
     }
     uint32_t recordBodyLen = (uint32_t)recordHeader.bodyLen;
 #ifdef HITLS_TLS_PROTO_TLS13
-    if (HS_GetVersion(ctx) == HITLS_VERSION_TLS13) {
+    if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13) {
         if ((recordHeader.type == REC_TYPE_CHANGE_CIPHER_SPEC || recordHeader.type == REC_TYPE_ALERT) &&
             recordBodyLen != 0) {
             ctx->recCtx->unexpectedMsgType = recordHeader.type;
@@ -1039,7 +1047,7 @@ int32_t TlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    RecClearAlertCount(ctx, encryptedMsg.type);
+    ctx->method.clearAlert(ctx, encryptedMsg.type);
 #ifdef HITLS_TLS_FEATURE_MODE_RELEASE_BUFFERS
     if ((ctx->config.tlsConfig.modeSupport & HITLS_MODE_RELEASE_BUFFERS) != 0 && (recordType == REC_TYPE_APP)) {
         RecTryFreeRecBuf(ctx, false);

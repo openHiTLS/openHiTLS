@@ -134,6 +134,13 @@ typedef struct {
 } FRAME_HsExtOfferedPsks;
 
 typedef struct {
+    FieldState exState;         /* extension Field state */
+    FRAME_Integer exType;       /* extension type */
+    FRAME_Integer exLen;        /* Full length of extension */
+    FRAME_Integer data;         /* extension content */
+} FRAME_HsExtUint16;
+
+typedef struct {
     FieldState exState;   /* extension Field state */
     FRAME_Integer exType; /* extension type */
     FRAME_Integer exLen;  /* Full length of extension */
@@ -163,6 +170,7 @@ typedef struct {
     FRAME_HsExtArray8 secRenego;            /* security renegotiation */
     FRAME_HsExtArray8 sessionTicket;
     FRAME_HsExtArray8 serverName;           /* sni */
+    FRAME_HsExtUint16 recordSizeLimit;
     FRAME_HsExtArray8 alpn;                 /* alpn */
     FRAME_HsExtArray8 tls13Cookie;           /* tls1.3 cookie */
     FRAME_HsExtKeyShare keyshares;          /* tls1.3 key share */
@@ -171,13 +179,6 @@ typedef struct {
     FRAME_HsExtOfferedPsks psks;            /* tls1.3 psk */
     FRAME_HsExtCaList caList;
 } FRAME_ClientHelloMsg;
-
-typedef struct {
-    FieldState exState;         /* extension Field state */
-    FRAME_Integer exType;       /* extension type */
-    FRAME_Integer exLen;        /* Full length of extension */
-    FRAME_Integer data;         /* extension content */
-} FRAME_HsExtUint16;
 
 typedef struct {
     FieldState exState;         /* extension Field state */
@@ -199,6 +200,7 @@ typedef struct {
     FRAME_HsExtArray8 secRenego;            /* security renegotiation */
     FRAME_HsExtArray8 sessionTicket;        /* sessionTicket */
     FRAME_HsExtArray8 serverName;           /* sni */
+    FRAME_HsExtUint16 recordSizeLimit;
     FRAME_HsExtArray8 alpn;                 /* alpn */
     FRAME_HsExtUint16 supportedVersion;     /* tls1.3 supported version */
     FRAME_HsExtServerKeyShare keyShare;     /* tls1.3 key share */

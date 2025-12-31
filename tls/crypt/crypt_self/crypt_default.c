@@ -23,7 +23,7 @@
 #include "tls_binlog_id.h"
 #include "crypt_algid.h"
 #include "hitls_crypt_type.h"
-#include "crypt_eal_rand.h"
+#include "crypt_default.h"
 #include "crypt_eal_md.h"
 #include "crypt_eal_mac.h"
 #include "crypt_eal_cipher.h"
@@ -32,7 +32,6 @@
 #include "crypt_errno.h"
 #include "hitls_error.h"
 
-#include "crypt_default.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 #include "config_type.h"

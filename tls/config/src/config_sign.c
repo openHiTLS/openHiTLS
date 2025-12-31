@@ -372,6 +372,7 @@ static const TLS_SigSchemeInfo SIGNATURE_SCHEME_INFO[] = {
 
 int32_t ConfigLoadSignatureSchemeInfo(HITLS_Config *config)
 {
+    // Configure the default signature algorithm list
     return UpdateSignAlgorithmsArray(config);
 }
 
@@ -422,7 +423,7 @@ typedef struct {
 
 #ifdef HITLS_BSL_OBJ_CUSTOM
 static int32_t ProcessOids(TLS_SigSchemeInfo *scheme, BslOidInfo *keyTypeOidInfo, BslOidInfo *paraOidInfo,
-                         BslOidInfo *signHashAlgOidInfo, BslOidInfo *hashOidInfo)
+    BslOidInfo *signHashAlgOidInfo, BslOidInfo *hashOidInfo)
 {
     int32_t ret = HITLS_SUCCESS;
     if (keyTypeOidInfo != NULL && keyTypeOidInfo->oidStr.octs != NULL) {
@@ -501,7 +502,7 @@ static int32_t ProviderAddSignatureSchemeInfo(const BSL_Param *params, void *arg
     PROCESS_OPTIONAL_STRING_PARAM(param, params, CRYPT_PARAM_CAP_TLS_SIGNALG_MD_OID, hashOid, hashOidLen,
         CRYPT_PARAM_CAP_TLS_SIGNALG_MD_NAME, hashName);
 #endif
-
+    // Test the availability of the current signature algorithm
     if (scheme->keyType == TLS_CERT_KEY_TYPE_RSA_PSS) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(LIBCTX_FROM_CONFIG(config), TLS_CERT_KEY_TYPE_RSA,
             CRYPT_EAL_PKEY_SIGN_OPERATE, ATTRIBUTE_FROM_CONFIG(config));
@@ -557,6 +558,7 @@ int32_t ConfigLoadSignatureSchemeInfo(HITLS_Config *config)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+    // Configure the default signature algorithm list
     return UpdateSignAlgorithmsArray(config);
 }
 

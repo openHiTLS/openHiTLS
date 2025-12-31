@@ -139,8 +139,9 @@ int32_t ProcessPlainAlert(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen);
  * @brief Clear the number of consecutive received warnings
  *
  * @param ctx [IN] tls Context
+ * @param recordType [IN] record type
  */
-void ALERT_ClearWarnCount(TLS_Ctx *ctx);
+void ALERT_ClearWarnCount(TLS_Ctx *ctx, uint32_t recordType);
 
 /**
  * @ingroup alert

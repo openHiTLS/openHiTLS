@@ -34,8 +34,9 @@
 #include "hs_state_recv.h"
 #include "hs_state_send.h"
 #include "hs_common.h"
+#include "sal_net.h"
 
-#ifdef HITLS_TLS_PROTO_DTLS12
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
 #define DTLS_MAX_MTU_OVERHEAD 48    /* Max overhead, ipv6 40 + udp 8 */
 #endif
 #define DATA_MAX_LENGTH 1024
@@ -116,10 +117,11 @@ static int32_t CloseEventInRenegotiationState(HITLS_Ctx *ctx)
         }
         ctx->shutdownState |= HITLS_SENT_SHUTDOWN;
     }
-    /* In the renegotiation state, if the HITLS_Close function is called, the connection is directly disconnected
-     * and read/write operations are not allowed. */
+    /* In the renegotiation state, if the Hitls_Close interface is invoked, the link is directly disconnected and
+     * read and write operations are not allowed. */
     ctx->shutdownState |= HITLS_RECEIVED_SHUTDOWN;
     ChangeConnState(ctx, CM_STATE_CLOSED);
+
     return HITLS_SUCCESS;
 #else
     (void)ctx;
@@ -161,10 +163,11 @@ static int32_t CloseEventInHandshakingState(HITLS_Ctx *ctx)
         }
         ctx->shutdownState |= HITLS_SENT_SHUTDOWN;
     }
-    /* In the handshaking state, if the close function is called, the connection is directly disconnected
-     * and read/write operations are not allowed. */
+    /* In the handshaking state, if the close function is invoked, the link is directly disconnected and read and
+     * write operations are not allowed. */
     ctx->shutdownState |= HITLS_RECEIVED_SHUTDOWN;
     ChangeConnState(ctx, CM_STATE_CLOSED);
+
     return HITLS_SUCCESS;
 }
 
@@ -199,7 +202,7 @@ static int32_t CloseEventInAlertedState(HITLS_Ctx *ctx)
      * 2. A fatal alert has been sent to the peer end.
      * 3. Receive the close notification from the peer end.
      */
-    // Read and write operations are not allowed in the alerted state
+    // In the alerted state, read and write are not allowed.
     ChangeConnState(ctx, CM_STATE_CLOSED);
     ctx->shutdownState |= (HITLS_SENT_SHUTDOWN | HITLS_RECEIVED_SHUTDOWN);
     return HITLS_SUCCESS;
@@ -308,7 +311,7 @@ static void SetTlsMinMaxVersion(TLS_Config *config)
             break;
         }
     }
-    for (int32_t i = versionBitsSize - 1; i >= 0; i--) {
+    for (int32_t i = (int32_t)versionBitsSize - 1; i >= 0; i--) {
         if ((config->version & versionBits[i]) == versionBits[i]) {
             config->maxVersion = versions[i];
             break;
@@ -331,7 +334,7 @@ static int32_t SetConnState(HITLS_Ctx *ctx, bool isClient)
         config->endpoint = isClient ? HITLS_ENDPOINT_CLIENT : HITLS_ENDPOINT_SERVER;
     }
     if (config->endpoint == HITLS_ENDPOINT_SERVER) {
-        /* Server can have version holes */
+        /* Sever can have version bit holes */
         SetTlsMinMaxVersion(config);
         return HITLS_SetEndPoint(ctx, false);
     }
@@ -386,7 +389,6 @@ int32_t HITLS_Accept(HITLS_Ctx *ctx)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
 #endif
     ManageEventProcess acceptEventProcess[CM_STATE_END] = {
         AcceptEventInIdleState,
@@ -401,6 +403,62 @@ int32_t HITLS_Accept(HITLS_Ctx *ctx)
     ManageEventProcess proc = acceptEventProcess[GetConnState(ctx)];
     return ProcessEvent(ctx, proc);
 }
+
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_BSL_SAL_NET)
+int32_t HITLS_Listen(HITLS_Ctx *ctx, BSL_SAL_SockAddr clientAddr)
+{
+    if (ctx == NULL || clientAddr == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    int32_t ret = HITLS_Clear(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    BSL_UIO *uio = HITLS_GetUio(ctx);
+    BSL_UIO *rUio = HITLS_GetReadUio(ctx);
+    if (uio == NULL || rUio == NULL) {
+        return HITLS_UIO_NOT_SET;
+    }
+    int32_t version = ctx->config.tlsConfig.maxVersion;
+    if (((uint32_t)version & 0xff00) != HITLS_DTLS_ANY_VERSION) {
+        return HITLS_UNSUPPORT_TLS_VERSION;
+    }
+
+    ctx->isClient = false;
+    ret = CONN_Init(ctx);
+    if (ret != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16495, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "CONN_Init fail", 0, 0, 0, 0);
+        return ret;
+    }
+    ChangeConnState(ctx, CM_STATE_HANDSHAKING);
+    ctx->isDtlsListen = true;
+    uint32_t state = TRY_RECV_CLIENT_HELLO;
+    do {
+        if (state == TRY_RECV_CLIENT_HELLO) {
+            ret = HS_DtlsRecvClientHello(ctx);
+        }
+        if (ret == HITLS_SUCCESS && HS_GetState(ctx) == TRY_SEND_HELLO_VERIFY_REQUEST) {
+            ctx->hsCtx->expectRecvSeq = 1;
+            ret = HS_SendMsgProcess(ctx);
+        }
+        state = HS_GetState(ctx);
+    } while (state != TRY_SEND_SERVER_HELLO && ret == HITLS_SUCCESS);
+
+    int32_t addrLen = SAL_SockAddrSize(clientAddr);
+    if (ret == HITLS_SUCCESS &&
+        BSL_UIO_Ctrl(rUio, BSL_UIO_GET_PEER_IP_ADDR, addrLen, clientAddr) != BSL_SUCCESS) {
+        (void)memset_s(clientAddr, addrLen, 0, addrLen);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16496, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "GET_PEER_IP_ADDR fail", 0, 0, 0, 0);
+        ret = HITLS_MEMCPY_FAIL;
+    }
+    ctx->isDtlsListen = false;
+    return ret;
+}
+#endif /* #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_BSL_UIO_ADDR) */
 
 int32_t HITLS_Close(HITLS_Ctx *ctx)
 {
@@ -457,12 +515,14 @@ int32_t HITLS_GetError(const HITLS_Ctx *ctx, int32_t ret)
     if (ret == HITLS_SUCCESS) {
         return HITLS_SUCCESS;
     }
+
     if (ret == HITLS_CALLBACK_CLIENT_HELLO_RETRY) {
         return HITLS_WANT_CLIENT_HELLO_CB;
     }
     if (ret == HITLS_CALLBACK_CERT_RETRY) {
         return HITLS_WANT_X509_LOOKUP;
     }
+
     /* HANDSHAKING state */
     if (ctx->state == CM_STATE_HANDSHAKING) {
         /* In non-blocking mode, I/O read/write failure is acceptable and link establishment is allowed */
@@ -652,6 +712,7 @@ int32_t HITLS_SetNoQueryMtu(HITLS_Ctx *ctx, bool noQueryMtu)
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_FEATURE_MTU_QUERY
 int32_t HITLS_GetNeedQueryMtu(HITLS_Ctx *ctx, bool *needQueryMtu)
 {
     if (ctx == NULL || needQueryMtu == NULL) {
@@ -661,6 +722,7 @@ int32_t HITLS_GetNeedQueryMtu(HITLS_Ctx *ctx, bool *needQueryMtu)
     *needQueryMtu = ctx->needQueryMtu;
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_FEATURE_MTU_QUERY */
 #endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
 
 #ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
@@ -674,7 +736,7 @@ int32_t HITLS_GetClientVersion(const HITLS_Ctx *ctx, uint16_t *clientVersion)
 }
 #endif
 
-#ifdef HITLS_TLS_CONFIG_STATE
+#if defined(HITLS_TLS_CONFIG_STATE) && defined(HITLS_BSL_LOG)
 const char *HITLS_GetStateString(uint32_t state)
 {
     return HS_GetStateStr(state);
@@ -693,6 +755,7 @@ int32_t HITLS_DoHandShake(HITLS_Ctx *ctx)
         return HITLS_Accept(ctx);
     }
 }
+
 #ifdef HITLS_TLS_FEATURE_KEY_UPDATE
 /* The updateType types are as follows: HITLS_UPDATE_NOT_REQUESTED (0), HITLS_UPDATE_REQUESTED (1) or
  * HITLS_KEY_UPDATE_REQ_END(255). The local end sends 1 and the peer end sends 0 to the local end. The local end sends 0
@@ -747,7 +810,7 @@ static int32_t CheckRenegotiateValid(HITLS_Ctx *ctx)
 
     (void)HITLS_GetRenegotiationSupport(ctx, &isSupport);
     /* Renegotiation is disabled */
-    if (isSupport == false) {
+    if (!isSupport) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16071, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "forbid renegotiate.", 0, 0, 0, 0);
         return HITLS_CM_LINK_UNSUPPORT_SECURE_RENEGOTIATION;
@@ -800,6 +863,14 @@ int32_t HITLS_Renegotiate(HITLS_Ctx *ctx)
         return ret;
     }
 
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+    ctx->negotiatedInfo.renegoRecordSizeLimit = ctx->negotiatedInfo.recordSizeLimit;
+    ctx->negotiatedInfo.recordSizeLimit = 0;
+    ret = REC_RecOutBufReSet(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif
     ctx->userRenego = true; /* renegotiation initiated by the local end */
     ctx->negotiatedInfo.renegotiationNum++;
     ChangeConnState(ctx, CM_STATE_RENEGOTIATION);

@@ -140,7 +140,6 @@ static int32_t ParseClientSignatureAlgorithms(ParsePacket *pkt, ClientHelloMsg *
     }
     pkt->ctx->peerInfo.signatureAlgorithmsSize = signatureAlgorithmsSize;
     msg->extension.flag.haveSignatureAlgorithms = true;
-
     return HITLS_SUCCESS;
 }
 
@@ -640,6 +639,7 @@ static int32_t ParseClientPreSharedKey(ParsePacket *pkt, ClientHelloMsg *msg)
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
 static int32_t ParseClientTrustedCaList(ParsePacket *pkt, ClientHelloMsg *msg)
 {
     /* Refer to the CAList parsing method of the CertificateRequest Msg. */
@@ -679,6 +679,8 @@ static int32_t ParseClientTrustedCaList(ParsePacket *pkt, ClientHelloMsg *msg)
 
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
+
 static int32_t ParseClientPskKeyExModes(ParsePacket *pkt, ClientHelloMsg *msg)
 {
     /* Parsed extensions of the same type */
@@ -803,6 +805,29 @@ static int32_t ParseClientTicket(ParsePacket *pkt, ClientHelloMsg *msg)
 }
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
 
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+static int32_t ParseClientRecordSizeLimit(ParsePacket *pkt, ClientHelloMsg *msg)
+{
+    /* Parsed extensions of the same type */
+    if (msg->extension.flag.haveRecordSizeLimit == true) {
+        return ParseDupExtProcess(pkt->ctx, BINLOG_ID16243, BINGLOG_STR("recordSizeLimit"));
+    }
+
+    int32_t ret = ParseBytesToUint16(pkt, &msg->extension.content.recordSizeLimit);
+    if (ret != HITLS_SUCCESS) {
+        return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID16244, BINGLOG_STR("recordSizeLimit"));
+    }
+
+    /*
+     * Endpoints MUST NOT send a "record_size_limit" extension with a value
+     * smaller than 64.  An endpoint MUST treat receipt of a smaller value
+     * as a fatal error and generate an "illegal_parameter" alert.
+     */
+    msg->extension.flag.haveRecordSizeLimit = true;
+    return HITLS_SUCCESS;
+}
+#endif
+
 // parses the extension message from client
 static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_t *buf, uint32_t extMsgLen,
     ClientHelloMsg *msg)
@@ -829,7 +854,9 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         { .exMsgType = HS_EX_TYPE_PRE_SHARED_KEY, .parseFunc = ParseClientPreSharedKey},
         { .exMsgType = HS_EX_TYPE_PSK_KEY_EXCHANGE_MODES, .parseFunc = ParseClientPskKeyExModes},
         { .exMsgType = HS_EX_TYPE_COOKIE, .parseFunc = ParseClientCookie},
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
         { .exMsgType = HS_EX_TYPE_CERTIFICATE_AUTHORITIES, .parseFunc = ParseClientTrustedCaList},
+#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
         { .exMsgType = HS_EX_TYPE_POST_HS_AUTH, .parseFunc = ParseClientPostHsAuth},
         { .exMsgType = HS_EX_TYPE_KEY_SHARE, .parseFunc = ParseClientKeyShare},
 #endif /* HITLS_TLS_PROTO_TLS13 */
@@ -842,6 +869,9 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
 #ifdef HITLS_TLS_FEATURE_ETM
         { .exMsgType = HS_EX_TYPE_ENCRYPT_THEN_MAC, .parseFunc = ParseClientEncryptThenMac},
 #endif /* HITLS_TLS_FEATURE_ETM */
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+        { .exMsgType = HS_EX_TYPE_RECORD_SIZE_LIMIT, .parseFunc = ParseClientRecordSizeLimit},
+#endif
     };
     for (uint32_t index = 0; index < sizeof(extMsgList) / sizeof(extMsgList[0]); index++) {
         if (extMsgList[index].exMsgType == extMsgType) {
@@ -972,9 +1002,10 @@ void CleanClientHelloExtension(ClientHelloMsg *msg)
     msg->extension.content.keyShare = NULL;
     CleanPreShareKey(msg->extension.content.preSharedKey);
     msg->extension.content.preSharedKey = NULL;
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
     FreeDNList(msg->extension.content.caList);
+#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
     msg->extension.content.caList = NULL;
 #endif /* HITLS_TLS_PROTO_TLS13 */
-    return;
 }
 #endif /* HITLS_TLS_HOST_SERVER */

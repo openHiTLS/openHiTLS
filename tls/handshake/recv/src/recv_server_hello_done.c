@@ -13,7 +13,6 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#include "recv_process.h"
 #ifdef HITLS_TLS_HOST_CLIENT
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 #include "rec.h"

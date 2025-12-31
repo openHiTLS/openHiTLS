@@ -30,8 +30,13 @@ extern "C" {
 #define REC_MAX_PLAIN_TEXT_LENGTH 16384     /* Plain content length */
 
 #define REC_MAX_ENCRYPTED_OVERHEAD 2048u                  /* Maximum Encryption Overhead rfc5246 */
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+#define REC_MAX_READ_ENCRYPTED_OVERHEAD (256u + 64u)        /* Maximum Encryption Overhead maxPadding + max(iv + mac) */
+#define REC_MAX_WRITE_ENCRYPTED_OVERHEAD (16u + 64u)        /* Maximum Encryption Overhead minPadding + max(iv + mac) */
+#else
 #define REC_MAX_READ_ENCRYPTED_OVERHEAD REC_MAX_ENCRYPTED_OVERHEAD
 #define REC_MAX_WRITE_ENCRYPTED_OVERHEAD REC_MAX_ENCRYPTED_OVERHEAD
+#endif /* HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT */
 #define REC_MAX_CIPHER_TEXT_LEN (REC_MAX_PLAIN_LENGTH + REC_MAX_ENCRYPTED_OVERHEAD)   /* Maximum ciphertext length */
 
 #define REC_MAX_AES_GCM_ENCRYPTION_LIMIT 23726566u   /* RFC 8446 5.5 Limits on Key Usage AES-GCM SHOULD under 2^24.5 */
@@ -92,8 +97,6 @@ typedef struct RecCtx {
 uint32_t RecGetInitBufferSize(const TLS_Ctx *ctx, bool isRead);
 
 int32_t RecDerefBufList(TLS_Ctx *ctx);
-
-void RecClearAlertCount(TLS_Ctx *ctx, REC_Type recordType);
 
 /**
  * @brief   free the record buffer

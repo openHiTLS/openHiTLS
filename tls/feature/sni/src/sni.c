@@ -115,4 +115,44 @@ int32_t SNI_StrcaseCmp(const char *s1, const char *s2)
 
     return ret;
 }
+
+HITLS_Config *HITLS_SetNewConfig(HITLS_Ctx *ctx, HITLS_Config *newConfig)
+{
+    if (ctx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16758, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "ctx null", 0, 0, 0, 0);
+        return NULL;
+    }
+    if (ctx->globalConfig == newConfig || newConfig == NULL) {
+        return ctx->globalConfig;
+    }
+
+    if (newConfig->certMgrCtx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16759, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "certMgrCtx null", 0, 0, 0, 0);
+        return NULL;
+    }
+
+    HITLS_Config *srcConfig = &ctx->config.tlsConfig;
+
+    SAL_CERT_MgrCtxFree(srcConfig->certMgrCtx);
+    srcConfig->certMgrCtx = NULL;
+    srcConfig->certMgrCtx = SAL_CERT_MgrCtxDup(newConfig->certMgrCtx);
+    if (srcConfig->certMgrCtx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16760, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "MgrCtxDup fail", 0, 0, 0, 0);
+        return NULL;
+    }
+
+    if (srcConfig->sessionIdCtxSize == ctx->globalConfig->sessionIdCtxSize &&
+        (memcmp(srcConfig->sessionIdCtx, ctx->globalConfig->sessionIdCtx, srcConfig->sessionIdCtxSize) == 0)) {
+            (void)memcpy_s(srcConfig->sessionIdCtx, sizeof(srcConfig->sessionIdCtx),
+                           newConfig->sessionIdCtx, newConfig->sessionIdCtxSize);
+            srcConfig->sessionIdCtxSize = newConfig->sessionIdCtxSize;
+    }
+    srcConfig->userData = newConfig->userData;
+    srcConfig->userDataFreeCb = newConfig->userDataFreeCb;
+    HITLS_CFG_FreeConfig(ctx->globalConfig);
+    HITLS_CFG_UpRef(newConfig);
+    ctx->globalConfig = newConfig;
+    return ctx->globalConfig;
+}
 #endif /* HITLS_TLS_FEATURE_SNI */

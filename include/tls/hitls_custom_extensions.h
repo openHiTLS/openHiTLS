@@ -102,11 +102,11 @@ extern "C" {
  * @param   addArg  [IN]  Additional argument provided when registering the callback
  * @retval  HITLS_ADD_CUSTOM_EXTENSION_RET_PACK if the extension needs to be packed,
  *          HITLS_ADD_CUSTOM_EXTENSION_RET_PASS if it does not need to be packed,
- *          otherwise, any other return value is considered a failure and will trigger a fatal alert based on the alert value.
+ *          otherwise, any other return value is considered a failure and will trigger a fatal alert based on the alert
+ * value.
  */
 typedef int (*HITLS_AddCustomExtCallback) (const HITLS_Ctx *ctx, uint16_t extType, uint32_t context, uint8_t **out,
     uint32_t *outLen, HITLS_CERT_X509 *cert, uint32_t certIndex, uint32_t *alert, void *addArg);
-
 
 /**
  * @ingroup hitls_custom_extensions

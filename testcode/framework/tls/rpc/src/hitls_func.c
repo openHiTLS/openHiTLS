@@ -492,6 +492,12 @@ static int8_t HitlsSetConfig(const HitlsConfig *hitlsConfigList, int configListS
 int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
 {
     int ret = 0;
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+    if (inCtxCfg->recordSizeLimit > 0) {
+        LOG_DEBUG("HiTLS Set recordSizeLimit is %u", inCtxCfg->recordSizeLimit);
+        HITLS_CFG_SetRecordSizeLimit(outCfg, inCtxCfg->recordSizeLimit);
+    }
+#endif
 #ifdef HITLS_TLS_FEATURE_SESSION
     if (inCtxCfg->setSessionCache >= 0) {
         LOG_DEBUG("HiTLS Set SessionCache is %d", inCtxCfg->setSessionCache);

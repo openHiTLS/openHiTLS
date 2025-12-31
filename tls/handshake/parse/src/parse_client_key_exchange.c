@@ -239,7 +239,6 @@ void CleanClientKeyExchange(ClientKeyExchangeMsg *msg)
     BSL_SAL_FREE(msg->pskIdentity);
 #endif /* HITLS_TLS_FEATURE_PSK */
     BSL_SAL_FREE(msg->data);
-    return;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
 #endif /* HITLS_TLS_HOST_SERVER */

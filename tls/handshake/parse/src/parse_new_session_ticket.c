@@ -72,8 +72,9 @@ static int32_t ParseTicket(ParsePacket *pkt, NewSessionTicketMsg *msg)
     msg->ticketSize = (uint32_t)ticketSize;
     return HITLS_SUCCESS;
 }
-
-int32_t ParseNewSessionTicketExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, NewSessionTicketMsg *msg)
+#ifdef HITLS_TLS_PROTO_TLS13
+static int32_t ParseNewSessionTicketExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
+    NewSessionTicketMsg *msg)
 {
     uint32_t bufOffset = 0u;
     int32_t ret = HITLS_SUCCESS;
@@ -86,32 +87,30 @@ int32_t ParseNewSessionTicketExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_
             return ret;
         }
         bufOffset += HS_EX_HEADER_LEN;
-
-        if (bufLen - bufOffset >= extMsgLen) {
-            uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
-            if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED
-#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
-                || !IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx),
-                    extMsgType, HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET)
-#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
-            ) {
-                msg->extensionTypeMask |= 1ULL << hsExTypeId;
-            }
-
-#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
-            if (IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx),
-                extMsgType, HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET)) {
-                ret = ParseCustomExtensions(ctx, buf + bufOffset, extMsgType, extMsgLen,
-                    HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET, NULL, 0);
-                if (ret != HITLS_SUCCESS) {
-                    return ret;
-                }
-            }
-#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
-            bufOffset += extMsgLen;
-        } else {
+        if (bufLen - bufOffset < extMsgLen) {
             return HITLS_PARSE_INVALID_MSG_LEN;
         }
+        uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
+        if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+            || !IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx),
+                extMsgType, HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET)
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
+        ) {
+            msg->extensionTypeMask |= 1ULL << hsExTypeId;
+        }
+
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+        if (IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx),
+            extMsgType, HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET)) {
+            ret = ParseCustomExtensions(ctx, buf + bufOffset, extMsgType, extMsgLen,
+                HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET, NULL, 0);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+        }
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
+        bufOffset += extMsgLen;
     }
 
     if (bufOffset != bufLen) {
@@ -135,6 +134,7 @@ static int32_t ParseNewSessionTicketExtensions(ParsePacket *pkt, NewSessionTicke
     }
     return ParseNewSessionTicketExtension(pkt->ctx, &pkt->buf[*pkt->bufOffset], exMsgLen, msg);
 }
+#endif
 
 int32_t ParseNewSessionTicket(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg)
 {

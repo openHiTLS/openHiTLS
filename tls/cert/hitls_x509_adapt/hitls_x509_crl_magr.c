@@ -13,9 +13,10 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include "hitls_build.h"
+#if (defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER)) && defined(HITLS_TLS_CONFIG_CERT_CRL)
 #include <stdint.h>
 #include <string.h>
-#include "hitls_build.h"
 #include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -34,7 +35,8 @@ static int32_t LoadCrlFromFile(const char *path, HITLS_ParseFormat format, HITLS
     return HITLS_X509_CrlParseBundleFile(format, path, crlList);
 }
 
-static int32_t LoadCrlFromBuffer(const uint8_t *buf, uint32_t bufLen, HITLS_ParseFormat format, HITLS_X509_List **crlList)
+static int32_t LoadCrlFromBuffer(
+    const uint8_t *buf, uint32_t bufLen, HITLS_ParseFormat format, HITLS_X509_List **crlList)
 {
     BSL_Buffer buffer = {(uint8_t *)(uintptr_t)buf, bufLen};
     return HITLS_X509_CrlParseBundleBuff(format, &buffer, crlList);
@@ -44,7 +46,7 @@ HITLS_CERT_CRLList *HITLS_X509_Adapt_CrlParse(HITLS_Config *config, const uint8_
     HITLS_ParseType type, HITLS_ParseFormat format)
 {
     (void)config;  /* config parameter not used for CRL parsing */
-    
+
     if (buf == NULL || len == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return NULL;
@@ -78,3 +80,4 @@ void HITLS_X509_Adapt_CrlFree(HITLS_CERT_CRLList *crlList)
         BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
     }
 }
+#endif /* HITLS_TLS_CALLBACK_CERT && HITLS_TLS_CONFIG_CERT_CRL */

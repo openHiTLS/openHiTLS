@@ -23,6 +23,15 @@
 extern "C" {
 #endif
 
+typedef struct {
+    size_t outLen;
+    char label[MAX_EXPORT_MATERIAL_BUF];
+    size_t labelLen;
+    char context[MAX_EXPORT_MATERIAL_BUF];
+    size_t contextLen;
+    int useContext;
+} ExportMaterialParam;
+
 void HLT_ConfigTimeOut(const char* timeout);
 void HLT_UnsetTimeOut();
 
@@ -50,11 +59,13 @@ int HLT_SetRenegotiationSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetLegacyRenegotiateSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetClientRenegotiateSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetEmptyRecordsNum(HLT_Ctx_Config *ctxConfig, uint32_t emptyNum);
+int HLT_SetRecordSizeLimit(HLT_Ctx_Config *ctxConfig, uint16_t recordSize);
 int HLT_SetFlightTransmitSwitch(HLT_Ctx_Config *ctxConfig, bool support);
 int HLT_SetKeyLogCb(HLT_Ctx_Config *ctxConfig, char *SetKeyLogCb);
 int HLT_SetClientVerifySupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetNoClientCertSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetPostHandshakeAuth(HLT_Ctx_Config *ctxConfig, bool support);
+int HLT_SetPostHandshakeAuthSupport(HLT_Ctx_Config *ctxConfig, bool support);
 int HLT_SetExtenedMasterSecretSupport(HLT_Ctx_Config* ctxConfig, bool support);
 int HLT_SetEncryptThenMac(HLT_Ctx_Config *ctxConfig, int support);
 int HLT_SetMiddleBoxCompat(HLT_Ctx_Config *ctxConfig, int support);
@@ -130,6 +141,7 @@ int32_t HLT_SetSessionTicketSupport(HLT_Ctx_Config* config, bool issupport);
 int HLT_TlsSessionHasTicket(void *session);
 int HLT_TlsSessionIsResumable(void *session);
 void HLT_TlsFreeSession(void *session);
+int HLT_TLSWriteExportMaterial(void* ssl, ExportMaterialParam *param);
 
 // The RPC controls the remote process to invoke TLS functions
 int HLT_RpcTlsNewCtx(HLT_Process* peerProcess, TLS_VERSION tlsVersion, bool isClient);
@@ -169,6 +181,8 @@ int HLT_RpcSctpClose(HLT_Process *peerProcess, int fd);
 int HLT_RpcCloseFd(HLT_Process *peerProcess, int fd, int linkType);
 int HLT_RpcTlsSetMtu(HLT_Process *peerProcess, int sslId, uint16_t mtu);
 int HLT_RpcTlsGetErrorCode(HLT_Process *peerProcess, int sslId);
+
+int HLT_RpcTlsWriteExportMaterial(HLT_Process* peerProcess, int sslId, ExportMaterialParam *param);
 
 // TLS connection establishment encapsulation interface
 HLT_Tls_Res* HLT_ProcessTlsAccept(HLT_Process *process, TLS_VERSION tlsVersion,

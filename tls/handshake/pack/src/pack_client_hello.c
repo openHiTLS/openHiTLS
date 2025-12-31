@@ -23,9 +23,6 @@
 #include "tls.h"
 #include "hitls_error.h"
 #include "hitls_security.h"
-#ifdef HITLS_TLS_FEATURE_SECURITY
-#include "security.h"
-#endif
 #include "cipher_suite.h"
 #include "hs_ctx.h"
 #include "pack_common.h"
@@ -225,5 +222,4 @@ int32_t PackClientHello(const TLS_Ctx *ctx, PackPacket *pkt)
 
     return HITLS_SUCCESS;
 }
-
 #endif /* HITLS_TLS_HOST_CLIENT */

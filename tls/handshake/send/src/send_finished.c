@@ -24,10 +24,10 @@
 #include "hs_verify.h"
 #include "transcript_hash.h"
 #include "hs_common.h"
+#include "hs_dtls_timer.h"
 #include "pack.h"
 #include "send_process.h"
 #include "hs_kx.h"
-#include "hs_dtls_timer.h"
 
 #ifdef HITLS_TLS_HOST_CLIENT
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)

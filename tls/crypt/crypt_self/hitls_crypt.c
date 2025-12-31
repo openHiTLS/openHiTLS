@@ -124,7 +124,7 @@ static int32_t SetHmacMdAttr(CRYPT_EAL_MacCtx *ctx, const char *attrName)
     }
     BSL_Param param[] = {
         {.key = CRYPT_PARAM_MD_ATTR, .valueType = BSL_PARAM_TYPE_UTF8_STR,
-        .value = (void *)(uintptr_t)attrName, .valueLen = strlen(attrName), .useLen = 0},
+            .value = (void *)(uintptr_t)attrName, .valueLen = strlen(attrName), .useLen = 0},
         BSL_PARAM_END
     };
     int32_t ret = CRYPT_EAL_MacSetParam(ctx, param);
@@ -364,10 +364,10 @@ static int32_t SpecialModeEncryptPreSolve(CRYPT_EAL_CipherCtx *ctx, const HITLS_
         }
     }
     // In the case of CCM processing, msgLen needs to be set.
-    bool isCcm = (cipher->algo == HITLS_CIPHER_AES_128_CCM) || (cipher->algo == HITLS_CIPHER_AES_128_CCM8) ||
+    bool isCCM = (cipher->algo == HITLS_CIPHER_AES_128_CCM) || (cipher->algo == HITLS_CIPHER_AES_128_CCM8) ||
                  (cipher->algo == HITLS_CIPHER_AES_256_CCM) || (cipher->algo == HITLS_CIPHER_AES_256_CCM8) ||
-                 (cipher->algo == HITLS_CIPHER_SM4_CCM);
-    if (isCcm == true) {
+				 (cipher->algo == HITLS_CIPHER_SM4_CCM);
+    if (isCCM == true) {
         ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &inLen, sizeof(inLen));
         if (ret != CRYPT_SUCCESS) {
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16636, "SET_MSGLEN fail");
@@ -565,10 +565,10 @@ static int32_t DEFAULT_DecryptPrepare(CRYPT_EAL_CipherCtx *ctx, const HITLS_Ciph
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16652, "CipherUpdate fail");
         }
     }
-    bool isCcm = (cipher->algo == HITLS_CIPHER_AES_128_CCM) || (cipher->algo == HITLS_CIPHER_AES_128_CCM8) ||
+    bool isCCM = (cipher->algo == HITLS_CIPHER_AES_128_CCM) || (cipher->algo == HITLS_CIPHER_AES_128_CCM8) ||
                  (cipher->algo == HITLS_CIPHER_AES_256_CCM) || (cipher->algo == HITLS_CIPHER_AES_256_CCM8) ||
-                 (cipher->algo == HITLS_CIPHER_SM4_CCM);
-    if (isCcm == true) {
+				 (cipher->algo == HITLS_CIPHER_SM4_CCM);
+    if (isCCM == true) {
         // The length of the decrypted ciphertext consists of msgLen and tagLen, so tagLen needs to be subtracted.
         uint64_t msgLen = inLen - tagLen;
         ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &msgLen, sizeof(msgLen));
@@ -640,7 +640,8 @@ CRYPT_EAL_PkeyCtx *GeneratePkeyByParaId(HITLS_Lib_Ctx *libCtx, const char *attrN
 {
     int32_t ret;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
-    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, algId, isKem ? CRYPT_EAL_PKEY_KEM_OPERATE : CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
+    pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, algId,
+        isKem ? CRYPT_EAL_PKEY_KEM_OPERATE : CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
     if (pkey == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16658, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "PkeyNewCtx fail, algId is %d", algId, 0, 0, 0);
@@ -659,7 +660,8 @@ CRYPT_EAL_PkeyCtx *GeneratePkeyByParaId(HITLS_Lib_Ctx *libCtx, const char *attrN
 
     ret = CRYPT_EAL_PkeyGen(pkey);
     if (ret != CRYPT_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16660, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "PkeyGen fail %u", ret, 0, 0, 0);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16660,
+            BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "PkeyGen fail %u", ret, 0, 0, 0);
         CRYPT_EAL_PkeyFreeCtx(pkey);
         return NULL;
     }
@@ -1086,7 +1088,7 @@ int32_t HITLS_CRYPT_RandbytesEx(HITLS_Lib_Ctx *libCtx, uint8_t *bytes, uint32_t 
 {
     return CRYPT_EAL_RandbytesEx(libCtx, bytes, bytesLen);
 }
-#endif /*HITLS_TLS_FEATURE_PROVIDER */
+#endif /* HITLS_TLS_FEATURE_PROVIDER */
 
 void HITLS_CRYPT_FreeKey(HITLS_CRYPT_Key *key)
 {
@@ -1146,7 +1148,6 @@ int32_t HITLS_CRYPT_DigestFinal(HITLS_HASH_Ctx *ctx, uint8_t *out, uint32_t *len
 #endif
 }
 
-
 void HITLS_CRYPT_CipherFree(HITLS_Cipher_Ctx *ctx)
 {
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -1192,7 +1193,7 @@ int32_t HITLS_CRYPT_KemEncapsulate(HITLS_Lib_Ctx *libCtx, const char *attrName,
     if (groupInfo == NULL) {
         return HITLS_INVALID_INPUT;
     }
-        int32_t ret;
+    int32_t ret;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, groupInfo->algId, CRYPT_EAL_PKEY_KEM_OPERATE, attrName);
     if (pkey == NULL) {

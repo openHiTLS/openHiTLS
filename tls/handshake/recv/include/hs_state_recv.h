@@ -35,6 +35,15 @@ extern "C" {
  */
 int32_t HS_RecvMsgProcess(TLS_Ctx *ctx);
 
+/**
+ * @brief   Process HITLS_Listen recv ClientHello
+ *
+ * @param   ctx [IN] TLS object
+ *
+ * @retval  HITLS_SUCCESS
+ * @retval  For details, see hitls_error.h
+ */
+int32_t HS_DtlsRecvClientHello(TLS_Ctx *ctx);
 
 int32_t ReadHsMessage(TLS_Ctx *ctx, uint32_t length);
 #ifdef __cplusplus

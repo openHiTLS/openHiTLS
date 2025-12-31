@@ -40,7 +40,7 @@ static int32_t SelectProtocol(TLS_Ctx *ctx, uint8_t *alpnSelected, uint16_t alpn
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15259, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "server proposed protocol is not supported by client", 0, 0, 0, 0);
+            "server proposed protocol is not supported by client.", 0, 0, 0, 0);
         return HITLS_MSG_HANDLE_ALPN_PROTOCOL_NO_MATCH;
     }
     uint32_t protoLen = protoMatchLen;

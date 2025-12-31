@@ -58,7 +58,7 @@ int32_t DtlsRecordWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, 
 
 #endif
 
-/**
+/*
  * @brief   Write data to the UIO of the TLS context
  *
  * @param   ctx [IN] TLS context

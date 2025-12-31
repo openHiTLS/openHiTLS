@@ -32,17 +32,20 @@
 #ifdef HITLS_TLS_FEATURE_SECURITY
 #include "security.h"
 #endif
-#include "parse.h"
+#include "record.h"
 #include "hs_kx.h"
 #include "hs.h"
 #include "hs_extensions.h"
-#include "hs_common.h"
 #include "config_type.h"
 #include "config_check.h"
-#include "record.h"
+#include "hs_common.h"
 
 #ifdef HITLS_TLS_PROTO_DTLS12
 #define DTLS_SCTP_AUTH_LABEL "EXPORTER_DTLS_OVER_SCTP" /* dtls SCTP auth key label */
+#endif
+#ifdef HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL
+#define LABEL_SIZE 5
+#define MAX_LABEL_SIZE 23 /* the max size of label: "extended master secret" */
 #endif
 #ifdef HITLS_TLS_PROTO_TLS13
 /* Fixed random value of the hello retry request packet */
@@ -69,16 +72,7 @@ const uint8_t *HS_GetTls12DowngradeRandom(uint32_t *len)
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
 #endif /* HITLS_TLS_PROTO_TLS13 */
 
-uint32_t HS_GetVersion(const TLS_Ctx *ctx)
-{
-    if (ctx->negotiatedInfo.version > 0) {
-        return ctx->negotiatedInfo.version;
-    } else {
-        /* If the version is not negotiated, the latest version supported by the local is returned */
-        return ctx->config.tlsConfig.maxVersion;
-    }
-}
-
+#ifdef HITLS_BSL_LOG
 static const char *g_stateMachineStr[] = {
     [TLS_IDLE] = "idle",
     [TLS_CONNECTED] = "connected",
@@ -86,7 +80,9 @@ static const char *g_stateMachineStr[] = {
     [TRY_SEND_CLIENT_HELLO] = "send client hello",
     [TRY_SEND_CLIENT_KEY_EXCHANGE] = "send client key exchange",
     [TRY_RECV_SERVER_HELLO] = "recv server hello",
+#ifdef HITLS_TLS_PROTO_DTLS12
     [TRY_RECV_HELLO_VERIFY_REQUEST] = "recv hello verify request",
+#endif
     [TRY_RECV_SERVER_KEY_EXCHANGE] = "recv server key exchange",
     [TRY_RECV_SERVER_HELLO_DONE] = "recv server hello done",
     [TRY_RECV_NEW_SESSION_TICKET] = "recv new session ticket",
@@ -95,7 +91,9 @@ static const char *g_stateMachineStr[] = {
 #ifdef HITLS_TLS_HOST_SERVER
     [TRY_SEND_HELLO_REQUEST] = "send hello request",
     [TRY_SEND_SERVER_HELLO] = "send server hello",
+#ifdef HITLS_TLS_PROTO_DTLS12
     [TRY_SEND_HELLO_VERIFY_REQUEST] = "send hello verify request",
+#endif
     [TRY_SEND_SERVER_KEY_EXCHANGE] = "send server key exchange",
     [TRY_RECV_CLIENT_HELLO] = "recv client hello",
     [TRY_RECV_CLIENT_KEY_EXCHANGE] = "recv client key exchange",
@@ -131,7 +129,6 @@ const char *HS_GetStateStr(uint32_t state)
     if ((state >= (sizeof(g_stateMachineStr) / sizeof(char *))) || (g_stateMachineStr[state] == NULL)) {
         return "unknown";
     }
-
     return g_stateMachineStr[state];
 }
 
@@ -169,6 +166,7 @@ const char *HS_GetMsgTypeStr(HS_MsgType type)
     }
     return "unknown";
 }
+#endif /* HITLS_BSL_LOG */
 
 int32_t HS_ChangeState(TLS_Ctx *ctx, uint32_t nextState)
 {
@@ -626,7 +624,7 @@ uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
         case CERTIFICATE_VERIFY:
             return REC_MAX_PLAIN_LENGTH;
         case NEW_SESSION_TICKET:
-            if (HS_GetVersion(ctx) == HITLS_VERSION_TLS13) {
+            if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13) {
                 return HITLS_SESSION_TICKET_MAX_SIZE_TLS13;
             }
             return HITLS_SESSION_TICKET_MAX_SIZE_TLS12;
@@ -669,6 +667,181 @@ uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 
+#ifdef HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL
+/* rfc8446 7.5 Exporters
+    The exporter value is computed as:
+    TLS-Exporter(label, context_value, key_length) =
+        HKDF-Expand-Label(Derive-Secret(Secret, label, ""),
+                        "exporter", Hash(context_value), key_length) */
+#ifdef HITLS_TLS_PROTO_TLS13
+static int32_t Tls13ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t outLen,
+    const char *label, size_t labelLen, const uint8_t *context, size_t contextLen, int32_t useContext)
+{
+    size_t useContextLen = contextLen;
+    if (useContext == 0) {
+        useContextLen = 0;
+    }
+    uint8_t tmpSecret[MAX_DIGEST_SIZE] = {0};
+    HITLS_HashAlgo hash = ctx->negotiatedInfo.cipherSuiteInfo.hashAlg;
+    uint32_t hashLen = SAL_CRYPT_DigestSize(hash);
+    if (hashLen == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16820, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "DigestSize err", 0, 0, 0, 0);
+        return HITLS_CRYPT_ERR_DIGEST;
+    }
+    CRYPT_KeyDeriveParameters deriveInfo = {0};
+    deriveInfo.hashAlgo = hash;
+    deriveInfo.secret = ctx->exporterMasterSecret;
+    deriveInfo.secretLen = hashLen;
+    deriveInfo.label = (const uint8_t *)label;
+    deriveInfo.labelLen = (uint32_t)labelLen;
+    deriveInfo.seed = NULL;
+    deriveInfo.seedLen = 0;
+    deriveInfo.libCtx = LIBCTX_FROM_CTX(ctx);
+    deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
+    int32_t ret = HS_TLS13DeriveSecret(&deriveInfo, false, tmpSecret, hashLen);
+    if (ret != HITLS_SUCCESS) {
+        BSL_SAL_CleanseData(tmpSecret, MAX_DIGEST_SIZE);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16821, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "DeriveSecret fail", 0, 0, 0, 0);
+        return ret;
+    }
+    const uint8_t exportLabel[] = "exporter";
+    deriveInfo.secret = tmpSecret;
+    deriveInfo.secretLen = hashLen;
+    deriveInfo.label = exportLabel;
+    deriveInfo.labelLen = sizeof(exportLabel) - 1;
+    deriveInfo.seed = context;
+    deriveInfo.seedLen = (uint32_t)useContextLen;
+    ret = HS_TLS13DeriveSecret(&deriveInfo, false, out, (uint32_t)outLen);
+    BSL_SAL_CleanseData(tmpSecret, MAX_DIGEST_SIZE);
+    return ret;
+}
+#endif /* HITLS_TLS_PROTO_TLS13 */
+static bool IsSpecialLabel(const char *label, size_t labelLen)
+{
+    const char labelArray[LABEL_SIZE][MAX_LABEL_SIZE] = {
+    "client finished",
+    "server finished",
+    "key expansion",
+    "master secret",
+    "extended master secret"};
+    char labelBuf[MAX_LABEL_SIZE] = { 0 };
+    size_t useLabelLen = labelLen;
+    if (labelLen > MAX_LABEL_SIZE) {
+        useLabelLen = MAX_LABEL_SIZE;
+    }
+    int32_t ret = EOK;
+    if (labelLen != 0) {
+        ret = memcpy_s(labelBuf, sizeof(labelBuf), label, useLabelLen);
+    }
+    if (ret != EOK) {
+        return true;
+    }
+    for (uint32_t index = 0; index < LABEL_SIZE; index++) {
+        if (memcmp(labelBuf, labelArray[index], MAX_LABEL_SIZE) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* rfc5705 4. Exporter Definition
+    If no context is provided, it then computes:
+           PRF(SecurityParameters.master_secret, label,
+               SecurityParameters.client_random +
+               SecurityParameters.server_random
+               )[length]
+   If context is provided, it computes:
+           PRF(SecurityParameters.master_secret, label,
+               SecurityParameters.client_random +
+               SecurityParameters.server_random +
+               context_value_length + context_value
+               )[length] */
+static int32_t Tls12ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t outLen,
+    const char *label, size_t labelLen, const uint8_t *context, size_t contextLen, int32_t useContext)
+{
+    if (IsSpecialLabel(label, labelLen)) {
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_INVALID_INPUT, BINLOG_ID16822, "input invalid");
+    }
+
+    size_t seedLen = RANDOM_SIZE * 2;
+    if (useContext != 0) {
+        seedLen += sizeof(uint16_t) + contextLen;
+    }
+    uint8_t *seed = BSL_SAL_Calloc((uint32_t)seedLen, sizeof(uint8_t));
+    if (seed == NULL) {
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16823, "Calloc fail");
+    }
+    size_t usedLen = 0;
+    (void)memcpy_s(seed + usedLen, seedLen - usedLen, ctx->negotiatedInfo.clientRandom, RANDOM_SIZE);
+    usedLen += RANDOM_SIZE;
+    (void)memcpy_s(seed + usedLen, seedLen - usedLen, ctx->negotiatedInfo.serverRandom, RANDOM_SIZE);
+    usedLen += RANDOM_SIZE;
+    if (useContext != 0) {
+        BSL_Uint16ToByte((uint16_t)contextLen, seed + usedLen);
+        usedLen += sizeof(uint16_t);
+        if (context != NULL && contextLen != 0) {
+            (void)memcpy_s(seed + usedLen, seedLen - usedLen, context, contextLen);
+        }
+    }
+
+    uint32_t masterKeyLen = HITLS_SESS_GetMasterKeyLen(ctx->session);
+    uint8_t *masterKey = BSL_SAL_Calloc(masterKeyLen, sizeof(uint8_t));
+    if (masterKey == NULL) {
+        BSL_SAL_FREE(seed);
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16824, "Calloc fail");
+    }
+    int32_t ret = HITLS_SESS_GetMasterKey(ctx->session, masterKey, &masterKeyLen);
+    if (ret != HITLS_SUCCESS) {
+        BSL_SAL_FREE(seed);
+        BSL_SAL_FREE(masterKey);
+        return ret;
+    }
+
+    CRYPT_KeyDeriveParameters deriveInfo = {0};
+    deriveInfo.hashAlgo = ctx->negotiatedInfo.cipherSuiteInfo.hashAlg;
+    deriveInfo.secret = masterKey;
+    deriveInfo.secretLen = masterKeyLen;
+    deriveInfo.label = (const uint8_t *)label;
+    deriveInfo.labelLen = (uint32_t)labelLen;
+    deriveInfo.seed = seed;
+    deriveInfo.seedLen = (uint32_t)seedLen;
+    deriveInfo.libCtx = LIBCTX_FROM_CTX(ctx);
+    deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
+    ret = SAL_CRYPT_PRF(&deriveInfo, out, (uint32_t)outLen);
+    BSL_SAL_FREE(seed);
+    BSL_SAL_CleanseData(masterKey, masterKeyLen);
+    BSL_SAL_FREE(masterKey);
+    return ret;
+}
+
+int32_t HITLS_ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t outLen, const char *label, size_t labelLen,
+    const uint8_t *context, size_t contextLen, int32_t useContext)
+{
+    if (ctx == NULL || out == NULL || outLen == 0) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16825, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
+        return HITLS_INVALID_INPUT;
+    }
+    if (useContext != 0 && contextLen != 0 && (contextLen > UINT16_MAX || context == NULL)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16826, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input err", 0, 0, 0, 0);
+        return HITLS_INVALID_INPUT;
+    }
+    if (ctx->state != CM_STATE_TRANSPORTING) {
+        return HITLS_MSG_HANDLE_STATE_ILLEGAL;
+    }
+    int32_t ret = 0;
+#ifdef HITLS_TLS_PROTO_TLS13
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+        ret = Tls13ExportKeyingMaterial(ctx, out, outLen, label, labelLen, context, contextLen, useContext);
+    } else
+#endif /* HITLS_TLS_PROTO_TLS13 */
+    {
+        ret = Tls12ExportKeyingMaterial(ctx, out, outLen, label, labelLen, context, contextLen, useContext);
+    }
+    return ret;
+}
+#endif /* HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL */
+
 bool GroupConformToVersion(const TLS_Ctx *ctx, uint16_t version, uint16_t group)
 {
     uint32_t versionBits = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), version);
@@ -709,7 +882,7 @@ uint16_t *CheckSupportSignAlgorithms(const TLS_Ctx *ctx, const uint16_t *signAlg
         }
 #endif /* HITLS_TLS_PROTO_TLS13 */
         if (ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLCP_DTLCP11 &&
-            ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLS13 &&
+			ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLS13 &&
             signAlgorithms[i] == CERT_SIG_SCHEME_SM2_SM3) {
             continue;
         }
@@ -736,6 +909,7 @@ uint32_t HS_GetExtensionTypeId(uint32_t hsExtensionsType)
         case HS_EX_TYPE_APP_LAYER_PROTOCOLS: return HS_EX_TYPE_ID_APP_LAYER_PROTOCOLS;
         case HS_EX_TYPE_ENCRYPT_THEN_MAC: return HS_EX_TYPE_ID_ENCRYPT_THEN_MAC;
         case HS_EX_TYPE_EXTENDED_MASTER_SECRET: return HS_EX_TYPE_ID_EXTENDED_MASTER_SECRET;
+        case HS_EX_TYPE_RECORD_SIZE_LIMIT: return HS_EX_TYPE_ID_RECORD_SIZE_LIMIT;
         case HS_EX_TYPE_SESSION_TICKET: return HS_EX_TYPE_ID_SESSION_TICKET;
         case HS_EX_TYPE_PRE_SHARED_KEY: return HS_EX_TYPE_ID_PRE_SHARED_KEY;
         case HS_EX_TYPE_SUPPORTED_VERSIONS: return HS_EX_TYPE_ID_SUPPORTED_VERSIONS;
@@ -753,6 +927,9 @@ uint32_t HS_GetExtensionTypeId(uint32_t hsExtensionsType)
 int32_t HS_CheckReceivedExtension(HITLS_Ctx *ctx, HS_MsgType hsType, uint64_t hsMsgExtensionsMask,
     uint64_t hsMsgAllowedExtensionsMask)
 {
+#ifndef HITLS_BSL_LOG
+    (void)hsType;
+#endif
     if ((hsMsgExtensionsMask & hsMsgAllowedExtensionsMask) != hsMsgExtensionsMask) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17311, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -786,7 +963,7 @@ bool IsCipherSuiteAllowed(const HITLS_Ctx *ctx, uint16_t cipherSuite, bool check
                 return false;
             }
     }
-
+    /* The cipher suite sent by the clienthello is affected only by the supported version. */
     if (checkNegoVersion) {
         uint16_t negotiatedVersion = ctx->negotiatedInfo.version;
         if (negotiatedVersion > 0) {
@@ -797,4 +974,26 @@ bool IsCipherSuiteAllowed(const HITLS_Ctx *ctx, uint16_t cipherSuite, bool check
     }
 
     return true;
+}
+
+uint32_t HS_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param)
+{
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, (uint16_t)param);
+    if (groupInfo == NULL) {
+        return 0;
+    }
+    switch (cmd) {
+        case HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN:
+            return groupInfo->pubkeyLen;
+        case HITLS_CRYPT_INFO_CMD_GET_CIPHERTEXT_LEN:
+            return groupInfo->ciphertextLen;
+        default:
+            return 0;
+    }
+}
+
+HITLS_CERT_KeyType HS_SignScheme2CertKeyType(const HITLS_Ctx *ctx, HITLS_SignHashAlgo signScheme)
+{
+    const TLS_SigSchemeInfo *info = ConfigGetSignatureSchemeInfo(&ctx->config.tlsConfig, signScheme);
+    return info == NULL ? TLS_CERT_KEY_TYPE_UNKNOWN : info->keyType;
 }

@@ -24,7 +24,6 @@
 #include "hitls_error.h"
 #include "bsl_err_internal.h"
 #include "tls_config.h"
-#include "cert_mgr_ctx.h"
 #include "config_type.h"
 
 int32_t HITLS_X509_Adapt_CertEncode(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint8_t *buf, uint32_t len,
@@ -97,7 +96,6 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertParse(HITLS_Config *config, const uint8_t 
         encodedCert.dataLen = len;
         ret = HITLS_X509_CertParseBuff(format, &encodedCert, &cert);
     }
-
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
@@ -114,9 +112,11 @@ HITLS_CERT_Chain *HITLS_X509_Adapt_BundleCertParse(HITLS_Lib_Ctx *libCtx, const 
     int ret;
     HITLS_X509_List *certlist = NULL;
     switch (type) {
+#ifdef HITLS_TLS_CONFIG_CERT_LOAD_FILE
         case TLS_PARSE_TYPE_FILE:
             ret = HITLS_X509_ProviderCertParseBundleFile(libCtx, attrName, format, (const char *)buf, &certlist);
             break;
+#endif
         case TLS_PARSE_TYPE_BUFF:
             encodedCert.data = (uint8_t *)(uintptr_t)buf;
             encodedCert.dataLen = len;
@@ -177,7 +177,7 @@ static int32_t CertCtrlGetSignAlgo(HITLS_Config *config, HITLS_CERT_X509 *cert, 
     *algSign = BslCid2SignHashAlgo(config, signAlgCid, hashCid);
     return HITLS_SUCCESS;
 }
-#if defined(HITLS_TLS_PROTO_TLCP11) || defined(HITLS_TLS_CONFIG_KEY_USAGE)
+#if defined(HITLS_TLS_CONFIG_KEY_USAGE) || defined(HITLS_TLS_PROTO_TLCP11)
 static int32_t CertCheckKeyUsage(HITLS_Config *config, HITLS_CERT_X509 *cert, uint32_t inKeyUsage, bool *res)
 {
     (void)config;
@@ -204,7 +204,8 @@ static int32_t CertCheckKeyUsage(HITLS_Config *config, HITLS_CERT_X509 *cert, ui
     *res = (keyUsage & inKeyUsage) != 0;
     return HITLS_SUCCESS;
 }
-#endif
+#endif /* defined(HITLS_TLS_CONFIG_KEY_USAGE) || defined(HITLS_TLS_PROTO_TLCP11) */
+
 int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_CERT_CtrlCmd cmd,
     void *input, void *output)
 {
@@ -219,7 +220,7 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
             break;
         case CERT_CTRL_GET_SIGN_ALGO:
             return CertCtrlGetSignAlgo(config, cert, (HITLS_SignHashAlgo *)output);
-#if defined(HITLS_TLS_PROTO_TLCP11) || defined(HITLS_TLS_CONFIG_KEY_USAGE)
+#if defined(HITLS_TLS_CONFIG_KEY_USAGE) || defined(HITLS_TLS_PROTO_TLCP11)
         case CERT_KEY_CTRL_IS_KEYENC_USAGE:
             return CertCheckKeyUsage(config, cert, HITLS_X509_EXT_KU_KEY_ENCIPHERMENT, (bool *)output);
         case CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE:

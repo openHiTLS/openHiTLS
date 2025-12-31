@@ -503,8 +503,8 @@ int32_t VERIFY_Tls13CalcVerifyData(TLS_Ctx *ctx, bool isClient)
     return ret;
 }
 
-static int32_t ConstructMsgHash(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_HashAlgo hashAlgo, HsMsgCache *dataBuf,
-    uint8_t *out, uint32_t *outLen)
+static int32_t ConstructMsgHash(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_HashAlgo hashAlgo,
+    HsMsgCache *dataBuf, uint8_t *out, uint32_t *outLen)
 {
     int32_t ret = HITLS_SUCCESS;
     uint32_t digestLen = *outLen - MSG_HASH_HEADER_SIZE;
@@ -630,7 +630,8 @@ int32_t VERIFY_CalcPskBinder(const TLS_Ctx *ctx, HITLS_HashAlgo hashAlgo, bool i
         return HITLS_CRYPT_ERR_DIGEST;
     }
     // HKDF.Extract PSK to compute EarlySecret
-    ret = HS_TLS13DeriveEarlySecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), hashAlgo, psk, pskLen, earlySecret, &hashLen);
+    ret = HS_TLS13DeriveEarlySecret(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
+        hashAlgo, psk, pskLen, earlySecret, &hashLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16882, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveEarlySecret fail", 0, 0, 0, 0);

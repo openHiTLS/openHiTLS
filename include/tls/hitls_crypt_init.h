@@ -26,10 +26,12 @@ extern "C" {
 #endif
 
 /**
- * @ingroup  hitls_crypt_init
- * @brief   Initialize the algorithm interface. By default, the hicrypto interface is used.
+ * @ingroup hitls_crypt_init
  *
+ * @brief   Initialize the algorithm interface. By default, the hicrypto interface is used.
  * @attention If hicrypto is not used, you do not need to call this API.
+ * @param   NA
+ * @return  void
  */
 void HITLS_CryptMethodInit(void);
 

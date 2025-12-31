@@ -26,7 +26,6 @@
 #include "indicator.h"
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
 
-
 int32_t SendChangeCipherSpecProcess(TLS_Ctx *ctx)
 {
     /* send message which changed cipher suites */

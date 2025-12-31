@@ -267,7 +267,7 @@
                             "deps": ["callback_sal"]
                         },
                         "callback_crypt": {
-                            "deps": ["callback_sal"],
+                            "deps": ["callback_sal", "params"],
                             "callback_crypt_hmac_primitives": null
                         }
                     },
@@ -282,7 +282,9 @@
                         },
                         "feature_indicator": null,
                         "feature_session": {
-                            "feature_session_ticket": null,
+                            "feature_session_ticket": {
+                                "deps" :["tlv"]
+                            },
                             "feature_session_id": null,
                             "feature_session_cache_cb": {
                                 "deps" :["feature_session_ticket", "feature_session_id"]
@@ -290,6 +292,9 @@
                             "feature_session_custom_ticket": {
                                 "deps" :["feature_session_ticket", "feature_session_id"]
                             }
+                        },
+                        "feature_export_key_material": {
+                            "deps" :["feature_session"]
                         },
                         "feature_mode": {
                             "feature_mode_fall_back_scsv": null,
@@ -300,6 +305,7 @@
                         "feature_key_update": null,
                         "feature_flight": null,
                         "feature_cert_mode": null,
+                        "feature_record_size_limit": null,
                         "feature_kem": null,
                         "feature_client_hello_cb": null,
                         "feature_cert_cb": null,
@@ -307,10 +313,11 @@
                         "feature_rec_inbuffer_size": null,
                         "feature_custom_extension": null,
                         "feature_certificate_authorities": null,
+                        "feature_mtu_query": null,
                         "feature_sm_tls13": null
                     },
                     "proto": {
-                        "deps": ["tlv", "sal", "eal", "list"],
+                        "deps": ["sal", "eal", "list"],
                         "opts": [
                             ["host", "host_client", "host_server"],
                             ["uio_sctp", "uio_tcp", "uio_udp", "uio_plt"]
@@ -324,7 +331,8 @@
                             "config_cert_callback": null,
                             "config_cert_verify_cb": null,
                             "config_cert_build_chain": null,
-                            "config_cert_verify_location": null
+                            "config_cert_verify_location": {"deps": ["sal_file"]},
+                            "config_cert_crl": null
                         },
                         "config_key_usage": null,
                         "config_state": null,

@@ -36,7 +36,7 @@ extern "C" {
 
 #define REC_CONN_SEQ_SIZE 8u            /* Sequence number size */
 
-/**
+/*
  * Cipher suite information, which is required for local encryption and decryption
  * For details, see RFC5246 6.1
  */
@@ -269,7 +269,7 @@ void RecConnInitGenerateMacInput(const REC_TextInput *in, const uint8_t *text, u
     REC_TextInput *out);
 
 #ifdef HITLS_TLS_SUITE_CIPHER_CBC
-uint32_t RecGetHashAlgoFromMACAlgo(HITLS_MacAlgo macAlgo);
+uint32_t RecGetHashAlgoFromMacAlgo(HITLS_MacAlgo macAlgo);
 #endif
 #ifdef __cplusplus
 }

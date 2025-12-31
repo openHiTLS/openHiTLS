@@ -1898,9 +1898,13 @@ void UT_TLS_TLCP_CONSISTENCY_CIPHERTEXT_TOOLONG_TC001(int isClient, int ptLen, i
     ASSERT_EQ(TlsRecordWrite(sender->ssl, REC_TYPE_APP, sendBuf, ptLen), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(sender, receiver), HITLS_SUCCESS);
     STUB_REPLACE(TlsRecordRead, STUB_TlsRecordRead);
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+    int32_t ret = ctLen > 16709 ? HITLS_REC_RECORD_OVERFLOW : HITLS_SUCCESS;
+    ASSERT_EQ(TlsRecordRead(receiver->ssl, REC_TYPE_APP, readBuf, &readLen, ctLen), ret);
+#else
     int32_t ret = ctLen > 18432 ? HITLS_REC_RECORD_OVERFLOW : HITLS_SUCCESS;
     ASSERT_EQ(TlsRecordRead(receiver->ssl, REC_TYPE_APP, readBuf, &readLen, ctLen), ret);
-
+#endif
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(sender);

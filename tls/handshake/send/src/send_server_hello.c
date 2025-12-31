@@ -227,10 +227,10 @@ static int32_t Tls13ServerPrepareKeyShare(TLS_Ctx *ctx)
      /* The ecdhe and dhe groups can invoke the same interface to generate keys. */
     key = SAL_CRYPT_GenEcdhKeyPair(ctx, &curveParams);
     if (key == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
+        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_GEN_KEY_PAIR);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15552, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client generate key share key pair error.", 0, 0, 0, 0);
-        return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
+        return HITLS_CRYPT_ERR_GEN_KEY_PAIR;
     }
     kxCtx->key = key;
 

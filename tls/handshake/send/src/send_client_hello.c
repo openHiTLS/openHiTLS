@@ -211,10 +211,10 @@ static int32_t Tls13ClientGenKeyPair(TLS_Ctx *ctx, KeyExchCtx *kxCtx, uint16_t f
     // ecdhe and dhe groups can invoke the same interface to generate keys.
     HITLS_CRYPT_Key *key = SAL_CRYPT_GenEcdhKeyPair(ctx, &curveParams);
     if (key == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
+        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_GEN_KEY_PAIR);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15629, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "server generate key share key pair error.", 0, 0, 0, 0);
-        return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
+        return HITLS_CRYPT_ERR_GEN_KEY_PAIR;
     }
     if (kxCtx->key != NULL) {
         SAL_CRYPT_FreeEcdhKey(kxCtx->key);
@@ -228,10 +228,10 @@ static int32_t Tls13ClientGenKeyPair(TLS_Ctx *ctx, KeyExchCtx *kxCtx, uint16_t f
         curveParams.param.namedcurve = secondGroup;
         HITLS_CRYPT_Key *secondKey = SAL_CRYPT_GenEcdhKeyPair(ctx, &curveParams);
         if (secondKey == NULL) {
-            BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
+            BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_GEN_KEY_PAIR);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15629, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "server generate key share key pair error.", 0, 0, 0, 0);
-            return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
+            return HITLS_CRYPT_ERR_GEN_KEY_PAIR;
         }
         kxCtx->secondKey = secondKey;
     }

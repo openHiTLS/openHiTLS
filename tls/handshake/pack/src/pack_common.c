@@ -25,6 +25,8 @@
 #include "hs_ctx.h"
 #include "hitls_cert_type.h"
 #include "bsl_list.h"
+#include "hitls_cert_type.h"
+#include "bsl_list.h"
 #include "pack_common.h"
 #ifdef HITLS_TLS_FEATURE_SECURITY
 #include "security.h"
@@ -46,11 +48,11 @@ void PackDtlsMsgHeader(HS_MsgType type, uint16_t sequence, uint32_t length, uint
     buf[0] = (uint8_t)type & 0xffu;                               /** Type of the handshake message */
     BSL_Uint24ToByte(length, &buf[DTLS_HS_MSGLEN_ADDR]); /** Fills the length of the handshake message */
     BSL_Uint16ToByte(
-        sequence, &buf[DTLS_HS_MSGSEQ_ADDR]); /** The 2 bytes starting from the 4th byte are the sn of the message */
+        sequence, &buf[DTLS_HS_MSGSEQ_ADDR]); /** Two bytes starting from four bytes are the sn of the message */
     BSL_Uint24ToByte(
-        0, &buf[DTLS_HS_FRAGMENT_OFFSET_ADDR]); /** The 3 bytes starting from the 6th byte are the fragment offset. */
+        0, &buf[DTLS_HS_FRAGMENT_OFFSET_ADDR]); /** The three bytes starting from 6 bytes are the fragment offset. */
     BSL_Uint24ToByte(
-        length, &buf[DTLS_HS_FRAGMENT_LEN_ADDR]); /** The 3 bytes starting from the 9th byte are the fragment length. */
+        length, &buf[DTLS_HS_FRAGMENT_LEN_ADDR]); /** Three bytes starting from 9 bytes are the fragment length. */
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 */
 
@@ -120,13 +122,13 @@ int32_t PackTrustedCAList(HITLS_TrustedCAList *caList, PackPacket *pkt)
 #ifdef HITLS_TLS_PROTO_TLS13
 int32_t PackCertificateReqCtx(const TLS_Ctx *ctx, PackPacket *pkt)
 {
-    /* Pack certificate_request_context length */
+    /* Pack the length of certificate_request_context */
     int32_t ret = PackAppendUint8ToBuf(pkt, (uint8_t)ctx->certificateReqCtxSize);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
 
-    /* Pack certificate_request_context content */
+    /* Pack the content of certificate_request_context */
     if (ctx->certificateReqCtxSize > 0) {
         ret = PackAppendDataToBuf(pkt, ctx->certificateReqCtx, ctx->certificateReqCtxSize);
         if (ret != HITLS_SUCCESS) {
@@ -320,19 +322,16 @@ int32_t PackSkipBytes(PackPacket *pkt, uint32_t size)
 void PackCloseUint8Field(const PackPacket *pkt, uint32_t position)
 {
     (*pkt->buf)[position] = (uint8_t)(*pkt->bufOffset - position - sizeof(uint8_t));
-    return;
 }
 
 void PackCloseUint16Field(const PackPacket *pkt, uint32_t position)
 {
     BSL_Uint16ToByte((uint16_t)(*pkt->bufOffset - position - sizeof(uint16_t)), &(*pkt->buf)[position]);
-    return;
 }
 
 void PackCloseUint24Field(const PackPacket *pkt, uint32_t position)
 {
     BSL_Uint24ToByte((uint32_t)(*pkt->bufOffset - position - UINT24_SIZE), &(*pkt->buf)[position]);
-    return;
 }
 
 int32_t PackGetSubBuffer(const PackPacket *pkt, uint32_t start, uint32_t *length, uint8_t **buf)

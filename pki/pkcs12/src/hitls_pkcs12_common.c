@@ -27,7 +27,6 @@
 #include "bsl_err_internal.h"
 #include "crypt_codecskey.h"
 #include "crypt_eal_codecs.h"
-#include "bsl_bytes.h"
 #include "crypt_eal_md.h"
 #include "hitls_pki_pkcs12.h"
 #include "hitls_pkcs12_local.h"

@@ -73,6 +73,18 @@ static int32_t SavePendingData(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataL
 
 static int32_t CheckDataLen(TLS_Ctx *ctx, const uint8_t *data, uint32_t *sendLen)
 {
+    int32_t ret = HITLS_SUCCESS;
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    ret = REC_QueryMtu(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+    ret = REC_RecOutBufReSet(ctx);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
     RecCtx *recCtx = (RecCtx *)ctx->recCtx;
     if (recCtx->pendingData != NULL) {
         if ((
@@ -90,7 +102,7 @@ static int32_t CheckDataLen(TLS_Ctx *ctx, const uint8_t *data, uint32_t *sendLen
     }
 
     uint32_t maxWriteLen = 0u;
-    int32_t ret = REC_GetMaxWriteSize(ctx, &maxWriteLen);
+    ret = REC_GetMaxWriteSize(ctx, &maxWriteLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15660, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "APP: Get record max write size fail.", 0, 0, 0, 0);
@@ -106,23 +118,12 @@ static int32_t CheckDataLen(TLS_Ctx *ctx, const uint8_t *data, uint32_t *sendLen
 int32_t APP_Write(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
     int32_t ret = HITLS_SUCCESS;
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
-    ret = REC_QueryMtu(ctx);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
-    ret = REC_RecOutBufReSet(ctx);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
     uint32_t sendLen = dataLen;
     ret = CheckDataLen(ctx, data, &sendLen);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    *writeLen = 0;
+	*writeLen = 0;
 
     ret = REC_Write(ctx, REC_TYPE_APP, data, sendLen);
     if (ret != HITLS_SUCCESS) {

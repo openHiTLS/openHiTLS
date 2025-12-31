@@ -545,6 +545,10 @@ void UT_DTLCP_RFC6347_RECV_ALERT_AFTER_CCS_TC001()
     server->needStopBeforeRecvCCS = true;
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_FINISH) == HITLS_SUCCESS);
@@ -599,6 +603,10 @@ void UT_TLS_DTLCP_CONSISTENCY_RFC6347_TC001()
     FRAME_LinkObj *server = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_UDP, false);
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);

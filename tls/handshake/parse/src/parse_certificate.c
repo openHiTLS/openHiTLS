@@ -318,5 +318,4 @@ void CleanCertificate(CertificateMsg *msg)
         next = temp;
     }
     msg->cert = NULL;
-    return;
 }

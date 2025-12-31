@@ -205,7 +205,7 @@ static int32_t Tls13ProcessSendHandshakeMsg(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_PROTO_TLS13 */
 int32_t HS_SendMsgProcess(TLS_Ctx *ctx)
 {
-    uint32_t version = HS_GetVersion(ctx);
+    uint32_t version = GET_VERSION_FROM_CTX(ctx);
 
     switch (version) {
 #ifdef HITLS_TLS_PROTO_TLS_BASIC

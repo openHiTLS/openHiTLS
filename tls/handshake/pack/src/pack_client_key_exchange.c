@@ -58,7 +58,7 @@ static int32_t PackClientKxMsgNamedCurve(const TLS_Ctx *ctx, PackPacket *pkt)
     HITLS_ECParameters *curveParams = &ecdh->curveParams;
     KeyExchCtx *kxCtx = ctx->hsCtx->kxCtx;
 
-    pubKeyLen = SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, curveParams->param.namedcurve);
+    pubKeyLen = HS_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, curveParams->param.namedcurve);
     if (pubKeyLen == 0u) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15673, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -84,7 +84,6 @@ static int32_t PackClientKxMsgNamedCurve(const TLS_Ctx *ctx, PackPacket *pkt)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
     uint32_t pubKeyUsedLen = 0;
     ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->key, reservedBuf, pubKeyLen, &pubKeyUsedLen);
     if (ret != HITLS_SUCCESS || pubKeyLen != pubKeyUsedLen) {
@@ -93,7 +92,6 @@ static int32_t PackClientKxMsgNamedCurve(const TLS_Ctx *ctx, PackPacket *pkt)
             "encode ecdh key fail.", 0, 0, 0, 0);
         return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
     }
-
     (void)PackSkipBytes(pkt, pubKeyUsedLen);
 
     PackCloseUint8Field(pkt, pubKeyLenPosition);
@@ -170,7 +168,6 @@ int32_t PackClientKxMsgRsa(TLS_Ctx *ctx, PackPacket *pkt)
     HS_Ctx *hsCtx = ctx->hsCtx;
     KeyExchCtx *kxCtx = hsCtx->kxCtx;
     uint8_t *preMasterSecret = kxCtx->keyExchParam.rsa.preMasterSecret;
-
     uint32_t encLenPosition = 0u;
     ret = PackStartLengthField(pkt, sizeof(uint16_t), &encLenPosition);
     if (ret != HITLS_SUCCESS) {
@@ -179,7 +176,7 @@ int32_t PackClientKxMsgRsa(TLS_Ctx *ctx, PackPacket *pkt)
 
     HITLS_Config *config = &ctx->config.tlsConfig;
     CERT_MgrCtx *mgrCtx = config->certMgrCtx;
-    HITLS_CERT_X509 *cert = SAL_CERT_PairGetX509(hsCtx->peerCert);
+    HITLS_CERT_X509 *cert = SAL_CERT_PAIR_GET_X509_EX(hsCtx->peerCert);
     HITLS_CERT_Key *pubkey = NULL;
     ret = SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
     if (ret != HITLS_SUCCESS) {
@@ -187,7 +184,6 @@ int32_t PackClientKxMsgRsa(TLS_Ctx *ctx, PackPacket *pkt)
             "CERT_CTRL_GET_PUB_KEY fail", 0, 0, 0, 0);
         return ret;
     }
-
     /* Use CERT_KEY_CTRL_GET_SIGN_LEN to get encrypt length(Only by RSA and ECC) */
     uint32_t encryptLen = MAX_SIGN_SIZE;
     uint8_t *encBuf = NULL;
@@ -205,7 +201,6 @@ int32_t PackClientKxMsgRsa(TLS_Ctx *ctx, PackPacket *pkt)
             "KeyEncrypt fail", 0, 0, 0, 0);
         return ret;
     }
-
     ret = PackSkipBytes(pkt, encLen);
     if (ret != HITLS_SUCCESS) {
         return ret;
@@ -233,7 +228,7 @@ static int32_t PackClientKxMsgEcc(TLS_Ctx *ctx, PackPacket *pkt)
     /* Encrypt the PreMasterSecret using the public key of the server certificate */
     HITLS_Config *config = &ctx->config.tlsConfig;
     CERT_MgrCtx *certMgrCtx = config->certMgrCtx;
-    HITLS_CERT_X509 *certEnc = SAL_CERT_GetTlcpEncCert(hsCtx->peerCert);
+    HITLS_CERT_X509 *certEnc = SAL_CERT_PAIR_GET_TLCP_ENC_CERT_EX(hsCtx->peerCert);
     HITLS_CERT_Key *pubkey = NULL;
     ret = SAL_CERT_X509Ctrl(config, certEnc, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
     if (ret != HITLS_SUCCESS) {
@@ -266,7 +261,6 @@ static int32_t PackClientKxMsgEcc(TLS_Ctx *ctx, PackPacket *pkt)
     }
 
     PackCloseUint16Field(pkt, encLenPosition);
-
     return HITLS_SUCCESS;
 }
 #endif

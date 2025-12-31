@@ -279,6 +279,55 @@ int HLT_TlsWrite(void *ssl, uint8_t *data, uint32_t dataLen)
     }
 }
 
+int HLT_TLSWriteExportMaterial(void* ssl, ExportMaterialParam *param)
+{
+    int ret = 0;
+    Process *process = GetProcess();
+    uint32_t dataLen = param->outLen;
+    uint8_t *data = calloc(dataLen, 1);
+    if (data == NULL) {
+        return ERROR;
+    }
+    uint8_t nullData[MAX_EXPORT_MATERIAL_BUF] = {0};
+    const char *label = param->label;
+    if (memcmp(label, nullData, MAX_EXPORT_MATERIAL_BUF) == 0) {
+        label = NULL;
+    }
+    size_t labelLen = param->labelLen;
+    const uint8_t *context = (const uint8_t *)param->context;
+    if (memcmp(context, nullData, MAX_EXPORT_MATERIAL_BUF) == 0) {
+        context = NULL;
+    }
+    size_t contextLen = param->contextLen;
+    int32_t useContext = param->useContext;
+    switch (process->tlsType) {
+        case HITLS : {
+#ifdef HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL
+            ret = HITLS_ExportKeyingMaterial(ssl, data, dataLen, label, labelLen, context, contextLen, useContext);
+            if (ret != 0) {
+                free(data);
+                return ret;
+            }
+            LOG_DEBUG("Hitls Write Ing...");
+            ret = HitlsWrite(ssl, data, dataLen);
+            free(data);
+            return ret;
+#else
+            (void)useContext;
+            (void)contextLen;
+            (void)labelLen;
+            (void)ret;
+            (void)ssl;
+            free(data);
+            return -1;
+#endif
+        }
+        default:
+            free(data);
+            return ERROR;
+    }
+}
+
 int HLT_TlsRead(void *ssl, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
 {
     Process *process;
@@ -454,7 +503,7 @@ int RunDataChannelAccept(void *param)
 #endif
 #ifdef HITLS_BSL_UIO_UDP
         case UDP:
-            sockFd = UdpAccept(channelParam->ip, channelParam->bindFd, channelParam->isBlock, false);
+            sockFd = UdpAccept(channelParam->bindFd, (struct sockaddr *)&channelParam->sockAddr);
 #endif
             break;
         default:
@@ -1117,6 +1166,12 @@ int HLT_SetEncryptThenMac(HLT_Ctx_Config *ctxConfig, int support)
     return SUCCESS;
 }
 
+int HLT_SetRecordSizeLimit(HLT_Ctx_Config *ctxConfig, uint16_t recordSize)
+{
+    ctxConfig->recordSizeLimit = recordSize;
+    return SUCCESS;
+}
+
 int HLT_SetMiddleBoxCompat(HLT_Ctx_Config *ctxConfig, int support)
 {
     ctxConfig->isMiddleBoxCompat = support;
@@ -1136,6 +1191,12 @@ int HLT_SetClientVerifySupport(HLT_Ctx_Config *ctxConfig, bool support)
 }
 
 int HLT_SetPostHandshakeAuth(HLT_Ctx_Config *ctxConfig, bool support)
+{
+    ctxConfig->isSupportPostHandshakeAuth = support;
+    return SUCCESS;
+}
+
+int HLT_SetPostHandshakeAuthSupport(HLT_Ctx_Config *ctxConfig, bool support)
 {
     ctxConfig->isSupportPostHandshakeAuth = support;
     return SUCCESS;

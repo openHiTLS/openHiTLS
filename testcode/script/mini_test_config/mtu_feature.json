@@ -97,6 +97,7 @@
                 "proto",
                 "proto_dtls12",
                 "proto_dtlcp11",
+                "feature_mtu_query",
                 "suite_ecdhe_rsa_with_aes_128_cbc_sha"
             ]
         },

@@ -40,7 +40,7 @@
 #define TLS_DHE_PARAM_MAX_LEN 1024
 #define DEFAULT_SECURITY_BITS 80
 #define STRONG_CIPHER_STRENGTH_BITS 256
-#define STRONG_DHE_SECURITY_BITS 128
+#define STRONG_DHE_SECURITY_BIT 128
 
 #define IS_NOT_USE_CERTIFICATE_AUTH(cipherSuiteInfo) \
     ((cipherSuiteInfo)->authAlg == HITLS_AUTH_NULL || (cipherSuiteInfo)->authAlg == HITLS_AUTH_PSK)
@@ -88,7 +88,7 @@ static HITLS_CRYPT_Key *GetDhKeyBySecBits(TLS_Ctx *ctx)
 
     if (IS_NOT_USE_CERTIFICATE_AUTH(cipherSuiteInfo)) {
         if (ctx->negotiatedInfo.cipherSuiteInfo.strengthBits == STRONG_CIPHER_STRENGTH_BITS) {
-            secBits = STRONG_DHE_SECURITY_BITS;
+            secBits = STRONG_DHE_SECURITY_BIT;
         }
     } else if (cert != NULL) {
         HITLS_CERT_Key *pubkey = NULL;
@@ -106,9 +106,9 @@ static HITLS_CRYPT_Key *GetDhKeyBySecBits(TLS_Ctx *ctx)
     }
     int32_t securityLevelBits =
 #ifdef HITLS_TLS_FEATURE_SECURITY
-                SECURITY_GetSecbits(ctx->config.tlsConfig.securityLevel);
+        SECURITY_GetSecbits(ctx->config.tlsConfig.securityLevel);
 #else
-                DEFAULT_DHE_PSK_BIT_NUM;
+        DEFAULT_DHE_PSK_BIT_NUM;
 #endif /* HITLS_TLS_FEATURE_SECURITY */
     if (securityLevelBits > secBits) {
         secBits = securityLevelBits;
@@ -121,6 +121,7 @@ static HITLS_CRYPT_Key *GetDhKey(TLS_Ctx *ctx)
 {
     HITLS_CRYPT_Key *key = NULL;
     HITLS_Config *config = &ctx->config.tlsConfig;
+    (void)config;
 #ifdef HITLS_TLS_CONFIG_MANUAL_DH
     if (!config->isSupportDhAuto) {
         key = GetDhKeyByDhTmp(ctx);
@@ -203,23 +204,32 @@ static int32_t GenDhCipherSuiteParams(TLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_SUITE_KX_DHE */
+
+static int32_t GenKeyPair(TLS_Ctx *ctx)
+{
+    HITLS_CRYPT_Key *key = NULL;
+    key = SAL_CRYPT_GenEcdhKeyPair(ctx, &ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams);
+    if (key == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15746, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "server generate ecdhe key pair error.", 0, 0, 0, 0);
+        return HITLS_CRYPT_ERR_GEN_KEY_PAIR;
+    }
+    ctx->hsCtx->kxCtx->key = key;
+    return HITLS_SUCCESS;
+}
+
 static int32_t PackExchMsgPrepare(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
-    HITLS_CRYPT_Key *key = NULL;
     (void)ret;
-    (void)key;
     switch (ctx->hsCtx->kxCtx->keyExchAlgo) {
 #ifdef HITLS_TLS_SUITE_KX_ECDHE
         case HITLS_KEY_EXCH_ECDHE: /* TLCP is included here. */
         case HITLS_KEY_EXCH_ECDHE_PSK:
-            key = SAL_CRYPT_GenEcdhKeyPair(ctx, &ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams);
-            if (key == NULL) {
-                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15746, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                    "server generate ecdhe key pair error.", 0, 0, 0, 0);
-                return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
+            ret = GenKeyPair(ctx);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
             }
-            ctx->hsCtx->kxCtx->key = key;
             break;
 #endif /* HITLS_TLS_SUITE_KX_ECDHE */
 #ifdef HITLS_TLS_SUITE_KX_DHE

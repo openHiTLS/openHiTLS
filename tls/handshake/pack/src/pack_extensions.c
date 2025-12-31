@@ -39,8 +39,8 @@
 #include "hs_verify.h"
 #include "pack_common.h"
 #include "custom_extensions.h"
-#include "pack_extensions.h"
 #include "config_type.h"
+#include "pack_extensions.h"
 
 
 #define EXTENSION_MSG(exMsgT, needP, packF) \
@@ -108,6 +108,7 @@ static int32_t PackExtensionEnd(PackPacket *pkt, uint32_t extensionLenPosition)
 
     return HITLS_SUCCESS;
 }
+
 #ifdef HITLS_TLS_PROTO_TLS13
 
 static bool IsNeedPreSharedKey(const TLS_Ctx *ctx)
@@ -212,6 +213,32 @@ int32_t PackEmptyExtension(uint16_t exMsgType, bool needPack, PackPacket *pkt)
     }
     return HITLS_SUCCESS;
 }
+
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+int32_t PackRecordSizeLimit(const TLS_Ctx *ctx, PackPacket *pkt)
+{
+    int32_t ret = HITLS_SUCCESS;
+    uint16_t upperBound = (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13 ? REC_MAX_PLAIN_LENGTH + 1
+                                                                        : REC_MAX_PLAIN_LENGTH);
+    uint16_t recordSizeLimit = ctx->isClient ?
+        ctx->config.tlsConfig.recordSizeLimit : ctx->negotiatedInfo.recordSizeLimit;
+
+    if (recordSizeLimit == 0) {
+        return HITLS_SUCCESS;
+    }
+    uint16_t exMsgDataLen = sizeof(uint16_t);
+    ret = PackExtensionHeader(HS_EX_TYPE_RECORD_SIZE_LIMIT, exMsgDataLen, pkt);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    recordSizeLimit = recordSizeLimit <= upperBound ? recordSizeLimit : upperBound;
+    (void)PackAppendUint16ToBuf(pkt, recordSizeLimit);
+
+    ctx->hsCtx->extFlag.haveRecordSizeLimit = true;
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT */
 
 #ifdef HITLS_TLS_HOST_CLIENT
 #ifdef HITLS_TLS_FEATURE_SNI
@@ -436,6 +463,7 @@ static int32_t PackClientAlpnList(const TLS_Ctx *ctx, PackPacket *pkt)
     (void)PackAppendUint16ToBuf(pkt, exMsgDataLen);
 
     (void)PackAppendDataToBuf(pkt, config->alpnList, config->alpnListSize);
+
     /* Set the extension flag */
     ctx->hsCtx->extFlag.haveAlpn = true;
     return HITLS_SUCCESS;
@@ -627,7 +655,7 @@ static int32_t PackClientKeyShare(const TLS_Ctx *ctx, PackPacket *pkt)
 
     KeyShareParam *keyShare = &(kxCtx->keyExchParam.share);
     uint32_t secondPubKeyLen = 0u;
-    uint32_t pubKeyLen = SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group);
+    uint32_t pubKeyLen = HS_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group);
     if (pubKeyLen == 0u) {
         BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15422, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -637,7 +665,7 @@ static int32_t PackClientKeyShare(const TLS_Ctx *ctx, PackPacket *pkt)
 
     keyShareLen += sizeof(uint16_t) + sizeof(uint16_t) + pubKeyLen;
     if (keyShare->secondGroup != HITLS_NAMED_GROUP_BUTT) {
-        secondPubKeyLen = SAL_CRYPT_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->secondGroup);
+        secondPubKeyLen = HS_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->secondGroup);
         if (secondPubKeyLen == 0u) {
             BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15422, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -780,10 +808,7 @@ static int32_t PackClientPreSharedKey(const TLS_Ctx *ctx, PackPacket *pkt)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    ret = PackSkipBytes(pkt, minLen - HS_EX_HEADER_LEN);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
+    (void)PackSkipBytes(pkt, minLen - HS_EX_HEADER_LEN);
     PackClientPreSharedKeyIdentity(ctx, pskBuf, minLen - HS_EX_HEADER_LEN);
 
     // pack binder after fills in the packet header and extension length. call PackClientPreSharedKeyBinders
@@ -858,6 +883,9 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
     bool isNeedPha = IsNeedPackPha(ctx);
 #endif /* HITLS_TLS_FEATURE_PHA */
     PackExtInfo extMsgList[] = {
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+        { EXTENSION_MSG(HS_EX_TYPE_RECORD_SIZE_LIMIT, (tlsConfig->recordSizeLimit != 0), PackRecordSizeLimit) },
+#endif /* HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT */
 #ifdef HITLS_TLS_FEATURE_SNI
         { EXTENSION_MSG(HS_EX_TYPE_SERVER_NAME, IsNeedClientPackServerName(ctx), PackServerName) },
 #endif /* HITLS_TLS_FEATURE_SNI */
@@ -1194,13 +1222,17 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     int32_t ret = HITLS_SUCCESS;
 #ifdef HITLS_TLS_PROTO_TLS13
-    uint32_t version = HS_GetVersion(ctx);
+    uint32_t version = GET_VERSION_FROM_CTX(ctx);
     bool isHrrKeyshare = IsHrrKeyShare(ctx);
     bool isTls13 = Tls13NeedPack(ctx, version);
 #endif /* HITLS_TLS_PROTO_TLS13 */
     const TLS_NegotiatedInfo *negoInfo = &ctx->negotiatedInfo;
     (void)negoInfo;
     PackExtInfo extMsgList[] = {
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+        { EXTENSION_MSG(HS_EX_TYPE_RECORD_SIZE_LIMIT,
+            (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13), PackRecordSizeLimit) },
+#endif /* HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT */
 #ifdef HITLS_TLS_FEATURE_SNI
         { EXTENSION_MSG(HS_EX_TYPE_SERVER_NAME, IsNeedServerPackServerName(ctx), NULL) },
 #endif /* HITLS_TLS_FEATURE_SNI */

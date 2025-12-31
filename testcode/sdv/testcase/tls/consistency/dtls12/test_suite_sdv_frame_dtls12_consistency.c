@@ -2467,6 +2467,7 @@ EXIT:
 /* END_CASE */
 
 static bool cookie_generate_success = true;
+#define DTLS_COOKIE_LEN 255
 static int32_t UT_CookieGenerateCb(HITLS_Ctx *ctx, uint8_t *cookie, uint32_t *cookie_len)
 {
     (void)ctx;

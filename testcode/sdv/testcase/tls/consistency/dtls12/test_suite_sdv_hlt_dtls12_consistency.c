@@ -276,7 +276,7 @@ static void Test_Timeout001(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32
     ASSERT_EQ(HITLS_DtlsProcessTimeout(ctx), HITLS_SUCCESS);
     sleep(2);
     ASSERT_EQ(HITLS_DtlsProcessTimeout(ctx), HITLS_SUCCESS);
-    STUB_REPLACE(REC_Write, STUB_REC_Write);;
+    STUB_REPLACE(REC_Write, STUB_REC_Write);
     sleep(4);
     ASSERT_EQ(HITLS_DtlsProcessTimeout(ctx), HITLS_SUCCESS);
 

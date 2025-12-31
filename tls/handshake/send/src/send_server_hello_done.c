@@ -60,6 +60,7 @@ int32_t ServerSendServerHelloDoneProcess(TLS_Ctx *ctx)
     }
 #endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
 
+    /* update the state machine */
     if (hsCtx->isNeedClientCert) {
         return HS_ChangeState(ctx, TRY_RECV_CERTIFICATE);
     }

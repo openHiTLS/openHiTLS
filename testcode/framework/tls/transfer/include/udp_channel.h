@@ -29,7 +29,7 @@ int UdpConnect(const char *targetIP, const int targetPort);
 int UdpBind(const int localPort);
 
 /* accept */
-int UdpAccept(char *ip, int listenFd, bool isBlock, bool needClose);
+int UdpAccept(int32_t fd, struct sockaddr *sockAddr);
 
 /* write */
 int32_t UdpFrameWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen);

@@ -38,7 +38,7 @@ extern "C" {
 
 #define RECORD_HEADER 0x100
 #define RECORD_INNER_CONTENT_TYPE 0x101
-/**
+/*
  * record type
  */
 typedef enum {
@@ -49,7 +49,7 @@ typedef enum {
     REC_TYPE_UNKNOWN = 255
 } REC_Type;
 
-/**
+/*
  * SecurityParameters, used to generate keys and initialize the connect state
  */
 typedef struct {
@@ -172,7 +172,6 @@ void REC_ActiveOutdatedWriteState(TLS_Ctx *ctx);
  */
 void REC_DeActiveOutdatedWriteState(TLS_Ctx *ctx);
 
-
 /**
  * @ingroup record
  * @brief   Initialize the pending state
@@ -251,31 +250,32 @@ int32_t REC_GetMaxDataMtu(const TLS_Ctx *ctx, uint32_t *len);
 int32_t REC_TLS13InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *param, bool isOut);
 
 /**
- * @ingroup record
- * @brief   Retransmit a record
+ * @brief   Add the message to the retransmission queue
  *
- * @param   recCtx [IN] Record context
- * @param   recordType [IN] record type
- * @param   data [IN] data
- * @param   dataLen [IN] data length
+ * @param   recCtx [OUT] RecCtx Structure
+ * @param   type [IN] Message type
+ * @param   msg [IN] Message content
+ * @param   len [IN] Message length
+ *
+ * @retval  HITLS_SUCCESS
+ * @retval  HITLS_MEMALLOC_FAIL Memory allocation failed
  */
-int32_t REC_RetransmitListAppend(REC_Ctx *recCtx, REC_Type recordType, const uint8_t *data, uint32_t dataLen);
+int32_t REC_RetransmitListAppend(REC_Ctx *recCtx, REC_Type type, const uint8_t *msg, uint32_t len);
 
 /**
- * @ingroup record
- * @brief   Clean the retransmit list
+ * @brief   Clear the retransmission queue
  *
- * @param   recCtx [IN] Record context
+ * @param   recCtx [OUT] RecCtx Structure
  */
 void REC_RetransmitListClean(REC_Ctx *recCtx);
 
-
 /**
- * @ingroup record
- * @brief   Flush the retransmit list
+ * @brief   Send a message in the retransmission queue
+ *          UDP sending will not fail. Therefore, the sending failure scenario does not need to be considered
  *
- * @param   ctx [IN] TLS object
+ * @param   ctx [OUT] tls Context
  * @retval  HITLS_SUCCESS
+ * @retval  For other error codes, see hitls_error.h
  */
 int32_t REC_RetransmitListFlush(TLS_Ctx *ctx);
 
@@ -295,10 +295,10 @@ uint32_t APP_GetReadPendingBytes(const TLS_Ctx *ctx);
 int32_t REC_RecOutBufReSet(TLS_Ctx *ctx);
 
 /**
- * @ingroup record
- * @brief Flush the buffer uio
+ * @brief   Flush the buffer uio
  *
- * @param ctx [IN] TLS object
+ * @param   ctx [IN] ssl context
+ *
  * @retval  HITLS_SUCCESS
  * @retval  HITLS_REC_NORMAL_IO_BUSY uio busy
  * @retval  HITLS_REC_ERR_IO_EXCEPTION uio error

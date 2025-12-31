@@ -23,7 +23,6 @@ void RecAntiReplayReset(RecSlidWindow *w)
 {
     w->top = 0;
     w->window = 0;
-    return;
 }
 
 bool RecAntiReplayCheck(const RecSlidWindow *w, uint64_t seq)
@@ -66,6 +65,5 @@ void RecAntiReplayUpdate(RecSlidWindow *w, uint64_t seq)
         w->window <<= bit;
         w->window |= 1;
     }
-    return;
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */

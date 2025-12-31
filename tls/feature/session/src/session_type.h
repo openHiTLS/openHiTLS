@@ -87,8 +87,10 @@ struct TlsSessCtx {
     void *userData;
 };
 
-#define LIBCTX_FROM_SESSION_CTX(sessCtx) (sessCtx == NULL) ? NULL : ((sessCtx)->certMgrCtx == NULL ? NULL : (sessCtx)->certMgrCtx->libCtx)
-#define ATTRIBUTE_FROM_SESSION_CTX(sessCtx) (sessCtx == NULL) ? NULL : ((sessCtx)->certMgrCtx == NULL ? NULL : (sessCtx)->certMgrCtx->attrName)
+#define LIBCTX_FROM_SESSION_CTX(sessCtx) ((sessCtx) == NULL) ? \
+    NULL : ((sessCtx)->certMgrCtx == NULL ? NULL : (sessCtx)->certMgrCtx->libCtx)
+#define ATTRIBUTE_FROM_SESSION_CTX(sessCtx) ((sessCtx) == NULL) ? \
+    NULL : ((sessCtx)->certMgrCtx == NULL ? NULL : (sessCtx)->certMgrCtx->attrName)
 
 #ifdef __cplusplus
 }

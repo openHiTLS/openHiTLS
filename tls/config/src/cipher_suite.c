@@ -22,8 +22,8 @@
 #include "hitls_error.h"
 #include "tls.h"
 #include "tls_config.h"
-#include "cipher_suite.h"
 #include "config_type.h"
+#include "cipher_suite.h"
 
 #ifndef HITLS_TLS_CONFIG_CIPHER_SUITE
 #define CIPHER_NAME(name) NULL
@@ -1529,7 +1529,7 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         .cipherType = HITLS_AEAD_CIPHER,
         .strengthBits = 128},
 #endif
-#endif
+#endif /* HITLS_TLS_PROTO_TLCP11 */
 };
 
 const CipherSuiteCertType g_cipherSuiteAndCertTypes[] = {

@@ -19,6 +19,7 @@
 #include "logger.h"
 #include "process.h"
 #include "hlt_type.h"
+#include "hlt.h"
 #include "control_channel.h"
 #include "channel_res.h"
 #include "handle_cmd.h"
@@ -256,7 +257,8 @@ int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config
     "%u|%d|%d|"
     "%d|%d|%d|"
     "%d|%u|%d|%d|"
-    "%u|%d|%d|%s",
+    "%u|%d|%d|%s|"
+    "%d",
     g_cmdIndex, __FUNCTION__, ctxId,
     config->minVersion, config->maxVersion, config->cipherSuites, config->tls13CipherSuites,
     config->pointFormats, config->groups, config->signAlgorithms, config->isSupportRenegotiation,
@@ -269,7 +271,8 @@ int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config
     config->keyExchMode, config->SupportType, config->isSupportPostHandshakeAuth,
     config->readAhead, config->needCheckKeyUsage, config->isSupportVerifyNone,
     config->allowClientRenegotiate, config->emptyRecordsNum, config->allowLegacyRenegotiate, config->isEncryptThenMac,
-    config->modeSupport, config->isMiddleBoxCompat, config->isSupportDtlsCookieExchange, config->attrName);
+    config->modeSupport, config->isMiddleBoxCompat, config->isSupportDtlsCookieExchange, config->attrName,
+    config->recordSizeLimit);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
@@ -1774,4 +1777,74 @@ cleanup:
         free(dataBuf);
     }
     return result;
+}
+
+static char *Convert2Hex(char *buf, size_t len)
+{
+    static char ret[1024] = {0};
+    memset(ret, 0, 1024);
+    if (buf == NULL || len == 0) {
+        strcpy(ret, "NULL");
+        return ret;
+    }
+    for (size_t i = 0; i < len; ++i) {
+        sprintf(&ret[i * 2], "%02x", buf[i]);
+    }
+    return ret;
+}
+
+static char *Convert2String(ExportMaterialParam *data)
+{
+    const char *temp = "outLen=%lu label=%s labelLen=%lu context=%s contextLen=%lu useContext=%d";
+    const int bufNum = 2;
+    char *buf = (char *)calloc(MAX_EXPORT_MATERIAL_BUF * bufNum, 1);
+    if (buf == NULL) {
+        return NULL;
+    }
+    char hexLabel[MAX_EXPORT_MATERIAL_BUF] = {0};
+    strcpy(hexLabel, Convert2Hex(data->label, data->labelLen));
+    char hexContext[MAX_EXPORT_MATERIAL_BUF] = {0};
+    strcpy(hexContext, Convert2Hex(data->context, data->contextLen));
+    int32_t ret = snprintf_s(buf, MAX_EXPORT_MATERIAL_BUF * bufNum, MAX_EXPORT_MATERIAL_BUF * bufNum, temp,
+        data->outLen, hexLabel, data->labelLen, hexContext, data->contextLen, data->useContext);
+    if (ret < 0) {
+        free(buf);
+        return NULL;
+    }
+    return buf;
+}
+
+int HLT_RpcTlsWriteExportMaterial(HLT_Process* peerProcess, int sslId, ExportMaterialParam *param)
+{
+    int ret;
+    uint64_t cmdIndex;
+    Process *srcProcess = NULL;
+    CmdData expectCmdData = {0};
+    ControlChannelBuf dataBuf;
+    char *buf = Convert2String(param);
+    if (buf == NULL) {
+        return -1;
+    }
+
+    ASSERT_RETURN(peerProcess->remoteFlag ==  1, "Only Remote Process Support Call HLT_RpcTlsWriteExportMaterial");
+
+    srcProcess = GetProcess();
+    pthread_mutex_lock(&g_cmdMutex);
+    ret = sprintf_s((char *)dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d|%s",
+                    g_cmdIndex, __FUNCTION__, sslId, buf);
+    dataBuf.dataLen = strlen((const char *)dataBuf.data);
+    cmdIndex = g_cmdIndex;
+    g_cmdIndex++;
+    pthread_mutex_unlock(&g_cmdMutex);
+    free(buf);
+
+    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+
+    ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, &dataBuf);
+    ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");
+
+    // Waiting for the result returned by the peer
+    ret = WaitResult(&expectCmdData, cmdIndex, __FUNCTION__);
+    ASSERT_RETURN(ret == SUCCESS, "WaitResult Error");
+    return atoi((const char *)expectCmdData.paras[0]);
 }

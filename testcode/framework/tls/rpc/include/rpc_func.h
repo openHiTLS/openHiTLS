@@ -171,6 +171,7 @@ int RpcTlsSetMtu(CmdData *cmdData);
 
 int RpcTlsGetErrorCode(CmdData *cmdData);
 
+int RpcTlsWriteExportMaterial(CmdData *cmdData);
 #ifdef __cplusplus
 }
 #endif

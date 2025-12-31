@@ -56,7 +56,6 @@ static void SetReassBitMap(uint8_t *reassBitMap, uint32_t fragmentOffset, uint32
         /* Assign the last byte, &7 indicates the remainder 8 */
         reassBitMap[endOffset] |= g_endMaskMap[end & 7];
     }
-    return;
 }
 
 static bool IsReassComplete(const uint8_t *reassBitMap, uint32_t msgLen)
@@ -108,7 +107,6 @@ void HS_ReassFree(HS_ReassQueue *reassQueue)
         BSL_SAL_FREE(cur);              /* Release the node. */
     }
     BSL_SAL_FREE(reassQueue);
-    return;
 }
 
 static HS_ReassQueue *GetReassNode(HS_ReassQueue *reassQueue, uint16_t sequence)

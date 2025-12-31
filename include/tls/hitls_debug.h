@@ -50,13 +50,12 @@ extern "C" {
 
 /**
  * @ingroup hitls_debug
- * @brief   Information prompt callback prototype
- *
  * @attention The message prompt callback function does not return a value
+ * @brief   Information prompt callback prototype
  * @param   ctx       [IN] Ctx context
  * @param   eventType [IN] EventType Event type
  * @param   value     [IN] Value Function return value or Alert type that matches the event type
- * @retval  No value is returned.
+ * @return  No value is returned.
  */
 typedef void (*HITLS_InfoCb)(const HITLS_Ctx *ctx, int32_t eventType, int32_t value);
 
@@ -66,7 +65,7 @@ typedef void (*HITLS_InfoCb)(const HITLS_Ctx *ctx, int32_t eventType, int32_t va
  *
  * @param   ctx      [OUT] Ctx context
  * @param   callback [IN] Callback function for prompting information
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For other error codes, see hitls_error.h.
  */
 int32_t HITLS_SetInfoCb(HITLS_Ctx *ctx, HITLS_InfoCb callback);
@@ -76,7 +75,7 @@ int32_t HITLS_SetInfoCb(HITLS_Ctx *ctx, HITLS_InfoCb callback);
  * @brief   Callback for obtaining information
  *
  * @param   ctx [IN] Ctx context
- * @retval  Callback function of the current information prompt.
+ * @return  Callback function of the current information prompt.
  *          If this parameter is not set, NULL is returned.
  */
 HITLS_InfoCb HITLS_GetInfoCb(const HITLS_Ctx *ctx);
@@ -87,7 +86,7 @@ HITLS_InfoCb HITLS_GetInfoCb(const HITLS_Ctx *ctx);
  *
  * @param   config [OUT] Config Context
  * @param   callback [IN] Client callback
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_SetInfoCb(HITLS_Config *config, HITLS_InfoCb callback);
@@ -97,16 +96,15 @@ int32_t HITLS_CFG_SetInfoCb(HITLS_Config *config, HITLS_InfoCb callback);
  * @brief   Callback function for obtaining information prompts
  *
  * @param   config  [IN] config Context
- * @retval  Callback function of the current information prompt.
+ * @return  Callback function of the current information prompt.
  * If this parameter is not set, NULL is returned.
  */
 HITLS_InfoCb HITLS_CFG_GetInfoCb(const HITLS_Config *config);
 
 /**
  * @ingroup hitls_debug
- * @brief   Callback prototype of a protocol message
- *
  * @attention:  The callback function for messages in the retention protocol does not return any value.
+ * @brief   Callback prototype of a protocol message
  * @param   writePoint [IN] writePoint  Message direction in the callback ">>>" or "<<<"
  * @param   tlsVersion [IN] tlsVersion  TLS version, for example, HITLS_VERSION_TLS12.
  * @param   contentType[IN] contentType Type of the processed message body.
@@ -114,7 +112,7 @@ HITLS_InfoCb HITLS_CFG_GetInfoCb(const HITLS_Config *config);
  * @param   msgLen     [IN] msgLen      Processing instruction data length
  * @param   ctx        [IN] ctx         HITLS context
  * @param   arg        [IN] arg         User data, for example, BIO
- * @retval  No value is returned.
+ * @return  No value is returned.
 */
 typedef void (*HITLS_MsgCb) (int32_t writePoint, int32_t tlsVersion, int32_t contentType, const void *msg,
     uint32_t msgLen, HITLS_Ctx *ctx, void *arg);
@@ -125,7 +123,7 @@ typedef void (*HITLS_MsgCb) (int32_t writePoint, int32_t tlsVersion, int32_t con
  *
  * @param   ctx      [OUT] Ctx context
  * @param   callback [IN] Protocol message callback function
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_SetMsgCb(HITLS_Ctx *ctx, HITLS_MsgCb callback);
@@ -136,7 +134,7 @@ int32_t HITLS_SetMsgCb(HITLS_Ctx *ctx, HITLS_MsgCb callback);
  *
  * @param   config   [OUT] Config Context
  * @param   callback [IN] Protocol message callback
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_SetMsgCb(HITLS_Config *config, HITLS_MsgCb callback);
@@ -144,10 +142,9 @@ int32_t HITLS_CFG_SetMsgCb(HITLS_Config *config, HITLS_MsgCb callback);
 /**
  * @ingroup hitls_debug
  * @brief   Set the related parameters arg required by the protocol message callback function.
- *
- * @param   ctx   [OUT] Ctx Context.
+ * @param   ctx   [OUT] Ctx context
  * @param   arg [IN] Related parameters arg.
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_SetMsgCbArg(HITLS_Ctx *ctx, void *arg);
@@ -158,7 +155,7 @@ int32_t HITLS_SetMsgCbArg(HITLS_Ctx *ctx, void *arg);
  *
  * @param   config   [OUT] Config Context.
  * @param   arg [IN] Related parameters arg.
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_SetMsgCbArg(HITLS_Config *config, void *arg);

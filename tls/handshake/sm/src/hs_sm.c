@@ -25,6 +25,7 @@
 #include "hs.h"
 #include "hs_ctx.h"
 #include "hs_common.h"
+#include "hs_dtls_timer.h"
 #include "parse.h"
 #include "hs_state_recv.h"
 #include "hs_state_send.h"
@@ -35,7 +36,6 @@
 #endif /* HITLS_TLS_FEATURE_INDICATOR */
 #include "transcript_hash.h"
 #include "recv_process.h"
-#include "hs_dtls_timer.h"
 
 static int32_t HandshakeDone(TLS_Ctx *ctx)
 {
@@ -58,7 +58,6 @@ static int32_t HandshakeDone(TLS_Ctx *ctx)
     }
 #endif /* HITLS_TLS_FEATURE_FLIGHT */
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_SCTP)
-
     if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
         return HITLS_SUCCESS;
     }
@@ -96,9 +95,9 @@ bool IsHsSendState(HITLS_HandshakeState state)
     switch (state) {
         case TRY_SEND_HELLO_REQUEST:
         case TRY_SEND_CLIENT_HELLO:
+        case TRY_SEND_HELLO_VERIFY_REQUEST:
         case TRY_SEND_HELLO_RETRY_REQUEST:
         case TRY_SEND_SERVER_HELLO:
-        case TRY_SEND_HELLO_VERIFY_REQUEST:
         case TRY_SEND_ENCRYPTED_EXTENSIONS:
         case TRY_SEND_CERTIFICATE:
         case TRY_SEND_SERVER_KEY_EXCHANGE:
@@ -123,8 +122,8 @@ static bool IsHsRecvState(HITLS_HandshakeState state)
 {
     switch (state) {
         case TRY_RECV_CLIENT_HELLO:
-        case TRY_RECV_SERVER_HELLO:
         case TRY_RECV_HELLO_VERIFY_REQUEST:
+        case TRY_RECV_SERVER_HELLO:
         case TRY_RECV_ENCRYPTED_EXTENSIONS:
         case TRY_RECV_CERTIFICATE:
         case TRY_RECV_SERVER_KEY_EXCHANGE:

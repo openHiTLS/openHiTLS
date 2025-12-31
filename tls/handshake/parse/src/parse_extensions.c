@@ -32,6 +32,9 @@
 // Parse an empty extended message.
 int32_t ParseEmptyExtension(TLS_Ctx *ctx, uint16_t extMsgType, uint32_t extMsgLen, bool *haveExtension)
 {
+#ifndef HITLS_BSL_LOG
+    (void)extMsgType;
+#endif
     /* Parsed extensions of the same type */
     if (*haveExtension) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15120, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -185,8 +188,39 @@ int32_t ParseExHeader(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, uint16_
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+int32_t ParseRecordSizeLimit(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
+                             bool *haveRecordSizeLimit, uint16_t *recordSizeLimit)
+{
+    /* Parsed extensions of the same type */
+    if (*haveRecordSizeLimit == true) {
+        return ParseDupExtProcess(ctx, BINLOG_ID16249, BINGLOG_STR("RecordSizeLimit"));
+    }
+
+    if (bufLen != sizeof(uint16_t)) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17009, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "bufLen error", 0, 0, 0, 0);
+        BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_DECODE_ERROR);
+        return HITLS_PARSE_INVALID_MSG_LEN;
+    }
+
+    /*
+     * A client MAY abort the handshake with an "illegal_parameter" alert
+     * if the record_size_limit extension includes a value greater than
+     * the maximum record size permitted by the negotiated protocol version
+     * and extensions.
+     */
+    *recordSizeLimit = BSL_ByteToUint16(buf);
+    *haveRecordSizeLimit = true;
+    return HITLS_SUCCESS;
+}
+#endif
+
 int32_t ParseDupExtProcess(TLS_Ctx *ctx, uint32_t logId, const void *format)
 {
+#ifndef HITLS_BSL_LOG
+    (void)logId;
+#endif
     BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
     if (format != NULL) {
         BSL_LOG_BINLOG_VARLEN(logId, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "extension type %s is repeated.",
@@ -198,6 +232,9 @@ int32_t ParseDupExtProcess(TLS_Ctx *ctx, uint32_t logId, const void *format)
 
 int32_t ParseErrorExtLengthProcess(TLS_Ctx *ctx, uint32_t logId, const void *format)
 {
+#ifndef HITLS_BSL_LOG
+    (void)logId;
+#endif
     BSL_ERR_PUSH_ERROR(HITLS_PARSE_INVALID_MSG_LEN);
     if (format != NULL) {
         BSL_LOG_BINLOG_VARLEN(logId, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -210,22 +247,23 @@ int32_t ParseErrorExtLengthProcess(TLS_Ctx *ctx, uint32_t logId, const void *for
 bool GetExtensionFlagValue(TLS_Ctx *ctx, uint32_t hsExTypeId)
 {
     switch (hsExTypeId) {
-        case HS_EX_TYPE_ID_SERVER_NAME:                 return ctx->hsCtx->extFlag.haveServerName;
-        case HS_EX_TYPE_ID_SUPPORTED_GROUPS:            return ctx->hsCtx->extFlag.haveSupportedGroups;
-        case HS_EX_TYPE_ID_POINT_FORMATS:               return ctx->hsCtx->extFlag.havePointFormats;
-        case HS_EX_TYPE_ID_SIGNATURE_ALGORITHMS:        return ctx->hsCtx->extFlag.haveSignatureAlgorithms;
-        case HS_EX_TYPE_ID_EXTENDED_MASTER_SECRET:      return ctx->hsCtx->extFlag.haveExtendedMasterSecret;
-        case HS_EX_TYPE_ID_SUPPORTED_VERSIONS:          return ctx->hsCtx->extFlag.haveSupportedVers;
-        case HS_EX_TYPE_ID_CERTIFICATE_AUTHORITIES:     return ctx->hsCtx->extFlag.haveCA;
-        case HS_EX_TYPE_ID_POST_HS_AUTH:                return ctx->hsCtx->extFlag.havePostHsAuth;
-        case HS_EX_TYPE_ID_KEY_SHARE:                   return ctx->hsCtx->extFlag.haveKeyShare;
-        case HS_EX_TYPE_ID_EARLY_DATA:                  return ctx->hsCtx->extFlag.haveEarlyData;
-        case HS_EX_TYPE_ID_PSK_KEY_EXCHANGE_MODES:      return ctx->hsCtx->extFlag.havePskExMode;
-        case HS_EX_TYPE_ID_PRE_SHARED_KEY:              return ctx->hsCtx->extFlag.havePreShareKey;
-        case HS_EX_TYPE_ID_APP_LAYER_PROTOCOLS:         return ctx->hsCtx->extFlag.haveAlpn;
-        case HS_EX_TYPE_ID_SESSION_TICKET:              return ctx->hsCtx->extFlag.haveTicket;
-        case HS_EX_TYPE_ID_ENCRYPT_THEN_MAC:            return ctx->hsCtx->extFlag.haveEncryptThenMac;
-        case HS_EX_TYPE_ID_SIGNATURE_ALGORITHMS_CERT:   return ctx->hsCtx->extFlag.haveSignatureAlgorithmsCert;
+        case HS_EX_TYPE_ID_SERVER_NAME:              return ctx->hsCtx->extFlag.haveServerName;
+        case HS_EX_TYPE_ID_SUPPORTED_GROUPS:         return ctx->hsCtx->extFlag.haveSupportedGroups;
+        case HS_EX_TYPE_ID_POINT_FORMATS:            return ctx->hsCtx->extFlag.havePointFormats;
+        case HS_EX_TYPE_ID_SIGNATURE_ALGORITHMS:     return ctx->hsCtx->extFlag.haveSignatureAlgorithms;
+        case HS_EX_TYPE_ID_EXTENDED_MASTER_SECRET:   return ctx->hsCtx->extFlag.haveExtendedMasterSecret;
+        case HS_EX_TYPE_ID_SUPPORTED_VERSIONS:       return ctx->hsCtx->extFlag.haveSupportedVers;
+        case HS_EX_TYPE_ID_CERTIFICATE_AUTHORITIES:  return ctx->hsCtx->extFlag.haveCA;
+        case HS_EX_TYPE_ID_POST_HS_AUTH:             return ctx->hsCtx->extFlag.havePostHsAuth;
+        case HS_EX_TYPE_ID_KEY_SHARE:                return ctx->hsCtx->extFlag.haveKeyShare;
+        case HS_EX_TYPE_ID_EARLY_DATA:               return ctx->hsCtx->extFlag.haveEarlyData;
+        case HS_EX_TYPE_ID_PSK_KEY_EXCHANGE_MODES:   return ctx->hsCtx->extFlag.havePskExMode;
+        case HS_EX_TYPE_ID_PRE_SHARED_KEY:           return ctx->hsCtx->extFlag.havePreShareKey;
+        case HS_EX_TYPE_ID_APP_LAYER_PROTOCOLS:      return ctx->hsCtx->extFlag.haveAlpn;
+        case HS_EX_TYPE_ID_SESSION_TICKET:           return ctx->hsCtx->extFlag.haveTicket;
+        case HS_EX_TYPE_ID_ENCRYPT_THEN_MAC:         return ctx->hsCtx->extFlag.haveEncryptThenMac;
+        case HS_EX_TYPE_ID_RECORD_SIZE_LIMIT:        return ctx->hsCtx->extFlag.haveRecordSizeLimit;
+        case HS_EX_TYPE_ID_SIGNATURE_ALGORITHMS_CERT:return ctx->hsCtx->extFlag.haveSignatureAlgorithmsCert;
         case HS_EX_TYPE_ID_COOKIE:
         case HS_EX_TYPE_ID_RENEGOTIATION_INFO:
         default:
@@ -246,7 +284,7 @@ int32_t CheckForDuplicateExtension(ParsePacket *pkt, uint16_t *extMsgType, uint3
     *pkt->bufOffset += HS_EX_HEADER_LEN;
 
     *extensionId = HS_GetExtensionTypeId(*extMsgType);
-    // can not process duplication unknown ext, unknown ext is verified elsewhere
+    // can not process duplicated unknown ext, unknown ext is verified elsewhere
     if (((extensionTypeMask & (1ULL << *extensionId)) != 0) && *extensionId != HS_EX_TYPE_ID_UNRECOGNIZED) {
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17328, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

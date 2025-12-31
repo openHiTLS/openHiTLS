@@ -29,11 +29,11 @@
 extern "C" {
 #endif
 
- /* Currently, the SNI supports only the host name type. */
-
 /**
  * @ingroup hitls_sni
- * @brief   Currently, the SNI supports only the host name type.
+ * @brief   Enumerated type for Server Name Indication (SNI) types.
+ *
+ * Currently, the SNI supports only the host name type.
  */
 typedef enum {
     HITLS_SNI_HOSTNAME_TYPE,
@@ -46,11 +46,10 @@ typedef enum {
 
 /**
  * @ingroup hitls_sni
- * @brief   Obtain the value of server_name before, during, or after the handshake on the client or server.
- *
+ * @brief   Obtain the value of server_name before, during, or after the handshake on the client or server.\
  * @param   ctx [IN] TLS connection handle
  * @param   type  [IN] serverName type
- * @retval  The value of server_name, if successful.
+ * @return  The value of server_name, if successful.
  *          NULL, if failure.
  */
 const char *HITLS_GetServerName(const HITLS_Ctx *ctx, const int type);
@@ -58,9 +57,8 @@ const char *HITLS_GetServerName(const HITLS_Ctx *ctx, const int type);
 /**
  * @ingroup hitls_sni
  * @brief   Obtain the server_name type before, during, or after the handshake on the client or server.
- *
  * @param   ctx [IN] TLS connection handle
- * @retval  HITLS_SNI_HOSTNAME_TYPE, if successful.
+ * @return  HITLS_SNI_HOSTNAME_TYPE, if successful.
  *          -1: if failure.
  */
 int32_t HITLS_GetServernameType(const HITLS_Ctx *ctx);
@@ -72,7 +70,7 @@ int32_t HITLS_GetServernameType(const HITLS_Ctx *ctx);
  * @param   config  [OUT] config Context
  * @param   serverName  [IN] serverName
  * @param   serverNameStrlen [IN] serverName length
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_SetServerName(HITLS_Config *config, uint8_t *serverName, uint32_t serverNameStrlen);
@@ -84,7 +82,7 @@ int32_t HITLS_CFG_SetServerName(HITLS_Config *config, uint8_t *serverName, uint3
  * @param   config [IN] config Context
  * @param   serverName [OUT] serverName
  * @param   serverNameStrlen [OUT] serverName length
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_GetServerName(HITLS_Config *config, uint8_t **serverName, uint32_t *serverNameStrlen);
@@ -96,7 +94,7 @@ int32_t HITLS_CFG_GetServerName(HITLS_Config *config, uint8_t **serverName, uint
  * @param   ctx   [IN] ctx context.
  * @param   alert [IN] Warning information.
  * @param   arg   [IN] The server supports the input parameters related to server_name.
- * @retval  The user return value contains:
+ * @return  The user return value contains:
  *         HITLS_ACCEPT_SNI_ERR_OK 0 (received, server_name null extension)
  *         HITLS_ACCEPT_SNI_ERR_ALERT_FATAL 2 (Do not accept, abort handshake)
  *         HITLS_ACCEPT_SNI_ERR_NOACK 3 (not accepted, but continue handshake, not sending server_name null extension)
@@ -109,7 +107,7 @@ typedef int32_t (*HITLS_SniDealCb)(HITLS_Ctx *ctx, int *alert, void *arg);
  *
  * @param   config  [OUT] Config Context
  * @param   callback [IN] Server callback implemented by the user
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_SetServerNameCb(HITLS_Config *config, HITLS_SniDealCb callback);
@@ -120,7 +118,7 @@ int32_t HITLS_CFG_SetServerNameCb(HITLS_Config *config, HITLS_SniDealCb callback
  *
  * @param   config  [OUT] Config context
  * @param   arg  [IN] Set parameters related to server_name.
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_SetServerNameArg(HITLS_Config *config, void *arg);
@@ -131,7 +129,7 @@ int32_t HITLS_CFG_SetServerNameArg(HITLS_Config *config, void *arg);
  *
  * @param   config  [IN] config Context
  * @param   callback [IN] [OUT] Server callback implemented by the user
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_GetServerNameCb(HITLS_Config *config, HITLS_SniDealCb *callback);
@@ -142,10 +140,20 @@ int32_t HITLS_CFG_GetServerNameCb(HITLS_Config *config, HITLS_SniDealCb *callbac
  *
  * @param   config  [IN] Config context
  * @param   arg  [IN] [OUT] Set parameters related to server_name.arg
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_GetServerNameArg(HITLS_Config *config, void **arg);
+
+/**
+ * @ingroup hitls_sni
+ * @brief   Set a new configuration for an existing TLS handle. Currently this parameter is used only in SNI callback.
+ * @param   ctx [OUT] TLS connection handle.
+ * @param   newConfig [IN] config Context
+ * @return  Return the global configuration pointer currently used by the CTX, or NULL indicates that memory
+ * allocation fails.
+ */
+HITLS_Config *HITLS_SetNewConfig(HITLS_Ctx *ctx, HITLS_Config *newConfig);
 
 #ifdef __cplusplus
 }

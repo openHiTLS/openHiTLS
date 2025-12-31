@@ -191,6 +191,15 @@
     #ifndef HITLS_TLS_FEATURE_SM_TLS13
         #define HITLS_TLS_FEATURE_SM_TLS13
     #endif
+    #ifndef HITLS_TLS_FEATURE_MTU_QUERY
+        #define HITLS_TLS_FEATURE_MTU_QUERY
+    #endif
+    #ifndef HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL
+        #define HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL
+    #endif
+    #ifndef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+        #define HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+    #endif
 #endif /* HITLS_TLS_FEATURE */
 
 #if defined(HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES) && !defined(HITLS_PKI_X509_CRT_AUTH)
@@ -251,6 +260,14 @@
     #ifndef HITLS_TLS_FEATURE_SESSION_TICKET
         #define HITLS_TLS_FEATURE_SESSION_TICKET
     #endif
+#endif
+
+#if defined(HITLS_TLS_FEATURE_MTU_QUERY) && (!defined(HITLS_TLS_PROTO_DTLS12) || !defined(HITLS_BSL_UIO_UDP))
+#undef HITLS_TLS_FEATURE_MTU_QUERY
+#endif
+
+#if defined(HITLS_TLS_FEATURE_MTU_QUERY) && !defined(HITLS_BSL_UIO_MTU_QUERY)
+    #define HITLS_BSL_UIO_MTU_QUERY
 #endif
 
 #if defined(HITLS_TLS_FEATURE_SECURITY) && !defined(HITLS_TLS_CONFIG_CIPHER_SUITE)
@@ -372,6 +389,9 @@
     #endif
     #ifndef HITLS_TLS_CONFIG_CERT_VERIFY_LOCATION
         #define HITLS_TLS_CONFIG_CERT_VERIFY_LOCATION
+    #endif
+    #ifndef HITLS_TLS_CONFIG_CERT_CRL
+        #define HITLS_TLS_CONFIG_CERT_CRL
     #endif
 #endif
 

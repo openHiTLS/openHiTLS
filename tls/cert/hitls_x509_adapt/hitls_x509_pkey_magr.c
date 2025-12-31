@@ -28,9 +28,9 @@
 #include "hitls_type.h"
 #include "crypt_eal_pkey.h"
 #include "hitls_crypt_type.h"
+#include "cert.h"
 #include "config_type.h"
 #include "tls_config.h"
-#include "cert_mgr_ctx.h"
 
 static int32_t GetPassByCb(HITLS_PasswordCb passWordCb, void *passWordCbUserData, char *pass, int32_t *passLen)
 {
@@ -98,6 +98,7 @@ HITLS_CERT_Key *HITLS_X509_Adapt_ProviderKeyParse(HITLS_Config *config, const ui
         ret = CRYPT_EAL_ProviderDecodeBuffKey(libCtx, attrName, BSL_CID_UNKNOWN, format, encodeType,
             &encode, &pwdBuff, (CRYPT_EAL_PkeyCtx **)&ealPriKey);
     }
+
     (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -129,6 +130,7 @@ HITLS_CERT_Key *HITLS_X509_Adapt_KeyParse(HITLS_Config *config, const uint8_t *b
         ret = CRYPT_EAL_DecodeBuffKey(format, CRYPT_ENCDEC_UNKNOW, &encode, pwd, pwdLen,
             (CRYPT_EAL_PkeyCtx **)&ealPriKey);
     }
+
     (void)memset_s(pwd, MAX_PASS_LEN, 0, MAX_PASS_LEN);
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

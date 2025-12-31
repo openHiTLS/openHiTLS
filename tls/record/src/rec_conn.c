@@ -61,7 +61,6 @@ void RecConnStateFree(RecConnState *state)
     BSL_SAL_CleanseData(state->suiteInfo, sizeof(RecConnSuitInfo));
     BSL_SAL_FREE(state->suiteInfo);
     BSL_SAL_FREE(state);
-    return;
 }
 
 uint64_t RecConnGetSeqNum(const RecConnState *state)
@@ -113,7 +112,7 @@ int32_t RecConnStateSetCipherInfo(RecConnState *state, RecConnSuitInfo *suitInfo
 }
 
 #ifdef HITLS_TLS_SUITE_CIPHER_CBC
-uint32_t RecGetHashAlgoFromMACAlgo(HITLS_MacAlgo macAlgo)
+uint32_t RecGetHashAlgoFromMacAlgo(HITLS_MacAlgo macAlgo)
 {
     switch (macAlgo) {
         case HITLS_MAC_1:
@@ -156,10 +155,10 @@ int32_t RecConnGenerateMac(HITLS_Lib_Ctx *libCtx, const char *attrName,
     offset += sizeof(uint16_t);
     BSL_Uint16ToByte((uint16_t)plainMsg->textLen, &header[offset]);       // The 11th and 12th bytes are the data length
 
-    HITLS_HashAlgo hashAlgo = RecGetHashAlgoFromMACAlgo(suiteInfo->macAlg);
+    HITLS_HashAlgo hashAlgo = RecGetHashAlgoFromMacAlgo(suiteInfo->macAlg);
     if (hashAlgo == HITLS_HASH_BUTT) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_REC_ERR_GENERATE_MAC, BINLOG_ID17229,
-            "RecGetHashAlgoFromMACAlgo fail");
+            "RecGetHashAlgoFromMacAlgo fail");
     }
 
     if (suiteInfo->macCtx == NULL) {
@@ -236,7 +235,8 @@ int32_t RecConnCheckMac(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, const REC_Text
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_SUITE_CIPHER_CBC */
-int32_t RecConnEncrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText, uint32_t cipherTextLen)
+int32_t RecConnEncrypt(
+    TLS_Ctx *ctx, RecConnState *state, const REC_TextInput *plainMsg, uint8_t *cipherText, uint32_t cipherTextLen)
 {
     return RecGetCryptoFuncs(state->suiteInfo)->encryt(ctx, state, plainMsg, cipherText, cipherTextLen);
 }
@@ -267,7 +267,6 @@ static void PackSuitInfo(RecConnSuitInfo *suitInfo, const REC_SecParameters *par
     suitInfo->blockLength = param->blockLength;
     suitInfo->recordIvLength = param->recordIvLength;
     suitInfo->macLen = param->macLen;
-    return;
 }
 
 static void RecConnCalcWriteKey(const REC_SecParameters *param, uint8_t *keyBuf, uint32_t keyBufLen,
@@ -368,19 +367,19 @@ int32_t RecConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
 }
 
 #ifdef HITLS_TLS_PROTO_TLS13
+static const uint8_t DEVICE_INFO_KEY[] = "key";
+static const uint8_t DEVICE_INFO_IV[] = "iv";
 int32_t RecTLS13CalcWriteKey(CRYPT_KeyDeriveParameters *deriveInfo, uint8_t *key, uint32_t keyLen)
 {
-    uint8_t label[] = "key";
-    deriveInfo->label = label;
-    deriveInfo->labelLen = sizeof(label) - 1;
+    deriveInfo->label = DEVICE_INFO_KEY;
+    deriveInfo->labelLen = sizeof(DEVICE_INFO_KEY) - 1;
     return SAL_CRYPT_HkdfExpandLabel(deriveInfo, key, keyLen);
 }
 
 int32_t RecTLS13CalcWriteIv(CRYPT_KeyDeriveParameters *deriveInfo, uint8_t *iv, uint32_t ivLen)
 {
-    uint8_t label[] = "iv";
-    deriveInfo->label = label;
-    deriveInfo->labelLen = sizeof(label) - 1;
+    deriveInfo->label = DEVICE_INFO_IV;
+    deriveInfo->labelLen = sizeof(DEVICE_INFO_IV) - 1;
     return SAL_CRYPT_HkdfExpandLabel(deriveInfo, iv, ivLen);
 }
 

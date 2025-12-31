@@ -338,6 +338,21 @@ static int32_t ParseHsSupportedVersion(const uint8_t *buffer, uint32_t bufLen,
     return HITLS_SUCCESS;
 }
 
+static int32_t ParseHsExtUint16(const uint8_t *buffer, uint32_t bufLen, FRAME_HsExtUint16 *field, uint32_t *offset)
+{
+    uint32_t exOffset = 0;
+    field->exState = INITIAL_FIELD;
+    ParseFieldInteger16(&buffer[0], bufLen, &field->exType, &exOffset);
+    ParseFieldInteger16(&buffer[exOffset], bufLen - exOffset, &field->exLen, &exOffset);
+    if (field->exLen.data == 0u) {
+        *offset += exOffset;
+        return HITLS_SUCCESS;
+    }
+    ParseFieldInteger16(&buffer[exOffset], bufLen - exOffset, &field->data, &exOffset);
+    *offset += exOffset;
+    return HITLS_SUCCESS;
+}
+
 static int32_t ParseClientHelloMsg(FRAME_Type *frameType, const uint8_t *buffer, uint32_t bufLen,
     FRAME_ClientHelloMsg *clientHello, uint32_t *parseLen)
 {
@@ -386,6 +401,9 @@ static int32_t ParseClientHelloMsg(FRAME_Type *frameType, const uint8_t *buffer,
                 break;
             case HS_EX_TYPE_SERVER_NAME:
                 ParseHsExtArrayForList(&buffer[offset], bufLen - offset, &clientHello->serverName, &offset);
+                break;
+            case HS_EX_TYPE_RECORD_SIZE_LIMIT:
+                ParseHsExtUint16(&buffer[offset], bufLen - offset, &clientHello->recordSizeLimit, &offset);
                 break;
             case HS_EX_TYPE_APP_LAYER_PROTOCOLS:
                 ParseHsExtArrayForList(&buffer[offset], bufLen - offset, &clientHello->alpn, &offset);
@@ -456,21 +474,6 @@ static void CleanClientHelloMsg(FRAME_ClientHelloMsg *clientHello)
     return;
 }
 
-static int32_t ParseHsExtUint16(const uint8_t *buffer, uint32_t bufLen, FRAME_HsExtUint16 *field, uint32_t *offset)
-{
-    uint32_t exOffset = 0;
-    field->exState = INITIAL_FIELD;
-    ParseFieldInteger16(&buffer[0], bufLen, &field->exType, &exOffset);
-    ParseFieldInteger16(&buffer[exOffset], bufLen - exOffset, &field->exLen, &exOffset);
-    if (field->exLen.data == 0u) {
-        *offset += exOffset;
-        return HITLS_SUCCESS;
-    }
-    ParseFieldInteger16(&buffer[exOffset], bufLen - exOffset, &field->data, &exOffset);
-    *offset += exOffset;
-    return HITLS_SUCCESS;
-}
-
 static int32_t ParseHsExtServerKeyShare(const uint8_t *buffer, uint32_t bufLen,
     FRAME_HsExtServerKeyShare *field, uint32_t *offset)
 {
@@ -524,6 +527,9 @@ static int32_t ParseServerHelloMsg(const uint8_t *buffer, uint32_t bufLen, FRAME
                 break;
             case HS_EX_TYPE_SERVER_NAME:
                 ParseHsExtArrayForList(&buffer[offset], bufLen - offset, &serverHello->serverName, &offset);
+                break;
+            case HS_EX_TYPE_RECORD_SIZE_LIMIT:
+                ParseHsExtUint16(&buffer[offset], bufLen - offset, &serverHello->recordSizeLimit, &offset);
                 break;
             case HS_EX_TYPE_APP_LAYER_PROTOCOLS:
                 ParseHsExtArrayForList(&buffer[offset], bufLen - offset, &serverHello->alpn, &offset);
@@ -801,7 +807,7 @@ static int32_t ParseClientKxMsg(FRAME_Type *frameType, const uint8_t *buffer, ui
     uint32_t offset = 0;
     switch (frameType->keyExType) {
         case HITLS_KEY_EXCH_ECDHE:
-            /* Compatible with OpenSSL. Three bytes are added to the client key exchange. */
+            /* Three bytes are added to the client key exchange. */
 #ifdef HITLS_TLS_PROTO_TLCP11
             if (frameType->versionType == HITLS_VERSION_TLCP_DTLCP11) {
                 // Curve type + Curve ID + Public key length

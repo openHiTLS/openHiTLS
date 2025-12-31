@@ -30,7 +30,6 @@
 #ifdef HITLS_TLS_FEATURE_INDICATOR
 #include "indicator.h"
 #endif
-#include "hs.h"
 #include "rec_crypto.h"
 
 
@@ -46,7 +45,6 @@ static void OutbufUpdate(uint32_t *start, uint32_t startvalue, uint32_t *end, ui
     /** Commit the record to be written */
     *start = startvalue;
     *end = endvalue;
-    return;
 }
 
 static int32_t CheckEncryptionLimits(TLS_Ctx *ctx, RecConnState *state)
@@ -138,11 +136,13 @@ static inline void DtlsRecordHeaderPack(uint8_t *outBuf, REC_Type recordType, ui
 
 static int32_t DtlsTrySendMessage(TLS_Ctx *ctx, RecCtx *recordCtx, REC_Type recordType, RecConnState *state)
 {
+    (void)recordType;
+#ifdef HITLS_BSL_UIO_SCTP
     /* Notify the uio whether the service message is being sent. rfc6083 4.4. Stream Usage: For non-app messages, the
      * sctp stream id number must be 0 */
     bool isAppMsg = (recordType == REC_TYPE_APP);
     (void)BSL_UIO_Ctrl(ctx->uio, BSL_UIO_SCTP_MASK_APP_MESSAGE, sizeof(isAppMsg), &isAppMsg);
-
+#endif /* HITLS_BSL_UIO_SCTP */
     int32_t ret = DatagramWrite(ctx, recordCtx->outBuf);
     if (ret != HITLS_SUCCESS) {
         /* Does not cache messages in the DTLS */
@@ -296,11 +296,7 @@ static void TlsPlainMsgGenerate(REC_TextInput *plainMsg, const TLS_Ctx *ctx,
             ctx->config.tlsConfig.maxVersion;
     }
 
-    if (ctx->hsCtx != NULL && ctx->hsCtx->state == TRY_SEND_CLIENT_HELLO &&
-        ctx->state != CM_STATE_RENEGOTIATION &&
-#ifdef HITLS_TLS_PROTO_TLS13
-        ctx->hsCtx->haveHrr == false &&
-#endif
+    if (ctx->isClient && ctx->negotiatedInfo.version == 0 && ctx->state != CM_STATE_RENEGOTIATION &&
 #ifdef HITLS_TLS_PROTO_TLCP11
         ctx->config.tlsConfig.maxVersion != HITLS_VERSION_TLCP_DTLCP11 &&
 #endif
@@ -463,6 +459,7 @@ int32_t REC_FlightTransmit(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+    /* Reset the buffer uio size */
     ret = REC_QueryMtu(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;
@@ -470,7 +467,7 @@ int32_t REC_FlightTransmit(TLS_Ctx *ctx)
 #endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
     ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_FLUSH, 0, NULL);
     if (ret == BSL_UIO_IO_BUSY) {
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#ifdef HITLS_TLS_FEATURE_MTU_QUERY
         if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
             return HITLS_REC_NORMAL_IO_BUSY;
         }
@@ -481,7 +478,7 @@ int32_t REC_FlightTransmit(TLS_Ctx *ctx)
                 "Record write: get EMSGSIZE error.", 0, 0, 0, 0);
             ctx->needQueryMtu = true;
         }
-#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+#endif /* HITLS_TLS_FEATURE_MTU_QUERY */
         return HITLS_REC_NORMAL_IO_BUSY;
     }
     if (ret != BSL_SUCCESS) {

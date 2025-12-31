@@ -21,36 +21,79 @@
 #include "hitls_cert_type.h"
 #include "hitls_cert_reg.h"
 #include "hitls_cert.h"
-#include "tls_config.h"
 #include "bsl_hash.h"
+#include "tls_config.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Used to transfer certificates, private keys, and certificate chains. */
-typedef struct CertPairInner CERT_Pair;
+typedef struct {
+    HITLS_CERT_X509 *cert;      /* device certificate */
+#ifdef HITLS_TLS_PROTO_TLCP11
+    /* encrypted device cert. Currently this field is used only when the peer-end encrypted certificate is stored. */
+    HITLS_CERT_X509 *encCert;
+    HITLS_CERT_Key *encPrivateKey;
+#endif
+    HITLS_CERT_Key *privateKey; /* private key corresponding to the certificate */
+    HITLS_CERT_Chain *chain;    /* certificate chain */
+} CERT_Pair;
 
-/**
- * @brief   Obtain the certificate
- *
- * @param   certPair [IN] Certificate resource struct
- *
- * @return  Certificate
- */
-HITLS_CERT_X509 *SAL_CERT_PairGetX509(CERT_Pair *certPair);
+struct CertMgrCtxInner {
+    uint32_t currentCertKeyType;                  /* keyType to the certificate in use. */
+    /* Indicates the certificate resources on the link. Only one certificate of a type can be loaded. */
+    BSL_HASH_Hash *certPairs;                     /* cert hash table. key keyType, value CERT_Pair */
+    HITLS_CERT_Chain *extraChain;
+    HITLS_CERT_Store *verifyStore;              /* Verifies the store, which is used to verify the certificate chain. */
+    HITLS_CERT_Store *chainStore;               /* Certificate chain store, used to assemble the certificate chain */
+    HITLS_CERT_Store *certStore;                /* Default CA store */
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+    HITLS_CERT_MgrMethod method;                /* callback function */
+#endif
+    HITLS_PasswordCb defaultPasswdCb;           /* Default password callback, used in loading certificate. */
+    void *defaultPasswdCbUserData;              /* Set the userData used by the default password callback.  */
+#ifdef HITLS_TLS_CONFIG_CERT_CALLBACK
+    HITLS_VerifyCb verifyCb;                    /* Certificate verification callback function */
+#endif /* HITLS_TLS_CONFIG_CERT_CALLBACK */
+#ifdef HITLS_TLS_FEATURE_CERT_CB
+    HITLS_CertCb certCb;                      /* Certificate callback function */
+    void *certCbArg;                        /* Argument for the certificate callback function */
+#endif /* HITLS_TLS_FEATURE_CERT_CB */
+    HITLS_Lib_Ctx *libCtx;          /* library context */
+    const char *attrName;              /* attrName */
+};
 
-/**
- * @ingroup hitls_cert_reg
- * @brief   Obtain the encryption certificate
- *
- * @param   certPair [IN] Certificate resource struct
- *
- * @return  Encryption certificate
- */
-HITLS_CERT_X509 *SAL_CERT_GetTlcpEncCert(CERT_Pair *certPair);
+#define LIBCTX_FROM_CERT_MGR_CTX(mgrCtx) (((mgrCtx) == NULL) ? NULL : (mgrCtx)->libCtx)
+#define ATTR_FROM_CERT_MGR_CTX(mgrCtx) (((mgrCtx) == NULL) ? NULL : (mgrCtx)->attrName)
 
-HITLS_CERT_Chain *SAL_CERT_PairGetChain(CERT_Pair *certPair);
+/* Get data from CERT_MgrCtx */
+#define SAL_CERT_GET_VERIFY_STORE(mgrCtx) ((mgrCtx)->verifyStore)
+#define SAL_CERT_GET_VERIFY_STORE_EX(mgrCtx) (((mgrCtx) == NULL) ? NULL : (mgrCtx)->verifyStore)
+
+#define SAL_CERT_GET_CHAIN_STORE(mgrCtx) ((mgrCtx)->chainStore)
+#define SAL_CERT_GET_CHAIN_STORE_EX(mgrCtx) (((mgrCtx) == NULL) ? NULL : (mgrCtx)->chainStore)
+
+#define SAL_CERT_GET_CERT_STORE(mgrCtx) ((mgrCtx)->certStore)
+#define SAL_CERT_GET_CERT_STORE_EX(mgrCtx) (((mgrCtx) == NULL) ? NULL : (mgrCtx)->certStore)
+
+#define SAL_CERT_GET_DEFAULT_PWD_CB(mgrCtx) (((mgrCtx) == NULL) ? NULL : (mgrCtx)->defaultPasswdCb)
+#define SAL_CERT_GET_DEFAULT_PWD_CB_USRDATA(mgrCtx) (((mgrCtx) == NULL) ? NULL : (mgrCtx)->defaultPasswdCbUserData)
+
+#ifdef HITLS_TLS_CONFIG_CERT_CALLBACK
+#define SAL_CERT_GET_VERIIFY_CB(mgrCtx) (((mgrCtx) == NULL) ? NULL : (mgrCtx)->verifyCb)
+#endif
+
+/* Get data from CERT_Pair */
+#define SAL_CERT_PAIR_GET_X509(certPair) ((certPair)->cert)
+#define SAL_CERT_PAIR_GET_X509_EX(certPair) (((certPair) == NULL) ? NULL : (certPair)->cert)
+
+#define SAL_CERT_PAIR_GET_CHAIN(certPair) ((certPair)->chain)
+
+#ifdef HITLS_TLS_PROTO_TLCP11
+#define SAL_CERT_PAIR_GET_TLCP_ENC_CERT(certPair) ((certPair)->encCert)
+#define SAL_CERT_PAIR_GET_TLCP_ENC_CERT_EX(certPair) (((certPair) == NULL) ? NULL : (certPair)->encCert)
+#endif
 
 CERT_Pair *SAL_CERT_PairDup(CERT_MgrCtx *mgrCtx, CERT_Pair *srcCertPair);
 
@@ -151,15 +194,6 @@ void SAL_CERT_MgrCtxFree(CERT_MgrCtx *mgrCtx);
 int32_t SAL_CERT_SetCertStore(CERT_MgrCtx *mgrCtx, HITLS_CERT_Store *store);
 
 /**
- * @brief   Obtain the cert store
- *
- * @param   mgrCtx [IN] Certificate management struct
- *
- * @return  cert store
- */
-HITLS_CERT_Store *SAL_CERT_GetCertStore(CERT_MgrCtx *mgrCtx);
-
-/**
  * @brief   Set the chain store
  *
  * @param   mgrCtx [IN] Certificate management struct
@@ -170,15 +204,6 @@ HITLS_CERT_Store *SAL_CERT_GetCertStore(CERT_MgrCtx *mgrCtx);
 int32_t SAL_CERT_SetChainStore(CERT_MgrCtx *mgrCtx, HITLS_CERT_Store *store);
 
 /**
- * @brief   Obtain the chain store
- *
- * @param   mgrCtx [IN] Certificate management struct
- *
- * @return  chain store
- */
-HITLS_CERT_Store *SAL_CERT_GetChainStore(CERT_MgrCtx *mgrCtx);
-
-/**
  * @brief   Set the verify store
  *
  * @param   mgrCtx [IN] Certificate management struct
@@ -187,15 +212,6 @@ HITLS_CERT_Store *SAL_CERT_GetChainStore(CERT_MgrCtx *mgrCtx);
  * @retval  HITLS_SUCCESS           succeeded.
  */
 int32_t SAL_CERT_SetVerifyStore(CERT_MgrCtx *mgrCtx, HITLS_CERT_Store *store);
-
-/**
- * @brief   Obtain the verify store
- *
- * @param   mgrCtx [IN] Certificate management struct
- *
- * @return  verify store
- */
-HITLS_CERT_Store *SAL_CERT_GetVerifyStore(CERT_MgrCtx *mgrCtx);
 
 /**
  * @brief   Add a device certificate and set it to the current. Only one certificate of each type can be added.
@@ -308,15 +324,6 @@ int32_t SAL_CERT_CtrlVerifyParams(HITLS_Config *config, HITLS_CERT_Store *store,
 int32_t SAL_CERT_SetDefaultPasswordCb(CERT_MgrCtx *mgrCtx, HITLS_PasswordCb cb);
 
 /**
- * @brief   Obtain the default passwd callback.
- *
- * @param   mgrCtx [IN] Certificate management struct
- *
- * @return  Callback function
- */
-HITLS_PasswordCb SAL_CERT_GetDefaultPasswordCb(CERT_MgrCtx *mgrCtx);
-
-/**
  * @brief   Set the user data used in the default passwd callback.
  *
  * @param   mgrCtx   [IN] Certificate management struct
@@ -325,15 +332,6 @@ HITLS_PasswordCb SAL_CERT_GetDefaultPasswordCb(CERT_MgrCtx *mgrCtx);
  * @retval  HITLS_SUCCESS           succeeded.
  */
 int32_t SAL_CERT_SetDefaultPasswordCbUserdata(CERT_MgrCtx *mgrCtx, void *userdata);
-
-/**
- * @brief   Obtain the user data used in the default passwd callback.
- *
- * @param   mgrCtx [IN] Certificate management struct
- *
- * @return  User data
- */
-void *SAL_CERT_GetDefaultPasswordCbUserdata(CERT_MgrCtx *mgrCtx);
 
 /**
  * @brief   Set the verify callback function, which is used during certificate verification.
@@ -346,13 +344,15 @@ void *SAL_CERT_GetDefaultPasswordCbUserdata(CERT_MgrCtx *mgrCtx);
 int32_t SAL_CERT_SetVerifyCb(CERT_MgrCtx *mgrCtx, HITLS_VerifyCb cb);
 
 /**
- * @brief   Obtain the verify callback function.
- *
- * @param   mgrCtx [IN] Certificate management struct
- *
- * @return  Callback function
+ * @ingroup
+ * @brief   Set the current certificate to the value based on the option parameter.
+ * @param   mgrCtx [OUT] Certificate management struct
+ * @param   option [IN] Setting options, including HITLS_CERT_SET_FIRST and HITLS_CERT_SET_NEXT
+ * @retval  HITLS_SUCCESS           succeeded.
+ * @retval  For other error codes, see hitls_error.h.
  */
-HITLS_VerifyCb SAL_CERT_GetVerifyCb(CERT_MgrCtx *mgrCtx);
+int32_t SAL_CERT_SetActiveCert(CERT_MgrCtx *mgrCtx, long option);
+
 /**
  * @brief   Set the certificate callback function.
  *

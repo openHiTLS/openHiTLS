@@ -81,7 +81,6 @@ static void *SessKeyDupFunc(void *src, size_t size)
 static void SessKeyFreeFunc(void *ptr)
 {
     BSL_SAL_FREE(ptr);
-    return;
 }
 
 /* Session copy function */
@@ -94,7 +93,6 @@ static void *SessionDupFunc(void *src, size_t size)
 static void SessionFreeFunc(void *ptr)
 {
     HITLS_SESS_Free((HITLS_Session *)ptr);
-    return;
 }
 
 TLS_SessionMgr *SESSMGR_New(HITLS_Lib_Ctx *libCtx)
@@ -176,7 +174,6 @@ void SESSMGR_Free(TLS_SessionMgr *mgr)
         BSL_SAL_ThreadLockFree(mgr->lock);
         BSL_SAL_FREE(mgr);
     }
-    return;
 }
 
 void SESSMGR_SetTimeout(TLS_SessionMgr *mgr, uint64_t sessTimeout)
@@ -186,7 +183,6 @@ void SESSMGR_SetTimeout(TLS_SessionMgr *mgr, uint64_t sessTimeout)
         mgr->sessTimeout = sessTimeout;
         BSL_SAL_ThreadUnlock(mgr->lock);
     }
-    return;
 }
 
 uint64_t SESSMGR_GetTimeout(TLS_SessionMgr *mgr)
@@ -210,7 +206,6 @@ void SESSMGR_SetCacheMode(TLS_SessionMgr *mgr, uint32_t mode)
         mgr->sessCacheMode = mode;
         BSL_SAL_ThreadUnlock(mgr->lock);
     }
-    return;
 }
 
 uint32_t SESSMGR_GetCacheMode(TLS_SessionMgr *mgr)
@@ -234,7 +229,6 @@ void SESSMGR_SetCacheSize(TLS_SessionMgr *mgr, uint32_t sessCacheSize)
         mgr->sessCacheSize = sessCacheSize;
         BSL_SAL_ThreadUnlock(mgr->lock);
     }
-    return;
 }
 
 /* Obtain the maximum number of cached sessions. Ensure that the pointer is not NULL */
@@ -272,8 +266,8 @@ void SESSMGR_InsertSession(TLS_SessionMgr *mgr, HITLS_Session *sess, bool isStor
     BSL_SAL_ThreadWriteLock(mgr->lock);
 
     if (mgr->sessCacheSize == 0 || BSL_HASH_Size(mgr->hash) < mgr->sessCacheSize) {
-        HITLS_Session *tmpSess = NULL;
-        if (BSL_HASH_At(mgr->hash, (uintptr_t)&key, (uintptr_t *)&tmpSess) == BSL_SUCCESS) {
+        HITLS_Session *tempSess;
+        if (BSL_HASH_At(mgr->hash, (uintptr_t)&key, (uintptr_t *)&tempSess) == BSL_SUCCESS) {
             BSL_HASH_Erase(mgr->hash, (uintptr_t)&key);
         }
         /* Insert a session node */
@@ -377,7 +371,7 @@ void SESSMGR_ClearTimeout(HITLS_Config *config, uint64_t time)
     while (it != BSL_HASH_IterEnd(config->sessMgr->hash)) {
         uintptr_t ptr = BSL_HASH_IterValue(config->sessMgr->hash, it);
         HITLS_Session *sess = (HITLS_Session *)ptr;
-        if (time == 0 ||SESS_CheckValidity(sess, time) == false) {
+        if (time == 0 || SESS_CheckValidity(sess, time) == false) {
             SESS_Disable(sess);
             /* Delete the node if it is invalid */
             uintptr_t tmpKey = BSL_HASH_HashIterKey(config->sessMgr->hash, it);
@@ -457,7 +451,6 @@ void SESSMGR_SetTicketKeyCb(TLS_SessionMgr *mgr, HITLS_TicketKeyCb ticketKeyCb)
         mgr->ticketKeyCb = ticketKeyCb;
         BSL_SAL_ThreadUnlock(mgr->lock);
     }
-    return;
 }
 
 HITLS_TicketKeyCb SESSMGR_GetTicketKeyCb(TLS_SessionMgr *mgr)

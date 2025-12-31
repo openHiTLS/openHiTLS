@@ -60,7 +60,6 @@
 #include "common_func.h"
 #include "hitls_func.h"
 #include "hitls_cert_type.h"
-#include "cert_mgr_ctx.h"
 #include "parser_frame_msg.h"
 #include "recv_process.h"
 #include "simulate_io.h"
@@ -165,6 +164,9 @@ void UT_TLS_CM_SET_NO_QUERY_MTU_API_TC001(void)
     server = FRAME_CreateLink(config, BSL_UIO_UDP);
     ASSERT_TRUE(server != NULL);
 
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
     bool noQueryMtu = false;
     ASSERT_TRUE(HITLS_SetNoQueryMtu(NULL, noQueryMtu) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_SetNoQueryMtu(client->ssl, noQueryMtu) == HITLS_SUCCESS);
@@ -203,6 +205,9 @@ void UT_TLS_CM_GET_NEED_QUERY_MTU_API_TC001(void)
     ASSERT_TRUE(client != NULL);
     server = FRAME_CreateLink(config, BSL_UIO_UDP);
     ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
 
     bool needQueryMtu = true;
     ASSERT_TRUE(HITLS_GetNeedQueryMtu(NULL, &needQueryMtu) == HITLS_NULL_INPUT);
@@ -287,6 +292,9 @@ void UT_TLS_CM_MTU_EMSGSIZE_TC001(void)
     ASSERT_TRUE(client != NULL);
     server = FRAME_CreateLink(config, BSL_UIO_UDP);
     ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
 

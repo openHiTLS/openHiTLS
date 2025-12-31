@@ -26,7 +26,7 @@ extern "C" {
 
 int32_t Tls12ServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg, bool isNeedClientHelloCb);
 
-/**
+/*
  * @brief   Server processes DTLS client hello message
  *
  * @param   ctx [IN] TLS context

@@ -164,7 +164,6 @@ void SECURITY_SetDefault(HITLS_Config *config)
     /*  Default security settings. Set the default security level and default security callback function. */
     config->securityLevel = HITLS_DEFAULT_SECURITY_LEVEL;
     config->securityCb = SECURITY_DefaultCb;
-    return;
 }
 
 int32_t SECURITY_CfgCheck(const HITLS_Config *config, int32_t option, int32_t bits, int32_t id, void *other)
@@ -204,11 +203,12 @@ int32_t SECURITY_CfgCheck(const HITLS_Config *config, int32_t option, int32_t bi
             }
             ianaId = (uint16_t)id;
             return config->securityCb(NULL, config, option, 0, 0, &ianaId, config->securityExData);
+
         default:
-            break;
+            return config->securityCb(NULL, config, option, bits, id, other, config->securityExData);
     }
-    return config->securityCb(NULL, config, option, bits, id, other, config->securityExData);
 }
+
 int32_t SECURITY_SslCheck(const HITLS_Ctx *ctx, int32_t option, int32_t bits, int32_t id, void *other)
 {
     if (ctx == NULL) {

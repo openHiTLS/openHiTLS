@@ -20,7 +20,6 @@
 #include "bsl_errno.h"
 #include "app_function.h"
 #include "app_print.h"
-#include "app_help.h"
 #include "app_provider.h"
 
 static int AppInit(void)

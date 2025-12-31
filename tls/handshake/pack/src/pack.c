@@ -245,7 +245,7 @@ int32_t HS_PackMsg(TLS_Ctx *ctx, HS_MsgType type)
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_INTERNAL_EXCEPTION, BINLOG_ID15814, "ctx is null");
     }
 
-    uint32_t version = HS_GetVersion(ctx);
+    uint32_t version = GET_VERSION_FROM_CTX(ctx);
     int32_t ret = HITLS_SUCCESS;
 
     switch (version) {

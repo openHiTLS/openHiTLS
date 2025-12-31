@@ -30,7 +30,7 @@ extern "C" {
  *
  * @param ctx [IN] SSL context
  *
- * @retval HITLS_SUCCESS                Initializition successful.
+ * @retval HITLS_SUCCESS                succeeded.
  * @retval HITLS_INTERNAL_EXCEPTION     An unexpected internal error occurs.
  * @retval HITLS_MEMALLOC_FAIL          Failed to apply for memory.
  */
@@ -51,7 +51,7 @@ void CCS_DeInit(TLS_Ctx *ctx);
  *
  * @param   ctx [IN] TLS context
  *
- * @retval  True if the Change cipher spec message is received else false.
+ * @return  Check whether the Change cipher spec message is received.
  */
 bool CCS_IsRecv(const TLS_Ctx *ctx);
 
@@ -61,7 +61,7 @@ bool CCS_IsRecv(const TLS_Ctx *ctx);
  *
  * @param ctx [IN] TLS context
  *
- * @retval HITLS_SUCCESS                Send successful.
+ * @retval HITLS_SUCCESS                succeeded.
  * @retval HITLS_INTERNAL_EXCEPTION     An unexpected internal error occurs.
  * @retval For other error codes, see REC_Write.
  */

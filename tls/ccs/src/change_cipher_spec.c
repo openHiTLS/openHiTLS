@@ -89,7 +89,7 @@ int32_t CCS_Send(TLS_Ctx *ctx)
     }
 #endif
 #ifdef HITLS_TLS_FEATURE_INDICATOR
-    INDICATOR_MessageIndicate(1, HS_GetVersion(ctx), REC_TYPE_CHANGE_CIPHER_SPEC, buf, 1,
+    INDICATOR_MessageIndicate(1, GET_VERSION_FROM_CTX(ctx), REC_TYPE_CHANGE_CIPHER_SPEC, buf, 1,
     ctx, ctx->config.tlsConfig.msgArg);
 #endif
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15617, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
@@ -193,7 +193,7 @@ int32_t ProcessPlainCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
     }
     /** Multiple generate ccs messages are received: If UDP transmission is used, ignore the ccs. */
     if (ctx->ccsCtx->ccsRecvflag == true && !BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP) &&
-        HS_GetVersion(ctx) != HITLS_VERSION_TLS13) {
+        GET_VERSION_FROM_CTX(ctx) != HITLS_VERSION_TLS13) {
         return RETURN_ALERT_PROCESS(ctx, HITLS_REC_NORMAL_RECV_UNEXPECT_MSG, BINLOG_ID16277,
             "Multiple generate ccs msg are received", ALERT_UNEXPECTED_MESSAGE);
     }
@@ -208,7 +208,7 @@ int32_t ProcessPlainCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
     }
     ctx->ccsCtx->ccsRecvflag = true;
 #ifdef HITLS_TLS_FEATURE_INDICATOR
-    INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_CHANGE_CIPHER_SPEC, data, 1,
+    INDICATOR_MessageIndicate(0, GET_VERSION_FROM_CTX(ctx), REC_TYPE_CHANGE_CIPHER_SPEC, data, 1,
                               ctx, ctx->config.tlsConfig.msgArg);
 #endif
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15615, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
@@ -222,7 +222,7 @@ int32_t ProcessPlainCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
 int32_t ProcessDecryptedCCS(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
 {
 #ifdef HITLS_TLS_PROTO_TLS13
-    if (HS_GetVersion(ctx) == HITLS_VERSION_TLS13) {
+    if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13) {
         return RETURN_ALERT_PROCESS(ctx, HITLS_REC_NORMAL_RECV_UNEXPECT_MSG, BINLOG_ID15612,
             "recv encrypted ccs msg", ALERT_UNEXPECTED_MESSAGE);
     }

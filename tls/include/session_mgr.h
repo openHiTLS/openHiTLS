@@ -31,7 +31,7 @@ extern "C" {
 /* Application */
 TLS_SessionMgr *SESSMGR_New(HITLS_Lib_Ctx *libCtx);
 
-/* Copy the number of references and increase the number of references by 1 */
+/* Copy the number of references. The number of references increases by 1 */
 TLS_SessionMgr *SESSMGR_Dup(TLS_SessionMgr *mgr);
 
 /* Release */
@@ -80,7 +80,7 @@ HITLS_TicketKeyCb SESSMGR_GetTicketKeyCb(TLS_SessionMgr *mgr);
  * @brief   Obtain the default ticket key of the HITLS. The key is used to encrypt and decrypt the ticket
  *          in the new session ticket when the HITLS_TicketKeyCb callback function is not set.
  *
- * @attention The returned key value is as follows: 16-bytes key name + 32-bytes AES key + 32-bytes HMAC key
+ * @attention The returned key value is as follows: 16-byte key name + 32-byte AES key + 32-byte HMAC key
  *
  * @param   mgr [IN] Session management context
  * @param   key [OUT] Obtained ticket key
@@ -96,7 +96,7 @@ int32_t SESSMGR_GetTicketKey(const TLS_SessionMgr *mgr, uint8_t *key, uint32_t k
  * @brief   Set the default ticket key of the HITLS. The key is used to encrypt and decrypt tickets
  *          in the new session ticket when the HITLS_TicketKeyCb callback function is not set.
  *
- * @attention The returned key value is as follows: 16-bytes key name + 32-bytes AES key + 32-bytes HMAC key
+ * @attention The returned key value is as follows: 16-byte key name + 32-byte AES key + 32-byte HMAC key
  *
  * @param   mgr [OUT] Session management context
  * @param   key [IN] Ticket key to be set
@@ -118,8 +118,8 @@ int32_t SESSMGR_SetTicketKey(TLS_SessionMgr *mgr, const uint8_t *key, uint32_t k
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-int32_t SESSMGR_EncryptSessionTicket(TLS_Ctx *ctx, const TLS_SessionMgr *sessMgr, const HITLS_Session *sess, uint8_t **ticketBuf,
-    uint32_t *ticketBufSize);
+int32_t SESSMGR_EncryptSessionTicket(TLS_Ctx *ctx, const TLS_SessionMgr *sessMgr, const HITLS_Session *sess,
+    uint8_t **ticketBuf, uint32_t *ticketBufSize);
 
 /**
  * @brief   Decrypt the session ticket. This interface is invoked when the session ticket of the clientHello is received

@@ -1804,7 +1804,7 @@ void UT_TLS_CFG_LOADVERIFYDIR_MULTI_PATH_TC001(void)
     int32_t ret = HITLS_CFG_LoadVerifyDir(config, multi_path);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
 
-    HITLS_CERT_Store *store = SAL_CERT_GetCertStore(config->certMgrCtx);
+    HITLS_CERT_Store *store = SAL_CERT_GET_CERT_STORE_EX(config->certMgrCtx);
     ASSERT_TRUE(store != NULL);
 
     HITLS_X509_StoreCtx *storeCtx = (HITLS_X509_StoreCtx *)store;
@@ -2039,7 +2039,7 @@ void UT_TLS_CFG_LOADDEFAULTCAPATH_TC003(void)
     ASSERT_EQ(ret, HITLS_SUCCESS);
 
     // Verify the path was set correctly by checking CA store
-    HITLS_CERT_Store *store = SAL_CERT_GetCertStore(config->certMgrCtx);
+    HITLS_CERT_Store *store = SAL_CERT_GET_CERT_STORE_EX(config->certMgrCtx);
     ASSERT_TRUE(store != NULL);
 
     // Cast to HITLS_X509_StoreCtx to access internal structure
@@ -2240,5 +2240,198 @@ void UT_TLS_CFG_GET_CCM8_CIPHERSUITE_TC001(char *stdName)
     ASSERT_EQ(cipher->strengthBits, 64);
 EXIT:
     return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_HITLS_CFG_SET_KEEP_PEER_CERT_API_TC001
+* @spec  -
+* @title  Covering abnormal input parameters for the HITLS_CFG_SetKeepPeerCertificate interface
+* @precon  nan
+* @brief  1.Call the HITLS_CFG_SetKeepPeerCertificate interface with config set to null; expected result 2 occurs.
+*         2.Call the HITLS_CFG_SetKeepPeerCertificate interface with config not being empty and isKeepPeerCert set to
+*           true. Expected result 1 occurs.
+*         3.Call the HITLS_CFG_SetKeepPeerCertificate interface with config not being empty and isKeepPeerCert set to
+*           false. Expected result 1 occurs.
+* @expect  1.return HITLS_SUCCESS
+*          2.return error code
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HITLS_CFG_SET_KEEP_PEER_CERT_API_TC001(void)
+{
+    HitlsInit();
+
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    int32_t ret = HITLS_CFG_SetKeepPeerCertificate(NULL, true);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+
+    ret = HITLS_CFG_SetKeepPeerCertificate(tlsConfig, true);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+
+    ret = HITLS_CFG_SetKeepPeerCertificate(tlsConfig, false);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+
+    HITLS_Ctx *ctx = HITLS_New(tlsConfig);
+    ASSERT_TRUE(ctx != NULL);
+    ret = HITLS_SetKeepPeerCertificate(NULL, false);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+    ret = HITLS_SetKeepPeerCertificate(ctx, false);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test  HITLS_UT_TLS_SET_CURRENT_CERT_TC001
+ * @spec  -
+ * @title  Cover Abnormal Input Parameters of the HITLS_CFG_SetCurrentCert Interface
+ * @precon  nan
+ * @brief  1.Invoke the HITLS_CFG_SetCurrentCert interface. Config is NULL. Expected result 2.
+ *         2.Invoke the HITLS_CFG_SetCurrentCert interface. Config is not NULL. Expected result 1.
+ * @expect  1.Return HITLS_SUCCESS
+ *          2.Return HITLS_NULL_INPUT
+ * @prior  Level 1
+ * @auto  TRUE
+ **/
+/* BEGIN_CASE */
+void HITLS_UT_TLS_SET_CURRENT_CERT_TC001(void)
+{
+    HitlsInit();
+
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    int32_t ret = HITLS_CFG_SetCurrentCert(NULL, 1);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+
+    ret = HITLS_CFG_SetCurrentCert(tlsConfig, 1);
+    ASSERT_TRUE(ret = HITLS_CERT_ERR_SET_CERT);
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  HITLS_UT_TLS_SET_CURRENTCERT_API_TC001
+* @spec  -
+* @title  Cover Abnormal Input Parameters of the HITLS_SetCurrentCert Interface
+* @precon  nan
+* @brief  1.Invoke the HITLS_SetCurrentCert interface. Ctx is NULL, option is HITLS_CERT_SET_FIRST. Expected result 2.
+*         2.Invoke the HITLS_SetCurrentCert interface. Ctx is not NULL, option is HITLS_CERT_SET_FIRST. Expected result 1.
+* @expect  1.Return HITLS_CERT_ERR_SET_CERT
+*          2.Return HITLS_NULL_INPUT
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void HITLS_UT_TLS_SET_CURRENTCERT_API_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    HITLS_Ctx *ctx = HITLS_New(tlsConfig);
+    ASSERT_TRUE(ctx != NULL);
+    long option = HITLS_CERT_SET_FIRST;
+
+    int32_t ret = HITLS_SetCurrentCert(NULL, option);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+
+    ret = HITLS_SetCurrentCert(ctx, option);
+    ASSERT_EQ(ret, HITLS_CERT_ERR_SET_CERT);
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_CONFIG_GET_CIPHERSUITESBYSTDNAME_TC001
+* @spec  -
+* @title  test for HITLS_CFG_GetCipherSuites
+* @precon  nan
+* @brief   1. Input a null pointer. Expected result 1.
+*          2. Input a smaller array length. Expected result 2.
+*          3. Input normal parameters. Expected result 3
+* @expect  1. Return HITLS_NULL_INPUT
+*          2. Return HITLS_CONFIG_INVALID_LENGTH
+*          3. Return HITLS_SUCCESS
+@ */
+
+/* BEGIN_CASE */
+void UT_CONFIG_GET_CIPHERSUITES_TC001(void)
+{
+    FRAME_Init();
+    uint16_t data[1024] = {0};
+    uint32_t dataLen = sizeof(data) / sizeof(uint16_t);
+    uint32_t cipherSuiteSize = 0;
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(HITLS_CFG_GetCipherSuites(NULL, data, dataLen, &cipherSuiteSize) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_GetCipherSuites(config, NULL, dataLen, &cipherSuiteSize) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_GetCipherSuites(config, data, dataLen, NULL) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_GetCipherSuites(config, data, 0, &cipherSuiteSize) == HITLS_CONFIG_INVALID_LENGTH);
+    ASSERT_TRUE(HITLS_CFG_GetCipherSuites(config, data, dataLen, &cipherSuiteSize) == HITLS_SUCCESS);
+    ASSERT_TRUE(data[0] == HITLS_AES_256_GCM_SHA384);
+    ASSERT_TRUE(data[1] == HITLS_CHACHA20_POLY1305_SHA256);
+    ASSERT_TRUE(data[2] == HITLS_AES_128_GCM_SHA256);
+    ASSERT_TRUE(cipherSuiteSize == 3);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  HITLS_CCA_GLOBALCONFIG_005
+* @spec  -
+* @title  HITLS_SetNewConfig changes the session ID based on the config.
+* @precon  nan
+* @brief
+1. Apply for a configuration file.
+2. Apply for newconfig and set the session ID of newconfig to 123456789123456789123456.
+3. Link establishment
+4. Invoke the HITLS_SetNewConfig interface to change the session ID.
+5. Establish a link and check the session ID of client hello.
+* @expect
+1. The initialization is successful.
+2. The setting is successful.
+3. The link is set up successfully.
+4. The interface is successfully invoked.
+5. The session ID is 123456789123456789123456.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void HITLS_HITLS_GLOBALCONFIG_005()
+{
+    // 1. Apply for a configuration file.
+    FRAME_Init();
+    HITLS_Config *Config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(Config != NULL);
+    HITLS_Ctx *ctx = HITLS_New(Config);
+    ASSERT_TRUE(ctx != NULL);
+    // 2. Apply for newconfig and set the session ID of newconfig to 123456789123456789123456.
+    HITLS_Config *NewConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(NewConfig != NULL);
+    uint8_t sessIdCtx[HITLS_SESSION_ID_CTX_MAX_SIZE] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    // 3. Link establishment
+    NewConfig->sessionIdCtxSize = 50;
+    ASSERT_TRUE(memcpy_s(NewConfig->sessionIdCtx, HITLS_SESSION_ID_CTX_MAX_SIZE, sessIdCtx, sizeof(sessIdCtx)) == EOK);
+    // 4. Invoke the HITLS_SetNewConfig interface to change the session ID.
+    ctx->globalConfig = HITLS_SetNewConfig(ctx, NewConfig);
+    // 5. Establish a link and check the session ID of client hello.
+    ASSERT_TRUE(memcmp(ctx->globalConfig->sessionIdCtx, sessIdCtx, sizeof(sessIdCtx)) == 0);
+    ASSERT_TRUE(ctx->globalConfig->sessionIdCtxSize == NewConfig->sessionIdCtxSize);
+EXIT:
+    HITLS_CFG_FreeConfig(Config);
+    HITLS_CFG_FreeConfig(NewConfig);
+    HITLS_Free(ctx);
 }
 /* END_CASE */

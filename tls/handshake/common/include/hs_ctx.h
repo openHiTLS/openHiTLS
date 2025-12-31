@@ -47,8 +47,6 @@ extern "C" {
 #error "HITLS_HS_BUFFER_SIZE_LIMIT must be greater than or equal to HITLS_HS_INIT_BUFFER_SIZE"
 #endif
 
-#define UINT24_SIZE 3u
-
 /* Transmits ECDH key exchange data */
 typedef struct {
     HITLS_ECParameters curveParams; /* Elliptic curve parameter */

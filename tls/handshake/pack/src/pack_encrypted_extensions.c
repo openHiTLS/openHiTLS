@@ -81,13 +81,17 @@ static int32_t PackEncryptedExs(const TLS_Ctx *ctx, PackPacket *pkt)
          .needPack = ctx->negotiatedInfo.isSniStateOK,
          .packFunc = NULL},
 #endif /* HITLS_TLS_FEATURE_SNI */
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+        {.exMsgType = HS_EX_TYPE_RECORD_SIZE_LIMIT,
+         .needPack = (ctx->negotiatedInfo.recordSizeLimit != 0),
+         .packFunc = PackRecordSizeLimit},
+#endif /* HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT */
 #ifdef HITLS_TLS_FEATURE_ALPN
         {.exMsgType = HS_EX_TYPE_APP_LAYER_PROTOCOLS,
          .needPack = (ctx->negotiatedInfo.alpnSelected != NULL),
          .packFunc = PackServerSelectAlpnProto},
 #endif /* HITLS_TLS_FEATURE_ALPN */
     };
-
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
     if (IsPackNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS)) {
         ret = PackCustomExtensions(ctx, pkt, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS, NULL, 0);

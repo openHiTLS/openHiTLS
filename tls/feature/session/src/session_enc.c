@@ -24,9 +24,8 @@
 #include "bsl_sal.h"
 #include "hitls_error.h"
 #include "session_type.h"
-#include "cert_mgr_ctx.h"
-#include "session_enc.h"
 #include "cert_method.h"
+#include "session_enc.h"
 
 typedef int32_t (*PfuncEncSessionObjFunc)(const HITLS_Session *sess, SessionObjType type, uint8_t *data,
     uint32_t length, uint32_t *encLen);

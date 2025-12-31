@@ -31,7 +31,7 @@ extern "C" {
 
 /**
  * @ingroup hitls_security
- *
+ * @brief HiTLS default level of security.
  * HiTLS default level of security. You can configure the default level by using the compilation macro.
  * If the compilation macro is not defined, the default level 1 is used.
  */
@@ -39,7 +39,10 @@ extern "C" {
 #define HITLS_DEFAULT_SECURITY_LEVEL 1
 #endif
 
-/* security level  */
+/**
+ * @ingroup hitls_security
+ * @brief   Security level
+ */
 #define HITLS_SECURITY_LEVEL_ZERO 0
 #define HITLS_SECURITY_LEVEL_ONE 1
 #define HITLS_SECURITY_LEVEL_TWO 2
@@ -49,7 +52,10 @@ extern "C" {
 #define HITLS_SECURITY_LEVEL_MIN HITLS_SECURITY_LEVEL_ZERO
 #define HITLS_SECURITY_LEVEL_MAX HITLS_SECURITY_LEVEL_FIVE
 
-/* security strength  */
+/**
+ * @ingroup hitls_security
+ * @brief   Security strength
+ */
 #define HITLS_SECURITY_LEVEL_ONE_SECBITS 80
 #define HITLS_SECURITY_LEVEL_TWO_SECBITS 112
 #define HITLS_SECURITY_LEVEL_THREE_SECBITS 128
@@ -67,7 +73,10 @@ extern "C" {
 # define HITLS_SECURITY_SECOP_OTHER_SIGALG  (5 << 16)
 # define HITLS_SECURITY_SECOP_OTHER_CERT    (6 << 16)
 
-/* Indicated operation refers to peer key or certificate */
+/**
+ * @ingroup hitls_security
+ * @brief   Indicated operation refers to peer key or certificate
+ */
 # define HITLS_SECURITY_SECOP_PEER          0x1000
 
 /* Called to filter ciphers */
@@ -125,8 +134,7 @@ extern "C" {
  * and support group ID. Input based on the options that need to be checked.
  * @param   other  [IN] Parameters to be checked, such as cipher suites, certificates, and signature algorithms.
  * @param   exData [IN] Input the data as required.
- * @retval  HITLS_SUCCESS, if successful.
- *          For details about other error codes,see hitls_error.h
+ * @return  1: success; others: failure
  */
 typedef int32_t (*HITLS_SecurityCb)(const HITLS_Ctx *ctx, const HITLS_Config *config, int32_t option,
     int32_t bits, int32_t id, void *other, void *exData);
@@ -137,7 +145,7 @@ typedef int32_t (*HITLS_SecurityCb)(const HITLS_Ctx *ctx, const HITLS_Config *co
  *
  * @param   config        [IN/OUT] Config context
  * @param   securityLevel [IN] Security level
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h
  */
 int32_t HITLS_CFG_SetSecurityLevel(HITLS_Config *config, int32_t securityLevel);
@@ -148,7 +156,7 @@ int32_t HITLS_CFG_SetSecurityLevel(HITLS_Config *config, int32_t securityLevel);
  *
  * @param   config        [IN] Config context
  * @param   securityLevel [OUT] Security Context
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h
  */
 int32_t HITLS_CFG_GetSecurityLevel(const HITLS_Config *config, int32_t *securityLevel);
@@ -159,7 +167,7 @@ int32_t HITLS_CFG_GetSecurityLevel(const HITLS_Config *config, int32_t *security
  *
  * @param   config     [IN/OUT] Config context
  * @param   securityCb [IN] Security callback function
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_CFG_SetSecurityCb(HITLS_Config *config, HITLS_SecurityCb securityCb);
@@ -179,7 +187,7 @@ HITLS_SecurityCb HITLS_CFG_GetSecurityCb(const HITLS_Config *config);
  *
  * @param   config [IN/OUT] Config context
  * @param   securityExData [IN] Security ExData
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h
  */
 int32_t HITLS_CFG_SetSecurityExData(HITLS_Config *config, void *securityExData);
@@ -189,7 +197,7 @@ int32_t HITLS_CFG_SetSecurityExData(HITLS_Config *config, void *securityExData);
  * @brief   Obtain the configured Security ExData
  *
  * @param   config [IN] Config context
- * @retval  Security ExData
+ * @return  Security ExData
  */
 void *HITLS_CFG_GetSecurityExData(const HITLS_Config *config);
 
@@ -199,7 +207,7 @@ void *HITLS_CFG_GetSecurityExData(const HITLS_Config *config);
  *
  * @param   ctx           [IN/OUT] Ctx context
  * @param   securityLevel [IN] Security level
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h
  */
 int32_t HITLS_SetSecurityLevel(HITLS_Ctx *ctx, int32_t securityLevel);
@@ -210,7 +218,7 @@ int32_t HITLS_SetSecurityLevel(HITLS_Ctx *ctx, int32_t securityLevel);
  *
  * @param   ctx           [IN] Ctx context
  * @param   securityLevel [OUT] Security level
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h
  */
 int32_t HITLS_GetSecurityLevel(const HITLS_Ctx *ctx, int32_t *securityLevel);
@@ -221,7 +229,7 @@ int32_t HITLS_GetSecurityLevel(const HITLS_Ctx *ctx, int32_t *securityLevel);
  *
  * @param   ctx        [IN/OUT] Ctx context
  * @param   securityCb [IN] Security callback function
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, see hitls_error.h
  */
 int32_t HITLS_SetSecurityCb(HITLS_Ctx *ctx, HITLS_SecurityCb securityCb);
@@ -241,7 +249,7 @@ HITLS_SecurityCb HITLS_GetSecurityCb(const HITLS_Ctx *ctx);
  *
  * @param   ctx            [IN/OUT] Ctx context
  * @param   securityExData [IN] Security ExData
- * @retval  HITLS_SUCCESS, if successful.
+ * @return  HITLS_SUCCESS, if successful.
  *          For details about other error codes, hitls_error.h
  */
 int32_t HITLS_SetSecurityExData(HITLS_Ctx *ctx, void *securityExData);
@@ -251,7 +259,7 @@ int32_t HITLS_SetSecurityExData(HITLS_Ctx *ctx, void *securityExData);
  * @brief   Obtains the configured Security ExData.
  *
  * @param   ctx [IN] Ctx context
- * @retval  Security ExData
+ * @return  Security ExData
  */
 void *HITLS_GetSecurityExData(const HITLS_Ctx *ctx);
 

@@ -27,6 +27,9 @@
 #ifdef HITLS_TLS_FEATURE_PSK
 #include "hitls_psk.h"
 #endif
+#ifdef HITLS_TLS_PROTO_DTLS12
+#include "hitls_cookie.h"
+#endif
 #ifdef HITLS_TLS_FEATURE_ALPN
 #include "hitls_alpn.h"
 #endif
@@ -45,7 +48,6 @@
 #include "config_default.h"
 #include "bsl_list.h"
 #include "rec.h"
-#include "hitls_cookie.h"
 #include "cert_method.h"
 #ifdef HITLS_TLS_FEATURE_SECURITY
 #include "security.h"
@@ -53,6 +55,7 @@
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
 #include "custom_extensions.h"
 #endif
+
 #ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
 /* Define the upper limit of the group type */
 #define MAX_GROUP_TYPE_NUM 128u
@@ -228,10 +231,16 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 #ifdef HITLS_TLS_FEATURE_FLIGHT
     destConfig->isFlightTransmitEnable = srcConfig->isFlightTransmitEnable;
 #endif
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+    destConfig->recordSizeLimit = srcConfig->recordSizeLimit;
+#endif
 }
 
 static int32_t DeepCopy(void** destConfig, const void* srcConfig, uint32_t logId, uint32_t len)
 {
+#ifndef HITLS_BSL_LOG
+    (void)logId;
+#endif
     BSL_SAL_FREE(*destConfig);
     *destConfig = BSL_SAL_Dump(srcConfig, len);
     if (*destConfig == NULL) {
@@ -446,7 +455,6 @@ void FreeNode(HITLS_TrustedCANode *node)
 {
     BSL_SAL_FREE(node->data);
     BSL_SAL_FREE(node);
-    return;
 }
 
 static HITLS_TrustedCANode *DupNameNode(const HITLS_TrustedCANode *src)
@@ -613,8 +621,6 @@ void HITLS_CFG_FreeConfig(HITLS_Config *config)
     }
 #endif
     BSL_SAL_FREE(config);
-
-    return;
 }
 
 int32_t HITLS_CFG_UpRef(HITLS_Config *config)
@@ -656,6 +662,26 @@ uint32_t MapVersion2VersionBit(bool isDatagram, uint16_t version)
     return ret;
 }
 
+
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
+int32_t CheckRenegotiatedVersion(TLS_Ctx *ctx)
+{
+    if (ctx->negotiatedInfo.isRenegotiation) {
+        uint16_t oldNegotiationVersion = ctx->negotiatedInfo.version;
+        uint32_t versionBit =
+            MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), oldNegotiationVersion);
+        if ((versionBit & ctx->config.tlsConfig.version) == 0) {
+            return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
+        }
+        ctx->config.tlsConfig.version = versionBit;
+        ctx->config.tlsConfig.minVersion = ctx->negotiatedInfo.version;
+        ctx->config.tlsConfig.maxVersion = ctx->negotiatedInfo.version;
+    }
+    return HITLS_SUCCESS;
+}
+#endif
+
+#ifdef HITLS_TLS_CONFIG_VERSION
 void ChangeMinMaxVersion(uint32_t versionMask, uint32_t originVersionMask, uint16_t *minVersion, uint16_t *maxVersion)
 {
     uint32_t versionMaskBit = versionMask;
@@ -682,7 +708,7 @@ void ChangeMinMaxVersion(uint32_t versionMask, uint32_t originVersionMask, uint1
             break;
         }
     }
-    if (found == false) {
+    if (!found) {
         // No version is supported
         *minVersion = 0;
         *maxVersion = 0;
@@ -697,18 +723,21 @@ static int ChangeVersionMask(HITLS_Config *config, uint16_t minVersion, uint16_t
     uint32_t originVersionMask = config->originVersionMask;
     uint32_t versionMask = 0;
     uint32_t versionBit = 0;
-    uint16_t begin = IS_DTLS_VERSION(minVersion) ? maxVersion : minVersion;
+    uint16_t begin = IS_DTLS_VERSION(maxVersion) ? maxVersion : minVersion;
     uint16_t end = IS_DTLS_VERSION(maxVersion) ? minVersion : maxVersion;
+
     for (uint16_t version = begin; version <= end; version++) {
         versionBit = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(originVersionMask), version);
         versionMask |= versionBit;
     }
+
     if ((versionMask & originVersionMask) == 0) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16598, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Config version err", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_CONFIG_INVALID_VERSION);
         return HITLS_CONFIG_INVALID_VERSION;
     }
+
     config->version = (versionMask & originVersionMask);
     return HITLS_SUCCESS;
 }
@@ -745,26 +774,7 @@ static void ChangeTmpVersion(HITLS_Config *config, uint16_t *tmpMinVersion, uint
             *tmpMaxVersion = maxVersion;
         }
     }
-    return;
 }
-
-#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
-int32_t CheckRenegotiatedVersion(TLS_Ctx *ctx)
-{
-    if (ctx->negotiatedInfo.isRenegotiation) {
-        uint16_t oldNegotiatedVersion = ctx->negotiatedInfo.version;
-        uint32_t versionBit =
-            MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), oldNegotiatedVersion);
-        if ((versionBit & ctx->config.tlsConfig.version) == 0) {
-            return HITLS_MSG_HANDLE_UNSUPPORT_VERSION;
-        }
-        ctx->config.tlsConfig.version = versionBit;
-        ChangeMinMaxVersion(ctx->config.tlsConfig.version, ctx->config.tlsConfig.originVersionMask,
-                            &ctx->config.tlsConfig.minVersion, &ctx->config.tlsConfig.maxVersion);
-    }
-    return HITLS_SUCCESS;
-}
-#endif
 
 int32_t HITLS_CFG_SetVersion(HITLS_Config *config, uint16_t minVersion, uint16_t maxVersion)
 {
@@ -786,20 +796,21 @@ int32_t HITLS_CFG_SetVersion(HITLS_Config *config, uint16_t minVersion, uint16_t
 
     uint16_t tmpMinVersion = minVersion;
     uint16_t tmpMaxVersion = maxVersion;
+
     ChangeTmpVersion(config, &tmpMinVersion, &tmpMaxVersion);
+
     ret = CheckVersion(tmpMinVersion, tmpMaxVersion);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
     /* In invalid cases, both maxVersion and minVersion are 0 */
     ret = ChangeVersionMask(config, tmpMinVersion, tmpMaxVersion);
     if (ret == HITLS_SUCCESS) {
         ChangeMinMaxVersion(config->version, config->originVersionMask, &config->minVersion, &config->maxVersion);
     }
-
     return ret;
 }
+#endif /* HITLS_TLS_CONFIG_VERSION */
 
 #ifdef HITLS_TLS_CONFIG_VERSION
 int32_t HITLS_CFG_SetVersionForbid(HITLS_Config *config, uint32_t noVersion)
@@ -908,7 +919,33 @@ int32_t HITLS_CFG_SetCipherSuites(HITLS_Config *config, const uint16_t *cipherSu
 
     return HITLS_SUCCESS;
 }
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
+int32_t HITLS_CFG_GetCipherSuites(HITLS_Config *config, uint16_t *data, uint32_t dataLen, uint32_t *cipherSuitesSize)
+{
+    if (config == NULL || data == NULL || cipherSuitesSize == NULL) {
+        return HITLS_NULL_INPUT;
+    }
 
+    uint32_t num = 0;
+    if (dataLen < config->cipherSuitesSize + config->tls13cipherSuitesSize) {
+        return HITLS_CONFIG_INVALID_LENGTH;
+    }
+
+    if (config->maxVersion == HITLS_VERSION_TLS13) {
+        for (uint32_t i = 0; i < config->tls13cipherSuitesSize; i++) {
+            data[num] = config->tls13CipherSuites[i];
+            num += 1;
+        }
+    }
+
+    for (uint32_t i = 0; i < config->cipherSuitesSize; i++) {
+        data[num] = config->cipherSuites[i];
+        num += 1;
+    }
+    *cipherSuitesSize = num;
+    return HITLS_SUCCESS;
+}
+#endif
 int32_t HITLS_CFG_SetEcPointFormats(HITLS_Config *config, const uint8_t *pointFormats, uint32_t pointFormatsSize)
 {
     if ((config == NULL) || (pointFormats == NULL) || (pointFormatsSize == 0)) {
@@ -954,6 +991,90 @@ int32_t HITLS_CFG_SetGroups(HITLS_Config *config, const uint16_t *groups, uint32
     config->groupsSize = groupsSize;
     return HITLS_SUCCESS;
 }
+
+#ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
+static uint16_t GroupToId(const char *name)
+{
+    if (strcmp(name, "HITLS_EC_GROUP_SECP256R1") == 0) {
+        return HITLS_EC_GROUP_SECP256R1;
+    }
+    if (strcmp(name, "HITLS_EC_GROUP_SECP384R1") == 0) {
+        return HITLS_EC_GROUP_SECP384R1;
+    }
+    if (strcmp(name, "HITLS_EC_GROUP_SECP521R1") == 0) {
+        return HITLS_EC_GROUP_SECP521R1;
+    }
+    if (strcmp(name, "HITLS_EC_GROUP_BRAINPOOLP256R1") == 0) {
+        return HITLS_EC_GROUP_BRAINPOOLP256R1;
+    }
+    if (strcmp(name, "HITLS_EC_GROUP_BRAINPOOLP384R1") == 0) {
+        return HITLS_EC_GROUP_BRAINPOOLP384R1;
+    }
+    if (strcmp(name, "HITLS_EC_GROUP_BRAINPOOLP512R1") == 0) {
+        return HITLS_EC_GROUP_BRAINPOOLP512R1;
+    }
+    if (strcmp(name, "HITLS_EC_GROUP_CURVE25519") == 0) {
+        return HITLS_EC_GROUP_CURVE25519;
+    }
+    if (strcmp(name, "HITLS_EC_GROUP_SM2") == 0) {
+        return HITLS_EC_GROUP_SM2;
+    }
+    if (strcmp(name, "HITLS_FF_DHE_2048") == 0) {
+        return HITLS_FF_DHE_2048;
+    }
+    if (strcmp(name, "HITLS_FF_DHE_3072") == 0) {
+        return HITLS_FF_DHE_3072;
+    }
+    if (strcmp(name, "HITLS_FF_DHE_4096") == 0) {
+        return HITLS_FF_DHE_4096;
+    }
+    if (strcmp(name, "HITLS_FF_DHE_6144") == 0) {
+        return HITLS_FF_DHE_6144;
+    }
+    if (strcmp(name, "HITLS_FF_DHE_8192") == 0) {
+        return HITLS_FF_DHE_8192;
+    }
+    return HITLS_NAMED_GROUP_BUTT;
+}
+
+
+int32_t HITLS_CFG_SetGroupList(HITLS_Config *config, const char *groupNames, uint32_t groupNamesLen)
+{
+    if (config == NULL || groupNames == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    uint16_t groupIds[MAX_GROUP_TYPE_NUM] = {0};
+    uint32_t cnt = 0;
+    uint16_t tmpGroupId = 0;
+    char *context = NULL;
+    char *groupNamesTmp = (char *)BSL_SAL_Calloc(sizeof(char), groupNamesLen + 1);
+    if (groupNamesTmp == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16604, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
+        return HITLS_MEMALLOC_FAIL;
+    }
+    (void)memcpy_s(groupNamesTmp, groupNamesLen + 1, groupNames, groupNamesLen);
+    char *groupName = strtok_s((char *)groupNamesTmp, ":", &context);
+
+    while (groupName != NULL) {
+        tmpGroupId = GroupToId(groupName);
+        if (tmpGroupId == HITLS_NAMED_GROUP_BUTT) {
+            BSL_SAL_FREE(groupNamesTmp);
+            return HITLS_CONFIG_UNSUPPORT_GROUP;
+        }
+        if (cnt >= MAX_GROUP_TYPE_NUM) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16168, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "the group number to be set exceeds max group number.", 0, 0, 0, 0);
+            BSL_SAL_FREE(groupNamesTmp);
+            return HITLS_INVALID_INPUT;
+        }
+        groupIds[cnt++] = tmpGroupId;
+        groupName = strtok_s(NULL, ":", &context);
+    }
+    BSL_SAL_FREE(groupNamesTmp);
+    return HITLS_CFG_SetGroups(config, groupIds, cnt);
+}
+#endif /* HITLS_TLS_CONFIG_CIPHER_SUITE */
 
 #ifdef HITLS_TLS_CONFIG_MANUAL_DH
 int32_t HITLS_CFG_SetDhAutoSupport(HITLS_Config *config, bool support)
@@ -1312,27 +1433,37 @@ int32_t HITLS_CFG_GetQuietShutdown(const HITLS_Config *config, int32_t *mode)
     return HITLS_SUCCESS;
 }
 
-#ifdef HITLS_TLS_SUITE_CIPHER_CBC
 int32_t HITLS_CFG_SetEncryptThenMac(HITLS_Config *config, bool encryptThenMacType)
 {
+#ifdef HITLS_TLS_SUITE_CIPHER_CBC
     if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     config->isEncryptThenMac = encryptThenMacType;
     return HITLS_SUCCESS;
+#else
+    (void)config;
+    (void)encryptThenMacType;
+    return HITLS_CONFIG_UNSUPPORT;
+#endif
 }
 
 int32_t HITLS_CFG_GetEncryptThenMac(const HITLS_Config *config, bool *encryptThenMacType)
 {
+#ifdef HITLS_TLS_SUITE_CIPHER_CBC
     if (config == NULL || encryptThenMacType == NULL) {
         return HITLS_NULL_INPUT;
     }
 
     *encryptThenMacType = config->isEncryptThenMac;
     return HITLS_SUCCESS;
-}
+#else
+    (void)config;
+    (void)encryptThenMacType;
+    return HITLS_CONFIG_UNSUPPORT;
 #endif
+}
 
 int32_t HITLS_CFG_SetCipherServerPreference(HITLS_Config *config, bool isSupport)
 {

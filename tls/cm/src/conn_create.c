@@ -39,7 +39,7 @@
 #include "crypt.h"
 #include "cipher_suite.h"
 
-#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
 static int32_t PeerInfoInit(HITLS_Ctx *ctx)
 {
     ctx->peerInfo.caList = BSL_LIST_New(sizeof(HITLS_TrustedCANode *));
@@ -50,7 +50,7 @@ static int32_t PeerInfoInit(HITLS_Ctx *ctx)
 
     return HITLS_SUCCESS;
 }
-#endif
+#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
 /**
  * @ingroup    hitls
  * @brief      Create a TLS object and deep Copy the HITLS_Config to the HITLS_Ctx.
@@ -88,7 +88,7 @@ HITLS_Ctx *HITLS_New(HITLS_Config *config)
     }
     (void)HITLS_CFG_UpRef(config);
     newCtx->globalConfig = config;
-#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
     ret = PeerInfoInit(newCtx);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16473, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -101,19 +101,22 @@ HITLS_Ctx *HITLS_New(HITLS_Config *config)
     return newCtx;
 }
 
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
 static void CaListNodeDestroy(void *data)
 {
     HITLS_TrustedCANode *tmpData = (HITLS_TrustedCANode *)data;
     BSL_SAL_FREE(tmpData->data);
     BSL_SAL_FREE(tmpData);
-    return;
 }
+#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
 
 static void CleanPeerInfo(PeerInfo *peerInfo)
 {
     BSL_SAL_FREE(peerInfo->groups);
     BSL_SAL_FREE(peerInfo->cipherSuites);
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
     BSL_LIST_FREE(peerInfo->caList, (BSL_LIST_PFUNC_FREE)CaListNodeDestroy);
+#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
     BSL_SAL_FREE(peerInfo->signatureAlgorithms);
 }
 
@@ -129,7 +132,6 @@ static void CleanNegotiatedInfo(TLS_NegotiatedInfo *negotiatedInfo)
 #ifdef HITLS_TLS_FEATURE_SNI
     BSL_SAL_FREE(negotiatedInfo->serverName);
 #endif
-    return;
 }
 #endif
 
@@ -175,13 +177,12 @@ void HITLS_Free(HITLS_Ctx *ctx)
 #endif
     ConnCleanSensitiveData(ctx);
     BSL_SAL_FREE(ctx);
-    return;
 }
 
 #ifdef HITLS_TLS_FEATURE_SESSION
 static int32_t HITLS_ClearBadSession(HITLS_Ctx *ctx)
 {
-    if (ctx != NULL && ctx->session != NULL && (ctx->shutdownState & HITLS_SENT_SHUTDOWN) == 0 &&
+    if (ctx->session != NULL && (ctx->shutdownState & HITLS_SENT_SHUTDOWN) == 0 &&
         !(ctx->state == CM_STATE_HANDSHAKING || ctx->state == CM_STATE_IDLE)) {
         SESSMGR_RemoveSession(ctx->globalConfig, ctx->session);
         return HITLS_SESS_ERR_BAD_SESSION;
@@ -189,6 +190,50 @@ static int32_t HITLS_ClearBadSession(HITLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 #endif
+#ifdef HITLS_TLS_PROTO_TLS13
+static void CleanSecret(HITLS_Ctx *ctx)
+{
+    memset_s(ctx->clientAppTrafficSecret, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
+    memset_s(ctx->serverAppTrafficSecret, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
+    memset_s(ctx->resumptionMasterSecret, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
+#ifdef HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL
+    memset_s(ctx->exporterMasterSecret, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
+#endif
+}
+#endif
+int32_t HITLS_Clear(HITLS_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    ctx->rwstate = HITLS_NOTHING;
+#ifdef HITLS_TLS_FEATURE_SESSION
+    if (HITLS_ClearBadSession(ctx) != HITLS_SUCCESS) {
+        HITLS_SESS_Free(ctx->session);
+        ctx->session = NULL;
+    }
+#endif
+    CONN_Deinit(ctx);
+    ctx->hsCtx = NULL;
+    ctx->ccsCtx = NULL;
+    ctx->alertCtx = NULL;
+    ctx->recCtx = NULL;
+    CleanPeerInfo(&(ctx->peerInfo));
+#if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN) || defined(HITLS_TLS_FEATURE_SNI)
+    CleanNegotiatedInfo(&ctx->negotiatedInfo);
+#endif
+    (void)memset_s(&ctx->negotiatedInfo, sizeof(TLS_NegotiatedInfo), 0, sizeof(TLS_NegotiatedInfo));
+#ifdef HITLS_TLS_PROTO_TLS13
+    CleanSecret(ctx);
+#endif
+    ctx->userShutDown = false;
+    ctx->userRenego = false;
+    ctx->preState = CM_STATE_IDLE;
+    ctx->state = CM_STATE_IDLE;
+    ctx->shutdownState = 0;
+    ctx->haveClientPointFormats = false;
+    return HITLS_SUCCESS;
+}
 
 #ifdef HITLS_TLS_FEATURE_FLIGHT
 int32_t HITLS_SetReadUio(HITLS_Ctx *ctx, BSL_UIO *uio)
@@ -223,12 +268,12 @@ static void ConfigPmtu(HITLS_Ctx *ctx, BSL_UIO *uio)
 #ifdef HITLS_TLS_PROTO_DTLS12
     /* The PMTU needs to be set for DTLS. If the PMTU is not set, use the default value */
     if ((ctx->config.pmtu == 0) && IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
-        if (BSL_UIO_GetUioChainTransportType(uio, BSL_UIO_UDP)) {
+        if (BSL_UIO_GetUioChainTransportType(uio, BSL_UIO_SCTP)) {
+            ctx->config.pmtu = DTLS_SCTP_PMTU;
+        } else {
             uint8_t overhead = 0;
             (void)BSL_UIO_Ctrl(ctx->uio, BSL_UIO_UDP_GET_MTU_OVERHEAD, sizeof(uint8_t), &overhead);
             ctx->config.pmtu = DTLS_DEFAULT_PMTU - (uint16_t)overhead;
-        } else {
-            ctx->config.pmtu = DTLS_SCTP_PMTU;
         }
     }
 #endif
@@ -406,10 +451,7 @@ int32_t HITLS_IsServer(const HITLS_Ctx *ctx, bool *isServer)
         return HITLS_NULL_INPUT;
     }
 
-    *isServer = false;
-    if (!ctx->isClient) {
-        *isServer = true;
-    }
+    *isServer = !ctx->isClient;
 
     return HITLS_SUCCESS;
 }
@@ -447,27 +489,6 @@ HITLS_Session *HITLS_GetDupSession(HITLS_Ctx *ctx)
         return NULL;
     }
     return HITLS_SESS_Dup(ctx->session);
-}
-#endif
-
-#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
-int32_t HITLS_GetPeerSignatureType(const HITLS_Ctx *ctx, HITLS_SignAlgo *sigType)
-{
-    HITLS_SignAlgo signAlg = HITLS_SIGN_BUTT;
-    HITLS_HashAlgo hashAlg = HITLS_HASH_BUTT;
-
-    if (ctx == NULL || sigType == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
-    if (CFG_GetSignParamBySchemes(ctx, ctx->peerInfo.peerSignHashAlg,
-        &signAlg, &hashAlg) == false) {
-        return HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE;
-    }
-
-    *sigType = signAlg;
-
-    return HITLS_SUCCESS;
 }
 #endif
 
@@ -597,6 +618,17 @@ int32_t HITLS_SetEcGroups(HITLS_Ctx *ctx, uint16_t *lst, uint32_t groupSize)
     return HITLS_CFG_SetGroups(&(ctx->config.tlsConfig), lst, groupSize);
 }
 
+#ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
+int32_t HITLS_SetGroupList(HITLS_Ctx *ctx, const char *groups, uint32_t groupNamesLen)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetGroupList(&(ctx->config.tlsConfig), groups, groupNamesLen);
+}
+#endif /* HITLS_TLS_CONFIG_CIPHER_SUITE */
+
 int32_t HITLS_SetSigalgsList(HITLS_Ctx *ctx, const uint16_t *signAlgs, uint16_t signAlgsSize)
 {
     if (ctx == NULL) {
@@ -672,7 +704,7 @@ int32_t HITLS_SetVerifyNoneSupport(HITLS_Ctx *ctx, bool support)
     return HITLS_CFG_SetVerifyNoneSupport(&(ctx->config.tlsConfig), support);
 }
 #endif
-#if defined(HITLS_TLS_FEATURE_CERT_MODE) && defined(HITLS_TLS_FEATURE_RENEGOTIATION)
+#ifdef HITLS_TLS_FEATURE_CERT_MODE
 int32_t HITLS_SetClientOnceVerifySupport(HITLS_Ctx *ctx, bool support)
 {
     if (ctx == NULL) {
@@ -717,7 +749,7 @@ HITLS_CERT_Chain *HITLS_GetPeerCertChain(const HITLS_Ctx *ctx)
         return NULL;
     }
 
-    HITLS_CERT_Chain *certChain = SAL_CERT_PairGetChain(certPair);
+    HITLS_CERT_Chain *certChain = SAL_CERT_PAIR_GET_CHAIN(certPair);
     return certChain;
 }
 #endif
@@ -763,6 +795,26 @@ int32_t HITLS_GetSecureRenegotiationSupport(const HITLS_Ctx *ctx, bool *isSecure
     return HITLS_SUCCESS;
 }
 #endif
+
+int32_t HITLS_SetCurrentCert(HITLS_Ctx *ctx, long option)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetCurrentCert(&(ctx->config.tlsConfig), option);
+}
+
+#ifdef HITLS_TLS_FEATURE_CERT_CB
+int32_t HITLS_SetCertCb(HITLS_Ctx *ctx, HITLS_CertCb certCb, void *arg)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetCertCb(&(ctx->config.tlsConfig), certCb, arg);
+}
+#endif /* HITLS_TLS_FEATURE_CERT_CB */
 #ifdef HITLS_TLS_MAINTAIN_KEYLOG
 static int32_t Uint8ToHex(const uint8_t *srcBuf, size_t srcLen, size_t *offset,
     size_t destMaxSize, uint8_t *destBuf)
@@ -777,7 +829,7 @@ static int32_t Uint8ToHex(const uint8_t *srcBuf, size_t srcLen, size_t *offset,
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16480, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
         return HITLS_NULL_INPUT;
     }
-    /* Initialize Offset */
+    /** Initialization Offset */
     size_t offsetTemp = 0u;
     /* Converting an Array to a Hexadecimal Character String */
     for (size_t i = 0u; i < srcLen; i++) {
@@ -812,8 +864,9 @@ int32_t HITLS_LogSecret(HITLS_Ctx *ctx, const char *label, const uint8_t *secret
     uint8_t *random = ctx->negotiatedInfo.clientRandom;
     uint32_t randomLen = RANDOM_SIZE;
     size_t labelLen = strlen(label);
-    const uint8_t blankSpace = 0x20;
-    // The lengths of random and secret need to be converted into hexadecimal so they are doubled.
+    const uint8_t blankSpace = 0x20; // ASCII code space
+    // The length of random and secret needs to be converted into hexadecimal. Therefore, the length of random and
+    // secret needs to be twice.
     size_t outLen = labelLen + randomLen + randomLen + secretLen + secretLen + 3;
     uint8_t *outBuffer = (uint8_t *)BSL_SAL_Calloc((uint32_t)outLen, sizeof(uint8_t));
     if (outBuffer == NULL) {
@@ -849,23 +902,12 @@ int32_t HITLS_LogSecret(HITLS_Ctx *ctx, const char *label, const uint8_t *secret
 
     ctx->globalConfig->keyLogCb(ctx, (const char *)outBuffer);
 
-    BSL_SAL_CleanseData(outBuffer, outLen);
+    BSL_SAL_CleanseData(outBuffer, (uint32_t)outLen);
     BSL_SAL_FREE(outBuffer);
 
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_MAINTAIN_KEYLOG */
-
-#ifdef HITLS_TLS_FEATURE_CERT_CB
-int32_t HITLS_SetCertCb(HITLS_Ctx *ctx, HITLS_CertCb certCb, void *arg)
-{
-    if (ctx == NULL) {
-        return HITLS_NULL_INPUT;
-    }
-
-    return HITLS_CFG_SetCertCb(&(ctx->config.tlsConfig), certCb, arg);
-}
-#endif /* HITLS_TLS_FEATURE_CERT_CB */
 
 #ifdef HITLS_TLS_CONFIG_CERT_BUILD_CHAIN
 int32_t HITLS_BuildCertChain(HITLS_Ctx *ctx, HITLS_BUILD_CHAIN_FLAG flag)

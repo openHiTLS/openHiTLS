@@ -45,6 +45,7 @@ static int32_t PackServerHelloMandatoryField(const TLS_Ctx *ctx, PackPacket *pkt
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+
     ret = PackAppendUint16ToBuf(pkt, ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite); // cipher suite
     if (ret != HITLS_SUCCESS) {
         return ret;

@@ -25,7 +25,7 @@ extern "C" {
 
 /**
  * Enumerated value of session information
- * Do not change the enumerated value. If need add the enumerated value, add at the end
+ *  Do not change the enumerated value. If need add the enumerated value, add at the end
  */
 typedef enum {
     SESS_OBJ_VERSION = 0x0101,

@@ -26,9 +26,6 @@
 #include "crypt.h"
 #include "cert_method.h"
 #include "session.h"
-#ifdef HITLS_TLS_FEATURE_SECURITY
-#include "security.h"
-#endif
 #include "hs_ctx.h"
 #include "transcript_hash.h"
 #include "hs_common.h"
@@ -75,26 +72,18 @@ void HS_KeyExchCtxFree(KeyExchCtx *keyExchCtx)
 #endif /* HITLS_TLS_PROTO_TLS13 */
     BSL_SAL_FREE(keyExchCtx->peerPubkey);
     SAL_CRYPT_FreeEcdhKey(keyExchCtx->secondKey);
+	SAL_CRYPT_FreeEcdhKey(keyExchCtx->key);
     switch (keyExchCtx->keyExchAlgo) {
-        case HITLS_KEY_EXCH_NULL:
-        case HITLS_KEY_EXCH_ECDHE:
-        case HITLS_KEY_EXCH_ECDH:
-        case HITLS_KEY_EXCH_ECDHE_PSK:
-            SAL_CRYPT_FreeEcdhKey(keyExchCtx->key);
-            break;
         case HITLS_KEY_EXCH_DHE:
         case HITLS_KEY_EXCH_DHE_PSK:
         case HITLS_KEY_EXCH_DH:
-            SAL_CRYPT_FreeDhKey(keyExchCtx->key);
             BSL_SAL_FREE(keyExchCtx->keyExchParam.dh.p);
             BSL_SAL_FREE(keyExchCtx->keyExchParam.dh.g);
             break;
-        case HITLS_KEY_EXCH_RSA:
         default:
             break;
     }
     BSL_SAL_FREE(keyExchCtx);
-    return;
 }
 #ifdef HITLS_TLS_HOST_CLIENT
 #ifdef HITLS_TLS_SUITE_KX_ECDHE
@@ -136,12 +125,12 @@ static int32_t ProcessServerKxMsgNamedCurve(TLS_Ctx *ctx, const ServerKeyExchang
     ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams.param.namedcurve = namedGroup;
     HITLS_CRYPT_Key *key = SAL_CRYPT_GenEcdhKeyPair(ctx, &ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams);
     if (key == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ERR_ENCODE_ECDH_KEY);
+        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_GEN_KEY_PAIR);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15517, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get ecdh key pair fail when process server kx msg named curve.", 0, 0, 0, 0);
         BSL_SAL_FREE(peerPubkey);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        return HITLS_MSG_HANDLE_ERR_ENCODE_ECDH_KEY;
+        return HITLS_CRYPT_ERR_GEN_KEY_PAIR;
     }
     ctx->hsCtx->kxCtx->key = key;
     ctx->hsCtx->kxCtx->peerPubkey = peerPubkey;
@@ -318,6 +307,7 @@ int32_t HS_ProcessClientKxMsgSm2(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
         /* If the server fails to process the message, it is prohibited to send the alert message. The randomly
          * generated premaster secret must be used to continue the handshake */
         SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), keyExchCtx->keyExchParam.ecc.preMasterSecret, MASTER_SECRET_LEN);
+        BSL_SAL_CleanseData(preMasterSecret, secretLen);
         BSL_SAL_FREE(preMasterSecret);
         return HITLS_SUCCESS;
     }
@@ -328,10 +318,11 @@ int32_t HS_ProcessClientKxMsgSm2(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
         // If the version does not match, a 46-byte preMasterSecret is randomly generated
         uint16_t version = ctx->negotiatedInfo.clientVersion;
         uint32_t offset = 0u;
-        // 8：right shift a byte
+        // 8: right shift a byte
         keyExchCtx->keyExchParam.ecc.preMasterSecret[offset++] = (uint8_t)(version >> 8);
         keyExchCtx->keyExchParam.ecc.preMasterSecret[offset++] = (uint8_t)(version);
-        SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), keyExchCtx->keyExchParam.ecc.preMasterSecret + offset, MASTER_SECRET_LEN - offset);
+        SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx),
+            keyExchCtx->keyExchParam.ecc.preMasterSecret + offset, MASTER_SECRET_LEN - offset);
         BSL_SAL_CleanseData(preMasterSecret, secretLen);
         BSL_SAL_FREE(preMasterSecret);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15348, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -503,7 +494,7 @@ static int32_t GenPremasterSecretFromEcdhe(TLS_Ctx *ctx, uint8_t *preMasterSecre
             return HITLS_CERT_ERR_EXP_CERT;
         }
         HITLS_CRYPT_Key *peerPubKey = NULL;
-        HITLS_CERT_X509 *cert = SAL_CERT_GetTlcpEncCert(ctx->hsCtx->peerCert);
+        HITLS_CERT_X509 *cert = SAL_CERT_PAIR_GET_TLCP_ENC_CERT_EX(ctx->hsCtx->peerCert);
         ret = SAL_CERT_X509Ctrl(config, cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&peerPubKey);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16835, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -551,7 +542,6 @@ static int32_t GenPreMasterSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32
         case HITLS_KEY_EXCH_RSA_PSK:
             if (memcpy_s(preMasterSecret, *preMasterSecretLen,
                 keyExchCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN) != EOK) {
-                    BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
                     return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMCPY_FAIL, BINLOG_ID16836, "memcpy fail");
                 }
             *preMasterSecretLen = MASTER_SECRET_LEN;
@@ -561,7 +551,6 @@ static int32_t GenPreMasterSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32
         case HITLS_KEY_EXCH_ECC:
             if (memcpy_s(preMasterSecret, *preMasterSecretLen,
                 keyExchCtx->keyExchParam.ecc.preMasterSecret, MASTER_SECRET_LEN) != EOK) {
-                    BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
                     return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMCPY_FAIL, BINLOG_ID16837, "memcpy fail");
                 }
             *preMasterSecretLen = MASTER_SECRET_LEN;
@@ -570,10 +559,8 @@ static int32_t GenPreMasterSecret(TLS_Ctx *ctx, uint8_t *preMasterSecret, uint32
         case HITLS_KEY_EXCH_PSK:
             break;
         default:
-            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_UNSUPPORT_KX_ALG, BINLOG_ID16838, "unknow keyExchAlgo");
     }
-    BSL_ERR_PUSH_ERROR(ret);
     return ret;
 }
 
@@ -587,6 +574,7 @@ int32_t HS_GenerateMasterSecret(TLS_Ctx *ctx)
 
     ret = GenPreMasterSecret(ctx, preMasterSecret, &preMasterSecretLen);
     if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15527, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "calc ecdh shared secret failed.", 0, 0, 0, 0);
         return ret;

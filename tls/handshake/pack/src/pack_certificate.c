@@ -38,7 +38,7 @@ int32_t PackCertificate(TLS_Ctx *ctx, PackPacket *pkt)
         return ret;
     }
 
-    /* Certificate content using callback */
+    /* Certificate content */
     ret = SAL_CERT_EncodeCertChain(ctx, pkt);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15809, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

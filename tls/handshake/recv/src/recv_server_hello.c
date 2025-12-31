@@ -150,7 +150,7 @@ static int32_t ClientCheckExtendedMasterSecret(TLS_Ctx *ctx, const ServerHelloMs
         does not contain the extension, the client MUST abort the
         handshake.  */
     if (ctx->negotiatedInfo.isResume && ctx->session != NULL) {
-        bool haveExtMasterSecret;
+        bool haveExtMasterSecret = false;
         HITLS_SESS_GetHaveExtMasterSecret(ctx->session, &haveExtMasterSecret);
         if (serverHello->haveExtendedMasterSecret != haveExtMasterSecret) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17083, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -367,6 +367,45 @@ static int32_t ClientCheckEncryptThenMac(TLS_Ctx *ctx, const ServerHelloMsg *ser
 }
 #endif /* HITLS_TLS_FEATURE_ETM */
 
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+static int32_t ClientCheckRecordSizeLimit(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
+{
+    if (!ctx->hsCtx->extFlag.haveRecordSizeLimit && serverHello->haveRecordSizeLimit) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16251, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "client did not send but get record size limit.", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNSUPPORTED_EXTENSION);
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
+        return HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE;
+    }
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 && serverHello->haveRecordSizeLimit) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16248, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "tls13 recv record size limit from server hello.", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+        BSL_ERR_PUSH_ERROR(HITLS_PARSE_UNSUPPORTED_EXTENSION);
+        return HITLS_PARSE_UNSUPPORTED_EXTENSION;
+    }
+
+    ctx->negotiatedInfo.peerRecordSizeLimit = 0;
+    ctx->negotiatedInfo.recordSizeLimit = 0;
+    if (serverHello->haveRecordSizeLimit) {
+        uint16_t upperBound = (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13 ? REC_MAX_PLAIN_LENGTH + 1
+                                                                                : REC_MAX_PLAIN_LENGTH);
+        if (serverHello->recordSizeLimit < 64u ||
+            (serverHello->recordSizeLimit > upperBound)) {
+            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_INVALID_RECORD_SIZE_LIMIT);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17086, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "The value of record size limit is invalid.", 0, 0, 0, 0);
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+            return HITLS_MSG_HANDLE_INVALID_RECORD_SIZE_LIMIT;
+        }
+        ctx->negotiatedInfo.recordSizeLimit = (ctx->config.tlsConfig.recordSizeLimit <= upperBound) ?
+            ctx->config.tlsConfig.recordSizeLimit : upperBound;
+        ctx->negotiatedInfo.peerRecordSizeLimit = serverHello->recordSizeLimit;
+    }
+    return REC_RecOutBufReSet(ctx);
+}
+#endif
+
 static int32_t ClientCheckExtensionsFlag(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 {
     static const CheckExtFunc extInfoList[] = {
@@ -392,11 +431,13 @@ static int32_t ClientCheckExtensionsFlag(TLS_Ctx *ctx, const ServerHelloMsg *ser
 #ifdef HITLS_TLS_FEATURE_ETM
         ClientCheckEncryptThenMac,
 #endif /* HITLS_TLS_FEATURE_ETM */
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+        ClientCheckRecordSizeLimit,
+#endif /* HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT */
     };
 
-    int32_t ret;
     for (uint32_t i = 0; i < sizeof(extInfoList) / sizeof(extInfoList[0]); i++) {
-        ret = extInfoList[i](ctx, serverHello);
+        int32_t ret = extInfoList[i](ctx, serverHello);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
@@ -429,7 +470,7 @@ static bool IsCipherSuiteSupport(const TLS_Ctx *ctx, uint16_t cipherSuite)
 
 static int32_t ClientCheckCipherSuite(TLS_Ctx *ctx, const ServerHelloMsg *serverHello, bool isHrr)
 {
-    int32_t ret = HITLS_SUCCESS;
+    int32_t ret;
     (void)isHrr;
     if (!IsCipherSuiteSupport(ctx, serverHello->cipherSuite)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15269, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -485,7 +526,7 @@ static int32_t ClientCheckCipherSuite(TLS_Ctx *ctx, const ServerHelloMsg *server
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 static int32_t ClientCheckVersion(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 {
-    int32_t ret = HITLS_SUCCESS;
+    int32_t ret;
     (void)ret;
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     ret = CheckRenegotiatedVersion(ctx);
@@ -596,7 +637,6 @@ static bool SessionIdCmp(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 
 static int32_t ClientCopySessionId(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 {
-    int32_t ret = HITLS_SUCCESS;
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
 
     BSL_SAL_FREE(hsCtx->sessionId);
@@ -609,7 +649,8 @@ static int32_t ClientCopySessionId(TLS_Ctx *ctx, const ServerHelloMsg *serverHel
         return HITLS_MEMALLOC_FAIL;
     }
 
-    ret = memcpy_s(hsCtx->sessionId, HITLS_SESSION_ID_MAX_SIZE, serverHello->sessionId, serverHello->sessionIdSize);
+    int32_t ret = memcpy_s(hsCtx->sessionId, HITLS_SESSION_ID_MAX_SIZE, serverHello->sessionId,
+        serverHello->sessionIdSize);
     if (ret != EOK) {
         BSL_SAL_FREE(hsCtx->sessionId);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15277, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -624,15 +665,13 @@ static int32_t ClientCopySessionId(TLS_Ctx *ctx, const ServerHelloMsg *serverHel
 
 static int32_t ClientCheckIfResumeFromSession(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 {
-    bool isResume = false;
-
     ctx->negotiatedInfo.isResume = false;
 
     if (ctx->session == NULL || serverHello->sessionIdSize == 0u) {
         return HITLS_SUCCESS;
     }
 
-    isResume = SessionIdCmp(ctx, serverHello);
+    bool isResume = SessionIdCmp(ctx, serverHello);
     if (isResume == true) {
         /* Resume the session */
         ctx->negotiatedInfo.isResume = true;
@@ -792,16 +831,9 @@ static int32_t Tls13ClientCheckSessionId(TLS_Ctx *ctx, const ServerHelloMsg *ser
 
 static int32_t Tls13ClientCheckServerHello(TLS_Ctx *ctx, const ServerHelloMsg *serverHello, bool isHrr)
 {
-    int32_t ret = HITLS_SUCCESS;
+    (void)memcpy_s(ctx->hsCtx->serverRandom, HS_RANDOM_SIZE, serverHello->randomValue, HS_RANDOM_SIZE);
 
-    ctx->negotiatedInfo.version = serverHello->supportedVersion;
-
-    ret = memcpy_s(ctx->hsCtx->serverRandom, HS_RANDOM_SIZE, serverHello->randomValue, HS_RANDOM_SIZE);
-    if (ret != EOK) {
-        return ret;
-    }
-
-    ret = Tls13ClientCheckSessionId(ctx, serverHello);
+    int32_t ret = Tls13ClientCheckSessionId(ctx, serverHello);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -828,7 +860,8 @@ static int32_t ClientCheckHrrKeyShareExtension(TLS_Ctx *ctx, const ServerHelloMs
     const uint16_t *groups = ctx->config.tlsConfig.groups;
     uint32_t numOfGroups = ctx->config.tlsConfig.groupsSize;
 
-    /* The selected group exist in the key share extension of the original client hello and no cookie exchange requested */
+    /* The selected group exist in the key share extension of the original client hello and no cookie exchange requested
+     */
     if (ctx->negotiatedInfo.cookie == NULL && (selectedGroup == ctx->hsCtx->kxCtx->keyExchParam.share.group ||
             selectedGroup == ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15283, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -907,9 +940,7 @@ static int32_t ClientCheckHrrCookieExtension(TLS_Ctx *ctx, const ServerHelloMsg 
 
 static int32_t Tls13ClientCheckHrrExtension(TLS_Ctx *ctx, const ServerHelloMsg *helloRetryRequest)
 {
-    int32_t ret = HITLS_SUCCESS;
-
-    ret = HS_CheckReceivedExtension(ctx, HELLO_RETRY_REQUEST, helloRetryRequest->extensionTypeMask,
+    int32_t ret = HS_CheckReceivedExtension(ctx, HELLO_RETRY_REQUEST, helloRetryRequest->extensionTypeMask,
         HS_EX_TYPE_TLS1_3_ALLOWED_OF_HELLO_RETRY_REQUEST);
     if (ret != HITLS_SUCCESS) {
         return ret;
@@ -933,10 +964,9 @@ static int32_t Tls13ClientCheckHrrExtension(TLS_Ctx *ctx, const ServerHelloMsg *
 
 int32_t Tls13ClientRecvHelloRetryRequestProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
-    int32_t ret = HITLS_SUCCESS;
     const ServerHelloMsg *helloRetryRequest = &msg->body.serverHello;
 
-    ret = Tls13ClientCheckHelloRetryRequest(ctx, helloRetryRequest);
+    int32_t ret = Tls13ClientCheckHelloRetryRequest(ctx, helloRetryRequest);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -1040,7 +1070,7 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
             serverHello->keyShare.group != ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup)) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
         return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP, BINLOG_ID15289,
-            "the keyshare parameter is illegal.", ALERT_ILLEGAL_PARAMETER);
+            "the keyshare parameter is illegal", ALERT_ILLEGAL_PARAMETER);
     }
 
     const KeyShare *keyShare = &serverHello->keyShare;
@@ -1154,9 +1184,7 @@ static uint32_t GetServertls13AuthType(const ServerHelloMsg *serverHello)
 
 static int32_t Tls13ProcessServerHelloExtension(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 {
-    int32_t ret = 0;
-
-    ret = HS_CheckReceivedExtension(ctx, SERVER_HELLO, serverHello->extensionTypeMask,
+    int32_t ret = HS_CheckReceivedExtension(ctx, SERVER_HELLO, serverHello->extensionTypeMask,
         HS_EX_TYPE_TLS1_3_ALLOWED_OF_SERVER_HELLO);
     if (ret != HITLS_SUCCESS) {
         return ret;
@@ -1188,11 +1216,10 @@ static int32_t Tls13ProcessServerHelloExtension(TLS_Ctx *ctx, const ServerHelloM
 
 int32_t Tls13ProcessServerHello(TLS_Ctx *ctx, const HS_Msg *msg)
 {
-    int32_t ret = HITLS_SUCCESS;
     const ServerHelloMsg *serverHello = &msg->body.serverHello;
 
     /* Check all fields except the extended fields in the server hello message */
-    ret = Tls13ClientCheckServerHello(ctx, serverHello, false);
+    int32_t ret = Tls13ClientCheckServerHello(ctx, serverHello, false);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -1239,12 +1266,11 @@ int32_t Tls13ProcessServerHello(TLS_Ctx *ctx, const HS_Msg *msg)
 
 int32_t Tls13ClientRecvServerHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
-    int32_t ret = HITLS_SUCCESS;
     const ServerHelloMsg *serverHello = &msg->body.serverHello;
 
     /* Obtain the intention of the server and determine the version to be negotiated by the server */
     uint16_t negotiatedVersion = 0;
-    ret = GetNegotiatedVersion(ctx, serverHello, &negotiatedVersion);
+    int32_t ret = GetNegotiatedVersion(ctx, serverHello, &negotiatedVersion);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -1266,6 +1292,8 @@ int32_t Tls13ClientRecvServerHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         return ClientRecvServerHelloProcess(ctx, msg);
     }
 #endif /* only for tls13 */
+
+    ctx->negotiatedInfo.version = negotiatedVersion;
     uint32_t hrrRandomSize = 0;
     const uint8_t *hrrRandom = HS_GetHrrRandom(&hrrRandomSize);
 

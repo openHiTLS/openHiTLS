@@ -24,8 +24,6 @@
 #include "hitls_crypt_reg.h"
 #include "crypt.h"
 #include "config_type.h"
-
-#include "crypt_algid.h"
 #ifdef HITLS_TLS_FEATURE_PROVIDER
 #include "hitls_crypt.h"
 #endif
@@ -398,7 +396,8 @@ int32_t P_Hash(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
         alignLen -= tmpLen;
         offset += tmpLen;
 
-        ret = SAL_CRYPT_Hmac(input->libCtx, input->attrName, input->hashAlgo, input->secret, input->secretLen, iterator, tmpLen, iterator, &tmpLen);
+        ret = SAL_CRYPT_Hmac(input->libCtx, input->attrName, input->hashAlgo,
+            input->secret, input->secretLen, iterator, tmpLen, iterator, &tmpLen);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15083, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "P_Hash error: iterator update fail, HMAC ret = 0x%x.", ret, 0, 0, 0);
@@ -809,30 +808,6 @@ int32_t SAL_CRYPT_CalcDhSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName
         HITLS_CRYPT_CALLBACK_CALC_DH_SHARED_SECRET, ret, BINLOG_ID15112, HITLS_CRYPT_ERR_CALC_SHARED_KEY);
 }
 
-uint32_t SAL_CRYPT_GetCryptLength(const TLS_Ctx *ctx, int32_t cmd, int32_t param)
-{
-    const TLS_GroupInfo *groupInfo = NULL;
-    if (ctx == NULL) {
-        return 0;
-    }
-    groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, (uint16_t)param);
-    switch (cmd) {
-        case HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN:
-            if (groupInfo == NULL) {
-                return 0;
-            }
-            return groupInfo->pubkeyLen;
-        case HITLS_CRYPT_INFO_CMD_GET_CIPHERTEXT_LEN:
-            if (groupInfo == NULL) {
-                return 0;
-            }
-            return groupInfo->ciphertextLen;
-        default:
-            break;
-    }
-    return 0;
-}
-
 #ifdef HITLS_TLS_PROTO_TLS13
 int32_t SAL_CRYPT_HkdfExtract(HITLS_Lib_Ctx *libCtx,
     const char *attrName, HITLS_CRYPT_HkdfExtractInput *input, uint8_t *prk, uint32_t *prkLen)
@@ -986,4 +961,3 @@ int32_t SAL_CRYPT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *ciphertext
         HITLS_CRYPT_ERR_KEM_DECAPSULATE);
 }
 #endif /* HITLS_TLS_FEATURE_KEM */
-

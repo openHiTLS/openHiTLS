@@ -21,7 +21,7 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "hitls_error.h"
-#include "hs_ctx.h"
+#include "hs_common.h"
 #include "parse_common.h"
 
 int32_t ParseVersion(ParsePacket *pkt, uint16_t *version)
@@ -186,6 +186,9 @@ int32_t ParseCopyBytesToArray(ParsePacket *pkt, uint8_t *object, uint32_t length
 int32_t ParseErrorProcess(TLS_Ctx *ctx, int32_t err, uint32_t logId, const void *format,
     ALERT_Description description)
 {
+#ifndef HITLS_BSL_LOG
+    (void)logId;
+#endif
     BSL_ERR_PUSH_ERROR(err);
     if (format != NULL) {
         BSL_LOG_BINLOG_FIXLEN(logId, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, format, 0, 0, 0, 0);
@@ -214,7 +217,7 @@ int32_t CheckPeerSignScheme(HITLS_Ctx *ctx, CERT_Pair *peerCert, uint16_t signSc
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17099, "get pubkey type fail");
     }
 
-    if (keyType != SAL_CERT_SignScheme2CertKeyType(ctx, signScheme)) {
+    if (keyType != HS_SignScheme2CertKeyType(ctx, signScheme)) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_PARSE_UNSUPPORT_SIGN_ALG, BINLOG_ID17156, "signScheme err");
     }
 

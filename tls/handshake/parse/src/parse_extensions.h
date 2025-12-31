@@ -108,11 +108,14 @@ int32_t ParseExCookie(const uint8_t *buf, uint32_t bufLen, uint8_t **cookie, uin
 int32_t ParseSecRenegoInfo(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, uint8_t **secRenegoInfo,
     uint8_t *secRenegoInfoSize);
 
+int32_t ParseRecordSizeLimit(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
+                             bool *haveRecordSizeLimit, uint16_t *recordSizeLimit);
+
 int32_t ParseServerSelectedAlpnProtocol(
     ParsePacket *pkt, bool *haveSelectedAlpn, uint8_t **alpnSelected, uint16_t *alpnSelectedSize);
 
 /**
- * @brief   Error process in duplicated extension
+ * @brief   error procrss in duplicated extension
  *
  * @param   ctx [IN] TLS context
  * @param   logId [IN] binlogid
@@ -123,7 +126,7 @@ int32_t ParseServerSelectedAlpnProtocol(
 int32_t ParseDupExtProcess(TLS_Ctx *ctx, uint32_t logId, const void *format);
 
 /**
- * @brief   Parse extension length error
+ * @brief   parse extension length error
  *
  * @param   ctx [IN] TLS context
  * @param   logId [IN] binlogid

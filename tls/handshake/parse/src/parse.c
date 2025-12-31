@@ -86,7 +86,7 @@ static int32_t CheckServerKeyExchangeType(TLS_Ctx *ctx, const HS_MsgType msgType
 
 static int32_t CheckCertificateRequestType(TLS_Ctx *ctx, const HS_MsgType msgType)
 {
-    uint32_t version = HS_GetVersion(ctx);
+    uint32_t version = GET_VERSION_FROM_CTX(ctx);
     if (version == HITLS_VERSION_TLS13) {
         if (msgType == CERTIFICATE) {
             (void)HS_ChangeState(ctx, TRY_RECV_CERTIFICATE);
@@ -136,25 +136,34 @@ int32_t CheckHsMsgType(TLS_Ctx *ctx, HS_MsgType msgType)
     }
 
     HS_Ctx *hsCtx = ctx->hsCtx;
+#ifdef HITLS_BSL_LOG
     const char *expectedMsg = NULL;
+#endif
+    bool isUnexpected = false;
     if (msgType != g_checkHsMsgTypeList[hsCtx->state].msgType) {
         if (g_checkHsMsgTypeList[hsCtx->state].checkCb == NULL ||
             g_checkHsMsgTypeList[hsCtx->state].checkCb(ctx, msgType) != HITLS_SUCCESS) {
+#ifdef HITLS_BSL_LOG
             expectedMsg = HS_GetMsgTypeStr(g_checkHsMsgTypeList[hsCtx->state].msgType);
+#endif
+            isUnexpected = true;
         }
     }
 
-    if (msgType == FINISHED && HS_GetVersion(ctx) != HITLS_VERSION_TLS13 &&
+    if (msgType == FINISHED && GET_VERSION_FROM_CTX(ctx) != HITLS_VERSION_TLS13 &&
             !(ctx->state == CM_STATE_HANDSHAKING && ctx->preState == CM_STATE_TRANSPORTING)) {
         bool isCcsRecv = ctx->method.isRecvCCS(ctx);
         if (isCcsRecv != true) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15349, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "recv finish but haven't recv ccs", 0, 0, 0, 0);
+#ifdef HITLS_BSL_LOG
             expectedMsg = HS_GetMsgTypeStr(FINISHED);
+#endif
+            isUnexpected = true;
         }
     }
 
-    if (expectedMsg != NULL) {
+    if (isUnexpected) {
         BSL_LOG_BINLOG_VARLEN(BINLOG_ID16148, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Handshake state expect %s", expectedMsg);
         BSL_LOG_BINLOG_VARLEN(BINLOG_ID16149, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -256,16 +265,20 @@ static int32_t ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *data, uint32_t len
     switch (hsMsg->type) {
         case CLIENT_HELLO:
             return ParseClientHello(ctx, data, len, hsMsg);
+#ifdef HITLS_TLS_HOST_CLIENT
         case SERVER_HELLO:
             return ParseServerHello(ctx, data, len, hsMsg);
-        case HELLO_VERIFY_REQUEST:
-            return ParseHelloVerifyRequest(ctx, data, len, hsMsg);
-        case CERTIFICATE:
-            return ParseCertificate(ctx, data, len, hsMsg);
         case SERVER_KEY_EXCHANGE:
             return ParseServerKeyExchange(ctx, data, len, hsMsg);
         case CERTIFICATE_REQUEST:
             return ParseCertificateRequest(ctx, data, len, hsMsg);
+#ifdef HITLS_TLS_PROTO_DTLS12
+        case HELLO_VERIFY_REQUEST:
+            return ParseHelloVerifyRequest(ctx, data, len, hsMsg);
+#endif
+#endif
+        case CERTIFICATE:
+            return ParseCertificate(ctx, data, len, hsMsg);
         case CLIENT_KEY_EXCHANGE:
             return ParseClientKeyExchange(ctx, data, len, hsMsg);
         case CERTIFICATE_VERIFY:
@@ -347,7 +360,7 @@ int32_t HS_ParseMsgHeader(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_Ms
             BINGLOG_STR("null input parameter"), ALERT_UNKNOWN);
     }
 
-    uint32_t version = HS_GetVersion(ctx);
+    uint32_t version = GET_VERSION_FROM_CTX(ctx);
 
     switch (version) {
 #ifdef HITLS_TLS_PROTO_TLS
@@ -379,8 +392,9 @@ int32_t HS_ParseMsgHeader(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_Ms
 
 int32_t HS_ParseMsg(TLS_Ctx *ctx, const HS_MsgInfo *hsMsgInfo, HS_Msg *hsMsg)
 {
-    if ((ctx == NULL) || (ctx->method.sendAlert == NULL) || (hsMsgInfo == NULL) || (hsMsgInfo->rawMsg == NULL) ||
-        (hsMsg == NULL)) {
+    bool nullInput = (ctx == NULL) || (ctx->method.sendAlert == NULL) || (hsMsgInfo == NULL) ||
+                     (hsMsgInfo->rawMsg == NULL) || (hsMsg == NULL);
+    if (nullInput == true) {
         BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15608, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "the input parameter pointer is null.", 0, 0, 0, 0);
@@ -392,7 +406,7 @@ int32_t HS_ParseMsg(TLS_Ctx *ctx, const HS_MsgInfo *hsMsgInfo, HS_Msg *hsMsg)
     hsMsg->fragmentOffset = hsMsgInfo->fragmentOffset;
     hsMsg->fragmentLength = hsMsgInfo->fragmentLength;
 
-    uint32_t version = HS_GetVersion(ctx);
+    uint32_t version = GET_VERSION_FROM_CTX(ctx);
 
     switch (version) {
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
@@ -442,8 +456,10 @@ void HS_CleanMsg(HS_Msg *hsMsg)
 #ifdef HITLS_TLS_HOST_CLIENT
         case SERVER_HELLO:
             return CleanServerHello(&hsMsg->body.serverHello);
+#ifdef HITLS_TLS_PROTO_DTLS12
         case HELLO_VERIFY_REQUEST:
             return CleanHelloVerifyRequest(&hsMsg->body.helloVerifyReq);
+#endif
         case CERTIFICATE_REQUEST:
             return CleanCertificateRequest(&hsMsg->body.certificateReq);
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
@@ -475,7 +491,6 @@ void HS_CleanMsg(HS_Msg *hsMsg)
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15610, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
         "clean unsupport handshake msg type[%d].", hsMsg->type, 0, 0, 0);
-    return;
 }
 #ifdef HITLS_TLS_FEATURE_CLIENT_HELLO_CB
 int32_t HITLS_ClientHelloGetLegacyVersion(HITLS_Ctx *ctx, uint16_t *version)

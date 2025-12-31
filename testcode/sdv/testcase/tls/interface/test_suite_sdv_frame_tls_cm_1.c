@@ -89,10 +89,14 @@
 #include "hitls_session.h"
 #include "bsl_log.h"
 #include "bsl_err.h"
+#include "hitls.h"
 #include "hitls_crypt_reg.h"
 #include "crypt_errno.h"
 #include "bsl_list.h"
 #include "hitls_cert.h"
+#include "hitls_cert_local.h"
+#include "hitls_pki_cert.h"
+#include "hitls_x509_local.h"
 #include "parse_extensions_client.c"
 #include "parse_extensions_server.c"
 #include "parse_server_hello.c"
@@ -103,7 +107,10 @@
  * Stub Definitions
  * ============================================================================ */
 STUB_DEFINE_RET2(void *, BSL_SAL_Calloc, uint32_t, uint32_t);
-
+STUB_DEFINE_RET1(BslList *, BSL_LIST_New, int32_t);
+STUB_DEFINE_RET1(const HITLS_Config *, HITLS_GetConfig, const HITLS_Ctx *);
+STUB_DEFINE_RET2(void *, BSL_SAL_Dump, const void *, uint32_t);
+STUB_DEFINE_RET3(int32_t, BSL_LIST_AddElement, BslList *, void *, BslListPosition);
 
 static char *g_serverName = "testServer";
 uint32_t g_uiPort = 18888;
@@ -112,6 +119,8 @@ uint32_t g_uiPort = 18888;
 #define GET_GROUPS_CNT (-1)
 #define READ_BUF_SIZE (18 * 1024)
 #define ALERT_BODY_LEN 2u
+#define HITLS_MIN_RECORDSIZE_LIMIT 64
+#define READ_BUF_LEN_18K 18432
 
 typedef struct {
     uint16_t version;
@@ -602,35 +611,6 @@ void UT_TLS_CM_SET_GET_SESSION_API_TC001(int version)
     ASSERT_TRUE(HITLS_SetSession(NULL, NULL) == HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_SetSession(ctx, NULL) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_GetSession(ctx) == HITLS_SUCCESS);
-EXIT:
-    HITLS_CFG_FreeConfig(tlsConfig);
-    HITLS_Free(ctx);
-}
-/* END_CASE */
-
-/* @
-* @test  UT_TLS_CM_GET_PEERSIGNATURE_TYPE_API_TC001
-* @title  Test HITLS_GetPeerSignatureType interface
-* @brief 1. If ctx is NULL, Invoke the HITLS_GetPeerSignatureType interface. Expected result 2.
-*        2. Invoke the HITLS_GetPeerSignatureType interface. Expected result 1.
-* @expect 1. Returns HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE
-*         2.Returns HITLS_NULL_INPUT
-@ */
-/* BEGIN_CASE */
-void UT_TLS_CM_GET_PEERSIGNATURE_TYPE_API_TC001(int version)
-{
-    HitlsInit();
-    HITLS_Config *tlsConfig = NULL;
-    HITLS_Ctx *ctx = NULL;
-
-    tlsConfig = GetHitlsConfigViaVersion(version);
-    ASSERT_TRUE(tlsConfig != NULL);
-
-    ctx = HITLS_New(tlsConfig);
-    ASSERT_TRUE(ctx != NULL);
-    HITLS_SignAlgo sigType = {0};
-    ASSERT_EQ(HITLS_GetPeerSignatureType(NULL, NULL), HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_GetPeerSignatureType(ctx, &sigType), HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
@@ -1280,7 +1260,7 @@ void UT_TLS_CM_GET_SHARED_SIGALGS_API_TC001(int tlsVersion)
     int32_t paraId;
     int32_t count;
 
-    // Test NULL ctx (OpenSSL style: returns 0)
+    // Test NULL ctx
     count = HITLS_GetSharedSigAlgs(NULL, -1, NULL, NULL, NULL);
     ASSERT_TRUE(count == 0);
 
@@ -1448,5 +1428,2139 @@ void UT_TLS_CM_GET_SHARED_SIGALGS_FUNC_TC002(int version)
 EXIT:
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_HITLS_LISTEN_API_TC001
+* @spec  -
+* @title  test for HITLS_Listen
+* @precon  nan
+* @brief   HITLS_Listen
+*          1. Transfer an empty TLS connection handle. Expected result 1 is obtained
+*          2. Transfer an empty TLS connection handle, an empty clientAddr. Expected result 1 is obtained
+*          3. Transfer non-empty TLS connection handle, non-empty clientAddr. Expected result 2 is obtained
+* @expect  1. return HITLS_NULL_INPUT
+*          2. return HITLS_REC_NORMAL_RECV_BUF_EMPTY
+@ */
+/* BEGIN_CASE */
+void SDV_HITLS_LISTEN_API_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewDTLS12Config();
+    FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    BSL_SAL_SockAddr clientAddr = NULL;
+    ASSERT_EQ(SAL_SockAddrNew(&clientAddr), BSL_SUCCESS);
+    ASSERT_TRUE(HITLS_Listen(NULL, clientAddr) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_Listen(server->ssl, NULL) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_Listen(server->ssl, clientAddr) == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Listen(server->ssl, clientAddr), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Listen(server->ssl, clientAddr), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    SAL_SockAddrFree(clientAddr);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_CONFIG_SET_GROUP_LIST_TC002
+* @spec  -
+* @title  Testing the HITLS_CFG_SetGroupList and HITLS_SetGroupList interfaces
+* @precon  nan
+* @expect  1. return HITLS_CONFIG_UNSUPPORT_GROUP
+@ */
+/* BEGIN_CASE */
+void UT_CONFIG_SET_GROUP_LIST_TC002()
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = NULL;
+    ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    const char group[] = "HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_";
+    ASSERT_TRUE(HITLS_CFG_SetGroupList(config, group, sizeof(group)) ==  HITLS_CONFIG_UNSUPPORT_GROUP);
+    ASSERT_EQ(HITLS_SetGroupList(ctx, group, sizeof(group)), HITLS_CONFIG_UNSUPPORT_GROUP);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  HITLS_TLS_SetGroupsList_SDV_23_1_0_001
+* @spec  -
+* @title  HTLS_CFG_SetGroupList interface test. A group is transferred.
+* @precon  nan
+* @brief    1. Transfer a correct group. Expected result 1 is obtained.
+* @expect   1. Return HITLS_SUCCESS to obtain the correct group array.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void HITLS_TLS_SetGroupsList_SDV_23_1_0_001()
+{
+    HitlsInit();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = NULL;
+    ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    // Transfer a correct group
+    const char group[] = "HITLS_EC_GROUP_SECP256R1";
+    ASSERT_TRUE(HITLS_CFG_SetGroupList(config, group, sizeof(group)) ==  HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_SetGroupList(ctx, group, sizeof(group)) ==  HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  HITLS_TLS_SetGroupsList_SDV_23_1_0_002
+* @spec  -
+* @title  HTLS_CFG_SetGroupList interface test. Multiple groups are transferred.
+* @precon  nan
+* @brief    1. Transfer multiple correct groups. Expected result 1 is obtained.
+* @expect   1. Return HITLS_SUCCESS to obtain the correct group array.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void HITLS_TLS_SetGroupsList_SDV_23_1_0_002()
+{
+    HitlsInit();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = NULL;
+    ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    // Transfer multiple correct groups.
+    const char group[] = "HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP384R1";
+    ASSERT_TRUE(HITLS_CFG_SetGroupList(config, group, sizeof(group)) ==  HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_SetGroupList(ctx, group, sizeof(group)) ==  HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  HITLS_TLS_SetGroupsList_SDV_23_1_0_003
+* @spec  -
+* @title  HITLS_CFG_SetGroupList interface test. The input group contains incorrect enumerated values.
+* @precon  nan
+* @brief    1. Transfer multiple groups that contain incorrect enumerated values. Expected result 1 is obtained.
+* @expect   1. An error is reported. HITLS_CONFIG_UNSUPPORT_GROUP is reported.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void HITLS_TLS_SetGroupsList_SDV_23_1_0_003()
+{
+    HitlsInit();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = NULL;
+    ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    // Transfer multiple groups that contain incorrect enumerated values
+    const char group[] = "HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1: \
+                HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP256R1";
+
+    ASSERT_TRUE(HITLS_CFG_SetGroupList(config, group, sizeof(group)) ==  HITLS_CONFIG_UNSUPPORT_GROUP);
+    ASSERT_EQ(HITLS_SetGroupList(ctx, group, sizeof(group)), HITLS_CONFIG_UNSUPPORT_GROUP);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  HITLS_TLS_SetGroupsList_SDV_23_1_0_004
+* @spec  -
+* @title  HITLS_CFG_SetGroupList interface test. The input group contains incorrect enumerated values.
+* @precon  nan
+* @brief    1. Transfer multiple groups that contain incorrect enumerated values. Expected result 1 is obtained.
+* @expect   1. An error is reported, and the HITLS_CONFIG_UNSUPPORT_GROUP is reported.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void HITLS_TLS_SetGroupsList_SDV_23_1_0_004()
+{
+    HitlsInit();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = NULL;
+    ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    // Transfer multiple groups that contain incorrect enumerated values.
+    const char group[] = "HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_";
+    ASSERT_TRUE(HITLS_CFG_SetGroupList(config, group, sizeof(group)) ==  HITLS_CONFIG_UNSUPPORT_GROUP);
+    ASSERT_EQ(HITLS_SetGroupList(ctx, group, sizeof(group)), HITLS_CONFIG_UNSUPPORT_GROUP);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  HITLS_TLS_SetGroupsList_SDV_23_1_0_005
+* @spec  -
+* @title  HITLS_CFG_SetGroupList interface test. The input groups are not separated by colons (:).
+            The input groups are a long character string.
+* @precon  nan
+* @brief    1. Transfer multiple groups. Do not separate multiple groups with colons (:). Expected result 1 is obtained.
+* @expect   1. An error is reported. HITLS_CONFIG_UNSUPPORT_GROUP is reported.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void HITLS_TLS_SetGroupsList_SDV_23_1_0_005()
+{
+    HitlsInit();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = NULL;
+    ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    // Transfer multiple groups. Do not separate multiple groups with colons (:).
+    const char group[] = "HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1 \
+                HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1HITLS_EC_GROUP_SECP256R1";
+
+    ASSERT_TRUE(HITLS_CFG_SetGroupList(config, group, sizeof(group)) ==  HITLS_CONFIG_UNSUPPORT_GROUP);
+    ASSERT_EQ(HITLS_SetGroupList(ctx, group, sizeof(group)), HITLS_CONFIG_UNSUPPORT_GROUP);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_CONFIG_SET_GROUP_LIST_TC001
+* @spec  -
+* @title  Testing the HITLS_CFG_SetGroupList interface
+* @precon  nan
+@ */
+/* BEGIN_CASE */
+void UT_CONFIG_SET_GROUP_LIST_TC001(int tlsVersion)
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    switch (tlsVersion) {
+        case HITLS_VERSION_TLS12:
+            config = HITLS_CFG_NewTLS12Config();
+            break;
+        case HITLS_VERSION_TLS13:
+            config = HITLS_CFG_NewTLS13Config();
+            break;
+        default:
+            config = NULL;
+            break;
+    }
+    const char groupNamesError[] = "1:1";
+    const char groupNames[] =
+        "HITLS_EC_GROUP_SECP256R1:HITLS_EC_GROUP_SECP384R1:HITLS_EC_GROUP_SECP521R1:HITLS_EC_GROUP_BRAINPOOLP256R1";
+
+    ASSERT_EQ(HITLS_CFG_SetGroupList(config, groupNamesError, sizeof(groupNamesError)), HITLS_CONFIG_UNSUPPORT_GROUP);
+    ASSERT_TRUE(HITLS_CFG_SetGroupList(config, groupNames, sizeof(groupNames)) == HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_HITLS_CM_GETCIPHERSUITES_API_TC001
+* @spec  -
+* @title  Testing the HITLS_GetCipherSuites interface
+* @precon  nan
+@ */
+
+/* BEGIN_CASE */
+void SDV_HITLS_CM_GETCIPHERSUITES_API_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    uint16_t data[1024] = {0};
+    uint32_t dataLen = sizeof(data) / sizeof(uint16_t);
+    uint32_t cipherSuiteSize = 0;
+    ASSERT_TRUE(HITLS_GetCipherSuites(NULL, data, dataLen, &cipherSuiteSize) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_GetCipherSuites(ctx, data, dataLen, &cipherSuiteSize) == HITLS_SUCCESS);
+    ASSERT_TRUE(data[0] == HITLS_AES_256_GCM_SHA384);
+    ASSERT_TRUE(data[1] == HITLS_CHACHA20_POLY1305_SHA256);
+    ASSERT_TRUE(data[2] == HITLS_AES_128_GCM_SHA256);
+    ASSERT_TRUE(cipherSuiteSize == 3);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_HITLS_CM_GET_CLIENT_CIPHER_SUITES_TC001
+* @title  test for HITLS_GetClientCipherSuites
+* @precon  nan
+* @brief   1. Create TLS config. Expected result 1 is obtained
+*          2. Get the client cipher suites. Expected result 1 is obtained
+* @expect  1. Success
+@ */
+/* BEGIN_CASE */
+void UT_HITLS_CM_GET_CLIENT_CIPHER_SUITES_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
+    HITLS_Ctx *ctx = FRAME_GetTlsCtx(server);
+    uint16_t data[1024] = {0};
+    uint32_t dataLen = sizeof(data) / sizeof(uint16_t);
+    uint32_t cipherSuiteSize = 0;
+    ASSERT_TRUE(HITLS_GetClientCipherSuites(ctx, data, dataLen, &cipherSuiteSize) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_GetClientCipherSuites(NULL, data, dataLen, &cipherSuiteSize) == HITLS_NULL_INPUT);
+
+    ASSERT_EQ(data[0], HITLS_AES_256_GCM_SHA384);
+    ASSERT_EQ(data[1], HITLS_CHACHA20_POLY1305_SHA256);
+    ASSERT_EQ(data[2], HITLS_AES_128_GCM_SHA256);
+    ASSERT_EQ(cipherSuiteSize, 3);
+    HITLS_Ctx *ctx1 = FRAME_GetTlsCtx(client);
+    ASSERT_TRUE(HITLS_GetClientCipherSuites(ctx1, data, dataLen, &cipherSuiteSize) == HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+BslList *BSL_LIST_New_NULL(int32_t dataSize)
+{
+    (void)dataSize;
+    return NULL;
+}
+
+const HITLS_Config *HITLS_GetConfig_FAIL(const HITLS_Ctx *ctx)
+{
+    (void)ctx;
+    return NULL;
+}
+
+void *BSL_SAL_Dump_NULL(const void *src, uint32_t size)
+{
+    (void)src;
+    (void)size;
+    return NULL;
+}
+
+int32_t BSL_LIST_AddElement_FAIL(BslList *pList, void *pData, BslListPosition enPosition)
+{
+    (void)pList;
+    (void)pData;
+    (void)enPosition;
+    return BSL_INVALID_ARG;
+}
+
+/* BEGIN_CASE */
+void SDV_HITLS_GET_SUPPORTED_CIPHERS_001()
+{
+    HITLS_CryptMethodInit();
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    uint16_t cipherSuites[] = {HITLS_RSA_WITH_AES_128_CBC_SHA, HITLS_DHE_DSS_WITH_AES_128_CBC_SHA};
+    HITLS_CFG_SetCipherSuites(config, cipherSuites, sizeof(cipherSuites)/sizeof(uint16_t));
+    FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
+
+    ASSERT_TRUE(HITLS_GetSupportedCiphers(NULL) == NULL);
+    STUB_REPLACE(BSL_LIST_New, BSL_LIST_New_NULL);
+    ASSERT_TRUE(HITLS_GetSupportedCiphers(client->ssl) == NULL);
+    STUB_RESTORE(BSL_LIST_New);
+    STUB_REPLACE(HITLS_GetConfig, HITLS_GetConfig_FAIL);
+    ASSERT_TRUE(HITLS_GetSupportedCiphers(client->ssl) == NULL);
+    STUB_RESTORE(HITLS_GetConfig);
+    STUB_REPLACE(BSL_SAL_Dump, BSL_SAL_Dump_NULL);
+    ASSERT_TRUE(HITLS_GetSupportedCiphers(client->ssl) == NULL);
+    STUB_RESTORE(BSL_SAL_Dump);
+    STUB_REPLACE(BSL_LIST_AddElement, BSL_LIST_AddElement_FAIL);
+    ASSERT_TRUE(HITLS_GetSupportedCiphers(client->ssl) == NULL);
+    STUB_RESTORE(BSL_LIST_AddElement);
+
+    HITLS_CIPHER_List *cipherList = HITLS_GetSupportedCiphers(client->ssl);
+    ASSERT_TRUE(cipherList != NULL);
+    BslListNode *tmp = BSL_LIST_FirstNode(cipherList);
+    HITLS_Cipher *cipher = BSL_LIST_GetData(tmp);
+    ASSERT_TRUE(cipher->cipherSuite == cipherSuites[0]);
+    tmp = BSL_LIST_GetNextNode(cipherList, (const BslListNode *)BSL_LIST_FirstNode(cipherList));
+    cipher = BSL_LIST_GetData(tmp);
+    ASSERT_TRUE(cipher->cipherSuite == cipherSuites[1]);
+    ASSERT_TRUE(BSL_LIST_COUNT(cipherList) == 2);
+EXIT:
+    BSL_LIST_FREE(cipherList, BSL_SAL_Free);
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_INTERFACE_HITLS_ExportKeyingMaterial_TC002
+* @spec  -
+* @title  Testing the HITLS_ExportKeyingMaterial interface
+* @precon  nan
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void UT_INTERFACE_HITLS_ExportKeyingMaterial_TC002()
+{
+    HITLS_CryptMethodInit();
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    uint8_t out[20] = {0};
+    size_t outLen = 20;
+    const char *label = NULL;
+    size_t labelLen = 0;
+    const uint8_t *context = (uint8_t *)"12345";
+    size_t contextLen = 5;
+    int useContext = 1;
+    ASSERT_EQ(HITLS_ExportKeyingMaterial(client->ssl, out, outLen,
+        label, labelLen, context, contextLen, useContext), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CCA_EXPORT_KEY_MATERIAL_008
+* @spec  -
+* @title  Calling HITLS_ExportKeyingMaterial during the handshake process
+* @precon  nan
+* @brief  "1. Set the version number to tls1.2, and there is an expected result 1.
+2. Keep the client/server status in the recv_finish state; expected result 2 occurs.
+3. Invoke the HITLS_ExportKeyingMaterial interface, and expected result 3 is obtained.
+* @expect  "1. Set successful
+2. Set successful
+3. return HITLS_MSG_HANDLE_STATE_ILLEGAL
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HITLS_EXPORT_KEY_MATERIAL_008()
+{
+    HITLS_CryptMethodInit();
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_FINISH), HITLS_SUCCESS);
+    uint8_t out[20] = {0};
+    size_t outLen = 20;
+    const char *label = NULL;
+    size_t labelLen = 0;
+    const uint8_t *context = (uint8_t *)"12345";
+    size_t contextLen = 5;
+    int useContext = 1;
+    ASSERT_EQ(HITLS_ExportKeyingMaterial(client->ssl, out, outLen,
+        label, labelLen, context, contextLen, useContext), HITLS_MSG_HANDLE_STATE_ILLEGAL);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CCA_EXPORT_KEY_MATERIAL_001
+* @spec  -
+* @title  HITLS_ExportKeyingMaterial interface test
+* @precon  nan
+* @brief    1. If the ctx field is empty, expected result 1 is obtained.
+            2. If the out field is empty, expected result 2 is obtained.
+            3. The length of outLen is 0. Expected result 3 is obtained.
+            4. The label field is empty, but the labelen field is not 0. (Expected result 4 is obtained.)
+            5. If the length of labellen is 0, expected result 5 is obtained.
+            6. If the context length is 0, expected result 6 is obtained.
+            7. The value of useContext is 0, and the value of context is NULL.
+            8. The context is NULL
+            9. UseContext is set to another value.
+* @expect   1. The interface returns the HITLS_INVALID_INPUT.
+            2. The interface returns the HITLS_INVALID_INPUT message.
+            3. The interface returns the HITLS_INVALID_INPUT message.
+            4. The interface returns the HITLS_INVALID_INPUT.
+            5. The interface returns HITLS_SUCCESS.
+            6. The interface returns HITLS_SUCCESS.
+            7. The interface returns HITLS_SUCCESS.
+            8. The interface returns HITLS_SUCCESS.
+            9. The interface returns HITLS_SUCCESS.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HITLS_EXPORT_KEY_MATERIAL_001()
+{
+    HitlsInit();
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    uint8_t out[1000] = {0};
+    size_t outLen = 1000;
+    const char *label = "123456";
+    size_t labelLen = strlen("123456");
+    const uint8_t *context = (uint8_t *)"12345";
+    size_t contextLen = 5;
+    int useContext = 1;
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    // The ctx field is empty
+    ASSERT_EQ(HITLS_ExportKeyingMaterial(NULL, out, outLen, label, labelLen, context, contextLen, useContext),
+        HITLS_INVALID_INPUT);
+
+    // The out field is empty
+    ASSERT_EQ(HITLS_ExportKeyingMaterial(client->ssl, NULL, outLen, label, labelLen, context, contextLen, useContext),
+        HITLS_INVALID_INPUT);
+
+    // The length of outLen is 0
+    ASSERT_EQ(HITLS_ExportKeyingMaterial(client->ssl, out, 0, label, labelLen, context, contextLen, useContext),
+        HITLS_INVALID_INPUT);
+
+    // The label field is empty, but the labelen field is not 0
+    ASSERT_EQ(HITLS_ExportKeyingMaterial(client->ssl, out, outLen, NULL, labelLen, context, contextLen, useContext),
+        HITLS_INVALID_INPUT);
+
+    // The length of labellen is 0
+    ASSERT_EQ(HITLS_ExportKeyingMaterial(client->ssl, out, outLen, label, 0, context, contextLen, useContext),
+        HITLS_SUCCESS);
+
+    // The value of useContext is 0, and the value of context is NULL.
+    ASSERT_EQ(HITLS_ExportKeyingMaterial(client->ssl, out, outLen, label, labelLen, NULL, contextLen, 0),
+        HITLS_SUCCESS);
+
+    // The context is NULL
+    ASSERT_EQ(HITLS_ExportKeyingMaterial(client->ssl, out, outLen, label, labelLen, NULL, contextLen, useContext),
+        HITLS_INVALID_INPUT);
+
+    // The context length is 0
+    ASSERT_EQ(HITLS_ExportKeyingMaterial(client->ssl, out, outLen, label, labelLen, context, 0, useContext),
+        HITLS_SUCCESS);
+
+    // UseContext is set to another value.
+    ASSERT_EQ(HITLS_ExportKeyingMaterial(client->ssl, out, outLen, label, labelLen, context, 0, 3), HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+static int32_t X509_CertSignatureCmp(HITLS_X509_Asn1AlgId *certOri, BSL_ASN1_BitString *signOri,
+    HITLS_X509_Asn1AlgId *cert, BSL_ASN1_BitString *sign)
+{
+    if (certOri->algId != cert->algId) {
+        return 1;
+    }
+    if (signOri->len != sign->len) {
+        return 1;
+    }
+    return memcmp(signOri->buff, sign->buff, sign->len);
+}
+
+static int32_t X509_CertCmp(HITLS_X509_Cert *certOri, HITLS_X509_Cert *cert)
+{
+    if (certOri == cert) {
+        return 0;
+    }
+    if (HITLS_X509_CmpNameNode(certOri->tbs.subjectName, cert->tbs.subjectName) != 0) {
+        return 1;
+    }
+    if (certOri->tbs.tbsRawDataLen != cert->tbs.tbsRawDataLen) {
+        return 1;
+    }
+    int32_t ret = memcmp(certOri->tbs.tbsRawData, cert->tbs.tbsRawData, cert->tbs.tbsRawDataLen);
+    if (ret != 0) {
+        return 1;
+    }
+    return X509_CertSignatureCmp(&certOri->tbs.signAlgId, &certOri->signature,
+        &cert->tbs.signAlgId, &cert->signature);
+}
+
+uint32_t Compare_Certificates(FRAME_LinkObj *client, FRAME_LinkObj *server, bool isClientPeerCertNull,
+    bool isServerPeerCertNull)
+{
+    HITLS_CERT_X509 *client_Cert = HITLS_GetCertificate(client->ssl);
+    HITLS_CERT_X509 *server_Cert = HITLS_GetCertificate(server->ssl);
+
+    HITLS_CERT_X509 *client_PeerCert = HITLS_GetPeerCertificate(client->ssl);
+    HITLS_CERT_X509 *server_PeerCert = HITLS_GetPeerCertificate(server->ssl);
+    HITLS_CERT_Chain *client_PeerChain = HITLS_GetPeerCertChain(client->ssl);
+    HITLS_CERT_Chain *server_PeerChain = HITLS_GetPeerCertChain(server->ssl);
+
+    HITLS_CERT_Chain *client_Chain = HITLS_CFG_GetChainCerts(&client->ssl->config.tlsConfig);
+    HITLS_CERT_Chain *server_Chain = HITLS_CFG_GetChainCerts(&server->ssl->config.tlsConfig);
+
+    HITLS_CERT_X509 *client_ChainCert = NULL;
+    HITLS_CERT_X509 *server_PeerChainCert = NULL;
+    HITLS_CERT_X509 *server_ChainCert = NULL;
+    HITLS_CERT_X509 *client_PeerEECert = NULL;
+    HITLS_CERT_X509 *client_PeerChainCert = NULL;
+
+    if (!isClientPeerCertNull) {
+        server_ChainCert = (HITLS_CERT_X509*)server_Chain->first->data; // server chain cert
+        client_PeerEECert = (HITLS_CERT_X509*)client_PeerChain->first->data; // server ee cert
+        client_PeerChainCert = (HITLS_CERT_X509*)client_PeerChain->last->data; // server chain cert
+    }
+    if (!isServerPeerCertNull) {
+        client_ChainCert = (HITLS_CERT_X509*)client_Chain->first->data; // client chain cert
+        server_PeerChainCert = (HITLS_CERT_X509*)server_PeerChain->first->data; // client chain cert
+    }
+
+    int client_result = 0;
+    int server_result = 0;
+    if (isClientPeerCertNull) {
+        ASSERT_TRUE(client_PeerCert == NULL);
+        ASSERT_TRUE(client_PeerChain == NULL);
+        client_result = 1;
+    } else {
+        ASSERT_TRUE(client_PeerCert != NULL);
+        if (X509_CertCmp(client_PeerCert, server_Cert) == 0 && X509_CertCmp(client_PeerEECert, server_Cert) == 0 &&
+            X509_CertCmp(client_PeerChainCert, server_ChainCert) == 0) {
+            client_result = 1;
+        } else {
+            client_result = 0;
+        }
+    }
+    if (isServerPeerCertNull) {
+        ASSERT_TRUE(server_PeerCert == NULL);
+        ASSERT_TRUE(server_PeerChain == NULL);
+        server_result = 1;
+    } else {
+        ASSERT_TRUE(server_PeerCert != NULL);
+        if (X509_CertCmp(server_PeerCert, client_Cert) == 0 &&
+            X509_CertCmp(server_PeerChainCert, client_ChainCert) == 0) {
+            server_result = 1;
+        } else {
+            server_result = 0;
+        }
+    }
+
+    HITLS_X509_CertFree(client_PeerCert);
+    HITLS_X509_CertFree(server_PeerCert);
+
+    if (client_result & server_result) {
+        return HITLS_SUCCESS;
+    } else {
+        return 1;
+    }
+EXIT:
+    return 1;
+}
+
+uint32_t Compare_ResumeCertificates(FRAME_LinkObj *client, FRAME_LinkObj *server)
+{
+    HITLS_CERT_X509 *client_Cert = HITLS_GetCertificate(client->ssl);
+    HITLS_CERT_X509 *server_Cert = HITLS_GetCertificate(server->ssl);
+
+    HITLS_CERT_X509 *client_PeerCert = HITLS_GetPeerCertificate(client->ssl);
+    HITLS_CERT_X509 *server_PeerCert = HITLS_GetPeerCertificate(server->ssl);
+    HITLS_CERT_Chain *client_PeerChain = HITLS_GetPeerCertChain(client->ssl);
+    HITLS_CERT_Chain *server_PeerChain = HITLS_GetPeerCertChain(server->ssl);
+
+    HITLS_CERT_Chain *server_Chain = HITLS_CFG_GetChainCerts(&server->ssl->config.tlsConfig);
+
+    HITLS_CERT_X509 *server_ChainCert = NULL;
+    HITLS_CERT_X509 *client_PeerEECert = NULL;
+    HITLS_CERT_X509 *client_PeerChainCert = NULL;
+
+    server_ChainCert = (HITLS_CERT_X509*)server_Chain->first->data; // server chain cert
+    client_PeerEECert = (HITLS_CERT_X509*)client_PeerChain->first->data; // server ee cert
+    client_PeerChainCert = (HITLS_CERT_X509*)client_PeerChain->last->data; // server chain cert
+
+    int client_resulte = 0;
+    int server_resulte = 0;
+    ASSERT_TRUE(client_PeerCert != NULL);
+    if ((X509_CertCmp(client_PeerCert, server_Cert) == 0) && (X509_CertCmp(client_PeerEECert, server_Cert) == 0) &&
+        (X509_CertCmp(client_PeerChainCert, server_ChainCert) == 0)) {
+        client_resulte = 1;
+    } else {
+        client_resulte = 0;
+    }
+    // After the session is resumed, the peer certificate chain of the server is empty, but the peer certificate is not
+    // empty.
+    ASSERT_TRUE(server_PeerChain == NULL);
+    ASSERT_TRUE(server_PeerCert != NULL);
+    if (X509_CertCmp(server_PeerCert, client_Cert) == 0) {
+        server_resulte = 1;
+    } else {
+        server_resulte = 0;
+    }
+
+    HITLS_X509_CertFree(client_PeerCert);
+    HITLS_X509_CertFree(server_PeerCert);
+
+    if (client_resulte & server_resulte) {
+        return HITLS_SUCCESS;
+    } else {
+        return 1;
+    }
+EXIT:
+    return 1;
+}
+
+/* BEGIN_CASE */
+void HITLS_TLS_KeepPeerCertFunc_OnceVerify_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *config_c = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *config_s = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_c != NULL);
+    ASSERT_TRUE(config_s != NULL);
+    HITLS_CFG_SetClientVerifySupport(config_s, true);
+    HITLS_CFG_SetClientOnceVerifySupport(config_s, true);
+    HITLS_CFG_SetRenegotiationSupport(config_s, true);
+    HITLS_CFG_SetRenegotiationSupport(config_c, true);
+    HITLS_CFG_SetKeepPeerCertificate(config_s, true);
+    HITLS_CFG_SetKeepPeerCertificate(config_c, true);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(config_c, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(config_s, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    HITLS_SetClientRenegotiateSupport(server->ssl, true);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    HITLS_CERT_X509 *getCert_s1 = HITLS_GetPeerCertificate(server->ssl);
+    HITLS_CERT_Chain *certChain_s1 = HITLS_GetPeerCertChain(server->ssl);
+    ASSERT_TRUE(getCert_s1 != NULL);
+    ASSERT_TRUE(certChain_s1 != NULL);
+    HITLS_CFG_FreeCert(config_s, getCert_s1);
+
+    ASSERT_EQ(HITLS_Renegotiate(client->ssl), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateRenegotiation(client, server), HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
+    ASSERT_TRUE(server->ssl->state == CM_STATE_TRANSPORTING);
+
+    HITLS_CERT_X509 *getCert_s = HITLS_GetPeerCertificate(server->ssl);
+    HITLS_CERT_Chain *certChain_s = HITLS_GetPeerCertChain(server->ssl);
+    ASSERT_TRUE(getCert_s == NULL);
+    ASSERT_TRUE(certChain_s == NULL);
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC001
+* @spec -
+* @title TLS12 caches the peer certificate by default.
+* @precon nan
+* @brief
+* 1. Initialize the TLS12 client and server.
+* 2. Establish a link. After the link is established, the HITLS_GetPeerCertificate and HITLS_GetPeerCertChain interfaces are
+* invoked to check the peer certificate cached at both ends.
+* @expect
+* 1. Initialization succeeded.
+* 2. The link is successfully established. The certificate cached on the client is the same as the certificate sent by the
+*  server.The peer certificate cached on the server is NULL.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC001(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_EQ(Compare_Certificates(client, server, false, true), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC002
+* @spec -
+* @title Enabling Peer Certificate Caching, Dual-End Authentication, and Empty Client Certificate, and Allowing the
+*           Client to Send an Empty Certificate
+* @precon nan
+* @brief
+* 1. Invoke the HITLS_CFG_SetKeepPeerCertificate interface to enable the function of caching the peer certificate and set
+*    an empty certificate.
+* 2. Enable two-way authentication on the server and allow the client to send an empty certificate.
+* 3. Set up a link. After the link is set up, invoke HITLS_GetPeerCertificate and HITLS_GetPeerCertChain to check whether the
+*    peer certificate cached on the server is NULL.
+* @expect
+* 1. Setting succeeded.
+* 2. Setting succeeded.
+* 3. The server cache certificate is empty.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC002(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetNoClientCertSupport(s_config, true);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) , HITLS_SUCCESS);
+
+    ASSERT_EQ(Compare_Certificates(client, server, false, true) , HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC003
+* @spec -
+* @title TLS 12 enables dual-end authentication and peer certificate caching.
+* @precon nan
+* @brief
+* 1. The client invokes the HITLS_CFG_SetKeepPeerCertificate interface to enable the peer certificate caching function.
+* 2. Establish a link. After the link is established, invoke HITLS_GetPeerCertificate and HITLS_GetPeerCertChain to check
+*    whether the peer certificate cached at both ends is correct.
+* @expect
+* 1. Setting succeeded.
+* 2. The link is successfully established. The cached certificate is the same as the certificate sent by the peer end.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC003(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC004
+* @spec -
+* @title TLS12 enables dual-end authentication and disables caching of the peer certificate.
+* @precon nan
+* @brief
+* 1. Invoke the HITLS_CFG_SetKeepPeerCertificate interface to disable peer certificate caching and enable two-way authentication.
+* 2. Establish a link. After the link is established, invoke HITLS_GetPeerCertificate and HITLS_GetPeerCertChain to check whether
+*  the peer certificate cached at both ends is NULL.
+* @expect
+* 1. Setting succeeded.
+* 2. Whether the Peer Certificate Cached at Both Ends Is NULL When Link Establishment Is Successful
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC004(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(c_config, false);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, false);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_EQ(Compare_Certificates(client, server, true, true), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC005
+* @spec -
+* @title Enable dual-end authentication during renegotiation.
+* @precon nan
+* @brief
+* 1. Disable the function of caching the peer certificate and set up a link when the client invokes the
+*    HITLS_CFG_SetKeepPeerCertificate interface.
+* 2. Enable dual-end authentication on the server and initiate renegotiation.
+* 3. Establish a link. After the link is established, invoke HITLS_GetPeerCertificate and HITLS_GetPeerCertChain to check
+*    whether the peer certificate cached at both ends is correct.
+* @expect
+* 1. Link setup success
+* 2. The setting is successful and renegotiation is initiated.
+* 3. The link is successfully established. The cached certificate is the same as the certificate sent by the peer end.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC005(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(c_config, false);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, false);
+    HITLS_CFG_SetRenegotiationSupport(c_config, true);
+    HITLS_CFG_SetRenegotiationSupport(s_config, true);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    HITLS_SetKeepPeerCertificate(client->ssl, true);
+    HITLS_SetKeepPeerCertificate(server->ssl, true);
+
+    ASSERT_TRUE(HITLS_Renegotiate(client->ssl) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Renegotiate(server->ssl) == HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC006
+* @spec -
+* @title Enable caching of the peer certificate and renegotiate a new certificate.
+* @precon nan
+* @brief
+* 1. Invoke the HITLS_CFG_SetKeepPeerCertificate interface to enable the function of caching the peer certificate and
+*    set up a link.
+* 2. Set the algorithm suite to HITLS_RSA_WITH_AES_128_CCM on the client and initiate renegotiation.
+* 3. After the renegotiation is complete, check whether the peer certificate cached on the client is an RSA certificate.
+* @expect
+* 1. Link setup success
+* 2. The setting is successful and renegotiation is initiated.
+* 3. The client caches the RSA certificate, which is the same as the certificate sent by the peer end during renegotiation.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC006(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_CERT_Store *verifyStore = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(c_config, false);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, false);
+    HITLS_CFG_SetRenegotiationSupport(c_config, true);
+    HITLS_CFG_SetRenegotiationSupport(s_config, true);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_EQ(Compare_Certificates(client, server, true, true), HITLS_SUCCESS);
+
+    char certChain2File[] = "../testdata/tls/certificate/der/ecdsa/inter-nist521.der";
+    char certee2File[] = "../testdata/tls/certificate/der/ecdsa/end256-sha256.der";
+    char privatekey2File[] = "../testdata/tls/certificate/der/ecdsa/end256-sha256.key.der";
+    char caCertFile[] = "../testdata/tls/certificate/der/ecdsa/ca-nist521.der";
+
+    HITLS_CERT_X509 *caCert = HITLS_CFG_ParseCert(c_config, (const uint8_t *)caCertFile,
+        strlen(caCertFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certChain2 = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChain2File,
+        strlen(certChain2File) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee2 = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certee2File,
+        strlen(certee2File) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey2 = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekey2File,
+        strlen(privatekey2File) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain2 != NULL);
+    ASSERT_TRUE(certee2 != NULL);
+    ASSERT_TRUE(privatekey2 != NULL);
+    ASSERT_TRUE(caCert != NULL);
+
+    verifyStore = SAL_CERT_StoreNew(s_config->certMgrCtx);
+    ASSERT_TRUE(verifyStore != NULL);
+    SAL_CERT_StoreCtrl(s_config, verifyStore, CERT_STORE_CTRL_ADD_CERT_LIST, caCert, NULL);
+    
+    ASSERT_EQ(HITLS_CFG_SetVerifyStore(&client->ssl->config.tlsConfig, verifyStore, false), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetVerifyStore(&server->ssl->config.tlsConfig, verifyStore, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(&client->ssl->config.tlsConfig, certee2, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(&client->ssl->config.tlsConfig, privatekey2, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(&client->ssl->config.tlsConfig, certChain2, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(&server->ssl->config.tlsConfig, certee2, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(&server->ssl->config.tlsConfig, privatekey2, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(&server->ssl->config.tlsConfig, certChain2, false), HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_SetKeepPeerCertificate(client->ssl, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetKeepPeerCertificate(server->ssl, true), HITLS_SUCCESS);
+
+    uint16_t cipher[] = {HITLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256};
+    ASSERT_EQ(HITLS_SetCipherSuites(client->ssl, cipher, sizeof(cipher)/sizeof(uint16_t)), HITLS_SUCCESS);
+    uint16_t signAlgs[] = {CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
+    HITLS_SetSigalgsList(client->ssl, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
+
+    ASSERT_TRUE(HITLS_Renegotiate(client->ssl) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Renegotiate(server->ssl) == HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC007
+* @spec -
+* @title Client Sending an Empty Certificate During Renegotiation
+* @precon nan
+* @brief
+* 1. The client invokes the HITLS_CFG_SetKeepPeerCertificate interface to enable the peer certificate caching function.
+* 2. Configure an empty certificate on the client, configure the server to allow the client to send an empty certificate,
+*    and initiate renegotiation.
+* 3. Set up a link. After the link is set up, invoke HITLS_GetPeerCertificate and HITLS_GetPeerCertChain to check whether
+*    the peer certificate cached on the server is NULL.
+* @expect
+* 1. Link setup success
+* 2. The setting is successful and renegotiation is initiated.
+* 3. The link is successfully established, and the certificate cached on the server is NULL.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC007(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetNoClientCertSupport(s_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(c_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, true);
+    HITLS_CFG_SetRenegotiationSupport(c_config, true);
+    HITLS_CFG_SetRenegotiationSupport(s_config, true);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+
+    uint32_t keyType = client->ssl->config.tlsConfig.certMgrCtx->currentCertKeyType;
+    ASSERT_TRUE(keyType != TLS_CERT_KEY_TYPE_UNKNOWN);
+    CERT_Pair *currentCertPair =  NULL;
+    CERT_MgrCtx *mgrCtx = client->ssl->config.tlsConfig.certMgrCtx;
+    (void)BSL_HASH_At(mgrCtx->certPairs, (uintptr_t)mgrCtx->currentCertKeyType, (uintptr_t *)&currentCertPair);
+    ASSERT_NE(currentCertPair, NULL);
+
+    ASSERT_TRUE(HITLS_Renegotiate(client->ssl) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Renegotiate(server->ssl) == HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    // The deep copy of the current certificate does use the reference counting mode. so isServerPeerCertNull is false.
+    ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC008
+* @spec -
+* @title Certificates are cached during the first link setup and are not cached during renegotiation.
+* @precon nan
+* @brief
+* 1. The client invokes the HITLS_CFG_SetKeepPeerCertificate interface to enable the peer certificate caching function.
+* 2. Disable the caching of the peer certificate on the client and server and initiate renegotiation.
+* 3. Establish a link. After the link is established, invoke HITLS_GetPeerCertificate and HITLS_GetPeerCertChain to check
+*  whether the peer certificate cached at both ends is NULL.
+* @expect
+* 1. Link setup success
+* 2. The setting is successful and renegotiation is initiated.
+* 3. The link is successfully established, and the cached certificate is NULL.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC008(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(c_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, true);
+    HITLS_CFG_SetRenegotiationSupport(c_config, true);
+    HITLS_CFG_SetRenegotiationSupport(s_config, true);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+
+    HITLS_SetKeepPeerCertificate(client->ssl, false);
+    HITLS_SetKeepPeerCertificate(server->ssl, false);
+
+    ASSERT_TRUE(HITLS_Renegotiate(client->ssl) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Renegotiate(server->ssl) == HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_EQ(Compare_Certificates(client, server, true, true), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC009
+* @spec -
+* @title Enable caching of the peer certificate, verify the client only once, and perform renegotiation.
+* @precon nan
+* @brief
+* 1. Invoke the HITLS_CFG_SetKeepPeerCertificate interface to enable the peer certificate cache function. Enable two-way
+*    authentication.
+* 2. Initiate renegotiation.
+* 3. After the renegotiation is complete, invoke HITLS_GetPeerCertificate and HITLS_GetPeerCertChain to check whether the
+*    peer certificate cached on the server is NULL
+* @expect
+* 1. Link setup success
+* 2. Renegotiation initiated successfully.
+* 3. The link is successfully established, and the cached certificate is NULL.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC009(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetClientOnceVerifySupport(s_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(c_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, true);
+    HITLS_CFG_SetRenegotiationSupport(c_config, true);
+    HITLS_CFG_SetRenegotiationSupport(s_config, true);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_Renegotiate(client->ssl) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Renegotiate(server->ssl) == HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_EQ(Compare_Certificates(client, server, false, true), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC010
+* @spec -
+* @title Enabling Peer Certificate Caching and Resuming Sessions
+* @precon nan
+* @brief
+* 1. The client invokes the HITLS_CFG_SetKeepPeerCertificate interface to enable the peer certificate caching function.
+* 2. Initiate session recovery.
+* 3. After the session is restored, the HITLS_GetPeerCertificate and HITLS_GetPeerCertChain interfaces are invoked to check
+*    the peer certificate cached at both ends.
+* @expect
+* 1. Link setup success
+* 2. Session resumption initiated successfully.
+* 3. The link is successfully established. The cached certificate is the peer certificate used during the first link establishment.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC010(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *Session = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(c_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, true);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    Session = HITLS_GetDupSession(client->ssl);
+    ASSERT_TRUE(Session != NULL);
+
+    ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(HITLS_SetSession(client->ssl, Session), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.isResume, true);
+
+    ASSERT_EQ(Compare_ResumeCertificates(client, server), HITLS_SUCCESS);
+EXIT:
+    HITLS_SESS_Free(Session);
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC011
+* @spec -
+* @title Not enabled for the first time. Peer-end certificate caching is enabled for session recovery.
+* @precon nan
+* @brief
+* 1. When the client and server invoke the HITLS_CFG_SetKeepPeerCertificate interface, the peer certificate caching
+*    function is disabled.
+* 2. Enable the function of caching the peer certificate on the client and server and initiate session recovery.
+* 3. After session restoration is complete, invoke HITLS_GetPeerCertificate and HITLS_GetPeerCertChain to check whether the
+*    peer certificate cached at both ends is NULL.
+* @expect
+* 1. Link setup success
+* 2. Session resumption initiated successfully.
+* 3. Whether the peer certificate in the dual-end cache is NULL
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC011(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *Session = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(c_config, false);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, false);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    Session = HITLS_GetDupSession(client->ssl);
+    ASSERT_TRUE(Session != NULL);
+
+    ASSERT_EQ(Compare_Certificates(client, server, true, true), HITLS_SUCCESS);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+
+    HITLS_CFG_SetKeepPeerCertificate(c_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, true);
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(HITLS_SetSession(client->ssl, Session), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.isResume, true);
+
+    ASSERT_EQ(Compare_Certificates(client, server, true, true), HITLS_SUCCESS);
+EXIT:
+    HITLS_SESS_Free(Session);
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC012
+* @spec -
+* @title Enabled for the First Time, Peer Certificate Cache Disabled for Session Restoration, Session Restoration
+* @precon nan
+* @brief
+* 1. The client invokes the HITLS_CFG_SetKeepPeerCertificate interface to enable the peer certificate caching function.
+* 2. Disable the function of caching the peer certificate on the client and server and initiate session recovery.
+* 3. After the session is restored, the HITLS_GetPeerCertificate and HITLS_GetPeerCertChain interfaces are invoked to check
+*    the peer certificate cached at both ends.
+* @expect
+* 1. Link setup success
+* 2. Session resumption initiated successfully.
+* 3. The link is successfully established. The cached certificate is the peer certificate used for the first link establishment.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC012(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *Session = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(c_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, true);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    Session = HITLS_GetDupSession(client->ssl);
+    ASSERT_TRUE(Session != NULL);
+
+    ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+
+    HITLS_CFG_SetKeepPeerCertificate(c_config, false);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, false);
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(HITLS_SetSession(client->ssl, Session), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.isResume, true);
+    ASSERT_EQ(server->ssl->negotiatedInfo.isResume, true);
+
+    ASSERT_EQ(Compare_ResumeCertificates(client, server), HITLS_SUCCESS);
+EXIT:
+    HITLS_SESS_Free(Session);
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC013
+* @spec -
+* @title Enabled for the First Time, Peer Certificate Cache Disabled for Session Restoration, Session Restoration
+* @precon nan
+* @brief
+* 1. The client invokes the HITLS_CFG_SetKeepPeerCertificate interface to enable the peer certificate cache and
+*    authentication after handshake.
+* 2. Establish a link. After the link is established, invoke HITLS_GetPeerCertificate and HITLS_GetPeerCertChain to check
+*    whether the peer certificate cached at both ends is correct. Expected result 2 is displayed.
+* 3. Authentication after the server initiates a handshake
+* 4. Check whether the peer certificate in the dual-end cache is correct.
+* @expect
+* 1. Setting succeeded.
+* 2. The link is successfully established. The client caches the peer certificate, and the server cache is NULL.
+* 3. Authentication completed after handshake.
+* 4. Peer certificates can be cached on both the client and server.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC013(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(c_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, true);
+    HITLS_CFG_SetPostHandshakeAuthSupport(c_config, true);
+    HITLS_CFG_SetPostHandshakeAuthSupport(s_config, true);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(Compare_Certificates(client, server, false, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_VerifyClientPostHandshake(server->ssl) == HITLS_SUCCESS);
+
+    uint8_t readbuff[READ_BUF_LEN_18K];
+    uint32_t readLen = 0;
+
+    // request
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+
+    // certificate
+    ASSERT_EQ(HITLS_Read(client->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->hsCtx->state, TRY_SEND_CERTIFICATE_VERIFY);
+    ASSERT_EQ(HITLS_Read(server->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(server->ssl->hsCtx->state, TRY_RECV_CERTIFICATE_VERIFY);
+
+    // verify
+    ASSERT_EQ(HITLS_Read(client->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->hsCtx->state, TRY_SEND_FINISH);
+    ASSERT_EQ(HITLS_Read(server->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(server->ssl->hsCtx->state, TRY_RECV_FINISH);
+
+    // finish
+    ASSERT_EQ(HITLS_Read(client->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(HITLS_Read(server->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(server->ssl->hsCtx->state, TRY_SEND_NEW_SESSION_TICKET);
+
+    // new sessionticket
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(client->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(server->ssl->hsCtx->state, TRY_SEND_NEW_SESSION_TICKET);
+
+    // new sessionticket
+    ASSERT_EQ(HITLS_Read(server->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(client->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+
+    ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_KeepPeerCertificate_TC014
+* @spec -
+* @title Session Recovery After the Peer Certificate Caching Function Is Enabled for TLS13
+* @precon nan
+* @brief
+* 1. Apply for a TLS13 client and server, invoke the HITLS_CFG_SetKeepPeerCertificate interface to enable the peer
+*    certificate, and enable two-way authentication.
+* 2. Initiate session recovery.
+* 3. After the session is restored, the HITLS_GetPeerCertificate and HITLS_GetPeerCertChain interfaces are invoked to check
+*    the peer certificate cached at both ends.
+* @expect
+* 1. Link setup success
+* 2. Session resumption initiated successfully.
+* 3. The link is successfully established. The cached certificate is the peer certificate used during the first link establishment.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_KeepPeerCertificate_TC014(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(c_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, true);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+
+    HITLS_Session *Session = HITLS_GetDupSession(client->ssl);
+    ASSERT_TRUE(Session != NULL);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(HITLS_SetSession(client->ssl, Session), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_EQ(Compare_ResumeCertificates(client, server), HITLS_SUCCESS);
+EXIT:
+    HITLS_SESS_Free(Session);
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_HITLS_CM_SETRECORDSIZELIMIT_API_TC001
+* @spec  -
+* @title  Testing the HITLS_SetRecordSizeLimit interface
+* @precon  nan
+@ */
+/* BEGIN_CASE */
+void SDV_HITLS_CM_SETRECORDSIZELIMIT_API_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_TRUE(HITLS_SetRecordSizeLimit(NULL, HITLS_MIN_RECORDSIZE_LIMIT) == HITLS_NULL_INPUT);
+
+    ctx->state = CM_STATE_HANDSHAKING;
+    ASSERT_TRUE(HITLS_SetRecordSizeLimit(ctx, HITLS_MIN_RECORDSIZE_LIMIT) == HITLS_CM_LINK_HANDSHAKING);
+    ctx->state = CM_STATE_RENEGOTIATION;
+    ASSERT_TRUE(HITLS_SetRecordSizeLimit(ctx, HITLS_MIN_RECORDSIZE_LIMIT) == HITLS_CM_LINK_HANDSHAKING);
+    ctx->state = CM_STATE_ALERTING;
+    ASSERT_TRUE(HITLS_SetRecordSizeLimit(ctx, HITLS_MIN_RECORDSIZE_LIMIT) == HITLS_CM_LINK_HANDSHAKING);
+    ctx->state = CM_STATE_ALERTED;
+    ASSERT_TRUE(HITLS_SetRecordSizeLimit(ctx, HITLS_MIN_RECORDSIZE_LIMIT) == HITLS_CM_LINK_HANDSHAKING);
+    ctx->state = CM_STATE_CLOSED;
+    ASSERT_TRUE(HITLS_SetRecordSizeLimit(ctx, HITLS_MIN_RECORDSIZE_LIMIT) == HITLS_CM_LINK_HANDSHAKING);
+
+    ctx->state = CM_STATE_IDLE;
+    ASSERT_TRUE(HITLS_SetRecordSizeLimit(ctx, HITLS_MIN_RECORDSIZE_LIMIT) == HITLS_SUCCESS);
+    ctx->state = CM_STATE_TRANSPORTING;
+    ASSERT_TRUE(HITLS_SetRecordSizeLimit(ctx, HITLS_MIN_RECORDSIZE_LIMIT) == HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  HITLS_UT_TLS_GET_RECORDSIZELIMIT_API_TC001
+* @spec  -
+* @title  Cover Abnormal Input Parameters of the HITLS_GetRecordSizeLimit Interface
+* @precon  nan
+* @brief  1.Invoke the HITLS_GetRecordSizeLimit interface. Ctx is NULL, recordSizeLimit is not NULL. Expected result 2.
+*         2.Invoke the HITLS_GetRecordSizeLimit interface. Ctx is not NULL, recordSizeLimit is not NULL. Expected result 1.
+* @expect  1.Return HITLS_SUCCESS
+*          2.Return HITLS_NULL_INPUT
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void HITLS_UT_TLS_GET_RECORDSIZELIMIT_API_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    HITLS_Ctx *ctx = HITLS_New(tlsConfig);
+    ASSERT_TRUE(ctx != NULL);
+    uint16_t recordSizeLimit = 0;
+
+    int32_t ret = HITLS_GetRecordSizeLimit(NULL, &recordSizeLimit);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+
+    ret = HITLS_GetRecordSizeLimit(ctx, &recordSizeLimit);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test  HITLS_UT_TLS_GET_RECORD_SIZE_LIMIT_TC001
+ * @spec  -
+ * @title  Cover Abnormal Input Parameters of the HITLS_CFG_GetRecordSizeLimit Interface
+ * @precon  nan
+ * @brief  1.Invoke the HITLS_CFG_GetRecordSizeLimit interface. Config is NULL, recordSize is not NULL. Expected result 2.
+ *         2.Invoke the HITLS_CFG_GetRecordSizeLimit interface. Config is not NULL, recordSize is NULL. Expected result 2.
+ *         3.Invoke the HITLS_CFG_GetRecordSizeLimit interface. Config is not NULL, recordSize is not NULL. Expected result 1.
+ * @expect  1.Return HITLS_SUCCESS
+ *          2.Return HITLS_NULL_INPUT
+ * @prior  Level 1
+ * @auto  TRUE
+ **/
+/* BEGIN_CASE */
+void HITLS_UT_TLS_GET_RECORD_SIZE_LIMIT_TC001(void)
+{
+    HitlsInit();
+
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    uint16_t size = 0;
+    int32_t ret = HITLS_CFG_GetRecordSizeLimit(NULL, &size);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+
+    ret = HITLS_CFG_GetRecordSizeLimit(tlsConfig, NULL);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+
+    ret = HITLS_CFG_GetRecordSizeLimit(tlsConfig, &size);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    return;
 }
 /* END_CASE */

@@ -26,6 +26,7 @@
 #include "hs_ctx.h"
 #include "hs_verify.h"
 #include "hs_common.h"
+#include "hs_cert.h"
 #include "hs_msg.h"
 #include "recv_process.h"
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
@@ -74,7 +75,7 @@ int32_t Tls13RecvCertVerifyProcess(TLS_Ctx *ctx)
             expectCertInfo.signSchemeList = ctx->peerInfo.signatureAlgorithms;
             expectCertInfo.signSchemeNum = ctx->peerInfo.signatureAlgorithmsSize;
             expectCertInfo.caList = ctx->peerInfo.caList;
-            (void)SAL_CERT_SelectCertByInfo(ctx, &expectCertInfo);
+            (void)HS_SelectCertByInfo(ctx, &expectCertInfo);
         }
     }
     return HS_ChangeState(ctx, TRY_RECV_FINISH);

@@ -20,22 +20,21 @@
 #include "bsl_log.h"
 #include "bsl_err_internal.h"
 #include "hitls_error.h"
+#include "rec.h"
 #include "tls.h"
 #include "hs_ctx.h"
-#include "hs_verify.h"
 #include "hs_common.h"
+#include "hs_verify.h"
 #include "pack.h"
 #include "send_process.h"
 
 int32_t DtlsServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx)
 {
     int32_t ret;
-    /** get the server infomation */
-    HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
+    HS_Ctx *hsCtx = ctx->hsCtx;
 
-    /** determine whether to assemble a message */
+    /* determine whether to assemble a message */
     if (hsCtx->msgLen == 0) {
-        /* assemble message */
         ret = HS_PackMsg(ctx, HELLO_VERIFY_REQUEST);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17333, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -44,7 +43,6 @@ int32_t DtlsServerSendHelloVerifyRequestProcess(TLS_Ctx *ctx)
         }
     }
 
-    /** writing handshake message */
     ret = HS_SendMsg(ctx);
     if (ret != HITLS_SUCCESS) {
         return ret;

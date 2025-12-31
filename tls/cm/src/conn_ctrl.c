@@ -129,7 +129,7 @@ int32_t HITLS_GetSessionTicketKey(const HITLS_Ctx *ctx, uint8_t *key, uint32_t k
         return HITLS_NULL_INPUT;
     }
 
-    return HITLS_CFG_GetSessionTicketKey(&ctx->config.tlsConfig, key, keySize, outSize);
+    return HITLS_CFG_GetSessionTicketKey(ctx->globalConfig, key, keySize, outSize);
 }
 
 int32_t HITLS_SetSessionTicketKey(HITLS_Ctx *ctx, const uint8_t *key, uint32_t keySize)
@@ -138,7 +138,7 @@ int32_t HITLS_SetSessionTicketKey(HITLS_Ctx *ctx, const uint8_t *key, uint32_t k
         return HITLS_NULL_INPUT;
     }
 
-    return HITLS_CFG_SetSessionTicketKey(&ctx->config.tlsConfig, key, keySize);
+    return HITLS_CFG_SetSessionTicketKey(ctx->globalConfig, key, keySize);
 }
 #endif
 
@@ -189,7 +189,7 @@ HITLS_CERT_X509 *HITLS_GetPeerCertificate(const HITLS_Ctx *ctx)
         return NULL;
     }
 
-    HITLS_CERT_X509 *cert = SAL_CERT_PairGetX509(peerCert);
+    HITLS_CERT_X509 *cert = SAL_CERT_PAIR_GET_X509_EX(peerCert);
     /* Certificate reference increments by one */
     return cert == NULL ? NULL : SAL_CERT_X509Ref(ctx->config.tlsConfig.certMgrCtx, cert);
 }
@@ -306,7 +306,7 @@ int32_t HITLS_GetVerifyNoneSupport(HITLS_Ctx *ctx, bool *isSupport)
 }
 #endif
 
-#if defined(HITLS_TLS_FEATURE_CERT_MODE) && defined(HITLS_TLS_FEATURE_RENEGOTIATION)
+#ifdef HITLS_TLS_FEATURE_CERT_MODE
 int32_t HITLS_GetClientOnceVerifySupport(HITLS_Ctx *ctx, bool *isSupport)
 {
     if (ctx == NULL) {
@@ -336,6 +336,7 @@ int32_t HITLS_SetModeSupport(HITLS_Ctx *ctx, uint32_t mode)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
+
     return HITLS_CFG_SetModeSupport(&(ctx->config.tlsConfig), mode);
 }
 
@@ -352,6 +353,7 @@ int32_t HITLS_GetModeSupport(const HITLS_Ctx *ctx, uint32_t *mode)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
+
     return HITLS_CFG_GetModeSupport(&(ctx->config.tlsConfig), mode);
 }
 #endif
@@ -466,6 +468,7 @@ int32_t HITLS_GetSessionTicketSupport(const HITLS_Ctx *ctx, bool *isSupport)
     return HITLS_CFG_GetSessionTicketSupport(&(ctx->config.tlsConfig), isSupport);
 }
 #endif
+
 int32_t HITLS_SetEmptyRecordsNum(HITLS_Ctx *ctx, uint32_t emptyNum)
 {
     if (ctx == NULL) {
@@ -563,22 +566,22 @@ int32_t HITLS_GetFlightTransmitSwitch(const HITLS_Ctx *ctx, bool *isEnable)
 #endif
 
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
-int32_t HITLS_SetDtlsCookieExangeSupport(HITLS_Ctx *ctx, bool isEnable)
+int32_t HITLS_SetDtlsCookieExangeSupport(HITLS_Ctx *ctx, bool isSupport)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    return HITLS_CFG_SetDtlsCookieExchangeSupport(&(ctx->config.tlsConfig), isEnable);
+    return HITLS_CFG_SetDtlsCookieExchangeSupport(&(ctx->config.tlsConfig), isSupport);
 }
 
-int32_t HITLS_GetDtlsCookieExangeSupport(const HITLS_Ctx *ctx, bool *isEnable)
+int32_t HITLS_GetDtlsCookieExangeSupport(const HITLS_Ctx *ctx, bool *isSupport)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    return HITLS_CFG_GetDtlsCookieExchangeSupport(&(ctx->config.tlsConfig), isEnable);
+    return HITLS_CFG_GetDtlsCookieExchangeSupport(&(ctx->config.tlsConfig), isSupport);
 }
 #endif
 
@@ -621,24 +624,24 @@ int32_t HITLS_GetMaxCertList(const HITLS_Ctx *ctx, uint32_t *maxSize)
 #endif
 
 #ifdef HITLS_TLS_CONFIG_MANUAL_DH
-int32_t HITLS_SetTmpDhCb(HITLS_Ctx *ctx, HITLS_DhTmpCb cb)
+int32_t HITLS_SetTmpDhCb(HITLS_Ctx *ctx, HITLS_DhTmpCb callback)
 {
-    if (ctx == NULL || cb == NULL) {
+    if (ctx == NULL || callback == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    return HITLS_CFG_SetTmpDhCb(&(ctx->config.tlsConfig), cb);
+    return HITLS_CFG_SetTmpDhCb(&(ctx->config.tlsConfig), callback);
 }
 #endif /* HITLS_TLS_CONFIG_MANUAL_DH */
 
 #ifdef HITLS_TLS_CONFIG_RECORD_PADDING
-int32_t HITLS_SetRecordPaddingCb(HITLS_Ctx *ctx, HITLS_RecordPaddingCb cb)
+int32_t HITLS_SetRecordPaddingCb(HITLS_Ctx *ctx, HITLS_RecordPaddingCb callback)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    return HITLS_CFG_SetRecordPaddingCb(&(ctx->config.tlsConfig), cb);
+    return HITLS_CFG_SetRecordPaddingCb(&(ctx->config.tlsConfig), callback);
 }
 
 HITLS_RecordPaddingCb HITLS_GetRecordPaddingCb(HITLS_Ctx *ctx)
@@ -676,6 +679,40 @@ int32_t HITLS_SetCheckKeyUsage(HITLS_Ctx *ctx, bool isCheck)
         return HITLS_NULL_INPUT;
     }
     return HITLS_CFG_SetCheckKeyUsage(&(ctx->config.tlsConfig), isCheck);
+}
+#endif
+
+#if defined(HITLS_TLS_CONNECTION_INFO_NEGOTIATION) && defined(HITLS_TLS_FEATURE_SESSION)
+int32_t HITLS_SetKeepPeerCertificate(HITLS_Ctx *ctx, bool isKeepPeerCert)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    return HITLS_CFG_SetKeepPeerCertificate(&(ctx->config.tlsConfig), isKeepPeerCert);
+}
+#endif
+
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+int32_t HITLS_SetRecordSizeLimit(HITLS_Ctx *ctx, uint16_t recordSize)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    if (ctx->state == CM_STATE_IDLE || ctx->state == CM_STATE_TRANSPORTING) {
+        return HITLS_CFG_SetRecordSizeLimit(&(ctx->config.tlsConfig), recordSize);
+    }
+
+    return HITLS_CM_LINK_HANDSHAKING;
+}
+
+int32_t HITLS_GetRecordSizeLimit(HITLS_Ctx *ctx, uint16_t *recordSize)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_GetRecordSizeLimit(&(ctx->config.tlsConfig), recordSize);
 }
 #endif
 

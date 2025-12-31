@@ -23,6 +23,7 @@
 #include "securec.h"
 
 #define FAKE_BSL_UIO_FD 666
+#define IPV4_WITH_UDP_HEADER_LEN 28
 
 FrameUioUserData *FRAME_IO_CreateUserData(void)
 {
@@ -106,6 +107,10 @@ int32_t FRAME_Ctrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *param)
 
     if (cmd == BSL_UIO_GET_FD) {
         *(int32_t *)param = FAKE_BSL_UIO_FD;
+    }
+
+    if (cmd == BSL_UIO_UDP_GET_MTU_OVERHEAD) {
+        *(uint8_t *)param = IPV4_WITH_UDP_HEADER_LEN;
     }
 
     return BSL_SUCCESS;

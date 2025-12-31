@@ -21,33 +21,6 @@
 #include "cert_mgr.h"
 #include "cert_mgr_ctx.h"
 
-HITLS_CERT_X509 *SAL_CERT_PairGetX509(CERT_Pair *certPair)
-{
-    if (certPair == NULL) {
-        return NULL;
-    }
-    return certPair->cert;
-}
-
-#ifdef HITLS_TLS_PROTO_TLCP11
-HITLS_CERT_X509 *SAL_CERT_GetTlcpEncCert(CERT_Pair *certPair)
-{
-    if (certPair == NULL) {
-        return NULL;
-    }
-    return certPair->encCert;
-}
-#endif
-#if defined(HITLS_TLS_CONNECTION_INFO_NEGOTIATION)
-HITLS_CERT_Chain *SAL_CERT_PairGetChain(CERT_Pair *certPair)
-{
-    if (certPair == NULL) {
-        return NULL;
-    }
-    return certPair->chain;
-}
-#endif /* HITLS_TLS_CONNECTION_INFO_NEGOTIATION */
-
 #ifdef HITLS_TLS_PROTO_TLCP11
 static int32_t TlcpCertPairDup(CERT_MgrCtx *mgrCtx, CERT_Pair *srcCertPair, CERT_Pair *destCertPair)
 {
@@ -151,7 +124,7 @@ void SAL_CERT_PairClear(CERT_MgrCtx *mgrCtx, CERT_Pair *certPair)
 void SAL_CERT_PairFree(CERT_MgrCtx *mgrCtx, CERT_Pair *certPair)
 {
     SAL_CERT_PairClear(mgrCtx, certPair);
-    BSL_SAL_FREE(certPair);
+    BSL_SAL_Free(certPair);
     return;
 }
 
@@ -168,7 +141,8 @@ int32_t SAL_CERT_HashDup(CERT_MgrCtx *destMgrCtx, CERT_MgrCtx *srcMgrCtx)
     BSL_HASH_Iterator iter = BSL_HASH_IterBegin(certPairs);
     while (iter != BSL_HASH_IterEnd(certPairs)) {
         uint32_t keyType = (uint32_t)BSL_HASH_HashIterKey(certPairs, iter);
-        CERT_Pair *certPair = (CERT_Pair *)BSL_HASH_IterValue(certPairs, iter);
+        uintptr_t ptr = BSL_HASH_IterValue(certPairs, iter);
+        CERT_Pair *certPair = (CERT_Pair *)ptr;
         if (certPair != NULL) {
             CERT_Pair *newCertPair = SAL_CERT_PairDup(srcMgrCtx, certPair);
             if (newCertPair == NULL) {

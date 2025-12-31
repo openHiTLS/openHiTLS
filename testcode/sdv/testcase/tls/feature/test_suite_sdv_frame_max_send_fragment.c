@@ -212,6 +212,10 @@ void UT_TLS_CM_SET_MAX_SEND_FRAGMENT_TC001(void)
     ASSERT_TRUE(client != NULL);
     server = FRAME_CreateLink(config, BSL_UIO_UDP);
     ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
     /* value > 512 */
     uint16_t maxSendFragment = 1000;
     ASSERT_TRUE(HITLS_SetMaxSendFragment(client->ssl, maxSendFragment) == HITLS_SUCCESS);

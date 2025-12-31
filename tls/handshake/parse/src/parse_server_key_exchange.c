@@ -146,7 +146,7 @@ int32_t VerifySignature(TLS_Ctx *ctx, const uint8_t *kxData, uint32_t kxDataLen,
             BINGLOG_STR("peerCert null"), ALERT_CERTIFICATE_REQUIRED);
     }
 
-    HITLS_CERT_X509 *cert = SAL_CERT_PairGetX509(ctx->hsCtx->peerCert);
+    HITLS_CERT_X509 *cert = SAL_CERT_PAIR_GET_X509(ctx->hsCtx->peerCert);
     HITLS_CERT_Key *pubkey = NULL;
     int32_t ret = SAL_CERT_X509Ctrl(&(ctx->config.tlsConfig), cert, CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
     if (ret != HITLS_SUCCESS) {
@@ -185,7 +185,7 @@ static int32_t ParseEcdhePublicKey(ParsePacket *pkt, ServerEcdh *ecdh)
     }
 #endif /* HITLS_TLS_PROTO_TLCP11 */
     if ((ecdh->ecPara.type == HITLS_EC_CURVE_TYPE_NAMED_CURVE) &&
-        (pubKeySize != SAL_CRYPT_GetCryptLength(pkt->ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN,
+        (pubKeySize != HS_GetCryptLength(pkt->ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN,
             ecdh->ecPara.param.namedcurve))) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15300, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "ecdhe server pubkey length error, curve id = %u, pubkey len = %u.",
@@ -236,6 +236,21 @@ int32_t ParseEcParameters(ParsePacket *pkt, ServerEcdh *ecdh)
     return HITLS_SUCCESS;
 }
 
+static int32_t ParseEcdhePreSign(ParsePacket *pkt, ServerKeyExchangeMsg *msg)
+{
+    /* Parse the EC parameter in the ECDH message on the server */
+    int32_t ret = ParseEcParameters(pkt, &msg->keyEx.ecdh);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    /* Parse DH public key from peer */
+    ret = ParseEcdhePublicKey(pkt, &msg->keyEx.ecdh);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    return HITLS_SUCCESS;
+}
+
 /**
  * @brief Parse the server ecdh message.
  *
@@ -253,18 +268,10 @@ int32_t ParseEcParameters(ParsePacket *pkt, ServerEcdh *ecdh)
 static int32_t ParseServerEcdhe(ParsePacket *pkt, ServerKeyExchangeMsg *msg)
 {
     TLS_Ctx *ctx = pkt->ctx;
-    /* Parse the EC parameter in the ECDH message on the server */
-    int32_t ret = ParseEcParameters(pkt, &msg->keyEx.ecdh);
+    int32_t ret = ParseEcdhePreSign(pkt, msg);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
-    /* Parse DH public key from peer */
-    ret = ParseEcdhePublicKey(pkt, &msg->keyEx.ecdh);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
     /*  ECDHE_PSK and ANON_ECDHE key exchange are not signed */
     if (ctx->hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_ECDHE_PSK ||
         ctx->negotiatedInfo.cipherSuiteInfo.authAlg == HITLS_AUTH_NULL) {
@@ -441,7 +448,7 @@ static int32_t VerifyServerKxMsgEcc(ParsePacket *pkt, CERT_SignParam *signParam)
             "parse ecc signature fail.", 0, 0, 0, 0);
         return HITLS_PARSE_ECDH_SIGN_ERR;
     }
-    HITLS_CERT_X509 *signCert = SAL_CERT_PairGetX509(ctx->hsCtx->peerCert);
+    HITLS_CERT_X509 *signCert = SAL_CERT_PAIR_GET_X509_EX(ctx->hsCtx->peerCert);
     HITLS_CERT_Key *pubkey = NULL;
     ret = SAL_CERT_X509Ctrl(&(ctx->config.tlsConfig), signCert,
         CERT_CTRL_GET_PUB_KEY, NULL, (void *)&pubkey);
@@ -498,7 +505,7 @@ static int32_t ParseServerKxMsgEcc(ParsePacket *pkt)
 
 int32_t ParseServerKeyExchange(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, HS_Msg *hsMsg)
 {
-    int32_t ret;
+    int32_t ret = HITLS_SUCCESS;
     uint32_t offset = 0u;
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
     ServerKeyExchangeMsg *msg = &hsMsg->body.serverKeyExchange;
@@ -530,7 +537,6 @@ int32_t ParseServerKeyExchange(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, 
         /* PSK & RSA_PSK nego may pack identity hint inside ServerKeyExchange msg */
         case HITLS_KEY_EXCH_PSK:
         case HITLS_KEY_EXCH_RSA_PSK:
-            ret = HITLS_SUCCESS;
             break;
 #endif /* HITLS_TLS_SUITE_KX_RSA */
 #ifdef HITLS_TLS_PROTO_TLCP11
@@ -571,8 +577,6 @@ void CleanServerKeyExchange(ServerKeyExchangeMsg *msg)
     }
 #endif
     BSL_SAL_FREE(msg->pskIdentityHint);
-
-    return;
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
 #endif /* HITLS_TLS_HOST_CLIENT */

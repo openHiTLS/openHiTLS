@@ -46,7 +46,7 @@
 #include "hs_ctx.h"
 #include "conn_common.h"
 
-
+#ifdef HITLS_BSL_LOG
 static const char *GetStateString(uint32_t state)
 {
     /* * Unknown status */
@@ -66,6 +66,7 @@ static const char *GetStateString(uint32_t state)
     /* Current status */
     return stateMachineStr[state];
 }
+#endif
 
 void ConnCleanSensitiveData(TLS_Ctx *ctx)
 {
@@ -100,7 +101,6 @@ void ChangeConnState(HITLS_Ctx *ctx, CM_State state)
         GetStateString(ctx->preState));
     BSL_LOG_BINLOG_VARLEN(BINLOG_ID15840, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN, "change to [%s]",
         GetStateString(state));
-    return;
 }
 
 int32_t CommonEventInAlertingState(HITLS_Ctx *ctx)
@@ -125,7 +125,7 @@ int32_t CommonEventInAlertingState(HITLS_Ctx *ctx)
     }
 #ifdef HITLS_TLS_FEATURE_INDICATOR
     uint8_t data[2] = {alertInfo.level, alertInfo.description};
-    INDICATOR_MessageIndicate(1, HS_GetVersion(ctx), REC_TYPE_ALERT, data, sizeof(data) / sizeof(uint8_t), ctx,
+    INDICATOR_MessageIndicate(1, GET_VERSION_FROM_CTX(ctx), REC_TYPE_ALERT, data, sizeof(data) / sizeof(uint8_t), ctx,
         ctx->config.tlsConfig.msgArg);
 
     INDICATOR_StatusIndicate(ctx, INDICATE_EVENT_WRITE_ALERT,
@@ -148,8 +148,8 @@ int32_t CommonEventInAlertingState(HITLS_Ctx *ctx)
             ChangeConnState(ctx, CM_STATE_ALERTED);
         }
         ctx->shutdownState |= HITLS_SENT_SHUTDOWN;
-        /* If the previous state was not in the transporting state, the connection should be closed directly, and
-         * reading and writing are not allowed. */
+        /* If the previous state of alerting is not transporting, the link should be directly closed and read and
+         * write are not allowed. */
         if (ctx->preState != CM_STATE_TRANSPORTING) {
             ctx->shutdownState |= HITLS_RECEIVED_SHUTDOWN;
         }
@@ -166,7 +166,7 @@ static int32_t AlertRecvProcess(HITLS_Ctx *ctx, const ALERT_Info *alertInfo)
 {
 #ifdef HITLS_TLS_FEATURE_INDICATOR
     uint8_t data[2] = {alertInfo->level, alertInfo->description};
-    INDICATOR_MessageIndicate(0, HS_GetVersion(ctx), REC_TYPE_ALERT, data, sizeof(data) / sizeof(uint8_t), ctx,
+    INDICATOR_MessageIndicate(0, GET_VERSION_FROM_CTX(ctx), REC_TYPE_ALERT, data, sizeof(data) / sizeof(uint8_t), ctx,
         ctx->config.tlsConfig.msgArg);
 
     INDICATOR_StatusIndicate(ctx, INDICATE_EVENT_READ_ALERT,
@@ -281,7 +281,9 @@ int32_t CommonEventInHandshakingState(HITLS_Ctx *ctx)
 
     // If HS_DoHandshake returns success, the connection has been established.
     ChangeConnState(ctx, CM_STATE_TRANSPORTING);
+
     HS_DeInit(ctx);
+
     return HITLS_SUCCESS;
 }
 
@@ -317,6 +319,37 @@ int32_t HITLS_SetCipherSuites(HITLS_Ctx *ctx, const uint16_t *cipherSuites, uint
     }
     return HITLS_CFG_SetCipherSuites(&(ctx->config.tlsConfig), cipherSuites, cipherSuitesSize);
 }
+#ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
+int32_t HITLS_GetCipherSuites(HITLS_Ctx *ctx, uint16_t *data, uint32_t dataLen, uint32_t *cipherSuitesSize)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    return HITLS_CFG_GetCipherSuites(&(ctx->config.tlsConfig), data, dataLen, cipherSuitesSize);
+}
+
+int32_t HITLS_GetClientCipherSuites(HITLS_Ctx *ctx, uint16_t *data, uint32_t dataLen, uint32_t *cipherSuitesSize)
+{
+    if (ctx == NULL || data == NULL || cipherSuitesSize == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    if (ctx->isClient) {
+        *cipherSuitesSize = 0;
+        return HITLS_SUCCESS;
+    }
+
+    if (dataLen < ctx->peerInfo.cipherSuitesSize) {
+        return HITLS_CONFIG_INVALID_LENGTH;
+    }
+
+    for (uint32_t i = 0; i < ctx->peerInfo.cipherSuitesSize; i++) {
+        data[i] = ctx->peerInfo.cipherSuites[i];
+    }
+    *cipherSuitesSize = ctx->peerInfo.cipherSuitesSize;
+    return HITLS_SUCCESS;
+}
+#endif
 #ifdef HITLS_TLS_FEATURE_ALPN
 int32_t HITLS_SetAlpnProtos(HITLS_Ctx *ctx, const uint8_t *protos, uint32_t protosLen)
 {
@@ -364,6 +397,78 @@ const HITLS_Cipher *HITLS_GetCurrentCipher(const HITLS_Ctx *ctx)
     return &(ctx->negotiatedInfo.cipherSuiteInfo);
 }
 #endif
+
+#ifdef HITLS_TLS_FEATURE_SECURITY
+int32_t GetAvailableCipherList(const HITLS_Ctx *ctx, HITLS_CIPHER_List *cipherList, uint16_t *cipherSuites,
+    uint32_t cipherSuitesSize)
+{
+    int32_t ret = BSL_INTERNAL_EXCEPTION;
+    for (uint32_t i = 0; i < cipherSuitesSize; i++) {
+        const HITLS_Cipher *tmpCipher = HITLS_CFG_GetCipherByID(cipherSuites[i]);
+        if (tmpCipher == NULL) {
+            continue;
+        }
+        HITLS_Cipher *cipher = BSL_SAL_Dump(tmpCipher, sizeof(HITLS_Cipher));
+        if (cipher == NULL) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16461, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Dump fail", 0, 0, 0, 0);
+            return HITLS_MEMCPY_FAIL;
+        }
+        if (SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CIPHER_CHECK, 0, 0, (void *)cipher) == SECURITY_SUCCESS) {
+            ret = BSL_LIST_AddElement(cipherList, cipher, BSL_LIST_POS_END);
+            if (ret != BSL_SUCCESS) {
+                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16462, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                    "AddElement fail, ret %d", ret, 0, 0, 0);
+                BSL_SAL_Free(cipher);
+                return HITLS_MEMALLOC_FAIL;
+            }
+        } else {
+            BSL_SAL_Free(cipher);
+        }
+    }
+    if (ret != BSL_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16463, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "ret %d", ret, 0, 0, 0);
+        return HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE;
+    }
+    return HITLS_SUCCESS;
+}
+
+HITLS_CIPHER_List *HITLS_GetSupportedCiphers(const HITLS_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17143, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "ctx null", 0, 0, 0, 0);
+        return NULL;
+    }
+    HITLS_CIPHER_List *cipherList = BSL_LIST_New(sizeof(HITLS_Cipher *));
+    if (cipherList == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17151, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "LIST_New fail", 0, 0, 0, 0);
+        return NULL;
+    }
+
+    const TLS_Config *config = HITLS_GetConfig(ctx);
+    if (config == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17102, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "GetConfig fail", 0, 0, 0, 0);
+        BSL_LIST_FREE(cipherList, BSL_SAL_Free);
+        return NULL;
+    }
+
+    if (GetAvailableCipherList(ctx, cipherList, config->cipherSuites, config->cipherSuitesSize) != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17153, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "GetAvailableCipherList fail", 0, 0, 0, 0);
+        BSL_LIST_FREE(cipherList, BSL_SAL_Free);
+        return NULL;
+    }
+#ifdef HITLS_TLS_PROTO_TLS13
+    if (ctx->config.tlsConfig.maxVersion == HITLS_VERSION_TLS13 && GetAvailableCipherList(ctx, cipherList,
+        config->tls13CipherSuites, config->tls13cipherSuitesSize) != HITLS_SUCCESS) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17149, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "GetAvailableCipherList fail", 0, 0, 0, 0);
+        BSL_LIST_FREE(cipherList, BSL_SAL_Free);
+        return NULL;
+    }
+#endif
+    return cipherList;
+}
+#endif /* HITLS_TLS_FEATURE_SECURITY */
 
 int32_t HITLS_IsClient(const HITLS_Ctx *ctx, bool *isClient)
 {
@@ -655,6 +760,7 @@ int32_t CommonEventInRenegotiationState(HITLS_Ctx *ctx)
 
     // If the HS_DoHandshake message is returned successfully, the link has been terminated.
     ChangeConnState(ctx, CM_STATE_TRANSPORTING);
+
     HS_DeInit(ctx);
 
     // Prevent the renegotiation status from being changed after the Hello Request message is sent.
@@ -664,7 +770,11 @@ int32_t CommonEventInRenegotiationState(HITLS_Ctx *ctx)
         BSL_LOG_BINLOG_FIXLEN(
             BINLOG_ID15952, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN, "renegotiate completed.", 0, 0, 0, 0);
     }
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+    return REC_RecOutBufReSet(ctx);
+#else
     return HITLS_SUCCESS;
+#endif /* HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT */
 }
 #endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
 
@@ -737,6 +847,7 @@ int32_t HITLS_GetExtenedMasterSecretSupport(HITLS_Ctx *ctx, bool *isSupport)
 
     return HITLS_CFG_GetExtenedMasterSecretSupport(&(ctx->config.tlsConfig), isSupport);
 }
+
 #if defined(HITLS_TLS_FEATURE_RENEGOTIATION) && defined(HITLS_TLS_FEATURE_SESSION)
 int32_t HITLS_SetResumptionOnRenegoSupport(HITLS_Ctx *ctx, bool support)
 {

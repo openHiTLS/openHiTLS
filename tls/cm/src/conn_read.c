@@ -30,9 +30,9 @@
 #include "hs_common.h"
 #include "hs_ctx.h"
 #include "crypt.h"
+#include "hs_dtls_timer.h"
 #include "hs_state_recv.h"
 #include "bsl_bytes.h"
-#include "hs_dtls_timer.h"
 
 #define HS_MESSAGE_LEN_FIELD 3u
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
@@ -320,12 +320,16 @@ static int32_t ReadEventInTransportingState(HITLS_Ctx *ctx, uint8_t *data, uint3
         ret = APP_Read(ctx, data, bufSize, readLen);
         if (ret == HITLS_SUCCESS) {
             if ((!ctx->negotiatedInfo.isRenegotiation) && (ctx->hsCtx != NULL)) {
+                /* In the UDP scenario, if an APP message is received, the peer end considers that the link
+                 * establishment is complete. In this case, the hsCtx memory needs to be released */
                 HS_DeInit(ctx);
             }
             /* An APP message is received */
             break;
         }
 
+        /* The handshake message processing flow starts when an error code such as alarm, CCS,
+            unknown type message, or decoding error is received. */
         if (ret == HITLS_REC_NORMAL_RECV_UNEXPECT_MSG && REC_GetUnexpectedMsgType(ctx) == REC_TYPE_HANDSHAKE) {
             unexpectMsgRet = PreprocessUnexpectHsMsg(ctx);
             if (unexpectMsgRet != HITLS_SUCCESS) {
@@ -607,4 +611,3 @@ int32_t HITLS_DtlsGetTimeout(HITLS_Ctx *ctx, uint64_t *remainTimeOut)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
-

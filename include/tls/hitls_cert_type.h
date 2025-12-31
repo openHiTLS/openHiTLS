@@ -84,37 +84,43 @@ typedef struct BslList HITLS_CERT_CRLList;
  */
 typedef enum {
     CERT_STORE_CTRL_SET_VERIFY_DEPTH = 0,   /**< Set the certificate verification depth. */
-    CERT_STORE_CTRL_ADD_CERT_LIST,      /**< Add ca and chain certificate to store */
-    CERT_STORE_CTRL_GET_VERIFY_DEPTH,   /**< Get the certificate verification depth. */
-    CERT_STORE_CTRL_ADD_CRL_LIST,       /**< Add CRL list to verify store */
-    CERT_STORE_CTRL_CLEAR_CRL_LIST,     /**< Clear all CRLs from verify store */
-    CERT_STORE_CTRL_ADD_CA_PATH,        /**< Add the CA path. */
-    CERT_STORE_CTRL_SET_VERIFY_FLAGS,   /**< Set the certificate verification flags. */
-    CERT_STORE_CTRL_GET_VERIFY_FLAGS,   /**< Get the certificate verification flags. */
-    CERT_STORE_CTRL_SET_DEFAULT_PATH,   /**< Set the default CA path. */
+    CERT_STORE_CTRL_ADD_CERT_LIST,          /**< Add ca and chain certificate to store */
+    CERT_STORE_CTRL_GET_VERIFY_DEPTH,       /**< Get the certificate verification depth. */
+    CERT_STORE_CTRL_ADD_CRL_LIST,           /**< Add CRL list to verify store */
+    CERT_STORE_CTRL_CLEAR_CRL_LIST,         /**< Clear all CRLs from verify store */
+    CERT_STORE_CTRL_ADD_CA_PATH,            /**< Add the CA path. */
+    CERT_STORE_CTRL_SET_VERIFY_FLAGS,       /**< Set the certificate verification flags. */
+    CERT_STORE_CTRL_GET_VERIFY_FLAGS,       /**< Get the certificate verification flags. */
+    CERT_STORE_CTRL_SET_DEFAULT_PATH,       /**< Set the default CA path. */
 
-    CERT_CTRL_GET_ENCODE_LEN = 200,           /**< Obtain the length of the certificate code. */
-    CERT_CTRL_GET_PUB_KEY,              /**< Obtaining the Certificate Public Key (Release Required). */
-    CERT_CTRL_GET_SIGN_ALGO,            /**< Obtain the certificate signature algorithm. */
-    CERT_CTRL_GET_ENCODE_SUBJECT_DN,    /**< Get the subject distinguished name as a buffer. */
-    CERT_CTRL_IS_SELF_SIGNED,           /** Determine whether the certificate is a self-signed certificate */
+    CERT_CTRL_GET_ENCODE_LEN = 200,         /**< Obtain the length of the certificate code. */
+    CERT_CTRL_GET_PUB_KEY,                  /**< Obtaining the Certificate Public Key (Release Required). */
+    CERT_CTRL_GET_SIGN_ALGO,                /**< Obtain the certificate signature algorithm. */
+    CERT_CTRL_GET_ENCODE_SUBJECT_DN,        /**< Get the subject distinguished name as a buffer. */
+    CERT_CTRL_IS_SELF_SIGNED,               /** Determine whether the certificate is a self-signed certificate */
 
-    CERT_KEY_CTRL_GET_SIGN_LEN = 400,         /**< Obtain the signature length. */
-    CERT_KEY_CTRL_GET_TYPE,             /**< Obtaining the Key Type. */
-    CERT_KEY_CTRL_GET_CURVE_NAME,       /**< Obtain the elliptic curve ID. */
-    CERT_KEY_CTRL_GET_POINT_FORMAT,     /**< Obtains the format of the EC point. */
-    CERT_KEY_CTRL_GET_SECBITS,          /**< Obtain the security bits. */
-    CERT_KEY_CTRL_IS_KEYENC_USAGE,      /**< Is the encryption certificate permission. */
-    CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE,      /**< Is it digital signature permission. */
-    CERT_KEY_CTRL_IS_KEY_CERT_SIGN_USAGE,     /**< Is the certificate issuing permission. */
-    CERT_KEY_CTRL_IS_KEY_AGREEMENT_USAGE,     /**< Is it the certificate verification permission. */
-    CERT_KEY_CTRL_GET_PARAM_ID,               /**< Obtain the parameter ID. */
-    CERT_KEY_CTRL_IS_DATA_ENC_USAGE,          /**< Is it the data encryption permission. */
-    CERT_KEY_CTRL_IS_NON_REPUDIATION_USAGE,   /**< Is it the non-repudiation permission. */
-    CERT_KEY_CTRL_GET_PSS_MD,                 /**< Obtain PSS hash */
+    CERT_KEY_CTRL_GET_SIGN_LEN = 400,       /**< Obtain the signature length. */
+    CERT_KEY_CTRL_GET_TYPE,                 /**< Obtaining the Key Type. */
+    CERT_KEY_CTRL_GET_CURVE_NAME,           /**< Obtain the elliptic curve ID. */
+    CERT_KEY_CTRL_GET_POINT_FORMAT,         /**< Obtains the format of the EC point. */
+    CERT_KEY_CTRL_GET_SECBITS,              /**< Obtain the security bits. */
+    CERT_KEY_CTRL_IS_KEYENC_USAGE,          /**< Is the encryption certificate permission. */
+    CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE,    /**< Is it digital signature permission. */
+    CERT_KEY_CTRL_IS_KEY_CERT_SIGN_USAGE,   /**< Is the certificate issuing permission. */
+    CERT_KEY_CTRL_IS_KEY_AGREEMENT_USAGE,   /**< Is it the certificate verification permission. */
+    CERT_KEY_CTRL_GET_PARAM_ID,             /**< Obtain the parameter ID. */
+    CERT_KEY_CTRL_IS_DATA_ENC_USAGE,        /**< Is it the data encryption permission. */
+    CERT_KEY_CTRL_IS_NON_REPUDIATION_USAGE, /**< Is it the non-repudiation permission. */
+    CERT_KEY_CTRL_GET_PSS_MD,               /**< Obtain PSS hash. */
 
     CERT_CTRL_BUTT,
 } HITLS_CERT_CtrlCmd;
+
+typedef enum {
+    HITLS_BUILD_CHAIN_FLAG_NO_ROOT = 0x2,
+    HITLS_BUILD_CHAIN_FLAG_CHECK = 0x4,
+    HITLS_BUILD_CHAIN_FLAG_IGNORE_ERROR = 0x8,
+} HITLS_BUILD_CHAIN_FLAG;
 
 /**
  * @ingroup hitls_cert_type
@@ -163,14 +169,8 @@ typedef enum {
     TLS_CERT_KEY_TYPE_SM2 = BSL_CID_SM2DSA
 } HITLS_CERT_KeyType;
 
-typedef enum {
-    HITLS_BUILD_CHAIN_FLAG_NO_ROOT = 0x2,
-    HITLS_BUILD_CHAIN_FLAG_CHECK = 0x4,
-    HITLS_BUILD_CHAIN_FLAG_IGNORE_ERROR = 0x8,
-} HITLS_BUILD_CHAIN_FLAG;
-
 /**
- * @ingroup hitls_cert_type
+ * @ingroup hitls_cert_type, https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml
  * @brief   Certificate Signature Algorithm Enumeration
  */
 typedef enum {

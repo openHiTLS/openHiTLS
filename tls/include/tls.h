@@ -45,8 +45,6 @@ extern "C" {
 #define IS_SUPPORT_TLCP(versionBits) (((versionBits) & TLCP_VERSION_BITS) != 0x0u)
 #define IS_SUPPORT_TLS(versionBits) (((versionBits) & TLS_VERSION_MASK) != 0x0u)
 
-#define DTLS_COOKIE_LEN 255
-
 #define MAC_KEY_LEN 32u              /* the length of mac key */
 
 #define UNPROCESSED_APP_MSG_COUNT_MAX 50       /* number of APP data cached */
@@ -142,9 +140,9 @@ typedef enum {
     TLS_CONNECTED,                  /* Handshake succeeded */
     TRY_SEND_HELLO_REQUEST,         /* sends hello request message */
     TRY_SEND_CLIENT_HELLO,          /* sends client hello message */
+    TRY_SEND_HELLO_VERIFY_REQUEST,  /* sends hello verify request message */
     TRY_SEND_HELLO_RETRY_REQUEST,   /* sends hello retry request message */
     TRY_SEND_SERVER_HELLO,          /* sends server hello message */
-    TRY_SEND_HELLO_VERIFY_REQUEST,  /* sends hello verify request message */
     TRY_SEND_ENCRYPTED_EXTENSIONS,  /* sends encrypted extensions message */
     TRY_SEND_CERTIFICATE,           /* sends certificate message */
     TRY_SEND_SERVER_KEY_EXCHANGE,   /* sends server key exchange message */
@@ -158,8 +156,8 @@ typedef enum {
     TRY_SEND_FINISH,                /* sends finished message */
     TRY_SEND_KEY_UPDATE,            /* sends keyupdate message */
     TRY_RECV_CLIENT_HELLO,          /* attempts to receive client hello message */
-    TRY_RECV_SERVER_HELLO,          /* attempts to receive server hello message */
     TRY_RECV_HELLO_VERIFY_REQUEST,  /* attempts to receive hello verify request message */
+    TRY_RECV_SERVER_HELLO,          /* attempts to receive server hello message */
     TRY_RECV_ENCRYPTED_EXTENSIONS,  /* attempts to receive encrypted extensions message */
     TRY_RECV_CERTIFICATE,           /* attempts to receive certificate message */
     TRY_RECV_SERVER_KEY_EXCHANGE,   /* attempts to receive server key exchange message */
@@ -181,6 +179,8 @@ typedef enum {
 } HitlsProcessState;
 
 typedef void (*SendAlertCallback)(const TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description);
+
+typedef void (*ClearAlertCallBack)(TLS_Ctx *ctx, uint32_t recordType);
 
 typedef bool (*GetAlertFlagCallback)(const TLS_Ctx *ctx);
 
@@ -281,6 +281,7 @@ struct TlsCtx {
         SendCcsCallback sendCCS;            /* send a CCS message */
         CtrlCcsCallback ctrlCCS;            /* controlling CCS */
         SendAlertCallback sendAlert;        /* set the alert message to be sent */
+        ClearAlertCallBack clearAlert;      /* Clear the number of consecutive received warnings */
         GetAlertFlagCallback getAlertFlag;  /* get alert state */
         UnexpectMsgHandleCallback unexpectedMsgProcessCb;   /* the callback for unexpected messages */
     } method;
@@ -294,6 +295,7 @@ struct TlsCtx {
     uint8_t clientAppTrafficSecret[MAX_DIGEST_SIZE];   /* TLS1.3 client app traffic secret */
     uint8_t serverAppTrafficSecret[MAX_DIGEST_SIZE];   /* TLS1.3 server app traffic secret */
     uint8_t resumptionMasterSecret[MAX_DIGEST_SIZE];   /* TLS1.3 session resume secret */
+    uint8_t exporterMasterSecret[MAX_DIGEST_SIZE];     /* TLS1.3 export the master secret */
 
     uint32_t bytesLeftToRead;               /* bytes left to read after hs header has parsed */
     uint32_t keyUpdateType;                 /* TLS1.3 key update type */
@@ -322,10 +324,13 @@ typedef struct {
     uint32_t *bufOffset; // &hsCtx->msgLen
 } PackPacket;
 
-#define LIBCTX_FROM_CTX(ctx) ((ctx == NULL) ? NULL : (ctx)->config.tlsConfig.libCtx)
-#define ATTRIBUTE_FROM_CTX(ctx) ((ctx == NULL) ? NULL : (ctx)->config.tlsConfig.attrName)
+#define LIBCTX_FROM_CTX(ctx) (((ctx) == NULL) ? NULL : (ctx)->config.tlsConfig.libCtx)
+#define ATTRIBUTE_FROM_CTX(ctx) (((ctx) == NULL) ? NULL : (ctx)->config.tlsConfig.attrName)
 
-#define CUSTOM_EXT_FROM_CTX(ctx) ((ctx == NULL) ? NULL : (ctx)->config.tlsConfig.customExts)
+#define CUSTOM_EXT_FROM_CTX(ctx) (((ctx) == NULL) ? NULL : (ctx)->config.tlsConfig.customExts)
+
+#define GET_VERSION_FROM_CTX(ctx) \
+    ((ctx)->negotiatedInfo.version > 0 ? (ctx)->negotiatedInfo.version : (ctx)->config.tlsConfig.maxVersion)
 
 #ifdef __cplusplus
 }

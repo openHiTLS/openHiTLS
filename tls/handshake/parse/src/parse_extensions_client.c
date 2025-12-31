@@ -85,6 +85,7 @@ int32_t ParseServerKeyShare(ParsePacket *pkt, ServerHelloMsg *msg)
     if (ret != HITLS_SUCCESS) {
         return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15159, BINGLOG_STR("ServerKeyShare"));
     }
+
     if (pkt->bufLen == *pkt->bufOffset) {
         msg->haveKeyShare = true;
         return HITLS_SUCCESS;  // If there is no subsequent content, the extension is the keyshare of hrr
@@ -347,6 +348,10 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         case HS_EX_TYPE_SUPPORTED_GROUPS:
             return HITLS_SUCCESS;
 #endif /* HITLS_TLS_PROTO_TLS13 */
+#ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+        case HS_EX_TYPE_RECORD_SIZE_LIMIT:
+            return ParseRecordSizeLimit(pkt.ctx, pkt.buf, extMsgLen, &msg->haveRecordSizeLimit, &msg->recordSizeLimit);
+#endif
         default:
             break;
     }
@@ -354,7 +359,8 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
     if (IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType,
         HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO | HITLS_EX_TYPE_HELLO_RETRY_REQUEST)) {
         return ParseCustomExtensions(pkt.ctx, pkt.buf + *pkt.bufOffset, extMsgType, extMsgLen,
-            HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO | HITLS_EX_TYPE_HELLO_RETRY_REQUEST, NULL, 0);
+            HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO | HITLS_EX_TYPE_HELLO_RETRY_REQUEST,
+            NULL, 0);
     }
 #endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
     // You need to send an alert when an unknown extended field is encountered
@@ -428,6 +434,5 @@ void CleanServerHelloExtension(ServerHelloMsg *msg)
     BSL_SAL_FREE(msg->cookie);
     BSL_SAL_FREE(msg->keyShare.keyExchange);
 #endif /* HITLS_TLS_PROTO_TLS13 */
-    return;
 }
 #endif /* HITLS_TLS_HOST_CLIENT */

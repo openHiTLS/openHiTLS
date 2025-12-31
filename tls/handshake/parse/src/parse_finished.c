@@ -52,5 +52,4 @@ void CleanFinished(FinishedMsg *msg)
     if (msg != NULL) {
         BSL_SAL_FREE(msg->verifyData);
     }
-    return;
 }

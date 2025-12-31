@@ -49,45 +49,35 @@
 int UdpConnect(const char *targetIP, const int targetPort)
 {
     (void)targetIP;
-    (void)targetPort;
-    int fd;
-    struct sockaddr_in serverAddr;
+    int fd = -1;
+    struct sockaddr_in sockAddr;
 
-    // Create a socket
+    /* Create a socket */
     if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
-        LOG_ERROR("socket() fail\n");
-        return -1;
-    }
-    int option = 1;
-    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option)) < 0) {
-        close(fd);
-        LOG_ERROR("setsockopt() fail\n");
+        LOG_ERROR("socket() fail");
         return -1;
     }
 
-    // Set the protocol and port number
-    bzero(&serverAddr, sizeof(serverAddr));
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(targetPort);
-    // Set the IP address
-    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-
-    // Connection
-    int index = 0;
-    const int maxConnTime = 8000;
-    do {
-        if (connect(fd, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) == 0) {
-            break;
-        }
-        usleep(1000); // Delay 100000 us
-        LOG_ERROR("Connect error try again\n");
-    } while (index++ < maxConnTime);
-    if (index >= maxConnTime) {
+    /* Set the protocol, IP address, and port number */
+    sockAddr.sin_family = AF_INET;
+    sockAddr.sin_port = htons(targetPort);
+    sockAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    if (connect(fd, (struct sockaddr *)&sockAddr, sizeof(struct sockaddr_in)) != 0) {
+        LOG_ERROR("connect() fail");
         close(fd);
-        LOG_ERROR("Connect error\n");
         return -1;
     }
     SetBlockMode(fd, false);
+    int32_t sendBytes = write(fd, "helloworld", sizeof("helloworld"));
+    if (sendBytes < 0) {
+        /* Non-fatal error */
+        if (IsNonFatalErr(errno) == true) {
+            return fd;
+        }
+        /* Fatal error */
+        LOG_ERROR("error: write errno %d", errno);
+        return -1;
+    }
     return fd;
 }
 
@@ -131,16 +121,25 @@ int UdpBind(const int localPort)
     return lisentFd;
 }
 
-int UdpAccept(char *ip, int listenFd, bool isBlock, bool needClose)
+int UdpAccept(int32_t fd, struct sockaddr *sockAddr)
 {
-    (void)ip;
-    (void)listenFd;
-    (void)isBlock;
-
-    if (needClose) {
-        close(listenFd);
+    int32_t ret;
+    int addrlen = sizeof(struct sockaddr_in);
+    uint8_t buf[1024];
+    do {
+        ret = recvfrom(fd, buf, 1024, 0, sockAddr, (socklen_t *)&addrlen);
+    } while (ret<0 && IsNonFatalErr(errno) == true);
+    if (ret < 0) {
+        LOG_ERROR("error: accept errno %d", errno);
+        return -1;
     }
-    return listenFd;
+
+    /* Configure the peer IP address and port number in the FD to prepare for write operations */
+    if (connect(fd, sockAddr, sizeof(struct sockaddr_in)) != 0) {
+        LOG_ERROR("udp connect() fail");
+        return -1;
+    }
+    return fd;
 }
 
 /* Disable the specified socket */

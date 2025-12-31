@@ -29,7 +29,7 @@
 #include "hs_extensions.h"
 #include "pack_common.h"
 #include "pack_extensions.h"
-#include "cert_mgr_ctx.h"
+#include "hs_cert.h"
 #include "custom_extensions.h"
 
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
@@ -59,7 +59,7 @@ static int32_t PackCertificateTypes(const TLS_Ctx *ctx, PackPacket *pkt)
     uint32_t baseSignAlgorithmsSize = config->signAlgorithmsSize;
     const uint16_t *baseSignAlgorithms = config->signAlgorithms;
     for (uint32_t i = 0; i < baseSignAlgorithmsSize; i++) {
-        HITLS_CERT_KeyType keyType = SAL_CERT_SignScheme2CertKeyType(ctx, baseSignAlgorithms[i]);
+        HITLS_CERT_KeyType keyType = HS_SignScheme2CertKeyType(ctx, baseSignAlgorithms[i]);
         CERT_Type certType = CertKeyType2CertType(keyType);
         for (uint32_t j = 0; j < certTypeListsSize; j++) {
             if ((certTypeLists[j].certType == certType) && (certTypeLists[j].isSupported == false)) {
@@ -216,6 +216,7 @@ static int32_t PackSignAlgorithmsExtension(const TLS_Ctx *ctx, PackPacket *pkt)
     return HITLS_SUCCESS;
 }
 
+// Pack the extension of the Tls1.3 Certificate Request
 static int32_t PackCertReqExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -299,5 +300,4 @@ int32_t Tls13PackCertificateRequest(const TLS_Ctx *ctx, PackPacket *pkt)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
-
 #endif /* HITLS_TLS_HOST_SERVER */
