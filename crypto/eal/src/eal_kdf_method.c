@@ -40,7 +40,7 @@
     EAL_KdfMethod g_kdfMethod_##name = {         \
         (KdfNewCtx)CRYPT_##name##_NewCtxEx,  (KdfSetParam)CRYPT_##name##_SetParam,      \
         (KdfDerive)CRYPT_##name##_Derive,  (KdfDeinit)CRYPT_##name##_Deinit,            \
-        NULL, (KdfFreeCtx)CRYPT_##name##_FreeCtx                                        \
+        NULL, (KdfFreeCtx)CRYPT_##name##_FreeCtx, (KdfDupCtx)CRYPT_##name##_DupCtx      \
     }
 
 #ifdef HITLS_CRYPTO_PBKDF2
@@ -120,6 +120,9 @@ static int32_t SetKdfMethod(const CRYPT_EAL_Func *funcs, EAL_KdfMethod *method)
                 break;
             case CRYPT_EAL_IMPLKDF_FREECTX:
                 method->freeCtx = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLKDF_DUPCTX:
+                method->dupCtx = funcs[index].func;
                 break;
             default:
                 BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);

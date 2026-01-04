@@ -91,7 +91,7 @@ int32_t CRYPT_EAL_MdCopyCtx(CRYPT_EAL_MdCTX *to, const CRYPT_EAL_MdCTX *from);
 
 /**
  * @ingroup crypt_eal_md
- * @brief   Copy the MD context.
+ * @brief   Dup the MD context.
  *
  * Note that need to call the CRYPT_EAL_MdFreeCtx interface to release the memory after the duplication is complete.
  *

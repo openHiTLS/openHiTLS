@@ -76,7 +76,8 @@ static const EAL_CipherMethod CHACHA20_POLY1305_METHOD = {
     (CipherUpdate)MODES_CHACHA20POLY1305_Update,
     (CipherFinal)MODES_CHACHA20POLY1305_Final,
     (CipherCtrl)MODES_CHACHA20POLY1305_Ctrl,
-    (CipherFreeCtx)MODES_CHACHA20POLY1305_FreeCtx
+    (CipherFreeCtx)MODES_CHACHA20POLY1305_FreeCtx,
+    (CipherDupCtx)MODES_CHACHA20POLY1305_DupCtx
 };
 #endif
 
@@ -88,7 +89,8 @@ static const EAL_CipherMethod CTR_METHOD = {
     (CipherUpdate)MODES_CTR_UpdateEx,
     (CipherFinal)MODES_CTR_Final,
     (CipherCtrl)MODES_CTR_Ctrl,
-    (CipherFreeCtx)MODES_CTR_FreeCtx
+    (CipherFreeCtx)MODES_CTR_FreeCtx,
+    (CipherDupCtx)MODES_CipherDupCtx
 };
 #endif
 
@@ -100,7 +102,8 @@ static const EAL_CipherMethod CBC_METHOD = {
     (CipherUpdate)MODES_CBC_UpdateEx,
     (CipherFinal)MODES_CBC_FinalEx,
     (CipherCtrl)MODES_CBC_Ctrl,
-    (CipherFreeCtx)MODES_CBC_FreeCtx
+    (CipherFreeCtx)MODES_CBC_FreeCtx,
+    (CipherDupCtx)MODES_CipherDupCtx
 };
 #endif
 
@@ -112,7 +115,8 @@ static const EAL_CipherMethod ECB_METHOD = {
     (CipherUpdate)MODES_ECB_UpdateEx,
     (CipherFinal)MODES_ECB_FinalEx,
     (CipherCtrl)MODES_ECB_Ctrl,
-    (CipherFreeCtx)MODES_ECB_FreeCtx
+    (CipherFreeCtx)MODES_ECB_FreeCtx,
+    (CipherDupCtx)MODES_CipherDupCtx
 };
 #endif
 
@@ -124,7 +128,8 @@ static const EAL_CipherMethod CCM_METHOD = {
     (CipherUpdate)MODES_CCM_UpdateEx,
     (CipherFinal)MODES_CCM_Final,
     (CipherCtrl)MODES_CCM_Ctrl,
-    (CipherFreeCtx)MODES_CCM_FreeCtx
+    (CipherFreeCtx)MODES_CCM_FreeCtx,
+    (CipherDupCtx)MODES_CCM_DupCtx
 };
 #endif
 
@@ -136,7 +141,8 @@ static const EAL_CipherMethod GCM_METHOD = {
     (CipherUpdate)MODES_GCM_UpdateEx,
     (CipherFinal)MODES_GCM_Final,
     (CipherCtrl)MODES_GCM_Ctrl,
-    (CipherFreeCtx)MODES_GCM_FreeCtx
+    (CipherFreeCtx)MODES_GCM_FreeCtx,
+    (CipherDupCtx)MODES_GCM_DupCtx
 };
 #endif
 
@@ -149,7 +155,8 @@ static const EAL_CipherMethod CFB_METHOD = {
     (CipherUpdate)MODES_CFB_UpdateEx,
     (CipherFinal)MODES_CFB_Final,
     (CipherCtrl)MODES_CFB_Ctrl,
-    (CipherFreeCtx)MODES_CFB_FreeCtx
+    (CipherFreeCtx)MODES_CFB_FreeCtx,
+    (CipherDupCtx)MODES_CFB_DupCtx
 };
 #endif
 
@@ -161,7 +168,8 @@ static const EAL_CipherMethod OFB_METHOD = {
     (CipherUpdate)MODES_OFB_UpdateEx,
     (CipherFinal)MODES_OFB_Final,
     (CipherCtrl)MODES_OFB_Ctrl,
-    (CipherFreeCtx)MODES_OFB_FreeCtx
+    (CipherFreeCtx)MODES_OFB_FreeCtx,
+    (CipherDupCtx)MODES_CipherDupCtx
 };
 #endif
 
@@ -173,7 +181,8 @@ static const EAL_CipherMethod XTS_METHOD = {
     (CipherUpdate)MODES_XTS_UpdateEx,
     (CipherFinal)MODES_XTS_Final,
     (CipherCtrl)MODES_XTS_Ctrl,
-    (CipherFreeCtx)MODES_XTS_FreeCtx
+    (CipherFreeCtx)MODES_XTS_FreeCtx,
+    (CipherDupCtx)MODES_XTS_DupCtx
 };
 #endif
 
@@ -185,7 +194,8 @@ static const EAL_CipherMethod AES_WRAP_NOPAD_METHOD = {
     (CipherUpdate)MODES_WRAP_Update,
     (CipherFinal)MODES_WRAP_Final,
     (CipherCtrl)MODE_WRAP_Ctrl,
-    (CipherFreeCtx)MODES_WRAP_FreeCtx
+    (CipherFreeCtx)MODES_WRAP_FreeCtx,
+    (CipherDupCtx)MODES_WRAP_DupCtx,
 };
 
 static const EAL_CipherMethod AES_WRAP_PAD_METHOD = {
@@ -195,7 +205,8 @@ static const EAL_CipherMethod AES_WRAP_PAD_METHOD = {
     (CipherUpdate)MODES_WRAP_Update,
     (CipherFinal)MODES_WRAP_Final,
     (CipherCtrl)MODE_WRAP_Ctrl,
-    (CipherFreeCtx)MODES_WRAP_FreeCtx
+    (CipherFreeCtx)MODES_WRAP_FreeCtx,
+    (CipherDupCtx)MODES_WRAP_DupCtx,
 };
 #endif // HITLS_CRYPTO_WRAP
 
@@ -207,7 +218,8 @@ static const EAL_CipherMethod HCTR_METHOD = {
     (CipherUpdate)MODES_HCTR_Update,
     (CipherFinal)MODES_HCTR_Final,
     (CipherCtrl)MODES_HCTR_Ctrl,
-    (CipherFreeCtx)MODES_HCTR_Free
+    (CipherFreeCtx)MODES_HCTR_Free,
+    (CipherDupCtx)MODES_HCTR_DupCtx
 };
 #endif
 
@@ -640,6 +652,9 @@ static int32_t SetCipherMethod(const CRYPT_EAL_Func *funcs, EAL_CipherMethod *me
                 break;
             case CRYPT_EAL_IMPLCIPHER_CTRL:
                 method->ctrl = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLCIPHER_DUPCTX:
+                method->dupCtx = funcs[index].func;
                 break;
             default:
                 BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);

@@ -128,6 +128,7 @@ typedef int32_t (*CRYPT_EAL_ImplProviderInit)(CRYPT_EAL_ProvMgrCtx *mgrCtx, BSL_
 #define CRYPT_EAL_IMPLCIPHER_DEINITCTX   5
 #define CRYPT_EAL_IMPLCIPHER_CTRL        6
 #define CRYPT_EAL_IMPLCIPHER_FREECTX     7
+#define CRYPT_EAL_IMPLCIPHER_DUPCTX     8
 
 typedef void *(*CRYPT_EAL_ImplCipherNewCtx)(void *provCtx, int32_t algId);
 typedef int32_t (*CRYPT_EAL_ImplCipherInitCtx)(void *ctx, const uint8_t *key, uint32_t keyLen,
@@ -138,7 +139,7 @@ typedef int32_t (*CRYPT_EAL_ImplCipherFinal)(void *ctx, uint8_t *out, uint32_t *
 typedef int32_t (*CRYPT_EAL_ImplCipherDeinitCtx)(void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplCipherCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplCipherFreeCtx)(void *ctx);
-
+typedef void *(*CRYPT_EAL_ImplCipherDupCtx)(const void *ctx);
 
 // CRYPT_EAL_OPERAID_KEYMGMT
 #define CRYPT_EAL_IMPLPKEYMGMT_NEWCTX     1
@@ -263,6 +264,7 @@ typedef int32_t (*CRYPT_EAL_ImplMdGetParam)(void *ctx, BSL_Param *param);
 #define CRYPT_EAL_IMPLMAC_CTRL        7
 #define CRYPT_EAL_IMPLMAC_FREECTX     8
 #define CRYPT_EAL_IMPLMAC_SETPARAM    9
+#define CRYPT_EAL_IMPLMAC_DUPCTX     10
 
 typedef void *(*CRYPT_EAL_ImplMacNewCtx)(void *provCtx, int32_t algId);
 typedef int32_t (*CRYPT_EAL_ImplMacInit)(void *ctx, const uint8_t *key, uint32_t len, BSL_Param *param);
@@ -273,6 +275,7 @@ typedef int32_t (*CRYPT_EAL_ImplMacReInitCtx)(void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplMacCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*CRYPT_EAL_ImplMacFreeCtx)(void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplMacSetParam)(void *ctx, const BSL_Param *param);
+typedef void *(*CRYPT_EAL_ImplMacDupCtx)(const void *ctx);
 
 // CRYPT_EAL_OPERAID_KDF
 #define CRYPT_EAL_IMPLKDF_NEWCTX      1
@@ -281,6 +284,7 @@ typedef int32_t (*CRYPT_EAL_ImplMacSetParam)(void *ctx, const BSL_Param *param);
 #define CRYPT_EAL_IMPLKDF_DEINITCTX   4
 #define CRYPT_EAL_IMPLKDF_CTRL        5 // not support
 #define CRYPT_EAL_IMPLKDF_FREECTX     6
+#define CRYPT_EAL_IMPLKDF_DUPCTX      7
 
 typedef void *(*CRYPT_EAL_ImplKdfNewCtx)(void *provCtx, int32_t algId);
 typedef int32_t (*CRYPT_EAL_ImplKdfSetParam)(void *ctx, BSL_Param *param);
@@ -288,6 +292,7 @@ typedef int32_t (*CRYPT_EAL_ImplKdfDerive)(void *ctx, uint8_t *key, uint32_t key
 typedef int32_t (*CRYPT_EAL_ImplKdfDeInitCtx)(void *ctx);
 typedef int32_t (*CRYPT_EAL_ImplKdfCtrl)(void *ctx, int32_t cmd, void *val, uint32_t valLen); // not support
 typedef void (*CRYPT_EAL_ImplKdfFreeCtx)(void *ctx);
+typedef void *(*CRYPT_EAL_ImplKdfDupCtx)(const void *ctx);
 
 // CRYPT_EAL_OPERAID_RAND
 #define CRYPT_EAL_IMPLRAND_DRBGNEWCTX   1

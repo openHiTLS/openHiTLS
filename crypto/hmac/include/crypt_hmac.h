@@ -48,6 +48,7 @@ int32_t CRYPT_HMAC_SetParam(CRYPT_HMAC_Ctx *ctx, const BSL_Param *param);
 #define CRYPT_HMAC_SetParam NULL
 #endif // HITLS_CRYPTO_PROVIDER
 void CRYPT_HMAC_FreeCtx(CRYPT_HMAC_Ctx *ctx);
+CRYPT_HMAC_Ctx *CRYPT_HMAC_DupCtx(const CRYPT_HMAC_Ctx *macCtx);
 
 #ifdef __cplusplus
 }

@@ -628,4 +628,27 @@ int32_t MODES_CCM_UpdateEx(MODES_CCM_Ctx *modeCtx, const uint8_t *in, uint32_t i
     }
 }
 
+MODES_CCM_Ctx *MODES_CCM_DupCtx(const MODES_CCM_Ctx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        return NULL;
+    }
+    MODES_CCM_Ctx *ctx = BSL_SAL_Dump(modeCtx, sizeof(MODES_CCM_Ctx));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return ctx;
+    }
+
+    void *ciphCtx = BSL_SAL_Dump(modeCtx->ccmCtx.ciphCtx, modeCtx->ccmCtx.ciphMeth->ctxSize);
+    if (ciphCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_CleanseData(&ctx->ccmCtx, sizeof(MODES_CipherCCMCtx));
+        BSL_SAL_Free(ctx);
+        return NULL;
+    }
+
+    ctx->ccmCtx.ciphCtx = ciphCtx;
+    return ctx;
+}
+
 #endif

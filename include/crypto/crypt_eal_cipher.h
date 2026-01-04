@@ -249,6 +249,28 @@ int32_t CRYPT_EAL_CipherGetPadding(CRYPT_EAL_CipherCtx *ctx);
   */
 int32_t CRYPT_EAL_CipherGetInfo(CRYPT_CIPHER_AlgId id, int32_t type, uint32_t *infoValue);
 
+/**
+ * @ingroup crypt_eal_cipher
+ * @brief   Copy the cipher context.
+ *
+ * @param   to [IN] target cipher context.
+ * @param   from [IN] original cipher context.
+ * @retval #CRYPT_SUCCESS, parameters are set successfully.
+ * @retval #CRYPT_NULL_INPUT, the input parameter is NULL.
+ *         Other error codes see crypt_errno.h
+ */
+int32_t CRYPT_EAL_CipherCopyCtx(CRYPT_EAL_CipherCtx *to, const CRYPT_EAL_CipherCtx *from);
+
+/**
+ * @ingroup crypt_eal_cipher
+ * @brief   Dup the cipher context.
+ *
+ * @param   from [IN] original cipher context.
+ * @retval  CRYPT_EAL_CipherCtx, cipher context pointer.
+ *          NULL, if the operation fails.
+ */
+CRYPT_EAL_CipherCtx *CRYPT_EAL_CipherDupCtx(const CRYPT_EAL_CipherCtx *from);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

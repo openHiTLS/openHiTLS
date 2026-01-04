@@ -121,6 +121,15 @@ int32_t CRYPT_SCRYPT_Deinit(CRYPT_SCRYPT_Ctx *ctx);
  */
 void CRYPT_SCRYPT_FreeCtx(CRYPT_SCRYPT_Ctx *ctx);
 
+/**
+ * @ingroup SCRYPT
+ * @brief Copy SCRYPT context.
+ *
+ * @param ctx [IN] SCRYPT handle.
+ * @retval New SCRYPT handle.
+ */
+CRYPT_SCRYPT_Ctx *CRYPT_SCRYPT_DupCtx(const CRYPT_SCRYPT_Ctx *ctx);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

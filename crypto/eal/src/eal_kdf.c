@@ -169,4 +169,51 @@ void CRYPT_EAL_KdfFreeCtx(CRYPT_EAL_KdfCTX *ctx)
     BSL_SAL_Free(ctx);
 }
 
+int32_t CRYPT_EAL_KdfCopyCtx(CRYPT_EAL_KdfCTX *to, const CRYPT_EAL_KdfCTX *from)
+{
+    if (to == NULL || from == NULL || from->method.dupCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (to->data != NULL) {
+        if (to->method.freeCtx == NULL) {
+            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+        }
+        to->method.freeCtx(to->data);
+        to->data = NULL;
+    }
+    void *newData = from->method.dupCtx(from->data);
+    if (newData == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    (void)memcpy_s(to, sizeof(CRYPT_EAL_KdfCTX), from, sizeof(CRYPT_EAL_KdfCTX));
+    to->data = newData;
+    return CRYPT_SUCCESS;
+}
+
+CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfDupCtx(const CRYPT_EAL_KdfCTX *from)
+{
+    if (from == NULL || from->method.dupCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
+        return NULL;
+    }
+
+    CRYPT_EAL_KdfCTX *newCtx = BSL_SAL_Dump(from, sizeof(CRYPT_EAL_KdfCTX));
+    if (newCtx == NULL ) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+
+    void *data = from->method.dupCtx(from->data);
+    if (data == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newCtx);
+        return NULL;
+    }
+    newCtx->data = data;
+    return newCtx;
+}
+
 #endif

@@ -71,6 +71,8 @@ int32_t MODE_WRAP_DeInitCtx(MODES_WRAP_Ctx *modeCtx);
 
 void MODES_WRAP_FreeCtx(MODES_WRAP_Ctx *modeCtx);
 
+MODES_WRAP_Ctx *MODES_WRAP_DupCtx(const MODES_WRAP_Ctx *modeCtx);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

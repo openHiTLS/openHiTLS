@@ -127,6 +127,13 @@ int32_t CRYPT_CMAC_Ctrl(CRYPT_CMAC_Ctx *ctx, uint32_t opt, void *val, uint32_t l
  */
 void CRYPT_CMAC_FreeCtx(CRYPT_CMAC_Ctx *ctx);
 
+/**
+ * @brief Dup the CMAC context.
+ * @param ctx [IN] CMAC context.
+ * @retval CMAC context.
+ */
+CRYPT_CMAC_Ctx *CRYPT_CMAC_DupCtx(const CRYPT_CMAC_Ctx *ctx);
+
 #ifdef __cplusplus
 }
 #endif /* __cpluscplus */

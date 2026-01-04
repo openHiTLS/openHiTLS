@@ -59,7 +59,8 @@
         (MacReinit)CRYPT_##name##_Reinit,            \
         (MacCtrl)CRYPT_##name##_Ctrl,                \
         (MacSetParam)CRYPT_##name##_SetParam,        \
-        (MacFreeCtx)CRYPT_##name##_FreeCtx           \
+        (MacFreeCtx)CRYPT_##name##_FreeCtx,          \
+        (MacDupCtx)CRYPT_##name##_DupCtx            \
     }
 
 #ifdef HITLS_CRYPTO_HMAC
@@ -264,6 +265,9 @@ static int32_t SetMacMethod(const CRYPT_EAL_Func *funcs, EAL_MacMethod *method)
                 break;
             case CRYPT_EAL_IMPLMAC_SETPARAM:
                 method->setParam = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLMAC_DUPCTX:
+                method->dupCtx = funcs[index].func;
                 break;
             default:
                 BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);

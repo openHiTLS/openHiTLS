@@ -285,4 +285,52 @@ int32_t CRYPT_EAL_MacSetParam(CRYPT_EAL_MacCtx *ctx, const BSL_Param *param)
     return ctx->macMeth.setParam(ctx->ctx, param);
 }
 
+int32_t CRYPT_EAL_MacCopyCtx(CRYPT_EAL_MacCtx *to, const CRYPT_EAL_MacCtx *from)
+{
+    if (to == NULL || from == NULL || from->macMeth.dupCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    if (to->ctx != NULL) {
+        if (to->macMeth.freeCtx == NULL) {
+            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, from->id, CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+        }
+        to->macMeth.freeCtx(to->ctx);
+        to->ctx = NULL;
+    }
+    void *ctx = from->macMeth.dupCtx(from->ctx);
+    if (ctx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, from->id, CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_INVALID_ARG;
+    }
+    (void)memcpy_s(to, sizeof(CRYPT_EAL_MacCtx), from, sizeof(CRYPT_EAL_MacCtx));
+    to->ctx = ctx;
+    return CRYPT_SUCCESS;
+}
+
+CRYPT_EAL_MacCtx *CRYPT_EAL_MacDupCtx(const CRYPT_EAL_MacCtx *from)
+{
+    if (from == NULL || from->macMeth.dupCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
+        return NULL;
+    }
+
+    CRYPT_EAL_MacCtx *newCtx = BSL_SAL_Dump(from, sizeof(CRYPT_EAL_MacCtx));
+    if (newCtx == NULL ) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, from->id, CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+
+    void *ctx = from->macMeth.dupCtx(from->ctx);
+    if (ctx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, from->id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newCtx);
+        return NULL;
+    }
+    newCtx->ctx = ctx;
+    return newCtx;
+}
+
 #endif

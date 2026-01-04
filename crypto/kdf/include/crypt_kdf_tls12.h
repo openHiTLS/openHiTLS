@@ -94,6 +94,15 @@ int32_t CRYPT_KDFTLS12_Deinit(CRYPT_KDFTLS12_Ctx *ctx);
  */
 void CRYPT_KDFTLS12_FreeCtx(CRYPT_KDFTLS12_Ctx *ctx);
 
+/**
+ * @ingroup KDFTLS12
+ * @brief Copy KDFTLS12 context.
+ *
+ * @param ctx [IN] KDFTLS12 handle.
+ * @retval New KDFTLS12 handle.
+ */
+CRYPT_KDFTLS12_Ctx *CRYPT_KDFTLS12_DupCtx(const CRYPT_KDFTLS12_Ctx *ctx);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
