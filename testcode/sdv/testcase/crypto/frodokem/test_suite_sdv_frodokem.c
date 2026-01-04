@@ -23,9 +23,10 @@
 #include "securec.h"
 #include "crypt_frodokem.h"
 #include "crypt_drbg.h"
+#include "stub_utils.h"
 /* END_HEADER */
 static uint8_t gRandNumber = 0;
-
+STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 /* @
 * @test  SDV_CRYPTO_FRODOKEM_CTRL_API_TC001
 * @spec  -
@@ -652,7 +653,7 @@ void SDV_CRYPTO_FRODOKEM_DUPKEY_API_TC001(int bits)
 {
     TestMemInit();
     CRYPT_RandRegist(TestSimpleRand);
-    
+
     CRYPT_EAL_PkeyCtx *ctx = NULL;
 #ifdef HITLS_CRYPTO_PROVIDER
     ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_FRODOKEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
@@ -718,6 +719,92 @@ EXIT:
     BSL_SAL_FREE(sharedKey1);
     BSL_SAL_FREE(sharedKey2);
     CRYPT_RandRegist(NULL);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_FRODOKEM_DUPKEY_STUB_TC001
+* @spec  -
+* @title  Test CRYPT_EAL_PkeyDupCtx with stubbed BSL_SAL_Malloc failure
+* @precon  nan
+* @brief  1. Create a context and generate key pair
+*         2. Dup the context
+*         3. Compare the two contexts, expect success
+*         4. Use the first context to do encaps
+*         5. Use the dupped context to do decaps
+*         6. Compare the shared secrets, expect them to be the same
+* @expect  All operations succeed and shared secrets match
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_FRODOKEM_DUPKEY_STUB_TC001(int algId)
+{
+    TestMemInit();
+    CRYPT_RandRegist(TestSimpleRand);
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_FRODOKEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+#else
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_FRODOKEM);
+#endif
+    ASSERT_TRUE(ctx != NULL);
+
+    // Set parameters and generate key pair
+    uint32_t val = (uint32_t)algId;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    uint8_t *cipher = NULL;
+    uint8_t *sharedKey = NULL;
+    uint32_t cipherLen = 0;
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    
+    uint32_t sharedLen = 0;
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &sharedLen, sizeof(sharedLen));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    cipher = BSL_SAL_Malloc(cipherLen);
+    ASSERT_TRUE(cipher != NULL);
+    sharedKey = BSL_SAL_Malloc(sharedLen);
+    ASSERT_TRUE(sharedKey != NULL);
+    ret = CRYPT_EAL_PkeyEncapsInit(ctx, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    uint32_t totalMallocCount = 0;
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ret = CRYPT_EAL_PkeyGen(ctx);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    // Dup the context
+    CRYPT_EAL_PkeyCtx *ctxDup = CRYPT_EAL_PkeyDupCtx(ctx);
+    ASSERT_TRUE(ctxDup != NULL);
+    ret = CRYPT_EAL_PkeyEncaps(ctxDup, cipher, &cipherLen, sharedKey, &sharedLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_PkeyDecaps(ctxDup, cipher, cipherLen, sharedKey, &sharedLen);
+    CRYPT_EAL_PkeyFreeCtx(ctxDup);
+    totalMallocCount = STUB_GetMallocCallCount();
+    ctxDup = NULL;
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; ++i) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        CRYPT_EAL_PkeyGen(ctx);
+        ctxDup = CRYPT_EAL_PkeyDupCtx(ctx);
+        CRYPT_EAL_PkeyEncaps(ctxDup, cipher, &cipherLen, sharedKey, &sharedLen);
+        CRYPT_EAL_PkeyDecaps(ctxDup, cipher, cipherLen, sharedKey, &sharedLen);
+        CRYPT_EAL_PkeyFreeCtx(ctxDup);
+        ctxDup = NULL;
+    }
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_EAL_PkeyFreeCtx(ctxDup);
+    CRYPT_RandRegist(NULL);
+    BSL_SAL_FREE(cipher);
+    BSL_SAL_FREE(sharedKey);
+    STUB_RESTORE(BSL_SAL_Malloc);
     return;
 }
 /* END_CASE */

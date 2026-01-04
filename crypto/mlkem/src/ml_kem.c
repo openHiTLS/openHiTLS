@@ -127,8 +127,13 @@ static int32_t MlKemSetAlgInfo(CRYPT_ML_KEM_Ctx *ctx, void *val, uint32_t len)
 
 static int32_t MlKemDupKeyData(CRYPT_ML_KEM_Ctx *ctx, CRYPT_ML_KEM_Ctx *newCtx)
 {
+    if (ctx->info == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYINFO_NOT_SET);
+        return CRYPT_MLKEM_KEYINFO_NOT_SET;
+    }
     int32_t ret = MLKEM_CreateMatrixBuf(ctx->info->k, &newCtx->keyData);
     if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     for (uint8_t i = 0; i < ctx->info->k; i++) {
@@ -201,11 +206,12 @@ CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_DupCtx(CRYPT_ML_KEM_Ctx *ctx)
         }
         newCtx->dkLen = ctx->dkLen;
     }
-    if (MlKemDupKeyData(ctx, newCtx) != CRYPT_SUCCESS) {
-        CRYPT_ML_KEM_FreeCtx(newCtx);
-        return NULL;
+    if (ctx->keyData.bufAddr != NULL) {
+        if (MlKemDupKeyData(ctx, newCtx) != CRYPT_SUCCESS) {
+            CRYPT_ML_KEM_FreeCtx(newCtx);
+            return NULL;
+        }
     }
-
     newCtx->libCtx = ctx->libCtx;
     newCtx->dkFormat = ctx->dkFormat;
     newCtx->hasSeed = ctx->hasSeed;
