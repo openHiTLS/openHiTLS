@@ -53,6 +53,7 @@ BslOidInfo g_oidTable[] = {
     {{9, "\140\206\110\1\145\3\4\1\54", BSL_OID_GLOBAL}, "aes-256-cfb", BSL_CID_AES256_CFB},
     {{9, "\52\206\110\206\367\15\1\1\1", BSL_OID_GLOBAL}, "RSAENCRYPTION", BSL_CID_RSA}, // rsa subkey
     {{7, "\52\206\110\316\70\4\1", BSL_OID_GLOBAL}, "DSAENCRYPTION", BSL_CID_DSA}, // dsa subkey
+    {{7, "\52\206\110\316\76\2\1", BSL_OID_GLOBAL}, "dhPublicNumber", BSL_CID_DH}, // dhPublicNumber
     {{8, "\52\206\110\206\367\15\2\5", BSL_OID_GLOBAL}, "MD5", BSL_CID_MD5},
     {{5, "\53\16\3\2\32", BSL_OID_GLOBAL}, "SHA1", BSL_CID_SHA1},
     {{9, "\140\206\110\1\145\3\4\2\4", BSL_OID_GLOBAL}, "SHA224", BSL_CID_SHA224},

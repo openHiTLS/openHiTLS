@@ -41,9 +41,6 @@ SDV_X509_CERT_VERSIONCHECK_TC003
 SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certnopublickey.der":BSL_ASN1_ERR_TAG_EXPECTED:""
 
 SDV_X509_CERT_VERSIONCHECK_TC003
-SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/dsacert.der":CRYPT_DECODE_ERR_NO_USABLE_DECODER:""
-
-SDV_X509_CERT_VERSIONCHECK_TC003
 SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certnosignaturealgorithm.der":BSL_ASN1_ERR_TAG_EXPECTED:""
 
 SDV_X509_CERT_VERSIONCHECK_TC003
@@ -81,6 +78,9 @@ SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certsignaturev
 
 SDV_X509_CERT_VERSIONCHECK_TC003
 SDV_X509_CERT_VERSIONCHECK_TC003:"../testdata/cert/asn1/certcheck/certsignaturevalueUTF8.der":BSL_ASN1_ERR_TAG_EXPECTED:""
+
+SDV_X509_CERT_VERSIONCHECK_TC004
+SDV_X509_CERT_VERSIONCHECK_TC004:"../testdata/cert/asn1/certcheck/dsacert.der"
 
 SDV_X509_CERT_SERIALNUMCHECK_TC001- negative
 SDV_X509_CERT_SERIALNUMCHECK_TC001:1:HITLS_PKI_SUCCESS:"FF":"../testdata/cert/asn1/certcheck/certnegativeserialnum.der":"../testdata/cert/asn1/certcheck/check/certnegativeserialnum"

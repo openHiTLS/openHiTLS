@@ -1154,3 +1154,195 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_DSAKEY_BUFF_TC001(char *path, int fileType, Hex *asn1)
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_DSA)
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    BSL_Buffer encodeAsn1 = {0};
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkeyCtx, NULL, BSL_FORMAT_ASN1, fileType, &encodeAsn1), CRYPT_SUCCESS);
+    ASSERT_COMPARE("asn1 compare.", encodeAsn1.data, encodeAsn1.dataLen, asn1->x, asn1->len);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_FREE(encodeAsn1.data);
+#else
+    (void)path;
+    (void)fileType;
+    (void)asn1;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_DSAKEY_BUFF_TC002(char *path, int fileType)
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_DSA)
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    uint32_t totalMallocCount = STUB_GetMallocCallCount();
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    pkeyCtx = NULL;
+
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ASSERT_NE(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+#else
+    (void)path;
+    (void)fileType;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_DSAKEY_BUFF_TC003(char *path, int fileType)
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_DSA)
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    BSL_Buffer encodeAsn1 = {0};
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkeyCtx, NULL, BSL_FORMAT_ASN1, fileType, &encodeAsn1), CRYPT_SUCCESS);
+    uint32_t totalMallocCount = STUB_GetMallocCallCount();
+    BSL_SAL_FREE(encodeAsn1.data);
+    encodeAsn1.data = NULL;
+    encodeAsn1.dataLen = 0;
+
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ASSERT_NE(CRYPT_EAL_EncodeBuffKey(pkeyCtx, NULL, BSL_FORMAT_ASN1, fileType, &encodeAsn1), CRYPT_SUCCESS);
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_FREE(encodeAsn1.data);
+    encodeAsn1.data = NULL;
+    encodeAsn1.dataLen = 0;
+#else
+    (void)path;
+    (void)fileType;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_DHKEY_BUFF_TC001(char *path, int fileType, Hex *asn1)
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_DH)
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    BSL_Buffer encodeAsn1 = {0};
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkeyCtx, NULL, BSL_FORMAT_ASN1, fileType, &encodeAsn1), CRYPT_SUCCESS);
+    ASSERT_COMPARE("asn1 compare.", encodeAsn1.data, encodeAsn1.dataLen, asn1->x, asn1->len);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_FREE(encodeAsn1.data);
+#else
+    (void)path;
+    (void)fileType;
+    (void)asn1;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_DHKEY_BUFF_TC002(char *path, int fileType)
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_DH)
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    uint32_t totalMallocCount = STUB_GetMallocCallCount();
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    pkeyCtx = NULL;
+
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ASSERT_NE(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+#else
+    (void)path;
+    (void)fileType;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_DHKEY_BUFF_TC003(char *path, int fileType)
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_DH)
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    BSL_Buffer encodeAsn1 = {0};
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkeyCtx, NULL, BSL_FORMAT_ASN1, fileType, &encodeAsn1), CRYPT_SUCCESS);
+    uint32_t totalMallocCount = STUB_GetMallocCallCount();
+    BSL_SAL_FREE(encodeAsn1.data);
+    encodeAsn1.data = NULL;
+    encodeAsn1.dataLen = 0;
+
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ASSERT_NE(CRYPT_EAL_EncodeBuffKey(pkeyCtx, NULL, BSL_FORMAT_ASN1, fileType, &encodeAsn1), CRYPT_SUCCESS);
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_FREE(encodeAsn1.data);
+    encodeAsn1.data = NULL;
+    encodeAsn1.dataLen = 0;
+#else
+    (void)path;
+    (void)fileType;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
