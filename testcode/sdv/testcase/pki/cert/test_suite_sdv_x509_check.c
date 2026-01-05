@@ -582,6 +582,25 @@ EXIT:
 /* END_CASE */
 
 /**
+ * Testing for parse of various abnormal scenarios for certificate basic fields
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_VERSIONCHECK_TC004(char *path)
+{
+#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
+    (void)path;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    HITLS_X509_Cert *cert = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_CertFree(cert);
+#endif
+}
+/* END_CASE */
+
+/**
  * Test the generation and parsing of certificates when serialnum is 0xFF, 0, a 20-digit array, and a 21-digit array.
  */
 /* BEGIN_CASE */

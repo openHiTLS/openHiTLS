@@ -126,6 +126,14 @@ typedef enum {
 
 #endif
 
+#ifdef HITLS_CRYPTO_DSA
+static BSL_ASN1_TemplateItem g_dsaKeyparamTempl[] = {
+    {BSL_ASN1_TAG_INTEGER, 0, 0}, /* p */
+    {BSL_ASN1_TAG_INTEGER, 0, 0}, /* q */
+    {BSL_ASN1_TAG_INTEGER, 0, 0} /* g */
+};
+#endif
+
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
 /**
  * ECPrivateKey ::= SEQUENCE {
@@ -505,6 +513,34 @@ int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara 
 }
 #endif
 
+#ifdef HITLS_CRYPTO_DSA
+int32_t CRYPT_DECODE_DsaKeyParamAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum)
+{
+    if (buff == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    uint8_t *tmpBuff = buff;
+    uint32_t tmpBuffLen = buffLen;
+    BSL_ASN1_Template templ = {g_dsaKeyparamTempl, sizeof(g_dsaKeyparamTempl) / sizeof(g_dsaKeyparamTempl[0])};
+    int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &tmpBuff, &tmpBuffLen, asn1, arrNum);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+
+int32_t CRYPT_ENCODE_DsaKeyParamAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num, BSL_Buffer *encode)
+{
+    BSL_ASN1_Template templ = {g_dsaKeyparamTempl, sizeof(g_dsaKeyparamTempl) / sizeof(g_dsaKeyparamTempl[0])};
+    int32_t ret = BSL_ASN1_EncodeTemplate(&templ, asn1, asn1Num, &encode->data, &encode->dataLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+#endif
+
 static int32_t DecSubKeyInfoCb(int32_t type, uint32_t idx, void *data, void *expVal)
 {
     (void)idx;
@@ -516,7 +552,7 @@ static int32_t DecSubKeyInfoCb(int32_t type, uint32_t idx, void *data, void *exp
             if (cid == BSL_CID_EC_PUBLICKEY || cid == BSL_CID_SM2PRIME256) {
                 // note: any It can be encoded empty or it can be null
                 *(uint8_t *)expVal = BSL_ASN1_TAG_OBJECT_ID;
-            } else if (cid == BSL_CID_RSASSAPSS) {
+            } else if (cid == BSL_CID_DSA || cid == BSL_CID_DH || cid == BSL_CID_RSASSAPSS) {
                 *(uint8_t *)expVal = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
             } else if (cid == BSL_CID_ED25519) {
                 /* RFC8410: Ed25519 has no algorithm parameters */

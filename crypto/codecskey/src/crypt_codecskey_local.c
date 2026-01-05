@@ -255,6 +255,343 @@ int32_t ParseRsaPrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName, u
 }
 #endif
 
+#if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_DH)
+static int32_t EncodeKeyParamAsn1BuffInner(CRYPT_EAL_PkeyCtx *pctx, int32_t opt, int32_t keyType, void *getFunc,
+    uint8_t **key, uint32_t *keyLen)
+{
+    uint8_t *tmpKey = NULL;
+    uint32_t tmpLen;
+    BSL_Param rawKey[] = {
+        {keyType, 0, NULL, 0, 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = CRYPT_EAL_PkeyCtrl(pctx, opt, &tmpLen, sizeof(tmpLen));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    tmpKey = (uint8_t *)BSL_SAL_Calloc(tmpLen, 1);
+    if (tmpKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    rawKey[0].value = tmpKey;
+    rawKey[0].valueLen = tmpLen;
+    int32_t (*getKeyFunc)(const CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param) = getFunc;
+    ret = getKeyFunc(pctx, rawKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        BSL_SAL_Free(tmpKey);
+        return ret;
+    }
+    *key = tmpKey;
+    *keyLen = tmpLen;
+    return CRYPT_SUCCESS;
+}
+#endif
+
+#ifdef HITLS_CRYPTO_DSA
+int32_t ParseDsaKeyParamAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName, bool isPriv,
+    uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *pk8AlgoParam, CRYPT_EAL_PkeyCtx **pkey)
+{
+    CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_ProviderPkeyNewCtx(libctx, CRYPT_PKEY_DSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        attrName);
+    if (pctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    uint8_t* tmpBuff = pk8AlgoParam->buff;
+    uint32_t tmpBuffLen = pk8AlgoParam->len;
+    BSL_ASN1_Buffer asn1[CRYPT_DSA_PRV_G_IDX + 1] = {0};
+    int32_t ret = CRYPT_DECODE_DsaKeyParamAsn1Buff(tmpBuff, tmpBuffLen, asn1, CRYPT_DSA_PRV_G_IDX + 1);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        return ret;
+    }
+    CRYPT_EAL_PkeyPara keyparam = {0};
+    keyparam.id = CRYPT_PKEY_DSA;
+    keyparam.para.dsaPara.p = asn1[CRYPT_DSA_PRV_P_IDX].buff;
+    keyparam.para.dsaPara.q = asn1[CRYPT_DSA_PRV_Q_IDX].buff;
+    keyparam.para.dsaPara.g = asn1[CRYPT_DSA_PRV_G_IDX].buff;
+    keyparam.para.dsaPara.pLen = asn1[CRYPT_DSA_PRV_P_IDX].len;
+    keyparam.para.dsaPara.qLen = asn1[CRYPT_DSA_PRV_Q_IDX].len;
+    keyparam.para.dsaPara.gLen = asn1[CRYPT_DSA_PRV_G_IDX].len;
+    ret = CRYPT_EAL_PkeySetPara(pctx, &keyparam);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        return ret;
+    }
+
+    BSL_ASN1_TemplateItem templItem = {BSL_ASN1_TAG_INTEGER, 0, 0};
+    BSL_ASN1_Template templ = {&templItem, 1};
+    ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &buff, &buffLen, asn1, 1);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        return ret;
+    }
+    BSL_Param rawKey[] = {
+        {CRYPT_PARAM_DSA_PRVKEY, BSL_PARAM_TYPE_OCTETS, asn1[0].buff, asn1[0].len, 0},
+        BSL_PARAM_END
+    };
+    if (isPriv != 0) {
+        ret = CRYPT_EAL_PkeySetPrvEx(pctx, rawKey);
+    } else {
+        rawKey[0].key = CRYPT_PARAM_DSA_PUBKEY;
+        ret = CRYPT_EAL_PkeySetPubEx(pctx, rawKey);
+    }
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        return ret;
+    }
+    *pkey = pctx;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t EncodeDsaKeySetParam(CRYPT_EAL_PkeyCtx *pctx, uint8_t *key, uint32_t keyLen,
+    BSL_ASN1_Buffer *pk8AlgoParam, BSL_Buffer *encode)
+{
+    BSL_Buffer encodedKey = {0};
+    BSL_ASN1_Buffer asn1[CRYPT_DSA_PRV_G_IDX + 1] = {0};
+    asn1[0].tag = BSL_ASN1_TAG_INTEGER;
+    asn1[0].len = keyLen;
+    asn1[0].buff = key;
+    BSL_ASN1_TemplateItem templItem = {BSL_ASN1_TAG_INTEGER, 0, 0};
+    BSL_ASN1_Template templ = {&templItem, 1};
+    int32_t ret = BSL_ASN1_EncodeTemplate(&templ, asn1, 1, &encodedKey.data, &encodedKey.dataLen);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    CRYPT_EAL_PkeyPara keyparam = {0};
+    keyparam.id = CRYPT_PKEY_DSA;
+    uint32_t byteLen = CRYPT_EAL_PkeyGetKeyLen(pctx);
+    if (byteLen == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_KEY);
+        BSL_SAL_ClearFree(encodedKey.data, encodedKey.dataLen);
+        return CRYPT_INVALID_KEY;
+    }
+    keyparam.para.dsaPara.p = (uint8_t *)BSL_SAL_Calloc(byteLen * 3, 1);
+    if (keyparam.para.dsaPara.p == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_ClearFree(encodedKey.data, encodedKey.dataLen);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    keyparam.para.dsaPara.q = keyparam.para.dsaPara.p + byteLen;
+    keyparam.para.dsaPara.g = keyparam.para.dsaPara.q + byteLen;
+    keyparam.para.dsaPara.pLen = byteLen;
+    keyparam.para.dsaPara.qLen = byteLen;
+    keyparam.para.dsaPara.gLen = byteLen;
+    ret = CRYPT_EAL_PkeyGetPara(pctx, &keyparam);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        BSL_SAL_ClearFree(encodedKey.data, encodedKey.dataLen);
+        BSL_SAL_Free(keyparam.para.dsaPara.p);
+        return ret;
+    }
+    asn1[CRYPT_DSA_PRV_P_IDX].tag = BSL_ASN1_TAG_INTEGER;
+    asn1[CRYPT_DSA_PRV_Q_IDX].tag = BSL_ASN1_TAG_INTEGER;
+    asn1[CRYPT_DSA_PRV_G_IDX].tag = BSL_ASN1_TAG_INTEGER;
+    asn1[CRYPT_DSA_PRV_P_IDX].buff = keyparam.para.dsaPara.p;
+    asn1[CRYPT_DSA_PRV_Q_IDX].buff = keyparam.para.dsaPara.q;
+    asn1[CRYPT_DSA_PRV_G_IDX].buff = keyparam.para.dsaPara.g;
+    asn1[CRYPT_DSA_PRV_P_IDX].len = keyparam.para.dsaPara.pLen;
+    asn1[CRYPT_DSA_PRV_Q_IDX].len = keyparam.para.dsaPara.qLen;
+    asn1[CRYPT_DSA_PRV_G_IDX].len = keyparam.para.dsaPara.gLen;
+    BSL_Buffer paramEncode = {0};
+    ret = CRYPT_ENCODE_DsaKeyParamAsn1Buff(asn1, CRYPT_DSA_PRV_G_IDX + 1, &paramEncode);
+    BSL_SAL_Free(keyparam.para.dsaPara.p);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        BSL_SAL_ClearFree(encodedKey.data, encodedKey.dataLen);
+        return ret;
+    }
+    pk8AlgoParam->tag = BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED;
+    pk8AlgoParam->buff = paramEncode.data;
+    pk8AlgoParam->len = paramEncode.dataLen;
+    encode->data = encodedKey.data;
+    encode->dataLen = encodedKey.dataLen;
+    return ret;
+}
+
+int32_t EncodeDsaKeyParamAsn1Buff(CRYPT_EAL_PkeyCtx *pctx, bool isPriv,
+    BSL_ASN1_Buffer *pk8AlgoParam, BSL_Buffer *encode)
+{
+    uint8_t *key = NULL;
+    uint32_t keyLen;
+    int32_t opt = CRYPT_CTRL_GET_PRVKEY_LEN;
+    int32_t keyType = CRYPT_PARAM_DSA_PRVKEY;
+    int32_t (*getFunc)(const CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param) = CRYPT_EAL_PkeyGetPrvEx;
+    if (isPriv == 0) {
+        opt = CRYPT_CTRL_GET_PUBKEY_LEN;
+        keyType = CRYPT_PARAM_DSA_PUBKEY;
+        getFunc = CRYPT_EAL_PkeyGetPubEx;
+    }
+    int32_t ret = EncodeKeyParamAsn1BuffInner(pctx, opt, keyType, getFunc, &key, &keyLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = EncodeDsaKeySetParam(pctx, key, keyLen, pk8AlgoParam, encode);
+    BSL_SAL_ClearFree(key, keyLen);
+    return ret;
+}
+#endif
+
+#ifdef HITLS_CRYPTO_DH
+int32_t ParseDhKeyParamAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName, bool isPriv,
+    uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *pk8AlgoParam, CRYPT_EAL_PkeyCtx **pkey)
+{
+    CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_ProviderPkeyNewCtx(libctx, CRYPT_PKEY_DH, CRYPT_EAL_PKEY_UNKNOWN_OPERATE,
+        attrName);
+    if (pctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    uint8_t* tmpBuff = pk8AlgoParam->buff;
+    uint32_t tmpBuffLen = pk8AlgoParam->len;
+    BSL_ASN1_Buffer asn1[CRYPT_DH_PRV_Q_IDX + 1] = {0};
+    int32_t ret = CRYPT_DECODE_DsaKeyParamAsn1Buff(tmpBuff, tmpBuffLen, asn1, CRYPT_DH_PRV_Q_IDX + 1);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        return ret;
+    }
+    CRYPT_EAL_PkeyPara keyparam = {0};
+    keyparam.id = CRYPT_PKEY_DH;
+    keyparam.para.dhPara.p = asn1[CRYPT_DH_PRV_P_IDX].buff;
+    keyparam.para.dhPara.g = asn1[CRYPT_DH_PRV_G_IDX].buff;
+    keyparam.para.dhPara.q = asn1[CRYPT_DH_PRV_Q_IDX].buff;
+    keyparam.para.dhPara.pLen = asn1[CRYPT_DH_PRV_P_IDX].len;
+    keyparam.para.dhPara.gLen = asn1[CRYPT_DH_PRV_G_IDX].len;
+    keyparam.para.dhPara.qLen = asn1[CRYPT_DH_PRV_Q_IDX].len;
+    ret = CRYPT_EAL_PkeySetPara(pctx, &keyparam);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        return ret;
+    }
+
+    BSL_ASN1_TemplateItem templItem = {BSL_ASN1_TAG_INTEGER, 0, 0};
+    BSL_ASN1_Template templ = {&templItem, 1};
+    ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &buff, &buffLen, asn1, 1);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        return ret;
+    }
+    BSL_Param rawKey[] = {
+        {CRYPT_PARAM_DH_PRVKEY, BSL_PARAM_TYPE_OCTETS, asn1[0].buff, asn1[0].len, 0},
+        BSL_PARAM_END
+    };
+    if (isPriv != 0) {
+        ret = CRYPT_EAL_PkeySetPrvEx(pctx, rawKey);
+    } else {
+        rawKey[0].key = CRYPT_PARAM_DH_PUBKEY;
+        ret = CRYPT_EAL_PkeySetPubEx(pctx, rawKey);
+    }
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        return ret;
+    }
+    *pkey = pctx;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t EncodeDhKeySetParam(CRYPT_EAL_PkeyCtx *pctx, uint8_t *key, uint32_t keyLen,
+    BSL_ASN1_Buffer *pk8AlgoParam, BSL_Buffer *encode)
+{
+    BSL_Buffer encodedKey = {0};
+    BSL_ASN1_Buffer asn1[CRYPT_DH_PRV_Q_IDX + 1] = {0};
+    asn1[0].tag = BSL_ASN1_TAG_INTEGER;
+    asn1[0].len = keyLen;
+    asn1[0].buff = key;
+    BSL_ASN1_TemplateItem templItem = {BSL_ASN1_TAG_INTEGER, 0, 0};
+    BSL_ASN1_Template templ = {&templItem, 1};
+    int32_t ret = BSL_ASN1_EncodeTemplate(&templ, asn1, 1, &encodedKey.data, &encodedKey.dataLen);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    CRYPT_EAL_PkeyPara keyparam = {0};
+    keyparam.id = CRYPT_PKEY_DH;
+    uint32_t byteLen = CRYPT_EAL_PkeyGetKeyLen(pctx);
+    if (byteLen == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_KEY);
+        BSL_SAL_ClearFree(encodedKey.data, encodedKey.dataLen);
+        return CRYPT_INVALID_KEY;
+    }
+    keyparam.para.dhPara.p = (uint8_t *)BSL_SAL_Calloc(byteLen * 3, 1);
+    if (keyparam.para.dhPara.p == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_ClearFree(encodedKey.data, encodedKey.dataLen);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    keyparam.para.dhPara.g = keyparam.para.dhPara.p + byteLen;
+    keyparam.para.dhPara.q = keyparam.para.dhPara.g + byteLen;
+    keyparam.para.dhPara.pLen = byteLen;
+    keyparam.para.dhPara.gLen = byteLen;
+    keyparam.para.dhPara.qLen = byteLen;
+    ret = CRYPT_EAL_PkeyGetPara(pctx, &keyparam);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        BSL_SAL_ClearFree(encodedKey.data, encodedKey.dataLen);
+        BSL_SAL_Free(keyparam.para.dhPara.p);
+        return ret;
+    }
+    asn1[CRYPT_DH_PRV_P_IDX].tag = BSL_ASN1_TAG_INTEGER;
+    asn1[CRYPT_DH_PRV_G_IDX].tag = BSL_ASN1_TAG_INTEGER;
+    asn1[CRYPT_DH_PRV_Q_IDX].tag = BSL_ASN1_TAG_INTEGER;
+    asn1[CRYPT_DH_PRV_P_IDX].buff = keyparam.para.dhPara.p;
+    asn1[CRYPT_DH_PRV_G_IDX].buff = keyparam.para.dhPara.g;
+    asn1[CRYPT_DH_PRV_Q_IDX].buff = keyparam.para.dhPara.q;
+    asn1[CRYPT_DH_PRV_P_IDX].len = keyparam.para.dhPara.pLen;
+    asn1[CRYPT_DH_PRV_G_IDX].len = keyparam.para.dhPara.gLen;
+    asn1[CRYPT_DH_PRV_Q_IDX].len = keyparam.para.dhPara.qLen;
+    BSL_Buffer paramEncode = {0};
+    ret = CRYPT_ENCODE_DsaKeyParamAsn1Buff(asn1, CRYPT_DH_PRV_Q_IDX + 1, &paramEncode);
+    BSL_SAL_Free(keyparam.para.dhPara.p);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        BSL_SAL_ClearFree(encodedKey.data, encodedKey.dataLen);
+        return ret;
+    }
+    pk8AlgoParam->tag = BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED;
+    pk8AlgoParam->buff = paramEncode.data;
+    pk8AlgoParam->len = paramEncode.dataLen;
+    encode->data = encodedKey.data;
+    encode->dataLen = encodedKey.dataLen;
+    return ret;
+}
+
+int32_t EncodeDhKeyParamAsn1Buff(CRYPT_EAL_PkeyCtx *pctx, bool isPriv,
+    BSL_ASN1_Buffer *pk8AlgoParam, BSL_Buffer *encode)
+{
+    uint8_t *key = NULL;
+    uint32_t keyLen;
+    int32_t opt = CRYPT_CTRL_GET_PRVKEY_LEN;
+    int32_t keyType = CRYPT_PARAM_DH_PRVKEY;
+    int32_t (*getFunc)(const CRYPT_EAL_PkeyCtx *pkey, BSL_Param *param) = CRYPT_EAL_PkeyGetPrvEx;
+    if (isPriv == 0) {
+        opt = CRYPT_CTRL_GET_PUBKEY_LEN;
+        keyType = CRYPT_PARAM_DH_PUBKEY;
+        getFunc = CRYPT_EAL_PkeyGetPubEx;
+    }
+    int32_t ret = EncodeKeyParamAsn1BuffInner(pctx, opt, keyType, getFunc, &key, &keyLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = EncodeDhKeySetParam(pctx, key, keyLen, pk8AlgoParam, encode);
+    BSL_SAL_ClearFree(key, keyLen);
+    return ret;
+}
+#endif
+
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
 static int32_t EccEalKeyNew(CRYPT_EAL_LibCtx *libctx, const char *attrName, BSL_ASN1_Buffer *ecParamOid,
     int32_t *alg, CRYPT_EAL_PkeyCtx **ealKey)
@@ -697,48 +1034,68 @@ static int32_t ParseSlhDsaPrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *a
 static int32_t ParsePk8PrikeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName,
     CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo, CRYPT_EAL_PkeyCtx **ealPriKey)
 {
+    switch (pk8PrikeyInfo->keyType) {
 #ifdef HITLS_CRYPTO_RSA
-    if (pk8PrikeyInfo->keyType == BSL_CID_RSA || pk8PrikeyInfo->keyType == BSL_CID_RSASSAPSS) {
-        return ParseRsaPrikeyAsn1Buff(libctx, attrName, pk8PrikeyInfo->pkeyRawKey, pk8PrikeyInfo->pkeyRawKeyLen,
-            &pk8PrikeyInfo->keyParam, pk8PrikeyInfo->keyType, ealPriKey);
-    }
+        case BSL_CID_RSA:
+        case BSL_CID_RSASSAPSS:
+            return ParseRsaPrikeyAsn1Buff(libctx, attrName, pk8PrikeyInfo->pkeyRawKey, pk8PrikeyInfo->pkeyRawKeyLen,
+                &pk8PrikeyInfo->keyParam, pk8PrikeyInfo->keyType, ealPriKey);
+#endif
+#ifdef HITLS_CRYPTO_DSA
+        case BSL_CID_DSA:
+            return ParseDsaKeyParamAsn1Buff(libctx, attrName, 1,
+                pk8PrikeyInfo->pkeyRawKey, pk8PrikeyInfo->pkeyRawKeyLen, &pk8PrikeyInfo->keyParam, ealPriKey);
+#endif
+#ifdef HITLS_CRYPTO_DH
+        case BSL_CID_DH:
+            return ParseDhKeyParamAsn1Buff(libctx, attrName, 1,
+                pk8PrikeyInfo->pkeyRawKey, pk8PrikeyInfo->pkeyRawKeyLen, &pk8PrikeyInfo->keyParam, ealPriKey);
 #endif
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
-    if (pk8PrikeyInfo->keyType == BSL_CID_EC_PUBLICKEY) {
-        return ParseEccPrikeyAsn1Buff(libctx, attrName, pk8PrikeyInfo->pkeyRawKey, pk8PrikeyInfo->pkeyRawKeyLen,
-            &pk8PrikeyInfo->keyParam, ealPriKey);
-    }
+        case BSL_CID_EC_PUBLICKEY:
+            return ParseEccPrikeyAsn1Buff(libctx, attrName, pk8PrikeyInfo->pkeyRawKey, pk8PrikeyInfo->pkeyRawKeyLen,
+                &pk8PrikeyInfo->keyParam, ealPriKey);
 #endif
 #ifdef HITLS_CRYPTO_ED25519
-    if (pk8PrikeyInfo->keyType == BSL_CID_ED25519) {
-        return ParseEd25519PrikeyAsn1Buff(libctx, attrName, pk8PrikeyInfo->pkeyRawKey, pk8PrikeyInfo->pkeyRawKeyLen,
-            ealPriKey);
-    }
+        case BSL_CID_ED25519:
+            return ParseEd25519PrikeyAsn1Buff(libctx, attrName,
+                pk8PrikeyInfo->pkeyRawKey, pk8PrikeyInfo->pkeyRawKeyLen, ealPriKey);
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
-    if (pk8PrikeyInfo->keyType == BSL_CID_ML_DSA_44 || pk8PrikeyInfo->keyType == BSL_CID_ML_DSA_65
-        || pk8PrikeyInfo->keyType == BSL_CID_ML_DSA_87) {
+        case BSL_CID_ML_DSA_44:
+        case BSL_CID_ML_DSA_65:
+        case BSL_CID_ML_DSA_87:
             return ParseMldsaPrikeyAsn1Buff(libctx, attrName, pk8PrikeyInfo->pkeyRawKey,
                 pk8PrikeyInfo->pkeyRawKeyLen, pk8PrikeyInfo->keyType, ealPriKey);
-        }
 #endif
 #ifdef HITLS_CRYPTO_SLH_DSA
-        if (pk8PrikeyInfo->keyType >= BSL_CID_SLH_DSA_SHA2_128S &&
-            pk8PrikeyInfo->keyType <= BSL_CID_SLH_DSA_SHAKE_256F) {
+        case BSL_CID_SLH_DSA_SHA2_128S:
+        case BSL_CID_SLH_DSA_SHAKE_128S:
+        case BSL_CID_SLH_DSA_SHA2_128F:
+        case BSL_CID_SLH_DSA_SHAKE_128F:
+        case BSL_CID_SLH_DSA_SHA2_192S:
+        case BSL_CID_SLH_DSA_SHAKE_192S:
+        case BSL_CID_SLH_DSA_SHA2_192F:
+        case BSL_CID_SLH_DSA_SHAKE_192F:
+        case BSL_CID_SLH_DSA_SHA2_256S:
+        case BSL_CID_SLH_DSA_SHAKE_256S:
+        case BSL_CID_SLH_DSA_SHA2_256F:
+        case BSL_CID_SLH_DSA_SHAKE_256F:
             return ParseSlhDsaPrikeyAsn1Buff(libctx, attrName,
                 pk8PrikeyInfo->pkeyRawKey, pk8PrikeyInfo->pkeyRawKeyLen,
                 pk8PrikeyInfo->keyType, ealPriKey);
-        }
 #endif
 #ifdef HITLS_CRYPTO_MLKEM
-    if (pk8PrikeyInfo->keyType == BSL_CID_ML_KEM_512 || pk8PrikeyInfo->keyType == BSL_CID_ML_KEM_768 ||
-        pk8PrikeyInfo->keyType == BSL_CID_ML_KEM_1024) {
+        case BSL_CID_ML_KEM_512:
+        case BSL_CID_ML_KEM_768:
+        case BSL_CID_ML_KEM_1024:
             return ParseMlKemPrikeyAsn1Buff(libctx, attrName,
                 pk8PrikeyInfo->pkeyRawKey,
                 pk8PrikeyInfo->pkeyRawKeyLen, pk8PrikeyInfo->keyType, ealPriKey);
-        }
 #endif
-    return CRYPT_DECODE_UNSUPPORTED_PKCS8_TYPE;
+        default:
+            return CRYPT_DECODE_UNSUPPORTED_PKCS8_TYPE;
+    }
 }
 
 static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName, BSL_ASN1_Buffer *encode,
@@ -753,7 +1110,6 @@ static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
     }
     BSL_ASN1_Buffer *oid = algoId; // OID
     BSL_ASN1_Buffer *algParam = algoId + 1; // the parameters
-    (void)algParam;
     BSL_ASN1_Buffer *pubkey = &encode[CRYPT_SUBKEYINFO_BITSTRING_IDX]; // the last BSL_ASN1_Buffer, the pubkey
     BSL_ASN1_BitString bitPubkey = {0};
     ret = BSL_ASN1_DecodePrimitiveItem(pubkey, &bitPubkey);
@@ -762,44 +1118,64 @@ static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
         return ret;
     }
     BslCid cid = BSL_OBJ_GetCidFromOidBuff(oid->buff, oid->len);
+    switch (cid) {
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
-    if (cid == BSL_CID_EC_PUBLICKEY || cid == BSL_CID_SM2PRIME256) {
-        return ParseEccPubkeyAsn1Buff(libctx, attrName, &bitPubkey, algParam, ealPubKey);
-    }
+        case BSL_CID_EC_PUBLICKEY:
+        case BSL_CID_SM2PRIME256:
+            return ParseEccPubkeyAsn1Buff(libctx, attrName, &bitPubkey, algParam, ealPubKey);
 #endif
 #ifdef HITLS_CRYPTO_RSA
-    if (cid == BSL_CID_RSA || cid == BSL_CID_RSASSAPSS) {
-        return ParseRsaPubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, algParam, ealPubKey, cid);
-    }
+        case BSL_CID_RSA:
+        case BSL_CID_RSASSAPSS:
+            return ParseRsaPubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, algParam, ealPubKey, cid);
+#endif
+#ifdef HITLS_CRYPTO_DSA
+        case BSL_CID_DSA:
+            return ParseDsaKeyParamAsn1Buff(libctx, attrName, 0, bitPubkey.buff, bitPubkey.len, algParam, ealPubKey);
+#endif
+#ifdef HITLS_CRYPTO_DH
+        case BSL_CID_DH:
+            return ParseDhKeyParamAsn1Buff(libctx, attrName, 0, bitPubkey.buff, bitPubkey.len, algParam, ealPubKey);
 #endif
 #ifdef HITLS_CRYPTO_ED25519
-    if (cid == BSL_CID_ED25519) {
-        return ParseEd25519PubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, ealPubKey);
-    }
+        case BSL_CID_ED25519:
+            return ParseEd25519PubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, ealPubKey);
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
-    if (cid == BSL_CID_ML_DSA_44 || cid == BSL_CID_ML_DSA_65 || cid == BSL_CID_ML_DSA_87) {
-        return ParseMldsaPubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, cid, ealPubKey);
-    }
+        case BSL_CID_ML_DSA_44:
+        case BSL_CID_ML_DSA_65:
+        case BSL_CID_ML_DSA_87:
+            return ParseMldsaPubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, cid, ealPubKey);
 #endif
 #ifdef HITLS_CRYPTO_SLH_DSA
-    if (cid >= BSL_CID_SLH_DSA_SHA2_128S && cid <= BSL_CID_SLH_DSA_SHAKE_256F) {
-        return ParseSlhDsaPubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, cid, ealPubKey);
-    }
+        case BSL_CID_SLH_DSA_SHA2_128S:
+        case BSL_CID_SLH_DSA_SHAKE_128S:
+        case BSL_CID_SLH_DSA_SHA2_128F:
+        case BSL_CID_SLH_DSA_SHAKE_128F:
+        case BSL_CID_SLH_DSA_SHA2_192S:
+        case BSL_CID_SLH_DSA_SHAKE_192S:
+        case BSL_CID_SLH_DSA_SHA2_192F:
+        case BSL_CID_SLH_DSA_SHAKE_192F:
+        case BSL_CID_SLH_DSA_SHA2_256S:
+        case BSL_CID_SLH_DSA_SHAKE_256S:
+        case BSL_CID_SLH_DSA_SHA2_256F:
+        case BSL_CID_SLH_DSA_SHAKE_256F:
+            return ParseSlhDsaPubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, cid, ealPubKey);
 #endif
 #ifdef HITLS_CRYPTO_MLKEM
-    if (cid == BSL_CID_ML_KEM_512 || cid == BSL_CID_ML_KEM_768 || cid == BSL_CID_ML_KEM_1024) {
-        return ParseMlKemPubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, cid, ealPubKey);
-    }
+        case BSL_CID_ML_KEM_512:
+        case BSL_CID_ML_KEM_768:
+        case BSL_CID_ML_KEM_1024:
+            return ParseMlKemPubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, cid, ealPubKey);
 #endif
 #ifdef HITLS_CRYPTO_XMSS
-    if (cid == BSL_CID_XMSS) {
-        return ParseXmssPubKeyAsn1Buff(libctx, attrName, &bitPubkey, ealPubKey);
-    }
+        case BSL_CID_XMSS:
+            return ParseXmssPubKeyAsn1Buff(libctx, attrName, &bitPubkey, ealPubKey);
 #endif
-
-    BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
-    return CRYPT_DECODE_UNKNOWN_OID;
+        default:
+            BSL_ERR_PUSH_ERROR(CRYPT_DECODE_UNKNOWN_OID);
+            return CRYPT_DECODE_UNKNOWN_OID;
+    }
 }
 
 int32_t ParsePk8PriKeyBuff(CRYPT_EAL_LibCtx *libctx, const char *attrName, BSL_Buffer *buff,
@@ -1652,6 +2028,16 @@ static int32_t EncodePk8AlgidAny(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *bitSt
             ret = EncodeRsaPrvKey(ealPriKey, keyParam, &tmp, &cid);
             break;
 #endif
+#ifdef HITLS_CRYPTO_DSA
+        case CRYPT_PKEY_DSA:
+            ret = EncodeDsaKeyParamAsn1Buff(ealPriKey, 1, keyParam, &tmp);
+            break;
+#endif
+#ifdef HITLS_CRYPTO_DH
+        case CRYPT_PKEY_DH:
+            ret = EncodeDhKeyParamAsn1Buff(ealPriKey, 1, keyParam, &tmp);
+            break;
+#endif
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
         case CRYPT_PKEY_ECDSA:
         case CRYPT_PKEY_SM2:
@@ -1777,50 +2163,65 @@ int32_t EncodePk8EncPriKeyBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, C
 
 static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1_Buffer *algo, BSL_Buffer *bitStr)
 {
-    int32_t ret = CRYPT_ERR_ALGID;
+    int32_t ret;
     CRYPT_PKEY_AlgId cid = CRYPT_EAL_PkeyGetId(ealPubKey);
     BSL_Buffer bitTmp = {0};
     BSL_ASN1_Buffer algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX + 1] = {0};
+    switch (cid) {
 #ifdef HITLS_CRYPTO_RSA
-    if (cid == CRYPT_PKEY_RSA) {
-        ret = EncodeRsaPubkeyAsn1Buff(ealPubKey, &algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX], &bitTmp);
-        if (algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX].tag == (BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED)) {
-            cid = (CRYPT_PKEY_AlgId)BSL_CID_RSASSAPSS;
-        }
-    }
+        case CRYPT_PKEY_RSA:
+            ret = EncodeRsaPubkeyAsn1Buff(ealPubKey, &algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX], &bitTmp);
+            if (algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX].tag == (BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED)) {
+                cid = (CRYPT_PKEY_AlgId)BSL_CID_RSASSAPSS;
+            }
+            break;
+#endif
+#ifdef HITLS_CRYPTO_DSA
+        case CRYPT_PKEY_DSA:
+            ret = EncodeDsaKeyParamAsn1Buff(ealPubKey, 0, &algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX], &bitTmp);
+            break;
+#endif
+#ifdef HITLS_CRYPTO_DH
+        case CRYPT_PKEY_DH:
+            ret = EncodeDhKeyParamAsn1Buff(ealPubKey, 0, &algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX], &bitTmp);
+            break;
 #endif
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
-    if (cid == CRYPT_PKEY_ECDSA || cid == CRYPT_PKEY_SM2) {
-        cid = (CRYPT_PKEY_AlgId)BSL_CID_EC_PUBLICKEY;
-        ret = EncodeEccPubkeyAsn1Buff(ealPubKey, &algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX], &bitTmp);
-    }
+        case CRYPT_PKEY_ECDSA:
+        case CRYPT_PKEY_SM2:
+            cid = (CRYPT_PKEY_AlgId)BSL_CID_EC_PUBLICKEY;
+            ret = EncodeEccPubkeyAsn1Buff(ealPubKey, &algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX], &bitTmp);
+            break;
 #endif
 #ifdef HITLS_CRYPTO_ED25519
-    if (cid == CRYPT_PKEY_ED25519) {
-        ret = EncodeEd25519PubkeyAsn1Buff(ealPubKey, &bitTmp);
-    }
+        case CRYPT_PKEY_ED25519:
+            ret = EncodeEd25519PubkeyAsn1Buff(ealPubKey, &bitTmp);
+            break;
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
-    if (cid == CRYPT_PKEY_ML_DSA) {
-        ret = EncodeMldsaPubkeyAsn1Buff(ealPubKey, &bitTmp, (BslCid *)&cid);
-    }
+        case CRYPT_PKEY_ML_DSA:
+            ret = EncodeMldsaPubkeyAsn1Buff(ealPubKey, &bitTmp, (BslCid *)&cid);
+            break;
 #endif
 #ifdef HITLS_CRYPTO_SLH_DSA
-    if (cid == CRYPT_PKEY_SLH_DSA) {
-        ret = EncodeSlhDsaPubkeyAsn1Buff(ealPubKey, &bitTmp, (BslCid *)&cid);
-    }
+        case CRYPT_PKEY_SLH_DSA:
+            ret = EncodeSlhDsaPubkeyAsn1Buff(ealPubKey, &bitTmp, (BslCid *)&cid);
+            break;
 #endif
 #ifdef HITLS_CRYPTO_MLKEM
-    if (cid == CRYPT_PKEY_ML_KEM) {
-        ret = EncodeMlKemPubkeyAsn1Buff(ealPubKey, &bitTmp, (BslCid *)&cid);
-    }
+        case CRYPT_PKEY_ML_KEM:
+            ret = EncodeMlKemPubkeyAsn1Buff(ealPubKey, &bitTmp, (BslCid *)&cid);
+            break;
 #endif
-
 #ifdef HITLS_CRYPTO_XMSS
-    if (cid == CRYPT_PKEY_XMSS) {
-        ret = EncodeXmssPubkeyAsn1Buff(ealPubKey, &bitTmp);
-    }
+        case CRYPT_PKEY_XMSS:
+            ret = EncodeXmssPubkeyAsn1Buff(ealPubKey, &bitTmp);
+            break;
 #endif
+        default:
+            ret = CRYPT_DECODE_UNKNOWN_OID;
+            break;
+    }
 
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1845,8 +2246,9 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
     bitStr->data = bitTmp.data;
     bitStr->dataLen = bitTmp.dataLen;
 EXIT:
-#ifdef HITLS_CRYPTO_RSA
-    if (cid == (CRYPT_PKEY_AlgId)BSL_CID_RSASSAPSS) {
+#if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_DH)
+    if (cid == (CRYPT_PKEY_AlgId)BSL_CID_RSASSAPSS || cid == (CRYPT_PKEY_AlgId)CRYPT_PKEY_DSA ||
+        cid == (CRYPT_PKEY_AlgId)CRYPT_PKEY_DH) {
         BSL_SAL_FREE(algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX].buff);
     }
 #endif

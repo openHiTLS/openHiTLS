@@ -116,6 +116,18 @@ typedef enum {
     CRYPT_RSA_PRV_OTHER_PRIME_IDX = 9
 } CRYPT_RSA_PRV_TEMPL_IDX;
 
+typedef enum {
+    CRYPT_DSA_PRV_P_IDX = 0,
+    CRYPT_DSA_PRV_Q_IDX = 1,
+    CRYPT_DSA_PRV_G_IDX = 2,
+} CRYPT_DSA_KEYPARAM_TEMPL_IDX;
+
+typedef enum {
+    CRYPT_DH_PRV_P_IDX = 0,
+    CRYPT_DH_PRV_G_IDX = 1,
+    CRYPT_DH_PRV_Q_IDX = 2,
+} CRYPT_DH_KEYPARAM_TEMPL_IDX;
+
 #define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_HASH    0
 #define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_MASKGEN 1
 #define CRYPT_ASN1_CTX_SPECIFIC_TAG_RSAPSS_SALTLEN 2
@@ -171,6 +183,18 @@ int32_t CRYPT_DECODE_PrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_ASN
 int32_t CRYPT_DECODE_RsaPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *pubAsn1, uint32_t arrNum);
 
 int32_t CRYPT_DECODE_RsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *asn1, uint32_t asn1Num);
+#endif
+
+#ifdef HITLS_CRYPTO_DSA
+int32_t CRYPT_DECODE_DsaKeyParamAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
+
+int32_t CRYPT_ENCODE_DsaKeyParamAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num, BSL_Buffer *encode);
+#endif
+
+#ifdef HITLS_CRYPTO_DH
+int32_t CRYPT_DECODE_DhKeyParamAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
+
+int32_t CRYPT_ENCODE_DhKeyParamAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num, BSL_Buffer *encode);
 #endif
 
 #ifdef HITLS_CRYPTO_MLDSA
