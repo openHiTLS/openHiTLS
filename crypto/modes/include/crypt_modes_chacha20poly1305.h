@@ -59,6 +59,7 @@ int32_t MODES_CHACHA20POLY1305_Final(MODES_CHACHAPOLY_Ctx *modeCtx, uint8_t *out
 int32_t MODES_CHACHA20POLY1305_DeInitCtx(MODES_CHACHAPOLY_Ctx *modeCtx);
 int32_t MODES_CHACHA20POLY1305_Ctrl(MODES_CHACHAPOLY_Ctx *modeCtx, int32_t cmd, void *val, uint32_t len);
 void MODES_CHACHA20POLY1305_FreeCtx(MODES_CHACHAPOLY_Ctx *modeCtx);
+MODES_CHACHAPOLY_Ctx *MODES_CHACHA20POLY1305_DupCtx(const MODES_CHACHAPOLY_Ctx *modeCtx);
 
 #ifdef __cplusplus
 }

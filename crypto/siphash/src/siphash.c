@@ -327,4 +327,20 @@ void CRYPT_SIPHASH_FreeCtx(CRYPT_SIPHASH_Ctx *ctx)
         BSL_SAL_Free(ctx);
     }
 }
+
+CRYPT_SIPHASH_Ctx *CRYPT_SIPHASH_DupCtx(const CRYPT_SIPHASH_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return NULL;
+    }
+
+    CRYPT_SIPHASH_Ctx *newCtx = BSL_SAL_Dump(ctx, sizeof(CRYPT_SIPHASH_Ctx));
+    if (newCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    return newCtx;
+}
+
 #endif /* HITLS_CRYPTO_SIPHASH */

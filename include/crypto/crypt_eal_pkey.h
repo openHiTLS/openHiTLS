@@ -158,7 +158,7 @@ int32_t CRYPT_EAL_PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *fr
 
 /**
  * @ingroup crypt_eal_pkey
- * @brief   Copy the Pkey context.
+ * @brief   Dup the Pkey context.
  *          After the duplication is complete, call the CRYPT_EAL_PkeyFreeCtx interface to release the memory.
  *
  * @param   ctx [IN] Source Pkey context

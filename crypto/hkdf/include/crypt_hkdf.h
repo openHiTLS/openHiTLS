@@ -82,6 +82,15 @@ int32_t CRYPT_HKDF_Deinit(CRYPT_HKDF_Ctx *ctx);
  */
 void CRYPT_HKDF_FreeCtx(CRYPT_HKDF_Ctx *ctx);
 
+/**
+ * @ingroup HKDF
+ * @brief Copy HKDF context.
+ *
+ * @param ctx [IN] HKDF handle.
+ * @retval New HKDF handle.
+ */
+CRYPT_HKDF_Ctx *CRYPT_HKDF_DupCtx(const CRYPT_HKDF_Ctx *ctx);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

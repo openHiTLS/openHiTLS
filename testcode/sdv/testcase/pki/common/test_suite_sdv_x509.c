@@ -905,7 +905,7 @@ EXIT:
 #if (defined(HITLS_CRYPTO_KEY_ENCODE) && defined(HITLS_CRYPTO_KEY_EPKI)) || defined(HITLS_PKI_X509_CRT_GEN) || defined(HITLS_PKI_X509_CSR_GEN)
 static int32_t test = 0;
 static int32_t marked = 0;
-static void *STUB_BSL_SAL_Malloc(uint32_t size)
+static void *STUB_BSL_SAL_Malloc_x509(uint32_t size)
 {
     if (marked <= test) {
         marked++;
@@ -948,7 +948,7 @@ void SDV_PKI_GEN_ENCKEY_STUB_TC001(int algId, int curveId, int symId, Hex *pwd, 
     marked = 0;
     pkey = GenKey(algId, curveId);
     ASSERT_NE(pkey, NULL);
-    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc_x509);
     for (int i = maxTriggers; i > 0; i--) {
         marked = 0;
         test--;
@@ -1002,7 +1002,7 @@ void SDV_PKI_GEN_ENCKEY_STUB_TC002(int algId, int curveId, int symId, Hex *pwd, 
     marked = 0;
     pkey = GenKey(algId, curveId);
     ASSERT_NE(pkey, NULL);
-    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc_x509);
     for (int i = maxTriggers; i > 0; i--) {
         marked = 0;
         test--;
@@ -1077,7 +1077,7 @@ void SDV_PKI_GEN_CERT_STUB_TC001(int algId, int hashId, int curveId, int maxTrig
     }
     test = maxTriggers;
     marked = 0;
-    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc_x509);
     for (int i = maxTriggers; i > 0; i--) {
         marked = 0;
         test--;
@@ -1142,7 +1142,7 @@ void SDV_PKI_GEN_CSR_STUB_TC001(int algId, int hashId, int curveId, int maxTrigg
     }
     test = maxTriggers;
     marked = 0;
-    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc_x509);
     for (int i = maxTriggers; i > 0; i--) {
         marked = 0;
         test--;

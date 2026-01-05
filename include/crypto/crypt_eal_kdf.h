@@ -100,6 +100,27 @@ int32_t CRYPT_EAL_KdfDeInitCtx(CRYPT_EAL_KdfCTX *ctx);
  */
 void CRYPT_EAL_KdfFreeCtx(CRYPT_EAL_KdfCTX *ctx);
 
+ /**
+ * @ingroup crypt_eal_kdf
+ * @brief Copy the context of kdf
+ * Note: When using HKDF for key derivation in CRYPT_KDF_HKDF_MODE_EXTRACT mode,
+ * need set the new context's extended length use CRYPT_PARAM_KDF_EXLEN.
+ * @param from [IN] kdf context
+ * @param to [OUT] kdf context
+ *
+ */
+int32_t CRYPT_EAL_KdfCopyCtx(CRYPT_EAL_KdfCTX *to, const CRYPT_EAL_KdfCTX *from);
+
+/**
+ * @ingroup crypt_eal_kdf
+ * @brief   Dup the kdf context.
+ *
+ * @param   from [IN] original kdf context.
+ * @retval  CRYPT_EAL_KdfCTX, kdf context pointer.
+ *          NULL, if the operation fails.
+ */
+CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfDupCtx(const CRYPT_EAL_KdfCTX *from);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

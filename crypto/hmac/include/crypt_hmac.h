@@ -40,6 +40,7 @@ void    CRYPT_HMAC_Reinit(CRYPT_HMAC_Ctx *ctx);
 void    CRYPT_HMAC_Deinit(CRYPT_HMAC_Ctx *ctx);
 int32_t CRYPT_HMAC_Ctrl(CRYPT_HMAC_Ctx *ctx, CRYPT_MacCtrl opt, void *val, uint32_t len);
 void CRYPT_HMAC_FreeCtx(CRYPT_HMAC_Ctx *ctx);
+CRYPT_HMAC_Ctx *CRYPT_HMAC_DupCtx(const CRYPT_HMAC_Ctx *macCtx);
 
 #ifdef __cplusplus
 }

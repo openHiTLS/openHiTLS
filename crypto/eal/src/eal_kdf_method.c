@@ -38,7 +38,7 @@
     EAL_KdfMethod g_kdfMethod_##name = {         \
         (KdfNewCtx)CRYPT_##name##_NewCtx,  (KdfSetParam)CRYPT_##name##_SetParam,      \
         (KdfDerive)CRYPT_##name##_Derive,  (KdfDeinit)CRYPT_##name##_Deinit,          \
-        (KdfFreeCtx)CRYPT_##name##_FreeCtx, NULL \
+        (KdfFreeCtx)CRYPT_##name##_FreeCtx, NULL, (KdfDupCtx)CRYPT_##name##_DupCtx    \
     }
 
 #ifdef HITLS_CRYPTO_PBKDF2

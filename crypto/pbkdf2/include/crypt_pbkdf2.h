@@ -82,6 +82,15 @@ int32_t CRYPT_PBKDF2_Deinit(CRYPT_PBKDF2_Ctx *ctx);
  */
 void CRYPT_PBKDF2_FreeCtx(CRYPT_PBKDF2_Ctx *ctx);
 
+/**
+ * @ingroup PBKDF2
+ * @brief Copy PBKDF2 context.
+ *
+ * @param ctx [IN] PBKDF2 handle.
+ * @retval New PBKDF2 handle.
+ */
+CRYPT_PBKDF2_Ctx *CRYPT_PBKDF2_DupCtx(const CRYPT_PBKDF2_Ctx *ctx);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

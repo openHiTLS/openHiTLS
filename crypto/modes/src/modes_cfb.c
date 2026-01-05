@@ -554,4 +554,26 @@ int32_t MODES_CFB_UpdateEx(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t i
     }
 }
 
+MODES_CFB_Ctx *MODES_CFB_DupCtx(const MODES_CFB_Ctx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        return NULL;
+    }
+    MODES_CFB_Ctx *ctx = BSL_SAL_Dump(modeCtx, sizeof(MODES_CFB_Ctx));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return ctx;
+    }
+
+    void *ciphCtx = BSL_SAL_Dump(modeCtx->cfbCtx.modeCtx.ciphCtx, modeCtx->cfbCtx.modeCtx.ciphMeth->ctxSize);
+    if (ciphCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_ClearFree(ctx, sizeof(MODES_CFB_Ctx));
+        return NULL;
+    }
+
+    ctx->cfbCtx.modeCtx.ciphCtx = ciphCtx;
+    return ctx;
+}
+
 #endif

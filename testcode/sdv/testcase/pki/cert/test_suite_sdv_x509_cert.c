@@ -1186,7 +1186,7 @@ EXIT:
 static int32_t test = 0;
 static int32_t marked = 0;
 
-static void *STUB_BSL_SAL_Malloc(uint32_t size)
+static void *STUB_BSL_SAL_Malloc_cert(uint32_t size)
 {
     if (marked <= test) {
         marked++;
@@ -1216,7 +1216,7 @@ void SDV_X509_CERT_PARSE_STUB_TC001(int format, char *path, int maxTriggers)
     HITLS_X509_Cert *cert = NULL;
     test = maxTriggers;
     marked = 0;
-    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc_cert);
     for (int i = 208; i > 0; i--) {
         marked = 0;
         test--;

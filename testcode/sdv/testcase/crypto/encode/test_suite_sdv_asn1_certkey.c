@@ -919,7 +919,7 @@ EXIT:
 
 static int32_t test = 0;
 static int32_t marked = 0;
-static void *STUB_BSL_SAL_Malloc(uint32_t size)
+static void *STUB_BSL_SAL_Malloc_cert(uint32_t size)
 {
     if (marked <= test) {
         marked++;
@@ -959,7 +959,7 @@ void SDV_BSL_ASN1_PARSE_BUFF_STUB_TC001(char *formatStr, char *typeStr, char *pa
     marked = 0;
     STUB_Init();
     FuncStubInfo tmpRpInfo;
-    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc_cert);
     for (int i = maxTriggers; i > 0; i--) {
         marked = 0;
         test--;

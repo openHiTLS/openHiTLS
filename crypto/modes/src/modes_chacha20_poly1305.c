@@ -437,4 +437,26 @@ void MODES_CHACHA20POLY1305_FreeCtx(MODES_CHACHAPOLY_Ctx *modeCtx)
     BSL_SAL_ClearFree(modeCtx, sizeof(MODES_CHACHAPOLY_Ctx));
 }
 
+MODES_CHACHAPOLY_Ctx *MODES_CHACHA20POLY1305_DupCtx(const MODES_CHACHAPOLY_Ctx *modeCtx)
+{
+    if (modeCtx == NULL) {
+        return NULL;
+    }
+    MODES_CHACHAPOLY_Ctx *ctx = BSL_SAL_Dump(modeCtx, sizeof(MODES_CHACHAPOLY_Ctx));
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return ctx;
+    }
+
+    void *ciphCtx = BSL_SAL_Dump(modeCtx->chachaCtx.key, modeCtx->chachaCtx.method->ctxSize);
+    if (ciphCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_ClearFree(ctx, sizeof(MODES_CHACHAPOLY_Ctx));
+        return NULL;
+    }
+
+    ctx->chachaCtx.key = ciphCtx;
+    return ctx;
+}
+
 #endif

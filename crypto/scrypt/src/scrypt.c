@@ -531,4 +531,37 @@ void CRYPT_SCRYPT_FreeCtx(CRYPT_SCRYPT_Ctx *ctx)
     BSL_SAL_Free(ctx);
 }
 
+CRYPT_SCRYPT_Ctx *CRYPT_SCRYPT_DupCtx(const CRYPT_SCRYPT_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        return NULL;
+    }
+    uint8_t *password = NULL;
+    uint8_t *salt = NULL;
+    CRYPT_SCRYPT_Ctx *newCtx = BSL_SAL_Dump(ctx, sizeof(CRYPT_SCRYPT_Ctx));
+    if (newCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+
+    if (ctx->password != NULL) {
+        password = BSL_SAL_Dump(ctx->password, ctx->passLen);
+        GOTO_EXIT_IF((password == NULL), CRYPT_MEM_ALLOC_FAIL);
+    }
+    if (ctx->salt != NULL) {
+        salt = BSL_SAL_Dump(ctx->salt, ctx->saltLen);
+        GOTO_EXIT_IF((salt == NULL), CRYPT_MEM_ALLOC_FAIL);
+    }
+
+    newCtx->password = password;
+    newCtx->salt = salt;
+    return newCtx;
+EXIT:
+    BSL_SAL_ClearFree(password, ctx->passLen);
+    BSL_SAL_Free(salt);
+    BSL_SAL_Free(newCtx);
+    return NULL;
+}
+
+
 #endif /* HITLS_CRYPTO_SCRYPT */

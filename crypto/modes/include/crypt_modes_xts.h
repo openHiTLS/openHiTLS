@@ -69,6 +69,8 @@ int32_t AES_XTS_Update(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t inLen
 
 int32_t AES_XTS_Final(MODES_XTS_Ctx *modeCtx, uint8_t *out, uint32_t *outLen);
 
+MODES_XTS_Ctx *MODES_XTS_DupCtx(const MODES_XTS_Ctx *modeCtx);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

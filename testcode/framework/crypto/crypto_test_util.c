@@ -305,3 +305,39 @@ CRYPT_EAL_PkeyCtx *TestPkeyNewCtx(
 #endif
 }
 #endif
+
+static volatile uint32_t g_malloc_called_idx = 0;
+static volatile uint32_t g_malloc_failed_idx = 0;
+static volatile bool g_malloc_fail_enabled = true;
+
+void *STUB_BSL_SAL_Malloc(uint32_t size)
+{
+    uint32_t current_call_index = g_malloc_called_idx;
+    g_malloc_called_idx = current_call_index + 1;
+
+    if (g_malloc_fail_enabled && current_call_index == g_malloc_failed_idx) {
+        return NULL;
+    }
+
+    return malloc(size);
+}
+
+void STUB_ResetMallocCount(void)
+{
+    g_malloc_called_idx = 0;
+}
+
+void STUB_SetMallocFailIndex(uint32_t failIdx)
+{
+    g_malloc_failed_idx = failIdx;
+}
+
+uint32_t STUB_GetMallocCallCount(void)
+{
+    return g_malloc_called_idx;
+}
+
+void STUB_EnableMallocFail(bool enable)
+{
+    g_malloc_fail_enabled = enable;
+}

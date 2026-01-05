@@ -74,6 +74,7 @@ static void EalKdfCopyMethod(const EAL_KdfMethod *method, EAL_KdfUnitaryMethod *
     dest->deinit = method->deinit;
     dest->freeCtx = method->freeCtx;
     dest->ctrl = method->ctrl;
+    dest->dupCtx = method->dupCtx;
 }
 
 #ifdef HITLS_CRYPTO_PROVIDER
@@ -105,6 +106,9 @@ static int32_t CRYPT_EAL_SetKdfMethod(CRYPT_EAL_KdfCTX *ctx, const CRYPT_EAL_Fun
                 break;
             case CRYPT_EAL_IMPLKDF_FREECTX:
                 method->freeCtx = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLKDF_DUPCTX:
+                method->dupCtx = funcs[index].func;
                 break;
             default:
                 BSL_SAL_FREE(method);
@@ -259,6 +263,72 @@ void CRYPT_EAL_KdfFreeCtx(CRYPT_EAL_KdfCTX *ctx)
     BSL_SAL_FREE(ctx->method);
     BSL_SAL_FREE(ctx);
     return;
+}
+
+int32_t CRYPT_EAL_KdfCopyCtx(CRYPT_EAL_KdfCTX *to, const CRYPT_EAL_KdfCTX *from)
+{
+    if (to == NULL || from == NULL || from->method == NULL || from->method->dupCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (to->data != NULL) {
+        if (to->method == NULL || to->method->freeCtx == NULL) {
+            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+        }
+        to->method->freeCtx(to->data);
+        to->data = NULL;
+    }
+    if (to->method != NULL) {
+        BSL_SAL_FREE(to->method);
+    }
+
+    EAL_KdfUnitaryMethod *tmpMethod = BSL_SAL_Dump(from->method, sizeof(EAL_KdfUnitaryMethod));
+    if (tmpMethod == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+
+    void *newData = from->method->dupCtx(from->data);
+    if (newData == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(tmpMethod);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    (void)memcpy_s(to, sizeof(CRYPT_EAL_KdfCTX), from, sizeof(CRYPT_EAL_KdfCTX));
+    to->data = newData;
+    to->method = tmpMethod;
+    return CRYPT_SUCCESS;
+}
+
+CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfDupCtx(const CRYPT_EAL_KdfCTX *from)
+{
+    if (from == NULL || from->method == NULL || from->method->dupCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
+        return NULL;
+    }
+
+    CRYPT_EAL_KdfCTX *newCtx = BSL_SAL_Dump(from, sizeof(CRYPT_EAL_KdfCTX));
+    if (newCtx == NULL ) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+
+    newCtx->method = BSL_SAL_Dump(from->method, sizeof(EAL_KdfUnitaryMethod));
+    if (newCtx->method == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newCtx);
+        return NULL;
+    }
+
+    newCtx->data = from->method->dupCtx(from->data);
+    if (newCtx->data == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newCtx->method);
+        BSL_SAL_Free(newCtx);
+        return NULL;
+    }
+    return newCtx;
 }
 
 #endif

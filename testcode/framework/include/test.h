@@ -161,6 +161,55 @@ void PrintLog(FILE *logFile);
 
 void PrintDiff(const uint8_t *str1, uint32_t size1, const uint8_t *str2, uint32_t size2);
 
+/**
+ * @brief Stub function for BSL_SAL_Malloc to simulate malloc failures
+ *
+ * This function is used in memory leak tests to trigger malloc failures at specific points.
+ * It tracks the number of malloc calls and returns NULL when the call count matches
+ * the configured failure index.
+ *
+ * @param size Size to allocate
+ * @return Allocated memory pointer, or NULL if simulating a failure
+ */
+void *STUB_BSL_SAL_Malloc(uint32_t size);
+
+/**
+ * @brief Reset malloc stub counters
+ *
+ * Resets the internal counters used by STUB_BSL_SAL_Malloc. Should be called
+ * before each test case to ensure clean state.
+ */
+void STUB_ResetMallocCount(void);
+
+/**
+ * @brief Set which malloc call should fail
+ *
+ * Configures STUB_BSL_SAL_Malloc to fail on a specific call number.
+ * For example, SetMallocFailIndex(3) will cause the 3rd malloc call to return NULL.
+ *
+ * @param failIdx The index (0-based) of the malloc call that should fail
+ */
+void STUB_SetMallocFailIndex(uint32_t failIdx);
+
+/**
+ * @brief Get current malloc call count
+ *
+ * Returns the number of malloc calls made since the last reset.
+ *
+ * @return Current call count
+ */
+uint32_t STUB_GetMallocCallCount(void);
+
+/**
+ * @brief Enable or disable malloc failure injection
+ *
+ * When disabled, STUB_BSL_SAL_Malloc will never return NULL (acts like normal malloc).
+ * This is useful for the "probe" phase to count total malloc calls.
+ *
+ * @param enable true to enable failure injection, false to disable
+ */
+void STUB_EnableMallocFail(bool enable);
+
 #ifdef __cplusplus
 }
 #endif

@@ -173,4 +173,27 @@ void CRYPT_CMAC_FreeCtx(CRYPT_CMAC_Ctx *ctx)
     BSL_SAL_Free(ctx);
 }
 
+CRYPT_CMAC_Ctx *CRYPT_CMAC_DupCtx(const CRYPT_CMAC_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return NULL;
+    }
+
+    CRYPT_CMAC_Ctx *newCtx = BSL_SAL_Dump(ctx, sizeof(CRYPT_CMAC_Ctx));
+    if (newCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+
+    void *key = BSL_SAL_Dump(ctx->key, ctx->method->ctxSize);
+    if (key == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newCtx);
+        return NULL;
+    }
+    newCtx->key = key;
+    return newCtx;
+}
+
 #endif /* HITLS_CRYPTO_CMAC */

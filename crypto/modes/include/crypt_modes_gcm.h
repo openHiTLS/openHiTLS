@@ -81,6 +81,8 @@ int32_t MODES_GCM_UpdateEx(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t i
 
 int32_t MODES_GCM_InitHashTable(MODES_CipherGCMCtx *ctx);
 int32_t MODES_GCM_SetKey(MODES_CipherGCMCtx *ctx, const uint8_t *key, uint32_t len);
+MODES_GCM_Ctx *MODES_GCM_DupCtx(const MODES_GCM_Ctx *modeCtx);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

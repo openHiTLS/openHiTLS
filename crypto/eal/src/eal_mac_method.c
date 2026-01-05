@@ -52,7 +52,8 @@
         (MacDeinit)CRYPT_##name##_Deinit,            \
         (MacReinit)CRYPT_##name##_Reinit,            \
         (MacCtrl)CRYPT_##name##_Ctrl,                \
-        (MacFreeCtx)CRYPT_##name##_FreeCtx           \
+        (MacFreeCtx)CRYPT_##name##_FreeCtx,          \
+        (MacDupCtx)CRYPT_##name##_DupCtx,            \
     }
 
 #ifdef HITLS_CRYPTO_HMAC
@@ -77,7 +78,8 @@ EAL_MacMethod g_macMethod_GMAC = {
     // (MacReinit)
     NULL,
     (MacCtrl)CRYPT_GMAC_Ctrl,
-    (MacFreeCtx)CRYPT_GMAC_FreeCtx
+    (MacFreeCtx)CRYPT_GMAC_FreeCtx,
+    (MacDupCtx)CRYPT_GMAC_DupCtx,
 };
 #endif
 

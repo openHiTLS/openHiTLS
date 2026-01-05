@@ -16,6 +16,7 @@
 #include <pthread.h>
 #include "securec.h"
 #include "crypt_eal_mac.h"
+#include "eal_mac_local.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
 #include "crypt_sha1.h"
@@ -23,6 +24,7 @@
 #include "crypt_sha3.h"
 #include "crypt_sm3.h"
 #include "crypt_md5.h"
+#include "stub_replace.h"
 
 #define TEST_FAIL (-1)
 #define TEST_SUCCESS (0)

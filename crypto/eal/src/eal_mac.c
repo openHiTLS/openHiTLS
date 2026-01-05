@@ -46,6 +46,7 @@ static void EalMacCopyMethod(const EAL_MacMethod *src, EAL_MacUnitaryMethod *dst
     dst->newCtx = src->newCtx;
     dst->ctrl = src->ctrl;
     dst->freeCtx = src->freeCtx;
+    dst->dupCtx = src->dupCtx;
 }
 
 #ifdef HITLS_CRYPTO_PROVIDER
@@ -82,6 +83,9 @@ static int32_t CRYPT_EAL_SetMacMethod(CRYPT_EAL_MacCtx *ctx, const CRYPT_EAL_Fun
                 break;
             case CRYPT_EAL_IMPLMAC_FREECTX:
                 method->freeCtx = funcs[index].func;
+                break;
+            case CRYPT_EAL_IMPLMAC_DUPCTX:
+                method->dupCtx = funcs[index].func;
                 break;
             default:
                 BSL_SAL_Free(method);
@@ -377,6 +381,72 @@ bool CRYPT_EAL_MacIsValidAlgId(CRYPT_MAC_AlgId id)
 {
     EAL_MacMethLookup method;
     return EAL_MacFindMethod(id, &method) == CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_EAL_MacCopyCtx(CRYPT_EAL_MacCtx *to, const CRYPT_EAL_MacCtx *from)
+{
+    if (to == NULL || from == NULL || from->macMeth == NULL || from->macMeth->dupCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    if (to->ctx != NULL) {
+        if (to->macMeth->freeCtx == NULL) {
+            EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, from->id, CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+        }
+        to->macMeth->freeCtx(to->ctx);
+        to->ctx = NULL;
+    }
+
+    if (to->macMeth != NULL) {
+        BSL_SAL_FREE(to->macMeth);
+    }
+
+    EAL_MacUnitaryMethod *tmpMethod = BSL_SAL_Dump(from->macMeth, sizeof(EAL_MacUnitaryMethod));
+    if (tmpMethod == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, from->id, CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+
+    void *ctx = from->macMeth->dupCtx(from->ctx);
+    if (ctx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, from->id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(tmpMethod);
+        return CRYPT_INVALID_ARG;
+    }
+    (void)memcpy_s(to, sizeof(CRYPT_EAL_MacCtx), from, sizeof(CRYPT_EAL_MacCtx));
+    to->ctx = ctx;
+    to->macMeth = tmpMethod;
+    return CRYPT_SUCCESS;
+}
+
+CRYPT_EAL_MacCtx *CRYPT_EAL_MacDupCtx(const CRYPT_EAL_MacCtx *from)
+{
+    if (from == NULL || from->macMeth == NULL || from->macMeth->dupCtx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, CRYPT_MAC_MAX, CRYPT_NULL_INPUT);
+        return NULL;
+    }
+
+    CRYPT_EAL_MacCtx *newCtx = BSL_SAL_Dump(from, sizeof(CRYPT_EAL_MacCtx));
+    if (newCtx == NULL ) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, from->id, CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    newCtx->macMeth = BSL_SAL_Dump(from->macMeth, sizeof(EAL_MacUnitaryMethod));
+    if (newCtx->macMeth == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, from->id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newCtx);
+        return NULL;
+    }
+    newCtx->ctx = from->macMeth->dupCtx(from->ctx);
+    if (newCtx->ctx == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, from->id, CRYPT_MEM_ALLOC_FAIL);
+        BSL_SAL_Free(newCtx->macMeth);
+        BSL_SAL_Free(newCtx);
+        return NULL;
+    }
+    return newCtx;
 }
 
 #endif

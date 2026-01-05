@@ -396,4 +396,51 @@ void CRYPT_HKDF_FreeCtx(CRYPT_HKDF_Ctx *ctx)
     BSL_SAL_ClearFree((void *)ctx->info, ctx->infoLen);
     BSL_SAL_Free(ctx);
 }
+
+CRYPT_HKDF_Ctx *CRYPT_HKDF_DupCtx(const CRYPT_HKDF_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        return NULL;
+    }
+    uint8_t *key = NULL;
+    uint8_t *salt = NULL;
+    uint8_t *prk = NULL;
+    uint8_t *info = NULL;
+
+    CRYPT_HKDF_Ctx *newCtx = BSL_SAL_Dump(ctx, sizeof(CRYPT_HKDF_Ctx));
+    if (newCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+    if (ctx->key != NULL) {
+        key = BSL_SAL_Dump(ctx->key, ctx->keyLen);
+        GOTO_EXIT_IF((key == NULL), CRYPT_MEM_ALLOC_FAIL);
+    }
+    if (ctx->salt != NULL) {
+        salt = BSL_SAL_Dump(ctx->salt, ctx->saltLen);
+        GOTO_EXIT_IF((salt == NULL), CRYPT_MEM_ALLOC_FAIL);
+    }
+    if (ctx->prk != NULL) {
+        prk = BSL_SAL_Dump(ctx->prk, ctx->prkLen);
+        GOTO_EXIT_IF((prk == NULL), CRYPT_MEM_ALLOC_FAIL);
+    }
+    if (ctx->info != NULL) {
+        info = BSL_SAL_Dump(ctx->info, ctx->infoLen);
+        GOTO_EXIT_IF((info == NULL), CRYPT_MEM_ALLOC_FAIL);
+    }
+    newCtx->key = key;
+    newCtx->salt = salt;
+    newCtx->prk = prk;
+    newCtx->info = info;
+    newCtx->outLen = NULL;
+    return newCtx;
+EXIT:
+    BSL_SAL_ClearFree(key, ctx->keyLen);
+    BSL_SAL_ClearFree(prk, ctx->prkLen);
+    BSL_SAL_ClearFree(info, ctx->infoLen);
+    BSL_SAL_Free(salt);
+    BSL_SAL_Free(newCtx);
+    return NULL;
+}
+
 #endif // HITLS_CRYPTO_HKDF

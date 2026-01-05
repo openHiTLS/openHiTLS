@@ -1557,7 +1557,7 @@ EXIT:
 
 static int32_t test = 0;
 static int32_t marked = 0;
-static void *STUB_BSL_SAL_Malloc(uint32_t size)
+static void *STUB_BSL_SAL_Malloc_Crl(uint32_t size)
 {
     if (marked <= test) {
         marked++;
@@ -1579,7 +1579,7 @@ void SDV_X509_CRL_PARSE_STUB_TC001(int format, char *path, int maxTriggers)
     HITLS_X509_Crl *crl = NULL;
     FuncStubInfo tmpRpInfo = {0};
     STUB_Init();
-    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc_Crl);
     test = maxTriggers;
     for (int i = maxTriggers; i > 0; i--) {
         marked = 0;
@@ -1636,7 +1636,7 @@ void SDV_X509_CRL_ENCODE_STUB_TC001(char *cert, char *key, int keytype, int pad,
     marked = 0;
     STUB_Init();
     FuncStubInfo tmpRpInfo;
-    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+    STUB_Replace(&tmpRpInfo, BSL_SAL_Malloc, STUB_BSL_SAL_Malloc_Crl);
     ASSERT_NE(crl->signature.buff, NULL);
     ASSERT_NE(crl->signature.len, 0);
     for (int i = maxTriggers; i > 0; i--) {

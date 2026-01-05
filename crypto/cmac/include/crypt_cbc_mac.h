@@ -100,6 +100,13 @@ int32_t CRYPT_CBC_MAC_Ctrl(CRYPT_CBC_MAC_Ctx *ctx, uint32_t opt, void *val, uint
  */
 void CRYPT_CBC_MAC_FreeCtx(CRYPT_CBC_MAC_Ctx *ctx);
 
+/**
+ * @brief Dup the CBC_MAC context.
+ * @param ctx [IN] CBC_MAC context.
+ * @retval CBC_MAC context.
+ */
+CRYPT_CBC_MAC_Ctx *CRYPT_CBC_MAC_DupCtx(const CRYPT_CBC_MAC_Ctx *ctx);
+
 #ifdef __cplusplus
 }
 #endif /* __cpluscplus */
