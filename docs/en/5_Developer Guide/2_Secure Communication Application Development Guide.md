@@ -27,7 +27,7 @@ Currently, openHiTLS supports the following protocol versions:
 | Verify client certificate only once| **HITLS_CFG_SetClientOnceVerifySupport** (disabled by default)|
 | Send handshake packets in a single flight| **HITLS_CFG_SetFlightTransmitSwitch** (disabled by default)|
 | Quiet shutdown mode| **HITLS_CFG_SetQuietShutdown** (disabled by default)|
-| Extend primary key| **HITLS_CFG_SetExtenedMasterSecretSupport** (enabled by default)|
+| Extend primary key| **HITLS_CFG_SetExtendedMasterSecretSupport** (enabled by default)|
 | Support **sessionTicket**| **HITLS_CFG_SetSessionTicketSupport** (enabled by default)|
 | Verify **keyUsage**| **HITLS_CFG_SetCheckKeyUsage** (enabled by default)|
 | Auto-generate DH parameter| **HITLS_CFG_SetDhAutoSupport** (enabled by default)|
@@ -48,7 +48,7 @@ Currently, openHiTLS supports the following protocol versions:
 | Authentication after handshake| **HITLS_CFG_SetPostHandshakeAuthSupport** (disabled by default)|
 | Send handshake packets in a single flight| **HITLS_CFG_SetFlightTransmitSwitch** (disabled by default)|
 | Quiet shutdown mode| **HITLS_CFG_SetQuietShutdown** (disabled by default)|
-| Extend primary key| **HITLS_CFG_SetExtenedMasterSecretSupport** (enabled by default)|
+| Extend primary key| **HITLS_CFG_SetExtendedMasterSecretSupport** (enabled by default)|
 | Support **sessionTicket**| **HITLS_CFG_SetSessionTicketSupport** (enabled by default)|
 | Verify **keyUsage**| **HITLS_CFG_SetCheckKeyUsage** (enabled by default)|
 | Auto-generate DH parameter| **HITLS_CFG_SetDhAutoSupport** (enabled by default)|

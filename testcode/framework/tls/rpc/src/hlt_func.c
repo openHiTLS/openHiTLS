@@ -1208,7 +1208,7 @@ int HLT_SetNoClientCertSupport(HLT_Ctx_Config *ctxConfig, bool support)
     return SUCCESS;
 }
 
-int HLT_SetExtenedMasterSecretSupport(HLT_Ctx_Config *ctxConfig, bool support)
+int HLT_SetExtendedMasterSecretSupport(HLT_Ctx_Config *ctxConfig, bool support)
 {
     ctxConfig->isSupportExtendMasterSecret = support;
     return SUCCESS;

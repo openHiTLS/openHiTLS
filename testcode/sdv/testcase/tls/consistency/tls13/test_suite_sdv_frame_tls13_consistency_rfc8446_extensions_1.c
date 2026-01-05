@@ -1141,7 +1141,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CHECK_SERVERHELLO_MASTER_SECRET_FUNC_TC001
     testInfo.c_config = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(testInfo.c_config != NULL);
 
-    HITLS_CFG_SetExtenedMasterSecretSupport(testInfo.c_config, true);
+    HITLS_CFG_SetExtendedMasterSecretSupport(testInfo.c_config, true);
 
     testInfo.client = FRAME_CreateLink(testInfo.c_config, testInfo.uioType);
     ASSERT_TRUE(testInfo.client != NULL);
