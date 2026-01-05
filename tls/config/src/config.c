@@ -1292,7 +1292,7 @@ int32_t HITLS_CFG_SetLegacyRenegotiateSupport(HITLS_Config *config, bool support
 }
 #endif /* defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */
 
-int32_t HITLS_CFG_SetExtenedMasterSecretSupport(HITLS_Config *config, bool support)
+int32_t HITLS_CFG_SetExtendedMasterSecretSupport(HITLS_Config *config, bool support)
 {
     if (config == NULL) {
         return HITLS_NULL_INPUT;
@@ -1326,7 +1326,7 @@ int32_t HITLS_CFG_SetPskIdentityHint(HITLS_Config *config, const uint8_t *hint, 
 }
 #endif
 
-int32_t HITLS_CFG_GetExtenedMasterSecretSupport(HITLS_Config *config, bool *isSupport)
+int32_t HITLS_CFG_GetExtendedMasterSecretSupport(HITLS_Config *config, bool *isSupport)
 {
     if (config == NULL || isSupport == NULL) {
         return HITLS_NULL_INPUT;

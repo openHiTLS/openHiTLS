@@ -548,8 +548,8 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
 #endif
     // Indicates whether extended master keys are supported.
     LOG_DEBUG("HiTLS Set Support Extend Master Secret is %d", inCtxCfg->isSupportExtendMasterSecret);
-    ret = HITLS_CFG_SetExtenedMasterSecretSupport(outCfg, inCtxCfg->isSupportExtendMasterSecret);
-    ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetExtenedMasterSecretSupport ERROR");
+    ret = HITLS_CFG_SetExtendedMasterSecretSupport(outCfg, inCtxCfg->isSupportExtendMasterSecret);
+    ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetExtendedMasterSecretSupport ERROR");
 
 #ifdef HITLS_TLS_CONFIG_KEY_USAGE
     // Support CloseCheckKeyUsage

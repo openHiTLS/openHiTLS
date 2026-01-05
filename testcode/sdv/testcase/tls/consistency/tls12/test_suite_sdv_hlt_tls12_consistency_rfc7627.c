@@ -115,7 +115,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC006(int ver
     ASSERT_TRUE(clientConfig != NULL);
 
     HLT_Ctx_Config *clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
-    HLT_SetExtenedMasterSecretSupport(clientCtxConfig, false);
+    HLT_SetExtendedMasterSecretSupport(clientCtxConfig, false);
 
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
 #ifdef HITLS_TLS_FEATURE_PROVIDER
@@ -124,7 +124,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC006(int ver
     serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
 #endif
     // 1. The client and server do not support the extension connection establishment.
-    HLT_SetExtenedMasterSecretSupport(clientCtxConfig, false);
+    HLT_SetExtendedMasterSecretSupport(clientCtxConfig, false);
 
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
@@ -371,7 +371,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC008(int ver
     serverConfigId2 = HLT_RpcTlsNewCtx(remoteProcess, version, false);
 #endif
     // 2. Apply for another server that does not support the extension and establish a connection.
-    HLT_SetExtenedMasterSecretSupport(serverCtxConfig2, false);
+    HLT_SetExtendedMasterSecretSupport(serverCtxConfig2, false);
     ASSERT_TRUE(HLT_TlsSetCtx(clientConfig, clientCtxConfig) == 0);
     ASSERT_TRUE(HLT_RpcTlsSetCtx(remoteProcess, serverConfigId, serverCtxConfig) == 0);
     do {
@@ -513,10 +513,10 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009(int ver
     ASSERT_TRUE(clientConfig != NULL);
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
-    HLT_SetExtenedMasterSecretSupport(clientCtxConfig, false);
+    HLT_SetExtendedMasterSecretSupport(clientCtxConfig, false);
 
     serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
-    HLT_SetExtenedMasterSecretSupport(serverCtxConfig, false);
+    HLT_SetExtendedMasterSecretSupport(serverCtxConfig, false);
 
 #ifdef HITLS_TLS_FEATURE_PROVIDER
     serverConfigId = HLT_RpcProviderTlsNewCtx(remoteProcess, version, false, NULL, NULL, NULL, 0, NULL);

@@ -1782,7 +1782,7 @@ int32_t HITLS_Flush(HITLS_Ctx *ctx);
  * @retval  HITLS_SUCCESS.
  * @retval  HITLS_NULL_INPUT, ctx is NULL.
  */
-int32_t HITLS_SetExtenedMasterSecretSupport(HITLS_Ctx *ctx, bool support);
+int32_t HITLS_SetExtendedMasterSecretSupport(HITLS_Ctx *ctx, bool support);
 
 /**
  * @ingroup hitls
@@ -1793,7 +1793,7 @@ int32_t HITLS_SetExtenedMasterSecretSupport(HITLS_Ctx *ctx, bool support);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, ctx is NULL.
  */
-int32_t HITLS_GetExtenedMasterSecretSupport(HITLS_Ctx *ctx, bool *isSupport);
+int32_t HITLS_GetExtendedMasterSecretSupport(HITLS_Ctx *ctx, bool *isSupport);
 
 /**
  * @ingroup hitls

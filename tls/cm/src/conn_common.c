@@ -830,22 +830,22 @@ int32_t HITLS_Flush(HITLS_Ctx *ctx)
 #endif
 }
 
-int32_t HITLS_SetExtenedMasterSecretSupport(HITLS_Ctx *ctx, bool support)
+int32_t HITLS_SetExtendedMasterSecretSupport(HITLS_Ctx *ctx, bool support)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    return HITLS_CFG_SetExtenedMasterSecretSupport(&(ctx->config.tlsConfig), support);
+    return HITLS_CFG_SetExtendedMasterSecretSupport(&(ctx->config.tlsConfig), support);
 }
 
-int32_t HITLS_GetExtenedMasterSecretSupport(HITLS_Ctx *ctx, bool *isSupport)
+int32_t HITLS_GetExtendedMasterSecretSupport(HITLS_Ctx *ctx, bool *isSupport)
 {
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
 
-    return HITLS_CFG_GetExtenedMasterSecretSupport(&(ctx->config.tlsConfig), isSupport);
+    return HITLS_CFG_GetExtendedMasterSecretSupport(&(ctx->config.tlsConfig), isSupport);
 }
 
 #if defined(HITLS_TLS_FEATURE_RENEGOTIATION) && defined(HITLS_TLS_FEATURE_SESSION)
