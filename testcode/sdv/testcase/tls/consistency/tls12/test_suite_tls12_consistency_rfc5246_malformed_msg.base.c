@@ -252,7 +252,7 @@ void ServerAccept(HLT_FrameHandle *handle, TestPara *testPara)
 
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
-    ASSERT_TRUE(HLT_SetExtenedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
+    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
     clientRes = HLT_ProcessTlsInit(remoteProcess, TLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
     HLT_RpcTlsConnect(remoteProcess, clientRes->sslId);
@@ -303,7 +303,7 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
 
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
-    ASSERT_TRUE(HLT_SetExtenedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
+    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
     ASSERT_TRUE(HLT_SetSessionTicketSupport(clientConfig, testPara->isSupportSessionTicket) == 0);
     if (testPara->isSupportDhCipherSuites) {
         ASSERT_TRUE(HLT_SetCipherSuites(clientConfig, "HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256") == 0);
@@ -415,7 +415,7 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     if (testPara->clientSignature != NULL) {
         ASSERT_TRUE(HLT_SetSignature(clientConfig, testPara->clientSignature) == 0);
     }
-    ASSERT_TRUE(HLT_SetExtenedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
+    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
     clientRes = HLT_ProcessTlsInit(localProcess, TLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
     // Configure the interface for constructing abnormal messages.

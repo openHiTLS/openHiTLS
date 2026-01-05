@@ -355,7 +355,7 @@ int32_t DefaultCfgStatusPark1(HandshakeTestInfo *testInfo, int uioType)
     HITLS_CFG_SetSignature(testInfo->config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
     HITLS_CFG_SetClientVerifySupport(testInfo->config, testInfo->isSupportClientVerify);
     HITLS_CFG_SetNoClientCertSupport(testInfo->config, false);
-    HITLS_CFG_SetExtenedMasterSecretSupport(testInfo->config, true);
+    HITLS_CFG_SetExtendedMasterSecretSupport(testInfo->config, true);
     return StatusPark(testInfo, uioType);
 }
 

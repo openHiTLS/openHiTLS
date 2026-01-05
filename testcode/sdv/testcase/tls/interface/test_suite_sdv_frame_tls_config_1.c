@@ -302,15 +302,15 @@ EXIT:
 /* END_CASE */
 
 /** @
-* @test  UT_TLS_CFG_SET_GET_EXTENEDMASTERSECRETSUPPORT_API_TC001
+* @test  UT_TLS_CFG_SET_GET_ExtendedMasterSecretSUPPORT_API_TC001
 * @spec  -
-* @title Test the HITLS_CFG_SetExtenedMasterSecretSupport and HITLS_CFG_GetExtenedMasterSecretSupport interfaces.
+* @title Test the HITLS_CFG_SetExtendedMasterSecretSupport and HITLS_CFG_GetExtendedMasterSecretSupport interfaces.
 * @precon nan
-* @brief HITLS_CFG_SetExtenedMasterSecretSupport
+* @brief HITLS_CFG_SetExtendedMasterSecretSupport
 * 1. Import empty configuration information. Expected result 1.
 * 2. Transfer non-empty configuration information and set support to an invalid value. Expected result 2.
 * 3. Transfer non-empty configuration information and set support to a valid value. Expected result 3.
-*    HITLS_CFG_GetExtenedMasterSecretSupport
+*    HITLS_CFG_GetExtendedMasterSecretSupport
 * 1. Import empty configuration information. Expected result 1.
 * 2. Transfer an empty isSupport pointer. Expected result 1.
 * 3. Transfer the non-null configuration information and the isSupport pointer is not null. Expected result 3 is
@@ -321,14 +321,14 @@ EXIT:
 @ */
 
 /* BEGIN_CASE */
-void UT_TLS_CFG_SET_GET_EXTENEDMASTERSECRETSUPPORT_API_TC001(int tlsVersion)
+void UT_TLS_CFG_SET_GET_ExtendedMasterSecretSUPPORT_API_TC001(int tlsVersion)
 {
     FRAME_Init();
     HITLS_Config *config = NULL;
     bool support = -1;
     bool isSupport = -1;
-    ASSERT_TRUE(HITLS_CFG_SetExtenedMasterSecretSupport(config, support) == HITLS_NULL_INPUT);
-    ASSERT_TRUE(HITLS_CFG_GetExtenedMasterSecretSupport(config, &isSupport) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_SetExtendedMasterSecretSupport(config, support) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_GetExtendedMasterSecretSupport(config, &isSupport) == HITLS_NULL_INPUT);
 
     switch (tlsVersion) {
         case HITLS_VERSION_TLS12:
@@ -342,19 +342,19 @@ void UT_TLS_CFG_SET_GET_EXTENEDMASTERSECRETSUPPORT_API_TC001(int tlsVersion)
             break;
     }
 
-    ASSERT_TRUE(HITLS_CFG_GetExtenedMasterSecretSupport(config, NULL) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_GetExtendedMasterSecretSupport(config, NULL) == HITLS_NULL_INPUT);
 
     support = true;
-    ASSERT_TRUE(HITLS_CFG_SetExtenedMasterSecretSupport(config, support) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetExtendedMasterSecretSupport(config, support) == HITLS_SUCCESS);
 
     support = -1;
-    ASSERT_TRUE(HITLS_CFG_SetExtenedMasterSecretSupport(config, support) == HITLS_SUCCESS);
-    ASSERT_TRUE(HITLS_CFG_GetExtenedMasterSecretSupport(config, &isSupport) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetExtendedMasterSecretSupport(config, support) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_GetExtendedMasterSecretSupport(config, &isSupport) == HITLS_SUCCESS);
     ASSERT_TRUE(isSupport == true);
 
     support = false;
-    ASSERT_TRUE(HITLS_CFG_SetExtenedMasterSecretSupport(config, support) == HITLS_SUCCESS);
-    ASSERT_TRUE(HITLS_CFG_GetExtenedMasterSecretSupport(config, &isSupport) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetExtendedMasterSecretSupport(config, support) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_GetExtendedMasterSecretSupport(config, &isSupport) == HITLS_SUCCESS);
     ASSERT_TRUE(isSupport == false);
 EXIT:
     HITLS_CFG_FreeConfig(config);

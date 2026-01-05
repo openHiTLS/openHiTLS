@@ -61,7 +61,7 @@ int32_t NewConfig(HsTestInfo *testInfo)
     }
 
     HITLS_CFG_SetClientVerifySupport(testInfo->config, true);
-    HITLS_CFG_SetExtenedMasterSecretSupport(testInfo->config, true);
+    HITLS_CFG_SetExtendedMasterSecretSupport(testInfo->config, true);
     HITLS_CFG_SetNoClientCertSupport(testInfo->config, true);
     HITLS_CFG_SetRenegotiationSupport(testInfo->config, true);
     HITLS_CFG_SetPskServerCallback(testInfo->config, (HITLS_PskServerCb)ExampleServerCb);

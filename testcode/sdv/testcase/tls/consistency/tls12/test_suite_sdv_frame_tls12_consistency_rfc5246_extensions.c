@@ -520,8 +520,8 @@ void UT_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_TC002(void)
     HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(s_config != NULL);
 
-    HITLS_CFG_SetExtenedMasterSecretSupport(c_config, true);
-    HITLS_CFG_SetExtenedMasterSecretSupport(s_config, false);
+    HITLS_CFG_SetExtendedMasterSecretSupport(c_config, true);
+    HITLS_CFG_SetExtendedMasterSecretSupport(s_config, false);
 
     FRAME_LinkObj *client = FRAME_CreateLink(c_config, BSL_UIO_TCP);
     ASSERT_TRUE(client != NULL);

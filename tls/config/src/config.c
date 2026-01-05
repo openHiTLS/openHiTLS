@@ -1491,7 +1491,7 @@ int32_t HITLS_CFG_SetResumptionOnRenegoSupport(HITLS_Config *config, bool suppor
 }
 #endif
 
-int32_t HITLS_CFG_SetExtenedMasterSecretSupport(HITLS_Config *config, bool support)
+int32_t HITLS_CFG_SetExtendedMasterSecretSupport(HITLS_Config *config, bool support)
 {
     if (config == NULL) {
         return HITLS_NULL_INPUT;
@@ -1572,7 +1572,7 @@ int32_t HITLS_CFG_GetRenegotiationSupport(const HITLS_Config *config, bool *isSu
 }
 #endif
 
-int32_t HITLS_CFG_GetExtenedMasterSecretSupport(HITLS_Config *config, bool *isSupport)
+int32_t HITLS_CFG_GetExtendedMasterSecretSupport(HITLS_Config *config, bool *isSupport)
 {
     if (config == NULL || isSupport == NULL) {
         return HITLS_NULL_INPUT;

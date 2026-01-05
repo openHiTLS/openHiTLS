@@ -156,7 +156,7 @@ void SetCommonConfig(HITLS_Config **config)
         HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256};
     HITLS_CFG_SetCipherSuites(*config, cipherSuites, sizeof(cipherSuites) / sizeof(uint16_t));
     HITLS_CFG_SetClientVerifySupport(*config, true);
-    HITLS_CFG_SetExtenedMasterSecretSupport(*config, true);
+    HITLS_CFG_SetExtendedMasterSecretSupport(*config, true);
     HITLS_CFG_SetNoClientCertSupport(*config, true);
     HITLS_CFG_SetRenegotiationSupport(*config, true);
     HITLS_CFG_SetPskServerCallback(*config, (HITLS_PskServerCb)ExampleServerCb);
