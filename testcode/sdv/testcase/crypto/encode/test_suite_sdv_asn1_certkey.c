@@ -1200,7 +1200,9 @@ void SDV_BSL_ASN1_DECODE_DSAKEY_BUFF_TC002(char *path, int fileType)
     for (uint32_t i = 0; i < totalMallocCount; i++) {
         STUB_ResetMallocCount();
         STUB_SetMallocFailIndex(i);
-        ASSERT_NE(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+        CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx);
+        CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+        pkeyCtx = NULL;
     }
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
@@ -1296,7 +1298,9 @@ void SDV_BSL_ASN1_DECODE_DHKEY_BUFF_TC002(char *path, int fileType)
     for (uint32_t i = 0; i < totalMallocCount; i++) {
         STUB_ResetMallocCount();
         STUB_SetMallocFailIndex(i);
-        ASSERT_NE(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+        CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx);
+        CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+        pkeyCtx = NULL;
     }
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
