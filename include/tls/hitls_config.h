@@ -624,7 +624,7 @@ int32_t HITLS_CFG_SetNoClientCertSupport(HITLS_Config *config, bool support);
  * @retval  HITLS_SUCCESS.
  * @retval  HITLS_NULL_INPUT, config is NULL
  */
-int32_t HITLS_CFG_SetExtenedMasterSecretSupport(HITLS_Config *config, bool support);
+int32_t HITLS_CFG_SetExtendedMasterSecretSupport(HITLS_Config *config, bool support);
 
 /**
  * @ingroup hitls_config
@@ -695,7 +695,7 @@ int32_t HITLS_CFG_GetNoClientCertSupport(HITLS_Config *config, bool *isSupport);
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */
-int32_t HITLS_CFG_GetExtenedMasterSecretSupport(HITLS_Config *config, bool *isSupport);
+int32_t HITLS_CFG_GetExtendedMasterSecretSupport(HITLS_Config *config, bool *isSupport);
 
 /**
  * @ingroup hitls_config
