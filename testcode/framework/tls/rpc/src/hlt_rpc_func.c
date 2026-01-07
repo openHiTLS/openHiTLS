@@ -183,7 +183,7 @@ int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config
     g_cmdIndex, __FUNCTION__, ctxId,
     config->minVersion, config->maxVersion, config->cipherSuites, config->tls13CipherSuites,
     config->pointFormats, config->groups, config->signAlgorithms, config->isSupportRenegotiation,
-    config->isSupportClientVerify, config->isSupportNoClientCert, config->isSupportExtendMasterSecret, config->eeCert,
+    config->isSupportClientVerify, config->isSupportNoClientCert, config->isSupportExtendedMasterSecret, config->eeCert,
     config->privKey, config->password, config->caCert, config->chainCert,
     config->signCert, config->signPrivKey, config->psk, config->isSupportSessionTicket,
     config->setSessionCache, config->ticketKeyCb, config->isFlightTransmitEnable, config->serverName,

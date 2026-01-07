@@ -58,10 +58,10 @@ typedef struct {
     FRAME_LinkObj *server;
     HITLS_HandshakeState state;
     bool isClient;
-    bool isSupportExtendMasterSecret;
+    bool isSupportExtendedMasterSecret;
     bool isSupportClientVerify;
     bool isSupportNoClientCert;
-    bool isServerExtendMasterSecret;
+    bool isServerExtendedMasterSecret;
     bool isSupportRenegotiation; /* Renegotiation support flag */
     bool needStopBeforeRecvCCS;  /* For CCS test, stop at TRY_RECV_FINISH stage before CCS message is received. */
 } HandshakeTestInfo;

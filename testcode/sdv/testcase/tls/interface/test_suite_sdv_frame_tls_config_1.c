@@ -316,8 +316,8 @@ EXIT:
 * 3. Transfer the non-null configuration information and the isSupport pointer is not null. Expected result 3 is
 *    obtained.
 * @expect 1. Returns HITLS_NULL_INPUT
-* 2. HITLS_SUCCES is returned and config->isSupportExtendMasterSecret is true.
-* 3. Returns HITLS_SUCCES and config->isSupportExtendMasterSecret is true or false.
+* 2. HITLS_SUCCES is returned and config->isSupportExtendedMasterSecret is true.
+* 3. Returns HITLS_SUCCES and config->isSupportExtendedMasterSecret is true or false.
 @ */
 
 /* BEGIN_CASE */

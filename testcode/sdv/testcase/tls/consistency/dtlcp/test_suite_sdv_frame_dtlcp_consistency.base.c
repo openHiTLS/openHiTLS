@@ -71,7 +71,7 @@ typedef struct {
     FRAME_LinkObj *server;
     HITLS_HandshakeState state;
     bool isClient;
-    bool isSupportExtendMasterSecret;
+    bool isSupportExtendedMasterSecret;
     bool isSupportClientVerify;
     bool isSupportNoClientCert;
     bool isSupportRenegotiation;
@@ -108,7 +108,7 @@ int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo, int uioType)
     }
 
     HITLS_CFG_SetCheckKeyUsage(testInfo->config, false);
-    testInfo->config->isSupportExtendMasterSecret = testInfo->isSupportExtendMasterSecret;
+    testInfo->config->isSupportExtendedMasterSecret = testInfo->isSupportExtendedMasterSecret;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
     testInfo->config->isSupportRenegotiation = testInfo->isSupportRenegotiation;
@@ -130,7 +130,7 @@ int32_t DefaultCfgStatusParkWithSuite(HandshakeTestInfo *testInfo)
     uint16_t cipherSuits[] = {HITLS_ECDHE_SM4_CBC_SM3,HITLS_ECC_SM4_CBC_SM3};
     HITLS_CFG_SetCipherSuites(testInfo->config, cipherSuits, sizeof(cipherSuits) / sizeof(uint16_t));
 
-    testInfo->config->isSupportExtendMasterSecret = testInfo->isSupportExtendMasterSecret;
+    testInfo->config->isSupportExtendedMasterSecret = testInfo->isSupportExtendedMasterSecret;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
 

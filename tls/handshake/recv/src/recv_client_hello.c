@@ -861,7 +861,7 @@ static int32_t ResumeCheckExtendedMasterScret(TLS_Ctx *ctx, const ClientHelloMsg
         if (clientHello->extension.flag.haveExtendedMasterSecret) {
             HITLS_SESS_Free(*sess);
             *sess = NULL;
-        } else if (ctx->config.tlsConfig.isSupportExtendMasterSecret) {
+        } else if (ctx->config.tlsConfig.isSupportExtendedMasterSecret) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17052, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "ExtendedMasterSecret err", 0, 0, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
@@ -1091,7 +1091,7 @@ static int32_t ServerProcessClientHelloExt(TLS_Ctx *ctx, const ClientHelloMsg *c
     (void)clientHello;
     (void)ctx;
     /* Sets the extended master key flag */
-    if (ctx->negotiatedInfo.version > HITLS_VERSION_SSL30 && ctx->config.tlsConfig.isSupportExtendMasterSecret &&
+    if (ctx->negotiatedInfo.version > HITLS_VERSION_SSL30 && ctx->config.tlsConfig.isSupportExtendedMasterSecret &&
         !clientHello->extension.flag.haveExtendedMasterSecret) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16196, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "The peer does not support the extended master key.", 0, 0, 0, 0);

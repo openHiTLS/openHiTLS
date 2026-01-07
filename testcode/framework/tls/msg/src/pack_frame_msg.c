@@ -89,7 +89,7 @@ int32_t GenClientHelloExtensionCtx(TLS_Ctx *tlsCtx, FRAME_Msg *msg)
 {
     ClientHelloMsg *clientHello = &msg->body.handshakeMsg.body.clientHello;
     TLS_Config *tlsConfig = &tlsCtx->config.tlsConfig;
-    tlsConfig->isSupportExtendMasterSecret = clientHello->extension.flag.haveExtendedMasterSecret;
+    tlsConfig->isSupportExtendedMasterSecret = clientHello->extension.flag.haveExtendedMasterSecret;
     tlsConfig->signAlgorithmsSize = clientHello->extension.content.signatureAlgorithmsSize;
     if (tlsConfig->signAlgorithmsSize > 0) {
         uint32_t signAlgorithmsLen = tlsConfig->signAlgorithmsSize * sizeof(uint16_t);

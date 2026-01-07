@@ -247,8 +247,8 @@ int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ct
 
     // Indicates whether extended master keys are supported.
     // The twelfth parameter indicates whether the extended master key is supported.
-    ctxConfig->isSupportExtendMasterSecret = (((int)strtol(string[index++], NULL, 10)) > 0) ? true : false;
-    LOG_DEBUG("Remote Process Set Ctx isSupportExtendMasterSecret is %d", ctxConfig->isSupportExtendMasterSecret);
+    ctxConfig->isSupportExtendedMasterSecret = (((int)strtol(string[index++], NULL, 10)) > 0) ? true : false;
+    LOG_DEBUG("Remote Process Set Ctx isSupportExtendedMasterSecret is %d", ctxConfig->isSupportExtendedMasterSecret);
 
     // device certificate
     // The thirteenth parameter indicates the location of the device certificate.

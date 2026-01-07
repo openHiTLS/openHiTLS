@@ -520,8 +520,8 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetPostHandshakeAuth ERROR");
 #endif
     // Indicates whether extended master keys are supported.
-    LOG_DEBUG("HiTLS Set Support Extend Master Secret is %d", inCtxCfg->isSupportExtendMasterSecret);
-    ret = HITLS_CFG_SetExtendedMasterSecretSupport(outCfg, inCtxCfg->isSupportExtendMasterSecret);
+    LOG_DEBUG("HiTLS Set Support Extend Master Secret is %d", inCtxCfg->isSupportExtendedMasterSecret);
+    ret = HITLS_CFG_SetExtendedMasterSecretSupport(outCfg, inCtxCfg->isSupportExtendedMasterSecret);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetExtendedMasterSecretSupport ERROR");
 
 #ifdef HITLS_TLS_CONFIG_KEY_USAGE

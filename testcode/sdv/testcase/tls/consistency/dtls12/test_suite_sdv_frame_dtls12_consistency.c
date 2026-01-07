@@ -44,7 +44,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001(void)
     FRAME_Type frameType = {0};
     testInfo.state = HS_STATE_BUTT;
     testInfo.isClient = false;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     frameType.versionType = HITLS_VERSION_DTLS12;
     frameType.recordType = REC_TYPE_HANDSHAKE;
@@ -100,7 +100,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SEQ_NUMBER_TC001(int uioType)
     HandshakeTestInfo testInfo = {0};
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.state = TRY_RECV_CLIENT_HELLO;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, uioType) == HITLS_SUCCESS);
@@ -146,7 +146,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SEQ_NUMBER_TC002(int uioType)
     HandshakeTestInfo testInfo = {0};
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.state = TRY_RECV_SERVER_HELLO;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, uioType) == HITLS_SUCCESS);
@@ -194,7 +194,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SEQ_NUMBER_TC003(int uioType)
     HandshakeTestInfo testInfo = {0};
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.state = TRY_RECV_FINISH;
     testInfo.isClient = false;
     ASSERT_EQ(DefaultCfgStatusPark(&testInfo, uioType), HITLS_SUCCESS);
@@ -256,7 +256,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_TOOLONG_TC001(int uioType)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_RECV_CERTIFICATE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     testInfo.isSupportClientVerify = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, uioType) == HITLS_SUCCESS);
@@ -323,7 +323,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_TOOLONG_TC002(int uioType)
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_RECV_CERTIFICATE;
     testInfo.isClient = true;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, uioType) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.client->io);
@@ -389,7 +389,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_TOOLONG_TC003(int uioType)
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_RECV_CLIENT_KEY_EXCHANGE;
     testInfo.isClient = false;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, uioType) == HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Accept(testInfo.server->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
@@ -447,7 +447,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_ZERO_TC001(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.server->io);
@@ -524,7 +524,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_ZERO_TC002(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.client->io);
@@ -599,7 +599,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_ZERO_TC003(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_CERTIFICATE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.client->io);
@@ -666,7 +666,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_ZERO_TC004(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_SERVER_KEY_EXCHANGE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.client->io);
@@ -738,7 +738,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_ZERO_TC005(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_CLIENT_KEY_EXCHANGE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.server->io);
@@ -803,7 +803,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_ZERO_TC006(void)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_RECV_CLIENT_KEY_EXCHANGE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     ASSERT_TRUE(testInfo.server->ssl != NULL);
@@ -853,7 +853,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_ZERO_TC007(void)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_SEND_FINISH;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     ASSERT_TRUE(testInfo.server->ssl != NULL);
@@ -905,7 +905,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_COMPRESSED_TC001(int uioType)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, uioType) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.server->io);
@@ -972,7 +972,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_COMPRESSED_TC002(int uioType)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, uioType) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.client->io);
@@ -1038,7 +1038,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_CIPHER_TC001(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.server->io);
@@ -1104,7 +1104,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_CIPHER_TC002(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.client->io);
@@ -1172,7 +1172,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SIGNATURE_TC001(void)
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_CLIENT_HELLO;
     testInfo.isClient = false;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.server->io);
@@ -1236,7 +1236,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SIGNATURE_TC002(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.client->io);
@@ -1307,7 +1307,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SIGNATURE_TC003(int uioType)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, uioType) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.server->io);
@@ -1374,7 +1374,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SIGNATURE_TC004(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.server->io);
@@ -1443,7 +1443,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SIGNATURE_TC005(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.client->io);
@@ -1514,7 +1514,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SIGNATURE_TC007(int uioType)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, uioType) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.server->io);
@@ -1578,7 +1578,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_CERTIFICATE_TC003(int uioType)
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_CLIENT_KEY_EXCHANGE;
     testInfo.isClient = false;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, uioType) == HITLS_SUCCESS);
     frameType.versionType = HITLS_VERSION_DTLS12;
@@ -1636,7 +1636,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_VERSION_TC001(int uioType)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, uioType) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.server->io);
@@ -1703,14 +1703,14 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC001(int uioType)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TLS_IDLE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     FRAME_Init();
     testInfo.config = HITLS_CFG_NewDTLS12Config();
     ASSERT_TRUE(testInfo.config != NULL);
     uint16_t cipherSuits[] = {HITLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384};
     HITLS_CFG_SetCipherSuites(testInfo.config, cipherSuits, sizeof(cipherSuits) / sizeof(uint16_t));
-    testInfo.config->isSupportExtendMasterSecret = testInfo.isSupportExtendMasterSecret;
+    testInfo.config->isSupportExtendedMasterSecret = testInfo.isSupportExtendedMasterSecret;
     testInfo.config->isSupportClientVerify = testInfo.isSupportClientVerify;
     testInfo.config->isSupportNoClientCert = testInfo.isSupportNoClientCert;
     testInfo.client = FRAME_CreateLink(testInfo.config, uioType);
@@ -1763,7 +1763,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC002(int uioType)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_SEND_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, uioType) == HITLS_SUCCESS);
     CONN_Deinit(testInfo.client->ssl);
@@ -1806,7 +1806,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC003(int uioType)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_SEND_SERVER_HELLO_DONE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, uioType) == HITLS_SUCCESS);
     ASSERT_TRUE(testInfo.server->ssl != NULL);
@@ -1856,7 +1856,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC004(int uioType)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_SEND_FINISH;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, uioType) == HITLS_SUCCESS);
     ASSERT_TRUE(testInfo.client->ssl != NULL);
@@ -1896,7 +1896,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC005(int uioType)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_SEND_FINISH;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, uioType) == HITLS_SUCCESS);
     ASSERT_TRUE(testInfo.server->ssl != NULL);
@@ -1942,7 +1942,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC006(int uioType)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = HS_STATE_BUTT;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, uioType) == HITLS_SUCCESS);
     ASSERT_TRUE(SendHelloReqWithIndex(testInfo.server->ssl, 1) == HITLS_SUCCESS);
@@ -1989,7 +1989,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC007(int uioType)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TLS_IDLE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     HandshakeTestInfo testInfo1 = {0};
     testInfo1.state = TLS_IDLE;
@@ -1998,7 +1998,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC007(int uioType)
     ASSERT_TRUE(testInfo.config != NULL);
     uint16_t cipherSuits[] = {HITLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384};
     HITLS_CFG_SetCipherSuites(testInfo.config, cipherSuits, sizeof(cipherSuits) / sizeof(uint16_t));
-    testInfo.config->isSupportExtendMasterSecret = testInfo.isSupportExtendMasterSecret;
+    testInfo.config->isSupportExtendedMasterSecret = testInfo.isSupportExtendedMasterSecret;
     testInfo.config->isSupportClientVerify = testInfo.isSupportClientVerify;
     testInfo.config->isSupportNoClientCert = testInfo.isSupportNoClientCert;
     testInfo.client = FRAME_CreateLink(testInfo.config, uioType);
@@ -2698,7 +2698,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC8422_ECPOINT_TC001(void)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.client->io);
@@ -2769,7 +2769,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC8422_EXTENSION_MISS_TC001(void)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.server->io);

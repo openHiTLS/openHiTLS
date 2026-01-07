@@ -262,7 +262,7 @@ static int32_t EncSessObjSessionId(const HITLS_Session *sess, SessionObjType typ
     return HITLS_SUCCESS;
 }
 
-static int32_t EncSessObjExtendMasterSecret(const HITLS_Session *sess, SessionObjType type, uint8_t *data,
+static int32_t EncSessObjExtendedMasterSecret(const HITLS_Session *sess, SessionObjType type, uint8_t *data,
     uint32_t length, uint32_t *encLen)
 {
     int ret;
@@ -461,7 +461,7 @@ static const SessObjEncFunc OBJ_LIST[] = {
 #endif
     {SESS_OBJ_SESSION_ID_CTX, EncSessObjSessionIdCtx},
     {SESS_OBJ_SESSION_ID, EncSessObjSessionId},
-    {SESS_OBJ_SUPPORT_EXTEND_MASTER_SECRET, EncSessObjExtendMasterSecret},
+    {SESS_OBJ_SUPPORT_EXTEND_MASTER_SECRET, EncSessObjExtendedMasterSecret},
     {SESS_OBJ_VERIFY_RESULT, EncSessObjVerifyResult},
     {SESS_OBJ_AGE_ADD, EncSessObjTicketAgeAdd},
 };

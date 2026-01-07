@@ -73,10 +73,10 @@ typedef struct {
     FRAME_LinkObj *server;
     HITLS_HandshakeState state;
     bool isClient;
-    bool isSupportExtendMasterSecret;
+    bool isSupportExtendedMasterSecret;
     bool isSupportClientVerify;
     bool isSupportNoClientCert;
-    bool isServerExtendMasterSecret;
+    bool isServerExtendedMasterSecret;
     bool isSupportRenegotiation; /* Renegotiation support flag */
     bool needStopBeforeRecvCCS;  /* CCS test, so that the TRY_RECV_FINISH stops before the CCS message is received */
 } HandshakeTestInfo;
@@ -94,7 +94,7 @@ typedef struct {
     bool alertRecvFlag;     // Indicates whether the alert is received. The value fasle indicates the sent alert, and the value true indicates the received alert.
     ALERT_Description expectDescription; // Expected alert description of the test end.
     bool isSupportClientVerify; // Indicates whether to use the dual-end verification.
-    bool isSupportExtendMasterSecret; // Indicates whether to use an extended master key.
+    bool isSupportExtendedMasterSecret; // Indicates whether to use an extended master key.
     bool isSupportDhCipherSuites; // Indicates whether to use the DHE cipher suite
     bool isExpectRet;                     // Indicates whether the return value is expected.
     int expectRet;                        // Expected return value. The isExpectRet function needs to be enabled.
@@ -142,7 +142,7 @@ int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo)
         return HITLS_INTERNAL_EXCEPTION;
     }
     HITLS_CFG_SetCheckKeyUsage(testInfo->config, false);
-    testInfo->config->isSupportExtendMasterSecret = testInfo->isSupportExtendMasterSecret;
+    testInfo->config->isSupportExtendedMasterSecret = testInfo->isSupportExtendedMasterSecret;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
     testInfo->config->isSupportRenegotiation = testInfo->isSupportRenegotiation;
@@ -163,7 +163,7 @@ int32_t DefaultCfgStatusParkWithSuite(HandshakeTestInfo *testInfo)
     uint16_t cipherSuits[] = {HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256};
     HITLS_CFG_SetCipherSuites(testInfo->config, cipherSuits, sizeof(cipherSuits) / sizeof(uint16_t));
 
-    testInfo->config->isSupportExtendMasterSecret = testInfo->isSupportExtendMasterSecret;
+    testInfo->config->isSupportExtendedMasterSecret = testInfo->isSupportExtendedMasterSecret;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
 
@@ -173,10 +173,10 @@ int32_t DefaultCfgStatusParkWithSuite(HandshakeTestInfo *testInfo)
 int32_t StatusPark1(HandshakeTestInfo *testInfo)
 {
     /* Construct a link. */
-    if(testInfo->isServerExtendMasterSecret == true){
-        testInfo->config->isSupportExtendMasterSecret = true;
+    if(testInfo->isServerExtendedMasterSecret == true){
+        testInfo->config->isSupportExtendedMasterSecret = true;
     }else {
-        testInfo->config->isSupportExtendMasterSecret = false;
+        testInfo->config->isSupportExtendedMasterSecret = false;
     }
     testInfo->config->isSupportRenegotiation = false;
     testInfo->server = FRAME_CreateLink(testInfo->config, BSL_UIO_TCP);
@@ -184,10 +184,10 @@ int32_t StatusPark1(HandshakeTestInfo *testInfo)
         return HITLS_INTERNAL_EXCEPTION;
     }
 
-    if(testInfo->isServerExtendMasterSecret == true){
-        testInfo->config->isSupportExtendMasterSecret = false;
+    if(testInfo->isServerExtendedMasterSecret == true){
+        testInfo->config->isSupportExtendedMasterSecret = false;
     }else {
-        testInfo->config->isSupportExtendMasterSecret = true;
+        testInfo->config->isSupportExtendedMasterSecret = true;
     }
     testInfo->config->isSupportRenegotiation = testInfo->isSupportRenegotiation;
     testInfo->client = FRAME_CreateLink(testInfo->config, BSL_UIO_TCP);
@@ -219,7 +219,7 @@ int32_t DefaultCfgStatusPark1(HandshakeTestInfo *testInfo)
     uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
     HITLS_CFG_SetSignature(testInfo->config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
 
-    testInfo->config->isSupportExtendMasterSecret = testInfo->isSupportExtendMasterSecret;
+    testInfo->config->isSupportExtendedMasterSecret = testInfo->isSupportExtendedMasterSecret;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
 

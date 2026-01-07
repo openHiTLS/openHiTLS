@@ -164,7 +164,7 @@ static int32_t SetDefaultPointFormats(HITLS_Config *config)
 
 static void BasicInitConfig(HITLS_Config *config)
 {
-    config->isSupportExtendMasterSecret = false;
+    config->isSupportExtendedMasterSecret = false;
     config->emptyRecordsNum = HITLS_MAX_EMPTY_RECORDS;
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
     config->allowLegacyRenegotiate = false;
@@ -194,7 +194,7 @@ static void InitConfig(HITLS_Config *config)
     config->isSupportDhAuto = false;
 #endif
     if (config->maxVersion == HITLS_VERSION_TLCP_DTLCP11) {
-        config->isSupportExtendMasterSecret = false;
+        config->isSupportExtendedMasterSecret = false;
     }
 #ifdef HITLS_TLS_FEATURE_FLIGHT
     config->isFlightTransmitEnable = true;
