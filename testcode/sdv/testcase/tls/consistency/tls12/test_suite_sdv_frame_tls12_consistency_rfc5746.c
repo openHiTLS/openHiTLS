@@ -59,11 +59,11 @@ typedef struct {
     FRAME_LinkObj *server;
     HITLS_HandshakeState state;
     bool isClient;
-    bool isSupportExtendMasterSecret;
+    bool isSupportExtendedMasterSecret;
     bool isSupportClientVerify;
     bool isSupportNoClientCert;
     bool isSupportRenegotiation;
-    bool isServerExtendMasterSecret;
+    bool isServerExtendedMasterSecret;
 } HandshakeTestInfo;
 
 int32_t StatusPark(HandshakeTestInfo *testInfo)
@@ -117,7 +117,7 @@ int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo)
         return HITLS_INTERNAL_EXCEPTION;
     }
     HITLS_CFG_SetCheckKeyUsage(testInfo->config, false);
-    testInfo->config->isSupportExtendMasterSecret = testInfo->isSupportExtendMasterSecret;
+    testInfo->config->isSupportExtendedMasterSecret = testInfo->isSupportExtendedMasterSecret;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
     testInfo->config->isSupportRenegotiation = testInfo->isSupportRenegotiation;
@@ -127,10 +127,10 @@ int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo)
 
 int32_t StatusPark1(HandshakeTestInfo *testInfo)
 {
-    if (testInfo->isServerExtendMasterSecret == true) {
-        testInfo->config->isSupportExtendMasterSecret = true;
+    if (testInfo->isServerExtendedMasterSecret == true) {
+        testInfo->config->isSupportExtendedMasterSecret = true;
     } else {
-        testInfo->config->isSupportExtendMasterSecret = false;
+        testInfo->config->isSupportExtendedMasterSecret = false;
     }
     testInfo->config->isSupportRenegotiation = false;
     testInfo->server = FRAME_CreateLink(testInfo->config, BSL_UIO_TCP);
@@ -138,10 +138,10 @@ int32_t StatusPark1(HandshakeTestInfo *testInfo)
         return HITLS_INTERNAL_EXCEPTION;
     }
 
-    if (testInfo->isServerExtendMasterSecret == true) {
-        testInfo->config->isSupportExtendMasterSecret = false;
+    if (testInfo->isServerExtendedMasterSecret == true) {
+        testInfo->config->isSupportExtendedMasterSecret = false;
     } else {
-        testInfo->config->isSupportExtendMasterSecret = true;
+        testInfo->config->isSupportExtendedMasterSecret = true;
     }
     testInfo->config->isSupportRenegotiation = testInfo->isSupportRenegotiation;
     testInfo->client = FRAME_CreateLink(testInfo->config, BSL_UIO_TCP);
@@ -171,7 +171,7 @@ int32_t DefaultCfgStatusPark1(HandshakeTestInfo *testInfo)
     uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
     HITLS_CFG_SetSignature(testInfo->config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
 
-    testInfo->config->isSupportExtendMasterSecret = testInfo->isSupportExtendMasterSecret;
+    testInfo->config->isSupportExtendedMasterSecret = testInfo->isSupportExtendedMasterSecret;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
     testInfo->config->isSupportRenegotiation = testInfo->isSupportRenegotiation;
@@ -240,7 +240,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC001(void)
     HandshakeTestInfo testInfo = {0};
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportRenegotiation = true;
     testInfo.state = TRY_RECV_CLIENT_HELLO;
     testInfo.isClient = false;

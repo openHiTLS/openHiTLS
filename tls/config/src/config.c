@@ -138,7 +138,7 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
     destConfig->isQuietShutdown = srcConfig->isQuietShutdown;
     destConfig->isSupportServerPreference = srcConfig->isSupportServerPreference;
     destConfig->maxCertList = srcConfig->maxCertList;
-    destConfig->isSupportExtendMasterSecret = srcConfig->isSupportExtendMasterSecret;
+    destConfig->isSupportExtendedMasterSecret = srcConfig->isSupportExtendedMasterSecret;
     destConfig->emptyRecordsNum = srcConfig->emptyRecordsNum;
     destConfig->isKeepPeerCert = srcConfig->isKeepPeerCert;
     destConfig->version = srcConfig->version;
@@ -1297,7 +1297,7 @@ int32_t HITLS_CFG_SetExtendedMasterSecretSupport(HITLS_Config *config, bool supp
     if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
-    config->isSupportExtendMasterSecret = support;
+    config->isSupportExtendedMasterSecret = support;
     return HITLS_SUCCESS;
 }
 
@@ -1332,7 +1332,7 @@ int32_t HITLS_CFG_GetExtendedMasterSecretSupport(HITLS_Config *config, bool *isS
         return HITLS_NULL_INPUT;
     }
 
-    *isSupport = config->isSupportExtendMasterSecret;
+    *isSupport = config->isSupportExtendedMasterSecret;
     return HITLS_SUCCESS;
 }
 

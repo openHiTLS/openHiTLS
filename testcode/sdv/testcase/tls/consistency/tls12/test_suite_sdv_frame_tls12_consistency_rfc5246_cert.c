@@ -62,7 +62,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_SEND_CERTFICATE_TC001(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_SEND_SERVER_HELLO_DONE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
     testInfo.isClient = false;

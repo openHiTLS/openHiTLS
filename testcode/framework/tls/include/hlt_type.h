@@ -229,7 +229,7 @@ typedef struct {
     // The handshake will be continued regardless of the verification result. for server and client
     bool isSupportVerifyNone;
     bool isSupportPostHandshakeAuth;    // Indicates whether to support post handshake auth. The default value is false.
-    bool isSupportExtendMasterSecret;   // supports extended master keys. The default value is True
+    bool isSupportExtendedMasterSecret;   // supports extended master keys. The default value is True
     bool isSupportSessionTicket;        // Support session ticket
     bool isEncryptThenMac;              // Encrypt-then-mac is supported
     // Users can set the DH parameter to be automatically selected. If the switch is enabled,

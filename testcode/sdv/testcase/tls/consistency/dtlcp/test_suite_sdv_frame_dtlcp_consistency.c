@@ -411,7 +411,7 @@ void UT_TLS_DTLCP_CONSISTENCY_RFC8422_ECPOINT_TC001(void)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.client->io);
@@ -482,7 +482,7 @@ void UT_TLS_DTLCP_CONSISTENCY_RFC8422_EXTENSION_MISS_TC001(void)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.server->io);

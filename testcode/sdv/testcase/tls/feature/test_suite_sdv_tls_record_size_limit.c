@@ -681,7 +681,7 @@ void HITLS_SDV_TLS_RecSizeLimit_Overflow_FUNC_009(int flag)
     ASSERT_TRUE(tlsConfig != NULL);
     HITLS_CFG_SetRecordSizeLimit(tlsConfig, 16385);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
 
@@ -931,10 +931,10 @@ void HITLS_SDV_TLS_RecSizeLimit_FUNC_002(int flag,int c_size,int s_size)
     HITLS_CFG_SetRecordSizeLimit(c_tlsConfig, c_size);
     HITLS_CFG_SetRecordSizeLimit(s_tlsConfig, s_size);
 
-    c_tlsConfig->isSupportExtendMasterSecret = true;
+    c_tlsConfig->isSupportExtendedMasterSecret = true;
     c_tlsConfig->isSupportClientVerify = true;
     c_tlsConfig->isSupportNoClientCert = true;
-    s_tlsConfig->isSupportExtendMasterSecret = true;
+    s_tlsConfig->isSupportExtendedMasterSecret = true;
     s_tlsConfig->isSupportClientVerify = true;
     s_tlsConfig->isSupportNoClientCert = true;
 

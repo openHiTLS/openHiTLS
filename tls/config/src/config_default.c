@@ -166,7 +166,7 @@ static int32_t SetDefaultPointFormats(HITLS_Config *config)
 
 static void BasicInitConfig(HITLS_Config *config)
 {
-    config->isSupportExtendMasterSecret = false;
+    config->isSupportExtendedMasterSecret = false;
     config->emptyRecordsNum = HITLS_MAX_EMPTY_RECORDS;
 #ifdef HITLS_TLS_PROTO_TLS13
     config->isMiddleBoxCompat = true;
