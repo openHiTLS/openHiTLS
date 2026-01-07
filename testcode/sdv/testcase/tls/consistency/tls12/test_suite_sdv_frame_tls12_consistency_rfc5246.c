@@ -68,7 +68,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC001(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo) == HITLS_SUCCESS);
 
@@ -150,7 +150,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC002(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo) == HITLS_SUCCESS);
 
@@ -230,7 +230,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC003(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CERTIFICATE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo) == HITLS_SUCCESS);
 
@@ -303,7 +303,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC004(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_SERVER_KEY_EXCHANGE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo) == HITLS_SUCCESS);
 
@@ -380,7 +380,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC005(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CLIENT_KEY_EXCHANGE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo) == HITLS_SUCCESS);
 
@@ -451,7 +451,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC006(void)
     // Use the default configuration items to configure the client and server.
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_RECV_CERTIFICATE_VERIFY;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
     testInfo.isClient = false;
@@ -510,7 +510,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC007(void)
     // Use the default configuration items to configure the client and server.
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_RECV_NEW_SESSION_TICKET;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
     testInfo.isClient = true;
@@ -574,7 +574,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC008(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_SERVER_HELLO_DONE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
     testInfo.isClient = true;
@@ -648,7 +648,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_TC001(void)
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_RECV_SERVER_HELLO;
     testInfo.isClient = true;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
@@ -712,7 +712,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_TC002(void)
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_RECV_CERTIFICATE;
     testInfo.isClient = true;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
@@ -781,7 +781,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_TC003(void)
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_RECV_SERVER_KEY_EXCHANGE;
     testInfo.isClient = true;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
@@ -850,7 +850,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_TC004(void)
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_RECV_SERVER_HELLO_DONE;
     testInfo.isClient = true;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
@@ -964,7 +964,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_TC006(void)
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_RECV_CERTIFICATE_REQUEST;
     testInfo.isClient = true;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
@@ -1033,7 +1033,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_TC007(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
@@ -1106,7 +1106,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_TC008(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CLIENT_KEY_EXCHANGE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
@@ -1180,7 +1180,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_TC009(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CLIENT_KEY_EXCHANGE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
@@ -1254,7 +1254,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_TC010(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CERTIFICATE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
@@ -1329,7 +1329,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_TC011(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CLIENT_KEY_EXCHANGE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
@@ -1402,7 +1402,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_TC012(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CLIENT_KEY_EXCHANGE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
@@ -1854,7 +1854,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_SEQ_NUM_TC001(int isClient)
 {
     /* Configure the client/server to stay in the TRY_SEND_FINISH state. */
     HandshakeTestInfo testInfo = { 0 };
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.state = TRY_SEND_FINISH;
     testInfo.isClient = isClient;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
@@ -1957,7 +1957,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_SEQ_NUM_TC002(int isClient)
 {
     /* Configure the client/server to the status that the handshake is successful. */
     HandshakeTestInfo testInfo = { 0 };
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.state = HS_STATE_BUTT;
     testInfo.isClient = isClient;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
@@ -2056,7 +2056,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_UNEXPECT_RECODETYPE_TC001(void)
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_RECV_CLIENT_KEY_EXCHANGE;
     testInfo.isClient = false;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
 
@@ -2123,7 +2123,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_UNEXPECT_RECODETYPE_TC002(void)
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_RECV_SERVER_HELLO;
     testInfo.isClient = true;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
 
@@ -2190,7 +2190,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_UNEXPECT_RECODETYPE_TC003(void)
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_SEND_CHANGE_CIPHER_SPEC;
     testInfo.isClient = true;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = false;
     testInfo.isSupportNoClientCert = false;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo) == HITLS_SUCCESS);
@@ -2576,7 +2576,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HELLO_REQUEST_TC001(void)
 {
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TLS_IDLE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
 
     FRAME_Init();
@@ -2588,7 +2588,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HELLO_REQUEST_TC001(void)
     uint16_t cipherSuits[] = {HITLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384};
     HITLS_CFG_SetCipherSuites(testInfo.config, cipherSuits, sizeof(cipherSuits) / sizeof(uint16_t));
 
-    testInfo.config->isSupportExtendMasterSecret = testInfo.isSupportExtendMasterSecret;
+    testInfo.config->isSupportExtendedMasterSecret = testInfo.isSupportExtendedMasterSecret;
     testInfo.config->isSupportClientVerify = testInfo.isSupportClientVerify;
     testInfo.config->isSupportNoClientCert = testInfo.isSupportNoClientCert;
 
@@ -2634,7 +2634,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HELLO_REQUEST_TC002(void)
     /* Use the configuration items to configure the client and server. */
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_SEND_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo) == HITLS_SUCCESS);
 
@@ -2684,7 +2684,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HELLO_REQUEST_TC003(void)
     /* Use configuration items to configure the client and server. */
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_SEND_FINISH;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo) == HITLS_SUCCESS);
 
@@ -2938,7 +2938,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HELLO_REQUEST_TC007(void)
     HandshakeTestInfo testInfo = { 0 };
     FRAME_Msg parsedAlert = { 0 };
     testInfo.state = TRY_SEND_SERVER_HELLO_DONE;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo) == HITLS_SUCCESS);
 
@@ -2994,7 +2994,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HELLO_REQUEST_TC008(void)
 {
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_RECV_FINISH;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
 
     FRAME_Init();
@@ -3003,7 +3003,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HELLO_REQUEST_TC008(void)
     testInfo.config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(testInfo.config != NULL);
 
-    testInfo.config->isSupportExtendMasterSecret = testInfo.isSupportExtendMasterSecret;
+    testInfo.config->isSupportExtendedMasterSecret = testInfo.isSupportExtendedMasterSecret;
     testInfo.config->isSupportClientVerify = testInfo.isSupportClientVerify;
     testInfo.config->isSupportNoClientCert = testInfo.isSupportNoClientCert;
     testInfo.config->isSupportRenegotiation = true;
@@ -3067,7 +3067,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_HELLO_VERSION_TC001(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
@@ -3079,7 +3079,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_HELLO_VERSION_TC001(void)
     testInfo.config = HITLS_CFG_NewTLS12Config();
     ASSERT_TRUE(testInfo.config != NULL);
 
-    testInfo.config->isSupportExtendMasterSecret = testInfo.isSupportExtendMasterSecret;
+    testInfo.config->isSupportExtendedMasterSecret = testInfo.isSupportExtendedMasterSecret;
     testInfo.config->isSupportClientVerify = testInfo.isSupportClientVerify;
     testInfo.config->isSupportNoClientCert = testInfo.isSupportNoClientCert;
 
@@ -3137,7 +3137,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_NOT_SUPPORT_SERVER_VERSION_TC001(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
 
@@ -3213,7 +3213,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_SERVER_CHOSE_VERSION_TC001(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = true;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
@@ -3223,7 +3223,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_SERVER_CHOSE_VERSION_TC001(void)
     testInfo.config = HITLS_CFG_NewTLSConfig();
     ASSERT_TRUE(testInfo.config != NULL);
 
-    testInfo.config->isSupportExtendMasterSecret = testInfo.isSupportExtendMasterSecret;
+    testInfo.config->isSupportExtendedMasterSecret = testInfo.isSupportExtendedMasterSecret;
     testInfo.config->isSupportClientVerify = testInfo.isSupportClientVerify;
     testInfo.config->isSupportNoClientCert = testInfo.isSupportNoClientCert;
 
@@ -3282,7 +3282,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_DEFAULT_SIGNATURE_EXTENSION_TC001(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
 
@@ -3335,7 +3335,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_HELLO_WITHOUT_SIGNATURE_TC001(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
 
     FRAME_Init();
@@ -3347,7 +3347,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_HELLO_WITHOUT_SIGNATURE_TC001(void)
     ASSERT_EQ(HITLS_CFG_SetCipherSuites(testInfo.config, cipherSuite, sizeof(cipherSuite) / sizeof(uint16_t)),
         HITLS_SUCCESS);
 
-    testInfo.config->isSupportExtendMasterSecret = testInfo.isSupportExtendMasterSecret;
+    testInfo.config->isSupportExtendedMasterSecret = testInfo.isSupportExtendedMasterSecret;
     testInfo.config->isSupportClientVerify = testInfo.isSupportClientVerify;
     testInfo.config->isSupportNoClientCert = testInfo.isSupportNoClientCert;
 
@@ -3430,7 +3430,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_HELLO_WITHOUT_SIGNATURE_TC002(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
 
     FRAME_Init();
@@ -3442,7 +3442,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_CLIENT_HELLO_WITHOUT_SIGNATURE_TC002(void)
     ASSERT_EQ(HITLS_CFG_SetCipherSuites(testInfo.config, cipherSuite, sizeof(cipherSuite) / sizeof(uint16_t)),
         HITLS_SUCCESS);
 
-    testInfo.config->isSupportExtendMasterSecret = testInfo.isSupportExtendMasterSecret;
+    testInfo.config->isSupportExtendedMasterSecret = testInfo.isSupportExtendedMasterSecret;
     testInfo.config->isSupportClientVerify = testInfo.isSupportClientVerify;
     testInfo.config->isSupportNoClientCert = testInfo.isSupportNoClientCert;
 
@@ -3520,7 +3520,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECODE_VERSION_TC001(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
@@ -3533,7 +3533,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECODE_VERSION_TC001(void)
     uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
     HITLS_CFG_SetSignature(testInfo.config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
 
-    testInfo.config->isSupportExtendMasterSecret = testInfo.isSupportExtendMasterSecret;
+    testInfo.config->isSupportExtendedMasterSecret = testInfo.isSupportExtendedMasterSecret;
     testInfo.config->isSupportClientVerify = testInfo.isSupportClientVerify;
     testInfo.config->isSupportNoClientCert = testInfo.isSupportNoClientCert;
 
@@ -3596,7 +3596,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECODE_VERSION_TC002(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
@@ -3609,7 +3609,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECODE_VERSION_TC002(void)
     uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
     HITLS_CFG_SetSignature(testInfo.config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
 
-    testInfo.config->isSupportExtendMasterSecret = testInfo.isSupportExtendMasterSecret;
+    testInfo.config->isSupportExtendedMasterSecret = testInfo.isSupportExtendedMasterSecret;
     testInfo.config->isSupportClientVerify = testInfo.isSupportClientVerify;
     testInfo.config->isSupportNoClientCert = testInfo.isSupportNoClientCert;
 
@@ -3672,7 +3672,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECODE_VERSION_TC003(void)
     FRAME_Msg frameMsg = { 0 };
     FRAME_Type frameType = { 0 };
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isClient = false;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
@@ -3685,7 +3685,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECODE_VERSION_TC003(void)
     uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
     HITLS_CFG_SetSignature(testInfo.config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
 
-    testInfo.config->isSupportExtendMasterSecret = testInfo.isSupportExtendMasterSecret;
+    testInfo.config->isSupportExtendedMasterSecret = testInfo.isSupportExtendedMasterSecret;
     testInfo.config->isSupportClientVerify = testInfo.isSupportClientVerify;
     testInfo.config->isSupportNoClientCert = testInfo.isSupportNoClientCert;
 
@@ -4799,7 +4799,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_CM_CLOSE_SEND_ALERT_TC001(void)
     HandshakeTestInfo testInfo = { 0 };
     testInfo.state = TRY_RECV_SERVER_HELLO;
     testInfo.isClient = true;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = true;
     testInfo.isSupportNoClientCert = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
@@ -4879,7 +4879,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_CM_CLOSE_SEND_ALERT_TC002(void)
 
     testInfo.state = TRY_RECV_CLIENT_KEY_EXCHANGE;
     testInfo.isClient = false;
-    testInfo.isSupportExtendMasterSecret = true;
+    testInfo.isSupportExtendedMasterSecret = true;
     testInfo.isSupportClientVerify = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
 

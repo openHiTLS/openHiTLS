@@ -200,7 +200,7 @@ static int32_t DecSessObjSessionId(HITLS_Session *sess, SessionObjType type, con
     return HITLS_SUCCESS;
 }
 
-static int32_t DecSessObjExtendMasterSecret(HITLS_Session *sess, SessionObjType type, const uint8_t *data,
+static int32_t DecSessObjExtendedMasterSecret(HITLS_Session *sess, SessionObjType type, const uint8_t *data,
     uint32_t length, uint32_t *readLen)
 {
     uint8_t haveExtMasterSecret = 0;
@@ -335,7 +335,7 @@ static const SessObjDecFunc OBJ_LIST[] = {
 #endif
     {SESS_OBJ_SESSION_ID_CTX, DecSessObjSessionIdCtx},
     {SESS_OBJ_SESSION_ID, DecSessObjSessionId},
-    {SESS_OBJ_SUPPORT_EXTEND_MASTER_SECRET, DecSessObjExtendMasterSecret},
+    {SESS_OBJ_SUPPORT_EXTEND_MASTER_SECRET, DecSessObjExtendedMasterSecret},
     {SESS_OBJ_VERIFY_RESULT, DecSessObjVerifyResult},
     {SESS_OBJ_AGE_ADD, DecSessObjTicketAgeAdd},
 };

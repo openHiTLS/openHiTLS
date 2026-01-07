@@ -154,7 +154,7 @@ typedef struct {
     bool alertRecvFlag;
     ALERT_Description expectDescription;
     bool isSupportClientVerify;
-    bool isSupportExtendMasterSecret;
+    bool isSupportExtendedMasterSecret;
     bool isSupportSni;
     bool isSupportALPN;
     bool isSupportDhCipherSuites;
@@ -173,7 +173,7 @@ typedef struct {
     FRAME_LinkObj *server;
     HITLS_HandshakeState state;
     bool isClient;
-    bool isSupportExtendMasterSecret;
+    bool isSupportExtendedMasterSecret;
     bool isSupportClientVerify;
     bool isSupportNoClientCert;
     bool isSupportRenegotiation;
@@ -218,7 +218,7 @@ int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo)
     uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
     HITLS_CFG_SetSignature(testInfo->config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
 
-    testInfo->config->isSupportExtendMasterSecret = testInfo->isSupportExtendMasterSecret;
+    testInfo->config->isSupportExtendedMasterSecret = testInfo->isSupportExtendedMasterSecret;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
     testInfo->config->isSupportSessionTicket = testInfo->isSupportSessionTicket;
@@ -252,7 +252,7 @@ void ServerAccept(HLT_FrameHandle *handle, TestPara *testPara)
 
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
-    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
+    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->isSupportExtendedMasterSecret) == 0);
     clientRes = HLT_ProcessTlsInit(remoteProcess, TLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
     HLT_RpcTlsConnect(remoteProcess, clientRes->sslId);
@@ -303,7 +303,7 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
 
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
-    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
+    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->isSupportExtendedMasterSecret) == 0);
     ASSERT_TRUE(HLT_SetSessionTicketSupport(clientConfig, testPara->isSupportSessionTicket) == 0);
     if (testPara->isSupportDhCipherSuites) {
         ASSERT_TRUE(HLT_SetCipherSuites(clientConfig, "HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256") == 0);
@@ -385,7 +385,7 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     if (testPara->serverSignature != NULL) {
         ASSERT_TRUE(HLT_SetSignature(serverConfig, testPara->serverSignature) == 0);
     }
-    serverConfig->isSupportExtendMasterSecret = false;
+    serverConfig->isSupportExtendedMasterSecret = false;
     serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_2, serverConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
     // Configure the TLS connection on the local client.
@@ -415,7 +415,7 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     if (testPara->clientSignature != NULL) {
         ASSERT_TRUE(HLT_SetSignature(clientConfig, testPara->clientSignature) == 0);
     }
-    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->isSupportExtendMasterSecret) == 0);
+    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->isSupportExtendedMasterSecret) == 0);
     clientRes = HLT_ProcessTlsInit(localProcess, TLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
     // Configure the interface for constructing abnormal messages.
@@ -588,7 +588,7 @@ int32_t DefaultCfgStatusParkWithSuite(HandshakeTestInfo *testInfo)
     HITLS_CFG_SetCheckKeyUsage(testInfo->config, false);
     uint16_t cipherSuits[] = {HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256};
     HITLS_CFG_SetCipherSuites(testInfo->config, cipherSuits, sizeof(cipherSuits) / sizeof(uint16_t));
-    testInfo->config->isSupportExtendMasterSecret = testInfo->isSupportExtendMasterSecret;
+    testInfo->config->isSupportExtendedMasterSecret = testInfo->isSupportExtendedMasterSecret;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
 

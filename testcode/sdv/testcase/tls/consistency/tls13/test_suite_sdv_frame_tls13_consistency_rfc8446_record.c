@@ -142,7 +142,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC001(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -207,7 +207,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC002(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -274,7 +274,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC003(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
 
@@ -350,7 +350,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC004(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
 
@@ -436,7 +436,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC005(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -503,7 +503,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC006(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -570,7 +570,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC001(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -633,7 +633,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC002(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -695,7 +695,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC003(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -754,7 +754,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC004(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -814,7 +814,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC005(void)
     FRAME_Init();
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -880,7 +880,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC006(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -939,7 +939,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC007(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1000,7 +1000,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC008(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1075,7 +1075,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC009(void)
     FRAME_Init();
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1156,7 +1156,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC010(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1234,7 +1234,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC011(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1319,7 +1319,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC012(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1403,7 +1403,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC013(void)
     FRAME_Init();
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1473,7 +1473,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC014(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1547,7 +1547,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC015(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1618,7 +1618,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC016(void)
     FRAME_Init();
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1690,7 +1690,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HANDSHAKE_RECORD_TYPE_FUNC_TC001(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1740,7 +1740,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HANDSHAKE_RECORD_TYPE_FUNC_TC002(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1785,7 +1785,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SINGLE_ALERT_FUNC_TC001(void)
     FRAME_Init();
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1827,7 +1827,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SINGLE_ALERT_FUNC_TC002(void)
     FRAME_Init();
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1880,7 +1880,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_LEGACY_RECORD_VERSION_FUNC_TC001(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1936,7 +1936,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_LEGACY_RECORD_VERSION_FUNC_TC002(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1995,7 +1995,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_LEGACY_RECORD_VERSION_FUNC_TC003(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -2081,7 +2081,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_LEGACY_RECORD_VERSION_FUNC_TC004(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -2156,7 +2156,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_LEGACY_RECORD_VERSION_FUNC_TC005(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -2320,7 +2320,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CIPHERTEXT_LENGTH_FUNC_TC001(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -2374,7 +2374,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CIPHERTEXT_LENGTH_FUNC_TC002(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -2427,7 +2427,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SEQUENCE_NUMBER_FUNC_TC001(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -2479,7 +2479,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SEQUENCE_NUMBER_FUNC_TC002(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -2532,7 +2532,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SEQUENCE_NUMBER_FUNC_TC003(void)
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendMasterSecret = true;
+    tlsConfig->isSupportExtendedMasterSecret = true;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
