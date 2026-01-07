@@ -1044,23 +1044,44 @@ static int ReadAllLogFile(DIR *logDir, int *totalSuiteCount, FILE *outFile, Test
                 continue;
             }
             result[suiteCount].total++;
-            cur = 0;
-            while (buf[cur] != '\0' && !(buf[cur] == '.' && buf[cur + 1] == '.')) {
-                cur++;
+            // Find the end of the string to start backward search
+            size_t lineLen = strlen(buf);
+            int end = (int)lineLen - 1;
+            // Trim trailing whitespace/newlines to ensure we start at the status text
+            while (end >= 0 && (buf[end] == '\r' || buf[end] == '\n' || buf[end] == ' ')) {
+                end--;
             }
-            if (buf[cur] == '\0') {
+            // Search backwards for the "." separator
+            int dotPos = -1;
+            for (int i = end; i >= 1; i--) {
+                // Look for the last occurrence of "."
+                if (buf[i] == '.' && buf[i - 1] != '.') {
+                    dotPos = i; // Pointing to the second dot
+                    break;
+                }
+            }
+            if (dotPos == -1) {
                 Print("Read log file %s failed\n", dir->d_name);
                 (void)fclose(fpLog);
                 (void)fclose(fpAllLog);
                 return 1;
             }
-            if (strncpy_s(testCaseName, sizeof(testCaseName) - 1, buf, cur) != EOK) {
+            int nameLen = dotPos - 1;
+            if (nameLen >= MAX_TEST_FUNCTION_NAME || nameLen < 0) {
                 Print("TestCaseName is too long\n");
                 (void)fclose(fpLog);
                 (void)fclose(fpAllLog);
                 return 1;
             }
-            testCaseName[cur] = '\0';
+
+            if (strncpy_s(testCaseName, sizeof(testCaseName), buf, nameLen) != EOK) {
+                (void)fclose(fpLog);
+                (void)fclose(fpAllLog);
+                return 1;
+            }
+            testCaseName[nameLen] = '\0';
+            // Move pointer past the dots to find the status string
+            cur = dotPos;
             while (buf[cur] == '.') {
                 cur++;
             }
