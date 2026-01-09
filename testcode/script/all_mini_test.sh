@@ -344,12 +344,14 @@ test_pkey()
 
 test_tls()
 {
+    include_path="-I${HITLS_ROOT_DIR}/testcode/script/mini_test_config"
     NO_LIB=""
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=tlcp_feature test=base,asn1,base64,buffer,err,hash,init,list,log,obj,params,pem,tlv,sal,sal_mem,sal_lock,sal_str,sal_file,sal_thread,sal_net,sal_time,aes,bn,chacha20,cmac_aes,drbg_ctr,drbg_hash,ecc,ecdh,ecdsa,entropy,gcm,hkdf,hpke,mlkem,mldsa,sha256,sha384,sha512,slh_dsa,sm2,sm3,sm4,x25519,curve_nistp256,curve_nistp384,curve_nistp521,x509_crl_gen,x509_crl_parse,x509_csr_gen,x509_csr_parse,x509_crt_gen,x509_crt_parse,x509_vfy,tlcp linux add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM" add-options="-DHITLS_CRYPTO_MLKEM_CMP" add-options="-DHITLS_CRYPTO_MLDSA_CMP"
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=nokem_feature test=base linux
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=mtu_feature test=mtu linux
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=max_send_fragment_feature test=max_send_fragment linux
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=ca_list_feature test=ca_list linux
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=no_dfx_feature test=no_dfx compile-config=no_dfx_compile include-path="${include_path}" linux
 }
 
 test_pki()

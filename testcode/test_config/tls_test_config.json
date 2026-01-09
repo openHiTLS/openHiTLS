@@ -5,13 +5,15 @@
         "base": ["test_suite_sdv_hlt_base_connect"],
         "mtu": ["test_suite_sdv_frame_mtu"],
         "max_send_fragment": ["test_suite_sdv_frame_max_send_fragment"],
-        "ca_list": ["test_suite_sdv_frame_ca_list"]
+        "ca_list": ["test_suite_sdv_frame_ca_list"],
+        "no_dfx": ["test_suite_sdv_frame_no_dfx"]
     },
     "testSuiteCases": {
         "test_suite_sdv_hlt_tlcp_ciphersuite": [],
         "test_suite_sdv_hlt_base_connect": [],
         "test_suite_sdv_frame_mtu": [],
         "test_suite_sdv_frame_max_send_fragment": [],
-        "test_suite_sdv_frame_ca_list": []
+        "test_suite_sdv_frame_ca_list": [],
+        "test_suite_sdv_frame_no_dfx": []
     }
 }

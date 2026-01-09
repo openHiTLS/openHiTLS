@@ -114,9 +114,11 @@ static uint32_t RecGetReadBufferSize(const TLS_Ctx *ctx)
     if (ctx->negotiatedInfo.recordSizeLimit != 0 &&
         ctx->negotiatedInfo.recordSizeLimit <= REC_MAX_PLAIN_TEXT_LENGTH) {
         recSize -= REC_MAX_PLAIN_TEXT_LENGTH - ctx->negotiatedInfo.recordSizeLimit;
+#ifdef HITLS_TLS_PROTO_TLS13
         if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13) {
             recSize--;
         }
+#endif
     }
     return recSize;
 }
@@ -134,9 +136,11 @@ static uint32_t RecGetWriteBufferSize(const TLS_Ctx *ctx)
     recSize -= REC_MAX_PLAIN_TEXT_LENGTH - maxSendFragment;
     if (ctx->negotiatedInfo.peerRecordSizeLimit != 0 && ctx->negotiatedInfo.peerRecordSizeLimit <= maxSendFragment) {
         recSize -= maxSendFragment - ctx->negotiatedInfo.peerRecordSizeLimit;
+#ifdef HITLS_TLS_PROTO_TLS13
         if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
             recSize--;
         }
+#endif
     }
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
     RecCmpPmtu(ctx, &recSize);
@@ -576,7 +580,7 @@ int32_t REC_ActivePendingState(TLS_Ctx *ctx, bool isOut)
         } else {
             ++recordCtx->readEpoch;
             RecConnSetEpoch(states->currentState, recordCtx->readEpoch);
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_TLS_FEATURE_ANTI_REPLAY)
             RecAntiReplayReset(&states->currentState->window);
 #endif
         }
@@ -599,9 +603,11 @@ static uint32_t REC_GetRecordSizeLimitWriteLen(const TLS_Ctx *ctx)
 #endif
     if (ctx->negotiatedInfo.recordSizeLimit != 0 && ctx->negotiatedInfo.peerRecordSizeLimit <= defaultLen) {
         defaultLen = ctx->negotiatedInfo.peerRecordSizeLimit;
+#ifdef HITLS_TLS_PROTO_TLS13
         if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
             defaultLen--;
         }
+#endif
     }
     return defaultLen;
 }

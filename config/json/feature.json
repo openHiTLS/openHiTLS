@@ -261,7 +261,10 @@
                         "opts": ["proto"]
                     },
                     "callback": {
-                        "feature_provider": null,
+                        "feature_provider": {
+                            "feature_provider_hard_coding":null,
+                            "feature_provider_dynamic":null
+                        },
                         "callback_sal" :null,
                         "callback_cert": {
                             "deps": ["callback_sal"]
@@ -304,7 +307,12 @@
                         },
                         "feature_key_update": null,
                         "feature_flight": null,
-                        "feature_cert_mode": null,
+                        "feature_cert_mode": {
+                            "feature_cert_mode_client_verify": null,
+                            "feature_cert_mode_verify_peer": null
+                        },
+                        "feature_anti_replay": null,
+                        "feature_extended_master_secret": null,
                         "feature_record_size_limit": null,
                         "feature_kem": null,
                         "feature_client_hello_cb": null,
@@ -321,7 +329,14 @@
                         "opts": [
                             ["host", "host_client", "host_server"],
                             ["uio_sctp", "uio_tcp", "uio_udp", "uio_plt"]
-                        ]
+                        ],
+                        "proto_dfx": {
+                            "proto_dfx_check": null,
+                            "proto_dfx_info": null,
+                            "proto_dfx_alert_number": null,
+                            "proto_dfx_server_prefer": null
+                        },
+                        "proto_close_state": null
                     },
                     "config": {
                         "config_manual_dh": null,

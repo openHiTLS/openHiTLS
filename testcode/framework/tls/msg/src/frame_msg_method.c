@@ -149,12 +149,12 @@ static int32_t SetLinkConfig(uint16_t version, HITLS_KeyExchAlgo keyExAlgo, Link
     HITLS_CFG_SetCheckKeyUsage(linkPara->config, false);
 #endif /* HITLS_TLS_CONFIG_KEY_USAGE */
 
-#ifdef HITLS_TLS_FEATURE_CERT_MODE
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
     int32_t ret = HITLS_CFG_SetClientVerifySupport(linkPara->config, true);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-#endif /* HITLS_TLS_FEATURE_CERT_MODE */
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
     if (keyExAlgo == HITLS_KEY_EXCH_DHE) {
         uint16_t cipherSuites[] = {HITLS_DHE_RSA_WITH_AES_128_GCM_SHA256};
         HITLS_CFG_SetCipherSuites(linkPara->config, cipherSuites, sizeof(cipherSuites) / sizeof(uint16_t));

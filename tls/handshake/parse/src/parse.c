@@ -86,13 +86,16 @@ static int32_t CheckServerKeyExchangeType(TLS_Ctx *ctx, const HS_MsgType msgType
 
 static int32_t CheckCertificateRequestType(TLS_Ctx *ctx, const HS_MsgType msgType)
 {
+#ifdef HITLS_TLS_PROTO_TLS13
     uint32_t version = GET_VERSION_FROM_CTX(ctx);
     if (version == HITLS_VERSION_TLS13) {
         if (msgType == CERTIFICATE) {
             (void)HS_ChangeState(ctx, TRY_RECV_CERTIFICATE);
             return HITLS_SUCCESS;
         }
-    } else {
+    } else
+#endif
+    {
         if (msgType == SERVER_HELLO_DONE) {
             (void)HS_ChangeState(ctx, TRY_RECV_SERVER_HELLO_DONE);
             return HITLS_SUCCESS;
@@ -110,7 +113,9 @@ static const HsMsgTypeCheck g_checkHsMsgTypeList[] = {
 #ifdef HITLS_TLS_PROTO_DTLS12
     [TRY_RECV_HELLO_VERIFY_REQUEST] = {.msgType = HELLO_VERIFY_REQUEST, .checkCb = CheckHelloVerifyRequestType},
 #endif
+#ifdef HITLS_TLS_PROTO_TLS13
     [TRY_RECV_ENCRYPTED_EXTENSIONS] = {.msgType = ENCRYPTED_EXTENSIONS, .checkCb = NULL},
+#endif
     [TRY_RECV_CERTIFICATE] = {.msgType = CERTIFICATE, .checkCb = NULL},
     [TRY_RECV_SERVER_KEY_EXCHANGE] = {.msgType = SERVER_KEY_EXCHANGE, .checkCb = CheckServerKeyExchangeType},
     [TRY_RECV_CERTIFICATE_REQUEST] = {.msgType = CERTIFICATE_REQUEST, .checkCb = CheckCertificateRequestType},
@@ -119,7 +124,9 @@ static const HsMsgTypeCheck g_checkHsMsgTypeList[] = {
     [TRY_RECV_CERTIFICATE_VERIFY] = {.msgType = CERTIFICATE_VERIFY,  .checkCb = NULL},
     [TRY_RECV_NEW_SESSION_TICKET] = {.msgType = NEW_SESSION_TICKET, .checkCb = NULL},
     [TRY_RECV_FINISH] = {.msgType = FINISHED, .checkCb = NULL},
+#ifdef HITLS_TLS_PROTO_TLS13
     [TRY_RECV_KEY_UPDATE] = {.msgType = KEY_UPDATE, .checkCb = NULL},
+#endif
     [TRY_RECV_HELLO_REQUEST] = {.msgType = HELLO_REQUEST, .checkCb = NULL},
 };
 
@@ -281,8 +288,10 @@ static int32_t ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *data, uint32_t len
             return ParseCertificate(ctx, data, len, hsMsg);
         case CLIENT_KEY_EXCHANGE:
             return ParseClientKeyExchange(ctx, data, len, hsMsg);
+#if defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)
         case CERTIFICATE_VERIFY:
             return ParseCertificateVerify(ctx, data, len, hsMsg);
+#endif
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
         case NEW_SESSION_TICKET:
             return ParseNewSessionTicket(ctx, data, len, hsMsg);
@@ -477,8 +486,11 @@ void HS_CleanMsg(HS_Msg *hsMsg)
 #endif /* HITLS_TLS_HOST_CLIENT */
         case CERTIFICATE:
             return CleanCertificate(&hsMsg->body.certificate);
+#if (defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)) || \
+    defined(HITLS_TLS_PROTO_TLS13)    
         case CERTIFICATE_VERIFY:
             return CleanCertificateVerify(&hsMsg->body.certificateVerify);
+#endif
         case FINISHED:
             return CleanFinished(&hsMsg->body.finished);
         case KEY_UPDATE:

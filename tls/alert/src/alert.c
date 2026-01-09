@@ -251,6 +251,7 @@ int32_t ProcessPlainAlert(TLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen)
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 
+#ifdef HITLS_TLS_PROTO_DFX_ALERT_NUMBER
 void ALERT_ClearWarnCount(TLS_Ctx *ctx, uint32_t recordType)
 {
     if (recordType != REC_TYPE_ALERT) {
@@ -263,6 +264,7 @@ bool ALERT_HaveExceeded(TLS_Ctx *ctx, uint8_t threshold)
     ctx->alertCtx->warnCount += 1;
     return ctx->alertCtx->warnCount >= threshold;
 }
+#endif
 
 #ifdef HITLS_BSL_LOG
 int32_t ReturnAlertProcess(TLS_Ctx *ctx, int32_t err, uint32_t logId, const void *logStr,

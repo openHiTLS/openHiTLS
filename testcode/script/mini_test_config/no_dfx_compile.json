@@ -1,0 +1,135 @@
+{
+    "compileFlag": {
+        "common": {
+            "CC_OPT_LEVEL": [
+                "-D_FORTIFY_SOURCE=2",
+                "-O2"
+            ],
+            "CC_OVERALL_FLAGS": ["-pipe"],
+            "CC_LANGUAGE_FLAGS": ["-fsigned-char"],
+            "CC_CDG_FLAGS": ["-fno-common"],
+            "CC_MD_DEPENDENT_FLAGS": [],
+            "CC_OPT_FLAGS": [
+                "-fno-strict-aliasing",
+                "-fno-omit-frame-pointer"
+            ],
+            "CC_SEC_FLAGS": [
+                "-fPIC",
+                "-fstack-protector-strong"
+            ],
+            "CC_DEBUG_FLAGS": [],
+            "CC_USER_DEFINE_FLAGS": [
+                "-DHITLS_CONFIG_FILE='<hitls_nodfx_config.h>'",
+                "-I${HiTLS_SOURCE_ROOT_DIR}/testcode/script/mini_test_config/"
+            ],
+            "CC_WARN_FLAGS": [
+                "-Werror",
+                "-Wextra",
+                "-Wcast-qual",
+                "-Wall",
+                "-Wfloat-equal",
+                "-Wshadow",
+                "-Wformat=2"
+            ],
+            "CC_DEFINE_FLAGS": [
+                "-DHITLS_CRYPTO_EAL_REPORT",
+                "-DHITLS_CRYPTO_NIST_ECC_ACCELERATE",
+                "-DHITLS_CRYPTO_BN_COMBA",
+                "-DHITLS_CRYPTO_AES_PRECALC_TABLES",
+                "-DHITLS_AARCH64_PACIASP",
+                "-DHITLS_CRYPTO_SM2_PRECOMPUTE_512K_TBL"
+            ]
+        },
+        "gcc": {
+            "CC_WARN_FLAGS_EXTRA": [
+                "-Wdate-time",
+                "-Wno-stringop-overread"
+            ],
+            "CC_SEC_FLAGS_EXTRA": [
+                "--param=ssp-buffer-size=4"
+            ]
+        },
+        "clang": {
+            "CC_SEC_FLAGS_EXTRA": [
+                "-Wno-unused-command-line-argument"
+            ]
+        },
+        "apple-clang": {
+            "_inherit": "clang",
+            "CC_SEC_FLAGS_REMOVE": [
+                "--param=ssp-buffer-size=4"
+            ],
+            "CC_DEFINE_FLAGS_REMOVE": [
+                "-DHITLS_AARCH64_PACIASP"
+            ]
+        }
+    },
+    "linkFlag": {
+        "common": {
+            "PUBLIC": [],
+            "SHARED": [],
+            "EXE": []
+        },
+        "gnu-ld": {
+            "PUBLIC": [
+                "-Wl,-z,noexecstack",
+                "-Wl,-z,relro",
+                "-Wl,-z,now",
+                "-Wl,--build-id=none"
+            ],
+            "SHARED": [
+                "-shared"
+            ],
+            "EXE": [
+                "-pie"
+            ]
+        },
+        "ld64": {
+            "PUBLIC": [
+                "-Wl,-dead_strip"
+            ],
+            "SHARED": [
+                "-dynamiclib"
+            ],
+            "EXE": [
+                "-Wl,-pie"
+            ]
+        },
+        "lld": {
+            "PUBLIC": [
+                "-Wl,-z,noexecstack",
+                "-Wl,-z,relro",
+                "-Wl,-z,now",
+                "-Wl,--build-id=none",
+                "-Wl,--as-needed"
+            ],
+            "SHARED": [
+                "-shared"
+            ],
+            "EXE": [
+                "-pie"
+            ]
+        },
+        "gold": {
+            "_inherit": "gnu-ld",
+            "PUBLIC_EXTRA": [
+                "-Wl,--threads",
+                "-Wl,--thread-count=4"
+            ]
+        }
+    },
+    "systemDefines": {
+        "common": {},
+        "linux": {
+            "CC_DEFINE_FLAGS_EXTRA": [
+                "-D_GNU_SOURCE"
+            ]
+        },
+        "darwin": {
+            "CC_DEFINE_FLAGS_EXTRA": [
+                "-D_DARWIN_C_SOURCE",
+                "-DHITLS_CRYPTO_NO_AUXVAL"
+            ]
+        }
+    }
+}

@@ -279,10 +279,8 @@ void BSL_SAL_ClearFree(void *ptr, uint32_t size);
 
 #define BSL_SAL_FREE(value_)                    \
     do {                                        \
-        if ((value_) != NULL) {                 \
-            BSL_SAL_Free((void *)(value_));     \
-            (value_) = NULL;                    \
-        }                                       \
+        BSL_SAL_Free((void *)(value_));     \
+        (value_) = NULL;                    \
     } while (0)
 
 /**

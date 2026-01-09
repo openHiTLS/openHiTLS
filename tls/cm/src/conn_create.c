@@ -70,15 +70,16 @@ HITLS_Ctx *HITLS_New(HITLS_Config *config)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16470, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
         return NULL;
     }
-
-    int32_t ret = CheckConfig(config);
+    int32_t ret = HITLS_SUCCESS;
+#ifdef HITLS_TLS_PROTO_DFX_CHECK
+    ret = CheckConfig(config);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16471, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "CheckConfig fail, ret %d", ret, 0, 0, 0);
         BSL_SAL_FREE(newCtx);
         return NULL;
     }
-
+#endif
     ret = DumpConfig(newCtx, config);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16472, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -666,7 +667,7 @@ int32_t HITLS_ClearChainCerts(HITLS_Ctx *ctx)
     return HITLS_CFG_ClearChainCerts(&(ctx->config.tlsConfig));
 }
 
-#ifdef HITLS_TLS_FEATURE_CERT_MODE
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
 int32_t HITLS_SetClientVerifySupport(HITLS_Ctx *ctx, bool support)
 {
     if (ctx == NULL) {
@@ -683,7 +684,7 @@ int32_t HITLS_SetNoClientCertSupport(HITLS_Ctx *ctx, bool support)
 
     return HITLS_CFG_SetNoClientCertSupport(&(ctx->config.tlsConfig), support);
 }
-#endif
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
 #ifdef HITLS_TLS_FEATURE_PHA
 int32_t HITLS_SetPostHandshakeAuthSupport(HITLS_Ctx *ctx, bool support)
 {
@@ -694,7 +695,7 @@ int32_t HITLS_SetPostHandshakeAuthSupport(HITLS_Ctx *ctx, bool support)
     return HITLS_CFG_SetPostHandshakeAuthSupport(&(ctx->config.tlsConfig), support);
 }
 #endif
-#ifdef HITLS_TLS_FEATURE_CERT_MODE
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_VERIFY_PEER
 int32_t HITLS_SetVerifyNoneSupport(HITLS_Ctx *ctx, bool support)
 {
     if (ctx == NULL) {
@@ -703,8 +704,8 @@ int32_t HITLS_SetVerifyNoneSupport(HITLS_Ctx *ctx, bool support)
 
     return HITLS_CFG_SetVerifyNoneSupport(&(ctx->config.tlsConfig), support);
 }
-#endif
-#ifdef HITLS_TLS_FEATURE_CERT_MODE
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_VERIFY_PEER */
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
 int32_t HITLS_SetClientOnceVerifySupport(HITLS_Ctx *ctx, bool support)
 {
     if (ctx == NULL) {

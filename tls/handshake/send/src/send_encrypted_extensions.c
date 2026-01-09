@@ -72,6 +72,7 @@ int32_t Tls13ServerSendEncryptedExtensionsProcess(TLS_Ctx *ctx)
     if (ctx->hsCtx->kxCtx->pskInfo13.psk != NULL) {
         return HS_ChangeState(ctx, TRY_SEND_FINISH);
     }
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
     /* The server sends a CertificateRequest message only when the VerifyPeer mode is enabled */
     if (ctx->config.tlsConfig.isSupportClientVerify
 #ifdef HITLS_TLS_FEATURE_PHA
@@ -80,6 +81,7 @@ int32_t Tls13ServerSendEncryptedExtensionsProcess(TLS_Ctx *ctx)
         ) {
         return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE_REQUEST);
     }
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
     return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE);
 }
 #endif /* HITLS_TLS_PROTO_TLS13 && HITLS_TLS_HOST_SERVER */

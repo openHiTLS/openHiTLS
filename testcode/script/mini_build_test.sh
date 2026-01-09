@@ -43,6 +43,7 @@ ENDIAN="little"
 ASAN_OPTIONS=""
 TLS_FLAG=""
 FEATURE_CONFIG_FILE=""
+COMPILE_CONFIG_FILE=""
 INCLUDE_PATH=""
 
 print_usage() {
@@ -126,6 +127,18 @@ parse_option()
                 fi
                 if [ -z "$FEATURE_CONFIG_FILE" ]; then
                     echo "Error: Cannot find feature config file '${value}.json' or '${value}.json' under $HITLS_ROOT_DIR"
+                    exit 1
+                fi
+                ;;
+            "compile-config")
+                if [ -n "$ASM_TYPE" ]; then
+                    COMPILE_CONFIG_FILE=$(find $HITLS_ROOT_DIR -name "${value}_${ASM_TYPE}.json" -type f | head -n 1)
+                fi
+                if [ -z "$COMPILE_CONFIG_FILE" ]; then
+                    COMPILE_CONFIG_FILE=$(find $HITLS_ROOT_DIR -name "${value}.json" -type f | head -n 1)
+                fi
+                if [ -z "$COMPILE_CONFIG_FILE" ]; then
+                    echo "Error: Cannot find compile config file '${value}.json' or '${value}.json' under $HITLS_ROOT_DIR"
                     exit 1
                 fi
                 ;;
@@ -245,6 +258,10 @@ mini_config()
     if [ "$FEATURE_CONFIG_FILE" != "" ]; then
         MODIFIED_CONFIG_FILE=$(process_feature_config "$FEATURE_CONFIG_FILE" "$ENDIAN" "$BITS" "$ASM_TYPE" "$HITLS_ROOT_DIR/build/")
         enables="--feature_config $MODIFIED_CONFIG_FILE"
+    fi
+
+    if [ "$COMPILE_CONFIG_FILE" != "" ]; then
+        enables="$enables --compile_config $COMPILE_CONFIG_FILE"
     fi
 
     echo "python3 configure.py --lib_type $LIB_TYPE $enables --endian=$ENDIAN --bits=$BITS"

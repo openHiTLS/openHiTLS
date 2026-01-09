@@ -231,8 +231,6 @@ static int32_t RecordUnexpectedMsg(TLS_Ctx *ctx, RecBuf *decryptBuf, REC_Type re
         case REC_TYPE_APP:
             ret = RecBufListAddBuffer(ctx->recCtx->appRecList, decryptBuf);
             break;
-        case REC_TYPE_CHANGE_CIPHER_SPEC:
-        case REC_TYPE_ALERT:
         default:
             ret = ctx->method.unexpectedMsgProcessCb(ctx, recordType,
                 decryptBuf->buf, decryptBuf->end, false);
@@ -596,7 +594,7 @@ static uint8_t *GetUnprocessedMsg(RecCtx *recordCtx, REC_Type recordType, RecHdr
     return recordBody;
 }
 
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_TLS_FEATURE_ANTI_REPLAY)
 static int32_t AntiReplay(TLS_Ctx *ctx, RecHdr *hdr)
 {
     /* In non-UDP scenarios, anti-replay check is not required */
@@ -650,7 +648,7 @@ static int32_t DtlsGetRecord(TLS_Ctx *ctx, REC_Type recordType, RecHdr *hdr, uin
             return ret;
         }
     }
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_TLS_FEATURE_ANTI_REPLAY)
     ret = AntiReplay(ctx, hdr);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(*cachRecord);
@@ -715,13 +713,15 @@ int32_t DtlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-#if defined(HITLS_BSL_UIO_UDP)
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_TLS_FEATURE_ANTI_REPLAY)
     /* In UDP scenarios, update the sliding window flag */
     if (BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
         RecAntiReplayUpdate(&GetReadConnState(ctx)->window, REC_SEQ_GET(hdr.epochSeq));
     }
 #endif
+#ifdef HITLS_TLS_PROTO_DFX_ALERT_NUMBER
     ctx->method.clearAlert(ctx, cryptMsg.type);
+#endif
 #ifdef HITLS_TLS_FEATURE_MODE_RELEASE_BUFFERS
     if ((ctx->config.tlsConfig.modeSupport & HITLS_MODE_RELEASE_BUFFERS) != 0 && (recordType == REC_TYPE_APP)) {
         RecTryFreeRecBuf(ctx, false);
@@ -1047,7 +1047,9 @@ int32_t TlsRecordRead(TLS_Ctx *ctx, REC_Type recordType, uint8_t *data, uint32_t
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+#ifdef HITLS_TLS_PROTO_DFX_ALERT_NUMBER
     ctx->method.clearAlert(ctx, encryptedMsg.type);
+#endif
 #ifdef HITLS_TLS_FEATURE_MODE_RELEASE_BUFFERS
     if ((ctx->config.tlsConfig.modeSupport & HITLS_MODE_RELEASE_BUFFERS) != 0 && (recordType == REC_TYPE_APP)) {
         RecTryFreeRecBuf(ctx, false);

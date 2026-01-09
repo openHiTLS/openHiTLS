@@ -13,7 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#if defined(HITLS_TLS_HOST_SERVER) || defined(HITLS_TLS_PROTO_TLS13)
+#if (defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)) || \
+    defined(HITLS_TLS_PROTO_TLS13)
 #include <stdint.h>
 #include "securec.h"
 #include "tls_binlog_id.h"
@@ -81,4 +82,4 @@ int32_t Tls13RecvCertVerifyProcess(TLS_Ctx *ctx)
     return HS_ChangeState(ctx, TRY_RECV_FINISH);
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
-#endif /* HITLS_TLS_HOST_SERVER || HITLS_TLS_PROTO_TLS13 */
+#endif /* (HITLS_TLS_HOST_SERVER && HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY) || HITLS_TLS_PROTO_TLS13 */

@@ -102,24 +102,61 @@ int32_t HITLS_CRYPT_RegisterBaseMethod(HITLS_CRYPT_BaseMethod *userCryptCallBack
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
-    g_cryptBaseMethod.randBytes = userCryptCallBack->randBytes;
-    g_cryptBaseMethod.hmacSize = userCryptCallBack->hmacSize;
-    g_cryptBaseMethod.hmacInit = userCryptCallBack->hmacInit;
-    g_cryptBaseMethod.hmacReinit = userCryptCallBack->hmacReinit;
-    g_cryptBaseMethod.hmacFree = userCryptCallBack->hmacFree;
-    g_cryptBaseMethod.hmacUpdate = userCryptCallBack->hmacUpdate;
-    g_cryptBaseMethod.hmacFinal = userCryptCallBack->hmacFinal;
-    g_cryptBaseMethod.hmac = userCryptCallBack->hmac;
-    g_cryptBaseMethod.digestSize = userCryptCallBack->digestSize;
-    g_cryptBaseMethod.digestInit = userCryptCallBack->digestInit;
-    g_cryptBaseMethod.digestCopy = userCryptCallBack->digestCopy;
-    g_cryptBaseMethod.digestFree = userCryptCallBack->digestFree;
-    g_cryptBaseMethod.digestUpdate = userCryptCallBack->digestUpdate;
-    g_cryptBaseMethod.digestFinal = userCryptCallBack->digestFinal;
-    g_cryptBaseMethod.digest = userCryptCallBack->digest;
-    g_cryptBaseMethod.encrypt = userCryptCallBack->encrypt;
-    g_cryptBaseMethod.decrypt = userCryptCallBack->decrypt;
-    g_cryptBaseMethod.cipherFree = userCryptCallBack->cipherFree;
+
+    if (userCryptCallBack->randBytes != NULL) {
+        g_cryptBaseMethod.randBytes = userCryptCallBack->randBytes;
+    }
+    if (userCryptCallBack->hmacSize != NULL) {
+        g_cryptBaseMethod.hmacSize = userCryptCallBack->hmacSize;
+    }
+    if (userCryptCallBack->hmacInit != NULL) {
+        g_cryptBaseMethod.hmacInit = userCryptCallBack->hmacInit;
+    }
+    if (userCryptCallBack->hmacReinit != NULL) {
+        g_cryptBaseMethod.hmacReinit = userCryptCallBack->hmacReinit;
+    }
+    if (userCryptCallBack->hmacFree != NULL) {
+        g_cryptBaseMethod.hmacFree = userCryptCallBack->hmacFree;
+    }
+    if (userCryptCallBack->hmacUpdate != NULL) {
+        g_cryptBaseMethod.hmacUpdate = userCryptCallBack->hmacUpdate;
+    }
+    if (userCryptCallBack->hmacFinal != NULL) {
+        g_cryptBaseMethod.hmacFinal = userCryptCallBack->hmacFinal;
+    }
+    if (userCryptCallBack->hmac != NULL) {
+        g_cryptBaseMethod.hmac = userCryptCallBack->hmac;
+    }
+    if (userCryptCallBack->digestSize != NULL) {
+        g_cryptBaseMethod.digestSize = userCryptCallBack->digestSize;
+    }
+    if (userCryptCallBack->digestInit != NULL) {
+        g_cryptBaseMethod.digestInit = userCryptCallBack->digestInit;
+    }
+    if (userCryptCallBack->digestCopy != NULL) {
+        g_cryptBaseMethod.digestCopy = userCryptCallBack->digestCopy;
+    }
+    if (userCryptCallBack->digestFree != NULL) {
+        g_cryptBaseMethod.digestFree = userCryptCallBack->digestFree;
+    }
+    if (userCryptCallBack->digestUpdate != NULL) {
+        g_cryptBaseMethod.digestUpdate = userCryptCallBack->digestUpdate;
+    }
+    if (userCryptCallBack->digestFinal != NULL) {
+        g_cryptBaseMethod.digestFinal = userCryptCallBack->digestFinal;
+    }
+    if (userCryptCallBack->digest != NULL) {
+        g_cryptBaseMethod.digest = userCryptCallBack->digest;
+    }
+    if (userCryptCallBack->encrypt != NULL) {
+        g_cryptBaseMethod.encrypt = userCryptCallBack->encrypt;
+    }
+    if (userCryptCallBack->decrypt != NULL) {
+        g_cryptBaseMethod.decrypt = userCryptCallBack->decrypt;
+    }
+    if (userCryptCallBack->cipherFree != NULL) {
+        g_cryptBaseMethod.cipherFree = userCryptCallBack->cipherFree;
+    }
     return HITLS_SUCCESS;
 }
 

@@ -108,8 +108,10 @@ static int32_t ProcessSendHandshakeMsg(TLS_Ctx *ctx)
             return ServerSendServerHelloProcess(ctx);
         case TRY_SEND_SERVER_KEY_EXCHANGE:
             return ServerSendServerKeyExchangeProcess(ctx);
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
         case TRY_SEND_CERTIFICATE_REQUEST:
             return ServerSendCertRequestProcess(ctx);
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
         case TRY_SEND_SERVER_HELLO_DONE:
             return ServerSendServerHelloDoneProcess(ctx);
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
@@ -166,8 +168,10 @@ static int32_t Tls13ProcessSendHandshakeMsg(TLS_Ctx *ctx)
             return Tls13ServerSendServerHelloProcess(ctx);
         case TRY_SEND_ENCRYPTED_EXTENSIONS:
             return Tls13ServerSendEncryptedExtensionsProcess(ctx);
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
         case TRY_SEND_CERTIFICATE_REQUEST:
             return Tls13ServerSendCertRequestProcess(ctx);
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
         case TRY_SEND_NEW_SESSION_TICKET:
             return Tls13SendNewSessionTicketProcess(ctx);
 #endif /* HITLS_TLS_HOST_SERVER */
@@ -198,9 +202,8 @@ static int32_t Tls13ProcessSendHandshakeMsg(TLS_Ctx *ctx)
             return Tls13SendKeyUpdateProcess(ctx);
 #endif
         default:
-            break;
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_STATE_ILLEGAL, BINLOG_ID17101, "Handshake state error");
     }
-    return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_STATE_ILLEGAL, BINLOG_ID17101, "Handshake state error");
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 int32_t HS_SendMsgProcess(TLS_Ctx *ctx)

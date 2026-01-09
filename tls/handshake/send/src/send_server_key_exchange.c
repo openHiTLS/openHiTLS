@@ -288,7 +288,7 @@ int32_t ServerSendServerKeyExchangeProcess(TLS_Ctx *ctx)
 
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15750, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "server send keyExchange msg success.", 0, 0, 0, 0);
-
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
     /* Update the state machine. If the CertificateRequest message does not need to be sent, the system directly
      * switches to theSend_SERVER_HELLO_DONE state */
     if (ctx->negotiatedInfo.cipherSuiteInfo.authAlg != HITLS_AUTH_NULL &&
@@ -299,6 +299,7 @@ int32_t ServerSendServerKeyExchangeProcess(TLS_Ctx *ctx)
             return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE_REQUEST);
         }
     }
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
     /* Make sure the client will always send a certificate message, because ECDHE relies on the client's encrypted
      * certificate, even if the client does not require authentication (isSupportClientVerify equals false). */
 #ifdef HITLS_TLS_PROTO_TLCP11

@@ -117,17 +117,21 @@ static uint16_t ServerSelectCurveId(const TLS_Ctx *ctx, const ClientHelloMsg *cl
     uint32_t normalGroupsSize = 0;
     uint16_t *perferenceGroups = NULL;
     uint16_t *normalGroups = NULL;
+#ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER
     if (ctx->config.tlsConfig.isSupportServerPreference) {
         perferenceGroupsSize = ctx->config.tlsConfig.groupsSize;
         normalGroupsSize = clientHello->extension.content.supportedGroupsSize;
         perferenceGroups = ctx->config.tlsConfig.groups;
         normalGroups = clientHello->extension.content.supportedGroups;
     } else {
+#endif
         perferenceGroupsSize = clientHello->extension.content.supportedGroupsSize;
         normalGroupsSize = ctx->config.tlsConfig.groupsSize;
         perferenceGroups = clientHello->extension.content.supportedGroups;
         normalGroups = ctx->config.tlsConfig.groups;
+#ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER
     }
+#endif
 
     /* Find supported curves */
     for (uint32_t i = 0u; i < perferenceGroupsSize; i++) {
@@ -463,23 +467,24 @@ int32_t ServerSelectCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
     /* Obtain server information */
     uint16_t *cfgCipherSuites = ctx->config.tlsConfig.cipherSuites;
     uint32_t cfgCipherSuitesSize = ctx->config.tlsConfig.cipherSuitesSize;
+#ifdef HITLS_TLS_PROTO_TLS13
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
         cfgCipherSuites = ctx->config.tlsConfig.tls13CipherSuites;
         cfgCipherSuitesSize = ctx->config.tlsConfig.tls13cipherSuitesSize;
     }
-
+#endif
     const uint16_t *preferenceCipherSuites = clientHello->cipherSuites;
     uint16_t preferenceCipherSuitesSize = clientHello->cipherSuitesSize;
     const uint16_t *normalCipherSuites = cfgCipherSuites;
     uint16_t normalCipherSuitesSize = (uint16_t)cfgCipherSuitesSize;
-
+#ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER
     if (ctx->config.tlsConfig.isSupportServerPreference) {
         preferenceCipherSuites = cfgCipherSuites;
         preferenceCipherSuitesSize = (uint16_t)cfgCipherSuitesSize;
         normalCipherSuites = clientHello->cipherSuites;
         normalCipherSuitesSize = clientHello->cipherSuitesSize;
     }
-
+#endif
     bool preferSha256 = false;
 
 #ifdef HITLS_TLS_PROTO_TLS13
@@ -1034,10 +1039,12 @@ static int32_t ServerCheckResume(TLS_Ctx *ctx, const ClientHelloMsg *clientHello
 {
     ctx->negotiatedInfo.isResume = false;
     ctx->negotiatedInfo.isTicket = false;
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     /* If session resumption is not allowed in the renegotiation state, return */
     if (ctx->negotiatedInfo.isRenegotiation && !ctx->config.tlsConfig.isResumptionOnRenego) {
         return HITLS_SUCCESS;
     }
+#endif
     /* Create a null session handle */
     HITLS_Session *sess = NULL;
     uint32_t ticketBufSize = clientHello->extension.content.ticketSize;
@@ -1146,6 +1153,7 @@ static int32_t ServerCheckAndProcessRenegoInfo(TLS_Ctx *ctx, const ClientHelloMs
 static int32_t ServerCheckEncryptThenMac(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
     bool haveEncryptThenMac = clientHello->extension.flag.haveEncryptThenMac;
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     /* Renegotiation cannot be downgraded from EncryptThenMac to MacThenEncrypt */
     if (ctx->negotiatedInfo.isRenegotiation && ctx->negotiatedInfo.isEncryptThenMac && !haveEncryptThenMac) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ENCRYPT_THEN_MAC_ERR);
@@ -1154,7 +1162,7 @@ static int32_t ServerCheckEncryptThenMac(TLS_Ctx *ctx, const ClientHelloMsg *cli
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
         return HITLS_MSG_HANDLE_ENCRYPT_THEN_MAC_ERR;
     }
-
+#endif
     /* If EncryptThenMac is not configured, a success message is returned. */
     if (!ctx->config.tlsConfig.isEncryptThenMac) {
         return HITLS_SUCCESS;
@@ -1197,6 +1205,7 @@ static int32_t ServerSelectCipherSuiteInfo(TLS_Ctx *ctx, const ClientHelloMsg *c
 
 static int32_t ServerProcessClientHelloExt(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
+#ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
     int32_t ret = HITLS_SUCCESS;
     (void)ret;
     (void)clientHello;
@@ -1210,7 +1219,7 @@ static int32_t ServerProcessClientHelloExt(TLS_Ctx *ctx, const ClientHelloMsg *c
         return HITLS_MSG_HANDLE_INVALID_EXTENDED_MASTER_SECRET;
     }
     ctx->negotiatedInfo.isExtendedMasterSecret = clientHello->extension.flag.haveExtendedMasterSecret;
-
+#endif
     return ProcessClientHelloExt(ctx, clientHello, false);
 }
 
@@ -1402,10 +1411,12 @@ int32_t Tls12ServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg, bool 
             return ret;
         }
     }
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     if (ctx->state == CM_STATE_RENEGOTIATION && !ctx->userRenego) {
         ctx->negotiatedInfo.isRenegotiation = true; /* Start renegotiation */
         ctx->negotiatedInfo.renegotiationNum++;
     }
+#endif
     return HS_ChangeState(ctx, TRY_SEND_SERVER_HELLO);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
@@ -1449,6 +1460,7 @@ static int32_t DtlsServerCheckAndProcessCookie(TLS_Ctx *ctx, const ClientHelloMs
     }
     /* If the cookie fails to be verified, send a hello verify request */
     if (!*isCookieValid) {
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
         /* During DTLS renegotiation, if the cookie verification fails, an alert message is sent.
             If the cookie is empty, the hello verify request is sent */
         if ((clientHello->cookieLen != 0u) && (ctx->negotiatedInfo.isRenegotiation)) {
@@ -1458,6 +1470,7 @@ static int32_t DtlsServerCheckAndProcessCookie(TLS_Ctx *ctx, const ClientHelloMs
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
             return HITLS_MSG_VERIFY_COOKIE_ERR;
         }
+#endif
         ret = PrepareDtlsCookie(ctx, clientHello);
         if (ret != HITLS_SUCCESS) {
             return ret;
@@ -1515,10 +1528,12 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
             return ret;
         }
     }
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     if (ctx->state == CM_STATE_RENEGOTIATION && !ctx->userRenego) {
         ctx->negotiatedInfo.isRenegotiation = true; /* Start renegotiation */
         ctx->negotiatedInfo.renegotiationNum++;
     }
+#endif
     return HS_ChangeState(ctx, TRY_SEND_SERVER_HELLO);
 }
 #endif
@@ -2344,13 +2359,13 @@ static int32_t Tls13ServerProcessClientHello(TLS_Ctx *ctx, HS_Msg *msg)
             return ret;
         }
     }
-#ifdef HITLS_TLS_FEATURE_PHA
+#if defined(HITLS_TLS_FEATURE_PHA) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)
     TLS_Config *tlsConfig = &ctx->config.tlsConfig;
     if (ctx->phaState == PHA_NONE && tlsConfig->isSupportClientVerify &&
         msg->body.clientHello.extension.flag.havePostHsAuth) {
         ctx->phaState = PHA_EXTENSION;
     }
-#endif /* HITLS_TLS_FEATURE_PHA */
+#endif /* HITLS_TLS_FEATURE_PHA && HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
     return HS_ChangeState(ctx, TRY_SEND_SERVER_HELLO);
 }
 

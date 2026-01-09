@@ -434,22 +434,25 @@ int32_t DeriveMasterSecret(TLS_Ctx *ctx, const uint8_t *preMasterSecret, uint32_
 {
     int32_t ret = HITLS_SUCCESS;
     const uint8_t masterSecretLabel[] = "master secret";
-    const uint8_t exMasterSecretLabel[] = "extended master secret";
     uint8_t seed[HS_RANDOM_SIZE * 2] = {0}; // seed size is twice the random size
     uint32_t seedLen = sizeof(seed);
-    bool isExtendedMasterSecret = ctx->negotiatedInfo.isExtendedMasterSecret;
 
     CRYPT_KeyDeriveParameters deriveInfo;
     deriveInfo.hashAlgo = ctx->negotiatedInfo.cipherSuiteInfo.hashAlg;
     deriveInfo.secret = preMasterSecret;
     deriveInfo.secretLen = len;
-
+    
+#ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
+    const uint8_t exMasterSecretLabel[] = "extended master secret";
+    bool isExtendedMasterSecret = ctx->negotiatedInfo.isExtendedMasterSecret;
     if (isExtendedMasterSecret) {
         deriveInfo.label = exMasterSecretLabel;
         deriveInfo.labelLen = sizeof(exMasterSecretLabel) - 1u;
         ret = VERIFY_CalcSessionHash(
             ctx->hsCtx->verifyCtx, seed, &seedLen);  // Use session hash as seed for key deriviation
-    } else {
+    } else
+#endif
+    {
         deriveInfo.label = masterSecretLabel;
         deriveInfo.labelLen = sizeof(masterSecretLabel) - 1u;
         ret = HS_CombineRandom(ctx->hsCtx->clientRandom, ctx->hsCtx->serverRandom, HS_RANDOM_SIZE, seed, seedLen);
@@ -470,8 +473,7 @@ int32_t DeriveMasterSecret(TLS_Ctx *ctx, const uint8_t *preMasterSecret, uint32_
         return ret;
     }
 #ifdef HITLS_TLS_MAINTAIN_KEYLOG
-    if (HITLS_LogSecret(ctx, MASTER_SECRET_LABEL, ctx->hsCtx->masterKey,
-        MASTER_SECRET_LEN) != HITLS_SUCCESS) {
+    if (HITLS_LogSecret(ctx, MASTER_SECRET_LABEL, ctx->hsCtx->masterKey, MASTER_SECRET_LEN) != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15336, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "failed to LogSecret, MASTER_SECRET_LABEL.", 0, 0, 0, 0);
     }

@@ -124,6 +124,7 @@ static int32_t ClientCheckServerName(TLS_Ctx *ctx, const ServerHelloMsg *serverH
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_FEATURE_SNI */
+#ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
 static int32_t ClientCheckExtendedMasterSecret(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 {
     if ((!ctx->hsCtx->extFlag.haveExtendedMasterSecret) && serverHello->haveExtendedMasterSecret) {
@@ -171,6 +172,7 @@ static int32_t ClientCheckExtendedMasterSecret(TLS_Ctx *ctx, const ServerHelloMs
         serverHello->haveExtendedMasterSecret);
     return HITLS_SUCCESS;
 }
+#endif
 #ifdef HITLS_TLS_PROTO_TLS13
 static int32_t ClientCheckKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverHello)
 {
@@ -340,7 +342,7 @@ static int32_t ClientCheckEncryptThenMac(TLS_Ctx *ctx, const ServerHelloMsg *ser
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
         return HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE;
     }
-
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     /* During renegotiation, EncryptThenMac cannot be converted to MacThenEncrypt */
     if (ctx->negotiatedInfo.isRenegotiation && ctx->negotiatedInfo.isEncryptThenMac &&
         !serverHello->haveEncryptThenMac) {
@@ -350,7 +352,7 @@ static int32_t ClientCheckEncryptThenMac(TLS_Ctx *ctx, const ServerHelloMsg *ser
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ENCRYPT_THEN_MAC_ERR);
         return HITLS_MSG_HANDLE_ENCRYPT_THEN_MAC_ERR;
     }
-
+#endif
     /* This extension does not need to be negotiated for tls1.3 */
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
         return HITLS_SUCCESS;
@@ -413,7 +415,9 @@ static int32_t ClientCheckExtensionsFlag(TLS_Ctx *ctx, const ServerHelloMsg *ser
 #ifdef HITLS_TLS_FEATURE_SNI
         ClientCheckServerName,
 #endif /* HITLS_TLS_FEATURE_SNI */
+#ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
         ClientCheckExtendedMasterSecret,
+#endif
 #ifdef HITLS_TLS_FEATURE_ALPN
         ClientCheckNegotiatedAlpnOfServerHello,
 #endif /* HITLS_TLS_FEATURE_ALPN */
@@ -899,25 +903,6 @@ static int32_t ClientCheckHrrKeyShareExtension(TLS_Ctx *ctx, const ServerHelloMs
     return HITLS_SUCCESS;
 }
 
-/* If an implementation receives an extension
- * which it recognizes and which is not specified for the message in
- * which it appears, it MUST abort the handshake with an
- * "illegal_parameter" alert. */
-static int32_t ClientCheckHrrExtraExtension(TLS_Ctx *ctx, const ServerHelloMsg *helloRetryRequest)
-{
-    if (helloRetryRequest->haveServerName || helloRetryRequest->haveExtendedMasterSecret ||
-        helloRetryRequest->havePointFormats || helloRetryRequest->haveSelectedAlpn ||
-        helloRetryRequest->haveSelectedIdentity || helloRetryRequest->haveSecRenego || helloRetryRequest->haveTicket ||
-        helloRetryRequest->haveEncryptThenMac) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17092, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "these extensions are not specified in the hrr message", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
-        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE);
-        return HITLS_MSG_HANDLE_UNSUPPORT_EXTENSION_TYPE;
-    }
-    return HITLS_SUCCESS;
-}
-
 static int32_t ClientCheckHrrCookieExtension(TLS_Ctx *ctx, const ServerHelloMsg *helloRetryRequest)
 {
     if (helloRetryRequest->haveCookie == false) {
@@ -946,11 +931,6 @@ static int32_t Tls13ClientCheckHrrExtension(TLS_Ctx *ctx, const ServerHelloMsg *
         return ret;
     }
 
-    /* Check whether there are redundant extensions */
-    ret = ClientCheckHrrExtraExtension(ctx, helloRetryRequest);
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
 
     /* Check the key share extension */
     ret = ClientCheckHrrCookieExtension(ctx, helloRetryRequest);

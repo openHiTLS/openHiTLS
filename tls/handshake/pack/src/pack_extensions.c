@@ -902,7 +902,9 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
         { EXTENSION_MSG(HS_EX_TYPE_POST_HS_AUTH, isNeedPha, NULL) },
 #endif /* HITLS_TLS_FEATURE_PHA */
 #endif /* HITLS_TLS_PROTO_TLS13 */
+#ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
         { EXTENSION_MSG(HS_EX_TYPE_EXTENDED_MASTER_SECRET, true, NULL) },
+#endif
 #ifdef HITLS_TLS_FEATURE_ALPN
         { EXTENSION_MSG(HS_EX_TYPE_APP_LAYER_PROTOCOLS, (tlsConfig->alpnList != NULL &&
             ctx->state == CM_STATE_HANDSHAKING), PackClientAlpnList) },
@@ -944,7 +946,9 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 #ifdef HITLS_TLS_FEATURE_PHA
     ctx->hsCtx->extFlag.havePostHsAuth = isNeedPha;
 #endif /* HITLS_TLS_FEATURE_PHA */
+#ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
     ctx->hsCtx->extFlag.haveExtendedMasterSecret = true;
+#endif
 #ifdef HITLS_TLS_FEATURE_ETM
     ctx->hsCtx->extFlag.haveEncryptThenMac = ctx->config.tlsConfig.isEncryptThenMac;
 #endif /* HITLS_TLS_FEATURE_ETM */
@@ -1160,6 +1164,7 @@ static int32_t PackServerPreSharedKey(const TLS_Ctx *ctx, PackPacket *pkt)
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 static int32_t PackServerSecRenegoInfo(const TLS_Ctx *ctx, PackPacket *pkt)
 {
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     bool isRenegotiation = ctx->negotiatedInfo.isRenegotiation;
     const uint8_t *clientData = ctx->negotiatedInfo.clientVerifyData;
     uint32_t clientDataSize = ctx->negotiatedInfo.clientVerifyDataSize;
@@ -1187,7 +1192,14 @@ static int32_t PackServerSecRenegoInfo(const TLS_Ctx *ctx, PackPacket *pkt)
     (void)PackAppendDataToBuf(pkt, clientData, clientDataSize);
 
     (void)PackAppendDataToBuf(pkt, serverData, serverDataSize);
-
+#else
+    (void)ctx;
+    int32_t ret = PackExtensionHeader(HS_EX_TYPE_RENEGOTIATION_INFO, sizeof(uint8_t), pkt);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    (void)PackAppendUint8ToBuf(pkt, 0);
+#endif
     return HITLS_SUCCESS;
 }
 #endif /* defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */
@@ -1220,7 +1232,6 @@ static bool IsNeedServerPackEncryptThenMac(const TLS_Ctx *ctx)
 // Pack the empty extension of Server Hello
 static int32_t PackServerExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 {
-    int32_t ret = HITLS_SUCCESS;
 #ifdef HITLS_TLS_PROTO_TLS13
     uint32_t version = GET_VERSION_FROM_CTX(ctx);
     bool isHrrKeyshare = IsHrrKeyShare(ctx);
@@ -1246,7 +1257,9 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 #ifdef HITLS_TLS_PROTO_TLS13
         { EXTENSION_MSG(HS_EX_TYPE_SUPPORTED_VERSIONS, isTls13, PackServerSupportedVersion) },
 #endif /* HITLS_TLS_PROTO_TLS13 */
+#ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
         { EXTENSION_MSG(HS_EX_TYPE_EXTENDED_MASTER_SECRET, negoInfo->isExtendedMasterSecret, NULL) },
+#endif
 #ifdef HITLS_TLS_FEATURE_ALPN
         { .exMsgType = HS_EX_TYPE_APP_LAYER_PROTOCOLS,
           .needPack = (negoInfo->alpnSelected != NULL
@@ -1287,19 +1300,14 @@ static int32_t PackServerExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
     }
 
     if (IsPackNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), context)) {
-        ret = PackCustomExtensions(ctx, pkt, context, NULL, 0);
+        int32_t ret = PackCustomExtensions(ctx, pkt, context, NULL, 0);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
     }
 #endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
 
-    ret = PackExtensions(ctx, pkt, extMsgList, sizeof(extMsgList) / sizeof(extMsgList[0]));
-    if (ret != HITLS_SUCCESS) {
-        return ret;
-    }
-
-    return HITLS_SUCCESS;
+    return PackExtensions(ctx, pkt, extMsgList, sizeof(extMsgList) / sizeof(extMsgList[0]));
 }
 
 // Pack the Server Hello extension

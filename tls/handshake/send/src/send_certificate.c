@@ -63,6 +63,7 @@ int32_t SendCertificateProcess(TLS_Ctx *ctx)
     if (IsNeedServerKeyExchange(ctx) == true) {
         return HS_ChangeState(ctx, TRY_SEND_SERVER_KEY_EXCHANGE);
     }
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
     /* The server sends CertificateRequest only when the isSupportClientVerify mode is enabled */
     if (ctx->config.tlsConfig.isSupportClientVerify) {
         /* isSupportClientOnceVerify specifies whether the CR is sent only in the initial handshake phase. */
@@ -72,6 +73,7 @@ int32_t SendCertificateProcess(TLS_Ctx *ctx)
             return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE_REQUEST);
         }
     }
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
     return HS_ChangeState(ctx, TRY_SEND_SERVER_HELLO_DONE);
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */

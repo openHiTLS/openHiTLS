@@ -105,6 +105,7 @@ static int32_t EstablishEventInRenegotiationState(HITLS_Ctx *ctx)
 #endif
 }
 
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
 static int32_t CloseEventInRenegotiationState(HITLS_Ctx *ctx)
 {
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
@@ -130,6 +131,7 @@ static int32_t CloseEventInRenegotiationState(HITLS_Ctx *ctx)
     return HITLS_INTERNAL_EXCEPTION;
 #endif
 }
+#endif
 
 static int32_t EstablishEventInAlertedState(HITLS_Ctx *ctx)
 {
@@ -138,6 +140,7 @@ static int32_t EstablishEventInAlertedState(HITLS_Ctx *ctx)
     return HITLS_CM_LINK_FATAL_ALERTED;
 }
 
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
 static int32_t EstablishEventInClosedState(HITLS_Ctx *ctx)
 {
     (void)ctx;
@@ -253,6 +256,7 @@ static int32_t CloseEventInClosedState(HITLS_Ctx *ctx)
     ChangeConnState(ctx, CM_STATE_CLOSED);
     return HITLS_SUCCESS;
 }
+#endif
 
 // Check and process the CTX status before HITLS_Connect and HITLS_Accept.
 int32_t ProcessCtxState(HITLS_Ctx *ctx)
@@ -363,7 +367,9 @@ int32_t HITLS_Connect(HITLS_Ctx *ctx)
         EstablishEventInRenegotiationState,
         NULL,  // The alerting phase has been processed in the ProcessCtxState function
         EstablishEventInAlertedState,
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
         EstablishEventInClosedState
+#endif
     };
 
     ManageEventProcess proc = connectEventProcess[GetConnState(ctx)];
@@ -397,7 +403,9 @@ int32_t HITLS_Accept(HITLS_Ctx *ctx)
         EstablishEventInRenegotiationState,
         NULL,
         EstablishEventInAlertedState,
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
         EstablishEventInClosedState
+#endif
     };
 
     ManageEventProcess proc = acceptEventProcess[GetConnState(ctx)];
@@ -460,6 +468,7 @@ int32_t HITLS_Listen(HITLS_Ctx *ctx, BSL_SAL_SockAddr clientAddr)
 }
 #endif /* #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP) && defined(HITLS_BSL_UIO_ADDR) */
 
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
 int32_t HITLS_Close(HITLS_Ctx *ctx)
 {
     if (ctx == NULL) {
@@ -503,6 +512,13 @@ int32_t HITLS_Close(HITLS_Ctx *ctx)
 
     return HITLS_SUCCESS;
 }
+#else /* HITLS_TLS_PROTO_CLOSE_STATE */
+int32_t HITLS_Close(HITLS_Ctx *ctx)
+{
+    ALERT_Send(ctx, ALERT_LEVEL_WARNING, ALERT_CLOSE_NOTIFY);
+    return ALERT_Flush(ctx);
+}
+#endif /* HITLS_TLS_PROTO_CLOSE_STATE */
 
 int32_t HITLS_GetError(const HITLS_Ctx *ctx, int32_t ret)
 {
@@ -629,7 +645,11 @@ int32_t HITLS_GetHandShakeState(const HITLS_Ctx *ctx, uint32_t *state)
         }
     }
 
-    if (ctx->state == CM_STATE_ALERTED || ctx->state == CM_STATE_CLOSED) {
+    if (ctx->state == CM_STATE_ALERTED
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
+        || ctx->state == CM_STATE_CLOSED
+#endif
+    ) {
         if (ctx->preState == CM_STATE_IDLE && ctx->hsCtx == NULL) {
             hsState = TLS_IDLE;
         } else if (ctx->hsCtx != NULL) {

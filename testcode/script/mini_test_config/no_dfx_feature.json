@@ -1,0 +1,116 @@
+{
+    "libType": [
+        "static",
+        "shared"
+    ],
+    "libs": {
+        "hitls_bsl": {
+            "c": [
+                "init",
+                "sal",
+                "sal_mem",
+                "sal_lock",
+                "log",
+                "err",
+                "hash",
+                "sal_str",
+                "sal_file",
+                "uio_buffer",
+                "uio_mem",
+                "uio_plt",
+                "uio_udp",
+                "sal_thread",
+                "sal_net",
+                "sal_time",
+                "tlv",
+                "base64",
+                "asn1",
+                "buffer",
+                "list",
+                "obj",
+                "params",
+                "pem"
+            ]
+        },
+        "hitls_crypto": {
+            "asm": [
+                "bn",
+                "chacha20",
+                "chacha20poly1305",
+                "aes",
+                "gcm",
+                "sha256",
+                "sha384",
+                "sha512",
+                "bn_rand",
+                "x25519",
+                "curve_nistp256",
+                "curve_nistp384",
+                "curve_nistp521",
+                "ecc",
+                "curve_sm2",
+                "sm3",
+                "sm4"
+            ],
+            "c": [
+                "eal",
+                "ealinit",
+                "entropy",
+                "drbg_hash",
+                "sha256",
+                "sha384",
+                "sha512",
+                "hkdf",
+                "aes",
+                "gcm",
+                "chacha20",
+                "hpke",
+                "bn",
+                "x25519",
+                "curve_nistp256",
+                "curve_nistp384",
+                "curve_nistp521",
+                "drbg_ctr",
+                "cmac_aes",
+                "ecdsa",
+                "ecdh",
+                "ecc",
+                "mlkem",
+                "mldsa",
+                "slh_dsa",
+                "cbc",
+                "rsa",
+                "sha1",
+                "cipher",
+                "pkey",
+                "codecskey"
+            ]
+        },
+        "hitls_tls": {
+            "c": [
+                "callback_sal",
+                "callback_cert",
+                "callback_crypt",
+                "config",
+                "host",
+                "maintain",
+                "proto",
+                "proto_dtls12",
+                "proto_dtlcp11",
+                "feature_mtu_query",
+                "suite_ecdhe_rsa_with_aes_128_cbc_sha"
+            ]
+        },
+        "hitls_pki": {
+            "c": [
+                "info",
+                "pkcs12",
+                "x509"
+            ]
+        }
+    },
+    "endian": "little",
+    "bits": 64,
+    "asmType": "no_asm",
+    "system": "linux"
+}

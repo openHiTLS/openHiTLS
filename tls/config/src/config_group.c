@@ -21,7 +21,7 @@
 #include "hitls_error.h"
 #include "crypt_algid.h"
 #include "config.h"
-#ifdef HITLS_TLS_FEATURE_PROVIDER
+#ifdef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
 #include "securec.h"
 #include "crypt_eal_provider.h"
 #include "crypt_params_key.h"
@@ -45,12 +45,13 @@ static const uint16_t DEFAULT_GROUP_ID[] = {
     HITLS_FF_DHE_8192,
 };
 
-#ifndef HITLS_TLS_FEATURE_PROVIDER
+#ifndef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
 #ifndef HITLS_TLS_CAP_NO_STR
 #define CONST_CAST(str) ((char *)(uintptr_t)(str))
 #else
 #define CONST_CAST(str) NULL
-#endif
+#endif /* HITLS_TLS_CAP_NO_STR */
+
 static const TLS_GroupInfo GROUP_INFO[] = {
     {
         CONST_CAST("x25519"),
@@ -96,6 +97,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
     },
 #endif /* HITLS_TLS_PROTO_TLS13 */
 #endif /* HITLS_TLS_FEATURE_KEM */
+#ifdef HITLS_CRYPTO_CURVE_NISTP256
     {
         CONST_CAST("secp256r1"),
         CRYPT_ECC_NISTP256, // CRYPT_ECC_NISTP256
@@ -106,6 +108,8 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_CURVE_NISTP256 */
+#ifdef HITLS_CRYPTO_CURVE_NISTP384
     {
         CONST_CAST("secp384r1"),
         CRYPT_ECC_NISTP384, // CRYPT_ECC_NISTP384
@@ -116,6 +120,8 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_CURVE_NISTP384 */
+#ifdef HITLS_CRYPTO_CURVE_NISTP521
     {
         CONST_CAST("secp521r1"),
         CRYPT_ECC_NISTP521, // CRYPT_ECC_NISTP521
@@ -126,6 +132,8 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         TLS_VERSION_MASK | DTLS_VERSION_MASK, // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_CURVE_NISTP521 */
+#ifdef HITLS_CRYPTO_CURVE_BP256R1
     {
         CONST_CAST("brainpoolP256r1"),
         CRYPT_ECC_BRAINPOOLP256R1, // CRYPT_ECC_BRAINPOOLP256R1
@@ -136,6 +144,8 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_CURVE_BP256R1 */
+#ifdef HITLS_CRYPTO_CURVE_BP384R1
     {
         CONST_CAST("brainpoolP384r1"),
         CRYPT_ECC_BRAINPOOLP384R1, // CRYPT_ECC_BRAINPOOLP384R1
@@ -146,6 +156,8 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_CURVE_BP384R1 */
+#ifdef HITLS_CRYPTO_CURVE_BP512R1
     {
         CONST_CAST("brainpoolP512r1"),
         CRYPT_ECC_BRAINPOOLP512R1, // CRYPT_ECC_BRAINPOOLP512R1
@@ -156,6 +168,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         TLS10_VERSION_BIT | TLS11_VERSION_BIT | TLS12_VERSION_BIT | DTLS_VERSION_MASK, // versionBits
         false,
     },
+#endif /* HITLS_CRYPTO_CURVE_BP512R1 */
 #ifdef HITLS_TLS_FEATURE_SM_TLS13
     {
         "curveSm2",
@@ -180,6 +193,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         false,
     },
 #endif
+#ifdef HITLS_CRYPTO_DH
     {
         CONST_CAST("ffdhe8192"),
         CRYPT_DH_RFC7919_8192, // CRYPT_DH_8192
@@ -230,6 +244,7 @@ static const TLS_GroupInfo GROUP_INFO[] = {
         TLS13_VERSION_BIT, // versionBits
         false,
     }
+#endif /* HITLS_CRYPTO_DH */
 };
 
 int32_t ConfigLoadGroupInfo(HITLS_Config *config)
@@ -260,7 +275,7 @@ const TLS_GroupInfo *ConfigGetGroupInfoList(const HITLS_Config *config, uint32_t
     *size = sizeof(GROUP_INFO) / sizeof(GROUP_INFO[0]);
     return &GROUP_INFO[0];
 }
-#else
+#else /* #ifndef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC */
 
 static int32_t ProviderAddGroupInfo(const BSL_Param *params, void *args)
 {
@@ -360,4 +375,4 @@ const TLS_GroupInfo *ConfigGetGroupInfoList(const HITLS_Config *config, uint32_t
     *size = config->groupInfolen;
     return config->groupInfo;
 }
-#endif
+#endif /* HITLS_TLS_FEATURE_PROVIDER_DYNAMIC */

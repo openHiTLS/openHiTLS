@@ -61,7 +61,9 @@ static const char *GetStateString(uint32_t state)
         [CM_STATE_TRANSPORTING] = "Transporting",
         [CM_STATE_ALERTING] = "Alerting",
         [CM_STATE_ALERTED] = "Alerted",
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
         [CM_STATE_CLOSED] = "Closed",
+#endif
     };
     /* Current status */
     return stateMachineStr[state];
@@ -140,6 +142,7 @@ int32_t CommonEventInAlertingState(HITLS_Ctx *ctx)
         return HITLS_SUCCESS;
     }
 
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
     /* If the close_notify message is sent, the link must be disconnected */
     if (alertInfo.description == ALERT_CLOSE_NOTIFY) {
         if (ctx->userShutDown) {
@@ -155,6 +158,7 @@ int32_t CommonEventInAlertingState(HITLS_Ctx *ctx)
         }
         return HITLS_SUCCESS;
     }
+#endif
 
     /* Other warning alerts will not terminate the connection and the status will be restored to the previous status */
     ctx->state = ctx->preState;
@@ -189,7 +193,7 @@ static int32_t AlertRecvProcess(HITLS_Ctx *ctx, const ALERT_Info *alertInfo)
         /* Other warning alerts will not be processed */
         return HITLS_SUCCESS;
     }
-
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
     ctx->shutdownState |= HITLS_RECEIVED_SHUTDOWN;
 
     /* In quiet disconnection mode, close_notify does not need to be sent */
@@ -218,6 +222,9 @@ static int32_t AlertRecvProcess(HITLS_Ctx *ctx, const ALERT_Info *alertInfo)
         ChangeConnState(ctx, CM_STATE_ALERTED);
     }
     return HITLS_CM_LINK_CLOSED;
+#else
+    return HITLS_CM_LINK_CLOSED;
+#endif
 }
 
 int32_t AlertEventProcess(HITLS_Ctx *ctx)
@@ -259,14 +266,14 @@ int32_t CommonEventInHandshakingState(HITLS_Ctx *ctx)
             /* The handshake fails, but no alert is received. Return the error code to the user */
             return ret;
         }
-
+#ifdef HITLS_TLS_PROTO_DFX_ALERT_NUMBER
         if (ALERT_HaveExceeded(ctx, MAX_ALERT_COUNT)) {
             /* If there are multiple consecutive alerts, the link is abnormal and needs to be terminated. */
             ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
             alertRet = AlertEventProcess(ctx);
             return (alertRet == HITLS_SUCCESS) ? ret : alertRet;
         }
-
+#endif
         alertRet = AlertEventProcess(ctx);
         if (alertRet != HITLS_SUCCESS) {
             /* If the alert message fails to be sent, return the error code to the user */
@@ -527,14 +534,19 @@ static uint16_t FindPreference(const HITLS_Ctx *ctx, int32_t nmatch, bool *haveF
     uint32_t localGroupSize = ctx->config.tlsConfig.groupsSize;
     uint16_t *peerGroups = ctx->peerInfo.groups;
     uint16_t *localGroups = ctx->config.tlsConfig.groups;
-    bool chooseServerPre = ctx->config.tlsConfig.isSupportServerPreference;
     uint16_t intersectionCnt = 0;
-
+#ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER
+    bool chooseServerPre = ctx->config.tlsConfig.isSupportServerPreference;
     preferGroupSize = (chooseServerPre == true) ? localGroupSize : peerGroupSize;
     secondPreferGroupSize = (chooseServerPre == true) ? peerGroupSize : localGroupSize;
     preferGroups = (chooseServerPre == true) ? localGroups : peerGroups;
     secondPreferGroups = (chooseServerPre == true) ? peerGroups : localGroups;
-
+#else
+    preferGroupSize = peerGroupSize;
+    secondPreferGroupSize = localGroupSize;
+    preferGroups = peerGroups;
+    secondPreferGroups = localGroups;
+#endif
     for (uint32_t i = 0; i < preferGroupSize; i++) {
         for (uint32_t j = 0; j < secondPreferGroupSize; j++) {
             if (preferGroups[i] == secondPreferGroups[j]) {
@@ -735,11 +747,12 @@ int32_t CommonEventInRenegotiationState(HITLS_Ctx *ctx)
             return ret;
         }
         InnerRenegotiationProcess(ctx);
+#ifdef HITLS_TLS_PROTO_DFX_ALERT_NUMBER
         if (ALERT_HaveExceeded(ctx, MAX_ALERT_COUNT)) {
             /* If multiple consecutive alerts exist, the link is abnormal and needs to be terminated */
             ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
         }
-
+#endif
         int32_t alertRet = AlertEventProcess(ctx);
         if (alertRet != HITLS_SUCCESS) {
             if (alertRet != HITLS_CM_LINK_CLOSED) {

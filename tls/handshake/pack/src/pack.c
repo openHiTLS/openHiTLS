@@ -33,7 +33,7 @@
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt)
 {
-    int32_t ret = HITLS_SUCCESS;
+    int32_t ret = HITLS_PACK_UNSUPPORT_HANDSHAKE_MSG;
     switch (type) {
 #ifdef HITLS_TLS_HOST_SERVER
         case SERVER_HELLO:
@@ -47,9 +47,11 @@ static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt)
         case SERVER_KEY_EXCHANGE:
             ret = PackServerKeyExchange(ctx, pkt);
             break;
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
         case CERTIFICATE_REQUEST:
             ret = PackCertificateRequest(ctx, pkt);
             break;
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
         case HELLO_REQUEST:
         case SERVER_HELLO_DONE:
             return HITLS_SUCCESS;
@@ -77,7 +79,6 @@ static int32_t PackHsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt)
             ret = PackFinished(ctx, pkt);
             break;
         default:
-            ret = HITLS_PACK_UNSUPPORT_HANDSHAKE_MSG;
             break;
     }
 
@@ -105,9 +106,11 @@ static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt
         case ENCRYPTED_EXTENSIONS:
             ret = PackEncryptedExtensions(ctx, pkt);
             break;
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
         case CERTIFICATE_REQUEST:
             ret = Tls13PackCertificateRequest(ctx, pkt);
             break;
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
         case NEW_SESSION_TICKET:
             ret = Tls13PackNewSessionTicket(ctx, pkt);
             break;
