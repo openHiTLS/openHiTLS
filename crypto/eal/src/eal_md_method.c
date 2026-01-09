@@ -46,6 +46,13 @@ typedef struct {
     EAL_MdMethod *mdMeth;
 } EAL_CidToMdMeth;
 
+#ifdef HITLS_CRYPTO_MD_MB
+typedef struct {
+    uint32_t id;
+    const EAL_MdMBMethod *mbMeth;
+} EAL_CidToMdMbMeth;
+#endif
+
 #define CRYPT_MD_IMPL_METHOD_DECLARE(name, id)                                              \
     EAL_MdMethod g_mdMethod_##name = {                                                      \
         id,                                                                                 \
@@ -118,6 +125,46 @@ static const EAL_CidToMdMeth ID_TO_MD_METH_TABLE[] = {
     {CRYPT_MD_SM3,      &g_mdMethod_SM3},
 #endif
 };
+
+#ifdef HITLS_CRYPTO_MD_MB
+#ifdef HITLS_CRYPTO_SHA2_MB
+static const EAL_MdMBMethod g_mdMbMethod_SHA256 = {
+    (MdMBNewCtx)CRYPT_SHA256_MBNewCtx,
+    (MdMBFreeCtx)CRYPT_SHA256_MBFreeCtx,
+    (MdMBInit)CRYPT_SHA256_MBInit,
+    (MdMBUpdate)CRYPT_SHA256_MBUpdate,
+    (MdMBFinal)CRYPT_SHA256_MBFinal
+};
+#endif
+
+static const EAL_CidToMdMbMeth ID_TO_MD_MB_METH_TABLE[] = {
+#ifdef HITLS_CRYPTO_SHA2_MB
+    {CRYPT_MD_SHA256_MB, &g_mdMbMethod_SHA256},
+#endif
+};
+
+static const EAL_MdMBMethod *EAL_MdFindDefaultMbMethod(CRYPT_MD_AlgId id)
+{
+    uint32_t num = sizeof(ID_TO_MD_MB_METH_TABLE) / sizeof(ID_TO_MD_MB_METH_TABLE[0]);
+    for (uint32_t i = 0; i < num; i++) {
+        if (ID_TO_MD_MB_METH_TABLE[i].id == id) {
+            return ID_TO_MD_MB_METH_TABLE[i].mbMeth;
+        }
+    }
+    return NULL;
+}
+
+EAL_MdMBMethod *EAL_MdFindMbMethod(CRYPT_MD_AlgId id, EAL_MdMBMethod *method)
+{
+    const EAL_MdMBMethod *findMethod = EAL_MdFindDefaultMbMethod(id);
+    if (findMethod == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return NULL;
+    }
+    *method = *findMethod;
+    return method;
+}
+#endif // HITLS_CRYPTO_MD_MB
 
 #if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_ECDSA)
 static const uint32_t SIGN_MD_ID_LIST[] = {

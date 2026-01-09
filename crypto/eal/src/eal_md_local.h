@@ -37,10 +37,17 @@ typedef enum {
 
 struct EAL_MdCtx {
     EAL_MdMethod method;  /* algorithm operation entity */
+#ifdef HITLS_CRYPTO_MD_MB
+    EAL_MdMBMethod mbMethod; /* multi-buffer operation entity */
+#endif
     void *data;        /* Algorithm ctx, mainly context */
     uint32_t state;
     CRYPT_MD_AlgId id;
 };
+
+#ifdef HITLS_CRYPTO_MD_MB
+EAL_MdMBMethod *EAL_MdFindMbMethod(CRYPT_MD_AlgId id, EAL_MdMBMethod *method);
+#endif
 
 /**
  * @ingroup eal

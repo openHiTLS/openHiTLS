@@ -85,6 +85,71 @@ CRYPT_EAL_PkeyCtx *TestPkeyNewCtx(
     CRYPT_EAL_LibCtx *libCtx, int32_t id, uint32_t operType, const char *attrName, int isProvider);
 #endif
 
+#ifdef __aarch64__
+#define AARCH64_PUT_CANARY()                                          \
+    double canaryd = 1.1;                                            \
+    register double d8 asm("d8");                                     \
+    register double d9 asm("d9");                                     \
+    register double d10 asm("d10");                                   \
+    register double d11 asm("d11");                                   \
+    register double d12 asm("d12");                                   \
+    register double d13 asm("d13");                                   \
+    register double d14 asm("d14");                                   \
+    register double d15 asm("d15");                                   \
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d8) : "w"(canaryd) :);  \
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d9) : "w"(canaryd) :);  \
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d10) : "w"(canaryd) :); \
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d11) : "w"(canaryd) :); \
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d12) : "w"(canaryd) :); \
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d13) : "w"(canaryd) :); \
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d14) : "w"(canaryd) :); \
+    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d15) : "w"(canaryd) :); \
+    long canaryx = 0x12345678;                                        \
+    register int x19 asm("x19");                                      \
+    register int x20 asm("x20");                                      \
+    register int x21 asm("x21");                                      \
+    register int x22 asm("x22");                                      \
+    register int x23 asm("x23");                                      \
+    register int x24 asm("x24");                                      \
+    register int x25 asm("x25");                                      \
+    register int x26 asm("x26");                                      \
+    register int x27 asm("x27");                                      \
+    register int x28 asm("x28");                                      \
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x19) : "r"(canaryx) :);   \
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x20) : "r"(canaryx) :);   \
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x21) : "r"(canaryx) :);   \
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x22) : "r"(canaryx) :);   \
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x23) : "r"(canaryx) :);   \
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x24) : "r"(canaryx) :);   \
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x25) : "r"(canaryx) :);   \
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x26) : "r"(canaryx) :);   \
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x27) : "r"(canaryx) :);   \
+    asm volatile("mov %x0, %x1 \n\t" : "=r"(x28) : "r"(canaryx) :);
+
+#define AARCH64_CHECK_CANARY()   \
+    ASSERT_TRUE(d8 == canaryd);  \
+    ASSERT_TRUE(d9 == canaryd);  \
+    ASSERT_TRUE(d10 == canaryd); \
+    ASSERT_TRUE(d11 == canaryd); \
+    ASSERT_TRUE(d12 == canaryd); \
+    ASSERT_TRUE(d13 == canaryd); \
+    ASSERT_TRUE(d14 == canaryd); \
+    ASSERT_TRUE(d15 == canaryd); \
+    ASSERT_TRUE(x19 == canaryx); \
+    ASSERT_TRUE(x20 == canaryx); \
+    ASSERT_TRUE(x21 == canaryx); \
+    ASSERT_TRUE(x22 == canaryx); \
+    ASSERT_TRUE(x23 == canaryx); \
+    ASSERT_TRUE(x24 == canaryx); \
+    ASSERT_TRUE(x25 == canaryx); \
+    ASSERT_TRUE(x26 == canaryx); \
+    ASSERT_TRUE(x27 == canaryx); \
+    ASSERT_TRUE(x28 == canaryx);
+#else
+#define AARCH64_PUT_CANARY()
+#define AARCH64_CHECK_CANARY()
+#endif
+
 #ifdef __cplusplus
 }
 #endif
