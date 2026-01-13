@@ -18,70 +18,118 @@
 #include "ml_kem_local.h"
 
 // basecase multiplication: add to polyH but not override it
-static void BaseMulAdd(int16_t polyH[2], const int16_t f0, const int16_t f1, const int16_t g0, const int16_t g1,
-                       const int16_t factor)
+static void BaseMulAdd(int32_t polyH[2], const int16_t f0, const int16_t f1, const int16_t g0, const int16_t g1,
+                       const int32_t factor)
 {
-    polyH[0] += (int16_t)((f0 * g0 + f1 * g1 % MLKEM_Q * factor) % MLKEM_Q);
-    polyH[1] += (int16_t)((f0 * g1 + f1 * g0) % MLKEM_Q);
+    polyH[0] += f0 * g0 + f1 * PlantardReduction(g1 * factor);
+    polyH[1] += f0 * g1 + f1 * g0;
 }
 
-static void CircMulAdd(int16_t dest[MLKEM_N], const int16_t src1[MLKEM_N], const int16_t src2[MLKEM_N],
-                       const int16_t *factor)
+static void BaseMulAddCache(int32_t polyH[2], const int16_t f0, const int16_t f1, const int16_t g0, const int16_t g1,
+                       const int16_t cache)
+{
+    polyH[0] += f0 * g0 + f1 * cache;
+    polyH[1] += f0 * g1 + f1 * g0;
+}
+
+static void CircMulAdd(int32_t dest[MLKEM_N], const int16_t src1[MLKEM_N], const int16_t src2[MLKEM_N],
+                       const int32_t *factor)
 {
     for (uint32_t i = 0; i < MLKEM_N / 4; i++) {
         // 4-byte data is calculated in each round.
-        BaseMulAdd(&dest[4 * i], src1[4 * i], src1[4 * i + 1], src2[4 * i], src2[4 * i + 1], factor[i]);
+        BaseMulAdd(&dest[4 * i], src1[4 * i], src1[4 * i + 1], src2[4 * i], src2[4 * i + 1], factor[2 * i]);
         BaseMulAdd(&dest[4 * i + 2], src1[4 * i + 2], src1[4 * i + 3], src2[4 * i + 2], src2[4 * i + 3],
-                   -1 * factor[i]);
+                   factor[2 * i + 1]);
     }
 }
 
-static void PolyReduce(int16_t *poly)
+static void CircMulAddUseCache(int32_t dest[MLKEM_N], const int16_t src1[MLKEM_N], const int16_t src2[MLKEM_N],
+                       const int16_t *mulCache)
 {
-    for (int i = 0; i < MLKEM_N; ++i) {
-        poly[i] = BarrettReduction(poly[i]);
+    for (uint32_t i = 0; i < MLKEM_N / 4; i++) {
+        // 4-byte data is calculated in each round.
+        BaseMulAddCache(&dest[4 * i], src1[4 * i], src1[4 * i + 1], src2[4 * i], src2[4 * i + 1], mulCache[2 * i]);
+        BaseMulAddCache(&dest[4 * i + 2], src1[4 * i + 2], src1[4 * i + 3], src2[4 * i + 2], src2[4 * i + 3],
+                   mulCache[2 * i + 1]);
     }
 }
+
+static void PolyReduce(int16_t *poly, int32_t *src)
+{
+    for (int32_t i = 0; i < MLKEM_N; ++i) {
+        poly[i] = BarrettReduction(src[i]);
+    }
+}
+
+void MLKEM_ComputeMulCache(uint8_t k, int16_t **input, int16_t output[MLKEM_K_MAX][MLKEM_N_HALF], const int32_t *factor)
+{
+
+    for (int32_t i = 0; i < k; ++i) {
+        for (int32_t j = 0; j < MLKEM_N_HALF; ++j) {
+            output[i][j] = PlantardReduction(input[i][2 * j + 1] * factor[j]);
+        }
+    }
+}
+
 // polyVecOut += (matrix * polyVec): add to polyVecOut but not override it
-void MLKEM_MatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut, const int16_t *factor)
+void MLKEM_MatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut,
+                        const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF])
 {
     int16_t **currOutPoly = polyVecOut;
-    for (int i = 0; i < k; ++i) {
+    int32_t tmps[MLKEM_N];
+    for (int32_t i = 0; i < k; ++i) {
         int16_t **currMatrixPoly = matrix + i * MLKEM_K_MAX;
         int16_t **currVecPoly = polyVec;
-        for (int j = 0; j < k; ++j) {
-            CircMulAdd(*currOutPoly, *currMatrixPoly, *currVecPoly, factor + MLKEM_N_HALF / 2);
+        for (int32_t j= 0; j < MLKEM_N; ++j) {
+            tmps[j] = (*currOutPoly)[j];
+        }
+        for (int32_t j = 0; j < k; ++j) {
+            CircMulAddUseCache(tmps, *currMatrixPoly, *currVecPoly, mulCache[j]);
             ++currMatrixPoly;
             ++currVecPoly;
         }
-        PolyReduce(*currOutPoly);
+        PolyReduce(*currOutPoly, tmps);
         ++currOutPoly;
     }
 }
 
 // polyVecOut += (matrix^T * polyVec): add to polyVecOut but not override it
 void MLKEM_TransposeMatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut,
-                                 const int16_t *factor)
+                                 const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF])
 {
     int16_t **currOutPoly = polyVecOut;
-    for (int i = 0; i < k; ++i) {
+    for (int32_t i = 0; i < k; ++i) {
         int16_t **currMatrixPoly = matrix + i;
         int16_t **currVecPoly = polyVec;
-        for (int j = 0; j < k; ++j) {
-            CircMulAdd(*currOutPoly, *currMatrixPoly, *currVecPoly, factor + MLKEM_N_HALF / 2);
+        int32_t tmps[MLKEM_N] = {0};
+        for (int32_t j = 0; j < k; ++j) {
+            CircMulAddUseCache(tmps, *currMatrixPoly, *currVecPoly, mulCache[j]);
             currMatrixPoly += MLKEM_K_MAX;
             ++currVecPoly;
         }
+        PolyReduce(*currOutPoly, tmps);
         ++currOutPoly;
     }
 }
 
-void MLKEM_VectorInnerProductAdd(uint8_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
-                                 const int16_t *factor)
+void MLKEM_VectorInnerProductAddUseCache(uint8_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
+                                 const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF])
 {
-    for (int i = 0; i < k; ++i) {
-        CircMulAdd(polyOut, polyVec1[i], polyVec2[i], factor + MLKEM_N_HALF / 2);
+    int32_t tmps[MLKEM_N] = {0};
+    for (int32_t i = 0; i < k; ++i) {
+        CircMulAddUseCache(tmps, polyVec1[i], polyVec2[i], mulCache[i]);
     }
+    PolyReduce(polyOut, tmps);
+}
+
+void MLKEM_VectorInnerProductAdd(uint8_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
+                                 const int32_t *factor)
+{
+    int32_t tmps[MLKEM_N] = {0};
+    for (int32_t i = 0; i < k; ++i) {
+        CircMulAdd(tmps, polyVec1[i], polyVec2[i], factor);
+    }
+    PolyReduce(polyOut, tmps);
 }
 
 void MLKEM_SamplePolyCBD(int16_t *polyF, uint8_t *buf, uint8_t eta)
