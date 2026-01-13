@@ -28,32 +28,40 @@
 #define MLKEM_PRF_BLOCKSIZE 64
 #define MLKEM_ENCODE_BLOCKSIZE 32
 
-// 9 = 8.38 = (((MLKEM_BITS_OF_Q * (MLKEM_N/8) * 2^MLKEM_BITS_OF_Q) / MLKEM_Q) + 64) / 64;
-// array_B_arbitrary_length = 9 * 64 + 2 = 578
-#define MLKEM_XOF_OUTPUT_LENGTH 578
-
 #define MLKEM_Q    3329
 #define MLKEM_Q_INV_BETA (-3327)  //(-MLKEM_Q) ^{-1} mod BETA, BETA = 2^{16}
 #define MLKEM_Q_HALF ((MLKEM_Q + 1) / 2)
 #define MLKEM_BITS_OF_Q 12
 #define MLKEM_INVN 3303  // MLKEM_N_HALF * MLKEM_INVN = 1 mod MLKEM_Q
 #define MLKEM_K_MAX    4
+
+// Reference: https://eprint.iacr.org/2022/956.pdf
+// Section 4.1. Efficient Plantard Arithmetic for 16-bit Modulus
+#define MLKEM_PLANTARD_L 16
+#define MLKEM_PLANTARD_ALPHA 3
+
+// 1729 * 128^{-1} mod 3329 converted to Plantard domin
+// 1729 is the last round ztea
+#define MLKEM_LAST_ROUND_ZETA 2131356556
+#define MLKEM_HALF_DEGREE_INVERSE_MOD_Q (-33544352) // 128^{-1} mod 3329 = 3303 converted to Plantard domin
+
 typedef int32_t (*MlKemHashFunc)(uint32_t id, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
 
-static inline int16_t BarrettReduction(int16_t a)
+static inline int16_t BarrettReduction(int32_t a)
 {
-    const int16_t v = ((1 << 26) + MLKEM_Q / 2) / MLKEM_Q;
-    int16_t t = ((int32_t)v * a + (1 << 25)) >> 26;
+    const int32_t v = ((1 << 27) + MLKEM_Q / 2) / MLKEM_Q;
+    int32_t t = ((int64_t)v * a + (1 << 26)) >> 27;
     t *= MLKEM_Q;
-    return a - t;
+    return (int16_t)(a - t);
 }
 
-static inline int16_t MontgomeryReduction(int32_t a)
+static inline int16_t PlantardReduction(int32_t a)
 {
-    int16_t t = (int16_t)a * MLKEM_Q_INV_BETA;
-    t = (a - (int32_t)t * MLKEM_Q) >> 16;
-    return t;
+    a >>= MLKEM_PLANTARD_L;
+    a = (a + (1 << MLKEM_PLANTARD_ALPHA)) * MLKEM_Q;
+    a >>= MLKEM_PLANTARD_L;
+    return a;
 }
 
 typedef struct {
@@ -95,14 +103,19 @@ struct CryptMlKemCtx {
 };
 int32_t MLKEM_DecodeDk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *dk, uint32_t dkLen);
 int32_t MLKEM_DecodeEk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *ek, uint32_t ekLen);
-void MLKEM_ComputNTT(int16_t *a, const int16_t *psi);
-void MLKEM_ComputINTT(int16_t *a, const int16_t *psi);
+void MLKEM_ComputNTT(int16_t *a, const int32_t *psi);
+void MLKEM_ComputINTT(int16_t *a, const int32_t *psi);
 void MLKEM_SamplePolyCBD(int16_t *polyF, uint8_t *buf, uint8_t eta);
 void MLKEM_TransposeMatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut,
-                                 const int16_t *factor);
-void MLKEM_MatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut, const int16_t *factor);
+                                 const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF]);
+void MLKEM_MatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t **polyVecOut,
+                        const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF]);
 void MLKEM_VectorInnerProductAdd(uint8_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
-                                 const int16_t *factor);
+                                 const int32_t *factor);
+void MLKEM_VectorInnerProductAddUseCache(uint8_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
+                                 const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF]);
+
+void MLKEM_ComputeMulCache(uint8_t k, int16_t **input, int16_t output[MLKEM_K_MAX][MLKEM_N_HALF], const int32_t *factor);
 
 int32_t MLKEM_KeyGenInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *d, uint8_t *z);
 

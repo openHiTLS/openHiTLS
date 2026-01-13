@@ -32,32 +32,51 @@
 #define MLKEM_ETA1_MAX    3
 #define MLKEM_ETA2_MAX    2
 
-// A LUT of the primitive n-th roots of unity (psi) in bit-reversed order.
-static const int16_t PRE_COMPUT_TABLE_NTT[MLKEM_N_HALF] = {
-    1, 1729, 2580, 3289, 2642, 630, 1897, 848, 1062, 1919, 193, 797, 2786, 3260, 569, 1746, 296, 2447, 1339, 1476,
-    3046, 56, 2240, 1333, 1426, 2094, 535, 2882, 2393, 2879, 1974, 821, 289, 331, 3253, 1756, 1197, 2304, 2277, 2055,
-    650, 1977, 2513, 632, 2865, 33, 1320, 1915, 2319, 1435, 807, 452, 1438, 2868, 1534, 2402, 2647, 2617, 1481, 648,
-    2474, 3110, 1227, 910, 17, 2761, 583, 2649, 1637, 723, 2288, 1100, 1409, 2662, 3281, 233, 756, 2156, 3015, 3050,
-    1703, 1651, 2789, 1789, 1847, 952, 1461, 2687, 939, 2308, 2437, 2388, 733, 2337, 268, 641, 1584, 2298, 2037, 3220,
-    375, 2549, 2090, 1645, 1063, 319, 2773, 757, 2099, 561, 2466, 2594, 2804, 1092, 403, 1026, 1143, 2150, 2775, 886,
-    1722, 1212, 1874, 1029, 2110, 2935, 885, 2154
+typedef void (*compressFunc)(int16_t *x);
+
+/*
+ * zeta converted to Plantard domin
+ * x = (zeta * (-2^(2l)) mod q) * (q^-1 mod 2^(2l))
+ * quotient = round(x / 2^(2l))
+ * x -= quotient * 2^(2l)
+ */
+static const int32_t CONST_ZETA_POWER_1[MLKEM_N_HALF] = {
+    1290168, -2064267850, -966335387, -51606696, -886345008, 812805467, -1847519726, 1094061961, 
+    1370157786, -1819136043, 249002310, 1028263423, -700560901, -89021551, 734105255, -2042335004, 
+    381889553, -1137927652, 1727534158, 1904287092, -365117376, 72249375, -1404992305, 1719793153, 
+    1839778722, -1593356746, 690239563, -576704830, -1207596692, -580575332, -1748176835, 1059227441, 
+    372858381, 427045412, -98052722, -2029433330, 1544330386, -1322421591, -1357256111, -1643673275, 
+    838608815, -1744306333, -1052776603, 815385801, -598637676, 42575525, 1703020977, -1824296712, 
+    -1303069080, 1851390229, 1041165097, 583155668, 1855260731, -594767174, 1979116802, -1195985185, 
+    -879894171, -918599193, 1910737929, 836028480, -1103093132, -282546662, 1583035408, 1174052340, 
+    21932846, -732815086, 752167598, -877313836, 2112004045, 932791035, -1343064270, 1419184148, 
+    1817845876, -860541660, -61928035, 300609006, 975366560, -1513366367, -405112565, -359956706, 
+    -2097812202, 2130066389, -696690399, -1986857805, -1912028096, 1228239371, 1884934581, -828287474, 
+    1211467195, -1317260921, -1150829326, -1214047529, 945692709, -1279846067, 345764865, 826997308, 
+    2043625172, -1330162596, -1666896289, -140628247, 483812778, -1006330577, -1598517416, 2122325384, 
+    1371447954, 411563403, -717333077, 976656727, -1586905909, 723783916, -1113414471, -948273043, 
+    -677337888, 1408862808, 519937465, 1323711759, 1474661346, -1521107372, -714752743, 1143088323, 
+    -2073299022, 1563682897, -1877193576, 1327582262, -1572714068, -508325958, 1141798155, -1515946702,
 };
 
-/* A LUT of the primitive n-th roots of unity (psi) multiplied by montgomery factor in bit-reversed order:
-PRE_COMPUT_TABLE_NTT_MONT[i] = PRE_COMPUT_TABLE_NTT[i] * 2^{16} mod MLKEM_Q;
-if (PRE_COMPUT_TABLE_NTT_MONT[i] >= MLKEM_Q / 2) {
-    PRE_COMPUT_TABLE_NTT_MONT[i] -= MLKEM_Q
-    }
-*/
-static const int16_t PRE_COMPUT_TABLE_NTT_MONT[MLKEM_N_HALF] = {
-    -1044, -758,  -359,  -1517, 1493,  1422,  287,   202,   -171,  622,  1577,  182,   962,   -1202, -1474, 1468,
-    573,   -1325, 264,   383,   -829,  1458,  -1602, -130,  -681,  1017, 732,   608,   -1542, 411,   -205,  -1571,
-    1223,  652,   -552,  1015,  -1293, 1491,  -282,  -1544, 516,   -8,   -320,  -666,  -1618, -1162, 126,   1469,
-    -853,  -90,   -271,  830,   107,   -1421, -247,  -951,  -398,  961,  -1508, -725,  448,   -1065, 677,   -1275,
-    -1103, 430,   555,   843,   -1251, 871,   1550,  105,   422,   587,  177,   -235,  -291,  -460,  1574,  1653,
-    -246,  778,   1159,  -147,  -777,  1483,  -602,  1119,  -1590, 644,  -872,  349,   418,   329,   -156,  -75,
-    817,   1097,  603,   610,   1322,  -1285, -1465, 384,   -1215, -136, 1218,  -1335, -874,  220,   -1187, -1659,
-    -1185, -1530, -1278, 794,   -1510, -854,  -870,  478,   -108,  -308, 996,   991,   958,   -1460, 1522,  1628};
+static const int32_t CONST_ZETA_POWER_2[MLKEM_N_HALF] = {
+    21932846, -21932845, -732815086, 732815087, 752167598, -752167597, -877313836, 877313837, 
+    2112004045, -2112004044, 932791035, -932791034, -1343064270, 1343064271, 1419184148, -1419184147, 
+    1817845876, -1817845875, -860541660, 860541661, -61928035, 61928036, 300609006, -300609005, 
+    975366560, -975366559, -1513366367, 1513366368, -405112565, 405112566, -359956706, 359956707, 
+    -2097812202, 2097812203, 2130066389, -2130066388, -696690399, 696690400, -1986857805, 1986857806, 
+    -1912028096, 1912028097, 1228239371, -1228239370, 1884934581, -1884934580, -828287474, 828287475, 
+    1211467195, -1211467194, -1317260921, 1317260922, -1150829326, 1150829327, -1214047529, 1214047530, 
+    945692709, -945692708, -1279846067, 1279846068, 345764865, -345764864, 826997308, -826997307, 
+    2043625172, -2043625171, -1330162596, 1330162597, -1666896289, 1666896290, -140628247, 140628248, 
+    483812778, -483812777, -1006330577, 1006330578, -1598517416, 1598517417, 2122325384, -2122325383, 
+    1371447954, -1371447953, 411563403, -411563402, -717333077, 717333078, 976656727, -976656726, 
+    -1586905909, 1586905910, 723783916, -723783915, -1113414471, 1113414472, -948273043, 948273044, 
+    -677337888, 677337889, 1408862808, -1408862807, 519937465, -519937464, 1323711759, -1323711758, 
+    1474661346, -1474661345, -1521107372, 1521107373, -714752743, 714752744, 1143088323, -1143088322, 
+    -2073299022, 2073299023, 1563682897, -1563682896, -1877193576, 1877193577, 1327582262, -1327582261, 
+    -1572714068, 1572714069, -508325958, 508325959, 1141798155, -1141798154, -1515946702, 1515946703,
+};
 
 int32_t MLKEM_CreateMatrixBuf(uint8_t k, MLKEM_MatrixSt *st)
 {
@@ -83,56 +102,91 @@ int32_t MLKEM_CreateMatrixBuf(uint8_t k, MLKEM_MatrixSt *st)
     return CRYPT_SUCCESS;
 }
 
-
 // Compress
-typedef struct {
-    uint64_t barrettMultiplier;  /* round(2 ^ barrettShift / MLKEM_Q) */
-    uint16_t barrettShift;
-    uint16_t halfQ;              /* rounded (MLKEM_Q / 2) down or up */
-    uint8_t  bits;
-} MLKEM_BARRET_REDUCE;
-
 // The values of du and dv are from NIST.FIPS.203 Table 2.
-static const MLKEM_BARRET_REDUCE MLKEM_BARRETT_TABLE[] = {
-    {80635   /* round(2^28/MLKEM_Q) */, 28, 1665 /* Ceil(MLKEM_Q/2)  */, 1},
-    {1290167 /* round(2^32/MLKEM_Q) */, 32, 1665 /* Ceil(MLKEM_Q/2)  */, 10},  // 10 is mlkem768 du
-    {80635   /* round(2^28/MLKEM_Q) */, 28, 1665 /* Ceil(MLKEM_Q/2)  */, 4},   // 4 is mlkem768 dv
-    {40318   /* round(2^27/MLKEM_Q) */, 27, 1664 /* Floor(MLKEM_Q/2) */, 5},   // 5 is mlkem1024 dv
-    {645084  /* round(2^31/MLKEM_Q) */, 31, 1664 /* Floor(MLKEM_Q/2) */, 11}   // 11 is mlkem1024 du
-};
-
-static int16_t DivMlKemQ(uint16_t x, uint8_t bits, uint16_t halfQ, uint16_t barrettShift, uint64_t barrettMultiplier)
+// 2^4 * round(2^33 / q) = 41285360
+static void DivMlKemQBit4(int16_t *x)
 {
-    uint64_t round = ((uint64_t)x << bits) + halfQ;
-    round *= barrettMultiplier;
-    round >>= barrettShift;
-    return (int16_t)(round & ((1 << bits) - 1));
+    for (int32_t i = 0; i < MLKEM_N; ++i) {
+        uint64_t tmp = x[i] + ((x[i] >> 15) & MLKEM_Q);
+        tmp = tmp * 41285360;
+        x[i] = (int16_t)(((tmp + (1ULL << 32)) >> 33) & 0xF);
+    }
 }
 
-static int16_t Compress(int16_t x, uint8_t d)
+// 2^5 * round(2^33 / q) = 82570720
+static void DivMlKemQBit5(int16_t *x)
 {
-    int16_t value = 0;
-    uint16_t t = x + ((x >> 15) & MLKEM_Q);
-    /* Computing (x << d) / MLKEM_Q by Barret Reduce */
-    for (uint32_t i = 0; i < sizeof(MLKEM_BARRETT_TABLE) / sizeof(MLKEM_BARRET_REDUCE); i++) {
-        if (d == MLKEM_BARRETT_TABLE[i].bits) {
-            value = DivMlKemQ(t,
-                MLKEM_BARRETT_TABLE[i].bits,
-                MLKEM_BARRETT_TABLE[i].halfQ,
-                MLKEM_BARRETT_TABLE[i].barrettShift,
-                MLKEM_BARRETT_TABLE[i].barrettMultiplier);
-            break;
-        }
+    for (int32_t i = 0; i < MLKEM_N; ++i) {
+        uint64_t tmp = x[i] + ((x[i] >> 15) & MLKEM_Q);
+        tmp = tmp * 82570720;
+        x[i] = (int16_t)(((tmp + (1ULL << 32)) >> 33) & 0x1F);
     }
-    return value;
+}
+
+// 2^10 * round(2^33 / q) = 2642263040
+static void DivMlKemQBit10(int16_t *x)
+{
+    for (int32_t i = 0; i < MLKEM_N; ++i) {
+        uint64_t tmp = x[i] + ((x[i] >> 15) & MLKEM_Q);
+        tmp = tmp * 2642263040;
+        x[i] = (int16_t)(((tmp + (1ULL << 32)) >> 33) & 0x3FF);
+    }
+}
+
+// 2^11 * round(2^33 / q) = 5284526080
+static void DivMlKemQBit11(int16_t *x)
+{
+    for (int32_t i = 0; i < MLKEM_N; ++i) {
+        uint64_t tmp = x[i] + ((x[i] >> 15) & MLKEM_Q);
+        tmp = tmp * 5284526080;
+        x[i] = (int16_t)(((tmp + (1ULL << 32)) >> 33) & 0x7FF);
+    }
+}
+
+// 2^1 * round(2^31 / q) = 1290168
+static void DivMlKemQBit1(int16_t *x)
+{
+    for (int32_t i = 0; i < MLKEM_N; ++i) {
+        uint32_t tmp = x[i] + ((x[i] >> 15) & MLKEM_Q);
+        tmp = tmp * 1290168;
+        x[i] = (int16_t)(((tmp + (1U << 30)) >> 31) & 0x1);
+    }
+}
+
+static compressFunc COMPRESS_FUNCS_TABLE[] = {
+    NULL, DivMlKemQBit1, NULL, NULL, DivMlKemQBit4, DivMlKemQBit5, NULL,
+    NULL, NULL, NULL, DivMlKemQBit10, DivMlKemQBit11
+};
+
+static void PolyCompress(int16_t *x, uint8_t d)
+{
+    COMPRESS_FUNCS_TABLE[d](x);
+}
+
+static void MlkemAddPoly(const int16_t *a, int16_t *b)
+{
+    for (int32_t i = 0; i < MLKEM_N; ++i) {
+        b[i] += a[i];
+    }
+}
+
+static void MlkemSubPoly(const int16_t *a, int16_t *b)
+{
+    for (int32_t i = 0; i < MLKEM_N; ++i) {
+        b[i] = a[i] - b[i];
+    }
 }
 
 // DeCompress
-static int16_t DeCompress(int16_t x, uint8_t bits)
+static void PolyDeCompress(int16_t *x, uint8_t bits)
 {
-    uint32_t product = (uint32_t)x * MLKEM_Q;
-    uint32_t power = 1 << bits;
-    return (int16_t)((product >> bits) + ((product & (power - 1)) >> (bits - 1)));
+    for (int32_t i = 0; i < MLKEM_N; ++i) {
+        uint32_t product = (uint32_t)x[i] * MLKEM_Q;
+        uint32_t power = 1 << bits;
+        x[i] = (int16_t)((product >> bits) + ((product & (power - 1)) >> (bits - 1)));
+    }
+
 }
 
 // hash functions
@@ -148,12 +202,6 @@ static int32_t HashFuncG(void *libCtx, const uint8_t *in, uint32_t inLen, uint8_
     return EAL_Md(CRYPT_MD_SHA3_512, libCtx, NULL, in, inLen, out, &len, false, libCtx != NULL);
 }
 
-static int32_t HashFuncXOF(void *libCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
-{
-    uint32_t len = outLen;
-    return EAL_Md(CRYPT_MD_SHAKE128, libCtx, NULL, in, inLen, out, &len, false, libCtx != NULL);
-}
-
 static int32_t HashFuncJ(void *libCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t outLen)
 {
     uint32_t len = outLen;
@@ -166,25 +214,23 @@ static int32_t PRF(void *libCtx, uint8_t *extSeed, uint32_t extSeedLen, uint8_t 
     return EAL_Md(CRYPT_MD_SHAKE256, libCtx, NULL, extSeed, extSeedLen, outBuf, &len, false, libCtx != NULL);
 }
 
-static int32_t Parse(uint16_t *polyNtt, uint8_t *arrayB, uint32_t arrayLen, uint32_t n)
+static int32_t Parse(uint16_t *polyNtt, uint8_t *arrayB, uint32_t *curLen)
 {
     uint32_t i = 0;
-    uint32_t j = 0;
-    while (j < n) {
-        if (i + 3 > arrayLen) {  // 3 bytes of arrayB are read in each round.
-            BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYLEN_ERROR);
-            return CRYPT_MLKEM_KEYLEN_ERROR;
-        }
+    while (*curLen < MLKEM_N && i < CRYPT_SHAKE128_BLOCKSIZE) {
         // The 4 bits of each byte are combined with the 8 bits of another byte into 12 bits.
         uint16_t d1 = ((uint16_t)arrayB[i]) + (((uint16_t)arrayB[i + 1] & 0x0f) << 8);  // 4 bits.
         uint16_t d2 = (((uint16_t)arrayB[i + 1]) >> 4) + (((uint16_t)arrayB[i + 2]) << 4);
-        if (d1 < MLKEM_Q) {
-            polyNtt[j] = d1;
-            j++;
-        }
-        if (d2 < MLKEM_Q && j < n) {
-            polyNtt[j] = d2;
-            j++;
+
+        int32_t mask = (MLKEM_Q - 1 - d1) >> 31;
+        polyNtt[*curLen] = (int16_t)(d1 & ~mask);
+        *curLen += 1 + mask;
+
+
+        if (*curLen < MLKEM_N) {
+            mask = (MLKEM_Q - 1 - d2) >> 31;
+            polyNtt[*curLen] = (int16_t)(d2 & ~mask);
+            *curLen += 1 + mask;
         }
         i += 3;  // 3 bytes are processed in each round.
     }
@@ -299,7 +345,7 @@ static void ByteEncode(uint8_t *r, int16_t *polyF, uint8_t bit)
             EncodeBits11(r, (uint16_t *)polyF);
             break;
         case 12:    // 12 Used for K-PKE.KeyGen Step 19.
-            for (int i = 0; i < MLKEM_N; ++i) {
+            for (int32_t i = 0; i < MLKEM_N; ++i) {
                 polyF[i] += (polyF[i] >> 15) & MLKEM_Q;
             }
             EncodeBits12(r, (uint16_t *)polyF);
@@ -440,9 +486,23 @@ static int32_t GenMatrix(const CRYPT_ML_KEM_Ctx *ctx, const uint8_t *digest,
 {
     uint8_t k = ctx->info->k;
     uint8_t p[MLKEM_SEED_LEN + 2];  // Reserved lengths of i and j is 2 byte.
-    uint8_t xofOut[MLKEM_XOF_OUTPUT_LENGTH];
+    uint8_t xofOut[CRYPT_SHAKE128_BLOCKSIZE];
+
+    EAL_MdMethod method = {0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+    void *provCtx = NULL;
+    if (EAL_MdFindMethodEx(CRYPT_MD_SHAKE128, ctx->libCtx, NULL, &method, &provCtx, ctx->libCtx != NULL) == NULL) {
+        return CRYPT_EAL_ERR_ALGID;
+    }
+
+    void *hashCtx = method.newCtx(provCtx, CRYPT_MD_SHAKE128);
+    if (hashCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
 
     (void)memcpy_s(p, MLKEM_SEED_LEN, digest, MLKEM_SEED_LEN);
+    int32_t ret = CRYPT_SUCCESS;
+    uint32_t curLen;
     for (uint8_t i = 0; i < k; i++) {
         for (uint8_t j = 0; j < k; j++) {
             if (isEnc) {
@@ -452,13 +512,18 @@ static int32_t GenMatrix(const CRYPT_ML_KEM_Ctx *ctx, const uint8_t *digest,
                 p[MLKEM_SEED_LEN] = j;
                 p[MLKEM_SEED_LEN + 1] = i;
             }
-            int32_t ret = HashFuncXOF(ctx->libCtx, p, MLKEM_SEED_LEN + 2, xofOut, MLKEM_XOF_OUTPUT_LENGTH);
-            RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
-            ret = Parse((uint16_t *)polyMatrix[i][j], xofOut, MLKEM_XOF_OUTPUT_LENGTH, MLKEM_N);
-            RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+            curLen = 0;
+            GOTO_ERR_IF(method.init(hashCtx, NULL), ret);
+            GOTO_ERR_IF(method.update(hashCtx, p, MLKEM_SEED_LEN + 2), ret);
+            while (curLen < MLKEM_N) {
+                GOTO_ERR_IF(method.squeeze(hashCtx, xofOut, CRYPT_SHAKE128_BLOCKSIZE), ret);
+                GOTO_ERR_IF(Parse((uint16_t *)polyMatrix[i][j], xofOut, &curLen), ret);
+            }
         }
     }
-    return CRYPT_SUCCESS;
+ERR:
+    method.freeCtx(hashCtx);
+    return ret;
 }
 
 static int32_t SampleEta1(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, int16_t *polyS[], uint8_t *nonce)
@@ -473,7 +538,7 @@ static int32_t SampleEta1(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, int16_t 
         RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
         MLKEM_SamplePolyCBD(polyS[i], prfOut, ctx->info->eta1);
         *nonce = *nonce + 1;
-        MLKEM_ComputNTT(polyS[i], PRE_COMPUT_TABLE_NTT_MONT);
+        MLKEM_ComputNTT(polyS[i], CONST_ZETA_POWER_1);
     }
     return CRYPT_SUCCESS;
 }
@@ -515,9 +580,17 @@ static int32_t PkeKeyGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *pk, uint8_t *dk, uint8_
 
     GOTO_ERR_IF(GenMatrix(ctx, p, ctx->keyData.matrix, false), ret);  // Step 3 - 7
     GOTO_ERR_IF(SampleEta1(ctx, q, ctx->keyData.vectorS, &nonce), ret);  // Step 8 - 11
+    for (int32_t i = 0; i < k; ++i) {
+        for (int32_t j = 0; j < MLKEM_N; ++j) {
+            ctx->keyData.vectorS[i][j] = BarrettReduction(ctx->keyData.vectorS[i][j]);
+        }
+    }
     GOTO_ERR_IF(SampleEta1(ctx, q, ctx->keyData.vectorT, &nonce), ret);  // Step 12 - 15
+
+    int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF];
+    MLKEM_ComputeMulCache(k, ctx->keyData.vectorS, mulCache, CONST_ZETA_POWER_2);
     MLKEM_MatrixMulAdd(k, (int16_t **)ctx->keyData.matrix, ctx->keyData.vectorS, ctx->keyData.vectorT,
-                       PRE_COMPUT_TABLE_NTT);
+                       mulCache);
     // output: pk, dk,  ekPKE ← ByteEncode12(𝐭)‖p.
     for (uint8_t i = 0; i < k; i++) {
         // Step 19
@@ -547,7 +620,7 @@ int32_t MLKEM_DecodeDk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *dk, uint32_t dkLen)
     if (MLKEM_CreateMatrixBuf(k, &ctx->keyData) != CRYPT_SUCCESS) {
         return BSL_MALLOC_FAIL;
     }
-    for (int i = 0; i < k; ++i) {
+    for (int32_t i = 0; i < k; ++i) {
         if (DecodeBits12(ctx->keyData.vectorS[i], dk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * i) != CRYPT_SUCCESS) {
             return CRYPT_MLKEM_DECODE_KEY_OVERFLOW;
         }
@@ -592,7 +665,6 @@ int32_t MLKEM_DecodeEk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *ek, uint32_t ekLen)
 static int32_t PkeEncrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint8_t *m, uint8_t *r)
 {
     uint8_t i;
-    uint32_t n;
     uint8_t k = ctx->info->k;
     uint8_t nonce = 0; // Step 1
     uint8_t seedE[MLKEM_SEED_LEN + 1];
@@ -624,24 +696,27 @@ static int32_t PkeEncrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint8_t *m, uint8_
     GOTO_ERR_IF(PRF(ctx->libCtx, seedE, MLKEM_SEED_LEN + 1, bufEncE, MLKEM_PRF_BLOCKSIZE * ctx->info->eta2), ret);
     MLKEM_SamplePolyCBD(polyE2, bufEncE, ctx->info->eta2);
     // Step 18
-    MLKEM_TransposeMatrixMulAdd(k, (int16_t **)ctx->keyData.matrix, polyVecY, polyVecU, PRE_COMPUT_TABLE_NTT);
+    int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF];
+    MLKEM_ComputeMulCache(k, polyVecY, mulCache, CONST_ZETA_POWER_2);
+    MLKEM_TransposeMatrixMulAdd(k, (int16_t **)ctx->keyData.matrix, polyVecY, polyVecU, mulCache);
     // Step 19
     for (i = 0; i < k; i++) {
-        MLKEM_ComputINTT(polyVecU[i], PRE_COMPUT_TABLE_NTT_MONT);
-        for (n = 0; n < MLKEM_N; n++) {
-            polyVecU[i][n] = Compress(polyVecU[i][n] + polyVecE1[i][n], ctx->info->du);
-        }
+        MLKEM_ComputINTT(polyVecU[i], CONST_ZETA_POWER_1);
+        MlkemAddPoly(polyVecE1[i], polyVecU[i]);
+        PolyCompress(polyVecU[i], ctx->info->du);
     }
     // Step 21
-    MLKEM_VectorInnerProductAdd(k, ctx->keyData.vectorT, polyVecY, polyC2, PRE_COMPUT_TABLE_NTT);
+    MLKEM_VectorInnerProductAddUseCache(k, ctx->keyData.vectorT, polyVecY, polyC2, mulCache);
     ByteDecode(polyM, m, 1);
-    MLKEM_ComputINTT(polyC2, PRE_COMPUT_TABLE_NTT_MONT);
+    MLKEM_ComputINTT(polyC2, CONST_ZETA_POWER_1);
 
-    for (n = 0; n < MLKEM_N; n++) {
-        polyM[n] = DeCompress(polyM[n], 1); // Step 20
-        // Step 22
-        polyC2[n] = Compress(polyC2[n] + polyE2[n] + polyM[n], ctx->info->dv);
-    }
+
+    PolyDeCompress(polyM, 1); // Step 20
+    MlkemAddPoly(polyE2, polyC2);
+    MlkemAddPoly(polyM, polyC2);
+    // Step 22
+    PolyCompress(polyC2, ctx->info->dv);
+
 
     // Step 22
     for (i = 0; i < k; i++) {
@@ -660,7 +735,6 @@ static int32_t PkeDecrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *result, const uint8_t 
 {
     uint8_t i;
     uint8_t k = ctx->info->k;
-    uint32_t n;
     // tmpPolyVec = polyM || polyC2 || polyVecC1
     int16_t *tmpPolyVec = BSL_SAL_Calloc((k * 2 + 1) * MLKEM_N, sizeof(int16_t));
     if (tmpPolyVec == NULL) {
@@ -680,20 +754,18 @@ static int32_t PkeDecrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *result, const uint8_t 
     }
     ByteDecode(polyC2, ciphertext + MLKEM_ENCODE_BLOCKSIZE * ctx->info->du * k, ctx->info->dv);   // Step 4
     for (i = 0; i < k; i++) {
-        for (n = 0; n < MLKEM_N; n++) {
-            polyVecC1[i][n] = DeCompress(polyVecC1[i][n], ctx->info->du);  // Step 3
-            if (i == 0) {
-                polyC2[n] = DeCompress(polyC2[n], ctx->info->dv);  // Step 4
-            }
+        PolyDeCompress(polyVecC1[i], ctx->info->du);  // Step 3
+        if (i == 0) {
+            PolyDeCompress(polyC2, ctx->info->dv);  // Step 4
         }
-        MLKEM_ComputNTT(polyVecC1[i], PRE_COMPUT_TABLE_NTT_MONT);
+        MLKEM_ComputNTT(polyVecC1[i], CONST_ZETA_POWER_1);
     }
-    MLKEM_VectorInnerProductAdd(k, ctx->keyData.vectorS, polyVecC1, polyM, PRE_COMPUT_TABLE_NTT);
-    MLKEM_ComputINTT(polyM, PRE_COMPUT_TABLE_NTT_MONT);
+    MLKEM_VectorInnerProductAdd(k, ctx->keyData.vectorS, polyVecC1, polyM, CONST_ZETA_POWER_2);
+    MLKEM_ComputINTT(polyM, CONST_ZETA_POWER_1);
     // c2 - polyM
-    for (n = 0; n < MLKEM_N; n++) {
-        polyM[n] = Compress(polyC2[n] - polyM[n], 1);
-    }
+
+    MlkemSubPoly(polyC2, polyM);
+    PolyCompress(polyM, 1);
 
     ByteEncode(result, polyM, 1);  // Step 7
     BSL_SAL_Free(tmpPolyVec);
