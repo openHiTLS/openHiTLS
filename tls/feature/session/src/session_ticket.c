@@ -306,7 +306,6 @@ static int32_t ParseSessionTicket(Ticket *ticket, const uint8_t *ticketBuf, uint
 {
     uint32_t offset = 0;
     if (ticketBufSize < HITLS_TICKET_KEY_NAME_SIZE + HITLS_TICKET_IV_SIZE + sizeof(uint32_t)) {
-        BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_SESSION_TICKET_SIZE_INCORRECT);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16044, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "ticketBufSize is incorrect when parse session ticket.", 0, 0, 0, 0);
         return HITLS_SESS_ERR_SESSION_TICKET_SIZE_INCORRECT;
@@ -322,7 +321,6 @@ static int32_t ParseSessionTicket(Ticket *ticket, const uint8_t *ticketBuf, uint
     offset += sizeof(uint32_t);
 
     if ((ticketBufSize - offset) < ticket->encryptedStateSize) {
-        BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_SESSION_TICKET_SIZE_INCORRECT);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16032, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "ticketBufSize is incorrect when parse session ticket encryptedStateSize.", 0, 0, 0, 0);
         return HITLS_SESS_ERR_SESSION_TICKET_SIZE_INCORRECT;
@@ -333,7 +331,6 @@ static int32_t ParseSessionTicket(Ticket *ticket, const uint8_t *ticketBuf, uint
 
     if (ticketBufSize != offset) {
         if ((ticketBufSize - offset) != HITLS_TICKET_KEY_SIZE) {
-            BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_SESSION_TICKET_SIZE_INCORRECT);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16033, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "ticketBufSize is incorrect when parse session ticket hmac.", 0, 0, 0, 0);
             return HITLS_SESS_ERR_SESSION_TICKET_SIZE_INCORRECT;

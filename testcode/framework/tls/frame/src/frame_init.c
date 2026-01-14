@@ -22,7 +22,9 @@
 #include "bsl_sal.h"
 #include "bsl_log.h"
 #include "bsl_err.h"
+#include "bsl_err_internal.h"
 #include "crypt_algid.h"
+#include "crypt_errno.h"
 #include "hitls_crypt_init.h"
 #include "crypt_eal_rand.h"
 #include "hitls_cert_init.h"
@@ -58,10 +60,15 @@ void FRAME_Init(void)
     BSL_LOG_BinLogFuncs logFunc = { BinLogFixLenFunc, BinLogVarLenFunc };
     BSL_LOG_RegBinLogFunc(&logFunc);
 #endif
+    BSL_ERR_SET_MARK();
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
+    if (CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL) == CRYPT_EAL_ERR_DRBG_REPEAT_INIT) {
+        BSL_ERR_POP_TO_MARK();
+    }
 #else
-    CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+    if (CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_EAL_ERR_DRBG_REPEAT_INIT) {
+        BSL_ERR_POP_TO_MARK();
+    }
     HITLS_CertMethodInit();
     HITLS_CryptMethodInit();
 #endif

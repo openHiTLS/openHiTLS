@@ -140,8 +140,10 @@ static int32_t DtlsTrySendMessage(TLS_Ctx *ctx, RecCtx *recordCtx, REC_Type reco
 #ifdef HITLS_BSL_UIO_SCTP
     /* Notify the uio whether the service message is being sent. rfc6083 4.4. Stream Usage: For non-app messages, the
      * sctp stream id number must be 0 */
-    bool isAppMsg = (recordType == REC_TYPE_APP);
-    (void)BSL_UIO_Ctrl(ctx->uio, BSL_UIO_SCTP_MASK_APP_MESSAGE, sizeof(isAppMsg), &isAppMsg);
+    if (BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
+        bool isAppMsg = (recordType == REC_TYPE_APP);
+        (void)BSL_UIO_Ctrl(ctx->uio, BSL_UIO_SCTP_MASK_APP_MESSAGE, sizeof(isAppMsg), &isAppMsg);
+    }
 #endif /* HITLS_BSL_UIO_SCTP */
     int32_t ret = DatagramWrite(ctx, recordCtx->outBuf);
     if (ret != HITLS_SUCCESS) {

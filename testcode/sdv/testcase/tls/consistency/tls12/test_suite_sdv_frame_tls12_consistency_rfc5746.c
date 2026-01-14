@@ -266,6 +266,8 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC001(void)
     ASSERT_TRUE(FlagScsv == 1);
     ASSERT_TRUE(frameMsg.body.hsMsg.body.clientHello.secRenego.exState == MISSING_FIELD);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -397,6 +399,8 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC002(void)
     testInfo.state = HS_STATE_BUTT;
     ASSERT_TRUE(DefaultCfgStatusPark1(&testInfo) == HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -443,6 +447,8 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC009(void)
     ASSERT_TRUE(server != NULL);
     ASSERT_EQ(FRAME_CreateConnection(client1, server1, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_TRUE(server1->ssl->negotiatedInfo.isSecureRenegotiation == true);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -566,6 +572,8 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC005(void)
     ASSERT_TRUE(HITLS_Renegotiate(clientTlsCtx) == HITLS_SUCCESS);
 
     ASSERT_TRUE(FRAME_CreateRenegotiationState(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     ClearWrapper();
@@ -705,6 +713,8 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC011(void)
     RegisterWrapper(wrapper);
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);
@@ -780,6 +790,8 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC004(void)
     RecWrapper wrapper = {TRY_SEND_CLIENT_HELLO, REC_TYPE_HANDSHAKE, false, NULL, Test_ClientHello_SecRenego};
     RegisterWrapper(wrapper);
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     ClearWrapper();
@@ -1009,6 +1021,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC006(void)
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_HANDSHAKE_FAILURE);
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);
@@ -1262,6 +1275,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC0012(void)
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_HANDSHAKE_FAILURE);
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(config);

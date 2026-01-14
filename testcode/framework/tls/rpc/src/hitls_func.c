@@ -21,6 +21,8 @@
 
 #include "uio_base.h"
 #include "bsl_sal.h"
+#include "bsl_err.h"
+#include "bsl_err_internal.h"
 #include "sal_net.h"
 #include "hitls.h"
 #include "hitls_cert_type.h"
@@ -44,6 +46,7 @@
 #include "common_func.h"
 #include "crypt_eal_rand.h"
 #include "crypt_algid.h"
+#include "crypt_errno.h"
 #include "channel_res.h"
 #include "crypt_eal_provider.h"
 #include "rec_wrapper.h"
@@ -261,10 +264,15 @@ int HitlsInit(void)
     int ret;
     ret = RegMemCallback(MEM_CALLBACK_DEFAULT);
     ret |= RegCertCallback(CERT_CALLBACK_DEFAULT);
+    BSL_ERR_SET_MARK();
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
+    if (CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL) == CRYPT_EAL_ERR_DRBG_REPEAT_INIT) {
+        (void)BSL_ERR_POP_TO_MARK();
+    }
 #else
-    CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+    if (CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0) == CRYPT_EAL_ERR_DRBG_REPEAT_INIT) {
+        BSL_ERR_POP_TO_MARK();
+    }
     HITLS_CryptMethodInit();
 #endif
     return ret;
@@ -911,12 +919,14 @@ int HitlsConnect(void *ssl)
     }
     time_t start = time(NULL);
     LOG_DEBUG("HiTLS Tls Connect Ing...");
+    BSL_ERR_SET_MARK();
     do {
         ret = HITLS_Connect(ssl);
         usleep(1000); // stay 1000us
     } while ((ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY || ret == HITLS_REC_NORMAL_IO_BUSY ||
             ret == HITLS_CALLBACK_CERT_RETRY) &&
             ((time(NULL) - start < timeout))); // usleep(1000) after each attemp.
+    BSL_ERR_POP_TO_MARK();
     if (ret != SUCCESS) {
         LOG_ERROR("HITLS_Connect Error is %d", ret);
     } else {
@@ -954,12 +964,14 @@ int HitlsRead(void *ssl, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
     }
     time_t start = time(NULL);
     LOG_DEBUG("HiTLS Read Ing...");
+    BSL_ERR_SET_MARK();
     do {
         ret = HITLS_Read(ssl, data, bufSize, readLen);
         usleep(1000); // stay 1000us
     } while ((ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY || ret == HITLS_REC_NORMAL_IO_BUSY ||
             ret == HITLS_CALLBACK_CERT_RETRY) &&
             ((time(NULL) - start < timeout))); // A maximum of 8000 calls
+    BSL_ERR_POP_TO_MARK();
     LOG_DEBUG("HiTLS Read Result is %d", ret);
     return ret;
 }

@@ -1714,7 +1714,6 @@ int32_t CFG_GetCipherSuiteInfo(uint16_t cipherSuite, CipherSuiteInfo *cipherInfo
     if (cipherInfo == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15858, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "CFG:cipherInfo is NULL.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
         return HITLS_INTERNAL_EXCEPTION;
     }
     /* Obtain the cipher suite information. If the cipher suite information is successfully obtained, a response is
@@ -1728,7 +1727,6 @@ int32_t CFG_GetCipherSuiteInfo(uint16_t cipherSuite, CipherSuiteInfo *cipherInfo
             if (ret != EOK) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15859, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "CFG:memcpy failed.", 0, 0, 0, 0);
-                BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
                 return HITLS_MEMCPY_FAIL;
             }
             return HITLS_SUCCESS;
@@ -1736,7 +1734,6 @@ int32_t CFG_GetCipherSuiteInfo(uint16_t cipherSuite, CipherSuiteInfo *cipherInfo
     }
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15860, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN,
         "CFG: [0x%x]cipher suite is not supported.", cipherSuite, 0, 0, 0);
-    BSL_ERR_PUSH_ERROR(HITLS_CONFIG_UNSUPPORT_CIPHER_SUITE);
     return HITLS_CONFIG_UNSUPPORT_CIPHER_SUITE;
 }
 

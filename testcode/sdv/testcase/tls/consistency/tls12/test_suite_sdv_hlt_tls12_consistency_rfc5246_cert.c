@@ -150,6 +150,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_SERVER_WITHOUT_ROOT_CERT_TC001(void)
 
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
+    
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
 }

@@ -659,6 +659,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_SELECT_PREFER_CIPHER_SUITE_TC001(void)
     const char *name = client->ssl->negotiatedInfo.cipherSuiteInfo.name;
     char *expectName = "HITLS_AES_128_GCM_SHA256";
     ASSERT_TRUE(memcmp(expectName, name, strlen(expectName)) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);

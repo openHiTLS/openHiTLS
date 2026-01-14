@@ -350,8 +350,12 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RSAE_SUPPORT_BY_TLS12SERVER_FUNC_TC001()
 
     FRAME_LinkObj *client = FRAME_CreateLink(config_c, BSL_UIO_TCP);
     FRAME_LinkObj *server = FRAME_CreateLink(config_s, BSL_UIO_TCP);
+    // Error stack exists
     int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
     ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
@@ -715,6 +719,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RESUMPTION_FUNC_TC001()
     server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
     HITLS_SetSession(client->ssl, clientSession);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -743,6 +750,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FUNC_TC001()
     HITLS_CFG_SetGroups(config, serverGroups, sizeof(serverGroups) / sizeof(uint16_t));
     FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -786,9 +796,13 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PREFER_PSS_TO_PKCS1_FUNC_TC001()
     FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
+    // Error stack exists
     int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
     ASSERT_EQ(ret, HITLS_SUCCESS);
     ASSERT_EQ(server->ssl->negotiatedInfo.signScheme, CERT_SIG_SCHEME_RSA_PSS_PSS_SHA256);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
@@ -1647,6 +1661,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ZERO_APPMSG_FUNC_TC001(int isZeroClient)
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_SUCCESS);
     ASSERT_TRUE(readLen == clientDataSize && memcmp(clientData, readBuf, readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1784,6 +1801,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLOSE_NOTIFY_FUNC_TC001(void)
     ASSERT_TRUE(serverframeMsg.body.alertMsg.level == ALERT_LEVEL_WARNING &&
                 serverframeMsg.body.alertMsg.description == ALERT_CLOSE_NOTIFY);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1853,6 +1872,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLOSE_NOTIFY_FUNC_TC003(void)
     ASSERT_TRUE(clientframeMsg.type == REC_TYPE_ALERT && clientframeMsg.bodyLen == ALERT_BODY_LEN);
     ASSERT_TRUE(clientframeMsg.body.alertMsg.level == ALERT_LEVEL_WARNING &&
                 clientframeMsg.body.alertMsg.description == ALERT_CLOSE_NOTIFY);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1909,6 +1931,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_WRITE_FUNC_TC001(void)
     uint8_t data[] = "Hello World";
     uint32_t writeLen;
     ASSERT_EQ(HITLS_Write(client->ssl, data, sizeof(data), &writeLen), HITLS_CM_LINK_CLOSED);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1967,6 +1992,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SERVER_CLOSE_NOTIFY_WRITE_FUNC_TC001(void)
 
     uint32_t writeLen;
     ASSERT_EQ(HITLS_Write(server->ssl, data, sizeof(data), &writeLen), HITLS_CM_LINK_CLOSED);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -2367,6 +2395,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_READ_FUNC_TC003(void)
 
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_CM_LINK_CLOSED);
     ASSERT_EQ(server->ssl->shutdownState, HITLS_RECEIVED_SHUTDOWN);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -2417,6 +2448,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_READ_FUNC_TC004(void)
 
     ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_CM_LINK_CLOSED);
     ASSERT_EQ(client->ssl->shutdownState, HITLS_RECEIVED_SHUTDOWN);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);

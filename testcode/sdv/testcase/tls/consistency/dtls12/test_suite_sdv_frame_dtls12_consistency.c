@@ -118,6 +118,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SEQ_NUMBER_TC001(int uioType)
     ASSERT_TRUE(parseLen == recvLen);
     ASSERT_TRUE(frameMsg.body.hsMsg.sequence.data == 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -163,6 +165,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SEQ_NUMBER_TC002(int uioType)
     ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
     ASSERT_TRUE(parseLen == recvLen);
     ASSERT_TRUE(frameMsg.body.hsMsg.sequence.data == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -223,6 +227,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SEQ_NUMBER_TC003(int uioType)
     ASSERT_TRUE(FRAME_ParseMsgHeader(&frameType_1, recvBuf_1, recvLen_1, &frameMsg_1, &parseLen_1) == HITLS_SUCCESS);
     ASSERT_TRUE(parseLen_1 == PARSEMSGHEADER_LEN);
     ASSERT_TRUE(frameMsg_1.body.hsMsg.sequence.data == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -291,6 +297,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_TOOLONG_TC001(int uioType)
     ASSERT_TRUE(testInfo.server->ssl != NULL);
     ASSERT_EQ(HITLS_Accept(testInfo.server->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
     ASSERT_TRUE(testInfo.server->ssl->hsCtx->state == TRY_RECV_CERTIFICATE);
+
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -358,8 +365,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_TOOLONG_TC002(int uioType)
     ASSERT_TRUE(testInfo.client->ssl != NULL);
     ASSERT_EQ(HITLS_Connect(testInfo.client->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
     ASSERT_TRUE(testInfo.client->ssl->hsCtx->state == TRY_RECV_CERTIFICATE);
-EXIT:
 
+EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -418,8 +425,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_TOOLONG_TC003(int uioType)
     ASSERT_TRUE(testInfo.server->ssl->hsCtx->state == TRY_RECV_CERTIFICATE_VERIFY);
     bool isCcsRecv = testInfo.server->ssl->method.isRecvCCS(testInfo.server->ssl);
     ASSERT_TRUE(isCcsRecv == false);
+ 
 EXIT:
-
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -496,7 +503,6 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_ZERO_TC001(void)
     ASSERT_TRUE(alertMsg->alertDescription.data == ALERT_DECODE_ERROR);
 
 EXIT:
-
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -1065,6 +1071,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_CIPHER_TC001(void)
     memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
     CONN_Deinit(testInfo.server->ssl);
     ASSERT_TRUE(testInfo.server->ssl != NULL);
+    // Error stack exists
     ASSERT_EQ(HITLS_Accept(testInfo.server->ssl), HITLS_REC_NORMAL_IO_BUSY);
     ioUserData = BSL_UIO_GetUserData(testInfo.server->io);
     uint8_t *sndBuf = ioUserData->sndMsg.msg;
@@ -1074,6 +1081,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_CIPHER_TC001(void)
     frameType.handshakeType = SERVER_HELLO;
     ASSERT_TRUE(FRAME_ParseMsg(&frameType, sndBuf, sndLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
     ASSERT_EQ(frameMsg.body.hsMsg.body.serverHello.cipherSuite.data, HITLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1207,6 +1216,9 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SIGNATURE_TC001(void)
     ASSERT_TRUE(FRAME_ParseMsg(&frameType, sndBuf, sndLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
     ASSERT_EQ(frameMsg.recType.data, REC_TYPE_HANDSHAKE);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -1549,6 +1561,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_SIGNATURE_TC007(int uioType)
     ASSERT_TRUE(FRAME_ParseMsg(&frameType, sndBuf, sndLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
     ASSERT_TRUE(frameMsg.recType.data == REC_TYPE_HANDSHAKE);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -1737,6 +1751,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC001(int uioType)
     ASSERT_EQ(readLen, writeLen);
     ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -1777,6 +1793,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC002(int uioType)
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(testInfo.client);
     ASSERT_EQ(clientTlsCtx->state, CM_STATE_HANDSHAKING);
     ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_RECV_SERVER_HELLO);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
 
@@ -1829,6 +1847,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC003(int uioType)
     FRAME_AlertMsg *alertMsg = &frameMsg.body.alertMsg;
     ASSERT_TRUE(alertMsg->alertLevel.data ==  ALERT_LEVEL_FATAL);
     ASSERT_TRUE(alertMsg->alertDescription.data == ALERT_UNEXPECTED_MESSAGE);
+
 EXIT:
 
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1869,6 +1888,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC004(int uioType)
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(testInfo.client);
     ASSERT_EQ(clientTlsCtx->state, CM_STATE_HANDSHAKING);
     ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_RECV_NEW_SESSION_TICKET);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
 
@@ -1961,6 +1982,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC006(int uioType)
     ASSERT_EQ(readLen, writeLen);
     ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
 
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -2014,6 +2037,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_HELLO_REQUEST_TC007(int uioType)
     ASSERT_TRUE(testInfo.server->ssl != NULL);
     ASSERT_EQ(HITLS_Accept(testInfo.server->ssl), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
     ASSERT_TRUE(testInfo.server->ssl->state == CM_STATE_ALERTED);
+
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -2051,6 +2075,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_FINISH_TC001(void)
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.client->io, data, len) == HITLS_SUCCESS);
     (void)HITLS_Connect(testInfo.client->ssl);
     ASSERT_EQ(testInfo.client->ssl->state, CM_STATE_TRANSPORTING);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -2091,6 +2117,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_FINISH_TC002(void)
     ASSERT_EQ(testInfo.server->ssl->state, CM_STATE_HANDSHAKING);
     ASSERT_EQ(testInfo.server->ssl->hsCtx->state, TRY_SEND_CHANGE_CIPHER_SPEC);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -2128,6 +2156,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_FINISH_TC003(int uioType)
     (void)HITLS_Connect(testInfo.client->ssl);
     ASSERT_TRUE(testInfo.client->ssl->state == CM_STATE_TRANSPORTING);
     ASSERT_TRUE(HITLS_Read(testInfo.client->ssl, data, MAX_RECORD_LENTH, &len) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -2192,6 +2222,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_FINISH_TC004(int uioType)
     ASSERT_EQ(readLen, writeLen);
     ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -2237,6 +2269,9 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_DISORDER_TC001(int uioType)
     ASSERT_TRUE(HITLS_Read(testInfo.server->ssl, app2Data, MAX_RECORD_LENTH, &app2Len) == HITLS_SUCCESS);
     ASSERT_EQ(app1Len, app2Len);
     ASSERT_EQ(memcmp(app1Data, app2Data, app2Len), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -2282,6 +2317,9 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_DISORDER_TC002(int uioType)
     ASSERT_TRUE(HITLS_Read(testInfo.client->ssl, app2Data, MAX_RECORD_LENTH, &app2Len) == HITLS_SUCCESS);
     ASSERT_EQ(app1Len, app2Len);
     ASSERT_EQ(memcmp(app1Data, app2Data, app1Len), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -2341,6 +2379,9 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_APPDATA_TC001(int uioType)
     ASSERT_EQ(HITLS_Read(testInfo.client->ssl, readData, MAX_RECORD_LENTH, &readLen), HITLS_SUCCESS);
     ASSERT_EQ(readLen, writeLen);
     ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -2395,6 +2436,9 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_APPDATA_TC002(int uioType)
     ASSERT_EQ(HITLS_Read(testInfo.client->ssl, readData, MAX_RECORD_LENTH, &readLen), HITLS_SUCCESS);
     ASSERT_EQ(readLen, writeLen);
     ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -2457,6 +2501,9 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_CLIENT_HELLO_TC001(int uioType)
     ASSERT_EQ(HITLS_Read(testInfo.server->ssl, readData, MAX_RECORD_LENTH, &readLen), HITLS_SUCCESS);
     ASSERT_EQ(readLen, writeLen);
     ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -2671,6 +2718,8 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_HELLO_VERIFY_REQ_TC004(void)
     cookie_valid = true;
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -2896,6 +2945,9 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_TC001()
     uint8_t readData[MAX_RECORD_LENTH] = {0};
     uint32_t readLen = MAX_RECORD_LENTH;
     ASSERT_EQ(HITLS_Read(clientTlsCtx, readData, MAX_RECORD_LENTH, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -2946,6 +2998,8 @@ void UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC001(int isNeedSleep, int clientState)
             ret = FRAME_TrasferMsgBetweenLink(client, server);
         }
         ASSERT_EQ(ret, HITLS_SUCCESS);
+        
+        ASSERT_TRUE(TestIsErrStackEmpty());
     } else {
         ret = HITLS_DtlsProcessTimeout(client->ssl);
         ASSERT_TRUE(ret == HITLS_MSG_HANDLE_DTLS_RETRANSMIT_NOT_TIMEOUT);

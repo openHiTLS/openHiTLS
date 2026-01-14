@@ -144,6 +144,8 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC001(char *serverCipherSuite, ch
 
     ASSERT_TRUE(testCtx->negotiatedInfo.signScheme == CERT_SIG_SCHEME_RSA_PKCS1_SHA512);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
 }
@@ -220,6 +222,8 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC002(char *serverCipherSuite, ch
     HITLS_Ctx *testCtx = (HITLS_Ctx *)serverRes->ssl;
 
     ASSERT_TRUE(testCtx->negotiatedInfo.cipherSuiteInfo.cipherSuite == expectResult);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HLT_FreeAllProcess();
@@ -299,6 +303,8 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC003(char *serverCipherSuite, ch
 
     ASSERT_TRUE(testCtx->negotiatedInfo.signScheme == CERT_SIG_SCHEME_RSA_PKCS1_SHA384);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
 }
@@ -377,6 +383,8 @@ void SDV_HITLS_CM_HITLS_GetNegotiateGroup_FUNC_TC004(char *serverCipherSuite, ch
 
     ASSERT_TRUE(testCtx->negotiatedInfo.negotiatedGroup == HITLS_EC_GROUP_SECP256R1);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
 }
@@ -436,6 +444,9 @@ void SDV_TLS_CM_FRAGMENTATION_FUNC_TC001(void)
     ASSERT_TRUE(clientRes != NULL);
 
     ASSERT_TRUE(HLT_TlsConnect(clientRes->ssl) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     STUB_RESTORE(REC_GetMaxWriteSize);
     HLT_FreeAllProcess();

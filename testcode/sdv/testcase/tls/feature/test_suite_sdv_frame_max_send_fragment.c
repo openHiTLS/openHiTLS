@@ -219,6 +219,7 @@ void UT_TLS_CM_SET_MAX_SEND_FRAGMENT_TC001(void)
     /* value > 512 */
     uint16_t maxSendFragment = 1000;
     ASSERT_TRUE(HITLS_SetMaxSendFragment(client->ssl, maxSendFragment) == HITLS_SUCCESS);
+    // Error stack is empty
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
 
     const uint8_t sndBuf[1200] = {0};

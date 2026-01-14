@@ -54,7 +54,6 @@ static int32_t CheckCertType(CERT_Type expectCertType, HITLS_CERT_KeyType checke
     /* Convert the key type to the certificate type. */
     CERT_Type checkedCertType = CertKeyType2CertType(checkedKeyType);
     if (expectCertType != checkedCertType) {
-        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_CERT);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15034, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "unexpect cert: expect cert type = %u, checked key type = %u.", expectCertType, checkedKeyType, 0, 0);
         return HITLS_MSG_HANDLE_UNSUPPORT_CERT;
@@ -101,7 +100,6 @@ static int32_t CheckSelectSignAlgorithms(TLS_Ctx *ctx, const SelectSignAlgorithm
         if (info->keyType == TLS_CERT_KEY_TYPE_RSA_PSS) {
             HITLS_HashAlgo hashAlgId = HITLS_HASH_BUTT;
             (void)SAL_CERT_KeyCtrl(&ctx->config.tlsConfig, pubkey, CERT_KEY_CTRL_GET_PSS_MD, NULL, (void *)&hashAlgId);
-
             if (hashAlgId != HITLS_HASH_BUTT && (int32_t)hashAlgId != info->hashAlgId) {
                 continue;
             }
@@ -115,7 +113,6 @@ static int32_t CheckSelectSignAlgorithms(TLS_Ctx *ctx, const SelectSignAlgorithm
         ctx->negotiatedInfo.signScheme = baseSignAlgorithms[i];
         return HITLS_SUCCESS;
     }
-    BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH);
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15981, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "unexpect cert: no available signature scheme, key type = %u.", checkedKeyType, 0, 0, 0);
     return HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH;
@@ -318,11 +315,13 @@ static int32_t TlcpSelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
 
         ret = HS_CheckCertInfo(ctx, info, cert, true, true);
         if (ret != HITLS_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16308, "CheckCertInfo fail");
         }
 
         ret = HS_CheckCertInfo(ctx, info, encCert, true, false);
         if (ret != HITLS_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16309, "CheckCertInfo fail");
         }
     } else {
@@ -332,12 +331,14 @@ static int32_t TlcpSelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
         if (cert != NULL) {
             ret = HS_CheckCertInfo(ctx, info, cert, true, true);
             if (ret != HITLS_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(ret);
                 return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16310, "CheckCertInfo fail");
             }
         }
         if (encCert != NULL) {
             ret = HS_CheckCertInfo(ctx, info, encCert, true, false);
             if (ret != HITLS_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(ret);
                 return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16311, "CheckCertInfo fail");
             }
         }
@@ -418,7 +419,6 @@ int32_t HS_SelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
     if (ret == HITLS_SUCCESS) {
         return ret;
     }
-    BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_SELECT_CERTIFICATE);
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16151, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "select certificate fail. ret %d", ret, 0, 0, 0);
     mgrCtx->currentCertKeyType = TLS_CERT_KEY_TYPE_UNKNOWN;

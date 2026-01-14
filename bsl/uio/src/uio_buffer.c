@@ -94,7 +94,6 @@ static int32_t BufferFlushInternal(BSL_UIO *uio)
             return ret;
         }
         if (tmpWriteLen == 0) {
-            BSL_ERR_PUSH_ERROR(BSL_UIO_IO_BUSY);
             return BSL_UIO_IO_BUSY;
         }
         ctx->outOff += tmpWriteLen;
@@ -119,7 +118,9 @@ static int32_t BufferFlush(BSL_UIO *uio, int32_t larg, void *parg)
     (void)BSL_UIO_ClearFlags(uio, (BSL_UIO_FLAGS_RWS | BSL_UIO_FLAGS_SHOULD_RETRY));
     int32_t ret = BufferFlushInternal(uio);
     if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+        if (ret != BSL_UIO_IO_BUSY) {
+            BSL_ERR_PUSH_ERROR(ret);
+        }
         return ret;
     }
     return BSL_UIO_Ctrl(uio->next, BSL_UIO_FLUSH, larg, parg);

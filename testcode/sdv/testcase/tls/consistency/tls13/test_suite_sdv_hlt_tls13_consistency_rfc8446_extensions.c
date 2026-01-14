@@ -366,6 +366,8 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC002(int version, int
     ASSERT_TRUE(readLen == strlen(writeBuf));
     ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
@@ -434,6 +436,8 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC003(int version, int
     ASSERT_TRUE(HLT_TlsRead(serverRes->ssl, readBuf, BUF_SIZE_DTO_TEST, &readLen) == 0);
     ASSERT_TRUE(readLen == strlen(writeBuf));
     ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     ClearWrapper();
@@ -972,6 +976,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_MASTEREXTKEY_FUNC_TC001()
     ASSERT_TRUE(HLT_TlsRead(serverRes->ssl, readBuf, BUF_SIZE_DTO_TEST, &readLen) == 0);
     ASSERT_TRUE(readLen == strlen(writeBuf));
     ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
@@ -1119,6 +1126,8 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_PSKTICKET_FUNC_TC001(int version, int con
         ASSERT_TRUE(session != NULL);
         cnt++;
     } while (cnt < 2);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     ClearWrapper();

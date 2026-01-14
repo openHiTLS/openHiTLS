@@ -335,12 +335,15 @@ void UT_TLS_CM_SET_GET_ENCRYPTHENMAC_FUNC_TC001(int version)
     ASSERT_EQ(HITLS_GetEncryptThenMac(client->ssl, &encryptThenMacType), HITLS_SUCCESS);
     ASSERT_EQ(encryptThenMacType, 1);
 
+    // Error stack exists
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
     ASSERT_EQ(HITLS_GetEncryptThenMac(server->ssl, &encryptThenMacType), HITLS_SUCCESS);
     ASSERT_EQ(encryptThenMacType, 1);
     ASSERT_EQ(HITLS_GetEncryptThenMac(client->ssl, &encryptThenMacType), HITLS_SUCCESS);
     ASSERT_EQ(encryptThenMacType, 1);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -383,6 +386,8 @@ void UT_TLS_CM_SET_SERVERNAME_FUNC_TC001(void)
     client->ssl->isClient = true;
     const char *server_name = HITLS_GetServerName(client->ssl, HITLS_SNI_HOSTNAME_TYPE);
     ASSERT_TRUE(memcmp(server_name, (uint8_t *)g_serverName, strlen(g_serverName)) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -535,6 +540,8 @@ void UT_TLS_CM_REMOVE_CERTANDKEY_API_TC001(void)
     ASSERT_TRUE(ret == HITLS_SUCCESS);
     ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
     ASSERT_TRUE(server->ssl->state == CM_STATE_TRANSPORTING);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -708,6 +715,9 @@ void UT_TLS_GET_GLOBALCONFIG_TC001(void)
     ASSERT_TRUE(ctx != NULL);
 
     ASSERT_TRUE(HITLS_GetGlobalConfig(ctx) != NULL);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);
@@ -763,6 +773,9 @@ void UT_TLS_HITLS_PEEK_TC001(int tlsVersion)
     ASSERT_EQ(memcmp(readBuf, c2s, readLen), 0);
     ASSERT_EQ(HITLS_Peek(server->ssl, peekBuf2, sizeof(peekBuf2), &peekLen2), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
     ASSERT_EQ(peekLen2, 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -877,6 +890,8 @@ void UT_TLS_SET_ServerName_TC001(void)
     server_name = HS_GetServerName(server->ssl);
     ASSERT_TRUE(memcmp(server_name, g_serverName, strlen(g_serverName)) == 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -987,6 +1002,8 @@ void UT_TLS_HITLS_CLOSE_TC001(int uioType)
     ASSERT_EQ(HITLS_Close(clientTlsCtx), HITLS_SUCCESS);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_CLOSED);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     CleanRecordBody(&recvframeMsg);
     CleanRecordBody(&sndframeMsg);
@@ -1032,6 +1049,8 @@ void UT_TLS_HITLS_CLOSE_TC002(int uioType)
 
     ASSERT_TRUE(HITLS_Close(clientTlsCtx) == HITLS_SUCCESS);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_CLOSED);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -1111,7 +1130,10 @@ void SDV_HITLS_TLCP_PATCH_TC005_3()
     FRAME_LinkObj *server = FRAME_CreateTLCPLink(s_config, BSL_UIO_TCP, false);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -1175,6 +1197,8 @@ void UT_TLS_SERVER_SKIP_DHE_SELECT_ECDHE_TC001(void)
     ASSERT_TRUE(server->ssl->negotiatedInfo.cipherSuiteInfo.kxAlg == HITLS_KEY_EXCH_ECDHE);
     ASSERT_TRUE(server->ssl->negotiatedInfo.cipherSuiteInfo.cipherSuite ==
         HITLS_ECDH_ANON_WITH_AES_128_CBC_SHA);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -1281,6 +1305,8 @@ void UT_TLS_CM_GET_SHARED_SIGALGS_API_TC001(int tlsVersion)
     count = HITLS_GetSharedSigAlgs(ctx, 0, &signatureScheme, &keyType, &paraId);
     ASSERT_TRUE(count == 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);
@@ -1364,6 +1390,8 @@ void UT_TLS_CM_GET_SHARED_SIGALGS_FUNC_TC001(int version)
         }
     }
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
@@ -1425,6 +1453,8 @@ void UT_TLS_CM_GET_SHARED_SIGALGS_FUNC_TC002(int version)
     ret = HITLS_GetSharedSigAlgs(ctx, -2, &scheme, &keyType, &paraId);
     ASSERT_EQ(ret, 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);
@@ -1810,6 +1840,9 @@ void UT_HITLS_CM_GET_CLIENT_CIPHER_SUITES_TC001()
     ASSERT_EQ(cipherSuiteSize, 3);
     HITLS_Ctx *ctx1 = FRAME_GetTlsCtx(client);
     ASSERT_TRUE(HITLS_GetClientCipherSuites(ctx1, data, dataLen, &cipherSuiteSize) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1877,6 +1910,9 @@ void SDV_HITLS_GET_SUPPORTED_CIPHERS_001()
     cipher = BSL_LIST_GetData(tmp);
     ASSERT_TRUE(cipher->cipherSuite == cipherSuites[1]);
     ASSERT_TRUE(BSL_LIST_COUNT(cipherList) == 2);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     BSL_LIST_FREE(cipherList, BSL_SAL_Free);
     HITLS_CFG_FreeConfig(config);
@@ -1910,6 +1946,9 @@ void UT_INTERFACE_HITLS_ExportKeyingMaterial_TC002()
     int useContext = 1;
     ASSERT_EQ(HITLS_ExportKeyingMaterial(client->ssl, out, outLen,
         label, labelLen, context, contextLen, useContext), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1949,6 +1988,7 @@ void SDV_HITLS_EXPORT_KEY_MATERIAL_008()
     int useContext = 1;
     ASSERT_EQ(HITLS_ExportKeyingMaterial(client->ssl, out, outLen,
         label, labelLen, context, contextLen, useContext), HITLS_MSG_HANDLE_STATE_ILLEGAL);
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -2297,9 +2337,13 @@ void SDV_HiTLS_KeepPeerCertificate_TC001(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_EQ(Compare_Certificates(client, server, false, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -2366,9 +2410,13 @@ void SDV_HiTLS_KeepPeerCertificate_TC002(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) , HITLS_SUCCESS);
 
     ASSERT_EQ(Compare_Certificates(client, server, false, true) , HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -2434,9 +2482,13 @@ void SDV_HiTLS_KeepPeerCertificate_TC003(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -2504,9 +2556,13 @@ void SDV_HiTLS_KeepPeerCertificate_TC004(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_EQ(Compare_Certificates(client, server, true, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -2579,6 +2635,7 @@ void SDV_HiTLS_KeepPeerCertificate_TC005(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     HITLS_SetKeepPeerCertificate(client->ssl, true);
@@ -2589,6 +2646,9 @@ void SDV_HiTLS_KeepPeerCertificate_TC005(void)
     ASSERT_TRUE(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
     ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -2661,6 +2721,7 @@ void SDV_HiTLS_KeepPeerCertificate_TC006(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_EQ(Compare_Certificates(client, server, true, true), HITLS_SUCCESS);
@@ -2711,6 +2772,9 @@ void SDV_HiTLS_KeepPeerCertificate_TC006(void)
     ASSERT_EQ(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -2784,6 +2848,7 @@ void SDV_HiTLS_KeepPeerCertificate_TC007(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
@@ -2800,6 +2865,9 @@ void SDV_HiTLS_KeepPeerCertificate_TC007(void)
     ASSERT_EQ(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     // The deep copy of the current certificate does use the reference counting mode. so isServerPeerCertNull is false.
     ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -2871,6 +2939,7 @@ void SDV_HiTLS_KeepPeerCertificate_TC008(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
@@ -2883,6 +2952,9 @@ void SDV_HiTLS_KeepPeerCertificate_TC008(void)
     ASSERT_EQ(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_EQ(Compare_Certificates(client, server, true, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -2956,6 +3028,7 @@ void SDV_HiTLS_KeepPeerCertificate_TC009(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
@@ -2965,6 +3038,9 @@ void SDV_HiTLS_KeepPeerCertificate_TC009(void)
     ASSERT_EQ(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_EQ(Compare_Certificates(client, server, false, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+    
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -3035,6 +3111,7 @@ void SDV_HiTLS_KeepPeerCertificate_TC010(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     Session = HITLS_GetDupSession(client->ssl);
     ASSERT_TRUE(Session != NULL);
@@ -3054,6 +3131,9 @@ void SDV_HiTLS_KeepPeerCertificate_TC010(void)
     ASSERT_EQ(client->ssl->negotiatedInfo.isResume, true);
 
     ASSERT_EQ(Compare_ResumeCertificates(client, server), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_SESS_Free(Session);
     HITLS_CFG_FreeConfig(c_config);
@@ -3126,6 +3206,7 @@ void SDV_HiTLS_KeepPeerCertificate_TC011(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     Session = HITLS_GetDupSession(client->ssl);
     ASSERT_TRUE(Session != NULL);
@@ -3147,6 +3228,9 @@ void SDV_HiTLS_KeepPeerCertificate_TC011(void)
     ASSERT_EQ(client->ssl->negotiatedInfo.isResume, true);
 
     ASSERT_EQ(Compare_Certificates(client, server, true, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_SESS_Free(Session);
     HITLS_CFG_FreeConfig(c_config);
@@ -3218,6 +3302,7 @@ void SDV_HiTLS_KeepPeerCertificate_TC012(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     Session = HITLS_GetDupSession(client->ssl);
     ASSERT_TRUE(Session != NULL);
@@ -3240,6 +3325,9 @@ void SDV_HiTLS_KeepPeerCertificate_TC012(void)
     ASSERT_EQ(server->ssl->negotiatedInfo.isResume, true);
 
     ASSERT_EQ(Compare_ResumeCertificates(client, server), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_SESS_Free(Session);
     HITLS_CFG_FreeConfig(c_config);
@@ -3315,6 +3403,7 @@ void SDV_HiTLS_KeepPeerCertificate_TC013(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_EQ(Compare_Certificates(client, server, false, true), HITLS_SUCCESS);
 
@@ -3361,6 +3450,9 @@ void SDV_HiTLS_KeepPeerCertificate_TC013(void)
     ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
 
     ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -3431,6 +3523,7 @@ void SDV_HiTLS_KeepPeerCertificate_TC014(void)
     server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
 
@@ -3449,6 +3542,9 @@ void SDV_HiTLS_KeepPeerCertificate_TC014(void)
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_EQ(Compare_ResumeCertificates(client, server), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+    
 EXIT:
     HITLS_SESS_Free(Session);
     HITLS_CFG_FreeConfig(c_config);
@@ -3490,6 +3586,9 @@ void SDV_HITLS_CM_SETRECORDSIZELIMIT_API_TC001()
     ASSERT_TRUE(HITLS_SetRecordSizeLimit(ctx, HITLS_MIN_RECORDSIZE_LIMIT) == HITLS_SUCCESS);
     ctx->state = CM_STATE_TRANSPORTING;
     ASSERT_TRUE(HITLS_SetRecordSizeLimit(ctx, HITLS_MIN_RECORDSIZE_LIMIT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);
@@ -3524,6 +3623,7 @@ void HITLS_UT_TLS_GET_RECORDSIZELIMIT_API_TC001(void)
 
     ret = HITLS_GetRecordSizeLimit(ctx, &recordSizeLimit);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);

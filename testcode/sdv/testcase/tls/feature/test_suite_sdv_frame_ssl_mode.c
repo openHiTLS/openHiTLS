@@ -109,6 +109,7 @@ void UT_TLS_CM_SSL_MODE_AUTO_RETRY_TC001()
     server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
     uint32_t len = 0;
@@ -130,6 +131,9 @@ void UT_TLS_CM_SSL_MODE_AUTO_RETRY_TC001()
     g_time = 0;
     STUB_REPLACE(APP_Read, STUB_APP_Read);;
     ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -173,6 +177,7 @@ void UT_TLS_CM_SSL_MODE_AUTO_RETRY_TC002()
     server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
     uint32_t len = 0;
@@ -194,6 +199,9 @@ void UT_TLS_CM_SSL_MODE_AUTO_RETRY_TC002()
     g_time = 0;
     STUB_REPLACE(APP_Read, STUB_APP_Read);;
     ASSERT_EQ(HITLS_Read(client->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -238,6 +246,7 @@ void UT_TLS_CM_SSL_MODE_MOVE_BUFFER_TC001()
     server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
     ASSERT_TRUE(HITLS_SetModeSupport(client->ssl, HITLS_MODE_ACCEPT_MOVING_WRITE_BUFFER) == HITLS_SUCCESS);
@@ -249,6 +258,9 @@ void UT_TLS_CM_SSL_MODE_MOVE_BUFFER_TC001()
     ASSERT_TRUE(HITLS_Write(client->ssl, data, sizeof(data), &len) == HITLS_REC_NORMAL_IO_BUSY);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Write(client->ssl, data2, sizeof(data2), &len), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -359,6 +371,7 @@ void UT_TLS_CM_SSL_MODE_RELEASE_BUFFER_TC001()
 
     ASSERT_TRUE(HITLS_SetModeSupport(client->ssl, HITLS_MODE_RELEASE_BUFFERS) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_SetModeSupport(server->ssl, HITLS_MODE_RELEASE_BUFFERS) == HITLS_SUCCESS);
+    // Error stack exists
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
     uint32_t len = 0;
@@ -370,6 +383,9 @@ void UT_TLS_CM_SSL_MODE_RELEASE_BUFFER_TC001()
     ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_SUCCESS);
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);

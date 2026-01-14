@@ -337,6 +337,9 @@ void UT_TLS_CM_MTU_EMSGSIZE_TC001(void)
     /* use min mtu 256, and the encrypt cost is need to be reduced */
     ASSERT_TRUE(writeLen < 256);
     ASSERT_TRUE(writeLen > 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     STUB_RESTORE(REC_Write);
     STUB_RESTORE(UdpSocketCtrl);

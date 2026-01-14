@@ -211,6 +211,9 @@ void HITLS_DTLS1_2_INFOCB_SDV_23_0_2_014(int isCertVerify, int count, int versio
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
     ASSERT_EQ(g_countserverloop, count);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
@@ -281,6 +284,9 @@ void HITLS_DTLS1_2_INFOCB_SDV_23_0_2_015(int isCertVerify, int count, int versio
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
     ASSERT_EQ(g_countclientloop, count);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
@@ -333,6 +339,9 @@ void HITLS_DTLS1_2_INFOCB_SDV_23_0_2_011(int count, int version, int connType)
     HLT_GetTlsAcceptResult(serverRes);
 
     ASSERT_EQ(g_countserverloop, count);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();

@@ -185,6 +185,8 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC001(int version, int connType)
         cnt++;
     } while (cnt <= 2);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -404,6 +406,9 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC003(int version, int connType)
         }
         cnt++;
     } while (cnt < 3);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -546,6 +551,9 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC004(int version, int connType)
         }
         count++;
     } while (count <= 2);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -662,6 +670,9 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC005(int version, int connType)
         }
         cnt++;
     } while (cnt <= 4);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -776,6 +787,9 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC006(int version, int connType)
         }
         cnt++;
     } while (cnt <= 2);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -1038,6 +1052,8 @@ void SDV_TLS_TLCP_CONSISTENCY_TRANSPORT_FUNC_TC01(void)
     ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_SIZE, &readLen) == 0);
     ASSERT_TRUE(readLen == 16384);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
 }
@@ -1153,6 +1169,9 @@ void SDV_TLS_TLCP_CONSISTENCY_RESUME_FUNC_TC009(int mode)
             ASSERT_TRUE(session != NULL);
         }cnt++;
     }while(cnt < 3);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -1279,6 +1298,8 @@ void SDV_TLS_TLCP1_1_TRANSPORT_FUNC_TC01(void)
     uint32_t readLen;
     ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_SIZE, &readLen) == 0);
     ASSERT_TRUE(readLen == 16384);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HLT_FreeAllProcess();

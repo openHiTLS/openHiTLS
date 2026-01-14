@@ -191,6 +191,8 @@ void HITLS_clear_SDV_23_1_0_002()
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     HITLS_CFG_FreeConfig(config_resume);
@@ -330,6 +332,8 @@ void HITLS_clear_SDV_23_1_0_003()
     ASSERT_EQ(HITLS_SetSession(client->ssl, clientSession), HITLS_SUCCESS);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -473,6 +477,8 @@ void HITLS_clear_SDV_23_1_0_005()
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     HITLS_CFG_FreeConfig(config_resume);
@@ -615,6 +621,8 @@ void HITLS_clear_SDV_23_1_0_004()
     ASSERT_EQ(HITLS_SetSession(server->ssl, serverSession), HITLS_SUCCESS);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);

@@ -148,6 +148,9 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_TWO_DISOEDER_CHAIN_CERT_FUNC_TC001(void)
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_3, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) != 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
@@ -211,6 +214,8 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_MIDDLE_BOX_COMPAT_FUNC_TC001(int isMiddle
     ASSERT_EQ(HLT_ProcessTlsRead(localProcess, serverRes, readData, readLen, &readLen), 0);
     ASSERT_EQ(readLen, REC_MAX_PLAIN_LENGTH);
     ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();

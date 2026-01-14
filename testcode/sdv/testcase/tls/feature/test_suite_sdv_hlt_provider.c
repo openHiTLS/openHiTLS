@@ -87,7 +87,7 @@ void SDV_TLS13_PROVIDER_NEW_GROUP_SIGNALG_TC001(char *path, char *providerName, 
     HLT_SetSignature(clientCtxConfig, signAlg);
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_AES_128_GCM_SHA256");
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_AES_128_GCM_SHA256");
-
+    // Error stack exists
     serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_3, serverCtxConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
 
@@ -101,6 +101,7 @@ void SDV_TLS13_PROVIDER_NEW_GROUP_SIGNALG_TC001(char *path, char *providerName, 
     ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_LEN_18K, &readLen) == 0);
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
+
 EXIT:
     HLT_FreeAllProcess();
     BSL_OBJ_FreeHashTable();
@@ -145,6 +146,9 @@ void SDV_TLS13_PROVIDER_KEM_TC001(char *group)
     ASSERT_TRUE(HLT_ProcessTlsRead(localProcess, clientRes, readBuf, READ_BUF_LEN_18K, &readLen) == 0);
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
 #endif
@@ -187,7 +191,7 @@ void SDV_TLS13_MULTI_PROVIDER_TC001(char *path, char *providerName, char *attrNa
 
     HLT_SetCipherSuites(serverCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
     HLT_SetCipherSuites(clientCtxConfig, "HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256");
-
+    // Error stack exists
     serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_2, serverCtxConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
 
@@ -201,6 +205,9 @@ void SDV_TLS13_MULTI_PROVIDER_TC001(char *path, char *providerName, char *attrNa
     ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_LEN_18K, &readLen) == 0);
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
 #endif

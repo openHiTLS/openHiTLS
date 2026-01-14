@@ -72,6 +72,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_SEND_CERTFICATE_TC001(void)
     frameType.recordType = REC_TYPE_HANDSHAKE;
     frameType.handshakeType = SERVER_HELLO_DONE;
     frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    // Error stack exists
     ASSERT_TRUE(FRAME_GetDefaultMsg(&frameType, &frameMsg) == HITLS_SUCCESS);
 
     uint32_t sendLen = MAX_RECORD_LENTH;
@@ -94,6 +95,8 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_HANDSHAKE_SEND_CERTFICATE_TC001(void)
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.client->io, tmp2, tmp2Len) == HITLS_SUCCESS);
 
     ASSERT_TRUE(testInfo.server->ssl->hsCtx->state == TRY_RECV_CERTIFICATE);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -145,7 +148,6 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_SIGNATION_NOT_SUITABLE_CERT_TC002(void)
     ASSERT_TRUE(server != NULL);
     FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfoClient);
     ASSERT_TRUE(client != NULL);
-
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
 EXIT:
@@ -432,6 +434,8 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_KEYUSAGE_CERT_TC003(void)
     ASSERT_TRUE(server != NULL);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -547,6 +551,8 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_ECDHE_PSK_TC001(void)
     STUB_REPLACE(SAL_CRYPT_CalcEcdhSharedSecret, Stub_SAL_CRYPT_CalcEcdhSharedSecret);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     STUB_RESTORE(SAL_CRYPT_CalcEcdhSharedSecret);
     HITLS_CFG_FreeConfig(config);
@@ -655,6 +661,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_KEYUSAGE_CERT_TC004(int isCheckKeyUsage)
     };
     FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfoClient);
     ASSERT_TRUE(client != NULL);
+    // Error stack exists
     FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfoServer);
     ASSERT_TRUE(server != NULL);
     if (isCheckKeyUsage) {
@@ -663,6 +670,8 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_KEYUSAGE_CERT_TC004(int isCheckKeyUsage)
         HITLS_SetCheckKeyUsage(client->ssl, false);
     }
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -799,7 +808,10 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_EXTRA_CHAIN_CERT_TC002()
     ASSERT_TRUE(extraChainCert->count == 1);
     ASSERT_TRUE(extraChainCert != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
@@ -859,7 +871,10 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_BUILD_CERT_CHAIN_TC001()
 
     ASSERT_TRUE(HITLS_CFG_BuildCertChain(&server->ssl->config.tlsConfig, HITLS_BUILD_CHAIN_FLAG_CHECK) == HITLS_SUCCESS);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
@@ -1014,7 +1029,11 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_BUILD_CERT_CHAIN_TC003()
     chainCertList = HITLS_CFG_GetChainCerts(&server->ssl->config.tlsConfig);
     ASSERT_EQ(BSL_LIST_COUNT(chainCertList), 1);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
@@ -1087,7 +1106,10 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_BUILD_CERT_CHAIN_TC004()
     HITLS_CERT_Chain *chainCertList = HITLS_CFG_GetChainCerts(&server->ssl->config.tlsConfig);
     ASSERT_EQ(BSL_LIST_COUNT(chainCertList), 1);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
@@ -1141,7 +1163,10 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_VERIFY_CHAIN_TC001()
     FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfoServer);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
@@ -1196,7 +1221,10 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_VERIFY_CHAIN_TC002()
     FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfoServer);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
@@ -1251,7 +1279,10 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_VERIFY_CHAIN_TC003()
     FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfoServer);
     ASSERT_TRUE(server != NULL);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config_c);

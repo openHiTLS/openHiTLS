@@ -501,6 +501,7 @@ static int32_t ClientCheckCipherSuite(TLS_Ctx *ctx, const ServerHelloMsg *server
 
     ret = CFG_GetCipherSuiteInfo(serverHello->cipherSuite, &ctx->negotiatedInfo.cipherSuiteInfo);
     if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15271, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get cipher suite information fail.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
@@ -1121,6 +1122,7 @@ static int32_t ClientProcessPreSharedKey(TLS_Ctx *ctx, const ServerHelloMsg *ser
     CipherSuiteInfo cipherInfo = {0};
     int32_t ret = CFG_GetCipherSuiteInfo(cipherSuite, &cipherInfo);
     if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         return RETURN_ALERT_PROCESS(ctx, ret, BINLOG_ID17093, "GetCipherSuiteInfo fail", ALERT_INTERNAL_ERROR);
     }
 

@@ -253,6 +253,8 @@ void SDV_TLS_CFG_SET_GET_VERIFYNONESUPPORT_FUNC_TC001(int version, int connType)
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
@@ -330,6 +332,9 @@ void SDV_TLS_CFG_SET_GET_CLIENTVERIFYUPPORT_FUNC_TC001(int clientverify)
     ASSERT_TRUE(HITLS_GetFinishVerifyData(server->ssl, verifyDataNew, sizeof(verifyDataNew),
         &verifyDataNewSize) == HITLS_SUCCESS);
     ASSERT_TRUE(memcmp(verifyDataNew, verifyDataOld, verifyDataOldSize) != 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
@@ -602,6 +607,9 @@ void SDV_TLS_CFG_GET_FLIGHTTRANSMITSWITH_FUNC_TC001(int version)
     }
 
     HLT_CleanFrameHandle();
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     g_flag = 0;
     g_flight = 0;

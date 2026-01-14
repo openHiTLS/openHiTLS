@@ -313,6 +313,7 @@ void UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC001(int version, int type)
     ASSERT_TRUE(testInfo.clientSession != NULL);
 
     ASSERT_TRUE(CreateLink(&testInfo) == HITLS_SUCCESS);
+    // Error stack exists
     ASSERT_TRUE(
         FRAME_CreateConnection(testInfo.client, testInfo.server, false, TRY_RECV_CLIENT_HELLO) == HITLS_SUCCESS);
     ASSERT_TRUE(testInfo.server->ssl->hsCtx->state == TRY_RECV_CLIENT_HELLO);
@@ -347,6 +348,8 @@ void UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC001(int version, int type)
     }
     frameMsg.body.handshakeMsg.body.clientHello.extension.content.serverName = serverName;
     frameMsg.body.handshakeMsg.body.clientHello.extension.content.serverNameSize = serverNameSize;
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     BSL_SAL_FREE(g_sessionId);
@@ -479,6 +482,9 @@ void UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC003()
 
     const char *hostName = HITLS_GetServerName(server->ssl, HITLS_SNI_HOSTNAME_TYPE);
     ASSERT_TRUE(*hostName == *g_serverName);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HITLS_CFG_FreeConfig(clientconfig);
     HITLS_CFG_FreeConfig(serverconfig);

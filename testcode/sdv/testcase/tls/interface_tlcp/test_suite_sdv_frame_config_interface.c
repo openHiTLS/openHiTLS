@@ -458,6 +458,7 @@ void UT_TLS_CFG_SET_TMPDHCB_API_TC001(int securityBits, int securityLevel)
     ASSERT_TRUE(HITLS_SetSecurityLevel(server->ssl, securityLevel) == HITLS_SUCCESS);
 
     if (SECURITY_GetSecbits(securityLevel) > securityBits) {
+        // Error stack exists
         ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_SEND_SERVER_KEY_EXCHANGE), HITLS_SUCCESS);
         ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_MSG_HANDLE_ERR_GET_DH_KEY);
     } else {
@@ -1123,6 +1124,9 @@ void UT_TLS_CFG_SET_GET_RENEGOTIATIONSUPPORT_FUNC_TC001()
     ASSERT_TRUE(HITLS_Renegotiate(serverRes->ssl) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_Renegotiate(clientRes->ssl) == HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_CreateRenegotiationState(clientRes, serverRes, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(clientRes);
@@ -1166,6 +1170,7 @@ void UT_TLS_CFG_SET_ECPOINTFORMATS_FUNC_TC001(int version)
     const uint8_t pointFormats2[] = {HITLS_POINT_FORMAT_BUTT};
     uint32_t pointFormatsSize2 = sizeof(pointFormats2) / sizeof(uint8_t);
     ASSERT_TRUE(HITLS_CFG_SetEcPointFormats(Config, pointFormats2, pointFormatsSize2) == HITLS_SUCCESS);
+    // Error stack exists
     ctx = HITLS_New(Config);
     if(version == TLS1_2){
         ASSERT_TRUE(ctx == NULL);
@@ -1183,6 +1188,7 @@ void UT_TLS_CFG_SET_ECPOINTFORMATS_FUNC_TC001(int version)
     ASSERT_TRUE(server != NULL);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
 EXIT:
     HITLS_CFG_FreeConfig(Config);
     HITLS_Free(ctx);
@@ -1246,6 +1252,7 @@ void UT_TLS_CFG_SET_GROUPS_FUNC_TC001(int version)
     ASSERT_TRUE(testInfo.server != NULL);
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, testInfo.isClient, HS_STATE_BUTT),
         HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
+ 
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -1514,6 +1521,9 @@ void UT_TLS_CFG_SET_POSTHANDSHAKEAUTHSUPPORT_API_TC001(int tlsVersion)
     int ret = HITLS_SetPostHandshakeAuthSupport(ctx, true);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
     ASSERT_TRUE(ctx->config.tlsConfig.isSupportPostHandshakeAuth == true);
+    
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);

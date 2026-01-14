@@ -147,7 +147,6 @@ static uint16_t ServerSelectCurveId(const TLS_Ctx *ctx, const ClientHelloMsg *cl
         }
     }
 
-    BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_NAMED_CURVE);
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15211, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "the curve id in client hello is unsupported.", 0, 0, 0, 0);
     return 0;
@@ -932,6 +931,7 @@ static int32_t ServerCheckResumeParam(TLS_Ctx *ctx, const ClientHelloMsg *client
 
     ret = CFG_GetCipherSuiteInfo(cipherSuite, &ctx->negotiatedInfo.cipherSuiteInfo);
     if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17050, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "GetCipherSuiteInfo fail", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
@@ -2133,6 +2133,7 @@ static int32_t Tls13ServerSelectCert(TLS_Ctx *ctx, const ClientHelloMsg *clientH
     int32_t ret =  HS_SelectCertByInfo(ctx, &expectCertInfo);
     if (ret != HITLS_SUCCESS) {
         /* No proper certificate */
+        BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_SELECT_CERTIFICATE);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15219, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "have no suitable cert. ret %d", ret, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);

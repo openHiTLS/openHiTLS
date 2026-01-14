@@ -483,6 +483,8 @@ void UT_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_TC001(void)
     testInfo.state = HS_STATE_BUTT;
     ASSERT_TRUE(DefaultCfgStatusPark1(&testInfo) == HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     FRAME_CleanMsg(&frameType1, &frameMsg1);
@@ -560,6 +562,8 @@ void UT_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_TC002(void)
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) , HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     FRAME_CleanMsg(&frameType1, &frameMsg1);
@@ -633,6 +637,8 @@ void UT_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_TC004(void)
     FRAME_FreeLink(testInfo.server);
     testInfo.state = HS_STATE_BUTT;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -710,7 +716,10 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_GROUP_SUPPORT_TC001()
     ASSERT_EQ(clientMsg->supportedGroups.exData.data[0], HITLS_EC_GROUP_SECP521R1);
     ASSERT_EQ(clientMsg->supportedGroups.exData.size, 1);
 
+    // Error stack exists
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);

@@ -654,6 +654,7 @@ uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
     CipherSuiteInfo cipherInfo = {0};
     ret = CFG_GetCipherSuiteInfo(cipherSuite, &cipherInfo);
     if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16819, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "GetCipherSuiteInfo fail", 0, 0, 0, 0);
         return 0;

@@ -187,6 +187,9 @@ void SDV_HiTLS_Variable_Buffer_Length_TC001(int version, int connType)
     ASSERT_EQ(client->ssl->recCtx->outBuf->bufSize, outbufsize);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -263,6 +266,9 @@ void SDV_HiTLS_Variable_Buffer_Length_TC002(int version, int connType, int limit
     ASSERT_EQ(client->ssl->recCtx->outBuf->bufSize, outbufsize);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -324,6 +330,8 @@ void SDV_HiTLS_Variable_Buffer_Length_TC002_UDP_900_Client()
 
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
@@ -365,6 +373,8 @@ void SDV_HiTLS_Variable_Buffer_Length_TC002_UDP_900_Server()
     ASSERT_TRUE(clientRes != NULL);
 
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     ClearWrapper();
@@ -451,6 +461,8 @@ void SDV_HiTLS_Variable_Buffer_Length_TC003(void)
     ASSERT_EQ(client->ssl->recCtx->outBuf->bufSize, outbufsize_2000);
 
     ASSERT_TRUE(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
@@ -543,6 +555,8 @@ void SDV_HiTLS_Variable_Buffer_Length_TC004(void)
 
     ASSERT_TRUE(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -629,6 +643,9 @@ void SDV_HiTLS_Variable_Buffer_Length_TC005(void)
     FRAME_TrasferMsgBetweenLink(server, client);
     HITLS_Connect(client->ssl);
     ASSERT_EQ(client->ssl->state, CM_STATE_ALERTED);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -691,6 +708,9 @@ void SDV_HiTLS_Variable_Buffer_Length_TC006(void)
     ASSERT_EQ(readLen, writeLen2);
     ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
     ASSERT_EQ(outLen, writeLen2);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -769,6 +789,9 @@ void SDV_HiTLS_Variable_Buffer_Length_TC007(void)
     ASSERT_EQ(client->ssl->recCtx->outBuf->bufSize, TLS_MAX_OUTBUFF_LENGTH);
 
     ASSERT_TRUE(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -856,6 +879,8 @@ void SDV_HiTLS_Variable_Buffer_Length_TC008(void)
 
     ASSERT_TRUE(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -939,6 +964,9 @@ void SDV_HiTLS_Variable_Buffer_Length_TC009(void)
     ASSERT_EQ(client->ssl->recCtx->outBuf->bufSize, outbufsize_2000);
 
     ASSERT_TRUE(FRAME_CreateRenegotiationState(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(c_config);
     HITLS_CFG_FreeConfig(s_config);
@@ -1020,6 +1048,9 @@ void SDV_HiTLS_Variable_Buffer_Length_TC010(char* ciphersuite)
     ASSERT_EQ(HLT_ProcessTlsRead(localProcess, clientRes, readData, readLen, &readLen), 0);
     ASSERT_EQ(readLen, 1000);
     ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
 }
@@ -1091,13 +1122,16 @@ void SDV_HiTLS_Variable_Buffer_Length_TC011(int supportEncThenMac)
     RecConnState *state = ctx->recCtx->writeStates.currentState;
     uint32_t ciphertextLen = RecGetCryptoFuncs(state->suiteInfo)->calCiphertextLen(ctx, state->suiteInfo,
         REC_1024_PLAIN_LENGTH, false);
-    ASSERT_EQ((ciphertextLen - REC_1024_PLAIN_LENGTH -MAX_MAC_AND_IV_LENGTH), 16);
+    ASSERT_EQ((ciphertextLen - REC_1024_PLAIN_LENGTH - MAX_MAC_AND_IV_LENGTH), 16);
     STUB_REPLACE(RecConnGetCbcPaddingLen, STUB_RecConnGetCbcPaddingLen);
 
     ASSERT_EQ(HLT_ProcessTlsWrite(localProcess, clientRes, writeData, writeLen), 0);
     ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, serverRes, readData, readLen, &readLen), 0);
     ASSERT_EQ(readLen, REC_1024_PLAIN_LENGTH);
     ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     STUB_RESTORE(REC_RecOutBufReSet);
     STUB_RESTORE(RecConnGetCbcPaddingLen);
@@ -1173,6 +1207,9 @@ void SDV_HiTLS_Variable_Buffer_Length_TC012(int supportEncThenMac)
     ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, clientRes, readData, readLen, &readLen), 0);
     ASSERT_EQ(readLen, REC_1024_PLAIN_LENGTH);
     ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     STUB_RESTORE(REC_RecOutBufReSet);
     STUB_RESTORE(RecConnGetCbcPaddingLen);

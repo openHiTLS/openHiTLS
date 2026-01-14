@@ -299,6 +299,9 @@ void UT_TLS_CFG_SET_GET_VERSIONFORBID_API_TC001(void)
     ASSERT_TRUE(HITLS_CFG_SetVersionForbid(config, version) == HITLS_SUCCESS);
     ASSERT_TRUE(config->version == 0);
     ASSERT_TRUE(config->minVersion == 0 && config->maxVersion == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
 }
@@ -337,6 +340,9 @@ void UT_TLS_CFG_SET_GET_VERSIONFORBID_API_TC002(void)
     ASSERT_TRUE(HITLS_CFG_SetVersionSupport(config, version) == HITLS_SUCCESS);
     ASSERT_TRUE(config->version == (TLS12_VERSION_BIT | TLS13_VERSION_BIT));
     ASSERT_TRUE(config->minVersion == HITLS_VERSION_TLS12 && config->maxVersion == HITLS_VERSION_TLS13);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
 }
@@ -520,6 +526,8 @@ void UT_TLS_CFG_SET_CIPHERSUITES_FUNC_TC001(int tlsVersion)
     ASSERT_TRUE(server != NULL);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
@@ -1377,6 +1385,8 @@ void UT_HITLS_CFG_REMOVE_CERTANDKEY_API_TC001(int version, char *certFile, char 
     ASSERT_TRUE(HITLS_CFG_GetCertificate(tlsConfig) == NULL);
     ASSERT_TRUE(HITLS_CFG_GetPrivateKey(tlsConfig) == NULL);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeCert(tlsConfig, cert);
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -1468,6 +1478,9 @@ void UT_TLS_CFG_SET_DTLS_MTU_API_TC001(void)
     server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
     ASSERT_TRUE(HITLS_SetMtu(server->ssl, mtu) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1772,6 +1785,8 @@ void UT_TLS_CFG_SET_RECORDPADDINGARG_API_TC002()
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
@@ -1821,6 +1836,8 @@ void UT_TLS_CFG_LOADVERIFYDIR_MULTI_PATH_TC001(void)
         ASSERT_TRUE(path != NULL);
         ASSERT_TRUE(strcmp(path, expect_paths[i]) == 0);
     }
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -2061,6 +2078,8 @@ void UT_TLS_CFG_LOADDEFAULTCAPATH_TC003(void)
     // Compare the actual path with expected path
     ASSERT_TRUE(strcmp(pathPtr, expectedPath) == 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
 }
@@ -2224,6 +2243,9 @@ void UT_TLS_CFG_SET_SESSION_CACHE_SIZE_FUNC_TC001(void)
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_EQ(BSL_HASH_Size(client->ssl->globalConfig->sessMgr->hash), 1);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -2429,6 +2451,9 @@ void HITLS_HITLS_GLOBALCONFIG_005()
     // 5. Establish a link and check the session ID of client hello.
     ASSERT_TRUE(memcmp(ctx->globalConfig->sessionIdCtx, sessIdCtx, sizeof(sessIdCtx)) == 0);
     ASSERT_TRUE(ctx->globalConfig->sessionIdCtxSize == NewConfig->sessionIdCtxSize);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(Config);
     HITLS_CFG_FreeConfig(NewConfig);

@@ -69,6 +69,9 @@ void UT_TLS_CERT_CFG_LoadCAFile_API_TC001(int version, char *certFile, char *use
                                       TLS_PARSE_FORMAT_ASN1, &caList) == HITLS_SUCCESS);
     ASSERT_TRUE(caList != NULL);
     ASSERT_TRUE(caList->count == 1);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     BSL_LIST_FREE(caList, CaListNodeInnerDestroy);
@@ -118,6 +121,8 @@ void UT_TLS_TLS13_RECV_CA_LIST_TC001(char *certFile)
     ASSERT_TRUE(peerList != NULL);
     ASSERT_TRUE(peerList->count == 1);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -165,6 +170,7 @@ void UT_TLS_TLS12_RECV_CA_LIST_TC001(char *certFile)
     ASSERT_TRUE(client != NULL);
     server = FRAME_CreateLink(config, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
+    // Error stack is empty
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
     HITLS_TrustedCAList *peerList = HITLS_GetPeerCAList(client->ssl);
     ASSERT_TRUE(peerList != NULL);

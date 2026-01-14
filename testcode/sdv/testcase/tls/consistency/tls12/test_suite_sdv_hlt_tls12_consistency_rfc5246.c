@@ -597,6 +597,8 @@ void SDV_TLS_TLS1_2_RFC5246_HANDSHAKE_FUNC_TC001()
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
