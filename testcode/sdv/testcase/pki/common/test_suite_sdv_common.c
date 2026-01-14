@@ -2009,6 +2009,8 @@ EXIT:
 }
 /* END_CASE */
 
+#if defined(HITLS_PKI_X509_VFY_HOSTNAME)
+
 static bool PkiSkipTest(int32_t algId, int32_t format)
 {
 #ifndef HITLS_BSL_PEM
@@ -2040,14 +2042,14 @@ static bool PkiSkipTest(int32_t algId, int32_t format)
             return true;
     }
 }
-
+#endif // HITLS_PKI_X509_VFY_HOSTNAME
 /*
  * Test for exact hostname match, including case-insensitivity.
  */
 /* BEGIN_CASE */
 void SDV_PKI_HOSTNAME_EXACT_MATCH_TC001(int flag)
 {
-#if defined(HITLS_PKI_X509_VFY)
+#if defined(HITLS_PKI_X509_VFY) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
     ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "", ""), HITLS_PKI_SUCCESS);
@@ -2086,7 +2088,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKI_HOSTNAME_WILDCARD_MATCH_TC002(int flag)
 {
-#if defined(HITLS_PKI_X509_VFY)
+#if defined(HITLS_PKI_X509_VFY) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
     ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "*.openhitls.com", ".openhitls.com"), HITLS_PKI_SUCCESS);
@@ -2124,7 +2126,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKI_HOSTNAME_MISMATCH_TC001(int flag)
 {
-#if defined(HITLS_PKI_X509_VFY)
+#if defined(HITLS_PKI_X509_VFY) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
     ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "*.openhitls.com", ".openhitls.com."),
@@ -2156,7 +2158,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKI_HOSTNAME_MISMATCH_TC002(int flag)
 {
-#if defined(HITLS_PKI_X509_VFY)
+#if defined(HITLS_PKI_X509_VFY) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
     // Wildcard should not match multiple labels
@@ -2184,7 +2186,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKI_HOSTNAME_INVALID_INPUTS_TC001(int flag)
 {
-#if defined(HITLS_PKI_X509) && defined(HITLS_PKI_X509_CRT)
+#if defined(HITLS_PKI_X509) && defined(HITLS_PKI_X509_CRT) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
     // More invalid inputs
@@ -2232,7 +2234,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKI_VERIFY_HOSTNAME_TC001(int algId, int format, Hex *encode, int flag)
 {
-#if defined(HITLS_PKI_X509_CRT_PARSE)
+#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
     if (PkiSkipTest(algId, format)) {
         SKIP_TEST();
     }
@@ -2304,7 +2306,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKI_VERIFY_HOSTNAME_WITH_CN_TC001(int algId, int format, Hex *encode, int flag)
 {
-#if defined(HITLS_PKI_X509_CRT_PARSE)
+#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
     if (PkiSkipTest(algId, format)) {
         SKIP_TEST();
     }
