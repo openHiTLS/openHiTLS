@@ -149,7 +149,7 @@ EXIT:
 
 /**
  * @test  SDV_CRYPTO_EAL_AES_WRAP_FUNC_TC001
- * @title  Encrypt and Dncrypt vector test.
+ * @title  Encrypt and Decrypt vector test.
  * @precon nan
  * @brief
  *    1.Initialize the CTX. Expected result 1 is obtained.
@@ -164,9 +164,19 @@ EXIT:
 void SDV_CRYPTO_EAL_AES_WRAP_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *in, Hex *out, int enc)
 {
     TestMemInit();
-    uint8_t outTmp[MAX_OUTPUT] = {0};
-    uint32_t len = MAX_OUTPUT;
- 
+    uint32_t len = 0;
+    if (enc == 0) {  // Decrypt
+        len = in->len - MAX_IV_LEN;
+    } else {
+        len = in->len + MAX_IV_LEN;
+        if (algId == CRYPT_CIPHER_AES128_WRAP_PAD || algId == CRYPT_CIPHER_AES192_WRAP_PAD ||
+            algId == CRYPT_CIPHER_AES256_WRAP_PAD) {
+            len = len + (MAX_IV_LEN - (in->len % MAX_IV_LEN)); // Add padding len;
+        }
+    }
+    uint8_t *outTmp = BSL_SAL_Malloc(len);
+    ASSERT_TRUE(outTmp != NULL);
+
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(algId);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc), CRYPT_SUCCESS);
@@ -174,6 +184,7 @@ void SDV_CRYPTO_EAL_AES_WRAP_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *in, H
     ASSERT_EQ(len, out->len);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
 EXIT:
+    BSL_SAL_Free(outTmp);
     CRYPT_EAL_CipherDeinit(ctx);
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
