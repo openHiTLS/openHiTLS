@@ -419,6 +419,26 @@ static int32_t ParseEd25519PubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CRYPT
 }
 #endif // HITLS_CRYPTO_ED25519
 
+#ifdef HITLS_CRYPTO_X25519
+static int32_t ParseX25519PubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, CRYPT_EAL_PkeyCtx **ealPubKey)
+{
+    CRYPT_EAL_PkeyCtx *pctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
+    if (pctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    CRYPT_EAL_PkeyPub pub = {.id = CRYPT_PKEY_X25519, .key.curve25519Pub = {.data = buff, .len = buffLen}};
+    int32_t ret = CRYPT_EAL_PkeySetPub(pctx, &pub);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    *ealPubKey = pctx;
+    return ret;
+}
+#endif // HITLS_CRYPTO_X25519
+
 static int32_t ParsePk8PrikeyAsn1(CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo, CRYPT_EAL_PkeyCtx **ealPriKey)
 {
 #ifdef HITLS_CRYPTO_RSA
@@ -476,6 +496,12 @@ int32_t ParseSubPubkeyAsn1(BSL_ASN1_Buffer *encode, CRYPT_EAL_PkeyCtx **ealPubKe
     (void)algParam;
     if (cid == BSL_CID_ED25519) {
         return ParseEd25519PubkeyAsn1Buff(bitPubkey.buff, bitPubkey.len, ealPubKey);
+    }
+#endif
+#ifdef HITLS_CRYPTO_X25519
+    (void)algParam;
+    if (cid == BSL_CID_X25519) {
+        return ParseX25519PubkeyAsn1Buff(bitPubkey.buff, bitPubkey.len, ealPubKey);
     }
 #endif
 
