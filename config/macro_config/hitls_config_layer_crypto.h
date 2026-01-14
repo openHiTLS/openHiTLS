@@ -786,7 +786,7 @@
     #if defined(HITLS_CRYPTO_CURVE_NISTP192) || \
         ((defined(HITLS_CRYPTO_CURVE_NISTP224) || defined(HITLS_CRYPTO_CURVE_NISTP521)) && \
             !defined(HITLS_CRYPTO_NIST_USE_ACCEL)) || \
-        (HITLS_CRYPTO_CURVE_NISTP384) || \
+        defined(HITLS_CRYPTO_CURVE_NISTP384) || \
         (defined(HITLS_CRYPTO_CURVE_NISTP256) && (!defined(HITLS_CRYPTO_CURVE_NISTP256_ASM) || \
             (!defined(HITLS_CRYPTO_NIST_ECC_ACCELERATE))) && (!defined(HITLS_CRYPTO_NIST_USE_ACCEL))) || \
         (defined(HITLS_CRYPTO_CURVE_SM2) && !defined(HITLS_CRYPTO_CURVE_SM2_ASM))
