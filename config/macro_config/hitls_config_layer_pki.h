@@ -126,6 +126,9 @@
     #ifndef HITLS_PKI_X509_VFY_LOCATION
         #define HITLS_PKI_X509_VFY_LOCATION
     #endif
+    #ifndef HITLS_PKI_X509_VFY_HOSTNAME
+        #define HITLS_PKI_X509_VFY_HOSTNAME
+    #endif
 #endif
 
 #ifdef HITLS_PKI_X509_VFY_DEFAULT

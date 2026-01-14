@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_PKI_X509_CRT
+#ifdef HITLS_PKI_X509_VFY_HOSTNAME
 #include <string.h>
 #include <ctype.h>
 #include "hitls_pki_errno.h"
@@ -252,4 +252,4 @@ int32_t HITLS_X509_CheckKey(HITLS_X509_Cert *cert, CRYPT_EAL_PkeyCtx *prvKey)
     }
     return HITLS_PKI_SUCCESS;
 }
-#endif // HITLS_PKI_X509_CRT
+#endif // HITLS_PKI_X509_VFY_HOSTNAME

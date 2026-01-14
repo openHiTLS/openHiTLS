@@ -1697,9 +1697,7 @@
                 ".features" : [
                     "x509", "x509_crt", "x509_crt_gen", "x509_crt_parse",
                     "x509_crl", "x509_crl_gen", "x509_crl_parse",
-                    "x509_csr", "x509_csr_gen", "x509_csr_parse",
-                    "pkcs12", "pkcs12_gen", "pkcs12_parse", "cms", "cms_data", "cms_digestinfo", "cms_signeddata",
-                    "cms_encryptdata"
+                    "x509_csr", "x509_csr_gen", "x509_csr_parse"
                 ],
                 ".srcs" : "pki/x509_common/src/*",
                 ".deps" : ["platform::Secure_C", "bsl::sal", "bsl::asn1", "bsl::obj", "bsl::list", "crypto::codecskey"],
