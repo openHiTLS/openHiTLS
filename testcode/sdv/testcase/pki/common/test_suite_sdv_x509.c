@@ -81,6 +81,10 @@ static bool PkiSkipTest(int32_t algId, int32_t format)
         case CRYPT_PKEY_ED25519:
             return false;
 #endif
+#ifdef HITLS_CRYPTO_X25519
+        case CRYPT_PKEY_X25519:
+            return false;
+#endif
         default:
             return true;
     }

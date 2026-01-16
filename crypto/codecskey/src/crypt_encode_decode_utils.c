@@ -451,8 +451,8 @@ static int32_t DecSubKeyInfoCb(int32_t type, uint32_t idx, void *data, void *exp
                 *(uint8_t *)expVal = BSL_ASN1_TAG_OBJECT_ID;
             } else if (cid == BSL_CID_RSASSAPSS) {
                 *(uint8_t *)expVal = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
-            } else if (cid == BSL_CID_ED25519) {
-                /* RFC8410: Ed25519 has no algorithm parameters */
+            } else if (cid == BSL_CID_ED25519 || cid == BSL_CID_X25519) {
+                /* RFC8410: Ed25519/X25519 has no algorithm parameters */
                 *(uint8_t *)expVal = BSL_ASN1_TAG_EMPTY; // is empty
             } else {
                 *(uint8_t *)expVal = BSL_ASN1_TAG_NULL; // is null

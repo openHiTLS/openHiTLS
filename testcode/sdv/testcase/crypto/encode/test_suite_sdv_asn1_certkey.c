@@ -526,7 +526,7 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_BSL_ASN1_PARSE_ED25519PRIKEY_FILE_TC001(int alg, char *path, int format, int type, Hex *prv)
+void SDV_BSL_ASN1_PARSE_25519PRIKEY_FILE_TC001(int alg, char *path, int format, int type, Hex *prv)
 {
     RegisterLogFunc();
     uint8_t rawPriKey[32] = {0};
@@ -547,13 +547,77 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
-void SDV_BSL_ASN1_PARSE_ED25519PRIKEY_FILE_TC002(char *path, int format, int type, int ret)
+void SDV_BSL_ASN1_PARSE_25519PRIKEY_FILE_TC002(char *path, int format, int type, int ret)
 {
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &pkeyCtx), ret);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_X25519PUBKEY_FILE_TC001(char *path, int fileType, Hex *expect)
+{
+    RegisterLogFunc();
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(fileType, CRYPT_PUBKEY_SUBKEY);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(pkeyCtx), CRYPT_PKEY_X25519);
+
+    uint8_t rawPubKey[32] = {0};
+    CRYPT_EAL_PkeyPub pkeyPub = {0};
+    pkeyPub.id = CRYPT_PKEY_X25519;
+    pkeyPub.key.curve25519Pub.data = rawPubKey;
+    pkeyPub.key.curve25519Pub.len = sizeof(rawPubKey);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkeyCtx, &pkeyPub), CRYPT_SUCCESS);
+    ASSERT_COMPARE("key cmp", expect->x, expect->len, pkeyPub.key.curve25519Pub.data,
+        pkeyPub.key.curve25519Pub.len);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_X25519_EXCH_TC001(char *prvPath, int prvFormat, int prvType,
+    char *pubPath, int pubFormat, int pubType)
+{
+    RegisterLogFunc();
+    TestMemInit();
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *prvCtx = NULL;
+    CRYPT_EAL_PkeyCtx *pubCtx = NULL;
+    CRYPT_EAL_PkeyCtx *peerCtx = NULL;
+    uint8_t share1[32] = {0};
+    uint8_t share2[32] = {0};
+    uint32_t share1Len = sizeof(share1);
+    uint32_t share2Len = sizeof(share2);
+
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(prvFormat, prvType, prvPath, NULL, 0, &prvCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(pubFormat, pubType, pubPath, NULL, 0, &pubCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(prvCtx), CRYPT_PKEY_X25519);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(pubCtx), CRYPT_PKEY_X25519);
+
+    peerCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_X25519);
+    ASSERT_TRUE(peerCtx != NULL);
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(peerCtx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(prvCtx, peerCtx, share1, &share1Len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(peerCtx, pubCtx, share2, &share2Len), CRYPT_SUCCESS);
+    ASSERT_EQ(share1Len, share2Len);
+    ASSERT_EQ(memcmp(share1, share2, share1Len), 0);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    CRYPT_EAL_PkeyFreeCtx(peerCtx);
+    BSL_GLOBAL_DeInit();
 }
 /* END_CASE */
 

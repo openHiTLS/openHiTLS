@@ -368,12 +368,14 @@ test_pki()
     ### key gen ####
     bash mini_build_test.sh no-tls enable=eal,key_encode,sal_file,pem,rsa,sha256,drbg_hash test=key_encode linux
     bash mini_build_test.sh no-tls enable=eal,key_encode,pem,ed25519,drbg_hash test=key_encode
+    bash mini_build_test.sh no-tls enable=eal,key_encode,key_epki,pem,x25519,drbg_hash,cipher,modes,sha256,hmac test=key_encode
     bash mini_build_test.sh no-tls enable=eal,key_encode,sal_file,sm2,sha256,drbg_hash test=key_encode linux
     bash mini_build_test.sh no-tls enable=eal,key_encode,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=key_encode
 
     #### key parse ####
     bash mini_build_test.sh no-tls enable=eal,key_decode,sal_file,pem,rsa,sha256,drbg_hash test=key_decode linux
     bash mini_build_test.sh no-tls enable=eal,key_decode,sal_file,pem,ed25519 test=key_decode linux
+    bash mini_build_test.sh no-tls enable=eal,key_decode,key_epki,sal_file,pem,x25519,cipher,modes,sha256,hmac test=key_decode linux
     bash mini_build_test.sh no-tls enable=eal,key_decode,sal_file,sm2,sha256 test=key_decode linux
     bash mini_build_test.sh no-tls enable=eal,key_decode,sal_file,pem,ecdsa,curve_nistp256,sha256 test=key_decode linux
 

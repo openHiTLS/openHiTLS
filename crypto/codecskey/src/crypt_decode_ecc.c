@@ -23,7 +23,7 @@
 #ifdef HITLS_CRYPTO_SM2
 #include "crypt_sm2.h"
 #endif
-#ifdef HITLS_CRYPTO_ED25519
+#if defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_X25519)
 #include "crypt_curve25519.h"
 #endif
 #include "crypt_params_key.h"
@@ -358,9 +358,11 @@ int32_t CRYPT_SM2_ParsePkcs8Key(void *libCtx, uint8_t *buff, uint32_t buffLen, C
 }
 #endif // HITLS_CRYPTO_SM2
 
-#ifdef HITLS_CRYPTO_ED25519
-static int32_t ParseEd25519PrikeyAsn1Buff(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
-    CRYPT_CURVE25519_Ctx **ed25519PriKey)
+#if defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_X25519)
+typedef CRYPT_CURVE25519_Ctx *(*CRYPT_CURVE25519_NewCtxFunc)(void *libCtx);
+
+static int32_t ParseCurve25519PrikeyAsn1Buff(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
+    CRYPT_CURVE25519_Ctx **curvePriKey, CRYPT_CURVE25519_NewCtxFunc newCtx)
 {
     uint8_t *tmpBuff = buffer;
     uint32_t tmpBuffLen = bufferLen;
@@ -371,7 +373,7 @@ static int32_t ParseEd25519PrikeyAsn1Buff(void *libCtx, uint8_t *buffer, uint32_
         return ret;
     }
 
-    CRYPT_CURVE25519_Ctx *pctx = CRYPT_ED25519_NewCtxEx(libCtx);
+    CRYPT_CURVE25519_Ctx *pctx = newCtx(libCtx);
     if (pctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -386,12 +388,12 @@ static int32_t ParseEd25519PrikeyAsn1Buff(void *libCtx, uint8_t *buffer, uint32_
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    *ed25519PriKey = pctx;
+    *curvePriKey = pctx;
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_ED25519_ParsePkcs8Key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
-    CRYPT_CURVE25519_Ctx **ed25519PriKey)
+static int32_t ParseCurve25519Pkcs8Key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
+    CRYPT_CURVE25519_Ctx **curvePriKey, BslCid expectKeyType, CRYPT_CURVE25519_NewCtxFunc newCtx)
 {
     CRYPT_ENCODE_DECODE_Pk8PrikeyInfo pk8PrikeyInfo = {0};
     int32_t ret = CRYPT_DECODE_Pkcs8Info(buffer, bufferLen, NULL, &pk8PrikeyInfo);
@@ -399,15 +401,16 @@ int32_t CRYPT_ED25519_ParsePkcs8Key(void *libCtx, uint8_t *buffer, uint32_t buff
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (pk8PrikeyInfo.keyType != BSL_CID_ED25519) {
+    if (pk8PrikeyInfo.keyType != expectKeyType) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
-    return ParseEd25519PrikeyAsn1Buff(libCtx, pk8PrikeyInfo.pkeyRawKey, pk8PrikeyInfo.pkeyRawKeyLen, ed25519PriKey);
+    return ParseCurve25519PrikeyAsn1Buff(libCtx, pk8PrikeyInfo.pkeyRawKey, pk8PrikeyInfo.pkeyRawKeyLen,
+        curvePriKey, newCtx);
 }
 
-int32_t CRYPT_ED25519_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
-    CRYPT_CURVE25519_Ctx **pubKey, bool isComplete)
+static int32_t ParseCurve25519SubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
+    CRYPT_CURVE25519_Ctx **pubKey, bool isComplete, BslCid expectKeyType, CRYPT_CURVE25519_NewCtxFunc newCtx)
 {
     if (buff == NULL || buffLen == 0 || pubKey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -419,11 +422,11 @@ int32_t CRYPT_ED25519_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (subPubkeyInfo.keyType != BSL_CID_ED25519) {
+    if (subPubkeyInfo.keyType != expectKeyType) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
-    CRYPT_CURVE25519_Ctx *pctx = CRYPT_ED25519_NewCtxEx(libCtx);
+    CRYPT_CURVE25519_Ctx *pctx = newCtx(libCtx);
     if (pctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
@@ -441,5 +444,37 @@ int32_t CRYPT_ED25519_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32
     *pubKey = pctx;
     return ret;
 }
+#endif // HITLS_CRYPTO_ED25519 || HITLS_CRYPTO_X25519
+
+#ifdef HITLS_CRYPTO_ED25519
+int32_t CRYPT_ED25519_ParsePkcs8Key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
+    CRYPT_CURVE25519_Ctx **ed25519PriKey)
+{
+    return ParseCurve25519Pkcs8Key(libCtx, buffer, bufferLen, ed25519PriKey, BSL_CID_ED25519,
+        CRYPT_ED25519_NewCtxEx);
+}
+
+int32_t CRYPT_ED25519_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
+    CRYPT_CURVE25519_Ctx **pubKey, bool isComplete)
+{
+    return ParseCurve25519SubPubkeyAsn1Buff(libCtx, buff, buffLen, pubKey, isComplete, BSL_CID_ED25519,
+        CRYPT_ED25519_NewCtxEx);
+}
 #endif // HITLS_CRYPTO_ED25519
+
+#ifdef HITLS_CRYPTO_X25519
+int32_t CRYPT_X25519_ParsePkcs8Key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
+    CRYPT_CURVE25519_Ctx **x25519PriKey)
+{
+    return ParseCurve25519Pkcs8Key(libCtx, buffer, bufferLen, x25519PriKey, BSL_CID_X25519,
+        CRYPT_X25519_NewCtxEx);
+}
+
+int32_t CRYPT_X25519_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
+    CRYPT_CURVE25519_Ctx **pubKey, bool isComplete)
+{
+    return ParseCurve25519SubPubkeyAsn1Buff(libCtx, buff, buffLen, pubKey, isComplete, BSL_CID_X25519,
+        CRYPT_X25519_NewCtxEx);
+}
+#endif // HITLS_CRYPTO_X25519
 #endif // HITLS_CRYPTO_KEY_DECODE
