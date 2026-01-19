@@ -108,11 +108,13 @@ CMS_SignerInfo *CMS_SignerInfoNew(uint32_t flag)
         HITLS_CMS_SignerInfoFree(si);
         return NULL;
     }
-    si->signedAttrs = HITLS_X509_AttrsNew();
-    if (si->signedAttrs == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        HITLS_CMS_SignerInfoFree(si);
-        return NULL;
+    if ((flag & HITLS_CMS_FLAG_NO_SIGNEDATTR) == 0) {
+        si->signedAttrs = HITLS_X509_AttrsNew();
+        if (si->signedAttrs == NULL) {
+            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+            HITLS_CMS_SignerInfoFree(si);
+            return NULL;
+        }
     }
     si->unsignedAttrs = HITLS_X509_AttrsNew();
     if (si->unsignedAttrs == NULL) {

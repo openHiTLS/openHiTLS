@@ -18,6 +18,7 @@
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_asn1_internal.h"
+#include "bsl_list.h"
 #include "bsl_obj_internal.h"
 #include "hitls_pki_errno.h"
 #include "hitls_pki_params.h"
@@ -27,8 +28,11 @@
 #include "hitls_crl_local.h"
 #include "hitls_cert_local.h"
 #include "crypt_eal_md.h"
+#include "crypt_eal_pkey.h"
+#include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "bsl_params.h"
+#include "hitls_cms_util.h"
 #define MAX_DIGEST_SIZE 64  // Maximum digest size (e.g., SHA-512)
 
 /**
@@ -376,6 +380,15 @@ static int32_t ParseDigestSignAlgId(BSL_ASN1_Buffer *asn, CMS_AlgId *algId)
     if (algId->id == BSL_CID_UNKNOWN) {
         return HITLS_CMS_ERR_PARSE_TYPE;
     }
+
+    // RFC 9882: ML-DSA AlgorithmIdentifier parameters MUST be omitted
+    // Validate that PQC algorithms do not have parameters
+    if (HITLS_CMS_PqcShouldOmitParams((BslCid)algId->id) &&
+        asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].len > 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_PQC_PARAMS_NOT_OMITTED);
+        return HITLS_CMS_ERR_PQC_PARAMS_NOT_OMITTED;
+    }
+
     if (asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].len > 0) {
         algId->param.data = BSL_SAL_Dump(asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].buff,
             asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].len);
@@ -993,9 +1006,10 @@ static int32_t SetSignerIdV1(CMS_SignerInfo *signerInfo, BSL_ASN1_List *issuerNa
 }
 
 static int32_t CMS_SignerInfoGen(int32_t version, BSL_ASN1_List *issuerName,
-    BSL_Buffer *serialNum, BSL_Buffer *subjectKeyId, CMS_SignerInfo **signerinfo)
+    BSL_Buffer *serialNum, BSL_Buffer *subjectKeyId, CMS_SignerInfo **signerinfo, bool hasSignedAttr)
 {
-    CMS_SignerInfo *signerInfo = CMS_SignerInfoNew(HITLS_CMS_FLAG_GEN);
+    uint32_t flag = (!hasSignedAttr ? (HITLS_CMS_FLAG_GEN | HITLS_CMS_FLAG_NO_SIGNEDATTR) : HITLS_CMS_FLAG_GEN);
+    CMS_SignerInfo *signerInfo = CMS_SignerInfoNew(flag);
     if (signerInfo == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
@@ -1023,7 +1037,8 @@ static int32_t CMS_SignerInfoGen(int32_t version, BSL_ASN1_List *issuerName,
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t CreateSignerInfoFromCert(int32_t version, HITLS_X509_Cert *cert, CMS_SignerInfo **signerinfo)
+static int32_t CreateSignerInfoFromCert(int32_t version, HITLS_X509_Cert *cert, CMS_SignerInfo **signerinfo,
+    bool hasSignedAttr)
 {
     if (version == HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1) {
         BSL_ASN1_List *issuerName = NULL;
@@ -1038,7 +1053,7 @@ static int32_t CreateSignerInfoFromCert(int32_t version, HITLS_X509_Cert *cert, 
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        return CMS_SignerInfoGen(version, issuerName, &serialNum, NULL, signerinfo);
+        return CMS_SignerInfoGen(version, issuerName, &serialNum, NULL, signerinfo, hasSignedAttr);
     }
     if (version == HITLS_CMS_SIGNEDDATA_SIGNERINFO_V3) {
         HITLS_X509_ExtSki ski = {0};
@@ -1047,10 +1062,93 @@ static int32_t CreateSignerInfoFromCert(int32_t version, HITLS_X509_Cert *cert, 
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        return CMS_SignerInfoGen(version, NULL, NULL, &ski.kid, signerinfo);
+        return CMS_SignerInfoGen(version, NULL, NULL, &ski.kid, signerinfo, hasSignedAttr);
     }
     BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_VERSION_INVALID);
     return HITLS_CMS_ERR_VERSION_INVALID;
+}
+
+// Configure RSA signature algorithm based on padding type
+static int32_t ConfigureRsaSignAlg(CRYPT_EAL_PkeyCtx *signKey, HITLS_X509_Asn1AlgId *sigAlg)
+{
+    CRYPT_RsaPadType pad;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    if (pad == CRYPT_EMSA_PSS) {
+        sigAlg->algId = BSL_CID_RSASSAPSS;
+        ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_MD, &sigAlg->rsaPssParam.mdId, sizeof(CRYPT_MD_AlgId));
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_MGF, &sigAlg->rsaPssParam.mgfId, sizeof(CRYPT_MD_AlgId));
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+        ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_SALTLEN, &sigAlg->rsaPssParam.saltLen, sizeof(uint32_t));
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    } else if (pad == CRYPT_EMSA_PKCSV15) {
+        sigAlg->algId = BSL_CID_RSA;
+    } else {
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NOT_ENOUGH_INFO_KEY);
+        return HITLS_CMS_ERR_NOT_ENOUGH_INFO_KEY;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+// Configure signature algorithm based on key type
+static int32_t ConfigureSignAlg(const CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, HITLS_X509_Asn1AlgId *sigAlg)
+{
+    CRYPT_PKEY_AlgId asymAlg = CRYPT_EAL_PkeyGetId(prvKey);
+    CRYPT_EAL_PkeyCtx *signKey = (CRYPT_EAL_PkeyCtx *)(uintptr_t)prvKey;
+
+    if (HITLS_CMS_IsPqcSignAlg((BslCid)asymAlg)) {
+        CRYPT_PKEY_ParaId paraId = CRYPT_EAL_PkeyGetParaId(prvKey);
+        if (paraId == CRYPT_PKEY_PARAID_MAX) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+            return HITLS_CMS_ERR_INVALID_ALGO;
+        }
+        sigAlg->algId = (BslCid)paraId;
+    } else {
+        if (asymAlg == CRYPT_PKEY_RSA) {
+            return ConfigureRsaSignAlg(signKey, sigAlg);
+        }
+    
+        BslCid signAlgId = BSL_OBJ_GetSignIdFromHashAndAsymId((BslCid)asymAlg, (BslCid)mdId);
+        if (signAlgId == BSL_CID_UNKNOWN) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+            return HITLS_CMS_ERR_INVALID_ALGO;
+        }
+        sigAlg->algId = signAlgId;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t CreateAndConfigSigner(CRYPT_EAL_PkeyCtx *prvKey, int32_t version, HITLS_X509_Cert *cert, int32_t mdId,
+    bool hasSignedAttr, CMS_SignerInfo **signerinfo)
+{
+    int32_t ret = CreateSignerInfoFromCert(version, cert, signerinfo, hasSignedAttr);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = ConfigureSignAlg(prvKey, mdId, &(*signerinfo)->sigAlg);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        HITLS_CMS_SignerInfoFree(*signerinfo);
+        *signerinfo = NULL;
+        return ret;
+    }
+    (*signerinfo)->digestAlg.id = mdId;
+    return ret;
 }
 
 // Helper function: Set contentType if not already set
@@ -1229,39 +1327,6 @@ static int32_t AddRequiredAttr(HITLS_X509_Attrs *signedAttrs, HITLS_X509_AttrEnt
     return HITLS_PKI_SUCCESS;
 }
 
-// Helper function: Ensure required attributes exist in signedAttrs
-static int32_t EnsureRequiredAttrsExist(CMS_SignerInfo *signerInfo, uint8_t *digest, uint32_t digestLen,
-    BslCid contentType)
-{
-    HITLS_X509_AttrEntry *ctAttr = NULL;
-    int32_t ret = CreateContentTypeAttr(contentType, &ctAttr);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    ret = AddRequiredAttr(signerInfo->signedAttrs, ctAttr);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-
-    HITLS_X509_AttrEntry *mdAttr = NULL;
-    ret = CreateMessageDigestAttr(digest, digestLen, &mdAttr);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    ret = AddRequiredAttr(signerInfo->signedAttrs, mdAttr);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-
-    HITLS_X509_AttrEntry *stAttr = NULL;
-    ret = CreateSigningTimeAttr(&stAttr);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    // if failed, CreateSigningTimeAttr will free the attr
-    return AddRequiredAttr(signerInfo->signedAttrs, stAttr);
-}
-
 // Helper function: Encode signedAttrs and prepare data for signing
 static int32_t EncodeSignedAttrsForSigning(CMS_SignerInfo *signerInfo,
                                            uint8_t **signData, uint32_t *signDataLen)
@@ -1290,68 +1355,53 @@ static int32_t EncodeSignedAttrsForSigning(CMS_SignerInfo *signerInfo,
     };
     BSL_ASN1_TemplateItem setTemplItem = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, 0, 0};
     BSL_ASN1_Template setTempl = {&setTemplItem, 1};
-    ret = BSL_ASN1_EncodeTemplate(&setTempl, &asnArr, 1, signData, signDataLen);
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    ret = BSL_ASN1_EncodeTemplate(&setTempl, &asnArr, 1, &data, &dataLen);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-
+    *signData = data;
+    *signDataLen = dataLen;
     return HITLS_PKI_SUCCESS;
 }
 
-// Configure RSA signature algorithm based on padding type
-static int32_t ConfigureRsaSignAlg(CRYPT_EAL_PkeyCtx *signKey, HITLS_X509_Asn1AlgId *sigAlg)
+// Helper function: Ensure required attributes exist in signedAttrs
+static int32_t EnsureRequiredAttrsExist(CMS_SignerInfo *signerInfo, uint8_t *digest, uint32_t digestLen,
+    BslCid contentType, uint8_t **signData, uint32_t *signDataLen)
 {
-    CRYPT_RsaPadType pad;
-    int32_t ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+    HITLS_X509_AttrEntry *ctAttr = NULL;
+    int32_t ret = CreateContentTypeAttr(contentType, &ctAttr);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    ret = AddRequiredAttr(signerInfo->signedAttrs, ctAttr);
+    if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
 
-    if (pad == CRYPT_EMSA_PSS) {
-        sigAlg->algId = BSL_CID_RSASSAPSS;
-        ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_MD, &sigAlg->rsaPssParam.mdId, sizeof(CRYPT_MD_AlgId));
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-        ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_MGF, &sigAlg->rsaPssParam.mgfId, sizeof(CRYPT_MD_AlgId));
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-        ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_SALTLEN, &sigAlg->rsaPssParam.saltLen, sizeof(uint32_t));
-        if (ret != CRYPT_SUCCESS) {
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-    } else if (pad == CRYPT_EMSA_PKCSV15) {
-        sigAlg->algId = BSL_CID_RSA;
-    } else {
-        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NOT_ENOUGH_INFO_KEY);
-        return HITLS_CMS_ERR_NOT_ENOUGH_INFO_KEY;
+    HITLS_X509_AttrEntry *mdAttr = NULL;
+    ret = CreateMessageDigestAttr(digest, digestLen, &mdAttr);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
     }
-    return HITLS_PKI_SUCCESS;
-}
-
-// Configure signature algorithm based on key type
-static int32_t ConfigureSignAlg(const CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, HITLS_X509_Asn1AlgId *sigAlg)
-{
-    CRYPT_PKEY_AlgId asymAlg = CRYPT_EAL_PkeyGetId(prvKey);
-    CRYPT_EAL_PkeyCtx *signKey = (CRYPT_EAL_PkeyCtx *)(uintptr_t)prvKey;
-
-    if (asymAlg == CRYPT_PKEY_RSA) {
-        return ConfigureRsaSignAlg(signKey, sigAlg);
+    ret = AddRequiredAttr(signerInfo->signedAttrs, mdAttr);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
     }
 
-    BslCid signAlgId = BSL_OBJ_GetSignIdFromHashAndAsymId((BslCid)asymAlg, (BslCid)mdId);
-    if (signAlgId == BSL_CID_UNKNOWN) {
-        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
-        return HITLS_CMS_ERR_INVALID_ALGO;
+    HITLS_X509_AttrEntry *stAttr = NULL;
+    ret = CreateSigningTimeAttr(&stAttr);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
     }
-    sigAlg->algId = signAlgId;
-    return HITLS_PKI_SUCCESS;
+    // if failed, CreateSigningTimeAttr will free the attr
+    ret = AddRequiredAttr(signerInfo->signedAttrs, stAttr);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    return EncodeSignedAttrsForSigning(signerInfo, signData, signDataLen);
 }
 
 // Generate signature
@@ -1382,27 +1432,11 @@ static int32_t GenerateSignature(const CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId,
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t EncodeSignAndFinalize(CMS_SignedData *signedData, CMS_SignerInfo *signerInfo,
-    const CRYPT_EAL_PkeyCtx *prvKey)
+static int32_t SignAndFinalize(CMS_SignedData *signedData, CMS_SignerInfo *signerInfo,
+    const CRYPT_EAL_PkeyCtx *prvKey, uint8_t *signData, uint32_t signDataLen)
 {
-    // Encode signed attributes for signing
-    uint8_t *signData = NULL;
-    uint32_t signDataLen = 0;
-    int32_t ret = EncodeSignedAttrsForSigning(signerInfo, &signData, &signDataLen);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-
-    // Configure signature algorithm
-    ret = ConfigureSignAlg(prvKey, signerInfo->digestAlg.id, &signerInfo->sigAlg);
-    if (ret != HITLS_PKI_SUCCESS) {
-        BSL_SAL_Free(signData);
-        return ret;
-    }
-
     // Generate signature
-    ret = GenerateSignature(prvKey, signerInfo->digestAlg.id, signData, signDataLen, &signerInfo->sigValue);
-    BSL_SAL_Free(signData);
+    int32_t ret = GenerateSignature(prvKey, signerInfo->digestAlg.id, signData, signDataLen, &signerInfo->sigValue);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
@@ -1425,25 +1459,8 @@ static int32_t EncodeSignAndFinalize(CMS_SignedData *signedData, CMS_SignerInfo 
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t GetDigestFromAdjustMsg(CMS_SignedData *signedData, int32_t mdId, BSL_Buffer *msg,
-    uint8_t *out, uint32_t *outLen)
-{
-    int32_t ret;
-    if (!signedData->detached) {
-        ret = HandleNonDetachedContent(signedData, msg);
-        if (ret != HITLS_PKI_SUCCESS) {
-            return ret;
-        }
-    }
-
-    ret = CRYPT_EAL_ProviderMd(signedData->libCtx, mdId, signedData->attrName, msg->data, msg->dataLen, out, outLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    return ret;
-}
-
-static int32_t ObtainSignParams(const BSL_Param *params, int32_t *version, int32_t *mdId, bool *isDetached)
+static int32_t ObtainSignParams(const BSL_Param *params, int32_t *version, int32_t *mdId, bool *isDetached,
+    bool *hasSignedAttrs)
 {
     if (params == NULL) {
         return HITLS_PKI_SUCCESS;
@@ -1473,6 +1490,14 @@ static int32_t ObtainSignParams(const BSL_Param *params, int32_t *version, int32
             return HITLS_CMS_ERR_INVALID_PARAM;
         }
         *isDetached = *(bool *)param->value;
+    }
+    param = BSL_PARAM_FindConstParam(params, HITLS_CMS_PARAM_NO_SIGNED_ATTRS);
+    if (param != NULL && hasSignedAttrs != NULL) {
+        if (param->valueType != BSL_PARAM_TYPE_BOOL || param->valueLen != sizeof(bool)) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_PARAM);
+            return HITLS_CMS_ERR_INVALID_PARAM;
+        }
+        *hasSignedAttrs = !(*(bool *)param->value);
     }
     return HITLS_PKI_SUCCESS;
 }
@@ -1519,14 +1544,25 @@ static int32_t SignedDataCore(CMS_SignedData *signedData, CMS_SignerInfo *signer
     uint8_t *digest, uint32_t digestLen, const BSL_Param *optionalParam)
 {
     SetContentType(signedData);
-    // Ensure required attributes exist (content-type, message-digest, signing-time)
-    int32_t ret = EnsureRequiredAttrsExist(signerInfo, digest, digestLen, signedData->encapCont.contentType);
-    if (ret != HITLS_PKI_SUCCESS) {
-        HITLS_CMS_SignerInfoFree(signerInfo);
-        return ret;
+    int32_t ret;
+    bool needFree = false;
+    uint8_t *signData = digest;
+    uint32_t signDataLen = digestLen;
+    if ((signerInfo->flag & HITLS_CMS_FLAG_NO_SIGNEDATTR) == 0) {
+        // Ensure required attributes exist (content-type, message-digest, signing-time)
+        ret = EnsureRequiredAttrsExist(signerInfo, digest, digestLen, signedData->encapCont.contentType,
+            &signData, &signDataLen);
+        if (ret != HITLS_PKI_SUCCESS) {
+            HITLS_CMS_SignerInfoFree(signerInfo);
+            return ret;
+        }
+        needFree = true;
     }
     // Encode signed attributes, generate signature
-    ret = EncodeSignAndFinalize(signedData, signerInfo, prvKey);
+    ret = SignAndFinalize(signedData, signerInfo, prvKey, signData, signDataLen);
+    if (needFree) {
+        BSL_SAL_Free(signData);
+    }
     if (ret != HITLS_PKI_SUCCESS) {
         HITLS_CMS_SignerInfoFree(signerInfo);
         return ret;
@@ -1539,18 +1575,81 @@ static int32_t SignedDataCore(CMS_SignedData *signedData, CMS_SignerInfo *signer
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t CheckOrGetMdForPqc(CRYPT_PKEY_ParaId algId, bool hasSignedAttr, int32_t *mdId, bool isStream)
+{
+    if (!hasSignedAttr) {
+        if (isStream) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC);
+            return HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC;
+        } else {
+            int32_t md = HITLS_CMS_GetDefaultMlDsaDigestAlg((BslCid)algId, false);
+            if (md != BSL_CID_UNKNOWN) {
+                *mdId = md;
+            }
+            // RFC 9882: Validate digest algorithm for ML-DSA
+            return HITLS_PKI_SUCCESS;
+        }
+    } else {
+        return HITLS_CMS_ValidatePqcSignDigest((BslCid)algId, *(BslCid *)mdId);
+    }
+}
+
+static int32_t CMS_CheckKeyAndGetMd(HITLS_X509_Cert *cert, CRYPT_EAL_PkeyCtx *prvKey, int32_t *mdId, bool isStream,
+    bool hasSignedAttr)
+{
+    // Check if the private key matches the certificate's public key
+    int32_t ret = HITLS_X509_CheckKey(cert, prvKey);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    CRYPT_PKEY_AlgId signAlgId = CRYPT_EAL_PkeyGetId(prvKey);
+    // Check if the digest algorithm is supported
+    if (HITLS_CMS_IsPqcSignAlg((BslCid)signAlgId)) {
+        CRYPT_PKEY_ParaId algId = CRYPT_EAL_PkeyGetParaId(prvKey);
+        if (algId == CRYPT_PKEY_PARAID_MAX) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+            return HITLS_CMS_ERR_INVALID_ALGO;
+        }
+        ret = CheckOrGetMdForPqc(algId, hasSignedAttr, mdId, isStream);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+    }
+
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t CMS_GetOriginSignedData(CMS_SignedData *signedData, CMS_SignerInfo *signerInfo, BSL_Buffer *msg,
+    BSL_Buffer *out)
+{
+    int32_t ret;
+    if (!signedData->detached) {
+        ret = HandleNonDetachedContent(signedData, msg);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+    }
+    if ((signerInfo->flag & HITLS_CMS_FLAG_NO_SIGNEDATTR) != 0) {
+        out->data = msg->data;
+        out->dataLen = msg->dataLen;
+        return HITLS_PKI_SUCCESS;
+    } else {
+        ret = CRYPT_EAL_ProviderMd(signedData->libCtx, signerInfo->digestAlg.id, signedData->attrName, msg->data,
+            msg->dataLen, out->data, &out->dataLen);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+        }
+        return ret;
+    }
+}
+
 int32_t HITLS_CMS_DataSign(HITLS_CMS *cms, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Cert *cert, BSL_Buffer *msg,
     const BSL_Param *optionalParam)
 {
     if (cms == NULL || cms->ctx.signedData == NULL || cert == NULL || prvKey == NULL  || msg == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NULL_POINTER);
         return HITLS_CMS_ERR_NULL_POINTER;
-    }
-    // Verify that the private key matches the certificate's public key
-    int32_t ret = HITLS_X509_CheckKey(cert, prvKey);
-    if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
     }
     CMS_SignedData *signedData = cms->ctx.signedData;
     if (signedData->flag == HITLS_CMS_FLAG_PARSE) {
@@ -1559,27 +1658,39 @@ int32_t HITLS_CMS_DataSign(HITLS_CMS *cms, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509
     }
     int32_t version = HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1; // default version is 1
     int32_t mdId = BSL_CID_UNKNOWN;
+    bool hasSignedAttr = true;
+    int32_t ret;
     if (BSL_LIST_COUNT(signedData->digestAlg) > 0) {
-        ret = ObtainSignParams(optionalParam, &version, &mdId, NULL);
+        ret = ObtainSignParams(optionalParam, &version, &mdId, NULL, &hasSignedAttr);
     } else {
-        ret = ObtainSignParams(optionalParam, &version, &mdId, &signedData->detached);
+        ret = ObtainSignParams(optionalParam, &version, &mdId, &signedData->detached, &hasSignedAttr);
     }
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    // Verify that the private key matches the certificate's public key
+    ret = CMS_CheckKeyAndGetMd(cert, prvKey, &mdId, false, hasSignedAttr);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    CMS_SignerInfo *signerInfo = NULL;
+    ret = CreateAndConfigSigner(prvKey, version, cert, mdId, hasSignedAttr, &signerInfo);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
     uint8_t digest[MAX_DIGEST_SIZE];
     uint32_t digestLen = sizeof(digest);
-    ret = GetDigestFromAdjustMsg(signedData, mdId, msg, digest, &digestLen);
+    BSL_Buffer signedBuf = {
+        .data = digest,
+        .dataLen = digestLen
+    };
+    ret = CMS_GetOriginSignedData(signedData, signerInfo, msg, &signedBuf);
     if (ret != HITLS_PKI_SUCCESS) {
+        HITLS_CMS_SignerInfoFree(signerInfo);
         return ret;
     }
-    CMS_SignerInfo *signerInfo = NULL;
-    ret = CreateSignerInfoFromCert(version, cert, &signerInfo);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
-    }
-    signerInfo->digestAlg.id = mdId;
-    return SignedDataCore(signedData, signerInfo, prvKey, digest, digestLen, optionalParam);
+    return SignedDataCore(signedData, signerInfo, prvKey, signedBuf.data, signedBuf.dataLen, optionalParam);
 }
 
 // Initialize MD context for all digest algorithms
@@ -1975,7 +2086,6 @@ static int32_t VerifySignerInfo(CMS_SignedData *sigData, CMS_SignerInfo *si, BSL
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH);
         return HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH;
     }
-
     int32_t ret = CheckSignerInfoAttrs(sigData, si, msgBuff, &si->digestAlg);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
@@ -2003,7 +2113,45 @@ static int32_t GetVerifyMsgContent(CMS_SignedData *sigData, const BSL_Buffer *ms
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t VerifyParamCheck(HITLS_CMS *cms)
+static int32_t CheckPqcSignAlgAndDigest(CMS_SignerInfo *si, bool isStream)
+{
+    bool hasSignedAttr = (si->signedAttrs != NULL && BSL_LIST_COUNT(si->signedAttrs->list) > 0);
+    if (!hasSignedAttr) {
+        if (isStream) {
+            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC);
+            return HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC;
+        } else {
+            if (si->digestAlg.id != BSL_CID_SHA512) {
+                BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_MLDSA_ERROR_DIGEST);
+                return HITLS_CMS_ERR_MLDSA_ERROR_DIGEST;
+            }
+        }
+    } else {
+        int32_t ret = HITLS_CMS_ValidatePqcSignDigest((BslCid)si->sigAlg.algId, (BslCid)si->digestAlg.id);
+        if (ret != HITLS_PKI_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t VerifyParamCheckForPqc(HITLS_CMS *cms, bool isStream)
+{
+    CMS_SignedData *signedData = cms->ctx.signedData;
+    for (CMS_SignerInfo *si = (CMS_SignerInfo *)BSL_LIST_GET_FIRST(signedData->signerInfos); si != NULL;
+         si = (CMS_SignerInfo *)BSL_LIST_GET_NEXT(signedData->signerInfos)) {
+        if (HITLS_CMS_IsPqcSignAlg((BslCid)si->sigAlg.algId)) {
+            int32_t ret = CheckPqcSignAlgAndDigest(si, isStream);
+            if (ret != HITLS_PKI_SUCCESS) {
+                return ret;
+            }
+        }
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t VerifyParamCheck(HITLS_CMS *cms, bool isStream)
 {
     if (cms == NULL || cms->ctx.signedData == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NULL_POINTER);
@@ -2019,7 +2167,7 @@ static int32_t VerifyParamCheck(HITLS_CMS *cms)
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_VERSION_INVALID);
         return HITLS_CMS_ERR_VERSION_INVALID;
     }
-    return HITLS_PKI_SUCCESS;
+    return VerifyParamCheckForPqc(cms, isStream);
 }
 
 static int32_t InitVerifyParam(const BSL_Param *params, ChainVerifyParam *verifyParam)
@@ -2053,7 +2201,7 @@ static int32_t InitVerifyParam(const BSL_Param *params, ChainVerifyParam *verify
 
 int32_t HITLS_CMS_DataVerify(HITLS_CMS *cms, BSL_Buffer *msg, const BSL_Param *inputParam, BSL_Buffer *output)
 {
-    int32_t ret = VerifyParamCheck(cms);
+    int32_t ret = VerifyParamCheck(cms, false);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
@@ -2094,7 +2242,7 @@ int32_t HITLS_CMS_DataVerify(HITLS_CMS *cms, BSL_Buffer *msg, const BSL_Param *i
 
 static int32_t StreamVerifyParamCheck(HITLS_CMS *cms)
 {
-    int32_t ret = VerifyParamCheck(cms);
+    int32_t ret = VerifyParamCheck(cms, true);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
@@ -2240,16 +2388,17 @@ int32_t SignedData_SignFinal(HITLS_CMS *cms, const BSL_Param *optionalParam)
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_DATA);
         return HITLS_CMS_ERR_INVALID_DATA;
     }
-    // Verify that the private key matches the certificate's public key
-    ret = HITLS_X509_CheckKey(cert, prvKey);
-    if (ret != HITLS_PKI_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
     int32_t version = HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1; // default version is 1
     int32_t mdId = BSL_CID_UNKNOWN;
-    ret = ObtainSignParams(optionalParam, &version, &mdId, NULL);
+    bool hasSignedAttr = true;
+    ret = ObtainSignParams(optionalParam, &version, &mdId, NULL, &hasSignedAttr);
     if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    // Verify that the private key matches the certificate's public key
+    ret = CMS_CheckKeyAndGetMd(cert, prvKey, &mdId, true, hasSignedAttr);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     HITLS_X509_List *digestAlg = signedData->digestAlg;
@@ -2266,11 +2415,10 @@ int32_t SignedData_SignFinal(HITLS_CMS *cms, const BSL_Param *optionalParam)
     }
 
     CMS_SignerInfo *signerInfo = NULL;
-    ret = CreateSignerInfoFromCert(version, cert, &signerInfo);
+    ret = CreateAndConfigSigner(prvKey, version, cert, mdId, hasSignedAttr, &signerInfo);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
-    signerInfo->digestAlg.id = mdId;
     ret = SignedDataCore(signedData, signerInfo, prvKey, digest, digestLen, optionalParam);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
