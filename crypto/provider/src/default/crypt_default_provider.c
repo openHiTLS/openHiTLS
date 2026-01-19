@@ -460,6 +460,10 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
     {CRYPT_PKEY_ED25519, g_defEalP8Der2Ed25519Key,
         "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
+#ifdef HITLS_CRYPTO_X25519
+    {CRYPT_PKEY_X25519, g_defEalP8Der2X25519Key,
+        "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
 #ifdef HITLS_CRYPTO_MLDSA
     {CRYPT_PKEY_ML_DSA, g_defEalP8Der2MldsaKey,
         "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
@@ -500,6 +504,10 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
     {CRYPT_PKEY_ED25519, g_defEalSubPubKeyDer2Ed25519Key,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
+#ifdef HITLS_CRYPTO_X25519
+    {CRYPT_PKEY_X25519, g_defEalSubPubKeyDer2X25519Key,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
 #ifdef HITLS_CRYPTO_RSA
     {CRYPT_PKEY_RSA, g_defEalSubPubKeyWithoutSeqDer2RsaKey,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
@@ -514,6 +522,10 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
 #endif
 #ifdef HITLS_CRYPTO_ED25519
     {CRYPT_PKEY_ED25519, g_defEalSubPubKeyWithoutSeqDer2Ed25519Key,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
+#ifdef HITLS_CRYPTO_X25519
+    {CRYPT_PKEY_X25519, g_defEalSubPubKeyWithoutSeqDer2X25519Key,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
 #ifdef HITLS_CRYPTO_MLDSA

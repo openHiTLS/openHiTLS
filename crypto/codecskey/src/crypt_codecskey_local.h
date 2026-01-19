@@ -30,7 +30,7 @@
 #ifdef HITLS_CRYPTO_SM2
 #include "crypt_sm2.h"
 #endif
-#ifdef HITLS_CRYPTO_ED25519
+#if defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_X25519)
 #include "crypt_curve25519.h"
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
@@ -219,6 +219,12 @@ int32_t CRYPT_MLKEM_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t
 int32_t CRYPT_DECODE_MlkemPrikeyAsn1Buff(uint8_t *buffer, uint32_t bufferLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
 int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
     CRYPT_ML_KEM_Ctx **mlkemPriKey);
+#endif
+#ifdef HITLS_CRYPTO_X25519
+int32_t CRYPT_X25519_ParsePkcs8Key(void *libCtx, uint8_t *buffer, uint32_t bufferLen,
+    CRYPT_CURVE25519_Ctx **x25519PriKey);
+int32_t CRYPT_X25519_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t buffLen,
+    CRYPT_CURVE25519_Ctx **pubKey, bool isComplete);
 #endif
 #endif
 
