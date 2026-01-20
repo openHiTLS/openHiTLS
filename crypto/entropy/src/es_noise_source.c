@@ -266,7 +266,6 @@ static int32_t NsRead(ES_NoiseSource *ns, uint8_t *buf, uint32_t bufLen)
 int32_t ES_NsRead(ES_NoiseSource *ns, uint8_t *buf, uint32_t bufLen)
 {
     if (ns->isInit != true || ns->isEnable != true) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_ES_NS_NOT_AVA);
         return CRYPT_ENTROPY_ES_NS_NOT_AVA;
     }
 

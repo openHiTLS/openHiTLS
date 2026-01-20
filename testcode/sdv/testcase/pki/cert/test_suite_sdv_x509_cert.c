@@ -1347,6 +1347,7 @@ void SDV_X509_CERT_PARSE_STUB_TC001(int format, char *path)
     for (uint32_t i = 0; i < totalMallocCount; i++) {
         STUB_ResetMallocCount();
         STUB_SetMallocFailIndex(i);
+        TestErrClear();
         ret = HITLS_X509_CertParseFile(format, path, &cert);
         if (ret == HITLS_PKI_SUCCESS) {
             HITLS_X509_CertFree(cert);

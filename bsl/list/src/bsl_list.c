@@ -46,7 +46,6 @@ static int32_t BslListAddAfterCurr(BslList *pList, void *pData)
     /* allocate memory for new node */
     newNode = BSL_SAL_Calloc(1, sizeof(BslListNode));
     if (newNode == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_LIST_MALLOC_FAIL);
         return BSL_LIST_MALLOC_FAIL;
     }
 
