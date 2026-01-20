@@ -51,3 +51,27 @@ SDV_HITLS_CERT_ENHENCE_027:
  
 SDV_HITLS_CERT_ENHENCE_028
 SDV_HITLS_CERT_ENHENCE_028:
+
+SDV_BSL_ERR_OUTPUT_TC001 19
+SDV_BSL_ERR_OUTPUT_TC001:19:"errOutPut19":"../testdata/bsl/errOutPut19"
+
+SDV_BSL_ERR_OUTPUT_TC001 30
+SDV_BSL_ERR_OUTPUT_TC001:30:"errOutPut30":"../testdata/bsl/errOutPut30"
+
+SDV_BSL_ERR_OUTPUT_TC001 40
+SDV_BSL_ERR_OUTPUT_TC001:40:"errOutPut40":"../testdata/bsl/errOutPut40"
+
+SDV_BSL_ERR_OUTPUT_TC001 57
+SDV_BSL_ERR_OUTPUT_TC001:57:"errOutPut57":"../testdata/bsl/errOutPut57"
+
+SDV_BSL_ERR_OUTPUT_TC002 10+10
+SDV_BSL_ERR_OUTPUT_TC002:10:10:"errOutPut10+10":"../testdata/bsl/errOutPut10+10"
+
+SDV_BSL_ERR_OUTPUT_TC002 10+21 overwrite mark
+SDV_BSL_ERR_OUTPUT_TC002:10:21:"errOutPut10+21":"../testdata/bsl/errOutPut10+21"
+
+SDV_BSL_ERR_OUTPUT_TC003 40 then pop from firstandlast
+SDV_BSL_ERR_OUTPUT_TC003:40:"errOutPut40pop":"../testdata/bsl/errOutPut40pop"
+
+SDV_BSL_ERR_OUTPUT_TC004 errOutPut But No Err
+SDV_BSL_ERR_OUTPUT_TC004:"errOutPutButNoErr":"../testdata/bsl/errOutPutButNoErr"
