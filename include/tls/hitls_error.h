@@ -246,6 +246,7 @@ typedef enum {
     HITLS_REC_DECODE_ERROR,                        /**< Decoding failed. */
     HITLS_REC_RECORD_OVERFLOW,                     /**< Record is too long. */
     HITLS_REC_ERR_RECV_UNEXPECTED_MSG,             /**< Record: unexpected message */
+    HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY,          /**< TLS1.3: read key change not on record boundary */
     HITLS_REC_ERR_GENERATE_MAC,                    /**< Failed to generate the MAC address. */
     HITLS_REC_NORMAL_IO_EOF,                       /**< IO object has reached EOF. */
     HITLS_REC_ENCRYPTED_NUMBER_OVERFLOW,           /**< The number of AES-GCM encryption times cannot exceed 2^24.5. */
