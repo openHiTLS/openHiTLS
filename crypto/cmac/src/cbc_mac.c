@@ -141,7 +141,6 @@ int32_t CRYPT_CBC_MAC_Reinit(CRYPT_CBC_MAC_Ctx *ctx)
 int32_t CRYPT_CBC_MAC_Deinit(CRYPT_CBC_MAC_Ctx *ctx)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     return CipherMacDeinit(&ctx->common);

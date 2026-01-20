@@ -408,7 +408,12 @@ int GenFunctionWrapper(FILE *file, FunctionTable *function)
             }
         }
     }
-    ret = fprintf(file, ");\n}\n\n");
+    ret = fprintf(file,
+        ");\n"
+        "#if defined(HITLS_BSL_ERR)\n"
+        "    BSL_ERR_ClearError();\n"
+        "#endif\n"
+        "}\n\n");
     if (ret < 0) {
         return 1;
     }
@@ -946,6 +951,14 @@ int ScanFunctionFile(FILE *fpIn, FILE *fpOut, const char *dir)
     (void)signum; \n\
     fprintf(stderr, \"timeout 600\\n\");\n\
     exit(-1);\n}\n") < 0) {
+        return 1;
+    }
+
+    /* Optional: auto clear BSL error stack after each wrapper finishes. */
+    if (fprintf(fpOut,
+        "\n#if defined(HITLS_BSL_ERR)\n"
+        "#include \"bsl_err.h\"\n"
+        "#endif\n\n") < 0) {
         return 1;
     }
 

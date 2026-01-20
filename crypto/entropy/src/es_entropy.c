@@ -302,7 +302,7 @@ static uint32_t EsGetEntropy(ENTROPY_EntropySource *es, uint8_t *buf, uint32_t b
                 es->runLog(ret);
             }
             if (curEntropy >= entropy) {
-                return needLen;
+                break;
             }
         }
         if (curEntropy == tmpEntropy) {

@@ -1016,6 +1016,7 @@ void SDV_CRYPTO_PAILLIER_GET_SECURITY_BITS_FUNC_TC001(Hex *n, Hex *g, Hex *n2, i
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pubkey), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGetSecurityBits(pkey), securityBits);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -1101,6 +1102,7 @@ void SDV_CRYPTO_PAILLIER_ADD_API_TC001(Hex *Lambda, Hex *mu, Hex *n, Hex *g, Hex
 
     /* pKey is NULL */
     ASSERT_TRUE(CRYPT_EAL_PkeyHEAdd(pkey, items, addResult, &addLen) == CRYPT_PAILLIER_NO_KEY_INFO);
+    TestErrClear();
     
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pubkey), CRYPT_SUCCESS);
 
@@ -1112,6 +1114,7 @@ void SDV_CRYPTO_PAILLIER_ADD_API_TC001(Hex *Lambda, Hex *mu, Hex *n, Hex *g, Hex
         BSL_PARAM_InitValue(&items[IDX_C2], CRYPT_PARAM_PKEY_HE_CIPHERTEXT2, BSL_PARAM_TYPE_OCTETS, c2->x, c2->len),
         BSL_SUCCESS);
     (void)memset_s(&items[IDX_END], sizeof(items[IDX_END]), 0, sizeof(items[IDX_END]));
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     /* Test invalid inputs */
     ASSERT_EQ(CRYPT_EAL_PkeyHEAdd(NULL, items, addResult, &addLen), CRYPT_NULL_INPUT);
@@ -1134,6 +1137,7 @@ void SDV_CRYPTO_PAILLIER_ADD_API_TC001(Hex *Lambda, Hex *mu, Hex *n, Hex *g, Hex
     /* Test invalid outLen */
     addLen = 0;
     ASSERT_EQ(CRYPT_EAL_PkeyHEAdd(pkey, items, addResult, &addLen), CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH);
+    TestErrClear();
 
     /* Test valid homomorphic addition */
     addLen = 512;
@@ -1147,6 +1151,7 @@ void SDV_CRYPTO_PAILLIER_ADD_API_TC001(Hex *Lambda, Hex *mu, Hex *n, Hex *g, Hex
     prvkey.key.paillierPrv.n2Len = n2->len;
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prvkey), CRYPT_SUCCESS);
     ASSERT_EQ(HEAdd_Correctness_Check(pkey, c1, c2, addResult, addLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);

@@ -163,7 +163,6 @@ int32_t CRYPT_SHA3_Squeeze(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t len)
 int32_t CRYPT_SHA3_Deinit(CRYPT_SHA3_Ctx *ctx)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     BSL_SAL_CleanseData(ctx, sizeof(CRYPT_SHA3_Ctx));

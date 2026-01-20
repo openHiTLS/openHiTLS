@@ -113,7 +113,6 @@ int32_t CRYPT_SHA2_512_InitEx(CRYPT_SHA2_512_Ctx *ctx, void *param)
 int32_t CRYPT_SHA2_512_Deinit(CRYPT_SHA2_512_Ctx *ctx)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SHA2_512_Ctx));

@@ -118,6 +118,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
 
     ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, path), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test2, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     // Test loading a non-existent provider
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, "non_existent_provider", NULL, NULL), BSL_SAL_ERR_DL_NOT_FOUND);
@@ -127,6 +128,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
 
     // Test loading a provider without complete return methods
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, testNoFullfunc, NULL, NULL), CRYPT_PROVIDER_ERR_UNEXPECTED_IMPL);
+    TestErrClear();
 
     setenv("LD_LIBRARY_PATH", path, 1);
     ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, NULL), CRYPT_SUCCESS);
@@ -142,6 +144,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_TC001(char *path, char *path2, char *test1, char *
 
     // Test unloading a non-existent provider
     ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, cmd, "non_existent_provider"), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     if (libCtx != NULL) {
@@ -352,6 +355,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC002(char *path, char *test1, char *test2
     mdInitCtx = (CRYPT_EAL_ImplMdInitCtx)(funcs[1].func);
     ASSERT_EQ(mdInitCtx(provCtx, NULL), result);
     funcs = provCtx = NULL;
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     // Test 2: Test when no provider can meet the attribute requirements
     ret = CRYPT_EAL_ProviderGetFuncs(libCtx, CRYPT_EAL_OPERAID_HASH, CRYPT_MD_MD5, "n_atr=test3", &funcs, &provCtx);
@@ -521,6 +525,7 @@ void SDV_CRYPTO_PROVIDER_LOAD_DEFAULT_TC001(char *path, char *test1, int cmd, He
     ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x, msg->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_LibCtxFree(libCtx);
     CRYPT_EAL_MdFreeCtx(ctx);
@@ -761,6 +766,7 @@ void SDV_CRYPTO_PROVIDER_GET_CAPS_TC001(void)
 #else
     ASSERT_EQ(sigAlgCount, 0);
 #endif
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     // Test invalid mgrCtx
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(NULL, CRYPT_EAL_GET_GROUP_CAP, (CRYPT_EAL_ProcessFuncCb)GroupCapsCallback,
@@ -870,6 +876,7 @@ void SDV_CRYPTO_PROVIDER_PROC_ALL_TC001(char *path, char *test1, char *test2, in
     providerCount = 0;
     ASSERT_EQ(CRYPT_EAL_ProviderProcessAll(NULL, CountProvidersCallback, &providerCount), CRYPT_SUCCESS);
     ASSERT_EQ(providerCount, 1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     // Test 3: Test NULL inputs
     ASSERT_EQ(CRYPT_EAL_ProviderProcessAll(libCtx, NULL, &providerCount), CRYPT_NULL_INPUT);
@@ -978,6 +985,7 @@ void SDV_CRYPTO_PROVIDER_PROC_ALL_TC002(char *path, char *test1, char *test2, in
     ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, cmd, test1), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, cmd, test2), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_ProviderUnload(libCtx, BSL_SAL_LIB_FMT_OFF, "default"), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     
 EXIT:
     CRYPT_EAL_LibCtxFree(libCtx);
@@ -1052,6 +1060,7 @@ void SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC001(char *path, char *get_cap_test1, int
     ASSERT_TRUE(sharedKeyLen1 > 0);
     ASSERT_TRUE(sharedKeyLen2 > 0);
     ASSERT_EQ(memcmp(sharedKey1, sharedKey2, sharedKeyLen1), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(keyCtx1);
@@ -1112,6 +1121,7 @@ void SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC002(char *path, char *get_cap_test1, int
     ASSERT_TRUE(signatureLen > 0);
 
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(keyCtx, CRYPT_MD_SHA256, testData, testDataLen, signature, signatureLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     
     // Test 4: Modify signature and verify it should fail
     signature[10] ^= 0xFF; // Flip bits in the signature
@@ -1139,6 +1149,7 @@ void SDV_CRYPTO_PROVIDER_GET_CAP_TEST_TC003(void)
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, "default", NULL, NULL), CRYPT_SUCCESS);
     CRYPT_EAL_ProviderUnload(libCtx, 0, "default");
     ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, 0, "default", NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_ProviderUnload(libCtx, 0, "default");

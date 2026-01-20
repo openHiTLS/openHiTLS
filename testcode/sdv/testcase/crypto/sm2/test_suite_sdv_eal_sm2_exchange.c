@@ -656,6 +656,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC001(
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(dupCtx2, CRYPT_CTRL_SET_SM2_R, R->x, R->len) == CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(dupCtx1, dupCtx2, out, &outLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_RandRegist(NULL);
@@ -740,6 +741,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC002(Hex *prvKey1, Hex *pubKey2, Hex *prvKey2
 
     ASSERT_TRUE(outLen == shareKey->len);
     ASSERT_TRUE(memcmp(out, shareKey->x, shareKey->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_RandRegist(NULL);
@@ -841,6 +843,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC003(int pkg, int isProvider)
 
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(selfCtx2, peerCtx2, out2, &outLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(out1, out2, outLen) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_RandRegist(NULL);
@@ -939,6 +942,7 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC004(
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(cpyCtx1, cpyCtx2, out, &outLen), CRYPT_SUCCESS);
     ASSERT_TRUE(outLen == shareKey->len);
     ASSERT_TRUE(memcmp(out, shareKey->x, shareKey->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_RandRegist(NULL);

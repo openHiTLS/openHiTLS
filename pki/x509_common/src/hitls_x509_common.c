@@ -508,6 +508,7 @@ static int32_t HITLS_X509_ParsePem(CRYPT_EAL_LibCtx *libCtx, const char *attrNam
     uint32_t nextEncodeLen = encode->dataLen;
     BSL_PEM_Symbol symbol = {0};
     X509_GetPemSymbol(isCert, &symbol);
+    BSL_ERR_SET_MARK();
     while (nextEncodeLen > 0) {
         BSL_Buffer asn1Buf = {0};
         int32_t ret = BSL_PEM_DecodePemToAsn1(&nextEncode, &nextEncodeLen, &symbol, &(asn1Buf.data),
@@ -524,6 +525,7 @@ static int32_t HITLS_X509_ParsePem(CRYPT_EAL_LibCtx *libCtx, const char *attrNam
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_NO_ELEMENT);
         return HITLS_X509_ERR_PARSE_NO_ELEMENT;
     }
+    BSL_ERR_POP_TO_MARK();
     return HITLS_PKI_SUCCESS;
 }
 #endif // HITLS_BSL_PEM

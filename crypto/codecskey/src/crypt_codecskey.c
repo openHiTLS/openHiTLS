@@ -265,9 +265,11 @@ int32_t CRYPT_EAL_UnKnownKeyParseBuff(CRYPT_EAL_LibCtx *libctx, const char *attr
     const BSL_Buffer *pwd, BSL_Buffer *encode, CRYPT_EAL_PkeyCtx **ealPKey)
 {
     int32_t ret;
+    BSL_ERR_SET_MARK();
     for (int32_t type = CRYPT_PRIKEY_PKCS8_UNENCRYPT; type <= CRYPT_PRIKEY_ECC; type++) {
         ret = CRYPT_EAL_PriKeyParseBuff(libctx, attrName, format, type, encode, pwd, ealPKey);
         if (ret == CRYPT_SUCCESS) {
+            BSL_ERR_POP_TO_MARK();
             return ret;
         }
     }
@@ -275,6 +277,7 @@ int32_t CRYPT_EAL_UnKnownKeyParseBuff(CRYPT_EAL_LibCtx *libctx, const char *attr
     for (int32_t type = CRYPT_PUBKEY_SUBKEY; type <= CRYPT_PUBKEY_SUBKEY_WITHOUT_SEQ; type++) {
         ret = CRYPT_EAL_PubKeyParseBuff(libctx, attrName, format, type, encode, ealPKey);
         if (ret == CRYPT_SUCCESS) {
+            BSL_ERR_POP_TO_MARK();
             return ret;
         }
     }

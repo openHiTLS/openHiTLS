@@ -623,7 +623,9 @@ int32_t BSL_UIO_Append(BSL_UIO *uio, BSL_UIO *tail)
     }
     t->next = tail;
     tail->prev = t;
+    BSL_ERR_SET_MARK();
     (void)BSL_UIO_Ctrl(uio, BSL_UIO_APPEND, 0, tail);
+    BSL_ERR_POP_TO_MARK();
     return BSL_SUCCESS;
 }
 

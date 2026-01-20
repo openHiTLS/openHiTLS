@@ -568,6 +568,7 @@ void SDV_CRYPTO_MLKEM_KEYGEN_FUNC_TC001(int bits, Hex *z, Hex *d, Hex *testEK, H
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &dk), CRYPT_SUCCESS);
     ASSERT_COMPARE("compare ek", ek.key.kemEk.data, ek.key.kemEk.len, testEK->x, testEK->len);
     ASSERT_COMPARE("compare dk", dk.key.kemDk.data, dk.key.kemDk.len, testDK->x, testDK->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(ek.key.kemEk.data);
     BSL_SAL_Free(dk.key.kemDk.data);
@@ -651,11 +652,14 @@ void SDV_CRYPTO_MLKEM_ENCAPS_DECAPS_FUNC_TC001(int bits, Hex *m, Hex *testEK, He
     ASSERT_EQ(CRYPT_EAL_PkeyEncaps(pubKeyCtx, ciphertext, &cipherLen, sharedKey, &sharedLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("compare ct", ciphertext, cipherLen, testCT->x, testCT->len);
     ASSERT_COMPARE("compare sk", sharedKey, sharedLen, testSK->x, testSK->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pubKeyCtx, &dk), CRYPT_MLKEM_KEY_REPEATED_SET);
+    (void)TestErrClear();
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvKeyCtx, &dk), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyDecaps(prvKeyCtx, testCT->x, testCT->len, decSharedKey, &decSharedLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("compare dec sk", decSharedKey, decSharedLen, testSK->x, testSK->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(ek.key.kemEk.data);
     BSL_SAL_Free(dk.key.kemDk.data);
@@ -714,6 +718,7 @@ void SDV_CRYPTO_MLKEM_DECAPS_FUNC_TC001(int bits, Hex *testDK, Hex *testCT, Hex 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &dk), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctx, testCT->x, testCT->len, sharedKey, &sharedLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("compare sk", sharedKey, sharedLen, testSK->x, testSK->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(dk.key.kemDk.data);
     BSL_SAL_Free(sharedKey);
@@ -829,11 +834,14 @@ void SDV_CRYPTO_MLKEM_ABNORMAL_DECAPS_FUNC_TC001(int bits, Hex *m, Hex *testEK, 
     ASSERT_EQ(CRYPT_EAL_PkeyEncaps(pubKeyCtx, ciphertext, &cipherLen, sharedKey, &sharedLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("compare ct", ciphertext, cipherLen, testCT->x, testCT->len);
     ASSERT_COMPARE("compare sk", sharedKey, sharedLen, testSK->x, testSK->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pubKeyCtx, &dk), CRYPT_MLKEM_KEY_REPEATED_SET);
+    (void)TestErrClear();
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvKeyCtx, &dk), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyDecaps(prvKeyCtx, changeCT->x, changeCT->len, decSharedKey, &decSharedLen), CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(sharedKey, decSharedKey, sharedLen) != 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_SAL_Free(ek.key.kemEk.data);
@@ -920,6 +928,7 @@ void SDV_CRYPTO_MLKEM_ABNORMAL_DECAPS_FUNC_TC002(int bits, Hex *m, Hex *testEK, 
     ASSERT_EQ(CRYPT_EAL_PkeyEncaps(pubKeyCtx, ciphertext, &cipherLen, sharedKey, &sharedLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("compare ct", ciphertext, cipherLen, testCT->x, testCT->len);
     ASSERT_COMPARE("compare sk", sharedKey, sharedLen, testSK->x, testSK->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pubKeyCtx, &dk), CRYPT_MLKEM_KEY_REPEATED_SET);
     // validity check of private key is performed when setting the private key via decaps
@@ -1008,11 +1017,14 @@ void SDV_CRYPTO_MLKEM_ABNORMAL_DECAPS_FUNC_TC003(int bits, Hex *m, Hex *testDK, 
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubKeyCtx, &ek), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyEncaps(pubKeyCtx, ciphertext, &cipherLen, sharedKey, &sharedLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pubKeyCtx, &dk), CRYPT_MLKEM_KEY_REPEATED_SET);
+    (void)TestErrClear();
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvKeyCtx, &dk), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyDecaps(prvKeyCtx, ciphertext, cipherLen, decSharedKey, &decSharedLen), CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(sharedKey, decSharedKey, sharedLen) != 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_SAL_Free(ek.key.kemEk.data);
@@ -1048,6 +1060,7 @@ void SDV_CRYPTO_MLKEM_DECODE_OVERFLOW_TC001(int bits, Hex *testDk)
     prvKey.key.kemDk.len = decapsKeyLen;
     prvKey.key.kemDk.data = BSL_SAL_Malloc(decapsKeyLen);
     (void)memcpy_s(prvKey.key.kemDk.data, prvKey.key.kemDk.len, testDk->x, testDk->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &prvKey), CRYPT_MLKEM_DECODE_KEY_OVERFLOW);
 EXIT:
     BSL_SAL_Free(prvKey.key.kemDk.data);
@@ -1078,6 +1091,7 @@ void SDV_CRYPTO_MLKEM_DECODE_OVERFLOW_TC002(int bits, Hex *testEk)
     pubKey.key.kemEk.len = encapsKeyLen;
     pubKey.key.kemEk.data = BSL_SAL_Malloc(encapsKeyLen);
     (void)memcpy_s(pubKey.key.kemEk.data, pubKey.key.kemEk.len, testEk->x, testEk->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pubKey), CRYPT_MLKEM_DECODE_KEY_OVERFLOW);
 EXIT:
     BSL_SAL_Free(pubKey.key.kemEk.data);
@@ -1145,6 +1159,7 @@ void SDV_CRYPTO_MLKEM_KEY_PAIR_FUNC_TC001(int bits)
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubCtx, &ek), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(prvCtx, pubCtx), CRYPT_NULL_INPUT); // no pub
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, pubCtx), CRYPT_NULL_INPUT); // no prv
 
@@ -1436,6 +1451,7 @@ void SDV_CRYPTO_MLKEM_DECAPS_DUP_API_TC001(int bits)
 
     ret = CRYPT_EAL_PkeyDecaps(dupCtx, ciphertext, cipherLen, sharedKey, &sharedLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);

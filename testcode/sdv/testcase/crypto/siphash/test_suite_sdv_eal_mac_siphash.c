@@ -660,6 +660,7 @@ void SDV_CRYPT_EAL_SIPHASH_FUN_TC005(int algId, Hex *key, Hex *data)
     ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, NULL, 0), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, data->x, data->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac, &macLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
 }

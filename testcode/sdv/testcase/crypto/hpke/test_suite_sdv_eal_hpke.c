@@ -199,6 +199,7 @@ void SDV_CRYPT_EAL_HPKE_KEM_TC001(int mode, int kemId, int kdfId, int aeadId, He
 
     ASSERT_EQ(CRYPT_EAL_HpkeGetSharedSecret(ctxR, sharedSecretBuf, &buffLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("hpke R sharedSecret cmp", sharedSecretBuf, buffLen, sharedSecret->x, sharedSecret->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
@@ -248,6 +249,7 @@ void SDV_CRYPT_EAL_HPKE_AEAD_TC001(int mode, int kemId, int kdfId, int aeadId, H
     ASSERT_COMPARE("hpke open cmp", plain, plainLen, pt->x, pt->len);
     ASSERT_EQ(CRYPT_EAL_HpkeGetSeq(ctxR, &nextSeq), CRYPT_SUCCESS);
     ASSERT_EQ(nextSeq, seq + 1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
@@ -288,6 +290,7 @@ void SDV_CRYPT_EAL_HPKE_EXPORT_SECRET_TC001(int mode, int kemId, int kdfId, int 
     memset(exportedValueBuf, 0, HPKE_HKDF_MAX_EXTRACT_KEY_LEN);
     ASSERT_EQ(CRYPT_EAL_HpkeExportSecret(ctxR, exporterContext->x, exporterContext->len, exportedValueBuf, L), CRYPT_SUCCESS);
     ASSERT_COMPARE("hpke R exportedValue cmp", exportedValueBuf, exportedValue->len, exportedValue->x, exportedValue->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
     CRYPT_EAL_HpkeFreeCtx(ctxR);
@@ -381,6 +384,7 @@ static int32_t HpkeRandomTest(CRYPT_HPKE_Mode mode, CRYPT_HPKE_KEM_AlgId kemId, 
     uint8_t pskIdData[16] = { 0 };
     pskId.x = pskIdData;
     CRYPT_EAL_Randbytes(pskId.x, pskId.len);
+    (void)TestErrClear();
 
     // prepare Recipient key
     ASSERT_EQ(CRYPT_EAL_HpkeGenerateKeyPair(NULL, NULL, cipherSuite, NULL, 0, &pkeyE), CRYPT_SUCCESS);
@@ -407,6 +411,7 @@ static int32_t HpkeRandomTest(CRYPT_HPKE_Mode mode, CRYPT_HPKE_KEM_AlgId kemId, 
     if(mode == CRYPT_HPKE_MODE_AUTH || mode ==CRYPT_HPKE_MODE_AUTH_PSK){
         ASSERT_EQ(CRYPT_EAL_HpkeSetAuthPriKey(ctxS, pkeyS), CRYPT_SUCCESS);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     if (mode != CRYPT_HPKE_MODE_PSK && mode != CRYPT_HPKE_MODE_AUTH_PSK) {
         ASSERT_EQ(CRYPT_EAL_HpkeSetPsk(ctxS, psk.x, psk.len, pskId.x, pskId.len), CRYPT_HPKE_ERR_CALL);
@@ -415,6 +420,7 @@ static int32_t HpkeRandomTest(CRYPT_HPKE_Mode mode, CRYPT_HPKE_KEM_AlgId kemId, 
     if(mode != CRYPT_HPKE_MODE_AUTH && mode != CRYPT_HPKE_MODE_AUTH_PSK){
         ASSERT_EQ(CRYPT_EAL_HpkeSetAuthPriKey(ctxS, pkeyS), CRYPT_HPKE_ERR_CALL);
     }
+    (void)TestErrClear();
 
     if(mode == CRYPT_HPKE_MODE_PSK || mode == CRYPT_HPKE_MODE_AUTH_PSK){
         ASSERT_EQ(CRYPT_EAL_HpkeSetPsk(ctxS, psk.x, psk.len, pskId.x, pskId.len), CRYPT_SUCCESS);
@@ -499,6 +505,7 @@ void SDV_CRYPT_EAL_HPKE_TEST_RANDOMLY_TC001(void)
             }
         }
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     TestRandDeInit();
     return;
@@ -905,6 +912,7 @@ void SDV_CRYPT_EAL_HPKE_SHARED_SECRET_TC001(int mode, int kemId, int kdfId, int 
     ASSERT_COMPARE("hpke open cmp", plain, plainLen, pt->x, pt->len);
     ASSERT_EQ(CRYPT_EAL_HpkeGetSeq(ctxR, &nextSeq), CRYPT_SUCCESS);
     ASSERT_EQ(nextSeq, seq + 1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
@@ -942,6 +950,7 @@ void SDV_CRYPT_EAL_HPKE_SHARED_SECRET_TC002(int mode, int kemId, int kdfId, int 
     memset(exportedValueBuf, 0, HPKE_HKDF_MAX_EXTRACT_KEY_LEN);
     ASSERT_EQ(CRYPT_EAL_HpkeExportSecret(ctxR, exporterContext->x, exporterContext->len, exportedValueBuf, L), CRYPT_SUCCESS);
     ASSERT_COMPARE("hpke R exportedValue cmp", exportedValueBuf, exportedValue->len, exportedValue->x, exportedValue->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_HpkeFreeCtx(ctxS);
     CRYPT_EAL_HpkeFreeCtx(ctxR);
@@ -985,6 +994,7 @@ void SDV_CRYPT_EAL_HPKE_GENERATE_KEY_PAIR_TC001(void)
             }
         }
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     TestRandDeInit();
 }

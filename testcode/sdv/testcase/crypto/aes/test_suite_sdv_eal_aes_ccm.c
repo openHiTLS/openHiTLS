@@ -393,6 +393,7 @@ void SDV_CRYPTO_AES_CCM_CTRL_API_TC004(int id, int keyLen)
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_CipherReinit(ctx, iv, ivLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     tagLen = 2;
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen)) ==
@@ -464,6 +465,7 @@ void SDV_CRYPTO_AES_CCM_CTRL_API_TC005(int id, int keyLen)
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, data, 7, out, &outLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, cmpTag, tagLen), CRYPT_EAL_ERR_STATE);
 
     ASSERT_TRUE(CRYPT_EAL_CipherReinit(ctx, iv, ivLen) == CRYPT_SUCCESS);
@@ -526,6 +528,7 @@ void SDV_CRYPTO_AES_CCM_CTRL_API_TC006(int id, int keyLen)
     outLen = sizeof(out);
     dataLen = 30;
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, data, dataLen, out, &outLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     tagLen = 10;
     ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen)), CRYPT_EAL_ERR_STATE);
     tagLen = 16;
@@ -599,6 +602,7 @@ void SDV_CRYPTO_AES_CCM_UPDATE_FUNC_TC001(int isProvider, int id, Hex *key, Hex 
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(out, plaintext->x, outLen) == 0);
     ASSERT_TRUE(memcmp(tag, ciphertext->x + outLen, tagLen) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -801,6 +805,7 @@ void SDV_CRYPTO_AES_CCM_UPDATE_FUNC_TC002(int algId, Hex *key, Hex *iv, Hex *aad
 
     ASSERT_COMPARE("Compare Pt", out, pt->len, pt->x, pt->len);
     ASSERT_COMPARE("Compare Dec Tag", outTag, tagLen, tag->x, tag->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);

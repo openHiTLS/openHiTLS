@@ -244,6 +244,7 @@ void SDV_CRYPTO_PROVIDER_REG_FUNC_TC001(void)
 
     mdCtx = CRYPT_EAL_ProviderMdNewCtx(libCtx, CRYPT_MD_SHA256, "provider=default");
     ASSERT_TRUE(mdCtx != NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(CRYPT_EAL_MdInit(mdCtx), DEFAULT_SHA256_INIT_RET);
     CRYPT_EAL_MdFreeCtx(mdCtx);
 
@@ -256,6 +257,7 @@ void SDV_CRYPTO_PROVIDER_REG_FUNC_TC001(void)
     ASSERT_TRUE(mdCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_MdInit(mdCtx), PROVIDER_A_SHA256_INIT_RET);
     CRYPT_EAL_MdFreeCtx(mdCtx);
+    mdCtx = NULL;
 
     mdCtx = CRYPT_EAL_ProviderMdNewCtx(libCtx, CRYPT_MD_SHA256, "provider=b");
     ASSERT_TRUE(mdCtx == NULL);

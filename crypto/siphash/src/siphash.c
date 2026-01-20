@@ -311,7 +311,6 @@ int32_t CRYPT_SIPHASH_Reinit(CRYPT_SIPHASH_Ctx *ctx)
 int32_t CRYPT_SIPHASH_Deinit(CRYPT_SIPHASH_Ctx *ctx)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     return CRYPT_SUCCESS;

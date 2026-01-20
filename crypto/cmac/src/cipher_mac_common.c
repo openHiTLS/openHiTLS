@@ -135,7 +135,6 @@ int32_t CipherMacReinit(Cipher_MAC_Common_Ctx *ctx)
 int32_t CipherMacDeinit(Cipher_MAC_Common_Ctx *ctx)
 {
     if (ctx == NULL || ctx->method == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
 

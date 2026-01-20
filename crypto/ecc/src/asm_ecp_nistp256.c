@@ -312,17 +312,11 @@ static void CRYPT_ECP256_PointDouble5Times(P256_Point *r)
 // Ensure that m is not empty and is in the range (0, n-1)
 static void ECP256_WindowMul(P256_Point *r, const BN_BigNum *k, const ECC_Point *point)
 {
-    uint8_t kOctets[33]; // m big endian byte stream. Apply for 33 bytes and reserve one byte for the following offset.
-    uint32_t mLen = BN_Bytes(k);
-    // Offset during byte stream conversion. Ensure that the valid data of the mOctet is in the upper bits.
-    uint32_t offset = sizeof(kOctets) - mLen;
+    uint8_t kOctets[33] = {0}; // m big endian byte stream. Apply for 33 bytes and reserve one byte for the following offset.
     P256_Point table[16]; // The pre-computation window is 2 ^ (5 - 1) = 16 points
     P256_Point temp; // Apply for temporary space of two points.
     Coord tempY;
-    (void)BN_Bn2Bin(k, kOctets + offset, &mLen);
-    for (uint32_t i = 0; i < offset; i++) {
-        kOctets[i] = 0;
-    }
+    (void)BN_Bn2BinFixZero(k, kOctets, sizeof(kOctets));
 
     ECP256_EccPoint2P256Point(&temp, point);
 
@@ -381,19 +375,13 @@ static void ECP256_WindowMul(P256_Point *r, const BN_BigNum *k, const ECC_Point 
 
 static void ComputeK1G(P256_Point *k1G, const BN_BigNum *k1)
 {
-    uint8_t kOctets[33]; // applies for 33 bytes and reserves one byte for the following offset. 256 bits are 32 bytes.
+    uint8_t kOctets[33] = {0}; // applies for 33 bytes and reserves one byte for the following offset. 256 bits are 32 bytes.
     Coord tempY;
     P256_AffinePoint k1GAffine;
     const ECP256_TableRow *preCompTable = NULL; // precompute window size is 2 ^(7 - 1) = 64
     preCompTable = ECP256_GetPreCompTable();
-
-    uint32_t kLen = BN_Bytes(k1);
     // Offset during byte stream conversion. Ensure that the valid data of the mOctet is in the upper bits.
-    uint32_t offset = sizeof(kOctets) - kLen;
-    (void)BN_Bn2Bin(k1, kOctets + offset, &kLen);
-    for (uint32_t i = 0; i < offset; i++) {
-        kOctets[i] = 0;
-    }
+    (void)BN_Bn2BinFixZero(k1, kOctets, sizeof(kOctets));
 
     uint32_t w = 7; // Window size = 7
     // the recode mask, the window size is 7, thus 8 bits are used (one extra bit is the sign bit).

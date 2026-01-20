@@ -242,6 +242,7 @@ void SDV_BSL_BASE64_FUNC_TC001(void)
         ASSERT_TRUE(memcmp((const uint8_t *)decodeBuf, srcBuf, srcLen) == 0);
         ASSERT_TRUE(decodeBufLen == srcLen);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
@@ -324,6 +325,7 @@ void SDV_BSL_BASE64_FUNC_TC002(void)
         free(decodeBuf);
         BSL_BASE64_CtxFree(ctx);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
@@ -371,6 +373,7 @@ void SDV_BSL_BASE64_FUNC_TC003(void)
 
     ASSERT_TRUE(total == sizeof(encodeResult_08_withNL) - 1);
     ASSERT_TRUE(memcmp((const char *)encodeBuf, encodeResult_08_withNL, total) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     free(encodeBuf);
     BSL_BASE64_CtxFree(ctx);
@@ -419,6 +422,7 @@ void SDV_BSL_BASE64_FUNC_TC004(void)
 
     ASSERT_TRUE(total == srcLen);
     ASSERT_TRUE(memcmp((const uint8_t *)decodeBuf, srcBuf, total) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     free(decodeBuf);
     BSL_BASE64_CtxFree(ctx);
@@ -656,6 +660,7 @@ void SDV_BSL_BASE64_FUNC_TC008(void)
     total += tmpLen;
 
     ASSERT_TRUE(srcLen == total);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     free(encodeBuf);
     free(decodeBuf);
@@ -677,6 +682,7 @@ void Base64BlockEncDec(const uint8_t *buf, const uint32_t len)
 
     TRUE_OR_EXIT(BSL_BASE64_Decode(hitlsEncResult, hitlsEncLen, hitlsDecResult, &hitlsDecLen) == BSL_SUCCESS);
     TRUE_OR_EXIT(hitlsDecLen == srcLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(hitlsEncResult);
     BSL_SAL_Free(hitlsDecResult);
@@ -748,6 +754,7 @@ void Base64Stream(const uint8_t *buf, const uint32_t len)
     tmpLen = hitlsDecLen;
     TRUE_OR_EXIT(BSL_BASE64_DecodeFinal(ctx, hitlsDecResult + total, &tmpLen) == BSL_SUCCESS);
     total += tmpLen;
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_SAL_Free(hitlsEncResult);
@@ -848,6 +855,7 @@ void Base64StreamMultiUpdate(const BASE64_TEST_DATA data[])
     tmpLen = hitlsDecLen;
     TRUE_OR_EXIT(BSL_BASE64_DecodeFinal(ctx, hitlsDecResult + total, &tmpLen) == BSL_SUCCESS);
     total += tmpLen;
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     free(hitlsEncResult);

@@ -134,6 +134,7 @@ void SDV_CRYPTO_SM9_CRYPT_API_TC001(Hex *masterKey, Hex *userId, Hex *plaintext)
 
     // Step 6: Verify decrypted matches original
     ASSERT_TRUE(memcmp(decrypted, plaintext->x, plaintext->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(encCtx);

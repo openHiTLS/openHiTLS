@@ -188,6 +188,7 @@ void SDV_CRYPTO_XMSS_GETSET_KEY_TC002(void)
     prv.key.xmssPrv.pub.len = 32;
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prv), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return;
@@ -227,6 +228,7 @@ void SDV_CRYPTO_XMSS_GENKEY_KAT_TC001(int id, Hex *key, Hex *root)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pubOut), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(pubOut.key.xmssPub.seed, root->x, hashLen), 0);
     ASSERT_EQ(memcmp(pubOut.key.xmssPub.root, root->x + hashLen, hashLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -268,6 +270,9 @@ void SDV_CRYPTO_XMSS_SIGN_KAT_TC001(int id, int index, Hex *key, Hex *msg, Hex *
         ASSERT_TRUE(sigOutLen == sig->len);
         ASSERT_TRUE(memcmp(sigOut, sig->x, sigOutLen) == 0);
     }
+    if (result == CRYPT_SUCCESS) {
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return;
@@ -295,6 +300,9 @@ void SDV_CRYPTO_XMSS_VERIFY_KAT_TC001(int id, Hex *key, Hex *msg, Hex *sig, int 
     pub.key.xmssPub.len = keyLen;
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pub), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, 0, msg->x, msg->len, sig->x, sig->len), result);
+    if (result == CRYPT_SUCCESS) {
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return;

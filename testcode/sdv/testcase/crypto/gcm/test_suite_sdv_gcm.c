@@ -269,6 +269,7 @@ void SDV_CRYPTO_GCM_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *aad, Hex *pt, 
 
     ASSERT_COMPARE("Compare Pt", out, pt->len, pt->x, pt->len);
     ASSERT_COMPARE("Compare Dec Tag", outTag, tagLen, tag->x, tag->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -319,6 +320,7 @@ void SDV_CRYPTO_GCM_FUNC_TC002(int algId, Hex *key, Hex *iv, Hex *aad, Hex *pt, 
     for (uint32_t i = 0; i < threadNum; i++) {
         pthread_join(thrd[i], NULL);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     return;

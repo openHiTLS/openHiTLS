@@ -231,7 +231,6 @@ const BSL_Param *BSL_PARAM_FindConstParam(const BSL_Param *param, int32_t key)
         return NULL;
     }
     if (param == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return NULL;
     }
     int32_t index = 0;
@@ -251,7 +250,6 @@ BSL_Param *BSL_PARAM_FindParam(BSL_Param *param, int32_t key)
         return NULL;
     }
     if (param == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return NULL;
     }
     int32_t index = 0;

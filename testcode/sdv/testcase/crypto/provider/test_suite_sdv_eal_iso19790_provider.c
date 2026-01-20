@@ -301,6 +301,7 @@ void SDV_ISO19790_PROVIDER_PKEY_SIGN_VERIFY_TEST_TC001()
     ASSERT_TRUE(signatureLen > 0);
 
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(keyCtx, CRYPT_MD_SM3, testData, testDataLen, signature, signatureLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(keyCtx);
@@ -348,6 +349,7 @@ void SDV_ISO19790_PROVIDER_PKEY_SIGN_VERIFY_TEST_TC002()
     ASSERT_TRUE(signatureLen > 0);
 
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkeyCtx, mdId, testData, testDataLen, signature, signatureLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
@@ -391,6 +393,7 @@ void SDV_ISO_PROVIDER_PKEY_ENCRYPT_DECRYPT_TEST_TC001()
     ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkeyCtx, ciphertext, ciphertextLen, plaintext, &plaintextLen), CRYPT_SUCCESS);
     ASSERT_EQ(testDataLen, plaintextLen);
     ASSERT_EQ(memcmp(testData, plaintext, plaintextLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
@@ -481,6 +484,7 @@ void SDV_ISO19790_PROVIDER_DRBG_TEST_TC001()
     ASSERT_EQ(CRYPT_EAL_DrbgSeed(randCtx2), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_Drbgbytes(randCtx1, data, dataLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_Drbgbytes(randCtx2, data, dataLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_DrbgDeinit(randCtx1);
@@ -565,6 +569,7 @@ void SDV_ISO19790_PROVIDER_MAC_TEST_TC001(int algId, int keyLen)
     }
     ret = CRYPT_EAL_MacFinal(macCtx, mac, &macLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_MacFreeCtx(macCtx);
@@ -607,6 +612,7 @@ void SDV_ISO19790_PROVIDER_KDF_TEST_TC001(int macId, int iter, int saltLen)
 
     ret = CRYPT_EAL_KdfDerive(kdfCtx, derivedKey, derivedKeyLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
@@ -653,6 +659,7 @@ void SDV_ISO19790_PROVIDER_KDF_TEST_TC002(int algId, Hex *key, Hex *salt, Hex *i
         info->x, info->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(kdfCtx, out, outLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     if (out != NULL) {
         free(out);
@@ -701,6 +708,7 @@ void SDV_ISO19790_PROVIDER_KDF_TEST_TC003(int algId, Hex *key, Hex *label, Hex *
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(kdfCtx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     if (out != NULL) {
         free(out);
@@ -763,6 +771,7 @@ void SDV_ISO19790_PROVIDER_Get_Status_Test_TC001()
     ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, HITLS_PROVIDER_LIB_NAME, &isLoaded);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(isLoaded == false);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_ProviderUnload(libCtx, 0, HITLS_PROVIDER_LIB_NAME);
@@ -800,6 +809,7 @@ void SDV_ISO19790_PROVIDER_CMVP_SELFTEST_Test_TC001()
         &type, sizeof(type)), CRYPT_SUCCESS);
     ret = CRYPT_CMVP_Selftest(selftestCtx, params);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_CMVP_SelftestFreeCtx(selftestCtx);
@@ -848,6 +858,7 @@ void SDV_ISO19790_PROVIDER_CIPHPER_TEST_TC001()
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     cipherLen += tmpLen;
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(cipherCtx);
@@ -903,6 +914,7 @@ void SDV_ISO19790_PROVIDER_PKEY_TEST_TC001(int hashId, Hex *p, Hex *q, Hex *g)
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, hashId, testData, testDataLen, signature, &signatureLen), 0);
 
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkeyCtx, hashId, testData, testDataLen, signature, signatureLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
@@ -928,6 +940,7 @@ void SDV_ISO19790_PROVIDER_MAC_PARAM_CHECK_TC001(int algId, int keyLen)
 
     macCtx = CRYPT_EAL_ProviderMacNewCtx(ctx.libCtx, algId, HITLS_ISO_PROVIDER_ATTR);
     ASSERT_TRUE(macCtx != NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     
     int32_t ret = CRYPT_EAL_MacInit(macCtx, macKey, macKeyLen);
     ASSERT_EQ(ret, CRYPT_CMVP_ERR_PARAM_CHECK);
@@ -1031,10 +1044,12 @@ void SDV_ISO19790_PROVIDER_KDF_PARAM_CHECK_TC002(Hex *key, Hex *salt, Hex *info)
     ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS,
         key->x, 13), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, params), CRYPT_CMVP_ERR_PARAM_CHECK);
+    TestErrClear();
 
     ASSERT_EQ(BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS,
         key->x, 14), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, params), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
@@ -1315,6 +1330,7 @@ void SDV_ISO19790_PROVIDER_DH_CHECK_TEST_TC001()
 
     ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkeyCtx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pkeyCtx, pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);

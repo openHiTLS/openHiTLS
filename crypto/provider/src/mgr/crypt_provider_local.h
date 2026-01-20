@@ -62,7 +62,7 @@ int32_t CRYPT_EAL_InitProviderMethod(CRYPT_EAL_ProvMgrCtx *ctx, BSL_Param *param
     CRYPT_EAL_ImplProviderInit providerInit);
 CRYPT_EAL_LibCtx *CRYPT_EAL_LibCtxNewInternal(void);
 int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
-    int32_t algId, const char *attribute, const CRYPT_EAL_Func **funcs, CRYPT_EAL_ProvMgrCtx **mgrCtx);
+    int32_t algId, const char *attribute, const CRYPT_EAL_Func **funcs, CRYPT_EAL_ProvMgrCtx **mgrCtx, bool noPushError);
 
 void CRYPT_EAL_ProviderMgrCtxFree(CRYPT_EAL_ProvMgrCtx *ctx);
 

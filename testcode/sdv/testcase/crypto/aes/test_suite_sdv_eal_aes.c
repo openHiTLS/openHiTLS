@@ -508,6 +508,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC001(int isProvider, int algId, Hex *key, Hex 
     ASSERT_EQ(totalLen, out->len);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(outTmp, out->x, out->len), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
@@ -559,6 +560,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC002(int algId, Hex *key, Hex *iv, Hex *in, He
     }
 
     ASSERT_TRUE(memcmp(mctResult[MCT_INNER_LOOP - 1], out->x, out->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
@@ -622,6 +624,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC003(int isProvider, int algId, Hex *key, Hex 
     ret = CRYPT_EAL_CipherFinal(ctx, outTmp + len, &finLen);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
@@ -806,6 +809,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC004(int algId, Hex *key, Hex *iv, Hex *in, in
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
 
     ASSERT_TRUE(memcmp(in->x, result, in->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctxEnc);
@@ -864,6 +868,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC005(int isProvider, int algId, Hex *key, Hex 
     ret = CRYPT_EAL_CipherFinal(ctx, outTmp + totalLen, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
@@ -932,6 +937,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC006(int isProvider, int algId, int feed, Hex 
     ret = CRYPT_EAL_CipherFinal(ctx, outTmp + totalLen, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
@@ -973,6 +979,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC007(int algId, Hex *key, Hex *iv, Hex *in, He
     ret = CRYPT_EAL_CipherFinal(ctx, in->x + totalLen, &len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(in->x, out->x, out->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
@@ -1136,6 +1143,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC008(int isProvider, int algId, Hex *key, Hex 
 
     ASSERT_TRUE(totalLen == out->len);
     ASSERT_TRUE(memcmp(out->x, outTmp, out->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctxEnc);
@@ -1195,6 +1203,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC009(int isProvider, int algId, Hex *key, Hex 
 
     ASSERT_TRUE(totalLen == out->len);
     ASSERT_TRUE(memcmp(out->x, result, out->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctxDec);
@@ -1279,6 +1288,7 @@ void SDV_CRYPTO_EAL_AES_FUNC_TC001(int isProvider, int algId, Hex *key, Hex *iv,
     ASSERT_TRUE(totalLen == out->len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
@@ -1326,6 +1336,7 @@ void SDV_CRYPTO_EAL_AES_FUNC_TC005(int isProvider, int algId, Hex *key, Hex *iv,
     ret = CRYPT_EAL_CipherFinal(ctx, outTmp + len, &finLen);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);
@@ -1444,6 +1455,7 @@ void SDV_CRYPTO_EAL_AES_FUNC_TC010(int algId, Hex *key, Hex *iv, Hex *pt)
     ASSERT_TRUE(x26 == value);
     ASSERT_TRUE(x27 == value);
     ASSERT_TRUE(x28 == value);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 #endif

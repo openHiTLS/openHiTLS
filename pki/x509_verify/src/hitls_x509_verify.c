@@ -878,6 +878,7 @@ static int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List
 {
     // First try to find issuer in explicitly loaded store
     HITLS_X509_List *store = storeCtx->store;
+    BSL_ERR_SET_MARK();
     int32_t ret = X509_GetIssueFromChain(storeCtx, store, cert, issue);
     if (ret == HITLS_PKI_SUCCESS) {
         *issueInTrust = true;
@@ -889,6 +890,7 @@ static int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List
     if (BSL_LIST_COUNT(storeCtx->caPaths) > 0) {
         ret = FindIssuerByDer(storeCtx, cert, issue, issueInTrust);
         if (ret == HITLS_PKI_SUCCESS) {
+            BSL_ERR_POP_TO_MARK();
             return HITLS_PKI_SUCCESS;
         }
     }
@@ -898,6 +900,7 @@ static int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List
     if (certChain != NULL) {
         ret = X509_GetIssueFromChain(storeCtx, certChain, cert, issue);
         if (ret == HITLS_PKI_SUCCESS) {
+            BSL_ERR_POP_TO_MARK();
             *issueInTrust = false;
             return ret;
         }
@@ -1027,7 +1030,9 @@ int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot
         *chain = tmpChain;
         return HITLS_PKI_SUCCESS;
     }
+    BSL_ERR_SET_MARK();
     (void)X509_BuildChain(false, storeCtx, NULL, cert, tmpChain, NULL);
+    BSL_ERR_POP_TO_MARK();
     *chain = tmpChain;
 
     return HITLS_PKI_SUCCESS;
@@ -1123,7 +1128,9 @@ static int32_t CheckMlKemKeyUsage(HITLS_X509_Cert *cert)
 {
     // Check ML-KEM keyUsage according to draft-ietf-lamps-kyber-certificates-11 Section 5
     // keyEncipherment MUST be the only key usage set for ML-KEM-512/768/1024 certificates
+    BSL_ERR_SET_MARK();
     CRYPT_PKEY_ParaId pubKeyParaId = CRYPT_EAL_PkeyGetParaId(cert->tbs.ealPubKey);
+    BSL_ERR_POP_TO_MARK();
     if (pubKeyParaId != CRYPT_KEM_TYPE_MLKEM_512 &&
         pubKeyParaId != CRYPT_KEM_TYPE_MLKEM_768 &&
         pubKeyParaId != CRYPT_KEM_TYPE_MLKEM_1024) {

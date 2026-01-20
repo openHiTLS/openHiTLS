@@ -32,6 +32,7 @@ void SDV_BSL_PEM_ISPEM_FUNC_TC001(char *data, int expflag)
     uint32_t encodeLen = strlen(data);
     bool isPem = BSL_PEM_IsPemFormat(encode, encodeLen);
     ASSERT_TRUE(isPem == (bool)expflag);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
@@ -87,6 +88,7 @@ void SDV_BSL_PEM_PARSE_FUNC_TC002(void)
     ASSERT_TRUE(BSL_PEM_DecodePemToAsn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_SUCCESS);
     BSL_SAL_Free(asn1Encode);
     ASSERT_TRUE(BSL_PEM_DecodePemToAsn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(asn1Encode);
     return;

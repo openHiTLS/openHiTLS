@@ -70,7 +70,6 @@ int32_t CRYPT_MD5_InitEx(CRYPT_MD5_Ctx *ctx, void *param)
 int32_t CRYPT_MD5_Deinit(CRYPT_MD5_Ctx *ctx)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     (void)memset_s(ctx, sizeof(CRYPT_MD5_Ctx), 0, sizeof(CRYPT_MD5_Ctx));

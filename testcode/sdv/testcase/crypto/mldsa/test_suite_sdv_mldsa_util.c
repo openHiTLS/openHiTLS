@@ -86,6 +86,7 @@ void SDV_CRYPTO_MLDSA_CHECK_KEYPAIR_TC001(int type)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pubKey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &prvKey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubCtx, &pubKey), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(prvCtx, pubCtx), CRYPT_MLDSA_INVALID_PRVKEY); // pub prv mismatch
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, pubCtx), CRYPT_MLDSA_INVALID_PRVKEY); // no prv
@@ -136,6 +137,7 @@ void SDV_CRYPTO_MLDSA_CHECK_KEYPAIR_TC002(void)
 
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(NULL, NULL), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx1, ctx2), CRYPT_MLDSA_KEYINFO_NOT_SET); // different key-info
+    TestErrClear();
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx1, bits1), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx2, bits1), CRYPT_SUCCESS);
@@ -146,6 +148,7 @@ void SDV_CRYPTO_MLDSA_CHECK_KEYPAIR_TC002(void)
 
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx1, ctx1), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx2, ctx2), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx1, ctx2), CRYPT_MLDSA_PAIRWISE_CHECK_FAIL);
 
 EXIT:

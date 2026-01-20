@@ -519,6 +519,7 @@ void SDV_X509_CERT_VERSIONCHECK_TC001(int version, int extflag, int result, char
         GetPrintBuff(&data, expectbuf);
         Hex expect = {(uint8_t *)expectbuf, 0};
         ASSERT_EQ(PrintBuffTest(HITLS_PKI_PRINT_CERT, &data, "Print cert buffer", &expect, true), 0);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
 
 EXIT:
@@ -574,6 +575,7 @@ void SDV_X509_CERT_VERSIONCHECK_TC003(char *path, int result, char *expectbuf)
         GetPrintBuff(&data, expectbuf);
         Hex expect = {(uint8_t *)expectbuf, 0};
         ASSERT_EQ(PrintBuffTest(HITLS_PKI_PRINT_CERT, &data, "Print cert buffer", &expect, true), 0);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
 
 EXIT:
@@ -641,6 +643,7 @@ void SDV_X509_CERT_SERIALNUMCHECK_TC001(int extflag, int result, Hex *serialNum,
         GetPrintBuff(&data, expectbuf);
         Hex expect = {(uint8_t *)expectbuf, 0};
         ASSERT_EQ(PrintBuffTest(HITLS_PKI_PRINT_CERT, &data, "Print cert buffer", &expect, true), 0);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
 
 EXIT:
@@ -681,6 +684,7 @@ void SDV_X509_CERT_KEYCHECK_TC001(int keyflag, int result)
     }
     
     ASSERT_EQ(SetCertExt(cert), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     
     // sign cert
     ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, pkey, &algParam, cert), result);
@@ -843,6 +847,7 @@ void SDV_X509_CERT_SUBJECTCHECK_TC001(int extflag, int emailflag)
     if (emailflag) {
         ASSERT_EQ(HITLS_X509_AddDnName(dirNames, dnName1, 1), HITLS_PKI_SUCCESS);
         ASSERT_EQ(HITLS_X509_AddDnName(dirNames, dnName2, 1), HITLS_PKI_SUCCESS);
+        ASSERT_TRUE(TestIsErrStackEmpty());
         ASSERT_EQ(HITLS_X509_AddDnName(dirNames, dnName3, 1), HITLS_X509_ERR_SET_DNNAME_UNKNOWN);
     }
     
@@ -899,6 +904,7 @@ void SDV_X509_CERT_SUBJECTCHECK_TC003(int extflag, char *expectpath, char *expec
     GetPrintBuff(&data, expectbuf);
     Hex expect = {(uint8_t *)expectbuf, 0};
     ASSERT_EQ(PrintBuffTest(HITLS_PKI_PRINT_CERT, &data, "Print cert buffer", &expect, true), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -930,6 +936,7 @@ void SDV_X509_CERT_OIDCHECK_TC001(char *path, int result, char *expectbuf)
         GetPrintBuff(&data, expectbuf);
         Hex expect = {(uint8_t *)expectbuf, 0};
         ASSERT_EQ(PrintBuffTest(HITLS_PKI_PRINT_CERT, &data, "Print cert buffer", &expect, true), 0);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
     if (strstr(path, (const char *)"oidparamdiff") != NULL) {
         ASSERT_TRUE(cert->signAlgId.rsaPssParam.mdId != cert->tbs.signAlgId.rsaPssParam.mdId);
@@ -982,6 +989,7 @@ void SDV_X509_CERT_TELETEXSTRING_PARSEGEN_TC001(char *path, char *expectbuf)
     GetPrintBuff(&data, expectbuf);
     Hex expect = {(uint8_t *)expectbuf, 0};
     ASSERT_EQ(PrintBuffTest(HITLS_PKI_PRINT_CERT, &data, "Print cert buffer", &expect, true), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -1064,6 +1072,7 @@ void SDV_X509_CERT_WITH_AKISKI_GEN_TEST_TC001(int isCritical, Hex *kid, int algI
         ASSERT_EQ(parsedSki.critical, isCritical);
         ASSERT_COMPARE("Get parsedSki", parsedSki.kid.data, parsedSki.kid.dataLen, kid->x, kid->len);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -1127,6 +1136,7 @@ void SDV_X509_CERT_WITH_EXTAKI_PARSE_TEST_TC001(char *certPath, int isCritical, 
         &parsedAki, sizeof(HITLS_X509_ExtAki)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(parsedAki.critical, isCritical);
     ASSERT_COMPARE("Get aki", parsedAki.kid.data, parsedAki.kid.dataLen, kid->x, kid->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_X509_CertFree(parsedCert);
@@ -1147,6 +1157,7 @@ void SDV_X509_CERT_WITH_EXTSKI_PARSE_TEST_TC001(char *certPath, int isCritical, 
         &parsedSki, sizeof(HITLS_X509_ExtSki)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(parsedSki.critical, isCritical);
     ASSERT_COMPARE("Get parsedSki", parsedSki.kid.data, parsedSki.kid.dataLen, kid->x, kid->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_X509_CertFree(parsedCert);
@@ -1245,6 +1256,7 @@ void SDV_X509_CERT_WITH_KUSAGE_GEN_TEST_TC001(int isCritical, int algId, int has
         ASSERT_EQ((parsedKeyUsage & HITLS_X509_EXT_KU_ENCIPHER_ONLY) != 0, expKuEncipherOnly);
         ASSERT_EQ((parsedKeyUsage & HITLS_X509_EXT_KU_DECIPHER_ONLY) != 0, expKuDecipherOnly);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -1338,6 +1350,7 @@ void SDV_X509_CERT_WITH_KUSAGE_PARSE_TEST_TC001(char *certPath, int isEdited, in
         ASSERT_EQ((parsedKeyUsage & HITLS_X509_EXT_KU_ENCIPHER_ONLY) != 0, expKuEncipherOnly);
         ASSERT_EQ((parsedKeyUsage & HITLS_X509_EXT_KU_DECIPHER_ONLY) != 0, expKuDecipherOnly);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_X509_CertFree(parsedCert);
@@ -1407,6 +1420,7 @@ void SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001(int isCritical, int algId, int hashId
     ASSERT_EQ(gn->type, nameType);
     ASSERT_EQ(gn->value.dataLen, generalName.value.dataLen);
     ASSERT_EQ(memcmp(gn->value.data, generalName.value.data, gn->value.dataLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -1492,6 +1506,7 @@ void SDV_X509_CERT_WITH_SAN_ALL_GEN_TEST_TC001(int isCritical, int algId, int ha
         ASSERT_COMPARE("generalName", gn->value.data, gn->value.dataLen, str, strlen(str));
         gn = BSL_LIST_GET_NEXT(parsedSan.names);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -1566,6 +1581,7 @@ void SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001(int isCritical, char *certPath,
     ASSERT_EQ(gn->type, nameType);
     ASSERT_EQ(gn->value.dataLen, nameValueLen);
     ASSERT_COMPARE("subject Alternative Name", gn->value.data, gn->value.dataLen, nameValue, nameValueLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -1589,6 +1605,7 @@ void SDV_X509_CERT_WITH_SAN_ALL_PARSE_TC001(int isCritical, char *certPath, int 
         &g_beforeTime, &g_afterTime, dnList, dnList, isEdited), 0);
     ASSERT_EQ(HITLS_X509_CertCtrl(parsedCert, HITLS_X509_EXT_GET_SAN,
         &parsedSan, sizeof(HITLS_X509_ExtSan)), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(parsedSan.critical, isCritical);
     ASSERT_EQ(BSL_LIST_COUNT(parsedSan.names), nameNum);
     gn = BSL_LIST_GET_FIRST(parsedSan.names);
@@ -1636,6 +1653,7 @@ void SDV_X509_CERT_WITH_ILLEGAL_SAN_PARSE_TEST_TC001(int isCritical, char *certP
     ASSERT_EQ(BSL_LIST_COUNT(parsedSan.names), 0);
     gn = BSL_LIST_GET_FIRST(parsedSan.names);
     ASSERT_EQ(gn, NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -1701,6 +1719,7 @@ void SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001(int isCritical, int isCa, int maxPat
     ASSERT_EQ(parsedBCons.critical, isCritical);
     ASSERT_EQ(parsedBCons.isCa, isCa);
     ASSERT_EQ(parsedBCons.maxPathLen, maxPathLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -1728,6 +1747,7 @@ void SDV_X509_CERT_WITH_BCON_PARSE_TEST_TC001(int isCritical, int isCa, int maxP
     ASSERT_EQ(parsedBCons.critical, isCritical);
     ASSERT_EQ(parsedBCons.isCa, isCa);
     ASSERT_EQ(parsedBCons.maxPathLen, maxPathLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -1823,6 +1843,7 @@ void SDV_X509_CERT_WITH_EXTKU_GEN_TEST_TC001(int isCritical, int oidNum, int alg
         dataOid = BSL_LIST_GET_NEXT(parsedExt->exKeyUsage.oidList), idx ++) {
         ASSERT_COMPARE("Extedned key usage", oidBuff[idx].data, oidBuff[idx].dataLen, dataOid->data, dataOid->dataLen);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -1898,6 +1919,7 @@ void SDV_X509_CERT_WITH_EXTKU_WITH_ANYKU_GEN_TEST_TC001(int isCritical, int algI
     ASSERT_EQ(BSL_LIST_COUNT(parsedExt->exKeyUsage.oidList), 1);
     BSL_Buffer *dataOid = BSL_LIST_GET_FIRST(parsedExt->exKeyUsage.oidList);
     ASSERT_COMPARE("Extedned key usage", oidBuff.data, oidBuff.dataLen, dataOid->data, dataOid->dataLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -2014,6 +2036,7 @@ void SDV_X509_CERT_WITH_EXTKU_WITH_ANYKU_PARSE_TEST_TC001(int isCritical, char *
     ASSERT_EQ(BSL_LIST_COUNT(parsedExt->exKeyUsage.oidList), 1);
     BSL_Buffer *data = BSL_LIST_GET_FIRST(parsedExt->exKeyUsage.oidList);
     ASSERT_COMPARE("Extedned key usage", oidBuff.data, oidBuff.dataLen, data->data, data->dataLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -2081,6 +2104,7 @@ void SDV_X509_CERT_WITH_DUPLICATE_EXT_GEN_TEST_TC001(int isCritical, Hex *kid, i
         &parsedAki, sizeof(HITLS_X509_ExtAki)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(parsedAki.critical, isCritical);
     ASSERT_COMPARE("Get parsedAki", parsedAki.kid.data, parsedAki.kid.dataLen, kid->x, kid->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -2236,6 +2260,7 @@ void SDV_X509_CERT_WITH_ALL_EXT_GEN_TEST_TC001(Hex *kid, int algId, int hashId, 
     ASSERT_EQ(BSL_LIST_COUNT(parsedExt->exKeyUsage.oidList), 1);
     BSL_Buffer *OidData = BSL_LIST_GET_FIRST(parsedExt->exKeyUsage.oidList);
     ASSERT_COMPARE("Extedned key usage", oidBuff.data, oidBuff.dataLen, OidData->data, OidData->dataLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -2315,6 +2340,7 @@ void SDV_X509_CERT_WITH_ALL_EXT_PARSE_TEST_TC001(Hex *kid, char *path, int isEdi
     ASSERT_EQ(BSL_LIST_COUNT(parsedExt->exKeyUsage.oidList), 1);
     BSL_Buffer *OidData = BSL_LIST_GET_FIRST(parsedExt->exKeyUsage.oidList);
     ASSERT_COMPARE("Extedned key usage", oidBuff.data, oidBuff.dataLen, OidData->data, OidData->dataLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();

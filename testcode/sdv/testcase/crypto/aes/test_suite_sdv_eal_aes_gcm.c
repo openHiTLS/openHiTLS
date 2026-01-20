@@ -86,6 +86,7 @@ void SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC001(int isProvider, int algId, Hex *key, H
     outTag = (uint8_t *)BSL_SAL_Malloc(sizeof(uint8_t) * tagLen);
     ASSERT_TRUE(outTag != NULL);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, (uint8_t *)outTag, tagLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     if (pt->x != NULL) {
         ASSERT_TRUE(memcmp(out, pt->x, pt->len) == 0);
@@ -155,7 +156,7 @@ void SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC002(int isProvider, int algId, Hex *key, H
     outTag = (uint8_t *)BSL_SAL_Malloc(sizeof(uint8_t) * tagLen);
     ASSERT_TRUE(outTag != NULL);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, (uint8_t *)outTag, tagLen) == CRYPT_SUCCESS);
-
+    ASSERT_TRUE(TestIsErrStackEmpty());
     if (ct->x != NULL) {
         ASSERT_TRUE(memcmp(out, ct->x, ct->len) == 0);
     }

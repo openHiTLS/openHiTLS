@@ -391,6 +391,7 @@ void SDV_BSL_ASN1_DECODE_TEMPLATE_LAYER_END_OPTIONAL_TC001(Hex *encode)
     ASSERT_EQ(asnArr[2].tag, BSL_ASN1_TAG_INTEGER);
     ASSERT_EQ(asnArr[2].len, 1);
     ASSERT_EQ(asnArr[2].buff[0], 0x02);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
@@ -553,6 +554,7 @@ void SDV_BSL_ASN1_PARSE_CERT_FUNC_TC001(char *path, Hex *version, Hex *serial, H
     ASSERT_EQ_LOG("sign compare tag", asnArr[BSL_ASN1_TAG_SIGN_IDX].tag, BSL_ASN1_TAG_BITSTRING);
     ASSERT_COMPARE("sign compare", sign->x, sign->len,
         asnArr[BSL_ASN1_TAG_SIGN_IDX].buff, asnArr[BSL_ASN1_TAG_SIGN_IDX].len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_FREE(rawBuff);
 }
@@ -641,6 +643,7 @@ void SDV_BSL_ASN1_PARSE_BITSTRING_PRIMITIVEITEM_FUNC(Hex *val, int result, int u
         ASSERT_EQ((uint32_t)unusedBits, res.unusedBits);
         ASSERT_EQ(val->len - 1, res.len);
         ASSERT_COMPARE("bit string", res.buff, res.len, val->x + 1, val->len - 1);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
     
 EXIT:
@@ -663,6 +666,7 @@ void SDV_BSL_ASN1_PARSE_TIME_PRIMITIVEITEM_FUNC(int tag, Hex *val, int result,
         ASSERT_EQ(res.hour, hour);
         ASSERT_EQ(res.minute, minute);
         ASSERT_EQ(res.second, second);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
 EXIT:
     return;
@@ -840,6 +844,7 @@ void SDV_BSL_ASN1_ENCODE_BOOL_FUNC(int data, Hex *expect)
     ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, &asn, 1, &encode, &encodeLen), BSL_SUCCESS);
     ASSERT_EQ(encodeLen, expect->len);
     ASSERT_COMPARE("Encode bool", expect->x, expect->len, encode, encodeLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(encode);
 }
@@ -881,6 +886,7 @@ void SDV_BSL_ASN1_ENCODE_INT_BN_FUNC(Hex *bn, Hex *expect)
     ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, &asn, 1, &encode, &encodeLen), BSL_SUCCESS);
     ASSERT_EQ(encodeLen, expect->len);
     ASSERT_COMPARE("Encode int", expect->x, expect->len, encode, encodeLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(encode);
 }
@@ -954,6 +960,7 @@ void SDV_BSL_ASN1_ENCODE_NULL_FUNC_TC001(Hex *expect)
     ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asns, sizeof(asns) / sizeof(asn), &encode, &encodeLen), BSL_SUCCESS);
     ASSERT_EQ(encodeLen, expect->len);
     ASSERT_COMPARE("Encode null", expect->x, expect->len, encode, encodeLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(encode);
 }
@@ -972,6 +979,7 @@ void SDV_BSL_ASN1_ENCODE_NULL_FUNC_TC002(Hex *expect)
     ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, &asn, 1, &encode, &encodeLen), BSL_SUCCESS);
     ASSERT_EQ(encodeLen, expect->len);
     ASSERT_COMPARE("Encode null", expect->x, expect->len, encode, encodeLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(encode);
 }
@@ -1008,6 +1016,7 @@ void SDV_BSL_ASN1_ENCODE_TEMPLATE_FUNC_TC001(Hex *expect)
     ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asns, sizeof(asns) / sizeof(asns[0]), &encode, &encodeLen), BSL_SUCCESS);
     ASSERT_EQ(encodeLen, expect->len);
     ASSERT_COMPARE("Encode headonly", expect->x, expect->len, encode, encodeLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(encode);
 }
@@ -1038,6 +1047,7 @@ void SDV_BSL_ASN1_ENCODE_TEMPLATE_FUNC_TC002(Hex *data, Hex *expect)
     ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, asns, sizeof(asns) / sizeof(asn), &encode, &encodeLen), BSL_SUCCESS);
     ASSERT_EQ(encodeLen, expect->len);
     ASSERT_COMPARE("Encode optional|default", expect->x, expect->len, encode, encodeLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(encode);
 }
@@ -1089,6 +1099,7 @@ void SDV_BSL_ASN1_ENCODE_TEMPLATE_FUNC_TC003(Hex *data, int templIdx, Hex *expec
     ASSERT_EQ(BSL_ASN1_EncodeTemplate(g_templ + templIdx, asns, MAX_INT_ASN_NUM, &encode, &encodeLen), BSL_SUCCESS);
     ASSERT_EQ(encodeLen, expect->len);
     ASSERT_COMPARE("Encode", expect->x, expect->len, encode, encodeLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(encode);
 }
@@ -1228,6 +1239,7 @@ void SDV_BSL_ASN1_ENCODE_LIST_TC001(int listSize, Hex *encode)
               BSL_SUCCESS);
     ASSERT_EQ(encode->len, out.len);
     ASSERT_COMPARE("Encode list", encode->x, encode->len, out.buff, out.len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_FREE(out.buff);
 #endif
@@ -1264,6 +1276,7 @@ void SDV_BSL_ASN1_DECODE_THEN_ENCODE_FUNC_TC001(int testIdx, char *path)
     ASSERT_EQ(BSL_ASN1_EncodeTemplate(&templ, decodeAsns, asnNum, &encode, &encodeLen), BSL_SUCCESS);
     ASSERT_EQ(encodeLen, dataLen);
     ASSERT_COMPARE("Decode then encode", rawData, dataLen, encode, encodeLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(decodeAsns);
     BSL_SAL_Free(rawData);
@@ -1338,6 +1351,7 @@ void SDV_BSL_ASN1_ENCODE_THEN_DECODE_FUNC_TC001(int boolData, int number, Hex *b
     ASSERT_EQ(time2.hour, hour);
     ASSERT_EQ(time2.minute, minute);
     ASSERT_EQ(time2.second, second);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_SAL_Free(integer.buff);
@@ -1371,6 +1385,7 @@ void SDV_BSL_ASN1_ENCODE_BMPSTRING_TC001(Hex *enc, char *dec)
     ret = BSL_ASN1_EncodeTemplate(&templ, &decode, 1, &encode.buff, &encode.len);
     ASSERT_EQ(ret, BSL_SUCCESS);
     ASSERT_COMPARE("Encode String", encode.buff + 2, encode.len - 2, enc->x, enc->len); // skip 2 bytes header
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     BSL_SAL_FREE(encode.buff);
     ret = BSL_ASN1_EncodeTemplate(&templ, &wrong, 1, &encode.buff, &encode.len);
@@ -1393,6 +1408,7 @@ void SDV_BSL_ASN1_GET_ENCODE_LEN_FUNC_TC001(int contentLen, int expectLen, int r
     ASSERT_EQ(BSL_ASN1_GetEncodeLen(contentLen, &encodeLen), ret);
     if (ret == BSL_SUCCESS) {
         ASSERT_EQ(encodeLen, expectLen);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
 EXIT:
     return;

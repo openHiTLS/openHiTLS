@@ -121,6 +121,7 @@ static void *TestFileLengthFunc(void *args)
 
     ASSERT_TRUE(len > 0); // The length of the existing file is greater than 0.
     ASSERT_EQ(ret, BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_SAL_FileClose(stream);

@@ -214,6 +214,7 @@ void SDV_CRYPTO_SLH_DSA_GETSET_KEY_TC002(void)
     prv.key.slhDsaPrv.pub.len = 16;
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prv), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     TestRandDeInit();
@@ -253,6 +254,7 @@ void SDV_CRYPTO_SLH_DSA_GENKEY_KAT_TC001(int id, Hex *key, Hex *root)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pubOut), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(pubOut.key.slhDsaPub.seed, root->x, keyLen), 0);
     ASSERT_EQ(memcmp(pubOut.key.slhDsaPub.root, root->x + keyLen, keyLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -308,6 +310,7 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC001(int isProvider, int id, Hex *key, Hex *ad
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, msg->x, msg->len, sigOut, &sigOutLen), CRYPT_SUCCESS);
     ASSERT_TRUE(sigOutLen == sig->len);
     ASSERT_TRUE(memcmp(sigOut, sig->x, sigOutLen) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_RandRegistEx(RandInjectionEx);
@@ -357,6 +360,7 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC002(int id, Hex *key, Hex *addrand, Hex *msg,
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, preHashId, msg->x, msg->len, sigOut, &sigOutLen), CRYPT_SUCCESS);
     ASSERT_TRUE(sigOutLen == sig->len);
     ASSERT_TRUE(memcmp(sigOut, sig->x, sigOutLen) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return;
@@ -423,6 +427,7 @@ void SDV_CRYPTO_SLH_DSA_CHECK_KEYPAIR_TC001(int algId)
     prv.key.slhDsaPrv.pub.len = keyLen;
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prv), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvKey, &prv), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(prvKey, prvKey), CRYPT_SLHDSA_ERR_NO_PUBKEY);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubKey, pubKey), CRYPT_SLHDSA_ERR_NO_PRVKEY);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubKey, prvKey), CRYPT_SUCCESS);
@@ -470,6 +475,7 @@ void SDV_CRYPTO_SLH_DSA_CHECK_KEYPAIR_TC002(void)
 
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(NULL, NULL), CRYPT_NULL_INPUT);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx1, ctx2), CRYPT_SLHDSA_ERR_INVALID_ALGID); // different key-info
+    TestErrClear();
 
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx1, algId1), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(ctx2, algId1), CRYPT_SUCCESS);
@@ -480,6 +486,7 @@ void SDV_CRYPTO_SLH_DSA_CHECK_KEYPAIR_TC002(void)
 
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx1, ctx1), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx2, ctx2), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(ctx1, ctx2), CRYPT_SLHDSA_PAIRWISE_CHECK_FAIL);
 
 EXIT:

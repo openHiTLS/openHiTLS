@@ -240,6 +240,7 @@ void SDV_CRYPT_EAL_SHA1_FUN_TC001(Hex *data, Hex *hash)
     ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, data->x, data->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, out, &digestLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("hash result cmp", out, digestLen, hash->x, hash->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
@@ -275,6 +276,7 @@ void SDV_CRYPT_EAL_SHA1_FUN_TC002(Hex *data, Hex *hash)
     for (uint32_t i = 0; i < threadNum; i++) {
         pthread_join(thrd[i], NULL);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     return;
@@ -315,6 +317,7 @@ void SDV_CRYPT_EAL_SHA1_FUN_TC003(Hex *plain_text1, Hex *plain_text2, Hex *plain
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
 
     ASSERT_COMPARE("sha1", output, outLen, hash->x, hash->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
@@ -360,6 +363,7 @@ void SDV_CRYPTO_SHA1_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
     ASSERT_TRUE(cpyCtx != NULL);
     ASSERT_TRUE(dupCtx == NULL);
     ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, dupCtx), CRYPT_NULL_INPUT);
+    TestErrClear();
     ASSERT_EQ(CRYPT_EAL_MdCopyCtx(cpyCtx, ctx), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_MdInit(cpyCtx), CRYPT_SUCCESS);
@@ -377,6 +381,7 @@ void SDV_CRYPTO_SHA1_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 
     ASSERT_EQ(id, CRYPT_EAL_MdGetId(dupCtx));
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
     CRYPT_EAL_MdFreeCtx(cpyCtx);
@@ -410,6 +415,7 @@ void SDV_CRYPT_EAL_SHA1_FUN_TC004(int id, Hex *msg, Hex *hash)
     ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x, msg->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);

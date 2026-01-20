@@ -370,6 +370,7 @@ void SDV_CRYPTO_MLDSA_FUNC_SIGNDATA_TC002(int type, Hex *seed, Hex *testPrvKey, 
     ret = CRYPT_EAL_PkeySign(ctx, CRYPT_MD_MAX, msg->x, msg->len, out, &outLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_COMPARE("compare sign", out, outLen, sign->x, sign->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     BSL_SAL_FREE(out);
@@ -424,6 +425,7 @@ void SDV_CRYPTO_MLDSA_FUNC_VERIFYDATA_TC002(int type, Hex *testPubKey, Hex *msg,
     ret = CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_MAX, msg->x, msg->len, sign->x, sign->len);
     if (res == 0) {
         ASSERT_EQ(ret, CRYPT_SUCCESS);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     } else {
         ASSERT_NE(ret, CRYPT_SUCCESS);
     }
@@ -497,6 +499,7 @@ void SDV_CRYPTO_MLDSA_FUNC_SIGN_TC001(int type, int hashId, Hex *seed, Hex *test
     ret = CRYPT_EAL_PkeySign(ctx, hashId, msg->x, msg->len, out, &outLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_COMPARE("compare sign", out, outLen, sign->x, sign->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     BSL_SAL_FREE(out);
@@ -554,6 +557,7 @@ void SDV_CRYPTO_MLDSA_FUNC_VERIFY_TC001(int type, int hashId, Hex *testPubKey, H
     ret = CRYPT_EAL_PkeyVerify(ctx, hashId, msg->x, msg->len, sign->x, sign->len);
     if (res == 0) {
         ASSERT_EQ(ret, CRYPT_SUCCESS);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     } else {
         ASSERT_NE(ret, CRYPT_SUCCESS);
     }
@@ -651,8 +655,10 @@ void SDV_CRYPTO_MLDSA_FUNC_PROVIDER_TC001(int type, Hex *testPubKey, Hex *testPr
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = CRYPT_EAL_PkeyVerify(ctx2, CRYPT_MD_SHA256, msg->x, msg->len, out, outLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ret = CRYPT_EAL_PkeyCmp(ctx, ctx2);
     ASSERT_NE(ret, CRYPT_SUCCESS);
+    (void)TestErrClear();
 
     CRYPT_EAL_PkeyCtx *ctx3 = CRYPT_EAL_PkeyDupCtx(ctx);
     ASSERT_TRUE(ctx3 != NULL);
@@ -663,6 +669,7 @@ void SDV_CRYPTO_MLDSA_FUNC_PROVIDER_TC001(int type, Hex *testPubKey, Hex *testPr
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = CRYPT_EAL_PkeyVerify(ctx3, CRYPT_MD_SHA256, msg->x, msg->len, out, outLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_PkeyFreeCtx(ctx2);

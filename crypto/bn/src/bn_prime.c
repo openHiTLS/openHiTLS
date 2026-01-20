@@ -365,7 +365,6 @@ static int32_t PrimeLimbCheck(const BN_BigNum *bn)
     if (BN_IsLimb(bn, 2) || BN_IsLimb(bn, 3)) { /* 2 and 3 directly determine that the number is a prime number. */
         return CRYPT_SUCCESS;
     }
-    BSL_ERR_PUSH_ERROR(CRYPT_BN_NOR_CHECK_PRIME);
     return CRYPT_BN_NOR_CHECK_PRIME;
 }
 static uint32_t GetP(const BN_BigNum *bn)

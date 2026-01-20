@@ -265,6 +265,7 @@ void SDV_BSL_LIST_MAX_ELEMENTS_FUNC_TC001(void)
     for (int i = 0; i < 65535; i++) {
         ASSERT_EQ(BSL_LIST_AddElement(list, arr, BSL_LIST_POS_AFTER), BSL_SUCCESS);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(BSL_LIST_GetMaxElements(), 65535);
     ASSERT_EQ(BSL_LIST_COUNT(list), 65535);
     ASSERT_EQ(BSL_LIST_AddElement(list, arr, BSL_LIST_POS_AFTER), BSL_LIST_FULL);
@@ -330,6 +331,7 @@ void SDV_BSL_LIST_DETACH_FUNC_TC001(void)
     ASSERT_TRUE(UserDataCompare(testList->curr->prev->data, &data[5]) == 0);
     BSL_LIST_DetachNode(testList, &testList->curr);
     ASSERT_TRUE(UserDataCompare(BSL_LIST_CURR_ELMT(testList), &data[5]) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_LIST_FREE(testList, UserDataFree);
 }
@@ -374,6 +376,7 @@ void SDV_BSL_LIST_SEARCH_FUNC_TC001(void)
 
     UserData *tmp2 = BSL_LIST_Search(testList, "Dave", UserDataCompareByName, &errNum);
     ASSERT_TRUE(UserDataCompare(tmp2, &data[3]) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_LIST_FREE(testList, UserDataFree);
 }
@@ -450,6 +453,7 @@ void SDV_BSL_LIST_GET_NODE_FUNC_TC001(void)
     // BSL_LIST_GetIndexNode changes the curr point to 3.
     curTmp = *(UserData **)BSL_LIST_Curr(testList);
     ASSERT_TRUE(UserDataCompare(curTmp, &data[3]) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_LIST_FREE(testList, UserDataFree);
 }
@@ -487,6 +491,7 @@ void SDV_BSL_LIST_COPY_FUNC_TC001(void)
     destTmp = BSL_LIST_GET_LAST(destList);
     ASSERT_TRUE(UserDataCompare((const void *)srcTmp, (const void *)destTmp) == 0);
     ASSERT_TRUE(UserDataCompare(destList->first->next->data, srcList->first->next->data) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_LIST_FREE(destList, NULL);
     BSL_LIST_FREE(srcList, UserDataFree);
@@ -519,6 +524,7 @@ void SDV_BSL_LIST_SORT_FUNC_TC001(void)
     ASSERT_TRUE(UserDataCompare(BSL_LIST_GET_FIRST(testList), &data[2]) == 0);
     ASSERT_TRUE(UserDataCompare(BSL_LIST_GET_LAST(testList), &data[3]) == 0);
     ASSERT_TRUE(UserDataCompare(testList->first->next->next->next->data, &data[4]) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_LIST_FREE(testList, UserDataFree);
 }
@@ -558,6 +564,7 @@ void SDV_BSL_LIST_SORT_FUNC_TC002(void)
     ASSERT_EQ(BSL_LIST_AddElement(list1, arr + 5, BSL_LIST_POS_AFTER), BSL_SUCCESS);
     ASSERT_EQ(BSL_LIST_AddElement(list1, arr + 8, BSL_LIST_POS_AFTER), BSL_SUCCESS);
     ASSERT_EQ(BSL_LIST_AddElement(list1, arr + 6, BSL_LIST_POS_AFTER), BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(BSL_LIST_GetMaxQsortCount(), 100000);
     ASSERT_EQ(BSL_LIST_SetMaxQsortCount(67108865), BSL_INVALID_ARG);
     ASSERT_EQ(BSL_LIST_SetMaxQsortCount(10000), BSL_SUCCESS);
@@ -657,6 +664,7 @@ void SDV_BSL_LIST_ADD_GET_FUNC_TC001(void)
     ASSERT_TRUE(UserDataCompare(curTmp, &data[0]) == 0);
 
     ASSERT_TRUE(BSL_LIST_GetElmtIndex(&data[1], testList) == 1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_LIST_FREE(testList, UserDataFree);
 }
@@ -697,6 +705,7 @@ void SDV_BSL_LIST_CONCAT_FUNC_TC001(void)
     ASSERT_TRUE(UserDataCompare(BSL_LIST_GET_FIRST(destList), &data[0]) == 0);
     ASSERT_TRUE(UserDataCompare(BSL_LIST_GET_LAST(destList), &data[5]) == 0);
     ASSERT_TRUE(UserDataCompare(destList->first->next->next->next->data, &data[3]) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_LIST_FREE(destList, UserDataFree);
     BSL_SAL_FREE(srcList1);
@@ -729,6 +738,7 @@ void SDV_BSL_LIST_REVERSE_FUNC_TC001(void)
     BSL_LIST_RevList(testList);
     ASSERT_TRUE(UserDataCompare(BSL_LIST_GET_FIRST(testList), &data[2]) == 0);
     ASSERT_TRUE(UserDataCompare(BSL_LIST_GET_LAST(testList), &data[0]) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_LIST_FREE(testList, UserDataFree);
 }
@@ -769,6 +779,7 @@ void SDV_BSL_LIST_DELETE_NODE_FUNC_TC001(void)
     ASSERT_TRUE(BSL_LIST_COUNT(testList) == 2);
     BSL_LIST_DeleteAll(testList, UserDataFree);
     ASSERT_TRUE(BSL_LIST_COUNT(testList) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     free(data1);
     BSL_LIST_FREE(testList, UserDataFree);
@@ -803,6 +814,7 @@ void SDV_BSL_LIST_DELETE_NODE_FUNC_TC002(void)
 
     BSL_LIST_DeleteAllAfterSort(testList);
     ASSERT_TRUE(BSL_LIST_COUNT(testList) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     free(data1);
     BSL_LIST_FREE(testList, UserDataFree);
@@ -851,6 +863,7 @@ void SDV_CRYPTO_LIST_Pre_API_TC001()
     ASSERT_EQ(prv, NULL);
     prv = BSL_LIST_Prev(list);
     ASSERT_TRUE(prv != NULL && **prv == 1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_LIST_FREE(list, EmptyFree);
@@ -899,6 +912,7 @@ void SDV_CRYPTO_LIST_Next_API_TC002()
     ASSERT_EQ(next, NULL);
     next = BSL_LIST_Next(list);
     ASSERT_TRUE(next != NULL && **next == 1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_LIST_FREE(list, EmptyFree);
@@ -926,6 +940,7 @@ void SDV_BSL_LIST_SET_MAX_FUNC_TC001(void)
     ASSERT_TRUE(BSL_LIST_GetMaxQsortCount() == 100001);
     ASSERT_TRUE(BSL_LIST_SetMaxElements((1 << 16)) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_LIST_GetMaxElements() == (1 << 16));
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
@@ -1028,6 +1043,7 @@ void SDV_BSL_LIST_DELETE_FUNC_TC001(void)
     ASSERT_TRUE(BSL_LIST_AddElement(testList, "cccc", BSL_LIST_POS_BEFORE) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_LIST_COUNT(testList) == 1);
     BSL_LIST_DeleteCurrent(testList, UserDataFree);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_FREE(testList);
 }

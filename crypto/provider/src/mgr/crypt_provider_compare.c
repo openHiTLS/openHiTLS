@@ -435,7 +435,7 @@ static void FindHighestScoreFunc(CRYPT_EAL_LibCtx *localCtx, int32_t operaId, in
     }
 }
 
-int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
+static int32_t CRYPT_EAL_CompareAlgAndAttrNoPushError(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
     int32_t algId, const char *attribute, const CRYPT_EAL_Func **funcs, CRYPT_EAL_ProvMgrCtx **mgrCtx)
 {
     int32_t ret;
@@ -463,7 +463,6 @@ int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
     BSL_SAL_ThreadUnlock(localCtx->lock);
     BSL_HASH_Destroy(attrInfo.hash);
     if (implFunc == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
         return CRYPT_NOT_SUPPORT;
     }
     *funcs = implFunc;
@@ -471,6 +470,16 @@ int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
         *mgrCtx = ctx;
     }
     return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_EAL_CompareAlgAndAttr(CRYPT_EAL_LibCtx *localCtx, int32_t operaId,
+    int32_t algId, const char *attribute, const CRYPT_EAL_Func **funcs, CRYPT_EAL_ProvMgrCtx **mgrCtx, bool noPushError)
+{
+    int32_t ret = CRYPT_EAL_CompareAlgAndAttrNoPushError(localCtx, operaId, algId, attribute, funcs, mgrCtx);
+    if (ret != CRYPT_SUCCESS && !noPushError) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
 }
 
 #endif // HITLS_CRYPTO_PROVIDER

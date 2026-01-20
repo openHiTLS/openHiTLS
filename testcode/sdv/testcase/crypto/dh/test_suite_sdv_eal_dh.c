@@ -147,6 +147,7 @@ void SDV_CRYPTO_DH_FUNC_TC001(
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareLocal, &shareLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(shareLen == share->len);
     ASSERT_TRUE(memcmp(shareLocal, share->x, shareLen) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
@@ -204,6 +205,7 @@ void SDV_CRYPTO_DH_FUNC_TC002(Hex *p, Hex *g, Hex *q, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey2, pkey1, share2, &share2Len) == CRYPT_SUCCESS);
     ASSERT_TRUE(share1Len == share2Len);
     ASSERT_TRUE(memcmp(share1, share2, share1Len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_RandRegist(NULL);
     CRYPT_RandRegistEx(NULL);
@@ -255,6 +257,7 @@ void SDV_CRYPTO_DH_FUNC_TC003(int id, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey2, pkey1, share2, &share2Len) == CRYPT_SUCCESS);
     ASSERT_TRUE(share1Len == share2Len);
     ASSERT_TRUE(memcmp(share1, share2, share1Len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_RandRegist(NULL);
     CRYPT_RandRegistEx(NULL);
@@ -311,6 +314,7 @@ void SDV_CRYPTO_DH_FUNC_TC004(Hex *p, Hex *g, Hex *q, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey2, pkey1, share2, &share2Len) == CRYPT_SUCCESS);
     ASSERT_TRUE(share1Len == share2Len);
     ASSERT_TRUE(memcmp(share1, share2, share1Len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_RandRegist(NULL);
     CRYPT_RandRegistEx(NULL);
@@ -446,6 +450,7 @@ void SDV_CRYPTO_DH_FUNC_TC006(
     cmpRet2 = memcmp(shareLocal, share->x, share->len);
 
     ASSERT_TRUE(ret1 != CRYPT_SUCCESS || cmpRet1 != 0 || ret2 != CRYPT_SUCCESS || cmpRet2 != 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);
@@ -1546,6 +1551,7 @@ void SDV_CRYPTO_DH_DUP_CTX_FUNC_TC001(int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(dupCtx, ctx, share2, &share2Len) == CRYPT_SUCCESS);
     ASSERT_TRUE(share1Len == share2Len);
     ASSERT_TRUE(memcmp(share1, share2, share1Len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     TestRandDeInit();
@@ -1584,6 +1590,7 @@ void SDV_CRYPTO_DH_GET_KEY_BITS_FUNC_TC001(int id, int keyBits, Hex *p, Hex *g, 
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetKeyBits(pkey) == (uint32_t)keyBits);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
@@ -1658,6 +1665,7 @@ void SDV_CRYPTO_DH_CHECK_KEYPAIR_TC001(Hex *p, Hex *g, Hex *q, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyPairCheck(pkey, pkey) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -1689,6 +1697,7 @@ void SDV_CRYPTO_DH_CHECK_KEYPAIR_TC002(int id, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyPairCheck(pkey, pkey) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -1745,11 +1754,13 @@ void SDV_CRYPTO_DH_CHECK_KEYPAIR_INVALIED_TC001(Hex *p, Hex *g, Hex *q, int isPr
     ASSERT_TRUE(CRYPT_EAL_PkeyPairCheck(NULL, NULL) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pubCtx, &pub) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx) == CRYPT_NULL_INPUT); // no prv key
+    TestErrClear();
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(prvCtx, &prv) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pubCtx) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_TRUE(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx) == CRYPT_DH_PAIRWISE_CHECK_FAIL);
 
 EXIT:
@@ -1876,6 +1887,7 @@ void SDV_CRYPTO_DH_FUNC_SET_PARAM_EX_TC001(Hex *p, Hex *g, Hex *q, Hex *prvBuf, 
     ASSERT_TRUE(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareLocal, &shareLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(shareLen == share->len);
     ASSERT_TRUE(memcmp(shareLocal, share->x, shareLen) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
     CRYPT_EAL_PkeyFreeCtx(pkey2);

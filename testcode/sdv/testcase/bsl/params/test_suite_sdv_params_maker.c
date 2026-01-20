@@ -49,12 +49,14 @@ void SDV_BSL_BSL_PARAM_MAKER_Push_Value_API_TC001()
 
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(NULL, key, BSL_PARAM_TYPE_UINT32, &val, sizeof(val)), BSL_NULL_INPUT);
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key, BSL_PARAM_TYPE_UINT32, NULL, sizeof(val)), BSL_NULL_INPUT);
+    TestErrClear();
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key, BSL_PARAM_TYPE_UINT32, &val, sizeof(val)), BSL_SUCCESS);
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key, BSL_PARAM_TYPE_BOOL, &valBool, sizeof(valBool)), BSL_SUCCESS);
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key, BSL_PARAM_TYPE_FUNC_PTR, valPtr, sizeof(valPtr)), BSL_SUCCESS);
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key, BSL_PARAM_TYPE_CTX_PTR, valPtr, sizeof(valPtr)), BSL_SUCCESS);
     valPtr = NULL;
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key, BSL_PARAM_TYPE_FUNC_PTR, valPtr, 0), BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     if (maker) {
         BSL_PARAM_MAKER_Free(maker);
@@ -101,6 +103,7 @@ void SDV_BSL_BSL_PARAM_MAKER_ToParam_API_TC001()
     temp = BSL_PARAM_FindParam(params, key++);
     ASSERT_EQ(temp->value, (&params[index++])->value);
     ASSERT_EQ(*((uint16_t *)temp->value), u16);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     if (maker) {
         BSL_PARAM_MAKER_Free(maker);
@@ -160,6 +163,7 @@ void SDV_BSL_BSL_PARAM_MAKER_ToParam_API_TC002()
     ASSERT_EQ(temp->value, params->value);
     ASSERT_TRUE(memcmp((char *)temp->value, str, sizeof(str) - 2) == 0);
     ASSERT_TRUE(memcmp((char *)temp->value, str, sizeof(str)) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     if (maker) {
@@ -255,6 +259,7 @@ void SDV_HITLS_PARAM_001()
     temp = BSL_PARAM_FindParam(params, key++);
     ASSERT_EQ(temp->value, (&params[index++])->value);
     ASSERT_EQ(*((uint32_t *)temp->value), u32);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     if (maker) {
         BSL_PARAM_MAKER_Free(maker);
@@ -300,6 +305,7 @@ void SDV_HITLS_PARAM_002()
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key++, BSL_PARAM_TYPE_UINT8, &val_8, sizeof(val_8)), BSL_SUCCESS);
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key++, BSL_PARAM_TYPE_BOOL, &valBool, sizeof(valBool)), BSL_SUCCESS);
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key++, BSL_PARAM_TYPE_UINT32, &val_32, sizeof(val_32)), BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key++, BSL_PARAM_TYPE_UINT32, &val_8, sizeof(val_8)), BSL_INVALID_ARG);
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key++, BSL_PARAM_TYPE_UINT32, &val_8, sizeof(uint16_t)), BSL_INVALID_ARG);
 
@@ -368,6 +374,7 @@ void SDV_HITLS_PARAM_003()
     temp = BSL_PARAM_FindParam(params, key);
     ASSERT_EQ(temp->value, params->value);
     ASSERT_TRUE(memcmp((char *)temp->value, str, sizeof("hello")) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     if (maker) {
@@ -404,6 +411,7 @@ void SDV_HITLS_PARAM_004()
     BSL_ParamMaker *maker = BSL_PARAM_MAKER_New();
  
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key, BSL_PARAM_TYPE_UTF8_STR, &str, sizeof("hello world!!!")), BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     if (maker) {
         BSL_PARAM_MAKER_Free(maker);
@@ -457,6 +465,7 @@ void SDV_HITLS_PARAM_005()
 
     ASSERT_EQ(*((int32_t *)(&params[0])->value), int32_0);
     ASSERT_EQ(*((int32_t *)(&params[1])->value), int32_1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     if (maker) {

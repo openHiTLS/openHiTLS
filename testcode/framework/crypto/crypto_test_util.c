@@ -36,6 +36,7 @@
 
 #include "securec.h"
 #include "crypt_util_rand.h"
+#include "bsl_err_internal.h"
 
 #ifndef HITLS_BSL_SAL_MEM
 void *TestMalloc(uint32_t len)
@@ -52,6 +53,47 @@ void TestMemInit(void)
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, TestMalloc);
     BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, free);
 #endif
+}
+
+void TestErrClear(void)
+{
+#ifdef HITLS_BSL_ERR
+    BSL_ERR_ClearError();
+#endif
+}
+
+bool TestIsErrStackEmpty(void)
+{
+#ifdef HITLS_BSL_ERR
+    if (BSL_ERR_Init() != BSL_SUCCESS) {
+        return false;
+    }
+    const char *file = NULL;
+    uint32_t line = 0;
+    int32_t err = BSL_ERR_GetErrorFileLine(&file, &line); /* get the earliest error and pop it */
+    if (err == BSL_SUCCESS) {
+        return true;
+    }
+    Print("[BSL_ERR] unexpected error in stack: file=%s, line=%u\n", (file == NULL ? "NA" : file), line);
+    return false;
+#else
+    return true;
+#endif
+}
+
+bool TestIsErrStackNotEmpty(void)
+{
+#ifdef HITLS_BSL_ERR
+    if (BSL_ERR_Init() != BSL_SUCCESS) {
+        return true;
+    }
+    const char *file = NULL;
+    uint32_t line = 0;
+    int32_t err = BSL_ERR_GetErrorFileLine(&file, &line); /* get the earliest error and pop it */
+    return err != BSL_SUCCESS;
+#else
+    return true;
+#endif 
 }
 
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_DRBG)
@@ -147,6 +189,8 @@ int TestRandInitEx(void *libCtx)
     seedCtx.entropy = &tempEntropy;
 #endif
 
+    BSL_ERR_SET_MARK();
+
 #ifdef HITLS_CRYPTO_PROVIDER
 #ifndef HITLS_CRYPTO_ENTROPY
     BSL_Param param[4] = {0};
@@ -167,6 +211,7 @@ int TestRandInitEx(void *libCtx)
 #endif
 #endif
     if (ret == CRYPT_EAL_ERR_DRBG_REPEAT_INIT) {
+        BSL_ERR_POP_TO_MARK();
         ret = CRYPT_SUCCESS;
     }
     return ret;
@@ -303,6 +348,7 @@ void TestMacAddrNotAlign(int algId, Hex *key, Hex *data, Hex *mac)
     ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, pData, data->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, out, &outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("mac result cmp", out, outLen, mac->x, mac->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);

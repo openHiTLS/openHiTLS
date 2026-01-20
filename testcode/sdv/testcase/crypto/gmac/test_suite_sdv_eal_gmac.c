@@ -46,6 +46,7 @@ void SDV_CRYPTO_EAL_GMAC_FUNC_TC001(int id, Hex *key, Hex *iv, Hex *msg, Hex *ma
     ASSERT_TRUE(CRYPT_EAL_MacUpdate(gmacCtx, msg->x, msg->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacFinal(gmacCtx, output, &outLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(output, mac->x, outLen) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     free(output);
@@ -210,6 +211,7 @@ void SDV_CRYPT_EAL_GMAC_SAMEADDR_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *d
     ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, out, data->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, out, &tagLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("gmac result cmp", out, tagLen, mac->x, mac->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     free(out);
@@ -258,6 +260,7 @@ void SDV_CRYPT_EAL_GMAC_ADDR_NOT_ALIGN_FUNC_TC001(int algId, Hex *key, Hex *iv, 
     ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, pData, data->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, out, &tagLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("mac result cmp", out, tagLen, mac->x, mac->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     free(out);

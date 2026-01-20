@@ -486,6 +486,7 @@ void SDV_CRYPT_EAL_CBC_MAC_FUN_TC004(int algId, int padType, Hex *key, Hex *data
     ASSERT_TRUE(CRYPT_EAL_MacUpdate(ctx, data->x, data->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacFinal(ctx, mac, &macLen) == CRYPT_SUCCESS);
     ASSERT_COMPARE("mac1 result cmp", mac, macLen, vecMac->x, vecMac->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
 }
@@ -547,6 +548,7 @@ void SDV_CRYPT_EAL_CBC_MAC_FUN_TC006(int algId, int padType, Hex *key, Hex *data
     ASSERT_TRUE(CRYPT_EAL_MacFinal(ctx, mac2, &macLen2) == CRYPT_SUCCESS);
     ASSERT_TRUE(macLen1 == macLen2);
     ASSERT_COMPARE("mac1 vs mac2 result cmp", mac2, macLen2, mac1, macLen1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_SAL_FREE(totalInData);

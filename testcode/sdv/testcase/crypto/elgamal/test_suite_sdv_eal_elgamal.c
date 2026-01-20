@@ -818,6 +818,7 @@ void SDV_CRYPTO_ELGAMAL_SET_KEY_API_TC001( Hex *q, int k_bits, int bits, int isP
     SetElGamalPubKey(&pubKey, pubG, 600, pubP, 600, pubY, 600, pubQ, 600);
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey2, &pubKey), CRYPT_SUCCESS);
     ASSERT_EQ(Compare_PubKey(&pubKey, &pubKey), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
@@ -869,6 +870,7 @@ void SDV_CRYPTO_ELGAMAL_DUP_CTX_API_TC001( Hex *q,int k_bits, int bits, int isPr
         elgamalCtx->prvKey->x->size * sizeof(BN_UINT),
         elgamalCtx2->prvKey->x->data,
         elgamalCtx2->prvKey->x->size * sizeof(BN_UINT));
+        ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -905,6 +907,7 @@ void SDV_CRYPTO_ELGAMAL_GET_SECURITY_BITS_FUNC_TC001(Hex *q,Hex *p, Hex *g, Hex 
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pubkey), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGetSecurityBits(pkey), securityBits);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
