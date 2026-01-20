@@ -474,6 +474,7 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_FUNC_TC001(
     hitlsSignOutLen = signLen;
     ASSERT_EQ(CRYPT_EAL_PkeySign(cpyCtx, hashId, Msg->x, Msg->len, hitlsSign, &hitlsSignOutLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(cpyCtx, hashId, Msg->x, Msg->len, hitlsSign, hitlsSignOutLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_RandRegist(NULL);
     CRYPT_RandRegistEx(NULL);
@@ -569,6 +570,7 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_DATA_FUNC_TC001(
 
     /* Verify the signature of the hash data. */
     ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, mdOut.x, mdOut.len, hitlsSign, hitlsSignOutLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_RandRegist(NULL);
     CRYPT_RandRegistEx(NULL);
@@ -639,6 +641,7 @@ void SDV_CRYPTO_DSA_GEN_FUNC_TC001(Hex *p, Hex *q, Hex *g, Hex *data, int isProv
 
     ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, CRYPT_MD_SHA256, data->x, data->len, sign, &signLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SHA256, data->x, data->len, sign, signLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     free(sign);
@@ -731,6 +734,7 @@ void SDV_CRYPTO_DSA_DUP_CTX_FUNC_TC001(Hex *p, Hex *q, Hex *g, int isProvider)
         CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(dupCtx, CRYPT_MD_SHA256, (uint8_t *)msg, msgLen, sign, signLen),
         CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(ctx);
@@ -825,6 +829,7 @@ void SDV_CRYPTO_DSA_GET_KEY_BITS_FUNC_TC001(int id, int keyBits, Hex *P, Hex *Q,
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetKeyBits(pkey) == (uint32_t)keyBits);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
@@ -908,6 +913,7 @@ void SDV_CRYPTO_DSA_VERIFY_PQ_FUNC_TC001(int algId, Hex *seed, char *pHex, char 
     uint32_t counter = 5;
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     ASSERT_EQ(CryptDsaFips1864ValidatePq(algId, NULL, NULL, CRYPT_DSA_FFC_PARAM, &seedTmp, &dsaPara, counter), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     TestRandDeInit();
     BN_Destroy(p);
@@ -952,6 +958,7 @@ void SDV_CRYPTO_DSA_GEN_PQ_FUNC_TC001(int algId, int L, int N, Hex *seed, char *
     ASSERT_EQ(BN_Hex2Bn(&qReq, qHex), CRYPT_SUCCESS);
     ASSERT_EQ(BN_Cmp(ctx->para->p, pReq), 0);
     ASSERT_EQ(BN_Cmp(ctx->para->q, qReq), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_RandDeinit();
     STUB_RESTORE(CRYPT_EAL_RandbytesEx);
@@ -984,6 +991,7 @@ void SDV_CRYPTO_DSA_GEN_G_FUNC_TC001(char *pHex, char *qHex, char *gHex)
     ASSERT_EQ(CryptDsaFips1864GenUnverifiableG(&dsaPara, &h), CRYPT_SUCCESS);
     ASSERT_EQ(CryptDsaFips1864PartialValidateG(&dsaPara), CRYPT_SUCCESS);
     ASSERT_EQ(BN_Cmp(dsaPara.g, gReq), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BN_Destroy(p);
     BN_Destroy(q);
@@ -1013,6 +1021,7 @@ void SDV_CRYPTO_DSA_GEN_G_FUNC_TC002(int algId, int index, Hex *seed, char *pHex
     CRYPT_DSA_Para dsaPara = {p, q, NULL};
     ASSERT_EQ(CryptDsaFips1864GenVerifiableG(NULL, NULL, &fipsPara, &seedTmp, &dsaPara), CRYPT_SUCCESS);
     ASSERT_EQ(CryptDsaFips1864ValidateG(NULL, NULL, &fipsPara, &seedTmp, &dsaPara), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BN_Destroy(p);
     BN_Destroy(q);
@@ -1072,6 +1081,7 @@ void SDV_CRYPTO_DSA_GEN_G_FUNC_TC004(int algId, int index, Hex *seed, char *pHex
     ASSERT_EQ(CryptDsaFips1864GenVerifiableG(NULL, NULL, &fipsPara, &seedTmp, &dsaPara), CRYPT_SUCCESS);
     ASSERT_EQ(CryptDsaFips1864ValidateG(NULL, NULL, &fipsPara, &seedTmp, &dsaPara), CRYPT_SUCCESS);
     ASSERT_EQ(BN_Cmp(dsaPara.g, gReq), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BN_Destroy(p);
     BN_Destroy(q);
@@ -1117,6 +1127,7 @@ void SDV_CRYPTO_DSA_KEY_PAIR_GEN_BY_PARAM_FUNC_TC001(int flag, int gIndex, int i
     ASSERT_TRUE(pkey != NULL);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_DSA_ERR_KEY_PARA);
+    TestErrClear();
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GEN_PARA, params, 0), CRYPT_SUCCESS);
     uint32_t genFlag = (uint8_t)flag;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_GEN_FLAG, &genFlag, sizeof(genFlag)), CRYPT_SUCCESS);
@@ -1131,6 +1142,7 @@ void SDV_CRYPTO_DSA_KEY_PAIR_GEN_BY_PARAM_FUNC_TC001(int flag, int gIndex, int i
     uint32_t dataLen = 8;
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, data, dataLen, sign, &signLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA256, data, dataLen, sign, signLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
 #ifdef HITLS_CRYPTO_DRBG
     TestRandDeInit();

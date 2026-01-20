@@ -690,6 +690,7 @@ void SDV_CRYPTO_SM2_SIGN_FUNC_TC001(Hex *prvKey, Hex *userId, Hex *k, Hex *msg, 
     ASSERT_EQ(CRYPT_EAL_PkeySign(dupCtx, CRYPT_MD_SM3, msg->x, msg->len, signBuf, &signLen), CRYPT_SUCCESS);
     ASSERT_EQ(signLen, sign->len);
     ASSERT_TRUE(memcmp(signBuf, sign->x, sign->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_RandRegist(NULL);
@@ -746,6 +747,7 @@ void SDV_CRYPTO_SM2_SIGN_FUNC_TC002(
 
     ASSERT_TRUE(signLen == sign->len);
     ASSERT_TRUE(memcmp(signBuf, sign->x, sign->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_RandRegist(NULL);
@@ -790,6 +792,7 @@ void SDV_CRYPTO_SM2_VERIFY_FUNC_TC001(Hex *pubKey, Hex *userId, Hex *msg, Hex *s
     CRYPT_EAL_PkeyCtx *dupCtx = CRYPT_EAL_PkeyDupCtx(ctx);
     ASSERT_TRUE(dupCtx != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(dupCtx, CRYPT_MD_SM3, msg->x, msg->len, sign->x, sign->len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
@@ -828,6 +831,7 @@ void SDV_CRYPTO_SM2_VERIFY_FUNC_TC002(
     pub.key.eccPub.len = pubKey->len;
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx, &pub) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg->x, msg->len, sign->x, sign->len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
@@ -894,6 +898,7 @@ void SDV_CRYPTO_SM2_SIGN_VERIFY_FUNC_TC001(int isProvider)
     signLen = sizeof(signBuf);
     ASSERT_EQ(CRYPT_EAL_PkeySign(cpyCtx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, &signLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(cpyCtx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, signLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
@@ -929,6 +934,7 @@ void SDV_CRYPTO_SM2_VERIFY_FUNC_TC003(Hex *pubKey, Hex *userId, Hex *msg, Hex *s
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, userId->x, userId->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx, &pub) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     // Different errors will return different error codes.
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg->x, msg->len, sign->x, sign->len) != CRYPT_SUCCESS);
 
@@ -977,6 +983,7 @@ void SDV_CRYPTO_SM2_SIGN_VERIFY_FUNC_TC002(Hex *pubKey, Hex *prvKey, int isProvi
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySign(ctx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, &signLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, signLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
@@ -1037,6 +1044,9 @@ void SDV_CRYPTO_SM2_KEY_PAIR_CHECK_FUNC_TC001(Hex *pubKey, Hex *prvKey, Hex *use
 
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), expectRet);
+    if (expectRet == CRYPT_SUCCESS) {
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
 
 EXIT:
     TestRandDeInit();
@@ -1115,6 +1125,7 @@ void SDV_CRYPTO_SM2_CHECK_KEYPAIR_FUNC_TC001(int isProvider)
 
     sm2PrvKey.key.eccPrv.data = wrong;
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &sm2PrvKey), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_SM2_PAIRWISE_CHECK_FAIL);
 
 EXIT:
@@ -1232,6 +1243,7 @@ void SDV_CRYPTO_SM2_Import_Export_FUNC_TC001(void)
 
     ASSERT_EQ(CRYPT_SM2_Sign(srcSm2Ctx, CRYPT_MD_SM3, msg, sizeof(msg), sign, &signLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_SM2_Verify(dstSm2Ctx, CRYPT_MD_SM3, msg, sizeof(msg), sign, signLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_SM2_FreeCtx(srcSm2Ctx);
@@ -1286,6 +1298,7 @@ void SDV_CRYPTO_SM2_SIGN_DATA_FUNC_TC001(int mdId, Hex *pubKey, Hex *prvKey, int
     if (mdId == CRYPT_MD_SM3) {
         ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, msg, sizeof(msg), signBuf, signLen), CRYPT_SUCCESS);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     mdMethod->freeCtx(mdCtx);

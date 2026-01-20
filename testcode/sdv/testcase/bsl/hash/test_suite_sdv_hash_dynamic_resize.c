@@ -121,6 +121,7 @@ void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC001(void)
 
     // Verify all elements are accessible
     ASSERT_TRUE(verify_int_elements(hash, 0, 10) == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_HASH_Destroy(hash);
@@ -161,6 +162,7 @@ void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC002(void)
 
     // Verify all elements are accessible
     ASSERT_TRUE(verify_int_elements(hash, 0, 17) == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_HASH_Destroy(hash);
@@ -220,6 +222,7 @@ void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC004(void)
         ASSERT_TRUE(userData->id == values[i].id);
         ASSERT_TRUE(strcmp(userData->name, values[i].name) == 0);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_HASH_Destroy(hash);
@@ -273,6 +276,7 @@ void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC005(void)
 
     // Verify remaining 7 elements are still accessible
     ASSERT_TRUE(verify_int_elements(hash, 9, 7) == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_HASH_Destroy(hash);
@@ -327,6 +331,7 @@ void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC006(void)
 
     // Verify remaining elements are accessible
     ASSERT_TRUE(verify_int_elements(hash, 10, 7) == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_HASH_Destroy(hash);
     return;
@@ -390,6 +395,7 @@ void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC007(void)
 
     // Verify remaining 8 elements are accessible
     ASSERT_TRUE(verify_int_elements(hash, 22, 8) == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_HASH_Destroy(hash);
@@ -436,6 +442,7 @@ void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC008(void)
 
     // Verify remaining elements are accessible
     ASSERT_TRUE(verify_int_elements(hash, 7, 3) == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_HASH_Destroy(hash);
@@ -496,6 +503,7 @@ void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC009(void)
     uint32_t bucketSizeShrank2 = hash->bucketSize;
     ASSERT_TRUE(bucketSizeShrank2 < bucketSizeExpanded2);
     ASSERT_TRUE(verify_int_elements(hash, 110, 5) == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_HASH_Destroy(hash);

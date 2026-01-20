@@ -140,11 +140,13 @@ void SDV_BSL_OBJ_CREATE_SIGN_ID_TC002(void)
     BSL_OBJ_FreeSignHashTable();
     ASSERT_TRUE(g_signHashTable == NULL);
     (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_RUN_ONCE_CB_FUNC, PthreadRunOnce);
+    TestErrClear();
     ASSERT_EQ(BSL_OBJ_CreateSignId(signId, asymId, hashId), BSL_SUCCESS);
     ASSERT_TRUE(g_signHashTable != NULL);
     ASSERT_EQ(BSL_HASH_Size(g_signHashTable), 1);
 
     BSL_OBJ_FreeSignHashTable();
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 #endif
@@ -190,6 +192,7 @@ void SDV_BSL_OBJ_CREATE_TC001()
     ASSERT_EQ(strcmp(testOidName, retrievedName), 0);
 
     ASSERT_EQ(BSL_OBJ_Create(testOidData, 9, testOidName, testCid), BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     ASSERT_EQ(BSL_OBJ_Create(NULL, 9, testOidName, testCid), BSL_INVALID_ARG);
 
@@ -266,6 +269,7 @@ void SDV_BSL_OBJ_HASH_TABLE_LOOKUP_TC001()
     ASSERT_EQ(strcmp(testOidName2, retrievedName2), 0);
 
     BSL_OBJ_FreeHashTable();
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 #endif
@@ -292,6 +296,7 @@ void SDV_BSL_OBJ_GetOIDNUMBERICSTRING_FUNC_TC001(Hex *str, char *expect)
     ASSERT_TRUE(hexOid != NULL);
     ASSERT_EQ(outLen, str->len);
     ASSERT_COMPARE("test obj", hexOid, outLen, str->x, str->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     if (oid != NULL) {

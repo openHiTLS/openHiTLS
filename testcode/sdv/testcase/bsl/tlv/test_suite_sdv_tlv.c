@@ -54,6 +54,7 @@ void SDV_BSL_TLV_Find_API_TC001(void)
     uint32_t length = 0;
     ret = BSL_TLV_FindValuePos(type, data, encLen, &offset, &length);
     ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     uint32_t invalidType = 0x0102;
     ret = BSL_TLV_FindValuePos(invalidType, data, encLen, &offset, &length);

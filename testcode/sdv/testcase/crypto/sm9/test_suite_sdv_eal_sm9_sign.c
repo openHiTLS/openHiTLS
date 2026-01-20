@@ -998,6 +998,7 @@ void SDV_CRYPTO_SM9_CHECK_KEYPAIR_FUNC_TC001(Hex *masterKey, Hex *userId1, Hex *
     // Step 6: Change user ID in master context to userId2
     ret = CRYPT_EAL_PkeyCtrl(masterCtx, CRYPT_CTRL_SET_SM2_USER_ID, userId2->x, userId2->len);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     // Step 7: Check key pair again - should fail (different user IDs)
     ret = CRYPT_EAL_PkeyPairCheck(masterCtx, userCtx);
@@ -1065,6 +1066,7 @@ void SDV_CRYPTO_SM9_CHECK_PRVKEY_FUNC_TC001(Hex *masterKey, Hex *userId)
     // Step 5: Check private key - should succeed now
     ret = CRYPT_EAL_PkeyPrvCheck(ctx);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);

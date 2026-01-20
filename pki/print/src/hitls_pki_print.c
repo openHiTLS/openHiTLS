@@ -266,6 +266,7 @@ int32_t HITLS_PKI_PrintDnName(uint32_t layer, BslList *list, bool newLine, BSL_U
     int8_t namePosFlag = -1;  // -1: not start; 0: first; 1: others
     int32_t ret = HITLS_PKI_SUCCESS;
 
+    BSL_ERR_SET_MARK();
     for (name = g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253 ? BSL_LIST_GET_LAST(list) : BSL_LIST_GET_FIRST(list);
          name != NULL;
          name = g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253 ? BSL_LIST_GET_PREV(list) : BSL_LIST_GET_NEXT(list)) {
@@ -301,6 +302,7 @@ int32_t HITLS_PKI_PrintDnName(uint32_t layer, BslList *list, bool newLine, BSL_U
         }
         preLayerIs2 = name->layer != 1;
     }
+    BSL_ERR_POP_TO_MARK();
     if (newLine) {
         return BSL_PRINT_Buff(0, uio, HITLS_X509_PRINT_NEW_LINE, strlen(HITLS_X509_PRINT_NEW_LINE)) == 0
                    ? HITLS_PKI_SUCCESS

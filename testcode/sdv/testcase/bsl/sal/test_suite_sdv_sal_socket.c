@@ -68,6 +68,7 @@ void SDV_BSL_SAL_SOCKET_FUNC_TC001(void)
     ASSERT_TRUE(udp != -1);
     ASSERT_TRUE(BSL_SAL_SetSockopt(udp, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeOut, sizeof(timeOut)) == 0);
     ASSERT_TRUE(BSL_SAL_SockClose(udp) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }

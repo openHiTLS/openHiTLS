@@ -97,6 +97,7 @@ void SDV_CMS_PARSE_ENCRYPTEDDATA_TC002(Hex *buff)
     int32_t ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, (BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen,
         &output);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(output.data);
     return;
@@ -154,6 +155,7 @@ void SDV_CMS_PARSE_DIGESTINFO_TC002(Hex *buff, int alg, Hex *digest)
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(alg, cid);
     ASSERT_EQ(memcmp(output.data, digest->x, digest->len), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(output.data);
     return;
@@ -273,6 +275,7 @@ void SDV_CMS_ENCODE_DIGESTINFO_TC002(int algid, Hex *in)
     ret = HITLS_CMS_ParseDigestInfo(&output, &cid, &digest);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(cid, algid);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_FREE(digest.data);
     BSL_SAL_FREE(output.data);

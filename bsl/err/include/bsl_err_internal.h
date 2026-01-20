@@ -52,9 +52,17 @@ void BSL_ERR_PushError(int32_t err, const char *file, uint32_t lineNo);
  */
 #define BSL_ERR_PUSH_ERROR(e) BSL_ERR_PushError((e), __FILENAME__, __LINE__)
 
+#define BSL_ERR_SET_MARK() (void)BSL_ERR_SetMark()
+
+#define BSL_ERR_POP_TO_MARK() (void)BSL_ERR_PopToMark()
+
 #else
 
 #define BSL_ERR_PUSH_ERROR(e)
+
+#define BSL_ERR_SET_MARK()
+
+#define BSL_ERR_POP_TO_MARK()
 
 #endif /* HITLS_BSL_ERR */
 

@@ -56,6 +56,7 @@ void SDV_ENCODE_SIGN_BN_FUNC_TC001(Hex *r, Hex *s, Hex *expect)
     ASSERT_EQ(CRYPT_EAL_EncodeSign(bnR, bnS, encode, &encodeLen), CRYPT_SUCCESS);
     ASSERT_EQ(encodeLen, expect->len);
     ASSERT_TRUE(memcmp(encode, expect->x, expect->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BN_Destroy(bnR);
@@ -190,6 +191,7 @@ void SDV_ENCODE_SM2_ENCRYPT_DATA_FUNC_TC001(Hex *x, Hex *y, Hex *hash, Hex *ciph
     if (ret == CRYPT_SUCCESS) {
         ASSERT_EQ(encodeLen, expect->len);
         ASSERT_TRUE(memcmp(encode, expect->x, expect->len) == 0);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
 
 EXIT:
@@ -288,6 +290,7 @@ void SDV_DECODE_SM2_ENCRYPT_DATA_FUNC_TC001(Hex *encode, Hex *expectX, Hex *expe
         ASSERT_TRUE(memcmp(data.y + (data.yLen - expectY->len), expectY->x, expectY->len) == 0);
         ASSERT_TRUE(memcmp(data.hash, expectHash->x, data.hashLen) == 0);
         ASSERT_TRUE(memcmp(data.cipher, expectCipher->x, data.cipherLen) == 0);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
 
 EXIT:
@@ -448,6 +451,7 @@ void SDV_ENCODE_DECODE_SIGN_COMBO_TC001(Hex *r, Hex *s)
     ASSERT_EQ(BN_Bn2Bin(decS, sBuf, &sLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("Compare r", rBuf, rLen, r->x, r->len);
     ASSERT_COMPARE("Compare s", sBuf, sLen, s->x, s->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_SAL_Free(encode);
@@ -502,6 +506,7 @@ void SDV_ENCODE_DECODE_SM2_ENCRYPT_COMBO_TC001(Hex *x, Hex *y, Hex *hash, Hex *c
     ASSERT_COMPARE("Compare y", decData.y + (decData.yLen - y->len), y->len, y->x, y->len);
     ASSERT_COMPARE("Compare hash", decData.hash, decData.hashLen, hash->x, hash->len);
     ASSERT_COMPARE("Compare cipher", decData.cipher, decData.cipherLen, cipher->x, cipher->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_SAL_Free(encode);

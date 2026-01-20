@@ -676,6 +676,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC001(Hex *key, Hex *iv, Hex *aad, 
     ASSERT_TRUE(outLen == data->len);
     ASSERT_TRUE(memcmp(out, data->x, data->len) == 0);
     ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -751,6 +752,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC002(Hex *key, Hex *iv, Hex *aad, 
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, (uint8_t *)outTag, tagLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(out, data->x, data->len) == 0);
     ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -804,6 +806,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC003(Hex *key, Hex *iv, Hex *aad, 
     ASSERT_TRUE(outLen == cipher->len);
     ASSERT_TRUE(memcmp(out, cipher->x, cipher->len) == 0);
     ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -858,6 +861,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC004(Hex *key, Hex *iv, Hex *aad, 
     ASSERT_TRUE(outLen == cipher->len);
     ASSERT_TRUE(memcmp(out, cipher->x, cipher->len) == 0);
     ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -894,6 +898,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC005(Hex *key, Hex *iv, Hex *aad, 
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, (uint8_t *)outTag, tagLen) == CRYPT_SUCCESS);
 
     ASSERT_COMPARE("tag equal", outTag, tagLen, tag->x, tag->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -940,6 +945,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC006(Hex *key, Hex *iv, Hex *aad, 
     ASSERT_TRUE(outLen == cipher->len);
     ASSERT_TRUE(memcmp(out, cipher->x, cipher->len) == 0);
     ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, (uint8_t *)outTag, tagLen), CRYPT_EAL_ERR_STATE);
 
 EXIT:
@@ -986,6 +992,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC007(Hex *key, Hex *iv, Hex *aad, 
     ASSERT_TRUE(bufLen == cipher->len);
     ASSERT_TRUE(memcmp(buf, cipher->x, cipher->len) == 0);
     ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -1049,6 +1056,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC008(Hex *key, Hex *aad, Hex *data
     ASSERT_TRUE(outLen == data->len);
     ASSERT_TRUE(memcmp(out, data->x, data->len) == 0);
     ASSERT_TRUE(memcmp(outTag1, outTag2, tagLen) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -1116,6 +1124,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC009(Hex *key, Hex *iv, Hex *aad, 
     ASSERT_TRUE(outLen == data->len);
     ASSERT_TRUE(memcmp(out, data->x, data->len) == 0);
     ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) != 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -1204,6 +1213,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC010(Hex *key, Hex *iv, Hex *aad, 
     ASSERT_TRUE(memcmp(out + pt1->len, pt2->x, pt2->len) == 0);
     ASSERT_TRUE(memcmp(out + pt1->len + pt2->len, pt3->x, pt3->len) == 0);
     ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);

@@ -135,6 +135,7 @@ void SDV_CRYPTO_SM9_KEYEX_API_TC001(Hex *masterKey, Hex *userIdA, Hex *userIdB)
     // Verify shared keys match
     ASSERT_EQ(keyLen_A, keyLen_B);
     ASSERT_TRUE(memcmp(SK_A, SK_B, keyLen_A) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(ctx_a, ctx_b, SK_Long, &longKeyLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(ctx_a, ctx_b, SK_Short, &shortKeyLen), CRYPT_SUCCESS);

@@ -413,6 +413,7 @@ void SDV_CRYPTO_BN_RSHIFT_FUNC_TC001(int sign, Hex *hex, int n, int signRes, Hex
     ASSERT_TRUE(q != NULL);
     ASSERT_EQ(BN_Rshift(q, a, n), CRYPT_SUCCESS);  // r != a
     ASSERT_TRUE(BN_Cmp(r, res) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BN_Destroy(a);
@@ -570,6 +571,7 @@ void SDV_CRYPTO_BN_MODINV_FUNC_TC002(int sign, Hex *hex, Hex *modulo, Hex *resul
         ASSERT_TRUE(BN_Copy(r, m) == CRYPT_SUCCESS);
         ASSERT_TRUE(BN_ModInv(r, a, r, opt) == CRYPT_SUCCESS);
         ASSERT_TRUE_AND_LOG("r == m", BN_Cmp(r, res) == 0);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
 
 EXIT:
@@ -839,6 +841,7 @@ void SDV_CRYPTO_BN_MODEXP_FUNC_TC001(int sign1, Hex *hex1, Hex *hex2, Hex *modul
     ASSERT_TRUE(BN_Copy(r, m) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_ModExp(r, a, e, r, opt) == CRYPT_SUCCESS);  // r == m
     ASSERT_TRUE_AND_LOG("r == m", BN_Cmp(r, res) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BN_Destroy(a);
@@ -981,6 +984,7 @@ void SDV_CRYPTO_BN_MOD_FUNC_TC001(int sign1, Hex *hex1, int sign2, Hex *modulo, 
     ASSERT_EQ(BN_Copy(r, a), CRYPT_SUCCESS);
     ASSERT_EQ(BN_Mod(r, r, m, opt), CRYPT_SUCCESS);
     ASSERT_TRUE_AND_LOG("r == a", BN_Cmp(r, res) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BN_Destroy(a);
     BN_Destroy(m);
@@ -1048,6 +1052,7 @@ void SDV_CRYPTO_BN_PRIME_CHECK_FUNC_TC001(Hex *hex, int isPrime)
     ret = BN_PrimeCheck(bn, 0, opt, NULL);
     if (isPrime != 0) {
         ASSERT_EQ(ret, CRYPT_SUCCESS);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     } else {
         ASSERT_EQ(ret, CRYPT_BN_NOR_CHECK_PRIME);
     }
@@ -1207,6 +1212,7 @@ void SDV_CRYPTO_BN_SUB_FUNC_TC001(int sign1, Hex *hex1, int sign2, Hex *hex2, in
 
     ASSERT_EQ(BN_Sub(a, a, b), CRYPT_SUCCESS);
     ASSERT_TRUE_AND_LOG("a == a", BN_Cmp(a, res) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BN_Destroy(a);
@@ -1489,6 +1495,7 @@ void SDV_CRYPTO_BN_SQR_FUNC_TC001(int sign1, Hex *hex1, Hex *result)
     ASSERT_TRUE(BN_Copy(r, a) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_Sqr(r, a, opt) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_Cmp(r, res) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BN_Destroy(a);
@@ -1697,6 +1704,7 @@ void SDV_CRYPTO_BN_U64_FUNC_TC001(int len)
     ASSERT_TRUE(BN_U64Array2Bn(a, input, len) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_Bn2U64Array(a, output, &outlen) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(input, output, outlen * sizeof(uint64_t)) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BN_Destroy(a);
     free(input);
@@ -1732,6 +1740,7 @@ void SDV_CRYPTO_BN_UINT_FUNC_TC001(int len)
     ASSERT_TRUE(BN_Array2BN(a, input, len) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_BN2Array(a, output, len) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(input, output, len * sizeof(BN_UINT)) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BN_Destroy(a);
     free(input);
@@ -1809,6 +1818,7 @@ void SDV_CRYPTO_BN_GCD_FUNC_TC001(int sign1, Hex *hex1, int sign2, Hex *hex2, He
     ASSERT_EQ(BN_Copy(out, bn2), CRYPT_SUCCESS);
     ASSERT_EQ(BN_Gcd(out, bn, out, opt), CRYPT_SUCCESS);
     ASSERT_TRUE_AND_LOG("r == b", BN_Cmp(out, res) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BN_Destroy(bn);

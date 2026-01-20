@@ -38,12 +38,14 @@ void SDV_BSL_BSL_PARAM_InitValue_API_TC001()
     ASSERT_EQ(BSL_PARAM_InitValue(NULL, 1, BSL_PARAM_TYPE_UINT32, &val, sizeof(val)), BSL_INVALID_ARG);
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_UINT32, NULL, sizeof(val)), BSL_INVALID_ARG);
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, 100, &val, sizeof(val)), BSL_PARAMS_INVALID_TYPE);
+    TestErrClear();
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_UINT32, &val, sizeof(val)), BSL_SUCCESS);
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_BOOL, &valBool, sizeof(valBool)), BSL_SUCCESS);
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_FUNC_PTR, valPtr, 0), BSL_SUCCESS);
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_CTX_PTR, valPtr, 0), BSL_SUCCESS);
     valPtr = NULL;
     ASSERT_EQ(BSL_PARAM_InitValue(&param, 1, BSL_PARAM_TYPE_FUNC_PTR, valPtr, 0), BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
@@ -133,6 +135,7 @@ void SDV_BSL_BSL_PARAM_SetValue_API_TC002()
     ASSERT_EQ(BSL_PARAM_SetValue(&param[2], 1, BSL_PARAM_TYPE_UINT32, &val3, sizeof(val3)), BSL_SUCCESS);
     ASSERT_EQ(val3, tmp3);
     ASSERT_EQ(BSL_PARAM_SetValue(&param[3], 1, BSL_PARAM_TYPE_OCTETS, &buffer1, buffer1Len), BSL_INVALID_ARG);
+    TestErrClear();
     ASSERT_EQ(BSL_PARAM_SetValue(&param[3], 1, BSL_PARAM_TYPE_OCTETS, &buffer1, buffer1Len - 5), BSL_SUCCESS);
     ASSERT_COMPARE("compare value", tmpBuffer1, param[3].useLen, buffer1, buffer1Len - 5);
     tmpBuffer1[0] = 2;
@@ -151,6 +154,7 @@ void SDV_BSL_BSL_PARAM_SetValue_API_TC002()
     ASSERT_EQ(BSL_PARAM_SetValue(&param[7], 1, BSL_PARAM_TYPE_CTX_PTR, ptr, 8), BSL_SUCCESS);
     ASSERT_EQ(param[7].value, ptr);
     ASSERT_EQ(param[7].useLen, 8);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
@@ -176,6 +180,7 @@ void SDV_BSL_BSL_PARAM_FindParam_API_TC001()
     ASSERT_EQ(temp, &param[1]);
     temp = BSL_PARAM_FindParam(param, 5);
     ASSERT_EQ(temp, NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     return;

@@ -266,6 +266,7 @@ void SDV_PKCS12_GEN_KEYBAGS_TC001(char *pkeyPath, char *enCertPath, char *ca1Cer
     ASSERT_NE(p12_1->entityCert, NULL);
     ASSERT_NE(p12_1->key, NULL);
 #endif
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     HITLS_X509_CertFree(enCert);
@@ -331,12 +332,14 @@ void SDV_PKCS12_CTRL_GET_KEYBAGS_TC001(void)
         ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_ID, &id, sizeof(int32_t)), 0);
         ASSERT_EQ(id, BSL_CID_KEYBAG);
         ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_ATTR, &buffer, BSL_CID_FRIENDLYNAME), 0);
+        ASSERT_TRUE(TestIsErrStackEmpty());
         ASSERT_COMPARE("compare key bag attr", buffer.data, buffer.dataLen, attrName, strlen(attrName));
         ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_ATTR, &buffer, BSL_CID_LOCALKEYID),
             HITLS_PKCS12_ERR_NO_SAFEBAG_ATTRIBUTES);
         bag = BSL_LIST_GET_NEXT(keyList);
         CRYPT_EAL_PkeyFreeCtx(key);
         key = NULL;
+        TestErrClear();
     }
 #endif
 EXIT:
@@ -368,6 +371,7 @@ void SDV_PKCS12_PARSE_MULBAG_TC001(Hex *mulBag, int hasMac)
     ASSERT_NE(BSL_LIST_COUNT(p12->keyList), 0);
     ASSERT_NE(BSL_LIST_COUNT(p12->secretBags), 0);
     ASSERT_NE(p12->key, NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     HITLS_PKCS12_Free(p12);
 #endif
@@ -586,6 +590,7 @@ void SDV_PKCS12_ENCODE_STUB_TC001(Hex *mulBag, int hasMac)
     STUB_EnableMallocFail(false);
     STUB_ResetMallocCount();
     ASSERT_EQ(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     totalMallocCount = STUB_GetMallocCallCount();
     BSL_SAL_Free(output.data);
     output.data = NULL;
@@ -710,6 +715,7 @@ void SDV_PKCS12_CERTCHAIN_BUILD_TC001(void)
     // Build certificate chain using the end certificate
     ASSERT_EQ(HITLS_X509_CertChainBuild(storeCtx, true, cert3, &chain), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertVerify(storeCtx, chain), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_X509_CertFree(caCert);

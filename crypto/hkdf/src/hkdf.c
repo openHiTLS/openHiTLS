@@ -96,7 +96,6 @@ int32_t CRYPT_HKDF_Extract(void *macCtx, const EAL_MacMethod *macMeth, const uin
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-
     (void)macMeth->deinit(macCtx);
     GOTO_ERR_IF(macMeth->init(macCtx, salt, saltLen, NULL), ret);
     GOTO_ERR_IF(macMeth->update(macCtx, key, keyLen), ret);

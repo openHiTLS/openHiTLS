@@ -41,6 +41,7 @@ void SDV_BSL_BUFFER_FUNC_buffer_new(void)
     (void)BSL_BufMemGrowClean(buf, 6);
     ASSERT_EQ(buf->length, 6);
     ASSERT_EQ(buf->max, 8);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_BufMemFree(buf);
 }

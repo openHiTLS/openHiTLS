@@ -1364,6 +1364,7 @@ void SDV_CRYPTO_RSA_GET_SECURITY_BITS_FUNC_TC001(Hex *n, Hex *e, int securityBit
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pub), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGetSecurityBits(pkey), securityBits);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -1530,6 +1531,7 @@ void SDV_CRYPTO_RSA_GET_KEY_BITS_FUNC_TC001(int id, int keyBits, int isProvider)
     ASSERT_TRUE(pkey != NULL);
     ASSERT_TRUE_AND_LOG("1k key", CRYPT_EAL_PkeySetPara(pkey, &para) == 0);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetKeyBits(pkey) == (uint32_t)keyBits);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
@@ -1668,6 +1670,7 @@ void SDV_CRYPTO_RSA_SEED_KEYGEN_TC001(Hex *xp, Hex *xp1, Hex *xp2, Hex *xq, Hex 
     // Verify if p and q are as expected
     ASSERT_EQ(memcmp(prvKey1.key.rsaPrv.p, p->x, p->len), 0);
     ASSERT_EQ(memcmp(prvKey1.key.rsaPrv.q, q->x, q->len), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
@@ -1762,6 +1765,7 @@ void SDV_CRYPTO_RSA_CHECK_KEYPAIR_TC001(int bits, int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS); // check ctr
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pkey, pkey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -1814,6 +1818,9 @@ void SDV_CRYPTO_RSA_CHECK_KEYPAIR_TC002(Hex *p, Hex *q, Hex *n, Hex *d, int isPr
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pkey1, pkey2), expectRet);
 
     ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey2), CRYPT_SUCCESS);
+    if (expectRet == CRYPT_SUCCESS) {
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey1);
@@ -1872,6 +1879,7 @@ void SDV_CRYPTO_RSA_CHECK_KEYPAIR_TC003(int bits, int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &prvKey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     CRYPT_EAL_PkeyFreeCtx(pubCtx);
@@ -2128,6 +2136,7 @@ void SDV_CRYPTO_RSA_Import_Export_FUNC_TC001(void)
     ASSERT_TRUE(dstRsaCtx != NULL);
     ASSERT_EQ(CRYPT_RSA_Sign(srcRsaCtx, CRYPT_MD_SHA256, data, sizeof(data), signData, &signDataLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_RSA_Verify(dstRsaCtx, CRYPT_MD_SHA256, data, sizeof(data), signData, signDataLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_RSA_FreeCtx(srcRsaCtx);
     CRYPT_RSA_FreeCtx(dstRsaCtx);
@@ -2182,6 +2191,7 @@ void SDV_CRYPTO_RSA_Import_Export_FUNC_TC002(void)
     ASSERT_TRUE(dstRsaCtx != NULL);
     ASSERT_EQ(CRYPT_RSA_Sign(srcRsaCtx, CRYPT_MD_SHA256, data, sizeof(data), signData, &signDataLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_RSA_Verify(dstRsaCtx, CRYPT_MD_SHA256, data, sizeof(data), signData, signDataLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_RSA_FreeCtx(srcRsaCtx);
     CRYPT_RSA_FreeCtx(dstRsaCtx);

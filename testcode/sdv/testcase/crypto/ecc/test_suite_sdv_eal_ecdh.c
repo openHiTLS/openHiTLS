@@ -641,6 +641,7 @@ void SDV_CRYPTO_ECDH_EXCH_FUNC_TC001(
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(ecdhPkey, peerEcdhPubPkey, shareKey, &shareKeyLen), CRYPT_SUCCESS);
     ASSERT_TRUE_AND_LOG("Compare ShareKey Len", shareKeyLen == shareKeyVector->len);
     ASSERT_COMPARE("Compare ShareKey", shareKey, shareKeyLen, shareKeyVector->x, shareKeyVector->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ecdhPkey);
     CRYPT_EAL_PkeyFreeCtx(peerEcdhPubPkey);
@@ -720,6 +721,7 @@ void SDV_CRYPTO_ECDH_GET_KEY_BITS_FUNC_TC001(int paraid, int keyBits, int isProv
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraid), CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGetKeyBits(pkey) == (uint32_t)keyBits);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
@@ -745,6 +747,7 @@ void SDV_CRYPTO_ECDH_GET_SEC_BITS_FUNC_TC001(int paraid, int secBits)
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraid), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGetSecurityBits(pkey), secBits);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
@@ -918,6 +921,7 @@ void SDV_CRYPTO_ECC_MUL_CAL_TEST_FUNC_TC001(int paraId)
     ASSERT_EQ(ECC_PointMul(para, point2, rand, point1), CRYPT_SUCCESS);
     ASSERT_EQ(ECP_PointMulFast(para, point3, rand, point1), CRYPT_SUCCESS);
     ASSERT_EQ(ECC_PointCmp(para, point2, point3), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     ECC_FreePara(para);
@@ -976,6 +980,7 @@ void SDV_CRYPTO_ECC_ADD_CAL_TEST_FUNC_TC001(int paraId, Hex *bk1, Hex *bk2, Hex 
 
     ASSERT_EQ(ECC_PointMulAdd(para, r2, bnk1, bnk2, twoG), CRYPT_SUCCESS);
     ASSERT_EQ(ECC_PointCmp(para, r1, r2), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     ECC_FreePara(para);

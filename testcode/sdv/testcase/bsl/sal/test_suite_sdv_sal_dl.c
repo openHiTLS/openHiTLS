@@ -92,6 +92,7 @@ void SDV_BSL_SAL_DL_FUNC_TC001(char *test1, char *test2, char *testNoInit, char 
     ret = BSL_SAL_LoadLib(test2, &handle2);
     ASSERT_EQ(ret, BSL_SUCCESS);
     ASSERT_TRUE(handle2 != NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     // Test BSL_SAL_LoadLib with invalid input
     ret = BSL_SAL_LoadLib(NULL, &handle1);
@@ -102,6 +103,7 @@ void SDV_BSL_SAL_DL_FUNC_TC001(char *test1, char *test2, char *testNoInit, char 
 
     ret = BSL_SAL_LoadLib("nonExistentLib", &nonExistentLib);
     ASSERT_EQ(ret, BSL_SAL_ERR_DL_NOT_FOUND);
+    TestErrClear();
 
     // Test BSL_SAL_GetFuncAddress with valid input
     ret = BSL_SAL_GetFuncAddress(handle1, funcName, &func);
@@ -111,6 +113,7 @@ void SDV_BSL_SAL_DL_FUNC_TC001(char *test1, char *test2, char *testNoInit, char 
     // Test BSL_SAL_GetFuncAddress with provider lacking init function
     ret = BSL_SAL_LoadLib(testNoInit, &handleNoInit);
     ASSERT_EQ(ret, BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     
     ret = BSL_SAL_GetFuncAddress(handleNoInit, funcName, &func);
     ASSERT_EQ(ret, BSL_SAL_ERR_DL_NON_FUNCTION);
@@ -124,6 +127,7 @@ void SDV_BSL_SAL_DL_FUNC_TC001(char *test1, char *test2, char *testNoInit, char 
 #endif
     ret = BSL_SAL_GetFuncAddress(handle1, funcName, NULL);
     ASSERT_EQ(ret, BSL_SAL_ERR_BAD_PARAM);
+    TestErrClear();
 
     // Test BSL_SAL_UnLoadLib with valid input
     ret = BSL_SAL_UnLoadLib(handle1);
@@ -133,6 +137,7 @@ void SDV_BSL_SAL_DL_FUNC_TC001(char *test1, char *test2, char *testNoInit, char 
     ret = BSL_SAL_UnLoadLib(handle2);
     ASSERT_EQ(ret, BSL_SUCCESS);
     handle2 = NULL;
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     // Test BSL_SAL_UnLoadLib with invalid input
     ret = BSL_SAL_UnLoadLib(NULL);

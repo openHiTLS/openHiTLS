@@ -128,6 +128,7 @@ int32_t ES_NsListInit(BslList *nsList, bool enableTest)
     }
     bool nsUsed = false;
     ES_NoiseSource *ns = NULL;
+    BSL_ERR_SET_MARK();
     for (ns = BSL_LIST_GET_FIRST(nsList); ns != NULL; ns = BSL_LIST_GET_NEXT(nsList)) {
         /*
          * If the health check is automatically performed when the noise source is generated, no additional health
@@ -157,6 +158,7 @@ int32_t ES_NsListInit(BslList *nsList, bool enableTest)
         ES_NsListDeinit(nsList);
         return CRYPT_ENTROPY_ES_NO_NS;
     }
+    BSL_ERR_POP_TO_MARK();
     return CRYPT_SUCCESS;
 }
 

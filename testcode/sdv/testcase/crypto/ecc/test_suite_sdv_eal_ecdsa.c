@@ -918,6 +918,7 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC002(int eccId, Hex *prvKeyVector, Hex *
 
     /* Verify hash data */
     ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(ecdsaPkey2, hashData->x, hashData->len, hitlsSign, hitlsSignLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     free(hitlsSign);
@@ -1206,6 +1207,7 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC001(int eccId, int mdId, Hex *prvKeyVec
     hitlsSginLen = CRYPT_EAL_PkeyGetSignLen(cpyCtx);
     ASSERT_EQ(CRYPT_EAL_PkeySign(cpyCtx, mdId, msg->x, msg->len, hitlsSign, (uint32_t *)&hitlsSginLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(cpyCtx, mdId, msg->x, msg->len, hitlsSign, hitlsSginLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     free(hitlsSign);
@@ -1261,6 +1263,7 @@ void SDV_CRYPTO_ECDSA_SET_PUB_FUNC_TC001(
     Ecc_SetPubKey(&ECDSAPubkey, CRYPT_PKEY_ECDSA, pubKeyVector.data, pubKeyVector.len);
     if (result == 1) {
         ASSERT_EQ(CRYPT_EAL_PkeySetPub(ecdsaPkey, &ECDSAPubkey), CRYPT_SUCCESS);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     } else {
         ASSERT_NE(CRYPT_EAL_PkeySetPub(ecdsaPkey, &ECDSAPubkey), CRYPT_SUCCESS);
     }
@@ -1502,6 +1505,7 @@ void SDV_CRYPTO_ECDSA_CHECK_KEYPAIR_FUNC_TC001(int paraid, int isProvider)
 
     ecdsaPrvKey.key.eccPrv.data = wrong;
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &ecdsaPrvKey), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pubCtx, prvCtx), CRYPT_ECDSA_PAIRWISE_CHECK_FAIL);
 
 EXIT:
@@ -1625,6 +1629,7 @@ void SDV_CRYPTO_ECDSA_Import_Export_FUNC_TC001(void)
 
     ASSERT_EQ(CRYPT_ECDSA_Sign(srcEcdsaCtx, CRYPT_MD_SHA256, msg, sizeof(msg), sign, &signLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_ECDSA_Verify(dstEcdsaCtx, CRYPT_MD_SHA256, msg, sizeof(msg), sign, signLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_ECDSA_FreeCtx(srcEcdsaCtx);

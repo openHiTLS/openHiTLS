@@ -162,6 +162,7 @@ void SDV_CRYPT_EAL_KDF_HKDF_FUN_TC001(int algId, Hex *key, Hex *salt, Hex *info,
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     if (out != NULL) {
         free(out);
@@ -210,6 +211,7 @@ void SDV_CRYPTO_HKDF_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *salt,
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     if (out != NULL) {
         free(out);
@@ -245,6 +247,7 @@ void SDV_CRYPTO_HKDF_BSL_PARAM_MAKER_TC001(int algId, Hex *key, Hex *salt, Hex *
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), BSL_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), BSL_SUCCESS);
     ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     if (out != NULL) {
         free(out);
@@ -282,6 +285,7 @@ void SDV_CRYPTO_HKDF_BSL_PARAM_MAKER_TC002(int algId, Hex *key, Hex *salt, Hex *
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), BSL_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), BSL_SUCCESS);
     ASSERT_COMPARE("result cmp", out, outLen, result->x, result->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     if (out != NULL) {
         free(out);

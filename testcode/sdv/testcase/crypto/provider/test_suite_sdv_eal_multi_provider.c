@@ -93,6 +93,7 @@ void SDV_PROVIDER_SHA256_TC001(char *path, char *defProName, char *customProName
     ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, in->x, in->len), 0);
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, out, &outLen), 0);
     ASSERT_COMPARE("other provider sha256", out, outLen, digest->x, digest->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
@@ -137,6 +138,7 @@ void SDV_PROVIDER_HMAC_TC001(char *path, char *defProName, char *customProName, 
     ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, data->x, data->len), 0);
     ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, out, &outLen), 0);
     ASSERT_COMPARE("default hmac other sha256", out, outLen, vecMac->x, vecMac->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_MacFreeCtx(ctx);
@@ -190,6 +192,7 @@ void SDV_PROVIDER_HKDF_TC001(char *path, char *defProName, char *customProName, 
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), 0);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), 0);
     ASSERT_COMPARE("default hkdf-hmac other sha256", out, outLen, result->x, result->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_KdfFreeCtx(ctx);
@@ -242,6 +245,7 @@ void SDV_PROVIDER_PBKDF2_TC001(char *path, char *defProName, char *customProName
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), 0);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), 0);
     ASSERT_COMPARE("default pbkdf2 other sha256", out, outLen, result->x, result->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_KdfFreeCtx(ctx);
@@ -294,6 +298,7 @@ void SDV_PROVIDER_KDFTLS12_TC001(char *path, char *defProName, char *customProNa
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctx, params), 0);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), 0);
     ASSERT_COMPARE("default kdftls12 other sha256", out, outLen, result->x, result->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_KdfFreeCtx(ctx);
@@ -347,6 +352,7 @@ void SDV_PROVIDER_RSA_SIGN_VERIFY_PKCSV15_TC001(char *path, char *defProName, ch
     signLen = MAX_CIPHERTEXT_LEN;
     ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, msg->x, msg->len, sign, &signLen), 0);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, msg->x, msg->len, sign, signLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
@@ -405,6 +411,7 @@ void SDV_PROVIDER_RSA_SIGN_VERIFY_PSS_TC001(char *path, char *defProName, char *
     signLen = MAX_CIPHERTEXT_LEN;
     ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, msg->x, msg->len, sign, &signLen), 0);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, msg->x, msg->len, sign, signLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
@@ -481,6 +488,7 @@ void SDV_PROVIDER_RSA_RSABSSA_BLINDING_TC001(char *path, char *defProName, char 
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, msg->x, msg->len, unBlindSig, unBlindSigLen), 0);
 #endif
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_LibCtxFree(libCtx);
@@ -548,6 +556,7 @@ void SDV_PROVIDER_RSA_CRYPT_FUNC_TC001(char *path, char *defProName, char *custo
     ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(ctx, ct, ctLen, pt, &ptLen), 0);
     ASSERT_EQ(ptLen, plaintext->len);
     ASSERT_COMPARE("rsa encrypt and decrypt", pt, ptLen, plaintext->x, plaintext->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);

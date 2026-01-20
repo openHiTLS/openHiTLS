@@ -264,6 +264,7 @@ void SDV_BSL_UIO_NEW_API_TC001(void)
     /* Set method to NULL */
     BSL_UIO *uio = BSL_UIO_New(NULL);
     ASSERT_TRUE(uio == NULL);
+    TestErrClear();
 #ifdef HITLS_BSL_UIO_TCP
     /* Set transportType to tcp and construct the method structure. */
     {
@@ -292,6 +293,7 @@ void SDV_BSL_UIO_NEW_API_TC001(void)
         BSL_UIO_Free(uio);
     }
 #endif
+ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 #else
@@ -312,6 +314,7 @@ void SDV_BSL_UIO_NEW_API_TC002(void)
 
     BSL_UIO *uio = BSL_UIO_New(NULL);
     ASSERT_EQ(uio, NULL);
+    TestErrClear();
     BSL_UIO_Method *ori = BSL_UIO_NewMethod();
     ASSERT_NE(ori, NULL);
     int32_t customType = BSL_UIO_EXTEND + 3;
@@ -324,6 +327,7 @@ void SDV_BSL_UIO_NEW_API_TC002(void)
     ASSERT_EQ(BSL_UIO_SetMethod(ori, BSL_UIO_DESTROY_CB, BslUioDestroy), BSL_SUCCESS);
     ASSERT_EQ(BSL_UIO_SetMethod(ori, BSL_UIO_PUTS_CB, BslUioPuts), BSL_SUCCESS);
     ASSERT_EQ(BSL_UIO_SetMethod(ori, BSL_UIO_GETS_CB, BslUioGets), BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     ASSERT_EQ(BSL_UIO_SetMethod(ori, BSL_UIO_READ_CB, NULL), BSL_NULL_INPUT);
     ASSERT_EQ(BSL_UIO_SetMethod(ori, BSL_UIO_GETS_CB + 1, BslUioGets), BSL_INVALID_ARG);
@@ -394,6 +398,7 @@ void SDV_BSL_UIO_NEW_FUNC_TC001(void)
 
     ASSERT_EQ(BSL_UIO_Ctrl(uio, BSL_CUSTOM_UIO_GET_INDEX, sizeof(index), &index), BSL_SUCCESS);
     ASSERT_EQ(index, 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_UIO_Free(uio);
@@ -450,6 +455,7 @@ void SDV_BSL_UIO_INIT_FUNC_TC001(int uioType)
 
     ASSERT_EQ(BSL_UIO_Ctrl(uio, BSL_UIO_GET_FD, (int32_t)sizeof(fd), &getFd), BSL_SUCCESS);
     ASSERT_EQ(getFd, fd);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_UIO_Free(uio);
@@ -488,6 +494,7 @@ void SDV_BSL_UIO_INIT_FUNC_TC002(int uioType)
     ASSERT_TRUE(uio != NULL);
     ASSERT_EQ(BSL_UIO_Ctrl(uio, BSL_UIO_GET_INIT, (int32_t)sizeof(init), &init), BSL_SUCCESS);
     ASSERT_EQ(init, 1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_UIO_Free(uio);
@@ -550,6 +557,7 @@ void SDV_BSL_UIO_SETUSERDATA_API_TC001(void)
 
     ret = BSL_UIO_SetUserData(uio, userData2);
     ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_UIO_Free(uio);
@@ -590,6 +598,7 @@ void SDV_BSL_UIO_GETUSERDATA_API_TC001(void)
 
     data = BSL_UIO_GetUserData(uio);
     ASSERT_TRUE(data == userData);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_UIO_Free(uio);
 }
@@ -627,6 +636,7 @@ void SDV_BSL_UIO_FLAGS_FUNC_TC001(int uioType)
     ASSERT_EQ(BSL_UIO_SetFlags(uio, BSL_UIO_FLAGS_RWS), BSL_SUCCESS);
     // 0000 1000
     ASSERT_EQ(BSL_UIO_SetFlags(uio, BSL_UIO_FLAGS_SHOULD_RETRY), BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     // 0001 0000
     ASSERT_EQ(BSL_UIO_SetFlags(uio, BSL_UIO_FLAGS_MEM_READ_ONLY), BSL_INVALID_ARG);
     // 0010 0000
@@ -687,6 +697,7 @@ void SDV_BSL_UIO_FLAGS_FUNC_TC002(void)
 
     ASSERT_TRUE(BSL_UIO_TestFlags(uio, BSL_UIO_FLAGS_SHOULD_RETRY, &out) == BSL_SUCCESS);
     ASSERT_TRUE(out == BSL_UIO_FLAGS_SHOULD_RETRY);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_UIO_Free(uio);
 }
@@ -715,12 +726,14 @@ void SDV_BSL_UIO_UPREF_API_TC001(void)
     /* The test UIO is empty. */
     int32_t ret = BSL_UIO_UpRef(NULL);
     ASSERT_TRUE(ret == BSL_INTERNAL_EXCEPTION);
+    TestErrClear();
 
     uio = BSL_UIO_New(BSL_UIO_SctpMethod());
     ASSERT_TRUE(uio != NULL);
 
     ret = BSL_UIO_UpRef(uio);
     ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_UIO_Free(uio);
@@ -870,6 +883,7 @@ void SDV_BSL_UIO_SET_USERDATA_FREE_TC001(void)
     int32_t ret = BSL_UIO_SetUserData(uio, userData);
     ASSERT_TRUE(ret == BSL_SUCCESS);
     ASSERT_TRUE(uio->userData != NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     ret = BSL_UIO_SetUserDataFreeFunc(NULL, BSL_SAL_Free);
     ASSERT_TRUE(ret == BSL_NULL_INPUT);
@@ -959,6 +973,7 @@ void SDV_BSL_UIO_GET_READANDWRITE_NUM_TC001(void)
     ASSERT_TRUE(BSL_UIO_Read(uio, readBuf, dataLen, &readLen) == BSL_SUCCESS);
     ASSERT_EQ(BSL_UIO_Ctrl(uio, BSL_UIO_GET_READ_NUM, (int32_t)sizeof(readNum), &readNum), BSL_SUCCESS);
     ASSERT_EQ(readNum, readLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_UIO_Free(uio);
 #else
@@ -994,6 +1009,7 @@ void SDV_BSL_UIO_SET_FD_TC001(void)
     int32_t fd1 = -1;
     ASSERT_TRUE(BSL_UIO_Ctrl(uio, BSL_UIO_GET_FD, (int32_t)sizeof(fd1), &fd1) == BSL_SUCCESS);
     ASSERT_TRUE(fd == fd1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_UIO_Free(uio);
     remove(filename);
@@ -1026,6 +1042,7 @@ void SDV_BSL_UIO_NEXT_TC001(void)
     ASSERT_TRUE(BSL_UIO_Append(tcp1, tcp2) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_UIO_Next(tcp1) == tcp2);
     ASSERT_TRUE(BSL_UIO_Next(tcp2) == NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_UIO_Free(tcp1);
     BSL_UIO_Free(tcp2);
@@ -1085,6 +1102,7 @@ void SDV_BSL_UIO_UDP_API_TC001(void)
 
     ret = BSL_UIO_Ctrl(uio, BSL_UIO_UDP_SET_CONNECTED, 0, NULL);
     ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_UIO_Free(uio);
 }
@@ -1135,6 +1153,7 @@ void SDV_BSL_UIO_SCTP_API_TC001(void)
 
     ret = BSL_UIO_Ctrl(uio, BSL_UIO_SCTP_SET_APP_STREAM_ID, sizeof(uint16_t), &sendAppStreamId);
     ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_UIO_Free(uio);
 #endif
@@ -1177,6 +1196,7 @@ void SDV_BSL_UIO_BUFFER_RESET_TC001(void)
     ret = BSL_UIO_Write(buffer, buf, 2048, &writeLen);
     ASSERT_TRUE(ret == BSL_SUCCESS);
     ASSERT_TRUE(writeLen == 2048);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     ret = BSL_UIO_Ctrl(buffer, BSL_UIO_RESET, 0, NULL);
     ASSERT_TRUE(ret = BSL_UIO_FAIL);
@@ -1215,6 +1235,7 @@ void SDV_BSL_UIO_MEM_BASIC_TC001(void)
     ret = BSL_UIO_Ctrl(uio, BSL_UIO_PENDING, sizeof(uint64_t), &pendingLen);
     ASSERT_TRUE(ret == BSL_SUCCESS);
     ASSERT_TRUE(pendingLen == 0); // All data has been read
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_UIO_Free(uio);
@@ -1285,6 +1306,7 @@ void SDV_BSL_UIO_MEM_EOF_TC001(void)
     uint32_t flags = 0;
     BSL_UIO_TestFlags(uio, BSL_UIO_FLAGS_SHOULD_RETRY, &flags);
     ASSERT_TRUE((flags & BSL_UIO_FLAGS_SHOULD_RETRY) != 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_UIO_Free(uio);
@@ -1307,6 +1329,7 @@ void SDV_BSL_UIO_MEM_PUTS_TC001(void)
     BSL_UIO_SetInit(uio, false);
     ASSERT_EQ(BSL_UIO_Puts(uio, str, &len), BSL_UIO_UNINITIALIZED);
     ASSERT_EQ(BSL_UIO_Read(uio, buf, sizeof(buf), &len), BSL_UIO_UNINITIALIZED);
+    TestErrClear();
 
     BSL_UIO_SetInit(uio, true);
     ASSERT_EQ(BSL_UIO_Puts(uio, str, &len), BSL_SUCCESS);
@@ -1317,6 +1340,7 @@ void SDV_BSL_UIO_MEM_PUTS_TC001(void)
     ASSERT_EQ(len, strlen(str));
     buf[len] = '\0';
     ASSERT_EQ(strcmp(buf, str), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_UIO_Free(uio);
@@ -1337,6 +1361,7 @@ void SDV_BSL_UIO_MEM_GETS_TC001(void)
     BSL_UIO_SetInit(uio, false);
     ASSERT_EQ(BSL_UIO_Write(uio, data, dataLen, &len), BSL_UIO_UNINITIALIZED);
     ASSERT_EQ(BSL_UIO_Gets(uio, buf, &len), BSL_UIO_UNINITIALIZED);
+    TestErrClear();
 
     BSL_UIO_SetInit(uio, true);
     ASSERT_EQ(BSL_UIO_Write(uio, data, dataLen, &len), BSL_SUCCESS);
@@ -1359,6 +1384,7 @@ void SDV_BSL_UIO_MEM_GETS_TC001(void)
     const char *str2 = "-----END PUBLIC KEY-----";
     ASSERT_EQ(len, strlen(str2));
     ASSERT_EQ(strcmp(buf, str2), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_UIO_Free(uio);
@@ -1378,6 +1404,7 @@ void SDV_BSL_UIO_APPEND_TC001(void)
     ASSERT_TRUE(uio != NULL);
     ASSERT_TRUE(BSL_UIO_Append(uio, BSL_UIO_New(BSL_UIO_BufferMethod())) == BSL_SUCCESS);
     ASSERT_TRUE(HITLS_SetUio(ctx, uio) == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_UIO_FreeChain(uio);

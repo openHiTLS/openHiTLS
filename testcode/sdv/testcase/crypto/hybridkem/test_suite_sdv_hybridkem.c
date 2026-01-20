@@ -147,6 +147,7 @@ void SDV_CRYPTO_HYBRID_ENCAPS_DECAPS_FUNC_TC001(int algid, int type, int isProvi
 
     ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctxA, ciphertext, cipherLen, sharedKeyB, &sharedLenB), CRYPT_SUCCESS);
     ASSERT_COMPARE("compare sharedKey", sharedKeyB, sharedLenB, sharedKeyA, sharedLenA);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(ek.key.kemEk.data);
     BSL_SAL_Free(ciphertext);
@@ -307,6 +308,7 @@ void SDV_CRYPTO_HYBRID_ENCAPS_DECAPS_FUNC_TC002(int algid, int type, int isProvi
     ASSERT_EQ(CRYPT_EAL_PkeyEncaps(ctxB, ciphertext, &cipherLen, sharedKeyB, &sharedLenB), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyDecaps(ctxA, ciphertext, cipherLen, sharedKeyA, &sharedLenA), CRYPT_SUCCESS);
     ASSERT_COMPARE("compare sharedKey", sharedKeyB, sharedLenB, sharedKeyA, sharedLenA);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(ciphertext);
     BSL_SAL_Free(sharedKeyA);

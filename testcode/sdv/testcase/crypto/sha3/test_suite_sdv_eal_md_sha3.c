@@ -205,6 +205,7 @@ void SDV_CRYPT_EAL_SHA3_FUNC_TC001(int algId)
     outLen = CRYPT_EAL_MdGetDigestSize(algId);
 
     ASSERT_EQ(memcmp(out1, out2, outLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_MdFreeCtx(ctx1);
@@ -241,6 +242,7 @@ void SDV_CRYPT_EAL_SHA3_FUNC_TC002(int algId, Hex *data, Hex *hash)
     for (uint32_t i = 0; i < threadNum; i++) {
         pthread_join(thrd[i], NULL);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     return;
@@ -277,6 +279,7 @@ void SDV_CRYPT_EAL_SHA3_FUNC_TC003(int algId, Hex *in, Hex *digest)
 
     ASSERT_EQ(CRYPT_EAL_Md(algId, in->x, in->len, out, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(out, digest->x, digest->len), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
@@ -307,6 +310,7 @@ void SDV_CRYPT_EAL_SHA3_FUNC_TC004(int algId, Hex *in, Hex *digest)
     ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, in->x, in->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, out, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(out, digest->x, digest->len), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
@@ -343,6 +347,7 @@ void SDV_CRYPT_EAL_SHA3_FUNC_TC005(int algId, Hex *in, Hex *digest, int isProvid
     ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, in->x, in->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdSqueeze(ctx, out, outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(out, digest->x, digest->len), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
 }
@@ -383,6 +388,7 @@ void SDV_CRYPT_EAL_SHA3_FUNC_TC006(int algId, Hex *in, int outLen, Hex *digest, 
     ASSERT_EQ(CRYPT_EAL_MdSqueeze(ctx, out + squeezeLen * 2, squeezeLen), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdSqueeze(ctx, out + squeezeLen * 3, outLen - squeezeLen * 3), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(out, digest->x, digest->len), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     free(out);
     CRYPT_EAL_MdFreeCtx(ctx);
@@ -479,6 +485,7 @@ void SDV_CRYPTO_SHA3_DEFAULT_PROVIDER_FUNC_TC001(int id, Hex *msg, Hex *hash)
     ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg->x, msg->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, output, &outLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
@@ -518,6 +525,7 @@ void SDV_CRYPT_EAL_SHA3_FUNC_TC007(int algId, int outLen, Hex *in, Hex *digest)
     ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, out2, &tmpLen), CRYPT_SUCCESS);
     ASSERT_EQ(memcmp(out1, out2, outLen), 0);
     ASSERT_EQ(memcmp(out1, digest->x, digest->len), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     free(out1);
     free(out2);

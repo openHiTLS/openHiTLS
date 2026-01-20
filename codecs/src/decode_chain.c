@@ -247,6 +247,7 @@ static int32_t UpdateDecoderPath(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_DECODER_N
 static int32_t TryDecodeWithDecoder(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_DECODER_Node *currNode)
 {
     /* Convert password buffer to parameter if provided */
+    BSL_ERR_SET_MARK();
     BSL_Param *decoderParam = NULL;
     int32_t ret = CRYPT_DECODE_Decode(currNode->decoderCtx, currNode->inData.data, &decoderParam);
     if (ret == CRYPT_SUCCESS) {
@@ -277,6 +278,7 @@ static int32_t TryDecodeWithDecoder(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_DECODE
 
         return CRYPT_SUCCESS;
     } else {
+        BSL_ERR_POP_TO_MARK();
         /* Mark the node as tried */
         currNode->decoderCtx->decoderState = CRYPT_DECODER_STATE_TRIED;
         return CRYPT_DECODE_RETRY;

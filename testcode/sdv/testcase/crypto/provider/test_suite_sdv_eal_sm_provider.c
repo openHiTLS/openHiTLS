@@ -123,6 +123,7 @@ void SDV_SM_PROVIDER_PKEY_SIGN_VERIFY_TEST_TC001()
 
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkeyCtx, CRYPT_MD_SM3, testData, testDataLen, signature, signatureLen),
         CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
@@ -158,6 +159,7 @@ void SDV_SM_PROVIDER_DRBG_TEST_TC001(int algId)
     ASSERT_EQ(CRYPT_EAL_DrbgSeed(randCtx), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_Drbgbytes(randCtx, data, dataLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_DrbgDeinit(randCtx);
@@ -191,6 +193,7 @@ void SDV_SM_PROVIDER_MD_TEST_TC001(int algId)
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = CRYPT_EAL_MdFinal(mdCtx, md, &mdLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_MdFreeCtx(mdCtx);
@@ -236,6 +239,7 @@ void SDV_SM_PROVIDER_MAC_TEST_TC001(int algId, int keyLen)
 
     ret = CRYPT_EAL_MacFinal(macCtx, mac, &macLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_MacFreeCtx(macCtx);
@@ -280,6 +284,7 @@ void SDV_SM_PROVIDER_KDF_TEST_TC001(int macId, int iter, int saltLen)
 
     ret = CRYPT_EAL_KdfDerive(kdfCtx, derivedKey, derivedKeyLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
@@ -324,6 +329,7 @@ void SDV_SM_PROVIDER_CMVP_SELFTEST_Test_TC001()
     ASSERT_EQ(CRYPT_EAL_RandbytesEx(libCtx, random, randomLen), CRYPT_SUCCESS);
     ASSERT_EQ(BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_CMVP_RANDOM, BSL_PARAM_TYPE_OCTETS,
         random, randomLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ret = CRYPT_CMVP_Selftest(selftestCtx, params);
     ASSERT_TRUE(ret == CRYPT_SUCCESS || ret == CRYPT_CMVP_RANDOMNESS_ERR);
 
@@ -375,6 +381,7 @@ void SDV_SM_PROVIDER_CIPHPER_TEST_TC001()
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     cipherLen += tmpLen;
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(cipherCtx);
@@ -510,6 +517,7 @@ void SDV_SM_PROVIDER_KDF_KDFTLS12_TEST_TC001(int algId, Hex *key, Hex *label, He
         seed->x, seed->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(kdfCtx, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(kdfCtx, out, outLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     if (out != NULL) {
         free(out);

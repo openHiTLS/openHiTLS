@@ -239,8 +239,10 @@ void SDV_BSL_REG_BIN_LOG_FUNC_TC001(void)
 
     func.fixLenFunc = BinLogFixLenFunc;
     func.varLenFunc = BinLogVarLenFunc;
+    TestErrClear();
     ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_LOG_RegBinLogFunc(&func) == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
@@ -442,6 +444,7 @@ void SDV_BSL_BIN_LOG_FUNC_TC001(void)
 
     BSL_LOG_BINLOG_VARLEN(BINLOG_ID05003, BSL_LOG_LEVEL_FATAL, BSL_LOG_BINLOG_TYPE_RUN,
         "this is test msg: %s", "hello world");
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     fclose(g_LogOutput); // flush and close

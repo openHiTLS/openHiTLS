@@ -164,7 +164,7 @@ CRYPT_DECODER_Ctx *CRYPT_DECODE_ProviderNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t
     const CRYPT_EAL_Func *funcsDecoder = NULL;
     CRYPT_EAL_ProvMgrCtx *mgrCtx = NULL;
     int32_t ret = CRYPT_EAL_ProviderGetFuncsAndMgrCtx(libCtx, CRYPT_EAL_OPERAID_DECODER, pkeyAlgId, attrName,
-        &funcsDecoder, &mgrCtx);
+        &funcsDecoder, &mgrCtx, false);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return NULL;
@@ -246,15 +246,9 @@ int32_t CRYPT_DECODE_Decode(CRYPT_DECODER_Ctx *ctx, const BSL_Param *inParam, BS
 
 void CRYPT_DECODE_FreeOutData(CRYPT_DECODER_Ctx *ctx, BSL_Param *outData)
 {
-    if (ctx == NULL || outData == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+    if (ctx == NULL || outData == NULL || ctx->method == NULL || ctx->method->freeOutData == NULL) {
         return;
     }
-    if (ctx->method == NULL || ctx->method->freeOutData == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
-        return;
-    }
-
     ctx->method->freeOutData(ctx->decoderCtx, outData);
 }
 

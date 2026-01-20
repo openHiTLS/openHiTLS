@@ -271,14 +271,12 @@ static int32_t IsSignIdInHashTable(int32_t signId)
     BSL_SignIdMap *signIdMap = NULL;
     int32_t ret = BSL_SAL_ThreadReadLock(g_signHashRwLock);
     if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
     ret = BSL_HASH_At(g_signHashTable, (uintptr_t)signId, (uintptr_t *)&signIdMap);
     (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
     if (ret != BSL_SUCCESS || signIdMap == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_OBJ_ERR_FIND_HASH_TABLE);
         return BSL_OBJ_ERR_FIND_HASH_TABLE;
     }
     return BSL_SUCCESS;

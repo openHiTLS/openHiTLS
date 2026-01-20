@@ -236,7 +236,6 @@ int32_t CRYPT_HMAC_Reinit(CRYPT_HMAC_Ctx *ctx)
 int32_t CRYPT_HMAC_Deinit(CRYPT_HMAC_Ctx *ctx)
 {
     if (ctx == NULL || ctx->method.deinit == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     (void)ctx->method.deinit(ctx->mdCtx);

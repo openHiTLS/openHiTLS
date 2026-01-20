@@ -90,6 +90,7 @@ void SDV_CRYPTO_AES_MULTI_UPDATE_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *a
     ASSERT_COMPARE("dec result1", (uint8_t *)result, pt1->len, pt1->x, pt1->len);
     ASSERT_COMPARE("dec result2", (uint8_t *)result + pt1->len, pt2->len, pt2->x, pt2->len);
     ASSERT_COMPARE("dec tagResult", (uint8_t *)tagResult, tag->len, tag->x, tag->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
@@ -161,6 +162,7 @@ void SDV_CRYPTO_AES_MULTI_UPDATE_FUNC_TC002(int isProvider, int algId, Hex *key,
     ASSERT_TRUE(memcmp(result + pt1->len, pt2->x, pt2->len) == 0);
     ASSERT_TRUE(memcmp(result + pt1->len + pt2->len, pt3->x, pt3->len) == 0);
     ASSERT_TRUE(memcmp(tagResult, tag->x,  tag->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -281,6 +283,7 @@ void SDV_CRYPTO_EAL_CIPHER_FUNC_TC001(int padding, int algId, Hex *key, Hex *iv,
         ret = CRYPT_EAL_CipherFinal(ctx, decData + totalLen, &tmplen);
         ASSERT_EQ(ret, CRYPT_SUCCESS);
         ASSERT_TRUE(memcmp(testData, decData, sizeof(testData)) == 0);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
 EXIT:
     CRYPT_EAL_CipherDeinit(ctx);

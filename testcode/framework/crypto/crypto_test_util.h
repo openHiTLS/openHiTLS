@@ -62,6 +62,10 @@ bool IsCurveDisabled(int eccId);
 
 bool IsCurve25519AlgDisabled(int id);
 
+void TestErrClear(void);
+bool TestIsErrStackEmpty(void);
+bool TestIsErrStackNotEmpty(void);
+
 int32_t TestSimpleRand(uint8_t *buff, uint32_t len);
 int32_t TestSimpleRandEx(void *libCtx, uint8_t *buff, uint32_t len);
 int32_t TestSimpleRandExSelfCheck(void *libCtx, uint8_t *buff, uint32_t len);

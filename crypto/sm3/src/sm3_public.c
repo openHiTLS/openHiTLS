@@ -71,7 +71,6 @@ int32_t CRYPT_SM3_InitEx(CRYPT_SM3_Ctx *ctx, void *param)
 int32_t CRYPT_SM3_Deinit(CRYPT_SM3_Ctx *ctx)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     (void)memset_s(ctx, sizeof(CRYPT_SM3_Ctx), 0, sizeof(CRYPT_SM3_Ctx));

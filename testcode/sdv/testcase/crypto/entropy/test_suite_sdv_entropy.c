@@ -339,6 +339,7 @@ void SDV_CRYPTO_ENTROPY_EsNormalTest(int alg, int size, int test)
     ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrdget, EsGetAuto, es) == 0);
     BSL_SAL_ThreadClose(thrd);
     BSL_SAL_ThreadClose(thrdget);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_EsFree(es);
     return;
@@ -373,6 +374,7 @@ void SDV_CRYPTO_ENTROPY_EsCtrlTest1(int type, int state, int excRes)
     }
     if (excRes == 1) {
         ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, type, (void *)&len, sizeof(uint32_t)) == CRYPT_SUCCESS);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     } else {
         ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, type, (void *)&len, sizeof(uint32_t)) != CRYPT_SUCCESS);
     }
@@ -432,6 +434,7 @@ void SDV_CRYPTO_ENTROPY_EsCtrlTest2(void)
     ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GET_STATE, &flag, 1) == CRYPT_SUCCESS);
     ASSERT_TRUE(flag == true);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_CF, (void *)(intptr_t)"sm3_df", strlen("sm3_df")) != CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, 1) != CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ADD_NS, (void *)&para, sizeof(CRYPT_EAL_NsPara)) != CRYPT_SUCCESS);
@@ -516,6 +519,7 @@ void SDV_CRYPTO_ENTROPY_EsWithoutNsTest()
     /* Not sufficient entropy to pass the test yet, will fix later */
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, 1) == CRYPT_SUCCESS);
 #endif
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_TRUE(CRYPT_EAL_EsInit(es) != CRYPT_SUCCESS);
     CRYPT_EAL_NsPara para = {
         "aaa",
@@ -618,7 +622,9 @@ void SDV_CRYPTO_ENTROPY_EsMultiNsTest()
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ADD_NS, (void *)&norPara, sizeof(CRYPT_EAL_NsPara)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
     uint8_t buf[32] = {0};
+    // Error stack exists
     ASSERT_TRUE(CRYPT_EAL_EsEntropyGet(es, buf, 32) == 32);
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     CRYPT_EAL_EsFree(es);
@@ -685,6 +691,7 @@ void SDV_CRYPTO_ENTROPY_EsNsNumberTest(int number, int minEn, int expLen)
         strcat_s((char *)(intptr_t)errPara.name, strlen(name) + 3, str);
         if (iter >= 16) {
             ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ADD_NS, (void *)&errPara, sizeof(CRYPT_EAL_NsPara)) != CRYPT_SUCCESS);
+            (void)TestErrClear();
         } else {
             ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ADD_NS, (void *)&errPara, sizeof(CRYPT_EAL_NsPara)) == CRYPT_SUCCESS);
         }
@@ -693,6 +700,9 @@ void SDV_CRYPTO_ENTROPY_EsNsNumberTest(int number, int minEn, int expLen)
     ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
     uint8_t buf[32] = {0};
     ASSERT_TRUE(CRYPT_EAL_EsEntropyGet(es, buf, 32) == (uint32_t)expLen);
+    if (expLen != 0) {
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
 
 EXIT:
     BSL_SAL_Free((void *)(intptr_t)errPara.name);
@@ -767,6 +777,7 @@ void SDV_CRYPTO_ENTROPY_MutiTest(void)
         ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrdget, EsGetAuto, es) == 0);
         BSL_SAL_ThreadClose(thrdget);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_EsFree(es);
@@ -799,6 +810,7 @@ void SDV_CRYPTO_ENTROPY_MutiBeforeInitTest(void)
     BSL_SAL_ThreadId thrd;
     ASSERT_TRUE(BSL_SAL_ThreadCreate(&thrd, EsGatherAuto, es) == 0);
     BSL_SAL_ThreadClose(thrd);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_EsFree(es);
@@ -843,6 +855,7 @@ void SDV_CRYPTO_ENTROPY_ES_FUNC_0001(int enableTest)
     uint8_t buf[8192] = {0};
     uint32_t resLen = CRYPT_EAL_EsEntropyGet(es, buf, 8192);
     ASSERT_TRUE(resLen == 64);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_EsFree(es);
     return;
@@ -907,6 +920,7 @@ void SDV_CRYPTO_ENTROPY_ES_FUNC_0002(int enableTest)
     ASSERT_TRUE(resLen == 32);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_POOL_GET_CURRSIZE, (void *)&size, sizeof(uint32_t)) == CRYPT_SUCCESS);
     ASSERT_EQ(size, 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_EsFree(es);
     return;
@@ -953,6 +967,7 @@ void SDV_CRYPTO_ENTROPY_ES_FUNC_0003(int alg, int enableTest)
     uint8_t buf[8192] = {0};
     uint32_t resLen = CRYPT_EAL_EsEntropyGet(es, buf, 8192);
     ASSERT_TRUE(resLen == expectGetLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_EsFree(es);
     return;
@@ -990,6 +1005,7 @@ void SDV_CRYPTO_ENTROPY_ES_FUNC_0004(int enableTest)
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_REMOVE_NS, (void *)(uintptr_t)"CPU-Jitter", 10) == CRYPT_SUCCESS);
 #endif
     ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_ENTROPY_ES_NO_NS);
+    (void)TestErrClear();
     CRYPT_EAL_NsPara norPara1 = {
         "normal-ns",
         enableTest,
@@ -1041,7 +1057,9 @@ void SDV_CRYPTO_ENTROPY_ES_FUNC_0004(int enableTest)
     ENTROPY_EsDeinit(es->es);
     (void)BSL_SAL_ThreadUnlock(es->lock);
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_REMOVE_NS, (void *)(uintptr_t)"normal-ns", 10) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_ENTROPY_ES_NO_NS);
+    (void)TestErrClear();
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ADD_NS, (void *)&norPara2, sizeof(CRYPT_EAL_NsPara)) == CRYPT_SUCCESS);
 #ifdef HITLS_BSL_SAL_DARWIN
     /* On Darwin, re-disable health testing before second EsInit with timestamp NS */
@@ -1051,6 +1069,7 @@ void SDV_CRYPTO_ENTROPY_ES_FUNC_0004(int enableTest)
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_GATHER_ENTROPY, NULL, 0) == CRYPT_SUCCESS);
     resLen = CRYPT_EAL_EsEntropyGet(es, buf, 8192);
     ASSERT_TRUE(resLen == expectGetLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_EsFree(es);
     return;
@@ -1259,6 +1278,7 @@ void SDV_CRYPTO_EAL_SEEDPOOL_EntropySumTest(int minEntropy1, int minEntropy2, in
         ASSERT_TRUE(buf != NULL);
     }
     ASSERT_TRUE(enctx.entSum == (uint32_t)exp);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(buf);
     EAL_EntropyFreeCtx(ctx);
@@ -1321,6 +1341,7 @@ void SDV_CRYPTO_SEEDPOOL_DrbgTest(int isNull, int algId)
     CRYPT_EAL_RandDeinit();
     ASSERT_TRUE(CRYPT_EAL_RandInit((CRYPT_RAND_AlgId)algId, &meth, (void *)pool, NULL, 0) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_Randbytes(output, 16) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_SeedPoolFree(pool);
@@ -1364,6 +1385,7 @@ void SDV_CRYPTO_ENTROPY_DrbgTest(void)
     CRYPT_RandSeedMethod meth = {GetEntropyTest, CleanEntropyTest, GetNonceTest, CleanNonceTest};
     ASSERT_TRUE(CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, &meth, (void *)es, NULL, 0) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_Randbytes(output, 256) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_RandDeinit();
     CRYPT_EAL_EsFree(es);
@@ -1397,6 +1419,7 @@ void SDV_CRYPTO_SEEDPOOL_MutiTest(void)
         ASSERT_TRUE(pthread_create(&thrd, NULL, DrbgSeedTest, pool) == 0);
         pthread_join(thrd, NULL);
     }
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_SeedPoolFree(pool);
@@ -1662,6 +1685,7 @@ void SDV_CRYPTO_SEEDPOOL_CompleteTest(void)
     uint8_t out[16] = {0};
     ASSERT_TRUE(CRYPT_EAL_Drbgbytes(rndCtx, out, 16) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_DrbgSeed(rndCtx) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_EAL_DrbgDeinit(rndCtx);
@@ -1741,6 +1765,7 @@ void HITLS_SDV_DRBG_GM_FUNC_TC019(int isCreateNullPool, int isPhysical, int minE
     uint32_t entropy = (uint32_t)entropyL;
     ctx = EAL_EntropyNewCtx(pool, isNpesUsed, minLen, maxLen, entropy);
     ASSERT_TRUE(ctx != NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     if (isCreateNullPool && !isValid) {
         ASSERT_TRUE(EAL_EntropyCollection(pool, ctx) == CRYPT_SEED_POOL_NOT_MEET_REQUIREMENT);
     } else {
@@ -1856,6 +1881,7 @@ void HITLS_SDV_DRBG_GM_FUNC_TC039(int isCreateNullPool, int isPhysical, int minE
     ctx = EAL_EntropyNewCtx(pool, true, (uint32_t)minL, (uint32_t)maxL, (uint32_t)entropyL);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(EAL_EntropyCollection(pool, ctx) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_SeedPoolFree(pool);
     EAL_EntropyFreeCtx(ctx);
@@ -1965,6 +1991,7 @@ void HITLS_SDV_DRBG_GM_FUNC_TC067(int isCreateNullPool, int isPhysical, int minE
         ASSERT_TRUE(EAL_EntropyCollection(pool, ctx) != CRYPT_SUCCESS);
     } else {
         ASSERT_TRUE(EAL_EntropyCollection(pool, ctx) == CRYPT_SUCCESS);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
 EXIT:
     CRYPT_EAL_SeedPoolFree(pool);
@@ -2077,6 +2104,7 @@ void HITLS_SDV_DRBG_GM_FUNC_TC071(int isCreateNullPool, int isPhysical, int minE
     ctx = EAL_EntropyNewCtx(pool, true, (uint32_t)minL, (uint32_t)maxL, (uint32_t)entropyL);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(EAL_EntropyCollection(pool, ctx) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_SeedPoolFree(pool);
     EAL_EntropyFreeCtx(ctx);
@@ -2197,6 +2225,7 @@ void HITLS_SDV_DRBG_GM_FUNC_TC051(int isCreateNullPool, int isPhysical, int minE
     ctx = EAL_EntropyNewCtx(pool, true, (uint32_t)minL, (uint32_t)maxL, (uint32_t)entropyL);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(EAL_EntropyCollection(pool, ctx) == CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_SeedPoolFree(pool);
     EAL_EntropyFreeCtx(ctx);

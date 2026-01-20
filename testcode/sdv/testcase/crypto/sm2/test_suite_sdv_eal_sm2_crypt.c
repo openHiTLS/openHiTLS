@@ -297,6 +297,7 @@ void SDV_CRYPTO_SM2_ENC_FUNC_TC001(Hex *pubKey, Hex *plain, Hex *k, Hex *cipher,
     decodeText[0] = 0x04;
     ASSERT_EQ(encData.xLen + encData.yLen + encData.hashLen + encData.cipherLen + 1, cipher->len);
     ASSERT_TRUE(memcmp(decodeText, cipher->x, cipher->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_RandRegist(NULL);
@@ -355,6 +356,7 @@ void SDV_CRYPTO_SM2_DEC_FUNC_TC001(Hex *prvKey, Hex *plain, Hex *cipher, int isP
 
     ASSERT_TRUE(outLen == plain->len);
     ASSERT_TRUE(memcmp(plainText, plain->x, plain->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_RandRegist(NULL);
@@ -398,6 +400,7 @@ void SDV_CRYPTO_SM2_DECOCDE_Sm2CipherText(Hex *cipher)
     ASSERT_TRUE(c1 != NULL);
 
     ASSERT_EQ(ECC_DecodePoint(para, c1, decode, SM2_POINT_COORDINATE_LEN), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_Free(decode);
     ECC_FreePoint(c1);
@@ -480,6 +483,7 @@ void SDV_CRYPTO_SM2_GEN_CRYPT_FUNC_TC001(Hex *msg, int isProvider)
 
     ASSERT_TRUE(ptLen == msg->len);
     ASSERT_TRUE(memcmp(plainText, msg->x, msg->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_RandRegist(NULL);
@@ -531,6 +535,7 @@ void SDV_CRYPTO_SM2_GEN_CRYPT_FUNC_TC002(Hex *msg, int isProvider)
 
     ASSERT_TRUE(ptLen == msg->len);
     ASSERT_TRUE(memcmp(buf, msg->x, msg->len) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     CRYPT_RandRegist(NULL);
@@ -612,6 +617,7 @@ void SDV_CRYPTO_SM2_ENC_DECODE_FUNC_TC001(Hex *cipher)
         .cipherLen = decodelen - SM2_POINT_COORDINATE_LEN - SM3_MD_SIZE
     };
     ASSERT_EQ(CRYPT_EAL_DecodeSm2EncryptData(cipher->x, cipher->len, &encData), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }

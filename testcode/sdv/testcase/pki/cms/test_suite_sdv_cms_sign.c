@@ -124,6 +124,7 @@ void SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001(char *p7path, char *msgpath, int
     BSL_Buffer nullMsgBuf = {NULL, 0};
     ASSERT_EQ(BSL_SAL_ReadFile(msgpath, &msgBuff.data, &msgBuff.dataLen), BSL_SUCCESS);
     BSL_Buffer wrongMsgBuf = {msgBuff.data + 1, msgBuff.dataLen - 1};
+    ASSERT_TRUE(TestIsErrStackEmpty());
     if (isDetached) {
         ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuff, params, NULL), HITLS_PKI_SUCCESS);
         ASSERT_EQ(HITLS_CMS_DataVerify(cms, NULL, NULL, NULL), HITLS_CMS_ERR_SIGNEDDATA_NO_CONTENT);
@@ -206,6 +207,7 @@ void SDV_CMS_PARSE_SIGNEDDATA_ENC_DEC_FILE_TC001(char *p7path, char *msgpath, in
         ASSERT_EQ(HITLS_CMS_DataVerify(cms1, &msgBuff, params, NULL), HITLS_PKI_SUCCESS);
     } else {
         ASSERT_EQ(HITLS_CMS_DataVerify(cms1, NULL, params, NULL), HITLS_PKI_SUCCESS);
+        ASSERT_TRUE(TestIsErrStackEmpty());
     }
 EXIT:
     HITLS_CMS_Free(cms);
@@ -306,6 +308,7 @@ void SDV_CMS_ENCODE_SIGNEDDATA_TC001(Hex *buff)
     ASSERT_EQ(HITLS_CMS_GenSignedDataBuff(BSL_FORMAT_ASN1, cms, &encode), HITLS_PKI_SUCCESS);
     ASSERT_COMPARE("encode compare", encode.data, encode.dataLen, buff->x, buff->len);
     ASSERT_EQ(HITLS_CMS_ParseSignedData(NULL, NULL, &encode, &cms1), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_FREE(encode.data);
     HITLS_CMS_Free(cms1);
@@ -440,6 +443,7 @@ void SDV_CMS_SIGNERINFOGEN_SET_DN_TC001(void)
 
     // Verify SignerInfo structure
     ASSERT_EQ(signerInfo->version, HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CMS_Free(cms);
@@ -510,6 +514,7 @@ void SDV_CMS_SIGNERINFOGEN_SET_SKI_TC002(void)
     ASSERT_EQ(signerInfo->version, HITLS_CMS_SIGNEDDATA_SIGNERINFO_V3);
     ASSERT_COMPARE("ski compare", signerInfo->subjectKeyId.kid.data, signerInfo->subjectKeyId.kid.dataLen,
         ski.kid.data, ski.kid.dataLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CMS_Free(cms);
@@ -593,6 +598,7 @@ void SDV_CMS_ADDSIGNERINFO_RSA_PSS_TC001(char *certPath, char *keyPath, char *ms
     ASSERT_EQ(addedSignerInfo->sigAlg.rsaPssParam.mdId, BSL_CID_SHA256);
     ASSERT_EQ(addedSignerInfo->sigAlg.rsaPssParam.mgfId, BSL_CID_SHA256);
     ASSERT_EQ(addedSignerInfo->sigAlg.rsaPssParam.saltLen, 20);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_SAL_FREE(data);
@@ -670,6 +676,7 @@ void SDV_CMS_ADDSIGNERINFO_RSA_PKCSV15_TC001(char *certPath, char *keyPath, char
 
     // Verify signature algorithm is standard RSA.
     ASSERT_EQ(addedSignerInfo->sigAlg.algId, BSL_CID_RSA);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_SAL_FREE(data);
@@ -737,6 +744,7 @@ void SDV_CMS_ADDSIGNERINFO_ECC_KEY_TC001(char *certPath, char *keyPath, char *ms
         BSL_PARAM_END
     };
     ASSERT_EQ(HITLS_CMS_DataSign(cms, pkey, cert, &msgBuf, params), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     // Get signerInfo back from cms to verify
     CMS_SignedData *signedData = cms->ctx.signedData;
@@ -845,6 +853,7 @@ void SDV_CMS_CTRL_ADD_CERT_TC001(char *certPath, char *keyPath, char *msg)
         HITLS_PKI_SUCCESS);
     ASSERT_EQ(addedSerial.dataLen, serialNum.dataLen);
     ASSERT_EQ(memcmp(addedSerial.data, serialNum.data, serialNum.dataLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_SAL_FREE(data);
@@ -1026,6 +1035,7 @@ void SDV_CMS_GEN_ATTACH_SIGNEDDATA_TC001(int algId, char *capath, char *certPath
     ASSERT_EQ(BSL_LIST_COUNT(cms->ctx.signedData->signerInfos), 2); // its should be 2.
     ASSERT_EQ(HITLS_CMS_DataVerify(cms, &msgBuf, params, NULL), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_CMS_DataVerify(cms, NULL, params, NULL), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_SAL_FREE(data);
@@ -1146,6 +1156,7 @@ void SDV_CMS_GEN_DETACHED_SIGNEDDATA_MULTI_SIGNER_TC001(char *capath, char *cert
     ASSERT_EQ(HITLS_CMS_DataInit(HITLS_CMS_OPT_VERIFY, parsedCms, NULL), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_CMS_DataUpdate(parsedCms, &msgBuf), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_CMS_DataFinal(parsedCms, params2), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     BSL_SAL_FREE(data);
@@ -1266,6 +1277,7 @@ void SDV_CMS_STREAM_SIGN_DETACHED_TC001(char *capath, char *cert1Path, char *key
     HITLS_CMS *cms2 = NULL;
     ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &encode, &cms2), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(cms2 != NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     BSL_Param verifyParams1[7] = {
         {HITLS_CMS_PARAM_CA_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, caCertchain, sizeof(HITLS_X509_List *), 0},
         BSL_PARAM_END
@@ -1406,18 +1418,21 @@ void SDV_CMS_STREAM_NODETACHED_TEST_TC001(void)
     // Try to initialize streaming verification on non-detached CMS - should fail
     ASSERT_EQ(HITLS_CMS_DataInit(HITLS_CMS_OPT_VERIFY, cms2, NULL), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_CMS_DataUpdate(cms2, &msgBuf), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(HITLS_CMS_DataFinal(cms2, NULL), HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_CERT);
     BSL_Param verifyParams1[8] = {
         {HITLS_CMS_PARAM_UNTRUSTED_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, certchain, sizeof(HITLS_X509_List *), 0},
         BSL_PARAM_END
     };
     ASSERT_EQ(HITLS_CMS_DataFinal(cms2, verifyParams1), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    TestErrClear();
     BSL_Param verifyParams2[8] = {
         {HITLS_CMS_PARAM_UNTRUSTED_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, certchain, sizeof(HITLS_X509_List *), 0},
         {HITLS_CMS_PARAM_CA_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, caCertchain, sizeof(HITLS_X509_List *), 0},
         BSL_PARAM_END
     };
     ASSERT_EQ(HITLS_CMS_DataFinal(cms2, verifyParams2), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_FREE(encode.data);
     HITLS_CMS_Free(cms);
@@ -1552,9 +1567,11 @@ void SDV_CMS_MIXED_SING_VERIFY_TC001(void)
     ASSERT_TRUE(encode.data != NULL && encode.dataLen > 0);
     ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &encode, &cms2), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(cms2 != NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     // Verify all SignerInfos using one-shot API first
     ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &initMsgBuf, NULL, NULL), HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+    TestErrClear();
     ASSERT_EQ(HITLS_CMS_DataVerify(cms2, &initMsgBuf, params, NULL), HITLS_PKI_SUCCESS);
 
     // Verify all SignerInfos using streaming API (verifies both signers simultaneously)
@@ -1568,6 +1585,7 @@ void SDV_CMS_MIXED_SING_VERIFY_TC001(void)
     ASSERT_EQ(HITLS_CMS_DataInit(HITLS_CMS_OPT_SIGN, cms, NULL), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_CMS_DataUpdate(cms, &msgBuf), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_CMS_DataFinal(cms, signParams), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_SAL_FREE(encode.data);
     HITLS_CMS_Free(cms);
@@ -1667,6 +1685,7 @@ void SDV_CMS_NODETACHED_DIFF_MSG_FAIL_TC001(void)
     };
     ASSERT_EQ(HITLS_CMS_DataSign(cms, pkey1, cert1, &msgBuf1, params1), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_CMS_DataVerify(cms, NULL, params1, NULL),  HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     // Create second SignerInfo
     char *msg2 = "This is a different message";
     BSL_Buffer msgBuf2 = {(uint8_t *)msg2, strlen(msg2)};
@@ -1807,6 +1826,7 @@ void SDV_CMS_SIGNEDDATA_INVALID_TC002(void)
 
     int32_t pkcsv15 = CRYPT_MD_SHA256;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     BSL_Buffer msgBuf = {msg, sizeof(msg)};
     ASSERT_EQ(HITLS_CMS_DataInit(HITLS_CMS_OPT_SIGN, cms, NULL), HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH);
@@ -1896,6 +1916,7 @@ void SDV_CMS_STREAM_INCORRECT_SEQUENCE_TC001(void)
         BSL_PARAM_END
     };
     ASSERT_EQ(HITLS_CMS_DataFinal(cms, params), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
     // Try to update after final, Should fail.
     ASSERT_EQ(HITLS_CMS_DataUpdate(cms, &msgBuf), HITLS_CMS_ERR_INVALID_STATE);
@@ -2039,6 +2060,7 @@ static int32_t LoadCertChainAndKeys(const char *basePath, TestCertChainCtx *ctx)
         device2KeyPath, NULL, 0, &ctx->pkey2), HITLS_PKI_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx->pkey2, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)),
         HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return ret;
 }
@@ -2202,6 +2224,7 @@ void SDV_CMS_SIGN_VERIFY_WITH_CERT_CHAIN_CRL_TC002(char *basePath, char *msg)
     int ref;
     ASSERT_EQ(HITLS_X509_CertCtrl(certCtx.caCert, HITLS_X509_REF_UP, &ref, sizeof(int32_t)), BSL_SUCCESS);
     ASSERT_EQ(BSL_LIST_AddElement(partChain, certCtx.caCert, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     BSL_Param partiChain[4] = {
         {HITLS_CMS_PARAM_CA_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, partChain, 0, 0},
         {HITLS_CMS_PARAM_CRL_LISTS, BSL_PARAM_TYPE_CTX_PTR, crlList, sizeof(HITLS_X509_List *), 0},
@@ -2301,6 +2324,7 @@ void SDV_CMS_SIGN_VERIFY_WITH_CERT_CHAIN_CRL_TC003(char *basePath, char *msg)
     cms = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_SIGNEDDATA);
     ASSERT_NE(cms, NULL);
     ASSERT_EQ(HITLS_CMS_DataSign(cms, certCtx.pkey1, certCtx.device1Cert, &msgBuf, params), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
     BSL_Param verifyParams1[2] = {
         {HITLS_CMS_PARAM_UNTRUSTED_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, midchain, 0, 0},
         BSL_PARAM_END
@@ -2400,6 +2424,7 @@ void SDV_CMS_SIGN_VERIFY_STUB_TC001(char *basePath, char *msg)
     STUB_ResetMallocCount();
     ASSERT_EQ(HITLS_CMS_DataSign(cms, certCtx.pkey1, certCtx.device1Cert, &msgBuf, params), HITLS_PKI_SUCCESS);
     totalMallocCount = STUB_GetMallocCallCount();
+    ASSERT_TRUE(TestIsErrStackEmpty());
     for (uint32_t i = 0; i < totalMallocCount; i++) {
         STUB_EnableMallocFail(true);
         STUB_ResetMallocCount();

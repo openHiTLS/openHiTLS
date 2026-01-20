@@ -99,6 +99,7 @@ void SDV_BSL_SAL_ATOMIC_ADD_TC001(void)
         pthread_join(pid2[i], NULL);
     }
     ASSERT_EQ(g_threadStartNum, 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     g_threadStartNum = 0;

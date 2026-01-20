@@ -494,7 +494,6 @@ int32_t MODES_GCM_Final(MODES_GCM_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
 int32_t MODES_GCM_DeInitCtx(MODES_GCM_Ctx *modeCtx)
 {
     if (modeCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     int32_t algId = modeCtx->algId;

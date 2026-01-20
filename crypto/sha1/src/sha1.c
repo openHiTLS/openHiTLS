@@ -80,7 +80,6 @@ int32_t CRYPT_SHA1_InitEx(CRYPT_SHA1_Ctx *ctx, void *param)
 int32_t CRYPT_SHA1_Deinit(CRYPT_SHA1_Ctx *ctx)
 {
     if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SHA1_Ctx));

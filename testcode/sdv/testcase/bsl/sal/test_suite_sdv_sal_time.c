@@ -84,6 +84,7 @@ void SDV_BSL_TIME_FUNC_REGISTER_TC001(void)
     BSL_SysTimeFuncUnReg();
 
     ASSERT_NE(BSL_SAL_CurrentSysTimeGet(), 1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
@@ -257,6 +258,7 @@ void SDV_BSL_TIME_CONVERT_TIME_FUNC_TC001(void)
 
     /* 2.Failed to convert the time. */
     ASSERT_TRUE(BSL_SAL_DateToUtcTimeConvert(&dateTime, &utcTime) != BSL_SUCCESS);
+    TestErrClear();
 
     /* 3.Time conversion succeeded. */
     dateTime.year = BSL_TIME_SYSTEM_EPOCH_YEAR;
@@ -266,6 +268,7 @@ void SDV_BSL_TIME_CONVERT_TIME_FUNC_TC001(void)
     dateTime.minute = 0;
     dateTime.second = 0;
     ASSERT_TRUE(BSL_SAL_DateToUtcTimeConvert(&dateTime, &utcTime) == (uint32_t)BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
@@ -326,6 +329,7 @@ void SDV_BSL_SAL_CONVERT_TIME_API_TC001(void)
     ASSERT_TRUE(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime) == BSL_SUCCESS);
     ASSERT_TRUE(gmtime_r((const time_t *)&utcTime, &tempTime) != NULL);
     TestBslSysTimeAndTmCompare(&dateTime, &tempTime);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
@@ -359,6 +363,7 @@ void SDV_BSL_TIME_DATETIME_CHECK_FUNC_TC001(void)
     dateTime.year = 1970;
     ret = BSL_DateTimeCheck(&dateTime);
     ASSERT_EQ(ret, true);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
@@ -572,6 +577,7 @@ void SDV_BSL_TIME_DATETIME_CHECK_FUNC_TC004(void)
     dateTime.millSec = 59;
     ret = BSL_DateTimeCheck(&dateTime);
     ASSERT_EQ(ret, true);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
@@ -716,6 +722,7 @@ void SDV_BSL_TIME_ADD_DAY_SECOND_TC001(void)
 
     /* 4.Invalid parameter */
     ASSERT_EQ(BSL_DateTimeAddDaySecond(NULL, &base, 0, 0), BSL_INTERNAL_EXCEPTION);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     return;
@@ -747,6 +754,7 @@ void SDV_BSL_TIME_GET_NSEC_FUNC_TC001(void)
     ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_TIME_GET_TIME_IN_NS, TestTimeGetNSec), BSL_SUCCESS);
     ASSERT_EQ(BSL_SAL_TIME_GetNSec(), TestTimeGetNSec());
     ASSERT_EQ(BSL_SAL_CallBack_Ctrl(BSL_SAL_TIME_GET_TIME_IN_NS, NULL), BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
 }
