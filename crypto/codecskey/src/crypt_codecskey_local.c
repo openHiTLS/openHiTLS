@@ -288,6 +288,38 @@ static int32_t EncodeKeyParamAsn1BuffInner(CRYPT_EAL_PkeyCtx *pctx, int32_t opt,
     *keyLen = tmpLen;
     return CRYPT_SUCCESS;
 }
+
+static int32_t SetDsaDhKeyPair(CRYPT_EAL_PkeyCtx *pkey, CRYPT_PKEY_AlgId algId, bool isPriv,
+    uint8_t *buff, uint32_t buffLen)
+{
+    int32_t pubKeyTag;
+    int32_t prvKeyTag;
+    if (algId == CRYPT_PKEY_DSA) {
+        pubKeyTag = CRYPT_PARAM_DSA_PUBKEY;
+        prvKeyTag = CRYPT_PARAM_DSA_PRVKEY;
+    } else {
+        pubKeyTag = CRYPT_PARAM_DH_PUBKEY;
+        prvKeyTag = CRYPT_PARAM_DH_PRVKEY;
+    }
+    BSL_Param rawKey[] = {
+        {pubKeyTag, BSL_PARAM_TYPE_OCTETS, buff, buffLen, 0},
+        BSL_PARAM_END
+    };
+    int32_t ret = CRYPT_EAL_PkeySetPubEx(pkey, rawKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (isPriv != 0) {
+        rawKey[0].key = prvKeyTag;
+        ret = CRYPT_EAL_PkeySetPrvEx(pkey, rawKey);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    return CRYPT_SUCCESS;
+}
 #endif
 
 #ifdef HITLS_CRYPTO_DSA
@@ -332,18 +364,8 @@ int32_t ParseDsaKeyParamAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName,
         CRYPT_EAL_PkeyFreeCtx(pctx);
         return ret;
     }
-    BSL_Param rawKey[] = {
-        {CRYPT_PARAM_DSA_PRVKEY, BSL_PARAM_TYPE_OCTETS, asn1[0].buff, asn1[0].len, 0},
-        BSL_PARAM_END
-    };
-    if (isPriv != 0) {
-        ret = CRYPT_EAL_PkeySetPrvEx(pctx, rawKey);
-    } else {
-        rawKey[0].key = CRYPT_PARAM_DSA_PUBKEY;
-        ret = CRYPT_EAL_PkeySetPubEx(pctx, rawKey);
-    }
+    ret = SetDsaDhKeyPair(pctx, CRYPT_PKEY_DSA, isPriv, asn1[0].buff, asn1[0].len);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         CRYPT_EAL_PkeyFreeCtx(pctx);
         return ret;
     }
@@ -483,18 +505,8 @@ int32_t ParseDhKeyParamAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName, 
         CRYPT_EAL_PkeyFreeCtx(pctx);
         return ret;
     }
-    BSL_Param rawKey[] = {
-        {CRYPT_PARAM_DH_PRVKEY, BSL_PARAM_TYPE_OCTETS, asn1[0].buff, asn1[0].len, 0},
-        BSL_PARAM_END
-    };
-    if (isPriv != 0) {
-        ret = CRYPT_EAL_PkeySetPrvEx(pctx, rawKey);
-    } else {
-        rawKey[0].key = CRYPT_PARAM_DH_PUBKEY;
-        ret = CRYPT_EAL_PkeySetPubEx(pctx, rawKey);
-    }
+    ret = SetDsaDhKeyPair(pctx, CRYPT_PKEY_DH, isPriv, asn1[0].buff, asn1[0].len);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         CRYPT_EAL_PkeyFreeCtx(pctx);
         return ret;
     }
