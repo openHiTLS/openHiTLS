@@ -35,6 +35,7 @@
 #include "conn_init.h"
 #include "alert.h"
 #include "hs_kx.h"
+#include "rec_wrapper.h"
 /* END_HEADER */
 
 /* ============================================================================
@@ -2560,6 +2561,261 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SEQUENCE_NUMBER_FUNC_TC003(void)
     ASSERT_TRUE(HITLS_Write(server->ssl, (uint8_t *)"Hello World", sizeof("Hello World"), &writeLen) == HITLS_SUCCESS);
     ASSERT_TRUE(recCtx->writeStates.currentState->seq == 1);
 EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+static void AppendKeyUpdateAfterRecord(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)user;
+
+    const uint8_t ku[5] = { 0x18, 0x00, 0x00, 0x01, 0x00 };
+
+    if (*len + (uint32_t)sizeof(ku) > bufSize) {
+        return;
+    }
+    (void)memcpy_s(data + *len, bufSize - *len, ku, sizeof(ku));
+    *len += (uint32_t)sizeof(ku);
+}
+
+static void AppendFinishedAfterRecord(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)user;
+
+    /* Finished handshake: type=0x14, length=0 (empty verify_data as placeholder) */
+    const uint8_t finished[4] = { 0x14, 0x00, 0x00, 0x00 };
+
+    if (*len + (uint32_t)sizeof(finished) > bufSize) {
+        return;
+    }
+    (void)memcpy_s(data + *len, bufSize - *len, finished, sizeof(finished));
+    *len += (uint32_t)sizeof(finished);
+}
+
+/**
+ * @test     UT_TLS_TLS13_RFC8446_CONSISTENCY_NOT_ON_RECORD_BOUNDARY_FUNC_TC001
+ * @spec     -
+ * @title    ServerHello not on record boundary - Client read key switch
+ * @precon   nan
+ * @brief    Server sends ServerHello with KeyUpdate appended in same record.
+ *           Client should reject with fatal unexpected_message.
+ * @expect   Client returns HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY and ALERT_UNEXPECTED_MESSAGE
+ * @prior    Level 1
+ * @auto     TRUE
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_NOT_ON_RECORD_BOUNDARY_FUNC_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    RecWrapper wrapper = { TRY_SEND_SERVER_HELLO, REC_TYPE_HANDSHAKE, false, NULL, AppendKeyUpdateAfterRecord };
+    RegisterWrapper(wrapper);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+    ASSERT_EQ(ret, HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY);
+
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_UNEXPECTED_MESSAGE);
+
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * @test     UT_TLS_TLS13_RFC8446_CONSISTENCY_NOT_ON_RECORD_BOUNDARY_FUNC_TC002
+ * @spec     -
+ * @title    Server Finished not on record boundary - Client read key switch
+ * @precon   nan
+ * @brief    Server sends Finished with KeyUpdate appended in same record.
+ *           Client should reject with fatal unexpected_message.
+ * @expect   Client returns HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY and ALERT_UNEXPECTED_MESSAGE
+ * @prior    Level 1
+ * @auto     TRUE
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_NOT_ON_RECORD_BOUNDARY_FUNC_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    RecWrapper wrapper = { TRY_SEND_FINISH, REC_TYPE_HANDSHAKE, false, NULL, AppendKeyUpdateAfterRecord };
+    RegisterWrapper(wrapper);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+    ASSERT_EQ(ret, HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY);
+
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_UNEXPECTED_MESSAGE);
+
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * @test     UT_TLS_TLS13_RFC8446_CONSISTENCY_NOT_ON_RECORD_BOUNDARY_FUNC_TC003
+ * @spec     -
+ * @title    Client Finished not on record boundary - Server read key switch
+ * @precon   nan
+ * @brief    Client sends Finished with KeyUpdate appended in same record.
+ *           Server should reject with fatal unexpected_message.
+ * @expect   Server returns HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY and ALERT_UNEXPECTED_MESSAGE
+ * @prior    Level 1
+ * @auto     TRUE
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_NOT_ON_RECORD_BOUNDARY_FUNC_TC003(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    RecWrapper wrapper = { TRY_SEND_FINISH, REC_TYPE_HANDSHAKE, false, NULL, AppendKeyUpdateAfterRecord };
+    RegisterWrapper(wrapper);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+    ASSERT_EQ(ret, HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY);
+
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_UNEXPECTED_MESSAGE);
+
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * @test     UT_TLS_TLS13_RFC8446_CONSISTENCY_NOT_ON_RECORD_BOUNDARY_FUNC_TC004
+ * @spec     -
+ * @title    KeyUpdate not on record boundary - Server to Client
+ * @precon   nan
+ * @brief    Server sends KeyUpdate with another KeyUpdate appended in same record.
+ *           Client should reject with fatal unexpected_message.
+ * @expect   Client returns HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY and ALERT_UNEXPECTED_MESSAGE
+ * @prior    Level 1
+ * @auto     TRUE
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_NOT_ON_RECORD_BOUNDARY_FUNC_TC004(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    RecWrapper wrapper = { TRY_SEND_KEY_UPDATE, REC_TYPE_HANDSHAKE, false, NULL, AppendFinishedAfterRecord };
+    RegisterWrapper(wrapper);
+
+    ASSERT_TRUE(HITLS_KeyUpdate(server->ssl, HITLS_UPDATE_REQUESTED) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Accept(server->ssl) == HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    int32_t ret = HITLS_Read(client->ssl, readBuf, READ_BUF_SIZE, &readLen);
+    ASSERT_EQ(ret, HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY);
+
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_UNEXPECTED_MESSAGE);
+
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * @test     UT_TLS_TLS13_RFC8446_CONSISTENCY_NOT_ON_RECORD_BOUNDARY_FUNC_TC005
+ * @spec     -
+ * @title    KeyUpdate not on record boundary - Client to Server
+ * @precon   nan
+ * @brief    Client sends KeyUpdate with Finished appended in same record.
+ *           Server should reject with fatal unexpected_message.
+ * @expect   Server returns HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY and ALERT_UNEXPECTED_MESSAGE
+ * @prior    Level 1
+ * @auto     TRUE
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_NOT_ON_RECORD_BOUNDARY_FUNC_TC005(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    RecWrapper wrapper = { TRY_SEND_KEY_UPDATE, REC_TYPE_HANDSHAKE, false, NULL, AppendFinishedAfterRecord };
+    RegisterWrapper(wrapper);
+
+    ASSERT_TRUE(HITLS_KeyUpdate(client->ssl, HITLS_UPDATE_REQUESTED) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    int32_t ret = HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen);
+    ASSERT_EQ(ret, HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY);
+
+    ALERT_Info alert = {0};
+    ALERT_GetInfo(server->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_UNEXPECTED_MESSAGE);
+
+EXIT:
+    ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);

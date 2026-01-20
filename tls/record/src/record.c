@@ -542,6 +542,17 @@ int32_t REC_TLS13InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *p
 int32_t REC_ActivePendingState(TLS_Ctx *ctx, bool isOut)
 {
     RecCtx *recordCtx = (RecCtx *)ctx->recCtx;
+
+    if (!isOut) {
+        if ((recordCtx->hsRecList != NULL && !RecBufListEmpty(recordCtx->hsRecList))) {
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17383, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "Record: read key change not on record boundary.", 0, 0, 0, 0);
+            BSL_ERR_PUSH_ERROR(HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY);
+            return HITLS_REC_ERR_NOT_ON_RECORD_BOUNDARY;
+        }
+    }
+
     RecConnStates *states = (isOut == true) ? &recordCtx->writeStates : &recordCtx->readStates;
 
     if (states->pendingState == NULL) {
