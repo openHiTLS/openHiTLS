@@ -18,6 +18,7 @@
 
 #include "hitls_x509_local.h"
 #include "securec.h"
+#include "bsl_asn1_internal.h"
 #include "bsl_sal.h"
 #include "bsl_log_internal.h"
 #include "hitls_pki_errno.h"
@@ -34,6 +35,15 @@
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 #include "hitls_pki_utils.h"
+
+void HITLS_X509_FreeParsedNameNode(HITLS_X509_NameNode *node)
+{
+    if (node == NULL) {
+        return;
+    }
+    BSL_SAL_FREE(node->utf8Value.buff);
+    BSL_SAL_Free(node);
+}
 
 int32_t HITLS_X509_AddListItemDefault(void *item, uint32_t len, BSL_ASN1_List *list)
 {
@@ -101,6 +111,52 @@ int32_t HITLS_X509_ParseSignAlgInfo(BSL_ASN1_Buffer *algId, BSL_ASN1_Buffer *par
 }
 #endif
 
+static uint8_t X509_ToLower(uint8_t c)
+{
+    if (c >= 'A' && c <= 'Z') {
+        return c + ('a' - 'A');
+    }
+    return c;
+}
+
+static bool X509_IsSpace(uint8_t c)
+{
+    return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
+}
+
+static void X509_StringCanon(BSL_ASN1_Buffer *utf8Val)
+{
+    bool preSpace = true;
+    uint32_t writeIdx = 0;
+
+    for (uint32_t readIdx = 0; readIdx < utf8Val->len; readIdx++) {
+        uint8_t ch = utf8Val->buff[readIdx];
+        if (X509_IsSpace(ch)) {
+            if (!preSpace) {
+                utf8Val->buff[writeIdx++] = (uint8_t)' ';
+            }
+            preSpace = true;
+            continue;
+        }
+        utf8Val->buff[writeIdx++] = X509_ToLower(ch);
+        preSpace = false;
+    }
+    if (writeIdx > 0 && utf8Val->buff[writeIdx - 1] == (uint8_t)' ') {
+        writeIdx--;
+    }
+    utf8Val->len = writeIdx;
+}
+
+static int32_t X509_Asn1StringCanon(const BSL_ASN1_Buffer *in, BSL_ASN1_Buffer *out)
+{
+    int32_t ret = BSL_ASN1_ToUtf8String(in, out);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    X509_StringCanon(out);
+    return ret;
+}
+
 static int32_t HITLS_X509_ParseNameNode(BSL_ASN1_Buffer *asn, HITLS_X509_NameNode *node)
 {
     uint8_t *temp = asn->buff;
@@ -126,7 +182,8 @@ static int32_t HITLS_X509_ParseNameNode(BSL_ASN1_Buffer *asn, HITLS_X509_NameNod
     }
     // parse string
     if (*temp != BSL_ASN1_TAG_UTF8STRING && *temp != BSL_ASN1_TAG_PRINTABLESTRING &&
-        *temp != BSL_ASN1_TAG_IA5STRING && *temp != BSL_ASN1_TAG_TELETEXSTRING) {
+        *temp != BSL_ASN1_TAG_IA5STRING && *temp != BSL_ASN1_TAG_TELETEXSTRING &&
+        *temp != BSL_ASN1_TAG_BMPSTRING && *temp != BSL_ASN1_TAG_UNIVERSALSTRING) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_STR);
         return HITLS_X509_ERR_PARSE_STR;
     }
@@ -164,7 +221,7 @@ int32_t HITLS_X509_ParseListAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, void *
     }
     return ret;
 ERR:
-    BSL_SAL_Free(node);
+    HITLS_X509_FreeParsedNameNode(node);
     return ret;
 }
 
@@ -175,7 +232,7 @@ int32_t HITLS_X509_ParseNameList(BSL_ASN1_Buffer *name, BSL_ASN1_List *list)
     BSL_ASN1_DecodeListParam listParam = {2, expTag};
     int32_t ret = BSL_ASN1_DecodeListItem(&listParam, name, HITLS_X509_ParseListAsnItem, NULL, list);
     if (ret != BSL_SUCCESS) {
-        BSL_LIST_DeleteAll(list, NULL);
+        BSL_LIST_DeleteAll(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     }
     return ret;
 }
@@ -350,62 +407,25 @@ EXIT:
 #if defined(HITLS_PKI_INFO_DN_HASH) || defined(HITLS_PKI_X509_VFY_LOCATION)
 static HITLS_X509_NameNode *NameNodeDup(HITLS_X509_NameNode *node)
 {
-    uint32_t size = sizeof(HITLS_X509_NameNode) + node->nameType.len + node->nameValue.len;
-    uint8_t *tmp = BSL_SAL_Calloc(1, size);
-    if (tmp == NULL) {
+    HITLS_X509_NameNode *res = (HITLS_X509_NameNode *)BSL_SAL_Calloc(1, sizeof(HITLS_X509_NameNode));
+    if (res == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return NULL;
     }
-    HITLS_X509_NameNode *res = (HITLS_X509_NameNode *)tmp;
     res->layer = node->layer;
 
     if (node->nameType.len != 0) {
         res->nameType.tag = node->nameType.tag;
         res->nameType.len = node->nameType.len;
-        res->nameType.buff = tmp + sizeof(HITLS_X509_NameNode);
+        res->nameType.buff = (uint8_t *)BSL_SAL_Calloc(1, node->nameType.len);
+        if (res->nameType.buff == NULL) {
+            HITLS_X509_FreeNameNode(res);
+            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+            return NULL;
+        }
         (void)memcpy_s(res->nameType.buff, res->nameType.len, node->nameType.buff, node->nameType.len);
     }
-    if (node->nameValue.len != 0) {
-        res->nameValue.tag = node->nameValue.tag;
-        res->nameValue.len = node->nameValue.len;
-        res->nameValue.buff = tmp + sizeof(HITLS_X509_NameNode) + node->nameType.len;
-        (void)memcpy_s(res->nameValue.buff, res->nameValue.len, node->nameValue.buff, node->nameValue.len);
-    }
     return res;
-}
-
-static char ToLower(char c)
-{
-    if (c >= 'A' && c <= 'Z') {
-        return c + 32;  // 32 is ('a' - 'A')
-    }
-    return c;
-}
-
-static bool IsSpace(char c)
-{
-    return c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r' || c == ' ';
-}
-
-static void StringCanon(BSL_ASN1_Buffer *str)
-{
-    if (str->tag != BSL_ASN1_TAG_UTF8STRING) {
-        str->tag = BSL_ASN1_TAG_UTF8STRING;
-    }
-    bool preSpace = true;
-    uint32_t idx = 0;
-    for (uint32_t i = 0; i < str->len; i++) {
-        if (IsSpace((char)str->buff[i])) {
-            if (!preSpace) {
-                str->buff[idx++] = ' ';
-            }
-            preSpace = true;
-            continue;
-        }
-        str->buff[idx++] = (uint8_t)ToLower((char)str->buff[i]);
-        preSpace = false;
-    }
-    str->len = str->buff[idx - 1] == ' ' ? idx - 1 : idx;
 }
 
 int32_t HITLS_X509_EncodeCanonNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *name)
@@ -419,15 +439,22 @@ int32_t HITLS_X509_EncodeCanonNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *nam
         return BSL_MALLOC_FAIL;
     }
     int32_t ret;
-    for (HITLS_X509_NameNode *node = BSL_LIST_GET_FIRST(tmpList); node != NULL; node = BSL_LIST_GET_NEXT(tmpList)) {
-        if (node->nameValue.buff == NULL || node->nameValue.len == 0) {
-            continue;
+    HITLS_X509_NameNode *nodeOri = BSL_LIST_GET_FIRST(list);
+    HITLS_X509_NameNode *node = BSL_LIST_GET_FIRST(tmpList);
+    while (nodeOri != NULL) {
+        if (nodeOri->nameValue.len != 0 && nodeOri->nameValue.buff != NULL) {
+            ret = X509_Asn1StringCanon(&nodeOri->nameValue, &node->nameValue);
+            if (ret != BSL_SUCCESS) {
+                BSL_ERR_PUSH_ERROR(ret);
+                BSL_LIST_FREE(tmpList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
+                return ret;
+            }
         }
-        StringCanon(&node->nameValue);
+        nodeOri = (HITLS_X509_NameNode *)BSL_LIST_GET_NEXT(list);
+        node = (HITLS_X509_NameNode *)BSL_LIST_GET_NEXT(tmpList);
     }
-
     ret = HITLS_X509_EncodeNameList(tmpList, name);
-    BSL_LIST_FREE(tmpList, NULL);
+    BSL_LIST_FREE(tmpList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
     return ret;
 }
 #endif
@@ -564,41 +591,25 @@ static int32_t X509_NodeNameCompare(BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *dest)
     return memcmp(src->buff, dest->buff, dest->len);
 }
 
-static int32_t X509_NodeNameCaseCompare(BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *dest)
+static int32_t X509_NeedStringCanon(HITLS_X509_NameNode *node)
 {
-    if ((src->tag == BSL_ASN1_TAG_UTF8STRING || src->tag == BSL_ASN1_TAG_PRINTABLESTRING) &&
-        (dest->tag == BSL_ASN1_TAG_UTF8STRING || dest->tag == BSL_ASN1_TAG_PRINTABLESTRING)) {
-        if (src->len != dest->len) {
-            return 1;
-        }
-        for (uint32_t i = 0; i < src->len; i++) {
-            if (src->buff[i] == dest->buff[i]) {
-                continue;
-            }
-            // 32 means 'a' - 'A'
-            if ('a' <= src->buff[i] && src->buff[i] <= 'z' && src->buff[i] - dest->buff[i] == 32) {
-                continue;
-            }
-            // 32 means 'a' - 'A'
-            if ('a' <= dest->buff[i] && dest->buff[i] <= 'z' && dest->buff[i] - src->buff[i] == 32) {
-                continue;
-            }
-            return 1;
-        }
-        return 0;
+    if (node->utf8Value.tag == 0 && node->layer != 1) {
+        return X509_Asn1StringCanon(&node->nameValue, &node->utf8Value);
     }
-    return 1;
+    return BSL_SUCCESS;
 }
 
-static int32_t X509_NodeNameValueCompare(BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *dest)
+static int32_t X509_NodeNameValueCompare(HITLS_X509_NameNode *nodeOri, HITLS_X509_NameNode *node)
 {
     // quick comparison
-    if (X509_NodeNameCompare(src, dest) == 0) {
+    if (X509_NodeNameCompare(&nodeOri->nameValue, &node->nameValue) == 0) {
         return 0;
     }
-    return X509_NodeNameCaseCompare(src, dest);
+    if (X509_NeedStringCanon(nodeOri) != BSL_SUCCESS || X509_NeedStringCanon(node) != BSL_SUCCESS) {
+        return 1;
+    }
+    return X509_NodeNameCompare(&nodeOri->utf8Value, &node->utf8Value);
 }
-
 
 static int32_t X509_NodeCompare(BSL_ASN1_Buffer *buffOri, BSL_ASN1_Buffer *buff)
 {
@@ -625,7 +636,7 @@ int32_t HITLS_X509_CmpNameNode(BSL_ASN1_List *nameOri, BSL_ASN1_List *name)
         if (nodeOri->layer != node->layer) {
             return 1;
         }
-        if (X509_NodeNameValueCompare(&nodeOri->nameValue, &node->nameValue) != 0) {
+        if (X509_NodeNameValueCompare(nodeOri, node) != 0) {
             return 1;
         }
         nodeOri = (HITLS_X509_NameNode *)BSL_LIST_GET_NEXT(nameOri);

@@ -424,7 +424,7 @@ static int32_t HITLS_AddCertToStoreTest(char *path, HITLS_X509_StoreCtx *store, 
 
 static int32_t HITLS_AddCrlToStoreTest(char *path, HITLS_X509_StoreCtx *store, HITLS_X509_Crl **crl)
 {
-    int32_t ret = HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, crl);
+    int32_t ret = HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, path, crl);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
@@ -4466,5 +4466,198 @@ EXIT:
     HITLS_X509_CertFree(certTest);
     HITLS_X509_CertFree(certVrtify);
     HITLS_X509_CertFree(otherCert);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001
+ * @title  Test X509 chain verification via CA path with various charsets.
+ * @brief  1. Verify that parent and child certificates can be matched successfully
+ *         when issuerName and AKI fields use different encoding types but identical content.
+ *         2. Verify that certificate chain validation succeeds after name normalization
+ *         (collapse consecutive spaces and case-insensitive match).
+ *         3. Verify that chain validation fails when abnormal input causes encoding
+ *         type conversion failure.
+ * @expect 1. Certificate chain verification successful.
+ *         2. Certificate chain verification successful.
+ *         3. Issuer certificate not found.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001(char *caPath, char *entityCertPath, int expectedResult)
+{
+    int32_t ret;
+    HITLS_X509_StoreCtx *store = NULL;
+    HITLS_X509_Cert *entity = NULL;
+    HITLS_X509_List *chain = NULL;
+
+    TestMemInit();
+    store = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+
+    ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_ADD_CA_PATH, (void *)caPath, strlen(caPath));
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, entityCertPath, &entity);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
+
+    ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, expectedResult);
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(entity);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001
+ * @title  Test X509 chain verification via store with various charsets.
+ * @brief  1. Verify that parent and child certificates can be matched successfully
+ *         when issuerName and AKI fields use different encoding types but identical content.
+ *         2. Verify that certificate chain validation succeeds after name normalization
+ *         (collapse consecutive spaces and case-insensitive match).
+ * @expect 1. Certificate chain verification successful.
+ *         2. Certificate chain verification successful.
+ *         3. Issuer certificate not found.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001(char *caCertPath, char *entityCertPath, int expectedResult)
+{
+    int32_t ret;
+    HITLS_X509_StoreCtx *store = NULL;
+    HITLS_X509_Cert *ca = NULL;
+    HITLS_X509_Cert *entity = NULL;
+    HITLS_X509_List *chain = NULL;
+
+    TestMemInit();
+    store = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+
+    ret = HITLS_AddCertToStoreTest(caCertPath, store, &ca);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+
+    ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, entityCertPath, &entity);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
+
+    ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, expectedResult);
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(ca);
+    HITLS_X509_CertFree(entity);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC002
+ * @title  Test X509 chain verification with intermediate CA using normalization.
+ * @brief  Verify that certificate chain validation succeeds after name normalization
+ *         (collapse consecutive spaces and case-insensitive match).
+ * @expect Certificate chain verification successful.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC002(char *rootCertPath, char *caCertPath, char *entityCertPath)
+{
+    int32_t ret;
+    HITLS_X509_StoreCtx *store = NULL;
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *ca = NULL;
+    HITLS_X509_Cert *entity = NULL;
+    HITLS_X509_List *chain = NULL;
+
+    TestMemInit();
+    store = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+
+    ret = HITLS_AddCertToStoreTest(rootCertPath, store, &root);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+
+    ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, caCertPath, &ca);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, entityCertPath, &entity);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(chain != NULL);
+    ret = X509_AddCertToChainTest(chain, entity);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = X509_AddCertToChainTest(chain, ca);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    /* 2:include inter CA */
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 2);
+
+    ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(root);
+    HITLS_X509_CertFree(ca);
+    HITLS_X509_CertFree(entity);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001
+ * @title  Test X509 chain and CRL verification with various charsets.
+ * @brief  1. Verify that certificates and CRL entries can be matched successfully
+ *         when issuerName and AKI fields use different encoding types but identical content.
+ *         2. Verify that CRL identification fails when abnormal input causes encoding
+ *         type conversion failure.
+ * @expect 1. CRL is matched successfully; if the CRL contains the end-entity certificate,
+ *            the certificate is treated as revoked, otherwise certificate chain
+ *            verification succeeds.
+ *         2. Corresponding CRL not found.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001(char *caCertPath, char *entityCertPath,
+    char *crlPath, int expectedResult)
+{
+    int32_t ret;
+    HITLS_X509_StoreCtx *store = NULL;
+    HITLS_X509_Cert *ca = NULL;
+    HITLS_X509_Cert *entity = NULL;
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_List *chain = NULL;
+
+    TestMemInit();
+    store = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+
+    ret = HITLS_AddCertToStoreTest(caCertPath, store, &ca);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = HITLS_AddCrlToStoreTest(crlPath, store, &crl);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
+    ASSERT_EQ(BSL_LIST_COUNT(store->crl), 1);
+
+    ret = HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, entityCertPath, &entity);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
+
+    store->verifyParam.flags = HITLS_X509_VFY_FLAG_CRL_DEV;
+    ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, expectedResult);
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(ca);
+    HITLS_X509_CertFree(entity);
+    HITLS_X509_CrlFree(crl);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
 }
 /* END_CASE */

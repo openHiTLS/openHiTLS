@@ -55,6 +55,7 @@ extern "C" {
 
 #define BSL_ASN1_TAG_UTCTIME           0x17
 #define BSL_ASN1_TAG_GENERALIZEDTIME   0x18
+#define BSL_ASN1_TAG_UNIVERSALSTRING   0x1C
 #define BSL_ASN1_TAG_BMPSTRING         0x1E
 
 /* Custom types, use private class to prevent conflicts */

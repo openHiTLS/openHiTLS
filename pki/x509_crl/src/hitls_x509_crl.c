@@ -132,7 +132,7 @@ void HITLS_X509_CrlFree(HITLS_X509_Crl *crl)
         BSL_SAL_FREE(crl->tbs.tbsRawData);
         BSL_SAL_FREE(crl->signature.buff);
     } else {
-        BSL_LIST_FREE(crl->tbs.issuerName, NULL);
+        BSL_LIST_FREE(crl->tbs.issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     }
 #ifdef HITLS_CRYPTO_SM2
     if (crl->signAlgId.algId == BSL_CID_SM2DSAWITHSM3) {
@@ -399,7 +399,7 @@ int32_t HITLS_X509_ParseCrlTbs(BSL_ASN1_Buffer *asnArr, HITLS_X509_Crl *crl)
     return ret;
 ERR:
 
-    BSL_LIST_DeleteAll(crl->tbs.issuerName, NULL);
+    BSL_LIST_DeleteAll(crl->tbs.issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     BSL_LIST_DeleteAll(crl->tbs.revokedCerts, FreeEntryList);
     return ret;
 }
@@ -835,7 +835,7 @@ int32_t HITLS_X509_ParseAsn1Crl(uint8_t *encode, uint32_t encodeLen, HITLS_X509_
     crl->flag |= HITLS_X509_CRL_PARSE_FLAG;
     return HITLS_PKI_SUCCESS;
 ERR:
-    BSL_LIST_DeleteAll(crl->tbs.issuerName, NULL);
+    BSL_LIST_DeleteAll(crl->tbs.issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     BSL_LIST_DeleteAll(crl->tbs.revokedCerts, NULL);
     BSL_LIST_DeleteAll(crl->tbs.crlExt.extList, NULL);
     return ret;

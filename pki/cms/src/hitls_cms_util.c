@@ -58,7 +58,7 @@ void HITLS_CMS_SignerInfoFree(void *signerInfo)
         BSL_SAL_FREE(si->signData.data);
         BSL_SAL_FREE(si->certSerialNum.data);
     } else {
-        BSL_LIST_FREE(si->issuerName, NULL);
+        BSL_LIST_FREE(si->issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     }
     BSL_SAL_Free(si);
 }

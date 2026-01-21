@@ -41,11 +41,8 @@ void HITLS_X509_FreeNameNode(HITLS_X509_NameNode *node)
         return;
     }
     BSL_SAL_FREE(node->nameType.buff);
-    node->nameType.len = 0;
-    node->nameType.tag = 0;
     BSL_SAL_FREE(node->nameValue.buff);
-    node->nameValue.len = 0;
-    node->nameValue.tag = 0;
+    BSL_SAL_FREE(node->utf8Value.buff);
     BSL_SAL_Free(node);
 }
 
@@ -160,7 +157,7 @@ int32_t HITLS_X509_SetPkey(void **pkey, void *val)
 static HITLS_X509_NameNode *DupNameNode(const HITLS_X509_NameNode *src)
 {
     /* Src is not null. */
-    HITLS_X509_NameNode *dest = BSL_SAL_Malloc(sizeof(HITLS_X509_NameNode));
+    HITLS_X509_NameNode *dest = BSL_SAL_Calloc(1, sizeof(HITLS_X509_NameNode));
     if (dest == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return NULL;

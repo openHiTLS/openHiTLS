@@ -59,6 +59,9 @@ extern "C" {
 typedef struct _HITLS_X509_NameNode {
     BSL_ASN1_Buffer nameType;
     BSL_ASN1_Buffer nameValue;
+    /* UTF-8 normalized content, used for certificate chain verification.
+       Allocate memory during the verification process and release it along with the NameNode. */
+    BSL_ASN1_Buffer utf8Value;
     uint8_t layer;
 } HITLS_X509_NameNode;
 
@@ -190,6 +193,8 @@ int32_t HITLS_X509_Sign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const HIT
 #endif
 
 void HITLS_X509_FreeNameNode(HITLS_X509_NameNode *node);
+
+void HITLS_X509_FreeParsedNameNode(HITLS_X509_NameNode *node);
 
 int32_t HITLS_X509_ParseNameList(BSL_ASN1_Buffer *name, BSL_ASN1_List *list);
 

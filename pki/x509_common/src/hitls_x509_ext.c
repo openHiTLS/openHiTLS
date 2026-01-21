@@ -239,7 +239,7 @@ static int32_t ParseDirName(uint8_t **encode, uint32_t *encLen, BslList **list)
         *encode += valueLen;
         *encLen -= valueLen;
     } else {
-        BSL_LIST_FREE(*list, NULL);
+        BSL_LIST_FREE(*list, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     }
     return ret;
 }
@@ -272,7 +272,7 @@ static int32_t ParseGeneralName(uint8_t tag, uint8_t **encode, uint32_t *encLen,
     }
     HITLS_X509_GeneralName *name = BSL_SAL_Calloc(1, sizeof(HITLS_X509_GeneralName));
     if (name == NULL) {
-        BSL_LIST_FREE(dirNames, NULL);
+        BSL_LIST_FREE(dirNames, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
@@ -280,7 +280,7 @@ static int32_t ParseGeneralName(uint8_t tag, uint8_t **encode, uint32_t *encLen,
     name->value = value;
     ret = BSL_LIST_AddElement(list, name, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
-        BSL_LIST_FREE(dirNames, NULL);
+        BSL_LIST_FREE(dirNames, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
         BSL_SAL_Free(name);
     }
     return ret;
@@ -290,7 +290,7 @@ static void FreeGeneralName(void *data)
 {
     HITLS_X509_GeneralName *name = (HITLS_X509_GeneralName *)data;
     if (name->type == HITLS_X509_GN_DNNAME) {
-        BSL_LIST_DeleteAll((BslList *)(uintptr_t)name->value.data, NULL);
+        BSL_LIST_DeleteAll((BslList *)(uintptr_t)name->value.data, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
         BSL_SAL_Free(name->value.data);
     }
     BSL_SAL_Free(data);
