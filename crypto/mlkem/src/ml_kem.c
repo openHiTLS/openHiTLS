@@ -615,12 +615,14 @@ int32_t CRYPT_ML_KEM_Cmp(const CRYPT_ML_KEM_Ctx *a, const CRYPT_ML_KEM_Ctx *b)
 }
 #endif
 
-int32_t CRYPT_ML_KEM_GetSecBits(const CRYPT_ML_KEM_Ctx *ctx)
+static int32_t MlkemGetSecBits(const CRYPT_ML_KEM_Ctx *ctx, int32_t *val)
 {
-    if (ctx == NULL || ctx->info == NULL) {
-        return 0;
+    if (ctx->info == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYINFO_NOT_SET);
+        return CRYPT_MLKEM_KEYINFO_NOT_SET;
     }
-    return (int32_t)ctx->info->secBits;
+    *val = (int32_t)ctx->info->secBits;
+    return CRYPT_SUCCESS;
 }
 
 static int32_t MlKemCleanPubKey(CRYPT_ML_KEM_Ctx *ctx)
@@ -638,9 +640,6 @@ int32_t CRYPT_ML_KEM_Ctrl(CRYPT_ML_KEM_Ctx *ctx, int32_t opt, void *val, uint32_
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
-    }
-    if (opt == CRYPT_CTRL_GET_SECBITS) {
-        return CRYPT_CTRL_GET_NUM32_EX(CRYPT_ML_KEM_GetSecBits, ctx, val, len);
     }
     if (opt == CRYPT_CTRL_CLEAN_PUB_KEY) {
         return MlKemCleanPubKey(ctx);
@@ -668,6 +667,8 @@ int32_t CRYPT_ML_KEM_Ctrl(CRYPT_ML_KEM_Ctx *ctx, int32_t opt, void *val, uint32_
             return MlKemSetDkFormat(ctx, val, len);
         case CRYPT_CTRL_GET_MLKEM_DK_FORMAT:
             return MlKemGetDkFormat(ctx, val, len);
+        case CRYPT_CTRL_GET_SECBITS:
+            return MlkemGetSecBits(ctx, val);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_CTRL_NOT_SUPPORT);
             return CRYPT_MLKEM_CTRL_NOT_SUPPORT;
