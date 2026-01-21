@@ -88,4 +88,4 @@ uint32_t BSL_SAL_Strnlen(const char *string, uint32_t count)
 
     return n;
 }
-#endif
+#endif // HITLS_BSL_SAL_STR

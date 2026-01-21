@@ -18,6 +18,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdint.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "bsl_err.h"
@@ -92,6 +95,13 @@ static uint64_t PthreadGetId(void)
     return (uint64_t)pthread_self();
 }
 
+#define PTHREAD_ARBITRARY_ID 123456789101112 // 1 ~ 12
+
+static uint64_t PthreadGetArbitraryId(void)
+{
+    return PTHREAD_ARBITRARY_ID;
+}
+
 static void PushErrorFixTimes(int32_t times)
 {
     while (times) {
@@ -142,6 +152,7 @@ void SDV_BSL_ERR_FUNC_TC001(void)
     int32_t err;
 
     ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
 
     /* no error is pushed */
     ASSERT_TRUE(BSL_ERR_GetLastError() == BSL_SUCCESS);
@@ -160,12 +171,14 @@ void SDV_BSL_ERR_FUNC_TC001(void)
     uint32_t line = 0;
     err = BSL_ERR_PeekLastErrorFileLine(&file, &line);
     ASSERT_TRUE(err == BSL_UIO_FAIL);
+    ASSERT_TRUE(file != NULL);
     ASSERT_TRUE(strcmp(file, __FILENAME__) == 0);
 
     file = NULL;
     line = 0;
     err = BSL_ERR_GetLastErrorFileLine(&file, &line);
     ASSERT_TRUE(err == BSL_UIO_FAIL);
+    ASSERT_TRUE(file != NULL);
     ASSERT_TRUE(strcmp(file, __FILENAME__) == 0);
 
     ASSERT_TRUE(BSL_ERR_GetLastError() == BSL_SUCCESS);
@@ -178,6 +191,7 @@ void SDV_BSL_ERR_FUNC_TC001(void)
 
     ASSERT_TRUE(BSL_ERR_GetLastError() == BSL_SUCCESS);
 EXIT:
+    BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
     return;
 }
@@ -211,7 +225,6 @@ EXIT:
  *    10. BSL_SUCCESS
  */
 /* BEGIN_CASE */
-
 void SDV_BSL_ERR_STACK_FUNC_TC001(int isRemoveAll)
 {
     TestMemInit();
@@ -222,6 +235,7 @@ void SDV_BSL_ERR_STACK_FUNC_TC001(int isRemoveAll)
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_UNLOCK_CB_FUNC, PthreadRWLockUnlock) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, PthreadGetId) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
 
     ASSERT_TRUE(BSL_ERR_GetLastError() == BSL_SUCCESS);
     PushErrorFixTimes(5);
@@ -241,12 +255,12 @@ void SDV_BSL_ERR_STACK_FUNC_TC001(int isRemoveAll)
     ASSERT_TRUE(BSL_ERR_PeekErrorFileLine(NULL, &lineNo) == 1);
     ASSERT_TRUE(lineNo == 0);
     ASSERT_TRUE(BSL_ERR_PeekLastErrorFileLine((const char **)&file, &lineNo) == 1);
-    ASSERT_TRUE(strcmp(file, "2") == 0);
-    ASSERT_TRUE(lineNo == 3);
+    ASSERT_TRUE(file != NULL && strcmp(file, "2") == 0 && lineNo == 3);
+    
     lineNo = 0;
+    file = NULL;
     ASSERT_TRUE(BSL_ERR_PeekErrorFileLine((const char **)&file, &lineNo) == 1);
-    ASSERT_TRUE(strcmp(file, "2") == 0);
-    ASSERT_TRUE(lineNo == 3);
+    ASSERT_TRUE(file != NULL && strcmp(file, "2") == 0 && lineNo == 3);
     ASSERT_TRUE(BSL_ERR_GetError() == 1);
     BSL_ERR_PUSH_ERROR(BSL_SUCCESS);
 
@@ -256,14 +270,14 @@ void SDV_BSL_ERR_STACK_FUNC_TC001(int isRemoveAll)
     ASSERT_TRUE(lineNo == 0);
     ASSERT_TRUE(BSL_ERR_PeekErrorFileLine(NULL, &lineNo) == 1);
     ASSERT_TRUE(lineNo == 0);
+    file = NULL;
     ASSERT_TRUE(BSL_ERR_PeekLastErrorFileLine((const char **)&file, &lineNo) == 1);
-    ASSERT_TRUE(strcmp(file, "NA") == 0);
-    ASSERT_TRUE(lineNo == 0);
+    ASSERT_TRUE(file != NULL && strcmp(file, "NA") == 0 && lineNo == 0);
+    file = NULL;
     ASSERT_TRUE(BSL_ERR_PeekErrorFileLine((const char **)&file, &lineNo) == 1);
-    ASSERT_TRUE(strcmp(file, "NA") == 0);
-    ASSERT_TRUE(lineNo == 0);
+    ASSERT_TRUE(file != NULL && strcmp(file, "NA") == 0 && lineNo == 0);
 EXIT:
-    BSL_ERR_ClearError();
+    BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
 }
 /* END_CASE */
@@ -296,15 +310,17 @@ void SDV_BSL_ERR_COMPATIBILITY_FUNC_TC001(void)
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_UNLOCK_CB_FUNC, PthreadRWLockUnlock) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, PthreadGetId) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
     // Construct an exception to trigger the error code module to push the stack.
     ASSERT_TRUE(BSL_UIO_SetMethodType(NULL, 1) == BSL_NULL_INPUT);
     char *file = NULL;
     uint32_t line = 0;
     int32_t err = BSL_ERR_GetLastErrorFileLine((const char **)&file, &line);
+    ASSERT_TRUE(file != NULL);
     ASSERT_TRUE(strcmp(file, "uio_abstraction.c") == 0);
     ASSERT_TRUE(err == BSL_NULL_INPUT);
 EXIT:
-    BSL_ERR_ClearError();
+    BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
 #endif
 }
@@ -334,6 +350,7 @@ void SDV_BSL_ERR_STACK_API_TC001(int isRemoveAll)
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_LOCK_UNLOCK_CB_FUNC, PthreadRWLockUnlock) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, PthreadGetId) == BSL_SUCCESS);
     ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
 
     BSL_ERR_RemoveErrorStack((isRemoveAll == 1) ? true : false);
     BSL_ERR_ClearError();
@@ -366,6 +383,7 @@ EXIT:
 void SDV_BSL_ERR_MARK_FUNC_TC001(void)
 {
     ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
     int32_t ret;
 
     ret = BSL_ERR_SetMark();
@@ -407,6 +425,7 @@ void SDV_BSL_ERR_MARK_FUNC_TC001(void)
     ret = BSL_ERR_GetLastError();
     ASSERT_TRUE(ret == BSL_UIO_IO_BUSY);
 EXIT:
+    BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
 }
 /* END_CASE */
@@ -433,6 +452,8 @@ void SDV_BSL_ERR_STRING_FUNC_TC001(void)
 {
     RegThreadFunc();
     ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_RemoveErrStringBatch();
 
     ASSERT_TRUE(BSL_ERR_AddErrStringBatch(NULL, 0) == BSL_NULL_INPUT);
     ASSERT_TRUE(BSL_ERR_AddErrStringBatch((void *)-1, 0) == BSL_NULL_INPUT);
@@ -482,9 +503,9 @@ EXIT:
 void SDV_BSL_ERR_AVLLR_FUNC_TC001(void)
 {
     TestMemInit();
-    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
-
     BSL_AvlTree *root = NULL;
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
 
     root = BSL_AVL_InsertNode(root, 100, BSL_AVL_MakeLeafNode(NULL));
     ASSERT_TRUE(root->nodeId == 100);
@@ -507,10 +528,8 @@ void SDV_BSL_ERR_AVLLR_FUNC_TC001(void)
     ASSERT_TRUE(root->nodeId == 85);
     root = BSL_AVL_DeleteNode(root, 120, NULL);
     ASSERT_TRUE(root->nodeId == 80);
-
-    BSL_AVL_DeleteTree(root, NULL);
-
 EXIT:
+    BSL_AVL_DeleteTree(root, NULL);
     BSL_ERR_DeInit();
 }
 /* END_CASE */
@@ -557,8 +576,9 @@ EXIT:
 void SDV_BSL_ERR_AVLLL_FUNC_TC001(void)
 {
     TestMemInit();
-    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
     BSL_AvlTree *root = NULL;
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
 
     root = BSL_AVL_InsertNode(root, 100, BSL_AVL_MakeLeafNode(NULL));
     ASSERT_TRUE(root->nodeId == 100);
@@ -580,10 +600,8 @@ void SDV_BSL_ERR_AVLLL_FUNC_TC001(void)
     ASSERT_TRUE(root->nodeId == 80);
     root = BSL_AVL_DeleteNode(root, 65, NULL);
     ASSERT_TRUE(root->nodeId == 100);
-
-    BSL_AVL_DeleteTree(root, NULL);
-
 EXIT:
+    BSL_AVL_DeleteTree(root, NULL);
     BSL_ERR_DeInit();
 }
 /* END_CASE */
@@ -610,9 +628,9 @@ EXIT:
 void SDV_BSL_ERR_AVLRL_FUNC_TC001(void)
 {
     TestMemInit();
-    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
     BSL_AvlTree *root = NULL;
-
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
     root = BSL_AVL_InsertNode(root, 100, BSL_AVL_MakeLeafNode(NULL));
     ASSERT_TRUE(root->nodeId == 100);
     root = BSL_AVL_InsertNode(root, 80, BSL_AVL_MakeLeafNode(NULL));
@@ -625,10 +643,8 @@ void SDV_BSL_ERR_AVLRL_FUNC_TC001(void)
     ASSERT_TRUE(root->nodeId == 100);
     root = BSL_AVL_InsertNode(root, 105, BSL_AVL_MakeLeafNode(NULL));
     ASSERT_TRUE(root->nodeId == 110);
-
-    BSL_AVL_DeleteTree(root, NULL);
-
 EXIT:
+    BSL_AVL_DeleteTree(root, NULL);
     BSL_ERR_ClearError();
     BSL_ERR_DeInit();
 }
@@ -639,6 +655,7 @@ void SDV_BSL_ERR_PEEK_FUNC_TC001(void)
 {
     TestMemInit();
     ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
 
     // Test peek operations on empty stack
     ASSERT_TRUE(BSL_ERR_PeekLastError() == BSL_SUCCESS);
@@ -672,7 +689,6 @@ void SDV_BSL_ERR_PEEK_FUNC_TC001(void)
     ASSERT_TRUE(BSL_ERR_PeekLastError() == BSL_SUCCESS);
 
 EXIT:
-    BSL_ERR_ClearError();
     BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
 }
@@ -683,6 +699,7 @@ void SDV_BSL_ERR_GET_LIB_FUNC_TC001(void)
 {
     TestMemInit();
     ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
 
     // Test BSL_ERR_GET_LIB with BSL_SUCCESS (should return 0)
     ASSERT_TRUE(BSL_ERR_GET_LIB(BSL_SUCCESS) == 0);
@@ -708,7 +725,6 @@ void SDV_BSL_ERR_GET_LIB_FUNC_TC001(void)
     error = BSL_ERR_PeekLastError();
     ASSERT_TRUE(BSL_ERR_GET_LIB(error) == BSL_ERR_LIB_BSL);
 EXIT:
-    BSL_ERR_ClearError();
     BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
 }
@@ -719,6 +735,7 @@ void SDV_BSL_ERR_PEEK_COMBINED_TC001(void)
 {
     TestMemInit();
     ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
 
     // Push a sequence of different errors
     BSL_ERR_PushError(BSL_NULL_INPUT, __FILENAME__, __LINE__);
@@ -765,7 +782,6 @@ void SDV_BSL_ERR_PEEK_COMBINED_TC001(void)
     ASSERT_TRUE(BSL_ERR_GET_LIB(singleError) == BSL_ERR_LIB_BSL);
 
 EXIT:
-    BSL_ERR_ClearError();
     BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
 }
@@ -776,6 +792,8 @@ void SDV_BSL_ERR_GET_ERR_ALL_FUNC_TC001(void)
 {
     TestMemInit();
     ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_RemoveErrStringBatch();
 
     // Register error descriptions
     const char *uioFailDesc = "UIO operation failed";
@@ -867,28 +885,35 @@ void SDV_BSL_ERR_GET_ERR_ALL_FUNC_TC001(void)
     BSL_ERR_PushError(BSL_UIO_FAIL, __FILENAME__, __LINE__);
     
     // Test with NULL file parameter
+    lineNo = 0;
+    desc = NULL;
     error = BSL_ERR_GetErrAll(NULL, &lineNo, &desc);
     ASSERT_TRUE(error == BSL_UIO_FAIL);
+    ASSERT_EQ(lineNo, 0);
     ASSERT_TRUE(desc != NULL);
     ASSERT_TRUE(strcmp(desc, uioFailDesc) == 0);
 
     BSL_ERR_PushError(BSL_MALLOC_FAIL, __FILENAME__, __LINE__);
     
     // Test with NULL lineNo parameter
+    file = NULL;
+    desc = NULL;
     error = BSL_ERR_GetErrAll(&file, NULL, &desc);
     ASSERT_TRUE(error == BSL_MALLOC_FAIL);
-    ASSERT_TRUE(file != NULL);
-    ASSERT_TRUE(strcmp(file, __FILENAME__) == 0);
+    ASSERT_TRUE(file == NULL);
     ASSERT_TRUE(desc != NULL);
     ASSERT_TRUE(strcmp(desc, mallocFailDesc) == 0);
 
     BSL_ERR_PushError(BSL_INVALID_ARG, __FILENAME__, __LINE__);
-    
+    uint32_t line4 = __LINE__ - 1;
     // Test with NULL desc parameter
+    file = NULL;
+    lineNo = 0;
     error = BSL_ERR_GetErrAll(&file, &lineNo, NULL);
     ASSERT_TRUE(error == BSL_INVALID_ARG);
     ASSERT_TRUE(file != NULL);
     ASSERT_TRUE(strcmp(file, __FILENAME__) == 0);
+    ASSERT_TRUE(lineNo == line4);
 
     // Test BSL_ERR_GetErrAll with errors that have no description
     BSL_ERR_PushError(BSL_UIO_IO_BUSY, __FILENAME__, __LINE__); // This error has no registered description
@@ -904,7 +929,6 @@ void SDV_BSL_ERR_GET_ERR_ALL_FUNC_TC001(void)
 
 EXIT:
     BSL_ERR_RemoveErrStringBatch();
-    BSL_ERR_ClearError();
     BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
 }
@@ -915,6 +939,8 @@ void SDV_BSL_ERR_GET_ERR_ALL_EDGE_TC001(void)
 {
     TestMemInit();
     ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_RemoveErrStringBatch();
 
     // Register some error descriptions
     const char *testDesc1 = "Test error 1";
@@ -934,9 +960,6 @@ void SDV_BSL_ERR_GET_ERR_ALL_EDGE_TC001(void)
     // Push error with NULL filename
     BSL_ERR_PushError(BSL_UIO_FAIL, NULL, 100);
     
-    file = NULL;
-    lineNo = 0;
-    desc = NULL;
     error = BSL_ERR_GetErrAll(&file, &lineNo, &desc);
     ASSERT_TRUE(error == BSL_UIO_FAIL);
     ASSERT_TRUE(file != NULL);
@@ -1004,7 +1027,6 @@ void SDV_BSL_ERR_GET_ERR_ALL_EDGE_TC001(void)
 
 EXIT:
     BSL_ERR_RemoveErrStringBatch();
-    BSL_ERR_ClearError();
     BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
 }
@@ -1035,6 +1057,8 @@ void SDV_HITLS_CERT_ENHENCE_027(void)
 {
     TestMemInit();
     ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_RemoveErrStringBatch();
 
     ASSERT_TRUE(BSL_ERR_PeekLastError() == BSL_SUCCESS);
 
@@ -1083,7 +1107,6 @@ void SDV_HITLS_CERT_ENHENCE_027(void)
     ASSERT_TRUE(desc2 == NULL);
 
 EXIT:
-    BSL_ERR_ClearError();
     BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
 }
@@ -1105,7 +1128,6 @@ EXIT:
 void SDV_HITLS_CERT_ENHENCE_028(void)
 {
     TestMemInit();
-    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
 
     ASSERT_TRUE(BSL_ERR_GET_LIB(CRYPT_BN_BITS_TOO_MAX) == BSL_ERR_LIB_CRYPTO);
     ASSERT_TRUE(BSL_ERR_GET_LIB(HITLS_CRYPT_ERR_ENCRYPT) == BSL_ERR_LIB_TLS);
@@ -1113,9 +1135,282 @@ void SDV_HITLS_CERT_ENHENCE_028(void)
     ASSERT_TRUE(BSL_ERR_GET_LIB(HITLS_X509_ERR_VFY_GET_THISUPDATE_FAIL) == BSL_ERR_LIB_PKI);
     ASSERT_TRUE(BSL_ERR_GET_LIB(HITLS_AUTH_PRIVPASS_INVALID_TOKEN_TYPE) == BSL_ERR_LIB_AUTH);
 EXIT:
-    BSL_ERR_ClearError();
-    BSL_ERR_RemoveErrorStack(true);
-    BSL_ERR_DeInit();
+    return;
 }
 /* END_CASE */
 
+int32_t g_errCode[] = { // Hex
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+    22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40};
+
+uint32_t g_errCodeCount = sizeof(g_errCode) / sizeof(int32_t);
+
+static const char *ExtractBaseName(const char *fullpath)
+{
+    if (fullpath == NULL) {
+        return "unknown";
+    }
+
+    const char *nameStart = strrchr(fullpath, '/');
+    if (nameStart == NULL) {
+        nameStart = strrchr(fullpath, '\\');
+    }
+    
+    if (nameStart != NULL) {
+        nameStart++;
+    } else {
+        nameStart = fullpath;
+    }
+    return nameStart;
+}
+
+static void PushErrors(int32_t pushErrNum)
+{
+    int32_t pushLine = 1000; // Arbitrary line number for testing
+    const char *fileBaseName = ExtractBaseName(__FILE__);
+    for (int32_t n = 0; n < pushErrNum; n++) {
+        BSL_ERR_PushError(g_errCode[n % g_errCodeCount], fileBaseName, pushLine);
+    }
+}
+
+FILE *g_out = NULL;
+int32_t ClearFileContent(char *outFilename)
+{
+    FILE *fp = fopen(outFilename, "w");
+    if (fp == NULL) {
+        return -1;
+    }
+    (void)fclose(fp);
+    return BSL_SUCCESS;
+}
+
+int32_t AppendToFileInit(char *filename)
+{
+    if (g_out != NULL) {
+        (void)fclose(g_out);
+        g_out = NULL;
+    }
+    int32_t ret = ClearFileContent(filename);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    g_out = fopen(filename, "a");
+    if (g_out == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    return BSL_SUCCESS;
+}
+
+void AppendToFile(const char *str)
+{
+    if (g_out == NULL || str == NULL) {
+        return;
+    }
+    size_t len = strlen((const char *)str);
+    if (len > 0) {
+        fwrite(str, 1, len, g_out);
+        fflush(g_out);
+    }
+}
+
+void ReleaseFileWriter(void)
+{
+    if (g_out != NULL) {
+        fflush(g_out);
+        (void)fclose(g_out);
+        g_out = NULL;
+    }
+}
+
+int32_t ReadEntireFile(const char *filename, uint8_t *buffer, uint32_t bufferSize, uint32_t *readLen)
+{
+    if (filename == NULL || buffer == NULL || readLen == NULL) {
+        return BSL_INVALID_ARG;
+    }
+    
+    *readLen = 0;
+    
+    FILE *fp = fopen(filename, "rb");
+    if (fp == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        return -1;
+    }
+    long fileSize = ftell(fp);
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        return -1;
+    }
+    
+    if (fileSize < 0) {
+        (void)fclose(fp);
+        return -1;
+    }
+    uint32_t sizeToRead = (uint32_t)fileSize;
+    if (sizeToRead >= bufferSize) {
+        sizeToRead = bufferSize - 1;
+    }
+
+    size_t bytesRead = fread(buffer, 1, sizeToRead, fp);
+    (void)fclose(fp);
+    
+    if (bytesRead == 0 && sizeToRead > 0) {
+        return -1;
+    }
+    
+    buffer[bytesRead] = '\0';
+    *readLen = (uint32_t)bytesRead;
+    
+    return BSL_SUCCESS;
+}
+
+void StdPrintfOutputFunc(const char *str)
+{
+    if (str != NULL) {
+        printf("%s", str);
+    }
+}
+
+/* BEGIN_CASE */
+void SDV_BSL_ERR_OUTPUT_TC001(int pushErrNum, char *outFilename, char *inFilename)
+{
+    TestMemInit();
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, PthreadGetArbitraryId);
+
+    char outFilebuff[256 * 20] = {0};
+    char inFilebuff[256 * 20] = {0};
+
+    PushErrors(pushErrNum); // Push errors pushErrNum times
+    printf("%s pushErrNum=%d, default output null\n", __FUNCTION__, pushErrNum);
+    BSL_ERR_OutputErrorStack(); // test OutputErrorStack when BSL_ERR_RegErrStackLog(NULL) by default
+
+    BSL_ERR_RegErrStackLog(StdPrintfOutputFunc);
+    printf("%s pushErrNum=%d, printf\n", __FUNCTION__, pushErrNum);
+    BSL_ERR_OutputErrorStack(); // test OutputErrorStack when BSL_ERR_RegErrStackLog(printf)
+
+    ASSERT_EQ(AppendToFileInit(outFilename), BSL_SUCCESS);
+    BSL_ERR_RegErrStackLog(AppendToFile);
+    BSL_ERR_OutputErrorStack(); // test OutputErrorStack when BSL_ERR_RegErrStackLog(AppendToFile)
+    ReleaseFileWriter();
+
+    // compare output file with fixed input file
+    uint32_t outFileReadLen = 0;
+    ASSERT_EQ(ReadEntireFile(outFilename, (uint8_t *)outFilebuff, sizeof(outFilebuff) - 1, &outFileReadLen),
+              BSL_SUCCESS);
+    uint32_t inFileLen = 0;
+    ASSERT_EQ(ReadEntireFile(inFilename, (uint8_t *)inFilebuff, sizeof(inFilebuff) - 1, &inFileLen), BSL_SUCCESS);
+    ASSERT_EQ(outFileReadLen, inFileLen);
+    ASSERT_EQ(memcmp(outFilebuff, inFilebuff, outFileReadLen), 0);
+EXIT:
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_DeInit();
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ERR_OUTPUT_TC002(int pushErrNum1, int pushErrNum2, char *outFilename, char *inFilename)
+{
+    TestMemInit();
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, PthreadGetArbitraryId);
+
+    char outFilebuff[256 * 20] = {0};
+    char inFilebuff[256 * 20] = {0};
+
+    ASSERT_EQ(AppendToFileInit(outFilename), BSL_SUCCESS);
+    BSL_ERR_RegErrStackLog(AppendToFile);
+    PushErrors(pushErrNum1); // Push errors pushErrNum1 times
+    ASSERT_EQ(BSL_ERR_SetMark(), BSL_SUCCESS);
+    PushErrors(pushErrNum2); // Push errors pushErrNum2 times
+    BSL_ERR_OutputErrorStack(); // test OutputErrorStack after SetMark
+    ReleaseFileWriter();
+
+    // compare output file with fixed input file
+    uint32_t outFileReadLen = 0;
+    ASSERT_EQ(ReadEntireFile(outFilename, (uint8_t *)outFilebuff, sizeof(outFilebuff) - 1, &outFileReadLen),
+              BSL_SUCCESS);
+    uint32_t inFileLen = 0;
+    ASSERT_EQ(ReadEntireFile(inFilename, (uint8_t *)inFilebuff, sizeof(inFilebuff) - 1, &inFileLen), BSL_SUCCESS);
+    ASSERT_EQ(outFileReadLen, inFileLen);
+    ASSERT_EQ(memcmp(outFilebuff, inFilebuff, outFileReadLen), 0);
+EXIT:
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_DeInit();
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ERR_OUTPUT_TC003(int pushErrNum, char *outFilename, char *inFilename)
+{
+    TestMemInit();
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, PthreadGetArbitraryId);
+
+    char outFilebuff[256 * 20] = {0};
+    char inFilebuff[256 * 20] = {0};
+
+    ASSERT_EQ(AppendToFileInit(outFilename), BSL_SUCCESS);
+    BSL_ERR_RegErrStackLog(AppendToFile);
+    PushErrors(pushErrNum);
+    (void)BSL_ERR_GetError();
+    (void)BSL_ERR_GetLastError();
+    BSL_ERR_OutputErrorStack(); // test OutputErrorStack after popping errors
+    ReleaseFileWriter();
+
+    // compare output file with fixed input file
+    uint32_t outFileReadLen = 0;
+    ASSERT_EQ(ReadEntireFile(outFilename, (uint8_t *)outFilebuff, sizeof(outFilebuff) - 1, &outFileReadLen),
+              BSL_SUCCESS);
+    uint32_t inFileLen = 0;
+    ASSERT_EQ(ReadEntireFile(inFilename, (uint8_t *)inFilebuff, sizeof(inFilebuff) - 1, &inFileLen), BSL_SUCCESS);
+    ASSERT_EQ(outFileReadLen, inFileLen);
+    ASSERT_EQ(memcmp(outFilebuff, inFilebuff, outFileReadLen), 0);
+EXIT:
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_DeInit();
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ERR_OUTPUT_TC004(char *outFilename, char *inFilename)
+{
+    TestMemInit();
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, PthreadGetId);
+
+    char outFilebuff[256 * 20] = {0};
+    char inFilebuff[256 * 20] = {0};
+
+    ASSERT_EQ(AppendToFileInit(outFilename), BSL_SUCCESS);
+    BSL_ERR_RegErrStackLog(AppendToFile);
+    // test OutputErrorStack when avl tree root node of the error stack not exists
+    BSL_ERR_OutputErrorStack();
+
+    PushErrors(1);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, PthreadGetArbitraryId);
+    // test OutputErrorStack when no Error stack in avl tree of the error stack.
+    BSL_ERR_OutputErrorStack();
+
+    // compare output file with fixed input file
+    uint32_t outFileReadLen = 0;
+    ASSERT_EQ(ReadEntireFile(outFilename, (uint8_t *)outFilebuff, sizeof(outFilebuff) - 1, &outFileReadLen),
+              BSL_SUCCESS);
+    uint32_t inFileLen = 0;
+    ASSERT_EQ(ReadEntireFile(inFilename, (uint8_t *)inFilebuff, sizeof(inFilebuff) - 1, &inFileLen), BSL_SUCCESS);
+    ASSERT_EQ(outFileReadLen, inFileLen);
+    ASSERT_EQ(memcmp(outFilebuff, inFilebuff, outFileReadLen), 0);
+EXIT:
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_DeInit();
+    return;
+}
+/* END_CASE */

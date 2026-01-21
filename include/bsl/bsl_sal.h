@@ -1920,7 +1920,6 @@ int32_t BSL_SAL_Atoi(const char *str);
  */
 uint32_t BSL_SAL_Strnlen(const char *string, uint32_t count);
 
-
 /**
  * @ingroup bsl_sal
  * @brief Load a dynamic library for dl.

@@ -325,6 +325,34 @@ int32_t BSL_ERR_PopToMark(void);
  */
 int32_t BSL_ERR_ClearLastMark(void);
 
+/**
+ * @ingroup bsl_err
+ * @brief Err output callback function type.
+ *
+ * Callback function type for outputting strings.
+ *
+ * @param str [IN] String to output, encoded in character format.
+ */
+typedef void (*BSL_ERR_OutputFunc)(const char *str);
+
+/**
+ * @ingroup bsl_err
+ * @brief Register a err output callback function with dual protection
+ *
+ * @param func Callback function to register
+ */
+void BSL_ERR_RegErrStackLog(const BSL_ERR_OutputFunc func);
+
+/**
+ * @ingroup bsl_err
+ * @brief Print all error information in the current error stack.
+ *
+ * Print all error information in the current error stack.
+ *
+ * @attention none
+ */
+void BSL_ERR_OutputErrorStack(void);
+
 #ifdef __cplusplus
 }
 #endif
