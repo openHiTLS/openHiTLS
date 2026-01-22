@@ -484,11 +484,7 @@ int32_t CRYPT_DSA_GetPrvKey(const CRYPT_DSA_Ctx *ctx, CRYPT_DsaPrv *prv)
         BSL_ERR_PUSH_ERROR(CRYPT_DSA_ERR_KEY_INFO);
         return CRYPT_DSA_ERR_KEY_INFO;
     }
-    if (ctx->para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DSA_ERR_KEY_PARA);
-        return CRYPT_DSA_ERR_KEY_PARA;
-    }
-    if (BN_Bytes(ctx->para->q) > prv->len) {
+    if (BN_Bytes(ctx->x) > prv->len) {
         BSL_ERR_PUSH_ERROR(CRYPT_DSA_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_DSA_BUFF_LEN_NOT_ENOUGH;
     }

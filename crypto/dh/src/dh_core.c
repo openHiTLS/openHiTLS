@@ -728,20 +728,9 @@ int32_t CRYPT_DH_GetPrvKey(const CRYPT_DH_Ctx *ctx, CRYPT_DhPrv *prv)
         BSL_ERR_PUSH_ERROR(CRYPT_DH_KEYINFO_ERROR);
         return CRYPT_DH_KEYINFO_ERROR;
     }
-    if (ctx->para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DH_PARA_ERROR);
-        return CRYPT_DH_PARA_ERROR;
-    }
-    if (ctx->para->q != NULL) {
-        if (BN_Bytes(ctx->para->q) > prv->len) {
-            BSL_ERR_PUSH_ERROR(CRYPT_DH_BUFF_LEN_NOT_ENOUGH);
-            return CRYPT_DH_BUFF_LEN_NOT_ENOUGH;
-        }
-    } else {
-        if (BN_Bytes(ctx->para->p) > prv->len) {
-            BSL_ERR_PUSH_ERROR(CRYPT_DH_BUFF_LEN_NOT_ENOUGH);
-            return CRYPT_DH_BUFF_LEN_NOT_ENOUGH;
-        }
+    if (BN_Bytes(ctx->x) > prv->len) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DH_BUFF_LEN_NOT_ENOUGH);
+        return CRYPT_DH_BUFF_LEN_NOT_ENOUGH;
     }
     int32_t ret = BN_Bn2Bin(ctx->x, prv->data, &(prv->len));
     if (ret != CRYPT_SUCCESS) {

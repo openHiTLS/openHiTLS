@@ -1428,3 +1428,53 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_DSAKEY_BUFF_CMP(char *path, int fileType, Hex *asn1)
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_DSA)
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    CRYPT_EAL_PkeyCtx *pkeyAsn1Ctx = NULL;
+    BSL_Buffer encodeAsn1 = {asn1->x, asn1->len};
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &encodeAsn1, NULL, 0, &pkeyAsn1Ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyCtx, pkeyAsn1Ctx), CRYPT_SUCCESS);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    CRYPT_EAL_PkeyFreeCtx(pkeyAsn1Ctx);
+#else
+    (void)path;
+    (void)fileType;
+    (void)asn1;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_DHKEY_BUFF_CMP(char *path, int fileType, Hex *asn1)
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_DH)
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    CRYPT_EAL_PkeyCtx *pkeyAsn1Ctx = NULL;
+    BSL_Buffer encodeAsn1 = {asn1->x, asn1->len};
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &encodeAsn1, NULL, 0, &pkeyAsn1Ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyCtx, pkeyAsn1Ctx), CRYPT_SUCCESS);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    CRYPT_EAL_PkeyFreeCtx(pkeyAsn1Ctx);
+#else
+    (void)path;
+    (void)fileType;
+    (void)asn1;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
