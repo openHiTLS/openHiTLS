@@ -333,6 +333,7 @@ int32_t RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
      * the client MUST send a certificate message containing no certificates.
      */
     if (certs->certCount == 0) {
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
         /** Only the server allows the peer certificate to be empty */
         if ((ctx->isClient == false) &&
             (ctx->config.tlsConfig.isSupportClientVerify && ctx->config.tlsConfig.isSupportNoClientCert)) {
@@ -340,7 +341,7 @@ int32_t RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
                 "server recv empty cert", 0, 0, 0, 0);
             return HS_ChangeState(ctx, TRY_RECV_CLIENT_KEY_EXCHANGE);
         }
-
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15724, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "peer certificate is needed!", 0, 0, 0, 0);
@@ -362,7 +363,11 @@ int32_t RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
      * fails to be verified */
     if (ret != HITLS_SUCCESS) {
         if (!ctx->config.tlsConfig.isSupportVerifyNone) {
+#ifdef HITLS_TLS_PROTO_DFX_INFO
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, GetAlertfromX509Err(ctx->peerInfo.verifyResult));
+#else
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_CERTIFICATE);
+#endif
             return ret;
         }
     }
@@ -407,6 +412,29 @@ static int32_t CertificateReqCtxCheck(TLS_Ctx *ctx, const CertificateMsg *certs)
     return HITLS_SUCCESS;
 }
 
+static int32_t ProcessEmptyCert(TLS_Ctx *ctx)
+{
+    if (ctx->isClient) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE);
+        return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE, BINLOG_ID16126,
+            "peer certificate is needed!", ALERT_DECODE_ERROR);
+    }
+    /** Only the server allows the peer certificate to be empty */
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
+    if ((ctx->config.tlsConfig.isSupportClientVerify && ctx->config.tlsConfig.isSupportNoClientCert)) {
+        int32_t ret = VERIFY_Tls13CalcVerifyData(ctx, true);
+        if (ret != HITLS_SUCCESS) {
+            return RETURN_ALERT_PROCESS(ctx, ret, BINLOG_ID15729,
+                "server calculate client finished data error", ALERT_INTERNAL_ERROR);
+        }
+        return HS_ChangeState(ctx, TRY_RECV_FINISH);
+    }
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
+    BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE);
+    return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE, BINLOG_ID15727,
+        "peer certificate is needed!", ALERT_CERTIFICATE_REQUIRED);
+}
+
 int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 {
     const CertificateMsg *certs = &msg->body.certificate;
@@ -430,24 +458,7 @@ int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
      * the client MUST send a certificate message containing no certificates.
      */
     if (certs->certCount == 0) {
-        if (ctx->isClient) {
-            BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE);
-            return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE, BINLOG_ID16126,
-                "peer certificate is needed!", ALERT_DECODE_ERROR);
-        }
-        /** Only the server allows the peer certificate to be empty */
-        if ((ctx->config.tlsConfig.isSupportClientVerify && ctx->config.tlsConfig.isSupportNoClientCert)) {
-            ret = VERIFY_Tls13CalcVerifyData(ctx, true);
-            if (ret != HITLS_SUCCESS) {
-                return RETURN_ALERT_PROCESS(ctx, ret, BINLOG_ID15729,
-                    "server calculate client finished data error", ALERT_INTERNAL_ERROR);
-            }
-            return HS_ChangeState(ctx, TRY_RECV_FINISH);
-        }
-
-        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE);
-        return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_NO_PEER_CERTIFIACATE, BINLOG_ID15727,
-            "peer certificate is needed!", ALERT_CERTIFICATE_REQUIRED);
+        return ProcessEmptyCert(ctx);
     }
 
     /** Process the obtained peer certificate */
@@ -464,7 +475,11 @@ int32_t Tls13RecvCertificateProcess(TLS_Ctx *ctx, const HS_Msg *msg)
         if (!ctx->config.tlsConfig.isSupportVerifyNone) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17045, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "VerifyCertChain fail, ret = 0x%x.", (uint32_t)ret, 0, 0, 0);
+#ifdef HITLS_TLS_PROTO_DFX_INFO
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, GetAlertfromX509Err(ctx->peerInfo.verifyResult));
+#else
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_CERTIFICATE); 
+#endif
             return ret;
         }
     }

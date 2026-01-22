@@ -74,6 +74,7 @@ int32_t RecvUnexpectMsgInTransportingStateProcess(HITLS_Ctx *ctx)
 }
 static int32_t RecvRenegoReqPreprocess(TLS_Ctx *ctx, uint8_t type)
 {
+#ifdef HITLS_TLS_PROTO_TLS13
     /* If the version is TLS1.3, ignore the message */
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16514, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -81,10 +82,9 @@ static int32_t RecvRenegoReqPreprocess(TLS_Ctx *ctx, uint8_t type)
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
         return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
     }
-
+#endif
     /* If the message is not a renegotiation request, ignore the message */
-    if ((ctx->isClient && (type == CLIENT_HELLO)) ||
-        (!ctx->isClient && (type == HELLO_REQUEST))) {
+    if ((ctx->isClient && (type == CLIENT_HELLO)) || (!ctx->isClient && (type == HELLO_REQUEST))) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16515, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "ignore the message", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
@@ -111,7 +111,7 @@ static int32_t RecvRenegoReqPreprocess(TLS_Ctx *ctx, uint8_t type)
             return HITLS_SUCCESS;
         }
     }
-
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
     REC_RetransmitListClean(ctx->recCtx); /* dtls over udp scenario, the retransmission queue needs to be cleared */
 #endif
@@ -129,9 +129,11 @@ static int32_t RecvRenegoReqPreprocess(TLS_Ctx *ctx, uint8_t type)
     } else {
         (void)HS_ChangeState(ctx, TRY_RECV_HELLO_REQUEST);
     }
+#endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_PROTO_TLS13
 static int32_t RecvKeyUpdatePreprocess(TLS_Ctx *ctx)
 {
     if (ctx->negotiatedInfo.version != HITLS_VERSION_TLS13) {
@@ -194,6 +196,7 @@ static int32_t RecvNSTPreprocess(TLS_Ctx *ctx)
     ChangeConnState(ctx, CM_STATE_HANDSHAKING);
     return HS_ChangeState(ctx, TRY_RECV_NEW_SESSION_TICKET);
 }
+#endif /* HITLS_TLS_PROTO_TLS13 */
 
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
 static int32_t RecvPostFinishPreprocess(TLS_Ctx *ctx)
@@ -255,32 +258,27 @@ static int32_t PreprocessUnexpectHsMsg(HITLS_Ctx *ctx)
     switch (hsCtx->msgBuf[0]) {
         case HELLO_REQUEST:
         case CLIENT_HELLO:
-            ret = RecvRenegoReqPreprocess(ctx, hsCtx->msgBuf[0]);
-            break;
+            return RecvRenegoReqPreprocess(ctx, hsCtx->msgBuf[0]);
+#ifdef HITLS_TLS_PROTO_TLS13
         case KEY_UPDATE:
-            ret = RecvKeyUpdatePreprocess(ctx);
-            break;
+            return RecvKeyUpdatePreprocess(ctx);
         case CERTIFICATE_REQUEST:
-            ret = RecvCertReqPreprocess(ctx);
-            break;
+            return RecvCertReqPreprocess(ctx);
         case CERTIFICATE:
-            ret = RecvCertPreprocess(ctx);
-            break;
+            return RecvCertPreprocess(ctx);
         case NEW_SESSION_TICKET:
-            ret = RecvNSTPreprocess(ctx);
-            break;
+            return RecvNSTPreprocess(ctx);
+#endif
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
         case FINISHED:
-            ret = RecvPostFinishPreprocess(ctx);
-            break;
+            return RecvPostFinishPreprocess(ctx);
 #endif
         default:
             BSL_LOG_BINLOG_VARLEN(BINLOG_ID16529, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "Unexpected %s handshake state message.", HS_GetMsgTypeStr(hsCtx->msgBuf[0]));
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
-            ret = HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+            return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
     }
-    return ret;
 }
 
 static void ConsumeHandshakeMessage(HITLS_Ctx *ctx)
@@ -348,11 +346,12 @@ static int32_t ReadEventInTransportingState(HITLS_Ctx *ctx, uint8_t *data, uint3
                 InnerRenegotiationProcess(ctx);
             }
 #endif
+#ifdef HITLS_TLS_PROTO_DFX_ALERT_NUMBER
             if (ALERT_HaveExceeded(ctx, MAX_ALERT_COUNT)) {
                 /* If multiple consecutive alerts exist, the link is abnormal and needs to be disconnected */
                 ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
             }
-
+#endif
             unexpectMsgRet = AlertEventProcess(ctx);
             if (unexpectMsgRet != HITLS_SUCCESS) {
                 /* If the alert fails to be sent, a response is returned to the user for processing */
@@ -360,7 +359,11 @@ static int32_t ReadEventInTransportingState(HITLS_Ctx *ctx, uint8_t *data, uint3
             }
 
             /* If fatal alert or close_notify has been processed, the link must be disconnected */
-            if (ctx->state == CM_STATE_ALERTED || ctx->state == CM_STATE_CLOSED) {
+            if (ctx->state == CM_STATE_ALERTED
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
+                || ctx->state == CM_STATE_CLOSED
+#endif
+            ) {
                 return ret;
             }
         }
@@ -432,6 +435,7 @@ static int32_t ReadEventInAlertedState(HITLS_Ctx *ctx, uint8_t *data, uint32_t b
     return HITLS_CM_LINK_FATAL_ALERTED;
 }
 
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
 static int32_t ReadEventInClosedState(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
 {
     // Non-closed state
@@ -459,6 +463,8 @@ static int32_t ReadEventInClosedState(HITLS_Ctx *ctx, uint8_t *data, uint32_t bu
     // Directly return to link closed.
     return HITLS_CM_LINK_CLOSED;
 }
+#endif
+
 static int32_t ReadProcess(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen)
 {
     ReadEventProcess readEventProcess[CM_STATE_END] = {
@@ -468,7 +474,9 @@ static int32_t ReadProcess(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint
         ReadEventInRenegotiationState,
         NULL,
         ReadEventInAlertedState,
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
         ReadEventInClosedState
+#endif
     };
 
     if ((GetConnState(ctx) >= CM_STATE_END) || (GetConnState(ctx) == CM_STATE_ALERTING)) {

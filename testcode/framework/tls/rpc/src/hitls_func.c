@@ -510,12 +510,14 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
         ret = HITLS_CFG_SetVersion(outCfg, inCtxCfg->minVersion, inCtxCfg->maxVersion);
         ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetVersion Error ERROR");
     }
+#ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER
     if (inCtxCfg->SupportType == SERVER_CFG_SET_TRUE) {
         HITLS_CFG_SetCipherServerPreference(outCfg, true);
     }
     if (inCtxCfg->SupportType == SERVER_CFG_SET_FALSE) {
         HITLS_CFG_SetCipherServerPreference(outCfg, false);
     }
+#endif
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     // Setting Renegotiation
     LOG_DEBUG("HiTLS Set Support Renegotiation is %d", inCtxCfg->isSupportRenegotiation);
@@ -526,15 +528,16 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     ret = HITLS_CFG_SetClientRenegotiateSupport(outCfg, inCtxCfg->allowClientRenegotiate);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetClientRenegotiateSupport ERROR");
 #endif
-#ifdef HITLS_TLS_FEATURE_CERT_MODE
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
     // Whether to enable dual-ended verification
     LOG_DEBUG("HiTLS Set Support Client Verify is %d", inCtxCfg->isSupportClientVerify);
     ret = HITLS_CFG_SetClientVerifySupport(outCfg, inCtxCfg->isSupportClientVerify);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetClientVerifySupport ERROR");
+#endif
     LOG_DEBUG("HiTLS Set readAhead is %d", inCtxCfg->readAhead);
     ret = HITLS_CFG_SetReadAhead(outCfg, inCtxCfg->readAhead);
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetReadAhead ERROR");
-
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
     // Indicates whether to allow empty certificate list on the client.
     LOG_DEBUG("HiTLS Set Support Not Client Cert is %d", inCtxCfg->isSupportNoClientCert);
     ret = HITLS_CFG_SetNoClientCertSupport(outCfg, inCtxCfg->isSupportNoClientCert);
@@ -721,7 +724,7 @@ int HitlsSetCtx(HITLS_Config *outCfg, HLT_Ctx_Config *inCtxCfg)
     ASSERT_RETURN(ret == SUCCESS, "HITLS_CFG_SetKeyExchMode ERROR");
     }
 #endif
-#ifdef HITLS_TLS_FEATURE_CERT_MODE
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_VERIFY_PEER
     // Set whether to enable isSupportVerifyNone;
     LOG_DEBUG("HiTLS Set Support pha is %d", inCtxCfg->isSupportVerifyNone);
     ret = HITLS_CFG_SetVerifyNoneSupport(outCfg, inCtxCfg->isSupportVerifyNone);
@@ -815,12 +818,14 @@ const BSL_UIO_Method *GetDefaultMethod(HILT_TransportType type)
 int HitlsSetSsl(void *ssl, HLT_Ssl_Config *sslConfig)
 {
     int ret;
+#ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER
     if (sslConfig->SupportType == SERVER_CTX_SET_TRUE) {
         HITLS_SetCipherServerPreference((HITLS_Ctx *)ssl, true);
     }
     if (sslConfig->SupportType == SERVER_CTX_SET_FALSE) {
         HITLS_SetCipherServerPreference((HITLS_Ctx *)ssl, false);
     }
+#endif
     HILT_TransportType type = (sslConfig->connType == NONE_TYPE) ? SCTP : sslConfig->connType;
 
     BSL_UIO *uio = BSL_UIO_New(GetDefaultMethod(type));

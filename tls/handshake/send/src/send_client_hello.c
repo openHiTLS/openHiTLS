@@ -43,13 +43,13 @@
 static int32_t ClientPrepareSession(TLS_Ctx *ctx)
 {
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
-
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
     /* If the session cannot be resumed during renegotiation, delete the session */
     if (ctx->negotiatedInfo.isRenegotiation && !ctx->config.tlsConfig.isResumptionOnRenego) {
         HITLS_SESS_Free(ctx->session);
         ctx->session = NULL;
     }
-
+#endif
     if (ctx->session != NULL) {
         uint64_t curTime = (uint64_t)BSL_SAL_CurrentSysTimeGet();
         if (!SESS_CheckValidity(ctx->session, curTime)) {

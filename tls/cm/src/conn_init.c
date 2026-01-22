@@ -35,7 +35,9 @@ int32_t ConnUnexpectedMsg(HITLS_Ctx *ctx, uint32_t msgType, const uint8_t *data,
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return HITLS_NULL_INPUT;
     }
+#ifdef HITLS_TLS_PROTO_DFX_ALERT_NUMBER
     ALERT_ClearWarnCount(ctx, msgType);
+#endif
     int32_t ret = HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
 #ifdef HITLS_TLS_PROTO_TLS13
     if (isPlain) { // tls13
@@ -85,7 +87,9 @@ int32_t CONN_Init(TLS_Ctx *ctx)
     ctx->method.sendCCS = CCS_Send;
     ctx->method.ctrlCCS = CCS_Ctrl;
     ctx->method.sendAlert = ALERT_Send;
+#ifdef HITLS_TLS_PROTO_DFX_ALERT_NUMBER
     ctx->method.clearAlert = ALERT_ClearWarnCount;
+#endif
     ctx->method.getAlertFlag = ALERT_GetFlag;
     ctx->method.unexpectedMsgProcessCb = ConnUnexpectedMsg;
 #ifdef HITLS_TLS_FEATURE_KEY_UPDATE

@@ -545,10 +545,7 @@ class FeatureConfigParser:
             else:
                 is_fea_contained = False
                 while 'parent' in rel:
-                    if rel['parent'] in disables:
-                        raise Exception("The 'disables' features {} and 'enables' featrues {} conflict".format(fea, disables))
-
-                    if rel['parent'] in features:
+                    if rel['parent'] in disables or rel['parent'] in features:
                         is_fea_contained = True
                         break
                     rel = feas_info[rel['parent']]

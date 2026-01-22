@@ -714,7 +714,7 @@ int32_t HITLS_CFG_SetCertCb(HITLS_Config *config, HITLS_CertCb certCb, void *arg
 }
 #endif /* HITLS_TLS_FEATURE_CERT_CB */
 
-#ifdef HITLS_TLS_FEATURE_CERT_MODE
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_VERIFY_PEER
 int32_t HITLS_CFG_SetVerifyNoneSupport(HITLS_Config *config, bool support)
 {
     if (config == NULL) {
@@ -734,7 +734,9 @@ int32_t HITLS_CFG_GetVerifyNoneSupport(HITLS_Config *config, bool *isSupport)
     *isSupport = config->isSupportVerifyNone;
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_VERIFY_PEER */
 
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
 int32_t HITLS_CFG_GetClientVerifySupport(HITLS_Config *config, bool *isSupport)
 {
     if (config == NULL || isSupport == NULL) {
@@ -773,7 +775,7 @@ int32_t HITLS_CFG_SetNoClientCertSupport(HITLS_Config *config, bool support)
     config->isSupportNoClientCert = support;
     return HITLS_SUCCESS;
 }
-#endif
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
 
 #ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
 static void HitlsTrustedCANodeFree(void *caNode)

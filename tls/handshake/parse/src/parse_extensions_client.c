@@ -143,6 +143,7 @@ static int32_t ParseServerSupportedVersions(ParsePacket *pkt, ServerHelloMsg *ms
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 
+#ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
 // Parses the extended master secret sent by the serve
 static int32_t ParseServerExtMasterSecret(ParsePacket *pkt, ServerHelloMsg *msg)
 {
@@ -150,6 +151,7 @@ static int32_t ParseServerExtMasterSecret(ParsePacket *pkt, ServerHelloMsg *msg)
     return ParseEmptyExtension(pkt->ctx, HS_EX_TYPE_EXTENDED_MASTER_SECRET, pkt->bufLen,
         &msg->haveExtendedMasterSecret);
 }
+#endif
 #ifdef HITLS_TLS_FEATURE_ALPN
 int32_t ParseServerSelectedAlpnProtocol(
     ParsePacket *pkt, bool *haveSelectedAlpn, uint8_t **alpnSelected, uint16_t *alpnSelectedSize)
@@ -313,8 +315,10 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         case HS_EX_TYPE_SERVER_NAME:
             return ParseServerServerName(&pkt, msg);
 #endif /* HITLS_TLS_FEATURE_SNI */
+#ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
         case HS_EX_TYPE_EXTENDED_MASTER_SECRET:
             return ParseServerExtMasterSecret(&pkt, msg);
+#endif
 #ifdef HITLS_TLS_FEATURE_ALPN
         case HS_EX_TYPE_APP_LAYER_PROTOCOLS:
             return ParseServerSelectedAlpnProtocol(

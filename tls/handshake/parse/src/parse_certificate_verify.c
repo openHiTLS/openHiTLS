@@ -13,7 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#if defined(HITLS_TLS_HOST_SERVER) || defined(HITLS_TLS_PROTO_TLS13)
+#if (defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)) || \
+    defined(HITLS_TLS_PROTO_TLS13)
 #include "tls_binlog_id.h"
 #include "bsl_log.h"
 #include "bsl_log_internal.h"
@@ -230,4 +231,4 @@ void CleanCertificateVerify(CertificateVerifyMsg *msg)
 
     BSL_SAL_FREE(msg->sign);
 }
-#endif /* HITLS_TLS_HOST_CLIENT || HITLS_TLS_PROTO_TLS13 */
+#endif /* (HITLS_TLS_HOST_SERVER && HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY) || HITLS_TLS_PROTO_TLS13 */

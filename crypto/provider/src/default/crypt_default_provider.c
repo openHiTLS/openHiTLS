@@ -27,7 +27,7 @@
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_params_key.h"
-#ifdef HITLS_TLS_FEATURE_PROVIDER
+#ifdef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
 #include "hitls_crypt_type.h"
 #include "hitls_cert_type.h"
 #include "hitls_type.h"
@@ -623,7 +623,7 @@ static void CRYPT_EAL_DefaultProvFree(void *provCtx)
     BSL_SAL_Free(provCtx);
 }
 
-#ifdef HITLS_TLS_FEATURE_PROVIDER
+#ifdef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
 #define TLS_GROUP_PARAM_COUNT 11
 #define TLS_SIGN_SCHEME_PARAM_COUNT 18
 typedef struct {
@@ -1275,13 +1275,13 @@ static int32_t CRYPT_EAL_DefaultProvGetCaps(void *provCtx, int32_t cmd, CRYPT_EA
             return CRYPT_NOT_SUPPORT;
     }
 }
-#endif
+#endif /* HITLS_TLS_FEATURE_PROVIDER_DYNAMIC */
 
 static CRYPT_EAL_Func g_defEalProvOutFuncs[] = {
     {CRYPT_EAL_PROVCB_QUERY, CRYPT_EAL_DefaultProvQuery},
     {CRYPT_EAL_PROVCB_FREE, CRYPT_EAL_DefaultProvFree},
     {CRYPT_EAL_PROVCB_CTRL, NULL},
-#ifdef HITLS_TLS_FEATURE_PROVIDER
+#ifdef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
     {CRYPT_EAL_PROVCB_GETCAPS, CRYPT_EAL_DefaultProvGetCaps},
 #endif
     CRYPT_EAL_FUNC_END

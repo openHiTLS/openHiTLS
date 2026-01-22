@@ -70,7 +70,7 @@ void CFG_CleanConfig(HITLS_Config *config)
     BSL_SAL_FREE(config->pointFormats);
     BSL_SAL_FREE(config->groups);
     BSL_SAL_FREE(config->signAlgorithms);
-#ifdef HITLS_TLS_FEATURE_PROVIDER
+#ifdef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
 #ifndef HITLS_TLS_CAP_NO_STR
     for (uint32_t i = 0; i < config->groupInfolen; i++) {
         BSL_SAL_FREE(config->groupInfo[i].name);
@@ -87,7 +87,7 @@ void CFG_CleanConfig(HITLS_Config *config)
     BSL_SAL_FREE(config->sigSchemeInfo);
     config->sigSchemeInfoSize = 0;
     config->sigSchemeInfolen = 0;
-#endif
+#endif /* HITLS_TLS_FEATURE_PROVIDER_DYNAMIC */
 
 #if defined(HITLS_TLS_PROTO_TLS12) && defined(HITLS_TLS_FEATURE_PSK)
     BSL_SAL_FREE(config->pskIdentityHint);
@@ -135,8 +135,12 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
     destConfig->attrName = ATTRIBUTE_FROM_CONFIG(srcConfig);
     destConfig->minVersion = srcConfig->minVersion;
     destConfig->maxVersion = srcConfig->maxVersion;
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
     destConfig->isQuietShutdown = srcConfig->isQuietShutdown;
+#endif
+#ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER
     destConfig->isSupportServerPreference = srcConfig->isSupportServerPreference;
+#endif
     destConfig->maxCertList = srcConfig->maxCertList;
     destConfig->isSupportExtendedMasterSecret = srcConfig->isSupportExtendedMasterSecret;
     destConfig->emptyRecordsNum = srcConfig->emptyRecordsNum;
@@ -182,16 +186,16 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 #if defined(HITLS_TLS_FEATURE_RENEGOTIATION) && defined(HITLS_TLS_FEATURE_SESSION)
     destConfig->isResumptionOnRenego = srcConfig->isResumptionOnRenego;
 #endif
-#ifdef HITLS_TLS_FEATURE_CERT_MODE
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_VERIFY_PEER
+    destConfig->isSupportVerifyNone = srcConfig->isSupportVerifyNone;
+#endif
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
     destConfig->isSupportClientVerify = srcConfig->isSupportClientVerify;
     destConfig->isSupportNoClientCert = srcConfig->isSupportNoClientCert;
-    destConfig->isSupportVerifyNone = srcConfig->isSupportVerifyNone;
+    destConfig->isSupportClientOnceVerify = srcConfig->isSupportClientOnceVerify;
 #endif
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
     destConfig->isSupportSessionTicket = srcConfig->isSupportSessionTicket;
-#endif
-#if defined(HITLS_TLS_FEATURE_RENEGOTIATION) && defined(HITLS_TLS_FEATURE_CERT_MODE)
-    destConfig->isSupportClientOnceVerify = srcConfig->isSupportClientOnceVerify;
 #endif
 #ifdef HITLS_TLS_FEATURE_PHA
     destConfig->isSupportPostHandshakeAuth = srcConfig->isSupportPostHandshakeAuth;
@@ -273,7 +277,7 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
         }
         destConfig->groupsSize = srcConfig->groupsSize;
     }
-#ifdef HITLS_TLS_FEATURE_PROVIDER
+#ifdef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
     if (srcConfig->groupInfo != NULL) {
 #ifndef HITLS_TLS_CAP_NO_STR
         for (uint32_t i = 0; i < destConfig->groupInfolen; i++) {
@@ -300,7 +304,7 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
 #endif
         }
     }
-#endif
+#endif /* HITLS_TLS_FEATURE_PROVIDER_DYNAMIC */
     return HITLS_SUCCESS;
 }
 
@@ -329,7 +333,7 @@ static int32_t SignAlgorithmsCfgDeepCopy(HITLS_Config *destConfig, const HITLS_C
         }
         destConfig->signAlgorithmsSize = srcConfig->signAlgorithmsSize;
     }
-#ifdef HITLS_TLS_FEATURE_PROVIDER
+#ifdef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
     if (srcConfig->sigSchemeInfo != NULL) {
         for (uint32_t i = 0; i < destConfig->sigSchemeInfolen; i++) {
             BSL_SAL_FREE(destConfig->sigSchemeInfo[i].name);
@@ -1401,6 +1405,7 @@ int32_t HITLS_SetVersionForbid(HITLS_Ctx *ctx, uint32_t noVersion)
 }
 #endif
 
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
 int32_t HITLS_CFG_SetQuietShutdown(HITLS_Config *config, int32_t mode)
 {
     if (config == NULL) {
@@ -1432,6 +1437,7 @@ int32_t HITLS_CFG_GetQuietShutdown(const HITLS_Config *config, int32_t *mode)
     *mode = (int32_t)config->isQuietShutdown;
     return HITLS_SUCCESS;
 }
+#endif
 
 int32_t HITLS_CFG_SetEncryptThenMac(HITLS_Config *config, bool encryptThenMacType)
 {
@@ -1465,6 +1471,7 @@ int32_t HITLS_CFG_GetEncryptThenMac(const HITLS_Config *config, bool *encryptThe
 #endif
 }
 
+#ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER
 int32_t HITLS_CFG_SetCipherServerPreference(HITLS_Config *config, bool isSupport)
 {
     if (config == NULL) {
@@ -1484,6 +1491,7 @@ int32_t HITLS_CFG_GetCipherServerPreference(const HITLS_Config *config, bool *is
     *isSupport = config->isSupportServerPreference;
     return HITLS_SUCCESS;
 }
+#endif
 
 #ifdef HITLS_TLS_MAINTAIN_KEYLOG
 int32_t HITLS_CFG_SetKeyLogCb(HITLS_Config *config, HITLS_KeyLogCb callback)

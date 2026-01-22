@@ -165,7 +165,6 @@ bool CFG_GetSignParamBySchemes(const HITLS_Ctx *ctx, HITLS_SignHashAlgo scheme, 
  */
 uint8_t CFG_GetCertTypeByCipherSuite(uint16_t cipherSuite);
 
-
 /**
  * @brief   get the group name of the ecdsa
  *

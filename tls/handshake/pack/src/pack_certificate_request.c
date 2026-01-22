@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_HOST_SERVER
+#if defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)
 #include <stdint.h>
 #include <stdbool.h>
 #include "securec.h"
@@ -118,6 +118,7 @@ static int32_t PackSignAlgorithms(const TLS_Ctx *ctx, PackPacket *pkt)
 #endif /* HITLS_TLS_PROTO_TLS12 || HITLS_TLS_PROTO_DTLS12 */
 
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
 static int32_t PackCALists(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     const TLS_Config *config = &(ctx->config.tlsConfig);
@@ -126,7 +127,6 @@ static int32_t PackCALists(const TLS_Ctx *ctx, PackPacket *pkt)
         return PackAppendUint16ToBuf(pkt, 0);
     }
 
-#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
     uint32_t caListLenPosition = 0u;
     int32_t ret = PackStartLengthField(pkt, sizeof(uint16_t), &caListLenPosition);
     if (ret != HITLS_SUCCESS) {
@@ -141,9 +141,9 @@ static int32_t PackCALists(const TLS_Ctx *ctx, PackPacket *pkt)
     }
 
     PackCloseUint16Field(pkt, caListLenPosition);
-#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
 
 int32_t PackCertificateRequest(const TLS_Ctx *ctx, PackPacket *pkt)
 {
@@ -161,12 +161,15 @@ int32_t PackCertificateRequest(const TLS_Ctx *ctx, PackPacket *pkt)
         }
     }
 #endif
+#ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
     ret = PackCALists(ctx, pkt);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-
     return HITLS_SUCCESS;
+#else
+    return PackAppendUint16ToBuf(pkt, 0);
+#endif /* HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES */
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
 #ifdef HITLS_TLS_PROTO_TLS13
@@ -262,7 +265,7 @@ static int32_t PackCertReqExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
     return HITLS_SUCCESS;
 }
 
-int32_t Tls13PackCertReqExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
+static int32_t Tls13PackCertReqExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     /* Start packing extensions length */
     uint32_t extensionsLenPosition = 0u;
@@ -300,4 +303,4 @@ int32_t Tls13PackCertificateRequest(const TLS_Ctx *ctx, PackPacket *pkt)
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
-#endif /* HITLS_TLS_HOST_SERVER */
+#endif /* HITLS_TLS_HOST_SERVER && HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */

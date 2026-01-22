@@ -254,7 +254,6 @@ uint8_t *HS_PrepareSignDataTlcp(const TLS_Ctx *ctx, const uint8_t *partSignData,
 uint8_t *HS_PrepareSignData(const TLS_Ctx *ctx, const uint8_t *partSignData,
     uint32_t partSignDataLen, uint32_t *signDataLen)
 {
-    int32_t ret;
     /* Signature data: client random number + server random number + key exchange packet data/encryption certificate */
     uint32_t randomLen = HS_RANDOM_SIZE * 2u;
     uint32_t dataLen = randomLen + partSignDataLen;
@@ -269,13 +268,7 @@ uint8_t *HS_PrepareSignData(const TLS_Ctx *ctx, const uint8_t *partSignData,
     (void)memcpy_s(data, dataLen, ctx->hsCtx->clientRandom, HS_RANDOM_SIZE);
     (void)memcpy_s(&data[HS_RANDOM_SIZE], dataLen - HS_RANDOM_SIZE, ctx->hsCtx->serverRandom, HS_RANDOM_SIZE);
     /* Copy key exchange packet data */
-    ret = memcpy_s(&data[randomLen], dataLen - randomLen, partSignData, partSignDataLen);
-    if (ret != EOK) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16814, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
-        BSL_SAL_Free(data);
-        BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
-        return NULL;
-    }
+    (void)memcpy_s(&data[randomLen], dataLen - randomLen, partSignData, partSignDataLen);
 
     *signDataLen = dataLen;
     return data;
@@ -603,20 +596,16 @@ uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
 #endif
         case SERVER_HELLO:
             return HITLS_SERVER_HELLO_MAX_SIZE;
+#ifdef HITLS_TLS_PROTO_TLS13
         case ENCRYPTED_EXTENSIONS:
             return HITLS_ENCRYPTED_EXTENSIONS_MAX_SIZE;
-        case CERTIFICATE:
-            if (ctx->config.tlsConfig.maxCertList == 0) {
-                return HITLS_MAX_CERT_LIST_DEFAULT;
-            }
-            return ctx->config.tlsConfig.maxCertList;
+#endif
         case SERVER_KEY_EXCHANGE:
             return HITLS_SERVER_KEY_EXCH_MAX_SIZE;
+        case CERTIFICATE:
         case CERTIFICATE_REQUEST:
-            if (ctx->config.tlsConfig.maxCertList == 0) {
-                return HITLS_MAX_CERT_LIST_DEFAULT;
-            }
-            return ctx->config.tlsConfig.maxCertList;
+            return ctx->config.tlsConfig.maxCertList == 0 ? HITLS_MAX_CERT_LIST_DEFAULT
+                                                          : ctx->config.tlsConfig.maxCertList;
         case SERVER_HELLO_DONE:
             return HITLS_SERVER_HELLO_DONE_MAX_SIZE;
         case CLIENT_KEY_EXCHANGE:
@@ -624,20 +613,27 @@ uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
         case CERTIFICATE_VERIFY:
             return REC_MAX_PLAIN_LENGTH;
         case NEW_SESSION_TICKET:
+#ifdef HITLS_TLS_PROTO_TLS13
             if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13) {
                 return HITLS_SESSION_TICKET_MAX_SIZE_TLS13;
             }
+#endif
             return HITLS_SESSION_TICKET_MAX_SIZE_TLS12;
+#ifdef HITLS_TLS_PROTO_TLS13
         case END_OF_EARLY_DATA:
             return HITLS_END_OF_EARLY_DATA_MAX_SIZE;
+#endif
         case FINISHED:
             return HITLS_FINISHED_MAX_SIZE;
+#ifdef HITLS_TLS_PROTO_TLS13
         case KEY_UPDATE:
             return HITLS_KEY_UPDATE_MAX_SIZE;
+#endif
         default:
             return 0;
     }
 }
+
 #ifdef HITLS_TLS_PROTO_TLS13
 uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo *hashAlg)
 {

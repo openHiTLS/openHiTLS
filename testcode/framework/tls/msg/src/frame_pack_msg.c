@@ -1193,47 +1193,32 @@ static int32_t PackNewSessionTicketMsg(FRAME_Type *type, const FRAME_NewSessionT
 static int32_t PackHsMsgBody(FRAME_Type *type, const FRAME_Msg *msg,
     uint8_t *buf, uint32_t bufLen, uint32_t *usedLen)
 {
-    int32_t ret;
-
     const FRAME_HsMsg *hsMsg = &(msg->body.hsMsg);
 
     switch (type->handshakeType) {
         case CLIENT_HELLO:
-            ret = PackClientHelloMsg(&(hsMsg->body.clientHello), buf, bufLen, usedLen);
-            break;
+            return PackClientHelloMsg(&(hsMsg->body.clientHello), buf, bufLen, usedLen);
         case SERVER_HELLO:
-            ret = PackServerHelloMsg(&(hsMsg->body.serverHello), buf, bufLen, usedLen);
-            break;
+            return PackServerHelloMsg(&(hsMsg->body.serverHello), buf, bufLen, usedLen);
         case CERTIFICATE:
-            ret = PackCertificateMsg(type, &(hsMsg->body.certificate), buf, bufLen, usedLen);
-            break;
+            return PackCertificateMsg(type, &(hsMsg->body.certificate), buf, bufLen, usedLen);
         case SERVER_KEY_EXCHANGE:
-            ret = PackServerKeyExchangeMsg(type, &(hsMsg->body.serverKeyExchange), buf, bufLen, usedLen);
-            break;
+            return PackServerKeyExchangeMsg(type, &(hsMsg->body.serverKeyExchange), buf, bufLen, usedLen);
         case CERTIFICATE_REQUEST:
-            ret = PackCertificateRequestMsg(type, &(hsMsg->body.certificateReq), buf, bufLen, usedLen);
-            break;
+            return PackCertificateRequestMsg(type, &(hsMsg->body.certificateReq), buf, bufLen, usedLen);
         case SERVER_HELLO_DONE:
-            ret = PackServerHelloDoneMsg(&(hsMsg->body.serverHelloDone), buf, bufLen, usedLen);
-            break;
+            return PackServerHelloDoneMsg(&(hsMsg->body.serverHelloDone), buf, bufLen, usedLen);
         case CLIENT_KEY_EXCHANGE:
-            ret = PackClientKeyExchangeMsg(type, &(hsMsg->body.clientKeyExchange), buf, bufLen, usedLen);
-            break;
+            return PackClientKeyExchangeMsg(type, &(hsMsg->body.clientKeyExchange), buf, bufLen, usedLen);
         case CERTIFICATE_VERIFY:
-            ret = PackCertificateVerifyMsg(type, &(hsMsg->body.certificateVerify), buf, bufLen, usedLen);
-            break;
+            return PackCertificateVerifyMsg(type, &(hsMsg->body.certificateVerify), buf, bufLen, usedLen);
         case FINISHED:
-            ret = PackFinishedMsg(&(hsMsg->body.finished), buf, bufLen, usedLen);
-            break;
+            return PackFinishedMsg(&(hsMsg->body.finished), buf, bufLen, usedLen);
         case NEW_SESSION_TICKET:
-            ret = PackNewSessionTicketMsg(type, &(hsMsg->body.newSessionTicket), buf, bufLen, usedLen);
-            break;
+            return PackNewSessionTicketMsg(type, &(hsMsg->body.newSessionTicket), buf, bufLen, usedLen);
         default:
-            ret = HITLS_PACK_UNSUPPORT_HANDSHAKE_MSG;
-            break;
+            return HITLS_PACK_UNSUPPORT_HANDSHAKE_MSG;
     }
-
-    return ret;
 }
 
 static int32_t PackHandShakeMsg(FRAME_Type *type, const FRAME_Msg *msg,

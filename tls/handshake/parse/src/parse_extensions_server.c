@@ -171,11 +171,13 @@ static int32_t ParseClientPointFormats(ParsePacket *pkt, ClientHelloMsg *msg)
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
 static int32_t ParseClientExtMasterSecret(ParsePacket *pkt, ClientHelloMsg *msg)
 {
     return ParseEmptyExtension(pkt->ctx, HS_EX_TYPE_EXTENDED_MASTER_SECRET, pkt->bufLen,
         &msg->extension.flag.haveExtendedMasterSecret);
 }
+#endif
 #ifdef HITLS_TLS_FEATURE_SNI
 static void SetRevMsgExtServernameInfo(ClientHelloMsg *msg, uint8_t serverNameType, uint8_t *serverName,
     uint16_t serverNameLen)
@@ -844,8 +846,9 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
 #ifdef HITLS_TLS_FEATURE_SNI
         { .exMsgType = HS_EX_TYPE_SERVER_NAME, .parseFunc = ParseClientServerName},
 #endif /* HITLS_TLS_FEATURE_SNI */
-
+#ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
         { .exMsgType = HS_EX_TYPE_EXTENDED_MASTER_SECRET, .parseFunc = ParseClientExtMasterSecret},
+#endif
 #ifdef HITLS_TLS_FEATURE_ALPN
         { .exMsgType = HS_EX_TYPE_APP_LAYER_PROTOCOLS, .parseFunc = ParseClientAlpnProposeList},
 #endif

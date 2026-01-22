@@ -121,7 +121,7 @@ typedef struct TlsConfig {
     BSL_SAL_RefCount references;        /* reference count */
     HITLS_Lib_Ctx *libCtx;          /* library context */
     const char *attrName;              /* attrName */
-#ifdef HITLS_TLS_FEATURE_PROVIDER
+#ifdef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
     TLS_GroupInfo *groupInfo;
     uint32_t groupInfolen;
     uint32_t groupInfoSize;

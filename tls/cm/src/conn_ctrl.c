@@ -195,6 +195,7 @@ HITLS_CERT_X509 *HITLS_GetPeerCertificate(const HITLS_Ctx *ctx)
 }
 #endif
 
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
 int32_t HITLS_SetQuietShutdown(HITLS_Ctx *ctx, int32_t mode)
 {
     if (ctx == NULL) {
@@ -222,6 +223,7 @@ int32_t HITLS_GetQuietShutdown(const HITLS_Ctx *ctx, int32_t *mode)
 
     return HITLS_SUCCESS;
 }
+#endif
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
 int32_t HITLS_GetRenegotiationState(const HITLS_Ctx *ctx, bool *isRenegotiationState)
 {
@@ -245,6 +247,8 @@ int32_t HITLS_GetRwstate(const HITLS_Ctx *ctx, uint8_t *rwstate)
     return HITLS_SUCCESS;
 }
 #endif
+
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
 int32_t HITLS_SetShutdownState(HITLS_Ctx *ctx, uint32_t mode)
 {
     if (ctx == NULL) {
@@ -264,8 +268,9 @@ int32_t HITLS_GetShutdownState(const HITLS_Ctx *ctx, uint32_t *mode)
     *mode = ctx->shutdownState;
     return HITLS_SUCCESS;
 }
+#endif
 
-#ifdef HITLS_TLS_FEATURE_CERT_MODE
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
 int32_t HITLS_GetClientVerifySupport(HITLS_Ctx *ctx, bool *isSupport)
 {
     if (ctx == NULL) {
@@ -283,7 +288,7 @@ int32_t HITLS_GetNoClientCertSupport(HITLS_Ctx *ctx, bool *isSupport)
 
     return HITLS_CFG_GetNoClientCertSupport(&(ctx->config.tlsConfig), isSupport);
 }
-#endif
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
 
 #ifdef HITLS_TLS_FEATURE_PHA
 int32_t HITLS_GetPostHandshakeAuthSupport(HITLS_Ctx *ctx, bool *isSupport)
@@ -295,7 +300,7 @@ int32_t HITLS_GetPostHandshakeAuthSupport(HITLS_Ctx *ctx, bool *isSupport)
     return HITLS_CFG_GetPostHandshakeAuthSupport(&(ctx->config.tlsConfig), isSupport);
 }
 #endif
-#ifdef HITLS_TLS_FEATURE_CERT_MODE
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_VERIFY_PEER
 int32_t HITLS_GetVerifyNoneSupport(HITLS_Ctx *ctx, bool *isSupport)
 {
     if (ctx == NULL) {
@@ -306,7 +311,7 @@ int32_t HITLS_GetVerifyNoneSupport(HITLS_Ctx *ctx, bool *isSupport)
 }
 #endif
 
-#ifdef HITLS_TLS_FEATURE_CERT_MODE
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
 int32_t HITLS_GetClientOnceVerifySupport(HITLS_Ctx *ctx, bool *isSupport)
 {
     if (ctx == NULL) {
@@ -394,6 +399,8 @@ int32_t HITLS_SetServerName(HITLS_Ctx *ctx, uint8_t *serverName, uint32_t server
     return HITLS_CFG_SetServerName(&(ctx->config.tlsConfig), serverName, serverNameStrlen);
 }
 #endif
+
+#ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER
 int32_t HITLS_SetCipherServerPreference(HITLS_Ctx *ctx, bool isSupport)
 {
     if (ctx == NULL) {
@@ -411,6 +418,7 @@ int32_t HITLS_GetCipherServerPreference(const HITLS_Ctx *ctx, bool *isSupport)
 
     return HITLS_CFG_GetCipherServerPreference(&(ctx->config.tlsConfig), isSupport);
 }
+#endif
 
 int32_t HITLS_SetRenegotiationSupport(HITLS_Ctx *ctx, bool isSupport)
 {

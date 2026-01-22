@@ -99,10 +99,9 @@ static bool IsUnexpectedHandshaking(const TLS_Ctx *ctx)
 {
     return (ctx->state == CM_STATE_HANDSHAKING && ctx->preState == CM_STATE_TRANSPORTING);
 }
+
 static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
 {
-    uint32_t version = GET_VERSION_FROM_CTX(ctx);
-    (void)version;
     switch (ctx->hsCtx->state) {
 #ifdef HITLS_TLS_HOST_SERVER
         case TRY_RECV_CLIENT_HELLO:
@@ -118,8 +117,10 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
 #endif /* HITLS_TLS_PROTO_TLS_BASIC only for tls13 */
         case TRY_RECV_CLIENT_KEY_EXCHANGE:
             return ServerRecvClientKxProcess(ctx, hsMsg);
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
         case TRY_RECV_CERTIFICATE_VERIFY:
             return ServerRecvClientCertVerifyProcess(ctx);
+#endif
 #endif /* HITLS_TLS_HOST_SERVER */
 #ifdef HITLS_TLS_HOST_CLIENT
         case TRY_RECV_CERTIFICATE_REQUEST:
@@ -175,14 +176,17 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
     ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
     return HITLS_MSG_HANDLE_STATE_ILLEGAL;
 }
+
 static int32_t ProcessReceivedHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
 {
     if (hsMsg->type == HELLO_REQUEST) {
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
         if (ctx->hsCtx->state == TRY_RECV_HELLO_REQUEST) {
             ctx->negotiatedInfo.isRenegotiation = true; /* Start renegotiation */
             ctx->negotiatedInfo.renegotiationNum++;
             return HS_ChangeState(ctx, TRY_SEND_CLIENT_HELLO);
         }
+#endif
         /* The HelloRequest message should be ignored during the handshake. */
         return HITLS_SUCCESS;
     }

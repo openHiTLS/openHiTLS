@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#ifdef HITLS_TLS_HOST_SERVER
+#if defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -110,4 +110,4 @@ int32_t Tls13ServerSendCertRequestProcess(TLS_Ctx *ctx)
     return HS_ChangeState(ctx, TRY_SEND_CERTIFICATE);
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
-#endif /* HITLS_TLS_HOST_SERVER */
+#endif /* HITLS_TLS_HOST_SERVER && HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */

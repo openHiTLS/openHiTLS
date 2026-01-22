@@ -346,7 +346,9 @@ int32_t ParseDhePara(ParsePacket *pkt, uint16_t *paraLen, uint8_t **para)
 static int32_t ParseServerDhe(ParsePacket *pkt, ServerKeyExchangeMsg *msg)
 {
     ServerDh *dh = &msg->keyEx.dh;
+#ifdef HITLS_BSL_LOG
     const char *logStr = BINGLOG_STR("parse dhe param or PubKey fail. ret %d");
+#endif
     TLS_Ctx *ctx = pkt->ctx;
     int32_t ret = ParseDhePara(pkt, &dh->plen, &dh->p);
     if (ret != HITLS_SUCCESS) {

@@ -507,7 +507,7 @@ int32_t HITLS_CFG_SetSessionRemoveCb(HITLS_Config *config, const HITLS_SessionRe
 }
 #endif /* HITLS_TLS_FEATURE_SESSION_CACHE_CB */
 
-#ifdef HITLS_TLS_FEATURE_CERT_MODE
+#ifdef HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
 int32_t HITLS_CFG_SetClientOnceVerifySupport(HITLS_Config *config, bool support)
 {
     if (config == NULL) {
@@ -526,7 +526,7 @@ int32_t HITLS_CFG_GetClientOnceVerifySupport(HITLS_Config *config, bool *isSuppo
     *isSupport = config->isSupportClientOnceVerify;
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_FEATURE_CERT_MODE */
+#endif /* HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY */
 
 #ifdef HITLS_TLS_FEATURE_FLIGHT
 int32_t HITLS_CFG_SetFlightTransmitSwitch(HITLS_Config *config, bool isEnable)

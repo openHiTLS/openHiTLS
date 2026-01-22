@@ -44,7 +44,8 @@ static bool CFG_IsValidVersion(uint16_t version)
 }
 #endif /* HITLS_TLS_CONFIG_VERSION */
 
-static bool  HaveMatchSignAlg(const TLS_Config *config, HITLS_AuthAlgo authAlg, const uint16_t *signatureAlgorithms,
+#ifdef HITLS_TLS_PROTO_DFX_CHECK
+static bool HaveMatchSignAlg(const TLS_Config *config, HITLS_AuthAlgo authAlg, const uint16_t *signatureAlgorithms,
     uint32_t signatureAlgorithmsSize)
 {
     HITLS_SignAlgo signAlg = HITLS_SIGN_BUTT;
@@ -193,6 +194,7 @@ static int32_t CheckGroup(const TLS_Config *config)
 
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_PROTO_DFX_CHECK */
 
 #ifdef HITLS_TLS_CONFIG_VERSION
 int32_t CheckVersion(uint16_t minVersion, uint16_t maxVersion)
@@ -232,6 +234,7 @@ int32_t CheckVersion(uint16_t minVersion, uint16_t maxVersion)
 }
 #endif /* HITLS_TLS_CONFIG_VERSION */
 
+#ifdef HITLS_TLS_PROTO_DFX_CHECK
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
 static int32_t CheckCallbackFunc(const TLS_Config *config)
 {
@@ -293,3 +296,4 @@ int32_t CheckConfig(const TLS_Config *config)
 #endif
     return ret;
 }
+#endif /* HITLS_TLS_PROTO_DFX_CHECK */

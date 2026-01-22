@@ -68,12 +68,12 @@ static int32_t WriteEventInTransportingState(HITLS_Ctx *ctx, const uint8_t *data
             /* Failed to send a message but no alert is displayed */
             break;
         }
-
+#ifdef HITLS_TLS_PROTO_DFX_ALERT_NUMBER
         if (ALERT_HaveExceeded(ctx, MAX_ALERT_COUNT)) {
             /* If multiple consecutive alerts exist, the link is abnormal and needs to be disconnected */
             ALERT_Send(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
         }
-
+#endif
         alertRet = AlertEventProcess(ctx);
         if (alertRet != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16546, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -149,6 +149,7 @@ static int32_t WriteEventInAlertedState(HITLS_Ctx *ctx, const uint8_t *data, uin
     return HITLS_CM_LINK_FATAL_ALERTED;
 }
 
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
 static int32_t WriteEventInClosedState(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen)
 {
     if ((ctx->shutdownState & HITLS_SENT_SHUTDOWN) == 0) {
@@ -171,6 +172,8 @@ static int32_t WriteEventInClosedState(HITLS_Ctx *ctx, const uint8_t *data, uint
     // Directly return a message indicating that the link status is abnormal.
     return HITLS_CM_LINK_CLOSED;
 }
+#endif
+
 #ifdef HITLS_TLS_FEATURE_PHA
 int32_t CommonCheckPostHandshakeAuth(TLS_Ctx *ctx)
 {
@@ -220,7 +223,9 @@ int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint3
         WriteEventInRenegotiationState,
         NULL,
         WriteEventInAlertedState,
+#ifdef HITLS_TLS_PROTO_CLOSE_STATE
         WriteEventInClosedState
+#endif
     };
 
     if ((GetConnState(ctx) >= CM_STATE_END) || (GetConnState(ctx) == CM_STATE_ALERTING)) {
