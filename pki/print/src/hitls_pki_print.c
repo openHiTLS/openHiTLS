@@ -715,8 +715,69 @@ static int32_t PrintCertTbs(uint32_t layer, HITLS_X509_CertTbs *tbs, BSL_UIO *ui
     return PrintX509Ext(&tbs->ext, true, layer, uio);
 }
 
-static int32_t PrintCert(HITLS_X509_Cert *cert, BSL_UIO *uio)
+static int32_t PrintCertBrief(HITLS_X509_Cert *cert, BSL_UIO *uio)
 {
+    HITLS_X509_CertTbs *tbs = &cert->tbs;
+    uint32_t layer = 0;
+    int32_t ret;
+
+    /* Version */
+    (void)BSL_PRINT_Fmt(layer, uio, "Version: %d\n", tbs->version + 1);
+
+    /* Serial Number */
+    (void)BSL_PRINT_Fmt(layer, uio, "Serial Number: ");
+    RETURN_RET_IF(BSL_PRINT_Number(layer, NULL, tbs->serialNum.buff, tbs->serialNum.len, uio) != 0,
+        HITLS_PRINT_ERR_CERT_TBS);
+
+    /* Issuer */
+    (void)BSL_PRINT_Fmt(layer, uio, "Issuer: ");
+    ret = HITLS_PKI_PrintDnName(0, tbs->issuerName, true, uio);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    /* Subject */
+    (void)BSL_PRINT_Fmt(layer, uio, "Subject: ");
+    ret = HITLS_PKI_PrintDnName(0, tbs->subjectName, true, uio);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    /* Validity */
+    (void)BSL_PRINT_Fmt(layer, uio, "Not Before: ");
+    RETURN_RET_IF(BSL_PRINT_Time(0, &tbs->validTime.start, uio) != 0, HITLS_PRINT_ERR_CERT_TBS);
+    (void)BSL_PRINT_Fmt(layer, uio, "Not After : ");
+    RETURN_RET_IF(BSL_PRINT_Time(0, &tbs->validTime.end, uio) != 0, HITLS_PRINT_ERR_CERT_TBS);
+
+    /* Signature Algorithm */
+    const char *name = BSL_OBJ_GetOidNameFromCID(tbs->signAlgId.algId);
+    (void)BSL_PRINT_Fmt(layer, uio, "Signature Algorithm: %s\n", name ? name : HITLS_X509_UNKOWN);
+
+    /* Public Key size */
+    CRYPT_EAL_PkeyCtx *pubKey = tbs->ealPubKey;
+    int32_t id = CRYPT_EAL_PkeyGetId(pubKey);
+    uint32_t keyBits = 0;
+    if (id == CRYPT_PKEY_ECDSA || id == CRYPT_PKEY_SM2) {
+        (void)CRYPT_EAL_PkeyCtrl(pubKey, CRYPT_CTRL_GET_ECC_ORDER_BITS, &keyBits, sizeof(uint32_t));
+    } else {
+        keyBits = CRYPT_EAL_PkeyGetKeyBits(pubKey);
+    }
+    (void)BSL_PRINT_Fmt(layer, uio, "Public Key size: %u bits\n", keyBits);
+
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t PrintCert(HITLS_X509_Cert *cert, uint32_t valLen, bool brief, BSL_UIO *uio)
+{
+    if (valLen != sizeof(HITLS_X509_Cert *)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    if (brief) {
+        return PrintCertBrief(cert, uio);
+    }
     uint32_t layer = 0;
     (void)BSL_PRINT_Fmt(layer++, uio, "Certificate:\n");
     (void)BSL_PRINT_Fmt(layer, uio, "Data:\n");
@@ -1084,11 +1145,9 @@ int32_t HITLS_PKI_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *ui
             return BSL_PRINT_Time(0, val, uio);
 #ifdef HITLS_PKI_INFO_CRT
         case HITLS_PKI_PRINT_CERT:
-            if (valLen != sizeof(HITLS_X509_Cert *)) {
-                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-                return HITLS_X509_ERR_INVALID_PARAM;
-            }
-            return PrintCert(val, uio);
+            return PrintCert(val, valLen, false, uio);
+        case HITLS_PKI_PRINT_CERT_BRIEF:
+            return PrintCert(val, valLen, true, uio);
 #endif
 #ifdef HITLS_PKI_INFO_CSR
         case HITLS_PKI_PRINT_CSR:

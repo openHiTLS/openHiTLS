@@ -28,11 +28,6 @@
 extern "C" {
 #endif
 
-#define BSL_TIME_CMP_ERROR   0   /* The comparison between two dates is incorrect. */
-#define BSL_TIME_CMP_EQUAL   1   /* The two dates are the same. */
-#define BSL_TIME_DATE_BEFORE 2   /* The first date is earlier than the second date */
-#define BSL_TIME_DATE_AFTER  3   /* The first date is later than the second date. */
-
 #define BSL_TIME_YEAR_START 1900U
 #define BSL_TIME_SYSTEM_EPOCH_YEAR 1970U
 #define BSL_TIME_DAY_PER_NONLEAP_YEAR 365U

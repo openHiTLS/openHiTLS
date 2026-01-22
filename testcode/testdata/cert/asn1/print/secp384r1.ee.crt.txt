@@ -3,14 +3,14 @@ Certificate:
         Version: 3 (0x02)
         Serial Number:
             3b:76:08:58:96:ba:cd:ef:4d:20:cf:1c:63:de:46:19:de:24:92:fc
-        Signature Algorithm: CID_SHA256WITHRSAENCRYPTION
+        Signature Algorithm: SHA256WITHRSA
         Issuer: CN=test_intCa,C=GB
         Validity:
             Not Before: Sep 10 03:34:23 2024 GMT
             Not After : Sep 8 03:34:23 2034 GMT
         Subject: CN=test_ee,C=GB
         Subject Public Key Info:
-            Public Key Algorithm: id-ecPublicKey
+            Public Key Algorithm: EC-PUBLICKEY
                 Public-Key: (384 bit)
                 Pub:
                     04:78:e5:3d:76:66:02:b3:ad:ce:00:27:26:8d:e6:6a
@@ -20,20 +20,20 @@ Certificate:
                     f2:be:55:06:8e:2e:62:15:e0:5d:c6:23:51:3f:f8:dc
                     ab:0f:ef:1e:d0:c8:a3:97:11:a2:af:bd:ef:bc:b5:41
                     4e
-                ANS1 OID: CID_SECP384R1
+                ANS1 OID: SECP384R1
         X509V3 extensions:
-            CID_CE_KEYUSAGE: critical
+            KeyUsage: critical
                 Digital Signature, Key Encipherment
-            CID_CE_EXTKEYUSAGE: critical
-                CID_KP_TIMESTAMPING, CID_KP_CLIENTAUTH
-            CID_CE_BASICCONSTRAINTS:
+            ExtendedKeyUsage: critical
+                TimeStamping, ClientAuth
+            BasicConstraints:
                 CA:FALSE, pathlen:2
-            CID_CE_SUBJECTKEYIDENTIFIER:
+            SubjectKeyIdentifier:
                 de:e3:52:55:5e:1f:1c:1d:b3:63:a2:ed:2b:91:6f:c9:67:60:35:79
-            CID_CE_AUTHORITYKEYIDENTIFIER:
+            AuthorityKeyIdentifier:
                 DirName:CN=test_rootCa,C=GB
                 Serial: 11:22
-    Signature Algorithm: CID_SHA256WITHRSAENCRYPTION
+    Signature Algorithm: SHA256WITHRSA
     Signature Value:
         24:69:b7:1a:c1:9f:10:55:46:84:dc:f1:d6:fb:84:8b
         2f:7c:e7:a3:8e:56:76:03:cb:67:15:f8:80:cb:c1:cd

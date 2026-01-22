@@ -547,6 +547,12 @@ SDV_HITLS_X509_PrintCrl_TC001:"../testdata/cert/pem/crl/crl_v2_3.crl":BSL_FORMAT
 SDV_HITLS_X509_PrintCrl_TC001
 SDV_HITLS_X509_PrintCrl_TC001:"../testdata/cert/pem/crl/crl_error_reason.crl":BSL_FORMAT_PEM:HITLS_PKI_PRINT_DN_ONELINE:"../testdata/cert/pem/crl/crl_error_reason.crl.txt"
 
+SDV_HITLS_X509_PrintCert_TC001
+SDV_HITLS_X509_PrintCert_TC001:"../testdata/cert/asn1/print/secp384r1.ee.crt.der":BSL_FORMAT_ASN1:HITLS_PKI_PRINT_DN_RFC2253:1:"../testdata/cert/asn1/print/secp384r1.ee.crt.brief.txt"
+
+SDV_HITLS_X509_PrintCert_TC001
+SDV_HITLS_X509_PrintCert_TC001:"../testdata/cert/asn1/print/secp384r1.ee.crt.der":BSL_FORMAT_ASN1:HITLS_PKI_PRINT_DN_RFC2253:0:"../testdata/cert/asn1/print/secp384r1.ee.crt.txt"
+
 SDV_HITLS_MLDSA_PQCCert_TC001-CRYPT_PUBKEY_SUBKEY
 SDV_HITLS_MLDSA_PQCCert_TC001:BSL_FORMAT_ASN1:CRYPT_PUBKEY_SUBKEY:"../testdata/cert/asn1/mldsa_keys/mldsa87_publickey.der"
 
