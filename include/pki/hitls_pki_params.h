@@ -33,6 +33,7 @@ extern "C" {
 #define HITLS_CMS_PARAM_PRIVATE_KEY                 (HITLS_PKI_PARAM_CMS_BASE + 8)
 #define HITLS_CMS_PARAM_DEVICE_CERT                 (HITLS_PKI_PARAM_CMS_BASE + 9)
 #define HITLS_CMS_PARAM_STORE_FLAGS                 (HITLS_PKI_PARAM_CMS_BASE + 10)
+#define HITLS_CMS_PARAM_NO_SIGNED_ATTRS             (HITLS_PKI_PARAM_CMS_BASE + 11)
 
 #ifdef __cplusplus
 }

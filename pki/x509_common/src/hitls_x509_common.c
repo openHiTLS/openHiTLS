@@ -312,11 +312,17 @@ int32_t HITLS_X509_EncodeSignAlgInfo(HITLS_X509_Asn1AlgId *x509Alg, BSL_ASN1_Buf
         asnArr[1].tag = BSL_ASN1_TAG_NULL;
     } else {
         /**
-         * RFC5758 sec 3.2
+         * RFC5758 sec 3.2 (ECDSA)
          * When the ecdsa-with-SHA224, ecdsa-with-SHA256, ecdsa-with-SHA384, or
          * ecdsa-with-SHA512 algorithm identifier appears in the algorithm field
          * as an AlgorithmIdentifier, the encoding MUST omit the parameters
          * field.
+         *
+         * RFC9882 sec 3 (ML-DSA)
+         * The parameters field MUST be omitted when encoding an ML-DSA
+         * AlgorithmIdentifier.
+         *
+         * Similar requirements apply to other PQC signature algorithms.
          */
         asnArr[1].buff = NULL;
         asnArr[1].len = 0;

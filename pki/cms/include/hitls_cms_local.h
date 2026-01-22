@@ -58,7 +58,8 @@ typedef struct {
 } CMS_EncapContentInfo;
 
 #define HITLS_CMS_FLAG_GEN               0x01
-#define HITLS_CMS_FLAG_PARSE             0x10
+#define HITLS_CMS_FLAG_PARSE             0x02
+#define HITLS_CMS_FLAG_NO_SIGNEDATTR     0x08
 
 /**
  * @brief SignerInfo structure

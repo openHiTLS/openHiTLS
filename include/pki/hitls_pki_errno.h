@@ -175,6 +175,10 @@ typedef enum {
     HITLS_CMS_ERR_VERIFY_FAIL,
     HITLS_CMS_ERR_CERT_NOT_MATCH_SIGNERINFO, /**< The cert is not matched with the signerInfo,
                                                 which cannot be used in other places. */
+    HITLS_CMS_ERR_MLDSA_INVALID_DIGEST,      /**< ML-DSA digest algorithm does not meet RFC 9882 requirements */
+    HITLS_CMS_ERR_MLDSA_ERROR_DIGEST,
+    HITLS_CMS_ERR_PQC_PARAMS_NOT_OMITTED,    /**< PQC algorithm parameters must be omitted */
+    HITLS_CMS_ERR_NOT_SUPPORT_STREAM_PQC,    /**< Streaming mode is not supported for PQC algorithms */
 
     HITLS_PKCS12_ERR_NULL_POINTER = 0x04070001,
     HITLS_PKCS12_ERR_INVALID_PARAM,
