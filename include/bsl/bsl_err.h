@@ -329,11 +329,15 @@ int32_t BSL_ERR_ClearLastMark(void);
  * @ingroup bsl_err
  * @brief Err output callback function type.
  *
- * Callback function type for outputting strings.
+ * Callback function type for error output.
  *
- * @param str [IN] String to output, encoded in character format.
+ * @param threadId [IN] Thread ID.
+ * @param file [IN] File name.
+ * @param lineNo [IN] Line number.
+ * @param errCode [IN] Error code.
+ * @param mark [IN] Mark flag.
  */
-typedef void (*BSL_ERR_OutputFunc)(const char *str);
+typedef void (*BSL_ERR_OutputFunc)(uint64_t threadId, const char *file, uint32_t lineNo, int32_t errCode, bool mark);
 
 /**
  * @ingroup bsl_err
