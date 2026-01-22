@@ -703,13 +703,13 @@ int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, const HITLS_X509_Asn1AlgI
     }
     if (pubKeyId == CRYPT_PKEY_RSA) {
 #ifdef HITLS_CRYPTO_RSA
-        CRYPT_RsaPadType pad;
+        int32_t pad;
         int32_t ret = CRYPT_EAL_PkeyCtrl(pubkey, CRYPT_CTRL_GET_RSA_PADDING, &pad, sizeof(pad));
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        if (pad == CRYPT_EMSA_PSS) {
+        if (pad == (int32_t)CRYPT_EMSA_PSS) {
             return X509_CheckPssParam(pubkey, subAlg->algId, &subAlg->rsaPssParam);
         }
 #else

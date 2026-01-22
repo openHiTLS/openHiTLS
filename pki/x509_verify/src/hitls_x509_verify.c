@@ -608,7 +608,7 @@ int32_t X509_BuildChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *certChai
     HITLS_X509_List *chain, HITLS_X509_Cert **root)
 {
     HITLS_X509_Cert *cur = cert;
-    int32_t ret;
+    int32_t ret = HITLS_PKI_SUCCESS;
     while (cur != NULL) {
         HITLS_X509_Cert *issue = NULL;
         bool isTrustCa = false;
