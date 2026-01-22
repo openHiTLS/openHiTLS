@@ -30,11 +30,6 @@
 #include "hitls_pki_errno.h"
 #include "hitls_x509_adapt.h"
 
-static int32_t LoadCrlFromFile(const char *path, HITLS_ParseFormat format, HITLS_X509_List **crlList)
-{
-    return HITLS_X509_CrlParseBundleFile(format, path, crlList);
-}
-
 static int32_t LoadCrlFromBuffer(
     const uint8_t *buf, uint32_t bufLen, HITLS_ParseFormat format, HITLS_X509_List **crlList)
 {
@@ -54,14 +49,18 @@ HITLS_CERT_CRLList *HITLS_X509_Adapt_CrlParse(HITLS_Config *config, const uint8_
 
     HITLS_X509_List *crlList = NULL;
     int32_t ret;
-
-    if (type == TLS_PARSE_TYPE_FILE) {
-        ret = LoadCrlFromFile((const char *)buf, format, &crlList);
-    } else if (type == TLS_PARSE_TYPE_BUFF) {
-        ret = LoadCrlFromBuffer(buf, len, format, &crlList);
-    } else {
-        BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
-        return NULL;
+    switch (type) {
+#ifdef HITLS_TLS_CONFIG_CERT_LOAD_FILE
+        case TLS_PARSE_TYPE_FILE:
+            ret = HITLS_X509_CrlParseBundleFile(format, (const char *)buf, &crlList);
+            break;
+#endif
+        case TLS_PARSE_TYPE_BUFF:
+            ret = LoadCrlFromBuffer(buf, len, format, &crlList);
+            break;
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
+            return NULL;
     }
 
     if (ret != HITLS_PKI_SUCCESS) {

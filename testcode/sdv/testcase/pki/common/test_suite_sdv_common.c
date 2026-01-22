@@ -1574,6 +1574,38 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_HITLS_X509_PrintCert_TC001(char *certPath, int format, int printFlag, int brief, char *expectFile)
+{
+#if defined(HITLS_PKI_INFO_CRT) && defined(HITLS_PKI_X509_CRT)
+    TestMemInit();
+    HITLS_X509_Cert *cert = NULL;
+    Hex expect = { (uint8_t *)expectFile, 0 };
+    int32_t cmd = brief == 1 ? HITLS_PKI_PRINT_CERT_BRIEF : HITLS_PKI_PRINT_CERT;
+    BSL_Buffer data;
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(format, certPath, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_NE(cert, NULL);
+
+    data.data = (uint8_t *)cert;
+    data.dataLen = sizeof(HITLS_X509_Cert *);
+
+    ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_SET_PRINT_FLAG, &printFlag, sizeof(int), NULL), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(PrintBuffTest(cmd, &data, "Print cert", &expect, true), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_CertFree(cert);
+#else
+    (void)certPath;
+    (void)format;
+    (void)brief;
+    (void)expectFile;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_HITLS_X509_PrintCrl_TC001(char *certPath, int format, int printFlag, char *expectFile)
 {
 #if defined(HITLS_PKI_INFO_CRL) && defined(HITLS_PKI_X509_CRL)

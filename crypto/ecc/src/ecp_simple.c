@@ -617,24 +617,6 @@ ERR:
     return ret;
 }
 
-int32_t ECP_PointMulAddParaCheck(const ECC_Para *para, const ECC_Point *r, const BN_BigNum *k1,
-    const BN_BigNum *k2, const ECC_Point *pt)
-{
-    if (para == NULL || r == NULL || k1 == NULL || k2 == NULL || pt == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if ((para->id != r->id) || (para->id != pt->id)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    if (BN_IsZero(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
-    return CRYPT_SUCCESS;
-}
-
 // NotConstTime r = order*pt
 int32_t ECP_PointMulFast(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
 {
@@ -759,6 +741,24 @@ ERR:
     ECC_ReCodeFree(offData.codeK1);
     ECC_ReCodeFree(offData.codeK2);
     return ret;
+}
+
+int32_t ECP_PointMulAddParaCheck(const ECC_Para *para, const ECC_Point *r, const BN_BigNum *k1,
+    const BN_BigNum *k2, const ECC_Point *pt)
+{
+    if (para == NULL || r == NULL || k1 == NULL || k2 == NULL || pt == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if ((para->id != r->id) || (para->id != pt->id)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
+        return CRYPT_ECC_POINT_ERR_CURVE_ID;
+    }
+    if (BN_IsZero(&pt->z)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
+        return CRYPT_ECC_POINT_AT_INFINITY;
+    }
+    return CRYPT_SUCCESS;
 }
 
 static int32_t PointParaCheck(const ECC_Para *para, const ECC_Point *pt, int32_t format)
