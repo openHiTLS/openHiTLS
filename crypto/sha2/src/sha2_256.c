@@ -25,6 +25,10 @@
 #include "bsl_sal.h"
 #include "crypt_types.h"
 
+#define SHA256_INIT_ARRAY {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19}
+
+static const uint32_t SHA256_INIT_STATE[8] = SHA256_INIT_ARRAY;
+
 struct CryptSha256Ctx {
     uint32_t h[CRYPT_SHA2_256_DIGESTSIZE / sizeof(uint32_t)]; /* 256 bits for SHA256 state */
     uint32_t block[CRYPT_SHA2_256_BLOCKSIZE / sizeof(uint32_t)]; /* 512 bits block cache */
@@ -68,14 +72,7 @@ int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx, BSL_Param *param)
      * H(0)6 = 1f83d9ab
      * H(0)7 = 5be0cd19
      */
-    ctx->h[0] = 0x6a09e667UL;
-    ctx->h[1] = 0xbb67ae85UL;
-    ctx->h[2] = 0x3c6ef372UL;
-    ctx->h[3] = 0xa54ff53aUL;
-    ctx->h[4] = 0x510e527fUL;
-    ctx->h[5] = 0x9b05688cUL;
-    ctx->h[6] = 0x1f83d9abUL;
-    ctx->h[7] = 0x5be0cd19UL;
+    (void)memcpy_s(ctx->h, sizeof(SHA256_INIT_STATE), SHA256_INIT_STATE, sizeof(SHA256_INIT_STATE));
     ctx->outlen = CRYPT_SHA2_256_DIGESTSIZE;
     return CRYPT_SUCCESS;
 }
@@ -173,18 +170,12 @@ int32_t CRYPT_SHA2_256_Update(CRYPT_SHA2_256_Ctx *ctx, const uint8_t *data, uint
     uint8_t *p = (uint8_t *)ctx->block;
 
     if (left < CRYPT_SHA2_256_BLOCKSIZE - n) {
-        if (memcpy_s(p + n, CRYPT_SHA2_256_BLOCKSIZE - n, d, left) != EOK) {
-            BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-            return CRYPT_SECUREC_FAIL;
-        }
+        (void)memcpy_s(p + n, CRYPT_SHA2_256_BLOCKSIZE - n, d, left);
         ctx->blocklen += (uint32_t)left;
         return CRYPT_SUCCESS;
     }
     if ((n != 0) && (left >= CRYPT_SHA2_256_BLOCKSIZE - n)) {
-        if (memcpy_s(p + n, CRYPT_SHA2_256_BLOCKSIZE - n, d, CRYPT_SHA2_256_BLOCKSIZE - n) != EOK) {
-            BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-            return CRYPT_SECUREC_FAIL;
-        }
+        (void)memcpy_s(p + n, CRYPT_SHA2_256_BLOCKSIZE - n, d, CRYPT_SHA2_256_BLOCKSIZE - n);
         SHA256CompressMultiBlocks(ctx->h, p, 1);
         n = CRYPT_SHA2_256_BLOCKSIZE - n;
         d += n;
@@ -203,10 +194,7 @@ int32_t CRYPT_SHA2_256_Update(CRYPT_SHA2_256_Ctx *ctx, const uint8_t *data, uint
 
     if (left != 0) {
         ctx->blocklen = (uint32_t)left;
-        if (memcpy_s((uint8_t *)ctx->block, CRYPT_SHA2_256_BLOCKSIZE, d, left) != EOK) {
-            BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-            return CRYPT_SECUREC_FAIL;
-        }
+        (void)memcpy_s((uint8_t *)ctx->block, CRYPT_SHA2_256_BLOCKSIZE, d, left);
     }
 
     return CRYPT_SUCCESS;
@@ -268,6 +256,228 @@ int32_t CRYPT_SHA2_256_Final(CRYPT_SHA2_256_Ctx *ctx, uint8_t *digest, uint32_t 
 
     return CRYPT_SUCCESS;
 }
+
+
+#ifdef HITLS_CRYPTO_SHA2_MB
+
+CRYPT_SHA2_256_MB_Ctx *CRYPT_SHA256_MBNewCtx(uint32_t num)
+{
+    if (num != 2) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+        return NULL;
+    }
+
+    CRYPT_SHA2_256_MB_Ctx *mbCtx = BSL_SAL_Calloc(1, sizeof(CRYPT_SHA2_256_MB_Ctx));
+    if (mbCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+
+    mbCtx->ctxs = BSL_SAL_Calloc(num, sizeof(CRYPT_SHA2_256_Ctx));
+    if (mbCtx->ctxs == NULL) {
+        BSL_SAL_Free(mbCtx);
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return NULL;
+    }
+
+    mbCtx->num = num;
+    return mbCtx;
+}
+
+void CRYPT_SHA256_MBFreeCtx(CRYPT_SHA2_256_MB_Ctx *ctx)
+{
+    if (ctx == NULL) {
+        return;
+    }
+
+    if (ctx->ctxs != NULL) {
+        for (uint32_t i = 0; i < ctx->num; i++) {
+            (void)CRYPT_SHA2_256_Deinit(&ctx->ctxs[i]);
+        }
+        BSL_SAL_Free(ctx->ctxs);
+    }
+    BSL_SAL_Free(ctx);
+}
+
+int32_t CRYPT_SHA256_MBInit(CRYPT_SHA2_256_MB_Ctx *ctx)
+{
+#if defined(__aarch64__)
+    // currently only support sha256x2 in aarch64
+    if (UNLIKELY(ctx == NULL)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (UNLIKELY(ctx->num != 2)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+        return CRYPT_NOT_SUPPORT;
+    }
+    (void)CRYPT_SHA2_256_Init(&ctx->ctxs[0], NULL);
+    (void)CRYPT_SHA2_256_Init(&ctx->ctxs[1], NULL);
+    return CRYPT_SUCCESS;
+#else
+    (void)ctx;
+    return CRYPT_NOT_SUPPORT;
+#endif
+}
+
+int32_t CRYPT_SHA256_MBUpdate(CRYPT_SHA2_256_MB_Ctx *ctx, const uint8_t *data[], uint32_t nbytes[], uint32_t num)
+{
+#if defined(__aarch64__) && defined(HITLS_CRYPTO_SHA2_ASM)
+    // currently only support sha256x2 in aarch64
+    if (UNLIKELY(ctx == NULL || data == NULL || nbytes == NULL)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (UNLIKELY(num != 2 || ctx->num != num || nbytes[0] != nbytes[1])) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+        return CRYPT_NOT_SUPPORT;
+    }
+    uint32_t commonBytes = nbytes[0];
+    if (commonBytes == 0) {
+        return CRYPT_SUCCESS;
+    }
+    CRYPT_SHA2_256_Ctx *ctx0 = &ctx->ctxs[0];
+    CRYPT_SHA2_256_Ctx *ctx1 = &ctx->ctxs[1];
+
+    int32_t ret = UpdateParamIsValid(ctx0, data[0], commonBytes);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ret = UpdateParamIsValid(ctx1, data[1], commonBytes);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    uint8_t *b0 = (uint8_t *)(uintptr_t)ctx0->block;
+    uint8_t *b1 = (uint8_t *)(uintptr_t)ctx1->block;
+    const uint8_t *d0 = data[0];
+    const uint8_t *d1 = data[1];
+    uint32_t caches = ctx0->blocklen;
+    if (caches + commonBytes >= CRYPT_SHA2_256_BLOCKSIZE) {
+        if (caches != 0) {
+            uint32_t cpysize = CRYPT_SHA2_256_BLOCKSIZE - caches;
+            (void)memcpy_s(b0 + caches, cpysize, d0, cpysize);
+            d0 += cpysize;
+            (void)memcpy_s(b1 + caches, cpysize, d1, cpysize);
+            d1 += cpysize;
+            commonBytes -= cpysize;
+            CRYPT_SHA256x2_Compress(ctx0->h, ctx1->h, b0, b1, 1);
+            ctx0->blocklen = 0;
+            ctx1->blocklen = 0;
+        }
+        uint32_t nblocks = commonBytes / CRYPT_SHA2_256_BLOCKSIZE;
+        commonBytes &= (CRYPT_SHA2_256_BLOCKSIZE - 1);
+        if (nblocks > 0) {
+            CRYPT_SHA256x2_Compress(ctx0->h, ctx1->h, d0, d1, nblocks);
+            d0 += nblocks * CRYPT_SHA2_256_BLOCKSIZE;
+            d1 += nblocks * CRYPT_SHA2_256_BLOCKSIZE;
+        }
+        caches = 0; 
+    }
+    if (commonBytes != 0) {
+        (void)memcpy_s(b0 + caches, CRYPT_SHA2_256_BLOCKSIZE - caches, d0, commonBytes);
+        (void)memcpy_s(b1 + caches, CRYPT_SHA2_256_BLOCKSIZE - caches, d1, commonBytes);
+        ctx0->blocklen += commonBytes;
+        ctx1->blocklen += commonBytes;
+    }
+    return CRYPT_SUCCESS;
+#else
+    (void)ctx;
+    (void)data;
+    (void)nbytes;
+    (void)num;
+    return CRYPT_NOT_SUPPORT;
+#endif
+}
+
+int32_t CRYPT_SHA256_MBFinal(CRYPT_SHA2_256_MB_Ctx *ctx, uint8_t *digest[], uint32_t *outlen, uint32_t num)
+{
+#if defined(__aarch64__) && defined(HITLS_CRYPTO_SHA2_ASM)
+    // currently only support sha256x2 in aarch64
+    if (UNLIKELY(ctx == NULL || digest == NULL || outlen == NULL)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (UNLIKELY(num != 2 || ctx->num != num)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+        return CRYPT_NOT_SUPPORT;
+    }
+
+    if (UNLIKELY(digest[0] == NULL || digest[1] == NULL)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+
+    CRYPT_SHA2_256_Ctx *ctx0 = &ctx->ctxs[0];
+    CRYPT_SHA2_256_Ctx *ctx1 = &ctx->ctxs[1];
+    int32_t ret = FinalParamIsValid(ctx0, digest[0], outlen);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ret = FinalParamIsValid(ctx1, digest[1], outlen);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    uint8_t *b0 = (uint8_t *)(uintptr_t)ctx0->block;
+    uint8_t *b1 = (uint8_t *)(uintptr_t)ctx1->block;
+    uint32_t caches = ctx0->blocklen;
+    b0[caches] = 0x80;
+    b1[caches++] = 0x80;
+    if (caches > (CRYPT_SHA2_256_BLOCKSIZE - 8)) {
+        (void)memset_s(b0 + caches, CRYPT_SHA2_256_BLOCKSIZE - caches, 0, CRYPT_SHA2_256_BLOCKSIZE - caches);
+        (void)memset_s(b1 + caches, CRYPT_SHA2_256_BLOCKSIZE - caches, 0, CRYPT_SHA2_256_BLOCKSIZE - caches);
+        caches = 0;
+        CRYPT_SHA256x2_Compress(ctx0->h, ctx1->h, b0, b1, 1);
+    }
+    (void)memset_s(b0 + caches, CRYPT_SHA2_256_BLOCKSIZE - caches, 0,
+        CRYPT_SHA2_256_BLOCKSIZE - 8 - caches); /* 8 bytes to save bits of input */
+    (void)memset_s(b1 + caches, CRYPT_SHA2_256_BLOCKSIZE - caches, 0,
+        CRYPT_SHA2_256_BLOCKSIZE - 8 - caches); /* 8 bytes to save bits of input */
+    PUT_UINT32_BE(ctx0->hNum, b0, CRYPT_SHA2_256_BLOCKSIZE - 8);
+    PUT_UINT32_BE(ctx0->lNum, b0, CRYPT_SHA2_256_BLOCKSIZE - 4);
+    PUT_UINT32_BE(ctx1->hNum, b1, CRYPT_SHA2_256_BLOCKSIZE - 8);
+    PUT_UINT32_BE(ctx1->lNum, b1, CRYPT_SHA2_256_BLOCKSIZE - 4);
+    CRYPT_SHA256x2_Compress(ctx0->h, ctx1->h, b0, b1, 1);
+    ctx0->blocklen = 0;
+    ctx1->blocklen = 0;
+    for (uint32_t i = 0; i < ctx0->outlen / sizeof(uint32_t); i++) {
+        PUT_UINT32_BE(ctx0->h[i], digest[0], sizeof(uint32_t) * i);
+        PUT_UINT32_BE(ctx1->h[i], digest[1], sizeof(uint32_t) * i);
+    }
+    *outlen = ctx0->outlen;
+    return CRYPT_SUCCESS;   
+#else
+    (void)ctx;
+    (void)digest;
+    (void)outlen;
+    (void)num;
+    return CRYPT_NOT_SUPPORT;
+#endif
+}
+
+int32_t CRYPT_SHA256_MB(const uint8_t *data[], uint32_t nbytes, uint8_t *digest[], uint32_t *outlen, uint32_t num)
+{
+#if defined(__aarch64__) && defined(HITLS_CRYPTO_SHA2_ASM)
+    // currently only support sha256x2 in aarch64
+    if (num != 2) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+        return CRYPT_NOT_SUPPORT;
+    }
+    uint32_t state1[CRYPT_SHA256_STATE_SIZE] = SHA256_INIT_ARRAY;
+    uint32_t state2[CRYPT_SHA256_STATE_SIZE] = SHA256_INIT_ARRAY;
+    (void)CRYPT_SHA256x2(state1, state2, data[0], data[1], nbytes, digest[0], digest[1]);
+    *outlen = CRYPT_SHA2_256_DIGESTSIZE;
+    return CRYPT_SUCCESS;
+#else
+    (void)data;
+    (void)nbytes;
+    (void)digest;
+    (void)outlen;
+    (void)num;
+    return CRYPT_NOT_SUPPORT;
+#endif
+}
+#endif // HITLS_CRYPTO_SHA2_MB
 
 #ifdef HITLS_CRYPTO_SHA224
 

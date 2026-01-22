@@ -140,6 +140,46 @@ const EAL_MdMethod *EAL_MdFindMethod(CRYPT_MD_AlgId id)
     return NULL;
 }
 
+#ifdef HITLS_CRYPTO_MD_MB
+#ifdef HITLS_CRYPTO_SHA2_MB
+static const EAL_MdMBMethod g_mdMbMethod_SHA256 = {
+    (MdMBNewCtx)CRYPT_SHA256_MBNewCtx,
+    (MdMBFreeCtx)CRYPT_SHA256_MBFreeCtx,
+    (MdMBInit)CRYPT_SHA256_MBInit,
+    (MdMBUpdate)CRYPT_SHA256_MBUpdate,
+    (MdMBFinal)CRYPT_SHA256_MBFinal
+};
+#endif
+
+static const EAL_CidToMdMbMeth ID_TO_MD_MB_METH_TABLE[] = {
+#ifdef HITLS_CRYPTO_SHA2_MB
+    {CRYPT_MD_SHA256_MB, &g_mdMbMethod_SHA256},
+#endif
+};
+
+static const EAL_MdMBMethod *EAL_MdFindDefaultMbMethod(CRYPT_MD_AlgId id)
+{
+    uint32_t num = sizeof(ID_TO_MD_MB_METH_TABLE) / sizeof(ID_TO_MD_MB_METH_TABLE[0]);
+    for (uint32_t i = 0; i < num; i++) {
+        if (ID_TO_MD_MB_METH_TABLE[i].id == id) {
+            return ID_TO_MD_MB_METH_TABLE[i].mbMeth;
+        }
+    }
+    return NULL;
+}
+
+EAL_MdMBMethod *EAL_MdFindMbMethod(CRYPT_MD_AlgId id, EAL_MdMBMethod *method)
+{
+    const EAL_MdMBMethod *findMethod = EAL_MdFindDefaultMbMethod(id);
+    if (findMethod == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return NULL;
+    }
+    *method = *findMethod;
+    return method;
+}
+#endif // HITLS_CRYPTO_MD_MB
+
 int32_t EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
     int32_t ret;

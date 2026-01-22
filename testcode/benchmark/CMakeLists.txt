@@ -15,7 +15,7 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 PROJECT(openHiTLS_BENCHMARK)
 
 set(OPENHITLS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
-set(BENCHS sm2_bench.c)
+file(GLOB BENCHS "*_bench.c")
 
 add_compile_options(-g)
 add_executable(openhitls_benchmark benchmark.c ${BENCHS})

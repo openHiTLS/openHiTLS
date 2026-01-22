@@ -38,6 +38,7 @@ extern "C" {
 #ifdef HITLS_CRYPTO_SHA256
 #define CRYPT_SHA2_256_BLOCKSIZE  64
 #define CRYPT_SHA2_256_DIGESTSIZE 32
+#define CRYPT_SHA256_STATE_SIZE   8
 #endif // HITLS_CRYPTO_SHA256
 
 #ifdef HITLS_CRYPTO_SHA384
@@ -254,6 +255,153 @@ int32_t CRYPT_SHA2_256_Update(CRYPT_SHA2_256_Ctx *ctx, const uint8_t *data, uint
  * @retval #CRYPT_SHA2_OUT_BUFF_LEN_NOT_ENOUGH output buffer is not enough
  */
 int32_t CRYPT_SHA2_256_Final(CRYPT_SHA2_256_Ctx *ctx, uint8_t *digest, uint32_t *outlen);
+
+typedef struct {
+    uint32_t num;
+    CRYPT_SHA2_256_Ctx *ctxs;
+} CRYPT_SHA2_256_MB_Ctx;
+
+/**
+ * @ingroup SHA256
+ * @brief   Create a SHA256 multi-buffer context.
+ *
+ * Notes:
+ * - Currently only supports num == 2.
+ *
+ * @param   num [IN] Number of parallel messages/contexts.
+ *
+ * @retval  Pointer to multi-buffer context on success.
+ * @retval  NULL on failure (invalid num or memory allocation failure).
+ */
+CRYPT_SHA2_256_MB_Ctx *CRYPT_SHA256_MBNewCtx(uint32_t num);
+
+/**
+ * @ingroup SHA256
+ * @brief   Free a SHA256 multi-buffer context.
+ *
+ * @param   ctx [IN] Multi-buffer context pointer (can be NULL).
+ */
+void CRYPT_SHA256_MBFreeCtx(CRYPT_SHA2_256_MB_Ctx *ctx);
+
+/**
+ * @ingroup SHA256
+ * @brief   Initialize a SHA256 multi-buffer context.
+ *
+ * Notes:
+ * - Currently only supports ctx->num == 2.
+ *
+ * @param   ctx [IN/OUT] Multi-buffer context.
+ *
+ * @retval  #CRYPT_SUCCESS Success.
+ * @retval  #CRYPT_NULL_INPUT ctx is NULL.
+ * @retval  #CRYPT_NOT_SUPPORT Not supported (e.g. ctx->num != 2 or platform capability missing).
+ */
+int32_t CRYPT_SHA256_MBInit(CRYPT_SHA2_256_MB_Ctx *ctx);
+
+/**
+ * @ingroup SHA256
+ * @brief   Update SHA256 multi-buffer context with message fragments.
+ *
+ * Notes:
+ * - Each update processes one fragment per message, where data[i] is the fragment for lane i.
+ * - nbytes[i] is the fragment length for lane i. Currently requires nbytes[0] == nbytes[1],
+ *   otherwise returns #CRYPT_NOT_SUPPORT.
+ * - Currently only supports num == 2.
+ *
+ * @param   ctx [IN/OUT] Multi-buffer context.
+ * @param   data [IN] Input pointer array. data[i] is fragment pointer for lane i.
+ * @param   nbytes [IN] Input length array. nbytes[i] is fragment length for lane i.
+ * @param   num [IN] Number of lanes/messages.
+ *
+ * @retval  #CRYPT_SUCCESS Success.
+ * @retval  #CRYPT_NULL_INPUT Invalid input pointer.
+ * @retval  #CRYPT_NOT_SUPPORT Not supported (e.g. num != 2 or per-lane lengths are not equal).
+ * @retval  Other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_SHA256_MBUpdate(CRYPT_SHA2_256_MB_Ctx *ctx, const uint8_t *data[], uint32_t nbytes[], uint32_t num);
+
+/**
+ * @ingroup SHA256
+ * @brief   Finalize SHA256 multi-buffer context and output digests.
+ *
+ * Notes:
+ * - Currently only supports num == 2.
+ * - outlen indicates output buffer size on input and returns actual digest length on output.
+ *
+ * @param   ctx [IN/OUT] Multi-buffer context.
+ * @param   digest [OUT] Digest buffer pointer array. digest[i] is output buffer for lane i.
+ * @param   outlen [IN/OUT] Output buffer length / output digest length.
+ * @param   num [IN] Number of lanes/messages.
+ *
+ * @retval  #CRYPT_SUCCESS Success.
+ * @retval  #CRYPT_NULL_INPUT Invalid input pointer.
+ * @retval  #CRYPT_NOT_SUPPORT Not supported (e.g. num != 2 or platform capability missing).
+ * @retval  Other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_SHA256_MBFinal(CRYPT_SHA2_256_MB_Ctx *ctx, uint8_t *digest[], uint32_t *outlen, uint32_t num);
+
+/**
+ * @ingroup SHA256
+ * @brief   SHA256 dual-lane compression for full blocks.
+ *
+ * This function compresses nblocks full SHA256 blocks for two independent states in parallel.
+ * It does not handle padding or length encoding.
+ *
+ * @param   state1 [IN/OUT] SHA256 state for lane 0. Array size is #CRYPT_SHA256_STATE_SIZE.
+ * @param   state2 [IN/OUT] SHA256 state for lane 1. Array size is #CRYPT_SHA256_STATE_SIZE.
+ * @param   block1 [IN] Input block pointer for lane 0 (must contain nblocks * 64 bytes).
+ * @param   block2 [IN] Input block pointer for lane 1 (must contain nblocks * 64 bytes).
+ * @param   nblocks [IN] Number of full 64-byte blocks to compress.
+ */
+void CRYPT_SHA256x2_Compress(uint32_t state1[CRYPT_SHA256_STATE_SIZE], uint32_t state2[CRYPT_SHA256_STATE_SIZE],
+                             const uint8_t *block1, const uint8_t *block2, uint32_t nblocks);
+
+/**
+ * @ingroup SHA256
+ * @brief   SHA256 multi-buffer one-shot hashing.
+ *
+ * Notes:
+ * - Currently only supports num == 2.
+ * - nbytes is the same length for all lanes in this one-shot API.
+ *
+ * @param   data [IN] Input pointer array. data[i] is message pointer for lane i.
+ * @param   nbytes [IN] Input length in bytes.
+ * @param   digest [OUT] Digest buffer pointer array. digest[i] is output buffer for lane i.
+ * @param   outlen [IN/OUT] Output buffer length / output digest length.
+ * @param   num [IN] Number of lanes/messages.
+ *
+ * @retval  #CRYPT_SUCCESS Success.
+ * @retval  #CRYPT_NULL_INPUT Invalid input pointer.
+ * @retval  #CRYPT_NOT_SUPPORT Not supported (e.g. num != 2 or platform capability missing).
+ * @retval  Other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_SHA256_MB(const uint8_t *data[], uint32_t nbytes, uint8_t *digest[], uint32_t *outlen, uint32_t num);
+
+/**
+ * @ingroup SHA256
+ * @brief   SHA256 dual-lane one-shot hashing with initial states.
+ *
+ * This function computes SHA256 digests for two messages in parallel, starting from the provided
+ * SHA256 states.
+ *
+ * Notes:
+ * - This API is intended for internal acceleration paths.
+ *
+ * @param   state1 [IN/OUT] SHA256 state for lane 0. Array size is #CRYPT_SHA256_STATE_SIZE.
+ * @param   state2 [IN/OUT] SHA256 state for lane 1. Array size is #CRYPT_SHA256_STATE_SIZE.
+ * @param   data1 [IN] Input message pointer for lane 0.
+ * @param   data2 [IN] Input message pointer for lane 1.
+ * @param   nbytes [IN] Input length in bytes for both lanes.
+ * @param   dgst1 [OUT] Digest output buffer for lane 0 (size #CRYPT_SHA2_256_DIGESTSIZE).
+ * @param   dgst2 [OUT] Digest output buffer for lane 1 (size #CRYPT_SHA2_256_DIGESTSIZE).
+ *
+ * @retval  #CRYPT_SUCCESS Success.
+ * @retval  #CRYPT_NOT_SUPPORT Not supported on this platform/build.
+ */
+int32_t CRYPT_SHA256x2(uint32_t state1[CRYPT_SHA256_STATE_SIZE], uint32_t state2[CRYPT_SHA256_STATE_SIZE],
+                       const uint8_t *data1, const uint8_t *data2, uint32_t nbytes,
+                       uint8_t dgst1[CRYPT_SHA2_256_DIGESTSIZE], uint8_t dgst2[CRYPT_SHA2_256_DIGESTSIZE]);
+
 #endif // HITLS_CRYPTO_SHA256
 
 #ifdef HITLS_CRYPTO_SHA384

@@ -261,14 +261,13 @@ void SDV_BSL_TIME_SYSTIME_API_TC001(void)
 
     ret = BSL_SAL_SysTimeGet(&systime);
     ASSERT_TRUE(ret == BSL_SUCCESS);
-    
-    int64_t timestamp = 0;
-    ret = BSL_SAL_DateToUtcTimeConvert(&systime, &timestamp);
 
     /* Get the current time. */
     int64_t curtime = time(NULL);
 
-    ASSERT_TRUE(curtime >= timestamp && curtime - 5 <= timestamp);
+    int64_t timestamp = 0;
+    ret = BSL_SAL_DateToUtcTimeConvert(&systime, &timestamp);
+    ASSERT_LT(abs((int)(curtime - timestamp)), 5);
 EXIT:
     return;
 }

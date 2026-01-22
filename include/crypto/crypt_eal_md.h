@@ -203,6 +203,85 @@ int32_t CRYPT_EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8
  */
 int32_t CRYPT_EAL_MdDeinit(CRYPT_EAL_MdCTX *ctx);
 
+
+/**
+ * @ingroup crypt_eal_md
+ * @brief   Create a MD context for multi-buffer hash computation.
+ *
+ * This interface creates a MB context used by the multi-buffer workflow
+ * (Init/Update/Final) to hash multiple messages in parallel.
+ *
+ * Notes:
+ * - The returned ctx must be released by calling CRYPT_EAL_MdMBFreeCtx.
+ * - The multi-buffer capability is algorithm/feature dependent; unsupported cases
+ *   will return #CRYPT_NOT_SUPPORT in subsequent MB operations.
+ *
+ * @param   libCtx [IN] Library context (reserved, currently unused).
+ * @param   id [IN] MD algorithm ID (e.g. #CRYPT_MD_SHA256).
+ * @param   num [IN] Number of contexts/messages.
+ * @retval  CRYPT_EAL_MdCTX pointer on success.
+ *          NULL if memory allocation fails or input is invalid.
+ */
+CRYPT_EAL_MdCTX *CRYPT_EAL_MdMBNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t id, uint32_t num);
+
+/**
+ * @ingroup crypt_eal_md
+ * @brief   Release MB context created by CRYPT_EAL_MdMBNewCtx.
+ *
+ * @param   ctx [IN] MB context pointer.
+ */
+void CRYPT_EAL_MdMBFreeCtx(CRYPT_EAL_MdCTX *ctx);
+
+/**
+ * @ingroup crypt_eal_md
+ * @brief   Initialize multi-buffer MD context.
+ *
+ * @param   ctx [IN/OUT] MB context created by CRYPT_EAL_MdMBNewCtx.
+ * @retval  #CRYPT_SUCCESS on success.
+ *          #CRYPT_NULL_INPUT if input is invalid.
+ *          #CRYPT_NOT_SUPPORT if the algorithm does not support multi-buffer mode.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_MdMBInit(CRYPT_EAL_MdCTX *ctx);
+
+/**
+ * @ingroup crypt_eal_md
+ * @brief   Update multi-buffer MD context with message fragments.
+ *
+ * Each update processes one fragment per message.
+ * The fragment length is specified by nbytes[i] for message i. All nbytes[i] must be equal,
+ * otherwise this interface returns #CRYPT_NOT_SUPPORT.
+ *
+ * @param   ctx [IN/OUT] MB context.
+ * @param   data [IN] Data pointer array. data[i] is the fragment for message i.
+ * @param   nbytes [IN] Fragment length array in bytes. nbytes[i] is the fragment length for message i.
+ * @param   num [IN] Number of contexts/messages.
+ * @retval  #CRYPT_SUCCESS on success.
+ *          #CRYPT_NULL_INPUT if input is invalid.
+ *          #CRYPT_NOT_SUPPORT if the algorithm does not support multi-buffer mode or the nbytes are not equal.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_MdMBUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data[], uint32_t nbytes[], uint32_t num);
+
+/**
+ * @ingroup crypt_eal_md
+ * @brief   Finalize multi-buffer MD context and output digests.
+ *
+ * digest[i] is the output buffer for message i. The outlen parameter indicates the
+ * buffer size on input and returns the actual digest length on output.
+ *
+ * @param   ctx [IN/OUT] MB context.
+ * @param   digest [OUT] Digest buffer pointer array.
+ * @param   outlen [IN/OUT] Digest buffer length / output digest length.
+ * @param   num [IN] Number of contexts/messages.
+ * @retval  #CRYPT_SUCCESS on success.
+ *          #CRYPT_NULL_INPUT if input is invalid.
+ *          #CRYPT_NOT_SUPPORT if the algorithm does not support multi-buffer mode.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_MdMBFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *digest[], uint32_t *outlen, uint32_t num);
+
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

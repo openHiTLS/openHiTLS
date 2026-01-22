@@ -14,12 +14,13 @@
  */
 
 /* BEGIN_HEADER */
-
 #include <pthread.h>
 #include "eal_md_local.h"
 #include "crypt_eal_md.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
+#include "crypt_sha2.h"
+#include "crypto_test_util.h"
 /* END_HEADER */
 
 // 100 is greater than the digest length of all SHA algorithms.
@@ -487,5 +488,588 @@ void SDV_CRYPTO_SHA2_DEFAULT_PROVIDER_FUNC_TC001(int id, Hex *msg, Hex *hash)
 
 EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SHA256_MB_API_TC001
+ * @title  CRYPT_SHA256_MB API parameter validation test.
+ * @precon nan
+ * @brief
+ *    1.Call CRYPT_SHA256_MBInit with NULL ctx, expected result 1.
+ *    2.Call CRYPT_SHA256_MBInit with invalid num (!=2), expected result 2.
+ *    3.Call CRYPT_SHA256_MBUpdate with NULL parameters, expected result 3.
+ *    4.Call CRYPT_SHA256_MBFinal with NULL parameters, expected result 4.
+ *    5.Call CRYPT_SHA256_MB with NULL parameters, expected result 5.
+ *    6.Call CRYPT_SHA256_MB with valid parameters, expected result 6.
+ * @expect
+ *    1-5.Return error codes.
+ *    6.Return CRYPT_SUCCESS.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SHA256_MB_API_TC001(void)
+{
+#if !defined(__aarch64__) || !defined(HITLS_CRYPTO_SHA2_ASM) || !defined(HITLS_CRYPTO_SHA2_MB)
+    SKIP_TEST();
+#else
+    TestMemInit();
+    uint8_t data1[64] = {0};
+    uint8_t data2[64] = {0};
+    const uint8_t *dataArr[2] = {data1, data2};
+    uint8_t dgst1[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t dgst2[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t *dgstArr[2] = {dgst1, dgst2};
+    uint32_t outlen = CRYPT_SHA2_256_DIGESTSIZE;
+    
+    /* Test invalid num (only support 2) */
+    ASSERT_TRUE(CRYPT_SHA256_MBNewCtx(1) == NULL);
+    ASSERT_TRUE(CRYPT_SHA256_MBNewCtx(3) == NULL);
+    
+    CRYPT_SHA2_256_MB_Ctx *mbCtx = CRYPT_SHA256_MBNewCtx(2);
+    ASSERT_TRUE(mbCtx != NULL);
+
+    /* Test invalid init parameters */
+    ASSERT_EQ(CRYPT_SHA256_MBInit(NULL), CRYPT_NULL_INPUT);
+
+    /* Test valid init */
+    ASSERT_EQ(CRYPT_SHA256_MBInit(mbCtx), CRYPT_SUCCESS);
+
+    /* Test valid update */
+    uint32_t nbytesArr[2] = {64, 64};
+    ASSERT_EQ(CRYPT_SHA256_MBUpdate(mbCtx, NULL, nbytesArr, 2), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_SHA256_MBUpdate(mbCtx, dataArr, nbytesArr, 1), CRYPT_NOT_SUPPORT);
+    ASSERT_EQ(CRYPT_SHA256_MBUpdate(mbCtx, dataArr, nbytesArr, 2), CRYPT_SUCCESS);
+    
+    /* Test valid final */
+    ASSERT_EQ(CRYPT_SHA256_MBFinal(mbCtx, NULL, &outlen, 2), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_SHA256_MBFinal(mbCtx, dgstArr, &outlen, 1), CRYPT_NOT_SUPPORT);
+    ASSERT_EQ(CRYPT_SHA256_MBFinal(mbCtx, dgstArr, &outlen, 2), CRYPT_SUCCESS);
+    
+    /* Test one-shot API with NULL parameters */
+    ASSERT_EQ(CRYPT_SHA256_MB(dataArr, 64, NULL, &outlen, 1), CRYPT_NOT_SUPPORT);
+    
+    /* Test valid one-shot API */
+    ASSERT_EQ(CRYPT_SHA256_MB(dataArr, 64, dgstArr, &outlen, 2), CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_SHA256_MBFreeCtx(mbCtx);
+    return;
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SHA256_MB_FUNC_TC001
+ * @title  CRYPT_SHA256_MB one-shot API test with same message.
+ * @precon nan
+ * @brief
+ *    1.Prepare two identical messages and digest buffers, expected result 1.
+ *    2.Call CRYPT_SHA256_MB to compute both hashes, expected result 2.
+ *    3.Compare results with expected digest, expected result 3.
+ * @expect
+ *    1.Preparation successful.
+ *    2.Function returns CRYPT_SUCCESS.
+ *    3.Both digests match expected value.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SHA256_MB_FUNC_TC001(Hex *msg, Hex *digest)
+{
+#if !defined(__aarch64__) || !defined(HITLS_CRYPTO_SHA2_ASM) || !defined(HITLS_CRYPTO_SHA2_MB)
+    SKIP_TEST();
+    (void)msg;
+    (void)digest;
+#else
+    TestMemInit();
+    const uint8_t *dataArr[2] = {msg->x, msg->x};
+    uint8_t dgst1[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t dgst2[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t *dgstArr[2] = {dgst1, dgst2};
+    uint32_t outlen = CRYPT_SHA2_256_DIGESTSIZE;
+
+    ASSERT_EQ(CRYPT_SHA256_MB(dataArr, msg->len, dgstArr, &outlen, 2), CRYPT_SUCCESS);
+    ASSERT_EQ(outlen, CRYPT_SHA2_256_DIGESTSIZE);
+    ASSERT_COMPARE("SHA256_MB msg1", dgst1, CRYPT_SHA2_256_DIGESTSIZE, digest->x, digest->len);
+    ASSERT_COMPARE("SHA256_MB msg2", dgst2, CRYPT_SHA2_256_DIGESTSIZE, digest->x, digest->len);
+
+EXIT:
+    return;
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SHA256_MB_FUNC_TC002
+ * @title  CRYPT_SHA256_MB Init/Update/Final workflow test.
+ * @precon nan
+ * @brief
+ *    1.Call CRYPT_SHA256_MBInit to initialize contexts, expected result 1.
+ *    2.Call CRYPT_SHA256_MBUpdate to process equal-length messages, expected result 2.
+ *    3.Call CRYPT_SHA256_MBFinal to get digests, expected result 3.
+ *    4.Compare results with expected digests, expected result 4.
+ * @expect
+ *    1-3.All functions return CRYPT_SUCCESS.
+ *    4.Digests match expected values.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SHA256_MB_FUNC_TC002(Hex *msg, Hex *digest)
+{
+#if !defined(__aarch64__) || !defined(HITLS_CRYPTO_SHA2_ASM) || !defined(HITLS_CRYPTO_SHA2_MB)
+    SKIP_TEST();
+    (void)msg;
+    (void)digest;
+#else
+    TestMemInit();
+    const uint8_t *dataArr[2] = {msg->x, msg->x};
+    uint8_t dgst1[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t dgst2[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t *dgstArr[2] = {dgst1, dgst2};
+    uint32_t outlen = CRYPT_SHA2_256_DIGESTSIZE;
+    uint32_t nbytesArr[2] = {msg->len, msg->len};
+
+    CRYPT_SHA2_256_MB_Ctx *mbCtx = CRYPT_SHA256_MBNewCtx(2);
+    ASSERT_TRUE(mbCtx != NULL);
+    ASSERT_EQ(CRYPT_SHA256_MBInit(mbCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SHA256_MBUpdate(mbCtx, dataArr, nbytesArr, 2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SHA256_MBFinal(mbCtx, dgstArr, &outlen, 2), CRYPT_SUCCESS);
+    ASSERT_EQ(outlen, CRYPT_SHA2_256_DIGESTSIZE);
+    
+    ASSERT_COMPARE("SHA256_MB msg1", dgst1, CRYPT_SHA2_256_DIGESTSIZE, digest->x, digest->len);
+    ASSERT_COMPARE("SHA256_MB msg2", dgst2, CRYPT_SHA2_256_DIGESTSIZE, digest->x, digest->len);
+
+EXIT:
+    CRYPT_SHA256_MBFreeCtx(mbCtx);
+    return;
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SHA256_MB_FUNC_TC004
+ * @title  CRYPT_SHA256_MB multi-block length test.
+ * @precon nan
+ * @brief
+ *    1.Generate two different messages of specified length, expected result 1.
+ *    2.Compute hashes using CRYPT_SHA256_MB, expected result 2.
+ *    3.Verify results match sequential SHA256 computation, expected result 3.
+ * @expect
+ *    1.Messages generated successfully.
+ *    2.Function returns CRYPT_SUCCESS.
+ *    3.Results match sequential computation for both messages.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SHA256_MB_FUNC_TC004(int msgLen)
+{
+#if !defined(__aarch64__) || !defined(HITLS_CRYPTO_SHA2_ASM) || !defined(HITLS_CRYPTO_SHA2_MB)
+    SKIP_TEST();
+    (void)msgLen;
+#else
+    TestMemInit();
+    uint8_t *data1 = NULL;
+    uint8_t *data2 = NULL;
+    CRYPT_EAL_MdCTX *seqCtx1 = NULL;
+    CRYPT_EAL_MdCTX *seqCtx2 = NULL;
+
+    /* Allocate and fill test data */
+    data1 = (uint8_t *)malloc(msgLen);
+    data2 = (uint8_t *)malloc(msgLen);
+    ASSERT_TRUE(data1 != NULL && data2 != NULL);
+
+    for (int i = 0; i < msgLen; i++) {
+        data1[i] = (uint8_t)(i & 0xFF);
+        data2[i] = (uint8_t)((i * 3 + 7) & 0xFF);
+    }
+
+    /* MB computation */
+    const uint8_t *dataArr[2] = {data1, data2};
+    uint8_t dgst1_mb[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t dgst2_mb[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t *dgstArr[2] = {dgst1_mb, dgst2_mb};
+    uint32_t outlen = CRYPT_SHA2_256_DIGESTSIZE;
+
+    AARCH64_PUT_CANARY();
+    ASSERT_EQ(CRYPT_SHA256_MB(dataArr, msgLen, dgstArr, &outlen, 2), CRYPT_SUCCESS);
+    AARCH64_CHECK_CANARY();
+    /* Sequential computation for verification */
+    seqCtx1 = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHA256);
+    seqCtx2 = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHA256);
+    ASSERT_TRUE(seqCtx1 != NULL && seqCtx2 != NULL);
+
+    uint8_t dgst1_seq[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t dgst2_seq[CRYPT_SHA2_256_DIGESTSIZE];
+    uint32_t seqOutlen = CRYPT_SHA2_256_DIGESTSIZE;
+
+    ASSERT_EQ(CRYPT_EAL_MdInit(seqCtx1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(seqCtx1, data1, msgLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(seqCtx1, dgst1_seq, &seqOutlen), CRYPT_SUCCESS);
+
+    seqOutlen = CRYPT_SHA2_256_DIGESTSIZE;
+    ASSERT_EQ(CRYPT_EAL_MdInit(seqCtx2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(seqCtx2, data2, msgLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(seqCtx2, dgst2_seq, &seqOutlen), CRYPT_SUCCESS);
+
+    /* Compare results */
+    ASSERT_COMPARE("MB vs seq msg1", dgst1_mb, CRYPT_SHA2_256_DIGESTSIZE,
+                   dgst1_seq, CRYPT_SHA2_256_DIGESTSIZE);
+    ASSERT_COMPARE("MB vs seq msg2", dgst2_mb, CRYPT_SHA2_256_DIGESTSIZE,
+                   dgst2_seq, CRYPT_SHA2_256_DIGESTSIZE);
+
+EXIT:
+    free(data1);
+    free(data2);
+    CRYPT_EAL_MdFreeCtx(seqCtx1);
+    CRYPT_EAL_MdFreeCtx(seqCtx2);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SHA256_MB_FUNC_TC003
+ * @title  CRYPT_SHA256_MB multi-update test.
+ * @precon nan
+ * @brief
+ *    1.Initialize MB contexts, expected result 1.
+ *    2.Call Update multiple times with different data chunks, expected result 2.
+ *    3.Finalize and compare with sequential SHA256, expected result 3.
+ * @expect
+ *    1-2.All operations return CRYPT_SUCCESS.
+ *    3.Results match sequential computation.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SHA256_MB_FUNC_TC003(void)
+{
+#if !defined(__aarch64__) || !defined(HITLS_CRYPTO_SHA2_ASM) || !defined(HITLS_CRYPTO_SHA2_MB)
+    SKIP_TEST();
+#else
+    TestMemInit();
+    CRYPT_SHA2_256_MB_Ctx *mbCtx = CRYPT_SHA256_MBNewCtx(2);
+    ASSERT_TRUE(mbCtx != NULL);
+    
+    /* Prepare test data: split into chunks */
+    uint8_t chunk1_1[32], chunk1_2[32], chunk1_3[16];
+    uint8_t chunk2_1[32], chunk2_2[32], chunk2_3[16];
+    for (int i = 0; i < 32; i++) {
+        chunk1_1[i] = (uint8_t)(i);
+        chunk1_2[i] = (uint8_t)(i + 32);
+        chunk2_1[i] = (uint8_t)(i * 2);
+        chunk2_2[i] = (uint8_t)(i * 2 + 32);
+    }
+    for (int i = 0; i < 16; i++) {
+        chunk1_3[i] = (uint8_t)(i + 64);
+        chunk2_3[i] = (uint8_t)(i * 2 + 64);
+    }
+    
+    const uint8_t *dataArr1[2] = {chunk1_1, chunk2_1};
+    const uint8_t *dataArr2[2] = {chunk1_2, chunk2_2};
+    const uint8_t *dataArr3[2] = {chunk1_3, chunk2_3};
+    
+    uint8_t dgst1[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t dgst2[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t *dgstArr[2] = {dgst1, dgst2};
+    uint32_t outlen = CRYPT_SHA2_256_DIGESTSIZE;
+    uint32_t nbytesArr1[2] = {32, 32};
+    uint32_t nbytesArr2[2] = {32, 32};
+    uint32_t nbytesArr3[2] = {16, 16};
+    
+    AARCH64_PUT_CANARY();
+    /* MB computation with multiple updates */
+    ASSERT_EQ(CRYPT_SHA256_MBInit(mbCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SHA256_MBUpdate(mbCtx, dataArr1, nbytesArr1, 2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SHA256_MBUpdate(mbCtx, dataArr2, nbytesArr2, 2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SHA256_MBUpdate(mbCtx, dataArr3, nbytesArr3, 2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SHA256_MBFinal(mbCtx, dgstArr, &outlen, 2), CRYPT_SUCCESS);
+    
+    AARCH64_CHECK_CANARY();
+    /* Sequential computation for verification */
+    CRYPT_EAL_MdCTX *seqCtx1 = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHA256);
+    CRYPT_EAL_MdCTX *seqCtx2 = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHA256);
+    ASSERT_TRUE(seqCtx1 != NULL && seqCtx2 != NULL);
+    
+    uint8_t seqDgst1[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t seqDgst2[CRYPT_SHA2_256_DIGESTSIZE];
+    uint32_t seqOutlen = CRYPT_SHA2_256_DIGESTSIZE;
+    
+    ASSERT_EQ(CRYPT_EAL_MdInit(seqCtx1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(seqCtx1, chunk1_1, 32), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(seqCtx1, chunk1_2, 32), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(seqCtx1, chunk1_3, 16), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(seqCtx1, seqDgst1, &seqOutlen), CRYPT_SUCCESS);
+    
+    seqOutlen = CRYPT_SHA2_256_DIGESTSIZE;
+    ASSERT_EQ(CRYPT_EAL_MdInit(seqCtx2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(seqCtx2, chunk2_1, 32), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(seqCtx2, chunk2_2, 32), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(seqCtx2, chunk2_3, 16), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(seqCtx2, seqDgst2, &seqOutlen), CRYPT_SUCCESS);
+    
+    /* Compare results */
+    ASSERT_COMPARE("MB vs seq msg1", dgst1, CRYPT_SHA2_256_DIGESTSIZE, 
+                   seqDgst1, CRYPT_SHA2_256_DIGESTSIZE);
+    ASSERT_COMPARE("MB vs seq msg2", dgst2, CRYPT_SHA2_256_DIGESTSIZE, 
+                   seqDgst2, CRYPT_SHA2_256_DIGESTSIZE);
+
+EXIT:
+    CRYPT_SHA256_MBFreeCtx(mbCtx);
+    CRYPT_EAL_MdFreeCtx(seqCtx1);
+    CRYPT_EAL_MdFreeCtx(seqCtx2);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_EAL_SHA256_MB_API_TC001
+ * @title  CRYPT_EAL_MdMB* API parameter validation test.
+ * @precon nan
+ * @brief
+ *    1.Call CRYPT_EAL_MdMBNewCtx with num=0, expected result 1.
+ *    2.Call CRYPT_EAL_MdMBNewCtx with invalid num (!=2), expected result 2.
+ *    3.Call CRYPT_EAL_MdMBInit/Update/Final with NULL parameters, expected result 3.
+ * @expect
+ *    1-3.Return error codes / NULL pointers.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_SHA256_MB_API_TC001(void)
+{
+#if !defined(HITLS_CRYPTO_MD_MB) || !defined(HITLS_CRYPTO_SHA2_MB)
+    SKIP_TEST();
+#else
+    TestMemInit();
+
+    ASSERT_TRUE(CRYPT_EAL_MdMBNewCtx(NULL, CRYPT_MD_SHA256_MB, 0) == NULL);
+    ASSERT_TRUE(CRYPT_EAL_MdMBNewCtx(NULL, CRYPT_MD_SHA256_MB, 1) == NULL);
+    ASSERT_TRUE(CRYPT_EAL_MdMBNewCtx(NULL, CRYPT_MD_SHA256_MB, 3) == NULL);
+
+    ASSERT_EQ(CRYPT_EAL_MdMBInit(NULL), CRYPT_NULL_INPUT);
+    uint32_t nbytesArr[2] = {1, 1};
+    ASSERT_EQ(CRYPT_EAL_MdMBUpdate(NULL, NULL, nbytesArr, 2), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_EAL_MdMBFinal(NULL, NULL, NULL, 2), CRYPT_NULL_INPUT);
+EXIT:
+    return;
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_EAL_SHA256_MB_API_TC002
+ * @title  CRYPT_EAL_MdMB* boundary parameter combinations test.
+ * @precon nan
+ * @brief
+ *    1.Create MB context and init it, expected result 1.
+ *    2.Call CRYPT_EAL_MdMBUpdate with mismatched nbytes, expected result 2.
+ *    3.Call CRYPT_EAL_MdMBUpdate with NULL lane data and non-zero nbytes, expected result 3.
+ *    4.Call CRYPT_EAL_MdMBUpdate/Final with num=0, expected result 4.
+ *    5.Call CRYPT_EAL_MdMBFinal with NULL digest lane, expected result 5.
+ *    6.Call CRYPT_EAL_MdMBFinal with insufficient outlen, expected result 6.
+ * @expect
+ *    1.Return CRYPT_SUCCESS.
+ *    2.Return CRYPT_NOT_SUPPORT.
+ *    3.Return CRYPT_NULL_INPUT.
+ *    4.Return CRYPT_NULL_INPUT.
+ *    5.Return CRYPT_NULL_INPUT.
+ *    6.Return CRYPT_SHA2_OUT_BUFF_LEN_NOT_ENOUGH.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_SHA256_MB_API_TC002(void)
+{
+#if !defined(__aarch64__) || !defined(HITLS_CRYPTO_SHA2_ASM) || !defined(HITLS_CRYPTO_SHA2_MB) || !defined(HITLS_CRYPTO_MD_MB)
+    SKIP_TEST();
+#else
+    TestMemInit();
+
+    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdMBNewCtx(NULL, CRYPT_MD_SHA256_MB, 2);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_MdMBInit(ctx), CRYPT_SUCCESS);
+
+    uint8_t in1[1] = {0x01};
+    uint8_t in2[1] = {0x02};
+    const uint8_t *dataArr[2] = {in1, in2};
+
+    uint32_t nbytesMismatch[2] = {1, 2};
+    ASSERT_EQ(CRYPT_EAL_MdMBUpdate(ctx, dataArr, nbytesMismatch, 2), CRYPT_NOT_SUPPORT);
+
+    uint32_t nbytesValid[2] = {1, 1};
+    const uint8_t *dataArrWithNull[2] = {NULL, in2};
+    ASSERT_EQ(CRYPT_EAL_MdMBUpdate(ctx, dataArrWithNull, nbytesValid, 2), CRYPT_NULL_INPUT);
+
+    ASSERT_EQ(CRYPT_EAL_MdMBUpdate(ctx, dataArr, nbytesValid, 0), CRYPT_NULL_INPUT);
+
+    uint8_t dgst1[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t dgst2[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t *dgstArrWithNull[2] = {NULL, dgst2};
+    uint32_t outlen = CRYPT_SHA2_256_DIGESTSIZE;
+    ASSERT_EQ(CRYPT_EAL_MdMBFinal(ctx, dgstArrWithNull, &outlen, 2), CRYPT_NULL_INPUT);
+
+    uint8_t *dgstArr[2] = {dgst1, dgst2};
+    outlen = CRYPT_SHA2_256_DIGESTSIZE - 1;
+    ASSERT_EQ(CRYPT_EAL_MdMBFinal(ctx, dgstArr, &outlen, 2), CRYPT_SHA2_OUT_BUFF_LEN_NOT_ENOUGH);
+
+EXIT:
+    CRYPT_EAL_MdMBFreeCtx(ctx);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_EAL_SHA256_MB_FUNC_TC001
+ * @title  CRYPT_EAL_MdMB* Init/Update/Final workflow test.
+ * @precon nan
+ * @brief
+ *    1.Create MB contexts using CRYPT_EAL_MdMBNewCtx, expected result 1.
+ *    2.Call CRYPT_EAL_MdMBInit/Update/Final to compute two digests, expected result 2.
+ *    3.Compare results with expected digest, expected result 3.
+ * @expect
+ *    1.Creation succeeds.
+ *    2.All functions return CRYPT_SUCCESS.
+ *    3.Both digests match expected value.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_SHA256_MB_FUNC_TC001(Hex *msg, Hex *digest)
+{
+#if !defined(__aarch64__) || !defined(HITLS_CRYPTO_SHA2_ASM) || !defined(HITLS_CRYPTO_SHA2_MB) || !defined(HITLS_CRYPTO_MD_MB)
+    SKIP_TEST();
+    (void)msg;
+    (void)digest;
+#else
+    TestMemInit();
+
+    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdMBNewCtx(NULL, CRYPT_MD_SHA256_MB, 2);
+    ASSERT_TRUE(ctx != NULL);
+
+    const uint8_t *dataArr[2] = {msg->x, msg->x};
+    uint32_t nbytesArr[2] = {msg->len, msg->len};
+    uint8_t dgst1[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t dgst2[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t *dgstArr[2] = {dgst1, dgst2};
+    uint32_t outlen = CRYPT_SHA2_256_DIGESTSIZE;
+
+    ASSERT_EQ(CRYPT_EAL_MdMBInit(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdMBUpdate(ctx, dataArr, nbytesArr, 2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdMBFinal(ctx, dgstArr, &outlen, 2), CRYPT_SUCCESS);
+    ASSERT_EQ(outlen, CRYPT_SHA2_256_DIGESTSIZE);
+
+    ASSERT_COMPARE("EAL_SHA256_MB msg1", dgst1, CRYPT_SHA2_256_DIGESTSIZE, digest->x, digest->len);
+    ASSERT_COMPARE("EAL_SHA256_MB msg2", dgst2, CRYPT_SHA2_256_DIGESTSIZE, digest->x, digest->len);
+
+EXIT:
+    CRYPT_EAL_MdMBFreeCtx(ctx);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPT_EAL_SHA256_MB_FUNC_TC002
+ * @title  CRYPT_EAL_MdMB* length boundary and multi-update test.
+ * @precon nan
+ * @brief
+ *    1.Generate two different messages of specified length, expected result 1.
+ *    2.Compute hashes using CRYPT_EAL_MdMB workflow with multiple updates, expected result 2.
+ *    3.Verify results match sequential SHA256 computation, expected result 3.
+ * @expect
+ *    1.Messages generated successfully.
+ *    2.All MB workflow functions return CRYPT_SUCCESS.
+ *    3.Results match sequential computation for both messages.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_SHA256_MB_FUNC_TC002(int msgLen)
+{
+#if !defined(__aarch64__) || !defined(HITLS_CRYPTO_SHA2_ASM) || !defined(HITLS_CRYPTO_SHA2_MB) || !defined(HITLS_CRYPTO_MD_MB)
+    SKIP_TEST();
+    (void)msgLen;
+#else
+    TestMemInit();
+    if (msgLen < 0) {
+        SKIP_TEST();
+        return;
+    }
+
+    uint8_t *data1 = NULL;
+    uint8_t *data2 = NULL;
+    CRYPT_EAL_MdCTX *mbCtx = NULL;
+    CRYPT_EAL_MdCTX *seqCtx1 = NULL;
+    CRYPT_EAL_MdCTX *seqCtx2 = NULL;
+
+    uint32_t allocLen = (msgLen == 0) ? 1u : (uint32_t)msgLen;
+    data1 = (uint8_t *)malloc(allocLen);
+    data2 = (uint8_t *)malloc(allocLen);
+    ASSERT_TRUE(data1 != NULL && data2 != NULL);
+
+    for (int i = 0; i < msgLen; i++) {
+        data1[i] = (uint8_t)(i & 0xFF);
+        data2[i] = (uint8_t)((i * 3 + 7) & 0xFF);
+    }
+
+    /* MB workflow computation */
+    mbCtx = CRYPT_EAL_MdMBNewCtx(NULL, CRYPT_MD_SHA256_MB, 2);
+    ASSERT_TRUE(mbCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_MdMBInit(mbCtx), CRYPT_SUCCESS);
+
+    /* Boundary: zero-length update should succeed */
+    const uint8_t *dataArr0[2] = {data1, data2};
+    uint32_t nbytesArr0[2] = {0, 0};
+    ASSERT_EQ(CRYPT_EAL_MdMBUpdate(mbCtx, dataArr0, nbytesArr0, 2), CRYPT_SUCCESS);
+
+    uint32_t offset = 0;
+    if (msgLen > 0) {
+        const uint8_t *dataArr1[2] = {data1, data2};
+        uint32_t nbytesArr1[2] = {1, 1};
+        ASSERT_EQ(CRYPT_EAL_MdMBUpdate(mbCtx, dataArr1, nbytesArr1, 2), CRYPT_SUCCESS);
+        offset = 1;
+    }
+
+    uint32_t remaining = (uint32_t)msgLen - offset;
+    if (remaining > 0) {
+        uint32_t chunkLen = (remaining > 63) ? 63 : remaining;
+        const uint8_t *dataArr2[2] = {data1 + offset, data2 + offset};
+        uint32_t nbytesArr2[2] = {chunkLen, chunkLen};
+        ASSERT_EQ(CRYPT_EAL_MdMBUpdate(mbCtx, dataArr2, nbytesArr2, 2), CRYPT_SUCCESS);
+        offset += chunkLen;
+    }
+
+    remaining = (uint32_t)msgLen - offset;
+    if (remaining > 0) {
+        const uint8_t *dataArr3[2] = {data1 + offset, data2 + offset};
+        uint32_t nbytesArr3[2] = {remaining, remaining};
+        ASSERT_EQ(CRYPT_EAL_MdMBUpdate(mbCtx, dataArr3, nbytesArr3, 2), CRYPT_SUCCESS);
+    }
+
+    uint8_t dgst1Mb[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t dgst2Mb[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t *dgstArr[2] = {dgst1Mb, dgst2Mb};
+    uint32_t outlen = CRYPT_SHA2_256_DIGESTSIZE;
+
+    AARCH64_PUT_CANARY();
+    ASSERT_EQ(CRYPT_EAL_MdMBFinal(mbCtx, dgstArr, &outlen, 2), CRYPT_SUCCESS);
+    AARCH64_CHECK_CANARY();
+    ASSERT_EQ(outlen, CRYPT_SHA2_256_DIGESTSIZE);
+
+    /* Sequential computation for verification */
+    seqCtx1 = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHA256);
+    seqCtx2 = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHA256);
+    ASSERT_TRUE(seqCtx1 != NULL && seqCtx2 != NULL);
+
+    uint8_t dgst1Seq[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t dgst2Seq[CRYPT_SHA2_256_DIGESTSIZE];
+    uint32_t seqOutlen = CRYPT_SHA2_256_DIGESTSIZE;
+
+    ASSERT_EQ(CRYPT_EAL_MdInit(seqCtx1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(seqCtx1, data1, (uint32_t)msgLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(seqCtx1, dgst1Seq, &seqOutlen), CRYPT_SUCCESS);
+
+    seqOutlen = CRYPT_SHA2_256_DIGESTSIZE;
+    ASSERT_EQ(CRYPT_EAL_MdInit(seqCtx2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(seqCtx2, data2, (uint32_t)msgLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(seqCtx2, dgst2Seq, &seqOutlen), CRYPT_SUCCESS);
+
+    ASSERT_COMPARE("EAL_MB vs seq msg1", dgst1Mb, CRYPT_SHA2_256_DIGESTSIZE,
+                   dgst1Seq, CRYPT_SHA2_256_DIGESTSIZE);
+    ASSERT_COMPARE("EAL_MB vs seq msg2", dgst2Mb, CRYPT_SHA2_256_DIGESTSIZE,
+                   dgst2Seq, CRYPT_SHA2_256_DIGESTSIZE);
+
+EXIT:
+    free(data1);
+    free(data2);
+    CRYPT_EAL_MdMBFreeCtx(mbCtx);
+    CRYPT_EAL_MdFreeCtx(seqCtx1);
+    CRYPT_EAL_MdFreeCtx(seqCtx2);
+#endif
 }
 /* END_CASE */

@@ -79,6 +79,7 @@ typedef enum {
     CRYPT_MD_SHAKE128 = BSL_CID_SHAKE128,
     CRYPT_MD_SHAKE256 = BSL_CID_SHAKE256,
     CRYPT_MD_SM3 = BSL_CID_SM3,
+    CRYPT_MD_SHA256_MB = BSL_CID_SHA256_MB, /* identifies the SHA256 hash algorithm (multi-buffer variant) */
     CRYPT_MD_MAX = BSL_CID_UNKNOWN
 } CRYPT_MD_AlgId;
 

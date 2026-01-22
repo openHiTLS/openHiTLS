@@ -471,4 +471,385 @@ SHA256CryptoExt:
     st1     {v4.4s-v5.4s}, [x0]
     ret
     .size SHA256CryptoExt, .-SHA256CryptoExt
+
+/* 
+ * Optimized macro for dual SHA-256 rounds - caller-saved registers only
+ * Uses on-demand K256 loading to comply with AAPCS calling convention
+ * v8-v15 are callee-saved and must be preserved
+ */
+.macro ROUNDS4X2_LOAD m0_a, m0_b, k
+    mov         v30.16b, v4.16b
+    mov         v31.16b, v6.16b
+    add         v28.4s, v\k\().4s, v\m0_a\().4s
+    add         v29.4s, v\k\().4s, v\m0_b\().4s
+    sha256h     q4, q5, v28.4s
+    sha256h     q6, q7, v29.4s
+    sha256h2    q5, q30, v28.4s
+    sha256h2    q7, q31, v29.4s
+.endm
+
+/* Macro for round with message schedule update */
+.macro ROUND_SCHED m0, m1, m2, m3, m0b, m1b, m2b, m3b, k
+    ROUNDS4X2_LOAD \m0, \m0b, \k
+    sha256su0   v\m0\().4s, v\m1\().4s
+    sha256su0   v\m0b\().4s, v\m1b\().4s
+    sha256su1   v\m0\().4s, v\m2\().4s, v\m3\().4s
+    sha256su1   v\m0b\().4s, v\m2b\().4s, v\m3b\().4s
+.endm
+
+.macro REVBE x0, x1
+#ifndef HITLS_BIG_ENDIAN
+    rev \x0, \x1
+#else
+    mov \x0, \x1
+#endif
+.endm
+
+/*
+ * Function: CRYPT_SHA256x2 - Dual SHA-256 hash computation
+ * Prototype: void CRYPT_SHA256x2(uint32_t state1[8], uint32_t state2[8],
+ *                                 const uint8_t *in1, const uint8_t *in2, uint32_t nbytes,
+ *                                 uint8_t dgst1[32], uint8_t dgst2[32]);
+ * 
+ * Parameters:
+ *   x0 - state1: Initial/final hash state for message 1
+ *   x1 - state2: Initial/final hash state for message 2
+ *   x2 - in1: Message 1 data pointer
+ *   x3 - in2: Message 2 data pointer
+ *   w4 - nbytes: Message length (same for both)
+ *   x5 - dgst1: Output digest for message 1 (32 bytes, big-endian)
+ *   x6 - dgst2: Output digest for message 2 (32 bytes, big-endian)
+ * 
+ * Computes two SHA-256 hashes simultaneously using ARMv8 crypto extensions.
+ * Handles padding internally per FIPS 180-4.
+ */
+
+.balign 16
+#ifdef __APPLE__
+    .global _CRYPT_SHA256x2
+    _CRYPT_SHA256x2:
+#else
+    .global CRYPT_SHA256x2
+    .type CRYPT_SHA256x2, %function
+CRYPT_SHA256x2:
+#endif
+AARCH64_PACIASP
+    /* Stack: 256 bytes
+     * 0-15: x29/x30, 96-159: buffer1, 160-223: buffer2 */
+    stp     x29, x30, [sp, #-160]!
+    add     x29, sp, #0
+    stp     x19, x20, [sp, #16]
+    
+    /* Initialize */
+    lsl     x19, x4, #3             // bit count for padding
+    ld1     {v24.4s-v25.4s}, [x0]   // Load initial state1
+    ld1     {v26.4s-v27.4s}, [x1]   // Load initial state2
+
+    /* Process complete 64-byte blocks */
+    lsr     w9, w4, #6              // num_blocks = nbytes / 64
+    cbz     w9, .L_partial_2x
+
+.L_fullblk_2x:
+    /* Load 64 bytes from each message and convert to big-endian */
+    ld1     {v16.16b-v19.16b}, [x2], #64
+    ld1     {v20.16b-v23.16b}, [x3], #64
+    rev32   v16.16b, v16.16b
+    rev32   v20.16b, v20.16b
+    rev32   v17.16b, v17.16b
+    rev32   v21.16b, v21.16b
+    rev32   v18.16b, v18.16b
+    rev32   v22.16b, v22.16b
+    rev32   v19.16b, v19.16b
+    rev32   v23.16b, v23.16b
+
+    /* Execute 64 rounds of compression */
+    bl      sha256_block_x2
+
+    subs    w9, w9, #1
+    bne     .L_fullblk_2x
+
+.L_partial_2x:
+    /* Handle partial block and padding (FIPS 180-4):
+     * Append 0x80, pad with zeros to 56 bytes, append 64-bit length */
+    and     w10, w4, #63            // remaining bytes
+    cbz     w10, .L_padding_aligned_2x
+    
+    /* Clear buffers and copy remaining bytes */
+    add     x11, sp, #32
+    movi    v28.16b, #0
+    movi    v29.16b, #0
+    movi    v30.16b, #0
+    movi    v31.16b, #0
+    st1     {v28.16b-v31.16b}, [x11], #64
+    st1     {v28.16b-v31.16b}, [x11]
+    
+    add     x11, sp, #32
+    add     x12, sp, #96
+    mov     x13, x10
+    
+    /* Copy 16-byte chunks */
+    cmp     x13, #16
+    blt     .L_copy_bytes_2x
+.L_copy_16_2x:
+    ldr     q28, [x2], #16
+    ldr     q29, [x3], #16
+    str     q28, [x11], #16
+    str     q29, [x12], #16
+    sub     x13, x13, #16
+    cmp     x13, #16
+    bge     .L_copy_16_2x
+    
+    /* Copy remaining bytes */
+.L_copy_bytes_2x:
+    cbz     x13, .L_add_padding_2x
+    ldrb    w14, [x2], #1
+    ldrb    w15, [x3], #1
+    strb    w14, [x11], #1
+    strb    w15, [x12], #1
+    subs    x13, x13, #1
+    bne     .L_copy_bytes_2x
+
+.L_add_padding_2x:
+    /* Add 0x80 padding byte */
+    mov     w13, #0x80
+    add     x14, sp, #32
+    add     x15, sp, #96
+    strb    w13, [x14, x10]
+    strb    w13, [x15, x10]
+    
+    /* Check if need one or two blocks */
+    cmp     w10, #56
+    bge     .L_need_extra_block_2x
+    
+    /* Case 1: Padding fits in one block */
+    REVBE     x8, x19
+    add     x14, sp, #32
+    add     x15, sp, #96
+    str     x8, [x14, #56]
+    str     x8, [x15, #56]
+    
+    ld1     {v16.16b-v19.16b}, [x14]
+    ld1     {v20.16b-v23.16b}, [x15]
+    rev32   v16.16b, v16.16b
+    rev32   v20.16b, v20.16b
+    rev32   v17.16b, v17.16b
+    rev32   v21.16b, v21.16b
+    rev32   v18.16b, v18.16b
+    rev32   v22.16b, v22.16b
+    rev32   v19.16b, v19.16b
+    rev32   v23.16b, v23.16b
+    b       .L_process_final_2x
+
+.L_need_extra_block_2x:
+    /* Case 2: Need two blocks (remaining >= 56) */
+    add     x14, sp, #32
+    add     x15, sp, #96
+    ld1     {v16.16b-v19.16b}, [x14]
+    ld1     {v20.16b-v23.16b}, [x15]
+    rev32   v16.16b, v16.16b
+    rev32   v20.16b, v20.16b
+    rev32   v17.16b, v17.16b
+    rev32   v21.16b, v21.16b
+    rev32   v18.16b, v18.16b
+    rev32   v22.16b, v22.16b
+    rev32   v19.16b, v19.16b
+    rev32   v23.16b, v23.16b
+    bl      sha256_block_x2
+    
+    /* Prepare second block: zeros + length */
+    /* For direct vector register manipulation, always use rev (not REVBE)
+     * because mov v.d[n], x is a pure bit copy, independent of system endianness */
+    rev     x8, x19
+    movi    v16.2d, #0
+    movi    v17.2d, #0
+    movi    v18.2d, #0
+    mov     v19.d[0], xzr
+    mov     v19.d[1], x8
+    mov     v20.16b, v16.16b
+    mov     v21.16b, v17.16b
+    mov     v22.16b, v18.16b
+    mov     v23.16b, v19.16b
+    rev32   v16.16b, v16.16b
+    rev32   v17.16b, v17.16b
+    rev32   v18.16b, v18.16b
+    rev32   v19.16b, v19.16b
+    rev32   v20.16b, v20.16b
+    rev32   v21.16b, v21.16b
+    rev32   v22.16b, v22.16b
+    rev32   v23.16b, v23.16b
+    b       .L_process_final_2x
+
+.L_padding_aligned_2x:
+    /* Case 3: Block-aligned message */
+    add     x14, sp, #32
+    add     x15, sp, #96
+    movi    v28.16b, #0
+    movi    v29.16b, #0
+    movi    v30.16b, #0
+    movi    v31.16b, #0
+    st1     {v28.16b-v31.16b}, [x14]
+    st1     {v28.16b-v31.16b}, [x15]
+    
+    mov     w13, #0x80
+    add     x14, sp, #32
+    add     x15, sp, #96
+    strb    w13, [x14]
+    strb    w13, [x15]
+    REVBE     x8, x19
+    str     x8, [x14, #56]
+    str     x8, [x15, #56]
+    
+    ld1     {v16.16b-v19.16b}, [x14]
+    ld1     {v20.16b-v23.16b}, [x15]
+    rev32   v16.16b, v16.16b
+    rev32   v20.16b, v20.16b
+    rev32   v17.16b, v17.16b
+    rev32   v21.16b, v21.16b
+    rev32   v18.16b, v18.16b
+    rev32   v22.16b, v22.16b
+    rev32   v19.16b, v19.16b
+    rev32   v23.16b, v23.16b
+
+.L_process_final_2x:
+    bl      sha256_block_x2
+
+.L_finalize_2x:
+    /* Output results: state arrays (little-endian) and digests (big-endian) */
+    st1     {v24.4s-v25.4s}, [x0]
+    st1     {v26.4s-v27.4s}, [x1]
+#ifndef HITLS_BIG_ENDIAN
+    rev32   v24.16b, v24.16b
+    rev32   v25.16b, v25.16b
+    rev32   v26.16b, v26.16b
+    rev32   v27.16b, v27.16b
+#endif
+    st1     {v24.4s-v25.4s}, [x5]
+    st1     {v26.4s-v27.4s}, [x6]
+
+    ldp     x19, x20, [sp, #16]
+    ldp     x29, x30, [sp], #160
+AARCH64_AUTIASP
+    ret
+#ifndef __APPLE__
+    .size CRYPT_SHA256x2, .-CRYPT_SHA256x2
+#endif
+
+/* Local subroutine: 64-round SHA-256 compression for dual messages
+ * Input: v16-v19, v20-v23 (msg schedules), v24-v27 (states)
+ * Modifies: v0-v7, v16-v23, v28-v31, x16 */
+sha256_block_x2:
+    mov v4.16b, v24.16b
+    mov v5.16b, v25.16b
+    mov v6.16b, v26.16b
+    mov v7.16b, v27.16b
+
+#ifdef __APPLE__
+    adrp        x16, .K256@page
+    add         x16, x16, .K256@pageoff
+#else
+    adrp        x16, .K256
+    add         x16, x16, :lo12:.K256
+#endif
+    
+    /* Rounds 0-47 */
+    ld1 {v0.4s-v3.4s}, [x16], #64
+    ROUND_SCHED 16, 17, 18, 19, 20, 21, 22, 23, 0
+    ROUND_SCHED 17, 18, 19, 16, 21, 22, 23, 20, 1
+    ROUND_SCHED 18, 19, 16, 17, 22, 23, 20, 21, 2
+    ROUND_SCHED 19, 16, 17, 18, 23, 20, 21, 22, 3
+    ld1 {v0.4s-v3.4s}, [x16], #64
+    ROUND_SCHED 16, 17, 18, 19, 20, 21, 22, 23, 0
+    ROUND_SCHED 17, 18, 19, 16, 21, 22, 23, 20, 1
+    ROUND_SCHED 18, 19, 16, 17, 22, 23, 20, 21, 2
+    ROUND_SCHED 19, 16, 17, 18, 23, 20, 21, 22, 3
+    ld1 {v0.4s-v3.4s}, [x16], #64
+    ROUND_SCHED 16, 17, 18, 19, 20, 21, 22, 23, 0
+    ROUND_SCHED 17, 18, 19, 16, 21, 22, 23, 20, 1
+    ROUND_SCHED 18, 19, 16, 17, 22, 23, 20, 21, 2
+    ROUND_SCHED 19, 16, 17, 18, 23, 20, 21, 22, 3
+    
+    /* Rounds 48-63 */
+    ld1 {v0.4s-v3.4s}, [x16], #64
+    ROUNDS4X2_LOAD 16, 20, 0
+    ROUNDS4X2_LOAD 17, 21, 1
+    ROUNDS4X2_LOAD 18, 22, 2
+    ROUNDS4X2_LOAD 19, 23, 3
+    
+    /* Add to state */
+    add         v24.4s, v24.4s, v4.4s
+    add         v25.4s, v25.4s, v5.4s
+    add         v26.4s, v26.4s, v6.4s
+    add         v27.4s, v27.4s, v7.4s
+    ret
+
+
+/*
+ * void CRYPT_SHA256x2_Compress(uint32_t state1[CRYPT_SHA256_STATE_SIZE], uint32_t state2[CRYPT_SHA256_STATE_SIZE],
+ *                            const uint8_t *block1, const uint8_t *block2, uint32_t nblocks);
+ * 
+ * Function: Compress multiple blocks for dual SHA-256 computation
+ * Parameters:
+ *   x0 - state1: Initial/final hash state for message 1
+ *   x1 - state2: Initial/final hash state for message 2
+ *   x2 - block1: Message 1 data pointer
+ *   x3 - block2: Message 2 data pointer
+ *   w4 - nblocks: Number of 64-byte blocks to process
+ * 
+ * Updates two SHA-256 states by compressing nblocks pairs of 64-byte blocks.
+ */
+
+.balign 16
+#ifdef __APPLE__
+    .global _CRYPT_SHA256x2_Compress
+    _CRYPT_SHA256x2_Compress:
+#else
+    .global CRYPT_SHA256x2_Compress
+    .type CRYPT_SHA256x2_Compress, %function
+CRYPT_SHA256x2_Compress:
+#endif
+AARCH64_PACIASP
+    stp     x29, x30, [sp, #-16]!
+    add     x29, sp, #0
+    /* Check if nblocks is zero */
+    cbz     w4, .Lcompress_end_x2
+    
+    /* Load initial states */
+    ld1     {v24.4s-v25.4s}, [x0]   // Load state1 (8 uint32_t = 2 vectors)
+    ld1     {v26.4s-v27.4s}, [x1]   // Load state2 (8 uint32_t = 2 vectors)
+    
+    /* Loop through nblocks */
+.Lcompress_loop_x2:
+    /* Load 64 bytes from each block */
+    ld1     {v16.16b-v19.16b}, [x2], #64  // Load block1 (64 bytes = 4 vectors)
+    ld1     {v20.16b-v23.16b}, [x3], #64  // Load block2 (64 bytes = 4 vectors)
+    
+    /* Convert to big-endian (SHA-256 requires big-endian input) */
+    rev32   v16.16b, v16.16b
+    rev32   v17.16b, v17.16b
+    rev32   v18.16b, v18.16b
+    rev32   v19.16b, v19.16b
+    rev32   v20.16b, v20.16b
+    rev32   v21.16b, v21.16b
+    rev32   v22.16b, v22.16b
+    rev32   v23.16b, v23.16b
+    
+    /* Execute 64 rounds of compression */
+    bl      sha256_block_x2
+    
+    /* Decrement block counter and loop if more blocks remain */
+    subs    w4, w4, #1
+    bne     .Lcompress_loop_x2
+    
+    /* Store final states */
+    st1     {v24.4s-v25.4s}, [x0]   // Store state1
+    st1     {v26.4s-v27.4s}, [x1]   // Store state2
+
+.Lcompress_end_x2:
+    ldp     x29, x30, [sp], #16
+AARCH64_AUTIASP
+    ret
+#ifndef __APPLE__
+    .size CRYPT_SHA256x2_Compress, .-CRYPT_SHA256x2_Compress
+#endif
+
 #endif
