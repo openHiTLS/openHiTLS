@@ -115,6 +115,10 @@ CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_DupCtx(CRYPT_ML_DSA_Ctx *ctx)
         CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newCtx->prvKey, ctx->prvKey, BSL_SAL_Dump(ctx->prvKey, ctx->prvLen),
         CRYPT_MEM_ALLOC_FAIL);
+    if (ctx->hasSeed) {
+        (void)memcpy_s(newCtx->seed, MLDSA_SEED_BYTES_LEN, ctx->seed, MLDSA_SEED_BYTES_LEN);
+        newCtx->hasSeed = true;
+    }
     newCtx->pubLen = ctx->pubLen;
     newCtx->prvLen = ctx->prvLen;
     newCtx->needEncodeCtx = ctx->needEncodeCtx;

@@ -56,8 +56,6 @@ int32_t CRYPT_ML_KEM_Cmp(const CRYPT_ML_KEM_Ctx *a, const CRYPT_ML_KEM_Ctx *b);
 #define CRYPT_ML_KEM_Cmp NULL
 #endif
 
-int32_t CRYPT_ML_KEM_GetSecBits(const CRYPT_ML_KEM_Ctx *ctx);
-
 int32_t CRYPT_ML_KEM_Encaps(CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32_t *cipherLen,
     uint8_t *share, uint32_t *shareLen);
 

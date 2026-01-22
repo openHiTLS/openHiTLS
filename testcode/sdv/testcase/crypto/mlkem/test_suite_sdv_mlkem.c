@@ -1289,7 +1289,7 @@ void SDV_CRYPTO_MLKEM_PRV_KEY_FUNC_TC001(int bits)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(prvCtx, &ek), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(prvCtx), CRYPT_SUCCESS);
 
-    dk.key.kemDk.data[0] = 1u; // tamper dk
+    ASSERT_EQ(memset_s(dk.key.kemDk.data + decapsKeyLen - 65, 64, 0, 32), CRYPT_SUCCESS); // set the H(ek) of dk all zero
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(invalidPrvCtx, &dk), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(invalidPrvCtx), CRYPT_MLKEM_INVALID_PRVKEY); // dk is set, but is invalid
