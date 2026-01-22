@@ -60,6 +60,11 @@
                         },
                         "sha3": null
                     },
+                    "md_mb": {
+                        "sha2_mb": {
+                            "sha256_mb": null
+                        }
+                    },
                     "mac": {
                         "hmac": null,
                         "gmac": {"deps": ["eal", "aes", "gcm"]},
@@ -862,7 +867,7 @@
                 ".deps": ["platform::Secure_C"]
             },
             "sha2": {
-                ".features": ["sha224", "sha256", "sha384", "sha512"],
+                ".features": ["sha224", "sha256", "sha384", "sha512", "sha2_mb"],
                 ".srcs": {
                     "public": "crypto/sha2/src/sha2*.c",
                     "no_asm": "crypto/sha2/src/noasm_*.c",

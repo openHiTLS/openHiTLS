@@ -22,6 +22,7 @@
 #include "modes_local.h"
 #include "bsl_sal.h"
 #include "securec.h"
+#include "crypto_test_util.h"
 
 #define MAX_OUTPUT 5000
 #define MCT_INNER_LOOP 1000
@@ -1369,45 +1370,7 @@ void SDV_CRYPTO_EAL_AES_FUNC_TC010(int algId, Hex *key, Hex *iv, Hex *pt)
     CRYPT_EAL_CipherCtx *ctx = NULL;
     TestMemInit();
 
-    double canary = 1.1;
-    register double d8 asm("d8");
-    register double d9 asm("d9");
-    register double d10 asm("d10");
-    register double d11 asm("d11");
-    register double d12 asm("d12");
-    register double d13 asm("d13");
-    register double d14 asm("d14");
-    register double d15 asm("d15");
-    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d8) : "w"(canary) :);
-    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d9) : "w"(canary) :);
-    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d10) : "w"(canary) :);
-    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d11) : "w"(canary) :);
-    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d12) : "w"(canary) :);
-    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d13) : "w"(canary) :);
-    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d14) : "w"(canary) :);
-    asm volatile("fmov %d0, %d1 \n\t" : "=w"(d15) : "w"(canary) :);
-
-    long value = 0x12345678;
-    register int x19 asm("x19");
-    register int x20 asm("x20");
-    register int x21 asm("x21");
-    register int x22 asm("x22");
-    register int x23 asm("x23");
-    register int x24 asm("x24");
-    register int x25 asm("x25");
-    register int x26 asm("x26");
-    register int x27 asm("x27");
-    register int x28 asm("x28");
-    asm volatile("mov %x0, %x1 \n\t" : "=r"(x19) : "r"(value) :);
-    asm volatile("mov %x0, %x1 \n\t" : "=r"(x20) : "r"(value) :);
-    asm volatile("mov %x0, %x1 \n\t" : "=r"(x21) : "r"(value) :);
-    asm volatile("mov %x0, %x1 \n\t" : "=r"(x22) : "r"(value) :);
-    asm volatile("mov %x0, %x1 \n\t" : "=r"(x23) : "r"(value) :);
-    asm volatile("mov %x0, %x1 \n\t" : "=r"(x24) : "r"(value) :);
-    asm volatile("mov %x0, %x1 \n\t" : "=r"(x25) : "r"(value) :);
-    asm volatile("mov %x0, %x1 \n\t" : "=r"(x26) : "r"(value) :);
-    asm volatile("mov %x0, %x1 \n\t" : "=r"(x27) : "r"(value) :);
-    asm volatile("mov %x0, %x1 \n\t" : "=r"(x28) : "r"(value) :);
+    AARCH64_PUT_CANARY();
 
     // Encrypt
     ASSERT_TRUE((ctx = CRYPT_EAL_CipherNewCtx(algId)) != NULL);
@@ -1437,25 +1400,8 @@ void SDV_CRYPTO_EAL_AES_FUNC_TC010(int algId, Hex *key, Hex *iv, Hex *pt)
     ASSERT_COMPARE("AES:", plain, plainLen, pt->x, pt->len);
     CRYPT_EAL_CipherFreeCtx(ctx);
     ctx = NULL;
-    ASSERT_TRUE(d8 == canary);
-    ASSERT_TRUE(d9 == canary);
-    ASSERT_TRUE(d10 == canary);
-    ASSERT_TRUE(d11 == canary);
-    ASSERT_TRUE(d12 == canary);
-    ASSERT_TRUE(d13 == canary);
-    ASSERT_TRUE(d14 == canary);
-    ASSERT_TRUE(d15 == canary);
-    ASSERT_TRUE(x19 == value);
-    ASSERT_TRUE(x20 == value);
-    ASSERT_TRUE(x21 == value);
-    ASSERT_TRUE(x22 == value);
-    ASSERT_TRUE(x23 == value);
-    ASSERT_TRUE(x24 == value);
-    ASSERT_TRUE(x25 == value);
-    ASSERT_TRUE(x26 == value);
-    ASSERT_TRUE(x27 == value);
-    ASSERT_TRUE(x28 == value);
     ASSERT_TRUE(TestIsErrStackEmpty());
+    AARCH64_CHECK_CANARY();
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 #endif

@@ -946,6 +946,30 @@
 #define HITLS_CRYPTO_SM3_ASM
 #endif
 
+#ifdef HITLS_CRYPTO_MD_MB
+    #ifndef HITLS_CRYPTO_SHA2_MB
+        #define HITLS_CRYPTO_SHA2_MB
+    #endif
+#endif
+
+#ifdef HITLS_CRYPTO_SHA2_MB
+    #ifndef HITLS_CRYPTO_SHA256_MB
+        #define HITLS_CRYPTO_SHA256_MB
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_SHA256_MB)
+    #ifndef HITLS_CRYPTO_SHA2_MB
+        #define HITLS_CRYPTO_SHA2_MB
+    #endif
+#endif
+
+#if defined(HITLS_CRYPTO_SHA2_MB)
+    #ifndef HITLS_CRYPTO_MD_MB
+        #define HITLS_CRYPTO_MD_MB
+    #endif
+#endif
+
 #if defined(HITLS_CRYPTO_BN_X8664) || defined(HITLS_CRYPTO_BN_ARMV8)
 #define HITLS_CRYPTO_BN_ASM
 #endif

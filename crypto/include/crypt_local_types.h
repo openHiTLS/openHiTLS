@@ -44,6 +44,22 @@ typedef void (*MdFreeCtx)(void *data);
 typedef int32_t (*MdGetParam)(void *data, BSL_Param *param);
 typedef int32_t (*MdSqueeze)(void *data, uint8_t *out, uint32_t len);
 
+#ifdef HITLS_CRYPTO_MD_MB
+typedef void *(*MdMBNewCtx)(uint32_t num);
+typedef void (*MdMBFreeCtx)(void *ctx);
+typedef int32_t (*MdMBInit)(void *ctx);
+typedef int32_t (*MdMBUpdate)(void *ctx, const uint8_t *data[], uint32_t nbytes[], uint32_t num);
+typedef int32_t (*MdMBFinal)(void *ctx, uint8_t *digest[], uint32_t *outlen, uint32_t num);
+
+typedef struct {
+    MdMBNewCtx newCtx;
+    MdMBFreeCtx freeCtx;
+    MdMBInit init;
+    MdMBUpdate update;
+    MdMBFinal final;
+} EAL_MdMBMethod;
+#endif // HITLS_CRYPTO_MD_MB
+
 typedef struct {
     int32_t id;
     uint16_t blockSize;  // Block size processed by the hash algorithm at a time, which is used with other algorithms.
