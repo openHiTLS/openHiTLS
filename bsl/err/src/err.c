@@ -31,7 +31,6 @@
 
 /* Error information stack size */
 #define SAL_MAX_ERROR_STACK 20
-#define OUTPUT_LINE_LENGTH 256
 
 static BSL_ERR_OutputFunc g_outputFunc = NULL;
 
@@ -556,43 +555,31 @@ void BSL_ERR_OutputErrorStack(void)
     if (g_outputFunc == NULL) {
         return;
     }
-    char buffer[OUTPUT_LINE_LENGTH] = {0};
     (void)BSL_SAL_ThreadReadLock(g_errLock);
     if (g_avlRoot == NULL) {
         BSL_SAL_ThreadUnlock(g_errLock);
-        g_outputFunc("Avl tree root node of the error stack not exist.\n");
         return;
     }
     const uint64_t threadId = BSL_SAL_ThreadGetId();
     BSL_AvlTree *curNode = BSL_AVL_SearchNode(g_avlRoot, threadId);
     if (curNode == NULL) {
         BSL_SAL_ThreadUnlock(g_errLock);
-        (void)snprintf_truncated_s(buffer, OUTPUT_LINE_LENGTH,
-                                   "The Error stack of threadId %lu, not exist in avl tree of the error stack.\n",
-                                   threadId);
-        g_outputFunc((const char *)buffer);
         return;
     }
     ErrorCodeStack *errStack = curNode->data; /* will not be null */
 
     uint16_t idx = errStack->bottom;
     uint16_t count = 0;
-
     while (errStack->errorStack[idx] != 0 && count < SAL_MAX_ERROR_STACK) {
         const char *file = errStack->filename[idx];
         uint32_t lineNo = errStack->line[idx];
         int32_t errCode = errStack->errorStack[idx];
-        int32_t mark = (errStack->errorFlags[idx] & ERR_FLAG_POP_MARK);
-
+        bool mark = (errStack->errorFlags[idx] & ERR_FLAG_POP_MARK) != 0;
         if (file == NULL) {
             file = "NA";
             lineNo = 0;
         }
-
-        (void)snprintf_truncated_s(buffer, OUTPUT_LINE_LENGTH, "%lu  #%-2u %s:%-4u 0x%08X  %c\n",
-                                   threadId, count, file, lineNo, errCode, mark ? 'M' : ' ');
-        g_outputFunc((const char *)buffer);
-        (void)memset_s(buffer, OUTPUT_LINE_LENGTH, 0, OUTPUT_LINE_LENGTH);
+        g_outputFunc(threadId, file, lineNo, errCode, mark);
         idx = (idx + 1) % SAL_MAX_ERROR_STACK;
         count++;
     }

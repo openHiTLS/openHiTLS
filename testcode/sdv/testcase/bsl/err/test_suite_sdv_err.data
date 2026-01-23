@@ -74,4 +74,4 @@ SDV_BSL_ERR_OUTPUT_TC003 40 then pop from firstandlast
 SDV_BSL_ERR_OUTPUT_TC003:40:"errOutPut40pop":"../testdata/bsl/errOutPut40pop"
 
 SDV_BSL_ERR_OUTPUT_TC004 errOutPut But No Err
-SDV_BSL_ERR_OUTPUT_TC004:"errOutPutButNoErr":"../testdata/bsl/errOutPutButNoErr"
+SDV_BSL_ERR_OUTPUT_TC004:"errOutPutNA":"../testdata/bsl/errOutPutNA"

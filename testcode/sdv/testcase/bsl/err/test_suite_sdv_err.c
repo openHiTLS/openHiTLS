@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "bsl_err.h"
@@ -30,6 +31,8 @@
 #include "crypt_errno.h"
 #include "hitls_error.h"
 #include "auth_errno.h"
+#include "securec.h"
+
 
 static int32_t PthreadRWLockNew(BSL_SAL_ThreadLockHandle *lock)
 {
@@ -1201,14 +1204,21 @@ int32_t AppendToFileInit(char *filename)
     return BSL_SUCCESS;
 }
 
-void AppendToFile(const char *str)
+void AppendToFile(uint64_t threadId, const char *file, uint32_t lineNo, int32_t errCode, bool mark)
 {
-    if (g_out == NULL || str == NULL) {
+    if (g_out == NULL) {
         return;
     }
-    size_t len = strlen((const char *)str);
-    if (len > 0) {
-        fwrite(str, 1, len, g_out);
+    char str[256] = {0};
+    int ret = snprintf_s(str, sizeof(str), sizeof(str) - 1,
+                         "%" PRIu64 " %s:%-4u 0x%08X  %c\n",
+                         threadId, file, lineNo, errCode, mark ? 'M' : ' ');
+    if (ret < 0) {
+        return;
+    }
+    size_t realLen = strlen(str);
+    if (realLen > 0) {
+        fwrite(str, 1, realLen, g_out);
         fflush(g_out);
     }
 }
@@ -1265,11 +1275,10 @@ int32_t ReadEntireFile(const char *filename, uint8_t *buffer, uint32_t bufferSiz
     return BSL_SUCCESS;
 }
 
-void StdPrintfOutputFunc(const char *str)
+void StdPrintfOutputFunc(uint64_t threadId, const char *file, uint32_t lineNo, int32_t errCode, bool mark)
 {
-    if (str != NULL) {
-        printf("%s", str);
-    }
+    printf("%" PRIu64 " %s:%-4u 0x%08X  %c\n",
+           threadId, file, lineNo, errCode, mark ? 'M' : ' ');
 }
 
 /* BEGIN_CASE */
@@ -1397,8 +1406,13 @@ void SDV_BSL_ERR_OUTPUT_TC004(char *outFilename, char *inFilename)
 
     PushErrors(1);
     BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, PthreadGetArbitraryId);
-    // test OutputErrorStack when no Error stack in avl tree of the error stack.
+    // test when curNode == NULL
     BSL_ERR_OutputErrorStack();
+
+    // test output "NA" filename and 0 line number
+    BSL_ERR_PushError(BSL_UIO_FAIL, NULL, 0);
+    BSL_ERR_OutputErrorStack(); // test OutputErrorStack after SetMark
+    ReleaseFileWriter();
 
     // compare output file with fixed input file
     uint32_t outFileReadLen = 0;
