@@ -589,6 +589,9 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009(int ver
 
         cnt++;
     } while (cnt < 3);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HLT_CleanFrameHandle();

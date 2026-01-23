@@ -123,6 +123,8 @@ void SDV_TLS_BASE_CONNECT_TC01(int connType, int version)
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
 }

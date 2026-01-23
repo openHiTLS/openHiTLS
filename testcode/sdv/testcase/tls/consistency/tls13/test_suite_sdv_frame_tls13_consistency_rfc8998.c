@@ -276,6 +276,7 @@ void SDV_TLS_TLS13_RFC8998_CONSISTENCY_FUNC_TC001(char *sCipherSuite, char *cCip
         client = FRAME_CreateLinkWithCerts(config_c, BSL_UIO_TCP, &cSm2CertInfo[1], 2);
     }
 
+    // Error stack exists
     int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
     ASSERT_EQ(ret, expectedRes);
     if (expectedRes == HITLS_SUCCESS) {
@@ -287,6 +288,8 @@ void SDV_TLS_TLS13_RFC8998_CONSISTENCY_FUNC_TC001(char *sCipherSuite, char *cCip
         ASSERT_EQ(client->ssl->negotiatedInfo.cipherSuiteInfo.hashAlg, negotiateHashId);
         ASSERT_EQ(server->ssl->negotiatedInfo.version, version);
         ASSERT_EQ(client->ssl->negotiatedInfo.version, version);
+
+        ASSERT_TRUE(TestIsErrStackNotEmpty());
     }
 
 EXIT:
@@ -342,6 +345,9 @@ void SDV_TLS_TLS13_RFC8998_CONSISTENCY_FUNC_TC002(char *cipherSuite, char *sign,
     ASSERT_EQ(memcmp(config->tls13CipherSuites, smCiphersuites13, sizeof(smCiphersuites13)), 0);
     ASSERT_EQ(config->signAlgorithms[0], smSignAlg);
     ASSERT_EQ(config->groups[0], smGroup);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
 }
@@ -380,6 +386,9 @@ void SDV_TLS_TLS13_RFC8998_CONSISTENCY_FUNC_TC003()
     ASSERT_EQ(config_c->signAlgorithms[0], smSignAlg);
     ASSERT_EQ(config_c->groupsSize, 1);
     ASSERT_EQ(config_c->groups[0], smGroup);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);

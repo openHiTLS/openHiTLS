@@ -92,6 +92,9 @@ void SDV_TLS13_MULTI_KEYSHARE_TC001()
     ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, READ_BUF_LEN_18K, &readLen) == 0);
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HLT_FreeAllProcess();
     ClearWrapper();

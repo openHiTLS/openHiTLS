@@ -38,8 +38,9 @@ const char *HITLS_GetServerName(const HITLS_Ctx *ctx, const int type)
     uint16_t version = ctx->config.tlsConfig.maxVersion;
     uint8_t *hostName = NULL;
     uint32_t nameSize = 0u;
-    SESS_GetHostName(ctx->session, &nameSize, &hostName);
-
+    if (ctx->session != NULL) {
+        SESS_GetHostName(ctx->session, &nameSize, &hostName);
+    }
     if (!isClient) {
         /* Before Handshake */
         if (ctx->state == CM_STATE_IDLE) {

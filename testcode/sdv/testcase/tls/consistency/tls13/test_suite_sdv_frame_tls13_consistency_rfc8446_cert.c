@@ -657,8 +657,12 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_NO_CERT_FUNC_TC001(int isSupportNoC
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_IDLE);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_IDLE);
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1269,6 +1273,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ABNORMAL_CERTREQMSG_FUNC_TC000()
     RecWrapper wrapper = {TRY_SEND_CERTIFICATE_REQUEST, REC_TYPE_HANDSHAKE, false, NULL, Test_CertReqPackAndParse};
     RegisterWrapper(wrapper);
     ASSERT_EQ(DoHandshake(&testInfo), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -1912,6 +1919,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SERVER_CERTCHAIN_FUNC_TC002(void)
     ASSERT_TRUE(client != NULL);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -2076,7 +2086,11 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ECDSA_SIGN_RSA_CERT_FUNC_TC001(void)
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_IDLE);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -2194,6 +2208,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_TICKET_NONCE_ZEROLENGTH_MSG_TC001(voi
     };
     RegisterWrapper(wrapper);
     ASSERT_EQ(DoHandshake(&testInfo), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -2240,6 +2257,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SELECT_PREFER_CIPHER_SUITE_TC001(void)
     const char *name = clientTlsCtx->negotiatedInfo.cipherSuiteInfo.name;
     char *expectName = "HITLS_AES_128_GCM_SHA256";
     ASSERT_TRUE(memcmp(expectName, name, strlen(expectName)) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
 }
@@ -2285,6 +2305,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SELECT_PREFER_CIPHER_SUITE_TC002(void)
     const char *name = clientTlsCtx->negotiatedInfo.cipherSuiteInfo.name;
     char *expectName = "HITLS_AES_256_GCM_SHA384";
     ASSERT_TRUE(memcmp(expectName, name, strlen(expectName)) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HLT_FreeAllProcess();
 }
@@ -2314,9 +2337,13 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSS_PARAMETER_CHECK()
     FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config_s, BSL_UIO_TCP, &certInfo);
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
+    // Error stack exists
     int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
     ASSERT_EQ(ret, HITLS_SUCCESS);
     ASSERT_EQ(server->ssl->negotiatedInfo.signScheme, CERT_SIG_SCHEME_RSA_PSS_PSS_SHA512);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);
@@ -2394,6 +2421,7 @@ void UT_TLS_TLS13_RFC8446_SIGALG_SELECT_TC001(int ecPrefer)
     HITLS_CFG_SetSignature(config, serverSign, sizeof(signAlgs2) / sizeof(uint16_t));
     FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
 
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     HITLS_SignHashAlgo peerSignScheme;
     HITLS_GetPeerSignScheme(client->ssl, &peerSignScheme);

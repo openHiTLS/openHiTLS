@@ -336,6 +336,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_RECORDTYPE_TC005(void)
     ASSERT_EQ(FRAME_ParseMsgHeader(&frameType, sndBuf, sndLen, &frameMsg, &parseLen), 0);
 
     ASSERT_TRUE(frameMsg.recType.data == REC_TYPE_ALERT);
+
 EXIT:
     CleanRecordBody(&recvframeMsg);
     HITLS_CFG_FreeConfig(config);
@@ -700,7 +701,6 @@ EXIT:
 /* BEGIN_CASE */
 void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC001(int version)
 {
-
     FRAME_Init();
     HITLS_Config *config = NULL;
     FRAME_LinkObj *client = NULL;
@@ -2015,6 +2015,7 @@ void UT_TLS_TLCP_CONSISTENCY_SEQ_NUM_TC001(int isClient)
     testInfo.isSupportExtendedMasterSecret = true;
     testInfo.state = TRY_SEND_FINISH;
     testInfo.isClient = isClient;
+    // Error stack exists
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
 
     if (isClient) {
@@ -2040,6 +2041,7 @@ void UT_TLS_TLCP_CONSISTENCY_SEQ_NUM_TC001(int isClient)
     }
     ASSERT_TRUE(remoteSsl->recCtx->readStates.currentState->seq == 1);
 
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -2079,6 +2081,7 @@ void UT_TLS_TLCP_CONSISTENCY_SEQ_NUM_TC002(int isClient)
     testInfo.isSupportExtendedMasterSecret = true;
     testInfo.state = HS_STATE_BUTT;
     testInfo.isClient = isClient;
+    // Error stack exists
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
     ASSERT_TRUE(testInfo.client->ssl->state == CM_STATE_TRANSPORTING);
     ASSERT_TRUE(testInfo.server->ssl->state == CM_STATE_TRANSPORTING);
@@ -2103,6 +2106,8 @@ void UT_TLS_TLCP_CONSISTENCY_SEQ_NUM_TC002(int isClient)
     uint32_t readLen = 0;
     ASSERT_EQ(APP_Read(remoteSsl, readBuf, READ_BUF_SIZE, &readLen), HITLS_SUCCESS);
     ASSERT_EQ(remoteSsl->recCtx->readStates.currentState->seq , 2);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -2139,7 +2144,11 @@ void UT_TLS_TLCP_CONSISTENCY_SERVER_TLS_ALL_TC001()
     config_s->isSupportClientVerify = true;
     client = FRAME_CreateTLCPLink(config_c, BSL_UIO_TCP, true);
     server = FRAME_CreateTLCPLink(config_s, BSL_UIO_TCP, false);
+    // Error stack exists
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
     HITLS_CFG_FreeConfig(config_s);

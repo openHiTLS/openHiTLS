@@ -835,6 +835,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC002()
     uint16_t version = 0;
     ASSERT_EQ(HITLS_GetNegotiatedVersion(testInfo.client->ssl, &version), HITLS_SUCCESS);
     ASSERT_EQ(version, HITLS_VERSION_TLS12);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -892,6 +895,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC003()
     testInfo.client = FRAME_CreateLink(testInfo.config, testInfo.uioType);
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_TRUE(testInfo.client->ssl->negotiatedInfo.version == HITLS_VERSION_TLS12);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -924,6 +930,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC004()
     uint16_t version = 0;
     ASSERT_EQ(HITLS_GetNegotiatedVersion(testInfo.client->ssl, &version), HITLS_SUCCESS);
     ASSERT_EQ(version, HITLS_VERSION_TLS13);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -991,6 +1000,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC005()
     version = 0;
     ASSERT_EQ(HITLS_GetNegotiatedVersion(testInfo.client->ssl, &version), HITLS_SUCCESS);
     ASSERT_EQ(version, HITLS_VERSION_TLS13);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -1035,6 +1047,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC006()
     version = 0;
     ASSERT_EQ(HITLS_GetNegotiatedVersion(testInfo.client->ssl, &version), HITLS_SUCCESS);
     ASSERT_EQ(version, HITLS_VERSION_TLS12);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -1109,6 +1124,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC007()
     version = 0;
     ASSERT_EQ(HITLS_GetNegotiatedVersion(testInfo.client->ssl, &version), HITLS_SUCCESS);
     ASSERT_EQ(version, HITLS_VERSION_TLS12);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -1149,6 +1167,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CHECK_SERVERHELLO_MASTER_SECRET_FUNC_TC001
     ASSERT_TRUE(testInfo.server != NULL);
 
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.c_config);
@@ -1298,6 +1318,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SUPPORT_VERSION_FUNC_TC009()
     version = 0;
     ASSERT_EQ(HITLS_GetNegotiatedVersion(testInfo.client->ssl, &version), HITLS_SUCCESS);
     ASSERT_EQ(version, HITLS_VERSION_TLS13);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -1690,6 +1713,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_FUNC_TC001()
     bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(testInfo.client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, false);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -2049,6 +2075,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_FUNC_TC007()
     testInfo.client = FRAME_CreateLink(testInfo.config, testInfo.uioType);
     testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+    
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -2097,6 +2126,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_FUNC_TC008()
     };
     RegisterWrapper(wrapper);
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(testInfo.config);

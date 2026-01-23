@@ -79,6 +79,8 @@ void UT_TLS12_RESUME_FUNC_TC001()
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, true);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -129,6 +131,8 @@ void UT_SESSION_CACHE_MODE_BASIC_TC001()
     ASSERT_EQ(mode, HITLS_SESS_CACHE_BOTH);
     ASSERT_TRUE((mode & HITLS_SESS_CACHE_CLIENT) != 0);
     ASSERT_TRUE((mode & HITLS_SESS_CACHE_SERVER) != 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -184,6 +188,8 @@ void UT_SESSION_CACHE_MODE_NO_CACHE_TC002()
     bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, false);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
@@ -242,6 +248,8 @@ void UT_SESSION_CACHE_MODE_BOTH_TC003()
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, true);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -291,6 +299,8 @@ void UT_SESSION_CACHE_MODE_DISABLE_INTERNAL_STORE_TC004()
 
     // Check cache size - should be 0 due to DISABLE_INTERNAL_STORE
     ASSERT_EQ(BSL_HASH_Size(client->ssl->globalConfig->sessMgr->hash), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -356,6 +366,8 @@ void UT_SESSION_CACHE_MODE_ENABLE_TIME_UPDATE_TC005()
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, true);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -403,6 +415,8 @@ void UT_SESSION_CACHE_MODE_COMBINED_FLAGS_TC006()
 
     HITLS_Session *clientSession = HITLS_GetDupSession(client->ssl);
     ASSERT_TRUE(clientSession != NULL);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -492,6 +506,8 @@ void UT_SESSION_CACHE_MODE_BACKWARD_COMPATIBILITY_TC008()
     bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, true);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -685,6 +701,8 @@ void UT_EXTERNAL_CACHE_GET_CB_FUNCTION_TC003()
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_TRUE(isReused);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
     HITLS_CFG_FreeConfig(serverConfig);
@@ -738,6 +756,8 @@ void UT_EXTERNAL_CACHE_REMOVE_CB_FUNCTION_TC004()
 
     /* Verify remove callback was called */
     ASSERT_TRUE(g_sessionRemoveCbCalled);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -815,6 +835,8 @@ void UT_EXTERNAL_CACHE_FULL_EXTERNAL_MODE_TC005()
     bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_TRUE(isReused);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
@@ -900,6 +922,8 @@ void UT_CUSTOM_SESSION_TICKET_EXT_DATA_BASIC_TC001()
     }
     ASSERT_EQ(HITLS_SetSessionTicketExtData(ctx, testData2, sizeof(testData2)), HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);
@@ -943,6 +967,8 @@ void UT_CUSTOM_SESSION_TICKET_EXT_DATA_REPLACE_TC002()
     memset(testData3, 0xCC, sizeof(testData3));
     ASSERT_EQ(HITLS_SetSessionTicketExtData(ctx, testData3, sizeof(testData3)), HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);
@@ -981,6 +1007,8 @@ void UT_CUSTOM_SESSION_TICKET_EXT_PROCESS_CB_BASIC_TC003()
 
     /* Set callback to NULL (valid operation) */
     ASSERT_EQ(HITLS_SetSessionTicketExtProcessCb(ctx, NULL, NULL), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -1068,6 +1096,8 @@ void UT_CUSTOM_SESSION_TICKET_EXT_PROCESS_CB_PARAM_TC005()
     ASSERT_EQ(HITLS_SetSessionTicketExtProcessCb(ctx, TestSessionTicketExtProcessCb, (void *)TEST_USER_ARG),
               HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     HITLS_Free(ctx);
@@ -1120,6 +1150,8 @@ void UT_CUSTOM_SESSION_TICKET_CLIENT_SEND_EXT_TC006()
 
     /* Verify user argument was passed correctly */
     ASSERT_EQ(g_receivedExtArg, (void *)TEST_USER_ARG);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
@@ -1174,6 +1206,8 @@ void UT_CUSTOM_SESSION_TICKET_BIDIRECTIONAL_EXT_TC008()
 
     /* At least one callback should be called in bidirectional scenario */
     ASSERT_TRUE(g_sessionTicketExtProcessCbCalled);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
@@ -1233,6 +1267,8 @@ void UT_CUSTOM_SESSION_TICKET_CALLBACK_FUNCTION_TC009()
     ASSERT_EQ(g_receivedExtDataLen, sizeof(testExtData));
     ASSERT_EQ(memcmp(g_receivedExtData, testExtData, sizeof(testExtData)), 0);
     ASSERT_EQ(g_receivedExtArg, (void *)TEST_USER_ARG);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
@@ -1327,6 +1363,8 @@ void UT_CUSTOM_SESSION_TICKET_NO_CALLBACK_TC011()
     /* Verify callback was NOT called (no callback set) */
     ASSERT_TRUE(!g_sessionTicketExtProcessCbCalled);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
     HITLS_CFG_FreeConfig(serverConfig);
@@ -1384,6 +1422,8 @@ void UT_CUSTOM_SESSION_TICKET_TLS12_COMPAT_TC012()
     /* Verify extension functionality */
     ASSERT_TRUE(g_sessionTicketExtProcessCbCalled);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
     HITLS_CFG_FreeConfig(serverConfig);
@@ -1440,6 +1480,8 @@ void UT_CUSTOM_SESSION_TICKET_TLS13_COMPAT_TC013()
 
     /* Verify extension functionality */
     ASSERT_TRUE(g_sessionTicketExtProcessCbCalled);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
@@ -1502,6 +1544,8 @@ void UT_CUSTOM_SESSION_TICKET_LARGE_DATA_TC014()
     ASSERT_EQ(g_receivedExtDataLen, largeDataSize);
     ASSERT_EQ(memcmp(g_receivedExtData, largeExtData, largeDataSize), 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     BSL_SAL_FREE(largeExtData);
     HITLS_CFG_FreeConfig(clientConfig);
@@ -1549,6 +1593,8 @@ void UT_CUSTOM_SESSION_TICKET_MEMORY_MGMT_TC016()
     /* Set data again after previous settings */
     uint8_t data4[] = "FinalMemTestData";
     ASSERT_EQ(HITLS_SetSessionTicketExtData(ctx, data4, sizeof(data4)), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -1618,6 +1664,8 @@ void UT_SESSION_MGMT_CLEAR_TIMEOUT_BASIC_TC001()
 
     /* Verify cache is cleared */
     ASSERT_EQ(BSL_HASH_Size(server->ssl->globalConfig->sessMgr->hash), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -1707,6 +1755,8 @@ void UT_SESSION_MGMT_CLEAR_NO_TIMEOUT_TC003()
     uint32_t afterCacheSize = BSL_HASH_Size(client->ssl->globalConfig->sessMgr->hash);
     ASSERT_EQ(afterCacheSize, initialCacheSize);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1753,6 +1803,8 @@ void UT_SESSION_MGMT_CLEAR_EXTERNAL_CALLBACK_TC005()
 
     /* Verify remove callback was called */
     ASSERT_TRUE(g_sessionMgmtRemoveCbCalled);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -1806,6 +1858,8 @@ void UT_SESSION_MGMT_REMOVE_SESSION_BASIC_TC006()
     /* Verify cache size decreased */
     uint32_t afterCacheSize = BSL_HASH_Size(client->ssl->globalConfig->sessMgr->hash);
     ASSERT_EQ(afterCacheSize, initialCacheSize - 1);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -1947,6 +2001,8 @@ void UT_SESSION_MGMT_REMOVE_CALLBACK_TC010()
     ASSERT_EQ(HITLS_CFG_RemoveSession(config, session), HITLS_SUCCESS);
     ASSERT_TRUE(g_sessionMgmtRemoveCbCalled);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -1992,6 +2048,8 @@ void UT_SESSION_MGMT_GET_TIMEOUT_BASIC_TC012()
 
     /* Timeout should be reasonable (between 1 second and 1 year) */
     ASSERT_TRUE(timeout >= 1 && timeout <= 365 * 24 * 3600);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -2103,6 +2161,8 @@ void UT_SESSION_MGMT_LIFECYCLE_INTEGRATION_TC019()
     /* Step 5: Verify session is removed */
     uint32_t finalSize = BSL_HASH_Size(client->ssl->globalConfig->sessMgr->hash);
     ASSERT_EQ(finalSize, cacheSize - 1);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);

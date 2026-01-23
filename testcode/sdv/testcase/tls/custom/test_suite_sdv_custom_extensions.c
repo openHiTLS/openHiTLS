@@ -157,6 +157,8 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_API_TC001(void)
     ctx->config.tlsConfig.customExts = NULL;
     ASSERT_EQ(len, 0);  // No data packed without add_cb
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_Free(ctx);
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -204,6 +206,8 @@ void SDV_TLS_PARSE_CUSTOM_EXTENSIONS_API_TC001(void)
     ctx->config.tlsConfig.customExts = NULL;
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
     // Note: Current implementation doesn't update bufOffset without parse_cb, adjust expectation if needed
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_Free(ctx);
@@ -262,6 +266,8 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_MULTIPLE_API_TC001(void)
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
     ASSERT_EQ(len, 0);             // No data packed without add_cb
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_Free(ctx);
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -303,6 +309,8 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_EMPTY_API_TC001(void)
     int32_t ret = PackCustomExtensions(ctx, &pkt, context, NULL, 0);
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
     ASSERT_EQ(len, 0);             // Verify the packing length is 0
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -364,6 +372,8 @@ void SDV_TLS_PACK_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     ASSERT_EQ(packedLen, 1);  // Verify the len
     ASSERT_EQ(buf[len - 1], 0xAA);  // Verify the data
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
@@ -410,6 +420,8 @@ void SDV_TLS_PARSE_CUSTOM_EXTENSIONS_CALLBACK_API_TC001(void)
     int32_t ret = ParseCustomExtensions(ctx, buf + bufOffset, extType, extLen, context, NULL, 0);
     ctx->config.tlsConfig.customExts = NULL;
     ASSERT_EQ(ret, HITLS_SUCCESS);  // Verify the return value is success
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -663,6 +675,8 @@ void SDV_HITLS_CUSTOM_EXTENSION_FUNCTION_TC001(void)
     ASSERT_EQ(serverArg.addedContext[5], HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET);
     ASSERT_EQ(serverArg.addedContext[5], HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
     HITLS_CFG_FreeConfig(serverConfig);
@@ -767,6 +781,8 @@ void SDV_HITLS_CUSTOM_EXTENSION_FUNCTION_TC003()
     ASSERT_EQ(serverArg.addedContext[0], HITLS_EX_TYPE_TLS1_3_SERVER_HELLO);
     ASSERT_EQ(serverArg.parsedContext[0], HITLS_EX_TYPE_CLIENT_HELLO);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(clientConfig);
     HITLS_CFG_FreeConfig(serverConfig);
@@ -816,6 +832,8 @@ void SDV_HITLS_CUSTOM_EXTENSION_FUNCTION_TC004()
 
     ASSERT_EQ(serverArg.addedContextCount, 1);
     ASSERT_EQ(serverArg.parsedContextCount, 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 
 EXIT:

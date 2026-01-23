@@ -119,6 +119,7 @@ void UT_TLS_ALPN_PARSE_PROTO_FUNC_TC001(int version)
     ASSERT_TRUE(server != NULL);
 
     int32_t ret;
+    // Error stack exists
     ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
     ASSERT_EQ(ret, HITLS_SUCCESS);
     HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);

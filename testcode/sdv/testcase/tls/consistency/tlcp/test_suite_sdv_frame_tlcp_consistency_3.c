@@ -1100,6 +1100,7 @@ void UT_TLS_TLCP_CONSISTENCY_CLOSE_NOTIFY_TC001(void)
     FRAME_LinkObj *server = NULL;
 
     client = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, true);
+    // Error stack exists
     server = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, false);
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
@@ -1136,6 +1137,8 @@ void UT_TLS_TLCP_CONSISTENCY_CLOSE_NOTIFY_TC001(void)
     ASSERT_TRUE(serverframeMsg.type == REC_TYPE_ALERT && serverframeMsg.bodyLen == ALERT_BODY_LEN);
     ASSERT_TRUE(serverframeMsg.body.alertMsg.level == ALERT_LEVEL_WARNING &&
         serverframeMsg.body.alertMsg.description == ALERT_CLOSE_NOTIFY);
+    
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -1170,6 +1173,7 @@ void UT_TLS_TLCP_CONSISTENCY_CLOSE_NOTIFY_TC002(void)
     FRAME_LinkObj *server = NULL;
 
     client = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, true);
+    // Error stack exists
     server = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, false);
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
@@ -1225,6 +1229,8 @@ void UT_TLS_TLCP_CONSISTENCY_CLOSE_NOTIFY_TC002(void)
     ASSERT_TRUE(serverframeMsg1.body.alertMsg.level == ALERT_LEVEL_WARNING &&
         serverframeMsg1.body.alertMsg.description == ALERT_CLOSE_NOTIFY);
 
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1257,6 +1263,7 @@ void UT_TLS_TLCP_CONSISTENCY_CLOSE_NOTIFY_TC003(void)
     FRAME_LinkObj *server = NULL;
 
     client = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, true);
+    // Error stack exists
     server = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, false);
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
@@ -1294,6 +1301,8 @@ void UT_TLS_TLCP_CONSISTENCY_CLOSE_NOTIFY_TC003(void)
     ASSERT_TRUE(clientframeMsg.body.alertMsg.level == ALERT_LEVEL_WARNING &&
         clientframeMsg.body.alertMsg.description == ALERT_CLOSE_NOTIFY);
 
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1327,6 +1336,7 @@ void UT_TLS_TLCP_CONSISTENCY_CLOSE_NOTIFY_TC004(void)
     FRAME_LinkObj *server = NULL;
 
     client = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, true);
+    // Error stack exists
     server = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, false);
     ASSERT_TRUE(client != NULL);
     ASSERT_TRUE(server != NULL);
@@ -1380,6 +1390,8 @@ void UT_TLS_TLCP_CONSISTENCY_CLOSE_NOTIFY_TC004(void)
     ALERT_GetInfo(client->ssl, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_WARNING);
     ASSERT_EQ(alert.description, ALERT_CLOSE_NOTIFY);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);

@@ -120,6 +120,7 @@ static int32_t ClientCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
 {
     int32_t ret = ClientCheckPeerCert(ctx, SAL_CERT_PAIR_GET_X509(peerCert));
     if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16224, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client check peer cert failed", 0, 0, 0, 0);
         return ret;
@@ -152,6 +153,7 @@ static int32_t ClientCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
         expectCertInfo.certType = CFG_GetCertTypeByCipherSuite(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite);
         ret = HS_CheckCertInfo(ctx, &expectCertInfo, cert, false, false);
         if (ret != HITLS_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17041, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "CheckCertInfo fail, ret = %d.", ret, 0, 0, 0);
         }
@@ -164,6 +166,7 @@ static int32_t ServerCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
 {
     int32_t ret = ServerCheckPeerCert(ctx, SAL_CERT_PAIR_GET_X509(peerCert));
     if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16226, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "server check peer cert failed.", 0, 0, 0, 0);
         return ret;
@@ -184,6 +187,7 @@ static int32_t ServerCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
         expectCertInfo.certType = CFG_GetCertTypeByCipherSuite(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite);
         ret = HS_CheckCertInfo(ctx, &expectCertInfo, cert, false, false);
         if (ret != HITLS_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17042, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "CheckCertInfo fail, ret = %d.", ret, 0, 0, 0);
         }

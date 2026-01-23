@@ -1150,6 +1150,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC001(int version, 
 
         cnt++;
     } while (cnt < 3);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -1268,6 +1271,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC002(int version, 
 
         cnt++;
     } while (cnt < 3);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -1384,6 +1390,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC003(int version, 
 
         cnt++;
     } while (cnt < 3);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -1500,6 +1509,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC004(int version, 
 
         cnt++;
     } while (cnt < 3);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();
@@ -1611,6 +1623,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC003(int version, 
     ASSERT_TRUE(HLT_ProcessTlsRead(remoteProcess, clientRes, readBuf, sizeof(readBuf), &readLen) == 0);
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
@@ -1786,6 +1801,8 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_NEGOTIATE_CIPHERSUITE_TC004(int version, 
     ASSERT_EQ(HLT_TlsConnect(clientRes->ssl), HITLS_SUCCESS);
     ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), HITLS_SUCCESS);
     ASSERT_EQ(((HITLS_Ctx *)clientRes->ssl)->negotiatedInfo.cipherSuiteInfo.cipherSuite, HITLS_DH_ANON_WITH_AES_256_CBC_SHA256);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HLT_CleanFrameHandle();
@@ -2194,6 +2211,9 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_MULTILINK_RESUME_ALERT_TC002(int version,
         ASSERT_TRUE(HITLS_SESS_IsResumable(session) == true);
         cunt++;
     } while (cunt <= 2);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();

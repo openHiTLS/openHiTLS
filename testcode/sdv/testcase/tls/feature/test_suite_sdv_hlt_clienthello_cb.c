@@ -198,6 +198,8 @@ void SDV_TLS_CLIENT_HELLO_CALLBACK_FUNC_TC02(void)
 
     ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), HITLS_SUCCESS);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
 }
@@ -223,7 +225,11 @@ void SDV_TLS_CLIENT_HELLO_CALLBACK_FUNC_TC03(int version)
 
     localProcess = HLT_InitLocalProcess(HITLS);
     ASSERT_TRUE(localProcess != NULL);
-    remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, g_uiPort, true);
+    if (version == TLS1_2 || version == TLS1_3) {
+        remoteProcess = HLT_LinkRemoteProcess(HITLS, TCP, g_uiPort, true);
+    } else {
+        remoteProcess = HLT_LinkRemoteProcess(HITLS, UDP, g_uiPort, true);
+    }
     ASSERT_TRUE(remoteProcess != NULL);
     HLT_Ctx_Config *serverCtxConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ;
@@ -238,6 +244,8 @@ void SDV_TLS_CLIENT_HELLO_CALLBACK_FUNC_TC03(int version)
 
     ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), HITLS_SUCCESS);
     ASSERT_EQ(retry_count, 2);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HLT_FreeAllProcess();
@@ -347,6 +355,8 @@ void SDV_TLS_CLIENT_HELLO_CALLBACK_FUNC_TC05(void)
 
     ASSERT_EQ(HLT_GetTlsAcceptResult(serverRes), HITLS_SUCCESS);
     ASSERT_EQ(retry_count, 3);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HLT_FreeAllProcess();

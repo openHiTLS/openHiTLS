@@ -389,6 +389,9 @@ void SDV_TLS_CERT_LoadAndDelCert_FUNC_TC001(int delWay)
     ASSERT_TRUE(clientRes != NULL);
     ASSERT_EQ(HLT_GetTlsAcceptResultFromId(tlsAcceptId), 0);
     ASSERT_EQ(Dtls_DataTransfer(serverCtx, remoteProcess, clientRes), SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HLT_FreeAllProcess();
     return;

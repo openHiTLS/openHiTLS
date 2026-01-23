@@ -792,6 +792,8 @@ void UT_TLS_CERT_GET_CALIST_FUNC_TC001(int version)
     ASSERT_TRUE(caList != NULL);
     ASSERT_EQ(caList->count, 2);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);

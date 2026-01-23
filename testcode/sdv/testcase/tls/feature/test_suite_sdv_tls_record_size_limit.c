@@ -206,6 +206,9 @@ void HITLS_SDV_TLS_RecSizeLimit_PlainText_FUNC_001(int version, int connType, in
     }
     ASSERT_TRUE(HLT_ProcessTlsWrite(remoteProcess, clientRes, writeData, s_record_size) == 0);
     ASSERT_TRUE(HLT_ProcessTlsRead(localProcess, serverRes, readBuf, sizeof(readBuf), &readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
@@ -274,6 +277,9 @@ void HITLS_SDV_TLS_RecSizeLimit_PlainText_FUNC_002()
     HLT_Tls_Res *clientRes = HLT_ProcessTlsInit(remoteProcess, TLS1_3, config_c, NULL);
     ASSERT_TRUE(clientRes != NULL);
     ASSERT_EQ(HLT_RpcTlsConnect(remoteProcess, clientRes->sslId), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
@@ -326,6 +332,9 @@ void HITLS_SDV_TLS_RecSizeLimit_Overflow_FUNC_010(int version, int c_size, int s
     ASSERT_EQ(writeLen, REC_MAX_PLAIN_TEXT_LENGTH);
     ASSERT_EQ(readLen, REC_MAX_PLAIN_LENGTH);
     ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
 }
@@ -388,6 +397,9 @@ void HITLS_SDV_TLS_RecSizeLimit_Overflow_FUNC_002(int version, int c_size, int s
     ALERT_Info info = {0};
     ALERT_GetInfo(clientRes->ssl, &info);
     ASSERT_EQ(info.flag, ALERT_FLAG_NO);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HLT_FreeAllProcess();
 }
@@ -1080,6 +1092,9 @@ void HITLS_SDV_TLS_RecSizeLimit_FUNC_001(int version, int connType)
     ASSERT_TRUE(HLT_ProcessTlsRead(localProcess, clientRes, readBuf, sizeof(readBuf), &readLen) == 0);
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     ClearWrapper();
     HLT_CleanFrameHandle();
@@ -1393,6 +1408,9 @@ void HITLS_SDV_TLS_RecSizeLimit_FUNC_014(int version, int connType, int c_record
         ASSERT_TRUE(HITLS_SESS_IsResumable(session) == true);
         cnt++;
     } while (cnt < 2);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HITLS_SESS_Free(session);
     HLT_FreeAllProcess();

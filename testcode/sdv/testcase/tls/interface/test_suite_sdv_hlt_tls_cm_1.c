@@ -224,6 +224,9 @@ void SDV_HITLS_EXPORT_KEY_MATERIAL_005()
     ASSERT_TRUE(readLen == outLen);
     // Compare whether the keys exported from the local end and the remote end are consistent.
     ASSERT_TRUE(memcmp(localMaterial, readBuf, readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     free(readBuf);
     free(localMaterial);
@@ -343,6 +346,8 @@ void SDV_HITLS_EXPORT_KEY_MATERIAL_007()
     ASSERT_TRUE(HLT_TlsRead(clientRes->ssl, readBuf, outLen, &readLen) == 0);
     ASSERT_TRUE(readLen == outLen);
     ASSERT_TRUE(memcmp(localMaterial, readBuf, readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     free(readBuf);

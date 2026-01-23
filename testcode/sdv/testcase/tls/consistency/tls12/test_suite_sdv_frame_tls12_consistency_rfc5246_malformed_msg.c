@@ -63,6 +63,9 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC009(int messageLen)
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
     uint8_t data[REC_MAX_CIPHER_TEXT_LEN];
     ASSERT_EQ(REC_Write(clientTlsCtx, REC_TYPE_APP, data, messageLen), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     TlsCtxFree();
     HITLS_CFG_FreeConfig(config);
@@ -110,6 +113,9 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC010(int messageLen)
 
     uint8_t data[REC_MAX_CIPHER_TEXT_LEN];
     ASSERT_EQ(REC_Write(serverTlsCtx, REC_TYPE_APP, data, messageLen), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     TlsCtxFree();
     HITLS_CFG_FreeConfig(config);
@@ -238,6 +244,8 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_FRAGMENTED_MSG_TC001(void)
     ASSERT_EQ(ret, HITLS_REC_NORMAL_IO_BUSY);
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_TRUE(client->ssl->state == CM_STATE_TRANSPORTING);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);

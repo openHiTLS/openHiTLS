@@ -77,6 +77,9 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_ECDHE_ECDSA_FUNC_TC001(void)
     ASSERT_TRUE(serverRes != NULL);
     clientRes = HLT_ProcessTlsConnect(remoteProcess, TLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
@@ -176,6 +179,9 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCY_CURVE_AND_AUTH_FUNC_TC001(void)
      *  Set serverkeyexchange to secp256r1 */
     int ret = HLT_TlsConnect(clientRes->ssl);
     ASSERT_TRUE(ret == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_FreeAllProcess();
     HLT_CleanFrameHandle();
@@ -276,6 +282,8 @@ static void Test_SetCipherSuites_With_Link(CipherInfo serverCipher, CipherInfo c
     ASSERT_TRUE(ret == 0);
     ASSERT_TRUE(readLen == strlen("Hello"));
     ASSERT_TRUE(memcmp("Hello", readBuf, readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HLT_FreeAllProcess();

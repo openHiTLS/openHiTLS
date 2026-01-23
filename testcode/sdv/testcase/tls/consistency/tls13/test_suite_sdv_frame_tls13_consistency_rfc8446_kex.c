@@ -717,6 +717,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_FUNC_TC008()
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
     ASSERT_EQ(HITLS_Read(serverTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_CM_LINK_UNESTABLISHED);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1022,6 +1025,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_NULL_KEYSHARE_FUNC_TC001()
     ASSERT_TRUE(serverTlsCtx->hsCtx->state == TRY_RECV_CLIENT_HELLO);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -1090,6 +1096,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SECOND_GROUP_SUPPORT_FUNC_TC001()
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_TRANSPORTING);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -1286,6 +1295,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SECOND_GROUP_SUPPORT_FUNC_TC003()
     clientMsg = &frameMsg.body.hsMsg.body.clientHello;
     ASSERT_TRUE(clientMsg->psks.exState == MISSING_FIELD);
     FRAME_CleanMsg(&frameType, &frameMsg);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     HITLS_SESS_Free(Session);
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -1366,6 +1377,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RENEGOTIATION_OLD_VERSION_FUNC_TC001()
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_TRANSPORTING);
     ASSERT_TRUE(serverTlsCtx->negotiatedInfo.version == HITLS_VERSION_TLS12);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig_s);
@@ -1645,6 +1658,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SESSION_ID_FUNC_TC001()
     FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
     ASSERT_EQ(clientMsg->sessionIdSize.data, 32);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -1720,6 +1735,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SESSION_ID_FUNC_TC002()
 
     ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -1949,6 +1967,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SESSION_ID_FUNC_TC005()
 
     ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -2008,6 +2028,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CH_CIPHERSUITES_FUNC_TC001()
 
     ASSERT_TRUE(server->ssl->negotiatedInfo.cipherSuiteInfo.cipherSuite == HITLS_AES_256_GCM_SHA384);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
@@ -2075,6 +2096,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CH_CIPHERSUITES_FUNC_TC002()
 
     FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
     ASSERT_TRUE(clientMsg->psks.exState == MISSING_FIELD);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 
 EXIT:
@@ -2160,7 +2183,6 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_COMPRESSION_METHOD_FUNC_TC001()
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_ILLEGAL_PARAMETER);
-
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -2308,6 +2330,9 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_COMPRESSION_METHOD_FUNC_TC003()
 
     ASSERT_TRUE(serverTlsCtx->negotiatedInfo.version == HITLS_VERSION_TLS12);
     ASSERT_TRUE(clientTlsCtx->negotiatedInfo.version == HITLS_VERSION_TLS12);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig_s);
     HITLS_CFG_FreeConfig(tlsConfig_c);
@@ -2383,6 +2408,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNKNOWN_EXTENSION_FUNC_TC001()
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
     ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_RECV_ENCRYPTED_EXTENSIONS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -3235,6 +3262,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_RANDOM_FUNC_TC001()
 };
     ASSERT_TRUE(memcmp(serverMsg->randomValue.data, g_hrrRandom, sizeof(g_hrrRandom) / sizeof(uint8_t)) == 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -3322,6 +3351,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_RANDOM_FUNC_TC002()
 
     ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
     ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_SEND_CLIENT_HELLO);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -3604,6 +3635,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_EXTENSION_FUNC_TC001()
 
     ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
     ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_RECV_CERTIFICATE);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
@@ -4875,6 +4908,8 @@ void SDV_TLS13_RFC8446_KeyShareGroup_TC003(int version, int connType)
     ASSERT_TRUE(readLen == strlen(writeBuf));
     ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     HLT_CleanFrameHandle();
     HLT_FreeAllProcess();
@@ -4975,6 +5010,9 @@ void UT_TLS13_RFC8446_RECV_MUTI_CCS_TC001()
         ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
     }
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);

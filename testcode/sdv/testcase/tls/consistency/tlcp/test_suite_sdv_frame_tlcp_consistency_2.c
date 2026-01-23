@@ -168,6 +168,7 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC005()
     FRAME_FreeLink(server);
 
     client = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, true);
+    // Error stack exists
     server = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, false);
     HITLS_SetSession(client->ssl, clientSession);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_SEND_FINISH), HITLS_SUCCESS);
@@ -184,6 +185,8 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC005()
     ASSERT_EQ(isReused, false);
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, true);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
@@ -217,6 +220,7 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC006()
     const uint64_t timeout = 5u;
     HITLS_CFG_SetSessionTimeout(config, timeout);
     client = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, true);
+    // Error stack exists
     server = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, false);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
     HITLS_Session *clientSession = HITLS_GetDupSession(client->ssl);
@@ -230,6 +234,9 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC006()
     bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, false);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
@@ -258,6 +265,7 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC007()
     FRAME_LinkObj *server = NULL;
     config = HITLS_CFG_NewTLCPConfig();
     client = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, true);
+    // Error stack exists
     server = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, false);
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
     HITLS_Session *clientSession = HITLS_GetDupSession(client->ssl);
@@ -272,6 +280,9 @@ void UT_TLS_TLCP_CONSISTENCY_RESUME_TC007()
     bool isReused = false;
     ASSERT_EQ(HITLS_IsSessionReused(client->ssl, &isReused), HITLS_SUCCESS);
     ASSERT_EQ(isReused, false);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
 EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);

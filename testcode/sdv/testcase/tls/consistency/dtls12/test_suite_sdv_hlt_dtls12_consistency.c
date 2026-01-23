@@ -159,6 +159,8 @@ void SDV_TLS_DTLS_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
     HLT_RpcCloseFd(remoteProcess, sockFd.peerFd, remoteProcess->connType);
     HLT_CloseFd(sockFd.srcFd, localProcess->connType);
 
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HLT_CleanFrameHandle();
@@ -245,6 +247,8 @@ void SDV_TLS_DTLS_CONSISTENCY_RFC6347_MTU_TC001()
     HLT_Tls_Res *clientRes = HLT_ProcessTlsConnect(remoteProcess, DTLS1_2, clientCtxConfig, NULL);
     ASSERT_TRUE(clientRes == NULL);
     ASSERT_EQ(ctx->config.pmtu, 548);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
@@ -325,6 +329,9 @@ void SDV_TLS_DTLS_CONSISTENCY_RFC6347_MTU_TC002()
     ASSERT_EQ(HLT_ProcessTlsRead(remoteProcess, clientRes, readData, readLen, &readLen), 0);
     ASSERT_EQ(readLen, strlen("Hello World"));
     ASSERT_EQ(memcmp("Hello World", readData, readLen), 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
 EXIT:
     ClearWrapper();
     HLT_FreeAllProcess();
@@ -385,6 +392,8 @@ void SDV_TLS_DTLS_BASIC_HANDSHAKE_TC001(void)
     ASSERT_TRUE(HLT_ProcessTlsRead(localProcess, serverRes, readBuf, sizeof(readBuf), &readLen) == 0);
     ASSERT_TRUE(readLen == sizeof(writeData));
     ASSERT_TRUE(memcmp(writeData, readBuf, readLen) == 0);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HLT_FreeAllProcess();

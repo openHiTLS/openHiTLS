@@ -881,6 +881,7 @@ static int32_t X509_FindIssueCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List
     BSL_ERR_SET_MARK();
     int32_t ret = X509_GetIssueFromChain(storeCtx, store, cert, issue);
     if (ret == HITLS_PKI_SUCCESS) {
+        BSL_ERR_POP_TO_MARK();
         *issueInTrust = true;
         return ret;
     }
