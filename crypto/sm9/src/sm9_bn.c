@@ -97,7 +97,7 @@ int32_t bn_get_bitlen(const uint32_t *x, int32_t wsize)
     /***********************/
     int32_t i;
     int32_t bits;
-    uint32_t t;
+    uint32_t t = 0;
     /***********************/
 
     for (i = wsize - 1; i >= 0; i--) {
