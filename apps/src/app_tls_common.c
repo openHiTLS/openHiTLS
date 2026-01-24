@@ -36,13 +36,19 @@
 #include "cipher_suite.h"
 #include "hitls_session.h"
 #include "hitls_cert_type.h"
+#include "crypt_eal_pkey.h"
+#include "crypt_errno.h"
 #include "bsl_bytes.h"
+#include "bsl_params.h"
 #include "bsl_sal.h"
 #include "bsl_err.h"
 #include "sal_file.h"
+#include "crypt_params_key.h"
 #include "app_tls_common.h"
 
 #define HEARTBEAT_STR "heartbeat"
+
+static CRYPT_EAL_PkeyCtx *LoadKeyFromFile(APP_CertConfig *certConfig, bool isSignKey);
 
 APP_ProtocolType ParseProtocolType(const char *protocolStr)
 {
@@ -244,6 +250,104 @@ static int32_t GetPkeyCtxFromUuid(AppProvider *provider, HITLS_APP_SM_Param *smP
 }
 #endif
 
+#ifdef HITLS_APP_SM_MODE
+static int32_t ReadEncKeyCipher(const char *cipherFile, uint8_t **cipher, uint32_t *cipherLen)
+{
+    int32_t ret = BSL_SAL_ReadFile(cipherFile, cipher, cipherLen);
+    if (ret != BSL_SUCCESS) {
+        AppPrintError("Failed to read encrypted private key from %s\n", cipherFile);
+    }
+    return ret;
+}
+
+static int32_t DecryptEncKeyWithSign(CRYPT_EAL_PkeyCtx *signKey, const uint8_t *cipher, uint32_t cipherLen,
+    uint8_t **plain, uint32_t *plainLen)
+{
+    uint8_t *buf = BSL_SAL_Malloc(cipherLen);
+    if (buf == NULL) {
+        AppPrintError("Failed to allocate memory for decrypted private key\n");
+        return HITLS_APP_MEM_ALLOC_FAIL;
+    }
+    uint32_t outLen = cipherLen;
+    int32_t ret = CRYPT_EAL_PkeyDecrypt(signKey, cipher, cipherLen, buf, &outLen);
+    if (ret != CRYPT_SUCCESS) {
+        AppPrintError("Failed to decrypt encrypted private key: 0x%x\n", ret);
+        BSL_SAL_ClearFree(buf, cipherLen);
+        return ret;
+    }
+    *plain = buf;
+    *plainLen = outLen;
+    return CRYPT_SUCCESS;
+}
+
+static CRYPT_EAL_PkeyCtx *CreateSm2PkeyFromPrv(AppProvider *provider, uint8_t *plain, uint32_t plainLen)
+{
+    CRYPT_EAL_PkeyCtx *encKey = CRYPT_EAL_ProviderPkeyNewCtx(APP_GetCurrent_LibCtx(), CRYPT_PKEY_SM2, 0,
+        provider->providerAttr);
+    if (encKey == NULL) {
+        AppPrintError("Failed to create pkey context for decrypted private key\n");
+        return NULL;
+    }
+    BSL_Param prvParam[] = {{0}, BSL_PARAM_END};
+    (void)BSL_PARAM_InitValue(&prvParam[0], CRYPT_PARAM_EC_PRVKEY, BSL_PARAM_TYPE_OCTETS,
+        (void *)plain, plainLen);
+    int32_t ret = CRYPT_EAL_PkeySetPrvEx(encKey, prvParam);
+    if (ret != CRYPT_SUCCESS) {
+        AppPrintError("Failed to set decrypted private key: 0x%x\n", ret);
+        CRYPT_EAL_PkeyFreeCtx(encKey);
+        return NULL;
+    }
+    return encKey;
+}
+
+static CRYPT_EAL_PkeyCtx *LoadEncKeyBySignKey(APP_CertConfig *certConfig)
+{
+    AppProvider *provider = certConfig->provider;
+    const char *cipherFile = certConfig->tlcpEncKey;
+    CRYPT_EAL_PkeyCtx *signKey = NULL;
+    CRYPT_EAL_PkeyCtx *encKey = NULL;
+    uint8_t *cipher = NULL;
+    uint8_t *plain = NULL;
+    uint32_t cipherLen = 0;
+    uint32_t plainLen = 0;
+
+    if (ReadEncKeyCipher(cipherFile, &cipher, &cipherLen) != BSL_SUCCESS) {
+        return NULL;
+    }
+    signKey = LoadKeyFromFile(certConfig, true);
+    if (signKey == NULL) {
+        AppPrintError("Failed to load TLCP signature private key for decrypt\n");
+        goto ERR;
+    }
+    if (DecryptEncKeyWithSign(signKey, cipher, cipherLen, &plain, &plainLen) != CRYPT_SUCCESS) {
+        goto ERR;
+    }
+    encKey = CreateSm2PkeyFromPrv(provider, plain, plainLen);
+    if (encKey == NULL) {
+        goto ERR;
+    }
+    CRYPT_EAL_PkeyFreeCtx(signKey);
+    BSL_SAL_Free(cipher);
+    BSL_SAL_ClearFree(plain, cipherLen);
+    return encKey;
+
+ERR:
+    if (encKey != NULL) {
+        CRYPT_EAL_PkeyFreeCtx(encKey);
+    }
+    if (signKey != NULL) {
+        CRYPT_EAL_PkeyFreeCtx(signKey);
+    }
+    if (cipher != NULL) {
+        BSL_SAL_Free(cipher);
+    }
+    if (plain != NULL) {
+        BSL_SAL_ClearFree(plain, cipherLen);
+    }
+    return NULL;
+}
+#endif
+
 static CRYPT_EAL_PkeyCtx *LoadKeyFromFile(APP_CertConfig *certConfig, bool isSignKey)
 {
     char *keyFile = isSignKey ? certConfig->tlcpSignKey : certConfig->tlcpEncKey;
@@ -260,6 +364,12 @@ static CRYPT_EAL_PkeyCtx *LoadKeyFromFile(APP_CertConfig *certConfig, bool isSig
     if (isSignKey && certConfig->smParam->smTag == 1) {
         int32_t ret = GetPkeyCtxFromUuid(provider, certConfig->smParam, keyFile, &pkey);
         if (ret == HITLS_APP_SUCCESS) {
+            return pkey;
+        }
+    }
+    if (!isSignKey && certConfig->smParam->smTag == 1) {
+        pkey = LoadEncKeyBySignKey(certConfig);
+        if (pkey != NULL) {
             return pkey;
         }
     }
