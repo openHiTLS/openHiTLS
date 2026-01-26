@@ -1478,3 +1478,63 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_DECODE_DSAKEY_BUFF_TC004()
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_DSA)
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+
+    // DSA
+    CRYPT_EAL_PkeyCtx *dsakey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_DSA, 0, NULL);
+    int32_t algId = CRYPT_MD_SHA256;
+    uint32_t L = 2048;
+    uint32_t N = 256;
+    uint32_t seedLen = 256;
+    int32_t index = 0;
+    BSL_Param params[6] = {
+        {CRYPT_PARAM_DSA_ALGID, BSL_PARAM_TYPE_INT32, &algId, sizeof(int32_t), 0},
+        {CRYPT_PARAM_DSA_PBITS, BSL_PARAM_TYPE_UINT32, &L, sizeof(uint32_t), 0},
+        {CRYPT_PARAM_DSA_QBITS, BSL_PARAM_TYPE_UINT32, &N, sizeof(uint32_t), 0},
+        {CRYPT_PARAM_DSA_SEEDLEN, BSL_PARAM_TYPE_UINT32, &seedLen, sizeof(uint32_t), 0},
+        {CRYPT_PARAM_DSA_GINDEX, BSL_PARAM_TYPE_INT32, &index, sizeof(int32_t), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(dsakey, CRYPT_CTRL_GEN_PARA, params, 0), CRYPT_SUCCESS);
+    uint32_t genFlag = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(dsakey, CRYPT_CTRL_SET_GEN_FLAG, &genFlag, sizeof(genFlag)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(dsakey), 0);
+
+    BSL_Buffer encDSAAsn1 = {0};
+    CRYPT_EAL_PkeyCtx *get_dsakey = NULL;
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(dsakey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encDSAAsn1), CRYPT_SUCCESS);
+    BSL_SAL_FREE(encDSAAsn1.data);
+    encDSAAsn1.dataLen = 0;
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(dsakey, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encDSAAsn1), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_UNKNOWN, CRYPT_PUBKEY_SUBKEY, &encDSAAsn1, NULL, 0, &get_dsakey) , CRYPT_SUCCESS);
+    // DH
+    CRYPT_EAL_PkeyCtx *dhkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_DH, 0, NULL);
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(dhkey, CRYPT_DH_RFC7919_2048) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(dhkey), 0);
+    CRYPT_EAL_PkeyCtx *get_dhkey = NULL;
+    BSL_Buffer encDHAsn1 = {0};
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(dhkey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encDHAsn1), CRYPT_SUCCESS);
+    BSL_SAL_FREE(encDHAsn1.data);
+    encDHAsn1.dataLen = 0;
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(dhkey, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encDHAsn1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_UNKNOWN, CRYPT_PUBKEY_SUBKEY, &encDHAsn1, NULL, 0, &get_dhkey) , CRYPT_SUCCESS);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(dsakey);
+    CRYPT_EAL_PkeyFreeCtx(dhkey);
+    CRYPT_EAL_PkeyFreeCtx(get_dsakey);
+    CRYPT_EAL_PkeyFreeCtx(get_dhkey);
+    BSL_SAL_FREE(encDSAAsn1.data);
+    BSL_SAL_FREE(encDHAsn1.data);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
