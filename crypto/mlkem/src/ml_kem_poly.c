@@ -21,7 +21,7 @@
 static void BaseMulAdd(int32_t polyH[2], const int16_t f0, const int16_t f1, const int16_t g0, const int16_t g1,
                        const int32_t factor)
 {
-    polyH[0] += f0 * g0 + f1 * PlantardReduction(g1 * factor);
+    polyH[0] += f0 * g0 + f1 * PlantardReduction((uint32_t)g1 * (uint32_t)factor);
     polyH[1] += f0 * g1 + f1 * g0;
 }
 
@@ -50,7 +50,7 @@ static void CircMulAddUseCache(int32_t dest[MLKEM_N], const int16_t src1[MLKEM_N
         // 4-byte data is calculated in each round.
         BaseMulAddCache(&dest[4 * i], src1[4 * i], src1[4 * i + 1], src2[4 * i], src2[4 * i + 1], mulCache[2 * i]);
         BaseMulAddCache(&dest[4 * i + 2], src1[4 * i + 2], src1[4 * i + 3], src2[4 * i + 2], src2[4 * i + 3],
-                   mulCache[2 * i + 1]);
+                        mulCache[2 * i + 1]);
     }
 }
 
@@ -63,10 +63,9 @@ static void PolyReduce(int16_t *poly, int32_t *src)
 
 void MLKEM_ComputeMulCache(uint8_t k, int16_t **input, int16_t output[MLKEM_K_MAX][MLKEM_N_HALF], const int32_t *factor)
 {
-
     for (int32_t i = 0; i < k; ++i) {
         for (int32_t j = 0; j < MLKEM_N_HALF; ++j) {
-            output[i][j] = PlantardReduction(input[i][2 * j + 1] * factor[j]);
+            output[i][j] = PlantardReduction((uint32_t)input[i][2 * j + 1] * (uint32_t)factor[j]);
         }
     }
 }

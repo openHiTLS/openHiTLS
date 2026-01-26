@@ -58,10 +58,11 @@ static inline int16_t BarrettReduction(int32_t a)
 
 static inline int16_t PlantardReduction(int32_t a)
 {
-    a >>= MLKEM_PLANTARD_L;
-    a = (a + (1 << MLKEM_PLANTARD_ALPHA)) * MLKEM_Q;
-    a >>= MLKEM_PLANTARD_L;
-    return a;
+    int32_t tmp = a;
+    tmp >>= MLKEM_PLANTARD_L;
+    tmp = (tmp + (1 << MLKEM_PLANTARD_ALPHA)) * MLKEM_Q;
+    tmp >>= MLKEM_PLANTARD_L;
+    return tmp;
 }
 
 typedef struct {
@@ -113,14 +114,15 @@ void MLKEM_MatrixMulAdd(uint8_t k, int16_t **matrix, int16_t **polyVec, int16_t 
 void MLKEM_VectorInnerProductAdd(uint8_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
                                  const int32_t *factor);
 void MLKEM_VectorInnerProductAddUseCache(uint8_t k, int16_t **polyVec1, int16_t **polyVec2, int16_t *polyOut,
-                                 const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF]);
+                                         const int16_t mulCache[MLKEM_K_MAX][MLKEM_N_HALF]);
 
-void MLKEM_ComputeMulCache(uint8_t k, int16_t **input, int16_t output[MLKEM_K_MAX][MLKEM_N_HALF], const int32_t *factor);
+void MLKEM_ComputeMulCache(uint8_t k, int16_t **input, int16_t output[MLKEM_K_MAX][MLKEM_N_HALF],
+                           const int32_t *factor);
 
 int32_t MLKEM_KeyGenInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *d, uint8_t *z);
 
 int32_t MLKEM_EncapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen, uint8_t *sk, uint32_t *skLen,
-    uint8_t *m);
+                             uint8_t *m);
 
 int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen, uint8_t *sk, uint32_t *skLen);
 
