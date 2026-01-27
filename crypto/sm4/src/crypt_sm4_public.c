@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM4
 
-#include "securec.h"
 #include "bsl_sal.h"
 #include "crypt_sm4.h"
 
