@@ -374,7 +374,7 @@ static int32_t SelectCertByInfo(HITLS_Ctx *ctx, CERT_ExpectInfo *info)
         if (ret != HITLS_SUCCESS) {
             continue;
         }
-        mgrCtx->currentCertKeyType = signInfo->keyType;
+        mgrCtx->currentCertKeyType = (uint32_t)signInfo->keyType;
         return HITLS_SUCCESS;
     }
 

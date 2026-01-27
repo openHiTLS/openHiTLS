@@ -83,15 +83,15 @@ static int32_t GenerateCookieCalcMaterial(const TLS_Ctx *ctx, const ClientHelloM
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16916, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "addr New fail", 0, 0, 0, 0);
         return HITLS_MEMCPY_FAIL;
     }
-    int32_t peerAddrLen = SAL_SockAddrSize(peerAddr);
+    int32_t peerAddrLen = (int32_t)SAL_SockAddrSize(peerAddr);
     /* Add the peer IP address */
     ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_GET_PEER_IP_ADDR, peerAddrLen, peerAddr);
     if (ret == BSL_SUCCESS) {
-        if (memcpy_s(ipAddr, MAX_IP_ADDR_SIZE, peerAddr, SAL_SockAddrSize(peerAddr)) != EOK) {
+        if (memcpy_s(ipAddr, MAX_IP_ADDR_SIZE, peerAddr, (size_t)peerAddrLen) != EOK) {
             SAL_SockAddrFree(peerAddr);
             return BSL_MEMCPY_FAIL;
         }
-        param.size = SAL_SockAddrSize(peerAddr);
+        param.size = (uint32_t)peerAddrLen;
         if (memcpy_s(material, materialSize, ipAddr, param.size) != EOK) {
             BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15692, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

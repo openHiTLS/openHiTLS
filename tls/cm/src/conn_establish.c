@@ -455,10 +455,10 @@ int32_t HITLS_Listen(HITLS_Ctx *ctx, BSL_SAL_SockAddr clientAddr)
         state = HS_GetState(ctx);
     } while (state != TRY_SEND_SERVER_HELLO && ret == HITLS_SUCCESS);
 
-    int32_t addrLen = SAL_SockAddrSize(clientAddr);
+    int32_t addrLen = (int32_t)SAL_SockAddrSize(clientAddr);
     if (ret == HITLS_SUCCESS &&
         BSL_UIO_Ctrl(rUio, BSL_UIO_GET_PEER_IP_ADDR, addrLen, clientAddr) != BSL_SUCCESS) {
-        (void)memset_s(clientAddr, addrLen, 0, addrLen);
+        (void)memset_s(clientAddr, (size_t)addrLen, 0, (size_t)addrLen);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16496, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "GET_PEER_IP_ADDR fail", 0, 0, 0, 0);
         ret = HITLS_MEMCPY_FAIL;
