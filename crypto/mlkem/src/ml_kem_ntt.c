@@ -27,7 +27,7 @@ void MLKEM_ComputNTT(int16_t *a, const int32_t *psi)
         for (start = 0; start < MLKEM_N; start = j + len) {
             zeta = psi[k++];
             for (j = start; j < start + len; ++j) {
-                int16_t t = PlantardReduction(a[j + len] * zeta);
+                int16_t t = PlantardReduction((uint32_t)a[j + len] * (uint32_t)zeta);
                 a[j + len] = a[j] - t;
                 a[j] += t;
             }
@@ -35,50 +35,46 @@ void MLKEM_ComputNTT(int16_t *a, const int32_t *psi)
     }
 }
 
-#define MLKEM_INTT_LOOP(len) \
-    for (uint32_t start = 0; start < 256; start = j + (len)) {        \
-        zeta = psi[k--];                                              \
-        for (j = start; j < start + (len); j++) {                     \
-            t = a[j];                                                 \
-            a[j] = t + a[j + (len)];                                  \
-            a[j + (len)] = a[j + (len)] - t;                          \
-            a[j + (len)] = PlantardReduction(zeta * a[j + (len)]);    \
+#define MLKEM_INTT_LOOP(len, k, a, psi) \
+    for (uint32_t start = 0; start < 256; start += 2 * (len)) {       \
+        int32_t zeta = (psi)[(k)--];                                  \
+        for (uint32_t j = start; j < start + (len); j++) {            \
+            int16_t t = (a)[j];                                       \
+            (a)[j] = t + (a)[j + (len)];                              \
+            (a)[j + (len)] = (a)[j + (len)] - t;                      \
+            (a)[j + (len)] = PlantardReduction((uint32_t)zeta * (uint32_t)(a)[j + (len)]);    \
         }                                                             \
     }
 
 void MLKEM_ComputINTT(int16_t *a, const int32_t *psi)
 {
-    int16_t t;
-    int32_t zeta;
-    uint32_t j = 0;
-    // Mont / 128
     uint32_t k = MLKEM_N_HALF - 1;
-    MLKEM_INTT_LOOP(2);
-    MLKEM_INTT_LOOP(4);
-    MLKEM_INTT_LOOP(8);
+    MLKEM_INTT_LOOP(2, k, a, psi);
+    MLKEM_INTT_LOOP(4, k, a, psi);
+    MLKEM_INTT_LOOP(8, k, a, psi);
     for (int32_t i = 0; i < MLKEM_N; ++i) {
         a[i] = BarrettReduction(a[i]);
     }
-    MLKEM_INTT_LOOP(16);
-    MLKEM_INTT_LOOP(32);
-    MLKEM_INTT_LOOP(64);
+    MLKEM_INTT_LOOP(16, k, a, psi);
+    MLKEM_INTT_LOOP(32, k, a, psi);
+    MLKEM_INTT_LOOP(64, k, a, psi);
 
     for (int32_t i = 0; i < MLKEM_N; ++i) {
         a[i] = BarrettReduction(a[i]);
     }
 
     int32_t len = 128;
-    for (uint32_t start = 0; start < MLKEM_N; start = j + len) {
-        for (j = start; j < start + len; j++) {
-            t = a[j];
+    for (uint32_t start = 0; start < MLKEM_N; start += 2 * len) {
+        for (uint32_t j = start; j < start + len; j++) {
+            int16_t t = a[j];
             a[j] = (int16_t)(t + a[j + len]);
             a[j + len] = a[j + len] - t;
-            a[j + len] = PlantardReduction(MLKEM_LAST_ROUND_ZETA * a[j + len]);
+            a[j + len] = PlantardReduction((uint32_t)MLKEM_LAST_ROUND_ZETA * (uint32_t)a[j + len]);
         }
     }
 
-    for (j = 0; j < MLKEM_N / 2; j++) {
-        a[j] = PlantardReduction(a[j] * MLKEM_HALF_DEGREE_INVERSE_MOD_Q);
+    for (uint32_t j = 0; j < MLKEM_N / 2; j++) {
+        a[j] = PlantardReduction((uint32_t)a[j] * (uint32_t)MLKEM_HALF_DEGREE_INVERSE_MOD_Q);
     }
 }
 #endif
