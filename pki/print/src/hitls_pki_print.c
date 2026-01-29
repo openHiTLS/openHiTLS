@@ -590,9 +590,19 @@ static int32_t PrintX509Ext(HITLS_X509_Ext *ext, bool isCertExt, uint32_t layer,
     for (entry = BSL_LIST_GET_FIRST(ext->extList); entry != NULL; entry = BSL_LIST_GET_NEXT(ext->extList)) {
         extName = BSL_OBJ_GetOidNameFromCID(entry->cid);
         if (extName == NULL) {
-            if (BSL_PRINT_Buff(layer + 1, uio, HITLS_X509_UNSUPPORT_EXT, strlen(HITLS_X509_UNSUPPORT_EXT)) != 0) {
-                BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_EXT_NAME);
-                goto EXIT;
+            char *tmpName = BSL_OBJ_GetOidNumericString(entry->extnId.buff, entry->extnId.len);
+            if (tmpName != NULL) {
+                if (BSL_PRINT_Fmt(layer + 1, uio, "%s\n", tmpName) != 0) {
+                    BSL_SAL_Free(tmpName);
+                    BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_EXT_NAME);
+                    goto EXIT;
+                }
+                BSL_SAL_Free(tmpName);
+            } else {
+                if (BSL_PRINT_Buff(layer + 1, uio, HITLS_X509_UNSUPPORT_EXT, strlen(HITLS_X509_UNSUPPORT_EXT)) != 0) {
+                    BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_EXT_NAME);
+                    goto EXIT;
+                }
             }
             continue;
         }
@@ -821,9 +831,21 @@ static int32_t PrintAttr(HITLS_X509_AttrEntry *entry, uint32_t layer, BSL_UIO *u
 {
     switch (entry->cid) {
         case BSL_CID_EXTENSIONREQUEST:
+            (void)BSL_PRINT_Fmt(layer, uio, "Requested Extensions:\n");
             return PrintReqExtension(&entry->attrValue, layer, uio);
-        default:
+        default: {
+            char *tmpName = BSL_OBJ_GetOidNumericString(entry->attrId.buff, entry->attrId.len);
+            if (tmpName != NULL) {
+                if (BSL_PRINT_Fmt(layer, uio, "%s\n", tmpName) != 0) {
+                    BSL_SAL_Free(tmpName);
+                    BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_EXT_NAME);
+                    return HITLS_PRINT_ERR_EXT_NAME;
+                }
+                BSL_SAL_Free(tmpName);
+                return HITLS_PKI_SUCCESS;
+            }
             return HITLS_X509_ERR_ATTR_UNSUPPORT;
+        }
     }
 }
 
@@ -834,9 +856,6 @@ static int32_t PrintAttrs(BslList *attrs, uint32_t layer, BSL_UIO *uio)
     int32_t count = BSL_LIST_COUNT(attrs);
     if (count == 0) {
         (void)BSL_PRINT_Fmt(layer + 1, uio, "(none)\n");
-    }
-    (void)BSL_PRINT_Fmt(layer + 1, uio, "Requested Extensions:\n");
-    if (count == 0) {
         return HITLS_PKI_SUCCESS;
     }
     int32_t ret;
@@ -846,7 +865,6 @@ static int32_t PrintAttrs(BslList *attrs, uint32_t layer, BSL_UIO *uio)
             return ret;
         }
     }
-
     return HITLS_PKI_SUCCESS;
 }
 

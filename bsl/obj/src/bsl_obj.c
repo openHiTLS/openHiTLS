@@ -273,7 +273,6 @@ BslCid BSL_OBJ_GetCidFromOidBuff(const uint8_t *oid, uint32_t len)
     return BSL_CID_UNKNOWN;
 #else
     if (g_oidHashTable == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
         return BSL_CID_UNKNOWN;
     }
 
@@ -330,7 +329,6 @@ BslOidString *BSL_OBJ_GetOID(BslCid ulCID)
 
     /* Initialize hash table if needed */
     if (g_oidHashTable == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_OBJ_INVALID_HASH_TABLE);
         return NULL;
     }
 
