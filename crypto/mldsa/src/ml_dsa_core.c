@@ -179,23 +179,13 @@ static int32_t MLDSAVerifyCreateMatrix(uint8_t k, uint8_t l, MLDSA_VerifyMatrixS
     return CRYPT_SUCCESS;
 }
 
-// NIST.FIPS.204 Algorithm 14 CoeffFromThreeBytes(b0, b1, b2)
-static int32_t CoeffFromThreeBytes(uint8_t b0, uint8_t b1, uint8_t b2)
-{
-    uint8_t b = b2;
-    if (b > 0x7f) {
-        b = b - 0x80;
-    }
-    // 𝑧 ← 2^16 ⋅ b2′ + 2^8 ⋅ b1 + b0
-    return (((int32_t)b << 16) | ((int32_t)b1 << 8)) | b0;
-}
-
 // NIST.FIPS.204 Algorithm 30 RejNTTPoly(ρ)
 static int32_t RejNTTPoly(int32_t a[MLDSA_N], const uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN])
 {
     int32_t ret;
-    unsigned int buflen = CRYPT_SHAKE128_BLOCKSIZE;
-    uint8_t buf[CRYPT_SHAKE128_BLOCKSIZE];
+    unsigned int outlen = CRYPT_SHAKE128_BLOCKSIZE;
+    const uint32_t buflen = CRYPT_SHAKE128_BLOCKSIZE / 4;
+    uint32_t buf[CRYPT_SHAKE128_BLOCKSIZE / 4];
 
     const EAL_MdMethod *hashMethod = EAL_MdFindDefaultMethod(CRYPT_MD_SHAKE128);
     if (hashMethod == NULL) {
@@ -209,16 +199,48 @@ static int32_t RejNTTPoly(int32_t a[MLDSA_N], const uint8_t seed[MLDSA_SEED_EXTE
     }
     GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, seed, MLDSA_SEED_EXTEND_BYTES_LEN), ret);
-    GOTO_ERR_IF(hashMethod->squeeze(mdCtx, buf, buflen), ret);
+    GOTO_ERR_IF(hashMethod->squeeze(mdCtx, (uint8_t *)buf, outlen), ret);
     uint32_t j = 0;
     for (uint32_t i = 0; i < MLDSA_N;) {
-        a[i] = CoeffFromThreeBytes(buf[j], buf[j + 1], buf[j + 2]); // Data from 3 uint8_t to int32_t.
-        j += 3;
-        if (a[i] < MLDSA_Q) {  // a[i] is less than MLDSA_Q is an invalid value.
-            i++;
+        const uint32_t w0 = CRYPT_HTOLE32(buf[j]);
+        const uint32_t w1 = CRYPT_HTOLE32(buf[j + 1]);
+        const uint32_t w2 = CRYPT_HTOLE32(buf[j + 2]);
+
+        int32_t t0 = w0;
+        int32_t t1 = (w0 >> 24) | (w1 << 8);
+        int32_t t2 = (w1 >> 16) | (w2 << 16);
+        int32_t t3 = (w2 >> 8);
+
+        t0 &= 0x7FFFFFU;
+        t1 &= 0x7FFFFFU;
+        t2 &= 0x7FFFFFU;
+        t3 &= 0x7FFFFFU;
+
+        const int32_t m0 = (MLDSA_Q - 1 - t0) >> 31;
+        const int32_t m1 = (MLDSA_Q - 1 - t1) >> 31;
+        const int32_t m2 = (MLDSA_Q - 1 - t2) >> 31;
+        const int32_t m3 = (MLDSA_Q - 1 - t3) >> 31;
+
+        a[i] = t0 & ~m0;
+        i += 1 + m0; // a[i] is less than MLDSA_Q is an invalid value.
+        if (i < MLDSA_N) {
+            a[i] = t1 & ~m1;
+            i += 1 + m1;
         }
-        if (j >= CRYPT_SHAKE128_BLOCKSIZE) {
-            GOTO_ERR_IF(hashMethod->squeeze(mdCtx, buf, buflen), ret);
+
+        if (i < MLDSA_N) {
+            a[i] = t2 & ~m2;
+            i += 1 + m2;
+        }
+
+        if (i < MLDSA_N) {
+            a[i] = t3 & ~m3;
+            i += 1 + m3;
+        }
+
+        j += 3;
+        if (j >= buflen && i < MLDSA_N) {
+            GOTO_ERR_IF(hashMethod->squeeze(mdCtx, (uint8_t *)buf, outlen), ret);
             j = 0;
         }
     }
@@ -246,7 +268,7 @@ static int32_t ExpandA(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *pubSeed, int3
 }
 
 // NIST.FIPS.204 Algorithm 31 RejBoundedPoly(ρ)
-static int32_t RejBoundedPoly(const CRYPT_ML_DSA_Ctx *ctx, int32_t *a, const uint8_t *s)
+static int32_t RejBoundedPolyEta2(int32_t *a, const uint8_t *s)
 {
     uint8_t buf[CRYPT_SHAKE256_BLOCKSIZE];
     uint32_t bufLen = CRYPT_SHAKE256_BLOCKSIZE;
@@ -273,28 +295,60 @@ static int32_t RejBoundedPoly(const CRYPT_ML_DSA_Ctx *ctx, int32_t *a, const uin
         int32_t z1 = (int32_t)(buf[j] >> 4u);
         // Algorithm 15 CoeffFromHalfByte(b)
         // if 𝜂 = 2 and b < 15 then return 2 − (b mod 5)
-        if (ctx->info->eta == 2) {
-            if (z0 < 0x0F) {
-                // This is Barrett Modular Multiplication, 205 == 2^10 / 5
-                z0 = z0 - ((205 * z0) >> 10) * 5;  // 2 − (b mod 5)
-                a[i] = 2 - z0;
-                i++;
-            }
-            if (z1 < 0x0F && i < MLDSA_N) {
-                // Barrett Modular Multiplication, 205 == 2^10 / 5
-                z1 = z1 - ((205 * z1) >> 10) * 5;
-                a[i] = 2 - z1;  // 2 − (b mod 5)
-                i++;
-            }
-        } else {
-            if (z0 < 9) { // if 𝜂 = 4 and b < 9 then a[i] = 4 − b
-                a[i] = 4 - z0;
-                i++;
-            }
-            if (z1 < 9 && i < MLDSA_N) { // if 𝜂 = 4 and b < 9 then a[i + 1] = 4 − b
-                a[i] = 4 - z1;
-                i++;
-            }
+
+        // This is Barrett Modular Multiplication, 205 == 2^10 / 5
+        int32_t mask = (0xE - z0) >> 31; // 0 or -1
+        z0 = z0 - ((205 * z0) >> 10) * 5; // 205 == 2^10 / 5
+        a[i] = (2 - z0) & ~mask; // 2 − (b mod 5)
+        i += 1 + mask;
+
+        if (i < MLDSA_N) {
+            // Barrett Modular Multiplication, 205 == 2^10 / 5
+            mask = (0xE - z1) >> 31; // 0 or -1
+            z1 = z1 - ((205 * z1) >> 10) * 5; // 205 == 2^10 / 5
+            a[i] = (2 - z1) & ~mask; // 2 − (b mod 5)
+            i += 1 + mask;
+        }
+    }
+ERR:
+    hashMethod->freeCtx(mdCtx);
+    return ret;
+}
+
+static int32_t RejBoundedPolyEta4(int32_t *a, const uint8_t *s)
+{
+    uint8_t buf[CRYPT_SHAKE256_BLOCKSIZE];
+    uint32_t bufLen = CRYPT_SHAKE256_BLOCKSIZE;
+    int32_t ret = CRYPT_SUCCESS;
+    const EAL_MdMethod *hashMethod = EAL_MdFindDefaultMethod(CRYPT_MD_SHAKE256);
+    if (hashMethod == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
+    }
+    void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
+    if (mdCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
+    GOTO_ERR_IF(hashMethod->update(mdCtx, s, MLDSA_PRIVATE_SEED_LEN + 2), ret);  // k and l used 2 bytes.
+    GOTO_ERR_IF(hashMethod->squeeze(mdCtx, buf, bufLen), ret);
+    for (uint32_t i = 0, j = 0; i < MLDSA_N; j++) {
+        if (j == CRYPT_SHAKE256_BLOCKSIZE) {
+            GOTO_ERR_IF(hashMethod->squeeze(mdCtx, buf, CRYPT_SHAKE256_BLOCKSIZE), ret);
+            j = 0;
+        }
+        int32_t z0 = (int32_t)(buf[j] & 0x0F);
+        int32_t z1 = (int32_t)(buf[j] >> 4u);
+        // Algorithm 15 CoeffFromHalfByte(b)
+        int32_t mask = (0x8 - z0) >> 31;
+        a[i] = (4 - z0) & ~mask; // if 𝜂 = 4 and b < 9 then a[i] = 4 − b
+        i += 1 + mask;
+
+        if (i < MLDSA_N) {
+            mask = (0x8 - z1) >> 31;
+            a[i] = (4 - z1) & ~mask; // if 𝜂 = 4 and b < 9 then a[i] = 4 − b
+            i += 1 + mask;
         }
     }
 ERR:
@@ -312,14 +366,20 @@ static int32_t ExpandS(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *prvSeed,
     uint8_t seed[MLDSA_PRIVATE_SEED_LEN + 2]; // 2 bytes are reserved.
     (void)memcpy_s(seed, sizeof(seed), prvSeed, MLDSA_PRIVATE_SEED_LEN);
     seed[MLDSA_PRIVATE_SEED_LEN + 1] = 0;
+    int32_t (*rejBoundedPoly)(int32_t *a, const uint8_t *s);
+    if (ctx->info->eta == 2) {
+        rejBoundedPoly = RejBoundedPolyEta2;
+    } else {
+        rejBoundedPoly = RejBoundedPolyEta4;
+    }
     for (uint8_t i = 0; i < l; i++) {
         seed[MLDSA_PRIVATE_SEED_LEN] = i;
-        ret = RejBoundedPoly(ctx, s1[i], seed);
+        ret = rejBoundedPoly(s1[i], seed);
         RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
     }
     for (uint8_t i = 0; i < k; i++) {
         seed[MLDSA_PRIVATE_SEED_LEN] = l + i;
-        ret = RejBoundedPoly(ctx, s2[i], seed);
+        ret = rejBoundedPoly(s2[i], seed);
         RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
     }
     return CRYPT_SUCCESS;
@@ -336,23 +396,21 @@ static void ComputesNTT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const s[MLDSA_L_MA
 static void VectorsMul(int32_t *t, const int32_t *matrix, const int32_t *s)
 {
     for (uint32_t i = 0; i < MLDSA_N; i++) {
-        t[i] = MLDSA_MontgomeryReduce((int64_t)matrix[i] * s[i]);
+        t[i] = MLDSA_PlantardMulReduce((uint64_t)matrix[i] * (uint64_t)s[i] * (uint64_t)MLDSA_PLANTARD_INV);
     }
 }
 
 static void MatrixMul(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t, int32_t *const matrix[MLDSA_L_MAX],
     int32_t *const s[MLDSA_L_MAX])
 {
-    int32_t tmp[MLDSA_N] = { 0 };
-    VectorsMul(t, matrix[0], s[0]);
-    for (uint32_t i = 1; i < ctx->info->l; i++) {
-        VectorsMul(tmp, matrix[i], s[i]);
+    int64_t tmp[MLDSA_N] = { 0 };
+    for (uint32_t i = 0; i < ctx->info->l; i++) {
         for (uint32_t j = 0; j < MLDSA_N; j++) {
-            t[j] = t[j] + tmp[j];
+            tmp[j] += (int64_t)matrix[i][j] * s[i][j];
         }
     }
     for (uint32_t j = 0; j < MLDSA_N; j++) {
-        MLDSA_MOD_Q(t[j]);
+        t[j] = MLDSA_PlantardMulReduce((uint64_t)tmp[j] * (uint64_t)MLDSA_PLANTARD_INV);
     }
 }
 
