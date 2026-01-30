@@ -78,15 +78,6 @@ static const int64_t ZETAS[MLDSA_N] = {
     -1610012461767674827,
 };
 
-inline int32_t MLDSA_PlantardMulReduce(int64_t a)
-{
-    int64_t tmp = a;
-    tmp >>= MLDSA_PLANTARD_L;
-    tmp = (tmp + (1 << MLDSA_PLANTARD_ALPHA)) * MLDSA_Q;
-    tmp >>= MLDSA_PLANTARD_L;
-    return (int32_t)tmp;
-}
-
 // Algorithm 41 NTT(w)
 void MLDSA_ComputesNTT(int32_t w[MLDSA_N])
 {
