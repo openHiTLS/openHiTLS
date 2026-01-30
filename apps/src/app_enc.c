@@ -177,17 +177,11 @@ static int32_t ReadAndDec(EncCmdOpt *encOpt, char *hexBuf, uint32_t hexBufLen, i
 
 static int32_t GetCipherId(const char *name)
 {
-    HITLS_APP_PrintStdoutUioInit();
-    HITLS_APP_PrintCipherAlg();
-    HITLS_APP_PrintStdoutUioUnInit();
     return HITLS_APP_GetCidByName(name, HITLS_APP_LIST_OPT_CIPHER_ALG);
 }
 
 static int32_t GetMacId(const char *name)
 {
-    HITLS_APP_PrintStdoutUioInit();
-    HITLS_APP_PrintMdToHmacAlg();
-    HITLS_APP_PrintStdoutUioUnInit();
     return HITLS_APP_GetCidByName(name, HITLS_APP_LIST_OPT_MD_TO_MAC_ALG);
 }
 
