@@ -64,9 +64,6 @@ const uint32_t g_numBitsArray[] = {1024, 2048, 3072, 4096};
 
 static int32_t GetAlgId(const char *name)
 {
-    HITLS_APP_PrintStdoutUioInit();
-    HITLS_APP_PrintRsaIdAlg();
-    HITLS_APP_PrintStdoutUioUnInit();
     return HITLS_APP_GetCidByName(name, HITLS_APP_LIST_OPT_RSA_ALG);
 }
 

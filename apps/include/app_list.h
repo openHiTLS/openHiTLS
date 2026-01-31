@@ -44,15 +44,9 @@ void HITLS_APP_PrintStdoutUioUnInit(void);
 
 void HITLS_APP_PrintCipherAlg(void);
 
-void HITLS_APP_PrintMdToHmacAlg(void);
-
 void HITLS_APP_PrintPkcs12MacIdAlg(void);
 
 void HITLS_APP_PrintPbeAlg(void);
-
-void HITLS_APP_PrintKeyMgmtIdAlg(void);
-
-void HITLS_APP_PrintRsaIdAlg(void);
 
 int32_t HITLS_APP_GetCidByName(const char *name, int32_t type);
 

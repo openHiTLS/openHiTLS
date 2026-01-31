@@ -329,18 +329,6 @@ void HITLS_APP_PrintCipherAlg(void)
     }
 }
 
-void HITLS_APP_PrintMdToHmacAlg(void)
-{
-    AppPrint(g_stdout, "List md to hmac Algorithms:\n");
-    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
-    for (size_t i = 0; i < MD_TO_HMAC_ALG_CNT; ++i) {
-        if (!CRYPT_EAL_MacIsValidAlgId(g_MdToHmacInfo[i].cid)) {
-            continue;
-        }
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_MdToHmacInfo[i].name, g_MdToHmacInfo[i].cid);
-    }
-}
-
 void HITLS_APP_PrintPkcs12MacIdAlg(void)
 {
     AppPrint(g_stdout, "List pkcs12 mac id Algorithms:\n");
@@ -359,27 +347,6 @@ void HITLS_APP_PrintPbeAlg(void)
     AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
     for (size_t i = 0; i < KEY_PBE_CNT; ++i) {
         AppPrint(g_stdout, "%-20s\t%3zu\n", g_keyPbeList[i].name, g_keyPbeList[i].cid);
-    }
-}
-
-void HITLS_APP_PrintKeyMgmtIdAlg(void)
-{
-    AppPrint(g_stdout, "List key mgmt Algorithms:\n");
-    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
-    for (size_t i = 0; i < KEY_MGMT_CNT; ++i) {
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_keymgmtIdList[i].name, g_keymgmtIdList[i].cid);
-    }
-}
-
-void HITLS_APP_PrintRsaIdAlg(void)
-{
-    AppPrint(g_stdout, "List rsa id Algorithms:\n");
-    AppPrint(g_stdout, "%-20s\t%s\n", "NAME", "CID");
-    for (size_t i = 0; i < RSA_ID_CNT; ++i) {
-        if (!CRYPT_EAL_CipherIsValidAlgId(g_rsaIdList[i].cid)) {
-            continue;
-        }
-        AppPrint(g_stdout, "%-20s\t%3zu\n", g_rsaIdList[i].name, g_rsaIdList[i].cid);
     }
 }
 

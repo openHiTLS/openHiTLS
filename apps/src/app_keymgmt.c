@@ -534,9 +534,6 @@ static void HandleSomeOpt(KeyMgmtCmdOpt *keyMgmtOpt, HITLSOptType optType)
 
 static int32_t GetAlgId(const char *name)
 {
-    HITLS_APP_PrintStdoutUioInit();
-    HITLS_APP_PrintKeyMgmtIdAlg();
-    HITLS_APP_PrintStdoutUioUnInit();
     return HITLS_APP_GetCidByName(name, HITLS_APP_LIST_OPT_KEY_MGMT_ALG);
 }
 
