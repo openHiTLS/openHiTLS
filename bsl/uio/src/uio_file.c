@@ -134,20 +134,20 @@ static int32_t FilePending(BSL_UIO *uio, int32_t larg, uint64_t *ret)
         BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
         return BSL_INTERNAL_EXCEPTION;
     }
-    if (SAL_FileSeek(f, 0, SEEK_END) != BSL_SUCCESS) { // move to the end
+    if (SAL_FileSeek(f, 0, SAL_NET_SEEK_END) != BSL_SUCCESS) { // move to the end
         BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
         return BSL_INTERNAL_EXCEPTION;
     }
 
     long max; // get the length
     if (SAL_FileTell(f, &max) != BSL_SUCCESS || max < current) {  // error, including < 0, should restore the current
-        (void)SAL_FileSeek(f, current, SEEK_SET);
+        (void)SAL_FileSeek(f, current, SAL_NET_SEEK_SET);
         BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
         return BSL_INTERNAL_EXCEPTION;
     }
 
     *ret = (uint64_t)(max - current); // save the remaining length
-    (void)SAL_FileSeek(f, current, SEEK_SET); // recover it
+    (void)SAL_FileSeek(f, current, SAL_NET_SEEK_SET); // recover it
     return BSL_SUCCESS;
 }
 
@@ -205,7 +205,7 @@ static int32_t FileReset(BSL_UIO *uio, int32_t larg, void *offset)
     }
 
     bsl_sal_file_handle *f = BSL_UIO_GetCtx(uio);
-    if (SAL_FileSeek(f, *(long *)offset, SEEK_SET) != 0) {
+    if (SAL_FileSeek(f, *(long *)offset, SAL_NET_SEEK_SET) != 0) {
         BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
         return BSL_INTERNAL_EXCEPTION;
     }

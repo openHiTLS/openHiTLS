@@ -58,15 +58,15 @@
 /* BEGIN_CASE */
 void SDV_BSL_SAL_SOCKET_FUNC_TC001(void)
 {
-    int32_t tcp = BSL_SAL_Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    int32_t tcp = BSL_SAL_Socket(SAL_NET_IPV4, SAL_NET_SOCK_STREAM, SAL_NET_IPPROTO_TCP);
     ASSERT_TRUE(tcp != -1);
     struct timeval timeOut = { 0 };
     timeOut.tv_sec = READ_TIME_OUT_SEC;
-    ASSERT_TRUE(BSL_SAL_SetSockopt(tcp, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeOut, sizeof(timeOut)) == 0);
+    ASSERT_TRUE(BSL_SAL_SetSockopt(tcp, SAL_NET_SOL_SOCKET, SO_RCVTIMEO, (char *)&timeOut, sizeof(timeOut)) == 0);
     ASSERT_TRUE(BSL_SAL_SockClose(tcp) == 0);
-    int32_t udp = BSL_SAL_Socket(AF_INET, SOCK_DGRAM, 0);
+    int32_t udp = BSL_SAL_Socket(SAL_NET_IPV4, SAL_NET_SOCK_DGRAM, 0);
     ASSERT_TRUE(udp != -1);
-    ASSERT_TRUE(BSL_SAL_SetSockopt(udp, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeOut, sizeof(timeOut)) == 0);
+    ASSERT_TRUE(BSL_SAL_SetSockopt(udp, SAL_NET_SOL_SOCKET, SO_RCVTIMEO, (char *)&timeOut, sizeof(timeOut)) == 0);
     ASSERT_TRUE(BSL_SAL_SockClose(udp) == 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
@@ -93,7 +93,7 @@ static void *TestTcpClient(void *args)
     remoteAddr.sin_family = AF_INET;
     remoteAddr.sin_port = htons(GetPort());
     remoteAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    int32_t socketRemote = BSL_SAL_Socket(AF_INET, SOCK_STREAM, 0);
+    int32_t socketRemote = BSL_SAL_Socket(SAL_NET_IPV4, SAL_NET_SOCK_STREAM, 0);
     ASSERT_TRUE(socketRemote != -1);
     while(true) {
         int32_t ret = BSL_SAL_SockConnect(socketRemote, (BSL_SAL_SockAddr)&remoteAddr, sizeof(remoteAddr));
@@ -119,7 +119,7 @@ static void *TestTcpServer(void *args)
     localAddr.sin_family = AF_INET;
     localAddr.sin_port = htons(GetPort());
     localAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    int32_t socketLocal = BSL_SAL_Socket(AF_INET, SOCK_STREAM, 0);
+    int32_t socketLocal = BSL_SAL_Socket(SAL_NET_IPV4, SAL_NET_SOCK_STREAM, 0);
     ASSERT_TRUE(socketLocal != -1);
     ASSERT_TRUE(BSL_SAL_SockBind(socketLocal, (BSL_SAL_SockAddr)&localAddr, sizeof(localAddr)) == 0);
     ASSERT_TRUE(BSL_SAL_SockListen(socketLocal, 5) == 0);

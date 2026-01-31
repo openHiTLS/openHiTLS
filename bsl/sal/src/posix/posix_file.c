@@ -25,6 +25,8 @@
 #include "sal_file.h"
 #include "bsl_sal.h"
 
+#define FILE_SEEK_HITLS_2_POSIX(hitlsType)        (hitlsType)
+
 int32_t SAL_FILE_FOpen(bsl_sal_file_handle *stream, const char *path, const char *mode)
 {
     bsl_sal_file_handle temp = NULL;
@@ -129,8 +131,8 @@ int32_t SAL_FILE_FSeek(bsl_sal_file_handle stream, long offset, int32_t origin)
     if (stream == NULL) {
         return BSL_NULL_INPUT;
     }
-
-    if (fseek(stream, offset, origin) == 0) {
+    int32_t posixOrigin = FILE_SEEK_HITLS_2_POSIX(origin);
+    if (fseek(stream, offset, posixOrigin) == 0) {
         return BSL_SUCCESS;
     }
 
