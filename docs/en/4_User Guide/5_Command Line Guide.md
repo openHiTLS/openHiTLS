@@ -146,6 +146,38 @@ Generation, parsing, conversion and verification of X.509 certificates
 ### 3.4.3 crl
 Generation and management of certificate revocation lists
 
+**Function**: Parse, output, and verify CRLs, and print issuer/hash/text information  
+**Usage**:
+
+```
+hitls crl [-help] [-in file] [-inform PEM|DER] [-out file] [-outform PEM|DER] [-noout] [-nextupdate] [-CAfile file] [-issuer] [-hash] [-text]
+```
+
+**Supported Options**:
+- `-help`: Display help information
+- `-in <file>`: Input CRL file, default stdin
+- `-inform <PEM|DER>`: Input format, PEM or DER
+- `-out <file>`: Output file, default stdout
+- `-outform <PEM|DER>`: Output format, PEM or DER
+- `-noout`: Do not output CRL content (PEM/DER), but still print issuer/hash/text information
+- `-nextupdate`: Print CRL next update time
+- `-CAfile <file>`: Verify CRL using CA certificate
+- `-issuer`: Print issuer DN
+- `-hash`: Print issuer DN hash (prefix: "Issuer Hash=")
+- `-text`: Print CRL in text
+
+**Examples**:
+```bash
+# Print issuer/hash/text to a file
+hitls crl -in crl.pem -noout -issuer -hash -text -out crl_info.txt
+
+# Convert DER to PEM
+hitls crl -in crl.der -inform DER -out crl.pem -outform PEM
+
+# Verify CRL signature
+hitls crl -in crl.pem -noout -CAfile ca.crt
+```
+
 ### 3.4.4 verify
 Certificate chain verification and trust relationship checking
 
