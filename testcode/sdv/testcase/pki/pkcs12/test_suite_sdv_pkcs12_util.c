@@ -24,6 +24,7 @@
 #include "sal_file.h"
 #include "bsl_init.h"
 #include "hitls_pkcs12_local.h"
+#include "hitls_pki_crl.h"
 #include "hitls_crl_local.h"
 #include "hitls_cert_type.h"
 #include "hitls_cert_local.h"
@@ -35,6 +36,9 @@
 #include "stub_utils.h"
 #include "hitls_pki_utils.h"
 #include "hitls_pki_x509.h"
+#include "hitls_x509_verify.h"
+#include "crypt_params_key.h"
+#include "crypt_dsa.h"
 /* END_HEADER */
 
 #if (defined(HITLS_PKI_PKCS12_GEN) || defined(HITLS_PKI_PKCS12_PARSE)) && defined(HITLS_CRYPTO_PROVIDER)
@@ -112,6 +116,8 @@ static int32_t NewAndSetKeyBag(HITLS_PKCS12 *p12, int algId)
         para.para.rsaPara.eLen = 3;
         para.para.rsaPara.bits = 1024;
         ASSERT_TRUE(CRYPT_EAL_PkeySetPara(key, &para) == CRYPT_SUCCESS);
+    } else if (algId == BSL_CID_ECDSA) {
+        ASSERT_EQ(CRYPT_EAL_PkeySetParaById(key, CRYPT_ECC_NISTP256), CRYPT_SUCCESS);
     }
     ASSERT_EQ(CRYPT_EAL_PkeyGen(key), 0);
     HITLS_PKCS12_Bag *keyBag = HITLS_PKCS12_BagNew(BSL_CID_KEYBAG, 0, key); // new a key Bag
@@ -648,7 +654,7 @@ void SDV_PKCS12_CERTCHAIN_BUILD_TC001(void)
     HITLS_X509_StoreCtx *storeCtx = NULL;
     HITLS_X509_List *chain = NULL;
 
-    // Step 1: Load certificates from sm2-v3 directory
+    // step1: Load certificates from sm2-v3 directory
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/sm2-v3/ca.der", &caCert),
         HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/sm2-v3/inter.der", &interCert),
@@ -656,7 +662,7 @@ void SDV_PKCS12_CERTCHAIN_BUILD_TC001(void)
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/sm2-v3/end.der", &endCert),
         HITLS_PKI_SUCCESS);
 
-    // Step 2: Create P12 and add certificates
+    // step2: Create P12 and add certificates
     p12 = HITLS_PKCS12_New();
     ASSERT_NE(p12, NULL);
 
@@ -729,6 +735,596 @@ EXIT:
     HITLS_X509_CertFree(cert1);
     HITLS_X509_CertFree(cert2);
     HITLS_X509_CertFree(cert3);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_PKCS12_CRLBAG_ENCANDDEC_TC001
+ * @title Verify encoding and decoding functions of single CRLbag
+ * @step
+ * 1. Create crlbag and set crl into pkcs12
+ * 2. Encode the pkcs12 object
+ * 3. Decode the encoded data
+ * 4. Verify the number of decoded crls, content, and crl attributes
+ * @expect
+ * 1. Setting succeeds
+ * 2. Encoding succeeds
+ * 3. Decoding succeeds
+ * 4. The number of crlbags is consistent with before encoding, content remains consistent with before encoding,
+ *      and attribute parsing is correct
+ */
+/* BEGIN_CASE */
+void SDV_PKCS12_CRLBAG_ENCANDDEC_TC001(char *crlPath)
+{
+#ifndef HITLS_PKI_PKCS12_GEN
+    (void)crlPath;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), 0);
+    char *pwd = "123456";
+    CRYPT_Pbkdf2Param pbParam = {BSL_CID_PBES2, BSL_CID_PBKDF2, CRYPT_MAC_HMAC_SHA256, CRYPT_CIPHER_AES256_CBC,
+        16, (uint8_t *)pwd, strlen(pwd), 2048};
+    CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
+    HITLS_PKCS12_KdfParam macParam = {8, 2048, BSL_CID_SHA256, (uint8_t *)pwd, strlen(pwd)};
+    HITLS_PKCS12_MacParam paramTest = {.para = &macParam, .algId = BSL_CID_PKCS12KDF};
+    HITLS_PKCS12_EncodeParam encodeParam = {encParam, paramTest};
+#ifdef HITLS_PKI_PKCS12_PARSE
+    BSL_Buffer encPwd = {.data = (uint8_t *)pwd, .dataLen = strlen(pwd)};
+    HITLS_PKCS12_PwdParam pwdParam = {.encPwd = &encPwd, .macPwd = &encPwd};
+#endif
+    HITLS_X509_Crl *crl = NULL;
+    BSL_Buffer output = {0};
+    HITLS_PKCS12 *p12 = HITLS_PKCS12_New();
+    ASSERT_NE(p12, NULL);
+    HITLS_PKCS12 *p12_1 = NULL;
+    BSL_ASN1_List *crlBags = NULL;
+    
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlPath, &crl), HITLS_PKI_SUCCESS);
+
+    // 1. Create crlbag and set crl into pkcs12
+    ASSERT_EQ(SetCrlBag(p12, crl), HITLS_PKI_SUCCESS);
+
+    // 2. Encode the pkcs12 object
+    ASSERT_EQ(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output), 0);
+
+#ifdef HITLS_PKI_PKCS12_PARSE
+    // 3. Decode the encoded data
+    ASSERT_EQ(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &output, &pwdParam, &p12_1, true), 0);
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12_1, HITLS_PKCS12_GET_CRLBAGS, &crlBags, 0), 0);
+
+    // 4. Verify the number of decoded crls
+    ASSERT_EQ(BSL_LIST_COUNT(crlBags), 1);
+
+    HITLS_PKCS12_Bag *bag = BSL_LIST_GET_FIRST(crlBags);
+    ASSERT_NE(bag, NULL);
+
+    // 4. Verify decoded crl attributes
+    int32_t id = 0;
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_ID, &id, sizeof(int32_t)), 0);
+    ASSERT_EQ(id, BSL_CID_CRLBAG);
+
+    uint8_t bufferValue[20] = {0};
+    uint32_t bufferValueLen = 20;
+    BSL_Buffer buffer = {.data = bufferValue, .dataLen = bufferValueLen};
+    char *name = "I am a x509CrlBag";
+    uint32_t nameLen = strlen(name);
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_ATTR, &buffer, BSL_CID_FRIENDLYNAME), 0);
+    ASSERT_COMPARE("compare key bag attr", buffer.data, buffer.dataLen, name, nameLen);
+
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_ATTR, &buffer, BSL_CID_LOCALKEYID),
+                HITLS_PKCS12_ERR_NO_SAFEBAG_ATTRIBUTES);
+
+    // 4. Verify decoded crl content
+    HITLS_X509_Crl *g_crl = NULL;
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_VALUE, &g_crl, 0), HITLS_PKCS12_ERR_INVALID_PARAM);
+    ASSERT_EQ(g_crl, NULL);
+    g_crl = (HITLS_X509_Crl *)bag->value.crl;
+
+    ASSERT_EQ(HITLS_X509_CrlCmp(crl, g_crl), 0);
+#endif
+
+EXIT:
+    HITLS_X509_CrlFree(crl);
+    HITLS_PKCS12_Free(p12);
+    HITLS_PKCS12_Free(p12_1);
+    BSL_SAL_Free(output.data);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_PKCS12_CRLBAG_ENCANDDEC_TC002
+ * @title Verify encoding and decoding functions of multiple CRLbags
+ * @step
+ * 1. Create crlbag and set two crls into pkcs12
+ * 2. Encode the pkcs12 object
+ * 3. Decode the encoded data
+ * 4. Verify the number of decoded crls, content, and crl attributes
+ * @expect
+ * 1. Setting succeeds
+ * 2. Encoding succeeds
+ * 3. Decoding succeeds
+ * 4. The number of crlbags is consistent with before encoding, content remains consistent with before encoding,
+ *      and attribute parsing is correct
+ */
+/* BEGIN_CASE */
+void SDV_PKCS12_CRLBAG_ENCANDDEC_TC002(char *crlPath1, char *crlPath2)
+{
+#ifndef HITLS_PKI_PKCS12_GEN
+    (void)crlPath1;
+    (void)crlPath2;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), 0);
+    char *pwd = "123456";
+    CRYPT_Pbkdf2Param pbParam = {BSL_CID_PBES2, BSL_CID_PBKDF2, CRYPT_MAC_HMAC_SHA256, CRYPT_CIPHER_AES256_CBC,
+        16, (uint8_t *)pwd, strlen(pwd), 2048};
+    CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
+    HITLS_PKCS12_KdfParam macParam = {8, 2048, BSL_CID_SHA256, (uint8_t *)pwd, strlen(pwd)};
+    HITLS_PKCS12_MacParam paramTest = {.para = &macParam, .algId = BSL_CID_PKCS12KDF};
+    HITLS_PKCS12_EncodeParam encodeParam = {encParam, paramTest};
+#ifdef HITLS_PKI_PKCS12_PARSE
+    BSL_Buffer encPwd = {.data = (uint8_t *)pwd, .dataLen = strlen(pwd)};
+    HITLS_PKCS12_PwdParam pwdParam = {.encPwd = &encPwd, .macPwd = &encPwd};
+#endif
+    HITLS_X509_Crl *crl1 = NULL;
+    HITLS_X509_Crl *crl2 = NULL;
+    BSL_Buffer output = {0};
+    HITLS_PKCS12 *p12 = HITLS_PKCS12_New();
+    ASSERT_NE(p12, NULL);
+    HITLS_PKCS12 *p12_1 = NULL;
+    BSL_ASN1_List *crlBags = NULL;
+    
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlPath1, &crl1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlPath2, &crl2), HITLS_PKI_SUCCESS);
+
+    // 1. Create crlbag and set two crls into pkcs12
+    ASSERT_EQ(SetCrlBag(p12, crl1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(SetCrlBag(p12, crl2), HITLS_PKI_SUCCESS);
+
+    // 2. Encode the pkcs12 object
+    ASSERT_EQ(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output), 0);
+
+#ifdef HITLS_PKI_PKCS12_PARSE
+    // 3. Decode the encoded data
+    ASSERT_EQ(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &output, &pwdParam, &p12_1, true), 0);
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12_1, HITLS_PKCS12_GET_CRLBAGS, &crlBags, 0), 0);
+
+    // 4. Verify the number of decoded crls
+    ASSERT_EQ(BSL_LIST_COUNT(crlBags), 2);
+
+    // Define expected CRL array for comparison
+    HITLS_X509_Crl *expectCrls[] = {crl1, crl2};
+    uint32_t index = 0;
+    HITLS_PKCS12_Bag *bag = BSL_LIST_GET_FIRST(crlBags);
+    
+    // Loop through all Bags to ensure each one (including second) undergoes complete verification
+    while (bag != NULL && index < 2) {
+        // 4. Verify decoded crl attributes and ID
+        int32_t id = 0;
+        ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_ID, &id, sizeof(int32_t)), 0);
+        ASSERT_EQ(id, BSL_CID_CRLBAG);
+
+        uint8_t bufferValue[20] = {0};
+        uint32_t bufferValueLen = 20;
+        BSL_Buffer buffer = {.data = bufferValue, .dataLen = bufferValueLen};
+        char *name = "I am a x509CrlBag";
+        uint32_t nameLen = strlen(name);
+        ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_ATTR, &buffer, BSL_CID_FRIENDLYNAME), 0);
+        ASSERT_COMPARE("compare key bag attr", buffer.data, buffer.dataLen, name, nameLen);
+
+        ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_ATTR, &buffer, BSL_CID_LOCALKEYID),
+            HITLS_PKCS12_ERR_NO_SAFEBAG_ATTRIBUTES);
+
+        // 4. Verify decoded crl content
+        HITLS_X509_Crl *g_crl = (HITLS_X509_Crl *)bag->value.crl;
+        ASSERT_EQ(HITLS_X509_CrlCmp(expectCrls[index], g_crl), 0);
+
+        bag = BSL_LIST_GET_NEXT(crlBags);
+        index++;
+    }
+    ASSERT_EQ(index, 2); // Ensure loop executed twice
+#endif
+EXIT:
+    HITLS_X509_CrlFree(crl1);
+    HITLS_X509_CrlFree(crl2);
+    HITLS_PKCS12_Free(p12);
+    HITLS_PKCS12_Free(p12_1);
+    BSL_SAL_Free(output.data);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_PKCS12_CRLBAG_ENCANDDEC_TC003
+ * @title Verify encoding with invalid crlid in crlBag
+ * @step
+ * 1. Create crlbag and set crl into pkcs12
+ * 2. Set crlid of crlBag to 99
+ * 3. Call HITLS_PKCS12_GenBuff to encode pkcs12 object
+ * @expect
+ * 1. Setting succeeds
+ * 2. Setting succeeds
+ * 3. Encoding fails
+ */
+/* BEGIN_CASE */
+void SDV_PKCS12_CRLBAG_ENCANDDEC_TC003(char *crlPath)
+{
+#ifndef HITLS_PKI_PKCS12_GEN
+    (void)crlPath;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), 0);
+    char *pwd = "123456";
+    CRYPT_Pbkdf2Param pbParam = {BSL_CID_PBES2, BSL_CID_PBKDF2, CRYPT_MAC_HMAC_SHA256, CRYPT_CIPHER_AES256_CBC,
+        16, (uint8_t *)pwd, strlen(pwd), 2048};
+    CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
+    HITLS_PKCS12_KdfParam macParam = {8, 2048, BSL_CID_SHA256, (uint8_t *)pwd, strlen(pwd)};
+    HITLS_PKCS12_MacParam paramTest = {.para = &macParam, .algId = BSL_CID_PKCS12KDF};
+    HITLS_PKCS12_EncodeParam encodeParam = {encParam, paramTest};
+    HITLS_X509_Crl *crl = NULL;
+    BSL_Buffer output = {0};
+    HITLS_PKCS12 *p12 = HITLS_PKCS12_New();
+    ASSERT_NE(p12, NULL);
+    
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlPath, &crl), HITLS_PKI_SUCCESS);
+
+    // 1. Create crlbag and set crl into pkcs12
+    HITLS_PKCS12_Bag *crlBag = HITLS_PKCS12_BagNew(BSL_CID_CRLBAG, BSL_CID_X509CRL, crl); // new a crl Bag
+    ASSERT_NE(crlBag, NULL);
+    char *name = "I am a x509CrlBag";
+    uint32_t nameLen = strlen(name);
+    BSL_Buffer buffer = {0};
+    buffer.data = (uint8_t *)name;
+    buffer.dataLen = nameLen;
+
+    // 2. Set crlid of crlBag to 99
+    crlBag->id = 99;
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(crlBag, HITLS_PKCS12_BAG_ADD_ATTR, &buffer, BSL_CID_FRIENDLYNAME), 0);
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_ADD_CRLBAG, crlBag, 0), HITLS_PKCS12_ERR_INVALID_PARAM);
+
+    // 3. Encode pkcs12 object
+    ASSERT_NE(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output), HITLS_PKI_SUCCESS);
+EXIT:
+    crlBag->id = BSL_CID_CRLBAG;
+    HITLS_PKCS12_BagFree(crlBag);
+    HITLS_X509_CrlFree(crl);
+    HITLS_PKCS12_Free(p12);
+    BSL_SAL_Free(output.data);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_PKCS12_KEYBAG_ENCANDDEC_TC001
+ * @title Verify encoding and decoding functions of single keyBag
+ * @step
+ * 1. Create 1 pkcs12 object
+ * 2. Create a BSL_CID_RSA key and set it into pkcs12 via keyBag
+ * 3. Call HITLS_PKCS12_GenBuff to encode the object
+ * 4. Call HITLS_PKCS12_ParseBuff to decode encoded data
+ * 5. Verify the number of decoded keyBags, content, and attributes
+ * @expect
+ * 1. Creation succeeds
+ * 2. Setting succeeds
+ * 3. Encoding succeeds
+ * 4. Decoding succeeds
+ * 5. Number of keyBags is consistent with before encoding, content remains consistent with before encoding,
+ *      and attribute parsing is correct
+ */
+/* BEGIN_CASE */
+void SDV_PKCS12_KEYBAG_ENCANDDEC_TC001(void)
+{
+#ifndef HITLS_PKI_PKCS12_GEN
+    SKIP_TEST();
+#else
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), 0);
+    char *pwd = "123456";
+    CRYPT_Pbkdf2Param pbParam = {BSL_CID_PBES2, BSL_CID_PBKDF2, CRYPT_MAC_HMAC_SHA256, CRYPT_CIPHER_AES256_CBC,
+        16, (uint8_t *)pwd, strlen(pwd), 2048};
+    CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
+    HITLS_PKCS12_KdfParam macParam = {8, 2048, BSL_CID_SHA256, (uint8_t *)pwd, strlen(pwd)};
+    HITLS_PKCS12_MacParam paramTest = {.para = &macParam, .algId = BSL_CID_PKCS12KDF};
+    HITLS_PKCS12_EncodeParam encodeParam = {encParam, paramTest};
+#ifdef HITLS_PKI_PKCS12_PARSE
+    BSL_Buffer encPwd = {.data = (uint8_t *)pwd, .dataLen = strlen(pwd)};
+    HITLS_PKCS12_PwdParam pwdParam = {.encPwd = &encPwd, .macPwd = &encPwd};
+#endif
+    BSL_ASN1_List *keyList = NULL;
+    BSL_Buffer output = {0};
+    HITLS_PKCS12 *p12 = HITLS_PKCS12_New();
+    ASSERT_NE(p12, NULL);
+    HITLS_PKCS12 *p12_1 = NULL;
+    HITLS_PKCS12_Bag *bag = NULL;
+    uint8_t bufferValue[20] = {0};
+    uint32_t bufferValueLen = 20;
+    int32_t id = 0;
+    BSL_Buffer buffer = {.data = bufferValue, .dataLen = bufferValueLen};
+    char *attrName = "I am a keyBag";
+    
+    CRYPT_EAL_PkeyCtx *genKey = NULL;
+    CRYPT_EAL_PkeyCtx *parsedKey = NULL;
+
+    // 1. Create 1 pkcs12 object (already done above)
+    
+    // 2. Create a BSL_CID_RSA key and set it into pkcs12 via keyBag
+    genKey = CRYPT_EAL_ProviderPkeyNewCtx(p12->libCtx, BSL_CID_RSA, 0, p12->attrName);
+    ASSERT_NE(genKey, NULL);
+    
+    CRYPT_EAL_PkeyPara para = {.id = CRYPT_PKEY_RSA};
+    uint8_t e[] = {1, 0, 1};
+    para.para.rsaPara.e = e;
+    para.para.rsaPara.eLen = 3;
+    para.para.rsaPara.bits = 1024;
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(genKey, &para), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(genKey), 0);
+
+    bag = HITLS_PKCS12_BagNew(BSL_CID_KEYBAG, 0, genKey);
+    ASSERT_NE(bag, NULL);
+
+    BSL_Buffer attrBuffer = {0};
+    attrBuffer.data = (uint8_t *)attrName;
+    attrBuffer.dataLen = strlen(attrName);
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_ADD_ATTR, &attrBuffer, BSL_CID_FRIENDLYNAME), 0);
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_ADD_ATTR, &attrBuffer, BSL_CID_LOCALKEYID), 0);
+
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_ADD_KEYBAG, bag, 0), 0);
+
+    // 3. Call HITLS_PKCS12_GenBuff to encode the object
+    ASSERT_EQ(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output), HITLS_PKI_SUCCESS);
+
+#ifdef HITLS_PKI_PKCS12_PARSE
+    // 4. Call HITLS_PKCS12_ParseBuff to decode encoded data
+    ASSERT_EQ(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &output, &pwdParam, &p12_1, true), 0);
+
+    // 5. Verify the number of decoded keyBags
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12_1, HITLS_PKCS12_GET_KEYBAGS, &keyList, 0), 0);
+    ASSERT_EQ(BSL_LIST_COUNT(keyList), 1);
+    ASSERT_NE(keyList, NULL);
+    
+    HITLS_PKCS12_Bag *listBag = BSL_LIST_GET_FIRST(keyList);
+    ASSERT_NE(listBag, NULL);
+
+    // 5. Verify decoded keyBag content
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(listBag, HITLS_PKCS12_BAG_GET_VALUE, &parsedKey, 0), 0);
+    ASSERT_NE(parsedKey, NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(genKey, parsedKey), 0);
+
+    // 5. Verify decoded keyBag attributes
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(listBag, HITLS_PKCS12_BAG_GET_ID, &id, sizeof(int32_t)), 0);
+    ASSERT_EQ(id, BSL_CID_KEYBAG);
+
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(listBag, HITLS_PKCS12_BAG_GET_ATTR, &buffer, BSL_CID_FRIENDLYNAME), 0);
+    ASSERT_COMPARE("compare key bag attr", buffer.data, buffer.dataLen, attrName, strlen(attrName));
+
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(listBag, HITLS_PKCS12_BAG_GET_ATTR, &buffer, BSL_CID_LOCALKEYID), 0);
+    ASSERT_COMPARE("compare key bag attr", buffer.data, buffer.dataLen, attrName, strlen(attrName));
+#endif
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(genKey);
+    CRYPT_EAL_PkeyFreeCtx(parsedKey);
+    HITLS_PKCS12_BagFree(bag);
+    HITLS_PKCS12_Free(p12);
+    HITLS_PKCS12_Free(p12_1);
+    BSL_SAL_Free(output.data);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_PKCS12_KEYBAG_ENCANDDEC_TC002
+ * @title Verify encoding function of multiple keyBags
+ * @step
+ * 1. Create a new pkcs12 object
+ * 2. Create BSL_CID_ECDSA, BSL_CID_RSA keys and set them into pkcs12 via keyBag
+ * 3. Call HITLS_PKCS12_GenBuff to encode pkcs12 object
+ * 4. Call HITLS_PKCS12_ParseBuff to decode encoded data
+ * 5. Verify the number of decoded keyBags, content, and crl attributes
+ * @expect
+ * 1. Creation succeeds
+ * 2. Setting succeeds
+ * 3. Encoding succeeds
+ * 4. Decoding succeeds
+ * 5. Number of keyBags is consistent with before encoding, content remains consistent with before encoding,
+ *      and attribute parsing is correct
+ */
+/* BEGIN_CASE */
+void SDV_PKCS12_KEYBAG_ENCANDDEC_TC002(void)
+{
+#ifndef HITLS_PKI_PKCS12_GEN
+    SKIP_TEST();
+#else
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), 0);
+    char *pwd = "123456";
+    CRYPT_Pbkdf2Param pbParam = {BSL_CID_PBES2, BSL_CID_PBKDF2, CRYPT_MAC_HMAC_SHA256, CRYPT_CIPHER_AES256_CBC,
+        16, (uint8_t *)pwd, strlen(pwd), 2048};
+    CRYPT_EncodeParam encParam = {CRYPT_DERIVE_PBKDF2, &pbParam};
+    HITLS_PKCS12_KdfParam macParam = {8, 2048, BSL_CID_SHA256, (uint8_t *)pwd, strlen(pwd)};
+    HITLS_PKCS12_MacParam paramTest = {.para = &macParam, .algId = BSL_CID_PKCS12KDF};
+    HITLS_PKCS12_EncodeParam encodeParam = {encParam, paramTest};
+#ifdef HITLS_PKI_PKCS12_PARSE
+    BSL_Buffer encPwd = {.data = (uint8_t *)pwd, .dataLen = strlen(pwd)};
+    HITLS_PKCS12_PwdParam pwdParam = {.encPwd = &encPwd, .macPwd = &encPwd};
+#endif
+    BSL_ASN1_List *keyList = NULL;
+    BSL_Buffer output = {0};
+    HITLS_PKCS12 *p12 = HITLS_PKCS12_New();
+    ASSERT_NE(p12, NULL);
+    HITLS_PKCS12 *p12_1 = NULL;
+    HITLS_PKCS12_Bag *bag = NULL;
+    uint8_t bufferValue[20] = {0};
+    uint32_t bufferValueLen = 20;
+    int32_t id = 0;
+    BSL_Buffer buffer = {.data = bufferValue, .dataLen = bufferValueLen};
+    char *attrName = "I am a keyBag";
+    CRYPT_EAL_PkeyCtx *key = NULL;
+
+    // 2. Create BSL_CID_ECDSA, BSL_CID_RSA keys and set them into pkcs12 via keyBag
+    ASSERT_EQ(NewAndSetKeyBag(p12, BSL_CID_RSA), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(NewAndSetKeyBag(p12, BSL_CID_ECDSA), HITLS_PKI_SUCCESS);
+
+    // 3. Call HITLS_PKCS12_GenBuff to encode pkcs12 object
+    ASSERT_EQ(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output), 0);
+
+#ifdef HITLS_PKI_PKCS12_PARSE
+    // 4. Call HITLS_PKCS12_ParseBuff to decode encoded data
+    ASSERT_EQ(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &output, &pwdParam, &p12_1, true), 0);
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12_1, HITLS_PKCS12_GET_KEYBAGS, &keyList, 0), 0);
+    
+    // 5. Verify the number of decoded keyBags
+    ASSERT_EQ(BSL_LIST_COUNT(keyList), 2);
+    ASSERT_NE(keyList, NULL);
+    
+    bag = BSL_LIST_GET_FIRST(keyList);
+    // 5. Verify decoded keyBag content and attributes
+    while (bag != NULL) {
+        ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_VALUE, &key, 0), 0);
+        ASSERT_NE(key, NULL);
+        ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_ID, &id, sizeof(int32_t)), 0);
+        ASSERT_EQ(id, BSL_CID_KEYBAG);
+        ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_ATTR, &buffer, BSL_CID_FRIENDLYNAME), 0);
+        ASSERT_COMPARE("compare key bag attr", buffer.data, buffer.dataLen, attrName, strlen(attrName));
+        ASSERT_EQ(HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_ATTR, &buffer, BSL_CID_LOCALKEYID),
+            HITLS_PKCS12_ERR_NO_SAFEBAG_ATTRIBUTES);
+        bag = BSL_LIST_GET_NEXT(keyList);
+        CRYPT_EAL_PkeyFreeCtx(key);
+        key = NULL;
+    }
+#endif
+EXIT:
+    HITLS_PKCS12_Free(p12);
+    HITLS_PKCS12_Free(p12_1);
+    BSL_SAL_Free(output.data);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_PKCS12_ERRBUFFER_DEC_TC001
+ * @title Verify decoding of abnormal encoded file
+ * @step
+ * 1. Create a new pkcs12 object
+ * 2. Call HITLS_PKCS12_ParseBuff to decode abnormal encoded data
+ * @expect
+ * 1. Creation succeeds
+ * 2. Decoding fails
+ */
+/* BEGIN_CASE */
+void SDV_PKCS12_ERRBUFFER_DEC_TC001(Hex *mulBag, int hasMac)
+{
+#ifndef HITLS_PKI_PKCS12_PARSE
+    (void)mulBag;
+    (void)hasMac;
+    SKIP_TEST();
+#else
+    char *pwd = "123456";
+    BSL_Buffer encPwd = {.data = (uint8_t *)pwd, .dataLen = strlen(pwd)};
+    HITLS_PKCS12_PwdParam pwdParam = {.encPwd = &encPwd, .macPwd = &encPwd};
+    HITLS_PKCS12 *p12 = NULL;
+    BSL_Buffer buffer = {.data = (uint8_t *)mulBag->x, .dataLen = mulBag->len};
+    ASSERT_NE(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &buffer, &pwdParam, &p12, hasMac == 1), 0);
+EXIT:
+    HITLS_PKCS12_Free(p12);
+#endif
+}
+/* END_CASE */
+
+
+/**
+ * @test SDV_PKCS12_ENCANDDEC_CROSS_TC001
+ * @title PKCS12 encoding and decoding cross test
+ * @precondition PKCS12 encoding and decoding cross test
+ * @step
+ * 1. Parse the incoming key and crl files
+ * 2. Create a pkcs12 object and decode the incoming asn1
+ * 3. Extract decoded key bags and compare values of each type of key one by one
+ * 4. Compare whether decoded crl files are consistent
+ * @expect
+ * 1. Key and crl files parsed successfully
+ * 2. ASN.1 data decoded successfully
+ * 3. All types of key bags extracted successfully, key values consistent with original keys
+ * 4. crl files are consistent
+ */
+/* BEGIN_CASE */
+void SDV_PKCS12_ENCANDDEC_CROSS_TC001(char *rsakeyPath, char *ecdsakeyPath, char *crlPath, Hex *asn1)
+{
+#ifndef HITLS_PKI_PKCS12_PARSE
+    (void)rsakeyPath;
+    (void)ecdsakeyPath;
+    (void)crlPath;
+    (void)asn1;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), 0);
+    char *pwd = "123456";
+    BSL_Buffer encPwd = {.data = (uint8_t *)pwd, .dataLen = strlen(pwd)};
+    HITLS_PKCS12_PwdParam pwdParam = {.encPwd = &encPwd, .macPwd = &encPwd};
+
+    // 1. Parse the incoming key and crl files
+    CRYPT_EAL_PkeyCtx *rsapkeyBypem = NULL;
+    CRYPT_EAL_PkeyCtx *ecdsapkeyBypem = NULL;
+    HITLS_X509_Crl *crl = NULL;
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, CRYPT_PRIKEY_PKCS8_UNENCRYPT, rsakeyPath, NULL, 0, &rsapkeyBypem),
+                CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, CRYPT_PRIKEY_PKCS8_UNENCRYPT, ecdsakeyPath, NULL, 0, &ecdsapkeyBypem),
+                CRYPT_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, crlPath, &crl), HITLS_PKI_SUCCESS);
+
+    // 2. Create a pkcs12 object and decode the incoming asn1
+    HITLS_PKCS12 *p12 = NULL;
+    BSL_Buffer buffer = {.data = asn1->x, .dataLen = asn1->len};
+
+    ASSERT_EQ(HITLS_PKCS12_ParseBuff(BSL_FORMAT_ASN1, &buffer, &pwdParam, &p12, true), 0);
+
+    // 3. Extract decoded key bags and compare values of each type of key one by one
+    BSL_ASN1_List *keyList = NULL;
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GET_KEYBAGS, &keyList, 0), 0);
+    ASSERT_EQ(BSL_LIST_COUNT(keyList), 2);
+    ASSERT_NE(keyList, NULL);
+
+    HITLS_PKCS12_Bag *keyBag = BSL_LIST_GET_FIRST(keyList);
+    ASSERT_NE(keyBag, NULL);
+
+    CRYPT_EAL_PkeyCtx *rsaparsedKey = NULL;
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(keyBag, HITLS_PKCS12_BAG_GET_VALUE, &rsaparsedKey, 0), 0);
+    ASSERT_NE(rsaparsedKey, NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(rsapkeyBypem, rsaparsedKey), 0);
+
+    keyBag = BSL_LIST_GET_NEXT(keyList);
+    CRYPT_EAL_PkeyCtx *ecdsaparsedKey = NULL;
+    ASSERT_EQ(HITLS_PKCS12_BagCtrl(keyBag, HITLS_PKCS12_BAG_GET_VALUE, &ecdsaparsedKey, 0), 0);
+    ASSERT_NE(ecdsaparsedKey, NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(ecdsapkeyBypem, ecdsaparsedKey), 0);
+
+    // 4. Compare whether decoded crl files are consistent
+    BSL_ASN1_List *crlList = NULL;
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GET_CRLBAGS, &crlList, 0), 0);
+    ASSERT_EQ(BSL_LIST_COUNT(crlList), 1);
+
+    HITLS_PKCS12_Bag *crlBag = BSL_LIST_GET_FIRST(crlList);
+    ASSERT_NE(crlBag, NULL);
+    HITLS_X509_Crl *g_crl = NULL;
+    g_crl = (HITLS_X509_Crl *)crlBag->value.crl;
+
+    ASSERT_EQ(HITLS_X509_CrlCmp(crl, g_crl), 0);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ecdsapkeyBypem);
+    CRYPT_EAL_PkeyFreeCtx(rsapkeyBypem);
+    CRYPT_EAL_PkeyFreeCtx(rsaparsedKey);
+    CRYPT_EAL_PkeyFreeCtx(ecdsaparsedKey);
+    HITLS_PKCS12_Free(p12);
+    HITLS_X509_CrlFree(crl);
 #endif
 }
 /* END_CASE */
