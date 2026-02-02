@@ -751,7 +751,7 @@ uint64_t BSL_SAL_TIME_GetNSec(void);
 /**
  * @ingroup  bsl_sal_net
  * @brief socket address.
- * 
+ *
  * It should be defined like following union in linux, to cover various socket addresses.
  *     union SockAddr {
  *         struct sockaddr addr;
@@ -779,6 +779,35 @@ typedef int32_t (*BslSalSockAddrNew)(BSL_SAL_SockAddr *sockAddr);
  * @param   uioAddr [IN] UIO_Addr object
  */
 typedef void (*BslSalSockAddrFree)(BSL_SAL_SockAddr sockAddr);
+
+#define SAL_NET_SEEK_SET        0
+#define SAL_NET_SEEK_CUR        1
+#define SAL_NET_SEEK_END        2
+
+#define SAL_NET_IPV4            2   /* IPv4 Internet protocols */
+#define SAL_NET_IPV6            10  /* IPv6 Internet protocols */
+#define SAL_NET_IPUNIX          1   /* UNIX domain socket */
+#define SAL_NET_IPANY           0   /* Any protocol */
+
+#define SAL_NET_SOCK_STREAM     1
+#define SAL_NET_SOCK_DGRAM      2
+#define SAL_NET_SOCK_ALL        0   /* Indicates both SAL_NET_SOCK_STREAM and SAL_NET_SOCK_DGRAM. */
+
+#define SAL_NET_IPPROTO_IP      0   /* IPV4 level, It is used in conjunction with the SAL_NET_SOL_* option. */
+#define SAL_NET_IPPROTO_IPV6    41  /* IPV6 level, It is used in conjunction with the SAL_NET_IPV6_* option. */
+#define SAL_NET_IPPROTO_TCP     6   /* It is used in conjunction with the SAL_NET_TCP_* option. */
+#define SAL_NET_IPPROTO_UDP     17
+#define SAL_NET_IPPROTO_SCTP    132
+#define SAL_NET_IPPROTO_UNSPEC  0
+#define SAL_NET_SOL_SOCKET      1   /* It is used in conjunction with the SAL_NET_SO_* option. */
+
+#define SAL_NET_SO_REUSEADDR    2
+#define SAL_NET_SO_KEEPALIVE    9
+#define SAL_NET_SO_ERROR        4
+#define SAL_NET_TCP_NODELAY     1
+#define SAL_NET_IPV6_V6ONLY     26
+#define SAL_NET_IP_MTU          14 /* Retrive the current known path MTU of the current socket. */
+#define SAL_NET_IPV6_MTU        24 /* Retrive the current known path MTU of the current socket for IPV6. */
 
 #define SAL_IPV4 2 /* IPv4 Internet protocols */
 #define SAL_IPV6 10 /* IPv6 Internet protocols */
@@ -1081,7 +1110,7 @@ typedef int32_t (*BslSalNetRead)(int32_t fd, void *buf, uint32_t len, int32_t *e
  * @par Description: Offsets the file read/write position to a certain position.
  * @param fd [IN] File descriptor.
  * @param offset [IN] The offset from the start position.
- * @param origin [IN] The start position. One of SEEK_SET, SEEK_CUR and SEEK_END.
+ * @param origin [IN] The start position. One of SAL_NET_SEEK_SET, SAL_NET_SEEK_CUR and SAL_NET_SEEK_END.
  * @return If succeed, return the new read/write position. Otherwise, return -1.
  * @attention
  * Thread safe     : Thread-safe function.

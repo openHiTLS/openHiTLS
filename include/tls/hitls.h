@@ -177,7 +177,7 @@ int32_t HITLS_Accept(HITLS_Ctx *ctx);
  * @attention Only the DTLS server over udp calls this API.
  *            HITLS_Listen only supports ClientHellos that fit inside a single datagram.
  * @param   ctx [IN/OUT] TLS connection handle.
- * @param   clientAddr [IN/OUT] BSL_UIO_Addr pointed to by peer that sent the ClientHello.
+ * @param   clientAddr [IN/OUT] BSL_SOCKADDR_STORAGE pointed to by peer that sent the ClientHello.
  * @retval  HITLS_SUCCESS, the handshake is successful.
  * @retval  For other error codes, see hitls_error.h.
  */

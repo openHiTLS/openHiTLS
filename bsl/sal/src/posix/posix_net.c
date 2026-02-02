@@ -30,12 +30,18 @@
 #include "bsl_errno.h"
 #include "sal_net.h"
 
-typedef union {
-    struct sockaddr addr;
-    struct sockaddr_in6 addrIn6;
-    struct sockaddr_in addrIn;
-    struct sockaddr_un addrUn;
-} LinuxSockAddr;
+typedef struct sockaddr_storage BSL_SOCKADDR_STORAGE;
+
+#define ADDRESS_FAMILY_HITLS_2_POSIX(hitlsType)       (hitlsType)
+#define ADDRESS_SOCKET_TYPE_HITLS_2_POSIX(hitlsType)  (hitlsType)
+#define ADDRESS_PROTOCOL_HITLS_2_POSIX(hitlsType)     (hitlsType)
+#ifdef __APPLE__
+#define ADDRESS_LEVEL_HITLS_2_POSIX(hitlsType)        ((hitlsType) == SAL_NET_SOL_SOCKET ? 65535 : (hitlsType))
+#else
+#define ADDRESS_LEVEL_HITLS_2_POSIX(hitlsType)        (hitlsType)
+#endif
+#define ADDRESS_OPTION_HITLS_2_POSIX(hitlsType)       (hitlsType)
+#define ADDRESS_FAMILY_POSIX_2_HITLS(hitlsType)       (hitlsType)
 
 int32_t SAL_NET_Write(int32_t fd, const void *buf, uint32_t len, int32_t *err)
 {
@@ -89,7 +95,7 @@ int32_t SAL_NET_Recvfrom(int32_t sock, void *buf, size_t len, int32_t flags, voi
 
 int32_t SAL_NET_SockAddrNew(BSL_SAL_SockAddr *sockAddr)
 {
-    LinuxSockAddr *addr = (LinuxSockAddr *)BSL_SAL_Calloc(1, sizeof(LinuxSockAddr));
+    BSL_SOCKADDR_STORAGE *addr = (BSL_SOCKADDR_STORAGE *)BSL_SAL_Calloc(1, sizeof(BSL_SOCKADDR_STORAGE));
     if (addr == NULL) {
         return BSL_MALLOC_FAIL;
     }
@@ -104,40 +110,61 @@ void SAL_NET_SockAddrFree(BSL_SAL_SockAddr sockAddr)
 
 int32_t SAL_NET_SockAddrGetFamily(const BSL_SAL_SockAddr sockAddr)
 {
-    const LinuxSockAddr *addr = (const LinuxSockAddr *)sockAddr;
+    const BSL_SOCKADDR_STORAGE *addr = (const BSL_SOCKADDR_STORAGE *)sockAddr;
     if (addr == NULL) {
-        return AF_UNSPEC;
+        return ADDRESS_FAMILY_POSIX_2_HITLS(AF_UNSPEC);
     }
-    return addr->addr.sa_family;
+    return ADDRESS_FAMILY_POSIX_2_HITLS(addr->ss_family);
 }
 
 uint32_t SAL_NET_SockAddrSize(const BSL_SAL_SockAddr sockAddr)
 {
-    const LinuxSockAddr *addr = (const LinuxSockAddr *)sockAddr;
+    const BSL_SOCKADDR_STORAGE *addr = (const BSL_SOCKADDR_STORAGE *)sockAddr;
     if (addr == NULL) {
         return 0;
     }
-    switch (addr->addr.sa_family) {
+    switch (addr->ss_family) {
         case AF_INET:
-            return sizeof(addr->addrIn);
+            return sizeof(struct sockaddr_in);
         case AF_INET6:
-            return sizeof(addr->addrIn6);
+            return sizeof(struct sockaddr_in6);
         case AF_UNIX:
-            return sizeof(addr->addrUn);
+            return sizeof(struct sockaddr_un);
         default:
             break;
     }
-    return sizeof(LinuxSockAddr);
+    return sizeof(BSL_SOCKADDR_STORAGE);
 }
 
 void SAL_NET_SockAddrCopy(BSL_SAL_SockAddr dst, BSL_SAL_SockAddr src)
 {
-    memcpy_s(dst, sizeof(LinuxSockAddr), src, sizeof(LinuxSockAddr));
+    BSL_SOCKADDR_STORAGE *dstAddr = (BSL_SOCKADDR_STORAGE *)dst;
+    BSL_SOCKADDR_STORAGE *srcAddr = (BSL_SOCKADDR_STORAGE *)src;
+    uint32_t srcAddrLen = 0;
+    switch (srcAddr->ss_family) {
+        case AF_INET:
+            srcAddrLen = sizeof(struct sockaddr_in);
+            break;
+        case AF_INET6:
+            srcAddrLen = sizeof(struct sockaddr_in6);
+            break;
+#ifdef AF_UNIX
+        case AF_UNIX:
+            srcAddrLen = sizeof(struct sockaddr_un);
+            break;
+#endif
+        default:
+            break;
+    }
+    memcpy_s(dstAddr, sizeof(BSL_SOCKADDR_STORAGE), srcAddr, srcAddrLen);
 }
 
 int32_t SAL_NET_Socket(int32_t af, int32_t type, int32_t protocol)
 {
-    return (int32_t)socket(af, type, protocol);
+    int32_t posixFamily = ADDRESS_FAMILY_HITLS_2_POSIX(af);
+    int32_t posixType = ADDRESS_SOCKET_TYPE_HITLS_2_POSIX(type);
+    int32_t posixProtocol = ADDRESS_PROTOCOL_HITLS_2_POSIX(protocol);
+    return (int32_t)socket(posixFamily, posixType, posixProtocol);
 }
 
 int32_t SAL_NET_SockClose(int32_t sockId)
@@ -150,7 +177,9 @@ int32_t SAL_NET_SockClose(int32_t sockId)
 
 int32_t SAL_NET_SetSockopt(int32_t sockId, int32_t level, int32_t name, const void *val, int32_t len)
 {
-    if (setsockopt((int32_t)sockId, level, name, (char *)(uintptr_t)val, (socklen_t)len) != 0) {
+    int32_t posixLevel = ADDRESS_LEVEL_HITLS_2_POSIX(level);
+    int32_t posixName = ADDRESS_OPTION_HITLS_2_POSIX(name);
+    if (setsockopt((int32_t)sockId, posixLevel, posixName, (char *)(uintptr_t)val, (socklen_t)len) != 0) {
         return BSL_SAL_ERR_NET_SETSOCKOPT;
     }
     return BSL_SUCCESS;
@@ -158,7 +187,9 @@ int32_t SAL_NET_SetSockopt(int32_t sockId, int32_t level, int32_t name, const vo
 
 int32_t SAL_NET_GetSockopt(int32_t sockId, int32_t level, int32_t name, void *val, int32_t *len)
 {
-    if (getsockopt((int32_t)sockId, level, name, val, (socklen_t *)len) != 0) {
+    int32_t posixLevel = ADDRESS_LEVEL_HITLS_2_POSIX(level);
+    int32_t posixName = ADDRESS_OPTION_HITLS_2_POSIX(name);
+    if (getsockopt((int32_t)sockId, posixLevel, posixName, val, (socklen_t *)len) != 0) {
         return BSL_SAL_ERR_NET_GETSOCKOPT;
     }
     return BSL_SUCCESS;
