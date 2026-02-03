@@ -323,7 +323,6 @@ AARCH64_AUTIASP
     .balign 16
     .type SHA256CryptoExt, %function
 SHA256CryptoExt:
-AARCH64_PACIASP
     ld1     {v4.4s-v5.4s}, [x0]
 .Lloop_compress_64_ext:
     adrp    x4, .K256

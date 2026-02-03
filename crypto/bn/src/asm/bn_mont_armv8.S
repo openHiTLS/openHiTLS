@@ -255,7 +255,6 @@ AARCH64_AUTIASP
 
 .type   MontSqr8, %function
 MontSqr8:
-AARCH64_PACIASP
     cmp     x1, x2
     b.ne    MontMul4
 
@@ -1078,7 +1077,6 @@ AARCH64_AUTIASP
 
 .type   MontMul4, %function
 MontMul4:
-AARCH64_PACIASP
     stp     x29, x30, [sp, #-128]!
     mov     x29, sp
     stp     x27, x28, [sp, #16]
