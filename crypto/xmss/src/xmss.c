@@ -12,30 +12,28 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_XMSS
 
 #include "securec.h"
 #include "bsl_sal.h"
+#include "bsl_err_internal.h"
+#include "bsl_params.h"
 #include "crypt_errno.h"
 #include "crypt_algid.h"
-#include "crypt_util_rand.h"
-#include "eal_md_local.h"
+#include "crypt_params_key.h"
 #include "crypt_xmss.h"
-#include "slh_dsa_local.h"
-#include "slh_dsa_xmss.h"
-#include "slh_dsa_hypertree.h"
-#include "xmss_hash.h"
-
-#define XMSS_ADRS_LEN SLH_DSA_ADRS_LEN
-#define XMSS_INVALID_XDR -1
-
-typedef SlhDsaPara XmssPara;
+#include "crypt_utils.h"
+#include "xmss_local.h"
+#include "xmss_params.h"
+#include "xmss_tree.h"
+#include "xmss_address.h"
 
 typedef struct {
-    BSL_Param *pubXdr;
-    BSL_Param *pubSeed;
-    BSL_Param *pubRoot;
+    BSL_Param *pubXdr;    // XDR type identifier (4 bytes, optional)
+    BSL_Param *pubSeed;   // Public seed (n bytes)
+    BSL_Param *pubRoot;   // Tree root (n bytes)
 } XmssPubKeyParam;
 
 typedef struct {
@@ -46,166 +44,6 @@ typedef struct {
     BSL_Param *pubRoot;
 } XmssPrvKeyParam;
 
-/* params isCompressed, a, k, m, secCategory are not used for xmss */
-static const XmssPara g_xmssParaTable[] = {
-    /* { algId, isCompressed, n, h, d, hp, a, k, m, secCategory, pkBytes, sigBytes }, */
-    
-    { CRYPT_XMSS_SHA2_10_256, 0, 32, 10, 1, 10, 0, 0, 0, 0,  68, 2500, {0x0, 0x0, 0x0, 0x01}},
-    { CRYPT_XMSS_SHA2_16_256, 0, 32, 16, 1, 16, 0, 0, 0, 0,  68, 2692, {0x0, 0x0, 0x0, 0x02}},
-    { CRYPT_XMSS_SHA2_20_256, 0, 32, 20, 1, 20, 0, 0, 0, 0,  68, 2820, {0x0, 0x0, 0x0, 0x03}},
-    { CRYPT_XMSS_SHA2_10_512, 0, 64, 10, 1, 10, 0, 0, 0, 0, 132, 9092, {0x0, 0x0, 0x0, 0x04}},
-    { CRYPT_XMSS_SHA2_16_512, 0, 64, 16, 1, 16, 0, 0, 0, 0, 132, 9476, {0x0, 0x0, 0x0, 0x05}},
-    { CRYPT_XMSS_SHA2_20_512, 0, 64, 20, 1, 20, 0, 0, 0, 0, 132, 9732, {0x0, 0x0, 0x0, 0x06}},
-
-    { CRYPT_XMSS_SHAKE_10_256, 0, 32, 10, 1, 10, 0, 0, 0, 0,  68, 2500, {0x0, 0x0, 0x0, 0x07}},
-    { CRYPT_XMSS_SHAKE_16_256, 0, 32, 16, 1, 16, 0, 0, 0, 0,  68, 2692, {0x0, 0x0, 0x0, 0x08}},
-    { CRYPT_XMSS_SHAKE_20_256, 0, 32, 20, 1, 20, 0, 0, 0, 0,  68, 2820, {0x0, 0x0, 0x0, 0x09}},
-    { CRYPT_XMSS_SHAKE_10_512, 0, 64, 10, 1, 10, 0, 0, 0, 0, 132, 9092, {0x0, 0x0, 0x0, 0x0a}},
-    { CRYPT_XMSS_SHAKE_16_512, 0, 64, 16, 1, 16, 0, 0, 0, 0, 132, 9476, {0x0, 0x0, 0x0, 0x0b}},
-    { CRYPT_XMSS_SHAKE_20_512, 0, 64, 20, 1, 20, 0, 0, 0, 0, 132, 9732, {0x0, 0x0, 0x0, 0x0c}},
-
-    { CRYPT_XMSS_SHA2_10_192, 0, 24, 10, 1, 10, 0, 0, 0, 0, 52, 1492, {0x0, 0x0, 0x0, 0x0d}},
-    { CRYPT_XMSS_SHA2_16_192, 0, 24, 16, 1, 16, 0, 0, 0, 0, 52, 1636, {0x0, 0x0, 0x0, 0x0e}},
-    { CRYPT_XMSS_SHA2_20_192, 0, 24, 20, 1, 20, 0, 0, 0, 0, 52, 1732, {0x0, 0x0, 0x0, 0x0f}},
- 
-    { CRYPT_XMSS_SHAKE256_10_256, 0, 32, 10, 1, 10, 0, 0, 0, 0, 68, 2500, {0x0, 0x0, 0x0, 0x10}},
-    { CRYPT_XMSS_SHAKE256_16_256, 0, 32, 16, 1, 16, 0, 0, 0, 0, 68, 2692, {0x0, 0x0, 0x0, 0x11}},
-    { CRYPT_XMSS_SHAKE256_20_256, 0, 32, 20, 1, 20, 0, 0, 0, 0, 68, 2820, {0x0, 0x0, 0x0, 0x12}},
-
-    { CRYPT_XMSS_SHAKE256_10_192, 0, 24, 10, 1, 10, 0, 0, 0, 0, 52, 1492, {0x0, 0x0, 0x0, 0x13}},
-    { CRYPT_XMSS_SHAKE256_16_192, 0, 24, 16, 1, 16, 0, 0, 0, 0, 52, 1636, {0x0, 0x0, 0x0, 0x14}},
-    { CRYPT_XMSS_SHAKE256_20_192, 0, 24, 20, 1, 20, 0, 0, 0, 0, 52, 1732, {0x0, 0x0, 0x0, 0x15}},
-
-    { CRYPT_XMSSMT_SHA2_20_2_256,  0, 32, 20,  2, 10, 0, 0, 0, 0,  68,   4963, {0x0, 0x0, 0x0, 0x01}},
-    { CRYPT_XMSSMT_SHA2_20_4_256,  0, 32, 20,  4,  5, 0, 0, 0, 0,  68,   9251, {0x0, 0x0, 0x0, 0x02}},
-    { CRYPT_XMSSMT_SHA2_40_2_256,  0, 32, 40,  2, 20, 0, 0, 0, 0,  68,   5605, {0x0, 0x0, 0x0, 0x03}},
-    { CRYPT_XMSSMT_SHA2_40_4_256,  0, 32, 40,  4, 10, 0, 0, 0, 0,  68,   9893, {0x0, 0x0, 0x0, 0x04}},
-    { CRYPT_XMSSMT_SHA2_40_8_256,  0, 32, 40,  8,  5, 0, 0, 0, 0,  68,  18469, {0x0, 0x0, 0x0, 0x05}},
-    { CRYPT_XMSSMT_SHA2_60_3_256,  0, 32, 60,  3, 20, 0, 0, 0, 0,  68,   8392, {0x0, 0x0, 0x0, 0x06}},
-    { CRYPT_XMSSMT_SHA2_60_6_256,  0, 32, 60,  6, 10, 0, 0, 0, 0,  68,  14824, {0x0, 0x0, 0x0, 0x07}},
-    { CRYPT_XMSSMT_SHA2_60_12_256, 0, 32, 60, 12,  5, 0, 0, 0, 0,  68,  27688, {0x0, 0x0, 0x0, 0x08}},
-    { CRYPT_XMSSMT_SHA2_20_2_512,  0, 64, 20,  2, 10, 0, 0, 0, 0, 132,  18115, {0x0, 0x0, 0x0, 0x09}},
-    { CRYPT_XMSSMT_SHA2_20_4_512,  0, 64, 20,  4,  5, 0, 0, 0, 0, 132,  34883, {0x0, 0x0, 0x0, 0x0a}},
-    { CRYPT_XMSSMT_SHA2_40_2_512,  0, 64, 40,  2, 20, 0, 0, 0, 0, 132,  19397, {0x0, 0x0, 0x0, 0x0b}},
-    { CRYPT_XMSSMT_SHA2_40_4_512,  0, 64, 40,  4, 10, 0, 0, 0, 0, 132,  36165, {0x0, 0x0, 0x0, 0x0c}},
-    { CRYPT_XMSSMT_SHA2_40_8_512,  0, 64, 40,  8,  5, 0, 0, 0, 0, 132,  69701, {0x0, 0x0, 0x0, 0x0d}},
-    { CRYPT_XMSSMT_SHA2_60_3_512,  0, 64, 60,  3, 20, 0, 0, 0, 0, 132,  29064, {0x0, 0x0, 0x0, 0x0e}},
-    { CRYPT_XMSSMT_SHA2_60_6_512,  0, 64, 60,  6, 10, 0, 0, 0, 0, 132,  54216, {0x0, 0x0, 0x0, 0x0f}},
-    { CRYPT_XMSSMT_SHA2_60_12_512, 0, 64, 60, 12,  5, 0, 0, 0, 0, 132, 104520, {0x0, 0x0, 0x0, 0x10}},
-
-    { CRYPT_XMSSMT_SHAKE_20_2_256,  0, 32, 20,  2, 10, 0, 0, 0, 0,  68,   4963, {0x0, 0x0, 0x0, 0x11}},
-    { CRYPT_XMSSMT_SHAKE_20_4_256,  0, 32, 20,  4,  5, 0, 0, 0, 0,  68,   9251, {0x0, 0x0, 0x0, 0x12}},
-    { CRYPT_XMSSMT_SHAKE_40_2_256,  0, 32, 40,  2, 20, 0, 0, 0, 0,  68,   5605, {0x0, 0x0, 0x0, 0x13}},
-    { CRYPT_XMSSMT_SHAKE_40_4_256,  0, 32, 40,  4, 10, 0, 0, 0, 0,  68,   9893, {0x0, 0x0, 0x0, 0x14}},
-    { CRYPT_XMSSMT_SHAKE_40_8_256,  0, 32, 40,  8,  5, 0, 0, 0, 0,  68,  18469, {0x0, 0x0, 0x0, 0x15}},
-    { CRYPT_XMSSMT_SHAKE_60_3_256,  0, 32, 60,  3, 20, 0, 0, 0, 0,  68,   8392, {0x0, 0x0, 0x0, 0x16}},
-    { CRYPT_XMSSMT_SHAKE_60_6_256,  0, 32, 60,  6, 10, 0, 0, 0, 0,  68,  14824, {0x0, 0x0, 0x0, 0x17}},
-    { CRYPT_XMSSMT_SHAKE_60_12_256, 0, 32, 60, 12,  5, 0, 0, 0, 0,  68,  27688, {0x0, 0x0, 0x0, 0x18}},
-    { CRYPT_XMSSMT_SHAKE_20_2_512,  0, 64, 20,  2, 10, 0, 0, 0, 0, 132,  18115, {0x0, 0x0, 0x0, 0x19}},
-    { CRYPT_XMSSMT_SHAKE_20_4_512,  0, 64, 20,  4,  5, 0, 0, 0, 0, 132,  34883, {0x0, 0x0, 0x0, 0x1a}},
-    { CRYPT_XMSSMT_SHAKE_40_2_512,  0, 64, 40,  2, 20, 0, 0, 0, 0, 132,  19397, {0x0, 0x0, 0x0, 0x1b}},
-    { CRYPT_XMSSMT_SHAKE_40_4_512,  0, 64, 40,  4, 10, 0, 0, 0, 0, 132,  36165, {0x0, 0x0, 0x0, 0x1c}},
-    { CRYPT_XMSSMT_SHAKE_40_8_512,  0, 64, 40,  8,  5, 0, 0, 0, 0, 132,  69701, {0x0, 0x0, 0x0, 0x1d}},
-    { CRYPT_XMSSMT_SHAKE_60_3_512,  0, 64, 60,  3, 20, 0, 0, 0, 0, 132,  29064, {0x0, 0x0, 0x0, 0x1e}},
-    { CRYPT_XMSSMT_SHAKE_60_6_512,  0, 64, 60,  6, 10, 0, 0, 0, 0, 132,  54216, {0x0, 0x0, 0x0, 0x1f}},
-    { CRYPT_XMSSMT_SHAKE_60_12_512, 0, 64, 60, 12,  5, 0, 0, 0, 0, 132, 104520, {0x0, 0x0, 0x0, 0x20}},
-
-    { CRYPT_XMSSMT_SHA2_20_2_192,  0, 24, 20,  2, 10, 0, 0, 0, 0, 52,  2955, {0x0, 0x0, 0x0, 0x21}},
-    { CRYPT_XMSSMT_SHA2_20_4_192,  0, 24, 20,  4,  5, 0, 0, 0, 0, 52,  5403, {0x0, 0x0, 0x0, 0x22}},
-    { CRYPT_XMSSMT_SHA2_40_2_192,  0, 24, 40,  2, 20, 0, 0, 0, 0, 52,  3437, {0x0, 0x0, 0x0, 0x23}},
-    { CRYPT_XMSSMT_SHA2_40_4_192,  0, 24, 40,  4, 10, 0, 0, 0, 0, 52,  5885, {0x0, 0x0, 0x0, 0x24}},
-    { CRYPT_XMSSMT_SHA2_40_8_192,  0, 24, 40,  8,  5, 0, 0, 0, 0, 52, 10781, {0x0, 0x0, 0x0, 0x25}},
-    { CRYPT_XMSSMT_SHA2_60_3_192,  0, 24, 60,  3, 20, 0, 0, 0, 0, 52,  5144, {0x0, 0x0, 0x0, 0x26}},
-    { CRYPT_XMSSMT_SHA2_60_6_192,  0, 24, 60,  6, 10, 0, 0, 0, 0, 52,  8816, {0x0, 0x0, 0x0, 0x27}},
-    { CRYPT_XMSSMT_SHA2_60_12_192, 0, 24, 60, 12,  5, 0, 0, 0, 0, 52, 16160, {0x0, 0x0, 0x0, 0x28}},
-
-    { CRYPT_XMSSMT_SHAKE256_20_2_256,  0, 32, 20,  2, 10, 0, 0, 0, 0, 68,  4963, {0x0, 0x0, 0x0, 0x29}},
-    { CRYPT_XMSSMT_SHAKE256_20_4_256,  0, 32, 20,  4,  5, 0, 0, 0, 0, 68,  9251, {0x0, 0x0, 0x0, 0x2a}},
-    { CRYPT_XMSSMT_SHAKE256_40_2_256,  0, 32, 40,  2, 20, 0, 0, 0, 0, 68,  5605, {0x0, 0x0, 0x0, 0x2b}},
-    { CRYPT_XMSSMT_SHAKE256_40_4_256,  0, 32, 40,  4, 10, 0, 0, 0, 0, 68,  9893, {0x0, 0x0, 0x0, 0x2c}},
-    { CRYPT_XMSSMT_SHAKE256_40_8_256,  0, 32, 40,  8,  5, 0, 0, 0, 0, 68, 18469, {0x0, 0x0, 0x0, 0x2d}},
-    { CRYPT_XMSSMT_SHAKE256_60_3_256,  0, 32, 60,  3, 20, 0, 0, 0, 0, 68,  8392, {0x0, 0x0, 0x0, 0x2e}},
-    { CRYPT_XMSSMT_SHAKE256_60_6_256,  0, 32, 60,  6, 10, 0, 0, 0, 0, 68, 14824, {0x0, 0x0, 0x0, 0x2f}},
-    { CRYPT_XMSSMT_SHAKE256_60_12_256, 0, 32, 60, 12,  5, 0, 0, 0, 0, 68, 27688, {0x0, 0x0, 0x0, 0x30}},
-
-    { CRYPT_XMSSMT_SHAKE256_20_2_192,  0, 24, 20,  2, 10, 0, 0, 0, 0, 52,  2955, {0x0, 0x0, 0x0, 0x31}},
-    { CRYPT_XMSSMT_SHAKE256_20_4_192,  0, 24, 20,  4,  5, 0, 0, 0, 0, 52,  5403, {0x0, 0x0, 0x0, 0x32}},
-    { CRYPT_XMSSMT_SHAKE256_40_2_192,  0, 24, 40,  2, 20, 0, 0, 0, 0, 52,  3437, {0x0, 0x0, 0x0, 0x33}},
-    { CRYPT_XMSSMT_SHAKE256_40_4_192,  0, 24, 40,  4, 10, 0, 0, 0, 0, 52,  5885, {0x0, 0x0, 0x0, 0x34}},
-    { CRYPT_XMSSMT_SHAKE256_40_8_192,  0, 24, 40,  8,  5, 0, 0, 0, 0, 52, 10781, {0x0, 0x0, 0x0, 0x35}},
-    { CRYPT_XMSSMT_SHAKE256_60_3_192,  0, 24, 60,  3, 20, 0, 0, 0, 0, 52,  5144, {0x0, 0x0, 0x0, 0x36}},
-    { CRYPT_XMSSMT_SHAKE256_60_6_192,  0, 24, 60,  6, 10, 0, 0, 0, 0, 52,  8816, {0x0, 0x0, 0x0, 0x37}},
-    { CRYPT_XMSSMT_SHAKE256_60_12_192, 0, 24, 60, 12,  5, 0, 0, 0, 0, 52, 16160, {0x0, 0x0, 0x0, 0x38}},
-};
-
-// “X” means xmss
-static void XAdrsSetLayerAddr(XmssAdrs *adrs, uint32_t layer)
-{
-    PUT_UINT32_BE(layer, adrs->x.layerAddr, 0);
-}
-
-static void XAdrsSetTreeAddr(XmssAdrs *adrs, uint64_t tree)
-{
-    PUT_UINT64_BE(tree, adrs->x.treeAddr, 0);
-}
-
-static void XAdrsSetType(XmssAdrs *adrs, AdrsType type)
-{
-    PUT_UINT32_BE(type, adrs->x.type, 0);
-    (void)memset_s(adrs->x.padding, sizeof(adrs->x.padding), 0, sizeof(adrs->x.padding));
-}
-
-static void XAdrsSetKeyPairAddr(XmssAdrs *adrs, uint32_t keyPair)
-{
-    PUT_UINT32_BE(keyPair, adrs->x.padding, 0);
-}
-
-static void XAdrsSetChainAddr(XmssAdrs *adrs, uint32_t chain)
-{
-    PUT_UINT32_BE(chain, adrs->x.padding, 4); // chain address is 4 bytes, start from 4-th byte
-}
-
-static void XAdrsSetTreeHeight(XmssAdrs *adrs, uint32_t height)
-{
-    PUT_UINT32_BE(height, adrs->x.padding, 4); // tree height is 4 bytes, start from 4-th byte
-}
-
-static void XAdrsSetHashAddr(XmssAdrs *adrs, uint32_t hash)
-{
-    PUT_UINT32_BE(hash, adrs->x.padding, 8); // hash address is 4 bytes, start from 8-th byte
-}
-
-static void XAdrsSetTreeIndex(XmssAdrs *adrs, uint32_t index)
-{
-    PUT_UINT32_BE(index, adrs->x.padding, 8); // tree index is 4 bytes, start from 8-th byte
-}
-
-static void XAdrsSetKeyAndMask(XmssAdrs *adrs, uint32_t KeyAndMask)
-{
-    PUT_UINT32_BE(KeyAndMask, adrs->x.padding, 12); // KeyAndMask is 4 bytes, start from 12-th byte
-}
-
-static uint32_t XAdrsGetTreeHeight(const XmssAdrs *adrs)
-{
-    return GET_UINT32_BE(adrs->x.padding, 4);
-}
-
-static uint32_t XAdrsGetTreeIndex(const XmssAdrs *adrs)
-{
-    return GET_UINT32_BE(adrs->x.padding, 8); // tree index is 4 bytes, start from 8-th byte
-}
-
-static void XAdrsCopyKeyPairAddr(XmssAdrs *adrs, const XmssAdrs *adrs2)
-{
-    (void)memcpy_s(adrs->x.padding, sizeof(adrs->x.padding), adrs2->x.padding,
-                   4); // key pair address is 4 bytes, start from 4-th byte
-}
-
-static uint32_t XAdrsGetAdrsLen()
-{
-    return XMSS_ADRS_LEN;
-}
-
 CryptXmssCtx *CRYPT_XMSS_NewCtx(void)
 {
     CryptXmssCtx *ctx = (CryptXmssCtx *)BSL_SAL_Calloc(sizeof(CryptXmssCtx), 1);
@@ -213,8 +51,7 @@ CryptXmssCtx *CRYPT_XMSS_NewCtx(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    ctx->isXmss = true;
-    ctx->para.algId = 0;
+    ctx->params = NULL;
     return ctx;
 }
 
@@ -233,8 +70,8 @@ void CRYPT_XMSS_FreeCtx(CryptXmssCtx *ctx)
     if (ctx == NULL) {
         return;
     }
-    BSL_SAL_CleanseData(ctx->prvKey.seed, sizeof(ctx->prvKey.seed));
-    BSL_SAL_CleanseData(ctx->prvKey.prf, sizeof(ctx->prvKey.prf));
+    BSL_SAL_CleanseData(ctx->key.seed, sizeof(ctx->key.seed));
+    BSL_SAL_CleanseData(ctx->key.prf, sizeof(ctx->key.prf));
     BSL_SAL_Free(ctx);
 }
 
@@ -246,288 +83,19 @@ static bool CheckNotXmssAlgId(int32_t algId)
     return false;
 }
 
-int32_t CRYPT_XMSS_Gen(CryptXmssCtx *ctx)
-{
-    int32_t ret;
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (CheckNotXmssAlgId(ctx->para.algId)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_ALGID);
-        return CRYPT_XMSS_ERR_INVALID_ALGID;
-    }
-    uint32_t n = ctx->para.n;
-    uint32_t d = ctx->para.d;
-    uint32_t hp = ctx->para.hp;
-    ret = CRYPT_RandEx(ctx->libCtx, ctx->prvKey.seed, n);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-    ret = CRYPT_RandEx(ctx->libCtx, ctx->prvKey.prf, n);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    
-    ret = CRYPT_RandEx(ctx->libCtx, ctx->prvKey.pub.seed, n);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    XmssAdrs adrs;
-    (void)memset_s(&adrs, sizeof(XmssAdrs), 0, sizeof(XmssAdrs));
-    ctx->adrsOps.setLayerAddr(&adrs, d - 1);
-    uint8_t node[MAX_MDSIZE] = {0};
-    ret = XmssNode(node, 0, hp, &adrs, ctx, NULL, 0);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    (void)memcpy_s(ctx->prvKey.pub.root, n, node, n);
-
-    /* init the private key index to 0 */
-    ctx->prvKey.index = 0;
-
-    return CRYPT_SUCCESS;
-}
-
-/* integer to big-endian bytes */
-static void U64toBytes(uint8_t *out, uint32_t outlen, uint64_t in)
-{
-    for (int32_t i = outlen - 1; i >= 0; i--) {
-        out[i] = in & 0xff;
-        in = in >> 8;
-    }
-}
-
-/* big-endian bytes to integer. */
-static uint64_t BytestoU64(const uint8_t *in, uint32_t inlen)
-{
-    uint64_t ret = 0;
-    for (; inlen > 0; in++, inlen--) {
-        ret = ret << 8;
-        ret |= in[0];
-    }
-    return ret;
-}
-
-static int32_t CRYPT_XMSS_SignInternal(CryptXmssCtx *ctx, const uint8_t *msg, uint32_t msgLen, uint8_t *sig,
-                                       uint32_t *sigLen)
-{
-    int32_t ret;
-    uint32_t n = ctx->para.n;
-    uint32_t d = ctx->para.d;
-    uint32_t h = ctx->para.h;
-    uint32_t hp = ctx->para.hp;
-    uint32_t sigBytes = ctx->para.sigBytes;
-    uint64_t index = ctx->prvKey.index;
-    uint64_t treeIdx;
-    uint32_t leafIdx;
-    uint32_t IdxBytes;
-    uint8_t idx[MAX_MDSIZE] = {0};
-
-    if (*sigLen < sigBytes) {
-        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_SIG_LEN);
-        return CRYPT_XMSS_ERR_INVALID_SIG_LEN;
-    }
-
-    if (h == 64) {
-        /* we do not use the last signature while total height 64,
-         * otherwisw, index will wrap. */
-        if (index == ((1ULL << h) - 1)) {
-            BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_KEY_EXPIRED);
-            return CRYPT_XMSS_ERR_KEY_EXPIRED;
-        }
-    } else {
-        if (index > ((1ULL << h) - 1)) {
-            BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_KEY_EXPIRED);
-            return CRYPT_XMSS_ERR_KEY_EXPIRED;
-        }
-    }
-
-    /* increment the private key index */
-    /* An implementation MUST NOT output the signature before the private key is updated. */
-    ctx->prvKey.index++;
-
-    uint32_t offset = 0;
-    uint32_t left = 0;
-
-    if (d == 1) {
-        /* XMSS, 4-bytes index_bytes*/
-        IdxBytes = 4;
-    } else {
-        /* XMSSMT, (ceil(h / 8))-bytes index_bytes */
-        IdxBytes = (h + 7) / 8;
-    }
-    U64toBytes(sig, IdxBytes, index);
-    offset += IdxBytes;
-    
-    PUT_UINT64_BE(index, idx, sizeof(idx) - 8);
-
-    ret = ctx->hashFuncs.prfmsg(ctx, idx + sizeof(idx) - 32, NULL, 0, sig + offset);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-
-    uint8_t digest[MAX_MDSIZE] = {0};
-    ret = ctx->hashFuncs.hmsg(ctx, sig + offset, msg, msgLen, idx + sizeof(idx) - n, digest);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    offset += n;
-    left = *sigLen - offset;
-    
-    leafIdx = index & ((1UL << hp) - 1);
-    treeIdx = index >> hp;
-    ret = HypertreeSign(digest, n, treeIdx, leafIdx, ctx, sig + offset, &left);
-    *sigLen = offset + left;
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_XMSS_Sign(CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen, uint8_t *sign,
-                        uint32_t *signLen)
-{
-    (void)algId;
-    int32_t ret;
-
-    if (ctx == NULL || data == NULL || dataLen == 0 || sign == NULL || signLen == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    ret = CRYPT_XMSS_SignInternal(ctx, data, dataLen, sign, signLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    return CRYPT_SUCCESS;
-}
-
-static int32_t CRYPT_XMSS_VerifyInternal(const CryptXmssCtx *ctx, const uint8_t *msg, uint32_t msgLen,
-                                         const uint8_t *sig, uint32_t sigLen)
-{
-    int32_t ret;
-    uint32_t n = ctx->para.n;
-    uint32_t d = ctx->para.d;
-    uint32_t h = ctx->para.h;
-    uint32_t hp = ctx->para.hp;
-    uint32_t sigBytes = ctx->para.sigBytes;
-    uint64_t index;
-    uint64_t treeIdx;
-    uint32_t leafIdx;
-    uint32_t IdxBytes;
-    uint8_t idx[MAX_MDSIZE] = {0};
-
-    if (sigLen != sigBytes) {
-        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_SIG_LEN);
-        return CRYPT_XMSS_ERR_INVALID_SIG_LEN;
-    }
-    uint32_t offset = 0;
-
-    if (d == 1) {
-        /* XMSS, 4-bytes index_bytes*/
-        IdxBytes = 4;
-    } else {
-        /* XMSSMT, (ceil(h / 8))-bytes index_bytes */
-        IdxBytes = (h + 7) / 8;
-    }
-    index = BytestoU64(sig, IdxBytes);
-    offset += IdxBytes;
-    
-    PUT_UINT64_BE(index, idx, sizeof(idx) - 8);
-
-    uint8_t digest[MAX_MDSIZE] = {0};
-    ret = ctx->hashFuncs.hmsg(ctx, sig + offset, msg, msgLen, idx + sizeof(idx) - n, digest);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    offset += n;
-
-    leafIdx = index & ((1UL << hp) - 1);
-    treeIdx = index >> hp;
-    ret = HypertreeVerify(digest, n, sig + offset, sigLen - offset, treeIdx, leafIdx, ctx);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    return CRYPT_SUCCESS;
-}
-
-int32_t CRYPT_XMSS_Verify(const CryptXmssCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
-                          const uint8_t *sign, uint32_t signLen)
-{
-    (void)algId;
-    int32_t ret;
-
-    if (ctx == NULL || data == NULL || dataLen == 0 || sign == NULL || signLen == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    ret = CRYPT_XMSS_VerifyInternal(ctx, data, dataLen, sign, signLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    return CRYPT_SUCCESS;
-}
-
-static const XmssPara *FindXmssPara(CRYPT_PKEY_ParaId algId)
-{
-    for (uint32_t i = 0; i < sizeof(g_xmssParaTable) / sizeof(g_xmssParaTable[0]); i++) {
-        if ((CRYPT_PKEY_ParaId)g_xmssParaTable[i].algId == algId) {
-            return &g_xmssParaTable[i];
-        }
-    }
-    return NULL;
-}
-
 static int32_t XmssSetAlgId(CryptXmssCtx *ctx, CRYPT_PKEY_ParaId algId)
 {
-    int32_t ret;
-    const XmssPara *para = NULL;
-    static const AdrsOps XadrsOps = {
-        .setLayerAddr = XAdrsSetLayerAddr,
-        .setTreeAddr = XAdrsSetTreeAddr,
-        .setType = XAdrsSetType,
-        .setKeyPairAddr = XAdrsSetKeyPairAddr,
-        .setChainAddr = XAdrsSetChainAddr,
-        .setTreeHeight = XAdrsSetTreeHeight,
-        .setHashAddr = XAdrsSetHashAddr,
-        .setTreeIndex = XAdrsSetTreeIndex,
-        .setKeyAndMask = XAdrsSetKeyAndMask,
-        .getTreeHeight = XAdrsGetTreeHeight,
-        .getTreeIndex = XAdrsGetTreeIndex,
-        .copyKeyPairAddr = XAdrsCopyKeyPairAddr,
-        .getAdrsLen = XAdrsGetAdrsLen,
-    };
-
-    para = FindXmssPara(algId);
+    const XmssParams *para = FindXmssPara(algId);
     if (para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_ALGID);
         return CRYPT_XMSS_ERR_INVALID_ALGID;
     }
-    ctx->para = *para;
-    ret = XmssInitHashFuncs(ctx);
+    int32_t ret = CRYPT_XMSS_InitInternal(ctx, para);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_ALGID);
         return CRYPT_XMSS_ERR_INVALID_ALGID;
     }
-    ctx->adrsOps = XadrsOps;
     return CRYPT_SUCCESS;
-}
-
-static inline uint32_t BigEndian2U32(const uint8_t in[4])
-{
-    return ((uint32_t)in[0] << 24)
-         | ((uint32_t)in[1] << 16)
-         | ((uint32_t)in[2] <<  8)
-         |  (uint32_t)in[3];
 }
 
 static int32_t XmssSetParaId(CryptXmssCtx *ctx, void *val, uint32_t len)
@@ -544,66 +112,107 @@ static int32_t XmssSetParaId(CryptXmssCtx *ctx, void *val, uint32_t len)
     return XmssSetAlgId(ctx, algId);
 }
 
+/*
+ * Get XMSS public key length (RFC 9802)
+ * Returns: XDR type (4 bytes) + pubSeed (n bytes) + root (n bytes)
+ */
 static int32_t XmssGetPubkeyLen(CryptXmssCtx *ctx, void *val, uint32_t len)
 {
     if (len != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    *(uint32_t *)val = ctx->para.n * 2 + HASH_SIGN_XDR_ALG_TYPE_LEN;
+    *(uint32_t *)val = ctx->params->n * 2 + HASH_SIGN_XDR_ALG_TYPE_LEN;
     return CRYPT_SUCCESS;
 }
 
+/*
+ * Get XMSS signature length
+ * Returns the signature size in bytes for the current parameter set
+ */
 static int32_t XmssGetSignatureLen(CryptXmssCtx *ctx, void *val, uint32_t len)
 {
     if (len != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    *(uint32_t *)val = ctx->para.sigBytes;
+    *(uint32_t *)val = ctx->params->sigBytes;
     return CRYPT_SUCCESS;
 }
 
+/*
+ * Get XMSS algorithm parameter ID
+ * Returns the CRYPT_PKEY_ParaId for the current parameter set
+ */
 static int32_t XmssGetParaId(CryptXmssCtx *ctx, void *val, uint32_t len)
 {
     if (len != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    *(int32_t *)val = (int32_t)ctx->para.algId;
+    if (ctx->params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
+        return CRYPT_XMSS_KEYINFO_NOT_SET;
+    }
+    *(int32_t *)val = (int32_t)ctx->params->algId;
     return CRYPT_SUCCESS;
 }
 
-static int32_t XmssGetParaIdByXdrAlgBuff(uint8_t *val, uint32_t len)
-{
-    if (len < HASH_SIGN_XDR_ALG_TYPE_LEN) {
-        return XMSS_INVALID_XDR;
-    }
-    uint32_t xdrId = BigEndian2U32(val);
-    if (xdrId == 0 || xdrId >= sizeof(g_xmssParaTable) / sizeof(g_xmssParaTable[0])) {
-        return XMSS_INVALID_XDR;
-    }
-    return g_xmssParaTable[xdrId - 1].algId;
-}
-
+/*
+ * Get XDR algorithm type buffer (RFC 9802)
+ * Copies the 4-byte XDR OID to the output buffer
+ */
 static int32_t XmssGetXdrAlgBuff(CryptXmssCtx *ctx, void *val, uint32_t len)
 {
     if (len < HASH_SIGN_XDR_ALG_TYPE_LEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    (void)memcpy_s(val, len, ctx->para.xdrAlgId, HASH_SIGN_XDR_ALG_TYPE_LEN);
+    if (ctx->params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
+        return CRYPT_XMSS_KEYINFO_NOT_SET;
+    }
+    (void)memcpy_s(val, len, ctx->params->xdrAlgId, HASH_SIGN_XDR_ALG_TYPE_LEN);
     return CRYPT_SUCCESS;
 }
 
+/*
+ * Set XMSS parameters by XDR algorithm ID (RFC 9802)
+ *
+ * Allows setting algorithm parameters using the 4-byte XDR OID.
+ * This is used when loading XMSS public keys from X.509 certificates.
+ *
+ * @param ctx  XMSS context
+ * @param val  Pointer to 4-byte XDR OID buffer
+ * @param len  Buffer length (must be >= 4)
+ *
+ * @return CRYPT_SUCCESS on success
+ *         CRYPT_XMSS_ERR_INVALID_XDR_ID if XDR ID is invalid
+ */
 static int32_t XmssSetXdrAlgId(CryptXmssCtx *ctx, void *val, uint32_t len)
 {
-    int32_t algId = XmssGetParaIdByXdrAlgBuff(val, len);
-    if (algId == XMSS_INVALID_XDR) {
+    if (val == NULL || len < HASH_SIGN_XDR_ALG_TYPE_LEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    return XmssSetParaId(ctx, &algId, sizeof(algId));
+
+    /* Convert 4-byte buffer to uint32 */
+    uint32_t xdrId = GET_UINT32_BE((const uint8_t *)val, 0);
+
+    /* Look up parameters by XDR ID (return pointer to global table) */
+    const XmssParams *params = XmssParams_FindByXdrId(xdrId);
+    if (params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_XDR_ID);
+        return CRYPT_XMSS_ERR_INVALID_XDR_ID;
+    }
+
+    /* Initialize core context with found parameters */
+    int32_t ret = CRYPT_XMSS_InitInternal(ctx, params);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_XMSS_Ctrl(CryptXmssCtx *ctx, int32_t opt, void *val, uint32_t len)
@@ -631,6 +240,62 @@ int32_t CRYPT_XMSS_Ctrl(CryptXmssCtx *ctx, int32_t opt, void *val, uint32_t len)
     }
 }
 
+int32_t CRYPT_XMSS_Gen(CryptXmssCtx *ctx)
+{
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->params == NULL || CheckNotXmssAlgId(ctx->params->algId)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_ALGID);
+        return CRYPT_XMSS_ERR_INVALID_ALGID;
+    }
+
+    /* Generate key pair using core API */
+    int32_t ret = CRYPT_XMSS_KeyGenInternal(ctx);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_XMSS_Sign(CryptXmssCtx *ctx, int32_t algId,
+                        const uint8_t *data, uint32_t dataLen,
+                        uint8_t *sign, uint32_t *signLen)
+{
+    (void)algId;
+    if (ctx == NULL || data == NULL || sign == NULL || signLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    int32_t ret = CRYPT_XMSS_SignInternal(ctx, data, dataLen, sign, signLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return CRYPT_SUCCESS;
+}
+
+int32_t CRYPT_XMSS_Verify(const CryptXmssCtx *ctx, int32_t algId,
+                          const uint8_t *data, uint32_t dataLen,
+                          const uint8_t *sign, uint32_t signLen)
+{
+    (void)algId;
+    if (ctx == NULL || data == NULL || sign == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    /* Verify signature using internal API */
+    int32_t ret = CRYPT_XMSS_VerifyInternal(ctx, data, dataLen, sign, signLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return CRYPT_SUCCESS;
+}
+
 static int32_t XPubKeyParamCheck(BSL_Param *para, XmssPubKeyParam *pub)
 {
     pub->pubSeed = BSL_PARAM_FindParam(para, CRYPT_PARAM_XMSS_PUB_SEED);
@@ -653,7 +318,7 @@ int32_t CRYPT_XMSS_GetPubKey(const CryptXmssCtx *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->para.algId == 0) {
+    if (ctx->params == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
         return CRYPT_XMSS_KEYINFO_NOT_SET;
     }
@@ -663,23 +328,25 @@ int32_t CRYPT_XMSS_GetPubKey(const CryptXmssCtx *ctx, BSL_Param *para)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+    /* Copy XDR type if requested (RFC 9802 X.509 support) */
     if (pub.pubXdr != NULL) {
-        if (memcpy_s(pub.pubXdr->value, pub.pubXdr->valueLen, ctx->para.xdrAlgId, HASH_SIGN_XDR_ALG_TYPE_LEN) != 0) {
+        if (memcpy_s(pub.pubXdr->value, pub.pubXdr->valueLen,
+                     ctx->params->xdrAlgId, HASH_SIGN_XDR_ALG_TYPE_LEN) != 0) {
             BSL_ERR_PUSH_ERROR(CRYPT_XMSS_LEN_NOT_ENOUGH);
             return CRYPT_XMSS_LEN_NOT_ENOUGH;
         }
         pub.pubXdr->useLen = HASH_SIGN_XDR_ALG_TYPE_LEN;
     }
-    if (memcpy_s(pub.pubSeed->value, pub.pubSeed->valueLen, ctx->prvKey.pub.seed, ctx->para.n) != 0) {
+    if (memcpy_s(pub.pubSeed->value, pub.pubSeed->valueLen, ctx->key.pubSeed, ctx->params->n) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_LEN_NOT_ENOUGH);
         return CRYPT_XMSS_LEN_NOT_ENOUGH;
     }
-    pub.pubSeed->useLen = ctx->para.n;
-    if (memcpy_s(pub.pubRoot->value, pub.pubRoot->valueLen, ctx->prvKey.pub.root, ctx->para.n) != 0) {
+    pub.pubSeed->useLen = ctx->params->n;
+    if (memcpy_s(pub.pubRoot->value, pub.pubRoot->valueLen, ctx->key.root, ctx->params->n) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_LEN_NOT_ENOUGH);
         return CRYPT_XMSS_LEN_NOT_ENOUGH;
     }
-    pub.pubRoot->useLen = ctx->para.n;
+    pub.pubRoot->useLen = ctx->params->n;
     return CRYPT_SUCCESS;
 }
 
@@ -690,15 +357,17 @@ static int32_t XPrvKeyParamCheck(const CryptXmssCtx *ctx, BSL_Param *para, XmssP
     prv->prvPrf = BSL_PARAM_FindParam(para, CRYPT_PARAM_XMSS_PRV_PRF);
     prv->pubSeed = BSL_PARAM_FindParam(para, CRYPT_PARAM_XMSS_PUB_SEED);
     prv->pubRoot = BSL_PARAM_FindParam(para, CRYPT_PARAM_XMSS_PUB_ROOT);
-    if (prv->prvIndex == NULL || prv->prvIndex->value == NULL || prv->prvSeed == NULL || prv->prvSeed->value == NULL ||
-        prv->prvPrf == NULL || prv->prvPrf->value == NULL || prv->pubSeed == NULL || prv->pubSeed->value == NULL ||
+    if (prv->prvIndex == NULL || prv->prvIndex->value == NULL ||
+        prv->prvSeed == NULL || prv->prvSeed->value == NULL ||
+        prv->prvPrf == NULL || prv->prvPrf->value == NULL ||
+        prv->pubSeed == NULL || prv->pubSeed->value == NULL ||
         prv->pubRoot == NULL || prv->pubRoot->value == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (prv->prvIndex->valueLen != sizeof(ctx->prvKey.index) || prv->prvSeed->valueLen != ctx->para.n ||
-        prv->prvPrf->valueLen != ctx->para.n || prv->pubSeed->valueLen != ctx->para.n ||
-        prv->pubRoot->valueLen != ctx->para.n) {
+    if (prv->prvIndex->valueLen != sizeof(ctx->key.idx) || prv->prvSeed->valueLen != ctx->params->n ||
+        prv->prvPrf->valueLen != ctx->params->n || prv->pubSeed->valueLen != ctx->params->n ||
+        prv->pubRoot->valueLen != ctx->params->n) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_KEYLEN);
         return CRYPT_XMSS_ERR_INVALID_KEYLEN;
     }
@@ -708,20 +377,20 @@ static int32_t XPrvKeyParamCheck(const CryptXmssCtx *ctx, BSL_Param *para, XmssP
 int32_t CRYPT_XMSS_GetPrvKey(const CryptXmssCtx *ctx, BSL_Param *para)
 {
     XmssPrvKeyParam prv;
-    uint64_t index = ctx->prvKey.index;
+    uint64_t index = ctx->key.idx;
     int32_t ret = XPrvKeyParamCheck(ctx, para, &prv);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    prv.prvSeed->useLen = ctx->para.n;
-    prv.prvPrf->useLen = ctx->para.n;
-    prv.pubSeed->useLen = ctx->para.n;
-    prv.pubRoot->useLen = ctx->para.n;
-    (void)memcpy_s(prv.prvSeed->value, prv.prvSeed->valueLen, ctx->prvKey.seed, ctx->para.n);
-    (void)memcpy_s(prv.prvPrf->value, prv.prvPrf->valueLen, ctx->prvKey.prf, ctx->para.n);
-    (void)memcpy_s(prv.pubSeed->value, prv.pubSeed->valueLen, ctx->prvKey.pub.seed, ctx->para.n);
-    (void)memcpy_s(prv.pubRoot->value, prv.pubRoot->valueLen, ctx->prvKey.pub.root, ctx->para.n);
+    prv.prvSeed->useLen = ctx->params->n;
+    prv.prvPrf->useLen = ctx->params->n;
+    prv.pubSeed->useLen = ctx->params->n;
+    prv.pubRoot->useLen = ctx->params->n;
+    (void)memcpy_s(prv.prvSeed->value, prv.prvSeed->valueLen, ctx->key.seed, ctx->params->n);
+    (void)memcpy_s(prv.prvPrf->value, prv.prvPrf->valueLen, ctx->key.prf, ctx->params->n);
+    (void)memcpy_s(prv.pubSeed->value, prv.pubSeed->valueLen, ctx->key.pubSeed, ctx->params->n);
+    (void)memcpy_s(prv.pubRoot->value, prv.pubRoot->valueLen, ctx->key.root, ctx->params->n);
     return BSL_PARAM_SetValue(prv.prvIndex, CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64,
             &index, sizeof(index));
 }
@@ -732,29 +401,38 @@ int32_t CRYPT_XMSS_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->para.algId == 0) {
+    if (ctx->params == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
         return CRYPT_XMSS_KEYINFO_NOT_SET;
     }
+
     XmssPubKeyParam pub;
     int32_t ret = XPubKeyParamCheck((BSL_Param *)(uintptr_t)para, &pub);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
+
+    /* Validate XDR type if provided (RFC 9802 X.509 support) */
     if (pub.pubXdr != NULL) {
-        int32_t algId = XmssGetParaIdByXdrAlgBuff(pub.pubXdr->value, pub.pubXdr->valueLen);
-        if (algId != ctx->para.algId) {
+        uint32_t xdrId = GET_UINT32_BE((uint8_t *)pub.pubXdr->value, 0);
+        const XmssParams *params = XmssParams_FindByXdrId(xdrId);
+        if (params == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_XDR_ID);
+            return CRYPT_XMSS_ERR_INVALID_XDR_ID;
+        }
+        /* Verify XDR matches currently set algorithm ID */
+        if (params->algId != ctx->params->algId) {
             BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_XDR_ID_UNMATCH);
             return CRYPT_XMSS_ERR_XDR_ID_UNMATCH;
         }
     }
-    if (pub.pubSeed->valueLen != ctx->para.n || pub.pubRoot->valueLen != ctx->para.n) {
+    if (pub.pubSeed->valueLen != ctx->params->n || pub.pubRoot->valueLen != ctx->params->n) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_KEYLEN);
         return CRYPT_XMSS_ERR_INVALID_KEYLEN;
     }
-    (void)memcpy_s(ctx->prvKey.pub.seed, MAX_MDSIZE, pub.pubSeed->value, pub.pubSeed->valueLen);
-    (void)memcpy_s(ctx->prvKey.pub.root, MAX_MDSIZE, pub.pubRoot->value, pub.pubRoot->valueLen);
+    (void)memcpy_s(ctx->key.pubSeed, XMSS_MAX_MDSIZE, pub.pubSeed->value, pub.pubSeed->valueLen);
+    (void)memcpy_s(ctx->key.root, XMSS_MAX_MDSIZE, pub.pubRoot->value, pub.pubRoot->valueLen);
     return CRYPT_SUCCESS;
 }
 
@@ -764,23 +442,22 @@ int32_t CRYPT_XMSS_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (ctx->para.algId == 0) {
+    if (ctx->params == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
         return CRYPT_XMSS_KEYINFO_NOT_SET;
     }
     XmssPrvKeyParam prv;
-    uint32_t tmplen = sizeof(ctx->prvKey.index);
+    uint32_t tmplen = sizeof(ctx->key.idx);
     int32_t ret = XPrvKeyParamCheck(ctx, (BSL_Param *)(uintptr_t)para, &prv);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    (void)memcpy_s(ctx->prvKey.seed, sizeof(ctx->prvKey.seed), prv.prvSeed->value, ctx->para.n);
-    (void)memcpy_s(ctx->prvKey.prf, sizeof(ctx->prvKey.prf), prv.prvPrf->value, ctx->para.n);
-    (void)memcpy_s(ctx->prvKey.pub.seed, sizeof(ctx->prvKey.pub.seed), prv.pubSeed->value, ctx->para.n);
-    (void)memcpy_s(ctx->prvKey.pub.root, sizeof(ctx->prvKey.pub.root), prv.pubRoot->value, ctx->para.n);
-    return BSL_PARAM_GetValue(prv.prvIndex, CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64,
-            &ctx->prvKey.index, &tmplen);
+    (void)memcpy_s(ctx->key.seed, sizeof(ctx->key.seed), prv.prvSeed->value, ctx->params->n);
+    (void)memcpy_s(ctx->key.prf, sizeof(ctx->key.prf), prv.prvPrf->value, ctx->params->n);
+    (void)memcpy_s(ctx->key.pubSeed, sizeof(ctx->key.pubSeed), prv.pubSeed->value, ctx->params->n);
+    (void)memcpy_s(ctx->key.root, sizeof(ctx->key.root), prv.pubRoot->value, ctx->params->n);
+    return BSL_PARAM_GetValue(prv.prvIndex, CRYPT_PARAM_XMSS_PRV_INDEX, BSL_PARAM_TYPE_UINT64, &ctx->key.idx, &tmplen);
 }
 
 CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx)
@@ -795,11 +472,28 @@ CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx)
         return NULL;
     }
     memcpy_s(newCtx, sizeof(CryptXmssCtx), ctx, sizeof(CryptXmssCtx));
-    newCtx->addrand = NULL;
-    newCtx->addrandLen = 0;
-    newCtx->context = NULL;
-    newCtx->contextLen = 0;
     return newCtx;
+}
+
+void InitTreeCtxFromXmssCtx(TreeCtx *treeCtx, const CryptXmssCtx *ctx)
+{
+    /* Initialize algorithm parameters */
+    treeCtx->n = ctx->params->n;
+    treeCtx->hp = ctx->params->hp;
+    treeCtx->d = ctx->params->d;
+    treeCtx->wotsLen = ctx->params->wotsLen;
+
+    /* Initialize key material */
+    treeCtx->pubSeed = ctx->key.pubSeed;
+    treeCtx->skSeed = ctx->key.seed;
+    treeCtx->root = ctx->key.root;
+
+    /* Initialize hash function table */
+    treeCtx->hashFuncs = ctx->hashFuncs;
+    /* Initialize address operations */
+    treeCtx->adrsOps = &ctx->adrsOps;
+    treeCtx->originalCtx = (void *)(uintptr_t)ctx;
+    treeCtx->isXmss = true;
 }
 
 #ifdef HITLS_CRYPTO_XMSS_CHECK
@@ -810,37 +504,41 @@ static int32_t XMSSKeyPairCheck(const CryptXmssCtx *pubKey, const CryptXmssCtx *
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (pubKey->para.algId == 0 || prvKey->para.algId == 0) {
+    if (prvKey->params == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
         return CRYPT_XMSS_KEYINFO_NOT_SET;
     }
-    if (pubKey->para.algId != prvKey->para.algId) {
+    if (pubKey->params->algId != prvKey->params->algId) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_PAIRWISE_CHECK_FAIL);
         return CRYPT_XMSS_PAIRWISE_CHECK_FAIL;
     }
 
-    uint32_t n = prvKey->para.n;
-    uint32_t d = prvKey->para.d;
-    uint32_t hp = prvKey->para.hp;
+    uint32_t n = prvKey->params->n;
+    uint32_t d = prvKey->params->d;
+    uint32_t hp = prvKey->params->hp;
 
     // Recalculate root from private key
     XmssAdrs adrs;
     (void)memset_s(&adrs, sizeof(XmssAdrs), 0, sizeof(XmssAdrs));
     prvKey->adrsOps.setLayerAddr(&adrs, d - 1);
-    uint8_t node[MAX_MDSIZE] = {0};
-    int32_t ret = XmssNode(node, 0, hp, &adrs, prvKey, NULL, 0);
+
+    TreeCtx treeCtx;
+    InitTreeCtxFromXmssCtx(&treeCtx, prvKey);
+
+    uint8_t node[XMSS_MAX_MDSIZE] = {0};
+    int32_t ret = XmssTree_ComputeNode(node, 0, hp, &adrs, &treeCtx, NULL, 0);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
     // Compare recalculated root with public key root
-    if (memcmp(node, pubKey->prvKey.pub.root, n) != 0) {
+    if (memcmp(node, pubKey->key.root, n) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_PAIRWISE_CHECK_FAIL);
         return CRYPT_XMSS_PAIRWISE_CHECK_FAIL;
     }
     // Compare public seeds
-    if (memcmp(prvKey->prvKey.pub.seed, pubKey->prvKey.pub.seed, n) != 0) {
+    if (memcmp(prvKey->key.pubSeed, pubKey->key.pubSeed, n) != 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_PAIRWISE_CHECK_FAIL);
         return CRYPT_XMSS_PAIRWISE_CHECK_FAIL;
     }
@@ -854,11 +552,11 @@ static int32_t XMSSPrvKeyCheck(const CryptXmssCtx *prvKey)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (prvKey->para.algId == 0) {
+    if (prvKey->params == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
         return CRYPT_XMSS_KEYINFO_NOT_SET;
     }
-    if (prvKey->para.n == 0) {
+    if (prvKey->params->algId == 0 || prvKey->params->n == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_INVALID_PRVKEY);
         return CRYPT_XMSS_INVALID_PRVKEY;
     }

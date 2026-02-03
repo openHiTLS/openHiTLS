@@ -99,7 +99,7 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
         ctx->adrsOps.setTreeHeight(adrs, 0);
         ctx->adrsOps.setTreeIndex(adrs, (i << a) + indices[i]);
 
-        ret = ctx->hashFuncs.f(ctx, adrs, sig + (a + 1) * n * i, n, node0);
+        ret = ctx->hashFuncs->f(ctx, adrs, sig + (a + 1) * n * i, n, node0);
         if (ret != 0) {
             goto ERR;
         }
@@ -117,7 +117,7 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
                 (void)memcpy_s(tmp + n, sizeof(tmp) - n, auth + j * n, n);
             }
 
-            ret = ctx->hashFuncs.h(ctx, adrs, tmp, 2 * n, node1);
+            ret = ctx->hashFuncs->h(ctx, adrs, tmp, 2 * n, node1);
             if (ret != 0) {
                 goto ERR;
             }
@@ -130,7 +130,7 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
     ctx->adrsOps.setType(&forspkAdrs, FORS_ROOTS);
     ctx->adrsOps.copyKeyPairAddr(&forspkAdrs, adrs);
 
-    ret = ctx->hashFuncs.tl(ctx, &forspkAdrs, root, n * k, pk);
+    ret = ctx->hashFuncs->tl(ctx, &forspkAdrs, root, n * k, pk);
     if (ret != 0) {
         goto ERR;
     }
@@ -148,7 +148,7 @@ int32_t ForsGenPrvKey(const SlhDsaAdrs *adrs, uint32_t idx, const CryptSlhDsaCtx
     ctx->adrsOps.copyKeyPairAddr(&skadrs, adrs);
     ctx->adrsOps.setTreeIndex(&skadrs, idx);
 
-    return ctx->hashFuncs.prf(ctx, &skadrs, sk);
+    return ctx->hashFuncs->prf(ctx, &skadrs, sk);
 }
 
 int32_t ForsNode(uint32_t idx, uint32_t height, SlhDsaAdrs *adrs, const CryptSlhDsaCtx *ctx, uint8_t *node)
@@ -164,7 +164,7 @@ int32_t ForsNode(uint32_t idx, uint32_t height, SlhDsaAdrs *adrs, const CryptSlh
         }
         ctx->adrsOps.setTreeHeight(adrs, height);
         ctx->adrsOps.setTreeIndex(adrs, idx);
-        ret = ctx->hashFuncs.f(ctx, adrs, sk, n, node);
+        ret = ctx->hashFuncs->f(ctx, adrs, sk, n, node);
         (void)BSL_SAL_CleanseData(sk, SLH_DSA_MAX_N);
         return ret;
     }
@@ -180,6 +180,6 @@ int32_t ForsNode(uint32_t idx, uint32_t height, SlhDsaAdrs *adrs, const CryptSlh
     }
     ctx->adrsOps.setTreeHeight(adrs, height);
     ctx->adrsOps.setTreeIndex(adrs, idx);
-    return ctx->hashFuncs.h(ctx, adrs, dnode, 2 * n, node);
+    return ctx->hashFuncs->h(ctx, adrs, dnode, 2 * n, node);
 }
 #endif // HITLS_CRYPTO_SLH_DSA

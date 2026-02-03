@@ -26,69 +26,62 @@
 #include "eal_md_local.h"
 #include "slh_dsa_local.h"
 #include "slh_dsa_hash.h"
+#include "xmss_common.h"
 
 #define SHA256_PADDING_LEN 64
 #define SHA512_PADDING_LEN 128
 
-static int32_t CalcMultiMsgHash(CRYPT_MD_AlgId mdId, const CRYPT_ConstData *hashData, uint32_t hashDataLen,
-                                uint8_t *out, uint32_t outLen)
-{
-    uint8_t tmp[MAX_MDSIZE] = {0};
-    uint32_t tmpLen = sizeof(tmp);
-    int32_t ret = CRYPT_CalcHash(NULL, EAL_MdFindDefaultMethod(mdId), hashData, hashDataLen, tmp, &tmpLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    (void)memcpy_s(out, outLen, tmp, outLen);
-    return CRYPT_SUCCESS;
-}
-
-static int32_t PrfmsgShake256(const CryptSlhDsaCtx *ctx, const uint8_t *rand, const uint8_t *msg, uint32_t msgLen,
+static int32_t PrfmsgShake256(const void *vctx, const uint8_t *rand, const uint8_t *msg, uint32_t msgLen,
                               uint8_t *out)
 {
+    const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     uint32_t n = ctx->para.n;
     const CRYPT_ConstData hashData[] = {{ctx->prvKey.prf, n}, {rand, n}, {msg, msgLen}};
     return CalcMultiMsgHash(CRYPT_MD_SHAKE256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, n);
 }
 
-static int32_t HmsgShake256(const CryptSlhDsaCtx *ctx, const uint8_t *r, const uint8_t *msg, uint32_t msgLen,
+static int32_t HmsgShake256(const void *vctx, const uint8_t *r, const uint8_t *msg, uint32_t msgLen,
                             const uint8_t *idx, uint8_t *out)
 {
     (void)idx;
+    const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     uint32_t n = ctx->para.n;
     uint32_t m = ctx->para.m;
     const CRYPT_ConstData hashData[] = {{r, n}, {ctx->prvKey.pub.seed, n}, {ctx->prvKey.pub.root, n}, {msg, msgLen}};
     return CalcMultiMsgHash(CRYPT_MD_SHAKE256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, m);
 }
 
-static int32_t PrfShake256(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, uint8_t *out)
+static int32_t PrfShake256(const void *vctx, const void *vadrs, uint8_t *out)
 {
+    const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
+    const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
     uint32_t n = ctx->para.n;
     const CRYPT_ConstData hashData[] = {
         {ctx->prvKey.pub.seed, n}, {adrs->bytes, ctx->adrsOps.getAdrsLen()}, {ctx->prvKey.seed, n}};
     return CalcMultiMsgHash(CRYPT_MD_SHAKE256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, n);
 }
 
-static int32_t HShake256(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, const uint8_t *msg, uint32_t msgLen,
+static int32_t HShake256(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen,
                          uint8_t *out)
 {
+    const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
+    const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
     uint32_t n = ctx->para.n;
     const CRYPT_ConstData hashData[] = {
         {ctx->prvKey.pub.seed, n}, {adrs->bytes, ctx->adrsOps.getAdrsLen()}, {msg, msgLen}};
     return CalcMultiMsgHash(CRYPT_MD_SHAKE256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, n);
 }
 
-static int32_t TlShake256(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, const uint8_t *msg, uint32_t msgLen,
+static int32_t TlShake256(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen,
                           uint8_t *out)
 {
-    return HShake256(ctx, adrs, msg, msgLen, out);
+    return HShake256(vctx, vadrs, msg, msgLen, out);
 }
 
-static int32_t FShake256(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, const uint8_t *msg, uint32_t msgLen,
+static int32_t FShake256(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen,
                          uint8_t *out)
 {
-    return HShake256(ctx, adrs, msg, msgLen, out);
+    return HShake256(vctx, vadrs, msg, msgLen, out);
 }
 
 static int32_t Prfmsg(const CryptSlhDsaCtx *ctx, const uint8_t *rand, const uint8_t *msg, uint32_t msgLen, uint8_t *out,
@@ -113,15 +106,16 @@ ERR:
     return ret;
 }
 
-static int32_t PrfmsgSha256(const CryptSlhDsaCtx *ctx, const uint8_t *rand, const uint8_t *msg, uint32_t msgLen,
+static int32_t PrfmsgSha256(const void *vctx, const uint8_t *rand, const uint8_t *msg, uint32_t msgLen,
                             uint8_t *out)
 {
-    return Prfmsg(ctx, rand, msg, msgLen, out, CRYPT_MAC_HMAC_SHA256);
+    return Prfmsg((const CryptSlhDsaCtx *)vctx, rand, msg, msgLen, out, CRYPT_MAC_HMAC_SHA256);
 }
-static int32_t PrfmsgSha512(const CryptSlhDsaCtx *ctx, const uint8_t *rand, const uint8_t *msg, uint32_t msgLen,
+
+static int32_t PrfmsgSha512(const void *vctx, const uint8_t *rand, const uint8_t *msg, uint32_t msgLen,
                             uint8_t *out)
 {
-    return Prfmsg(ctx, rand, msg, msgLen, out, CRYPT_MAC_HMAC_SHA512);
+    return Prfmsg((const CryptSlhDsaCtx *)vctx, rand, msg, msgLen, out, CRYPT_MAC_HMAC_SHA512);
 }
 
 static int32_t HmsgSha(const CryptSlhDsaCtx *ctx, const uint8_t *r, const uint8_t *seed, const uint8_t *root,
@@ -149,22 +143,26 @@ static int32_t HmsgSha(const CryptSlhDsaCtx *ctx, const uint8_t *r, const uint8_
     return CRYPT_Mgf1(NULL, EAL_MdFindDefaultMethod(mdId), tmpSeed, tmpSeedLen, out, m);
 }
 
-static int32_t HmsgSha256(const CryptSlhDsaCtx *ctx, const uint8_t *r, const uint8_t *msg, uint32_t msgLen,
+static int32_t HmsgSha256(const void *vctx, const uint8_t *r, const uint8_t *msg, uint32_t msgLen,
                           const uint8_t *idx, uint8_t *out)
 {
+    const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     (void)idx;
     return HmsgSha(ctx, r, ctx->prvKey.pub.seed, ctx->prvKey.pub.root, msg, msgLen, out, CRYPT_MD_SHA256);
 }
 
-static int32_t HmsgSha512(const CryptSlhDsaCtx *ctx, const uint8_t *r, const uint8_t *msg, uint32_t msgLen,
+static int32_t HmsgSha512(const void *vctx, const uint8_t *r, const uint8_t *msg, uint32_t msgLen,
                           const uint8_t *idx, uint8_t *out)
 {
+    const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
     (void)idx;
     return HmsgSha(ctx, r, ctx->prvKey.pub.seed, ctx->prvKey.pub.root, msg, msgLen, out, CRYPT_MD_SHA512);
 }
 
-static int32_t PrfSha256(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, uint8_t *out)
+static int32_t PrfSha256(const void *vctx, const void *vadrs, uint8_t *out)
 {
+    const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
+    const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
     uint32_t n = ctx->para.n;
     uint8_t padding[SHA256_PADDING_LEN] = {0};
     const CRYPT_ConstData hashData[] = {{ctx->prvKey.pub.seed, n},
@@ -174,9 +172,11 @@ static int32_t PrfSha256(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, uint
     return CalcMultiMsgHash(CRYPT_MD_SHA256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, n);
 }
 
-static int32_t HSha256(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, const uint8_t *msg, uint32_t msgLen,
+static int32_t HSha256(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen,
                        uint8_t *out)
 {
+    const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
+    const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
     uint32_t n = ctx->para.n;
     uint8_t padding[SHA256_PADDING_LEN] = {0};
     const CRYPT_ConstData hashData[] = {{ctx->prvKey.pub.seed, n},
@@ -186,21 +186,23 @@ static int32_t HSha256(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, const 
     return CalcMultiMsgHash(CRYPT_MD_SHA256, hashData, sizeof(hashData) / sizeof(hashData[0]), out, n);
 }
 
-static int32_t FSha256(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, const uint8_t *msg, uint32_t msgLen,
+static int32_t FSha256(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen,
                        uint8_t *out)
 {
-    return HSha256(ctx, adrs, msg, msgLen, out);
+    return HSha256(vctx, vadrs, msg, msgLen, out);
 }
 
-static int32_t TlSha256(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, const uint8_t *msg, uint32_t msgLen,
+static int32_t TlSha256(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen,
                         uint8_t *out)
 {
-    return HSha256(ctx, adrs, msg, msgLen, out);
+    return HSha256(vctx, vadrs, msg, msgLen, out);
 }
 
-static int32_t HSha512(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, const uint8_t *msg, uint32_t msgLen,
+static int32_t HSha512(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen,
                        uint8_t *out)
 {
+    const CryptSlhDsaCtx *ctx = (const CryptSlhDsaCtx *)vctx;
+    const SlhDsaAdrs *adrs = (const SlhDsaAdrs *)vadrs;
     uint32_t n = ctx->para.n;
     uint8_t padding[SHA512_PADDING_LEN] = {0};
     const CRYPT_ConstData hashData[] = {{ctx->prvKey.pub.seed, n},
@@ -210,40 +212,55 @@ static int32_t HSha512(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, const 
     return CalcMultiMsgHash(CRYPT_MD_SHA512, hashData, sizeof(hashData) / sizeof(hashData[0]), out, n);
 }
 
-static int32_t TlSha512(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, const uint8_t *msg, uint32_t msgLen,
+static int32_t TlSha512(const void *vctx, const void *vadrs, const uint8_t *msg, uint32_t msgLen,
                         uint8_t *out)
 {
-    return HSha512(ctx, adrs, msg, msgLen, out);
+    return HSha512(vctx, vadrs, msg, msgLen, out);
 }
+
+/* Static hash function tables for SLH-DSA */
+static const CryptHashFuncs g_slhDsaSha256Funcs = {
+    .prf = PrfSha256,
+    .f = FSha256,
+    .h = HSha256,
+    .tl = TlSha256,
+    .hmsg = HmsgSha256,
+    .prfmsg = PrfmsgSha256,
+};
+
+static const CryptHashFuncs g_slhDsaSha512Funcs = {
+    .prf = PrfSha256,
+    .f = FSha256,
+    .h = HSha512,
+    .tl = TlSha512,
+    .hmsg = HmsgSha512,
+    .prfmsg = PrfmsgSha512,
+};
+
+static const CryptHashFuncs g_slhDsaShake256Funcs = {
+    .prf = PrfShake256,
+    .f = FShake256,
+    .h = HShake256,
+    .tl = TlShake256,
+    .hmsg = HmsgShake256,
+    .prfmsg = PrfmsgShake256,
+};
 
 void SlhDsaInitHashFuncs(CryptSlhDsaCtx *ctx)
 {
     CRYPT_PKEY_ParaId algId = ctx->para.algId;
-    SlhDsaHashFuncs *hashFuncs = &ctx->hashFuncs;
+
     if (algId == CRYPT_SLH_DSA_SHA2_128S || algId == CRYPT_SLH_DSA_SHA2_128F || algId == CRYPT_SLH_DSA_SHA2_192S ||
         algId == CRYPT_SLH_DSA_SHA2_192F || algId == CRYPT_SLH_DSA_SHA2_256S || algId == CRYPT_SLH_DSA_SHA2_256F) {
         ctx->para.isCompressed = true;
-        hashFuncs->prf = PrfSha256;
-        hashFuncs->f = FSha256;
         if (ctx->para.secCategory == 1) {
-            hashFuncs->prfmsg = PrfmsgSha256;
-            hashFuncs->hmsg = HmsgSha256;
-            hashFuncs->tl = TlSha256;
-            hashFuncs->h = HSha256;
+            ctx->hashFuncs = &g_slhDsaSha256Funcs;
         } else {
-            hashFuncs->prfmsg = PrfmsgSha512;
-            hashFuncs->hmsg = HmsgSha512;
-            hashFuncs->tl = TlSha512;
-            hashFuncs->h = HSha512;
+            ctx->hashFuncs = &g_slhDsaSha512Funcs;
         }
     } else {
         ctx->para.isCompressed = false;
-        hashFuncs->prfmsg = PrfmsgShake256;
-        hashFuncs->hmsg = HmsgShake256;
-        hashFuncs->prf = PrfShake256;
-        hashFuncs->tl = TlShake256;
-        hashFuncs->f = FShake256;
-        hashFuncs->h = HShake256;
+        ctx->hashFuncs = &g_slhDsaShake256Funcs;
     }
 }
 

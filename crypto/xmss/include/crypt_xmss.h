@@ -24,11 +24,9 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cpluscplus */
+#endif /* __cplusplus */
 
-typedef struct SlhDsaCtx CryptXmssCtx;
-typedef struct HashFuncs XmssHashFuncs;
-typedef union Adrs XmssAdrs;
+typedef struct CryptXmssCtx CryptXmssCtx;
 
 /**
  * @brief Allocate XMSS context memory space.

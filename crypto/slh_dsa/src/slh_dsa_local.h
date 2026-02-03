@@ -24,8 +24,8 @@
 #include "crypt_algid.h"
 #include "crypt_types.h"
 #include "crypt_utils.h"
-#include "slh_dsa_hash.h"
-#include "crypt_types.h"
+#include "xmss_common.h"
+#include "xmss_tree.h"
 
 #define SLH_DSA_ADRS_LEN            32
 #define SLH_DSA_ADRS_COMPRESSED_LEN 22
@@ -36,6 +36,9 @@
 
 #define SLH_DSA_PRVKEY 0x1
 #define SLH_DSA_PUBKEY 0x10
+
+typedef union Adrs SlhDsaAdrs;
+typedef struct SlhDsaCtx CryptSlhDsaCtx;
 
 typedef enum {
     WOTS_HASH,
@@ -78,45 +81,8 @@ union Adrs {
         uint8_t type;
         uint8_t padding[12];
     } c;
-    struct {
-        uint8_t layerAddr[4];
-        uint8_t treeAddr[8];
-        uint8_t type[4];
-        uint8_t padding[16];
-    } x;
     uint8_t bytes[SLH_DSA_ADRS_LEN];
 };
-
-// adrs operations functions
-typedef void (*AdrsSetLayerAddr)(SlhDsaAdrs *adrs, uint32_t layer);
-typedef void (*AdrsSetTreeAddr)(SlhDsaAdrs *adrs, uint64_t tree);
-typedef void (*AdrsSetType)(SlhDsaAdrs *adrs, AdrsType type);
-typedef void (*AdrsSetKeyPairAddr)(SlhDsaAdrs *adrs, uint32_t keyPair);
-typedef void (*AdrsSetChainAddr)(SlhDsaAdrs *adrs, uint32_t chain);
-typedef void (*AdrsSetTreeHeight)(SlhDsaAdrs *adrs, uint32_t height);
-typedef void (*AdrsSetHashAddr)(SlhDsaAdrs *adrs, uint32_t hash);
-typedef void (*AdrsSetTreeIndex)(SlhDsaAdrs *adrs, uint32_t index);
-typedef void (*AdrsSetKeyAndMask)(SlhDsaAdrs *adrs, uint32_t index); // for XMSS only
-typedef uint32_t (*AdrsGetTreeHeight)(const SlhDsaAdrs *adrs);
-typedef uint32_t (*AdrsGetTreeIndex)(const SlhDsaAdrs *adrs);
-typedef void (*AdrsCopyKeyPairAddr)(SlhDsaAdrs *adrs, const SlhDsaAdrs *adrs2);
-typedef uint32_t (*AdrsGetAdrsLen)(void);
-
-typedef struct {
-    AdrsSetLayerAddr setLayerAddr;
-    AdrsSetTreeAddr setTreeAddr;
-    AdrsSetType setType;
-    AdrsSetKeyPairAddr setKeyPairAddr;
-    AdrsSetChainAddr setChainAddr;
-    AdrsSetTreeHeight setTreeHeight;
-    AdrsSetHashAddr setHashAddr;
-    AdrsSetTreeIndex setTreeIndex;
-    AdrsSetKeyAndMask setKeyAndMask; // for XMSS only
-    AdrsGetTreeHeight getTreeHeight;
-    AdrsGetTreeIndex getTreeIndex;
-    AdrsCopyKeyPairAddr copyKeyPairAddr;
-    AdrsGetAdrsLen getAdrsLen;
-} AdrsOps;
 
 // b can be 4, 6, 8, 9, 12, 14
 // so use uint32_t to receive the BaseB value
@@ -135,7 +101,6 @@ typedef struct {
     uint32_t secCategory;
     uint32_t pkBytes;
     uint32_t sigBytes;
-    uint8_t xdrAlgId[HASH_SIGN_XDR_ALG_TYPE_LEN]; // RFC8391 Parameter Sets enum, length:4
 } SlhDsaPara;
 
 typedef struct {
@@ -152,6 +117,8 @@ typedef struct {
     SlhDsaPubKey pub;
 } SlhDsaPrvKey;
 
+
+
 struct SlhDsaCtx {
     SlhDsaPara para;
     uint8_t *context; // user specific context
@@ -160,14 +127,13 @@ struct SlhDsaCtx {
     uint8_t *addrand; // optional random bytes, can be set through CTRL interface, or comes from RNG
     uint32_t addrandLen; // length of the optional random bytes
     bool isPrehash;
-    bool isXmss; /* XMSS and SLH-DSA share common structure,
-                  * true : XMSS, false : SLH-DSA */
     SlhDsaPrvKey prvKey;
-    SlhDsaHashFuncs hashFuncs;
-    AdrsOps adrsOps;
+    const CryptHashFuncs *hashFuncs;  // Generic hash function table pointer
+    CryptAdrsOps adrsOps;     // Generic address operation function pointers
     uint8_t keyType; /* specify the key type */
     void *libCtx;
 };
 
+void InitTreeCtxFromSlhDsaCtx(TreeCtx* treeCtx, const CryptSlhDsaCtx *ctx);
 #endif // HITLS_CRYPTO_SLH_DSA
 #endif // SLH_DSA_LOCAL_H
