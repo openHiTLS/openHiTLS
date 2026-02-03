@@ -98,7 +98,15 @@ struct CryptMlDsaCtx {
 
 void MLDSA_ComputesNTT(int32_t w[MLDSA_N]);
 void MLDSA_ComputesINVNTT(int32_t w[MLDSA_N]);
-int32_t MLDSA_PlantardMulReduce(int64_t a);
+
+static inline int32_t MLDSA_PlantardMulReduce(int64_t a)
+{
+    int64_t tmp = a;
+    tmp >>= MLDSA_PLANTARD_L;
+    tmp = (tmp + (1 << MLDSA_PLANTARD_ALPHA)) * MLDSA_Q;
+    tmp >>= MLDSA_PLANTARD_L;
+    return (int32_t)tmp;
+}
 
 int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *d);
 
