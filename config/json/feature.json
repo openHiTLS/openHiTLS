@@ -185,7 +185,7 @@
                         "mldsa": {"deps": ["sha3", "obj_default"]},
                         "paillier": {"deps":["bn_rand", "bn_prime"]},
                         "elgamal": {"deps":["bn_rand", "bn_prime"]},
-                        "slh_dsa": { "deps": ["sha3", "obj_default", "eal", "hmac", "sha256", "sha512"]},
+                        "slh_dsa": { "deps": ["sha3", "obj_default", "eal", "hmac", "sha256", "sha512", "xmss"]},
                         "xmss": { "deps": ["sha3", "sha2", "obj_default", "eal", "sha256", "sha512"]},
                         "deps": ["params"]
                     },
@@ -1440,14 +1440,14 @@
             "slh_dsa": {
                 ".features": ["slh_dsa"],
                 ".srcs": "crypto/slh_dsa/src/*.c",
-                ".deps": ["crypto::sha3", "crypto::sha2", "bsl::obj"],
-                ".include": ["crypto/eal/src", "bsl/asn1/include"]
+                ".deps": ["crypto::sha3", "crypto::sha2", "bsl::obj", "crypto::xmss"],
+                ".include": ["crypto/eal/src", "bsl/asn1/include", "crypto/xmss/src"]
             },
             "xmss": {
                 ".features": ["xmss"],
                 ".srcs": "crypto/xmss/src/*.c",
                 ".deps": ["crypto::sha3", "crypto::sha2", "bsl::obj"],
-                ".include": ["crypto/eal/src", "bsl/asn1/include", "crypto/slh_dsa/include", "crypto/slh_dsa/src"]
+                ".include": ["crypto/eal/src", "bsl/asn1/include"]
             }
         },
         "bsl":{

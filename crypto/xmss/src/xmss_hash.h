@@ -19,9 +19,27 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_XMSS
 
-#include <stdint.h>
+#include "xmss_common.h"
+#include "xmss_local.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+/*
+ * Initialize XMSS hash functions for a given algorithm
+ *
+ * This function sets up the hash function pointers in the XMSS context
+ * based on the algorithm parameters.
+ *
+ * @param ctx   XMSS context (will be initialized with hash function pointer)
+ *
+ * @return CRYPT_SUCCESS on success, error code otherwise
+ */
 int32_t XmssInitHashFuncs(CryptXmssCtx *ctx);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // HITLS_CRYPTO_XMSS
 #endif // XMSS_HASH_H

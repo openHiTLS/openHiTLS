@@ -20,40 +20,15 @@
 #ifdef HITLS_CRYPTO_SLH_DSA
 
 #include <stdint.h>
-#include "bsl_params.h"
-#include "crypt_slh_dsa.h"
 
-#define MAX_MDSIZE 64
-
-// The length "out" is n, the max length is SLH_DSA_MAX_N
-typedef int32_t (*SlhDsaPrf)(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, uint8_t *out);
-
-typedef int32_t (*SlhDsaTl)(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, const uint8_t *msg, uint32_t msgLen,
-                            uint8_t *out);
-
-typedef int32_t (*SlhDsaH)(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, const uint8_t *msg, uint32_t msgLen,
-                           uint8_t *out);
-
-typedef int32_t (*SlhDsaF)(const CryptSlhDsaCtx *ctx, const SlhDsaAdrs *adrs, const uint8_t *msg, uint32_t msgLen,
-                           uint8_t *out);
-
-// The length of "prf", "rand" and "out" is n, the max length is SLH_DSA_MAX_N
-typedef int32_t (*SlhDsaPrfMsg)(const CryptSlhDsaCtx *ctx, const uint8_t *rand, const uint8_t *msg, uint32_t msgLen,
-                                uint8_t *out);
-
-// The length of "r", "seed" and "root" is n, the max length is SLH_DSA_MAX_N
-// the max length of "out" is SLH_DSA_MAX_M
-typedef int32_t (*SlhDsaHmsg)(const CryptSlhDsaCtx *ctx, const uint8_t *r, const uint8_t *msg, uint32_t msgLen,
-                              const uint8_t *idx, uint8_t *out);
-struct HashFuncs {
-    SlhDsaPrf prf;
-    SlhDsaTl tl;
-    SlhDsaH h;
-    SlhDsaF f;
-    SlhDsaPrfMsg prfmsg;
-    SlhDsaHmsg hmsg;
-};
-
+/*
+ * Initialize SLH-DSA hash functions for a given algorithm
+ *
+ * This function sets up the hash function pointers in the SLH-DSA context
+ * based on the algorithm parameters.
+ *
+ * @param ctx   SLH-DSA context (will be initialized with hash function pointer)
+ */
 void SlhDsaInitHashFuncs(CryptSlhDsaCtx *ctx);
 
 #endif // HITLS_CRYPTO_SLH_DSA
