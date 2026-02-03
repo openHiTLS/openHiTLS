@@ -1526,3 +1526,43 @@ EXIT:
     BSL_SAL_FREE(customExt.value.data);
 }
 /* END_CASE */
+
+/**
+ * Test CSR print with unknown attribute OID
+ * The unknown OID should be printed in numeric form
+ */
+/* BEGIN_CASE */
+void SDV_X509_CSR_PRINT_UNKNOWN_ATTR_TC001(char *path, char *expectFile)
+{
+#if defined(HITLS_PKI_INFO_CSR) && defined(HITLS_PKI_X509_CSR)
+    TestMemInit();
+    HITLS_X509_Csr *csr = NULL;
+    BSL_Buffer data = {0};
+    Hex expect = {(uint8_t *)expectFile, 0};
+
+    ASSERT_EQ(HITLS_X509_CsrParseFile(BSL_FORMAT_ASN1, path, &csr), HITLS_PKI_SUCCESS);
+    ASSERT_NE(csr, NULL);
+
+    HITLS_X509_Attrs *attrs = NULL;
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(HITLS_X509_Attrs *)), 0);
+    ASSERT_NE(attrs, NULL);
+    ASSERT_NE(BSL_LIST_COUNT(attrs->list), 0);
+
+    HITLS_X509_AttrEntry *entry = BSL_LIST_GET_FIRST(attrs->list);
+    ASSERT_NE(entry, NULL);
+    ASSERT_EQ(entry->cid, BSL_CID_UNKNOWN);
+
+    data.data = (uint8_t *)csr;
+    data.dataLen = sizeof(HITLS_X509_Csr *);
+    ASSERT_EQ(PrintBuffTest(HITLS_PKI_PRINT_CSR, &data, "Print csr with unknown attr", &expect, true), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_CsrFree(csr);
+#else
+    (void)path;
+    (void)expectFile;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */

@@ -35,8 +35,8 @@ Certificate:
                 CA:FALSE
             KeyUsage:
                 Digital Signature, Key Encipherment
-            <Unsupported extension>
-            <Unsupported extension>
+            1.2.3.4.5.6.7.8.9.1
+            1.2.3.4.5.6.7.8.9.2
             SubjectKeyIdentifier:
                 71:99:55:53:23:62:b1:40:37:23:9c:7d:c5:11:14:ef:47:04:68:93
     Signature Algorithm: SHA256WITHRSA

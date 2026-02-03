@@ -166,10 +166,7 @@ int32_t HITLS_X509_ParseAttr(BSL_ASN1_Buffer *attrItem, HITLS_X509_AttrEntry *at
     /* parse attribute id */
     attrEntry->cid = BSL_OBJ_GetCidFromOidBuff(asnArr[HITLS_X509_ATTR_OID_IDX].buff,
         asnArr[HITLS_X509_ATTR_OID_IDX].len);
-    if (attrEntry->cid == BSL_CID_UNKNOWN) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_OBJ_ID);
-        return HITLS_X509_ERR_PARSE_OBJ_ID;
-    }
+    /* Unknown OID is allowed, retain the original data for further processing */
     /* set id and value asn1 buffer */
     attrEntry->attrId = asnArr[HITLS_X509_ATTR_OID_IDX];
     attrEntry->attrValue = asnArr[HITLS_X509_ATTR_SET_IDX];
