@@ -72,6 +72,10 @@ int32_t MODES_CBC_Encrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t
 
 int32_t MODES_CBC_Decrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
+    if (ctx->ciphCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     const uint8_t *iv = ctx->iv;
     uint8_t *tmp = ctx->buf;
     uint32_t blockSize = ctx->blockSize;

@@ -476,7 +476,6 @@ AARCH64_AUTIASP
 .balign 16
 .type   SHA1CryptoExt, %function
 SHA1CryptoExt:
-AARCH64_PACIASP
     /* load k */
     adrp    x3, g_kExt
     add     x3, x3, :lo12:g_kExt

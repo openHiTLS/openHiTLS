@@ -347,6 +347,10 @@ CRYPT_HMAC_Ctx *CRYPT_HMAC_DupCtx(const CRYPT_HMAC_Ctx *macCtx)
         return CRYPT_HMAC_NewCtx(macCtx->hmacId);
 #endif
     }
+    if (macCtx->method.freeCtx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return NULL;
+    }
     CRYPT_HMAC_Ctx *ctx = BSL_SAL_Dump(macCtx, sizeof(CRYPT_HMAC_Ctx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -359,9 +363,9 @@ CRYPT_HMAC_Ctx *CRYPT_HMAC_DupCtx(const CRYPT_HMAC_Ctx *macCtx)
     if (mdCtx == NULL || oCtx == NULL || iCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         BSL_SAL_Free(ctx);
-        BSL_SAL_Free(mdCtx);
-        BSL_SAL_Free(oCtx);
-        BSL_SAL_Free(iCtx);
+        macCtx->method.freeCtx(mdCtx);
+        macCtx->method.freeCtx(oCtx);
+        macCtx->method.freeCtx(iCtx);
         return NULL;
     }
     ctx->mdCtx = mdCtx;
