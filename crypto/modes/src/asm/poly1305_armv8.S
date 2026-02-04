@@ -333,7 +333,6 @@ AARCH64_AUTIASP
 .balign 64
 .type   Poly1305LastNeon, %function
 Poly1305LastNeon:
-AARCH64_PACIASP
     /* Load the value of base 2^26. */
     ldp     w11, w12, [x0, #CTX_acc]
     ldp     w13, w14, [x0, #CTX_acc + 8]

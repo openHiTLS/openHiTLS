@@ -49,7 +49,9 @@ CRYPT_HMAC_Ctx *CRYPT_HMAC_NewCtx(CRYPT_MAC_AlgId id)
 
     ret = CRYPT_MD_ERR_NEWCTX;
     if (ctx->method->newCtx == NULL || ctx->method->freeCtx == NULL) {
-        goto ERR;
+        BSL_ERR_PUSH_ERROR(ret);
+        BSL_SAL_Free(ctx);
+        return NULL;
     }
     ctx->mdCtx = ctx->method->newCtx();
     if (ctx->mdCtx == NULL) {
@@ -258,7 +260,7 @@ CRYPT_HMAC_Ctx *CRYPT_HMAC_DupCtx(const CRYPT_HMAC_Ctx *macCtx)
         return NULL;
     }
 
-    if (macCtx->method->dupCtx == NULL) {
+    if (macCtx->method == NULL || macCtx->method->freeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return NULL;
     }
@@ -267,16 +269,15 @@ CRYPT_HMAC_Ctx *CRYPT_HMAC_DupCtx(const CRYPT_HMAC_Ctx *macCtx)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-
     void *mdCtx = macCtx->method->dupCtx(macCtx->mdCtx);
     void *oCtx = macCtx->method->dupCtx(macCtx->oCtx);
     void *iCtx = macCtx->method->dupCtx(macCtx->iCtx);
     if (mdCtx == NULL || oCtx == NULL || iCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         BSL_SAL_Free(ctx);
-        BSL_SAL_Free(mdCtx);
-        BSL_SAL_Free(oCtx);
-        BSL_SAL_Free(iCtx);
+        macCtx->method->freeCtx(mdCtx);
+        macCtx->method->freeCtx(iCtx);
+        macCtx->method->freeCtx(oCtx);
         return NULL;
     }
     ctx->mdCtx = mdCtx;

@@ -270,7 +270,7 @@ static void GcmMultiBlockCrypt(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8
 // enc: true: the encryption operation, false: the decryption operation
 static int32_t MODES_GCM_Crypt(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
 {
-    if (ctx == NULL || out == NULL) {
+    if (ctx == NULL || ctx->ciphCtx == NULL || out == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }

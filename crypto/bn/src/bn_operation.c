@@ -988,16 +988,18 @@ int32_t BN_SwapWithMask(BN_BigNum *a, BN_BigNum *b, BN_UINT mask)
     BN_UINT *srcB = b->data;
     BN_UINT tmp1;
     BN_UINT tmp2;
+    uint32_t tmp3;
+    uint32_t tmp4;
     for (uint32_t i = 0; i < a->room; i++) {
         tmp1 = srcA[i];
         tmp2 = srcB[i];
         srcA[i] = (tmp1 & rmask) | (tmp2 & mask);
         srcB[i] = (tmp2 & rmask) | (tmp1 & mask);
     }
-    tmp1 = a->size;
-    tmp2 = b->size;
-    a->size = (tmp1 & (uint32_t)rmask) | (tmp2 & (uint32_t)mask);
-    b->size = (tmp2 & (uint32_t)rmask) | (tmp1 & (uint32_t)mask);
+    tmp3 = a->size;
+    tmp4 = b->size;
+    a->size = (tmp3 & (uint32_t)rmask) | (tmp4 & (uint32_t)mask);
+    b->size = (tmp4 & (uint32_t)rmask) | (tmp3 & (uint32_t)mask);
     return CRYPT_SUCCESS;
 }
 #endif // HITLS_CRYPTO_ECC and HITLS_CRYPTO_CURVE_MONT
