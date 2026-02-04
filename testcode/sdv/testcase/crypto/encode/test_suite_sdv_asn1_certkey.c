@@ -27,6 +27,7 @@
 #include "bsl_log.h"
 #include "bsl_init.h"
 #include "sal_file.h"
+#include "eal_pkey_local.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_errno.h"
 #include "crypt_eal_codecs.h"
@@ -39,6 +40,7 @@
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 #include "stub_utils.h"
+
 /* END_HEADER */
 
 #ifdef HITLS_CRYPTO_PROVIDER
@@ -1534,6 +1536,376 @@ EXIT:
     BSL_SAL_FREE(encDSAAsn1.data);
     BSL_SAL_FREE(encDHAsn1.data);
 #else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/*
+@test SDV_PKCS8_ENCODE_DHKEY_DSAKEY_TC001
+@title DH, DSA key encoding
+@step
+1.openHiTLS calls CRYPT_EAL_EncodeBuffKey interface to encode the key in pem format,
+    comparing if the encoding between openssl and openHiTLS is consistent
+2.openHiTLS calls CRYPT_EAL_EncodeBuffKey interface to encode the key in asn1 format,
+    comparing if the encoding between openssl and openHiTLS is consistent
+@expect
+1.Encoding succeeds, consistent with openssl
+2.Encoding succeeds, consistent with openssl
+*/
+/* BEGIN_CASE */
+void SDV_PKCS8_ENCODE_DHKEY_DSAKEY_TC001(char *path, int fileType, Hex *asn1)
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DSA))
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    BSL_Buffer encodeAsn1 = {0};
+    BSL_Buffer encodePem = {0};
+    BSL_Buffer pem = {0};
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkeyCtx, NULL, BSL_FORMAT_ASN1, fileType, &encodeAsn1), CRYPT_SUCCESS);
+    ASSERT_COMPARE("asn1 compare.", encodeAsn1.data, encodeAsn1.dataLen, asn1->x, asn1->len);
+    
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &pem.data, &pem.dataLen), 0);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkeyCtx, NULL, BSL_FORMAT_PEM, fileType, &encodePem), CRYPT_SUCCESS);
+    ASSERT_COMPARE("asn1 compare.", encodePem.data, encodePem.dataLen, pem.data, pem.dataLen);
+EXIT:
+    BSL_SAL_FREE(pem.data);
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_FREE(encodePem.data);
+    BSL_SAL_FREE(encodeAsn1.data);
+#else
+    (void)path;
+    (void)fileType;
+    (void)asn1;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/*
+@test SDV_PKCS8_DECODE_DHKEY_DSAKEY_TC001
+@title DH, DSA key decoding
+@step
+1.openHiTLS calls CRYPT_EAL_DecodeFileKey interface to decode the key in pem format,
+    comparing if the decrypted key is consistent with the original key
+2.openHiTLS calls CRYPT_EAL_DecodeBuffKey interface to decode the key in asn1 format,
+    comparing if the decrypted key is consistent with the original key
+@expect
+1.Encoding succeeds, consistent with openssl
+2.Encoding succeeds, consistent with openssl
+*/
+/* BEGIN_CASE */
+void SDV_PKCS8_DECODE_DHKEY_DSAKEY_TC001(char *path, int fileType,  Hex *asn1)
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DSA))
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyBypem = NULL;
+    CRYPT_EAL_PkeyCtx *pkeyByAsn1 = NULL;
+    BSL_Buffer decodeAsn1 = {0};
+    decodeAsn1.data = BSL_SAL_Malloc(asn1->len);
+    decodeAsn1.dataLen = asn1->len;
+    memcpy_s(decodeAsn1.data, asn1->len, asn1->x, asn1->len);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyBypem), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &decodeAsn1, NULL, 0, &pkeyByAsn1), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyBypem, pkeyByAsn1), 0);
+EXIT:
+    BSL_SAL_FREE(decodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(pkeyBypem);
+    CRYPT_EAL_PkeyFreeCtx(pkeyByAsn1);
+#else
+    (void)path;
+    (void)fileType;
+    (void)asn1;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/*
+@test SDV_PKCS8_ENCDEC_DHKEY_DSAKEY_TC001
+@title DH, DSA key decoding then encoding
+@step
+1.openHiTLS calls CRYPT_EAL_DecodeFileKey interface to decode pem file
+2.openHiTLS calls CRYPT_EAL_DecodeBuffKey interface to decode asn1 data
+3.Call CRYPT_EAL_EncodeBuffKey to encode the decoded key in pem format
+4.Call CRYPT_EAL_EncodeBuffKey to encode the decoded key in asn1 format
+5.openHiTLS calls CRYPT_EAL_DecodeFileKey interface to decode re-encoded pem
+6.openHiTLS calls CRYPT_EAL_DecodeBuffKey interface to decode re-encoded asn1
+7.Compare the decrypted key to see if it's consistent with the given key
+@expect
+1.Decoding succeeds
+2.Decoding succeeds, consistent with key decoded from pem
+3.Encoding succeeds, consistent with original pem file content
+4.Encoding succeeds, consistent with original asn1 content
+5.Decoding succeeds
+6.Decoding succeeds
+7.Keys are identical
+*/
+/* BEGIN_CASE */
+void SDV_PKCS8_ENCDEC_DHKEY_DSAKEY_TC001(char *path, int fileType,  Hex *asn1)
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DSA))
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyBypem = NULL;
+    CRYPT_EAL_PkeyCtx *pkeyByAsn1 = NULL;
+    BSL_Buffer decodeAsn1 = {0};
+    BSL_Buffer encodeAsn1 = {0};
+    BSL_Buffer encodePem = {0};
+    BSL_Buffer pem = {0};
+    decodeAsn1.data = BSL_SAL_Malloc(asn1->len);
+    decodeAsn1.dataLen = asn1->len;
+    memcpy_s(decodeAsn1.data, asn1->len, asn1->x, asn1->len);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyBypem), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &decodeAsn1, NULL, 0, &pkeyByAsn1), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyBypem, pkeyByAsn1), 0);
+
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkeyBypem, NULL, BSL_FORMAT_ASN1, fileType, &encodeAsn1), CRYPT_SUCCESS);
+    ASSERT_COMPARE("asn1 compare.", encodeAsn1.data, encodeAsn1.dataLen, asn1->x, asn1->len);
+    
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &pem.data, &pem.dataLen), 0);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkeyByAsn1, NULL, BSL_FORMAT_PEM, fileType, &encodePem), CRYPT_SUCCESS);
+    ASSERT_COMPARE("asn1 compare.", encodePem.data, encodePem.dataLen, pem.data, pem.dataLen);
+
+    CRYPT_EAL_PkeyCtx *decpkeyBypem = NULL;
+    CRYPT_EAL_PkeyCtx *decpkeyByAsn1 = NULL;
+    BSL_Buffer decodeAsn1_2 = {0};
+    decodeAsn1_2.data = BSL_SAL_Malloc(encodeAsn1.dataLen);
+    decodeAsn1_2.dataLen = encodeAsn1.dataLen;
+    memcpy_s(decodeAsn1_2.data, encodeAsn1.dataLen, encodeAsn1.data, encodeAsn1.dataLen);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &decpkeyBypem), CRYPT_SUCCESS);
+    ASSERT_EQ(
+        CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &decodeAsn1_2, NULL, 0, &decpkeyByAsn1), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(decpkeyBypem, decpkeyByAsn1), 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(decpkeyBypem, pkeyBypem), 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyCmp(pkeyByAsn1, decpkeyByAsn1), 0);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyBypem);
+    CRYPT_EAL_PkeyFreeCtx(pkeyByAsn1);
+    CRYPT_EAL_PkeyFreeCtx(decpkeyBypem);
+    CRYPT_EAL_PkeyFreeCtx(decpkeyByAsn1);
+    BSL_SAL_FREE(decodeAsn1.data);
+    BSL_SAL_FREE(decodeAsn1_2.data);
+    BSL_SAL_FREE(encodePem.data);
+    BSL_SAL_FREE(encodeAsn1.data);
+    BSL_SAL_FREE(pem.data);
+#else
+    (void)path;
+    (void)fileType;
+    (void)asn1;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DSA))
+static void Set_DSA_Pub(CRYPT_EAL_PkeyPub *pub, uint8_t *key, uint32_t keyLen)
+{
+    pub->id = CRYPT_PKEY_DSA;
+    pub->key.dsaPub.data = key;
+    pub->key.dsaPub.len = keyLen;
+}
+
+static void Set_DSA_Prv(CRYPT_EAL_PkeyPrv *prv, uint8_t *key, uint32_t keyLen)
+{
+    prv->id = CRYPT_PKEY_DSA;
+    prv->key.dsaPrv.data = key;
+    prv->key.dsaPrv.len = keyLen;
+}
+
+static void Set_DH_Prv(CRYPT_EAL_PkeyPrv *prv, uint8_t *key, uint32_t keyLen)
+{
+    prv->id = CRYPT_PKEY_DH;
+    prv->key.dhPrv.data = key;
+    prv->key.dhPrv.len = keyLen;
+}
+
+static void Set_DH_Pub(CRYPT_EAL_PkeyPub *pub, uint8_t *key, uint32_t keyLen)
+{
+    pub->id = CRYPT_PKEY_DH;
+    pub->key.dhPub.data = key;
+    pub->key.dhPub.len = keyLen;
+}
+#endif
+
+/*
+@test SDV_PKCS8_ERROR_ENCDEC_TC001
+@title Encoding abnormal keys
+@step
+1.Generate a dh key and tamper with the dh key
+2.Call CRYPT_EAL_EncodeBuffKey to encode the key
+@expect
+1.Key generation succeeds
+2.Decoding succeeds
+*/
+/* BEGIN_CASE */
+void SDV_PKCS8_ERROR_ENCDEC_TC001()
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DSA))
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    
+    CRYPT_EAL_PkeyCtx *dsakey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, BSL_CID_DSA, 0, NULL);
+    ASSERT_NE(dsakey, NULL);
+    int32_t algId = CRYPT_MD_SHA256;
+    uint32_t L = 2048;
+    uint32_t N = 256;
+    uint32_t seedLen = 256;
+    int32_t index = 0;
+    BSL_Param params[6] = {
+        {CRYPT_PARAM_DSA_ALGID, BSL_PARAM_TYPE_INT32, &algId, sizeof(int32_t), 0},
+        {CRYPT_PARAM_DSA_PBITS, BSL_PARAM_TYPE_UINT32, &L, sizeof(uint32_t), 0},
+        {CRYPT_PARAM_DSA_QBITS, BSL_PARAM_TYPE_UINT32, &N, sizeof(uint32_t), 0},
+        {CRYPT_PARAM_DSA_SEEDLEN, BSL_PARAM_TYPE_UINT32, &seedLen, sizeof(uint32_t), 0},
+        {CRYPT_PARAM_DSA_GINDEX, BSL_PARAM_TYPE_INT32, &index, sizeof(int32_t), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(dsakey, CRYPT_CTRL_GEN_PARA, params, 0), CRYPT_SUCCESS);
+    uint32_t genFlag = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(dsakey, CRYPT_CTRL_SET_GEN_FLAG, &genFlag, sizeof(genFlag)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(dsakey), CRYPT_SUCCESS);
+
+    BSL_Buffer encDSAAsn1 = {0};
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(dsakey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encDSAAsn1),
+                CRYPT_SUCCESS);
+    BSL_SAL_FREE(encDSAAsn1.data);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(dsakey, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encDSAAsn1), CRYPT_SUCCESS);
+
+    uint8_t pubKey[1030];
+    uint32_t pubKeyLen = sizeof(pubKey);
+    uint8_t prvKey[1030];
+    uint32_t prvKeyLen = sizeof(prvKey);
+    uint8_t wrong[1030] = {1};
+    CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPrv prv = {0};
+    Set_DSA_Pub(&pub, pubKey, pubKeyLen);
+    Set_DSA_Prv(&prv, prvKey, prvKeyLen);
+    ASSERT_TRUE(CRYPT_EAL_PkeyGetPub(dsakey, &pub) == CRYPT_SUCCESS);
+    pub.key.dsaPub.data = wrong;
+
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPub(dsakey, &pub) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyPairCheck(dsakey, dsakey) == CRYPT_DSA_PAIRWISE_CHECK_FAIL);
+
+    BSL_SAL_FREE(encDSAAsn1.data);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(dsakey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encDSAAsn1),
+                CRYPT_SUCCESS);
+    BSL_SAL_FREE(encDSAAsn1.data);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(dsakey, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encDSAAsn1), CRYPT_SUCCESS);
+
+    // DH
+    CRYPT_EAL_PkeyCtx *dhkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, BSL_CID_DH, 0, NULL);
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(dhkey, CRYPT_DH_RFC3526_2048) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(dhkey), 0);
+
+    BSL_Buffer encDHAsn1 = {0};
+    ASSERT_EQ(
+        CRYPT_EAL_EncodeBuffKey(dhkey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encDHAsn1), CRYPT_SUCCESS);
+    BSL_SAL_FREE(encDHAsn1.data);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(dhkey, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encDHAsn1), CRYPT_SUCCESS);
+
+    Set_DH_Pub(&pub, pubKey, pubKeyLen);
+    Set_DH_Prv(&prv, prvKey, prvKeyLen);
+    ASSERT_TRUE(CRYPT_EAL_PkeyGetPub(dhkey, &pub) == CRYPT_SUCCESS);
+    pub.key.dhPub.data = wrong;
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPub(dhkey, &pub) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyPairCheck(dhkey, dhkey) == CRYPT_DH_PAIRWISE_CHECK_FAIL);
+
+    BSL_SAL_FREE(encDHAsn1.data);
+    ASSERT_EQ(
+        CRYPT_EAL_EncodeBuffKey(dhkey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encDHAsn1), CRYPT_SUCCESS);
+    BSL_SAL_FREE(encDHAsn1.data);
+    ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(dhkey, NULL, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, &encDHAsn1), CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(dsakey);
+    CRYPT_EAL_PkeyFreeCtx(dhkey);
+    BSL_SAL_FREE(encDSAAsn1.data);
+    BSL_SAL_FREE(encDHAsn1.data);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/*
+@test SDV_PKCS8_ERROR_ENCDEC_TC002
+@title Decoding abnormal encoded data
+@step
+1.openHiTLS calls CRYPT_EAL_DecodeFileKey interface to decode abnormal data
+@expect
+1.Decoding fails
+*/
+/* BEGIN_CASE */
+void SDV_PKCS8_ERROR_ENCDEC_TC002(char *path, int fileType,  Hex *asn1)
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_DSA) && defined(HITLS_CRYPTO_DSA))
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyBypem = NULL;
+    CRYPT_EAL_PkeyCtx *pkeyByAsn1 = NULL;
+    BSL_Buffer decodeAsn1 = {0};
+    decodeAsn1.data = BSL_SAL_Malloc(asn1->len);
+    decodeAsn1.dataLen = asn1->len;
+    memcpy_s(decodeAsn1.data, asn1->len, asn1->x, asn1->len);
+    ASSERT_NE(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyBypem), CRYPT_SUCCESS);
+    ASSERT_NE(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &decodeAsn1, NULL, 0, &pkeyByAsn1), CRYPT_SUCCESS);
+EXIT:
+    BSL_SAL_FREE(decodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(pkeyBypem);
+    CRYPT_EAL_PkeyFreeCtx(pkeyByAsn1);
+#else
+    (void)path;
+    (void)fileType;
+    (void)asn1;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/*
+@test SDV_PKCS8_ERROR_ENCDEC_TC003
+@title Decoding empty pem and asn1
+@step
+1.openHiTLS calls CRYPT_EAL_DecodeFileKey interface to decode empty pem and asn1 data
+@expect
+1.Decoding fails
+*/
+/* BEGIN_CASE */
+void SDV_PKCS8_ERROR_ENCDEC_TC003(char *path, int fileType,  Hex *asn1)
+{
+#if defined(HITLS_CRYPTO_PROVIDER) && defined(HITLS_CRYPTO_DSA)
+    CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyBypem = NULL;
+    CRYPT_EAL_PkeyCtx *pkeyByAsn1 = NULL;
+    BSL_Buffer decodeAsn1 = {0};
+    decodeAsn1.data = BSL_SAL_Malloc(asn1->len);
+    decodeAsn1.dataLen = asn1->len;
+    memcpy_s(decodeAsn1.data, asn1->len, asn1->x, asn1->len);
+    ASSERT_NE(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyBypem), CRYPT_SUCCESS);
+    ASSERT_NE(
+        CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, "eeeeeeee\a.pem", NULL, 0, &pkeyBypem), CRYPT_SUCCESS);
+    ASSERT_NE(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &decodeAsn1, NULL, 0, &pkeyByAsn1), CRYPT_SUCCESS);
+EXIT:
+    BSL_SAL_FREE(decodeAsn1.data);
+    CRYPT_EAL_PkeyFreeCtx(pkeyBypem);
+    CRYPT_EAL_PkeyFreeCtx(pkeyByAsn1);
+#else
+    (void)path;
+    (void)fileType;
+    (void)asn1;
     SKIP_TEST();
 #endif
 }
