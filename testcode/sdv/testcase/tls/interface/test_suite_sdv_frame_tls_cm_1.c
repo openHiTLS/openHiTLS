@@ -3664,3 +3664,38 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/* @
+* @test  HITLS_UT_TLS_CM_CLOSE_API_TC001
+* @spec  -
+* @title  Cover Abnormal useage of the HITLS_Close Interface
+* @precon  nan
+* @brief  1.Invoke the HITLS_Close interface. Expected result 1.
+*         2.Set shutdown state to zero value and invoke the HITLS_Close interface. Expected result 2.
+* @expect  1.Return HITLS_SUCCESS
+*          2.Return HITLS_SUCCESS
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void HITLS_UT_TLS_CM_CLOSE_API_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    HITLS_Ctx *ctx = HITLS_New(tlsConfig);
+    ASSERT_TRUE(ctx != NULL);
+
+    int32_t ret = HITLS_Close(ctx);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_SetShutdownState(ctx, 0) == HITLS_SUCCESS);
+    ret = HITLS_Close(ctx);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    HITLS_Free(ctx);
+}
+/* END_CASE */

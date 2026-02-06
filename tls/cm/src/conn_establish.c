@@ -215,6 +215,10 @@ static int32_t CloseEventInClosedState(HITLS_Ctx *ctx)
 {
     int32_t ret;
 
+    if (ctx->recCtx == NULL || ctx->alertCtx == NULL) {
+        return HITLS_SUCCESS;
+    }
+
     /* When a user invokes the close function for the first time, a close notify message is sent to the peer end. When
      * the user invokes the close function for the second time, the user attempts to receive the close notify message.
      */
@@ -515,6 +519,13 @@ int32_t HITLS_Close(HITLS_Ctx *ctx)
 #else /* HITLS_TLS_PROTO_CLOSE_STATE */
 int32_t HITLS_Close(HITLS_Ctx *ctx)
 {
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    if (ctx->recCtx == NULL || ctx->alertCtx == NULL) {
+        return HITLS_SUCCESS;
+    }
     ALERT_Send(ctx, ALERT_LEVEL_WARNING, ALERT_CLOSE_NOTIFY);
     return ALERT_Flush(ctx);
 }
