@@ -120,3 +120,7 @@ SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001:"../testdata/cert/chain/verify/ed25519
 
 SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001 RSA
 SDV_X509_CERT_VERIFY_BY_PUBKEY_FUNC_TC001:"../testdata/cert/chain/verify/rsa_cert_test.pem":"../testdata/cert/chain/verify/rsa_cert_verify.pem":"../testdata/cert/chain/rsa-pss-v3/ca.der"
+
+SDV_X509_CHECK_TIME_NEED_AFTER_TIME_FUNC_TC001 prevent aftertime bypass by flag tampering
+SDV_X509_CHECK_TIME_NEED_AFTER_TIME_FUNC_TC001:"../testdata/cert/chain/verify/aftertime_ca.der":"../testdata/cert/chain/verify/aftertime_cert.der":"../testdata/cert/chain/verify/aftertime_crl.der"
+

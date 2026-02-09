@@ -405,7 +405,7 @@ int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
     }
 }
 
-int32_t HITLS_X509_CheckTime(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_ValidTime *validTime)
+int32_t HITLS_X509_CheckTime(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_ValidTime *validTime, bool needAfterTime)
 {
     int64_t start = 0;
     int64_t end = 0;
@@ -423,8 +423,10 @@ int32_t HITLS_X509_CheckTime(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_ValidTime
         return HITLS_X509_ERR_TIME_FUTURE;
     }
 
-    if ((validTime->flag & BSL_TIME_AFTER_SET) == 0) {
-        return HITLS_PKI_SUCCESS;
+    if (!needAfterTime) {
+        if ((validTime->flag & BSL_TIME_AFTER_SET) == 0) {
+            return HITLS_PKI_SUCCESS;
+        }
     }
 
     ret = BSL_SAL_DateToUtcTimeConvert(&validTime->end, &end);
@@ -827,7 +829,7 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
                 continue;
             }
         }
-        if (HITLS_X509_CheckTime(storeCtx, &(crl->tbs.validTime)) != HITLS_PKI_SUCCESS) {
+        if (HITLS_X509_CheckTime(storeCtx, &(crl->tbs.validTime), false) != HITLS_PKI_SUCCESS) {
             crl = BSL_LIST_GET_NEXT(storeCtx->crl);
             continue;
         }
@@ -886,7 +888,7 @@ int32_t X509_VerifyChainCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
     int32_t ret;
     while (cur != NULL) {
         if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_TIME) != 0) {
-            ret = HITLS_X509_CheckTime(storeCtx, &cur->tbs.validTime);
+            ret = HITLS_X509_CheckTime(storeCtx, &cur->tbs.validTime, true);
             if (ret != HITLS_PKI_SUCCESS) {
                 return ret;
             }

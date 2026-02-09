@@ -964,3 +964,65 @@ EXIT:
     HITLS_X509_CertFree(otherCert);
 }
 /* END_CASE */
+
+/**
+ * @brief Test HITLS_X509_CheckTime with needAfterTime parameter:
+ *        - CRL verification (needAfterTime=false): can skip afterTime check if flag is not set
+ *        - Certificate verification (needAfterTime=true): must check afterTime even if flag is cleared
+ */
+/* BEGIN_CASE */
+void SDV_X509_CHECK_TIME_NEED_AFTER_TIME_FUNC_TC001(char *caPath, char *userPath, char *crlPath)
+{
+    TestMemInit();
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+    HITLS_X509_Cert *ca = NULL;
+    HITLS_X509_Cert *user = NULL;
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_List *chain = NULL;
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, caPath, &ca), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, ca, sizeof(HITLS_X509_Cert)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, userPath, &user), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_UNKNOWN, crlPath, &crl), HITLS_PKI_SUCCESS);
+
+    // Clear BSL_TIME_AFTER_SET flag from CRL
+    crl->tbs.validTime.flag &= ~BSL_TIME_AFTER_SET;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_CRL, crl, sizeof(HITLS_X509_Crl)),
+        HITLS_PKI_SUCCESS);
+    // Clear BSL_TIME_AFTER_SET flag from user certificate
+    user->tbs.validTime.flag &= ~BSL_TIME_AFTER_SET;
+
+    // Set verification time to current time (cert and CRL are already expired)
+    int64_t currentTime = (int64_t)time(NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &currentTime, sizeof(currentTime)),
+        HITLS_PKI_SUCCESS);
+
+    // Enable CRL verification
+    uint64_t flag = HITLS_X509_VFY_FLAG_CRL_ALL;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)),
+        HITLS_PKI_SUCCESS);
+
+    // Build certificate chain (add both user cert and CA to ensure CRL verification runs)
+    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, user), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, ca), HITLS_PKI_SUCCESS);
+
+    // Step 1: Test CRL verification separately (should pass with needAfterTime=false)
+    int32_t ret = HITLS_X509_VerifyCrl(store, chain);
+    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    // Step 2: Test full certificate verification (should fail with needAfterTime=true)
+    // Expected: HITLS_X509_ERR_TIME_EXPIRED because cert afterTime check is enforced
+    ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, HITLS_X509_ERR_TIME_EXPIRED);
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(ca);
+    HITLS_X509_CertFree(user);
+    HITLS_X509_CrlFree(crl);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */

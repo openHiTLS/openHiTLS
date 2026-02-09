@@ -585,17 +585,24 @@ static int32_t ParseSafeContentAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, voi
         return HITLS_PKI_SUCCESS;
     }
     BSL_Buffer buffer = {asn->buff, asn->len};
-    HITLS_PKCS12_SafeBag safeBag = {0};
-    int32_t ret = ParseSafeBag(&buffer, &safeBag);
+    HITLS_PKCS12_SafeBag *safeBag = BSL_SAL_Calloc(sizeof(HITLS_PKCS12_SafeBag), 1);
+    if (safeBag == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    int32_t ret = ParseSafeBag(&buffer, safeBag);
     if (ret != HITLS_PKI_SUCCESS) {
+        BSL_SAL_Free(safeBag);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = HITLS_X509_AddListItemDefault(&safeBag, sizeof(HITLS_PKCS12_SafeBag), list);
+    ret = HITLS_X509_AddListItemDefault(safeBag, sizeof(HITLS_PKCS12_SafeBag), list);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_SAL_FREE(safeBag.bag);
+        HITLS_PKCS12_SafeBagFree(safeBag);
         BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
+    BSL_SAL_Free(safeBag);
     return ret;
 }
 

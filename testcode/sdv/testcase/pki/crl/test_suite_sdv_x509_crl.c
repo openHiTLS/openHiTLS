@@ -1653,3 +1653,21 @@ EXIT:
     STUB_Reset(&tmpRpInfo);
 }
 /* END_CASE */
+
+/**
+ * @brief Test HITLS_X509_CrlCtrl with HITLS_X509_SET_VFY_SM2_USER_ID when val is NULL.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_SET_SM2_USERID_NULL_FUNC_TC001(void)
+{
+    TestMemInit();
+    HITLS_X509_Crl *crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    crl->signAlgId.algId = BSL_CID_SM2DSAWITHSM3;
+    int32_t ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VFY_SM2_USER_ID, NULL, 16); // valLen=16
+    ASSERT_EQ(ret, HITLS_X509_ERR_INVALID_PARAM);
+
+EXIT:
+    HITLS_X509_CrlFree(crl);
+}
+/* END_CASE */

@@ -1041,3 +1041,21 @@ EXIT:
     BSL_SAL_FREE(customExt.value.data);
 }
 /* END_CASE */
+
+/**
+ * @brief Test HITLS_X509_CsrCtrl with HITLS_X509_SET_VFY_SM2_USER_ID when val is NULL.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CSR_SET_SM2_USERID_NULL_FUNC_TC001(void)
+{
+    TestMemInit();
+    HITLS_X509_Csr *csr = HITLS_X509_CsrNew();
+    ASSERT_NE(csr, NULL);
+    csr->signAlgId.algId = BSL_CID_SM2DSAWITHSM3;
+    int32_t ret = HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_VFY_SM2_USER_ID, NULL, 16); // valLen=16
+    ASSERT_EQ(ret, HITLS_X509_ERR_INVALID_PARAM);
+
+EXIT:
+    HITLS_X509_CsrFree(csr);
+}
+/* END_CASE */

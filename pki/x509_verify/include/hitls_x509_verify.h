@@ -62,8 +62,6 @@ int32_t HITLS_X509_VerifyParamAndExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_L
  */
 int32_t HITLS_X509_VerifyCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain);
 
-int32_t HITLS_X509_GetIssuerFromStore(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_Cert **issuer);
-
 #ifdef __cplusplus
 }
 #endif

@@ -492,7 +492,7 @@ int32_t HITLS_X509_GetSerial(BSL_ASN1_Buffer *serial, void *val, uint32_t valLen
 #ifdef HITLS_CRYPTO_SM2
 int32_t HITLS_X509_SetSm2UserId(BSL_Buffer *sm2UserId, void *val, uint32_t valLen)
 {
-    if (valLen == 0 || valLen > SM2_MAX_ID_LENGTH) {
+    if (val == NULL || valLen == 0 || valLen > SM2_MAX_ID_LENGTH) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }

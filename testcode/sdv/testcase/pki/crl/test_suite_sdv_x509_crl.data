@@ -405,3 +405,6 @@ SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/asn1/rsa_cert/inter2.mul.crt":"
 
 SDV_X509_CRL_ENCODE_STUB_TC001 v3 cert sm2 with userid
 SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/sm2_with_userid/ca.crt":"../testdata/cert/sm2_with_userid/ca.key":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SM3:0:"tmp-sm2-withuserId.crl":1:3
+
+SDV_X509_CRL_SET_SM2_USERID_NULL_FUNC_TC001 Test setting SM2 user ID with NULL pointer
+SDV_X509_CRL_SET_SM2_USERID_NULL_FUNC_TC001:

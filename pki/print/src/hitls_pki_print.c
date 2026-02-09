@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <inttypes.h>
 #include "bsl_list.h"
 #include "bsl_uio.h"
 #include "bsl_asn1.h"
@@ -77,48 +78,61 @@ static bool CharInList(char c, char *list, uint32_t listSize)
     return false;
 }
 
+/*
+ * RFC2253: section 2.4
+ * The following characters need to be escaped"
+ * (1) a space or "#" character occurring at the beginning of the string
+ * (2) a space character occurring at the end of the string
+ * (3) one of the characters ",", "+", """, "\", "<", ">" or ";"
+ */
+static bool Rfc2253Escape(uint8_t *cur, uint64_t c, uint8_t *begin, uint8_t *end)
+{
+    return g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253 &&               // RFC 2253
+           ((cur == begin && (c == ' ' || c == '#')) ||               // (1)
+           (cur + 1 == end && c == ' ') ||                            // (2)
+           CharInList((char)c, g_rfc2253Escape, RFC2253_ESCAPE_CHAR_CNT));  // (3)
+}
+
 static int32_t PrintDnNameValue(BSL_ASN1_Buffer *value, BSL_UIO *uio)
 {
     uint8_t *cur = value->buff;
     uint8_t *end = value->buff + value->len;
+    uint64_t c;
     char quote = '"';
     bool needQuote = NeedQuote(value);
-    if (needQuote && BSL_ASN1_PrintfBuff(0, uio, &quote, 1) != BSL_SUCCESS) {
+    if (needQuote && BSL_ASN1_PrintfBuff(0, uio, &quote, 1) != 0) {
         BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DNNAME_VALUE);
         return HITLS_PRINT_ERR_DNNAME_VALUE;
     }
-    char c;
     char *fmt;
     int32_t ret;
+    char tmpC;
     while (cur != end) {
         c = *cur;
-        /*
-         * RFC2253： section 2.4
-         * Characters that need escaping:
-         * (1) A space or "#" character occurring at the beginning of the string
-         * (2) A space character occurring at the end of the string
-         * (3) One of the characters: ",", "+", """, "\", "<", ">", ";"
-         */
         fmt = NULL;
-        if (c < ' ' || c > '~') { // control character
-            fmt = "\\%02X";
-        } else if (g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253) {
-            if ((cur == value->buff && (c == ' ' || c == '#')) ||             // (1)
-                (cur + 1 == end && c == ' ') ||                               // (2)
-                CharInList(c, g_rfc2253Escape, RFC2253_ESCAPE_CHAR_CNT)) {    // (3)
-                fmt = "\\%c";
-            }
-        } else if (needQuote && c == '"') {
+        tmpC = 0;
+        if (c < ' ' || c > '~') {  // control character
+            fmt = "\\%02"PRIX64"";
+        } else if (Rfc2253Escape(cur, c, value->buff, end) == true) {
             fmt = "\\%c";
+            tmpC = (char)c;
+        } else if (needQuote && c == '"') {
+            fmt = "\\\"";
         }
-        ret = fmt == NULL ? BSL_ASN1_PrintfBuff(0, uio, &c, 1) : BSL_ASN1_Printf(0, uio, fmt, c);
+        if (tmpC != 0) {
+            ret = fmt == NULL ? BSL_ASN1_PrintfBuff(0, uio, &tmpC, 1) : BSL_ASN1_Printf(0, uio, fmt, tmpC);
+        } else {
+            tmpC = (char)c;
+            ret = fmt == NULL ? BSL_ASN1_PrintfBuff(0, uio, &tmpC, 1) : BSL_ASN1_Printf(0, uio, fmt, c);
+        }
         if (ret != BSL_SUCCESS) {
             BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DNNAME_VALUE);
             return HITLS_PRINT_ERR_DNNAME_VALUE;
         }
         cur++;
     }
-    if (needQuote && BSL_ASN1_PrintfBuff(0, uio, &quote, 1) != BSL_SUCCESS) {
+
+    if (needQuote && BSL_ASN1_PrintfBuff(0, uio, &quote, 1) != 0) {
         BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_DNNAME_VALUE);
         return HITLS_PRINT_ERR_DNNAME_VALUE;
     }
