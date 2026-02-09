@@ -3,7 +3,7 @@ Certificate Request:
         Version: 1 (0x00)
         Subject: CN=test.example.com,O=Test Organization,C=CN
         Subject Public Key Info:
-            Public Key Algorithm: RSAENCRYPTION
+            Public Key Algorithm: rsaEncryption
                 Public-Key: (2048 bit)
                 Modulus:
                     c5:15:ba:6f:78:bf:86:4d:f9:e0:cb:89:df:76:e7:ee
@@ -31,7 +31,7 @@ Certificate Request:
                     Digital Signature, Key Encipherment
                 1.2.3.4.5.6.7.8.9.1
                 1.2.3.4.5.6.7.8.9.2
-    Signature Algorithm: SHA256WITHRSA
+    Signature Algorithm: sha256WithRSAEncryption
     Signature Value:
         79:d9:b0:60:fc:b9:25:d0:98:59:ec:6b:0b:35:38:82
         cb:85:2b:2b:5b:d3:16:45:54:a2:2e:8f:11:d6:ff:2e

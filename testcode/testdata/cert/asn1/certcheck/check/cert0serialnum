@@ -2,14 +2,14 @@ Certificate:
     Data:
         Version: 3 (0x02)
         Serial Number: 0 (0x0)
-        Signature Algorithm: ECDSAWITHSHA256
+        Signature Algorithm: ecdsa-with-SHA256
         Issuer: C=CN,CN=OH
         Validity:
             Not Before: Jan 1 00:00:00 2025 GMT
             Not After : Jan 1 00:00:00 2035 GMT
         Subject: C=CN,CN=OH
         Subject Public Key Info:
-            Public Key Algorithm: EC-PUBLICKEY
+            Public Key Algorithm: id-ecPublicKey
                 Public-Key: (256 bit)
                 Pub:
                     04:a8:e3:e6:8e:d6:92:8c:94:5a:54:64:08:10:50:3e
@@ -17,7 +17,7 @@ Certificate:
                     73:13:82:bc:47:ec:d1:63:3c:84:9a:63:db:05:46:f2
                     71:9b:48:e4:72:60:e5:d3:0e:13:13:c7:e7:c2:83:2e
                     ae
-                ANS1 OID: PRIME256V1
+                ANS1 OID: prime256v1
         X509V3 extensions:
             BasicConstraints: critical
                 CA:TRUE, pathlen:1
@@ -31,7 +31,7 @@ Certificate:
                 ServerAuth
             SubjectAltName: critical
                 Email:Wllill@163.com, DNS:test, URI:test, DirName:C=CN,CN=OH, IP Address:116.101.115.116
-    Signature Algorithm: ECDSAWITHSHA256
+    Signature Algorithm: ecdsa-with-SHA256
     Signature Value:
         30:46:02:21:00:8d:7a:4e:0a:81:7c:47:4e:28:94:3f
         b9:b3:a4:71:73:44:8a:43:ce:b0:2a:e6:6f:62:0d:2c

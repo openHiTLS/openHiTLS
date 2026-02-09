@@ -2,14 +2,14 @@ Certificate:
     Data:
         Version: 3 (0x02)
         Serial Number: 287454020 (0x11223344)
-        Signature Algorithm: ECDSAWITHSHA256
+        Signature Algorithm: ecdsa-with-SHA256
         Issuer: C=CN,CN=hi
         Validity:
             Not Before: Jan 1 00:00:00 2025 GMT
             Not After : Jan 1 00:00:00 2035 GMT
         Subject: C=CN,CN=MI
         Subject Public Key Info:
-            Public Key Algorithm: EC-PUBLICKEY
+            Public Key Algorithm: id-ecPublicKey
                 Public-Key: (256 bit)
                 Pub:
                     04:50:3a:19:31:79:9d:7c:27:33:f8:55:3a:2d:3e:07
@@ -17,7 +17,7 @@ Certificate:
                     c3:e1:cc:22:67:83:04:08:8e:a4:55:0c:94:98:51:40
                     60:af:a6:9d:3b:02:f0:c2:0e:7b:e2:b4:3e:ed:d1:82
                     ce
-                ANS1 OID: PRIME256V1
+                ANS1 OID: prime256v1
         X509V3 extensions:
             BasicConstraints: critical
                 CA:TRUE
@@ -29,7 +29,7 @@ Certificate:
                 Keyid: 11:22:33:44:55:66:77:88
             SubjectAltName:
                 Email:test, DNS:test, URI:test, DirName:C=CN,CN=OH, IP Address:116.101.115.116
-    Signature Algorithm: ECDSAWITHSHA256
+    Signature Algorithm: ecdsa-with-SHA256
     Signature Value:
         30:45:02:21:00:e8:59:59:b3:a9:b7:5b:9d:d5:73:cd
         ca:e3:fa:26:7c:2f:f4:b1:cc:55:d9:65:fe:89:a2:b7
