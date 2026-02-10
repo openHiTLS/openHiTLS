@@ -1,6 +1,6 @@
 Certificate Revocation List (CRL):
     Version: 2 (0x01)
-    Signature Algorithm: SHA256WITHRSA
+    Signature Algorithm: sha256WithRSAEncryption
     Issuer: CN = OH, C = CN
     Last Update: Jan 1 00:00:00 2025 GMT
     Next Update: Jan 1 00:00:00 2035 GMT
@@ -17,7 +17,7 @@ Certificate Revocation List (CRL):
     X509V3 extensions:
         CrlNumber:
             17 (0x11)
-    Signature Algorithm: SHA256WITHRSA
+    Signature Algorithm: sha256WithRSAEncryption
     Signature Value:
         2f:d1:24:cb:ea:f8:8f:8d:c5:2d:4e:74:1b:1b:fa:d6
         4e:b5:5a:6a:88:e1:06:40:4b:7a:3c:39:0c:2c:97:79

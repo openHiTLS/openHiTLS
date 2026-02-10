@@ -4,5 +4,5 @@ Issuer: CN=test_intCa,C=GB
 Subject: CN=test_ee,C=GB
 Not Before: Sep 10 03:34:23 2024 GMT
 Not After : Sep 8 03:34:23 2034 GMT
-Signature Algorithm: SHA256WITHRSA
+Signature Algorithm: sha256WithRSAEncryption
 Public Key size: 384 bits

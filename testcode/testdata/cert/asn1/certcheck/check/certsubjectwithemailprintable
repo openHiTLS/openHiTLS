@@ -3,14 +3,14 @@ Certificate:
         Version: 3 (0x02)
         Serial Number:
             74:f6:97:8d:7b:10:30:aa:d4:9b:5d:6c:d4:b9:a7:01:c0:27:0b:73
-        Signature Algorithm: SHA256WITHRSA
+        Signature Algorithm: sha256WithRSAEncryption
         Issuer: emailAddress=CN,CN=www.example.com,OU=TechDept,O=TestOrg,L=Beijing,ST=Beijing,C=CN
         Validity:
             Not Before: Nov 3 03:32:21 2025 GMT
             Not After : Nov 3 03:32:21 2026 GMT
         Subject: emailAddress=CN,CN=www.example.com,OU=TechDept,O=TestOrg,L=Beijing,ST=Beijing,C=CN
         Subject Public Key Info:
-            Public Key Algorithm: RSAENCRYPTION
+            Public Key Algorithm: rsaEncryption
                 Public-Key: (2048 bit)
                 Modulus:
                     d9:08:83:9a:01:82:0a:7c:08:e1:0e:0e:63:85:28:5a
@@ -37,7 +37,7 @@ Certificate:
                 Keyid: 3a:cf:5b:ed:e3:a8:cc:29:12:32:d1:d6:4d:0b:17:62:71:1b:40:d0
             BasicConstraints: critical
                 CA:TRUE
-    Signature Algorithm: SHA256WITHRSA
+    Signature Algorithm: sha256WithRSAEncryption
     Signature Value:
         19:4d:6a:61:ec:34:c0:18:da:ce:81:f4:bc:d2:cc:8d
         09:f8:fa:aa:f9:7f:37:71:1e:f5:d4:0e:f5:b8:a5:6f

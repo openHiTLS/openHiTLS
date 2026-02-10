@@ -2,14 +2,14 @@ Certificate:
     Data:
         Version: 2 (0x01)
         Serial Number: 287454020 (0x11223344)
-        Signature Algorithm: ECDSAWITHSHA256
+        Signature Algorithm: ecdsa-with-SHA256
         Issuer: C=CN,CN=OH
         Validity:
             Not Before: Jan 1 00:00:00 2025 GMT
             Not After : Jan 1 00:00:00 2035 GMT
         Subject: C=CN,CN=OH
         Subject Public Key Info:
-            Public Key Algorithm: EC-PUBLICKEY
+            Public Key Algorithm: id-ecPublicKey
                 Public-Key: (256 bit)
                 Pub:
                     04:5f:99:69:eb:58:fa:41:8d:ea:d3:3f:76:72:74:a6
@@ -17,8 +17,8 @@ Certificate:
                     0e:cd:72:7b:78:bb:27:38:16:bf:23:7e:91:0b:d9:21
                     b2:8d:0b:bd:fa:1f:f7:b5:4b:de:3c:72:79:24:81:fe
                     3d
-                ANS1 OID: PRIME256V1
-    Signature Algorithm: ECDSAWITHSHA256
+                ANS1 OID: prime256v1
+    Signature Algorithm: ecdsa-with-SHA256
     Signature Value:
         30:45:02:21:00:af:11:a5:2d:9d:c3:06:1f:12:3c:55
         02:14:1a:5a:40:94:a5:84:b2:c5:c9:36:1d:14:a9:cc
