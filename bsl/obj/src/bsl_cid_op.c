@@ -124,7 +124,7 @@ static void InitSignHashTableOnce(void)
 }
 #endif
 
-int32_t OBJ_GetHashIdFromSignId(BslCid signAlg, BslCid *hashId)
+int32_t OBJ_GetHashIdFromSignId(BslCid signAlg, int32_t *hashId)
 {
     if (signAlg == BSL_CID_UNKNOWN) {
         return BSL_OBJ_INVALID_ALGID;
@@ -298,7 +298,7 @@ static int32_t InsertSignIdMapping(int32_t signId, int32_t asymId, int32_t hashI
         (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);
         return BSL_SUCCESS;
     }
-    ret = BSL_HASH_Insert(g_signHashTable, (uintptr_t)signId, sizeof(BslCid),
+    ret = BSL_HASH_Insert(g_signHashTable, (uintptr_t)signId, sizeof(signId),
         (uintptr_t)&newSignIdMap, sizeof(BSL_SignIdMap));
     if (ret != BSL_SUCCESS) {
         (void)BSL_SAL_ThreadUnlock(g_signHashRwLock);

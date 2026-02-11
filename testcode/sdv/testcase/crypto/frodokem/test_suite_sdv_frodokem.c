@@ -46,7 +46,7 @@ void SDV_CRYPTO_FRODOKEM_CTRL_API_TC001(int bits)
     CRYPT_RandRegist(TestSimpleRand);
 
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_FRODOKEM);
-    uint32_t val = (uint32_t)bits;
+    int32_t val = (int32_t)bits;
     int ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID + 100, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_FRODOKEM_CTRL_NOT_SUPPORT);
 
@@ -666,17 +666,17 @@ void SDV_CRYPTO_FRODOKEM_DUPKEY_API_TC001(int bits)
     uint32_t val = (uint32_t)bits;
     int32_t ret = CRYPT_EAL_PkeySetParaById(ctx, val);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    
+
     ret = CRYPT_EAL_PkeyEncapsInit(ctx, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    
+
     ret = CRYPT_EAL_PkeyGen(ctx);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Dup the context
     CRYPT_EAL_PkeyCtx *ctxDup = CRYPT_EAL_PkeyDupCtx(ctx);
     ASSERT_TRUE(ctxDup != NULL);
-    
+
     // Compare the two contexts
     ret = CRYPT_EAL_PkeyCmp(ctx, ctxDup);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -685,10 +685,10 @@ void SDV_CRYPTO_FRODOKEM_DUPKEY_API_TC001(int bits)
     uint32_t cipherLen = 0;
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    
+
     uint32_t sharedLen1 = 32;
     uint32_t sharedLen2 = 32;
-    
+
     uint8_t *ciphertext = BSL_SAL_Malloc(cipherLen);
     ASSERT_TRUE(ciphertext != NULL);
     uint8_t *sharedKey1 = BSL_SAL_Malloc(sharedLen1);
@@ -752,7 +752,7 @@ void SDV_CRYPTO_FRODOKEM_DUPKEY_STUB_TC001(int algId)
     ASSERT_TRUE(ctx != NULL);
 
     // Set parameters and generate key pair
-    uint32_t val = (uint32_t)algId;
+    int32_t val = (int32_t)algId;
     int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     uint8_t *cipher = NULL;
@@ -760,7 +760,7 @@ void SDV_CRYPTO_FRODOKEM_DUPKEY_STUB_TC001(int algId)
     uint32_t cipherLen = 0;
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    
+
     uint32_t sharedLen = 0;
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &sharedLen, sizeof(sharedLen));
     ASSERT_EQ(ret, CRYPT_SUCCESS);

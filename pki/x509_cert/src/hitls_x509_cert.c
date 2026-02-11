@@ -635,7 +635,7 @@ static int32_t X509_CertGetCtrl(HITLS_X509_Cert *cert, int32_t cmd, void *val, u
         case HITLS_X509_GET_SIGNALG:
             return HITLS_X509_GetSignAlg(cert->signAlgId.algId, val, valLen);
         case HITLS_X509_GET_SIGN_MDALG:
-            return HITLS_X509_GetSignMdAlg(&cert->signAlgId, val, (int32_t)valLen);
+            return HITLS_X509_GetSignMdAlg(&cert->signAlgId, val, valLen);
         case HITLS_X509_GET_SUBJECT_DN:
             return HITLS_X509_GetList(cert->tbs.subjectName, val, valLen);
         case HITLS_X509_GET_ISSUER_DN:

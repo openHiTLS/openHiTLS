@@ -134,6 +134,7 @@
             "-fpack-struct=4",
             "-fno-exceptions",
             "-fno-delete-null-pointer-checks",
+            "-fno-short-enums",
             "-fno-merge-constants"
         ],
         "CC_OVERALL_FLAGS": [

@@ -68,9 +68,10 @@ static int32_t SetPkeySignParam(HITLS_Ctx *hitlsCtx, CRYPT_EAL_PkeyCtx *ctx, HIT
 #ifdef HITLS_CRYPTO_RSA_EMSA_PSS
     if (signAlgo == HITLS_SIGN_RSA_PSS) {
         int32_t saltLen = CRYPT_RSA_SALTLEN_TYPE_HASHLEN;
+        CRYPT_MD_AlgId mdId = (CRYPT_MD_AlgId)mdAlgId;
         BSL_Param pssParam[4] = {
-            {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdAlgId, sizeof(mdAlgId), 0},
-            {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdAlgId, sizeof(mdAlgId), 0},
+            {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+            {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
             {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
             BSL_PARAM_END};
         return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0);

@@ -129,7 +129,7 @@ static int32_t SetRsaPara(CRYPT_EAL_PkeyCtx *pkey)
 
 static int32_t SetRsaPssPara(CRYPT_EAL_PkeyCtx *pkey)
 {
-    int32_t mdId = CRYPT_MD_SHA256;
+    CRYPT_MD_AlgId mdId = CRYPT_MD_SHA256;
     int32_t saltLen = 20; // 20 bytes salt
     BSL_Param pssParam[4] = {
     {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
@@ -237,7 +237,6 @@ static void SetSignParam(int32_t algId, int32_t mdId, HITLS_X509_SignAlgParam *a
         algParam->sm2UserId.data = (uint8_t *)g_sm2DefaultUserid;
         algParam->sm2UserId.dataLen = (uint32_t)strlen(g_sm2DefaultUserid);
     }
-    
 }
 #endif
 
@@ -322,7 +321,7 @@ static int32_t SetCrlEntry(HITLS_X509_Crl *crl)
     HITLS_X509_RevokeExtReason reason = {0, 1};  // keyCompromise
     BSL_TIME invalidTime = revokeTime;
     HITLS_X509_RevokeExtTime invalidTimeExt = {false, invalidTime};
-    
+
     BslList *names = NULL;
     HITLS_X509_CrlEntry *entry = HITLS_X509_CrlEntryNew();
     ASSERT_NE(entry, NULL);
@@ -1070,20 +1069,20 @@ void SDV_HITLS_MLDSA_PQCCert_TC004(int format, int type, int key_format, int key
     defined(HITLS_CRYPTO_CODECSKEY)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    BSL_Buffer encodeAsn1 = {0}; 
+    BSL_Buffer encodeAsn1 = {0};
     CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
     ASSERT_NE(pkey, NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_MLDSA_TYPE_MLDSA_87), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
-    
+
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT, &key_format, sizeof(uint32_t)), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkey, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
     ASSERT_EQ(keylen, encodeAsn1.dataLen);
-    
+
     ASSERT_EQ(CRYPT_EAL_EncodeFileKey(pkey, NULL, format, type, path), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
-      
+
 EXIT:
     BSL_SAL_FREE(encodeAsn1.data);
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -1252,14 +1251,13 @@ void SDV_HITLS_GEN_CSR_CERT_TC001()
     HITLS_X509_Attrs *attrs = NULL;
     HITLS_X509_SignAlgParam algParam = {0};
 
-
     HITLS_X509_Cert *cert = NULL;
     uint32_t version = 2; // v3 cert
     uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
     BSL_TIME beforeTime = {2025, 1, 1, 0, 0, 0, 0, 0};
-    BSL_TIME afterTime = {2035, 1, 1, 0, 0, 0, 0, 0};    
+    BSL_TIME afterTime = {2035, 1, 1, 0, 0, 0, 0, 0};
     uint8_t akid[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
-    BslList *dnList = NULL; 
+    BslList *dnList = NULL;
     BslList *subject = NULL;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
 
@@ -1282,7 +1280,7 @@ void SDV_HITLS_GEN_CSR_CERT_TC001()
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrSign(CRYPT_MD_SHA256, pkey, &algParam, csr), HITLS_PKI_SUCCESS);
-    
+
     ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, csr, &encode), 0);
     BSL_SAL_FREE(encode.data);
     ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, csr, path), 0);
@@ -1296,7 +1294,7 @@ void SDV_HITLS_GEN_CSR_CERT_TC001()
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
-    
+
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DN, &subject, sizeof(BslList *)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SUBJECT_DN, subject, sizeof(BslList)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_ISSUER_DN, subject, sizeof(BslList)), HITLS_PKI_SUCCESS);
@@ -1349,7 +1347,7 @@ void SDV_HITLS_GEN_CSR_MIDCERT_TC001()
     BSL_TIME afterTime = {2035, 1, 1, 0, 0, 0, 0, 0};
     uint8_t akid[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
     uint8_t skid[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x99};
-    BslList *dnList = NULL; 
+    BslList *dnList = NULL;
     BslList *subject = NULL;
     BslList *issuer = NULL;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
@@ -1378,7 +1376,7 @@ void SDV_HITLS_GEN_CSR_MIDCERT_TC001()
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrSign(CRYPT_MD_SHA256, pkey, &algParam, csr), HITLS_PKI_SUCCESS);
-    
+
     ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, csr, &encode), 0);
     BSL_SAL_FREE(encode.data);
     ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, csr, path), 0);
@@ -1392,7 +1390,7 @@ void SDV_HITLS_GEN_CSR_MIDCERT_TC001()
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
-    
+
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DN, &subject, sizeof(BslList *)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SUBJECT_DN, subject, sizeof(BslList)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cacert, HITLS_X509_GET_SUBJECT_DN, &issuer, sizeof(BslList *)), HITLS_PKI_SUCCESS);
@@ -1447,7 +1445,7 @@ void SDV_HITLS_GEN_CSR_EECERT_TC001()
     BSL_TIME afterTime = {2035, 1, 1, 0, 0, 0, 0, 0};
     uint8_t akid[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x99};
     uint8_t skid[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x00};
-    BslList *dnList = NULL; 
+    BslList *dnList = NULL;
     BslList *subject = NULL;
     BslList *issuer = NULL;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
@@ -1476,7 +1474,7 @@ void SDV_HITLS_GEN_CSR_EECERT_TC001()
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrSign(CRYPT_MD_SHA256, pkey, &algParam, csr), HITLS_PKI_SUCCESS);
-    
+
     ASSERT_EQ(HITLS_X509_CsrGenBuff(BSL_FORMAT_PEM, csr, &encode), 0);
     BSL_SAL_FREE(encode.data);
     ASSERT_EQ(HITLS_X509_CsrGenFile(BSL_FORMAT_PEM, csr, path), 0);
@@ -1490,7 +1488,7 @@ void SDV_HITLS_GEN_CSR_EECERT_TC001()
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
-    
+
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_GET_SUBJECT_DN, &subject, sizeof(BslList *)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SUBJECT_DN, subject, sizeof(BslList)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cacert, HITLS_X509_GET_SUBJECT_DN, &issuer, sizeof(BslList *)), HITLS_PKI_SUCCESS);
@@ -1584,13 +1582,13 @@ void SDV_HITLS_MLDSA_PQCCert_TC009(int key_format)
 #if defined(HITLS_CRYPTO_KEY_ENCODE) && defined(HITLS_CRYPTO_KEY_DECODE)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    BSL_Buffer encodeAsn1 = {0}; 
+    BSL_Buffer encodeAsn1 = {0};
     CRYPT_EAL_PkeyCtx *pkeyout = NULL;
     CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
     ASSERT_NE(pkey, NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_MLDSA_TYPE_MLDSA_44), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
-    
+
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT, &key_format, sizeof(uint32_t)), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1), CRYPT_SUCCESS);
@@ -1612,7 +1610,7 @@ void SDV_HITLS_MLDSA_PQCCert_TC009(int key_format)
             encodeAsn1.data[62] = 0x80;  //both  修改第62位为第二个tag
             ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1, NULL, 0, &pkeyout), BSL_ASN1_ERR_TAG_EXPECTED);
             encodeAsn1.data[62] = 0x04;  //both  修改第62位为第二个tag
-            break;    
+            break;
         default:
             break;
     }
@@ -1633,22 +1631,18 @@ void SDV_HITLS_MLDSA_PQCCert_TC010()
 #if defined(HITLS_CRYPTO_KEY_ENCODE) && defined(HITLS_CRYPTO_KEY_DECODE)
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    BSL_Buffer encodeAsn1 = {0}; 
+    BSL_Buffer encodeAsn1 = {0};
     int key_format = CRYPT_ALGO_MLDSA_PRIV_FORMAT_BOTH;
     CRYPT_EAL_PkeyCtx *pkeyout = NULL;
     CRYPT_EAL_PkeyCtx *pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
     ASSERT_NE(pkey, NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_MLDSA_TYPE_MLDSA_44), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
-    
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT, &key_format, sizeof(uint32_t)), CRYPT_SUCCESS);
-
     ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(pkey, NULL, BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
-
-    encodeAsn1.data[40]++; 
+    encodeAsn1.data[40]++;
     ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encodeAsn1, NULL, 0, &pkeyout), CRYPT_MLDSA_PRVKEY_SEED_INCONSISTENT);
-
 EXIT:
     BSL_SAL_FREE(encodeAsn1.data);
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -2064,37 +2058,37 @@ static int32_t GenKeyAndSelfCert(int32_t algId, int paraId, CRYPT_EAL_PkeyCtx **
     HITLS_X509_ExtSki ski = {false, {kid, sizeof(kid)}};
     HITLS_X509_ExtBCons bCons = {true, true, -1}; // CA=true, maxPathLen=-1 (no limit)
     HITLS_X509_ExtKeyUsage ku = {true, HITLS_X509_EXT_KU_DIGITAL_SIGN | HITLS_X509_EXT_KU_KEY_CERT_SIGN};
-    
+
     // Create XMSS private key context
     privKey = CRYPT_EAL_PkeyNewCtx(algId);
     ASSERT_NE(privKey, NULL);
 
     // Set XMSS parameters
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(privKey, paraId), CRYPT_SUCCESS);
-    
+
     // Generate XMSS key pair
     ASSERT_EQ(CRYPT_EAL_PkeyGen(privKey), CRYPT_SUCCESS);
-    
+
     // Create new certificate
     tmpCert = HITLS_X509_CertNew();
     ASSERT_NE(tmpCert, NULL);
-    
+
     // Set version (v3)
     int32_t version = HITLS_X509_VERSION_3;
     ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_VERSION, &version, sizeof(int32_t)), HITLS_PKI_SUCCESS);
-    
+
     // Set serial number
     ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_SERIALNUM, serialNum, sizeof(serialNum)), HITLS_PKI_SUCCESS);
-    
+
     // Set validity time
     ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_BEFORE_TIME, &beforeTime, sizeof(BSL_TIME)),
         HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_AFTER_TIME, &afterTime, sizeof(BSL_TIME)),
         HITLS_PKI_SUCCESS);
-    
+
     // Set public key
     ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_PUBKEY, privKey, 0), HITLS_PKI_SUCCESS);
-    
+
     // Create and set subject DN: C=CN, O=Test, CN=test xmss root
     BslList *subjectDN = HITLS_X509_DnListNew();
     ASSERT_NE(subjectDN, NULL);
@@ -2105,23 +2099,23 @@ static int32_t GenKeyAndSelfCert(int32_t algId, int paraId, CRYPT_EAL_PkeyCtx **
     ASSERT_EQ(HITLS_X509_AddDnName(subjectDN, &dnOrg, 1), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_AddDnName(subjectDN, &dnCN, 1), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_SUBJECT_DN, subjectDN, sizeof(BslList)), HITLS_PKI_SUCCESS);
-    
+
     // Set issuer DN (same as subject for self-signed certificate)
     ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_SET_ISSUER_DN, subjectDN, sizeof(BslList)), HITLS_PKI_SUCCESS);
-    
+
     // Generate SKI from public key (simplified - using a hash of public key)
     // In real implementation, this should use SHA-1 or SHA-256 hash of the public key
     // For now, we'll use a placeholder
     ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_EXT_SET_SKI, &ski, sizeof(HITLS_X509_ExtSki)), HITLS_PKI_SUCCESS);
-    
+
     // Set Basic Constraints
     ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_EXT_SET_BCONS, &bCons, sizeof(HITLS_X509_ExtBCons)),
         HITLS_PKI_SUCCESS);
-    
+
     // Set Key Usage
     ASSERT_EQ(HITLS_X509_CertCtrl(tmpCert, HITLS_X509_EXT_SET_KUSAGE, &ku, sizeof(HITLS_X509_ExtKeyUsage)),
         HITLS_PKI_SUCCESS);
-    
+
     // Sign certificate (self-signed, using private key)
     // For XMSS, we typically use SHA-256 or SHA-512
     ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, privKey, NULL, tmpCert), HITLS_PKI_SUCCESS);

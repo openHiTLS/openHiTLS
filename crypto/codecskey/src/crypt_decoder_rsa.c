@@ -83,8 +83,8 @@ static int32_t ProcRsaKeyPair(uint8_t *buff, uint32_t buffLen, CRYPT_RSA_Ctx *rs
 
 static int32_t ProcRsaPssParam(BSL_ASN1_Buffer *rsaPssParam, CRYPT_RSA_Ctx *rsaPriKey)
 {
-    CRYPT_RsaPadType padType = CRYPT_EMSA_PSS;
-    int32_t ret = CRYPT_RSA_Ctrl(rsaPriKey, CRYPT_CTRL_SET_RSA_PADDING, &padType, sizeof(CRYPT_RsaPadType));
+    int32_t padType = CRYPT_EMSA_PSS;
+    int32_t ret = CRYPT_RSA_Ctrl(rsaPriKey, CRYPT_CTRL_SET_RSA_PADDING, &padType, sizeof(padType));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

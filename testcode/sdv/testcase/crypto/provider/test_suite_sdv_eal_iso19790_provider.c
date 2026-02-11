@@ -289,7 +289,7 @@ void SDV_ISO19790_PROVIDER_PKEY_SIGN_VERIFY_TEST_TC001()
     uint32_t signatureLen = sizeof(signature);
     uint8_t testData[] = "Test data for signing and verification with ECDSA";
     uint32_t testDataLen = sizeof(testData) - 1;
-    
+
     ASSERT_EQ(Iso19790_ProviderLoad(&ctx), CRYPT_SUCCESS);
 
     keyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_SM2, 0, HITLS_ISO_PROVIDER_ATTR);
@@ -368,7 +368,7 @@ void SDV_ISO_PROVIDER_PKEY_ENCRYPT_DECRYPT_TEST_TC001()
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
     uint8_t e[] = {1, 0, 1};
     CRYPT_EAL_PkeyPara para = {0};
-    int32_t mdId = CRYPT_MD_SHA256;
+    CRYPT_MD_AlgId mdId = CRYPT_MD_SHA256;
     uint8_t plaintext[256] = {0};
     uint32_t plaintextLen = sizeof(plaintext);
     uint8_t ciphertext[256] = {0};
@@ -732,7 +732,7 @@ void SDV_ISO19790_PROVIDER_Get_Status_Test_TC001()
     libCtx = CRYPT_EAL_LibCtxNew();
     ASSERT_TRUE(libCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, HITLS_ISO_PROVIDER_PATH), CRYPT_SUCCESS);
-    
+
     bool isLoaded = false;
     int32_t ret = CRYPT_EAL_ProviderIsLoaded(libCtx, 0, HITLS_PROVIDER_LIB_NAME, &isLoaded);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -836,7 +836,7 @@ void SDV_ISO19790_PROVIDER_CIPHPER_TEST_TC001()
     uint32_t plainLen = sizeof(plainLen) - 1;
     uint8_t cipher[128] = {0};
     uint32_t cipherLen = sizeof(cipher);
-    
+
     ASSERT_EQ(Iso19790_ProviderLoad(&ctx), CRYPT_SUCCESS);
 
     cipherCtx = CRYPT_EAL_ProviderCipherNewCtx(ctx.libCtx, CRYPT_CIPHER_AES128_CBC, HITLS_ISO_PROVIDER_ATTR);
@@ -844,10 +844,10 @@ void SDV_ISO19790_PROVIDER_CIPHPER_TEST_TC001()
 
     int32_t ret = CRYPT_EAL_CipherInit(cipherCtx, key, keyLen, iv, ivLen, true);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    
+
     ret = CRYPT_EAL_CipherSetPadding(cipherCtx, CRYPT_PADDING_PKCS7);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    
+
     uint32_t tmpLen = cipherLen;
     ret = CRYPT_EAL_CipherUpdate(cipherCtx, plain, plainLen, cipher, &tmpLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -903,7 +903,7 @@ void SDV_ISO19790_PROVIDER_PKEY_TEST_TC001(int hashId, Hex *p, Hex *q, Hex *g)
     uint32_t signatureLen = sizeof(signature);
     uint8_t testData[] = "Test data for signing and verification with ECDSA";
     uint32_t testDataLen = sizeof(testData) - 1;
-    
+
     ASSERT_EQ(Iso19790_ProviderLoad(&ctx), CRYPT_SUCCESS);
 
     pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, CRYPT_PKEY_DSA, 0, HITLS_ISO_PROVIDER_ATTR);
@@ -941,7 +941,7 @@ void SDV_ISO19790_PROVIDER_MAC_PARAM_CHECK_TC001(int algId, int keyLen)
     macCtx = CRYPT_EAL_ProviderMacNewCtx(ctx.libCtx, algId, HITLS_ISO_PROVIDER_ATTR);
     ASSERT_TRUE(macCtx != NULL);
     ASSERT_TRUE(TestIsErrStackEmpty());
-    
+
     int32_t ret = CRYPT_EAL_MacInit(macCtx, macKey, macKeyLen);
     ASSERT_EQ(ret, CRYPT_CMVP_ERR_PARAM_CHECK);
 
@@ -1195,7 +1195,7 @@ void SDV_ISO19790_PROVIDER_RSA_PARAM_CHECK_TC002()
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
     uint8_t e[] = {1, 0, 1};
     CRYPT_EAL_PkeyPara para = {0};
-    int32_t mdId = CRYPT_MD_SHA256;
+    CRYPT_MD_AlgId mdId = CRYPT_MD_SHA256;
 
     ASSERT_EQ(Iso19790_ProviderLoad(&ctx), CRYPT_SUCCESS);
 

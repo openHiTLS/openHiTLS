@@ -170,8 +170,8 @@ static HITLS_CERT_KeyType CertKeyAlgId2KeyType(CRYPT_EAL_PkeyCtx *pkey)
 {
     CRYPT_PKEY_AlgId cid = CRYPT_EAL_PkeyGetId(pkey);
     if (cid == CRYPT_PKEY_RSA) {
-        CRYPT_RsaPadType padType = 0;
-        if (CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(CRYPT_RsaPadType)) != CRYPT_SUCCESS) {
+        int32_t padType = 0;
+        if (CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(padType)) != CRYPT_SUCCESS) {
             return TLS_CERT_KEY_TYPE_UNKNOWN;
         }
         if (padType == CRYPT_EMSA_PSS) {
@@ -207,7 +207,7 @@ int32_t HITLS_X509_Adapt_KeyCtrl(HITLS_Config *config, HITLS_CERT_Key *key, HITL
             *(int32_t *)output = CRYPT_EAL_PkeyGetParaId(key);
             break;
         case CERT_KEY_CTRL_GET_PSS_MD:
-            (void)CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MD, output, sizeof(CRYPT_MD_AlgId));
+            (void)CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MD, output, sizeof(int32_t));
             break;
         default:
             BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_ERR);

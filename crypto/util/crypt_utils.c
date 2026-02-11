@@ -63,7 +63,7 @@ int32_t CRYPT_SetSignMdCtrl(CRYPT_MD_AlgId *signMdId, void *val, uint32_t len, C
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (len != sizeof(CRYPT_MD_AlgId)) {
+    if (len != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
@@ -73,7 +73,7 @@ int32_t CRYPT_SetSignMdCtrl(CRYPT_MD_AlgId *signMdId, void *val, uint32_t len, C
             return ret;
         }
     }
-    *signMdId = *(CRYPT_MD_AlgId *)val;
+    *signMdId = *(int32_t *)val;
     return CRYPT_SUCCESS;
 }
 

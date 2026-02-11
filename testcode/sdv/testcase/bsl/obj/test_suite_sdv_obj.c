@@ -99,7 +99,7 @@ void SDV_BSL_OBJ_CREATE_SIGN_ID_TC001(void)
     BslCid retrievedAsymId = BSL_OBJ_GetAsymAlgIdFromSignId(signId);
     ASSERT_EQ(asymId, retrievedAsymId);
 
-    BslCid retrievedHashId = 0;
+    int32_t retrievedHashId = 0;
     ASSERT_EQ(OBJ_GetHashIdFromSignId(signId, &retrievedHashId), BSL_SUCCESS);
     ASSERT_EQ(hashId, retrievedHashId);
 
@@ -199,7 +199,7 @@ void SDV_BSL_OBJ_CREATE_TC001()
     ASSERT_EQ(BSL_OBJ_Create(testOidData, 9, NULL, testCid), BSL_INVALID_ARG);
 
     ASSERT_EQ(BSL_OBJ_Create(testOidData, 9, testOidName, BSL_CID_UNKNOWN), BSL_INVALID_ARG);
-    
+
     BSL_OBJ_FreeHashTable();
 EXIT:
     return;
@@ -231,7 +231,7 @@ void SDV_BSL_OBJ_HASH_TABLE_LOOKUP_TC001()
     testOid1.octetLen = sizeof(testOidData1);
     testOid1.octs = testOidData1;
     testOid1.flags = BSL_OID_GLOBAL;
-    
+
     testOid2.octetLen = sizeof(testOidData2);
     testOid2.octs = testOidData2;
     testOid2.flags = BSL_OID_GLOBAL;
@@ -351,7 +351,7 @@ EXIT:
 void SDV_BSL_OID_LENGTH_CHECK_TC001()
 {
     static const int32_t KNOWN_EXCEPTIONS = 6;
-    
+
     int32_t oidIndex = 0;
     int32_t totalCount = 0;
     int32_t passedCount = 0;
@@ -363,7 +363,7 @@ void SDV_BSL_OID_LENGTH_CHECK_TC001()
         oidInfo = g_oidTable[oidIndex];
         octetLen = oidInfo.strOid.octetLen;
         actualLen = strlen(oidInfo.strOid.octs);
-        
+
         totalCount++;
         if (octetLen == actualLen) {
             passedCount++;

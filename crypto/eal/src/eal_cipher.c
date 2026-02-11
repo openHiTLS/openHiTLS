@@ -157,7 +157,7 @@ void CRYPT_EAL_CipherDeinit(CRYPT_EAL_CipherCtx *ctx)
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
     }
-    
+
     // Restore the state to the state after the new is successful.
     ctx->states = EAL_CIPHER_STATE_NEW;
 }
@@ -186,7 +186,7 @@ int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, uint8_t *iv, uint32_t i
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
         return ret;
     }
-    
+
     // Reset the states.
     ctx->states = EAL_CIPHER_STATE_INIT;
     return CRYPT_SUCCESS;
@@ -347,7 +347,8 @@ int32_t CRYPT_EAL_CipherSetPadding(CRYPT_EAL_CipherCtx *ctx, CRYPT_PaddingType t
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
-    int32_t ret = ctx->method.ctrl(ctx->ctx, CRYPT_CTRL_SET_PADDING, (void *)&type, sizeof(type));
+    int32_t padType = type;
+    int32_t ret = ctx->method.ctrl(ctx->ctx, CRYPT_CTRL_SET_PADDING, (void *)&padType, sizeof(padType));
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
     }

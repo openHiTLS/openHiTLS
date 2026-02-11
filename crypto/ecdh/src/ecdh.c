@@ -187,11 +187,11 @@ int32_t CRYPT_ECDH_Ctrl(CRYPT_ECDH_Ctx *ctx, int32_t opt, void *val, uint32_t le
         case CRYPT_CTRL_GET_SECBITS:
             return CRYPT_CTRL_GET_NUM32_EX(ECC_GetSecBits, ctx->para, val, len);
         case CRYPT_CTRL_SET_PARA_BY_ID:
-            if (val == NULL || len != sizeof(CRYPT_PKEY_ParaId)) {
+            if (val == NULL || len != sizeof(int32_t)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
                 return CRYPT_INVALID_ARG;
             }
-            return ECC_SetPara(ctx, CRYPT_ECDH_NewParaById(*(CRYPT_PKEY_ParaId *)val));
+            return ECC_SetPara(ctx, CRYPT_ECDH_NewParaById(*(int32_t *)val));
         default:
             return ECC_PkeyCtrl(ctx, opt, val, len);
     }

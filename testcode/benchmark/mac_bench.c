@@ -38,7 +38,7 @@ static int32_t DoMacCtrl(CRYPT_EAL_MacCtx *mac, int32_t paraId)
 {
     if (paraId == CRYPT_MAC_CBC_MAC_SM4) {
         // cbc-mac-sm4 only support zeros padding
-        CRYPT_PaddingType padType = CRYPT_PADDING_ZEROS;
+        int32_t padType = CRYPT_PADDING_ZEROS;
         return CRYPT_EAL_MacCtrl(mac, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType));
     }
     return CRYPT_SUCCESS;

@@ -929,7 +929,7 @@ static int32_t CtrlServerSet(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (len != sizeof(uint32_t)) {
+    if (len != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_SM2_ERR_CTRL_LEN);
         return CRYPT_SM2_ERR_CTRL_LEN;
     }

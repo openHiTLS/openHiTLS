@@ -70,8 +70,8 @@ void SDV_X509_CRL_PARSE_FILE_FUNC_TC002(char *pathv1, char *pathv2)
     ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, pathv2, &crl), HITLS_PKI_SUCCESS);
     ASSERT_EQ(crl->tbs.version, 5); // 5 is invalid version.
     // Test getting the version number
-    uint32_t version = 0;
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &version, sizeof(uint32_t)), HITLS_PKI_SUCCESS);
+    int32_t version = 0;
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &version, sizeof(int32_t)), HITLS_PKI_SUCCESS);
     // The CRL version should be 0 (v1) or 1 (v2), 5 is invalid version.
     ASSERT_TRUE(version == 5);
     ASSERT_TRUE(TestIsErrStackEmpty());

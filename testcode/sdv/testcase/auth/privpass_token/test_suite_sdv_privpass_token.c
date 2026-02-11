@@ -968,7 +968,7 @@ void SDV_AUTH_PRIVPASS_TOKEN_INSTANCE_OBTAIN_TC001(Hex *token)
     ASSERT_NE(ctx, NULL);
 
     // Deserialize the token instance
-    ASSERT_EQ(HITLS_AUTH_PrivPassDeserialization(ctx, HITLS_AUTH_PRIVPASS_TOKEN_INSTANCE, token->x, token->len, 
+    ASSERT_EQ(HITLS_AUTH_PrivPassDeserialization(ctx, HITLS_AUTH_PRIVPASS_TOKEN_INSTANCE, token->x, token->len,
         &tokenInstance1), HITLS_AUTH_SUCCESS);
 
     // Extract parameters

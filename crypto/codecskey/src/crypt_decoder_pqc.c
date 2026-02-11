@@ -40,7 +40,7 @@
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
-#include "crypt_codecskey_local.h" 
+#include "crypt_codecskey_local.h"
 #include "crypt_codecskey.h"
 
 #ifdef HITLS_CRYPTO_MLDSA
@@ -69,8 +69,8 @@ int32_t CRYPT_MLDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t
         {CRYPT_PARAM_ML_DSA_PUBKEY, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo.pubKey.buff, subPubkeyInfo.pubKey.len, 0},
         BSL_PARAM_END
     };
-    ret = CRYPT_ML_DSA_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&subPubkeyInfo.keyType,
-        sizeof(subPubkeyInfo.keyType));
+    int32_t keyType = (int32_t)subPubkeyInfo.keyType;
+    ret = CRYPT_ML_DSA_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&keyType, sizeof(keyType));
     if (ret != CRYPT_SUCCESS) {
         CRYPT_ML_DSA_FreeCtx(pctx);
         return ret;
@@ -117,8 +117,8 @@ int32_t CRYPT_MLDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
     if (pctx == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    ret = CRYPT_ML_DSA_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&pk8PrikeyInfo.keyType,
-        sizeof(pk8PrikeyInfo.keyType));
+    int32_t keyType = (int32_t)pk8PrikeyInfo.keyType;
+    ret = CRYPT_ML_DSA_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&keyType, sizeof(keyType));
     if (ret != CRYPT_SUCCESS) {
         CRYPT_ML_DSA_FreeCtx(pctx);
         return ret;
@@ -169,7 +169,8 @@ int32_t CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_
         {CRYPT_PARAM_SLH_DSA_PUB_ROOT, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo.pubKey.buff + halfLen, halfLen, 0},
         BSL_PARAM_END
     };
-    ret = CRYPT_SLH_DSA_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, &subPubkeyInfo.keyType, sizeof(subPubkeyInfo.keyType));
+    int32_t keyType = (int32_t)subPubkeyInfo.keyType;
+    ret = CRYPT_SLH_DSA_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&keyType, sizeof(keyType));
     if (ret != CRYPT_SUCCESS) {
         CRYPT_SLH_DSA_FreeCtx(pctx);
         return ret;
@@ -212,8 +213,8 @@ int32_t CRYPT_SLHDSA_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffe
     if (pctx == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    ret = CRYPT_SLH_DSA_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&pk8PrikeyInfo.keyType,
-        sizeof(pk8PrikeyInfo.keyType));
+    int32_t keyType = (int32_t)pk8PrikeyInfo.keyType;
+    ret = CRYPT_SLH_DSA_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&keyType, sizeof(keyType));
     if (ret != CRYPT_SUCCESS) {
         CRYPT_SLH_DSA_FreeCtx(pctx);
         return ret;
@@ -264,8 +265,8 @@ int32_t CRYPT_MLKEM_ParseSubPubkeyAsn1Buff(void *libCtx, uint8_t *buff, uint32_t
         {CRYPT_PARAM_ML_KEM_PUBKEY, BSL_PARAM_TYPE_OCTETS, subPubkeyInfo.pubKey.buff, subPubkeyInfo.pubKey.len, 0},
         BSL_PARAM_END
     };
-    ret = CRYPT_ML_KEM_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&subPubkeyInfo.keyType,
-        sizeof(subPubkeyInfo.keyType));
+    int32_t keyType = (int32_t)subPubkeyInfo.keyType;
+    ret = CRYPT_ML_KEM_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&keyType, sizeof(keyType));
     if (ret != CRYPT_SUCCESS) {
         CRYPT_ML_KEM_FreeCtx(pctx);
         return ret;
@@ -310,8 +311,8 @@ int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
     if (pctx == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    ret = CRYPT_ML_KEM_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&pk8PrikeyInfo.keyType,
-        sizeof(pk8PrikeyInfo.keyType));
+    int32_t keyType = (int32_t)pk8PrikeyInfo.keyType;
+    ret = CRYPT_ML_KEM_Ctrl(pctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&keyType, sizeof(keyType));
     if (ret != CRYPT_SUCCESS) {
         CRYPT_ML_KEM_FreeCtx(pctx);
         return ret;

@@ -372,7 +372,7 @@ int32_t CRYPT_MCELIECE_GetPubKeyEx(CRYPT_MCELIECE_Ctx *ctx, BSL_Param *param)
 
 static int32_t McElieceSetParaById(CRYPT_MCELIECE_Ctx *ctx, void *val, uint32_t valLen)
 {
-    if (valLen != sizeof(uint32_t)) {
+    if (valLen != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }

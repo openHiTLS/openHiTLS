@@ -84,7 +84,7 @@ void SDV_CRYPT_EAL_CBC_MAC_API_TC003(int algId, int padType)
     ASSERT_TRUE(CRYPT_EAL_MacInit(ctx, key, keyLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacInit(ctx, key, keyLen) == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(CRYPT_PaddingType)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacUpdate(ctx, data, dataLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacInit(ctx, key, keyLen) == CRYPT_SUCCESS);
 
@@ -106,7 +106,7 @@ EXIT:
 * @spec  -
 * @title  Impact of Input Parameters on the CRYPT_EAL_MacUpdate Interface
 * @precon  nan
-* @brief 
+* @brief
 * @prior  Level 1
 * @auto  TRUE
 @ */
@@ -124,7 +124,7 @@ void SDV_CRYPT_EAL_CBC_MAC_API_TC004(int algId, int padType)
     CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_MacNewCtx(algId);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(CRYPT_EAL_MacInit(ctx, key, len) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(CRYPT_PaddingType)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_MacUpdate(NULL, data, dataLen) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_MacUpdate(ctx, NULL, dataLen) == CRYPT_NULL_INPUT);
@@ -142,7 +142,7 @@ EXIT:
 * @spec  -
 * @title  Impact of the ctx status on the CRYPT_EAL_MacUpdate interface
 * @precon  nan
-* @brief  
+* @brief
 15.update成功，返回CRYPT_SUCCESS
 * @prior  Level 1
 * @auto  TRUE
@@ -165,7 +165,7 @@ void SDV_CRYPT_EAL_CBC_MAC_API_TC005(int algId, int padType)
     ASSERT_TRUE(CRYPT_EAL_MacUpdate(ctx, data, dataLen) == CRYPT_EAL_ERR_STATE);
 
     ASSERT_TRUE(CRYPT_EAL_MacInit(ctx, key, len) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(CRYPT_PaddingType)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacUpdate(ctx, data, dataLen) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_MacFinal(ctx, mac, &macLen) == CRYPT_SUCCESS);
@@ -192,7 +192,7 @@ EXIT:
 * @spec  -
 * @title  Impact of Input Parameters on the CRYPT_EAL_MacFinal Interface
 * @precon  nan
-* @brief 
+* @brief
 * @prior  Level 1
 * @auto  TRUE
 @ */
@@ -210,7 +210,7 @@ void SDV_CRYPT_EAL_CBC_MAC_API_TC006(int algId, int padType)
     CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_MacNewCtx(algId);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(CRYPT_EAL_MacInit(ctx, key, len) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(CRYPT_PaddingType)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType)) == CRYPT_SUCCESS);
 
     ASSERT_TRUE(CRYPT_EAL_MacFinal(NULL, mac, &macLen) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_MacFinal(ctx, NULL, &macLen) == CRYPT_NULL_INPUT);
@@ -232,7 +232,7 @@ EXIT:
 * @spec  -
 * @title  Impact of ctx Status Change on the CRYPT_EAL_MacFinal Interface
 * @precon  nan
-* @brief  
+* @brief
 * @prior  Level 1
 * @auto  TRUE
 @ */
@@ -253,7 +253,7 @@ void SDV_CRYPT_EAL_CBC_MAC_API_TC007(int algId, int padType, Hex *key1, Hex *mac
 
     // mac1
     ASSERT_TRUE(CRYPT_EAL_MacInit(ctx, key1->x, key1->len) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(CRYPT_PaddingType)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacFinal(ctx, mac, &macLen) == CRYPT_SUCCESS);
     ASSERT_COMPARE("mac1 result cmp", mac, macLen, mac1->x, mac1->len);
 
@@ -282,7 +282,7 @@ EXIT:
 * @spec  -
 * @title  Impact of Input Parameters on the CRYPT_EAL_GetMacLen Interface.
 * @precon  nan
-* @brief 
+* @brief
 * @prior  Level 1
 * @auto  TRUE
 @ */
@@ -313,7 +313,7 @@ EXIT:
 * @spec  -
 * @title  Impact of the ctx Status on the CRYPT_EAL_GetMacLen Interface
 * @precon  nan
-* @brief 
+* @brief
 * @prior  Level 1
 * @auto  TRUE
 @ */
@@ -337,7 +337,7 @@ void SDV_CRYPT_EAL_CBC_MAC_API_TC009(int algId, int padType)
     ASSERT_TRUE(CRYPT_EAL_MacInit(ctx, key, len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_GetMacLen(ctx) == CBC_MAC_MAC_LEN);
 
-    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(CRYPT_PaddingType)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacUpdate(ctx, data, dataLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_GetMacLen(ctx) == CBC_MAC_MAC_LEN);
 
@@ -360,7 +360,7 @@ EXIT:
 * @spec  -
 * @title  Impact of Input Parameters on the CRYPT_EAL_MacDeinit Interface Test
 * @precon  nan
-* @brief  
+* @brief
 * @prior  Level 1
 * @auto  TRUE
 @ */
@@ -390,7 +390,7 @@ EXIT:
 * @spec  -
 * @title  Impact of Input Parameters on the CRYPT_EAL_MacReinit Interface
 * @precon  nan
-* @brief  
+* @brief
 * @prior  Level 1
 * @auto  TRUE
 @ */
@@ -419,7 +419,7 @@ EXIT:
 * @spec  -
 * @title  Impact of ctx status change on the CRYPT_EAL_MacReinit interface
 * @precon  nan
-* @brief 
+* @brief
 * @prior  Level 1
 * @auto  TRUE
 @ */
@@ -442,7 +442,7 @@ void SDV_CRYPT_EAL_CBC_MAC_API_TC012(int algId, int padType)
     ASSERT_TRUE(CRYPT_EAL_MacReinit(ctx) == CRYPT_EAL_ERR_STATE);
 
     ASSERT_TRUE(CRYPT_EAL_MacInit(ctx, key, len) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(CRYPT_PaddingType)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacReinit(ctx) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacReinit(ctx) == CRYPT_SUCCESS);
 
@@ -465,7 +465,7 @@ EXIT:
 * @spec  -
 * @title  Impact of All-0 and All-F Data Keys on CBC MAC Calculation
 * @precon  nan
-* @brief  
+* @brief
 * @prior  Level 1
 * @auto  TRUE
 @ */
@@ -482,7 +482,7 @@ void SDV_CRYPT_EAL_CBC_MAC_FUN_TC004(int algId, int padType, Hex *key, Hex *data
     ASSERT_TRUE(ctx != NULL);
 
     ASSERT_TRUE(CRYPT_EAL_MacInit(ctx, key->x, key->len) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(CRYPT_PaddingType)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacUpdate(ctx, data->x, data->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacFinal(ctx, mac, &macLen) == CRYPT_SUCCESS);
     ASSERT_COMPARE("mac1 result cmp", mac, macLen, vecMac->x, vecMac->len);
@@ -531,7 +531,7 @@ void SDV_CRYPT_EAL_CBC_MAC_FUN_TC006(int algId, int padType, Hex *key, Hex *data
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(CRYPT_EAL_MacInit(ctx, key->x, key->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType,
-        sizeof(CRYPT_PaddingType)) == CRYPT_SUCCESS);
+        sizeof(padType)) == CRYPT_SUCCESS);
     ASSERT_TRUE(UpdateMultiTime(ctx, data, updateTimes, mac1, &macLen1) == CRYPT_SUCCESS);
     CRYPT_EAL_MacDeinit(ctx);
 
@@ -543,7 +543,7 @@ void SDV_CRYPT_EAL_CBC_MAC_FUN_TC006(int algId, int padType, Hex *key, Hex *data
     }
     ASSERT_TRUE(CRYPT_EAL_MacInit(ctx, key->x, key->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType,
-        sizeof(CRYPT_PaddingType)) == CRYPT_SUCCESS);
+        sizeof(padType)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacUpdate(ctx, totalInData, totalLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_MacFinal(ctx, mac2, &macLen2) == CRYPT_SUCCESS);
     ASSERT_TRUE(macLen1 == macLen2);
@@ -656,8 +656,7 @@ void SDV_CRYPT_EAL_CBC_MAC_COPY_CTX_TC001(int algId, int padType, Hex *key, Hex 
         CRYPT_EAL_ProviderMacNewCtx(NULL, algId, "provider=default");
     ASSERT_TRUE(ctx != NULL);
     ASSERT_EQ(CRYPT_EAL_MacInit(ctx, key->x, key->len), CRYPT_SUCCESS);
-    int32_t pad = (int32_t)padType;
-    ASSERT_EQ(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &pad, sizeof(pad)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType)), CRYPT_SUCCESS);
 
     copyCtx1 = (isProvider == 0) ? CRYPT_EAL_MacNewCtx(algId) :
         CRYPT_EAL_ProviderMacNewCtx(NULL, algId, "provider=default");

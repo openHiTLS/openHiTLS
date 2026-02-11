@@ -233,7 +233,7 @@ void SDV_PKCS12_GEN_KEYBAGS_TC001(char *pkeyPath, char *enCertPath, char *ca1Cer
     ASSERT_EQ(NewAndSetKeyBag(p12, BSL_CID_RSA), HITLS_PKI_SUCCESS);
     ASSERT_EQ(NewAndSetKeyBag(p12, BSL_CID_ED25519), HITLS_PKI_SUCCESS);
     ASSERT_EQ(NewAndSetSecretBag(p12), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(CRYPT_MD_AlgId)), 0);
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(mdId)), 0);
     // Gen a p12.
     ASSERT_EQ(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output), 0);
 #ifdef HITLS_PKI_PKCS12_PARSE
@@ -447,7 +447,7 @@ void SDV_PKCS12_PARSE_WITH_PROVIDER_TC001(Hex *mulBag)
     CRYPT_EAL_LibCtx *libCtx = NULL;
     libCtx = P12_ProviderLoadWithDefault();
     ASSERT_TRUE(libCtx != NULL);
-    
+
     char *pwd = "123456";
     BSL_Buffer encPwd = {.data = (uint8_t *)pwd, .dataLen = strlen(pwd)};
     HITLS_PKCS12_PwdParam pwdParam = {.encPwd = &encPwd, .macPwd = &encPwd};

@@ -215,11 +215,11 @@ static int32_t CheckParaId(CRYPT_Iso_Pkey_Ctx *ctx, int32_t opt, void *val, uint
     if (opt != CRYPT_CTRL_SET_PARA_BY_ID) {
         return CRYPT_SUCCESS;
     }
-    if (val == NULL || len != sizeof(CRYPT_PKEY_ParaId)) {
+    if (val == NULL || len != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    CRYPT_EAL_PkeyC2Data data = {NULL, NULL, NULL, CRYPT_MD_MAX, *(CRYPT_PKEY_ParaId *)val, CRYPT_EVENT_MAX,
+    CRYPT_EAL_PkeyC2Data data = {NULL, NULL, NULL, CRYPT_MD_MAX, *(int32_t *)val, CRYPT_EVENT_MAX,
         NULL, NULL, NULL};
     if (!CMVP_Iso19790PkeyC2(ctx->algId, &data)) {
         (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);

@@ -154,11 +154,11 @@ int32_t CRYPT_CBC_MAC_Ctrl(CRYPT_CBC_MAC_Ctx *ctx, uint32_t opt, void *val, uint
     }
     switch (opt) {
         case CRYPT_CTRL_SET_CBC_MAC_PADDING:
-            if (len != sizeof(CRYPT_PaddingType)) {
+            if (len != sizeof(int32_t)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_CBC_MAC_ERR_CTRL_LEN);
                 return CRYPT_CBC_MAC_ERR_CTRL_LEN;
             }
-            ctx->paddingType = *(CRYPT_PaddingType*)val;
+            ctx->paddingType = *(int32_t*)val;
             return CRYPT_SUCCESS;
         case CRYPT_CTRL_GET_MACLEN:
             return CipherMacGetMacLen(&ctx->common, val, len);

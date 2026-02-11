@@ -663,7 +663,7 @@ static int32_t MakePfxAndOutput(Pkcs12OptCtx *opt)
 
     //  Cal localKeyId to p12
     int32_t mdId = CRYPT_MD_SHA1;
-    ret = HITLS_PKCS12_Ctrl(opt->p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(CRYPT_MD_AlgId));
+    ret = HITLS_PKCS12_Ctrl(opt->p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(mdId));
     if (ret != HITLS_PKI_SUCCESS) {
         AppPrintError("pkcs12: Failed to set the local keyid, errCode = 0x%x.\n", ret);
         return HITLS_APP_X509_FAIL;

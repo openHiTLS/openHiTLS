@@ -1848,13 +1848,13 @@ static int32_t PKCS12_AddUnitBag(HITLS_PKCS12 *p12, void *val)
     return ret;
 }
 
-static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12, CRYPT_MD_AlgId *algId, uint32_t algIdLen)
+static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12, int32_t *algId, uint32_t algIdLen)
 {
     if (algId == NULL || p12->entityCert == NULL || p12->key == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
-    if (algIdLen != sizeof(CRYPT_MD_AlgId)) {
+    if (algIdLen != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
