@@ -76,11 +76,11 @@ extern "C" {
  * HiTLS version string
  */
 #ifndef OPENHITLS_VERSION_S
-#define OPENHITLS_VERSION_S "openHiTLS 0.3.0 31 Dec 2025"
+#define OPENHITLS_VERSION_S "openHiTLS 0.3.0 12 Feb 2026"
 #endif
 
 #ifndef OPENHITLS_VERSION_I
-#define OPENHITLS_VERSION_I 0x00300000ULL
+#define OPENHITLS_VERSION_I 0x0030000fULL
 #endif
 
 #define HITLS_VERSION_LEN 150
