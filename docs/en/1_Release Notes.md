@@ -7,22 +7,30 @@ Version: openHiTLS 0.3.0
 **openHiTLS 0.3.0 adds the following features:**
 
 ### Post-Quantum Cryptographic Algorithms
-* ML-DSA algorithm support
-* XMSS algorithm support
-* Classic McEliece algorithm support
-* FrodoKEM algorithm support
-* XMSS, ML-DSA, ML-KEM, SLH-DSA certificate capabilities
-* ML-DSA CMS SignedData capability
+* ML-KEM support ([FIPS 203](https://csrc.nist.gov/pubs/fips/203/final))
+* ML-DSA support ([FIPS 204](https://csrc.nist.gov/pubs/fips/204/final))
+* SLH-DSA support ([FIPS 205](https://csrc.nist.gov/pubs/fips/205/final))
+* XMSS support ([RFC 8391](https://www.rfc-editor.org/rfc/rfc8391.html))
+* Classic McEliece support ([McEliece](http://classic.mceliece.org/))
+* FrodoKEM support ([FrodoKEM](https://frodokem.org/))
+
+### PKI
+* Post-quantum capabilities support
+    * XMSS certificate support ([RFC 9802](https://datatracker.ietf.org/doc/rfc9802/))
+    * ML-DSA certificate support ([RFC 9881](https://datatracker.ietf.org/doc/rfc9881/))
+    * ML-KEM certificate support ([RFC-to-be 9935](https://www.ietf.org/id/draft-ietf-lamps-kyber-certificates-11.txt))
+    * SLH-DSA certificate support ([RFC 9909](https://datatracker.ietf.org/doc/rfc9909/))
+    * ML-DSA CMS capability ([RFC 9882](https://www.rfc-editor.org/rfc/rfc9882.html))
+* Others
+    * X25519 certificate support ([RFC 8410](https://www.rfc-editor.org/rfc/rfc8410.html))
+    * Enhanced certificate verification: partial chain verification, external public key verification, hostname verification
+    * CMS: SignedData encoding/decoding and signature verification support
+    * Enhanced PKCS12: CRL-bag, key-bag, secret-bag support, provider offload support
 
 ### Authentication Protocols
-* SPAKE2+ protocol
-* HOTP/TOTP
-
-### PKI and Certificates
-* X25519 certificate support
-* Enhanced certificate verification: partial chain verification, external public key verification, hostname verification
-* CMS: SignedData encoding/decoding and signature verification support
-* Enhanced PKCS12: CRL-bag, key-bag, secret-bag support, provider offload support
+* SPAKE2+ protocol ([RFC 9383](https://www.rfc-editor.org/rfc/rfc9383.html))
+* HOTP ([RFC 4226](https://www.rfc-editor.org/rfc/rfc4226.html))
+* TOTP ([RFC 6238](https://www.rfc-editor.org/rfc/rfc6238.html))
 
 ### Cryptographic Algorithms
 * AES-WRAP, RSA ISO9796-2:1997 signature
