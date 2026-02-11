@@ -185,7 +185,6 @@ g_kExt:
 .global SHA1_Step
 .type   SHA1_Step, %function
 SHA1_Step:
-    .inst 0xd503233f  // paciasp
     cmp     x1, #64
     b.lo    .Lend_sha1
 
@@ -454,7 +453,6 @@ SHA1_Step:
     ldp     x29, x30, [sp], #96
 
 .Lend_sha1:
-    .inst 0xd50323bf  // autiasp
     ret
 .size   SHA1_Step, .-SHA1_Step
 
