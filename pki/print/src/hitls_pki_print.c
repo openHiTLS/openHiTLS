@@ -628,11 +628,11 @@ EXIT:
 #if defined(HITLS_PKI_INFO_CRT) || defined(HITLS_PKI_INFO_CSR)
 static const char *GetPkeyAlgName(CRYPT_EAL_PkeyCtx *pkey)
 {
-    CRYPT_RsaPadType padType = 0;
+    int32_t padType = 0;
     int32_t ret;
     switch (CRYPT_EAL_PkeyGetId(pkey)) {
         case CRYPT_PKEY_RSA: {
-            ret = CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(CRYPT_RsaPadType));
+            ret = CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(padType));
             if (ret != CRYPT_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(ret);
                 return HITLS_X509_UNSUPPORT;
@@ -1012,7 +1012,7 @@ static int32_t PrintCrlEntry(uint32_t layer, HITLS_X509_CrlEntry *crlEntry, BSL_
             return ret;
         }
     }
-    
+
     return HITLS_PKI_SUCCESS;
 }
 
@@ -1082,7 +1082,7 @@ static int32_t PrintCrlTbs(uint32_t layer, HITLS_X509_CrlTbs *tbs, BSL_UIO *uio)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    
+
     return HITLS_PKI_SUCCESS;
 }
 

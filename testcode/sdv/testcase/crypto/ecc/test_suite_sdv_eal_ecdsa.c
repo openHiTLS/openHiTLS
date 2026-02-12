@@ -120,7 +120,7 @@ void SDV_CRYPTO_ECDSA_SET_PARA_BY_ID_API_TC002(
     /* Take over random numbers. */
     ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
     gkRandBufLen = randVector->len;
-    
+
     CRYPT_RandRegist(STUB_RandForSignature);
 #ifdef HITLS_CRYPTO_PROVIDER
     CRYPT_RandRegistEx(STUB_RandForSignatureEx);
@@ -197,7 +197,7 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC001(
     /* Take over random numbers. */
     ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
     gkRandBufLen = randVector->len;
-    
+
     CRYPT_RandRegist(STUB_RandForSignature);
 #ifdef HITLS_CRYPTO_PROVIDER
     CRYPT_RandRegistEx(STUB_RandForSignatureEx);
@@ -347,7 +347,7 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC003(
     /* Take over random numbers. */
     ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
     gkRandBufLen = randVector->len;
-    
+
     CRYPT_RandRegist(STUB_RandForSignature);
 #ifdef HITLS_CRYPTO_PROVIDER
     CRYPT_RandRegistEx(STUB_RandForSignatureEx);
@@ -890,7 +890,7 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC002(int eccId, Hex *prvKeyVector, Hex *
     /* Take over random numbers. */
     ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
     gkRandBufLen = randVector->len;
-    
+
     CRYPT_RandRegist(STUB_RandForSignature);
 #ifdef HITLS_CRYPTO_PROVIDER
     CRYPT_RandRegistEx(STUB_RandForSignatureEx);
@@ -1171,7 +1171,7 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC001(int eccId, int mdId, Hex *prvKeyVec
     /* Take over random numbers. */
     ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
     gkRandBufLen = randVector->len;
-    
+
     CRYPT_RandRegist(STUB_RandForSignature);
 #ifdef HITLS_CRYPTO_PROVIDER
     CRYPT_RandRegistEx(STUB_RandForSignatureEx);
@@ -1610,7 +1610,7 @@ void SDV_CRYPTO_ECDSA_Import_Export_FUNC_TC001(void)
 #else
     CRYPT_ECDSA_Ctx *srcEcdsaCtx = NULL;
     CRYPT_ECDSA_Ctx *dstEcdsaCtx = NULL;
-    CRYPT_PKEY_ParaId eccId = CRYPT_ECC_NISTP256;
+    int32_t eccId = CRYPT_ECC_NISTP256;
     uint8_t msg[2] = {1, 2};
     uint8_t sign[130];
     uint32_t signLen = sizeof(sign);
@@ -1619,11 +1619,11 @@ void SDV_CRYPTO_ECDSA_Import_Export_FUNC_TC001(void)
         {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &dstEcdsaCtx, 0, 0},
         BSL_PARAM_END
     };
-    
+
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     srcEcdsaCtx = CRYPT_ECDSA_NewCtx();
     ASSERT_TRUE(srcEcdsaCtx != NULL);
-    CRYPT_ECDSA_Ctrl(srcEcdsaCtx, CRYPT_CTRL_SET_PARA_BY_ID, &eccId, sizeof(CRYPT_PKEY_ParaId));
+    CRYPT_ECDSA_Ctrl(srcEcdsaCtx, CRYPT_CTRL_SET_PARA_BY_ID, &eccId, sizeof(eccId));
     ASSERT_EQ(CRYPT_ECDSA_Gen(srcEcdsaCtx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_ECDSA_Export(srcEcdsaCtx, param), CRYPT_SUCCESS);
 

@@ -1242,7 +1242,7 @@ int32_t HITLS_CRYPT_KemDecapsulate(HITLS_CRYPT_Key *key, const uint8_t *cipherte
 #ifdef HITLS_CRYPTO_KDFTLS12
 static void InitKdfTls12Param(CRYPT_KeyDeriveParameters *input, CRYPT_MAC_AlgId *id, BSL_Param *params)
 {
-    (void)BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, id, sizeof(CRYPT_MAC_AlgId));
+    (void)BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32, id, sizeof(int32_t));
     (void)BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_KDF_KEY, BSL_PARAM_TYPE_OCTETS,
         (void *)(uintptr_t)input->secret, input->secretLen);
     (void)BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_KDF_LABEL, BSL_PARAM_TYPE_OCTETS, // 2: index of label

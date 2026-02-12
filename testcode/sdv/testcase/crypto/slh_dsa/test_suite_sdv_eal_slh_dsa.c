@@ -115,7 +115,7 @@ void SDV_CRYPTO_SLH_DSA_GENKEY_TC001(int isProvider)
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_SLH_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
     } else
-#endif 
+#endif
     {
         (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SLH_DSA);
@@ -123,7 +123,7 @@ void SDV_CRYPTO_SLH_DSA_GENKEY_TC001(int isProvider)
     ASSERT_TRUE(pkey != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID, NULL, 0) == CRYPT_INVALID_ARG);
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SLHDSA_ERR_INVALID_ALGID);
-    CRYPT_PKEY_ParaId algId = CRYPT_SLH_DSA_SHA2_128S;
+    int32_t algId = CRYPT_SLH_DSA_SHA2_128S;
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&algId, sizeof(algId)) ==
                 CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SUCCESS);

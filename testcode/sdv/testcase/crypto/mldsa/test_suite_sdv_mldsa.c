@@ -66,14 +66,14 @@ void SDV_CRYPTO_MLDSA_API_TC001(int type, int setBits)
     CRYPT_EAL_PkeyCtx *ctx1 = NULL;
     CRYPT_EAL_PkeyCtx *ctx2 = NULL;
     CRYPT_EAL_PkeyCtx *ctx3 = NULL;
- 
+
 #ifdef HITLS_CRYPTO_PROVIDER
     ctx1 = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_DSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
 #else
     ctx1 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
 #endif
     ASSERT_TRUE(ctx1 != NULL);
-    uint32_t val = (uint32_t)type;
+    int32_t val = (int32_t)type;
     int32_t ret = CRYPT_EAL_PkeyCtrl(ctx1, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = CRYPT_EAL_PkeyGen(ctx1);
@@ -85,7 +85,7 @@ void SDV_CRYPTO_MLDSA_API_TC001(int type, int setBits)
     ctx2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
 #endif
     ASSERT_TRUE(ctx2 != NULL);
-    val = (uint32_t)type;
+    val = (int32_t)type;
     ret = CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = CRYPT_EAL_PkeyGen(ctx2);
@@ -132,7 +132,7 @@ void SDV_CRYPTO_MLDSA_FUNC_KEYGEN_TC001(int type, Hex *d, Hex *testPubkey, Hex *
     memcpy_s(gMlDsaRandBuf[0], 32, d->x, d->len);
     CRYPT_RandRegist(TEST_MLDSARandom);
     CRYPT_RandRegistEx(TEST_MLDSARandomEx);
- 
+
     CRYPT_EAL_PkeyPub pubKey = { 0 };
     pubKey.id = CRYPT_PKEY_ML_DSA;
     pubKey.key.mldsaPub.len = testPubkey->len;

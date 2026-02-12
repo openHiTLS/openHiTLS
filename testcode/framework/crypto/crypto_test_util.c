@@ -93,7 +93,7 @@ bool TestIsErrStackNotEmpty(void)
     return err != BSL_SUCCESS;
 #else
     return true;
-#endif 
+#endif
 }
 
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_DRBG)
@@ -307,7 +307,7 @@ void TestMacSameAddr(int algId, Hex *key, Hex *data, Hex *mac)
     uint32_t outLen = data->len > mac->len ? data->len : mac->len;
     uint8_t out[outLen];
     CRYPT_EAL_MacCtx *ctx = NULL;
-    int padType = CRYPT_PADDING_ZEROS;
+    int32_t padType = CRYPT_PADDING_ZEROS;
 
     ASSERT_EQ(memcpy_s(out, outLen, data->x, data->len), 0);
     TestMemInit();
@@ -315,7 +315,7 @@ void TestMacSameAddr(int algId, Hex *key, Hex *data, Hex *mac)
     ASSERT_TRUE((ctx = CRYPT_EAL_MacNewCtx(algId)) != NULL);
     ASSERT_EQ(CRYPT_EAL_MacInit(ctx, key->x, key->len), CRYPT_SUCCESS);
     if (algId == CRYPT_MAC_CBC_MAC_SM4) {
-        ASSERT_EQ(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(int)), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType)), CRYPT_SUCCESS);
     }
     ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, out, data->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, out, &outLen), CRYPT_SUCCESS);
@@ -330,7 +330,7 @@ void TestMacAddrNotAlign(int algId, Hex *key, Hex *data, Hex *mac)
     uint32_t outLen = data->len > mac->len ? data->len : mac->len;
     uint8_t out[outLen];
     CRYPT_EAL_MacCtx *ctx = NULL;
-    int padType = CRYPT_PADDING_ZEROS;
+    int32_t padType = CRYPT_PADDING_ZEROS;
     uint8_t keyTmp[key->len + 1] __attribute__((aligned(8)));
     uint8_t dataTmp[data->len + 1] __attribute__((aligned(8)));
     uint8_t *pKey = keyTmp + 1;
@@ -343,7 +343,7 @@ void TestMacAddrNotAlign(int algId, Hex *key, Hex *data, Hex *mac)
     ASSERT_TRUE((ctx = CRYPT_EAL_MacNewCtx(algId)) != NULL);
     ASSERT_EQ(CRYPT_EAL_MacInit(ctx, pKey, key->len), CRYPT_SUCCESS);
     if (algId == CRYPT_MAC_CBC_MAC_SM4) {
-        ASSERT_EQ(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(int)), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType)), CRYPT_SUCCESS);
     }
     ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, pData, data->len), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, out, &outLen), CRYPT_SUCCESS);

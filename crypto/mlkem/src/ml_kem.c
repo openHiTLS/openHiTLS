@@ -99,7 +99,7 @@ void CRYPT_ML_KEM_FreeCtx(CRYPT_ML_KEM_Ctx *ctx)
 
 static int32_t MlKemSetAlgInfo(CRYPT_ML_KEM_Ctx *ctx, void *val, uint32_t len)
 {
-    if (len != sizeof(uint32_t)) {
+    if (len != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
@@ -604,7 +604,7 @@ int32_t CRYPT_ML_KEM_Cmp(const CRYPT_ML_KEM_Ctx *a, const CRYPT_ML_KEM_Ctx *b)
         BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEY_NOT_EQUAL);
         return CRYPT_MLKEM_KEY_NOT_EQUAL;
     }
- 
+
     if (MlKemCmpKey(a->ek, a->ekLen, b->ek, b->ekLen) != CRYPT_SUCCESS) {
         return CRYPT_MLKEM_KEY_NOT_EQUAL;
     }

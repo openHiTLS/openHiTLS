@@ -32,8 +32,7 @@ int32_t HITLS_X509_Adapt_CertEncode(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint8
     (void)ctx;
     *usedLen = 0;
     uint32_t encodeLen = 0;
-    int32_t ret = HITLS_X509_CertCtrl((HITLS_X509_Cert *)cert, HITLS_X509_GET_ENCODELEN, &encodeLen,
-        (int32_t)sizeof(uint32_t));
+    int32_t ret = HITLS_X509_CertCtrl((HITLS_X509_Cert *)cert, HITLS_X509_GET_ENCODELEN, &encodeLen, sizeof(uint32_t));
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -145,13 +144,13 @@ HITLS_CERT_X509 *HITLS_X509_Adapt_CertRef(HITLS_CERT_X509 *cert)
     return cert;
 }
 
-static HITLS_SignHashAlgo BslCid2SignHashAlgo(HITLS_Config *config, BslCid signAlgId, BslCid hashAlgId)
+static HITLS_SignHashAlgo BslCid2SignHashAlgo(HITLS_Config *config, int32_t signAlgId, int32_t hashAlgId)
 {
     uint32_t size = 0;
     const TLS_SigSchemeInfo *sigSchemeInfoList = ConfigGetSignatureSchemeInfoList(config, &size);
     for (size_t i = 0; i < size; i++) {
-        if (sigSchemeInfoList[i].signHashAlgId == (int32_t)signAlgId &&
-            sigSchemeInfoList[i].hashAlgId == (int32_t)hashAlgId) {
+        if (sigSchemeInfoList[i].signHashAlgId == signAlgId &&
+            sigSchemeInfoList[i].hashAlgId == hashAlgId) {
             return sigSchemeInfoList[i].signatureScheme;
         }
     }
@@ -161,15 +160,15 @@ static HITLS_SignHashAlgo BslCid2SignHashAlgo(HITLS_Config *config, BslCid signA
 
 static int32_t CertCtrlGetSignAlgo(HITLS_Config *config, HITLS_CERT_X509 *cert, HITLS_SignHashAlgo *algSign)
 {
-    BslCid signAlgCid = 0;
-    BslCid hashCid = 0;
+    int32_t signAlgCid = 0;
+    int32_t hashCid = 0;
     *algSign = CERT_SIG_SCHEME_UNKNOWN;
-    int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGNALG, &signAlgCid, sizeof(BslCid));
+    int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGNALG, &signAlgCid, sizeof(signAlgCid));
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGN_MDALG, &hashCid, sizeof(BslCid));
+    ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SIGN_MDALG, &hashCid, sizeof(hashCid));
     if (ret != HITLS_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -213,7 +212,7 @@ int32_t HITLS_X509_Adapt_CertCtrl(HITLS_Config *config, HITLS_CERT_X509 *cert, H
     int32_t ret = HITLS_SUCCESS;
     switch (cmd) {
         case CERT_CTRL_GET_ENCODE_LEN:
-            ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODELEN, output, (uint32_t)sizeof(int32_t));
+            ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ENCODELEN, output, (uint32_t)sizeof(uint32_t));
             break;
         case CERT_CTRL_GET_PUB_KEY:
             ret = HITLS_X509_CertCtrl(cert, HITLS_X509_GET_PUBKEY, output, (uint32_t)sizeof(CRYPT_EAL_PkeyPub *));

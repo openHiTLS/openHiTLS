@@ -323,10 +323,10 @@ static CRYPT_EAL_MacCtx *InitAlgMac(MacOpt *macOpt)
 static int32_t MacParamSet(CRYPT_EAL_MacCtx *ctx, MacOpt *macOpt)
 {
     int32_t ret = HITLS_APP_SUCCESS;
-    uint32_t padding = CRYPT_PADDING_ZEROS;
+    int32_t padding = CRYPT_PADDING_ZEROS;
 
     if (macOpt->algId == CRYPT_MAC_CBC_MAC_SM4) {
-        ret = CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padding, sizeof(CRYPT_PaddingType));
+        ret = CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padding, sizeof(padding));
         if (ret != CRYPT_SUCCESS) {
             AppPrintError("mac:Failed to set CBC MAC padding, ret=%d\n", ret);
             ret = HITLS_APP_CRYPTO_FAIL;

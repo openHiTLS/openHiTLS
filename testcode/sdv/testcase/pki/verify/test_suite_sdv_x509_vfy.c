@@ -248,7 +248,7 @@ void SDV_X509_STORE_CTRL_FUNC_TC001(void)
     int32_t ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_DEPTH, &val, sizeof(int32_t));
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(store->verifyParam.maxDepth, val);
-    ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_SECBITS, &val, sizeof(int32_t));
+    ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_SECBITS, &val, sizeof(uint32_t));
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(store->verifyParam.securityBits, val);
     ASSERT_EQ(store->verifyParam.flags, HITLS_X509_VFY_FLAG_SECBITS);
@@ -3806,7 +3806,7 @@ void SDV_X509_PARTIAL_CERT_VFY_FUNC_TC001(char *caCertPath, char *interCertPath,
     int64_t setFlag = HITLS_X509_VFY_FLAG_PARTIAL_CHAIN;
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &setFlag, sizeof(setFlag));
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-    
+
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 EXIT:
@@ -4405,7 +4405,7 @@ void SDV_X509_PARTIAL_CERT_VFY_FUNC_TC005(void)
 
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_X509_ERR_CHAIN_DEPTH_UP_LIMIT);
-    
+
     // Disable the maximum depth, triggering an infinite loop.
     int32_t (*testCallback)(int32_t, HITLS_X509_StoreCtx*) = X509_STORECTX_VerifyCb3;
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_VERIFY_CB,

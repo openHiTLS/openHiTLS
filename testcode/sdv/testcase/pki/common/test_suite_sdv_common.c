@@ -1316,7 +1316,7 @@ void SDV_X509_SIGN_Func_TC002(void)
     CRYPT_EAL_PkeyCtx *prvKey = NULL;
     HITLS_X509_SignAlgParam algParam = {0};
     uint8_t obj = 1;
-    CRYPT_RsaPadType pad = CRYPT_EMSA_PKCSV15;
+    int32_t pad = CRYPT_EMSA_PKCSV15;
     CRYPT_EAL_PkeyPara para = {0};
     uint8_t e[] = {1, 0, 1};
     para.id = CRYPT_PKEY_RSA;
@@ -1331,7 +1331,7 @@ void SDV_X509_SIGN_Func_TC002(void)
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(prvKey, &para), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(prvKey), 0);
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType)), 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(pad)), 0);
 
     ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA224, prvKey, NULL, &obj, TestSignCb), 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
@@ -1339,7 +1339,7 @@ void SDV_X509_SIGN_Func_TC002(void)
     TestErrClear();
 
     pad = CRYPT_EMSA_PSS;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType)), 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(pad)), 0);
     ASSERT_EQ(HITLS_X509_Sign(CRYPT_MD_SHA224, prvKey, NULL, &obj, TestSignCb), 0);
 
     CRYPT_RSA_PssPara pssPara = {1, CRYPT_MD_SHA256, CRYPT_MD_SHA256};
@@ -1374,7 +1374,7 @@ void SDV_HITLS_X509_PrintCtrl_TC001(void)
 
     ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_SET_PRINT_FLAG, NULL, 0, NULL), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_SET_PRINT_FLAG, &flag, 0, NULL), HITLS_X509_ERR_INVALID_PARAM);
-    
+
     ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DNNAME, NULL, sizeof(BslList), uio), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DNNAME, &list, sizeof(BslList), NULL), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DNNAME, &list, 0, uio), HITLS_X509_ERR_INVALID_PARAM);
@@ -1428,9 +1428,9 @@ static int32_t PrintBuffTest(int cmd, BSL_Buffer *data, char *log, Hex *expect, 
     ASSERT_EQ(BSL_UIO_Read(uio, dnBuf, MAX_BUFF_SIZE, &dnBufLen), 0);
     if (isExpectFile) {
         ASSERT_EQ(ReadFile((char *)expect->x, expectBuf, MAX_BUFF_SIZE, &expectBufLen), 0);
-        ASSERT_COMPARE(log, expectBuf, expectBufLen, dnBuf, dnBufLen - 1); // Ignore line break differences 
+        ASSERT_COMPARE(log, expectBuf, expectBufLen, dnBuf, dnBufLen - 1); // Ignore line break differences
     } else {
-        ASSERT_COMPARE(log, expect->x, expect->len, dnBuf, dnBufLen - 1);  // Ignore line break differences 
+        ASSERT_COMPARE(log, expect->x, expect->len, dnBuf, dnBufLen - 1);  // Ignore line break differences
     }
     ret = 0;
 EXIT:
@@ -1473,7 +1473,7 @@ void SDV_CRYPT_EAL_DecodeBuffKey_Ex_TC001(void)
 #else
     TestMemInit();
     BSL_GLOBAL_Init();
-    
+
     CRYPT_EAL_PkeyCtx *key = NULL;
     BSL_Buffer encode = {0};
     BSL_Buffer pwd = {0};
@@ -1485,14 +1485,14 @@ void SDV_CRYPT_EAL_DecodeBuffKey_Ex_TC001(void)
         CRYPT_INVALID_ARG);
     ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PUBKEY_RSA", &encode, NULL, NULL),
         CRYPT_INVALID_ARG);
-    
+
     // Test invalid encode buffer
     ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PUBKEY_RSA", &encode, &pwd, &key),
         CRYPT_INVALID_ARG);
     encode.data = data;
     ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "ASN1", "PUBKEY_RSA", &encode, &pwd, &key),
         CRYPT_INVALID_ARG);
-    
+
     // Test invalid format
     encode.dataLen = sizeof(data);
     ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, "UNKNOWN_FORMAT", "PUBKEY_RSA", &encode, &pwd, &key),
@@ -1528,7 +1528,7 @@ void SDV_CRYPT_EAL_DecodeFileKey_Ex_TC001(void)
 #else
     TestMemInit();
     BSL_GLOBAL_Init();
-    
+
     CRYPT_EAL_PkeyCtx *key = NULL;
     BSL_Buffer pwd = {0};
     uint8_t pwdData[10] = {0};
@@ -1613,7 +1613,7 @@ void SDV_HITLS_X509_PrintCrl_TC001(char *certPath, int format, int printFlag, ch
     HITLS_X509_Crl *crl = NULL;
     int32_t *version = NULL;
     Hex expect = { (uint8_t *)expectFile, 0};
-    
+
     ASSERT_EQ(HITLS_X509_CrlParseFile(format, certPath, &crl), HITLS_PKI_SUCCESS);
     ASSERT_NE(crl, NULL);
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &version, sizeof(int32_t)), HITLS_PKI_SUCCESS);
@@ -2012,7 +2012,7 @@ void SDV_HITLS_MLDSA_PQCCert_TC001(int format, int type, char *path)
     uint32_t expectBufLen = sizeof(expectBuf);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_EncodeBuffKey(key, NULL, format, type, &encodeAsn1), CRYPT_SUCCESS);
-    
+
     ASSERT_EQ(ReadFile(path, expectBuf, encodeAsn1.dataLen, &expectBufLen), 0);
     ASSERT_COMPARE("key ", encodeAsn1.data, encodeAsn1.dataLen, expectBuf, expectBufLen);
     ASSERT_TRUE(TestIsErrStackEmpty());
@@ -2032,7 +2032,7 @@ void SDV_HITLS_MLDSA_PQCCert_TC005(int format, int type, char *path, int key_for
     CRYPT_EAL_PkeyCtx *key = NULL;
     BSL_Buffer encodeAsn1 = {0};
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key), CRYPT_SUCCESS);
-    
+
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_SET_MLDSA_PRVKEY_FORMAT, &key_format, sizeof(uint32_t)), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 

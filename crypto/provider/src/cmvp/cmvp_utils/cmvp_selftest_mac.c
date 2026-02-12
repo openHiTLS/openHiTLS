@@ -278,8 +278,8 @@ static bool CRYPT_CMVP_SelftestMacInternal(void *libCtx, const char *attrName, C
             CRYPT_CMVP_ERR_ALGO_SELFTEST);
     }
     if (macVec->type == MAC_TYPE_CBC_MAC) {
-        CRYPT_PaddingType padType = CRYPT_PADDING_ZEROS;
-        GOTO_ERR_IF_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(CRYPT_PaddingType)) !=
+        int32_t padType = CRYPT_PADDING_ZEROS;
+        GOTO_ERR_IF_TRUE(CRYPT_EAL_MacCtrl(ctx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType)) !=
             CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     }
     GOTO_ERR_IF_TRUE(CRYPT_EAL_MacUpdate(ctx, msg.data, msg.len) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);

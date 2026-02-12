@@ -387,9 +387,10 @@ void SDV_PROVIDER_RSA_SIGN_VERIFY_PSS_TC001(char *path, char *defProName, char *
         .key.rsaPub.e = e->x, .key.rsaPub.eLen = e->len};
     uint8_t sign[MAX_CIPHERTEXT_LEN] = {0};
     uint32_t signLen = MAX_CIPHERTEXT_LEN;
+    CRYPT_MD_AlgId paramMdId = (CRYPT_MD_AlgId)mdId;
     BSL_Param pssParam[4] = {
-        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
-        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
         {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
         BSL_PARAM_END};
     BSL_Param params[2] = {{0}, BSL_PARAM_END}; // Set 1 parameter for RSA
@@ -409,8 +410,8 @@ void SDV_PROVIDER_RSA_SIGN_VERIFY_PSS_TC001(char *path, char *defProName, char *
         strlen(customAttr)), 0);
     ASSERT_EQ(CRYPT_EAL_PkeySetParaEx(ctx, params), 0);
     signLen = MAX_CIPHERTEXT_LEN;
-    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, mdId, msg->x, msg->len, sign, &signLen), 0);
-    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, msg->x, msg->len, sign, signLen), 0);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, paramMdId, msg->x, msg->len, sign, &signLen), 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, paramMdId, msg->x, msg->len, sign, signLen), 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -456,9 +457,10 @@ void SDV_PROVIDER_RSA_RSABSSA_BLINDING_TC001(char *path, char *defProName, char 
     uint32_t flag = CRYPT_RSA_BSSA;
     uint8_t sign[MAX_CIPHERTEXT_LEN] = {0};
     uint32_t signLen = MAX_CIPHERTEXT_LEN;
+    CRYPT_MD_AlgId paramMdId = (CRYPT_MD_AlgId)mdId;
     BSL_Param pssParam[4] = {
-        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
-        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
         {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
         BSL_PARAM_END};
     BSL_Param params[2] = {{0}, BSL_PARAM_END}; // Set 1 parameter for RSA
@@ -480,12 +482,12 @@ void SDV_PROVIDER_RSA_RSABSSA_BLINDING_TC001(char *path, char *defProName, char 
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_FLAG, (void *)&flag, sizeof(uint32_t)), 0);
 
 #ifdef HITLS_CRYPTO_RSA_SIGN
-    ASSERT_EQ(CRYPT_EAL_PkeyBlind(ctx, mdId, msg->x, msg->len, blindMsg, &blindMsgLen), 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyBlind(ctx, paramMdId, msg->x, msg->len, blindMsg, &blindMsgLen), 0);
     ASSERT_EQ(CRYPT_EAL_PkeySignData(ctx, blindMsg, blindMsgLen, sign, &signLen), 0);
 #endif
 #ifdef HITLS_CRYPTO_RSA_VERIFY
     ASSERT_EQ(CRYPT_EAL_PkeyUnBlind(ctx, sign, signLen, unBlindSig, &unBlindSigLen), 0);
-    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, mdId, msg->x, msg->len, unBlindSig, unBlindSigLen), 0);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, paramMdId, msg->x, msg->len, unBlindSig, unBlindSigLen), 0);
 #endif
 
     ASSERT_TRUE(TestIsErrStackEmpty());
@@ -517,9 +519,10 @@ void SDV_PROVIDER_RSA_CRYPT_FUNC_TC001(char *path, char *defProName, char *custo
     CRYPT_EAL_PkeyPub pubkey = {.id = CRYPT_PKEY_RSA, .key.rsaPub.n = n->x, .key.rsaPub.nLen = n->len,
         .key.rsaPub.e = e->x, .key.rsaPub.eLen = e->len};
     CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_MD_AlgId paramMdId = (CRYPT_MD_AlgId)mdId;
     BSL_Param oaepParam[3] = {
-        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
-        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
         BSL_PARAM_END};
     int32_t pkcsv15 = mdId;
     uint8_t pt[MAX_CIPHERTEXT_LEN] = {0};

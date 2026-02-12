@@ -537,7 +537,7 @@ int32_t CRYPT_FRODOKEM_Cmp(CRYPT_FRODOKEM_Ctx *ctx1, CRYPT_FRODOKEM_Ctx *ctx2)
 
 static int32_t FrodoSetParaById(CRYPT_FRODOKEM_Ctx *ctx, void *val, uint32_t valLen)
 {
-    if (valLen != sizeof(uint32_t)) {
+    if (valLen != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }

@@ -51,7 +51,7 @@ void SDV_CRYPTO_MCELIECE_CTRL_API_TC001(int algId)
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
     ASSERT_TRUE(ctx != NULL);
 
-    uint32_t val = (uint32_t)algId;
+    int32_t val = (int32_t)algId;
     int ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID + 100, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_MCELIECE_CTRL_NOT_SUPPORT);
 
@@ -105,7 +105,7 @@ void SDV_CRYPTO_MCELIECE_KEYGEN_API_TC001(int algId)
     int32_t ret = CRYPT_EAL_PkeyGen(ctx);
     ASSERT_EQ(ret, CRYPT_MCELIECE_KEYINFO_NOT_SET);
 
-    uint32_t val = (uint32_t)algId;
+    int32_t val = (int32_t)algId;
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
@@ -142,7 +142,7 @@ void SDV_CRYPTO_MCELIECE_KEYGEN_API_TC002(int algId)
 #endif
     ASSERT_TRUE(ctx != NULL);
 
-    uint32_t val = (uint32_t)algId;
+    int32_t val = (int32_t)algId;
     int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
@@ -188,7 +188,7 @@ void SDV_CRYPTO_MCELIECE_ENCAPS_API_TC001(int algId)
 #endif
     ASSERT_TRUE(ctx != NULL);
 
-    uint32_t val = (uint32_t)algId;
+    int32_t val = (int32_t)algId;
     int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
@@ -267,7 +267,7 @@ void SDV_CRYPTO_MCELIECE_DECAPS_API_TC001(int algId)
 #endif
     ASSERT_TRUE(ctx != NULL);
 
-    uint32_t val = (uint32_t)algId;
+    int32_t val = (int32_t)algId;
     int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
@@ -345,7 +345,7 @@ void SDV_CRYPTO_MCELIECE_SETPUB_API_TC001(int algId, Hex *testEK)
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
     ASSERT_TRUE(ctx != NULL);
 
-    uint32_t val = (uint32_t)algId;
+    int32_t val = (int32_t)algId;
     int ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
@@ -415,7 +415,7 @@ void SDV_CRYPTO_MCELIECE_SETPRV_API_TC001(int algId, Hex *testDK)
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
     ASSERT_TRUE(ctx != NULL);
 
-    uint32_t val = (uint32_t)algId;
+    int32_t val = (int32_t)algId;
     int ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
@@ -495,7 +495,7 @@ void SDV_CRYPTO_MCELIECE_KEYCMP_FUNC_TC001(int algId)
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
     ASSERT_NE(ctx, NULL);
 
-    uint32_t val = (uint32_t)algId;
+    int32_t val = (int32_t)algId;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(ctx, NULL), CRYPT_SUCCESS);
 
@@ -506,7 +506,7 @@ void SDV_CRYPTO_MCELIECE_KEYCMP_FUNC_TC001(int algId)
     ASSERT_NE(ctx2, NULL);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx, ctx2), CRYPT_MCELIECE_KEY_NOT_EQUAL);
 
-    val = (uint32_t)algId;
+    val = (int32_t)algId;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCmp(ctx, ctx2), CRYPT_MCELIECE_KEY_NOT_EQUAL);
     ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(ctx2, NULL), CRYPT_SUCCESS);
@@ -517,7 +517,7 @@ void SDV_CRYPTO_MCELIECE_KEYCMP_FUNC_TC001(int algId)
     gRandNumber = 3u;
     CRYPT_EAL_PkeyCtx *ctx3 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
     ASSERT_NE(ctx3, NULL);
-    val = (uint32_t)algId;
+    val = (int32_t)algId;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx3, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyEncapsInit(ctx3, NULL), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx3), CRYPT_SUCCESS);
@@ -644,7 +644,7 @@ void SDV_CRYPTO_MCELIECE_ENCAPS_DECAPS_FUNC_TC001(int algId, Hex *seed, Hex *tes
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
     ASSERT_TRUE(ctx != NULL);
 
-    uint32_t val = (uint32_t)algId;
+    int32_t val = (int32_t)algId;
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
 
@@ -732,7 +732,7 @@ void SDV_CRYPTO_MCELIECE_DUPKEY_API_TC001(int algId)
 {
     TestMemInit();
     ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_RAND), CRYPT_SUCCESS);
-    
+
     CRYPT_EAL_PkeyCtx *ctx = NULL;
 #ifdef HITLS_CRYPTO_PROVIDER
     ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_PROVIDER), CRYPT_SUCCESS);
@@ -743,20 +743,20 @@ void SDV_CRYPTO_MCELIECE_DUPKEY_API_TC001(int algId)
     ASSERT_TRUE(ctx != NULL);
 
     // Set parameters and generate key pair
-    uint32_t val = (uint32_t)algId;
+    int32_t val = (int32_t)algId;
     int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    
+
     ret = CRYPT_EAL_PkeyEncapsInit(ctx, NULL);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    
+
     ret = CRYPT_EAL_PkeyGen(ctx);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Dup the context
     CRYPT_EAL_PkeyCtx *ctxDup = CRYPT_EAL_PkeyDupCtx(ctx);
     ASSERT_TRUE(ctxDup != NULL);
-    
+
     // Compare the two contexts
     ret = CRYPT_EAL_PkeyCmp(ctx, ctxDup);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
@@ -765,14 +765,14 @@ void SDV_CRYPTO_MCELIECE_DUPKEY_API_TC001(int algId)
     uint32_t cipherLen = 0;
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    
+
     uint32_t sharedLen = 0;
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &sharedLen, sizeof(sharedLen));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    
+
     uint32_t sharedLen1 = sharedLen;
     uint32_t sharedLen2 = sharedLen;
-    
+
     uint8_t *ciphertext = BSL_SAL_Malloc(cipherLen);
     ASSERT_TRUE(ciphertext != NULL);
     uint8_t *sharedKey1 = BSL_SAL_Malloc(sharedLen1);

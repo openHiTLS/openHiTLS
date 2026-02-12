@@ -60,15 +60,20 @@ int32_t CRYPT_EAL_GetRsaPssPara(CRYPT_EAL_PkeyCtx *key, CRYPT_RSA_PssPara *para)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MD, &para->mdId, sizeof(para->mdId));
+    int32_t mdId;
+    ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MD, &mdId, sizeof(mdId));
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MGF, &para->mgfId, sizeof(para->mgfId));
+    para->mdId = mdId;
+    int32_t mgfId;
+    ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MGF, &mgfId, sizeof(mgfId));
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
+    para->mgfId = mgfId;
     return ret;
 }
 
@@ -113,8 +118,8 @@ void CRYPT_EAL_DeinitRsaPrv(CRYPT_EAL_PkeyPrv *rsaPrv)
 #ifdef HITLS_CRYPTO_RSA
 static int32_t ProcRsaPssParam(BSL_ASN1_Buffer *rsaPssParam, CRYPT_EAL_PkeyCtx *ealPriKey)
 {
-    CRYPT_RsaPadType padType = CRYPT_EMSA_PSS;
-    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_SET_RSA_PADDING, &padType, sizeof(CRYPT_RsaPadType));
+    int32_t padType = CRYPT_EMSA_PSS;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_SET_RSA_PADDING, &padType, sizeof(padType));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -1327,9 +1332,9 @@ int32_t EncodeRsaPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1_Buffer *p
 }
 
 static int32_t EncodeRsaPrvKey(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_ASN1_Buffer *pk8AlgoParam, BSL_Buffer *bitStr,
-    CRYPT_PKEY_AlgId *cid)
+    int32_t *cid)
 {
-    CRYPT_RsaPadType pad = CRYPT_RSA_PADDINGMAX;
+    int32_t pad = CRYPT_RSA_PADDINGMAX;
     int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_RSA_PADDING, &pad, sizeof(pad));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1354,7 +1359,7 @@ static int32_t EncodeRsaPrvKey(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_ASN1_Buffer *pk
                 return ret;
             }
             pk8AlgoParam->tag = BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED;
-            *cid = (CRYPT_PKEY_AlgId)BSL_CID_RSASSAPSS;
+            *cid = BSL_CID_RSASSAPSS;
             break;
         default:
             ret = EncodeRsaPrikeyAsn1Buff(ealPriKey, &tmp);
@@ -2050,7 +2055,7 @@ static int32_t EncodePk8AlgidAny(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *bitSt
     (void)keyParam;
     int32_t ret;
     BSL_Buffer tmp = {0};
-    CRYPT_PKEY_AlgId cid = CRYPT_EAL_PkeyGetId(ealPriKey);
+    int32_t cid = CRYPT_EAL_PkeyGetId(ealPriKey);
     switch (cid) {
 #ifdef HITLS_CRYPTO_RSA
         case CRYPT_PKEY_RSA:
@@ -2070,7 +2075,7 @@ static int32_t EncodePk8AlgidAny(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *bitSt
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
         case CRYPT_PKEY_ECDSA:
         case CRYPT_PKEY_SM2:
-            cid = (CRYPT_PKEY_AlgId)BSL_CID_EC_PUBLICKEY;
+            cid = BSL_CID_EC_PUBLICKEY;
             ret = EncodeEccPrikeyAsn1Buff(ealPriKey, keyParam, &tmp);
             break;
 #endif
@@ -2198,7 +2203,7 @@ int32_t EncodePk8EncPriKeyBuff(CRYPT_EAL_LibCtx *libCtx, const char *attrName, C
 static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1_Buffer *algo, BSL_Buffer *bitStr)
 {
     int32_t ret;
-    CRYPT_PKEY_AlgId cid = CRYPT_EAL_PkeyGetId(ealPubKey);
+    int32_t cid = CRYPT_EAL_PkeyGetId(ealPubKey);
     BSL_Buffer bitTmp = {0};
     BSL_ASN1_Buffer algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX + 1] = {0};
     switch (cid) {
@@ -2206,7 +2211,7 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
         case CRYPT_PKEY_RSA:
             ret = EncodeRsaPubkeyAsn1Buff(ealPubKey, &algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX], &bitTmp);
             if (algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX].tag == (BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED)) {
-                cid = (CRYPT_PKEY_AlgId)BSL_CID_RSASSAPSS;
+                cid = BSL_CID_RSASSAPSS;
             }
             break;
 #endif
@@ -2223,7 +2228,7 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
         case CRYPT_PKEY_ECDSA:
         case CRYPT_PKEY_SM2:
-            cid = (CRYPT_PKEY_AlgId)BSL_CID_EC_PUBLICKEY;
+            cid = BSL_CID_EC_PUBLICKEY;
             ret = EncodeEccPubkeyAsn1Buff(ealPubKey, &algoId[BSL_ASN1_TAG_ALGOID_ANY_IDX], &bitTmp);
             break;
 #endif

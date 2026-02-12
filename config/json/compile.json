@@ -7,7 +7,10 @@
             ],
             "CC_OVERALL_FLAGS": ["-pipe"],
             "CC_LANGUAGE_FLAGS": ["-fsigned-char"],
-            "CC_CDG_FLAGS": ["-fno-common"],
+            "CC_CDG_FLAGS": [
+                "-fno-common",
+                "-fno-short-enums"
+            ],
             "CC_MD_DEPENDENT_FLAGS": [],
             "CC_OPT_FLAGS": [
                 "-fno-strict-aliasing",

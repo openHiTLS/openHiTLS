@@ -27,9 +27,8 @@ static int32_t SlhDsaSetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32
         printf("Failed to create pkey context\n");
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int rc = CRYPT_SUCCESS;
-    CRYPT_PKEY_ParaId algId = paraId;
-    rc = CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&algId, sizeof(algId));
+    int32_t algId = paraId;
+    int32_t rc = CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&algId, sizeof(algId));
     if (rc != CRYPT_SUCCESS) {
         return rc;
     }
@@ -49,10 +48,8 @@ static void SlhDsaTearDown(void *ctx)
 
 static int32_t SlhDsaKeyGen(void *ctx, BenchCtx *bench, BenchOptions *opts)
 {
-    int rc = CRYPT_SUCCESS;
-    CRYPT_PKEY_ParaId paraId = opts->paraId;
-
-    rc = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&paraId, sizeof(paraId));
+    int32_t paraId = opts->paraId;
+    int32_t rc = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&paraId, sizeof(paraId));
     if (rc != CRYPT_SUCCESS) {
         return rc;
     }
@@ -78,7 +75,7 @@ static int32_t SlhDsaSignInner(void *ctx, int32_t hashId, int32_t len)
 
 static int32_t SlhDsaSign(void *ctx, BenchCtx *bench, BenchOptions *opts)
 {
-    int rc;
+    int32_t rc;
     int32_t hashId = GetHashId(bench, opts);
     BENCH_TIMES_VA(SlhDsaSignInner(ctx, hashId, opts->len), rc, CRYPT_SUCCESS, opts->len, opts->times, "%s sign",
                    GetAlgName(opts->paraId));
@@ -87,11 +84,10 @@ static int32_t SlhDsaSign(void *ctx, BenchCtx *bench, BenchOptions *opts)
 
 static int32_t SlhDsaVerify(void *ctx, BenchCtx *bench, BenchOptions *opts)
 {
-    int rc;
     static uint8_t sign[51200]; // maximum len is 49856
     uint32_t signLen = sizeof(sign);
     int32_t hashId = GetHashId(bench, opts);
-    rc = CRYPT_EAL_PkeySign(ctx, hashId, g_plain, opts->len, sign, &signLen);
+    int32_t rc = CRYPT_EAL_PkeySign(ctx, hashId, g_plain, opts->len, sign, &signLen);
     if (rc != CRYPT_SUCCESS) {
         printf("Failed to sign\n");
         return rc;

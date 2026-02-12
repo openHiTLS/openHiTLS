@@ -194,10 +194,10 @@ ERR:
     return false;
 }
 
-static bool SetPkcsv15Pad(CRYPT_EAL_PkeyCtx *pkey, uint32_t *hashId)
+static bool SetPkcsv15Pad(CRYPT_EAL_PkeyCtx *pkey, int32_t *hashId)
 {
     *hashId = RSA_VECTOR[PKCSV15_PAD].mdId;
-    GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, hashId, sizeof(uint32_t)) !=
+    GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, hashId, sizeof(int32_t)) !=
         CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     return true;
 ERR:
@@ -206,8 +206,8 @@ ERR:
 
 static bool SetPssPad(CRYPT_EAL_PkeyCtx *pkey, uint32_t saltLen)
 {
-    uint32_t mdId = RSA_VECTOR[PSS_PAD].mdId;
-    uint32_t mgfId = RSA_VECTOR[PSS_PAD].mdId;
+    CRYPT_MD_AlgId mdId = RSA_VECTOR[PSS_PAD].mdId;
+    CRYPT_MD_AlgId mgfId = RSA_VECTOR[PSS_PAD].mdId;
     BSL_Param pss[4] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&mdId, sizeof(mdId), 0},
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&mgfId, sizeof(mgfId), 0},
@@ -225,7 +225,7 @@ static bool RsaSelftestSign(void *libCtx, const char *attrName, int32_t id)
 {
     bool ret = false;
     uint8_t *salt = NULL;
-    uint32_t pkcsv15;
+    int32_t pkcsv15;
     CRYPT_EAL_PkeyPrv prv = { 0 };
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     uint8_t *msg = NULL;
@@ -275,7 +275,7 @@ static bool RsaSelftestVerify(void *libCtx, const char *attrName, int32_t id)
 {
     bool ret = false;
     uint8_t *salt = NULL;
-    uint32_t mdId;
+    int32_t mdId;
     CRYPT_EAL_PkeyPub pub = { 0 };
     uint8_t *msg = NULL;
     uint8_t *sign = NULL;
@@ -343,7 +343,7 @@ static bool RsaSelftestEncrypt(void *libCtx, const char *attrName, const uint8_t
     uint8_t cipherText[MAX_CIPHER_TEXT_LEN] = {0};
     uint32_t cipherTextLen = sizeof(cipherText);
     int32_t err = CRYPT_CMVP_ERR_ALGO_SELFTEST;
-    uint32_t mdId = RSA_ENC_DEC_VECTOR.mdId;
+    CRYPT_MD_AlgId mdId = RSA_ENC_DEC_VECTOR.mdId;
     BSL_Param oaep[3] = {{CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         BSL_PARAM_END
@@ -384,7 +384,7 @@ static bool RsaSelftestDecrypt(void *libCtx, const char *attrName, const uint8_t
     uint8_t plainText[MAX_CIPHER_TEXT_LEN] = {0};
     uint32_t plainTextLen = sizeof(plainText);
     int32_t err = CRYPT_CMVP_ERR_ALGO_SELFTEST;
-    uint32_t mdId = RSA_ENC_DEC_VECTOR.mdId;
+    CRYPT_MD_AlgId mdId = RSA_ENC_DEC_VECTOR.mdId;
     BSL_Param oaep[3] = {{CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         BSL_PARAM_END

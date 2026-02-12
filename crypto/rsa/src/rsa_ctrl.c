@@ -256,7 +256,7 @@ static uint32_t RSAGetKeyLen(const CRYPT_RSA_Ctx *ctx)
 
 static int32_t GetPadding(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
 {
-    RSA_PadType *valTmp = val;
+    int32_t *valTmp = (int32_t *)val;
     if (val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -271,7 +271,7 @@ static int32_t GetPadding(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
 
 static int32_t GetMd(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
 {
-    CRYPT_MD_AlgId *valTmp = val;
+    int32_t *valTmp = (int32_t *)val;
     RETURN_RET_IF(val == NULL, CRYPT_NULL_INPUT);
     RETURN_RET_IF(len != sizeof(int32_t), CRYPT_INVALID_ARG);
 
@@ -295,7 +295,7 @@ static int32_t GetMd(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
 #ifdef HITLS_CRYPTO_RSA_EMSA_PSS
 static int32_t GetMgf(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
 {
-    CRYPT_MD_AlgId *valTmp = val;
+    int32_t *valTmp = (int32_t *)val;
     RETURN_RET_IF(val == NULL, CRYPT_NULL_INPUT);
     RETURN_RET_IF(len != sizeof(int32_t), CRYPT_INVALID_ARG);
     if (ctx->pad.type == EMSA_PKCSV15) {

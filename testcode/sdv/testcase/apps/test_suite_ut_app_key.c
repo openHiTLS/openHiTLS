@@ -165,7 +165,7 @@ void UT_HITLS_APP_KEY_TC002(char *algorithm, char *pkeyopt)
     if (strcasecmp(algorithm, "RSA") == 0) {
         SetRsaKeyInfo(pkeyPrvCtx);
         ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyPrvCtx, CRYPT_CTRL_SET_RSA_OAEP_LABEL, NULL, 0), CRYPT_SUCCESS);
-        int32_t hashId = CRYPT_MD_SHA1;
+        CRYPT_MD_AlgId hashId = CRYPT_MD_SHA1;
         BSL_Param oaepParam[3] = {
             {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
             {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
@@ -282,7 +282,7 @@ void UT_HITLS_APP_ENCKEY_TC002(char *algorithm, char *pkeyopt, char *cipherAlg)
     if (strcasecmp(algorithm, "RSA") == 0) {
         SetRsaKeyInfo(pkeyEncPrvCtx);
         ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyEncPrvCtx, CRYPT_CTRL_SET_RSA_OAEP_LABEL, NULL, 0), CRYPT_SUCCESS);
-        int32_t hashId = CRYPT_MD_SHA1;
+        CRYPT_MD_AlgId hashId = CRYPT_MD_SHA1;
         BSL_Param oaepParam[3] = {
             {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
             {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},

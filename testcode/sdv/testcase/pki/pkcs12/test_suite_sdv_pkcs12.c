@@ -1482,7 +1482,7 @@ void SDV_PKCS12_CTRL_TEST_TC001(char *pkeyPath, char *enCertPath, char *caCertPa
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_NE(targetKey, NULL);
 
-    ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(CRYPT_MD_AlgId));
+    ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(mdId));
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
@@ -1490,7 +1490,7 @@ void SDV_PKCS12_CTRL_TEST_TC001(char *pkeyPath, char *enCertPath, char *caCertPa
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_INVALID_PARAM);
 
     mdId = BSL_CID_MD4 - 1;
-    ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(CRYPT_MD_AlgId));
+    ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(mdId));
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_INVALID_PARAM);
     TestErrClear();
 
@@ -1557,13 +1557,13 @@ void SDV_PKCS12_CTRL_TEST_TC002(char *enCertPath)
     ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_SET_ENTITY_KEYBAG, NULL, 0); // keyBag == NULL.
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
 
-    ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID - 1, &mdId, sizeof(CRYPT_MD_AlgId)); // cmd is invalid.
+    ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID - 1, &mdId, sizeof(mdId)); // cmd is invalid.
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_INVALID_PARAM);
 
     ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GET_ENTITY_CERT, &target, 0); // no cert to obtain.
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NO_ENTITYCERT);
 
-    ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(CRYPT_MD_AlgId)); // no key and cert
+    ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(mdId)); // no key and cert
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NULL_POINTER);
 
     ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_SET_ENTITY_CERTBAG, entityCertBag, 0); // enCertBag is invalid.
@@ -1585,7 +1585,7 @@ void SDV_PKCS12_CTRL_TEST_TC002(char *enCertPath)
 
     // no key to set localKeyId.
     p12->key = &keyBag;
-    ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(CRYPT_MD_AlgId));
+    ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(mdId));
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_NO_PAIRED_CERT_AND_KEY);
     p12->key = NULL;
 
@@ -1768,7 +1768,7 @@ void SDV_PKCS12_BAG_TEST_TC003(char *pkeyPath, char *certPath)
     ASSERT_EQ(ret, HITLS_PKCS12_ERR_REPEATED_SET_ENTITYCERT); // Repeat setting.
 
     // The key bag has pushed the localKey-id attribute.
-    ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(CRYPT_MD_AlgId));
+    ret = HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(mdId));
     ASSERT_EQ(ret, HITLS_X509_ERR_SET_ATTR_REPEAT);
 
 EXIT:
@@ -1872,7 +1872,7 @@ void SDV_PKCS12_GEN_FROM_DATA_TC001(char *pkeyPath, char *enCertPath, char *ca1C
     // Set the second cert, which has no attr.
     ASSERT_EQ(HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_ADD_CERTBAG, otherCertBag, 0), 0);
     // Cal localKeyId to p12.
-    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(CRYPT_MD_AlgId)), 0);
+    ASSERT_EQ(HITLS_PKCS12_Ctrl(p12, HITLS_PKCS12_GEN_LOCALKEYID, &mdId, sizeof(mdId)), 0);
 
     ASSERT_EQ(HITLS_PKCS12_GenBuff(BSL_FORMAT_ASN1, p12, &encodeParam, true, &output), 0);
 
@@ -2216,7 +2216,7 @@ void SDV_PKCS12_BAG_CUSTOM_OID_TC001(void)
     HITLS_PKCS12 *p12_1 = NULL;
     HITLS_PKCS12 *p12 = HITLS_PKCS12_New();
     ASSERT_NE(p12, NULL);
-    
+
     ASSERT_EQ(BSL_OBJ_Create(oid, (uint32_t)strlen(oid), "Our OID", ourCid), HITLS_PKI_SUCCESS);
 
     secretBag = HITLS_PKCS12_BagNew(BSL_CID_SECRETBAG, ourCid, &secret);

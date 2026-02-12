@@ -104,7 +104,7 @@ static int32_t XmssSetParaId(CryptXmssCtx *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    CRYPT_PKEY_ParaId algId = *(CRYPT_PKEY_ParaId *)val;
+    int32_t algId = *(int32_t *)val;
     if (CheckNotXmssAlgId(algId)) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_ERR_INVALID_ALGID);
         return CRYPT_XMSS_ERR_INVALID_ALGID;

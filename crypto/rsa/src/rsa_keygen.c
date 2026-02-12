@@ -259,7 +259,7 @@ static int32_t ProcessRsaPrimeSeeds(const BSL_Param *para, CRYPT_RSA_Para *retPa
             return CRYPT_MEM_ALLOC_FAIL;
         }
     }
-    
+
     return CRYPT_SUCCESS;
 }
 #endif
@@ -1241,7 +1241,7 @@ static void InitRsaPubKeyParams(BSL_Param *params, uint32_t *index, uint8_t *buf
 
 static void InitRsaPrvKeyParams(BSL_Param *params, uint32_t *index, uint8_t *buffer, uint32_t len)
 {
-    (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_D, 
+    (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_D,
         BSL_PARAM_TYPE_OCTETS, buffer + ((*index - 1) * len), len);
     (*index)++;
     (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_P,
@@ -1263,20 +1263,20 @@ static void InitRsaPrvKeyParams(BSL_Param *params, uint32_t *index, uint8_t *buf
 
 static void ExportRsaPssParams(const CRYPT_RSA_Ctx *ctx, BSL_Param *params, uint32_t *index)
 {
-    (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_MD_ID, 
+    (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_MD_ID,
         BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&ctx->pad.para.pss.mdId, sizeof(int32_t));
     params[(*index)++].useLen = sizeof(int32_t);
-    (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_MGF1_ID, 
+    (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_MGF1_ID,
         BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&ctx->pad.para.pss.mgfId, sizeof(int32_t));
     params[(*index)++].useLen = sizeof(int32_t);
-    (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_SALTLEN, 
+    (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_SALTLEN,
         BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&ctx->pad.para.pss.saltLen, sizeof(int32_t));
     params[(*index)++].useLen = sizeof(int32_t);
 }
 
 static void ExportRsaPkcsParams(const CRYPT_RSA_Ctx *ctx, BSL_Param *params, uint32_t *index)
 {
-    (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_MD_ID, 
+    (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_MD_ID,
         BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&ctx->pad.para.pkcsv15.mdId, sizeof(int32_t));
     params[(*index)++].useLen = sizeof(int32_t);
 }

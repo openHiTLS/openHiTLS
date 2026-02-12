@@ -264,9 +264,10 @@ void SDV_CRYPTO_RSA_SIGN_PSS_FUNC_TC001(int mdId, Hex *n, Hex *d, Hex *msg, Hex 
     int i;
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
     CRYPT_EAL_PkeyPrv privaKey = {0};
+    CRYPT_MD_AlgId paramMdId = (CRYPT_MD_AlgId)mdId;
     BSL_Param pssParam[4] = {
-        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
-        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
         {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &salt->len, sizeof(salt->len), 0},
         BSL_PARAM_END};
     uint8_t *signdata = NULL;
@@ -292,7 +293,7 @@ void SDV_CRYPTO_RSA_SIGN_PSS_FUNC_TC001(int mdId, Hex *n, Hex *d, Hex *msg, Hex 
         if (salt->len != 0) {
             ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_SALT, salt->x, salt->len), CRYPT_SUCCESS);
         }
-        ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, mdId, msg->x, msg->len, signdata, &signLen), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, paramMdId, msg->x, msg->len, signdata, &signLen), CRYPT_SUCCESS);
         ASSERT_COMPARE("Compare Sign Data", signdata, signLen, sign->x, sign->len);
         signLen = sign->len;
     }
@@ -331,9 +332,10 @@ void SDV_CRYPTO_RSA_SIGN_PSS_FUNC_TC002(int mdId, Hex *n, Hex *d, Hex *msg, int 
     CRYPT_EAL_PkeyPrv privaKey = {0};
     uint8_t *signdata = NULL;
     uint32_t signLen;
+    CRYPT_MD_AlgId paramMdId = (CRYPT_MD_AlgId)mdId;
     BSL_Param pssParam[4] = {
-        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
-        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
         {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
         BSL_PARAM_END};
     SetRsaPrvKey(&privaKey, n->x, n->len, d->x, d->len);
@@ -356,7 +358,7 @@ void SDV_CRYPTO_RSA_SIGN_PSS_FUNC_TC002(int mdId, Hex *n, Hex *d, Hex *msg, int 
     signdata = (uint8_t *)malloc(signLen);
     ASSERT_TRUE(signdata != NULL);
 
-    ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, mdId, msg->x, msg->len, signdata, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, paramMdId, msg->x, msg->len, signdata, &signLen), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
 #ifdef HITLS_CRYPTO_DRBG
@@ -388,7 +390,7 @@ void SDV_CRYPTO_RSA_SIGN_PSS_FUNC_TC003(Hex *n, Hex *d, Hex *msg, int saltLen, i
     CRYPT_EAL_PkeyPrv privaKey = {0};
     uint8_t *signdata = NULL;
     uint32_t signLen;
-    int32_t mdId = CRYPT_MD_SHA224;
+    CRYPT_MD_AlgId mdId = CRYPT_MD_SHA224;
     BSL_Param pssParam[4] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
@@ -555,7 +557,7 @@ void SDV_CRYPTO_RSA_GEN_SIGN_VERIFY_PSS_FUNC_TC001(int bits, int isProvider)
 #endif
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyCtx *cpyCtx = NULL;
-    int32_t mdId = CRYPT_MD_SHA256;
+    CRYPT_MD_AlgId mdId = CRYPT_MD_SHA256;
     int32_t saltLen = 32;
     BSL_Param pssParam[4] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
@@ -894,9 +896,10 @@ void SDV_CRYPTO_RSA_VERIFY_PSS_FUNC_TC001(
     int ret;
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
     CRYPT_EAL_PkeyPub publicKey = {0};
+    CRYPT_MD_AlgId paramMdId = (CRYPT_MD_AlgId)mdAlgId;
     BSL_Param pssParam[4] = {
-        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdAlgId, sizeof(mdAlgId), 0},
-        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdAlgId, sizeof(mdAlgId), 0},
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
         {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &salt->len, sizeof(salt->len), 0},
         BSL_PARAM_END};
     Hex mdOut = {0};
@@ -960,9 +963,10 @@ void SDV_CRYPTO_RSA_VERIFY_PSS_FUNC_TC002(int mdAlgId, Hex *n, Hex *e, Hex *msg,
     CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
     CRYPT_EAL_PkeyPub publicKey = {0};
     uint32_t signLen = CRYPT_RSA_SALTLEN_TYPE_AUTOLEN;
+    CRYPT_MD_AlgId paramMdId = (CRYPT_MD_AlgId)mdAlgId;
     BSL_Param pssParam[4] = {
-        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdAlgId, sizeof(mdAlgId), 0},
-        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdAlgId, sizeof(mdAlgId), 0},
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
         {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &signLen, sizeof(signLen), 0},
         BSL_PARAM_END};
     TestMemInit();
@@ -977,7 +981,7 @@ void SDV_CRYPTO_RSA_VERIFY_PSS_FUNC_TC002(int mdAlgId, Hex *n, Hex *e, Hex *msg,
 
     /* Set padding. */
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkeyCtx, mdAlgId, msg->x, msg->len, sign->x, sign->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkeyCtx, paramMdId, msg->x, msg->len, sign->x, sign->len), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -1015,9 +1019,10 @@ void SDV_CRYPTO_RSA_BLINDING_FUNC_TC001(int keyLen, int hashId, int padMode, Hex
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_EAL_PkeyCtx *newCtx = NULL;
     CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_MD_AlgId paramMdId = (CRYPT_MD_AlgId)hashId;
     BSL_Param pssParam[4] = {
-        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
-        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
         {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
         BSL_PARAM_END};
     int paraSize;
@@ -1240,9 +1245,10 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC001(int mdId, Hex *n, Hex *e, Hex *d
     CRYPT_EAL_PkeyPrv prvKey = {0};
     SetRsaPubKey(&pubKey, n->x, n->len, e->x, e->len);
     SetRsaPrvKey(&prvKey, n->x, n->len, d->x, d->len);
+    CRYPT_MD_AlgId paramMdId = (CRYPT_MD_AlgId)mdId;
     BSL_Param pssParam[4] = {
-        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
-        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
         {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
         BSL_PARAM_END};
 
@@ -1576,7 +1582,7 @@ void SDV_CRYPTO_RSA_SIGN_VERIFY_ISO9796_2_PASS_TC001(int isProvider, int bits, i
     uint8_t *msg = NULL;
     uint8_t *signBuf = NULL;
     uint32_t signLen = 0;
-    int32_t mdId = mdAlgId;
+    CRYPT_MD_AlgId mdId = mdAlgId;
     uint32_t keyBytes = (uint32_t)((bits + 7) >> 3);
     uint32_t hashLen = CRYPT_EAL_MdGetDigestSize((CRYPT_MD_AlgId)mdId);
     uint32_t mLLen = 0;
@@ -1660,7 +1666,7 @@ void SDV_CRYPTO_RSA_SIGN_VERIFY_ISO9796_2_DETER_TC001(int isProvider, int bits, 
     uint8_t *sign2 = NULL;
     uint32_t signLen1 = 0;
     uint32_t signLen2 = 0;
-    int32_t mdId = mdAlgId;
+    CRYPT_MD_AlgId mdId = mdAlgId;
     uint32_t keyBytes = (uint32_t)((bits + 7) >> 3);
     uint32_t hashLen = CRYPT_EAL_MdGetDigestSize((CRYPT_MD_AlgId)mdId);
     uint32_t mLLen = 0;
@@ -1748,7 +1754,7 @@ void SDV_CRYPTO_RSA_SIGN_VERIFY_ISO9796_2_BOUNDARY_TC001(int isProvider, int bit
     uint8_t *msg = NULL;
     uint8_t *signBuf = NULL;
     uint32_t signLen = 0;
-    int32_t mdId = mdAlgId;
+    CRYPT_MD_AlgId mdId = mdAlgId;
     uint32_t keyBytes = (uint32_t)((bits + 7) >> 3);
     uint32_t hashLen = CRYPT_EAL_MdGetDigestSize((CRYPT_MD_AlgId)mdId);
     uint32_t mLLen = 0;
@@ -1852,7 +1858,7 @@ void SDV_CRYPTO_RSA_SIGN_VERIFY_ISO9796_2_NEGATIVE_TC001(int isProvider, int bit
     uint8_t *pubE = NULL;
     uint32_t signLen = 0;
     uint32_t emLen = 0;
-    int32_t mdId = mdAlgId;
+    CRYPT_MD_AlgId mdId = mdAlgId;
     uint32_t keyBytes = (uint32_t)((bits + 7) >> 3);
     uint32_t hashLen = CRYPT_EAL_MdGetDigestSize((CRYPT_MD_AlgId)mdId);
     uint32_t mLLen = 0;
@@ -2002,7 +2008,7 @@ void SDV_CRYPTO_RSA_SIGN_VERIFY_ISO9796_2_VECTOR_TC001(
     CRYPT_EAL_PkeyPub pubKey = {0};
     uint8_t *signdata = NULL;
     uint32_t signLen = 0;
-    int32_t mdId = mdAlgId;
+    CRYPT_MD_AlgId mdId = mdAlgId;
     BSL_Param isoParam[2] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         BSL_PARAM_END};

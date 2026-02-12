@@ -960,9 +960,9 @@ int32_t CRYPT_DH_Cmp(const CRYPT_DH_Ctx *a, const CRYPT_DH_Ctx *b)
 }
 #endif
 
-int32_t CRYPT_DH_SetParamById(CRYPT_DH_Ctx *ctx, CRYPT_PKEY_ParaId *id, uint32_t len)
+int32_t CRYPT_DH_SetParamById(CRYPT_DH_Ctx *ctx, int32_t *id, uint32_t len)
 {
-    if (id == NULL || len != sizeof(CRYPT_PKEY_ParaId)) {
+    if (id == NULL || len != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
@@ -1018,7 +1018,7 @@ int32_t CRYPT_DH_Ctrl(CRYPT_DH_Ctx *ctx, int32_t opt, void *val, uint32_t len)
         case CRYPT_CTRL_GET_SHARED_KEY_LEN:
             return CRYPT_CTRL_GetNum32(ctx->para == NULL ? 0 : BN_Bytes(ctx->para->p), val, len);
         case CRYPT_CTRL_SET_PARA_BY_ID:
-            return CRYPT_DH_SetParamById(ctx, (CRYPT_PKEY_ParaId *)val, len);
+            return CRYPT_DH_SetParamById(ctx, (int32_t *)val, len);
         case CRYPT_CTRL_SET_DH_FLAG:
             return CRYPT_DH_SetFlag(ctx, val, len);
         case CRYPT_CTRL_UP_REFERENCES:

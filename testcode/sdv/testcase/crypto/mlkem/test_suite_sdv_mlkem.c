@@ -62,7 +62,7 @@ void SDV_CRYPTO_MLKEM_CTRL_API_TC001(int bits)
     CRYPT_RandRegist(TestSimpleRand);
 
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
-    uint32_t val = (uint32_t)bits;
+    int32_t val = (int32_t)bits;
     int ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID + 100, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_MLKEM_CTRL_NOT_SUPPORT);
 
@@ -518,11 +518,11 @@ EXIT:
 * @spec  -
 * @title  Generating a Key Pair
 * @precon  nan
-* @brief  
+* @brief
 * 1. Register a random number and return the specified random number of the test vector.
 * 2. Call CRYPT_EAL_PkeyGen to generate a key pair.
 * 3. Compare key pairs and test vectors.
-* @expect  
+* @expect
 * 1. success
 * 2. success
 * 3. the key pair is the same as the test vector.
@@ -606,7 +606,7 @@ void SDV_CRYPTO_MLKEM_ENCAPS_DECAPS_FUNC_TC001(int bits, Hex *m, Hex *testEK, He
 
     CRYPT_EAL_PkeyCtx *pubKeyCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE,
         "provider=default", isProvider);
-    
+
     CRYPT_EAL_PkeyCtx *prvKeyCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE,
         "provider=default", isProvider);
 
@@ -1492,7 +1492,7 @@ void SDV_CRYPTO_MLKEM_DUPKEY_STUB_TC001(int algId)
     ASSERT_TRUE(ctx != NULL);
 
     // Set parameters and generate key pair
-    uint32_t val = (uint32_t)algId;
+    int32_t val = (int32_t)algId;
     int32_t ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     uint8_t *cipher = NULL;
@@ -1500,7 +1500,7 @@ void SDV_CRYPTO_MLKEM_DUPKEY_STUB_TC001(int algId)
     uint32_t cipherLen = 0;
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_CIPHERTEXT_LEN, &cipherLen, sizeof(cipherLen));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    
+
     uint32_t sharedLen = 0;
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SHARED_KEY_LEN, &sharedLen, sizeof(sharedLen));
     ASSERT_EQ(ret, CRYPT_SUCCESS);

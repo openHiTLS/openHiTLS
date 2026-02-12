@@ -421,7 +421,7 @@ void SDV_X509_CRL_CTRL_ParamCheck_TC001(void)
     HITLS_X509_Crl *crl = NULL;
     BSL_TIME time = {0};
     BSL_ASN1_List *issuer = NULL;
-    uint32_t version = 1;
+    int32_t version = 1;
 
     // Test null pointer parameter
     ASSERT_EQ(HITLS_X509_CrlCtrl(NULL, HITLS_X509_SET_VERSION, &version, sizeof(version)),
@@ -463,7 +463,7 @@ void SDV_X509_CRL_CTRL_ParamCheck_TC001(void)
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
 
     // Test normal parameters - get version number
-    uint32_t getVersion = 0;
+    int32_t getVersion = 0;
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &getVersion, sizeof(getVersion)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(getVersion, version);
 
@@ -590,7 +590,7 @@ EXIT:
 void SDV_X509_CRL_CTRL_GetFunc_TC001(void)
 {
     HITLS_X509_Crl *crl = NULL;
-    uint32_t version = 0;
+    int32_t version = 0;
     BSL_TIME beforeTime = {0};
     BSL_TIME afterTime = {0};
     BslList *issuerDN = NULL;
@@ -602,7 +602,7 @@ void SDV_X509_CRL_CTRL_GetFunc_TC001(void)
     ASSERT_NE(crl, NULL);
 
     // Test getting the version number
-    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &version, sizeof(uint32_t)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_VERSION, &version, sizeof(int32_t)), HITLS_PKI_SUCCESS);
     // The CRL version should be 0 (v1) or 1 (v2)
     ASSERT_TRUE(version == 1);
 
@@ -1213,7 +1213,7 @@ static int32_t PrintToFile(int cmd, BSL_Buffer *data, char *outputPath)
     ASSERT_EQ(HITLS_PKI_PrintCtrl(cmd, data->data, data->dataLen, uio), 0);
     (void)SAL_Flush(BSL_UIO_GetCtx(uio));
     ret = 0;
-    
+
 EXIT:
     BSL_UIO_Free(uio);
     return ret;
@@ -1271,7 +1271,7 @@ static int32_t SetCrlAllRevoked(HITLS_X509_Crl *crl, int8_t reasonCode, bool use
     HITLS_X509_RevokeExtTime invalidTimeExt = {false, invalidTime};
     ASSERT_EQ(HITLS_X509_CrlEntryCtrl(entry, HITLS_X509_CRL_SET_REVOKED_INVALID_TIME,
         &invalidTimeExt, sizeof(HITLS_X509_RevokeExtTime)), HITLS_PKI_SUCCESS);
-        
+
     // Set certificate issuer
     HITLS_X509_RevokeExtCertIssuer certIssuer = {true, NULL};
     certIssuer.issuerName = GenGeneralNameList();
@@ -1329,7 +1329,7 @@ static int32_t SetAllCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool includ
         for (size_t i = 0; i < sizeof(reasonCodes)/sizeof(reasonCodes[0]); i++) {
             ASSERT_EQ(SetCrlAllRevoked(crl, reasonCodes[i], useGMT), HITLS_PKI_SUCCESS);
         }
-        
+
         // Set AKI extension
         HITLS_X509_ExtSki ski = {0};
         BSL_Buffer serialNum = { NULL, 0 };
@@ -1346,7 +1346,7 @@ static int32_t SetAllCrl(HITLS_X509_Crl *crl, HITLS_X509_Cert *cert, bool includ
         ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_CRLNUMBER, &crlNumberExt,
             sizeof(HITLS_X509_ExtCrlNumber)), HITLS_PKI_SUCCESS);
     }
-    
+
     return HITLS_PKI_SUCCESS;
 EXIT:
     return -1;
@@ -1359,7 +1359,7 @@ static int32_t CompareCrlExtLists(BslList *extList1, BslList *extList2)
     HITLS_X509_ExtEntry **extNode2 = BSL_LIST_First(extList2);
     ASSERT_NE(*extNode1, NULL);
     ASSERT_NE(*extNode2, NULL);
-    
+
     for (int32_t count = 0; count < BSL_LIST_COUNT(extList1); count++) {
         ASSERT_EQ((*extNode1)->critical, (*extNode2)->critical);
         ASSERT_EQ((*extNode1)->extnId.tag, (*extNode2)->extnId.tag);
@@ -1965,7 +1965,7 @@ static void *STUB_BSL_SAL_Malloc_Crl(uint32_t size)
 /**
  * @test SDV_X509_CRL_PARSE_STUB_TC001
  * title 1. Test the decode crl with stub malloc fail
- * 
+ *
  */
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_STUB_TC001(int format, char *path, int maxTriggers)

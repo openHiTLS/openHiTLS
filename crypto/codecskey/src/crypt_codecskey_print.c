@@ -153,8 +153,8 @@ int32_t CRYPT_EAL_PrintRsaPssPara(uint32_t layer, CRYPT_RSA_PssPara *para, BSL_U
 
 static int32_t PrintRsaPssPara(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio)
 {
-    CRYPT_RsaPadType padType = 0;
-    int32_t ret = CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(CRYPT_RsaPadType));
+    int32_t padType = 0;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(padType));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

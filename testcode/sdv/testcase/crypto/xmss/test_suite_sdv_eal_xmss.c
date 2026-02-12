@@ -87,7 +87,7 @@ void SDV_CRYPTO_XMSS_GENKEY_TC001(int isProvider)
     if (isProvider == 1) {
         pkey = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_XMSS, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default");
     } else
-#endif 
+#endif
     {
         (void)isProvider;
         pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSS);
@@ -95,7 +95,7 @@ void SDV_CRYPTO_XMSS_GENKEY_TC001(int isProvider)
     ASSERT_TRUE(pkey != NULL);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID, NULL, 0) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_XMSS_ERR_INVALID_ALGID);
-    CRYPT_PKEY_ParaId algId = CRYPT_XMSS_SHA2_10_256;
+    int32_t algId = CRYPT_XMSS_SHA2_10_256;
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&algId, sizeof(algId)) ==
                 CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyGen(pkey) == CRYPT_SUCCESS);
@@ -262,7 +262,7 @@ void SDV_CRYPTO_XMSS_SIGN_KAT_TC001(int id, int index, Hex *key, Hex *msg, Hex *
     prv.key.xmssPrv.pub.root = key->x + keyLen * 3;
     prv.key.xmssPrv.pub.len = keyLen;
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
-    
+
 	uint8_t sigOut[50000] = {0};
     uint32_t sigOutLen = sizeof(sigOut);
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, 0, msg->x, msg->len, sigOut, &sigOutLen), result);

@@ -611,7 +611,7 @@ static int32_t MsgEncode(const CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t
     } else {
         mpLen += dataLen;
     }
-    
+
     uint8_t *mp = (uint8_t *)BSL_SAL_Malloc(mpLen);
     if (mp == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -691,7 +691,7 @@ static int32_t SlhDsaSetAlgId(CryptSlhDsaCtx *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    CRYPT_PKEY_ParaId algId = *(CRYPT_PKEY_ParaId *)val;
+    int32_t algId = *(int32_t *)val;
     if (CheckNotSlhDsaAlgId(algId)) {
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_INVALID_ALGID);
         return CRYPT_SLHDSA_ERR_INVALID_ALGID;

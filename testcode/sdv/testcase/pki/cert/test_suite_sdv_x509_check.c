@@ -64,7 +64,7 @@ static int32_t SetRsaPara(CRYPT_EAL_PkeyCtx *pkey)
 
 static int32_t SetRsaPssPara(CRYPT_EAL_PkeyCtx *pkey)
 {
-    int32_t mdId = CRYPT_MD_SHA256;
+    CRYPT_MD_AlgId mdId = CRYPT_MD_SHA256;
     int32_t saltLen = 20; // 20 bytes salt
     BSL_Param pssParam[4] = {
     {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
@@ -363,7 +363,7 @@ static int32_t SetCertBasic(HITLS_X509_Cert *cert, uint32_t version, uint8_t *se
     if (version <= 3) { // version can be 1,2,3
         ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_VERSION, &version, sizeof(version)), HITLS_PKI_SUCCESS);
     }
-    
+
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, serialNum, serialNumLen), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_BEFORE_TIME, beforeTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_AFTER_TIME, afterTime, sizeof(BSL_TIME)), HITLS_PKI_SUCCESS);
@@ -470,7 +470,6 @@ static void SetSignParam(int32_t algId, int32_t mdId, HITLS_X509_SignAlgParam *a
         algParam->sm2UserId.data = (uint8_t *)g_sm2DefaultUserid;
         algParam->sm2UserId.dataLen = (uint32_t)strlen(g_sm2DefaultUserid);
     }
-    
 }
 
 /**
@@ -491,7 +490,7 @@ void SDV_X509_CERT_VERSIONCHECK_TC001(int version, int extflag, int result, char
 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    
+
     pkey = GenKey(CRYPT_PKEY_ECDSA, CRYPT_ECC_NISTP256);
     cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
@@ -504,7 +503,7 @@ void SDV_X509_CERT_VERSIONCHECK_TC001(int version, int extflag, int result, char
     if (version == 4) { // version = 4 means not set version
         version = 0; // default version = 0
     }
-    
+
     // sign cert
     ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, pkey, &algParam, cert), result);
     if (result == HITLS_PKI_SUCCESS) {
@@ -620,7 +619,7 @@ void SDV_X509_CERT_SERIALNUMCHECK_TC001(int extflag, int result, Hex *serialNum,
 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    
+
     pkey = GenKey(CRYPT_PKEY_ECDSA, CRYPT_ECC_NISTP256);
     cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
@@ -629,7 +628,7 @@ void SDV_X509_CERT_SERIALNUMCHECK_TC001(int extflag, int result, Hex *serialNum,
     if (extflag) {
         ASSERT_EQ(SetCertExt(cert), 0);
     }
-    
+
     // sign cert
     ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, pkey, &algParam, cert), result);
     if (result == HITLS_PKI_SUCCESS) {
@@ -670,7 +669,7 @@ void SDV_X509_CERT_KEYCHECK_TC001(int keyflag, int result)
 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    
+
     pkey = GenKey(CRYPT_PKEY_X25519, CRYPT_ECC_NISTP256);
     cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
@@ -682,10 +681,10 @@ void SDV_X509_CERT_KEYCHECK_TC001(int keyflag, int result)
         ASSERT_EQ(SetCertBasic(cert, g_version, g_serialNum, sizeof(g_serialNum),
             &g_beforeTime, &g_afterTime, subject, subject, NULL), 0);
     }
-    
+
     ASSERT_EQ(SetCertExt(cert), 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
-    
+
     // sign cert
     ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, pkey, &algParam, cert), result);
 
@@ -716,7 +715,7 @@ void SDV_X509_CERT_ISSUERCHECK_TC001()
     ASSERT_EQ(SetCertBasic(cert, g_version, g_serialNum, sizeof(g_serialNum),
         &g_beforeTime, &g_afterTime, subject, NULL, pkey), 0);
     ASSERT_EQ(SetCertExt(cert), 0);
-    
+
     // sign cert
     ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, pkey, &algParam, cert), HITLS_X509_ERR_CERT_INVALID_DN);
 
@@ -750,7 +749,7 @@ void SDV_X509_CERT_ISSUERCHECK_TC002()
 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    
+
     pkey = GenKey(CRYPT_PKEY_X25519, CRYPT_ECC_NISTP256);
     cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
@@ -763,7 +762,7 @@ void SDV_X509_CERT_ISSUERCHECK_TC002()
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_ISSUER_DN, issuer1,
         sizeof(BslList)), HITLS_X509_ERR_SET_NAME_LIST);
     ASSERT_EQ(SetCertExt(cert), 0);
-    
+
 EXIT:
     TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -789,7 +788,7 @@ void SDV_X509_CERT_SUBJECTCHECK_TC002(int extflag)
 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    
+
     pkey = GenKey(CRYPT_PKEY_X25519, CRYPT_ECC_NISTP256);
     cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
@@ -801,7 +800,7 @@ void SDV_X509_CERT_SUBJECTCHECK_TC002(int extflag)
     if (extflag) {
         ASSERT_EQ(SetCertExt(cert), 0);
     }
-    
+
     // sign cert
     ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, pkey, &algParam, cert), HITLS_X509_ERR_CERT_INVALID_DN);
 
@@ -834,7 +833,7 @@ void SDV_X509_CERT_SUBJECTCHECK_TC001(int extflag, int emailflag)
 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    
+
     pkey = GenKey(CRYPT_PKEY_X25519, CRYPT_ECC_NISTP256);
     cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
@@ -850,7 +849,7 @@ void SDV_X509_CERT_SUBJECTCHECK_TC001(int extflag, int emailflag)
         ASSERT_TRUE(TestIsErrStackEmpty());
         ASSERT_EQ(HITLS_X509_AddDnName(dirNames, dnName3, 1), HITLS_X509_ERR_SET_DNNAME_UNKNOWN);
     }
-    
+
     // sign cert
     ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, pkey, &algParam, cert), HITLS_X509_ERR_CERT_INVALID_DN);
 
@@ -882,7 +881,7 @@ void SDV_X509_CERT_SUBJECTCHECK_TC003(int extflag, char *expectpath, char *expec
 
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    
+
     pkey = GenKey(CRYPT_PKEY_ECDSA, CRYPT_ECC_NISTP256);
     cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
@@ -891,7 +890,7 @@ void SDV_X509_CERT_SUBJECTCHECK_TC003(int extflag, char *expectpath, char *expec
     if (extflag) {
         ASSERT_EQ(SetCertExt(cert), 0);
     }
-    
+
     // sign cert
     ASSERT_EQ(HITLS_X509_CertSign(CRYPT_MD_SHA256, pkey, &algParam, cert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertGenFile(BSL_FORMAT_ASN1, cert, path), HITLS_PKI_SUCCESS);
@@ -968,11 +967,11 @@ void SDV_X509_CERT_TELETEXSTRING_PARSEGEN_TC001(char *path, char *expectbuf)
     BslList *subject = NULL;
     TestMemInit();
     ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-    
+
     pkey = GenKey(CRYPT_PKEY_ECDSA, CRYPT_ECC_NISTP256);
     cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
-    
+
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cacert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cacert, HITLS_X509_GET_SUBJECT_DN, &subject, sizeof(BslList *)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertCtrl(cacert, HITLS_X509_GET_ISSUER_DN, &issuer, sizeof(BslList *)), HITLS_PKI_SUCCESS);
@@ -1216,7 +1215,7 @@ void SDV_X509_CERT_WITH_KUSAGE_GEN_TEST_TC001(int isCritical, int algId, int has
     cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
     dnList = GenDNList();
-    
+
     // set keyUsage extension
     ASSERT_EQ(SetCertBasic(cert, g_version, g_serialNum, sizeof(g_serialNum),
         &g_beforeTime, &g_afterTime, dnList, dnList, key), 0);
@@ -1283,7 +1282,7 @@ void SDV_X509_CERT_WITH_ILLEGAL_KUSAGE_GEN_TEST_TC001(int isCritical, int keyUsa
     cert = HITLS_X509_CertNew();
     ASSERT_NE(cert, NULL);
     dnList = GenDNList();
-    
+
     ASSERT_EQ(SetCertBasic(cert, g_version, g_serialNum, sizeof(g_serialNum),
         &g_beforeTime, &g_afterTime, dnList, dnList, key), 0);
     ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_SET_KUSAGE,
@@ -1738,7 +1737,7 @@ void SDV_X509_CERT_WITH_BCON_PARSE_TEST_TC001(int isCritical, int isCa, int maxP
     HITLS_X509_Cert *parsedCert = NULL;
     BslList *dnList = GenDNList();
     HITLS_X509_ExtBCons parsedBCons = {0};
-    
+
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &parsedCert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(parsedBasicFieldsCheck(parsedCert, g_version, g_serialNum, sizeof(g_serialNum),
         &g_beforeTime, &g_afterTime, dnList, dnList, isEdited), 0);
@@ -1880,7 +1879,7 @@ void SDV_X509_CERT_WITH_EXTKU_WITH_ANYKU_GEN_TEST_TC001(int isCritical, int algI
     BslList *oidList = BSL_LIST_New(sizeof(BSL_Buffer));
     ASSERT_NE(oidList, NULL);
     dnList = GenDNList();
-    
+
     // set all purpose of extended keyUsage extension
     ASSERT_EQ(SetCertBasic(cert, g_version, g_serialNum, sizeof(g_serialNum),
         &g_beforeTime, &g_afterTime, dnList, dnList, key), 0);
@@ -2020,7 +2019,7 @@ EXIT:
 void SDV_X509_CERT_WITH_EXTKU_WITH_ANYKU_PARSE_TEST_TC001(int isCritical, char *path, int isEdited)
 {
     HITLS_X509_Cert *parsedCert = NULL;
-    
+
     BslList *dnList = GenDNList();
     BslList *oidList = BSL_LIST_New(sizeof(BSL_Buffer));
     ASSERT_NE(oidList, NULL);

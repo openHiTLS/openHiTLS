@@ -229,8 +229,8 @@ void SDV_SM_PROVIDER_MAC_TEST_TC001(int algId, int keyLen)
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     if (algId == CRYPT_MAC_CBC_MAC_SM4) {
-        CRYPT_PaddingType padType = CRYPT_PADDING_ZEROS;
-        ASSERT_EQ(CRYPT_EAL_MacCtrl(macCtx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(CRYPT_PaddingType)),
+        int32_t padType = CRYPT_PADDING_ZEROS;
+        ASSERT_EQ(CRYPT_EAL_MacCtrl(macCtx, CRYPT_CTRL_SET_CBC_MAC_PADDING, &padType, sizeof(padType)),
             CRYPT_SUCCESS);
     }
 
@@ -358,7 +358,7 @@ void SDV_SM_PROVIDER_CIPHPER_TEST_TC001()
     uint32_t plainLen = sizeof(plainLen) - 1;
     uint8_t cipher[128] = {0};
     uint32_t cipherLen = sizeof(cipher);
-    
+
     libCtx = SM_ProviderLoad();
     ASSERT_TRUE(libCtx != NULL);
 
@@ -367,10 +367,10 @@ void SDV_SM_PROVIDER_CIPHPER_TEST_TC001()
 
     int32_t ret = CRYPT_EAL_CipherInit(cipherCtx, key, keyLen, iv, ivLen, true);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    
+
     ret = CRYPT_EAL_CipherSetPadding(cipherCtx, CRYPT_PADDING_PKCS7);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-    
+
     uint32_t tmpLen = cipherLen;
     ret = CRYPT_EAL_CipherUpdate(cipherCtx, plain, plainLen, cipher, &tmpLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);

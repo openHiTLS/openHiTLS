@@ -270,7 +270,7 @@ int32_t HITLS_X509_GetPubKey(void *ealPubKey, void **val);
 
 int32_t HITLS_X509_GetSignAlg(BslCid signAlgId, int32_t *val, uint32_t valLen);
 
-int32_t HITLS_X509_GetSignMdAlg(const HITLS_X509_Asn1AlgId *signAlgId, int32_t *val, int32_t valLen);
+int32_t HITLS_X509_GetSignMdAlg(const HITLS_X509_Asn1AlgId *signAlgId, int32_t *val, uint32_t valLen);
 
 int32_t HITLS_X509_GetEncodeLen(uint32_t encodeLen, uint32_t *val, uint32_t valLen);
 
@@ -318,7 +318,7 @@ int32_t HITLS_X509_MatchPattern(uint32_t flags, const char *pattern, const char 
 
 int32_t X509_GetHashId(const HITLS_X509_Asn1AlgId *alg, int32_t *hashId);
 
-int32_t HITLS_X509_CtrlAlgInfo(CRYPT_EAL_PkeyCtx *pubKey, uint32_t hashId, const HITLS_X509_Asn1AlgId *alg);
+int32_t HITLS_X509_CtrlAlgInfo(CRYPT_EAL_PkeyCtx *pubKey, int32_t hashId, const HITLS_X509_Asn1AlgId *alg);
 
 int32_t HITLS_X509_EncodeObjIdentity(BslCid cid, BSL_ASN1_Buffer *asnBuff);
 

@@ -1071,8 +1071,8 @@ static int32_t CreateSignerInfoFromCert(int32_t version, HITLS_X509_Cert *cert, 
 // Configure RSA signature algorithm based on padding type
 static int32_t ConfigureRsaSignAlg(CRYPT_EAL_PkeyCtx *signKey, HITLS_X509_Asn1AlgId *sigAlg)
 {
-    CRYPT_RsaPadType pad;
-    int32_t ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType));
+    int32_t pad;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_PADDING, &pad, sizeof(pad));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -1080,16 +1080,20 @@ static int32_t ConfigureRsaSignAlg(CRYPT_EAL_PkeyCtx *signKey, HITLS_X509_Asn1Al
 
     if (pad == CRYPT_EMSA_PSS) {
         sigAlg->algId = BSL_CID_RSASSAPSS;
-        ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_MD, &sigAlg->rsaPssParam.mdId, sizeof(CRYPT_MD_AlgId));
+        int32_t mdId;
+        ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_MD, &mdId, sizeof(mdId));
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_MGF, &sigAlg->rsaPssParam.mgfId, sizeof(CRYPT_MD_AlgId));
+        sigAlg->rsaPssParam.mdId = mdId;
+        int32_t mgfId;
+        ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_MGF, &mgfId, sizeof(mgfId));
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
+        sigAlg->rsaPssParam.mgfId = mgfId;
         ret = CRYPT_EAL_PkeyCtrl(signKey, CRYPT_CTRL_GET_RSA_SALTLEN, &sigAlg->rsaPssParam.saltLen, sizeof(uint32_t));
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
@@ -1121,7 +1125,7 @@ static int32_t ConfigureSignAlg(const CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, H
         if (asymAlg == CRYPT_PKEY_RSA) {
             return ConfigureRsaSignAlg(signKey, sigAlg);
         }
-    
+
         BslCid signAlgId = BSL_OBJ_GetSignIdFromHashAndAsymId((BslCid)asymAlg, (BslCid)mdId);
         if (signAlgId == BSL_CID_UNKNOWN) {
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);

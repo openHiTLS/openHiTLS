@@ -555,12 +555,12 @@ void SDV_CMS_ADDSIGNERINFO_RSA_PSS_TC001(char *certPath, char *keyPath, char *ms
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, keyPath, NULL, 0, &pkey),
         CRYPT_SUCCESS);
     // Set RSA-PSS padding
-    CRYPT_RsaPadType pad = CRYPT_EMSA_PSS;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType)), CRYPT_SUCCESS);
+    int32_t pad = CRYPT_EMSA_PSS;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(pad)), CRYPT_SUCCESS);
 
     // Set PSS parameters
-    int32_t pssHash = BSL_CID_SHA256;
-    int32_t pssMgf = BSL_CID_SHA256;
+    CRYPT_MD_AlgId pssHash = (CRYPT_MD_AlgId)BSL_CID_SHA256;
+    CRYPT_MD_AlgId pssMgf = (CRYPT_MD_AlgId)BSL_CID_SHA256;
     int32_t pssSaltLen = 20;
     BSL_Param pssParams[4] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &pssHash, sizeof(pssHash), 0},
@@ -960,11 +960,11 @@ void SDV_CMS_GEN_ATTACH_SIGNEDDATA_TC001(int algId, char *capath, char *certPath
             CRYPT_SUCCESS);
 
         if (algId == BSL_CID_RSASSAPSS) {
-            CRYPT_RsaPadType pad = CRYPT_EMSA_PSS;
-            ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType)),
+            int32_t pad = CRYPT_EMSA_PSS;
+            ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(pad)),
                 CRYPT_SUCCESS);
-            int32_t pssHash = BSL_CID_SHA256;
-            int32_t pssMgf = BSL_CID_SHA256;
+            CRYPT_MD_AlgId pssHash = (CRYPT_MD_AlgId)BSL_CID_SHA256;
+            CRYPT_MD_AlgId pssMgf = (CRYPT_MD_AlgId)BSL_CID_SHA256;
             int32_t pssSaltLen = 32;
             BSL_Param pssParams[4] = {
                 {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &pssHash, sizeof(pssHash), 0},
@@ -1419,7 +1419,7 @@ void SDV_CMS_STREAM_NODETACHED_TEST_TC001(void)
     ASSERT_EQ(HITLS_CMS_DataInit(HITLS_CMS_OPT_SIGN, cms, NULL), HITLS_PKI_SUCCESS);
     const char *msg1 = "This is the test message";
     BSL_Buffer msgBuf = {(uint8_t *)msg1, strlen(msg1)};
-    
+
     // Try to finalize streaming signature on non-detached CMS
     int32_t version = HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1;
     bool isDetached = false; // thid param is not useful in stream.
@@ -1522,10 +1522,10 @@ void SDV_CMS_MIXED_SING_VERIFY_TC001(void)
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
         "../testdata/cert/asn1/cms/signeddata/rsa-pss/key.pem", NULL, 0, &pkey2), CRYPT_SUCCESS);
     ASSERT_TRUE(pkey2 != NULL);
-    CRYPT_RsaPadType pad = CRYPT_EMSA_PSS;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey2, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType)), CRYPT_SUCCESS);
-    int32_t pssHash = BSL_CID_SHA256;
-    int32_t pssMgf = BSL_CID_SHA256;
+    int32_t pad = CRYPT_EMSA_PSS;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey2, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(pad)), CRYPT_SUCCESS);
+    CRYPT_MD_AlgId pssHash = (CRYPT_MD_AlgId)BSL_CID_SHA256;
+    CRYPT_MD_AlgId pssMgf = (CRYPT_MD_AlgId)BSL_CID_SHA256;
     int32_t pssSaltLen = 32;
     BSL_Param pssParams[4] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &pssHash, sizeof(pssHash), 0},
@@ -1674,10 +1674,10 @@ void SDV_CMS_NODETACHED_DIFF_MSG_FAIL_TC001(void)
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT,
         "../testdata/cert/asn1/cms/signeddata/rsa-pss/key.pem", NULL, 0, &pkey2), CRYPT_SUCCESS);
     ASSERT_TRUE(pkey2 != NULL);
-    CRYPT_RsaPadType pad = CRYPT_EMSA_PSS;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey2, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType)), CRYPT_SUCCESS);
-    int32_t pssHash = BSL_CID_SHA256;
-    int32_t pssMgf = BSL_CID_SHA256;
+    int32_t pad = CRYPT_EMSA_PSS;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey2, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(pad)), CRYPT_SUCCESS);
+    CRYPT_MD_AlgId pssHash = (CRYPT_MD_AlgId)BSL_CID_SHA256;
+    CRYPT_MD_AlgId pssMgf = (CRYPT_MD_AlgId)BSL_CID_SHA256;
     int32_t pssSaltLen = 32;
     BSL_Param pssParams[4] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &pssHash, sizeof(pssHash), 0},

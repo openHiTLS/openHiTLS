@@ -669,8 +669,8 @@ static int32_t X509_CheckPssParam(CRYPT_EAL_PkeyCtx *key, int32_t algId, const C
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_MD_NOT_MATCH);
         return HITLS_X509_ERR_MD_NOT_MATCH;
     }
-    CRYPT_MD_AlgId mdId;
-    int32_t ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MD, &mdId, sizeof(int32_t));
+    int32_t mdId;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MD, &mdId, sizeof(mdId));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -679,17 +679,17 @@ static int32_t X509_CheckPssParam(CRYPT_EAL_PkeyCtx *key, int32_t algId, const C
         /* If the hash algorithm is unknown, no pss parameter is specified in key. */
         return HITLS_PKI_SUCCESS;
     }
-    if (mdId != rsaPssParam->mdId) {
+    if (mdId != (int32_t)rsaPssParam->mdId) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_MD_NOT_MATCH);
         return HITLS_X509_ERR_MD_NOT_MATCH;
     }
-    CRYPT_MD_AlgId mgfId;
-    ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MGF, &mgfId, sizeof(uint32_t));
+    int32_t mgfId;
+    ret = CRYPT_EAL_PkeyCtrl(key, CRYPT_CTRL_GET_RSA_MGF, &mgfId, sizeof(mgfId));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (mgfId != rsaPssParam->mgfId) {
+    if (mgfId != (int32_t)rsaPssParam->mgfId) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_MGF_NOT_MATCH);
         return HITLS_X509_ERR_MGF_NOT_MATCH;
     }
@@ -709,7 +709,7 @@ static int32_t X509_CheckPssParam(CRYPT_EAL_PkeyCtx *key, int32_t algId, const C
 
 int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, const HITLS_X509_Asn1AlgId *subAlg)
 {
-    uint32_t pubKeyId = CRYPT_EAL_PkeyGetId(pubkey);
+    int32_t pubKeyId = CRYPT_EAL_PkeyGetId(pubkey);
     if (pubKeyId == CRYPT_PKEY_MAX) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_GET_SIGNID);
         return HITLS_X509_ERR_VFY_GET_SIGNID;
@@ -735,7 +735,7 @@ int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, const HITLS_X509_Asn1AlgI
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_GET_SIGNID);
         return HITLS_X509_ERR_VFY_GET_SIGNID;
     }
-    if (pubKeyId != subSignAlg) {
+    if (pubKeyId != (int32_t)subSignAlg) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
         return HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH;
     }
@@ -779,7 +779,7 @@ int32_t HITLS_X509_SignAsn1Data(CRYPT_EAL_PkeyCtx *priv, CRYPT_MD_AlgId mdId,
 
 int32_t X509_GetHashId(const HITLS_X509_Asn1AlgId *alg, int32_t *hashId)
 {
-    int32_t ret = OBJ_GetHashIdFromSignId(alg->algId, (BslCid *)hashId);
+    int32_t ret = OBJ_GetHashIdFromSignId(alg->algId, hashId);
     if (ret != BSL_SUCCESS) {
         return ret;
     }
@@ -791,7 +791,7 @@ int32_t X509_GetHashId(const HITLS_X509_Asn1AlgId *alg, int32_t *hashId)
 }
 
 #if defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_SM2)
-int32_t HITLS_X509_CtrlAlgInfo(CRYPT_EAL_PkeyCtx *pubKey, uint32_t hashId, const HITLS_X509_Asn1AlgId *alg)
+int32_t HITLS_X509_CtrlAlgInfo(CRYPT_EAL_PkeyCtx *pubKey, int32_t hashId, const HITLS_X509_Asn1AlgId *alg)
 {
 #ifndef HITLS_CRYPTO_RSA
     (void)hashId;
@@ -935,6 +935,7 @@ int32_t HITLS_X509_CheckAki(HITLS_X509_Ext *issueExt, HITLS_X509_Ext *subjectExt
 static int32_t X509_SetRsaPssDefaultParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, HITLS_X509_Asn1AlgId *signAlgId)
 {
     int32_t currentHash;
+    CRYPT_MD_AlgId rsaMdId = (CRYPT_MD_AlgId)mdId;
     int32_t ret = CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_GET_RSA_MD, &currentHash, sizeof(int32_t));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -942,19 +943,19 @@ static int32_t X509_SetRsaPssDefaultParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdI
     }
     if (currentHash == BSL_CID_UNKNOWN) {
         signAlgId->algId = BSL_CID_RSASSAPSS;
-        signAlgId->rsaPssParam.mdId = mdId;
-        signAlgId->rsaPssParam.mgfId = mdId;
+        signAlgId->rsaPssParam.mdId = rsaMdId;
+        signAlgId->rsaPssParam.mgfId = rsaMdId;
         signAlgId->rsaPssParam.saltLen = 20; // 20: default saltLen
         BSL_Param param[4] = {
-        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
-        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &rsaMdId, sizeof(rsaMdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &rsaMdId, sizeof(rsaMdId), 0},
         {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &signAlgId->rsaPssParam.saltLen,
             sizeof(signAlgId->rsaPssParam.saltLen), 0},
         BSL_PARAM_END};
         return CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, param, 0);
     }
 
-    if (currentHash != mdId) {
+    if (currentHash != (int32_t)rsaMdId) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_MD_NOT_MATCH);
         return HITLS_X509_ERR_MD_NOT_MATCH;
     }
@@ -1008,8 +1009,8 @@ static int32_t X509_SetRsaPssParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, cons
 static int32_t X509_SetRsaPkcsParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, bool setPadding)
 {
     if (setPadding) {
-        CRYPT_RsaPadType pad = CRYPT_EMSA_PKCSV15;
-        int32_t ret = CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType));
+        int32_t pad = CRYPT_EMSA_PKCSV15;
+        int32_t ret = CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_SET_RSA_PADDING, &pad, sizeof(pad));
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -1022,8 +1023,8 @@ static int32_t X509_SetRsaPkcsParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, boo
 static int32_t X509_SetRsaSignParam(CRYPT_EAL_PkeyCtx *prvKey, int32_t mdId, const HITLS_X509_SignAlgParam *algParam,
     HITLS_X509_Asn1AlgId *signAlgId)
 {
-    CRYPT_RsaPadType pad;
-    int32_t ret = CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_GET_RSA_PADDING, &pad, sizeof(CRYPT_RsaPadType));
+    int32_t pad;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(prvKey, CRYPT_CTRL_GET_RSA_PADDING, &pad, sizeof(pad));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
