@@ -46,8 +46,6 @@ typedef void HITLS_PKI_LibCtx;
 #define HITLS_X509_EXT_KU_ENCIPHER_ONLY         0x0001
 #define HITLS_X509_EXT_KU_DECIPHER_ONLY         0x8000
 
-#define HITLS_X509_EXT_KU_NONE                  0xFFFF /* No Key Usage extension. */
-
 typedef enum {
     HITLS_X509_REF_UP = 0,             /** Increase the reference count of the object */
 

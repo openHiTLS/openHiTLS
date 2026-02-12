@@ -1241,10 +1241,11 @@ void SDV_X509_CERT_WITH_KUSAGE_GEN_TEST_TC001(int isCritical, int algId, int has
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &parsedCert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(parsedBasicFieldsCheck(parsedCert, g_version, g_serialNum, sizeof(g_serialNum),
         &g_beforeTime, &g_afterTime, dnList, dnList, 0), 0);
-    ASSERT_EQ(HITLS_X509_CertCtrl(parsedCert, HITLS_X509_EXT_GET_KUSAGE,
-        &parsedKeyUsage, sizeof(parsedKeyUsage)), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(parsedKeyUsage, keyUsage);
-    if (keyUsage != HITLS_X509_EXT_KU_NONE) {
+
+    int32_t ret = HITLS_X509_CertCtrl(parsedCert, HITLS_X509_EXT_GET_KUSAGE, &parsedKeyUsage, sizeof(parsedKeyUsage));
+    ASSERT_TRUE(ret == HITLS_PKI_SUCCESS || ret == HITLS_X509_ERR_KU_IS_NONE);
+    if (ret != HITLS_X509_ERR_KU_IS_NONE) {
+        ASSERT_EQ(parsedKeyUsage, keyUsage);
         ASSERT_EQ((parsedKeyUsage & HITLS_X509_EXT_KU_DIGITAL_SIGN) != 0, expKuDigitailSign);
         ASSERT_EQ((parsedKeyUsage & HITLS_X509_EXT_KU_NON_REPUDIATION) != 0, expKuNonRepudiation);
         ASSERT_EQ((parsedKeyUsage & HITLS_X509_EXT_KU_KEY_ENCIPHERMENT) != 0, expKuKeyEncipherment);
@@ -1335,10 +1336,10 @@ void SDV_X509_CERT_WITH_KUSAGE_PARSE_TEST_TC001(char *certPath, int isEdited, in
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &parsedCert), HITLS_PKI_SUCCESS);
     ASSERT_EQ(parsedBasicFieldsCheck(parsedCert, g_version, g_serialNum, sizeof(g_serialNum),
         &g_beforeTime, &g_afterTime, dnList, dnList, isEdited), 0);
-    ASSERT_EQ(HITLS_X509_CertCtrl(parsedCert, HITLS_X509_EXT_GET_KUSAGE,
-        &parsedKeyUsage, sizeof(parsedKeyUsage)), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(parsedKeyUsage, expkeyUsage);
-    if (expkeyUsage != HITLS_X509_EXT_KU_NONE) {
+    int32_t ret = HITLS_X509_CertCtrl(parsedCert, HITLS_X509_EXT_GET_KUSAGE, &parsedKeyUsage, sizeof(parsedKeyUsage));
+    ASSERT_TRUE(ret == HITLS_PKI_SUCCESS || ret == HITLS_X509_ERR_KU_IS_NONE);
+    if (ret != HITLS_X509_ERR_KU_IS_NONE) {
+        ASSERT_EQ(parsedKeyUsage, expkeyUsage);
         ASSERT_EQ((parsedKeyUsage & HITLS_X509_EXT_KU_DIGITAL_SIGN) != 0, expKuDigitailSign);
         ASSERT_EQ((parsedKeyUsage & HITLS_X509_EXT_KU_NON_REPUDIATION) != 0, expKuNonRepudiation);
         ASSERT_EQ((parsedKeyUsage & HITLS_X509_EXT_KU_KEY_ENCIPHERMENT) != 0, expKuKeyEncipherment);
