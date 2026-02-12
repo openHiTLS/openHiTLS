@@ -185,7 +185,7 @@
                         "mldsa": {"deps": ["sha3", "obj_default"]},
                         "paillier": {"deps":["bn_rand", "bn_prime"]},
                         "elgamal": {"deps":["bn_rand", "bn_prime"]},
-                        "slh_dsa": { "deps": ["sha3", "obj_default", "eal", "sha256", "sha512", "xmss"]},
+                        "slh_dsa": { "deps": ["sha3", "obj_default", "eal", "hmac", "sha256", "sha512", "xmss"]},
                         "xmss": { "deps": ["sha3", "sha2", "obj_default", "eal", "sha256", "sha512"]},
                         "deps": ["params"]
                     },
