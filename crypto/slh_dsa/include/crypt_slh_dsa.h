@@ -127,7 +127,6 @@ int32_t CRYPT_SLH_DSA_SetPubKey(CryptSlhDsaCtx *ctx, const CRYPT_SlhDsaPub *pub)
  */
 int32_t CRYPT_SLH_DSA_SetPrvKey(CryptSlhDsaCtx *ctx, const CRYPT_SlhDsaPrv *prv);
 
-#ifdef HITLS_BSL_PARAMS
 /**
  * @brief Get the public key of SLH-DSA
  *
@@ -159,7 +158,6 @@ int32_t CRYPT_SLH_DSA_SetPubKeyEx(CryptSlhDsaCtx *ctx, const BSL_Param *para);
  * @param para Pointer to the private key
  */
 int32_t CRYPT_SLH_DSA_SetPrvKeyEx(CryptSlhDsaCtx *ctx, const BSL_Param *para);
-#endif
 
 #ifdef HITLS_CRYPTO_SLH_DSA_CHECK
 
