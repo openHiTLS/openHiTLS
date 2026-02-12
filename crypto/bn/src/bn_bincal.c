@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_BN
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bn_bincal.h"
 
 /* r = a + w, the length of r and a array is 'size'. The return value is the carry. */
@@ -117,7 +117,7 @@ uint32_t BinLshift(BN_UINT *r, const BN_UINT *a, uint32_t n, uint32_t bits)
     r[nw] = a[0] << nb;
     /* Clear the lower bits to 0. */
     if (nw != 0) {
-        (void)memset_s(r, nw * sizeof(BN_UINT), 0, nw * sizeof(BN_UINT));
+        memset(r, 0, nw * sizeof(BN_UINT));
     }
 
     return rsize;
@@ -153,7 +153,7 @@ BN_UINT BinMulAcc(BN_UINT *r, const BN_UINT *a, uint32_t aSize, BN_UINT b)
 uint32_t BinMul(BN_UINT *r, uint32_t rRoom, const BN_UINT *a, uint32_t aSize, const BN_UINT *b, uint32_t bSize)
 {
     BN_UINT carry = 0;
-    (void)memset_s(r, rRoom * sizeof(BN_UINT), 0, rRoom * sizeof(BN_UINT));
+    memset(r, 0, rRoom * sizeof(BN_UINT));
     /* Result combination of cyclic calculation data units. */
     for (uint32_t i = 0; i < bSize; i++) {
         carry = 0;
@@ -176,7 +176,7 @@ uint32_t BinSqr(BN_UINT *r, uint32_t rRoom, const BN_UINT *a, uint32_t aSize)
     uint32_t i;
     BN_UINT carry;
 
-    (void)memset_s(r, rRoom * sizeof(BN_UINT), 0, rRoom * sizeof(BN_UINT));
+    memset(r, 0, rRoom * sizeof(BN_UINT));
     /* Calculate unequal data units, similar to trapezoid. */
     for (i = 0; i < aSize - 1; i++) {
         BN_UINT t = a[i];

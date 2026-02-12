@@ -15,6 +15,7 @@
 
 #include "hitls_build.h"
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -290,7 +291,7 @@ static HITLS_Lib_Ctx *InitProviderLibCtx(char *providerPath, char (*providerName
     }
     if (providerPath != NULL && strlen(providerPath) > 0) {
         ret = CRYPT_EAL_ProviderSetLoadPath(libCtx, providerPath);
-        if (ret != EOK) {
+        if (ret != 0) {
             CRYPT_EAL_LibCtxFree(libCtx);
             LOG_ERROR("CRYPT_EAL_ProviderSetLoadPath Error");
             return NULL;
@@ -298,15 +299,14 @@ static HITLS_Lib_Ctx *InitProviderLibCtx(char *providerPath, char (*providerName
     }
     for (int i = 0; i < providerCnt; i++) {
         ret = CRYPT_EAL_ProviderLoad(libCtx, (BSL_SAL_LibFmtCmd)providerLibFmts[i], providerNames[i], NULL, NULL);
-        if (ret != EOK) {
+        if (ret != 0) {
             CRYPT_EAL_LibCtxFree(libCtx);
             LOG_ERROR("CRYPT_EAL_ProviderLoad Error");
             return NULL;
         }
         char attrName[512] = {0};
-        memcpy_s(attrName, sizeof(attrName), "provider?", strlen("provider?"));
-        memcpy_s(attrName + strlen("provider?"), sizeof(attrName) - strlen("provider?"), providerNames[i],
-            strlen(providerNames[i]));
+        memcpy(attrName, "provider?", strlen("provider?") + 1);
+        memcpy(attrName + strlen("provider?"), providerNames[i], strlen(providerNames[i]));
         CRYPT_EAL_ProviderRandInitCtx(libCtx, CRYPT_RAND_SHA256, attrName, NULL, 0, NULL);
     }
     return libCtx;
@@ -451,22 +451,25 @@ static int8_t HitlsSetConfig(const HitlsConfig *hitlsConfigList, int configListS
 {
     int ret = 0;
     char configArray[MAX_CIPHERSUITES_LEN] = {0}; // A maximum of 512 characters are supported.
-    char *token, *rest;
+    char *token, *rest = NULL;
     int32_t configValue;
     uint16_t configValueArray[20] = {0}; // Currently, a maximum of 20 cipher suites are supported.
     uint32_t configSize = 0;
-    ret = memcpy_s(configArray, sizeof(configArray), name, strlen(name));
-    ASSERT_RETURN(ret == EOK, "Memcpy Error");
+
+    if (strlen(name) >= sizeof(configArray)) {
+        return ERROR;
+    }
+    memcpy(configArray, name, strlen(name) + 1);
 
     configSize = 0;
-    token = strtok_s(configArray, ":", &rest);
+    token = strtok_r(configArray, ":", &rest);
     do {
         // Currently, a maximum of 20 cipher suites are supported.
         ASSERT_RETURN(configSize < 20, "Max Support Set 20 Config");
         configValue = GetConfigVauleFromStr(hitlsConfigList, configListSize, token);
         ASSERT_RETURN(configValue != ERROR, "GetConfigVauleFromStr Error");
         configValueArray[configSize] = (uint16_t)configValue;
-        token = strtok_s(NULL, ":", &rest);
+        token = strtok_r(NULL, ":", &rest);
         configSize++;
     } while (token != NULL);
 

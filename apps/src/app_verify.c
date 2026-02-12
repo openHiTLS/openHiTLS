@@ -17,7 +17,6 @@
 #include <stdbool.h>
 #include <limits.h>
 #include "string.h"
-#include "securec.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "app_function.h"

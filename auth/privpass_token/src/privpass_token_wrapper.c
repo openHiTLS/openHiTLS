@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include "securec.h"
+#include <string.h>
 #include "crypt_eal_pkey.h"
 #include "crypt_eal_rand.h"
 #include "auth_params.h"
@@ -255,11 +255,11 @@ static int32_t PrivPassPubDecodePrvKey(void *libCtx, const char *attrName, void 
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    (void)memcpy_s(tmpBuff, prvKeyLen, prvKey, prvKeyLen);
+    memcpy(tmpBuff, prvKey, prvKeyLen);
     tmpBuff[prvKeyLen] = '\0';
     BSL_Buffer encode = {.data = tmpBuff, .dataLen = prvKeyLen};
     int32_t ret = CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, &encode, NULL, 0, &ctx);
-    (void)memset_s(tmpBuff, prvKeyLen, 0, prvKeyLen);
+    BSL_SAL_CleanseData(tmpBuff, prvKeyLen);
     BSL_SAL_Free(tmpBuff);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

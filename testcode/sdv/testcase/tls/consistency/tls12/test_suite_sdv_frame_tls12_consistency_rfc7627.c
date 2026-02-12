@@ -15,7 +15,6 @@
 
 /* BEGIN_HEADER */
 
-#include "securec.h"
 #include "hitls.h"
 #include "hitls_config.h"
 #include "hitls_type.h"

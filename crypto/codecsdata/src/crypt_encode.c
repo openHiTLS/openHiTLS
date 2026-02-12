@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_SM2_SIGN) || defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_ECDSA) || \
     defined(HITLS_CRYPTO_SM2_CRYPT)
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
 #include "crypt_encode.h"
@@ -43,7 +43,7 @@ static int32_t EncodeAsn1Template(BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asn
         return CRYPT_ENCODE_BUFF_NOT_ENOUGH;
     }
 
-    (void)memcpy_s(encode, *encodeLen, outBuf, outLen);
+    memcpy(encode, outBuf, outLen);
     BSL_SAL_Free(outBuf);
     *encodeLen = outLen;
 
@@ -380,10 +380,10 @@ int32_t CRYPT_EAL_DecodeSm2EncryptData(const uint8_t *encode, uint32_t encodeLen
         return CRYPT_DECODE_BUFF_NOT_ENOUGH;
     }
     // 1: point xy
-    (void)memcpy_s(data->x + (data->xLen - asnArr[0].len), asnArr[0].len, asnArr[0].buff, asnArr[0].len);
-    (void)memcpy_s(data->y + (data->yLen - asnArr[1].len), asnArr[1].len, asnArr[1].buff, asnArr[1].len);
-    (void)memcpy_s(data->hash, data->hashLen, asnArr[2].buff, asnArr[2].len);     // 2: hash
-    (void)memcpy_s(data->cipher, data->cipherLen, asnArr[3].buff, asnArr[3].len); // 3: cipher
+    memcpy(data->x + (data->xLen - asnArr[0].len), asnArr[0].buff, asnArr[0].len);
+    memcpy(data->y + (data->yLen - asnArr[1].len), asnArr[1].buff, asnArr[1].len);
+    memcpy(data->hash, asnArr[2].buff, asnArr[2].len);     // 2: hash
+    memcpy(data->cipher, asnArr[3].buff, asnArr[3].len); // 3: cipher
     data->hashLen = asnArr[2].len;   // 2: hash
     data->cipherLen = asnArr[3].len; // 3: cipher
 

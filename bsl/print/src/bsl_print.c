@@ -16,9 +16,9 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_PRINT
 #include <stdarg.h>
+#include <stdio.h>
 #include <inttypes.h>
 #include <string.h>
-#include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "bsl_print.h"
@@ -46,7 +46,7 @@ static int32_t PrintBuff(uint32_t layer, BSL_UIO *uio, const void *buff, uint32_
 {
     int32_t ret;
     char *indent[BSL_PRINT_MAX_INDENT + 1] = {0};
-    (void)memset_s(indent, BSL_PRINT_MAX_INDENT, ' ', BSL_PRINT_MAX_INDENT);
+    memset(indent, ' ', BSL_PRINT_MAX_INDENT);
     if (layer > 0) {
         ret = WriteBuff(uio, indent, layer * BSL_PRINT_EACH_LAYER_INDENT);
         if (ret != BSL_SUCCESS) {
@@ -83,8 +83,9 @@ static int32_t PrintHexOnOneLine(uint32_t layer, const uint8_t *data, uint32_t d
     int32_t ret;
     for (uint32_t i = 0; i < dataLen; i++) {
         isEnd = (i + 1) == dataLen;
-        if (sprintf_s(hexStr + strIdx * BSL_ASN1_HEX_TO_COLON_HEX,
-            BSL_PRINT_HEX_LEN - strIdx * BSL_ASN1_HEX_TO_COLON_HEX, isEnd ? "%02x\n" : "%02x:", data[i]) == -1) {
+        size_t avail = BSL_PRINT_HEX_LEN - strIdx * BSL_ASN1_HEX_TO_COLON_HEX;
+        int n = snprintf(hexStr + strIdx * BSL_ASN1_HEX_TO_COLON_HEX, avail, isEnd ? "%02x\n" : "%02x:", data[i]);
+        if (n < 0 || (size_t)n >= avail) {
             BSL_ERR_PUSH_ERROR(BSL_PRINT_ERR_BUF);
             return BSL_PRINT_ERR_BUF;
         }
@@ -115,15 +116,14 @@ int32_t BSL_PRINT_Hex(uint32_t layer, bool oneLine, const uint8_t *data, uint32_
 
     char hexStr[BSL_PRINT_HEX_LEN] = {0};
     uint32_t lineLen = dataLen <= BSL_PRINT_MAX_WIDTH ? BSL_PRINT_MAX_WIDTH : BSL_PRINT_WIDTH;
-    char *format = NULL;
     uint32_t strIdx = 0;
     bool isLineEnd;
 
     for (uint32_t i = 0; i < dataLen; i++) {
         isLineEnd = (i + 1) % lineLen == 0 || (i + 1) == dataLen;
-        format = isLineEnd ? "%02x\n" : "%02x:";
-        if (sprintf_s(hexStr + strIdx * BSL_ASN1_HEX_TO_COLON_HEX,
-            BSL_PRINT_HEX_LEN - strIdx * BSL_ASN1_HEX_TO_COLON_HEX, format, data[i]) == -1) {
+        size_t avail = BSL_PRINT_HEX_LEN - strIdx * BSL_ASN1_HEX_TO_COLON_HEX;
+        int n = snprintf(hexStr + strIdx * BSL_ASN1_HEX_TO_COLON_HEX, avail, isLineEnd ? "%02x\n" : "%02x:", data[i]);
+        if (n < 0 || (size_t)n >= avail) {
             BSL_ERR_PUSH_ERROR(BSL_PRINT_ERR_BUF);
             return BSL_PRINT_ERR_BUF;
         }
@@ -150,7 +150,15 @@ int32_t BSL_PRINT_Fmt(uint32_t layer, BSL_UIO *uio, const char *fmt, ...)
     va_list args;
     va_start(args, fmt);
     char buff[BSL_PRINT_LEN + 1] = {0};
-    if (vsprintf_s(buff, BSL_PRINT_LEN + 1, fmt, args) == -1) {
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#endif
+    int n = vsnprintf(buff, BSL_PRINT_LEN + 1, fmt, args);
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+    if (n < 0 || (size_t)n >= BSL_PRINT_LEN + 1) {
         va_end(args);
         BSL_ERR_PUSH_ERROR(BSL_PRINT_ERR_FMT);
         return BSL_PRINT_ERR_FMT;

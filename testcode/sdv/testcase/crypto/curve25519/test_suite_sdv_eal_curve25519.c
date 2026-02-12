@@ -28,7 +28,7 @@
 #include "crypt_curve25519.h"
 #include "eal_pkey_local.h"
 #include "crypt_eal_rand.h"
-#include "securec.h"
+#include <string.h>
 #include "curve25519_local.h"
 #include "crypt_params_key.h"
 
@@ -1167,7 +1167,7 @@ void SDV_CRYPTO_CURVE25519_PRV_KEY_CHECK_FUNC_TC001(int id, int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey), CRYPT_SUCCESS);
     ctx = (CRYPT_CURVE25519_Ctx *)pkey->key;
-    (void)memset_s(ctx->prvKey, CRYPT_CURVE25519_KEYLEN, 0, CRYPT_CURVE25519_KEYLEN);
+    memset(ctx->prvKey, 0, CRYPT_CURVE25519_KEYLEN);
     ASSERT_EQ(CRYPT_EAL_PkeyPrvCheck(pkey), CRYPT_CURVE25519_INVALID_PRVKEY);
 EXIT:
     TestRandDeInit();

@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CBC
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
@@ -62,11 +62,11 @@ int32_t MODES_CBC_Encrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t
         CBC_UPDATE_VALUES(left, input, output, blockSize);
     }
 
-    if (memcpy_s(ctx->iv, MODES_MAX_IV_LENGTH, iv, blockSize) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        return CRYPT_SECUREC_FAIL;
+    if (blockSize > MODES_MAX_IV_LENGTH) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_CPY_FAIL);
+        return CRYPT_MEM_CPY_FAIL;
     }
-
+    memcpy(ctx->iv, iv, blockSize);
     return CRYPT_SUCCESS;
 }
 
@@ -103,7 +103,7 @@ int32_t MODES_CBC_Decrypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t
             CBC_UPDATE_VALUES(left, input, output, blockSize);
         }
         if (iv != ctx->iv) {
-            (void)memcpy_s(ctx->iv, MODES_MAX_IV_LENGTH, iv, blockSize);
+            memcpy(ctx->iv, iv, blockSize);
         }
     } else {
         while (left >= blockSize) {

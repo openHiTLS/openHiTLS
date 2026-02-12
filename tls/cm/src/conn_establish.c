@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
@@ -468,7 +468,7 @@ int32_t HITLS_Listen(HITLS_Ctx *ctx, BSL_SAL_SockAddr clientAddr)
     int32_t addrLen = (int32_t)SAL_SockAddrSize(clientAddr);
     if (ret == HITLS_SUCCESS &&
         BSL_UIO_Ctrl(rUio, BSL_UIO_GET_PEER_IP_ADDR, addrLen, clientAddr) != BSL_SUCCESS) {
-        (void)memset_s(clientAddr, (size_t)addrLen, 0, (size_t)addrLen);
+        memset(clientAddr, 0, (size_t)addrLen);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16496, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "GET_PEER_IP_ADDR fail", 0, 0, 0, 0);
         ret = HITLS_MEMCPY_FAIL;

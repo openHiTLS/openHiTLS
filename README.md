@@ -46,37 +46,15 @@ Currently, openHiTLS has 5 components. The BSL component will be used with other
 
 ## Development
 
-### Dependency Preparation
-
-openHiTLS depends on Secure C (libboundscheck), which **is now built automatically by the CMake build system**, requiring no additional scripts.
-
-**Quick Start (Recommended)**:
+### Quick Start
 
 ```bash
-# Clone with submodules to get source code and dependencies in one step
-git clone --recurse-submodules https://gitcode.com/openhitls/openhitls.git
+git clone https://gitcode.com/openhitls/openhitls.git
 cd openhitls
 mkdir -p build && cd build
 cmake .. && make && make install
 ```
 
-**Alternative Methods**:
-
-1. **Already cloned but submodule not initialized**:
-   ```bash
-   git submodule update --init platform/Secure_C
-   mkdir -p build && cd build
-   cmake .. && make && make install
-   ```
-
-2. **Manual clone of dependency** (without submodules):
-   ```bash
-   git clone https://gitcode.com/openhitls/openhitls.git
-   cd openhitls
-   git clone https://gitee.com/openeuler/libboundscheck platform/Secure_C
-   mkdir -p build && cd build
-   cmake .. && make && make install
-   ```
 ### For Application Developers
 
 Source code mirroring of the official releases is pending for planning.

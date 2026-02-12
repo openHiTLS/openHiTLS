@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CMVP_SM
 
-#include "securec.h"
+#include <string.h>
 #include "crypt_eal_implprovider.h"
 #include "crypt_drbg.h"
 #include "bsl_sal.h"
@@ -192,7 +192,7 @@ static int32_t DRBG_GenerateBytesWrapper(SmRandCtx *ctx, uint8_t *out, uint32_t 
         return ret;
     }
     if (outLen < SM_RANDOM_MIN_LEN) {
-        (void)memcpy_s(out, outLen, randomData, outLen);
+        memcpy(out, randomData, outLen);
     }
     return CRYPT_SUCCESS;
 }

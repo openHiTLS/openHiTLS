@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_bytes.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -166,7 +166,7 @@ int32_t ParseBytesToArray(ParsePacket *pkt, uint8_t **object, uint32_t length)
         return HITLS_MEMALLOC_FAIL;
     }
 
-    (void)memcpy_s(*object, length, &pkt->buf[*pkt->bufOffset], length);
+    memcpy(*object, &pkt->buf[*pkt->bufOffset], length);
     *pkt->bufOffset += length;
 
     return HITLS_SUCCESS;
@@ -178,7 +178,7 @@ int32_t ParseCopyBytesToArray(ParsePacket *pkt, uint8_t *object, uint32_t length
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16981, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "bufLen err", 0, 0, 0, 0);
         return HITLS_PARSE_INVALID_MSG_LEN;
     }
-    (void)memcpy_s(object, length, &pkt->buf[*pkt->bufOffset], length);
+    memcpy(object, &pkt->buf[*pkt->bufOffset], length);
     *pkt->bufOffset += length;
     return HITLS_SUCCESS;
 }

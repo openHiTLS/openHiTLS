@@ -13,7 +13,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include "securec.h"
 #include "bsl_bytes.h"
 #include "bsl_sal.h"
 #include "hitls_error.h"

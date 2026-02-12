@@ -18,7 +18,7 @@
 
 #include <math.h>
 #include <float.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_log_internal.h"
 #include "bsl_binlog_id.h"
@@ -139,7 +139,7 @@ static int32_t PokerTest(const uint8_t *data, uint32_t len, int32_t blocklen)
     if (dict == NULL) {
         return CRYPT_CMVP_RANDOMNESS_ERR;
     }
-    memset_s(dict, maxComb * sizeof(uint32_t), 0, maxComb * sizeof(uint32_t));
+    memset(dict, 0, maxComb * sizeof(uint32_t));
     for (uint32_t i = 0; (uint32_t)(i + blocklen) <= len; i += (uint32_t)blocklen) {
         dict[DataToIndex(data + i, blocklen)]++;
     }

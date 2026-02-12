@@ -14,7 +14,6 @@
  */
 
 #include <string.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "hitls_error.h"
 #include "hs_ctx.h"
@@ -248,7 +247,7 @@ int32_t FRAME_CreateRenegotiation(FRAME_LinkObj *linkA, FRAME_LinkObj *linkB)
         }
 
         readBufLen = 0;
-        (void)memset_s(readBuf, sizeof(readBuf), 0, sizeof(readBuf));
+        memset(readBuf, 0, sizeof(readBuf));
         serverRet = HITLS_Read(linkB->ssl, readBuf, sizeof(readBuf), &readBufLen);
         if (serverRet != HITLS_SUCCESS) {
             ret = serverRet;
@@ -297,7 +296,7 @@ int32_t FRAME_CreateRenegotiationServer(FRAME_LinkObj *server, FRAME_LinkObj *cl
     }
     do {
         readBufLen = 0;
-        (void)memset_s(readBuf, sizeof(readBuf), 0, sizeof(readBuf));
+        memset(readBuf, 0, sizeof(readBuf));
         serverRet = HITLS_Read(server->ssl, readBuf, sizeof(readBuf), &readBufLen);
         if (serverRet != HITLS_SUCCESS) {
             ret = serverRet;
@@ -312,7 +311,7 @@ int32_t FRAME_CreateRenegotiationServer(FRAME_LinkObj *server, FRAME_LinkObj *cl
         }
 
         readBufLen = 0;
-        (void)memset_s(readBuf, sizeof(readBuf), 0, sizeof(readBuf));
+        memset(readBuf, 0, sizeof(readBuf));
         clientRet = HITLS_Read(client->ssl, readBuf, sizeof(readBuf), &readBufLen);
         if (clientRet != HITLS_SUCCESS) {
             ret = clientRet;
@@ -387,7 +386,7 @@ int32_t FRAME_CreateRenegotiationState(FRAME_LinkObj *client, FRAME_LinkObj *ser
         }
 
         readBufLen = 0;
-        (void)memset_s(readBuf, sizeof(readBuf), 0, sizeof(readBuf));
+        memset(readBuf, 0, sizeof(readBuf));
         serverRet = HITLS_Read(server->ssl, readBuf, sizeof(readBuf), &readBufLen);
         if (serverRet != HITLS_SUCCESS) {
             ret = serverRet;

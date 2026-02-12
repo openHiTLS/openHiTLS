@@ -19,7 +19,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stddef.h>
-#include <securec.h>
 #include <limits.h>
 #include "bsl_list.h"
 #include "bsl_print.h"

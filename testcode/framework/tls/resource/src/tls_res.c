@@ -15,7 +15,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "lock.h"
 #include "logger.h"
 #include "hitls_func.h"
@@ -31,7 +31,7 @@ ResList g_sslList;
 int InitTlsResList(void)
 {
     // Initializes the CTX resource management linked list.
-    (void)memset_s(&g_ctxList, sizeof(ResList), 0, sizeof(ResList));
+    memset(&g_ctxList, 0, sizeof(ResList));
     g_ctxList.resListLock = OsLockNew();
     if (g_ctxList.resListLock == NULL) {
         LOG_ERROR("OsLockNew Error");
@@ -43,11 +43,11 @@ int InitTlsResList(void)
         OsLockDestroy(g_ctxList.resListLock);
         return ERROR;
     }
-    (void)memset_s(g_ctxList.res, sizeof(Res), 0, sizeof(Res));
+    memset(g_ctxList.res, 0, sizeof(Res));
     g_ctxList.num = 0;
 
     // Initializing the SSL Resource Management Linked List
-    (void)memset_s(&g_sslList, sizeof(ResList), 0, sizeof(ResList));
+    memset(&g_sslList, 0, sizeof(ResList));
     g_sslList.resListLock = OsLockNew();
     if (g_sslList.resListLock == NULL) {
         LOG_ERROR("OsLockNew Error");
@@ -64,7 +64,7 @@ int InitTlsResList(void)
         OsLockDestroy(g_sslList.resListLock);
         return ERROR;
     }
-    (void)memset_s(g_sslList.res, sizeof(Res), 0, sizeof(Res));
+    memset(g_sslList.res, 0, sizeof(Res));
     g_sslList.num = 0;
     return SUCCESS;
 }
@@ -77,7 +77,7 @@ int InsertResToList(ResList *resList, Res tempRes)
     if (res == NULL) {
         return ERROR;
     }
-    memset_s(res, sizeof(Res), 0, sizeof(Res));
+    memset(res, 0, sizeof(Res));
 
     // Insert in the lock
     OsLock(resList->resListLock);

@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 
 #if defined(HITLS_CRYPTO_CODECS) && defined(HITLS_CRYPTO_PROVIDER)
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_list.h"
 #include "bsl_err_internal.h"
@@ -45,7 +45,7 @@ int32_t CRYPT_DECODE_ParseDecoderAttr(const char *attrName, DECODER_AttrInfo *in
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    char *token = strtok_s(info->attrName, ",", &rest);
+    char *token = strtok_r(info->attrName, ",", &rest);
     while (token != NULL) {
         while (*token == ' ') {
             token++;
@@ -61,7 +61,7 @@ int32_t CRYPT_DECODE_ParseDecoderAttr(const char *attrName, DECODER_AttrInfo *in
             info->outType = token + strlen("outType=");
         }
 
-        token = strtok_s(NULL, ",", &rest);
+        token = strtok_r(NULL, ",", &rest);
     }
 
     return CRYPT_SUCCESS;

@@ -15,7 +15,7 @@
  
 #include "hitls_build.h"
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -38,7 +38,7 @@
 
 static int32_t UpdateMacKey(TLS_Ctx *ctx, CookieInfo *cookieInfo)
 {
-    (void)memcpy_s(cookieInfo->preMacKey, MAC_KEY_LEN, cookieInfo->macKey, MAC_KEY_LEN); /* Save the old key */
+    memcpy(cookieInfo->preMacKey, cookieInfo->macKey, MAC_KEY_LEN); /* Save the old key */
     int32_t ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), cookieInfo->macKey, MAC_KEY_LEN); /* Create a new key */
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15691, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -88,18 +88,20 @@ static int32_t GenerateCookieCalcMaterial(const TLS_Ctx *ctx, const ClientHelloM
     /* Add the peer IP address */
     ret = BSL_UIO_Ctrl(ctx->uio, BSL_UIO_GET_PEER_IP_ADDR, peerAddrLen, peerAddr);
     if (ret == BSL_SUCCESS) {
-        if (memcpy_s(ipAddr, MAX_IP_ADDR_SIZE, peerAddr, (size_t)peerAddrLen) != EOK) {
+        if ((size_t)peerAddrLen > MAX_IP_ADDR_SIZE) {
             SAL_SockAddrFree(peerAddr);
             return BSL_MEMCPY_FAIL;
         }
+        memcpy(ipAddr, peerAddr, (size_t)peerAddrLen);
         param.size = (uint32_t)peerAddrLen;
-        if (memcpy_s(material, materialSize, ipAddr, param.size) != EOK) {
+        if (param.size > materialSize) {
             BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15692, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "copy ipAddr fail when calc cookie.", 0, 0, 0, 0);
             SAL_SockAddrFree(peerAddr);
             return HITLS_MEMCPY_FAIL;
         }
+        memcpy(material, ipAddr, param.size);
         offset += param.size;
     }
     SAL_SockAddrFree(peerAddr);
@@ -108,23 +110,24 @@ static int32_t GenerateCookieCalcMaterial(const TLS_Ctx *ctx, const ClientHelloM
     offset += sizeof(uint16_t);
 
     /* fill client's random value */
-    if (memcpy_s(&material[offset], materialSize - offset, clientHello->randomValue, HS_RANDOM_SIZE) != EOK) {
+    if (HS_RANDOM_SIZE > materialSize - offset) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15693, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "copy random fail when calc cookie.", 0, 0, 0, 0);
         return HITLS_MEMCPY_FAIL;
     }
+    memcpy(&material[offset], clientHello->randomValue, HS_RANDOM_SIZE);
     offset += HS_RANDOM_SIZE;
 
     /* fill session_id */
     if (clientHello->sessionIdSize != 0 && clientHello->sessionId != NULL) {
-        if (memcpy_s(&material[offset], materialSize - offset,
-            clientHello->sessionId, clientHello->sessionIdSize) != EOK) {
+        if (clientHello->sessionIdSize > materialSize - offset) {
             BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15694, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "copy sessionId fail when calc cookie.", 0, 0, 0, 0);
             return HITLS_MEMCPY_FAIL;
         }
+        memcpy(&material[offset], clientHello->sessionId, clientHello->sessionIdSize);
         offset += clientHello->sessionIdSize;
     }
 
@@ -166,14 +169,14 @@ static int32_t AddCookieCalcMaterial(
     uint32_t usedLen = 0;
     ret = GenerateCookieCalcMaterial(ctx, clientHello, material, materialSize, &usedLen);
     if (ret != HITLS_SUCCESS) {
-        (void)memset_s(material, materialSize, 0, materialSize);
+        memset(material, 0, materialSize);
         BSL_SAL_FREE(material);
         return ret;
     }
 
     ret = SAL_CRYPT_Hmac(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
         HITLS_HASH_SHA_256, cookieInfo->macKey, MAC_KEY_LEN, material, usedLen, cookie, cookieLen);
-    (void)memset_s(material, materialSize, 0, materialSize);
+    memset(material, 0, materialSize);
     BSL_SAL_FREE(material);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15696, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -255,7 +258,7 @@ static int32_t CheckCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool
         (ConstTimeMemcmp(cookie, clientHello->cookie, cookieLen) != 0)) {
         *isCookieValid = true;
     }
-    (void)memset_s(cookie, TLS_HS_MAX_COOKIE_SIZE, 0, TLS_HS_MAX_COOKIE_SIZE);
+    memset(cookie, 0, TLS_HS_MAX_COOKIE_SIZE);
     return HITLS_SUCCESS;
 }
 
@@ -270,21 +273,21 @@ static int32_t CheckCookieWithPreMacKey(TLS_Ctx *ctx, const ClientHelloMsg *clie
     }
 
     /* Save the current mackey */
-    (void)memcpy_s(macKeyStore, MAC_KEY_LEN, cookieInfo->macKey, MAC_KEY_LEN);
+    memcpy(macKeyStore, cookieInfo->macKey, MAC_KEY_LEN);
     /* Use the previous mackey */
-    (void)memcpy_s(cookieInfo->macKey, MAC_KEY_LEN, cookieInfo->preMacKey, MAC_KEY_LEN);
+    memcpy(cookieInfo->macKey, cookieInfo->preMacKey, MAC_KEY_LEN);
 
     int32_t ret = CheckCookie(ctx, clientHello, isCookieValid);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16918, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "CheckCookie fail", 0, 0, 0, 0);
-        (void)memset_s(macKeyStore, MAC_KEY_LEN, 0, MAC_KEY_LEN);
+        BSL_SAL_CleanseData(macKeyStore, MAC_KEY_LEN);
         return ret;
     }
 
     /* Restore the current mackey */
-    (void)memcpy_s(cookieInfo->macKey, MAC_KEY_LEN, macKeyStore, MAC_KEY_LEN);
-    (void)memset_s(macKeyStore, MAC_KEY_LEN, 0, MAC_KEY_LEN);
+    memcpy(cookieInfo->macKey, macKeyStore, MAC_KEY_LEN);
+    BSL_SAL_CleanseData(macKeyStore, MAC_KEY_LEN);
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_FEATURE_DEFAULT_COOKIE */

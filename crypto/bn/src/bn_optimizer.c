@@ -18,7 +18,6 @@
 
 #include <stdint.h>
 #include <string.h>
-#include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -134,7 +133,7 @@ static int32_t BnMake(BN_BigNum *r, uint32_t room)
         r->data = tmp;
         r->room = room;
     } else {
-        (void)memset_s(r->data, r->room * sizeof(BN_UINT), 0, r->room * sizeof(BN_UINT));
+        memset(r->data, 0, r->room * sizeof(BN_UINT));
     }
     r->size = 0;
     r->sign = false;

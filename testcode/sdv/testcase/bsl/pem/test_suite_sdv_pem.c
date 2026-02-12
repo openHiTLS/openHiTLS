@@ -18,7 +18,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "securec.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "bsl_pem_internal.h"

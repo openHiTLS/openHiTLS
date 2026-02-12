@@ -358,12 +358,16 @@ uint32_t ExampleClientCb(HITLS_Ctx *ctx, const uint8_t *hint, uint8_t *identity,
     int32_t ret;
     const char pskTrans[] = "psk data";
     uint32_t pskTransUsedLen = sizeof(pskTransUsedLen);
-    if (memcpy_s(identity, maxIdentityLen, "hello", strlen("hello") + 1) != EOK) {
+    if (strlen("hello") + 1 > maxIdentityLen) {
         return 0;
     }
-    if (memcpy_s(psk, maxPskLen, pskTrans, pskTransUsedLen) != EOK) {
+    memcpy(identity, "hello", strlen("hello") + 1);
+
+    if (pskTransUsedLen > maxPskLen) {
         return 0;
     }
+    memcpy(psk, pskTrans, pskTransUsedLen);
+
     return pskTransUsedLen;
 }
 
@@ -518,9 +522,10 @@ uint32_t ExampleServerCb(HITLS_Ctx *ctx, const uint8_t *identity, uint8_t *psk, 
     }
     const char pskTrans[] = "psk data";
     uint32_t pskTransUsedLen = sizeof(pskTransUsedLen);
-    if (memcpy_s(psk, maxPskLen, pskTrans, pskTransUsedLen) != EOK) {
+    if (pskTransUsedLen > maxPskLen) {
         return 0;
     }
+    memcpy(psk, pskTrans, pskTransUsedLen);
     return pskTransUsedLen;
 }
 

@@ -36,7 +36,6 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "sal_net.h"
 #include "hitls.h"
@@ -87,7 +86,6 @@
 #include "sctp_channel.h"
 #include "hitls_crypt_init.h"
 #include <stdlib.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_log.h"
 #include "bsl_err.h"
@@ -2071,9 +2069,8 @@ void UT_TLS_CFG_LOADDEFAULTCAPATH_TC003(void)
 
     // Construct expected default path
     char expectedPath[MAX_PATH_LEN] = {0};
-    ret = snprintf_s(expectedPath, sizeof(expectedPath), sizeof(expectedPath) - 1,
-                     "%s/ssl/certs", OPENHITLSDIR);
-    ASSERT_TRUE(ret > 0);
+    ret = snprintf(expectedPath, sizeof(expectedPath), "%s/ssl/certs", OPENHITLSDIR);
+    ASSERT_TRUE(ret > 0 && (size_t)ret < sizeof(expectedPath));
 
     // Compare the actual path with expected path
     ASSERT_TRUE(strcmp(pathPtr, expectedPath) == 0);
@@ -2444,8 +2441,8 @@ void HITLS_HITLS_GLOBALCONFIG_005()
     ASSERT_TRUE(NewConfig != NULL);
     uint8_t sessIdCtx[HITLS_SESSION_ID_CTX_MAX_SIZE] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     // 3. Link establishment
-    NewConfig->sessionIdCtxSize = 50;
-    ASSERT_TRUE(memcpy_s(NewConfig->sessionIdCtx, HITLS_SESSION_ID_CTX_MAX_SIZE, sessIdCtx, sizeof(sessIdCtx)) == EOK);
+    NewConfig->sessionIdCtxSize = sizeof(sessIdCtx);
+    memcpy(NewConfig->sessionIdCtx, sessIdCtx, sizeof(sessIdCtx));
     // 4. Invoke the HITLS_SetNewConfig interface to change the session ID.
     ctx->globalConfig = HITLS_SetNewConfig(ctx, NewConfig);
     // 5. Establish a link and check the session ID of client hello.

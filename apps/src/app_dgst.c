@@ -14,8 +14,7 @@
  */
 #include "app_dgst.h"
 #include <limits.h>
-#include "string.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_eal_md.h"
@@ -140,16 +139,15 @@ static int32_t HashValToFinal(
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
     if (g_argc == 0) {  // standard input
-        outRet = snprintf_s(outBuf, outBufLen + 1, outBufLen, "(stdin)= %s\n", hexBuf);
+        outRet = snprintf(outBuf, outBufLen + 1, "(stdin)= %s\n", hexBuf);
     } else {
-        outRet = snprintf_s(
-            outBuf, outBufLen + 1, outBufLen, "%s(%s)= %s\n", g_dgstInfo.algName, filename, hexBuf);
+        outRet = snprintf(outBuf, outBufLen + 1, "%s(%s)= %s\n", g_dgstInfo.algName, filename, hexBuf);
     }
     BSL_SAL_FREE(hexBuf);
-    if (outRet == -1) {
+    if (outRet < 0) {
         BSL_SAL_FREE(outBuf);
         AppPrintError("dgst: Failed to combine the output content\n");
-        return HITLS_APP_SECUREC_FAIL;
+        return HITLS_APP_ENCODE_FAIL;
     }
     *buf = (uint8_t *)outBuf;
     *bufLen = outRet;

@@ -20,7 +20,6 @@
 #include <string.h>
 #include <stdint.h>
 #include <pthread.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_errno.h"
 #include "bsl_obj.h"

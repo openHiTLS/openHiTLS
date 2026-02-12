@@ -20,7 +20,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include "securec.h"
 
 #include "crypt_errno.h"
 #include "crypt_algid.h"
@@ -127,13 +126,13 @@ static inline uint64_t CMMakeMask(uint64_t x)
 static inline uint64_t CMLoad8(const uint8_t *x)
 {
     uint64_t r = 0;
-    memcpy_s(&r, 8, x, 8);
+    memcpy(&r, x, 8);
     return r;
 }
 
 static inline void CMStore8(uint8_t *x, uint64_t v)
 {
-    memcpy_s(x, 8, &v, 8);
+    memcpy(x, &v, 8);
 }
 
 // trailing zero count

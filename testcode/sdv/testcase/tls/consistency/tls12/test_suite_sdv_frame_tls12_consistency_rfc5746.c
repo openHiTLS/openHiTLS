@@ -18,7 +18,7 @@
 #include <semaphore.h>
 #include <stdio.h>
 #include "process.h"
-#include "securec.h"
+#include <string.h>
 #include "hitls_error.h"
 #include "frame_tls.h"
 #include "frame_link.h"
@@ -101,7 +101,7 @@ static void Test_ServerHelloHaveSecRenego(HITLS_Ctx *ctx, uint8_t *data, uint32_
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     ASSERT_EQ(frameMsg.body.hsMsg.body.serverHello.secRenego.exState, INITIAL_FIELD);
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     ASSERT_EQ(parseLen, *len);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
@@ -321,7 +321,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC003(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.client->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
 
     ASSERT_TRUE(testInfo.client->ssl != NULL);
     ASSERT_EQ(HITLS_Connect(testInfo.client->ssl), HITLS_PARSE_INVALID_MSG_LEN);
@@ -642,7 +642,7 @@ void UT_TLS_TLS12_RFC5746_CONSISTENCY_EXTENDED_RENEGOTIATION_FUNC_TC010(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.server->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
 
     ASSERT_TRUE(testInfo.server->ssl != NULL);
     ASSERT_TRUE(HITLS_Accept(testInfo.server->ssl) == HITLS_MSG_HANDLE_RENEGOTIATION_FAIL);

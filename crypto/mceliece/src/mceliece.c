@@ -20,7 +20,7 @@
 #include "crypt_params_key.h"
 #include "mceliece_local.h"
 #include "crypt_types.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "crypt_util_rand.h"
 #include "crypt_util_ctrl.h"
@@ -142,7 +142,7 @@ CRYPT_MCELIECE_Ctx *CRYPT_MCELIECE_NewCtx(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(ctx, sizeof(CRYPT_MCELIECE_Ctx), 0, sizeof(CRYPT_MCELIECE_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_MCELIECE_Ctx));
     return ctx;
 }
 
@@ -200,7 +200,7 @@ static void McelieceParsePrvKey(uint8_t *prvKeyBuf, CMPrivateKey *sk, const Mcel
 {
     uint8_t *p = prvKeyBuf;
     /* 1. delta 32 B */
-    (void)memcpy_s(sk->delta, MCELIECE_L_BYTES, p, MCELIECE_L_BYTES);
+    memcpy(sk->delta, p, MCELIECE_L_BYTES);
     p += MCELIECE_L_BYTES;
     /* 2. c (pivot mask) 8 B */
     sk->c = CMLoad8(p);
@@ -215,11 +215,11 @@ static void McelieceParsePrvKey(uint8_t *prvKeyBuf, CMPrivateKey *sk, const Mcel
     PolynomialSetCoeff(&sk->g, params->t, 1);
 
     /* 4. controlbits */
-    (void)memcpy_s(sk->controlbits, sk->controlbitsLen, p, sk->controlbitsLen);
+    memcpy(sk->controlbits, p, sk->controlbitsLen);
     p += sk->controlbitsLen;
 
     /* 5. s (random string) */
-    (void)memcpy_s(sk->s, params->nBytes, p, params->nBytes);
+    memcpy(sk->s, p, params->nBytes);
 }
 
 int32_t CRYPT_MCELIECE_SetPrvKeyEx(CRYPT_MCELIECE_Ctx *ctx, const BSL_Param *param)
@@ -284,7 +284,7 @@ int32_t CRYPT_MCELIECE_SetPubKeyEx(CRYPT_MCELIECE_Ctx *ctx, const BSL_Param *par
         return CRYPT_MEM_ALLOC_FAIL;
     }
     uint32_t useLen = ctx->para->publicKeyBytes;
-    (void)memcpy_s(ctx->publicKey->matT.data, useLen, pub->value, useLen);
+    memcpy(ctx->publicKey->matT.data, pub->value, useLen);
     return CRYPT_SUCCESS;
 }
 
@@ -292,7 +292,7 @@ static void McelieceExportPrvKey(const CMPrivateKey *sk, uint8_t *prvKeyBuf, con
 {
     uint8_t *p = prvKeyBuf;
     /* 1. delta 32 B */
-    (void)memcpy_s(p, MCELIECE_L_BYTES, sk->delta, MCELIECE_L_BYTES);
+    memcpy(p, sk->delta, MCELIECE_L_BYTES);
     p += MCELIECE_L_BYTES;
     /* 2. c (pivot mask) 8 B */
     CMStore8(p, sk->c);
@@ -306,11 +306,11 @@ static void McelieceExportPrvKey(const CMPrivateKey *sk, uint8_t *prvKeyBuf, con
     }
 
     /* 4. controlbits */
-    (void)memcpy_s(p, sk->controlbitsLen, sk->controlbits, sk->controlbitsLen);
+    memcpy(p, sk->controlbits, sk->controlbitsLen);
     p += sk->controlbitsLen;
 
     /* 5. s (random string) */
-    (void)memcpy_s(p, params->nBytes, sk->s, params->nBytes);
+    memcpy(p, sk->s, params->nBytes);
 }
 
 int32_t CRYPT_MCELIECE_GetPrvKeyEx(CRYPT_MCELIECE_Ctx *ctx, BSL_Param *param)
@@ -365,7 +365,7 @@ int32_t CRYPT_MCELIECE_GetPubKeyEx(CRYPT_MCELIECE_Ctx *ctx, BSL_Param *param)
         return CRYPT_MCELIECE_BUFLEN_NOT_ENOUGH;
     }
     uint32_t useLen = ctx->para->publicKeyBytes;
-    (void)memcpy_s(pub->value, useLen, ctx->publicKey->matT.data, useLen);
+    memcpy(pub->value, ctx->publicKey->matT.data, useLen);
     pub->useLen = useLen;
     return CRYPT_SUCCESS;
 }
@@ -500,12 +500,11 @@ static void MceliecePrvKeyCopy(CMPrivateKey *dest, const CMPrivateKey *src, cons
 {
     dest->g.degree = src->g.degree;
     dest->c = src->c;
-    (void)memcpy_s(dest->delta, MCELIECE_L_BYTES, src->delta, MCELIECE_L_BYTES);
-    (void)memcpy_s(dest->g.coeffs, (params->t + 1) * sizeof(GFElement), src->g.coeffs,
-                   (params->t + 1) * sizeof(GFElement));
-    (void)memcpy_s(dest->alpha, sizeof(GFElement) * MCELIECE_Q, src->alpha, sizeof(GFElement) * MCELIECE_Q);
-    (void)memcpy_s(dest->s, params->nBytes, src->s, params->nBytes);
-    (void)memcpy_s(dest->controlbits, dest->controlbitsLen, src->controlbits, src->controlbitsLen);
+    memcpy(dest->delta, src->delta, MCELIECE_L_BYTES);
+    memcpy(dest->g.coeffs, src->g.coeffs, (params->t + 1) * sizeof(GFElement));
+    memcpy(dest->alpha, src->alpha, sizeof(GFElement) * MCELIECE_Q);
+    memcpy(dest->s, src->s, params->nBytes);
+    memcpy(dest->controlbits, src->controlbits, src->controlbitsLen);
 }
 
 static void MceliecePubKeyCopy(CMPublicKey *dest, const CMPublicKey *src, const McelieceParams *params)
@@ -513,7 +512,7 @@ static void MceliecePubKeyCopy(CMPublicKey *dest, const CMPublicKey *src, const 
     dest->matT.rows = src->matT.rows;
     dest->matT.cols = src->matT.cols;
     dest->matT.colsBytes = src->matT.colsBytes;
-    (void)memcpy_s(dest->matT.data, params->publicKeyBytes, src->matT.data, params->publicKeyBytes);
+    memcpy(dest->matT.data, src->matT.data, params->publicKeyBytes);
 }
 
 CRYPT_MCELIECE_Ctx *CRYPT_MCELIECE_DupCtx(const CRYPT_MCELIECE_Ctx *src)

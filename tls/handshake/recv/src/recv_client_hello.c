@@ -15,7 +15,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_TLS_HOST_SERVER
 #include "tls.h"
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -411,8 +411,7 @@ static int32_t ServerNegotiateCipher(TLS_Ctx *ctx, const ClientHelloMsg *clientH
     }
 
     ctx->hsCtx->kxCtx->keyExchAlgo = cipherSuiteInfo.kxAlg;
-    (void)memcpy_s(&ctx->negotiatedInfo.cipherSuiteInfo, sizeof(CipherSuiteInfo),
-                   &cipherSuiteInfo, sizeof(CipherSuiteInfo));
+    memcpy(&ctx->negotiatedInfo.cipherSuiteInfo, &cipherSuiteInfo, sizeof(CipherSuiteInfo));
     return ret;
 }
 #ifdef HITLS_TLS_PROTO_TLS13
@@ -457,8 +456,7 @@ static int32_t Tls13ServerNegotiateCipher(TLS_Ctx *ctx, uint16_t cipher, bool pr
         }
     }
 #endif
-    (void)memcpy_s(&ctx->negotiatedInfo.cipherSuiteInfo, sizeof(CipherSuiteInfo),
-        &cipherSuiteInfo, sizeof(CipherSuiteInfo));
+    memcpy(&ctx->negotiatedInfo.cipherSuiteInfo, &cipherSuiteInfo, sizeof(CipherSuiteInfo));
 
     return HITLS_SUCCESS;
 }
@@ -493,8 +491,7 @@ static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello,
     ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_CIPHER_SHARED, 0, 0, (void *)cipherSuiteInfo);
     if (ret != SECURITY_SUCCESS) {
         ctx->hsCtx->kxCtx->keyExchAlgo = HITLS_KEY_EXCH_NULL;
-        (void)memset_s(&ctx->hsCtx->kxCtx->keyExchParam, sizeof(ctx->hsCtx->kxCtx->keyExchParam),
-            0, sizeof(ctx->hsCtx->kxCtx->keyExchParam));
+        BSL_SAL_CleanseData(&ctx->hsCtx->kxCtx->keyExchParam, sizeof(ctx->hsCtx->kxCtx->keyExchParam));
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17047, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "SslCheck fail, ret %d", ret, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSECURE_CIPHER_SUITE);
@@ -704,14 +701,7 @@ static int32_t ServerSelectAlpnProtocol(TLS_Ctx *ctx, const ClientHelloMsg *clie
                 ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
                 return HITLS_MEMALLOC_FAIL;
             }
-            if (memcpy_s(alpnSelectedTmp, alpnSelectedLen + 1, alpnSelected, alpnSelectedLen) != EOK) {
-                BSL_SAL_FREE(alpnSelectedTmp);
-                BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
-                BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16031, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                    "server copy selected alpn failed.", 0, 0, 0, 0);
-                ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-                return HITLS_MEMCPY_FAIL;
-            }
+            memcpy(alpnSelectedTmp, alpnSelected, alpnSelectedLen);
             BSL_SAL_FREE(ctx->negotiatedInfo.alpnSelected);
             ctx->negotiatedInfo.alpnSelected = alpnSelectedTmp;
             ctx->negotiatedInfo.alpnSelectedSize = alpnSelectedLen;
@@ -1356,7 +1346,7 @@ static int32_t ServerCheckAndProcessClientHello(TLS_Ctx *ctx, const ClientHelloM
     }
 
     /* Copy random numbers */
-    (void)memcpy_s(hsCtx->clientRandom, HS_RANDOM_SIZE, clientHello->randomValue, HS_RANDOM_SIZE);
+    memcpy(hsCtx->clientRandom, clientHello->randomValue, HS_RANDOM_SIZE);
     ret = ServerCheckAndProcessRenegoInfo(ctx, clientHello);
     if (ret != HITLS_SUCCESS) {
         return ret;
@@ -1801,7 +1791,7 @@ static int32_t GetPskByIdentity(TLS_Ctx *ctx, const uint8_t *id, uint32_t idLen,
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return HITLS_MEMALLOC_FAIL;
     }
-    (void)memcpy_s(strId, idLen + 1, id, idLen);
+    memcpy(strId, id, idLen);
     strId[idLen] = '\0';
 
     uint32_t usedLen = ctx->config.tlsConfig.pskServerCb(ctx, strId, psk, *pskLen);
@@ -2036,11 +2026,11 @@ static int32_t ServerSelectPskAndCheckBinder(TLS_Ctx *ctx, const ClientHelloMsg 
         /* An available psk is found */
         ret = Tls13ServerSetPskInfo(ctx, psk, pskLen, index);
         if (ret != HITLS_SUCCESS) {
-            (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN); /* Clear sensitive memory */
+            BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN); /* Clear sensitive memory */
             return ret;
         }
         ret = CompareBinder(ctx, cur, psk, pskLen, clientHello->truncateHelloLen);
-        (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN); /* Clear sensitive memory */
+        BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN); /* Clear sensitive memory */
         if (ret != HITLS_SUCCESS) {
             /* RFC8446 Section 6.2:decrypt_error:  A handshake (not record layer) cryptographic
                 operation failed, including being unable to correctly verify a
@@ -2181,10 +2171,7 @@ static int32_t Tls13ServerBasicCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *cl
         return ret;
     }
     /* Copy random numbers */
-    ret = memcpy_s(ctx->hsCtx->clientRandom, HS_RANDOM_SIZE, clientHello->randomValue, HS_RANDOM_SIZE);
-    if (ret != EOK) {
-        return ret;
-    }
+    memcpy(ctx->hsCtx->clientRandom, clientHello->randomValue, HS_RANDOM_SIZE);
 
     /* Copy the session ID */
     ret = Tls13ServerSetSessionId(ctx, clientHello->sessionId, clientHello->sessionIdSize);

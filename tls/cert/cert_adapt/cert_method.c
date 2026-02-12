@@ -14,7 +14,7 @@
  */
 #include <stddef.h>
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -66,17 +66,14 @@ int32_t HITLS_CERT_RegisterMgrMethod(HITLS_CERT_MgrMethod *method)
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_NULL_INPUT, BINLOG_ID16108, "input NULL");
     }
-
-    if (memcpy_s(&g_certMgrMethod, sizeof(HITLS_CERT_MgrMethod), method, sizeof(HITLS_CERT_MgrMethod)) != EOK) {
-        return HITLS_MEMCPY_FAIL;
-    }
+    memcpy(&g_certMgrMethod, method, sizeof(HITLS_CERT_MgrMethod));
     return HITLS_SUCCESS;
 }
 
 void HITLS_CERT_DeinitMgrMethod(void)
 {
     HITLS_CERT_MgrMethod mgr = {0};
-    (void)memcpy_s(&g_certMgrMethod, sizeof(HITLS_CERT_MgrMethod), &mgr, sizeof(HITLS_CERT_MgrMethod));
+    memcpy(&g_certMgrMethod, &mgr, sizeof(HITLS_CERT_MgrMethod));
 }
 
 HITLS_CERT_MgrMethod *SAL_CERT_GetMgrMethod(void)

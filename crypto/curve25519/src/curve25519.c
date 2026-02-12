@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CURVE25519
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
@@ -42,7 +42,7 @@ CRYPT_CURVE25519_Ctx *CRYPT_X25519_NewCtx(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(ctx, sizeof(CRYPT_CURVE25519_Ctx), 0, sizeof(CRYPT_CURVE25519_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_CURVE25519_Ctx));
 
     ctx->keyType = CURVE25519_NOKEY;
     ctx->hashMethod = NULL;
@@ -70,7 +70,7 @@ CRYPT_CURVE25519_Ctx *CRYPT_ED25519_NewCtx(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(ctx, sizeof(CRYPT_CURVE25519_Ctx), 0, sizeof(CRYPT_CURVE25519_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_CURVE25519_Ctx));
 
     ctx->hashMethod = EAL_MdFindDefaultMethod(CRYPT_MD_SHA512);
     if (ctx->hashMethod == NULL) {
@@ -107,8 +107,8 @@ CRYPT_CURVE25519_Ctx *CRYPT_CURVE25519_DupCtx(CRYPT_CURVE25519_Ctx *ctx)
         return NULL;
     }
 
-    (void)memcpy_s(newCtx, sizeof(CRYPT_CURVE25519_Ctx), ctx, sizeof(CRYPT_CURVE25519_Ctx));
-    (void)memset_s(&(newCtx->references), sizeof(BSL_SAL_RefCount), 0, sizeof(BSL_SAL_RefCount));
+    memcpy(newCtx, ctx, sizeof(CRYPT_CURVE25519_Ctx));
+    memset(&(newCtx->references), 0, sizeof(BSL_SAL_RefCount));
     BSL_SAL_ReferencesInit(&(newCtx->references));
     return newCtx;
 }
@@ -242,8 +242,8 @@ int32_t CRYPT_CURVE25519_SetPubKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve
 
     /* The keyLen has been checked and does not have the overlong problem.
        The pkey memory is dynamically allocated and does not overlap with the pubkey memory. */
-    /* There is no failure case for memcpy_s. */
-    (void)memcpy_s(pkey->pubKey, CRYPT_CURVE25519_KEYLEN, pub->data, pub->len);
+    /* There is no failure case for memcpy. */
+    memcpy(pkey->pubKey, pub->data, pub->len);
     pkey->keyType |= CURVE25519_PUBKEY;
 
     return CRYPT_SUCCESS;
@@ -263,8 +263,8 @@ int32_t CRYPT_CURVE25519_SetPrvKey(CRYPT_CURVE25519_Ctx *pkey, const CRYPT_Curve
 
     /* The keyLen has been checked and does not have the overlong problem.
        The pkey memory is dynamically allocated and does not overlap with the pubkey memory. */
-    /* There is no failure case for memcpy_s. */
-    (void)memcpy_s(pkey->prvKey, CRYPT_CURVE25519_KEYLEN, prv->data, prv->len);
+    /* There is no failure case for memcpy. */
+    memcpy(pkey->prvKey, prv->data, prv->len);
     pkey->keyType |= CURVE25519_PRVKEY;
 
     return CRYPT_SUCCESS;
@@ -289,8 +289,8 @@ int32_t CRYPT_CURVE25519_GetPubKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Curve
 
     /* The keyLen has been checked and does not have the overlong problem.
        The pkey memory is dynamically allocated and does not overlap with the pubkey memory. */
-    /* There is no failure case for memcpy_s. */
-    (void)memcpy_s(pub->data, pub->len, pkey->pubKey, CRYPT_CURVE25519_KEYLEN);
+    /* There is no failure case for memcpy. */
+    memcpy(pub->data, pkey->pubKey, CRYPT_CURVE25519_KEYLEN);
 
     pub->len = CRYPT_CURVE25519_KEYLEN;
     return CRYPT_SUCCESS;
@@ -315,8 +315,8 @@ int32_t CRYPT_CURVE25519_GetPrvKey(const CRYPT_CURVE25519_Ctx *pkey, CRYPT_Curve
 
     /* The keyLen has been checked and does not have the overlong problem.
        The pkey memory is dynamically allocated and does not overlap with the pubkey memory. */
-    /* There is no failure case for memcpy_s. */
-    (void)memcpy_s(prv->data, prv->len, pkey->prvKey, CRYPT_CURVE25519_KEYLEN);
+    /* There is no failure case for memcpy. */
+    memcpy(prv->data, pkey->prvKey, CRYPT_CURVE25519_KEYLEN);
 
     prv->len = CRYPT_CURVE25519_KEYLEN;
     return CRYPT_SUCCESS;
@@ -531,8 +531,8 @@ int32_t CRYPT_CURVE25519_Sign(CRYPT_CURVE25519_Ctx *pkey, int32_t algId, const u
     // The value of *signLen has been checked in SignInputCheck to ensure that
     // the value is greater than or equal to CRYPT_CURVE25519_SIGNLEN.
     // The sign memory is input from outside the function. The outSign memory is allocated within the function.
-    // Memory overlap does not exist. There is no failure case for memcpy_s.
-    (void)memcpy_s(sign, *signLen, outSign, CRYPT_CURVE25519_SIGNLEN);
+    // Memory overlap does not exist. There is no failure case for memcpy.
+    memcpy(sign, outSign, CRYPT_CURVE25519_SIGNLEN);
     *signLen = CRYPT_CURVE25519_SIGNLEN;
 
 EXIT:
@@ -692,8 +692,8 @@ int32_t CRYPT_ED25519_GenKey(CRYPT_CURVE25519_Ctx *pkey)
     // The pkey is not empty. The length of the prvKey is CRYPT_CURVE25519_KEYLEN,
     // which is the same as the length of local prvKey.
     // The pkey->prvKey memory is input outside the function. The local prvKey memory is allocated within the function.
-    // Memory overlap does not exist. No failure case exists for memcpy_s.
-    (void)memcpy_s(pkey->prvKey, CRYPT_CURVE25519_KEYLEN, prvKey, CRYPT_CURVE25519_KEYLEN);
+    // Memory overlap does not exist. No failure case exists for memcpy.
+    memcpy(pkey->prvKey, prvKey, CRYPT_CURVE25519_KEYLEN);
     pkey->keyType = CURVE25519_PRVKEY | CURVE25519_PUBKEY;
 EXIT:
     BSL_SAL_CleanseData(prvKey, sizeof(prvKey));
@@ -758,7 +758,7 @@ void CRYPT_X25519_PublicFromPrivate(const uint8_t privateKey[CRYPT_CURVE25519_KE
     GeE out;
     Fp25 zPlusY, zMinusY, zMinusYInvert;
 
-    (void)memcpy_s(privateCopy, sizeof(privateCopy), privateKey, sizeof(privateCopy));
+    memcpy(privateCopy, privateKey, sizeof(privateCopy));
 
     privateCopy[0] &= 0xf8;      /* decodeScalar25519(k): k_list[0] &= 0xf8 */
     privateCopy[31] &= 0x7f;     /* decodeScalar25519(k): k_list[31] &= 0x7f */

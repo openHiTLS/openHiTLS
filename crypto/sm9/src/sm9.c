@@ -21,6 +21,7 @@
 #include "sm9_pairing.h"
 #include "sm9_fp.h"
 #include "crypt_util_rand.h"
+#include "bsl_sal.h"
 
 #include <string.h>
 
@@ -730,6 +731,7 @@ int32_t SM9_Alg_Enc(const uint8_t *msg, uint32_t mlen,
     if (elen)
         *elen = mlen + SM9_C1_ByteLen + SM9_C3_ByteLen;
 
+    BSL_SAL_CleanseData(mkey, SM9_Hash_Size);
     return SM9_OK;
 
 #else

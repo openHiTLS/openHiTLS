@@ -16,7 +16,6 @@
 #if defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)
 #include <stdint.h>
 #include <stdbool.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"

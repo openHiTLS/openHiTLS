@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -153,7 +153,7 @@ int32_t CCS_Init(TLS_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return HITLS_MEMALLOC_FAIL;
     }
-    (void)memset_s(ctx->ccsCtx, sizeof(struct CcsCtx), 0, sizeof(struct CcsCtx));
+    memset(ctx->ccsCtx, 0, sizeof(struct CcsCtx));
     return HITLS_SUCCESS;
 }
 

@@ -18,7 +18,6 @@
 #if defined(HITLS_BSL_SAL_DL)
 #include <stdio.h>
 #include <stdint.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
@@ -74,19 +73,19 @@ int32_t BSL_SAL_LibNameFormat(BSL_SAL_LibFmtCmd cmd, const char *fileName, char 
 
     switch (cmd) {
         case BSL_SAL_LIB_FMT_SO:
-            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s.%s", fileName, lib_ext);
+            ret = snprintf(tempName, dlPathLen, "%s.%s", fileName, lib_ext);
             break;
         case BSL_SAL_LIB_FMT_LIBSO:
-            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "lib%s.%s", fileName, lib_ext);
+            ret = snprintf(tempName, dlPathLen, "lib%s.%s", fileName, lib_ext);
             break;
         case BSL_SAL_LIB_FMT_LIBDLL:
-            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "lib%s.dll", fileName);
+            ret = snprintf(tempName, dlPathLen, "lib%s.dll", fileName);
             break;
         case BSL_SAL_LIB_FMT_DLL:
-            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s.dll", fileName);
+            ret = snprintf(tempName, dlPathLen, "%s.dll", fileName);
             break;
         case BSL_SAL_LIB_FMT_OFF:
-            ret = snprintf_s(tempName, dlPathLen, dlPathLen, "%s", fileName);
+            ret = snprintf(tempName, dlPathLen, "%s", fileName);
             break;
         default:
             // Default to the first(BSL_SAL_LIB_FMT_SO) conversion
@@ -94,7 +93,7 @@ int32_t BSL_SAL_LibNameFormat(BSL_SAL_LibFmtCmd cmd, const char *fileName, char 
             BSL_ERR_PUSH_ERROR(BSL_SAL_ERR_BAD_PARAM);
             return BSL_SAL_ERR_BAD_PARAM;
     }
-    if (ret < 0) {
+    if (ret < 0 || (size_t)ret >= dlPathLen) {
         BSL_SAL_Free(tempName);
         BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
         return BSL_INTERNAL_EXCEPTION;

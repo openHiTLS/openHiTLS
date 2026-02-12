@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_XMSS
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_errno.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
@@ -100,7 +100,7 @@ int32_t XmssWots_GeneratePublicKey(uint8_t *pub, void *adrs, const XmssWotsCtx *
 
     uint8_t skAdrsBuffer[MAX_ADRS_SIZE] = {0};
     void *skAdrs = skAdrsBuffer;
-    (void)memcpy_s(skAdrs, sizeof(skAdrsBuffer), adrs, sizeof(skAdrsBuffer));
+    memcpy(skAdrs, adrs, sizeof(skAdrsBuffer));
     if (!ctx->isXmss) {
         ctx->adrsOps->setType(skAdrs, 5); // 5: WOTS_PRF
         ctx->adrsOps->copyKeyPairAddr(skAdrs, adrs);
@@ -132,7 +132,7 @@ int32_t XmssWots_GeneratePublicKey(uint8_t *pub, void *adrs, const XmssWotsCtx *
     /* Compress WOTS+ public key using tl */
     uint8_t wotspkBuffer[MAX_ADRS_SIZE] = {0};
     void *wotspk = wotspkBuffer;
-    (void)memcpy_s(wotspk, sizeof(wotspkBuffer), adrs, sizeof(wotspkBuffer));
+    memcpy(wotspk, adrs, sizeof(wotspkBuffer));
     ctx->adrsOps->setType(wotspk, XMSS_ADRS_TYPE_LTREE); // slhdsa case is WOTS_PK, which is also 1
     ctx->adrsOps->copyKeyPairAddr(wotspk, adrs);
 
@@ -164,7 +164,7 @@ int32_t XmssWots_Sign(uint8_t *sig, uint32_t *sigLen, const uint8_t *msg, uint32
     uint32_t adrsLen3 = ctx->adrsOps->getAdrsLen();
     uint8_t skAdrsBuffer[MAX_ADRS_SIZE] = {0};
     void *skAdrs = skAdrsBuffer;
-    (void)memcpy_s(skAdrs, adrsLen3, adrs, adrsLen3);
+    memcpy(skAdrs, adrs, adrsLen3);
     if (!ctx->isXmss) {
         ctx->adrsOps->setType(skAdrs, 5); // 5: WOTS_PRF
         ctx->adrsOps->copyKeyPairAddr(skAdrs, adrs);
@@ -237,7 +237,7 @@ int32_t XmssWots_PkFromSig(const uint8_t *msg, uint32_t msgLen, const uint8_t *s
     /* Compress reconstructed WOTS+ public key */
     uint8_t wotspkBuffer[MAX_ADRS_SIZE] = {0};
     void *wotspk = wotspkBuffer;
-    (void)memcpy_s(wotspk, sizeof(wotspkBuffer), adrs, sizeof(wotspkBuffer));
+    memcpy(wotspk, adrs, sizeof(wotspkBuffer));
     ctx->adrsOps->setType(wotspk, XMSS_ADRS_TYPE_LTREE);
     ctx->adrsOps->copyKeyPairAddr(wotspk, adrs);
     ret = ctx->hashFuncs->tl((void *)ctx->coreCtx, wotspk, tmp, len * n, pub);

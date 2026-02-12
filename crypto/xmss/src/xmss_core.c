@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_XMSS
 
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "crypt_util_rand.h"
 #include "crypt_utils.h"
@@ -43,7 +43,7 @@ int32_t CRYPT_XMSS_InitInternal(CryptXmssCtx *ctx, const XmssParams *params)
     }
 
     /* Initialize key structure to zero */
-    (void)memset_s(&ctx->key, sizeof(ctx->key), 0, sizeof(ctx->key));
+    memset(&ctx->key, 0, sizeof(ctx->key));
 
     return CRYPT_SUCCESS;
 }
@@ -83,7 +83,7 @@ int32_t CRYPT_XMSS_KeyGenInternal(CryptXmssCtx *ctx)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    (void)memcpy_s(ctx->key.root, n, node, n);
+    memcpy(ctx->key.root, node, n);
     ctx->key.idx = 0;
     return CRYPT_SUCCESS;
 }

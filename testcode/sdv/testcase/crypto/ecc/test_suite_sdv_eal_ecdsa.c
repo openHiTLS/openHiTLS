@@ -118,7 +118,8 @@ void SDV_CRYPTO_ECDSA_SET_PARA_BY_ID_API_TC002(
     ASSERT_TRUE_AND_LOG("SetParaById", CRYPT_EAL_PkeySetParaById(ecdsaPkey, paraId) == CRYPT_SUCCESS);
 
     /* Take over random numbers. */
-    ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
+    ASSERT_TRUE(randVector->len <= sizeof(gkRandBuf));
+    memcpy(gkRandBuf, randVector->x, randVector->len);
     gkRandBufLen = randVector->len;
 
     CRYPT_RandRegist(STUB_RandForSignature);
@@ -195,7 +196,8 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC001(
     /* Register memory */
     TestMemInit();
     /* Take over random numbers. */
-    ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
+    ASSERT_TRUE(randVector->len <= sizeof(gkRandBuf));
+    memcpy(gkRandBuf, randVector->x, randVector->len);
     gkRandBufLen = randVector->len;
 
     CRYPT_RandRegist(STUB_RandForSignature);
@@ -345,7 +347,8 @@ void SDV_CRYPTO_ECDSA_SIGN_API_TC003(
     ASSERT_EQ(ret, CRYPT_NO_REGIST_RAND);
 
     /* Take over random numbers. */
-    ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
+    ASSERT_TRUE(randVector->len <= sizeof(gkRandBuf));
+    memcpy(gkRandBuf, randVector->x, randVector->len);
     gkRandBufLen = randVector->len;
 
     CRYPT_RandRegist(STUB_RandForSignature);
@@ -888,7 +891,8 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC002(int eccId, Hex *prvKeyVector, Hex *
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ecdsaPkey, &ecdsaPrvkey), CRYPT_SUCCESS);
 
     /* Take over random numbers. */
-    ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
+    ASSERT_TRUE(randVector->len <= sizeof(gkRandBuf));
+    memcpy(gkRandBuf, randVector->x, randVector->len);
     gkRandBufLen = randVector->len;
 
     CRYPT_RandRegist(STUB_RandForSignature);
@@ -1169,7 +1173,8 @@ void SDV_CRYPTO_ECDSA_SIGN_VERIFY_FUNC_TC001(int eccId, int mdId, Hex *prvKeyVec
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(ecdsaPkey, &ecdsaPubkey), CRYPT_SUCCESS);
 
     /* Take over random numbers. */
-    ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), randVector->x, randVector->len) == 0);
+    ASSERT_TRUE(randVector->len <= sizeof(gkRandBuf));
+    memcpy(gkRandBuf, randVector->x, randVector->len);
     gkRandBufLen = randVector->len;
 
     CRYPT_RandRegist(STUB_RandForSignature);

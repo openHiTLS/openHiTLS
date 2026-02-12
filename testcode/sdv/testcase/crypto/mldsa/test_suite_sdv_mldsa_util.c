@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "securec.h"
 #include "hitls_build.h"
 #include "bsl_err.h"
 #include "bsl_sal.h"

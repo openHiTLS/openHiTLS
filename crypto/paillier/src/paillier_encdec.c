@@ -16,12 +16,12 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_PAILLIER
 
+#include <string.h>
 #include "crypt_utils.h"
 #include "crypt_paillier.h"
 #include "paillier_local.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
-#include "securec.h"
 #include "bsl_err_internal.h"
 
 int32_t  CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *input, uint32_t inputLen,
@@ -501,9 +501,9 @@ int32_t CRYPT_PAILLIER_Add(const void *ctx, const BSL_Param *input, uint8_t *out
         goto EXIT;
     }
 
-    (void)memset_s(out, n2Bytes, 0, n2Bytes);
+    memset(out, 0, n2Bytes);
     if (actualLen > 0) {
-        (void)memcpy_s(out + (n2Bytes - actualLen), actualLen, tmpBuf, actualLen);
+        memcpy(out + (n2Bytes - actualLen), tmpBuf, actualLen);
     }
     *outLen = n2Bytes;
     BSL_SAL_Free(tmpBuf);

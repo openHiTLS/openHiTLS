@@ -14,7 +14,7 @@
  */
 
 /* BEGIN_HEADER */
-#include "securec.h"
+#include <string.h>
 #include "crypt_eal_rand.h"
 #include "crypt_eal_hpke.h"
 /* END_HEADER */
@@ -194,7 +194,7 @@ void SDV_CRYPT_EAL_HPKE_KEM_TC001(int mode, int kemId, int kdfId, int aeadId, He
     ASSERT_EQ(CRYPT_EAL_HpkeGetSharedSecret(ctxS, sharedSecretBuf, &buffLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("hpke S sharedSecret cmp", sharedSecretBuf, buffLen, sharedSecret->x, sharedSecret->len);
     
-    (void)memset_s(sharedSecretBuf, 0, HPKE_KEM_MAX_SHARED_KEY_LEN, 0);
+    memset(sharedSecretBuf, 0, HPKE_KEM_MAX_SHARED_KEY_LEN);
     buffLen = HPKE_KEM_MAX_SHARED_KEY_LEN;
 
     ASSERT_EQ(CRYPT_EAL_HpkeGetSharedSecret(ctxR, sharedSecretBuf, &buffLen), CRYPT_SUCCESS);
@@ -987,7 +987,7 @@ void SDV_CRYPT_EAL_HPKE_GENERATE_KEY_PAIR_TC001(void)
 
                 uint32_t ikmLen = 1024*1024;
                 uint8_t *ikm = (uint8_t *)malloc(ikmLen);
-                memset_s(ikm, ikmLen, 0xFF, ikmLen);
+                memset(ikm, 0xFF, ikmLen);
                 ASSERT_EQ(CRYPT_EAL_HpkeGenerateKeyPair(NULL, NULL, cipherSuite, ikm, ikmLen, &pctx), CRYPT_SUCCESS);
                 CRYPT_EAL_PkeyFreeCtx(pctx);
                 free(ikm);

@@ -24,7 +24,6 @@
 #include "crypt_utils.h"
 #include "cmvp_integrity_hmac.h"
 #include "crypt_params_key.h"
-#include "securec.h"
 #include "bsl_sal.h"
 #include "crypt_sm2.h"
 

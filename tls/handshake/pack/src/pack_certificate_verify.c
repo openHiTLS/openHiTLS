@@ -15,7 +15,6 @@
 #include "hitls_build.h"
 #if defined(HITLS_TLS_HOST_CLIENT) || defined(HITLS_TLS_PROTO_TLS13)
 #include <stdint.h>
-#include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"

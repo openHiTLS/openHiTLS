@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_XMSS
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "eal_md_local.h"
@@ -45,7 +45,7 @@ int32_t CalcMultiMsgHash(CRYPT_MD_AlgId mdId, const CRYPT_ConstData *hashData, u
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    (void)memcpy_s(out, outLen, tmp, outLen);
+    memcpy(out, tmp, outLen);
     return CRYPT_SUCCESS;
 }
 
@@ -143,7 +143,9 @@ static int32_t XFGeneric(const void *vctx, const void *vadrs, const uint8_t *msg
     }
 
     PUT_UINT32_BE(PADDING_F, padding, paddingLen - 4);
-    return CalcMultiMsgHash(mdId, hashData1, sizeof(hashData1) / sizeof(hashData1[0]), out, n);
+    ret = CalcMultiMsgHash(mdId, hashData1, sizeof(hashData1) / sizeof(hashData1[0]), out, n);
+    BSL_SAL_CleanseData(key, n);
+    return ret;
 }
 
 /* H - Tree hash function (RAND_HASH) */
@@ -169,6 +171,7 @@ static int32_t XHGeneric(const void *vctx, const void *vadrs, const uint8_t *msg
     XmssAdrs_SetKeyAndMask(&xadrs, 0);
     int32_t ret = CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), key, n);
     if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(key, n);
         return ret;
     }
 
@@ -176,6 +179,7 @@ static int32_t XHGeneric(const void *vctx, const void *vadrs, const uint8_t *msg
     XmssAdrs_SetKeyAndMask(&xadrs, 1);
     ret = CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), bitmask, n);
     if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(key, n);
         return ret;
     }
 
@@ -183,6 +187,7 @@ static int32_t XHGeneric(const void *vctx, const void *vadrs, const uint8_t *msg
     XmssAdrs_SetKeyAndMask(&xadrs, 2);
     ret = CalcMultiMsgHash(mdId, hashData, sizeof(hashData) / sizeof(hashData[0]), bitmask + n, n);
     if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(key, n);
         return ret;
     }
 
@@ -192,7 +197,9 @@ static int32_t XHGeneric(const void *vctx, const void *vadrs, const uint8_t *msg
     }
 
     PUT_UINT32_BE(PADDING_H, padding, paddingLen - 4);
-    return CalcMultiMsgHash(mdId, hashData1, sizeof(hashData1) / sizeof(hashData1[0]), out, n);
+    ret = CalcMultiMsgHash(mdId, hashData1, sizeof(hashData1) / sizeof(hashData1[0]), out, n);
+    BSL_SAL_CleanseData(key, n);
+    return ret;
 }
 
 /* TL - L-tree compression (compress WOTS+ public key to leaf node) */
@@ -209,7 +216,7 @@ static int32_t XTlGeneric(const void *vctx, const void *vadrs, const uint8_t *ms
         return BSL_MALLOC_FAIL;
     }
 
-    (void)memcpy_s(node, len * n, msg, msgLen);
+    memcpy(node, msg, msgLen);
     int32_t ret;
     for (uint32_t h = 0; len > 1; h++) {
         ctx->adrsOps.setTreeHeight(&xadrs, h);
@@ -223,14 +230,14 @@ static int32_t XTlGeneric(const void *vctx, const void *vadrs, const uint8_t *ms
         }
         /* Handle unbalanced L-tree */
         if (len & 1) {
-            (void)memcpy_s(node + (len / 2 * n), (len * n) - (len / 2 * n), node + (len - 1) * n, n);
+            memcpy(node + (len / 2 * n), node + (len - 1) * n, n);
             len = len / 2 + 1;
         } else {
             len = len / 2;
         }
     }
 
-    (void)memcpy_s(out, n, node, n);
+    memcpy(out, node, n);
     ret = CRYPT_SUCCESS;
 ERR:
     BSL_SAL_Free(node);
@@ -244,7 +251,7 @@ static int32_t XmssWotsChain(const uint8_t *x, uint32_t xLen, uint32_t start, ui
     const XmssWotsCtx *xmssWotsCtx = (const XmssWotsCtx *)ctx;
     int32_t ret;
     uint8_t tmp[XMSS_MAX_MDSIZE];
-    (void)memcpy_s(tmp, sizeof(tmp), x, xLen);
+    (void)memcpy(tmp, x, xLen);
     uint32_t tmpLen = xLen;
 
     /* Iterate the F function 'steps' times starting from 'start' */
@@ -258,7 +265,7 @@ static int32_t XmssWotsChain(const uint8_t *x, uint32_t xLen, uint32_t start, ui
         }
     }
 
-    (void)memcpy_s(output, tmpLen, tmp, tmpLen);
+    (void)memcpy(output, tmp, tmpLen);
     return CRYPT_SUCCESS;
 }
 

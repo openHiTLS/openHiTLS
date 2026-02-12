@@ -21,7 +21,7 @@
 #include "crypt_errno.h"
 #include "stub_utils.h"
 #include "crypt_eal_rand.h"
-#include "securec.h"
+#include <string.h>
 #include "crypt_util_rand.h"
 #include "crypt_encode.h"
 #include "crypt_dsa.h"
@@ -72,7 +72,11 @@ int32_t RandFuncExSelfCheck(void *libCtx, uint8_t *randNum, uint32_t randLen)
 int32_t SetFakeRandOutput(uint8_t *in, uint32_t inLen)
 {
     g_RandBufLen = inLen;
-    return memcpy_s(g_RandOutput, sizeof(g_RandOutput), in, inLen);
+    if (inLen > sizeof(g_RandOutput)) {
+        return -1;
+    }
+    memcpy(g_RandOutput, in, inLen);
+    return 0;
 }
 
 int32_t FakeRandFunc(uint8_t *randNum, uint32_t randLen)
@@ -80,7 +84,8 @@ int32_t FakeRandFunc(uint8_t *randNum, uint32_t randLen)
     if (randLen > RAND_BUF_LEN) {
         return ERR_BAD_RAND;
     }
-    return memcpy_s(randNum, randLen, g_RandOutput, randLen);
+    memcpy(randNum, g_RandOutput, randLen);
+    return 0;
 }
 
 int32_t FakeRandFuncEx(void *libCtx, uint8_t *randNum, uint32_t randLen)
@@ -89,7 +94,8 @@ int32_t FakeRandFuncEx(void *libCtx, uint8_t *randNum, uint32_t randLen)
     if (randLen > RAND_BUF_LEN) {
         return ERR_BAD_RAND;
     }
-    return memcpy_s(randNum, randLen, g_RandOutput, randLen);
+    memcpy(randNum, g_RandOutput, randLen);
+    return 0;
 }
 
 int32_t STUB_RandRangeK(void *libCtx, BN_BigNum *r, const BN_BigNum *p)

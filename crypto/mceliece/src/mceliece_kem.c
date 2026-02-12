@@ -30,7 +30,7 @@ static int32_t GenVectorE(CRYPT_MCELIECE_Ctx *ctx, uint8_t *c, uint8_t *e)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    (void)memset_s(c, ctx->para->mtBytes, 0, ctx->para->mtBytes);
+    memset(c, 0, ctx->para->mtBytes);
     ret = EncodeVector(e, &ctx->publicKey->matT, c, ctx->para);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -50,8 +50,8 @@ static int32_t ComputeSessionKeyWithPrefix(uint8_t *sessionKey, uint8_t prefix, 
         return CRYPT_MEM_ALLOC_FAIL;
     }
     hashIn[0] = prefix;
-    (void)memcpy_s(hashIn + 1, params->nBytes, e, params->nBytes);
-    (void)memcpy_s(hashIn + 1 + params->nBytes, params->cipherBytes, c, params->cipherBytes);
+    memcpy(hashIn + 1, e, params->nBytes);
+    memcpy(hashIn + 1 + params->nBytes, c, params->cipherBytes);
     int32_t ret = McElieceShake256(sessionKey, MCELIECE_L_BYTES, hashIn, inLen);
     BSL_SAL_FREE(hashIn);
     return ret;
@@ -81,7 +81,7 @@ int32_t McElieceEncapsInternal(CRYPT_MCELIECE_Ctx *ctx, uint8_t *ciphertext, uin
         // PC only: C1 = H(2, e)
         uint8_t hashIn[1 + MCELIECE_L_BYTES];
         hashIn[0] = 2;
-        (void)memcpy_s(hashIn + 1, MCELIECE_L_BYTES, e, MCELIECE_L_BYTES);
+        memcpy(hashIn + 1, e, MCELIECE_L_BYTES);
         ret = McElieceShake256(c1, MCELIECE_L_BYTES, hashIn, sizeof(hashIn));
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
@@ -126,7 +126,7 @@ static int32_t BuildVectorAndDecoding(uint8_t *e, const uint8_t *c0, const CMPri
         return ret;
     }
     if (decodeSuccess == 0) {
-        (void)memcpy_s(e, params->nBytes, sk->s, params->nBytes);
+        memcpy(e, sk->s, params->nBytes);
     }
     return CRYPT_SUCCESS;
 }
@@ -149,7 +149,7 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
         // PC only: verify C1
         uint8_t hashIn[1 + MCELIECE_L_BYTES];
         hashIn[0] = 2;
-        (void)memcpy_s(hashIn + 1, MCELIECE_L_BYTES, e, MCELIECE_L_BYTES);
+        memcpy(hashIn + 1, e, MCELIECE_L_BYTES);
         uint8_t c1Prime[MCELIECE_L_BYTES];
         ret = McElieceShake256(c1Prime, MCELIECE_L_BYTES, hashIn, sizeof(hashIn));
         if (ret != CRYPT_SUCCESS) {

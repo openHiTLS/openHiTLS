@@ -15,10 +15,9 @@
 
 #include "app_crl.h"
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
+#include <stdbool.h>
 #include <limits.h>
-#include "securec.h"
 #include "bsl_list.h"
 #include "bsl_print.h"
 #include "bsl_sal.h"

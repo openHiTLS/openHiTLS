@@ -15,7 +15,6 @@
 
 /* BEGIN_HEADER */
 #include <pthread.h>
-#include "securec.h"
 #include "eal_md_local.h"
 #include "crypt_eal_md.h"
 #include "crypt_errno.h"

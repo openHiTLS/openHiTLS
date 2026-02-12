@@ -29,7 +29,6 @@
 #include "app_genpkey.h"
 #include "app_pkey.h"
 #include "app_function.h"
-#include "securec.h"
 #include "bsl_err.h"
 #include "bsl_sal.h"
 #include "bsl_params.h"

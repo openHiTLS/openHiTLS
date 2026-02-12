@@ -32,7 +32,7 @@
 #include "parser_frame_msg.h"
 #include "rec_wrapper.h"
 #include "cert.h"
-#include "securec.h"
+#include <string.h>
 #include "conn_init.h"
 #include "hitls_crypt_init.h"
 #include "hitls_psk.h"
@@ -134,9 +134,7 @@ static void Test_FFDHE_Key_ERROR(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
 
     frameMsg.body.hsMsg.body.clientHello.keyshares.exKeyShares.data->keyExchange.state = ASSIGNED_FIELD;
 
-    memset_s(frameMsg.body.hsMsg.body.clientHello.keyshares.exKeyShares.data->keyExchange.data,
-            frameMsg.body.hsMsg.body.clientHello.keyshares.exKeyShares.data->keyExchangeLen.data, 255,
-            frameMsg.body.hsMsg.body.clientHello.keyshares.exKeyShares.data->keyExchangeLen.data );
+    memset(frameMsg.body.hsMsg.body.clientHello.keyshares.exKeyShares.data->keyExchange.data, 255, frameMsg.body.hsMsg.body.clientHello.keyshares.exKeyShares.data->keyExchangeLen.data);
 
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 
@@ -164,8 +162,7 @@ static void Test_FFDHE_Key_Client_DecodeError(HITLS_Ctx *ctx, uint8_t *data, uin
 
     frameMsg.body.hsMsg.body.clientHello.keyshares.exKeyShares.data->keyExchange.state = ASSIGNED_FIELD;
 
-    memset_s(frameMsg.body.hsMsg.body.clientHello.keyshares.exKeyShares.data->keyExchange.data,
-            frameMsg.body.hsMsg.body.clientHello.keyshares.exKeyShares.data->keyExchangeLen.data, 8, 10);
+    memset(frameMsg.body.hsMsg.body.clientHello.keyshares.exKeyShares.data->keyExchange.data, 8, 10);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 
 EXIT:

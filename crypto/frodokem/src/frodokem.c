@@ -20,7 +20,7 @@
 #include "bsl_sal.h"
 #include "crypt_params_key.h"
 #include "crypt_errno.h"
-#include "securec.h"
+#include <string.h>
 #include "frodo_local.h"
 #include "crypt_frodokem.h"
 #include "bsl_params.h"
@@ -47,8 +47,7 @@ typedef int32_t (*FrodoShakeFunc)(uint8_t *output, uint32_t outLen, const uint8_
 
 // Input: rnd = s || seedSE || z
 // Output: pk = seedA || B, sk = s || pk || S^T || H(pk), where B = A*S + E, seedA = H(z)， S and E are sampled from seedSE
-static int32_t FrodoKemKeypairInternal(const uint8_t *rnd, const FrodoKemParams *params, uint8_t *pk, uint8_t *sk,
-                                       size_t lenSk)
+static int32_t FrodoKemKeypairInternal(const uint8_t *rnd, const FrodoKemParams *params, uint8_t *pk, uint8_t *sk)
 {
     // n is the number of rows of matrix S
     const uint16_t n = params->n;
@@ -87,9 +86,9 @@ static int32_t FrodoKemKeypairInternal(const uint8_t *rnd, const FrodoKemParams 
     uint8_t *skS = skPk + params->pkSize;
     uint8_t *skPkh = skS + matrixSize;
 
-    (void)memcpy_s(skSec, lenSk, s, params->ss);
-    (void)memcpy_s(skPk, lenSk - params->ss, pk, params->pkSize);
-    (void)memcpy_s(skS, lenSk - params->ss - params->pkSize, (uint8_t *)sTranspose, matrixSize);
+    memcpy(skSec, s, params->ss);
+    memcpy(skPk, pk, params->pkSize);
+    memcpy(skS, (uint8_t *)sTranspose, matrixSize);
 
     ret = FrodoShake(skPkh, params->lenPkHash, pk, params->pkSize);
     if (ret != CRYPT_SUCCESS) {
@@ -132,8 +131,8 @@ static int32_t FrodoKemEncapsInternal(const uint8_t *mu, const FrodoKemParams *p
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memcpy_s(in, inLen, pkh, params->lenPkHash);
-    (void)memcpy_s(in + params->lenPkHash, inLen - params->lenPkHash, mu, params->lenMu + params->lenSalt);
+    memcpy(in, pkh, params->lenPkHash);
+    memcpy(in + params->lenPkHash, mu, params->lenMu + params->lenSalt);
 
     ret = FrodoShake(seedk, seedkLen, in, inLen);
     BSL_SAL_FREE(in);
@@ -165,8 +164,8 @@ static int32_t FrodoKemEncapsInternal(const uint8_t *mu, const FrodoKemParams *p
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    (void)memcpy_s(ctK, ctKLen, ct, params->ctxSize);
-    (void)memcpy_s(ctK + params->ctxSize, ctKLen - params->ctxSize, k, params->ss);
+    memcpy(ctK, ct, params->ctxSize);
+    memcpy(ctK + params->ctxSize, k, params->ss);
 
     ret = FrodoShake(ss, params->ss, ctK, ctKLen);
 
@@ -175,7 +174,7 @@ static int32_t FrodoKemEncapsInternal(const uint8_t *mu, const FrodoKemParams *p
     return ret;
 }
 
-static int32_t FrodoKemKeypair(const FrodoKemParams *params, uint8_t *pk, uint8_t *sk, size_t lenSk)
+static int32_t FrodoKemKeypair(const FrodoKemParams *params, uint8_t *pk, uint8_t *sk)
 {
     const size_t randLen = (size_t)params->ss + params->lenSeedSE + params->lenSeedA;
     uint8_t *rnd = BSL_SAL_Malloc(randLen);
@@ -189,7 +188,7 @@ static int32_t FrodoKemKeypair(const FrodoKemParams *params, uint8_t *pk, uint8_
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = FrodoKemKeypairInternal(rnd, params, pk, sk, lenSk);
+    ret = FrodoKemKeypairInternal(rnd, params, pk, sk);
     BSL_SAL_ClearFree(rnd, randLen);
     return ret;
 }
@@ -241,8 +240,8 @@ static int32_t FrodoKemDecaps(const FrodoKemParams *params, uint8_t *ss, const u
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
-    (void)memcpy_s(pkh, bufLen, skPkh, params->lenPkHash);
-    (void)memcpy_s(salt, bufLen - (salt - buf), ct + ctLen - params->lenSalt, params->lenSalt);
+    memcpy(pkh, skPkh, params->lenPkHash);
+    memcpy(salt, ct + ctLen - params->lenSalt, params->lenSalt);
 
     ret = FrodoShake(seedK, seedKLen, pkhMuSalt, pkhMuSaltLen); //
     if (ret != CRYPT_SUCCESS) {
@@ -270,8 +269,8 @@ static int32_t FrodoKemDecaps(const FrodoKemParams *params, uint8_t *ss, const u
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         goto EXIT;
     }
-    (void)memcpy_s(ctKBuf, ctKLen, ct, params->ctxSize);
-    (void)memcpy_s(ctKBuf + ctLen, ctKLen - ctLen, kPrime, params->ss);
+    memcpy(ctKBuf, ct, params->ctxSize);
+    memcpy(ctKBuf + ctLen, kPrime, params->ss);
     ret = FrodoShake(ss, params->ss, ctKBuf, ctKLen);
     BSL_SAL_FREE(ctKBuf);
 EXIT:
@@ -286,7 +285,7 @@ CRYPT_FRODOKEM_Ctx *CRYPT_FRODOKEM_NewCtx(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(ctx, sizeof(CRYPT_FRODOKEM_Ctx), 0, sizeof(CRYPT_FRODOKEM_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_FRODOKEM_Ctx));
 
     return ctx;
 }
@@ -316,7 +315,7 @@ int32_t CRYPT_FRODOKEM_Gen(CRYPT_FRODOKEM_Ctx *ctx)
         BSL_SAL_FREE(ctx->publicKey);
     }
     if (ctx->privateKey != NULL) {
-        (void)memset_s(ctx->privateKey, ctx->para->kemSkSize, 0, ctx->para->kemSkSize);
+        memset(ctx->privateKey, 0, ctx->para->kemSkSize);
         BSL_SAL_FREE(ctx->privateKey);
     }
     ctx->publicKey = BSL_SAL_Calloc(ctx->para->pkSize, sizeof(uint8_t));
@@ -330,7 +329,7 @@ int32_t CRYPT_FRODOKEM_Gen(CRYPT_FRODOKEM_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret = FrodoKemKeypair(ctx->para, ctx->publicKey, ctx->privateKey, ctx->para->kemSkSize);
+    int32_t ret = FrodoKemKeypair(ctx->para, ctx->publicKey, ctx->privateKey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_FREE(ctx->publicKey);
@@ -371,7 +370,7 @@ int32_t CRYPT_FRODOKEM_SetPrvKeyEx(CRYPT_FRODOKEM_Ctx *ctx, BSL_Param *param)
     }
 
     uint32_t useLen = ctx->para->kemSkSize;
-    (void)memcpy_s(ctx->privateKey, useLen, prv->value, useLen);
+    memcpy(ctx->privateKey, prv->value, useLen);
     return CRYPT_SUCCESS;
 }
 
@@ -406,7 +405,7 @@ int32_t CRYPT_FRODOKEM_SetPubKeyEx(CRYPT_FRODOKEM_Ctx *ctx, BSL_Param *param)
         }
     }
     uint32_t useLen = ctx->para->pkSize;
-    (void)memcpy_s(ctx->publicKey, useLen, pub->value, useLen);
+    memcpy(ctx->publicKey, pub->value, useLen);
     return CRYPT_SUCCESS;
 }
 
@@ -434,7 +433,7 @@ int32_t CRYPT_FRODOKEM_GetPrvKeyEx(CRYPT_FRODOKEM_Ctx *ctx, BSL_Param *param)
         return CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH;
     }
     uint32_t useLen = ctx->para->kemSkSize;
-    (void)memcpy_s(prv->value, useLen, ctx->privateKey, useLen);
+    memcpy(prv->value, ctx->privateKey, useLen);
     prv->useLen = useLen;
     return CRYPT_SUCCESS;
 }
@@ -463,7 +462,7 @@ int32_t CRYPT_FRODOKEM_GetPubKeyEx(CRYPT_FRODOKEM_Ctx *ctx, BSL_Param *param)
         return CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH;
     }
     uint32_t useLen = ctx->para->pkSize;
-    (void)memcpy_s(pub->value, useLen, ctx->publicKey, useLen);
+    memcpy(pub->value, ctx->publicKey, useLen);
     pub->useLen = useLen;
     return CRYPT_SUCCESS;
 }
@@ -489,7 +488,7 @@ CRYPT_FRODOKEM_Ctx *CRYPT_FRODOKEM_DupCtx(CRYPT_FRODOKEM_Ctx *src)
             CRYPT_FRODOKEM_FreeCtx(ctx);
             return NULL;
         }
-        (void)memcpy_s(ctx->publicKey, ctx->para->pkSize, src->publicKey, ctx->para->pkSize);
+        memcpy(ctx->publicKey, src->publicKey, ctx->para->pkSize);
     }
     if (src->privateKey != NULL) {
         ctx->privateKey = BSL_SAL_Calloc(src->para->kemSkSize, sizeof(uint8_t));
@@ -498,7 +497,7 @@ CRYPT_FRODOKEM_Ctx *CRYPT_FRODOKEM_DupCtx(CRYPT_FRODOKEM_Ctx *src)
             CRYPT_FRODOKEM_FreeCtx(ctx);
             return NULL;
         }
-        (void)memcpy_s(ctx->privateKey, ctx->para->kemSkSize, src->privateKey, ctx->para->kemSkSize);
+        memcpy(ctx->privateKey, src->privateKey, ctx->para->kemSkSize);
     }
     ctx->libCtx = src->libCtx;
     return ctx;

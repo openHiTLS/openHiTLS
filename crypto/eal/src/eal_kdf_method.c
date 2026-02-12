@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_KDF)
 
-#include "securec.h"
+#include <string.h>
 #include "crypt_local_types.h"
 #include "crypt_algid.h"
 #ifdef HITLS_CRYPTO_PBKDF2

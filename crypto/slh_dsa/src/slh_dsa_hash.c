@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SLH_DSA
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "crypt_types.h"
@@ -72,7 +72,7 @@ static int32_t CalcMultiMsgHashByCtx(CRYPT_MD_AlgId mdId, void *mdCtxIn, const C
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    (void)memcpy_s(out, outLen, tmp, outLen);
+    (void)memcpy(out, tmp, outLen);
     return CRYPT_SUCCESS;
 }
 
@@ -230,7 +230,7 @@ static int32_t Prfmsg(const CryptSlhDsaCtx *ctx, const uint8_t *rand, const uint
     GOTO_ERR_IF_EX(CRYPT_EAL_MacUpdate(mdCtx, rand, n), ret);
     GOTO_ERR_IF_EX(CRYPT_EAL_MacUpdate(mdCtx, msg, msgLen), ret);
     GOTO_ERR_IF_EX(CRYPT_EAL_MacFinal(mdCtx, tmp, &tmpLen), ret);
-    (void)memcpy_s(out, n, tmp, n);
+    memcpy(out, tmp, n);
 ERR:
     CRYPT_EAL_MacFreeCtx(mdCtx);
     return ret;
@@ -258,8 +258,8 @@ static int32_t HmsgSha(const CryptSlhDsaCtx *ctx, const uint8_t *r, const uint8_
 
     uint8_t tmpSeed[2 * SLH_DSA_MAX_N + MAX_MDSIZE] = {0}; // 2 is for double
     uint32_t tmpSeedLen = 0;
-    (void)memcpy_s(tmpSeed, sizeof(tmpSeed), r, n);
-    (void)memcpy_s(tmpSeed + n, sizeof(tmpSeed) - n, seed, n);
+    memcpy(tmpSeed, r, n);
+    memcpy(tmpSeed + n, seed, n);
     tmpSeedLen = n + n;
     tmpLen = CRYPT_EAL_MdGetDigestSize(mdId);
 
@@ -349,12 +349,11 @@ static void Sha256FinalPad(CRYPT_SHA2_256_Ctx *ctx)
 
     p[n++] = 0x80;
     if (n > (CRYPT_SHA2_256_BLOCKSIZE - 8)) { /* 8 bytes to save bits of input */
-        (void)memset_s(p + n, CRYPT_SHA2_256_BLOCKSIZE - n, 0, CRYPT_SHA2_256_BLOCKSIZE - n);
+        memset(p + n, 0, CRYPT_SHA2_256_BLOCKSIZE - n);
         n = 0;
         SHA256CompressMultiBlocks(ctx->h, p, 1);
     }
-    (void)memset_s(p + n, CRYPT_SHA2_256_BLOCKSIZE - n, 0,
-        CRYPT_SHA2_256_BLOCKSIZE - 8 - n); /* 8 bytes to save bits of input */
+    memset(p + n, 0, CRYPT_SHA2_256_BLOCKSIZE - 8 - n); /* 8 bytes to save bits of input */
 
     p += CRYPT_SHA2_256_BLOCKSIZE - 8; /* 8 bytes to save bits of input */
     PUT_UINT32_BE(ctx->hNum, p, 0);
@@ -367,7 +366,7 @@ static int32_t ChainSha256(const uint8_t *x, uint32_t xLen, uint32_t start, uint
 {
     (void)pubSeed; // Parameter kept for API compatibility
     if (steps == 0) {
-        (void)memcpy_s(output, xLen, x, xLen);
+        (void)memcpy(output, x, xLen);
         return CRYPT_SUCCESS;
     }
     const XmssWotsCtx *xmssWotsCtx = (const XmssWotsCtx *)ctx;
@@ -402,7 +401,7 @@ static int32_t ChainSha256(const uint8_t *x, uint32_t xLen, uint32_t start, uint
             BSL_ERR_PUSH_ERROR(ret);
             goto EXIT;
         }
-        (void)memcpy_s(output, n, tmp, n);
+        (void)memcpy(output, tmp, n);
         goto EXIT;
     }
     // block: |---ADRS---|--MSG--|0X80|-----|hNum|lNum|
@@ -415,7 +414,7 @@ static int32_t ChainSha256(const uint8_t *x, uint32_t xLen, uint32_t start, uint
         }
         // 18 = layerAddrLen + treeAddrLen + typeLen + hashAddressOffset = 1 + 8 + 1 + 8
         PUT_UINT32_BE(start + i, (uint8_t *)sha256Ctx->block, 18); // offset 18
-        (void)memcpy_s(sha256Ctx->h, sizeof(sha256Ctx->h), sha256CtxIn->h, sizeof(sha256Ctx->h));
+        (void)memcpy(sha256Ctx->h, sha256CtxIn->h, sizeof(sha256Ctx->h));
         SHA256CompressMultiBlocks(sha256Ctx->h, (uint8_t *)sha256Ctx->block, 1);
     }
     for (uint32_t j = 0; j < num; ++j) {
@@ -431,7 +430,7 @@ static int32_t ChainShake256(const uint8_t *x, uint32_t xLen, uint32_t start, ui
 {
     (void)pubSeed; // Parameter kept for API compatibility
     if (steps == 0) {
-        (void)memcpy_s(output, xLen, x, xLen);
+        (void)memcpy(output, x, xLen);
         return CRYPT_SUCCESS;
     }
     const XmssWotsCtx *xmssWotsCtx = (const XmssWotsCtx *)ctx;
@@ -454,7 +453,7 @@ static int32_t ChainShake256(const uint8_t *x, uint32_t xLen, uint32_t start, ui
     
     for (i = 0; i < steps; ++i) {
         if (i > 0) {
-            (void)memcpy_s(pSt + msgOffset, n, pSt, n);
+            (void)memcpy(pSt + msgOffset, pSt, n);
         }
 
         slhDsaCtx->adrsOps.setHashAddr(adrsCtx, start + i);

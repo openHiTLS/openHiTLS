@@ -81,7 +81,7 @@ extern "C" {
         if ((paramObj)->destField == NULL) { \
             goto ERR; \
         } \
-        (void)memcpy_s((paramObj)->destField, (tmpParam)->valueLen + 1, (tmpParam)->value, (tmpParam)->valueLen); \
+        memcpy((paramObj)->destField, (tmpParam)->value, (tmpParam)->valueLen); \
     } while (0)
 
 #define PROCESS_OPTIONAL_STRING_PARAM(tmpParam, params, paramName, outString, outStringLen, nameParamName, outName) \

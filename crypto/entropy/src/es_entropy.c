@@ -17,7 +17,7 @@
 #if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_ENTROPY_SYS)
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_list.h"
 #include "crypt_errno.h"
@@ -48,7 +48,7 @@ ENTROPY_EntropySource *ENTROPY_EsNew(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(es, sizeof(ENTROPY_EntropySource), 0, sizeof(ENTROPY_EntropySource));
+    memset(es, 0, sizeof(ENTROPY_EntropySource));
     es->nsList = ES_NsListCreat();
     if (es->nsList == NULL) {
         BSL_SAL_Free(es);
@@ -360,7 +360,7 @@ int32_t ENTROPY_EsEntropyGather(ENTROPY_EntropySource *es)
         return CRYPT_MEM_ALLOC_FAIL;
     }
     ret = ES_EntropyPoolPushBytes(es->pool, data, len);
-    (void)memset_s(data, len, 0, len);
+    memset(data, 0, len);
     BSL_SAL_Free(data);
     return ret;
 }

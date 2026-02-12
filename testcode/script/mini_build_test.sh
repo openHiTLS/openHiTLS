@@ -362,7 +362,6 @@ test_feature()
 
 parse_option
 
-
 if [ "${BUILD_HITLS}" = "on" ]; then
     build_hitls
 fi

@@ -14,7 +14,7 @@
  */
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
@@ -52,7 +52,7 @@ int32_t HITLS_AUTH_OtpInit(HITLS_AUTH_OtpCtx *ctx, uint8_t *key, uint32_t keyLen
             return ret;
         }
     } else {
-        (void)memcpy_s(ctx->key.data, ctx->key.dataLen, key, keyLen);
+        memcpy(ctx->key.data, key, keyLen);
     }
 
     return HITLS_AUTH_SUCCESS;

@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MCELIECE
 #include "bsl_sal.h"
-#include "securec.h"
+#include <string.h>
 #include "mceliece_local.h"
 
 // Extract the rightmost 9-byte from the matrix, perform a tail-shift, and write it back
@@ -215,8 +215,7 @@ int32_t BuildParityCheckMatrixReferenceStyle(GFMatrix *matH, const GFPolynomial 
     }
 
     // Clear matrix
-    (void)memset_s(matH->data, (size_t)matH->rows * (size_t)matH->colsBytes, 0,
-                   (size_t)matH->rows * (size_t)matH->colsBytes);
+    memset(matH->data, 0, (size_t)matH->rows * (size_t)matH->colsBytes);
 
     // Fill rows: for each i (power), for each 8-column block, for each bit k
     for (int32_t i = 0; i < t; i++) {

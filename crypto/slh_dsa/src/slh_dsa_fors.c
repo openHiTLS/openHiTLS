@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -109,21 +109,21 @@ int32_t ForsPkFromSig(const uint8_t *sig, uint32_t sigLen, const uint8_t *md, ui
             ctx->adrsOps.setTreeHeight(adrs, j + 1);
             if (((indices[i] >> j) & 1) == 1) {
                 ctx->adrsOps.setTreeIndex(adrs, (ctx->adrsOps.getTreeIndex(adrs) - 1) >> 1);
-                (void)memcpy_s(tmp, sizeof(tmp), auth + j * n, n);
-                (void)memcpy_s(tmp + n, sizeof(tmp) - n, node0, n);
+                memcpy(tmp, auth + j * n, n);
+                memcpy(tmp + n, node0, n);
             } else {
                 ctx->adrsOps.setTreeIndex(adrs, ctx->adrsOps.getTreeIndex(adrs) >> 1);
-                (void)memcpy_s(tmp, sizeof(tmp), node0, n);
-                (void)memcpy_s(tmp + n, sizeof(tmp) - n, auth + j * n, n);
+                memcpy(tmp, node0, n);
+                memcpy(tmp + n, auth + j * n, n);
             }
 
             ret = ctx->hashFuncs->h(ctx, adrs, tmp, 2 * n, node1);
             if (ret != 0) {
                 goto ERR;
             }
-            (void)memcpy_s(node0, sizeof(node0), node1, sizeof(node1));
+            memcpy(node0, node1, sizeof(node1));
         }
-        (void)memcpy_s(root + i * n, (k - i) * n, node0, n);
+        memcpy(root + i * n, node0, n);
     }
 
     SlhDsaAdrs forspkAdrs = *adrs;

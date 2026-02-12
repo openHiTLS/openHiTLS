@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_PROVIDER
 #include <string.h>
-#include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_list.h"
 #include "eal_drbg_local.h"
@@ -130,7 +129,7 @@ static void ProviderSeedDeinit(EAL_SeedDrbg *seedDrbg)
         CRYPT_EAL_SeedPoolFree(seedDrbg->seedCtx);
         seedDrbg->seedCtx = NULL;
         BSL_SAL_ReferencesFree(&(seedDrbg->references));
-        (void)memset_s(seedDrbg, sizeof(EAL_SeedDrbg), 0, sizeof(EAL_SeedDrbg));
+        memset(seedDrbg, 0, sizeof(EAL_SeedDrbg));
     }
 }
 #endif

@@ -15,7 +15,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_TLS_HOST_CLIENT
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_log.h"
 #include "bsl_log_internal.h"
@@ -89,14 +89,7 @@ static int32_t Tls13ClientStoreCertReqCtx(TLS_Ctx *ctx, const CertificateRequest
             return HITLS_MEMALLOC_FAIL;
         }
         ctx->certificateReqCtxSize = certReq->certificateReqCtxSize;
-        int32_t ret = memcpy_s(ctx->certificateReqCtx, certReq->certificateReqCtxSize,
-            certReq->certificateReqCtx, certReq->certificateReqCtxSize);
-        if (ret != EOK) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16171, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
-                "client calloc cert req ctx failed.", 0, 0, 0, 0);
-            BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
-            return HITLS_MEMCPY_FAIL;
-        }
+        memcpy(ctx->certificateReqCtx, certReq->certificateReqCtx, certReq->certificateReqCtxSize);
     }
     return HITLS_SUCCESS;
 }

@@ -17,7 +17,7 @@
 #if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_ENTROPY_SYS)
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -203,12 +203,12 @@ static void EntropyProcess(ES_JitterState *e)
          * the latest entropy is attached to the tail of the buffer each time, and the 33-byte content is hashed.
          * The hashed content is written to the internal entropy pool of the entropy source.
          */
-        (void)memcpy_s(buf, NS_ENTROPY_HASH_SIZE + 1, e->data + start, NS_ENTROPY_HASH_SIZE);
+        memcpy(buf, e->data + start, NS_ENTROPY_HASH_SIZE);
         // The latest entropy 1 byte is placed at the end. The 33-byte data is hashed to form a new 32-byte entropy.
         buf[NS_ENTROPY_HASH_SIZE] = e->data[i];
         e->hashFunc(buf, sizeof(buf), (e->data + start), NS_ENTROPY_HASH_SIZE);
     }
-    (void)memset_s(buf, sizeof(buf), 0, sizeof(buf));
+    memset(buf, 0, sizeof(buf));
 }
 
 static int32_t EsCpuJitterGen(ES_JitterState *jitter, uint8_t *buf, uint32_t bufLen)
@@ -224,7 +224,7 @@ static int32_t EsCpuJitterGen(ES_JitterState *jitter, uint8_t *buf, uint32_t buf
             break;
         }
         uint32_t length = left > entropySize ? entropySize : left;
-        (void)memcpy_s(out, length, jitter->data, length);
+        memcpy(out, jitter->data, length);
         left -= length;
         if (left <= 0) {
             jitter->remainCount = entropySize - length;
@@ -246,7 +246,7 @@ static uint32_t EsCpuJitterGet(ES_JitterState *jitter, uint8_t *buf, uint32_t bu
         return bufLen;
     }
     uint32_t length = (bufLen < jitter->remainCount) ? bufLen : jitter->remainCount;
-    (void)memcpy_s(buf, bufLen, jitter->data + (NS_ENTROPY_DATA_SIZE - jitter->remainCount), length);
+    memcpy(buf, jitter->data + (NS_ENTROPY_DATA_SIZE - jitter->remainCount), length);
     jitter->remainCount -= length;
     return bufLen - length;
 }
@@ -270,7 +270,7 @@ static void ES_CpuJitterFree(void *ctx)
     if (ctx == NULL) {
         return;
     }
-    (void)memset_s(ctx, sizeof(ES_JitterState), 0, sizeof(ES_JitterState));
+    memset(ctx, 0, sizeof(ES_JitterState));
     BSL_SAL_FREE(ctx);
 }
 
@@ -283,12 +283,12 @@ static void *ES_CpuJitterInit(void *para)
     if (e == NULL) {
         return NULL;
     }
-    memset_s(e, sizeof(ES_JitterState), 0, sizeof(ES_JitterState));
+    memset(e, 0, sizeof(ES_JitterState));
     e->hashFunc = para;
     // Try to read 32 bytes once to check whether the environment is normal.
     uint8_t data[32] = {0};
     if (ES_CpuJitterRead(e, true, data, sizeof(data)) != CRYPT_SUCCESS) {
-        (void)memset_s(data, sizeof(data), 0, 32);  // 32, Zeroed 32-byte array
+        memset(data, 0, 32);  // 32, Zeroed 32-byte array
         ES_CpuJitterFree(e);
         return NULL;
     }
@@ -311,7 +311,7 @@ ES_NoiseSource *ES_CpuJitterGetCtx(void)
         BSL_ERR_PUSH_ERROR(BSL_LIST_MALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(ctx, sizeof(ES_NoiseSource), 0, sizeof(ES_NoiseSource));
+    memset(ctx, 0, sizeof(ES_NoiseSource));
     uint32_t len = strlen("CPU-Jitter");
     ctx->name = BSL_SAL_Malloc(len + 1);
     if (ctx->name == NULL) {
@@ -319,7 +319,7 @@ ES_NoiseSource *ES_CpuJitterGetCtx(void)
         BSL_ERR_PUSH_ERROR(BSL_LIST_MALLOC_FAIL);
         return NULL;
     }
-    (void)strncpy_s(ctx->name, len + 1, "CPU-Jitter", len);
+    (void)strcpy(ctx->name, "CPU-Jitter");
     ctx->autoTest = true;
     ctx->para = (void *)EmptyConditionComp;
     ctx->init = ES_CpuJitterInit;

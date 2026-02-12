@@ -17,7 +17,6 @@
 #if (defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER)) && defined(HITLS_TLS_CONFIG_CERT_CRL)
 #include <stdint.h>
 #include <string.h>
-#include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"

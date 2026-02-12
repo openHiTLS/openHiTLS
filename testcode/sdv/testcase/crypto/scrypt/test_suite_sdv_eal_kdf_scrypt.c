@@ -15,7 +15,7 @@
 
 /* BEGIN_HEADER */
 
-#include "securec.h"
+#include <string.h>
 #include "crypt_eal_kdf.h"
 #include "eal_kdf_local.h"
 #include "crypt_errno.h"
@@ -530,13 +530,13 @@ void SDV_CRYPT_EAL_SCRYPT_COPY_CTX_FUNC_TC001(Hex *key, Hex *salt, int N, int r,
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(copyCtx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result1 cmp", out, outLen, result->x, result->len);
-    (void)memset_s(out, outLen, 0, outLen);
+    memset(out, 0, outLen);
     CRYPT_EAL_KdfFreeCtx(copyCtx);
     copyCtx = NULL;
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(copyCtx1, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result2 cmp", out, outLen, result->x, result->len);
-    (void)memset_s(out, outLen, 0, outLen);
+    memset(out, 0, outLen);
     CRYPT_EAL_KdfFreeCtx(copyCtx1);
     copyCtx1 = NULL;
 
@@ -544,13 +544,13 @@ void SDV_CRYPT_EAL_SCRYPT_COPY_CTX_FUNC_TC001(Hex *key, Hex *salt, int N, int r,
     ASSERT_TRUE(copyCtx3 != NULL);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(copyCtx3, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result3 cmp", out, outLen, result->x, result->len);
-    (void)memset_s(out, outLen, 0, outLen);
+    memset(out, 0, outLen);
     CRYPT_EAL_KdfFreeCtx(copyCtx3);
     copyCtx3 = NULL;
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result4 cmp", out, outLen, result->x, result->len);
-    (void)memset_s(out, outLen, 0, outLen);
+    memset(out, 0, outLen);
     CRYPT_EAL_KdfFreeCtx(ctx);
     ctx = NULL;
 

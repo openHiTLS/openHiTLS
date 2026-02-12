@@ -26,7 +26,6 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_BSL_UIO_UDP
-#include "securec.h"
 #include "bsl_uio.h"
 #include "hitls_error.h"
 #include "hitls_type.h"
@@ -192,10 +191,11 @@ int32_t UdpFrameRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
             return BSL_SUCCESS;
         }
         if (newBuf != NULL) {
-            if (memcpy_s(buf, len, (uint8_t *)newBuf, packLen) != EOK) {
+            if (packLen > len) {
                 FreeNewBuf(newBuf);
                 return BSL_UIO_IO_EXCEPTION;
             }
+            memcpy(buf, (uint8_t *)newBuf, packLen);
             *readLen = packLen;
         }
         FreeNewBuf(newBuf);
@@ -227,7 +227,7 @@ static BSL_UIO_Method g_UdpUioMethodDefault;
 void *UdpGetDefaultMethod(void)
 {
     const BSL_UIO_Method *ori = BSL_UIO_UdpMethod();
-    memcpy_s(&g_UdpUioMethodDefault, sizeof(g_UdpUioMethodDefault), ori, sizeof(g_UdpUioMethodDefault));
+    memcpy(&g_UdpUioMethodDefault, ori, sizeof(g_UdpUioMethodDefault));
     g_UdpUioMethodDefault.uioWrite = SelectUdpWrite;
     g_UdpUioMethodDefault.uioRead = SelectUdpRead;
     return &g_UdpUioMethodDefault;

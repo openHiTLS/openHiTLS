@@ -34,7 +34,7 @@
 #include "parser_frame_msg.h"
 #include "cert.h"
 #include "process.h"
-#include "securec.h"
+#include <string.h>
 #include "session_type.h"
 #include "rec_wrapper.h"
 #include "common_func.h"
@@ -82,7 +82,7 @@ void SetConfig(HLT_Ctx_Config *clientconfig, HLT_Ctx_Config *serverconfig, SetIn
         if (setInfo.ServerGroup != NULL) {
             HLT_SetGroups(serverconfig, setInfo.ServerGroup);
         }
-        memcpy_s(serverconfig->psk, PSK_MAX_LEN, setInfo.psk, sizeof(setInfo.psk));
+        memcpy(serverconfig->psk, setInfo.psk, sizeof(setInfo.psk));
 
         if ( (setInfo.ClientKeyExchangeMode & (TLS13_KE_MODE_PSK_WITH_DHE | TLS13_KE_MODE_PSK_ONLY)) != 0) {
             clientconfig->keyExchMode = setInfo.ClientKeyExchangeMode;
@@ -95,7 +95,7 @@ void SetConfig(HLT_Ctx_Config *clientconfig, HLT_Ctx_Config *serverconfig, SetIn
         if (setInfo.ClientGroup != NULL) {
             HLT_SetGroups(clientconfig, setInfo.ClientGroup);
         }
-        memcpy_s(clientconfig->psk, PSK_MAX_LEN, setInfo.psk, sizeof(setInfo.psk));
+        memcpy(clientconfig->psk, setInfo.psk, sizeof(setInfo.psk));
         if ( (setInfo.ServerKeyExchangeMode & (TLS13_KE_MODE_PSK_WITH_DHE | TLS13_KE_MODE_PSK_ONLY)) != 0) {
             serverconfig->keyExchMode = setInfo.ServerKeyExchangeMode;
         }
@@ -288,7 +288,7 @@ void ResumeConnectWithPara(HLT_FrameHandle *handle, SetInfo setInfo)
             ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
             // Data read/write
             ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-            ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);
+            memset(readBuf, 0, READ_BUF_SIZE);
             ASSERT_TRUE(HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen) == 0);
             ASSERT_TRUE(readLen == strlen(writeBuf));
             ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);

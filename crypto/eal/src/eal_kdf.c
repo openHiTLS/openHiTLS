@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 #include "crypt_eal_kdf.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "crypt_local_types.h"
 #include "crypt_eal_mac.h"
@@ -188,7 +188,7 @@ int32_t CRYPT_EAL_KdfCopyCtx(CRYPT_EAL_KdfCtx *to, const CRYPT_EAL_KdfCtx *from)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memcpy_s(to, sizeof(CRYPT_EAL_KdfCtx), from, sizeof(CRYPT_EAL_KdfCtx));
+    memcpy(to, from, sizeof(CRYPT_EAL_KdfCTX));
     to->data = newData;
     return CRYPT_SUCCESS;
 }

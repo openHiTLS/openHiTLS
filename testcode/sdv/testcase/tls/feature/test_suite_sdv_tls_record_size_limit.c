@@ -16,7 +16,7 @@
 /* BEGIN_HEADER */
 #include <semaphore.h>
 #include "process.h"
-#include "securec.h"
+#include <string.h>
 #include "hitls_error.h"
 #include "frame_tls.h"
 #include "frame_link.h"
@@ -233,9 +233,9 @@ static void MalformedServerHelloMsg214(HITLS_Ctx *ctx, uint8_t *data, uint32_t *
     data[91] = 0xa4;
     data[92] = 0x3f;  // HRR's cookie extension content length
     data[93] = 0xa2;
-    memset_s(Msg, MAX_WRITE_LENTH, 1, MAX_WRITE_LENTH);
-    memcpy_s(Msg, 94, data, 94); // Copying hrr packets
-    memcpy_s(data, MAX_WRITE_LENTH, Msg, MAX_WRITE_LENTH);
+    memset(Msg, 1, MAX_WRITE_LENTH);
+    memcpy(Msg, data, 94); // Copying hrr packets
+    memcpy(data, Msg, MAX_WRITE_LENTH);
     *len = MAX_WRITE_LENTH;
     return;
 }
@@ -640,7 +640,7 @@ void HITLS_SDV_TLS_RecSizeLimit_Overflow_FUNC_001(int isclient)
         BSL_Uint16ToByte((uint16_t)ciphertextLen, &writeBuf[REC_TLS_RECORD_LENGTH_OFFSET]);
 
         FrameUioUserData *ioClientData = BSL_UIO_GetUserData(server->io);
-        memcpy_s(ioClientData->recMsg.msg, ciphertextLen + 5, writeBuf, ciphertextLen + 5);
+        memcpy(ioClientData->recMsg.msg, writeBuf, ciphertextLen + 5);
         ioClientData->recMsg.len = ciphertextLen + 5;
 
         uint32_t readbytes = 0;
@@ -665,7 +665,7 @@ void HITLS_SDV_TLS_RecSizeLimit_Overflow_FUNC_001(int isclient)
         BSL_Uint16ToByte((uint16_t)ciphertextLen, &writeBuf[REC_TLS_RECORD_LENGTH_OFFSET]);
 
         FrameUioUserData *ioClientData = BSL_UIO_GetUserData(client->io);
-        memcpy_s(ioClientData->recMsg.msg, ciphertextLen + 5, writeBuf, ciphertextLen + 5);
+        memcpy(ioClientData->recMsg.msg, writeBuf, ciphertextLen + 5);
         ioClientData->recMsg.len = ciphertextLen + 5;
 
         uint32_t readbytes = 0;
@@ -723,7 +723,7 @@ void HITLS_SDV_TLS_RecSizeLimit_Overflow_FUNC_009(int flag)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
 
     uint8_t msg[16386] = {0};
-    memset_s(msg, MAX_WRITE_LENTH+1, 1, MAX_WRITE_LENTH+1);
+    memset(msg, 1, MAX_WRITE_LENTH+1);
     msg[16385] = REC_TYPE_APP;
     REC_TextInput plainMsg = {  .type = REC_TYPE_APP,
                                 .negotiatedVersion = HITLS_VERSION_TLS13,
@@ -742,7 +742,7 @@ void HITLS_SDV_TLS_RecSizeLimit_Overflow_FUNC_009(int flag)
         BSL_Uint16ToByte((uint16_t)ciphertextLen, &writeBuf[REC_TLS_RECORD_LENGTH_OFFSET]);
 
         FrameUioUserData *ioClientData = BSL_UIO_GetUserData(server->io);
-        memcpy_s(ioClientData->recMsg.msg, ciphertextLen+5, writeBuf, ciphertextLen+5);
+        memcpy(ioClientData->recMsg.msg, writeBuf, ciphertextLen+5);
         ioClientData->recMsg.len = ciphertextLen+5;
 
         uint32_t readbytes = 0;
@@ -767,7 +767,7 @@ void HITLS_SDV_TLS_RecSizeLimit_Overflow_FUNC_009(int flag)
         BSL_Uint16ToByte((uint16_t)ciphertextLen, &writeBuf[REC_TLS_RECORD_LENGTH_OFFSET]);
 
         FrameUioUserData *ioClientData = BSL_UIO_GetUserData(client->io);
-        memcpy_s(ioClientData->recMsg.msg, ciphertextLen+5, writeBuf, ciphertextLen+5);
+        memcpy(ioClientData->recMsg.msg, writeBuf, ciphertextLen+5);
         ioClientData->recMsg.len = ciphertextLen+5;
 
         uint32_t readbytes = 0;
@@ -926,8 +926,8 @@ static void Copy_Certificate(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
     (void) len;
     (void) bufSize;
     (void) user;
-    memset_s(certificateMsg, 18432, 0, 18432);
-    memcpy_s(certificateMsg, *len, data, *len);
+    memset(certificateMsg, 0, 18432);
+    memcpy(certificateMsg, data, *len);
     certificateMsgLen = *len;
     return;
 }
@@ -977,7 +977,7 @@ void HITLS_SDV_TLS_RecSizeLimit_FUNC_002(int flag,int c_size,int s_size)
     if (flag == 0) {
         ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_CERTIFICATE) == HITLS_SUCCESS);
         uint8_t msg[18432] = {0};
-        memcpy_s(msg, certificateMsgLen, certificateMsg, certificateMsgLen);
+        memcpy(msg, certificateMsg, certificateMsgLen);
         msg[certificateMsgLen] = REC_TYPE_HANDSHAKE;
         REC_TextInput plainMsg = {  .type = REC_TYPE_APP,
                                     .negotiatedVersion = HITLS_VERSION_TLS13,
@@ -999,7 +999,7 @@ void HITLS_SDV_TLS_RecSizeLimit_FUNC_002(int flag,int c_size,int s_size)
         BSL_Uint16ToByte((uint16_t)ciphertextLen, &writeBuf[REC_TLS_RECORD_LENGTH_OFFSET]);
 
         FrameUioUserData *ioClientData = BSL_UIO_GetUserData(client->io);
-        memcpy_s(ioClientData->recMsg.msg, ciphertextLen+5, writeBuf, ciphertextLen+5);
+        memcpy(ioClientData->recMsg.msg, writeBuf, ciphertextLen+5);
         ioClientData->recMsg.len = ciphertextLen+5;
 
         ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
@@ -1007,7 +1007,7 @@ void HITLS_SDV_TLS_RecSizeLimit_FUNC_002(int flag,int c_size,int s_size)
     else {
         ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_RECV_CERTIFICATE) == HITLS_SUCCESS);
         uint8_t msg[18432] = {0};
-        memcpy_s(msg, certificateMsgLen, certificateMsg, certificateMsgLen);
+        memcpy(msg, certificateMsg, certificateMsgLen);
         msg[certificateMsgLen] = REC_TYPE_HANDSHAKE;
         REC_TextInput plainMsg = {  .type = REC_TYPE_APP,
                                     .negotiatedVersion = HITLS_VERSION_TLS13,
@@ -1028,7 +1028,7 @@ void HITLS_SDV_TLS_RecSizeLimit_FUNC_002(int flag,int c_size,int s_size)
         BSL_Uint16ToByte((uint16_t)ciphertextLen, &writeBuf[REC_TLS_RECORD_LENGTH_OFFSET]);
 
         FrameUioUserData *ioClientData = BSL_UIO_GetUserData(server->io);
-        memcpy_s(ioClientData->recMsg.msg, ciphertextLen+5, writeBuf, ciphertextLen+5);
+        memcpy(ioClientData->recMsg.msg, writeBuf, ciphertextLen+5);
         ioClientData->recMsg.len = ciphertextLen+5;
 
         ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
@@ -1256,7 +1256,7 @@ void HITLS_SDV_TLS_RecSizeLimit_FUNC_007(int isclient)
         BSL_Uint16ToByte((uint16_t)ciphertextLen, &writeBuf[REC_TLS_RECORD_LENGTH_OFFSET]);
 
         FrameUioUserData *ioClientData = BSL_UIO_GetUserData(server->io);
-        memcpy_s(ioClientData->recMsg.msg, ciphertextLen + 5, writeBuf, ciphertextLen+5);
+        memcpy(ioClientData->recMsg.msg, writeBuf, ciphertextLen+5);
         ioClientData->recMsg.len = ciphertextLen + 5;
 
         uint32_t readbytes = 0;
@@ -1279,7 +1279,7 @@ void HITLS_SDV_TLS_RecSizeLimit_FUNC_007(int isclient)
         BSL_Uint16ToByte((uint16_t)ciphertextLen, &writeBuf[REC_TLS_RECORD_LENGTH_OFFSET]);
 
         FrameUioUserData *ioClientData = BSL_UIO_GetUserData(client->io);
-        memcpy_s(ioClientData->recMsg.msg, ciphertextLen + 5, writeBuf, ciphertextLen+5);
+        memcpy(ioClientData->recMsg.msg, writeBuf, ciphertextLen+5);
         ioClientData->recMsg.len = ciphertextLen + 5;
 
         uint32_t readbytes = 0;
@@ -1382,7 +1382,7 @@ void HITLS_SDV_TLS_RecSizeLimit_FUNC_014(int version, int connType, int c_record
         ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
 
         ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-        ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);
+        memset(readBuf, 0, READ_BUF_SIZE);
         ASSERT_TRUE(HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen) == 0);
         ASSERT_TRUE(readLen == strlen(writeBuf));
         ASSERT_TRUE(memcmp(writeBuf, readBuf, strlen(writeBuf)) == 0);

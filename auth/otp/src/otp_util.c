@@ -14,7 +14,7 @@
  */
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "auth_errno.h"
 #include "auth_otp.h"
 #include "bsl_err_internal.h"
@@ -129,7 +129,7 @@ static int32_t OtpGetCtxContent(HITLS_AUTH_OtpCtx *ctx, int32_t cmd, void *param
                 BSL_ERR_PUSH_ERROR(HITLS_AUTH_OTP_BUFFER_NOT_ENOUGH);
                 return HITLS_AUTH_OTP_BUFFER_NOT_ENOUGH;
             }
-            (void)memcpy_s(output->value, output->valueLen, ctx->key.data, ctx->key.dataLen);
+            memcpy(output->value, ctx->key.data, ctx->key.dataLen);
             output->useLen = ctx->key.dataLen;
             return HITLS_AUTH_SUCCESS;
         case HITLS_AUTH_OTP_GET_CTX_DIGITS:

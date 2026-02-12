@@ -1,3 +1,0 @@
-[submodule "platform/Secure_C"]
-	path = platform/Secure_C
-	url = https://gitee.com/openeuler/libboundscheck.git

@@ -17,7 +17,7 @@
 #if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_ENTROPY_SYS)
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "bsl_list.h"
 #include "bsl_err_internal.h"
@@ -48,7 +48,7 @@ static ES_NoiseSource *ES_NsCreate(const char *name, bool autoTest, uint32_t min
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(ctx, sizeof(ES_NoiseSource), 0, sizeof(ES_NoiseSource));
+    memset(ctx, 0, sizeof(ES_NoiseSource));
     uint32_t len = strlen(name) + 1;
     ctx->name = BSL_SAL_Malloc(len);
     if (ctx->name == NULL) {
@@ -56,7 +56,7 @@ static ES_NoiseSource *ES_NsCreate(const char *name, bool autoTest, uint32_t min
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)strncpy_s(ctx->name, len, name, len - 1);
+    strcpy(ctx->name, name);
     // Initializing
     ctx->autoTest = autoTest;
     ctx->para = method->para;

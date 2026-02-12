@@ -16,7 +16,6 @@
 /* BEGIN_HEADER */
 #include <stdio.h>
 #include <stdbool.h>
-#include "securec.h"
 #include "sal_file.h"
 #include "bsl_sal.h"
 #include "bsl_list.h"

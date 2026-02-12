@@ -164,7 +164,7 @@ ERR:
 
 #if defined(HITLS_CRYPTO_PROVIDER) && (defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_ECDSA) || \
     defined(HITLS_CRYPTO_DSA))
-#include "securec.h"
+#include <string.h>
 int32_t CRYPT_PkeySetMdAttr(const char *mdAttr, uint32_t len, char **pkeyMdAttr)
 {
     if (mdAttr == NULL || len == 0) {
@@ -177,7 +177,7 @@ int32_t CRYPT_PkeySetMdAttr(const char *mdAttr, uint32_t len, char **pkeyMdAttr)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memcpy_s(*pkeyMdAttr, len + 1, mdAttr, len);
+    memcpy(*pkeyMdAttr, mdAttr, len);
     (*pkeyMdAttr)[len] = '\0';
     return CRYPT_SUCCESS;
 }

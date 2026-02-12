@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_DRBG_HASH
 #include <stdint.h>
 #include <stdlib.h>
-#include <securec.h>
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
@@ -168,7 +168,7 @@ static int32_t DRBG_HashDf(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen,  co
             // tmpOutLen is the maximum supported MD length,
             // and len is the actual length, which must be smaller than tmpOutLen.
             // Only the len length needs to be truncated as the output.
-            (void)memcpy_s(buf, len, tmpOut, len);
+            memcpy(buf, tmpOut, len);
             break;
         }
         if ((ret = meth->final(mdCtx, buf, &tmpOutLen)) != CRYPT_SUCCESS) {
@@ -198,7 +198,7 @@ static int32_t DRBG_Hashgen(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen)
     uint8_t *buf = out;
 
     // The length of the V array is the longest seedLen. Therefore, there is no failure.
-    (void)memcpy_s(data, sizeof(data), ctx->v, ctx->seedLen);
+    memcpy(data, ctx->v, ctx->seedLen);
 
     while (len > 0) {
         uint8_t n = 1;
@@ -225,7 +225,7 @@ static int32_t DRBG_Hashgen(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen)
                 goto EXIT;
             }
 
-            (void)memcpy_s(buf, len, temp, len);
+            memcpy(buf, temp, len);
             break;
         }
         buf += mdSize;
@@ -366,7 +366,7 @@ int32_t DRBG_HashReseed(DRBG_Ctx *drbg, const CRYPT_Data *entropy, const CRYPT_D
     }
 
     // The length of the C array is the longest seedLen. Therefore, there is no failure.
-    (void)memcpy_s(ctx->v, sizeof(ctx->v), ctx->c, ctx->seedLen);
+    memcpy(ctx->v, ctx->c, ctx->seedLen);
 
     c = 0x0;
     ret = DRBG_HashDf(ctx, ctx->c, ctx->seedLen, &temp, &v, NULL, NULL);

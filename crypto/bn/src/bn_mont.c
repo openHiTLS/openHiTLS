@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -78,7 +78,7 @@ static int32_t MontExpReady(BN_BigNum *table[], uint32_t num, BN_Mont *mont, BN_
         }
     }
     table[0] = table[1];
-    (void)memcpy_s(table[1]->data, mont->mSize * sizeof(BN_UINT), b, mont->mSize * sizeof(BN_UINT));
+    memcpy(table[1]->data, b, mont->mSize * sizeof(BN_UINT));
 
     for (i = 2; i < num; i++) { /* precompute num - 2 data blocks */
         int32_t ret = MontMulBin(table[i]->data, table[0]->data, table[i - 1]->data, mont, opt, consttime);
@@ -135,7 +135,7 @@ static int32_t MontExpBin(BN_UINT *r, const BN_UINT *e, uint32_t eSize, BN_Mont 
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    (void)memcpy_s(mont->b, mont->mSize * sizeof(BN_UINT), r, mont->mSize * sizeof(BN_UINT));
+    memcpy(mont->b, r, mont->mSize * sizeof(BN_UINT));
     uint32_t base = BinBits(e, eSize) - 1;
     uint32_t perSize = GetReadySize(base);
     const uint32_t readySize = 1 << perSize;
@@ -205,7 +205,7 @@ static const BN_BigNum *DealBaseNum(const BN_BigNum *a, BN_Mont *mont, BN_Optimi
             BSL_ERR_PUSH_ERROR(*ret);
             return NULL;
         }
-        (void)memcpy_s(tmpMod->data, mont->mSize * sizeof(BN_UINT), mont->mod, mont->mSize * sizeof(BN_UINT));
+        memcpy(tmpMod->data, mont->mod, mont->mSize * sizeof(BN_UINT));
         tmpval->size = BinDiv(NULL, NULL, tmpval->data, tmpval->size, tmpMod->data, mont->mSize);
         aTmp = tmpval;
     }
@@ -221,7 +221,7 @@ static const BN_UINT *TmpValueHandle(BN_BigNum *r, const BN_BigNum *e, const BN_
         if (ee == NULL) {
             return NULL;
         }
-        (void)memcpy_s(ee->data, esize * sizeof(BN_UINT), e->data, esize * sizeof(BN_UINT));
+        memcpy(ee->data, e->data, esize * sizeof(BN_UINT));
         te = ee->data;
     }
     BN_COPY_BYTES(r->data, r->room, a->data, a->size);
@@ -321,7 +321,7 @@ void BN_MontDestroy(BN_Mont *mont)
     if (mont == NULL) {
         return;
     }
-    (void)memset_s(mont, MontSize(mont->mSize), 0, MontSize(mont->mSize));
+    memset(mont, 0, MontSize(mont->mSize));
     BSL_SAL_FREE(mont);
 }
 
@@ -329,8 +329,8 @@ void BN_MontDestroy(BN_Mont *mont)
 static void SetMod(BN_Mont *mont, const BN_BigNum *mod)
 {
     uint32_t mSize = mod->size;
-    (void)memcpy_s(mont->mod, mSize * sizeof(BN_UINT), mod->data, mSize * sizeof(BN_UINT));
-    (void)memset_s(mont->one, mSize * 3 * sizeof(BN_UINT), 0, mSize * 3 * sizeof(BN_UINT)); /* clear one and RR */
+    memcpy(mont->mod, mod->data, mSize * sizeof(BN_UINT));
+    memset(mont->one, 0, mSize * 3 * sizeof(BN_UINT)); /* clear one and RR */
     mont->one[0] = 1;    /* set one */
     mont->k0 = Inverse(mod->data[0]);
     mont->montRR[mSize * 2] = 1; /* 2^2n */
@@ -339,7 +339,7 @@ static void SetMod(BN_Mont *mont, const BN_BigNum *mod)
 
     // The size of the space required for calculating the montRR is 2 * mSize + 1
     (void)BinDiv(NULL, NULL, mont->montRR, 2 * mSize + 1, mont->mod, mSize);
-    (void)memcpy_s(mont->mod, mSize * sizeof(BN_UINT), mod->data, mSize * sizeof(BN_UINT));
+    memcpy(mont->mod, mod->data, mSize * sizeof(BN_UINT));
 }
 
 /* create a Montgomery structure, where m is a modulo */
@@ -492,9 +492,9 @@ static int32_t GetFirstData(BN_UINT *r, uint32_t base1, uint32_t base2,
     if (base1 == base2) {
         return MontMulBin(r, table1[0]->data, table2[0]->data, mont, opt, consttime);
     } else if (base1 > base2) {
-        (void)memcpy_s(r, mont->mSize * sizeof(BN_UINT), table1[0]->data, mont->mSize * sizeof(BN_UINT));
+        memcpy(r, table1[0]->data, mont->mSize * sizeof(BN_UINT));
     } else {
-        (void)memcpy_s(r, mont->mSize * sizeof(BN_UINT), table2[0]->data, mont->mSize * sizeof(BN_UINT));
+        memcpy(r, table2[0]->data, mont->mSize * sizeof(BN_UINT));
     }
     return CRYPT_SUCCESS;
 }
@@ -511,7 +511,7 @@ static int32_t MontExpOddReady(BN_BigNum *table[], uint32_t num, BN_Mont *mont, 
             return CRYPT_BN_OPTIMIZER_GET_FAIL;
         }
     }
-    (void)memcpy_s(table[0]->data, mont->mSize * sizeof(BN_UINT), b, mont->mSize * sizeof(BN_UINT));
+    memcpy(table[0]->data, b, mont->mSize * sizeof(BN_UINT));
     if (num == 1) {
         // When num is 1, pre-computation is not need.
         return CRYPT_SUCCESS;
@@ -533,7 +533,7 @@ static int32_t MontExpOddReady(BN_BigNum *table[], uint32_t num, BN_Mont *mont, 
             return ret;
         }
     }
-    (void)memcpy_s(table[0]->data, mont->mSize * sizeof(BN_UINT), b, mont->mSize * sizeof(BN_UINT));
+    memcpy(table[0]->data, b, mont->mSize * sizeof(BN_UINT));
     return CRYPT_SUCCESS;
 }
 
@@ -610,9 +610,9 @@ static int32_t MontExpMul(BN_UINT *r, const BN_BigNum *a1, const BN_BigNum *e1,
     const uint32_t readySize2 = 1 << (perSize2 - 1);
 
     // Generate the pre-computation table.
-    (void)memcpy_s(mont->b, mont->mSize * sizeof(BN_UINT), a1->data, mont->mSize * sizeof(BN_UINT));
+    memcpy(mont->b, a1->data, mont->mSize * sizeof(BN_UINT));
     GOTO_ERR_IF(MontExpOddReady(table1, readySize1, mont, opt, consttime), ret);
-    (void)memcpy_s(mont->b, mont->mSize * sizeof(BN_UINT), a2->data, mont->mSize * sizeof(BN_UINT));
+    memcpy(mont->b, a2->data, mont->mSize * sizeof(BN_UINT));
     GOTO_ERR_IF(MontExpOddReady(table2, readySize2, mont, opt, consttime), ret);
     // Obtain the first data.
     GOTO_ERR_IF(GetFirstData(r, base1, base2, table1, table2, mont, opt), ret);

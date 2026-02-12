@@ -31,7 +31,6 @@
 #include "crypt_errno.h"
 #include "hitls_error.h"
 #include "auth_errno.h"
-#include "securec.h"
 
 
 static int32_t PthreadRWLockNew(BSL_SAL_ThreadLockHandle *lock)
@@ -1210,10 +1209,9 @@ void AppendToFile(uint64_t threadId, const char *file, uint32_t lineNo, int32_t 
         return;
     }
     char str[256] = {0};
-    int ret = snprintf_s(str, sizeof(str), sizeof(str) - 1,
-                         "%" PRIu64 " %s:%-4u 0x%08X  %c\n",
+    int ret = snprintf(str, sizeof(str), "%" PRIu64 " %s:%-4u 0x%08X  %c\n",
                          threadId, file, lineNo, errCode, mark ? 'M' : ' ');
-    if (ret < 0) {
+    if (ret < 0 || (size_t)ret >= sizeof(str)) {
         return;
     }
     size_t realLen = strlen(str);

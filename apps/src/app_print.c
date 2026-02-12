@@ -15,7 +15,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_uio.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
@@ -39,10 +39,16 @@ int32_t AppUioVPrint(BSL_UIO *uio, const char *format, va_list args)
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
 
-    ret = vsnprintf_s(buf, LOG_BUFFER_LEN + 1, LOG_BUFFER_LEN, format, args);
-    if (ret < EOK) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+    ret = vsnprintf(buf, LOG_BUFFER_LEN + 1, format, args);
+#pragma GCC diagnostic pop
+    if (ret < 0) {
         BSL_SAL_FREE(buf);
-        return HITLS_APP_SECUREC_FAIL;
+        return HITLS_APP_INTERNAL_EXCEPTION;
+    }
+    if (ret > LOG_BUFFER_LEN) {
+        ret = LOG_BUFFER_LEN;
     }
     ret = BSL_UIO_Write(uio, buf, ret, &writeLen);
     BSL_SAL_FREE(buf);

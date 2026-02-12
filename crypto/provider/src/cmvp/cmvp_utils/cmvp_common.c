@@ -24,7 +24,6 @@
 #include <dlfcn.h>
 #include <syslog.h>
 #include <stdarg.h>
-#include "securec.h"
 #include "crypt_cmvp.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
@@ -114,7 +113,7 @@ static char *CMVP_GetLibPath(void *func)
     GOTO_ERR_IF_TRUE(dladdr(func, &info) == 0, CRYPT_CMVP_COMMON_ERR);
     path = BSL_SAL_Malloc((uint32_t)strlen(info.dli_fname) + 1);
     GOTO_ERR_IF_TRUE(path == NULL, CRYPT_MEM_ALLOC_FAIL);
-    (void)memcpy_s(path, strlen(info.dli_fname), info.dli_fname, strlen(info.dli_fname));
+    memcpy(path, info.dli_fname, strlen(info.dli_fname));
     path[strlen(info.dli_fname)] = '\0';
     return path;
 ERR:
@@ -165,7 +164,7 @@ static int32_t CopyParam(BSL_Param *param, int32_t *selfTestFlag, BSL_Param **ne
         return CRYPT_MEM_ALLOC_FAIL;
     }
     if (param != NULL) {
-        (void)memcpy_s(tmpParam, count * sizeof(BSL_Param), param, index * sizeof(BSL_Param));
+        memcpy(tmpParam, param, index * sizeof(BSL_Param));
     }
     int32_t ret = BSL_PARAM_InitValue(&tmpParam[index], CRYPT_PARAM_CMVP_INTERNAL_LIBCTX_FLAG, BSL_PARAM_TYPE_INT32,
         selfTestFlag, sizeof(int32_t));

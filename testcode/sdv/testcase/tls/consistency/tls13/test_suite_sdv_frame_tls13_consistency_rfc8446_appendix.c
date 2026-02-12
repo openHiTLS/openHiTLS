@@ -19,7 +19,7 @@
 #include "alert.h"
 #include "hitls_crypt_init.h"
 #include "common_func.h"
-#include "securec.h"
+#include <string.h>
 #include "hitls_error.h"
 #include "hs.h"
 #include "frame_tls.h"
@@ -155,7 +155,7 @@ static void Test_ServerHelloNoSupportedVersion(HITLS_Ctx *ctx, uint8_t *data, ui
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     frameMsg.body.hsMsg.body.serverHello.supportedVersion.exState = MISSING_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     ASSERT_EQ(parseLen, *len);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
@@ -260,7 +260,7 @@ static void Test_ResumeServerHelloNoSupportedVersion(HITLS_Ctx *ctx, uint8_t *da
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     frameMsg.body.hsMsg.body.serverHello.supportedVersion.exState = MISSING_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     ASSERT_EQ(parseLen, *len);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
@@ -287,7 +287,7 @@ static void Test_ResumeClientHelloNoSupportedVersion(HITLS_Ctx *ctx, uint8_t *da
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exState = MISSING_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     ASSERT_EQ(parseLen, *len);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
@@ -311,7 +311,7 @@ static void Test_ClientHelloNoSupportedVersion(HITLS_Ctx *ctx, uint8_t *data, ui
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exState = MISSING_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     ASSERT_EQ(parseLen, *len);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
@@ -469,7 +469,7 @@ static void Test_ClientHello2NoSupportedVersion(HITLS_Ctx *ctx, uint8_t *data, u
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exState = MISSING_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     ASSERT_EQ(parseLen, *len);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
@@ -534,7 +534,7 @@ static void Test_Client2HelloNoSupportedGroup(HITLS_Ctx *ctx, uint8_t *data, uin
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
     frameMsg.body.hsMsg.body.clientHello.supportedGroups.exState = MISSING_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     ASSERT_EQ(parseLen, *len);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
@@ -557,7 +557,7 @@ static void Test_ClientHelloNoSupportedGroup(HITLS_Ctx *ctx, uint8_t *data, uint
     FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
     frameMsg.body.hsMsg.body.clientHello.supportedGroups.exState = MISSING_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     ASSERT_EQ(parseLen, *len);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:

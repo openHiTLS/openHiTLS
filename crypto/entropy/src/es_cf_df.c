@@ -17,7 +17,7 @@
 #if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_ENTROPY_SYS)
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_local_types.h"
@@ -61,7 +61,7 @@ static void *ES_CfDfInit(void *mdMeth)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memcpy_s(&ctx->meth, sizeof(EAL_MdMethod), meth, sizeof(EAL_MdMethod));
+    memcpy(&ctx->meth, meth, sizeof(EAL_MdMethod));
     ctx->ctx = meth->newCtx(NULL, meth->id);
     if (ctx->ctx == NULL) {
         BSL_SAL_Free(ctx);

@@ -21,7 +21,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include "bsl_sal.h"
-#include "securec.h"
 #include "bsl_types.h"
 #include "bsl_log.h"
 #include "bsl_init.h"
@@ -127,7 +126,7 @@ HITLS_X509_StoreCtx *HITLS_X509_NewStoreCtxMock(void)
         return NULL;
     }
 
-    (void)memset_s(ctx, sizeof(HITLS_X509_StoreCtx), 0, sizeof(HITLS_X509_StoreCtx));
+    memset(ctx, 0, sizeof(HITLS_X509_StoreCtx));
     ctx->store = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
     if (ctx->store == NULL) {
         BSL_SAL_Free(ctx);
@@ -1746,15 +1745,12 @@ void SDV_X509_BUILD_SLHDSA_CERT_CHAIN_FUNC_TC001(char *variant)
     char rootPath[256] = {0};
     char interPath[256] = {0};
     char endPath[256] = {0};
-    int ret = snprintf_s(rootPath, sizeof(rootPath), sizeof(rootPath) - 1, "../testdata/cert/chain/slhdsa/%s/root.crt",
-                         variant);
-    ASSERT_TRUE(ret > 0);
-    ret = snprintf_s(interPath, sizeof(interPath), sizeof(interPath) - 1, "../testdata/cert/chain/slhdsa/%s/inter.crt",
-                     variant);
-    ASSERT_TRUE(ret > 0);
-    ret =
-        snprintf_s(endPath, sizeof(endPath), sizeof(endPath) - 1, "../testdata/cert/chain/slhdsa/%s/end.crt", variant);
-    ASSERT_TRUE(ret > 0);
+    int ret = snprintf(rootPath, sizeof(rootPath), "../testdata/cert/chain/slhdsa/%s/root.crt", variant);
+    ASSERT_TRUE(ret > 0 && (size_t)ret < sizeof(rootPath));
+    ret = snprintf(interPath, sizeof(interPath), "../testdata/cert/chain/slhdsa/%s/inter.crt", variant);
+    ASSERT_TRUE(ret > 0 && (size_t)ret < sizeof(interPath));
+    ret = snprintf(endPath, sizeof(endPath), "../testdata/cert/chain/slhdsa/%s/end.crt", variant);
+    ASSERT_TRUE(ret > 0 && (size_t)ret < sizeof(endPath));
 
     HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
     ASSERT_TRUE(store != NULL);
@@ -1788,9 +1784,9 @@ void SDV_X509_BUILD_SLHDSA_CERT_CHAIN_FUNC_TC001(char *variant)
         // Test 7a: Certificate with forbidden key usage (keyEncipherment)
         HITLS_X509_Cert *entityInvalidKu = NULL;
         char invalidKuPath[256];
-        ret = snprintf_s(invalidKuPath, sizeof(invalidKuPath), sizeof(invalidKuPath) - 1,
+        ret = snprintf(invalidKuPath, sizeof(invalidKuPath),
                          "../testdata/cert/chain/slhdsa/%s/end_invalid_ku.crt", variant);
-        ASSERT_TRUE(ret > 0);
+        ASSERT_TRUE(ret > 0 && (size_t)ret < sizeof(invalidKuPath));
         ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, invalidKuPath, &entityInvalidKu), HITLS_PKI_SUCCESS);
 
         ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entityInvalidKu, &chain), HITLS_PKI_SUCCESS);
@@ -1803,9 +1799,9 @@ void SDV_X509_BUILD_SLHDSA_CERT_CHAIN_FUNC_TC001(char *variant)
         // Test 7b: Certificate with missing required key usage
         HITLS_X509_Cert *entityMissingKu = NULL;
         char missingKuPath[256] = {0};
-        ret = snprintf_s(missingKuPath, sizeof(missingKuPath), sizeof(missingKuPath) - 1,
+        ret = snprintf(missingKuPath, sizeof(missingKuPath),
                          "../testdata/cert/chain/slhdsa/%s/end_missing_ku.crt", variant);
-        ASSERT_TRUE(ret > 0);
+        ASSERT_TRUE(ret > 0 && (size_t)ret < sizeof(missingKuPath));
         ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, missingKuPath, &entityMissingKu), HITLS_PKI_SUCCESS);
 
         ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entityMissingKu, &chain), HITLS_PKI_SUCCESS);
@@ -4234,9 +4230,9 @@ void SDV_X509_VFY_SIGALG_TRUST_ANCHOR_ALG_MISMATCH_FAIL_TC002(void)
     HITLS_X509_Cert *root = NULL;
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM,
         "../testdata/cert/chain/sigParam/rsa_root.pem", &root), HITLS_PKI_SUCCESS);
-    (void)memset_s(&root->signAlgId, sizeof(root->signAlgId), 0, sizeof(root->signAlgId));
+    memset(&root->signAlgId, 0, sizeof(root->signAlgId));
     root->signAlgId.algId = BSL_CID_ECDSAWITHSHA256;
-    (void)memset_s(&root->tbs.signAlgId, sizeof(root->tbs.signAlgId), 0, sizeof(root->tbs.signAlgId));
+    memset(&root->tbs.signAlgId, 0, sizeof(root->tbs.signAlgId));
     root->tbs.signAlgId.algId = BSL_CID_ECDSAWITHSHA256;
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root,
         sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);

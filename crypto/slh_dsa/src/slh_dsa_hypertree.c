@@ -16,7 +16,6 @@
 #ifdef HITLS_CRYPTO_SLH_DSA
 
 #include <stdint.h>
-#include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "slh_dsa_local.h"

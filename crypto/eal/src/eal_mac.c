@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "crypt_eal_mac.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_local_types.h"
@@ -47,7 +47,7 @@ static CRYPT_EAL_MacCtx *MacNewCtxInner(int32_t algId, CRYPT_EAL_LibCtx *libCtx,
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, algId, CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(macCtx, sizeof(CRYPT_EAL_MacCtx), 0, sizeof(CRYPT_EAL_MacCtx));
+    memset(macCtx, 0, sizeof(CRYPT_EAL_MacCtx));
     void *provCtx = NULL;
 #ifdef HITLS_CRYPTO_PROVIDER
     if (isProvider == true) {
@@ -305,7 +305,7 @@ int32_t CRYPT_EAL_MacCopyCtx(CRYPT_EAL_MacCtx *to, const CRYPT_EAL_MacCtx *from)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MAC, from->id, CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_INVALID_ARG;
     }
-    (void)memcpy_s(to, sizeof(CRYPT_EAL_MacCtx), from, sizeof(CRYPT_EAL_MacCtx));
+    memcpy(to, from, sizeof(CRYPT_EAL_MacCtx));
     to->ctx = ctx;
     return CRYPT_SUCCESS;
 }

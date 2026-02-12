@@ -27,7 +27,7 @@
 #include "hs_msg.h"
 #include "hs_verify.h"
 #include "hs_common.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #ifdef HITLS_TLS_FEATURE_PSK
 static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clientKxMsg)
@@ -52,7 +52,7 @@ static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *client
     if (ctx->hsCtx->kxCtx->pskInfo == NULL) {
         ctx->hsCtx->kxCtx->pskInfo = (PskInfo *)BSL_SAL_Calloc(1u, sizeof(PskInfo));
         if (ctx->hsCtx->kxCtx->pskInfo == NULL) {
-            (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
+            BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
             BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17070, "Calloc fail");
         }
@@ -62,12 +62,11 @@ static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *client
     if (clientKxMsg->pskIdentity != NULL) {
         tmpIdentity = (uint8_t *)BSL_SAL_Calloc(1u, (clientKxMsg->pskIdentitySize + 1) * sizeof(uint8_t));
         if (tmpIdentity == NULL) {
-            (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
+            BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
             BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17071, "Calloc fail");
         }
-        (void)memcpy_s(tmpIdentity, clientKxMsg->pskIdentitySize + 1, clientKxMsg->pskIdentity,
-            clientKxMsg->pskIdentitySize);
+        memcpy(tmpIdentity, clientKxMsg->pskIdentity, clientKxMsg->pskIdentitySize);
         BSL_SAL_FREE(ctx->hsCtx->kxCtx->pskInfo->identity);
         ctx->hsCtx->kxCtx->pskInfo->identity = tmpIdentity;
         ctx->hsCtx->kxCtx->pskInfo->identityLen = clientKxMsg->pskIdentitySize;
@@ -75,7 +74,7 @@ static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *client
 
     uint8_t *tmpPsk = (uint8_t *)BSL_SAL_Dump(psk, pskUsedLen);
     if (tmpPsk == NULL) {
-        (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
+        BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17072, "Dump fail");
     }
@@ -85,7 +84,7 @@ static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *client
     ctx->hsCtx->kxCtx->pskInfo->pskLen = pskUsedLen;
 
     /* sensitive info cleanup */
-    (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
+    BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
 
     return HITLS_SUCCESS;
 }

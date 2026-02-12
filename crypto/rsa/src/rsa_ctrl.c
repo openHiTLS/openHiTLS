@@ -16,11 +16,11 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_RSA
 
+#include <string.h>
 #include "crypt_utils.h"
 #include "rsa_local.h"
 #include "crypt_errno.h"
 #include "crypt_util_ctrl.h"
-#include "securec.h"
 #include "eal_md_local.h"
 
 #ifdef HITLS_CRYPTO_RSA_EMSA_PKCSV15
@@ -40,7 +40,7 @@ static int32_t SetEmsaPkcsV15(CRYPT_RSA_Ctx *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_MD_ALGID);
         return CRYPT_RSA_ERR_MD_ALGID;
     }
-    (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
+    memset(&(ctx->pad), 0, sizeof(RSAPad));
     ctx->pad.type = EMSA_PKCSV15;
     ctx->pad.para.pkcsv15.mdId = mdId;
     return CRYPT_SUCCESS;
@@ -75,7 +75,7 @@ static int32_t SetEmsaPss(CRYPT_RSA_Ctx *ctx, RSA_PadingPara *pad, void *mdProvC
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_PSS_SALT_LEN);
         return CRYPT_RSA_ERR_PSS_SALT_LEN;
     }
-    (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
+    (void)memset(&(ctx->pad), 0, sizeof(RSAPad));
     ctx->pad.para.pss = *pad;
     ctx->pad.type = EMSA_PSS;
     ctx->pad.para.pss.mdProvCtx = mdProvCtx;
@@ -92,8 +92,8 @@ static int32_t SetEmsaIso9796_2(CRYPT_RSA_Ctx *ctx, RSA_PadingPara *pad)
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
         return CRYPT_RSA_NO_KEY_INFO;
     }
-    (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
-    (void)memcpy_s(&(ctx->pad.para.iso9796_2), sizeof(RSA_PadingPara), pad, sizeof(RSA_PadingPara));
+    memset(&(ctx->pad), 0, sizeof(RSAPad));
+    memcpy(&(ctx->pad.para.iso9796_2), pad, sizeof(RSA_PadingPara));
     ctx->pad.type = EMSA_ISO9796_2;
     return CRYPT_SUCCESS;
 }
@@ -103,7 +103,7 @@ static int32_t SetEmsaIso9796_2(CRYPT_RSA_Ctx *ctx, RSA_PadingPara *pad)
 
 void SetOaep(CRYPT_RSA_Ctx *ctx, const RSA_PadingPara *val)
 {
-    (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
+    (void)memset(&(ctx->pad), 0, sizeof(RSAPad));
     ctx->pad.para.oaep = *(const RSA_PadingPara *)val;
     ctx->pad.type = RSAES_OAEP;
     return;
@@ -142,7 +142,7 @@ static int32_t SetRsaesPkcsV15(CRYPT_RSA_Ctx *ctx, const void *val, uint32_t len
         return CRYPT_RSA_SET_EMS_PKCSV15_LEN_ERROR;
     }
 
-    (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
+    memset(&(ctx->pad), 0, sizeof(RSAPad));
     ctx->pad.para.pkcsv15.mdId = *(const int32_t *)val;
     ctx->pad.type = RSAES_PKCSV15;
     return CRYPT_SUCCESS;

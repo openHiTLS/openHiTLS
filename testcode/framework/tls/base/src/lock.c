@@ -15,7 +15,8 @@
 
 #include <pthread.h>
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
+#include <stdlib.h>
 #include "logger.h"
 #include "lock.h"
 Lock *OsLockNew(void)

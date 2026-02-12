@@ -14,7 +14,6 @@
  */
 #include <string.h>
 #include "hitls_build.h"
-#include "securec.h"
 #include "bsl_bytes.h"
 #include "bsl_sal.h"
 #include "tls_binlog_id.h"
@@ -205,18 +204,8 @@ int32_t HS_CombineRandom(const uint8_t *random1, const uint8_t *random2, uint32_
         return HITLS_MSG_HANDLE_RANDOM_SIZE_ERR;
     }
 
-    if (memcpy_s(dest, destSize, random1, randomSize) != EOK) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15575, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "combine random1 fail.", 0, 0, 0, 0);
-        return HITLS_MEMCPY_FAIL;
-    }
-    if (memcpy_s(&dest[randomSize], destSize - randomSize, random2, randomSize) != EOK) {
-        BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15576, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "combine random2 fail.", 0, 0, 0, 0);
-        return HITLS_MEMCPY_FAIL;
-    }
+    memcpy(dest, random1, randomSize);
+    memcpy(&dest[randomSize], random2, randomSize);
 
     return HITLS_SUCCESS;
 }
@@ -239,12 +228,12 @@ uint8_t *HS_PrepareSignDataTlcp(const TLS_Ctx *ctx, const uint8_t *partSignData,
         return NULL;
     }
 
-    (void)memcpy_s(data, dataLen, ctx->hsCtx->clientRandom, HS_RANDOM_SIZE);
-    (void)memcpy_s(&data[HS_RANDOM_SIZE], dataLen - HS_RANDOM_SIZE, ctx->hsCtx->serverRandom, HS_RANDOM_SIZE);
+    memcpy(data, ctx->hsCtx->clientRandom, HS_RANDOM_SIZE);
+    memcpy(&data[HS_RANDOM_SIZE], ctx->hsCtx->serverRandom, HS_RANDOM_SIZE);
     /* Fill the length of the key exchange parameter */
     BSL_Uint24ToByte(partSignDataLen, &data[randomLen]);
     /* Copy key exchange packet data */
-    (void)memcpy_s(&data[randomLen] + exchParamLen, dataLen - randomLen - exchParamLen, partSignData, partSignDataLen);
+    memcpy(&data[randomLen] + exchParamLen, partSignData, partSignDataLen);
 
     *signDataLen = dataLen;
     return data;
@@ -265,10 +254,10 @@ uint8_t *HS_PrepareSignData(const TLS_Ctx *ctx, const uint8_t *partSignData,
         return NULL;
     }
 
-    (void)memcpy_s(data, dataLen, ctx->hsCtx->clientRandom, HS_RANDOM_SIZE);
-    (void)memcpy_s(&data[HS_RANDOM_SIZE], dataLen - HS_RANDOM_SIZE, ctx->hsCtx->serverRandom, HS_RANDOM_SIZE);
+    memcpy(data, ctx->hsCtx->clientRandom, HS_RANDOM_SIZE);
+    memcpy(&data[HS_RANDOM_SIZE], ctx->hsCtx->serverRandom, HS_RANDOM_SIZE);
     /* Copy key exchange packet data */
-    (void)memcpy_s(&data[randomLen], dataLen - randomLen, partSignData, partSignDataLen);
+    memcpy(&data[randomLen], partSignData, partSignDataLen);
 
     *signDataLen = dataLen;
     return data;
@@ -488,20 +477,20 @@ int32_t CheckClientPsk(TLS_Ctx *ctx)
     uint32_t pskUsedLen = ctx->config.tlsConfig.pskClientCb(ctx, NULL, identity, HS_PSK_IDENTITY_MAX_LEN,
                                                             psk, HS_PSK_MAX_LEN);
     if (pskUsedLen == 0 || pskUsedLen > HS_PSK_IDENTITY_MAX_LEN) {
-        (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
+        BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_ILLEGAL_PSK_LEN, BINLOG_ID16816, "pskUsedLen incorrect");
     }
     /* Length of pskid will not exceed 128 bytes */
     uint32_t identityUsedLen = (uint32_t)strnlen((char *)identity, HS_PSK_IDENTITY_MAX_LEN + 1);
     if (identityUsedLen > HS_PSK_IDENTITY_MAX_LEN) {
-        (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
+        BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
         return HITLS_MSG_HANDLE_ILLEGAL_IDENTITY_LEN;
     }
 
     if (ctx->hsCtx->kxCtx->pskInfo == NULL) {
         ctx->hsCtx->kxCtx->pskInfo = (PskInfo *)BSL_SAL_Calloc(1u, sizeof(PskInfo));
         if (ctx->hsCtx->kxCtx->pskInfo == NULL) {
-            (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
+            BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16694, "Calloc fail");
         }
     }
@@ -510,13 +499,13 @@ int32_t CheckClientPsk(TLS_Ctx *ctx)
     if (identityUsedLen > 0) {
         tmpIdentity = (uint8_t *)BSL_SAL_Calloc(1u, (identityUsedLen + 1));
         if (tmpIdentity == NULL) {
-            (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
+            BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16817, "Calloc fail");
         }
-        (void)memcpy_s(tmpIdentity, identityUsedLen + 1, identity, identityUsedLen);
+        memcpy(tmpIdentity, identity, identityUsedLen);
     }
     ctx->hsCtx->kxCtx->pskInfo->psk = (uint8_t *)BSL_SAL_Dump(psk, pskUsedLen);
-    (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
+    BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
     if (ctx->hsCtx->kxCtx->pskInfo->psk == NULL) {
         BSL_SAL_FREE(tmpIdentity);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16818, "Dump fail");
@@ -571,7 +560,7 @@ int32_t HS_GrowMsgBuf(TLS_Ctx *ctx, uint32_t msgSize, bool keepOldData)
     }
     ctx->hsCtx->bufferLen = bufSize;
     if (keepOldData) {
-        (void)memcpy_s(ctx->hsCtx->msgBuf, bufSize, oldDataAddr, oldDataSize);
+        memcpy(ctx->hsCtx->msgBuf, oldDataAddr, oldDataSize);
     }
     BSL_SAL_FREE(oldDataAddr);
     return HITLS_SUCCESS;
@@ -727,11 +716,9 @@ static bool IsSpecialLabel(const char *label, size_t labelLen)
     if (labelLen > MAX_LABEL_SIZE) {
         useLabelLen = MAX_LABEL_SIZE;
     }
-    int32_t ret = EOK;
-    if (labelLen != 0) {
-        ret = memcpy_s(labelBuf, sizeof(labelBuf), label, useLabelLen);
-    }
-    if (ret != EOK) {
+    if (labelLen != 0 && useLabelLen <= sizeof(labelBuf)) {
+        memcpy(labelBuf, label, useLabelLen);
+    } else if (labelLen != 0) {
         return true;
     }
     for (uint32_t index = 0; index < LABEL_SIZE; index++) {
@@ -770,15 +757,15 @@ static int32_t Tls12ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t ou
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16823, "Calloc fail");
     }
     size_t usedLen = 0;
-    (void)memcpy_s(seed + usedLen, seedLen - usedLen, ctx->negotiatedInfo.clientRandom, RANDOM_SIZE);
+    memcpy(seed + usedLen, ctx->negotiatedInfo.clientRandom, RANDOM_SIZE);
     usedLen += RANDOM_SIZE;
-    (void)memcpy_s(seed + usedLen, seedLen - usedLen, ctx->negotiatedInfo.serverRandom, RANDOM_SIZE);
+    memcpy(seed + usedLen, ctx->negotiatedInfo.serverRandom, RANDOM_SIZE);
     usedLen += RANDOM_SIZE;
     if (useContext != 0) {
         BSL_Uint16ToByte((uint16_t)contextLen, seed + usedLen);
         usedLen += sizeof(uint16_t);
         if (context != NULL && contextLen != 0) {
-            (void)memcpy_s(seed + usedLen, seedLen - usedLen, context, contextLen);
+            memcpy(seed + usedLen, context, contextLen);
         }
     }
 

@@ -31,7 +31,6 @@
 #include "app_mac.h"
 #include "bsl_ui.h"
 #include "bsl_uio.h"
-#include "securec.h"
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_rand.h"
 #include "crypt_eal_pkey.h"
@@ -124,7 +123,7 @@ static int32_t STUB_BSL_UI_ReadPwdUtil(BSL_UI_ReadPwdParam *param, char *buff, u
     (void)checkDataCallBack;
     (void)callBackData;
     char result[] = "a1234567";
-    (void)strcpy_s(buff, *buffLen, result);
+    strcpy(buff, result);
     *buffLen = (uint32_t)strlen(buff) + 1;
     return BSL_SUCCESS;
 }
@@ -174,7 +173,7 @@ static char *GetUuidFromP12(const char *directory)
         closedir(dp);
         return NULL;
     }
-    (void)memcpy_s(uuid, len, entry->d_name, len - 1);
+    memcpy(uuid, entry->d_name, len - 1);
     uuid[len - 1] = '\0';
     closedir(dp);
     return uuid;
@@ -201,7 +200,7 @@ static int32_t GetAllUuidsFromDirectory(const char *directory, char **uuidList, 
                 closedir(dp);
                 return -1;
             }
-            (void)memcpy_s(uuidList[count], len, entry->d_name, len - 1);
+            memcpy(uuidList[count], entry->d_name, len - 1);
             uuidList[count][len - 1] = '\0';
             count++;
         }
@@ -233,7 +232,7 @@ typedef struct {
 static int32_t TLCP_Send_Init(void *ctx)
 {
     TLCP_Context *tlcpCtx = (TLCP_Context *)ctx;
-    (void)memset_s(tlcpCtx, sizeof(TLCP_Context), 0, sizeof(TLCP_Context));
+    memset(tlcpCtx, 0, sizeof(TLCP_Context));
     int fd = open(SYNC_DATA_FILE, O_WRONLY | O_CREAT, 0644);
     if (fd == -1) {
         AppPrintError("open %s failed, ret: 0x%08x\n", SYNC_DATA_FILE, fd);
@@ -246,7 +245,7 @@ static int32_t TLCP_Send_Init(void *ctx)
 static int32_t TLCP_Receive_Init(void *ctx)
 {
     TLCP_Context *tlcpCtx = (TLCP_Context *)ctx;
-    (void)memset_s(tlcpCtx, sizeof(TLCP_Context), 0, sizeof(TLCP_Context));
+    memset(tlcpCtx, 0, sizeof(TLCP_Context));
     int fd = open(SYNC_DATA_FILE, O_RDONLY);
     if (fd == -1) {
         AppPrintError("open %s failed, ret: 0x%08x\n", SYNC_DATA_FILE, fd);
@@ -286,7 +285,7 @@ static void TLCP_Deinit(void *ctx)
     }
     TLCP_Context *tlcpCtx = (TLCP_Context *)ctx;
     close(tlcpCtx->fd);
-    (void)memset_s(tlcpCtx, sizeof(TLCP_Context), 0, sizeof(TLCP_Context));
+    memset(tlcpCtx, 0, sizeof(TLCP_Context));
 }
 
 static int32_t CreateFile(const char *file)
@@ -1314,7 +1313,7 @@ void UT_HITLS_APP_KEYMGMT_TC017(void)
     ASSERT_EQ(ret, HITLS_APP_SUCCESS);
 
     CRYPT_EAL_PkeyFreeCtx(keyInfo.pkeyCtx);
-    (void)memset_s(&keyInfo, sizeof(keyInfo), 0, sizeof(keyInfo));
+    memset(&keyInfo, 0, sizeof(keyInfo));
 
     TLCP_Context tlcpCtx = {0};
     ret = TLCP_Send_Init(&tlcpCtx);
@@ -1500,7 +1499,7 @@ static int32_t SM2SignAndVerify(char *uuid)
     char *inFile = WORK_PATH "/test.txt";
     char *outFile = WORK_PATH "/test.signature";
     char pubkey[256] = {0};
-    (void)sprintf_s(pubkey, sizeof(pubkey), "%s/%s-pub.pem", WORK_PATH, uuid);
+    (void)snprintf(pubkey, sizeof(pubkey), "%s/%s-pub.pem", WORK_PATH, uuid);
 
     char *argv[] = {"dgst", "-md", "sm3", "-sign", uuid, SM_PARAM, "-out", outFile, inFile, NULL};
     char *argv2[] = {"dgst", "-md", "sm3", "-verify", pubkey, SM_PARAM, "-signature", outFile, inFile, NULL};

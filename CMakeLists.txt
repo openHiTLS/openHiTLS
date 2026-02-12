@@ -30,9 +30,6 @@ include(helpers/hitls_lib_helpers)
 # Defined dependencies - Define all dependencies between features
 include(hitls_define_dependencies)
 
-# Build Secure C library
-include(${CMAKE_SOURCE_DIR}/platform/SecureC.cmake)
-
 # Load preset (if not already loaded) to set options based on selected profile
 include(hitls_load_preset)
 

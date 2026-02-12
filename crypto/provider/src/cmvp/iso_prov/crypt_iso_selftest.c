@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CMVP_ISO19790
 
-#include "securec.h"
 #include "crypt_types.h"
 #include "crypt_errno.h"
 #include "crypt_iso_provider.h"

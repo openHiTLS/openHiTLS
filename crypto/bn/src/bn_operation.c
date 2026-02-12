@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_BN
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
@@ -422,8 +422,8 @@ int32_t BN_Div(BN_BigNum *q, BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *
         goto err;
     }
 
-    (void)memcpy_s(yTmp->data, y->size * sizeof(BN_UINT), y->data, y->size * sizeof(BN_UINT));
-    (void)memcpy_s(rTmp->data, x->size * sizeof(BN_UINT), x->data, x->size * sizeof(BN_UINT));
+    memcpy(yTmp->data, y->data, y->size * sizeof(BN_UINT));
+    memcpy(rTmp->data, x->data, x->size * sizeof(BN_UINT));
     rTmp->sign = x->sign;
 
     rTmp->size = BinDiv(qTmp->data, &(qTmp->size), rTmp->data, x->size, yTmp->data, y->size);
@@ -433,7 +433,7 @@ int32_t BN_Div(BN_BigNum *q, BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *
             goto err;
         }
         q->sign = (x->sign != y->sign);
-        (void)memcpy_s(q->data, qTmp->size * sizeof(BN_UINT), qTmp->data, qTmp->size * sizeof(BN_UINT));
+        memcpy(q->data, qTmp->data, qTmp->size * sizeof(BN_UINT));
         q->size = qTmp->size;
     }
     if (r != NULL) {
@@ -442,7 +442,7 @@ int32_t BN_Div(BN_BigNum *q, BN_BigNum *r, const BN_BigNum *x, const BN_BigNum *
             goto err;
         }
         r->sign = (rTmp->size == 0) ? false : rTmp->sign; // The symbol can only be positive when the value is 0.
-        (void)memcpy_s(r->data, rTmp->size * sizeof(BN_UINT), rTmp->data, rTmp->size * sizeof(BN_UINT));
+        memcpy(r->data, rTmp->data, rTmp->size * sizeof(BN_UINT));
         r->size = rTmp->size;
     }
 err:
@@ -885,11 +885,7 @@ int32_t BN_Rshift(BN_BigNum *r, const BN_BigNum *a, uint32_t n)
     r->sign = a->sign;
     uint32_t size = BinRshift(r->data, a->data, a->size, n);
     if (size < r->size) {
-        if (memset_s(r->data + size, (r->room - size) * sizeof(BN_UINT), 0,
-            (r->size - size) * sizeof(BN_UINT)) != EOK) {
-            BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-            return CRYPT_SECUREC_FAIL;
-        }
+        memset(r->data + size, 0, (r->size - size) * sizeof(BN_UINT));
     }
     r->size = size;
     return CRYPT_SUCCESS;

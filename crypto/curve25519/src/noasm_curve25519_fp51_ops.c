@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_X25519
 
-#include "securec.h"
+#include <string.h>
 #include "curve25519_local.h"
 
 // X25519 alternative implementation, faster but require int128
@@ -470,7 +470,7 @@ void FpMulScalar(Fp25 out, const Fp25 p, const int32_t scalar)
     out[8] = (int32_t)result[8]; // 8
     out[9] = (int32_t)result[9]; // 9
 
-    (void)memset_s(result, sizeof(result), 0, sizeof(result));
+    memset(result, 0, sizeof(result));
 }
 
 void ScalarMultiPoint(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32])

@@ -17,7 +17,7 @@
 
 #include <semaphore.h>
 #include "process.h"
-#include "securec.h"
+#include <string.h>
 #include "hitls_error.h"
 #include "frame_tls.h"
 #include "frame_link.h"
@@ -392,14 +392,14 @@ static int SetCertPath(HLT_Ctx_Config *ctxConfig, const char *certStr, bool isSe
     char eeCertPath[30] = {0};
     char privKeyPath[30] = {0};
 
-    ret = sprintf_s(caCertPath, sizeof(caCertPath), ROOT_DER, certStr, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(chainCertPath, sizeof(chainCertPath), INTCA_DER, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(eeCertPath, sizeof(eeCertPath), isServer ? SERVER_DER : CLIENT_DER, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(privKeyPath, sizeof(privKeyPath), isServer ? SERVER_KEY_DER : CLIENT_KEY_DER, certStr);
-    ASSERT_TRUE(ret > 0);
+    ret = snprintf(caCertPath, sizeof(caCertPath), ROOT_DER, certStr, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(caCertPath));
+    ret = snprintf(chainCertPath, sizeof(chainCertPath), INTCA_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(chainCertPath));
+    ret = snprintf(eeCertPath, sizeof(eeCertPath), isServer ? SERVER_DER : CLIENT_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(eeCertPath));
+    ret = snprintf(privKeyPath, sizeof(privKeyPath), isServer ? SERVER_KEY_DER : CLIENT_KEY_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(privKeyPath));
     HLT_SetCaCertPath(ctxConfig, (char *)caCertPath);
     HLT_SetChainCertPath(ctxConfig, (char *)chainCertPath);
     HLT_SetEeCertPath(ctxConfig, (char *)eeCertPath);
@@ -417,14 +417,14 @@ static int SetCertPath1(HLT_Ctx_Config *ctxConfig, const char *certStr, const ch
     char eeCertPath[30] = {0};
     char privKeyPath[30] = {0};
 
-    ret = sprintf_s(caCertPath, sizeof(caCertPath), ROOT_DER, certStr1, certStr1);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(chainCertPath, sizeof(chainCertPath), INTCA_DER, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(eeCertPath, sizeof(eeCertPath), isServer ? SERVER_DER : CLIENT_DER, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(privKeyPath, sizeof(privKeyPath), isServer ? SERVER_KEY_DER : CLIENT_KEY_DER, certStr);
-    ASSERT_TRUE(ret > 0);
+    ret = snprintf(caCertPath, sizeof(caCertPath), ROOT_DER, certStr1, certStr1);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(caCertPath));
+    ret = snprintf(chainCertPath, sizeof(chainCertPath), INTCA_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(chainCertPath));
+    ret = snprintf(eeCertPath, sizeof(eeCertPath), isServer ? SERVER_DER : CLIENT_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(eeCertPath));
+    ret = snprintf(privKeyPath, sizeof(privKeyPath), isServer ? SERVER_KEY_DER : CLIENT_KEY_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(privKeyPath));
     HLT_SetCaCertPath(ctxConfig, (char *)caCertPath);
     HLT_SetChainCertPath(ctxConfig, (char *)chainCertPath);
     HLT_SetEeCertPath(ctxConfig, (char *)eeCertPath);
@@ -1129,7 +1129,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC001(int version, 
             ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
 
             ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-            ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);
+            memset(readBuf, 0, READ_BUF_SIZE);
             ASSERT_TRUE(HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen) == 0);
             ASSERT_TRUE(readLen == strlen(writeBuf));
             ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
@@ -1252,7 +1252,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC002(int version, 
         else {
             ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
             ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-            ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);
+            memset(readBuf, 0, READ_BUF_SIZE);
             ASSERT_TRUE(HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen) == 0);
             ASSERT_TRUE(readLen == strlen(writeBuf));
             ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
@@ -1371,7 +1371,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC003(int version, 
         else {
             ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
             ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-            ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);
+            memset(readBuf, 0, READ_BUF_SIZE);
             ASSERT_TRUE(HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen) == 0);
             ASSERT_TRUE(readLen == strlen(writeBuf));
             ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
@@ -1490,7 +1490,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RESUME_TAKE_EXTENSION_TC004(int version, 
         else {
             ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
             ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-            ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);
+            memset(readBuf, 0, READ_BUF_SIZE);
             ASSERT_TRUE(HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen) == 0);
             ASSERT_TRUE(readLen == strlen(writeBuf));
             ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);

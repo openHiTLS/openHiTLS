@@ -42,7 +42,7 @@ enum BSL_ERROR {
     BSL_NULL_INPUT = 0x03000000,            /**< NULL input. */
     BSL_INTERNAL_EXCEPTION,                 /**< Error occurs when calling internal BSL functions */
     BSL_MALLOC_FAIL,                        /**< Error occurs when allocating memory */
-    BSL_MEMCPY_FAIL,                        /**< Error occurs when calling memcpy_s. */
+    BSL_MEMCPY_FAIL,                        /**< Error occurs when calling memcpy. */
     BSL_MEMMOVE_FAIL,                       /**< Error occurs when calling memmove. */
     BSL_INVALID_ARG,                        /**< Invalid arguments. */
     BSL_DUMP_FAIL,                          /**< Error occurs when duplicating memory */

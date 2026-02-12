@@ -28,7 +28,7 @@
 #include "app_function.h"
 #include "app_provider.h"
 #include "app_sm.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "bsl_ui.h"
@@ -117,7 +117,7 @@ static int32_t STUB_BSL_UI_ReadPwdUtil(BSL_UI_ReadPwdParam *param, char *buff, u
     (void)checkDataCallBack;
     (void)callBackData;
     char result[] = PASSWORD;
-    (void)strcpy_s(buff, *buffLen, result);
+    strcpy(buff, result);
     *buffLen = (uint32_t)strlen(buff) + 1;
     return BSL_SUCCESS;
 }

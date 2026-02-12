@@ -20,7 +20,6 @@
 #include "crypt_eal_pkey.h"
 #include "crypt_util_rand.h"
 #include "eal_pkey_local.h"
-#include "securec.h"
 /* END_HEADER */
 
 /* @

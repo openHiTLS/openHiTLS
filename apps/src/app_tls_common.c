@@ -23,7 +23,6 @@
 #include <netdb.h>
 #include <errno.h>
 #include <fcntl.h>
-#include "securec.h"
 #include "app_errno.h"
 #include "app_print.h"
 #include "app_utils.h"
@@ -123,7 +122,7 @@ int ConfigureCipherSuites(HITLS_Config *config, const char *cipherStr, APP_Proto
         AppPrintError("Failed to allocate memory for cipher string\n");
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
-    strcpy_s(cipherStrCopy, strlen(cipherStr) + 1, cipherStr);
+    strcpy(cipherStrCopy, cipherStr);
 
     // Count number of cipher suites (based on colon count)
     uint32_t cipherCount = 1;
@@ -144,7 +143,7 @@ int ConfigureCipherSuites(HITLS_Config *config, const char *cipherStr, APP_Proto
     // Parse each cipher suite
     uint32_t index = 0;
     char *nextTmp = NULL;
-    char *token = strtok_s(cipherStrCopy, ":", &nextTmp);
+    char *token = strtok_r(cipherStrCopy, ":", &nextTmp);
     while (token != NULL && index < cipherCount) {
         const HITLS_Cipher *cipher = HITLS_CFG_GetCipherSuiteByStdName((const uint8_t *)token);
         if (cipher == NULL) {
@@ -174,7 +173,7 @@ int ConfigureCipherSuites(HITLS_Config *config, const char *cipherStr, APP_Proto
         }
 
         index++;
-        token = strtok_s(NULL, ":", &nextTmp);
+        token = strtok_r(NULL, ":", &nextTmp);
     }
 
     // Set cipher suite array
@@ -238,7 +237,7 @@ static int32_t GetPkeyCtxFromUuid(AppProvider *provider, HITLS_APP_SM_Param *smP
 {
     HITLS_APP_KeyInfo keyInfo = {0};
     HITLS_APP_SM_Param param = {0};
-    (void)memcpy_s(&param, sizeof(HITLS_APP_SM_Param), smParam, sizeof(HITLS_APP_SM_Param));
+    memcpy(&param, smParam, sizeof(HITLS_APP_SM_Param));
     param.uuid = uuid;
     int32_t ret = HITLS_APP_FindKey(provider, &param, CRYPT_PKEY_SM2, &keyInfo);
     if (ret != HITLS_APP_SUCCESS) {
@@ -381,7 +380,7 @@ static CRYPT_EAL_PkeyCtx *LoadKeyFromFile(APP_CertConfig *certConfig, bool isSig
         size_t len = strlen(password) + 1;
         pass = BSL_SAL_Malloc(len);
         if (pass != NULL) {
-            strcpy_s(pass, len, password);
+            strcpy(pass, password);
         }
     }
 
@@ -564,7 +563,7 @@ int CreateTCPSocket(APP_NetworkAddr *addr, int timeout)
     
     /* Connect to server */
     struct sockaddr_in serverAdd;
-    memset_s(&serverAdd, sizeof(serverAdd), 0, sizeof(serverAdd));
+    memset(&serverAdd, 0, sizeof(serverAdd));
     serverAdd.sin_family = AF_INET;
     serverAdd.sin_port = htons(addr->port);
     
@@ -576,7 +575,7 @@ int CreateTCPSocket(APP_NetworkAddr *addr, int timeout)
             BSL_SAL_SockClose(sockfd);
             return -1;
         }
-        memcpy_s(&serverAdd.sin_addr, sizeof(serverAdd.sin_addr), hostEntry->h_addr_list[0], hostEntry->h_length);
+        memcpy(&serverAdd.sin_addr, hostEntry->h_addr_list[0], (size_t)hostEntry->h_length);
     }
     
     if (BSL_SAL_SockConnect(sockfd, (BSL_SAL_SockAddr)&serverAdd, sizeof(serverAdd)) < 0) {
@@ -603,7 +602,7 @@ int CreateUDPSocket(APP_NetworkAddr *addr, int timeout)
     
     /* Connect UDP socket to server */
     struct sockaddr_in serverAdd;
-    memset_s(&serverAdd, sizeof(serverAdd), 0, sizeof(serverAdd));
+    memset(&serverAdd, 0, sizeof(serverAdd));
     serverAdd.sin_family = AF_INET;
     serverAdd.sin_port = htons(addr->port);
     
@@ -615,7 +614,7 @@ int CreateUDPSocket(APP_NetworkAddr *addr, int timeout)
             BSL_SAL_SockClose(sockfd);
             return -1;
         }
-        memcpy_s(&serverAdd.sin_addr, sizeof(serverAdd.sin_addr), hostEntry->h_addr_list[0], hostEntry->h_length);
+        memcpy(&serverAdd.sin_addr, hostEntry->h_addr_list[0], (size_t)hostEntry->h_length);
     }
     
     if (BSL_SAL_SockConnect(sockfd, (BSL_SAL_SockAddr)&serverAdd, sizeof(serverAdd)) < 0) {
@@ -641,7 +640,7 @@ int CreateTCPListenSocket(APP_NetworkAddr *addr, int backlog)
     
     /* Bind to address */
     struct sockaddr_in bindAddr;
-    memset_s(&bindAddr, sizeof(bindAddr), 0, sizeof(bindAddr));
+    memset(&bindAddr, 0, sizeof(bindAddr));
     bindAddr.sin_family = AF_INET;
     bindAddr.sin_port = htons(addr->port);
     
@@ -689,7 +688,7 @@ int CreateUDPListenSocket(APP_NetworkAddr *addr, int timeout)
     
     /* Bind to address */
     struct sockaddr_in bindAddr;
-    memset_s(&bindAddr, sizeof(bindAddr), 0, sizeof(bindAddr));
+    memset(&bindAddr, 0, sizeof(bindAddr));
     bindAddr.sin_family = AF_INET;
     bindAddr.sin_port = htons(addr->port);
     
@@ -796,7 +795,7 @@ int ParseConnectString(const char *connectStr, APP_NetworkAddr *addr)
         AppPrintError("Failed to alloc memory.\n");
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
-    strcpy_s(strCopy, len, connectStr);
+    strcpy(strCopy, connectStr);
     
     char *colon_pos = strrchr(strCopy, ':');
     if (colon_pos == NULL) {
@@ -810,7 +809,7 @@ int ParseConnectString(const char *connectStr, APP_NetworkAddr *addr)
     size_t host_len = strlen(strCopy) + 1;
     addr->host = BSL_SAL_Malloc(host_len);
     if (addr->host != NULL) {
-        strcpy_s(addr->host, host_len, strCopy);
+        strcpy(addr->host, strCopy);
     }
     addr->port = atoi(colon_pos + 1);
     
@@ -841,8 +840,8 @@ int32_t GetHeartBeat(uint8_t *buffer, uint32_t *len)
     }
     BSL_Uint64ToByte(time, (uint8_t *)&time);
     const char *heartBeat = HEARTBEAT_STR;
-    (void)memcpy_s(buffer, APP_HEARTBEAT_LEN, heartBeat, strlen(heartBeat));
-    (void)memcpy_s(buffer + strlen(heartBeat), APP_HEARTBEAT_LEN - strlen(heartBeat), &time, sizeof(time));
+    memcpy(buffer, heartBeat, strlen(heartBeat));
+    memcpy(buffer + strlen(heartBeat), &time, sizeof(time));
     *len = APP_HEARTBEAT_LEN;
     return HITLS_APP_SUCCESS;
 }
@@ -860,7 +859,7 @@ int32_t ParseHeartBeat(uint8_t *buffer, uint32_t len)
         return HITLS_APP_INVALID_ARG;
     }
     int64_t time = 0;
-    (void)memcpy_s(&time, sizeof(time), buffer + strlen(HEARTBEAT_STR), sizeof(time));
+    memcpy(&time, buffer + strlen(HEARTBEAT_STR), sizeof(time));
     time = BSL_ByteToUint64((uint8_t *)&time);
     return HITLS_APP_SUCCESS;
 }

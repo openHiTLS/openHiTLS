@@ -17,7 +17,6 @@
 #include <ctype.h>
 #include "hitls_build.h"
 #include "hitls_pki_errno.h"
-#include "securec.h"
 #include "bsl_sal.h"
 #include "hitls_pki_types.h"
 #include "bsl_list.h"
@@ -179,7 +178,7 @@ int32_t X509_VerifyHostnameWithSan(HITLS_X509_Cert *cert, const char *hostname,
             HITLS_X509_ClearSubjectAltName(&san);
             return BSL_MALLOC_FAIL;
         }
-        (void)memcpy_s(dnsName, gn->value.dataLen + 1, gn->value.data, gn->value.dataLen);
+        memcpy(dnsName, gn->value.data, gn->value.dataLen);
         dnsName[gn->value.dataLen] = '\0';
         ret = MatchCb(dnsName, hostname);
         BSL_SAL_Free(dnsName);

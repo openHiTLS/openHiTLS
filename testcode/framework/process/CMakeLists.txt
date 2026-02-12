@@ -17,7 +17,6 @@ set_target_properties(process PROPERTIES
 )
 
 target_include_directories(process PRIVATE
-    ${openHiTLS_SRC}/platform/Secure_C/include
     ${openHiTLS_SRC}/testcode/framework/tls/resource/include
     ${openHiTLS_SRC}/testcode/framework/tls/base/include
     ${openHiTLS_SRC}/testcode/framework/tls/process/include
@@ -41,7 +40,6 @@ target_link_directories(process
     PRIVATE
     ${openHiTLS_SRC}/build
     ${openHiTLS_SRC}/testcode/output/lib
-    ${openHiTLS_SRC}/platform/Secure_C/lib
 )
 
 set(PROCESS_LIBS tls_hlt tls_frame hitls_tls)
@@ -50,16 +48,6 @@ if(ENABLE_PKI AND ${BUILD_PKI} GREATER -1)
     list(APPEND PROCESS_LIBS hitls_pki)
 endif()
 
-# Use find_library to support cross-platform static library extensions (.a on Unix, .lib on Windows)
-find_library(BOUNDSCHECK_STATIC_LIB
-    NAMES libboundscheck.a boundscheck  # Try .a explicitly first, then let CMake find static version
-    PATHS ${openHiTLS_SRC}/platform/Secure_C/lib
-    NO_DEFAULT_PATH
-    NO_CMAKE_FIND_ROOT_PATH
-)
-if(NOT BOUNDSCHECK_STATIC_LIB)
-    message(FATAL_ERROR "Could not find static boundscheck library at ${openHiTLS_SRC}/platform/Secure_C/lib")
-endif()
-list(APPEND PROCESS_LIBS hitls_crypto hitls_bsl ${BOUNDSCHECK_STATIC_LIB} pthread dl rec_wrapper)
+list(APPEND PROCESS_LIBS hitls_crypto hitls_bsl pthread dl rec_wrapper)
 
 target_link_libraries(process ${PROCESS_LIBS})

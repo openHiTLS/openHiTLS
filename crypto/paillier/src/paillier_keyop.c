@@ -22,7 +22,6 @@
 #include "bsl_err_internal.h"
 #include "paillier_local.h"
 #include "crypt_errno.h"
-#include "securec.h"
 #include "bsl_sal.h"
 #include "crypt_params_key.h"
 

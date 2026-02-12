@@ -15,7 +15,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MLKEM
 #include <string.h>
-#include "securec.h"
 #include "crypt_utils.h"
 #include "crypt_sha3.h"
 #include "crypt_errno.h"

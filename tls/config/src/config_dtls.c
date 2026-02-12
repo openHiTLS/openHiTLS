@@ -17,7 +17,6 @@
 #include <stdbool.h>
 #include "hitls_build.h"
 #ifdef HITLS_TLS_PROTO_DTLS
-#include "securec.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #include "bsl_log.h"

@@ -17,7 +17,7 @@
 #ifdef HITLS_BSL_UI
 
 #include <stdio.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "ui_type.h"
 #include "bsl_errno.h"
@@ -34,7 +34,7 @@ BSL_UI *BSL_UI_New(const BSL_UI_Method *method)
     if (ui == NULL) {
         return NULL;
     }
-    (void)memset_s(ui, sizeof(BSL_UI), 0, sizeof(BSL_UI));
+    memset(ui, 0, sizeof(BSL_UI));
     int32_t ret = BSL_SAL_ThreadLockNew(&(ui->lock));
     if (ret != BSL_SUCCESS) {
         BSL_SAL_FREE(ui);
@@ -65,7 +65,7 @@ BSL_UI_Method *BSL_UI_MethodNew(void)
     if (method == NULL) {
         return method;
     }
-    (void)memset_s(method, sizeof(BSL_UI_Method), 0, sizeof(BSL_UI_Method));
+    memset(method, 0, sizeof(BSL_UI_Method));
     return method;
 }
 
@@ -153,13 +153,13 @@ char *BSL_UI_ConstructPrompt(const char *objectDesc, const char *objectName)
     if (outString == NULL) {
         return NULL;
     }
-    (void)strcpy_s(outString, outLen, start);
-    (void)strcat_s(outString, outLen, objectDesc);
+    (void)strcpy(outString, start);
+    (void)strcat(outString, objectDesc);
     if (objectName != NULL) {
-        (void)strcat_s(outString, outLen, middle);
-        (void)strcat_s(outString, outLen, objectName);
+        (void)strcat(outString, middle);
+        (void)strcat(outString, objectName);
     }
-    (void)strcat_s(outString, outLen, end);
+    (void)strcat(outString, end);
     return outString;
 }
 
@@ -194,9 +194,8 @@ static int32_t BSL_UI_OperVerifyData(BSL_UI *ui, const char *promptStr, BSL_UI_D
         BSL_ERR_PUSH_ERROR(BSL_UI_MEM_ALLOC_FAIL);
         return BSL_UI_MEM_ALLOC_FAIL;
     }
-    (void)memset_s(verifyStr, verifyLen, 0, verifyLen);
-    (void)strcpy_s(verifyStr, verifyLen, verifyPrompt);
-    (void)strcat_s(verifyStr, verifyLen, promptStr);
+    (void)strcpy(verifyStr, verifyPrompt);
+    (void)strcat(verifyStr, promptStr);
     writeData.data = verifyStr;
     writeData.dataLen = (uint32_t)strlen(verifyStr) + 1;
     readData.data = verifyRes;
@@ -216,7 +215,7 @@ static int32_t BSL_UI_OperVerifyData(BSL_UI *ui, const char *promptStr, BSL_UI_D
         ret = BSL_UI_VERIFY_BUFF_FAILED;
     }
     BSL_SAL_FREE(verifyStr);
-    (void)memset_s(verifyRes, sizeof(verifyRes), 0, sizeof(verifyRes));
+    memset(verifyRes, 0, sizeof(verifyRes));
     BSL_ERR_PUSH_ERROR(ret);
     return ret;
 }
@@ -291,16 +290,20 @@ int32_t BSL_UI_ReadPwdUtil(BSL_UI_ReadPwdParam *param, char *buff, uint32_t *buf
                 break;
             }
         }
-        if (strcpy_s(buff, *buffLen, result) != EOK) {
-            ret = BSL_UI_OUTPUT_BUFF_TOO_SHORT;
-            break;
+        {
+            size_t rlen = strlen(result);
+            if (rlen + 1 > *buffLen) {
+                ret = BSL_UI_OUTPUT_BUFF_TOO_SHORT;
+                break;
+            }
+            memcpy(buff, result, rlen + 1);
+            *buffLen = (uint32_t)(rlen + 1);
         }
-        *buffLen = (uint32_t)strlen(buff) + 1;
     } while (0);
     ui->method->uiClose(ui);
     BSL_UI_Free(ui);
     BSL_SAL_FREE(promptStr);
-    (void)memset_s(result, sizeof(result), 0, sizeof(result));
+    memset(result, 0, sizeof(result));
     return ret;
 }
 
@@ -335,7 +338,7 @@ BSL_UI_DataPack *BSL_UI_DataPackNew(void)
     if (data == NULL) {
         return NULL;
     }
-    (void)memset_s(data, sizeof(BSL_UI_DataPack), 0, sizeof(BSL_UI_DataPack));
+    memset(data, 0, sizeof(BSL_UI_DataPack));
     return data;
 }
 

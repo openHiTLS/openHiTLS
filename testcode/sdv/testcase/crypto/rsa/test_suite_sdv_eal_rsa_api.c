@@ -433,14 +433,14 @@ void SDV_CRYPTO_RSA_SET_PRV_API_TC001(int isProvider)
 
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey) == CRYPT_SUCCESS);
 
-    (void)memset_s(prvD, sizeof(prvD), 0x00, sizeof(prvD));
+    memset(prvD, 0x00, sizeof(prvD));
     ASSERT_TRUE_AND_LOG("d is 0", CRYPT_EAL_PkeySetPrv(pkey2, &prvKey) == CRYPT_RSA_ERR_INPUT_VALUE);
 
     prvD[sizeof(prvD) - 1] = 1;
     ASSERT_TRUE_AND_LOG("d is 1", CRYPT_EAL_PkeySetPrv(pkey2, &prvKey) == CRYPT_RSA_ERR_INPUT_VALUE);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey) == CRYPT_SUCCESS);
-    (void)memset_s(prvN, sizeof(prvN), 0x00, sizeof(prvN));
+    memset(prvN, 0x00, sizeof(prvN));
     ASSERT_TRUE_AND_LOG("n is 0", CRYPT_EAL_PkeySetPrv(pkey2, &prvKey) == CRYPT_RSA_ERR_KEY_BITS);
 
     prvKey.key.rsaPrv.q = prvQ;
@@ -449,11 +449,11 @@ void SDV_CRYPTO_RSA_SET_PRV_API_TC001(int isProvider)
     prvKey.key.rsaPrv.pLen = 600;  // 600 bytes > 1024 bits
 
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey) == CRYPT_SUCCESS);
-    (void)memset_s(prvP, sizeof(prvP), 0x00, sizeof(prvP));
+    memset(prvP, 0x00, sizeof(prvP));
     ASSERT_TRUE_AND_LOG("p is 0", CRYPT_EAL_PkeySetPrv(pkey2, &prvKey) == CRYPT_RSA_ERR_INPUT_VALUE);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey) == CRYPT_SUCCESS);
-    (void)memset_s(prvQ, sizeof(prvQ), 0x00, sizeof(prvQ));
+    memset(prvQ, 0x00, sizeof(prvQ));
     ASSERT_TRUE_AND_LOG("q is 0", CRYPT_EAL_PkeySetPrv(pkey2, &prvKey) == CRYPT_RSA_ERR_INPUT_VALUE);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey) == CRYPT_SUCCESS);
@@ -506,8 +506,8 @@ void SDV_CRYPTO_RSA_SET_PRV_API_TC002(int isProvider)
     uint8_t prvN[2050];  // max rsa key len is 16384 bits, 16384/8 = 2048, 2050 > 2048
     CRYPT_EAL_PkeyPrv prvKey = {0};
 
-    (void)memset_s(prvD, sizeof(prvD), 0xff, sizeof(prvD));
-    (void)memset_s(prvN, sizeof(prvN), 0xff, sizeof(prvN));
+    memset(prvD, 0xff, sizeof(prvD));
+    memset(prvN, 0xff, sizeof(prvN));
     SetRsaPrvKey(&prvKey, prvN, RSA_MIN_KEYLEN, prvD, RSA_MIN_KEYLEN);
 
     TestMemInit();
@@ -598,7 +598,7 @@ void SDV_CRYPTO_RSA_SET_PUB_API_TC001(int isProvider)
 
     pubKey.key.rsaPub.n = pubN;
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPub(pkey, &pubKey) == CRYPT_SUCCESS);
-    (void)memset_s(pubN, sizeof(pubN), 0x00, sizeof(pubN));
+    memset(pubN, 0x00, sizeof(pubN));
     ASSERT_TRUE_AND_LOG("n is 0", CRYPT_EAL_PkeySetPub(pkey2, &pubKey) == CRYPT_RSA_ERR_KEY_BITS);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPub(pkey, &pubKey) == CRYPT_SUCCESS);
@@ -607,7 +607,7 @@ void SDV_CRYPTO_RSA_SET_PUB_API_TC001(int isProvider)
 
     pubKey.key.rsaPub.e = pubE;
     ASSERT_TRUE(CRYPT_EAL_PkeyGetPub(pkey, &pubKey) == CRYPT_SUCCESS);
-    (void)memset_s(pubE, sizeof(pubE), 0x00, sizeof(pubE));
+    memset(pubE, 0x00, sizeof(pubE));
     ASSERT_TRUE_AND_LOG("e is 0", CRYPT_EAL_PkeySetPub(pkey2, &pubKey) == CRYPT_RSA_ERR_INPUT_VALUE);
 
 EXIT:
@@ -652,8 +652,8 @@ void SDV_CRYPTO_RSA_SET_PUB_API_TC002(int isProvider)
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
 
-    (void)memset_s(pubE, sizeof(pubE), 0xff, sizeof(pubE));
-    (void)memset_s(pubN, sizeof(pubN), 0xff, sizeof(pubN));
+    memset(pubE, 0xff, sizeof(pubE));
+    memset(pubN, 0xff, sizeof(pubN));
     ASSERT_TRUE_AND_LOG("e = n", CRYPT_EAL_PkeySetPub(pkey, &pubKey) == CRYPT_RSA_ERR_INPUT_VALUE);
 
     pubKey.key.rsaPub.nLen = RSA_MIN_KEYLEN - 1;
@@ -679,7 +679,7 @@ void SDV_CRYPTO_RSA_SET_PUB_API_TC002(int isProvider)
     pubKey.key.rsaPub.eLen = RSA_MAX_KEYLEN;
     ASSERT_TRUE_AND_LOG("Max len failed case", CRYPT_EAL_PkeySetPub(pkey, &pubKey) == CRYPT_RSA_ERR_KEY_BITS);
 
-    (void)memset_s(pubE, sizeof(pubE), 0, sizeof(pubE));
+    memset(pubE, 0, sizeof(pubE));
     ASSERT_TRUE_AND_LOG("e = 0", CRYPT_EAL_PkeySetPub(pkey, &pubKey) == CRYPT_RSA_ERR_INPUT_VALUE);
 
     pubE[RSA_MAX_KEYLEN - 1] = 1;
@@ -846,7 +846,7 @@ void SDV_CRYPTO_RSA_CTRL_API_TC001(Hex *n, Hex *d, Hex *salt, int hashId, int is
         BSL_PARAM_END};
     int32_t pkcsv15 = hashId;
     uint8_t badSalt[2500];
-    (void)memset_s(badSalt, sizeof(badSalt), 'A', sizeof(badSalt));
+    memset(badSalt, 'A', sizeof(badSalt));
     const uint32_t badSaltLen = 2500;  // 2500 is greater than the maximum length.
 
     SetRsaPrvKey(&prvkey, n->x, n->len, d->x, d->len);

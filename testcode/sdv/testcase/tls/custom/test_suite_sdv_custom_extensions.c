@@ -21,7 +21,6 @@
 #include <stddef.h>
 #include <string.h>
 #include <errno.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "frame_tls.h"
 #include "hitls_config.h"

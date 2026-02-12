@@ -15,7 +15,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_TLS_FEATURE_SECURITY
 #include <stdint.h>
-#include "securec.h"
 #include "bsl_err_internal.h"
 #include "tls_binlog_id.h"
 #include "hitls_error.h"

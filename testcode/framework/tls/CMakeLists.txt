@@ -21,7 +21,6 @@ if(TLS_DEBUG)
 endif()
 
 target_include_directories(TLS_TEST_INTF INTERFACE
-    ${openHiTLS_SRC}/platform/Secure_C/include
     ${openHiTLS_SRC}/include
     ${openHiTLS_SRC}/include/tls
     ${openHiTLS_SRC}/include/bsl

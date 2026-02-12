@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MODES
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_bytes.h"
 #include "bsl_err_internal.h"
@@ -115,7 +115,7 @@ void MODES_ClearVfyTag(uint8_t *vfyTag, uint32_t *vfyTagLen, uint32_t maxTagLen)
     if (vfyTag == NULL || vfyTagLen == NULL) {
         return;
     }
-    (void)memset_s(vfyTag, maxTagLen, 0, maxTagLen);
+    memset(vfyTag, 0, maxTagLen);
     *vfyTagLen = 0;
 }
 
@@ -134,7 +134,7 @@ int32_t MODES_SetVfyTag(uint8_t *vfyTag, uint32_t *vfyTagLen, uint32_t maxTagLen
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_TAGLEN_ERROR);
         return CRYPT_MODES_TAGLEN_ERROR;
     }
-    (void)memcpy_s(vfyTag, maxTagLen, tag, inputTagLen);
+    (void)memcpy(vfyTag, tag, inputTagLen);
     *vfyTagLen = inputTagLen;
     return CRYPT_SUCCESS;
 }
@@ -338,7 +338,7 @@ static int32_t MODES_CipherUpdateCache(MODES_CipherCtx *ctx,  void *blockUpdate,
         uint8_t padding = blockSize - ctx->dataLen;
         padding = (*inLen) > (padding) ? padding : (uint8_t)(*inLen);
         if (padding != 0) {
-            (void)memcpy_s(ctx->data + ctx->dataLen, (EAL_MAX_BLOCK_LENGTH - ctx->dataLen), (*in), padding);
+            memcpy(ctx->data + ctx->dataLen, (*in), padding);
             (*inLen) -= padding;
             (*in) += padding;
             ctx->dataLen += padding;
@@ -413,16 +413,17 @@ int32_t MODES_CipherFinal(MODES_CipherCtx *modeCtx, void *blockUpdate, uint8_t *
         outLenTemp = modeCtx->dataLen;
         ret = MODES_BlockUnPadding(modeCtx->pad, tmpBuf, modeCtx->commonCtx.blockSize, &outLenTemp);
         if (ret != CRYPT_SUCCESS) {
-            (void)memset_s(tmpBuf, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+            memset(tmpBuf, 0, EAL_MAX_BLOCK_LENGTH);
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        if (memcpy_s(out, *outLen, tmpBuf, outLenTemp) != EOK) {
-            (void)memset_s(tmpBuf, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+        if (outLenTemp > *outLen) {
+            memset(tmpBuf, 0, EAL_MAX_BLOCK_LENGTH);
             BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
             return CRYPT_EAL_BUFF_LEN_NOT_ENOUGH;
         }
-        (void)memset_s(tmpBuf, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+        memcpy(out, tmpBuf, outLenTemp);
+        memset(tmpBuf, 0, EAL_MAX_BLOCK_LENGTH);
         *outLen = outLenTemp;
     }
     modeCtx->dataLen = 0;
@@ -472,7 +473,7 @@ int32_t MODES_CipherUpdate(MODES_CipherCtx *modeCtx, void *blockUpdate, const ui
     }
     // Process the new cache.
     if (left > 0) {
-        (void)memcpy_s(modeCtx->data, modeCtx->commonCtx.blockSize, tmpIn + len, left);
+        memcpy(modeCtx->data, tmpIn + len, left);
         modeCtx->dataLen = left;
     }
 
@@ -499,7 +500,7 @@ int32_t MODES_CipherDeInitCtx(MODES_CipherCtx *modeCtx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    (void)memset_s(modeCtx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+    memset(modeCtx->data, 0, EAL_MAX_BLOCK_LENGTH);
     modeCtx->dataLen = 0;
     modeCtx->pad = CRYPT_PADDING_NONE;
     MODES_Clean(&modeCtx->commonCtx);
@@ -529,7 +530,7 @@ int32_t MODES_SetIv(MODES_CipherCommonCtx *ctx, const uint8_t *val, uint32_t len
         return CRYPT_MODES_IVLEN_ERROR;
     }
 
-    (void)memcpy_s(ctx->iv, MODES_MAX_IV_LENGTH, val, len);
+    (void)memcpy(ctx->iv, val, len);
     ctx->offset = 0;    // If the IV value is changed, the original offset is useless.
     ctx->ivIndex = 0;
     return CRYPT_SUCCESS;
@@ -549,7 +550,7 @@ int32_t MODES_GetIv(MODES_CipherCommonCtx *ctx, uint8_t *val, uint32_t len)
         return CRYPT_MODE_ERR_INPUT_LEN;
     }
 
-    (void)memcpy_s(val, len, ctx->iv, ivLen);
+    memcpy(val, ctx->iv, ivLen);
 
     return CRYPT_SUCCESS;
 }
@@ -558,7 +559,7 @@ int32_t MODES_CipherCtrl(MODES_CipherCtx *ctx, int32_t opt, void *val, uint32_t 
 {
     switch (opt) {
         case CRYPT_CTRL_REINIT_STATUS:
-            (void)memset_s(ctx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+            memset(ctx->data, 0, EAL_MAX_BLOCK_LENGTH);
             ctx->dataLen = 0;
             ctx->pad = CRYPT_PADDING_NONE;
             return MODES_SetIv(&ctx->commonCtx, val, len);

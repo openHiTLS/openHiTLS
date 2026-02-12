@@ -22,7 +22,7 @@
 #include "crypt_sm9.h"
 #include "crypt_params_key.h"
 #include "bsl_params.h"
-#include "securec.h"
+#include <string.h>
 
 #define SM9_SIGNATURE_LEN 96
 #define SM9_SIG_MASTER_KEY_LEN 32
@@ -318,7 +318,8 @@ void SDV_CRYPTO_SM9_GET_PRV_API_TC001(Hex *masterKey, Hex *userId)
     ASSERT_EQ(ret, SM9_OK);
     ret = SM9_GenSignUserKey(nativeCtx, userId->x, userId->len);
     ASSERT_EQ(ret, SM9_OK);
-    memcpy_s(expectedUserKey, sizeof(expectedUserKey), nativeCtx->sig_dsk, SM9_SIG_USR_PRIKEY_BYTES);
+    if ((SM9_SIG_USR_PRIKEY_BYTES) <= (sizeof(expectedUserKey)))
+        memcpy(expectedUserKey, nativeCtx->sig_dsk, SM9_SIG_USR_PRIKEY_BYTES);
 
     // Step 1: Create EAL context
     ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
@@ -418,7 +419,8 @@ void SDV_CRYPTO_SM9_SET_PUB_API_TC001(Hex *masterKey)
     ASSERT_TRUE(nativeCtx != NULL);
     ret = SM9_SetSignMasterKey(nativeCtx, masterKey->x);
     ASSERT_EQ(ret, SM9_OK);
-    memcpy_s(masterPubKey, sizeof(masterPubKey), nativeCtx->sig_mpk, SM9_SIG_SYS_PUBKEY_BYTES);
+    if ((SM9_SIG_SYS_PUBKEY_BYTES) <= (sizeof(masterPubKey)))
+        memcpy(masterPubKey, nativeCtx->sig_mpk, SM9_SIG_SYS_PUBKEY_BYTES);
 
     // Step 1: Create context
     ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);

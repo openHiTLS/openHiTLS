@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_SCRYPT
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_local_types.h"
@@ -182,7 +182,7 @@ static void SCRYPT_BlockMix(uint8_t *b, uint8_t *y, uint32_t r)
         SCRYPT_Salsa20WordSpecification((uint32_t*)(uintptr_t)y1);
     }
 
-    (void)memcpy_s(b, r << 7, y, r << 7); // Length bit r of B and y: r << 7
+    memcpy(b, y, r << 7); // Length bit r of B and y: r << 7
 }
 
 /* For details about this function, see section 5 in RFC7914 */
@@ -193,7 +193,7 @@ static void SCRYPT_ROMix(uint8_t *b, uint32_t n, uint32_t r, uint8_t *v, uint8_t
     uint32_t blockSize = r << 7;
 
     for (i = 0, tmp = v; i < n; i++, tmp += blockSize) {
-        (void)memcpy_s(tmp, blockSize, b, blockSize);
+        memcpy(tmp, b, blockSize);
         SCRYPT_BlockMix(b, y, r);
     }
 
@@ -496,7 +496,7 @@ int32_t CRYPT_SCRYPT_Deinit(CRYPT_SCRYPT_Ctx *ctx)
     }
     BSL_SAL_ClearFree(ctx->password, ctx->passLen);
     BSL_SAL_FREE(ctx->salt);
-    (void)memset_s(ctx, sizeof(CRYPT_SCRYPT_Ctx), 0, sizeof(CRYPT_SCRYPT_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_SCRYPT_Ctx));
 
     int32_t ret = CRYPT_SCRYPT_InitCtx(ctx);
     if (ret != CRYPT_SUCCESS) {

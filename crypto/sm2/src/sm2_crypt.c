@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM2_CRYPT
 #include <limits.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "crypt_types.h"
 #include "crypt_utils.h"
@@ -363,7 +363,7 @@ int32_t CRYPT_SM2_Decrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
         goto ERR;
     }
     // The verification is successful. M' is the last plaintext.
-    (void)memcpy_s(out, *outlen, t, cipherLen);
+    memcpy(out, t, cipherLen);
     *outlen = cipherLen;
 
 ERR:

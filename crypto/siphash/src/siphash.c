@@ -18,7 +18,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "bsl_err_internal.h"
@@ -222,13 +222,13 @@ int32_t CRYPT_SIPHASH_Update(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *in, uint32_t
     if (ctx->offset != 0) {
         size_t emptySpaceLen = SIPHASH_WORD_SIZE - ctx->offset;
         if (tmpInlen < emptySpaceLen) {
-            (void)memcpy_s(ctx->remainder + (ctx->offset), tmpInlen, tmpIn, tmpInlen);
+            memcpy(ctx->remainder + (ctx->offset), tmpIn, tmpInlen);
             // update offset, emptySpaceLen shrinks
             ctx->offset += tmpInlen;
             return CRYPT_SUCCESS;
         }
         // fill ctx->remainder[SIPHASH_WORD_SIZE - ctx->offset] to ctx->remainder[SIPHASH_WORD_SIZE - 1] using in
-        (void)memcpy_s(ctx->remainder + (ctx->offset), emptySpaceLen, tmpIn, emptySpaceLen);
+        memcpy(ctx->remainder + (ctx->offset), tmpIn, emptySpaceLen);
         // update inlen
         tmpInlen -= (uint32_t)emptySpaceLen;
         // consume emptySpaceLen data of in
@@ -245,7 +245,7 @@ int32_t CRYPT_SIPHASH_Update(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *in, uint32_t
         tmpIn += SIPHASH_WORD_SIZE;
     }
     if (remainLen > 0) {
-        (void)memcpy_s(ctx->remainder, remainLen, lastWordPos, remainLen);
+        memcpy(ctx->remainder, lastWordPos, remainLen);
     }
     ctx->offset = (uint32_t)remainLen;
     return CRYPT_SUCCESS;
@@ -304,7 +304,7 @@ int32_t CRYPT_SIPHASH_Reinit(CRYPT_SIPHASH_Ctx *ctx)
     ctx->state3 = 0;
     ctx->accInLen = 0;
     ctx->offset = 0;
-    (void)memset_s(ctx->remainder, SIPHASH_WORD_SIZE, 0, SIPHASH_WORD_SIZE);
+    memset(ctx->remainder, 0, SIPHASH_WORD_SIZE);
     return CRYPT_SUCCESS;
 }
 

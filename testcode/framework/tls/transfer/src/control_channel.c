@@ -14,10 +14,13 @@
  */
 
 #include <errno.h>
+#include <stddef.h>
 #include <sys/time.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include "channel_res.h"
 #include "logger.h"
-#include "securec.h"
+#include <string.h>
 
 #define SUCCESS 0
 #define ERROR (-1)
@@ -70,17 +73,17 @@ int ControlChannelConnect(ControlChannelRes *channelInfo)
 
 int ControlChannelWrite(int32_t sockFd, char *peerDomainPath, ControlChannelBuf *dataBuf)
 {
-    int ret;
     uint32_t dataLen;
     uint32_t addrLen;
     struct sockaddr_un peerAddr;
 
     peerAddr.sun_family = AF_UNIX;
-    ret = strcpy_s(peerAddr.sun_path, strlen(peerDomainPath) + 1, peerDomainPath);
-    if (ret != EOK) {
-        LOG_ERROR("strcpy_s Error");
+    size_t pathLen = strlen(peerDomainPath) + 1;
+    if (pathLen > sizeof(peerAddr.sun_path)) {
+        LOG_ERROR("strcpy Error");
         return ERROR;
     }
+    memcpy(peerAddr.sun_path, peerDomainPath, pathLen);
     addrLen = offsetof(struct sockaddr_un, sun_path) + strlen(peerDomainPath) + 1;
     dataLen = sendto(sockFd, dataBuf->data, dataBuf->dataLen, 0, (struct sockaddr *)&peerAddr, addrLen);
     if (dataLen != dataBuf->dataLen) {
@@ -95,7 +98,7 @@ int ControlChannelRead(int32_t sockFd, ControlChannelBuf *dataBuf)
     struct sockaddr_un peerAddr;
     int dataLen;
     socklen_t addrLen = sizeof(struct sockaddr_un);
-    (void)memset_s(dataBuf->data, CONTROL_CHANNEL_MAX_MSG_LEN, 0, CONTROL_CHANNEL_MAX_MSG_LEN);
+    memset(dataBuf->data, 0, CONTROL_CHANNEL_MAX_MSG_LEN);
 
     dataLen = recvfrom(sockFd, dataBuf->data, CONTROL_CHANNEL_MAX_MSG_LEN, 0,
                        (struct sockaddr *)(&peerAddr), &(addrLen));

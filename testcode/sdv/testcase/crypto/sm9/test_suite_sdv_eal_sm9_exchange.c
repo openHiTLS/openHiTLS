@@ -19,7 +19,6 @@
 #include "crypt_sm9.h"
 #include "crypt_params_key.h"
 #include "bsl_params.h"
-#include "securec.h"
 
 #define SM9_KEYEX_RA_LEN 64
 #define SM9_KEYEX_RB_LEN 64

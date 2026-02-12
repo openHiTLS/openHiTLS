@@ -14,7 +14,7 @@
  */
 #include "hitls_build.h"
 #ifdef HITLS_TLS_HOST_CLIENT
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -193,7 +193,7 @@ int32_t ParseServerSelectedAlpnProtocol(
             BINGLOG_STR("selected alpn proto malloc fail."), ALERT_UNKNOWN);
     }
 
-    (void)memcpy_s(*alpnSelected, selectedAlpnLen + 1, &pkt->buf[offset], selectedAlpnLen + 1);
+    memcpy(*alpnSelected, &pkt->buf[offset], selectedAlpnLen + 1);
 
     *alpnSelectedSize = selectedAlpnLen + 1;
     *haveSelectedAlpn = true;

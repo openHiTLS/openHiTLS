@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "securec.h"
 #include "app_errno.h"
 #include "app_print.h"
 
@@ -305,7 +304,7 @@ static int32_t ParseCommandLine(int32_t argc, char *argv[], CommandOptions *opti
     }
     
     /* Initialize options */
-    (void)memset_s(options, sizeof(CommandOptions), 0, sizeof(CommandOptions));
+    memset(options, 0, sizeof(CommandOptions));
     
     int32_t argIndex = 1;
     

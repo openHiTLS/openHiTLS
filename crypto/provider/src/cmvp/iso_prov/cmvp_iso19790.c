@@ -24,7 +24,6 @@
 #include "crypt_utils.h"
 #include "cmvp_integrity_hmac.h"
 #include "crypt_params_key.h"
-#include "securec.h"
 #include "bsl_sal.h"
 
 void CMVP_Iso19790EventProcess(CRYPT_EVENT_TYPE oper, CRYPT_ALGO_TYPE type, int32_t id, int32_t err)

@@ -13,6 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include <inttypes.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -23,7 +25,7 @@
 #include "control_channel.h"
 #include "channel_res.h"
 #include "handle_cmd.h"
-#include "securec.h"
+#include <string.h>
 
 #define SUCCESS 0
 #define ERROR (-1)
@@ -47,10 +49,10 @@ void InitCmdIndex(void)
 static int WaitResult(CmdData *expectCmdData, int cmdIndex, const char *funcName)
 {
     int ret;
-    ret = sprintf_s(expectCmdData->id, sizeof(expectCmdData->id), "%d", cmdIndex);
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
-    ret = sprintf_s(expectCmdData->funcId, sizeof(expectCmdData->funcId), "%s", funcName);
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    ret = snprintf(expectCmdData->id, sizeof(expectCmdData->id), "%d", cmdIndex);
+    ASSERT_RETURN(ret >= 0 && ret < (int)sizeof(expectCmdData->id), "snprintf Error");
+    ret = snprintf(expectCmdData->funcId, sizeof(expectCmdData->funcId), "%s", funcName);
+    ASSERT_RETURN(ret >= 0 && ret < (int)sizeof(expectCmdData->funcId), "snprintf Error");
 
     // Receive the result.
     ret = WaitResultFromPeer(expectCmdData);
@@ -81,58 +83,78 @@ int HLT_RpcProviderTlsNewCtx(HLT_Process *peerProcess, TLS_VERSION tlsVersion, b
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data),
-        "%llu|%s|%d|%d|",
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data),
+        "%" PRIu64 "|%s|%d|%d|",
         g_cmdIndex, __FUNCTION__, tlsVersion, isClient);
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
     offset += ret;
     if (providerCnt == 0 || providerNames == NULL || providerLibFmts == NULL) {
-        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "|");
-        if (!(ret > 0)) {
-            LOG_ERROR("sprintf_s Error");
+        if ((size_t)offset >= sizeof(dataBuf->data)) {
+            LOG_ERROR("buffer overflow");
+            goto cleanup;
+        }
+        ret = snprintf(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "|");
+        if (ret < 0 || ret >= (int)(sizeof(dataBuf->data) - offset)) {
+            LOG_ERROR("snprintf Error");
             goto cleanup;
         }
         offset += ret;
     }
 
     for (int i = 0; i < providerCnt - 1; i++) {
-        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "%s,%d:", providerNames[i],
+        if ((size_t)offset >= sizeof(dataBuf->data)) {
+            LOG_ERROR("buffer overflow");
+            goto cleanup;
+        }
+        ret = snprintf(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "%s,%d:", providerNames[i],
             providerLibFmts[i]);
-        if (!(ret > 0)) {
-            LOG_ERROR("sprintf_s Error");
+        if (ret < 0 || ret >= (int)(sizeof(dataBuf->data) - offset)) {
+            LOG_ERROR("snprintf Error");
             goto cleanup;
         }
         offset += ret;
     }
     if (providerCnt >= 1) {
-        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "%s,%d|", providerNames[providerCnt - 1],
+        if ((size_t)offset >= sizeof(dataBuf->data)) {
+            LOG_ERROR("buffer overflow");
+            goto cleanup;
+        }
+        ret = snprintf(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "%s,%d|", providerNames[providerCnt - 1],
             providerLibFmts[providerCnt - 1]);
-        if (!(ret > 0)) {
-            LOG_ERROR("sprintf_s Error");
+        if (ret < 0 || ret >= (int)(sizeof(dataBuf->data) - offset)) {
+            LOG_ERROR("snprintf Error");
             goto cleanup;
         }
         offset += ret;
     }
-    if (attrName != NULL && strlen(attrName) > 0) {
-        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "%s|", attrName);
-    } else {
-        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "|");
+    if ((size_t)offset >= sizeof(dataBuf->data)) {
+        LOG_ERROR("buffer overflow");
+        goto cleanup;
     }
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (attrName != NULL && strlen(attrName) > 0) {
+        ret = snprintf(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "%s|", attrName);
+    } else {
+        ret = snprintf(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "|");
+    }
+    if (ret < 0 || ret >= (int)(sizeof(dataBuf->data) - offset)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
     offset += ret;
-    if (providerPath != NULL && strlen(providerPath) > 0) {
-        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "%s|", providerPath);
-    } else {
-        ret = sprintf_s(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "|");
+    if ((size_t)offset >= sizeof(dataBuf->data)) {
+        LOG_ERROR("buffer overflow");
+        goto cleanup;
     }
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (providerPath != NULL && strlen(providerPath) > 0) {
+        ret = snprintf(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "%s|", providerPath);
+    } else {
+        ret = snprintf(dataBuf->data + offset, sizeof(dataBuf->data) - offset, "|");
+    }
+    if (ret < 0 || ret >= (int)(sizeof(dataBuf->data) - offset)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
     offset += ret;
@@ -141,11 +163,6 @@ int HLT_RpcProviderTlsNewCtx(HLT_Process *peerProcess, TLS_VERSION tlsVersion, b
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
-
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
-        goto cleanup;
-    }
 
     ret = ControlChannelWrite(srcProcess->controlChannelFd, peerProcess->srcDomainPath, dataBuf);
     if (!(ret == SUCCESS)) {
@@ -190,14 +207,14 @@ int HLT_RpcTlsNewCtx(HLT_Process *peerProcess, TLS_VERSION tlsVersion, bool isCl
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d", g_cmdIndex, __FUNCTION__, tlsVersion, isClient);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d|%d", g_cmdIndex, __FUNCTION__, tlsVersion, isClient);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -244,8 +261,8 @@ int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data),
-    "%llu|%s|%d|"
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data),
+    "%" PRIu64 "|%s|%d|"
     "%u|%u|%s|%s|"
     "%s|%s|%s|%d|"
     "%d|%d|%d|%s|"
@@ -278,8 +295,8 @@ int HLT_RpcTlsSetCtx(HLT_Process *peerProcess, int ctxId, HLT_Ctx_Config *config
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -328,14 +345,14 @@ int HLT_RpcTlsNewSsl(HLT_Process *peerProcess, int ctxId)
     // Constructing Commands
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, ctxId);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, ctxId);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -383,15 +400,15 @@ int HLT_RpcTlsSetSsl(HLT_Process *peerProcess, int sslId, HLT_Ssl_Config *config
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d|%d|%d",
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d|%d|%d|%d",
                     g_cmdIndex, __FUNCTION__, sslId, config->sockFd, config->connType, config->connPort);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -437,14 +454,14 @@ int HLT_RpcTlsListen(HLT_Process *peerProcess, int sslId)
     }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
     dataBuf->dataLen = strlen(dataBuf->data);
     acceptId = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -482,14 +499,14 @@ int HLT_RpcTlsAccept(HLT_Process *peerProcess, int sslId)
     }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
     dataBuf->dataLen = strlen(dataBuf->data);
     acceptId = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -548,14 +565,14 @@ int HLT_RpcTlsConnect(HLT_Process *peerProcess, int sslId)
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -601,14 +618,14 @@ int HLT_RpcTlsConnectUnBlock(HLT_Process *peerProcess, int sslId)
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    int ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, "HLT_RpcTlsConnect", sslId);
+    int ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, "HLT_RpcTlsConnect", sslId);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -660,14 +677,14 @@ int HLT_RpcTlsRead(HLT_Process *peerProcess, int sslId, uint8_t *data, uint32_t 
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%u", g_cmdIndex, __FUNCTION__, sslId, bufSize);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d|%u", g_cmdIndex, __FUNCTION__, sslId, bufSize);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -688,8 +705,10 @@ int HLT_RpcTlsRead(HLT_Process *peerProcess, int sslId, uint8_t *data, uint32_t 
     ret = atoi(expectCmdData.paras[0]);
     if (ret == SUCCESS) {
         *readLen = atoi(expectCmdData.paras[1]);  // The first parameter indicates the read length.
-        memcpy_s(
-            data, bufSize, expectCmdData.paras[2], *readLen);  // The second parameter indicates the content to be read.
+        if (*readLen <= bufSize) {
+            memcpy(data, expectCmdData.paras[2], *readLen);
+        }
+        // The second parameter indicates the content to be read.
     }
 
     result = ret;
@@ -724,14 +743,14 @@ int HLT_RpcTlsReadUnBlock(HLT_Process *peerProcess, int sslId, uint8_t *data, ui
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%u", g_cmdIndex, "HLT_RpcTlsRead", sslId, bufSize);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d|%u", g_cmdIndex, "HLT_RpcTlsRead", sslId, bufSize);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -763,7 +782,9 @@ int HLT_RpcGetTlsReadResult(int cmdIndex, uint8_t *data, uint32_t bufSize, uint3
     if (ret == SUCCESS) {
         *readLen = (int)strtol(expectCmdData.paras[1], &endPtr, 0); // The first parameter indicates the read length.
         // The second parameter indicates the content to be read.
-        memcpy_s(data, bufSize, expectCmdData.paras[2], *readLen);
+        if (*readLen <= bufSize) {
+            memcpy(data, expectCmdData.paras[2], *readLen);
+        }
     }
     return ret;
 }
@@ -790,15 +811,15 @@ int HLT_RpcTlsWrite(HLT_Process *peerProcess, int sslId, uint8_t *data, uint32_t
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%u|%s",
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d|%u|%s",
                     g_cmdIndex, __FUNCTION__, sslId, bufSize, data);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -844,15 +865,15 @@ int HLT_RpcTlsWriteUnBlock(HLT_Process *peerProcess, int sslId, uint8_t *data, u
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%u|%s",
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d|%u|%s",
                     g_cmdIndex, "HLT_RpcTlsWrite", sslId, bufSize, data);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -904,14 +925,14 @@ int HLT_RpcTlsRenegotiate(HLT_Process *peerProcess, int sslId)
     }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -958,14 +979,14 @@ int HLT_RpcTlsVerifyClientPostHandshake(HLT_Process *peerProcess, int sslId)
     }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1011,15 +1032,15 @@ int HLT_RpcDataChannelConnect(HLT_Process *peerProcess, DataChannelParam *channe
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d|%d", g_cmdIndex, __FUNCTION__,
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d|%d|%d", g_cmdIndex, __FUNCTION__,
                     channelParam->type, channelParam->port, channelParam->isBlock);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1064,14 +1085,14 @@ int HLT_RpcDataChannelBind(HLT_Process *peerProcess, DataChannelParam *channelPa
     }
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d|%d|%d", g_cmdIndex, __FUNCTION__,
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d|%d|%d|%d", g_cmdIndex, __FUNCTION__,
                     channelParam->type, channelParam->port, channelParam->isBlock, channelParam->bindFd);
     dataBuf->dataLen = strlen(dataBuf->data);
     bindId = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
     ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, dataBuf);
@@ -1117,15 +1138,15 @@ int HLT_RpcDataChannelAccept(HLT_Process *peerProcess, DataChannelParam *channel
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d|%d|%d", g_cmdIndex, __FUNCTION__,
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d|%d|%d|%d", g_cmdIndex, __FUNCTION__,
                     channelParam->type, channelParam->port, channelParam->isBlock, channelParam->bindFd);
     dataBuf->dataLen = strlen(dataBuf->data);
     acceptId = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1176,14 +1197,14 @@ int HLT_RpcTlsRegCallback(HLT_Process *peerProcess, TlsCallbackType type)
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, type);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, type);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1229,14 +1250,14 @@ int HLT_RpcProcessExit(HLT_Process *peerProcess)
     }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, peerProcess->connFd);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, peerProcess->connFd);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1281,14 +1302,14 @@ int HLT_RpcTlsGetStatus(HLT_Process *peerProcess, int sslId)
     srcProcess = GetProcess();
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1333,14 +1354,14 @@ int HLT_RpcTlsGetAlertFlag(HLT_Process *peerProcess, int sslId)
     srcProcess = GetProcess();
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1385,14 +1406,14 @@ int HLT_RpcTlsGetAlertLevel(HLT_Process *peerProcess, int sslId)
     srcProcess = GetProcess();
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (!(ret > 0)) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1437,14 +1458,14 @@ int HLT_RpcTlsGetAlertDescription(HLT_Process *peerProcess, int sslId)
     srcProcess = GetProcess();
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (ret <= 0) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1491,14 +1512,14 @@ int HLT_RpcTlsClose(HLT_Process *peerProcess, int sslId)
     }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (ret <= 0) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1544,14 +1565,14 @@ int HLT_RpcFreeResFormSsl(HLT_Process *peerProcess, int sslId)
     }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (ret <= 0) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1597,14 +1618,14 @@ int HLT_RpcSctpClose(HLT_Process *peerProcess, int fd)
     }
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, fd);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, fd);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (ret <= 0) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1647,15 +1668,15 @@ int HLT_RpcCloseFd(HLT_Process *peerProcess, int fd, int linkType)
         goto cleanup;
     }
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d", g_cmdIndex, __FUNCTION__, fd, linkType);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d|%d", g_cmdIndex, __FUNCTION__, fd, linkType);
 
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (ret <= 0) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1695,15 +1716,15 @@ int HLT_RpcTlsSetMtu(HLT_Process *peerProcess, int sslId, uint16_t mtu)
         goto cleanup;
     }
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d|%d", g_cmdIndex, __FUNCTION__, sslId, mtu);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d|%d", g_cmdIndex, __FUNCTION__, sslId, mtu);
 
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (ret <= 0) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1747,14 +1768,14 @@ int HLT_RpcTlsGetErrorCode(HLT_Process *peerProcess, int sslId)
     srcProcess = GetProcess();
 
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s(dataBuf->data, sizeof(dataBuf->data), "%llu|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
+    ret = snprintf(dataBuf->data, sizeof(dataBuf->data), "%" PRIu64 "|%s|%d", g_cmdIndex, __FUNCTION__, sslId);
     dataBuf->dataLen = strlen(dataBuf->data);
     cmdIndex = g_cmdIndex;
     g_cmdIndex++;
     pthread_mutex_unlock(&g_cmdMutex);
 
-    if (ret <= 0) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || ret >= (int)sizeof(dataBuf->data)) {
+        LOG_ERROR("snprintf Error");
         goto cleanup;
     }
 
@@ -1795,7 +1816,7 @@ static char *Convert2Hex(char *buf, size_t len)
 
 static char *Convert2String(ExportMaterialParam *data)
 {
-    const char *temp = "outLen=%lu label=%s labelLen=%lu context=%s contextLen=%lu useContext=%d";
+    const char *temp = "outLen=%zu label=%s labelLen=%zu context=%s contextLen=%zu useContext=%d";
     const int bufNum = 2;
     char *buf = (char *)calloc(MAX_EXPORT_MATERIAL_BUF * bufNum, 1);
     if (buf == NULL) {
@@ -1805,8 +1826,9 @@ static char *Convert2String(ExportMaterialParam *data)
     strcpy(hexLabel, Convert2Hex(data->label, data->labelLen));
     char hexContext[MAX_EXPORT_MATERIAL_BUF] = {0};
     strcpy(hexContext, Convert2Hex(data->context, data->contextLen));
-    int32_t ret = snprintf_s(buf, MAX_EXPORT_MATERIAL_BUF * bufNum, MAX_EXPORT_MATERIAL_BUF * bufNum, temp,
+    int n = snprintf(buf, MAX_EXPORT_MATERIAL_BUF * bufNum, temp,
         data->outLen, hexLabel, data->labelLen, hexContext, data->contextLen, data->useContext);
+    int32_t ret = (n < 0 || (size_t)n >= (size_t)(MAX_EXPORT_MATERIAL_BUF * bufNum)) ? -1 : 0;
     if (ret < 0) {
         free(buf);
         return NULL;
@@ -1830,7 +1852,7 @@ int HLT_RpcTlsWriteExportMaterial(HLT_Process* peerProcess, int sslId, ExportMat
 
     srcProcess = GetProcess();
     pthread_mutex_lock(&g_cmdMutex);
-    ret = sprintf_s((char *)dataBuf.data, sizeof(dataBuf.data), "%llu|%s|%d|%s",
+    ret = snprintf((char *)dataBuf.data, sizeof(dataBuf.data), "%" PRIu64 "|%s|%d|%s",
                     g_cmdIndex, __FUNCTION__, sslId, buf);
     dataBuf.dataLen = strlen((const char *)dataBuf.data);
     cmdIndex = g_cmdIndex;
@@ -1838,7 +1860,7 @@ int HLT_RpcTlsWriteExportMaterial(HLT_Process* peerProcess, int sslId, ExportMat
     pthread_mutex_unlock(&g_cmdMutex);
     free(buf);
 
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    ASSERT_RETURN(ret > 0 && ret < (int)sizeof(dataBuf.data), "snprintf Error");
 
     ret = ControlChannelWrite(srcProcess->controlChannelFd,  peerProcess->srcDomainPath, &dataBuf);
     ASSERT_RETURN(ret == SUCCESS, "ControlChannelWrite Error");

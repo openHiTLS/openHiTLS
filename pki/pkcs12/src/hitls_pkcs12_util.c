@@ -19,7 +19,7 @@
 #ifdef HITLS_BSL_SAL_FILE
 #include "sal_file.h"
 #endif
-#include "securec.h"
+#include <string.h>
 #include "hitls_pkcs12_local.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
@@ -454,7 +454,7 @@ int32_t HITLS_PKCS12_KDF(HITLS_PKCS12 *p12, const uint8_t *pwd, uint32_t pwdLen,
         CRYPT_EAL_MdFreeCtx(ctx);
         return ret;
     }
-    (void)memset_s(D, param->v, type, param->v);
+    memset(D, type, param->v);
     uint32_t SLen = param->v * ((macData->macSalt->dataLen + param->v - 1) / param->v);
     uint32_t PLen = param->v * ((pwdLen + param->v - 1) / param->v);
     uint32_t k = 0;
@@ -494,12 +494,7 @@ int32_t HITLS_PKCS12_KDF(HITLS_PKCS12 *p12, const uint8_t *pwd, uint32_t pwdLen,
         }
 
         uint32_t copyLen = n > param->u ? param->u : n;
-        if (memcpy_s(key, n, A, copyLen) != EOK) {
-            ret = BSL_MEMCPY_FAIL;
-            BSL_ERR_PUSH_ERROR(BSL_MEMCPY_FAIL);
-            goto EXIT;
-        }
-
+        memcpy(key, A, copyLen);
         n -= copyLen;
         if (n == 0) {
             goto EXIT;

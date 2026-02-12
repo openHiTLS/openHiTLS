@@ -26,7 +26,7 @@
 #include "crypt_errno.h"
 #include "app_pkcs12.h"
 #include "app_function.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_err.h"
 #include "bsl_sal.h"
 #include "bsl_ui.h"
@@ -372,7 +372,7 @@ EXIT:
 void UT_HITLS_APP_PKCS12_TC007(void)
 {
     char invalidName[2048] = {0};
-    (void)memset_s(invalidName, sizeof(invalidName) - 1, 'a', sizeof(invalidName) - 1);
+    memset(invalidName, 'a', sizeof(invalidName) - 1);
     char *argv[][18] = {
         {"pkcs12", "-export", "-in", CERT, "-inkey", PRI_KEY, "-passin", "pass:12345678", "-chain", "-CAfile",
             CHAIN, "-passout", "pass:12345678", "-out", "out.pfx", "-name", "testname"},
@@ -455,7 +455,7 @@ static int32_t BSL_UI_ReadPwdUtil_Mock(BSL_UI_ReadPwdParam *param, char *buff, u
     (void)param;
     (void)checkDataCallBack;
     (void)callBackData;
-    (void)memcpy_s(buff, *buffLen, "12345678", strlen("12345678"));
+    memcpy(buff, "12345678", strlen("12345678"));
     *buffLen = strlen("12345678") + 1;
     return HITLS_APP_SUCCESS;
 }

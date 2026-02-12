@@ -20,7 +20,6 @@
 #include <termios.h>
 #include <unistd.h>
 #include <limits.h>
-#include "securec.h"
 #include "bsl_uio.h"
 #include "bsl_ui.h"
 #include "app_errno.h"

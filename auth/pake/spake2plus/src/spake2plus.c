@@ -21,7 +21,7 @@
 #include "crypt_ecc.h"
 #include "spake2plus_ecc.h"
 #include "auth_errno.h"
-#include "securec.h"
+#include <string.h>
 #include "crypt_bn.h"
 #include "crypt_eal_md.h"
 #include "crypt_eal_kdf.h"
@@ -215,11 +215,11 @@ static int32_t Spake2PlusGetEcc(CRYPT_EAL_PkeyCtx *pkey, EccParamType type, uint
 
     switch (type) {
         case ECC_PARAM_P:
-            (void)memcpy_s(out, para.para.eccPara.pLen, para.para.eccPara.p, para.para.eccPara.pLen);
+            memcpy(out, para.para.eccPara.p, para.para.eccPara.pLen);
             *outLen = para.para.eccPara.pLen;
             break;
         case ECC_PARAM_N:
-            (void)memcpy_s(out, para.para.eccPara.nLen, para.para.eccPara.n, para.para.eccPara.nLen);
+            memcpy(out, para.para.eccPara.n, para.para.eccPara.nLen);
             *outLen = para.para.eccPara.nLen;
             break;
         default:
@@ -248,9 +248,9 @@ int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfC
         spakeCtx->w0.dataLen = exist_w0.dataLen;
         spakeCtx->w1.dataLen = exist_w1.dataLen;
         spakeCtx->l.dataLen = exist_l.dataLen;
-        (void)memcpy_s(spakeCtx->w0.data, exist_w0.dataLen, exist_w0.data, exist_w0.dataLen);
-        (void)memcpy_s(spakeCtx->w1.data, exist_w1.dataLen, exist_w1.data, exist_w1.dataLen);
-        (void)memcpy_s(spakeCtx->l.data, exist_l.dataLen, exist_l.data, exist_l.dataLen);
+        memcpy(spakeCtx->w0.data, exist_w0.data, exist_w0.dataLen);
+        memcpy(spakeCtx->w1.data, exist_w1.data, exist_w1.dataLen);
+        memcpy(spakeCtx->l.data, exist_l.data, exist_l.dataLen);
         return HITLS_AUTH_SUCCESS;
     }
 
@@ -301,8 +301,8 @@ int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfC
         goto ERR;
     }
 
-    (void)memcpy_s(w0s, sizeof(w0s), out, w0sLen);
-    (void)memcpy_s(w1s, sizeof(w1s), out + w0sLen, outLen - w0sLen);
+    memcpy(w0s, out, w0sLen);
+    memcpy(w1s, out + w0sLen, outLen - w0sLen);
 
     ret = BN_Bin2Bn(w0s0, w0s, w0sLen);
     if (ret != HITLS_AUTH_SUCCESS) {
@@ -356,9 +356,9 @@ int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfC
     spakeCtx->w0.dataLen = w0_dataLen;
     spakeCtx->w1.dataLen = w1_dataLen;
     spakeCtx->l.dataLen = l_dataLen;
-    (void)memcpy_s(spakeCtx->w0.data, w0_dataLen, w0_data, w0_dataLen);
-    (void)memcpy_s(spakeCtx->w1.data, w1_dataLen, w1_data, w1_dataLen);
-    (void)memcpy_s(spakeCtx->l.data, l_dataLen, l_data, l_dataLen);
+    memcpy(spakeCtx->w0.data, w0_data, w0_dataLen);
+    memcpy(spakeCtx->w1.data, w1_data, w1_dataLen);
+    memcpy(spakeCtx->l.data, l_data, l_dataLen);
 
 ERR:
     BN_Destroy(w0s0);
@@ -388,9 +388,9 @@ int32_t HITLS_AUTH_Spake2plusRespRegister(HITLS_AUTH_PakeCtx* ctx, BSL_Buffer ex
         spakeCtx->w0.dataLen = exist_w0.dataLen;
         spakeCtx->w1.dataLen = exist_w1.dataLen;
         spakeCtx->l.dataLen = exist_l.dataLen;
-        (void)memcpy_s(spakeCtx->w0.data, exist_w0.dataLen, exist_w0.data, exist_w0.dataLen);
-        (void)memcpy_s(spakeCtx->w1.data, exist_w1.dataLen, exist_w1.data, exist_w1.dataLen);
-        (void)memcpy_s(spakeCtx->l.data, exist_l.dataLen, exist_l.data, exist_l.dataLen);
+        memcpy(spakeCtx->w0.data, exist_w0.data, exist_w0.dataLen);
+        memcpy(spakeCtx->w1.data, exist_w1.data, exist_w1.dataLen);
+        memcpy(spakeCtx->l.data, exist_l.data, exist_l.dataLen);
         return HITLS_AUTH_SUCCESS;
     }
     Spake2PlusFreeCtx(spakeCtx);
@@ -466,7 +466,7 @@ static int32_t Spake2PlusGenerateRandNum(uint8_t *num, uint8_t *p, uint32_t pLen
         return HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL;
     }
 
-    (void)memset_s(x, pLen, 0, pLen);
+    BSL_SAL_CleanseData(x, pLen);
     
     uint32_t retryCount = 0;
     const uint32_t MAX_RETRIES = 1000;
@@ -494,7 +494,7 @@ static int32_t Spake2PlusGenerateRandNum(uint8_t *num, uint8_t *p, uint32_t pLen
     } else if (!success) {
         ret = CRYPT_NO_REGIST_RAND;
     } else {
-        (void)memcpy_s(num, pLen, x, pLen);
+        memcpy(num, x, pLen);
         ret = HITLS_AUTH_SUCCESS;
     }
 
@@ -897,9 +897,9 @@ static void uint32_to_le_bytes(uint32_t len, uint8_t out[8])
     if (remaining < 8 + len) { \
         __ret = CRYPT_MEM_ALLOC_FAIL; \
     } else { \
-        (void)memcpy_s(pos, 8, len_bytes, 8); \
+        memcpy(pos, len_bytes, 8); \
         pos += 8; remaining -= 8; \
-        (void)memcpy_s(pos, len, data, len); \
+        memcpy(pos, data, len); \
         pos += len; remaining -= len; \
     } \
     __ret; \
@@ -1084,10 +1084,8 @@ static int32_t Spake2PlusComputeKeySchedule(Spake2plusCtx *ctx, BSL_Buffer tt, B
         goto ERR;
     }
 
-    (void)memcpy_s(kConfirmP->data, g_spake2PlusAlgInfo[ctx->index].macKeyLen,
-        out, g_spake2PlusAlgInfo[ctx->index].macKeyLen);
-    (void)memcpy_s(kConfirmV->data, g_spake2PlusAlgInfo[ctx->index].macKeyLen,
-        out + g_spake2PlusAlgInfo[ctx->index].macKeyLen, g_spake2PlusAlgInfo[ctx->index].macKeyLen);
+    memcpy(kConfirmP->data, out, g_spake2PlusAlgInfo[ctx->index].macKeyLen);
+    memcpy(kConfirmV->data, out + g_spake2PlusAlgInfo[ctx->index].macKeyLen, g_spake2PlusAlgInfo[ctx->index].macKeyLen);
     kConfirmP->dataLen = g_spake2PlusAlgInfo[ctx->index].macKeyLen;
     kConfirmV->dataLen = g_spake2PlusAlgInfo[ctx->index].macKeyLen;
 
@@ -1109,12 +1107,12 @@ static int32_t Spake2PlusComputeKeySchedule(Spake2plusCtx *ctx, BSL_Buffer tt, B
         goto ERR;
     }
 
-    (void)memcpy_s(kShared->data, out0Len, out0, out0Len);
+    memcpy(kShared->data, out0, out0Len);
     kShared->dataLen = out0Len;
 
-    (void)memset_s(kMain, sizeof(kMain), 0, sizeof(kMain));
-    (void)memset_s(out, sizeof(out), 0, sizeof(out));
-    (void)memset_s(out0, sizeof(out0), 0, sizeof(out0));
+    BSL_SAL_CleanseData(kMain, sizeof(kMain));
+    BSL_SAL_CleanseData(out, sizeof(out));
+    BSL_SAL_CleanseData(out0, sizeof(out0));
 
 ERR:
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
@@ -1182,7 +1180,7 @@ int32_t HITLS_AUTH_Spake2plusReqSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer randnu
 
     if (randnumx.data != NULL) {
         randnumLen = randnumx.dataLen;
-        (void)memcpy_s(randnum, randnumx.dataLen, randnumx.data, randnumx.dataLen);
+        memcpy(randnum, randnumx.data, randnumx.dataLen);
     } else {
         ret = Spake2PlusInit(spakeCtx, randnum, &randnumLen);
         if (ret != HITLS_AUTH_SUCCESS) {
@@ -1192,7 +1190,7 @@ int32_t HITLS_AUTH_Spake2plusReqSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer randnu
     }
 
     spakeCtx->x.dataLen = randnumLen;
-    (void)memcpy_s(spakeCtx->x.data, randnumLen, randnum, randnumLen);
+    memcpy(spakeCtx->x.data, randnum, randnumLen);
 
     uint8_t shareP[MAX_ECC_KEY_LEN] = { 0 };
     uint32_t sharePLen = MAX_ECC_KEY_LEN;
@@ -1204,10 +1202,10 @@ int32_t HITLS_AUTH_Spake2plusReqSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer randnu
     }
     
     spakeCtx->share.dataLen = sharePLen;
-    (void)memcpy_s(spakeCtx->share.data, sharePLen, shareP, sharePLen);
+    memcpy(spakeCtx->share.data, shareP, sharePLen);
 
     share->dataLen = sharePLen;
-    (void)memcpy_s(share->data, sharePLen, shareP, sharePLen);
+    memcpy(share->data, shareP, sharePLen);
 
     return ret;
 }
@@ -1247,7 +1245,7 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
 
     if (y.data != NULL) {
         randnumLen = y.dataLen;
-        (void)memcpy_s(randnum, y.dataLen, y.data, y.dataLen);
+        memcpy(randnum, y.data, y.dataLen);
     } else {
         ret = Spake2PlusInit(spakeCtx, randnum, &randnumLen);
         if (ret != HITLS_AUTH_SUCCESS) {
@@ -1263,10 +1261,10 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
     }
 
     shareV->dataLen = shareV0Len;
-    (void)memcpy_s(shareV->data, shareV0Len, shareV0, shareV0Len);
+    memcpy(shareV->data, shareV0, shareV0Len);
 
     randnumBuffer.dataLen = randnumLen;
-    (void)memcpy_s(randnumBuffer.data, randnumLen, randnum, randnumLen);
+    memcpy(randnumBuffer.data, randnum, randnumLen);
 
     ret = Spake2PlusVerifierFinish(spakeCtx, randnumBuffer, shareP, &zBuffer, &vBuffer);
     if (ret != HITLS_AUTH_SUCCESS) {
@@ -1292,7 +1290,7 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
     }
 
     spakeCtx->key_shared.dataLen = kSharedBuffer.dataLen;
-    (void)memcpy_s(spakeCtx->key_shared.data, kSharedBuffer.dataLen, kSharedBuffer.data, kSharedBuffer.dataLen);
+    memcpy(spakeCtx->key_shared.data, kSharedBuffer.data, kSharedBuffer.dataLen);
     
     ret = Spake2PlusComputeExpectedConfirm(spakeCtx, kConfirmVBuffer, shareP, &outHmacBuffer);
     if (ret != HITLS_AUTH_SUCCESS) {
@@ -1300,10 +1298,10 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
     }
 
     spakeCtx->confirmV.dataLen = outHmacBuffer.dataLen;
-    (void)memcpy_s(spakeCtx->confirmV.data, outHmacBuffer.dataLen, outHmacBuffer.data, outHmacBuffer.dataLen);
+    memcpy(spakeCtx->confirmV.data, outHmacBuffer.data, outHmacBuffer.dataLen);
 
     confirmV->dataLen = outHmacBuffer.dataLen;
-    (void)memcpy_s(confirmV->data, outHmacBuffer.dataLen, outHmacBuffer.data, outHmacBuffer.dataLen);
+    memcpy(confirmV->data, outHmacBuffer.data, outHmacBuffer.dataLen);
 
     ret = Spake2PlusComputeExpectedConfirm(spakeCtx, kConfirmPBuffer, *shareV, &outHmacBuffer);
     if (ret != HITLS_AUTH_SUCCESS) {
@@ -1311,7 +1309,7 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
     }
 
     spakeCtx->confirmP.dataLen = outHmacBuffer.dataLen;
-    (void)memcpy_s(spakeCtx->confirmP.data, outHmacBuffer.dataLen, outHmacBuffer.data, outHmacBuffer.dataLen);
+    memcpy(spakeCtx->confirmP.data, outHmacBuffer.data, outHmacBuffer.dataLen);
 
 err:
     if (ret != HITLS_AUTH_SUCCESS) {
@@ -1380,7 +1378,7 @@ int32_t HITLS_AUTH_Spake2plusReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer share
     }
 
     spakeCtx->key_shared.dataLen = kSharedBuffer.dataLen;
-    (void)memcpy_s(spakeCtx->key_shared.data, kSharedBuffer.dataLen, kSharedBuffer.data, kSharedBuffer.dataLen);
+    memcpy(spakeCtx->key_shared.data, kSharedBuffer.data, kSharedBuffer.dataLen);
 
     ret = Spake2PlusComputeExpectedConfirm(spakeCtx, kConfirmPBuffer, shareV, &outHmacBuffer);
     if (ret != HITLS_AUTH_SUCCESS) {
@@ -1388,10 +1386,10 @@ int32_t HITLS_AUTH_Spake2plusReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer share
     }
 
     spakeCtx->confirmP.dataLen = outHmacBuffer.dataLen;
-    (void)memcpy_s(spakeCtx->confirmP.data, outHmacBuffer.dataLen, outHmacBuffer.data, outHmacBuffer.dataLen);
+    memcpy(spakeCtx->confirmP.data, outHmacBuffer.data, outHmacBuffer.dataLen);
 
     confirmP->dataLen = outHmacBuffer.dataLen;
-    (void)memcpy_s(confirmP->data, outHmacBuffer.dataLen, outHmacBuffer.data, outHmacBuffer.dataLen);
+    memcpy(confirmP->data, outHmacBuffer.data, outHmacBuffer.dataLen);
 
     ret = Spake2PlusComputeExpectedConfirm(spakeCtx, kConfirmVBuffer, spakeCtx->share, &outHmacBuffer);
     if (ret != HITLS_AUTH_SUCCESS) {
@@ -1399,7 +1397,7 @@ int32_t HITLS_AUTH_Spake2plusReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer share
     }
 
     spakeCtx->confirmV.dataLen = outHmacBuffer.dataLen;
-    (void)memcpy_s(spakeCtx->confirmV.data, outHmacBuffer.dataLen, outHmacBuffer.data, outHmacBuffer.dataLen);
+    memcpy(spakeCtx->confirmV.data, outHmacBuffer.data, outHmacBuffer.dataLen);
 
     if (spakeCtx->confirmV.dataLen != confirmV.dataLen ||
         ConstTimeMemcmp(spakeCtx->confirmV.data, confirmV.data, confirmV.dataLen) == 0) {
@@ -1409,7 +1407,7 @@ int32_t HITLS_AUTH_Spake2plusReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer share
     }
 
     out->dataLen = kSharedBuffer.dataLen;
-    (void)memcpy_s(out->data, kSharedBuffer.dataLen, kSharedBuffer.data, kSharedBuffer.dataLen);
+    memcpy(out->data, kSharedBuffer.data, kSharedBuffer.dataLen);
 err:
     if (ret != HITLS_AUTH_SUCCESS) {
         Spake2PlusFreeCtx(spakeCtx);
@@ -1444,7 +1442,7 @@ int32_t HITLS_AUTH_Spake2plusRespDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer conf
     }
 
     out->dataLen = spakeCtx->key_shared.dataLen;
-    (void)memcpy_s(out->data, spakeCtx->key_shared.dataLen, spakeCtx->key_shared.data, spakeCtx->key_shared.dataLen);
+    memcpy(out->data, spakeCtx->key_shared.data, spakeCtx->key_shared.dataLen);
 
     return HITLS_AUTH_SUCCESS;
 }

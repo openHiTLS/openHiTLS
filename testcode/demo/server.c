@@ -5,7 +5,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "securec.h"
 
 #include "bsl_sal.h"
 #include "bsl_err.h"

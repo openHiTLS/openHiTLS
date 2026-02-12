@@ -16,13 +16,13 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_ECB
 
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "crypt_modes_ecb.h"
 #include "modes_local.h"
-#include "securec.h"
 
 static int32_t MODES_ECB_Crypt(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc)
 {
@@ -103,7 +103,7 @@ int32_t MODES_ECB_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_
     }
     switch (cmd) {
         case CRYPT_CTRL_REINIT_STATUS:
-            (void)memset_s(modeCtx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+            memset(modeCtx->data, 0, EAL_MAX_BLOCK_LENGTH);
             modeCtx->dataLen = 0;
             modeCtx->pad = CRYPT_PADDING_NONE;
             return CRYPT_SUCCESS;

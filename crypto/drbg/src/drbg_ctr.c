@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_DRBG_CTR
 
 #include <stdlib.h>
-#include <securec.h>
+#include <string.h>
 #include "crypt_errno.h"
 #include "crypt_local_types.h"
 #include "crypt_utils.h"
@@ -108,14 +108,15 @@ int32_t DRBG_CtrUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_Data *
     DRBG_CtrXor(&temp, in2);
 
     // Key = leftmost (temp, keylen). V = rightmost (temp, blocklen).
-    if (memcpy_s(ctx->k, DRBG_CTR_MAX_KEYLEN, temp.data, ctx->keyLen) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        ret = CRYPT_SECUREC_FAIL;
+    if (ctx->keyLen > DRBG_CTR_MAX_KEYLEN) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_CPY_FAIL);
+        ret = CRYPT_MEM_CPY_FAIL;
         goto EXIT;
     }
+    memcpy(ctx->k, temp.data, ctx->keyLen);
     // The length to be copied of ctx->V is AES_BLOCK_LEN, which is also the array length.
     // The lower bits of temp.data are used for ctx->K, and the upper bits are used for ctx->V.
-    (void)memcpy_s(ctx->v, AES_BLOCK_LEN, temp.data + ctx->keyLen, AES_BLOCK_LEN);
+    memcpy(ctx->v, temp.data + ctx->keyLen, AES_BLOCK_LEN);
 EXIT:
     (void)ciphMeth->cipherDeInitCtx(ctx->ctrCtx);
     return ret;
@@ -195,7 +196,7 @@ static int32_t DRBG_CtrBCCUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in, uint8_t t
     do {
         const uint32_t left = AES_BLOCK_LEN - tempPos;
         const uint32_t cpyLen = (left > dataLeft) ? dataLeft : left;
-        (void)memcpy_s(temp + tempPos, left, in->data + offset, cpyLen);
+        memcpy(temp + tempPos, in->data + offset, cpyLen);
 
         if (left == cpyLen) {
             if ((ret = DRBG_CtrBCCUpdateKX(drbg, temp)) != CRYPT_SUCCESS) {
@@ -475,7 +476,7 @@ static int32_t DRBG_CtrGenerateBlocks(DRBG_Ctx *drbg, uint8_t *out, uint32_t out
         }
         // tmpOutLen indicates the length of the out remaining. In the last part of DRBG generation,
         // truncate the length of tmpOutLen and assign it to the out remaining.
-        (void)memcpy_s(out + offset, tmpOutLen, temp, tmpOutLen);
+        memcpy(out + offset, temp, tmpOutLen);
     }
 
     return ret;

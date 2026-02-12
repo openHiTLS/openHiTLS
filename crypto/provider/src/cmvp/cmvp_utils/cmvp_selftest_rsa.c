@@ -27,7 +27,6 @@
 #include "crypt_utils.h"
 #include "crypt_eal_rand.h"
 #include "crypt_util_rand.h"
-#include "securec.h"
 #include "bsl_sal.h"
 
 #define PKCSV15_PAD 0
@@ -170,7 +169,7 @@ static const CMVP_RSA_ENC_DEC_VECTOR RSA_ENC_DEC_VECTOR = {
 
 static bool GetPrvKey(const char *n, const char *d, CRYPT_EAL_PkeyPrv *prv)
 {
-    (void)memset_s(&prv->key.rsaPrv, sizeof(prv->key.rsaPrv), 0, sizeof(prv->key.rsaPrv));
+    memset(&prv->key.rsaPrv, 0, sizeof(prv->key.rsaPrv));
     prv->key.rsaPrv.n = CMVP_StringsToBins(n, &(prv->key.rsaPrv.nLen));
     GOTO_ERR_IF_TRUE(prv->key.rsaPrv.n == NULL, CRYPT_CMVP_COMMON_ERR);
     prv->key.rsaPrv.d = CMVP_StringsToBins(d, &(prv->key.rsaPrv.dLen));
@@ -324,7 +323,7 @@ static int32_t SetRandomVector(const char *vector, uint8_t *r, uint32_t rLen)
         BSL_SAL_FREE(rand);
         return CRYPT_CMVP_ERR_ALGO_SELFTEST;
     }
-    (void)memcpy_s(r, rLen, rand, rLen);
+    memcpy(r, rand, rLen);
     BSL_SAL_FREE(rand);
     return CRYPT_SUCCESS;
 }

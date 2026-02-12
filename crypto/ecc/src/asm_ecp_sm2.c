@@ -17,7 +17,7 @@
 #if defined(HITLS_CRYPTO_CURVE_SM2) && defined(HITLS_SIXTY_FOUR_BITS)
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_ecc.h"
 #include "ecc_local.h"
 #include "crypt_utils.h"
@@ -127,8 +127,8 @@ static void ECP_Sm2ModInverse(BN_UINT *out, const BN_UINT *in)
     if (IsZeros(in) != 0) {
         return;
     }
-    (void)memcpy_s(u, SM2_BYTES_NUM, in, SM2_BYTES_NUM);
-    (void)memcpy_s(v, SM2_BYTES_NUM, g_sm2p, SM2_BYTES_NUM);
+    memcpy(u, in, SM2_BYTES_NUM);
+    memcpy(v, g_sm2p, SM2_BYTES_NUM);
     while (((!IS_ONE(u)) != 0) && ((!IS_ONE(v)) != 0)) {
         c = u[0] & 0x3; // Use 0x03 to obtain the last two bits.
         d = v[0] & 0x3;
@@ -149,9 +149,9 @@ static void ECP_Sm2ModInverse(BN_UINT *out, const BN_UINT *in)
         }
     }
     if (IS_ONE(u) != 0) {
-        (void)memcpy_s(out, SM2_BYTES_NUM, x1, SM2_BYTES_NUM);
+        memcpy(out, x1, SM2_BYTES_NUM);
     } else {
-        (void)memcpy_s(out, SM2_BYTES_NUM, x2, SM2_BYTES_NUM);
+        memcpy(out, x2, SM2_BYTES_NUM);
     }
 }
 
@@ -167,8 +167,8 @@ static void ECP_Sm2InvModOrd(BN_UINT *out, const BN_UINT *in)
     if (IsZeros(in) != 0) {
         return;
     }
-    (void)memcpy_s(u, SM2_BYTES_NUM, in, SM2_BYTES_NUM);
-    (void)memcpy_s(v, SM2_BYTES_NUM, g_sm2ord, SM2_BYTES_NUM);
+    memcpy(u, in, SM2_BYTES_NUM);
+    memcpy(v, g_sm2ord, SM2_BYTES_NUM);
     while (((!IS_ONE(u)) != 0) && ((!IS_ONE(v)) != 0)) {
         c = u[0] & 0x3; // Use 0x03 to obtain the last two bits.
         d = v[0] & 0x3;
@@ -189,9 +189,9 @@ static void ECP_Sm2InvModOrd(BN_UINT *out, const BN_UINT *in)
         }
     }
     if (IS_ONE(u) != 0) {
-        (void)memcpy_s(out, SM2_BYTES_NUM, x1, SM2_BYTES_NUM);
+        memcpy(out, x1, SM2_BYTES_NUM);
     } else {
-        (void)memcpy_s(out, SM2_BYTES_NUM, x2, SM2_BYTES_NUM);
+        memcpy(out, x2, SM2_BYTES_NUM);
     }
 }
 
@@ -221,8 +221,8 @@ int32_t ECP_Sm2GetAffine(SM2_AffinePoint *r, const SM2_point *a)
     BN_UINT zInv3[SM2_LIMBS] ALIGN32 = {0};
     BN_UINT zInv2[SM2_LIMBS] ALIGN32 = {0};
     if (IsEqual(a->z, g_one) != 0) {
-        (void)memcpy_s(r->x, sizeof(r->x), a->x, sizeof(r->x));
-        (void)memcpy_s(r->y, sizeof(r->y), a->y, sizeof(r->x));
+        memcpy(r->x, a->x, sizeof(r->x));
+        memcpy(r->y, a->y, sizeof(r->x));
         return CRYPT_SUCCESS;
     }
 
@@ -301,18 +301,18 @@ static int32_t ECP_Sm2WnafMul(SM2_point *r, const BN_BigNum *k, SM2_point p)
     ECP_Sm2ToMont(precomputed[0].z, p.z);
     ECP_Sm2PointDoubleMont(&doublePoint, &precomputed[0]);
 
-    (void)memcpy_s(precomputed[WINDOW_HALF_TABLE_SIZE].x, SM2_BYTES_NUM, precomputed[0].x, SM2_BYTES_NUM);
+    memcpy(precomputed[WINDOW_HALF_TABLE_SIZE].x, precomputed[0].x, SM2_BYTES_NUM);
     ECP_Sm2Neg(precomputed[WINDOW_HALF_TABLE_SIZE].y, precomputed[0].y);
-    (void)memcpy_s(precomputed[WINDOW_HALF_TABLE_SIZE].z, SM2_BYTES_NUM, precomputed[0].z, SM2_BYTES_NUM);
+    memcpy(precomputed[WINDOW_HALF_TABLE_SIZE].z, precomputed[0].z, SM2_BYTES_NUM);
 
     for (uint32_t i = 1; i < WINDOW_HALF_TABLE_SIZE; i++) {
         ECP_Sm2PointAddMont(&precomputed[i], &precomputed[i - 1], &doublePoint); // 1, 3, 5, 7, 9, 11, 13, 15
-        (void)memcpy_s(precomputed[i + WINDOW_HALF_TABLE_SIZE].x, SM2_BYTES_NUM, precomputed[i].x, SM2_BYTES_NUM);
+        memcpy(precomputed[i + WINDOW_HALF_TABLE_SIZE].x, precomputed[i].x, SM2_BYTES_NUM);
         ECP_Sm2Neg(precomputed[i + WINDOW_HALF_TABLE_SIZE].y, precomputed[i].y);
-        (void)memcpy_s(precomputed[i + WINDOW_HALF_TABLE_SIZE].z, SM2_BYTES_NUM, precomputed[i].z, SM2_BYTES_NUM);
+        memcpy(precomputed[i + WINDOW_HALF_TABLE_SIZE].z, precomputed[i].z, SM2_BYTES_NUM);
     }
     int8_t index = SM2_NUMTOOFFSET(recodeK->num[0]);
-    (void)memcpy_s(r, sizeof(SM2_point), &precomputed[index], sizeof(SM2_point));
+    memcpy(r, &precomputed[index], sizeof(SM2_point));
     uint32_t w = recodeK->wide[0];
     while (w != 0) {
         ECP_Sm2PointDoubleMont(r, r);

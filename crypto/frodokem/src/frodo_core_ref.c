@@ -21,7 +21,7 @@
 #include "eal_cipher_local.h"
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
-#include "securec.h"
+#include <string.h>
 
 #define FRODO_MAX_N                  1344
 #define FRODO_MAX_SEED_A             16
@@ -49,7 +49,7 @@ typedef void (*MultFunctionShake)(uint16_t *out, const uint16_t *matrixS, int32_
 static inline uint16_t leToUint16(uint16_t n)
 {
     uint8_t bytes[2];
-    (void)memcpy_s(bytes, 2, &n, 2);
+    memcpy(bytes, &n, 2);
     return (uint16_t)bytes[0] | ((uint16_t)bytes[1] << 8);
 }
 
@@ -403,7 +403,7 @@ void FrodoCommonKeyDecode(uint16_t *out, const uint16_t *in, const FrodoKemParam
     const uint16_t round = (uint16_t)(1u << (s - 1));
     const uint16_t mask = (uint16_t)((1u << b) - 1u);
 
-    (void)memset_s(mu, params->lenMu, 0, params->lenMu);
+    memset(mu, 0, params->lenMu);
 
     size_t bitpos = 0;
     for (size_t t = 0; t < total; t++) {

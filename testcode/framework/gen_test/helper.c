@@ -15,7 +15,7 @@
 
 #include "helper.h"
 #include <dirent.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_utils.h"
 
 #define INCLUDE_BASE "/* INCLUDE_BASE"
@@ -287,9 +287,10 @@ int ReadFunction(const char *in, const uint32_t inLen, char *outFuncName, uint32
     if (cur >= inLen) {
         return 1;
     }
-    if (strncpy_s(funcName, outLen, &in[prev], cur - prev) != 0) {
+    if ((size_t)(cur - prev) >= outLen) {
         return 1;
     }
+    memcpy(funcName, &in[prev], (size_t)(cur - prev));
     funcName[cur - prev] = '\0';
     cur++;
 
@@ -341,9 +342,10 @@ int AddFunction(const char *funcName, int argv[MAX_ARGUMENT_COUNT], const uint32
         return 1;
     }
 
-    if (strcpy_s(g_testFunc[g_testFuncCount].name, MAX_TEST_FUNCTION_NAME, funcName) != 0) {
+    if (strlen(funcName) >= MAX_TEST_FUNCTION_NAME) {
         return 1;
     }
+    strcpy(g_testFunc[g_testFuncCount].name, funcName);
     g_testFunc[g_testFuncCount].argCount = argCount;
     for (uint32_t i = 0; i < argCount; i++) {
         g_testFunc[g_testFuncCount].argType[i] = argv[i];
@@ -467,9 +469,12 @@ static int ConnectFunction(char *lineBuf, uint32_t bufLen, FILE *fp)
             break;
         }
         if (ReadLine(fp, buf, MAX_FUNCTION_LINE_LEN, 0, 0) == 0) {
-            if (strcat_s(lineBuf, bufLen, buf) != 0) {
+            size_t used = strlen(lineBuf);
+            size_t add = strlen(buf);
+            if (used + add + 1 > bufLen) {
                 return 1;
             }
+            strcat(lineBuf, buf);
         } else {
             return 1;
         }
@@ -561,7 +566,7 @@ static int IncludeBase(char *line, uint32_t len, FILE *outFile, const char *dir)
     *end = '\0';
 
     char fileBuf[MAX_FILE_PATH_LEN];
-    if (snprintf_s(fileBuf, MAX_FILE_PATH_LEN, MAX_FILE_PATH_LEN, BASE_FILE_FORMAT, dir, name) == -1) {
+    if (snprintf(fileBuf, MAX_FILE_PATH_LEN, BASE_FILE_FORMAT, dir, name) < 0) {
         return 1;
     }
     g_lineCount = 0;
@@ -645,10 +650,11 @@ static int AddExp(const char *exp)
             return i;
         }
     }
-    if (strcpy_s(g_expTable[g_expCount], MAX_EXPRESSION_LEN, exp) != 0) {
+    if (strlen(exp) >= MAX_EXPRESSION_LEN) {
         Print("Macro too long, max length is %d\n", MAX_EXPRESSION_LEN);
         return -1;
     }
+    strcpy(g_expTable[g_expCount], exp);
     g_expCount++;
     return g_expCount - 1;
 }
@@ -895,7 +901,7 @@ FILE *OpenFile(const char *name, const char *option, const char *format)
 {
     FILE *fp = NULL;
     char fileBuf[MAX_FILE_PATH_LEN];
-    if (snprintf_s(fileBuf, MAX_FILE_PATH_LEN, MAX_FILE_PATH_LEN, format, name) == -1) {
+    if (snprintf(fileBuf, MAX_FILE_PATH_LEN, format, name) < 0) {
         Print("argument too long\n");
         return NULL;
     }
@@ -918,17 +924,21 @@ int StripDir(const char *in, char *suiteName, const uint32_t suiteNameLen, char 
         return 1;
     }
 
-    if (strncpy_s(localDir, dirNameLen, in, begin) != 0) {
+    if ((size_t)begin >= dirNameLen) {
         return 1;
     }
+    memcpy(localDir, in, (size_t)begin);
+    localDir[begin] = '\0';
 
-    if (strcpy_s(localSuiteName, suiteNameLen, &in[begin + 1]) != 0) {
+    if (strlen(&in[begin + 1]) >= suiteNameLen) {
         return 1;
     }
+    strcpy(localSuiteName, &in[begin + 1]);
 
-    if (strcpy_s(g_suiteFileName, MAX_FILE_PATH_LEN, &in[begin + 1]) != 0) {
+    if (strlen(&in[begin + 1]) >= MAX_FILE_PATH_LEN) {
         return 1;
     }
+    strcpy(g_suiteFileName, &in[begin + 1]);
 
     return 0;
 }
@@ -1037,12 +1047,13 @@ static int ReadAllLogFile(DIR *logDir, int *totalSuiteCount, FILE *outFile, Test
             return 1;
         }
 
-        if (strcpy_s(result[suiteCount].name, MAX_TEST_FUNCTION_NAME - 1, dir->d_name) != EOK) {
+        if (strlen(dir->d_name) >= MAX_TEST_FUNCTION_NAME) {
             Print("Dir's Name is too long\n");
             (void)fclose(fpLog);
             (void)fclose(fpAllLog);
             return 1;
         }
+        strcpy(result[suiteCount].name, dir->d_name);
         // len of ".log" is 4
         result[suiteCount].name[strlen(dir->d_name) - 4] = '\0';
         result[suiteCount].total = 0;
@@ -1052,7 +1063,7 @@ static int ReadAllLogFile(DIR *logDir, int *totalSuiteCount, FILE *outFile, Test
 
         while (ReadLine(fpLog, buf, bufLen, 0, 0) == 0) {
             char testCaseName[MAX_TEST_FUNCTION_NAME];
-            memset_s(testCaseName, MAX_TEST_FUNCTION_NAME, 0, MAX_TEST_FUNCTION_NAME);
+            memset(testCaseName, 0, MAX_TEST_FUNCTION_NAME);
             if (!IsSuite(buf, strlen(buf))) {
                 continue;
             }
@@ -1087,11 +1098,12 @@ static int ReadAllLogFile(DIR *logDir, int *totalSuiteCount, FILE *outFile, Test
                 return 1;
             }
 
-            if (strncpy_s(testCaseName, sizeof(testCaseName), buf, nameLen) != EOK) {
+            if (nameLen >= (int)sizeof(testCaseName)) {
                 (void)fclose(fpLog);
                 (void)fclose(fpAllLog);
                 return 1;
             }
+            memcpy(testCaseName, buf, (size_t)nameLen);
             testCaseName[nameLen] = '\0';
             // Move pointer past the dots to find the status string
             cur = dotPos;

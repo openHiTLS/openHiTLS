@@ -16,7 +16,7 @@
 /* BEGIN_HEADER */
 #include <limits.h>
 #include <pthread.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_eal_mac.h"
@@ -202,7 +202,8 @@ void SDV_CRYPT_EAL_GMAC_SAMEADDR_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *d
     CRYPT_EAL_MacCtx *ctx = NULL;
 
     ASSERT_TRUE((out = malloc(outLen)) != NULL);
-    ASSERT_EQ(memcpy_s(out, outLen, data->x, data->len), 0);
+    ASSERT_TRUE(data->len <= (outLen));
+    memcpy(out, data->x, data->len);
 
     ASSERT_TRUE((ctx = CRYPT_EAL_MacNewCtx(algId)) != NULL);
     ASSERT_EQ(CRYPT_EAL_MacInit(ctx, key->x, key->len), CRYPT_SUCCESS);
@@ -248,9 +249,12 @@ void SDV_CRYPT_EAL_GMAC_ADDR_NOT_ALIGN_FUNC_TC001(int algId, Hex *key, Hex *iv, 
     uint8_t *pIv = ivTmp + 1;
     uint8_t *pData = dataTmp + 1;
 
-    ASSERT_TRUE(memcpy_s(pKey, key->len, key->x, key->len) == 0);
-    ASSERT_TRUE(memcpy_s(pIv, iv->len, iv->x, iv->len) == 0);
-    ASSERT_TRUE(memcpy_s(pData, data->len, data->x, data->len) == 0);
+    ASSERT_TRUE(key->len <= key->len + 1);
+    memcpy(pKey, key->x, key->len);
+    ASSERT_TRUE(iv->len <= iv->len + 1);
+    memcpy(pIv, iv->x, iv->len);
+    ASSERT_TRUE(data->len <= data->len + 1);
+    memcpy(pData, data->x, data->len);
     TestMemInit();
 
     ASSERT_TRUE((ctx = CRYPT_EAL_MacNewCtx(algId)) != NULL);

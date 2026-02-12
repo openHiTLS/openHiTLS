@@ -23,7 +23,7 @@
 #include "hitls_cert.h"
 #include "hitls.h"
 #include "hitls_func.h"
-#include "securec.h"
+#include <string.h>
 #include "cert_method.h"
 #include "cert_mgr.h"
 #include "cert_mgr_ctx.h"
@@ -287,12 +287,12 @@ void UT_TLS_CERT_CFG_LoadCertBuffer_FUNC_001(int version, char *certPath)
     ASSERT_TRUE(buf != NULL);
     ASSERT_TRUE(bufLen <= BUF_MAX_SIZE);
     uint8_t buf2[BUF_MAX_SIZE]  = {0};
-    (void)memcpy_s(buf2, bufLen, buf, bufLen);
+    memcpy(buf2, buf, bufLen);
 
     buf2[bufLen - 1] = 'b';
     buf2[bufLen] = 0;
     uint8_t buf1[BUF_MAX_SIZE]  = {0};
-    (void)memcpy_s(buf1, bufLen, buf, bufLen);
+    memcpy(buf1, buf, bufLen);
 
     buf1[bufLen - 2] = 0;
     ASSERT_TRUE(HITLS_CFG_LoadCertBuffer(tlsConfig, buf, bufLen, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
@@ -405,11 +405,11 @@ void UT_TLS_CERT_CFG_LoadKeyBuffer_FUNC_TC001(int version, char *keyPath)
     ASSERT_TRUE(buf != NULL);
     ASSERT_TRUE(bufLen <= BUF_MAX_SIZE);
     uint8_t buf2[BUF_MAX_SIZE]  = {0};
-    memcpy_s(buf2, bufLen, buf, bufLen);
+    memcpy(buf2, buf, bufLen);
     buf2[bufLen - 1] = 'a';
     buf2[bufLen] = 0;
     uint8_t buf1[BUF_MAX_SIZE]  = {0};
-    memcpy_s(buf1, bufLen, buf, bufLen);
+    memcpy(buf1, buf, bufLen);
     buf1[bufLen - 2] = 0;
     ASSERT_TRUE(HITLS_CFG_LoadKeyBuffer(tlsConfig, buf, bufLen, TLS_PARSE_FORMAT_ASN1) == HITLS_SUCCESS);
     ASSERT_EQ(

@@ -12,7 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-#include "securec.h"
+#include <string.h>
 #include "hitls_build.h"
 #include "hs_ctx.h"
 #include "bsl_sal.h"
@@ -161,7 +161,7 @@ static int32_t WrapperRecWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t 
     uint8_t locBuffer[MAX_BUF];
     uint32_t manipulateLen = num;
 
-    (void)memcpy_s(locBuffer, MAX_BUF, data, num);
+    memcpy(locBuffer, data, num);
     wrapper->func(ctx, locBuffer, &manipulateLen, MAX_BUF, wrapper->userData);
 
     // Reallocate buffer if needed
@@ -176,7 +176,7 @@ static int32_t WrapperRecWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t 
 
     // Update handshake context
     if (recordType == REC_TYPE_HANDSHAKE) {
-        (void)memcpy_s(ctx->hsCtx->msgBuf, ctx->hsCtx->bufferLen, locBuffer, manipulateLen);
+        memcpy(ctx->hsCtx->msgBuf, locBuffer, manipulateLen);
         ctx->hsCtx->msgLen = manipulateLen;
     }
 
@@ -472,7 +472,7 @@ void ClearWrapper(void)
     pthread_mutex_unlock(&g_mappingMutex);
 
     // Clear global wrapper configuration (sets func to NULL)
-    (void)memset(&g_recWrapper, 0, sizeof(RecWrapper));
+    memset(&g_recWrapper, 0, sizeof(RecWrapper));
 }
 
 void ClearConnectionList(void)
@@ -480,6 +480,6 @@ void ClearConnectionList(void)
     // Clear the connection tracking list to prevent state leakage between tests
     pthread_mutex_lock(&g_connectionMutex);
     g_connectionCount = 0;
-    (void)memset(g_allConnections, 0, sizeof(g_allConnections));
+    memset(g_allConnections, 0, sizeof(g_allConnections));
     pthread_mutex_unlock(&g_connectionMutex);
 }

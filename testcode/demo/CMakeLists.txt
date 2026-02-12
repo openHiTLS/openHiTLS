@@ -21,8 +21,7 @@ set(HITLS_INCLUDE ${HITLS_ROOT}/include/bsl
                   ${HITLS_ROOT}/include/tls
                   ${HITLS_ROOT}/include/pki
                   ${HITLS_ROOT}/include/auth
-                  ${HITLS_ROOT}/config/macro_config
-                  ${HITLS_ROOT}/platform/Secure_C/include)
+                  ${HITLS_ROOT}/config/macro_config)
 
 if(CUSTOM_CFLAGS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CUSTOM_CFLAGS}")
@@ -38,10 +37,9 @@ endif()
 
 add_library(DEMO_INTF INTERFACE)
 target_compile_options(DEMO_INTF INTERFACE -g)
-target_link_directories(DEMO_INTF INTERFACE ${HITLS_ROOT}/build
-                                            ${HITLS_ROOT}/platform/Secure_C/lib/)
+target_link_directories(DEMO_INTF INTERFACE ${HITLS_ROOT}/build)
 
-target_link_libraries(DEMO_INTF INTERFACE hitls_tls hitls_pki hitls_auth hitls_crypto hitls_bsl boundscheck pthread dl)
+target_link_libraries(DEMO_INTF INTERFACE hitls_tls hitls_pki hitls_auth hitls_crypto hitls_bsl pthread dl)
 target_include_directories(DEMO_INTF INTERFACE ${HITLS_INCLUDE})
 
 file(GLOB TESTS "*.c")

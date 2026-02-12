@@ -24,7 +24,6 @@
 #include "crypt_eal_pkey.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
-#include "securec.h"
 #include "bsl_sal.h"
 
 typedef struct {
@@ -91,9 +90,8 @@ static bool GetPkey(void *libCtx, const char *attrName, bool isBob, CRYPT_EAL_Pk
     pub->key.eccPub.data = BSL_SAL_Malloc(pub->key.eccPub.len);
     GOTO_ERR_IF_TRUE(pub->key.eccPub.data == NULL, CRYPT_MEM_ALLOC_FAIL);
     pub->key.eccPub.data[0] = 0x04; // CRYPT_POINT_UNCOMPRESSED标记头
-    GOTO_ERR_IF_TRUE(memcpy_s(pub->key.eccPub.data + 1, pub->key.eccPub.len, x, xLen) != EOK, CRYPT_SECUREC_FAIL);
-    GOTO_ERR_IF_TRUE(
-        memcpy_s(pub->key.eccPub.data + 1 + xLen, pub->key.eccPub.len, y, yLen) != EOK, CRYPT_SECUREC_FAIL);
+    memcpy(pub->key.eccPub.data + 1, x, xLen);
+    memcpy(pub->key.eccPub.data + 1 + xLen, y, yLen);
     GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeySetParaById(*pkeyPub, ECDH_VECTOR.curveId) != CRYPT_SUCCESS,
         CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeySetPub(*pkeyPub, pub) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);

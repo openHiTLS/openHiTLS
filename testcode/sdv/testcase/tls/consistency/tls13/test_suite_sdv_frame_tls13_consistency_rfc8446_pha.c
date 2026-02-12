@@ -33,7 +33,7 @@
 #include "parser_frame_msg.h"
 #include "rec_wrapper.h"
 #include "cert.h"
-#include "securec.h"
+#include <string.h>
 #include "conn_init.h"
 #include "hitls_crypt_init.h"
 #include "hitls_psk.h"
@@ -49,7 +49,7 @@ int32_t STUB_RecConnDecrypt(
 {
     (void)ctx;
     (void)state;
-    memcpy_s(data, cryptMsg->textLen, cryptMsg->text, cryptMsg->textLen);
+    memcpy(data, cryptMsg->text, cryptMsg->textLen);
     (void)data;
     *dataLen = cryptMsg->textLen;
     return HITLS_SUCCESS;

@@ -20,7 +20,6 @@
 #include <pthread.h>
 #include <string.h>
 
-#include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_asn1_internal.h"
 #include "bsl_err.h"
@@ -1629,7 +1628,7 @@ void SDV_PKCS8_DECODE_DHKEY_DSAKEY_TC001(char *path, int fileType,  Hex *asn1)
     BSL_Buffer decodeAsn1 = {0};
     decodeAsn1.data = BSL_SAL_Malloc(asn1->len);
     decodeAsn1.dataLen = asn1->len;
-    memcpy_s(decodeAsn1.data, asn1->len, asn1->x, asn1->len);
+    memcpy(decodeAsn1.data, asn1->x, asn1->len);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyBypem), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &decodeAsn1, NULL, 0, &pkeyByAsn1), CRYPT_SUCCESS);
 
@@ -1682,7 +1681,7 @@ void SDV_PKCS8_ENCDEC_DHKEY_DSAKEY_TC001(char *path, int fileType,  Hex *asn1)
     BSL_Buffer pem = {0};
     decodeAsn1.data = BSL_SAL_Malloc(asn1->len);
     decodeAsn1.dataLen = asn1->len;
-    memcpy_s(decodeAsn1.data, asn1->len, asn1->x, asn1->len);
+    memcpy(decodeAsn1.data, asn1->x, asn1->len);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyBypem), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &decodeAsn1, NULL, 0, &pkeyByAsn1), CRYPT_SUCCESS);
 
@@ -1700,7 +1699,7 @@ void SDV_PKCS8_ENCDEC_DHKEY_DSAKEY_TC001(char *path, int fileType,  Hex *asn1)
     BSL_Buffer decodeAsn1_2 = {0};
     decodeAsn1_2.data = BSL_SAL_Malloc(encodeAsn1.dataLen);
     decodeAsn1_2.dataLen = encodeAsn1.dataLen;
-    memcpy_s(decodeAsn1_2.data, encodeAsn1.dataLen, encodeAsn1.data, encodeAsn1.dataLen);
+    memcpy(decodeAsn1_2.data, encodeAsn1.data, encodeAsn1.dataLen);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &decpkeyBypem), CRYPT_SUCCESS);
     ASSERT_EQ(
         CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &decodeAsn1_2, NULL, 0, &decpkeyByAsn1), CRYPT_SUCCESS);
@@ -1877,7 +1876,7 @@ void SDV_PKCS8_ERROR_ENCDEC_TC002(char *path, int fileType,  Hex *asn1)
     BSL_Buffer decodeAsn1 = {0};
     decodeAsn1.data = BSL_SAL_Malloc(asn1->len);
     decodeAsn1.dataLen = asn1->len;
-    memcpy_s(decodeAsn1.data, asn1->len, asn1->x, asn1->len);
+    memcpy(decodeAsn1.data, asn1->x, asn1->len);
     ASSERT_NE(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyBypem), CRYPT_SUCCESS);
     ASSERT_NE(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_ASN1, fileType, &decodeAsn1, NULL, 0, &pkeyByAsn1), CRYPT_SUCCESS);
 EXIT:
@@ -1913,7 +1912,7 @@ void SDV_PKCS8_ERROR_ENCDEC_TC003(char *path, int fileType,  Hex *asn1)
     BSL_Buffer decodeAsn1 = {0};
     decodeAsn1.data = BSL_SAL_Malloc(asn1->len);
     decodeAsn1.dataLen = asn1->len;
-    memcpy_s(decodeAsn1.data, asn1->len, asn1->x, asn1->len);
+    memcpy(decodeAsn1.data, asn1->x, asn1->len);
     ASSERT_NE(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, path, NULL, 0, &pkeyBypem), CRYPT_SUCCESS);
     ASSERT_NE(
         CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, fileType, "eeeeeeee\a.pem", NULL, 0, &pkeyBypem), CRYPT_SUCCESS);

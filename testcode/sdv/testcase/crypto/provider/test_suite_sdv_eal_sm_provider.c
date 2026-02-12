@@ -18,7 +18,6 @@
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_eal_init.h"

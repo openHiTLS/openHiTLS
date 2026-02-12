@@ -15,7 +15,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_TLS_PROTO_TLS13
 #include <stdbool.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "tls_binlog_id.h"
 #include "hitls_error.h"
@@ -577,14 +577,15 @@ int32_t HS_SwitchTrafficKey(TLS_Ctx *ctx, uint8_t *secret, uint32_t secretLen, b
         return HITLS_INTERNAL_EXCEPTION;
     }
 
-    if (memcpy_s(keyPara.masterSecret, sizeof(keyPara.masterSecret), secret, secretLen) != EOK) {
+    if (secretLen > sizeof(keyPara.masterSecret)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16912, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         return HITLS_MEMCPY_FAIL;
     }
+    memcpy(keyPara.masterSecret, secret, secretLen);
 
     ret = REC_TLS13InitPendingState(ctx, &keyPara, isOut);
-    (void)memset_s(keyPara.masterSecret, sizeof(keyPara.masterSecret), 0, sizeof(keyPara.masterSecret));
+    BSL_SAL_CleanseData(keyPara.masterSecret, sizeof(keyPara.masterSecret));
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
@@ -634,12 +635,13 @@ int32_t HS_TLS13UpdateTrafficSecret(TLS_Ctx *ctx, bool isOut)
             "HkdfExpandLabel fail", 0, 0, 0, 0);
         return ret;
     }
-    ret = memcpy_s(baseKey, baseKeyLen, trafficSecret, trafficSecretLen);
-    BSL_SAL_CleanseData(trafficSecret, MAX_DIGEST_SIZE);
-    if (ret != EOK) {
+    if (trafficSecretLen > baseKeyLen) {
+        BSL_SAL_CleanseData(trafficSecret, MAX_DIGEST_SIZE);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16915, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         return HITLS_MEMCPY_FAIL;
     }
+    memcpy(baseKey, trafficSecret, trafficSecretLen);
+    BSL_SAL_CleanseData(trafficSecret, MAX_DIGEST_SIZE);
 
     return HS_SwitchTrafficKey(ctx, baseKey, baseKeyLen, isOut);
 }

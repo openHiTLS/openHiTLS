@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_SHA3
 
 #include <stdlib.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "bsl_err_internal.h"
@@ -48,7 +48,7 @@ static int32_t CRYPT_SHA3_Init(CRYPT_SHA3_Ctx *ctx, uint32_t mdSize, uint32_t bl
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    (void)memset_s(ctx, sizeof(CRYPT_SHA3_Ctx), 0, sizeof(CRYPT_SHA3_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_SHA3_Ctx));
     ctx->mdSize = mdSize;
     ctx->padChr = padChr;
     ctx->blockSize = blockSize;
@@ -71,14 +71,14 @@ int32_t CRYPT_SHA3_Update(CRYPT_SHA3_Ctx *ctx, const uint8_t *in, uint32_t len)
 
     if (ctx->num != 0) {
         if (dataLen < left) {
-            (void)memcpy_s(ctx->buf + ctx->num, left, data, dataLen);
+            memcpy(ctx->buf + ctx->num, data, dataLen);
             ctx->num += dataLen;
             return CRYPT_SUCCESS;
         }
 
         // When the external input data is greater than the remaining space of the block,
         // copy the data of the remaining space.
-        (void)memcpy_s(ctx->buf + ctx->num, left, data, left);
+        memcpy(ctx->buf + ctx->num, data, left);
         (void)SHA3_Absorb(ctx->state, ctx->buf, ctx->blockSize, ctx->blockSize);
         dataLen -= left;
         data += left;
@@ -89,7 +89,7 @@ int32_t CRYPT_SHA3_Update(CRYPT_SHA3_Ctx *ctx, const uint8_t *in, uint32_t len)
     dataLen = len - (data - in);
     if (dataLen != 0) {
         // copy the remaining data to the cache array
-        (void)memcpy_s(ctx->buf, ctx->blockSize, data, dataLen);
+        memcpy(ctx->buf, data, dataLen);
         ctx->num = dataLen;
     }
 
@@ -110,7 +110,7 @@ int32_t CRYPT_SHA3_Final(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t *len)
 
     uint32_t left = ctx->blockSize - ctx->num;
     uint32_t outLen = (ctx->mdSize == 0) ? *len : ctx->mdSize;
-    (void)memset_s(ctx->buf + ctx->num, left, 0, left);
+    memset(ctx->buf + ctx->num, 0, left);
     ctx->buf[ctx->num] = ctx->padChr;
     ctx->buf[ctx->blockSize - 1] |= 0x80; // 0x80 is the last 1 of pad 10*1 mode
 
@@ -130,7 +130,7 @@ int32_t CRYPT_SHA3_Squeeze(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t len)
 
     if (!ctx->squeeze) {
         uint32_t left = ctx->blockSize - ctx->num;
-        (void)memset_s(ctx->buf + ctx->num, left, 0, left);
+        memset(ctx->buf + ctx->num, 0, left);
         ctx->buf[ctx->num] = ctx->padChr;
         ctx->buf[ctx->blockSize - 1] |= 0x80; // 0x80 is the last 1 of pad 10*1 mode
         (void)SHA3_Absorb(ctx->state, ctx->buf, ctx->blockSize, ctx->blockSize);
@@ -141,7 +141,7 @@ int32_t CRYPT_SHA3_Squeeze(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t len)
     uint8_t *outTmp = out;
     if (ctx->num != 0) {
         uint32_t outLen = (ctx->num > len) ? len : ctx->num;
-        (void)memcpy_s(outTmp, outLen, ctx->buf + ctx->blockSize - ctx->num, outLen);
+        memcpy(outTmp, ctx->buf + ctx->blockSize - ctx->num, outLen);
         ctx->num -= outLen;
         tmpLen -= outLen;
         outTmp += outLen;
@@ -154,7 +154,7 @@ int32_t CRYPT_SHA3_Squeeze(CRYPT_SHA3_Ctx *ctx, uint8_t *out, uint32_t len)
     }
     if (tmpLen != 0) {
         SHA3_Squeeze(ctx->state, ctx->buf, ctx->blockSize, ctx->blockSize, true);
-        (void)memcpy_s(outTmp, tmpLen, ctx->buf, tmpLen);
+        memcpy(outTmp, ctx->buf, tmpLen);
         ctx->num = ctx->blockSize - tmpLen;
     }
     return CRYPT_SUCCESS;
@@ -176,7 +176,7 @@ int32_t CRYPT_SHA3_CopyCtx(CRYPT_SHA3_Ctx *dst, const CRYPT_SHA3_Ctx *src)
         return CRYPT_NULL_INPUT;
     }
 
-    (void)memcpy_s(dst, sizeof(CRYPT_SHA3_Ctx), src, sizeof(CRYPT_SHA3_Ctx));
+    memcpy(dst, src, sizeof(CRYPT_SHA3_Ctx));
     return CRYPT_SUCCESS;
 }
 
@@ -191,7 +191,7 @@ CRYPT_SHA3_Ctx *CRYPT_SHA3_DupCtx(const CRYPT_SHA3_Ctx *src)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memcpy_s(newCtx, sizeof(CRYPT_SHA3_Ctx), src, sizeof(CRYPT_SHA3_Ctx));
+    memcpy(newCtx, src, sizeof(CRYPT_SHA3_Ctx));
     return newCtx;
 }
 

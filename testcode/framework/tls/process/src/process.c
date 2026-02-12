@@ -14,6 +14,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -65,7 +66,7 @@ int InitProcessList(void)
 {
     g_processList.processRes = (ProcessRes*)malloc(sizeof(ProcessRes));
     ASSERT_RETURN(g_processList.processRes != NULL, "Malloc ProcessRes Error");
-    memset_s(g_processList.processRes, sizeof(ProcessRes), 0, sizeof(ProcessRes));
+    memset(g_processList.processRes, 0, sizeof(ProcessRes));
     g_processList.num = 0;
     return SUCCESS;
 }
@@ -130,7 +131,7 @@ void FreeProcessResList(void)
     }
 
     free(g_processList.processRes);
-    memset_s(&g_processList, sizeof(g_processList), 0, sizeof(g_processList));
+    memset(&g_processList, 0, sizeof(g_processList));
     return;
 }
 
@@ -138,7 +139,7 @@ int InitProcess(void)
 {
     g_process= (Process*)malloc(sizeof(Process));
     ASSERT_RETURN(g_process != NULL, "Malloc ProcessRes Error");
-    (void)memset_s(g_process, sizeof(Process), 0, sizeof(Process));
+    memset(g_process, 0, sizeof(Process));
     return SUCCESS;
 }
 
@@ -242,8 +243,11 @@ HLT_Process *InitSrcProcess(TLS_TYPE tlsType, char *srcDomainPath)
         return NULL;
     }
 
-    ret = sprintf_s(srcControlDomainPath, DOMAIN_PATH_LEN, "%s.%u.sock", basename(srcDomainPath), getpid());
-
+    ret = snprintf(srcControlDomainPath, DOMAIN_PATH_LEN, "%s.%u.sock", basename(srcDomainPath), getpid());
+    if (ret < 0 || (size_t)ret >= DOMAIN_PATH_LEN) {
+        LOG_ERROR("sprintf Error");
+        return NULL;
+    }
     ret = InitProcess();
     if (ret != SUCCESS) {
         LOG_ERROR("InitProcess Error");
@@ -307,11 +311,11 @@ HLT_Process *InitSrcProcess(TLS_TYPE tlsType, char *srcDomainPath)
     process->hltTlsResNum = 0;
     process->connType = NONE_TYPE;
     process->connFd = 0;
-    ret = memcpy_s(process->srcDomainPath, DOMAIN_PATH_LEN, srcControlDomainPath, strlen(srcControlDomainPath));
-    if (ret != EOK) {
-        LOG_ERROR("memcpy_s process->srcDomainPath ERROR");
+    if (strlen(srcControlDomainPath) >= DOMAIN_PATH_LEN) {
+        LOG_ERROR("memcpy process->srcDomainPath ERROR");
         goto ERR;
     }
+    memcpy(process->srcDomainPath, srcControlDomainPath, strlen(srcControlDomainPath) + 1);
     LOG_DEBUG("Init Local Process Successful");
     return (HLT_Process*)process;
 
@@ -355,11 +359,9 @@ HLT_Process *InitPeerProcess(TLS_TYPE tlsType, HILT_TransportType connType, int 
         LOG_ERROR("Malloc Process is NULL");
         return NULL;
     }
-    (void)memset_s(process, sizeof(HLT_Process), 0, sizeof(HLT_Process));
+    memset(process, 0, sizeof(HLT_Process));
     pid_t localpid = getpid();
-    ret = sprintf_s(startCmd,
-        CMD_MAX_LEN,
-        START_PROCESS_CMD,
+    ret = snprintf(startCmd, CMD_MAX_LEN, START_PROCESS_CMD,
         tlsType,
         localProcess->srcDomainPath,
         g_processIndex,
@@ -367,8 +369,8 @@ HLT_Process *InitPeerProcess(TLS_TYPE tlsType, HILT_TransportType connType, int 
         localpid,
         localProcess->srcDomainPath,
         g_processIndex);
-    if (ret == 0) {
-        LOG_ERROR("sprintf_s Error");
+    if (ret < 0 || (size_t)ret >= CMD_MAX_LEN) {
+        LOG_ERROR("sprintf Error");
         free(process);
         return NULL;
     }
@@ -386,8 +388,8 @@ HLT_Process *InitPeerProcess(TLS_TYPE tlsType, HILT_TransportType connType, int 
 
     // The message is received, indicating that the peer end is in the receiveable state.
     CmdData expectCmdData = {0};
-    (void)sprintf_s(expectCmdData.id, sizeof(expectCmdData.id), "0");
-    (void)sprintf_s(expectCmdData.funcId, sizeof(expectCmdData.funcId), "HEART");
+    (void)snprintf(expectCmdData.id, sizeof(expectCmdData.id), "0");
+    (void)snprintf(expectCmdData.funcId, sizeof(expectCmdData.funcId), "HEART");
     tryNum = 0;
     do {
         ret = WaitResultFromPeer(&expectCmdData);
@@ -404,9 +406,9 @@ HLT_Process *InitPeerProcess(TLS_TYPE tlsType, HILT_TransportType connType, int 
     process->connFd = 0;
     process->tlsType = tlsType;
     process->remoteFlag = 1;
-    ret = sprintf_s(process->srcDomainPath, DOMAIN_PATH_LEN, "%s_%d", localProcess->srcDomainPath, g_processIndex);
-    if (ret <= 0) {
-        LOG_ERROR("sprintf_s Error");
+    ret = snprintf(process->srcDomainPath, DOMAIN_PATH_LEN, "%s_%d", localProcess->srcDomainPath, g_processIndex);
+    if (ret < 0 || (size_t)ret >= DOMAIN_PATH_LEN) {
+        LOG_ERROR("sprintf Error");
         goto ERR;
     }
     // Creating a Data Link

@@ -14,7 +14,7 @@
  */
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -61,7 +61,7 @@ CERT_MgrCtx *SAL_CERT_MgrCtxProviderNew(HITLS_Lib_Ctx *libCtx, const char *attrN
 
 #ifndef HITLS_TLS_FEATURE_PROVIDER
     HITLS_CERT_MgrMethod *method = SAL_CERT_GetMgrMethod();
-    (void)memcpy_s(&newCtx->method, sizeof(HITLS_CERT_MgrMethod), method, sizeof(HITLS_CERT_MgrMethod));
+    memcpy(&newCtx->method, method, sizeof(HITLS_CERT_MgrMethod));
 #endif
     newCtx->certStore = SAL_CERT_StoreNew(newCtx);
     if (newCtx->certStore == NULL) {
@@ -120,7 +120,7 @@ CERT_MgrCtx *SAL_CERT_MgrCtxDup(CERT_MgrCtx *mgrCtx)
         return NULL;
     }
 #ifndef HITLS_TLS_FEATURE_PROVIDER
-    (void)memcpy_s(&newCtx->method, sizeof(HITLS_CERT_MgrMethod), &mgrCtx->method, sizeof(HITLS_CERT_MgrMethod));
+    memcpy(&newCtx->method, &mgrCtx->method, sizeof(HITLS_CERT_MgrMethod));
 #endif
     int32_t ret = SAL_CERT_HashDup(newCtx, mgrCtx);
     if (ret != HITLS_SUCCESS) {

@@ -19,7 +19,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include "securec.h"
+#include <string.h>
 
 #include "logger.h"
 #include "process.h"
@@ -674,7 +674,7 @@ HLT_Ctx_Config* HLT_NewCtxConfig(char *setFile, const char *key)
         return NULL;
     }
 
-    (void)memset_s(ctxConfig, sizeof(HLT_Ctx_Config), 0, sizeof(HLT_Ctx_Config));
+    memset(ctxConfig, 0, sizeof(HLT_Ctx_Config));
     ctxConfig->needCheckKeyUsage = false;
     ctxConfig->isSupportRenegotiation = false;
     ctxConfig->allowClientRenegotiate = false;
@@ -739,7 +739,7 @@ HLT_Ssl_Config *HLT_NewSslConfig(char *setFile)
         return NULL;
     }
 
-    (void)memset_s(sslConfig, sizeof(HLT_Ssl_Config), 0, sizeof(HLT_Ssl_Config));
+    memset(sslConfig, 0, sizeof(HLT_Ssl_Config));
 
     // Store SSL configuration resources and release them later.
     localProcess = GetProcess();
@@ -1040,7 +1040,7 @@ HLT_Tls_Res* HLT_ProcessTlsConnect(HLT_Process *process, TLS_VERSION tlsVersion,
         LOG_ERROR("Malloc TlsRes ERROR");
         return NULL;
     }
-    (void)memset_s(tlsRes, sizeof(HLT_Tls_Res), 0, sizeof(HLT_Tls_Res));
+    memset(tlsRes, 0, sizeof(HLT_Tls_Res));
     // Checking Configuration Parameters
     if (ctxConfig == NULL) {
         ctxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
@@ -1152,8 +1152,13 @@ int HLT_SetEmptyRecordsNum(HLT_Ctx_Config *ctxConfig, uint32_t emptyNum)
 
 int HLT_SetKeyLogCb(HLT_Ctx_Config *ctxConfig, char *SetKeyLogCb)
 {
-    (void)memset_s(ctxConfig->keyLogCb, KEY_LOG_CB_LEN, 0, KEY_LOG_CB_LEN);
-    if (strcpy_s(ctxConfig->keyLogCb, KEY_LOG_CB_LEN, SetKeyLogCb) != EOK) {
+    memset(ctxConfig->keyLogCb, 0, KEY_LOG_CB_LEN);
+    if (SetKeyLogCb == NULL) {
+        LOG_ERROR("HLT_SetKeyLogCb failed.");
+        return -1;
+    }
+    int n = snprintf(ctxConfig->keyLogCb, KEY_LOG_CB_LEN, "%s", SetKeyLogCb);
+    if (n < 0 || (size_t)n >= KEY_LOG_CB_LEN) {
         LOG_ERROR("HLT_SetKeyLogCb failed.");
         return -1;
     }
@@ -1223,9 +1228,9 @@ int HLT_SetModeSupport(HLT_Ctx_Config *ctxConfig, uint32_t mode)
 int HLT_SetCipherSuites(HLT_Ctx_Config *ctxConfig, const char *cipherSuites)
 {
     int ret;
-    (void)memset_s(ctxConfig->cipherSuites, sizeof(ctxConfig->cipherSuites), 0, sizeof(ctxConfig->cipherSuites));
-    ret = sprintf_s(ctxConfig->cipherSuites, sizeof(ctxConfig->cipherSuites), cipherSuites);
-    if (ret <= 0) {
+    memset(ctxConfig->cipherSuites, 0, sizeof(ctxConfig->cipherSuites));
+    ret = snprintf(ctxConfig->cipherSuites, sizeof(ctxConfig->cipherSuites), "%s", cipherSuites);
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->cipherSuites)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1233,7 +1238,8 @@ int HLT_SetCipherSuites(HLT_Ctx_Config *ctxConfig, const char *cipherSuites)
 
 int HLT_SetProviderPath(HLT_Ctx_Config *ctxConfig, char *providerPath)
 {
-    if (strcpy_s(ctxConfig->providerPath, sizeof(ctxConfig->providerPath), providerPath) != EOK) {
+    int n = snprintf(ctxConfig->providerPath, sizeof(ctxConfig->providerPath), "%s", providerPath ? providerPath : "");
+    if (n < 0 || (size_t)n >= sizeof(ctxConfig->providerPath)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1241,7 +1247,8 @@ int HLT_SetProviderPath(HLT_Ctx_Config *ctxConfig, char *providerPath)
 
 int HLT_SetProviderAttrName(HLT_Ctx_Config *ctxConfig, char *attrName)
 {
-    if (strcpy_s(ctxConfig->attrName, sizeof(ctxConfig->attrName), attrName) != EOK) {
+    int n = snprintf(ctxConfig->attrName, sizeof(ctxConfig->attrName), "%s", attrName ? attrName : "");
+    if (n < 0 || (size_t)n >= sizeof(ctxConfig->attrName)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1250,7 +1257,8 @@ int HLT_SetProviderAttrName(HLT_Ctx_Config *ctxConfig, char *attrName)
 int HLT_AddProviderInfo(HLT_Ctx_Config *ctxConfig, char *providerName, int providerLibFmt)
 {
     if (providerName != NULL) {
-        if (strcpy_s(ctxConfig->providerNames[ctxConfig->providerCnt], MAX_PROVIDER_NAME_LEN, providerName) != EOK) {
+        int n = snprintf(ctxConfig->providerNames[ctxConfig->providerCnt], MAX_PROVIDER_NAME_LEN, "%s", providerName);
+        if (n < 0 || (size_t)n >= MAX_PROVIDER_NAME_LEN) {
             return ERROR;
         }
         ctxConfig->providerLibFmts[ctxConfig->providerCnt] = providerLibFmt;
@@ -1262,10 +1270,9 @@ int HLT_AddProviderInfo(HLT_Ctx_Config *ctxConfig, char *providerName, int provi
 int HLT_SetTls13CipherSuites(HLT_Ctx_Config *ctxConfig, const char *cipherSuites)
 {
     int ret;
-    (void)memset_s(ctxConfig->tls13CipherSuites, sizeof(ctxConfig->tls13CipherSuites), 0,
-        sizeof(ctxConfig->tls13CipherSuites));
-    ret = sprintf_s(ctxConfig->tls13CipherSuites, sizeof(ctxConfig->tls13CipherSuites), cipherSuites);
-    if (ret <= 0) {
+    memset(ctxConfig->tls13CipherSuites, 0, sizeof(ctxConfig->tls13CipherSuites));
+    ret = snprintf(ctxConfig->tls13CipherSuites, sizeof(ctxConfig->tls13CipherSuites), "%s", cipherSuites);
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->tls13CipherSuites)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1274,9 +1281,9 @@ int HLT_SetTls13CipherSuites(HLT_Ctx_Config *ctxConfig, const char *cipherSuites
 int HLT_SetEcPointFormats(HLT_Ctx_Config *ctxConfig, const char *pointFormat)
 {
     int ret;
-    (void)memset_s(ctxConfig->pointFormats, sizeof(ctxConfig->pointFormats), 0, sizeof(ctxConfig->pointFormats));
-    ret = sprintf_s(ctxConfig->pointFormats, sizeof(ctxConfig->pointFormats), pointFormat);
-    if (ret <= 0) {
+    memset(ctxConfig->pointFormats, 0, sizeof(ctxConfig->pointFormats));
+    ret = snprintf(ctxConfig->pointFormats, sizeof(ctxConfig->pointFormats), "%s", pointFormat);
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->pointFormats)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1285,9 +1292,9 @@ int HLT_SetEcPointFormats(HLT_Ctx_Config *ctxConfig, const char *pointFormat)
 int HLT_SetGroups(HLT_Ctx_Config *ctxConfig, const char *groups)
 {
     int ret;
-    (void)memset_s(ctxConfig->groups, sizeof(ctxConfig->groups), 0, sizeof(ctxConfig->groups));
-    ret = sprintf_s(ctxConfig->groups, sizeof(ctxConfig->groups), groups);
-    if (ret <= 0) {
+    memset(ctxConfig->groups, 0, sizeof(ctxConfig->groups));
+    ret = snprintf(ctxConfig->groups, sizeof(ctxConfig->groups), "%s", groups);
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->groups)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1296,9 +1303,9 @@ int HLT_SetGroups(HLT_Ctx_Config *ctxConfig, const char *groups)
 int HLT_SetSignature(HLT_Ctx_Config *ctxConfig, const char *signature)
 {
     int ret;
-    (void)memset_s(ctxConfig->signAlgorithms, sizeof(ctxConfig->signAlgorithms), 0, sizeof(ctxConfig->signAlgorithms));
-    ret = sprintf_s(ctxConfig->signAlgorithms, sizeof(ctxConfig->signAlgorithms), signature);
-    if (ret <= 0) {
+    memset(ctxConfig->signAlgorithms, 0, sizeof(ctxConfig->signAlgorithms));
+    ret = snprintf(ctxConfig->signAlgorithms, sizeof(ctxConfig->signAlgorithms), "%s", (signature != NULL) ? signature : "NULL");
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->signAlgorithms)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1306,8 +1313,14 @@ int HLT_SetSignature(HLT_Ctx_Config *ctxConfig, const char *signature)
 
 int HLT_SetPsk(HLT_Ctx_Config *ctxConfig, char *psk)
 {
-    (void)memset_s(ctxConfig->psk, PSK_MAX_LEN, 0, PSK_MAX_LEN);
-    if (strcpy_s(ctxConfig->psk, PSK_MAX_LEN, psk) != EOK) {
+    int n;
+    memset(ctxConfig->psk, 0, PSK_MAX_LEN);
+    if (psk == NULL) {
+        LOG_ERROR("HLT_SetPsk failed.");
+        return -1;
+    }
+    n = snprintf(ctxConfig->psk, PSK_MAX_LEN, "%s", psk);
+    if (n < 0 || (size_t)n >= PSK_MAX_LEN) {
         LOG_ERROR("HLT_SetPsk failed.");
         return -1;
     }
@@ -1322,8 +1335,14 @@ int HLT_SetKeyExchMode(HLT_Ctx_Config *config, uint32_t mode)
 
 int HLT_SetTicketKeyCb(HLT_Ctx_Config *ctxConfig, char *ticketKeyCbName)
 {
-    (void)memset_s(ctxConfig->ticketKeyCb, TICKET_KEY_CB_NAME_LEN, 0, TICKET_KEY_CB_NAME_LEN);
-    if (strcpy_s(ctxConfig->ticketKeyCb, TICKET_KEY_CB_NAME_LEN, ticketKeyCbName) != EOK) {
+    int n;
+    memset(ctxConfig->ticketKeyCb, 0, TICKET_KEY_CB_NAME_LEN);
+    if (ticketKeyCbName == NULL) {
+        LOG_ERROR("HLT_SetTicketKeyCb failed.");
+        return -1;
+    }
+    n = snprintf(ctxConfig->ticketKeyCb, TICKET_KEY_CB_NAME_LEN, "%s", ticketKeyCbName);
+    if (n < 0 || (size_t)n >= TICKET_KEY_CB_NAME_LEN) {
         LOG_ERROR("HLT_SetTicketKeyCb failed.");
         return -1;
     }
@@ -1333,9 +1352,9 @@ int HLT_SetTicketKeyCb(HLT_Ctx_Config *ctxConfig, char *ticketKeyCbName)
 int HLT_SetCaCertPath(HLT_Ctx_Config *ctxConfig, const char *caCertPath)
 {
     int ret;
-    (void)memset_s(ctxConfig->caCert, sizeof(ctxConfig->caCert), 0, sizeof(ctxConfig->caCert));
-    ret = sprintf_s(ctxConfig->caCert, sizeof(ctxConfig->caCert), caCertPath);
-    if (ret <= 0) {
+    memset(ctxConfig->caCert, 0, sizeof(ctxConfig->caCert));
+    ret = snprintf(ctxConfig->caCert, sizeof(ctxConfig->caCert), "%s", caCertPath);
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->caCert)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1344,9 +1363,9 @@ int HLT_SetCaCertPath(HLT_Ctx_Config *ctxConfig, const char *caCertPath)
 int HLT_SetChainCertPath(HLT_Ctx_Config *ctxConfig, const char *chainCertPath)
 {
     int ret;
-    (void)memset_s(ctxConfig->chainCert, sizeof(ctxConfig->chainCert), 0, sizeof(ctxConfig->chainCert));
-    ret = sprintf_s(ctxConfig->chainCert, sizeof(ctxConfig->chainCert), chainCertPath);
-    if (ret <= 0) {
+    memset(ctxConfig->chainCert, 0, sizeof(ctxConfig->chainCert));
+    ret = snprintf(ctxConfig->chainCert, sizeof(ctxConfig->chainCert), "%s", chainCertPath);
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->chainCert)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1355,9 +1374,9 @@ int HLT_SetChainCertPath(HLT_Ctx_Config *ctxConfig, const char *chainCertPath)
 int HLT_SetEeCertPath(HLT_Ctx_Config *ctxConfig, const char *eeCertPath)
 {
     int ret;
-    (void)memset_s(ctxConfig->eeCert, sizeof(ctxConfig->eeCert), 0, sizeof(ctxConfig->eeCert));
-    ret = sprintf_s(ctxConfig->eeCert, sizeof(ctxConfig->eeCert), eeCertPath);
-    if (ret <= 0) {
+    memset(ctxConfig->eeCert, 0, sizeof(ctxConfig->eeCert));
+    ret = snprintf(ctxConfig->eeCert, sizeof(ctxConfig->eeCert), "%s", eeCertPath);
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->eeCert)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1366,9 +1385,9 @@ int HLT_SetEeCertPath(HLT_Ctx_Config *ctxConfig, const char *eeCertPath)
 int HLT_SetPrivKeyPath(HLT_Ctx_Config *ctxConfig, const char *privKeyPath)
 {
     int ret;
-    (void)memset_s(ctxConfig->privKey, sizeof(ctxConfig->privKey), 0, sizeof(ctxConfig->privKey));
-    ret = sprintf_s(ctxConfig->privKey, sizeof(ctxConfig->privKey), privKeyPath);
-    if (ret <= 0) {
+    memset(ctxConfig->privKey, 0, sizeof(ctxConfig->privKey));
+    ret = snprintf(ctxConfig->privKey, sizeof(ctxConfig->privKey), "%s", privKeyPath);
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->privKey)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1377,9 +1396,9 @@ int HLT_SetPrivKeyPath(HLT_Ctx_Config *ctxConfig, const char *privKeyPath)
 int HLT_SetSignCertPath(HLT_Ctx_Config *ctxConfig, const char *signCertPath)
 {
     int ret;
-    (void)memset_s(ctxConfig->signCert, sizeof(ctxConfig->signCert), 0, sizeof(ctxConfig->signCert));
-    ret = sprintf_s(ctxConfig->signCert, sizeof(ctxConfig->signCert), signCertPath);
-    if (ret <= 0) {
+    memset(ctxConfig->signCert, 0, sizeof(ctxConfig->signCert));
+    ret = snprintf(ctxConfig->signCert, sizeof(ctxConfig->signCert), "%s", signCertPath);
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->signCert)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1388,9 +1407,9 @@ int HLT_SetSignCertPath(HLT_Ctx_Config *ctxConfig, const char *signCertPath)
 int HLT_SetSignPrivKeyPath(HLT_Ctx_Config *ctxConfig, const char *signPrivKeyPath)
 {
     int ret;
-    (void)memset_s(ctxConfig->signPrivKey, sizeof(ctxConfig->signPrivKey), 0, sizeof(ctxConfig->signPrivKey));
-    ret = sprintf_s(ctxConfig->signPrivKey, sizeof(ctxConfig->signPrivKey), signPrivKeyPath);
-    if (ret <= 0) {
+    memset(ctxConfig->signPrivKey, 0, sizeof(ctxConfig->signPrivKey));
+    ret = snprintf(ctxConfig->signPrivKey, sizeof(ctxConfig->signPrivKey), "%s", signPrivKeyPath);
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->signPrivKey)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1399,9 +1418,9 @@ int HLT_SetSignPrivKeyPath(HLT_Ctx_Config *ctxConfig, const char *signPrivKeyPat
 int HLT_SetPassword(HLT_Ctx_Config* ctxConfig, const char* password)
 {
     int ret;
-    (void)memset_s(ctxConfig->password, sizeof(ctxConfig->password), 0, sizeof(ctxConfig->password));
-    ret = sprintf_s(ctxConfig->password, sizeof(ctxConfig->password), password);
-    if (ret <= 0) {
+    memset(ctxConfig->password, 0, sizeof(ctxConfig->password));
+    ret = snprintf(ctxConfig->password, sizeof(ctxConfig->password), "%s", password);
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->password)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1423,9 +1442,10 @@ void HLT_SetCertPath(HLT_Ctx_Config *ctxConfig, const char *caPath, const char *
 
 int HLT_SetServerName(HLT_Ctx_Config *ctxConfig, const char *serverName)
 {
-    (void)memset_s(ctxConfig->serverName, sizeof(ctxConfig->serverName), 0, sizeof(ctxConfig->serverName));
-    int ret = sprintf_s(ctxConfig->serverName, sizeof(ctxConfig->serverName), serverName);
-    if (ret <= 0) {
+    int ret;
+    memset(ctxConfig->serverName, 0, sizeof(ctxConfig->serverName));
+    ret = snprintf(ctxConfig->serverName, sizeof(ctxConfig->serverName), "%s", serverName ? serverName : "");
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->serverName)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1433,8 +1453,10 @@ int HLT_SetServerName(HLT_Ctx_Config *ctxConfig, const char *serverName)
 
 int HLT_SetServerNameArg(HLT_Ctx_Config *ctxConfig, char *arg)
 {
-    (void)memset_s(ctxConfig->sniArg, SERVER_NAME_ARG_NAME_LEN, 0, SERVER_NAME_ARG_NAME_LEN);
-    if (strcpy_s(ctxConfig->sniArg, SERVER_NAME_ARG_NAME_LEN, arg) != EOK) {
+    int n;
+    memset(ctxConfig->sniArg, 0, SERVER_NAME_ARG_NAME_LEN);
+    n = snprintf(ctxConfig->sniArg, SERVER_NAME_ARG_NAME_LEN, "%s", arg ? arg : "");
+    if (n < 0 || (size_t)n >= SERVER_NAME_ARG_NAME_LEN) {
         LOG_ERROR("HLT_SetServerNameArg failed.");
         return ERROR;
     }
@@ -1443,8 +1465,10 @@ int HLT_SetServerNameArg(HLT_Ctx_Config *ctxConfig, char *arg)
 
 int HLT_SetServerNameCb(HLT_Ctx_Config *ctxConfig, char *sniCbName)
 {
-    (void)memset_s(ctxConfig->sniDealCb, SERVER_NAME_CB_NAME_LEN, 0, SERVER_NAME_CB_NAME_LEN);
-    if (strcpy_s(ctxConfig->sniDealCb, SERVER_NAME_CB_NAME_LEN, sniCbName) != EOK) {
+    int n;
+    memset(ctxConfig->sniDealCb, 0, SERVER_NAME_CB_NAME_LEN);
+    n = snprintf(ctxConfig->sniDealCb, SERVER_NAME_CB_NAME_LEN, "%s", sniCbName ? sniCbName : "");
+    if (n < 0 || (size_t)n >= SERVER_NAME_CB_NAME_LEN) {
         LOG_ERROR("HLT_SetServerNameCb failed.");
         return ERROR;
     }
@@ -1453,9 +1477,10 @@ int HLT_SetServerNameCb(HLT_Ctx_Config *ctxConfig, char *sniCbName)
 
 int HLT_SetAlpnProtos(HLT_Ctx_Config *ctxConfig, const char *alpnProtos)
 {
-    (void)memset_s(ctxConfig->alpnList, sizeof(ctxConfig->alpnList), 0, sizeof(ctxConfig->alpnList));
-    int ret = sprintf_s(ctxConfig->alpnList, sizeof(ctxConfig->alpnList), alpnProtos);
-    if (ret <= 0) {
+    int ret;
+    memset(ctxConfig->alpnList, 0, sizeof(ctxConfig->alpnList));
+    ret = snprintf(ctxConfig->alpnList, sizeof(ctxConfig->alpnList), "%s", alpnProtos ? alpnProtos : "");
+    if (ret < 0 || (size_t)ret >= sizeof(ctxConfig->alpnList)) {
         return ERROR;
     }
     return SUCCESS;
@@ -1463,13 +1488,16 @@ int HLT_SetAlpnProtos(HLT_Ctx_Config *ctxConfig, const char *alpnProtos)
 
 int HLT_SetAlpnProtosSelectCb(HLT_Ctx_Config *ctxConfig, char *callback, char *userData)
 {
-    (void)memset_s(ctxConfig->alpnSelectCb, ALPN_CB_NAME_LEN, 0, ALPN_CB_NAME_LEN);
-    if (strcpy_s(ctxConfig->alpnSelectCb, ALPN_CB_NAME_LEN, callback) != EOK) {
+    int n;
+    memset(ctxConfig->alpnSelectCb, 0, ALPN_CB_NAME_LEN);
+    n = snprintf(ctxConfig->alpnSelectCb, ALPN_CB_NAME_LEN, "%s", callback ? callback : "");
+    if (n < 0 || (size_t)n >= ALPN_CB_NAME_LEN) {
         LOG_ERROR("HLT_SetAlpnCb failed.");
         return ERROR;
     }
-    (void)memset_s(ctxConfig->alpnUserData, ALPN_DATA_NAME_LEN, 0, ALPN_DATA_NAME_LEN);
-    if (strcpy_s(ctxConfig->alpnUserData, ALPN_DATA_NAME_LEN, userData) != EOK) {
+    memset(ctxConfig->alpnUserData, 0, ALPN_DATA_NAME_LEN);
+    n = snprintf(ctxConfig->alpnUserData, ALPN_DATA_NAME_LEN, "%s", userData ? userData : "");
+    if (n < 0 || (size_t)n >= ALPN_DATA_NAME_LEN) {
         LOG_ERROR("HLT_SetAlpnDataCb failed.");
         return ERROR;
     }

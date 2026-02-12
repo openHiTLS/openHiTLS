@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
-#include "securec.h"
 #include "bsl_err.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -274,7 +273,7 @@ void SDV_CRYPTO_GCM_API_TC008(int id, int keyLen)
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, pt, sizeof(pt), ct, &outLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, tagLen) == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(memcpy_s(badTag, sizeof(badTag), tag, sizeof(tag)) == EOK);
+    memcpy(badTag, tag, sizeof(tag));
     badTag[0] ^= 0x01;
 
     outLen = sizeof(out);
@@ -337,7 +336,8 @@ void SDV_CRYPTO_GCM_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *aad, Hex *pt, 
     ASSERT_TRUE(out != NULL);
     outTag = (uint8_t *)malloc(sizeof(uint8_t) * tagLen);
     ASSERT_TRUE(outTag != NULL);
-    ASSERT_TRUE(memcpy_s(out, outLen, pt->x, pt->len) == EOK);
+    ASSERT_TRUE(pt->len <= outLen);
+    memcpy(out, pt->x, pt->len);
     ctx = CRYPT_EAL_CipherNewCtx(algId);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true) == CRYPT_SUCCESS);
@@ -352,7 +352,8 @@ void SDV_CRYPTO_GCM_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *aad, Hex *pt, 
     ASSERT_COMPARE("Compare Enc Tag", outTag, tagLen, tag->x, tag->len);
 
     CRYPT_EAL_CipherDeinit(ctx);
-    ASSERT_TRUE(memcpy_s(out, outLen, ct->x, ct->len) == EOK);
+    ASSERT_TRUE(ct->len <= outLen);
+    memcpy(out, ct->x, ct->len);
     ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, false) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad->x, aad->len) == CRYPT_SUCCESS);

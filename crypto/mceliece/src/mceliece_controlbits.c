@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MCELIECE
 #include "bsl_sal.h"
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"
 #include "mceliece_local.h"
@@ -33,7 +33,7 @@ static void RadixSortI32(uint32_t *ua, uint32_t *tmp, const int64_t n)
     size_t cnt[256];
     size_t pref[256];
     for (int32_t pass = 0; pass < 4; pass++) { // Number of radix passes for full 32-bit key (32 / 8 = 4)
-        (void)memset_s(cnt, sizeof(cnt), 0, sizeof(cnt));
+        memset(cnt, 0, sizeof(cnt));
         int32_t shift = pass * 8; // Bit-shift per radix pass (8-bit digit size)
         for (int64_t i = 0; i < n; i++) {
             // bias for signed order: flip sign bit once across full 32-bit key
@@ -441,9 +441,9 @@ int32_t CbitsFromPermNs(uint8_t *out, const int16_t *pi, const int64_t w, const 
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memset_s(temp, sizeof(int32_t) * (size_t)(2 * n), 0, sizeof(int32_t) * (size_t)(2 * n));
+    memset(temp, 0, sizeof(int32_t) * (size_t)(2 * n));
     size_t outBytes = (size_t)((((2 * w - 1) * n / 2) + 7) / 8);
-    (void)memset_s(out, outBytes, 0, outBytes);
+    memset(out, 0, outBytes);
     int32_t ret = BenesNetControlbits(out, 0, 1, pi, w, n, temp);
     BSL_SAL_FREE(temp);
     return ret;
@@ -467,7 +467,7 @@ static int32_t AllocBitPlanes(uint8_t ***planes, const int64_t w, const int64_t 
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return CRYPT_MEM_ALLOC_FAIL;
         }
-        (void)memset_s((*planes)[b], planeBytes, 0, planeBytes);
+        memset((*planes)[b], 0, planeBytes);
     }
     return CRYPT_SUCCESS;
 }

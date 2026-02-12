@@ -15,8 +15,8 @@
 
 #include "app_rand.h"
 #include <stddef.h>
+#include <string.h>
 #include <limits.h>
-#include "securec.h"
 #include "bsl_uio.h"
 #include "crypt_eal_rand.h"
 #include "bsl_base64.h"

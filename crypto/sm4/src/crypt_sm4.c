@@ -18,7 +18,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
@@ -254,7 +254,7 @@ static int32_t CRYPT_SM4_Crypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *o
     }
 
     if (!enc) {
-        (void)memset_s(x, sizeof(x), 0, sizeof(x));
+        memset(x, 0, sizeof(x));
     }
 
     return CRYPT_SUCCESS;

@@ -28,7 +28,6 @@
 #include "hitls_cert.h"
 #include "hitls.h"
 #include "hitls_func.h"
-#include "securec.h"
 #include "cert_method.h"
 #include "cert_mgr.h"
 #include "cert_mgr_ctx.h"

@@ -17,7 +17,6 @@
 #ifdef HITLS_BSL_PEM
 #include <stdint.h>
 #include <string.h>
-#include "securec.h"
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
@@ -86,13 +85,13 @@ static void PemFormatBase64(char *src, uint32_t srcLen, char **des)
     char *tmp = *des;
     while (len > PEM_LINE_LEN) {
         *tmp++ = '\n';
-        (void)memcpy_s(tmp, PEM_LINE_LEN, src, PEM_LINE_LEN);
+        memcpy(tmp, src, PEM_LINE_LEN);
         tmp += PEM_LINE_LEN;
         src += PEM_LINE_LEN;
         len -= PEM_LINE_LEN;
     }
     *tmp++ = '\n';
-    (void)memcpy_s(tmp, len, src, len);
+    memcpy(tmp, src, len);
     tmp += len;
     *tmp++ = '\n';
     *des = tmp;
@@ -127,10 +126,10 @@ int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_S
             break;
         }
         char *resTmp = res;
-        (void)memcpy_s(resTmp, headLen, symbol->head, headLen);
+        memcpy(resTmp, symbol->head, headLen);
         resTmp += headLen;
         PemFormatBase64(tmp, len, &resTmp);
-        (void)memcpy_s(resTmp, tailLen, symbol->tail, tailLen);
+        memcpy(resTmp, symbol->tail, tailLen);
         resTmp += tailLen;
         *resTmp++ = '\n';
         *resTmp++ = '\0';

@@ -16,7 +16,6 @@
 /* BEGIN_HEADER */
 
 #include "bsl_sal.h"
-#include "securec.h"
 #include "hitls_pki_pkcs12.h"
 #include "hitls_pki_errno.h"
 #include "bsl_types.h"

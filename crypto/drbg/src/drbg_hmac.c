@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_DRBG_HMAC
 #include <stdlib.h>
-#include <securec.h>
+#include <string.h>
 #include "crypt_errno.h"
 #include "crypt_local_types.h"
 #include "crypt_utils.h"
@@ -138,10 +138,10 @@ int32_t DRBG_HmacInstantiate(DRBG_Ctx *drbg, const CRYPT_Data *entropyInput, con
     }
 
     // Key = 0x00 00...00.
-    (void)memset_s(ctx->k, sizeof(ctx->k), 0, ctx->blockLen);
+    memset(ctx->k, 0, ctx->blockLen);
 
     // V = 0x01 01...01.
-    (void)memset_s(ctx->v, sizeof(ctx->v), 1, ctx->blockLen);
+    memset(ctx->v, 1, ctx->blockLen);
 
     // seed_material = entropy_input || nonce || personalization_string.
     // (Key, V) = HMAC_DRBG_Update (seed_material, Key, V).
@@ -230,7 +230,7 @@ int32_t DRBG_HmacGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
     }
     // Intercepts the len-length V-value as an output, and because of len <= blockLen,
     // length of V is always greater than blockLen，Therefore, this problem does not exist.
-    (void)memcpy_s(buf, len, ctx->v, len);
+    memcpy(buf, ctx->v, len);
 
     //  (Key, V) = HMAC_DRBG_Update (additional_input, Key, V).
     if ((ret = DRBG_HmacUpdate(drbg, &adin, hasAdin)) != CRYPT_SUCCESS) {

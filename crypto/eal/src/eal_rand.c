@@ -17,7 +17,7 @@
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_DRBG)
 
 #include <stdbool.h>
-#include <securec.h>
+#include <string.h>
 #include "crypt_eal_rand.h"
 #include "crypt_errno.h"
 #include "bsl_errno.h"
@@ -165,7 +165,7 @@ void EAL_SeedDrbgDeinit(bool isDefaultSeed)
         g_seedDrbg.seed = NULL;
         CRYPT_EAL_SeedPoolFree(g_seedDrbg.seedCtx);
         g_seedDrbg.seedCtx = NULL;
-        (void)memset_s(&(g_seedDrbg.seedMeth), sizeof(g_seedDrbg.seedMeth), 0, sizeof(g_seedDrbg.seedMeth));
+        memset(&(g_seedDrbg.seedMeth), 0, sizeof(g_seedDrbg.seedMeth));
         BSL_SAL_ReferencesFree(&(g_seedDrbg.references));
     }
     (void)BSL_SAL_ThreadUnlock(g_seedLock);

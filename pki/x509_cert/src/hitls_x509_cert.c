@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_PKI_X509_CRT
 #include <stdio.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #ifdef HITLS_BSL_SAL_FILE
 #include "sal_file.h"
@@ -524,8 +524,9 @@ static int32_t X509_GetAsn1BslTimeStr(const BSL_TIME *time, BSL_Buffer *val)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    if (sprintf_s((char *)val->data, PRINT_TIME_MAX_SIZE, BSL_PRINT_TIME_FMT,
-        BSL_PRINT_MONTH_STR[time->month - 1], time->day, time->hour, time->minute, time->second, time->year) == -1) {
+    int n = snprintf((char *)val->data, PRINT_TIME_MAX_SIZE, BSL_PRINT_TIME_FMT,
+        BSL_PRINT_MONTH_STR[time->month - 1], time->day, time->hour, time->minute, time->second, time->year);
+    if (n < 0 || (size_t)n >= PRINT_TIME_MAX_SIZE) {
         BSL_SAL_FREE(val->data);
         val->dataLen = 0;
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_TIME);
@@ -561,7 +562,7 @@ static int32_t X509_GetCNStrFromList(BSL_ASN1_List *nameList, BSL_Buffer *buff, 
             BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
             return BSL_MALLOC_FAIL;
         }
-        (void)memcpy_s(buff->data, nameNode->nameValue.len + 1, nameNode->nameValue.buff, nameNode->nameValue.len);
+        memcpy(buff->data, nameNode->nameValue.buff, nameNode->nameValue.len);
         buff->data[nameNode->nameValue.len] = '\0';
         buff->dataLen = nameNode->nameValue.len;
         return HITLS_PKI_SUCCESS;
@@ -667,7 +668,7 @@ static int32_t CertSet(void *dest, uint32_t size, void *val, uint32_t valLen, Se
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    (void)memcpy_s(dest, size, val, size);
+    memcpy(dest, val, size);
     return HITLS_PKI_SUCCESS;
 }
 

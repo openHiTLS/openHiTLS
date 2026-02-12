@@ -20,7 +20,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_TLS_FEATURE_ALPN
 #include "process.h"
-#include "securec.h"
+#include <string.h>
 #include "hlt.h"
 #include "hlt_type.h"
 #include "hitls_alpn.h"
@@ -55,14 +55,14 @@ static int SetCertPath(HLT_Ctx_Config *ctxConfig, const char *certStr, bool isSe
     char eecertPath[30];
     char privKeyPath[30];
 
-    ret = sprintf_s(caCertPath, sizeof(caCertPath), ROOT_PEM, certStr, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(chainCertPath, sizeof(chainCertPath), INTCA_PEM, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(eecertPath, sizeof(eecertPath), isServer ? SERVER_PEM : CLIENT_PEM, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(privKeyPath, sizeof(privKeyPath), isServer ? SERVER_KEY_PEM : CLIENT_KEY_PEM, certStr);
-    ASSERT_TRUE(ret > 0);
+    ret = snprintf(caCertPath, sizeof(caCertPath), ROOT_PEM, certStr, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(caCertPath));
+    ret = snprintf(chainCertPath, sizeof(chainCertPath), INTCA_PEM, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(chainCertPath));
+    ret = snprintf(eecertPath, sizeof(eecertPath), isServer ? SERVER_PEM : CLIENT_PEM, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(eecertPath));
+    ret = snprintf(privKeyPath, sizeof(privKeyPath), isServer ? SERVER_KEY_PEM : CLIENT_KEY_PEM, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(privKeyPath));
 
     HLT_SetCaCertPath(ctxConfig, (char *)caCertPath);
     HLT_SetChainCertPath(ctxConfig, (char *)chainCertPath);

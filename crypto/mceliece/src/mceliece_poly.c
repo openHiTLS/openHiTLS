@@ -110,7 +110,7 @@ int32_t PolynomialSetCoeff(GFPolynomial *poly, const int32_t degree, const GFEle
 
 int32_t PolynomialCopy(GFPolynomial *dst, const GFPolynomial *src)
 {
-    (void)memset_s(dst->coeffs, (dst->maxDegree + 1) * sizeof(GFElement), 0, (dst->maxDegree + 1) * sizeof(GFElement));
+    memset(dst->coeffs, 0, (dst->maxDegree + 1) * sizeof(GFElement));
     int32_t termsToCopy = (src->degree < dst->maxDegree) ? src->degree : dst->maxDegree;
 
     if (src->degree < 0) {

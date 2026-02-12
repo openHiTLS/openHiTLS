@@ -20,7 +20,7 @@
 #include "crypt_eal_pkey.h"
 #include "crypt_util_rand.h"
 #include "eal_pkey_local.h"
-#include "securec.h"
+#include <string.h>
 #include "crypt_frodokem.h"
 #include "crypt_drbg.h"
 #include "stub_utils.h"
@@ -342,7 +342,7 @@ void SDV_CRYPTO_FRODOKEM_SETPUB_API_TC001(int bits, Hex *testEK)
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &ek), CRYPT_NULL_INPUT);
 
     ek.key.kemEk.data =  BSL_SAL_Malloc(encapsKeyLen);
-    (void)memcpy_s(ek.key.kemEk.data, encapsKeyLen, testEK->x, testEK->len);
+    memcpy(ek.key.kemEk.data, testEK->x, testEK->len);
     ek.key.kemEk.len = encapsKeyLen - 1;
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &ek), CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH);
 
@@ -350,7 +350,7 @@ void SDV_CRYPTO_FRODOKEM_SETPUB_API_TC001(int bits, Hex *testEK)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &ek), CRYPT_FRODOKEM_ABSENT_PUBKEY);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &ek), CRYPT_SUCCESS);
-    (void)memset_s(ek.key.kemEk.data, encapsKeyLen, 0, encapsKeyLen);
+    memset(ek.key.kemEk.data, 0, encapsKeyLen);
 
     ek.key.kemEk.len = encapsKeyLen - 1;
     ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &ek), CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH);
@@ -402,7 +402,7 @@ void SDV_CRYPTO_FRODOKEM_SETPRV_API_TC001(int bits, Hex *testDK)
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &dk), CRYPT_NULL_INPUT);
 
     dk.key.kemDk.data =  BSL_SAL_Malloc(decapsKeyLen);
-    (void)memcpy_s(dk.key.kemDk.data, decapsKeyLen, testDK->x, testDK->len);
+    memcpy(dk.key.kemDk.data, testDK->x, testDK->len);
     dk.key.kemDk.len = decapsKeyLen - 1;
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &dk), CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH);
 
@@ -410,7 +410,7 @@ void SDV_CRYPTO_FRODOKEM_SETPRV_API_TC001(int bits, Hex *testDK)
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &dk), CRYPT_FRODOKEM_ABSENT_PRVKEY);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &dk), CRYPT_SUCCESS);
-    (void)memset_s(dk.key.kemDk.data, decapsKeyLen, 0, decapsKeyLen);
+    memset(dk.key.kemDk.data, 0, decapsKeyLen);
 
     dk.key.kemDk.len = decapsKeyLen - 1;
     ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &dk), CRYPT_FRODOKEM_BUFLEN_NOT_ENOUGH);
@@ -524,7 +524,8 @@ static int32_t GetEntropy(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRY
     if (entropy->data == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    memcpy_s(entropy->data, entropy->len, g_frodoSeed, 48);
+
+    memcpy(entropy->data, g_frodoSeed, 48);
     return CRYPT_SUCCESS;
 }
 
@@ -578,7 +579,9 @@ static void RandTeardown()
 void SDV_CRYPTO_FRODOKEM_ENCAPS_DECAPS_FUNC_TC001(int bits, Hex *seed, Hex *testEk, Hex *testDk, Hex *testCt, Hex *testSs)
 {
     TestMemInit();
-    memcpy_s(g_frodoSeed, 48, seed->x, seed->len);
+    if (seed->len <= 48) {
+        memcpy(g_frodoSeed, seed->x, seed->len);
+    }
     ASSERT_EQ(RandSetUp(), CRYPT_SUCCESS);
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_FRODOKEM);
     ASSERT_TRUE(ctx != NULL);

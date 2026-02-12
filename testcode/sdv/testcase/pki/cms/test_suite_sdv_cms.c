@@ -16,7 +16,7 @@
 /* BEGIN_HEADER */
 
 #include "bsl_sal.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_types.h"
 #include "bsl_log.h"
 #include "sal_file.h"
@@ -71,7 +71,7 @@ void SDV_CMS_PARSE_ENCRYPTEDDATA_TC001(Hex *buff)
         &output);
     ASSERT_EQ(ret, CRYPT_EAL_CIPHER_DATA_ERROR);
 
-    (void)memset_s(buff->x + buff->len - 20, 16, 0, 16); // modify the ciphertext, 16 and 20 are random number.
+    memset(buff->x + buff->len - 20, 0, 16); // modify the ciphertext, 16 and 20 are random number.
     ret =  CRYPT_EAL_ParseAsn1PKCS7EncryptedData(NULL, NULL, (BSL_Buffer *)buff, (const uint8_t *)pwd, pwdlen,
         &output);
     ASSERT_EQ(ret, CRYPT_EAL_CIPHER_DATA_ERROR);

@@ -16,7 +16,6 @@
 
 /* BEGIN_HEADER */
 #include <stdio.h>
-#include "securec.h"
 #include "test.h"
 #include "bsl_uio.h"
 #include "bsl_types.h"

@@ -19,7 +19,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "securec.h"
 #include "crypt_errno.h"
 #include "crypt_eal_provider.h"
 #include "crypt_eal_implprovider.h"

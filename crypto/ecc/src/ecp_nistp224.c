@@ -17,7 +17,7 @@
 #if defined(HITLS_CRYPTO_CURVE_NISTP224) && defined(HITLS_CRYPTO_NIST_USE_ACCEL)
 
 #include <stdbool.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_util_internal.h"
 #include "crypt_utils.h"
@@ -1298,7 +1298,7 @@ static void PtMul(Point *out, const Felem *k1, const Felem *k2, const Point preM
         PtAddMixed(&ptQ, &ptQ, &ptPre);
     } else {
         // k1 and k2 are all NULL, and the infinite point is output.
-        (void)memset_s((void *)out, sizeof(Point), 0, sizeof(Point));
+        memset((void *)out, 0, sizeof(Point));
         return;
     }
 
@@ -1400,7 +1400,7 @@ static int32_t GetPreMulPt(Point preMulPt[TABLE_P_SIZE], const ECC_Point *pt)
     int32_t ret;
 
     // 0pt
-    (void)memset_s((void *)&preMulPt[0], sizeof(Point), 0, sizeof(Point));
+    memset((void *)&preMulPt[0], 0, sizeof(Point));
     // 1pt
     ret = BN2Felem(&preMulPt[1].x, &pt->x);
     if (ret != CRYPT_SUCCESS) {

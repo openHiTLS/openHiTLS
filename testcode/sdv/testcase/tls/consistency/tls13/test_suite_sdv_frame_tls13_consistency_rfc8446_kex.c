@@ -29,7 +29,7 @@
 #include "hs.h"
 #include "alert.h"
 #include "bsl_sal.h"
-#include "securec.h"
+#include <string.h>
 #include "app.h"
 #include "hs_kx.h"
 #include "hs_msg.h"
@@ -159,14 +159,14 @@ static int SetCertPath(HLT_Ctx_Config *ctxConfig, const char *certStr, bool isSe
     char eeCertPath[30];
     char privKeyPath[30];
 
-    int32_t ret = sprintf_s(caCertPath, sizeof(caCertPath), ROOT_DER, certStr, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(chainCertPath, sizeof(chainCertPath), INTCA_DER, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(eeCertPath, sizeof(eeCertPath), isServer ? SERVER_DER : CLIENT_DER, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(privKeyPath, sizeof(privKeyPath), isServer ? SERVER_KEY_DER : CLIENT_KEY_DER, certStr);
-    ASSERT_TRUE(ret > 0);
+    int32_t ret = snprintf(caCertPath, sizeof(caCertPath), ROOT_DER, certStr, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(caCertPath));
+    ret = snprintf(chainCertPath, sizeof(chainCertPath), INTCA_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(chainCertPath));
+    ret = snprintf(eeCertPath, sizeof(eeCertPath), isServer ? SERVER_DER : CLIENT_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(eeCertPath));
+    ret = snprintf(privKeyPath, sizeof(privKeyPath), isServer ? SERVER_KEY_DER : CLIENT_KEY_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(privKeyPath));
     HLT_SetCaCertPath(ctxConfig, (char *)caCertPath);
     HLT_SetChainCertPath(ctxConfig, (char *)chainCertPath);
     HLT_SetEeCertPath(ctxConfig, (char *)eeCertPath);
@@ -211,8 +211,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVE_RENEGOTIATION_REQUEST_FUNC_TC001()
 
     FrameMsg recMsg = {0};
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
-    ASSERT_TRUE(memcpy_s(recMsg.msg, MAX_RECORD_LENTH, ioServerData->recMsg.msg + REC_TLS_RECORD_HEADER_LEN,
-    ioServerData->recMsg.len - REC_TLS_RECORD_HEADER_LEN) == EOK);
+    ASSERT_TRUE(ioServerData->recMsg.len - REC_TLS_RECORD_HEADER_LEN <= (MAX_RECORD_LENTH));
+    memcpy(recMsg.msg, ioServerData->recMsg.msg + REC_TLS_RECORD_HEADER_LEN, ioServerData->recMsg.len - REC_TLS_RECORD_HEADER_LEN);
     recMsg.len = ioServerData->recMsg.len - 5;
 
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
@@ -394,7 +394,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_FUNC_TC001()
     FrameUioUserData *ioUserData2 = BSL_UIO_GetUserData(client2->io);
     uint8_t *recvBuf2 = ioUserData2->recMsg.msg;
     uint32_t recvLen2 = ioUserData2->recMsg.len;
-    memcpy_s(buffer, MAX_RECORD_LENTH, recvBuf2, recvLen2);
+    ASSERT_TRUE((recvLen2) <= (MAX_RECORD_LENTH));
+    memcpy(buffer, recvBuf2, recvLen2);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
     ioUserData->recMsg.len = 0;
     ASSERT_EQ(FRAME_TransportRecMsg(client->io, buffer, recvLen2), HITLS_SUCCESS);
@@ -709,7 +710,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HANDSHAKE_UNEXPECTMSG_FUNC_TC008()
     FrameUioUserData *ioUserData2 = BSL_UIO_GetUserData(server2->io);
     uint8_t *recvBuf2 = ioUserData2->recMsg.msg;
     uint32_t recvLen2 = ioUserData2->recMsg.len;
-    memcpy_s(buffer, MAX_RECORD_LENTH, recvBuf2, recvLen2);
+    ASSERT_TRUE((recvLen2) <= (MAX_RECORD_LENTH));
+    memcpy(buffer, recvBuf2, recvLen2);
 
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
     ioUserData->recMsg.len = 0;
@@ -1156,7 +1158,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SECOND_GROUP_SUPPORT_FUNC_TC002()
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
     uint8_t *recvBuf = ioUserData->recMsg.msg;
     uint32_t recvLen = ioUserData->recMsg.len;
-    memcpy_s(buffer, MAX_RECORD_LENTH, recvBuf, recvLen);
+    ASSERT_TRUE((recvLen) <= (MAX_RECORD_LENTH));
+    memcpy(buffer, recvBuf, recvLen);
 
     ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
@@ -1916,8 +1919,7 @@ static void Test_ModifyClientHello_Sessionid_005(HITLS_Ctx *ctx, uint8_t *data, 
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
-    ASSERT_TRUE(memcpy_s(clientMsg->sessionId.data, sizeof(sessionId_temp) / sizeof(uint8_t),
-    sessionId_temp, sizeof(sessionId_temp) / sizeof(uint8_t)) == 0);
+    memcpy(clientMsg->sessionId.data, sessionId_temp, sizeof(sessionId_temp));
 
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
@@ -3335,8 +3337,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_RANDOM_FUNC_TC002()
     0xcf, 0x21, 0xad, 0x74, 0xe5, 0x9a, 0x61, 0x11, 0xbe, 0x1d, 0x8c, 0x02, 0x1e, 0x65, 0xb8, 0x91,
     0xc2, 0xa2, 0x11, 0x16, 0x7a, 0xbb, 0x8c, 0x5e, 0x07, 0x9e, 0x09, 0xe2, 0xc8, 0xa8, 0x33, 0x9c
 };
-    ASSERT_TRUE(memcpy_s(serverMsg->randomValue.data, sizeof(g_hrrRandom) / sizeof(uint8_t),
-    g_hrrRandom, sizeof(g_hrrRandom) / sizeof(uint8_t)) == 0);
+    memcpy(serverMsg->randomValue.data, g_hrrRandom, sizeof(g_hrrRandom));
     serverMsg->keyShare.data.keyExchangeLen.state = MISSING_FIELD;
     serverMsg->keyShare.data.keyExchange.state = MISSING_FIELD;
     serverMsg->keyShare.data.group.data = HITLS_EC_GROUP_SECP521R1;
@@ -3432,8 +3433,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SERVER_DOWN_GRADE_RANDOM_FUNC_TC001()
     /* The client is tls1.3, and the server is tls1.2. Construct a scenario where the last eight random bytes of
      * the server hello packet received by the client are equal to the specified value. */
     const uint8_t g_tls12Downgrade[HS_DOWNGRADE_RANDOM_SIZE] = {0x44, 0x4f, 0x57, 0x4e, 0x47, 0x52, 0x44, 0x01};
-    ASSERT_TRUE(memcpy_s(serverMsg->randomValue.data + (HS_RANDOM_SIZE - HS_DOWNGRADE_RANDOM_SIZE), sizeof(g_tls12Downgrade) / sizeof(uint8_t),
-    g_tls12Downgrade, sizeof(g_tls12Downgrade) / sizeof(uint8_t)) == 0);
+    memcpy(serverMsg->randomValue.data + (HS_RANDOM_SIZE - HS_DOWNGRADE_RANDOM_SIZE), g_tls12Downgrade, sizeof(g_tls12Downgrade));
 
     uint32_t sendLen = MAX_RECORD_LENTH;
     uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
@@ -3925,8 +3925,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FORMAT_FUNC_TC001()
     0xcf, 0x21, 0xad, 0x74, 0xe5, 0x9a, 0x61, 0x11, 0xbe, 0x1d, 0x8c, 0x02, 0x1e, 0x65, 0xb8, 0x91,
     0xc2, 0xa2, 0x11, 0x16, 0x7a, 0xbb, 0x8c, 0x5e, 0x07, 0x9e, 0x09, 0xe2, 0xc8, 0xa8, 0x33, 0x9c
 };
-    ASSERT_TRUE(memcpy_s(serverMsg->randomValue.data, sizeof(g_hrrRandom) / sizeof(uint8_t),
-    g_hrrRandom, sizeof(g_hrrRandom) / sizeof(uint8_t)) == 0);
+    memcpy(serverMsg->randomValue.data, g_hrrRandom, sizeof(g_hrrRandom));
 
     uint32_t sendLen = MAX_RECORD_LENTH;
     uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
@@ -4214,7 +4213,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_FORMAT_FUNC_TC004()
     ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &parsedSH, &parseLen) == HITLS_SUCCESS);
 
     FRAME_ServerHelloMsg *shMsg = &parsedSH.body.hsMsg.body.serverHello;
-    memset_s((shMsg->sessionId.data), shMsg->sessionId.size, 1, shMsg->sessionId.size);
+    memset((shMsg->sessionId.data), 1, shMsg->sessionId.size);
 
     uint32_t sendLen = MAX_RECORD_LENTH;
     uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
@@ -4903,7 +4902,7 @@ void SDV_TLS13_RFC8446_KeyShareGroup_TC003(int version, int connType)
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
 
     ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, clientRes->sslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-    ASSERT_TRUE(memset_s(readBuf, BUF_SIZE_DTO_TEST, 0, BUF_SIZE_DTO_TEST) == EOK);
+    memset(readBuf, 0, BUF_SIZE_DTO_TEST);
     ASSERT_TRUE(HLT_TlsRead(serverRes->ssl, readBuf, BUF_SIZE_DTO_TEST, &readLen) == 0);
     ASSERT_TRUE(readLen == strlen(writeBuf));
     ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);

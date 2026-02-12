@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_DRBG
 #include <stdint.h>
 #include <stdlib.h>
-#include <securec.h>
+#include <string.h>
 #include "crypt_types.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"

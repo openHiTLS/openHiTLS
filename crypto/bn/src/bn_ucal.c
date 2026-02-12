@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_BN
 
-#include "securec.h"
 #include "bn_bincal.h"
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"

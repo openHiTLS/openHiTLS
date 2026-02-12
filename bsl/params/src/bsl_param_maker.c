@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_PARAMS
 #include "bsl_errno.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_params.h"
 #include "bsl_list.h"
@@ -146,7 +146,7 @@ int32_t BSL_PARAM_MAKER_PushValue(BSL_ParamMaker *maker, int32_t key, uint32_t t
             if (ret != BSL_SUCCESS) {
                 goto EXIT;
             }
-            (void)memcpy_s(&paramMakerDef->num, len, value, len);
+            memcpy(&paramMakerDef->num, value, len);
             paramMakerDef->allocLen = len;
             break;
         case BSL_PARAM_TYPE_UINT32_PTR:
@@ -212,7 +212,7 @@ int32_t BSL_PARAM_MAKER_DeepPushValue(BSL_ParamMaker *maker, int32_t key, uint32
         goto EXIT;
     }
     paramMakerDef->flag |= PARAM_MAKER_MALLOCED_VALUE;
-    (void)memcpy_s(paramMakerDef->value, len, value, len);
+    memcpy(paramMakerDef->value, value, len);
     paramMakerDef->allocLen = allocLen;
     maker->valueLen += paramMakerDef->allocLen;
     ret = BSL_LIST_AddElement(maker->params, paramMakerDef, BSL_LIST_POS_END);
@@ -227,7 +227,7 @@ static int32_t BSL_PARAM_MAKER_NumberConvert(BSL_PARAM_MAKER_DEF *paramMakerDef,
     int32_t i, uint8_t **valueIndex)
 {
     uint8_t *value = *valueIndex;
-    (void)memcpy_s(value, paramMakerDef->len, &paramMakerDef->num, paramMakerDef->len);
+    memcpy(value, &paramMakerDef->num, paramMakerDef->len);
     *valueIndex += paramMakerDef->allocLen;
     return BSL_PARAM_InitValue(&params[i], paramMakerDef->key, paramMakerDef->type, value, paramMakerDef->len);
 }
@@ -243,9 +243,9 @@ static int32_t BSL_PARAM_MAKER_StringConvert(BSL_PARAM_MAKER_DEF *paramMakerDef,
 {
     uint8_t *value = *valueIndex;
     if (paramMakerDef->value != NULL) {
-        (void)memcpy_s(value, paramMakerDef->len, paramMakerDef->value, paramMakerDef->len);
+        memcpy(value, paramMakerDef->value, paramMakerDef->len);
     } else {
-        (void)memset_s(value, paramMakerDef->len, 0, paramMakerDef->len);
+        memset(value, 0, paramMakerDef->len);
     }
     if (paramMakerDef->type == BSL_PARAM_TYPE_UTF8_STR) {
         ((char *)(value))[paramMakerDef->len] = '\0';

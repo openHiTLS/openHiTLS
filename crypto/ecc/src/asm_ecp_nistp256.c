@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdbool.h>
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -27,7 +28,6 @@
 #include "ecc_local.h"
 #include "bsl_err_internal.h"
 #include "asm_ecp_nistp256.h"
-#include "securec.h"
 
 #if defined(HITLS_SIXTY_FOUR_BITS)
     // 1 is on the field with Montgomery, 1 * RR * R' mod P = R mod P = R - P

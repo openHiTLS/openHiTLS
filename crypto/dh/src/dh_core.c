@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_DH
 
-#include "securec.h"
+#include <string.h>
 #include "sal_atomic.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
@@ -37,7 +37,7 @@ CRYPT_DH_Ctx *CRYPT_DH_NewCtx(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(ctx, sizeof(CRYPT_DH_Ctx), 0, sizeof(CRYPT_DH_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_DH_Ctx));
     BSL_SAL_ReferencesInit(&(ctx->references));
     return ctx;
 }

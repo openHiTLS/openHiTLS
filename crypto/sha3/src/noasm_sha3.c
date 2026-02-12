@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_SHA3
 
 #include <stdlib.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "bsl_err_internal.h"
@@ -89,7 +89,7 @@ void SHA3_Squeeze(uint8_t *state, uint8_t *out, uint32_t outLen, uint32_t r, boo
         for (uint32_t i = 0; i < blockInWord; i++) {
             PUT_UINT64_LE(oneLane[i], outTmp, i << 3); // left shift by 3 bits equals i * 8.
         }
-        (void)memcpy_s(out + outLen - dataLen, dataLen, outTmp, copyLen);
+        memcpy(out + outLen - dataLen, outTmp, copyLen);
         dataLen -= copyLen;
         if (dataLen > 0 || isNeedKeccak) {
             SHA3_Keccak(state);

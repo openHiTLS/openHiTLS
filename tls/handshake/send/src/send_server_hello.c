@@ -14,7 +14,7 @@
  */
 #include "hitls_build.h"
 #ifdef HITLS_TLS_HOST_SERVER
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -133,7 +133,11 @@ static int32_t DowngradeServerRandom(TLS_Ctx *ctx)
         /* Some positions need to be rewritten to obtain random */
         offset = HS_RANDOM_SIZE - downgradeRandomLen;
         /* Rewrite the last eight bytes of the random */
-        ret = memcpy_s(hsCtx->serverRandom + offset, HS_RANDOM_DOWNGRADE_SIZE, downgradeRandom, downgradeRandomLen);
+        if (downgradeRandomLen > HS_RANDOM_DOWNGRADE_SIZE) {
+            ret = HITLS_MEMCPY_FAIL;
+        } else {
+            memcpy(hsCtx->serverRandom + offset, downgradeRandom, downgradeRandomLen);
+        }
     }
     return ret;
 }
@@ -164,7 +168,7 @@ int32_t ServerSendServerHelloProcess(TLS_Ctx *ctx)
          * to be rewritten */
         if (tlsConfig->maxVersion == HITLS_VERSION_TLS13) {
             ret = DowngradeServerRandom(ctx);
-            if (ret != EOK) {
+            if (ret != HITLS_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16248, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "copy down grade random fail.", 0, 0, 0, 0);
@@ -305,12 +309,13 @@ int32_t Tls13ServerSendHelloRetryRequestProcess(TLS_Ctx *ctx)
     if (hsCtx->msgLen == 0) {
         uint32_t hrrRandomLen = 0;
         const uint8_t *hrrRandom = HS_GetHrrRandom(&hrrRandomLen);
-        if (memcpy_s(hsCtx->serverRandom, HS_RANDOM_SIZE, hrrRandom, hrrRandomLen) != EOK) {
+        if (hrrRandomLen > HS_RANDOM_SIZE) {
             BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15557, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "copy hello retry request random fail.", 0, 0, 0, 0);
             return HITLS_MEMCPY_FAIL;
         }
+        memcpy(hsCtx->serverRandom, hrrRandom, hrrRandomLen);
 
         /* Pack the message. The hello retry request is assembled in the server hello format */
         ret = HS_PackMsg(ctx, SERVER_HELLO);

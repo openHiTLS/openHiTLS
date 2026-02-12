@@ -24,7 +24,6 @@
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "crypt_util_rand.h"
-#include "securec.h"
 #include "bsl_sal.h"
 
 #define BITS_OF_BYTE 8

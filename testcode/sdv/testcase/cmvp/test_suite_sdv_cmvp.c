@@ -35,7 +35,6 @@
 #include "crypt_eal_pkey.h"
 #include "crypt_eal_rand.h"
 #include "crypt_entropy.h"
-#include "securec.h"
 #include "bsl_errno.h"
 #include "crypt_params_key.h"
 #include "crypt_hmac.h"
@@ -77,9 +76,9 @@ static char *Bin2Hex(const uint8_t *input, int length)
     if (result == NULL) {
         return NULL;
     }
-    (void)memset_s(result, rLen, 0, rLen);
+    memset(result, 0, rLen);
     for (int i = 0; i < length; i++) {
-        if (sprintf_s(result + perHexLen * i, rLen, "%02x", input[i]) <= 0) {
+        if (snprintf(result + perHexLen * i, rLen, "%02x", input[i]) < 0) {
             free(result);
             return NULL;
         }

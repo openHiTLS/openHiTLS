@@ -18,7 +18,7 @@
 #include <stdbool.h>
 #include <dirent.h>
 #include <limits.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_uio.h"
 #include "crypt_eal_rand.h"
 #include "crypt_eal_cipher.h"
@@ -137,8 +137,8 @@ static char *GetKeyFullPath(const char *workPath, const char *uuid, const char *
         AppPrintError("keymgmt: Failed to allocate memory.\n");
         return NULL;
     }
-    int32_t ret = sprintf_s(path, APP_MAX_PATH_LEN, "%s/%s%s", workPath, uuid, suffix);
-    if (ret < 0) {
+    int ret = snprintf(path, APP_MAX_PATH_LEN, "%s/%s%s", workPath, uuid, suffix);
+    if (ret < 0 || ret >= APP_MAX_PATH_LEN) {
         BSL_SAL_Free(path);
         AppPrintError("keymgmt: Failed to get key full path, ret: %d.\n", ret);
         return NULL;
@@ -678,7 +678,7 @@ static int32_t SplitUuidString(const char *uuid, BslList **uuidList)
 
     char sep[] = ",";
     char *nextTmp = NULL;
-    char *tmp = strtok_s(src, sep, &nextTmp);
+    char *tmp = strtok_r(src, sep, &nextTmp);
     while (tmp != NULL) {
         char *singleUuid = BSL_SAL_Dump(tmp, strlen(tmp) + 1);
         if (singleUuid == NULL) {
@@ -695,7 +695,7 @@ static int32_t SplitUuidString(const char *uuid, BslList **uuidList)
             AppPrintError("keymgmt: Failed to add single uuid to list.\n");
             return HITLS_APP_SAL_FAIL;
         }
-        tmp = strtok_s(NULL, sep, &nextTmp);
+        tmp = strtok_r(NULL, sep, &nextTmp);
     }
     BSL_SAL_FREE(src);
     *uuidList = list;
@@ -1128,7 +1128,7 @@ int32_t HITLS_APP_FindKey(AppProvider *provider, HITLS_APP_SM_Param *smParam, in
         FreeKeyInfo(&readKeyInfo);
         return ret;
     }
-    (void)memcpy_s(keyInfo, sizeof(*keyInfo), &readKeyInfo, sizeof(readKeyInfo));
+    memcpy(keyInfo, &readKeyInfo, sizeof(readKeyInfo));
     (void)BSL_SAL_CleanseData(readKeyInfo.key, readKeyInfo.keyLen);
     return HITLS_APP_SUCCESS;
 }
@@ -1159,7 +1159,7 @@ static int32_t FillSyncKeyInfoFromSm2(const HITLS_APP_KeyInfo *keyInfo, HITLS_Sy
 {
     HITLS_APP_KeyAttr attr = keyInfo->attr;
     KeyAttrOrderCvt(&attr, true);
-    (void)memcpy_s(&info->attr, sizeof(info->attr), &attr, sizeof(attr));
+    memcpy(&info->attr, &attr, sizeof(attr));
 
     uint8_t prv[APP_KEYMGMT_MAX_KEY_LEN] = {0};
     uint8_t pub[APP_KEYMGMT_MAX_KEY_LEN] = {0};
@@ -1179,17 +1179,17 @@ static int32_t FillSyncKeyInfoFromSm2(const HITLS_APP_KeyInfo *keyInfo, HITLS_Sy
     uint32_t used = 0;
     uint32_t len = 0;
     BSL_Uint32ToByte(pubLen, (uint8_t *)&len);
-    (void)memcpy_s(info->key + used, sizeof(info->key) - used, &len, sizeof(len));
+    memcpy(info->key + used, &len, sizeof(len));
     used += sizeof(len);
 
-    (void)memcpy_s(info->key + used, sizeof(info->key) - used, pub, pubLen);
+    memcpy(info->key + used, pub, pubLen);
     used += pubLen;
 
     BSL_Uint32ToByte(prvLen, (uint8_t *)&len);
-    (void)memcpy_s(info->key + used, sizeof(info->key) - used, &len, sizeof(len));
+    memcpy(info->key + used, &len, sizeof(len));
     used += sizeof(len);
 
-    (void)memcpy_s(info->key + used, sizeof(info->key) - used, prv, prvLen);
+    memcpy(info->key + used, prv, prvLen);
     used += prvLen;
     BSL_Uint32ToByte(used, (uint8_t *)&info->keyLen);
     BSL_SAL_CleanseData(prv, prvLen);
@@ -1201,8 +1201,8 @@ static int32_t FillSyncKeyInfoFromCipher(const HITLS_APP_KeyInfo *keyInfo, HITLS
 {
     HITLS_APP_KeyAttr attr = keyInfo->attr;
     KeyAttrOrderCvt(&attr, true);
-    (void)memcpy_s(&info->attr, sizeof(info->attr), &attr, sizeof(attr));
-    (void)memcpy_s(info->key, sizeof(info->key), keyInfo->key, keyInfo->keyLen);
+    memcpy(&info->attr, &attr, sizeof(attr));
+    memcpy(info->key, keyInfo->key, keyInfo->keyLen);
     BSL_Uint32ToByte(keyInfo->keyLen, (uint8_t *)&info->keyLen);
     return HITLS_APP_SUCCESS;
 }
@@ -1278,7 +1278,7 @@ static int32_t PrepareOneKey(AppProvider *provider, HITLS_APP_SM_Param *smParam,
     if (ret != HITLS_APP_SUCCESS) {
         return ret;
     }
-    (void)memcpy_s(buf + *index, sizeof(HITLS_SyncKeyInfo), &info, sizeof(HITLS_SyncKeyInfo));
+    memcpy(buf + *index, &info, sizeof(HITLS_SyncKeyInfo));
     *index += sizeof(HITLS_SyncKeyInfo);
     BSL_SAL_CleanseData(info.key, sizeof(info.key));
     return HITLS_APP_SUCCESS;
@@ -1288,11 +1288,11 @@ static void PreparHeaderInfo(uint32_t n, uint8_t *buf, size_t *index)
 {
     uint32_t version = APP_KEYMGMT_SYNC_DATA_VERSION;
     BSL_Uint32ToByte(version, (uint8_t *)&version);
-    (void)memcpy_s(buf, sizeof(uint32_t), &version, sizeof(uint32_t));
+    memcpy(buf, &version, sizeof(uint32_t));
     *index += sizeof(uint32_t);
 
     BSL_Uint32ToByte(n, (uint8_t *)&n);
-    (void)memcpy_s(buf + *index, sizeof(uint32_t), &n, sizeof(uint32_t));
+    memcpy(buf + *index, &n, sizeof(uint32_t));
     *index += sizeof(uint32_t);
 }
 
@@ -1356,7 +1356,7 @@ static int32_t CreateCipherKeyFromSyncInfo(const HITLS_SyncKeyInfo *info, HITLS_
         AppPrintError("keymgmt: Invalid keyLen: %d.\n", info->keyLen);
         return HITLS_APP_INVALID_ARG;
     }
-    (void)memcpy_s(outKeyInfo->key, sizeof(outKeyInfo->key), info->key, info->keyLen);
+    memcpy(outKeyInfo->key, info->key, info->keyLen);
     outKeyInfo->keyLen = info->keyLen;
     return HITLS_APP_SUCCESS;
 }
@@ -1406,7 +1406,7 @@ static int32_t CreateAsymKeyFromSyncInfo(AppProvider *provider, HITLS_SyncKeyInf
         return HITLS_APP_INVALID_ARG;
     }
     uint32_t pubLen = 0;
-    (void)memcpy_s(&pubLen, sizeof(pubLen), info->key, sizeof(uint32_t));
+    memcpy(&pubLen, info->key, sizeof(uint32_t));
     pubLen = BSL_ByteToUint32((uint8_t *)&pubLen);
     uint32_t pos = sizeof(uint32_t);
     if (pubLen > info->keyLen - pos) {
@@ -1421,7 +1421,7 @@ static int32_t CreateAsymKeyFromSyncInfo(AppProvider *provider, HITLS_SyncKeyInf
         return HITLS_APP_INVALID_ARG;
     }
     uint32_t prvLen = 0;
-    (void)memcpy_s(&prvLen, sizeof(prvLen), info->key + pos, sizeof(uint32_t));
+    memcpy(&prvLen, info->key + pos, sizeof(uint32_t));
     prvLen = BSL_ByteToUint32((uint8_t *)&prvLen);
     pos += sizeof(uint32_t);
     if (prvLen != info->keyLen - pos) {
@@ -1442,7 +1442,7 @@ static int32_t ParseAndWriteKeyFile(KeyMgmtCmdOpt *keyMgmtOpt, HITLS_SyncKeyInfo
     KeyAttrOrderCvt(&info->attr, false);
 
     HITLS_APP_KeyInfo keyInfo = {0};
-    (void)memcpy_s(&keyInfo.attr, sizeof(keyInfo.attr), &info->attr, sizeof(info->attr));
+    memcpy(&keyInfo.attr, &info->attr, sizeof(info->attr));
     int32_t ret =
         keyInfo.attr.algId == CRYPT_PKEY_SM2 ? CreateAsymKeyFromSyncInfo(keyMgmtOpt->provider, info, &keyInfo)
                                              : CreateCipherKeyFromSyncInfo(info, &keyInfo);

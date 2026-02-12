@@ -22,7 +22,6 @@
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_sha3.h"
-#include "securec.h"
 /* END_HEADER */
 
 // 100 is greater than the digest length of all SHA algorithms.

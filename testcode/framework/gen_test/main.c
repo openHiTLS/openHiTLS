@@ -13,7 +13,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include "securec.h"
 #include "helper.h"
 
 #define EXECUTE_BASE_FILE "../common/execute_base.c"

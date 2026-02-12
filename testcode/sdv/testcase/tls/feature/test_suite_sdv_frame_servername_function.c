@@ -17,7 +17,7 @@
 
 #include <stdio.h>
 #include <stddef.h>
-#include "securec.h"
+#include <string.h>
 #include "tls_config.h"
 #include "tls.h"
 #include "hitls_type.h"
@@ -205,7 +205,7 @@ static int32_t DefaultCfgAndLink(HandshakeTestInfo *testInfo)
     HITLS_CFG_SetServerNameCb(testInfo->serverConfig, testInfo->sniDealCb);
 
     sniArg = (SNI_Arg *)BSL_SAL_Calloc(1, sizeof(SNI_Arg));
-    snprintf_s(sniArg->servername, sizeof(sniArg->servername), strlen(g_serverName), "%s", g_serverName);
+    (void)snprintf(sniArg->servername, sizeof(sniArg->servername), "%s", g_serverName);
     if (HITLS_CFG_SetServerNameArg(testInfo->serverConfig, sniArg) != HITLS_SUCCESS) {
         return HITLS_INTERNAL_EXCEPTION;
     }

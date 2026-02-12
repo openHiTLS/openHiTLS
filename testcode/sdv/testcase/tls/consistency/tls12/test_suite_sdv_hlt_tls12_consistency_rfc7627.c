@@ -17,7 +17,7 @@
 
 #include <semaphore.h>
 #include <unistd.h>
-#include "securec.h"
+#include <string.h>
 #include "hitls.h"
 #include "hitls_config.h"
 #include "hitls_session.h"
@@ -177,7 +177,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC006(int ver
         } else {
             ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
             ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-            ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);
+            memset(readBuf, 0, READ_BUF_SIZE);
             ASSERT_TRUE(HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen) == 0);
             ASSERT_TRUE(readLen == strlen(writeBuf));
             ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
@@ -301,7 +301,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC007(int ver
             // 1. The client and server support the extension connection establishment.
             ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
             ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-            ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);
+            memset(readBuf, 0, READ_BUF_SIZE);
             ASSERT_TRUE(HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen) == 0);
             ASSERT_TRUE(readLen == strlen(writeBuf));
             ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
@@ -571,7 +571,7 @@ void SDV_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_FUNC_TC009(int ver
         } else {
             ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
             ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-            ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);
+            memset(readBuf, 0, READ_BUF_SIZE);
             ASSERT_TRUE(HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen) == 0);
             ASSERT_TRUE(readLen == strlen(writeBuf));
             ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);

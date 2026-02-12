@@ -515,7 +515,8 @@ void SDV_CRYPTO_SM2_GEN_CRYPT_FUNC_TC002(Hex *msg, int isProvider)
     uint8_t buf[MAX_PLAIN_TEXT_LEN + CIPHER_TEXT_EXTRA_LEN];
     uint32_t ctLen = sizeof(buf);
     uint32_t ptLen = sizeof(buf);
-    ASSERT_TRUE(memcpy_s(buf, ptLen, msg->x, msg->len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(msg->len <= ptLen);
+    memcpy(buf, msg->x, msg->len);
 
     TestMemInit();
     if (isProvider) {

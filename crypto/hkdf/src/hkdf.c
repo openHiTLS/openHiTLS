@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_HKDF
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_local_types.h"
@@ -169,7 +169,7 @@ int32_t CRYPT_HKDF_Expand(void *macCtx, const EAL_MacMethod *macMeth, uint16_t m
         GOTO_ERR_IF(macMeth->update(macCtx, &counter, 1), ret);
         GOTO_ERR_IF(macMeth->final(macCtx, hash, &hashLen), ret);
         hashLen = hashLen > (outLen - totalLen) ? (outLen - totalLen) : hashLen;
-        (void)memcpy_s(out + totalLen, outLen - totalLen, hash, hashLen);
+        memcpy(out + totalLen, hash, hashLen);
         totalLen += hashLen;
     }
 
@@ -380,7 +380,7 @@ int32_t CRYPT_HKDF_Deinit(CRYPT_HKDF_Ctx *ctx)
         return CRYPT_NULL_INPUT;
     }
     DeinitCtx(ctx);
-    (void)memset_s(ctx, sizeof(CRYPT_HKDF_Ctx), 0, sizeof(CRYPT_HKDF_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_HKDF_Ctx));
     return CRYPT_SUCCESS;
 }
 

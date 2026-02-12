@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_bytes.h"
 #include "hitls_error.h"
 #include "hitls.h"
@@ -227,9 +227,10 @@ static int32_t PackArray8(const FRAME_Array8 *field, uint8_t *buf, uint32_t bufL
         return HITLS_INTERNAL_EXCEPTION;
     }
 
-    if (memcpy_s(buf, bufLen, field->data, field->size) != EOK) {
+    if (field->size > bufLen) {
         return HITLS_MEMCPY_FAIL;
     }
+    memcpy(buf, field->data, field->size);
 
     *offset += length;
     return HITLS_SUCCESS;
@@ -1261,10 +1262,11 @@ static int32_t PackHandShakeMsg(FRAME_Type *type, const FRAME_Msg *msg,
     // Splicing body and head
     // If some fields are missing in the header, the packet body is filled with an offset forward.
     if (headerLen != offset) {
-        ret = memmove_s(&buf[headerLen], bufLen - headerLen, &buf[offset], bodyLen);
-        if (ret != EOK) {
-            return ret;
+        if (bodyLen > bufLen - headerLen || offset + bodyLen > bufLen) {
+            return HITLS_INTERNAL_EXCEPTION;
         }
+        memmove(&buf[headerLen], &buf[offset], bodyLen);
+        ret = 0;
     }
     *usedLen = headerLen + bodyLen;
     return ret;
@@ -1398,10 +1400,11 @@ int32_t FRAME_PackMsg(FRAME_Type *frameType, const FRAME_Msg *msg, uint8_t *buff
     // Splicing body and head
     // If some fields are missing in the header, the packet body is filled with an offset forward.
     if (headerLen != offset) {
-        ret = memmove_s(&buffer[headerLen], bufLen - headerLen, &buffer[offset], bodyLen);
-        if (ret != EOK) {
-            return ret;
+        if (bodyLen > bufLen - headerLen || offset + bodyLen > bufLen) {
+            return HITLS_INTERNAL_EXCEPTION;
         }
+        memmove(&buffer[headerLen], &buffer[offset], bodyLen);
+        ret = 0;
     }
     *usedLen = headerLen + bodyLen;
     return ret;

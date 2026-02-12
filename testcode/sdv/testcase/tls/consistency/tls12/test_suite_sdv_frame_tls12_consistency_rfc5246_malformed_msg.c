@@ -165,7 +165,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_MISS_CLIENT_KEYEXCHANGE_TC001(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.server->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
 
     ASSERT_TRUE(testInfo.server->ssl != NULL);
     ASSERT_EQ(HITLS_Accept(testInfo.server->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
@@ -217,7 +217,8 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_FRAGMENTED_MSG_TC001(void)
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
     uint8_t data[MAX_RECORD_LENTH] = {0};
     uint32_t dataLen = MAX_RECORD_LENTH;
-    ASSERT_EQ(memcpy_s(data, MAX_RECORD_LENTH, ioUserData->sndMsg.msg, ioUserData->sndMsg.len), 0);
+    ASSERT_TRUE(ioUserData->sndMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(data, ioUserData->sndMsg.msg, ioUserData->sndMsg.len);
     dataLen = ioUserData->sndMsg.len;
 
     uint32_t msglength = BSL_ByteToUint16(&data[3]);
@@ -227,15 +228,17 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_FRAGMENTED_MSG_TC001(void)
     uint8_t recorddata1[] = {0x16, 0x03, 0x03, 0x00, 0x46};
     // The last two bytes of the first five bytes of the length of bodylen are modified.
     BSL_Uint16ToByte((uint16_t)msgLen, &recorddata1[3]);
-    ASSERT_EQ(memcpy_s(ioUserData->sndMsg.msg, MAX_RECORD_LENTH, data, len), 0);
-    ASSERT_EQ(memcpy_s(ioUserData->sndMsg.msg, MAX_RECORD_LENTH, recorddata1, sizeof(recorddata1)), 0);
+    ASSERT_TRUE(len <= (MAX_RECORD_LENTH));
+    memcpy(ioUserData->sndMsg.msg, data, len);
+    memcpy(ioUserData->sndMsg.msg, recorddata1, sizeof(recorddata1));
     // Send the second segment of packets. eg.163 = 5 + 70 + （5 +83）
     uint8_t recorddata2[] = {0x16, 0x03, 0x03, 0x00, 0x53};
     msgLen = dataLen - len;
     BSL_Uint16ToByte((uint16_t)msgLen, &recorddata2[3]);
-    ASSERT_EQ(memcpy_s(ioUserData->sndMsg.msg + len, MAX_RECORD_LENTH - len, recorddata2, sizeof(recorddata2)), 0);
+    memcpy(ioUserData->sndMsg.msg + len, recorddata2, sizeof(recorddata2));
     ioUserData->sndMsg.len = len + 5;
-    ASSERT_EQ(memcpy_s(ioUserData->sndMsg.msg + ioUserData->sndMsg.len, MAX_RECORD_LENTH - len, data + len, dataLen - len), 0);
+    ASSERT_TRUE((dataLen - len) <= (MAX_RECORD_LENTH - len));
+    memcpy(ioUserData->sndMsg.msg + ioUserData->sndMsg.len, data + len, dataLen - len);
     ioUserData->sndMsg.len += dataLen - len;
 
     ret = HITLS_Connect(client->ssl);

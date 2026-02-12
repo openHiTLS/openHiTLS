@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_MD)
 
-#include "securec.h"
+#include <string.h>
 #include "crypt_local_types.h"
 #include "crypt_algid.h"
 #ifdef HITLS_CRYPTO_SHA2
@@ -203,7 +203,7 @@ EAL_MdMethod *EAL_MdFindMethod(CRYPT_MD_AlgId id, EAL_MdMethod *method)
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return NULL;
         }
-        (void)memset_s(retMethod, sizeof(EAL_MdMethod), 0, sizeof(EAL_MdMethod));
+        memset(retMethod, 0, sizeof(EAL_MdMethod));
     }
     *retMethod = *findMethod;
     return retMethod;
@@ -272,7 +272,7 @@ static EAL_MdMethod *EAL_ProviderMdFindMethod(CRYPT_MD_AlgId id, void *libCtx, c
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return NULL;
         }
-        (void)memset_s(retMethod, sizeof(EAL_MdMethod), 0, sizeof(EAL_MdMethod));
+        memset(retMethod, 0, sizeof(EAL_MdMethod));
     }
 
     ret = SetMdMethod(funcs, retMethod);

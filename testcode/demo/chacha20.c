@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include "securec.h"
 #include "bsl_err.h"
 #include "bsl_sal.h"
 #include "crypt_algid.h"
@@ -137,7 +136,7 @@ static int ExecuteChacha20Demo(void)
         PrintLastError();
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    memset_s(ciphertext, plaintextLength, 0, plaintextLength);
+    memset(ciphertext, 0, plaintextLength);
 
     // Allocate and zero-initialize decrypted text buffer (with null-terminator space)
     uint8_t* decryptedText = (uint8_t*)malloc(plaintextLength + 1);
@@ -145,11 +144,11 @@ static int ExecuteChacha20Demo(void)
         PrintLastError();
 
         // Cleanup: decryptedText allocation failed, secure wipe and free ciphertext
-        memset_s(ciphertext, plaintextLength, 0, plaintextLength);
+        memset(ciphertext, 0, plaintextLength);
         free(ciphertext);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    memset_s(decryptedText, plaintextLength + 1, 0, plaintextLength + 1);
+    memset(decryptedText, 0, plaintextLength + 1);
 
     // Display demonstration information
     printf("\n================ ChaCha20 Stream Cipher Demonstration ================\n\n");
@@ -177,8 +176,8 @@ static int ExecuteChacha20Demo(void)
 
     int ret = Chacha20Process(&encryptParams, 1);
     if (ret != CRYPT_SUCCESS) {
-        memset_s(ciphertext, plaintextLength, 0, plaintextLength);
-        memset_s(decryptedText, plaintextLength + 1, 0, plaintextLength + 1);
+        memset(ciphertext, 0, plaintextLength);
+        memset(decryptedText, 0, plaintextLength + 1);
         free(ciphertext);
         free(decryptedText);
         return ret;
@@ -206,8 +205,8 @@ static int ExecuteChacha20Demo(void)
 
     ret = Chacha20Process(&decryptParams, 0);
     if (ret != CRYPT_SUCCESS) {
-        memset_s(ciphertext, plaintextLength, 0, plaintextLength);
-        memset_s(decryptedText, plaintextLength + 1, 0, plaintextLength + 1);
+        memset(ciphertext, 0, plaintextLength);
+        memset(decryptedText, 0, plaintextLength + 1);
         free(ciphertext);
         free(decryptedText);
         return ret;
@@ -223,8 +222,8 @@ static int ExecuteChacha20Demo(void)
 
     // Verify lengths
     if (decryptedLength != plaintextLength) {
-        memset_s(ciphertext, plaintextLength, 0, plaintextLength);
-        memset_s(decryptedText, plaintextLength + 1, 0, plaintextLength + 1);
+        memset(ciphertext, 0, plaintextLength);
+        memset(decryptedText, 0, plaintextLength + 1);
         free(ciphertext);
         free(decryptedText);
         return CRYPT_INCONSISTENT_OPERATION;
@@ -232,8 +231,8 @@ static int ExecuteChacha20Demo(void)
 
     // Verify contents
     if (memcmp(plaintext, decryptedText, plaintextLength) != 0) {
-        memset_s(ciphertext, plaintextLength, 0, plaintextLength);
-        memset_s(decryptedText, plaintextLength + 1, 0, plaintextLength + 1);
+        memset(ciphertext, 0, plaintextLength);
+        memset(decryptedText, 0, plaintextLength + 1);
         free(ciphertext);
         free(decryptedText);
         return CRYPT_INCONSISTENT_OPERATION;
@@ -243,8 +242,8 @@ static int ExecuteChacha20Demo(void)
     printf("\n==================================================\n");
 
     // Free resources with secure wiping
-    memset_s(ciphertext, plaintextLength, 0, plaintextLength);
-    memset_s(decryptedText, plaintextLength + 1, 0, plaintextLength + 1);
+    memset(ciphertext, 0, plaintextLength);
+    memset(decryptedText, 0, plaintextLength + 1);
     free(ciphertext);
     free(decryptedText);
     return CRYPT_SUCCESS;

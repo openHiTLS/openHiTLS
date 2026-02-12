@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_UIO_SCTP
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -268,7 +268,7 @@ static int32_t BslSctpSetPeerIpAddr(SctpParameters *parameters, const uint8_t *a
         return BSL_UIO_FAIL;
     }
 
-    (void)memcpy_s(parameters->ip, sizeof(parameters->ip), addr, size);
+    memcpy(parameters->ip, addr, size);
     parameters->ipLen = (uint32_t)size;
     return BSL_SUCCESS;
 }
@@ -298,7 +298,7 @@ static int32_t BslSctpGetPeerIpAddr(SctpParameters *parameters, void *parg, int3
         return BSL_UIO_FAIL;
     }
 
-    (void)memcpy_s(para->addr, para->size, parameters->ip, parameters->ipLen);
+    memcpy(para->addr, parameters->ip, parameters->ipLen);
     para->size = parameters->ipLen;
     return BSL_SUCCESS;
 }

@@ -15,7 +15,7 @@
 
 /* BEGIN_HEADER */
 #include <stdio.h>
-#include "securec.h"
+#include <string.h>
 #include "tls_config.h"
 #include "hitls_type.h"
 #include "hs.h"
@@ -1019,8 +1019,8 @@ void SDV_HiTLS_Variable_Buffer_Length_TC010(char* ciphersuite)
     HLT_SetRecordSizeLimit(clientConfig, 1000);
 
     if (strstr(ciphersuite, "PSK") != NULL) {
-        memcpy_s(clientConfig->psk, PSK_MAX_LEN, "12121212121212", sizeof("12121212121212"));
-        memcpy_s(serverConfig->psk, PSK_MAX_LEN, "12121212121212", sizeof("12121212121212"));
+        memcpy(clientConfig->psk, "12121212121212", strlen("12121212121212"));
+        memcpy(serverConfig->psk, "12121212121212", strlen("12121212121212"));
     }
 
     HLT_SetCipherSuites(serverConfig, ciphersuite);
@@ -1290,7 +1290,7 @@ void SDV_HiTLS_Variable_Buffer_Length_TC013(int isclient, int isEncryptThenMac)
             BSL_Uint16ToByte((uint16_t)ciphertextLen, &writeBuf[REC_TLS_RECORD_LENGTH_OFFSET]);
 
             FrameUioUserData *ioClientData = BSL_UIO_GetUserData(server->io);
-            memcpy_s(ioClientData->recMsg.msg, ciphertextLen+5, writeBuf, ciphertextLen+5);
+            memcpy(ioClientData->recMsg.msg, writeBuf, ciphertextLen+5);
             ioClientData->recMsg.len = ciphertextLen+5;
 
             STUB_RESTORE(RecConnGetCbcPaddingLen);
@@ -1316,7 +1316,7 @@ void SDV_HiTLS_Variable_Buffer_Length_TC013(int isclient, int isEncryptThenMac)
             BSL_Uint16ToByte((uint16_t)ciphertextLen, &writeBuf[REC_TLS_RECORD_LENGTH_OFFSET]);
 
             FrameUioUserData *ioClientData = BSL_UIO_GetUserData(client->io);
-            memcpy_s(ioClientData->recMsg.msg, ciphertextLen+5, writeBuf, ciphertextLen+5);
+            memcpy(ioClientData->recMsg.msg, writeBuf, ciphertextLen+5);
             ioClientData->recMsg.len = ciphertextLen+5;
 
             STUB_RESTORE(RecConnGetCbcPaddingLen);

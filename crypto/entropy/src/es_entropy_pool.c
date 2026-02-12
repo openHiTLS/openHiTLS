@@ -17,7 +17,7 @@
 #if defined(HITLS_CRYPTO_ENTROPY) && defined(HITLS_CRYPTO_ENTROPY_SYS)
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -57,7 +57,7 @@ void ES_EntropyPoolDeInit(ES_EntropyPool *pool)
         return;
     }
 
-    (void)memset_s(pool->buf, pool->maxSize, 0, pool->maxSize);
+    memset(pool->buf, 0, pool->maxSize);
     BSL_SAL_FREE(pool->buf);
     BSL_SAL_Free(pool);
     return;
@@ -77,11 +77,11 @@ int32_t ES_EntropyPoolPushBytes(ES_EntropyPool *pool, uint8_t *buf, uint32_t buf
 {
     uint32_t partA, partB;
     partA = (bufLen > (pool->maxSize - pool->rear)) ? pool->maxSize - pool->rear : bufLen;
-    (void)memcpy_s(&pool->buf[pool->rear], pool->maxSize - pool->rear, buf, partA);
+    memcpy(&pool->buf[pool->rear], buf, partA);
     pool->rear = (pool->rear + partA) % pool->maxSize;
     if (partA < bufLen) {
         partB = bufLen - partA;
-        (void)memcpy_s(&pool->buf[pool->rear], pool->maxSize - pool->rear, buf + partA, partB);
+        memcpy(&pool->buf[pool->rear], buf + partA, partB);
         pool->rear = (pool->rear + partB) % pool->maxSize;
     }
     return CRYPT_SUCCESS;
@@ -98,11 +98,11 @@ uint32_t ES_EntropyPoolPopBytes(ES_EntropyPool *pool, uint8_t *data, uint32_t si
     bufLen = (ES_EntropyPoolGetCurSize(pool) < size) ? ES_EntropyPoolGetCurSize(pool) : size;
 
     partA = (bufLen <= pool->maxSize - pool->front) ? bufLen : pool->maxSize - pool->front;
-    (void)memcpy_s(data, bufLen, &pool->buf[pool->front], partA);
+    memcpy(data, &pool->buf[pool->front], partA);
     pool->front = (pool->front + partA) % pool->maxSize;
     partB = bufLen - partA;
     if (partB != 0) {
-        (void)memcpy_s(data + partA, bufLen - partA, &pool->buf[pool->front], partB);
+        memcpy(data + partA, &pool->buf[pool->front], partB);
         pool->front = (pool->front + partB) % pool->maxSize;
     }
 

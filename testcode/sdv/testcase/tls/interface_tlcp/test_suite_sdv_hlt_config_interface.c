@@ -32,7 +32,6 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "alert.h"
 #include "hitls_error.h"
@@ -171,14 +170,14 @@ static int SetCertPath(HLT_Ctx_Config *ctxConfig, const char *certStr, bool isSe
     char eeCertPath[30];
     char privKeyPath[30];
 
-    int32_t ret = sprintf_s(caCertPath, sizeof(caCertPath), ROOT_DER, certStr, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(chainCertPath, sizeof(chainCertPath), INTCA_DER, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(eeCertPath, sizeof(eeCertPath), isServer ? SERVER_DER : CLIENT_DER, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(privKeyPath, sizeof(privKeyPath), isServer ? SERVER_KEY_DER : CLIENT_KEY_DER, certStr);
-    ASSERT_TRUE(ret > 0);
+    int32_t ret = snprintf(caCertPath, sizeof(caCertPath), ROOT_DER, certStr, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(caCertPath));
+    ret = snprintf(chainCertPath, sizeof(chainCertPath), INTCA_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(chainCertPath));
+    ret = snprintf(eeCertPath, sizeof(eeCertPath), isServer ? SERVER_DER : CLIENT_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(eeCertPath));
+    ret = snprintf(privKeyPath, sizeof(privKeyPath), isServer ? SERVER_KEY_DER : CLIENT_KEY_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(privKeyPath));
     HLT_SetCaCertPath(ctxConfig, (char *)caCertPath);
     HLT_SetChainCertPath(ctxConfig, (char *)chainCertPath);
     HLT_SetEeCertPath(ctxConfig, (char *)eeCertPath);

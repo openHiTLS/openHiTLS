@@ -21,7 +21,7 @@
 #include "crypt_errno.h"
 #include "crypt_modes_cfb.h"
 #include "modes_local.h"
-#include "securec.h"
+#include <string.h>
 
 int32_t MODE_SM4_CFB_Encrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
@@ -62,7 +62,7 @@ int32_t SM4_CFB_InitCtx(MODES_CFB_Ctx *modeCtx, const uint8_t *key, uint32_t key
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    (void)memcpy_s(modeCtx->cfbCtx.modeCtx.iv, MODES_MAX_IV_LENGTH, iv, ivLen);
+    memcpy(modeCtx->cfbCtx.modeCtx.iv, iv, ivLen);
     modeCtx->enc = enc;
     return ret;
 }

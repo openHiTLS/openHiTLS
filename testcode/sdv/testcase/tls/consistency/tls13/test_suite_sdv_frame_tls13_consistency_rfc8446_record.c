@@ -31,7 +31,7 @@
 #include "simulate_io.h"
 #include "parser_frame_msg.h"
 #include "cert.h"
-#include "securec.h"
+#include <string.h>
 #include "conn_init.h"
 #include "alert.h"
 #include "hs_kx.h"
@@ -161,7 +161,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC001(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_SEND_SERVER_HELLO) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     FrameMsg sndMsg;
-    ASSERT_TRUE(memcpy_s(sndMsg.msg, MAX_RECORD_LENTH, ioServerData->sndMsg.msg, ioServerData->sndMsg.len) == EOK);
+    ASSERT_TRUE(ioServerData->sndMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(sndMsg.msg, ioServerData->sndMsg.msg, ioServerData->sndMsg.len);
     sndMsg.len = ioServerData->sndMsg.len;
     ioServerData->sndMsg.len = 0;
     uint8_t data = 1;
@@ -230,7 +231,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC002(void)
 
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     FrameMsg recMsg;
-    ASSERT_TRUE(memcpy_s(recMsg.msg, MAX_RECORD_LENTH, ioServerData->recMsg.msg, ioServerData->recMsg.len) == EOK);
+    ASSERT_TRUE(ioServerData->recMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(recMsg.msg, ioServerData->recMsg.msg, ioServerData->recMsg.len);
     recMsg.len = ioServerData->recMsg.len;
     ioServerData->recMsg.len = 0;
 
@@ -313,7 +315,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC003(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_SEND_SERVER_HELLO) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     FrameMsg sndMsg;
-    ASSERT_TRUE(memcpy_s(sndMsg.msg, MAX_RECORD_LENTH, ioServerData->sndMsg.msg, ioServerData->sndMsg.len) == EOK);
+    ASSERT_TRUE(ioServerData->sndMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(sndMsg.msg, ioServerData->sndMsg.msg, ioServerData->sndMsg.len);
     sndMsg.len = ioServerData->sndMsg.len;
     ioServerData->sndMsg.len = 0;
     uint8_t data = 1;
@@ -399,7 +402,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC004(void)
     ASSERT_EQ(isReused, true);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     FrameMsg recMsg;
-    ASSERT_TRUE(memcpy_s(recMsg.msg, MAX_RECORD_LENTH, ioServerData->recMsg.msg, ioServerData->recMsg.len) == EOK);
+    ASSERT_TRUE(ioServerData->recMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(recMsg.msg, ioServerData->recMsg.msg, ioServerData->recMsg.len);
     recMsg.len = ioServerData->recMsg.len;
     ioServerData->recMsg.len = 0;
     uint8_t data = 1;
@@ -470,7 +474,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC005(void)
     ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_SEND_HELLO_RETRY_REQUEST), HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     FrameMsg sndMsg;
-    ASSERT_TRUE(memcpy_s(sndMsg.msg, MAX_RECORD_LENTH, ioServerData->sndMsg.msg, ioServerData->sndMsg.len) == EOK);
+    ASSERT_TRUE(ioServerData->sndMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(sndMsg.msg, ioServerData->sndMsg.msg, ioServerData->sndMsg.len);
     sndMsg.len = ioServerData->sndMsg.len;
     ioServerData->sndMsg.len = 0;
     uint8_t data = 1;
@@ -541,7 +546,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_IGNORE_CCS_FUNC_TC006(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_FINISH) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     FrameMsg recMsg;
-    ASSERT_TRUE(memcpy_s(recMsg.msg, MAX_RECORD_LENTH, ioServerData->recMsg.msg, ioServerData->recMsg.len) == EOK);
+    ASSERT_TRUE(ioServerData->recMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(recMsg.msg, ioServerData->recMsg.msg, ioServerData->recMsg.len);
     recMsg.len = ioServerData->recMsg.len;
     ioServerData->recMsg.len = 0;
 
@@ -604,7 +610,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC001(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_SEND_SERVER_HELLO) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     FrameMsg sndMsg;
-    ASSERT_TRUE(memcpy_s(sndMsg.msg, MAX_RECORD_LENTH, ioServerData->sndMsg.msg, ioServerData->sndMsg.len) == EOK);
+    ASSERT_TRUE(ioServerData->sndMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(sndMsg.msg, ioServerData->sndMsg.msg, ioServerData->sndMsg.len);
     sndMsg.len = ioServerData->sndMsg.len;
     ioServerData->sndMsg.len = 0;
 
@@ -788,7 +795,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC004(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_SEND_CERTIFICATE) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     FrameMsg recMsg;
-    ASSERT_TRUE(memcpy_s(recMsg.msg, MAX_RECORD_LENTH, ioServerData->recMsg.msg, ioServerData->recMsg.len) == EOK);
+    ASSERT_TRUE(ioServerData->recMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(recMsg.msg, ioServerData->recMsg.msg, ioServerData->recMsg.len);
     recMsg.len = ioServerData->recMsg.len;
     ioServerData->recMsg.len = 0;
 
@@ -847,7 +855,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC005(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_RECV_CERTIFICATE) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     FrameMsg recMsg;
-    ASSERT_TRUE(memcpy_s(recMsg.msg, MAX_RECORD_LENTH, ioServerData->recMsg.msg, ioServerData->recMsg.len) == EOK);
+    ASSERT_TRUE(ioServerData->recMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(recMsg.msg, ioServerData->recMsg.msg, ioServerData->recMsg.len);
     recMsg.len = ioServerData->recMsg.len;
     ioServerData->recMsg.len = 0;
 
@@ -914,7 +923,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC006(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     ioServerData->sndMsg.len = sizeof(ccsMessage);
-    memcpy_s(ioServerData->sndMsg.msg, ioServerData->sndMsg.len, ccsMessage, sizeof(ccsMessage));
+    memcpy(ioServerData->sndMsg.msg, ccsMessage, sizeof(ccsMessage));
 
     ioServerData->sndMsg.msg[5] = 0x2;
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
@@ -1048,7 +1057,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC008(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_SEND_SERVER_HELLO) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     FrameMsg sndMsg;
-    ASSERT_TRUE(memcpy_s(sndMsg.msg, MAX_RECORD_LENTH, ioServerData->sndMsg.msg, ioServerData->sndMsg.len) == EOK);
+    ASSERT_TRUE(ioServerData->sndMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(sndMsg.msg, ioServerData->sndMsg.msg, ioServerData->sndMsg.len);
     sndMsg.len = ioServerData->sndMsg.len;
     ioServerData->sndMsg.len = 0;
     uint8_t data = 2;
@@ -1285,7 +1295,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC011(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_FINISH) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     FrameMsg recMsg;
-    ASSERT_TRUE(memcpy_s(recMsg.msg, MAX_RECORD_LENTH, ioServerData->recMsg.msg, ioServerData->recMsg.len) == EOK);
+    ASSERT_TRUE(ioServerData->recMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(recMsg.msg, ioServerData->recMsg.msg, ioServerData->recMsg.len);
     recMsg.len = ioServerData->recMsg.len;
     ioServerData->recMsg.len = 0;
 
@@ -1370,7 +1381,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC012(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_FINISH) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     FrameMsg recMsg;
-    ASSERT_TRUE(memcpy_s(recMsg.msg, MAX_RECORD_LENTH, ioServerData->recMsg.msg, ioServerData->recMsg.len) == EOK);
+    ASSERT_TRUE(ioServerData->recMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(recMsg.msg, ioServerData->recMsg.msg, ioServerData->recMsg.len);
     recMsg.len = ioServerData->recMsg.len;
     ioServerData->recMsg.len = 0;
 
@@ -1449,7 +1461,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC013(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
     ioServerData->sndMsg.len = sizeof(ccsMessage);
-    memcpy_s(ioServerData->sndMsg.msg, ioServerData->sndMsg.len, ccsMessage, sizeof(ccsMessage));
+    memcpy(ioServerData->sndMsg.msg, ccsMessage, sizeof(ccsMessage));
     ioServerData->sndMsg.msg[5] = 0x2;
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
     /*  17. After the session is recovered, the client receives a CCS whose value is not 0x01 and sends the
@@ -1595,7 +1607,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC015(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
     FrameUioUserData *ioClientData = BSL_UIO_GetUserData(client->io);
     ioClientData->sndMsg.len = sizeof(ccsMessage);
-    memcpy_s(ioClientData->sndMsg.msg, ioClientData->sndMsg.len, ccsMessage, sizeof(ccsMessage));
+    memcpy(ioClientData->sndMsg.msg, ccsMessage, sizeof(ccsMessage));
     ioClientData->sndMsg.msg[5] = 0x2;
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
     /* 21. After the session is recovered, the server sends the unexpected_message alarm to terminate the handshake
@@ -2622,7 +2634,7 @@ static void AppendKeyUpdateAfterRecord(HITLS_Ctx *ctx, uint8_t *data, uint32_t *
     if (*len + (uint32_t)sizeof(ku) > bufSize) {
         return;
     }
-    (void)memcpy_s(data + *len, bufSize - *len, ku, sizeof(ku));
+    memcpy(data + *len, ku, sizeof(ku));
     *len += (uint32_t)sizeof(ku);
 }
 
@@ -2637,7 +2649,7 @@ static void AppendFinishedAfterRecord(HITLS_Ctx *ctx, uint8_t *data, uint32_t *l
     if (*len + (uint32_t)sizeof(finished) > bufSize) {
         return;
     }
-    (void)memcpy_s(data + *len, bufSize - *len, finished, sizeof(finished));
+    memcpy(data + *len, finished, sizeof(finished));
     *len += (uint32_t)sizeof(finished);
 }
 

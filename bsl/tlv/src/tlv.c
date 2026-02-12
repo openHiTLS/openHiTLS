@@ -17,7 +17,7 @@
 #ifdef HITLS_BSL_TLV
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_errno.h"
 #include "bsl_bytes.h"
 #include "bsl_log_internal.h"
@@ -43,13 +43,7 @@ int32_t BSL_TLV_Pack(const BSL_Tlv *tlv, uint8_t *buffer, uint32_t bufLen, uint3
     BSL_Uint32ToByte(tlv->length, curPos);
     curPos += sizeof(uint32_t);
     /* Write TLV data */
-    if (memcpy_s(curPos, bufLen - TLV_HEADER_LENGTH, tlv->value, tlv->length) != EOK) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05014, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "TLV build error: write tlv value fail, bufLen = %u, tlv length = %u, tlv type = 0x%x.",
-            bufLen, tlv->length, tlv->type, 0);
-        BSL_ERR_PUSH_ERROR(BSL_TLV_ERR_MEMCPY_FAIL);
-        return BSL_TLV_ERR_MEMCPY_FAIL;
-    }
+    memcpy(curPos, tlv->value, tlv->length);
 
     *usedLen = TLV_HEADER_LENGTH + tlv->length;
     return BSL_SUCCESS;
@@ -95,13 +89,14 @@ int32_t BSL_TLV_Parse(uint32_t wantType, const uint8_t *data, uint32_t dataLen, 
         /* The TLV type matches the expected type */
         if (wantType == type) {
             /* Parse the TLV data */
-            if (memcpy_s(tlv->value, tlv->length, curPos + TLV_HEADER_LENGTH, length) != EOK) {
+            if (length > tlv->length) {
                 BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05017, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                     "Parse TLV error: write tlv value fail, bufLen = %u, tlv length = %u, tlv type = 0x%x.",
                     tlv->length, length, type, 0);
                 BSL_ERR_PUSH_ERROR(BSL_TLV_ERR_MEMCPY_FAIL);
                 return BSL_TLV_ERR_MEMCPY_FAIL;
             }
+            memcpy(tlv->value, curPos + TLV_HEADER_LENGTH, length);
             tlv->type = type;
             tlv->length = length;
             *readLen = dataLen - remainLen;

@@ -33,7 +33,6 @@ testcase_array=()
 # Build library path with all necessary library paths (cross-platform)
 # Start with build directory (no leading colon)
 LIB_PATHS="$(realpath ${HITLS_ROOT_DIR}/build)"
-LIB_PATHS="${LIB_PATHS}:$(realpath ${HITLS_ROOT_DIR}/platform/Secure_C/lib)"
 
 # Add CMVP provider library paths (all architectures: C, armv8_le, x86_64, etc.)
 for cmvp_lib_dir in ${HITLS_ROOT_DIR}/output/CMVP/*/lib; do

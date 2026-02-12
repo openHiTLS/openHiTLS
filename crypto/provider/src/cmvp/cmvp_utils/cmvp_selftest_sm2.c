@@ -16,7 +16,6 @@
 #if defined(HITLS_CRYPTO_CMVP_ISO19790) || defined(HITLS_CRYPTO_CMVP_SM) || defined(HITLS_CRYPTO_CMVP_FIPS)
 
 #include <string.h>
-#include "securec.h"
 #include "crypt_bn.h"
 #include "crypt_cmvp_selftest.h"
 #include "cmvp_common.h"
@@ -128,7 +127,7 @@ static int32_t SetRandomVector(const char *vector, uint8_t *r, uint32_t rLen)
         BSL_SAL_FREE(rand);
         return CRYPT_CMVP_ERR_ALGO_SELFTEST;
     }
-    (void)memcpy_s(r, rLen, rand, rLen);
+    memcpy(r, rand, rLen);
     BSL_SAL_FREE(rand);
     return CRYPT_SUCCESS;
 }
@@ -154,7 +153,7 @@ static bool SetPrvPkey(CRYPT_EAL_PkeyCtx **pkeyPrv, const char qd[])
     prv.key.eccPrv.len = dLen;
     prv.key.eccPrv.data = BSL_SAL_Malloc(prv.key.eccPrv.len);
     GOTO_ERR_IF_TRUE(prv.key.eccPrv.data == NULL, CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF_TRUE(memcpy_s(prv.key.eccPrv.data, prv.key.eccPrv.len, d, dLen) != EOK, CRYPT_SECUREC_FAIL);
+    memcpy(prv.key.eccPrv.data, d, dLen);
 
     GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeySetPrv(*pkeyPrv, &prv) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     ret = true;
@@ -183,8 +182,8 @@ static bool SetPubPkey(CRYPT_EAL_PkeyCtx **pkeyPub, const char qX[], const char 
     pub.key.eccPub.data = BSL_SAL_Malloc(pub.key.eccPub.len);
     GOTO_ERR_IF_TRUE(pub.key.eccPub.data == NULL, CRYPT_MEM_ALLOC_FAIL);
     pub.key.eccPub.data[0] = 0x04;
-    GOTO_ERR_IF_TRUE(memcpy_s(pub.key.eccPub.data + 1, pub.key.eccPub.len, x, xLen) != EOK, CRYPT_SECUREC_FAIL);
-    GOTO_ERR_IF_TRUE(memcpy_s(pub.key.eccPub.data + 1 + xLen, pub.key.eccPub.len, y, yLen) != EOK, CRYPT_SECUREC_FAIL);
+    memcpy(pub.key.eccPub.data + 1, x, xLen);
+    memcpy(pub.key.eccPub.data + 1 + xLen, y, yLen);
     GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeySetPub(*pkeyPub, &pub) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
 
     ret = true;

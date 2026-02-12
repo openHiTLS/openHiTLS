@@ -18,7 +18,6 @@
 #include <limits.h>
 #include <pthread.h>
 #include "crypt_siphash.h"
-#include "securec.h"
 #include "crypt_eal_mac.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"

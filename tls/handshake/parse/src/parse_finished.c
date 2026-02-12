@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -41,7 +41,7 @@ int32_t ParseFinished(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg 
         return ParseErrorProcess(ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15831,
             BINGLOG_STR("verifyData malloc fail"), ALERT_UNKNOWN);
     }
-    (void)memcpy_s(msg->verifyData, bufLen, buf, bufLen);
+    memcpy(msg->verifyData, buf, bufLen);
     msg->verifyDataSize = bufLen;
 
     return HITLS_SUCCESS;

@@ -19,7 +19,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stddef.h>
-#include <securec.h>
 #include <limits.h>
 #include "app_errno.h"
 #include "app_print.h"

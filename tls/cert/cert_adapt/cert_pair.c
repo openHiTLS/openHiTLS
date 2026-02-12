@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "tls_binlog_id.h"
 #include "hitls_cert_type.h"
@@ -117,7 +117,7 @@ void SAL_CERT_PairClear(CERT_MgrCtx *mgrCtx, CERT_Pair *certPair)
         SAL_CERT_ChainFree(certPair->chain);
     }
 
-    (void)memset_s(certPair, sizeof(CERT_Pair), 0, sizeof(CERT_Pair));
+    memset(certPair, 0, sizeof(CERT_Pair));
     return;
 }
 

@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -485,7 +485,7 @@ static bool IsExistUnprocessedHsMsg(RecCtx *recCtx)
 
     if (curEpoch > epoch) {
         /* Expired messages need to be cleaned up */
-        (void)memset_s(&unprocessedHsMsg->hdr, sizeof(unprocessedHsMsg->hdr), 0, sizeof(unprocessedHsMsg->hdr));
+        memset(&unprocessedHsMsg->hdr, 0, sizeof(unprocessedHsMsg->hdr));
         BSL_SAL_FREE(unprocessedHsMsg->recordBody);
     }
 
@@ -574,7 +574,7 @@ static uint8_t *GetUnprocessedMsg(RecCtx *recordCtx, REC_Type recordType, RecHdr
     uint8_t *recordBody = NULL;
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
     if ((recordType == REC_TYPE_HANDSHAKE) && IsExistUnprocessedHsMsg(recordCtx)) {
-        (void)memcpy_s(hdr, sizeof(RecHdr), &recordCtx->unprocessedHsMsg.hdr, sizeof(RecHdr));
+        memcpy(hdr, &recordCtx->unprocessedHsMsg.hdr, sizeof(RecHdr));
         recordBody = recordCtx->unprocessedHsMsg.recordBody;
         recordCtx->unprocessedHsMsg.recordBody = NULL;
     }
@@ -586,7 +586,7 @@ static uint8_t *GetUnprocessedMsg(RecCtx *recordCtx, REC_Type recordType, RecHdr
         if (appMsg == NULL) {
             return NULL;
         }
-        (void)memcpy_s(hdr, sizeof(RecHdr), &appMsg->hdr, sizeof(RecHdr));
+        memcpy(hdr, &appMsg->hdr, sizeof(RecHdr));
         recordBody = appMsg->recordBody;
         appMsg->recordBody = NULL;
         UnprocessedAppMsgFree(appMsg);

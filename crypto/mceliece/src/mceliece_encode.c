@@ -18,7 +18,7 @@
 
 #include "mceliece_local.h"
 #include "bsl_sal.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "crypt_util_rand.h"
 
@@ -53,10 +53,10 @@ static inline uint64_t MatrixGetU64(const GFMatrix *matT, const int32_t row, con
     uint64_t w = 0;
     if (tailBytes < 8) {
         // tail: less than 8 bits
-        (void)memcpy_s(&w, tailBytes, p, tailBytes);
+        memcpy(&w, p, tailBytes);
     } else {
         // tail: full 8 bits
-        (void)memcpy_s(&w, 8, p, 8);
+        memcpy(&w, p, 8);
     }
 
     w >>= (colBase & 7);
@@ -75,7 +75,7 @@ static int32_t EncodeVector6688(const uint8_t *errorVector, const GFMatrix *matT
         return CRYPT_MEM_ALLOC_FAIL;
     }
     for (int32_t i = 0; i < params->mt; i++) {
-        (void)memset_s(row, params->nBytes, 0, params->nBytes);
+        memset(row, 0, params->nBytes);
         const int32_t n64 = params->nBytes >> 3;
         uint64_t *w = (uint64_t *)row;
 
@@ -127,13 +127,13 @@ static void CopyHeadMT6960(uint8_t *dst, const uint8_t *src, const McelieceParam
     uint8_t *d = dst + (n64 << 3);
     int32_t n = wholeBytes & 7;
     if (n >= 4) {
-        (void)memcpy_s(d, 4, s, 4);
+        memcpy(d, s, 4);
         s += 4;
         d += 4;
         n -= 4;
     }
     if (n >= 2) {
-        (void)memcpy_s(d, 2, s, 2);
+        memcpy(d, s, 2);
         s += 2;
         d += 2;
         n -= 2;
@@ -219,7 +219,7 @@ static void BuildRow8192(uint8_t *row, const uint8_t *pkPtr, int32_t rowIdx, con
     for (int32_t j = leading & ~7; j < leading; j++) {
         row[j] = 0;
     }
-    (void)memcpy_s(row + leading, params->kBytes, pkPtr, params->kBytes);
+    memcpy(row + leading, pkPtr, params->kBytes);
     row[rowIdx >> 3] |= 1u << (rowIdx & 7u);
 }
 
@@ -245,7 +245,7 @@ static int32_t EncodeVector8192(const uint8_t *errorVector, const GFMatrix *matT
         return CRYPT_MEM_ALLOC_FAIL;
     }
     for (int32_t i = 0; i < params->mt; i++) {
-        (void)memset_s(row, params->nBytes, 0, params->nBytes);
+        memset(row, 0, params->nBytes);
         BuildRow8192(row, pkPtr, i, params);
         ComputeRow8192(ciphertext, errorVector, row, i, params);
         pkPtr += params->kBytes;
@@ -342,7 +342,7 @@ static int32_t FixedWeightVector6688Or6960(CRYPT_MCELIECE_Ctx *ctx, uint8_t *e)
         goto EXIT;
     }
 
-    (void)memset_s(e, ctx->para->nBytes, 0, ctx->para->nBytes);
+    memset(e, 0, ctx->para->nBytes);
     for (int32_t i = 0; i < t; i++) {
         VectorSetBit(e, posList[i], 1);
     }
@@ -405,7 +405,7 @@ static int32_t FixedWeightVector8192(CRYPT_MCELIECE_Ctx *ctx, uint8_t *e)
         bitMask[j] = 1U << (posList[j] & 7); // bit inside byte
     }
 
-    (void)memset_s(e, ctx->para->nBytes, 0, ctx->para->nBytes); // init; 1024 B for n=8192
+    memset(e, 0, ctx->para->nBytes); // init; 1024 B for n=8192
     for (int32_t i = 0; i < ctx->para->nBytes; i++) {
         uint8_t acc = 0;
         for (int32_t j = 0; j < ctx->para->t; j++) {

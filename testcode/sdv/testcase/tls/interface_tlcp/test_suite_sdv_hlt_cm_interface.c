@@ -17,7 +17,6 @@
 
 #include <unistd.h>
 #include <semaphore.h>
-#include "securec.h"
 #include "hlt.h"
 #include "logger.h"
 #include "hitls_config.h"

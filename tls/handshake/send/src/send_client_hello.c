@@ -15,7 +15,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_TLS_HOST_CLIENT
 #include <string.h>
-#include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -321,14 +320,14 @@ int32_t CreatePskSession(TLS_Ctx *ctx, uint8_t *id, uint32_t idLen, HITLS_Sessio
     }
     if (pskLen > HS_PSK_MAX_LEN) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17111, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "pskLen err", 0, 0, 0, 0);
-        memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
+        BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
         return HITLS_MSG_HANDLE_ILLEGAL_PSK_LEN;
     }
 
     HITLS_Session *sess = HITLS_SESS_New();
     if (sess == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17112, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "sess new fail", 0, 0, 0, 0);
-        memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
+        BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
         return HITLS_MEMALLOC_FAIL;
     }
 
@@ -336,7 +335,7 @@ int32_t CreatePskSession(TLS_Ctx *ctx, uint8_t *id, uint32_t idLen, HITLS_Sessio
     HITLS_SESS_SetCipherSuite(sess, HITLS_AES_128_GCM_SHA256);
     HITLS_SESS_SetProtocolVersion(sess, HITLS_VERSION_TLS13);
     *pskSession = sess;
-    memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
+    BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
     return HITLS_SUCCESS;
 }
 
@@ -393,7 +392,7 @@ static UserPskList *ConstructUserPsk(HITLS_Session *sessoin, const uint8_t *iden
         BSL_SAL_FREE(userPsk);
         return NULL;
     }
-    (void)memcpy_s(userPsk->identity, identityLen, identity, identityLen);
+    memcpy(userPsk->identity, identity, identityLen);
     userPsk->identityLen = identityLen;
     userPsk->num = curIndex;
     return userPsk;

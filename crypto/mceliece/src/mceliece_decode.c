@@ -268,7 +268,7 @@ static int32_t LocateErrors(const GFElement *syn, const GFPolynomial *g, const G
 // build bit-vector from position list
 static void PosToBits(uint8_t *vec, const int32_t *pos, const int32_t cnt, const int32_t n)
 {
-    (void)memset_s(vec, (n + 7U) >> 3, 0, (n + 7U) >> 3);
+    memset(vec, 0, (n + 7U) >> 3);
     for (int32_t i = 0; i < cnt; i++) {
         if (pos[i] >= 0 && pos[i] < n) { // Lower-bound sentinel to ignore negative (invalid) error positions
             VectorSetBit(vec, pos[i], 1); // Unit bit value used to mark each discovered error position
@@ -319,7 +319,7 @@ int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const GFElem
         return CRYPT_MEM_ALLOC_FAIL;
     }
     if (IsZeroSyndrome(syndrome, 2 * params->t) == CRYPT_SUCCESS) {
-        (void)memset_s(errorVector, errorVecLen, 0, params->nBytes);
+        memset(errorVector, 0, params->nBytes);
         *decodeSuccess = 1; // Boolean success flag when the syndrome is all-zero (no errors to correct)
         BSL_SAL_FREE(syndrome);
         return CRYPT_SUCCESS;

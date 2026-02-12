@@ -16,7 +16,7 @@
 /* BEGIN_HEADER */
 
 #include "hlt.h"
-#include "securec.h"
+#include <string.h>
 #include "process.h"
 #include "session.h"
 #include "hitls_config.h"
@@ -186,8 +186,8 @@ void SDV_HITLS_TICKET_KEY_CALLBACK_RESUME_FUNC_TC001(int version, int connType, 
 #else
     serverConfigId = HLT_RpcTlsNewCtx(remoteProcess, version, false);
 #endif
-    memcpy_s(clientCtxConfig->psk, PSK_MAX_LEN, "12121212121212", sizeof("12121212121212"));
-    memcpy_s(serverCtxConfig->psk, PSK_MAX_LEN, "12121212121212", sizeof("12121212121212"));
+    memcpy(clientCtxConfig->psk, "12121212121212", strlen("12121212121212"));
+    memcpy(serverCtxConfig->psk, "12121212121212", strlen("12121212121212"));
 
     // Register the session ticket key callback on the server.
     HLT_SetTicketKeyCb(serverCtxConfig, ticketKeyCb);
@@ -233,7 +233,7 @@ void SDV_HITLS_TICKET_KEY_CALLBACK_RESUME_FUNC_TC001(int version, int connType, 
         ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
 
         ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-        ASSERT_TRUE(memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE) == EOK);
+        memset(readBuf, 0, READ_BUF_SIZE);
         ASSERT_TRUE(HLT_TlsRead(clientSsl, readBuf, READ_BUF_SIZE, &readLen) == 0);
         ASSERT_TRUE(readLen == strlen(writeBuf));
         ASSERT_TRUE(memcmp(writeBuf, readBuf, strlen(writeBuf)) == 0);

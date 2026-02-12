@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "securec.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "crypt_utils.h"
@@ -312,7 +311,7 @@ static int32_t PkeKeyGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *pk, uint8_t *dk, uint8_
     uint8_t digest[CRYPT_SHA3_512_DIGESTSIZE] = {0};
 
     // (p,q) = G(d || k)
-    (void)memcpy_s(seed, MLKEM_SEED_LEN + 1, d, MLKEM_SEED_LEN);
+    memcpy(seed, d, MLKEM_SEED_LEN);
     seed[MLKEM_SEED_LEN] = k;
     CRYPT_SHA3_512(digest, seed, MLKEM_SEED_LEN + 1);
 
@@ -466,23 +465,24 @@ int32_t MLKEM_KeyGenInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *d, uint8_t *z)
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
     // dk ← (dkPKE‖ek‖H(ek)‖𝑧)
-    if (memcpy_s(ctx->dk + dkPkeLen, ctx->dkLen - dkPkeLen, ctx->ek, ctx->ekLen) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        return CRYPT_SECUREC_FAIL;
+    if (ctx->ekLen > ctx->dkLen - dkPkeLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_CPY_FAIL);
+        return CRYPT_MEM_CPY_FAIL;
     }
+    memcpy(ctx->dk + dkPkeLen, ctx->ek, ctx->ekLen);
 
     CRYPT_SHA3_256(ctx->dk + dkPkeLen + ctx->ekLen, ctx->ek, ctx->ekLen);
 
-    if (memcpy_s(ctx->dk + dkPkeLen + ctx->ekLen + CRYPT_SHA3_256_DIGESTSIZE,
-                 ctx->dkLen - (dkPkeLen + ctx->ekLen + CRYPT_SHA3_256_DIGESTSIZE), z, MLKEM_SEED_LEN) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        return CRYPT_SECUREC_FAIL;
+    if (ctx->dkLen - (dkPkeLen + ctx->ekLen + CRYPT_SHA3_256_DIGESTSIZE) < MLKEM_SEED_LEN) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_CPY_FAIL);
+        return CRYPT_MEM_CPY_FAIL;
     }
+    memcpy(ctx->dk + dkPkeLen + ctx->ekLen + CRYPT_SHA3_256_DIGESTSIZE, z, MLKEM_SEED_LEN);
 
     // Store seed (d || z) in context
     ctx->hasSeed = true;
-    (void)memcpy_s(ctx->seed, MLKEM_SEED_LEN, d, MLKEM_SEED_LEN);
-    (void)memcpy_s(ctx->seed + MLKEM_SEED_LEN, MLKEM_SEED_LEN, z, MLKEM_SEED_LEN);
+    memcpy(ctx->seed, d, MLKEM_SEED_LEN);
+    memcpy(ctx->seed + MLKEM_SEED_LEN, z, MLKEM_SEED_LEN);
 
     return CRYPT_SUCCESS;
 }
@@ -497,11 +497,11 @@ int32_t MLKEM_EncapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen
     int32_t ret;
 
     //  (K,r) = G(m || H(ek))
-    (void)memcpy_s(mhek, MLKEM_SEED_LEN, m, MLKEM_SEED_LEN);
+    (void)memcpy(mhek, m, MLKEM_SEED_LEN);
     CRYPT_SHA3_256(mhek + MLKEM_SEED_LEN, ctx->ek, ctx->ekLen);
     CRYPT_SHA3_512(kr, mhek, MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE);
 
-    (void)memcpy_s(sk, *skLen, kr, MLKEM_SHARED_KEY_LEN);
+    memcpy(sk, kr, MLKEM_SHARED_KEY_LEN);
 
     // 𝑐 ← K-PKE.Encrypt(ek,𝑚,𝑟)
     ret = PkeEncrypt(ctx, ct, m, kr + MLKEM_SHARED_KEY_LEN);
@@ -536,7 +536,7 @@ int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen,
     ret = PkeDecrypt(ctx, mh, ct); // Step 5: 𝑚′ ← K-PKE.Decrypt(dkPKE, 𝑐)
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
     // Step 6: (K′,r′) ← G(m′ || h)
-    (void)memcpy_s(mh + MLKEM_SEED_LEN, CRYPT_SHA3_256_DIGESTSIZE, h, CRYPT_SHA3_256_DIGESTSIZE);
+    (void)memcpy(mh + MLKEM_SEED_LEN, h, CRYPT_SHA3_256_DIGESTSIZE);
     CRYPT_SHA3_512(kr, mh, MLKEM_SEED_LEN + CRYPT_SHA3_256_DIGESTSIZE);
     // Step 8: 𝑐′ ← K-PKE.Encrypt(ekPKE,𝑚′,𝑟′)
     uint8_t *r = kr + MLKEM_SHARED_KEY_LEN;
@@ -551,8 +551,8 @@ int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen,
     }
     mask = (uint8_t)(((uint16_t)mask - 1) >> 8);
     // Step 7: K = J(z || c)
-    (void)memcpy_s(newCt, ctLen + MLKEM_SEED_LEN, z, MLKEM_SEED_LEN);
-    (void)memcpy_s(newCt + MLKEM_SEED_LEN, ctLen, ct, ctLen);
+    (void)memcpy(newCt, z, MLKEM_SEED_LEN);
+    (void)memcpy(newCt + MLKEM_SEED_LEN, ct, ctLen);
     CRYPT_SHAKE256(r, MLKEM_SHARED_KEY_LEN, newCt, ctLen + MLKEM_SEED_LEN);
 
     for (uint32_t i = 0; i < MLKEM_SHARED_KEY_LEN; i++) {

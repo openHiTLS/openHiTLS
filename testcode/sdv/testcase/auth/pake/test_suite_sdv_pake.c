@@ -19,7 +19,6 @@
 #include "auth_pake.h"
 #include "bsl_types.h"
 #include "bsl_sal.h"
-#include "securec.h"
 #include "auth_errno.h"
 /* END_HEADER */
 
@@ -31,7 +30,7 @@ static int32_t create_buffer_from_hex(BSL_Buffer *buf, Hex *hex)
     }
 
     buf->dataLen = hex->len;
-    memcpy_s(buf->data, buf->dataLen, hex->x, hex->len);
+    memcpy(buf->data, hex->x, hex->len);
     return HITLS_AUTH_SUCCESS;
 }
 
@@ -141,7 +140,7 @@ void SDV_CRYPT_EAL_SPAKE2PLUS_TC001(Hex *context, Hex *prover, Hex *verifier, in
 EXIT:
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
     CRYPT_EAL_KdfFreeCtx(kdfCtxTmp);
-    (void)memset_s(password, sizeof(password), 0, sizeof(password));
+    memset(password, 0, sizeof(password));
     BSL_SAL_ClearFree(contextBuf.data, contextBuf.dataLen);
     BSL_SAL_ClearFree(proverBuf.data, proverBuf.dataLen);
     BSL_SAL_ClearFree(verifierBuf.data, verifierBuf.dataLen);

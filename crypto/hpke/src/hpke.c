@@ -18,7 +18,6 @@
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_HPKE)
 
 #include <string.h>
-#include "securec.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_eal_kdf.h"
 #include "crypt_eal_cipher.h"
@@ -384,8 +383,9 @@ EXIT:
 
 static inline void HpkeGenerateKemSuiteId(uint8_t kemIdex, uint8_t *suiteId, uint32_t suiteIdLen)
 {
+    (void)suiteIdLen;
     uint16_t kemId = g_hpkeKemAlgInfo[kemIdex].hpkeKemId;
-    (void)memcpy_s(suiteId, suiteIdLen, "KEM", strlen("KEM"));
+    memcpy(suiteId, "KEM", strlen("KEM"));
     uint32_t offset = strlen("KEM");
 
     BSL_Uint16ToByte(kemId, suiteId + offset);
@@ -394,7 +394,8 @@ static inline void HpkeGenerateKemSuiteId(uint8_t kemIdex, uint8_t *suiteId, uin
 static inline void HpkeGenerateHpkeSuiteId(uint8_t kemIndex, uint8_t kdfIndex, uint8_t aeadIndex, uint8_t *suiteId,
     uint32_t suiteIdLen)
 {
-    (void)memcpy_s(suiteId, suiteIdLen, "HPKE", strlen("HPKE"));
+    (void)suiteIdLen;
+    memcpy(suiteId, "HPKE", strlen("HPKE"));
     uint32_t offset = strlen("HPKE");
 
     BSL_Uint16ToByte(g_hpkeKemAlgInfo[kemIndex].hpkeKemId, suiteId + offset);
@@ -552,13 +553,13 @@ static int32_t HpkeLabeledExtract(CRYPT_EAL_KdfCtx *hkdfCtx, HPKE_LabeledExtract
     }
 
     uint32_t offset = 0;
-    (void)memcpy_s(labeledIkm + offset, labeledIkmLen - offset, version, versionLen);
+    memcpy(labeledIkm + offset, version, versionLen);
     offset += versionLen;
-    (void)memcpy_s(labeledIkm + offset, labeledIkmLen - offset, params->suiteId, params->suiteIdLen);
+    memcpy(labeledIkm + offset, params->suiteId, params->suiteIdLen);
     offset += params->suiteIdLen;
-    (void)memcpy_s(labeledIkm + offset, labeledIkmLen - offset, params->label, params->labelLen);
+    memcpy(labeledIkm + offset, params->label, params->labelLen);
     offset += params->labelLen;
-    (void)memcpy_s(labeledIkm + offset, labeledIkmLen - offset, params->ikm, params->ikmLen);
+    memcpy(labeledIkm + offset, params->ikm, params->ikmLen);
 
     HPKE_HkdfExtractParams extractParams = {params->macId, labeledIkm, labeledIkmLen, params->salt, params->saltLen};
     int32_t ret = HpkeHkdfExtract(hkdfCtx, &extractParams, out, outLen);
@@ -588,13 +589,13 @@ static int32_t HpkeLabeledExpand(CRYPT_EAL_KdfCtx *hkdfCtx, HPKE_LabeledExpandPa
 
     BSL_Uint16ToByte((uint16_t)outLen, labeledInfo);
     uint32_t offset = sizeof(uint16_t);
-    (void)memcpy_s(labeledInfo + offset, labeledInfoLen - offset, version, versionLen);
+    memcpy(labeledInfo + offset, version, versionLen);
     offset += versionLen;
-    (void)memcpy_s(labeledInfo + offset, labeledInfoLen - offset, params->suiteId, params->suiteIdLen);
+    memcpy(labeledInfo + offset, params->suiteId, params->suiteIdLen);
     offset += params->suiteIdLen;
-    (void)memcpy_s(labeledInfo + offset, labeledInfoLen - offset, params->label, params->labelLen);
+    memcpy(labeledInfo + offset, params->label, params->labelLen);
     offset += params->labelLen;
-    (void)memcpy_s(labeledInfo + offset, labeledInfoLen - offset, params->info, params->infoLen);
+    memcpy(labeledInfo + offset, params->info, params->infoLen);
 
     HPKE_HkdfExpandParam expandParams = {params->macId, params->prk, params->prkLen, labeledInfo, labeledInfoLen};
     int32_t ret = HpkeHkdfExpand(hkdfCtx, &expandParams, out, outLen);
@@ -627,7 +628,7 @@ static int32_t HpkeComputeSharedSecret(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx
 
     int32_t ret = CRYPT_EAL_PkeyComputeShareKey(priKey, pubKey, dh, &dhLen);
     if (ret != CRYPT_SUCCESS) {
-        memset_s(dh, dhLen, 0, dhLen);
+        BSL_SAL_CleanseData(dh, dhLen);
         return ret;
     }
 
@@ -641,7 +642,7 @@ static int32_t HpkeComputeSharedSecret(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx
             ret = CRYPT_EAL_PkeyComputeShareKey(priKey, authKey, dh + dhLen, &dh0Len);
         }
         if (ret != CRYPT_SUCCESS) {
-            memset_s(dh, dhLen + dh0Len, 0, dhLen + dh0Len);
+            BSL_SAL_CleanseData(dh, dhLen + dh0Len);
             return ret;
         }
         dhLen = dhLen + dh0Len;
@@ -692,11 +693,11 @@ static int32_t HpkeCreateKemContext(uint8_t *enc, uint32_t encLen, uint8_t *pkR,
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    (void)memcpy_s(kemContext, encLen, enc, encLen);
-    (void)memcpy_s(kemContext + encLen, pkRLen, pkR, pkRLen);
+    memcpy(kemContext, enc, encLen);
+    memcpy(kemContext + encLen, pkR, pkRLen);
 
     if (authKey != NULL) {
-        (void)memcpy_s(kemContext + encLen + pkRLen, pkSmLen, pkSm, pkSmLen);
+        memcpy(kemContext + encLen + pkRLen, pkSm, pkSmLen);
     }
 
     *out = kemContext;
@@ -746,7 +747,7 @@ static int32_t HpkeEncap(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_
 
     ret = HpkeComputeSharedSecret(ctx, pkeyS, pkeyR, authKey, kemContext, kemContextLen, sharedSecret, sharedSecretLen);
     if (ret == CRYPT_SUCCESS) {
-        (void)memcpy_s(encapsulatedKey, *encapsulatedKeyLen, enc, encLen);
+        memcpy(encapsulatedKey, enc, encLen);
         *encapsulatedKeyLen = encLen;
     }
 EXIT:
@@ -1156,6 +1157,7 @@ int32_t CRYPT_EAL_HpkeSeal(CRYPT_EAL_HpkeCtx *ctx, uint8_t *aad, uint32_t aadLen
     if (ret == CRYPT_SUCCESS) {
         ctx->seq++;
     }
+    BSL_SAL_CleanseData(nonce, HPKE_AEAD_NONCE_LEN);
     return ret;
 }
 
@@ -1192,6 +1194,7 @@ static int32_t HpkeDecap(CRYPT_EAL_HpkeCtx *ctx, CRYPT_EAL_PkeyCtx *pkey, uint8_
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyS);
+    BSL_SAL_CleanseData(pubKeyData, pubKeyDataLen);
     BSL_SAL_FREE(kemContext);
     return ret;
 }
@@ -1363,6 +1366,7 @@ int32_t CRYPT_EAL_HpkeOpen(CRYPT_EAL_HpkeCtx *ctx, uint8_t *aad, uint32_t aadLen
     if (ret == CRYPT_SUCCESS) {
         ctx->seq++;
     }
+    BSL_SAL_CleanseData(nonce, HPKE_AEAD_NONCE_LEN);
     return ret;
 }
 
@@ -1638,7 +1642,7 @@ int32_t CRYPT_EAL_HpkeGetSharedSecret(CRYPT_EAL_HpkeCtx *ctx, uint8_t *buff, uin
         return CRYPT_INVALID_ARG;
     }
 
-    (void)memcpy_s(buff, *buffLen, ctx->sharedSecret, ctx->sharedSecretLen);
+    memcpy(buff, ctx->sharedSecret, ctx->sharedSecretLen);
     *buffLen = ctx->sharedSecretLen;
     return CRYPT_SUCCESS;
 }

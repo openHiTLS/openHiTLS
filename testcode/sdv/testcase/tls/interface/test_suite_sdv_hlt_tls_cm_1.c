@@ -15,7 +15,7 @@
 
 /* BEGIN_HEADER */
 
-#include "securec.h"
+#include <string.h>
 #include "hlt.h"
 #include "hitls_error.h"
 #include "hitls_func.h"
@@ -209,8 +209,8 @@ void SDV_HITLS_EXPORT_KEY_MATERIAL_005()
     param.labelLen = strlen("12");
     param.contextLen = 0;
     param.useContext = 1;
-    memcpy_s(param.label, sizeof(param.label), "12", strlen("12"));
-    memcpy_s(param.context, sizeof(param.context), NULL, 0);
+    memcpy(param.label, "12", strlen("12"));
+    memset(param.context, 0, sizeof(param.context));
     uint8_t *readBuf = (uint8_t *)calloc(outLen, sizeof(uint8_t));
     uint32_t readLen = 0;
     ASSERT_TRUE(readBuf != NULL);
@@ -299,8 +299,8 @@ void SDV_HITLS_EXPORT_KEY_MATERIAL_007()
     param.labelLen = strlen("12");
     param.contextLen = 0;
     param.useContext = 1;
-    memcpy_s(param.label, sizeof(param.label), "12", strlen("12"));
-    memcpy_s(param.context, sizeof(param.context), NULL, 0);
+    memcpy(param.label, "12", strlen("12"));
+    memset(param.context, 0, sizeof(param.context));
     uint8_t *readBuf = (uint8_t *)calloc(outLen, sizeof(uint8_t));
     uint32_t readLen = 0;
     ASSERT_TRUE(readBuf != NULL);

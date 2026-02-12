@@ -18,7 +18,6 @@
 
 #include "app_prime.h"
 #include <stddef.h>
-#include "securec.h"
 #include "bsl_uio.h"
 #include "crypt_eal_rand.h"
 #include "crypt_errno.h"

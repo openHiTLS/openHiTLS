@@ -16,7 +16,7 @@
 #include <stddef.h>
 #include "hitls_build.h"
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
@@ -106,7 +106,7 @@ int32_t CRYPT_CTRL_SetMacMethod(void *libCtx, CRYPT_MAC_AlgId inId, int32_t ret,
         }
         (macMeth)->freeCtx(*macCtx);
         *macCtx = NULL;
-        (void)memset_s(macMeth, sizeof(EAL_MacMethod), 0, sizeof(EAL_MacMethod));
+        memset(macMeth, 0, sizeof(EAL_MacMethod));
     }
     EAL_MacMethod *findMeth = EAL_MacFindMethod(inId, macMeth);
     if (findMeth == NULL) {

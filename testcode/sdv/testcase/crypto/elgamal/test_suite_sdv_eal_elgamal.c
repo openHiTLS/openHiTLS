@@ -31,7 +31,6 @@
 #include "crypt_elgamal.h"
 #include "elgamal_local.h"
 #include "bn_basic.h"
-#include "securec.h"
 
 /* END_HEADER */
 

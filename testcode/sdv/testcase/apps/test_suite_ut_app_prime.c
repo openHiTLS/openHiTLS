@@ -27,7 +27,6 @@
 #include "crypt_eal_rand.h"
 #include "crypt_errno.h"
 #include "bsl_errno.h"
-#include "securec.h"
 #include "stub_utils.h"
 
 /* END_HEADER */

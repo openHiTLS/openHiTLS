@@ -15,7 +15,6 @@
 
 /* BEGIN_HEADER */
 #include "app_opt.h"
-#include "securec.h"
 #include "app_errno.h"
 #include "bsl_uio.h"
 #include "app_print.h"

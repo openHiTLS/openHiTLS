@@ -18,7 +18,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
-#include "securec.h"
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
@@ -138,7 +137,7 @@ static void BslBase64EncodeProcess(BSL_Base64Ctx *ctx, const uint8_t **srcBuf, u
 
     if (ctx->num != 0) {
         remainLen = ctx->length - ctx->num;
-        (void)memcpy_s(&(ctx->buf[ctx->num]), remainLen, *srcBuf, remainLen);
+        memcpy(&(ctx->buf[ctx->num]), *srcBuf, remainLen);
         BslBase64EncodeBlock(ctx, &bufTmp, srcBufLen, &dstBufTmp, dstBufLen, remainLen);
         *srcBuf += remainLen;
         remainLen = 0;
@@ -251,7 +250,7 @@ static int32_t BslBase64DecodeCheckAndRmvEqualSign(uint8_t *buf, uint32_t *bufLe
 static int32_t BslBase64Normalization(const char *srcBuf, const uint32_t srcBufLen, uint8_t *filterBuf,
     uint32_t *filterBufLen)
 {
-    (void)memset_s(filterBuf, *filterBufLen, 0, *filterBufLen);
+    memset(filterBuf, 0, *filterBufLen);
     BslBase64DecodeRemoveBlank((const uint8_t *)srcBuf, srcBufLen, filterBuf, filterBufLen);
     if (*filterBufLen == 0 || ((*filterBufLen) % BASE64_DECODE_BYTES != 0)) {
         return BSL_BASE64_INVALID_ENCODE;
@@ -389,7 +388,7 @@ int32_t BSL_BASE64_EncodeUpdate(BSL_Base64Ctx *ctx, const uint8_t *srcBuf, uint3
 
     /* If srcBuf is too short for a buf, store it in the buf first. */
     if (srcBufLen < ctx->length - ctx->num) {
-        (void)memcpy_s(&(ctx->buf[ctx->num]), srcBufLen, srcBuf, srcBufLen);
+        memcpy(&(ctx->buf[ctx->num]), srcBuf, srcBufLen);
         ctx->num += srcBufLen;
         return BSL_SUCCESS;
     }
@@ -399,7 +398,7 @@ int32_t BSL_BASE64_EncodeUpdate(BSL_Base64Ctx *ctx, const uint8_t *srcBuf, uint3
     /* If the remaining bytes are less than 48 bytes, store the bytes in the buf and wait for next processing. */
     if (srcBufLen != 0) {
         /* Ensure that srcBufLen < 48 */
-        (void)memcpy_s(&(ctx->buf[0]), srcBufLen, srcBuf, srcBufLen);
+        memcpy(&(ctx->buf[0]), srcBuf, srcBufLen);
     }
     ctx->num = srcBufLen;
     return BSL_SUCCESS;

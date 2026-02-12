@@ -15,7 +15,7 @@
 
 /* BEGIN_HEADER */
 #include <stdlib.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_params_key.h"
 #include "crypt_errno.h"
 #include "crypt_eal_md.h"
@@ -359,7 +359,7 @@ void SDV_CRYPTO_PROVIDER_REG_API_TC001(void)
     ASSERT_EQ(CRYPT_EAL_ProviderRegister(libCtx, "", ProviderAInit, NULL, NULL), CRYPT_INVALID_ARG);
     // 2.3 Test with very long provider name
     char longProviderName[4096];
-    (void)memset_s(longProviderName, sizeof(longProviderName), 'a', sizeof(longProviderName) - 1);
+    memset(longProviderName, 'a', sizeof(longProviderName) - 1);
     longProviderName[sizeof(longProviderName) - 1] = '\0';
     ASSERT_EQ(CRYPT_EAL_ProviderRegister(libCtx, longProviderName, ProviderAInit, NULL, NULL), CRYPT_INVALID_ARG);
     // 2.4 Test with special characters in provider name

@@ -16,7 +16,7 @@
 #include "bsl_sal.h"
 #include "crypt_types.h"
 #include "crypt_errno.h"
-#include "securec.h"
+#include <string.h>
 #include "crypt_sm9.h"
 #include "crypt_util_rand.h"
 
@@ -37,7 +37,11 @@ int32_t RandFunc(uint8_t *randNum, uint32_t randLen)
 int32_t SetFakeRandOutput(uint8_t *in, uint32_t inLen)
 {
     g_RandBufLen = inLen;
-    return memcpy_s(g_RandOutput, sizeof(g_RandOutput), in, inLen);
+    if (inLen > sizeof(g_RandOutput)) {
+        return -1;
+    }
+    memcpy(g_RandOutput, in, inLen);
+    return 0;
 }
 
 int32_t FakeRandFunc(uint8_t *randNum, uint32_t randLen)
@@ -45,7 +49,8 @@ int32_t FakeRandFunc(uint8_t *randNum, uint32_t randLen)
     if (randLen > RAND_BUF_LEN) {
         return -1;
     }
-    return memcpy_s(randNum, randLen, g_RandOutput, randLen);
+    memcpy(randNum, g_RandOutput, randLen);
+    return 0;
 }
 
 void PrintHex(const char *name, const uint8_t *data, uint32_t len)

@@ -19,7 +19,7 @@
 #ifdef HITLS_BSL_SAL_FILE
 #include "sal_file.h"
 #endif
-#include "securec.h"
+#include <string.h>
 #include "hitls_pki_errno.h"
 #include "hitls_x509_local.h"
 #include "hitls_cms_local.h"

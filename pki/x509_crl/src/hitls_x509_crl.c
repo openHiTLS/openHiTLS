@@ -15,7 +15,7 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_PKI_X509_CRL
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_obj_internal.h"
 #include "bsl_log_internal.h"
@@ -455,8 +455,7 @@ int32_t HITLS_X509_EncodeRevokeCrlList(BSL_ASN1_List *crlList, BSL_ASN1_Buffer *
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    (void)memset_s(asnBuf, (uint32_t)count * sizeof(BSL_ASN1_Buffer) * X509_CRLENTRY_ELEM_NUMBER, 0,
-        (uint32_t)count * sizeof(BSL_ASN1_Buffer) * X509_CRLENTRY_ELEM_NUMBER);
+    memset(asnBuf, 0, (uint32_t)count * sizeof(BSL_ASN1_Buffer) * X509_CRLENTRY_ELEM_NUMBER);
     uint32_t iter = 0;
     int32_t ret;
     for (BslListNode *crlNode = BSL_LIST_FirstNode(crlList); crlNode != NULL;
@@ -982,7 +981,7 @@ static int32_t CrlSetTime(void *dest, uint8_t *val, uint32_t valLen)
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    (void)memcpy_s(dest, valLen, val, valLen);
+    memcpy(dest, val, valLen);
     return HITLS_PKI_SUCCESS;
 }
 
@@ -1050,7 +1049,7 @@ static HITLS_X509_CrlEntry *X509_CrlEntryDup(const HITLS_X509_CrlEntry *src)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(dest, sizeof(HITLS_X509_CrlEntry), 0, sizeof(HITLS_X509_CrlEntry));
+    memset(dest, 0, sizeof(HITLS_X509_CrlEntry));
 
     dest->serialNumber.buff = BSL_SAL_Dump(src->serialNumber.buff, src->serialNumber.len);
     if (dest->serialNumber.buff == NULL) {
@@ -1238,7 +1237,7 @@ HITLS_X509_CrlEntry *HITLS_X509_CrlEntryNew(void)
         return NULL;
     }
 
-    (void)memset_s(entry, sizeof(HITLS_X509_CrlEntry), 0, sizeof(HITLS_X509_CrlEntry));
+    memset(entry, 0, sizeof(HITLS_X509_CrlEntry));
 
     entry->flag |= HITLS_X509_CRL_GEN_FLAG;
     return entry;

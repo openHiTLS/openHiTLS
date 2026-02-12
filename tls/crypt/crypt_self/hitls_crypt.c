@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #if defined(HITLS_TLS_FEATURE_PROVIDER) || defined(HITLS_TLS_CALLBACK_CRYPT)
 #include <string.h>
-#include "securec.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #include "bsl_params.h"
@@ -669,7 +668,7 @@ static int32_t SetSM2SelfCtx(CRYPT_EAL_PkeyCtx *selfCtx, HITLS_Sm2GenShareKeyPar
         return ret;
     }
     ret = CRYPT_EAL_PkeyCtrl(selfCtx, CRYPT_CTRL_SET_SM2_RANDOM, localPrv.key.eccPrv.data, localPrv.key.eccPrv.len);
-    (void)memset_s(localPrvData, SM2_PRVKEY_LEN, 0, SM2_PRVKEY_LEN);
+    BSL_SAL_CleanseData(localPrvData, SM2_PRVKEY_LEN);
     if (ret != CRYPT_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16668, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "SET_SM2_RANDOM fail", 0, 0, 0, 0);

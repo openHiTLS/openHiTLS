@@ -13,6 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -121,11 +122,11 @@ void *HiTLS_X509_LoadCertListToStore(HITLS_Config *tlsCfg, const char *fileList)
     char certList[MAX_CERT_LEN] = {0};
     char certPath[SINGLE_CERT_LEN] = {0};
 
-    ret = memcpy_s(certList, MAX_CERT_LEN, fileList, strlen(fileList));
-    if (ret != EOK) {
-        LOG_ERROR("memcpy_s Error");
+    if (strlen(fileList) >= MAX_CERT_LEN) {
+        LOG_ERROR("memcpy Error");
         return NULL;
     }
+    memcpy(certList, fileList, strlen(fileList) + 1);
 
     void *store = SAL_CERT_StoreNew(tlsCfg->certMgrCtx);
     if(store == NULL){
@@ -134,12 +135,12 @@ void *HiTLS_X509_LoadCertListToStore(HITLS_Config *tlsCfg, const char *fileList)
     }
 
     char *rest = NULL;
-    char *token = strtok_s(certList, ":", &rest);
+    char *token = strtok_r(certList, ":", &rest);
     do {
-        (void)memset_s(certPath, SINGLE_CERT_LEN, 0, SINGLE_CERT_LEN);
-        ret = sprintf_s(certPath, SINGLE_CERT_LEN, "%s%s", DEFAULT_CERT_PATH, token);
-        if (ret <= 0) {
-            LOG_ERROR("sprintf_s Error");
+        memset(certPath, 0, SINGLE_CERT_LEN);
+        ret = snprintf(certPath, SINGLE_CERT_LEN, "%s%s", DEFAULT_CERT_PATH, token);
+        if (ret < 0 || ret >= SINGLE_CERT_LEN) {
+            LOG_ERROR("sprintf Error");
             HITLS_X509_StoreCtxFree(store);
             return NULL;
         }
@@ -156,7 +157,7 @@ void *HiTLS_X509_LoadCertListToStore(HITLS_Config *tlsCfg, const char *fileList)
             HITLS_X509_StoreCtxFree(store);
             return NULL;
         }
-        token = strtok_s(NULL, ":", &rest);
+        token = strtok_r(NULL, ":", &rest);
     } while (token != NULL);
 
     return store;
@@ -169,19 +170,19 @@ int32_t HITLS_X509_LoadEECertList(HITLS_Config *tlsCfg, const char *eeFileList, 
     char certList[MAX_CERT_LEN] = {0};
     char certPath[SINGLE_CERT_LEN] = {0};
 
-    ret = memcpy_s(certList, MAX_CERT_LEN, eeFileList, strlen(eeFileList));
-    if (ret != EOK) {
-        LOG_ERROR("memcpy_s Error");
+    if (strlen(eeFileList) >= MAX_CERT_LEN) {
+        LOG_ERROR("memcpy Error");
         return ERROR;
     }
+    memcpy(certList, eeFileList, strlen(eeFileList) + 1);
 
     char *rest = NULL;
-    char *token = strtok_s(certList, ":", &rest);
+    char *token = strtok_r(certList, ":", &rest);
     do {
-        (void)memset_s(certPath, SINGLE_CERT_LEN, 0, SINGLE_CERT_LEN);
-        ret = sprintf_s(certPath, SINGLE_CERT_LEN, "%s%s", DEFAULT_CERT_PATH, token);
-        if (ret <= 0) {
-            LOG_ERROR("sprintf_s Error");
+        memset(certPath, 0, SINGLE_CERT_LEN);
+        ret = snprintf(certPath, SINGLE_CERT_LEN, "%s%s", DEFAULT_CERT_PATH, token);
+        if (ret < 0 || ret >= SINGLE_CERT_LEN) {
+            LOG_ERROR("sprintf Error");
             return ERROR;
         }
         LOG_DEBUG("Load Cert Path is %s", certPath);
@@ -201,7 +202,7 @@ int32_t HITLS_X509_LoadEECertList(HITLS_Config *tlsCfg, const char *eeFileList, 
             HITLS_X509_Adapt_CertFree(cert);
             return ERROR;
         }
-        token = strtok_s(NULL, ":", &rest);
+        token = strtok_r(NULL, ":", &rest);
     } while (token != NULL);
     return SUCCESS;
 }
@@ -213,19 +214,19 @@ int32_t HITLS_X509_LoadPrivateKeyList(HITLS_Config *tlsCfg, const char *keyFileL
     char fileList[MAX_CERT_LEN] = {0};
     char filePath[SINGLE_CERT_LEN] = {0};
 
-    ret = memcpy_s(fileList, MAX_CERT_LEN, keyFileList, strlen(keyFileList));
-    if (ret != EOK) {
-        LOG_ERROR("memcpy_s Error");
+    if (strlen(keyFileList) >= MAX_CERT_LEN) {
+        LOG_ERROR("memcpy Error");
         return ERROR;
     }
+    memcpy(fileList, keyFileList, strlen(keyFileList) + 1);
 
     char *rest = NULL;
-    char *token = strtok_s(fileList, ":", &rest);
+    char *token = strtok_r(fileList, ":", &rest);
     do {
-        (void)memset_s(filePath, SINGLE_CERT_LEN, 0, SINGLE_CERT_LEN);
-        ret = sprintf_s(filePath, SINGLE_CERT_LEN, "%s%s", DEFAULT_CERT_PATH, token);
-        if (ret <= 0) {
-            LOG_ERROR("sprintf_s Error");
+        memset(filePath, 0, SINGLE_CERT_LEN);
+        ret = snprintf(filePath, SINGLE_CERT_LEN, "%s%s", DEFAULT_CERT_PATH, token);
+        if (ret < 0 || ret >= SINGLE_CERT_LEN) {
+            LOG_ERROR("sprintf Error");
             return ERROR;
         }
         LOG_DEBUG("Load Cert Path is %s", filePath);
@@ -251,7 +252,7 @@ int32_t HITLS_X509_LoadPrivateKeyList(HITLS_Config *tlsCfg, const char *keyFileL
             CRYPT_EAL_PkeyFreeCtx(key);
             return ERROR;
         }
-        token = strtok_s(NULL, ":", &rest);
+        token = strtok_r(NULL, ":", &rest);
     } while (token != NULL);
     return SUCCESS;
 }

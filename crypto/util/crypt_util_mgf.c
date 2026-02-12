@@ -17,7 +17,7 @@
 #if defined(HITLS_CRYPTO_RSA_EMSA_PSS) || defined(HITLS_CRYPTO_RSAES_OAEP) || defined(HITLS_CRYPTO_SLH_DSA)
 
 #include <stdlib.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -83,11 +83,7 @@ int32_t CRYPT_Mgf1(void *provCtx, const EAL_MdMethod *hashMethod, const uint8_t 
         }
         // Output the leading maskLen octets of T as the octet string mask
         partLen = (outLen + hashLen <= maskLen) ? hashLen : (maskLen - outLen);
-        if (memcpy_s(mask + outLen, maskLen - outLen, md, partLen) != EOK) {
-            ret = CRYPT_SECUREC_FAIL;
-            BSL_ERR_PUSH_ERROR(ret);
-            goto EXIT;
-        }
+        memcpy(mask + outLen, md, partLen);
     }
 EXIT:
     BSL_SAL_CleanseData(md, sizeof(md));

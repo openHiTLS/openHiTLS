@@ -33,7 +33,7 @@
 #include "simulate_io.h"
 #include "parser_frame_msg.h"
 #include "cert.h"
-#include "securec.h"
+#include <string.h>
 #include "rec_wrapper.h"
 #include "conn_init.h"
 #include "rec.h"
@@ -405,7 +405,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MODIFIED_SESSID_FROM_SH_FUNC_TC001()
     ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &parsedSH, &parseLen) == HITLS_SUCCESS);
 
     FRAME_ServerHelloMsg *shMsg = &parsedSH.body.hsMsg.body.serverHello;
-    memset_s((shMsg->sessionId.data), shMsg->sessionId.size, 1, shMsg->sessionId.size);
+    memset((shMsg->sessionId.data), 1, shMsg->sessionId.size);
 
     uint32_t sendLen = MAX_RECORD_LENTH;
     uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
@@ -672,7 +672,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MODIFIED_CERT_VERIFY_FUNC_TC001(int isClie
     /* 2. Set the dual-end verification, set the signature algorithm supported by the client and server to
      *    CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384, and establish a connection, Change the signature algorithm field in
      *    the CertificateVerify message sent by the client to CERT_SIG_SCHEME_DSA_SHA224. */
-    memset_s(buf + HS_MSG_HEADER_SIZE, sizeof(uint16_t), CERT_SIG_SCHEME_DSA_SHA224, sizeof(uint16_t));
+    memset(buf + HS_MSG_HEADER_SIZE, CERT_SIG_SCHEME_DSA_SHA224, sizeof(uint16_t));
     ret = HS_ParseMsgHeader(ctx, buf, dataLen, &hsMsgInfo);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
     HS_Msg hsMsg = {0};
@@ -814,11 +814,12 @@ static void Test_ModifyFinish(HITLS_Ctx *ctx, uint8_t *buf, uint32_t *bufLen, ui
 {
     (void)ctx;
     (void)userData;
+    (void)bufSize;
     /* hs msg struct, the first byte indicates the HandshakeType,
      *   the following 3 bytes indicate the remaining bytes in message
      */
     uint8_t modifiedHsMsg[] = {KEY_UPDATE, 0, 0, sizeof(uint8_t), HITLS_UPDATE_REQUESTED};
-    (void)memcpy_s(buf, bufSize, modifiedHsMsg, sizeof(modifiedHsMsg));
+    memcpy(buf, modifiedHsMsg, sizeof(modifiedHsMsg));
     *bufLen = sizeof(modifiedHsMsg);
 }
 
@@ -960,7 +961,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEYUPDATE_WITH_NO_REPLY_FUNC_TC001()
     uint32_t writeLen;
     ASSERT_EQ(HITLS_Write(client->ssl, src, sizeof(src), &writeLen), HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
-    memset_s(dest, READ_BUF_SIZE, 0, READ_BUF_SIZE);
+    memset(dest, 0, READ_BUF_SIZE);
     readbytes = 0;
     ASSERT_EQ(HITLS_Read(server->ssl, dest, READ_BUF_SIZE, &readbytes), HITLS_REC_BAD_RECORD_MAC);
     ALERT_Info alertInfo = {0};
@@ -1017,7 +1018,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEYUPDATE_WITH_NO_REPLY_FUNC_TC002()
     uint32_t writeLen;
     ASSERT_EQ(HITLS_Write(server->ssl, src, sizeof(src), &writeLen), HITLS_SUCCESS);
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
-    memset_s(dest, READ_BUF_SIZE, 0, READ_BUF_SIZE);
+    memset(dest, 0, READ_BUF_SIZE);
     readbytes = 0;
     ASSERT_EQ(HITLS_Read(client->ssl, dest, READ_BUF_SIZE, &readbytes), HITLS_REC_BAD_RECORD_MAC);
     ALERT_Info alertInfo = {0};
@@ -1500,7 +1501,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC001(void)
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_SEND_CLIENT_HELLO) == HITLS_SUCCESS);
     FrameUioUserData *ioServerData = BSL_UIO_GetUserData(client->io);
     FrameMsg sndMsg;
-    ASSERT_TRUE(memcpy_s(sndMsg.msg, MAX_RECORD_LENTH, ioServerData->sndMsg.msg, ioServerData->sndMsg.len) == EOK);
+    ASSERT_TRUE(ioServerData->sndMsg.len <= (MAX_RECORD_LENTH));
+    memcpy(sndMsg.msg, ioServerData->sndMsg.msg, ioServerData->sndMsg.len);
     sndMsg.len = ioServerData->sndMsg.len;
     ioServerData->sndMsg.len = 0;
     uint8_t data = 1;
@@ -1573,7 +1575,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC002(int isClient
         ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
         ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
     } else {
-        memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE);
+        memset(readBuf, 0, READ_BUF_SIZE);
         ASSERT_EQ(SendCcs(server->ssl, &data, sizeof(data)), HITLS_SUCCESS);
         ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
         /* 1. After receiving the finished message and CCS message, the client sends the unexpected_message alarm to
@@ -1632,17 +1634,16 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ZERO_APPMSG_FUNC_TC001(int isZeroClient)
     uint8_t appData[] = "hello world";
     uint8_t serverData[READ_BUF_SIZE] = {0};
     uint8_t clientData[READ_BUF_SIZE] = {0};
-    ASSERT_TRUE((sizeof(data) <= READ_BUF_SIZE) && (sizeof(appData) <= READ_BUF_SIZE));
     if (isZeroClient != 0) {
         /* 1. Establish a connection. After the connection is established, construct an APPdata message with 0 length
          * and send it to the server. Then, send an APPdata message with data to the server.  */
-        (void)memcpy_s(clientData, READ_BUF_SIZE, data, sizeof(data));
-        (void)memcpy_s(serverData, READ_BUF_SIZE, appData, sizeof(appData));
+        memcpy(clientData, data, sizeof(data));
+        memcpy(serverData, appData, sizeof(appData));
     } else {
         /* 2. Establish a connection. After the connection is established, construct an APPdata message with zero length
          * and send it to the client. Then, send an APPdata message with data to the client. */
-        (void)memcpy_s(clientData, READ_BUF_SIZE, appData, sizeof(appData));
-        (void)memcpy_s(serverData, READ_BUF_SIZE, data, sizeof(data));
+        memcpy(clientData, appData, sizeof(appData));
+        memcpy(serverData, data, sizeof(data));
     }
     size_t serverDataSize = strlen((char *)serverData) + 1;
     size_t clientDataSize = strlen((char *)clientData) + 1;
@@ -1656,7 +1657,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_ZERO_APPMSG_FUNC_TC001(int isZeroClient)
     ASSERT_TRUE(readLen == serverDataSize && memcmp(serverData, readBuf, readLen) == 0);
 
     ASSERT_EQ(HITLS_Write(client->ssl, clientData, clientDataSize, &writeLen), HITLS_SUCCESS);
-    memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE);
+    memset(readBuf, 0, READ_BUF_SIZE);
     readLen = 0;
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_Read(server->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_SUCCESS);
@@ -1725,7 +1726,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_INCORRECT_LENGTH_CHMSG_FUNC_TC001(voi
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(server->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
 
     ASSERT_TRUE(server->ssl != NULL);
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_PARSE_INVALID_MSG_LEN);
@@ -2084,7 +2085,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SERVER_RECV_CLOSE_NOTIFY_CLIENTHELLO_FUNC_
     serverioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(server->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
 
     ASSERT_TRUE(server->ssl != NULL);
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_CM_LINK_FATAL_ALERTED);
@@ -2148,7 +2149,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_HRR_FUNC_TC001(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(client->io, alertBuf, alertLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
     ASSERT_TRUE(client->ssl != NULL);
     ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_CM_LINK_CLOSED);
     ASSERT_NE(FRAME_CreateConnection(client, server, true, TRY_RECV_CERTIFICATE), HITLS_SUCCESS);
@@ -2209,7 +2210,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_APP_FUNC_TC001(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(client->io, alertBuf, alertLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
     ASSERT_TRUE(client->ssl != NULL);
     ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
     ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
@@ -2269,7 +2270,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_READ_FUNC_TC001(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(client->io, alertBuf, alertLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
     ASSERT_TRUE(client->ssl != NULL);
     ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
 
@@ -2335,7 +2336,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_CLIENT_CLOSE_NOTIFY_READ_FUNC_TC002(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(server->io, alertBuf, alertLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
     ASSERT_TRUE(server->ssl != NULL);
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
 
@@ -2509,10 +2510,11 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNEXPECT_RECODETYPE_FUNC_TC001()
     uint8_t data[MAX_RECORD_LENTH] = {0};
     uint32_t len = MAX_RECORD_LENTH;
     uint8_t appdata[] = {0xff, 0x03, 0x03, 0x00, 0x02, 0x01, 0x01};
-    ASSERT_EQ(memcpy_s(data, len, appdata, sizeof(appdata)), EOK);
-    ASSERT_EQ(
-        memcpy_s(data + sizeof(appdata), len - sizeof(appdata), ioUserData->recMsg.msg, ioUserData->recMsg.len), EOK);
-    ASSERT_EQ(memcpy_s(ioUserData->recMsg.msg, MAX_RECORD_LENTH, data, ioUserData->recMsg.len + sizeof(appdata)), EOK);
+    memcpy(data, appdata, sizeof(appdata));
+    ASSERT_TRUE(ioUserData->recMsg.len <= (len - sizeof(appdata)));
+    memcpy(data + sizeof(appdata), ioUserData->recMsg.msg, ioUserData->recMsg.len);
+    ASSERT_TRUE(ioUserData->recMsg.len + sizeof(appdata) <= (MAX_RECORD_LENTH));
+    memcpy(ioUserData->recMsg.msg, data, ioUserData->recMsg.len + sizeof(appdata));
     ioUserData->recMsg.len += sizeof(appdata);
 
     uint8_t readBuf[READ_BUF_SIZE] = {0};
@@ -2564,10 +2566,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNEXPECT_RECODETYPE_FUNC_TC002()
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.server->io);
     FrameMsg sndMsg;
-    ASSERT_TRUE(memcpy_s(sndMsg.msg,
-                    MAX_RECORD_LENTH,
-                    ioUserData->recMsg.msg + REC_TLS_RECORD_HEADER_LEN,
-                    ioUserData->recMsg.len - REC_TLS_RECORD_HEADER_LEN) == EOK);
+    ASSERT_TRUE(ioUserData->recMsg.len - REC_TLS_RECORD_HEADER_LEN <= (MAX_RECORD_LENTH));
+    memcpy(sndMsg.msg, ioUserData->recMsg.msg + REC_TLS_RECORD_HEADER_LEN, ioUserData->recMsg.len - REC_TLS_RECORD_HEADER_LEN);
     sndMsg.len = ioUserData->recMsg.len - REC_TLS_RECORD_HEADER_LEN;
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
@@ -2623,10 +2623,11 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNEXPECT_RECODETYPE_FUNC_TC003(void)
     uint8_t data[MAX_RECORD_LENTH] = {0};
     uint32_t len = MAX_RECORD_LENTH;
     uint8_t appdata[] = {0x17, 0x03, 0x03, 0x00, 0x02, 0x01, 0x01};
-    ASSERT_EQ(memcpy_s(data, len, appdata, sizeof(appdata)), EOK);
-    ASSERT_EQ(
-        memcpy_s(data + sizeof(appdata), len - sizeof(appdata), ioUserData->recMsg.msg, ioUserData->recMsg.len), EOK);
-    ASSERT_EQ(memcpy_s(ioUserData->recMsg.msg, MAX_RECORD_LENTH, data, ioUserData->recMsg.len + sizeof(appdata)), EOK);
+    memcpy(data, appdata, sizeof(appdata));
+    ASSERT_TRUE(ioUserData->recMsg.len <= (len - sizeof(appdata)));
+    memcpy(data + sizeof(appdata), ioUserData->recMsg.msg, ioUserData->recMsg.len);
+    ASSERT_TRUE(ioUserData->recMsg.len + sizeof(appdata) <= (MAX_RECORD_LENTH));
+    memcpy(ioUserData->recMsg.msg, data, ioUserData->recMsg.len + sizeof(appdata));
     ioUserData->recMsg.len += sizeof(appdata);
 
     ASSERT_TRUE(testInfo.server->ssl != NULL);
@@ -2682,10 +2683,11 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNEXPECT_RECODETYPE_FUNC_TC004(void)
     uint8_t data[MAX_RECORD_LENTH] = {0};
     uint32_t len = MAX_RECORD_LENTH;
     uint8_t appdata[] = {0x17, 0x03, 0x03, 0x00, 0x02, 0x01, 0x01};
-    ASSERT_EQ(memcpy_s(data, len, appdata, sizeof(appdata)), EOK);
-    ASSERT_EQ(
-        memcpy_s(data + sizeof(appdata), len - sizeof(appdata), ioUserData->recMsg.msg, ioUserData->recMsg.len), EOK);
-    ASSERT_EQ(memcpy_s(ioUserData->recMsg.msg, MAX_RECORD_LENTH, data, ioUserData->recMsg.len + sizeof(appdata)), EOK);
+    memcpy(data, appdata, sizeof(appdata));
+    ASSERT_TRUE(ioUserData->recMsg.len <= (len - sizeof(appdata)));
+    memcpy(data + sizeof(appdata), ioUserData->recMsg.msg, ioUserData->recMsg.len);
+    ASSERT_TRUE(ioUserData->recMsg.len + sizeof(appdata) <= (MAX_RECORD_LENTH));
+    memcpy(ioUserData->recMsg.msg, data, ioUserData->recMsg.len + sizeof(appdata));
     ioUserData->recMsg.len += sizeof(appdata);
 
     ASSERT_TRUE(testInfo.client->ssl != NULL);
@@ -2744,10 +2746,8 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNEXPECT_RECODETYPE_FUNC_TC005()
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, TRY_RECV_SERVER_HELLO), HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.client->io);
     FrameMsg sndMsg;
-    ASSERT_TRUE(memcpy_s(sndMsg.msg,
-                    MAX_RECORD_LENTH,
-                    ioUserData->recMsg.msg + REC_TLS_RECORD_HEADER_LEN,
-                    ioUserData->recMsg.len - REC_TLS_RECORD_HEADER_LEN) == EOK);
+    ASSERT_TRUE(ioUserData->recMsg.len - REC_TLS_RECORD_HEADER_LEN <= (MAX_RECORD_LENTH));
+    memcpy(sndMsg.msg, ioUserData->recMsg.msg + REC_TLS_RECORD_HEADER_LEN, ioUserData->recMsg.len - REC_TLS_RECORD_HEADER_LEN);
     sndMsg.len = ioUserData->recMsg.len - REC_TLS_RECORD_HEADER_LEN;
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
@@ -2806,10 +2806,11 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_UNEXPECT_RECODETYPE_FUNC_TC006()
     uint8_t data[MAX_RECORD_LENTH] = {0};
     uint32_t len = MAX_RECORD_LENTH;
     uint8_t appdata[] = {0xff, 0x03, 0x03, 0x00, 0x02, 0x01, 0x01};
-    ASSERT_EQ(memcpy_s(data, len, appdata, sizeof(appdata)), EOK);
-    ASSERT_EQ(
-        memcpy_s(data + sizeof(appdata), len - sizeof(appdata), ioUserData->recMsg.msg, ioUserData->recMsg.len), EOK);
-    ASSERT_EQ(memcpy_s(ioUserData->recMsg.msg, MAX_RECORD_LENTH, data, ioUserData->recMsg.len + sizeof(appdata)), EOK);
+    memcpy(data, appdata, sizeof(appdata));
+    ASSERT_TRUE(ioUserData->recMsg.len <= (len - sizeof(appdata)));
+    memcpy(data + sizeof(appdata), ioUserData->recMsg.msg, ioUserData->recMsg.len);
+    ASSERT_TRUE(ioUserData->recMsg.len + sizeof(appdata) <= (MAX_RECORD_LENTH));
+    memcpy(ioUserData->recMsg.msg, data, ioUserData->recMsg.len + sizeof(appdata));
     ioUserData->recMsg.len += sizeof(appdata);
 
     uint8_t readBuf[READ_BUF_SIZE] = {0};
@@ -2883,7 +2884,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC003(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.server->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
 
     ASSERT_TRUE(testInfo.server->ssl != NULL);
     /* 3. When the server receives the Change Cipher Spec message, check the value returned by the HITLS_Accept
@@ -2958,7 +2959,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC004(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.client->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
 
     ASSERT_TRUE(testInfo.client->ssl != NULL);
     /* 3. When the client receives the Change Cipher Spec message, check the value returned by the HITLS_Accept
@@ -3036,7 +3037,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC001(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.server->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
     /* 3. When the server receives the client hello message, check the value returned by the HITLS_Accept
      *    interface. */
     ASSERT_TRUE(testInfo.server->ssl != NULL);
@@ -3112,7 +3113,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC002(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.client->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
     ASSERT_TRUE(testInfo.client->ssl != NULL);
     /* 2. The client invokes the HITLS_Connect interface. */
     ASSERT_EQ(HITLS_Connect(testInfo.client->ssl), HITLS_REC_RECORD_OVERFLOW);

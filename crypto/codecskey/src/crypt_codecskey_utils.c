@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CODECSKEY
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_types.h"
 #include "bsl_asn1_internal.h"
 #include "bsl_obj_internal.h"
@@ -803,7 +803,7 @@ int32_t CRYPT_DECODE_ParseEncDataAsn1(CRYPT_EAL_LibCtx *libctx, const char *attr
     uint32_t dataLen = encPara->enData->dataLen;
     ret = CryptData(libctx, attrName, encPara->ivData, encPara->enData, symAlg, false,
         &keyBuff, &decode->data, &dataLen);
-    (void)memset_s(key, sizeof(key), 0, sizeof(key));
+    BSL_SAL_CleanseData(key, sizeof(key));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

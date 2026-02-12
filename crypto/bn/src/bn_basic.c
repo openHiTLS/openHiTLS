@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_BN
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
@@ -207,7 +207,7 @@ BN_BigNum *BN_Dup(const BN_BigNum *a)
     BN_BigNum *r = BN_Create(a->room * BN_UINT_BITS);
     if (r != NULL) {
         r->sign = a->sign;
-        (void)memcpy_s(r->data, a->size * sizeof(BN_UINT), a->data, a->size * sizeof(BN_UINT));
+        memcpy(r->data, a->data, a->size * sizeof(BN_UINT));
         r->size = a->size;
     }
     return r;
@@ -424,7 +424,7 @@ int32_t BnExtend(BN_BigNum *a, uint32_t words)
         return CRYPT_MEM_ALLOC_FAIL;
     }
     if (a->size > 0) {
-        (void)memcpy_s(tmp, a->size * sizeof(BN_UINT), a->data, a->size * sizeof(BN_UINT));
+        memcpy(tmp, a->data, a->size * sizeof(BN_UINT));
         BSL_SAL_CleanseData(a->data, a->size * sizeof(BN_UINT));
     }
     BSL_SAL_Free(a->data);

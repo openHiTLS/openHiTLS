@@ -13,7 +13,6 @@
  * See the Mulan PSL v2 for more details.
  */
 #include <string.h>
-#include "securec.h"
 #include "hitls_build.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -102,7 +101,7 @@ int32_t RecConnStateSetCipherInfo(RecConnState *state, RecConnSuitInfo *suitInfo
         return HITLS_MEMALLOC_FAIL;
     }
 
-    (void)memcpy_s(state->suiteInfo, sizeof(RecConnSuitInfo), suitInfo, sizeof(RecConnSuitInfo));
+    memcpy(state->suiteInfo, suitInfo, sizeof(RecConnSuitInfo));
     return HITLS_SUCCESS;
 }
 
@@ -139,9 +138,7 @@ int32_t RecConnGenerateMac(HITLS_Lib_Ctx *libCtx, const char *attrName,
     int32_t ret = HITLS_SUCCESS;
     uint8_t header[CBC_MAC_HEADER_LEN] = {0};
     uint32_t offset = 0;
-    if (memcpy_s(header, CBC_MAC_HEADER_LEN, plainMsg->seq, REC_CONN_SEQ_SIZE) != EOK) {  //  sequence or epoch + seq
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMCPY_FAIL, BINLOG_ID17228, "memcpy fail");
-    }
+    memcpy(header, plainMsg->seq, REC_CONN_SEQ_SIZE);
     offset += REC_CONN_SEQ_SIZE;
 
     header[offset] = plainMsg->type;                                      // The eighth byte is the record type
@@ -277,33 +274,39 @@ static void RecConnCalcWriteKey(const REC_SecParameters *param, uint8_t *keyBuf,
     }
 
     if (param->macKeyLen > 0u) {
-        if (memcpy_s(client->macKey, sizeof(client->macKey), keyBuf, param->macKeyLen) != EOK) {
+        if (param->macKeyLen > sizeof(client->macKey)) {
             return;
         }
+        memcpy(client->macKey, keyBuf, param->macKeyLen);
         offset += param->macKeyLen;
-        if (memcpy_s(server->macKey, sizeof(server->macKey), keyBuf + offset, param->macKeyLen) != EOK) {
+        if (param->macKeyLen > sizeof(server->macKey)) {
             return;
         }
+        memcpy(server->macKey, keyBuf + offset, param->macKeyLen);
         offset += param->macKeyLen;
     }
     if (param->encKeyLen > 0u) {
-        if (memcpy_s(client->key, sizeof(client->key), keyBuf + offset, param->encKeyLen) != EOK) {
+        if (param->encKeyLen > sizeof(client->key)) {
             return;
         }
+        memcpy(client->key, keyBuf + offset, param->encKeyLen);
         offset += param->encKeyLen;
-        if (memcpy_s(server->key, sizeof(server->key), keyBuf + offset, param->encKeyLen) != EOK) {
+        if (param->encKeyLen > sizeof(server->key)) {
             return;
         }
+        memcpy(server->key, keyBuf + offset, param->encKeyLen);
         offset += param->encKeyLen;
     }
     if (param->fixedIvLength > 0u) {
-        if (memcpy_s(client->iv, sizeof(client->iv), keyBuf + offset, param->fixedIvLength) != EOK) {
+        if (param->fixedIvLength > sizeof(client->iv)) {
             return;
         }
+        memcpy(client->iv, keyBuf + offset, param->fixedIvLength);
         offset += param->fixedIvLength;
-        if (memcpy_s(server->iv, sizeof(server->iv), keyBuf + offset, param->fixedIvLength) != EOK) {
+        if (param->fixedIvLength > sizeof(server->iv)) {
             return;
         }
+        memcpy(server->iv, keyBuf + offset, param->fixedIvLength);
     }
     PackSuitInfo(client, param);
     PackSuitInfo(server, param);
@@ -338,10 +341,9 @@ int32_t RecConnKeyBlockGen(HITLS_Lib_Ctx *libCtx, const char *attrName,
 
     uint8_t randomValue[REC_RANDOM_LEN * 2];
     /** Random value of the replication server */
-    (void)memcpy_s(randomValue, sizeof(randomValue), param->serverRandom, REC_RANDOM_LEN);
+    memcpy(randomValue, param->serverRandom, REC_RANDOM_LEN);
     /** Random value of the replication client */
-    (void)memcpy_s(&randomValue[REC_RANDOM_LEN], sizeof(randomValue) - REC_RANDOM_LEN,
-        param->clientRandom, REC_RANDOM_LEN);
+    memcpy(&randomValue[REC_RANDOM_LEN], param->clientRandom, REC_RANDOM_LEN);
 
     keyDeriveParam.seed = randomValue;
     // Total length of 2 random numbers

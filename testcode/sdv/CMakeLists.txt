@@ -36,7 +36,6 @@ endif()
 target_link_directories(TEST_INTF INTERFACE
     ${openHiTLS_SRC}/build
     ${openHiTLS_SRC}/testcode/output/lib
-    ${openHiTLS_SRC}/platform/Secure_C/lib
 )
 
 # Link libraries - cross-platform shared library configuration
@@ -61,17 +60,7 @@ if(ENABLE_CRYPTO AND ${BUILD_CRYPTO} GREATER -1)
     list(APPEND TEST_INTF_LIBS hitls_crypto)
 endif()
 
-# Use find_library to support cross-platform static library extensions (.a on Unix, .lib on Windows)
-find_library(BOUNDSCHECK_STATIC_LIB
-    NAMES libboundscheck.a boundscheck  # Try .a explicitly first, then let CMake find static version
-    PATHS ${CMAKE_SOURCE_DIR}/../platform/Secure_C/lib
-    NO_DEFAULT_PATH
-    NO_CMAKE_FIND_ROOT_PATH
-)
-if(NOT BOUNDSCHECK_STATIC_LIB)
-    message(FATAL_ERROR "Could not find static boundscheck library at ${CMAKE_SOURCE_DIR}/../platform/Secure_C/lib")
-endif()
-list(APPEND TEST_INTF_LIBS hitls_bsl ${BOUNDSCHECK_STATIC_LIB} pthread dl)
+list(APPEND TEST_INTF_LIBS hitls_bsl pthread dl)
 target_link_libraries(TEST_INTF INTERFACE ${TEST_INTF_LIBS})
 
 # Shared variant inherits all configurations from TEST_INTF
@@ -79,7 +68,6 @@ add_library(TEST_INTF_SHARED INTERFACE)
 target_link_libraries(TEST_INTF_SHARED INTERFACE TEST_INTF)
 
 set(TEST_INTF_INCLUDE_DIRS 
-    ${openHiTLS_SRC}/platform/Secure_C/include
     ${openHiTLS_SRC}/include
     ${openHiTLS_SRC}/testcode/framework/include
     ${openHiTLS_SRC}/testcode/framework/crypto

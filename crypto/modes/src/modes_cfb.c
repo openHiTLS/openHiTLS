@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_CFB
 
 #include <stdbool.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "eal_cipher_local.h"
@@ -59,8 +59,7 @@ static int32_t MODES_CFB_BytesEncrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in
 
         // The first (blockSize - feedbackBytes) bytes are filled with the least significant bytes of the previous IV.
         if (blockSize - feedbackBytes > 0) {
-            (void)memmove_s(&ctx->modeCtx.iv[0], blockSize, &ctx->modeCtx.iv[feedbackBytes],
-                blockSize - feedbackBytes);
+            memmove(&ctx->modeCtx.iv[0], &ctx->modeCtx.iv[feedbackBytes], blockSize - feedbackBytes);
             i = blockSize - feedbackBytes;
         }
 
@@ -175,8 +174,7 @@ static int32_t MODES_CFB_BytesDecrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in
 
         // The first (blockSize - feedbackBytes) bytes are filled with the least significant bytes of the previous IV.
         if (blockSize - feedbackBytes > 0) {
-            (void)memmove_s(&ctx->modeCtx.iv[0], blockSize, &ctx->modeCtx.iv[feedbackBytes],
-                blockSize - feedbackBytes);
+            memmove(&ctx->modeCtx.iv[0], &ctx->modeCtx.iv[feedbackBytes], blockSize - feedbackBytes);
             i = blockSize - feedbackBytes;
         }
 
@@ -318,7 +316,7 @@ int32_t MODES_CFB_BitCrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *
         // Divide by 8 to obtain the current byte position. tmpOut[0] >> 7 to obtain the most significant bit.
         out[i / 8] |= (tmp[1] >> 7) << pos; // Assign the out encryption bit to the encrypted/decrypted value.
     }
-    (void)memset_s(tmp, sizeof(tmp), 0, sizeof(tmp));
+    memset(tmp, 0, sizeof(tmp));
     return CRYPT_SUCCESS;
 }
 

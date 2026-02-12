@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
@@ -251,13 +251,13 @@ int32_t HITLS_AUTH_PrivPassGenTokenReq(HITLS_AUTH_PrivPassCtx *ctx, const HITLS_
     BSL_Uint16ToByte(challenge->tokenType, tokenInput);
     offset += 2; // offset 2 bytes.
     // Add nonce
-    (void)memcpy_s(tokenInput + offset, PRIVPASS_TOKEN_NONCE_LEN, ctx->nonce, PRIVPASS_TOKEN_NONCE_LEN);
+    memcpy(tokenInput + offset, ctx->nonce, PRIVPASS_TOKEN_NONCE_LEN);
     offset += PRIVPASS_TOKEN_NONCE_LEN;
     // Add challenge digest
-    (void)memcpy_s(tokenInput + offset, PRIVPASS_TOKEN_SHA256_SIZE, challengeDigest, PRIVPASS_TOKEN_SHA256_SIZE);
+    memcpy(tokenInput + offset, challengeDigest, PRIVPASS_TOKEN_SHA256_SIZE);
     offset += PRIVPASS_TOKEN_SHA256_SIZE;
     // Add token key id
-    (void)memcpy_s(tokenInput + offset, PRIVPASS_TOKEN_SHA256_SIZE, ctx->tokenKeyId, PRIVPASS_TOKEN_SHA256_SIZE);
+    memcpy(tokenInput + offset, ctx->tokenKeyId, PRIVPASS_TOKEN_SHA256_SIZE);
 
     // Calculate blinded message
     request->blindedMsg.data = BSL_SAL_Malloc(authenticatorLen);
@@ -403,14 +403,13 @@ int32_t HITLS_AUTH_PrivPassGenToken(HITLS_AUTH_PrivPassCtx *ctx, const HITLS_AUT
         goto ERR;
     }
     // Copy nonce from ctx
-    (void)memcpy_s(finalToken->nonce, PRIVPASS_TOKEN_NONCE_LEN, ctx->nonce, PRIVPASS_TOKEN_NONCE_LEN);
+    memcpy(finalToken->nonce, ctx->nonce, PRIVPASS_TOKEN_NONCE_LEN);
 
     // Copy challenge digest from ctx
-    (void)memcpy_s(finalToken->challengeDigest, PRIVPASS_TOKEN_SHA256_SIZE,
-        challengeDigest, PRIVPASS_TOKEN_SHA256_SIZE);
+    memcpy(finalToken->challengeDigest, challengeDigest, PRIVPASS_TOKEN_SHA256_SIZE);
 
     // Copy token key ID from ctx
-    (void)memcpy_s(finalToken->tokenKeyId, PRIVPASS_TOKEN_SHA256_SIZE, ctx->tokenKeyId, PRIVPASS_TOKEN_SHA256_SIZE);
+    memcpy(finalToken->tokenKeyId, ctx->tokenKeyId, PRIVPASS_TOKEN_SHA256_SIZE);
 
     // Copy authenticator from tokenResponse
     finalToken->authenticator.data = BSL_SAL_Malloc(outputLen);
@@ -495,16 +494,15 @@ int32_t HITLS_AUTH_PrivPassVerifyToken(HITLS_AUTH_PrivPassCtx *ctx, const HITLS_
     offset += 2; // offset 2 bytes.
 
     // Add nonce
-    (void)memcpy_s(tokenInput + offset, PRIVPASS_TOKEN_NONCE_LEN, finalToken->nonce, PRIVPASS_TOKEN_NONCE_LEN);
+    memcpy(tokenInput + offset, finalToken->nonce, PRIVPASS_TOKEN_NONCE_LEN);
     offset += PRIVPASS_TOKEN_NONCE_LEN;
 
     // Add challenge digest
-    (void)memcpy_s(tokenInput + offset, PRIVPASS_TOKEN_SHA256_SIZE,
-        finalToken->challengeDigest, PRIVPASS_TOKEN_SHA256_SIZE);
+    memcpy(tokenInput + offset, finalToken->challengeDigest, PRIVPASS_TOKEN_SHA256_SIZE);
     offset += PRIVPASS_TOKEN_SHA256_SIZE;
 
     // Add token key id
-    (void)memcpy_s(tokenInput + offset, PRIVPASS_TOKEN_SHA256_SIZE, finalToken->tokenKeyId, PRIVPASS_TOKEN_SHA256_SIZE);
+    memcpy(tokenInput + offset, finalToken->tokenKeyId, PRIVPASS_TOKEN_SHA256_SIZE);
 
     // Verify the token using ctx's verify method
     ret = ctx->method.verify(ctx->pubKeyCtx, HITLS_AUTH_PRIVPASS_CRYPTO_SHA384, tokenInput,

@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <string.h>
-#include "securec.h"
 #include "bsl_errno.h"
 #include "bsl_list_internal.h"
 
@@ -133,12 +132,13 @@ static void *UserDataCopy(const void *a)
     if (dest == NULL) {
         return NULL;
     }
-    (void)memset_s(dest, sizeof(UserData), 0, sizeof(UserData));
+    memset(dest, 0, sizeof(UserData));
     dest->id = src->id;
-    if (memcpy_s(dest->name, MAX_NAME_LEN, src->name, strlen(src->name)) != EOK) {
+    if (strlen(src->name) > MAX_NAME_LEN) {
         BSL_SAL_FREE(dest);
         return NULL;
     }
+    memcpy(dest->name, src->name, strlen(src->name));
     return dest;
 }
 
@@ -954,7 +954,7 @@ void SDV_BSL_LIST_DELETE_NODE_FUNC_TC001(void)
 
     UserData *data1 = BSL_SAL_Malloc(sizeof(UserData) * 3);
     ASSERT_TRUE(data1 != NULL);
-    memcpy_s(data1, sizeof(UserData) * 3, data, sizeof(UserData) *3);
+    memcpy(data1, data, sizeof(UserData) * 3);
 
     for (int i = 0; i < 3; i++) {
         ASSERT_TRUE(BSL_LIST_AddElement(testList, &data1[i], BSL_LIST_POS_AFTER) == BSL_SUCCESS);
@@ -992,7 +992,7 @@ void SDV_BSL_LIST_DELETE_NODE_FUNC_TC002(void)
 
     UserData *data1 = BSL_SAL_Malloc(sizeof(UserData) * 3);
     ASSERT_TRUE(data1 != NULL);
-    memcpy_s(data1, sizeof(UserData) * 3, data, sizeof(UserData) *3);
+    memcpy(data1, data, sizeof(UserData) * 3);
 
     for (int i = 0; i < 3; i++) {
         ASSERT_TRUE(BSL_LIST_AddElement(testList, &data1[i], BSL_LIST_POS_AFTER) == BSL_SUCCESS);
@@ -1355,7 +1355,7 @@ void SDV_BSL_LIST_STATELESS_MULTI_THREAD_FUNC_TC001(void)
         {testList, "1-2-3-4-5-", "Dave", BSL_SUCCESS},
         {testList, "1-2-3-4-5-", "Celina", BSL_SUCCESS}
     };
-    (void)memcpy_s(arg, sizeof(arg), initArg, sizeof(initArg));
+    (void)memcpy(arg, initArg, sizeof(initArg));
     for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
         ASSERT_TRUE(pthread_create(&thrd[i], NULL, (void *)ListStatelessTraverseThread, &arg[i]) == 0);
     }
@@ -1404,7 +1404,7 @@ void SDV_BSL_LIST_STATELESS_BIDIRECTIONAL_MULTI_THREAD_FUNC_TC001(void)
         {testList, "1-2-3-4-5-", "5-4-3-2-1-", "Alice", BSL_SUCCESS},
         {testList, "1-2-3-4-5-", "5-4-3-2-1-", "Emma", BSL_SUCCESS}
     };
-    (void)memcpy_s(arg, sizeof(arg), initArg, sizeof(initArg));
+    (void)memcpy(arg, initArg, sizeof(initArg));
     for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
         ASSERT_TRUE(pthread_create(&thrd[i], NULL, (void *)ListBidirectionalTraverseThread, &arg[i]) == 0);
     }

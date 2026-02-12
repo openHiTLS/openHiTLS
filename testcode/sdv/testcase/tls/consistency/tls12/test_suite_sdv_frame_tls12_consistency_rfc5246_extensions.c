@@ -17,7 +17,7 @@
 
 #include <semaphore.h>
 #include "process.h"
-#include "securec.h"
+#include <string.h>
 #include "hitls_error.h"
 #include "frame_tls.h"
 #include "frame_link.h"
@@ -152,7 +152,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_MSGLENGTH_TOOLONG_TC001(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.server->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
 
     ASSERT_TRUE(testInfo.server->ssl != NULL);
     ASSERT_EQ(HITLS_Accept(testInfo.server->ssl), HITLS_REC_RECORD_OVERFLOW);
@@ -223,7 +223,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_MSGLENGTH_TOOLONG_TC002(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.client->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
 
     ASSERT_TRUE(testInfo.client->ssl != NULL);
     ASSERT_EQ(HITLS_Connect(testInfo.client->ssl), HITLS_REC_RECORD_OVERFLOW);
@@ -284,7 +284,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_MSGLENGTH_TOOLONG_TC003(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.server->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
 
     ASSERT_TRUE(testInfo.server->ssl != NULL);
     ASSERT_EQ(HITLS_Accept(testInfo.server->ssl), HITLS_REC_RECORD_OVERFLOW);
@@ -346,7 +346,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_MSGLENGTH_TOOLONG_TC004(void)
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.client->io, sendBuf, sendLen) == HITLS_SUCCESS);
 
     FRAME_CleanMsg(&frameType1, &frameMsg1);
-    memset_s(&frameMsg1, sizeof(frameMsg1), 0, sizeof(frameMsg1));
+    memset(&frameMsg1, 0, sizeof(frameMsg1));
 
     ASSERT_TRUE(testInfo.client->ssl != NULL);
     ASSERT_EQ(HITLS_Connect(testInfo.client->ssl), HITLS_REC_RECORD_OVERFLOW);

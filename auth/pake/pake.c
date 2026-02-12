@@ -21,7 +21,7 @@
 #include "crypt_errno.h"
 #include "bsl_errno.h"
 #include "bsl_params.h"
-#include "securec.h"
+#include <string.h>
 #include "crypt_params_key.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
@@ -116,10 +116,10 @@ HITLS_AUTH_PakeCtx *HITLS_AUTH_PakeNewCtx(CRYPT_EAL_LibCtx *libCtx, const char *
         HITLS_AUTH_PakeFreeCtx(ctx);
         return NULL;
     }
-    memcpy_s(ctx->password.data, ctx->password.dataLen, password.data, password.dataLen);
-    memcpy_s(ctx->prover.data, ctx->prover.dataLen, prover.data, prover.dataLen);
-    memcpy_s(ctx->verifier.data, ctx->verifier.dataLen, verifier.data, verifier.dataLen);
-    memcpy_s(ctx->context.data, ctx->context.dataLen, context.data, context.dataLen);
+    memcpy(ctx->password.data, password.data, password.dataLen);
+    memcpy(ctx->prover.data, prover.data, prover.dataLen);
+    memcpy(ctx->verifier.data, verifier.data, verifier.dataLen);
+    memcpy(ctx->context.data, context.data, context.dataLen);
 
     return ctx;
 }
@@ -329,10 +329,9 @@ CRYPT_EAL_KdfCtx* HITLS_AUTH_PakeGetKdfCtx(HITLS_AUTH_PakeCtx* ctx, HITLS_AUTH_P
             uint8_t *salt = kdf.param.pbkdf2.salt.data;
             int32_t ret = HITLS_AUTH_SUCCESS;
 
-            (void)memcpy_s(buffer, ctx->password.dataLen, ctx->password.data, ctx->password.dataLen);
-            (void)memcpy_s(buffer + ctx->password.dataLen, ctx->prover.dataLen, ctx->prover.data, ctx->prover.dataLen);
-            (void)memcpy_s(buffer + ctx->password.dataLen + ctx->prover.dataLen, ctx->verifier.dataLen,
-                ctx->verifier.data, ctx->verifier.dataLen);
+            memcpy(buffer, ctx->password.data, ctx->password.dataLen);
+            memcpy(buffer + ctx->password.dataLen, ctx->prover.data, ctx->prover.dataLen);
+            memcpy(buffer + ctx->password.dataLen + ctx->prover.dataLen, ctx->verifier.data, ctx->verifier.dataLen);
             CRYPT_EAL_KdfCtx *kdfCtx = CRYPT_EAL_KdfNewCtx(kdf.algId);
             if (kdfCtx == NULL) {
                 BSL_SAL_Free(buffer);

@@ -16,7 +16,7 @@
 /* BEGIN_HEADER */
 
 #include "bsl_sal.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_types.h"
 #include "bsl_log.h"
 #include "sal_file.h"
@@ -2058,14 +2058,14 @@ static int32_t LoadCertChainAndKeys(const char *basePath, TestCertChainCtx *ctx)
     char crlPath[256];
     char crlEmptyPath[256];
 
-    (void)sprintf_s(rootPath, sizeof(rootPath), "%s/root_ca.crt", basePath);
-    (void)sprintf_s(caPath, sizeof(caPath), "%s/mid_ca.crt", basePath);
-    (void)sprintf_s(device1CertPath, sizeof(device1CertPath), "%s/device1.crt", basePath);
-    (void)sprintf_s(device1KeyPath, sizeof(device1KeyPath), "%s/device1.key", basePath);
-    (void)sprintf_s(device2CertPath, sizeof(device2CertPath), "%s/device2.crt", basePath);
-    (void)sprintf_s(device2KeyPath, sizeof(device2KeyPath), "%s/device2.key", basePath);
-    (void)sprintf_s(crlPath, sizeof(crlPath), "%s/mid_ca_revocation.crl", basePath);
-    (void)sprintf_s(crlEmptyPath, sizeof(crlEmptyPath), "%s/mid_ca_empty.crl", basePath);
+    (void)snprintf(rootPath, sizeof(rootPath), "%s/root_ca.crt", basePath);
+    (void)snprintf(caPath, sizeof(caPath), "%s/mid_ca.crt", basePath);
+    (void)snprintf(device1CertPath, sizeof(device1CertPath), "%s/device1.crt", basePath);
+    (void)snprintf(device1KeyPath, sizeof(device1KeyPath), "%s/device1.key", basePath);
+    (void)snprintf(device2CertPath, sizeof(device2CertPath), "%s/device2.crt", basePath);
+    (void)snprintf(device2KeyPath, sizeof(device2KeyPath), "%s/device2.key", basePath);
+    (void)snprintf(crlPath, sizeof(crlPath), "%s/mid_ca_revocation.crl", basePath);
+    (void)snprintf(crlEmptyPath, sizeof(crlEmptyPath), "%s/mid_ca_empty.crl", basePath);
 
     int32_t ret = 0;
     // Load certificates
@@ -2499,7 +2499,7 @@ static int32_t STUB_BSL_SAL_SysTimeGet(BSL_TIME *sysTime)
     if (sysTime == NULL) {
         return -1;
     }
-    (void)memset(sysTime, 1, sizeof(BSL_TIME));
+    memset(sysTime, 1, sizeof(BSL_TIME));
     sysTime->year = 2055;  // >= 2050
     return BSL_SUCCESS;
 }

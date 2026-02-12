@@ -13,7 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include "securec.h"
+#include <stdio.h>
+#include <string.h>
 #include "bsl_sal.h"
 #include "uio_base.h"
 #include "uio_abstraction.h"
@@ -40,22 +41,24 @@ HITLS_Ctx *FRAME_CreateDefaultDtlsObj(void)
     char chainPath[MAX_CERT_PATH_LENGTH] = {0};
     char certPath[MAX_CERT_PATH_LENGTH] = {0};
     char keyPath[MAX_CERT_PATH_LENGTH] = {0};
-    if (sprintf_s(verifyPath, MAX_CERT_PATH_LENGTH, "%s:%s", RSA_SHA_CA_PATH, ECDSA_SHA_CA_PATH) <= 0) {
+    int n;
+    n = snprintf(verifyPath, MAX_CERT_PATH_LENGTH, "%s:%s", RSA_SHA_CA_PATH, ECDSA_SHA_CA_PATH);
+    if (n < 0 || (size_t)n >= MAX_CERT_PATH_LENGTH) {
         HITLS_CFG_FreeConfig(config);
         return NULL;
     }
-
-    if (sprintf_s(chainPath, MAX_CERT_PATH_LENGTH, "%s:%s", RSA_SHA_CHAIN_PATH, ECDSA_SHA_CHAIN_PATH) <= 0) {
+    n = snprintf(chainPath, MAX_CERT_PATH_LENGTH, "%s:%s", RSA_SHA_CHAIN_PATH, ECDSA_SHA_CHAIN_PATH);
+    if (n < 0 || (size_t)n >= MAX_CERT_PATH_LENGTH) {
         HITLS_CFG_FreeConfig(config);
         return NULL;
     }
-
-    if (sprintf_s(certPath, MAX_CERT_PATH_LENGTH, "%s:%s", RSA_SHA256_EE_PATH3, ECDSA_SHA256_EE_PATH) <= 0) {
+    n = snprintf(certPath, MAX_CERT_PATH_LENGTH, "%s:%s", RSA_SHA256_EE_PATH3, ECDSA_SHA256_EE_PATH);
+    if (n < 0 || (size_t)n >= MAX_CERT_PATH_LENGTH) {
         HITLS_CFG_FreeConfig(config);
         return NULL;
     }
-
-    if (sprintf_s(keyPath, MAX_CERT_PATH_LENGTH, "%s:%s", RSA_SHA256_PRIV_PATH3, ECDSA_SHA256_PRIV_PATH) <= 0) {
+    n = snprintf(keyPath, MAX_CERT_PATH_LENGTH, "%s:%s", RSA_SHA256_PRIV_PATH3, ECDSA_SHA256_PRIV_PATH);
+    if (n < 0 || (size_t)n >= MAX_CERT_PATH_LENGTH) {
         HITLS_CFG_FreeConfig(config);
         return NULL;
     }
@@ -99,9 +102,10 @@ FRAME_LinkObj *CreateLink(HITLS_Config *config, BSL_UIO_TransportType type)
 #endif
             break;
     }
-    if (memcpy_s(&method, sizeof(BSL_UIO_Method), ori, sizeof(method)) != EOK) {
+    if (sizeof(method) > sizeof(BSL_UIO_Method)) {
         return NULL;
     }
+    memcpy(&method, ori, sizeof(method));
 
     FRAME_LinkObj *linkObj = BSL_SAL_Calloc(1u, sizeof(FRAME_LinkObj));
     if (linkObj == NULL) {
@@ -194,19 +198,12 @@ FRAME_LinkObj *FRAME_CreateLinkBase(HITLS_Config *config, BSL_UIO_TransportType 
         char chainPath[MAX_CERT_PATH_LENGTH] = {0};
         char certPath[MAX_CERT_PATH_LENGTH] = {0};
         char keyPath[MAX_CERT_PATH_LENGTH] = {0};
-        sprintf_s(verifyPath, MAX_CERT_PATH_LENGTH, "%s:%s", ECDSA_SHA_CA_PATH, RSA_SHA_CA_PATH);
-        sprintf_s(chainPath,
-            MAX_CERT_PATH_LENGTH,
-            "%s:%s",
-            ECDSA_SHA_CHAIN_PATH,
-            RSA_SHA_CHAIN_PATH);
-        sprintf_s(
-            certPath, MAX_CERT_PATH_LENGTH, "%s:%s", ECDSA_SHA256_EE_PATH, RSA_SHA256_EE_PATH3);
-        sprintf_s(keyPath,
-            MAX_CERT_PATH_LENGTH,
-            "%s:%s",
-            ECDSA_SHA256_PRIV_PATH,
-            RSA_SHA256_PRIV_PATH3);
+        snprintf(verifyPath, MAX_CERT_PATH_LENGTH, "%s:%s", ECDSA_SHA_CA_PATH, RSA_SHA_CA_PATH);
+        snprintf(chainPath, MAX_CERT_PATH_LENGTH, "%s:%s",
+            ECDSA_SHA_CHAIN_PATH, RSA_SHA_CHAIN_PATH);
+        snprintf(certPath, MAX_CERT_PATH_LENGTH, "%s:%s", ECDSA_SHA256_EE_PATH, RSA_SHA256_EE_PATH3);
+        snprintf(keyPath, MAX_CERT_PATH_LENGTH, "%s:%s",
+            ECDSA_SHA256_PRIV_PATH, RSA_SHA256_PRIV_PATH3);
         ret = HiTLS_X509_LoadCertAndKey(config, verifyPath, chainPath, certPath, NULL, keyPath, NULL);
         if (ret != HITLS_SUCCESS) {
             return NULL;

@@ -20,7 +20,7 @@
 #include <time.h>
 #include <stddef.h>
 #include <unistd.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "hitls.h"
 #include "hitls_config.h"
@@ -239,7 +239,7 @@ void Test_MisClientHelloExtension(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, 
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
     FieldState *extensionState = GetDataAddress(&frameMsg, user);
     *extensionState = MISSING_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
     ASSERT_NE(parseLen, *len);
 EXIT:

@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include "securec.h"
+#include <string.h>
 #include "helper.h"
 #include "test.h"
 
@@ -103,19 +103,25 @@ ERR:
 void RecordFailure(const char *test, const char *filename)
 {
     g_testResult.result = TEST_RESULT_FAILED;
-    if (strcpy_s(g_testResult.test, sizeof(g_testResult.test), test) != 0) {
+    if (strlen(test) >= sizeof(g_testResult.test)) {
         Print("failure log failed: message too long\n");
+    } else {
+        strcpy(g_testResult.test, test);
     }
-    if (strcpy_s(g_testResult.filename, sizeof(g_testResult.filename), filename) != 0) {
+    if (strlen(filename) >= sizeof(g_testResult.filename)) {
         Print("failure log failed: filename too long\n");
+    } else {
+        strcpy(g_testResult.filename, filename);
     }
 }
 
 void SkipTest(const char *filename)
 {
     g_testResult.result = TEST_RESULT_SKIPPED;
-    if (strcpy_s(g_testResult.filename, sizeof(g_testResult.filename), filename) != 0) {
+    if (strlen(filename) >= sizeof(g_testResult.filename)) {
         Print("failure log failed: filename too long\n");
+    } else {
+        strcpy(g_testResult.filename, filename);
     }
 }
 void PrintResult(bool showDetail, char *vectorName, uint64_t useTime)

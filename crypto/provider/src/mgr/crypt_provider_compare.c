@@ -18,7 +18,6 @@
 
 #include <string.h>
 #include <stdbool.h>
-#include "securec.h"
 #include "bsl_list.h"
 #include "bsl_err_internal.h"
 #include "bsl_hash.h"
@@ -229,9 +228,9 @@ static int32_t ParseAttributeValue(const char *attribute, int32_t *startPos, cha
     }
 
     // Copy the string corresponding to the key and value
-    (void)memcpy_s(tempKey, keyLen + 1, attribute + keyStart, keyLen);
-    (void)memcpy_s(judgeStr, judgeLen + 1, attribute + judgeStart, judgeLen);
-    (void)memcpy_s(valueStr, valueLen + 1, attribute + valueStart, valueLen);
+    (void)memcpy(tempKey, attribute + keyStart, keyLen);
+    (void)memcpy(judgeStr, attribute + judgeStart, judgeLen);
+    (void)memcpy(valueStr, attribute + valueStart, valueLen);
 
     *startPos = attribute[valueEnd] == '\0' ? valueEnd : valueEnd + 1;
     *key = tempKey;

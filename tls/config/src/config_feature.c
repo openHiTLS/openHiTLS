@@ -16,7 +16,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_log.h"
 #include "tls_binlog_id.h"
@@ -63,7 +63,7 @@ int32_t HITLS_CFG_SetServerName(HITLS_Config *config, uint8_t *serverName, uint3
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16606, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
-    (void)memcpy_s(newData, serverNameSize, serverName, serverNameStrlen);
+    memcpy(newData, serverName, serverNameStrlen);
     newData[serverNameSize - 1] = '\0';
 
     BSL_SAL_FREE(config->serverName);
@@ -177,7 +177,7 @@ int32_t HITLS_CFG_SetAlpnProtos(HITLS_Config *config, const uint8_t *alpnProtos,
         return HITLS_MEMALLOC_FAIL;
     }
 
-    (void)memcpy_s(alpnListTmp, alpnProtosLen + 1, alpnProtos, alpnProtosLen);
+    memcpy(alpnListTmp, alpnProtos, alpnProtosLen);
 
     BSL_SAL_FREE(config->alpnList);
     config->alpnList = alpnListTmp;
@@ -475,10 +475,10 @@ int32_t HITLS_CFG_SetSessionIdCtx(HITLS_Config *config, const uint8_t *sessionId
         return HITLS_NULL_INPUT;
     }
 
-    if (len != 0 && memcpy_s(config->sessionIdCtx, sizeof(config->sessionIdCtx), sessionIdCtx, len) != EOK) {
+    if (len > sizeof(config->sessionIdCtx)) {
         return HITLS_MEMCPY_FAIL;
     }
-
+    memcpy(config->sessionIdCtx, sessionIdCtx, len);
     /* The allowed value is 0 */
     config->sessionIdCtxSize = len;
     return HITLS_SUCCESS;

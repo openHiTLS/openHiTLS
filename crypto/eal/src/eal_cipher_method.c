@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_CIPHER)
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "eal_cipher_local.h"

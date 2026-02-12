@@ -18,7 +18,7 @@
 #include "crypt_errno.h"
 #include "crypt_eal_cipher.h"
 #include "bsl_sal.h"
-#include "securec.h"
+#include <string.h>
 
 /* END_HEADER */
 
@@ -616,7 +616,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_FINAL_API_TC003(void)
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, pt, sizeof(pt), ct, &outLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, sizeof(tag)) == CRYPT_SUCCESS);
 
-    ASSERT_TRUE(memcpy_s(badTag, sizeof(badTag), tag, sizeof(tag)) == EOK);
+    memcpy(badTag, tag, sizeof(tag));
     badTag[0] ^= 0x01;
 
     outLen = sizeof(out);
@@ -1065,7 +1065,8 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC007(Hex *key, Hex *iv, Hex *aad, 
 
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
     ASSERT_TRUE(ctx != NULL);
-    ASSERT_TRUE(memcpy_s(buf, bufLen, data->x, data->len) == 0);
+    ASSERT_TRUE(data->len <= bufLen);
+    memcpy(buf, data->x, data->len);
     ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad->x, aad->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, buf, data->len, buf, &bufLen) == CRYPT_SUCCESS);
@@ -1119,7 +1120,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC008(Hex *key, Hex *aad, Hex *data
     const uint32_t tagLen = sizeof(outTag1);
     uint32_t outLen = sizeof(out);
     uint8_t iv[8];
-    (void)memset_s(iv, sizeof(iv), 'A', sizeof(iv));
+    memset(iv, 'A', sizeof(iv));
 
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
     ASSERT_TRUE(ctx != NULL);

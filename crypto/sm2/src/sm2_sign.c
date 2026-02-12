@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_SM2
 
 #include <stdbool.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "crypt_types.h"
 #include "crypt_utils.h"
@@ -42,7 +42,7 @@ static int32_t Sm2SetUserId(CRYPT_SM2_Ctx *ctx, const uint8_t *val, uint32_t len
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memcpy_s(ctx->userId, len, val, len);
+    memcpy(ctx->userId, val, len);
     ctx->userIdLen = len;
     return CRYPT_SUCCESS;
 }
@@ -110,8 +110,8 @@ CRYPT_SM2_Ctx *CRYPT_SM2_DupCtx(CRYPT_SM2_Ctx *ctx)
     newCtx->server = ctx->server;
     newCtx->isSumValid = ctx->isSumValid;
     BSL_SAL_ReferencesInit(&(newCtx->references));
-    (void)memcpy_s(newCtx->sumCheck, SM3_MD_SIZE, ctx->sumCheck, SM3_MD_SIZE);
-    (void)memcpy_s(newCtx->sumSend, SM3_MD_SIZE, ctx->sumSend, SM3_MD_SIZE);
+    memcpy(newCtx->sumCheck, ctx->sumCheck, SM3_MD_SIZE);
+    memcpy(newCtx->sumSend, ctx->sumSend, SM3_MD_SIZE);
 
     return newCtx;
 ERR:
@@ -864,12 +864,7 @@ static int32_t Sm2GetSumSend(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = memcpy_s((uint8_t *)val, len, ctx->sumSend, SM3_MD_SIZE);
-    if (ret != EOK) {
-        ret = CRYPT_SM2_ERR_GET_S;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    memcpy((uint8_t *)val, ctx->sumSend, SM3_MD_SIZE);
 
     return CRYPT_SUCCESS;
 }

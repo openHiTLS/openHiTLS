@@ -12,7 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-#include "securec.h"
+#include <string.h>
 #include "hitls_build.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -329,7 +329,7 @@ static int32_t Tls12TryRecvHandShakeMsg(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
     HS_Msg hsMsg = {0};
-    (void)memset_s(&hsMsg, sizeof(HS_Msg), 0, sizeof(HS_Msg));
+    memset(&hsMsg, 0, sizeof(HS_Msg));
     if (ctx->hsCtx->hsMsg == NULL) {
         ret = ReadThenParseTlsHsMsg(ctx, &hsMsg);
         if (ret != HITLS_SUCCESS) {
@@ -348,7 +348,7 @@ static int32_t Tls13TryRecvHandShakeMsg(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
     HS_Msg hsMsg = {0};
-    (void)memset_s(&hsMsg, sizeof(HS_Msg), 0, sizeof(HS_Msg));
+    memset(&hsMsg, 0, sizeof(HS_Msg));
     if (ctx->hsCtx->hsMsg == NULL) {
         ret = ReadThenParseTlsHsMsg(ctx, &hsMsg);
         if (ret != HITLS_SUCCESS) {
@@ -534,7 +534,7 @@ static int32_t DtlsTryRecvHandShakeMsg(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
     HS_Msg hsMsg = {0};
-    (void)memset_s(&hsMsg, sizeof(HS_Msg), 0, sizeof(HS_Msg));
+    memset(&hsMsg, 0, sizeof(HS_Msg));
     if (ctx->hsCtx->hsMsg == NULL) {
         ret = DtlsReadAndParseHandshakeMsg(ctx, &hsMsg);
         if (ret != HITLS_SUCCESS || ctx->hsCtx->hsMsg == NULL) {

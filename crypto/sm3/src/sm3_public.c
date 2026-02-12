@@ -18,7 +18,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "bsl_err_internal.h"
@@ -49,7 +49,7 @@ int32_t CRYPT_SM3_Init(CRYPT_SM3_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    (void)memset_s(ctx, sizeof(CRYPT_SM3_Ctx), 0, sizeof(CRYPT_SM3_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_SM3_Ctx));
     /* GM/T 0004-2012 chapter 4.1 */
     ctx->h[0] = 0x7380166F;
     ctx->h[1] = 0x4914B2B9;
@@ -73,7 +73,7 @@ int32_t CRYPT_SM3_Deinit(CRYPT_SM3_Ctx *ctx)
     if (ctx == NULL) {
         return CRYPT_NULL_INPUT;
     }
-    (void)memset_s(ctx, sizeof(CRYPT_SM3_Ctx), 0, sizeof(CRYPT_SM3_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_SM3_Ctx));
     return CRYPT_SUCCESS;
 }
 
@@ -128,13 +128,13 @@ int32_t CRYPT_SM3_Update(CRYPT_SM3_Ctx *ctx, const uint8_t *in, uint32_t len)
 
     if (ctx->num != 0) {
         if (dataLen < left) {
-            (void)memcpy_s(ctx->block + ctx->num, left, data, dataLen);
+            memcpy(ctx->block + ctx->num, data, dataLen);
             ctx->num += dataLen;
             return CRYPT_SUCCESS;
         }
         // When the external input data is greater than the remaining space of the block,
         // copy the data which is the same length as the remaining space.
-        (void)memcpy_s(ctx->block + ctx->num, left, data, left);
+        memcpy(ctx->block + ctx->num, data, left);
         SM3_Compress(ctx->h, ctx->block, 1);
         dataLen -= left;
         data += left;
@@ -151,7 +151,7 @@ int32_t CRYPT_SM3_Update(CRYPT_SM3_Ctx *ctx, const uint8_t *in, uint32_t len)
 
     if (dataLen != 0) {
         // copy the remaining data to the cache array
-        (void)memcpy_s(ctx->block, CRYPT_SM3_BLOCKSIZE, data, dataLen);
+        memcpy(ctx->block, data, dataLen);
         ctx->num = dataLen;
     }
 
@@ -185,12 +185,12 @@ int32_t CRYPT_SM3_Final(CRYPT_SM3_Ctx *ctx, uint8_t *out, uint32_t *outLen)
     uint32_t num = ctx->num;
     uint32_t left = CRYPT_SM3_BLOCKSIZE - num;
     if (left < 8) { /* less than 8 bytes which insufficient for storing data length data */
-        (void)memset_s(block + num, left, 0, left);
+        memset(block + num, 0, left);
         SM3_Compress(ctx->h, ctx->block, 1);
         num = 0;
         left = CRYPT_SM3_BLOCKSIZE;
     }
-    (void)memset_s(block + num, left - 8, 0, left - 8);
+    memset(block + num, 0, left - 8);
     block += CRYPT_SM3_BLOCKSIZE - 8;
     PUT_UINT32_BE(ctx->hNum, block, 0);
     block += sizeof(uint32_t);
@@ -218,7 +218,7 @@ int32_t CRYPT_SM3_CopyCtx(CRYPT_SM3_Ctx *dst, const CRYPT_SM3_Ctx *src)
         return CRYPT_NULL_INPUT;
     }
 
-    (void)memcpy_s(dst, sizeof(CRYPT_SM3_Ctx), src, sizeof(CRYPT_SM3_Ctx));
+    memcpy(dst, src, sizeof(CRYPT_SM3_Ctx));
     return CRYPT_SUCCESS;
 }
 
@@ -233,7 +233,7 @@ CRYPT_SM3_Ctx *CRYPT_SM3_DupCtx(const CRYPT_SM3_Ctx *src)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memcpy_s(newCtx, sizeof(CRYPT_SM3_Ctx), src, sizeof(CRYPT_SM3_Ctx));
+    memcpy(newCtx, src, sizeof(CRYPT_SM3_Ctx));
     return newCtx;
 }
 

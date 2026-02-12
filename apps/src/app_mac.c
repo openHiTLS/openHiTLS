@@ -16,7 +16,6 @@
 #include "app_mac.h"
 #include <limits.h>
 #include "string.h"
-#include "securec.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_eal_mac.h"

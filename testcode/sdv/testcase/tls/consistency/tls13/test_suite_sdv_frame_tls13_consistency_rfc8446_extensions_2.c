@@ -32,7 +32,7 @@
 #include "parser_frame_msg.h"
 #include "rec_wrapper.h"
 #include "cert.h"
-#include "securec.h"
+#include <string.h>
 #include "process.h"
 #include "conn_init.h"
 #include "hitls_crypt_init.h"
@@ -352,11 +352,10 @@ static void Test_Client_Mode(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint3
     uint16_t version[] = { 0x03, };
     frameMsg.body.hsMsg.body.clientHello.pskModes.exData.data =
         BSL_SAL_Calloc(sizeof(version) / sizeof(uint8_t), sizeof(uint8_t));
-    ASSERT_EQ(memcpy_s(frameMsg.body.hsMsg.body.clientHello.pskModes.exData.data,
-        sizeof(version), version, sizeof(version)), EOK);
+    memcpy(frameMsg.body.hsMsg.body.clientHello.pskModes.exData.data, version, sizeof(version));
     frameMsg.body.hsMsg.body.clientHello.keyshares.exState = MISSING_FIELD;
     frameMsg.body.hsMsg.body.clientHello.keyshares.exKeyShares.state = MISSING_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -427,7 +426,7 @@ static void Test_Server_Keyshare(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, u
 
     frameMsg.body.hsMsg.body.serverHello.keyShare.data.group.data = *(uint64_t *)user;
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -495,7 +494,7 @@ static void Test_Server_Keyshare3(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, 
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     ASSERT_TRUE(frameMsg.body.hsMsg.body.serverHello.keyShare.exState == MISSING_FIELD);
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -578,7 +577,7 @@ static void Test_Server_Keyshare4(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, 
     FRAME_ModifyMsgArray8(uu, sizeof(uu), &frameMsg.body.hsMsg.body.serverHello.keyShare.data.keyExchange,
     &frameMsg.body.hsMsg.body.serverHello.keyShare.data.keyExchangeLen);
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -888,7 +887,7 @@ static void Test_SERVERHELLO_VERSION(HITLS_Ctx *ctx, uint8_t *data, uint32_t *le
 
     frameMsg.body.hsMsg.body.serverHello.version.data = 0x0301;
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1360,7 +1359,7 @@ void UT_TLS_TLS13_PARSE_CA_LIST_TC001()
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(server->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
     ASSERT_NE(FRAME_CreateConnection(server, client, false, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_TRUE(TestIsErrStackEmpty());
@@ -1888,7 +1887,7 @@ void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC006(int isServerPreference)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(server->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
 
     STUB_REPLACE(SECURITY_SslCheck, STUB_SECURITY_SslCheck);
     STUB_REPLACE(GroupConformToVersion, STUB_GroupConformToVersion);

@@ -15,7 +15,7 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MLKEM
-#include "securec.h"
+#include <string.h>
 #include "crypt_sha3.h"
 #include "crypt_utils.h"
 #include "bsl_err_internal.h"
@@ -259,7 +259,7 @@ int32_t SampleEta1(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *seed, int16_t *s[], int
 {
     uint8_t q[MLKEM_SEED_LEN + 1] = { 0 };  // Reserved lengths of nonce is 1 byte.
     uint8_t prfOut[MLKEM_PRF_BLOCKSIZE * MLKEM_ETA1_MAX] = { 0 };
-    (void)memcpy_s(q, MLKEM_SEED_LEN, seed, MLKEM_SEED_LEN);
+    (void)memcpy(q, seed, MLKEM_SEED_LEN);
     uint8_t nonce = 0;
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         q[MLKEM_SEED_LEN] = nonce++;
@@ -282,7 +282,7 @@ int32_t SampleEta2(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *seed, int16_t *s[], int
 {
     uint8_t q[MLKEM_SEED_LEN + 1] = { 0 };  // Reserved lengths of nonce is 1 byte.
     uint8_t prfOut[MLKEM_PRF_BLOCKSIZE * MLKEM_ETA1_MAX] = { 0 };
-    (void)memcpy_s(q, MLKEM_SEED_LEN, seed, MLKEM_SEED_LEN);
+    (void)memcpy(q, seed, MLKEM_SEED_LEN);
     uint8_t nonce = 0;
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         q[MLKEM_SEED_LEN] = nonce++;
@@ -340,7 +340,7 @@ int32_t GenMatrix(const CRYPT_ML_KEM_Ctx *ctx, const uint8_t *seed,
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    (void)memcpy_s(p, MLKEM_SEED_LEN, seed, MLKEM_SEED_LEN);
+    (void)memcpy(p, seed, MLKEM_SEED_LEN);
     int32_t ret = CRYPT_SUCCESS;
     uint32_t curLen;
     for (uint8_t i = 0; i < k; i++) {
@@ -391,7 +391,7 @@ int32_t MLKEM_PKEGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, uint8_t *pk, uint8_
         ByteEncode(dk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * i, ctx->keyData.vectorS[i], MLKEM_BITS_OF_Q);
     }
     // The buffer of pk is sufficient, check it before calling this function.
-    (void)memcpy_s(pk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * k, MLKEM_SEED_LEN, p, MLKEM_SEED_LEN);
+    (void)memcpy(pk + MLKEM_SEED_LEN * MLKEM_BITS_OF_Q * k, p, MLKEM_SEED_LEN);
 ERR:
     return ret;
 }

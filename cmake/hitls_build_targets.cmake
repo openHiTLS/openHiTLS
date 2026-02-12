@@ -30,7 +30,7 @@ elseif(HITLS_CRYPTO_CMVP_SM)
     set(_G_HITLS_CMVP_HAMC_ALG "sm3")
 endif()
 
-set(_G_HITLS_LIB_LINK_LIBS boundscheck)
+set(_G_HITLS_LIB_LINK_LIBS)
 
 if(HITLS_BSL_SAL_DL AND (HITLS_BSL_SAL_LINUX OR HITLS_BSL_SAL_DARWIN))
     list(APPEND _G_HITLS_LIB_LINK_LIBS dl)
@@ -187,12 +187,12 @@ else()
         if(HITLS_BUILD_SHARED)
             target_link_libraries(hitls PRIVATE
                 hitls_tls-shared hitls_pki-shared hitls_crypto-shared hitls_bsl-shared
-                dl pthread m boundscheck
+                dl pthread m
             )
         elseif(HITLS_BUILD_STATIC)
             target_link_libraries(hitls PRIVATE
                 hitls_tls-static hitls_pki-static hitls_crypto-static hitls_bsl-static
-                dl pthread m boundscheck
+                dl pthread m
             )
         endif()
     endif()

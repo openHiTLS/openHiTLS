@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_PKI_X509
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_obj.h"
 #include "bsl_obj_internal.h"
 #include "bsl_sal.h"

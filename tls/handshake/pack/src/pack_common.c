@@ -14,7 +14,7 @@
  */
 #include <stdint.h>
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -164,7 +164,7 @@ int32_t PackHelloCommonField(const TLS_Ctx *ctx, PackPacket *pkt, uint16_t versi
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
     ret = PackSessionId(pkt, hsCtx->sessionId, hsCtx->sessionIdSize);
     if (ret != HITLS_SUCCESS) {
-        (void)memset_s(hsCtx->sessionId, hsCtx->sessionIdSize, 0, hsCtx->sessionIdSize);
+        memset(hsCtx->sessionId, 0, hsCtx->sessionIdSize);
         return ret;
     }
 #else // Session recovery is not supported.
@@ -278,7 +278,7 @@ int32_t PackAppendDataToBuf(PackPacket *pkt, const uint8_t *data, uint32_t size)
         return ret;
     }
 
-    (void)memcpy_s(&(*pkt->buf)[*pkt->bufOffset], *pkt->bufLen - *pkt->bufOffset, data, size);
+    memcpy(&(*pkt->buf)[*pkt->bufOffset], data, size);
     *pkt->bufOffset += size;
     return HITLS_SUCCESS;
 }

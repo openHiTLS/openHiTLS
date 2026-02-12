@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_WRAP
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "eal_cipher_local.h"
@@ -85,23 +85,23 @@ static int32_t WRAP_Encrypt(MODES_CipherWRAPCtx *ctx, uint8_t *out, uint32_t inL
         BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);
         return CRYPT_MODE_ERR_INPUT_LEN;
     }
-    (void)memcpy_s(encBuf, AES_ENCRYPT_BUF_SIZE, iv, CRYPT_WRAP_BLOCKSIZE);
+    memcpy(encBuf, iv, CRYPT_WRAP_BLOCKSIZE);
     // 6 round cycle
     for (uint32_t j = 0; j < 6; j++) {
         ptr = out + CRYPT_WRAP_BLOCKSIZE;
         for (uint32_t i = 0; i < inLen; i += CRYPT_WRAP_BLOCKSIZE) {
-            (void)memcpy_s(encBuf + CRYPT_WRAP_BLOCKSIZE, CRYPT_WRAP_BLOCKSIZE, ptr, CRYPT_WRAP_BLOCKSIZE);
+            memcpy(encBuf + CRYPT_WRAP_BLOCKSIZE, ptr, CRYPT_WRAP_BLOCKSIZE);
             ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, encBuf, encBuf, AES_ENCRYPT_BUF_SIZE);
             if (ret != CRYPT_SUCCESS) {
                 return ret;
             }
             WRAP_DataBytesXor(encBuf + AES_WRAP_T_LEN_BYTE_OFFSET, t);
             t++;
-            (void)memcpy_s(ptr, CRYPT_WRAP_BLOCKSIZE, encBuf + CRYPT_WRAP_BLOCKSIZE, CRYPT_WRAP_BLOCKSIZE);
+            memcpy(ptr, encBuf + CRYPT_WRAP_BLOCKSIZE, CRYPT_WRAP_BLOCKSIZE);
             ptr += CRYPT_WRAP_BLOCKSIZE;
         }
     }
-    (void)memcpy_s(out, CRYPT_WRAP_BLOCKSIZE, encBuf, CRYPT_WRAP_BLOCKSIZE);
+    memcpy(out, encBuf, CRYPT_WRAP_BLOCKSIZE);
     return CRYPT_SUCCESS;
 }
 
@@ -113,8 +113,8 @@ static int32_t WRAP_Decrypt(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint8_t
     int32_t ret;
     uint32_t outLen = inLen - CRYPT_WRAP_BLOCKSIZE;
     uint32_t t = 6 * (outLen >> 3);
-    (void)memcpy_s(decBuf, AES_ENCRYPT_BUF_SIZE, in, CRYPT_WRAP_BLOCKSIZE);
-    (void)memmove_s(out, outLen, in + CRYPT_WRAP_BLOCKSIZE, outLen);
+    memcpy(decBuf, in, CRYPT_WRAP_BLOCKSIZE);
+    memmove(out, in + CRYPT_WRAP_BLOCKSIZE, outLen);
 
     // 6 round cycle
     for (uint32_t j = 0; j < 6; j++) {
@@ -122,26 +122,26 @@ static int32_t WRAP_Decrypt(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint8_t
         for (uint32_t i = 0; i < outLen; i += CRYPT_WRAP_BLOCKSIZE) {
             WRAP_DataBytesXor(decBuf + AES_WRAP_T_LEN_BYTE_OFFSET, t);
             t--;
-            (void)memcpy_s(decBuf + CRYPT_WRAP_BLOCKSIZE, CRYPT_WRAP_BLOCKSIZE, ptr, CRYPT_WRAP_BLOCKSIZE);
+            memcpy(decBuf + CRYPT_WRAP_BLOCKSIZE, ptr, CRYPT_WRAP_BLOCKSIZE);
             ret = ctx->ciphMeth->decryptBlock(ctx->ciphCtx, decBuf, decBuf, AES_ENCRYPT_BUF_SIZE);
             if (ret != CRYPT_SUCCESS) {
-                (void)memset_s(out, outLen, 0, outLen);
-                (void)memset_s(decBuf, AES_ENCRYPT_BUF_SIZE, 0, AES_ENCRYPT_BUF_SIZE);
+                BSL_SAL_CleanseData(out, outLen);
+                BSL_SAL_CleanseData(decBuf, AES_ENCRYPT_BUF_SIZE);
                 return ret;
             }
-            (void)memcpy_s(ptr, CRYPT_WRAP_BLOCKSIZE, decBuf + CRYPT_WRAP_BLOCKSIZE, CRYPT_WRAP_BLOCKSIZE);
+            memcpy(ptr, decBuf + CRYPT_WRAP_BLOCKSIZE, CRYPT_WRAP_BLOCKSIZE);
             ptr -= CRYPT_WRAP_BLOCKSIZE;
         }
     }
     if (ctx->flagPad != false) {  // In pad mode, aiv not NULL.
-        (void)memcpy_s(aiv, CRYPT_WRAP_BLOCKSIZE, decBuf, CRYPT_WRAP_BLOCKSIZE);
+        memcpy(aiv, decBuf, CRYPT_WRAP_BLOCKSIZE);
         ret = CRYPT_SUCCESS;
     } else if (memcmp(ctx->iv, decBuf, CRYPT_WRAP_BLOCKSIZE) != 0) {
-        (void)memset_s(out, outLen, 0, outLen);
+        BSL_SAL_CleanseData(out, outLen);
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_WRAP_DEC_ERROR);
         ret = CRYPT_MODES_WRAP_DEC_ERROR;
     }
-    (void)memset_s(decBuf, AES_ENCRYPT_BUF_SIZE, 0, AES_ENCRYPT_BUF_SIZE);
+    BSL_SAL_CleanseData(decBuf, AES_ENCRYPT_BUF_SIZE);
     return ret;
 }
 
@@ -163,20 +163,20 @@ static int32_t WRAP_EncryptPad(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint
         BSL_ERR_PUSH_ERROR(CRYPT_MODE_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_MODE_BUFF_LEN_NOT_ENOUGH;
     }
-    (void)memmove_s(out + CRYPT_WRAP_BLOCKSIZE, *outLen - CRYPT_WRAP_BLOCKSIZE, in, inLen);
-    (void)memset_s(out + inLen + CRYPT_WRAP_BLOCKSIZE, padLen, 0, padLen);
+    memmove(out + CRYPT_WRAP_BLOCKSIZE, in, inLen);
+    memset(out + inLen + CRYPT_WRAP_BLOCKSIZE, 0, padLen);
 
-    (void)memcpy_s(aiv, CRYPT_WRAP_BLOCKSIZE, ctx->iv, CRYPT_WRAP_AIV_SIZE);
+    memcpy(aiv, ctx->iv, CRYPT_WRAP_AIV_SIZE);
     WRAP_DataBytesXor(aiv + AES_WRAP_T_LEN_BYTE_OFFSET, inLen);
 
     if (inLen <= CRYPT_WRAP_BLOCKSIZE) {
-        (void)memcpy_s(out, CRYPT_WRAP_BLOCKSIZE, aiv, CRYPT_WRAP_BLOCKSIZE);
+        memcpy(out, aiv, CRYPT_WRAP_BLOCKSIZE);
         ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, out, out, AES_ENCRYPT_BUF_SIZE);
     } else {
         ret = WRAP_Encrypt(ctx, out, inLen + padLen, aiv);
     }
     if (ret != CRYPT_SUCCESS) {
-        (void)memset_s(out, *outLen, 0, *outLen);  // Erasing sensitive information.
+        BSL_SAL_CleanseData(out, *outLen);  // Erasing sensitive information.
         return ret;
     }
     *outLen = inLen + padLen + CRYPT_WRAP_BLOCKSIZE;
@@ -221,8 +221,8 @@ static int32_t WRAP_DecryptPad(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }
-        (void)memcpy_s(aiv, CRYPT_WRAP_BLOCKSIZE, tmpBuf, CRYPT_WRAP_BLOCKSIZE);
-        (void)memcpy_s(out, CRYPT_WRAP_BLOCKSIZE, tmpBuf + CRYPT_WRAP_BLOCKSIZE, CRYPT_WRAP_BLOCKSIZE);
+        memcpy(aiv, tmpBuf, CRYPT_WRAP_BLOCKSIZE);
+        memcpy(out, tmpBuf + CRYPT_WRAP_BLOCKSIZE, CRYPT_WRAP_BLOCKSIZE);
         padLen = CRYPT_WRAP_BLOCKSIZE;
     } else {
         ret = WRAP_Decrypt(ctx, in, out, inLen, aiv);
@@ -233,7 +233,7 @@ static int32_t WRAP_DecryptPad(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint
     }
     ret = DecryptResultGetLen(ctx, out, aiv, padLen, inLen, outLen);
     if (ret != CRYPT_SUCCESS) {
-        (void)memset_s(out, *outLen, 0, *outLen);  // Erasing sensitive information.
+        BSL_SAL_CleanseData(out, *outLen);  // Erasing sensitive information.
     }
     return ret;
 }
@@ -251,10 +251,10 @@ int32_t MODE_WRAP_Encrypt(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint8_t *
             BSL_ERR_PUSH_ERROR(CRYPT_MODE_BUFF_LEN_NOT_ENOUGH);
             return CRYPT_MODE_BUFF_LEN_NOT_ENOUGH;
         }
-        (void)memmove_s(out + CRYPT_WRAP_BLOCKSIZE, *outLen - CRYPT_WRAP_BLOCKSIZE, in, inLen);
+        memmove(out + CRYPT_WRAP_BLOCKSIZE, in, inLen);
         ret = WRAP_Encrypt(ctx, out, inLen, ctx->iv);
         if (ret != CRYPT_SUCCESS) {
-            (void)memset_s(out, *outLen, 0, *outLen);  // Erasing sensitive information.
+        BSL_SAL_CleanseData(out, *outLen);  // Erasing sensitive information.
             return ret;
         }
         *outLen = inLen + CRYPT_WRAP_BLOCKSIZE;
@@ -295,7 +295,7 @@ static int32_t WRAP_SetIV(MODES_CipherWRAPCtx *ctx, const uint8_t *val, uint32_t
     if ((ctx->flagPad && len != CRYPT_WRAP_AIV_SIZE) || (!ctx->flagPad && len != CRYPT_WRAP_BLOCKSIZE)) {
         return CRYPT_MODES_IVLEN_ERROR;
     }
-    (void)memcpy_s(ctx->iv, CRYPT_WRAP_BLOCKSIZE, val, len);
+    memcpy(ctx->iv, val, len);
     return CRYPT_SUCCESS;
 }
 
@@ -305,10 +305,10 @@ static int32_t WRAP_GetIV(MODES_CipherWRAPCtx *ctx, uint8_t *val, uint32_t len)
         return CRYPT_NULL_INPUT;
     }
     if (ctx->flagPad && len >= CRYPT_WRAP_AIV_SIZE) {
-        (void)memcpy_s(val, len, ctx->iv, CRYPT_WRAP_AIV_SIZE);
+        memcpy(val, ctx->iv, CRYPT_WRAP_AIV_SIZE);
         return CRYPT_SUCCESS;
     } else if (!ctx->flagPad && len >= CRYPT_WRAP_BLOCKSIZE) {
-        (void)memcpy_s(val, len, ctx->iv, CRYPT_WRAP_BLOCKSIZE);
+        memcpy(val, ctx->iv, CRYPT_WRAP_BLOCKSIZE);
         return CRYPT_SUCCESS;
     }
     return CRYPT_MODES_IVLEN_ERROR;
@@ -337,9 +337,9 @@ MODES_WRAP_Ctx *MODES_WRAP_NewCtx(int32_t algId, bool isPad)
     ctx->wrapCtx.ciphMeth = method;
     ctx->wrapCtx.flagPad = isPad;
     if (isPad) {
-        (void)memcpy_s(ctx->wrapCtx.iv, CRYPT_WRAP_BLOCKSIZE, DEFAULT_AIV, sizeof(DEFAULT_AIV));
+        memcpy(ctx->wrapCtx.iv, DEFAULT_AIV, sizeof(DEFAULT_AIV));
     } else {
-        (void)memcpy_s(ctx->wrapCtx.iv, CRYPT_WRAP_BLOCKSIZE, DEFAULT_IV, sizeof(DEFAULT_IV));
+        memcpy(ctx->wrapCtx.iv, DEFAULT_IV, sizeof(DEFAULT_IV));
     }
     return ctx;
 }

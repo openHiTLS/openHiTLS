@@ -14,7 +14,7 @@
  */
 #include "app_utils.h"
 #include <stdio.h>
-#include <securec.h>
+#include <string.h>
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
@@ -131,7 +131,7 @@ static char *GetPemKeyFileName(const char *buf, size_t readLen)
     if (name == NULL) {
         return name;
     }
-    memcpy_s(name, len, buf + PEM_BEGIN_STR_LEN, len);
+    memcpy(name, buf + PEM_BEGIN_STR_LEN, len);
     name[len] = '\0';
     return name;
 }
@@ -230,10 +230,12 @@ static int32_t GetPasswdByFile(const char *passwdArg, size_t passwdArgLen, char 
     }
     // Apply for a new memory and copy the unprocessed character string.
     char filePath[PATH_MAX] = {0};
-    if (strcpy_s(filePath, PATH_MAX, passwdArg + APP_PASS_FILE_STR_LEN) != EOK) {
+    size_t pathLen = strlen(passwdArg + APP_PASS_FILE_STR_LEN);
+    if (pathLen >= PATH_MAX) {
         AppPrintError("Failed to read passwd from file.\n");
-        return HITLS_APP_SECUREC_FAIL;
+        return HITLS_APP_INTERNAL_EXCEPTION;
     }
+    memcpy(filePath, passwdArg + APP_PASS_FILE_STR_LEN, pathLen + 1);
     // Binding the password file UIO.
     BSL_UIO *passUio = BSL_UIO_New(BSL_UIO_FileMethod());
     if (passUio == NULL) {
@@ -297,7 +299,7 @@ static char *GetStrAfterPreFix(const char *inputArg, uint32_t inputArgLen, uint3
     if (str == NULL) {
         return NULL;
     }
-    memcpy_s(str, len, inputArg + prefixLen, len);
+    memcpy(str, inputArg + prefixLen, len);
     str[len] = '\0';
     return str;
 }
@@ -473,7 +475,7 @@ CRYPT_EAL_PkeyCtx *HITLS_APP_ProviderLoadPrvKey(CRYPT_EAL_LibCtx *libCtx, const 
     if (pkey == NULL) {
         PrintFileOrStdinError(inFilePath, "Failed to read the private key");
     }
-    (void)memset_s(pass, passLen, 0, passLen);
+    memset(pass, 0, passLen);
     BSL_SAL_FREE(data);
     BSL_SAL_FREE(prvkeyName);
     return pkey;
@@ -514,7 +516,7 @@ CRYPT_EAL_PkeyCtx *HITLS_APP_LoadPrvKey(const char *inFilePath, BSL_ParseFormat 
     if (pkey == NULL) {
         PrintFileOrStdinError(inFilePath, "Failed to read the private key");
     }
-    (void)memset_s(pass, passLen, 0, passLen);
+    memset(pass, 0, passLen);
     BSL_SAL_FREE(data);
     BSL_SAL_FREE(prvkeyName);
     return pkey;
@@ -666,7 +668,7 @@ static int32_t ReadPemByUioSymbol(BSL_UIO *memUio, BSL_UIO *rUio, BSL_PEM_Symbol
 
     while (true) {
         lineLen = APP_LINESIZE + 1;
-        (void)memset_s(buf, lineLen, 0, lineLen);
+        memset(buf, 0, lineLen);
 
         // Reads a row of data.
         if ((BSL_UIO_Gets(rUio, buf, &lineLen) != BSL_SUCCESS) || (lineLen == 0)) {
@@ -999,7 +1001,7 @@ int32_t HITLS_APP_ParseHex(const char *hexStr, bool expectPrefix, uint8_t **byte
             return HITLS_APP_MEM_ALLOC_FAIL;
         }
         tmp[0] = '0';
-        (void)memcpy_s(tmp + 1, hexLen, num, hexLen);
+        memcpy(tmp + 1, num, hexLen);
         tmp[hexLen + 1] = '\0';
         ret = HITLS_APP_HexToBytes(tmp, res, bytesLen);
         BSL_SAL_Free(tmp);
@@ -1091,8 +1093,8 @@ static int32_t InitRand(AppInitParam *param)
 #ifdef HITLS_APP_SM_MODE
     pid_t pid = getpid();
     char str[32] = {0};
-    int32_t len = sprintf_s(str, sizeof(str), "%d", pid);
-    if (len < 0) {
+    int len = (uint32_t)snprintf(str, sizeof(str), "%d", pid);
+    if (len < 0 || (size_t)len >= sizeof(str)) {
         AppPrintError("Failed to set pid, pid = %d.\n", pid);
         return HITLS_APP_INVALID_ARG;
     }
@@ -1100,7 +1102,7 @@ static int32_t InitRand(AppInitParam *param)
         param->randAlgId = CRYPT_RAND_SM4_CTR_DF;
     }
     int32_t ret = CRYPT_EAL_ProviderRandInitCtx(APP_GetCurrent_LibCtx(), param->randAlgId,
-        param->provider->providerAttr, (const uint8_t *)str, len, NULL);
+        param->provider->providerAttr, (const uint8_t *)str, (uint32_t)len, NULL);
 #else
     int32_t ret = CRYPT_EAL_ProviderRandInitCtx(APP_GetCurrent_LibCtx(), param->randAlgId,
         param->provider->providerAttr, NULL, 0, NULL);

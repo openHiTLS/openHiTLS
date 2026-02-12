@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include "securec.h"
+#include <stdio.h>
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 
@@ -68,7 +68,7 @@ int32_t BSL_SAL_Atoi(const char *str)
     if (str == NULL) {
         return 0;
     }
-    if (sscanf_s(str, "%d", &val) != -1) {
+    if (sscanf(str, "%d", &val) == 1) {
         return (int32_t)val;
     }
     return 0;

@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -69,7 +69,7 @@ int32_t ParseSingleCert(ParsePacket *pkt, CERT_Item **certItem)
         return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15589,
             BINGLOG_STR("item->data malloc fail."), ALERT_UNKNOWN);
     }
-    (void)memcpy_s(item->data, item->dataSize, &pkt->buf[*pkt->bufOffset], item->dataSize);
+    memcpy(item->data, &pkt->buf[*pkt->bufOffset], item->dataSize);
     *pkt->bufOffset += certLen;
     *certItem = item;
 
@@ -245,7 +245,7 @@ int32_t Tls13ParseCertificateReqCtx(ParsePacket *pkt, HS_Msg *hsMsg)
             return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15596,
                 BINGLOG_STR("certificateReqCtx malloc fail."), ALERT_UNKNOWN);
         }
-        (void)memcpy_s(certMsg->certificateReqCtx, certReqCtxLen, &pkt->buf[*pkt->bufOffset], certReqCtxLen);
+        memcpy(certMsg->certificateReqCtx, &pkt->buf[*pkt->bufOffset], certReqCtxLen);
         *pkt->bufOffset += certReqCtxLen;
     }
     return HITLS_SUCCESS;

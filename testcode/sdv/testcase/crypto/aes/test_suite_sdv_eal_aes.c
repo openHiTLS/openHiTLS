@@ -21,7 +21,7 @@
 #include "eal_cipher_local.h"
 #include "modes_local.h"
 #include "bsl_sal.h"
-#include "securec.h"
+#include <string.h>
 #include "crypto_test_util.h"
 
 #define MAX_OUTPUT 5000
@@ -43,7 +43,7 @@ static void Test_CipherOverLap(int algId, Hex *key, Hex *iv, Hex *in, Hex *out, 
     ASSERT_TRUE(ctx != NULL);
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
-    memcpy_s(outTmp + inOffset, sizeof(outTmp) - inOffset, in->x, in->len);
+    memcpy(outTmp + inOffset, in->x, in->len);
     ret = CRYPT_EAL_CipherUpdate(ctx, outTmp + inOffset, in->len, outTmp + outOffset, &len);
     if (outOffset > 0 && outOffset < in->len) {
         ASSERT_TRUE(ret == CRYPT_EAL_ERR_PART_OVERLAP);
@@ -615,7 +615,7 @@ void SDV_CRYPTO_AES_ENCRYPT_FUNC_TC003(int isProvider, int algId, Hex *key, Hex 
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
 
-    (void)memset_s(outTmp, MAX_OUTPUT, 0, MAX_OUTPUT);
+    memset(outTmp, 0, MAX_OUTPUT);
     len = MAX_OUTPUT;
     ret = CRYPT_EAL_CipherReinit(ctx, iv->x, iv->len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -1241,7 +1241,7 @@ void SDV_CRYPTO_EAL_AES_XTS_GET_IV_TC001(int id, Hex *key, Hex *iv, Hex *plainTe
     ASSERT_COMPARE("Get iv after init", outIv, iv->len, iv->x, iv->len);
 
     ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, plainText->x, plainText->len, out, &outLen), CRYPT_SUCCESS);
-    (void)memset_s(outIv, AES_BLOCKSIZE, 0, AES_BLOCKSIZE);
+    memset(outIv, 0, AES_BLOCKSIZE);
     ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, outIv, iv->len), CRYPT_SUCCESS);
     ASSERT_COMPARE("Get iv after encrypt", outIv, iv->len, iv->x, iv->len);
 
@@ -1327,7 +1327,7 @@ void SDV_CRYPTO_EAL_AES_FUNC_TC005(int isProvider, int algId, Hex *key, Hex *iv,
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
 
-    (void)memset_s(outTmp, MAX_OUTPUT, 0, MAX_OUTPUT);
+    memset(outTmp, 0, MAX_OUTPUT);
     len = MAX_OUTPUT;
     ret = CRYPT_EAL_CipherReinit(ctx, iv->x, iv->len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);

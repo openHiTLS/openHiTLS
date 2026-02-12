@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "securec.h"
 #include "hitls_build.h"
 #include "bsl_err.h"
 #include "bsl_sal.h"
@@ -33,7 +32,8 @@ static uint8_t gMlDsaRandBuf[3][32] = { 0 };
 uint32_t gMlDsaRandNum = 0;
 static int32_t TEST_MLDSARandom(uint8_t *randNum, uint32_t randLen)
 {
-    memcpy_s(randNum, randLen, gMlDsaRandBuf[gMlDsaRandNum], 32);
+    (void)randLen;
+    memcpy(randNum, gMlDsaRandBuf[gMlDsaRandNum], 32);
     gMlDsaRandNum++;
     return 0;
 }
@@ -129,7 +129,9 @@ void SDV_CRYPTO_MLDSA_FUNC_KEYGEN_TC001(int type, Hex *d, Hex *testPubkey, Hex *
 {
     TestMemInit();
     gMlDsaRandNum = 0;
-    memcpy_s(gMlDsaRandBuf[0], 32, d->x, d->len);
+    if (d->len <= 32) {
+        memcpy(gMlDsaRandBuf[0], d->x, d->len);
+    }
     CRYPT_RandRegist(TEST_MLDSARandom);
     CRYPT_RandRegistEx(TEST_MLDSARandomEx);
 
@@ -211,7 +213,9 @@ void SDV_CRYPTO_MLDSA_FUNC_SIGNDATA_TC001(int type, Hex *seed, Hex *testPrvKey, 
     TestMemInit();
     gMlDsaRandNum = 0;
     uint8_t *out = NULL;
-    memcpy_s(gMlDsaRandBuf[0], 32, seed->x, seed->len);
+    if (seed->len <= 32) {
+        memcpy(gMlDsaRandBuf[0], seed->x, seed->len);
+    }
     CRYPT_RandRegist(TEST_MLDSARandom);
     CRYPT_RandRegistEx(TEST_MLDSARandomEx);
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);
@@ -330,7 +334,9 @@ void SDV_CRYPTO_MLDSA_FUNC_SIGN_TC001(int type, int hashId, Hex *seed, Hex *test
 {
     TestMemInit();
     gMlDsaRandNum = 0;
-    memcpy_s(gMlDsaRandBuf[0], 32, seed->x, seed->len);
+    if (seed->len <= 32) {
+        memcpy(gMlDsaRandBuf[0], seed->x, seed->len);
+    }
     CRYPT_RandRegist(TEST_MLDSARandom);
     CRYPT_RandRegistEx(TEST_MLDSARandomEx);
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_DSA);

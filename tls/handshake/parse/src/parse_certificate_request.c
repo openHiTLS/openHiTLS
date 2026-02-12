@@ -14,7 +14,7 @@
  */
 #include "hitls_build.h"
 #ifdef HITLS_TLS_HOST_CLIENT
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -369,7 +369,7 @@ int32_t Tls13ParseCertificateRequest(TLS_Ctx *ctx, const uint8_t *buf, uint32_t 
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16963, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc err", 0, 0, 0, 0);
             return HITLS_MEMALLOC_FAIL;
         }
-        (void)memcpy_s(msg->certificateReqCtx, certReqCtxLen, &pkt.buf[*pkt.bufOffset], certReqCtxLen);
+        memcpy(msg->certificateReqCtx, &pkt.buf[*pkt.bufOffset], certReqCtxLen);
         *pkt.bufOffset += certReqCtxLen;
     }
 

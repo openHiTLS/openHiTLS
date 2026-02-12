@@ -32,7 +32,7 @@
 #include "parser_frame_msg.h"
 #include "rec_wrapper.h"
 #include "cert.h"
-#include "securec.h"
+#include <string.h>
 #include "process.h"
 #include "conn_init.h"
 #include "hitls_crypt_init.h"
@@ -73,11 +73,10 @@ static void Test_Client_Mode(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint3
     uint16_t version[] = { 0x03, };
     frameMsg.body.hsMsg.body.clientHello.pskModes.exData.data =
         BSL_SAL_Calloc(sizeof(version) / sizeof(uint8_t), sizeof(uint8_t));
-    ASSERT_EQ(memcpy_s(frameMsg.body.hsMsg.body.clientHello.pskModes.exData.data,
-        sizeof(version), version, sizeof(version)), EOK);
+    memcpy(frameMsg.body.hsMsg.body.clientHello.pskModes.exData.data, version, sizeof(version));
     frameMsg.body.hsMsg.body.clientHello.keyshares.exState = MISSING_FIELD;
     frameMsg.body.hsMsg.body.clientHello.keyshares.exKeyShares.state = MISSING_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -101,7 +100,7 @@ static void Test_Server_Keyshare(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, u
 
     frameMsg.body.hsMsg.body.serverHello.keyShare.data.group.data = *(uint64_t *)user;
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -131,14 +130,14 @@ static int SetCertPath(HLT_Ctx_Config *ctxConfig, const char *certStr, bool isSe
     char eeCertPath[30];
     char privKeyPath[30];
 
-    ret = sprintf_s(caCertPath, sizeof(caCertPath), ROOT_DER, certStr, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(chainCertPath, sizeof(chainCertPath), INTCA_DER, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(eeCertPath, sizeof(eeCertPath), isServer ? SERVER_DER : CLIENT_DER, certStr);
-    ASSERT_TRUE(ret > 0);
-    ret = sprintf_s(privKeyPath, sizeof(privKeyPath), isServer ? SERVER_KEY_DER : CLIENT_KEY_DER, certStr);
-    ASSERT_TRUE(ret > 0);
+    ret = snprintf(caCertPath, sizeof(caCertPath), ROOT_DER, certStr, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(caCertPath));
+    ret = snprintf(chainCertPath, sizeof(chainCertPath), INTCA_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(chainCertPath));
+    ret = snprintf(eeCertPath, sizeof(eeCertPath), isServer ? SERVER_DER : CLIENT_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(eeCertPath));
+    ret = snprintf(privKeyPath, sizeof(privKeyPath), isServer ? SERVER_KEY_DER : CLIENT_KEY_DER, certStr);
+    ASSERT_TRUE(ret >= 0 && (size_t)ret < sizeof(privKeyPath));
     HLT_SetCaCertPath(ctxConfig, (char *)caCertPath);
     HLT_SetChainCertPath(ctxConfig, (char *)chainCertPath);
     HLT_SetEeCertPath(ctxConfig, (char *)eeCertPath);
@@ -164,7 +163,7 @@ static void Test_Server_SVersion2(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, 
 
     frameMsg.body.hsMsg.body.serverHello.supportedVersion.data.data = *(uint64_t *)user;
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -295,7 +294,7 @@ static void Test_Server_Keyshare1(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, 
 
     ASSERT_TRUE(frameMsg.body.hsMsg.body.serverHello.keyShare.data.group.data == *(uint64_t *)user);
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -361,7 +360,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC002(int version, int
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
 
     ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, clientRes->sslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-    ASSERT_TRUE(memset_s(readBuf, BUF_SIZE_DTO_TEST, 0, BUF_SIZE_DTO_TEST) == EOK);
+    memset(readBuf, 0, BUF_SIZE_DTO_TEST);
     ASSERT_TRUE(HLT_TlsRead(serverRes->ssl, readBuf, BUF_SIZE_DTO_TEST, &readLen) == 0);
     ASSERT_TRUE(readLen == strlen(writeBuf));
     ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
@@ -432,7 +431,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_KEYSHAREGROUP_FUNC_TC003(int version, int
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
 
     ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, clientRes->sslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-    ASSERT_TRUE(memset_s(readBuf, BUF_SIZE_DTO_TEST, 0, BUF_SIZE_DTO_TEST) == EOK);
+    memset(readBuf, 0, BUF_SIZE_DTO_TEST);
     ASSERT_TRUE(HLT_TlsRead(serverRes->ssl, readBuf, BUF_SIZE_DTO_TEST, &readLen) == 0);
     ASSERT_TRUE(readLen == strlen(writeBuf));
     ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
@@ -470,7 +469,7 @@ static void Test_Server_Keyshare2(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, 
         frameMsg.body.hsMsg.body.serverHello.keyShare.data.group.data = *(uint64_t *)user;
     }
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -559,11 +558,10 @@ static void Test_Server_SVersion(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, u
     uint16_t ciphers[3] = { 0xC02C, 0x1302, 0x1303};
     frameMsg.body.hsMsg.body.clientHello.cipherSuites.data =
     BSL_SAL_Calloc(sizeof(ciphers) / sizeof(uint16_t) + 1, sizeof(uint16_t));
-    ASSERT_EQ(memcpy_s(frameMsg.body.hsMsg.body.clientHello.cipherSuites.data,
-    sizeof(ciphers), ciphers, sizeof(ciphers)), EOK);
+    memcpy(frameMsg.body.hsMsg.body.clientHello.cipherSuites.data, ciphers, sizeof(ciphers));
     frameMsg.body.hsMsg.body.clientHello.cipherSuites.state = ASSIGNED_FIELD;
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -784,7 +782,7 @@ static void Test_Server_SVersion6(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, 
     frameMsg.body.hsMsg.body.clientHello.version.data = 0x0304;
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exState = MISSING_FIELD;
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -911,7 +909,7 @@ static void Test_Server_MasterExtKey(HITLS_Ctx *ctx, uint8_t *data, uint32_t *le
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     ASSERT_TRUE(frameMsg.body.hsMsg.body.serverHello.extendedMasterSecret.exState == INITIAL_FIELD);
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -972,7 +970,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_MASTEREXTKEY_FUNC_TC001()
     ASSERT_TRUE(HLT_GetTlsAcceptResult(serverRes) == 0);
 
     ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, clientRes->sslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-    ASSERT_TRUE(memset_s(readBuf, BUF_SIZE_DTO_TEST, 0, BUF_SIZE_DTO_TEST) == EOK);
+    memset(readBuf, 0, BUF_SIZE_DTO_TEST);
     ASSERT_TRUE(HLT_TlsRead(serverRes->ssl, readBuf, BUF_SIZE_DTO_TEST, &readLen) == 0);
     ASSERT_TRUE(readLen == strlen(writeBuf));
     ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);
@@ -1001,7 +999,7 @@ static void Test_Client_PskTicket(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, 
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
     frameMsg.body.hsMsg.body.clientHello.psks.identities.data->identity.data[0] += 0x01;
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1102,7 +1100,7 @@ void SDV_TLS_TLS13_RFC8446_CONSISTENCY_PSKTICKET_FUNC_TC001(int version, int con
         ASSERT_TRUE(HLT_TlsConnect(clientSsl) == 0);
 
         ASSERT_TRUE(HLT_RpcTlsWrite(remoteProcess, serverSslId, (uint8_t *)writeBuf, strlen(writeBuf)) == 0);
-        ASSERT_TRUE(memset_s(readBuf, BUF_SIZE_DTO_TEST, 0, BUF_SIZE_DTO_TEST) == EOK);
+        memset(readBuf, 0, BUF_SIZE_DTO_TEST);
         ASSERT_TRUE(HLT_TlsRead(clientSsl, readBuf, BUF_SIZE_DTO_TEST, &readLen) == 0);
         ASSERT_TRUE(readLen == strlen(writeBuf));
         ASSERT_TRUE(memcmp(writeBuf, readBuf, readLen) == 0);

@@ -17,7 +17,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "bsl_sal.h"
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -654,15 +654,14 @@ static int32_t ClientCopySessionId(TLS_Ctx *ctx, const ServerHelloMsg *serverHel
         return HITLS_MEMALLOC_FAIL;
     }
 
-    int32_t ret = memcpy_s(hsCtx->sessionId, HITLS_SESSION_ID_MAX_SIZE, serverHello->sessionId,
-        serverHello->sessionIdSize);
-    if (ret != EOK) {
+    if (serverHello->sessionIdSize > HITLS_SESSION_ID_MAX_SIZE) {
         BSL_SAL_FREE(hsCtx->sessionId);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15277, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "session Id memcpy fail.", 0, 0, 0, 0);
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         return HITLS_MEMCPY_FAIL;
     }
+    memcpy(hsCtx->sessionId, serverHello->sessionId, serverHello->sessionIdSize);
 
     hsCtx->sessionIdSize = serverHello->sessionIdSize;
     return HITLS_SUCCESS;
@@ -695,10 +694,7 @@ static int32_t ClientCheckServerHello(TLS_Ctx *ctx, const ServerHelloMsg *server
         return ret;
     }
 
-    ret = memcpy_s(ctx->hsCtx->serverRandom, HS_RANDOM_SIZE, serverHello->randomValue, HS_RANDOM_SIZE);
-    if (ret != EOK) {
-        return ret;
-    }
+    memcpy(ctx->hsCtx->serverRandom, serverHello->randomValue, HS_RANDOM_SIZE);
 #ifdef HITLS_TLS_FEATURE_SESSION
     /* Check the session resumption. Check whether the session ID, version number, cipher suite, and master key
      * extension match */
@@ -836,7 +832,7 @@ static int32_t Tls13ClientCheckSessionId(TLS_Ctx *ctx, const ServerHelloMsg *ser
 
 static int32_t Tls13ClientCheckServerHello(TLS_Ctx *ctx, const ServerHelloMsg *serverHello, bool isHrr)
 {
-    (void)memcpy_s(ctx->hsCtx->serverRandom, HS_RANDOM_SIZE, serverHello->randomValue, HS_RANDOM_SIZE);
+    memcpy(ctx->hsCtx->serverRandom, serverHello->randomValue, HS_RANDOM_SIZE);
 
     int32_t ret = Tls13ClientCheckSessionId(ctx, serverHello);
     if (ret != HITLS_SUCCESS) {
@@ -1140,7 +1136,7 @@ static int32_t ClientProcessPreSharedKey(TLS_Ctx *ctx, const ServerHelloMsg *ser
     pskInfo->psk = BSL_SAL_Dump(psk, pskLen);
     BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
     if (pskInfo->psk == NULL) {
-        (void)memset_s(psk, HS_PSK_MAX_LEN, 0, HS_PSK_MAX_LEN);
+        BSL_SAL_CleanseData(psk, HS_PSK_MAX_LEN);
         return RETURN_ALERT_PROCESS(ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID17094, "dump psk fail", ALERT_INTERNAL_ERROR);
     }
     pskInfo->pskLen = pskLen;

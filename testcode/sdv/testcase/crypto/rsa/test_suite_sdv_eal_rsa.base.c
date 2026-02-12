@@ -31,7 +31,6 @@
 #include "crypt_rsa.h"
 #include "rsa_local.h"
 #include "bn_basic.h"
-#include "securec.h"
 
 /* ============================================================================
  * Stub Definitions

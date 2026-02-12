@@ -19,7 +19,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <semaphore.h>
-#include "securec.h"
+#include <string.h>
 #include "hlt.h"
 #include "logger.h"
 #include "hitls_config.h"
@@ -127,8 +127,8 @@ static void CONNECT(int version, int connType, char *Ciphersuite, char *groups, 
 
     uint8_t psk[] = "12121212121212";
     if (hasPsk) {
-        memcpy_s(serverCtxConfig->psk, PSK_MAX_LEN, psk, sizeof(psk));
-        memcpy_s(clientCtxConfig->psk, PSK_MAX_LEN, psk, sizeof(psk));
+        memcpy(serverCtxConfig->psk, psk, sizeof(psk));
+        memcpy(clientCtxConfig->psk, psk, sizeof(psk));
     }
 
     serverCtxConfig->securitylevel = g_testSecurityLevel;

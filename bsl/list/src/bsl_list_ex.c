@@ -17,7 +17,6 @@
 #ifdef HITLS_BSL_LIST
 
 #include <string.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_list_internal.h"
 

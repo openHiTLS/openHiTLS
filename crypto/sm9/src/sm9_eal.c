@@ -17,6 +17,7 @@
 #ifdef HITLS_CRYPTO_SM9
 
 #include <stdio.h>
+#include <string.h>
 #include "crypt_sm9_eal.h"
 #include "crypt_sm9.h"
 #include "crypt_errno.h"
@@ -24,7 +25,6 @@
 #include "crypt_params_key.h"
 #include "bsl_sal.h"
 #include "bsl_bytes.h"
-#include "securec.h"
 
 /* Key type constants */
 #define SM9_KEY_TYPE_SIGN  1
@@ -47,7 +47,7 @@ CRYPT_SM9_Ctx *CRYPT_SM9_DupCtx(const CRYPT_SM9_Ctx *ctx)
     }
 
     /* Deep copy all fields */
-    (void)memcpy_s(newCtx, sizeof(SM9_Ctx), ctx, sizeof(SM9_Ctx));
+    memcpy(newCtx, ctx, sizeof(SM9_Ctx));
 
     return newCtx;
 }

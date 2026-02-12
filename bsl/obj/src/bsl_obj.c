@@ -16,8 +16,8 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_OBJ
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_obj.h"
 #include "bsl_obj_internal.h"
@@ -626,7 +626,7 @@ void BSL_OBJ_FreeHashTable(void)
             (void)BSL_SAL_ThreadLockFree(g_oidHashRwLock);
             g_oidHashRwLock = NULL;
         }
-        (void)memset_s(&g_oidHashInitOnce, sizeof(g_oidHashInitOnce), 0, sizeof(g_oidHashInitOnce));
+        memset(&g_oidHashInitOnce, 0, sizeof(g_oidHashInitOnce));
     }
 }
 #endif // HITLS_BSL_OBJ_CUSTOM
@@ -651,10 +651,8 @@ char *BSL_OBJ_GetOidNumericString(const uint8_t *oid, uint32_t len)
     }
 
     char buffer[256] = {0};
-    if (snprintf_s(buffer, sizeof(buffer), sizeof(buffer) - 1, "%d.%d", oid[0] / BSL_OBJ_ARCS_Y_MAX,
-        oid[0] % BSL_OBJ_ARCS_Y_MAX) < 0) {
-        return NULL;
-    }
+    (void)snprintf(buffer, sizeof(buffer), "%d.%d", oid[0] / BSL_OBJ_ARCS_Y_MAX,
+        oid[0] % BSL_OBJ_ARCS_Y_MAX);
 
     uint64_t value = 0;
     uint32_t currentPos = strlen(buffer);
@@ -674,19 +672,16 @@ char *BSL_OBJ_GetOidNumericString(const uint8_t *oid, uint32_t len)
         value = (value << 7) | (oid[i] & 0x7F);
         if (!(oid[i] & 0x80)) {
             char temp[20] = {0};
-            int32_t tempLen = snprintf_s(temp, sizeof(temp), sizeof(temp) - 1, ".%lu", value);
-            if (tempLen < 0) {
+            int tempLen = snprintf(temp, sizeof(temp), ".%lu", (unsigned long)value);
+            if (tempLen < 0 || (size_t)tempLen >= sizeof(temp)) {
                 BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
                 return NULL;
             }
-            if (currentPos + tempLen >= sizeof(buffer)) {
+            if (currentPos + (uint32_t)tempLen >= sizeof(buffer)) {
                 BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
                 return NULL;
             }
-            if (memcpy_s(buffer + currentPos, tempLen, temp, tempLen) != 0) {
-                BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
-                return NULL;
-            }
+            memcpy(buffer + currentPos, temp, tempLen);
             currentPos += tempLen;
             value = 0;
         }

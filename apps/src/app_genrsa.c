@@ -20,7 +20,7 @@
 #include <stddef.h>
 #include <termios.h>
 #include <unistd.h>
-#include <securec.h>
+#include <string.h>
 #include <limits.h>
 #include "bsl_ui.h"
 #include "bsl_uio.h"
@@ -85,10 +85,12 @@ int32_t HITLS_APP_Passwd(char *buf, int32_t bufMaxLen, int32_t flag)
         AppPrintError("Failed to check passwd.\n");
         return errLen;
     }
-    if (strncpy_s(buf, bufMaxLen, (char *)pwd, pwdLen) != EOK) {
+    if (pwdLen >= (uint32_t)bufMaxLen) {
         BSL_SAL_ClearFree(pwd, pwdLen);
         return errLen;
     }
+    memcpy(buf, pwd, (size_t)pwdLen);
+    buf[pwdLen] = '\0';
     BSL_SAL_ClearFree(pwd, pwdLen);
     return pwdLen;
 }
@@ -232,14 +234,16 @@ static int32_t HandlePkey(GenrsaInOpt *opt, char *resBuf, uint32_t bufLen)
     CRYPT_EncodeParam encodeParam = {CRYPT_DERIVE_PBKDF2, &pbkdfParam};
     BSL_Buffer encode = {0};
     ret = CRYPT_EAL_EncodeBuffKey(pkey, &encodeParam, BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_ENCRYPT, &encode);
-    (void)memset_s(pwd, APP_MAX_PASS_LENGTH, 0, APP_MAX_PASS_LENGTH);
+    memset(pwd, 0, APP_MAX_PASS_LENGTH);
     if (ret != CRYPT_SUCCESS) {
         AppPrintError("Encode failed.\n");
         ret = HITLS_APP_ENCODE_FAIL;
         goto hpEnd;
     }
-    if (memcpy_s(resBuf, bufLen, encode.data, encode.dataLen) != EOK) {
-        ret = HITLS_APP_SECUREC_FAIL;
+    if (encode.dataLen > bufLen) {
+        ret = HITLS_APP_INTERNAL_EXCEPTION;
+    } else {
+        memcpy(resBuf, encode.data, encode.dataLen);
     }
     BSL_SAL_FREE(encode.data);
 hpEnd:

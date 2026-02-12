@@ -17,7 +17,6 @@
 #if defined(HITLS_CRYPTO_SHA1) && !defined(HITLS_CRYPTO_SHA1_SMALL_MEM)
 
 #include <stdlib.h>
-#include "securec.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "bsl_err_internal.h"

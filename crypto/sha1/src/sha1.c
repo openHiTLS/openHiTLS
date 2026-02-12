@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_SHA1
 
 #include <stdlib.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "bsl_err_internal.h"
@@ -57,7 +57,7 @@ int32_t CRYPT_SHA1_Init(CRYPT_SHA1_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    (void)memset_s(ctx, sizeof(CRYPT_SHA1_Ctx), 0, sizeof(CRYPT_SHA1_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_SHA1_Ctx));
 
     /**
      *  RFC3174 6.1 Initialize the H constants of the input ctx
@@ -93,7 +93,7 @@ int32_t CRYPT_SHA1_CopyCtx(CRYPT_SHA1_Ctx *dst, const CRYPT_SHA1_Ctx *src)
         return CRYPT_NULL_INPUT;
     }
 
-    (void)memcpy_s(dst, sizeof(CRYPT_SHA1_Ctx), src, sizeof(CRYPT_SHA1_Ctx));
+    memcpy(dst, src, sizeof(CRYPT_SHA1_Ctx));
     return CRYPT_SUCCESS;
 }
 
@@ -108,7 +108,7 @@ CRYPT_SHA1_Ctx *CRYPT_SHA1_DupCtx(const CRYPT_SHA1_Ctx *src)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memcpy_s(newCtx, sizeof(CRYPT_SHA1_Ctx), src, sizeof(CRYPT_SHA1_Ctx));
+    memcpy(newCtx, src, sizeof(CRYPT_SHA1_Ctx));
     return newCtx;
 }
 
@@ -167,14 +167,14 @@ int32_t CRYPT_SHA1_Update(CRYPT_SHA1_Ctx *ctx, const uint8_t *in, uint32_t len)
 
     /* Check whether the user input data and cached data can form a block. */
     if (dataLen < left) {
-        (void)memcpy_s(&ctx->m[start], left, data, dataLen);
+        memcpy(&ctx->m[start], data, dataLen);
         ctx->count += dataLen;
         return CRYPT_SUCCESS;
     }
 
     /* Preferentially process the buf data and form a block with the user input data. */
     if (start != 0) {
-        (void)memcpy_s(&ctx->m[start], left, data, left);
+        memcpy(&ctx->m[start], data, left);
         (void)SHA1_Step(ctx->m, CRYPT_SHA1_BLOCKSIZE, ctx->h);
         dataLen -= left;
         data += left;
@@ -187,7 +187,7 @@ int32_t CRYPT_SHA1_Update(CRYPT_SHA1_Ctx *ctx, const uint8_t *in, uint32_t len)
 
     /* The remaining data is less than one block and stored in the buf. */
     if (dataLen != 0) {
-        (void)memcpy_s(ctx->m, CRYPT_SHA1_BLOCKSIZE, data, dataLen);
+        memcpy(ctx->m, data, dataLen);
         ctx->count = dataLen;
     }
     return CRYPT_SUCCESS;
@@ -236,13 +236,13 @@ int32_t CRYPT_SHA1_Final(CRYPT_SHA1_Ctx *ctx, uint8_t *out, uint32_t *len)
     padLen = CRYPT_SHA1_BLOCKSIZE - padPos;
 
     if (padLen < 8) {   /* 64 bits (8 bytes) of 512 bits are reserved to pad "0" */
-        (void)memset_s(&ctx->m[padPos], padLen, 0, padLen);
+        memset(&ctx->m[padPos], 0, padLen);
         padPos = 0;
         padLen = CRYPT_SHA1_BLOCKSIZE;
         (void)SHA1_Step(ctx->m, CRYPT_SHA1_BLOCKSIZE, ctx->h);
     }
     /* offset 8 bytes, reserved for storing the data length */
-    (void)memset_s(&ctx->m[padPos], (padLen - 8), 0, (padLen - 8));
+    memset(&ctx->m[padPos], 0, (padLen - 8));
     PUT_UINT32_BE(ctx->hNum, ctx->m, 56);    /* The 56th byte starts to store the upper 32-bit data. */
     PUT_UINT32_BE(ctx->lNum, ctx->m, 60);    /* The 60th byte starts to store the lower 32-bit data. */
     (void)SHA1_Step(ctx->m, CRYPT_SHA1_BLOCKSIZE, ctx->h);

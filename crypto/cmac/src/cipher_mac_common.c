@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_CBC_MAC) || defined(HITLS_CRYPTO_CMAC)
 #include <stdlib.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
@@ -65,7 +65,7 @@ int32_t CipherMacInit(Cipher_MAC_Common_Ctx *ctx, const uint8_t *key, uint32_t l
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    (void)memset_s(ctx->data, CIPHER_MAC_MAXBLOCKSIZE, 0, CIPHER_MAC_MAXBLOCKSIZE);
+    memset(ctx->data, 0, CIPHER_MAC_MAXBLOCKSIZE);
     ctx->len = 0;
     return CRYPT_SUCCESS;
 }
@@ -134,7 +134,7 @@ int32_t CipherMacReinit(Cipher_MAC_Common_Ctx *ctx)
         return CRYPT_NULL_INPUT;
     }
 
-    (void)memset_s(ctx->data, CIPHER_MAC_MAXBLOCKSIZE, 0, CIPHER_MAC_MAXBLOCKSIZE);
+    memset(ctx->data, 0, CIPHER_MAC_MAXBLOCKSIZE);
     ctx->len = 0;
     return CRYPT_SUCCESS;
 }
@@ -147,8 +147,8 @@ int32_t CipherMacDeinit(Cipher_MAC_Common_Ctx *ctx)
 
     const uint32_t ctxSize = ctx->method->ctxSize;
     BSL_SAL_CleanseData(ctx->key, ctxSize);
-    (void)memset_s(ctx->data, CIPHER_MAC_MAXBLOCKSIZE, 0, CIPHER_MAC_MAXBLOCKSIZE);
-    (void)memset_s(ctx->left, CIPHER_MAC_MAXBLOCKSIZE, 0, CIPHER_MAC_MAXBLOCKSIZE);
+    memset(ctx->data, 0, CIPHER_MAC_MAXBLOCKSIZE);
+    memset(ctx->left, 0, CIPHER_MAC_MAXBLOCKSIZE);
     ctx->len = 0;
     return CRYPT_SUCCESS;
 }

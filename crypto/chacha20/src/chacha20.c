@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_CHACHA20
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
@@ -124,7 +124,7 @@ void CHACHA20_Block(CRYPT_CHACHA20_Ctx *ctx)
     uint32_t i;
     // The length defined by ctx->last.c is the same as that defined by ctx->state.
     // Therefore, the returned value is not out of range.
-    (void)memcpy_s(ctx->last.c, CHACHA20_STATEBYTES, ctx->state, sizeof(ctx->state));
+    memcpy(ctx->last.c, ctx->state, sizeof(ctx->state));
     /* RFC7539-2.3 These are 20 round in this function */
     for (i = 0; i < 10; i++) {
         /* column round */
@@ -227,6 +227,6 @@ void CRYPT_CHACHA20_Clean(CRYPT_CHACHA20_Ctx *ctx)
         return;
     }
     
-    (void)memset_s(ctx, sizeof(CRYPT_CHACHA20_Ctx), 0, sizeof(CRYPT_CHACHA20_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_CHACHA20_Ctx));
 }
 #endif // HITLS_CRYPTO_CHACHA20

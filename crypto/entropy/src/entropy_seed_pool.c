@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_ENTROPY
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "entropy_seed_pool.h"
@@ -34,7 +34,7 @@ ENTROPY_SeedPool *ENTROPY_SeedPoolNew(bool isCreateNullPool)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(poolCtx, sizeof(ENTROPY_SeedPool), 0, sizeof(ENTROPY_SeedPool));
+    memset(poolCtx, 0, sizeof(ENTROPY_SeedPool));
     poolCtx->esList = BSL_LIST_New(sizeof(ENTROPY_Source));
     if (poolCtx->esList == NULL) {
         BSL_SAL_Free(poolCtx);

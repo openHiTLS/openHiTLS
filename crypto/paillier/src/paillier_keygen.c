@@ -16,11 +16,11 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_PAILLIER
 
+#include <string.h>
 #include "crypt_paillier.h"
 #include "paillier_local.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
-#include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
@@ -36,7 +36,7 @@ CRYPT_PAILLIER_Ctx *CRYPT_PAILLIER_NewCtx(void)
         return NULL;
     }
 
-    (void)memset_s(ctx, sizeof(CRYPT_PAILLIER_Ctx), 0, sizeof(CRYPT_PAILLIER_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_PAILLIER_Ctx));
     BSL_SAL_ReferencesInit(&(ctx->references));
     return ctx;
 }
@@ -59,7 +59,7 @@ static CRYPT_PAILLIER_PubKey *PaillierPubKeyDupCtx(CRYPT_PAILLIER_PubKey *pubKey
         return NULL;
     }
 
-    (void)memset_s(newPubKey, sizeof(CRYPT_PAILLIER_PubKey), 0, sizeof(CRYPT_PAILLIER_PubKey));
+    memset(newPubKey, 0, sizeof(CRYPT_PAILLIER_PubKey));
     
     GOTO_ERR_IF_SRC_NOT_NULL(newPubKey->n, pubKey->n, BN_Dup(pubKey->n), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newPubKey->g, pubKey->g, BN_Dup(pubKey->g), CRYPT_MEM_ALLOC_FAIL);
@@ -80,7 +80,7 @@ static CRYPT_PAILLIER_PrvKey *PaillierPrvKeyDupCtx(CRYPT_PAILLIER_PrvKey *prvKey
         return NULL;
     }
 
-    (void)memset_s(newPrvKey, sizeof(CRYPT_PAILLIER_PrvKey), 0, sizeof(CRYPT_PAILLIER_PrvKey));
+    memset(newPrvKey, 0, sizeof(CRYPT_PAILLIER_PrvKey));
     
     GOTO_ERR_IF_SRC_NOT_NULL(newPrvKey->n, prvKey->n, BN_Dup(prvKey->n), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newPrvKey->lambda, prvKey->lambda, BN_Dup(prvKey->lambda), CRYPT_MEM_ALLOC_FAIL);
@@ -101,7 +101,7 @@ static CRYPT_PAILLIER_Para *PaillierParaDupCtx(CRYPT_PAILLIER_Para *para)
         return NULL;
     }
 
-    (void)memset_s(newPara, sizeof(CRYPT_PAILLIER_Para), 0, sizeof(CRYPT_PAILLIER_Para));
+    memset(newPara, 0, sizeof(CRYPT_PAILLIER_Para));
     
     newPara->bits = para->bits;
     GOTO_ERR_IF_SRC_NOT_NULL(newPara->p, para->p, BN_Dup(para->p), CRYPT_MEM_ALLOC_FAIL);
@@ -127,7 +127,7 @@ CRYPT_PAILLIER_Ctx *CRYPT_PAILLIER_DupCtx(CRYPT_PAILLIER_Ctx *keyCtx)
         return NULL;
     }
 
-    (void)memset_s(newKeyCtx, sizeof(CRYPT_PAILLIER_Ctx), 0, sizeof(CRYPT_PAILLIER_Ctx));
+    memset(newKeyCtx, 0, sizeof(CRYPT_PAILLIER_Ctx));
 
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->prvKey, keyCtx->prvKey, PaillierPrvKeyDupCtx(keyCtx->prvKey),
         CRYPT_MEM_ALLOC_FAIL);

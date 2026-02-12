@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_list.h"
 #include "bsl_err_internal.h"
@@ -54,7 +54,7 @@ int32_t RecBufResize(RecBuf *recBuf, uint32_t size)
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return HITLS_MEMALLOC_FAIL;
     }
-    (void)memcpy_s(newBuf, size, &recBuf->buf[recBuf->start], recBuf->end - recBuf->start);
+    memcpy(newBuf, &recBuf->buf[recBuf->start], recBuf->end - recBuf->start);
     recBuf->end = recBuf->end - recBuf->start;
     recBuf->start = 0;
     BSL_SAL_FREE(recBuf->buf);
@@ -133,13 +133,7 @@ int32_t RecBufListGetBuffer(RecBufList *bufList, uint8_t *buf, uint32_t bufLen, 
         return HITLS_SUCCESS;
     }
     uint8_t *startBuf = &recBuf->buf[recBuf->start];
-    int32_t ret = memcpy_s(buf, bufLen, startBuf, copyLen);
-    if (ret != EOK) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16242, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "RecBufListGetBuffer memcpy_s failed; buf may be nullptr", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
-        return HITLS_MEMCPY_FAIL;
-    }
+    memcpy(buf, startBuf, copyLen);
     if (!isPeek) {
         recBuf->start += copyLen;
     }
@@ -158,7 +152,7 @@ int32_t RecBufListAddBuffer(RecBufList *bufList, RecBuf *buf)
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return HITLS_MEMALLOC_FAIL;
     }
-    (void)memcpy_s(newBuf, sizeof(RecBuf), buf, sizeof(RecBuf));
+    memcpy(newBuf, buf, sizeof(RecBuf));
     if (BSL_LIST_AddElement(bufList, newBuf, BSL_LIST_POS_END) != BSL_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17217, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "AddElement fail", 0, 0, 0, 0);

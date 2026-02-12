@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
-#include "securec.h"
 #include "bsl_err.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -68,7 +67,8 @@ int32_t STUB_RandForSignature(uint8_t *byte, uint32_t len)
         return CRYPT_NULL_INPUT;
     }
     // Return the fixed K value from test vector
-    return memcpy_s(byte, len, g_kRandBuf, len);
+    memcpy(byte, g_kRandBuf, len);
+    return 0;
 }
 
 int32_t STUB_RandForSignatureEx(void *libCtx, uint8_t *byte, uint32_t len)
@@ -430,7 +430,8 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_FUNC_TC001(
     CRYPT_EAL_PkeyPub pub = {0};
     Set_DSA_Para(&para, &prv, &pub, P, Q, G, X, Y);
 
-    ASSERT_EQ(memcpy_s(g_kRandBuf, sizeof(g_kRandBuf), K->x, K->len), 0);
+    ASSERT_TRUE((K->len) <= sizeof(g_kRandBuf));
+    memcpy(g_kRandBuf, K->x, K->len);
     g_kRandBufLen = K->len;
 
     TestMemInit();
@@ -526,7 +527,8 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_DATA_FUNC_TC001(
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     Hex mdOut = {0};
 
-    ASSERT_EQ(memcpy_s(g_kRandBuf, sizeof(g_kRandBuf), K->x, K->len), 0);
+    ASSERT_TRUE((K->len) <= sizeof(g_kRandBuf));
+    memcpy(g_kRandBuf, K->x, K->len);
     g_kRandBufLen = K->len;
 
     CRYPT_EAL_PkeyPara para;
@@ -876,7 +878,7 @@ static int32_t ref = 0;
 int32_t STUB_CRYPT_EAL_Randbytes(uint8_t *byte, uint32_t len)
 {
     if (ref == 0) {
-        (void)memcpy_s(byte, len, g_dsa_seed, len);
+        memcpy(byte, g_dsa_seed, len);
         ref = 1;
     } else {
         for (uint32_t i = 0; i < len; i++) {

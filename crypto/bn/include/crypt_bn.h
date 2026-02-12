@@ -887,7 +887,7 @@ int32_t BN_Bin2Bn(BN_BigNum *r, const uint8_t *bin, uint32_t binLen);
  * @retval CRYPT_SUCCESS
  * @retval CRYPT_NULL_INPUT     Invalid null pointer
  * @retval CRYPT_MEM_ALLOC_FAIL Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL   An error occurred during the copy.
+ * @retval CRYPT_MEM_CPY_FAIL   An error occurred during the copy.
  */
 int32_t BN_Bn2Bin(const BN_BigNum *a, uint8_t *bin, uint32_t *binLen);
 
@@ -1009,7 +1009,7 @@ int32_t BN_U64Array2Bn(BN_BigNum *r, const uint64_t *array, uint32_t len);
  * @retval CRYPT_SUCCESS
  * @retval CRYPT_NULL_INPUT     Invalid null pointer
  * @retval CRYPT_MEM_ALLOC_FAIL Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL   A copy error occurs.
+ * @retval CRYPT_MEM_CPY_FAIL   A copy error occurs.
  */
 int32_t BN_Bn2U64Array(const BN_BigNum *a, uint64_t *array, uint32_t *len);
 #endif
@@ -1131,7 +1131,7 @@ void BN_MontDestroy(BN_Mont *mont);
  * @retval CRYPT_SUCCESS            succeeded.
  * @retval CRYPT_NULL_INPUT         Invalid null pointer
  * @retval CRYPT_MEM_ALLOC_FAIL     Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL       The security function returns an error.
+ * @retval CRYPT_MEM_CPY_FAIL       The security function returns an error.
  */
 int32_t BN_Rshift(BN_BigNum *r, const BN_BigNum *a, uint32_t n);
 
@@ -1192,7 +1192,7 @@ int32_t BN_ModSqrt(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Opti
  * @retval CRYPT_SUCCESS
  * @retval CRYPT_NULL_INPUT     Invalid null pointer
  * @retval CRYPT_MEM_ALLOC_FAIL Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL   The security function returns an error.
+ * @retval CRYPT_MEM_CPY_FAIL   The security function returns an error.
  */
 int32_t BN_BN2Array(const BN_BigNum *src, BN_UINT *dst, uint32_t size);
 

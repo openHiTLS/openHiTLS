@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_BN
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "bn_basic.h"
@@ -121,7 +121,7 @@ int32_t BN_Bn2BinFixZero(const BN_BigNum *a, uint8_t *bin, uint32_t binLen)
     }
     uint32_t fixLen = binLen - bytes;
     uint8_t *base = bin + fixLen;
-    (void)memset_s(bin, binLen, 0, fixLen);
+    memset(bin, 0, fixLen);
     if (bytes == 0) {
         return CRYPT_SUCCESS;
     }
@@ -237,7 +237,7 @@ int32_t BN_BN2Array(const BN_BigNum *src, BN_UINT *dst, uint32_t size)
         return CRYPT_BN_BUFF_LEN_NOT_ENOUGH;
     }
 
-    (void)memset_s(dst, size * sizeof(BN_UINT), 0, size * sizeof(BN_UINT));
+    memset(dst, 0, size * sizeof(BN_UINT));
     for (uint32_t i = 0; i < src->size; i++) {
         dst[i] = src->data[i];
     }
@@ -526,7 +526,7 @@ static int32_t CalDecStr(const BN_BigNum *a, BN_UINT *bnInit, uint32_t unitNum, 
         BN_UINT rem;
         // index records the amount of BN_UINT offset, cannot exceed the maximum value unitNum
         if (index == unitNum) {
-            ret = CRYPT_SECUREC_FAIL;
+            ret = CRYPT_MEM_CPY_FAIL;
             goto ERR;
         }
         ret = BN_DivLimb(bnDup, &rem, bnDup, BN_DEC_VAL);

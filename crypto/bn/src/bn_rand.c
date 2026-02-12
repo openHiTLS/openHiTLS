@@ -17,7 +17,6 @@
 #ifdef HITLS_CRYPTO_BN_RAND
 
 #include <stdint.h>
-#include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"

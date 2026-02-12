@@ -16,7 +16,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -246,7 +248,7 @@ uint8_t *GetNewBuf(const void *buf, uint32_t len, uint32_t *packLen)
             }
             newOffset += packLenTmp;
         } else {
-            memcpy_s(&newBuf[newOffset], MAX_LEN - newOffset, &((uint8_t*)buf)[offset], parseLen);
+            memcpy(&newBuf[newOffset], &((uint8_t*)buf)[offset], parseLen);
             newOffset += parseLen;
         }
         offset += parseLen;

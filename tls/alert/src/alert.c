@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -58,7 +58,7 @@ void ALERT_GetInfo(const TLS_Ctx *ctx, ALERT_Info *info)
 void ALERT_CleanInfo(const TLS_Ctx *ctx)
 {
     uint8_t alertCount = ctx->alertCtx->warnCount;
-    (void)memset_s(ctx->alertCtx, sizeof(struct AlertCtx), 0, sizeof(struct AlertCtx));
+    memset(ctx->alertCtx, 0, sizeof(struct AlertCtx));
     ctx->alertCtx->warnCount = alertCount;
 }
 
@@ -180,7 +180,7 @@ int32_t ALERT_Init(TLS_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return HITLS_MEMALLOC_FAIL;
     }
-    (void)memset_s(ctx->alertCtx, sizeof(struct AlertCtx), 0, sizeof(struct AlertCtx));
+    memset(ctx->alertCtx, 0, sizeof(struct AlertCtx));
     return HITLS_SUCCESS;
 }
 

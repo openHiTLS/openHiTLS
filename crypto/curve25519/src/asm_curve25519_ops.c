@@ -18,7 +18,7 @@
 #ifdef HITLS_CRYPTO_X25519
 
 #include "x25519_asm.h"
-#include "securec.h"
+#include <string.h>
 #include "curve25519_local.h"
 #ifdef HITLS_CRYPTO_X25519_X8664
 #include "crypt_utils.h"
@@ -292,7 +292,7 @@ void Fp51ScalarMultiPoint(uint8_t out[32], const uint8_t scalar[32], const uint8
     Fp51Invert(&t1, &z2);
     Fp51Mul(&t2, &x2, &t1);
     Fp51PolyToData(&t2, out);
-    (void)memset_s(k, sizeof(k), 0, sizeof(k));
+    BSL_SAL_CleanseData(k, sizeof(k));
 }
 
 #ifdef HITLS_CRYPTO_X25519_X8664
@@ -466,7 +466,7 @@ void Fp64ScalarMultiPoint(uint8_t out[32], const uint8_t scalar[32], const uint8
     Fe64Invert(z2, z2);
     Fp64Mul(x2, x2, z2);
     Fp64PolyToData(out, x2);
-    (void)memset_s(e, sizeof(e), 0, sizeof(e));
+    BSL_SAL_CleanseData(e, sizeof(e));
 }
 #endif
 

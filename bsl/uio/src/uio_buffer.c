@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_UIO_BUFFER
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_errno.h"
 #include "bsl_err_internal.h"
@@ -186,10 +186,7 @@ static int32_t TryCompleteBuffer(BufferCtx *ctx, const void *in, uint32_t remain
         return BSL_SUCCESS;
     }
     const uint32_t real = (freeSpace < remain) ? freeSpace : remain;
-    if (memcpy_s(&ctx->outBuf[ctx->outOff + ctx->outLen], freeSpace, in, real) != EOK) {
-        BSL_ERR_PUSH_ERROR(BSL_UIO_IO_EXCEPTION);
-        return BSL_UIO_IO_EXCEPTION;
-    }
+    memcpy(&ctx->outBuf[ctx->outOff + ctx->outLen], in, real);
     ctx->outLen += real;
     *writeLen += real;
     return BSL_SUCCESS;

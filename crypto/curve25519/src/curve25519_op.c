@@ -18,7 +18,7 @@
 #ifdef HITLS_CRYPTO_CURVE25519
 
 #include <stdbool.h>
-#include "securec.h"
+#include <string.h>
 #include "curve25519_local.h"
 #include "bsl_sal.h"
 #ifdef HITLS_CRYPTO_ED25519

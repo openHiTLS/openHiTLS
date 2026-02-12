@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "securec.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_modes_gcm.h"
@@ -79,8 +78,8 @@ void SDV_CRYPTO_AES_MULTI_UPDATE_FUNC_TC001(int algId, Hex *key, Hex *iv, Hex *a
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad->x, aad->len) == CRYPT_SUCCESS);
 
-    (void)memset_s(result, sizeof(result), 0, sizeof(result));
-    (void)memset_s(tagResult, sizeof(tagResult), 0, sizeof(tagResult));
+    memset(result, 0, sizeof(result));
+    memset(tagResult, 0, sizeof(tagResult));
     outLen = DATA_MAX_LEN;
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, ct->x, pt1->len, result, &outLen) == CRYPT_SUCCESS);
     outLen = DATA_MAX_LEN - pt1->len;
@@ -138,8 +137,8 @@ void SDV_CRYPTO_AES_MULTI_UPDATE_FUNC_TC002(int isProvider, int algId, Hex *key,
     ASSERT_COMPARE("enc result", (uint8_t *)result, pt1->len + pt2->len + pt3->len, ct->x, ct->len);
     ASSERT_COMPARE("enc tagResult", (uint8_t *)tagResult, tag->len, tag->x, tag->len);
 
-    (void)memset_s(result, sizeof(result), 0, sizeof(result));
-    (void)memset_s(tagResult, sizeof(tagResult), 0, sizeof(tagResult));
+    memset(result, 0, sizeof(result));
+    memset(tagResult, 0, sizeof(tagResult));
     outLen = DATA_MAX_LEN;
     tagLen = tag->len;
     // decrypt

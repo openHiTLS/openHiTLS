@@ -29,7 +29,6 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "sal_net.h"
 #include "bsl_errno.h"
@@ -191,7 +190,7 @@ static int32_t BslUioWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t
     if (reslen < len) {
         return BSL_INVALID_ARG;
     }
-    memcpy_s(lowCtx->buff + lowCtx->index, len, buf, len);
+    memcpy(lowCtx->buff + lowCtx->index, buf, len);
     lowCtx->index += len;
     *writeLen = len;
     return BSL_SUCCESS;
@@ -208,7 +207,7 @@ static int32_t BslUioRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readL
     }
 
     int copyLen = (lowCtx->index > len) ? len : lowCtx->index;
-    (void)memcpy_s(buf, copyLen, lowCtx->buff, copyLen);
+    memcpy(buf, lowCtx->buff, copyLen);
     *readLen = copyLen;
     lowCtx->index -= copyLen;
     return BSL_SUCCESS;
@@ -1077,11 +1076,12 @@ void SDV_BSL_UIO_UDP_API_TC001(void)
     UIO_Addr peerAddr = { 0 };
     uint8_t ipv4[IP_V4_LEN] = {0x11, 0x22, 0x33, 0x44};
     peerAddr.addr.sa_family = AF_INET;
-    ASSERT_TRUE(memcpy_s(peerAddr.addr.sa_data, sizeof(UIO_Addr), ipv4, IP_V4_LEN) == EOK);
+    ASSERT_TRUE(IP_V4_LEN <= sizeof(peerAddr.addr.sa_data));
+    memcpy(peerAddr.addr.sa_data, ipv4, IP_V4_LEN);
 
     const BSL_UIO_Method *ori = BSL_UIO_UdpMethod();
     BSL_UIO_Method method = {0};
-    memcpy_s(&method, sizeof(method), ori, sizeof(method));
+    memcpy(&method, ori, sizeof(method));
     method.uioWrite = STUB_Write;
     method.uioRead = STUB_Read;
 

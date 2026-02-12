@@ -14,7 +14,7 @@
  */
 #include "hitls_build.h"
 #ifdef HITLS_TLS_PROTO_TLS13
-#include "securec.h"
+#include <string.h>
 #include "tls.h"
 #include "bsl_err_internal.h"
 #include "hitls_error.h"
@@ -146,7 +146,7 @@ static int32_t SetTLS13SMCipherSuites(HITLS_Config *config, bool isOnlySupportSM
             BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
             return HITLS_MEMALLOC_FAIL;
         }
-        (void)memcpy_s(tls13CipherSuites, tls13CipherSuitesSize, smCiphersuites13, smCiphersuites13Size);
+        memcpy(tls13CipherSuites, smCiphersuites13, smCiphersuites13Size);
         uint16_t firstSmCipherSuite = 0;
         int index = 2;
         for (uint32_t i = 0; i < config->tls13cipherSuitesSize; i++) {
@@ -234,7 +234,7 @@ static int32_t SetTLS13SMGroups(HITLS_Config *config, bool isOnlySupportSM)
         config->groups = tls13Groups;
         config->groupsSize = index;
     }
-    (void)memset_s(config->keyshareIndex, sizeof(config->keyshareIndex), 0, sizeof(config->keyshareIndex));
+    memset(config->keyshareIndex, 0, sizeof(config->keyshareIndex));
     return HITLS_SUCCESS;
 }
 

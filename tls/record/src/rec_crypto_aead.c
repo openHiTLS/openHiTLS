@@ -15,7 +15,6 @@
 #include <string.h>
 #include "hitls_build.h"
 #ifdef HITLS_TLS_SUITE_CIPHER_AEAD
-#include "securec.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
@@ -74,8 +73,8 @@ static int32_t AeadGetNonce(const RecConnSuitInfo *suiteInfo, uint8_t *nonce, ui
          * to 12. 4 bytes + 8bytes(64 bits record sequence number, big endian) = 12 bytes 4 bytes the implicit part be
          * derived from iv. The first 4 bytes of the IV are obtained.
          */
-        (void)memcpy_s(nonce, nonceLen, suiteInfo->iv, fixedIvLength);
-        (void)memcpy_s(&nonce[fixedIvLength], recordIvLength, seq, seqLen);
+        memcpy(nonce, suiteInfo->iv, fixedIvLength);
+        memcpy(&nonce[fixedIvLength], seq, seqLen);
         return HITLS_SUCCESS;
     } else if (recordIvLength == 0) {
         /*
@@ -85,9 +84,9 @@ static int32_t AeadGetNonce(const RecConnSuitInfo *suiteInfo, uint8_t *nonce, ui
          * Perform XOR with the 12 bytes IV. The result is nonce.
          */
         // First four bytes (all 0s)
-        (void)memset_s(&nonce[0], nonceLen, 0, AEAD_NONCE_ZEROS_SIZE);
+        memset(&nonce[0], 0, AEAD_NONCE_ZEROS_SIZE);
         // First 4 bytes (all 0s) + Last 8 bytes (64-bit record sequence number, big endian)
-        (void)memcpy_s(&nonce[AEAD_NONCE_ZEROS_SIZE], nonceLen - AEAD_NONCE_ZEROS_SIZE, seq, seqLen);
+        memcpy(&nonce[AEAD_NONCE_ZEROS_SIZE], seq, seqLen);
         for (uint32_t i = 0; i < nonceLen; i++) {
             nonce[i] = nonce[i] ^ suiteInfo->iv[i];
         }
@@ -121,7 +120,7 @@ static void AeadGetAad(uint8_t *aad, uint32_t *aadLen, const REC_TextInput *inpu
 #endif /* HITLS_TLS_PROTO_TLS13 */
     /* non-TLS1.3 generation additional_data = seq_num + TLSCompressed.type + TLSCompressed.version +
      * TLSCompressed.length */
-    (void)memcpy_s(aad, AEAD_AAD_MAX_SIZE, input->seq, REC_CONN_SEQ_SIZE);
+    memcpy(aad, input->seq, REC_CONN_SEQ_SIZE);
     uint32_t offset = REC_CONN_SEQ_SIZE;
     aad[offset] = input->type;                                // The eighth byte indicates the record type
     offset++;
@@ -253,12 +252,13 @@ static int32_t AeadEncrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInpu
 
     /** During AEAD encryption, the sequence number is used as the explicit IV */
     if (state->suiteInfo->recordIvLength > 0u) {
-        if (memcpy_s(&cipherText[cipherOffset], cipherTextLen, plainMsg->seq, REC_CONN_SEQ_SIZE) != EOK) {
+        if (REC_CONN_SEQ_SIZE > cipherTextLen) {
             BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15384, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "Record encrypt:memcpy fail.", 0, 0, 0, 0);
             return HITLS_MEMCPY_FAIL;
         }
+        memcpy(&cipherText[cipherOffset], plainMsg->seq, REC_CONN_SEQ_SIZE);
         cipherOffset += REC_CONN_SEQ_SIZE;
     }
 

@@ -17,7 +17,6 @@
 
 #ifdef HITLS_CRYPTO_ECC
 
-#include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"

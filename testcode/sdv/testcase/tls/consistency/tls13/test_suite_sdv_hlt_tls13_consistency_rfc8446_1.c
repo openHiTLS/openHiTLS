@@ -32,7 +32,6 @@
 #include "simulate_io.h"
 #include "parser_frame_msg.h"
 #include "cert.h"
-#include "securec.h"
 #include "rec_wrapper.h"
 #include "conn_init.h"
 #include "rec.h"

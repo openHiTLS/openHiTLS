@@ -15,7 +15,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER)
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_eal_pkey.h"
 #include "hitls_error.h"
 #include "hitls_cert_type.h"
@@ -47,7 +47,7 @@ int32_t HITLS_X509_Adapt_CertEncode(HITLS_Ctx *ctx, HITLS_CERT_X509 *cert, uint8
         return ret;
     }
 
-    (void)memcpy_s(buf, len, encodedBuff, encodeLen);
+    memcpy(buf, encodedBuff, encodeLen);
     *usedLen = encodeLen;
     return ret;
 }

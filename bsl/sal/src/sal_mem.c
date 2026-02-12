@@ -14,8 +14,8 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include "hitls_build.h"
-#include "securec.h"
 #include "bsl_log_internal.h"
 #include "bsl_util_internal.h"
 #include "bsl_errno.h"
@@ -66,21 +66,7 @@ void *BSL_SAL_Calloc(uint32_t num, uint32_t size)
     if (ptr == NULL) {
         return NULL;
     }
-    // If the value is greater than SECUREC_MEM_MAX_LEN, segment processing is required.
-    // This is because memset_s can process only the value which the size is SECUREC_MEM_MAX_LEN.
-    uint32_t offset = 0;
-    while (blockSize > SECUREC_MEM_MAX_LEN) {
-        if (memset_s(&ptr[offset], SECUREC_MEM_MAX_LEN, 0, SECUREC_MEM_MAX_LEN) != EOK) {
-            BSL_SAL_FREE(ptr);
-            return NULL;
-        }
-        offset += SECUREC_MEM_MAX_LEN;
-        blockSize -= SECUREC_MEM_MAX_LEN;
-    }
-    if (memset_s(&ptr[offset], blockSize, 0, blockSize) != EOK) {
-        BSL_SAL_FREE(ptr);
-        return NULL;
-    }
+    memset(ptr, 0, blockSize);
     return ptr;
 }
 
@@ -94,7 +80,7 @@ void *BSL_SAL_Dump(const void *src, uint32_t size)
         return NULL;
     }
 
-    (void)memcpy_s(ptr, size, src, size);
+    memcpy(ptr, src, size);
     return ptr;
 }
 
@@ -114,103 +100,25 @@ void *BSL_SAL_Realloc(void *addr, uint32_t newSize, uint32_t oldSize)
         return NULL;
     }
 
-    if (memcpy_s(ptr, newSize, addr, minSize) != EOK) {
-        BSL_SAL_FREE(ptr);
-    } else {
-        BSL_SAL_FREE(addr);
+    if (minSize > 0 && addr != NULL) {
+        memcpy(ptr, addr, minSize);
     }
+    BSL_SAL_FREE(addr);
 
     return ptr;
 #endif
 }
 
-#if !defined(__clang__)
-#pragma GCC push_options
-#pragma GCC optimize("O3")
-#endif
-#define CLEAN_THRESHOLD_SIZE 16UL
-
-static void CleanSensitiveDataLess16Byte(void *buf, uint32_t bufLen)
-{
-    uint8_t *tmp = (uint8_t *)buf;
-    switch (bufLen) {
-        case 16: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-16
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 15: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-15
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 14: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-14
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 13: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-13
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 12: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-12
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 11: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-11
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 10: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-10
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 9: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-9
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 8: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-8
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 7: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-7
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 6: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-6
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 5: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-5
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 4: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-4
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 3: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-3
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 2: *(tmp++) = (uint8_t)0; // fall-through, Write 0 to bufLen-2
-            FALLTHROUGH; /* FALLTHROUGH */
-        case 1: *(tmp) = (uint8_t)0; // fall-through, Write 0 to bufLen-1
-            FALLTHROUGH; /* FALLTHROUGH */
-        default:                   /* Do nothing */
-            break;
-    }
-}
-
-static void CleanSensitiveData(void *buf, uint32_t bufLen)
-{
-    uint8_t *tmp = (uint8_t *)buf;
-    uint32_t boundOpt;
-
-    if (((uintptr_t)buf & 0x3) == 0) { // buf & 0x3, used to determine whether 4-byte alignment
-        // shift rightwards by 4 bits and then leftwards by 4 bits, which is used to calculate an integer multiple of 16
-        boundOpt = (bufLen >> 4) << 4;
-        for (uint32_t i = 0; i < boundOpt; i += 16) { // Clear 16 pieces of memory each time.
-            uint32_t *ctmp = (uint32_t *)(uintptr_t)(tmp + i);
-            ctmp[0] = 0;
-            ctmp[1] = 0;
-            ctmp[2] = 0;
-            ctmp[3] = 0;
-        }
-    } else {
-        // shifted rightward by 2 bits and then left by 2 bits, used to calculate an integer multiple of 4.
-        boundOpt = (bufLen >> 2) << 2;
-        for (uint32_t i = 0; i < boundOpt; i += 4) { // Clear 4 pieces of memory each time.
-            tmp[i] = 0;
-            tmp[i + 1] = 0;
-            tmp[i + 2] = 0;
-            tmp[i + 3] = 0;
-        }
-    }
-    for (uint32_t i = boundOpt; i < bufLen; ++i) {
-        tmp[i] = 0;
-    }
-}
-
 void BSL_SAL_CleanseData(void *ptr, uint32_t size)
 {
-    if (ptr == NULL) {
+    if (ptr == NULL || size == 0) {
         return;
     }
-    if (size > CLEAN_THRESHOLD_SIZE) {
-        CleanSensitiveData(ptr, size);
-    } else {
-        CleanSensitiveDataLess16Byte(ptr, size);
+    volatile uint8_t *p = (volatile uint8_t *)ptr;
+    while (size--) {
+        *p++ = 0;
     }
+    __asm__ __volatile__("" : : "r"(ptr) : "memory");
 }
 
 void BSL_SAL_ClearFree(void *ptr, uint32_t size)
@@ -237,7 +145,3 @@ int32_t SAL_MemCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb)
             return BSL_SAL_ERR_BAD_PARAM;
     }
 }
-
-#if !defined(__clang__)
-#pragma GCC pop_options
-#endif

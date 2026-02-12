@@ -46,9 +46,7 @@ void TEST_SendUnexpectCertificateVerifyMsg(void *msg, void *data)
     frameType->recordType = REC_TYPE_HANDSHAKE;
     frameType->handshakeType = CERTIFICATE_VERIFY;
     frameType->keyExType = HITLS_KEY_EXCH_ECDHE;
-    if (memcpy_s(msg, sizeof(FRAME_Msg), &newFrameMsg, sizeof(newFrameMsg)) != EOK) {
-        Print("TEST_SendUnexpectCertificateMsg memcpy_s Error!");
-    }
+    memcpy(msg, &newFrameMsg, sizeof(newFrameMsg));
 }
 
 static void MalformedClientHelloMsgCallback_01(void *msg, void *userData)

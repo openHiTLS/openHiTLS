@@ -24,7 +24,7 @@
 #include "bsl_sal.h"
 #include "tls.h"
 #include "cert.h"
-#include "securec.h"
+#include <string.h>
 #include "frame_msg.h"
 #include "alert.h"
 #include "bsl_list.h"
@@ -346,7 +346,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_CERTFICATE_VERITY_FAIL_TC004(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(client->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_PARSE_VERIFY_SIGN_FAIL);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);

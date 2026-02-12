@@ -15,7 +15,7 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_TLS_PROTO_DTLS12
-#include "securec.h"
+#include <string.h>
 #include "bsl_module_list.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -44,7 +44,7 @@ void CacheNextEpochHsMsg(UnprocessedHsMsg *unprocessedHsMsg, const RecHdr *hdr, 
         return;
     }
 
-    (void)memcpy_s(&unprocessedHsMsg->hdr, sizeof(RecHdr), hdr, sizeof(RecHdr));
+    memcpy(&unprocessedHsMsg->hdr, hdr, sizeof(RecHdr));
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15446, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN,
         "cache next epoch hs msg", 0, 0, 0, 0);
 }
@@ -117,7 +117,7 @@ int32_t UnprocessedAppMsgListAppend(UnprocessedAppMsg *appMsgList, const RecHdr 
             "Buffer app record: Malloc fail.", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
-    (void)memcpy_s(&appNode->hdr, sizeof(RecHdr), hdr, sizeof(RecHdr));
+    memcpy(&appNode->hdr, hdr, sizeof(RecHdr));
 
     LIST_ADD_BEFORE(&appMsgList->head, &appNode->head);
 

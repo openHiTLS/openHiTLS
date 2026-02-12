@@ -20,7 +20,7 @@
 #include "crypt_eal_pkey.h"
 #include "crypt_util_rand.h"
 #include "eal_pkey_local.h"
-#include "securec.h"
+#include <string.h>
 #include "crypt_mceliece.h"
 #include "crypt_eal_init.h"
 #include "crypt_eal_md.h"
@@ -562,7 +562,7 @@ static int32_t GetEntropy(void *ctx, CRYPT_Data *entropy, uint32_t strength, CRY
     if (entropy->data == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    memcpy_s(entropy->data, entropy->len, g_mcelieceSeed, 48);
+    memcpy(entropy->data, g_mcelieceSeed, 48);
     return CRYPT_SUCCESS;
 }
 
@@ -639,7 +639,7 @@ void SDV_CRYPTO_MCELIECE_ENCAPS_DECAPS_FUNC_TC001(int algId, Hex *seed, Hex *tes
 {
     TestMemInit();
     // Copy seed to global variable for mock random function
-    (void)memcpy_s(g_mcelieceSeed, 48, seed->x, seed->len);
+    memcpy(g_mcelieceSeed, seed->x, seed->len);
     ASSERT_EQ(RandSetUp(), CRYPT_SUCCESS);
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_MCELIECE);
     ASSERT_TRUE(ctx != NULL);
@@ -693,7 +693,7 @@ void SDV_CRYPTO_MCELIECE_ENCAPS_DECAPS_FUNC_TC001(int algId, Hex *seed, Hex *tes
     ASSERT_COMPARE("encaps ss cmp", ss, ssLen, testSs->x, testSs->len);
 
     // Clear ss for decaps test
-    memset_s(ss, ssLen, 0, ssLen);
+    memset(ss, 0, ssLen);
 
     // Switch to decaps mode
     ASSERT_EQ(CRYPT_EAL_PkeyDecapsInit(ctx, NULL), CRYPT_SUCCESS);

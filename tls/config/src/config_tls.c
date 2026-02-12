@@ -14,7 +14,6 @@
  */
 
 #include "hitls_build.h"
-#include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_list.h"
 #include "hitls_type.h"

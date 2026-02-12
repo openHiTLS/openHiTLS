@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_SHA256
 #include "crypt_sha2.h"
 #include <stdlib.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "crypt_utils.h"
 #include "bsl_err_internal.h"
@@ -51,7 +51,7 @@ int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    (void)memset_s(ctx, sizeof(CRYPT_SHA2_256_Ctx), 0, sizeof(CRYPT_SHA2_256_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_SHA2_256_Ctx));
     /**
      * @RFC 4634 6.1 SHA-224 and SHA-256 Initialization
      * SHA-256, the initial hash value, H(0):
@@ -64,7 +64,7 @@ int32_t CRYPT_SHA2_256_Init(CRYPT_SHA2_256_Ctx *ctx)
      * H(0)6 = 1f83d9ab
      * H(0)7 = 5be0cd19
      */
-    (void)memcpy_s(ctx->h, sizeof(SHA256_INIT_STATE), SHA256_INIT_STATE, sizeof(SHA256_INIT_STATE));
+    memcpy(ctx->h, SHA256_INIT_STATE, sizeof(SHA256_INIT_STATE));
     ctx->outlen = CRYPT_SHA2_256_DIGESTSIZE;
     return CRYPT_SUCCESS;
 }
@@ -91,7 +91,7 @@ int32_t CRYPT_SHA2_256_CopyCtx(CRYPT_SHA2_256_Ctx *dst, const CRYPT_SHA2_256_Ctx
         return CRYPT_NULL_INPUT;
     }
 
-    (void)memcpy_s(dst, sizeof(CRYPT_SHA2_256_Ctx), src, sizeof(CRYPT_SHA2_256_Ctx));
+    memcpy(dst, src, sizeof(CRYPT_SHA2_256_Ctx));
     return CRYPT_SUCCESS;
 }
 
@@ -106,7 +106,7 @@ CRYPT_SHA2_256_Ctx *CRYPT_SHA2_256_DupCtx(const CRYPT_SHA2_256_Ctx *src)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memcpy_s(newCtx, sizeof(CRYPT_SHA2_256_Ctx), src, sizeof(CRYPT_SHA2_256_Ctx));
+    memcpy(newCtx, src, sizeof(CRYPT_SHA2_256_Ctx));
     return newCtx;
 }
 
@@ -169,18 +169,18 @@ int32_t CRYPT_SHA2_256_Update(CRYPT_SHA2_256_Ctx *ctx, const uint8_t *data, uint
     uint8_t *p = (uint8_t *)ctx->block;
 
     if (left < CRYPT_SHA2_256_BLOCKSIZE - n) {
-        (void)memcpy_s(p + n, CRYPT_SHA2_256_BLOCKSIZE - n, d, left);
+        memcpy(p + n, d, left);
         ctx->blocklen += (uint32_t)left;
         return CRYPT_SUCCESS;
     }
     if ((n != 0) && (left >= CRYPT_SHA2_256_BLOCKSIZE - n)) {
-        (void)memcpy_s(p + n, CRYPT_SHA2_256_BLOCKSIZE - n, d, CRYPT_SHA2_256_BLOCKSIZE - n);
+        memcpy(p + n, d, CRYPT_SHA2_256_BLOCKSIZE - n);
         SHA256CompressMultiBlocks(ctx->h, p, 1);
         n = CRYPT_SHA2_256_BLOCKSIZE - n;
         d += n;
         left -= n;
         ctx->blocklen = 0;
-        (void)memset_s(p, CRYPT_SHA2_256_BLOCKSIZE, 0, CRYPT_SHA2_256_BLOCKSIZE);
+        memset(p, 0, CRYPT_SHA2_256_BLOCKSIZE);
     }
 
     n = (uint32_t)(left / CRYPT_SHA2_256_BLOCKSIZE);
@@ -193,7 +193,7 @@ int32_t CRYPT_SHA2_256_Update(CRYPT_SHA2_256_Ctx *ctx, const uint8_t *data, uint
 
     if (left != 0) {
         ctx->blocklen = (uint32_t)left;
-        (void)memcpy_s((uint8_t *)ctx->block, CRYPT_SHA2_256_BLOCKSIZE, d, left);
+        memcpy((uint8_t *)ctx->block, d, left);
     }
 
     return CRYPT_SUCCESS;
@@ -230,12 +230,11 @@ int32_t CRYPT_SHA2_256_Final(CRYPT_SHA2_256_Ctx *ctx, uint8_t *digest, uint32_t 
 
     p[n++] = 0x80;
     if (n > (CRYPT_SHA2_256_BLOCKSIZE - 8)) { /* 8 bytes to save bits of input */
-        (void)memset_s(p + n, CRYPT_SHA2_256_BLOCKSIZE - n, 0, CRYPT_SHA2_256_BLOCKSIZE - n);
+        memset(p + n, 0, CRYPT_SHA2_256_BLOCKSIZE - n);
         n = 0;
         SHA256CompressMultiBlocks(ctx->h, p, 1);
     }
-    (void)memset_s(p + n, CRYPT_SHA2_256_BLOCKSIZE - n, 0,
-        CRYPT_SHA2_256_BLOCKSIZE - 8 - n); /* 8 bytes to save bits of input */
+    memset(p + n, 0, CRYPT_SHA2_256_BLOCKSIZE - 8 - n); /* 8 bytes to save bits of input */
 
     p += CRYPT_SHA2_256_BLOCKSIZE - 8; /* 8 bytes to save bits of input */
     PUT_UINT32_BE(ctx->hNum, p, 0);
@@ -245,7 +244,7 @@ int32_t CRYPT_SHA2_256_Final(CRYPT_SHA2_256_Ctx *ctx, uint8_t *digest, uint32_t 
     p -= CRYPT_SHA2_256_BLOCKSIZE;
     SHA256CompressMultiBlocks(ctx->h, p, 1);
     ctx->blocklen = 0;
-    (void)memset_s(p, CRYPT_SHA2_256_BLOCKSIZE, 0, CRYPT_SHA2_256_BLOCKSIZE);
+    memset(p, 0, CRYPT_SHA2_256_BLOCKSIZE);
 
     n = ctx->outlen / sizeof(uint32_t);
     for (uint32_t nn = 0; nn < n; nn++) {
@@ -354,9 +353,9 @@ int32_t CRYPT_SHA256_MBUpdate(CRYPT_SHA2_256_MB_Ctx *ctx, const uint8_t *data[],
     if (caches + commonBytes >= CRYPT_SHA2_256_BLOCKSIZE) {
         if (caches != 0) {
             uint32_t cpysize = CRYPT_SHA2_256_BLOCKSIZE - caches;
-            (void)memcpy_s(b0 + caches, cpysize, d0, cpysize);
+            memcpy(b0 + caches, d0, cpysize);
             d0 += cpysize;
-            (void)memcpy_s(b1 + caches, cpysize, d1, cpysize);
+            memcpy(b1 + caches, d1, cpysize);
             d1 += cpysize;
             commonBytes -= cpysize;
             CRYPT_SHA256x2_Compress(ctx0->h, ctx1->h, b0, b1, 1);
@@ -373,8 +372,8 @@ int32_t CRYPT_SHA256_MBUpdate(CRYPT_SHA2_256_MB_Ctx *ctx, const uint8_t *data[],
         caches = 0; 
     }
     if (commonBytes != 0) {
-        (void)memcpy_s(b0 + caches, CRYPT_SHA2_256_BLOCKSIZE - caches, d0, commonBytes);
-        (void)memcpy_s(b1 + caches, CRYPT_SHA2_256_BLOCKSIZE - caches, d1, commonBytes);
+        memcpy(b0 + caches, d0, commonBytes);
+        memcpy(b1 + caches, d1, commonBytes);
         ctx0->blocklen += commonBytes;
         ctx1->blocklen += commonBytes;
     }
@@ -422,15 +421,13 @@ int32_t CRYPT_SHA256_MBFinal(CRYPT_SHA2_256_MB_Ctx *ctx, uint8_t *digest[], uint
     b0[caches] = 0x80;
     b1[caches++] = 0x80;
     if (caches > (CRYPT_SHA2_256_BLOCKSIZE - 8)) {
-        (void)memset_s(b0 + caches, CRYPT_SHA2_256_BLOCKSIZE - caches, 0, CRYPT_SHA2_256_BLOCKSIZE - caches);
-        (void)memset_s(b1 + caches, CRYPT_SHA2_256_BLOCKSIZE - caches, 0, CRYPT_SHA2_256_BLOCKSIZE - caches);
+        memset(b0 + caches, 0, CRYPT_SHA2_256_BLOCKSIZE - caches);
+        memset(b1 + caches, 0, CRYPT_SHA2_256_BLOCKSIZE - caches);
         caches = 0;
         CRYPT_SHA256x2_Compress(ctx0->h, ctx1->h, b0, b1, 1);
     }
-    (void)memset_s(b0 + caches, CRYPT_SHA2_256_BLOCKSIZE - caches, 0,
-        CRYPT_SHA2_256_BLOCKSIZE - 8 - caches); /* 8 bytes to save bits of input */
-    (void)memset_s(b1 + caches, CRYPT_SHA2_256_BLOCKSIZE - caches, 0,
-        CRYPT_SHA2_256_BLOCKSIZE - 8 - caches); /* 8 bytes to save bits of input */
+    memset(b0 + caches, 0, CRYPT_SHA2_256_BLOCKSIZE - 8 - caches); /* 8 bytes to save bits of input */
+    memset(b1 + caches, 0, CRYPT_SHA2_256_BLOCKSIZE - 8 - caches); /* 8 bytes to save bits of input */
     PUT_UINT32_BE(ctx0->hNum, b0, CRYPT_SHA2_256_BLOCKSIZE - 8);
     PUT_UINT32_BE(ctx0->lNum, b0, CRYPT_SHA2_256_BLOCKSIZE - 4);
     PUT_UINT32_BE(ctx1->hNum, b1, CRYPT_SHA2_256_BLOCKSIZE - 8);
@@ -492,7 +489,7 @@ int32_t CRYPT_SHA2_224_Init(CRYPT_SHA2_224_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    (void)memset_s(ctx, sizeof(CRYPT_SHA2_224_Ctx), 0, sizeof(CRYPT_SHA2_224_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_SHA2_224_Ctx));
     /**
      * @RFC 4634 6.1 SHA-224 and SHA-256 Initialization
      * SHA-224, the initial hash value, H(0):

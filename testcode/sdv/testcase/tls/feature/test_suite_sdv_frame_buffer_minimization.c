@@ -36,7 +36,6 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "sal_net.h"
 #include "frame_tls.h"

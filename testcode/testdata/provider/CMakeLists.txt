@@ -106,36 +106,24 @@ endforeach()
 
 set(OPENHITLS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../..)
 
-find_library(BOUNDSCHECK_STATIC_LIB
-    NAMES libboundscheck.a boundscheck
-    PATHS ${OPENHITLS_ROOT}/platform/Secure_C/lib
-    NO_DEFAULT_PATH
-    NO_CMAKE_FIND_ROOT_PATH
-)
-if(NOT BOUNDSCHECK_STATIC_LIB)
-    message(FATAL_ERROR "Could not find static boundscheck library at ${OPENHITLS_ROOT}/platform/Secure_C/lib")
-endif()
-
 add_library(provider_new_alg_test SHARED provider_new_alg_test.c provider_test_utils.c)
-target_link_directories(provider_new_alg_test PUBLIC ${OPENHITLS_ROOT}/build
-                                            ${OPENHITLS_ROOT}/platform/Secure_C/lib)
+target_link_directories(provider_new_alg_test PUBLIC ${OPENHITLS_ROOT}/build)
 target_include_directories(provider_new_alg_test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
                                                ${OPENHITLS_ROOT}/include/crypto
                                                ${OPENHITLS_ROOT}/include/bsl
                                                ${OPENHITLS_ROOT}/config/macro_config
                                                ${OPENHITLS_ROOT}/bsl/obj/include
                                                ${OPENHITLS_ROOT}/bsl/asn1/include
-                                               ${OPENHITLS_ROOT}/crypto/codecskey/include
-                                               ${OPENHITLS_ROOT}/platform/Secure_C/include)
+                                               ${OPENHITLS_ROOT}/crypto/codecskey/include)
 if(ENABLE_GCOV)
     if(NOT APPLE)
-        target_link_libraries(provider_new_alg_test hitls_crypto hitls_bsl ${BOUNDSCHECK_STATIC_LIB} gcov)
+        target_link_libraries(provider_new_alg_test hitls_crypto hitls_bsl gcov)
     else()
-        target_link_libraries(provider_new_alg_test hitls_crypto hitls_bsl ${BOUNDSCHECK_STATIC_LIB})
+        target_link_libraries(provider_new_alg_test hitls_crypto hitls_bsl)
         target_link_options(provider_new_alg_test PRIVATE -fprofile-arcs)
     endif()
 else()
-    target_link_libraries(provider_new_alg_test hitls_crypto hitls_bsl ${BOUNDSCHECK_STATIC_LIB})
+    target_link_libraries(provider_new_alg_test hitls_crypto hitls_bsl)
 endif()
 target_compile_options(provider_new_alg_test PUBLIC -g -O0 -DHITLS_BSL_OBJ -DHITLS_CRYPTO_CODECSKEY -DHITLS_CRYPTO_KEY_DECODE)
 set_target_properties(provider_new_alg_test PROPERTIES
@@ -187,19 +175,17 @@ target_include_directories(provider_sha256 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
                                                ${OPENHITLS_ROOT}/bsl/sal/src
                                                ${OPENHITLS_ROOT}/crypto/include
                                                ${OPENHITLS_ROOT}/crypto/sha2/include
-                                               ${OPENHITLS_ROOT}/crypto/sha2/src
-                                               ${OPENHITLS_ROOT}/platform/Secure_C/include)
+                                               ${OPENHITLS_ROOT}/crypto/sha2/src)
 if(ENABLE_GCOV)
     if(NOT APPLE)
-        target_link_libraries(provider_sha256 PRIVATE ${BOUNDSCHECK_STATIC_LIB} gcov)
+        target_link_libraries(provider_sha256 PRIVATE gcov)
     else()
-        target_link_libraries(provider_sha256 PRIVATE ${BOUNDSCHECK_STATIC_LIB})
+        target_link_libraries(provider_sha256 PRIVATE)
         target_link_options(provider_sha256 PRIVATE -fprofile-arcs)
     endif()
 else()
-    target_link_libraries(provider_sha256 PRIVATE ${BOUNDSCHECK_STATIC_LIB})
+    target_link_libraries(provider_sha256 PRIVATE)
 endif()
-target_link_directories(provider_sha256 PRIVATE ${OPENHITLS_ROOT}/platform/Secure_C/lib)
 target_compile_options(provider_sha256 PRIVATE -g -O0 -DHITLS_CRYPTO_SHA256 -DHITLS_CRYPTO_SHA2 -DHITLS_CRYPTO_MD -DHITLS_CRYPTO_PROVIDER -DHITLS_BSL_PARAMS)
 set_target_properties(provider_sha256 PROPERTIES
     PREFIX ""

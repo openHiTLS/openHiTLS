@@ -27,7 +27,7 @@
 #include "crypt_utils.h"
 #include "crypt_local_types.h"
 #include "bsl_sal.h"
-#include <securec.h>
+#include <string.h>
 
 typedef struct {
     uint32_t id;
@@ -487,7 +487,7 @@ bool CipherEnc(void *libCtx, const char *attrName, CRYPT_CIPHER_AlgId id, CIPHER
     uint32_t len = data.cipherText.len;
     uint8_t *out = BSL_SAL_Malloc(len);
     GOTO_ERR_IF_TRUE(out == NULL, CRYPT_MEM_ALLOC_FAIL);
-    memset_s(out, len, 0, len);
+    memset(out, 0, len);
     ctx = CRYPT_EAL_ProviderCipherNewCtx(libCtx, id, attrName);
     GOTO_ERR_IF_TRUE(CRYPT_EAL_CipherInit(ctx, data.key.data, data.key.len, data.iv.data, data.iv.len, true) !=
         CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);

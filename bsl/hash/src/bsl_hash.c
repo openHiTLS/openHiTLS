@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_HASH
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "list_base.h"
 #include "bsl_errno.h"

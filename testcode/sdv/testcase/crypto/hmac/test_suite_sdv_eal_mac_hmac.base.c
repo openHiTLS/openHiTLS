@@ -14,7 +14,6 @@
  */
 
 #include <pthread.h>
-#include "securec.h"
 #include "crypt_eal_mac.h"
 #include "eal_mac_local.h"
 #include "crypt_errno.h"

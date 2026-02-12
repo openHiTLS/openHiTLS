@@ -16,8 +16,6 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_CODECS) && defined(HITLS_CRYPTO_PROVIDER)
 #include <stdint.h>
-#include <string.h>
-#include "securec.h"
 #include "crypt_eal_codecs.h"
 #include "crypt_eal_implprovider.h"
 #include "crypt_provider.h"

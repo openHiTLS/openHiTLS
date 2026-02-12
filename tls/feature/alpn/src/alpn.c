@@ -15,7 +15,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_TLS_FEATURE_ALPN
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "hitls_error.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
@@ -54,7 +54,7 @@ static int32_t SelectProtocol(TLS_Ctx *ctx, uint8_t *alpnSelected, uint16_t alpn
         return HITLS_MEMALLOC_FAIL;
     }
 
-    (void)memcpy_s(alpnSelectedTmp, protoLen + 1, protoMatch, protoLen);
+    memcpy(alpnSelectedTmp, protoMatch, protoLen);
     BSL_SAL_FREE(ctx->negotiatedInfo.alpnSelected);
     ctx->negotiatedInfo.alpnSelected = alpnSelectedTmp;
     ctx->negotiatedInfo.alpnSelectedSize = protoLen;

@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_ENTROPY
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_utils.h"
 #include "entropy_seed_pool.h"
 
@@ -46,7 +46,7 @@ static uint32_t HWRandBytes(uint8_t *buf, uint32_t len, int32_t (*rand)(uint64_t
             return len - left;
         }
         uint32_t cpLen = left < sizeof(randVal) ? left : sizeof(randVal);
-        (void)memcpy_s(buf + len - left, left, (uint8_t *)&randVal, cpLen);
+        memcpy(buf + len - left, (uint8_t *)&randVal, cpLen);
         left -= cpLen;
     }
     return len;
@@ -101,7 +101,7 @@ static uint32_t GetDrbgSupport()
             drngCap |= DRNG_HAS_RDRAND;
         }
         
-        (void)memset_s(cpuid, sizeof(cpuid), 0, sizeof(cpuid));
+        memset(cpuid, 0, sizeof(cpuid));
         GetCpuId(0x7, 0, cpuid);
         if (cpuid[EBX_OUT_IDX] & bit_RDSEED) {
             drngCap |= DRNG_HAS_RDSEED;

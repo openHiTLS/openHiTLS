@@ -14,7 +14,7 @@
  */
 #include "hitls_build.h"
 #if defined(HITLS_TLS_FEATURE_SESSION_TICKET) && defined(HITLS_TLS_HOST_SERVER)
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -134,12 +134,12 @@ int32_t Tls13TicketGenerate(TLS_Ctx *ctx)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17155, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "DeriveResumePsk fail", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        (void)memset_s(resumePsk, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
+        BSL_SAL_CleanseData(resumePsk, MAX_DIGEST_SIZE);
         return ret;
     }
     ret = Tls13TicketGenerateConfigSession(ctx, &newSession, resumePsk, hashLen);
     if (ret != HITLS_SUCCESS) {
-        (void)memset_s(resumePsk, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
+        BSL_SAL_CleanseData(resumePsk, MAX_DIGEST_SIZE);
         return ret;
     }
 
@@ -149,13 +149,13 @@ int32_t Tls13TicketGenerate(TLS_Ctx *ctx)
             "Encrypt Session Ticket failed.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         HITLS_SESS_Free(newSession);
-        (void)memset_s(resumePsk, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
+        BSL_SAL_CleanseData(resumePsk, MAX_DIGEST_SIZE);
         return ret;
     }
 
     HITLS_SESS_Free(ctx->session);
     ctx->session = newSession;
-    (void)memset_s(resumePsk, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
+    BSL_SAL_CleanseData(resumePsk, MAX_DIGEST_SIZE);
     return HITLS_SUCCESS;
 }
 

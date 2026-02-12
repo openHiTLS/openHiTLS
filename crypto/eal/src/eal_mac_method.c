@@ -17,7 +17,7 @@
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_MAC)
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_local_types.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
@@ -227,7 +227,7 @@ EAL_MacMethod *EAL_MacFindMethod(CRYPT_MAC_AlgId id, EAL_MacMethod *method)
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return NULL;
         }
-        (void)memset_s(retMethod, sizeof(EAL_MacMethod), 0, sizeof(EAL_MacMethod));
+        memset(retMethod, 0, sizeof(EAL_MacMethod));
     }
     *retMethod = *findMethod;
     return retMethod;
@@ -295,7 +295,7 @@ static EAL_MacMethod *EAL_ProviderMacFindMethod(CRYPT_MAC_AlgId id, void *libCtx
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return NULL;
         }
-        (void)memset_s(retMethod, sizeof(EAL_MacMethod), 0, sizeof(EAL_MacMethod));
+        memset(retMethod, 0, sizeof(EAL_MacMethod));
     }
     ret = SetMacMethod(funcs, retMethod);
     if (ret != CRYPT_SUCCESS) {

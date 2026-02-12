@@ -17,7 +17,7 @@
 #ifdef HITLS_BSL_PARAMS
 #include "bsl_errno.h"
 #include "bsl_sal.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_params.h"
 
@@ -142,7 +142,7 @@ int32_t BSL_PARAM_SetValue(BSL_Param *param, int32_t key, uint32_t type, void *v
                 BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
                 return BSL_INVALID_ARG;
             }
-            (void)memcpy_s(param->value, len, val, len);
+            memcpy(param->value, val, len);
             param->useLen = len;
             return BSL_SUCCESS;
         default:
@@ -215,7 +215,7 @@ int32_t BSL_PARAM_GetValue(const BSL_Param *param, int32_t key, uint32_t type, v
                 BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
                 return BSL_INVALID_ARG;
             }
-            (void)memcpy_s(val, param->valueLen, param->value, param->valueLen);
+            memcpy(val, param->value, param->valueLen);
             *valueLen = param->valueLen;
             return BSL_SUCCESS;
         default:

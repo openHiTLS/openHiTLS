@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_ENTROPY)
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "eal_entropy.h"
@@ -44,7 +44,7 @@ static int32_t ECFMac(uint32_t algId, uint8_t *in, uint32_t inLen, uint8_t *out,
      * Unlike other cryptographic applications, keys used in these external conditioning functions do not require
      * secrecy to accomplish their purpose so may be hard-coded, fixed, or all zeros.
      */
-    (void)memset_s(ecfKey, keyLen, 0, keyLen);
+    memset(ecfKey, 0, keyLen);
     int32_t ret = CRYPT_EAL_MacInit(ctx, ecfKey, keyLen);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_MacFreeCtx(ctx);

@@ -15,7 +15,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_CURVE_SM2_ARMV7) && defined(HITLS_THIRTY_TWO_BITS)
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "crypt_ecc.h"
 #include "ecc_local.h"
 #include "crypt_utils.h"
@@ -141,7 +141,7 @@ static const Sm2Point sm2_point_gen_table[52] = {
         };
 
 static void ECP_Sm2FpSet(Sm2Fp r, const Sm2Fp a) {
-    memcpy_s(r, sizeof(Sm2Fp), a, sizeof(Sm2Fp));
+    memcpy(r, a, sizeof(Sm2Fp));
 }
 
 static int ECP_Sm2FpIsOdd(const Sm2Fp a){
@@ -418,8 +418,8 @@ static void ECP_Sm2PointAddCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *
  */
 static void ECP_Sm2PointSubCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
     Sm2Point t;
-    memcpy_s(t.x, sizeof(Sm2Fp), q->x, sizeof(Sm2Fp));
-    memcpy_s(t.z, sizeof(Sm2Fp), q->z, sizeof(Sm2Fp));
+    memcpy(t.x, q->x, sizeof(Sm2Fp));
+    memcpy(t.z, q->z, sizeof(Sm2Fp));
     ECP_Sm2FpNeg(t.y, q->y);
     ECP_Sm2PointAddCore(r, p, &t);
 }
@@ -484,8 +484,8 @@ static void ECP_Sm2PointAddWithAffineCore(Sm2Point *r, const Sm2Point *p, const 
  */
 static void ECP_Sm2PointSubWithAffineCore(Sm2Point *r, const Sm2Point *p, const Sm2Point *q) {
     Sm2Point t;
-    memcpy_s(t.x, sizeof(Sm2Fp), q->x, sizeof(Sm2Fp));
-    memcpy_s(t.z, sizeof(Sm2Fp), q->z, sizeof(Sm2Fp));
+    memcpy(t.x, q->x, sizeof(Sm2Fp));
+    memcpy(t.z, q->z, sizeof(Sm2Fp));
     ECP_Sm2FpNeg(t.y, q->y);
     ECP_Sm2PointAddWithAffineCore(r, p, &t);
 }

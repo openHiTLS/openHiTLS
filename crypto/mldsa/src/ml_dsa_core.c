@@ -15,7 +15,7 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MLDSA
-#include "securec.h"
+#include <string.h>
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "crypt_utils.h"
@@ -254,7 +254,7 @@ static int32_t ExpandA(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *pubSeed, int3
     uint8_t k = ctx->info->k;
     uint8_t l = ctx->info->l;
     uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN];
-    (void)memcpy_s(seed, sizeof(seed), pubSeed, MLDSA_PUBLIC_SEED_LEN);
+    memcpy(seed, pubSeed, MLDSA_PUBLIC_SEED_LEN);
     for (uint8_t i = 0; i < k; i++) {
         for (uint8_t j = 0; j < l; j++) {
             seed[MLDSA_PUBLIC_SEED_LEN] = j;
@@ -363,7 +363,7 @@ static int32_t ExpandS(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *prvSeed,
     uint8_t k = ctx->info->k;
     uint8_t l = ctx->info->l;
     uint8_t seed[MLDSA_PRIVATE_SEED_LEN + 2]; // 2 bytes are reserved.
-    (void)memcpy_s(seed, sizeof(seed), prvSeed, MLDSA_PRIVATE_SEED_LEN);
+    memcpy(seed, prvSeed, MLDSA_PRIVATE_SEED_LEN);
     seed[MLDSA_PRIVATE_SEED_LEN + 1] = 0;
     int32_t (*rejBoundedPoly)(int32_t *a, const uint8_t *s);
     if (ctx->info->eta == 2) {
@@ -387,7 +387,7 @@ static int32_t ExpandS(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *prvSeed,
 static void ComputesNTT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const s[MLDSA_L_MAX], int32_t *sOut[MLDSA_L_MAX])
 {
     for (uint8_t i = 0; i < ctx->info->l; i++) {
-        (void)memcpy_s(sOut[i], sizeof(int32_t) * MLDSA_N, s[i], sizeof(int32_t) * MLDSA_N);
+        memcpy(sOut[i], s[i], sizeof(int32_t) * MLDSA_N);
         MLDSA_ComputesNTT(sOut[i]);
     }
 }
@@ -416,7 +416,7 @@ static void MatrixMul(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t, int32_t *const ma
 static int32_t ComputesT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t[MLDSA_K_MAX], MLDSA_KeyGenMatrixSt *st, uint8_t*pub)
 {
     uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN];
-    (void)memcpy_s(seed, sizeof(seed), pub, MLDSA_PUBLIC_SEED_LEN);
+    (void)memcpy(seed, pub, MLDSA_PUBLIC_SEED_LEN);
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         for (uint8_t j = 0; j < ctx->info->l; j++) {
             seed[MLDSA_PUBLIC_SEED_LEN] = j;
@@ -654,7 +654,7 @@ static void SignBitUnPack(const uint8_t *v, uint32_t w[MLDSA_N], uint32_t bits, 
 // NIST.FIPS.204 Algorithm 22 pkEncode(ρ, t1)
 static void PkEncode(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *seed, int32_t *const t[MLDSA_K_MAX])
 {
-    (void)memcpy_s(ctx->pubKey, ctx->pubLen, seed, MLDSA_PUBLIC_SEED_LEN);
+    memcpy(ctx->pubKey, seed, MLDSA_PUBLIC_SEED_LEN);
     for (int32_t i = 0; i < ctx->info->k; i++) {
         // 10 is bitlen(𝑞−1) − d
         ByteEncode(ctx->pubKey + MLDSA_PUBLIC_SEED_LEN + i * MLDSA_PUBKEY_POLYT_PACKEDBYTES, (uint32_t *)t[i], 10);
@@ -664,7 +664,7 @@ static void PkEncode(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *seed, int32_t *
 // NIST.FIPS.204 Algorithm 23 pkDecode(pk)
 static void PkDecode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *seed, int32_t *t[MLDSA_K_MAX])
 {
-    (void)memcpy_s(seed, MLDSA_PUBLIC_SEED_LEN, ctx->pubKey, MLDSA_PUBLIC_SEED_LEN);
+    memcpy(seed, ctx->pubKey, MLDSA_PUBLIC_SEED_LEN);
     for (int32_t i = 0; i < ctx->info->k; i++) {
         // 10 is bitlen(𝑞−1) − d
         ByteDecode(ctx->pubKey + MLDSA_PUBLIC_SEED_LEN + i * MLDSA_PUBKEY_POLYT_PACKEDBYTES, (uint32_t *)t[i], 10);
@@ -678,10 +678,10 @@ static void SkEncode(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *pubSeed, const 
     uint32_t i;
     uint32_t bitLen = ctx->info->eta == 2 ? 3 : 4;  // 3 and 4 is bitlen(2𝜂)
     uint32_t index = MLDSA_PUBLIC_SEED_LEN;
-    (void)memcpy_s(ctx->prvKey, ctx->prvLen, pubSeed, MLDSA_PUBLIC_SEED_LEN);
-    (void)memcpy_s(ctx->prvKey + index, ctx->prvLen - index, signSeed, MLDSA_SIGNING_SEED_LEN);
+    memcpy(ctx->prvKey, pubSeed, MLDSA_PUBLIC_SEED_LEN);
+    memcpy(ctx->prvKey + index, signSeed, MLDSA_SIGNING_SEED_LEN);
     index += MLDSA_SIGNING_SEED_LEN;
-    (void)memcpy_s(ctx->prvKey + index, ctx->prvLen - index, tr, MLDSA_TR_MSG_LEN);
+    memcpy(ctx->prvKey + index, tr, MLDSA_TR_MSG_LEN);
     index += MLDSA_TR_MSG_LEN;
     for (i = 0; i < ctx->info->l; i++) {
         BitPack(ctx->prvKey + index, (uint32_t *)st->s1[i], bitLen, ctx->info->eta);
@@ -704,11 +704,11 @@ static void SkDecode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pubSeed, uint8_t *sig
     uint32_t i;
     uint32_t bitLen = ctx->info->eta == 2 ? 3 : 4;  // 3 and 4 is bitlen(2𝜂)
     uint32_t index = MLDSA_PUBLIC_SEED_LEN;
-    (void)memcpy_s(pubSeed, MLDSA_PUBLIC_SEED_LEN, ctx->prvKey, MLDSA_PUBLIC_SEED_LEN);
-    (void)memcpy_s(signSeed, MLDSA_SIGNING_SEED_LEN, ctx->prvKey + index, MLDSA_SIGNING_SEED_LEN);
+    memcpy(pubSeed, ctx->prvKey, MLDSA_PUBLIC_SEED_LEN);
+    memcpy(signSeed, ctx->prvKey + index, MLDSA_SIGNING_SEED_LEN);
 
     index += MLDSA_SIGNING_SEED_LEN;
-    (void)memcpy_s(tr, MLDSA_PRIVATE_SEED_LEN, ctx->prvKey + index, MLDSA_PRIVATE_SEED_LEN);
+    memcpy(tr, ctx->prvKey + index, MLDSA_PRIVATE_SEED_LEN);
     index += MLDSA_PRIVATE_SEED_LEN;
 
     for (i = 0; i < ctx->info->l; i++) {
@@ -971,7 +971,7 @@ static void SigEncode(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *out, uint32_t outLen
         ptr += blockSize;
     }
 
-    (void)memset_s(ptr, outLen - blockSize * ctx->info->l, 0, outLen - blockSize * ctx->info->l);
+    memset(ptr, 0, outLen - blockSize * ctx->info->l);
     for (uint32_t i = 0; i < ctx->info->k; i++) {
         for (uint32_t j = 0; j < MLDSA_N; j++) {
             if (h[i][j] != 0) {
@@ -1002,7 +1002,7 @@ static int32_t SigDecode(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *in, int32_t
             return CRYPT_MLDSA_SIGN_DATA_ERROR;
         }
         uint32_t first = index;
-        (void)memset_s(h[i], sizeof(int32_t) * MLDSA_N, 0, sizeof(int32_t) * MLDSA_N);
+        memset(h[i], 0, sizeof(int32_t) * MLDSA_N);
         while (index < ptr[ctx->info->omega + i]) {
             if (index > first && (ptr[index - 1] >= ptr[index])) {
                 BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_SIGN_DATA_ERROR);
@@ -1022,7 +1022,7 @@ static int32_t ComputesApproxW(const CRYPT_ML_DSA_Ctx *ctx, MLDSA_VerifyMatrixSt
     int32_t *c, int32_t *w[MLDSA_K_MAX])
 {
     uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN];
-    (void)memcpy_s(seed, sizeof(seed), pubSeed, MLDSA_PUBLIC_SEED_LEN);
+    (void)memcpy(seed, pubSeed, MLDSA_PUBLIC_SEED_LEN);
     MLDSA_ComputesNTT(c);
     for (uint8_t i = 0; i < ctx->info->l; i++) {
         MLDSA_ComputesNTT(st->z[i]);
@@ -1088,7 +1088,7 @@ int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *d)
 
     GOTO_ERR_IF(MLDSAKeyGenCreateMatrix(k, l, &st), ret);
     // 32-byte random seed + 1 byte 'k' + 1 byte 'l'
-    (void)memcpy_s(seed, sizeof(seed), d, MLDSA_SEED_BYTES_LEN);
+    memcpy(seed, d, MLDSA_SEED_BYTES_LEN);
     seed[MLDSA_SEED_BYTES_LEN] = k;
     seed[MLDSA_SEED_BYTES_LEN + 1] = l;
     // (ρ, ρ′, K) ∈ B32 × B64 × B32 ← H(𝜉||IntegerToBytes(k, 1)||IntegerToBytes(ℓ, 1), 128)
@@ -1116,7 +1116,7 @@ int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *d)
     SkEncode(ctx, pubSeed, signSeed, tr, &st); // Step 10
     
     ctx->hasSeed = true;
-    (void)memcpy_s(ctx->seed, MLDSA_SEED_BYTES_LEN, d, MLDSA_SEED_BYTES_LEN);
+    memcpy(ctx->seed, d, MLDSA_SEED_BYTES_LEN);
 ERR:
     BSL_SAL_ClearFree(st.bufAddr, st.bufSize);
     BSL_SAL_CleanseData(seed, sizeof(seed));
@@ -1133,7 +1133,7 @@ int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, u
     uint8_t uBuf[MLDSA_XOF_MSG_LEN];
     uint8_t tr[MLDSA_TR_MSG_LEN];
     uint8_t signSeed[MLDSA_SIGNING_SEED_LEN + MLDSA_SEED_BYTES_LEN];
-    (void)memcpy_s(signSeed + MLDSA_SIGNING_SEED_LEN, MLDSA_SEED_BYTES_LEN, rand, MLDSA_SEED_BYTES_LEN);
+    memcpy(signSeed + MLDSA_SIGNING_SEED_LEN, rand, MLDSA_SEED_BYTES_LEN);
 
     // The w1Len length of MLDSA44 and MLDSA65 is 768, and the w1Len length of MLDSA87 is 1024.
     uint32_t w1Len = (ctx->info->k == 4 || ctx->info->k == 6) ? 768 : 1024;
@@ -1150,7 +1150,7 @@ int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, u
     // A ← ExpandA(ρ)
     GOTO_ERR_IF(ExpandA(ctx, pubSeed, st.matrix), ret);
     if (ctx->isMuMsg) {
-        (void)memcpy_s(uBuf, MLDSA_XOF_MSG_LEN, msg->data, msg->len);
+        memcpy(uBuf, msg->data, msg->len);
     } else {
         // μ ← H(BytesToBits(tr)||𝑀′, 64)
         GOTO_ERR_IF(HashFuncH(tr, MLDSA_TR_MSG_LEN, msg->data, msg->len, uBuf, MLDSA_XOF_MSG_LEN), ret);
@@ -1174,7 +1174,7 @@ int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, u
         // 𝑐 ← H(μ||w1Encode(w1), 𝜆/4)
         W1Encode(ctx, w1Buf, st.w1);
         GOTO_ERR_IF(HashFuncH(uBuf, MLDSA_XOF_MSG_LEN, w1Buf, w1Len, out, cBufLen), ret);
-        (void)memset_s(c, sizeof(c), 0, sizeof(c));
+        memset(c, 0, sizeof(c));
         // 𝑐 ∈ 𝑅𝑞 ← SampleInBall(c)
         GOTO_ERR_IF(SampleInBall(ctx, out, cBufLen, c), ret);
         // 𝑐 ← NTT(𝑐)
@@ -1251,7 +1251,7 @@ int32_t MLDSA_VerifyInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg,
     }
 
     if (ctx->isMuMsg) {
-        (void)memcpy_s(uBuf, MLDSA_XOF_MSG_LEN, msg->data, msg->len);
+        memcpy(uBuf, msg->data, msg->len);
     } else {
         // tr ← H(pk, 64)
         GOTO_ERR_IF(HashFuncH(ctx->pubKey, ctx->pubLen, NULL, 0, tr, MLDSA_TR_MSG_LEN), ret);
@@ -1285,7 +1285,7 @@ static void DecodePrvKey(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pubSeed, MLDSA_Ke
 {
     uint32_t bitLen = ctx->info->eta == 2 ? 3 : 4;  // 3 and 4 is bitlen(2𝜂)
     uint32_t index = MLDSA_PUBLIC_SEED_LEN + MLDSA_SIGNING_SEED_LEN + MLDSA_PRIVATE_SEED_LEN;
-    (void)memcpy_s(pubSeed, MLDSA_PUBLIC_SEED_LEN, ctx->prvKey, MLDSA_PUBLIC_SEED_LEN);
+    (void)memcpy(pubSeed, ctx->prvKey, MLDSA_PUBLIC_SEED_LEN);
 
     uint32_t i = 0;
     for (i = 0; i < ctx->info->l; i++) {
@@ -1325,11 +1325,12 @@ int32_t MLDSA_CalPub(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pub, uint32_t pubLen)
         }
     }
     // pk <- pkEncode(ρ, t1)
-    if (memcpy_s(pub, pubLen, pubSeed, MLDSA_PUBLIC_SEED_LEN) != EOK) {
+    if (MLDSA_PUBLIC_SEED_LEN > pubLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_LEN_NOT_ENOUGH);
         ret = CRYPT_MLDSA_LEN_NOT_ENOUGH;
         goto ERR;
     }
+    memcpy(pub, pubSeed, MLDSA_PUBLIC_SEED_LEN);
     for (int32_t i = 0; i < ctx->info->k; i++) {
         // 10 is bitlen(q − 1) − d
         ByteEncode(pub + MLDSA_PUBLIC_SEED_LEN + i * MLDSA_PUBKEY_POLYT_PACKEDBYTES, (uint32_t *)st.t1[i], 10);

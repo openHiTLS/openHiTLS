@@ -17,7 +17,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "securec.h"
 #include "bsl_errno.h"
 #include "list_base.h"
 #include "bsl_hash.h"
@@ -43,7 +42,8 @@ void *UserHashKeyDupFunc(void *src, size_t size)
 
     retKey = (char *)BSL_SAL_Calloc(1, size);
     ASSERT_TRUE((char *)retKey != (char *)NULL);
-    ASSERT_TRUE(strcpy_s(retKey, size, tmpKey) == EOK);
+    ASSERT_TRUE(strlen(tmpKey) < size);
+    strcpy(retKey, tmpKey);
 
 EXIT:
     return (void *)retKey;
@@ -56,7 +56,8 @@ void *UserHashDataDupFunc(void *src, size_t size)
 
     ret = (UserData *)BSL_SAL_Calloc(1, sizeof(UserData));
     ASSERT_TRUE(ret != (UserData *)NULL);
-    ASSERT_TRUE(memcpy_s(ret, size + 1, tmpSrc, size) == EOK);
+    ASSERT_TRUE(size <= size + 1);
+    memcpy(ret, tmpSrc, size);
 
 EXIT:
     return ret;

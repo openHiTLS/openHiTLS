@@ -391,9 +391,7 @@ static void TEST_SendUnexpectCertificateVerifyMsg(void *msg, void *data)
     frameType->recordType = REC_TYPE_HANDSHAKE;
     frameType->handshakeType = CERTIFICATE_VERIFY;
     frameType->keyExType = HITLS_KEY_EXCH_ECDHE;
-    if (memcpy_s(msg, sizeof(FRAME_Msg), &newFrameMsg, sizeof(newFrameMsg)) != EOK) {
-        Print("TEST_SendUnexpectCertificateMsg memcpy_s Error!");
-    }
+    memcpy(msg, &newFrameMsg, sizeof(newFrameMsg));
 }
 
 static void TEST_UnexpectMsg(HLT_FrameHandle *frameHandle, TestExpect *testExpect, bool isSupportClientVerify)
@@ -524,9 +522,7 @@ static void TEST_SendUnexpectCertificateMsg(void *msg, void *data)
     frameType->handshakeType = CERTIFICATE;
     frameType->keyExType = HITLS_KEY_EXCH_ECDHE;
     frameType->transportType = BSL_UIO_TCP;
-    if (memcpy_s(msg, sizeof(FRAME_Msg), &newFrameMsg, sizeof(newFrameMsg)) != EOK) {
-        Print("TEST_SendUnexpectCertificateMsg memcpy_s Error!");
-    }
+    memcpy(msg, &newFrameMsg, sizeof(newFrameMsg));
 }
 
 /* @
@@ -724,7 +720,7 @@ void UT_TLS_TLCP_CONSISTENCY_CCS_TC006(int isClient)
         ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
         ASSERT_EQ(info.description, ALERT_UNEXPECTED_MESSAGE);
     } else {
-        memset_s(readBuf, READ_BUF_SIZE, 0, READ_BUF_SIZE);
+        memset(readBuf, 0, READ_BUF_SIZE);
         ASSERT_EQ(SendCcs(server->ssl, &data, sizeof(data)), HITLS_SUCCESS);
         ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
         ASSERT_EQ(HITLS_Read(clientTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_UNEXPECT_MSG);
@@ -904,9 +900,10 @@ static int32_t GetDisorderServerCertAndKeyExchMsg(FRAME_LinkObj *server, uint8_t
     }
     offset += readLen;
 
-    if (memcpy_s(&data[offset], len - offset, tmpData, tmpLen) != EOK) {
+    if (tmpLen > len - offset) {
         return HITLS_MEMCPY_FAIL;
     }
+    memcpy(&data[offset], tmpData, tmpLen);
     offset += tmpLen;
     *usedLen = offset;
     return HITLS_SUCCESS;
@@ -1074,7 +1071,7 @@ void UT_TLS_TLCP_CONSISTENCY_DISORDER_TC003(void)
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(server->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
 
     ASSERT_TRUE(server->ssl != NULL);
     ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
@@ -1580,7 +1577,7 @@ void UT_TLS_TLCP_CONSISTENCY_AMEND_APPDATA_TC001(char *cipherSuite, int isClient
     FRAME_AppMsg *appMsg = &frameMsg.body.appMsg;
     uint8_t appData[] = "123";
     appMsg->appData.state = ASSIGNED_FIELD;
-    ASSERT_EQ(memcpy_s(appMsg->appData.data, appMsg->appData.size, "123", sizeof(appData)), 0);
+    memcpy(appMsg->appData.data, "123", sizeof(appData));
 
     uint32_t sendLen = MAX_RECORD_LENTH;
     uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
@@ -1589,7 +1586,7 @@ void UT_TLS_TLCP_CONSISTENCY_AMEND_APPDATA_TC001(char *cipherSuite, int isClient
     ioUserData->recMsg.len = 0;
     ASSERT_TRUE(FRAME_TransportRecMsg(recver->io, sendBuf, sendLen) == HITLS_SUCCESS);
     FRAME_CleanMsg(&frameType, &frameMsg);
-    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    memset(&frameMsg, 0, sizeof(frameMsg));
 
     ASSERT_EQ(HITLS_Read(recver->ssl, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_BAD_RECORD_MAC);
     ALERT_Info alertInfo = { 0 };

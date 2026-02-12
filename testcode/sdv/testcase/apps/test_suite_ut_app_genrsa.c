@@ -17,7 +17,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "securec.h"
 #include <stddef.h>
 #include "app_genrsa.h"
 #include "app_rsa.h"

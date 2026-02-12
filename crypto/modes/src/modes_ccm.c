@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_CCM
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "eal_cipher_local.h"
@@ -241,7 +241,7 @@ static int32_t SetIv(MODES_CipherCCMCtx *ctx, const void *val, uint32_t len)
     void *ciphCtx = ctx->ciphCtx; // Handle used by the method
     const EAL_SymMethod *ciphMeth = ctx->ciphMeth; // algorithm method
     uint8_t tagLen = ctx->tagLen;
-    (void)memset_s(ctx, sizeof(MODES_CipherCCMCtx), 0, sizeof(MODES_CipherCCMCtx));
+    memset(ctx, 0, sizeof(MODES_CipherCCMCtx));
     ctx->ciphCtx = ciphCtx;
     ctx->ciphMeth = ciphMeth;
     ctx->tagLen = tagLen;
@@ -249,7 +249,7 @@ static int32_t SetIv(MODES_CipherCCMCtx *ctx, const void *val, uint32_t len)
     uint8_t m = (ctx->tagLen - 2) / 2; // M' = (M - 2)/2
     ctx->nonce[0] = (uint8_t)((l - 1) & 0x7); // set L
     ctx->nonce[0] |= (m << 3); // set M. The default value of TagLen is 16bytes. (bit2 bit3 bit4) indicating the tagLen
-    (void)memcpy_s(ctx->nonce + 1, CCM_BLOCKSIZE - 1, val, len);
+    memcpy(ctx->nonce + 1, val, len);
 
     return CRYPT_SUCCESS;
 }
@@ -431,7 +431,7 @@ static int32_t CtrTagCalc(MODES_CipherCCMCtx *ctx)
      */
     ctx->nonce[0] &= 0x07; // update the nonce
     uint8_t l = (ctx->nonce[0] & 0x07) + 1;
-    (void)memset_s(ctx->nonce + CCM_BLOCKSIZE - l, l, 0, l);
+    memset(ctx->nonce + CCM_BLOCKSIZE - l, 0, l);
     int32_t ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->nonce, ctx->nonce, CCM_BLOCKSIZE);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

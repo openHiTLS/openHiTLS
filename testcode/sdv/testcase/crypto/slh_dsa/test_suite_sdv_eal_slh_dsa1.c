@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "securec.h"
 #include "bsl_err.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -51,7 +50,7 @@ void SDV_CRYPTO_SLH_DSA_VERIFY_KAT_TC001(int id, Hex *key, Hex *addrand, Hex *ms
     }
 
     CRYPT_EAL_PkeyPrv prv;
-    (void)memset_s(&prv, sizeof(CRYPT_EAL_PkeyPrv), 0, sizeof(CRYPT_EAL_PkeyPrv));
+    memset(&prv, 0, sizeof(CRYPT_EAL_PkeyPrv));
     prv.id = CRYPT_PKEY_SLH_DSA;
     prv.key.slhDsaPrv.seed = key->x;
     prv.key.slhDsaPrv.prf = key->x + keyLen;
@@ -98,7 +97,7 @@ void SDV_CRYPTO_SLH_DSA_VERIFY_PREHASHED_KAT_TC001(int id, Hex *key, Hex *addran
               CRYPT_SUCCESS);
 
     CRYPT_EAL_PkeyPrv prv;
-    (void)memset_s(&prv, sizeof(CRYPT_EAL_PkeyPrv), 0, sizeof(CRYPT_EAL_PkeyPrv));
+    memset(&prv, 0, sizeof(CRYPT_EAL_PkeyPrv));
     prv.id = CRYPT_PKEY_SLH_DSA;
     prv.key.slhDsaPrv.seed = key->x;
     prv.key.slhDsaPrv.prf = key->x + keyLen;

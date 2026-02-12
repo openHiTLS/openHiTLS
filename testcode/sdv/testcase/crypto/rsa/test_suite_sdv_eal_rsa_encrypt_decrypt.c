@@ -480,7 +480,7 @@ int32_t STUB_CRYPT_RandEx(void *libCtx, uint8_t *rand, uint32_t randLen)
 {
     (void)libCtx;
     (void)randLen;
-    (void)memcpy_s(rand, sizeof(randBuf), randBuf, sizeof(randBuf));
+    memcpy(rand, randBuf, sizeof(randBuf));
     return 0;
 }
 
@@ -497,19 +497,19 @@ static int32_t STUB_CRYPT_Mgf1(void *provCtx, const EAL_MdMethod *hashMethod, co
     (void)maskLen;
     if (times1 < 1) {
         times1++;
-        (void)memcpy_s(mask, sizeof(seedMaskbuffer0), seedMaskbuffer0, sizeof(seedMaskbuffer0));
+        memcpy(mask, seedMaskbuffer0, sizeof(seedMaskbuffer0));
         return 0;
     }
     if (flag == 1) {
-        (void)memcpy_s(mask, sizeof(dbbuffer1), dbbuffer1, sizeof(dbbuffer1));
+        memcpy(mask, dbbuffer1, sizeof(dbbuffer1));
     } else if (flag == 2) {
-        (void)memcpy_s(mask, sizeof(dbbuffer2), dbbuffer2, sizeof(dbbuffer1));
+        memcpy(mask, dbbuffer2, sizeof(dbbuffer1));
     } else if (flag == 3) {
-        (void)memcpy_s(mask, sizeof(dbbuffer3), dbbuffer3, sizeof(dbbuffer1));
+        memcpy(mask, dbbuffer3, sizeof(dbbuffer1));
     } else if (flag == 4) {
-        (void)memcpy_s(mask, sizeof(dbbuffer4), dbbuffer4, sizeof(dbbuffer1));
+        memcpy(mask, dbbuffer4, sizeof(dbbuffer1));
     } else if (flag == 5) {
-        (void)memcpy_s(mask, sizeof(dbbuffer5), dbbuffer5, sizeof(dbbuffer1));
+        memcpy(mask, dbbuffer5, sizeof(dbbuffer1));
     }
     return 0;
 };
@@ -527,7 +527,7 @@ static int32_t STUB_CRYPT_CalcHash(void *provCtx, const EAL_MdMethod *hashMethod
     (void)size;
     (void)out;
     (void)outlen;
-    (void)memcpy_s(out, sizeof(hashBuf), hashBuf, sizeof(hashBuf));
+    memcpy(out, hashBuf, sizeof(hashBuf));
     *outlen = sizeof(hashBuf);
     return 0;
 };
@@ -538,7 +538,7 @@ static int32_t STUB_CRYPT_RSA_PrvDec(const CRYPT_RSA_Ctx *ctx, const uint8_t *in
     (void)ctx;
     (void)input;
     (void)inputLen;
-    (void)memcpy_s(out, sizeof(decBuf), decBuf, sizeof(decBuf));
+    memcpy(out, decBuf, sizeof(decBuf));
     *outLen = sizeof(decBuf);
     return 0;
 }

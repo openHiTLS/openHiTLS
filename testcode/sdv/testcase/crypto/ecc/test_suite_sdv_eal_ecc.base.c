@@ -17,7 +17,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
-#include "securec.h"
 #include "crypt_bn.h"
 #include "bsl_err.h"
 #include "bsl_sal.h"
@@ -81,7 +80,8 @@ static int32_t STUB_RandForSignature(uint8_t *byte, uint32_t len)
         return CRYPT_NULL_INPUT;
     }
     // Return the fixed K value from test vector
-    return memcpy_s(byte, len, gkRandBuf, len);
+    memcpy(byte, gkRandBuf, len);
+    return 0;
 }
 
 #ifdef HITLS_CRYPTO_PROVIDER
@@ -103,26 +103,24 @@ static int32_t EccPointToBuffer(Hex *pubKeyX, Hex *pubKeyY, CRYPT_PKEY_PointForm
     switch (pointFormat) {
         case CRYPT_POINT_COMPRESSED: {
             pubKey->data[0] = (sign == 1) ? 0x02 : 0x03;
-            ASSERT_TRUE_AND_LOG(
-                "memcpy_s", memcpy_s(pubKey->data + 1, pubKey->len - 1, pubKeyX->x, pubKeyX->len) == EOK);
+            ASSERT_TRUE_AND_LOG("memcpy", (pubKeyX->len) <= (pubKey->len - 1));
+            memcpy(pubKey->data + 1, pubKeyX->x, pubKeyX->len);
             pubKey->len = pubKeyX->len + 1;
         } break;
         case CRYPT_POINT_UNCOMPRESSED: {
             pubKey->data[0] = 0x04;
-            ASSERT_TRUE_AND_LOG(
-                "memcpy_s", memcpy_s(pubKey->data + 1, pubKey->len - 1, pubKeyX->x, pubKeyX->len) == EOK);
-            ASSERT_TRUE_AND_LOG("memcpy_s",
-                memcpy_s(pubKey->data + 1 + pubKeyX->len, pubKey->len - 1 - pubKeyX->len, pubKeyY->x, pubKeyY->len) ==
-                    EOK);
+            ASSERT_TRUE_AND_LOG("memcpy", (pubKeyX->len) <= (pubKey->len - 1));
+            memcpy(pubKey->data + 1, pubKeyX->x, pubKeyX->len);
+            ASSERT_TRUE_AND_LOG("memcpy", (pubKeyY->len) <= (pubKey->len - 1 - pubKeyX->len));
+            memcpy(pubKey->data + 1 + pubKeyX->len, pubKeyY->x, pubKeyY->len);
             pubKey->len = pubKeyX->len + pubKeyY->len + 1;
         } break;
         case CRYPT_POINT_HYBRID: {
             pubKey->data[0] = (sign == 1) ? 0x06 : 0x07;
-            ASSERT_TRUE_AND_LOG(
-                "memcpy_s", memcpy_s(pubKey->data + 1, pubKey->len - 1, pubKeyX->x, pubKeyX->len) == EOK);
-            ASSERT_TRUE_AND_LOG("memcpy_s",
-                memcpy_s(pubKey->data + 1 + pubKeyX->len, pubKey->len - 1 - pubKeyX->len, pubKeyY->x, pubKeyY->len) ==
-                    EOK);
+            ASSERT_TRUE_AND_LOG("memcpy", (pubKeyX->len) <= (pubKey->len - 1));
+            memcpy(pubKey->data + 1, pubKeyX->x, pubKeyX->len);
+            ASSERT_TRUE_AND_LOG("memcpy", (pubKeyY->len) <= (pubKey->len - 1 - pubKeyX->len));
+            memcpy(pubKey->data + 1 + pubKeyX->len, pubKeyY->x, pubKeyY->len);
             pubKey->len = pubKeyX->len + pubKeyY->len + 1;
         } break;
         default:
@@ -211,7 +209,8 @@ static int Ecc_GenKey(
     ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, eccId), CRYPT_SUCCESS);
 
     /* Setup fixed random value for deterministic key generation */
-    ASSERT_TRUE(memcpy_s(gkRandBuf, sizeof(gkRandBuf), prvKeyVector->x, prvKeyVector->len) == 0);
+    ASSERT_TRUE(prvKeyVector->len <= sizeof(gkRandBuf));
+    memcpy(gkRandBuf, prvKeyVector->x, prvKeyVector->len);
     gkRandBufLen = prvKeyVector->len;
 
     /* Init DRBG first, then register our callback AFTER to override TestSimpleRand */
@@ -712,8 +711,8 @@ int EAL_PkeySetPub_Api_TC002(int algId, Hex *prvKey, Hex *pubKey)
     int ret = ERROR;
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyPrv prv1, prv2;
-    (void)memset_s(&prv1.key.rsaPrv, sizeof(prv1.key.rsaPrv), 0, sizeof(prv1.key.rsaPrv));
-    (void)memset_s(&prv2.key.rsaPrv, sizeof(prv2.key.rsaPrv), 0, sizeof(prv2.key.rsaPrv));
+    memset(&prv1.key.rsaPrv, 0, sizeof(prv1.key.rsaPrv));
+    memset(&prv2.key.rsaPrv, 0, sizeof(prv2.key.rsaPrv));
     CRYPT_EAL_PkeyPub ecdsaPubkey;
     KeyData pubKeyVector = {{0}, KEY_MAX_LEN};
 

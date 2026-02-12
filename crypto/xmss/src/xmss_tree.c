@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
@@ -89,7 +89,7 @@ int32_t XmssTree_ComputeNode(uint8_t *node, uint32_t idx, uint32_t height, void 
     if (height == 0) {
         uint8_t adrsBuffer[MAX_ADRS_SIZE] = {0};
         void *leafAdrs = adrsBuffer;
-        (void)memcpy_s(leafAdrs, sizeof(adrsBuffer), adrs, sizeof(adrsBuffer));
+        memcpy(leafAdrs, adrs, sizeof(adrsBuffer));
 
         ctx->adrsOps->setType(leafAdrs, XMSS_ADRS_TYPE_OTS);
         ctx->adrsOps->setKeyPairAddr(leafAdrs, idx); /* Set OTS key pair index */
@@ -107,7 +107,7 @@ int32_t XmssTree_ComputeNode(uint8_t *node, uint32_t idx, uint32_t height, void 
         /* Check if this leaf is the sibling of the target leaf in authentication path
          * At height 0, sibling of leafIdx is at index (leafIdx ^ 1) */
         if (authPath && (idx == ((leafIdx >> height) ^ 0x01))) {
-            (void)memcpy_s(authPath + (height * n), n, node, n);
+            memcpy(authPath + (height * n), node, n);
         }
         return CRYPT_SUCCESS;
     }
@@ -134,7 +134,7 @@ int32_t XmssTree_ComputeNode(uint8_t *node, uint32_t idx, uint32_t height, void 
     // Hash children to get parent node
     uint8_t adrsBuffer[MAX_ADRS_SIZE] = {0};
     void *treeAdrs = adrsBuffer;
-    (void)memcpy_s(treeAdrs, sizeof(adrsBuffer), adrs, sizeof(adrsBuffer));
+    memcpy(treeAdrs, adrs, sizeof(adrsBuffer));
 
     ctx->adrsOps->setType(treeAdrs, XMSS_ADRS_TYPE_HASH); // slh-dsa is also tree of value 2
     if (ctx->isXmss) {
@@ -144,8 +144,8 @@ int32_t XmssTree_ComputeNode(uint8_t *node, uint32_t idx, uint32_t height, void 
     }
     ctx->adrsOps->setTreeIndex(treeAdrs, idx);
     uint8_t tmp[XMSS_MAX_MDSIZE * 2];
-    (void)memcpy_s(tmp, XMSS_MAX_MDSIZE * 2, leftNode, n);
-    (void)memcpy_s(tmp + n, XMSS_MAX_MDSIZE * 2 - n, rightNode, n);
+    memcpy(tmp, leftNode, n);
+    memcpy(tmp + n, rightNode, n);
 
     ret = ctx->hashFuncs->h(ctx->originalCtx, treeAdrs, tmp, 2 * n, node);
     if (ret != CRYPT_SUCCESS) {
@@ -157,7 +157,7 @@ int32_t XmssTree_ComputeNode(uint8_t *node, uint32_t idx, uint32_t height, void 
      * At height h, the node on the path from leafIdx to root is at index (leafIdx >> h),
      * so its sibling is at index ((leafIdx >> h) ^ 1) */
     if ((height != hp) && authPath && (idx == ((leafIdx >> height) ^ 0x01))) {
-        (void)memcpy_s(authPath + (height * n), n, node, n);
+        memcpy(authPath + (height * n), node, n);
     }
 
     return CRYPT_SUCCESS;
@@ -207,7 +207,7 @@ int32_t XmssTree_Sign(const uint8_t *msg, uint32_t msgLen, uint32_t idx, void *a
     /* Make a copy of the address to avoid modifying the original */
     uint8_t adrsBuffer[MAX_ADRS_SIZE] = {0};
     void *wotsAdrs = adrsBuffer;
-    (void)memcpy_s(wotsAdrs, sizeof(adrsBuffer), adrs, sizeof(adrsBuffer));
+    memcpy(wotsAdrs, adrs, sizeof(adrsBuffer));
 
     ctx->adrsOps->setType(wotsAdrs, XMSS_ADRS_TYPE_OTS); // for slh-dsa case, WOTS_HASH is also 0
     ctx->adrsOps->setKeyPairAddr(wotsAdrs, idx);
@@ -290,7 +290,7 @@ int32_t XmssTree_Verify(const uint8_t *msg, uint32_t msgLen, const uint8_t *sig,
      * Output: node0 (recovered WOTS+ public key = leaf node) */
     uint8_t wotsAdrsBuffer[MAX_ADRS_SIZE];
     void *wotsAdrs = wotsAdrsBuffer;
-    (void)memcpy_s(wotsAdrs, sizeof(wotsAdrsBuffer), adrs, sizeof(wotsAdrsBuffer));
+    memcpy(wotsAdrs, adrs, sizeof(wotsAdrsBuffer));
 
     ctx->adrsOps->setType(wotsAdrs, XMSS_ADRS_TYPE_OTS);
     ctx->adrsOps->setKeyPairAddr(wotsAdrs, idx);
@@ -322,13 +322,13 @@ int32_t XmssTree_Verify(const uint8_t *msg, uint32_t msgLen, const uint8_t *sig,
         uint8_t tmp[XMSS_MAX_MDSIZE * 2];
         if (((idx >> k) & 1) != 0) {
             /* Current node is right child: hash(sibling || node0) */
-            (void)memcpy_s(tmp, sizeof(tmp), sig + (len + k) * n, n); /* Left: sibling from auth path */
-            (void)memcpy_s(tmp + n, sizeof(tmp) - n, node0, n); /* Right: current node */
+            memcpy(tmp, sig + (len + k) * n, n); /* Left: sibling from auth path */
+            memcpy(tmp + n, node0, n); /* Right: current node */
             ctx->adrsOps->setTreeIndex(adrs, (ctx->adrsOps->getTreeIndex(adrs) - 1) >> 1);
         } else {
             /* Current node is left child: hash(node0 || sibling) */
-            (void)memcpy_s(tmp, sizeof(tmp), node0, n); /* Left: current node */
-            (void)memcpy_s(tmp + n, sizeof(tmp) - n, sig + (len + k) * n, n); /* Right: sibling from auth path */
+            memcpy(tmp, node0, n); /* Left: current node */
+            memcpy(tmp + n, sig + (len + k) * n, n); /* Right: sibling from auth path */
             ctx->adrsOps->setTreeIndex(adrs, ctx->adrsOps->getTreeIndex(adrs) >> 1);
         }
 
@@ -339,12 +339,12 @@ int32_t XmssTree_Verify(const uint8_t *msg, uint32_t msgLen, const uint8_t *sig,
         }
 
         /* Move up one level: the computed parent becomes the current node for next iteration */
-        (void)memcpy_s(node0, sizeof(node0), node1, sizeof(node1));
+        memcpy(node0, node1, sizeof(node1));
     }
 
     /* Step 3: Output the computed root
      * Caller must compare this with the expected root from public key */
-    (void)memcpy_s(pk, n, node0, n);
+    memcpy(pk, node0, n);
     return CRYPT_SUCCESS;
 }
 
@@ -363,7 +363,7 @@ int32_t HyperTree_Verify(const uint8_t *msg, uint32_t msgLen, const uint8_t *sig
     }
     const uint8_t *sigPtr = sig;
     uint8_t node[XMSS_MAX_MDSIZE] = {0};
-    (void)memcpy_s(node, sizeof(node), msg, msgLen);
+    memcpy(node, msg, msgLen);
     uint64_t treeIdxTmp = treeIdx;
     uint32_t leafIdxTmp = leafIdx;
 
@@ -405,7 +405,7 @@ int32_t HyperTree_Sign(const uint8_t *msg, uint32_t msgLen, uint64_t treeIdx, ui
         return ctx->isXmss ? CRYPT_XMSS_ERR_INVALID_SIG_LEN : CRYPT_SLHDSA_ERR_INVALID_SIG_LEN;
     }
     uint8_t root[XMSS_MAX_MDSIZE] = {0};
-    (void)memcpy_s(root, n, msg, msgLen);
+    memcpy(root, msg, msgLen);
     const uint8_t *currentMsg = root;
     for (uint32_t j = 0; j < d; j++) {
         /* Create a fresh address buffer for each iteration to avoid corruption */

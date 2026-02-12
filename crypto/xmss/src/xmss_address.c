@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_XMSS
 
-#include "securec.h"
+#include <string.h>
 #include "crypt_utils.h"
 #include "xmss_address.h"
 #include "xmss_local.h"
@@ -38,8 +38,7 @@ static void XmssAdrs_SetTreeAddr(void *adrs, uint64_t tree)
 static void XmssAdrs_SetType(void *adrs, uint32_t type)
 {
     PUT_UINT32_BE(type, ((XmssAdrs *)adrs)->fields.type, 0);
-    (void)memset_s(((XmssAdrs *)adrs)->bytes + XMSS_TYPE_SPECIFIC_FIELD_OFFSET, XMSS_TYPE_SPECIFIC_FIELD_LEN, 0,
-                   XMSS_TYPE_SPECIFIC_FIELD_LEN);
+    memset(((XmssAdrs *)adrs)->bytes + XMSS_TYPE_SPECIFIC_FIELD_OFFSET, 0, XMSS_TYPE_SPECIFIC_FIELD_LEN);
 }
 
 static void XmssAdrs_SetKeyPairAddr(void *adrs, uint32_t keyPair)
@@ -83,8 +82,7 @@ static uint32_t XmssAdrs_GetTreeIndex(const void *adrs)
 
 static void XmssAdrs_CopyKeyPairAddr(void *dest, const void *src)
 {
-    (void)memcpy_s(((XmssAdrs *)dest)->fields.keyPairAddr, sizeof(((XmssAdrs *)dest)->fields.keyPairAddr),
-                   ((const XmssAdrs *)src)->fields.keyPairAddr, sizeof(((const XmssAdrs *)src)->fields.keyPairAddr));
+    memcpy(((XmssAdrs *)dest)->fields.keyPairAddr, ((const XmssAdrs *)src)->fields.keyPairAddr, sizeof(((const XmssAdrs *)src)->fields.keyPairAddr));
 }
 
 static uint32_t XmssAdrs_GetAdrsLen(void)

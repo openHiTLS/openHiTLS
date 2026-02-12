@@ -12,7 +12,8 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
-#include "securec.h"
+#include <stdio.h>
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "tls_binlog_id.h"
 #include "bsl_sal.h"
@@ -188,11 +189,11 @@ static int32_t HITLS_ClearBadSession(HITLS_Ctx *ctx)
 #ifdef HITLS_TLS_PROTO_TLS13
 static void CleanSecret(HITLS_Ctx *ctx)
 {
-    memset_s(ctx->clientAppTrafficSecret, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
-    memset_s(ctx->serverAppTrafficSecret, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
-    memset_s(ctx->resumptionMasterSecret, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
+    BSL_SAL_CleanseData(ctx->clientAppTrafficSecret, MAX_DIGEST_SIZE);
+    BSL_SAL_CleanseData(ctx->serverAppTrafficSecret, MAX_DIGEST_SIZE);
+    BSL_SAL_CleanseData(ctx->resumptionMasterSecret, MAX_DIGEST_SIZE);
 #ifdef HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL
-    memset_s(ctx->exporterMasterSecret, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
+    BSL_SAL_CleanseData(ctx->exporterMasterSecret, MAX_DIGEST_SIZE);
 #endif
 }
 #endif
@@ -217,7 +218,7 @@ int32_t HITLS_Clear(HITLS_Ctx *ctx)
 #if defined(HITLS_TLS_EXTENSION_COOKIE) || defined(HITLS_TLS_FEATURE_ALPN) || defined(HITLS_TLS_FEATURE_SNI)
     CleanNegotiatedInfo(&ctx->negotiatedInfo);
 #endif
-    (void)memset_s(&ctx->negotiatedInfo, sizeof(TLS_NegotiatedInfo), 0, sizeof(TLS_NegotiatedInfo));
+    memset(&ctx->negotiatedInfo, 0, sizeof(TLS_NegotiatedInfo));
 #ifdef HITLS_TLS_PROTO_TLS13
     CleanSecret(ctx);
 #endif
@@ -828,12 +829,13 @@ static int32_t Uint8ToHex(const uint8_t *srcBuf, size_t srcLen, size_t *offset,
     size_t offsetTemp = 0u;
     /* Converting an Array to a Hexadecimal Character String */
     for (size_t i = 0u; i < srcLen; i++) {
-        if (sprintf_s((char *)&destBuf[offsetTemp], (destMaxSize - offsetTemp), "%02x", srcBuf[i]) == -1) {
+        int n = snprintf((char *)&destBuf[offsetTemp], (destMaxSize - offsetTemp), "%02x", srcBuf[i]);
+        if (n < 0 || (size_t)n >= (destMaxSize - offsetTemp)) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16481, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "sprintf_s fail", 0, 0, 0, 0);
+                "snprintf fail", 0, 0, 0, 0);
             return HITLS_INVALID_INPUT;
         }
-        offsetTemp += sizeof(uint16_t);
+        offsetTemp += (size_t)n;
         if (offsetTemp >= destMaxSize) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16482, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "There's not enough memory", 0, 0, 0, 0);
@@ -870,7 +872,7 @@ int32_t HITLS_LogSecret(HITLS_Ctx *ctx, const char *label, const uint8_t *secret
     }
 
     // Combine label, random, and secret into a character string separated by spaces and end with '\0'.
-    (void)memcpy_s(outBuffer, outLen, label, labelLen);
+    memcpy(outBuffer, label, labelLen);
     offset += labelLen;
     outBuffer[offset++] = blankSpace;
     size_t index = 0;

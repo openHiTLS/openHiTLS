@@ -21,7 +21,6 @@
 #include <termios.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <securec.h>
 #include "bsl_uio.h"
 #include "app_utils.h"
 #include "app_errno.h"
@@ -127,8 +126,8 @@ typedef struct {
 
 static int32_t Int2Hex(int32_t num, char *hexBuf)
 {
-    int ret = snprintf_s(hexBuf, REC_HEX_BUF_LENGTH + 1, REC_HEX_BUF_LENGTH, "%08X", num);
-    if (strlen(hexBuf) != REC_HEX_BUF_LENGTH || ret == -1) {
+    int ret = snprintf(hexBuf, REC_HEX_BUF_LENGTH + 1, "%08X", num);
+    if (strlen(hexBuf) != REC_HEX_BUF_LENGTH || ret < 0) {
         AppPrintError("enc: error in uint to hex.\n");
         return HITLS_APP_ENCODE_FAIL;
     }
@@ -422,11 +421,12 @@ static int32_t HandlePasswd(EncCmdOpt *encOpt)
         AppPrintError("enc: Failed to check passwd.\n");
         return HITLS_APP_PASSWD_FAIL;
     }
-    if (memcpy_s(encOpt->keySet->pass, APP_MAX_PASS_LENGTH, pwd, pwdLen) != EOK) {
+    if (pwdLen > APP_MAX_PASS_LENGTH) {
         BSL_SAL_ClearFree(pwd, pwdLen);
         AppPrintError("enc: Invalid passwd length.\n");
         return HITLS_APP_PASSWD_FAIL;
     }
+    memcpy(encOpt->keySet->pass, pwd, pwdLen);
     BSL_SAL_ClearFree(pwd, pwdLen);
     encOpt->keySet->passLen = pwdLen;
     return HITLS_APP_SUCCESS;
@@ -601,7 +601,7 @@ static int32_t GetKeyFromP12(EncCmdOpt *encOpt)
         BSL_SAL_CleanseData(keyInfo.key, keyInfo.keyLen);
         return HITLS_APP_INVALID_ARG;
     }
-    (void)memcpy_s(encOpt->keySet->dKey, encOpt->keySet->dKeyLen, keyInfo.key, keyInfo.keyLen);
+    memcpy(encOpt->keySet->dKey, keyInfo.key, keyInfo.keyLen);
     BSL_SAL_CleanseData(keyInfo.key, keyInfo.keyLen);
     return HITLS_APP_SUCCESS;
 }
@@ -788,10 +788,7 @@ static int32_t UpdateEncStdin(EncCmdOpt *encOpt)
             AppPrintError("enc: Buffer overflow detected\n");
             return HITLS_APP_COPY_ARGS_FAILED;
         }
-        if (memcpy_s(cacheArea + cacheLen, MAX_BUFSIZE + BUF_READABLE_BLOCK - cacheLen, readBuf, readLen) != EOK) {
-            ret = HITLS_APP_COPY_ARGS_FAILED;
-            break;
-        }
+        memcpy(cacheArea + cacheLen, readBuf, readLen);
         cacheLen += readLen;
         if (cacheLen < BUF_READABLE_BLOCK) {
             continue;
@@ -806,11 +803,11 @@ static int32_t UpdateEncStdin(EncCmdOpt *encOpt)
             break;
         }
         // Place the secure block data in the cacheArea at the top and reset cacheLen.
-        if (memcpy_s(cacheArea, MAX_BUFSIZE + BUF_READABLE_BLOCK - BUF_SAFE_BLOCK,
-            cacheArea + readableLen, BUF_SAFE_BLOCK) != EOK) {
+        if (readableLen + BUF_SAFE_BLOCK > MAX_BUFSIZE + BUF_READABLE_BLOCK) {
             ret = HITLS_APP_COPY_ARGS_FAILED;
             break;
         }
+        memcpy(cacheArea, cacheArea + readableLen, BUF_SAFE_BLOCK);
         cacheLen = BUF_SAFE_BLOCK;
     }
     BSL_SAL_FREE(cacheArea);
@@ -1015,10 +1012,10 @@ static int32_t EncOrDecProc(EncCmdOpt *encOpt)
     if (CRYPT_EAL_CipherInit(encOpt->keySet->ctx, encOpt->keySet->dKey, encOpt->keySet->dKeyLen, encOpt->keySet->iv,
         encOpt->keySet->ivLen, encOpt->encTag) != CRYPT_SUCCESS) {
         AppPrintError("enc: Failed to init the cipher.\n");
-        (void)memset_s(encOpt->keySet->dKey, encOpt->keySet->dKeyLen, 0, encOpt->keySet->dKeyLen);
+        memset(encOpt->keySet->dKey, 0, encOpt->keySet->dKeyLen);
         return HITLS_APP_CRYPTO_FAIL;
     }
-    (void)memset_s(encOpt->keySet->dKey, encOpt->keySet->dKeyLen, 0, encOpt->keySet->dKeyLen);
+    memset(encOpt->keySet->dKey, 0, encOpt->keySet->dKeyLen);
     if (IsBlockCipher(encOpt->cipherId)) {
         if (CRYPT_EAL_CipherSetPadding(encOpt->keySet->ctx, CRYPT_PADDING_PKCS7) != CRYPT_SUCCESS) {
             return HITLS_APP_CRYPTO_FAIL;

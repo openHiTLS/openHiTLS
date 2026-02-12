@@ -17,7 +17,6 @@
 #include <ctype.h>
 #include <stdint.h>
 #include <string.h>
-#include "securec.h"
 #include "hitls_error.h"
 #include "hitls_config.h"
 #include "hitls_sni.h"
@@ -147,8 +146,7 @@ HITLS_Config *HITLS_SetNewConfig(HITLS_Ctx *ctx, HITLS_Config *newConfig)
 
     if (srcConfig->sessionIdCtxSize == ctx->globalConfig->sessionIdCtxSize &&
         (memcmp(srcConfig->sessionIdCtx, ctx->globalConfig->sessionIdCtx, srcConfig->sessionIdCtxSize) == 0)) {
-            (void)memcpy_s(srcConfig->sessionIdCtx, sizeof(srcConfig->sessionIdCtx),
-                           newConfig->sessionIdCtx, newConfig->sessionIdCtxSize);
+            memcpy(srcConfig->sessionIdCtx, newConfig->sessionIdCtx, newConfig->sessionIdCtxSize);
             srcConfig->sessionIdCtxSize = newConfig->sessionIdCtxSize;
     }
     srcConfig->userData = newConfig->userData;

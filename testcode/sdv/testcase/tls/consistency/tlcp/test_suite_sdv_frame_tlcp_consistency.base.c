@@ -38,7 +38,6 @@
 #include "app.h"
 #include "hlt.h"
 #include "alert.h"
-#include "securec.h"
 #include "record.h"
 #include "rec_write.h"
 #include "rec_read.h"

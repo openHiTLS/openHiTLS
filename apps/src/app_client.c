@@ -21,7 +21,7 @@
 #include <sys/socket.h>
 #include <signal.h>
 #include <unistd.h>
-#include "securec.h"
+#include <string.h>
 #include "app_errno.h"
 #include "app_print.h"
 #include "app_opt.h"
@@ -802,7 +802,7 @@ static int32_t SendHeartBeatAndConfirm(HITLS_ClientParams *params)
     BSL_UIO *dtlcpUio = NULL;
     HITLS_Ctx *dtlcpCtx = NULL;
     HITLS_ClientParams dtlcpParams = {0};
-    (void)memcpy_s(&dtlcpParams, sizeof(dtlcpParams), params, sizeof(*params));
+    memcpy(&dtlcpParams, params, sizeof(dtlcpParams));
     dtlcpParams.protocol = "dtlcp";
     dtlcpParams.port = DEFAULT_DTLCP_PORT;
 

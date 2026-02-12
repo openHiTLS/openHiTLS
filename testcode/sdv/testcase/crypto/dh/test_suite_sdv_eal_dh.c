@@ -17,7 +17,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "securec.h"
+#include <string.h>
 
 #include "bsl_sal.h"
 #include "crypt_algid.h"
@@ -353,7 +353,7 @@ void SDV_CRYPTO_DH_FUNC_TC005(Hex *p, Hex *g, Hex *q, Hex *prv1, int isProvider)
 
     uint8_t *tmpPub = (uint8_t *)malloc(sizeof(uint8_t) * p->len);
     ASSERT_TRUE(tmpPub != NULL);
-    ASSERT_TRUE(memcpy_s(tmpPub, p->len, p->x, p->len) == 0);
+    memcpy(tmpPub, p->x, p->len);
     int last = p->len - 1;
     tmpPub[last] -= 1;  // pubKey = p - 1
 
@@ -374,7 +374,7 @@ void SDV_CRYPTO_DH_FUNC_TC005(Hex *p, Hex *g, Hex *q, Hex *prv1, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey2, &pub) == CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareLocal, &shareLen), CRYPT_DH_KEYINFO_ERROR);
 
-    ASSERT_TRUE(memset_s(tmpPub, p->len, 0, p->len) == 0);  // pubKey = 0;
+    memset(tmpPub, 0, p->len);  // pubKey = 0;
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(pkey2, &pub) == CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareLocal, &shareLen), CRYPT_DH_KEYINFO_ERROR);
 
@@ -553,7 +553,7 @@ void SDV_CRYPTO_DH_SET_PARA_API_TC002(Hex *p, Hex *g, Hex *q, int isProvider)
     para.para.dhPara.pLen = 95;  // 768 / 8 = 96, 96 - 1 = 95
     ASSERT_TRUE_AND_LOG("p smaller than 768", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
 
-    (void)memset_s(longBuf, sizeof(longBuf), 0, sizeof(longBuf));
+    memset(longBuf, 0, sizeof(longBuf));
     longBuf[p->len - 1] = 1;
     para.para.dhPara.p = longBuf;
     para.para.dhPara.pLen = p->len;
@@ -564,14 +564,14 @@ void SDV_CRYPTO_DH_SET_PARA_API_TC002(Hex *p, Hex *g, Hex *q, int isProvider)
     para.para.dhPara.pLen = p->len;
     para.para.dhPara.qLen = 19;  // 160 / 8 = 20, 19 < 20
     para.para.dhPara.q = longBuf;
-    (void)memset_s(longBuf, sizeof(longBuf), 0, sizeof(longBuf));
+    memset(longBuf, 0, sizeof(longBuf));
     longBuf[18] = 1;
     ASSERT_TRUE_AND_LOG("q smaller than 160", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_DH_PARA_ERROR);
 
     para.para.dhPara.qLen = p->len + 1;
     ASSERT_TRUE_AND_LOG("q longer than p", CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_EAL_ERR_NEW_PARA_FAIL);
 
-    (void)memset_s(longBuf, sizeof(longBuf), 0, sizeof(longBuf));
+    memset(longBuf, 0, sizeof(longBuf));
     longBuf[20] = 1;
     para.para.dhPara.qLen = 21;
     ASSERT_TRUE_AND_LOG("q greater than 160 but value smaller than 160 bits",
@@ -616,14 +616,16 @@ void SDV_CRYPTO_DH_SET_PARA_API_TC003(Hex *p, Hex *g, Hex *q, int isProvider)
     ASSERT_TRUE(pkey != NULL);
 
     int last = p->len - 1;
-    ASSERT_TRUE(memcpy_s(buf, bufLen, p->x, p->len) == 0);
+    ASSERT_TRUE(p->len <= bufLen);
+    memcpy(buf, p->x, p->len);
     buf[last] += 1;  // p is even
 
     para.para.dhPara.p = buf;
     para.para.dhPara.pLen = p->len;
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_DH_PARA_ERROR);
 
-    ASSERT_TRUE(memcpy_s(buf, bufLen, q->x, q->len) == 0);
+    ASSERT_TRUE(q->len <= bufLen);
+    memcpy(buf, q->x, q->len);
     last = q->len - 1;
     buf[last] += 1;  // q is even
     para.para.dhPara.p = p->x;
@@ -631,7 +633,7 @@ void SDV_CRYPTO_DH_SET_PARA_API_TC003(Hex *p, Hex *g, Hex *q, int isProvider)
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_DH_PARA_ERROR);
 
-    (void)memset_s(buf, sizeof(buf), 0, sizeof(buf));  // g = 0
+    memset(buf, 0, sizeof(buf));  // g = 0
     para.para.dhPara.q = q->x;
     para.para.dhPara.g = buf;
 
@@ -643,7 +645,8 @@ void SDV_CRYPTO_DH_SET_PARA_API_TC003(Hex *p, Hex *g, Hex *q, int isProvider)
 
     last = p->len - 1;
     para.para.dhPara.gLen = p->len;
-    ASSERT_TRUE(memcpy_s(buf, bufLen, p->x, p->len) == 0);
+    ASSERT_TRUE(p->len <= bufLen);
+    memcpy(buf, p->x, p->len);
     buf[last] -= 1;  // g = p - 1
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_DH_PARA_ERROR);
 
@@ -810,7 +813,7 @@ void SDV_CRYPTO_DH_SET_PRV_API_TC002(Hex *p, Hex *g, Hex *q, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
 
     tmpPrv = (uint8_t *)malloc(sizeof(uint8_t) * p->len);
-    ASSERT_TRUE(memcpy_s(tmpPrv, p->len, p->x, p->len) == 0);
+    memcpy(tmpPrv, p->x, p->len);
     last = p->len - 1;
     tmpPrv[last] -= 1;  // tmpPrv = p - 1, Vectors are guaranteed not to wrap around.
 
@@ -827,7 +830,8 @@ void SDV_CRYPTO_DH_SET_PRV_API_TC002(Hex *p, Hex *g, Hex *q, int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeySetPara(pkey, &para) == CRYPT_SUCCESS);
 
     /* In normal para, p>q does not exceed the threshold. */
-    ASSERT_TRUE(memcpy_s(tmpPrv, p->len, q->x, q->len) == 0);
+    ASSERT_TRUE(q->len <= p->len);
+    memcpy(tmpPrv, q->x, q->len);
     prv.key.dhPrv.len = q->len;
     ASSERT_TRUE_AND_LOG("prvKey = q", CRYPT_EAL_PkeySetPrv(pkey, &prv) == CRYPT_DH_KEYINFO_ERROR);
 
@@ -835,7 +839,7 @@ void SDV_CRYPTO_DH_SET_PRV_API_TC002(Hex *p, Hex *g, Hex *q, int isProvider)
     tmpPrv[last] -= 1;
     ASSERT_TRUE_AND_LOG("prvKey = q - 1", CRYPT_EAL_PkeySetPrv(pkey, &prv) == CRYPT_SUCCESS);
 
-    (void)memset_s(tmpPrv, p->len, 0, p->len);
+    memset(tmpPrv, 0, p->len);
     ASSERT_TRUE_AND_LOG("prvKey = 0", CRYPT_EAL_PkeySetPrv(pkey, &prv) == CRYPT_DH_KEYINFO_ERROR);
 
     last = q->len - 1;

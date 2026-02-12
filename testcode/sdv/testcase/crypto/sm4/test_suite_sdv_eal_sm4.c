@@ -19,7 +19,7 @@
 #include "crypt_eal_cipher.h"
 #include "bsl_sal.h"
 #include "pthread.h"
-#include "securec.h"
+#include <string.h>
 #include "eal_cipher_local.h"
 #include "crypto_test_util.h"
 
@@ -386,14 +386,14 @@ void SDV_CRYPTO_SM4_CTRL_API_TC001(Hex *key, Hex *iv, Hex *msg)
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, iv1, len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(iv1, iv->x, iv->len) == 0);
-    (void)memset_s(iv1, BLOCKSIZE, 0, BLOCKSIZE);
+    memset(iv1, 0, BLOCKSIZE);
 
     ret = CRYPT_EAL_CipherUpdate(ctx, msg->x, BLOCKSIZE - 1, out, &outlen);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_IV, iv1, len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(iv1, iv->x, iv->len) == 0);
-    (void)memset_s(iv1, BLOCKSIZE, 0, BLOCKSIZE);
+    memset(iv1, 0, BLOCKSIZE);
 
     outlen = MAXSIZE;
     ret = CRYPT_EAL_CipherUpdate(ctx, msg->x, 1, out, &outlen);
@@ -560,8 +560,8 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC002(int algId, Hex *key, Hex *iv, int inLen, 
     uint32_t leftLen = MAXSIZE;
     uint32_t len = MAXSIZE;
 
-    (void)memset_s(outTmp, MAXSIZE, 0xAA, MAXSIZE);
-    (void)memset_s(input, MAXSIZE, 0xAA, MAXSIZE);
+    memset(outTmp, 0xAA, MAXSIZE);
+    memset(input, 0xAA, MAXSIZE);
     CRYPT_EAL_CipherCtx *ctxEnc = NULL;
     CRYPT_EAL_CipherCtx *ctxDec = NULL;
 
@@ -973,7 +973,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC005(int isProvider, Hex *key, Hex *in1, Hex *
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out1->x, out1->len) == 0);
 
-    (void)memset_s(outTmp, MAXSIZE, 0, MAXSIZE);
+    memset(outTmp, 0, MAXSIZE);
     len = MAXSIZE;
     ret = CRYPT_EAL_CipherReinit(ctx, iv2->x, iv2->len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -981,7 +981,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC005(int isProvider, Hex *key, Hex *in1, Hex *
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out2->x, out2->len) == 0);
 
-    (void)memset_s(outTmp, MAXSIZE, 0, MAXSIZE);
+    memset(outTmp, 0, MAXSIZE);
     len = MAXSIZE;
     ret = CRYPT_EAL_CipherReinit(ctx, iv1->x, iv1->len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -1195,7 +1195,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC008(int isProvider, int algId, Hex *key, Hex 
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_COMPARE("Cipher compare", out->x, out->len, outTmp, len + finLen);
 
-    (void)memset_s(outTmp, MAX_OUTPUT, 0, MAX_OUTPUT);
+    memset(outTmp, 0, MAX_OUTPUT);
     len = MAX_OUTPUT;
     ret = CRYPT_EAL_CipherReinit(ctx, iv->x, iv->len);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -1252,7 +1252,7 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC009(int isProvider, int algId, Hex *key, Hex 
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTmp, out->x, out->len) == 0);
 
-    (void)memset_s(outTmp, MAX_OUTPUT, 0, MAX_OUTPUT);
+    memset(outTmp, 0, MAX_OUTPUT);
     len = MAX_OUTPUT;
     ret = CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -1303,8 +1303,8 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC010(int algId, Hex *key, Hex *iv, int inLen, 
     uint32_t leftLen = MAX_DATASZIE;
     uint32_t len = MAX_DATASZIE;
 
-    (void)memset_s(outTmp, MAX_DATASZIE, 0xAA, MAX_DATASZIE);
-    (void)memset_s(input, MAX_DATASZIE, 0xAA, MAX_DATASZIE);
+    memset(outTmp, 0xAA, MAX_DATASZIE);
+    memset(input, 0xAA, MAX_DATASZIE);
     CRYPT_EAL_CipherCtx *ctxEnc = NULL;
     CRYPT_EAL_CipherCtx *ctxDec = NULL;
 
@@ -1378,8 +1378,8 @@ void SDV_CRYPTO_SM4_ENCRYPT_FUNC_TC011(int algId, Hex *key, Hex *iv, int inLen, 
     uint32_t leftLen = MAX_DATASZIE;
     uint32_t len = MAX_DATASZIE;
 
-    (void)memset_s(outTmp, MAX_DATASZIE, 0xAA, MAX_DATASZIE);
-    (void)memset_s(input, MAX_DATASZIE, 0xAA, MAX_DATASZIE);
+    memset(outTmp, 0xAA, MAX_DATASZIE);
+    memset(input, 0xAA, MAX_DATASZIE);
     CRYPT_EAL_CipherCtx *ctxEnc = NULL;
     CRYPT_EAL_CipherCtx *ctxDec = NULL;
 

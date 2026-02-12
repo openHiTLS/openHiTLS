@@ -13,6 +13,8 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include <stdarg.h>
+#include <stdio.h>
 #include <unistd.h>
 #include "logger.h"
 
@@ -63,19 +65,19 @@ int LogWrite(LogLevel level, const char *file, int line, const char *fmt, ...)
 
     // Process the log header
     if (file == NULL || line == 0) {
-        len = snprintf_s(logBuf, LOG_MAX_SIZE, (size_t)(LOG_MAX_SIZE - 1), "[%d_TEST_%s]",
+        len = snprintf(logBuf, LOG_MAX_SIZE, "[%d_TEST_%s]",
             getpid(), ConvertLevel2Str((LogLevel)tmpLevel));
     } else {
-        len = snprintf_s(logBuf, LOG_MAX_SIZE, (size_t)(LOG_MAX_SIZE - 1), "[%d_TEST_%s][%s:%d]",
+        len = snprintf(logBuf, LOG_MAX_SIZE, "[%d_TEST_%s][%s:%d]",
             getpid(), ConvertLevel2Str((LogLevel)tmpLevel), file, line);
     }
 
-    if (len < 0 || len > LOG_MAX_SIZE - 1) {
+    if (len < 0 || len > (int)(LOG_MAX_SIZE - 1)) {
         return 0;
     }
 
     va_start(vargs, fmt);
-    ilen = vsnprintf_s(logBuf + len, (size_t)(LOG_MAX_SIZE - len), (size_t)(LOG_MAX_SIZE - len - 1), fmt, vargs);
+    ilen = vsnprintf(logBuf + len, (size_t)(LOG_MAX_SIZE - len), fmt, vargs);
     if (ilen < 0 || ilen > LOG_MAX_SIZE - len - 1) {
         // In the case of overflow truncation, the maximum value is used
         len = LOG_MAX_SIZE;

@@ -15,7 +15,6 @@
 
 #include <stdbool.h>
 #include <string.h>
-#include "securec.h"
 #include "bsl_err.h"
 #include "bsl_log_internal.h"
 #include "bsl_binlog_id.h"
@@ -367,7 +366,7 @@ static int32_t ParseBMPString(const uint8_t *bmp, uint32_t bmpLen, BSL_ASN1_Buff
 
 static void EncodeT61String(const uint8_t *in, uint32_t inLen, uint8_t *encode, uint32_t *offset)
 {
-    (void)memcpy_s(encode + *offset, inLen, in, inLen);
+    memcpy(encode + *offset, in, inLen);
     *offset += inLen;
     return;
 }
@@ -1052,10 +1051,10 @@ static void EncodeInt(BSL_ASN1_Buffer *asn, uint32_t encodeLen, uint8_t *encode,
 {
     if (encodeLen < asn->len) {
         /* Skip the copying of high-order octets with all zeros. */
-        (void)memcpy_s(encode + *offset, encodeLen, asn->buff + (asn->len - encodeLen), encodeLen);
+        memcpy(encode + *offset, asn->buff + (asn->len - encodeLen), encodeLen);
     } else {
         /* the high bit of positive number octet is 1 */
-        (void)memcpy_s(encode + *offset + (encodeLen - asn->len), asn->len, asn->buff, asn->len);
+        memcpy(encode + *offset + (encodeLen - asn->len), asn->buff, asn->len);
     }
     *offset += encodeLen;
 }
@@ -1084,7 +1083,7 @@ static void EncodeContent(BSL_ASN1_Buffer *asn, uint32_t encodeLen, uint8_t *enc
             EncodeT61String(asn->buff, asn->len, encode, offset);
             return;
         default:
-            (void)memcpy_s(encode + *offset, encodeLen, asn->buff, encodeLen);
+            memcpy(encode + *offset, asn->buff, encodeLen);
             *offset += encodeLen;
             return;
     }
@@ -1144,6 +1143,7 @@ static void FreeEncodedListItems(BSL_ASN1_Buffer *encodedItems, uint32_t listSiz
 static int32_t EncodeAndSortSetItems(BSL_ASN1_EncodeItem *eItems, uint32_t listSize, uint32_t templNum,
     uint8_t *encode, uint32_t encodeLen)
 {
+    (void)encodeLen;
     BSL_ASN1_Buffer *encodedItems = (BSL_ASN1_Buffer *)BSL_SAL_Calloc(listSize, sizeof(BSL_ASN1_Buffer));
     if (encodedItems == NULL) {
         return BSL_MALLOC_FAIL;
@@ -1167,7 +1167,7 @@ static int32_t EncodeAndSortSetItems(BSL_ASN1_EncodeItem *eItems, uint32_t listS
         if (encodedItems[i].len == 0) {
             continue;
         }
-        (void)memcpy_s(encode + offset, encodeLen - offset, encodedItems[i].buff, encodedItems[i].len);
+        memcpy(encode + offset, encodedItems[i].buff, encodedItems[i].len);
         offset += encodedItems[i].len;
     }
 

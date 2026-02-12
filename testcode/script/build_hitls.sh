@@ -90,48 +90,6 @@ clean()
     mkdir ${HITLS_ROOT_DIR}/build
 }
 
-# ============================================================
-# Ensure Secure_C Submodule is Ready
-# ============================================================
-# Function: ensure_securec_ready
-# Purpose: Check and initialize Secure_C git submodule if needed
-# Note: Actual build happens via CMake (platform/SecureC.cmake)
-#       This function only ensures the source code is available
-# ============================================================
-ensure_securec_ready()
-{
-    local securec_src_dir="${HITLS_ROOT_DIR}/platform/Secure_C/src"
-    local securec_lib_file="${HITLS_ROOT_DIR}/platform/Secure_C/lib/libboundscheck.a"
-
-    echo "======================================================================"
-    echo "Checking Secure_C dependency..."
-    echo "======================================================================"
-
-    # Initialize submodule if source not present
-    if [ ! -d "${securec_src_dir}" ]; then
-        echo "[INFO] Secure_C submodule not initialized, initializing..."
-        cd "${HITLS_ROOT_DIR}"
-
-        if ! git submodule update --init platform/Secure_C; then
-            echo "[ERROR] Failed to initialize Secure_C submodule"
-            echo "[ERROR] Please check your git configuration and network connection"
-            exit 1
-        fi
-
-        echo "[SUCCESS] Secure_C submodule initialized"
-    else
-        echo "[INFO] Secure_C submodule already initialized"
-    fi
-
-    # Report build status
-    if [ -f "${securec_lib_file}" ]; then
-        echo "[INFO] Securec library already built: ${securec_lib_file}"
-    else
-        echo "[INFO] Securec will be built by CMake during hitls build"
-    fi
-    echo ""
-}
-
 build_hitls_code()
 {
     # Compile openHiTLS
@@ -371,7 +329,6 @@ parse_option()
 
 clean
 parse_option
-ensure_securec_ready
 
 # Always build main library
 build_hitls_code

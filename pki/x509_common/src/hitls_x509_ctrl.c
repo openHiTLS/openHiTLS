@@ -17,7 +17,7 @@
 #ifdef HITLS_PKI_X509
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "sal_atomic.h"
 #include "bsl_obj.h"
 #include "bsl_sal.h"
@@ -499,7 +499,7 @@ int32_t HITLS_X509_SetSm2UserId(BSL_Buffer *sm2UserId, void *val, uint32_t valLe
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    (void) memcpy_s(sm2UserId->data, valLen, (uint8_t *)val, valLen);
+    memcpy(sm2UserId->data, (uint8_t *)val, valLen);
     sm2UserId->dataLen = (uint32_t)valLen;
     return HITLS_PKI_SUCCESS;
 }
@@ -518,12 +518,13 @@ static int32_t X509GetPrintSNStr(const BSL_ASN1_Buffer *nameType, char *buff, ui
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_DN);
         return HITLS_X509_ERR_CERT_INVALID_DN;
     }
-    if (strcpy_s(buff, buffLen, oidName) != EOK) {
+    size_t oidLen = strlen(oidName);
+    if (oidLen >= buffLen) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_DN);
         return HITLS_X509_ERR_CERT_INVALID_DN;
     }
-
-    *usedLen = (uint32_t)strlen(oidName);
+    memcpy(buff, oidName, oidLen + 1);
+    *usedLen = (uint32_t)oidLen;
     return HITLS_PKI_SUCCESS;
 }
 
@@ -551,10 +552,11 @@ static int32_t X509PrintNameNode(const HITLS_X509_NameNode *nameNode, char *buff
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    if (memcpy_s(buff + offset, buffLen - offset, nameNode->nameValue.buff, nameNode->nameValue.len) != EOK) {
+    if (nameNode->nameValue.len > buffLen - offset) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_INVALID_DN);
         return HITLS_X509_ERR_CERT_INVALID_DN;
     }
+    memcpy(buff + offset, nameNode->nameValue.buff, nameNode->nameValue.len);
     offset += nameNode->nameValue.len;
     *usedLen = offset;
     return HITLS_PKI_SUCCESS;
@@ -598,7 +600,7 @@ int32_t HITLS_X509_GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Bu
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    (void)memcpy_s(buff->data, offset + 1, tmpBuffStr, offset);
+    memcpy(buff->data, tmpBuffStr, offset);
     buff->dataLen = offset;
     return HITLS_PKI_SUCCESS;
 }

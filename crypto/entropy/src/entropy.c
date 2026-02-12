@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_ENTROPY
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_algid.h"
@@ -39,8 +39,8 @@ static int32_t EntropyEcf(ENTROPY_ECFCtx *enCtx, uint8_t *data, uint32_t dataLen
         return ret;
     }
     uint32_t cpLen = (conLen > *outLen) ? *outLen : conLen;
-    (void)memcpy_s(out, cpLen, conData, cpLen);
-    (void)memset_s(conData, conLen, 0, conLen);
+    memcpy(out, conData, cpLen);
+    memset(conData, 0, conLen);
     *outLen = cpLen;
     return CRYPT_SUCCESS;
 }
@@ -79,7 +79,7 @@ int32_t ENTROPY_GetFullEntropyInput(void *ctx, ENTROPY_SeedPool *pool, bool isNp
         /* If the data of the length specified by tmpLen can be provided, the value is the full entropy (tmpLen * 8). */
         if (tmpLen * ECF_BYTE_TO_BIT == entropy) {
             cpLen = tmpLen < remLen ? tmpLen : remLen;
-            (void)memcpy_s(ptr, remLen, tmpData, cpLen);
+            memcpy(ptr, tmpData, cpLen);
             remEnt -= ((entropy > remEnt) ? remEnt : entropy);
         } else {
             uint32_t leftLen = tmpDataLen - tmpLen;
@@ -103,7 +103,7 @@ int32_t ENTROPY_GetFullEntropyInput(void *ctx, ENTROPY_SeedPool *pool, bool isNp
         }
     }
 ERR:
-    (void)memset_s(tmpData, tmpDataLen, 0, tmpDataLen);
+    memset(tmpData, 0, tmpDataLen);
     BSL_SAL_FREE(tmpData);
     return ret;
 }

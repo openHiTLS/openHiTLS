@@ -96,16 +96,10 @@ export_env()
         CUSTOM_CFLAGS="$CUSTOM_CFLAGS -Wno-int-conversion -Wno-error=int-conversion"
         CUSTOM_CFLAGS="$CUSTOM_CFLAGS -Wno-unused-function -Wno-error=unused-function"
     fi
+    # Test framework has optional RPC code; avoid unused-function errors on Linux too
+    CUSTOM_CFLAGS="$CUSTOM_CFLAGS -Wno-unused-function -Wno-error=unused-function"
     if [[ ! -e "${HITLS_ROOT_DIR}/testcode/output/log" ]]; then
         mkdir -p ${HITLS_ROOT_DIR}/testcode/output/log
-    fi
-}
-
-down_depend_code()
-{
-    if [ ! -d "${HITLS_ROOT_DIR}/platform/Secure_C/lib" ]; then
-        cd ${HITLS_ROOT_DIR}/platform/Secure_C
-        make -j
     fi
 }
 
@@ -360,7 +354,6 @@ options()
 export_env
 options "$@"
 clean
-down_depend_code
 find_test_suite
 process_custom_cases
 build_test_suite

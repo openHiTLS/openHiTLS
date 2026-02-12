@@ -148,7 +148,7 @@ int32_t CRYPT_PAILLIER_Gen(CRYPT_PAILLIER_Ctx *ctx);
  * @retval CRYPT_PAILLIER_NO_KEY_INFO       does not contain the key information.
  * @retval CRYPT_PAILLIER_ERR_INPUT_VALUE   The entered value does not meet the calculation conditions.
  * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL               A security function error occurs.
+ * @retval CRYPT_MEM_CPY_FAIL               A security function error occurs.
  * @retval BN error                         An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                    encryption succeeded.
  */
@@ -171,7 +171,7 @@ int32_t  CRYPT_PAILLIER_PubEnc(const CRYPT_PAILLIER_Ctx *ctx, const uint8_t *inp
  * @retval CRYPT_PAILLIER_NO_KEY_INFO       does not contain the key information.
  * @retval CRYPT_PAILLIER_ERR_INPUT_VALUE   The entered value does not meet the calculation conditions.
  * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL               A security function error occurs.
+ * @retval CRYPT_MEM_CPY_FAIL               A security function error occurs.
  * @retval BN error.                        An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                    Decrypted Successfully
  */
@@ -328,7 +328,7 @@ int32_t CRYPT_PAILLIER_GetPubKeyEx(const CRYPT_PAILLIER_Ctx *ctx, BSL_Param *par
  * @retval CRYPT_PAILLIER_ERR_INPUT_VALUE       The entered value does not meet the calculation conditions.
  * @retval CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH   Outbuf Insufficient
  * @retval CRYPT_MEM_ALLOC_FAIL                 Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL                   A safe function error occurs.
+ * @retval CRYPT_MEM_CPY_FAIL                   A safe function error occurs.
  * @retval BN error.                            An error occurs in the internal BigNum operation.
  * @retval CRYPT_EAL_ALG_NOT_SUPPORT            does not register the encryption method.
  * @retval CRYPT_SUCCESS                        encryption succeeded.
@@ -351,7 +351,7 @@ int32_t CRYPT_PAILLIER_Encrypt(CRYPT_PAILLIER_Ctx *ctx, const uint8_t *data, uin
  * @retval CRYPT_PAILLIER_ERR_INPUT_VALUE       The entered value does not meet the calculation conditions.
  * @retval CRYPT_PAILLIER_BUFF_LEN_NOT_ENOUGH   Outbuf Insufficient
  * @retval CRYPT_MEM_ALLOC_FAIL                 Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL                   A security function error occurs.
+ * @retval CRYPT_MEM_CPY_FAIL                   A security function error occurs.
  * @retval CRYPT_EAL_ALG_NOT_SUPPORT            does not register the decryption method.
  * @retval BN error.                            An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                        Decryption succeeded.

@@ -14,7 +14,7 @@
  */
 #include "hitls_build.h"
 #ifdef HITLS_TLS_HOST_SERVER
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -224,7 +224,7 @@ static int32_t ParseClientServerNameIndication(TLS_Ctx *ctx, const uint8_t *buf,
             return ParseErrorProcess(ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15127,
                 BINGLOG_STR("server_name malloc fail."), ALERT_INTERNAL_ERROR);
         }
-        (void)memcpy_s(serverName, serverNameLen + 1, &buf[bufOffset], serverNameLen);
+        memcpy(serverName, &buf[bufOffset], serverNameLen);
         SetRevMsgExtServernameInfo(msg, serverNameType, serverName, serverNameLen + 1);
         bufOffset += serverNameLen;
     }
@@ -346,7 +346,7 @@ int32_t ParseIdentities(TLS_Ctx *ctx, PreSharedKey *preSharedKey, const uint8_t 
             return HITLS_MEMALLOC_FAIL;
         }
 
-        (void)memcpy_s(node->identity, node->identitySize + 1, &buf[bufOffset], identitySize);
+        memcpy(node->identity, &buf[bufOffset], identitySize);
         bufOffset += node->identitySize;
 
         node->obfuscatedTicketAge = BSL_ByteToUint32(&buf[bufOffset]);
@@ -576,7 +576,7 @@ static int32_t ParseBinders(TLS_Ctx *ctx, PreSharedKey *preSharedKey, const uint
                 BINGLOG_STR("pre_share_key malloc fail."), ALERT_UNKNOWN);
         }
 
-        (void)memcpy_s(cur->binder, cur->binderSize, &buf[bufOffset], binderLen);
+        memcpy(cur->binder, &buf[bufOffset], binderLen);
         bufOffset += binderLen;
     }
 

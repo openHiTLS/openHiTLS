@@ -25,7 +25,6 @@
 #include "crypt_entropy.h"
 #include "crypt_eal_rand.h"
 #include "eal_entropy.h"
-#include "securec.h"
 #include "crypt_eal_entropy.h"
 #include "crypt_algid.h"
 #include "bsl_list.h"
@@ -129,7 +128,7 @@ static int32_t EntropyReadNormal(void *ctx, uint32_t timeout, uint8_t *buf, uint
 {
     (void)ctx;
     (void)timeout;
-    memset_s(buf, bufLen, 0xff, bufLen);
+    memset(buf, 0xff, bufLen);
     return CRYPT_SUCCESS;
 }
 
@@ -149,7 +148,7 @@ static int32_t EntropyReadError(void *ctx, uint32_t timeout, uint8_t *buf, uint3
 {
     (void)ctx;
     (void)timeout;
-    memset_s(buf, bufLen, 0xff, bufLen);
+    memset(buf, 0xff, bufLen);
     return -1;
 }
 
@@ -251,7 +250,7 @@ static uint32_t EntropyGetNormal(void *ctx, uint8_t *buf, uint32_t bufLen)
     (void)ctx;
     (void)buf;
     (void)bufLen;
-    memset_s(buf, bufLen, 'a', bufLen);
+    memset(buf, 'a', bufLen);
     return 32 > bufLen ? bufLen : 32;
 }
 
@@ -260,7 +259,7 @@ static uint32_t EntropyGet0Normal(void *ctx, uint8_t *buf, uint32_t bufLen)
     (void)ctx;
     (void)buf;
     (void)bufLen;
-    memset_s(buf, bufLen, 'a', bufLen);
+    memset(buf, 'a', bufLen);
     return 0;
 }
 
@@ -750,11 +749,13 @@ void SDV_CRYPTO_ENTROPY_EsNsNumberTest(int number, int minEn, int expLen)
     const char *name = "ns-normal-";
     errPara.name = BSL_SAL_Malloc(strlen(name) + 3);
     ASSERT_TRUE(errPara.name != NULL);
+    size_t nameCap = strlen(name) + 3;
     for(int32_t iter = 0; iter < number; iter++) {
-        char str[3] = {0};
-        strncpy_s((char *)(intptr_t)errPara.name, strlen(name) + 3, name, strlen(name));
-        sprintf_s(str, 3, "%d", iter);
-        strcat_s((char *)(intptr_t)errPara.name, strlen(name) + 3, str);
+        char str[16] = {0}; /* enough for int32_t "%d" */
+        strncpy((char *)(intptr_t)errPara.name, name, nameCap - 1);
+        ((char *)(intptr_t)errPara.name)[nameCap - 1] = '\0';
+        snprintf(str, sizeof(str), "%d", iter);
+        strncat((char *)(intptr_t)errPara.name, str, nameCap - 1 - strlen((char *)(intptr_t)errPara.name));
         if (iter >= 16) {
             ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ADD_NS, (void *)&errPara, sizeof(CRYPT_EAL_NsPara)) != CRYPT_SUCCESS);
             (void)TestErrClear();

@@ -16,7 +16,7 @@
 /* BEGIN_HEADER */
 #include <termios.h>
 #include <unistd.h>
-#include "securec.h"
+#include <string.h>
 #include "app_opt.h"
 #include "app_print.h"
 #include "app_utils.h"
@@ -493,7 +493,7 @@ int32_t STUB_HITLS_APP_GetPasswd(BSL_UI_ReadPwdParam *param, char **passin, uint
 {
     (void)param;
     *passin = (char *)malloc(6);
-    memcpy_s(*passin, 6, "123456", 6);
+    memcpy(*passin, "123456", 6);
     *passLen = 6;
     return HITLS_APP_SUCCESS;
 }

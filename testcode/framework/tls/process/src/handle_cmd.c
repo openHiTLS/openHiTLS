@@ -19,14 +19,14 @@
 #include <stdbool.h>
 #include <semaphore.h>
 #include "hlt_type.h"
-#include "securec.h"
+#include <string.h>
 #include "logger.h"
 #include "rpc_func.h"
 #include "channel_res.h"
 #include "handle_cmd.h"
 
 #define SUCCESS 0
-#define ERROR (-1)
+#define ERROR   (-1)
 #define ASSERT_RETURN(condition, log) \
     do {                              \
         if (!(condition)) {           \
@@ -61,19 +61,19 @@ int ExpectResult(CmdData *expectCmdData)
 
     if ((strncmp(expectCmdData->id, cmdData.id, strlen(cmdData.id)) == 0) &&
         (strncmp(expectCmdData->funcId, cmdData.funcId, strlen(cmdData.funcId)) == 0)) {
-            ret = memcpy_s(expectCmdData->paras, sizeof(expectCmdData->paras), cmdData.paras, sizeof(cmdData.paras));
-            if (ret != EOK) {
-                LOG_ERROR("memcpy_s ERROR");
-                OsUnLock(channelRes->rcvBufferLock);
-                return ERROR;
-            }
-            (void)memset_s(channelRes->rcvBuffer[id], CONTROL_CHANNEL_MAX_MSG_LEN, 0, CONTROL_CHANNEL_MAX_MSG_LEN);
+        if (sizeof(cmdData.paras) > sizeof(expectCmdData->paras)) {
+            LOG_ERROR("memcpy ERROR");
             OsUnLock(channelRes->rcvBufferLock);
-            return SUCCESS;
+            return ERROR;
+        }
+        memcpy(expectCmdData->paras, cmdData.paras, sizeof(cmdData.paras));
+        memset(channelRes->rcvBuffer[id], 0, CONTROL_CHANNEL_MAX_MSG_LEN);
+        OsUnLock(channelRes->rcvBufferLock);
+        return SUCCESS;
     }
     OsUnLock(channelRes->rcvBufferLock);
     LOG_ERROR("strncmp ERROR [expectCmdData->id=%s, cmdData.id = %s, expectCmdData->funcId = %s, cmdData.funcId = %s]",
-        expectCmdData->id, cmdData.id, expectCmdData->funcId, cmdData.funcId);
+              expectCmdData->id, cmdData.id, expectCmdData->funcId, cmdData.funcId);
     return ERROR;
 }
 
@@ -96,62 +96,60 @@ int WaitResultFromPeer(CmdData *expectCmdData)
 
 int ParseCmdFromStr(char *str, CmdData *cmdData)
 {
-    int ret, count, strBufLen;
+    int count = 0;
+    size_t strBufLen;
     char *token = NULL;
     char *rest = NULL;
     char *strBuf = NULL;
-    (void)memset_s(cmdData, sizeof(CmdData), 0, sizeof(CmdData));
+    memset(cmdData, 0, sizeof(CmdData));
 
     strBufLen = strlen(str) + 1;
-    strBuf = (char*)malloc(strBufLen);
+    strBuf = (char *)malloc(strBufLen);
     ASSERT_RETURN(strBuf != NULL, "Malloc Error");
-    (void)memset_s(strBuf, strBufLen, 0, strBufLen);
-    ret = memcpy_s(strBuf, strBufLen, str, strlen(str));
-    if (ret != EOK) {
-        LOG_ERROR("memcpy_s Error");
-        goto ERR;
-    }
+    memcpy(strBuf, str, strBufLen);
 
     /*
       The command message structure is as follows:
       ID | FUNC | PARAS1 | PARAS2 |......
       Fields are separated by vertical bars (|).
     */
-    // Get ID
-    token = strtok_s(strBuf, "|", &rest);
-    ret = strcpy_s(cmdData->id, sizeof(cmdData->id), token); // Get Id
-    if (ret != EOK) {
-        LOG_ERROR("strcpy_s Error");
+    token = strtok_r(strBuf, "|", &rest);
+    if (token == NULL) {
+        LOG_ERROR("parse id Error");
         goto ERR;
     }
-
-    // Get FUNC.
-    token = strtok_s(NULL, "|", &rest);
-    ret = strcpy_s(cmdData->funcId, sizeof(cmdData->funcId), token); // Get FunId
-    if (ret != EOK) {
-        LOG_ERROR("strcpy_s Error");
+    if (strlen(token) >= sizeof(cmdData->id)) {
+        LOG_ERROR("id too long");
         goto ERR;
     }
+    memcpy(cmdData->id, token, strlen(token) + 1);
 
-    // Obtaining Parameters
-    token = strtok_s(NULL, "|", &rest);
-    count = 0;
-    for (; token != NULL; token = strtok_s(NULL, "|", &rest)) {
-        // Maximum length of argument is CONTROL_CHANNEL_MAX_MSG_LEN
-        ret = strcpy_s(cmdData->paras[count], sizeof(cmdData->paras[0]), token);
+    token = strtok_r(NULL, "|", &rest);
+    if (token == NULL) {
+        LOG_ERROR("parse funcId Error");
+        goto ERR;
+    }
+    if (strlen(token) >= sizeof(cmdData->funcId)) {
+        LOG_ERROR("funcId too long");
+        goto ERR;
+    }
+    memcpy(cmdData->funcId, token, strlen(token) + 1);
+
+    for (token = strtok_r(NULL, "|", &rest); token != NULL; token = strtok_r(NULL, "|", &rest)) {
+        if (count >= (int)(sizeof(cmdData->paras) / sizeof(cmdData->paras[0]))) {
+            break;
+        }
+        if (strlen(token) >= sizeof(cmdData->paras[0])) {
+            LOG_ERROR("paras too long");
+            goto ERR;
+        }
+        memcpy(cmdData->paras[count], token, strlen(token) + 1);
         int offset = 0;
-        while (rest[offset] == '|') {
+        while (rest != NULL && rest[offset] == '|') {
             count++;
             offset++;
         }
         count++;
-        if (ret != EOK) {
-            break;
-        }
-    }
-    if (ret != EOK) {
-        LOG_ERROR("strcpy_s error");
-        goto ERR;
     }
     cmdData->parasNum = count;
     free(strBuf);
@@ -180,15 +178,14 @@ int ExecuteCmd(CmdData *cmdData)
         }
     }
     LOG_ERROR("Not Find FuncId");
-    (void)memset_s(cmdData->result, sizeof(cmdData->result), 0, sizeof(cmdData->result));
-    ret = sprintf_s(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ERROR);
-    ASSERT_RETURN(ret > 0, "sprintf_s Error");
+    memset(cmdData->result, 0, sizeof(cmdData->result));
+    ret = snprintf(cmdData->result, sizeof(cmdData->result), "%s|%s|%d", cmdData->id, cmdData->funcId, ERROR);
+    ASSERT_RETURN(ret > 0 && (size_t)ret < sizeof(cmdData->result), "snprintf Error");
     return ret;
 }
 
 int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ctx_Config *ctxConfig)
 {
-    int ret;
     /*
         The message structure is as follows:
         minVersion | maxVersion |cipherSuites |CA |......
@@ -207,31 +204,36 @@ int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ct
 
     // Obtaining the Algorithm Suite
     // The third parameter indicates the algorithm suite.
-    ret = strcpy_s(ctxConfig->cipherSuites, sizeof(ctxConfig->cipherSuites), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->cipherSuites), "strcpy Error");
+    memcpy(ctxConfig->cipherSuites, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx cipherSuites is %s", ctxConfig->cipherSuites);
 
     // The fourth parameter indicates the algorithm suite.
-    ret = strcpy_s(ctxConfig->tls13CipherSuites, sizeof(ctxConfig->tls13CipherSuites), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->tls13CipherSuites), "strcpy Error");
+    memcpy(ctxConfig->tls13CipherSuites, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx tls13cipherSuites is %s", ctxConfig->tls13CipherSuites);
 
     // ECC Point Format Configuration for Asymmetric Algorithms
     // The fifth parameter indicates the dot format.
-    ret = strcpy_s(ctxConfig->pointFormats, sizeof(ctxConfig->pointFormats), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->pointFormats), "strcpy Error");
+    memcpy(ctxConfig->pointFormats, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx pointFormats is %s", ctxConfig->pointFormats);
 
     // Obtaining a Group
     // The sixth parameter indicates a group.
-    ret = strcpy_s(ctxConfig->groups, sizeof(ctxConfig->groups), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->groups), "strcpy Error");
+    memcpy(ctxConfig->groups, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx groups is %s", ctxConfig->groups);
 
     // Obtaining a Signature
     // The seventh parameter indicates the signature.
-    ret = strcpy_s(ctxConfig->signAlgorithms, sizeof(ctxConfig->signAlgorithms), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->signAlgorithms), "strcpy Error");
+    memcpy(ctxConfig->signAlgorithms, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx signAlgorithms is %s", ctxConfig->signAlgorithms);
 
     // Whether to support renegotiation
@@ -256,49 +258,57 @@ int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ct
 
     // device certificate
     // The thirteenth parameter indicates the location of the device certificate.
-    ret = strcpy_s(ctxConfig->eeCert, sizeof(ctxConfig->eeCert), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->eeCert), "strcpy Error");
+    memcpy(ctxConfig->eeCert, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx EE is %s", ctxConfig->eeCert);
 
     // private key
     // The fourteenth parameter indicates the location of the private key.
-    ret = strcpy_s(ctxConfig->privKey, sizeof(ctxConfig->privKey), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->privKey), "strcpy Error");
+    memcpy(ctxConfig->privKey, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx privKey is %s", ctxConfig->privKey);
 
     // private key password
     // The fifteenth parameter indicates the password of the private key.
-    ret = strcpy_s(ctxConfig->password, sizeof(ctxConfig->password), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->password), "strcpy Error");
+    memcpy(ctxConfig->password, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx password is %s", ctxConfig->password);
 
     // CA certificate
     // The 16th parameter indicates the CA certificate.
-    ret = strcpy_s(ctxConfig->caCert, sizeof(ctxConfig->caCert), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->caCert), "strcpy Error");
+    memcpy(ctxConfig->caCert, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx caCert is %s", ctxConfig->caCert);
 
     // Chain certificate
     // The 17th parameter indicates the certificate chain.
-    ret = strcpy_s(ctxConfig->chainCert, sizeof(ctxConfig->chainCert), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->chainCert), "strcpy Error");
+    memcpy(ctxConfig->chainCert, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx chainCert is %s", ctxConfig->chainCert);
 
     // signature certificate
     LOG_DEBUG("Remote Process Set Ctx signCert is %s", string[index]);
     // The eighteenth parameter indicates the position of the signature certificate.
-    ret = strcpy_s(ctxConfig->signCert, sizeof(ctxConfig->signCert), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->signCert), "strcpy Error");
+    memcpy(ctxConfig->signCert, string[index], strlen(string[index]) + 1);
+    index++;
 
     // private key for signature
     LOG_DEBUG("Remote Process Set Ctx signPrivKey is %s", string[index]);
     // The 19th parameter indicates the location of the signature private key.
-    ret = strcpy_s(ctxConfig->signPrivKey, sizeof(ctxConfig->signPrivKey), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->signPrivKey), "strcpy Error");
+    memcpy(ctxConfig->signPrivKey, string[index], strlen(string[index]) + 1);
+    index++;
 
     // psk
-    ret = strcpy_s(ctxConfig->psk, sizeof(ctxConfig->psk), string[index++]); // 21st parameter psk
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->psk), "strcpy Error");
+    memcpy(ctxConfig->psk, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx psk is %s", ctxConfig->psk);
 
     // Indicates whether to support session tickets.
@@ -313,8 +323,9 @@ int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ct
 
     // Setting the ticket key cb
     // 24th parameter ticket key cb
-    ret = strcpy_s(ctxConfig->ticketKeyCb, sizeof(ctxConfig->ticketKeyCb), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->ticketKeyCb), "strcpy Error");
+    memcpy(ctxConfig->ticketKeyCb, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx ticketKeyCb is %s", ctxConfig->ticketKeyCb);
 
     // Indicates whether isFlightTransmitEnable is supported. The 25th parameter indicates whether to send handshake
@@ -323,38 +334,44 @@ int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ct
     LOG_DEBUG("Remote Process Set Ctx isFlightTransmitEnable is %d", ctxConfig->isFlightTransmitEnable);
 
     // Setting the server name
-    ret = strcpy_s(ctxConfig->serverName, sizeof(ctxConfig->serverName), string[index++]); // Parameter 26
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->serverName), "strcpy Error");
+    memcpy(ctxConfig->serverName, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx ServerName is %s", ctxConfig->serverName);
 
     // Setting the server name cb
     // 27th parameter server name cb
-    ret = strcpy_s(ctxConfig->sniDealCb, sizeof(ctxConfig->sniDealCb), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->sniDealCb), "strcpy Error");
+    memcpy(ctxConfig->sniDealCb, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx ServerNameCb is %s", ctxConfig->sniDealCb);
 
     // Setting the server name arg
     // 28th parameter server name arg cb
-    ret = strcpy_s(ctxConfig->sniArg, sizeof(ctxConfig->sniArg), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->sniArg), "strcpy Error");
+    memcpy(ctxConfig->sniArg, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx ServerNameArg is %s", ctxConfig->sniArg);
 
     // Setting the ALPN
-    ret = strcpy_s(ctxConfig->alpnList, sizeof(ctxConfig->alpnList), string[index++]); // 29th parameter
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->alpnList), "strcpy Error");
+    memcpy(ctxConfig->alpnList, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx alpnList is %s", ctxConfig->alpnList);
 
     // Setting the ALPN cb
-    ret = strcpy_s(ctxConfig->alpnSelectCb, sizeof(ctxConfig->alpnSelectCb), string[index++]); // 30th parameter
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->alpnSelectCb), "strcpy Error");
+    memcpy(ctxConfig->alpnSelectCb, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx alpnSelectCb is %s", ctxConfig->alpnSelectCb);
 
     // Setting the ALPN data
-    ret = strcpy_s(ctxConfig->alpnUserData, sizeof(ctxConfig->alpnUserData), string[index++]); // 31th parameter
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->alpnUserData), "strcpy Error");
+    memcpy(ctxConfig->alpnUserData, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx alpnUserData is %s", ctxConfig->alpnUserData);
 
-	// Sets the security level. The parameter indicates that the security strength of the key meets the security level
+    // Sets the security level. The parameter indicates that the security strength of the key meets the security level
     // requirements and is converted into a decimal number.
     ctxConfig->securitylevel = (int)strtol(string[index++], NULL, 10);
     LOG_DEBUG("Remote Process Set Ctx SecurityLevel is %d", ctxConfig->securitylevel);
@@ -411,8 +428,9 @@ int ParseCtxConfigFromString(char (*string)[CONTROL_CHANNEL_MAX_MSG_LEN], HLT_Ct
     ctxConfig->isSupportDtlsCookieExchange = (int)strtol(string[index++], NULL, 10);
     LOG_DEBUG("Remote Process Set Ctx CookieExchange is %d", ctxConfig->isSupportDtlsCookieExchange);
     // set the attrName
-    ret = strcpy_s(ctxConfig->attrName, sizeof(ctxConfig->attrName), string[index++]);
-    ASSERT_RETURN(ret == EOK, "strcpy_s Error");
+    ASSERT_RETURN(strlen(string[index]) < sizeof(ctxConfig->attrName), "strcpy Error");
+    memcpy(ctxConfig->attrName, string[index], strlen(string[index]) + 1);
+    index++;
     LOG_DEBUG("Remote Process Set Ctx attrName is %s", ctxConfig->attrName);
 
     // Set the empty record number.

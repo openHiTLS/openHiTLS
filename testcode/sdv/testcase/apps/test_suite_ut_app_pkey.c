@@ -29,7 +29,6 @@
 #include "crypt_errno.h"
 #include "app_pkey.h"
 #include "app_function.h"
-#include "securec.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"
 #include "stub_utils.h"

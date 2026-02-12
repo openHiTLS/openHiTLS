@@ -18,7 +18,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
-#include "securec.h"
+#include <string.h>
 #include "eal_pkey_local.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_errno.h"
@@ -116,7 +116,7 @@ static int32_t PkeyCopyCtx(CRYPT_EAL_PkeyCtx *to, const CRYPT_EAL_PkeyCtx *from)
         return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
     *to = *from;
-    (void)memset_s(&(to->references), sizeof(BSL_SAL_RefCount), 0, sizeof(BSL_SAL_RefCount));
+    (void)memset(&(to->references), 0, sizeof(BSL_SAL_RefCount));
     to->key = from->method.dupCtx(from->key);
     if (to->key == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, from->id, CRYPT_EAL_PKEY_DUP_ERROR);

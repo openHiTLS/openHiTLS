@@ -15,7 +15,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 #include <stdbool.h>
-#include "securec.h"
 #include "tlv.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"

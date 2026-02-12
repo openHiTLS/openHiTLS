@@ -15,7 +15,8 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_BSL_OBJ
-#include "securec.h"
+#include <stddef.h>
+#include <string.h>
 #include "bsl_obj.h"
 #include "bsl_sal.h"
 #include "bsl_obj_internal.h"
@@ -354,7 +355,7 @@ void BSL_OBJ_FreeSignHashTable(void)
             (void)BSL_SAL_ThreadLockFree(g_signHashRwLock);
             g_signHashRwLock = NULL;
         }
-        (void)memset_s(&g_signHashInitOnce, sizeof(g_signHashInitOnce), 0, sizeof(g_signHashInitOnce));
+        memset(&g_signHashInitOnce, 0, sizeof(g_signHashInitOnce));
     }
 }
 #endif // HITLS_BSL_OBJ_CUSTOM

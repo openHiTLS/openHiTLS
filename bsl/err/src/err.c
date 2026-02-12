@@ -17,7 +17,7 @@
 #ifdef HITLS_BSL_ERR
 
 #include <stdbool.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
 #include "bsl_sal.h"
@@ -91,7 +91,7 @@ int32_t BSL_ERR_Init(void)
 
 void BSL_ERR_DeInit(void)
 {
-    (void)memset(&g_isErrInit, 0, sizeof(g_isErrInit));
+    memset(&g_isErrInit, 0, sizeof(g_isErrInit));
     if (g_errLock == NULL) {
         return;
     }
@@ -193,7 +193,7 @@ void BSL_ERR_ClearError(void)
         /* Will not be NULL. */
         ErrorCodeStack *errStack = curNode->data;
         if (errStack->flag == 0) {
-            (void)memset_s(errStack, sizeof(*errStack), 0, sizeof(*errStack));
+            memset(errStack, 0, sizeof(*errStack));
         }
     }
 

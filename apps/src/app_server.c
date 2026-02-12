@@ -20,7 +20,6 @@
 #include <errno.h>
 #include <signal.h>
 #include <unistd.h>
-#include "securec.h"
 #include "app_errno.h"
 #include "app_print.h"
 #include "app_opt.h"
@@ -887,7 +886,7 @@ int HITLS_ServerMain(int argc, char *argv[])
 
 #ifdef HITLS_APP_SM_MODE
     if (params.smParam->smTag == 1) {
-        (void)memcpy_s(&dtlcpParams, sizeof(dtlcpParams), &params, sizeof(params));
+        memcpy(&dtlcpParams, &params, sizeof(dtlcpParams));
         dtlcpParams.protocol = "dtlcp";
         dtlcpParams.port = DEFAULT_DTLCP_PORT;
 

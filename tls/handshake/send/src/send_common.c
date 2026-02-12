@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -87,10 +87,11 @@ int32_t HS_DtlsSendFragmentHsMsg(TLS_Ctx *ctx, uint32_t maxRecPayloadLen, const 
     }
 
     /* Copy the fragment header */
-    if (memcpy_s(data, maxRecPayloadLen, msgData, DTLS_HS_MSG_HEADER_SIZE) != EOK) {
+    if (DTLS_HS_MSG_HEADER_SIZE > maxRecPayloadLen) {
         BSL_SAL_FREE(data);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMCPY_FAIL, BINLOG_ID15796, "memcpy fail");
     }
+    memcpy(data, msgData, DTLS_HS_MSG_HEADER_SIZE);
 
     uint32_t fragmentOffset = 0;
     uint32_t fragmentLen = 0;
@@ -107,11 +108,11 @@ int32_t HS_DtlsSendFragmentHsMsg(TLS_Ctx *ctx, uint32_t maxRecPayloadLen, const 
         BSL_Uint24ToByte(fragmentOffset, &data[DTLS_HS_FRAGMENT_OFFSET_ADDR]);
         BSL_Uint24ToByte(fragmentLen, &data[DTLS_HS_FRAGMENT_LEN_ADDR]);
         /* Write fragmented data */
-        if (memcpy_s(&data[DTLS_HS_MSG_HEADER_SIZE], maxRecPayloadLen - DTLS_HS_MSG_HEADER_SIZE,
-            &msgData[DTLS_HS_MSG_HEADER_SIZE + fragmentOffset], fragmentLen) != EOK) {
+        if (fragmentLen > maxRecPayloadLen - DTLS_HS_MSG_HEADER_SIZE) {
             BSL_SAL_FREE(data);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMCPY_FAIL, BINLOG_ID17127, "memcpy fail");
         }
+        memcpy(&data[DTLS_HS_MSG_HEADER_SIZE], &msgData[DTLS_HS_MSG_HEADER_SIZE + fragmentOffset], fragmentLen);
 
         /* Send to the record layer */
         ret = REC_Write(ctx, REC_TYPE_HANDSHAKE, data, fragmentLen + DTLS_HS_MSG_HEADER_SIZE);

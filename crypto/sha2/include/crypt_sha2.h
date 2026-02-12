@@ -626,7 +626,7 @@ int32_t CRYPT_SHA2_512_InitEx(CRYPT_SHA2_512_Ctx *ctx, void *param);
  * @retval #CRYPT_SUCCESS If partial digest is calculated
  * @retval #CRYPT_NULL_INPUT input arguments is NULL
  * @retval #CRYPT_SHA2_INPUT_OVERFLOW input message is overflow
- * @retval #CRYPT_SECUREC_FAIL secure c function fail.
+ * @retval #CRYPT_MEM_CPY_FAIL secure c function fail.
  */
 int32_t CRYPT_SHA2_512_Update(CRYPT_SHA2_512_Ctx *ctx, const uint8_t *data, uint32_t nbytes);
 

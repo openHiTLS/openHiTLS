@@ -20,7 +20,6 @@
 #include <time.h>
 #include <stddef.h>
 #include <unistd.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "hitls.h"
 #include "hitls_config.h"

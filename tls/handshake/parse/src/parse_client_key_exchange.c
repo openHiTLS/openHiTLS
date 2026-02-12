@@ -15,7 +15,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_TLS_HOST_SERVER
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -171,7 +171,7 @@ static int32_t ParseClientKxMsgIdentity(ParsePacket *pkt, ClientKeyExchangeMsg *
             BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
             return HITLS_MEMALLOC_FAIL;
         }
-        (void)memcpy_s(identity, identityLen + 1, &pkt->buf[*pkt->bufOffset], identityLen);
+        memcpy(identity, &pkt->buf[*pkt->bufOffset], identityLen);
     }
     msg->pskIdentity = identity;
     msg->pskIdentitySize = identityLen;

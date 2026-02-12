@@ -32,7 +32,7 @@
 #include "parser_frame_msg.h"
 #include "rec_wrapper.h"
 #include "cert.h"
-#include "securec.h"
+#include <string.h>
 #include "process.h"
 #include "conn_init.h"
 #include "hitls_crypt_init.h"
@@ -91,10 +91,12 @@ static void Test_PskGetCert(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32
     frameMsg.length.data = *len;
     frameMsg.recVersion.data = HITLS_VERSION_TLS13;
     if (user != NULL) {  // cert message
-        ASSERT_EQ(memcpy_s(certBuf, MAX_BUF, data, *len), EOK);
+        ASSERT_TRUE(*len <= (MAX_BUF));
+        memcpy(certBuf, data, *len);
         bufLen = *len;
     } else {
-        ASSERT_EQ(memcpy_s(data, bufSize, certBuf, bufLen), EOK);
+        ASSERT_TRUE(bufLen <= bufSize);
+        memcpy(data, certBuf, bufLen);
         *len = bufLen;
     }
 EXIT:
@@ -196,10 +198,12 @@ static void Test_PskGetCertReq(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uin
     frameMsg.length.data = *len;
     frameMsg.recVersion.data = HITLS_VERSION_TLS13;
     if (user != NULL) {  // cert message
-        ASSERT_EQ(memcpy_s(certBuf, READ_BUF_SIZE, data, *len), EOK);
+        ASSERT_TRUE(*len <= (READ_BUF_SIZE));
+        memcpy(certBuf, data, *len);
         bufLen = *len;
     } else {
-        ASSERT_EQ(memcpy_s(data, bufSize, certBuf, bufLen), EOK);
+        ASSERT_TRUE(bufLen <= bufSize);
+        memcpy(data, certBuf, bufLen);
         *len = bufLen;
     }
 EXIT:
@@ -448,11 +452,11 @@ static void Test_ErrorOrderPsk(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uin
     frameMsg.body.hsMsg.body.clientHello.extensionLen.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.length.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.body.clientHello.pskModes.exState = MISSING_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
     uint8_t pskMode[] = {0, 0x2d, 0, 2, 1, 1};  // psk with dhe mode
     ASSERT_NE(parseLen, *len);
-    ASSERT_EQ(memcpy_s(&data[*len], bufSize - *len, &pskMode, sizeof(pskMode)), EOK);
+    memcpy(&data[*len], &pskMode, sizeof(pskMode));
     *len += sizeof(pskMode);
     ASSERT_EQ(parseLen, *len);
 EXIT:
@@ -514,7 +518,7 @@ static void Test_RepeatClientHelloExtension(HITLS_Ctx *ctx, uint8_t *data, uint3
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
     FieldState *extensionState = GetDataAddress(&frameMsg, user);
     *extensionState = DUPLICATE_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
     ASSERT_NE(parseLen, *len);
 EXIT:
@@ -732,7 +736,7 @@ static void Test_RepeatServerHelloExtension(HITLS_Ctx *ctx, uint8_t *data, uint3
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     FieldState *extensionState = GetDataAddress(&frameMsg, user);
     *extensionState = DUPLICATE_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -863,7 +867,7 @@ static void Test_ErrLegacyVersion(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, 
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
     frameMsg.body.hsMsg.body.clientHello.version.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.body.clientHello.version.data = HITLS_VERSION_TLS13;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -960,13 +964,12 @@ static void Test_UnknownVersion(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, ui
     uint16_t version[] = { 0x01, 0x02, *(uint16_t *)user };
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exData.data =
         BSL_SAL_Calloc(sizeof(version) / sizeof(uint16_t), sizeof(uint16_t));
-    ASSERT_EQ(memcpy_s(frameMsg.body.hsMsg.body.clientHello.supportedVersion.exData.data,
-        sizeof(version), version, sizeof(version)), EOK);
+    memcpy(frameMsg.body.hsMsg.body.clientHello.supportedVersion.exData.data, version, sizeof(version));
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exData.size = sizeof(version) / sizeof(uint16_t);
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exData.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exDataLen.data = sizeof(version);
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exLen.data = sizeof(version) + sizeof(uint8_t);
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1089,7 +1092,7 @@ static void Test_ServerVersion(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uin
     } else {
         ASSERT_EQ(0, 1);
     }
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1196,7 +1199,7 @@ static void Test_ServerHelloSessionId(HITLS_Ctx *ctx, uint8_t *data, uint32_t *l
 
     frameMsg.body.hsMsg.body.serverHello.sessionIdSize.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.body.serverHello.sessionIdSize.data = *len;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     ASSERT_EQ(parseLen, *len);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
@@ -1353,7 +1356,7 @@ static void Test_ErrorServerVersion(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len
     } else {
         ASSERT_EQ(0, 1);
     }
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1463,7 +1466,7 @@ static void Test_AbsentGroup(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint3
     frameMsg.body.hsMsg.body.clientHello.supportedGroups.exData.data[0] =
         frameMsg.body.hsMsg.body.clientHello.supportedGroups.exData.data[1];
     frameMsg.body.hsMsg.body.clientHello.supportedGroups.exDataLen.data = sizeof(uint16_t);
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1565,7 +1568,7 @@ static void Test_HelloRetryRequest(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
     ASSERT_EQ(parseLen, *len);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     frameMsg.body.hsMsg.body.serverHello.keyShare.data.group.data = HITLS_EC_GROUP_SECP384R1;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1606,7 +1609,7 @@ static void Test_HelloRetryRequestSameGroup(HITLS_Ctx *ctx, uint8_t *data, uint3
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     ASSERT_EQ(frameMsg.body.hsMsg.body.serverHello.keyShare.data.group.data, HITLS_EC_GROUP_SECP256R1);
     frameMsg.body.hsMsg.body.serverHello.keyShare.data.group.data = HITLS_EC_GROUP_CURVE25519;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1742,7 +1745,7 @@ static void Test_InvalidSelectedIdentity(HITLS_Ctx *ctx, uint8_t *data, uint32_t
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     ASSERT_EQ(frameMsg.body.hsMsg.body.serverHello.pskSelectedIdentity.exState, INITIAL_FIELD);
     frameMsg.body.hsMsg.body.serverHello.pskSelectedIdentity.data.data = 1;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1862,7 +1865,7 @@ static void Test_InvalidCipherSuites(HITLS_Ctx *ctx, uint8_t *data, uint32_t *le
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     ASSERT_EQ(frameMsg.body.hsMsg.body.serverHello.pskSelectedIdentity.exState, INITIAL_FIELD);
     frameMsg.body.hsMsg.body.serverHello.cipherSuite.data = HITLS_AES_256_GCM_SHA384;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -2031,11 +2034,12 @@ static void Test_ServerErrorOrderPsk(HITLS_Ctx *ctx, uint8_t *data, uint32_t *le
     frameMsg.body.hsMsg.body.serverHello.extensionLen.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.length.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.body.serverHello.supportedVersion.exState = MISSING_FIELD;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
     uint8_t supportedVersion[] = {0, 0x2b, 0, 2, 3, 4};
     ASSERT_NE(parseLen, *len);
-    ASSERT_EQ(memcpy_s(&data[*len], bufSize - *len, &supportedVersion, sizeof(supportedVersion)), EOK);
+    ASSERT_TRUE(sizeof(supportedVersion) <= (bufSize - *len));
+    memcpy(&data[*len], &supportedVersion, sizeof(supportedVersion));
     *len += sizeof(supportedVersion);
     ASSERT_EQ(parseLen, *len);
 EXIT:
@@ -2158,7 +2162,7 @@ static void Test_HrrMisClientHelloExtension(HITLS_Ctx *ctx, uint8_t *data, uint3
         ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
         FieldState *extensionState = GetDataAddress(&frameMsg, user);
         *extensionState = MISSING_FIELD;
-        memset_s(data, bufSize, 0, bufSize);
+        memset(data, 0, bufSize);
         FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
     }
 EXIT:
@@ -2344,7 +2348,7 @@ static void Test_CertificateExtensionError001(HITLS_Ctx *ctx, uint8_t *data, uin
 
     uint8_t *extensionData = BSL_SAL_Calloc(extensionLen, sizeof(uint8_t));
     ASSERT_TRUE(extensionData != NULL);
-    ASSERT_EQ(memcpy_s(extensionData, extensionLen, certExtension, extensionLen), EOK);
+    memcpy(extensionData, certExtension, extensionLen);
     certItem->extension.state = ASSIGNED_FIELD;
     BSL_SAL_FREE(certItem->extension.data);
     certItem->extension.data = extensionData;
@@ -2353,7 +2357,7 @@ static void Test_CertificateExtensionError001(HITLS_Ctx *ctx, uint8_t *data, uin
     certItem->extensionLen.data = extensionLen;
     *len += extensionLen;
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -2435,7 +2439,7 @@ static void Test_CertificateExtensionError002(HITLS_Ctx *ctx, uint8_t *data, uin
 
     uint8_t *extensionData = BSL_SAL_Calloc(extensionLen, sizeof(uint8_t));
     ASSERT_TRUE(extensionData != NULL);
-    ASSERT_EQ(memcpy_s(extensionData, extensionLen, certExtension, extensionLen), EOK);
+    memcpy(extensionData, certExtension, extensionLen);
     certItem->extension.state = ASSIGNED_FIELD;
     BSL_SAL_FREE(certItem->extension.data);
     certItem->extension.data = extensionData;
@@ -2444,7 +2448,7 @@ static void Test_CertificateExtensionError002(HITLS_Ctx *ctx, uint8_t *data, uin
     certItem->extensionLen.data = extensionLen;
     *len += extensionLen;
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -2526,7 +2530,7 @@ static void Test_CertificateExtensionError003(HITLS_Ctx *ctx, uint8_t *data, uin
 
     uint8_t *extensionData = BSL_SAL_Calloc(extensionLen, sizeof(uint8_t));
     ASSERT_TRUE(extensionData != NULL);
-    ASSERT_EQ(memcpy_s(extensionData, extensionLen, certExtension, extensionLen), EOK);
+    memcpy(extensionData, certExtension, extensionLen);
     certItem->extension.state = ASSIGNED_FIELD;
     BSL_SAL_FREE(certItem->extension.data);
     certItem->extension.data = extensionData;
@@ -2535,7 +2539,7 @@ static void Test_CertificateExtensionError003(HITLS_Ctx *ctx, uint8_t *data, uin
     certItem->extensionLen.data = extensionLen;
     *len += extensionLen;
 
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -2614,7 +2618,7 @@ static void Test_ModifyKeyShareGroup(HITLS_Ctx *ctx, uint8_t *data, uint32_t *le
     ASSERT_EQ(clientMsg->keyshares.exKeyShares.size, 2);
     clientMsg->keyshares.exKeyShares.data[1].group.state = ASSIGNED_FIELD;
     clientMsg->keyshares.exKeyShares.data[1].group.data = HITLS_EC_GROUP_CURVE25519;
-    memset_s(data, bufSize, 0, bufSize);
+    memset(data, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);

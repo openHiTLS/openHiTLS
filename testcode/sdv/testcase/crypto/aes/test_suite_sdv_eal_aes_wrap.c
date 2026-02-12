@@ -18,7 +18,7 @@
 #include "crypt_errno.h"
 #include "crypt_eal_cipher.h"
 #include "bsl_sal.h"
-#include "securec.h"
+#include <string.h>
 
 #define MAX_OUTPUT 5000
 #define MCT_INNER_LOOP 1000
@@ -269,7 +269,8 @@ void SDV_CRYPTO_EAL_AES_WRAP_FUNC_TC003(int algId, Hex *key, Hex *iv, Hex *in, H
     uint8_t outTmp[MAX_OUTPUT] = {0};
     uint32_t len = MAX_OUTPUT;
 
-    ASSERT_EQ(memcpy_s(outTmp, MAX_OUTPUT, in->x, in->len), EOK);
+    ASSERT_TRUE(in->len <= (MAX_OUTPUT));
+    memcpy(outTmp, in->x, in->len);
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(algId);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, enc), CRYPT_SUCCESS);
@@ -306,8 +307,10 @@ void SDV_CRYPTO_CIPHER_AES_WRAP_NOT_ALIGN_TC001(int algId, Hex *key, Hex *plainT
     uint32_t leftLen = MAX_DATA_LEN - 1;
     uint32_t totalLen = 0;
 
-    ASSERT_TRUE(memcpy_s(pKey, MAX_DATA_LEN - 1, key->x, key->len) == EOK);
-    ASSERT_TRUE(memcpy_s(pPt, MAX_DATA_LEN - 1, plainText->x, plainText->len) == EOK);
+    ASSERT_TRUE(key->len <= (MAX_DATA_LEN - 1));
+    memcpy(pKey, key->x, key->len);
+    ASSERT_TRUE(plainText->len <= (MAX_DATA_LEN - 1));
+    memcpy(pPt, plainText->x, plainText->len);
     TestMemInit();
 
     // Encrypt
@@ -322,7 +325,8 @@ void SDV_CRYPTO_CIPHER_AES_WRAP_NOT_ALIGN_TC001(int algId, Hex *key, Hex *plainT
     CRYPT_EAL_CipherDeinit(ctx);
     leftLen = MAX_DATA_LEN - 1;
     // Decrypt
-    ASSERT_TRUE(memcpy_s(pCt, MAX_DATA_LEN - 1, cipherText->x, cipherText->len) == EOK);
+    ASSERT_TRUE(cipherText->len <= (MAX_DATA_LEN - 1));
+    memcpy(pCt, cipherText->x, cipherText->len);
     ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, pKey, key->len, NULL, 0, false) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, pCt, cipherText->len, pPt, &leftLen) == CRYPT_SUCCESS);
     totalLen = leftLen;

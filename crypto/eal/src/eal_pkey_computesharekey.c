@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_PKEY)
 
-#include "securec.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "bsl_err_internal.h"

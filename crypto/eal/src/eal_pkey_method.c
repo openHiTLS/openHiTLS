@@ -16,7 +16,6 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_PKEY)
 
-#include "securec.h"
 #include "crypt_local_types.h"
 #include "crypt_algid.h"
 #include "eal_pkey_local.h"

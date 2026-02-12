@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_CIPHER)
 
-#include "securec.h"
+#include <string.h>
 #include "crypt_algid.h"
 #include "crypt_eal_cipher.h"
 #include "bsl_err_internal.h"
@@ -458,7 +458,7 @@ int32_t CRYPT_EAL_CipherCopyCtx(CRYPT_EAL_CipherCtx *to, const CRYPT_EAL_CipherC
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, from->id, CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memcpy_s(to, sizeof(CRYPT_EAL_CipherCtx), from, sizeof(CRYPT_EAL_CipherCtx));
+    memcpy(to, from, sizeof(CRYPT_EAL_CipherCtx));
     to->ctx = ctx;
     return CRYPT_SUCCESS;
 }

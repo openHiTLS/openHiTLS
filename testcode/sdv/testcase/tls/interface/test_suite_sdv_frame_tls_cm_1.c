@@ -36,7 +36,6 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "sal_net.h"
 #include "frame_tls.h"
@@ -3665,11 +3664,13 @@ static uint32_t CustomPskLeakCb(HITLS_Ctx *ctx, const uint8_t *hint, uint8_t *id
 {
     (void)ctx;
     (void)hint;
+    (void)maxPskLen;
     // Provide a totally unique identity string to completely avoid normal business logic allocation collisions
-    if (memcpy_s(identity, maxIdentityLen, g_leak_test_identity, SPECIAL_IDENTITY_LEN + 1) != EOK) {
+    if (SPECIAL_IDENTITY_LEN + 1 > maxIdentityLen) {
         return 0;
     }
-    memset_s(psk, maxPskLen, 0x11, 32);
+    memcpy(identity, g_leak_test_identity, SPECIAL_IDENTITY_LEN + 1);
+    memset(psk, 0x11, 32);
     return 32;
 }
 

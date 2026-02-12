@@ -30,7 +30,6 @@
 #include "app_opt.h"
 #include "bsl_ui.h"
 #include "bsl_uio.h"
-#include "securec.h"
 #include "crypt_eal_cipher.h"
 #include "crypt_eal_rand.h"
 #include "crypt_eal_pkey.h"
@@ -126,7 +125,7 @@ static int32_t STUB_BSL_UI_ReadPwdUtil(BSL_UI_ReadPwdParam *param, char *buff, u
     (void)checkDataCallBack;
     (void)callBackData;
     char result[] = PASSWORD;
-    (void)strcpy_s(buff, *buffLen, result);
+    strcpy(buff, result);
     *buffLen = (uint32_t)strlen(buff) + 1;
     return BSL_SUCCESS;
 }
@@ -138,7 +137,7 @@ static int32_t STUB_BSL_UI_ReadPwdUtil_WrongPassword(BSL_UI_ReadPwdParam *param,
     (void)checkDataCallBack;
     (void)callBackData;
     char wrongPassword[] = "wrong_password_123";
-    (void)strcpy_s(buff, *buffLen, wrongPassword);
+    strcpy(buff, wrongPassword);
     *buffLen = (uint32_t)strlen(buff) + 1;
     return BSL_SUCCESS;
 }

@@ -15,7 +15,7 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_PKI_CMS_SIGNEDDATA
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_asn1_internal.h"
 #include "bsl_list.h"
@@ -739,7 +739,7 @@ static int32_t EncodeX509List(HITLS_X509_List *list, uint8_t implicitTag, Encode
     }
     uint32_t offset = 0;
     for (uint32_t j = 0; j < i; j++) {
-        (void)memcpy_s(temp + offset, asnBuf[j].len, asnBuf[j].buff, asnBuf[j].len);
+        memcpy(temp + offset, asnBuf[j].buff, asnBuf[j].len);
         offset += asnBuf[j].len;
     }
     FreeAsnList(asnBuf, i);
@@ -771,7 +771,7 @@ static int32_t EncodeSignerIdentifier(CMS_SignerInfo *si, BSL_ASN1_Buffer *sid)
             BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
             return BSL_MALLOC_FAIL;
         }
-        (void)memcpy_s(encoded, totalLen, si->subjectKeyId.kid.data, si->subjectKeyId.kid.dataLen);
+        memcpy(encoded, si->subjectKeyId.kid.data, si->subjectKeyId.kid.dataLen);
         sid->buff = encoded;
         sid->len = totalLen;
         sid->tag = BSL_ASN1_CLASS_CTX_SPECIFIC;
@@ -2364,7 +2364,7 @@ static int32_t GetDigestFromMdCtx(HITLS_X509_List *digestAlg, int32_t mdId, uint
             if (ret != HITLS_PKI_SUCCESS) {
                 return ret;
             }
-            (void)memcpy_s(digest, MAX_DIGEST_SIZE, tmpDigest, tmpDigestLen);
+            memcpy(digest, tmpDigest, tmpDigestLen);
             *digestLen = tmpDigestLen;
             return HITLS_PKI_SUCCESS;
         }

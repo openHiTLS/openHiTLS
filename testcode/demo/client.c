@@ -6,7 +6,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "securec.h"
+#include <string.h>
 
 #include "bsl_sal.h"
 #include "bsl_err.h"
@@ -59,7 +59,7 @@ int main(int32_t argc, char *argv[])
 
     // Set the protocol and port number
     struct sockaddr_in serverAddr;
-    (void)memset_s(&serverAddr, sizeof(serverAddr), 0, sizeof(serverAddr));
+    memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(12345);
     serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");

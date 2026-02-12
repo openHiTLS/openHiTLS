@@ -17,7 +17,7 @@
 #if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "eal_cipher_local.h"
@@ -57,7 +57,7 @@ void Poly1305SetKey(Poly1305Ctx *ctx, const uint8_t key[POLY1305_KEYSIZE])
     ctx->acc[4] = 0;
     ctx->acc[5] = 0;
 
-    (void)memset_s(ctx->last, sizeof(ctx->last), 0, sizeof(ctx->last));
+    memset(ctx->last, 0, sizeof(ctx->last));
     ctx->lastLen = 0;
     Poly1305InitForAsm(ctx); // Information such as tables required for initializing the assembly
 }
@@ -231,7 +231,7 @@ static int32_t SetIv(MODES_CipherChaChaPolyCtx *ctx, const uint8_t *iv, uint32_t
     uint8_t block[POLY1305_KEYSIZE] = { 0 };
     if (ivLen == 8) { // If the length of the IV is 8, 0 data must be padded before.
         uint8_t tmpBuff[12] = { 0 };
-        (void)memcpy_s(tmpBuff + 4, sizeof(tmpBuff) - 4, iv, ivLen); // // 4 bytes 0 data must be padded before.
+        memcpy(tmpBuff + 4, iv, ivLen); // // 4 bytes 0 data must be padded before.
         ret = ctx->method->cipherCtrl(ctx->key, CRYPT_CTRL_SET_IV, tmpBuff, sizeof(tmpBuff));
         // Clear sensitive data.
         (void)BSL_SAL_CleanseData(tmpBuff, sizeof(tmpBuff));

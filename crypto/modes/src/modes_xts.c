@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_XTS
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "eal_cipher_local.h"
@@ -235,10 +235,11 @@ int32_t MODES_XTS_Encrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *o
     }
     // set c m-1
     tmpOut -= blockSize;
-    if (memcpy_s(tmpOut, blockSize + tmpLen, pp, blockSize) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        return CRYPT_SECUREC_FAIL;
+    if (blockSize > blockSize + tmpLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_CPY_FAIL);
+        return CRYPT_MEM_CPY_FAIL;
     }
+    memcpy(tmpOut, pp, blockSize);
     return CRYPT_SUCCESS;
 }
 
@@ -275,7 +276,7 @@ int32_t MODES_XTS_Decrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *o
         return CRYPT_SUCCESS;
     }
 
-    (void)memcpy_s(t2, MODES_XTS_BLOCKSIZE, ctx->tweak, blockSize);
+    memcpy(t2, ctx->tweak, blockSize);
 
     if (ctx->ciphMeth->algId == CRYPT_SYM_SM4) {
         GF128Mul_GM(ctx->tweak, blockSize);
@@ -296,10 +297,11 @@ int32_t MODES_XTS_Decrypt(MODES_CipherXTSCtx *ctx, const uint8_t *in, uint8_t *o
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (memcpy_s(tmpOut, blockSize + tmpLen, pp, blockSize) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        return CRYPT_SECUREC_FAIL;
+    if (blockSize > blockSize + tmpLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_CPY_FAIL);
+        return CRYPT_MEM_CPY_FAIL;
     }
+    memcpy(tmpOut, pp, blockSize);
     return CRYPT_SUCCESS;
 }
 
@@ -327,11 +329,11 @@ int32_t MODES_XTS_SetIv(MODES_CipherXTSCtx *ctx, const uint8_t *val, uint32_t le
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_IVLEN_ERROR);
         return CRYPT_MODES_IVLEN_ERROR;
     }
-    if (memcpy_s(ctx->iv, MODES_MAX_IV_LENGTH, val, len) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        return CRYPT_SECUREC_FAIL;
+    if (len > MODES_MAX_IV_LENGTH) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_CPY_FAIL);
+        return CRYPT_MEM_CPY_FAIL;
     }
-
+    memcpy(ctx->iv, val, len);
     // Use key2 and i to encrypt to obtain the tweak.
     ret = ctx->ciphMeth->encryptBlock((uint8_t*)ctx->ciphCtx + ctx->ciphMeth->ctxSize,
         ctx->iv, ctx->tweak, ctx->blockSize);
@@ -351,10 +353,11 @@ static int32_t GetIv(MODES_CipherXTSCtx *ctx, uint8_t *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);
         return CRYPT_MODE_ERR_INPUT_LEN;
     }
-    if (memcpy_s(val, len, ctx->iv, ctx->blockSize) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        return CRYPT_SECUREC_FAIL;
+    if (ctx->blockSize > len) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_CPY_FAIL);
+        return CRYPT_MEM_CPY_FAIL;
     }
+    memcpy(val, ctx->iv, ctx->blockSize);
     return CRYPT_SUCCESS;
 }
 
@@ -366,7 +369,7 @@ int32_t MODES_XTS_Ctrl(MODES_XTS_Ctx *modeCtx, int32_t cmd, void *val, uint32_t 
     }
     switch (cmd) {
         case CRYPT_CTRL_REINIT_STATUS:
-            (void)memset_s(modeCtx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+            memset(modeCtx->data, 0, EAL_MAX_BLOCK_LENGTH);
             modeCtx->dataLen = 0;
             return MODES_XTS_SetIv(&modeCtx->xtsCtx, val, len);
         case CRYPT_CTRL_GET_IV:
@@ -462,7 +465,7 @@ int32_t MODES_XTS_DeInitCtx(MODES_XTS_Ctx *modeCtx)
         return CRYPT_NULL_INPUT;
     }
     MODES_XTS_Clean(&modeCtx->xtsCtx);
-    (void)memset_s(modeCtx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+    memset(modeCtx->data, 0, EAL_MAX_BLOCK_LENGTH);
     modeCtx->dataLen = 0;
     modeCtx->pad = CRYPT_PADDING_NONE;
     return CRYPT_SUCCESS;
@@ -559,7 +562,7 @@ MODES_XTS_Ctx *MODES_XTS_DupCtx(const MODES_XTS_Ctx *modeCtx)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         BSL_SAL_CleanseData(ctx->xtsCtx.iv, MODES_MAX_IV_LENGTH);
         BSL_SAL_CleanseData(ctx->xtsCtx.tweak, MODES_MAX_IV_LENGTH);
-        (void)memset_s(ctx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+        memset(ctx->data, 0, EAL_MAX_BLOCK_LENGTH);
         BSL_SAL_Free(ctx);
         return NULL;
     }

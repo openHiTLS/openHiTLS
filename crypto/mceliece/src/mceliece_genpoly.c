@@ -76,7 +76,7 @@ int32_t GenPolyOverGF(GFElement *out, const GFElement *f, const int32_t t, const
         mat[0 * t + i] = (i == 0) ? 1 : 0;
     }
     // mat[1][:] = f
-    (void)memcpy_s(&mat[1 * t], (size_t)t * sizeof(GFElement), f, (size_t)t * sizeof(GFElement));
+    memcpy(&mat[1 * t], f, (size_t)t * sizeof(GFElement));
     // mat[2]..mat[t] by polynomial multiplication truncated to degree < t
     for (int32_t r = 2; r <= t; r++) {
         GFVecMul(&mat[r * t], &mat[(r - 1) * t], f, t);

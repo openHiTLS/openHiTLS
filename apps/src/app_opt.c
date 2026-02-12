@@ -17,12 +17,11 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <errno.h>
 #include <libgen.h>
 #include <sys/stat.h>
 #include <stdbool.h>
-#include "securec.h"
 #include "app_errno.h"
 #include "bsl_sal.h"
 #include "app_print.h"
@@ -77,8 +76,7 @@ static void GetProgName(const char *filePath)
 
     // Avoid consistency between source and destination addresses.
     if (p != g_cmdOptState.progName) {
-        (void)strncpy_s(
-            g_cmdOptState.progName, sizeof(g_cmdOptState.progName) - 1, p, sizeof(g_cmdOptState.progName) - 1);
+        strncpy(g_cmdOptState.progName, p, sizeof(g_cmdOptState.progName) - 1);
     }
     g_cmdOptState.progName[sizeof(g_cmdOptState.progName) - 1] = '\0';
 }
@@ -89,7 +87,7 @@ static void CmdOptStateInit(int32_t index, int32_t argc, char **argv, const HITL
     g_cmdOptState.argc = argc;
     g_cmdOptState.argv = argv;
     g_cmdOptState.opts = opts;
-    (void)memset_s(g_cmdOptState.progName, sizeof(g_cmdOptState.progName), 0, sizeof(g_cmdOptState.progName));
+    memset(g_cmdOptState.progName, 0, sizeof(g_cmdOptState.progName));
 }
 
 static void CmdOptStateClear(void)
@@ -98,7 +96,7 @@ static void CmdOptStateClear(void)
     g_cmdOptState.argc = 0;
     g_cmdOptState.argv = NULL;
     g_cmdOptState.opts = NULL;
-    (void)memset_s(g_cmdOptState.progName, sizeof(g_cmdOptState.progName), 0, sizeof(g_cmdOptState.progName));
+    memset(g_cmdOptState.progName, 0, sizeof(g_cmdOptState.progName));
 }
 
 char *HITLS_APP_GetProgName(void)
@@ -394,7 +392,7 @@ static void OptPrint(const HITLS_CmdOption *opt, int width)
 {
     const char *help = opt->help ? opt->help : "";
     char start[MAX_HITLS_APP_OPT_LINE_WIDTH + 1] = {0};
-    (void)memset_s(start, sizeof(start) - 1, ' ', sizeof(start) - 1);
+    memset(start, ' ', sizeof(start) - 1);
     start[sizeof(start) - 1] = '\0';
     int pos = 0;
     start[pos++] = ' ';
@@ -405,10 +403,14 @@ static void OptPrint(const HITLS_CmdOption *opt, int width)
         start[pos++] = '[';
     }
     if (strlen(opt->name) > 0) {
-        if (EOK == strncpy_s(&start[pos], sizeof(start) - pos - 1, opt->name, strlen(opt->name))) {
-            pos += strlen(opt->name);
+        size_t nameLen = strlen(opt->name);
+        size_t dstSpace = sizeof(start) - pos;
+        if (nameLen < dstSpace - 1) {
+            memcpy(&start[pos], opt->name, nameLen);
+            start[pos + nameLen] = '\0';
+            pos += (int)nameLen;
         }
-        (void)memset_s(&start[pos + 1], sizeof(start) - 1 - pos - 1, ' ', sizeof(start) - 1 - pos - 1);
+        memset(&start[pos + 1], ' ', sizeof(start) - 1 - pos - 1);
     } else {
         start[pos++] = '*';
     }
@@ -420,16 +422,20 @@ static void OptPrint(const HITLS_CmdOption *opt, int width)
     if (opt->valueType != HITLS_APP_OPT_VALUETYPE_NO_VALUE) {
         start[pos++] = ' ';
         const char *param = ValueType2Param(opt->valueType);
-        if (strncpy_s(&start[pos], sizeof(start) - pos - 1, param, strlen(param)) == EOK) {
-            pos += strlen(param);
+        size_t paramLen = strlen(param);
+        size_t dstSpace = sizeof(start) - pos;
+        if (paramLen < dstSpace - 1) {
+            strncpy(&start[pos], param, dstSpace);
+            start[pos + paramLen] = '\0';
+            pos += (int)paramLen;
         }
-        (void)memset_s(&start[pos + 1], sizeof(start) - 1 - pos - 1, ' ', sizeof(start) - 1 - pos - 1);
+        memset(&start[pos + 1], ' ', sizeof(start) - 1 - pos - 1);
     }
     start[pos++] = ' ';
     if (pos >= MAX_HITLS_APP_OPT_NAME_WIDTH) {
         start[pos] = '\0';
         AppPrintError("%s\n", start);
-        (void)memset_s(start, sizeof(start) - 1, ' ', sizeof(start) - 1);
+        memset(start, ' ', sizeof(start) - 1);
     }
     start[width] = '\0';
     AppPrintError("%s  %s\n", start, help);
@@ -589,7 +595,12 @@ int32_t HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t bufLen, int32
             outRet = HITLS_APP_BytesToHex(buf, bufLen, outBuf, outBufLen + 1);
             break;
         default:
-            outRet = memcpy_s(outBuf, outBufLen, buf, bufLen);
+            if (bufLen > outBufLen) {
+                outRet = HITLS_APP_INTERNAL_EXCEPTION;
+            } else {
+                memcpy(outBuf, buf, bufLen);
+                outRet = HITLS_APP_SUCCESS;
+            }
             break;
     }
     if (outRet != HITLS_APP_SUCCESS) {

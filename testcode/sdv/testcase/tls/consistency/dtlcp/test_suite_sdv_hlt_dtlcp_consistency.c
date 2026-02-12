@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <unistd.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "hitls.h"
 #include "hitls_config.h"
@@ -207,7 +207,7 @@ void SDV_TLS_DTLCP_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
     ASSERT_TRUE(pthread_create(&thrd, NULL, (void *)Hello, clientSsl) == 0);
     uint8_t readBuf[BUF_SIZE_DTO_TEST] = {0};
     uint32_t readLen;
-    ASSERT_TRUE(memset_s(readBuf, BUF_SIZE_DTO_TEST, 0, BUF_SIZE_DTO_TEST) == EOK);
+    memset(readBuf, 0, BUF_SIZE_DTO_TEST);
     ASSERT_TRUE(HLT_RpcTlsRead(remoteProcess, serverSslId, readBuf, BUF_SIZE_DTO_TEST, &readLen) == 0);
     pthread_join(thrd, NULL);
     ASSERT_TRUE(readLen == strlen(writeBuf));

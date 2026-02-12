@@ -26,7 +26,6 @@
 #else
 #error "only support linux and macOS"
 #endif
-#include "securec.h"
 #include "app_errno.h"
 #include "bsl_sal.h"
 #include "bsl_obj.h"

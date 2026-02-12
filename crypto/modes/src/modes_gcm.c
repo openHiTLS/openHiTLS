@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_GCM
 
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "eal_cipher_local.h"
@@ -92,11 +92,11 @@ int32_t MODES_GCM_SetIv(MODES_CipherGCMCtx *ctx, const uint8_t *iv, uint32_t ivL
     if (len == 12) { // len(IV ) = 96bit = 12byte
         const uint8_t ivPad[4] = {0x00, 0x00, 0x00, 0x01};
         /* Y0 = IV || 0^31 || 1  if len(IV ) = 96 = 12byte */
-        (void)memcpy_s(ctx->iv, GCM_BLOCKSIZE, iv, 12);
-        (void)memcpy_s(ctx->iv + 12, GCM_BLOCKSIZE - 12, ivPad, sizeof(ivPad)); // pad last 4bit(base = 12)
+        memcpy(ctx->iv, iv, 12);
+        memcpy(ctx->iv + 12, ivPad, sizeof(ivPad)); // pad last 4bit(base = 12)
     } else {
         /* Y0 = GHASH(H, {}, IV ) otherwise */
-        (void)memset_s(ctx->iv, GCM_BLOCKSIZE, 0, GCM_BLOCKSIZE);
+        memset(ctx->iv, 0, GCM_BLOCKSIZE);
         const uint8_t *off = iv;
         uint32_t blockLen = ivLen & GCM_BLOCK_MASK;
         uint32_t lastLen = ivLen - blockLen;
@@ -134,12 +134,12 @@ int32_t MODES_GCM_SetIv(MODES_CipherGCMCtx *ctx, const uint8_t *iv, uint32_t ivL
     PUT_UINT32_BE(ctr, ctx->iv, 12); // Writeback of offset 12 bytes
 
     // Reset information.
-    (void)memset_s(ctx->ghash, GCM_BLOCKSIZE, 0, GCM_BLOCKSIZE);
+    memset(ctx->ghash, 0, GCM_BLOCKSIZE);
     ctx->aadLen = 0;
-    (void)memset_s(ctx->last, GCM_BLOCKSIZE, 0, GCM_BLOCKSIZE);
+    memset(ctx->last, 0, GCM_BLOCKSIZE);
     ctx->lastLen = 0;
     ctx->plaintextLen = 0;
-    (void)memset_s(ctx->remCt, GCM_BLOCKSIZE, 0, GCM_BLOCKSIZE);
+    memset(ctx->remCt, 0, GCM_BLOCKSIZE);
 
     // Clear sensitive information.
     BSL_SAL_CleanseData(&ctr, sizeof(uint32_t));
@@ -330,7 +330,7 @@ static void GcmPad(const MODES_CipherGCMCtx *ctx, uint8_t ghash[GCM_BLOCKSIZE], 
     // S = GHASHH (A || 0v || C || 0u || [len(A)]64 || [len(C)]64).
     if (ctx->lastLen != 0) {
         uint32_t offset = GCM_BLOCKSIZE - ctx->lastLen;
-        (void)memset_s(remCt + offset, GCM_BLOCKSIZE - offset, 0, ctx->lastLen);
+        (void)memset(remCt + offset, 0, ctx->lastLen);
         GcmHashMultiBlock(ghash, ctx->hTable, remCt, GCM_BLOCKSIZE);
     }
     uint64_t aadLen = (uint64_t)(ctx->aadLen) << 3; // bitLen = byteLen << 3
@@ -383,8 +383,8 @@ static int32_t GetTag(MODES_CipherGCMCtx *ctx, uint8_t *val, uint32_t len)
     // Copy the context to a local variable to avoid modifying the original context.
     uint8_t ghash[GCM_BLOCKSIZE];
     uint8_t remCt[GCM_BLOCKSIZE];
-    (void)memcpy_s(ghash, sizeof(ghash), ctx->ghash, sizeof(ctx->ghash));
-    (void)memcpy_s(remCt, sizeof(remCt), ctx->remCt, sizeof(ctx->remCt));
+    (void)memcpy(ghash, ctx->ghash, sizeof(ctx->ghash));
+    (void)memcpy(remCt, ctx->remCt, sizeof(ctx->remCt));
     ctx->cryptCnt++; // The encryption/decryption process ends. Key usage times + 1
     GcmPad(ctx, ghash, remCt);
     uint32_t i;

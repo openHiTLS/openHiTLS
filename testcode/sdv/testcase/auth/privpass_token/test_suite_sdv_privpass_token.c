@@ -26,7 +26,7 @@
 #include "crypt_eal_codecs.h"
 #include "crypt_errno.h"
 #include "crypt_params_key.h"
-#include "securec.h"
+#include <string.h>
 
 /* END_HEADER */
 
@@ -987,9 +987,9 @@ void SDV_AUTH_PRIVPASS_TOKEN_INSTANCE_OBTAIN_TC001(Hex *token)
     tokenInstance2 = HITLS_AUTH_PrivPassNewToken(HITLS_AUTH_PRIVPASS_TOKEN_INSTANCE);
     tmpToken = tokenInstance2->st.token;
     tmpToken->tokenType = tokenType;
-    (void)memcpy_s(tmpToken->nonce, param[0].useLen, nonceBuffer, param[0].useLen);
-    (void)memcpy_s(tmpToken->challengeDigest, param[3].useLen, challengeDigestBuffer, param[3].useLen);
-    (void)memcpy_s(tmpToken->tokenKeyId, param[4].useLen, tokenKeyIdBuffer, param[4].useLen);
+    memcpy(tmpToken->nonce, nonceBuffer, param[0].useLen);
+    memcpy(tmpToken->challengeDigest, challengeDigestBuffer, param[3].useLen);
+    memcpy(tmpToken->tokenKeyId, tokenKeyIdBuffer, param[4].useLen);
     tmpToken->authenticator.data = authenticatorBuffer;
     tmpToken->authenticator.dataLen = param[1].useLen;
     // Serialize and compare
@@ -1141,7 +1141,7 @@ void SDV_AUTH_PRIVPASS_CTX_DATA_OBTAIN_TC001(Hex *pki, Hex *nonce)
         HITLS_AUTH_PRIVPASS_NO_PUBKEY_INFO);
 
     ASSERT_EQ(HITLS_AUTH_PrivPassSetPubkey(ctx, pki->x, pki->len), HITLS_AUTH_SUCCESS);
-    (void)memcpy_s(ctx->nonce, nonce->len, nonce->x, nonce->len);
+    memcpy(ctx->nonce, nonce->x, nonce->len);
     ASSERT_EQ(HITLS_AUTH_PrivPassCtxCtrl(ctx, HITLS_AUTH_PRIVPASS_GET_CTX_NONCE, param, 0), HITLS_AUTH_SUCCESS);
     ASSERT_EQ(HITLS_AUTH_PrivPassCtxCtrl(ctx, HITLS_AUTH_PRIVPASS_GET_CTX_TOKENKEYID, param, 0), HITLS_AUTH_SUCCESS);
     ASSERT_EQ(HITLS_AUTH_PrivPassCtxCtrl(ctx, HITLS_AUTH_PRIVPASS_GET_CTX_TRUNCATEDTOKENKEYID, param, 0),

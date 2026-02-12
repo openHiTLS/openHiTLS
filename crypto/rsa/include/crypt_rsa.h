@@ -159,7 +159,7 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx);
  * @retval CRYPT_RSA_NO_KEY_INFO        does not contain the key information.
  * @retval CRYPT_RSA_ERR_INPUT_VALUE    The entered value does not meet the calculation conditions.
  * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL           A security function error occurs.
+ * @retval CRYPT_MEM_CPY_FAIL           A security function error occurs.
  * @retval BN error                     An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                encryption succeeded.
  */
@@ -183,7 +183,7 @@ int32_t  CRYPT_RSA_PubEnc(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32
  * @retval CRYPT_RSA_NO_KEY_INFO        does not contain the key information.
  * @retval CRYPT_RSA_ERR_INPUT_VALUE    The entered value does not meet the calculation conditions.
  * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL           A security function error occurs.
+ * @retval CRYPT_MEM_CPY_FAIL           A security function error occurs.
  * @retval BN error.                    An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                Decrypted Successfully
  */
@@ -432,7 +432,7 @@ int32_t CRYPT_RSA_VerifyPss(CRYPT_RSA_Ctx *ctx, const EAL_MdMethod *hashMethod, 
  *
  * @retval CRYPT_NULL_INPUT                 Invalid null pointer input
  * @retval CRYPT_RSA_NO_KEY_INFO            The key information is insufficient.
- * @retval CRYPT_SECUREC_FAIL               The security function fails.
+ * @retval CRYPT_MEM_CPY_FAIL               The security function fails.
  * @retval CRYPT_RSA_BUFF_LEN_NOT_ENOUGH    The length required by the padding does not match the input parameter.
  * @retval CRYPT_RSA_ERR_INPUT_VALUE        The hash algorithm ID is not supported.
  * @retval CRYPT_SUCCESS                    The pkcsv1.5 padding is successfully set.
@@ -453,7 +453,7 @@ int32_t CRYPT_RSA_SetPkcsV15Type1(CRYPT_MD_AlgId hashId, const uint8_t *data, ui
  *
  * @retval CRYPT_NULL_INPUT                 Invalid null pointer input
  * @retval CRYPT_RSA_ERR_PKCSV15_SALT_DATA  Incorrect padding value.
- * @retval CRYPT_SECUREC_FAIL               Security Function Failure
+ * @retval CRYPT_MEM_CPY_FAIL               Security Function Failure
  * @retval CRYPT_RSA_BUFF_LEN_NOT_ENOUGH    The length required for padding does not match the input parameter.
  * @retval CRYPT_RSA_ERR_INPUT_VALUE        The hash algorithm ID is not supported.
  * @retval CRYPT_SUCCESS                    Verify pkcsv1.5 is padded successfully.
@@ -508,7 +508,7 @@ int32_t CRYPT_RSA_Sign(CRYPT_RSA_Ctx *ctx, int32_t algId, const uint8_t *data, u
  * @retval CRYPT_RSA_ERR_INPUT_VALUE        The entered value does not meet the calculation conditions.
  * @retval CRYPT_RSA_BUFF_LEN_NOT_ENOUGH    Outbuf Insufficient
  * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL               A safe function error occurs.
+ * @retval CRYPT_MEM_CPY_FAIL               A safe function error occurs.
  * @retval BN error.                        An error occurs in the internal BigNum operation.
  * @retval CRYPT_EAL_ALG_NOT_SUPPORT        does not register the encryption method.
  * @retval CRYPT_SUCCESS                    encryption succeeded.
@@ -533,7 +533,7 @@ int32_t CRYPT_RSA_Encrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
  * @retval CRYPT_RSA_ERR_INPUT_VALUE        The entered value does not meet the calculation conditions.
  * @retval CRYPT_RSA_BUFF_LEN_NOT_ENOUGH    Outbuf Insufficient
  * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
- * @retval CRYPT_SECUREC_FAIL               A security function error occurs.
+ * @retval CRYPT_MEM_CPY_FAIL               A security function error occurs.
  * @retval CRYPT_EAL_ALG_NOT_SUPPORT        does not register the decryption method.
  * @retval BN error.                        An error occurs in the internal BigNum operation.
  * @retval CRYPT_SUCCESS                    Decryption succeeded.
@@ -603,7 +603,7 @@ int32_t CRYPT_RSA_Cmp(const CRYPT_RSA_Ctx *a, const CRYPT_RSA_Ctx *b);
  *
  * @retval CRYPT_NULL_INPUT                 Error null pointer input
  * @retval CRYPT_RSA_ERR_INPUT_VALUE        The entered value does not meet the calculation conditions.
- * @retval CRYPT_SECUREC_FAIL               A security function error occurs.
+ * @retval CRYPT_MEM_CPY_FAIL               A security function error occurs.
  * @retval CRYPT_MEM_ALLOC_FAIL             Memory allocation failure
  * @retval CRYPT_RSA_BUFF_LEN_NOT_ENOUGH    Outbuf Insufficient
  * */
@@ -626,7 +626,7 @@ int32_t CRYPT_RSA_SetPkcs1Oaep(CRYPT_RSA_Ctx *ctx, const uint8_t *in, uint32_t i
  *
  * @retval CRYPT_NULL_INPUT             Error null pointer input
  * @retval CRYPT_RSA_ERR_INPUT_VALUE    The entered value does not meet the calculation conditions.
- * @retval CRYPT_SECUREC_FAIL           A security function error occurs.
+ * @retval CRYPT_MEM_CPY_FAIL           A security function error occurs.
  * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
  * */
 int32_t CRYPT_RSA_VerifyPkcs1Oaep(RSA_PadingPara *pad, const uint8_t *in, uint32_t inLen, const uint8_t *param,

@@ -115,7 +115,7 @@ typedef struct {
  *
  * @retval  HITLS_SUCCESS obtained successfully.
  * @retval  HITLS_INTERNAL_EXCEPTION An unexpected internal error.
- * @retval  HITLS_MEMCPY_FAIL memcpy_s failed to be executed.
+ * @retval  HITLS_MEMCPY_FAIL memcpy failed to be executed.
  * @retval  HITLS_CONFIG_UNSUPPORT_CIPHER_SUITE No information about the cipher suite is found.
  */
 int32_t CFG_GetCipherSuiteInfo(uint16_t cipherSuite, CipherSuiteInfo *cipherInfo);

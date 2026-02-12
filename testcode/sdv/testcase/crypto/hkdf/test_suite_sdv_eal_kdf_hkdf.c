@@ -15,7 +15,7 @@
 
 /* BEGIN_HEADER */
 
-#include "securec.h"
+#include <string.h>
 #include "crypt_eal_kdf.h"
 #include "eal_kdf_local.h"
 #include "crypt_errno.h"
@@ -408,7 +408,7 @@ void SDV_CRYPTO_HKDF_COPY_CTX_API_TC002(int algId, Hex *key, Hex *salt, Hex *inf
     // After setting ctxB's length, redo key derivation and compare results (should match)
     ASSERT_EQ(BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_KDF_EXLEN, BSL_PARAM_TYPE_UINT32_PTR,
         &tmpLenB, sizeof(tmpLenB)), CRYPT_SUCCESS);
-    (void)memset_s(&params[1], sizeof(BSL_Param), 0, sizeof(BSL_Param));
+    memset(&params[1], 0, sizeof(BSL_Param));
     ASSERT_EQ(CRYPT_EAL_KdfSetParam(ctxB, params), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctxB, tmpBufB, 0), CRYPT_SUCCESS);
     ASSERT_COMPARE("result cmp", tmpBufA, tmpLenA, tmpBufB, tmpLenB);
@@ -480,13 +480,13 @@ void SDV_CRYPT_EAL_HKDF_COPY_CTX_FUNC_TC001(int algId, Hex *key, Hex *salt, Hex 
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(copyCtx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result1 cmp", out, outLen, result->x, result->len);
-    (void)memset_s(out, outLen, 0, outLen);
+    memset(out, 0, outLen);
     CRYPT_EAL_KdfFreeCtx(copyCtx);
     copyCtx = NULL;
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(copyCtx1, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result2 cmp", out, outLen, result->x, result->len);
-    (void)memset_s(out, outLen, 0, outLen);
+    memset(out, 0, outLen);
     CRYPT_EAL_KdfFreeCtx(copyCtx1);
     copyCtx1 = NULL;
 
@@ -494,13 +494,13 @@ void SDV_CRYPT_EAL_HKDF_COPY_CTX_FUNC_TC001(int algId, Hex *key, Hex *salt, Hex 
     ASSERT_TRUE(copyCtx3 != NULL);
     ASSERT_EQ(CRYPT_EAL_KdfDerive(copyCtx3, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result3 cmp", out, outLen, result->x, result->len);
-    (void)memset_s(out, outLen, 0, outLen);
+    memset(out, 0, outLen);
     CRYPT_EAL_KdfFreeCtx(copyCtx3);
     copyCtx3 = NULL;
 
     ASSERT_EQ(CRYPT_EAL_KdfDerive(ctx, out, outLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("result4 cmp", out, outLen, result->x, result->len);
-    (void)memset_s(out, outLen, 0, outLen);
+    memset(out, 0, outLen);
     CRYPT_EAL_KdfFreeCtx(ctx);
     ctx = NULL;
 

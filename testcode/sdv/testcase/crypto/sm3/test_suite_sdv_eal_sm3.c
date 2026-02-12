@@ -20,7 +20,6 @@
 #include "eal_md_local.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
-#include "securec.h"
 /* END_HEADER */
 
 typedef struct {

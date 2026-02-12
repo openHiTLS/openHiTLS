@@ -16,7 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "securec.h"
 #include "bsl_sal.h"
 #include "hitls.h"
 #include "hitls_config.h"
@@ -329,14 +328,16 @@ int32_t FRAME_AppendMsgArray8(const uint8_t *data, uint32_t dataLen,
     if (newData == NULL) {
         return HITLS_MEMALLOC_FAIL;
     }
-    if (memcpy_s(newData, newDataLen, frameArray->data, frameArray->size) != EOK) {
+    if (frameArray->size > newDataLen) {
         BSL_SAL_FREE(newData);
         return HITLS_MEMCPY_FAIL;
     }
-    if (memcpy_s(&newData[frameArray->size], newDataLen - frameArray->size, data, dataLen) != EOK) {
+    memcpy(newData, frameArray->data, frameArray->size);
+    if (dataLen > newDataLen - frameArray->size) {
         BSL_SAL_FREE(newData);
         return HITLS_MEMCPY_FAIL;
     }
+    memcpy(&newData[frameArray->size], data, dataLen);
 
     BSL_SAL_FREE(frameArray->data); /* Clear the old memory. */
     frameArray->state = ASSIGNED_FIELD;

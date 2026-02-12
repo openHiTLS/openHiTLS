@@ -20,7 +20,7 @@
 #include "crypt_rsa.h"
 #include "rsa_local.h"
 #include "crypt_errno.h"
-#include "securec.h"
+#include <string.h>
 #include "eal_md_local.h"
 
 // rsa-decrypt Calculation used by Chinese Remainder Theorem(CRT). intermediate variables:
@@ -630,7 +630,7 @@ static int32_t BlindSign(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataL
     }
 
     /* Copy the blind signature to output buffer */
-    (void)memcpy_s(sign, *signLen, s, sLen);
+    memcpy(sign, s, sLen);
     *signLen = sLen;
 EXIT:
     BSL_SAL_FREE(m);
@@ -783,15 +783,11 @@ static int32_t RsaGetSignVerifyData(CRYPT_RSA_Ctx *ctx, uint8_t *hash, uint32_t 
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    if (mLLen > 0 && memcpy_s(mlHash, mlHashLen, msg, mLLen) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        BSL_SAL_Free(mlHash);
-        return CRYPT_SECUREC_FAIL;
+    if (mLLen > 0) {
+        memcpy(mlHash, msg, mLLen);
     }
-    if (memcpy_s(mlHash + mLLen, mlHashLen - mLLen, hash, hLen) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        BSL_SAL_Free(mlHash);
-        return CRYPT_SECUREC_FAIL;
+    if (mlHashLen - mLLen > 0) {
+        memcpy(mlHash + mLLen, hash, hLen);
     }
     *data = mlHash;
     *dataLen = mlHashLen;
@@ -886,7 +882,7 @@ int32_t CRYPT_RSA_SignData(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dat
         BSL_ERR_PUSH_ERROR(ret);
     }
 EXIT:
-    (void)memset_s(pad, padLen, 0, padLen);
+    BSL_SAL_CleanseData(pad, padLen);
     BSL_SAL_FREE(pad);
     return ret;
 }
@@ -1002,7 +998,7 @@ int32_t CRYPT_RSA_VerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t d
             BSL_ERR_PUSH_ERROR(ret);
     }
 EXIT:
-    (void)memset_s(pad, padLen, 0, padLen);
+    (void)BSL_SAL_CleanseData(pad, padLen);
     BSL_SAL_Free(pad);
     return ret;
 }
@@ -1110,7 +1106,7 @@ int32_t CRYPT_RSA_Encrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
                 BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_ENC_INPUT_NOT_ENOUGH);
                 goto EXIT;
             }
-            (void)memcpy_s(pad, padLen, data, dataLen);
+            memcpy(pad, data, dataLen);
             break;
 #endif
         default:
@@ -1124,7 +1120,7 @@ int32_t CRYPT_RSA_Encrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
         BSL_ERR_PUSH_ERROR(ret);
     }
 EXIT:
-    (void)memset_s(pad, padLen, 0, padLen);
+    BSL_SAL_CleanseData(pad, padLen);
     BSL_SAL_FREE(pad);
     return ret;
 }
@@ -1193,11 +1189,12 @@ int32_t CRYPT_RSA_Decrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
 #endif
 #ifdef HITLS_CRYPTO_RSA_NO_PAD
         case RSA_NO_PAD:
-            if (memcpy_s(out, *outLen, pad, padLen) != EOK) {
+            if (padLen > *outLen) {
                 ret = CRYPT_RSA_BUFF_LEN_NOT_ENOUGH;
                 BSL_ERR_PUSH_ERROR(CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
                 goto EXIT;
             }
+            memcpy(out, pad, padLen);
             *outLen = padLen;
             break;
 #endif
@@ -1241,11 +1238,12 @@ int32_t CRYPT_RSA_Recover(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
 #endif
 #ifdef HITLS_CRYPTO_RSA_NO_PAD
         case RSA_NO_PAD:
-            if (memcpy_s(out, *outLen, emMsg, emLen) != EOK) {
-                BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-                ret = CRYPT_SECUREC_FAIL;
+            if (emLen > *outLen) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MEM_CPY_FAIL);
+                ret = CRYPT_MEM_CPY_FAIL;
                 goto ERR;
             }
+            memcpy(out, emMsg, emLen);
             *outLen = emLen;
             break;
 #endif
@@ -1255,7 +1253,7 @@ int32_t CRYPT_RSA_Recover(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
             goto ERR;
     }
 ERR:
-    (void)memset_s(emMsg, emLen, 0, emLen);
+    BSL_SAL_CleanseData(emMsg, emLen);
     BSL_SAL_FREE(emMsg);
     return ret;
 }

@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_EAL) && defined(HITLS_CRYPTO_ENTROPY)
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -43,7 +43,7 @@ CRYPT_EAL_Es *CRYPT_EAL_EsNew(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(esCtx, sizeof(CRYPT_EAL_Es), 0, sizeof(CRYPT_EAL_Es));
+    memset(esCtx, 0, sizeof(CRYPT_EAL_Es));
     esCtx->es = ENTROPY_EsNew();
     if (esCtx->es == NULL) {
         BSL_SAL_Free(esCtx);
@@ -227,7 +227,7 @@ CRYPT_EAL_SeedPoolCtx *CRYPT_EAL_SeedPoolNew(bool isCreateNullPool)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(ctx, sizeof(CRYPT_EAL_SeedPoolCtx), 0, sizeof(CRYPT_EAL_SeedPoolCtx));
+    memset(ctx, 0, sizeof(CRYPT_EAL_SeedPoolCtx));
     int32_t ret = BSL_SAL_ThreadLockNew(&ctx->lock);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_FREE(ctx);

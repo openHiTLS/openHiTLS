@@ -20,7 +20,7 @@
 #include "elgamal_local.h"
 #include "crypt_errno.h"
 #include "crypt_utils.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "crypt_params_key.h"
@@ -34,7 +34,7 @@ CRYPT_ELGAMAL_Ctx *CRYPT_ELGAMAL_NewCtx(void)
         return NULL;
     }
 
-    (void)memset_s(ctx, sizeof(CRYPT_ELGAMAL_Ctx), 0, sizeof(CRYPT_ELGAMAL_Ctx));
+    memset(ctx, 0, sizeof(CRYPT_ELGAMAL_Ctx));
     BSL_SAL_ReferencesInit(&(ctx->references));
 
     return ctx;
@@ -58,7 +58,7 @@ static CRYPT_ELGAMAL_PubKey *ElGamalPubKeyDupCtx(CRYPT_ELGAMAL_PubKey *pubKey)
         return NULL;
     }
 
-    (void)memset_s(newPubKey, sizeof(CRYPT_ELGAMAL_PubKey), 0, sizeof(CRYPT_ELGAMAL_PubKey));
+    memset(newPubKey, 0, sizeof(CRYPT_ELGAMAL_PubKey));
 
     GOTO_ERR_IF_SRC_NOT_NULL(newPubKey->p, pubKey->p, BN_Dup(pubKey->p), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newPubKey->g, pubKey->g, BN_Dup(pubKey->g), CRYPT_MEM_ALLOC_FAIL);
@@ -79,7 +79,7 @@ static CRYPT_ELGAMAL_PrvKey *ElGamalPrvKeyDupCtx(CRYPT_ELGAMAL_PrvKey *prvKey)
         return NULL;
     }
 
-    (void)memset_s(newPrvKey, sizeof(CRYPT_ELGAMAL_PrvKey), 0, sizeof(CRYPT_ELGAMAL_PrvKey));
+    memset(newPrvKey, 0, sizeof(CRYPT_ELGAMAL_PrvKey));
 
     GOTO_ERR_IF_SRC_NOT_NULL(newPrvKey->p, prvKey->p, BN_Dup(prvKey->p), CRYPT_MEM_ALLOC_FAIL);
     GOTO_ERR_IF_SRC_NOT_NULL(newPrvKey->g, prvKey->g, BN_Dup(prvKey->g), CRYPT_MEM_ALLOC_FAIL);
@@ -99,7 +99,7 @@ static CRYPT_ELGAMAL_Para *ElGamalParaDupCtx(CRYPT_ELGAMAL_Para *para)
         return NULL;
     }
 
-    (void)memset_s(newPara, sizeof(CRYPT_ELGAMAL_Para), 0, sizeof(CRYPT_ELGAMAL_Para));
+    memset(newPara, 0, sizeof(CRYPT_ELGAMAL_Para));
 
     newPara->bits = para->bits;
     GOTO_ERR_IF_SRC_NOT_NULL(newPara->q, para->q, BN_Dup(para->q), CRYPT_MEM_ALLOC_FAIL);
@@ -123,7 +123,7 @@ CRYPT_ELGAMAL_Ctx *CRYPT_ELGAMAL_DupCtx(CRYPT_ELGAMAL_Ctx *keyCtx)
         return NULL;
     }
 
-    (void)memset_s(newKeyCtx, sizeof(CRYPT_ELGAMAL_Ctx), 0, sizeof(CRYPT_ELGAMAL_Ctx));
+    memset(newKeyCtx, 0, sizeof(CRYPT_ELGAMAL_Ctx));
 
     GOTO_ERR_IF_SRC_NOT_NULL(newKeyCtx->prvKey, keyCtx->prvKey, ElGamalPrvKeyDupCtx(keyCtx->prvKey),
                              CRYPT_MEM_ALLOC_FAIL);

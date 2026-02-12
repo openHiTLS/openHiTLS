@@ -16,7 +16,8 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_UIO_PLT
 
-#include "securec.h"
+#include <string.h>
+#include <errno.h>
 #include "bsl_sal.h"
 #include "bsl_binlog_id.h"
 #include "bsl_log_internal.h"
@@ -113,7 +114,7 @@ BSL_UIO *BSL_UIO_New(const BSL_UIO_Method *method)
         return NULL;
     }
 
-    (void)memcpy_s(&uio->method, sizeof(BSL_UIO_Method), method, sizeof(BSL_UIO_Method));
+    memcpy(&uio->method, method, sizeof(BSL_UIO_Method));
 
     BSL_SAL_ReferencesInit(&(uio->references));
     BSL_UIO_SetIsUnderlyingClosedByUio(uio, false);

@@ -17,7 +17,6 @@
 #include <pthread.h>
 #include <stdio.h>
 #include "bsl_sal.h"
-#include "securec.h"
 #include "stub_utils.h"
 #include "hitls_error.h"
 #include "hitls_pki_cert.h"
@@ -1622,7 +1621,7 @@ void SDV_HITLS_X509_DN_STR_MULTI_THREAD_TC001(void)
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/nist384ca.crt", &cert), HITLS_PKI_SUCCESS);
     ASSERT_NE(cert, NULL);
 
-    (void)memcpy_s(arg, sizeof(arg), initArg, sizeof(initArg));
+    (void)memcpy(arg, initArg, sizeof(initArg));
     for (uint32_t i = 0; i < sizeof(arg) / sizeof(arg[0]); i++) {
         arg[i].cert = cert;
         ASSERT_TRUE(pthread_create(&thrd[i], NULL, (void *)X509DnStringThread, &arg[i]) == 0);
@@ -1682,7 +1681,7 @@ void SDV_HITLS_X509_DN_STR_MIXED_MULTI_THREAD_TC001(void)
         {cert, HITLS_X509_GET_SUBJECT_DN_STR, (const char *)subjectDn.data, subjectDn.dataLen, BSL_INTERNAL_EXCEPTION},
         {cert, HITLS_X509_GET_ISSUER_DN_STR, (const char *)issuerDn.data, issuerDn.dataLen, BSL_INTERNAL_EXCEPTION}
     };
-    (void)memcpy_s(arg, sizeof(arg), initArg, sizeof(initArg));
+    (void)memcpy(arg, initArg, sizeof(initArg));
     for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
         ASSERT_TRUE(pthread_create(&thrd[i], NULL, (void *)X509DnCtrlThread, &arg[i]) == 0);
     }
@@ -1750,7 +1749,7 @@ void SDV_HITLS_X509_CANON_NAME_MULTI_THREAD_TC001(void)
         {issuerName, canonName.buff, canonName.len, expectCurr, BSL_INTERNAL_EXCEPTION},
         {issuerName, canonName.buff, canonName.len, expectCurr, BSL_INTERNAL_EXCEPTION}
     };
-    (void)memcpy_s(arg, sizeof(arg), initArg, sizeof(initArg));
+    (void)memcpy(arg, initArg, sizeof(initArg));
     for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
         ASSERT_TRUE(pthread_create(&thrd[i], NULL, (void *)X509CanonNameThread, &arg[i]) == 0);
     }
@@ -2805,7 +2804,7 @@ void SDV_X509_PARSE_NAME_LIST_UTF8_CACHE_MULTI_THREAD_TC001(Hex *nameAHex, Hex *
         {listA, listB, expectCurrA, expectCurrB, BSL_INTERNAL_EXCEPTION},
         {listA, listB, expectCurrA, expectCurrB, BSL_INTERNAL_EXCEPTION}
     };
-    (void)memcpy_s(arg, sizeof(arg), initArg, sizeof(initArg));
+    (void)memcpy(arg, initArg, sizeof(initArg));
     for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
         ASSERT_TRUE(pthread_create(&thrd[i], NULL, (void *)X509CmpNameThread, &arg[i]) == 0);
     }

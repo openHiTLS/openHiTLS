@@ -15,7 +15,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_TLS_HOST_CLIENT
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -69,7 +69,7 @@ static int32_t PackMsgPrepare(TLS_Ctx *ctx)
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17120, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "GenerateRsaPremasterSecret fail", 0, 0, 0, 0);
-            (void)memset_s(hsCtx->kxCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN, 0, MASTER_SECRET_LEN);
+            BSL_SAL_CleanseData(hsCtx->kxCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN);
             return ret;
         }
     }
@@ -82,7 +82,7 @@ static int32_t PackMsgPrepare(TLS_Ctx *ctx)
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17121, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "CheckClientPsk fail", 0, 0, 0, 0);
-            (void)memset_s(hsCtx->kxCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN, 0, MASTER_SECRET_LEN);
+            BSL_SAL_CleanseData(hsCtx->kxCtx->keyExchParam.rsa.preMasterSecret, MASTER_SECRET_LEN);
             return ret;
         }
     }
@@ -93,7 +93,7 @@ static int32_t PackMsgPrepare(TLS_Ctx *ctx)
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17122, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "GenerateEccPremasterSecret fail", 0, 0, 0, 0);
-            (void)memset_s(hsCtx->kxCtx->keyExchParam.ecc.preMasterSecret, MASTER_SECRET_LEN, 0, MASTER_SECRET_LEN);
+            BSL_SAL_CleanseData(hsCtx->kxCtx->keyExchParam.ecc.preMasterSecret, MASTER_SECRET_LEN);
             return ret;
         }
     }

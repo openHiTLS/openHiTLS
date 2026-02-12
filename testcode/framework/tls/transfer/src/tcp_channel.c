@@ -25,7 +25,6 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_BSL_UIO_TCP
-#include "securec.h"
 #include "bsl_uio.h"
 #include "hitls_error.h"
 #include "hitls_type.h"
@@ -73,7 +72,7 @@ int TcpConnect(const char *targetIP, const int targetPort)
     }
 
     // Set the protocol and port number
-    (void)memset_s(&serverAddr, sizeof(serverAddr), 0, sizeof(serverAddr));
+    memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(targetPort);
 
@@ -127,7 +126,7 @@ int TcpBind(const int localPort)
     }
 
     // Set the protocol and port number
-    (void)memset_s(&serverAddr, sizeof(serverAddr), 0, sizeof(serverAddr));
+    memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(localPort);
     serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -245,10 +244,11 @@ int32_t TcpFrameRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
             return BSL_SUCCESS;
         }
         if (newBuf != NULL) {
-            if (memcpy_s(buf, len, (uint8_t *)newBuf, packLen) != EOK) {
+            if (packLen > len) {
                 FreeNewBuf(newBuf);
                 return BSL_UIO_IO_EXCEPTION;
             }
+            memcpy(buf, (uint8_t *)newBuf, packLen);
             *readLen = packLen;
         }
         FreeNewBuf(newBuf);

@@ -16,7 +16,7 @@
 /* BEGIN_HEADER */
 
 #include <stdlib.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_bn.h"
@@ -461,7 +461,7 @@ void SDV_CRYPTO_BN_MODINV_API_TC001(void)
     ASSERT_TRUE(BN_IsZero(zero) == true);
 
     // a = FF...FF (32 bytes)
-    ASSERT_TRUE(memset_s(buff, sizeof(buff), 0xFF, LONG_BN_BYTES_32) == EOK);
+    memset(buff, 0xFF, LONG_BN_BYTES_32);
     ASSERT_TRUE(BN_Bin2Bn(a, buff, LONG_BN_BYTES_32) == CRYPT_SUCCESS);
     // m == FF...FD (32 bytes)
     buff[LONG_BN_BYTES_32 - 1] = (uint8_t)0xFD;
@@ -665,7 +665,7 @@ void SDV_CRYPTO_BN_MODEXP_API_TC001(void)
     ASSERT_TRUE(r != NULL);
     ASSERT_TRUE(m != NULL);
     ASSERT_TRUE(opt != NULL);
-    ASSERT_TRUE(memset_s(buff, sizeof(buff), 0xFF, LONG_BN_BYTES_32) == EOK);
+    memset(buff, 0xFF, LONG_BN_BYTES_32);
 
     ASSERT_TRUE(BN_Bin2Bn(a, buff, LONG_BN_BYTES_32) == CRYPT_SUCCESS);
 
@@ -722,7 +722,7 @@ void SDV_CRYPTO_BN_MODEXP_API_TC002(void)
     ASSERT_TRUE(negOne != NULL);
     ASSERT_TRUE(opt != NULL);
 
-    ASSERT_TRUE(memset_s(buff, sizeof(buff), 0xFF, LONG_BN_BYTES_32) == EOK);
+    memset(buff, 0xFF, LONG_BN_BYTES_32);
 
     ASSERT_TRUE(a != NULL);
     ASSERT_TRUE(BN_Bin2Bn(a, buff, LONG_BN_BYTES_32) == CRYPT_SUCCESS);
@@ -1442,7 +1442,7 @@ void SDV_CRYPTO_BN_SQR_API_TC001(void)
 
     ASSERT_TRUE(BN_Sqr(r, a, opt) == CRYPT_SUCCESS);
 
-    memset_s(buff, sizeof(buff), 0xFF, LONG_BN_BYTES_32);
+    memset(buff, 0xFF, LONG_BN_BYTES_32);
     ASSERT_TRUE(BN_Bin2Bn(a, buff, sizeof(buff)) == CRYPT_SUCCESS);
     ASSERT_TRUE(BN_Sqr(r, a, opt) == CRYPT_SUCCESS);
 
@@ -2194,7 +2194,7 @@ void SDV_CRYPTO_BN_MULLIMB_API_TC001(void)
     ASSERT_TRUE(r2 != NULL);
     ASSERT_TRUE(zero != NULL);
     ASSERT_TRUE(opt != NULL);
-    memset_s(buff, sizeof(buff), 0xFF, LONG_BN_BYTES_32);
+    memset(buff, 0xFF, LONG_BN_BYTES_32);
 
     ret = BN_Bin2Bn(a, buff, LONG_BN_BYTES_32);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
@@ -2258,7 +2258,7 @@ void SDV_CRYPTO_BN_DIVLIMB_API_TC001(void)
     ASSERT_TRUE(opt != NULL);
     BN_UINT res1;
     // BN_UINT res2;
-    memset_s(buff, sizeof(buff), 0xFF, LONG_BN_BYTES_32);
+    memset(buff, 0xFF, LONG_BN_BYTES_32);
 
     ret = BN_Bin2Bn(a, buff, LONG_BN_BYTES_32);
     ASSERT_TRUE(ret == CRYPT_SUCCESS);

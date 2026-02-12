@@ -17,7 +17,6 @@
 #include "app_provider.h"
 #include <limits.h>
 #include "string.h"
-#include "securec.h"
 #include "app_errno.h"
 #include "app_print.h"
 #include "bsl_sal.h"

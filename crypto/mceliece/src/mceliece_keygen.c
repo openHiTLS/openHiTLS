@@ -41,7 +41,7 @@ static uint16_t BitrevU16(const uint16_t x, const int32_t m)
 static uint32_t Load4(const uint8_t *x)
 {
     uint32_t r = 0;
-    (void)memcpy_s(&r, 4, x, 4);
+    memcpy(&r, x, 4);
     return r;
 }
 
@@ -80,7 +80,7 @@ static void GenPiInitial(int16_t *pi, const CMPrivateKey *sk, const MceliecePara
 
 static int32_t GenControlBitsFromPi(CMPrivateKey *sk, const int16_t *pi, const McelieceParams *params)
 {
-    (void)memset_s(sk->controlbits, sk->controlbitsLen, 0, sk->controlbitsLen);
+    memset(sk->controlbits, 0, sk->controlbitsLen);
     return CbitsFromPermNs(sk->controlbits, pi, params->m, MCELIECE_Q);
 }
 
@@ -103,7 +103,7 @@ static int32_t GenerateFieldOrdering(GFElement *alpha, const uint8_t *randomBits
         BSL_SAL_FREE(pairs);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memcpy_s(sortedForCheck, MCELIECE_Q * sizeof(PairSt), pairs, MCELIECE_Q * sizeof(PairSt));
+    memcpy(sortedForCheck, pairs, MCELIECE_Q * sizeof(PairSt));
     qsort(sortedForCheck, MCELIECE_Q, sizeof(PairSt), ComparePairs);
     int32_t hasDuplicates = 0;
     for (int32_t i = 0; i < MCELIECE_Q_1; i++) {
@@ -130,7 +130,7 @@ static int32_t GenerateFieldOrdering(GFElement *alpha, const uint8_t *randomBits
 static int32_t GenerateIrreduciblePolyFinal(GFPolynomial *g, const uint8_t *randomBits, const int32_t t,
                                             const int32_t m)
 {
-    (void)memset_s(g->coeffs, (g->maxDegree + 1) * sizeof(GFElement), 0, (g->maxDegree + 1) * sizeof(GFElement));
+    memset(g->coeffs, 0, (g->maxDegree + 1) * sizeof(GFElement));
     g->degree = -1;
     // Reference-compatible packing: read t little-endian 16-bit values, mask to m bits
     // random_bits is expected to be 2*t bytes long for the poly section
@@ -302,7 +302,7 @@ static int32_t SystematicLoop(const uint8_t *sBitsPtr, const uint8_t *fieldOrder
         return ret;
     }
 
-    (void)memcpy_s(sk->s, params->nBytes, sBitsPtr, params->nBytes);
+    memcpy(sk->s, sBitsPtr, params->nBytes);
     BSL_SAL_FREE(pi);
     return CRYPT_SUCCESS;
 }
@@ -314,9 +314,9 @@ static int32_t McEliecePrg(const uint8_t *seed, uint8_t *output, const size_t ou
     // Total buffer length for key-generation seed: 1-byte length prefix + 32-byte random
     uint8_t tempSeed[MCELIECE_PRG_SEED_LEN] = {0};
     tempSeed[0] = MCELIECE_PRG_PREFIX; // the value of first element of tempSeed must be 64
-    (void)memcpy_s(tempSeed + 1, MCELIECE_L_BYTES, seed, MCELIECE_L_BYTES);
+    memcpy(tempSeed + 1, seed, MCELIECE_L_BYTES);
     int32_t ret = McElieceShake256(output, outputLen, tempSeed, MCELIECE_PRG_SEED_LEN);
-    (void)memset_s(tempSeed, MCELIECE_PRG_SEED_LEN, 0, MCELIECE_PRG_SEED_LEN);
+    memset(tempSeed, 0, MCELIECE_PRG_SEED_LEN);
     return ret;
 }
 
@@ -339,7 +339,7 @@ int32_t SeededKeyGenInternal(const uint8_t *delta, CMPublicKey *pk, CMPrivateKey
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    (void)memcpy_s(sk->delta, deltaPrimeByteLen, delta, deltaPrimeByteLen);
+    memcpy(sk->delta, delta, deltaPrimeByteLen);
     int32_t maxAttempts = 50;
 
     for (int32_t attempt = 0; attempt < maxAttempts; attempt++) {
@@ -350,7 +350,7 @@ int32_t SeededKeyGenInternal(const uint8_t *delta, CMPublicKey *pk, CMPrivateKey
             BSL_SAL_FREE(rndE);
             return ret;
         }
-        (void)memcpy_s(deltaPrime, deltaPrimeByteLen, rndE + prgOutputByteLen - deltaPrimeByteLen, deltaPrimeByteLen);
+        memcpy(deltaPrime, rndE + prgOutputByteLen - deltaPrimeByteLen, deltaPrimeByteLen);
 
         const uint8_t *sBitsPtr = rndE;
         const uint8_t *fieldOrderingBitsPtr = rndE + sByteLen;
@@ -361,7 +361,7 @@ int32_t SeededKeyGenInternal(const uint8_t *delta, CMPublicKey *pk, CMPrivateKey
             BSL_SAL_FREE(rndE);
             return CRYPT_SUCCESS;
         }
-        (void)memcpy_s(sk->delta, MCELIECE_L_BYTES, deltaPrime, MCELIECE_L_BYTES);
+        memcpy(sk->delta, deltaPrime, MCELIECE_L_BYTES);
     }
 
     BSL_SAL_FREE(rndE);

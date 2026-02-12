@@ -218,14 +218,15 @@ void SDV_CRYPTO_SM2_SET_PRV_API_TC001(Hex *prvKey, int isProvider)
     uint8_t prvKeyCopy[SM2_PRVKEY_MAX_LEN + 1] = {0};
     CRYPT_EAL_PkeyPrv prv = {0};
 
-    (void)memset_s(fullF, sizeof(fullF), 0xff, sizeof(fullF));
+    memset(fullF, 0xff, sizeof(fullF));
 
     TestMemInit();
     CRYPT_EAL_PkeyCtx *ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_SM2,
         CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(ctx != NULL);
 
-    ASSERT_TRUE(memcpy_s(prvKeyCopy, SM2_PRVKEY_MAX_LEN + 1, prvKey->x, prvKey->len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(prvKey->len <= (SM2_PRVKEY_MAX_LEN + 1));
+    memcpy(prvKeyCopy, prvKey->x, prvKey->len);
     SetSm2PrvKey(&prv, prvKeyCopy, prvKey->len + 1);
     ASSERT_TRUE_AND_LOG("invalid prv len", CRYPT_EAL_PkeySetPrv(ctx, &prv) == CRYPT_ECC_PKEY_ERR_INVALID_PRIVATE_KEY);
 
@@ -575,7 +576,8 @@ void SDV_CRYPTO_SM2_VERIFY_API_TC001(Hex *pubKey, Hex *userId, Hex *msg, Hex *si
     CRYPT_EAL_PkeyFreeCtx(ctx);
     ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
     ASSERT_TRUE(ctx != NULL);
-    ASSERT_TRUE(memcpy_s(bigSign, SM2_SIGN_MAX_LEN + 1, sign->x, sign->len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(sign->len <= (SM2_SIGN_MAX_LEN + 1));
+    memcpy(bigSign, sign->x, sign->len);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx, &pub) == CRYPT_SUCCESS);
 

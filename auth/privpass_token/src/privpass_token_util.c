@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "bsl_errno.h"
 #include "auth_errno.h"
 #include "auth_privpass_token.h"
@@ -51,8 +51,7 @@ static int32_t EncodeTokenChallengeReq(const PrivPass_TokenChallengeReq *tokenCh
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH);
         return HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH;
     }
-    (void)memcpy_s(buffer, tokenChallengeReq->challengeReqLen, tokenChallengeReq->challengeReq,
-        tokenChallengeReq->challengeReqLen);
+    memcpy(buffer, tokenChallengeReq->challengeReq, tokenChallengeReq->challengeReqLen);
     *buffLen = tokenChallengeReq->challengeReqLen;
     return HITLS_AUTH_SUCCESS;
 }
@@ -221,16 +220,14 @@ static int32_t EncodeTokenChallenge(const PrivPass_TokenChallenge *challenge,
     curr += 4; // offset 4 bytes.
 
     if (challenge->issuerName.dataLen > 0 && challenge->issuerName.data != NULL) {
-        (void)memcpy_s(curr, challenge->issuerName.dataLen, challenge->issuerName.data,
-            challenge->issuerName.dataLen);
+        memcpy(curr, challenge->issuerName.data, challenge->issuerName.dataLen);
         curr += challenge->issuerName.dataLen;
     }
 
     // Write redemptionContext (1 byte)
     *curr++ = (uint8_t)challenge->redemption.dataLen;
     if (challenge->redemption.dataLen > 0 && challenge->redemption.data != NULL) {
-        (void)memcpy_s(curr, challenge->redemption.dataLen, challenge->redemption.data,
-            challenge->redemption.dataLen);
+        memcpy(curr, challenge->redemption.data, challenge->redemption.dataLen);
         curr += challenge->redemption.dataLen;
     }
 
@@ -238,8 +235,7 @@ static int32_t EncodeTokenChallenge(const PrivPass_TokenChallenge *challenge,
     BSL_Uint16ToByte((uint16_t)challenge->originInfo.dataLen, curr);
     curr += 2; // offset 2 bytes.
     if (challenge->originInfo.dataLen > 0 && challenge->originInfo.data != NULL) {
-        (void)memcpy_s(curr, challenge->originInfo.dataLen, challenge->originInfo.data,
-            challenge->originInfo.dataLen);
+        memcpy(curr, challenge->originInfo.data, challenge->originInfo.dataLen);
     }
     *outBuffLen = (uint32_t)totalLen;
     return HITLS_AUTH_SUCCESS;
@@ -328,7 +324,7 @@ static int32_t EncodeTokenRequest(const PrivPass_TokenRequest *request, uint8_t 
     // Encode truncatedTokenKeyId (1 byte)
     buffer[offset++] = request->truncatedTokenKeyId;
     // Encode blindedMsg
-    (void)memcpy_s(buffer + offset, authenticatorLen, request->blindedMsg.data, authenticatorLen);
+    memcpy(buffer + offset, request->blindedMsg.data, authenticatorLen);
     *outBuffLen = totalLen;
     return HITLS_AUTH_SUCCESS;
 }
@@ -373,7 +369,7 @@ static int32_t EncodeTokenPubResp(const PrivPass_TokenPubResponse *resp, uint8_t
     }
 
     // Copy token data to buffer
-    (void)memcpy_s(buffer, resp->blindSigLen, resp->blindSig, resp->blindSigLen);
+    memcpy(buffer, resp->blindSig, resp->blindSigLen);
     *buffLen = resp->blindSigLen;
     return HITLS_AUTH_SUCCESS;
 }
@@ -422,20 +418,19 @@ static int32_t EncodeToken(const PrivPass_TokenInstance *token, uint8_t *buffer,
     BSL_Uint16ToByte(token->tokenType, buffer);
     offset += 2; // offset 2 bytes.
     // Encode nonce
-    (void)memcpy_s(buffer + offset, PRIVPASS_TOKEN_NONCE_LEN, token->nonce, PRIVPASS_TOKEN_NONCE_LEN);
+    memcpy(buffer + offset, token->nonce, PRIVPASS_TOKEN_NONCE_LEN);
     offset += PRIVPASS_TOKEN_NONCE_LEN;
 
     // Encode challengeDigest
-    (void)memcpy_s(buffer + offset, PRIVPASS_TOKEN_SHA256_SIZE, token->challengeDigest, PRIVPASS_TOKEN_SHA256_SIZE);
+    memcpy(buffer + offset, token->challengeDigest, PRIVPASS_TOKEN_SHA256_SIZE);
     offset += PRIVPASS_TOKEN_SHA256_SIZE;
 
     // Encode tokenKeyId
-    (void)memcpy_s(buffer + offset, PRIVPASS_TOKEN_SHA256_SIZE, token->tokenKeyId, PRIVPASS_TOKEN_SHA256_SIZE);
+    memcpy(buffer + offset, token->tokenKeyId, PRIVPASS_TOKEN_SHA256_SIZE);
     offset += PRIVPASS_TOKEN_SHA256_SIZE;
 
     // Encode authenticator
-    (void)memcpy_s(buffer + offset, token->authenticator.dataLen, token->authenticator.data,
-        token->authenticator.dataLen);
+    memcpy(buffer + offset, token->authenticator.data, token->authenticator.dataLen);
 
     *outBuffLen = totalLen;
     return HITLS_AUTH_SUCCESS;
@@ -466,15 +461,15 @@ static int32_t DecodeToken(PrivPass_TokenInstance *token, const uint8_t *buffer,
 
     int32_t offset = 2; // Skip tokenType which we've already read
     // Decode nonce
-    (void)memcpy_s(token->nonce, PRIVPASS_TOKEN_NONCE_LEN, buffer + offset, PRIVPASS_TOKEN_NONCE_LEN);
+    memcpy(token->nonce, buffer + offset, PRIVPASS_TOKEN_NONCE_LEN);
     offset += PRIVPASS_TOKEN_NONCE_LEN;
 
     // Decode challengeDigest
-    (void)memcpy_s(token->challengeDigest, PRIVPASS_TOKEN_SHA256_SIZE, buffer + offset, PRIVPASS_TOKEN_SHA256_SIZE);
+    memcpy(token->challengeDigest, buffer + offset, PRIVPASS_TOKEN_SHA256_SIZE);
     offset += PRIVPASS_TOKEN_SHA256_SIZE;
 
     // Decode tokenKeyId
-    (void)memcpy_s(token->tokenKeyId, PRIVPASS_TOKEN_SHA256_SIZE, buffer + offset, PRIVPASS_TOKEN_SHA256_SIZE);
+    memcpy(token->tokenKeyId, buffer + offset, PRIVPASS_TOKEN_SHA256_SIZE);
     offset += PRIVPASS_TOKEN_SHA256_SIZE;
 
     // Decode authenticator
@@ -804,8 +799,7 @@ static int32_t PrivPassGetTokenChallengeRequest(HITLS_AUTH_PrivPassToken *ctx, B
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
         return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
     }
-    (void)memcpy_s(output->value, output->valueLen, ctx->st.tokenChallengeReq->challengeReq,
-        ctx->st.tokenChallengeReq->challengeReqLen);
+    memcpy(output->value, ctx->st.tokenChallengeReq->challengeReq, ctx->st.tokenChallengeReq->challengeReqLen);
     output->useLen = ctx->st.tokenChallengeReq->challengeReqLen;
     return HITLS_AUTH_SUCCESS;
 }
@@ -829,7 +823,7 @@ static int32_t GetTokenChallengeContent(PrivPass_TokenChallenge *challenge, BSL_
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH);
         return HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH;
     }
-    (void)memcpy_s(output->value, output->valueLen, targetBuff, targetLen);
+    memcpy(output->value, targetBuff, targetLen);
     output->useLen = targetLen;
     return HITLS_AUTH_SUCCESS;
 }
@@ -911,7 +905,7 @@ static int32_t PrivPassGetTokenRequestContent(HITLS_AUTH_PrivPassToken *obj, int
                 BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH);
                 return HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH;
             }
-            (void)memcpy_s(output->value, output->valueLen, request->blindedMsg.data, request->blindedMsg.dataLen);
+            memcpy(output->value, request->blindedMsg.data, request->blindedMsg.dataLen);
             output->useLen = request->blindedMsg.dataLen;
             return HITLS_AUTH_SUCCESS;
     }
@@ -936,8 +930,7 @@ static int32_t PrivPassGetTokenResponseContent(HITLS_AUTH_PrivPassToken *ctx, BS
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH);
         return HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH;
     }
-    (void)memcpy_s(output->value, output->valueLen, ctx->st.tokenResponse->st.pubResp.blindSig,
-        ctx->st.tokenResponse->st.pubResp.blindSigLen);
+    memcpy(output->value, ctx->st.tokenResponse->st.pubResp.blindSig, ctx->st.tokenResponse->st.pubResp.blindSigLen);
     output->useLen = ctx->st.tokenResponse->st.pubResp.blindSigLen;
     return HITLS_AUTH_SUCCESS;
 }
@@ -966,7 +959,7 @@ static int32_t CopyTokenContent(PrivPass_TokenInstance *token, BSL_Param *param,
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH);
         return HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH;
     }
-    (void)memcpy_s(output->value, output->valueLen, targetBuff, targetLen);
+    memcpy(output->value, targetBuff, targetLen);
     output->useLen = targetLen;
     return HITLS_AUTH_SUCCESS;
 }
@@ -1057,7 +1050,7 @@ static int32_t PrivPassGetCtxContent(HITLS_AUTH_PrivPassCtx *ctx, int32_t cmd, B
                 BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH);
                 return HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH;
             }
-            (void)memcpy_s(output->value, output->valueLen, ctx->nonce, PRIVPASS_TOKEN_NONCE_LEN);
+            memcpy(output->value, ctx->nonce, PRIVPASS_TOKEN_NONCE_LEN);
             output->useLen = PRIVPASS_TOKEN_NONCE_LEN;
             return HITLS_AUTH_SUCCESS;
         case HITLS_AUTH_PRIVPASS_GET_CTX_TRUNCATEDTOKENKEYID:
@@ -1086,7 +1079,7 @@ static int32_t PrivPassGetCtxContent(HITLS_AUTH_PrivPassCtx *ctx, int32_t cmd, B
                 BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH);
                 return HITLS_AUTH_PRIVPASS_BUFFER_NOT_ENOUGH;
             }
-            (void)memcpy_s(output->value, output->valueLen, ctx->tokenKeyId, PRIVPASS_TOKEN_SHA256_SIZE);
+            memcpy(output->value, ctx->tokenKeyId, PRIVPASS_TOKEN_SHA256_SIZE);
             output->useLen = PRIVPASS_TOKEN_SHA256_SIZE;
             return HITLS_AUTH_SUCCESS;
     }

@@ -25,7 +25,7 @@
 #include "hs_msg.h"
 #include "hs_ctx.h"
 #include "hs.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_sal.h"
 #include "alert.h"
 #include "pack.h"
@@ -134,7 +134,7 @@ uint32_t HITLS_CFG_AddCustomExtension(HITLS_Config *config, const HITLS_CustomEx
     exts->meths = tmp;
     meth = exts->meths + exts->methsCount;
 
-    (void)memset_s(meth, sizeof(*meth), 0, sizeof(*meth));
+    memset(meth, 0, sizeof(*meth));
     meth->extType = params->extType;
     meth->context = params->context;
     meth->addCb = params->addCb;

@@ -15,7 +15,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
 #include <stdint.h>
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -119,7 +119,7 @@ int32_t Tls12ClientRecvNewSeesionTicketProcess(TLS_Ctx *ctx, HS_Msg *hsMsg)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15971, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "client Calculate server finished data error.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
-        (void)memset_s(hsCtx->masterKey, sizeof(hsCtx->masterKey), 0, sizeof(hsCtx->masterKey));
+        BSL_SAL_CleanseData(hsCtx->masterKey, sizeof(hsCtx->masterKey));
         return ret;
     }
 
@@ -157,14 +157,14 @@ int32_t Tls13ClientRecvNewSessionTicketProcess(TLS_Ctx *ctx, HS_Msg *hsMsg)
     }
     ret = HS_TLS13DeriveResumePsk(ctx, msg->ticketNonce, msg->ticketNonceSize, resumePsk, hashLen);
     if (ret != HITLS_SUCCESS) {
-        (void)memset_s(resumePsk, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
+        BSL_SAL_CleanseData(resumePsk, MAX_DIGEST_SIZE);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16015, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Derive resume psk failed.", 0, 0, 0, 0);
         return ret;
     }
 
     ret = UpdateTicket(ctx, msg, resumePsk, hashLen);
-    (void)memset_s(resumePsk, MAX_DIGEST_SIZE, 0, MAX_DIGEST_SIZE);
+    BSL_SAL_CleanseData(resumePsk, MAX_DIGEST_SIZE);
     if (ret != HITLS_SUCCESS) {
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;

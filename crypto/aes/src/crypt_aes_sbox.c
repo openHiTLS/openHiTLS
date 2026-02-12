@@ -15,7 +15,6 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_AES) && !defined(HITLS_CRYPTO_AES_PRECALC_TABLES)
 
-#include "securec.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"

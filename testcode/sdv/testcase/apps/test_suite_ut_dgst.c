@@ -24,7 +24,6 @@
 #include "app_print.h"
 #include "crypt_eal_md.h"
 #include "bsl_sal.h"
-#include "securec.h"
 #include "bsl_errno.h"
 #include "crypt_errno.h"
 #include "stub_utils.h"

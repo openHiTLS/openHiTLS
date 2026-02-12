@@ -14,7 +14,7 @@
  */
 #include "hitls_build.h"
 #ifdef HITLS_TLS_PROTO_DTLS12
-#include "securec.h"
+#include <string.h>
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -52,7 +52,7 @@ static void SetReassBitMap(uint8_t *reassBitMap, uint32_t fragmentOffset, uint32
         reassBitMap[startOffset] |= g_startMaskMap[start & 7];
         /* Assign a value to the middle byte */
         uint32_t copyLen = endOffset - startOffset - 1;
-        (void)memset_s(&reassBitMap[startOffset + 1], copyLen, 0xFF, copyLen);
+        memset(&reassBitMap[startOffset + 1], 0xFF, copyLen);
         /* Assign the last byte, &7 indicates the remainder 8 */
         reassBitMap[endOffset] |= g_endMaskMap[end & 7];
     }
@@ -191,13 +191,14 @@ static int32_t ReassembleMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, HS_ReassQueue *n
 
     /* Copy the message header */
     if (msgInfo->fragmentOffset == 0u) {
-        if (memcpy_s(&node->msg[0], node->msgLen, &msgInfo->rawMsg[0], DTLS_HS_MSG_HEADER_SIZE) != EOK) {
+        if (DTLS_HS_MSG_HEADER_SIZE > node->msgLen) {
             BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15756, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "msg header copy fail when append to reassQueue.", 0, 0, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
             return HITLS_MEMCPY_FAIL;
         }
+        memcpy(&node->msg[0], &msgInfo->rawMsg[0], DTLS_HS_MSG_HEADER_SIZE);
     }
 
     if (node->msgLen == DTLS_HS_MSG_HEADER_SIZE) {
@@ -207,14 +208,14 @@ static int32_t ReassembleMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, HS_ReassQueue *n
     }
 
     /* Message reassembly */
-    if (memcpy_s(&node->msg[bufOffset], node->msgLen - bufOffset,
-                 &msgInfo->rawMsg[DTLS_HS_MSG_HEADER_SIZE], msgInfo->fragmentLength) != EOK) {
+    if (msgInfo->fragmentLength > node->msgLen - bufOffset) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15757, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "msg copy fail when append to reassQueue.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return HITLS_MEMCPY_FAIL;
     }
+    memcpy(&node->msg[bufOffset], &msgInfo->rawMsg[DTLS_HS_MSG_HEADER_SIZE], msgInfo->fragmentLength);
 
     /* Set the bitmap and check whether the bitmap is complete */
     SetReassBitMap(node->reassBitMap, msgInfo->fragmentOffset, msgInfo->fragmentLength);
@@ -278,13 +279,14 @@ int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len)
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    if (memcpy_s(ctx->hsCtx->msgBuf, ctx->hsCtx->bufferLen, node->msg, node->msgLen) != EOK) {
+    if (node->msgLen > ctx->hsCtx->bufferLen) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15758, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "msg copy fail when get a msg from reassQueue.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return HITLS_MEMCPY_FAIL;
     }
+    memcpy(ctx->hsCtx->msgBuf, node->msg, node->msgLen);
     msgInfo->rawMsg = ctx->hsCtx->msgBuf;
     *len = node->msgLen;             /* Set the message length. */
     BSL_LIST_REMOVE(&node->head);        /* Delete the node from the queue. */

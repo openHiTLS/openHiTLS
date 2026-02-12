@@ -16,7 +16,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "hitls_build.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
 #include "bsl_log.h"
@@ -118,7 +118,6 @@ void CFG_CleanConfig(HITLS_Config *config)
 #endif
 }
 
-
 static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 {
     HITLS_Config *destConfig = &ctx->config.tlsConfig;
@@ -131,8 +130,7 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
     destConfig->attrName = ATTRIBUTE_FROM_CONFIG(srcConfig);
     destConfig->minVersion = srcConfig->minVersion;
     destConfig->maxVersion = srcConfig->maxVersion;
-    (void)memcpy_s(destConfig->keyshareIndex, sizeof(destConfig->keyshareIndex), srcConfig->keyshareIndex,
-                   sizeof(srcConfig->keyshareIndex));
+    (void)memcpy(destConfig->keyshareIndex, srcConfig->keyshareIndex, sizeof(srcConfig->keyshareIndex));
 #ifdef HITLS_TLS_PROTO_CLOSE_STATE
     destConfig->isQuietShutdown = srcConfig->isQuietShutdown;
 #endif
@@ -238,7 +236,7 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 #endif
 }
 
-static int32_t DeepCopy(void **destConfig, const void *srcConfig, uint32_t logId, uint32_t len)
+static int32_t DeepCopy(void** destConfig, const void* srcConfig, uint32_t logId, uint32_t len)
 {
 #ifndef HITLS_BSL_LOG
     (void)logId;
@@ -280,7 +278,7 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
 
     if (srcConfig->tuples != NULL) {
         int32_t ret2 = DeepCopy((void **)&destConfig->tuples, srcConfig->tuples, BINLOG_ID16585,
-            srcConfig->tuplesSize * sizeof(uint32_t));
+                                srcConfig->tuplesSize * sizeof(uint32_t));
         if (ret2 != HITLS_SUCCESS) {
             return ret2;
         }
@@ -439,13 +437,11 @@ static int32_t CertMgrDeepCopy(HITLS_Config *destConfig, const HITLS_Config *src
 #ifdef HITLS_TLS_FEATURE_SESSION_ID
 static int32_t SessionIdCtxCopy(HITLS_Config *destConfig, const HITLS_Config *srcConfig)
 {
-    if (srcConfig->sessionIdCtxSize != 0 &&
-        memcpy_s(destConfig->sessionIdCtx, sizeof(destConfig->sessionIdCtx),
-        srcConfig->sessionIdCtx, srcConfig->sessionIdCtxSize) != EOK) {
+    if (srcConfig->sessionIdCtxSize != 0 && srcConfig->sessionIdCtxSize > sizeof(destConfig->sessionIdCtx)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16592, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         return HITLS_MEMCPY_FAIL;
     }
-
+    memcpy(destConfig->sessionIdCtx, srcConfig->sessionIdCtx, srcConfig->sessionIdCtxSize);
     destConfig->sessionIdCtxSize = srcConfig->sessionIdCtxSize;
     return HITLS_SUCCESS;
 }
@@ -676,7 +672,6 @@ uint32_t MapVersion2VersionBit(bool isDatagram, uint16_t version)
     }
     return ret;
 }
-
 
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
 int32_t CheckRenegotiatedVersion(TLS_Ctx *ctx)
@@ -1006,7 +1001,7 @@ int32_t HITLS_CFG_SetGroups(HITLS_Config *config, const uint16_t *groups, uint32
     config->groups = newData;
     config->groupsSize = groupsSize;
 
-    (void)memset_s(config->keyshareIndex, sizeof(config->keyshareIndex), 0, sizeof(config->keyshareIndex));
+    memset(config->keyshareIndex, 0, sizeof(config->keyshareIndex));
     return HITLS_SUCCESS;
 }
 
@@ -1020,11 +1015,7 @@ static uint16_t GroupToId(const TLS_Config *tlsConfig, char *name)
 {
     const char *groupName = name;
     const GroupNameMap groupMap[] = {
-        {"P-256", "secp256r1"},
-        {"P-384", "secp384r1"},
-        {"P-521", "secp521r1"},
-        {"X25519", "x25519"}
-    };
+        {"P-256", "secp256r1"}, {"P-384", "secp384r1"}, {"P-521", "secp521r1"}, {"X25519", "x25519"}};
 
     for (uint32_t i = 0; i < sizeof(groupMap) / sizeof(groupMap[0]); i++) {
         if (strcmp(name, groupMap[i].alias) == 0) {
@@ -1046,7 +1037,6 @@ static uint16_t GroupToId(const TLS_Config *tlsConfig, char *name)
     return HITLS_NAMED_GROUP_BUTT;
 }
 
-
 static char *AllocAndCopyGroupName(const char *groupNames, uint32_t groupNamesLen)
 {
     char *groupNamesTmp = (char *)BSL_SAL_Calloc(groupNamesLen + 1, sizeof(char));
@@ -1054,7 +1044,7 @@ static char *AllocAndCopyGroupName(const char *groupNames, uint32_t groupNamesLe
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16604, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
         return NULL;
     }
-    (void)memcpy_s(groupNamesTmp, groupNamesLen + 1, groupNames, groupNamesLen);
+    (void)memcpy(groupNamesTmp, groupNames, groupNamesLen);
     return groupNamesTmp;
 }
 
@@ -1138,11 +1128,11 @@ int32_t HITLS_CFG_SetGroupList(HITLS_Config *config, const char *groupNames, uin
     }
     char *tupleContext = NULL;
     int32_t ret;
-    char *tupleToken = strtok_s(groupNamesTmp, "/", &tupleContext);
+    char *tupleToken = strtok_r(groupNamesTmp, "/", &tupleContext);
     while (tupleToken != NULL) {
         uint32_t tupleGroupCount = 0;
         char *groupContext = NULL;
-        char *groupName = strtok_s(tupleToken, ":", &groupContext);
+        char *groupName = strtok_r(tupleToken, ":", &groupContext);
         while (groupName != NULL) {
             ret = ParseGroupNameToId(config, groupName, &list);
             if (ret != HITLS_SUCCESS) {
@@ -1150,10 +1140,10 @@ int32_t HITLS_CFG_SetGroupList(HITLS_Config *config, const char *groupNames, uin
                 return ret;
             }
             tupleGroupCount++;
-            groupName = strtok_s(NULL, ":", &groupContext);
+            groupName = strtok_r(NULL, ":", &groupContext);
         }
         list.tuples[(list.tuplesSize)++] = tupleGroupCount;
-        tupleToken = strtok_s(NULL, "/", &tupleContext);
+        tupleToken = strtok_r(NULL, "/", &tupleContext);
     }
     BSL_SAL_FREE(groupNamesTmp);
 
@@ -1162,7 +1152,7 @@ int32_t HITLS_CFG_SetGroupList(HITLS_Config *config, const char *groupNames, uin
         return ret;
     }
     ret = SetTuples(config, list.tuples, list.tuplesSize);
-    (void)memcpy_s(config->keyshareIndex, sizeof(config->keyshareIndex), list.keyshareIndex, sizeof(list.keyshareIndex));
+    (void)memcpy(config->keyshareIndex, list.keyshareIndex, sizeof(list.keyshareIndex));
     return ret;
 }
 #endif /* HITLS_TLS_CONFIG_CIPHER_SUITE */

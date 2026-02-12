@@ -17,7 +17,7 @@
 #ifdef HITLS_PKI_X509
 
 #include "hitls_x509_local.h"
-#include "securec.h"
+#include <string.h>
 #include "bsl_asn1_internal.h"
 #include "bsl_sal.h"
 #include "bsl_log_internal.h"
@@ -440,7 +440,7 @@ static HITLS_X509_NameNode *NameNodeDup(HITLS_X509_NameNode *node)
             BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
             return NULL;
         }
-        (void)memcpy_s(res->nameType.buff, res->nameType.len, node->nameType.buff, node->nameType.len);
+        memcpy(res->nameType.buff, node->nameType.buff, node->nameType.len);
     }
     return res;
 }

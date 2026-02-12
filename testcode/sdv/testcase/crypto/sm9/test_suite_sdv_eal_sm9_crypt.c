@@ -22,7 +22,7 @@
 #include "crypt_sm9.h"
 #include "crypt_params_key.h"
 #include "bsl_params.h"
-#include "securec.h"
+#include <string.h>
 
 #define SM9_ENC_MASTER_KEY_LEN 32
 #define SM9_CIPHERTEXT_MAX_LEN 512
@@ -76,8 +76,10 @@ void SDV_CRYPTO_SM9_CRYPT_API_TC001(Hex *masterKey, Hex *userId, Hex *plaintext)
     ASSERT_EQ(ret, SM9_OK);
     ret = SM9_GenEncUserKey(nativeCtx, userId->x, userId->len);
     ASSERT_EQ(ret, SM9_OK);
-    memcpy_s(userKey, sizeof(userKey), nativeCtx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
-    memcpy_s(masterPubKey, sizeof(masterPubKey), nativeCtx->enc_mpk, SM9_ENC_SYS_PUBKEY_BYTES);
+    if ((SM9_ENC_USR_PRIKEY_BYTES) <= (sizeof(userKey)))
+        memcpy(userKey, nativeCtx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
+    if ((SM9_ENC_SYS_PUBKEY_BYTES) <= (sizeof(masterPubKey)))
+        memcpy(masterPubKey, nativeCtx->enc_mpk, SM9_ENC_SYS_PUBKEY_BYTES);
 
     // Step 2: Create encrypt context and set master private key + user ID
     encCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
@@ -193,8 +195,10 @@ void SDV_CRYPTO_SM9_CRYPT_API_TC002(Hex *masterKey, Hex *userId, Hex *plaintext)
     ASSERT_EQ(ret, SM9_OK);
     ret = SM9_GenEncUserKey(nativeCtx, userId->x, userId->len);
     ASSERT_EQ(ret, SM9_OK);
-    memcpy_s(userKey, sizeof(userKey), nativeCtx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
-    memcpy_s(masterPubKey, sizeof(masterPubKey), nativeCtx->enc_mpk, SM9_ENC_SYS_PUBKEY_BYTES);
+    if ((SM9_ENC_USR_PRIKEY_BYTES) <= (sizeof(userKey)))
+        memcpy(userKey, nativeCtx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
+    if ((SM9_ENC_SYS_PUBKEY_BYTES) <= (sizeof(masterPubKey)))
+        memcpy(masterPubKey, nativeCtx->enc_mpk, SM9_ENC_SYS_PUBKEY_BYTES);
 
     // Set master private key + user ID for encryption
     BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
@@ -275,15 +279,18 @@ void SDV_CRYPTO_SM9_CRYPT_API_TC003(Hex *masterKey, Hex *userIdA, Hex *userIdB, 
     // Generate User A's key
     ret = SM9_GenEncUserKey(nativeCtx, userIdA->x, userIdA->len);
     ASSERT_EQ(ret, SM9_OK);
-    memcpy_s(userKeyA, sizeof(userKeyA), nativeCtx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
+    if ((SM9_ENC_USR_PRIKEY_BYTES) <= (sizeof(userKeyA)))
+        memcpy(userKeyA, nativeCtx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
 
     // Generate User B's key
     ret = SM9_GenEncUserKey(nativeCtx, userIdB->x, userIdB->len);
     ASSERT_EQ(ret, SM9_OK);
-    memcpy_s(userKeyB, sizeof(userKeyB), nativeCtx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
+    if ((SM9_ENC_USR_PRIKEY_BYTES) <= (sizeof(userKeyB)))
+        memcpy(userKeyB, nativeCtx->enc_dek, SM9_ENC_USR_PRIKEY_BYTES);
 
     // Save master public key
-    memcpy_s(masterPubKey, sizeof(masterPubKey), nativeCtx->enc_mpk, SM9_ENC_SYS_PUBKEY_BYTES);
+    if ((SM9_ENC_SYS_PUBKEY_BYTES) <= (sizeof(masterPubKey)))
+        memcpy(masterPubKey, nativeCtx->enc_mpk, SM9_ENC_SYS_PUBKEY_BYTES);
 
     // Step 2: Create encrypt context for User A
     encCtxA = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);

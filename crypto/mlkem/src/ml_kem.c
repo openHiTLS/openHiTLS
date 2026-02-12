@@ -15,7 +15,7 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MLKEM
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "crypt_algid.h"
 #include "bsl_sal.h"
@@ -62,7 +62,7 @@ CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_NewCtx(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(keyCtx, sizeof(CRYPT_ML_KEM_Ctx), 0, sizeof(CRYPT_ML_KEM_Ctx));
+    memset(keyCtx, 0, sizeof(CRYPT_ML_KEM_Ctx));
     keyCtx->hasSeed = false;
     keyCtx->dkFormat = CRYPT_ALGO_MLKEM_DK_FORMAT_NOT_SET;
     BSL_SAL_ReferencesInit(&(keyCtx->references));
@@ -139,15 +139,11 @@ static int32_t MlKemDupKeyData(CRYPT_ML_KEM_Ctx *ctx, CRYPT_ML_KEM_Ctx *newCtx)
     }
     for (uint8_t i = 0; i < ctx->info->k; i++) {
         for (uint8_t j = 0; j < ctx->info->k; j++) {
-            (void)memcpy_s(newCtx->keyData.matrix[i][j], MLKEM_N * sizeof(int16_t), ctx->keyData.matrix[i][j],
-                MLKEM_N * sizeof(int16_t));
+            memcpy(newCtx->keyData.matrix[i][j], ctx->keyData.matrix[i][j], MLKEM_N * sizeof(int16_t));
         }
-        (void)memcpy_s(newCtx->keyData.vectorS[i], MLKEM_N * sizeof(int16_t), ctx->keyData.vectorS[i],
-            MLKEM_N * sizeof(int16_t));
-        (void)memcpy_s(newCtx->keyData.vectorE[i], MLKEM_N * sizeof(int16_t), ctx->keyData.vectorE[i],
-            MLKEM_N * sizeof(int16_t));
-        (void)memcpy_s(newCtx->keyData.vectorT[i], MLKEM_N * sizeof(int16_t), ctx->keyData.vectorT[i],
-            MLKEM_N * sizeof(int16_t));
+        memcpy(newCtx->keyData.vectorS[i], ctx->keyData.vectorS[i], MLKEM_N * sizeof(int16_t));
+        memcpy(newCtx->keyData.vectorE[i], ctx->keyData.vectorE[i], MLKEM_N * sizeof(int16_t));
+        memcpy(newCtx->keyData.vectorT[i], ctx->keyData.vectorT[i], MLKEM_N * sizeof(int16_t));
     }
     return CRYPT_SUCCESS;
 }
@@ -217,7 +213,7 @@ CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_DupCtx(CRYPT_ML_KEM_Ctx *ctx)
     newCtx->dkFormat = ctx->dkFormat;
     newCtx->hasSeed = ctx->hasSeed;
     if (ctx->hasSeed) {
-        (void)memcpy_s(newCtx->seed, sizeof(newCtx->seed), ctx->seed, sizeof(ctx->seed));
+        memcpy(newCtx->seed, ctx->seed, sizeof(ctx->seed));
     }
     return newCtx;
 }
@@ -278,7 +274,7 @@ static int32_t MlKemGetSeed(const CRYPT_ML_KEM_Ctx *ctx, void *val, uint32_t len
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    (void)memcpy_s(val, len, ctx->seed, 64); // // 64 bytes (d || z)
+    memcpy(val, ctx->seed, 64); // // 64 bytes (d || z)
     return CRYPT_SUCCESS;
 }
 
@@ -361,10 +357,11 @@ int32_t CRYPT_ML_KEM_GetEncapsKey(const CRYPT_ML_KEM_Ctx *ctx, CRYPT_KemEncapsKe
         BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEY_NOT_SET);
         return CRYPT_MLKEM_KEY_NOT_SET;
     }
-    if (memcpy_s(ek->data, ek->len, ctx->ek, ctx->ekLen) != EOK) {
+    if (ctx->ekLen > ek->len) {
         BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYLEN_ERROR);
         return CRYPT_MLKEM_KEYLEN_ERROR;
     }
+    memcpy(ek->data, ctx->ek, ctx->ekLen);
     ek->len = ctx->ekLen;
     return CRYPT_SUCCESS;
 }
@@ -418,10 +415,11 @@ int32_t CRYPT_ML_KEM_GetDecapsKey(const CRYPT_ML_KEM_Ctx *ctx, CRYPT_KemDecapsKe
         return CRYPT_MLKEM_KEY_NOT_SET;
     }
 
-    if (memcpy_s(dk->data, dk->len, ctx->dk, ctx->dkLen) != EOK) {
+    if (ctx->dkLen > dk->len) {
         BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEYLEN_ERROR);
         return CRYPT_MLKEM_KEYLEN_ERROR;
     }
+    memcpy(dk->data, ctx->dk, ctx->dkLen);
     dk->len = ctx->dkLen;
     return CRYPT_SUCCESS;
 }
@@ -461,8 +459,8 @@ static int32_t MLKEM_RecomputeKeyFromSeed(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *
     }
     uint8_t d[MLKEM_SEED_LEN];
     uint8_t z[MLKEM_SEED_LEN];
-    (void)memcpy_s(d, MLKEM_SEED_LEN, seed, MLKEM_SEED_LEN);
-    (void)memcpy_s(z, MLKEM_SEED_LEN, seed + MLKEM_SEED_LEN, MLKEM_SEED_LEN);
+    memcpy(d, seed, MLKEM_SEED_LEN);
+    memcpy(z, seed + MLKEM_SEED_LEN, MLKEM_SEED_LEN);
     int32_t ret = MLKEM_KeyGenInternal(ctx, d, z);
     BSL_SAL_CleanseData(d, MLKEM_SEED_LEN);
     BSL_SAL_CleanseData(z, MLKEM_SEED_LEN);

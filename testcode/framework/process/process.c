@@ -19,7 +19,7 @@
 #include <stdbool.h>
 #include <semaphore.h>
 
-#include "securec.h"
+#include <string.h>
 #include "channel_res.h"
 #include "handle_cmd.h"
 #include "tls_res.h"
@@ -55,17 +55,17 @@ int IsFeedbackResult(ControlChannelRes *channelInfo)
     }
     i = 0;
     while (channelInfo->sendBufferNum > 0) {
-        ret = memcpy_s(dataBuf.data, CONTROL_CHANNEL_MAX_MSG_LEN,
-                       channelInfo->sendBuffer[i], strlen((char*)(channelInfo->sendBuffer[i])));
-        if (ret != EOK) {
+        size_t len = strlen((char *)channelInfo->sendBuffer[i]);
+        if (len >= CONTROL_CHANNEL_MAX_MSG_LEN) {
             LOG_ERROR("MemCpy Error");
             OsUnLock(channelInfo->sendBufferLock);
             return ERROR;
         }
-        dataBuf.dataLen = strlen((char*)channelInfo->sendBuffer[i]);
+        memcpy(dataBuf.data, channelInfo->sendBuffer[i], len + 1);
+        dataBuf.dataLen = len;
         LOG_DEBUG("Remote Process Send Result %s", dataBuf.data);
         ret = ControlChannelWrite(channelInfo->sockFd, channelInfo->peerDomainPath, &dataBuf);
-        if (ret != EOK) {
+        if (ret != 0) {
             LOG_ERROR("ControlChannelWrite Error, Msg is %s, ret is %d\n", dataBuf.data, ret);
             OsUnLock(channelInfo->sendBufferLock);
             return ERROR;
@@ -90,10 +90,11 @@ void FreeThreadRes(pthread_t *threadList, int threadNum)
 void ThreadExcuteCmd(void *param)
 {
     CmdData cmdData = {0};
-    if (memcpy_s(&cmdData, sizeof(cmdData), (CmdData *)param, sizeof(CmdData)) != EOK) {
+    if (sizeof(CmdData) > sizeof(cmdData)) {
         free(param);
         return;
     }
+    memcpy(&cmdData, (CmdData *)param, sizeof(CmdData));
     free(param);
     ControlChannelRes *channelInfo = GetControlChannelRes();
     (void)ExecuteCmd(&cmdData);  // Cast to void to suppress unused-value warning
@@ -121,12 +122,14 @@ int main(int argc, char **argv)
     process = GetProcess();
     process->remoteFlag = 1; // Must be marked as a remote process
     process->tlsType = atoi(argv[1]); // The first parameter indicates the Hitls function
-    ret = memcpy_s(process->srcDomainPath, DOMAIN_PATH_LEN, argv[2],
-        strlen(argv[2])); // The second parameter indicates the local IP address
-    ASSERT_RETURN(ret == SUCCESS, "memcpy process->srcDomainPath Error");
-    ret = memcpy_s(process->peerDomainPath, DOMAIN_PATH_LEN, argv[3],
-        strlen(argv[3])); // The third parameter indicates the address of the control process
-    ASSERT_RETURN(ret == SUCCESS, "memcpy process->srcDomainPath Error");
+    if (strlen(argv[2]) >= DOMAIN_PATH_LEN) {
+        ASSERT_RETURN(0, "memcpy process->srcDomainPath Error");
+    }
+    memcpy(process->srcDomainPath, argv[2], strlen(argv[2]) + 1);
+    if (strlen(argv[3]) >= DOMAIN_PATH_LEN) {
+        ASSERT_RETURN(0, "memcpy process->peerDomainPath Error");
+    }
+    memcpy(process->peerDomainPath, argv[3], strlen(argv[3]) + 1);
 
     // Dependent library initialization
     ret = HLT_LibraryInit(process->tlsType);
@@ -174,8 +177,8 @@ int main(int argc, char **argv)
             if (strncmp((char *)cmdData->funcId, "HLT_RpcProcessExit", strlen("HLT_RpcProcessExit")) == 0) {
                 // Indicates that the process needs to exit
                 sctpFd = atoi((char *)cmdData->paras[0]);
-                (void)sprintf_s((char *)exitCmdData.result, sizeof(exitCmdData.result), "%s|%s|%d",
-                                cmdData->id, cmdData->funcId, sctpFd);
+                (void)snprintf((char *)exitCmdData.result, sizeof(exitCmdData.result), "%s|%s|%d",
+                               cmdData->id, cmdData->funcId, sctpFd);
                 PushResultToChannelSendBuffer(channelInfo, exitCmdData.result);
                 free(cmdData);
                 break;

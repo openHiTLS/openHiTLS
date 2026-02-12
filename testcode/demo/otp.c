@@ -12,7 +12,6 @@
 #include "crypt_eal_rand.h"
 #include "auth_errno.h"
 #include "crypt_errno.h"
-#include "securec.h"
 
 void *StdMalloc(uint32_t len)
 {
@@ -205,8 +204,9 @@ int main()
         size_t currentLen = strlen(buffer);                                                                         \
         size_t bufferSize = sizeof(buffer);                                                                         \
         size_t remaining = bufferSize - currentLen;                                                                 \
-        if (remaining <= 0 || snprintf_s(buffer + currentLen, remaining, remaining, format, ##__VA_ARGS__) == -1) { \
-            printf("snprintf_s failed\n");                                                                          \
+        int _n = snprintf(buffer + currentLen, remaining, format, ##__VA_ARGS__);                                   \
+        if (remaining <= 0 || _n < 0 || (size_t)_n >= remaining) {                                                  \
+            printf("snprintf failed\n");                                                                            \
             goto EXIT;                                                                                              \
         }                                                                                                           \
     } while (0)

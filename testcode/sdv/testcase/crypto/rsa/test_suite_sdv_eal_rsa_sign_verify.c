@@ -588,7 +588,7 @@ void SDV_CRYPTO_RSA_GEN_SIGN_VERIFY_PKCSV15_FUNC_TC001(int bits, int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, mdId, data, dataLen, sign, signLen), CRYPT_SUCCESS);
 
     signLen = (bits + 7) >> 3;  // keybytes == (keyBits + 7) >> 3 */
-    memset_s(hash, sizeof(hash), 'A', sizeof(hash));
+    memset(hash, 'A', sizeof(hash));
     ASSERT_EQ(CRYPT_EAL_PkeySignData(pkey, hash, hashLen, sign, &signLen), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, hash, hashLen, sign, signLen), CRYPT_SUCCESS);
@@ -657,8 +657,8 @@ void SDV_CRYPTO_RSA_GEN_SIGN_VERIFY_PSS_FUNC_TC001(int bits, int isProvider)
     uint8_t hash[32];                    // SHA256 digest length 32
     const uint32_t hashLen = sizeof(hash);
 
-    memset_s(hash, sizeof(hash), 'A', sizeof(hash));
-    (void)memset_s(salt, sizeof(salt), 'A', sizeof(salt));
+    memset(hash, 'A', sizeof(hash));
+    memset(salt, 'A', sizeof(salt));
     uint8_t *sign = malloc(signLen);
     ASSERT_TRUE(sign != NULL);
     SetRsaPara(&para, e, 3, bits);
@@ -1473,7 +1473,7 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
         ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_SALT, salt->x, salt->len) == CRYPT_SUCCESS);
     }
     if (isStub) {
-        memcpy_s(g_RandBuf, TMP_BUFF_LEN, rBuf, rBufLen);
+        memcpy(g_RandBuf, rBuf, rBufLen);
     } else {
         ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R, rBuf, rBufLen) == CRYPT_SUCCESS);
     }

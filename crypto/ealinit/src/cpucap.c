@@ -17,7 +17,7 @@
 #ifdef __x86_64__
 
 #include <cpuid.h>
-#include "securec.h"
+#include <string.h>
 
 
 CpuInstrSupportState g_cpuState = {0};
@@ -298,12 +298,10 @@ void GetCpuInstrSupportState(void)
 
     /* SIMD CPU support */
     GetCpuId(0x1, 0, cpuId);
-    (void)memcpy_s(g_cpuState.code1Out, CPU_ID_OUT_U32_CNT * sizeof(uint32_t), cpuId,
-        CPU_ID_OUT_U32_CNT * sizeof(uint32_t));
+    memcpy(g_cpuState.code1Out, cpuId, CPU_ID_OUT_U32_CNT * sizeof(uint32_t));
 
     GetCpuId(0x7, 0, cpuId);
-    (void)memcpy_s(g_cpuState.code7Out, CPU_ID_OUT_U32_CNT * sizeof(uint32_t), cpuId,
-        CPU_ID_OUT_U32_CNT * sizeof(uint32_t));
+    memcpy(g_cpuState.code7Out, cpuId, CPU_ID_OUT_U32_CNT * sizeof(uint32_t));
 
     /* SIMD OS support */
     if (IsSupportXSAVE() && IsSupportOSXSAVE()) {

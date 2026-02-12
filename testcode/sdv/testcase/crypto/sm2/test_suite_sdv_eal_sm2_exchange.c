@@ -788,8 +788,8 @@ void SDV_CRYPTO_SM2_EXCHANGE_FUNC_TC003(int pkg, int isProvider)
     int32_t server = 1;
     int32_t client = 0;
 
-    (void)memset_s(userId1, sizeof(userId1), 'A', sizeof(userId1));
-    (void)memset_s(userId2, sizeof(userId2), 'B', sizeof(userId2));
+    memset(userId1, 'A', sizeof(userId1));
+    memset(userId2, 'B', sizeof(userId2));
 
     uint8_t pubKey1[65];
     uint8_t pubKey2[65];

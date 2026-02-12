@@ -16,7 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_HCTR
 
-#include "securec.h"
+#include <string.h>
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "eal_cipher_local.h"
@@ -51,8 +51,8 @@ static void HctrGf128Mul(const uint8_t a[HCTR_BLOCK_SIZE], const uint8_t b[HCTR_
     uint8_t z[HCTR_BLOCK_SIZE];
     uint32_t i;
 
-    (void)memset_s(res, HCTR_BLOCK_SIZE, 0, HCTR_BLOCK_SIZE);
-    (void)memcpy_s(z, HCTR_BLOCK_SIZE, a, HCTR_BLOCK_SIZE);
+    memset(res, 0, HCTR_BLOCK_SIZE);
+    memcpy(z, a, HCTR_BLOCK_SIZE);
 
     for (i = 0; i < 128; i++) {
         // Process multiplier 'b' from MSB (bit 7 of b[0])
@@ -89,8 +89,8 @@ static int32_t HctrUniversalHash(const uint8_t *k, const uint8_t *data, uint32_t
         return CRYPT_MEM_ALLOC_FAIL;
     }
     if (effectiveLen > 0) {
-        (void)memcpy_s(allData, effectiveLen, data, dataLen);
-        (void)memcpy_s(allData + dataLen, effectiveLen - dataLen, tw, HCTR_TW_LEN);
+        memcpy(allData, data, dataLen);
+        memcpy(allData + dataLen, tw, HCTR_TW_LEN);
     }
 
     m = (uint32_t)((effectiveLen + HCTR_BLOCK_SIZE - 1) / HCTR_BLOCK_SIZE);
@@ -105,7 +105,7 @@ static int32_t HctrUniversalHash(const uint8_t *k, const uint8_t *data, uint32_t
             ret = CRYPT_MEM_ALLOC_FAIL;
             goto ERR;
         }
-        (void)memset_s(kPowers, sizeof(uint8_t *) * m, 0, sizeof(uint8_t *) * m);
+        memset(kPowers, 0, sizeof(uint8_t *) * m);
 
         for (i = 0; i < m; i++) {
             kPowers[i] = (uint8_t *)BSL_SAL_Malloc(HCTR_BLOCK_SIZE);
@@ -117,7 +117,7 @@ static int32_t HctrUniversalHash(const uint8_t *k, const uint8_t *data, uint32_t
         }
         
         uint8_t kPow1[HCTR_BLOCK_SIZE];
-        (void)memcpy_s(kPow1, HCTR_BLOCK_SIZE, k, HCTR_BLOCK_SIZE);
+        memcpy(kPow1, k, HCTR_BLOCK_SIZE);
         HctrGf128Mul(kPow1, k, kPowers[0]); // kPowers[0] = K^2
 
         for (i = 1; i < m; i++) {
@@ -126,14 +126,14 @@ static int32_t HctrUniversalHash(const uint8_t *k, const uint8_t *data, uint32_t
     }
 
     // Direct summation
-    (void)memset_s(hashVal, HCTR_BLOCK_SIZE, 0, HCTR_BLOCK_SIZE);
+    memset(hashVal, 0, HCTR_BLOCK_SIZE);
     if (m > 0) {
         for (i = 0; i < m; i++) {
             uint32_t offset = i * HCTR_BLOCK_SIZE;
             uint32_t chunkLen = (effectiveLen - offset < HCTR_BLOCK_SIZE) ?
                                 (uint32_t)(effectiveLen - offset) : HCTR_BLOCK_SIZE;
-            (void)memset_s(currentBlock, sizeof(currentBlock), 0, sizeof(currentBlock));
-            (void)memcpy_s(currentBlock, sizeof(currentBlock), allData + offset, chunkLen);
+            memset(currentBlock, 0, sizeof(currentBlock));
+            memcpy(currentBlock, allData + offset, chunkLen);
 
             // Term is M_{i+1} * K^{m-i+1}. Powers are K^(m+1), K^m, ..., K^2
             // This corresponds to kPowers[m-1-i]
@@ -152,7 +152,7 @@ static int32_t HctrUniversalHash(const uint8_t *k, const uint8_t *data, uint32_t
     HctrGf128Mul(lenBlock, k, lenTerm);
     DATA64_XOR(hashVal, lenTerm, hashVal, HCTR_BLOCK_SIZE);
 
-    (void)memcpy_s(out, HCTR_BLOCK_SIZE, hashVal, HCTR_BLOCK_SIZE);
+    memcpy(out, hashVal, HCTR_BLOCK_SIZE);
 
 ERR:
     BSL_SAL_Free(allData);
@@ -245,9 +245,9 @@ int32_t MODES_HCTR_Init(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t k
     HCTR_Pack_Ctx *packCtx = (HCTR_Pack_Ctx *)modeCtx->commonCtx.ciphCtx;
     HCTR_Inner_Ctx *hctrCtx = &packCtx->hctrCtx;
 
-    (void)memcpy_s(hctrCtx->k1, sizeof(hctrCtx->k1), key, HCTR_BLOCK_SIZE);
-    (void)memcpy_s(hctrCtx->k2, sizeof(hctrCtx->k2), key + HCTR_BLOCK_SIZE, HCTR_BLOCK_SIZE);
-    (void)memcpy_s(hctrCtx->tw, sizeof(hctrCtx->tw), iv, ivLen);
+    memcpy(hctrCtx->k1, key, HCTR_BLOCK_SIZE);
+    memcpy(hctrCtx->k2, key + HCTR_BLOCK_SIZE, HCTR_BLOCK_SIZE);
+    memcpy(hctrCtx->tw, iv, ivLen);
 
     int32_t ret = modeCtx->commonCtx.ciphMeth->setEncryptKey(packCtx->algCtx, hctrCtx->k1, HCTR_BLOCK_SIZE);
     if (ret != CRYPT_SUCCESS) {
@@ -279,7 +279,7 @@ static int32_t HctrBufferEnsureCapacity(MODES_HCTR_Buffer *buffer, uint32_t addi
     }
 
     if (buffer->dataLen > 0) {
-        (void)memcpy_s(newBuf, newSize, buffer->buffer, buffer->dataLen);
+        memcpy(newBuf, buffer->buffer, buffer->dataLen);
     }
 
     BSL_SAL_Free(buffer->buffer);
@@ -310,7 +310,7 @@ int32_t MODES_HCTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t 
         return ret;
     }
     
-    (void)memcpy_s(buffer->buffer + buffer->dataLen, buffer->bufSize - buffer->dataLen, in, inLen);
+    memcpy(buffer->buffer + buffer->dataLen, in, inLen);
     buffer->dataLen += inLen;
 
     *outLen = 0;
@@ -373,7 +373,7 @@ int32_t MODES_HCTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLe
 
         /* OPTIMIZATION: Process all full blocks first */
         for (uint32_t j = 0; j < numFullBlocks; j++) {
-            (void)memcpy_s(counterBlock, sizeof(counterBlock), ctrBase, sizeof(ctrBase));
+            memcpy(counterBlock, ctrBase, sizeof(ctrBase));
             uint8_t iBe[sizeof(uint64_t)];
             PUT_UINT64_BE(i, iBe, 0);
             DATA_XOR(counterBlock + (HCTR_BLOCK_SIZE - sizeof(uint64_t)), iBe,
@@ -388,7 +388,7 @@ int32_t MODES_HCTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLe
         /* OPTIMIZATION: Process the final partial block separately */
         uint32_t lastChunkLen = restLen - processedLen;
         if (lastChunkLen > 0) {
-            (void)memcpy_s(counterBlock, sizeof(counterBlock), ctrBase, sizeof(ctrBase));
+            memcpy(counterBlock, ctrBase, sizeof(ctrBase));
             uint8_t iBe[sizeof(uint64_t)];
             PUT_UINT64_BE(i, iBe, 0);
             DATA_XOR(counterBlock + (HCTR_BLOCK_SIZE - sizeof(uint64_t)), iBe,
@@ -423,7 +423,7 @@ int32_t MODES_HCTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLe
         uint32_t numFullBlocks = restLen / HCTR_BLOCK_SIZE;
         
         for (uint32_t j = 0; j < numFullBlocks; j++) {
-            (void)memcpy_s(counterBlock, sizeof(counterBlock), ctrBase, sizeof(ctrBase));
+            memcpy(counterBlock, ctrBase, sizeof(ctrBase));
             uint8_t iBe[sizeof(uint64_t)];
             PUT_UINT64_BE(i, iBe, 0);
             DATA_XOR(counterBlock + (HCTR_BLOCK_SIZE - sizeof(uint64_t)), iBe,
@@ -437,7 +437,7 @@ int32_t MODES_HCTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLe
 
         uint32_t lastChunkLen = restLen - processedLen;
         if (lastChunkLen > 0) {
-            (void)memcpy_s(counterBlock, sizeof(counterBlock), ctrBase, sizeof(ctrBase));
+            memcpy(counterBlock, ctrBase, sizeof(ctrBase));
             uint8_t iBe[sizeof(uint64_t)];
             PUT_UINT64_BE(i, iBe, 0);
             DATA_XOR(counterBlock + (HCTR_BLOCK_SIZE - sizeof(uint64_t)), iBe,
@@ -455,10 +455,10 @@ int32_t MODES_HCTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLe
     ret = CRYPT_SUCCESS;
 
 ERR:
-    (void)memset_s(z1, sizeof(z1), 0, sizeof(z1));
-    (void)memset_s(z2, sizeof(z2), 0, sizeof(z2));
-    (void)memset_s(hVal, sizeof(hVal), 0, sizeof(hVal));
-    (void)memset_s(ctrBase, sizeof(ctrBase), 0, sizeof(ctrBase));
+    memset(z1, 0, sizeof(z1));
+    memset(z2, 0, sizeof(z2));
+    memset(hVal, 0, sizeof(hVal));
+    memset(ctrBase, 0, sizeof(ctrBase));
     hctrCtx->dataBuffer.dataLen = 0;
     return ret;
 }

@@ -21,7 +21,7 @@
 #include "crypt_types.h"
 #include "crypt_utils.h"
 #include "crypt_util_ctrl.h"
-#include "securec.h"
+#include <string.h>
 #include "sal_atomic.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
@@ -532,10 +532,12 @@ static int32_t GetEccName(ECC_Pkey *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
         return CRYPT_ECC_POINT_ERR_CURVE_ID;
     }
-    if (memcpy_s(val, len, name, strlen(name) + 1) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        return CRYPT_SECUREC_FAIL;
+    size_t n = strlen(name) + 1;
+    if (n > len) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_CPY_FAIL);
+        return CRYPT_MEM_CPY_FAIL;
     }
+    memcpy(val, name, n);
     return CRYPT_SUCCESS;
 }
 

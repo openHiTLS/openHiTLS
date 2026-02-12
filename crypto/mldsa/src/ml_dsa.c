@@ -15,7 +15,7 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MLDSA
-#include "securec.h"
+#include <string.h>
 #include "crypt_errno.h"
 #include "crypt_algid.h"
 #include "crypt_util_rand.h"
@@ -115,7 +115,7 @@ CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_DupCtx(CRYPT_ML_DSA_Ctx *ctx)
     GOTO_ERR_IF_SRC_NOT_NULL(newCtx->prvKey, ctx->prvKey, BSL_SAL_Dump(ctx->prvKey, ctx->prvLen),
         CRYPT_MEM_ALLOC_FAIL);
     if (ctx->hasSeed) {
-        (void)memcpy_s(newCtx->seed, MLDSA_SEED_BYTES_LEN, ctx->seed, MLDSA_SEED_BYTES_LEN);
+        memcpy(newCtx->seed, ctx->seed, MLDSA_SEED_BYTES_LEN);
         newCtx->hasSeed = true;
     }
     newCtx->pubLen = ctx->pubLen;
@@ -212,7 +212,7 @@ static int32_t MLDSAGetSeed(const CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    (void)memcpy_s(val, len, ctx->seed, MLDSA_SEED_BYTES_LEN);
+    memcpy(val, ctx->seed, MLDSA_SEED_BYTES_LEN);
     return CRYPT_SUCCESS;
 }
 
@@ -477,7 +477,7 @@ int32_t CRYPT_ML_DSA_SetPrvKey(CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPrv *prv)
         return CRYPT_MEM_ALLOC_FAIL;
     }
     ctx->prvLen = ctx->info->privateKeyLen;
-    (void)memcpy_s(ctx->prvKey, ctx->prvLen, prv->data, prv->len);
+    memcpy(ctx->prvKey, prv->data, prv->len);
     return CRYPT_SUCCESS;
 }
 
@@ -625,7 +625,7 @@ int32_t CRYPT_ML_DSA_SetPubKey(CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPub *pub)
         return CRYPT_MEM_ALLOC_FAIL;
     }
     ctx->pubLen = ctx->info->publicKeyLen;
-    (void)memcpy_s(ctx->pubKey, ctx->pubLen, pub->data, pub->len);
+    memcpy(ctx->pubKey, pub->data, pub->len);
     return CRYPT_SUCCESS;
 }
 
@@ -640,10 +640,11 @@ int32_t CRYPT_ML_DSA_GetPrvKey(const CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPrv *prv)
         return CRYPT_MLDSA_KEY_NOT_SET;
     }
 
-    if (memcpy_s(prv->data, prv->len, ctx->prvKey, ctx->prvLen) != EOK) {
+    if (ctx->prvLen > prv->len) {
         BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_LEN_NOT_ENOUGH);
         return CRYPT_MLDSA_LEN_NOT_ENOUGH;
     }
+    memcpy(prv->data, ctx->prvKey, ctx->prvLen);
     prv->len = ctx->prvLen;
     return CRYPT_SUCCESS;
 }
@@ -658,10 +659,11 @@ int32_t CRYPT_ML_DSA_GetPubKey(const CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPub *pub)
         BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_KEY_NOT_SET);
         return CRYPT_MLDSA_KEY_NOT_SET;
     }
-    if (memcpy_s(pub->data, pub->len, ctx->pubKey, ctx->pubLen) != EOK) {
+    if (ctx->pubLen > pub->len) {
         BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_LEN_NOT_ENOUGH);
         return CRYPT_MLDSA_LEN_NOT_ENOUGH;
     }
+    memcpy(pub->data, ctx->pubKey, ctx->pubLen);
     pub->len = ctx->pubLen;
     return CRYPT_SUCCESS;
 }
@@ -747,7 +749,7 @@ static int32_t MLDSAPreHashEncode(CRYPT_ML_DSA_Ctx *ctx, int32_t hashId, const u
     tmpLen -= MLDSA_SIGN_PREFIX_BYTES;
 
     if (ctx->ctxInfo != NULL && ctx->ctxLen > 0) {
-        (void)memcpy_s(ptr, msg->len - MLDSA_SIGN_PREFIX_BYTES, ctx->ctxInfo, ctx->ctxLen);
+        memcpy(ptr, ctx->ctxInfo, ctx->ctxLen);
         ptr += ctx->ctxLen;
         tmpLen -= ctx->ctxLen;
     }
@@ -755,7 +757,7 @@ static int32_t MLDSAPreHashEncode(CRYPT_ML_DSA_Ctx *ctx, int32_t hashId, const u
     ptr[1] = (uint8_t)oidInfo->octetLen;
     ptr += MLDSA_SIGN_PREFIX_BYTES;
     tmpLen -= MLDSA_SIGN_PREFIX_BYTES;
-    (void)memcpy_s(ptr, tmpLen, oidInfo->octs, oidInfo->octetLen);
+    memcpy(ptr, oidInfo->octs, oidInfo->octetLen);
     ptr += oidInfo->octetLen;
     tmpLen -= oidInfo->octetLen;
     void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
@@ -802,11 +804,9 @@ static int32_t MLDSAEncodeInputData(CRYPT_ML_DSA_Ctx *ctx, int32_t hashId, const
     msg->data[0] = 0;
     msg->data[1] = (uint8_t)ctx->ctxLen;
     if (ctx->ctxInfo != NULL && ctx->ctxLen > 0) {
-        (void)memcpy_s(msg->data + MLDSA_SIGN_PREFIX_BYTES, msg->len - MLDSA_SIGN_PREFIX_BYTES,
-            ctx->ctxInfo, ctx->ctxLen);
+        memcpy(msg->data + MLDSA_SIGN_PREFIX_BYTES, ctx->ctxInfo, ctx->ctxLen);
     }
-    (void)memcpy_s(msg->data + MLDSA_SIGN_PREFIX_BYTES + ctx->ctxLen,
-        msg->len - MLDSA_SIGN_PREFIX_BYTES - ctx->ctxLen, data, dataLen);
+    memcpy(msg->data + MLDSA_SIGN_PREFIX_BYTES + ctx->ctxLen, data, dataLen);
     return CRYPT_SUCCESS;
 }
 

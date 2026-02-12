@@ -13,9 +13,10 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdatomic.h>
-#include "securec.h"
+#include <string.h>
 #include "hitls_crypt_type.h"
 #include "hitls_session.h"
 #include "logger.h"
@@ -77,11 +78,12 @@ int32_t ExampleSetPsk(char *psk)
         LOG_DEBUG("input error.");
         return -1;
     }
-    (void)memset_s(g_localPsk, PSK_MAX_LEN, 0, PSK_MAX_LEN);
-    if (strcpy_s(g_localPsk, PSK_MAX_LEN, psk) != EOK) {
+    int n = snprintf(g_localPsk, PSK_MAX_LEN, "%s", psk);
+    if (n < 0 || (size_t)n >= PSK_MAX_LEN) {
         LOG_DEBUG("ExampleSetPsk failed.");
         return -1;
     }
+
     return 0;
 }
 
@@ -135,12 +137,14 @@ uint32_t ExampleClientCb(HITLS_Ctx *ctx, const uint8_t *hint, uint8_t *identity,
     }
 
     /* strlen(g_localIdentity) + 1 copy terminator */
-    if (memcpy_s(identity, maxIdentityLen, g_localIdentity, strlen(g_localIdentity) + 1) != EOK) {
+    if (strlen(g_localIdentity) + 1 > maxIdentityLen) {
         return 0;
     }
-    if (memcpy_s(psk, maxPskLen, pskTrans, pskTransUsedLen) != EOK) {
+    memcpy(identity, g_localIdentity, strlen(g_localIdentity) + 1);
+    if (pskTransUsedLen > maxPskLen) {
         return 0;
     }
+    memcpy(psk, pskTrans, pskTransUsedLen);
     return pskTransUsedLen;
 }
 
@@ -161,9 +165,10 @@ uint32_t ExampleServerCb(HITLS_Ctx *ctx, const uint8_t *identity, uint8_t *psk, 
         return 0;
     }
 
-    if (memcpy_s(psk, maxPskLen, pskTrans, pskTransUsedLen) != EOK) {
+    if (pskTransUsedLen > maxPskLen) {
         return 0;
     }
+    memcpy(psk, pskTrans, pskTransUsedLen);
 
     return pskTransUsedLen;
 }
@@ -185,9 +190,10 @@ static void SetCipherInfo(void *cipher)
 int32_t ExampleTicketKeySuccessCb(uint8_t *keyName, uint32_t keyNameSize, void *cipher, uint8_t isEncrypt)
 {
     if (isEncrypt) {
-        if (memcpy_s(keyName, keyNameSize, g_keyName, KEY_NAME_SIZE) != EOK) {
+        if (KEY_NAME_SIZE > keyNameSize) {
             return HITLS_TICKET_KEY_RET_FAIL;
         }
+        memcpy(keyName, g_keyName, KEY_NAME_SIZE);
         SetCipherInfo(cipher);
         return HITLS_TICKET_KEY_RET_SUCCESS;
     }
@@ -202,9 +208,10 @@ int32_t ExampleTicketKeySuccessCb(uint8_t *keyName, uint32_t keyNameSize, void *
 int32_t ExampleTicketKeyRenewCb(uint8_t *keyName, uint32_t keyNameSize, void *cipher, uint8_t isEncrypt)
 {
     if (isEncrypt) {
-        if (memcpy_s(keyName, keyNameSize, g_keyName, KEY_NAME_SIZE) != EOK) {
+        if (KEY_NAME_SIZE > keyNameSize) {
             return HITLS_TICKET_KEY_RET_FAIL;
         }
+        memcpy(keyName, g_keyName, KEY_NAME_SIZE);
         SetCipherInfo(cipher);
         return HITLS_TICKET_KEY_RET_SUCCESS_RENEW;
     }
@@ -219,8 +226,9 @@ int32_t ExampleTicketKeyRenewCb(uint8_t *keyName, uint32_t keyNameSize, void *ci
 int32_t ExampleTicketKeyAlertCb(uint8_t *keyName, uint32_t keyNameSize, HITLS_CipherParameters *cipher,
     uint8_t isEncrypt)
 {
+    (void)keyNameSize;
     if (isEncrypt) {
-        (void)memcpy_s(keyName, keyNameSize, g_keyName, KEY_NAME_SIZE);
+        memcpy(keyName, g_keyName, KEY_NAME_SIZE);
         SetCipherInfo(cipher);
         return HITLS_TICKET_KEY_RET_SUCCESS_RENEW;
     } else {
@@ -231,8 +239,9 @@ int32_t ExampleTicketKeyAlertCb(uint8_t *keyName, uint32_t keyNameSize, HITLS_Ci
 int32_t ExampleTicketKeyFailCb(uint8_t *keyName, uint32_t keyNameSize, HITLS_CipherParameters *cipher,
     uint8_t isEncrypt)
 {
+    (void)keyNameSize;
     if (isEncrypt) {
-        (void)memcpy_s(keyName, keyNameSize, g_keyName, KEY_NAME_SIZE);
+        memcpy(keyName, g_keyName, KEY_NAME_SIZE);
         SetCipherInfo(cipher);
         return HITLS_TICKET_KEY_RET_SUCCESS_RENEW;
     }
