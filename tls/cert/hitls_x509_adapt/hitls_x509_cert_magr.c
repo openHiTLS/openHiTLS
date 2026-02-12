@@ -21,7 +21,7 @@
 #include "hitls_cert_type.h"
 #include "hitls_type.h"
 #include "hitls_pki_cert.h"
-#include "hitls_error.h"
+#include "hitls_pki_errno.h"
 #include "bsl_err_internal.h"
 #include "tls_config.h"
 #include "cert_mgr_ctx.h"
@@ -171,11 +171,7 @@ static int32_t CertCheckKeyUsage(HITLS_Config *config, HITLS_CERT_X509 *cert, ui
 {
     uint32_t keyUsage = 0;
     int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_KUSAGE, &keyUsage, sizeof(uint32_t));
-    if (ret != HITLS_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    if (keyUsage == HITLS_X509_EXT_KU_NONE) {
+    if (ret == HITLS_X509_ERR_KU_IS_NONE) {
 #ifdef HITLS_TLS_PROTO_TLCP11
         // Key usage must be present, otherwise the chain is broken.
         if (config == NULL) {
@@ -188,6 +184,9 @@ static int32_t CertCheckKeyUsage(HITLS_Config *config, HITLS_CERT_X509 *cert, ui
 #endif
         *res = true;
         return HITLS_SUCCESS;
+    } else if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
     *res = (keyUsage & inKeyUsage) != 0;
     return HITLS_SUCCESS;

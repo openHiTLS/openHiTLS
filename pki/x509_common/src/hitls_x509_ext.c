@@ -1235,7 +1235,10 @@ static int32_t GetExtKeyUsage(HITLS_X509_Ext *ext, uint32_t *val, uint32_t valLe
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     HITLS_X509_CertExt *certExt = (HITLS_X509_CertExt *)ext->extData;
-    *val = certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE ? certExt->keyUsage : HITLS_X509_EXT_KU_NONE;
+    if ((certExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) == 0) {
+        return HITLS_X509_ERR_KU_IS_NONE;
+    }
+    *val = certExt->keyUsage;
     return HITLS_PKI_SUCCESS;
 }
 
