@@ -73,15 +73,15 @@ bool CheckCertKeyUsage(HITLS_X509_Cert *cert, const char *certfile, uint32_t usa
 
     uint32_t keyUsage = 0;
     int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_KUSAGE, &keyUsage, sizeof(keyUsage));
+    // Check only if the keyusage extension is present.
+    if (ret == HITLS_X509_ERR_KU_IS_NONE) {
+        return true;
+    }
     if (ret != HITLS_PKI_SUCCESS) {
         AppPrintError("Failed to get the key usage of file %s, errCode = %d.\n", certfile, ret);
         return false;
     }
 
-    // Check only if the keyusage extension is present.
-    if (keyUsage == HITLS_X509_EXT_KU_NONE) {
-        return true;
-    }
     if ((keyUsage & usage) == 0) {
         PrintCertErr(cert);
         AppPrintError("Failed to check the key usage of file %s.\n", certfile);

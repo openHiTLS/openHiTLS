@@ -530,9 +530,10 @@ void SDV_X509_CERT_CTRL_FUNC_TC001(char *path, int expRawDataLen, int expSignAlg
     ASSERT_EQ(ref, 2);
     HITLS_X509_CertFree(cert);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_KUSAGE, &keyUsage, sizeof(keyUsage)), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(keyUsage, expKeyUsage);
-    if (expKeyUsage != HITLS_X509_EXT_KU_NONE) {
+    int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_KUSAGE, &keyUsage, sizeof(keyUsage));
+    ASSERT_TRUE(ret == HITLS_PKI_SUCCESS || ret == HITLS_X509_ERR_KU_IS_NONE);
+    if (ret != HITLS_X509_ERR_KU_IS_NONE) {
+        ASSERT_EQ(keyUsage, expKeyUsage);
         ASSERT_EQ((keyUsage & HITLS_X509_EXT_KU_DIGITAL_SIGN) != 0, expKuDigitailSign);
         ASSERT_EQ((keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN) != 0, expKuCertSign);
         ASSERT_EQ((keyUsage & HITLS_X509_EXT_KU_KEY_AGREEMENT) != 0, expKuKeyAgreement);
@@ -627,9 +628,10 @@ void SDV_X509_CERT_DUP_FUNC_TC001(char *path, int expSignAlg,
     ASSERT_EQ(HITLS_X509_CertCtrl(dest, HITLS_X509_GET_SIGNALG, &alg, sizeof(alg)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(alg, expSignAlg);
 
-    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_KUSAGE, &keyUsage, sizeof(keyUsage)), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(keyUsage, expKeyUsage);
-    if (expKeyUsage != HITLS_X509_EXT_KU_NONE) {
+    int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_KUSAGE, &keyUsage, sizeof(keyUsage));
+    ASSERT_TRUE(ret == HITLS_PKI_SUCCESS || ret == HITLS_X509_ERR_KU_IS_NONE);
+    if (ret != HITLS_X509_ERR_KU_IS_NONE) {
+        ASSERT_EQ(keyUsage, expKeyUsage);
         ASSERT_EQ((keyUsage & HITLS_X509_EXT_KU_DIGITAL_SIGN) != 0, expKuDigitailSign);
         ASSERT_EQ((keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN) != 0, expKuCertSign);
         ASSERT_EQ((keyUsage & HITLS_X509_EXT_KU_KEY_AGREEMENT) != 0, expKuKeyAgreement);
