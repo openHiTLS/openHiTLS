@@ -87,7 +87,7 @@ union Adrs {
 // b can be 4, 6, 8, 9, 12, 14
 // so use uint32_t to receive the BaseB value
 void BaseB(const uint8_t *x, uint32_t xLen, uint32_t b, uint32_t *out, uint32_t outLen);
-#define HASH_SIGN_XDR_ALG_TYPE_LEN 4
+
 typedef struct {
     int32_t algId; // CRYPT_PKEY_ParaId (SLH_DSA_AlgId or XMSS_AlgId)
     bool isCompressed;
@@ -116,8 +116,6 @@ typedef struct {
     uint64_t index; // the next unused WOTS+ key index, for XMSS only
     SlhDsaPubKey pub;
 } SlhDsaPrvKey;
-
-
 
 struct SlhDsaCtx {
     SlhDsaPara para;
