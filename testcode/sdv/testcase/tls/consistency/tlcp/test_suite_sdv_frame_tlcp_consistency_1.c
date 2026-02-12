@@ -707,7 +707,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC001(int version)
     FRAME_LinkObj *server = NULL;
     config = HITLS_CFG_NewTLCPConfig();
     ASSERT_TRUE(config != NULL);
-    config->isSupportExtendedMasterSecret = true;
+    config->emsMode = HITLS_EMS_MODE_FORCE;
     config->isSupportClientVerify = true;
     config->isSupportNoClientCert = false;
     config->isSupportRenegotiation = true;
@@ -780,7 +780,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC002(int version)
     FRAME_LinkObj *server = NULL;
     config = HITLS_CFG_NewTLCPConfig();
     ASSERT_TRUE(config != NULL);
-    config->isSupportExtendedMasterSecret = true;
+    config->emsMode = HITLS_EMS_MODE_FORCE;
     config->isSupportClientVerify = true;
     config->isSupportNoClientCert = false;
     config->isSupportRenegotiation = true;
@@ -853,7 +853,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC003(int version)
     FRAME_LinkObj *server = NULL;
     config = HITLS_CFG_NewTLCPConfig();
     ASSERT_TRUE(config != NULL);
-    config->isSupportExtendedMasterSecret = true;
+    config->emsMode = HITLS_EMS_MODE_FORCE;
     config->isSupportClientVerify = true;
     config->isSupportNoClientCert = false;
     config->isSupportRenegotiation = true;
@@ -1129,7 +1129,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC007(int version)
     FRAME_LinkObj *server = NULL;
     config = HITLS_CFG_NewTLCPConfig();
     ASSERT_TRUE(config != NULL);
-    config->isSupportExtendedMasterSecret = true;
+    config->emsMode = HITLS_EMS_MODE_FORCE;
     config->isSupportClientVerify = true;
     config->isSupportNoClientCert = false;
     config->isSupportRenegotiation = true;
@@ -1209,7 +1209,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC008(int version)
     FRAME_LinkObj *server = NULL;
     config = HITLS_CFG_NewTLCPConfig();
     ASSERT_TRUE(config != NULL);
-    config->isSupportExtendedMasterSecret = true;
+    config->emsMode = HITLS_EMS_MODE_FORCE;
     config->isSupportClientVerify = true;
     config->isSupportNoClientCert = false;
     config->isSupportRenegotiation = true;
@@ -1289,7 +1289,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC009(int version)
     FRAME_LinkObj *server = NULL;
     config = HITLS_CFG_NewTLCPConfig();
     ASSERT_TRUE(config != NULL);
-    config->isSupportExtendedMasterSecret = true;
+    config->emsMode = HITLS_EMS_MODE_FORCE;
     config->isSupportClientVerify = true;
     config->isSupportNoClientCert = false;
     config->isSupportRenegotiation = true;
@@ -1370,7 +1370,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC010(int version)
     FRAME_LinkObj *server = NULL;
     config = HITLS_CFG_NewTLCPConfig();
     ASSERT_TRUE(config != NULL);
-    config->isSupportExtendedMasterSecret = true;
+    config->emsMode = HITLS_EMS_MODE_FORCE;
     config->isSupportClientVerify = true;
     config->isSupportNoClientCert = false;
     config->isSupportRenegotiation = true;
@@ -1449,7 +1449,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC011(int version)
     FRAME_LinkObj *server = NULL;
     config = HITLS_CFG_NewTLCPConfig();
     ASSERT_TRUE(config != NULL);
-    config->isSupportExtendedMasterSecret = true;
+    config->emsMode = HITLS_EMS_MODE_FORCE;
     config->isSupportClientVerify = true;
     config->isSupportNoClientCert = false;
     config->isSupportRenegotiation = true;
@@ -1526,7 +1526,7 @@ void UT_TLS_TLCP_CONSISTENCY_UNEXPECT_HANDSHAKEMSG_TC012(int version)
     FRAME_LinkObj *server = NULL;
     config = HITLS_CFG_NewTLCPConfig();
     ASSERT_TRUE(config != NULL);
-    config->isSupportExtendedMasterSecret = true;
+    config->emsMode = HITLS_EMS_MODE_FORCE;
     config->isSupportClientVerify = true;
     config->isSupportNoClientCert = true;
     config->isSupportRenegotiation = true;
@@ -2012,7 +2012,7 @@ EXIT:
 void UT_TLS_TLCP_CONSISTENCY_SEQ_NUM_TC001(int isClient)
 {
     HandshakeTestInfo testInfo = { 0 };
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.state = TRY_SEND_FINISH;
     testInfo.isClient = isClient;
     // Error stack exists
@@ -2078,7 +2078,7 @@ EXIT:
 void UT_TLS_TLCP_CONSISTENCY_SEQ_NUM_TC002(int isClient)
 {
     HandshakeTestInfo testInfo = { 0 };
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.state = HS_STATE_BUTT;
     testInfo.isClient = isClient;
     // Error stack exists
@@ -2139,8 +2139,8 @@ void UT_TLS_TLCP_CONSISTENCY_SERVER_TLS_ALL_TC001()
     config_s = HITLS_CFG_NewTLSConfig();
     ASSERT_TRUE(config_c != NULL);
     ASSERT_TRUE(config_s != NULL);
-    config_c->isSupportExtendedMasterSecret = true;
-    config_s->isSupportExtendedMasterSecret = true;
+    config_c->emsMode = HITLS_EMS_MODE_FORCE;
+    config_s->emsMode = HITLS_EMS_MODE_FORCE;
     config_s->isSupportClientVerify = true;
     client = FRAME_CreateTLCPLink(config_c, BSL_UIO_TCP, true);
     server = FRAME_CreateTLCPLink(config_s, BSL_UIO_TCP, false);

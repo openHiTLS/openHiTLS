@@ -1483,7 +1483,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC001(void)
     FRAME_Init();
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
-    tlsConfig->isSupportExtendedMasterSecret = true;
+    tlsConfig->emsMode = HITLS_EMS_MODE_FORCE;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -1542,7 +1542,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECEIVES_OTHER_CCS_FUNC_TC002(int isClient
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
     ASSERT_TRUE(tlsConfig != NULL);
 
-    tlsConfig->isSupportExtendedMasterSecret = true;
+    tlsConfig->emsMode = HITLS_EMS_MODE_FORCE;
     tlsConfig->isSupportClientVerify = true;
     tlsConfig->isSupportNoClientCert = true;
     FRAME_LinkObj *client = NULL;
@@ -2468,7 +2468,7 @@ int32_t DefaultCfgStatusParkWithSuite_1_3(HandshakeTestInfo *testInfo)
     }
     uint16_t cipherSuits[] = {HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256};
     HITLS_CFG_SetCipherSuites(testInfo->config, cipherSuits, sizeof(cipherSuits) / sizeof(uint16_t));
-    testInfo->config->isSupportExtendedMasterSecret = testInfo->isSupportExtendedMasterSecret;
+    testInfo->config->emsMode = testInfo->emsMode;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
     return StatusPark(testInfo);
@@ -2852,7 +2852,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC003(void)
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_RECV_FINISH;
     testInfo.isClient = false;
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.isSupportClientVerify = true;
     /* 1. Use the default configuration items to configure the client and server. */
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite_1_3(&testInfo) == HITLS_SUCCESS);
@@ -2927,7 +2927,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC004(void)
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_RECV_FINISH;
     testInfo.isClient = true;
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.isSupportClientVerify = true;
     /* 1. Use the default configuration items to configure the client and server. */
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite_1_3(&testInfo) == HITLS_SUCCESS);
@@ -3002,7 +3002,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC001(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.isClient = false;
     /* 1. Use the default configuration items to configure the client and server. */
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite_1_3(&testInfo) == HITLS_SUCCESS);
@@ -3083,7 +3083,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_MSGLENGTH_TOOLONG_FUNC_TC002(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite_1_3(&testInfo) == HITLS_SUCCESS);
 
@@ -3332,7 +3332,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_ZEROLENGTH_MSG_FUNC_TC001(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite_1_3(&testInfo) == HITLS_SUCCESS);
 
@@ -3394,7 +3394,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_RECV_ZEROLENGTH_MSG_FUNC_TC002(void)
     FRAME_Msg frameMsg = {0};
     FRAME_Type frameType = {0};
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusParkWithSuite_1_3(&testInfo) == HITLS_SUCCESS);
 

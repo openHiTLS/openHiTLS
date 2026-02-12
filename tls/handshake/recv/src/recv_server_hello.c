@@ -161,7 +161,7 @@ static int32_t ClientCheckExtendedMasterSecret(TLS_Ctx *ctx, const ServerHelloMs
         }
     }
 #endif /* HITLS_TLS_FEATURE_SESSION */
-    if (ctx->config.tlsConfig.isSupportExtendedMasterSecret && !serverHello->haveExtendedMasterSecret) {
+    if (ctx->config.tlsConfig.emsMode == HITLS_EMS_MODE_FORCE && !serverHello->haveExtendedMasterSecret) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17084, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "ExtendedMasterSecret err", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);

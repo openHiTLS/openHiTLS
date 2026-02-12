@@ -2440,7 +2440,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_DATA_AFTER_COMPRESSION_FUNC_TC001()
 {
     FRAME_Init();
     HITLS_Config *tlsConfig_s = HITLS_CFG_NewTLSConfig();
-    tlsConfig_s->isSupportExtendedMasterSecret = false;
+    tlsConfig_s->emsMode = HITLS_EMS_MODE_PREFER;
     tlsConfig_s->isSupportClientVerify = true;
     HITLS_CFG_SetKeyExchMode(tlsConfig_s, TLS13_KE_MODE_PSK_WITH_DHE);
     HITLS_CFG_SetVersionSupport(tlsConfig_s, 0x00000030U);
@@ -2467,7 +2467,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_DATA_AFTER_COMPRESSION_FUNC_TC001()
     /* Set tls1.2 on the client and tls1.3 on the server. Construct the clienthello compression algorithm without
      * any extension. */
     HITLS_Config *tlsConfig_c = HITLS_CFG_NewTLS12Config();
-    tlsConfig_c->isSupportExtendedMasterSecret = false;
+    tlsConfig_c->emsMode = HITLS_EMS_MODE_PREFER;
     tlsConfig_c->isSupportClientVerify = true;
     ASSERT_TRUE(tlsConfig_c != NULL);
 
@@ -3126,7 +3126,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SERVER_EXTENSION_FUNC_TC002()
     FRAME_Init();
 
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLSConfig();
-    tlsConfig->isSupportExtendedMasterSecret = false;
+    tlsConfig->emsMode = HITLS_EMS_MODE_PREFER;
     tlsConfig->isSupportClientVerify = true;
     HITLS_CFG_SetKeyExchMode(tlsConfig, TLS13_KE_MODE_PSK_WITH_DHE);
     ASSERT_TRUE(tlsConfig != NULL);
@@ -3577,7 +3577,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_EXTENSION_FUNC_TC001()
     FRAME_Init();
 
     HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
-    tlsConfig->isSupportExtendedMasterSecret = false;
+    tlsConfig->emsMode = HITLS_EMS_MODE_PREFER;
     tlsConfig->isSupportClientVerify = true;
     HITLS_CFG_SetKeyExchMode(tlsConfig, TLS13_KE_MODE_PSK_WITH_DHE);
     ASSERT_TRUE(tlsConfig != NULL);

@@ -1379,6 +1379,9 @@ int32_t HITLS_GetCipherServerPreference(const HITLS_Ctx *ctx, bool *isSupport);
  *
  * @param   ctx   [IN/OUT] TLS connection handle.
  * @param   isSupport  [IN] Support or Not，true: yes; false: no.
+ * @attention If you enable this feature, it is recommended to also set HITLS_CFG_SetLegacyRenegotiateSupport
+ *            to false and HITLS_CFG_GetExtendedMasterSecretMode to HITLS_EMS_MODE_FORCE, otherwise renegotiation
+ *            attacks and triple handshake attacks may be possible.
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
  */
@@ -1794,6 +1797,28 @@ int32_t HITLS_SetExtendedMasterSecretSupport(HITLS_Ctx *ctx, bool support);
  * @retval  HITLS_NULL_INPUT, ctx is NULL.
  */
 int32_t HITLS_GetExtendedMasterSecretSupport(HITLS_Ctx *ctx, bool *isSupport);
+
+/**
+ * @ingroup hitls
+ * @brief   Set extended master secret mode.
+ *
+ * @param   ctx  [IN] TLS connection handle
+ * @param   mode [IN] EMS mode. See HITLS_EMS_MODE_*.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, if ctx is NULL.
+ */
+int32_t HITLS_SetExtendedMasterSecretMode(HITLS_Ctx *ctx, int32_t mode);
+
+/**
+ * @ingroup hitls
+ * @brief   Get extended master secret mode.
+ *
+ * @param   ctx  [IN] TLS connection handle
+ * @param   mode [OUT] EMS mode. See HITLS_EMS_MODE_*.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, if ctx or mode is NULL.
+ */
+int32_t HITLS_GetExtendedMasterSecretMode(HITLS_Ctx *ctx, int32_t *mode);
 
 /**
  * @ingroup hitls

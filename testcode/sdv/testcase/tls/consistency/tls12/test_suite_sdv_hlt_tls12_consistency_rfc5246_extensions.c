@@ -58,7 +58,7 @@ typedef struct {
     bool alertRecvFlag;     // Indicates whether the alert is received. The value fasle indicates the sent alert, and the value true indicates the received alert
     ALERT_Description expectDescription; // Expected alert description on the test end
     bool isSupportClientVerify;
-    bool isSupportExtendedMasterSecret;
+    int32_t emsMode;
     bool isSupportRenegotiation;
     bool isSupportSessionTicket;
     bool isSupportDhCipherSuites;
@@ -78,7 +78,7 @@ typedef struct {
     FRAME_LinkObj *server;
     HITLS_HandshakeState state;
     bool isClient;
-    bool isSupportExtendedMasterSecret;
+    int32_t emsMode;
     bool isSupportClientVerify;
     bool isSupportNoClientCert;
     bool isSupportRenegotiation;
@@ -150,7 +150,7 @@ void ServerAccept(HLT_FrameHandle *handle, TestPara *testPara)
     //Set up a TLS link on the remote client.
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
-    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->isSupportExtendedMasterSecret) == 0);
+    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->emsMode) == 0);
     clientRes = HLT_ProcessTlsInit(remoteProcess, TLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
     HLT_RpcTlsConnect(remoteProcess, clientRes->sslId);
@@ -212,7 +212,7 @@ void ServerSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     //Set up a TLS link on the remote client.
     clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
-    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->isSupportExtendedMasterSecret) == 0);
+    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->emsMode) == 0);
     ASSERT_TRUE(HLT_SetRenegotiationSupport(clientConfig, testPara->isSupportRenegotiation) == 0);
     clientConfig->isSupportSessionTicket = testPara->isSupportSessionTicket;
     if (testPara->isSupportSni) {
@@ -345,7 +345,7 @@ void ClientSendMalformedRecordHeaderMsg(HLT_FrameHandle *handle, TestPara *testP
     if (testPara->clientSignature != NULL) {
         ASSERT_TRUE(HLT_SetSignature(clientConfig, testPara->clientSignature) == 0);
     }
-    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->isSupportExtendedMasterSecret) == 0);
+    ASSERT_TRUE(HLT_SetExtendedMasterSecretSupport(clientConfig, testPara->emsMode) == 0);
     clientRes = HLT_ProcessTlsInit(localProcess, TLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
 
@@ -484,7 +484,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_REPEAT_EXTENSION_TC010(void)
     handle.frameCallBack = MalformedServerHelloMsgCallback001; // reconstruction callback
     TestPara testPara = {0};
     testPara.port = PORT;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.expectHsState = TRY_RECV_CLIENT_KEY_EXCHANGE;
     testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
     ServerSendMalformedRecordHeaderMsg(&handle, &testPara);
@@ -529,7 +529,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_REPEAT_EXTENSION_TC011(void)
     handle.frameCallBack = MalformedServerHelloMsgCallback002;
     TestPara testPara = {0};
     testPara.port = PORT;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.expectHsState = TRY_RECV_CLIENT_KEY_EXCHANGE;
     testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
     ServerSendMalformedRecordHeaderMsg(&handle, &testPara);
@@ -573,7 +573,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_REPEAT_EXTENSION_TC012(void)
     handle.frameCallBack = MalformedServerHelloMsgCallback003;
     TestPara testPara = {0};
     testPara.port = PORT;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.isSupportRenegotiation = true;
     testPara.expectHsState = TRY_RECV_CLIENT_KEY_EXCHANGE;
     testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
@@ -618,7 +618,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_REPEAT_EXTENSION_TC013(void)
     handle.frameCallBack = MalformedServerHelloMsgCallback004;
     TestPara testPara = {0};
     testPara.port = PORT;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.isSupportSessionTicket = true;
     testPara.expectHsState = TRY_RECV_CLIENT_KEY_EXCHANGE;
     testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
@@ -663,7 +663,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_REPEAT_EXTENSION_TC014(void)
     handle.frameCallBack = MalformedServerHelloMsgCallback005;
     TestPara testPara = {0};
     testPara.port = PORT;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.isSupportSni = true;
     testPara.expectHsState = TRY_RECV_CLIENT_KEY_EXCHANGE;
     testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
@@ -708,7 +708,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_REPEAT_EXTENSION_TC009(void)
     handle.frameCallBack = MalformedServerHelloMsgCallback006;
     TestPara testPara = {0};
     testPara.port = PORT;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.isSupportAlpn = true;
     testPara.expectHsState = TRY_RECV_CLIENT_KEY_EXCHANGE;
     testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
@@ -885,7 +885,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_REPEAT_EXTENSION_TC005(void)
     testPara.port = PORT;
     testPara.expectHsState = TRY_RECV_SERVER_HELLO;
     testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     ClientSendMalformedRecordHeaderMsg(&handle, &testPara);
     return;
 }
@@ -929,7 +929,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_REPEAT_EXTENSION_TC006(void)
     testPara.port = PORT;
     testPara.expectHsState = TRY_RECV_SERVER_HELLO;
     testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.isSupportSessionTicket = true;
     ClientSendMalformedRecordHeaderMsg(&handle, &testPara);
     return;
@@ -980,7 +980,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_REPEAT_EXTENSION_TC007(void)
     testPara.port = PORT;
     testPara.expectHsState = TRY_RECV_SERVER_HELLO;
     testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.isSupportSni = true;
     ClientSendMalformedRecordHeaderMsg(&handle, &testPara);
     return;
@@ -1026,7 +1026,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_REPEAT_EXTENSION_TC008(void)
     testPara.port = PORT;
     testPara.expectHsState = TRY_RECV_SERVER_HELLO;
     testPara.expectDescription = ALERT_ILLEGAL_PARAMETER;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.isSupportAlpn = true;
     ClientSendMalformedRecordHeaderMsg(&handle, &testPara);
     return;
@@ -1857,7 +1857,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_MALFORMED_CLIENT_HELLO_MSG_FUN_TC048(void
     testPara.port = PORT;
     testPara.expectHsState = TRY_RECV_SERVER_HELLO;
     testPara.expectDescription = ALERT_DECODE_ERROR;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.isSupportSni = true;
     ClientSendMalformedRecordHeaderMsg(&handle, &testPara);
     return;
@@ -1911,7 +1911,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_MALFORMED_CLIENT_HELLO_MSG_FUN_TC047(void
     testPara.port = PORT;
     testPara.expectHsState = TRY_RECV_SERVER_HELLO;
     testPara.expectDescription = ALERT_DECODE_ERROR;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.isSupportSni = true;
     ClientSendMalformedRecordHeaderMsg(&handle, &testPara);
     return;
@@ -1965,7 +1965,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_MALFORMED_CLIENT_HELLO_MSG_FUN_TC046(void
     testPara.port = PORT;
     testPara.expectHsState = TRY_RECV_SERVER_HELLO;
     testPara.expectDescription = ALERT_DECODE_ERROR;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.isSupportSni = true;
     ClientSendMalformedRecordHeaderMsg(&handle, &testPara);
     return;
@@ -2017,7 +2017,7 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_MALFORMED_CLIENT_HELLO_MSG_FUN_TC045(void
     testPara.port = PORT;
     testPara.expectHsState = TRY_RECV_SERVER_HELLO;
     testPara.expectDescription = ALERT_DECODE_ERROR;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.isSupportSni = true;
     ClientSendMalformedRecordHeaderMsg(&handle, &testPara);
     return;

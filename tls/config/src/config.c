@@ -142,7 +142,7 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
     destConfig->isSupportServerPreference = srcConfig->isSupportServerPreference;
 #endif
     destConfig->maxCertList = srcConfig->maxCertList;
-    destConfig->isSupportExtendedMasterSecret = srcConfig->isSupportExtendedMasterSecret;
+    destConfig->emsMode = srcConfig->emsMode;
     destConfig->emptyRecordsNum = srcConfig->emptyRecordsNum;
     destConfig->isKeepPeerCert = srcConfig->isKeepPeerCert;
     destConfig->version = srcConfig->version;
@@ -1301,8 +1301,7 @@ int32_t HITLS_CFG_SetExtendedMasterSecretSupport(HITLS_Config *config, bool supp
     if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
-    config->isSupportExtendedMasterSecret = support;
-    return HITLS_SUCCESS;
+    return HITLS_CFG_SetExtendedMasterSecretMode(config, support ? HITLS_EMS_MODE_FORCE : HITLS_EMS_MODE_PREFER);
 }
 
 #if defined(HITLS_TLS_FEATURE_PSK) && (defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12))
@@ -1336,7 +1335,27 @@ int32_t HITLS_CFG_GetExtendedMasterSecretSupport(HITLS_Config *config, bool *isS
         return HITLS_NULL_INPUT;
     }
 
-    *isSupport = config->isSupportExtendedMasterSecret;
+    *isSupport = (config->emsMode == HITLS_EMS_MODE_FORCE);
+    return HITLS_SUCCESS;
+}
+int32_t HITLS_CFG_SetExtendedMasterSecretMode(HITLS_Config *config, int32_t mode)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    if (mode != HITLS_EMS_MODE_FORBID && mode != HITLS_EMS_MODE_PREFER && mode != HITLS_EMS_MODE_FORCE) {
+        return HITLS_INVALID_INPUT;
+    }
+    config->emsMode = mode;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetExtendedMasterSecretMode(HITLS_Config *config, int32_t *mode)
+{
+    if (config == NULL || mode == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *mode = config->emsMode;
     return HITLS_SUCCESS;
 }
 

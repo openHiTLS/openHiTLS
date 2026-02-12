@@ -46,6 +46,37 @@ EXIT:
     return;
 }
 
+static void Test_MissSecRenego(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
+    uint32_t bufSize, void *user)
+{
+    if (*(bool *)user) {
+        return;
+    }
+    *(bool *)user = true;
+    (void)ctx;
+    (void)bufSize;
+    (void)user;
+    FRAME_Type frameType = { 0 };
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    frameType.transportType = BSL_UIO_TCP;
+    FRAME_Msg frameMsg = { 0 };
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLCP_DTLCP11;
+    frameMsg.transportType = BSL_UIO_TCP;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
+    ASSERT_EQ(parseLen, *len);
+    frameMsg.body.hsMsg.body.serverHello.secRenego.exState = MISSING_FIELD;
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+EXIT:
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
 /* @
 * @test  UT_TLS_TLCP_CONSISTENCY_SESSIONID_MISS_TC001
 * @title During session recovery, the server deletes session_id after sending the server hello message. The expected
@@ -88,6 +119,94 @@ EXIT:
     FRAME_FreeLink(server);
     ClearWrapper();
     HITLS_SESS_Free(clientSession);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_TLCP_CONSISTENCY_SERVERHELLO_NO_RENEG_EXT_TC001
+* @title Client does not abort when ServerHello misses secure renegotiation extension with legacy allowed.
+* @precon nan
+* @brief  1. Start handshake and remove secRenego extension from ServerHello.
+*         2. Continue handshake.
+* @expect 1. Handshake succeeds.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLCP_CONSISTENCY_SERVERHELLO_NO_RENEG_EXT_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    bool isModify = false;
+    RecWrapper wrapper = {
+        TRY_SEND_SERVER_HELLO,
+        REC_TYPE_HANDSHAKE,
+        false,
+        &isModify,
+        Test_MissSecRenego
+    };
+    RegisterWrapper(wrapper);
+
+    config = HITLS_CFG_NewTLCPConfig();
+    client = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, true);
+    server = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, false);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    ClearWrapper();
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_TLCP_CONSISTENCY_CLIENTHELLO_NO_TICKET_EXT_TC001
+* @title TLCP client hello does not carry session ticket extension when disabled by default.
+* @precon nan
+* @brief  1. Use default TLCP config to start handshake and stop at server recv client hello.
+*         2. Parse client hello on server side.
+* @expect 1. ClientHello session ticket extension is missing.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLCP_CONSISTENCY_CLIENTHELLO_NO_TICKET_EXT_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    config = HITLS_CFG_NewTLCPConfig();
+    ASSERT_TRUE(config != NULL);
+
+    client = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, true);
+    server = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, false);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+
+    FrameUioUserData *ioServerData = BSL_UIO_GetUserData(server->io);
+    uint8_t *recvBuf = ioServerData->recMsg.msg;
+    uint32_t recvLen = ioServerData->recMsg.len;
+    ASSERT_TRUE(recvLen != 0);
+
+    FRAME_Type frameType = {0};
+    FRAME_Msg frameMsg = {0};
+    uint32_t parseLen = 0;
+    frameType.versionType = HITLS_VERSION_TLCP_DTLCP11;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+    frameType.handshakeType = CLIENT_HELLO;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    frameType.transportType = BSL_UIO_TCP;
+    ASSERT_EQ(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen), HITLS_SUCCESS);
+
+    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
+    ASSERT_EQ(clientMsg->sessionTicket.exState, MISSING_FIELD);
+    FRAME_CleanMsg(&frameType, &frameMsg);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
 }
 /* END_CASE */
 
@@ -1737,6 +1856,43 @@ void UT_TLS_TLCP_CONSISTENCY_KEYUSAGE_TC004()
     ASSERT_EQ(info.flag, ALERT_FLAG_SEND);
     ASSERT_EQ(info.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(info.description, ALERT_BAD_CERTIFICATE);
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test   UT_TLS_TLCP_CONSISTENCY_EMS_DEFAULT_FORBID_TC001
+* @title  TLCP default config forbids EMS and should not negotiate EMS.
+* @precon nan
+* @brief  1. Use default TLCP config to create client/server.
+*         2. Complete handshake.
+* @expect 1. Handshake succeeds.
+*         2. EMS is not negotiated on both sides.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLCP_CONSISTENCY_EMS_DEFAULT_FORBID_TC001()
+{
+    FRAME_Init();
+
+    HITLS_Config *tlsConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    tlsConfig = HITLS_CFG_NewTLCPConfig();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    client = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, true);
+    ASSERT_TRUE(client != NULL);
+
+    server = FRAME_CreateTLCPLink(tlsConfig, BSL_UIO_TCP, false);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.isExtendedMasterSecret, false);
+    ASSERT_EQ(server->ssl->negotiatedInfo.isExtendedMasterSecret, false);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);

@@ -61,7 +61,8 @@ static int32_t ClientPrepareSession(TLS_Ctx *ctx)
     if (ctx->session != NULL) {
         bool haveExtMasterSecret = false;
         HITLS_SESS_GetHaveExtMasterSecret(ctx->session, &haveExtMasterSecret);
-        if (!haveExtMasterSecret && ctx->config.tlsConfig.isSupportExtendedMasterSecret) {
+        if ((!haveExtMasterSecret && ctx->config.tlsConfig.emsMode == HITLS_EMS_MODE_FORCE) ||
+            (haveExtMasterSecret && ctx->config.tlsConfig.emsMode == HITLS_EMS_MODE_FORBID)) {
             HITLS_SESS_Free(ctx->session);
             ctx->session = NULL;
             return HITLS_SUCCESS;

@@ -45,7 +45,7 @@ typedef struct {
     FRAME_LinkObj *server;
     HITLS_HandshakeState state;
     bool isClient;
-    bool isSupportExtendedMasterSecret;
+    int32_t emsMode;
     bool isSupportClientVerify;
     bool isSupportNoClientCert;
     bool isSupportRenegotiation;
@@ -89,7 +89,7 @@ int32_t DefaultCfgStatusPark(HandshakeTestInfo *testInfo)
     uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
     HITLS_CFG_SetSignature(testInfo->config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
 
-    testInfo->config->isSupportExtendedMasterSecret = testInfo->isSupportExtendedMasterSecret;
+    testInfo->config->emsMode = testInfo->emsMode;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
     testInfo->config->isSupportRenegotiation = testInfo->isSupportRenegotiation;
@@ -117,7 +117,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_MSGLENGTH_TOOLONG_TC001(void)
     HandshakeTestInfo testInfo = {0};
 
     testInfo.state = TRY_RECV_CERTIFICATE;
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.isClient = false;
     testInfo.isSupportClientVerify = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
@@ -188,7 +188,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_MSGLENGTH_TOOLONG_TC002(void)
 
     testInfo.state = TRY_RECV_CERTIFICATE;
     testInfo.isClient = true;
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.isSupportClientVerify = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
 
@@ -257,7 +257,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_MSGLENGTH_TOOLONG_TC003(void)
 
     testInfo.state = TRY_RECV_CLIENT_KEY_EXCHANGE;
     testInfo.isClient = false;
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.isSupportClientVerify = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
 
@@ -316,7 +316,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_MSGLENGTH_TOOLONG_TC004(void)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_SEND_FINISH;
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);
 
@@ -367,9 +367,9 @@ EXIT:
 int32_t StatusPark1(HandshakeTestInfo *testInfo)
 {
     if(testInfo->isServerExtendedMasterSecret == true){
-        testInfo->config->isSupportExtendedMasterSecret = true;
+        testInfo->config->emsMode = HITLS_EMS_MODE_FORCE;
     }else {
-        testInfo->config->isSupportExtendedMasterSecret = false;
+        testInfo->config->emsMode = HITLS_EMS_MODE_PREFER;
     }
     testInfo->config->isSupportRenegotiation = false;
     testInfo->server = FRAME_CreateLink(testInfo->config, BSL_UIO_TCP);
@@ -378,9 +378,9 @@ int32_t StatusPark1(HandshakeTestInfo *testInfo)
     }
 
     if(testInfo->isServerExtendedMasterSecret == true){
-        testInfo->config->isSupportExtendedMasterSecret = false;
+        testInfo->config->emsMode = HITLS_EMS_MODE_PREFER;
     }else {
-        testInfo->config->isSupportExtendedMasterSecret = true;
+        testInfo->config->emsMode = HITLS_EMS_MODE_FORCE;
     }
     testInfo->config->isSupportRenegotiation = testInfo->isSupportRenegotiation;
     testInfo->client = FRAME_CreateLink(testInfo->config, BSL_UIO_TCP);
@@ -410,7 +410,7 @@ int32_t DefaultCfgStatusPark1(HandshakeTestInfo *testInfo)
     uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
     HITLS_CFG_SetSignature(testInfo->config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
 
-    testInfo->config->isSupportExtendedMasterSecret = testInfo->isSupportExtendedMasterSecret;
+    testInfo->config->emsMode = testInfo->emsMode;
     testInfo->config->isSupportClientVerify = testInfo->isSupportClientVerify;
     testInfo->config->isSupportNoClientCert = testInfo->isSupportNoClientCert;
     testInfo->config->isSupportRenegotiation = testInfo->isSupportRenegotiation;
@@ -597,7 +597,7 @@ void UT_TLS_TLS12_RFC7627_CONSISTENCY_EXTENDED_MASTER_SECRET_TC004(void)
 
     FRAME_Msg frameMsg1 = {0};
     FRAME_Type frameType1 = {0};
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.state = TRY_RECV_CLIENT_HELLO;
     testInfo.isClient = false;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo) == HITLS_SUCCESS);

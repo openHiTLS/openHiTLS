@@ -229,7 +229,7 @@ typedef struct TlsConfig {
 #endif
     bool isFlightTransmitEnable;        /* sending of handshake information in one flighttransmit */
 
-    bool isSupportExtendedMasterSecret;   /* is support extended master secret */
+    int32_t emsMode;                      /* extended master secret mode */
     bool isSupportSessionTicket;        /* is support session ticket */
     bool isSupportServerPreference;     /* server cipher suites can be preferentially selected */
 
