@@ -185,16 +185,10 @@ int32_t CRYPT_DECODE_RsaPubkeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1
 int32_t CRYPT_DECODE_RsaPrikeyAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *asn1, uint32_t asn1Num);
 #endif
 
-#ifdef HITLS_CRYPTO_DSA
+#if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_DH)
 int32_t CRYPT_DECODE_DsaKeyParamAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
 
 int32_t CRYPT_ENCODE_DsaKeyParamAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num, BSL_Buffer *encode);
-#endif
-
-#ifdef HITLS_CRYPTO_DH
-int32_t CRYPT_DECODE_DhKeyParamAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum);
-
-int32_t CRYPT_ENCODE_DhKeyParamAsn1Buff(BSL_ASN1_Buffer *asn1, uint32_t asn1Num, BSL_Buffer *encode);
 #endif
 
 #ifdef HITLS_CRYPTO_MLDSA
