@@ -266,3 +266,51 @@ hitls prime [-help] [-generate] [-bits num] [-safe] [-hex] [-checks num] [number
 # Output in hexadecimal format
 ./hitls prime -generate -bits 128 -hex
 ```
+
+### 3.6.3 errdecode
+
+**Function**: Convert error codes to human-readable strings
+
+**Usage**:
+
+```
+hitls errdecode [-help] [-v | --verbose] [--stack] [-hex] [error_code ...]
+```
+
+**Supported Options**:
+
+- `-help`: Display help information
+- `-v`, `--verbose`: Show detailed error code field breakdown
+- `--stack`: Display error stack (if supported)
+- `-hex`: Force hexadecimal parsing
+
+**Arguments**:
+
+- `error_code`: Error code in decimal or hexadecimal format
+  - Hexadecimal can be with (0x) or without prefix
+  - Multiple error codes can be specified
+
+**Examples**:
+
+```bash
+# Decode a decimal error code
+hitls errdecode 101
+
+# Decode a hexadecimal error code (with 0x prefix)
+hitls errdecode 0x0E000065
+
+# Decode a hexadecimal error code (without 0x prefix)
+hitls errdecode 0E000065
+
+# Show detailed error code field breakdown
+hitls errdecode -v 0x1408F10B
+
+# Batch process multiple error codes
+hitls errdecode 101 0x0E000065 234567890
+
+# Read error codes from pipeline
+echo "0x1408F10B" | hitls errdecode
+
+# Display error stack
+hitls errdecode --stack
+```
