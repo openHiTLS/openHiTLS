@@ -199,36 +199,45 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
     int32_t alg = CRYPT_RAND_SHA256;
 #endif
 
+    // Step 1: CPU capability detection (no dependencies)
     if ((initOpt & CRYPT_EAL_INIT_CPU) && (g_ealInitOpts & CRYPT_EAL_INIT_CPU) == 0) {
         GetCpuInstrSupportState();
         g_ealInitOpts |= CRYPT_EAL_INIT_CPU;
     }
 
+    // Step 2: BSL initialization (foundational layer, no dependencies)
     ret = BslModuleInit(initOpt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-  
-    ret = ProviderModuleInit(initOpt, alg);
-    if (ret != CRYPT_SUCCESS) {
-        BslModuleFree(initOpt);
-        return ret;
-    }
 
-    ret = RandModuleInit(initOpt, alg);
-    if (ret != CRYPT_SUCCESS) {
-        BslModuleFree(initOpt);
-        ProviderModuleFree(initOpt);
-        return ret;
-    }
-
+    // Step 3: Global lock initialization (must be before Rand and Provider Rand)
+    // The seed lock (g_seedLock) is used by EAL_GetDefaultSeed() which may be
+    // called during DRBG initialization in both RandModuleInit and ProviderModuleInit.
     ret = GlobalLockInit(initOpt, alg);
     if (ret != CRYPT_SUCCESS) {
-        RandModuleFree(initOpt);
         BslModuleFree(initOpt);
-        ProviderModuleFree(initOpt);
         return ret;
     }
+
+    // Step 4: Provider initialization (depends on BSL and Lock)
+    ret = ProviderModuleInit(initOpt, alg);
+    if (ret != CRYPT_SUCCESS) {
+        GlobalLockFree(initOpt);
+        BslModuleFree(initOpt);
+        return ret;
+    }
+
+    // Step 5: Rand module initialization (depends on BSL and Lock, independent of Provider)
+    // Note: Rand and Provider are independent parallel paths for random number generation
+    ret = RandModuleInit(initOpt, alg);
+    if (ret != CRYPT_SUCCESS) {
+        ProviderModuleFree(initOpt);
+        GlobalLockFree(initOpt);
+        BslModuleFree(initOpt);
+        return ret;
+    }
+
     return ret;
 }
 
@@ -243,10 +252,13 @@ void CRYPT_EAL_Cleanup(uint64_t opts)
     initOpt = CRYPT_EAL_INIT_ALL;
 #endif
 
-    ProviderModuleFree(initOpt);
+    // Cleanup in reverse order of initialization (LIFO principle)
+    // Init order: CPU → BSL → Lock → Provider → Rand
+    // Cleanup order: Rand → Provider → Lock → BSL
     RandModuleFree(initOpt);
-    BslModuleFree(initOpt);
+    ProviderModuleFree(initOpt);
     GlobalLockFree(initOpt);
+    BslModuleFree(initOpt);
     g_ealInitOpts &= (~initOpt);
 }
 
