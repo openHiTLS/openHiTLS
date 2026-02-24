@@ -126,7 +126,7 @@ typedef enum {
 
 #endif
 
-#ifdef HITLS_CRYPTO_DSA
+#if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_DH)
 static BSL_ASN1_TemplateItem g_dsaKeyparamTempl[] = {
     {BSL_ASN1_TAG_INTEGER, 0, 0}, /* p */
     {BSL_ASN1_TAG_INTEGER, 0, 0}, /* q */
@@ -513,7 +513,7 @@ int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara 
 }
 #endif
 
-#ifdef HITLS_CRYPTO_DSA
+#if defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_DH)
 int32_t CRYPT_DECODE_DsaKeyParamAsn1Buff(uint8_t *buff, uint32_t buffLen, BSL_ASN1_Buffer *asn1, uint32_t arrNum)
 {
     if (buff == NULL) {
