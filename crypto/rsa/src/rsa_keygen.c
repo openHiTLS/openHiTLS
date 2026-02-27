@@ -1264,21 +1264,21 @@ static void InitRsaPrvKeyParams(BSL_Param *params, uint32_t *index, uint8_t *buf
 static void ExportRsaPssParams(const CRYPT_RSA_Ctx *ctx, BSL_Param *params, uint32_t *index)
 {
     (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_MD_ID,
-        BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&ctx->pad.para.pss.mdId, sizeof(int32_t));
-    params[(*index)++].useLen = sizeof(int32_t);
+        BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&ctx->pad.para.pss.mdId, sizeof(ctx->pad.para.pss.mdId));
+    params[(*index)++].useLen = sizeof(ctx->pad.para.pss.mdId);
     (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_MGF1_ID,
-        BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&ctx->pad.para.pss.mgfId, sizeof(int32_t));
-    params[(*index)++].useLen = sizeof(int32_t);
+        BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&ctx->pad.para.pss.mgfId, sizeof(ctx->pad.para.pss.mgfId));
+    params[(*index)++].useLen = sizeof(ctx->pad.para.pss.mgfId);
     (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_SALTLEN,
-        BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&ctx->pad.para.pss.saltLen, sizeof(int32_t));
-    params[(*index)++].useLen = sizeof(int32_t);
+        BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&ctx->pad.para.pss.saltLen, sizeof(ctx->pad.para.pss.saltLen));
+    params[(*index)++].useLen = sizeof(ctx->pad.para.pss.saltLen);
 }
 
 static void ExportRsaPkcsParams(const CRYPT_RSA_Ctx *ctx, BSL_Param *params, uint32_t *index)
 {
     (void)BSL_PARAM_InitValue(&params[*index], CRYPT_PARAM_RSA_MD_ID,
-        BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&ctx->pad.para.pkcsv15.mdId, sizeof(int32_t));
-    params[(*index)++].useLen = sizeof(int32_t);
+        BSL_PARAM_TYPE_INT32, (void *)(uintptr_t)&ctx->pad.para.pkcsv15.mdId, sizeof(ctx->pad.para.pkcsv15.mdId));
+    params[(*index)++].useLen = sizeof(ctx->pad.para.pkcsv15.mdId);
 }
 
 int32_t CRYPT_RSA_Export(const CRYPT_RSA_Ctx *ctx, BSL_Param *params)

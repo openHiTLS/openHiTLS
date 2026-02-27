@@ -229,7 +229,7 @@ void SDV_CRYPTO_HKDF_BSL_PARAM_MAKER_TC001(int algId, Hex *key, Hex *salt, Hex *
     ASSERT_TRUE(out != NULL);
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
     ASSERT_TRUE(ctx != NULL);
-    CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_FULL;
+    uint32_t mode = CRYPT_KDF_HKDF_MODE_FULL;
 
     BSL_ParamMaker *maker = BSL_PARAM_MAKER_New();
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32,
@@ -267,7 +267,7 @@ void SDV_CRYPTO_HKDF_BSL_PARAM_MAKER_TC002(int algId, Hex *key, Hex *salt, Hex *
     ASSERT_TRUE(out != NULL);
     CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
     ASSERT_TRUE(ctx != NULL);
-    CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_FULL;
+    uint32_t mode = CRYPT_KDF_HKDF_MODE_FULL;
 
     BSL_ParamMaker *maker = BSL_PARAM_MAKER_New();
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, CRYPT_PARAM_KDF_MAC_ID, BSL_PARAM_TYPE_UINT32,
