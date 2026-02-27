@@ -517,7 +517,7 @@ int32_t GaussPartialSemiSystematic(uint8_t *mat, const int32_t colsBytes, int16_
     }
 }
 
-int32_t ColsRermutation(uint8_t *mat, int32_t const colsBytes, int16_t *pi, uint64_t *pivots, const int32_t mt)
+int32_t ColsRermutation(uint8_t *mat, const int32_t colsBytes, int16_t *pi, uint64_t *pivots, const int32_t mt)
 {
     const int32_t row = mt - MCELIECE_MU;
     const int32_t blockIdx = row >> 3; // offset

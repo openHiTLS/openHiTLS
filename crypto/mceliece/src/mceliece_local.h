@@ -152,10 +152,10 @@ static inline int32_t CMCtz64(uint64_t x)
 // =================================================================================
 /* Compute control bits for a Benes network from a permutation pi of size n=2^w.
  * out must point to ((2*w-1)*n/16) bytes, zeroed by the caller or by the impl. */
-int32_t CbitsFromPermNs(uint8_t *out, const int16_t *pi, int64_t w, int64_t n);
+int32_t CbitsFromPermNs(uint8_t *out, const int16_t *pi, const int64_t w, const int64_t n);
 
 // Derive support L[0..N-1] from control bits
-int32_t SupportFromCbits(GFElement *L, const uint8_t *cbits, int64_t w, int32_t lenN);
+int32_t SupportFromCbits(GFElement *L, const uint8_t *cbits, const int64_t w, const int32_t lenN);
 
 // =================================================================================
 // Goppa Encode and Decode Functions
@@ -180,7 +180,7 @@ int32_t EncodeVector(const uint8_t *errorVector, const GFMatrix *matT, uint8_t *
 // out[0..t-1] are coefficients g_0..g_{t-1} with monic leading coeff implied
 // f[0..t-1] are coefficients of f(x) in GF(2^m)
 // Returns 0 on success, -1 on failure (singular system)
-int32_t GenPolyOverGF(GFElement *out, const GFElement *f, int32_t t, int32_t m);
+int32_t GenPolyOverGF(GFElement *out, const GFElement *f, const int32_t t, const int32_t m);
 // GF(2^13) add(/xor)
 GFElement GFAddtion(GFElement a, GFElement b);
 // GF(2^13) mul
@@ -196,7 +196,7 @@ GFElement GFPower(GFElement base, int32_t exp);
 GFPolynomial *PolynomialCreate(const int32_t maxDegree);
 void PolynomialFree(GFPolynomial *poly);
 
-void PolynomialRoots(GFElement *out, const GFElement *f, const GFElement *L, int32_t n, int32_t t);
+void PolynomialRoots(GFElement *out, const GFElement *f, const GFElement *L, const int32_t n, const int32_t t);
 
 GFElement PolynomialEval(const GFPolynomial *poly, GFElement x);
 
@@ -227,7 +227,7 @@ int32_t BuildParityCheckMatrixReferenceStyle(GFMatrix *matH, const GFPolynomial 
                                              const McelieceParams *params);
 int32_t ReduceToSystematicFormReferenceStyle(GFMatrix *matH);
 
-int32_t ColsRermutation(uint8_t *mat, const int32_t colsBytes, int16_t *pi, uint64_t *pivots, int32_t mt);
+int32_t ColsRermutation(uint8_t *mat, const int32_t colsBytes, int16_t *pi, uint64_t *pivots, const int32_t mt);
 int32_t GaussPartialSemiSystematic(uint8_t *mat, const int32_t colsBytes, int16_t *pi, uint64_t *pivots,
                                    const int32_t mt, const int32_t paramN);
 
