@@ -117,10 +117,10 @@ void SDV_AUTH_OTP_CTX_CTRL_API_TC001(int protocolType)
     uint8_t key20[] = "12345678901234567890";
     ASSERT_EQ(HITLS_AUTH_OtpInit(ctx, key20, sizeof(key20)), HITLS_AUTH_SUCCESS);
 
-    HITLS_AUTH_OtpType protocolTypeGot;
+    int32_t protocolTypeGot;
     uint8_t keyGot[sizeof(key20)];
     uint32_t digitsGot;
-    HITLS_AUTH_OtpCryptAlgId algIdGot;
+    int32_t algIdGot;
 
     /* Get default value. */
     BSL_Param paramGet[] = {
@@ -141,7 +141,7 @@ void SDV_AUTH_OTP_CTX_CTRL_API_TC001(int protocolType)
 
     /* Set valid value. */
     uint32_t digitsSet = 8;
-    HITLS_AUTH_OtpCryptAlgId algIdSet = HITLS_AUTH_OTP_CRYPTO_SHA512;
+    int32_t algIdSet = HITLS_AUTH_OTP_CRYPTO_SHA512;
     BSL_Param paramSet[] = {
         {AUTH_PARAM_OTP_CTX_DIGITS, BSL_PARAM_TYPE_UINT32, &digitsSet, sizeof(digitsSet), sizeof(digitsSet)},
         {AUTH_PARAM_OTP_CTX_HASHALGID, BSL_PARAM_TYPE_OCTETS, &algIdSet, sizeof(algIdSet), sizeof(algIdSet)},
@@ -213,7 +213,7 @@ EXIT:
 /* END_CASE */
 
 /**
- * @test SDV_AUTH_OTP_CTX_CTRL_API_TC001
+ * @test SDV_AUTH_OTP_CTX_CTRL_API_TC002
  * @spec OTP Context
  * @title Test control OTP context
  */
@@ -227,7 +227,7 @@ void SDV_AUTH_OTP_CTX_CTRL_API_TC002(int protocolType)
 
     /* Set invalid value. */
     uint32_t digitsSet = OTP_MAX_DIGITS + 1;
-    HITLS_AUTH_OtpCryptAlgId algIdSet = HITLS_AUTH_OTP_CRYPTO_SHA512 + 100;
+    int32_t algIdSet = HITLS_AUTH_OTP_CRYPTO_SHA512 + 100;
     BSL_Param paramSet[] = {
         {AUTH_PARAM_OTP_CTX_DIGITS, BSL_PARAM_TYPE_UINT32, &digitsSet, sizeof(digitsSet), sizeof(digitsSet)},
         {AUTH_PARAM_OTP_CTX_HASHALGID, BSL_PARAM_TYPE_OCTETS, &algIdSet, sizeof(algIdSet), sizeof(algIdSet)},

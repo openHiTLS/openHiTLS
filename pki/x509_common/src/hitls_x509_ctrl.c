@@ -204,7 +204,7 @@ static int32_t X509EncodeNameNodeEntry(const HITLS_X509_NameNode *nameNode, BSL_
         {BSL_ASN1_TAG_ANY, 0, 0}
     };
 
-    BSL_ASN1_Buffer asnDnBuff = {};
+    BSL_ASN1_Buffer asnDnBuff = {0};
     BSL_ASN1_Template dntTempl = {dnTempl, sizeof(dnTempl) / sizeof(dnTempl[0])};
     int32_t ret = BSL_ASN1_EncodeTemplate(&dntTempl, asnArr, X509_DN_NAME_ELEM_NUMBER,
         &asnDnBuff.buff, &asnDnBuff.len);

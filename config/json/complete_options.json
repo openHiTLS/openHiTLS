@@ -79,6 +79,8 @@
             "-Wignored-qualifiers",
             "-Wimplicit-fallthrough=3",
             "-Wtype-limits",
+            "-Wno-type-limits",
+            "-Wno-cast-function-type",
             "-Wno-stringop-overread"
         ],
         "CC_SEC_FLAGS": [
@@ -135,6 +137,7 @@
             "-fno-exceptions",
             "-fno-delete-null-pointer-checks",
             "-fno-short-enums",
+            "-fshort-enums",
             "-fno-merge-constants"
         ],
         "CC_OVERALL_FLAGS": [

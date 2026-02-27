@@ -393,7 +393,7 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X5
     int32_t ret;
     void *node = NULL;
     for (node = BSL_LIST_GET_FIRST(attrs->list); node != NULL; node = BSL_LIST_GET_NEXT(attrs->list), iter++) {
-        HITLS_X509_AttrEntry attrEntry = {};
+        HITLS_X509_AttrEntry attrEntry = {0};
         if (encodeCb != NULL) {
             ret = encodeCb(node, &attrEntry);
             if (ret != HITLS_PKI_SUCCESS) {

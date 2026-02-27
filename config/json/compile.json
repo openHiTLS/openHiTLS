@@ -8,8 +8,7 @@
             "CC_OVERALL_FLAGS": ["-pipe"],
             "CC_LANGUAGE_FLAGS": ["-fsigned-char"],
             "CC_CDG_FLAGS": [
-                "-fno-common",
-                "-fno-short-enums"
+                "-fno-common"
             ],
             "CC_MD_DEPENDENT_FLAGS": [],
             "CC_OPT_FLAGS": [

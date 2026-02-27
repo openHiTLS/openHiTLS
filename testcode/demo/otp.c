@@ -64,7 +64,7 @@ int32_t validateHotp(HITLS_AUTH_OtpCtx *ctx, uint64_t counter, char *otp, uint32
 }
 
 int32_t setTotpCtx(HITLS_AUTH_OtpCtx *ctx, uint8_t *key, uint32_t keyLen, uint32_t digits,
-                   HITLS_AUTH_OtpCryptAlgId hashAlgId, uint32_t timeStepSize, BslUnixTime startOffset,
+                   int32_t hashAlgId, uint32_t timeStepSize, BslUnixTime startOffset,
                    uint32_t validWindow)
 {
     int32_t ret = HITLS_AUTH_OtpInit(ctx, key, keyLen);
