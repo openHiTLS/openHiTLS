@@ -21,6 +21,7 @@
 #include "crypt_types.h"
 #include "crypt_utils.h"
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
 #include "bsl_err_internal.h"
 #include "crypt_bn.h"
 #include "crypt_ecc.h"
@@ -247,19 +248,6 @@ ERR:
     return ret;
 }
 
-static int32_t IsUEqualToC3(const uint8_t *data, const uint8_t *sm3Buf, uint32_t sm3BufLen)
-{
-    uint8_t check = 0;
-    for (uint32_t i = 0; i < sm3BufLen; i++) {
-        check |= sm3Buf[i] ^ data[i + SM2_POINT_COORDINATE_LEN];
-    }
-    if (check != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM2_DECRYPT_FAIL);
-        return CRYPT_SM2_DECRYPT_FAIL;
-    }
-    return CRYPT_SUCCESS;
-}
-
 static int32_t DecryptInputCheck(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t datalen,
     const uint8_t *out, const uint32_t *outlen)
 {
@@ -368,7 +356,11 @@ int32_t CRYPT_SM2_Decrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
     // Calculate hash（x2 || t || y2)
     GOTO_ERR_IF(Sm3Hash(ctx->hashMethod, tmpBuf, t, cipherLen, sm3Buf, &sm3BufLen), ret);
     // Check whether u is equal to c3.
-    GOTO_ERR_IF(IsUEqualToC3(decode, sm3Buf, sm3BufLen), ret);
+    if (ConstTimeMemcmp(decode + SM2_POINT_COORDINATE_LEN, sm3Buf, sm3BufLen) == 0) {
+        ret = CRYPT_SM2_DECRYPT_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
     // The verification is successful. M' is the last plaintext.
     (void)memcpy_s(out, *outlen, t, cipherLen);
     *outlen = cipherLen;
