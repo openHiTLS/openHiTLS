@@ -379,7 +379,7 @@ static int32_t CheckTicketHmac(HITLS_Lib_Ctx *libCtx, const char *attrName,
         return ret;
     }
 
-    if (memcmp(ticket->mac, mac, macLen) != 0) {
+    if (ConstTimeMemcmp(ticket->mac, mac, macLen) == 0) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16036, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "compare mac fail when decrypt session ticket.", 0, 0, 0, 0);
         /* The HMAC check fails, but the complete link establishment can be continued. Therefore, HITLS_SUCCESS is
@@ -415,16 +415,22 @@ static int32_t GenerateSessFromTicket(HITLS_Lib_Ctx *libCtx, const char *attrNam
     }
 
 #ifdef HITLS_TLS_SUITE_CIPHER_CBC
-    /* Padding needs to be verified in CBC mode. */
+    /* Constant-time padding verification in CBC mode. */
     if (cipher->type == HITLS_CBC_CIPHER) {
         /* The last byte is the padding length field, and the padding content is the length value. */
         uint8_t paddingLen = plaintext[plaintextLen - 1];
-        for (uint32_t i = 1; i <= paddingLen; i++) {
-            if (plaintext[plaintextLen - 1 - i] != paddingLen) {
-                BSL_SAL_CleanseData(plaintext, plaintextLen);
-                BSL_SAL_FREE(plaintext);
-                return HITLS_SUCCESS;
-            }
+        uint32_t good = Uint32ConstTimeGe(plaintextLen, (uint32_t)paddingLen + 1);
+
+        /* Always iterate 255 times to ensure constant-time behavior. */
+        for (uint32_t i = 1; i <= 255; i++) {
+            uint32_t mask = good & Uint32ConstTimeLe(i, paddingLen);
+            good &= Uint32ConstTimeEqual(plaintext[plaintextLen - 1 - (i & mask)], paddingLen);
+        }
+
+        if (good == 0) {
+            BSL_SAL_CleanseData(plaintext, plaintextLen);
+            BSL_SAL_FREE(plaintext);
+            return HITLS_SUCCESS;
         }
         plaintextLen -= paddingLen + sizeof(uint8_t);
     }

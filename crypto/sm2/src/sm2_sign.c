@@ -23,6 +23,7 @@
 #include "crypt_utils.h"
 #include "crypt_util_ctrl.h"
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
 #include "bsl_err_internal.h"
 #include "crypt_bn.h"
 #include "crypt_encode.h"
@@ -885,20 +886,6 @@ static int32_t Sm2GetSumSend(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-/* consttime memcmp function */
-static int32_t IsDataEqual(const uint8_t *data1, const uint8_t *data2, uint32_t len)
-{
-    uint8_t check = 0;
-    for (uint32_t i = 0; i < len; i++) {
-        check |= data1[i] ^ data2[i];
-    }
-    if (check != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM2_EXCH_VERIFY_FAIL);
-        return CRYPT_SM2_EXCH_VERIFY_FAIL;
-    }
-    return CRYPT_SUCCESS;
-}
-
 static int32_t Sm2DoCheck(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 {
     if (val == NULL) {
@@ -916,9 +903,11 @@ static int32_t Sm2DoCheck(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = IsDataEqual(ctx->sumCheck, val, len);
-    if (ret != CRYPT_SUCCESS) {
+    if (ConstTimeMemcmp(ctx->sumCheck, val, len) == 0) {
+        ret = CRYPT_SM2_EXCH_VERIFY_FAIL;
         ctx->isSumValid = 0;
+    } else {
+        ret = CRYPT_SUCCESS;
     }
     return ret;
 }

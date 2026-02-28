@@ -227,7 +227,7 @@ int32_t RecConnCheckMac(TLS_Ctx *ctx, RecConnSuitInfo *suiteInfo, const REC_Text
         return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_RECORD_MAC);
     }
 
-    if (memcmp(&text[textLen - suiteInfo->macLen], mac, macLen) != 0) {
+    if (ConstTimeMemcmp(&text[textLen - suiteInfo->macLen], mac, macLen) == 0) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15942, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "record cbc mode decrypt error: MAC check failed.", 0, 0, 0, 0);
         return RecordSendAlertMsg(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_RECORD_MAC);
