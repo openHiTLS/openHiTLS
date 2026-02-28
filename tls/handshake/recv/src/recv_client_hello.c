@@ -950,13 +950,13 @@ static int32_t ServerCheckResumeParam(TLS_Ctx *ctx, const ClientHelloMsg *client
     rfc7627 5.3
     If a server receives a ClientHello for an abbreviated handshake
 offering to resume a known previous session, it behaves as follows:
---------------------------------------------------------------------------------------------------------
-| original session | abbreviated handshake  |                     Server behavior                        |
-| :-------------: | :--------------------: | :---------------------------------------------------------:|
-|      true       |          true          |                 SH with ems, agree resume                  |
-|      true       |         false          |                     abort handshake                        |
-|      false      |          true          |            disagre resume, full handshake                  |
-|      false      |         false          | depend cnf: abort handshake(true) / agree resume (false)   |
+----------------------------------------------------------------------------------------------------------------
+| original session | abbreviated handshake  |                     Server behavior                               |
+| :-------------: | :--------------------: | :-----------------------------------------------------------------:|
+|      true       |          true          |   agree resume (force, prefer) / full handshake no ems (forbid)    |
+|      true       |         false          |                     abort handshake                                |
+|      false      |          true          |   full handshake ems (force, prefer)/full handshake no ems (forbid)|
+|      false      |         false          |   abort handshake (force) / agree resume (prefer, forbid)          |
 */
 static int32_t ResumeCheckExtendedMasterScret(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, HITLS_Session **sess)
 {
@@ -973,18 +973,24 @@ static int32_t ResumeCheckExtendedMasterScret(TLS_Ctx *ctx, const ClientHelloMsg
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
             return HITLS_MSG_HANDLE_INVALID_EXTENDED_MASTER_SECRET;
         }
-        ctx->negotiatedInfo.isExtendedMasterSecret = true;
+        ctx->negotiatedInfo.isExtendedMasterSecret = ctx->config.tlsConfig.emsMode != HITLS_EMS_MODE_FORBID;
+        if (ctx->config.tlsConfig.emsMode == HITLS_EMS_MODE_FORBID) {
+            HITLS_SESS_Free(*sess);
+            *sess = NULL;
+        }
     } else {
         if (clientHello->extension.flag.haveExtendedMasterSecret) {
             HITLS_SESS_Free(*sess);
             *sess = NULL;
-        } else if (ctx->config.tlsConfig.isSupportExtendedMasterSecret) {
+        } else if (ctx->config.tlsConfig.emsMode == HITLS_EMS_MODE_FORCE) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17052, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "ExtendedMasterSecret err", 0, 0, 0, 0);
+                "ExtendedMasterSecret err: EMS required but not received", 0, 0, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
             return HITLS_MSG_HANDLE_INVALID_EXTENDED_MASTER_SECRET;
         }
-        ctx->negotiatedInfo.isExtendedMasterSecret = clientHello->extension.flag.haveExtendedMasterSecret;
+        ctx->negotiatedInfo.isExtendedMasterSecret = ctx->config.tlsConfig.emsMode != HITLS_EMS_MODE_FORBID ?
+                                                        clientHello->extension.flag.haveExtendedMasterSecret :
+                                                        false;
     }
 #ifdef HITLS_TLS_FEATURE_SNI
     return ServerCheckResumeSni(ctx, clientHello, sess);
@@ -1211,14 +1217,18 @@ static int32_t ServerProcessClientHelloExt(TLS_Ctx *ctx, const ClientHelloMsg *c
     (void)clientHello;
     (void)ctx;
     /* Sets the extended master key flag */
-    if (ctx->negotiatedInfo.version > HITLS_VERSION_SSL30 && ctx->config.tlsConfig.isSupportExtendedMasterSecret &&
+    if (ctx->config.tlsConfig.emsMode == HITLS_EMS_MODE_FORCE &&
         !clientHello->extension.flag.haveExtendedMasterSecret) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16196, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "The peer does not support the extended master key.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
         return HITLS_MSG_HANDLE_INVALID_EXTENDED_MASTER_SECRET;
     }
-    ctx->negotiatedInfo.isExtendedMasterSecret = clientHello->extension.flag.haveExtendedMasterSecret;
+    if (ctx->config.tlsConfig.emsMode != HITLS_EMS_MODE_FORBID) {
+        ctx->negotiatedInfo.isExtendedMasterSecret = clientHello->extension.flag.haveExtendedMasterSecret;
+    } else {
+        ctx->negotiatedInfo.isExtendedMasterSecret = false;
+    }
 #endif
     return ProcessClientHelloExt(ctx, clientHello, false);
 }

@@ -903,7 +903,8 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
 #endif /* HITLS_TLS_FEATURE_PHA */
 #endif /* HITLS_TLS_PROTO_TLS13 */
 #ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
-        { EXTENSION_MSG(HS_EX_TYPE_EXTENDED_MASTER_SECRET, true, NULL) },
+        { EXTENSION_MSG(HS_EX_TYPE_EXTENDED_MASTER_SECRET,
+            (tlsConfig->emsMode != HITLS_EMS_MODE_FORBID), NULL) },
 #endif
 #ifdef HITLS_TLS_FEATURE_ALPN
         { EXTENSION_MSG(HS_EX_TYPE_APP_LAYER_PROTOCOLS, (tlsConfig->alpnList != NULL &&
@@ -947,7 +948,7 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
     ctx->hsCtx->extFlag.havePostHsAuth = isNeedPha;
 #endif /* HITLS_TLS_FEATURE_PHA */
 #ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
-    ctx->hsCtx->extFlag.haveExtendedMasterSecret = true;
+    ctx->hsCtx->extFlag.haveExtendedMasterSecret = (tlsConfig->emsMode != HITLS_EMS_MODE_FORBID);
 #endif
 #ifdef HITLS_TLS_FEATURE_ETM
     ctx->hsCtx->extFlag.haveEncryptThenMac = ctx->config.tlsConfig.isEncryptThenMac;

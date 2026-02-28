@@ -77,6 +77,28 @@ typedef struct TlsSessCtx HITLS_Session;
 */
 #define TLS13_CERT_AUTH_WITH_DHE 4u
 
+/**
+ * @ingroup hitls_config
+ *
+ * @brief   Extended Master Secret (EMS) mode - Forbidden
+ *          The EMS extension is not supported.
+ */
+#define HITLS_EMS_MODE_FORBID (-1)
+/**
+ * @ingroup hitls_config
+ *
+ * @brief   Extended Master Secret (EMS) mode - Prefer
+ *          Send EMS extension and allow non-EMS connections.
+ */
+#define HITLS_EMS_MODE_PREFER (0)
+/**
+ * @ingroup hitls_config
+ *
+ * @brief   Extended Master Secret (EMS) mode - Force
+ *          Require EMS negotiation, otherwise fail the handshake.
+ */
+#define HITLS_EMS_MODE_FORCE  (1)
+
 /* Sets the number of digits in the version number. */
 #define SSLV2_VERSION_BIT 0x00000001U
 #define SSLV3_VERSION_BIT 0x00000002U

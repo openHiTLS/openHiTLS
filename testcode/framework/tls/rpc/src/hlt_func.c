@@ -633,7 +633,7 @@ HLT_Ctx_Config* HLT_NewCtxConfigTLCP(char *setFile, const char *key, bool isClie
     ctxConfig->allowLegacyRenegotiate = false;
     ctxConfig->isSupportClientVerify = false;
     ctxConfig->isSupportNoClientCert = false;
-    ctxConfig->isSupportExtendedMasterSecret = false;
+    ctxConfig->emsMode = HITLS_EMS_MODE_PREFER;
     ctxConfig->isClient = isClient;
     ctxConfig->setSessionCache = HITLS_SESS_CACHE_SERVER;
     HLT_SetGroups(ctxConfig, "NULL");
@@ -683,7 +683,7 @@ HLT_Ctx_Config* HLT_NewCtxConfig(char *setFile, const char *key)
     ctxConfig->isSupportNoClientCert = false;
     ctxConfig->isSupportVerifyNone = false;
     ctxConfig->isSupportPostHandshakeAuth = false;
-    ctxConfig->isSupportExtendedMasterSecret = true;
+    ctxConfig->emsMode = HITLS_EMS_MODE_FORCE;
     ctxConfig->isSupportSessionTicket = false;
     ctxConfig->isSupportDhAuto = true;
 	ctxConfig->isEncryptThenMac = true;
@@ -1210,7 +1210,7 @@ int HLT_SetNoClientCertSupport(HLT_Ctx_Config *ctxConfig, bool support)
 
 int HLT_SetExtendedMasterSecretSupport(HLT_Ctx_Config *ctxConfig, bool support)
 {
-    ctxConfig->isSupportExtendedMasterSecret = support;
+    ctxConfig->emsMode = support;
     return SUCCESS;
 }
 

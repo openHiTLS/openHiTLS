@@ -482,7 +482,7 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCYECDHE_ERR_POINT_FUNC_TC002(void)
     handle.frameCallBack = MalformedServerHelloMsgCallback;
     TestPara testPara = {0};
     testPara.port = g_uiPort;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     // 4. The status of the tested end is alerted.
     testPara.expectHsState = TRY_RECV_CLIENT_KEY_EXCHANGE;
     // 3. Check the status of the tested end.
@@ -533,7 +533,7 @@ void SDV_TLS_TLS12_RFC8422_CONSISTENCYECDHE_ECDHE_LOSE_CURVE_FUNC_TC001(void)
     handle.frameCallBack = MalformedNoCurveExternsionCallback;
     TestPara testPara = {0};
     testPara.port = g_uiPort;
-    testPara.isSupportExtendedMasterSecret = true;
+    testPara.emsMode = HITLS_EMS_MODE_FORCE;
     testPara.expectHsState = TRY_RECV_SERVER_HELLO;
     // 3. The server continues to establish a connection.
     testPara.expectDescription = ALERT_HANDSHAKE_FAILURE;

@@ -196,7 +196,6 @@ typedef struct TLSCtxConfig {
                                                including IP header and udp/tcp header */
     uint16_t pmtu;                          /* Maximum transport unit of a path (bytes) */
 
-    bool isSupportPto;                      /* is support process based TLS offload */
     uint8_t reserved[1];                    /* four-byte alignment */
 
     TLS_Config tlsConfig;                   /* tls configure context */

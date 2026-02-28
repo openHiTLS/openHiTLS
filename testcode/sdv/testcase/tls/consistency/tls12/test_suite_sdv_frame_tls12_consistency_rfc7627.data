@@ -1,0 +1,66 @@
+UI_TLS_EMS_MODE_TC001 client: FORBID, server: FORBID, expectEms: 0
+UI_TLS_EMS_MODE_TC001:-1:-1:0
+
+UI_TLS_EMS_MODE_TC001 client: FORBID, server: PREFER, expectEms: 0
+UI_TLS_EMS_MODE_TC001:-1:0:0
+
+UI_TLS_EMS_MODE_TC001 client: PREFER, server: FORBID, expectEms: 0
+UI_TLS_EMS_MODE_TC001:0:-1:0
+
+UI_TLS_EMS_MODE_TC001 client: PREFER, server: PREFER, expectEms: 1
+UI_TLS_EMS_MODE_TC001:0:0:1
+
+UI_TLS_EMS_MODE_TC001 client: PREFER, server: FORCE, expectEms: 1
+UI_TLS_EMS_MODE_TC001:0:1:1
+
+UI_TLS_EMS_MODE_TC001 client: FORCE, server: PREFER, expectEms: 1
+UI_TLS_EMS_MODE_TC001:1:0:1
+
+UI_TLS_EMS_MODE_TC001 client: FORCE, server: FORCE, expectEms: 1
+UI_TLS_EMS_MODE_TC001:1:1:1
+
+UI_TLS_EMS_MODE_TC002 client: FORBID, server: FORCE, expectEms: 0
+UI_TLS_EMS_MODE_TC002:-1:1:0
+
+UI_TLS_EMS_MODE_TC002 client: FORCE, server: FORBID, expectEms: 0
+UI_TLS_EMS_MODE_TC002:1:-1:0
+
+UI_TLS_EMS_MODE_RESUME_TC001 origEMS=true, abbrevEMS=true, server FORCE, expectResume: 1, expectEms: 1
+UI_TLS_EMS_MODE_RESUME_TC001:0:0:1:1:1
+
+UI_TLS_EMS_MODE_RESUME_TC001 origEMS=true, abbrevEMS=true, server PREFER, expectResume: 1, expectEms: 1
+UI_TLS_EMS_MODE_RESUME_TC001:0:0:0:1:1
+
+UI_TLS_EMS_MODE_RESUME_TC001 origEMS=true, abbrevEMS=true, server FORBID, expectResume: 0, expectEms: 0
+UI_TLS_EMS_MODE_RESUME_TC001:0:0:-1:0:0
+
+UI_TLS_EMS_MODE_RESUME_TC001 origEMS=false, abbrevEMS=true, server FORCE, expectResume: 0, expectEms: 1
+UI_TLS_EMS_MODE_RESUME_TC001:-1:0:1:0:1
+
+UI_TLS_EMS_MODE_RESUME_TC001 origEMS=false, abbrevEMS=true, server PREFER, expectResume: 0, expectEms: 1
+UI_TLS_EMS_MODE_RESUME_TC001:-1:0:0:0:1
+
+UI_TLS_EMS_MODE_RESUME_TC001 origEMS=false, abbrevEMS=true, server FORBID, expectResume: 0, expectEms: 0
+UI_TLS_EMS_MODE_RESUME_TC001:-1:0:-1:0:0
+
+
+UI_TLS_EMS_MODE_RESUME_TC001 origEMS=false, abbrevEMS=false, server PREFER, expectResume: 1, expectEms: 0
+UI_TLS_EMS_MODE_RESUME_TC001:-1:-1:0:1:0
+
+UI_TLS_EMS_MODE_RESUME_TC001 origEMS=false, abbrevEMS=false, server FORBID, expectResume: 1, expectEms: 0
+UI_TLS_EMS_MODE_RESUME_TC001:-1:-1:-1:1:0
+
+UI_TLS_EMS_MODE_RESUME_TC002 origEMS=false, abbrevEMS=false, server FORCE
+UI_TLS_EMS_MODE_RESUME_TC002:-1:-1:1:0
+
+UI_TLS_EMS_MODE_RESUME_TC003 origEMS=true, abbrevEMS=false (session flag flipped), server FORCE
+UI_TLS_EMS_MODE_RESUME_TC003:1
+
+UI_TLS_EMS_MODE_RESUME_TC003 origEMS=true, abbrevEMS=false (session flag flipped), server PREFER
+UI_TLS_EMS_MODE_RESUME_TC003:0
+
+UI_TLS_EMS_MODE_RESUME_TC003 origEMS=true, abbrevEMS=false (session flag flipped), server FORBID
+UI_TLS_EMS_MODE_RESUME_TC003:-1
+
+UI_TLS_EMS_MODE_RESUME_TC004 client: EMS resume forbidden, expect no session_id in ClientHello
+UI_TLS_EMS_MODE_RESUME_TC004:0

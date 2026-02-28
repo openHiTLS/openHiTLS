@@ -45,6 +45,11 @@ HITLS_Config *HITLS_CFG_ProviderNewTLCPConfig(HITLS_Lib_Ctx *libCtx, const char 
         BSL_SAL_FREE(newConfig);
         return NULL;
     }
+    newConfig->emsMode = HITLS_EMS_MODE_FORBID;
+    newConfig->allowLegacyRenegotiate = true;
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
+    newConfig->isSupportSessionTicket = false;
+#endif
     newConfig->originVersionMask = newConfig->version;
     return newConfig;
 }

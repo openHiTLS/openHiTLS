@@ -450,7 +450,7 @@ bool IsNeedCertPrepare(const CipherSuiteInfo *cipherSuiteInfo)
 bool IsTicketSupport(const TLS_Ctx *ctx)
 {
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET
-    if (ctx->config.tlsConfig.isSupportSessionTicket && (!ctx->config.isSupportPto)
+    if (ctx->config.tlsConfig.isSupportSessionTicket
 #ifdef HITLS_TLS_FEATURE_SECURITY
     && (SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_TICKET, 0, 0, NULL) == SECURITY_SUCCESS)
 #endif

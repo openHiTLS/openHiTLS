@@ -857,8 +857,26 @@ int32_t HITLS_GetExtendedMasterSecretSupport(HITLS_Ctx *ctx, bool *isSupport)
     if (ctx == NULL) {
         return HITLS_NULL_INPUT;
     }
-
+    
     return HITLS_CFG_GetExtendedMasterSecretSupport(&(ctx->config.tlsConfig), isSupport);
+}
+
+int32_t HITLS_SetExtendedMasterSecretMode(HITLS_Ctx *ctx, int32_t mode)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetExtendedMasterSecretMode(&(ctx->config.tlsConfig), mode);
+}
+
+int32_t HITLS_GetExtendedMasterSecretMode(HITLS_Ctx *ctx, int32_t *mode)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_GetExtendedMasterSecretMode(&(ctx->config.tlsConfig), mode);
 }
 
 #if defined(HITLS_TLS_FEATURE_RENEGOTIATION) && defined(HITLS_TLS_FEATURE_SESSION)

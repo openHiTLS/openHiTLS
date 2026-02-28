@@ -237,8 +237,8 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RECV_KEYUPDATE_TC001(void)
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-    clientCtxConfig->isSupportExtendedMasterSecret=true;
-    serverCtxConfig->isSupportExtendedMasterSecret=true;
+    clientCtxConfig->emsMode=true;
+    serverCtxConfig->emsMode=true;
     serverCtxConfig->isSupportSessionTicket=true;
     clientCtxConfig->isSupportSessionTicket=true;
 
@@ -307,8 +307,8 @@ void SDV_TLS_TLS12_RFC5246_CONSISTENCY_RECV_NST_TC001(void)
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-    clientCtxConfig->isSupportExtendedMasterSecret=true;
-    serverCtxConfig->isSupportExtendedMasterSecret=true;
+    clientCtxConfig->emsMode=true;
+    serverCtxConfig->emsMode=true;
     serverCtxConfig->isSupportSessionTicket=true;
     clientCtxConfig->isSupportSessionTicket=true;
 
@@ -367,8 +367,8 @@ void SDV_TLS_TLS12_StateTrans_FUNC_TC001(void)
 
     clientCtxConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientCtxConfig != NULL);
-    clientCtxConfig->isSupportExtendedMasterSecret=true;
-    serverCtxConfig->isSupportExtendedMasterSecret=true;
+    clientCtxConfig->emsMode=true;
+    serverCtxConfig->emsMode=true;
     serverCtxConfig->isSupportSessionTicket=true;
     clientCtxConfig->isSupportSessionTicket=true;
 
@@ -428,14 +428,14 @@ void ClientSendMalformedCipherSuiteLenMsg(HLT_FrameHandle *handle, TestPara *tes
     HLT_Ctx_Config *serverConfig = HLT_NewCtxConfig(NULL, "SERVER");
     ASSERT_TRUE(serverConfig != NULL);
     ASSERT_TRUE(HLT_SetClientVerifySupport(serverConfig, testPara->isSupportClientVerify) == 0);
-    serverConfig->isSupportExtendedMasterSecret = false;
+    serverConfig->emsMode = HITLS_EMS_MODE_PREFER;
     HLT_Tls_Res *serverRes = HLT_ProcessTlsAccept(remoteProcess, TLS1_2, serverConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
     // Configure the TLS connection on the local client.
 
     HLT_Ctx_Config *clientConfig = HLT_NewCtxConfig(NULL, "CLIENT");
     ASSERT_TRUE(clientConfig != NULL);
-    serverConfig->isSupportExtendedMasterSecret = false;
+    serverConfig->emsMode = HITLS_EMS_MODE_PREFER;
     HLT_Tls_Res *clientRes = HLT_ProcessTlsInit(localProcess, TLS1_2, clientConfig, NULL);
     ASSERT_TRUE(clientRes != NULL);
     // Configure the interface for constructing abnormal messages.

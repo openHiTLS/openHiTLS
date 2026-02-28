@@ -88,7 +88,7 @@ void UT_TLS_DTLCP_CONSISTENCY_RFC6347_FINISH_TC002(void)
     ASSERT_TRUE(FRAME_TransportRecMsg(testInfo.server->io, data, len) == HITLS_SUCCESS);
     (void)HITLS_Accept(testInfo.server->ssl);
     ASSERT_EQ(testInfo.server->ssl->state, CM_STATE_HANDSHAKING);
-    ASSERT_EQ(testInfo.server->ssl->hsCtx->state, TRY_SEND_CHANGE_CIPHER_SPEC);
+    ASSERT_EQ(testInfo.server->ssl->hsCtx->state, TRY_SEND_FINISH);
 
     ASSERT_TRUE(TestIsErrStackNotEmpty());
 
@@ -438,7 +438,7 @@ void UT_TLS_DTLCP_CONSISTENCY_RFC8422_ECPOINT_TC001(void)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_RECV_SERVER_HELLO;
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.isClient = true;
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(testInfo.client->io);
@@ -509,7 +509,7 @@ void UT_TLS_DTLCP_CONSISTENCY_RFC8422_EXTENSION_MISS_TC001(void)
 {
     HandshakeTestInfo testInfo = {0};
     testInfo.state = TRY_RECV_CLIENT_HELLO;
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.isClient = false;
     // Error stack exists
     ASSERT_TRUE(DefaultCfgStatusPark(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);

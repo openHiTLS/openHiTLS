@@ -545,6 +545,9 @@ int32_t HITLS_CFG_SetVersionForbid(HITLS_Config *config, uint32_t noVersion);
  *
  * @param   config   [OUT] Config handle
  * @param   support  [IN] Whether to support the function. The options are as follows: True: yes; False: no.
+ * @attention If you enable this feature, it is recommended to also set HITLS_CFG_SetLegacyRenegotiateSupport
+ *            to false and HITLS_CFG_GetExtendedMasterSecretMode to HITLS_EMS_MODE_FORCE, otherwise renegotiation
+ *            attacks and triple handshake attacks may be possible.
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */
@@ -692,6 +695,29 @@ int32_t HITLS_CFG_GetNoClientCertSupport(HITLS_Config *config, bool *isSupport);
  * @retval  HITLS_NULL_INPUT, config is null.
  */
 int32_t HITLS_CFG_GetExtendedMasterSecretSupport(HITLS_Config *config, bool *isSupport);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Set extended master secret mode.
+ *
+ * @param   config [IN] TLS config handle
+ * @param   mode   [IN] EMS mode. See HITLS_EMS_MODE_*.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, if config is NULL.
+ * @retval  HITLS_INVALID_INPUT, if mode is invalid.
+ */
+int32_t HITLS_CFG_SetExtendedMasterSecretMode(HITLS_Config *config, int32_t mode);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Get extended master secret mode.
+ *
+ * @param   config [IN] TLS config handle
+ * @param   mode   [OUT] EMS mode. See HITLS_EMS_MODE_*.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, if config or mode is NULL.
+ */
+int32_t HITLS_CFG_GetExtendedMasterSecretMode(HITLS_Config *config, int32_t *mode);
 
 /**
  * @ingroup hitls_config

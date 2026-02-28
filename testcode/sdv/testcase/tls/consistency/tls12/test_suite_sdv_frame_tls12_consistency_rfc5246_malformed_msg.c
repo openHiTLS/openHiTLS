@@ -143,7 +143,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_MISS_CLIENT_KEYEXCHANGE_TC001(void)
     /* 1. Configure the single-end authentication. After the server sends the serverhellodone message, the client
      *     stops in the try send client key exchange state. */
     testInfo.state = TRY_SEND_CLIENT_KEY_EXCHANGE;
-    testInfo.isSupportExtendedMasterSecret = true;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
     testInfo.isClient = true;
 
     testInfo.isSupportClientVerify = false;
