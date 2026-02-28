@@ -2211,12 +2211,7 @@ static int32_t CheckSupportVersion(TLS_Ctx *ctx, uint16_t version, uint16_t *sel
         version = HITLS_VERSION_TLS12;
     }
     uint32_t versionBits = MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), version);
-#ifdef HITLS_TLS_PROTO_TLCP11
-    if (((version > HITLS_VERSION_SSL30) || (version == HITLS_VERSION_TLCP_DTLCP11)) &&
-#else
-    if ((version > HITLS_VERSION_SSL30) &&
-#endif /* HITLS_TLS_PROTO_TLCP11 */
-        ((versionBits & ctx->config.tlsConfig.version) == versionBits)) {
+    if ((versionBits & ctx->config.tlsConfig.version) == versionBits && (versionBits != 0)) {
         *selectVersion = version;
         return HITLS_SUCCESS;
     }

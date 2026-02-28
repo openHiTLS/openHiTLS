@@ -3563,3 +3563,70 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/* @
+* @test UT_TLS_SDV_TLS1_3_RFC8446_CONSISTENCY_UNSUPPORT_VERSION_TC001
+* @spec -
+* @title Test when server receive a unsupported legacy version in client hello, the server will response with alert and close the connection.
+* @precon nan
+* @brief 1. Initialize a tls11 client and a tls13 server configuration. Expected result 1.
+* 2. Server process the client hello. Expected result 2.
+* @expect 1 Initialization succeeded.
+* 2. The server sends a protocol version alert and closes the connection.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_SDV_TLS1_3_RFC8446_CONSISTENCY_UNSUPPORT_VERSION_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(tlsConfig != NULL);
+    ASSERT_TRUE(HITLS_CFG_SetVersion(tlsConfig, HITLS_VERSION_TLS12, HITLS_VERSION_TLS13) == HITLS_SUCCESS);
+
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO) == HITLS_SUCCESS);
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recvLen != 0);
+
+    uint32_t parseLen = 0;
+    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+
+    frameType.handshakeType = CLIENT_HELLO;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+
+    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
+    clientMsg->version.data = HITLS_VERSION_TLS11;
+    clientMsg->version.state = ASSIGNED_FIELD;
+    clientMsg->supportedVersion.exState = MISSING_FIELD;
+    uint32_t sendLen = MAX_RECORD_LENTH;
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    ASSERT_TRUE(FRAME_PackMsg(&frameType, &frameMsg, sendBuf, sendLen, &sendLen) == HITLS_SUCCESS);
+    ioUserData->recMsg.len = 0;
+    ASSERT_TRUE(FRAME_TransportRecMsg(server->io, sendBuf, sendLen) == HITLS_SUCCESS);
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_MSG_HANDLE_UNSUPPORT_VERSION);
+    ALERT_Info alertInfo = { 0 };
+    ALERT_GetInfo(server->ssl, &alertInfo);
+    ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alertInfo.description, ALERT_PROTOCOL_VERSION);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
