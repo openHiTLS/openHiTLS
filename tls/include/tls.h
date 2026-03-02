@@ -317,6 +317,9 @@ struct TlsCtx {
     bool noQueryMtu;                        /* Don't query the mtu from bio */
     bool needQueryMtu;                      /* whether need query mtu from bio */
     bool mtuModified;                       /* whether mtu has been modified */
+    /* To reduce the calculation amount for determining timeout, use the end time instead of the start time. If the end
+     * time is exceeded, the receiving times out. */
+    BSL_TIME deadline;     /* End time */
 };
 
 typedef struct {

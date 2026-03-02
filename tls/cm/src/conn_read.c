@@ -219,7 +219,6 @@ static int32_t RecvPostFinishPreprocess(TLS_Ctx *ctx)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16522, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "HS_IsTimeout fail or timeout", 0, 0, 0, 0);
         REC_RetransmitListClean(ctx->recCtx);
-        HS_DeInit(ctx);
         return HITLS_REC_NORMAL_RECV_UNEXPECT_MSG;
     }
     if ((ctx->isClient && !ctx->negotiatedInfo.isResume) || (!ctx->isClient && ctx->negotiatedInfo.isResume)) {
@@ -584,12 +583,12 @@ int32_t HITLS_DtlsGetTimeout(HITLS_Ctx *ctx, uint64_t *remainTimeOut)
     if (ret != BSL_SUCCESS) {
         return ret;
     }
-    BSL_TIME endTime = ctx->hsCtx->deadline;
+    BSL_TIME endTime = ctx->deadline;
     ret = BSL_SAL_DateTimeCompareByUs(&curTime, &endTime);
     if (ret == BSL_TIME_DATE_AFTER || ret == BSL_TIME_CMP_EQUAL) {
         return HITLS_SUCCESS;
     } else if (ret == BSL_TIME_CMP_ERROR) {
-        return BSL_TIME_CMP_ERROR;
+        return HITLS_INTERNAL_EXCEPTION;
     }
 
     int64_t curUtcTime = 0;
