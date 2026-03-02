@@ -62,6 +62,7 @@ int32_t CRYPT_ML_KEM_Encaps(CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32_t *ci
 int32_t CRYPT_ML_KEM_Decaps(CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32_t cipherLen,
     uint8_t *share, uint32_t *shareLen);
 
+int32_t CRYPT_ML_KEM_PrvKeyValidCheck(CRYPT_ML_KEM_Ctx *ctx);
 #ifdef HITLS_CRYPTO_MLKEM_CHECK
 
 /**

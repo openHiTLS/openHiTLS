@@ -30,6 +30,8 @@
 #include "crypt_params_key.h"
 #include "crypt_codecskey.h"
 #include "crypt_codecskey_local.h"
+#include "crypt_mlkem.h"
+#include "eal_pkey_local.h"
 
 #if defined(HITLS_CRYPTO_KEY_EPKI) && defined(HITLS_CRYPTO_KEY_ENCODE)
 /**
@@ -911,7 +913,7 @@ static int32_t ParseMlKemPrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *at
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = CRYPT_EAL_PkeyPrvCheck(pctx);
+    ret = CRYPT_ML_KEM_PrvKeyValidCheck((CRYPT_ML_KEM_Ctx *)pctx->key);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_PkeyFreeCtx(pctx);
         BSL_ERR_PUSH_ERROR(ret);

@@ -1250,8 +1250,6 @@ ERR:
     return ret;
 }
 
-#ifdef HITLS_CRYPTO_MLDSA_CHECK
-
 // calculate public key from private key
 int32_t MLDSA_CalPub(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pub, uint32_t pubLen)
 {
@@ -1351,7 +1349,5 @@ int32_t MLDSA_KeyConsistenceCheck(CRYPT_ML_DSA_Ctx *ctx)
     }
     return CRYPT_SUCCESS;
 }
-
-#endif // HITLS_CRYPTO_MLDSA_CHECK
 
 #endif

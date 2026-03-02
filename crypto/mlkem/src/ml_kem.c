@@ -760,7 +760,6 @@ int32_t CRYPT_ML_KEM_Decaps(CRYPT_ML_KEM_Ctx *ctx, uint8_t *cipher, uint32_t cip
     return MLKEM_DecapsInternal(ctx, cipher, cipherLen, share, shareLen);
 }
 
-#ifdef HITLS_CRYPTO_MLKEM_CHECK
 /**
  * @brief Verify that a public key and private key form a valid key pair
  *
@@ -836,7 +835,7 @@ ERR:
  * @param prvKey Private key context containing dk
  * @return CRYPT_SUCCESS if pairwise check passes, error code otherwise
  */
-static int32_t MlKemPairwiseConsistencyCheck(CRYPT_ML_KEM_Ctx *prvKey)
+static int32_t PrvKeyValidCheck(CRYPT_ML_KEM_Ctx *prvKey)
 {
     // Private key format: dk = dkPKE || ek || H(ek) || z
     // Extract embedded ek from dk
@@ -875,7 +874,7 @@ static int32_t MlKemPairwiseConsistencyCheck(CRYPT_ML_KEM_Ctx *prvKey)
     return ret;
 }
 
-static int32_t MlKemPrvKeyCheck(CRYPT_ML_KEM_Ctx *prvKey)
+int32_t CRYPT_ML_KEM_PrvKeyValidCheck(CRYPT_ML_KEM_Ctx *prvKey)
 {
     if (prvKey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -889,20 +888,21 @@ static int32_t MlKemPrvKeyCheck(CRYPT_ML_KEM_Ctx *prvKey)
         BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_INVALID_PRVKEY);
         return CRYPT_MLKEM_INVALID_PRVKEY;
     }
-    if (MlKemPairwiseConsistencyCheck(prvKey) != CRYPT_SUCCESS) {
+    if (PrvKeyValidCheck(prvKey) != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_INVALID_PRVKEY);
         return CRYPT_MLKEM_INVALID_PRVKEY;
     }
     return CRYPT_SUCCESS;
 }
 
+#ifdef HITLS_CRYPTO_MLKEM_CHECK
 int32_t CRYPT_ML_KEM_Check(uint32_t checkType, CRYPT_ML_KEM_Ctx *pkey1, CRYPT_ML_KEM_Ctx *pkey2)
 {
     switch (checkType) {
         case CRYPT_PKEY_CHECK_KEYPAIR:
             return MlKemKeyPairCheck(pkey1, pkey2);
         case CRYPT_PKEY_CHECK_PRVKEY:
-            return MlKemPrvKeyCheck(pkey1);
+            return CRYPT_ML_KEM_PrvKeyValidCheck(pkey1);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
             return CRYPT_INVALID_ARG;
