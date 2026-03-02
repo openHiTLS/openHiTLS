@@ -15,6 +15,8 @@
 
 /* BEGIN_HEADER */
 #include "hs_cookie.h"
+#include "record.h"
+#include "sal_timeimpl.h"
 /* INCLUDE_BASE test_suite_sdv_frame_dtls12_consistency */
 /* END_HEADER */
 
@@ -3008,5 +3010,158 @@ EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC002
+* @spec -
+* @title Testing the behavior of server when receiving client's finish after handshake in 2msl
+* @precon nan
+* @brief 1. Use the default configuration items to configure the client and server and do handshake. Expected result 1.
+* 2. After handshake, clientg send finish to server in 2msl. Expected result 2.
+* @expect 1. The handshake is successful.
+* 2. Server retransmit the last flight.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC002()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
+    tlsConfig->isSupportRenegotiation = true;
+    tlsConfig->isSupportSessionTicket = false;
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    uint32_t sendFinishLen = 24;
+    // construct finish message with DTLS header
+    uint8_t sendfinish[24] = {0x14, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 
+                              0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01};
+    ASSERT_EQ(REC_Write(clientTlsCtx, REC_TYPE_HANDSHAKE, sendfinish, sendFinishLen), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    ASSERT_EQ(HITLS_Read(serverTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_IO_BUSY);
+    
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+    uint8_t *sndBuf = ioUserData->sndMsg.msg;
+    uint32_t sndLen = ioUserData->sndMsg.len;
+    // the content of the buffer should be a CCS message
+    ASSERT_EQ(sndLen, 14);
+    uint8_t target[] = {0x14, 0xfe, 0xfd, 0x00, 0x00, 0x00, 0x00, 0x00,
+                        0x00, 0x00, 0x05, 0x00, 0x01, 0x01};
+    ASSERT_TRUE(memcmp(sndBuf, target, 14) == 0);
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+STUB_DEFINE_RET1(int32_t, BSL_SAL_SysTimeGet, BSL_TIME *);
+int32_t STUB_BSL_SAL_SysTimeGet(BSL_TIME *sysTime)
+{
+    int32_t ret = SAL_TIME_SysTimeGet(sysTime);
+    if (ret == BSL_SUCCESS) {
+        sysTime->year += 1;
+    }
+    return ret;
+}
+/* @
+* @test UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC003
+* @spec -
+* @title Testing the behavior of server when receiving client's finish after handshake after 2msl
+* @precon nan
+* @brief 1. Use the default configuration items to configure the client and server and do handshake. Expected result 1.
+* 2. After handshake, clientg send finish to server after 2msl. Expected result 2.
+* @expect 1. The handshake is successful.
+* 2. Server ignore the finish message.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC003()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
+    tlsConfig->isSupportRenegotiation = true;
+    tlsConfig->isSupportSessionTicket = false;
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    uint32_t sendFinishLen = 24;
+    // construct finish message with DTLS header
+    uint8_t sendfinish[24] = {0x14, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 
+                              0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01};
+    ASSERT_EQ(REC_Write(clientTlsCtx, REC_TYPE_HANDSHAKE, sendfinish, sendFinishLen), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    
+    STUB_REPLACE(BSL_SAL_SysTimeGet, STUB_BSL_SAL_SysTimeGet);
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    ASSERT_EQ(HITLS_Read(serverTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    RecRetransmitList *retransmitList = &serverTlsCtx->recCtx->retransmitList;
+    ASSERT_TRUE(LIST_IS_EMPTY(&retransmitList->head) == true);
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    STUB_RESTORE(BSL_SAL_SysTimeGet);
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC004
+* @spec -
+* @title Testing the behavior of server when receiving client's finish after handshake after 2msl
+* @precon nan
+* @brief 1. Use the default configuration items to configure the client and server and do handshake. Expected result 1.
+* 2. After handshake, server try to read a message after 2msl. Expected result 2.
+* @expect 1. The handshake is successful.
+* 2. The server's retransmission list should be cleared.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC004()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
+    tlsConfig->isSupportRenegotiation = true;
+    tlsConfig->isSupportSessionTicket = false;
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+    
+    STUB_REPLACE(BSL_SAL_SysTimeGet, STUB_BSL_SAL_SysTimeGet);
+    uint8_t readBuf[READ_BUF_SIZE] = {0};
+    uint32_t readLen = 0;
+    ASSERT_EQ(HITLS_Read(serverTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    RecRetransmitList *retransmitList = &serverTlsCtx->recCtx->retransmitList;
+    ASSERT_TRUE(LIST_IS_EMPTY(&retransmitList->head) == true);
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    STUB_RESTORE(BSL_SAL_SysTimeGet);
 }
 /* END_CASE */

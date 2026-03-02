@@ -211,7 +211,7 @@ int32_t HS_CheckKeyUpdateState(TLS_Ctx *ctx, uint32_t updateType)
 int32_t HS_CheckAndProcess2MslTimeout(TLS_Ctx *ctx)
 {
     /* In non-UDP scenarios, the 2MSL timer timeout does not need to be checked */
-    if ((ctx->hsCtx == NULL) || !BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
+    if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_UDP)) {
         return HITLS_SUCCESS;
     }
 
@@ -226,7 +226,6 @@ int32_t HS_CheckAndProcess2MslTimeout(TLS_Ctx *ctx)
     /* If the retransmission queue times out, the retransmission queue is cleared and the hsCtx memory is released */
     if (isTimeout) {
         REC_RetransmitListClean(ctx->recCtx);
-        HS_DeInit(ctx);
     }
     return HITLS_SUCCESS;
 }
