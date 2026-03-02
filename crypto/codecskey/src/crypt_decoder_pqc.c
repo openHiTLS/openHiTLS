@@ -327,6 +327,11 @@ int32_t CRYPT_MLKEM_ParsePkcs8key(void *libCtx, uint8_t *buffer, uint32_t buffer
         CRYPT_ML_KEM_FreeCtx(pctx);
         return ret;
     }
+    ret = CRYPT_ML_KEM_PrvKeyValidCheck(pctx);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_ML_KEM_FreeCtx(pctx);
+        return ret;
+    }
     *mlkemPriKey = pctx;
     return CRYPT_SUCCESS;
 }

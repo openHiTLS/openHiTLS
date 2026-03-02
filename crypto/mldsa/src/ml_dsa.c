@@ -558,6 +558,12 @@ int32_t CRYPT_ML_DSA_SetPrvKeyEx(CRYPT_ML_DSA_Ctx *ctx, const BSL_Param *para)
         return ret;
     }
     ret = MLDSA_KeyConsistenceCheck(ctx);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_ClearFree(ctx->prvKey, ctx->prvLen);
+        ctx->prvKey = NULL;
+        ctx->prvLen = 0;
+        BSL_ERR_PUSH_ERROR(ret);
+    }
     return ret;
 }
 

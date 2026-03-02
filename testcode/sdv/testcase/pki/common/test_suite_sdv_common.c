@@ -1898,15 +1898,7 @@ void SDV_HITLS_MLKEM_PrivateKey_MutatedS0_TC001(int format, int type, char *path
 
     // Attempt to decode private key with mutated s_0
     int32_t ret = CRYPT_EAL_DecodeFileKey(format, type, path, NULL, 0, &key);
-
-#ifdef HITLS_CRYPTO_MLKEM_CHECK
-    // With pairwise check enabled: should detect s_0 corruption
     ASSERT_EQ(ret, CRYPT_MLKEM_INVALID_PRVKEY);
-#else
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ASSERT_TRUE(TestIsErrStackEmpty());
-#endif
-
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(key);
     BSL_GLOBAL_DeInit();
