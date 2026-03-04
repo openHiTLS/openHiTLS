@@ -537,6 +537,24 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_ECCPRIKEY_FILE_TC002(int isProvider, char *path, int fileType, char *fileTypeStr, Hex *pass,
+    int mdId, Hex *msg, int alg, Hex *rawKey, int paraId)
+{
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    ASSERT_EQ(DecodeKeyFile(isProvider, path,
+        BSL_FORMAT_ASN1, "ASN1", fileType, fileTypeStr, pass->x, pass->len, &pkeyCtx), 0);
+    ASSERT_EQ(EccPrvSign(pkeyCtx, mdId, alg, msg, rawKey, paraId), CRYPT_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_BSL_ASN1_PARSE_25519PRIKEY_FILE_TC001(int alg, char *path, int format, int type, Hex *prv)
 {
     uint8_t rawPriKey[32] = {0};

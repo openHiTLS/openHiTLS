@@ -1072,6 +1072,7 @@ static int32_t ParsePk8PrikeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
 #endif
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
         case BSL_CID_EC_PUBLICKEY:
+        case BSL_CID_SM2PRIME256:
             return ParseEccPrikeyAsn1Buff(libctx, attrName, pk8PrikeyInfo->pkeyRawKey, pk8PrikeyInfo->pkeyRawKeyLen,
                 &pk8PrikeyInfo->keyParam, ealPriKey);
 #endif
