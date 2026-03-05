@@ -42,7 +42,7 @@ static const CRYPT_ML_DSA_Info MLDSA_PARAMETERTER_87 = {CRYPT_MLDSA_TYPE_MLDSA_8
 static const CRYPT_ML_DSA_Info *g_mldsaInfo[] = {&MLDSA_PARAMETERTER_44, &MLDSA_PARAMETERTER_65,
     &MLDSA_PARAMETERTER_87};
 
-const CRYPT_ML_DSA_Info *CRYPT_ML_DSA_GetInfo(int32_t k)
+static const CRYPT_ML_DSA_Info *CRYPT_ML_DSA_GetInfo(int32_t k)
 {
     if (k == CRYPT_MLDSA_TYPE_MLDSA_44) {
         return g_mldsaInfo[0];
@@ -471,7 +471,7 @@ static int32_t MLDSA_VerifyArgCheck(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *data, 
 
 int32_t CRYPT_ML_DSA_SetPrvKey(CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPrv *prv)
 {
-    if (ctx == NULL || prv == NULL) {
+    if (ctx == NULL || prv == NULL || prv->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -613,7 +613,7 @@ int32_t CRYPT_ML_DSA_GetPubKeyEx(const CRYPT_ML_DSA_Ctx *ctx, BSL_Param *para)
 
 int32_t CRYPT_ML_DSA_SetPubKey(CRYPT_ML_DSA_Ctx *ctx, CRYPT_MlDsaPub *pub)
 {
-    if (ctx == NULL || pub == NULL) {
+    if (ctx == NULL || pub == NULL || pub->data == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
