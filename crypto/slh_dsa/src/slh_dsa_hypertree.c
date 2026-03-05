@@ -19,7 +19,6 @@
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
-#include "crypt_errno.h"
 #include "slh_dsa_local.h"
 #include "slh_dsa_hypertree.h"
 

@@ -791,7 +791,7 @@ static int32_t ParseMldsaPubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *at
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    uint32_t ret = CRYPT_EAL_PkeySetParaById(pctx, (uint32_t)cid);
+    int32_t ret = CRYPT_EAL_PkeySetParaById(pctx, (uint32_t)cid);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_PkeyFreeCtx(pctx);
         return ret;
@@ -859,7 +859,7 @@ static int32_t ParseMlKemPubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *at
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    uint32_t ret = CRYPT_EAL_PkeySetParaById(pctx, (uint32_t)cid);
+    int32_t ret = CRYPT_EAL_PkeySetParaById(pctx, (uint32_t)cid);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_PkeyFreeCtx(pctx);
         return ret;
@@ -974,7 +974,7 @@ static int32_t ParseSlhDsaPubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *a
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    uint32_t ret = CRYPT_EAL_PkeySetParaById(pctx, (uint32_t)cid);
+    int32_t ret = CRYPT_EAL_PkeySetParaById(pctx, (uint32_t)cid);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_PkeyFreeCtx(pctx);
         return ret;
@@ -2017,7 +2017,7 @@ static int32_t EncodeMlKemPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffe
 static int32_t EncodeXmssPubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buffer *bitStr)
 {
     uint32_t pubLen = 0;
-    uint32_t ret = CRYPT_EAL_PkeyCtrl(ealPubKey, CRYPT_CTRL_GET_PUBKEY_LEN, &pubLen, sizeof(uint32_t));
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPubKey, CRYPT_CTRL_GET_PUBKEY_LEN, &pubLen, sizeof(uint32_t));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;

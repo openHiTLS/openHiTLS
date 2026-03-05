@@ -19,8 +19,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SLH_DSA
 
-#include <stdint.h>
-
 /*
  * Initialize SLH-DSA hash functions for a given algorithm
  *

@@ -20,7 +20,6 @@
 #ifdef HITLS_CRYPTO_XMSS
 
 #include <stdint.h>
-#include <stddef.h>
 
 typedef struct CryptAdrsOps CryptAdrsOps;
 
