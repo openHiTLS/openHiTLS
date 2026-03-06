@@ -245,7 +245,7 @@ static int32_t CheckCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool
     }
 
     if ((cookieLen == clientHello->cookieLen) &&
-        (memcmp((char *)cookie, (char *)clientHello->cookie, cookieLen) == 0)) {
+        (ConstTimeMemcmp(cookie, clientHello->cookie, cookieLen) != 0)) {
         *isCookieValid = true;
     }
     (void)memset_s(cookie, TLS_HS_MAX_COOKIE_SIZE, 0, TLS_HS_MAX_COOKIE_SIZE);
@@ -288,7 +288,7 @@ static int32_t CheckCookieDuringRenegotiation(TLS_Ctx *ctx, const ClientHelloMsg
     uint16_t cookieLen = (uint16_t)ctx->negotiatedInfo.cookieSize;
 
     if ((cookieLen == clientHello->cookieLen) &&
-        (memcmp((char *)cookie, (char *)clientHello->cookie, cookieLen) == 0)) {
+        (ConstTimeMemcmp(cookie, clientHello->cookie, cookieLen) != 0)) {
         *isCookieValid = true;
     }
     return HITLS_SUCCESS;

@@ -1291,7 +1291,7 @@ static int32_t HpkeAeadDecrypt(CRYPT_EAL_HpkeCtx *ctx, const uint8_t *nonce, uin
         goto EXIT;
     }
 
-    if (memcmp(tag, cipherText + (cipherTextLen - HPKE_AEAD_TAG_LEN), HPKE_AEAD_TAG_LEN) != 0) {
+    if (ConstTimeMemcmp(tag, cipherText + (cipherTextLen - HPKE_AEAD_TAG_LEN), HPKE_AEAD_TAG_LEN) == 0) {
         ret = CRYPT_HPKE_ERR_AEAD_TAG;
         BSL_ERR_PUSH_ERROR(CRYPT_HPKE_ERR_AEAD_TAG);
     }
