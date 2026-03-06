@@ -335,7 +335,7 @@ int32_t CRYPT_SM2_ParsePkcs8Key(void *libCtx, uint8_t *buff, uint32_t buffLen, C
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (pk8PrikeyInfo.keyType != BSL_CID_EC_PUBLICKEY) {
+    if (pk8PrikeyInfo.keyType != BSL_CID_EC_PUBLICKEY && pk8PrikeyInfo.keyType != BSL_CID_SM2PRIME256) {
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH);
         return CRYPT_DECODE_ERR_KEY_TYPE_NOT_MATCH;
     }
