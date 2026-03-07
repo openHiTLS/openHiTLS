@@ -339,5 +339,6 @@ EXIT:
     BSL_SAL_FREE(tokenRequestBuff);
     BSL_SAL_FREE(tokenResponseBuff);
     BSL_SAL_FREE(finalTokenBuff);
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_ALL);
     return ret;
 }

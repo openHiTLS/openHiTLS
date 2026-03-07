@@ -134,10 +134,9 @@ int main(void)
 
 EXIT:
     // Release the context memory.
-    CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(prvCtx);
     CRYPT_EAL_PkeyFreeCtx(pubCtx);
     BSL_SAL_Free(shareKey);
-    BSL_ERR_DeInit();
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_ALL);
     return ret;
 }

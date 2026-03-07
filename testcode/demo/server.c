@@ -173,5 +173,6 @@ EXIT:
     HITLS_X509_CertFree(serverCert);
     CRYPT_EAL_PkeyFreeCtx(pkey);
     BSL_UIO_Free(uio);
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_ALL);
     return exitValue;
 }

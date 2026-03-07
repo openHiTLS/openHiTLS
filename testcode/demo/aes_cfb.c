@@ -149,21 +149,20 @@ int main(void)
     if (ret != CRYPT_SUCCESS) {
         printf("error code is %x\n", ret);
         PrintLastError();
-        BSL_ERR_DeInit();
         return ret;
     }
 
     CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AES128_CFB);
     if (ctx == NULL) {
         PrintLastError();
-        BSL_ERR_DeInit();
+        CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_ALL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
     ret = RunDemo(ctx);
 
     CRYPT_EAL_CipherFreeCtx(ctx);
-    BSL_ERR_DeInit();
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_ALL);
     return ret;
 }
 

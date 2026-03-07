@@ -200,5 +200,6 @@ EXIT:
     HITLS_X509_CertFree(rootCA);
     HITLS_X509_CertFree(subCA);
     BSL_UIO_Free(uio);
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_ALL);
     return exitValue;
 }
