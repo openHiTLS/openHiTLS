@@ -32,6 +32,7 @@
 #include "crypt_errno.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
+#include "bsl_bytes.h"
 
 #include "spake2plus.h"
 
@@ -1400,9 +1401,10 @@ int32_t HITLS_AUTH_Spake2plusReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer share
     spakeCtx->confirmV.dataLen = outHmacBuffer.dataLen;
     (void)memcpy_s(spakeCtx->confirmV.data, outHmacBuffer.dataLen, outHmacBuffer.data, outHmacBuffer.dataLen);
 
-    if (memcmp(spakeCtx->confirmV.data, confirmV.data, confirmV.dataLen) != 0 &&
-    spakeCtx->confirmV.dataLen == confirmV.dataLen) {
+    if (spakeCtx->confirmV.dataLen != confirmV.dataLen ||
+        ConstTimeMemcmp(spakeCtx->confirmV.data, confirmV.data, confirmV.dataLen) == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_INVALID_PARAM);
+        ret = HITLS_AUTH_PAKE_INVALID_PARAM;
         goto err;
     }
 
@@ -1434,8 +1436,8 @@ int32_t HITLS_AUTH_Spake2plusRespDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer conf
         return HITLS_AUTH_NULL_INPUT;
     }
 
-    if (memcmp(spakeCtx->confirmP.data, confirmP.data, confirmP.dataLen) != 0 &&
-    spakeCtx->confirmP.dataLen == confirmP.dataLen) {
+    if (spakeCtx->confirmP.dataLen != confirmP.dataLen ||
+        ConstTimeMemcmp(spakeCtx->confirmP.data, confirmP.data, confirmP.dataLen) == 0) {
         Spake2PlusFreeCtx(spakeCtx);
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_INVALID_PARAM);
         return HITLS_AUTH_PAKE_INVALID_PARAM;

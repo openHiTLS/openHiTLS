@@ -35,6 +35,7 @@
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 #include "config_type.h"
+#include "bsl_bytes.h"
 #include "hitls_crypt.h"
 
 #ifndef HITLS_CRYPTO_EAL
@@ -498,7 +499,7 @@ static int32_t AeadDecrypt(CRYPT_EAL_CipherCtx *ctx, const HITLS_CipherParameter
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16647, "GET_TAG err");
     }
 
-    if (memcmp(tag, in + cipherLen, tagLen) != 0) {
+    if (ConstTimeMemcmp(tag, in + cipherLen, tagLen) == 0) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_DECRYPT, BINLOG_ID16648, "memcmp tag fail");
     }
 

@@ -20,6 +20,7 @@
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
 #include "eal_md_local.h"
+#include "bsl_bytes.h"
 
 // gen e & encode
 static int32_t GenVectorE(CRYPT_MCELIECE_Ctx *ctx, uint8_t *c, uint8_t *e)
@@ -155,7 +156,7 @@ int32_t McElieceDecapsInternal(const uint8_t *ciphertext, const CMPrivateKey *sk
             BSL_ERR_PUSH_ERROR(ret);
             goto EXIT;
         }
-        b = memcmp(c1Prime, c1, MCELIECE_L_BYTES) == 0 ? 1 : 0; // If C' != C1, set b <- 0
+        b = ConstTimeMemcmp(c1Prime, c1, MCELIECE_L_BYTES) == 0 ? 0 : 1; // If C' != C1, set b <- 0
     }
 
     ret = ComputeSessionKeyWithPrefix(sessionKey, b, e, ciphertext, params);

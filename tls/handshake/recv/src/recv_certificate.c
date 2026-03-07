@@ -31,6 +31,7 @@
 #include "hs_extensions.h"
 #include "alert.h"
 #include "cert_method.h"
+#include "bsl_bytes.h"
 #include "hitls_pki_errno.h"
 
 // PKI error code to Alert mapping for certificate validation
@@ -399,7 +400,7 @@ static int32_t CertificateReqCtxCheck(TLS_Ctx *ctx, const CertificateMsg *certs)
     }
     /* pha phase, which must be non-empty and equal */
     if (ctx->certificateReqCtxSize != 0 && (ctx->certificateReqCtxSize != certs->certificateReqCtxSize ||
-                memcmp(ctx->certificateReqCtx, certs->certificateReqCtx, certs->certificateReqCtxSize) != 0)) {
+                ConstTimeMemcmp(ctx->certificateReqCtx, certs->certificateReqCtx, certs->certificateReqCtxSize) == 0)) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17044, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "certificateReqCtx is not equal", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);

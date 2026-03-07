@@ -30,6 +30,7 @@
 #include "hs_verify.h"
 #include "recv_process.h"
 #include "hs_kx.h"
+#include "bsl_bytes.h"
 #ifdef HITLS_TLS_FEATURE_SESSION
 #include "session_mgr.h"
 #endif
@@ -232,7 +233,7 @@ static int32_t CheckFinishedVerifyData(const FinishedMsg *finishedMsg, const uin
         return HITLS_MSG_HANDLE_INCORRECT_DIGEST_LEN;
     }
 
-    if (memcmp(finishedMsg->verifyData, verifyData, verifyDataSize) != 0) {
+    if (ConstTimeMemcmp(finishedMsg->verifyData, verifyData, verifyDataSize) == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_VERIFY_FINISHED_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15739, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Finished data unequal.", 0, 0, 0, 0);

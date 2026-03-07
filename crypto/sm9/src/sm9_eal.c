@@ -23,6 +23,7 @@
 #include "crypt_utils.h"
 #include "crypt_params_key.h"
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
 #include "securec.h"
 
 /* Key type constants */
@@ -730,7 +731,7 @@ int32_t CRYPT_SM9_Cmp(const CRYPT_SM9_Ctx *ctx1, const CRYPT_SM9_Ctx *ctx2)
     }
 
     /* Compare relevant fields */
-    if (memcmp(ctx1, ctx2, sizeof(SM9_Ctx)) == 0) {
+    if (ConstTimeMemcmp((const uint8_t *)ctx1, (const uint8_t *)ctx2, sizeof(SM9_Ctx)) != 0) {
         return CRYPT_SUCCESS;
     }
 

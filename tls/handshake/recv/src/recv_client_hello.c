@@ -46,6 +46,7 @@
 #ifdef HITLS_TLS_FEATURE_SESSION
 #include "session_mgr.h"
 #endif
+#include "bsl_bytes.h"
 #include "cert_method.h"
 
 #ifdef HITLS_TLS_PROTO_TLS13
@@ -1911,8 +1912,8 @@ int32_t CompareBinder(TLS_Ctx *ctx, const PreSharedKey *pskNode, uint8_t *psk, u
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    ret = memcmp(computedBinder, recvBinder, binderLen);
-    if (ret != 0) {
+    ret = ConstTimeMemcmp(computedBinder, recvBinder, binderLen) == 0 ? HITLS_INTERNAL_EXCEPTION : HITLS_SUCCESS;
+    if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17061, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "memcmp fail, ret %d", ret, 0, 0, 0);
         return HITLS_INTERNAL_EXCEPTION;

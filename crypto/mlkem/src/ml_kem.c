@@ -20,6 +20,7 @@
 #include "crypt_algid.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
+#include "bsl_bytes.h"
 #include "eal_pkey_local.h"
 #include "crypt_util_rand.h"
 #include "crypt_util_ctrl.h"
@@ -582,7 +583,7 @@ static int32_t MlKemCmpKey(uint8_t *a, uint32_t aLen, uint8_t *b, uint32_t bLen)
         return CRYPT_MLKEM_KEY_NOT_EQUAL;
     }
     if (a != NULL && b != NULL) {
-        if (memcmp(a, b, aLen) != 0) {
+        if (ConstTimeMemcmp(a, b, aLen) == 0) {
             BSL_ERR_PUSH_ERROR(CRYPT_MLKEM_KEY_NOT_EQUAL);
             return CRYPT_MLKEM_KEY_NOT_EQUAL;
         }
