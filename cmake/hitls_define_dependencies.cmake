@@ -205,6 +205,7 @@ hitls_define_dependency(HITLS_CRYPTO_SHA256_MB          DEPS HITLS_CRYPTO_SHA2_M
 hitls_define_dependency(HITLS_CRYPTO_SHA256_SMALL_MEM   DEPS HITLS_CRYPTO_SHA256)
 hitls_define_dependency(HITLS_CRYPTO_SHA512_SMALL_MEM   DEPS HITLS_CRYPTO_SHA512)
 hitls_define_dependency(HITLS_CRYPTO_SHA1_SMALL_MEM     DEPS HITLS_CRYPTO_SHA1)
+hitls_define_dependency(HITLS_CRYPTO_SM3_SMALL_MEM      DEPS HITLS_CRYPTO_SM3)
 
 ## Mac
 hitls_define_dependency(HITLS_CRYPTO_MAC

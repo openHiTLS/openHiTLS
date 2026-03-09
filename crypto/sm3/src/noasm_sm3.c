@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_SM3
+#if defined(HITLS_CRYPTO_SM3) && !defined(HITLS_CRYPTO_SM3_SMALL_MEM)
 
 #include <stdint.h>
 #include "crypt_utils.h"
@@ -283,4 +283,4 @@ void SM3_Compress(uint32_t state[8], const uint8_t *data, uint32_t blockCnt)
         count--;
     }
 }
-#endif // HITLS_CRYPTO_SM3
+#endif // HITLS_CRYPTO_SM3 && !HITLS_CRYPTO_SM3_SMALL_MEM

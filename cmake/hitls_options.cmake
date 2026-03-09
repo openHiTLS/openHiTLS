@@ -149,6 +149,7 @@ option(HITLS_CRYPTO_MD                                         "MD" OFF)
     option(HITLS_CRYPTO_SHA512_SMALL_MEM                           "SHA512 Small Memory" OFF)
   option(HITLS_CRYPTO_SHA3                                       "SHA3" OFF)
   option(HITLS_CRYPTO_SM3                                        "SM3" OFF)
+  option(HITLS_CRYPTO_SM3_SMALL_MEM                              "SM3 Small Memory" OFF)
 
 ## Md_mb
 option(HITLS_CRYPTO_MD_MB                                      "Multi-Buffer MD" OFF)

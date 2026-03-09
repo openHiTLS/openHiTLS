@@ -30,6 +30,10 @@ elseif(HITLS_CRYPTO_SM3_ARMV7)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_sm3.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/sm3_armv7.S
     )
+elseif(HITLS_CRYPTO_SM3_SMALL_MEM)
+    list(APPEND _sm3_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/noasm_sm3_small.c
+    )
 else()
     list(APPEND _sm3_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/noasm_sm3.c)
 endif()
