@@ -383,8 +383,8 @@ def get_cfg_args():
                             help='Force rebuild dependencies even if already built. '
                                  'This will clean and rebuild securec library.')
 
-        parser.add_argument('--hitls_version', default='openHiTLS 0.3.1 2 Mar 2026', help='%(prog)s version str')
-        parser.add_argument('--hitls_version_num', default=0x0030001f, help='%(prog)s version num')
+        parser.add_argument('--hitls_version', default='openHiTLS 0.3.2 9 Mar 2026', help='%(prog)s version str')
+        parser.add_argument('--hitls_version_num', default=0x0030002f, help='%(prog)s version num')
         parser.add_argument('--bundle_libs', action='store_true', help='Indicates that multiple libraries are bundled together. By default, it is not bound.\
                             It need to be used together with "-m"')
         # Compile the command apps.
