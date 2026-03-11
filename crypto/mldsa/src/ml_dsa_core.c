@@ -989,7 +989,7 @@ static int32_t SigDecode(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *in, int32_t
             index++;
         }
     }
-    for (int32_t i = index; i < (ctx->info->omega - 1); i++) {
+    for (int32_t i = index; i <= (ctx->info->omega - 1); i++) {
         RETURN_RET_IF(ptr[i] != 0, CRYPT_MLDSA_SIGN_DATA_ERROR);
     }
     return CRYPT_SUCCESS;
