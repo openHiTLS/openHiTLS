@@ -437,12 +437,6 @@ int32_t HITLS_CRYPT_Encrypt(HITLS_Lib_Ctx *libCtx, const char *attrName, const H
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16642, "CipherUpdate fail");
     }
 
-    if (*outLen < cipherLen) {
-        CRYPT_EAL_CipherFreeCtx(*ctx);
-        *ctx = NULL;
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_ENCRYPT, BINLOG_ID16643, "outLen less than cipherLen");
-    }
-
     uint32_t finLen = *outLen - cipherLen;
     if (cipher->type == HITLS_AEAD_CIPHER) {
         finLen = IsCipherCCM8(cipher->algo) ? CCM8_TLS_TAG_LEN : CCM_TLS_TAG_LEN;
@@ -525,10 +519,6 @@ int32_t CbcDecrypt(CRYPT_EAL_CipherCtx *ctx, const uint8_t *in, uint32_t inLen, 
     ret = CRYPT_EAL_CipherUpdate(ctx, in, inLen, out, &plainLen);
     if (ret != CRYPT_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16649, "CipherUpdate fail");
-    }
-
-    if (*outLen < plainLen) {
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_DECRYPT, BINLOG_ID16650, "CipherUpdate fail");
     }
 
     uint32_t finLen = *outLen - plainLen;
@@ -949,9 +939,7 @@ int32_t HITLS_CRYPT_GetDhParameters(HITLS_CRYPT_Key *key, uint8_t *p, uint16_t *
 {
 #ifdef HITLS_CRYPTO_PKEY
     int32_t ret;
-    uint8_t tmpP[MAX_PKEY_PARA_LEN] = {0};
     uint8_t tmpQ[MAX_PKEY_PARA_LEN] = {0};
-    uint8_t tmpG[MAX_PKEY_PARA_LEN] = {0};
 
     CRYPT_EAL_PkeyPara para = {0};
     para.id = CRYPT_PKEY_DH;
@@ -961,15 +949,6 @@ int32_t HITLS_CRYPT_GetDhParameters(HITLS_CRYPT_Key *key, uint8_t *p, uint16_t *
     para.para.dhPara.qLen = sizeof(tmpQ);
     para.para.dhPara.g = g;
     para.para.dhPara.gLen = *gLen;
-
-    if (p == NULL) {
-        para.para.dhPara.p = tmpP;
-        para.para.dhPara.pLen = sizeof(tmpP);
-    }
-    if (g == NULL) {
-        para.para.dhPara.g = tmpG;
-        para.para.dhPara.gLen = sizeof(tmpG);
-    }
 
     ret = CRYPT_EAL_PkeyGetPara(key, &para);
     if (ret != CRYPT_SUCCESS) {

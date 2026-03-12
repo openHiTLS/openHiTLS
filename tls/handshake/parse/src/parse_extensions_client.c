@@ -414,7 +414,7 @@ int32_t ParseServerExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
 
     // The extended content is the last field of the serverHello message. No other data should follow.
     if (bufOffset != bufLen) {
-        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15206,
+        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15201,
             BINGLOG_STR("parse extension failed."), ALERT_DECODE_ERROR);
     }
 

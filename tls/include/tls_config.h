@@ -224,9 +224,7 @@ typedef struct TlsConfig {
     bool isQuietShutdown;               /* is support the quiet shutdown mode */
     bool isEncryptThenMac;              /* is EncryptThenMac on */
     /* DTLS */
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
     bool isSupportDtlsCookieExchange;    /* is dtls support cookie exchange */
-#endif
     bool isFlightTransmitEnable;        /* sending of handshake information in one flighttransmit */
 
     int32_t emsMode;                      /* extended master secret mode */

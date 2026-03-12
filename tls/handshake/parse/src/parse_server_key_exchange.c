@@ -372,11 +372,8 @@ static int32_t ParseServerDhe(ParsePacket *pkt, ServerKeyExchangeMsg *msg)
     /* DHE_PSK | ANON_DHE key exchange is not signed */
     if (ctx->hsCtx->kxCtx->keyExchAlgo == HITLS_KEY_EXCH_DHE_PSK ||
         ctx->negotiatedInfo.cipherSuiteInfo.authAlg == HITLS_AUTH_NULL) {
-        if (pkt->bufLen != *pkt->bufOffset) {
-            return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15323,
-                BINGLOG_STR("parse serverkeyEx signature failed."), ALERT_DECODE_ERROR);
-        }
-        return HITLS_SUCCESS;
+        return pkt->bufLen != *pkt->bufOffset ? ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15323,
+            BINGLOG_STR("parse serverkeyEx signature failed."), ALERT_DECODE_ERROR) : HITLS_SUCCESS;
     }
 
     uint32_t kxDataLen = *pkt->bufOffset;

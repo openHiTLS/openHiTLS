@@ -34,9 +34,12 @@ extern "C" {
 #define EXPORTER_SECRET_LABEL "EXPORTER_SECRET"
 
 /* The maximum premaster secret calculated by using the PSK may be:
- * |uint16_t|MAX_OTHER_SECRET_SIZE|uint16_t|HS_PSK_MAX_LEN| */
-#define MAX_OTHER_SECRET_SIZE 1536
-#define MAX_PRE_MASTER_SECRET_SIZE (sizeof(uint16_t) + MAX_OTHER_SECRET_SIZE + sizeof(uint16_t) + HS_PSK_MAX_LEN)
+ * |uint16_t|HITLS_MAX_OTHER_SECRET_SIZE|uint16_t|HS_PSK_MAX_LEN| */
+#ifndef HITLS_MAX_OTHER_SECRET_SIZE
+#define HITLS_MAX_OTHER_SECRET_SIZE 1536
+#endif
+#define MAX_PRE_MASTER_SECRET_SIZE (sizeof(uint16_t) + HITLS_MAX_OTHER_SECRET_SIZE + sizeof(uint16_t) + \
+    HS_PSK_MAX_LEN)
 #define MAX_SHA1_SIZE 20
 #define MAX_MD5_SIZE 16
 

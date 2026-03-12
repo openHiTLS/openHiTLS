@@ -339,27 +339,11 @@ int32_t HS_ProcessClientKxMsgSm2(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
 #endif
 #endif /* HITLS_TLS_HOST_SERVER */
 #ifdef HITLS_TLS_FEATURE_PSK
-static int32_t AppendPsk(uint8_t *pskPmsBuf, uint32_t pskPmsBufLen, uint8_t *psk, uint32_t pskLen)
-{
-    uint32_t offset = 0u;
-    uint8_t *pskPmsBufTmp = pskPmsBuf;
-
-    BSL_Uint16ToByte((uint16_t)pskLen, pskPmsBufTmp);
-    offset += sizeof(uint16_t);
-
-    if (memcpy_s(&pskPmsBufTmp[offset], pskPmsBufLen - offset, psk, pskLen) != EOK) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16828, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
-        return HITLS_MEMCPY_FAIL;
-    }
-
-    return HITLS_SUCCESS;
-}
-
 static int32_t GeneratePskPreMasterSecret(TLS_Ctx *ctx, uint8_t *pmsBuf, uint32_t pmsBufLen, uint32_t *pmsUsedLen)
 {
     int32_t ret = HITLS_SUCCESS;
     uint32_t offset = 0u;
-    uint8_t tmpPskPmsBufTmp[MAX_PRE_MASTER_SECRET_SIZE] = {0};
+    uint8_t *p = pmsBuf;
 
     uint8_t *psk = ctx->hsCtx->kxCtx->pskInfo->psk;
     uint32_t pskLen = ctx->hsCtx->kxCtx->pskInfo->pskLen;
@@ -372,30 +356,30 @@ static int32_t GeneratePskPreMasterSecret(TLS_Ctx *ctx, uint8_t *pmsBuf, uint32_
         /* |shareKeyLen(2 byte)|shareKey|PskLen(2 byte)|psk| */
         case HITLS_KEY_EXCH_DHE_PSK:
         case HITLS_KEY_EXCH_ECDHE_PSK:
+            ret = memmove_s(p + sizeof(uint16_t), pmsBufLen - sizeof(uint16_t), p, *pmsUsedLen);
             /* Padding ShareKeyLen */
-            BSL_Uint16ToByte((uint16_t)*pmsUsedLen, &tmpPskPmsBufTmp[offset]);
-            offset += sizeof(uint16_t);
-            /* Padding ShareKey */
-            ret = memcpy_s(&tmpPskPmsBufTmp[offset], MAX_PRE_MASTER_SECRET_SIZE - offset, pmsBuf, *pmsUsedLen);
-            offset += *pmsUsedLen;
+            BSL_Uint16ToByte((uint16_t)*pmsUsedLen, p);
+            offset = sizeof(uint16_t) + *pmsUsedLen;
+            p += offset;
             break;
         /* |48(2 byte)|version number(2 byte)|rand value(46 byte)|pskLen(2 byte)|psk| */
         case HITLS_KEY_EXCH_RSA_PSK:
+            ret = memmove_s(p + sizeof(uint16_t), pmsBufLen - sizeof(uint16_t), p, *pmsUsedLen);
             /* Padding the length (Version + RandValue). The value is fixed to 48 */
-            BSL_Uint16ToByte(MASTER_SECRET_LEN, &tmpPskPmsBufTmp[offset]);
-            offset = sizeof(uint16_t);
-            /* Padding |Version|RandValue| */
-            ret = memcpy_s(&tmpPskPmsBufTmp[offset], MAX_PRE_MASTER_SECRET_SIZE - offset, pmsBuf, *pmsUsedLen);
-            offset += MASTER_SECRET_LEN;
+            BSL_Uint16ToByte(MASTER_SECRET_LEN, p);
+            offset = sizeof(uint16_t) + MASTER_SECRET_LEN;
+            p += offset;
             break;
         /* |N(2 byte)|N 0s|N(2 byte)|psk|, N stands for pskLen */
         case HITLS_KEY_EXCH_PSK:
             /* Padding pskLen */
-            BSL_Uint16ToByte((uint16_t)pskLen, &tmpPskPmsBufTmp[offset]);
+            BSL_Uint16ToByte((uint16_t)pskLen, p);
             offset = sizeof(uint16_t);
+            p += offset;
             /* padding pskLen with zeros */
-            ret = memset_s(&tmpPskPmsBufTmp[offset], MAX_PRE_MASTER_SECRET_SIZE - offset, 0, pskLen);
+            ret = memset_s(p, pmsBufLen - offset, 0, pskLen);
             offset += pskLen;
+            p += offset;
             break;
         default:
             /* no key exchange algo matched */
@@ -408,23 +392,19 @@ static int32_t GeneratePskPreMasterSecret(TLS_Ctx *ctx, uint8_t *pmsBuf, uint32_
         goto ERR;
     }
 
-    if (AppendPsk(&tmpPskPmsBufTmp[offset], MAX_PRE_MASTER_SECRET_SIZE - offset, psk, pskLen) != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16832, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "AppendPsk fail", 0, 0, 0, 0);
-        goto ERR;
+    BSL_Uint16ToByte((uint16_t)pskLen, p);
+    offset += sizeof(uint16_t);
+    p += sizeof(uint16_t);
+    if (memcpy_s(p, pmsBufLen - offset, psk, pskLen) != EOK) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16828, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
+        return HITLS_MEMCPY_FAIL;
     }
-    offset += (sizeof(uint16_t) + pskLen);
 
-    if (memcpy_s(pmsBuf, pmsBufLen, tmpPskPmsBufTmp, offset) != EOK) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16833, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
-        goto ERR;
-    }
+    offset += pskLen;
     *pmsUsedLen = offset;
-
-    (void)memset_s(tmpPskPmsBufTmp, MAX_PRE_MASTER_SECRET_SIZE, 0, MAX_PRE_MASTER_SECRET_SIZE);
 
     return HITLS_SUCCESS;
 ERR:
-    (void)memset_s(tmpPskPmsBufTmp, MAX_PRE_MASTER_SECRET_SIZE, 0, MAX_PRE_MASTER_SECRET_SIZE);
     BSL_ERR_PUSH_ERROR(HITLS_MEMCPY_FAIL);
     return HITLS_MEMCPY_FAIL;
 }
@@ -570,9 +550,10 @@ int32_t HS_GenerateMasterSecret(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
     uint8_t preMasterSecret[MAX_PRE_MASTER_SECRET_SIZE] = {0};
-    /* key exchange algorithm contains psk, preMasterSecret: |uint16_t|MAX_OTHER_SECRET_SIZE|uint16_t|HS_PSK_MAX_LEN|
-       key exchange algorithm not contains psk, preMasterSecret: |MAX_OTHER_SECRET_SIZE| */
-    uint32_t preMasterSecretLen = MAX_OTHER_SECRET_SIZE;
+    /* key exchange algorithm contains psk, preMasterSecret:
+       |uint16_t|HITLS_MAX_OTHER_SECRET_SIZE|uint16_t|HS_PSK_MAX_LEN|
+       key exchange algorithm not contains psk, preMasterSecret: |HITLS_MAX_OTHER_SECRET_SIZE| */
+    uint32_t preMasterSecretLen = HITLS_MAX_OTHER_SECRET_SIZE;
 
     ret = GenPreMasterSecret(ctx, preMasterSecret, &preMasterSecretLen);
     if (ret != HITLS_SUCCESS) {
