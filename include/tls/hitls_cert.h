@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hitls_cert
- * @ingroup  hitls
+ * @ingroup tls
  * @brief    TLS Certificate Operation Interface
  */
 

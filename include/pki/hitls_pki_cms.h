@@ -13,6 +13,17 @@
  * See the Mulan PSL v2 for more details.
  */
 
+/**
+ * @file hitls_pki_cms.h
+ * @brief CMS public APIs.
+ */
+
+/**
+ * @defgroup cms
+ * @ingroup pki
+ * @brief CMS processing interfaces.
+ */
+
 #ifndef HITLS_PKI_CMS_H
 #define HITLS_PKI_CMS_H
 
@@ -28,6 +39,7 @@ extern "C" {
 typedef struct _HITLS_CMS HITLS_CMS;
 
 /**
+ * @ingroup cms
  * @brief Create a new CMS handle
  * @param libCtx library context
  * @param attrName Attribute/profile name
@@ -37,6 +49,7 @@ typedef struct _HITLS_CMS HITLS_CMS;
 HITLS_CMS *HITLS_CMS_ProviderNew(HITLS_PKI_LibCtx *libCtx, const char *attrName, int32_t dataType);
 
 /**
+ * @ingroup cms
  * @brief Free CMS structure
  * @param cms CMS structure to free
  */

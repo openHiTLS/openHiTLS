@@ -14,7 +14,7 @@
  */
  /**
  * @defgroup hitls_cert_init
- * @ingroup  hitls
+ * @ingroup tls
  * @brief    TLS certificate abstraction layer initialization
  */
 #ifndef HITLS_CERT_INIT_H

@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hitls_errno
- * @ingroup hitls
+ * @ingroup tls
  * @brief error module
  */
 

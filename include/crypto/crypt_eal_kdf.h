@@ -35,8 +35,9 @@ extern "C" {
 typedef struct EalKdfCtx CRYPT_EAL_KdfCTX;
 
 /**
- * @ingroup crypt_eal_kdf, Not supported in provider
+ * @ingroup crypt_eal_kdf
  * @brief   Check whether the given kdf algorithm ID is valid.
+ * @note    Not supported in provider mode.
  *
  * @param   id [IN] kdf algorithm ID.
  * @retval Valid, true is returned.
@@ -72,7 +73,7 @@ CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfNewCtx(CRYPT_KDF_AlgId algId);
  * @param ctx [IN] kdf context
  * @param param [IN] parameters
  *
- * @retval  #CRYPT_SUCCESS.
+ * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_KdfSetParam(CRYPT_EAL_KdfCTX *ctx, const BSL_Param *param);
@@ -85,7 +86,7 @@ int32_t CRYPT_EAL_KdfSetParam(CRYPT_EAL_KdfCTX *ctx, const BSL_Param *param);
  * @param key [OUT] Derived key
  * @param keyLen [IN] Specify the key derivation length
  *
- * @retval  #CRYPT_SUCCESS.
+ * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_KdfDerive(CRYPT_EAL_KdfCTX *ctx, uint8_t *key, uint32_t keyLen);
@@ -96,7 +97,7 @@ int32_t CRYPT_EAL_KdfDerive(CRYPT_EAL_KdfCTX *ctx, uint8_t *key, uint32_t keyLen
  *
  * @param ctx [IN] kdf context
  *
- * @retval  #CRYPT_SUCCESS.
+ * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_KdfDeInitCtx(CRYPT_EAL_KdfCTX *ctx);

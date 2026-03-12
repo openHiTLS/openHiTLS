@@ -13,6 +13,17 @@
  * See the Mulan PSL v2 for more details.
  */
 
+/**
+ * @file hitls_pki_pkcs12.h
+ * @brief PKCS#12 public APIs.
+ */
+
+/**
+ * @defgroup pkcs12
+ * @ingroup pki
+ * @brief PKCS#12 processing interfaces.
+ */
+
 #ifndef HITLS_PKI_PKCS12_H
 #define HITLS_PKI_PKCS12_H
 

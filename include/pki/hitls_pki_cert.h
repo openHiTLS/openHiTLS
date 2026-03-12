@@ -34,6 +34,7 @@ typedef struct _HITLS_X509_Cert HITLS_X509_Cert;
 HITLS_X509_Cert *HITLS_X509_CertNew(void);
 
 /**
+ * @ingroup pki
  * @brief Create a new X509 certificate object using the provider mechanism
  *
  * @param libCtx [IN] Library context from CRYPT_EAL_LibCtx

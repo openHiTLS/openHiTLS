@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hitls_type
- * @ingroup hitls
+ * @ingroup tls
  * @brief TLS type definition, provides the TLS type required by the user
  */
 

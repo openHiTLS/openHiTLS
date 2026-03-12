@@ -89,7 +89,7 @@ const char *CRYPT_CMVP_GetVersion(CRYPT_SelftestCtx *ctx);
  * @param   ctx [IN] The self-test context.
  * @param   param [IN] This is a self-check parameter and must contain CRYPT_CMVP_SELFTEST_TYPE.
  *
- * @retval  #CRYPT_SUCCESS.
+ * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_CMVP_Selftest(CRYPT_SelftestCtx *ctx, const BSL_Param *param);

@@ -72,7 +72,7 @@ bool CRYPT_EAL_MdIsValidAlgId(CRYPT_MD_AlgId id);
  * @ingroup crypt_eal_md
  * @brief   Return the MD algorithm ID.
  *
- * @param   pkey [IN] MD context
+ * @param   ctx [IN] MD context
  * @retval  ID, MD algorithm ID.
  *          CRYPT_MD_MAX, which indicates invalid ID or the input parameter is null.
  */
@@ -84,7 +84,7 @@ int32_t CRYPT_EAL_MdGetId(CRYPT_EAL_MdCTX *ctx);
  *
  * @param   to [IN/OUT] Target MD context
  * @param   from [IN] Source MD context
- * @retval  #CRYPT_SUCCESS.
+ * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_MdCopyCtx(CRYPT_EAL_MdCTX *to, const CRYPT_EAL_MdCTX *from);
@@ -116,7 +116,7 @@ void CRYPT_EAL_MdFreeCtx(CRYPT_EAL_MdCTX *ctx);
  * @brief  Initialize the MD context.
  *
  * @param   ctx [IN/OUT] MD context, which is created by using the CRYPT_EAL_MdNewCtx interface.
- * @retval  #CRYPT_SUCCESS.
+ * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_MdInit(CRYPT_EAL_MdCTX *ctx);
@@ -131,7 +131,7 @@ int32_t CRYPT_EAL_MdInit(CRYPT_EAL_MdCTX *ctx);
  *                   The maximum length of sha384 and sha512 is [0, 2^128 bits).
  *                   The maximum total length of sha1, sha224, sha256, sm3, and md5 is [0, 2^64 bits).
  *                   The maximum length at a time is [0, 0xffffffff].
- * @retval  #CRYPT_SUCCESS.
+ * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data, uint32_t len);
@@ -147,7 +147,7 @@ int32_t CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data, uint32_t l
  * @param   out [OUT] Buffer to store squeezed output
  * @param   len [IN] Input: requested output length (must be <= buffer size)
  * @retval  #CRYPT_SUCCESS
- *          #CRYPT_E_SHORT_BUFFER if output buffer is too small
+ * @retval  CRYPT_E_SHORT_BUFFER if output buffer is too small
  *          For other error codes, see crypt_errno.h
  */
 int32_t CRYPT_EAL_MdSqueeze(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t len);
@@ -163,7 +163,7 @@ int32_t CRYPT_EAL_MdSqueeze(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t len);
  * the hash length of the corresponding algorithm, the hash length can be obtained through the
  * CRYPT_EAL_MdGetDigestSize interface.
  * Requires user creation management.
- * @retval  #CRYPT_SUCCESS.
+ * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_MdFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t *len);
@@ -184,11 +184,11 @@ uint32_t CRYPT_EAL_MdGetDigestSize(CRYPT_MD_AlgId id);
  *
  * @param   id [IN] Algorithm ID
  * @param   in [IN] Data to be digested
- * @param   len [IN] Data length
+ * @param   inLen [IN] Data length
  * @param   out [OUT] Digest result
- * @param   len [IN/OUT] The input parameter indicates the length of the buffer marked as "out", and the output
+ * @param   outLen [IN/OUT] The input parameter indicates the length of the buffer marked as "out", and the output
  * parameter indicates the valid length of the obtained "out".
- * @retval  #CRYPT_SUCCESS.
+ * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
@@ -201,11 +201,11 @@ int32_t CRYPT_EAL_Md(CRYPT_MD_AlgId id, const uint8_t *in, uint32_t inLen, uint8
  * @param   id [IN] Algorithm ID
  * @param   attrName [IN] Attribute name
  * @param   in [IN] Data to be digested
- * @param   len [IN] Data length
+ * @param   inLen [IN] Data length
  * @param   out [OUT] Digest result
- * @param   len [IN/OUT] The input parameter indicates the length of the buffer marked as "out", and the output
+ * @param   outLen [IN/OUT] The input parameter indicates the length of the buffer marked as "out", and the output
  * parameter indicates the valid length of the obtained "out".
- * @retval  #CRYPT_SUCCESS.
+ * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_ProviderMd(CRYPT_EAL_LibCtx *libCtx, CRYPT_MD_AlgId id, const char *attrName, const uint8_t *in,

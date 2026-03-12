@@ -14,7 +14,7 @@
  */
  /**
  * @defgroup hitls_crypt_init
- * @ingroup hitls
+ * @ingroup tls
  * @brief  algorithm abstraction layer initialization
  */
 

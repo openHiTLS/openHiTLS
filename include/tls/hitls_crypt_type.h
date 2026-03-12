@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hitls_crypt_reg
- * @ingroup hitls
+ * @ingroup tls
  * @brief  Algorithm related interfaces to be registered
  */
 

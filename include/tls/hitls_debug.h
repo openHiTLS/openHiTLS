@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hitls_crypt_reg
- * @ingroup hitls
+ * @ingroup tls
  * @brief  hitls maintenance and debugging
  */
 
@@ -107,7 +107,7 @@ HITLS_InfoCb HITLS_CFG_GetInfoCb(const HITLS_Config *config);
  * @brief   Callback prototype of a protocol message
  * @param   writePoint [IN] writePoint  Message direction in the callback ">>>" or "<<<"
  * @param   tlsVersion [IN] tlsVersion  TLS version, for example, HITLS_VERSION_TLS12.
- * @param   contentType[IN] contentType Type of the processed message body.
+ * @param   contentType [IN] contentType Type of the processed message body.
  * @param   msg        [IN] msg         callback internal message processing instruction data
  * @param   msgLen     [IN] msgLen      Processing instruction data length
  * @param   ctx        [IN] ctx         HITLS context
@@ -165,4 +165,3 @@ int32_t HITLS_CFG_SetMsgCbArg(HITLS_Config *config, void *arg);
 #endif
 
 #endif // HITLS_DEBUG_H
-

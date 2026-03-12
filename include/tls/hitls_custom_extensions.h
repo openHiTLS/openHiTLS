@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hitls_custom_extensions
- * @ingroup  hitls
+ * @ingroup tls
  * @brief    TLS Custom Extensions
  */
 

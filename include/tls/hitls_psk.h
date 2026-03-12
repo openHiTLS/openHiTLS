@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hitls_psk
- * @ingroup hitls
+ * @ingroup tls
  * @brief Basic functions for link establishment based on PSK
  */
 

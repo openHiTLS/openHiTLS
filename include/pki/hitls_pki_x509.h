@@ -47,6 +47,7 @@ typedef int32_t (*X509_STORECTX_VerifyCb)(int32_t, HITLS_X509_StoreCtx *);
 HITLS_X509_StoreCtx *HITLS_X509_StoreCtxNew(void);
 
 /**
+ * @ingroup pki
  * @brief Create a new X509 store object using the provider mechanism
  *
  * @param libCtx [IN] Library context from CRYPT_EAL
