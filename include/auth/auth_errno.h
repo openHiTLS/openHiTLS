@@ -13,6 +13,34 @@
  * See the Mulan PSL v2 for more details.
  */
 
+/**
+ * @file auth_errno.h
+ * @brief Error codes for authentication-related modules.
+ */
+
+/**
+ * @defgroup auth
+ * @brief Authentication module.
+ */
+
+/**
+ * @defgroup auth_errno
+ * @ingroup auth
+ * @brief Authentication error code definitions.
+ */
+
+/**
+ * @defgroup auth_privpass
+ * @ingroup auth
+ * @brief Private Pass token interfaces.
+ */
+
+/**
+ * @defgroup auth_otp
+ * @ingroup auth
+ * @brief One-time password interfaces.
+ */
+
 #ifndef AUTH_ERRNO_H
 #define AUTH_ERRNO_H
 
@@ -20,6 +48,10 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup auth_errno
+ * @brief Error codes returned by authentication APIs.
+ */
 typedef enum {
     HITLS_AUTH_SUCCESS = 0,                           /* Operation completed successfully */
 

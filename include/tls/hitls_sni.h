@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hitls_sni
- * @ingroup hitls
+ * @ingroup tls
  * @brief TLS SNI correlation type
  */
 

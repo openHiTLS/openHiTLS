@@ -13,12 +13,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-/**
- * @defgroup hitls
- * @ingroup hitls
- * @brief TLS parameter configuration
- */
-
 /** @defgroup tls tls */
 
 #ifndef HITLS_H
@@ -37,7 +31,7 @@ extern "C" {
 #endif
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Create a TLS object and deep copy the HITLS_Config to the HITLS_Ctx.
  * @details This is the main TLS structure, which starts to establish a secure link through the client or server
  * on the basis that the link has been established at the network layer.
@@ -49,7 +43,7 @@ extern "C" {
 HITLS_Ctx *HITLS_New(HITLS_Config *config);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Release the TLS connection.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -58,7 +52,7 @@ HITLS_Ctx *HITLS_New(HITLS_Config *config);
 void HITLS_Free(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Reset the TLS handle to allow it to be used for another connection.
  * @param   ctx [IN] TLS connection handle.
  * @retval  HITLS_SUCCESS, if successful.
@@ -67,7 +61,7 @@ void HITLS_Free(HITLS_Ctx *ctx);
 int32_t HITLS_Clear(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the UIO object for the HiTLS context.
  * @details Bind the HiTLS context to the UIO object, through which the TLS object sends data, reads data,
  * and controls the connection status at the network layer.
@@ -84,7 +78,7 @@ int32_t HITLS_Clear(HITLS_Ctx *ctx);
 int32_t HITLS_SetUio(HITLS_Ctx *ctx, BSL_UIO *uio);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Read UIO for the HiTLS context.
  * @attention Must be called before HITLS_Connect and HITLS_Accept and released after HITLS_Free.
  * If this function has been called, you must call BSL_UIO_Free to release the UIO.
@@ -96,7 +90,7 @@ int32_t HITLS_SetUio(HITLS_Ctx *ctx, BSL_UIO *uio);
 int32_t HITLS_SetReadUio(HITLS_Ctx *ctx, BSL_UIO *uio);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the UIO object from the HiTLS context.
  *
  * @param   ctx [IN] TLS object.
@@ -105,7 +99,7 @@ int32_t HITLS_SetReadUio(HITLS_Ctx *ctx, BSL_UIO *uio);
 BSL_UIO *HITLS_GetUio(const HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the UIO object of the read data.
  *
  * @param   ctx [IN] TLS object
@@ -114,7 +108,7 @@ BSL_UIO *HITLS_GetUio(const HITLS_Ctx *ctx);
 BSL_UIO *HITLS_GetReadUio(const HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   The client starts the handshake with the TLS server.
  * @details Starting the handshake with the TLS server using HITLS_Connect.
  * The UIO object must be created and bound to the HiTLS context.
@@ -135,7 +129,7 @@ BSL_UIO *HITLS_GetReadUio(const HITLS_Ctx *ctx);
 int32_t HITLS_Connect(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the initial status of the connection.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -146,7 +140,7 @@ int32_t HITLS_Connect(HITLS_Ctx *ctx);
 int32_t HITLS_SetEndPoint(HITLS_Ctx *ctx, bool isClient);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   The server waits for the client to start handshake.
  * @details The server waits for the client to initiate the handshake.
  * The UIO object must be created and bound to the HiTLS context.\n
@@ -168,7 +162,7 @@ int32_t HITLS_SetEndPoint(HITLS_Ctx *ctx, bool isClient);
 int32_t HITLS_Accept(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   The server statelessly listens for new incoming DTLS connections.
  * @details If a ClientHello is received that does not contain a cookie,
  *          then server respond with a Hello Verify Request for a new ClientHello that does contain a cookie.
@@ -184,7 +178,7 @@ int32_t HITLS_Accept(HITLS_Ctx *ctx);
 int32_t HITLS_Listen(HITLS_Ctx *ctx, BSL_SAL_SockAddr clientAddr);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Read application data
  *
  * @attention Only the application data decrypted by one record can be read by HiTLS at a time
@@ -206,7 +200,7 @@ int32_t HITLS_Listen(HITLS_Ctx *ctx, BSL_SAL_SockAddr clientAddr);
 int32_t HITLS_Read(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   read application data from a TLS/SSL connection
  * @attention HITLS_Peek() is identical to HITLS_Read() except no bytes are actually
               removed from the underlying BIO during the read
@@ -222,7 +216,7 @@ int32_t HITLS_Read(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *re
 int32_t HITLS_Peek(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *readLen);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Write data.
  * @details: Encrypts and packs data with the specified length dataLen into a single record and sends the record.
  * @attention The length of the data to be sent cannot exceed the maximum writable length,
@@ -240,7 +234,7 @@ int32_t HITLS_Peek(HITLS_Ctx *ctx, uint8_t *data, uint32_t bufSize, uint32_t *re
 int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint32_t *writeLen);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the maximum writable (plaintext) length.
  *
  * @param   ctx [OUT] TLS connection handle.
@@ -251,7 +245,7 @@ int32_t HITLS_Write(HITLS_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint3
 int32_t HITLS_GetMaxWriteSize(const HITLS_Ctx *ctx, uint32_t *len);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain user data from the HiTLS context. This interface is called
  * in the callback registered with the HiTLS.
  * @attention must be called before HITLS_Connect and HITLS_Accept.
@@ -263,7 +257,7 @@ int32_t HITLS_GetMaxWriteSize(const HITLS_Ctx *ctx, uint32_t *len);
 void *HITLS_GetUserData(const HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Save the user data in the HiTLS context, which can be obtained from the callback registered with the HiTLS.
  *
  * @attention must be called before HITLS_Connect and HITLS_Accept.
@@ -278,7 +272,7 @@ void *HITLS_GetUserData(const HITLS_Ctx *ctx);
 int32_t HITLS_SetUserData(HITLS_Ctx *ctx, void *userData);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Close the TLS connection.
  * @par Description:
  * If the peer end is not closed, the system sends a closed notify message to the peer end.
@@ -290,7 +284,7 @@ int32_t HITLS_SetUserData(HITLS_Ctx *ctx, void *userData);
 int32_t HITLS_Close(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the shutdown status of the TLS link.
  * @par Description:
  * In HITLS_Close, if the peer end is not closed, a closed notification message is sent to the peer end.
@@ -309,7 +303,7 @@ int32_t HITLS_Close(HITLS_Ctx *ctx);
 int32_t HITLS_SetShutdownState(HITLS_Ctx *ctx, uint32_t mode);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the shutdown status of the TLS link.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -320,7 +314,7 @@ int32_t HITLS_SetShutdownState(HITLS_Ctx *ctx, uint32_t mode);
 int32_t HITLS_GetShutdownState(const HITLS_Ctx *ctx, uint32_t *mode);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the HiTLS negotiation version.
  *
  * @param   ctx [IN] TLS object
@@ -331,18 +325,18 @@ int32_t HITLS_GetShutdownState(const HITLS_Ctx *ctx, uint32_t *mode);
 int32_t HITLS_GetNegotiatedVersion(const HITLS_Ctx *ctx, uint16_t *version);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the latest protocol version.
  *
  * @param   ctx [IN] TLS object
- * @param   maxVersion [OUT] Latest protocol version supported
+ * @param   minVersion [OUT] Latest protocol version supported
  * @return  HITLS_SUCCESS, obtained successfully.
  *          For details about other error codes, see hitls_error.h.
  */
 int32_t HITLS_GetMaxProtoVersion(const HITLS_Ctx *ctx, uint16_t *maxVersion);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the latest protocol version.
  *
  * @param   ctx [IN] TLS object
@@ -353,10 +347,10 @@ int32_t HITLS_GetMaxProtoVersion(const HITLS_Ctx *ctx, uint16_t *maxVersion);
 int32_t HITLS_GetMinProtoVersion(const HITLS_Ctx *ctx, uint16_t *minVersion);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the minimum protocol version based on the specified version.
  * @param   ctx [OUT] TLS object
- * @param   versiion [IN] The given version
+ * @param   version [IN] The given version
  * @attention   The maximum version number and minimum version number must be both TLS and DTLS. Currently,
  * only DTLS 1.2 is supported. This interface is used together with the full configuration interfaces,
  * such as HITLS_CFG_NewDTLSConfig and HITLS_CFG_NewTLSConfig.
@@ -368,10 +362,10 @@ int32_t HITLS_GetMinProtoVersion(const HITLS_Ctx *ctx, uint16_t *minVersion);
 int32_t HITLS_SetMinProtoVersion(HITLS_Ctx *ctx, uint16_t version);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the maximum protocol version that is supported based on the specified version.
  * @param   ctx [OUT] TLS object
- * @param   versiion [IN] The given version
+ * @param   version [IN] The given version
  * @attention   The maximum version number and minimum version number must be both TLS and DTLS. Currently,
  * only DTLS 1.2 is supported. This function is used together with the full configuration interfaces,
  * such as HITLS_CFG_NewDTLSConfig and HITLS_CFG_NewTLSConfig.
@@ -383,7 +377,7 @@ int32_t HITLS_SetMinProtoVersion(HITLS_Ctx *ctx, uint16_t version);
 int32_t HITLS_SetMaxProtoVersion(HITLS_Ctx *ctx, uint16_t version);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain whether to use the AEAD algorithm.
  *
  * @param   ctx [IN] TLS object
@@ -394,7 +388,7 @@ int32_t HITLS_SetMaxProtoVersion(HITLS_Ctx *ctx, uint16_t version);
 int32_t HITLS_IsAead(const HITLS_Ctx *ctx, bool *isAead);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Check whether DTLS is used.
  *
  * @param   ctx [IN] TLS object
@@ -405,7 +399,7 @@ int32_t HITLS_IsAead(const HITLS_Ctx *ctx, bool *isAead);
 int32_t HITLS_IsDtls(const HITLS_Ctx *ctx, bool *isDtls);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Record the error value of the HiTLS link.
  *
  * @param   ctx [OUT] TLS connection handle
@@ -416,7 +410,7 @@ int32_t HITLS_IsDtls(const HITLS_Ctx *ctx, bool *isDtls);
 int32_t HITLS_SetErrorCode(HITLS_Ctx *ctx, int32_t errorCode);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the error value of the HiTLS link.
  *
  * @param   ctx [OUT] TLS connection handle
@@ -425,7 +419,7 @@ int32_t HITLS_SetErrorCode(HITLS_Ctx *ctx, int32_t errorCode);
 int32_t HITLS_GetErrorCode(const HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the information about whether the handshake is complete.
  *
  * @param   ctx [OUT] TLS connection handle
@@ -436,7 +430,7 @@ int32_t HITLS_GetErrorCode(const HITLS_Ctx *ctx);
 int32_t HITLS_IsHandShakeDone(const HITLS_Ctx *ctx, uint8_t *isDone);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Indicates whether the HiTLS object functions as the server.
  *
  * @param   ctx [OUT] TLS connection handle
@@ -447,7 +441,7 @@ int32_t HITLS_IsHandShakeDone(const HITLS_Ctx *ctx, uint8_t *isDone);
 int32_t HITLS_IsServer(const HITLS_Ctx *ctx, bool *isServer);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Check the HiTLS object in the read cache.
  * (including processed and unprocessed data, excluding the network layer) Whether there is data
  *
@@ -459,7 +453,7 @@ int32_t HITLS_IsServer(const HITLS_Ctx *ctx, bool *isServer);
 int32_t HITLS_ReadHasPending(const HITLS_Ctx *ctx, bool *isPending);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the number of bytes of application data to be read from the current record from the HiTLS object.
  * @attention When the HiTLS works in data packet transmission (DTLS), the HITLS_Read may
  * copy part of the application packet because the input buffer is not large enough.
@@ -471,7 +465,7 @@ int32_t HITLS_ReadHasPending(const HITLS_Ctx *ctx, bool *isPending);
 uint32_t HITLS_GetReadPendingBytes(const HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the signature hash algorithm used by the peer end.
  *
  * @param   ctx [IN] TLS connection handle
@@ -482,7 +476,7 @@ uint32_t HITLS_GetReadPendingBytes(const HITLS_Ctx *ctx);
 int32_t HITLS_GetPeerSignScheme(const HITLS_Ctx *ctx, HITLS_SignHashAlgo *peerSignScheme);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the signature hash algorithm used by the local end.
  *
  * @param   ctx [IN] TLS connection handle
@@ -493,7 +487,7 @@ int32_t HITLS_GetPeerSignScheme(const HITLS_Ctx *ctx, HITLS_SignHashAlgo *peerSi
 int32_t HITLS_GetLocalSignScheme(const HITLS_Ctx *ctx, HITLS_SignHashAlgo *localSignScheme);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Get shared signature algorithms (negotiated)
  *
  * This function returns the list of signature algorithms supported by both client and server.
@@ -522,7 +516,7 @@ int32_t HITLS_GetSharedSigAlgs(const HITLS_Ctx *ctx, int32_t idx, uint16_t *sign
     int32_t *paraId);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief Set the group supported by the hitls object.
  *
  * @param ctx [OUT] hitls context
@@ -534,7 +528,7 @@ int32_t HITLS_GetSharedSigAlgs(const HITLS_Ctx *ctx, int32_t idx, uint16_t *sign
 int32_t HITLS_SetEcGroups(HITLS_Ctx *ctx, uint16_t *lst, uint32_t groupSize);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the group supported during key exchange, the group supported by HiTLS can be queried in
  * HITLS_NamedGroup.
  * @attention If a group is not supported, an error will be reported during configuration check.
@@ -548,7 +542,7 @@ int32_t HITLS_SetEcGroups(HITLS_Ctx *ctx, uint16_t *lst, uint32_t groupSize);
 int32_t HITLS_SetGroupList(HITLS_Ctx *ctx, const char *groups, uint32_t groupNamesLen);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the signature algorithm supported by the hitls object.
  *
  * @param   ctx [OUT] hitls context.
@@ -560,7 +554,7 @@ int32_t HITLS_SetGroupList(HITLS_Ctx *ctx, const char *groups, uint32_t groupNam
 int32_t HITLS_SetSigalgsList(HITLS_Ctx *ctx, const uint16_t *signAlgs, uint16_t signAlgsSize);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the EC point format of the hitls.
  * @attention Currently, the value can only be HITLS_ECPOINTFORMAT_UNCOMPRESSED.
  * @param   ctx [OUT] hitls context.
@@ -572,7 +566,7 @@ int32_t HITLS_SetSigalgsList(HITLS_Ctx *ctx, const uint16_t *signAlgs, uint16_t 
 int32_t HITLS_SetEcPointFormats(HITLS_Ctx *ctx, const uint8_t *pointFormats, uint32_t pointFormatsSize);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set whether to verify the client certificate.
  *
  * @param   ctx [OUT] TLS connection handle
@@ -584,7 +578,7 @@ int32_t HITLS_SetEcPointFormats(HITLS_Ctx *ctx, const uint8_t *pointFormats, uin
 int32_t HITLS_SetClientVerifySupport(HITLS_Ctx *ctx, bool support);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set whether to support the function without the client certificate, Takes effect only when the client
  * certificate is verified.
             Client: This setting has no impact
@@ -600,7 +594,7 @@ int32_t HITLS_SetClientVerifySupport(HITLS_Ctx *ctx, bool support);
 int32_t HITLS_SetNoClientCertSupport(HITLS_Ctx *ctx, bool support);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set whether to support post-handshake AUTH.
  *
  * @param   ctx [OUT] TLS connection handle
@@ -611,7 +605,7 @@ int32_t HITLS_SetNoClientCertSupport(HITLS_Ctx *ctx, bool support);
 int32_t HITLS_SetPostHandshakeAuthSupport(HITLS_Ctx *ctx, bool support);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set whether to support do not proceed dual-ended verification.
  *
  * @param   ctx [OUT] TLS connection handle
@@ -622,7 +616,7 @@ int32_t HITLS_SetPostHandshakeAuthSupport(HITLS_Ctx *ctx, bool support);
 int32_t HITLS_SetVerifyNoneSupport(HITLS_Ctx *ctx, bool support);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set whether the client certificate can be requested only once.
  *
  * @param   ctx [OUT] TLS connection handle
@@ -633,7 +627,7 @@ int32_t HITLS_SetVerifyNoneSupport(HITLS_Ctx *ctx, bool support);
 int32_t HITLS_SetClientOnceVerifySupport(HITLS_Ctx *ctx, bool support);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the value of hitlsConfig.
  *
  * @param   ctx [IN] TLS connection handle
@@ -643,7 +637,7 @@ int32_t HITLS_SetClientOnceVerifySupport(HITLS_Ctx *ctx, bool support);
 const HITLS_Config *HITLS_GetConfig(const HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the point of GlobalConfig
  * @param   ctx [IN] TLS connection handle
  * @return  NULL The input parameter pointer is null
@@ -652,7 +646,7 @@ const HITLS_Config *HITLS_GetConfig(const HITLS_Ctx *ctx);
 HITLS_Config *HITLS_GetGlobalConfig(const HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Clears the configured TLS1.3 cipher suite.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -662,7 +656,7 @@ HITLS_Config *HITLS_GetGlobalConfig(const HITLS_Ctx *ctx);
 int32_t HITLS_ClearTLS13CipherSuites(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief    Set the supported cipher suites.
  * The sequence of the cipher suites affects the priority of the selected cipher suites.
  * The cipher suites with the highest priority are selected first.
@@ -676,7 +670,7 @@ int32_t HITLS_ClearTLS13CipherSuites(HITLS_Ctx *ctx);
 int32_t HITLS_SetCipherSuites(HITLS_Ctx *ctx, const uint16_t *cipherSuites, uint32_t cipherSuitesSize);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief  Get the supported cipher suites array.
  * @param   ctx [IN] TLS connection handle.
  * @param   data [OUT] Array for storing cipher suites.
@@ -688,7 +682,7 @@ int32_t HITLS_SetCipherSuites(HITLS_Ctx *ctx, const uint16_t *cipherSuites, uint
 int32_t HITLS_GetCipherSuites(HITLS_Ctx *ctx, uint16_t *data, uint32_t dataLen, uint32_t *cipherSuitesSize);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief  Get the received cipher suites array from the client.
  * @param   ctx [IN] TLS connection handle.
  * @param   data [OUT] Array for storing cipher suites.
@@ -700,7 +694,7 @@ int32_t HITLS_GetCipherSuites(HITLS_Ctx *ctx, uint16_t *data, uint32_t dataLen, 
 int32_t HITLS_GetClientCipherSuites(HITLS_Ctx *ctx, uint16_t *data, uint32_t dataLen, uint32_t *cipherSuitesSize);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the negotiated cipher suite pointer.
  *
  * @param   ctx  [IN] TLS connection handle
@@ -710,7 +704,7 @@ int32_t HITLS_GetClientCipherSuites(HITLS_Ctx *ctx, uint16_t *data, uint32_t dat
 const HITLS_Cipher *HITLS_GetCurrentCipher(const HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the supported cipher suites list for HITLS_Ctx.
  * @param   ctx [IN] TLS connection handle
  * @return  Pointer to the supported cipher suites list
@@ -719,7 +713,7 @@ const HITLS_Cipher *HITLS_GetCurrentCipher(const HITLS_Ctx *ctx);
 HITLS_CIPHER_List *HITLS_GetSupportedCiphers(const HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the random number of the client and server during the handshake.
  *
  * @param   ctx  [IN] TLS connection handle
@@ -734,7 +728,7 @@ HITLS_CIPHER_List *HITLS_GetSupportedCiphers(const HITLS_Ctx *ctx);
 int32_t HITLS_GetHsRandom(const HITLS_Ctx *ctx, uint8_t *out, uint32_t *outlen, bool isClient);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the current handshake status.
  *
  * @param   ctx  [IN] TLS connection handle
@@ -745,7 +739,7 @@ int32_t HITLS_GetHsRandom(const HITLS_Ctx *ctx, uint8_t *out, uint32_t *outlen, 
 int32_t HITLS_GetHandShakeState(const HITLS_Ctx *ctx, uint32_t *state);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the handshake status character string.
  *
  * @param   state [IN] Handshake status
@@ -755,7 +749,7 @@ int32_t HITLS_GetHandShakeState(const HITLS_Ctx *ctx, uint32_t *state);
 const char *HITLS_GetStateString(uint32_t state);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Check whether a handshake is being performed.
  *
  * @param   ctx  [IN] TLS connection handle
@@ -766,7 +760,7 @@ const char *HITLS_GetStateString(uint32_t state);
 int32_t HITLS_IsHandShaking(const HITLS_Ctx *ctx, bool *isHandShaking);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain whether renegotiation is supported.
  *
  * @param   ctx [IN] hitls Context
@@ -777,7 +771,7 @@ int32_t HITLS_IsHandShaking(const HITLS_Ctx *ctx, bool *isHandShaking);
 int32_t HITLS_GetRenegotiationSupport(const HITLS_Ctx *ctx, bool *isSupportRenegotiation);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Check whether the handshake has not been performed.
  *
  * @param   ctx [IN] TLS connection handle
@@ -788,7 +782,7 @@ int32_t HITLS_GetRenegotiationSupport(const HITLS_Ctx *ctx, bool *isSupportReneg
 int32_t HITLS_IsBeforeHandShake(const HITLS_Ctx *ctx, bool *isBefore);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the MTU of Data Link layer.
  *
  * @param   ctx  [IN] TLS connection handle
@@ -800,7 +794,7 @@ int32_t HITLS_IsBeforeHandShake(const HITLS_Ctx *ctx, bool *isBefore);
 int32_t HITLS_SetLinkMtu(HITLS_Ctx *ctx, uint16_t linkMtu);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the MTU of a path.
  *
  * @param   ctx  [IN] TLS connection handle
@@ -812,7 +806,7 @@ int32_t HITLS_SetLinkMtu(HITLS_Ctx *ctx, uint16_t linkMtu);
 int32_t HITLS_SetMtu(HITLS_Ctx *ctx, uint16_t mtu);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the option that don't query mtu from the bio.
  *
  * @param   ctx  [IN] TLS connection handle
@@ -823,7 +817,7 @@ int32_t HITLS_SetMtu(HITLS_Ctx *ctx, uint16_t mtu);
 int32_t HITLS_SetNoQueryMtu(HITLS_Ctx *ctx, bool noQueryMtu);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Querying whether the EMSGSIZE error occur and mtu need be modified
  *
  * @param   ctx [IN] TLS connection handle.
@@ -834,7 +828,7 @@ int32_t HITLS_SetNoQueryMtu(HITLS_Ctx *ctx, bool noQueryMtu);
 int32_t HITLS_GetNeedQueryMtu(HITLS_Ctx *ctx, bool *needQueryMtu);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the version number set by the client in ClientHello.
  *
  * @param   ctx  [IN] TLS connection handle
@@ -845,7 +839,7 @@ int32_t HITLS_GetNeedQueryMtu(HITLS_Ctx *ctx, bool *needQueryMtu);
 int32_t HITLS_GetClientVersion(const HITLS_Ctx *ctx, uint16_t *clientVersion);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @attention In the IDLE state, the HITLS_SetEndPoint must be called first.
  * @brief   The client/server starts handshake.
  * @param   ctx  [IN] TLS connection handle
@@ -855,7 +849,7 @@ int32_t HITLS_GetClientVersion(const HITLS_Ctx *ctx, uint16_t *clientVersion);
 int32_t HITLS_DoHandShake(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Check whether the current end is client.
  *
  * @param   ctx  [IN] TLS connection handle
@@ -866,7 +860,7 @@ int32_t HITLS_DoHandShake(HITLS_Ctx *ctx);
 int32_t HITLS_IsClient(const HITLS_Ctx *ctx, bool *isClient);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the keyupdate type of the current context and send the keyupdate message.
  *
  * @param   ctx  [IN] TLS connection handle
@@ -877,7 +871,7 @@ int32_t HITLS_IsClient(const HITLS_Ctx *ctx, bool *isClient);
 int32_t HITLS_KeyUpdate(HITLS_Ctx *ctx, uint32_t updateType);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Return the keyupdate type of the current context.
  *
  * @param   ctx  [IN] TLS connection handle
@@ -887,7 +881,7 @@ int32_t HITLS_KeyUpdate(HITLS_Ctx *ctx, uint32_t updateType);
 int32_t HITLS_GetKeyUpdateType(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the supported peer group or the number of supported peer groups of the nth match.
  * nmatch Value range: - 1 or a positive integer
  * This function can be called only after negotiation and can be called only by the server.
@@ -906,7 +900,7 @@ int32_t HITLS_GetKeyUpdateType(HITLS_Ctx *ctx);
 int32_t HITLS_GetSharedGroup(const HITLS_Ctx *ctx, int32_t nmatch, uint16_t *groupId);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the DTLS timeout interval callback.
  * @param   ctx [IN] TLS connection handle.
  * @param   cb [IN] DTLS obtaining timeout interval callback.
@@ -916,7 +910,7 @@ int32_t HITLS_GetSharedGroup(const HITLS_Ctx *ctx, int32_t nmatch, uint16_t *gro
 int32_t HITLS_SetDtlsTimerCb(HITLS_Ctx *ctx, HITLS_DtlsTimerCb cb);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the supported version number.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -927,7 +921,7 @@ int32_t HITLS_SetDtlsTimerCb(HITLS_Ctx *ctx, HITLS_DtlsTimerCb cb);
 int32_t HITLS_GetVersionSupport(const HITLS_Ctx *ctx, uint32_t *version);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the supported version number.
  * @param   ctx  [OUT] TLS connection handle
  * @param   version [IN] Supported version number.
@@ -943,7 +937,7 @@ int32_t HITLS_GetVersionSupport(const HITLS_Ctx *ctx, uint32_t *version);
 int32_t HITLS_SetVersionSupport(HITLS_Ctx *ctx, uint32_t version);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the supported version number range.
  * @param   ctx  [OUT] TLS connection handle
  * @param   minVersion [IN] Minimum version number supported.
@@ -959,7 +953,7 @@ int32_t HITLS_SetVersionSupport(HITLS_Ctx *ctx, uint32_t version);
 int32_t HITLS_SetVersion(HITLS_Ctx *ctx, uint32_t minVersion, uint32_t maxVersion);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the version number to be disabled.
  *
  * @param   ctx  [OUT] TLS connection handle
@@ -970,7 +964,7 @@ int32_t HITLS_SetVersion(HITLS_Ctx *ctx, uint32_t minVersion, uint32_t maxVersio
 int32_t HITLS_SetVersionForbid(HITLS_Ctx *ctx, uint32_t noVersion);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Sets whether to verify the version in the premaster secret.
  * @param   ctx  [OUT] TLS Connection Handle.
  * @param   needCheck [IN] Indicates whether to perform check.
@@ -984,7 +978,7 @@ int32_t HITLS_SetVersionForbid(HITLS_Ctx *ctx, uint32_t noVersion);
 int32_t HITLS_SetNeedCheckPmsVersion(HITLS_Ctx *ctx, bool needCheck);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the silent disconnection mode.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -996,7 +990,7 @@ int32_t HITLS_SetNeedCheckPmsVersion(HITLS_Ctx *ctx, bool needCheck);
 int32_t HITLS_SetQuietShutdown(HITLS_Ctx *ctx, int32_t mode);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the current silent disconnection mode.
  *
  * @param   ctx [IN] TLS connection handle
@@ -1007,7 +1001,7 @@ int32_t HITLS_SetQuietShutdown(HITLS_Ctx *ctx, int32_t mode);
 int32_t HITLS_GetQuietShutdown(const HITLS_Ctx *ctx, int32_t *mode);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Sets whether to support the function of automatically selecting DH parameters.
  * If the value is true, the DH parameter is automatically selected based on the length of the certificate private key.
  * If the value is false, the DH parameter needs to be set.
@@ -1020,7 +1014,7 @@ int32_t HITLS_GetQuietShutdown(const HITLS_Ctx *ctx, int32_t *mode);
 int32_t HITLS_SetDhAutoSupport(HITLS_Ctx *ctx, bool support);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the DH parameter specified by the user.
  *
  * @param   ctx [IN/OUT] hitls context.
@@ -1031,7 +1025,7 @@ int32_t HITLS_SetDhAutoSupport(HITLS_Ctx *ctx, bool support);
 int32_t HITLS_SetTmpDh(HITLS_Ctx *ctx, HITLS_CRYPT_Key *dhPkey);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the TmpDh callback function.
  * @param   ctx [IN/OUT] TLS connection handle.
  * @param   callback [IN] Set the TmpDh callback.
@@ -1041,7 +1035,7 @@ int32_t HITLS_SetTmpDh(HITLS_Ctx *ctx, HITLS_CRYPT_Key *dhPkey);
 int32_t HITLS_SetTmpDhCb(HITLS_Ctx *ctx, HITLS_DhTmpCb callback);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Sets the RecordPadding callback.
  *
  * @param   ctx [IN/OUT] TLS Connection Handle
@@ -1052,7 +1046,7 @@ int32_t HITLS_SetTmpDhCb(HITLS_Ctx *ctx, HITLS_DhTmpCb callback);
 int32_t HITLS_SetRecordPaddingCb(HITLS_Ctx *ctx, HITLS_RecordPaddingCb callback);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtains the RecordPadding callback function.
  *
  * @param   ctx [IN/OUT] TLS Connection Handle
@@ -1062,7 +1056,7 @@ int32_t HITLS_SetRecordPaddingCb(HITLS_Ctx *ctx, HITLS_RecordPaddingCb callback)
 HITLS_RecordPaddingCb HITLS_GetRecordPaddingCb(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Sets the parameters arg required by the RecordPadding callback function.
  *
  * @param   ctx [IN/OUT] TLS Connection Handle
@@ -1073,7 +1067,7 @@ HITLS_RecordPaddingCb HITLS_GetRecordPaddingCb(HITLS_Ctx *ctx);
 int32_t HITLS_SetRecordPaddingCbArg(HITLS_Ctx *ctx, void *arg);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtains the parameter arg required by the RecordPadding callback function.
  *
  * @param   ctx [IN/OUT] TLS Connection Handle
@@ -1083,7 +1077,7 @@ int32_t HITLS_SetRecordPaddingCbArg(HITLS_Ctx *ctx, void *arg);
 void *HITLS_GetRecordPaddingCbArg(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the verification data and length of the peer end based on the received finished message.
  *
  * @param   ctx [IN] TLS context
@@ -1097,7 +1091,7 @@ void *HITLS_GetRecordPaddingCbArg(HITLS_Ctx *ctx);
 int32_t HITLS_GetPeerFinishVerifyData(const HITLS_Ctx *ctx, void *buf, uint32_t bufLen, uint32_t *dataLen);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Disables the verification of keyusage in the certificate. This function is enabled by default.
  *
  * @param   ctx [OUT] config context
@@ -1108,7 +1102,7 @@ int32_t HITLS_GetPeerFinishVerifyData(const HITLS_Ctx *ctx, void *buf, uint32_t 
 int32_t HITLS_SetCheckKeyUsage(HITLS_Ctx *ctx, bool isCheck);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the verification data and length of the local end based on the sent finished message.
  *
  * @param   ctx [IN] TLS context
@@ -1122,7 +1116,7 @@ int32_t HITLS_SetCheckKeyUsage(HITLS_Ctx *ctx, bool isCheck);
 int32_t HITLS_GetFinishVerifyData(const HITLS_Ctx *ctx, void *buf, uint32_t bufLen, uint32_t *dataLen);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtains whether security renegotiation is supported.
  *
  * @param   ctx [IN] hitls context.
@@ -1133,7 +1127,7 @@ int32_t HITLS_GetFinishVerifyData(const HITLS_Ctx *ctx, void *buf, uint32_t bufL
 int32_t HITLS_GetSecureRenegotiationSupport(const HITLS_Ctx *ctx, bool *isSecureRenegotiation);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief Perform renegotiation.
  *
  * @attention 1. After this interface is called, the user needs to call one of the
@@ -1178,7 +1172,7 @@ int32_t HITLS_GetSecureRenegotiationSupport(const HITLS_Ctx *ctx, bool *isSecure
 int32_t HITLS_Renegotiate(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the current is whether in the renegotiation state.
  *
  * @attention For the server, the server does not enter the renegotiation state by sending only the hello request
@@ -1195,11 +1189,11 @@ int32_t HITLS_GetRenegotiationState(const HITLS_Ctx *ctx, bool *isRenegotiationS
 
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the current internal status.
  *
  * @param   ctx  [IN] TLS connection Handle.
- * @param   rwState  [OUT] Current internal status information.
+ * @param   rwstate  [OUT] Current internal status information.
  *
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  For details about other error codes, see hitls_error.h.
@@ -1207,7 +1201,7 @@ int32_t HITLS_GetRenegotiationState(const HITLS_Ctx *ctx, bool *isRenegotiationS
 int32_t HITLS_GetRwstate(const HITLS_Ctx *ctx, uint8_t *rwstate);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Check whether the client certificate can be verified.
  *
  * @param   ctx  [IN] TLS connection Handle.
@@ -1218,7 +1212,7 @@ int32_t HITLS_GetRwstate(const HITLS_Ctx *ctx, uint8_t *rwstate);
 int32_t HITLS_GetClientVerifySupport(HITLS_Ctx *ctx, bool *isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Check whether no client certificate is supported, This command is valid only when client certificate
  * verification is enabled.
  *
@@ -1230,7 +1224,7 @@ int32_t HITLS_GetClientVerifySupport(HITLS_Ctx *ctx, bool *isSupport);
 int32_t HITLS_GetNoClientCertSupport(HITLS_Ctx *ctx, bool *isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Query whether post-handshake AUTH is supported
  *
  * @param   ctx  [IN] TLS connection Handle.
@@ -1241,7 +1235,7 @@ int32_t HITLS_GetNoClientCertSupport(HITLS_Ctx *ctx, bool *isSupport);
 int32_t HITLS_GetPostHandshakeAuthSupport(HITLS_Ctx *ctx, bool *isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Query if support is available for not performing dual-end verification.
  *
  * @param   ctx  [IN] TLS Connection Handle.
@@ -1252,7 +1246,7 @@ int32_t HITLS_GetPostHandshakeAuthSupport(HITLS_Ctx *ctx, bool *isSupport);
 int32_t HITLS_GetVerifyNoneSupport(HITLS_Ctx *ctx, bool *isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Query whether the client certificate can be requested only once.
  *
  * @param   ctx  [IN] TLS Connection Handle.
@@ -1264,7 +1258,7 @@ int32_t HITLS_GetClientOnceVerifySupport(HITLS_Ctx *ctx, bool *isSupport);
 
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Clears the renegotiation count.
  *
  * @param   ctx [IN] hitls context.
@@ -1275,7 +1269,7 @@ int32_t HITLS_GetClientOnceVerifySupport(HITLS_Ctx *ctx, bool *isSupport);
 int32_t HITLS_ClearRenegotiationNum(HITLS_Ctx *ctx, uint32_t *renegotiationNum);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the negotiated group information.
  *
  * @param   ctx  [IN] TLS Connection Handle.
@@ -1286,7 +1280,7 @@ int32_t HITLS_ClearRenegotiationNum(HITLS_Ctx *ctx, uint32_t *renegotiationNum);
 int32_t HITLS_GetNegotiateGroup(const HITLS_Ctx *ctx, uint16_t *group);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the function to support the specified feature.
  * @param   ctx  [OUT] TLS connection handle.
  * @param   mode  [IN] features to be enabled.
@@ -1296,7 +1290,7 @@ int32_t HITLS_GetNegotiateGroup(const HITLS_Ctx *ctx, uint16_t *group);
 int32_t HITLS_SetModeSupport(HITLS_Ctx *ctx, uint32_t mode);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Function to clear the specified feature.
  *
  * @param   ctx [OUT] TLS Connection Handle
@@ -1307,7 +1301,7 @@ int32_t HITLS_SetModeSupport(HITLS_Ctx *ctx, uint32_t mode);
 int32_t HITLS_ClearModeSupport(HITLS_Ctx *ctx, uint32_t mode);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtains the functional characteristics mode in the config.
  * @param   ctx  [IN] TLS Connection Handle.
  * @param   mode  [OUT] Output parameter for obtaining the mode.
@@ -1317,7 +1311,7 @@ int32_t HITLS_ClearModeSupport(HITLS_Ctx *ctx, uint32_t mode);
 int32_t HITLS_GetModeSupport(const HITLS_Ctx *ctx, uint32_t *mode);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Setting the Encrypt-Then-Mac mode.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -1328,7 +1322,7 @@ int32_t HITLS_GetModeSupport(const HITLS_Ctx *ctx, uint32_t *mode);
 int32_t HITLS_SetEncryptThenMac(HITLS_Ctx *ctx, bool encryptThenMacType);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtains the Encrypt-Then-Mac type
  *
  * @param   ctx [IN] TLS connection Handle.
@@ -1339,7 +1333,7 @@ int32_t HITLS_SetEncryptThenMac(HITLS_Ctx *ctx, bool encryptThenMacType);
 int32_t HITLS_GetEncryptThenMac(const HITLS_Ctx *ctx, bool *encryptThenMacType);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Setting the value of server_name.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -1351,7 +1345,7 @@ int32_t HITLS_GetEncryptThenMac(const HITLS_Ctx *ctx, bool *encryptThenMacType);
 int32_t HITLS_SetServerName(HITLS_Ctx *ctx, uint8_t *serverName, uint32_t serverNameStrlen);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   The algorithm suite can be preferentially selected from the algorithm list supported by the server.
  *
  * @param   ctx [IN] TLS Connection Handle.
@@ -1362,7 +1356,7 @@ int32_t HITLS_SetServerName(HITLS_Ctx *ctx, uint8_t *serverName, uint32_t server
 int32_t HITLS_SetCipherServerPreference(HITLS_Ctx *ctx, bool isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtains whether the current cipher suite supports preferential selection
  * from the list of algorithms supported by the server.
  *
@@ -1374,7 +1368,7 @@ int32_t HITLS_SetCipherServerPreference(HITLS_Ctx *ctx, bool isSupport);
 int32_t HITLS_GetCipherServerPreference(const HITLS_Ctx *ctx, bool *isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Sets whether to support renegotiation.
  *
  * @param   ctx   [IN/OUT] TLS connection handle.
@@ -1388,7 +1382,7 @@ int32_t HITLS_GetCipherServerPreference(const HITLS_Ctx *ctx, bool *isSupport);
 int32_t HITLS_SetRenegotiationSupport(HITLS_Ctx *ctx, bool isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set whether to allow a renegotiate request from the client
  * @param   ctx   [IN/OUT] TLS connection handle.
  * @param   isSupport  [IN] Support or Not，true: yes; false: no.
@@ -1398,7 +1392,7 @@ int32_t HITLS_SetRenegotiationSupport(HITLS_Ctx *ctx, bool isSupport);
 int32_t HITLS_SetClientRenegotiateSupport(HITLS_Ctx *ctx, bool isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set whether to abort handshake when server doesn't support SecRenegotiation
  * @param   ctx   [IN/OUT] TLS connection handle.
  * @param   isSupport  [IN] Support or Not，true: yes; false: no.
@@ -1408,7 +1402,7 @@ int32_t HITLS_SetClientRenegotiateSupport(HITLS_Ctx *ctx, bool isSupport);
 int32_t HITLS_SetLegacyRenegotiateSupport(HITLS_Ctx *ctx, bool isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Sets whether to support session tickets.
  *
  * @param   ctx  [IN/OUT] TLS connection handle.
@@ -1419,7 +1413,7 @@ int32_t HITLS_SetLegacyRenegotiateSupport(HITLS_Ctx *ctx, bool isSupport);
 int32_t HITLS_SetSessionTicketSupport(HITLS_Ctx *ctx, bool isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Check whether the session ticket is supported.
  *
  * @param   ctx  [IN] TLS connection handle.
@@ -1430,7 +1424,7 @@ int32_t HITLS_SetSessionTicketSupport(HITLS_Ctx *ctx, bool isSupport);
 int32_t HITLS_GetSessionTicketSupport(const HITLS_Ctx *ctx, bool *isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Sets whether to perform cookie exchange in the dtls.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -1441,7 +1435,7 @@ int32_t HITLS_GetSessionTicketSupport(const HITLS_Ctx *ctx, bool *isSupport);
 int32_t HITLS_SetDtlsCookieExangeSupport(HITLS_Ctx *ctx, bool isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Querying whether the DTLS performs cookie exchange.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -1452,7 +1446,7 @@ int32_t HITLS_SetDtlsCookieExangeSupport(HITLS_Ctx *ctx, bool isSupport);
 int32_t HITLS_GetDtlsCookieExangeSupport(const HITLS_Ctx *ctx, bool *isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Sets whether to send handshake messages by flight distance.
  *
  * @param   ctx [IN/OUT] TLS connection handle.
@@ -1464,7 +1458,7 @@ int32_t HITLS_GetDtlsCookieExangeSupport(const HITLS_Ctx *ctx, bool *isSupport);
 int32_t HITLS_SetFlightTransmitSwitch(HITLS_Ctx *ctx, bool isEnable);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtains the status of whether to send handshake information according to the flight distance.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -1475,7 +1469,7 @@ int32_t HITLS_SetFlightTransmitSwitch(HITLS_Ctx *ctx, bool isEnable);
 int32_t HITLS_GetFlightTransmitSwitch(const HITLS_Ctx *ctx, bool *isEnable);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   set the max empty records number can be received
  *
  * @param   ctx [IN/OUT] TLS connection handle.
@@ -1486,7 +1480,7 @@ int32_t HITLS_GetFlightTransmitSwitch(const HITLS_Ctx *ctx, bool *isEnable);
 int32_t HITLS_SetEmptyRecordsNum(HITLS_Ctx *ctx, uint32_t emptyNum);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   set the max send fragment to restrict the amount of plaintext bytes in any record
  *
  * @param   ctx [IN/OUT] TLS connection handle.
@@ -1498,7 +1492,7 @@ int32_t HITLS_SetEmptyRecordsNum(HITLS_Ctx *ctx, uint32_t emptyNum);
 int32_t HITLS_SetMaxSendFragment(HITLS_Ctx *ctx, uint16_t maxSendFragment);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the max send fragment to restrict the amount of plaintext bytes in any record
  *
  * @param   ctx [IN] TLS connection handle.
@@ -1510,7 +1504,7 @@ int32_t HITLS_SetMaxSendFragment(HITLS_Ctx *ctx, uint16_t maxSendFragment);
 int32_t HITLS_GetMaxSendFragment(const HITLS_Ctx *ctx, uint16_t *maxSendFragment);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set the rec inbuffer inital size
  *
  * @param   ctx [IN/OUT] TLS connection handle.
@@ -1522,7 +1516,7 @@ int32_t HITLS_GetMaxSendFragment(const HITLS_Ctx *ctx, uint16_t *maxSendFragment
 int32_t HITLS_SetRecInbufferSize(HITLS_Ctx *ctx, uint32_t recInbufferSize);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the rec inbuffer inital size
  *
  * @param   ctx [IN] TLS connection handle.
@@ -1533,7 +1527,7 @@ int32_t HITLS_SetRecInbufferSize(HITLS_Ctx *ctx, uint32_t recInbufferSize);
 int32_t HITLS_GetRecInbufferSize(const HITLS_Ctx *ctx, uint32_t *recInbufferSize);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the max empty records number can be received
  *
  * @param   ctx [IN] TLS connection handle.
@@ -1544,7 +1538,7 @@ int32_t HITLS_GetRecInbufferSize(const HITLS_Ctx *ctx, uint32_t *recInbufferSize
 int32_t HITLS_GetEmptyRecordsNum(const HITLS_Ctx *ctx, uint32_t *emptyNum);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Sets the maximum size of the certificate chain that can be sent from the peer end.
  *
  * @param   ctx [IN/OUT] TLS connection handle.
@@ -1555,7 +1549,7 @@ int32_t HITLS_GetEmptyRecordsNum(const HITLS_Ctx *ctx, uint32_t *emptyNum);
 int32_t HITLS_SetMaxCertList(HITLS_Ctx *ctx, uint32_t maxSize);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtains the maximum size of the certificate chain that can be sent by the peer end.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -1566,7 +1560,7 @@ int32_t HITLS_SetMaxCertList(HITLS_Ctx *ctx, uint32_t maxSize);
 int32_t HITLS_GetMaxCertList(const HITLS_Ctx *ctx, uint32_t *maxSize);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief This API is designed for upper layer applications to export key materials based on
  * RFC5705 (version < tls1.2) or RFC8446 (tls1.3).
  *
@@ -1586,7 +1580,7 @@ int32_t HITLS_ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t outLen, 
     const uint8_t *context, size_t contextLen, int32_t useContext);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   This interface is valid only on the server. When the post-handshake command is configured,
  *          the client identity is verified through this interface.
  *
@@ -1598,7 +1592,7 @@ int32_t HITLS_ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t outLen, 
 int32_t HITLS_VerifyClientPostHandshake(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set whether to save the peer certificate.
  * @param   ctx [IN] TLS connection handle.
  * @param   isKeepPeerCert [IN] Set whether to save the peer certificate.
@@ -1608,7 +1602,7 @@ int32_t HITLS_VerifyClientPostHandshake(HITLS_Ctx *ctx);
 int32_t HITLS_SetKeepPeerCertificate(HITLS_Ctx *ctx, bool isKeepPeerCert);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   The default record size limit is 0 to unsupport the record size limit extension (RFC 8449).
  *          If negotiated, it is used only to limit the size of records sent by the peer in the receive direction.
  *          However, the record size sent to the peer is limited by the record size limit value of the peer.
@@ -1620,7 +1614,7 @@ int32_t HITLS_SetKeepPeerCertificate(HITLS_Ctx *ctx, bool isKeepPeerCert);
 int32_t HITLS_SetRecordSizeLimit(HITLS_Ctx *ctx, uint16_t recordSize);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtains the record size limit value of ctx.
  *
  * @param   ctx [OUT] Hitls ctx
@@ -1631,7 +1625,7 @@ int32_t HITLS_SetRecordSizeLimit(HITLS_Ctx *ctx, uint16_t recordSize);
 int32_t HITLS_GetRecordSizeLimit(HITLS_Ctx *ctx, uint16_t *recordSize);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the legacy version from client hello.
  * @attention This interface is valid only in client hello callback.
  * @param   ctx [IN] TLS connection handle.
@@ -1642,7 +1636,7 @@ int32_t HITLS_GetRecordSizeLimit(HITLS_Ctx *ctx, uint16_t *recordSize);
 int32_t HITLS_ClientHelloGetLegacyVersion(HITLS_Ctx *ctx, uint16_t *version);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the random value from client hello.
  *
  * @attention This interface is valid only in client hello callback.
@@ -1655,7 +1649,7 @@ int32_t HITLS_ClientHelloGetLegacyVersion(HITLS_Ctx *ctx, uint16_t *version);
 int32_t HITLS_ClientHelloGetRandom(HITLS_Ctx *ctx, uint8_t **out, uint8_t *outlen);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the session ID from client hello.
  *
  * @attention This interface is valid only in client hello callback.
@@ -1668,7 +1662,7 @@ int32_t HITLS_ClientHelloGetRandom(HITLS_Ctx *ctx, uint8_t **out, uint8_t *outle
 int32_t HITLS_ClientHelloGetSessionID(HITLS_Ctx *ctx, uint8_t **out, uint8_t *outlen);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the cipher suites from client hello.
  *
  * @attention This interface is valid only in client hello callback.
@@ -1681,7 +1675,7 @@ int32_t HITLS_ClientHelloGetSessionID(HITLS_Ctx *ctx, uint8_t **out, uint8_t *ou
 int32_t HITLS_ClientHelloGetCiphers(HITLS_Ctx *ctx, uint16_t **out, uint16_t *outlen);
 
 /**
-* @ingroup hitls
+* @ingroup tls
 * @brief   Obtain the all extension types from client hello.
 *
 * @attention This interface is valid only in client hello callback.
@@ -1695,7 +1689,7 @@ int32_t HITLS_ClientHelloGetCiphers(HITLS_Ctx *ctx, uint16_t **out, uint16_t *ou
 int32_t HITLS_ClientHelloGetExtensionsPresent(HITLS_Ctx *ctx, uint16_t **out, uint8_t *outlen);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain a specific extension from client hello.
  *
  * @attention This interface is valid only in client hello callback.
@@ -1709,7 +1703,7 @@ int32_t HITLS_ClientHelloGetExtensionsPresent(HITLS_Ctx *ctx, uint16_t **out, ui
 int32_t HITLS_ClientHelloGetExtension(HITLS_Ctx *ctx, uint16_t type, uint8_t **out, uint32_t *outlen);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Handle the timeout of sending and receiving DTLS messages.
  *
  * @param   ctx [IN] TLS Connection Handle
@@ -1720,7 +1714,7 @@ int32_t HITLS_ClientHelloGetExtension(HITLS_Ctx *ctx, uint16_t type, uint8_t **o
 int32_t HITLS_DtlsProcessTimeout(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Get the remaining timeout time for timeout retransmission.
  *
  * @param   ctx [IN] TLS Connection Handle
@@ -1732,7 +1726,7 @@ int32_t HITLS_DtlsProcessTimeout(HITLS_Ctx *ctx);
 int32_t HITLS_DtlsGetTimeout(HITLS_Ctx *ctx, uint64_t *remainTimeOut);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Sets whether to support middle box compat mode.
  *
  * @param   ctx [IN] TLS Connection Handle.
@@ -1743,7 +1737,7 @@ int32_t HITLS_DtlsGetTimeout(HITLS_Ctx *ctx, uint64_t *remainTimeOut);
 int32_t HITLS_SetMiddleBoxCompat(HITLS_Ctx *ctx, bool isMiddleBox);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain whether middle box compat mode is supported.
  *
  * @param   ctx [IN] TLS connection handle.
@@ -1754,7 +1748,7 @@ int32_t HITLS_SetMiddleBoxCompat(HITLS_Ctx *ctx, bool isMiddleBox);
 int32_t HITLS_GetMiddleBoxCompat(HITLS_Ctx *ctx, bool *isMiddleBox);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain the record out buffer remaining size
  *
  * @param   ctx [IN] TLS connection handle
@@ -1765,7 +1759,7 @@ int32_t HITLS_GetMiddleBoxCompat(HITLS_Ctx *ctx, bool *isMiddleBox);
 int32_t HITLS_GetOutPendingSize(const HITLS_Ctx *ctx, uint32_t *size);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Flush the record out buffer
  *
  * @param   ctx [IN] TLS connection handle
@@ -1776,7 +1770,7 @@ int32_t HITLS_GetOutPendingSize(const HITLS_Ctx *ctx, uint32_t *size);
 int32_t HITLS_Flush(HITLS_Ctx *ctx);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Sets whether to forcibly support extended master keys.
  *
  * @param   ctx [IN] TLS connection handle
@@ -1788,7 +1782,7 @@ int32_t HITLS_Flush(HITLS_Ctx *ctx);
 int32_t HITLS_SetExtendedMasterSecretSupport(HITLS_Ctx *ctx, bool support);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Query whether extended master keys are supported.
  *
  * @param   ctx [IN] TLS connection handle
@@ -1799,7 +1793,7 @@ int32_t HITLS_SetExtendedMasterSecretSupport(HITLS_Ctx *ctx, bool support);
 int32_t HITLS_GetExtendedMasterSecretSupport(HITLS_Ctx *ctx, bool *isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set extended master secret mode.
  *
  * @param   ctx  [IN] TLS connection handle
@@ -1810,7 +1804,7 @@ int32_t HITLS_GetExtendedMasterSecretSupport(HITLS_Ctx *ctx, bool *isSupport);
 int32_t HITLS_SetExtendedMasterSecretMode(HITLS_Ctx *ctx, int32_t mode);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Get extended master secret mode.
  *
  * @param   ctx  [IN] TLS connection handle
@@ -1821,7 +1815,7 @@ int32_t HITLS_SetExtendedMasterSecretMode(HITLS_Ctx *ctx, int32_t mode);
 int32_t HITLS_GetExtendedMasterSecretMode(HITLS_Ctx *ctx, int32_t *mode);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Set whether to support session restoration during renegotiation.
  * By default, session restoration is not supported.
  * @param   ctx [IN] TLS connection handle
@@ -1832,7 +1826,7 @@ int32_t HITLS_GetExtendedMasterSecretMode(HITLS_Ctx *ctx, int32_t *mode);
 int32_t HITLS_SetResumptionOnRenegoSupport(HITLS_Ctx *ctx, bool support);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Get whether to support session restoration during renegotiation.
  * By default, session restoration is not supported.
  * @param   ctx [IN] TLS connection handle
@@ -1843,7 +1837,7 @@ int32_t HITLS_SetResumptionOnRenegoSupport(HITLS_Ctx *ctx, bool support);
 int32_t HITLS_GetResumptionOnRenegoSupport(HITLS_Ctx *ctx, bool *isSupport);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Get whether to allow a renegotiate request from the client
  * @param   ctx   [IN] TLS connection handle.
  * @param   isSupport  [OUT] Indicates whether to allow a renegotiate request from the client

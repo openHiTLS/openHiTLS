@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hitls_alpn
- * @ingroup  hitls
+ * @ingroup tls
  * @brief    TLS ALPN related type
  */
 

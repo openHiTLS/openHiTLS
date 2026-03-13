@@ -126,7 +126,7 @@ typedef void (*HITLS_AUTH_PrivPassFreePkeyCtx)(void *pkeyCtx);
  * @param   digest [OUT] Buffer to store the computed digest
  * @param   digestLen [IN/OUT] Size of digest buffer/Length of computed digest
  *
- * @retval  #0, if successful.
+ * @retval  0, if successful.
  *          other error codes, failed.
  */
 typedef int32_t (*HITLS_AUTH_PrivPassDigest)(void *libCtx, const char *attrName, int32_t algId, const uint8_t *input,
@@ -144,7 +144,7 @@ typedef int32_t (*HITLS_AUTH_PrivPassDigest)(void *libCtx, const char *attrName,
  * @param   blindedData [OUT] Buffer to store blinded data
  * @param   blindedDataLen [IN/OUT] Size of buffer/Length of blinded data
  *
- * @retval  #0, if successful.
+ * @retval  0, if successful.
  *          other error codes, failed.
  */
 typedef int32_t (*HITLS_AUTH_PrivPassBlind)(void *pkeyCtx, int32_t algId, const uint8_t *data,
@@ -161,7 +161,7 @@ typedef int32_t (*HITLS_AUTH_PrivPassBlind)(void *pkeyCtx, int32_t algId, const 
  * @param   data [OUT] Buffer to store unblinded data
  * @param   dataLen [IN/OUT] Size of buffer/Length of unblinded data
  *
- * @retval  #0, if successful.
+ * @retval  0, if successful.
  *          other error codes, failed.
  */
 typedef int32_t (*HITLS_AUTH_PrivPassUnblind)(void *pkeyCtx, const uint8_t *blindedData,
@@ -177,7 +177,7 @@ typedef int32_t (*HITLS_AUTH_PrivPassUnblind)(void *pkeyCtx, const uint8_t *blin
  * @param   sign [OUT] Buffer to store signature
  * @param   signLen [IN/OUT] Size of buffer/Length of signature
  *
- * @retval  #0, if successful.
+ * @retval  0, if successful.
  *          other error codes, failed.
  */
 typedef int32_t (*HITLS_AUTH_PrivPassSignData)(void *pkeyCtx, const uint8_t *data, uint32_t dataLen,
@@ -194,7 +194,7 @@ typedef int32_t (*HITLS_AUTH_PrivPassSignData)(void *pkeyCtx, const uint8_t *dat
  * @param   sign [IN] Signature to verify
  * @param   signLen [IN] Length of signature
  *
- * @retval  #0, if successful.
+ * @retval  0, if successful.
  *          other error codes, failed.
  */
 typedef int32_t (*HITLS_AUTH_PrivPassVerify)(void *pkeyCtx, int32_t algId, const uint8_t *data, uint32_t dataLen,
@@ -211,7 +211,7 @@ typedef int32_t (*HITLS_AUTH_PrivPassVerify)(void *pkeyCtx, int32_t algId, const
  * @param   pubKeyLen [IN] Length of public key data
  * @param   pkeyCtx [OUT] Pointer to store created key context
  *
- * @retval  #0, if successful.
+ * @retval  0, if successful.
  *          other error codes, failed.
  */
 typedef int32_t (*HITLS_AUTH_PrivPassDecodePubKey)(void *libCtx, const char *attrName, uint8_t *pubKey,
@@ -229,7 +229,7 @@ typedef int32_t (*HITLS_AUTH_PrivPassDecodePubKey)(void *libCtx, const char *att
  * @param   prvKeyLen [IN] Length of private key data
  * @param   pkeyCtx [OUT] Pointer to store created key context
  *
- * @retval  #0, if successful.
+ * @retval  0, if successful.
  *          other error codes, failed.
  */
 typedef int32_t (*HITLS_AUTH_PrivPassDecodePrvKey)(void *libCtx, const char *attrName, void *param, uint8_t *prvKey,
@@ -242,7 +242,7 @@ typedef int32_t (*HITLS_AUTH_PrivPassDecodePrvKey)(void *libCtx, const char *att
  * @param   pubKeyCtx [IN] Public key context
  * @param   prvKeyCtx [IN] Private key context
  *
- * @retval  #0, if successful.
+ * @retval  0, if successful.
  *          other error codes, failed.
  */
 typedef int32_t (*HITLS_AUTH_PrivPassCheckKeyPair)(void *pubKeyCtx, void *prvKeyCtx);
@@ -254,7 +254,7 @@ typedef int32_t (*HITLS_AUTH_PrivPassCheckKeyPair)(void *pubKeyCtx, void *prvKey
  * @param   buffer [IN] Buffer to store random bytes
  * @param   bufferLen [IN] Length of buffer
  *
- * @retval  #0, if successful.
+ * @retval  0, if successful.
  *          other error codes, failed.
  */
 typedef int32_t (*HITLS_AUTH_PrivPassRandom)(uint8_t *buffer, uint32_t bufferLen);

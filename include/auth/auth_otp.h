@@ -79,7 +79,7 @@ typedef enum {
  * @param   digest [OUT] Buffer to store the computed hmac.
  * @param   digestLen [IN/OUT] Size of hmac buffer/Length of computed hmac.
  *
- * @retval  #0, if successful.
+ * @retval  0, if successful.
  *          other error codes, failed.
  */
 typedef int32_t (*HITLS_AUTH_OtpHmac)(void *libCtx, const char *attrName, int32_t algId, const uint8_t *key,
@@ -93,7 +93,7 @@ typedef int32_t (*HITLS_AUTH_OtpHmac)(void *libCtx, const char *attrName, int32_
  * @param   buffer [IN] Buffer to store random bytes.
  * @param   bufferLen [IN] Length of buffer.
  *
- * @retval  #0, if successful.
+ * @retval  0, if successful.
  *          other error codes, failed.
  */
 typedef int32_t (*HITLS_AUTH_OtpRandom)(uint8_t *buffer, uint32_t bufferLen);

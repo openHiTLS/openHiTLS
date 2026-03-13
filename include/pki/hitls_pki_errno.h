@@ -13,6 +13,22 @@
  * See the Mulan PSL v2 for more details.
  */
 
+/**
+ * @file hitls_pki_errno.h
+ * @brief Error codes for PKI, X.509, CMS, PKCS#12, and print modules.
+ */
+
+/**
+ * @defgroup pki
+ * @brief Public key infrastructure module.
+ */
+
+/**
+ * @defgroup pki_errno
+ * @ingroup pki
+ * @brief PKI-related error code definitions.
+ */
+
 #ifndef HITLS_PKI_ERRNO_H
 #define HITLS_PKI_ERRNO_H
 
@@ -20,6 +36,10 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup pki_errno
+ * @brief Error codes returned by the PKI APIs.
+ */
 typedef enum {
     HITLS_PKI_SUCCESS,
     HITLS_X509_ERR_TIME_EXPIRED = 0x04000001,

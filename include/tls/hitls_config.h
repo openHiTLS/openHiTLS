@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hitls_config
- * @ingroup  hitls
+ * @ingroup tls
  * @brief    TLS parameter configuration
  */
 
@@ -1652,7 +1652,7 @@ int32_t HITLS_CFG_SetRecordSizeLimit(HITLS_Config *config, uint16_t recordSize);
 int32_t HITLS_CFG_GetRecordSizeLimit(HITLS_Config *config, uint16_t *recordSize);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Sets whether to support middle box compat mode.
  * @param   config [OUT] Config context
  * @param   isMiddleBox [IN] Support or Not.
@@ -1662,7 +1662,7 @@ int32_t HITLS_CFG_GetRecordSizeLimit(HITLS_Config *config, uint16_t *recordSize)
 int32_t HITLS_CFG_SetMiddleBoxCompat(HITLS_Config *config, bool isMiddleBox);
 
 /**
- * @ingroup hitls
+ * @ingroup tls
  * @brief   Obtain whether middle box compat mode is supported.
  * @param   config [IN] Config context
  * @param   isMiddleBox [OUT] Support or Not.

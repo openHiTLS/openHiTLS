@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hitls_security
- * @ingroup hitls
+ * @ingroup tls
  * @brief TLS security features
  */
 

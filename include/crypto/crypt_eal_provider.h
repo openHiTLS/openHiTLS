@@ -157,7 +157,7 @@ int32_t CRYPT_EAL_ProviderUnload(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd
  *  Repeating settings will release the previous path.
  *
  * @param libCtx [IN] Library context
- * @param serchPath [IN] the path to load the provider
+ * @param searchPath [IN] the path to load the provider
  *
  * @retval #CRYPT_SUCCESS, if success.
  *         Other error codes see the crypt_errno.h

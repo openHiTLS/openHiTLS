@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hitls_cert_type
- * @ingroup  hitls
+ * @ingroup tls
  * @brief    Structures related to a certificate
  */
 
@@ -170,8 +170,9 @@ typedef enum {
 } HITLS_CERT_KeyType;
 
 /**
- * @ingroup hitls_cert_type, https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml
+ * @ingroup hitls_cert_type
  * @brief   Certificate Signature Algorithm Enumeration
+ * @see     https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml
  */
 typedef enum {
     /* Reservation algorithm. */

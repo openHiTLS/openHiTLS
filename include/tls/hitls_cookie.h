@@ -13,6 +13,16 @@
  * See the Mulan PSL v2 for more details.
  */
 
+/**
+ * @file hitls_cookie.h
+ * @brief DTLS cookie callback and helper definitions.
+ */
+
+/**
+ * @defgroup hitls_cookie
+ * @ingroup tls
+ * @brief DTLS cookie generation and verification callbacks.
+ */
 
 #ifndef HITLS_COOKIE_H
 #define HITLS_COOKIE_H

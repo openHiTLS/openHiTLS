@@ -13,6 +13,17 @@
  * See the Mulan PSL v2 for more details.
  */
 
+/**
+ * @file hitls_pki_params.h
+ * @brief Parameter identifiers used by PKI APIs.
+ */
+
+/**
+ * @defgroup pki_params
+ * @ingroup pki
+ * @brief Parameter identifiers for PKI interfaces.
+ */
+
 #ifndef HITLS_PKI_PARAMS_H
 #define HITLS_PKI_PARAMS_H
 

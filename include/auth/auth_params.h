@@ -13,6 +13,17 @@
  * See the Mulan PSL v2 for more details.
  */
 
+/**
+ * @file auth_params.h
+ * @brief Parameter identifiers for authentication control-style APIs.
+ */
+
+/**
+ * @defgroup auth_params
+ * @ingroup auth
+ * @brief Parameter identifiers shared by authentication modules.
+ */
+
 #ifndef AUTH_PARAMS_H
 #define AUTH_PARAMS_H
 

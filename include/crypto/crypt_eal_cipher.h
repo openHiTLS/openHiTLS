@@ -34,8 +34,9 @@ extern "C" {
 typedef struct CRYPT_EAL_CipherCtxLocal CRYPT_EAL_CipherCtx;
 
 /**
- * @ingroup crypt_eal_cipher, Not supported in provider
+ * @ingroup crypt_eal_cipher
  * @brief   Check whether the given symmetric algorithm ID is valid.
+ * @note    Not supported in provider mode.
  *
  * @param   id [IN] Symmetric algorithm ID.
  * @retval Valid, true is returned.
@@ -121,7 +122,7 @@ void CRYPT_EAL_CipherDeinit(CRYPT_EAL_CipherCtx *ctx);
  *
  * @param ctx [IN] Symmetric encryption/decryption handle
  * @param iv [IN] Vector
- * @param ivlen [IN] Vector length
+ * @param ivLen [IN] Vector length
  */
 int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, uint8_t *iv, uint32_t ivLen);
 

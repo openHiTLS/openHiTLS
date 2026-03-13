@@ -199,7 +199,7 @@ int32_t HITLS_X509_CrlSign(int32_t mdId, const CRYPT_EAL_PkeyCtx *prvKey, const 
     HITLS_X509_Crl *crl);
 
 /**
- * @ingroup pki crl
+ * @ingroup pki
  * @brief Allocate a revoked certificate.
  *
  * @attention None

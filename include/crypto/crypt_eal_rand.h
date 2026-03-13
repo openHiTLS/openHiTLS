@@ -367,7 +367,7 @@ bool CRYPT_EAL_RandIsValidAlgId(CRYPT_RAND_AlgId id);
  * This function instantiates the Deterministic Random Bit Generator (DRBG) with personalization string.
  * It supports multi-thread access.
  *
- * @param ctx      [IN] DRBG handle
+ * @param rndCtx   [IN] DRBG handle
  * @param pers [IN] Personal data, which can be NULL.
  * @param persLen [IN] Personal data length. the range is [0,0x7FFFFFF0].
  * @retval #CRYPT_SUCCESS, if successful.
@@ -384,7 +384,7 @@ int32_t CRYPT_EAL_DrbgInstantiate(CRYPT_EAL_RndCtx *rndCtx, const uint8_t *pers,
  * @param val [IN/OUT] Data to be set/obtained
  * @param valLen [IN] Length of the data marked as "val"
  *
- * @retval  #CRYPT_SUCCESS.
+ * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
 int32_t CRYPT_EAL_DrbgCtrl(CRYPT_EAL_RndCtx *ctx, int32_t cmd, void *val, uint32_t valLen);

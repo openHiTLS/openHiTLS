@@ -15,7 +15,7 @@
 
 /**
  * @defgroup hitls_session
- * @ingroup hitls
+ * @ingroup tls
  * @brief TLS session
  */
 

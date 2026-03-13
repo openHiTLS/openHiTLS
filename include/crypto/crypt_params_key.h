@@ -13,6 +13,17 @@
  * See the Mulan PSL v2 for more details.
  */
 
+/**
+ * @file crypt_params_key.h
+ * @brief Parameter identifiers
+ */
+
+/**
+ * @defgroup crypt_params_key
+ * @ingroup crypt
+ * @brief Parameter identifiers
+ */
+
 #ifndef CRYPT_PARAMS_KEY_H
 #define CRYPT_PARAMS_KEY_H
 
