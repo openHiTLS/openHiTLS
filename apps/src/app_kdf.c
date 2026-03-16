@@ -294,9 +294,9 @@ static int32_t CheckParam(KdfOpt *kdfOpt)
     return HITLS_APP_SUCCESS;
 }
 
-static CRYPT_EAL_KdfCTX *InitAlgKdf(KdfOpt *kdfOpt)
+static CRYPT_EAL_KdfCtx *InitAlgKdf(KdfOpt *kdfOpt)
 {
-    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_ProviderKdfNewCtx(APP_GetCurrent_LibCtx(), kdfOpt->kdfId,
+    CRYPT_EAL_KdfCtx *ctx = CRYPT_EAL_ProviderKdfNewCtx(APP_GetCurrent_LibCtx(), kdfOpt->kdfId,
         kdfOpt->provider->providerAttr);
     if (ctx == NULL) {
         AppPrintError("Failed to create the algorithm(%s) context\n", kdfOpt->kdfName);
@@ -344,7 +344,7 @@ static int32_t KdfParseSalt(KdfOpt *kdfOpt, uint8_t **salt, uint32_t *saltLen)
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t Pbkdf2Params(CRYPT_EAL_KdfCTX *ctx, BSL_Param *params, KdfOpt *kdfOpt)
+static int32_t Pbkdf2Params(CRYPT_EAL_KdfCtx *ctx, BSL_Param *params, KdfOpt *kdfOpt)
 {
     uint32_t index = 0;
     uint8_t *pass = NULL;
@@ -402,7 +402,7 @@ static int32_t Pbkdf2Params(CRYPT_EAL_KdfCTX *ctx, BSL_Param *params, KdfOpt *kd
     return ret;
 }
 
-static int32_t PbkdfParamSet(CRYPT_EAL_KdfCTX *ctx, KdfOpt *kdfOpt)
+static int32_t PbkdfParamSet(CRYPT_EAL_KdfCtx *ctx, KdfOpt *kdfOpt)
 {
     if (kdfOpt->kdfId == CRYPT_KDF_PBKDF2) {
         BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
@@ -412,7 +412,7 @@ static int32_t PbkdfParamSet(CRYPT_EAL_KdfCTX *ctx, KdfOpt *kdfOpt)
     return HITLS_APP_OPT_VALUE_INVALID;
 }
 
-static int32_t KdfResult(CRYPT_EAL_KdfCTX *ctx, KdfOpt *kdfOpt)
+static int32_t KdfResult(CRYPT_EAL_KdfCtx *ctx, KdfOpt *kdfOpt)
 {
     uint8_t *out = NULL;
     uint32_t outLen = kdfOpt->keyLen;
@@ -469,7 +469,7 @@ int32_t HITLS_KdfMain(int argc, char *argv[])
     AppInitParam initParam = {CRYPT_RAND_SHA256, &appProvider};
     KdfOpt kdfOpt = {CRYPT_MAC_HMAC_SHA256, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL, 1000, &appProvider, 0};
 #endif
-    CRYPT_EAL_KdfCTX *ctx = NULL;
+    CRYPT_EAL_KdfCtx *ctx = NULL;
     do {
         mainRet = HITLS_APP_OptBegin(argc, argv, g_kdfOpts);
         if (mainRet != HITLS_APP_SUCCESS) {

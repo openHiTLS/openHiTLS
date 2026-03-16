@@ -96,9 +96,9 @@ static AlgInfo g_dgstInfo = {"sha256", CRYPT_MD_SHA256, 0};
 static int32_t g_argc = 0;
 static char **g_argv;
 
-static CRYPT_EAL_MdCTX *InitAlgDigest(CRYPT_MD_AlgId id)
+static CRYPT_EAL_MdCtx *InitAlgDigest(CRYPT_MD_AlgId id)
 {
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(APP_GetCurrent_LibCtx(), id, g_signInfo.provider->providerAttr);
+    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_ProviderMdNewCtx(APP_GetCurrent_LibCtx(), id, g_signInfo.provider->providerAttr);
     if (ctx == NULL) {
         AppPrintError("dgst: Failed to create the algorithm(%s) context\n", g_dgstInfo.algName);
         return NULL;
@@ -156,7 +156,7 @@ static int32_t HashValToFinal(
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t MdFinalToBuf(CRYPT_EAL_MdCTX *ctx, uint8_t **buf, uint32_t *bufLen, const char *filename)
+static int32_t MdFinalToBuf(CRYPT_EAL_MdCtx *ctx, uint8_t **buf, uint32_t *bufLen, const char *filename)
 {
     int32_t outRet = HITLS_APP_SUCCESS;
     // save the initial hash value
@@ -202,7 +202,7 @@ static int32_t BufOutToUio(const char *outfile, BSL_UIO *fileWriteUio, uint8_t *
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t StdSumAndOut(CRYPT_EAL_MdCTX *ctx, const char *outfile)
+static int32_t StdSumAndOut(CRYPT_EAL_MdCtx *ctx, const char *outfile)
 {
     int32_t stdRet = HITLS_APP_SUCCESS;
     uint8_t *outBuf = NULL;
@@ -263,7 +263,7 @@ static int32_t StdSumAndOut(CRYPT_EAL_MdCTX *ctx, const char *outfile)
     return stdRet;
 }
 
-static int32_t ReadFileToBuf(CRYPT_EAL_MdCTX *ctx, const char *filename)
+static int32_t ReadFileToBuf(CRYPT_EAL_MdCtx *ctx, const char *filename)
 {
     int32_t readRet = HITLS_APP_SUCCESS;
     BSL_UIO *readUio = HITLS_APP_UioOpen(filename, 'r', 0);
@@ -310,7 +310,7 @@ static int32_t ReadFileToBuf(CRYPT_EAL_MdCTX *ctx, const char *filename)
     return readRet;
 }
 
-static int32_t FileSumOutStd(CRYPT_EAL_MdCTX *ctx)
+static int32_t FileSumOutStd(CRYPT_EAL_MdCtx *ctx)
 {
     int32_t outRet = HITLS_APP_SUCCESS;
     // Traverse the files that need to be digested, obtain the file content, calculate the file content digest,
@@ -356,7 +356,7 @@ static int32_t FileSumOutStd(CRYPT_EAL_MdCTX *ctx)
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t MultiFileSetCtx(CRYPT_EAL_MdCTX *ctx)
+static int32_t MultiFileSetCtx(CRYPT_EAL_MdCtx *ctx)
 {
     int32_t outRet = CRYPT_EAL_MdDeinit(ctx); // md release
     if (outRet != CRYPT_SUCCESS) {
@@ -371,7 +371,7 @@ static int32_t MultiFileSetCtx(CRYPT_EAL_MdCTX *ctx)
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t FileSumOutFile(CRYPT_EAL_MdCTX *ctx, const char *outfile)
+static int32_t FileSumOutFile(CRYPT_EAL_MdCtx *ctx, const char *outfile)
 {
     int32_t outRet = HITLS_APP_SUCCESS;
     BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(outfile, 'w', 0);  // overwrite the original content
@@ -425,7 +425,7 @@ static int32_t FileSumOutFile(CRYPT_EAL_MdCTX *ctx, const char *outfile)
     return HITLS_APP_SUCCESS;
 }
 
-static int32_t FileSumAndOut(CRYPT_EAL_MdCTX *ctx, const char *outfile)
+static int32_t FileSumAndOut(CRYPT_EAL_MdCtx *ctx, const char *outfile)
 {
     int32_t outRet = HITLS_APP_SUCCESS;
     if (outfile == NULL) {
@@ -441,7 +441,7 @@ static int32_t FileSumAndOut(CRYPT_EAL_MdCTX *ctx, const char *outfile)
 static int32_t CalculateDgst(char *outfile)
 {
     int32_t ret = HITLS_APP_SUCCESS;
-    CRYPT_EAL_MdCTX *ctx = InitAlgDigest(g_dgstInfo.algId);
+    CRYPT_EAL_MdCtx *ctx = InitAlgDigest(g_dgstInfo.algId);
     if (ctx == NULL) {
         ret = HITLS_APP_CRYPTO_FAIL;
         return ret;

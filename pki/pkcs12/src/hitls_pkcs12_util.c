@@ -349,7 +349,7 @@ static int32_t InitKdfParam(const Pkcs12KdfParam *param, uint8_t **D, uint8_t **
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t MacLoop(uint32_t LoopTimes, CRYPT_EAL_MdCTX *ctx, const Pkcs12KdfParam *param, uint8_t *D,
+static int32_t MacLoop(uint32_t LoopTimes, CRYPT_EAL_MdCtx *ctx, const Pkcs12KdfParam *param, uint8_t *D,
     uint8_t *I, uint8_t *A, uint32_t k, uint32_t dataLen)
 {
     int32_t ret;
@@ -442,7 +442,7 @@ int32_t HITLS_PKCS12_KDF(HITLS_PKCS12 *p12, const uint8_t *pwd, uint32_t pwdLen,
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_ALGO);
         return HITLS_PKCS12_ERR_INVALID_ALGO;
     }
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(p12->libCtx, (CRYPT_MD_AlgId)macData->alg, p12->attrName);
+    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_ProviderMdNewCtx(p12->libCtx, (CRYPT_MD_AlgId)macData->alg, p12->attrName);
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;

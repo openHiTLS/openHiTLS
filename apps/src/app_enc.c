@@ -625,7 +625,7 @@ static int32_t GetCipherKey(EncCmdOpt *encOpt)
         return GetKeyFromP12(encOpt);
     }
 #endif
-    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_ProviderKdfNewCtx(APP_GetCurrent_LibCtx(), CRYPT_KDF_PBKDF2,
+    CRYPT_EAL_KdfCtx *ctx = CRYPT_EAL_ProviderKdfNewCtx(APP_GetCurrent_LibCtx(), CRYPT_KDF_PBKDF2,
         encOpt->provider->providerAttr);
     if (ctx == NULL) {
         return HITLS_APP_MEM_ALLOC_FAIL;

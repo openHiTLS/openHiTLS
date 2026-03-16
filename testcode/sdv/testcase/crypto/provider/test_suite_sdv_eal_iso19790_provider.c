@@ -504,7 +504,7 @@ void SDV_ISO19790_PROVIDER_MD_TEST_TC001(int algId)
     SKIP_TEST();
 #else
     Iso19790_ProviderLoadCtx ctx = {0};
-    CRYPT_EAL_MdCTX *mdCtx = NULL;
+    CRYPT_EAL_MdCtx *mdCtx = NULL;
     uint8_t plaintext[128] = {0};
     uint32_t plaintextLen = sizeof(plaintext);
     uint8_t md[128] = {0};
@@ -588,7 +588,7 @@ void SDV_ISO19790_PROVIDER_KDF_TEST_TC001(int macId, int iter, int saltLen)
     SKIP_TEST();
 #else
     Iso19790_ProviderLoadCtx ctx = {0};
-    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+    CRYPT_EAL_KdfCtx *kdfCtx = NULL;
     uint8_t password[32] = {0};
     uint32_t passwordLen = sizeof(password);
     uint8_t salt[32] = {0};
@@ -636,7 +636,7 @@ void SDV_ISO19790_PROVIDER_KDF_TEST_TC002(int algId, Hex *key, Hex *salt, Hex *i
     }
     TestMemInit();
     Iso19790_ProviderLoadCtx ctx = {0};
-    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+    CRYPT_EAL_KdfCtx *kdfCtx = NULL;
     uint32_t outLen = 32;
     uint8_t *out = malloc(outLen * sizeof(uint8_t));
     ASSERT_TRUE(out != NULL);
@@ -689,7 +689,7 @@ void SDV_ISO19790_PROVIDER_KDF_TEST_TC003(int algId, Hex *key, Hex *label, Hex *
     uint8_t *out = malloc(outLen * sizeof(uint8_t));
     ASSERT_TRUE(out != NULL);
     Iso19790_ProviderLoadCtx ctx = {0};
-    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+    CRYPT_EAL_KdfCtx *kdfCtx = NULL;
 
     ASSERT_EQ(Iso19790_ProviderLoad(&ctx), CRYPT_SUCCESS);
 
@@ -966,7 +966,7 @@ void SDV_ISO19790_PROVIDER_KDF_PARAM_CHECK_TC001(Hex *key, Hex *label, Hex *seed
     SKIP_TEST();
 #else
     Iso19790_ProviderLoadCtx ctx = {0};
-    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+    CRYPT_EAL_KdfCtx *kdfCtx = NULL;
 
     ASSERT_EQ(Iso19790_ProviderLoad(&ctx), CRYPT_SUCCESS);
 
@@ -1014,7 +1014,7 @@ void SDV_ISO19790_PROVIDER_KDF_PARAM_CHECK_TC002(Hex *key, Hex *salt, Hex *info)
     SKIP_TEST();
 #else
     Iso19790_ProviderLoadCtx ctx = {0};
-    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+    CRYPT_EAL_KdfCtx *kdfCtx = NULL;
     ASSERT_EQ(Iso19790_ProviderLoad(&ctx), CRYPT_SUCCESS);
 
     kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(ctx.libCtx, CRYPT_KDF_HKDF, HITLS_ISO_PROVIDER_ATTR);
@@ -1065,7 +1065,7 @@ void SDV_ISO19790_PROVIDER_KDF_PARAM_CHECK_TC003()
     SKIP_TEST();
 #else
     Iso19790_ProviderLoadCtx ctx = {0};
-    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+    CRYPT_EAL_KdfCtx *kdfCtx = NULL;
     uint8_t password[32] = {0};
     uint32_t passwordLen = sizeof(password);
     uint8_t salt[32] = {0};
@@ -1347,7 +1347,7 @@ void SDV_ISO19790_PROVIDER_MD_USE_DEFAULT_LIBCTX_TEST_TC001(int algId)
     SKIP_TEST();
 #else
     int32_t ret = CRYPT_SUCCESS;
-    CRYPT_EAL_MdCTX *mdCtx = NULL;
+    CRYPT_EAL_MdCtx *mdCtx = NULL;
     uint8_t plaintext[128] = {0};
     uint32_t plaintextLen = sizeof(plaintext);
     uint8_t md[128] = {0};

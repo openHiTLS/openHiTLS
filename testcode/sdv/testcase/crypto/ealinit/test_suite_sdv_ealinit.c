@@ -197,7 +197,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_CRYPT_EAL_Init_TC003()
 {
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
     ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_SHA256);
     ASSERT_TRUE(ctx != NULL);
     CRYPT_EAL_MdFreeCtx(ctx);
@@ -238,7 +238,7 @@ void SDV_CRYPTO_CRYPT_EAL_Init_TC004()
     uint32_t outLen = DATA_LEN;
     uint8_t out[outLen];
 
-    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
+    CRYPT_EAL_KdfCtx *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
     ASSERT_TRUE(ctx != NULL);
 
     CRYPT_MAC_AlgId macAlgId = CRYPT_MAC_HMAC_SHA256;

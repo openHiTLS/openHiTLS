@@ -79,7 +79,7 @@ void SDV_PROVIDER_SHA256_TC001(char *path, char *defProName, char *customProName
     Hex *in, Hex *digest)
 {
 #if defined(HITLS_CRYPTO_MD) && defined(HITLS_CRYPTO_PROVIDER)
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
     CRYPT_EAL_LibCtx *libCtx = NULL;
     uint8_t out[SHA2_OUTPUT_MAXSIZE];
     uint32_t outLen = SHA2_OUTPUT_MAXSIZE;
@@ -167,7 +167,7 @@ void SDV_PROVIDER_HKDF_TC001(char *path, char *defProName, char *customProName, 
     uint8_t *out = NULL;
     uint32_t outLen = result->len;
     CRYPT_EAL_LibCtx *libCtx = NULL;
-    CRYPT_EAL_KdfCTX *ctx = NULL;
+    CRYPT_EAL_KdfCtx *ctx = NULL;
     BSL_Param params[7] = {{0}, {0}, {0}, {0}, {0}, {0}, BSL_PARAM_END}; // Set 6 parameters for hkdf
     CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_FULL;
 
@@ -222,7 +222,7 @@ void SDV_PROVIDER_PBKDF2_TC001(char *path, char *defProName, char *customProName
     uint8_t *out = NULL;
     uint32_t outLen = result->len;
     CRYPT_EAL_LibCtx *libCtx = NULL;
-    CRYPT_EAL_KdfCTX *ctx = NULL;
+    CRYPT_EAL_KdfCtx *ctx = NULL;
     BSL_Param params[6] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END}; // Set 5 parameters for pbkdf2
 
     TestMemInit();
@@ -275,7 +275,7 @@ void SDV_PROVIDER_KDFTLS12_TC001(char *path, char *defProName, char *customProNa
     uint8_t *out = NULL;
     uint32_t outLen = result->len;
     CRYPT_EAL_LibCtx *libCtx = NULL;
-    CRYPT_EAL_KdfCTX *ctx = NULL;
+    CRYPT_EAL_KdfCtx *ctx = NULL;
     BSL_Param params[6] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END}; // Set 5 parameters for kdftls12
 
     TestMemInit();

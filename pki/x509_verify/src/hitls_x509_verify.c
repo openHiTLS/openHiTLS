@@ -804,7 +804,7 @@ static int32_t HITLS_X509_GetCertBySubjectDer(HITLS_X509_StoreCtx *storeCtx, con
     uint8_t digest[CRYPT_SHA1_DIGESTSIZE];
     uint32_t digestLen = CRYPT_SHA1_DIGESTSIZE;
     int32_t ret = HITLS_PKI_SUCCESS;
-    CRYPT_EAL_MdCTX *mdCtx = CRYPT_EAL_ProviderMdNewCtx(storeCtx->libCtx, CRYPT_MD_SHA1, storeCtx->attrName);
+    CRYPT_EAL_MdCtx *mdCtx = CRYPT_EAL_ProviderMdNewCtx(storeCtx->libCtx, CRYPT_MD_SHA1, storeCtx->attrName);
     if (mdCtx != NULL) {
         if (CRYPT_EAL_MdInit(mdCtx) == CRYPT_SUCCESS &&
             CRYPT_EAL_MdUpdate(mdCtx, subjectDerData->buff, subjectDerData->len) == CRYPT_SUCCESS) {

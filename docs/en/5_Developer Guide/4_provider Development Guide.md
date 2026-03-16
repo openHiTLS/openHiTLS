@@ -273,7 +273,7 @@ For example code, refer to `crypt_default_provider.c:CryptGetSignAlgCaps`
     ...
     // For actual use, it is recommended to use EAL layer wrapping interfaces for each algorithm,
     // which automatically locate and initialize the algorithm.
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(libCtx, CRYPT_MD_MD5, "provider=no_hitls,type=hash");
+    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_ProviderMdNewCtx(libCtx, CRYPT_MD_MD5, "provider=no_hitls,type=hash");
     assert(ctx != NULL);
     ...
     ```
@@ -453,7 +453,7 @@ int main() {
 
 // Using the built-in HITLS algorithm library:
     // Step 1: Directly initialize using EAL layer MD interface
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, CRYPT_MD_SM3, "provider=default");
+    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, CRYPT_MD_SM3, "provider=default");
     ASSERT_TRUE(ctx != NULL);
 
 -----------------------------------------------
@@ -472,7 +472,7 @@ int main() {
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
 
     // Step 4: Directly initialize using EAL layer MD interface
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(libCtx, CRYPT_MD_SM3, "attr1=temp_attr1,attr2=temp_attr2");
+    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_ProviderMdNewCtx(libCtx, CRYPT_MD_SM3, "attr1=temp_attr1,attr2=temp_attr2");
     ASSERT_TRUE(ctx != NULL);
 
 -----------------------------------------------
@@ -487,7 +487,7 @@ int main() {
     ASSERT_TRUE(ret == CRYPT_SUCCESS);
 
     // Step 3: Directly initialize using EAL layer MD interface
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, CRYPT_MD_SM3, "attr1=temp_attr1,attr2=temp_attr2");
+    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, CRYPT_MD_SM3, "attr1=temp_attr1,attr2=temp_attr2");
     ASSERT_TRUE(ctx != NULL);
 
 ------------------------------------------------------------------------------------------------------

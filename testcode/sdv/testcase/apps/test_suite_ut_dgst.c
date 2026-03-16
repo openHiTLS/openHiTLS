@@ -39,10 +39,10 @@ STUB_DEFINE_RET4(int32_t, BSL_UIO_Ctrl, BSL_UIO *, int32_t, int32_t, void *);
 STUB_DEFINE_RET0(char *, HITLS_APP_OptGetValueStr);
 STUB_DEFINE_RET4(int32_t, HITLS_APP_OptWriteUio, BSL_UIO *, uint8_t *, uint32_t, int32_t);
 STUB_DEFINE_RET1(uint32_t, CRYPT_EAL_MdGetDigestSize, CRYPT_MD_AlgId);
-STUB_DEFINE_RET3(CRYPT_EAL_MdCTX *, CRYPT_EAL_ProviderMdNewCtx, CRYPT_EAL_LibCtx *, int32_t, const char *);
-STUB_DEFINE_RET1(int32_t, CRYPT_EAL_MdInit, CRYPT_EAL_MdCTX *);
-STUB_DEFINE_RET3(int32_t, CRYPT_EAL_MdUpdate, CRYPT_EAL_MdCTX *, const uint8_t *, uint32_t);
-STUB_DEFINE_RET3(int32_t, CRYPT_EAL_MdFinal, CRYPT_EAL_MdCTX *, uint8_t *, uint32_t *);
+STUB_DEFINE_RET3(CRYPT_EAL_MdCtx *, CRYPT_EAL_ProviderMdNewCtx, CRYPT_EAL_LibCtx *, int32_t, const char *);
+STUB_DEFINE_RET1(int32_t, CRYPT_EAL_MdInit, CRYPT_EAL_MdCtx *);
+STUB_DEFINE_RET3(int32_t, CRYPT_EAL_MdUpdate, CRYPT_EAL_MdCtx *, const uint8_t *, uint32_t);
+STUB_DEFINE_RET3(int32_t, CRYPT_EAL_MdFinal, CRYPT_EAL_MdCtx *, uint8_t *, uint32_t *);
 
 
 #define PRV_PATH "../testdata/certificate/rsa_key/prvKey.pem"
@@ -387,7 +387,7 @@ EXIT:
 }
 /* END_CASE */
 
-CRYPT_EAL_MdCTX *STUB_CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
+CRYPT_EAL_MdCtx *STUB_CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
     (void)algId;
     (void)attrName;
@@ -423,7 +423,7 @@ EXIT:
 }
 /* END_CASE */
 
-int32_t STUB_CRYPT_EAL_MdInit(CRYPT_EAL_MdCTX *ctx){
+int32_t STUB_CRYPT_EAL_MdInit(CRYPT_EAL_MdCtx *ctx){
     (void)ctx;
     return HITLS_APP_CRYPTO_FAIL;
 }
@@ -456,7 +456,7 @@ EXIT:
 }
 /* END_CASE */
 
-int32_t STUB_CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data, uint32_t len){
+int32_t STUB_CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCtx *ctx, const uint8_t *data, uint32_t len){
     (void)ctx;
     (void)data;
     (void)len;
@@ -491,7 +491,7 @@ EXIT:
 }
 /* END_CASE */
 
-int32_t STUB_CRYPT_EAL_MdFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t *len){
+int32_t STUB_CRYPT_EAL_MdFinal(CRYPT_EAL_MdCtx *ctx, uint8_t *out, uint32_t *len){
     (void)ctx;
     (void)out;
     (void)len;

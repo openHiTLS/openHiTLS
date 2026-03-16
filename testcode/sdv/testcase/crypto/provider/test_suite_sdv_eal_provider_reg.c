@@ -231,7 +231,7 @@ void SDV_CRYPTO_PROVIDER_REG_FUNC_TC001(void)
 #ifndef HITLS_CRYPTO_PROVIDER
     SKIP_TEST();
 #else
-    CRYPT_EAL_MdCTX *mdCtx = NULL;
+    CRYPT_EAL_MdCtx *mdCtx = NULL;
 
     TestMemInit();
     CRYPT_EAL_LibCtx *libCtx = CRYPT_EAL_LibCtxNew();
@@ -292,7 +292,7 @@ void SDV_CRYPTO_PROVIDER_REG_FUNC_TC002(void)
 #ifndef HITLS_CRYPTO_PROVIDER
     SKIP_TEST();
 #else
-    CRYPT_EAL_MdCTX *mdCtx = NULL;
+    CRYPT_EAL_MdCtx *mdCtx = NULL;
     TestMemInit();
     CRYPT_EAL_LibCtx *libCtx = CRYPT_EAL_LibCtxNew();
     ASSERT_TRUE(libCtx != NULL);

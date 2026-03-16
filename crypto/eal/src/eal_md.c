@@ -35,14 +35,11 @@
 #include "crypt_provider.h"
 #endif
 
-static CRYPT_EAL_MdCTX *MdNewCtxInner(CRYPT_MD_AlgId id, CRYPT_EAL_LibCtx *libCtx, const char *attrName,
+static CRYPT_EAL_MdCtx *MdNewCtxInner(CRYPT_MD_AlgId id, CRYPT_EAL_LibCtx *libCtx, const char *attrName,
     bool isProvider)
 {
-    (void)libCtx;
-    (void)attrName;
-    (void)isProvider;
     EAL_MdMethod *method = NULL;
-    CRYPT_EAL_MdCTX *ctx = BSL_SAL_Malloc(sizeof(CRYPT_EAL_MdCTX));
+    CRYPT_EAL_MdCtx *ctx = BSL_SAL_Malloc(sizeof(CRYPT_EAL_MdCtx));
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_MEM_ALLOC_FAIL);
         return NULL;
@@ -69,7 +66,7 @@ ERR:
     return NULL;
 }
 
-CRYPT_EAL_MdCTX *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
+CRYPT_EAL_MdCtx *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
 #ifdef HITLS_CRYPTO_PROVIDER
     return MdNewCtxInner(algId, libCtx, attrName, true);
@@ -80,7 +77,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t al
 #endif
 }
 
-CRYPT_EAL_MdCTX *CRYPT_EAL_MdNewCtx(CRYPT_MD_AlgId id)
+CRYPT_EAL_MdCtx *CRYPT_EAL_MdNewCtx(CRYPT_MD_AlgId id)
 {
 #ifdef HITLS_CRYPTO_ASM_CHECK
     if (CRYPT_ASMCAP_Md(id) != CRYPT_SUCCESS) {
@@ -97,7 +94,7 @@ bool CRYPT_EAL_MdIsValidAlgId(CRYPT_MD_AlgId id)
     return EAL_MdFindDefaultMethod(id) != NULL;
 }
 
-int32_t CRYPT_EAL_MdGetId(CRYPT_EAL_MdCTX *ctx)
+int32_t CRYPT_EAL_MdGetId(CRYPT_EAL_MdCtx *ctx)
 {
     if (ctx == NULL) {
         return CRYPT_MD_MAX;
@@ -105,7 +102,7 @@ int32_t CRYPT_EAL_MdGetId(CRYPT_EAL_MdCTX *ctx)
     return ctx->id;
 }
 
-int32_t CRYPT_EAL_MdCopyCtx(CRYPT_EAL_MdCTX *to, const CRYPT_EAL_MdCTX *from)
+int32_t CRYPT_EAL_MdCopyCtx(CRYPT_EAL_MdCtx *to, const CRYPT_EAL_MdCtx *from)
 {
     if (to == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
@@ -134,7 +131,7 @@ int32_t CRYPT_EAL_MdCopyCtx(CRYPT_EAL_MdCTX *to, const CRYPT_EAL_MdCTX *from)
     return CRYPT_SUCCESS;
 }
 
-CRYPT_EAL_MdCTX *CRYPT_EAL_MdDupCtx(const CRYPT_EAL_MdCTX *ctx)
+CRYPT_EAL_MdCtx *CRYPT_EAL_MdDupCtx(const CRYPT_EAL_MdCtx *ctx)
 {
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
@@ -145,7 +142,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdDupCtx(const CRYPT_EAL_MdCTX *ctx)
         return NULL;
     }
 
-    CRYPT_EAL_MdCTX *newCtx = BSL_SAL_Malloc(sizeof(CRYPT_EAL_MdCTX));
+    CRYPT_EAL_MdCtx *newCtx = BSL_SAL_Malloc(sizeof(CRYPT_EAL_MdCtx));
     if (newCtx == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return NULL;
@@ -160,7 +157,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdDupCtx(const CRYPT_EAL_MdCTX *ctx)
     return newCtx;
 }
 
-void CRYPT_EAL_MdFreeCtx(CRYPT_EAL_MdCTX *ctx)
+void CRYPT_EAL_MdFreeCtx(CRYPT_EAL_MdCtx *ctx)
 {
     if (ctx == NULL) {
         return;
@@ -174,7 +171,7 @@ void CRYPT_EAL_MdFreeCtx(CRYPT_EAL_MdCTX *ctx)
     BSL_SAL_Free(ctx);
 }
 
-int32_t CRYPT_EAL_MdInit(CRYPT_EAL_MdCTX *ctx)
+int32_t CRYPT_EAL_MdInit(CRYPT_EAL_MdCtx *ctx)
 {
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
@@ -194,7 +191,7 @@ int32_t CRYPT_EAL_MdInit(CRYPT_EAL_MdCTX *ctx)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data, uint32_t len)
+int32_t CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCtx *ctx, const uint8_t *data, uint32_t len)
 {
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
@@ -220,7 +217,7 @@ int32_t CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data, uint32_t l
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_EAL_MdFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t *len)
+int32_t CRYPT_EAL_MdFinal(CRYPT_EAL_MdCtx *ctx, uint8_t *out, uint32_t *len)
 {
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
@@ -249,7 +246,7 @@ int32_t CRYPT_EAL_MdFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t *len)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_EAL_MdSqueeze(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t len)
+int32_t CRYPT_EAL_MdSqueeze(CRYPT_EAL_MdCtx *ctx, uint8_t *out, uint32_t len)
 {
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
@@ -274,7 +271,7 @@ int32_t CRYPT_EAL_MdSqueeze(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_EAL_MdDeinit(CRYPT_EAL_MdCTX *ctx)
+int32_t CRYPT_EAL_MdDeinit(CRYPT_EAL_MdCtx *ctx)
 {
     if (ctx == NULL || ctx->method.deinit == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
@@ -335,7 +332,7 @@ int32_t CRYPT_EAL_ProviderMd(CRYPT_EAL_LibCtx *libCtx, CRYPT_MD_AlgId id, const 
 
 #ifdef HITLS_CRYPTO_MD_MB
 
-CRYPT_EAL_MdCTX *CRYPT_EAL_MdMBNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t id, uint32_t num)
+CRYPT_EAL_MdCtx *CRYPT_EAL_MdMBNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t id, uint32_t num)
 {
     (void)libCtx;
     if (UNLIKELY(num == 0)) {
@@ -356,7 +353,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdMBNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t id, uint
         return NULL;
     }
 
-    CRYPT_EAL_MdCTX *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_EAL_MdCTX));
+    CRYPT_EAL_MdCtx *ctx = BSL_SAL_Calloc(1, sizeof(CRYPT_EAL_MdCtx));
     if (ctx == NULL) {
         mbMethod.freeCtx(mbData);
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_MEM_ALLOC_FAIL);
@@ -370,7 +367,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdMBNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t id, uint
     return ctx;
 }
 
-void CRYPT_EAL_MdMBFreeCtx(CRYPT_EAL_MdCTX *ctx)
+void CRYPT_EAL_MdMBFreeCtx(CRYPT_EAL_MdCtx *ctx)
 {
     if (ctx == NULL) {
         return;
@@ -381,7 +378,7 @@ void CRYPT_EAL_MdMBFreeCtx(CRYPT_EAL_MdCTX *ctx)
     BSL_SAL_Free(ctx);
 }
 
-int32_t CRYPT_EAL_MdMBInit(CRYPT_EAL_MdCTX *ctx)
+int32_t CRYPT_EAL_MdMBInit(CRYPT_EAL_MdCtx *ctx)
 {
     if (UNLIKELY(ctx == NULL)) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
@@ -402,7 +399,7 @@ int32_t CRYPT_EAL_MdMBInit(CRYPT_EAL_MdCTX *ctx)
     return ret;
 }
 
-int32_t CRYPT_EAL_MdMBUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data[], uint32_t nbytes[], uint32_t num)
+int32_t CRYPT_EAL_MdMBUpdate(CRYPT_EAL_MdCtx *ctx, const uint8_t *data[], uint32_t nbytes[], uint32_t num)
 {
     if (UNLIKELY(ctx == NULL || data == NULL || nbytes == NULL || num == 0)) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);
@@ -426,7 +423,7 @@ int32_t CRYPT_EAL_MdMBUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data[], uint32
     return ret;
 }
 
-int32_t CRYPT_EAL_MdMBFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *digest[], uint32_t *outlen, uint32_t num)
+int32_t CRYPT_EAL_MdMBFinal(CRYPT_EAL_MdCtx *ctx, uint8_t *digest[], uint32_t *outlen, uint32_t num)
 {
     if (UNLIKELY(ctx == NULL || digest == NULL || outlen == NULL || num == 0)) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, CRYPT_MD_MAX, CRYPT_NULL_INPUT);

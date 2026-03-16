@@ -124,7 +124,7 @@ HITLS_AUTH_PakeCtx *HITLS_AUTH_PakeNewCtx(CRYPT_EAL_LibCtx *libCtx, const char *
     return ctx;
 }
  
-static int32_t HITLS_AUTH_PakeReqRegister(HITLS_AUTH_PakeCtx *ctx, CRYPT_EAL_KdfCTX* kdfctx,
+static int32_t HITLS_AUTH_PakeReqRegister(HITLS_AUTH_PakeCtx *ctx, CRYPT_EAL_KdfCtx* kdfctx,
     BSL_Buffer in0, BSL_Buffer in1, BSL_Buffer in2)
 {
     if (ctx == NULL || kdfctx == NULL) {
@@ -149,7 +149,7 @@ static int32_t HITLS_AUTH_PakeReqRegister(HITLS_AUTH_PakeCtx *ctx, CRYPT_EAL_Kdf
     return ret;
 }
 
-static int32_t HITLS_AUTH_PakeRespRegister(HITLS_AUTH_PakeCtx *ctx, CRYPT_EAL_KdfCTX *kdfctx,
+static int32_t HITLS_AUTH_PakeRespRegister(HITLS_AUTH_PakeCtx *ctx, CRYPT_EAL_KdfCtx *kdfctx,
     BSL_Buffer in0, BSL_Buffer in1, BSL_Buffer in2)
 {
     (void)kdfctx;
@@ -175,7 +175,7 @@ static int32_t HITLS_AUTH_PakeRespRegister(HITLS_AUTH_PakeCtx *ctx, CRYPT_EAL_Kd
     return ret;
 }
 
-int32_t HITLS_AUTH_Pake_Ctrl(HITLS_AUTH_PakeCtx *ctx, HITLS_AUTH_PAKE_CtrlCmd cmd, CRYPT_EAL_KdfCTX *kdfctx,
+int32_t HITLS_AUTH_Pake_Ctrl(HITLS_AUTH_PakeCtx *ctx, HITLS_AUTH_PAKE_CtrlCmd cmd, CRYPT_EAL_KdfCtx *kdfctx,
     BSL_Buffer in0, BSL_Buffer in1, BSL_Buffer in2)
 {
     if (ctx == NULL) {
@@ -307,7 +307,7 @@ int32_t HITLS_AUTH_PakeRespDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer in0, BSL_B
     return ret;
 }
 
-CRYPT_EAL_KdfCTX* HITLS_AUTH_PakeGetKdfCtx(HITLS_AUTH_PakeCtx* ctx, HITLS_AUTH_PAKE_KDF kdf)
+CRYPT_EAL_KdfCtx* HITLS_AUTH_PakeGetKdfCtx(HITLS_AUTH_PakeCtx* ctx, HITLS_AUTH_PAKE_KDF kdf)
 {
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_NULL_INPUT);
@@ -333,7 +333,7 @@ CRYPT_EAL_KdfCTX* HITLS_AUTH_PakeGetKdfCtx(HITLS_AUTH_PakeCtx* ctx, HITLS_AUTH_P
             (void)memcpy_s(buffer + ctx->password.dataLen, ctx->prover.dataLen, ctx->prover.data, ctx->prover.dataLen);
             (void)memcpy_s(buffer + ctx->password.dataLen + ctx->prover.dataLen, ctx->verifier.dataLen,
                 ctx->verifier.data, ctx->verifier.dataLen);
-            CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_KdfNewCtx(kdf.algId);
+            CRYPT_EAL_KdfCtx *kdfCtx = CRYPT_EAL_KdfNewCtx(kdf.algId);
             if (kdfCtx == NULL) {
                 BSL_SAL_Free(buffer);
                 BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL);

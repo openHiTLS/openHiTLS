@@ -31,7 +31,9 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef struct EAL_MdCtx CRYPT_EAL_MdCTX;
+typedef struct EAL_MdCtx CRYPT_EAL_MdCtx;
+
+#define CRYPT_EAL_MdCTX CRYPT_EAL_MdCtx
 
 /**
  * @ingroup crypt_eal_md
@@ -40,10 +42,10 @@ typedef struct EAL_MdCtx CRYPT_EAL_MdCTX;
  * After the calculation is complete, call the CRYPT_EAL_MdFreeCtx interface to release the memory.
  *
  * @param   id [IN] Algorithm ID
- * @retval  CRYPT_EAL_MdCTX, MD context pointer.
+ * @retval  CRYPT_EAL_MdCtx, MD context pointer.
  *          NULL, if the operation fails.
  */
-CRYPT_EAL_MdCTX *CRYPT_EAL_MdNewCtx(CRYPT_MD_AlgId id);
+CRYPT_EAL_MdCtx *CRYPT_EAL_MdNewCtx(CRYPT_MD_AlgId id);
 
 /**
  * @ingroup crypt_eal_md
@@ -56,7 +58,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdNewCtx(CRYPT_MD_AlgId id);
  * @retval  CRYPT_EAL_PkeyCtx pointer.
  *          NULL, if the operation fails.
  */
-CRYPT_EAL_MdCTX *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName);
+CRYPT_EAL_MdCtx *CRYPT_EAL_ProviderMdNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName);
 
 /**
  * @ingroup crypt_eal_md
@@ -76,7 +78,7 @@ bool CRYPT_EAL_MdIsValidAlgId(CRYPT_MD_AlgId id);
  * @retval  ID, MD algorithm ID.
  *          CRYPT_MD_MAX, which indicates invalid ID or the input parameter is null.
  */
-int32_t CRYPT_EAL_MdGetId(CRYPT_EAL_MdCTX *ctx);
+int32_t CRYPT_EAL_MdGetId(CRYPT_EAL_MdCtx *ctx);
 
 /**
  * @ingroup crypt_eal_md
@@ -87,7 +89,7 @@ int32_t CRYPT_EAL_MdGetId(CRYPT_EAL_MdCTX *ctx);
  * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_EAL_MdCopyCtx(CRYPT_EAL_MdCTX *to, const CRYPT_EAL_MdCTX *from);
+int32_t CRYPT_EAL_MdCopyCtx(CRYPT_EAL_MdCtx *to, const CRYPT_EAL_MdCtx *from);
 
 /**
  * @ingroup crypt_eal_md
@@ -96,10 +98,10 @@ int32_t CRYPT_EAL_MdCopyCtx(CRYPT_EAL_MdCTX *to, const CRYPT_EAL_MdCTX *from);
  * Note that need to call the CRYPT_EAL_MdFreeCtx interface to release the memory after the duplication is complete.
  *
  * @param   ctx [IN] Source MD context
- * @retval  CRYPT_EAL_MdCTX, MD context pointer.
+ * @retval  CRYPT_EAL_MdCtx, MD context pointer.
  *          NULL, if the operation fails.
  */
-CRYPT_EAL_MdCTX *CRYPT_EAL_MdDupCtx(const CRYPT_EAL_MdCTX *ctx);
+CRYPT_EAL_MdCtx *CRYPT_EAL_MdDupCtx(const CRYPT_EAL_MdCtx *ctx);
 
 /**
  * @ingroup crypt_eal_md
@@ -109,7 +111,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdDupCtx(const CRYPT_EAL_MdCTX *ctx);
  * NULL by caller.
  * @retval  Void, no return value.
  */
-void CRYPT_EAL_MdFreeCtx(CRYPT_EAL_MdCTX *ctx);
+void CRYPT_EAL_MdFreeCtx(CRYPT_EAL_MdCtx *ctx);
 
 /**
  * @ingroup crypt_eal_md
@@ -119,7 +121,7 @@ void CRYPT_EAL_MdFreeCtx(CRYPT_EAL_MdCTX *ctx);
  * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_EAL_MdInit(CRYPT_EAL_MdCTX *ctx);
+int32_t CRYPT_EAL_MdInit(CRYPT_EAL_MdCtx *ctx);
 
 /**
  * @ingroup crypt_eal_md
@@ -134,7 +136,7 @@ int32_t CRYPT_EAL_MdInit(CRYPT_EAL_MdCTX *ctx);
  * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data, uint32_t len);
+int32_t CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCtx *ctx, const uint8_t *data, uint32_t len);
 
 /**
  * @ingroup crypt_eal_md
@@ -150,7 +152,7 @@ int32_t CRYPT_EAL_MdUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data, uint32_t l
  * @retval  CRYPT_E_SHORT_BUFFER if output buffer is too small
  *          For other error codes, see crypt_errno.h
  */
-int32_t CRYPT_EAL_MdSqueeze(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t len);
+int32_t CRYPT_EAL_MdSqueeze(CRYPT_EAL_MdCtx *ctx, uint8_t *out, uint32_t len);
 
 /**
  * @ingroup crypt_eal_md
@@ -166,7 +168,7 @@ int32_t CRYPT_EAL_MdSqueeze(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t len);
  * @retval  CRYPT_SUCCESS
  *          For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_EAL_MdFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *out, uint32_t *len);
+int32_t CRYPT_EAL_MdFinal(CRYPT_EAL_MdCtx *ctx, uint8_t *out, uint32_t *len);
 
 /**
  * @ingroup crypt_eal_md
@@ -219,8 +221,7 @@ int32_t CRYPT_EAL_ProviderMd(CRYPT_EAL_LibCtx *libCtx, CRYPT_MD_AlgId id, const 
  *
  * @param   ctx [IN] Md Context
  */
-int32_t CRYPT_EAL_MdDeinit(CRYPT_EAL_MdCTX *ctx);
-
+int32_t CRYPT_EAL_MdDeinit(CRYPT_EAL_MdCtx *ctx);
 
 /**
  * @ingroup crypt_eal_md
@@ -237,10 +238,10 @@ int32_t CRYPT_EAL_MdDeinit(CRYPT_EAL_MdCTX *ctx);
  * @param   libCtx [IN] Library context (reserved, currently unused).
  * @param   id [IN] MD algorithm ID (e.g. #CRYPT_MD_SHA256).
  * @param   num [IN] Number of contexts/messages.
- * @retval  CRYPT_EAL_MdCTX pointer on success.
+ * @retval  CRYPT_EAL_MdCtx pointer on success.
  *          NULL if memory allocation fails or input is invalid.
  */
-CRYPT_EAL_MdCTX *CRYPT_EAL_MdMBNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t id, uint32_t num);
+CRYPT_EAL_MdCtx *CRYPT_EAL_MdMBNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t id, uint32_t num);
 
 /**
  * @ingroup crypt_eal_md
@@ -248,7 +249,7 @@ CRYPT_EAL_MdCTX *CRYPT_EAL_MdMBNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t id, uint
  *
  * @param   ctx [IN] MB context pointer.
  */
-void CRYPT_EAL_MdMBFreeCtx(CRYPT_EAL_MdCTX *ctx);
+void CRYPT_EAL_MdMBFreeCtx(CRYPT_EAL_MdCtx *ctx);
 
 /**
  * @ingroup crypt_eal_md
@@ -260,7 +261,7 @@ void CRYPT_EAL_MdMBFreeCtx(CRYPT_EAL_MdCTX *ctx);
  *          #CRYPT_NOT_SUPPORT if the algorithm does not support multi-buffer mode.
  *          For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_EAL_MdMBInit(CRYPT_EAL_MdCTX *ctx);
+int32_t CRYPT_EAL_MdMBInit(CRYPT_EAL_MdCtx *ctx);
 
 /**
  * @ingroup crypt_eal_md
@@ -279,7 +280,7 @@ int32_t CRYPT_EAL_MdMBInit(CRYPT_EAL_MdCTX *ctx);
  *          #CRYPT_NOT_SUPPORT if the algorithm does not support multi-buffer mode or the nbytes are not equal.
  *          For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_EAL_MdMBUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data[], uint32_t nbytes[], uint32_t num);
+int32_t CRYPT_EAL_MdMBUpdate(CRYPT_EAL_MdCtx *ctx, const uint8_t *data[], uint32_t nbytes[], uint32_t num);
 
 /**
  * @ingroup crypt_eal_md
@@ -297,7 +298,7 @@ int32_t CRYPT_EAL_MdMBUpdate(CRYPT_EAL_MdCTX *ctx, const uint8_t *data[], uint32
  *          #CRYPT_NOT_SUPPORT if the algorithm does not support multi-buffer mode.
  *          For other error codes, see crypt_errno.h.
  */
-int32_t CRYPT_EAL_MdMBFinal(CRYPT_EAL_MdCTX *ctx, uint8_t *digest[], uint32_t *outlen, uint32_t num);
+int32_t CRYPT_EAL_MdMBFinal(CRYPT_EAL_MdCtx *ctx, uint8_t *digest[], uint32_t *outlen, uint32_t num);
 
 #ifdef __cplusplus
 }

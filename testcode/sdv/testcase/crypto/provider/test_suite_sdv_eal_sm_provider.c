@@ -176,7 +176,7 @@ void SDV_SM_PROVIDER_MD_TEST_TC001(int algId)
     SKIP_TEST();
 #else
     CRYPT_EAL_LibCtx *libCtx = NULL;
-    CRYPT_EAL_MdCTX *mdCtx = NULL;
+    CRYPT_EAL_MdCtx *mdCtx = NULL;
     uint8_t plaintext[128] = {0};
     uint32_t plaintextLen = sizeof(plaintext);
     uint8_t md[128] = {0};
@@ -259,7 +259,7 @@ void SDV_SM_PROVIDER_KDF_TEST_TC001(int macId, int iter, int saltLen)
     SKIP_TEST();
 #else
     CRYPT_EAL_LibCtx *libCtx = NULL;
-    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+    CRYPT_EAL_KdfCtx *kdfCtx = NULL;
     uint8_t password[32] = {0};
     uint32_t passwordLen = sizeof(password);
     uint8_t salt[32] = {0};
@@ -398,7 +398,7 @@ void SDV_SM_PROVIDER_KDF_PARAM_CHECK_TC001()
     SKIP_TEST();
 #else
     CRYPT_EAL_LibCtx *libCtx = NULL;
-    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+    CRYPT_EAL_KdfCtx *kdfCtx = NULL;
     uint8_t password[32] = {0};
     uint32_t passwordLen = sizeof(password);
     uint8_t salt[32] = {0};
@@ -494,7 +494,7 @@ void SDV_SM_PROVIDER_KDF_KDFTLS12_TEST_TC001(int algId, Hex *key, Hex *label, He
     }
     TestMemInit();
     CRYPT_EAL_LibCtx *libCtx = NULL;
-    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+    CRYPT_EAL_KdfCtx *kdfCtx = NULL;
     uint32_t outLen = 32;
     uint8_t *out = malloc(outLen * sizeof(uint8_t));
     ASSERT_TRUE(out != NULL);

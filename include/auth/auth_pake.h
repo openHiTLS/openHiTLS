@@ -117,7 +117,7 @@ void HITLS_AUTH_PakeFreeCtx(HITLS_AUTH_PakeCtx *ctx);
  * @retval #HITLS_AUTH_SUCCESS if successful
  *          Other error codes defined in hitls_errno.h if an error occurs
  */
-int32_t HITLS_AUTH_Pake_Ctrl(HITLS_AUTH_PakeCtx *ctx, HITLS_AUTH_PAKE_CtrlCmd cmd, CRYPT_EAL_KdfCTX *kdfctx,
+int32_t HITLS_AUTH_Pake_Ctrl(HITLS_AUTH_PakeCtx *ctx, HITLS_AUTH_PAKE_CtrlCmd cmd, CRYPT_EAL_KdfCtx *kdfctx,
     BSL_Buffer in0, BSL_Buffer in1, BSL_Buffer in2);
 
 /**
@@ -185,9 +185,9 @@ int32_t HITLS_AUTH_PakeRespDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer in0, BSL_B
  * @param ctx [IN] PAKE context
  * @param kdf [IN] KDF algorithm configuration
  *
- * @retval #CRYPT_EAL_KdfCTX pointer if successful, NULL if failed
+ * @retval #CRYPT_EAL_KdfCtx pointer if successful, NULL if failed
  */
-CRYPT_EAL_KdfCTX* HITLS_AUTH_PakeGetKdfCtx(HITLS_AUTH_PakeCtx* ctx, HITLS_AUTH_PAKE_KDF kdf);
+CRYPT_EAL_KdfCtx* HITLS_AUTH_PakeGetKdfCtx(HITLS_AUTH_PakeCtx* ctx, HITLS_AUTH_PAKE_KDF kdf);
 #ifdef __cplusplus
 }
 #endif // __cplusplus

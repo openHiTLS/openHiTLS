@@ -54,12 +54,12 @@ bool CRYPT_EAL_KdfIsValidAlgId(CRYPT_KDF_AlgId id)
     return EAL_KdfFindMethod(id, NULL) == CRYPT_SUCCESS;
 }
 
-CRYPT_EAL_KdfCTX *KdfNewCtxInner(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName, bool isProvider)
+CRYPT_EAL_KdfCtx *KdfNewCtxInner(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName, bool isProvider)
 {
     (void)libCtx;
     (void)attrName;
     (void)isProvider;
-    CRYPT_EAL_KdfCTX *ctx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_KdfCTX));
+    CRYPT_EAL_KdfCtx *ctx = BSL_SAL_Calloc(1u, sizeof(CRYPT_EAL_KdfCtx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
@@ -97,17 +97,17 @@ ERR:
     return NULL;
 }
 
-CRYPT_EAL_KdfCTX *CRYPT_EAL_ProviderKdfNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
+CRYPT_EAL_KdfCtx *CRYPT_EAL_ProviderKdfNewCtx(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName)
 {
     return KdfNewCtxInner(libCtx, algId, attrName, true);
 }
 
-CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfNewCtx(CRYPT_KDF_AlgId algId)
+CRYPT_EAL_KdfCtx *CRYPT_EAL_KdfNewCtx(CRYPT_KDF_AlgId algId)
 {
     return KdfNewCtxInner(NULL, algId, NULL, false);
 }
 
-int32_t CRYPT_EAL_KdfSetParam(CRYPT_EAL_KdfCTX *ctx, const BSL_Param *param)
+int32_t CRYPT_EAL_KdfSetParam(CRYPT_EAL_KdfCtx *ctx, const BSL_Param *param)
 {
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
@@ -125,7 +125,7 @@ int32_t CRYPT_EAL_KdfSetParam(CRYPT_EAL_KdfCTX *ctx, const BSL_Param *param)
     return ret;
 }
 
-int32_t CRYPT_EAL_KdfDerive(CRYPT_EAL_KdfCTX *ctx, uint8_t *key, uint32_t keyLen)
+int32_t CRYPT_EAL_KdfDerive(CRYPT_EAL_KdfCtx *ctx, uint8_t *key, uint32_t keyLen)
 {
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
@@ -144,7 +144,7 @@ int32_t CRYPT_EAL_KdfDerive(CRYPT_EAL_KdfCTX *ctx, uint8_t *key, uint32_t keyLen
     return CRYPT_SUCCESS;
 }
 
-int32_t CRYPT_EAL_KdfDeInitCtx(CRYPT_EAL_KdfCTX *ctx)
+int32_t CRYPT_EAL_KdfDeInitCtx(CRYPT_EAL_KdfCtx *ctx)
 {
     if (ctx == NULL || ctx->method.deinit == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
@@ -155,7 +155,7 @@ int32_t CRYPT_EAL_KdfDeInitCtx(CRYPT_EAL_KdfCTX *ctx)
     return CRYPT_SUCCESS;
 }
 
-void CRYPT_EAL_KdfFreeCtx(CRYPT_EAL_KdfCTX *ctx)
+void CRYPT_EAL_KdfFreeCtx(CRYPT_EAL_KdfCtx *ctx)
 {
     if (ctx == NULL) {
         return;
@@ -169,7 +169,7 @@ void CRYPT_EAL_KdfFreeCtx(CRYPT_EAL_KdfCTX *ctx)
     BSL_SAL_Free(ctx);
 }
 
-int32_t CRYPT_EAL_KdfCopyCtx(CRYPT_EAL_KdfCTX *to, const CRYPT_EAL_KdfCTX *from)
+int32_t CRYPT_EAL_KdfCopyCtx(CRYPT_EAL_KdfCtx *to, const CRYPT_EAL_KdfCtx *from)
 {
     if (to == NULL || from == NULL || from->method.dupCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
@@ -188,19 +188,19 @@ int32_t CRYPT_EAL_KdfCopyCtx(CRYPT_EAL_KdfCTX *to, const CRYPT_EAL_KdfCTX *from)
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memcpy_s(to, sizeof(CRYPT_EAL_KdfCTX), from, sizeof(CRYPT_EAL_KdfCTX));
+    (void)memcpy_s(to, sizeof(CRYPT_EAL_KdfCtx), from, sizeof(CRYPT_EAL_KdfCtx));
     to->data = newData;
     return CRYPT_SUCCESS;
 }
 
-CRYPT_EAL_KdfCTX *CRYPT_EAL_KdfDupCtx(const CRYPT_EAL_KdfCTX *from)
+CRYPT_EAL_KdfCtx *CRYPT_EAL_KdfDupCtx(const CRYPT_EAL_KdfCtx *from)
 {
     if (from == NULL || from->method.dupCtx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, CRYPT_KDF_MAX, CRYPT_NULL_INPUT);
         return NULL;
     }
 
-    CRYPT_EAL_KdfCTX *newCtx = BSL_SAL_Dump(from, sizeof(CRYPT_EAL_KdfCTX));
+    CRYPT_EAL_KdfCtx *newCtx = BSL_SAL_Dump(from, sizeof(CRYPT_EAL_KdfCtx));
     if (newCtx == NULL ) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_KDF, from->id, CRYPT_MEM_ALLOC_FAIL);
         return NULL;

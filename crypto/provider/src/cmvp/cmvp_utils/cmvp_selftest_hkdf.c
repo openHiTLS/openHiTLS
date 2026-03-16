@@ -52,7 +52,7 @@ static bool CRYPT_CMVP_SelftestHkdfInternal(void *libCtx, const char *attrName)
     uint8_t *expOut = NULL;
     uint8_t *out = NULL;
     uint32_t keyLen, saltLen, infoLen, expOutLen;
-    CRYPT_EAL_KdfCTX *ctx = NULL;
+    CRYPT_EAL_KdfCtx *ctx = NULL;
     CRYPT_HKDF_MODE mode = CRYPT_KDF_HKDF_MODE_FULL;
     CRYPT_MAC_AlgId id = CRYPT_MAC_HMAC_SHA256;
 

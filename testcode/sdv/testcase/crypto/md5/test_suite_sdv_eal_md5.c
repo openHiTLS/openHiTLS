@@ -37,7 +37,7 @@ void Md5MultiThreadTest(void *arg)
     ThreadParameter *threadParameter = (ThreadParameter *)arg;
     uint32_t outLen = CRYPT_MD5_DIGESTSIZE;
     uint8_t out[CRYPT_MD5_DIGESTSIZE];
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
     ctx = CRYPT_EAL_MdNewCtx(threadParameter->id);
     ASSERT_TRUE(ctx != NULL);
     for (uint32_t i = 0; i < 10; i++) { // Repeat 10 times
@@ -82,7 +82,7 @@ void SDV_CRYPTO_MD5_API_TC001(void)
     uint32_t dataLen = sizeof(data);
     uint8_t output[CRYPT_MD5_DIGESTSIZE + 1];
     uint32_t outputLen = CRYPT_MD5_DIGESTSIZE;
-    CRYPT_EAL_MdCTX *md5Ctx = NULL;
+    CRYPT_EAL_MdCtx *md5Ctx = NULL;
     ASSERT_EQ(CRYPT_EAL_MdDeinit(md5Ctx), CRYPT_NULL_INPUT);
     md5Ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_MD5);
     ASSERT_TRUE(md5Ctx != NULL);
@@ -138,7 +138,7 @@ void SDV_CRYPTO_MD5_FUNC_TC001(Hex *hash)
     uint8_t output[CRYPT_MD5_DIGESTSIZE];
     uint32_t outLen = CRYPT_MD5_DIGESTSIZE;
 
-    CRYPT_EAL_MdCTX *md5Ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_MD5);
+    CRYPT_EAL_MdCtx *md5Ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_MD5);
     ASSERT_TRUE(md5Ctx != NULL);
     ASSERT_EQ(CRYPT_EAL_MdInit(md5Ctx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_MdFinal(md5Ctx, output, &outLen), CRYPT_SUCCESS);
@@ -171,7 +171,7 @@ void SDV_CRYPTO_MD5_FUNC_TC002(Hex *msg, Hex *hash)
     uint8_t output[CRYPT_MD5_DIGESTSIZE];
     uint32_t outLen = CRYPT_MD5_DIGESTSIZE;
 
-    CRYPT_EAL_MdCTX *md5Ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_MD5);
+    CRYPT_EAL_MdCtx *md5Ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_MD5);
     ASSERT_TRUE(md5Ctx != NULL);
 
     ASSERT_EQ(CRYPT_EAL_MdInit(md5Ctx), CRYPT_SUCCESS);
@@ -207,8 +207,8 @@ EXIT:
 void SDV_CRYPTO_MD5_FUNC_TC003(void)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *ctx1 = NULL;
-    CRYPT_EAL_MdCTX *ctx2 = NULL;
+    CRYPT_EAL_MdCtx *ctx1 = NULL;
+    CRYPT_EAL_MdCtx *ctx2 = NULL;
 
     ctx1 = CRYPT_EAL_MdNewCtx(CRYPT_MD_MD5);
     ASSERT_TRUE(ctx1 != NULL);
@@ -268,7 +268,7 @@ void SDV_CRYPTO_MD5_FUNC_TC004(Hex *data1, Hex *data2, Hex *data3, Hex *hash)
     TestMemInit();
     uint8_t output[CRYPT_MD5_DIGESTSIZE];
     uint32_t outLen = CRYPT_MD5_DIGESTSIZE;
-    CRYPT_EAL_MdCTX *md5Ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_MD5);
+    CRYPT_EAL_MdCtx *md5Ctx = CRYPT_EAL_MdNewCtx(CRYPT_MD_MD5);
     ASSERT_TRUE(md5Ctx != NULL);
 
     ASSERT_EQ(CRYPT_EAL_MdInit(md5Ctx), CRYPT_SUCCESS);
@@ -307,9 +307,9 @@ EXIT:
 void SDV_CRYPTO_MD5_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *cpyCtx = NULL;
-    CRYPT_EAL_MdCTX *dupCtx = NULL;
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtx(id);
+    CRYPT_EAL_MdCtx *cpyCtx = NULL;
+    CRYPT_EAL_MdCtx *dupCtx = NULL;
+    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_MdNewCtx(id);
     ASSERT_TRUE(ctx != NULL);
     uint8_t output[CRYPT_MD5_DIGESTSIZE];
     uint32_t outLen = CRYPT_MD5_DIGESTSIZE;
@@ -364,7 +364,7 @@ void SDV_CRYPTO_MD5_FUNC_TC005(int id, Hex *msg, Hex *hash)
     TestMemInit();
     uint8_t output[CRYPT_MD5_DIGESTSIZE];
     uint32_t outLen = CRYPT_MD5_DIGESTSIZE;
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
 #ifdef HITLS_CRYPTO_PROVIDER
     ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, id, "provider=default");
 #else

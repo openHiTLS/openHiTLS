@@ -103,7 +103,7 @@ void SDV_CRYPT_EAL_SPAKE2PLUS_TC001(Hex *context, Hex *prover, Hex *verifier, in
     BSL_Buffer emptyBuf0 = { 0 };
     BSL_Buffer emptyBuf1 = { 0 };
     BSL_Buffer emptyBuf2 = { 0 };
-    CRYPT_EAL_KdfCTX* kdfCtxTmp = HITLS_AUTH_PakeGetKdfCtx(ctx2, kdfParam);
+    CRYPT_EAL_KdfCtx* kdfCtxTmp = HITLS_AUTH_PakeGetKdfCtx(ctx2, kdfParam);
     ASSERT_TRUE(kdfCtxTmp != NULL);
     ASSERT_EQ(HITLS_AUTH_Pake_Ctrl(ctx2, HITLS_AUTH_PAKE_REQ_REGISTER, kdfCtxTmp, emptyBuf0, emptyBuf1, emptyBuf2),
         HITLS_AUTH_SUCCESS);
@@ -115,7 +115,7 @@ void SDV_CRYPT_EAL_SPAKE2PLUS_TC001(Hex *context, Hex *prover, Hex *verifier, in
         passwordBuf, proverBuf, verifierBuf, contextBuf);
     ASSERT_TRUE(ctx1 != NULL);
 
-    CRYPT_EAL_KdfCTX* kdfCtx = HITLS_AUTH_PakeGetKdfCtx(ctx2, kdfParam);
+    CRYPT_EAL_KdfCtx* kdfCtx = HITLS_AUTH_PakeGetKdfCtx(ctx2, kdfParam);
     ASSERT_TRUE(kdfCtx != NULL);
     ASSERT_EQ(HITLS_AUTH_Pake_Ctrl(ctx0, HITLS_AUTH_PAKE_REQ_REGISTER, kdfCtx, w0Buf, w1Buf, LBuf),
         HITLS_AUTH_SUCCESS);

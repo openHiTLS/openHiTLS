@@ -228,7 +228,7 @@ static int32_t Spake2PlusGetEcc(CRYPT_EAL_PkeyCtx *pkey, EccParamType type, uint
     return HITLS_AUTH_SUCCESS;
 }
 
-int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfCTX* kdfCtx, BSL_Buffer exist_w0,
+int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfCtx* kdfCtx, BSL_Buffer exist_w0,
     BSL_Buffer exist_w1, BSL_Buffer exist_l)
 {
     bool allNull = (exist_w0.data == NULL && exist_w1.data == NULL && exist_l.data == NULL);
@@ -1032,7 +1032,7 @@ static int32_t Spake2PlusComputeKeySchedule(Spake2plusCtx *ctx, BSL_Buffer tt, B
         macId=CRYPT_MAC_HMAC_SHA512;
     }
 
-    CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
+    CRYPT_EAL_KdfCtx *kdfCtx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
     if (kdfCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL);
         return HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL;

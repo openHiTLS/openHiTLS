@@ -33,7 +33,7 @@
 int MD_Data(CRYPT_MD_AlgId mdId, Hex *msgIn, Hex *mdOut)
 {
     uint32_t outLen;
-    CRYPT_EAL_MdCTX *mdCtx = NULL;
+    CRYPT_EAL_MdCtx *mdCtx = NULL;
     uint32_t mdOutLen = CRYPT_EAL_MdGetDigestSize(mdId);
     ASSERT_TRUE(mdOutLen != 0);
     mdOut->x = (uint8_t *)malloc(mdOutLen);
@@ -1844,7 +1844,7 @@ void SDV_CRYPTO_RSA_SIGN_VERIFY_ISO9796_2_NEGATIVE_TC001(int isProvider, int bit
     CRYPT_RSA_Ctx *rsaCtx = NULL;
     CRYPT_EAL_PkeyPara para = {0};
     CRYPT_EAL_PkeyPub pubKey = {0};
-    CRYPT_EAL_MdCTX *mdCtx = NULL;
+    CRYPT_EAL_MdCtx *mdCtx = NULL;
     uint8_t e[] = {1, 0, 1};
     uint8_t *msg = NULL;
     uint8_t *msgTamper = NULL;

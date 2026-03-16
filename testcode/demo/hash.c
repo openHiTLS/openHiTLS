@@ -35,7 +35,7 @@ void PrintLastError(void) {
 int main(void)
 {
     int ret = 0;
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
     uint8_t digest[32] = {0};
     unsigned int digestLen = 32;
     uint8_t data[] = {0x1b, 0x50, 0x3f, 0xb9, 0xa7, 0x3b, 0x16, 0xad, 0xa3,

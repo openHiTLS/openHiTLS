@@ -128,7 +128,7 @@ static bool IsPkeyAlgIdValid(int id)
 
 #define MD_OUTPUT_MAXSIZE 128
 
-static int32_t MdTest(CRYPT_EAL_MdCTX *ctx, Hex *msg, Hex *hash)
+static int32_t MdTest(CRYPT_EAL_MdCtx *ctx, Hex *msg, Hex *hash)
 {
     (void)msg;
     (void)hash;
@@ -205,8 +205,8 @@ EXIT:
 void SDV_CRYPTO_MD_COPY_FUNC_TC001(int id, Hex *msg, Hex *hash)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *cpyCtx = NULL;
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtx(id);
+    CRYPT_EAL_MdCtx *cpyCtx = NULL;
+    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_MdNewCtx(id);
     ASSERT_TRUE(ctx != NULL);
     ASSERT_EQ(MdTest(ctx, msg, hash), 0);
 

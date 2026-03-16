@@ -56,7 +56,7 @@ static bool CRYPT_CMVP_SelftestKdfTls12Internal(void *libCtx, const char *attrNa
     uint8_t *expDk = NULL;
     uint8_t *dk = NULL;
     uint32_t keyLen, labelLen, seedLen, expDkLen;
-    CRYPT_EAL_KdfCTX *ctx = NULL;
+    CRYPT_EAL_KdfCtx *ctx = NULL;
     CRYPT_MAC_AlgId id = CRYPT_MAC_HMAC_SHA256;
     key = CMVP_StringsToBins(KDF_TLS12_VECTOR.key, &keyLen);
     GOTO_ERR_IF_TRUE(key == NULL, CRYPT_CMVP_COMMON_ERR);
