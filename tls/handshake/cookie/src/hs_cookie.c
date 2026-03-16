@@ -33,6 +33,7 @@
 #include "hs_ctx.h"
 #include "hs.h"
 
+#ifdef HITLS_TLS_FEATURE_DEFAULT_COOKIE
 #define MAX_IP_ADDR_SIZE 256u
 
 static int32_t UpdateMacKey(TLS_Ctx *ctx, CookieInfo *cookieInfo)
@@ -180,9 +181,11 @@ static int32_t AddCookieCalcMaterial(
     }
     return ret;
 }
+#endif /* HITLS_TLS_FEATURE_DEFAULT_COOKIE */
 
 int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *cookie, uint32_t *cookieLen)
 {
+    (void)clientHello;
     /* If the user's cookie calculation callback is registered, use the user's callback interface */
     if (ctx->globalConfig != NULL && ctx->globalConfig->appGenCookieCb != NULL) {
         int32_t returnVal = ctx->globalConfig->appGenCookieCb(ctx, cookie, cookieLen);
@@ -202,7 +205,7 @@ int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *
         }
         return HITLS_SUCCESS;
     }
-
+#ifdef HITLS_TLS_FEATURE_DEFAULT_COOKIE
     /* If the cookie calculation callback is not registered, the default calculation is used */
     int32_t ret = HITLS_SUCCESS;
     CookieInfo *cookieInfo = &ctx->negotiatedInfo.cookieInfo;
@@ -225,8 +228,12 @@ int32_t HS_CalcCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, uint8_t *
     cookieInfo->algRemainTime--;
 
     return HITLS_SUCCESS;
+#else
+    return HITLS_MSG_HANDLE_COOKIE_ERR;
+#endif /* HITLS_TLS_FEATURE_DEFAULT_COOKIE */
 }
 
+#ifdef HITLS_TLS_FEATURE_DEFAULT_COOKIE
 static int32_t CheckCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid)
 {
     uint8_t cookie[TLS_HS_MAX_COOKIE_SIZE] = {0};
@@ -280,6 +287,7 @@ static int32_t CheckCookieWithPreMacKey(TLS_Ctx *ctx, const ClientHelloMsg *clie
     (void)memset_s(macKeyStore, MAC_KEY_LEN, 0, MAC_KEY_LEN);
     return HITLS_SUCCESS;
 }
+#endif /* HITLS_TLS_FEATURE_DEFAULT_COOKIE */
 
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
 static int32_t CheckCookieDuringRenegotiation(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid)
@@ -329,7 +337,7 @@ int32_t HS_CheckCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *is
         }
         return HITLS_SUCCESS;
     }
-
+#ifdef HITLS_TLS_FEATURE_DEFAULT_COOKIE
     /* If the cookie validation callback function of the user is not registered, use the default validation function */
     int32_t ret = CheckCookie(ctx, clientHello, isCookieValid);
     if (ret != HITLS_SUCCESS) {
@@ -345,5 +353,8 @@ int32_t HS_CheckCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *is
     }
 
     return CheckCookieWithPreMacKey(ctx, clientHello, isCookieValid);
+#else
+    return HITLS_MSG_HANDLE_COOKIE_ERR;
+#endif /* HITLS_TLS_FEATURE_DEFAULT_COOKIE */
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */

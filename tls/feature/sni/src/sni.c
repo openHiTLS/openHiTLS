@@ -37,10 +37,12 @@ const char *HITLS_GetServerName(const HITLS_Ctx *ctx, const int type)
     bool isResume = ctx->negotiatedInfo.isResume;
     uint16_t version = ctx->config.tlsConfig.maxVersion;
     uint8_t *hostName = NULL;
+#ifdef HITLS_TLS_FEATURE_SESSION
     uint32_t nameSize = 0u;
     if (ctx->session != NULL) {
         SESS_GetHostName(ctx->session, &nameSize, &hostName);
     }
+#endif
     if (!isClient) {
         /* Before Handshake */
         if (ctx->state == CM_STATE_IDLE) {

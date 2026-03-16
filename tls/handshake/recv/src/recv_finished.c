@@ -158,7 +158,7 @@ static int32_t SessionConfig(TLS_Ctx *ctx)
     return HITLS_SUCCESS;
 }
 
-int32_t HsSetSessionInfo(TLS_Ctx *ctx)
+static int32_t HsSetSessionInfo(TLS_Ctx *ctx)
 {
     int32_t ret = 0;
     TLS_SessionMgr *sessMgr = NULL;

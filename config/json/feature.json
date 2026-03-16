@@ -327,7 +327,8 @@
                         "feature_custom_extension": null,
                         "feature_certificate_authorities": null,
                         "feature_mtu_query": null,
-                        "feature_sm_tls13": null
+                        "feature_sm_tls13": null,
+                        "feature_default_cookie": null
                     },
                     "proto": {
                         "deps": ["sal", "eal", "list"],
