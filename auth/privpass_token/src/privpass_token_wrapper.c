@@ -57,7 +57,7 @@ static int32_t PrivPassPubDigest(void *libCtx, const char *attrName, int32_t alg
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PRIVPASS_INVALID_INPUT);
         return HITLS_AUTH_PRIVPASS_INVALID_INPUT;
     }
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtx(algId);
+    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_MdNewCtx(algId);
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;

@@ -57,7 +57,7 @@ static bool CRYPT_CMVP_SelftestScryptInternal(void *libCtx, const char *attrName
     uint32_t n = SCRYPT_VECTOR.n;
     uint32_t r = SCRYPT_VECTOR.r;
     uint32_t p = SCRYPT_VECTOR.p;
-    CRYPT_EAL_KdfCTX *ctx = NULL;
+    CRYPT_EAL_KdfCtx *ctx = NULL;
     pw = CMVP_StringsToBins(SCRYPT_VECTOR.pw, &pwLen);
     GOTO_ERR_IF_TRUE(pw == NULL, CRYPT_CMVP_COMMON_ERR);
     salt = CMVP_StringsToBins(SCRYPT_VECTOR.salt, &saltLen);

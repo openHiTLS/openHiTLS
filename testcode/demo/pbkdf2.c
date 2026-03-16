@@ -53,7 +53,7 @@ int main(void)
     uint8_t out[sizeof(result)] = {0};
     uint32_t outLen = sizeof(result);
 
-    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
+    CRYPT_EAL_KdfCtx *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
     if (ctx == NULL) {
         PrintLastError();
         goto EXIT;

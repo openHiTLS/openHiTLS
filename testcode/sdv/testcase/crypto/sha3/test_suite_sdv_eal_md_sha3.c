@@ -41,7 +41,7 @@ void Sha3MultiThreadTest(void *arg)
     ThreadParameter *threadParameter = (ThreadParameter *)arg;
     uint32_t outLen = SHA3_OUTPUT_MAXSIZE;
     uint8_t out[SHA3_OUTPUT_MAXSIZE];
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
     ctx = CRYPT_EAL_MdNewCtx(threadParameter->id);
     ASSERT_TRUE(ctx != NULL);
     for (uint32_t i = 0; i < 10; i++) {
@@ -113,7 +113,7 @@ EXIT:
 void SDV_CRYPT_EAL_SHA3_API_TC002(int algId)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *sha3Ctx = NULL;
+    CRYPT_EAL_MdCtx *sha3Ctx = NULL;
 
     ASSERT_EQ(CRYPT_EAL_MdDeinit(sha3Ctx), CRYPT_NULL_INPUT);
 
@@ -169,8 +169,8 @@ EXIT:
 void SDV_CRYPT_EAL_SHA3_FUNC_TC001(int algId)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *ctx1 = NULL;
-    CRYPT_EAL_MdCTX *ctx2 = NULL;
+    CRYPT_EAL_MdCtx *ctx1 = NULL;
+    CRYPT_EAL_MdCtx *ctx2 = NULL;
 
     ctx1 = CRYPT_EAL_MdNewCtx(algId);
     ASSERT_TRUE(ctx1 != NULL);
@@ -264,7 +264,7 @@ EXIT:
 void SDV_CRYPT_EAL_SHA3_FUNC_TC003(int algId, Hex *in, Hex *digest)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
 
     uint8_t out[SHA3_OUTPUT_MAXSIZE];
     uint32_t outLen = SHA3_OUTPUT_MAXSIZE;
@@ -299,7 +299,7 @@ EXIT:
 void SDV_CRYPT_EAL_SHA3_FUNC_TC004(int algId, Hex *in, Hex *digest)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
 
     uint8_t out[SHA3_OUTPUT_MAXSIZE];
     uint32_t outLen = SHA3_OUTPUT_MAXSIZE;
@@ -329,7 +329,7 @@ EXIT:
 void SDV_CRYPT_EAL_SHA3_FUNC_TC005(int algId, Hex *in, Hex *digest, int isProvider)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
 
     uint8_t out[SHA3_OUTPUT_MAXSIZE];
     uint32_t outLen = SHA3_OUTPUT_MAXSIZE;
@@ -366,7 +366,7 @@ EXIT:
 void SDV_CRYPT_EAL_SHA3_FUNC_TC006(int algId, Hex *in, int outLen, Hex *digest, int isProvider)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
     int32_t squeezeLen = digest->len / 3;
     uint8_t *out = malloc(outLen);
     ASSERT_TRUE(out != NULL);
@@ -418,9 +418,9 @@ EXIT:
 void SDV_CRYPTO_SHA3_COPY_CTX_FUNC_TC001(int id, Hex *msg, Hex *hash)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *cpyCtx = NULL;
-    CRYPT_EAL_MdCTX *dupCtx = NULL;
-    CRYPT_EAL_MdCTX *ctx = CRYPT_EAL_MdNewCtx(id);
+    CRYPT_EAL_MdCtx *cpyCtx = NULL;
+    CRYPT_EAL_MdCtx *dupCtx = NULL;
+    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_MdNewCtx(id);
     ASSERT_TRUE(ctx != NULL);
     uint8_t output[SHA3_OUTPUT_MAXSIZE];
     uint32_t outLen = SHA3_OUTPUT_MAXSIZE;
@@ -471,7 +471,7 @@ EXIT:
 void SDV_CRYPTO_SHA3_DEFAULT_PROVIDER_FUNC_TC001(int id, Hex *msg, Hex *hash)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
 #ifdef HITLS_CRYPTO_PROVIDER
     ctx = CRYPT_EAL_ProviderMdNewCtx(NULL, id, "provider=default");
 #else
@@ -505,7 +505,7 @@ EXIT:
 void SDV_CRYPT_EAL_SHA3_FUNC_TC007(int algId, int outLen, Hex *in, Hex *digest)
 {
     TestMemInit();
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
     int32_t squeezeLen = 130;
     uint32_t tmpLen = outLen;
     uint8_t *out1 = malloc(outLen);

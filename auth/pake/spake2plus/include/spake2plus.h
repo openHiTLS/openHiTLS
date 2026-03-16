@@ -78,7 +78,7 @@ int32_t Spake2PlusInitCipherSuite(Spake2plusCtx* ctx, HITLS_AUTH_PAKE_CipherSuit
  * @retval #HITLS_AUTH_SUCCESS if successful
  *          Other error codes defined in hitls_errno.h if an error occurs
  */
-int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfCTX* kdfCtx,
+int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfCtx* kdfCtx,
     BSL_Buffer exist_w0, BSL_Buffer exist_w1, BSL_Buffer exist_l);
 
  /**

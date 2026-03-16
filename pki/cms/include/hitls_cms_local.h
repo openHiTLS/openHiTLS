@@ -39,7 +39,7 @@ extern "C" {
 typedef struct {
     int32_t id;     /**< Algorithm OID */
     BSL_Buffer param; /**< Algorithm parameters (optional) */
-    CRYPT_EAL_MdCTX *mdCtx; /**< Message digest context for streaming signature */
+    CRYPT_EAL_MdCtx *mdCtx; /**< Message digest context for streaming signature */
 } CMS_AlgId;
 
 /**

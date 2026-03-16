@@ -186,7 +186,7 @@ static int32_t GetPassword(char **password)
 static int32_t DeriveKeyFromPassword(AppProvider *provider, char *password, UserParam *userParam, uint8_t *dKey,
     uint32_t dKeyLen)
 {
-    CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(APP_GetCurrent_LibCtx(), CRYPT_KDF_PBKDF2,
+    CRYPT_EAL_KdfCtx *kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(APP_GetCurrent_LibCtx(), CRYPT_KDF_PBKDF2,
         provider->providerAttr);
     if (kdfCtx == NULL) {
         AppPrintError("Failed to create kdf context.\n");

@@ -330,7 +330,7 @@ EXIT:
 static int32_t PbkdfDeriveKey(CRYPT_EAL_LibCtx *libctx, const char *attrName, uint32_t iter, int32_t prfId,
     BSL_Buffer *salt, const uint8_t *pwd, uint32_t pwdLen, BSL_Buffer *key)
 {
-    CRYPT_EAL_KdfCTX *kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libctx, CRYPT_KDF_PBKDF2, attrName);
+    CRYPT_EAL_KdfCtx *kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libctx, CRYPT_KDF_PBKDF2, attrName);
     if (kdfCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_PBKDF2_NOT_SUPPORTED);
         return CRYPT_PBKDF2_NOT_SUPPORTED;

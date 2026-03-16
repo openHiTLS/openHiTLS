@@ -21,6 +21,10 @@
 #include "bsl_asn1_internal.h"
 #include "bsl_obj.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 /**
  * @brief Get default digest algorithm for ML-DSA variant
  * @param mldsaVariant ML-DSA variant CID

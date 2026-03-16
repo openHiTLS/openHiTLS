@@ -88,7 +88,7 @@ int32_t STUB_RandRangeK(void *libCtx, BN_BigNum *r, const BN_BigNum *p)
 int Compute_Md(CRYPT_MD_AlgId mdId, Hex *msgIn, Hex *mdOut)
 {
     uint32_t outLen;
-    CRYPT_EAL_MdCTX *mdCtx = NULL;
+    CRYPT_EAL_MdCtx *mdCtx = NULL;
     uint32_t mdOutLen = CRYPT_EAL_MdGetDigestSize(mdId);
     ASSERT_TRUE(mdOutLen != 0);
     mdOut->x = (uint8_t *)malloc(mdOutLen);

@@ -161,7 +161,7 @@ static bool CRYPT_CMVP_SelftestMdInternal(void *libCtx, const char *attrName, CR
     uint8_t *md = NULL;
     uint8_t *expectMd = NULL;
     uint32_t msgLen, mdLen, expectMdLen;
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
 
     const CMVP_HASH_VECTOR *hashVec = FindVectorById(id);
     if (hashVec == NULL || hashVec->msg == NULL) {

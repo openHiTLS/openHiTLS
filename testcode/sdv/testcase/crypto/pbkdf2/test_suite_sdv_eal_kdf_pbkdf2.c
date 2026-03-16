@@ -49,7 +49,7 @@ void SDV_CRYPT_EAL_KDF_PBKDF2_API_TC001(void)
     uint32_t outLen = DATA_LEN;
     uint8_t out[DATA_LEN];
 
-    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
+    CRYPT_EAL_KdfCtx *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
     ASSERT_TRUE(ctx != NULL);
 
     CRYPT_MAC_AlgId macAlgId = CRYPT_MAC_HMAC_SHA1;
@@ -159,7 +159,7 @@ void SDV_CRYPT_EAL_KDF_PBKDF2_FUN_TC001(int algId, Hex *key, Hex *salt, int it, 
     uint8_t *out = malloc(outLen * sizeof(uint8_t));
     ASSERT_TRUE(out != NULL);
 
-    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
+    CRYPT_EAL_KdfCtx *ctx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_PBKDF2);
     ASSERT_TRUE(ctx != NULL);
 
     BSL_Param params[5] = {{0}, {0}, {0}, {0}, BSL_PARAM_END};
@@ -200,7 +200,7 @@ void SDV_CRYPTO_PBKDF2_DEFAULT_PROVIDER_FUNC_TC001(int algId, Hex *key, Hex *sal
     uint32_t outLen = result->len;
     uint8_t *out = malloc(outLen * sizeof(uint8_t));
     ASSERT_TRUE(out != NULL);
-    CRYPT_EAL_KdfCTX *ctx = NULL;
+    CRYPT_EAL_KdfCtx *ctx = NULL;
 
 #ifdef HITLS_CRYPTO_PROVIDER
     ctx = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_PBKDF2, "provider=default");
@@ -235,9 +235,9 @@ EXIT:
 void SDV_CRYPTO_PBKDF2_COPY_CTX_API_TC001(int isProvider)
 {
     TestMemInit();
-    CRYPT_EAL_KdfCTX *ctxA = NULL;
-    CRYPT_EAL_KdfCTX *ctxB = NULL;
-    CRYPT_EAL_KdfCTX ctxC = { 0 };
+    CRYPT_EAL_KdfCtx *ctxA = NULL;
+    CRYPT_EAL_KdfCtx *ctxB = NULL;
+    CRYPT_EAL_KdfCtx ctxC = { 0 };
     if (isProvider != 0) {
         ctxA = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_PBKDF2, "provider=default");
         ctxB = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_PBKDF2, "provider=default");
@@ -266,9 +266,9 @@ EXIT:
 void SDV_CRYPTO_PBKDF2_DUP_CTX_API_TC001(int isProvider)
 {
     TestMemInit();
-    CRYPT_EAL_KdfCTX *ctxA = NULL;
-    CRYPT_EAL_KdfCTX *ctxB = NULL;
-    CRYPT_EAL_KdfCTX ctxC = { 0 };
+    CRYPT_EAL_KdfCtx *ctxA = NULL;
+    CRYPT_EAL_KdfCtx *ctxB = NULL;
+    CRYPT_EAL_KdfCtx ctxC = { 0 };
     if (isProvider != 0) {
         ctxA = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_PBKDF2, "provider=default");
     } else {
@@ -299,11 +299,11 @@ void SDV_CRYPT_EAL_PBKDF2_COPY_CTX_FUNC_TC001(int algId, Hex *key, Hex *salt, in
     uint8_t *out = BSL_SAL_Malloc(outLen * sizeof(uint8_t));
     ASSERT_TRUE(out != NULL);
 
-    CRYPT_EAL_KdfCTX *ctx = NULL;
-    CRYPT_EAL_KdfCTX *copyCtx = NULL;
-    CRYPT_EAL_KdfCTX *copyCtx1 = NULL;
-    CRYPT_EAL_KdfCTX *copyCtx2 = NULL;
-    CRYPT_EAL_KdfCTX *copyCtx3 = NULL;
+    CRYPT_EAL_KdfCtx *ctx = NULL;
+    CRYPT_EAL_KdfCtx *copyCtx = NULL;
+    CRYPT_EAL_KdfCtx *copyCtx1 = NULL;
+    CRYPT_EAL_KdfCtx *copyCtx2 = NULL;
+    CRYPT_EAL_KdfCtx *copyCtx3 = NULL;
     if (isProvider != 0) {
         ctx = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_PBKDF2, "provider=default");
         copyCtx = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_PBKDF2, "provider=default");
@@ -377,9 +377,9 @@ EXIT:
 
 static int32_t TestKdfCopyCtxMemCheck(int32_t algId, Hex *key, Hex *salt, int it, int isProvider)
 {
-    CRYPT_EAL_KdfCTX *ctxA = NULL;
-    CRYPT_EAL_KdfCTX *ctxB = NULL;
-    CRYPT_EAL_KdfCTX *srcCtx = NULL;
+    CRYPT_EAL_KdfCtx *ctxA = NULL;
+    CRYPT_EAL_KdfCtx *ctxB = NULL;
+    CRYPT_EAL_KdfCtx *srcCtx = NULL;
     if (isProvider != 0) {
         srcCtx = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_HKDF, "provider=default");
         ctxA = CRYPT_EAL_ProviderKdfNewCtx(NULL, CRYPT_KDF_HKDF, "provider=default");

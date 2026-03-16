@@ -284,7 +284,7 @@ int32_t HITLS_CRYPT_HMAC(HITLS_Lib_Ctx *libCtx, const char *attrName,
 HITLS_HASH_Ctx *HITLS_CRYPT_DigestInit(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_HashAlgo hashAlgo)
 {
 #ifdef HITLS_CRYPTO_MD
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
     ctx = CRYPT_EAL_ProviderMdNewCtx(libCtx, hashAlgo, attrName);
     if (ctx == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16628, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,  "MdNewCtx fail", 0, 0, 0, 0);
@@ -313,7 +313,7 @@ int32_t HITLS_CRYPT_Digest(HITLS_Lib_Ctx *libCtx, const char *attrName,
 {
 #ifdef HITLS_CRYPTO_MD
     int32_t ret;
-    CRYPT_EAL_MdCTX *ctx = NULL;
+    CRYPT_EAL_MdCtx *ctx = NULL;
     ctx = CRYPT_EAL_ProviderMdNewCtx(libCtx, hashAlgo, attrName);
     if (ctx == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_DIGEST, BINLOG_ID16631, "MdNewCtx fail");
@@ -984,7 +984,7 @@ int32_t HITLS_CRYPT_HkdfExtract(HITLS_Lib_Ctx *libCtx,
             "GetHmacAlgId fail", 0, 0, 0, 0);
         return HITLS_CRYPT_ERR_HMAC;
     }
-    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+    CRYPT_EAL_KdfCtx *kdfCtx = NULL;
     kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_HKDF, attrName);
     if (kdfCtx == NULL) {
         return HITLS_CRYPT_ERR_HKDF_EXTRACT;
@@ -1032,7 +1032,7 @@ int32_t HITLS_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx,
     if (id == CRYPT_MAC_MAX) {
         return HITLS_CRYPT_ERR_HMAC;
     }
-    CRYPT_EAL_KdfCTX *kdfCtx = NULL;
+    CRYPT_EAL_KdfCtx *kdfCtx = NULL;
     kdfCtx = CRYPT_EAL_ProviderKdfNewCtx(libCtx, CRYPT_KDF_HKDF, attrName);
     if (kdfCtx == NULL) {
         return HITLS_CRYPT_ERR_HKDF_EXPAND;
@@ -1243,7 +1243,7 @@ int32_t HITLS_CRYPT_PRF(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t
     BSL_Param params[6] = {{0}, {0}, {0}, {0}, {0}, BSL_PARAM_END}; // Set 5 parameters for kdftls12
     InitKdfTls12Param(input, &id, params);
 
-    CRYPT_EAL_KdfCTX *ctx = CRYPT_EAL_ProviderKdfNewCtx(input->libCtx, CRYPT_KDF_KDFTLS12, input->attrName);
+    CRYPT_EAL_KdfCtx *ctx = CRYPT_EAL_ProviderKdfNewCtx(input->libCtx, CRYPT_KDF_KDFTLS12, input->attrName);
     if (ctx == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17374, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "KdfNewCtx fail", 0, 0, 0, 0);
         return HITLS_CRYPT_ERR_KDF;

@@ -76,7 +76,7 @@ static bool CRYPT_CMVP_SelftestPbkdf2Internal(void *libCtx, const char *attrName
     uint8_t *expOut = NULL;
     uint8_t *out = NULL;
     uint32_t expOutLen, pwLen, saltLen, iter;
-    CRYPT_EAL_KdfCTX *ctx = NULL;
+    CRYPT_EAL_KdfCtx *ctx = NULL;
     const CMVP_PBKDF2_VECTOR *pbkdf2Vec = FindVectorById(id);
     if (pbkdf2Vec == NULL || pbkdf2Vec->pw == NULL) {
         return false;

@@ -2318,9 +2318,9 @@ static int32_t SignedData_SignUpdate(HITLS_CMS *cms, const BSL_Buffer *msg)
 }
 
 // Get digest from MD context
-static int32_t GetDigestValue(CRYPT_EAL_MdCTX *mdCtx, uint8_t *hash, uint32_t *hashLen)
+static int32_t GetDigestValue(CRYPT_EAL_MdCtx *mdCtx, uint8_t *hash, uint32_t *hashLen)
 {
-    CRYPT_EAL_MdCTX *tmp = CRYPT_EAL_MdDupCtx(mdCtx);
+    CRYPT_EAL_MdCtx *tmp = CRYPT_EAL_MdDupCtx(mdCtx);
     if (tmp == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
