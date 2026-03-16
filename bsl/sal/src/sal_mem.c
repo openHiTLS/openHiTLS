@@ -14,6 +14,7 @@
  */
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include "hitls_build.h"
 #include "bsl_log_internal.h"

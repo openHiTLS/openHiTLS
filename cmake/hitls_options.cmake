@@ -411,6 +411,8 @@ option(HITLS_CRYPTO_MLKEM_ARMV8                                "MLKEM ARMv8" OFF
 ## FRODOKEM
 option(HITLS_CRYPTO_FRODOKEM_ASM                               "FrodoKEM ASM" OFF)
 option(HITLS_CRYPTO_FRODOKEM_ARMV8                             "FrodoKEM ARMv8" OFF)
+## MLDSA
+option(HITLS_CRYPTO_MLDSA_ARMV8                                "MLDSA ARMv8" OFF)
 
 # --- PKI Features ---
 ## X509

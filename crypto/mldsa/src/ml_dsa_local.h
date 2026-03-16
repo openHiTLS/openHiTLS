@@ -37,6 +37,7 @@
 #define GAMMA_BITS_OF_MLDSA_44 18
 #define GAMMA_BITS_OF_MLDSA_65_87 20
 #define K_VALUE_OF_MLDSA_44 4
+#define K_VALUE_OF_MLDSA_65 6
 
 #define MLDSA_Q    8380417
 #define MLDSA_QINV    58728449  // MLDSA_Q^(-1) mod 2^32
@@ -97,6 +98,32 @@ struct CryptMlDsaCtx {
 
 void MLDSA_ComputesNTT(int32_t w[MLDSA_N]);
 void MLDSA_ComputesINVNTT(int32_t w[MLDSA_N]);
+
+void MLDSA_VectorsMul(int32_t *t, const int32_t *matrix, const int32_t *s);
+void MLDSA_MatrixMul(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t, 
+    int32_t *const matrix[MLDSA_L_MAX], int32_t *const s[MLDSA_L_MAX]);
+void MLDSA_UseHint(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const h[MLDSA_K_MAX], int32_t *w[MLDSA_K_MAX]);
+void MLDSA_Decompose(const CRYPT_ML_DSA_Ctx *ctx, int32_t r, int32_t *r1, int32_t *r0);
+void MLDSA_Batch_Decompose(const CRYPT_ML_DSA_Ctx *ctx, int32_t a[MLDSA_N], int32_t r1[MLDSA_N]);
+int32_t MLDSA_RejNTTPoly(int32_t a[MLDSA_N], const uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN]);
+int32_t MLDSA_RejBoundedPolyEta2(int32_t *a, const uint8_t *s);
+int32_t MLDSA_RejBoundedPolyEta4(int32_t *a, const uint8_t *s);
+
+#ifdef HITLS_CRYPTO_MLDSA_X2
+int32_t MLDSA_RejNTTPolyPair(int32_t *a0, int32_t *a1,
+    const uint8_t *seed0, const uint8_t *seed1);
+int32_t MLDSA_RejBoundedPolyEta2Pair(int32_t *a0, int32_t *a1,
+    const uint8_t *s0, const uint8_t *s1);
+int32_t MLDSA_RejBoundedPolyEta4Pair(int32_t *a0, int32_t *a1,
+    const uint8_t *s0, const uint8_t *s1);
+#endif /* HITLS_CRYPTO_MLDSA_X2 */
+
+bool MLDSA_ValidityChecks(const int32_t *z, uint32_t t);
+void MLDSA_VectorsAdd(int32_t *t, int32_t *a, int32_t *b);
+void MLDSA_VectorsAddQ(int32_t *t, int32_t *a, int32_t *b);
+void MLDSA_VectorsSub(int32_t *t, int32_t *a, int32_t *b);
+void MLDSA_ComputesPower2Round(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t0[MLDSA_K_MAX], int32_t *t1[MLDSA_K_MAX]);
+void MLDSA_SignBitUnPack(const uint8_t *v, uint32_t w[MLDSA_N], uint32_t bits, uint32_t b);
 
 static inline int32_t MLDSA_PlantardMulReduce(int64_t a)
 {
