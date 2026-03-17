@@ -94,7 +94,7 @@ void SDV_CRYPTO_SLH_DSA_VERIFY_PREHASHED_KAT_TC001(int id, Hex *key, Hex *addran
                   CRYPT_SUCCESS);
     }
     int32_t prehash = 1;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_FLAG, (void *)&prehash, sizeof(prehash)),
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_MODE, (void *)&prehash, sizeof(prehash)),
               CRYPT_SUCCESS);
 
     CRYPT_EAL_PkeyPrv prv;

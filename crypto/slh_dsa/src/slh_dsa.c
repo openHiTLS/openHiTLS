@@ -804,7 +804,7 @@ int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t
             return SlhDsaSetAlgId(ctx, val, len);
         case CRYPT_CTRL_GET_PARAID:
             return SlhDsaGetParaId(ctx, val, len);
-        case CRYPT_CTRL_SET_PREHASH_FLAG:
+        case CRYPT_CTRL_SET_PREHASH_MODE:
             if (val == NULL || len != sizeof(int32_t)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
                 return CRYPT_INVALID_ARG;

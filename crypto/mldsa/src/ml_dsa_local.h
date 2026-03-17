@@ -86,7 +86,6 @@ struct CryptMlDsaCtx {
     uint8_t *ctxInfo;
     uint32_t ctxLen;
     bool isMuMsg;
-    bool needEncodeCtx;
     bool needPreHash;
     bool deterministicSignFlag;
     BSL_SAL_RefCount references;

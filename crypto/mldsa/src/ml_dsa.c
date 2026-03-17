@@ -61,7 +61,6 @@ CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_NewCtx(void)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    keyCtx->needEncodeCtx = true;
     keyCtx->isMuMsg = false;
     keyCtx->deterministicSignFlag = false;
     keyCtx->needPreHash = false;
@@ -121,7 +120,6 @@ CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_DupCtx(CRYPT_ML_DSA_Ctx *ctx)
     }
     newCtx->pubLen = ctx->pubLen;
     newCtx->prvLen = ctx->prvLen;
-    newCtx->needEncodeCtx = ctx->needEncodeCtx;
     newCtx->isMuMsg = ctx->isMuMsg;
     newCtx->deterministicSignFlag = ctx->deterministicSignFlag;
     newCtx->needPreHash = ctx->needPreHash;
@@ -242,16 +240,6 @@ static int32_t MLDSAGetPrvKeyFormat(const CRYPT_ML_DSA_Ctx *ctx, void *val, uint
     return CRYPT_SUCCESS;
 }
 
-static int32_t MlDSASetEncodeFlag(CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
-{
-    if (len != sizeof(int32_t) || val == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-    ctx->needEncodeCtx = (*(int32_t *)val != 0);
-    return CRYPT_SUCCESS;
-}
-
 static int32_t MlDSASetMsgFlag(CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
 {
     if (len != sizeof(int32_t) || val == NULL) {
@@ -272,7 +260,7 @@ static int32_t MlDSASetDeterministicSignFlag(CRYPT_ML_DSA_Ctx *ctx, void *val, u
     return CRYPT_SUCCESS;
 }
 
-static int32_t MlDSASetPreHashFlag(CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
+static int32_t MlDSASetPreHashMode(CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
 {
     if (len != sizeof(int32_t) || val == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
@@ -293,7 +281,6 @@ int32_t MLDSASetctxInfo(CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
         ctx->ctxLen = 0;
     }
     if (val == NULL && len == 0) {
-        ctx->needEncodeCtx = true;
         return CRYPT_SUCCESS;
     }
 
@@ -303,7 +290,6 @@ int32_t MLDSASetctxInfo(CRYPT_ML_DSA_Ctx *ctx, void *val, uint32_t len)
         return CRYPT_MEM_ALLOC_FAIL;
     }
     ctx->ctxLen = len;
-    ctx->needEncodeCtx = true;
     return CRYPT_SUCCESS;
 }
 
@@ -352,14 +338,12 @@ int32_t CRYPT_ML_DSA_Ctrl(CRYPT_ML_DSA_Ctx *ctx, int32_t opt, void *val, uint32_
             return MLDSAGetSecBits(ctx, val, len);
         case CRYPT_CTRL_SET_CTX_INFO:
             return MLDSASetctxInfo(ctx, val, len);
-        case CRYPT_CTRL_SET_MLDSA_ENCODE_FLAG:
-            return MlDSASetEncodeFlag(ctx, val, len);
         case CRYPT_CTRL_SET_MLDSA_MUMSG_FLAG:
             return MlDSASetMsgFlag(ctx, val, len);
         case CRYPT_CTRL_SET_DETERMINISTIC_FLAG:
             return MlDSASetDeterministicSignFlag(ctx, val, len);
-        case CRYPT_CTRL_SET_PREHASH_FLAG:
-            return MlDSASetPreHashFlag(ctx, val, len);
+        case CRYPT_CTRL_SET_PREHASH_MODE:
+            return MlDSASetPreHashMode(ctx, val, len);
         case CRYPT_CTRL_GET_PUBKEY_LEN:
             return MLDSAGetPubKeyLen(ctx, val, len);
         case CRYPT_CTRL_GET_PRVKEY_LEN:
@@ -795,7 +779,7 @@ static int32_t MLDSAEncodeInputData(CRYPT_ML_DSA_Ctx *ctx, int32_t hashId, const
     CRYPT_Data *msg)
 {
     int32_t ret;
-    if (ctx->isMuMsg || ctx->needEncodeCtx == false) {
+    if (ctx->isMuMsg) {
         msg->data = BSL_SAL_Dump(data, dataLen);
         RETURN_RET_IF(msg->data == NULL, CRYPT_MEM_ALLOC_FAIL);
         msg->len = dataLen;
