@@ -91,9 +91,9 @@ void SDV_CRYPTO_SLH_DSA_API_CTRL_TC001(void)
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_CTX_INFO, NULL, 0) == CRYPT_INVALID_ARG);
     uint8_t context[128] = {0};
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_CTX_INFO, context, sizeof(context)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_FLAG, NULL, 0) == CRYPT_INVALID_ARG);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_MODE, NULL, 0) == CRYPT_INVALID_ARG);
     int32_t preHash = 1;
-    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_FLAG, &preHash, sizeof(preHash)) ==
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_MODE, &preHash, sizeof(preHash)) ==
                 CRYPT_SUCCESS);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
@@ -341,7 +341,7 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC002(int id, Hex *key, Hex *addrand, Hex *msg,
                   CRYPT_SUCCESS);
     }
     int32_t prehash = 1;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_FLAG, (void *)&prehash, sizeof(prehash)),
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_PREHASH_MODE, (void *)&prehash, sizeof(prehash)),
               CRYPT_SUCCESS);
     CRYPT_EAL_PkeyPrv prv;
     (void)memset_s(&prv, sizeof(CRYPT_EAL_PkeyPrv), 0, sizeof(CRYPT_EAL_PkeyPrv));
