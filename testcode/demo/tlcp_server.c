@@ -111,8 +111,8 @@ int main(int32_t argc, char *argv[])
         printf("Parse subca failed.\n");
         goto EXIT;
     }
-    HITLS_CFG_AddCertToStore(config, rootCA, TLS_CERT_STORE_TYPE_DEFAULT, true);
-    HITLS_CFG_AddCertToStore(config, subCA, TLS_CERT_STORE_TYPE_DEFAULT, true);
+    HITLS_CFG_AddCertToStore(config, rootCA, false, true);
+    HITLS_CFG_AddCertToStore(config, subCA, false, true);
     // Load signature certificate
     HITLS_CERT_X509 *signCert = NULL;
     HITLS_CERT_X509 *signPkey = NULL;
@@ -146,8 +146,8 @@ int main(int32_t argc, char *argv[])
         printf("Parse encPkey failed.\n");
         goto EXIT;
     }
-    HITLS_CFG_SetTlcpCertificate(config, encCert, TLS_PARSE_FORMAT_ASN1, true);
-    HITLS_CFG_SetTlcpPrivateKey(config, encPkey, TLS_PARSE_FORMAT_ASN1, true);
+    HITLS_CFG_SetTlcpCertificate(config, encCert, false, true);
+    HITLS_CFG_SetTlcpPrivateKey(config, encPkey, false, true);
 
     /* Create a new openHiTLS ctx */
     ctx = HITLS_New(config);

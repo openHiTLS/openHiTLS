@@ -115,8 +115,8 @@ int main(int32_t argc, char *argv[])
         printf("Parse signPkey failed.\n");
         goto EXIT;
     }
-    HITLS_CFG_SetTlcpCertificate(config, signCert, TLS_PARSE_FORMAT_ASN1, false);
-    HITLS_CFG_SetTlcpPrivateKey(config, signPkey, TLS_PARSE_FORMAT_ASN1, false);
+    HITLS_CFG_SetTlcpCertificate(config, signCert, false, false);
+    HITLS_CFG_SetTlcpPrivateKey(config, signPkey, false, false);
 
     // Load encryption certificate
     HITLS_CERT_X509 *encCert = NULL;
@@ -133,8 +133,8 @@ int main(int32_t argc, char *argv[])
         printf("Parse encPkey failed.\n");
         goto EXIT;
     }
-    HITLS_CFG_SetTlcpCertificate(config, encCert, TLS_PARSE_FORMAT_ASN1, true);
-    HITLS_CFG_SetTlcpPrivateKey(config, encPkey, TLS_PARSE_FORMAT_ASN1, true);
+    HITLS_CFG_SetTlcpCertificate(config, encCert, false, true);
+    HITLS_CFG_SetTlcpPrivateKey(config, encPkey, false, true);
 
     /* Create a new openHiTLS ctx */
     ctx = HITLS_New(config);
