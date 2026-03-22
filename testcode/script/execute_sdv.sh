@@ -292,6 +292,7 @@ parse_option()
             "help")
                 printf "Note: Before Run <sh ${BASH_SOURCE[0]}>, Please Fisrt Run <sh build_hitls.sh && sh build_sdv.sh>"
                 printf "%-50s %-30s\n" "Run All Testsuites Of The Output"     "sh ${BASH_SOURCE[0]}"
+                printf "%-50s %-30s\n" "Run Only Demos"                       "bash ${BASH_SOURCE[0]} demos"
                 printf "%-50s %-30s\n" "Run The Specified Testsuite"          "sh ${BASH_SOURCE[0]} test_suites_xxx test_suites_xxx"
                 printf "%-50s %-30s\n" "Run The Specified Testcase"           "sh ${BASH_SOURCE[0]} UT_CRYPTO_xxx SDV_CRYPTO_xxx"
                 printf "%-50s %-30s\n" "Set Thread Pool Size"                 "sh ${BASH_SOURCE[0]} threads=N"
@@ -321,101 +322,7 @@ parse_option()
 
 run_demos()
 {
-    pushd ${HITLS_ROOT_DIR}/testcode/demo/build
-    executales=$(find ./ -maxdepth 1 -type f -perm -a=x )
-    for e in $executales
-    do
-        if [[ "$e" == *"client"* ]] || [[ "$e" == *"server"* ]] || \
-           [[ "$e" == *"es_raw_dump"* ]] || [[ "$e" == *"entropy_dump"* ]]; then
-            continue
-        fi
-        echo "${e} start"
-        eval "${e}"
-        if [ $? -ne 0 ]; then
-            echo "Demo ${e} failed"
-            exit 1
-        fi
-    done
-
-    # The entropy assessment tools require arguments; run each with a minimal
-    # workload so the smoke test still exercises real output.
-    # Both tools drive the built-in noise sources directly; a build that carries
-    # none of them leaves the entropy source to a caller-registered source.
-    builtin_ns=""
-    if grep -qx -- '-DHITLS_CRYPTO_ENTROPY_NS_CPUJITTER' "${HITLS_ROOT_DIR}/build/macros.txt"; then
-        builtin_ns="jitter"
-    fi
-    if grep -qx -- '-DHITLS_CRYPTO_ENTROPY_NS_HASHLOOP' "${HITLS_ROOT_DIR}/build/macros.txt"; then
-        builtin_ns="${builtin_ns} hashloop"
-    fi
-    if [ -x ./es_raw_dump ] && [ -n "${builtin_ns}" ]; then
-        for smoke_ns in ${builtin_ns}; do
-            echo "./es_raw_dump ${smoke_ns} start"
-            smoke_raw=$(mktemp /tmp/es_raw_dump_smoke.XXXXXX)
-            ./es_raw_dump "${smoke_ns}" seq "${smoke_raw}" 1000 lsb8
-            smoke_rc=$?
-            rm -f "${smoke_raw}" "${smoke_raw}.u64"
-            if [ ${smoke_rc} -ne 0 ]; then
-                echo "Demo ./es_raw_dump ${smoke_ns} failed"
-                exit 1
-            fi
-        done
-    fi
-    if [ -x ./entropy_dump ] && [ -n "${builtin_ns}" ]; then
-        # The default conditioner follows the build: sm3_df under GM_CF,
-        # sha3_256_df otherwise.
-        smoke_df="sha3_256_df"
-        if grep -qx -- '-DHITLS_CRYPTO_ENTROPY_GM_CF' "${HITLS_ROOT_DIR}/build/macros.txt"; then
-            smoke_df="sm3_df"
-        fi
-        echo "./entropy_dump start"
-        smoke_ent=$(mktemp /tmp/entropy_dump_smoke.XXXXXX)
-        ./entropy_dump "${smoke_ent}" 1 "${smoke_df}" drbg
-        smoke_rc=$?
-        rm -f "${smoke_ent}"
-        if [ ${smoke_rc} -ne 0 ]; then
-            echo "Demo ./entropy_dump failed"
-            exit 1
-        fi
-    fi
-
-    # run server and client in order.
-    ./server &
-    server_pid=$!
-    sleep 1
-    ./client
-    client_rc=$?
-    if [ $client_rc -ne 0 ]; then
-        echo "Demo client failed"
-        exit 1
-    fi
-    # wait server to exit and get exit code
-    wait $server_pid
-    server_rc=$?
-    if [ $server_rc -ne 0 ]; then
-        echo "Demo server failed"
-        exit 1
-    fi
-
-    # run tlcp server and client in order.
-    ./tlcp_server &
-    tlcp_server_pid=$!
-    sleep 1
-    ./tlcp_client
-    tlcp_client_rc=$?
-    echo "tlcp_client_rc: $tlcp_client_rc"
-    if [ $tlcp_client_rc -ne 0 ]; then
-        echo "Demo tlcp client failed"
-        exit 1
-    fi
-    wait $tlcp_server_pid
-    tlcp_server_rc=$?
-    echo "tlcp_server_rc: $tlcp_server_rc"
-    if [ $tlcp_server_rc -ne 0 ]; then
-        echo "Demo tlcp server failed"
-        exit 1
-    fi
-    popd
+    bash "${SCRIPT_DIR}/execute_demos.sh" || exit 1
 }
 
 clean()
@@ -426,6 +333,10 @@ clean()
     rm -rf ${HITLS_ROOT_DIR}/testcode/output/asan*
 }
 
+if [[ $# -eq 1 && $1 == "demos" ]]; then
+    run_demos
+    exit 0
+fi
 clean
 parse_option
 if [ ${need_run_all} -eq 1 ]; then

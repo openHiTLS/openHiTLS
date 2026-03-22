@@ -1,0 +1,85 @@
+/*
+ * This file is part of the openHiTLS project.
+ *
+ * openHiTLS is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *     http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include "crypt_eal_pkey.h" // Header file for signature verification.
+#include "bsl_sal.h"
+#include "bsl_err.h"
+#include "crypt_algid.h"
+#include "crypt_errno.h"
+#include "crypt_eal_rand.h"
+#include "crypt_eal_init.h"
+
+
+int main(void)
+{
+    int ret = -1;
+    uint8_t userId[32] = {0};
+    uint8_t msg[32] = {0};
+    uint8_t signBuf[100] = {0};
+    uint32_t signLen = sizeof(signBuf);
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+
+    ret = CRYPT_EAL_Init(CRYPT_EAL_INIT_ALL);
+    if (ret != CRYPT_SUCCESS) {
+        printf("CRYPT_EAL_Init failed: 0x%x\n", ret);
+        goto EXIT;
+    }
+
+    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_SM2, CRYPT_EAL_PKEY_SIGN_OPERATE, NULL);
+    if (ctx == NULL) {
+        printf("CRYPT_EAL_ProviderPkeyNewCtx failed.\n");
+        goto EXIT;
+    }
+
+    /* SM2 mixes the user ID into ZA, so sign/verify must use the same value. */
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_SM2_USER_ID, userId, sizeof(userId));
+    if (ret != CRYPT_SUCCESS) {
+        printf("error code is %x\n", ret);
+        goto EXIT;
+    }
+
+    /* Generate one key pair and immediately verify the signature with the same context. */
+    ret = CRYPT_EAL_PkeyGen(ctx);
+    if (ret != CRYPT_SUCCESS) {
+        printf("error code is %x\n", ret);
+        goto EXIT;
+    }
+
+    // Sign.
+    ret = CRYPT_EAL_PkeySign(ctx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, &signLen);
+    if (ret != CRYPT_SUCCESS) {
+        printf("error code is %x\n", ret);
+        goto EXIT;
+    }
+
+    // Verify the signature.
+    ret = CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg, sizeof(msg), signBuf, signLen);
+    if (ret != CRYPT_SUCCESS) {
+        printf("error code is %x\n", ret);
+        goto EXIT;
+    }
+
+    printf("pass\n");
+    ret = 0;
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_ALL);
+    return ret;
+}

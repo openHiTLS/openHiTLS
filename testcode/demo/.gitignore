@@ -1,0 +1,16 @@
+# Demo build output
+/build/
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/Makefile
+
+# Common temporary artifacts
+/*.o
+/*.obj
+/*.out
+/*.exe
+
+# Compiled demo binaries
+/example_*
+!/example_*.c
