@@ -868,34 +868,32 @@ static void ComputesZ(const CRYPT_ML_DSA_Ctx *ctx, int32_t *y[MLDSA_L_MAX], cons
 static bool ValidityChecks(const int32_t *z, uint32_t t)
 {
     uint32_t n;
+    uint32_t result = 0;
     for (uint32_t j = 0; j < MLDSA_N; j++) {
         n = z[j] >> 31;    // Shift rightwards by 31 bits.
         n = z[j] - (n & ((uint32_t)z[j] << 1));
-        if (n >= t) {
-            return false;
-        }
+        // If |z[j]| >= t, (t - 1 - n) is negative and its highest bit (sign bit) is 1.
+        result |= ((t - 1 - n) >> 31) & 1;
     }
-    return true;
+    return (result == 0);
 }
 
 static bool ValidityChecksL(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const z[MLDSA_L_MAX], uint32_t t)
 {
+    bool valid = true;
     for (uint8_t i = 0; i < ctx->info->l; i++) {
-        if (ValidityChecks(z[i], t) == false) {
-            return false;
-        }
+        valid &= ValidityChecks(z[i], t);
     }
-    return true;
+    return valid;
 }
 
 static bool ValidityChecksK(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const z[MLDSA_K_MAX], uint32_t t)
 {
+    bool valid = true;
     for (uint8_t i = 0; i < ctx->info->k; i++) {
-        if (ValidityChecks(z[i], t) == false) {
-            return false;
-        }
+        valid &= ValidityChecks(z[i], t);
     }
-    return true;
+    return valid;
 }
 
 static void ComputesR(const CRYPT_ML_DSA_Ctx *ctx, const int32_t *c, MLDSA_SignMatrixSt *st)
@@ -919,17 +917,34 @@ static void ComputesCT(const CRYPT_ML_DSA_Ctx *ctx, const int32_t *c,
 static uint32_t MakeHint(const CRYPT_ML_DSA_Ctx *ctx, MLDSA_SignMatrixSt *st)
 {
     uint32_t num = 0;
+    int32_t g = (int32_t)ctx->info->gamma2;
     for (uint32_t i = 0; i < ctx->info->k; i++) {
-        MLDSA_VectorsAdd(st->w[i], st->w[i], st->ct0[i]);
-        MLDSA_VectorsSub(st->w[i], st->w[i], st->cs2[i]);
         for (uint32_t j = 0; j < MLDSA_N; j++) {
-            if (st->w[i][j] > (int32_t)ctx->info->gamma2 || st->w[i][j] < (0 - (int32_t)ctx->info->gamma2) ||
-                (st->w[i][j] == (0 - (int32_t)ctx->info->gamma2) && st->w1[i][j] != 0)) {
-                st->h[i][j] = 1;
-                num++;
-            } else {
-                st->h[i][j] = 0;
-            }
+            // In signing, st->w is actually w0 (LowBits of w), not the full w.
+            // FIPS-204 MakeHint requires checking if HighBits(w - cs2 + ct0) != HighBits(w - cs2).
+            // Since we previously enforced ||w0 - cs2|| < gamma2 - beta, we are guaranteed 
+            // that HighBits(w - cs2) == w1.
+            // Therefore, we only need to check if the accumulated low bits (v = w0 - cs2 + ct0) 
+            // crosses the bucket boundary [-gamma2, gamma2].
+            int32_t v = st->w[i][j] + st->ct0[i][j] - st->cs2[i][j];
+            MLDSA_MOD_Q(v);
+
+            uint32_t x = (uint32_t)(v + g);  // x = v + gamma2
+            // check if v > gamma2
+            uint32_t c1 = ((uint32_t)(g - v) >> 31) & 1;
+            // check if v < -gamma2
+            uint32_t c2 = (x >> 31) & 1;
+            // check if v == -gamma2 (i.e. x == 0)
+            uint32_t isZero = ((x | (0 - x)) >> 31) ^ 1;
+            
+            // For special negative boundary case (-gamma2), it overflows only if w1 != 0
+            uint32_t y = (uint32_t)st->w1[i][j];
+            uint32_t isNonZero = ((y | (0 - y)) >> 31) & 1;
+
+            // bit is 1 (overflow occurred) if v > gamma2 OR v < -gamma2 OR (v == -gamma2 AND w1 != 0)
+            uint32_t bit = c1 | c2 | (isZero & isNonZero);
+            st->h[i][j] = (int32_t)bit;
+            num += bit;
         }
     }
     return num;
