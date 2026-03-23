@@ -166,15 +166,9 @@ void SAL_CERT_MgrCtxFree(CERT_MgrCtx *mgrCtx)
     }
     SAL_CERT_ClearCertAndKey(mgrCtx);
     SAL_CERT_ChainFree(mgrCtx->extraChain);
-    mgrCtx->extraChain = NULL;
     SAL_CERT_StoreFree(mgrCtx, mgrCtx->verifyStore);
-    mgrCtx->verifyStore = NULL;
     SAL_CERT_StoreFree(mgrCtx, mgrCtx->chainStore);
-    mgrCtx->chainStore = NULL;
     SAL_CERT_StoreFree(mgrCtx, mgrCtx->certStore);
-    mgrCtx->certStore = NULL;
     BSL_HASH_Destroy(mgrCtx->certPairs);
-    mgrCtx->certPairs = NULL;
-    BSL_SAL_FREE(mgrCtx);
-    return;
+    BSL_SAL_Free(mgrCtx);
 }

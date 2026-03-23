@@ -65,12 +65,13 @@ int32_t RecBufResize(RecBuf *recBuf, uint32_t size)
 
 void RecBufFree(RecBuf *buf)
 {
-    if (buf != NULL) {
-        if (buf->isHoldBuffer) {
-            BSL_SAL_FREE(buf->buf);
-        }
-        BSL_SAL_FREE(buf);
+    if (buf == NULL) {
+        return;
     }
+    if (buf->isHoldBuffer) {
+        BSL_SAL_Free(buf->buf);
+    }
+    BSL_SAL_Free(buf);
 }
 
 void RecBufClean(RecBuf *buf)

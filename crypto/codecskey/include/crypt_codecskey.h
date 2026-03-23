@@ -73,9 +73,9 @@ int32_t CRYPT_EAL_EncodeRsaPssAlgParam(const CRYPT_RSA_PssPara *rsaPssParam, uin
 #endif // HITLS_CRYPTO_KEY_ENCODE
 
 #if defined(HITLS_CRYPTO_RSA) && (defined(HITLS_CRYPTO_KEY_ENCODE) || defined(HITLS_CRYPTO_KEY_INFO))
-int32_t CRYPT_EAL_InitRsaPrv(const CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_PKEY_AlgId cid, CRYPT_EAL_PkeyPrv *rsaPrv);
+int32_t CRYPT_EAL_InitRsaPrv(const CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_EAL_PkeyPrv *rsaPrv);
 void CRYPT_EAL_DeinitRsaPrv(CRYPT_EAL_PkeyPrv *rsaPrv);
-int32_t CRYPT_EAL_GetRsaPssPara(CRYPT_EAL_PkeyCtx *key, CRYPT_RSA_PssPara *para);
+int32_t CRYPT_EAL_GetRsaPssPara(CRYPT_EAL_PkeyCtx *key, CRYPT_RSA_PssPara *para, int32_t *padType);
 #endif
 
 #ifdef HITLS_PKI_CMS_ENCRYPTDATA

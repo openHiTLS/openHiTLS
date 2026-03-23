@@ -26,6 +26,7 @@
 #include "crypt_utils.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_errno.h"
+#include "crypt_codecskey_local.h"
 #include "crypt_codecskey.h"
 
 #define CRYPT_UNKOWN_STRING "Unknown\n"
@@ -50,84 +51,30 @@ static int32_t PrintKeyBits(bool isEcc, bool isPrv, uint32_t layer, CRYPT_EAL_Pk
 }
 
 #if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2)
-static int32_t GetEccPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *pub)
-{
-    uint32_t keyLen = CRYPT_EAL_PkeyGetKeyLen(pkey);
-    if (keyLen == 0) {
-        return CRYPT_DECODE_PRINT_NO_KEY;
-    }
-    uint8_t *buff = (uint8_t *)BSL_SAL_Malloc(keyLen);
-    if (buff == NULL) {
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    pub->id = CRYPT_EAL_PkeyGetId(pkey);
-    pub->key.eccPub.data = buff;
-    pub->key.eccPub.len = keyLen;
-    int32_t ret = CRYPT_EAL_PkeyGetPub(pkey, pub);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_Free(buff);
-        pub->key.eccPub.data = NULL;
-    }
-    return ret;
-}
-
 static int32_t PrintEccPubkey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio)
 {
     RETURN_RET_IF(PrintKeyBits(true, false, layer, pkey, uio) != 0, CRYPT_DECODE_PRINT_KEYBITS);
 
     /* pub key */
     CRYPT_EAL_PkeyPub pub = {0};
-    int32_t ret = GetEccPub(pkey, &pub);
+    int32_t ret = GetCommonPubKey(pkey, &pub);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
     (void)BSL_PRINT_Fmt(layer, uio, "Pub:\n");
-    ret = BSL_PRINT_Hex(layer + 1, false, pub.key.eccPub.data, pub.key.eccPub.len, uio);
+    (void)BSL_PRINT_Hex(layer + 1, false, pub.key.eccPub.data, pub.key.eccPub.len, uio);
     BSL_SAL_Free(pub.key.eccPub.data);
-    if (ret != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_ECC_PUB);
-        return CRYPT_DECODE_PRINT_ECC_PUB;
-    }
 
     /* ASN1 OID */
     CRYPT_PKEY_ParaId paraId =
         CRYPT_EAL_PkeyGetId(pkey) == CRYPT_PKEY_SM2 ? CRYPT_ECC_SM2 : CRYPT_EAL_PkeyGetParaId(pkey);
     const char *name = BSL_OBJ_GetOidNameFromCID((BslCid)paraId);
-    if (BSL_PRINT_Fmt(layer, uio, "ANS1 OID: %s\n", name == NULL ? CRYPT_UNKOWN_STRING : name) != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_ECC_OID);
-        return CRYPT_DECODE_PRINT_ECC_OID;
-    }
+    (void)BSL_PRINT_Fmt(layer, uio, "ANS1 OID: %s\n", name == NULL ? CRYPT_UNKOWN_STRING : name);
     return CRYPT_SUCCESS;
 }
 #endif // HITLS_CRYPTO_ECDSA || HITLS_CRYPTO_SM2
 
 #ifdef HITLS_CRYPTO_RSA
-static int32_t GetRsaPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *pub)
-{
-    uint32_t keyLen = CRYPT_EAL_PkeyGetKeyLen(pkey);
-    if (keyLen == 0) {
-        return CRYPT_DECODE_PRINT_NO_KEY;
-    }
-    uint8_t *buff = (uint8_t *)BSL_SAL_Malloc(keyLen * 2);  // 2: n + e
-    if (buff == NULL) {
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    pub->id = CRYPT_PKEY_RSA;
-    pub->key.rsaPub.n = buff;
-    pub->key.rsaPub.e = buff + keyLen;
-    pub->key.rsaPub.nLen = keyLen;
-    pub->key.rsaPub.eLen = keyLen;
-    int32_t ret = CRYPT_EAL_PkeyGetPub(pkey, pub);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_Free(buff);
-        pub->key.rsaPub.n = NULL;
-        pub->key.rsaPub.e = NULL;
-    }
-    return ret;
-}
-
 int32_t CRYPT_EAL_PrintRsaPssPara(uint32_t layer, CRYPT_RSA_PssPara *para, BSL_UIO *uio)
 {
     if (para == NULL || uio == NULL) {
@@ -135,18 +82,14 @@ int32_t CRYPT_EAL_PrintRsaPssPara(uint32_t layer, CRYPT_RSA_PssPara *para, BSL_U
     }
     /* hash */
     const char *name = BSL_OBJ_GetOidNameFromCID((BslCid)para->mdId);
-    RETURN_RET_IF(BSL_PRINT_Fmt(layer, uio, "Hash Algorithm: %s%s\n",
-        name == NULL ? CRYPT_UNKOWN_STRING : name, para->mdId == CRYPT_MD_SHA1 ? " (default)" : "") != BSL_SUCCESS,
-        CRYPT_DECODE_PRINT_RSAPSS_PARA);
+    (void)BSL_PRINT_Fmt(layer, uio, "Hash Algorithm: %s%s\n",
+        name == NULL ? CRYPT_UNKOWN_STRING : name, para->mdId == CRYPT_MD_SHA1 ? " (default)" : "");
     /* mgf */
     name = BSL_OBJ_GetOidNameFromCID((BslCid)para->mgfId);
-    RETURN_RET_IF(BSL_PRINT_Fmt(layer, uio, "Mask Algorithm: %s%s\n",
-        name == NULL ? CRYPT_UNKOWN_STRING : name, para->mgfId == CRYPT_MD_SHA1 ? " (default)" : "") != BSL_SUCCESS,
-        CRYPT_DECODE_PRINT_RSAPSS_PARA);
+    (void)BSL_PRINT_Fmt(layer, uio, "Mask Algorithm: %s%s\n",
+        name == NULL ? CRYPT_UNKOWN_STRING : name, para->mgfId == CRYPT_MD_SHA1 ? " (default)" : "");
     /* saltLen */
-    RETURN_RET_IF(BSL_PRINT_Fmt(layer, uio, "Salt Length: 0x%x%s\n",
-        para->saltLen, para->saltLen == 20 ? " (default)" : "") != 0,
-        CRYPT_DECODE_PRINT_RSAPSS_PARA);
+    (void)BSL_PRINT_Fmt(layer, uio, "Salt Length: 0x%x%s\n", para->saltLen, para->saltLen == 20 ? " (default)" : "");
     /* trailer is not supported */
     return CRYPT_SUCCESS;
 }
@@ -154,7 +97,8 @@ int32_t CRYPT_EAL_PrintRsaPssPara(uint32_t layer, CRYPT_RSA_PssPara *para, BSL_U
 static int32_t PrintRsaPssPara(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *uio)
 {
     int32_t padType = 0;
-    int32_t ret = CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_RSA_PADDING, &padType, sizeof(padType));
+    CRYPT_RSA_PssPara para;
+    int32_t ret = CRYPT_EAL_GetRsaPssPara(pkey, &para, &padType);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -162,20 +106,11 @@ static int32_t PrintRsaPssPara(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO 
     if (padType != CRYPT_EMSA_PSS) {
         return CRYPT_SUCCESS;
     }
-
-    CRYPT_RSA_PssPara para = {0};
-    ret = CRYPT_EAL_GetRsaPssPara(pkey, &para);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
     if (para.saltLen <= 0 && para.mdId == 0 && para.mgfId == 0) {
         return BSL_PRINT_Fmt(layer, uio, "No PSS parameter restrictions\n");
     }
 
-    RETURN_RET_IF(BSL_PRINT_Fmt(layer, uio, "PSS parameter restrictions:\n") != 0,
-        CRYPT_DECODE_PRINT_RSAPSS_PARA);
-
+    (void)BSL_PRINT_Fmt(layer, uio, "PSS parameter restrictions:\n");
     return CRYPT_EAL_PrintRsaPssPara(layer + 1, &para, uio);
 }
 
@@ -184,23 +119,15 @@ static int32_t PrintRsaPubkey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *
     RETURN_RET_IF(PrintKeyBits(false, false, layer, pkey, uio) != 0, CRYPT_DECODE_PRINT_KEYBITS);
 
     /* pub key */
-    CRYPT_EAL_PkeyPub pub = {0};
-    int32_t ret = GetRsaPub(pkey, &pub);
+    CRYPT_EAL_PkeyPub pub;
+    int32_t ret = GetRsaPubKey(pkey, &pub);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
     (void)BSL_PRINT_Fmt(layer, uio, "Modulus:\n");
-    if (BSL_PRINT_Hex(layer + 1, false, pub.key.rsaPub.n, pub.key.rsaPub.nLen, uio) != 0) {
-        BSL_SAL_Free(pub.key.rsaPub.n);
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_MODULUS);
-        return CRYPT_DECODE_PRINT_MODULUS;
-    }
-    ret = BSL_PRINT_Number(layer, "Exponent", pub.key.rsaPub.e, pub.key.rsaPub.eLen, uio);
+    (void)BSL_PRINT_Hex(layer + 1, false, pub.key.rsaPub.n, pub.key.rsaPub.nLen, uio);
+    (void)BSL_PRINT_Number(layer, "Exponent", pub.key.rsaPub.e, pub.key.rsaPub.eLen, uio);
     BSL_SAL_Free(pub.key.rsaPub.n);
-    if (ret != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_EXPONENT);
-        return CRYPT_DECODE_PRINT_EXPONENT;
-    }
 
     return PrintRsaPssPara(layer, pkey, uio);
 }
@@ -235,7 +162,7 @@ static int32_t PrintRsaPrikey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *
 
     /* pri key */
     CRYPT_EAL_PkeyPrv pri = {0};
-    int32_t ret = CRYPT_EAL_InitRsaPrv(pkey, CRYPT_PKEY_RSA, &pri);
+    int32_t ret = CRYPT_EAL_InitRsaPrv(pkey, &pri);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -244,8 +171,8 @@ static int32_t PrintRsaPrikey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *
         CRYPT_EAL_DeinitRsaPrv(&pri);
         return ret;
     }
-    if (BSL_PRINT_Fmt(layer, uio, "Modulus:\n") != 0 ||
-        BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.n, pri.key.rsaPrv.nLen, uio) != 0) {
+    (void)BSL_PRINT_Fmt(layer, uio, "Modulus:\n");
+    if (BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.n, pri.key.rsaPrv.nLen, uio) != 0) {
         CRYPT_EAL_DeinitRsaPrv(&pri);
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_MODULUS);
         return CRYPT_DECODE_PRINT_MODULUS;
@@ -255,38 +182,38 @@ static int32_t PrintRsaPrikey(uint32_t layer, CRYPT_EAL_PkeyCtx *pkey, BSL_UIO *
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_EXPONENT);
         return CRYPT_DECODE_PRINT_EXPONENT;
     }
-    if (BSL_PRINT_Fmt(layer, uio, "PrivateExponent:\n") != 0 ||
-        BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.d, pri.key.rsaPrv.dLen, uio) != 0) {
+    (void)BSL_PRINT_Fmt(layer, uio, "PrivateExponent:\n");
+    if (BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.d, pri.key.rsaPrv.dLen, uio) != 0) {
         CRYPT_EAL_DeinitRsaPrv(&pri);
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_MODULUS);
         return CRYPT_DECODE_PRINT_MODULUS;
     }
-    if (BSL_PRINT_Fmt(layer, uio, "Prime1:\n") != 0 ||
-        BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.p, pri.key.rsaPrv.pLen, uio) != 0) {
+    (void)BSL_PRINT_Fmt(layer, uio, "Prime1:\n");
+    if (BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.p, pri.key.rsaPrv.pLen, uio) != 0) {
         CRYPT_EAL_DeinitRsaPrv(&pri);
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_MODULUS);
         return CRYPT_DECODE_PRINT_MODULUS;
     }
-    if (BSL_PRINT_Fmt(layer, uio, "Prime2:\n") != 0 ||
-        BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.q, pri.key.rsaPrv.qLen, uio) != 0) {
+    (void)BSL_PRINT_Fmt(layer, uio, "Prime2:\n");
+    if (BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.q, pri.key.rsaPrv.qLen, uio) != 0) {
         CRYPT_EAL_DeinitRsaPrv(&pri);
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_MODULUS);
         return CRYPT_DECODE_PRINT_MODULUS;
     }
-    if (BSL_PRINT_Fmt(layer, uio, "Exponent1:\n") != 0 ||
-        BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.dP, pri.key.rsaPrv.dPLen, uio) != 0) {
+    (void)BSL_PRINT_Fmt(layer, uio, "Exponent1:\n");
+    if (BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.dP, pri.key.rsaPrv.dPLen, uio) != 0) {
         CRYPT_EAL_DeinitRsaPrv(&pri);
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_MODULUS);
         return CRYPT_DECODE_PRINT_MODULUS;
     }
-    if (BSL_PRINT_Fmt(layer, uio, "Exponent2:\n") != 0 ||
-        BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.dQ, pri.key.rsaPrv.dQLen, uio) != 0) {
+    (void)BSL_PRINT_Fmt(layer, uio, "Exponent2:\n");
+    if (BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.dQ, pri.key.rsaPrv.dQLen, uio) != 0) {
         CRYPT_EAL_DeinitRsaPrv(&pri);
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_MODULUS);
         return CRYPT_DECODE_PRINT_MODULUS;
     }
-    if (BSL_PRINT_Fmt(layer, uio, "Coefficient:\n") != 0 ||
-        BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.qInv, pri.key.rsaPrv.qInvLen, uio) != 0) {
+    (void)BSL_PRINT_Fmt(layer, uio, "Coefficient:\n");
+    if (BSL_PRINT_Hex(layer + 1, false, pri.key.rsaPrv.qInv, pri.key.rsaPrv.qInvLen, uio) != 0) {
         CRYPT_EAL_DeinitRsaPrv(&pri);
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_PRINT_MODULUS);
         return CRYPT_DECODE_PRINT_MODULUS;

@@ -240,12 +240,14 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 #endif
 }
 
-static int32_t DeepCopy(void** destConfig, const void* srcConfig, uint32_t logId, uint32_t len)
+static int32_t DeepCopy(void **destConfig, const void *srcConfig, uint32_t logId, uint32_t len)
 {
 #ifndef HITLS_BSL_LOG
     (void)logId;
 #endif
-    BSL_SAL_FREE(*destConfig);
+    if (*destConfig != NULL) {
+        BSL_SAL_Free(*destConfig);
+    }
     *destConfig = BSL_SAL_Dump(srcConfig, len);
     if (*destConfig == NULL) {
         BSL_LOG_BINLOG_FIXLEN(logId, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Dump fail", 0, 0, 0, 0);
@@ -312,7 +314,9 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
 static int32_t PskCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *srcConfig)
 {
     if (srcConfig->pskIdentityHint != NULL) {
-        BSL_SAL_FREE(destConfig->pskIdentityHint);
+        if (destConfig->pskIdentityHint != NULL) {
+            BSL_SAL_Free(destConfig->pskIdentityHint);
+        }
         destConfig->pskIdentityHint = BSL_SAL_Dump(srcConfig->pskIdentityHint, srcConfig->hintSize * sizeof(uint8_t));
         if (destConfig->pskIdentityHint == NULL) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16586, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Dump fail", 0, 0, 0, 0);
@@ -601,7 +605,7 @@ HITLS_Config *CreateConfig(void)
     if (BSL_SAL_ReferencesInit(&(newConfig->references)) != BSL_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16595, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "ReferencesInit fail", 0, 0, 0, 0);
-        BSL_SAL_FREE(newConfig);
+        BSL_SAL_Free(newConfig);
         return NULL;
     }
     return newConfig;
@@ -624,7 +628,7 @@ void HITLS_CFG_FreeConfig(HITLS_Config *config)
         config->userData = NULL;
     }
 #endif
-    BSL_SAL_FREE(config);
+    BSL_SAL_Free(config);
 }
 
 int32_t HITLS_CFG_UpRef(HITLS_Config *config)

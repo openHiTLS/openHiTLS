@@ -81,7 +81,6 @@ HITLS_CERT_Key *HITLS_X509_Adapt_ProviderKeyParse(HITLS_Config *config, const ui
     HITLS_Lib_Ctx *libCtx = LIBCTX_FROM_CONFIG(config);
     const char *attrName = ATTRIBUTE_FROM_CONFIG(config);
     int32_t ret = HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT;
-    BSL_Buffer encode = {0};
     HITLS_CERT_Key *ealPriKey = NULL;
     uint8_t pwd[MAX_PASS_LEN] = { 0 };
     BSL_Buffer pwdBuff = {pwd, sizeof(pwd)};
@@ -93,8 +92,7 @@ HITLS_CERT_Key *HITLS_X509_Adapt_ProviderKeyParse(HITLS_Config *config, const ui
     } else
 #endif
     if (type == TLS_PARSE_TYPE_BUFF) {
-        encode.data = (uint8_t *)(uintptr_t)buf;
-        encode.dataLen = len;
+        BSL_Buffer encode = {(uint8_t *)(uintptr_t)buf, len};
         ret = CRYPT_EAL_ProviderDecodeBuffKey(libCtx, attrName, BSL_CID_UNKNOWN, format, encodeType,
             &encode, &pwdBuff, (CRYPT_EAL_PkeyCtx **)&ealPriKey);
     }
@@ -113,7 +111,6 @@ HITLS_CERT_Key *HITLS_X509_Adapt_KeyParse(HITLS_Config *config, const uint8_t *b
 {
     (void)config;
     int32_t ret = HITLS_CERT_SELF_ADAPT_UNSUPPORT_FORMAT;
-    BSL_Buffer encode = {0};
     HITLS_CERT_Key *ealPriKey = NULL;
     uint8_t pwd[MAX_PASS_LEN] = { 0 };
     int32_t pwdLen = (int32_t)sizeof(pwd);
@@ -125,8 +122,7 @@ HITLS_CERT_Key *HITLS_X509_Adapt_KeyParse(HITLS_Config *config, const uint8_t *b
     } else
 #endif
     if (type == TLS_PARSE_TYPE_BUFF) {
-        encode.data = (uint8_t *)(uintptr_t)buf;
-        encode.dataLen = len;
+        BSL_Buffer encode = {(uint8_t *)(uintptr_t)buf, len};
         ret = CRYPT_EAL_DecodeBuffKey(format, CRYPT_ENCDEC_UNKNOW, &encode, pwd, pwdLen,
             (CRYPT_EAL_PkeyCtx **)&ealPriKey);
     }
@@ -139,16 +135,6 @@ HITLS_CERT_Key *HITLS_X509_Adapt_KeyParse(HITLS_Config *config, const uint8_t *b
     return ealPriKey;
 }
 #endif
-
-HITLS_CERT_Key *HITLS_X509_Adapt_KeyDup(HITLS_CERT_Key *key)
-{
-    return (HITLS_CERT_Key *)CRYPT_EAL_PkeyDupCtx(key);
-}
-
-void HITLS_X509_Adapt_KeyFree(HITLS_CERT_Key *key)
-{
-    CRYPT_EAL_PkeyFreeCtx(key);
-}
 
 static HITLS_NamedGroup GetCurveNameByKey(HITLS_Config *config, const CRYPT_EAL_PkeyCtx *key)
 {

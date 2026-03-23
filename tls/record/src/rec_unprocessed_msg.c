@@ -65,7 +65,7 @@ void UnprocessedAppMsgFree(UnprocessedAppMsg *msg)
 {
     if (msg != NULL) {
         BSL_SAL_FREE(msg->recordBody);
-        BSL_SAL_FREE(msg);
+        BSL_SAL_Free(msg);
     }
 }
 

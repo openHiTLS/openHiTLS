@@ -211,11 +211,8 @@ int32_t CheckPeerSignScheme(HITLS_Ctx *ctx, CERT_Pair *peerCert, uint16_t signSc
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17140, "get pubkey fail");
     }
     uint32_t keyType = TLS_CERT_KEY_TYPE_UNKNOWN;
-    ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
+    (void)SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
     SAL_CERT_KeyFree(config->certMgrCtx, pubkey);
-    if (ret != HITLS_SUCCESS) {
-        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17099, "get pubkey type fail");
-    }
 
     if (keyType != HS_SignScheme2CertKeyType(ctx, signScheme)) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_PARSE_UNSUPPORT_SIGN_ALG, BINLOG_ID17156, "signScheme err");

@@ -169,10 +169,9 @@ void SESSMGR_Free(TLS_SessionMgr *mgr)
 
         // Delete all sessions
         BSL_HASH_Destroy(mgr->hash);
-        mgr->hash = NULL;
 
         BSL_SAL_ThreadLockFree(mgr->lock);
-        BSL_SAL_FREE(mgr);
+        BSL_SAL_Free(mgr);
     }
 }
 

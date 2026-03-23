@@ -15,8 +15,14 @@
 #include "hitls_error.h"
 #include "tls.h"
 
-int32_t CovertRecordAlertToReturnValue(ALERT_Description description)
+int32_t RecordSendAlertMsg(TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description)
 {
+    /* RFC6347 4.1.2.7.  Handling Invalid Records:
+       We choose to discard invalid dtls record message and do not generate alerts. */
+    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
+        return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
+    }
+    ctx->method.sendAlert(ctx, level, description);
     switch (description) {
         case ALERT_PROTOCOL_VERSION:
             return HITLS_REC_INVALID_PROTOCOL_VERSION;
@@ -30,17 +36,5 @@ int32_t CovertRecordAlertToReturnValue(ALERT_Description description)
             return HITLS_REC_ERR_RECV_UNEXPECTED_MSG;
         default:
             return HITLS_REC_INVLAID_RECORD;
-    }
-}
-
-int32_t RecordSendAlertMsg(TLS_Ctx *ctx, ALERT_Level level, ALERT_Description description)
-{
-    /* RFC6347 4.1.2.7.  Handling Invalid Records:
-       We choose to discard invalid dtls record message and do not generate alerts. */
-    if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
-        return HITLS_REC_NORMAL_RECV_BUF_EMPTY;
-    } else {
-        ctx->method.sendAlert(ctx, level, description);
-        return CovertRecordAlertToReturnValue(description);
     }
 }

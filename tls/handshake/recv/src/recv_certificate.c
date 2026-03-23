@@ -199,7 +199,6 @@ static int32_t ServerCheckCert(TLS_Ctx *ctx, CERT_Pair *peerCert)
 #ifdef HITLS_TLS_CONFIG_KEY_USAGE
 static bool CheckCertKeyUsage(TLS_Ctx *ctx, CERT_Pair *peerCert)
 {
-    bool checkUsageRec = false;
     HITLS_CERT_X509 *cert = SAL_CERT_PAIR_GET_X509(peerCert);
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
         return SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE);
@@ -212,32 +211,16 @@ static bool CheckCertKeyUsage(TLS_Ctx *ctx, CERT_Pair *peerCert)
             case HITLS_KEY_EXCH_ECDHE:
             case HITLS_KEY_EXCH_ECDHE_PSK:
             case HITLS_KEY_EXCH_DHE_PSK:
-                checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE);
-                break;
+                return SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE);
             case HITLS_KEY_EXCH_RSA:
             case HITLS_KEY_EXCH_ECC:
             case HITLS_KEY_EXCH_RSA_PSK:
-                checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_KEYENC_USAGE);
-                break;
-            case HITLS_KEY_EXCH_ECDH:
-            case HITLS_KEY_EXCH_DH:
-                checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_KEY_AGREEMENT_USAGE);
-                break;
+                return SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_KEYENC_USAGE);
             default:
-                break;
-        }
-    } else {
-        switch (kxAlg) {
-            case HITLS_KEY_EXCH_ECDH:
-            case HITLS_KEY_EXCH_DH:
-                checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_KEY_AGREEMENT_USAGE);
-                break;
-            default:
-                checkUsageRec = SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE);
-                break;
+                return false;
         }
     }
-    return checkUsageRec;
+    return SAL_CERT_CheckCertKeyUsage(ctx, cert, CERT_KEY_CTRL_IS_DIGITAL_SIGN_USAGE);
 }
 #endif /* HITLS_TLS_CONFIG_KEY_USAGE */
 /**

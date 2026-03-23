@@ -91,8 +91,6 @@ int32_t SAL_NET_Recvfrom(int32_t sock, void *buf, size_t len, int32_t flags, voi
 
 #endif
 
-BSL_SAL_NetCallback SAL_GetNetCallBack(void);
-
 int32_t SAL_NetCallBack_Ctrl(BSL_SAL_CB_FUNC_TYPE type, void *funcCb);
 #ifdef __cplusplus
 }

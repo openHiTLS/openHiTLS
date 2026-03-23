@@ -1443,12 +1443,11 @@ int32_t X509_VerifyChainCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
         }
     }
     while (cur != NULL) {
-        if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_TIME) != 0) {
-            ret = HITLS_X509_CheckCertTime(storeCtx, cur, depth);
-            if (ret != HITLS_PKI_SUCCESS) {
-                return ret;
-            }
+        ret = HITLS_X509_CheckCertTime(storeCtx, cur, depth);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
         }
+
 #ifdef HITLS_CRYPTO_SM2
         ret = X509_StoreCheckSignature(&storeCtx->verifyParam.sm2UserId, issue->tbs.ealPubKey, cur->tbs.tbsRawData,
                                        cur->tbs.tbsRawDataLen, &cur->signAlgId, &cur->signature);

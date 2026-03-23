@@ -52,15 +52,13 @@ void RecConnStateFree(RecConnState *state)
     if (state->suiteInfo != NULL) {
 #ifdef HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES
         SAL_CRYPT_HmacFree(state->suiteInfo->macCtx);
-        state->suiteInfo->macCtx = NULL;
 #endif
         SAL_CRYPT_CipherFree(state->suiteInfo->ctx);
-        state->suiteInfo->ctx = NULL;
     }
     /* Clear sensitive information */
     BSL_SAL_CleanseData(state->suiteInfo, sizeof(RecConnSuitInfo));
     BSL_SAL_FREE(state->suiteInfo);
-    BSL_SAL_FREE(state);
+    BSL_SAL_Free(state);
 }
 
 uint64_t RecConnGetSeqNum(const RecConnState *state)

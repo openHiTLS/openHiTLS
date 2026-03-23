@@ -78,7 +78,7 @@ void VERIFY_Deinit(HS_Ctx *hsCtx)
         SAL_CRYPT_DigestFree(verifyCtx->hashCtx);
     }
     VERIFY_FreeMsgCache(verifyCtx);
-    BSL_SAL_FREE(verifyCtx);
+    BSL_SAL_Free(verifyCtx);
     hsCtx->verifyCtx = NULL;
     return;
 }

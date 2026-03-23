@@ -820,12 +820,7 @@ bool HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject)
         }
     }
 
-    ret = HITLS_X509_CheckAlg(issue->tbs.ealPubKey, &subject->tbs.signAlgId);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return false;
-    }
-
-    return true;
+    return HITLS_X509_CheckAlg(issue->tbs.ealPubKey, &subject->tbs.signAlgId) == HITLS_PKI_SUCCESS;
 }
 
 bool HITLS_X509_CertIsCA(HITLS_X509_Cert *cert)

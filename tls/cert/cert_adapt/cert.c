@@ -230,11 +230,8 @@ static int32_t CheckCertChainFromStore(HITLS_Config *config, HITLS_CERT_X509 *ce
     }
 
     int32_t secBits = 0;
-    ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_SECBITS, NULL, (void *)&secBits);
+    (void)SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_SECBITS, NULL, (void *)&secBits);
     SAL_CERT_KeyFree(mgrCtx, pubkey);
-    if (ret != HITLS_SUCCESS) {
-        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16319, "GET_SECBITS fail");
-    }
 
     ret = SECURITY_CfgCheck(config, HITLS_SECURITY_SECOP_CA_KEY, secBits, 0, cert);  // cert key
     if (ret != SECURITY_SUCCESS) {
@@ -257,17 +254,15 @@ static int32_t CheckCertChainFromStore(HITLS_Config *config, HITLS_CERT_X509 *ce
 }
 #endif
 
-static int32_t EncodeEECert(HITLS_Ctx *ctx, PackPacket *pkt, HITLS_CERT_X509 **cert)
+static int32_t EncodeEECert(HITLS_Ctx *ctx, PackPacket *pkt, CERT_Pair *currentCertPair, HITLS_CERT_X509 **cert)
 {
-    CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
-    CERT_Pair *currentCertPair =  NULL;
-    int32_t ret = BSL_HASH_At(mgrCtx->certPairs, (uintptr_t)mgrCtx->currentCertKeyType, (uintptr_t *)&currentCertPair);
-    if (ret != HITLS_SUCCESS || currentCertPair == NULL || currentCertPair->cert == NULL) {
+    HITLS_CERT_X509 *tmpCert = currentCertPair->cert;
+    if (tmpCert == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_CERT_ERR_EXP_CERT);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CERT_ERR_EXP_CERT, BINLOG_ID16152, "first cert is null");
     }
-    HITLS_CERT_X509 *tmpCert = currentCertPair->cert;
 
+    int32_t ret;
 #ifdef HITLS_TLS_FEATURE_SECURITY
     HITLS_CERT_Key *key = currentCertPair->privateKey;
     ret = SAL_CERT_CheckKeySecbits(ctx, tmpCert, key);
@@ -405,7 +400,7 @@ int32_t SAL_CERT_EncodeCertChain(HITLS_Ctx *ctx, PackPacket *pkt)
         /* No certificate needs to be sent at the local end. */
         return HITLS_SUCCESS;
     }
-    ret = EncodeEECert(ctx, pkt, &cert);
+    ret = EncodeEECert(ctx, pkt, currentCertPair, &cert);
     if (ret != HITLS_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15046, "encode device cert err");
     }
@@ -625,12 +620,7 @@ int32_t SAL_CERT_VerifyCertChain(HITLS_Ctx *ctx, CERT_Pair *certPair, bool isTlc
 uint32_t SAL_CERT_GetSignMaxLen(HITLS_Config *config, HITLS_CERT_Key *key)
 {
     uint32_t len = 0;
-    int32_t ret = SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_SIGN_LEN, NULL, &len);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15056, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "get signature length error: callback ret = 0x%x.", ret, 0, 0, 0);
-        return 0;
-    }
+    (void)SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_SIGN_LEN, NULL, &len);
     return len;
 }
 

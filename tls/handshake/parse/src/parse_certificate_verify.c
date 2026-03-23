@@ -120,8 +120,8 @@ static int32_t KeyMatchSignAlg(TLS_Ctx *ctx, HITLS_SignHashAlgo signScheme, HITL
         return HITLS_SUCCESS;
     }
     int32_t paramId = CRYPT_PKEY_PARAID_MAX;
-    int32_t ret = SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_PARAM_ID, NULL, (void *)&paramId);
-    if (ret != HITLS_SUCCESS || paramId != schemeInfo->paraId) {
+    (void)SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_PARAM_ID, NULL, (void *)&paramId);
+    if (paramId != schemeInfo->paraId) {
         return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16198,
             BINGLOG_STR("paramId mismatch sigScheme"), ALERT_INTERNAL_ERROR);
     }
@@ -149,12 +149,7 @@ static int VerifySignData(TLS_Ctx *ctx, uint16_t signHashAlg, const uint8_t *sig
 
     HITLS_SignHashAlgo signScheme = signHashAlg;
     HITLS_CERT_KeyType keyType = TLS_CERT_KEY_TYPE_UNKNOWN;
-    ret = SAL_CERT_KeyCtrl(&ctx->config.tlsConfig, pubkey, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
-    if (ret != HITLS_SUCCESS) {
-        SAL_CERT_KeyFree(mgrCtx, pubkey);
-        return ParseErrorProcess(ctx, ret, BINLOG_ID16072,
-            BINGLOG_STR("SAL_CERT_KeyCtrl fails"), ALERT_INTERNAL_ERROR);
-    }
+    (void)SAL_CERT_KeyCtrl(&ctx->config.tlsConfig, pubkey, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
 
     if (signScheme == 0) {
         /** If the value of the signature hash algorithm is 0, the peer does not send the signature algorithm.

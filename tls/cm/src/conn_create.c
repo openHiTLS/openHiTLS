@@ -154,9 +154,7 @@ void HITLS_Free(HITLS_Ctx *ctx)
     BSL_UIO_FreeChain(ctx->uio);
 #ifdef HITLS_TLS_FEATURE_FLIGHT
     BSL_UIO_FreeChain(ctx->rUio);
-    ctx->rUio = NULL;
 #endif
-    ctx->uio = NULL;
 #ifdef HITLS_TLS_FEATURE_SESSION
     /* Release certificate resources before releasing the config file. Otherwise, memory leakage occurs */
     HITLS_SESS_Free(ctx->session);
@@ -169,15 +167,11 @@ void HITLS_Free(HITLS_Ctx *ctx)
 #endif
 #ifdef HITLS_TLS_FEATURE_PHA
     SAL_CRYPT_DigestFree(ctx->phaHash);
-    ctx->phaHash = NULL;
     SAL_CRYPT_DigestFree(ctx->phaCurHash);
-    ctx->phaCurHash = NULL;
-    ctx->phaState = PHA_NONE;
     BSL_SAL_FREE(ctx->certificateReqCtx);
-    ctx->certificateReqCtxSize = 0;
 #endif
     ConnCleanSensitiveData(ctx);
-    BSL_SAL_FREE(ctx);
+    BSL_SAL_Free(ctx);
 }
 
 #ifdef HITLS_TLS_FEATURE_SESSION

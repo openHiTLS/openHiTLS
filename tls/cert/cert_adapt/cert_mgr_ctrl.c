@@ -97,11 +97,8 @@ int32_t SAL_CERT_SetCurrentCert(HITLS_Config *config, HITLS_CERT_X509 *cert, boo
     }
 
     uint32_t keyType = TLS_CERT_KEY_TYPE_UNKNOWN;
-    ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
+    (void)SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
     SAL_CERT_KeyFree(mgrCtx, pubkey);
-    if (ret != HITLS_SUCCESS) {
-        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16100, "GET KEY TYPE fail");
-    }
 
     CERT_Pair *certPair = NULL;
     ret = GetOrInsertCertPair(mgrCtx, keyType, &certPair);
@@ -177,13 +174,10 @@ int32_t SAL_CERT_SetCurrentPrivateKey(HITLS_Config *config, HITLS_CERT_Key *key,
     }
 
     uint32_t keyType = TLS_CERT_KEY_TYPE_UNKNOWN;
-    int32_t ret = SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
-    if (ret != HITLS_SUCCESS) {
-        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16104, "get key type fail");
-    }
+    (void)SAL_CERT_KeyCtrl(config, key, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
 
     CERT_Pair *certPair = NULL;
-    ret = GetOrInsertCertPair(mgrCtx, keyType, &certPair);
+    int32_t ret = GetOrInsertCertPair(mgrCtx, keyType, &certPair);
     if (ret != HITLS_SUCCESS || certPair == NULL) {
         return HITLS_MEMALLOC_FAIL;
     }

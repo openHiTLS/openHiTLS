@@ -109,7 +109,6 @@ void HITLS_SESS_Free(HITLS_Session *sess)
         if (sess->peerCert != NULL) {
             SAL_CERT_PairFree(sess->certMgrCtx, sess->peerCert);
         }
-        sess->peerCert = NULL;
         BSL_SAL_FREE(sess->ticket);
 #ifdef HITLS_TLS_FEATURE_SNI
         BSL_SAL_FREE(sess->hostName);
@@ -117,7 +116,7 @@ void HITLS_SESS_Free(HITLS_Session *sess)
         BSL_SAL_CleanseData(sess->masterKey, MAX_MASTER_KEY_SIZE);
         SAL_CERT_MgrCtxFree(sess->certMgrCtx);
         BSL_SAL_ThreadLockFree(sess->lock);
-        BSL_SAL_FREE(sess);
+        BSL_SAL_Free(sess);
     }
 }
 

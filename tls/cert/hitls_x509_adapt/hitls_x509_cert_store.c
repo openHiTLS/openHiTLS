@@ -90,8 +90,7 @@ int32_t HITLS_X509_Adapt_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store
             *(uint32_t *)output = (uint32_t)value2;
             return ret;
         case CERT_STORE_CTRL_ADD_CERT_LIST:
-            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SHALLOW_COPY_SET_CA, input,
-                sizeof(HITLS_X509_Cert));
+            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SHALLOW_COPY_SET_CA, input, 0);
         case CERT_STORE_CTRL_ADD_CA_PATH:
             return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_ADD_CA_PATH, input, strlen(input));
 #ifdef HITLS_TLS_CONFIG_CERT_CRL

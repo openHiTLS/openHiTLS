@@ -64,7 +64,7 @@ typedef enum {
                                            Note: The list is read-only and should not be modified. */
     HITLS_X509_GET_VERSION,            /** Get the version from cert or crl. */
     HITLS_X509_GET_REVOKELIST,         /** Get the certificate revoke list from the crl. */
-    HITLS_X509_GET_SERIALNUM,          /** Get the serial number of the cert. */
+    HITLS_X509_GET_SERIALNUM,          /** Get the serial number of the cert, shallow copy. */
     HITLS_X509_GET_BEFORE_TIME,        /** Get the validity start time */
     HITLS_X509_GET_AFTER_TIME,         /** Get the validity end time */
     HITLS_X509_GET_SIGN_MDALG,         /** Get the hash algorithm of signature algorithm used to sign the cert/ */

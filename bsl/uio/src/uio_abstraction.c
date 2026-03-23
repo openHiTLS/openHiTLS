@@ -163,13 +163,12 @@ void BSL_UIO_Free(BSL_UIO *uio)
     }
     if (uio->userData != NULL && uio->userDataFreeFunc != NULL) {
         (void)uio->userDataFreeFunc(uio->userData);
-        uio->userData = NULL;
     }
     if (uio->method.uioDestroy != NULL) {
         (void)uio->method.uioDestroy(uio);
     }
     BSL_SAL_ReferencesFree(&(uio->references));
-    BSL_SAL_FREE(uio);
+    BSL_SAL_Free(uio);
 }
 
 int32_t BSL_UIO_Write(BSL_UIO *uio, const void *data, uint32_t len, uint32_t *writeLen)

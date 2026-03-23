@@ -106,7 +106,7 @@ void HS_ReassFree(HS_ReassQueue *reassQueue)
         BSL_SAL_FREE(cur->msg);         /* Release node content. */
         BSL_SAL_FREE(cur);              /* Release the node. */
     }
-    BSL_SAL_FREE(reassQueue);
+    BSL_SAL_Free(reassQueue);
 }
 
 static HS_ReassQueue *GetReassNode(HS_ReassQueue *reassQueue, uint16_t sequence)

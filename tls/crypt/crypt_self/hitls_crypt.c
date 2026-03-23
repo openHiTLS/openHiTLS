@@ -284,8 +284,7 @@ int32_t HITLS_CRYPT_HMAC(HITLS_Lib_Ctx *libCtx, const char *attrName,
 HITLS_HASH_Ctx *HITLS_CRYPT_DigestInit(HITLS_Lib_Ctx *libCtx, const char *attrName, HITLS_HashAlgo hashAlgo)
 {
 #ifdef HITLS_CRYPTO_MD
-    CRYPT_EAL_MdCtx *ctx = NULL;
-    ctx = CRYPT_EAL_ProviderMdNewCtx(libCtx, hashAlgo, attrName);
+    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_ProviderMdNewCtx(libCtx, hashAlgo, attrName);
     if (ctx == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16628, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,  "MdNewCtx fail", 0, 0, 0, 0);
         return NULL;
@@ -313,16 +312,9 @@ int32_t HITLS_CRYPT_Digest(HITLS_Lib_Ctx *libCtx, const char *attrName,
 {
 #ifdef HITLS_CRYPTO_MD
     int32_t ret;
-    CRYPT_EAL_MdCtx *ctx = NULL;
-    ctx = CRYPT_EAL_ProviderMdNewCtx(libCtx, hashAlgo, attrName);
+    CRYPT_EAL_MdCtx *ctx = HITLS_CRYPT_DigestInit(libCtx, attrName, hashAlgo);
     if (ctx == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_DIGEST, BINLOG_ID16631, "MdNewCtx fail");
-    }
-
-    ret = CRYPT_EAL_MdInit(ctx);
-    if (ret != CRYPT_SUCCESS) {
-        CRYPT_EAL_MdFreeCtx(ctx);
-        return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16632, "MdInit fail");
     }
 
     ret = CRYPT_EAL_MdUpdate(ctx, in, inLen);
@@ -332,12 +324,11 @@ int32_t HITLS_CRYPT_Digest(HITLS_Lib_Ctx *libCtx, const char *attrName,
     }
 
     ret = CRYPT_EAL_MdFinal(ctx, out, outLen);
+    CRYPT_EAL_MdFreeCtx(ctx);
     if (ret != CRYPT_SUCCESS) {
-        CRYPT_EAL_MdFreeCtx(ctx);
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16634, "MdFinal fail");
     }
 
-    CRYPT_EAL_MdFreeCtx(ctx);
     return HITLS_SUCCESS;
 #else // HITLS_CRYPTO_MD
     (void)hashAlgo;
@@ -351,14 +342,13 @@ int32_t HITLS_CRYPT_Digest(HITLS_Lib_Ctx *libCtx, const char *attrName,
 #endif // HITLS_CRYPTO_MD
 }
 
-static int32_t SpecialModeEncryptPreSolve(CRYPT_EAL_CipherCtx *ctx, const HITLS_CipherParameters *cipher,
-    uint64_t inLen)
-{
 #ifdef HITLS_CRYPTO_CIPHER
-    int32_t ret = CRYPT_SUCCESS;
-
+static int32_t CcmPrepare(CRYPT_EAL_CipherCtx *ctx, const HITLS_CipherParameters *cipher, uint32_t inLen, bool isEnc)
+{
+    int32_t ret;
+    uint32_t tagLen = CCM_TLS_TAG_LEN;
     if (IsCipherCCM8(cipher->algo)) {
-        uint32_t tagLen = CCM8_TLS_TAG_LEN;
+        tagLen = CCM8_TLS_TAG_LEN;
         ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen));
         if (ret != CRYPT_SUCCESS) {
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16635, "SET_TAGLEN fail");
@@ -367,12 +357,23 @@ static int32_t SpecialModeEncryptPreSolve(CRYPT_EAL_CipherCtx *ctx, const HITLS_
     // In the case of CCM processing, msgLen needs to be set.
     bool isCCM = (cipher->algo == HITLS_CIPHER_AES_128_CCM) || (cipher->algo == HITLS_CIPHER_AES_128_CCM8) ||
                  (cipher->algo == HITLS_CIPHER_AES_256_CCM) || (cipher->algo == HITLS_CIPHER_AES_256_CCM8) ||
-				 (cipher->algo == HITLS_CIPHER_SM4_CCM);
+                 (cipher->algo == HITLS_CIPHER_SM4_CCM);
     if (isCCM == true) {
-        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &inLen, sizeof(inLen));
+        uint64_t msgLen = isEnc ? inLen : (inLen - tagLen);
+        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &msgLen, sizeof(msgLen));
         if (ret != CRYPT_SUCCESS) {
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16636, "SET_MSGLEN fail");
         }
+    }
+    return CRYPT_SUCCESS;
+}
+
+static int32_t SpecialModeEncryptPreSolve(CRYPT_EAL_CipherCtx *ctx, const HITLS_CipherParameters *cipher,
+    uint64_t inLen)
+{
+    int32_t ret = CcmPrepare(ctx, cipher, inLen, true);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
 
     if (cipher->type == HITLS_AEAD_CIPHER) {
@@ -380,15 +381,8 @@ static int32_t SpecialModeEncryptPreSolve(CRYPT_EAL_CipherCtx *ctx, const HITLS_
     }
 
     return ret;
-#else // HITLS_CRYPTO_CIPHER
-    (void)ctx;
-    (void)cipher;
-    (void)inLen;
-    return CRYPT_EAL_ALG_NOT_SUPPORT;
-#endif // HITLS_CRYPTO_CIPHER
 }
 
-#ifdef HITLS_CRYPTO_CIPHER
 static int32_t GetCipherInitCtx(HITLS_Lib_Ctx *libCtx, const char *attrName,
     const HITLS_CipherParameters *cipher, CRYPT_EAL_CipherCtx **ctx, bool enc)
 {
@@ -406,7 +400,7 @@ static int32_t GetCipherInitCtx(HITLS_Lib_Ctx *libCtx, const char *attrName,
     }
     return CRYPT_SUCCESS;
 }
-#endif
+#endif // HITLS_CRYPTO_CIPHER
 
 int32_t HITLS_CRYPT_Encrypt(HITLS_Lib_Ctx *libCtx, const char *attrName, const HITLS_CipherParameters *cipher,
     const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
@@ -541,37 +535,6 @@ int32_t CbcDecrypt(CRYPT_EAL_CipherCtx *ctx, const uint8_t *in, uint32_t inLen, 
 }
 #endif /* HITLS_TLS_SUITE_CIPHER_CBC */
 
-#ifdef HITLS_CRYPTO_CIPHER
-static int32_t DEFAULT_DecryptPrepare(CRYPT_EAL_CipherCtx *ctx, const HITLS_CipherParameters *cipher, uint32_t inLen)
-{
-    int32_t ret = CRYPT_SUCCESS;
-    uint32_t tagLen = CCM_TLS_TAG_LEN;
-    if (IsCipherCCM8(cipher->algo)) {
-        tagLen = CCM8_TLS_TAG_LEN;
-        /* The default value of tagLen is 16 for the ctx generated by the CRYPT_EAL_CipherNewCtx.
-           Therefore, need to set this parameter again. */
-        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen));
-        if (ret != CRYPT_SUCCESS) {
-            CRYPT_EAL_CipherFreeCtx(ctx);
-            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16652, "CipherUpdate fail");
-        }
-    }
-    bool isCCM = (cipher->algo == HITLS_CIPHER_AES_128_CCM) || (cipher->algo == HITLS_CIPHER_AES_128_CCM8) ||
-                 (cipher->algo == HITLS_CIPHER_AES_256_CCM) || (cipher->algo == HITLS_CIPHER_AES_256_CCM8) ||
-				 (cipher->algo == HITLS_CIPHER_SM4_CCM);
-    if (isCCM == true) {
-        // The length of the decrypted ciphertext consists of msgLen and tagLen, so tagLen needs to be subtracted.
-        uint64_t msgLen = inLen - tagLen;
-        ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &msgLen, sizeof(msgLen));
-        if (ret != CRYPT_SUCCESS) {
-            CRYPT_EAL_CipherFreeCtx(ctx);
-            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16653, "CipherUpdate fail");
-        }
-    }
-    return ret;
-}
-#endif
-
 int32_t HITLS_CRYPT_Decrypt(HITLS_Lib_Ctx *libCtx, const char *attrName, const HITLS_CipherParameters *cipher,
     const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
@@ -585,8 +548,7 @@ int32_t HITLS_CRYPT_Decrypt(HITLS_Lib_Ctx *libCtx, const char *attrName, const H
     if (ret != CRYPT_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16654, "CipherUpdate fail");
     }
-
-    ret = DEFAULT_DecryptPrepare(*ctx, cipher, inLen);
+    ret = CcmPrepare(*ctx, cipher, inLen, false);
     if (ret != CRYPT_SUCCESS) {
         *ctx = NULL;
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16655, "CipherUpdate fail");
@@ -824,8 +786,7 @@ int32_t HITLS_CRYPT_EcdhCalcSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attr
 #ifdef HITLS_CRYPTO_PKEY
     int32_t ret;
     int32_t id = CRYPT_EAL_PkeyGetId(key);
-    CRYPT_EAL_PkeyCtx *peerPk = NULL;
-    peerPk = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, id, CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
+    CRYPT_EAL_PkeyCtx *peerPk = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, id, CRYPT_EAL_PKEY_EXCH_OPERATE, attrName);
     if (peerPk == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_CRYPT_ERR_CALC_SHARED_KEY, BINLOG_ID16678, "peerPk new fail");
     }

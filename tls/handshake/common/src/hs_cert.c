@@ -156,12 +156,7 @@ static int32_t CheckCurveName(HITLS_Config *config, const uint16_t *curveList, u
     HITLS_CERT_Key *pubkey)
 {
     uint32_t curveName = HITLS_NAMED_GROUP_BUTT;
-    int32_t ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_CURVE_NAME, NULL, (void *)&curveName);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15036, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-            "internal error: unable to get curve name.", 0, 0, 0, 0);
-        return ret;
-    }
+    (void)SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_CURVE_NAME, NULL, (void *)&curveName);
     for (uint32_t i = 0; i < curveNum; i++) {
         if (curveName == curveList[i]) {
             return HITLS_SUCCESS;
@@ -177,12 +172,7 @@ static int32_t CheckPointFormat(HITLS_Config *config, const uint8_t *ecPointForm
     HITLS_CERT_Key *pubkey)
 {
     uint32_t ecPointFormat = HITLS_POINT_FORMAT_BUTT;
-    int32_t ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_POINT_FORMAT, NULL, (void *)&ecPointFormat);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15038, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-            "internal error: unable to get point format.", 0, 0, 0, 0);
-        return ret;
-    }
+    (void)SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_POINT_FORMAT, NULL, (void *)&ecPointFormat);
     for (uint32_t i = 0; i < listSize; i++) {
         if (ecPointFormat == ecPointFormatList[i]) {
             return HITLS_SUCCESS;
@@ -222,14 +212,9 @@ static int32_t CheckCertTypeAndSignScheme(HITLS_Ctx *ctx, const CERT_ExpectInfo 
 {
     HITLS_Config *config = &ctx->config.tlsConfig;
     uint32_t keyType = TLS_CERT_KEY_TYPE_UNKNOWN;
-    int32_t ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15041, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-            "check certificate error: pubkey type unknown.", 0, 0, 0, 0);
-        return ret;
-    }
+    (void)SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_TYPE, NULL, (void *)&keyType);
     /* Check the certificate type. */
-    ret = CheckCertType(expectCertInfo->certType, keyType);
+    int32_t ret = CheckCertType(expectCertInfo->certType, keyType);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

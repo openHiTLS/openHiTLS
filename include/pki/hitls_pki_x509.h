@@ -71,7 +71,7 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx);
  * @brief Generic function to process StoreCtx.
  *
  * @param storeCtx [IN] StoreCtx.
- * @param cmd [IN] HITLS_X509_Cmd                       data type             data length
+ * @param cmd [IN] HITLS_X509_StoreCtxCmd               data type             data length
  *        HITLS_X509_STORECTX_SET_PARAM_DEPTH           int32_t               sizeof(int32_t)
  *        HITLS_X509_STORECTX_SET_PARAM_FLAGS           uint64_t              sizeof(uint64_t)
  *        HITLS_X509_STORECTX_SET_PURPOSE               uint64_t              sizeof(uint64_t)

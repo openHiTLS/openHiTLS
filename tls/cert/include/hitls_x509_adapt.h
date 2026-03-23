@@ -61,8 +61,8 @@ HITLS_CERT_Key *HITLS_X509_Adapt_KeyParse(HITLS_Config *config, const uint8_t *b
 HITLS_CERT_Key *HITLS_X509_Adapt_ProviderKeyParse(HITLS_Config *config, const uint8_t *buf, uint32_t len,
     HITLS_ParseType type, const char *format, const char *encodeType);
 #endif
-HITLS_CERT_Key *HITLS_X509_Adapt_KeyDup(HITLS_CERT_Key *key);
-void HITLS_X509_Adapt_KeyFree(HITLS_CERT_Key *key);
+#define HITLS_X509_Adapt_KeyDup CRYPT_EAL_PkeyDupCtx
+#define HITLS_X509_Adapt_KeyFree CRYPT_EAL_PkeyFreeCtx
 int32_t HITLS_X509_Adapt_KeyCtrl(HITLS_Config *config, HITLS_CERT_Key *key, HITLS_CERT_CtrlCmd cmd,
     void *input, void *output);
 

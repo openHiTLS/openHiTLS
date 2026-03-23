@@ -50,10 +50,7 @@ static int32_t CheckCertSecuritylevel(HITLS_Config *config, HITLS_CERT_X509 *cer
     }
     do {
         int32_t secBits = 0;
-        ret = SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_SECBITS, NULL, (void *)&secBits);
-        if (ret != HITLS_SUCCESS) {
-            break;
-        }
+        (void)SAL_CERT_KeyCtrl(config, pubkey, CERT_KEY_CTRL_GET_SECBITS, NULL, (void *)&secBits);
 
         if (isCACert == true) {
             ret = SECURITY_CfgCheck(config, HITLS_SECURITY_SECOP_CA_KEY, secBits, 0, cert);
@@ -785,8 +782,7 @@ static void HitlsTrustedCANodeFree(void *caNode)
     }
     HITLS_TrustedCANode *newCaNode = (HITLS_TrustedCANode *)caNode;
     BSL_SAL_FREE(newCaNode->data);
-    newCaNode->data = NULL;
-    BSL_SAL_FREE(newCaNode);
+    BSL_SAL_Free(newCaNode);
 }
 
 void HITLS_CFG_ClearCAList(HITLS_Config *config)
@@ -795,7 +791,6 @@ void HITLS_CFG_ClearCAList(HITLS_Config *config)
         return;
     }
     BSL_LIST_FREE(config->caList, HitlsTrustedCANodeFree);
-    config->caList = NULL;
     return;
 }
 
@@ -1116,9 +1111,7 @@ static int32_t LoadVerifyDirAddPath(HITLS_Config *config, HITLS_CERT_Store *stor
     }
 
     char buf[MAX_PATH_LEN + 1] = {0};
-    if (memcpy_s(buf, sizeof(buf), start, len) != EOK) {
-        return HITLS_MEMCPY_FAIL;
-    }
+    (void)memcpy_s(buf, sizeof(buf), start, len);
     buf[len] = '\0';
 
     return SAL_CERT_StoreCtrl(config, store, CERT_STORE_CTRL_ADD_CA_PATH, (void *)buf, NULL);

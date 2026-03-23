@@ -274,6 +274,15 @@ static inline bool IsEcdsaEcParaId(int32_t paraId)
 }
 #endif
 
+#if defined(HITLS_CRYPTO_RSA) && (defined(HITLS_CRYPTO_KEY_INFO) || defined(HITLS_CRYPTO_KEY_ENCODE))
+int32_t GetRsaPubKey(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *pub);
+#endif
+
+#if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) || \
+    defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_X25519)
+int32_t GetCommonPubKey(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *pub);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

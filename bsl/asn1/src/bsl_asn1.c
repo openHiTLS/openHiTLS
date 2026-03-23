@@ -870,10 +870,7 @@ static int32_t GetContentLen(BSL_ASN1_Buffer *asn, uint32_t *len)
             }
             *len = asn->len * 2; // 2: Each character is 2 bytes
             return BSL_SUCCESS;
-        case BSL_ASN1_TAG_T61STRING:
-            *len = asn->len;
-            return BSL_SUCCESS;
-        default:
+        default: // BSL_ASN1_TAG_T61STRING or other tag
             *len = asn->len;
             return BSL_SUCCESS;
     }
@@ -1491,14 +1488,14 @@ static int32_t GetAndValidateCharSize(const BSL_ASN1_Buffer *in, uint32_t *charS
     switch (in->tag) {
         case BSL_ASN1_TAG_UTF8STRING:
             *charSize = 0;
-            break;
+            return BSL_SUCCESS;
         case BSL_ASN1_TAG_PRINTABLESTRING:
         case BSL_ASN1_TAG_IA5STRING:
         /* T61 character set is regarded as Latin-1.
            This is a common approximation as T61 is largely compatible with Latin-1. */
         case BSL_ASN1_TAG_TELETEXSTRING:
             *charSize = 1;
-            break;
+            return BSL_SUCCESS;
         case BSL_ASN1_TAG_BMPSTRING:
             *charSize = 2;   /* BMPString (2 bytes per char) */
             break;

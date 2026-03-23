@@ -365,7 +365,7 @@ static int32_t IteratorInit(CRYPT_KeyDeriveParameters *input, uint32_t hmacSize,
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15079, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "P_Hash error: iterator init fail, HMAC ret = 0x%x.", ret, 0, 0, 0);
-        BSL_SAL_FREE(seed);
+        BSL_SAL_Free(seed);
         return ret;
     }
     *iterator = seed;
@@ -375,11 +375,6 @@ static int32_t IteratorInit(CRYPT_KeyDeriveParameters *input, uint32_t hmacSize,
 
 static int32_t PHashPre(uint32_t *hmacSize, uint32_t *alignLen, uint32_t outLen, HITLS_HashAlgo hashAlgo)
 {
-    if (hmacSize == NULL || alignLen == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16611, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "input null", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
-        return HITLS_NULL_INPUT;
-    }
     *alignLen = outLen;
     *hmacSize = SAL_CRYPT_HmacSize(hashAlgo);
     if (*hmacSize == 0) {
@@ -448,7 +443,7 @@ int32_t P_Hash(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
     }
 EXIT:
     BSL_SAL_FREE(iterator);
-    BSL_SAL_FREE(data);
+    BSL_SAL_Free(data);
     return ret;
 }
 

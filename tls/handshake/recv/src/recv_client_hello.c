@@ -704,8 +704,7 @@ static int32_t ServerDealServerName(TLS_Ctx *ctx, const ClientHelloMsg *clientHe
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15233, BSL_LOG_LEVEL_WARN, BSL_LOG_BINLOG_TYPE_RUN,
                 "server did not accept server_name from client hello msg, but continue handshake", 0, 0, 0, 0);
             break;
-        case HITLS_ACCEPT_SNI_ERR_ALERT_FATAL:
-        default:
+        default: // HITLS_ACCEPT_SNI_ERR_ALERT_FATAL and others
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15234, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "server did not accept server_name from client hello msg, stop handshake",
                 0, 0, 0, 0);

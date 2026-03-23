@@ -314,7 +314,7 @@ void CleanCertificate(CertificateMsg *msg)
     while (next != NULL) {
         CERT_Item *temp = next->next;
         BSL_SAL_FREE(next->data);
-        BSL_SAL_FREE(next);
+        BSL_SAL_Free(next);
         next = temp;
     }
     msg->cert = NULL;
