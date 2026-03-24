@@ -51,10 +51,6 @@ static void DestroyTmpBn(BN_BigNum *t1, BN_BigNum *t2, BN_BigNum *t3, BN_BigNum 
 // Jacobian coordinate double the point
 int32_t ECP_NistPointDouble(const ECC_Para *para, ECC_Point *r, const ECC_Point *a)
 {
-    if (para == NULL || r == NULL || a == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     int32_t ret;
     uint32_t bits = BN_Bits(para->p);
 
@@ -102,10 +98,6 @@ ERR:
 // Jacobian coordinate multi-double the point: r = (2^m) * pt
 int32_t ECP_NistPointMultDouble(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, uint32_t m)
 {
-    if (para == NULL || r == NULL || a == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     uint32_t tm = m;
     int32_t ret;
     uint32_t bits = BN_Bits(para->p);
@@ -174,10 +166,6 @@ ERR:
 int32_t ECP_NistPointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a,
     const ECC_Point *b)
 {
-    if (para == NULL || r == NULL || a == NULL || b == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     if (BN_IsZero(&a->z)) {
         // If point a is an infinity point, r = b
         return ECC_CopyPoint(r, b);
@@ -236,10 +224,6 @@ ERR:
 int32_t ECP_NistPointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a,
     const ECC_Point *b)
 {
-    if (para == NULL || r == NULL || a == NULL || b == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     if (BN_IsZero(&a->z)) {
         // If point a is an infinity point, r = b
         return ECC_CopyPoint(r, b);
@@ -308,11 +292,6 @@ int32_t ECP_ModOrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a)
 {
     int32_t ret;
     BN_Optimizer *opt = NULL;
-    if (para == NULL || r == NULL || a == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     opt = BN_OptimizerCreate();
     if (opt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);

@@ -23,6 +23,41 @@
 #include "crypt_errno.h"
 #include "ecc_local.h"
 
+static int32_t ECC_PointMulAddParaCheck(ECC_Para *para, ECC_Point *r,
+    const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt)
+{
+    if (para == NULL || r == NULL || k1 == NULL || k2 == NULL || pt == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if ((para->id != r->id) || (para->id != pt->id)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
+        return CRYPT_ECC_POINT_ERR_CURVE_ID;
+    }
+    if (BN_IsZero(&pt->z)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
+        return CRYPT_ECC_POINT_AT_INFINITY;
+    }
+    return CRYPT_SUCCESS;
+}
+
+static int32_t ECC_PointMulParaCheck(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
+{
+    if (para == NULL || r == NULL || k == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if ((para->id != r->id) || ((pt != NULL) && (para->id != pt->id))) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
+        return CRYPT_ECC_POINT_ERR_CURVE_ID;
+    }
+    if (pt != NULL && BN_IsZero(&pt->z)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
+        return CRYPT_ECC_POINT_AT_INFINITY;
+    }
+    return CRYPT_SUCCESS;
+}
+
 ECC_Point *ECC_NewPoint(const ECC_Para *para)
 {
     if (para == NULL) {
@@ -137,7 +172,9 @@ int32_t ECC_GetPoint(const ECC_Para *para, ECC_Point *pt, CRYPT_Data *x, CRYPT_D
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_NOT_SUPPORT);
         return CRYPT_ECC_NOT_SUPPORT;
     }
-    GOTO_ERR_IF(para->method->point2Affine(para, pt, pt), ret);
+    if (!BN_IsOne(&pt->z)) {
+        GOTO_ERR_IF(para->method->point2Affine(para, pt, pt), ret);
+    }
     GOTO_ERR_IF(BN_Bn2BinFixZero(&pt->x, x->data, pBytes), ret);
     x->len = pBytes;
     if (y != NULL) {
@@ -166,7 +203,12 @@ int32_t ECC_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a)
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_NOT_SUPPORT);
         return CRYPT_ECC_NOT_SUPPORT;
     }
-    int32_t ret = para->method->point2Affine(para, r, a);
+    int32_t ret;
+    if (BN_IsOne(&a->z)) {
+        ret = ECC_CopyPoint(r, a);
+    } else {
+        ret = para->method->point2Affine(para, r, a);
+    }
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -196,7 +238,9 @@ int32_t ECC_GetPointDataX(const ECC_Para *para, ECC_Point *pt, BN_BigNum *x)
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_NOT_SUPPORT);
         return CRYPT_ECC_NOT_SUPPORT;
     }
-    GOTO_ERR_IF(para->method->point2Affine(para, pt, pt), ret);
+    if (!BN_IsOne(&pt->z)) {
+        GOTO_ERR_IF(para->method->point2Affine(para, pt, pt), ret);
+    }
     GOTO_ERR_IF(BN_Copy(x, &pt->x), ret);
 ERR:
     return ret;
@@ -222,9 +266,9 @@ ECC_Point *ECC_GetGFromPara(const ECC_Para *para)
 int32_t ECC_PointMulAdd(ECC_Para *para, ECC_Point *r,
     const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt)
 {
-    if (para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+    int32_t ret = ECC_PointMulAddParaCheck(para, r, k1, k2, pt);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
     if (para->method->pointMulAdd == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_NOT_SUPPORT);
@@ -236,13 +280,16 @@ int32_t ECC_PointMulAdd(ECC_Para *para, ECC_Point *r,
 int32_t ECC_PointMul(ECC_Para *para,  ECC_Point *r,
     const BN_BigNum *k, const ECC_Point *pt)
 {
-    if (para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
+    int32_t ret = ECC_PointMulParaCheck(para, r, k, pt);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
     }
     if (para->method->pointMul == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_NOT_SUPPORT);
         return CRYPT_ECC_NOT_SUPPORT;
+    }
+    if (BN_IsZero(k)) {
+        return BN_Zeroize(&r->z);
     }
     return para->method->pointMul(para, r, k, pt);
 }
@@ -365,7 +412,7 @@ int32_t ECC_PointCheck(const ECC_Point *pt)
 
 int32_t ECC_ModOrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a)
 {
-    if (para == NULL) {
+    if (para == NULL || r == NULL || a == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -414,7 +461,7 @@ void ECC_PointFromMont(const ECC_Para *para, ECC_Point *r)
 int32_t ECC_PointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b)
 {
     int32_t ret;
-    if (para == NULL) {
+    if (para == NULL || r == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }

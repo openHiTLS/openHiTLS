@@ -178,22 +178,6 @@ int32_t ECP_Point2AffineWithInv(const ECC_Para *para, ECC_Point *r, const ECC_Po
 
 /**
  * @ingroup ecc
- * @brief   Parameters checks before 'PointMulAdd'
- *
- * @param   para [IN] Curve parameters
- * @param   r [OUT] Output point information
- * @param   k1 [IN] Scalar 1
- * @param   k2 [IN] Scalar 2
- * @param   pt [IN] Point data
- *
- * @retval CRYPT_SUCCESS    check successfully
- * @retval For details about other errors, see crypt_errno.h
- */
-int32_t ECP_PointMulAddParaCheck(const ECC_Para *para, const ECC_Point *r, const BN_BigNum *k1,
-    const BN_BigNum *k2, const ECC_Point *pt);
-
-/**
- * @ingroup ecc
  * @brief   Calculate r = k1 * G + k2 * pt
  *
  * @param   para [IN] Curve parameters

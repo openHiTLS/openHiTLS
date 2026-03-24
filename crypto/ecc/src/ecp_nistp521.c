@@ -1419,21 +1419,15 @@ static int32_t ComputePointMulAdd(Point *out, const Array64 *binG, const Array64
 int32_t ECP521_PointMulAdd(ECC_Para *para, ECC_Point *r,
                            const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt)
 {
+    (void)para;
     int32_t ret;
     Array64 binG = {0};
     Array64 binP = {0};
     Point *out = NULL;
     uint32_t len;
     /* Input parameter check */
-    GOTO_ERR_IF(CheckParaValid(para, CRYPT_ECC_NISTP521), ret);
-    GOTO_ERR_IF(CheckPointValid(r, CRYPT_ECC_NISTP521), ret);
     GOTO_ERR_IF(CheckBnValid(k1, FELEM_BITS), ret);
     GOTO_ERR_IF(CheckBnValid(k2, FELEM_BITS), ret);
-    GOTO_ERR_IF(CheckPointValid(pt, CRYPT_ECC_NISTP521), ret);
-    if (BN_IsZero(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
     /* Convert the input BigNum */
     len = NUM_LIMBS;
     GOTO_ERR_IF(BN_Bn2U64Array(k1, binG.data, &len), ret);
@@ -1459,25 +1453,14 @@ ERR:
 /* Calculate r = k * pt; If pt is NULL, calculate r = k * G. This is the ConstTime processing function. */
 int32_t ECP521_PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
 {
+    (void)para;
     int32_t ret;
     Array64 bin = {0};
     uint32_t len = NUM_LIMBS;
     Point preCompute[TABLE_P_SIZE]; /* Pre-calculation table of Point pt */
     Point out;
     /* Input parameter check */
-    GOTO_ERR_IF(CheckParaValid(para, CRYPT_ECC_NISTP521), ret);
-    GOTO_ERR_IF(CheckPointValid(r, CRYPT_ECC_NISTP521), ret);
     GOTO_ERR_IF(CheckBnValid(k, FELEM_BITS), ret);
-    if (pt != NULL) {
-        if (pt->id != CRYPT_ECC_NISTP521) {
-            BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-            return CRYPT_ECC_POINT_ERR_CURVE_ID;
-        }
-        if (BN_IsZero(&pt->z)) {
-            BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-            return CRYPT_ECC_POINT_AT_INFINITY;
-        }
-    }
     /* Convert the input BigNum */
     GOTO_ERR_IF(BN_Bn2U64Array(k, bin.data, &len), ret);
     /* Calculate */
@@ -1515,17 +1498,9 @@ ERR:
 /* Convert a point to affine coordinates. */
 int32_t ECP521_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt)
 {
+    (void)para;
     int32_t ret;
     Felem z, zInv;
-    /* Input parameter check */
-    GOTO_ERR_IF(CheckParaValid(para, CRYPT_ECC_NISTP521), ret);
-    GOTO_ERR_IF(CheckPointValid(r, CRYPT_ECC_NISTP521), ret);
-    GOTO_ERR_IF(CheckPointValid(pt, CRYPT_ECC_NISTP521), ret);
-    /* Special data processing */
-    if (BN_IsZero(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
     /* Convert the input data. */
     GOTO_ERR_IF_EX(BN2Felem(&z, &pt->z), ret);
     /* Calculate and output result */

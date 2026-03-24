@@ -32,26 +32,6 @@ static const Coord g_rrModOrder = {{
     0x66e12d94f3d95620
 }};
 
-static int32_t ECP256_ModOrderInvCheck(const ECC_Para *para, const BN_BigNum *r, const BN_BigNum *a)
-{
-    if (para == NULL || r == NULL || a == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (para->id != CRYPT_ECC_NISTP256) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-
-    if (BN_IsZero(a)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_INVERSE_INPUT_ZERO);
-        return CRYPT_ECC_INVERSE_INPUT_ZERO;
-    }
-
-    return CRYPT_SUCCESS;
-}
-
 static int32_t Bn2CoordArray(const ECC_Para *para, Coord *aArr, const BN_BigNum *a)
 {
     int32_t ret = CRYPT_SUCCESS;
@@ -108,9 +88,9 @@ EXIT:
 // https://briansmith.org/ecc-inversion-addition-chains-01#p256_scalar_inversion
 int32_t ECP256_ModOrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a)
 {
-    int32_t ret = ECP256_ModOrderInvCheck(para, r, a);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
+    if (BN_IsZero(a)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_INVERSE_INPUT_ZERO);
+        return CRYPT_ECC_INVERSE_INPUT_ZERO;
     }
     const Coord one = {{1}};
     Coord aArr, res;
@@ -134,7 +114,7 @@ int32_t ECP256_ModOrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *
         7, 6
     };
 
-    ret = Bn2CoordArray(para, &aArr, a);
+    int32_t ret = Bn2CoordArray(para, &aArr, a);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

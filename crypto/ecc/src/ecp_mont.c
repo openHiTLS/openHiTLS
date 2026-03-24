@@ -29,9 +29,6 @@
 // Jacobian coordinate double the point
 int32_t ECP_NistPointDoubleMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a)
 {
-    if (a == NULL || r == NULL || para == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
     BN_Optimizer *opt = BN_OptimizerCreate();
     if (opt == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
@@ -78,9 +75,6 @@ ERR:
 // Jacobian coordinate multi-double the point: r = (2^m) * pt
 int32_t ECP_NistPointMultDoubleMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, uint32_t m)
 {
-    if (a == NULL || r == NULL || para == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
     uint32_t tm = m;
     BN_Optimizer *opt = BN_OptimizerCreate();
     if (opt == NULL) {
@@ -151,9 +145,6 @@ ERR:
 // https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo
 int32_t ECP_NistPointAddMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b)
 {
-    if (para == NULL || r == NULL || a == NULL || b == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
     if (BN_IsZero(&a->z)) {
         // If point a is an infinity point, r = b
         return ECC_CopyPoint(r, b);
@@ -220,9 +211,6 @@ ERR:
 int32_t ECP_NistPointAddAffineMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b)
 {
     int32_t ret;
-    if (a == NULL || b == NULL || r == NULL || para == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
     if (BN_IsZero(&a->z)) { // if point a is an infinity point, r = b,
         return ECC_CopyPoint(r, b);
     }
@@ -294,9 +282,6 @@ ERR:
 */
 int32_t ECP_PrimePointDoubleMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a)
 {
-    if (para == NULL || r == NULL || a == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
     BN_Optimizer *opt = BN_OptimizerCreate();
     if (opt == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
@@ -344,10 +329,7 @@ ERR:
 int32_t ECP_PrimePointAddMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a,
     const ECC_Point *b)
 {
-    bool flag = (para == NULL) || (r == NULL) || (a == NULL) || (b == NULL);
-    if (flag) {
-        return CRYPT_NULL_INPUT;
-    }
+    bool flag;
     if (BN_IsZero(&a->z)) {
         return ECC_CopyPoint(r, b);
     }
@@ -420,9 +402,6 @@ ERR:
 // Jacobian coordinate multi-double the point: r = (2^m) * pt
 int32_t ECP_PrimePointMultDoubleMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, uint32_t m)
 {
-    if (para == NULL || r == NULL || a == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
     uint32_t tm = m;
     int32_t ret = CRYPT_MEM_ALLOC_FAIL;
     BN_Optimizer *opt = BN_OptimizerCreate();
@@ -493,9 +472,6 @@ ERR:
 */
 int32_t ECP_PrimePointAddAffineMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b)
 {
-    if (para == NULL || r == NULL || a == NULL || b == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
     if (BN_IsZero(&a->z)) { // if point a is an infinity point, r = b,
         return ECC_CopyPoint(r, b);
     }
@@ -552,21 +528,6 @@ ERR:
 
 int32_t ECP_Point2AffineMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt)
 {
-    if (pt == NULL || r == NULL || para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (para->id != r->id || para->id != pt->id) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    if (BN_IsZero(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
-    if (BN_IsOne(&pt->z)) {
-        return ECC_CopyPoint(r, pt);
-    }
     uint32_t bits = BN_Bits(para->p);
     BN_BigNum *inv = BN_Create(bits);
     BN_BigNum *zz = BN_Create(bits);
@@ -798,22 +759,6 @@ ERR:
  */
 int32_t ECP_PointMulMont(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
 {
-    if (para == NULL || r == NULL || k == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
-    if (((pt != NULL) && (para->id != pt->id)) || (para->id != r->id)) {
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    if (pt != NULL && BN_IsZero(&pt->z)) {
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
-    if (BN_IsZero(k)) {
-        BN_Zeroize(&r->z);
-        return CRYPT_SUCCESS;
-    }
-    if (BN_Cmp(k, para->n) == 0 && pt != NULL) {
-        return ECP_PointMulFast(para, r, para->n, pt);
-    }
     int32_t ret;
     BN_UINT mask1 = 0;
     BN_UINT mask2 = 0;
@@ -828,7 +773,9 @@ int32_t ECP_PointMulMont(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, cons
         goto ERR;
     }
     // Convert base to affine.
-    GOTO_ERR_IF(ECP_Point2Affine(para, base, base), ret);
+    if (!BN_IsOne(&base->z)) {
+        GOTO_ERR_IF(ECP_Point2Affine(para, base, base), ret);
+    }
     GOTO_ERR_IF(ECC_PointToMont(para, base, opt), ret);
     GOTO_ERR_IF(ECC_CopyPoint(r, base), ret); // r = base
     GOTO_ERR_IF(MontLadderDouble(para, r1, r, opt), ret);

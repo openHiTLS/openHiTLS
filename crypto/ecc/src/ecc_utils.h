@@ -51,33 +51,8 @@ inline static void DecodeScalarCode(uint32_t *sign, uint32_t *value, uint32_t co
     *value = v & ((1 << WINDOW_SIZE) - 1);  // Five bits are intercepted.
 }
 
-inline static int32_t CheckParaValid(const ECC_Para *para, CRYPT_PKEY_ParaId id)
-{
-    if (para == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
-    if (para->id != id) {
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    return CRYPT_SUCCESS;
-}
-
-inline static int32_t CheckPointValid(const ECC_Point *pt, CRYPT_PKEY_ParaId id)
-{
-    if (pt == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
-    if (pt->id != id) {
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    return CRYPT_SUCCESS;
-}
-
 inline static int32_t CheckBnValid(const BN_BigNum *k, uint32_t maxBits)
 {
-    if (k == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
     if (BN_Bits(k) > maxBits) {  // If K is greater than maxBits, it is considered too long.
         return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
     }

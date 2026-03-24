@@ -68,7 +68,7 @@
 #error BN_UINT MUST be 4 or 8
 #endif
 
-// If the value is 0, all Fs are returned. If the value is not 0, 0 is returned.
+// If a == 0, return 0xFFFFFFFF...; otherwise return 0.
 static BN_UINT IsZero(const Coord *a)
 {
     BN_UINT ret = a->value[0];
@@ -171,11 +171,6 @@ static int32_t ECP256_GetAffine(ECC_Point *r, const P256_Point *pt)
     Coord res_x;
     Coord res_y;
     int32_t ret;
-    if (IsZero(&(pt->z)) != 0) {
-        ret = CRYPT_ECC_POINT_AT_INFINITY;
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
     ECP256_ModInverse(&zInv3, &(pt->z));        // zInv
     ECP256_Sqr(&zInv2, &zInv3);                 // zInv^2
     ECP256_Mul(&zInv3, &zInv2, &zInv3);         // zInv^3
@@ -225,15 +220,7 @@ static void ECP256_EccPoint2P256Point(P256_Point *r, const ECC_Point *pt)
 
 int32_t ECP256_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt)
 {
-    if (r == NULL || pt == NULL || para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (para->id != CRYPT_ECC_NISTP256 || r->id != CRYPT_ECC_NISTP256 || pt->id != CRYPT_ECC_NISTP256) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
+    (void)para;
     P256_Point temp;
     ECP256_EccPoint2P256Point(&temp, pt);
     return ECP256_GetAffine(r, &temp);
@@ -415,47 +402,15 @@ static void ComputeK1G(P256_Point *k1G, const BN_BigNum *k1)
     }
 }
 
-static int32_t ECP256_PointMulCheck(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
-{
-    bool flag = (para == NULL || r == NULL || k == NULL);
-    uint32_t bits;
-    if (flag) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (para->id != CRYPT_ECC_NISTP256 || r->id != CRYPT_ECC_NISTP256) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    if (pt != NULL) {
-        if (pt->id != CRYPT_ECC_NISTP256) {
-            BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-            return CRYPT_ECC_POINT_ERR_CURVE_ID;
-        }
-        // Special processing for the infinite point.
-        if (BN_IsZero(&pt->z)) {
-            BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-            return CRYPT_ECC_POINT_AT_INFINITY;
-        }
-    }
-    bits = BN_Bits(k);
-    if (bits > 256) {   // 256 is the number of bits in the curve mode
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_MUL_ERR_K_LEN);
-        return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
-    }
-
-    return CRYPT_SUCCESS;
-}
-
 // if pt == NULL, r = k * G, otherwise r = k * pt
 int32_t ECP256_PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
 {
+    (void)para;
     P256_Point rTemp = {0};
-    int32_t ret = ECP256_PointMulCheck(para, r, k, pt);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
+    if (BN_Bits(k) > 256) {   // 256 is the number of bits in the curve mode
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+        return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
     }
-
     if (pt == NULL) {
         ComputeK1G(&rTemp, k);
     } else {
@@ -463,35 +418,6 @@ int32_t ECP256_PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const 
     }
 
     ECP256_P256Point2EccPoint(r, &rTemp);
-
-    return ret;
-}
-
-static int32_t ECP256_PointMulAddCheck(
-    ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt)
-{
-    bool flag = (para == NULL || r == NULL || k1 == NULL || k2 == NULL || pt == NULL);
-    uint32_t bits1, bits2;
-    if (flag) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (para->id != CRYPT_ECC_NISTP256 || r->id != CRYPT_ECC_NISTP256 || pt->id != CRYPT_ECC_NISTP256) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    // Special processing of the infinite point.
-    if (BN_IsZero(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
-    bits1 = BN_Bits(k1);
-    bits2 = BN_Bits(k2);
-    if (bits1 > 256 || bits2 > 256) {   // 256 is the number of bits in the curve mode
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_MUL_ERR_K_LEN);
-        return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
-    }
-
     return CRYPT_SUCCESS;
 }
 
@@ -499,11 +425,11 @@ static int32_t ECP256_PointMulAddCheck(
 int32_t ECP256_PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2,
     const ECC_Point *pt)
 {
-    int32_t ret = ECP256_PointMulAddCheck(para, r, k1, k2, pt);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
+    (void)para;
+    if (BN_Bits(k1) > 256 || BN_Bits(k2) > 256) {   // 256 is the number of bits in the curve mode
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+        return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
     }
-
     P256_Point k2Pt;
     P256_Point k1G = {0};
 
@@ -511,6 +437,6 @@ int32_t ECP256_PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, co
     ComputeK1G(&k1G, k1);
     ECP256_PointAdd(&k1G, &k1G, &k2Pt);
     ECP256_P256Point2EccPoint(r, &k1G);
-    return ret;
+    return CRYPT_SUCCESS;
 }
 #endif /* defined(HITLS_CRYPTO_CURVE_NISTP256) && defined(HITLS_CRYPTO_NIST_USE_ACCEL) */

@@ -119,13 +119,7 @@ static int32_t CheckECCParameters(const ECC_Para *para, ECC_Point *r, const ECC_
 
 int32_t ECP_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt)
 {
-    int32_t ret = CheckECCParameters(para, r, pt);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    if (BN_IsOne(&pt->z)) {
-        return ECC_CopyPoint(r, pt);
-    }
+    int32_t ret;
     uint32_t bits = BN_Bits(para->p);
     BN_Optimizer *opt = BN_OptimizerCreate();
     BN_BigNum *zz = BN_Create(bits);
@@ -164,27 +158,6 @@ ERR:
 
 int32_t ECP_PointMul(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
 {
-    if (para == NULL || r == NULL || k == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if ((para->id != r->id) || ((pt != NULL) && (para->id != pt->id))) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    if (pt != NULL && BN_IsZero(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
-    if (BN_IsZero(k)) {
-        (void)BN_Zeroize(&r->z);
-        return CRYPT_SUCCESS;
-    }
-    if (BN_Cmp(k, para->n) == 0 && pt != NULL) {
-        // In this case, the consttime calculation is not required
-        // for checking whether the public key information is valid.
-        return ECP_PointMulFast(para, r, para->n, pt);
-    }
     uint32_t i;
     int32_t ret;
     BN_UINT mask;
@@ -198,7 +171,9 @@ int32_t ECP_PointMul(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const EC
         goto ERR;
     }
     // Convert base to affine.
-    GOTO_ERR_IF(ECP_Point2Affine(para, base, base), ret);
+    if (!BN_IsOne(&base->z)) {
+        GOTO_ERR_IF(ECP_Point2Affine(para, base, base), ret);
+    }
     // Add salt to prevent side channels.
     GOTO_ERR_IF(ECC_PointToMont(para, base, opt), ret);
     GOTO_ERR_IF(ECC_CopyPoint(r, base), ret);
@@ -620,18 +595,6 @@ ERR:
 // NotConstTime r = order*pt
 int32_t ECP_PointMulFast(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
 {
-    if (para == NULL || r == NULL || k == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if ((para->id != r->id) || ((pt != NULL) && (para->id != pt->id))) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    if (BN_IsZero(k)) {
-        (void)BN_Zeroize(&r->z);
-        return CRYPT_SUCCESS;
-    }
     int32_t ret;
     ReCodeData *codeK = NULL;
     int8_t offset;
@@ -689,10 +652,7 @@ static int32_t KZeroHandle(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1,
 int32_t ECP_PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1,
     const BN_BigNum *k2, const ECC_Point *pt)
 {
-    int32_t ret = ECP_PointMulAddParaCheck(para, r, k1, k2, pt);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
+    int32_t ret;
     if (BN_IsZero(k1) || BN_IsZero(k2)) {
         return KZeroHandle(para, r, k1, k2, pt);
     }
@@ -741,24 +701,6 @@ ERR:
     ECC_ReCodeFree(offData.codeK1);
     ECC_ReCodeFree(offData.codeK2);
     return ret;
-}
-
-int32_t ECP_PointMulAddParaCheck(const ECC_Para *para, const ECC_Point *r, const BN_BigNum *k1,
-    const BN_BigNum *k2, const ECC_Point *pt)
-{
-    if (para == NULL || r == NULL || k1 == NULL || k2 == NULL || pt == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if ((para->id != r->id) || (para->id != pt->id)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    if (BN_IsZero(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
-    return CRYPT_SUCCESS;
 }
 
 static int32_t PointParaCheck(const ECC_Para *para, const ECC_Point *pt, int32_t format)
@@ -824,7 +766,9 @@ int32_t ECC_EncodePoint(const ECC_Para *para, ECC_Point *pt, uint8_t *data, uint
     uint32_t bytes, off, lastLen, i, curveBytes;
     GOTO_ERR_IF(EncodePointParaCheck(para, pt, data, dataLen, format), ret);
     // Convert the point to affine.
-    GOTO_ERR_IF(para->method->point2Affine(para, pt, pt), ret);
+    if (!BN_IsOne(&pt->z)) {
+        GOTO_ERR_IF(para->method->point2Affine(para, pt, pt), ret);
+    }
     z = BN_GetBit(&pt->y, 0);
     bytes = BN_Bytes(&pt->x);
     curveBytes = BN_Bytes(para->p);

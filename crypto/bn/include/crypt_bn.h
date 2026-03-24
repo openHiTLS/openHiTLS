@@ -71,7 +71,7 @@ typedef struct BnCbCtx BN_CbCtx;
  
 typedef int32_t (*BN_CallBack)(BN_CbCtx *, int32_t, int32_t);
 
-/* If a is 0, all Fs are returned. If a is not 0, 0 is returned. */
+/* If a == 0, return 0xFFFFFFFF...; otherwise return 0. */
 static inline BN_UINT BN_IsZeroUintConsttime(BN_UINT a)
 {
     BN_UINT t = ~a & (a - 1); // The most significant bit of t is 1 only when a == 0.

@@ -220,10 +220,6 @@ int32_t ECP_Sm2GetAffine(SM2_AffinePoint *r, const SM2_point *a)
 {
     BN_UINT zInv3[SM2_LIMBS] ALIGN32 = {0};
     BN_UINT zInv2[SM2_LIMBS] ALIGN32 = {0};
-    if (IsZeros(a->z) != 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
     if (IsEqual(a->z, g_one) != 0) {
         (void)memcpy_s(r->x, sizeof(r->x), a->x, sizeof(r->x));
         (void)memcpy_s(r->y, sizeof(r->y), a->y, sizeof(r->x));
@@ -241,15 +237,7 @@ int32_t ECP_Sm2GetAffine(SM2_AffinePoint *r, const SM2_point *a)
 
 int32_t ECP_Sm2Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a)
 {
-    if (r == NULL || a == NULL || para == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (para->id != CRYPT_ECC_SM2 || r->id != CRYPT_ECC_SM2 || a->id != CRYPT_ECC_SM2) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-
+    (void)para;
     SM2_point temp = {0};
     SM2_AffinePoint rTemp = {0};
     int32_t ret;
@@ -345,21 +333,7 @@ static int32_t ECP_Sm2WnafMul(SM2_point *r, const BN_BigNum *k, SM2_point p)
 
 int32_t ECP_Sm2PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *scalar, const ECC_Point *pt)
 {
-    if (para == NULL || r == NULL || scalar == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (para->id != CRYPT_ECC_SM2 || r->id != CRYPT_ECC_SM2 || (pt != NULL && (pt->id != CRYPT_ECC_SM2))) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    if (pt != NULL && BN_IsZero(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
-    if (BN_IsZero(scalar)) {
-        return BN_Zeroize(&r->z);
-    }
+    (void)para;
     int32_t ret;
     BN_UINT k[SM2_LIMBS] = {0};
     uint32_t klen = SM2_LIMBS;
@@ -390,13 +364,13 @@ int32_t ECP_Sm2PointMulFast(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, co
 
 int32_t ECP_Sm2OrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a)
 {
-    if (para == NULL || r == NULL || a == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     if (BN_IsZero(a)) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_DIVISOR_ZERO);
         return CRYPT_BN_ERR_DIVISOR_ZERO;
+    }
+    if (BN_Cmp(para->n, a) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_NO_INVERSE);
+        return CRYPT_BN_ERR_NO_INVERSE;
     }
     int32_t ret = BN_Extend(r, SM2_LIMBS);
     if (ret != CRYPT_SUCCESS) {
@@ -413,42 +387,15 @@ int32_t ECP_Sm2OrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a)
     return CRYPT_SUCCESS;
 }
 
-static int32_t ECP_Sm2PointMulAddCheck(
-    ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt)
-{
-    bool flag = (para == NULL || r == NULL || k1 == NULL || k2 == NULL || pt == NULL);
-    uint32_t bits1;
-    uint32_t bits2;
-    if (flag) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (para->id != CRYPT_ECC_SM2 || r->id != CRYPT_ECC_SM2 || pt->id != CRYPT_ECC_SM2) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    // Special processing of the infinite point.
-    if (BN_IsZero(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
-    bits1 = BN_Bits(k1);
-    bits2 = BN_Bits(k2);
-    if (bits1 > SM2_BITS || bits2 > SM2_BITS) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_MUL_ERR_K_LEN);
-        return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
-    }
-
-    return CRYPT_SUCCESS;
-}
-
 // r = k1 * G + k2 * pt
 int32_t ECP_Sm2PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt)
 {
-    int32_t ret = ECP_Sm2PointMulAddCheck(para, r, k1, k2, pt);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
+    (void)para;
+    if (BN_Bits(k1) > SM2_BITS || BN_Bits(k2) > SM2_BITS) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_MUL_ERR_K_LEN);
+        return CRYPT_ECC_POINT_MUL_ERR_K_LEN;
     }
+    int32_t ret;
     BN_UINT k1Uint[SM2_LIMBS] = {0};
     uint32_t k1Len = SM2_LIMBS;
     SM2_point k1G = {0};

@@ -1562,6 +1562,7 @@ ERR:
 int32_t ECP256_PointMulAdd(
     ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const BN_BigNum *k2, const ECC_Point *pt)
 {
+    (void)para;
     int32_t ret;
     Felem felemK1;
     Felem felemK2;
@@ -1569,16 +1570,8 @@ int32_t ECP256_PointMulAdd(
     Point out;
 
     // Check the input parameters.
-    GOTO_ERR_IF(CheckParaValid(para, CRYPT_ECC_NISTP256), ret);
-    GOTO_ERR_IF(CheckPointValid(r, CRYPT_ECC_NISTP256), ret);
     GOTO_ERR_IF(CheckBnValid(k1, FELEM_BITS), ret);
     GOTO_ERR_IF(CheckBnValid(k2, FELEM_BITS), ret);
-    GOTO_ERR_IF(CheckPointValid(pt, CRYPT_ECC_NISTP256), ret);
-    // Special treatment of infinity points
-    if (BN_IsZero(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
 
     GOTO_ERR_IF_EX(BN2Felem(&felemK1, k1), ret);
     GOTO_ERR_IF_EX(BN2Felem(&felemK2, k2), ret);
@@ -1595,23 +1588,14 @@ ERR:
 
 int32_t ECP256_PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
 {
+    (void)para;
     int32_t ret;
     Felem felemK;
     Point preMulPt[TABLE_P_SIZE];
     Point out;
 
     // Check the input parameters.
-    GOTO_ERR_IF(CheckParaValid(para, CRYPT_ECC_NISTP256), ret);
-    GOTO_ERR_IF(CheckPointValid(r, CRYPT_ECC_NISTP256), ret);
     GOTO_ERR_IF(CheckBnValid(k, FELEM_BITS), ret);
-    if (pt != NULL) {
-        GOTO_ERR_IF(CheckPointValid(pt, CRYPT_ECC_NISTP256), ret);
-        // Special treatment of infinity points
-        if (BN_IsZero(&pt->z)) {
-            BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-            return CRYPT_ECC_POINT_AT_INFINITY;
-        }
-    }
 
     GOTO_ERR_IF_EX(BN2Felem(&felemK, k), ret);
     if (pt != NULL) {
@@ -1630,19 +1614,10 @@ ERR:
 
 int32_t ECP256_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt)
 {
+    (void)para;
     int32_t ret;
     Point out;
     Felem zInv;
-
-    // Check the input parameters.
-    GOTO_ERR_IF(CheckParaValid(para, CRYPT_ECC_NISTP256), ret);
-    GOTO_ERR_IF(CheckPointValid(r, CRYPT_ECC_NISTP256), ret);
-    GOTO_ERR_IF(CheckPointValid(pt, CRYPT_ECC_NISTP256), ret);
-    // Special treatment of infinity points
-    if (BN_IsZero(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
 
     GOTO_ERR_IF_EX(BN2Felem(&out.x, &pt->x), ret);
     GOTO_ERR_IF_EX(BN2Felem(&out.y, &pt->y), ret);
@@ -1660,16 +1635,6 @@ ERR:
 
 int32_t ECP256_ModOrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a)
 {
-    if (para == NULL || r == NULL || a == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (para->id != CRYPT_ECC_NISTP256) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-
     if (BN_IsZero(a)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_INVERSE_INPUT_ZERO);
         return CRYPT_ECC_INVERSE_INPUT_ZERO;
