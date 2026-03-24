@@ -251,6 +251,36 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test SDV_AUTH_OTP_CTX_CTRL_API_TC003
+ * @spec OTP Context
+ * @title Test NULL context input handling in OTP context control API
+ */
+/* BEGIN_CASE */
+void SDV_AUTH_OTP_CTX_CTRL_API_TC003(int protocolType)
+{
+    (void)protocolType;
+
+    uint32_t digitsSet = 8;
+    BSL_Param paramSet[] = {
+        {AUTH_PARAM_OTP_CTX_DIGITS, BSL_PARAM_TYPE_UINT32, &digitsSet, sizeof(digitsSet), sizeof(digitsSet)},
+        BSL_PARAM_END};
+
+    uint32_t digitsGot = 0;
+    BSL_Param paramGet[] = {
+        {AUTH_PARAM_OTP_CTX_DIGITS, BSL_PARAM_TYPE_UINT32, &digitsGot, sizeof(digitsGot), sizeof(digitsGot)},
+        BSL_PARAM_END};
+
+    ASSERT_EQ(HITLS_AUTH_OtpCtxCtrl(NULL, HITLS_AUTH_OTP_SET_CTX_DIGITS, paramSet, 0),
+              HITLS_AUTH_OTP_INVALID_INPUT);
+    ASSERT_EQ(HITLS_AUTH_OtpCtxCtrl(NULL, HITLS_AUTH_OTP_GET_CTX_DIGITS, paramGet, 0),
+              HITLS_AUTH_OTP_INVALID_INPUT);
+
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
  * @test SDV_AUTH_OTP_GEN_HOTP_API_TC001
  * @spec OTP Generation Process
  * @title Test HOTP generation process
