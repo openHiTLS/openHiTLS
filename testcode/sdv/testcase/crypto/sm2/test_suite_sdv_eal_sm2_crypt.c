@@ -603,3 +603,41 @@ EXIT:
 }
 /* END_CASE */
 
+
+/**
+ * @test   SDV_CRYPTO_SM2_DEC_API_TC002
+ * @title  SM2 CRYPT_EAL_PkeyDecrypt: Testing the boundary values of SM2 decryption.
+ * @precon Vector: private key, ciphertext.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM2_DEC_API_TC002(Hex *prvKey, Hex *cipher, int res)
+{
+    uint8_t plainText[MAX_PLAIN_TEXT_LEN];
+    uint32_t outLen = cipher->len;
+    CRYPT_EAL_PkeyPrv prv = {0};
+    uint8_t encodeText[MAX_PLAIN_TEXT_LEN + 20] = {0};
+    uint32_t encodeLen = MAX_PLAIN_TEXT_LEN + 20;
+    TestMemInit();
+    SetSm2PrvKey(&prv, prvKey->x, prvKey->len);
+
+    CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ctx, &prv), CRYPT_SUCCESS);
+
+    CRYPT_SM2_EncryptData encData = {
+        .x = cipher->x + 1,
+        .xLen = SM2_POINT_SINGLE_COORDINATE_LEN,
+        .y = cipher->x + SM2_POINT_SINGLE_COORDINATE_LEN + 1,
+        .yLen = SM2_POINT_SINGLE_COORDINATE_LEN,
+        .hash = cipher->x + SM2_POINT_COORDINATE_LEN,
+        .hashLen = SM3_MD_SIZE,
+        .cipher = cipher->x + SM2_POINT_COORDINATE_LEN + SM3_MD_SIZE,
+        .cipherLen = cipher->len - SM2_POINT_COORDINATE_LEN - SM3_MD_SIZE
+    };
+    ASSERT_EQ(CRYPT_EAL_EncodeSm2EncryptData(&encData, encodeText, &encodeLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(ctx, encodeText, encodeLen, plainText, &outLen), res);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+}
+/* END_CASE */
