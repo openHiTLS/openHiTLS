@@ -194,6 +194,10 @@ static int32_t OtpGetCtxContent(HITLS_AUTH_OtpCtx *ctx, int32_t cmd, void *param
 int32_t HITLS_AUTH_OtpCtxCtrl(HITLS_AUTH_OtpCtx *ctx, int32_t cmd, void *param, uint32_t paramLen)
 {
     (void)paramLen;
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_OTP_INVALID_INPUT);
+        return HITLS_AUTH_OTP_INVALID_INPUT;
+    }
     switch (cmd) {
         case HITLS_AUTH_OTP_SET_CTX_DIGITS:
         case HITLS_AUTH_OTP_SET_CTX_HASHALGID:
