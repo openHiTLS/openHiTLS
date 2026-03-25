@@ -1442,7 +1442,7 @@
                 ".features": ["slh_dsa"],
                 ".srcs": "crypto/slh_dsa/src/*.c",
                 ".deps": ["crypto::sha3", "crypto::sha2", "bsl::obj", "crypto::xmss"],
-                ".include": ["crypto/eal/src", "bsl/asn1/include", "crypto/xmss/src"]
+                ".include": ["crypto/eal/src", "bsl/asn1/include", "crypto/xmss/src", "crypto/sha3/src", "crypto/sha2/src"]
             },
             "xmss": {
                 ".features": ["xmss"],

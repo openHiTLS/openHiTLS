@@ -26,6 +26,7 @@
 #include "xmss_hash.h"
 #include "xmss_local.h"
 #include "xmss_address.h"
+#include "xmss_wots.h"
 
 /* Padding types for domain separation */
 #define PADDING_F          0
@@ -236,6 +237,31 @@ ERR:
     return ret;
 }
 
+static int32_t XmssWotsChain(const uint8_t *x, uint32_t xLen, uint32_t start, uint32_t steps, const uint8_t *pubSeed,
+                             void *adrs, const void *ctx, uint8_t *output)
+{
+    (void)pubSeed; // Parameter kept for API compatibility
+    const XmssWotsCtx *xmssWotsCtx = (const XmssWotsCtx *)ctx;
+    int32_t ret;
+    uint8_t tmp[XMSS_MAX_MDSIZE];
+    (void)memcpy_s(tmp, sizeof(tmp), x, xLen);
+    uint32_t tmpLen = xLen;
+
+    /* Iterate the F function 'steps' times starting from 'start' */
+    for (uint32_t i = start; i < start + steps; i++) {
+        xmssWotsCtx->adrsOps->setHashAddr(adrs, i);
+
+        /* Call F function through hash function table */
+        ret = xmssWotsCtx->hashFuncs->f((void *)xmssWotsCtx->coreCtx, adrs, tmp, tmpLen, tmp);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+
+    (void)memcpy_s(output, tmpLen, tmp, tmpLen);
+    return CRYPT_SUCCESS;
+}
+
 /* Static hash function table - shared by all XMSS algorithms */
 static const CryptHashFuncs g_xmssGenericHashFuncs = {
     .prf = XPrfGeneric,
@@ -244,6 +270,7 @@ static const CryptHashFuncs g_xmssGenericHashFuncs = {
     .tl = XTlGeneric,
     .prfmsg = PrfmsgGeneric,
     .hmsg = HmsgGeneric,
+    .chain = XmssWotsChain,
 };
 
 int32_t XmssInitHashFuncs(CryptXmssCtx *ctx)

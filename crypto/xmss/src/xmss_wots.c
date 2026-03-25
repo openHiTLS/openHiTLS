@@ -86,30 +86,6 @@ static void XmssWots_MsgToBaseW(const XmssWotsCtx *ctx, const uint8_t *msg, uint
     BaseB(csumBytes, 2, 4, out + len1, len2);
 }
 
-int32_t XmssWots_Chain(const uint8_t *x, uint32_t xLen, uint32_t start, uint32_t steps, const uint8_t *pubSeed,
-                       void *adrs, const XmssWotsCtx *ctx, uint8_t *output)
-{
-    (void)pubSeed; // Parameter kept for API compatibility
-    int32_t ret;
-    uint8_t tmp[XMSS_MAX_MDSIZE];
-    (void)memcpy_s(tmp, sizeof(tmp), x, xLen);
-    uint32_t tmpLen = xLen;
-
-    /* Iterate the F function 'steps' times starting from 'start' */
-    for (uint32_t i = start; i < start + steps; i++) {
-        ctx->adrsOps->setHashAddr(adrs, i);
-
-        /* Call F function through hash function table */
-        ret = ctx->hashFuncs->f((void *)ctx->coreCtx, adrs, tmp, tmpLen, tmp);
-        if (ret != CRYPT_SUCCESS) {
-            return ret;
-        }
-    }
-
-    (void)memcpy_s(output, tmpLen, tmp, tmpLen);
-    return CRYPT_SUCCESS;
-}
-
 int32_t XmssWots_GeneratePublicKey(uint8_t *pub, void *adrs, const XmssWotsCtx *ctx)
 {
     int32_t ret;
@@ -143,7 +119,7 @@ int32_t XmssWots_GeneratePublicKey(uint8_t *pub, void *adrs, const XmssWotsCtx *
         }
         ctx->adrsOps->setChainAddr(adrs, i);
         /* Chain the private key to get public key element */
-        ret = XmssWots_Chain(sk, n, 0, XMSS_WOTS_W - 1, ctx->pubSeed, adrs, ctx, tmp + i * n);
+        ret = ctx->hashFuncs->chain(sk, n, 0, XMSS_WOTS_W - 1, ctx->pubSeed, adrs, ctx, tmp + i * n);
         if (ret != CRYPT_SUCCESS) {
             BSL_SAL_CleanseData(sk, XMSS_MAX_MDSIZE);
             goto ERR;
@@ -206,7 +182,7 @@ int32_t XmssWots_Sign(uint8_t *sig, uint32_t *sigLen, const uint8_t *msg, uint32
         }
         ctx->adrsOps->setChainAddr(adrs, i);
         /* Chain private key element msgw[i] steps */
-        ret = XmssWots_Chain(sk, n, 0, msgw[i], ctx->pubSeed, adrs, ctx, sig + i * n);
+        ret = ctx->hashFuncs->chain(sk, n, 0, msgw[i], ctx->pubSeed, adrs, ctx, sig + i * n);
         BSL_SAL_CleanseData(sk, XMSS_MAX_MDSIZE);
         if (ret != CRYPT_SUCCESS) {
             goto ERR;
@@ -251,7 +227,8 @@ int32_t XmssWots_PkFromSig(const uint8_t *msg, uint32_t msgLen, const uint8_t *s
         ctx->adrsOps->setChainAddr(adrs, i);
 
         /* Complete the chain: chain from msgw[i] for (W-1-msgw[i]) steps */
-        ret = XmssWots_Chain(sig + i * n, n, msgw[i], XMSS_WOTS_W - 1 - msgw[i], ctx->pubSeed, adrs, ctx, tmp + i * n);
+        ret = ctx->hashFuncs->chain(sig + i * n, n, msgw[i], XMSS_WOTS_W - 1 - msgw[i],
+                                    ctx->pubSeed, adrs, ctx, tmp + i * n);
         if (ret != CRYPT_SUCCESS) {
             goto ERR;
         }

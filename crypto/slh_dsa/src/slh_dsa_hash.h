@@ -29,5 +29,24 @@
  */
 void SlhDsaInitHashFuncs(CryptSlhDsaCtx *ctx);
 
+/*
+ * SLH-DSA-SHA2: PreHash pkseed and padding then save the mdctx
+ * @param ctx   SLH-DSA context
+ */
+int32_t InitMdCtx(CryptSlhDsaCtx *ctx);
+
+/*
+ * SLH-DSA-SHA2: dup the md ctx
+ * @param dest  dest SLH-DSA context
+ * @param src   source SLH-DSA context
+ */
+void DupMdCtx(CryptSlhDsaCtx *dest, CryptSlhDsaCtx *src);
+
+/*
+ * SLH-DSA-SHA2: free the md ctx
+ * @param ctx   SLH-DSA context
+ */
+void FreeMdCtx(CryptSlhDsaCtx *ctx);
+
 #endif // HITLS_CRYPTO_SLH_DSA
 #endif // SLH_DSA_HASH_H

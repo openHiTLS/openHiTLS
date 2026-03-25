@@ -778,4 +778,39 @@ AARCH64_AUTIASP
     ret
 .size SHA3_Squeeze, .-SHA3_Squeeze
 
+/**
+ *  Function description: Perform Keccak permutation on the state.
+ *  Function prototyp: void SHA3_Keccak(uint8_t *state)
+ *  Input register:
+ *         x0: Pointer to the address of the State Matrix
+ *  Register usage: A00~A44: x0~x24 State Matrix
+ *                  T0~T4: x25~x29 temporary calculation register
+ *  Output register: None
+ *  Function/Macro Call: Keccak
+ */
+.global SHA3_Keccak
+.type   SHA3_Keccak, %function
+SHA3_Keccak:
+AARCH64_PACIASP
+    /* push stack protection */
+    stp x29, x30, [sp, #-96]!
+    stp x19, x20, [sp, #8*2]
+    stp x21, x22, [sp, #8*4]
+    stp x23, x24, [sp, #8*6]
+    stp x25, x26, [sp, #8*8]
+    stp x27, x28, [sp, #8*10]
+
+    mov x25, x0
+    Keccak
+
+    ldp x29, x30, [sp], #8*2
+    ldp x19, x20, [sp], #8*2
+    ldp x21, x22, [sp], #8*2
+    ldp x23, x24, [sp], #8*2
+    ldp x25, x26, [sp], #8*2
+    ldp x27, x28, [sp], #8*2
+AARCH64_AUTIASP
+    ret
+.size SHA3_Keccak, .-SHA3_Keccak
+
 #endif

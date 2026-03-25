@@ -92,6 +92,13 @@ typedef struct CryptHashFuncs {
      * Used for generating randomness for message-dependent operations
      */
     int32_t (*prfmsg)(const void *ctx, const uint8_t *key, const uint8_t *msg, uint32_t msgLen, uint8_t *out);
+
+    /**
+     * chain - WOTS+ chaining
+     * Used in WOTS+ key generation and signature generation
+     */
+    int32_t (*chain)(const uint8_t *x, uint32_t xLen, uint32_t start, uint32_t steps, const uint8_t *pubSeed,
+                       void *adrs, const void *ctx, uint8_t *output);
 } CryptHashFuncs;
 
 /*

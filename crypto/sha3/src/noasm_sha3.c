@@ -27,7 +27,7 @@
 extern "C" {
 #endif /* __cpluscplus */
 
-static void SHA3_Keccak(uint8_t *state);
+void SHA3_Keccak(uint8_t *state);
 static void Round(const uint64_t *a, uint64_t *e, uint32_t i);
 
 #define ROL64(a, offset) ((((uint64_t)(a)) << (offset)) ^ (((uint64_t)(a)) >> (64 - (offset))))
@@ -96,7 +96,7 @@ void SHA3_Squeeze(uint8_t *state, uint8_t *out, uint32_t outLen, uint32_t r, boo
     }
 }
 
-static void SHA3_Keccak(uint8_t *state)
+void SHA3_Keccak(uint8_t *state)
 {
     uint8_t stTmp[200] = {0};
 

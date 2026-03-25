@@ -129,6 +129,8 @@ struct SlhDsaCtx {
     const CryptHashFuncs *hashFuncs;  // Generic hash function table pointer
     CryptAdrsOps adrsOps;     // Generic address operation function pointers
     uint8_t keyType; /* specify the key type */
+    void *sha256MdCtx;
+    void *sha512MdCtx;
     void *libCtx;
 };
 

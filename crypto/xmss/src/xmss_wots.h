@@ -45,25 +45,6 @@ typedef struct {
 } XmssWotsCtx;
 
 /*
- * Compute a WOTS+ chain
- *
- * Iteratively applies the F function to compute a chain segment.
- *
- * @param x       Input value (n bytes)
- * @param xLen    Length of input (must be n)
- * @param start   Starting position in chain
- * @param steps   Number of steps to iterate (not end position!)
- * @param pubSeed Public seed for hash function
- * @param adrs    Address for domain separation
- * @param ctx     WOTS+ context
- * @param output  Output chain result (n bytes)
- *
- * @return CRYPT_SUCCESS on success
- */
-int32_t XmssWots_Chain(const uint8_t *x, uint32_t xLen, uint32_t start, uint32_t steps, const uint8_t *pubSeed,
-                       void *adrs, const XmssWotsCtx *ctx, uint8_t *output);
-
-/*
  * Generate a WOTS+ public key from a private key
  *
  * Computes the WOTS+ public key by chaining each private key element.
