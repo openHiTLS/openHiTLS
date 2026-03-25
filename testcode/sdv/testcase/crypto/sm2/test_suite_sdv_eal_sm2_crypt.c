@@ -618,6 +618,8 @@ void SDV_CRYPTO_SM2_DEC_API_TC002(Hex *prvKey, Hex *cipher, int res)
     uint8_t encodeText[MAX_PLAIN_TEXT_LEN + 20] = {0};
     uint32_t encodeLen = MAX_PLAIN_TEXT_LEN + 20;
     TestMemInit();
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
     SetSm2PrvKey(&prv, prvKey->x, prvKey->len);
 
     CRYPT_EAL_PkeyCtx *ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
@@ -638,6 +640,8 @@ void SDV_CRYPTO_SM2_DEC_API_TC002(Hex *prvKey, Hex *cipher, int res)
     ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(ctx, encodeText, encodeLen, plainText, &outLen), res);
 
 EXIT:
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 /* END_CASE */
