@@ -256,6 +256,10 @@ static int32_t DecryptInputCheck(const CRYPT_SM2_Ctx *ctx, const uint8_t *data, 
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    if (datalen < (SM2_POINT_COORDINATE_LEN + SM3_MD_SIZE)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
     if (ctx->pkey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_SM2_ERR_EMPTY_KEY);
         return CRYPT_SM2_ERR_EMPTY_KEY;
