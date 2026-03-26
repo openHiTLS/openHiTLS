@@ -71,11 +71,9 @@ typedef struct {
 } EccParam;
 
 typedef struct {
-    /* For TLS1.3 multi-key share, we try to send two key shares:
-     * - One for key encapsulation mechanism (KEM)
-     * - One for key exchange (KEX) */
-    HITLS_NamedGroup group;        /* First group for key share */
-    HITLS_NamedGroup secondGroup;  /* Second group for key share */
+    /* For TLS1.3 multi-key share support */
+    uint16_t groups[MAX_KEYSHARE_COUNT];  /* Groups for key share */
+    uint8_t count;                        /* Number of key shares */
 } KeyShareParam;
 
 /**
@@ -119,7 +117,7 @@ typedef struct {
         KeyShareParam share;
     } keyExchParam;
     HITLS_CRYPT_Key *key; /* Local key pair */
-    HITLS_CRYPT_Key *secondKey; /* second key pair for tls1.3 multi-key share */
+    HITLS_CRYPT_Key *keys[MAX_KEYSHARE_COUNT]; /* Multiple key pairs for multi-key share */
     uint8_t *peerPubkey; /* peer public key or peer ciphertext */
     uint32_t pubKeyLen; /* peer public key length */
 #ifdef HITLS_TLS_FEATURE_PSK

@@ -131,6 +131,7 @@ typedef enum {
     HITLS_CONFIG_ERR_MAX_LIMIT_CUSTOM_EXT,         /**< Exceed the max limit of custom extensions. */
     HITLS_CFG_ERR_LOAD_CRL_FILE,                   /**< Failed to load the CRL file. */
     HITLS_CFG_ERR_LOAD_CRL_BUFFER,                 /**< Failed to load the CRL buffer. */
+    HITLS_CFG_ERR_MAX_LIMIT_KEYSHARE,              /**< Exceed the max limit of keyshare. */
 
     HITLS_CM_FAIL_START = 0x02030001,              /**< Error start bit of the conn module. */
     HITLS_CM_LINK_FATAL_ALERTED,                   /**< link sent fatal alert. */

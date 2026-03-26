@@ -48,17 +48,13 @@
 #include "config_default.h"
 #include "bsl_list.h"
 #include "rec.h"
+#include "config_type.h"
 #include "cert_method.h"
 #ifdef HITLS_TLS_FEATURE_SECURITY
 #include "security.h"
 #endif
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
 #include "custom_extensions.h"
-#endif
-
-#ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
-/* Define the upper limit of the group type */
-#define MAX_GROUP_TYPE_NUM 128u
 #endif
 
 void CFG_CleanConfig(HITLS_Config *config)
@@ -69,6 +65,7 @@ void CFG_CleanConfig(HITLS_Config *config)
 #endif
     BSL_SAL_FREE(config->pointFormats);
     BSL_SAL_FREE(config->groups);
+    BSL_SAL_FREE(config->tuples);
     BSL_SAL_FREE(config->signAlgorithms);
 #ifdef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
 #ifndef HITLS_TLS_CAP_NO_STR
@@ -135,6 +132,8 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
     destConfig->attrName = ATTRIBUTE_FROM_CONFIG(srcConfig);
     destConfig->minVersion = srcConfig->minVersion;
     destConfig->maxVersion = srcConfig->maxVersion;
+    (void)memcpy_s(destConfig->keyshareIndex, sizeof(destConfig->keyshareIndex), srcConfig->keyshareIndex,
+                   sizeof(srcConfig->keyshareIndex));
 #ifdef HITLS_TLS_PROTO_CLOSE_STATE
     destConfig->isQuietShutdown = srcConfig->isQuietShutdown;
 #endif
@@ -278,6 +277,15 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
             return ret;
         }
         destConfig->groupsSize = srcConfig->groupsSize;
+    }
+
+    if (srcConfig->tuples != NULL) {
+        int32_t ret2 = DeepCopy((void **)&destConfig->tuples, srcConfig->tuples, BINLOG_ID16585,
+            srcConfig->tuplesSize * sizeof(uint16_t));
+        if (ret2 != HITLS_SUCCESS) {
+            return ret2;
+        }
+        destConfig->tuplesSize = srcConfig->tuplesSize;
     }
 #ifdef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
     if (srcConfig->groupInfo != NULL) {
@@ -997,54 +1005,125 @@ int32_t HITLS_CFG_SetGroups(HITLS_Config *config, const uint16_t *groups, uint32
     BSL_SAL_FREE(config->groups);
     config->groups = newData;
     config->groupsSize = groupsSize;
+
+    (void)memset_s(config->keyshareIndex, sizeof(config->keyshareIndex), 0, sizeof(config->keyshareIndex));
     return HITLS_SUCCESS;
 }
 
 #ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
-static uint16_t GroupToId(const char *name)
+typedef struct {
+    const char *alias;
+    const char *name;
+} GroupNameMap;
+
+static uint16_t GroupToId(const TLS_Config *tlsConfig, char *name)
 {
-    if (strcmp(name, "HITLS_EC_GROUP_SECP256R1") == 0) {
-        return HITLS_EC_GROUP_SECP256R1;
+    const char *groupName = name;
+    const GroupNameMap groupMap[] = {
+        {"P-256", "secp256r1"},
+        {"P-384", "secp384r1"},
+        {"P-521", "secp521r1"},
+        {"X25519", "x25519"}
+    };
+
+    for (uint32_t i = 0; i < sizeof(groupMap) / sizeof(groupMap[0]); i++) {
+        if (strcmp(name, groupMap[i].alias) == 0) {
+            groupName = groupMap[i].name;
+            break;
+        }
     }
-    if (strcmp(name, "HITLS_EC_GROUP_SECP384R1") == 0) {
-        return HITLS_EC_GROUP_SECP384R1;
+    uint32_t groupInfoNum = 0;
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfoList(tlsConfig, &groupInfoNum);
+    if (groupInfo == NULL || groupInfoNum == 0) {
+        return HITLS_NAMED_GROUP_BUTT;
     }
-    if (strcmp(name, "HITLS_EC_GROUP_SECP521R1") == 0) {
-        return HITLS_EC_GROUP_SECP521R1;
-    }
-    if (strcmp(name, "HITLS_EC_GROUP_BRAINPOOLP256R1") == 0) {
-        return HITLS_EC_GROUP_BRAINPOOLP256R1;
-    }
-    if (strcmp(name, "HITLS_EC_GROUP_BRAINPOOLP384R1") == 0) {
-        return HITLS_EC_GROUP_BRAINPOOLP384R1;
-    }
-    if (strcmp(name, "HITLS_EC_GROUP_BRAINPOOLP512R1") == 0) {
-        return HITLS_EC_GROUP_BRAINPOOLP512R1;
-    }
-    if (strcmp(name, "HITLS_EC_GROUP_CURVE25519") == 0) {
-        return HITLS_EC_GROUP_CURVE25519;
-    }
-    if (strcmp(name, "HITLS_EC_GROUP_SM2") == 0) {
-        return HITLS_EC_GROUP_SM2;
-    }
-    if (strcmp(name, "HITLS_FF_DHE_2048") == 0) {
-        return HITLS_FF_DHE_2048;
-    }
-    if (strcmp(name, "HITLS_FF_DHE_3072") == 0) {
-        return HITLS_FF_DHE_3072;
-    }
-    if (strcmp(name, "HITLS_FF_DHE_4096") == 0) {
-        return HITLS_FF_DHE_4096;
-    }
-    if (strcmp(name, "HITLS_FF_DHE_6144") == 0) {
-        return HITLS_FF_DHE_6144;
-    }
-    if (strcmp(name, "HITLS_FF_DHE_8192") == 0) {
-        return HITLS_FF_DHE_8192;
+
+    for (uint32_t i = 0; i < groupInfoNum; i++) {
+        if (strcmp(groupInfo[i].name, groupName) == 0) {
+            return groupInfo[i].groupId;
+        }
     }
     return HITLS_NAMED_GROUP_BUTT;
 }
 
+
+static char *AllocAndCopyGroupName(const char *groupNames, uint32_t groupNamesLen)
+{
+    char *groupNamesTmp = (char *)BSL_SAL_Calloc(groupNamesLen + 1, sizeof(char));
+    if (groupNamesTmp == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16604, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
+        return NULL;
+    }
+    (void)memcpy_s(groupNamesTmp, groupNamesLen + 1, groupNames, groupNamesLen);
+    return groupNamesTmp;
+}
+
+typedef struct {
+    uint16_t groupIds[MAX_GROUP_TYPE_NUM];
+    uint32_t groupsSize;
+    uint16_t tuples[MAX_GROUP_TYPE_NUM];
+    uint32_t tuplesSize;
+    uint32_t keyshareIndex[MAX_KEYSHARE_COUNT];
+    uint32_t keyshareCount;
+} GroupList;
+
+static int32_t ParseGroupNameToId(HITLS_Config *config, char *groupName, GroupList *list)
+{
+    if (list->groupsSize >= MAX_GROUP_TYPE_NUM) {
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_INVALID_INPUT, BINLOG_ID16168, "group number exceeds max");
+    }
+    bool needKeyshare = false;
+    bool needIgnore = false;
+    while (*groupName != '\0') {
+        if (*groupName == '?') {
+            if (needIgnore) {
+                return RETURN_ERROR_NUMBER_PROCESS(HITLS_CONFIG_UNSUPPORT_GROUP, BINLOG_ID16800, "error string format");
+            }
+            needIgnore = true;
+            groupName++;
+        } else if (*groupName == '*') {
+            if (needKeyshare) {
+                return RETURN_ERROR_NUMBER_PROCESS(HITLS_CONFIG_UNSUPPORT_GROUP, BINLOG_ID16801, "error string format");
+            }
+            needKeyshare = true;
+            groupName++;
+        } else if (*groupName == ' ') {
+            groupName++;
+        } else {
+            break;
+        }
+    }
+
+    uint16_t groupId = GroupToId(config, groupName);
+    if (groupId == HITLS_NAMED_GROUP_BUTT && !needIgnore) {
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_CONFIG_UNSUPPORT_GROUP, BINLOG_ID16802, "unsupported group id");
+    }
+    if (needKeyshare) {
+        if (list->keyshareCount >= MAX_KEYSHARE_COUNT) {
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_CFG_ERR_MAX_LIMIT_KEYSHARE, BINLOG_ID16168,
+                                               "keyshareCount too long");
+        }
+        list->keyshareIndex[(list->keyshareCount)++] = list->groupsSize;
+    }
+    list->groupIds[(list->groupsSize)++] = groupId;
+    return HITLS_SUCCESS;
+}
+
+static int32_t SetTuples(HITLS_Config *config, uint16_t *tuples, uint32_t tuplesSize)
+{
+    if (config == NULL || tuples == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    uint16_t *tuplesData = BSL_SAL_Dump(tuples, tuplesSize * sizeof(uint16_t));
+    if (tuplesData == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16603, "Dump fail");
+    }
+    BSL_SAL_FREE(config->tuples);
+    config->tuples = tuplesData;
+    config->tuplesSize = tuplesSize;
+    return HITLS_SUCCESS;
+}
 
 int32_t HITLS_CFG_SetGroupList(HITLS_Config *config, const char *groupNames, uint32_t groupNamesLen)
 {
@@ -1052,35 +1131,39 @@ int32_t HITLS_CFG_SetGroupList(HITLS_Config *config, const char *groupNames, uin
         return HITLS_NULL_INPUT;
     }
 
-    uint16_t groupIds[MAX_GROUP_TYPE_NUM] = {0};
-    uint32_t cnt = 0;
-    uint16_t tmpGroupId = 0;
-    char *context = NULL;
-    char *groupNamesTmp = (char *)BSL_SAL_Calloc(sizeof(char), groupNamesLen + 1);
+    GroupList list = {0};
+    char *groupNamesTmp = AllocAndCopyGroupName(groupNames, groupNamesLen);
     if (groupNamesTmp == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16604, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
         return HITLS_MEMALLOC_FAIL;
     }
-    (void)memcpy_s(groupNamesTmp, groupNamesLen + 1, groupNames, groupNamesLen);
-    char *groupName = strtok_s((char *)groupNamesTmp, ":", &context);
-
-    while (groupName != NULL) {
-        tmpGroupId = GroupToId(groupName);
-        if (tmpGroupId == HITLS_NAMED_GROUP_BUTT) {
-            BSL_SAL_FREE(groupNamesTmp);
-            return HITLS_CONFIG_UNSUPPORT_GROUP;
+    char *tupleContext = NULL;
+    int32_t ret;
+    char *tupleToken = strtok_s(groupNamesTmp, "/", &tupleContext);
+    while (tupleToken != NULL) {
+        uint32_t tupleGroupCount = 0;
+        char *groupContext = NULL;
+        char *groupName = strtok_s(tupleToken, ":", &groupContext);
+        while (groupName != NULL) {
+            ret = ParseGroupNameToId(config, groupName, &list);
+            if (ret != HITLS_SUCCESS) {
+                BSL_SAL_FREE(groupNamesTmp);
+                return ret;
+            }
+            tupleGroupCount++;
+            groupName = strtok_s(NULL, ":", &groupContext);
         }
-        if (cnt >= MAX_GROUP_TYPE_NUM) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16168, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "the group number to be set exceeds max group number.", 0, 0, 0, 0);
-            BSL_SAL_FREE(groupNamesTmp);
-            return HITLS_INVALID_INPUT;
-        }
-        groupIds[cnt++] = tmpGroupId;
-        groupName = strtok_s(NULL, ":", &context);
+        list.tuples[(list.tuplesSize)++] = tupleGroupCount;
+        tupleToken = strtok_s(NULL, "/", &tupleContext);
     }
     BSL_SAL_FREE(groupNamesTmp);
-    return HITLS_CFG_SetGroups(config, groupIds, cnt);
+
+    ret = SetTuples(config, list.tuples, list.tuplesSize);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    ret = HITLS_CFG_SetGroups(config, list.groupIds, list.groupsSize);
+    (void)memcpy_s(config->keyshareIndex, sizeof(config->keyshareIndex), list.keyshareIndex, sizeof(list.keyshareIndex));
+    return ret;
 }
 #endif /* HITLS_TLS_CONFIG_CIPHER_SUITE */
 

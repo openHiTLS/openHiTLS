@@ -77,7 +77,7 @@ void SDV_TLS13_MULTI_KEYSHARE_TC001()
     };
     RegisterWrapper(wrapper);
     HLT_SetGroups(serverCtxConfig, "HITLS_EC_GROUP_SECP256R1");
-    HLT_SetGroups(clientCtxConfig, "X25519MLKEM768:HITLS_EC_GROUP_SECP256R1");
+    HLT_SetGroups(clientCtxConfig, "HITLS_EC_GROUP_SECP256R1:X25519MLKEM768");
 
     HLT_Tls_Res *serverRes = HLT_ProcessTlsAccept(localProcess, TLS1_3, serverCtxConfig, NULL);
     ASSERT_TRUE(serverRes != NULL);
@@ -94,7 +94,7 @@ void SDV_TLS13_MULTI_KEYSHARE_TC001()
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 
     ASSERT_TRUE(TestIsErrStackEmpty());
-    
+
 EXIT:
     HLT_FreeAllProcess();
     ClearWrapper();

@@ -761,9 +761,10 @@ int32_t HITLS_CFG_GetPostHandshakeAuthSupport(HITLS_Config *config, bool *isSupp
 
 /**
  * @ingroup hitls_config
- * @brief   Sets whether to support not perform dual-ended verification
+ * @brief   Set whether to continue the handshake when certificate verification fails.
+ *
  * @param   config  [IN] Config handle
- * @param   support [IN] True: yes; False: no.
+ * @param   support [IN] True: continue on verification failure; False: terminate on failure
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */
@@ -771,10 +772,10 @@ int32_t HITLS_CFG_SetVerifyNoneSupport(HITLS_Config *config, bool support);
 
 /**
  * @ingroup hitls_config
- * @brief   Query whether not perform dual-ended verification is supported
+ * @brief   Query whether to continue the handshake when certificate verification fails.
  *
  * @param   config   [IN] Config handle
- * @param   isSupport   [OUT] Indicates whether not perform dual-ended verification is supported
+ * @param   isSupport   [OUT] Indicates whether continuing on verification failure is supported
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  HITLS_NULL_INPUT, config is null.
  */

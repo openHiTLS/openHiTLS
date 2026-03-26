@@ -621,6 +621,10 @@ chacha20poly1305, chacha20, rsa"
 #error "[HiTLS] The etm must work with cbc"
 #endif
 
+#if defined(HITLS_TLS_CONFIG_CIPHER_SUITE) && defined(HITLS_TLS_CAP_NO_STR)
+#error "[HiTLS] The cipher suite must work with string"
+#endif
+
 #endif /* HITLS_TLS */
 
 #ifdef HITLS_CRYPTO

@@ -652,27 +652,19 @@ static int32_t PackClientKeyShare(const TLS_Ctx *ctx, PackPacket *pkt)
     }
 
     uint16_t keyShareLen = 0;
-
     KeyShareParam *keyShare = &(kxCtx->keyExchParam.share);
-    uint32_t secondPubKeyLen = 0u;
-    uint32_t pubKeyLen = HS_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group);
-    if (pubKeyLen == 0u) {
-        BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15422, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "invalid keyShare length.", 0, 0, 0, 0);
-        return HITLS_PACK_INVALID_KX_PUBKEY_LENGTH;
-    }
+    uint32_t pubKeyLens[MAX_KEYSHARE_COUNT] = {0};
 
-    keyShareLen += sizeof(uint16_t) + sizeof(uint16_t) + pubKeyLen;
-    if (keyShare->secondGroup != HITLS_NAMED_GROUP_BUTT) {
-        secondPubKeyLen = HS_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->secondGroup);
-        if (secondPubKeyLen == 0u) {
+    for (uint8_t i = 0; i < keyShare->count; i++) {
+        pubKeyLens[i] = HS_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN,
+                                          keyShare->groups[i]);
+        if (pubKeyLens[i] == 0u) {
             BSL_ERR_PUSH_ERROR(HITLS_PACK_INVALID_KX_PUBKEY_LENGTH);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15422, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "invalid keyShare length.", 0, 0, 0, 0);
             return HITLS_PACK_INVALID_KX_PUBKEY_LENGTH;
         }
-        keyShareLen += sizeof(uint16_t) + sizeof(uint16_t) + secondPubKeyLen;
+        keyShareLen += sizeof(uint16_t) + sizeof(uint16_t) + pubKeyLens[i];
     }
 
     int32_t ret = PackExtensionHeader(HS_EX_TYPE_KEY_SHARE, sizeof(uint16_t) + keyShareLen, pkt);
@@ -683,38 +675,26 @@ static int32_t PackClientKeyShare(const TLS_Ctx *ctx, PackPacket *pkt)
     /* Pack the total length of client_keyShare */
     (void)PackAppendUint16ToBuf(pkt, keyShareLen);
 
-    /* Pack a group */
-    (void)PackAppendUint16ToBuf(pkt, (uint16_t)keyShare->group);
+    /* Pack each keyshare entry */
+    for (uint8_t i = 0; i < keyShare->count; i++) {
+        (void)PackAppendUint16ToBuf(pkt, (uint16_t)keyShare->groups[i]);
 
-    /* Length of the Pack KeyExChange */
-    (void)PackAppendUint16ToBuf(pkt, (uint16_t)pubKeyLen);
+        /* Length of the keyExchange */
+        (void)PackAppendUint16ToBuf(pkt, (uint16_t)pubKeyLens[i]);
 
-    uint32_t pubKeyUsedLen = 0;
-    uint8_t *pubKeyBuf = NULL;
-    (void)PackReserveBytes(pkt, pubKeyLen, &pubKeyBuf);
-    /* Pack KeyExChange */
-    ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->key, pubKeyBuf, pubKeyLen, &pubKeyUsedLen);
-    if (ret != HITLS_SUCCESS || pubKeyUsedLen != pubKeyLen) {
-        BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15423, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "encode client keyShare key fail.", 0, 0, 0, 0);
-        return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
-    }
+        /* Pack keyExchange */
+        uint32_t pubKeyUsedLen = 0;
+        uint8_t *pubKeyBuf = NULL;
+        (void)PackReserveBytes(pkt, pubKeyLens[i], &pubKeyBuf);
 
-    (void)PackSkipBytes(pkt, pubKeyUsedLen);
-
-    if (keyShare->secondGroup != HITLS_NAMED_GROUP_BUTT) {
-        (void)PackAppendUint16ToBuf(pkt, (uint16_t)keyShare->secondGroup);
-        (void)PackAppendUint16ToBuf(pkt, (uint16_t)secondPubKeyLen);
-        uint8_t *secondPubKeyBuf = NULL;
-        (void)PackReserveBytes(pkt, secondPubKeyLen, &secondPubKeyBuf);
-        ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->secondKey, secondPubKeyBuf, secondPubKeyLen, &pubKeyUsedLen);
-        if (ret != HITLS_SUCCESS || pubKeyUsedLen != secondPubKeyLen) {
+        ret = SAL_CRYPT_EncodeEcdhPubKey(kxCtx->keys[i], pubKeyBuf, pubKeyLens[i], &pubKeyUsedLen);
+        if (ret != HITLS_SUCCESS || pubKeyUsedLen != pubKeyLens[i]) {
             BSL_ERR_PUSH_ERROR(HITLS_CRYPT_ERR_ENCODE_ECDH_KEY);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15423, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "encode client keyShare key fail.", 0, 0, 0, 0);
             return HITLS_CRYPT_ERR_ENCODE_ECDH_KEY;
         }
+
         (void)PackSkipBytes(pkt, pubKeyUsedLen);
     }
     ctx->hsCtx->extFlag.haveKeyShare = true;
@@ -1038,7 +1018,7 @@ static int32_t PackHrrKeyShare(const TLS_Ctx *ctx, PackPacket *pkt)
     }
 
     /* Pack a group */
-    (void)PackAppendUint16ToBuf(pkt, (uint16_t)keyShare->group);
+    (void)PackAppendUint16ToBuf(pkt, (uint16_t)keyShare->groups[0]);
 
     ctx->hsCtx->extFlag.haveKeyShare = true;
     return HITLS_SUCCESS;
@@ -1078,7 +1058,7 @@ static int32_t PackServerKeyShare(const TLS_Ctx *ctx, PackPacket *pkt)
     (void)PackExtensionHeader(HS_EX_TYPE_KEY_SHARE, exMsgDataLen, pkt);
 
     /* Pack a group */
-    (void)PackAppendUint16ToBuf(pkt, (uint16_t)keyShare->group);
+    (void)PackAppendUint16ToBuf(pkt, (uint16_t)keyShare->groups[0]);
 
     /* Length of the paced KeyExChange */
     (void)PackAppendUint16ToBuf(pkt, (uint16_t)pubKeyLen);

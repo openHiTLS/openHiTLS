@@ -1367,3 +1367,439 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/**
+ * @test UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_CFG_TC001
+ * @spec HITLS_CFG_SetGroupList
+ * @title Test basic group tuple configuration with valid group names
+ * @precon nan
+ * @brief Test parsing basic tuple configuration "*secp384r1:x25519/secp521r1:secp256r1"
+ * @expect 1. Configuration succeeds
+ *        2. Groups array contains correct group IDs
+ *        3. Tuples array contains [2, 2]
+ *        4. KeyshareIndex contains [0, 1]
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_CFG_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+
+    const char *groupNames = "*secp384r1:x25519/secp521r1:secp256r1";
+    uint32_t groupNamesLen = strlen(groupNames);
+    int32_t ret = HITLS_CFG_SetGroupList(config, groupNames, groupNamesLen);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ASSERT_TRUE(config->groups != NULL);
+    ASSERT_EQ(config->groupsSize, 4u);
+
+    ASSERT_TRUE(config->tuples != NULL);
+    ASSERT_EQ(config->tuplesSize, 2u);
+    ASSERT_EQ(config->tuples[0], 2u);
+    ASSERT_EQ(config->tuples[1], 2u);
+
+    ASSERT_EQ(config->keyshareIndex[0], 0u);
+    ASSERT_EQ(config->keyshareIndex[1], 0u);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/** @
+* @test  UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_CFG_TC002
+* @spec   HITLS_CFG_SetGroupList
+* @title  Test group tuple configuration with maximum keyshares (4)
+* @precon nan
+* @brief  Test configuration with 4 keyshares (maximum allowed)
+* @expect All 4 keyshares are indexed correctly
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_CFG_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+
+    const char *groupNames = "*secp256r1:*secp384r1:*secp521r1:*x25519";
+    uint32_t groupNamesLen = strlen(groupNames);
+    int32_t ret = HITLS_CFG_SetGroupList(config, groupNames, groupNamesLen);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ASSERT_EQ(config->keyshareIndex[0], 0u);
+    ASSERT_EQ(config->keyshareIndex[1], 1u);
+    ASSERT_EQ(config->keyshareIndex[2], 2u);
+    ASSERT_EQ(config->keyshareIndex[3], 3u);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_CFG_TC003
+ * @spec HITLS_CFG_SetGroupList
+ * @title Test group tuple configuration without asterisk (default keyshare)
+ * @precon nan
+ * @brief Test that without asterisk, first group is selected by default
+ * @expect 1. Configuration succeeds
+ *        2. KeyshareIndex contains [0] (first group)
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_CFG_TC003(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+
+    const char *groupNames = "secp256r1:x25519/secp384r1";
+    uint32_t groupNamesLen = strlen(groupNames);
+    int32_t ret = HITLS_CFG_SetGroupList(config, groupNames, groupNamesLen);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ASSERT_EQ(config->keyshareIndex[0], 0u);
+    ASSERT_EQ(config->keyshareIndex[1], 0u);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_CFG_TC004
+ * @spec HITLS_CFG_SetGroupList
+ * @title Test group tuple configuration with invalid group name
+ * @precon nan
+ * @brief Test that invalid group name returns error
+ * @expect Configuration fails with HITLS_CONFIG_UNSUPPORT_GROUP
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_CFG_TC004(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+
+    int32_t ret = HITLS_CFG_SetGroupList(config, NULL, 0);
+    ASSERT_EQ(ret, HITLS_NULL_INPUT);
+    ret = HITLS_CFG_SetGroupList(NULL, "P-256", 5);
+    ASSERT_EQ(ret, HITLS_NULL_INPUT);
+    const char *groupNames = "*invalid_group:P-256";
+    uint32_t groupNamesLen = strlen(groupNames);
+    ret = HITLS_CFG_SetGroupList(config, groupNames, groupNamesLen);
+    ASSERT_EQ(ret, HITLS_CONFIG_UNSUPPORT_GROUP);
+    const char *groupNames2 = "*?*invalid_group:secp256r1";
+    uint32_t groupNamesLen2 = strlen(groupNames2);
+    ret = HITLS_CFG_SetGroupList(config, groupNames2, groupNamesLen2);
+    ASSERT_EQ(ret, HITLS_CONFIG_UNSUPPORT_GROUP);
+    const char *groupNames3 = "?*invalid_group :secp256r1";
+    uint32_t groupNamesLen3 = strlen(groupNames3);
+    ret = HITLS_CFG_SetGroupList(config, groupNames3, groupNamesLen3);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+    ASSERT_EQ(config->groups[0], HITLS_NAMED_GROUP_BUTT);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC001
+ * @spec ServerSelectGroupByTuples
+ * @title Test client preference mode with keyshare match in first tuple
+ * @precon nan
+ * @brief Scenario 1: Client preference, keyshare match
+ *        Config Tuple: [secp384r1, x25519] / [secp521r1, secp256r1]
+ *        Client keyshares: [secp256r1, x25519]
+ *        Client supported_groups: [secp256r1, x25519, secp384r1]
+ *        Expected: Select x25519, SH (no HRR)
+ * @expect Server selects x25519 and sends ServerHello directly
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *clientCfg = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *serverCfg = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientCfg != NULL && serverCfg != NULL);
+
+    const char *clientGroups = "*secp256r1:x25519";
+    uint32_t clientGroupsLen = strlen(clientGroups);
+    ASSERT_EQ(HITLS_CFG_SetGroupList(clientCfg, clientGroups, clientGroupsLen), HITLS_SUCCESS);
+
+    const char *serverGroups = "x25519:secp256r1/secp521r1";
+    uint32_t serverGroupsLen = strlen(serverGroups);
+    ASSERT_EQ(HITLS_CFG_SetGroupList(serverCfg, serverGroups, serverGroupsLen), HITLS_SUCCESS);
+    HITLS_CFG_SetCipherServerPreference(serverCfg, false);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(clientCfg, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(serverCfg, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+
+    int32_t ret = FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recvLen != 0);
+
+    uint32_t parseLen = 0;
+    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+    frameType.handshakeType = CLIENT_HELLO;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+
+    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
+    ASSERT_EQ(clientMsg->keyshares.exKeyShares.data[0].group.data, HITLS_EC_GROUP_SECP256R1);
+    ASSERT_EQ(clientMsg->keyshares.exKeyShares.size, 1);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_EQ(client->ssl->negotiatedInfo.negotiatedGroup, HITLS_EC_GROUP_SECP256R1);
+
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(clientCfg);
+    HITLS_CFG_FreeConfig(serverCfg);
+
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC002
+ * @spec ServerSelectGroupByTuples
+ * @title Test client preference mode without keyshare match
+ * @precon nan
+ * @brief Scenario 2: Client preference, no keyshare match
+ *        Server config Tuple: [x25519] / [secp256r1]
+ *        Client keyshares: [secp384r1]
+ *        Client supported_groups: [secp384r1, x25519]
+ *        Expected: Select x25519, HRR
+ * @expect Server sends HRR requesting x25519
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *clientCfg = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *serverCfg = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientCfg != NULL && serverCfg != NULL);
+
+    const char *clientGroups = "*secp384r1:x25519";
+    uint32_t clientGroupsLen = strlen(clientGroups);
+    ASSERT_EQ(HITLS_CFG_SetGroupList(clientCfg, clientGroups, clientGroupsLen), HITLS_SUCCESS);
+
+    const char *serverGroups = "x25519/secp256r1";
+    uint32_t serverGroupsLen = strlen(serverGroups);
+    ASSERT_EQ(HITLS_CFG_SetGroupList(serverCfg, serverGroups, serverGroupsLen), HITLS_SUCCESS);
+    HITLS_CFG_SetCipherServerPreference(serverCfg, false);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(clientCfg, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(serverCfg, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+
+    int32_t ret = FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recvLen != 0);
+
+    uint32_t parseLen = 0;
+    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+    frameType.handshakeType = CLIENT_HELLO;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+    // first client hello msg
+    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
+    ASSERT_EQ(clientMsg->keyshares.exKeyShares.data[0].group.data, HITLS_EC_GROUP_SECP384R1);
+    ASSERT_EQ(clientMsg->keyshares.exKeyShares.size, 1);
+    (void)HITLS_Accept(server->ssl);   // send hrr
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+    (void)HITLS_Connect(client->ssl);   // send ccs
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+    (void)HITLS_Accept(server->ssl);   // send ccs
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO) == HITLS_SUCCESS);
+
+    FRAME_Msg frameMsg2 = {0};
+    FRAME_Type frameType2 = {0};
+    FrameUioUserData *ioUserData2 = BSL_UIO_GetUserData(server->io);
+    uint8_t *recvBuf2 = ioUserData2->recMsg.msg;
+    uint32_t recvLen2 = ioUserData2->recMsg.len;
+    ASSERT_TRUE(recvLen2 != 0);
+
+    uint32_t parseLen2 = 0;
+    frameType2.versionType = HITLS_VERSION_TLS13;
+    frameType2.recordType = REC_TYPE_HANDSHAKE;
+    frameType2.handshakeType = CLIENT_HELLO;
+    frameType2.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType2, recvBuf2, recvLen2, &frameMsg2, &parseLen2) == HITLS_SUCCESS);
+    // second client hello msg
+    FRAME_ClientHelloMsg *clientMsg2 = &frameMsg2.body.hsMsg.body.clientHello;
+    ASSERT_EQ(clientMsg2->keyshares.exKeyShares.data[0].group.data, HITLS_EC_GROUP_CURVE25519);
+    ASSERT_EQ(clientMsg2->keyshares.exKeyShares.size, 1);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_EQ(client->ssl->negotiatedInfo.negotiatedGroup, HITLS_EC_GROUP_CURVE25519);
+
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    FRAME_CleanMsg(&frameType2, &frameMsg2);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(clientCfg);
+    HITLS_CFG_FreeConfig(serverCfg);
+
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC003
+ * @spec ServerSelectGroupByTuples
+ * @title Test server preference mode with keyshare match
+ * @precon nan
+ * @brief Scenario 3: Server preference, keyshare match
+ *        Server config Tuple: [secp256r1, x25519] / [secp521r1]
+ *        Client keyshares: [secp256r1, x25519]
+ *        Client supported_groups: [secp256r1, x25519]
+ *        Expected: Select secp256r1, SH (no HRR)
+ * @expect Server selects secp256r1 from its first tuple and sends ServerHello
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC003(void)
+{
+    FRAME_Init();
+    HITLS_Config *clientCfg = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *serverCfg = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientCfg != NULL && serverCfg != NULL);
+
+    const char *clientGroups = "*secp256r1:*x25519";
+    uint32_t clientGroupsLen = strlen(clientGroups);
+    ASSERT_EQ(HITLS_CFG_SetGroupList(clientCfg, clientGroups, clientGroupsLen), HITLS_SUCCESS);
+
+    const char *serverGroups = "secp256r1:x25519/secp521r1";
+    uint32_t serverGroupsLen = strlen(serverGroups);
+    ASSERT_EQ(HITLS_CFG_SetGroupList(serverCfg, serverGroups, serverGroupsLen), HITLS_SUCCESS);
+    HITLS_CFG_SetCipherServerPreference(serverCfg, true);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(clientCfg, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(serverCfg, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+
+    int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ASSERT_EQ(client->ssl->negotiatedInfo.negotiatedGroup, HITLS_EC_GROUP_SECP256R1);
+
+EXIT:
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(clientCfg);
+    HITLS_CFG_FreeConfig(serverCfg);
+
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC004
+ * @spec ServerSelectGroupByTuples
+ * @title Test client preference selects from second tuple when first has no match
+ * @precon nan
+ * @brief Scenario: Client preference, keyshare in second tuple
+ *        Server config Tuple: [x25519, secp256r1]
+ *        Client keyshares: [secp256r1, x25519]
+ *        Client supported_groups: [secp256r1, x25519]
+ *        Expected: Select secp256r1, SH (from second tuple)
+ * @expect Server selects secp256r1 from second tuple
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC004(void)
+{
+    FRAME_Init();
+    HITLS_Config *clientCfg = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *serverCfg = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientCfg != NULL && serverCfg != NULL);
+    const char *clientGroups = "*secp256r1:*x25519";
+    uint32_t clientGroupsLen = strlen(clientGroups);
+    ASSERT_EQ(HITLS_CFG_SetGroupList(clientCfg, clientGroups, clientGroupsLen), HITLS_SUCCESS);
+
+    const char *serverGroups = "x25519:secp256r1";
+    uint32_t serverGroupsLen = strlen(serverGroups);
+    ASSERT_EQ(HITLS_CFG_SetGroupList(serverCfg, serverGroups, serverGroupsLen), HITLS_SUCCESS);
+    HITLS_CFG_SetCipherServerPreference(serverCfg, false);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(clientCfg, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(serverCfg, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+
+    int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ASSERT_EQ(client->ssl->negotiatedInfo.negotiatedGroup, HITLS_EC_GROUP_SECP256R1);
+
+EXIT:
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(clientCfg);
+    HITLS_CFG_FreeConfig(serverCfg);
+
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC005
+ * @spec ServerSelectGroupByTuples
+ * @title Test server preference selects from server's tuple priority
+ * @precon nan
+ * @brief Scenario: Server preference, keyshare in lower priority tuple
+ *        Server config Tuple: [x25519, secp256r1]
+ *        Client keyshares: [secp256r1, x25519]
+ *        Client supported_groups: [secp256r1, x25519]
+ *        Expected: Select x25519, SH (server prefers first tuple)
+ * @expect Server selects x25519 from first tuple and sends ServerHello
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC005(void)
+{
+    FRAME_Init();
+    HITLS_Config *clientCfg = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *serverCfg = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientCfg != NULL && serverCfg != NULL);
+
+    const char *clientGroups = "*secp256r1:*x25519";
+    uint32_t clientGroupsLen = strlen(clientGroups);
+    ASSERT_EQ(HITLS_CFG_SetGroupList(clientCfg, clientGroups, clientGroupsLen), HITLS_SUCCESS);
+
+    const char *serverGroups = "x25519:secp256r1";
+    uint32_t serverGroupsLen = strlen(serverGroups);
+    ASSERT_EQ(HITLS_CFG_SetGroupList(serverCfg, serverGroups, serverGroupsLen), HITLS_SUCCESS);
+    HITLS_CFG_SetCipherServerPreference(serverCfg, true);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(clientCfg, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(serverCfg, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+
+    int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+
+    ASSERT_EQ(client->ssl->negotiatedInfo.negotiatedGroup, HITLS_EC_GROUP_CURVE25519);
+
+EXIT:
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(clientCfg);
+    HITLS_CFG_FreeConfig(serverCfg);
+
+}
+/* END_CASE */

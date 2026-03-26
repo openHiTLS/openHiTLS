@@ -114,6 +114,11 @@ typedef struct {
 
 typedef struct CustomExtMethods HITLS_CustomExts;
 
+#define MAX_KEYSHARE_COUNT 4
+
+/* Define the upper limit of the group type */
+#define MAX_GROUP_TYPE_NUM 32u
+
 /**
  * @brief   TLS Global Configuration
  */
@@ -145,6 +150,12 @@ typedef struct TlsConfig {
     /* According to RFC 8446 4.2.7, before TLS 1.3 is ec curves; TLS 1.3: supported groups for the key exchange */
     uint16_t *groups;
     uint32_t groupsSize;
+
+    /* Group tuple and keyshare configuration */
+    uint32_t keyshareIndex[MAX_KEYSHARE_COUNT]; /* Indexes of groups that need to generate keyshare in client hello */
+    uint16_t *tuples;                  /* Number of groups in each tuple (priority groups) */
+    uint32_t tuplesSize;               /* Number of tuples */
+
     uint16_t *signAlgorithms;           /* signature algorithm */
     uint32_t signAlgorithmsSize;
 

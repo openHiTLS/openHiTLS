@@ -14,6 +14,7 @@
  */
 
 #include <stddef.h>
+#include <string.h>
 #include "hitls_build.h"
 #include "config_type.h"
 #include "hitls_crypt_type.h"
@@ -29,6 +30,14 @@
 #include "crypt_eal_pkey.h"
 #endif
 
+#ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
+static const char DEFAULT_GROUP_ID[] =
+    "?*X25519MLKEM768/?*x25519:?secp256r1:?secp384r1:?secp521r1"
+#if defined(HITLS_TLS_PROTO_TLCP11) || defined(HITLS_TLS_FEATURE_SM_TLS13)
+    ":?sm2"
+#endif
+    "/?ffdhe2048:?ffdhe3072:?ffdhe4096:?ffdhe6144:?ffdhe8192";
+#else
 static const uint16_t DEFAULT_GROUP_ID[] = {
     HITLS_HYBRID_X25519_MLKEM768,
     HITLS_EC_GROUP_CURVE25519,
@@ -44,6 +53,7 @@ static const uint16_t DEFAULT_GROUP_ID[] = {
     HITLS_FF_DHE_6144,
     HITLS_FF_DHE_8192,
 };
+#endif
 
 #ifndef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
 #ifndef HITLS_TLS_CAP_NO_STR
@@ -253,7 +263,11 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
         return HITLS_INVALID_INPUT;
     }
     // Load default group configuration
-    return HITLS_CFG_SetGroups(config, DEFAULT_GROUP_ID, sizeof(DEFAULT_GROUP_ID) / sizeof(DEFAULT_GROUP_ID[0]));
+#ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
+    return HITLS_CFG_SetGroupList(config, DEFAULT_GROUP_ID, strlen(DEFAULT_GROUP_ID));
+#else
+    return HITLS_CFG_SetGroup(config, DEFAULT_GROUP_ID, sizeof(DEFAULT_GROUP_ID) / sizeof(DEFAULT_GROUP_ID[0]));
+#endif
 }
 
 const TLS_GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId)
@@ -357,7 +371,11 @@ int32_t ConfigLoadGroupInfo(HITLS_Config *config)
         return ret;
     }
     // Load default group configuration
-    return HITLS_CFG_SetGroups(config, DEFAULT_GROUP_ID, sizeof(DEFAULT_GROUP_ID) / sizeof(DEFAULT_GROUP_ID[0]));
+#ifdef HITLS_TLS_CONFIG_CIPHER_SUITE
+    return HITLS_CFG_SetGroupList(config, DEFAULT_GROUP_ID, strlen(DEFAULT_GROUP_ID));
+#else
+    return HITLS_CFG_SetGroup(config, DEFAULT_GROUP_ID, sizeof(DEFAULT_GROUP_ID) / sizeof(DEFAULT_GROUP_ID[0]));
+#endif
 }
 
 const TLS_GroupInfo *ConfigGetGroupInfo(const HITLS_Config *config, uint16_t groupId)

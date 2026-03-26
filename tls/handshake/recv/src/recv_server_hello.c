@@ -846,6 +846,16 @@ static int32_t Tls13ClientCheckServerHello(TLS_Ctx *ctx, const ServerHelloMsg *s
     return ClientCheckCipherSuite(ctx, serverHello, isHrr);
 }
 
+static bool FindGroupInKeyShare(TLS_Ctx *ctx, uint16_t selectedGroup)
+{
+    for (size_t i = 0; i < ctx->hsCtx->kxCtx->keyExchParam.share.count; i++) {
+        if (selectedGroup == ctx->hsCtx->kxCtx->keyExchParam.share.groups[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static int32_t ClientCheckHrrKeyShareExtension(TLS_Ctx *ctx, const ServerHelloMsg *helloRetryRequest)
 {
     if (helloRetryRequest->haveKeyShare == false) {
@@ -854,11 +864,9 @@ static int32_t ClientCheckHrrKeyShareExtension(TLS_Ctx *ctx, const ServerHelloMs
 
     /* The keyshare extension of hrr contains only group and does not contain other fields */
     if (helloRetryRequest->keyShare.keyExchangeSize != 0) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15282, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the keyshare keyExchangeSize is not 0 in hrr keyshare.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
-        return HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP;
+        return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP, BINLOG_ID15282,
+            "the hrr keyshare keyExchangeSize is not 0", ALERT_ILLEGAL_PARAMETER);
     }
 
     uint16_t selectedGroup = helloRetryRequest->keyShare.group;
@@ -867,13 +875,10 @@ static int32_t ClientCheckHrrKeyShareExtension(TLS_Ctx *ctx, const ServerHelloMs
 
     /* The selected group exist in the key share extension of the original client hello and no cookie exchange requested
      */
-    if (ctx->negotiatedInfo.cookie == NULL && (selectedGroup == ctx->hsCtx->kxCtx->keyExchParam.share.group ||
-            selectedGroup == ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup)) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15283, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the selected group extension is corresponded to a group in client hello key share.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+    if (ctx->negotiatedInfo.cookie == NULL && FindGroupInKeyShare(ctx, selectedGroup)) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
-        return HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP;
+        return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP, BINLOG_ID15283,
+            "hrr selected group in clienthello key share extension", ALERT_ILLEGAL_PARAMETER);
     }
 
     /* The selected group must exist in the supported groups extension of the original client hello */
@@ -885,19 +890,9 @@ static int32_t ClientCheckHrrKeyShareExtension(TLS_Ctx *ctx, const ServerHelloMs
         }
     }
     if (found == false) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15284, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "the selected group extension could not correspond to a group in client hello supported groups.",
-            0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
-        return HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP;
-    }
-    if (selectedGroup == ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup) {
-        SAL_CRYPT_FreeEcdhKey(ctx->hsCtx->kxCtx->key);
-        ctx->hsCtx->kxCtx->key = ctx->hsCtx->kxCtx->secondKey;
-        ctx->hsCtx->kxCtx->secondKey = NULL;
-        ctx->hsCtx->kxCtx->keyExchParam.share.group = selectedGroup;
-        ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup = HITLS_NAMED_GROUP_BUTT;
+        return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP, BINLOG_ID15284,
+            "selected group not in supported groups", ALERT_ILLEGAL_PARAMETER);
     }
     // Save the selected group
     ctx->negotiatedInfo.negotiatedGroup = selectedGroup;
@@ -1047,20 +1042,22 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
          && serverHello->keyShare.group != HITLS_EC_GROUP_SM2) ||
 #endif
         /* Check whether the sent support group is the same as the negotiated group */
-        (serverHello->keyShare.group != ctx->hsCtx->kxCtx->keyExchParam.share.group &&
-            serverHello->keyShare.group != ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup)) {
+        (!FindGroupInKeyShare(ctx, serverHello->keyShare.group))) {
         BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
         return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP, BINLOG_ID15289,
             "the keyshare parameter is illegal", ALERT_ILLEGAL_PARAMETER);
     }
 
     const KeyShare *keyShare = &serverHello->keyShare;
-    if (keyShare->group == ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup) {
-        SAL_CRYPT_FreeEcdhKey(ctx->hsCtx->kxCtx->key);
-        ctx->hsCtx->kxCtx->key = ctx->hsCtx->kxCtx->secondKey;
-        ctx->hsCtx->kxCtx->secondKey = NULL;
-        ctx->hsCtx->kxCtx->keyExchParam.share.group = keyShare->group;
-        ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup = HITLS_NAMED_GROUP_BUTT;
+    for (size_t i = 0; i < ctx->hsCtx->kxCtx->keyExchParam.share.count; i++) {
+        if (keyShare->group == ctx->hsCtx->kxCtx->keyExchParam.share.groups[i]) {
+            SAL_CRYPT_FreeEcdhKey(ctx->hsCtx->kxCtx->key);
+            ctx->hsCtx->kxCtx->key = ctx->hsCtx->kxCtx->keys[i];
+            ctx->hsCtx->kxCtx->keys[i] = NULL;
+            ctx->hsCtx->kxCtx->keyExchParam.share.groups[0] = keyShare->group;
+            ctx->hsCtx->kxCtx->keyExchParam.share.count = 1;
+            break;
+        }
     }
     const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, keyShare->group);
     if (groupInfo == NULL) {

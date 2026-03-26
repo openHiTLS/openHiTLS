@@ -83,74 +83,148 @@ static int32_t ServerCheckPointFormats(const ClientHelloMsg *clientHello)
     return HITLS_MSG_HANDLE_UNSUPPORT_POINT_FORMAT;
 }
 
-static uint16_t FindSupportedCurves(const TLS_Ctx *ctx, const uint16_t *perferenceGroups, uint32_t index)
+/* Select group based on tuple priority for TLS 1.3 */
+static void BuildTupleGroupsArray(const TLS_Ctx *ctx, uint32_t tupleStartIdx, uint32_t tupleSize, uint16_t *tupleGroups,
+                                  uint32_t *tupleGroupCount)
 {
-    /* Support group security check */
+    const TLS_Config *config = &ctx->config.tlsConfig;
+    *tupleGroupCount = 0;
+
+    for (uint32_t i = 0; i < tupleSize && (tupleStartIdx + i) < config->groupsSize; i++) {
+        uint16_t group = config->groups[tupleStartIdx + i];
 #ifdef HITLS_TLS_FEATURE_SECURITY
-    int32_t id = (int32_t)perferenceGroups[index];
-    int32_t ret = SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CURVE_SHARED, 0, id, NULL);
-    if (ret != SECURITY_SUCCESS || !GroupConformToVersion(ctx, ctx->negotiatedInfo.version, perferenceGroups[index])) {
+        int32_t ret = SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CURVE_SHARED, 0, (int32_t)group, NULL);
+        if (ret != SECURITY_SUCCESS || !GroupConformToVersion(ctx, ctx->negotiatedInfo.version, group)) {
 #else
-    if (!GroupConformToVersion(ctx, ctx->negotiatedInfo.version, perferenceGroups[index])) {
+        if (!GroupConformToVersion(ctx, ctx->negotiatedInfo.version, group)) {
 #endif /* HITLS_TLS_FEATURE_SECURITY */
-        return 0;
-    }
+            continue;
+        }
 #ifdef HITLS_TLS_FEATURE_SM_TLS13
-    if (IS_SM_TLS13(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite) &&
-        perferenceGroups[index] != HITLS_EC_GROUP_SM2) {
-        return 0;
-    }
+        if (IS_SM_TLS13(ctx->negotiatedInfo.cipherSuiteInfo.cipherSuite) && group != HITLS_EC_GROUP_SM2) {
+            continue;
+        }
 #endif
-    return perferenceGroups[index];
+        tupleGroups[(*tupleGroupCount)++] = group;
+    }
 }
 
-/**
-* @brief Select elliptic curve
-*
-* @param ctx [IN] TLS context
-* @param clientHello [IN] Client Hello packet
-*
-* @return Return curveID. If the value is 0, the supported curve is not found.
-*/
-static uint16_t ServerSelectCurveId(const TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
+static uint16_t ClientPrefSelectByTuple(const ClientHelloMsg *clientHello, const uint16_t *tupleGroups,
+                                        uint32_t tupleGroupCount)
 {
-    uint32_t perferenceGroupsSize = 0;
-    uint32_t normalGroupsSize = 0;
-    uint16_t *perferenceGroups = NULL;
-    uint16_t *normalGroups = NULL;
-#ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER
-    if (ctx->config.tlsConfig.isSupportServerPreference) {
-        perferenceGroupsSize = ctx->config.tlsConfig.groupsSize;
-        normalGroupsSize = clientHello->extension.content.supportedGroupsSize;
-        perferenceGroups = ctx->config.tlsConfig.groups;
-        normalGroups = clientHello->extension.content.supportedGroups;
-    } else {
-#endif
-        perferenceGroupsSize = clientHello->extension.content.supportedGroupsSize;
-        normalGroupsSize = ctx->config.tlsConfig.groupsSize;
-        perferenceGroups = clientHello->extension.content.supportedGroups;
-        normalGroups = ctx->config.tlsConfig.groups;
-#ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER
-    }
-#endif
+    KeyShare *clientKeyShares = clientHello->extension.content.keyShare;
+    const uint16_t *clientSupportedGroups = clientHello->extension.content.supportedGroups;
+    uint32_t clientSupportedGroupsSize = clientHello->extension.content.supportedGroupsSize;
+    ListHead *node = NULL;
+    ListHead *tmpNode = NULL;
+    KeyShare *cur = NULL;
+    uint32_t i;
+    uint32_t clientIdx;
+    uint16_t clientKeyshareGroup;
+    uint16_t clientSupportedGroup;
 
-    /* Find supported curves */
-    for (uint32_t i = 0u; i < perferenceGroupsSize; i++) {
-        for (uint32_t j = 0u; j < normalGroupsSize; j++) {
-            if (perferenceGroups[i] != normalGroups[j]) {
-                continue;
+    if (clientKeyShares == NULL) {
+        goto CHECK_SUPPORTED_GROUP;
+    }
+    LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(clientKeyShares->head)) {
+        cur = LIST_ENTRY(node, KeyShare, head);
+        clientKeyshareGroup = cur->group;
+        for (i = 0; i < tupleGroupCount; i++) {
+            if (clientKeyshareGroup == tupleGroups[i]) {
+                return clientKeyshareGroup;
             }
-            uint16_t curve = FindSupportedCurves(ctx, perferenceGroups, i);
-            if (curve == 0) {
-                continue;
-            }
-            return curve;
         }
     }
 
+CHECK_SUPPORTED_GROUP:
+    for (clientIdx = 0; clientIdx < clientSupportedGroupsSize; clientIdx++) {
+        clientSupportedGroup = clientSupportedGroups[clientIdx];
+        for (i = 0; i < tupleGroupCount; i++) {
+            if (clientSupportedGroup == tupleGroups[i]) {
+                return clientSupportedGroup;
+            }
+        }
+    }
+
+    return HITLS_NAMED_GROUP_BUTT;
+}
+
+static uint16_t ServerPrefSelectByTuple(const ClientHelloMsg *clientHello, const uint16_t *tupleGroups,
+                                        uint32_t tupleGroupCount)
+{
+    KeyShare *clientKeyShares = clientHello->extension.content.keyShare;
+    const uint16_t *clientSupportedGroups = clientHello->extension.content.supportedGroups;
+    uint32_t clientSupportedGroupsSize = clientHello->extension.content.supportedGroupsSize;
+    ListHead *node = NULL;
+    ListHead *tmpNode = NULL;
+    KeyShare *cur = NULL;
+    uint32_t i;
+    uint32_t clientIdx;
+    uint16_t serverGroup;
+
+    if (clientKeyShares == NULL) {
+        goto CHECK_SUPPORTED_GROUP;
+    }
+    for (i = 0; i < tupleGroupCount; i++) {
+        serverGroup = tupleGroups[i];
+        LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(clientKeyShares->head)) {
+            cur = LIST_ENTRY(node, KeyShare, head);
+            if (cur->group == serverGroup) {
+                return serverGroup;
+            }
+        }
+    }
+
+CHECK_SUPPORTED_GROUP:
+    for (i = 0; i < tupleGroupCount; i++) {
+        serverGroup = tupleGroups[i];
+        for (clientIdx = 0; clientIdx < clientSupportedGroupsSize; clientIdx++) {
+            if (serverGroup == clientSupportedGroups[clientIdx]) {
+                return serverGroup;
+            }
+        }
+    }
+
+    return HITLS_NAMED_GROUP_BUTT;
+}
+
+static uint16_t ServerSelectCurveId(const TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
+{
+    const TLS_Config *config = &ctx->config.tlsConfig;
+    const uint16_t *tuples = config->tuples == NULL ? config->groups : config->tuples;
+    const uint32_t tupleCount = config->tuples == NULL ? config->groupsSize : config->tuplesSize;
+
+    bool serverPrefer = false;
+#ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER
+    serverPrefer = config->isSupportServerPreference;
+#endif
+
+    uint32_t currentTupleStartIdx = 0;
+    for (uint32_t tupleIdx = 0; tupleIdx < tupleCount; tupleIdx++) {
+        uint32_t tupleSize = tuples[tupleIdx];
+        uint16_t tupleGroups[MAX_GROUP_TYPE_NUM];
+        uint32_t tupleGroupCount = 0;
+        BuildTupleGroupsArray(ctx, currentTupleStartIdx, tupleSize, tupleGroups, &tupleGroupCount);
+        if (tupleGroupCount == 0) {
+            currentTupleStartIdx += tupleSize;
+            continue;
+        }
+        uint16_t selectedGroup = 0;
+        if (!serverPrefer) {
+            selectedGroup = ClientPrefSelectByTuple(clientHello, tupleGroups, tupleGroupCount);
+        } else {
+            selectedGroup = ServerPrefSelectByTuple(clientHello, tupleGroups, tupleGroupCount);
+        }
+        if (selectedGroup != HITLS_NAMED_GROUP_BUTT) {
+            return selectedGroup;
+        }
+
+        currentTupleStartIdx += tupleSize;
+    }
+
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15211, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-        "the curve id in client hello is unsupported.", 0, 0, 0, 0);
-    return 0;
+        "No supported group found in tuple configuration.", 0, 0, 0, 0);
+    return HITLS_NAMED_GROUP_BUTT;
 }
 #endif /* HITLS_TLS_SUITE_KX_ECDHE */
 /**
@@ -216,17 +290,15 @@ static int32_t ProcessEcdheCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clien
 {
     /* If the curve id is not set, ECDHE cannot be used. */
     if ((ctx->config.tlsConfig.groupsSize == 0u) || (ctx->config.tlsConfig.groups == NULL)) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15212, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-            "can not used ecdhe whitout curve id.", 0, 0, 0, 0);
-        return HITLS_MSG_HANDLE_UNSUPPORT_CIPHER_SUITE;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_UNSUPPORT_CIPHER_SUITE, BINLOG_ID15212,
+            "can not used ecdhe whitout curve id");
     }
 #ifdef HITLS_TLS_PROTO_TLCP11
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
         if (CheckLocalContainCurveType(ctx->config.tlsConfig.groups,
             ctx->config.tlsConfig.groupsSize, HITLS_EC_GROUP_SM2) != true) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16231, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-                "TLCP need sm2 curve.", 0, 0, 0, 0);
-            return HITLS_MSG_HANDLE_UNSUPPORT_CIPHER_SUITE;
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_UNSUPPORT_CIPHER_SUITE, BINLOG_ID16231,
+                "TLCP need sm2 curve");
         }
         ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams.type = HITLS_EC_CURVE_TYPE_NAMED_CURVE;
         ctx->hsCtx->kxCtx->keyExchParam.ecdh.curveParams.param.namedcurve = HITLS_EC_GROUP_SM2;
@@ -236,24 +308,22 @@ static int32_t ProcessEcdheCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clien
     /* Check the Point format extension of the clientHello. This extension is not included in the TLCP */
     int32_t ret = ServerCheckPointFormats(clientHello);
     if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15213, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-            "server check client hello point formats fail.", 0, 0, 0, 0);
-        return HITLS_MSG_HANDLE_UNSUPPORT_CIPHER_SUITE;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_UNSUPPORT_CIPHER_SUITE, BINLOG_ID15213,
+            "server check client hello point formats fail");
     }
-
     uint16_t selectedEcCurveId =
 #ifdef HITLS_TLS_PROTO_TLS13
         ctx->hsCtx->haveHrr ? ctx->negotiatedInfo.negotiatedGroup :
 #endif
         ServerSelectCurveId(ctx, clientHello);
-    if (selectedEcCurveId == 0) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15214, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-            "server select curve id fail.", 0, 0, 0, 0);
-        return HITLS_MSG_HANDLE_UNSUPPORT_CIPHER_SUITE;
+    if (selectedEcCurveId == HITLS_NAMED_GROUP_BUTT) {
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MSG_HANDLE_UNSUPPORT_CIPHER_SUITE, BINLOG_ID15214,
+            "server select curve id fail");
     }
 #ifdef HITLS_TLS_PROTO_TLS13
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
-        ctx->hsCtx->kxCtx->keyExchParam.share.group = selectedEcCurveId;
+        ctx->hsCtx->kxCtx->keyExchParam.share.groups[0] = selectedEcCurveId;
+        ctx->hsCtx->kxCtx->keyExchParam.share.count = 1;
     } else
 #endif /* HITLS_TLS_PROTO_TLS13 */
     {
@@ -1589,7 +1659,7 @@ static int32_t ServerCheckKeyShare(TLS_Ctx *ctx, const ClientHelloMsg *clientHel
 
     /* ProcessEcdheCipherSuite returns a success response. There must be a public group */
     KeyShareParam *keyShare = &ctx->hsCtx->kxCtx->keyExchParam.share;
-    uint16_t selectGroup = keyShare->group;
+    uint16_t selectGroup = keyShare->groups[0];
     KeyShare *cache = clientHello->extension.content.keyShare;
     /*  rfc8446 4.2.8 Otherwise, when sending the new ClientHello, the client MUST
         replace the original "key_share" extension with one containing only a
@@ -1618,7 +1688,7 @@ static int32_t Tls13ServerProcessKeyShare(TLS_Ctx *ctx, const ClientHelloMsg *cl
     }
     /* ServerCheckKeyShare returns a success response. There must be a public group */
     KeyShareParam *keyShare = &ctx->hsCtx->kxCtx->keyExchParam.share;
-    uint16_t selectGroup = keyShare->group;
+    uint16_t selectGroup = keyShare->groups[0];
     ListHead *node = NULL;
     ListHead *tmpNode = NULL;
     KeyShare *cur = NULL;
@@ -1647,7 +1717,7 @@ static int32_t Tls13ServerProcessKeyShare(TLS_Ctx *ctx, const ClientHelloMsg *cl
         *isNeedSendHrr = false;
         /* Obtain the peer public key */
         ctx->hsCtx->kxCtx->pubKeyLen = cur->keyExchangeSize;
-        if (HS_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->group) !=
+        if (HS_GetCryptLength(ctx, HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN, keyShare->groups[0]) !=
             ctx->hsCtx->kxCtx->pubKeyLen) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
             return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP, BINLOG_ID16189,

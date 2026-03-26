@@ -71,8 +71,13 @@ void HS_KeyExchCtxFree(KeyExchCtx *keyExchCtx)
     BSL_SAL_FREE(keyExchCtx->ciphertext);
 #endif /* HITLS_TLS_PROTO_TLS13 */
     BSL_SAL_Free(keyExchCtx->peerPubkey);
-    SAL_CRYPT_FreeEcdhKey(keyExchCtx->secondKey);
     SAL_CRYPT_FreeEcdhKey(keyExchCtx->key);
+    for (uint8_t i = 0; i < MAX_KEYSHARE_COUNT; i++) {
+        if (keyExchCtx->keys[i] != NULL) {
+            SAL_CRYPT_FreeEcdhKey(keyExchCtx->keys[i]);
+            keyExchCtx->keys[i] = NULL;
+        }
+    }
     switch (keyExchCtx->keyExchAlgo) {
         case HITLS_KEY_EXCH_DHE:
         case HITLS_KEY_EXCH_DHE_PSK:
@@ -421,7 +426,7 @@ int32_t DeriveMasterSecret(TLS_Ctx *ctx, const uint8_t *preMasterSecret, uint32_
     deriveInfo.hashAlgo = ctx->negotiatedInfo.cipherSuiteInfo.hashAlg;
     deriveInfo.secret = preMasterSecret;
     deriveInfo.secretLen = len;
-    
+
 #ifdef HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
     const uint8_t exMasterSecretLabel[] = "extended master secret";
     bool isExtendedMasterSecret = ctx->negotiatedInfo.isExtendedMasterSecret;

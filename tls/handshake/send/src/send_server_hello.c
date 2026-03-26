@@ -210,7 +210,7 @@ static int32_t Tls13ServerPrepareKeyShare(TLS_Ctx *ctx)
                                    need to be calculated again */
         return HITLS_SUCCESS;
     }
-    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, keyShare->group);
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, keyShare->groups[0]);
     if (groupInfo == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16243, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "group info not found", 0, 0, 0, 0);
@@ -221,7 +221,7 @@ static int32_t Tls13ServerPrepareKeyShare(TLS_Ctx *ctx)
     }
     HITLS_ECParameters curveParams = {
         .type = HITLS_EC_CURVE_TYPE_NAMED_CURVE,
-        .param.namedcurve = keyShare->group,
+        .param.namedcurve = keyShare->groups[0],
     };
     HITLS_CRYPT_Key *key = NULL;
      /* The ecdhe and dhe groups can invoke the same interface to generate keys. */

@@ -234,7 +234,7 @@ static int32_t SetTLS13SMGroups(HITLS_Config *config, bool isOnlySupportSM)
         config->groups = tls13Groups;
         config->groupsSize = index;
     }
-
+    (void)memset_s(config->keyshareIndex, sizeof(config->keyshareIndex), 0, sizeof(config->keyshareIndex));
     return HITLS_SUCCESS;
 }
 
