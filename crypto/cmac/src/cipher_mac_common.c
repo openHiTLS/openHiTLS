@@ -91,8 +91,11 @@ int32_t CipherMacUpdate(Cipher_MAC_Common_Ctx *ctx, const uint8_t *in, uint32_t 
             return CRYPT_CMAC_INPUT_OVERFLOW;
         }
         uint32_t end = (ctx->len + lenTmp) > (blockSize) ? (blockSize) : (ctx->len + lenTmp);
-        for (uint32_t i = ctx->len; i < end; i++) {
-            ctx->left[i] = (*inTmp);
+        uint8_t *left = ctx->left + ctx->len;
+        uint8_t *leftEnd = ctx->left + end;
+        while (left < leftEnd) {
+            *left = *inTmp;
+            left++;
             inTmp++;
         }
         lenTmp -= (end - ctx->len);
@@ -117,8 +120,12 @@ int32_t CipherMacUpdate(Cipher_MAC_Common_Ctx *ctx, const uint8_t *in, uint32_t 
         lenTmp -= blockSize;
         inTmp += blockSize;
     }
-    for (uint32_t i = 0; i < lenTmp; i++) {
-        ctx->left[i] = inTmp[i];
+    uint8_t *left = ctx->left;
+    const uint8_t *leftSrcEnd = inTmp + lenTmp;
+    while (inTmp < leftSrcEnd) {
+        *left = *inTmp;
+        left++;
+        inTmp++;
     }
     ctx->len = lenTmp;
     return CRYPT_SUCCESS;

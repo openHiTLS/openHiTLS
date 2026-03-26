@@ -761,7 +761,7 @@ int32_t CRYPT_DECODE_ParseEncDataAsn1(CRYPT_EAL_LibCtx *libctx, const char *attr
     EncryptPara *encPara, const BSL_Buffer *pwd, BSL_ASN1_DecTemplCallBack keyInfoCb, BSL_Buffer *decode)
 {
     uint32_t iter;
-    int32_t prfId;
+    int32_t prfId = 0;
     uint32_t keylen = 0;
     uint8_t key[512] = {0}; // The maximum length of the symmetry algorithm
     BSL_Buffer salt = {0};
