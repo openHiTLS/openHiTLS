@@ -582,7 +582,6 @@ BSL_HASH_Hash *BSL_HASH_Create(uint32_t bktSize, BSL_HASH_CodeCalcFunc hashFunc,
     return hash;
 }
 
-
 static int32_t BSL_HASH_InsertNode(
     BSL_HASH_Hash *hash, RawList *rawList, const BSL_CstlUserData *inputKey, const BSL_CstlUserData *inputValue)
 {

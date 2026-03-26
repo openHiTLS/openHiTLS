@@ -203,7 +203,7 @@ typedef enum {
     HITLS_CMS_ECI_MAX_IDX,
 } HITLS_CMS_ECI_IDX;
 
-int32_t ParseEncapContentInfo(BSL_ASN1_Buffer *encode, CMS_SignedData *signedData)
+static int32_t ParseEncapContentInfo(BSL_ASN1_Buffer *encode, CMS_SignedData *signedData)
 {
     uint8_t *temp = encode->buff;
     uint32_t tempLen = encode->len;
@@ -2279,7 +2279,7 @@ static int32_t StreamVerifyParamCheck(HITLS_CMS *cms)
 
 static int32_t SignedData_SignInit(HITLS_CMS *cms, const BSL_Param *params)
 {
-    if (cms == NULL || cms->ctx.signedData == NULL) {
+    if (cms->ctx.signedData == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_NULL_POINTER);
         return HITLS_CMS_ERR_NULL_POINTER;
     }
@@ -2399,7 +2399,7 @@ static int32_t GetSignFinalParams(const BSL_Param *params, CRYPT_EAL_PkeyCtx **p
     return HITLS_PKI_SUCCESS;
 }
 
-int32_t SignedData_SignFinal(HITLS_CMS *cms, const BSL_Param *optionalParam)
+static int32_t SignedData_SignFinal(HITLS_CMS *cms, const BSL_Param *optionalParam)
 {
     CRYPT_EAL_PkeyCtx *prvKey = NULL;
     HITLS_X509_Cert *cert = NULL;
@@ -2556,7 +2556,7 @@ int32_t HITLS_CMS_SignedDataInit(HITLS_CMS *cms, int32_t option, const BSL_Param
 
 int32_t HITLS_CMS_SignedDataUpdate(HITLS_CMS *cms, const BSL_Buffer *input)
 {
-    if (cms->dataType != BSL_CID_PKCS7_SIGNEDDATA || cms->ctx.signedData == NULL || input == NULL) {
+    if (cms->ctx.signedData == NULL || input == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_PARAM);
         return HITLS_CMS_ERR_INVALID_PARAM;
     }
@@ -2576,7 +2576,7 @@ int32_t HITLS_CMS_SignedDataUpdate(HITLS_CMS *cms, const BSL_Buffer *input)
 
 int32_t HITLS_CMS_SignedDataFinal(HITLS_CMS *cms, const BSL_Param *param)
 {
-    if (cms == NULL || cms->dataType != BSL_CID_PKCS7_SIGNEDDATA || cms->ctx.signedData == NULL) {
+    if (cms->ctx.signedData == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_PARAM);
         return HITLS_CMS_ERR_INVALID_PARAM;
     }

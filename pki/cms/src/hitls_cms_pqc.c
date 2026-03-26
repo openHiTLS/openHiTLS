@@ -32,41 +32,50 @@
  * SHA-512 MUST be supported for all ML-DSA variants.
  * SHAKE256 SHOULD be supported (produces 512 bits output in CMS context).
  */
-int32_t HITLS_CMS_ValidateMlDsaDigestAlg(BslCid mldsaVariant, BslCid digestAlg)
+typedef struct {
+    BslCid algId;
+    const BslCid *digestList;
+    uint32_t count;
+} MlDsaDigestEntry;
+
+static const BslCid MLDSA44_DIGEST[] = {
+    BSL_CID_SHA256, BSL_CID_SHA384, BSL_CID_SHA512,
+    BSL_CID_SHA3_256, BSL_CID_SHA3_384, BSL_CID_SHA3_512,
+    BSL_CID_SHAKE128, BSL_CID_SHAKE256,
+};
+static const BslCid MLDSA65_DIGEST[] = {
+    BSL_CID_SHA384, BSL_CID_SHA512,
+    BSL_CID_SHA3_384, BSL_CID_SHA3_512,
+    BSL_CID_SHAKE256,
+};
+static const BslCid MLDSA87_DIGEST[] = {
+    BSL_CID_SHA512, BSL_CID_SHA3_512, BSL_CID_SHAKE256,
+};
+
+#define MLDSA_ARRAY_SIZE(arr) (uint32_t)(sizeof(arr) / sizeof((arr)[0]))
+
+static const MlDsaDigestEntry MLDSA_DIGEST_TABLE[] = {
+    { BSL_CID_ML_DSA_44, MLDSA44_DIGEST, MLDSA_ARRAY_SIZE(MLDSA44_DIGEST) },
+    { BSL_CID_ML_DSA_65, MLDSA65_DIGEST, MLDSA_ARRAY_SIZE(MLDSA65_DIGEST) },
+    { BSL_CID_ML_DSA_87, MLDSA87_DIGEST, MLDSA_ARRAY_SIZE(MLDSA87_DIGEST) },
+};
+
+static int32_t CMS_ValidateMlDsaDigestAlg(BslCid algId, BslCid mdId)
 {
-    switch (mldsaVariant) {
-        case BSL_CID_ML_DSA_44:
-            if (digestAlg == BSL_CID_SHA256 || digestAlg == BSL_CID_SHA384 ||
-                digestAlg == BSL_CID_SHA512 || digestAlg == BSL_CID_SHA3_256 ||
-                digestAlg == BSL_CID_SHA3_384 || digestAlg == BSL_CID_SHA3_512 ||
-                digestAlg == BSL_CID_SHAKE128 || digestAlg == BSL_CID_SHAKE256) {
+    for (uint32_t i = 0; i < MLDSA_ARRAY_SIZE(MLDSA_DIGEST_TABLE); i++) {
+        if (MLDSA_DIGEST_TABLE[i].algId != algId) {
+            continue;
+        }
+        for (uint32_t j = 0; j < MLDSA_DIGEST_TABLE[i].count; j++) {
+            if (MLDSA_DIGEST_TABLE[i].digestList[j] == mdId) {
                 return HITLS_PKI_SUCCESS;
             }
-            break;
-
-        case BSL_CID_ML_DSA_65:
-            if (digestAlg == BSL_CID_SHA384 || digestAlg == BSL_CID_SHA512 ||
-                digestAlg == BSL_CID_SHA3_384 || digestAlg == BSL_CID_SHA3_512 ||
-                digestAlg == BSL_CID_SHAKE256) {
-                return HITLS_PKI_SUCCESS;
-            }
-            break;
-
-        case BSL_CID_ML_DSA_87:
-            if (digestAlg == BSL_CID_SHA512 || digestAlg == BSL_CID_SHA3_512 ||
-                digestAlg == BSL_CID_SHAKE256) {
-                return HITLS_PKI_SUCCESS;
-            }
-            break;
-
-        default:
-            BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
-            return HITLS_CMS_ERR_INVALID_ALGO;
+        }
+        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_MLDSA_INVALID_DIGEST);
+        return HITLS_CMS_ERR_MLDSA_INVALID_DIGEST;
     }
-
-    // If we reach here, the digest algorithm is not acceptable for the given ML-DSA variant
-    BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_MLDSA_INVALID_DIGEST);
-    return HITLS_CMS_ERR_MLDSA_INVALID_DIGEST;
+    BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_INVALID_ALGO);
+    return HITLS_CMS_ERR_INVALID_ALGO;
 }
 
 /**
@@ -127,7 +136,7 @@ int32_t HITLS_CMS_ValidatePqcSignDigest(BslCid signAlgId, BslCid digestAlg)
         signAlgId == BSL_CID_ML_DSA_44 ||
         signAlgId == BSL_CID_ML_DSA_65 ||
         signAlgId == BSL_CID_ML_DSA_87) {
-        return HITLS_CMS_ValidateMlDsaDigestAlg(signAlgId, digestAlg);
+        return CMS_ValidateMlDsaDigestAlg(signAlgId, digestAlg);
     }
 
     // For other PQC algorithms, add validation as needed

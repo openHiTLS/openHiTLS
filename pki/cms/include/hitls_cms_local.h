@@ -81,7 +81,7 @@ typedef struct {
  * @brief SignerInfo structure
  * Reference: RFC 5652 Section 5.3
  */
-typedef struct _CMS_SignerInfo {
+typedef struct {
     int32_t version;                            /**< CMS version */
     BSL_ASN1_List *issuerName;
     BSL_Buffer certSerialNum;

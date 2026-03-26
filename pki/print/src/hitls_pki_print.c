@@ -572,6 +572,25 @@ static int32_t PrintExt(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, uint32_
     }
 }
 
+static int32_t PrintUnknownExtName(HITLS_X509_ExtEntry *entry, uint32_t layer, BSL_UIO *uio)
+{
+    char *tmpName = BSL_OBJ_GetOidNumericString(entry->extnId.buff, entry->extnId.len);
+    if (tmpName != NULL) {
+        int32_t ret = BSL_PRINT_Fmt(layer, uio, "%s\n", tmpName);
+        BSL_SAL_Free(tmpName);
+        if (ret != 0) {
+            BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_EXT_NAME);
+            return HITLS_PRINT_ERR_EXT_NAME;
+        }
+        return HITLS_PKI_SUCCESS;
+    }
+    if (BSL_PRINT_Buff(layer, uio, HITLS_X509_UNSUPPORT_EXT, strlen(HITLS_X509_UNSUPPORT_EXT)) != 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_EXT_NAME);
+        return HITLS_PRINT_ERR_EXT_NAME;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
 static int32_t PrintX509Ext(HITLS_X509_Ext *ext, bool isCertExt, uint32_t layer, BSL_UIO *uio)
 {
     int32_t count = BSL_LIST_COUNT(ext->extList);
@@ -597,19 +616,9 @@ static int32_t PrintX509Ext(HITLS_X509_Ext *ext, bool isCertExt, uint32_t layer,
         HITLS_X509_ExtEntry *entry = (HITLS_X509_ExtEntry *)BSL_LIST_GetData(extNode);
         extName = BSL_OBJ_GetOidNameFromCID(entry->cid);
         if (extName == NULL) {
-            char *tmpName = BSL_OBJ_GetOidNumericString(entry->extnId.buff, entry->extnId.len);
-            if (tmpName != NULL) {
-                if (BSL_PRINT_Fmt(layer + 1, uio, "%s\n", tmpName) != 0) {
-                    BSL_SAL_Free(tmpName);
-                    BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_EXT_NAME);
-                    goto EXIT;
-                }
-                BSL_SAL_Free(tmpName);
-            } else {
-                if (BSL_PRINT_Buff(layer + 1, uio, HITLS_X509_UNSUPPORT_EXT, strlen(HITLS_X509_UNSUPPORT_EXT)) != 0) {
-                    BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_EXT_NAME);
-                    goto EXIT;
-                }
+            ret = PrintUnknownExtName(entry, layer + 1, uio);
+            if (ret != HITLS_PKI_SUCCESS) {
+                goto EXIT;
             }
             continue;
         }

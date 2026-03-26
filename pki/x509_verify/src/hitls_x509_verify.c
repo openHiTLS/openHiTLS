@@ -610,6 +610,38 @@ static int32_t X509_GetCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List 
     return HITLS_PKI_SUCCESS;
 }
 
+#if defined(HITLS_PKI_X509_VFY_IDENTITY) || defined(HITLS_PKI_X509_VFY_LOCATION)
+
+static char *DupString(const char *str)
+{
+    char *dest = BSL_SAL_Dump(str, strlen(str) + 1);
+    if (dest == NULL) {
+        return NULL;
+    }
+    dest[strlen(str)] = '\0';
+    return dest;
+}
+
+static int32_t X509_CopyStringList(BslList *dst, const BslList *src)
+{
+    for (BslListNode *node = BSL_LIST_FirstNode(src); node != NULL; node = BSL_LIST_GetNextNode(src, node)) {
+        char *value = (char *)BSL_LIST_GetData(node);
+        char *copy = DupString(value);
+        if (copy == NULL) {
+            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+            return BSL_MALLOC_FAIL;
+        }
+        int32_t ret = BSL_LIST_AddElement(dst, copy, BSL_LIST_POS_END);
+        if (ret != BSL_SUCCESS) {
+            BSL_SAL_Free(copy);
+            BSL_ERR_PUSH_ERROR(ret);
+            return ret;
+        }
+    }
+    return HITLS_PKI_SUCCESS;
+}
+#endif
+
 #ifdef HITLS_PKI_X509_VFY_IDENTITY
 static int32_t X509_SetHostFlags(HITLS_X509_StoreCtx *storeCtx, const uint32_t *val, uint32_t valLen)
 {
@@ -620,16 +652,6 @@ static int32_t X509_SetHostFlags(HITLS_X509_StoreCtx *storeCtx, const uint32_t *
 
     storeCtx->verifyParam.hostflags |= *val;
     return HITLS_PKI_SUCCESS;
-}
-
-static char *DupString(const char *str)
-{
-    char *dest = BSL_SAL_Dump(str, strlen(str) + 1);
-    if (dest == NULL) {
-        return NULL;
-    }
-    dest[strlen(str)] = '\0';
-    return dest;
 }
 
 static int32_t X509_SetVerifyHost(HITLS_X509_StoreCtx *storeCtx, const char *hostname)
@@ -1835,25 +1857,6 @@ static int32_t X509_CopyRefList(BslList *dst, const BslList *src, int32_t (*refU
         ret = BSL_LIST_AddElement(dst, item, BSL_LIST_POS_END);
         if (ret != BSL_SUCCESS) {
             freeFn(item);
-            BSL_ERR_PUSH_ERROR(ret);
-            return ret;
-        }
-    }
-    return HITLS_PKI_SUCCESS;
-}
-
-static int32_t X509_CopyStringList(BslList *dst, const BslList *src)
-{
-    for (BslListNode *node = BSL_LIST_FirstNode(src); node != NULL; node = BSL_LIST_GetNextNode(src, node)) {
-        char *value = (char *)BSL_LIST_GetData(node);
-        char *copy = DupString(value);
-        if (copy == NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-            return BSL_MALLOC_FAIL;
-        }
-        int32_t ret = BSL_LIST_AddElement(dst, copy, BSL_LIST_POS_END);
-        if (ret != BSL_SUCCESS) {
-            BSL_SAL_Free(copy);
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }

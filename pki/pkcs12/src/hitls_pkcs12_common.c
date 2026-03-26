@@ -183,10 +183,6 @@ static int32_t ConvertCertBag(HITLS_PKCS12 *p12, HITLS_PKCS12_CommonSafeBag *bag
 static int32_t ConvertCrlBag(HITLS_PKCS12 *p12, HITLS_PKCS12_CommonSafeBag *bag, HITLS_X509_Crl **crl)
 {
     (void)p12;
-    if (bag == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
-        return HITLS_PKCS12_ERR_NULL_POINTER;
-    }
     if (bag->bagType != BSL_CID_X509CRL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_CERTYPES);
         return HITLS_PKCS12_ERR_INVALID_CERTYPES;

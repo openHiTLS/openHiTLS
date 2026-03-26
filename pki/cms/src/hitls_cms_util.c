@@ -63,7 +63,7 @@ void HITLS_CMS_SignerInfoFree(void *signerInfo)
     BSL_SAL_Free(si);
 }
 
-void CMS_SignedDataFree(CMS_SignedData *sd)
+static void CMS_SignedDataFree(CMS_SignedData *sd)
 {
     if (sd == NULL) {
         return;
