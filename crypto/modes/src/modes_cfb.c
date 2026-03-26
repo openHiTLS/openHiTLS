@@ -20,12 +20,14 @@
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
+#include "eal_cipher_local.h"
 #include "crypt_modes_cfb.h"
 #include "modes_local.h"
 #include "crypt_errno.h"
 #include "crypt_local_types.h"
 #include "crypt_modes.h"
 
+#ifndef HITLS_CRYPTO_CFB128
 /* 8-bit | 64-bit | 128-bit CFB encryption. Here, len indicates the number of bytes to be processed. */
 static int32_t MODES_CFB_BytesEncrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
@@ -88,6 +90,7 @@ static int32_t MODES_CFB_BytesEncrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in
 
     return CRYPT_SUCCESS;
 }
+#endif
 
 static int32_t MODES_CFB128_BytesEncrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
@@ -139,6 +142,7 @@ static int32_t MODES_CFB128_BytesEncrypt(MODES_CipherCFBCtx *ctx, const uint8_t 
     return CRYPT_SUCCESS;
 }
 
+#ifndef HITLS_CRYPTO_CFB128
 /* 8-bit | 64-bit | 128-bit CFB decryption. Here, len indicates the number of bytes to be processed. */
 static int32_t MODES_CFB_BytesDecrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
@@ -202,6 +206,7 @@ static int32_t MODES_CFB_BytesDecrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in
 
     return CRYPT_SUCCESS;
 }
+#endif
 
 static int32_t MODES_CFB128_BytesDecrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
@@ -325,11 +330,13 @@ int32_t MODES_CFB_Encrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *o
     }
 
     switch (ctx->feedbackBits) {
+#ifndef HITLS_CRYPTO_CFB128
         case 1:
             return MODES_CFB_BitCrypt(ctx, in, out, len * 8, true); // Each byte occupies 8 bits.
         case 8:
         case 64:
             return MODES_CFB_BytesEncrypt(ctx, in, out, len);
+#endif
         case 128:
             return MODES_CFB128_BytesEncrypt(ctx, in, out, len);
         default:
@@ -345,11 +352,13 @@ int32_t MODES_CFB_Decrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *o
         return CRYPT_NULL_INPUT;
     }
     switch (ctx->feedbackBits) {
+#ifndef HITLS_CRYPTO_CFB128
         case 1:     // 1-bit cfb. Convert the length of bytes to the length of bits.
             return MODES_CFB_BitCrypt(ctx, in, out, len * 8, false); // Each byte occupies 8 bits.
         case 8:     // 8-bit cfb
         case 64:    // 64-bit cfb
             return MODES_CFB_BytesDecrypt(ctx, in, out, len);
+#endif
         case 128:   // 128-bit cfb
             return MODES_CFB128_BytesDecrypt(ctx, in, out, len);
         default:
@@ -480,14 +489,6 @@ int32_t MODES_CFB_Update(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t inL
 {
     return MODES_CipherStreamProcess(modeCtx->enc ? MODES_CFB_Encrypt : MODES_CFB_Decrypt, &modeCtx->cfbCtx,
         in, inLen, out, outLen);
-}
-
-int32_t MODES_CFB_Final(MODES_CFB_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
-{
-    (void) modeCtx;
-    (void) out;
-    *outLen = 0;
-    return CRYPT_SUCCESS;
 }
 
 int32_t MODES_CFB_DeInitCtx(MODES_CFB_Ctx *modeCtx)

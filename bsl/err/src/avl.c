@@ -27,34 +27,24 @@
 
 static uint32_t GetMaxHeight(uint32_t a, uint32_t b)
 {
-    if (a >= b) {
-        return a;
-    } else {
-        return b;
-    }
+    return a >= b ? a : b;
 }
 
 static uint32_t GetAvlTreeHeight(const BSL_AvlTree *node)
 {
-    if (node == NULL) {
-        return 0;
-    } else {
-        return node->height;
-    }
+    return node == NULL ? 0 : node->height;
 }
 
 static void UpdateAvlTreeHeight(BSL_AvlTree *node)
 {
-    if (node != NULL) {
-        uint32_t leftHeight = GetAvlTreeHeight(node->leftNode);
-        uint32_t rightHeight = GetAvlTreeHeight(node->rightNode);
-        if (node->height >= AVL_MAX_HEIGHT) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05078, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "avl tree height exceed max limit", 0, 0, 0, 0);
-            return;
-        }
-        node->height = GetMaxHeight(leftHeight, rightHeight) + 1u;
+    uint32_t leftHeight = GetAvlTreeHeight(node->leftNode);
+    uint32_t rightHeight = GetAvlTreeHeight(node->rightNode);
+    if (node->height >= AVL_MAX_HEIGHT) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05078, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "avl tree height exceed max limit", 0, 0, 0, 0);
+        return;
     }
+    node->height = GetMaxHeight(leftHeight, rightHeight) + 1u;
 }
 
 BSL_AvlTree *BSL_AVL_MakeLeafNode(BSL_ElementData data)

@@ -651,11 +651,11 @@ char *BN_Bn2Dec(const BN_BigNum *a)
     }
 
 ERR:
-    BSL_SAL_FREE(bnInit);
+    BSL_SAL_Free(bnInit);
     if (ret == CRYPT_SUCCESS) {
         return result;
     }
-    BSL_SAL_FREE(result);
+    BSL_SAL_Free(result);
     return NULL;
 }
 #endif /* HITLS_CRYPTO_BN_STR_CONV */

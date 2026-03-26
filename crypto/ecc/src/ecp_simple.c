@@ -41,11 +41,8 @@ int32_t ECP_PointAtInfinity(const ECC_Para *para, const ECC_Point *pt)
     return CRYPT_SUCCESS;
 }
 
-// Check whether the point is on the curve.
 int32_t ECP_PointOnCurve(const ECC_Para *para, const ECC_Point *pt)
 {
-    uint32_t nistList[] = {CRYPT_ECC_NISTP192, CRYPT_ECC_NISTP224, CRYPT_ECC_NISTP256, CRYPT_ECC_NISTP384,
-        CRYPT_ECC_NISTP521};
     int32_t ret = ECP_PointAtInfinity(para, pt);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -68,24 +65,11 @@ int32_t ECP_PointOnCurve(const ECC_Para *para, const ECC_Point *pt)
         para->method->bnMontDec(dupA, para->montP);
         para->method->bnMontDec(dupB, para->montP);
     }
-    GOTO_ERR_IF(BN_ModSqr(x, &pt->x, para->p, opt), ret); // x^2
-    GOTO_ERR_IF(BN_ModMul(x, x, &pt->x, para->p, opt), ret); // x^3
-    if (ParamIdIsValid(para->id, nistList, sizeof(nistList) / sizeof(nistList[0]))) {
-        // Currently, only the NIST curve is supported(calculating x^3 - 3x).
-        // Other curves need to be expanded in the future.
-        if ((ret = BN_ModSub(x, x, &pt->x, para->p, opt)) != CRYPT_SUCCESS ||
-            (ret = BN_ModSub(x, x, &pt->x, para->p, opt)) != CRYPT_SUCCESS ||
-            (ret = BN_ModSub(x, x, &pt->x, para->p, opt)) != CRYPT_SUCCESS) { //  x^3 - 3x
-            BSL_ERR_PUSH_ERROR(ret);
-            goto ERR;
-        }
-    } else {
-        // General implementation
-        GOTO_ERR_IF(BN_ModMul(y, dupA, &pt->x, para->p, opt), ret);
-        GOTO_ERR_IF(BN_ModAdd(x, x, y, para->p, opt), ret); //  x^3 + ax
-    }
 
-    GOTO_ERR_IF(BN_ModAdd(x, x, dupB, para->p, opt), ret); //  x^3 - 3x + b
+    GOTO_ERR_IF(BN_ModSqr(x, &pt->x, para->p, opt), ret); // x^2
+    GOTO_ERR_IF(BN_ModAdd(x, x, dupA, para->p, opt), ret); // x^2 + a
+    GOTO_ERR_IF(BN_ModMul(x, x, &pt->x, para->p, opt), ret); // (x^2 + a)x
+    GOTO_ERR_IF(BN_ModAdd(x, x, dupB, para->p, opt), ret); //  x^3 + ax + b
     GOTO_ERR_IF(BN_ModSqr(y, &pt->y, para->p, opt), ret); // y^2
     if (BN_Cmp(x, y) != 0) {
         ret = CRYPT_ECC_POINT_NOT_ON_CURVE;
@@ -98,23 +82,6 @@ ERR:
     BN_Destroy(dupB);
     BN_OptimizerDestroy(opt);
     return ret;
-}
-
-static int32_t CheckECCParameters(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt)
-{
-    if (para == NULL || r == NULL || pt == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (para->id != pt->id || para->id != r->id) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
-    if (BN_IsZero(&pt->z)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
-        return CRYPT_ECC_POINT_AT_INFINITY;
-    }
-    return CRYPT_SUCCESS;
 }
 
 int32_t ECP_Point2Affine(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt)
@@ -215,19 +182,17 @@ ERR:
 // The z coordinate of point pt multiplied by z.
 int32_t ECP_Point2AffineWithInv(const ECC_Para *para, ECC_Point *r, const ECC_Point *pt, const BN_BigNum *inv)
 {
-    if (inv == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    int32_t ret = CheckECCParameters(para, r, pt);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
+    if (BN_IsZero(&pt->z)) {
+        // Infinite point multiplied by z is meaningless.
+        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
+        return CRYPT_ECC_POINT_AT_INFINITY;
     }
     BN_Optimizer *opt = BN_OptimizerCreate();
     if (opt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
+    int32_t ret;
     GOTO_ERR_IF(BN_ModSqr(&r->z, inv, para->p, opt), ret);            // z = inv^2
     GOTO_ERR_IF(BN_ModMul(&r->x, &pt->x, &r->z, para->p, opt), ret);    // x = x * (inv^2)
     GOTO_ERR_IF(BN_ModMul(&r->y, &pt->y, inv, para->p, opt), ret);
@@ -302,7 +267,6 @@ ERR:
     return ret;
 }
 
-// Currently, only prime number curves are supported. Other curves need to be expanded.
 int32_t ECC_PointCmp(const ECC_Para *para, const ECC_Point *a, const ECC_Point *b)
 {
     RETURN_RET_IF(para == NULL || a == NULL || b == NULL, CRYPT_NULL_INPUT);
@@ -342,9 +306,8 @@ ERR:
     return ret;
 }
 
-int32_t ECP_PointCopy(const ECC_Para *para, ECC_Point *a, const ECC_Point *b)
+int32_t ECP_PointCopy(ECC_Point *a, const ECC_Point *b)
 {
-    (void)para;
     int32_t ret;
 
     a->id = b->id;
@@ -359,19 +322,11 @@ int32_t ECP_PointCopy(const ECC_Para *para, ECC_Point *a, const ECC_Point *b)
 // Cartesian coordinate point inversion.
 int32_t ECP_PointInvertAtAffine(const ECC_Para *para, ECC_Point *r, const ECC_Point *a)
 {
-    if (para == NULL || r == NULL || a == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (para->id != r->id || para->id != a->id) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
-        return CRYPT_ECC_POINT_ERR_CURVE_ID;
-    }
+    int32_t ret;
     if (BN_IsZero(&a->z)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
     }
-    int32_t ret;
     GOTO_ERR_IF(ECC_CopyPoint(r, a), ret);
     GOTO_ERR_IF(BN_Sub(&r->y, para->p, &r->y), ret);
 ERR:
@@ -414,14 +369,13 @@ static int32_t ECP_PointPreCompute(const ECC_Para *para, ECC_Point *windows[], c
     for (i = WINDOW_TABLE_SIZE >> 1; i < WINDOW_TABLE_SIZE; i++) {
         GOTO_ERR_IF(ECP_PointInvertAtAffine(para, windows[i], windows[i - (WINDOW_TABLE_SIZE >> 1)]), ret);
     }
-    BN_OptimizerDestroy(opt);
-    ECC_FreePoint(doubleP);
-    return ret;
+    goto EXIT;
 ERR:
     for (i = 0; i < WINDOW_TABLE_SIZE; i++) {
         ECC_FreePoint(windows[i]);
         windows[i] = NULL;
     }
+EXIT:
     BN_OptimizerDestroy(opt);
     ECC_FreePoint(doubleP);
     return ret;
@@ -709,6 +663,7 @@ static int32_t PointParaCheck(const ECC_Para *para, const ECC_Point *pt, int32_t
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
+
     if (format < CRYPT_POINT_COMPRESSED || format > CRYPT_POINT_HYBRID) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_ERR_POINT_FORMAT);
         return CRYPT_ECC_ERR_POINT_FORMAT;

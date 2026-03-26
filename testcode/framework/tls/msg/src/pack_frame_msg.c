@@ -196,7 +196,7 @@ int32_t PackCertificateMsg(FRAME_Msg *msg)
     uint32_t allCertsLen = 0;                               // Total length of all certificates
     uint32_t offset = msg->len + DTLS_HS_MSG_HEADER_SIZE;   // Reserved packet header
     // Indicates the offset of the total length of the certificate chain.
-    uint32_t certsLenOffset = offset;                       
+    uint32_t certsLenOffset = offset;
     offset += TEST_CERT_LEN_TAG_SIZE;                       // Total length of the reserved certificate chain
 
     CERT_Item *cur = certificate->cert;

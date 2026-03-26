@@ -263,7 +263,7 @@ void SDV_HITLS_X509_CtrlCrl_TC001(void)
     ASSERT_EQ(HITLS_X509_CrlCtrl(NULL, 0xff, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     HITLS_X509_Crl crl = {0};
     ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, 0xff, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
-    ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, HITLS_X509_REF_UP, NULL, 0), BSL_INVALID_ARG);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, HITLS_X509_REF_UP, NULL, 0), HITLS_X509_ERR_INVALID_PARAM);
     ASSERT_EQ(HITLS_X509_CrlCtrl(&crl, HITLS_X509_REF_UP, &crl, 0), BSL_INVALID_ARG);
 EXIT:
     BSL_GLOBAL_DeInit();
@@ -1079,10 +1079,8 @@ void SDV_X509_EXT_ParseGeneralNames_TC001(Hex *encode, Hex *ip, Hex *uri, Hex *r
     };
 
     TestMemInit();
-    BslList *list = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
-    ASSERT_NE(list, NULL);
-
-    ASSERT_EQ(HITLS_X509_ParseGeneralNames(encode->x, encode->len, list), HITLS_PKI_SUCCESS);
+    BslList *list = NULL;
+    ASSERT_EQ(HITLS_X509_ParseGeneralNames(encode->x, encode->len, &list), HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(list), sizeof(map) / sizeof(map[0]));
 
     HITLS_X509_GeneralName *name = NULL;
@@ -1096,8 +1094,7 @@ void SDV_X509_EXT_ParseGeneralNames_TC001(Hex *encode, Hex *ip, Hex *uri, Hex *r
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
-    HITLS_X509_ClearGeneralNames(list);
-    BSL_SAL_Free(list);
+    HITLS_X509_FreeGeneralNames(list);
 }
 /* END_CASE */
 
@@ -1106,13 +1103,10 @@ void SDV_X509_EXT_ParseGeneralNames_Error_TC001(Hex *encode, int ret)
 {
     BSL_GLOBAL_Init();
     TestMemInit();
-    BslList *list = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
-    ASSERT_NE(list, NULL);
-
-    ASSERT_EQ(HITLS_X509_ParseGeneralNames(encode->x, encode->len, list), ret);
-
+    BslList *list = NULL;
+    ASSERT_EQ(HITLS_X509_ParseGeneralNames(encode->x, encode->len, &list), ret);
 EXIT:
-    BSL_SAL_Free(list);
+    HITLS_X509_FreeGeneralNames(list);
     BSL_GLOBAL_DeInit();
 }
 /* END_CASE */

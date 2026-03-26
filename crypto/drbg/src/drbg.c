@@ -330,11 +330,6 @@ int32_t DRBG_Generate(DRBG_Ctx *ctx,
     int32_t ret;
     CRYPT_Data adinData = {(uint8_t*)(uintptr_t)adin, adinLen};
 
-    if (ctx == NULL || out == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
     if (CRYPT_CHECK_BUF_INVALID(adin, adinLen)) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;

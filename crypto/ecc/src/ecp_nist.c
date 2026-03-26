@@ -291,8 +291,7 @@ ERR:
 int32_t ECP_ModOrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a)
 {
     int32_t ret;
-    BN_Optimizer *opt = NULL;
-    opt = BN_OptimizerCreate();
+    BN_Optimizer *opt = BN_OptimizerCreate();
     if (opt == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;

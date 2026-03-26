@@ -63,7 +63,7 @@ int32_t MODES_WRAP_InitCtx(MODES_WRAP_Ctx *modeCtx, const uint8_t *key, uint32_t
 
 int32_t MODES_WRAP_Update(MODES_WRAP_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 
-int32_t MODES_WRAP_Final(MODES_WRAP_Ctx *modeCtx, uint8_t *out, uint32_t *outLen);
+#define MODES_WRAP_Final MODES_CipherFinalComplete
 
 int32_t MODE_WRAP_Ctrl(MODES_WRAP_Ctx *modeCtx, int32_t opt, void *val, uint32_t len);
 

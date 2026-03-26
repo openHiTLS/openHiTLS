@@ -72,15 +72,14 @@ size_t BSL_BufMemGrowClean(BSL_BufMem *str, size_t len)
         return 0;
     }
     if (str->data != NULL && memcpy_s(ret, n, str->data, str->max) != EOK) {
-        BSL_SAL_FREE(ret);
+        BSL_SAL_Free(ret);
         return 0;
     }
     if (memset_s(&ret[str->length], n - str->length, 0, len - str->length) != EOK) {
-        BSL_SAL_FREE(ret);
+        BSL_SAL_Free(ret);
         return 0;
     }
-    BSL_SAL_CleanseData(str->data, (uint32_t)str->max);
-    BSL_SAL_FREE(str->data);
+    BSL_SAL_ClearFree(str->data, (uint32_t)str->max);
     str->data = ret;
     str->max = n;
     str->length = len;

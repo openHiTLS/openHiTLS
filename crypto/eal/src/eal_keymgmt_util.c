@@ -53,8 +53,7 @@ int32_t CRYPT_EAL_GetPkeyAlgInfo(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const 
         return ret;
     }
 
-    ret = CRYPT_EAL_SetPkeyMethod(&(pkeyAlgInfo->keyMgmtMethod), funcInfo.funcsKeyMgmt, funcInfo.funcsAsyCipher,
-        funcInfo.funcsExch, funcInfo.funcSign, funcInfo.funcKem);
+    ret = CRYPT_EAL_SetPkeyMethod(&(pkeyAlgInfo->keyMgmtMethod), &funcInfo);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }

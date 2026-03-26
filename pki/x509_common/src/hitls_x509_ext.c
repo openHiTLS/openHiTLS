@@ -308,9 +308,10 @@ void HITLS_X509_FreeGeneralName(HITLS_X509_GeneralName *data)
     BSL_SAL_Free(data);
 }
 
-void HITLS_X509_ClearGeneralNames(BslList *names)
+void HITLS_X509_FreeGeneralNames(BslList *names)
 {
     BSL_LIST_DeleteAll(names, (BSL_LIST_PFUNC_FREE)FreeGeneralName);
+    BSL_SAL_Free(names);
 }
 
 HITLS_X509_Ext *X509_ExtNew(HITLS_X509_Ext *ext, int32_t type)
@@ -324,7 +325,7 @@ HITLS_X509_Ext *X509_ExtNew(HITLS_X509_Ext *ext, int32_t type)
         ext = tmp;
     }
     ext->type = type;
-    ext->extList = BSL_LIST_New(sizeof(HITLS_X509_ExtEntry *));
+    ext->extList = BSL_LIST_New(sizeof(HITLS_X509_ExtEntry));
     if (ext->extList == NULL) {
         BSL_SAL_Free(tmp);
         return NULL;
@@ -366,13 +367,18 @@ void X509_ExtFree(HITLS_X509_Ext *ext, bool isFreeOut)
     }
 }
 
-int32_t HITLS_X509_ParseGeneralNames(uint8_t *encode, uint32_t encLen, BslList *list)
+int32_t HITLS_X509_ParseGeneralNames(uint8_t *encode, uint32_t encLen, BslList **list)
 {
     uint8_t *buff = encode;
     uint32_t buffLen = encLen;
     uint32_t nameValueLen;
     uint8_t tag;
     int32_t ret = HITLS_PKI_SUCCESS;
+    BslList *tmpList = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
+    if (tmpList == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
 
     while (buffLen != 0) {
         // tag
@@ -388,7 +394,7 @@ int32_t HITLS_X509_ParseGeneralNames(uint8_t *encode, uint32_t encLen, BslList *
             continue;
         }
         // value
-        ret = ParseGeneralName(tag, &buff, &buffLen, nameValueLen, list);
+        ret = ParseGeneralName(tag, &buff, &buffLen, nameValueLen, tmpList);
         if (ret != BSL_SUCCESS) {
             break;
         }
@@ -398,8 +404,10 @@ int32_t HITLS_X509_ParseGeneralNames(uint8_t *encode, uint32_t encLen, BslList *
         }
     }
     if (ret != BSL_SUCCESS) {
-        HITLS_X509_ClearGeneralNames(list);
+        HITLS_X509_FreeGeneralNames(tmpList);
         BSL_ERR_PUSH_ERROR(ret);
+    } else {
+        *list = tmpList;
     }
     return ret;
 }
@@ -410,8 +418,7 @@ void HITLS_X509_ClearAuthorityKeyId(HITLS_X509_ExtAki *aki)
         return;
     }
     if (aki->issuerName != NULL) {
-        HITLS_X509_ClearGeneralNames(aki->issuerName);
-        BSL_SAL_Free(aki->issuerName);
+        HITLS_X509_FreeGeneralNames(aki->issuerName);
         aki->issuerName = NULL;
     }
 }
@@ -420,7 +427,7 @@ int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509
 {
     uint8_t *temp = extEntry->extnValue.buff;
     uint32_t tempLen = extEntry->extnValue.len;
-    BslList *list = NULL;
+
     BSL_ASN1_Buffer asnArr[HITLS_X509_EXT_AKI_MAX] = {0};
     BSL_ASN1_Template templ = {g_akidTempl, sizeof(g_akidTempl) / sizeof(g_akidTempl[0])};
 
@@ -449,19 +456,12 @@ int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509
         aki->serialNum.dataLen = asnArr[HITLS_X509_EXT_AKI_SERIAL_IDX].len;
     }
     if (asnArr[HITLS_X509_EXT_AKI_ISSUER_IDX].tag != 0) {
-        list = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
-        if (list == NULL) {
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_AKI);
-            return HITLS_X509_ERR_PARSE_AKI;
-        }
         ret = HITLS_X509_ParseGeneralNames(
-            asnArr[HITLS_X509_EXT_AKI_ISSUER_IDX].buff, asnArr[HITLS_X509_EXT_AKI_ISSUER_IDX].len, list);
+            asnArr[HITLS_X509_EXT_AKI_ISSUER_IDX].buff, asnArr[HITLS_X509_EXT_AKI_ISSUER_IDX].len, &aki->issuerName);
         if (ret != HITLS_PKI_SUCCESS) {
-            BSL_SAL_Free(list);
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        aki->issuerName = list;
     }
     aki->critical = extEntry->critical;
     return ret;
@@ -574,8 +574,7 @@ void HITLS_X509_ClearSubjectAltName(HITLS_X509_ExtSan *san)
         return;
     }
     if (san->names != NULL) {
-        HITLS_X509_ClearGeneralNames(san->names);
-        BSL_SAL_Free(san->names);
+        HITLS_X509_FreeGeneralNames(san->names);
         san->names = NULL;
     }
 }
@@ -594,18 +593,12 @@ int32_t HITLS_X509_ParseSubjectAltName(HITLS_X509_ExtEntry *extEntry, HITLS_X509
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    BslList *list = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
-    if (list == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_SAN);
-        return HITLS_X509_ERR_PARSE_SAN;
-    }
-    ret = HITLS_X509_ParseGeneralNames(buff, len, list);
+
+    ret = HITLS_X509_ParseGeneralNames(buff, len, &san->names);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_SAL_FREE(list);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    san->names = list;
     san->critical = extEntry->critical;
     return ret;
 }

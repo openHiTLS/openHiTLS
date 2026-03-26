@@ -165,8 +165,7 @@ void CRYPT_CURVE25519_FreeCtx(CRYPT_CURVE25519_Ctx *pkey)
         return;
     }
     BSL_SAL_ReferencesFree(&(pkey->references));
-    BSL_SAL_CleanseData((void *)(pkey), sizeof(CRYPT_CURVE25519_Ctx));
-    BSL_SAL_FREE(pkey);
+    BSL_SAL_ClearFree((void *)(pkey), sizeof(CRYPT_CURVE25519_Ctx));
 }
 
 #ifdef HITLS_BSL_PARAMS

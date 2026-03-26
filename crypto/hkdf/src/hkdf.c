@@ -280,8 +280,8 @@ int32_t CRYPT_HKDF_SetParam(CRYPT_HKDF_Ctx *ctx, const BSL_Param *param)
 {
     uint32_t val = 0;
     void *ptrVal = NULL;
-    uint32_t len = 0;
-    const BSL_Param *temp = NULL;
+    uint32_t len;
+    const BSL_Param *temp;
     int32_t ret = CRYPT_HKDF_PARAM_ERROR;
     if (ctx == NULL || param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);

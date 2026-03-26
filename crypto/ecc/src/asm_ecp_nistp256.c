@@ -323,7 +323,7 @@ static void ECP256_WindowMul(P256_Point *r, const BN_BigNum *k, const ECC_Point 
     wCode = (wCode >> shift) & mask;
     wCode = Recodew5(wCode);
     ECP256_Gatherw5(&temp, table, wCode >> 1);
-    (void)memcpy_s(r, sizeof(P256_Point), &temp, sizeof(P256_Point));
+    *r = temp;
 
     // 5 bits is obtained each time. The total number of bits is 256 + 8 (1 byte reserved) = 264 bits.
     // Therefore, the last time can be scanned to 264-5 = 259 bits.

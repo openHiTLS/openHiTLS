@@ -26,13 +26,11 @@
 
 CRYPT_RSA_Ctx *CRYPT_RSA_NewCtx(void)
 {
-    CRYPT_RSA_Ctx *keyCtx = NULL;
-    keyCtx = BSL_SAL_Malloc(sizeof(CRYPT_RSA_Ctx));
+    CRYPT_RSA_Ctx *keyCtx = BSL_SAL_Calloc(sizeof(CRYPT_RSA_Ctx), 1);
     if (keyCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(keyCtx, sizeof(CRYPT_RSA_Ctx), 0, sizeof(CRYPT_RSA_Ctx));
     BSL_SAL_ReferencesInit(&(keyCtx->references));
     return keyCtx;
 }
@@ -79,22 +77,20 @@ ERR:
 
 static CRYPT_RSA_PrvKey *RSAPriKeyDupCtx(CRYPT_RSA_PrvKey *prvKey)
 {
-    CRYPT_RSA_PrvKey *newPriKey = BSL_SAL_Malloc(sizeof(CRYPT_RSA_PrvKey));
+    CRYPT_RSA_PrvKey *newPriKey = BSL_SAL_Calloc(sizeof(CRYPT_RSA_PrvKey), 1);
     if (newPriKey == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
 
-    (void)memset_s(newPriKey, sizeof(CRYPT_RSA_PrvKey), 0, sizeof(CRYPT_RSA_PrvKey));
-
-    GOTO_ERR_IF_SRC_NOT_NULL(newPriKey->n, prvKey->n, BN_Dup(prvKey->n), CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF_SRC_NOT_NULL(newPriKey->d, prvKey->d, BN_Dup(prvKey->d), CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF_SRC_NOT_NULL(newPriKey->p, prvKey->p, BN_Dup(prvKey->p), CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF_SRC_NOT_NULL(newPriKey->q, prvKey->q, BN_Dup(prvKey->q), CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF_SRC_NOT_NULL(newPriKey->dP, prvKey->dP, BN_Dup(prvKey->dP), CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF_SRC_NOT_NULL(newPriKey->dQ, prvKey->dQ, BN_Dup(prvKey->dQ), CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF_SRC_NOT_NULL(newPriKey->qInv, prvKey->qInv, BN_Dup(prvKey->qInv), CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF_SRC_NOT_NULL(newPriKey->e, prvKey->e, BN_Dup(prvKey->e), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_DST_NULL(newPriKey->n, BN_Dup(prvKey->n), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_DST_NULL(newPriKey->d, BN_Dup(prvKey->d), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_DST_NULL(newPriKey->p, BN_Dup(prvKey->p), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_DST_NULL(newPriKey->q, BN_Dup(prvKey->q), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_DST_NULL(newPriKey->dP, BN_Dup(prvKey->dP), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_DST_NULL(newPriKey->dQ, BN_Dup(prvKey->dQ), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_DST_NULL(newPriKey->qInv, BN_Dup(prvKey->qInv), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_DST_NULL(newPriKey->e, BN_Dup(prvKey->e), CRYPT_MEM_ALLOC_FAIL);
 
     return newPriKey;
 ERR:
@@ -104,18 +100,16 @@ ERR:
 
 static CRYPT_RSA_Para *RSAParaDupCtx(CRYPT_RSA_Para *para)
 {
-    CRYPT_RSA_Para *newPara = BSL_SAL_Malloc(sizeof(CRYPT_RSA_Para));
+    CRYPT_RSA_Para *newPara = BSL_SAL_Calloc(sizeof(CRYPT_RSA_Para), 1);
     if (newPara == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
 
-    (void)memset_s(newPara, sizeof(CRYPT_RSA_Para), 0, sizeof(CRYPT_RSA_Para));
-
     newPara->bits = para->bits;
-    GOTO_ERR_IF_SRC_NOT_NULL(newPara->e, para->e, BN_Dup(para->e), CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF_SRC_NOT_NULL(newPara->p, para->p, BN_Dup(para->p), CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF_SRC_NOT_NULL(newPara->q, para->q, BN_Dup(para->q), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_DST_NULL(newPara->e, BN_Dup(para->e), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_DST_NULL(newPara->p, BN_Dup(para->p), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_DST_NULL(newPara->q, BN_Dup(para->q), CRYPT_MEM_ALLOC_FAIL);
     return newPara;
 
 ERR:
@@ -126,16 +120,14 @@ ERR:
 #if defined(HITLS_CRYPTO_RSA_BLINDING) || defined(HITLS_CRYPTO_RSA_BSSA)
 static RSA_Blind *RSABlindDupCtx(RSA_Blind *blind)
 {
-    RSA_Blind *newBlind = BSL_SAL_Malloc(sizeof(RSA_Blind));
+    RSA_Blind *newBlind = BSL_SAL_Calloc(sizeof(RSA_Blind), 1);
     if (newBlind == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
 
-    (void)memset_s(newBlind, sizeof(RSA_Blind), 0, sizeof(RSA_Blind));
-
-    GOTO_ERR_IF_SRC_NOT_NULL(newBlind->r, blind->r, BN_Dup(blind->r), CRYPT_MEM_ALLOC_FAIL);
-    GOTO_ERR_IF_SRC_NOT_NULL(newBlind->rInv, blind->rInv, BN_Dup(blind->rInv), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_DST_NULL(newBlind->r, BN_Dup(blind->r), CRYPT_MEM_ALLOC_FAIL);
+    GOTO_ERR_IF_DST_NULL(newBlind->rInv, BN_Dup(blind->rInv), CRYPT_MEM_ALLOC_FAIL);
     return newBlind;
 
 ERR:
@@ -159,7 +151,7 @@ static RSA_BlindParam *RSABssADupCtx(RSA_BlindParam *blind)
         return newBlind;
     }
 ERR:
-    BSL_SAL_FREE(newBlind);
+    BSL_SAL_Free(newBlind);
     return NULL;
 }
 #endif
@@ -170,17 +162,14 @@ CRYPT_RSA_Ctx *CRYPT_RSA_DupCtx(CRYPT_RSA_Ctx *keyCtx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return NULL;
     }
-    CRYPT_RSA_Ctx *newKeyCtx = NULL;
-    newKeyCtx = BSL_SAL_Malloc(sizeof(CRYPT_RSA_Ctx));
+    CRYPT_RSA_Ctx *newKeyCtx = BSL_SAL_Calloc(sizeof(CRYPT_RSA_Ctx), 1);
     if (newKeyCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
 
-    (void)memset_s(newKeyCtx, sizeof(CRYPT_RSA_Ctx), 0, sizeof(CRYPT_RSA_Ctx));
-
     newKeyCtx->flags = keyCtx->flags;
-    (void)memcpy_s(&(newKeyCtx->pad), sizeof(RSAPad), &(keyCtx->pad), sizeof(RSAPad));
+    newKeyCtx->pad = keyCtx->pad;
     newKeyCtx->pad.salt.data = NULL;
     newKeyCtx->pad.salt.len = 0;
 
@@ -329,7 +318,7 @@ void CRYPT_RSA_FreePara(CRYPT_RSA_Para *para)
     BN_Destroy(para->e);
     BN_Destroy(para->p);
     BN_Destroy(para->q);
-    BSL_SAL_FREE(para);
+    BSL_SAL_Free(para);
 }
 
 void RSA_FreePrvKey(CRYPT_RSA_PrvKey *prvKey)
@@ -345,7 +334,7 @@ void RSA_FreePrvKey(CRYPT_RSA_PrvKey *prvKey)
     BN_Destroy(prvKey->dP);
     BN_Destroy(prvKey->dQ);
     BN_Destroy(prvKey->qInv);
-    BSL_SAL_FREE(prvKey);
+    BSL_SAL_Free(prvKey);
 }
 
 void RSA_FreePubKey(CRYPT_RSA_PubKey *pubKey)
@@ -356,7 +345,7 @@ void RSA_FreePubKey(CRYPT_RSA_PubKey *pubKey)
     BN_Destroy(pubKey->n);
     BN_Destroy(pubKey->e);
     BN_MontDestroy(pubKey->mont);
-    BSL_SAL_FREE(pubKey);
+    BSL_SAL_Free(pubKey);
 }
 
 void CRYPT_RSA_FreeCtx(CRYPT_RSA_Ctx *ctx)
@@ -383,18 +372,18 @@ void CRYPT_RSA_FreeCtx(CRYPT_RSA_Ctx *ctx)
         if (ctx->blindParam->type == RSABSSA) {
             RSA_BlindFreeCtx(ctx->blindParam->para.bssa);
         }
-        BSL_SAL_FREE(ctx->blindParam);
+        BSL_SAL_Free(ctx->blindParam);
     }
 #endif
     BSL_SAL_CleanseData((void *)(&(ctx->pad)), sizeof(RSAPad));
-    BSL_SAL_FREE(ctx->label.data);
-    BSL_SAL_FREE(ctx->mdAttr);
-    BSL_SAL_FREE(ctx);
+    BSL_SAL_Free(ctx->label.data);
+    BSL_SAL_Free(ctx->mdAttr);
+    BSL_SAL_Free(ctx);
 }
 
-static int32_t IsRSASetParamValid(const CRYPT_RSA_Ctx *ctx, const CRYPT_RSA_Para *para)
+static int32_t IsRSASetParamValid(const CRYPT_RSA_Para *para)
 {
-    if (ctx == NULL || para == NULL || para->e == NULL) {
+    if (para == NULL || para->e == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -403,7 +392,7 @@ static int32_t IsRSASetParamValid(const CRYPT_RSA_Ctx *ctx, const CRYPT_RSA_Para
         return CRYPT_RSA_ERR_KEY_BITS;
     }
 
-    if (BN_GetBit(para->e, 0) != true || BN_IsLimb(para->e, 1) == true) {
+    if (!BN_GetBit(para->e, 0) || BN_IsLimb(para->e, 1)) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_E_VALUE);
         return CRYPT_RSA_ERR_E_VALUE;
     }
@@ -491,13 +480,13 @@ int32_t CRYPT_RSA_SetPara(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPara *para)
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_NEW_PARA_FAIL);
         return CRYPT_EAL_ERR_NEW_PARA_FAIL;
     }
-    int32_t ret = IsRSASetParamValid(ctx, rsaPara);
+    int32_t ret = IsRSASetParamValid(rsaPara);
     if (ret != CRYPT_SUCCESS) {
         RSA_FREE_PARA(rsaPara);
         return ret;
     }
     (void)memset_s(&(ctx->pad), sizeof(RSAPad), 0, sizeof(RSAPad));
-    RSA_FREE_PARA(ctx->para);
+    CRYPT_RSA_FreePara(ctx->para);
     RSA_FREE_PRV_KEY(ctx->prvKey);
     RSA_FREE_PUB_KEY(ctx->pubKey);
     ctx->para = rsaPara;
@@ -755,31 +744,29 @@ static int32_t GenPrimeWithAuxiliaryPrime(uint32_t auxBits, uint32_t proBits, BN
         return ret;
     }
     uint32_t probPrimeCheck = GetProbPrimeMillerCheckTimes(proBits);
-
-    r1 = (Xp1 != NULL) ? Xp1 : OptimizerGetBn(opt, auxRoom);
-    r2 = (Xp2 != NULL) ? Xp2 : OptimizerGetBn(opt, auxRoom);
-
-    BN_BigNum *r1Double = OptimizerGetBn(opt, auxRoom);
-    BN_BigNum *primeCheck = OptimizerGetBn(opt, auxRoom);
-    BN_BigNum *r2Inv = OptimizerGetBn(opt, auxRoom);
-    BN_BigNum *r1DoubleInv = OptimizerGetBn(opt, auxRoom);
-    BN_BigNum *R = OptimizerGetBn(opt, auxRoom);
+    BN_BigNum *bns[7]; // get 7 BNs
     BN_BigNum *pMinusOne = OptimizerGetBn(opt, BITS_TO_BN_UNIT(proBits));
     uint32_t bits = isP ? (para->bits + 1) >> 1 : (para->bits >> 1); // Avoid the bit is odd.
     uint32_t iterRound = 20 * bits; // Step 9 specifies that the iteration round is 20 * (nlen/2);
-    if (r1 == NULL || r2 == NULL || r1Double == NULL || primeCheck == NULL || r2Inv == NULL ||
-        r1DoubleInv == NULL || R == NULL || pMinusOne == NULL) {
+    if (pMinusOne == NULL || OptimizerGetXBn(opt, auxRoom, 7, bns) != CRYPT_SUCCESS) { // get 7 BNs
         ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
         OptimizerEnd(opt);
         return ret;
     }
 
+    BN_BigNum *r1Double = bns[0]; // 0th bn
+    BN_BigNum *primeCheck = bns[1]; // 1st bn
+    BN_BigNum *r2Inv = bns[2]; // 2nd bn
+    BN_BigNum *r1DoubleInv = bns[3]; // 3rd bn
+    BN_BigNum *R = bns[4]; // 4th bn
+    r1 = (Xp1 != NULL) ? Xp1 : bns[5]; // 5th bn
+    r2 = (Xp2 != NULL) ? Xp2 : bns[6]; // 6th bn
+
     // Choose auxiliary prime r1, either from seed or generate randomly
     ret = GenAuxPrime(r1, auxBits, opt, (Xp1 != NULL));
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        OptimizerEnd(opt);
-        return ret;
+        goto ERR;
     }
     GOTO_ERR_IF(GenAuxPrime(r2, auxBits, opt, (Xp2 != NULL)), ret);
     GOTO_ERR_IF(BN_Lshift(r1Double, r1, 1), ret);
@@ -1014,16 +1001,8 @@ int32_t RSA_CalcPrvKey(const CRYPT_RSA_Para *para, CRYPT_RSA_Ctx *ctx, BN_Optimi
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
-    ret = BN_SubLimb(pMinusOne, prvKey->p, 1);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-    ret = BN_SubLimb(qMinusOne, prvKey->q, 1);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
+    (void)BN_SubLimb(pMinusOne, prvKey->p, 1);
+    (void)BN_SubLimb(qMinusOne, prvKey->q, 1);
     if (BN_IsZero(prvKey->n)) { // when generating key
         ret = RsaPrvKeyCalcND(para, ctx, pMinusOne, qMinusOne, optimizer);
         if (ret != CRYPT_SUCCESS) {
@@ -1054,7 +1033,7 @@ EXIT:
  * In NIST SP 800-56B, Section 6.4.1.1, requiring we should perform a successful key-pair validation
  * while generating the key pair.
  */
-static int32_t RSA_KeyValidationCheck(CRYPT_RSA_Ctx *ctx, uint32_t bits)
+static int32_t RSA_KeyValidationCheck(CRYPT_RSA_Ctx *ctx, uint32_t bits, BN_Optimizer *optimizer)
 {
     int32_t ret;
     BN_BigNum *val = BN_Create(1);
@@ -1066,8 +1045,8 @@ static int32_t RSA_KeyValidationCheck(CRYPT_RSA_Ctx *ctx, uint32_t bits)
     }
     // for performance reasons, we choose test num = 2.
     (void)BN_SetLimb(val, 2); // val is not null, and the val-memory must be sufficient.
-    GOTO_ERR_IF(BN_MontExp(expect, val, ctx->prvKey->e, ctx->pubKey->mont, NULL), ret);
-    GOTO_ERR_IF(BN_MontExpConsttime(expect, expect, ctx->prvKey->d, ctx->pubKey->mont, NULL), ret);
+    GOTO_ERR_IF(BN_MontExp(expect, val, ctx->prvKey->e, ctx->pubKey->mont, optimizer), ret);
+    GOTO_ERR_IF(BN_MontExpConsttime(expect, expect, ctx->prvKey->d, ctx->pubKey->mont, optimizer), ret);
     if (BN_Cmp(val, expect) != 0) {
         ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE);
@@ -1085,7 +1064,6 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-
     int32_t ret = CRYPT_MEM_ALLOC_FAIL;
     BN_Optimizer *optimizer = NULL;
     CRYPT_RSA_Ctx *newCtx = CRYPT_RSA_NewCtx();
@@ -1109,13 +1087,11 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx)
     BN_OptimizerSetLibCtx(ctx->libCtx, optimizer);
     ret = GenPQBasedOnProbPrimes(ctx->para, newCtx->prvKey, optimizer);
     if (ret != CRYPT_SUCCESS) {
-        BN_OptimizerDestroy(optimizer);
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
     ret = RSA_CalcPrvKey(ctx->para, newCtx, optimizer);
-    BN_OptimizerDestroy(optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -1130,14 +1106,16 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    ret = RSA_KeyValidationCheck(newCtx, ctx->para->bits);
+    ret = RSA_KeyValidationCheck(newCtx, ctx->para->bits, optimizer);
     if (ret != CRYPT_SUCCESS) {
         goto ERR; // dont't push the stack repeatedly.
     }
+    BN_OptimizerDestroy(optimizer);
     ShallowCopyCtx(ctx, newCtx);
-    BSL_SAL_FREE(newCtx);
+    BSL_SAL_Free(newCtx);
     return ret;
 ERR:
+    BN_OptimizerDestroy(optimizer);
     CRYPT_RSA_FreeCtx(newCtx);
     return ret;
 }

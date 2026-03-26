@@ -87,12 +87,9 @@ void ECC_FreePoint(ECC_Point *pt)
     if (pt == NULL) {
         return;
     }
-    BSL_SAL_CleanseData((void *)(pt->x.data), pt->x.size * sizeof(BN_UINT));
-    BSL_SAL_FREE(pt->x.data);
-    BSL_SAL_CleanseData((void *)(pt->y.data), pt->y.size * sizeof(BN_UINT));
-    BSL_SAL_FREE(pt->y.data);
-    BSL_SAL_CleanseData((void *)(pt->z.data), pt->z.size * sizeof(BN_UINT));
-    BSL_SAL_FREE(pt->z.data);
+    BSL_SAL_ClearFree((void *)(pt->x.data), pt->x.size * sizeof(BN_UINT));
+    BSL_SAL_ClearFree((void *)(pt->y.data), pt->y.size * sizeof(BN_UINT));
+    BSL_SAL_ClearFree((void *)(pt->z.data), pt->z.size * sizeof(BN_UINT));
     BSL_SAL_Free(pt);
 }
 
@@ -332,6 +329,11 @@ BN_BigNum *ECC_GetParaN(const ECC_Para *para)
         return NULL;
     }
     return BN_Dup(para->n);
+}
+
+BN_BigNum *ECC_GetParaRawN(const ECC_Para *para)
+{
+    return para->n;
 }
 
 BN_BigNum *ECC_GetParaA(const ECC_Para *para)

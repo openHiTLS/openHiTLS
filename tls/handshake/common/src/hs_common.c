@@ -807,8 +807,7 @@ static int32_t Tls12ExportKeyingMaterial(HITLS_Ctx *ctx, uint8_t *out, size_t ou
     deriveInfo.attrName = ATTRIBUTE_FROM_CTX(ctx);
     ret = SAL_CRYPT_PRF(&deriveInfo, out, (uint32_t)outLen);
     BSL_SAL_FREE(seed);
-    BSL_SAL_CleanseData(masterKey, masterKeyLen);
-    BSL_SAL_FREE(masterKey);
+    BSL_SAL_ClearFree(masterKey, masterKeyLen);
     return ret;
 }
 

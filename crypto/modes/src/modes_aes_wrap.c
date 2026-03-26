@@ -19,6 +19,7 @@
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
+#include "eal_cipher_local.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "crypt_modes_aes_wrap.h"
@@ -41,9 +42,9 @@ static const uint8_t DEFAULT_AIV[CRYPT_WRAP_AIV_SIZE] = {
     0xA6, 0x59, 0x59, 0xA6
 };
 
-void MODE_WRAP_Clean(MODES_CipherWRAPCtx *ctx)
+static void MODE_WRAP_Clean(MODES_CipherWRAPCtx *ctx)
 {
-    if (ctx == NULL || ctx->ciphMeth == NULL || ctx->ciphMeth->cipherDeInitCtx == NULL) {
+    if (ctx->ciphMeth == NULL || ctx->ciphMeth->cipherDeInitCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return;
     }
@@ -77,7 +78,7 @@ static void WRAP_DataBytesXor(uint8_t *out, uint32_t val)
 static int32_t WRAP_Encrypt(MODES_CipherWRAPCtx *ctx, uint8_t *out, uint32_t inLen, uint8_t *iv)
 {
     uint32_t t = 1;
-    uint8_t *ptr = NULL;
+    uint8_t *ptr;
     int32_t ret;
     uint8_t encBuf[AES_ENCRYPT_BUF_SIZE];
     if (inLen < AES_ENCRYPT_BUF_SIZE || inLen > CRYPT_WRAP_MAX_INPUT_LEN || (inLen & 0x07) != 0) {
@@ -108,7 +109,7 @@ static int32_t WRAP_Encrypt(MODES_CipherWRAPCtx *ctx, uint8_t *out, uint32_t inL
 static int32_t WRAP_Decrypt(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t inLen, uint8_t *aiv)
 {
     uint8_t decBuf[AES_ENCRYPT_BUF_SIZE];
-    uint8_t *ptr = NULL;
+    uint8_t *ptr;
     int32_t ret;
     uint32_t outLen = inLen - CRYPT_WRAP_BLOCKSIZE;
     uint32_t t = 6 * (outLen >> 3);
@@ -240,7 +241,7 @@ static int32_t WRAP_DecryptPad(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint
 int32_t MODE_WRAP_Encrypt(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t inLen,
     uint32_t *outLen)
 {
-    if (ctx == NULL || ctx->ciphCtx == NULL || ctx->ciphMeth == NULL) {
+    if (ctx->ciphCtx == NULL || ctx->ciphMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -266,7 +267,7 @@ int32_t MODE_WRAP_Encrypt(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint8_t *
 int32_t MODE_WRAP_Decrypt(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t inLen,
     uint32_t *outLen)
 {
-    if (ctx == NULL || ctx->ciphCtx == NULL || ctx->ciphMeth == NULL) {
+    if (ctx->ciphCtx == NULL || ctx->ciphMeth == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -294,9 +295,7 @@ static int32_t WRAP_SetIV(MODES_CipherWRAPCtx *ctx, const uint8_t *val, uint32_t
     if ((ctx->flagPad && len != CRYPT_WRAP_AIV_SIZE) || (!ctx->flagPad && len != CRYPT_WRAP_BLOCKSIZE)) {
         return CRYPT_MODES_IVLEN_ERROR;
     }
-    if (memcpy_s(ctx->iv, CRYPT_WRAP_BLOCKSIZE, val, len) != EOK) {
-        return CRYPT_SECUREC_FAIL;
-    }
+    (void)memcpy_s(ctx->iv, CRYPT_WRAP_BLOCKSIZE, val, len);
     return CRYPT_SUCCESS;
 }
 
@@ -400,18 +399,6 @@ int32_t MODES_WRAP_Update(MODES_WRAP_Ctx *modeCtx, const uint8_t *in, uint32_t i
     return modeCtx->enc ?
         MODE_WRAP_Encrypt(&modeCtx->wrapCtx, in, out, inLen, outLen) :
         MODE_WRAP_Decrypt(&modeCtx->wrapCtx, in, out, inLen, outLen);
-}
-
-int32_t MODES_WRAP_Final(MODES_WRAP_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
-{
-    if (outLen == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    (void)modeCtx;
-    (void)out;
-    *outLen = 0;
-    return CRYPT_SUCCESS;
 }
 
 void MODES_WRAP_FreeCtx(MODES_WRAP_Ctx *modeCtx)

@@ -82,10 +82,6 @@ int32_t CRYPT_CHACHA20_SetKey(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *key, uint3
 static int32_t CRYPT_CHACHA20_SetNonce(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *nonce, uint32_t nonceLen)
 {
     // RFC7539-2.3
-    if (ctx == NULL || nonce == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     if (nonceLen != CHACHA20_NONCELEN) {
         BSL_ERR_PUSH_ERROR(CRYPT_CHACHA20_NONCELEN_ERROR);
         return CRYPT_CHACHA20_NONCELEN_ERROR;
@@ -107,10 +103,6 @@ static int32_t CRYPT_CHACHA20_SetNonce(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *n
 // Little-endian data input
 static int32_t CRYPT_CHACHA20_SetCount(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *cnt, uint32_t cntLen)
 {
-    if (ctx == NULL || cnt == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     if (cntLen != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_CHACHA20_COUNTLEN_ERROR);
         return CRYPT_CHACHA20_COUNTLEN_ERROR;
@@ -209,6 +201,10 @@ int32_t CRYPT_CHACHA20_Update(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *in, uint8_
 
 int32_t CRYPT_CHACHA20_Ctrl(CRYPT_CHACHA20_Ctx *ctx, int32_t opt, void *val, uint32_t len)
 {
+    if (ctx == NULL || val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     switch (opt) {
         case CRYPT_CTRL_SET_IV: // in chacha20_poly1305 mode, the configured IV is the nonce of chacha20.
             /**

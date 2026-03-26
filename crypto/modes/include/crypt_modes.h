@@ -64,6 +64,9 @@ int32_t MODES_GetIv(MODES_CipherCommonCtx *ctx, uint8_t *val, uint32_t len);
 MODES_CipherCtx *MODES_CipherNewCtx(int32_t algId);
 MODES_CipherCtx *MODES_CipherNewCtxEx(void *libCtx, int32_t algId);
 MODES_CipherCtx *MODES_CipherDupCtx(const MODES_CipherCtx *modeCtx);
+int32_t MODES_CipherFinalComplete(void *modeCtx, uint8_t *out, uint32_t *outLen);
+int32_t MODES_CipherDeInitCtx(MODES_CipherCtx *modeCtx);
+void MODES_CipherFreeCtx(MODES_CipherCtx *modeCtx);
 
 #ifdef __cplusplus
 }

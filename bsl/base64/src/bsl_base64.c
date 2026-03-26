@@ -56,22 +56,6 @@ void BSL_BASE64_CtxClear(BSL_Base64Ctx *ctx)
     BSL_SAL_CleanseData(ctx, (uint32_t)sizeof(BSL_Base64Ctx));
 }
 
-static int32_t BslBase64EncodeParamsValidate(const uint8_t *srcBuf, const uint32_t srcBufLen,
-    const char *dstBuf, uint32_t *dstBufLen)
-{
-    if (srcBuf == NULL || srcBufLen == 0U || dstBuf == NULL || dstBufLen == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
-    /* The length of dstBuf of the user must be at least (srcBufLen+2)/3*4+1 */
-    if (*dstBufLen < BSL_BASE64_ENC_ENOUGH_LEN(srcBufLen)) {
-        BSL_ERR_PUSH_ERROR(BSL_BASE64_BUF_NOT_ENOUGH);
-        return BSL_BASE64_BUF_NOT_ENOUGH;
-    }
-
-    return BSL_SUCCESS;
-}
-
 static void BslBase64ArithEncodeProc(const uint8_t *srcBuf, const uint32_t srcBufLen,
     char *dstBuf, uint32_t *dstBufLen)
 {
@@ -201,9 +185,14 @@ static int32_t BslBase64DecodeCheck(const char src, uint32_t *paddingCnt)
 
 int32_t BSL_BASE64_Encode(const uint8_t *srcBuf, const uint32_t srcBufLen, char *dstBuf, uint32_t *dstBufLen)
 {
-    int32_t ret = BslBase64EncodeParamsValidate(srcBuf, srcBufLen, (const char *)dstBuf, dstBufLen);
-    if (ret != BSL_SUCCESS) {
-        return ret;
+    if (srcBuf == NULL || srcBufLen == 0U || dstBuf == NULL || dstBufLen == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
+        return BSL_NULL_INPUT;
+    }
+    /* The length of dstBuf of the user must be at least (srcBufLen+2)/3*4+1 */
+    if (*dstBufLen < BSL_BASE64_ENC_ENOUGH_LEN(srcBufLen)) {
+        BSL_ERR_PUSH_ERROR(BSL_BASE64_BUF_NOT_ENOUGH);
+        return BSL_BASE64_BUF_NOT_ENOUGH;
     }
 
     BslBase64ArithEncodeProc(srcBuf, srcBufLen, dstBuf, dstBufLen); /* executes the encoding algorithm */
@@ -336,7 +325,7 @@ static int32_t BslBase64ArithDecodeProc(const char *srcBuf, const uint32_t srcBu
         return ret;
     }
 
-    BSL_SAL_FREE(buf);
+    BSL_SAL_Free(buf);
     return BSL_SUCCESS;
 }
 

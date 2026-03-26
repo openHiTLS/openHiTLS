@@ -424,12 +424,12 @@ static int32_t Sm2SignCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, BN_BigNum *r,
     BN_BigNum *tmp = BN_Create(keyBits);
     // An extra bit is allocated to prevent the number of bits in the result of adding BNs from exceeding the keybits.
     BN_BigNum *t = BN_Create(keyBits + 1);
-    BN_BigNum *paraN = ECC_GetParaN(ctx->pkey->para);
+    BN_BigNum *paraN = ECC_GetParaRawN(ctx->pkey->para);
     ECC_Point *pt = ECC_NewPoint(ctx->pkey->para);
     BN_Optimizer *opt = BN_OptimizerCreate();
     int32_t ret, i;
 
-    if ((k == NULL) || (tmp == NULL) || (t == NULL) || (pt == NULL) || (paraN == NULL) || (opt == NULL)) {
+    if ((k == NULL) || (tmp == NULL) || (t == NULL) || (pt == NULL) || (opt == NULL)) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ret = CRYPT_MEM_ALLOC_FAIL;
         goto ERR;
@@ -473,7 +473,6 @@ ERR:
     BN_Destroy(k);
     BN_Destroy(tmp);
     BN_Destroy(t);
-    BN_Destroy(paraN);
     ECC_FreePoint(pt);
     BN_OptimizerDestroy(opt);
     return ret;
@@ -588,18 +587,13 @@ static int32_t VerifyCheckSign(const CRYPT_SM2_Ctx *ctx, BN_BigNum *r, BN_BigNum
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    BN_BigNum *paraN = ECC_GetParaN(ctx->pkey->para);
-    if (paraN == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
+    BN_BigNum *paraN = ECC_GetParaRawN(ctx->pkey->para);
 
     if ((BN_Cmp(r, paraN) >= 0) || (BN_Cmp(s, paraN) >= 0)) {
-        BN_Destroy(paraN);
         BSL_ERR_PUSH_ERROR(CRYPT_SM2_VERIFY_FAIL);
         return CRYPT_SM2_VERIFY_FAIL;
     }
-    BN_Destroy(paraN);
+
     if (BN_IsZero(r) || BN_IsZero(s)) {
         BSL_ERR_PUSH_ERROR(CRYPT_SM2_VERIFY_FAIL);
         return CRYPT_SM2_VERIFY_FAIL;
@@ -615,10 +609,10 @@ static int32_t Sm2VerifyCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, const BN_Bi
     ECC_Point *tpt = ECC_NewPoint(ctx->pkey->para);
     BN_BigNum *tptX = BN_Create(keyBits);
     BN_Optimizer *opt = BN_OptimizerCreate();
-    BN_BigNum *paraN = ECC_GetParaN(ctx->pkey->para);
+    BN_BigNum *paraN = ECC_GetParaRawN(ctx->pkey->para);
     int32_t ret;
 
-    if ((t == NULL) || (tpt == NULL) || (tptX == NULL) || (paraN == NULL) || (opt == NULL)) {
+    if ((t == NULL) || (tpt == NULL) || (tptX == NULL) || (opt == NULL)) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ret = CRYPT_MEM_ALLOC_FAIL;
         goto ERR;
@@ -641,7 +635,6 @@ static int32_t Sm2VerifyCore(const CRYPT_SM2_Ctx *ctx, BN_BigNum *e, const BN_Bi
 
 ERR:
     BN_Destroy(t);
-    BN_Destroy(paraN);
     ECC_FreePoint(tpt);
     BN_Destroy(tptX);
     BN_OptimizerDestroy(opt);
@@ -752,11 +745,11 @@ static int32_t Sm2GenerateR(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
     Sm2Clean(ctx);
     uint32_t keyBits = CRYPT_SM2_GetBits(ctx);
     int32_t tryNum = 0;
-    BN_BigNum *order = ECC_GetParaN(ctx->pkey->para);
+    BN_BigNum *order = ECC_GetParaRawN(ctx->pkey->para);
     ctx->r = BN_Create(keyBits);
     ctx->pointR = ECC_NewPoint(ctx->pkey->para);
     BN_BigNum *tmp = BN_Create(keyBits);
-    if (order == NULL || ctx->r == NULL || ctx->pointR == NULL || tmp == NULL) {
+    if (ctx->r == NULL || ctx->pointR == NULL || tmp == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -778,11 +771,9 @@ static int32_t Sm2GenerateR(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
     GOTO_ERR_IF(ECC_GetPointDataX(ctx->pkey->para, ctx->pointR, tmp), ret);
     GOTO_ERR_IF(ECC_EncodePoint(ctx->pkey->para, ctx->pointR, (uint8_t *)val, &len, CRYPT_POINT_UNCOMPRESSED), ret);
     BN_Destroy(tmp);
-    BN_Destroy(order);
     return ret;
 ERR:
     BN_Destroy(tmp);
-    BN_Destroy(order);
     Sm2Clean(ctx);
     return ret;
 }
@@ -814,11 +805,10 @@ static int32_t Sm2SetRandom(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 {
     int32_t ret;
     uint32_t keyBits = CRYPT_SM2_GetBits(ctx);
-    BN_BigNum *order = ECC_GetParaN(ctx->pkey->para);
     ctx->r = BN_Create(keyBits);
     ctx->pointR = ECC_NewPoint(ctx->pkey->para);
     BN_BigNum *tmp = BN_Create(keyBits);
-    if (order == NULL || ctx->r == NULL || ctx->pointR == NULL || tmp == NULL) {
+    if (ctx->r == NULL || ctx->pointR == NULL || tmp == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -832,11 +822,9 @@ static int32_t Sm2SetRandom(CRYPT_SM2_Ctx *ctx, const void *val, uint32_t len)
 
     GOTO_ERR_IF(ECC_PointMul(ctx->pkey->para, ctx->pointR, ctx->r, NULL), ret);
     GOTO_ERR_IF(ECC_GetPointDataX(ctx->pkey->para, ctx->pointR, tmp), ret);
-    BN_Destroy(order);
     BN_Destroy(tmp);
     return ret;
 ERR:
-    BN_Destroy(order);
     BN_Destroy(tmp);
     Sm2Clean(ctx);
     return ret;

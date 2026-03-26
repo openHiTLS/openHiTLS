@@ -148,9 +148,11 @@
             "-m64",
             "-mabi=ilp32",
             "-march=armv7-a",
+            "-march=armv7-m",
             "-march=armv8-a",
             "-mbig-endian",
             "-mtune=cortex-a57",
+            "-mtune=cortex-m4",
             "-mcpu=cortex-a15",
             "-mcpu=cortex-a9",
             "-mfloat-abi=softfp",
@@ -197,7 +199,8 @@
             "-DHITLS_CRYPTO_SM2_PRECOMPUTE_512K_TBL",
             "-DHITLS_CRYPTO_ACVP_TESTS",
             "-DHITLS_CRYPTO_DSA_GEN_PARA",
-            "-DHITLS_CRYPTO_SP800_STRICT_CHECK"
+            "-DHITLS_CRYPTO_SP800_STRICT_CHECK",
+            "-DHITLS_CRYPTO_CFB128"
         ],
         "CC_DEBUG_FLAGS": [
             "-g",

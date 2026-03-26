@@ -841,9 +841,6 @@ static uint32_t SqrNistP384(BN_UINT *r, uint32_t rSize, const BN_UINT *a, uint32
 
 static inline int32_t ModCalParaCheck(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, const BN_BigNum *mod)
 {
-    if (r == NULL || a == NULL || b == NULL || mod == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
     // 保证不越界访问
     if ((mod->size > a->room) || (mod->size > b->room)) {
         return CRYPT_BN_SPACE_NOT_ENOUGH;
@@ -894,11 +891,8 @@ int32_t BN_ModSubQuick(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
 }
 
 static inline int32_t ModEccMulParaCheck(BN_BigNum *r, const BN_BigNum *a,
-    const BN_BigNum *b, const BN_BigNum *mod, BN_Optimizer *opt)
+    const BN_BigNum *b, const BN_BigNum *mod)
 {
-    if (r == NULL || a == NULL || b == NULL || mod == NULL || opt == NULL) {
-        return CRYPT_NULL_INPUT;
-    }
     // Ensure that no out-of-bounds access occurs.
     if ((mod->size > b->room) || (mod->size > a->room)) {
         return CRYPT_BN_SPACE_NOT_ENOUGH;
@@ -910,7 +904,7 @@ static inline int32_t ModEccMulParaCheck(BN_BigNum *r, const BN_BigNum *a,
 int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, void *data, BN_Optimizer *opt)
 {
     BN_BigNum *mod = (BN_BigNum *)data;
-    int32_t ret = ModEccMulParaCheck(r, a, b, mod, opt);
+    int32_t ret = ModEccMulParaCheck(r, a, b, mod);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -948,12 +942,8 @@ int32_t BN_ModNistEccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, v
     return CRYPT_SUCCESS;
 }
 
-static int32_t ModEccSqrParaCheck(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod, BN_Optimizer *opt)
+static int32_t ModEccSqrParaCheck(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *mod)
 {
-    if (r == NULL || a == NULL || mod == NULL || opt == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
     // Ensure that no out-of-bounds access occurs.
     if (mod->size > a->room) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_SPACE_NOT_ENOUGH);
@@ -967,7 +957,7 @@ static int32_t ModEccSqrParaCheck(BN_BigNum *r, const BN_BigNum *a, const BN_Big
 int32_t BN_ModNistEccSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimizer *opt)
 {
     BN_BigNum *mod = (BN_BigNum *)data;
-    int32_t ret = ModEccSqrParaCheck(r, a, mod, opt);
+    int32_t ret = ModEccSqrParaCheck(r, a, mod);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -1013,7 +1003,7 @@ int32_t BN_ModNistEccSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimi
 int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, void *data, BN_Optimizer *opt)
 {
     BN_BigNum *mod = (BN_BigNum *)data;
-    int32_t ret = ModEccMulParaCheck(r, a, b, mod, opt);
+    int32_t ret = ModEccMulParaCheck(r, a, b, mod);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -1040,7 +1030,7 @@ int32_t BN_ModSm2EccMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, vo
 int32_t BN_ModSm2EccSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimizer *opt)
 {
     BN_BigNum *mod = (BN_BigNum *)data;
-    int32_t ret = ModEccSqrParaCheck(r, a, mod, opt);
+    int32_t ret = ModEccSqrParaCheck(r, a, mod);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -1060,5 +1050,5 @@ int32_t BN_ModSm2EccSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimiz
 
     return CRYPT_SUCCESS;
 }
-#endif
+#endif // HITLS_CRYPTO_CURVE_SM2
 #endif

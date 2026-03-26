@@ -20,6 +20,7 @@
 #include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
+#include "eal_cipher_local.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "crypt_modes_gcm.h"
@@ -513,10 +514,8 @@ void MODES_GCM_FreeCtx(MODES_GCM_Ctx *modeCtx)
         return;
     }
     (void)BSL_SAL_ClearFree(modeCtx->gcmCtx.ciphCtx, modeCtx->gcmCtx.ciphMeth->ctxSize);
-    (void)BSL_SAL_CleanseData(modeCtx, sizeof(MODES_GCM_Ctx));
-    BSL_SAL_Free(modeCtx);
+    (void)BSL_SAL_ClearFree(modeCtx, sizeof(MODES_GCM_Ctx));
 }
-
 
 int32_t MODES_GCM_InitCtxEx(MODES_GCM_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, void *param, bool enc)

@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_CTR)
+#if defined(HITLS_CRYPTO_AES) && (defined(HITLS_CRYPTO_CTR) || defined(HITLS_CRYPTO_GCM))
 
 #include "crypt_arm.h"
 #include "crypt_aes_macro_armv8.s"

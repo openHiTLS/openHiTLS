@@ -68,9 +68,6 @@ static int32_t IsEscapeValid(char c)
 
 static int32_t RemoveSpace(char *str)
 {
-    if (str == NULL) {
-        return 0;
-    }
     int32_t strLen = (int32_t)strlen(str);
     if (strLen == 0) {
         return 0;
@@ -451,10 +448,6 @@ void DefaultDestroy(BslList *sectionList)
 
 static int32_t SetSection(BslList *sectionList, const char *section, const char * key, const char *value)
 {
-    if (sectionList == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
     BSL_CONF_Section *secCtx = NULL;
     BSL_CONF_KeyValue *keyValue = NULL;
     if (strlen(section) == 0) { // default section.
@@ -626,7 +619,7 @@ int32_t DefaultLoadUio(BslList *sectionList, BSL_UIO *uio)
         (void)memset_s(value, BSL_CONF_LINE_SIZE + 1, 0, BSL_CONF_LINE_SIZE + 1);
         offset = 0; // Reset offset.
     }
-    BSL_SAL_FREE(buff);
+    BSL_SAL_Free(buff);
     return ret;
 }
 

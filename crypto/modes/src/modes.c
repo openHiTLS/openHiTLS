@@ -22,6 +22,7 @@
 #include "crypt_errno.h"
 #include "modes_local.h"
 #include "crypt_utils.h"
+#include "eal_cipher_local.h"
 #ifdef HITLS_CRYPTO_CTR
 #include "crypt_modes_ctr.h"
 #endif
@@ -94,6 +95,18 @@ MODES_CipherCtx *MODES_CipherNewCtxEx(void *libCtx, int32_t algId)
 {
     (void)libCtx;
     return MODES_CipherNewCtx(algId);
+}
+
+int32_t MODES_CipherFinalComplete(void *modeCtx, uint8_t *out, uint32_t *outLen)
+{
+    if (outLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    (void)modeCtx;
+    (void)out;
+    *outLen = 0;
+    return CRYPT_SUCCESS;
 }
 
 int32_t MODES_CipherInitCommonCtx(MODES_CipherCommonCtx *modeCtx, void *setSymKey, void *keyCtx,
@@ -463,10 +476,7 @@ int32_t MODES_SetIv(MODES_CipherCommonCtx *ctx, const uint8_t *val, uint32_t len
         return CRYPT_MODES_IVLEN_ERROR;
     }
 
-    if (memcpy_s(ctx->iv, MODES_MAX_IV_LENGTH, val, len) != EOK) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        return CRYPT_SECUREC_FAIL;
-    }
+    (void)memcpy_s(ctx->iv, MODES_MAX_IV_LENGTH, val, len);
     ctx->offset = 0;    // If the IV value is changed, the original offset is useless.
     ctx->ivIndex = 0;
     return CRYPT_SUCCESS;

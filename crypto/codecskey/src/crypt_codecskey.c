@@ -144,7 +144,7 @@ int32_t CRYPT_EAL_ParseAsn1PriKey(CRYPT_EAL_LibCtx *libctx, const char *attrName
 int32_t CRYPT_EAL_ParsePemPriKey(CRYPT_EAL_LibCtx *libctx, const char *attrName, int32_t type, BSL_Buffer *encode,
     const BSL_Buffer *pwd, CRYPT_EAL_PkeyCtx **ealPriKey)
 {
-    BSL_PEM_Symbol symbol = {0};
+    BSL_PEM_Symbol symbol;
     uint8_t *buff = encode->data;
     uint32_t buffLen = encode->dataLen;
     int32_t ret = EAL_GetPemPriKeySymbol(type, &symbol);
@@ -181,11 +181,11 @@ int32_t CRYPT_EAL_PriKeyParseBuff(CRYPT_EAL_LibCtx *libctx, const char *attrName
         isUnknown = true;
         isPem = BSL_PEM_IsPemFormat((char *)(encode->data), encode->dataLen);
     }
-    if (isPem == true || format == BSL_FORMAT_PEM) {
+    if (isPem || format == BSL_FORMAT_PEM) {
         return CRYPT_EAL_ParsePemPriKey(libctx, attrName, type, encode, pwd, ealPriKey);
     }
 #endif
-    if (isUnknown == true || format == BSL_FORMAT_ASN1) {
+    if (isUnknown || format == BSL_FORMAT_ASN1) {
         return CRYPT_EAL_ParseAsn1PriKey(libctx, attrName, type, encode, pwd, ealPriKey);
     }
     return CRYPT_DECODE_NO_SUPPORT_FORMAT;
@@ -215,7 +215,7 @@ int32_t CRYPT_EAL_ParseAsn1PubKey(CRYPT_EAL_LibCtx *libctx, const char *attrName
 int32_t CRYPT_EAL_ParsePemPubKey(CRYPT_EAL_LibCtx *libctx, const char *attrName, int32_t type, BSL_Buffer *encode,
     CRYPT_EAL_PkeyCtx **ealPubKey)
 {
-    BSL_PEM_Symbol symbol = {0};
+    BSL_PEM_Symbol symbol;
     int32_t ret = EAL_GetPemPubKeySymbol(type, &symbol);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -251,11 +251,11 @@ int32_t CRYPT_EAL_PubKeyParseBuff(CRYPT_EAL_LibCtx *libctx, const char *attrName
         isUnknown = true;
         isPem = BSL_PEM_IsPemFormat((char *)(encode->data), encode->dataLen);
     }
-    if (isPem == true || format == BSL_FORMAT_PEM) {
+    if (isPem || format == BSL_FORMAT_PEM) {
         return CRYPT_EAL_ParsePemPubKey(libctx, attrName, type, encode, ealPubKey);
     }
 #endif
-    if (isUnknown == true || format == BSL_FORMAT_ASN1) {
+    if (isUnknown || format == BSL_FORMAT_ASN1) {
         return CRYPT_EAL_ParseAsn1PubKey(libctx, attrName, type, encode, ealPubKey);
     }
     return CRYPT_DECODE_NO_SUPPORT_FORMAT;

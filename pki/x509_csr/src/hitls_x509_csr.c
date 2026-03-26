@@ -81,25 +81,28 @@ typedef enum {
 
 HITLS_X509_Csr *HITLS_X509_CsrNew(void)
 {
-    HITLS_X509_Csr *csr = NULL;
-    BSL_ASN1_List *subjectName = NULL;
-    HITLS_X509_Attrs *attributes = NULL;
-    csr = (HITLS_X509_Csr *)BSL_SAL_Calloc(1, sizeof(HITLS_X509_Csr));
-    subjectName = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
-    attributes = HITLS_X509_AttrsNew();
-    if (csr == NULL || subjectName == NULL || attributes == NULL) {
+    HITLS_X509_Csr *csr = (HITLS_X509_Csr *)BSL_SAL_Calloc(1, sizeof(HITLS_X509_Csr));
+    BSL_ASN1_List *subjectName = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    if (csr == NULL || subjectName == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        BSL_SAL_Free(subjectName);
-        BSL_SAL_Free(csr);
-        HITLS_X509_AttrsFree(attributes, NULL);
-        return NULL;
+        goto ERR;
     }
-
+#ifdef HITLS_PKI_X509_CSR_ATTR
+    HITLS_X509_Attrs *attributes = HITLS_X509_AttrsNew();
+    if (attributes == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        goto ERR;
+    }
+    csr->reqInfo.attributes = attributes;
+#endif
     BSL_SAL_ReferencesInit(&(csr->references));
     csr->reqInfo.subjectName = subjectName;
-    csr->reqInfo.attributes = attributes;
     csr->state = HITLS_X509_CSR_STATE_NEW;
     return csr;
+ERR:
+    BSL_SAL_Free(subjectName);
+    BSL_SAL_Free(csr);
+    return NULL;
 }
 
 HITLS_X509_Csr *HITLS_X509_ProviderCsrNew(HITLS_PKI_LibCtx *libCtx, const char *attrName)
@@ -138,13 +141,13 @@ void HITLS_X509_CsrFree(HITLS_X509_Csr *csr)
         csr->signAlgId.sm2UserId.dataLen = 0;
     }
 #endif
+#ifdef HITLS_PKI_X509_CSR_ATTR
     HITLS_X509_AttrsFree(csr->reqInfo.attributes, NULL);
-    csr->reqInfo.attributes = NULL;
+#endif
     BSL_SAL_FREE(csr->rawData);
     CRYPT_EAL_PkeyFreeCtx(csr->reqInfo.ealPubKey);
-    csr->reqInfo.ealPubKey = NULL;
 
-    BSL_SAL_FREE(csr);
+    BSL_SAL_Free(csr);
 }
 
 #ifdef HITLS_PKI_X509_CSR_PARSE
@@ -302,7 +305,7 @@ static int32_t X509CsrPemParse(const BSL_Buffer *encode, HITLS_X509_Csr *csr)
     }
     ret = X509CsrAsn1Parse(false, &asn1Buf, csr);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_SAL_FREE(asn1Buf.data);
+        BSL_SAL_Free(asn1Buf.data);
         BSL_ERR_PUSH_ERROR(ret);
     }
 
@@ -376,7 +379,7 @@ static int32_t CheckCsrValid(HITLS_X509_Csr *csr)
     if (csr->reqInfo.ealPubKey == NULL) {
         return HITLS_X509_ERR_CSR_INVALID_PUBKEY;
     }
-    if (csr->reqInfo.subjectName == NULL || BSL_LIST_COUNT(csr->reqInfo.subjectName) <= 0) {
+    if (BSL_LIST_COUNT(csr->reqInfo.subjectName) <= 0) {
         return HITLS_X509_ERR_CSR_INVALID_SUBJECT_DN;
     }
 
@@ -394,8 +397,7 @@ static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer
     }
     /* encode public key */
     BSL_Buffer pub = {0};
-    ret = CRYPT_EAL_EncodePubKeyBuffInternal(reqInfo->ealPubKey, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY,
-        false, &pub);
+    ret = CRYPT_EAL_EncodePubKeyBuffInternal(reqInfo->ealPubKey, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, false, &pub);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -459,9 +461,9 @@ static int32_t EncodeCsrReqInfo(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer *re
     };
     ret = BSL_ASN1_EncodeTemplate(&templ, reqInfoAsn, HITLS_X509_CSR_REQINFO_SIZE, &reqInfoBuff->buff,
         &reqInfoBuff->len);
-    BSL_SAL_FREE(subject.buff);
-    BSL_SAL_FREE(publicKey.buff);
-    BSL_SAL_FREE(attributes.buff);
+    BSL_SAL_Free(subject.buff);
+    BSL_SAL_Free(publicKey.buff);
+    BSL_SAL_Free(attributes.buff);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -480,13 +482,6 @@ BSL_ASN1_TemplateItem g_briefCsrTempl[] = {
 
 static int32_t X509EncodeAsn1CsrCore(HITLS_X509_Csr *csr)
 {
-    if (csr->signature.buff == NULL || csr->signature.len == 0 ||
-        csr->reqInfo.reqInfoRawData == NULL || csr->reqInfo.reqInfoRawDataLen == 0 ||
-        csr->signAlgId.algId == BSL_CID_UNKNOWN) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CSR_NOT_SIGNED);
-        return HITLS_X509_ERR_CSR_NOT_SIGNED;
-    }
-
     BSL_ASN1_Buffer asnArr[HITLS_X509_CSR_BRIEF_SIZE] = {
         {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, csr->reqInfo.reqInfoRawDataLen, csr->reqInfo.reqInfoRawData},
         {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, NULL},
@@ -507,7 +502,7 @@ static int32_t X509EncodeAsn1CsrCore(HITLS_X509_Csr *csr)
 
     BSL_ASN1_Template csrTempl = { g_briefCsrTempl, sizeof(g_briefCsrTempl) / sizeof(g_briefCsrTempl[0]) };
     ret = BSL_ASN1_EncodeTemplate(&csrTempl, asnArr, HITLS_X509_CSR_BRIEF_SIZE, &csr->rawData, &csr->rawDataLen);
-    BSL_SAL_FREE(asnArr[1].buff);
+    BSL_SAL_Free(asnArr[1].buff);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -527,10 +522,6 @@ static int32_t X509EncodeAsn1Csr(HITLS_X509_Csr *csr, BSL_Buffer *buff)
 {
     int32_t ret;
     if ((csr->flag & HITLS_X509_CSR_GEN_FLAG) != 0) {
-        if (csr->state != HITLS_X509_CSR_STATE_SIGN && csr->state != HITLS_X509_CSR_STATE_GEN) {
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CSR_NOT_SIGNED);
-            return HITLS_X509_ERR_CSR_NOT_SIGNED;
-        }
         if (csr->state == HITLS_X509_CSR_STATE_SIGN) {
             ret = X509EncodeAsn1CsrCore(csr);
             if (ret != HITLS_PKI_SUCCESS) {
@@ -538,6 +529,9 @@ static int32_t X509EncodeAsn1Csr(HITLS_X509_Csr *csr, BSL_Buffer *buff)
                 return ret;
             }
             csr->state = HITLS_X509_CSR_STATE_GEN;
+        } else if (csr->state != HITLS_X509_CSR_STATE_GEN) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CSR_NOT_SIGNED);
+            return HITLS_X509_ERR_CSR_NOT_SIGNED;
         }
     }
     if (csr->rawData == NULL || csr->rawDataLen == 0) {
@@ -569,7 +563,7 @@ static int32_t X509EncodePemCsr(HITLS_X509_Csr *csr, BSL_Buffer *buff)
     BSL_Buffer base64 = {0};
     BSL_PEM_Symbol symbol = {BSL_PEM_CERT_REQ_BEGIN_STR, BSL_PEM_CERT_REQ_END_STR};
     ret = BSL_PEM_EncodeAsn1ToPem(asn1.data, asn1.dataLen, &symbol, (char **)&base64.data, &base64.dataLen);
-    BSL_SAL_FREE(asn1.data);
+    BSL_SAL_Free(asn1.data);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -630,7 +624,7 @@ int32_t HITLS_X509_CsrGenFile(int32_t format, HITLS_X509_Csr *csr, const char *p
 #if defined(HITLS_PKI_X509_CSR_ATTR) && defined(HITLS_PKI_X509_CSR_GET)
 static int32_t X509GetAttr(HITLS_X509_Attrs *attrs, HITLS_X509_Attrs **val, uint32_t valLen)
 {
-    if (val == NULL || valLen != sizeof(HITLS_X509_Attrs *)) {
+    if (valLen != sizeof(HITLS_X509_Attrs *)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -647,7 +641,7 @@ static inline void SetCsrGenFlag(HITLS_X509_Csr *csr)
 
 int32_t HITLS_X509_CsrCtrl(HITLS_X509_Csr *csr, int32_t cmd, void *val, uint32_t valLen)
 {
-    if (csr == NULL) {
+    if (csr == NULL || val == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }

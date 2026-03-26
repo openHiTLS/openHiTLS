@@ -144,11 +144,6 @@ int32_t MODES_CBC_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen
     return MODES_CipherFinal(modeCtx, modeCtx->enc ? MODES_CBC_Encrypt : MODES_CBC_Decrypt, out, outLen);
 }
 
-int32_t MODES_CBC_DeInitCtx(MODES_CipherCtx *modeCtx)
-{
-    return MODES_CipherDeInitCtx(modeCtx);
-}
-
 int32_t MODES_CBC_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen)
 {
     int32_t ret;
@@ -186,11 +181,6 @@ int32_t MODES_CBC_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_
         default:
             return MODES_CipherCtrl(modeCtx, cmd, val, valLen);
     }
-}
-
-void MODES_CBC_FreeCtx(MODES_CipherCtx *modeCtx)
-{
-    MODES_CipherFreeCtx(modeCtx);
 }
 
 int32_t MODES_CBC_UpdateEx(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)

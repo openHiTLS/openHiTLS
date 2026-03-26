@@ -70,24 +70,21 @@ static int32_t BslSctpCtxNew(BSL_UIO *uio)
 
 static int32_t BslSctpCtxFree(BSL_UIO *uio)
 {
-    if (uio == NULL) {
-        return BSL_SUCCESS;
-    }
-    SctpParameters *ctx = BSL_UIO_GetCtx(uio);
+    SctpParameters *ctx = uio->ctx;
     uio->init = false;
     if (ctx != NULL) {
         if (BSL_UIO_GetIsUnderlyingClosedByUio(uio) && ctx->fd != -1) {
             (void)BSL_SAL_SockClose(ctx->fd);
         }
         BSL_SAL_FREE(ctx);
-        BSL_UIO_SetCtx(uio, NULL);
+        uio->ctx = NULL;
     }
     return BSL_SUCCESS;
 }
 
 static int32_t BslSctpWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen)
 {
-    if (uio == NULL || uio->ctx == NULL || ((SctpParameters *)uio->ctx)->method.uioWrite == NULL) {
+    if (uio->ctx == NULL || ((SctpParameters *)(uio->ctx))->method.uioWrite == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05106, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Uio: sctp write param invalid.", NULL, NULL, NULL, NULL);
@@ -99,14 +96,14 @@ static int32_t BslSctpWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_
 
 static int32_t BslSctpRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
 {
-    if (uio == NULL || uio->ctx == NULL || ((SctpParameters *)uio->ctx)->method.uioRead == NULL) {
+    SctpParameters *parameters = (SctpParameters *)uio->ctx;
+    if (parameters == NULL || parameters->method.uioRead == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05107, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Uio: sctp read param invalid.", NULL, NULL, NULL, NULL);
         return BSL_INVALID_ARG;
     }
     *readLen = 0;
-    SctpParameters *parameters = (SctpParameters *)uio->ctx;
     if (parameters->serialData.peerAuthed == false) {
         if (parameters->method.uioCtrl == NULL || parameters->method.uioCtrl(uio, BSL_UIO_SCTP_CHECK_PEER_AUTH,
             sizeof(parameters->serialData.peerAuthed), &parameters->serialData.peerAuthed) != BSL_SUCCESS) {
@@ -120,14 +117,17 @@ static int32_t BslSctpRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *read
     return parameters->method.uioRead(uio, buf, len, readLen);
 }
 
-static int32_t BslSctpAddAuthKey(BSL_UIO *uio, const uint8_t *authKey, uint16_t authKeySize)
+static int32_t BslSctpAddAuthKey(BSL_UIO *uio, const uint8_t *authKey, int32_t larg)
 {
-    SctpParameters *parameters = (SctpParameters *)BSL_UIO_GetCtx(uio);
-    if (authKey == NULL || authKeySize != sizeof(BSL_UIO_SctpAuthKey)) {
-        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+    if (larg < 0 || larg > UINT16_MAX) {
+        return BSL_INVALID_ARG;
+    }
+    SctpParameters *parameters = (SctpParameters *)uio->ctx;
+    if (parameters->method.uioCtrl == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05109, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Uio: add auth key failed", NULL, NULL, NULL, NULL);
-        return BSL_INVALID_ARG;
+        return BSL_NULL_INPUT;
     }
 
     if (parameters->serialData.isAddAuthkey) {
@@ -143,8 +143,8 @@ static int32_t BslSctpAddAuthKey(BSL_UIO *uio, const uint8_t *authKey, uint16_t 
     BSL_UIO_SctpAuthKey key;
     key.shareKeyId = parameters->serialData.shareKeyId;
     key.authKey = authKey;
-    key.authKeySize = authKeySize;
-
+    key.authKeySize = (uint16_t)larg;
+    
     int32_t ret = parameters->method.uioCtrl(uio, BSL_UIO_SCTP_ADD_AUTH_SHARED_KEY, (int32_t)sizeof(key), &key);
     if (ret != BSL_SUCCESS) {
         parameters->serialData.shareKeyId = prevShareKeyId;
@@ -160,7 +160,7 @@ static int32_t BslSctpAddAuthKey(BSL_UIO *uio, const uint8_t *authKey, uint16_t 
 
 static int32_t BslSctpActiveAuthKey(BSL_UIO *uio)
 {
-    SctpParameters *parameters = BSL_UIO_GetCtx(uio);
+    SctpParameters *parameters = uio->ctx;
     if (parameters == NULL || parameters->method.uioCtrl == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05112, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -185,7 +185,7 @@ static int32_t BslSctpActiveAuthKey(BSL_UIO *uio)
 
 static int32_t BslSctpDelPreAuthKey(BSL_UIO *uio)
 {
-    SctpParameters *parameters = BSL_UIO_GetCtx(uio);
+    SctpParameters *parameters = uio->ctx;
     if (parameters == NULL || parameters->method.uioCtrl == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05115, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -206,8 +206,8 @@ static int32_t BslSctpDelPreAuthKey(BSL_UIO *uio)
 
 static int32_t BslSctpIsSndBuffEmpty(BSL_UIO *uio, void *parg, int32_t larg)
 {
-    SctpParameters *parameters = BSL_UIO_GetCtx(uio);
-    if (parameters == NULL || parameters->method.uioCtrl == NULL || parg == NULL || larg != sizeof(bool)) {
+    SctpParameters *parameters = uio->ctx;
+    if (parameters->method.uioCtrl == NULL || larg != sizeof(bool)) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05118, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Uio: input error.", NULL, NULL, NULL, NULL);
@@ -227,7 +227,7 @@ static int32_t BslSctpIsSndBuffEmpty(BSL_UIO *uio, void *parg, int32_t larg)
 
 static int32_t BslSctpGetSendStreamId(const SctpParameters *parameters, void *parg, int32_t larg)
 {
-    if (larg != (int32_t)sizeof(uint16_t) || parg == NULL) {
+    if (larg != (int32_t)sizeof(uint16_t)) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05122, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Uio: Sctp input err.", NULL, NULL, NULL, NULL);
@@ -247,7 +247,7 @@ static int32_t BslSctpGetSendStreamId(const SctpParameters *parameters, void *pa
 
 int32_t BslSctpSetAppStreamId(SctpParameters *parameters, const void *parg, int32_t larg)
 {
-    if (larg != (int32_t)sizeof(uint16_t) || parg == NULL) {
+    if (larg != (int32_t)sizeof(uint16_t)) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05124, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "Uio: Sctp input err.", NULL, NULL, NULL, NULL);
@@ -261,13 +261,6 @@ int32_t BslSctpSetAppStreamId(SctpParameters *parameters, const void *parg, int3
 
 static int32_t BslSctpSetPeerIpAddr(SctpParameters *parameters, const uint8_t *addr, int32_t size)
 {
-    if (addr == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05126, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "Uio: NULL error.", NULL, NULL, NULL, NULL);
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
-
     if (size != IP_ADDR_V4_LEN && size != IP_ADDR_V6_LEN) {
         BSL_ERR_PUSH_ERROR(BSL_UIO_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05127, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -312,14 +305,14 @@ static int32_t BslSctpGetPeerIpAddr(SctpParameters *parameters, void *parg, int3
 
 static int32_t BslSctpSetFd(BSL_UIO *uio, void *parg, int32_t larg)
 {
-    if (larg != (int32_t)sizeof(int32_t) || parg == NULL) {
+    if (larg != (int32_t)sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05131, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "set fd handle invalid paramter.", NULL, NULL, NULL, NULL);
         return BSL_INVALID_ARG;
     }
     int32_t *fd = (int32_t *)parg;
-    SctpParameters *parameters = BSL_UIO_GetCtx(uio);
+    SctpParameters *parameters = uio->ctx;
     if (parameters->fd != -1) {
         if (BSL_UIO_GetIsUnderlyingClosedByUio(uio)) {
             (void)BSL_SAL_SockClose(parameters->fd);
@@ -332,7 +325,7 @@ static int32_t BslSctpSetFd(BSL_UIO *uio, void *parg, int32_t larg)
 
 static int32_t BslSctpGetFd(SctpParameters *parameters, void *parg, int32_t larg)
 {
-    if (larg != (int32_t)sizeof(int32_t) || parg == NULL) {
+    if (larg != (int32_t)sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05133, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "get fd handle invalid parameter.", NULL, NULL, NULL, NULL);
@@ -344,7 +337,7 @@ static int32_t BslSctpGetFd(SctpParameters *parameters, void *parg, int32_t larg
 
 static int32_t BslSctpMaskAppMsg(SctpParameters *parameters, void *parg, int32_t larg)
 {
-    if (parg == NULL || larg != sizeof(bool)) {
+    if (larg != sizeof(bool)) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05134, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "mask app msg failed", NULL, NULL, NULL, NULL);
@@ -356,10 +349,6 @@ static int32_t BslSctpMaskAppMsg(SctpParameters *parameters, void *parg, int32_t
 
 static int32_t BslSctpSetCtxCb(SctpParameters *parameters, int32_t type, void *func)
 {
-    if (parameters == NULL || func == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
     switch (type) {
         case BSL_UIO_WRITE_CB:
             parameters->method.uioWrite = func;
@@ -379,47 +368,50 @@ static int32_t BslSctpSetCtxCb(SctpParameters *parameters, int32_t type, void *f
 
 int32_t BslSctpCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 {
+    if (cmd == BSL_UIO_FLUSH) {
+        return BSL_SUCCESS;
+    }
     if (uio->ctx == NULL) {
         return BSL_NULL_INPUT;
     }
-    SctpParameters *parameters = BSL_UIO_GetCtx(uio);
+
+    if (cmd == BSL_UIO_SCTP_ACTIVE_AUTH_SHARED_KEY) {
+            return BslSctpActiveAuthKey(uio);
+        } else if (cmd == BSL_UIO_SCTP_DEL_PRE_AUTH_SHARED_KEY) {
+            return BslSctpDelPreAuthKey(uio);
+        }
+    if (parg == NULL) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05126, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Uio: null val.", 0, 0, 0, 0);
+        return BSL_NULL_INPUT;
+    }
     switch (cmd) {
         case BSL_UIO_SET_PEER_IP_ADDR:
-            return BslSctpSetPeerIpAddr(parameters, parg, larg);
+            return BslSctpSetPeerIpAddr(uio->ctx, parg, larg);
         case BSL_UIO_GET_PEER_IP_ADDR:
-            return BslSctpGetPeerIpAddr(parameters, parg, larg);
+            return BslSctpGetPeerIpAddr(uio->ctx, parg, larg);
         case BSL_UIO_SET_FD:
             return BslSctpSetFd(uio, parg, larg);
         case BSL_UIO_GET_FD:
-            return BslSctpGetFd(parameters, parg, larg);
+            return BslSctpGetFd(uio->ctx, parg, larg);
         case BSL_UIO_SCTP_GET_SEND_STREAM_ID:
-            return BslSctpGetSendStreamId(parameters, parg, larg);
+            return BslSctpGetSendStreamId(uio->ctx, parg, larg);
         case BSL_UIO_SCTP_SET_APP_STREAM_ID:
-            return BslSctpSetAppStreamId(parameters, parg, larg);
+            return BslSctpSetAppStreamId(uio->ctx, parg, larg);
         case BSL_UIO_SCTP_ADD_AUTH_SHARED_KEY:
-            if (larg < 0 || larg > UINT16_MAX) {
-                break;
-            }
             return BslSctpAddAuthKey(uio, parg, larg);
-        case BSL_UIO_SCTP_ACTIVE_AUTH_SHARED_KEY:
-            return BslSctpActiveAuthKey(uio);
-        case BSL_UIO_SCTP_DEL_PRE_AUTH_SHARED_KEY:
-            return BslSctpDelPreAuthKey(uio);
         case BSL_UIO_SCTP_MASK_APP_MESSAGE:
-            return BslSctpMaskAppMsg(parameters, parg, larg);
+            return BslSctpMaskAppMsg(uio->ctx, parg, larg);
         case BSL_UIO_SCTP_SND_BUFF_IS_EMPTY:
             return BslSctpIsSndBuffEmpty(uio, parg, larg);
         case BSL_UIO_SCTP_SET_CALLBACK:
-            return BslSctpSetCtxCb(parameters, larg, parg);
-        case BSL_UIO_FLUSH:
-            return BSL_SUCCESS;
+            return BslSctpSetCtxCb(uio->ctx, larg, parg);
         default:
-            break;
+            BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05139, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "Uio: sctp ctrl param invalid cmd.", NULL, NULL, NULL, NULL);
+            return BSL_INVALID_ARG;
     }
-    BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
-    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05139, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-        "Uio: sctp ctrl param invalid cmd.", NULL, NULL, NULL, NULL);
-    return BSL_INVALID_ARG;
 }
 
 const BSL_UIO_Method *BSL_UIO_SctpMethod(void)

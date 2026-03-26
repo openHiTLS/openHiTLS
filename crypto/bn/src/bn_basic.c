@@ -39,7 +39,7 @@ BN_BigNum *BN_Create(uint32_t bits)
         r->room = room;
         r->data = (BN_UINT *)BSL_SAL_Calloc(1u, room * sizeof(BN_UINT));
         if (r->data == NULL) {
-            BSL_SAL_FREE(r);
+            BSL_SAL_Free(r);
             return NULL;
         }
     }
@@ -59,7 +59,7 @@ void BN_Destroy(BN_BigNum *a)
     }
     BSL_SAL_FREE(a->data);
     if (!BN_IsFlag(a, CRYPT_BN_FLAG_OPTIMIZER)) {
-        BSL_SAL_FREE(a);
+        BSL_SAL_Free(a);
     }
 }
 
@@ -136,7 +136,7 @@ void BN_CbCtxDestroy(BN_CbCtx *cb)
     if (cb == NULL) {
         return;
     }
-    BSL_SAL_FREE(cb);
+    BSL_SAL_Free(cb);
 }
 #endif
 
@@ -427,7 +427,7 @@ int32_t BnExtend(BN_BigNum *a, uint32_t words)
         (void)memcpy_s(tmp, a->size * sizeof(BN_UINT), a->data, a->size * sizeof(BN_UINT));
         BSL_SAL_CleanseData(a->data, a->size * sizeof(BN_UINT));
     }
-    BSL_SAL_FREE(a->data);
+    BSL_SAL_Free(a->data);
     a->data = tmp;
     a->room = words;
     return CRYPT_SUCCESS;

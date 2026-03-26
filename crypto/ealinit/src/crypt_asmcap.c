@@ -298,11 +298,11 @@ static const EAL_CheckAsm HITLS_ASM_SYM_ALG_CHECK[] = {
     {.id = CRYPT_CIPHER_AES128_CCM, .callback = {CRYPT_AES_AsmCheck, NULL}},
     {.id = CRYPT_CIPHER_AES192_CCM, .callback = {CRYPT_AES_AsmCheck, NULL}},
     {.id = CRYPT_CIPHER_AES256_CCM, .callback = {CRYPT_AES_AsmCheck, NULL}},
-#if defined(HITLS_CRYPTO_GCM_ASM)
+#if defined(HITLS_CRYPTO_GHASH_ASM)
     {.id = CRYPT_CIPHER_AES128_GCM, .callback = {CRYPT_AES_AsmCheck, CRYPT_GHASH_AsmCheck}},
     {.id = CRYPT_CIPHER_AES192_GCM, .callback = {CRYPT_AES_AsmCheck, CRYPT_GHASH_AsmCheck}},
     {.id = CRYPT_CIPHER_AES256_GCM, .callback = {CRYPT_AES_AsmCheck, CRYPT_GHASH_AsmCheck}},
-#endif // HITLS_CRYPTO_GCM_ASM
+#endif // HITLS_CRYPTO_GHASH_ASM
     {.id = CRYPT_CIPHER_AES128_CFB, .callback = {CRYPT_AES_AsmCheck, NULL}},
     {.id = CRYPT_CIPHER_AES192_CFB, .callback = {CRYPT_AES_AsmCheck, NULL}},
     {.id = CRYPT_CIPHER_AES256_CFB, .callback = {CRYPT_AES_AsmCheck, NULL}},
@@ -318,9 +318,9 @@ static const EAL_CheckAsm HITLS_ASM_SYM_ALG_CHECK[] = {
     {.id = CRYPT_CIPHER_SM4_CBC, .callback = {CRYPT_SM4_AsmCheck, NULL}},
     {.id = CRYPT_CIPHER_SM4_ECB, .callback = {CRYPT_SM4_AsmCheck, NULL}},
     {.id = CRYPT_CIPHER_SM4_CTR, .callback = {CRYPT_SM4_AsmCheck, NULL}},
-#if defined(HITLS_CRYPTO_GCM_ASM)
+#if defined(HITLS_CRYPTO_GHASH_ASM)
     {.id = CRYPT_CIPHER_SM4_GCM, .callback = {CRYPT_SM4_AsmCheck, CRYPT_GHASH_AsmCheck}},
-#endif // HITLS_CRYPTO_GCM_ASM
+#endif // HITLS_CRYPTO_GHASH_ASM
     {.id = CRYPT_CIPHER_SM4_CFB, .callback = {CRYPT_SM4_AsmCheck, NULL}},
     {.id = CRYPT_CIPHER_SM4_OFB, .callback = {CRYPT_SM4_AsmCheck, NULL}},
 #endif // HITLS_CRYPTO_SM4

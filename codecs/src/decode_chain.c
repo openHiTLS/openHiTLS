@@ -423,12 +423,7 @@ int32_t CRYPT_DECODE_ProviderProcessAll(CRYPT_EAL_LibCtx *ctx, CRYPT_DECODE_Prov
         .cb = cb,
         .args = args
     };
-    int32_t ret = CRYPT_EAL_ProviderProcessAll(ctx, ProcessEachProviderDecoder, &processArgs);
-    if (ret != CRYPT_SUCCESS) {
-        return ret;
-    }
-    
-    return CRYPT_SUCCESS;
+    return CRYPT_EAL_ProviderProcessAll(ctx, ProcessEachProviderDecoder, &processArgs);
 }
 
 int32_t CRYPT_DECODE_PoolDecode(CRYPT_DECODER_PoolCtx *poolCtx, const BSL_Param *inParam, BSL_Param **outParam)

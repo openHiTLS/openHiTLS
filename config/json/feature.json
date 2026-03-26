@@ -34,7 +34,7 @@
                         "uio_tcp": {"deps": ["uio_plt", "sal_net"]},
                         "uio_udp": {"deps": ["uio_plt", "sal_net"]},
                         "uio_file": {"deps": ["uio_plt", "sal_file"]},
-                        "uio_mem": {"deps": ["uio_plt", "sal_mem", "buffer"]}
+                        "uio_mem": {"deps": ["uio_plt", "buffer"]}
                     },
                     "params": {"deps": ["list"]},
                     "print":null,
@@ -99,6 +99,7 @@
                     "entropy": {
                         "deps": ["list"], "opts": ["drbg_hash", "drbg_hmac", "drbg_ctr"]
                     },
+                    "ghash": null,
                     "modes": {
                         "cbc": null,
                         "ecb": null,
@@ -107,7 +108,9 @@
                         "ofb": null,
                         "cfb": null,
                         "ccm": null,
-                        "gcm": null,
+                        "gcm": {
+                            "deps": ["ghash"]
+                        },
                         "hctr": null,
                         "chacha20poly1305": null
                     },
@@ -223,6 +226,7 @@
                     "md5": {"ins_set":["x8664", "avx512"]},
                     "sm3": null,
                     "modes": {"ins_set":["x8664", "avx512"]},
+                    "ghash": {"ins_set":["x8664", "avx512"]},
                     "aes": {"ins_set":["x8664", "avx512"]},
                     "chacha20": {"ins_set":["x8664", "avx512"]},
                     "sm4": {"ins_set":["x8664", "avx512"]},
@@ -236,6 +240,7 @@
                     "sha3": null,
                     "sm3": null,
                     "modes": null,
+                    "ghash": null,
                     "aes": null,
                     "chacha20": null,
                     "sm4": null,
@@ -979,7 +984,7 @@
                 ]
             },
             "modes": {
-                ".features": ["cbc", "ecb", "xts", "ctr", "ofb", "cfb", "ccm", "gcm", "hctr", "chacha20poly1305"],
+                ".features": ["cbc", "ecb", "xts", "ctr", "ofb", "cfb", "ccm", "gcm", "hctr", "chacha20poly1305", "ghash"],
                 ".srcs": {
                     "public": "crypto/modes/src/modes*.c",
                     "no_asm": "crypto/modes/src/noasm_*.c",

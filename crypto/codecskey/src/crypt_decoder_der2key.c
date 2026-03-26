@@ -78,21 +78,21 @@ DECODER_Der2KeyCtx *DECODER_DER2KEY_NewCtx(void *provCtx)
 }
 
 #define DECODER_DEFINE_DER2KEY_NEW_CTX(keyType, keyId, keyMethod, asyCipherMethod, exchMethod, signMethod, kemMethod) \
-void *DECODER_##keyType##Der2KeyNewCtx(void *provCtx) \
-{ \
-    DECODER_Der2KeyCtx *ctx = DECODER_DER2KEY_NewCtx(provCtx); \
-    if (ctx == NULL) { \
-        return NULL; \
-    } \
-    int32_t ret = CRYPT_EAL_SetPkeyMethod(&ctx->method, keyMethod, asyCipherMethod, exchMethod, signMethod, \
-        kemMethod); \
-    if (ret != CRYPT_SUCCESS) { \
-        DECODER_DER2KEY_FreeCtx(ctx); \
-        return NULL; \
-    } \
-    ctx->keyAlgId = keyId; \
-    return ctx; \
-}
+    void *DECODER_##keyType##Der2KeyNewCtx(void *provCtx)                                                             \
+    {                                                                                                                 \
+        CRYPT_EAL_AsyAlgFuncsInfo funcs = {NULL, asyCipherMethod, exchMethod, signMethod, kemMethod, keyMethod};      \
+        DECODER_Der2KeyCtx *ctx = DECODER_DER2KEY_NewCtx(provCtx);                                                    \
+        if (ctx == NULL) {                                                                                            \
+            return NULL;                                                                                              \
+        }                                                                                                             \
+        int32_t ret = CRYPT_EAL_SetPkeyMethod(&ctx->method, &funcs);                                                  \
+        if (ret != CRYPT_SUCCESS) {                                                                                   \
+            DECODER_DER2KEY_FreeCtx(ctx);                                                                             \
+            return NULL;                                                                                              \
+        }                                                                                                             \
+        ctx->keyAlgId = keyId;                                                                                        \
+        return ctx;                                                                                                   \
+    }
 
 int32_t DECODER_CommonGetParam(const DECODER_CommonCtx *commonCtx, BSL_Param *param)
 {

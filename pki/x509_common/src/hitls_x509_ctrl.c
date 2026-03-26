@@ -48,7 +48,7 @@ void HITLS_X509_FreeNameNode(HITLS_X509_NameNode *node)
 
 int32_t HITLS_X509_GetList(BslList *list, void *val, uint32_t valLen)
 {
-    if (list == NULL || val == NULL || valLen != sizeof(BslList *)) {
+    if (valLen != sizeof(BslList *)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -60,7 +60,7 @@ int32_t HITLS_X509_GetList(BslList *list, void *val, uint32_t valLen)
     defined(HITLS_PKI_X509_CRT_AUTH)
 int32_t HITLS_X509_GetEncodeDn(BslList *list, void *val, uint32_t valLen)
 {
-    if (list == NULL || val == NULL || valLen != sizeof(BslList *)) {
+    if (valLen != sizeof(BslList *)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -82,10 +82,6 @@ int32_t HITLS_X509_GetEncodeDn(BslList *list, void *val, uint32_t valLen)
 
 int32_t HITLS_X509_GetPubKey(void *ealPubKey, void **val)
 {
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
     int32_t ret = CRYPT_EAL_PkeyUpRef((CRYPT_EAL_PkeyCtx *)ealPubKey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -97,7 +93,7 @@ int32_t HITLS_X509_GetPubKey(void *ealPubKey, void **val)
 
 int32_t HITLS_X509_GetSignAlg(BslCid signAlgId, int32_t *val, uint32_t valLen)
 {
-    if (val == NULL || valLen != sizeof(int32_t)) {
+    if (valLen != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -107,7 +103,7 @@ int32_t HITLS_X509_GetSignAlg(BslCid signAlgId, int32_t *val, uint32_t valLen)
 
 int32_t HITLS_X509_GetSignMdAlg(const HITLS_X509_Asn1AlgId *signAlgId, int32_t *val, uint32_t valLen)
 {
-    if (val == NULL || valLen != sizeof(int32_t)) {
+    if (valLen != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -116,7 +112,7 @@ int32_t HITLS_X509_GetSignMdAlg(const HITLS_X509_Asn1AlgId *signAlgId, int32_t *
 
 int32_t HITLS_X509_GetEncodeLen(uint32_t encodeLen, uint32_t *val, uint32_t valLen)
 {
-    if (val == NULL || valLen != sizeof(uint32_t)) {
+    if (valLen != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -126,10 +122,6 @@ int32_t HITLS_X509_GetEncodeLen(uint32_t encodeLen, uint32_t *val, uint32_t valL
 
 int32_t HITLS_X509_GetEncodeData(uint8_t *rawData, uint8_t **val)
 {
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
     *val = rawData;
     return HITLS_PKI_SUCCESS;
 }
@@ -294,7 +286,7 @@ static void FreeNodePack(NameNodePack *node)
 
 int32_t HITLS_X509_SetNameList(BslList **dest, void *val, uint32_t valLen)
 {
-    if (dest == NULL || val == NULL || valLen != sizeof(BslList)) {
+    if (valLen != sizeof(BslList)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -355,19 +347,19 @@ static int32_t X509AddDnNameItemToList(BslList *dnNameList, BslCid cid, uint8_t 
     }
     HITLS_X509_NameNode *layer2 = BSL_SAL_Calloc(1, sizeof(HITLS_X509_NameNode));
     if (layer2 == NULL) {
-        BSL_SAL_FREE(encode);
+        BSL_SAL_Free(encode);
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
     int32_t ret = FillNameNodes(layer2, cid, data, dataLen);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_SAL_FREE(encode);
+        BSL_SAL_Free(encode);
         HITLS_X509_FreeNameNode(layer2);
         return ret;
     }
     ret = X509EncodeNameNodeEntry(layer2, encode);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_SAL_FREE(encode);
+        BSL_SAL_Free(encode);
         HITLS_X509_FreeNameNode(layer2);
         return ret;
     }
@@ -421,7 +413,7 @@ void HITLS_X509_DnListFree(BslList *dnList)
 
 int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, uint32_t size)
 {
-    if (list == NULL || dnNames == NULL || size == 0) {
+    if (size == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -570,7 +562,7 @@ static int32_t X509PrintNameNode(const HITLS_X509_NameNode *nameNode, char *buff
 
 int32_t HITLS_X509_GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Buffer *buff)
 {
-    if (buff == NULL || nameList == NULL || BSL_LIST_COUNT(nameList) == 0) {
+    if (BSL_LIST_COUNT(nameList) == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }

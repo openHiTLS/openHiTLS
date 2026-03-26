@@ -56,7 +56,7 @@ static int32_t RandGenerate(void *libCtx, BN_BigNum *r, uint32_t bits)
     r->data[room - 1] &= mask;
     r->size = BinFixSize(r->data, room);
 ERR:
-    BSL_SAL_FREE(buf);
+    BSL_SAL_Free(buf);
     return ret;
 }
 

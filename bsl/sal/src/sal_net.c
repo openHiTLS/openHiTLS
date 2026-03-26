@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include "bsl_sal.h"
 #include "bsl_errno.h"
+#include "bsl_err_internal.h"
 #include "sal_netimpl.h"
 
 static BSL_SAL_NetCallback g_netCallBack = {0};

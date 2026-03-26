@@ -21,10 +21,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "crypt_local_types.h"
 #include "crypt_modes_xts.h"
 #include "crypt_modes_cbc.h"
-
 #include "crypt_modes_ccm.h"
 #include "crypt_modes_cfb.h"
 #include "crypt_modes_chacha20poly1305.h"
@@ -33,7 +31,6 @@
 #include "crypt_modes_gcm.h"
 #include "crypt_modes_ofb.h"
 #include "crypt_modes.h"
-#include "eal_cipher_local.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,10 +57,6 @@ int32_t MODES_BlockPadding(int32_t algId, int32_t padding, uint8_t blockSize, ui
 int32_t MODES_BlockUnPadding(int32_t padding, const uint8_t *pad, uint32_t padLen, uint32_t *dataLen);
 /* Block cipher processing */
 int32_t MODES_CipherFinal(MODES_CipherCtx *modeCtx, void *blockUpdate, uint8_t *out, uint32_t *outLen);
-
-int32_t MODES_CipherDeInitCtx(MODES_CipherCtx *modeCtx);
-
-void MODES_CipherFreeCtx(MODES_CipherCtx *modeCtx);
 
 int32_t MODES_CipherCtrl(MODES_CipherCtx *ctx, int32_t opt, void *val, uint32_t len);
 
@@ -110,11 +103,13 @@ void MODES_CTR_RemHandle(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t 
 #endif
 
 // gcm
-#ifdef HITLS_CRYPTO_GCM
+#ifdef HITLS_CRYPTO_GHASH
 void GcmTableGen4bit(uint8_t key[GCM_BLOCKSIZE], MODES_GCM_GF128 hTable[16]);
 
 void GcmHashMultiBlock(uint8_t t[GCM_BLOCKSIZE], const MODES_GCM_GF128 hTable[16], const uint8_t *in, uint32_t inLen);
+#endif
 
+#ifdef HITLS_CRYPTO_GCM
 uint32_t MODES_GCM_LastHandle(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len, bool enc);
 
 int32_t MODES_GCM_SetIv(MODES_CipherGCMCtx *ctx, const uint8_t *iv, uint32_t ivLen);

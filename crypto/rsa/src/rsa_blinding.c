@@ -42,7 +42,7 @@ void RSA_BlindFreeCtx(RSA_Blind *b)
     }
     BN_Destroy(b->r);
     BN_Destroy(b->rInv);
-    BSL_SAL_FREE(b);
+    BSL_SAL_Free(b);
 }
 
 static int32_t BlindUpdate(RSA_Blind *b, BN_BigNum *n, BN_Optimizer *opt)

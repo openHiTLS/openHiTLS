@@ -488,11 +488,9 @@ int32_t BN_DivLimb(BN_BigNum *q, BN_UINT *r, const BN_BigNum *x, const BN_UINT y
     shifts = GetZeroBitsUint(yTmp);
     if (shifts != 0) {
         yTmp <<= shifts; // Ensure that the most significant bit of the divisor is 1.
-        ret = BN_Lshift(xTmp, xTmp, shifts);
-        if (ret != CRYPT_SUCCESS) {
+        if ((ret = BN_Lshift(xTmp, xTmp, shifts)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            BN_Destroy(xTmp);
-            return ret;
+            goto FREE_XTMP;
         }
     }
 
@@ -502,24 +500,22 @@ int32_t BN_DivLimb(BN_BigNum *q, BN_UINT *r, const BN_BigNum *x, const BN_UINT y
         xTmp->data[i] = quo;
     }
 
-    xTmp->size = BinFixSize(xTmp->data, xTmp->size);
-    if (xTmp->size == 0) {
+    if ((xTmp->size = BinFixSize(xTmp->data, xTmp->size)) == 0) {
         xTmp->sign = 0;
     }
     rem >>= shifts;
 
 end:
     if (q != NULL) {
-        ret = BN_Copy(q, xTmp);
-        if (ret != CRYPT_SUCCESS) {
-            BN_Destroy(xTmp);
+        if ((ret = BN_Copy(q, xTmp)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            return ret;
+            goto FREE_XTMP;
         }
     }
     if (r != NULL) {
         *r = rem;
     }
+FREE_XTMP:
     BN_Destroy(xTmp);
     return ret;
 }
@@ -946,9 +942,7 @@ int32_t BN_CopyWithMask(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b,
     r->size = (a->size & (uint32_t)rmask) ^ (b->size & (uint32_t)mask);
     return CRYPT_SUCCESS;
 }
-#endif
 
-#if defined(HITLS_CRYPTO_ECC) && defined(HITLS_CRYPTO_CURVE_MONT)
 /* Invoked by the ECC module and the sign can be ignored.
  * if mask = BN_MASK, a, b --> b, a
  * if mask = 0, a, b --> a, b
@@ -982,6 +976,6 @@ int32_t BN_SwapWithMask(BN_BigNum *a, BN_BigNum *b, BN_UINT mask)
     b->size = (tmp4 & (uint32_t)rmask) | (tmp3 & (uint32_t)mask);
     return CRYPT_SUCCESS;
 }
-#endif // HITLS_CRYPTO_ECC and HITLS_CRYPTO_CURVE_MONT
+#endif // HITLS_CRYPTO_ECC
 
 #endif /* HITLS_CRYPTO_BN */

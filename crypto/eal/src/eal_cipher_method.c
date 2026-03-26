@@ -361,6 +361,8 @@ static const EAL_SymAlgMap SYM_ID_MAP[] = {
 #endif // sm4
 };
 
+static uint32_t g_symAlgNum = sizeof(SYM_ID_MAP) / sizeof(SYM_ID_MAP[0]);
+
 #ifdef HITLS_CRYPTO_AES
 static const EAL_SymMethod AES128_METHOD = {
     (SetEncryptKey)CRYPT_AES_SetEncryptKey128,
@@ -602,27 +604,23 @@ int32_t EAL_CipherFindMethod(CRYPT_CIPHER_AlgId id, EAL_CipherMethod *method)
         return CRYPT_NULL_INPUT;
     }
 
-    uint32_t num = sizeof(SYM_ID_MAP) / sizeof(SYM_ID_MAP[0]);
     const EAL_SymAlgMap *symAlgMap = NULL;
-
-    for (uint32_t i = 0; i < num; i++) {
+    for (uint32_t i = 0; i < g_symAlgNum; i++) {
         if (SYM_ID_MAP[i].id == id) {
             symAlgMap = &SYM_ID_MAP[i];
             break;
         }
     }
-
     if (symAlgMap == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
-
     const EAL_CipherMethod *modeMethod = EAL_FindModeMethod(symAlgMap->modeId);
     if (modeMethod == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
         return CRYPT_EAL_ERR_ALGID;
     }
-    (void)memcpy_s(method, sizeof(EAL_CipherMethod), modeMethod, sizeof(EAL_CipherMethod));
+    *method = *modeMethod;
     return CRYPT_SUCCESS;
 }
 

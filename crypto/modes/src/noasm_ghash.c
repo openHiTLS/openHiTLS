@@ -14,11 +14,12 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_GCM
+#ifdef HITLS_CRYPTO_GHASH
 
 #include "bsl_sal.h"
 #include "crypt_utils.h"
 #include "modes_local.h"
+#include "crypt_modes_gcm.h"
 
 /* table[i] = (P^4)*i, P = 0x4000000000000000, i = 0...16 */
 static const uint64_t TABLE_P4_BITS[16] = {

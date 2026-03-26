@@ -136,13 +136,14 @@ int32_t CRYPT_FFC_KeyPairCheck(const void *x, const void *y, const void *p, cons
         return CRYPT_NULL_INPUT;
     }
     BN_Mont *mont = BN_MontCreate(p);
+    BN_Optimizer *opt = BN_OptimizerCreate();
     BN_BigNum *yTmp = BN_Create(BN_Bits(p));
-    if (yTmp == NULL || mont == NULL) {
+    if (mont == NULL || opt == NULL || yTmp == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    ret = BN_MontExpConsttime(yTmp, g, x, mont, NULL);
+    ret = BN_MontExpConsttime(yTmp, g, x, mont, opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -153,6 +154,7 @@ int32_t CRYPT_FFC_KeyPairCheck(const void *x, const void *y, const void *p, cons
         goto ERR;
     }
 ERR:
+    BN_OptimizerDestroy(opt);
     BN_Destroy(yTmp);
     BN_MontDestroy(mont);
     return ret;

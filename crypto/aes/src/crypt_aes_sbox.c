@@ -119,7 +119,7 @@ static void AesSubBytes(uint32_t *state)
 
 static void AesShiftRows(uint32_t *state)
 {
-    uint32_t s[4] = {0};
+    uint32_t s[4];
     for (int32_t i = 0; i < 4; ++i) {
         s[i] = state[i];
     }
@@ -155,7 +155,7 @@ static uint8_t AesMul(uint8_t x, uint8_t y)
 
 static void AesMixColumns(uint32_t *state, bool isMixColumns)
 {
-    uint8_t ts[16] = {0};
+    uint8_t ts[16];
     for (int32_t i = 0; i < 4; ++i) {
         PUT_UINT32_BE(state[i], ts, 4 * i);
     }
@@ -187,7 +187,7 @@ static void AesMixColumns(uint32_t *state, bool isMixColumns)
 void CRYPT_AES_EncryptSbox(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     (void)len;
-    uint32_t s[4] = {0};
+    uint32_t s[4];
 
     for (int32_t i = 0; i < 4; ++i) {
         s[i] = GET_UINT32_BE(in, 4 * i);
@@ -211,7 +211,7 @@ void CRYPT_AES_EncryptSbox(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t 
 
 static void InvShiftRows(uint32_t *state)
 {
-    uint32_t s[4] = {0};
+    uint32_t s[4];
     for (int32_t i = 0; i < 4; ++i) {
         s[i] = state[i];
     }
@@ -233,7 +233,7 @@ static void InvSubBytes(uint32_t *state)
 void CRYPT_AES_DecryptSbox(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     (void)len;
-    uint32_t s[4] = {0};
+    uint32_t s[4];
 
     for (int32_t i = 0; i < 4; ++i) {
         s[i] = GET_UINT32_BE(in, 4 * i);

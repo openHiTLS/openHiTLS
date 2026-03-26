@@ -52,13 +52,21 @@ int32_t AES_CBC_DecryptBlock(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint
 
 int32_t AES_CBC_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
+#ifdef HITLS_CRYPTO_AES_ASM
     return MODES_CipherUpdate(modeCtx, modeCtx->enc ? AES_CBC_EncryptBlock : AES_CBC_DecryptBlock,
         in, inLen, out, outLen);
+#else
+    return MODES_CBC_Update(modeCtx, in, inLen, out, outLen);
+#endif
 }
 
 int32_t AES_CBC_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen)
 {
+#ifdef HITLS_CRYPTO_AES_ASM
     return MODES_CipherFinal(modeCtx, modeCtx->enc ? AES_CBC_EncryptBlock : AES_CBC_DecryptBlock, out, outLen);
+#else
+    return MODES_CBC_Final(modeCtx, out, outLen);
+#endif
 }
 
 #endif

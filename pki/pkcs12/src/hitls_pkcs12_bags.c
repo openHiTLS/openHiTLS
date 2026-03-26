@@ -59,10 +59,6 @@ int32_t BagGetAttr(HITLS_PKCS12_Bag *bag, uint32_t valType, BSL_Buffer *attrValu
 
 static int32_t GetKeyBagValue(HITLS_PKCS12_Bag *bag, void **value)
 {
-    if (value == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
-        return HITLS_PKCS12_ERR_NULL_POINTER;
-    }
     if (*value != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
@@ -82,10 +78,6 @@ static int32_t GetKeyBagValue(HITLS_PKCS12_Bag *bag, void **value)
 
 static int32_t GetCertBagValue(HITLS_PKCS12_Bag *bag, void **value)
 {
-    if (value == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
-        return HITLS_PKCS12_ERR_NULL_POINTER;
-    }
     if (*value != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
@@ -110,10 +102,6 @@ static int32_t GetCertBagValue(HITLS_PKCS12_Bag *bag, void **value)
 
 static int32_t GetSecretBagValue(HITLS_PKCS12_Bag *bag, void *value)
 {
-    if (value == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
-        return HITLS_PKCS12_ERR_NULL_POINTER;
-    }
     BSL_Buffer *tmp = (BSL_Buffer *)value;
     if (bag->value.secret.data == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_BAG_NO_SECRET);

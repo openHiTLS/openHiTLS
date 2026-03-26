@@ -58,8 +58,6 @@ typedef struct {
     int32_t (*pointMultDouble)(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, uint32_t m);
     // Module inverse
     int32_t (*modInv)(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Optimizer *opt);
-    // Convert points to affine coordinates based on the given module inverse information.
-    int32_t (*point2AffineWithInv)(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const BN_BigNum *inv);
     // Convert the point information to affine coordinates.
     int32_t (*point2Affine)(const ECC_Para *para, ECC_Point *r, const ECC_Point *a);
     // Calculate r = (a*b) % mod
@@ -195,14 +193,13 @@ int32_t ECP_PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, const
  * @ingroup ecc
  * @brief   Just a simple copy.
  *
- * @param   para [IN] Curve parameter information
  * @param   a [IN] Output point information
  * @param   b [IN] Input point information
  *
  * @retval CRYPT_SUCCESS                Copy successfully.
  * @retval For details about other errors, see crypt_errno.h
  */
-int32_t ECP_PointCopy(const ECC_Para *para, ECC_Point *a, const ECC_Point *b);
+int32_t ECP_PointCopy(ECC_Point *a, const ECC_Point *b);
 
 /**
  * @ingroup ecc
@@ -398,7 +395,7 @@ int32_t ECP_PrimePointAddMont(const ECC_Para *para, ECC_Point *r, const ECC_Poin
  * The prime curve is based on Montgomery's calculation of  k * pt.
  * The implementation is based on the Montgomery ladder.
  */
-int32_t ECP_PointMulMont(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt);
+int32_t ECP_PointMulMont(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt);
 
 #endif // HITLS_CRYPTO_CURVE_MONT
 

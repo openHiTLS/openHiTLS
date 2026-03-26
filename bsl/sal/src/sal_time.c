@@ -96,15 +96,10 @@ static int64_t BslMkTime64Get(const BSL_TIME *inputTime)
  */
 static int32_t BslUtcTimeGet(const BSL_TIME *inputTime, int64_t *utcTime)
 {
-    int64_t result;
-
-    if (inputTime == NULL || utcTime == NULL) {
-        return BSL_INTERNAL_EXCEPTION;
-    }
     if (BSL_DateTimeCheck(inputTime) == false) {
         return BSL_INTERNAL_EXCEPTION;
     }
-    result = BslMkTime64Get(inputTime);
+    int64_t result = BslMkTime64Get(inputTime);
     if (result < 0) {
         *utcTime = -1;
         return BSL_INTERNAL_EXCEPTION;
@@ -345,7 +340,7 @@ static bool BslYearMonthDayCheck(const BSL_TIME *dateTime)
         return false;
     } else if ((dateTime->month < BSL_MONTH_JAN) || (dateTime->month > BSL_MONTH_DEC)) {
         return false;
-    } else if (dateTime->day < BSL_MONTH_JAN) {
+    } else if (dateTime->day < BSL_TIME_MIN_DAY) {
         return false;
     } else {
         return BslDayValidCheck(dateTime->year, dateTime->month, dateTime->day);

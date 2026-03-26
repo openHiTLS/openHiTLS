@@ -20,6 +20,7 @@
 #include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
+#include "eal_cipher_local.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "modes_local.h"
@@ -604,7 +605,7 @@ void MODES_CCM_FreeCtx(MODES_CCM_Ctx *modeCtx)
     modeCtx->ccmCtx.ciphMeth->cipherDeInitCtx(modeCtx->ccmCtx.ciphCtx);
     BSL_SAL_FREE(modeCtx->ccmCtx.ciphCtx);
     BSL_SAL_CleanseData(&modeCtx->ccmCtx, sizeof(MODES_CipherCCMCtx));
-    BSL_SAL_FREE(modeCtx);
+    BSL_SAL_Free(modeCtx);
 }
 
 

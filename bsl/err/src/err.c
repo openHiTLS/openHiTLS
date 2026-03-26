@@ -99,17 +99,9 @@ void BSL_ERR_DeInit(void)
     g_errLock = NULL;
 }
 
-static void StackReset(ErrorCodeStack *stack)
-{
-    if (stack != NULL) {
-        (void)memset_s(stack, sizeof(*stack), 0, sizeof(*stack));
-    }
-}
-
 static void StackResetIndex(ErrorCodeStack *stack, uint32_t i)
 {
-    bool invalid = stack == NULL || i >= SAL_MAX_ERROR_STACK;
-    if (!invalid) {
+    if (i < SAL_MAX_ERROR_STACK) {
         stack->errorStack[i] = 0;
         stack->line[i] = 0;
         stack->filename[i] = NULL;
@@ -201,7 +193,7 @@ void BSL_ERR_ClearError(void)
         /* Will not be NULL. */
         ErrorCodeStack *errStack = curNode->data;
         if (errStack->flag == 0) {
-            StackReset(errStack);
+            (void)memset_s(errStack, sizeof(*errStack), 0, sizeof(*errStack));
         }
     }
 

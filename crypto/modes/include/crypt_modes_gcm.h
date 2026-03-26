@@ -17,7 +17,7 @@
 #define CRYPT_MODES_GCM_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_GCM
+#if defined(HITLS_CRYPTO_GCM) || defined(HITLS_CRYPTO_GHASH)
 
 #include "crypt_types.h"
 #include "crypt_modes.h"
@@ -25,14 +25,19 @@
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-#define GCM_MAX_COMBINED_LENGTH     (((uint64_t)1 << 36) - 32)
-#define GCM_MAX_INVOCATIONS_TIMES   ((uint32_t)(-1))
-#define GCM_BLOCK_MASK (0xfffffff0)
 typedef struct {
     uint64_t h;
     uint64_t l;
 } MODES_GCM_GF128;
+
 #define GCM_BLOCKSIZE 16
+
+#ifdef HITLS_CRYPTO_GCM
+
+#define GCM_MAX_COMBINED_LENGTH     (((uint64_t)1 << 36) - 32)
+#define GCM_MAX_INVOCATIONS_TIMES   ((uint32_t)(-1))
+#define GCM_BLOCK_MASK (0xfffffff0)
+
 typedef struct {
     uint8_t iv[GCM_BLOCKSIZE];      // Processed IV information. The length is 16 bytes.
     uint8_t ghash[GCM_BLOCKSIZE];   // Intermediate data for tag calculation.
@@ -85,11 +90,12 @@ int32_t MODES_GCM_UpdateEx(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t i
 int32_t MODES_GCM_InitHashTable(MODES_CipherGCMCtx *ctx);
 int32_t MODES_GCM_SetKey(MODES_CipherGCMCtx *ctx, const uint8_t *key, uint32_t len);
 MODES_GCM_Ctx *MODES_GCM_DupCtx(const MODES_GCM_Ctx *modeCtx);
+#endif // HITLS_CRYPTO_GCM
 
 #ifdef __cplusplus
 }
 #endif // __cplusplus
 
-#endif // HITLS_CRYPTO_GCM
+#endif // HITLS_CRYPTO_GCM || HITLS_CRYPTO_GHASH
 
 #endif // CRYPT_MODES_GCM_H

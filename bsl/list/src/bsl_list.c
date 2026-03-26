@@ -31,12 +31,6 @@ static int32_t BslListAddAfterCurr(BslList *pList, void *pData)
 {
     BslListNode *newNode = NULL;
 
-    /* check for missing argument */
-    if (pList == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
-
     /* check if current is null */
     if (pList->curr == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_LIST_INVALID_LIST_CURRENT);
@@ -72,12 +66,6 @@ static int32_t BslListInsertBeforeCurr(BslList *pList, void *pData)
     BslListNode *pNewNode = NULL;
 
     /* check if current is null */
-    /* check for missing argument */
-    if (pList == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
-
     if (pList->curr == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_LIST_INVALID_LIST_CURRENT);
         return BSL_LIST_INVALID_LIST_CURRENT;

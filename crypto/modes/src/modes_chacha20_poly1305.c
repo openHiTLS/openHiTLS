@@ -20,6 +20,7 @@
 #include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
+#include "eal_cipher_local.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "modes_local.h"
@@ -429,7 +430,6 @@ int32_t MODES_CHACHA20POLY1305_DeInitCtx(MODES_CHACHAPOLY_Ctx *modeCtx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-
     modeCtx->chachaCtx.method->cipherDeInitCtx(modeCtx->chachaCtx.key);
     BSL_SAL_CleanseData((void *)(&(modeCtx->chachaCtx.polyCtx)), sizeof(Poly1305Ctx));
     modeCtx->chachaCtx.aadLen = 0;

@@ -331,14 +331,14 @@ int32_t CRYPT_RSA_VerifyPss(CRYPT_RSA_Ctx *ctx, const EAL_MdMethod *hashMethod, 
     ret = GetAndVerifyDB(ctx->pad.para.pss.mgfProvCtx, mgfMethod, &emData, &dbBuff, &saltLength, msBit);
     if (ret != CRYPT_SUCCESS) {
         (void)memset_s(tmpBuff, emLen, 0, emLen);
-        BSL_SAL_FREE(tmpBuff);
+        BSL_SAL_Free(tmpBuff);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     const CRYPT_Data salt = {&tmpBuff[maskedDBLen - saltLength], saltLength};
     ret = VerifyH(ctx->pad.para.pss.mdProvCtx, hashMethod, &mHash, &salt, &h, &hBuff);
     (void)memset_s(tmpBuff, emLen, 0, emLen);
-    BSL_SAL_FREE(tmpBuff);
+    BSL_SAL_Free(tmpBuff);
     return ret;
 }
 #endif // HITLS_CRYPTO_RSA_VERIFY
@@ -641,8 +641,7 @@ static int32_t OaepSetMaskedDB(void *provCtx, const EAL_MdMethod *mgfMethod, uin
         db[i] ^= maskedDB[i];
     }
 EXIT:
-    BSL_SAL_CleanseData(maskedDB, maskedDBLen);
-    BSL_SAL_FREE(maskedDB);
+    BSL_SAL_ClearFree(maskedDB, maskedDBLen);
     return ret;
 }
 
@@ -907,8 +906,7 @@ int32_t CRYPT_RSA_VerifyPkcs1Oaep(RSA_PadingPara *pad, const uint8_t *in, uint32
     *msgLen = Uint32ConstTimeSelect(valid, maskedDBLen - offset, *msgLen);
     ret = Uint32ConstTimeIsZero(valid) & CRYPT_RSA_NOR_VERIFY_FAIL;
 ERR:
-    BSL_SAL_CleanseData(maskDB, maskedDBLen);
-    BSL_SAL_FREE(maskDB);
+    BSL_SAL_ClearFree(maskDB, maskedDBLen);
     return ret;
 }
 #endif // HITLS_CRYPTO_RSA_DECRYPT

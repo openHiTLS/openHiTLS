@@ -23,6 +23,7 @@
 #include "crypt_modes_ctr.h"
 #include "modes_local.h"
 
+#ifdef HITLS_CRYPTO_AES_ASM
 int32_t AES_CTR_EncryptBlock(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     // The ctx, in, and out pointers have been determined at the EAL layer and are not determined again.
@@ -73,9 +74,14 @@ int32_t AES_CTR_EncryptBlock(MODES_CipherCommonCtx *ctx, const uint8_t *in, uint
     }
     return CRYPT_SUCCESS;
 }
+#endif
 
 int32_t AES_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
+#ifdef HITLS_CRYPTO_AES_ASM
     return MODES_CipherStreamProcess(AES_CTR_EncryptBlock, &modeCtx->commonCtx, in, inLen, out, outLen);
+#else
+    return MODES_CTR_Update(modeCtx, in, inLen, out, outLen);
+#endif
 }
 #endif

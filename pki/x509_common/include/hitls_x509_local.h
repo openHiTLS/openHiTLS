@@ -198,9 +198,9 @@ void HITLS_X509_FreeParsedNameNode(HITLS_X509_NameNode *node);
 
 int32_t HITLS_X509_ParseNameList(BSL_ASN1_Buffer *name, BSL_ASN1_List *list);
 
-int32_t HITLS_X509_ParseGeneralNames(uint8_t *encode, uint32_t encLen, BslList *list);
+int32_t HITLS_X509_ParseGeneralNames(uint8_t *encode, uint32_t encLen, BslList **list);
 
-void HITLS_X509_ClearGeneralNames(BslList *names);
+void HITLS_X509_FreeGeneralNames(BslList *names);
 
 int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtAki *aki);
 
@@ -227,6 +227,9 @@ int32_t HITLS_X509_AddListItemDefault(void *item, uint32_t len, BSL_ASN1_List *l
 
 int32_t HITLS_X509_ParseX509(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format, const BSL_Buffer *encode,
     bool isCert, X509_ParseFuncCbk *parseFun, HITLS_X509_List *list);
+
+int32_t HITLS_X509_ParseBundleBuff(void *libCtx, const char *attrName, int32_t format,
+    const BSL_Buffer *encode, X509_ParseFuncCbk *cbk, bool isCert, uint32_t objSize, HITLS_X509_List **list);
 
 int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, const HITLS_X509_Asn1AlgId *subAlg);
 

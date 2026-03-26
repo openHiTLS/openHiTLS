@@ -67,7 +67,7 @@ static int32_t GenerateHpkeCtxSAndCtxR(int mode, CRYPT_HPKE_CipherSuite cipherSu
     }
    
     if(mode == CRYPT_HPKE_MODE_AUTH || mode ==CRYPT_HPKE_MODE_AUTH_PSK) {
-        ASSERT_EQ(CRYPT_EAL_HpkeSetAuthPriKey(ctxS1, pkeyS1),CRYPT_SUCCESS);    
+        ASSERT_EQ(CRYPT_EAL_HpkeSetAuthPriKey(ctxS1, pkeyS1), CRYPT_SUCCESS);
     }
 
     ASSERT_EQ(CRYPT_EAL_HpkeSetupSender(ctxS1, pkeyE1, info->x, info->len, pubR1.key.eccPub.data, 

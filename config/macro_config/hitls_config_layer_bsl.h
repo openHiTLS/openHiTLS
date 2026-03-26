@@ -79,9 +79,6 @@
 
 /* Derive the child-features of uio mem. */
 #if defined(HITLS_BSL_UIO_MEM)
-    #ifndef HITLS_BSL_SAL_MEM
-        #define HITLS_BSL_SAL_MEM
-    #endif
     #ifndef HITLS_BSL_BUFFER
         #define HITLS_BSL_BUFFER
     #endif

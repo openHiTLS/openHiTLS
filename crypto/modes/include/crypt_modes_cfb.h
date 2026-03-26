@@ -46,7 +46,7 @@ int32_t MODES_CFB_InitCtx(MODES_CFB_Ctx *modeCtx, const uint8_t *key, uint32_t k
     uint32_t ivLen, bool enc);
 
 int32_t MODES_CFB_Update(MODES_CFB_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
-int32_t MODES_CFB_Final(MODES_CFB_Ctx *modeCtx, uint8_t *out, uint32_t *outLen);
+#define MODES_CFB_Final MODES_CipherFinalComplete
 int32_t MODES_CFB_DeInitCtx(MODES_CFB_Ctx *modeCtx);
 int32_t MODES_CFB_Ctrl(MODES_CFB_Ctx *modeCtx, int32_t opt, void *val, uint32_t len);
 void MODES_CFB_FreeCtx(MODES_CFB_Ctx *modeCtx);

@@ -32,37 +32,37 @@ int32_t CRYPT_AES_AsmCheck(void);
 
 #if defined(HITLS_CRYPTO_CHACHA20_ASM)
 int32_t CRYPT_CHACHA20_AsmCheck(void);
-#endif // HITLS_CRYPTO_CHACHA20
+#endif // HITLS_CRYPTO_CHACHA20_ASM
 
 #if defined(HITLS_CRYPTO_CHACHA20POLY1305_ASM)
 int32_t CRYPT_POLY1305_AsmCheck(void);
-#endif // HITLS_CRYPTO_CHACHA20POLY1305
+#endif // HITLS_CRYPTO_CHACHA20POLY1305_ASM
 
 #if defined(HITLS_CRYPTO_SM4_ASM)
 int32_t CRYPT_SM4_AsmCheck(void);
-#endif // HITLS_CRYPTO_SM4
+#endif // HITLS_CRYPTO_SM4_ASM
 
-#if defined(HITLS_CRYPTO_GCM_ASM)
+#if defined(HITLS_CRYPTO_GHASH_ASM)
 int32_t CRYPT_GHASH_AsmCheck(void);
-#endif // HITLS_CRYPTO_GCM
+#endif // HITLS_CRYPTO_GHASH_ASM
 
 #endif // HITLS_CRYPTO_CIPHER
 
 #if defined(HITLS_CRYPTO_MD)
 #if defined(HITLS_CRYPTO_MD5_ASM)
 int32_t CRYPT_MD5_AsmCheck(void);
-#endif // HITLS_CRYPTO_MD5
+#endif // HITLS_CRYPTO_MD5_ASM
 #if defined(HITLS_CRYPTO_SHA1_ASM)
 int32_t CRYPT_SHA1_AsmCheck(void);
-#endif // HITLS_CRYPTO_SHA1
+#endif // HITLS_CRYPTO_SHA1_ASM
 
 #if defined(HITLS_CRYPTO_SHA2_ASM)
 int32_t CRYPT_SHA2_AsmCheck(void);
-#endif // HITLS_CRYPTO_SHA2
+#endif // HITLS_CRYPTO_SHA2_ASM
 
 #if defined(HITLS_CRYPTO_SM3_ASM)
 int32_t CRYPT_SM3_AsmCheck(void);
-#endif // HITLS_CRYPTO_SM3
+#endif // HITLS_CRYPTO_SM3_ASM
 #endif // HITLS_CRYPTO_MD
 
 

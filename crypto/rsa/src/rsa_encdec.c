@@ -37,9 +37,9 @@ static int32_t InputRangeCheck(const BN_BigNum *input, const BN_BigNum *n, uint3
 {
     // The value range defined in RFC is [0, n - 1]. Because the operation result of 0, 1, n - 1 is relatively fixed,
     // it is considered invalid here. The actual valid value range is [2, n - 2].
-    int32_t ret;
+    int32_t ret = CRYPT_SUCCESS;
     BN_BigNum *nMinusOne = NULL;
-    if (BN_IsZero(input) == true || BN_IsOne(input) == true) {
+    if (BN_IsZero(input) || BN_IsOne(input)) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
         return CRYPT_RSA_ERR_INPUT_VALUE;
     }
@@ -49,49 +49,13 @@ static int32_t InputRangeCheck(const BN_BigNum *input, const BN_BigNum *n, uint3
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    ret = BN_SubLimb(nMinusOne, n, 1);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        BN_Destroy(nMinusOne);
-        return ret;
-    }
+    (void)BN_SubLimb(nMinusOne, n, 1);
     if (BN_Cmp(input, nMinusOne) >= 0) {
         ret = CRYPT_RSA_ERR_INPUT_VALUE;
         BSL_ERR_PUSH_ERROR(ret);
     }
     BN_Destroy(nMinusOne);
     return ret;
-}
-
-static int32_t AddZero(uint32_t bits, uint8_t *out, uint32_t *outLen)
-{
-    uint32_t i;
-    uint32_t zeros = 0;
-    uint32_t needBytes = BN_BITS_TO_BYTES(bits);
-    /* Divide bits by 8 to obtain the byte length. If it is smaller than the key length, pad it with 0. */
-    if ((*outLen) < needBytes) {
-        /* Divide bits by 8 to obtain the byte length. If it is smaller than the key length, pad it with 0. */
-        zeros = needBytes - (*outLen);
-        if (memmove_s(out + zeros, needBytes - zeros, out, (*outLen)) != EOK) {
-            BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-            return CRYPT_SECUREC_FAIL;
-        }
-        for (i = 0; i < zeros; i++) {
-            out[i] = 0x0;
-        }
-    }
-    *outLen = needBytes;
-    return CRYPT_SUCCESS;
-}
-
-static int32_t ResultToOut(uint32_t bits, const BN_BigNum *result, uint8_t *out, uint32_t *outLen)
-{
-    int32_t ret = BN_Bn2Bin(result, out, outLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    return AddZero(bits, out, outLen);
 }
 
 static int32_t AllocResultAndInputBN(uint32_t bits, BN_BigNum **result, BN_BigNum **inputBN,
@@ -151,7 +115,8 @@ int32_t  CRYPT_RSA_PubEnc(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32
         return CRYPT_RSA_NO_KEY_INFO;
     }
     uint32_t bits = CRYPT_RSA_GetBits(ctx);
-    if ((*outLen) < BN_BITS_TO_BYTES(bits)) {
+    uint32_t bytes = BN_BITS_TO_BYTES(bits);
+    if ((*outLen) < bytes) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_RSA_BUFF_LEN_NOT_ENOUGH;
     }
@@ -165,7 +130,8 @@ int32_t  CRYPT_RSA_PubEnc(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32
 
     // pubKey->mont: Ensure that this value is not empty when the public key is set or generated.
     GOTO_ERR_IF(BN_MontExp(result, inputBN, pubKey->e, pubKey->mont, optimizer), ret);
-    ret = ResultToOut(bits, result, out, outLen);
+    ret = BN_Bn2BinFixZero(result, out, bytes);
+    *outLen = bytes;
 ERR:
     BN_Destroy(result);
     BN_Destroy(inputBN);
@@ -262,20 +228,6 @@ EXIT:
 }
 
 #ifdef HITLS_CRYPTO_RSA_BLINDING
-static int32_t RSA_GetSub(const BN_BigNum *p, const BN_BigNum *q, BN_BigNum *r1, BN_BigNum *r2)
-{
-    int32_t ret = BN_SubLimb(r1, p, 1);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    ret = BN_SubLimb(r2, q, 1);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    return ret;
-}
-
 static int32_t RSA_GetL(BN_BigNum *l, BN_BigNum *u, BN_BigNum *r1, BN_BigNum *r2, BN_Optimizer *opt)
 {
     int32_t ret = BN_Mul(l, r1, r2, opt);
@@ -303,8 +255,8 @@ static BN_BigNum *RSA_GetPublicExp(const BN_BigNum *d, const BN_BigNum *p,
     int32_t ret;
     /* Apply for the temporary space of the BN object */
     BN_BigNum *l = BN_Create(bits);
-    BN_BigNum *r1 = BN_Create(bits >> 1);
-    BN_BigNum *r2 = BN_Create(bits >> 1);
+    BN_BigNum *r1 = BN_Create(bits);
+    BN_BigNum *r2 = BN_Create(bits);
     BN_BigNum *u = BN_Create(bits + 1);
     BN_BigNum *e = BN_Create(bits);
 
@@ -313,12 +265,8 @@ static BN_BigNum *RSA_GetPublicExp(const BN_BigNum *d, const BN_BigNum *p,
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
-
-    ret = RSA_GetSub(p, q, r1, r2);
-    // The push error in GetSub can be used to locate the fault. Therefore, it is not added here.
-    if (ret != CRYPT_SUCCESS) {
-        goto EXIT;
-    }
+    (void)BN_SubLimb(r1, p, 1);
+    (void)BN_SubLimb(r2, q, 1);
 
     ret = RSA_GetL(l, u, r1, r2, opt);
     // The push error in GetL can be used to locate the fault. Therefore, it is not added here.
@@ -383,11 +331,6 @@ static int32_t RSA_AllocAndCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input,
     BN_BigNum **result, BN_BigNum **message)
 {
     int32_t ret;
-    if (ctx->prvKey == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
-        return CRYPT_RSA_NO_KEY_INFO;
-    }
-
     uint32_t bits = CRYPT_RSA_GetBits(ctx);
 
     ret = AllocResultAndInputBN(bits, result, message, input, inputLen);
@@ -451,6 +394,7 @@ int32_t CRYPT_RSA_PrvDec(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_
 {
     int32_t ret;
     uint32_t bits;
+    uint32_t bytes;
     BN_BigNum *result = NULL;
     BN_BigNum *message = NULL;
     BN_Optimizer *opt = NULL;
@@ -466,7 +410,8 @@ int32_t CRYPT_RSA_PrvDec(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_
     }
 
     bits = CRYPT_RSA_GetBits(ctx);
-    if ((*outLen) < BN_BITS_TO_BYTES(bits)) {
+    bytes = BN_BITS_TO_BYTES(bits);
+    if ((*outLen) < bytes) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_RSA_BUFF_LEN_NOT_ENOUGH;
     }
@@ -487,7 +432,8 @@ int32_t CRYPT_RSA_PrvDec(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_
         goto EXIT;
     }
 
-    ret = ResultToOut(bits, result, out, outLen);
+    ret = BN_Bn2BinFixZero(result, out, bytes);
+    *outLen = bytes;
 EXIT:
     OptimizerEnd(opt);
     BN_OptimizerDestroy(opt);
@@ -632,7 +578,8 @@ static int32_t BssaBlind(CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32_t inpu
     }
     blind = param->para.bssa;
     GOTO_ERR_IF(BN_ModMul(enMsg, enMsg, blind->r, n, opt), ret);
-    GOTO_ERR_IF(ResultToOut(bits, enMsg, out, outLen), ret);
+    GOTO_ERR_IF(BN_Bn2BinFixZero(enMsg, out, BN_BITS_TO_BYTES(bits)), ret);
+    *outLen = BN_BITS_TO_BYTES(bits);
     ctx->blindParam = param;
 ERR:
     if (ret != CRYPT_SUCCESS && ctx->blindParam == NULL && param != NULL) {
@@ -752,9 +699,10 @@ static int32_t BssaUnBlind(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint3
         goto ERR;
     }
     blind = ctx->blindParam->para.bssa;
-    GOTO_ERR_IF(BN_Bin2Bn(z, input, inputLen), ret);
+    (void)BN_Bin2Bn(z, input, inputLen);
     GOTO_ERR_IF(BN_ModMul(s, z, blind->rInv, n, opt), ret);
-    GOTO_ERR_IF(ResultToOut(bits, s, out, outLen), ret);
+    GOTO_ERR_IF(BN_Bn2BinFixZero(s, out, BN_BITS_TO_BYTES(bits)), ret);
+    *outLen = BN_BITS_TO_BYTES(bits);
 ERR:
     BN_Destroy(z);
     BN_Destroy(s);
@@ -837,12 +785,12 @@ static int32_t RsaGetSignVerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *hash, uin
     }
     if (mLLen > 0 && memcpy_s(mlHash, mlHashLen, msg, mLLen) != EOK) {
         BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        BSL_SAL_FREE(mlHash);
+        BSL_SAL_Free(mlHash);
         return CRYPT_SECUREC_FAIL;
     }
     if (memcpy_s(mlHash + mLLen, mlHashLen - mLLen, hash, hLen) != EOK) {
         BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-        BSL_SAL_FREE(mlHash);
+        BSL_SAL_Free(mlHash);
         return CRYPT_SECUREC_FAIL;
     }
     *data = mlHash;
@@ -1055,7 +1003,7 @@ int32_t CRYPT_RSA_VerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t d
     }
 EXIT:
     (void)memset_s(pad, padLen, 0, padLen);
-    BSL_SAL_FREE(pad);
+    BSL_SAL_Free(pad);
     return ret;
 }
 
@@ -1259,8 +1207,7 @@ int32_t CRYPT_RSA_Decrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
             goto EXIT;
     }
 EXIT:
-    BSL_SAL_CleanseData(pad, padLen);
-    BSL_SAL_FREE(pad);
+    BSL_SAL_ClearFree(pad, padLen);
     return ret;
 }
 #endif // HITLS_CRYPTO_RSA_DECRYPT

@@ -19,6 +19,7 @@
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
+#include "eal_cipher_local.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "crypt_modes_xts.h"

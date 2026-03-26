@@ -60,7 +60,7 @@ typedef struct {
 } EAL_MdMBMethod;
 #endif // HITLS_CRYPTO_MD_MB
 
-typedef struct {
+typedef struct EAL_MdMethod {
     int32_t id;
     uint16_t blockSize;  // Block size processed by the hash algorithm at a time, which is used with other algorithms.
     uint16_t mdSize;     // Output length of the HASH algorithm
@@ -250,7 +250,7 @@ typedef struct {
     CRYPT_SYM_AlgId algId;
 } EAL_SymMethod;
 
-typedef struct {
+typedef struct EAL_CipherMethod {
     CipherNewCtx newCtx;
     CipherInitCtx initCtx;
     CipherDeInitCtx deinitCtx;
@@ -270,7 +270,7 @@ typedef int32_t (*KdfCtrl)(void *data, int32_t cmd, void *val, uint32_t valLen);
 typedef void (*KdfFreeCtx)(void *ctx);
 typedef void *(*KdfDupCtx)(const void *ctx);
 
-typedef struct {
+typedef struct EAL_KdfMethod {
     KdfNewCtx newCtx;
     KdfSetParam setParam;
     KdfDerive derive;
@@ -290,7 +290,7 @@ typedef void* (*MacNewCtx)(void *provCtx, int32_t algId);
 // Complete key initialization.
 typedef int32_t (*MacInit)(void *ctx, const uint8_t *key, uint32_t len, void *param);
 typedef int32_t (*MacUpdate)(void *ctx, const uint8_t *in, uint32_t len);
-typedef int32_t (*MacFinal)(void *ctx, const uint8_t *out, uint32_t *len);
+typedef int32_t (*MacFinal)(void *ctx, uint8_t *out, uint32_t *len);
 typedef int32_t (*MacDeinit)(void *ctx);
 // The action is opposite to the initCtx. Sensitive data is deleted.
 typedef int32_t (*MacReinit)(void *ctx);
@@ -300,7 +300,7 @@ typedef void (*MacFreeCtx)(void *ctx);
 typedef void* (*MacDupCtx)(const void *ctx);
 
 /* set of MAC algorithm operation methods */
-typedef struct {
+typedef struct EAL_MacMethod {
     MacNewCtx newCtx;
     MacInit init;           // Initialize the MAC context.
     MacUpdate update;       // Add block data for MAC calculation.

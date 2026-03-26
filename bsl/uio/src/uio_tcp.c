@@ -59,17 +59,14 @@ static int32_t TcpNew(BSL_UIO *uio)
 
 static int32_t TcpSocketDestroy(BSL_UIO *uio)
 {
-    if (uio == NULL) {
-        return BSL_SUCCESS;
-    }
     uio->init = false;
-    TcpPrameters *ctx = BSL_UIO_GetCtx(uio);
+    TcpPrameters *ctx = uio->ctx;
     if (ctx != NULL) {
         if (BSL_UIO_GetIsUnderlyingClosedByUio(uio) && ctx->fd != -1) {
             (void)BSL_SAL_SockClose(ctx->fd);
         }
         BSL_SAL_FREE(ctx);
-        BSL_UIO_SetCtx(uio, NULL);
+        uio->ctx = NULL;
     }
     return BSL_SUCCESS;
 }
@@ -129,19 +126,11 @@ static int32_t TcpSocketRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *re
 
 static int32_t TcpSetFd(BSL_UIO *uio, int32_t size, const int32_t *fd)
 {
-    if (fd == NULL || uio == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
     if (size != (int32_t)sizeof(*fd)) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
-    TcpPrameters *ctx = BSL_UIO_GetCtx(uio);
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
+    TcpPrameters *ctx = uio->ctx;
     if (ctx->fd != -1) {
         if (BSL_UIO_GetIsUnderlyingClosedByUio(uio)) {
             (void)BSL_SAL_SockClose(ctx->fd);
@@ -154,32 +143,30 @@ static int32_t TcpSetFd(BSL_UIO *uio, int32_t size, const int32_t *fd)
 
 static int32_t TcpGetFd(BSL_UIO *uio, int32_t size, int32_t *fd)
 {
-    if (fd == NULL || uio == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
     if (size != (int32_t)sizeof(*fd)) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
-    TcpPrameters *ctx = BSL_UIO_GetCtx(uio);
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
+    TcpPrameters *ctx = uio->ctx;
     *fd = ctx->fd;
     return BSL_SUCCESS;
 }
 
 static int32_t TcpSocketCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 {
+    if (cmd == BSL_UIO_FLUSH) {
+        return BSL_SUCCESS;
+    }
+    if (parg == NULL || uio->ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
+        return BSL_NULL_INPUT;
+    }
+
     switch (cmd) {
         case BSL_UIO_SET_FD:
             return TcpSetFd(uio, larg, parg);
         case BSL_UIO_GET_FD:
             return TcpGetFd(uio, larg, parg);
-        case BSL_UIO_FLUSH:
-            return BSL_SUCCESS;
         default:
             break;
     }

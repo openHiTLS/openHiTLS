@@ -346,7 +346,7 @@ int32_t BSL_ASN1_DecodeListItem(BSL_ASN1_DecodeListParam *param, BSL_ASN1_Buffer
 
 static int32_t ParseBMPString(const uint8_t *bmp, uint32_t bmpLen, BSL_ASN1_Buffer *decode)
 {
-    if (bmp == NULL || bmpLen == 0 || decode == NULL) {
+    if (bmpLen == 0) {
         return BSL_NULL_INPUT;
     }
     if (bmpLen % 2 != 0) { // multiple of 2
@@ -390,7 +390,7 @@ static void EncodeBMPString(const uint8_t *in, uint32_t inLen, uint8_t *encode, 
  */
 int32_t BSL_ASN1_DecodePrimitiveItem(BSL_ASN1_Buffer *asn, void *decodeData)
 {
-    if (asn == NULL || decodeData == NULL) {
+    if (asn == NULL || asn->buff == NULL || decodeData == NULL) {
         return BSL_NULL_INPUT;
     }
     switch (asn->tag) {

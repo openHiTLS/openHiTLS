@@ -534,12 +534,11 @@ ECC_Para *ECC_NewPara(CRYPT_PKEY_ParaId id)
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_NOT_SUPPORT);
         return NULL;
     }
-    ECC_Para *para = BSL_SAL_Malloc(sizeof(ECC_Para));
+    ECC_Para *para = BSL_SAL_Calloc(sizeof(ECC_Para), 1);
     if (para == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    (void)memset_s(para, sizeof(ECC_Para), 0, sizeof(ECC_Para));
     para->method = method;
     uint32_t bits = curve->p.dataLen * 8; // bits = bytes * 8
     para->id = id;
@@ -558,13 +557,13 @@ ECC_Para *ECC_NewPara(CRYPT_PKEY_ParaId id)
     }
 
     int32_t ret;
-    GOTO_ERR_IF(BN_Bin2Bn(para->p, curve->p.data, curve->p.dataLen), ret);
-    GOTO_ERR_IF(BN_Bin2Bn(para->a, curve->a.data, curve->a.dataLen), ret);
-    GOTO_ERR_IF(BN_Bin2Bn(para->b, curve->b.data, curve->b.dataLen), ret);
-    GOTO_ERR_IF(BN_Bin2Bn(para->n, curve->n.data, curve->n.dataLen), ret);
-    GOTO_ERR_IF(BN_Bin2Bn(para->h, curve->h.data, curve->h.dataLen), ret);
-    GOTO_ERR_IF(BN_Bin2Bn(para->x, curve->x.data, curve->x.dataLen), ret);
-    GOTO_ERR_IF(BN_Bin2Bn(para->y, curve->y.data, curve->y.dataLen), ret);
+    (void)BN_Bin2Bn(para->p, curve->p.data, curve->p.dataLen); // Fails only if malloc fails
+    (void)BN_Bin2Bn(para->a, curve->a.data, curve->a.dataLen);
+    (void)BN_Bin2Bn(para->b, curve->b.data, curve->b.dataLen);
+    (void)BN_Bin2Bn(para->n, curve->n.data, curve->n.dataLen);
+    (void)BN_Bin2Bn(para->h, curve->h.data, curve->h.dataLen);
+    (void)BN_Bin2Bn(para->x, curve->x.data, curve->x.dataLen);
+    (void)BN_Bin2Bn(para->y, curve->y.data, curve->y.dataLen);
     GOTO_ERR_IF(InitMontPara(para), ret);
     return para;
 ERR:
@@ -578,42 +577,45 @@ CRYPT_PKEY_ParaId GetCurveId(const CRYPT_EccPara *eccPara)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_PKEY_PARAID_MAX;
     }
-    int32_t ret;
+
     BN_BigNum *a = BN_Create(ECC_MAX_BIT_LEN);
     BN_BigNum *b = BN_Create(ECC_MAX_BIT_LEN);
+    if  (a == NULL || b == NULL) {
+        goto ERR;
+    }
 
     for (uint32_t i = 0; i < sizeof(CURVE_PARAS) / sizeof(CURVE_ParaMap); i++) {
         const CURVE_Para *curve = GetCurvePara(CURVE_PARAS[i].id);
         if (curve == NULL) {
             continue;
         }
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->p, eccPara->pLen), ret);
-        GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->p.data, curve->p.dataLen), ret);
+        (void)BN_Bin2Bn(a, eccPara->p, eccPara->pLen); // Fails only if malloc fails
+        (void)BN_Bin2Bn(b, curve->p.data, curve->p.dataLen);
         if (BN_Cmp(a, b) != 0) {
             continue;
         }
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->a, eccPara->aLen), ret);
-        GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->a.data, curve->a.dataLen), ret);
+        (void)BN_Bin2Bn(a, eccPara->a, eccPara->aLen);
+        (void)BN_Bin2Bn(b, curve->a.data, curve->a.dataLen);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->b, eccPara->bLen), ret);
-        GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->b.data, curve->b.dataLen), ret);
+        (void)BN_Bin2Bn(a, eccPara->b, eccPara->bLen);
+        (void)BN_Bin2Bn(b, curve->b.data, curve->b.dataLen);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->h, eccPara->hLen), ret);
-        GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->h.data, curve->h.dataLen), ret);
+        (void)BN_Bin2Bn(a, eccPara->h, eccPara->hLen);
+        (void)BN_Bin2Bn(b, curve->h.data, curve->h.dataLen);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->n, eccPara->nLen), ret);
-        GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->n.data, curve->n.dataLen), ret);
+        (void)BN_Bin2Bn(a, eccPara->n, eccPara->nLen);
+        (void)BN_Bin2Bn(b, curve->n.data, curve->n.dataLen);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->x, eccPara->xLen), ret);
-        GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->x.data, curve->x.dataLen), ret);
+        (void)BN_Bin2Bn(a, eccPara->x, eccPara->xLen);
+        (void)BN_Bin2Bn(b, curve->x.data, curve->x.dataLen);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
-        GOTO_ERR_IF_EX(BN_Bin2Bn(a, eccPara->y, eccPara->yLen), ret);
-        GOTO_ERR_IF_EX(BN_Bin2Bn(b, curve->y.data, curve->y.dataLen), ret);
+        (void)BN_Bin2Bn(a, eccPara->y, eccPara->yLen);
+        (void)BN_Bin2Bn(b, curve->y.data, curve->y.dataLen);
         BREAK_IF(BN_Cmp(a, b) != 0);
 
         BN_Destroy(a);

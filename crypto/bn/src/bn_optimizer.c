@@ -59,8 +59,7 @@ void BN_OptimizerDestroy(BN_Optimizer *opt)
 
     while (nextChunk != NULL) {
         for (uint32_t i = 0; i < HITLS_CRYPT_OPTIMIZER_BN_NUM; i++) {
-            BSL_SAL_CleanseData((void *)(nextChunk->bigNums[i].data), nextChunk->bigNums[i].size * sizeof(BN_UINT));
-            BSL_SAL_FREE(nextChunk->bigNums[i].data);
+            BSL_SAL_ClearFree((void *)(nextChunk->bigNums[i].data), nextChunk->bigNums[i].size * sizeof(BN_UINT));
         }
         Chunk *tmp = nextChunk->next;
         BSL_SAL_Free(nextChunk);
@@ -69,8 +68,7 @@ void BN_OptimizerDestroy(BN_Optimizer *opt)
 
     while (prevChunk != NULL) {
         for (uint32_t i = 0; i < HITLS_CRYPT_OPTIMIZER_BN_NUM; i++) {
-            BSL_SAL_CleanseData((void *)(prevChunk->bigNums[i].data), prevChunk->bigNums[i].size * sizeof(BN_UINT));
-            BSL_SAL_FREE(prevChunk->bigNums[i].data);
+            BSL_SAL_ClearFree((void *)(prevChunk->bigNums[i].data), prevChunk->bigNums[i].size * sizeof(BN_UINT));
         }
         Chunk *tmp = prevChunk->prev;
         BSL_SAL_Free(prevChunk);
@@ -78,8 +76,7 @@ void BN_OptimizerDestroy(BN_Optimizer *opt)
     }
     // curChunk != NULL
     for (uint32_t i = 0; i < HITLS_CRYPT_OPTIMIZER_BN_NUM; i++) {
-        BSL_SAL_CleanseData((void *)(curChunk->bigNums[i].data), curChunk->bigNums[i].size * sizeof(BN_UINT));
-        BSL_SAL_FREE(curChunk->bigNums[i].data);
+        BSL_SAL_ClearFree((void *)(curChunk->bigNums[i].data), curChunk->bigNums[i].size * sizeof(BN_UINT));
     }
     BSL_SAL_Free(curChunk);
     BSL_SAL_Free(opt);
@@ -163,6 +160,17 @@ BN_BigNum *OptimizerGetBn(BN_Optimizer *opt, uint32_t room)
     }
     opt->used[opt->deep - 1]++;
     return tmp;
+}
+
+int32_t OptimizerGetXBn(BN_Optimizer *opt, uint32_t room, uint32_t x, BN_BigNum **bns)
+{
+    for (uint32_t i = 0; i < x; i++) {
+        bns[i] = OptimizerGetBn(opt, room);
+        if (bns[i] == NULL) {
+            return CRYPT_BN_OPTIMIZER_GET_FAIL;
+        }
+    }
+    return CRYPT_SUCCESS;
 }
 
 void OptimizerEnd(BN_Optimizer *opt)

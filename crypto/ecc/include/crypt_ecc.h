@@ -263,7 +263,7 @@ BN_BigNum *ECC_GetParaH(const ECC_Para *para);
 
 /**
  * @ingroup ecc
- * @brief Obtain the parameter value n based on the curve parameter.
+ * @brief Get a duplicate of the parameter n based of the curve.
  *
  * @param para [IN] Curve parameter information
  *
@@ -271,6 +271,17 @@ BN_BigNum *ECC_GetParaH(const ECC_Para *para);
  * @retval NULL     failure
  */
 BN_BigNum *ECC_GetParaN(const ECC_Para *para);
+
+/**
+ * @ingroup ecc
+ * @brief Get the reference of the parameter n.
+ *
+ * @param para [IN] Curve parameter information
+ *
+ * @retval Not NULL Success
+ * @retval NULL     failure
+ */
+BN_BigNum *ECC_GetParaRawN(const ECC_Para *para);
 
 /**
  * @ingroup ecc

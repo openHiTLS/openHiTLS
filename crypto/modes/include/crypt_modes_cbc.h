@@ -34,9 +34,9 @@ int32_t MODES_CBC_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t
     uint32_t ivLen, bool enc);
 int32_t MODES_CBC_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 int32_t MODES_CBC_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
-int32_t MODES_CBC_DeInitCtx(MODES_CipherCtx *modeCtx);
+#define MODES_CBC_DeInitCtx MODES_CipherDeInitCtx
 int32_t MODES_CBC_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen);
-void MODES_CBC_FreeCtx(MODES_CipherCtx *modeCtx);
+#define MODES_CBC_FreeCtx MODES_CipherFreeCtx
 
 // AES CBC optimization implementation
 int32_t AES_CBC_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);

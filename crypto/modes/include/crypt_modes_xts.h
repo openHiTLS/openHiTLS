@@ -61,7 +61,7 @@ void MODES_XTS_FreeCtx(MODES_XTS_Ctx *modeCtx);
 int32_t SM4_XTS_Update(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 int32_t SM4_XTS_InitCtx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, bool enc);
-int32_t SM4_XTS_Final(MODES_XTS_Ctx *modeCtx, uint8_t *out, uint32_t *outLen);
+#define SM4_XTS_Final MODES_CipherFinalComplete
 
 int32_t MODES_XTS_InitCtxEx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,
     uint32_t ivLen, void *param, bool enc);

@@ -15,7 +15,7 @@
 
 #include "hitls_build.h"
 
-#if defined(HITLS_CRYPTO_ECC) && defined(HITLS_CRYPTO_CURVE_MONT)
+#ifdef HITLS_CRYPTO_ECC
 
 #include "securec.h"
 #include "bsl_sal.h"
@@ -34,15 +34,19 @@ int32_t ECP_NistPointDoubleMont(const ECC_Para *para, ECC_Point *r, const ECC_Po
         return CRYPT_MEM_ALLOC_FAIL;
     }
     (void)OptimizerStart(opt);
-    int32_t ret;
+    int32_t ret = CRYPT_MEM_ALLOC_FAIL;
     BN_BigNum *halfP = ECP_HalfPGet(para->p);
-    BN_BigNum *t1 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *t2 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *t3 = OptimizerGetBn(opt, a->x.room);
-    if (t1 == NULL || t2 == NULL || t3 == NULL || halfP == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
+    BN_BigNum *t1;
+    BN_BigNum *t2;
+    BN_BigNum *t3;
+    BN_BigNum *bns[3]; // get 3 BNs
+    if (halfP == NULL || (ret = OptimizerGetXBn(opt, a->x.room, 3, bns)) != CRYPT_SUCCESS) { // get 3 BNs
         goto ERR;
     }
+    t1 = bns[0]; // 0th bn
+    t2 = bns[1]; // 1st bn
+    t3 = bns[2]; // 2nd bn
+
     GOTO_ERR_IF(para->method->bnMontEnc(halfP, para->montP, opt, false), ret);
 
     GOTO_ERR_IF(para->method->bnModNistEccSqr(t1, &a->z, para->montP, opt), ret);
@@ -80,17 +84,21 @@ int32_t ECP_NistPointMultDoubleMont(const ECC_Para *para, ECC_Point *r, const EC
     if (opt == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret;
+    int32_t ret = CRYPT_MEM_ALLOC_FAIL;
     (void)OptimizerStart(opt);
-    BN_BigNum *ta = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *tb = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *tc = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *tw = OptimizerGetBn(opt, a->x.room);
     BN_BigNum *halfP = ECP_HalfPGet(para->p);
-    if (ta == NULL || tb == NULL || tc == NULL || tw == NULL || halfP == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
+    BN_BigNum *ta;
+    BN_BigNum *tb;
+    BN_BigNum *tc;
+    BN_BigNum *tw;
+    BN_BigNum *bns[4]; // get 4 BNs
+    if (halfP == NULL || (ret = OptimizerGetXBn(opt, a->x.room, 4, bns)) != CRYPT_SUCCESS) { // get 4 BNs
         goto ERR;
     }
+    ta = bns[0]; // 0th bn
+    tb = bns[1]; // 1st bn
+    tc = bns[2]; // 2nd bn
+    tw = bns[3]; // 3rd bn
     GOTO_ERR_IF(BN_Copy(&r->x, &a->x), ret);
     GOTO_ERR_IF(BN_ModAddQuick(&r->y, &a->y, &a->y, para->p, opt), ret);
     GOTO_ERR_IF(BN_Copy(&r->z, &a->z), ret);
@@ -158,18 +166,22 @@ int32_t ECP_NistPointAddMont(const ECC_Para *para, ECC_Point *r, const ECC_Point
         return CRYPT_MEM_ALLOC_FAIL;
     }
     (void)OptimizerStart(opt);
-    BN_BigNum *t1 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *t2 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *t3 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *t4 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *t5 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *t6 = OptimizerGetBn(opt, a->x.room);
-    if (t1 == NULL || t2 == NULL || t3 == NULL || t4 == NULL || t5 == NULL || t6 == NULL) {
-        BN_OptimizerDestroy(opt); // no need to end opt.
-        return CRYPT_MEM_ALLOC_FAIL;
+    BN_BigNum *t1;
+    BN_BigNum *t2;
+    BN_BigNum *t3;
+    BN_BigNum *t5;
+    BN_BigNum *t6;
+    BN_BigNum *bns[5]; // get 5 BNs
+    int32_t ret = OptimizerGetXBn(opt, a->x.room, 5, bns); // get 5 BNs
+    if (ret != CRYPT_SUCCESS) {
+        goto ERR;
     }
+    t1 = bns[0]; // 0th bn
+    t2 = bns[1]; // 1st bn
+    t3 = bns[2]; // 2nd bn
+    t5 = bns[3]; // 3rd bn
+    t6 = bns[4]; // 4th bn
 
-    int32_t ret;
     GOTO_ERR_IF(para->method->bnModNistEccSqr(t1, &b->z, para->montP, opt), ret); // Z2^2
     GOTO_ERR_IF(para->method->bnModNistEccMul(t2, t1, &b->z, para->montP, opt), ret); // Z2^3
     GOTO_ERR_IF(para->method->bnModNistEccMul(t5, t1, &a->x, para->montP, opt), ret); // U1 = X1*Z2^2
@@ -210,7 +222,6 @@ ERR:
 // https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-madd-2004-hmv
 int32_t ECP_NistPointAddAffineMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, const ECC_Point *b)
 {
-    int32_t ret;
     if (BN_IsZero(&a->z)) { // if point a is an infinity point, r = b,
         return ECC_CopyPoint(r, b);
     }
@@ -218,15 +229,20 @@ int32_t ECP_NistPointAddAffineMont(const ECC_Para *para, ECC_Point *r, const ECC
     if (opt == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
+    BN_BigNum *t1;
+    BN_BigNum *t2;
+    BN_BigNum *t3;
+    BN_BigNum *t4;
     (void)OptimizerStart(opt);
-    BN_BigNum *t1 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *t2 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *t3 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *t4 = OptimizerGetBn(opt, a->x.room);
-    if (t1 == NULL || t2 == NULL || t3 == NULL || t4 == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
+    BN_BigNum *bns[4]; // get 4 BNs
+    int32_t ret = OptimizerGetXBn(opt, a->x.room, 4, bns); // get 4 BNs
+    if (ret != CRYPT_SUCCESS) { // get 4 BNs
         goto ERR;
     }
+    t1 = bns[0]; // 0th bn
+    t2 = bns[1]; // 1st bn
+    t3 = bns[2]; // 2nd bn
+    t4 = bns[3]; // 3rd bn
 
     GOTO_ERR_IF(para->method->bnModNistEccSqr(t1, &a->z, para->montP, opt), ret); // T1 = Z1^2
     GOTO_ERR_IF(para->method->bnModNistEccMul(t2, t1, &a->z, para->montP, opt), ret); // T2 = Z1^3
@@ -286,16 +302,20 @@ int32_t ECP_PrimePointDoubleMont(const ECC_Para *para, ECC_Point *r, const ECC_P
     if (opt == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t ret;
+    int32_t ret = CRYPT_MEM_ALLOC_FAIL;
     (void)OptimizerStart(opt);
-    BN_BigNum *t1 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *t2 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *t3 = OptimizerGetBn(opt, a->x.room);
     BN_BigNum *halfP = ECP_HalfPGet(para->p);
-    if (t1 == NULL || t2 == NULL || t3 == NULL || halfP == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
+    BN_BigNum *t1;
+    BN_BigNum *t2;
+    BN_BigNum *t3;
+    BN_BigNum *bns[3]; // get 3 BNs
+    if (halfP == NULL || (ret = OptimizerGetXBn(opt, a->x.room, 3, bns)) != CRYPT_SUCCESS) { // get 3 BNs
         goto ERR;
     }
+    t1 = bns[0]; // 0th bn
+    t2 = bns[1]; // 1st bn
+    t3 = bns[2]; // 2nd bn
+
     GOTO_ERR_IF(para->method->bnMontEnc(halfP, para->montP, opt, false), ret);
     GOTO_ERR_IF(para->method->bnModNistEccSqr(t1, &a->z, para->montP, opt), ret); // Z1^2
     GOTO_ERR_IF(para->method->bnModNistEccSqr(t2, t1, para->montP, opt), ret); // Z1^4
@@ -329,7 +349,6 @@ ERR:
 int32_t ECP_PrimePointAddMont(const ECC_Para *para, ECC_Point *r, const ECC_Point *a,
     const ECC_Point *b)
 {
-    bool flag;
     if (BN_IsZero(&a->z)) {
         return ECC_CopyPoint(r, b);
     }
@@ -341,19 +360,24 @@ int32_t ECP_PrimePointAddMont(const ECC_Para *para, ECC_Point *r, const ECC_Poin
         return CRYPT_MEM_ALLOC_FAIL;
     }
     (void)OptimizerStart(opt);
-    BN_BigNum *t0 = OptimizerGetBn(opt, para->p->size);
-    BN_BigNum *t1 = OptimizerGetBn(opt, para->p->size);
-    BN_BigNum *t2 = OptimizerGetBn(opt, para->p->size);
-    BN_BigNum *t3 = OptimizerGetBn(opt, para->p->size);
-    BN_BigNum *t4 = OptimizerGetBn(opt, para->p->size);
-    BN_BigNum *t5 = OptimizerGetBn(opt, para->p->size);
-    flag = (t0 == NULL) || (t1 == NULL) || (t2 == NULL) || (t3 == NULL) || (t4 == NULL) || (t5 == NULL);
-    if (flag) {
-        BN_OptimizerDestroy(opt); // no need to end opt.
-        return CRYPT_MEM_ALLOC_FAIL;
+    BN_BigNum *t0;
+    BN_BigNum *t1;
+    BN_BigNum *t2;
+    BN_BigNum *t3;
+    BN_BigNum *t4;
+    BN_BigNum *t5;
+    BN_BigNum *bns[6]; // get 6 BNs
+    int32_t ret = OptimizerGetXBn(opt, a->x.room, 6, bns); // get 6 BNs
+    if (ret != CRYPT_SUCCESS) {
+        goto ERR;
     }
+    t0 = bns[0]; // 0th bn
+    t1 = bns[1]; // 1st bn
+    t2 = bns[2]; // 2nd bn
+    t3 = bns[3]; // 3rd bn
+    t4 = bns[4]; // 4th bn
+    t5 = bns[5]; // 5th bn
 
-    int32_t ret;
     GOTO_ERR_IF(para->method->bnModNistEccSqr(t0, &a->z, para->montP, opt), ret); // z1z1 = z1^2
     GOTO_ERR_IF(para->method->bnModNistEccSqr(t5, &b->z, para->montP, opt), ret); // z2z2 = z2^2
     GOTO_ERR_IF(para->method->bnModNistEccMul(t1, &a->x, t5, para->montP, opt), ret); // u1 = x1*z2z2
@@ -409,15 +433,21 @@ int32_t ECP_PrimePointMultDoubleMont(const ECC_Para *para, ECC_Point *r, const E
         return CRYPT_MEM_ALLOC_FAIL;
     }
     (void)OptimizerStart(opt);
-    BN_BigNum *t1 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *t2 = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *ta = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *tb = OptimizerGetBn(opt, a->x.room);
-    BN_BigNum *tw = OptimizerGetBn(opt, a->x.room);
     BN_BigNum *halfP = ECP_HalfPGet(para->p);
-    if (t1 == NULL || t2 == NULL || ta == NULL || tb == NULL || tw == NULL || halfP == NULL) {
+    BN_BigNum *t1;
+    BN_BigNum *t2;
+    BN_BigNum *ta;
+    BN_BigNum *tb;
+    BN_BigNum *tw;
+    BN_BigNum *bns[5]; // get 5 BNs
+    if (halfP == NULL || (ret = OptimizerGetXBn(opt, a->x.room, 5, bns)) != CRYPT_SUCCESS) { // get 5 BNs
         goto ERR;
     }
+    t1 = bns[0]; // 0th bn
+    t2 = bns[1]; // 1st bn
+    ta = bns[2]; // 2nd bn
+    tb = bns[3]; // 3rd bn
+    tw = bns[4]; // 4th bn
 
     GOTO_ERR_IF(BN_Copy(&r->x, &a->x), ret);
     GOTO_ERR_IF(BN_ModAddQuick(&r->y, &a->y, &a->y, para->p, opt), ret);
@@ -480,15 +510,20 @@ int32_t ECP_PrimePointAddAffineMont(const ECC_Para *para, ECC_Point *r, const EC
         return CRYPT_MEM_ALLOC_FAIL;
     }
     (void)OptimizerStart(op);
-    BN_BigNum *t1 = OptimizerGetBn(op, a->x.room);
-    BN_BigNum *t2 = OptimizerGetBn(op, a->x.room);
-    BN_BigNum *t3 = OptimizerGetBn(op, a->x.room);
-    BN_BigNum *t4 = OptimizerGetBn(op, a->x.room);
-    if (t1 == NULL || t2 == NULL || t3 == NULL || t4 == NULL) {
-        BN_OptimizerDestroy(op);
-        return CRYPT_MEM_ALLOC_FAIL;
+    BN_BigNum *t1;
+    BN_BigNum *t2;
+    BN_BigNum *t3;
+    BN_BigNum *t4;
+    BN_BigNum *bns[4]; // get 4 BNs
+    int32_t ret = OptimizerGetXBn(op, a->x.room, 4, bns); // get 4 BNs
+    if (ret != CRYPT_SUCCESS) {
+        goto ERR;
     }
-    int32_t ret;
+    t1 = bns[0]; // 0th bn
+    t2 = bns[1]; // 1st bn
+    t3 = bns[2]; // 2nd bn
+    t4 = bns[3]; // 3rd bn
+
     GOTO_ERR_IF(para->method->bnModNistEccSqr(t1, &a->z, para->montP, op), ret); // Z1^2
     GOTO_ERR_IF(para->method->bnModNistEccMul(t2, t1, &a->z, para->montP, op), ret); // Z1^3
     GOTO_ERR_IF(para->method->bnModNistEccMul(t1, t1, &b->x, para->montP, op), ret); // X2*Z1^2
@@ -567,18 +602,26 @@ ERR:
 */
 static int32_t MontLadderDoubleAndAdd(ECC_Para *para, ECC_Point *r2, ECC_Point *r3, ECC_Point *p, BN_Optimizer *opt)
 {
-    int32_t ret;
     (void)OptimizerStart(opt);
-    BN_BigNum *t0 = OptimizerGetBn(opt, p->x.room);
-    BN_BigNum *t1 = OptimizerGetBn(opt, p->x.room);
-    BN_BigNum *t2 = OptimizerGetBn(opt, p->x.room);
-    BN_BigNum *t3 = OptimizerGetBn(opt, p->x.room);
-    BN_BigNum *t4 = OptimizerGetBn(opt, p->x.room);
-    BN_BigNum *t5 = OptimizerGetBn(opt, p->x.room);
-    if (t0 == NULL || t1 == NULL || t2 == NULL || t3 == NULL || t4 == NULL || t5 == NULL) {
-        OptimizerEnd(opt);
-        return CRYPT_MEM_ALLOC_FAIL; // 不需要释放其他大数，统一交给大数优化器管理
+    BN_BigNum *t0;
+    BN_BigNum *t1;
+    BN_BigNum *t2;
+    BN_BigNum *t3;
+    BN_BigNum *t4;
+    BN_BigNum *t5;
+    BN_BigNum *bns[6]; // get 6 BNs
+    int32_t ret = OptimizerGetXBn(opt, p->x.room, 6, bns); // get 6 BNs
+    if (ret != CRYPT_SUCCESS) {
+        // Not need to release other large numbers, they shoule be uniformly managed by optimizer.
+        goto ERR;
     }
+    t0 = bns[0]; // 0th bn
+    t1 = bns[1]; // 1st bn
+    t2 = bns[2]; // 2nd bn
+    t3 = bns[3]; // 3rd bn
+    t4 = bns[4]; // 4th bn
+    t5 = bns[5]; // 5th bn
+
     GOTO_ERR_IF(para->method->bnModNistEccSqr(&r2->y, &r2->x, para->montP, opt), ret); // x2 ^ 2
     GOTO_ERR_IF(para->method->bnModNistEccSqr(&r3->y, &r2->z, para->montP, opt), ret); // z2 ^ 2
     GOTO_ERR_IF(para->method->bnModNistEccMul(t0, &r2->x, &r2->z, para->montP, opt), ret); // X2 * Z2
@@ -640,6 +683,9 @@ static int32_t MontLadderRecoverYAndToMont(ECC_Para *para, ECC_Point *r1, ECC_Po
     BN_Optimizer *opt)
 {
     int32_t ret;
+    BN_BigNum *t0;
+    BN_BigNum *t1;
+    BN_BigNum *t2;
     if (BN_IsZero(&r1->z)) {
         para->method->bnMontDec(&r1->x, para->montP);
         para->method->bnMontDec(&r1->y, para->montP);
@@ -654,14 +700,15 @@ static int32_t MontLadderRecoverYAndToMont(ECC_Para *para, ECC_Point *r1, ECC_Po
         return CRYPT_SUCCESS;
     }
     (void)OptimizerStart(opt);
-    BN_BigNum *t0 = OptimizerGetBn(opt, p->x.room);
-    BN_BigNum *t1 = OptimizerGetBn(opt, p->x.room);
-    BN_BigNum *t2 = OptimizerGetBn(opt, p->x.room);
-    BN_BigNum *t3 = OptimizerGetBn(opt, p->x.room);
-    if (t0 == NULL || t1 == NULL || t2 == NULL || t3 == NULL) {
+    BN_BigNum *bns[3]; // get 3 BNs
+    if (OptimizerGetXBn(opt, p->x.room, 3, bns) != CRYPT_SUCCESS) { // get 3 BNs
         OptimizerEnd(opt);
-        return CRYPT_MEM_ALLOC_FAIL;  // Other bn do not need to be released. They are managed by the opt.
+        return CRYPT_BN_OPTIMIZER_GET_FAIL;  // Other bn do not need to be released. They are managed by the opt.
     }
+    t0 = bns[0]; // 0th bn
+    t1 = bns[1]; // 1st bn
+    t2 = bns[2]; // 2nd bn
+
     GOTO_ERR_IF(para->method->bnModNistEccSqr(t0, &r1->z, para->montP, opt), ret); // t0 = z1 ^ 2
     GOTO_ERR_IF(para->method->bnModNistEccMul(t0, t0, &r2->z, para->montP, opt), ret); // t0 = z2 * z1^2
 
@@ -757,7 +804,7 @@ ERR:
  * ref <Weierstraß Elliptic Curves and side-Channel Attacks>
  * Montgomery ladder to achieve k * Pt
  */
-int32_t ECP_PointMulMont(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
+int32_t ECP_PointMulMont(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const ECC_Point *pt)
 {
     int32_t ret;
     BN_UINT mask1 = 0;

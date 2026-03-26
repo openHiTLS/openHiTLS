@@ -172,10 +172,6 @@ static int32_t ParseCommonSafeBag(BSL_Buffer *buffer, HITLS_PKCS12_CommonSafeBag
 /* Convert commonBags to the cert */
 static int32_t ConvertCertBag(HITLS_PKCS12 *p12, HITLS_PKCS12_CommonSafeBag *bag, HITLS_X509_Cert **cert)
 {
-    if (bag == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
-        return HITLS_PKCS12_ERR_NULL_POINTER;
-    }
     if (bag->bagType != BSL_CID_X509CERTIFICATE) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_CERTYPES);
         return HITLS_PKCS12_ERR_INVALID_CERTYPES;
@@ -328,7 +324,7 @@ static int32_t ParseSafeBag(BSL_Buffer *buffer, HITLS_PKCS12_SafeBag *safeBag)
     return ret;
 ERR:
     BSL_SAL_FREE(bag->data);
-    BSL_SAL_FREE(bag);
+    BSL_SAL_Free(bag);
     HITLS_X509_AttrsFree(attributes, HITLS_PKCS12_AttributesFree);
     return ret;
 }
@@ -966,7 +962,7 @@ static void FreeListBuff(BSL_ASN1_Buffer *asnBuf, uint32_t count)
     for (uint32_t i = 0; i < count; i++) {
         BSL_SAL_FREE(asnBuf[i].buff);
     }
-    BSL_SAL_FREE(asnBuf);
+    BSL_SAL_Free(asnBuf);
 }
 
 static int32_t EncodeAttrValue(HITLS_PKCS12_SafeBagAttr *attribute, BSL_Buffer *encode)
@@ -1001,9 +997,7 @@ static int32_t EncodeAttrValue(HITLS_PKCS12_SafeBagAttr *attribute, BSL_Buffer *
 
 static int32_t X509_EncodeP12AttrItem(void *attrNode, HITLS_X509_AttrEntry *attrEntry)
 {
-    if (attrNode == NULL || attrEntry == NULL) {
-        return HITLS_X509_ERR_INVALID_PARAM;
-    }
+    // attrNode, attrEntry have been checked by HITLS_X509_EncodeAttrList
     HITLS_PKCS12_SafeBagAttr *p12Attr = attrNode;
     BslOidString *oidStr = BSL_OBJ_GetOID(p12Attr->attrId);
     if (oidStr == NULL) {
@@ -1386,7 +1380,7 @@ static int32_t EncodeCertListAddList(HITLS_PKCS12 *p12, const CRYPT_EncodeParam 
         bag->value.cert = p12->entityCert->value.cert;
         ret = BSL_LIST_AddElement(p12->certList, bag, BSL_LIST_POS_BEGIN);
         if (ret != BSL_SUCCESS) {
-            BSL_SAL_FREE(bag);
+            BSL_SAL_Free(bag);
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
@@ -1741,10 +1735,6 @@ int32_t HITLS_PKCS12_BagAddAttr(HITLS_PKCS12_Bag *bag, uint32_t type, const BSL_
 
 static int32_t PKCS12_SetEntityKey(HITLS_PKCS12 *p12, void *val)
 {
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
-        return HITLS_PKCS12_ERR_NULL_POINTER;
-    }
     if (p12->key != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_REPEATED_SET_KEY);
         return HITLS_PKCS12_ERR_REPEATED_SET_KEY;
@@ -1770,10 +1760,6 @@ static int32_t PKCS12_SetEntityKey(HITLS_PKCS12 *p12, void *val)
 
 static int32_t PKCS12_SetEntityCert(HITLS_PKCS12 *p12, void *val)
 {
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
-        return HITLS_PKCS12_ERR_NULL_POINTER;
-    }
     if (p12->entityCert != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_REPEATED_SET_ENTITYCERT);
         return HITLS_PKCS12_ERR_REPEATED_SET_ENTITYCERT;
@@ -1799,10 +1785,6 @@ static int32_t PKCS12_SetEntityCert(HITLS_PKCS12 *p12, void *val)
 
 static int32_t PKCS12_AddUnitBag(HITLS_PKCS12 *p12, void *val)
 {
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
-        return HITLS_PKCS12_ERR_NULL_POINTER;
-    }
     int32_t ret;
     HITLS_PKCS12_Bag *input = (HITLS_PKCS12_Bag *)val;
     BSL_ASN1_List *bagList = NULL;
@@ -1850,7 +1832,7 @@ static int32_t PKCS12_AddUnitBag(HITLS_PKCS12 *p12, void *val)
 
 static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12, int32_t *algId, uint32_t algIdLen)
 {
-    if (algId == NULL || p12->entityCert == NULL || p12->key == NULL) {
+    if (p12->entityCert == NULL || p12->key == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
@@ -1898,10 +1880,6 @@ static int32_t PKCS12_SetLocalKeyId(HITLS_PKCS12 *p12, int32_t *algId, uint32_t 
 
 static int32_t PKCS12_GetEntityCert(HITLS_PKCS12 *p12, int32_t cmd, void **val)
 {
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
-        return HITLS_PKCS12_ERR_NULL_POINTER;
-    }
     if (*val != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
@@ -1931,10 +1909,6 @@ static int32_t PKCS12_GetEntityCert(HITLS_PKCS12 *p12, int32_t cmd, void **val)
 
 static int32_t PKCS12_GetEntityKey(HITLS_PKCS12 *p12, int32_t cmd, void **val)
 {
-    if (val == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
-        return HITLS_PKCS12_ERR_NULL_POINTER;
-    }
     if (*val != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
@@ -1967,7 +1941,7 @@ static int32_t PKCS12_GetKeyBags(HITLS_PKCS12 *p12, void **val)
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
-    if (val == NULL || *val != NULL) {
+    if (*val != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
@@ -1981,7 +1955,7 @@ static int32_t PKCS12_GetSecretBags(HITLS_PKCS12 *p12, void **val)
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
-    if (val == NULL || *val != NULL) {
+    if (*val != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
@@ -1995,7 +1969,7 @@ static int32_t PKCS12_GetCertBags(HITLS_PKCS12 *p12, void **val)
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
-    if (val == NULL || *val != NULL) {
+    if (*val != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
@@ -2009,7 +1983,7 @@ static int32_t PKCS12_GetCrlBags(HITLS_PKCS12 *p12, void **val)
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }
-    if (val == NULL || *val != NULL) {
+    if (*val != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_INVALID_PARAM);
         return HITLS_PKCS12_ERR_INVALID_PARAM;
     }
@@ -2022,7 +1996,7 @@ int32_t HITLS_PKCS12_Ctrl(HITLS_PKCS12 *p12, int32_t cmd, void *val, uint32_t va
 #ifndef HITLS_PKI_PKCS12_GEN
     (void)valType;
 #endif
-    if (p12 == NULL) {
+    if (p12 == NULL || val == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
         return HITLS_PKCS12_ERR_NULL_POINTER;
     }

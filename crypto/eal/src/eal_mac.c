@@ -227,7 +227,7 @@ int32_t CRYPT_EAL_MacReinit(CRYPT_EAL_MacCtx *ctx)
         return ret;
     }
     ctx->state = CRYPT_MAC_STATE_INIT;
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 uint32_t CRYPT_EAL_GetMacLen(const CRYPT_EAL_MacCtx *ctx)

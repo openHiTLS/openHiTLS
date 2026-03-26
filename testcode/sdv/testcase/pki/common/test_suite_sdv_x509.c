@@ -351,15 +351,14 @@ static int32_t SetCrlEntry(HITLS_X509_Crl *crl)
 
     ret = 0;
 EXIT:
-    HITLS_X509_ClearGeneralNames(names);
-    BSL_SAL_Free(names);
+    HITLS_X509_FreeGeneralNames(names);
     HITLS_X509_CrlEntryFree(entry);
     BSL_LIST_FREE(certIssuer.issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
     return ret;
 }
 #endif // HITLS_PKI_X509_CRL_GEN
 
-#ifdef HITLS_PKI_X509_CSR_GEN
+#if defined(HITLS_PKI_X509_CSR_GEN) && defined(HITLS_PKI_X509_CSR_ATTR)
 static int32_t FillExt(HITLS_X509_Ext *ext)
 {
     HITLS_X509_ExtBCons bCons = {true, false, 1};
@@ -698,6 +697,24 @@ EXIT:
 }
 /* END_CASE */
 
+#ifdef HITLS_PKI_X509_CSR_ATTR
+static int32_t TestSetCsrAttrs(HITLS_X509_Csr *csr)
+{
+    int32_t ret = -1;
+    HITLS_X509_Attrs *attrs = NULL;
+    HITLS_X509_Ext *ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
+    ASSERT_NE(ext, NULL);
+
+    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(HITLS_X509_Attrs *)), 0);
+    ASSERT_EQ(FillExt(ext), 0);
+    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS, ext, 0), 0);
+    ret = 0;
+EXIT:
+    HITLS_X509_ExtFree(ext);
+    return ret;
+}
+#endif
+
 /* BEGIN_CASE */
 void SDV_PKI_GEN_CSR_TC001(int algId, int hashId, int curveId)
 {
@@ -711,8 +728,7 @@ void SDV_PKI_GEN_CSR_TC001(int algId, int hashId, int curveId)
     BSL_Buffer encode = {0};
     HITLS_X509_DN dnName1[1] = {{BSL_CID_AT_COMMONNAME, (uint8_t *)"OH", 2}};
     HITLS_X509_DN dnName2[1] = {{BSL_CID_AT_COUNTRYNAME, (uint8_t *)"CN", 2}};
-    HITLS_X509_Attrs *attrs = NULL;
-    HITLS_X509_Ext *ext = NULL;
+
     HITLS_X509_SignAlgParam algParam = {0};
     CRYPT_RSA_PssPara pssParam = {0};
 
@@ -722,17 +738,13 @@ void SDV_PKI_GEN_CSR_TC001(int algId, int hashId, int curveId)
     ASSERT_NE(key, NULL);
     csr = HITLS_X509_CsrNew();
     ASSERT_NE(csr, NULL);
-    ext = HITLS_X509_ExtNew(HITLS_X509_EXT_TYPE_CSR);
-    ASSERT_NE(ext, NULL);
 
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, key, 0), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, dnName1, 1), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, dnName2, 1), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(HITLS_X509_Attrs *)), 0);
-
-    ASSERT_EQ(FillExt(ext), 0);
-    ASSERT_EQ(HITLS_X509_AttrCtrl(attrs, HITLS_X509_ATTR_SET_REQUESTED_EXTENSIONS, ext, 0), 0);
-
+#ifdef HITLS_PKI_X509_CSR_ATTR
+    ASSERT_EQ(TestSetCsrAttrs(csr), 0);
+#endif
     SetSignParam(algId, hashId, &algParam, &pssParam);
     if (algId == CRYPT_PKEY_RSA) {
         ASSERT_EQ(HITLS_X509_CsrSign(hashId, key, NULL, csr), HITLS_PKI_SUCCESS);
@@ -759,7 +771,6 @@ EXIT:
     TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(key);
     HITLS_X509_CsrFree(csr);
-    HITLS_X509_ExtFree(ext);
     remove(path);
 #else
     UnusedParam1(algId, hashId, curveId);
@@ -1248,7 +1259,6 @@ void SDV_HITLS_GEN_CSR_CERT_TC001()
     BSL_Buffer encode = {0};
     HITLS_X509_DN dnName1[1] = {{BSL_CID_AT_COMMONNAME, (uint8_t *)"ROOT", 2}};
     HITLS_X509_DN dnName2[1] = {{BSL_CID_AT_COUNTRYNAME, (uint8_t *)"CN", 2}};
-    HITLS_X509_Attrs *attrs = NULL;
     HITLS_X509_SignAlgParam algParam = {0};
 
     HITLS_X509_Cert *cert = NULL;
@@ -1276,7 +1286,6 @@ void SDV_HITLS_GEN_CSR_CERT_TC001()
     // set csr info
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, dnName1, 1), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, dnName2, 1), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(HITLS_X509_Attrs *)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrSign(CRYPT_MD_SHA256, pkey, &algParam, csr), HITLS_PKI_SUCCESS);
@@ -1435,7 +1444,6 @@ void SDV_HITLS_GEN_CSR_EECERT_TC001()
     BSL_Buffer encode = {0};
     HITLS_X509_DN dnName1[1] = {{BSL_CID_AT_COMMONNAME, (uint8_t *)"EE", 2}};
     HITLS_X509_DN dnName2[1] = {{BSL_CID_AT_COUNTRYNAME, (uint8_t *)"CN", 2}};
-    HITLS_X509_Attrs *attrs = NULL;
     HITLS_X509_SignAlgParam algParam = {0};
 
     HITLS_X509_Cert *cert = NULL;
@@ -1470,7 +1478,6 @@ void SDV_HITLS_GEN_CSR_EECERT_TC001()
     // set csr info
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, dnName1, 1), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, dnName2, 1), HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_CSR_GET_ATTRIBUTES, &attrs, sizeof(HITLS_X509_Attrs *)), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CsrCtrl(csr, HITLS_X509_SET_PUBKEY, pkey, 0), HITLS_PKI_SUCCESS);
 
     ASSERT_EQ(HITLS_X509_CsrSign(CRYPT_MD_SHA256, pkey, &algParam, csr), HITLS_PKI_SUCCESS);

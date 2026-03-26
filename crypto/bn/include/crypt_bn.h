@@ -1229,6 +1229,13 @@ int32_t BN_Array2BN(BN_BigNum *dst, const BN_UINT *src, const uint32_t size);
 int32_t BN_CopyWithMask(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, BN_UINT mask);
 
 /**
+ * This interface is a constant time.
+ * if mask = BN_MASK, swap a and b.
+ * if mask = 0, a and b remain as they are.
+ */
+int32_t BN_SwapWithMask(BN_BigNum *a, BN_BigNum *b, BN_UINT mask);
+
+/**
  * @ingroup bn
  * @brief Calculate r = (a - b) % mod
  *
@@ -1461,6 +1468,20 @@ void OptimizerEnd(BN_Optimizer *opt);
  */
 BN_BigNum *OptimizerGetBn(BN_Optimizer *opt, uint32_t room);
 
+/**
+ * @ingroup bn
+ * @brief   Get x BN_BigNum from the large number optimizer.
+ *
+ * @param   opt [IN] Large number optimizer
+ * @param   room [IN] Length of the big number.
+ * @param   x [IN] the request number.
+ * @param   bns [IN/OUT] the bn lists array.
+ *
+ * @retval  CRYPT_SUCCESS
+ * @retval  CRYPT_BN_OPTIMIZER_GET_FAIL
+ */
+int32_t OptimizerGetXBn(BN_Optimizer *opt, uint32_t room, uint32_t x, BN_BigNum **bns);
+
 #ifdef HITLS_CRYPTO_CURVE_MONT
 
 /**
@@ -1484,13 +1505,6 @@ int32_t BnMontEnc(BN_BigNum *r, BN_Mont *mont, BN_Optimizer *opt, bool consttime
  * r = Reduce(r)
  */
 void BnMontDec(BN_BigNum *r, BN_Mont *mont);
-
-/**
- * This interface is a constant time.
- * if mask = BN_MASK. swap a and b.
- * if mask = 0, a and b remain as they are.
- */
-int32_t BN_SwapWithMask(BN_BigNum *a, BN_BigNum *b, BN_UINT mask);
 
 #endif // HITLS_CRYPTO_CURVE_MONT
 

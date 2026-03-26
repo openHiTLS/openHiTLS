@@ -55,9 +55,21 @@ static void AttributeValueFree(void *ptr)
         return;
     }
     AttributeValue *value = (AttributeValue *)ptr;
-    BSL_SAL_FREE(value->judgeStr);
-    BSL_SAL_FREE(value->valueStr);
+    BSL_SAL_Free(value->judgeStr);
+    BSL_SAL_Free(value->valueStr);
     BSL_SAL_Free(value);
+}
+
+static void AttributeValueClear(void *ptr)
+{
+    if (ptr == NULL) {
+        return;
+    }
+    AttributeValue *value = (AttributeValue *)ptr;
+    BSL_SAL_Free(value->judgeStr);
+    BSL_SAL_Free(value->valueStr);
+    value->judgeStr = NULL;
+    value->valueStr = NULL;
 }
 
 // Define a function to free the value list
@@ -71,6 +83,31 @@ static void FreeValueList(void *ptr)
     BSL_SAL_Free(valueList);
 }
 
+static int32_t AttributeValueAdd(AttributeValue *value, BslList *list)
+{
+    AttributeValue *newValue = BSL_SAL_Malloc(sizeof(AttributeValue));
+    if (newValue == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    newValue->judgeStr = BSL_SAL_Dump(value->judgeStr, BSL_SAL_Strnlen(value->judgeStr, UINT32_MAX) + 1);
+    newValue->valueStr = BSL_SAL_Dump(value->valueStr, BSL_SAL_Strnlen(value->valueStr, UINT32_MAX) + 1);
+
+    if (newValue->judgeStr == NULL || newValue->valueStr == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        AttributeValueFree(newValue);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+
+    int32_t ret = BSL_LIST_AddElement(list, newValue, BSL_LIST_POS_END);
+    if (ret != BSL_SUCCESS) {
+        AttributeValueFree(newValue);
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+
+    return ret;
+}
+
 // Value copy callback function, essentially a function to create a new value list
 static void *ValueDupFunc(void *ptr, size_t size)
 {
@@ -78,40 +115,19 @@ static void *ValueDupFunc(void *ptr, size_t size)
         return NULL;
     }
 
-    int32_t ret;
-    AttributeValue *srcValue = (AttributeValue *)ptr;
     BslList *newList = BSL_LIST_New(sizeof(AttributeValue));
     if (newList == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
 
-    AttributeValue *newValue = BSL_SAL_Calloc(1, sizeof(AttributeValue));
-    if (newValue == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        goto ERR;
-    }
-
-    newValue->judgeStr = BSL_SAL_Dump(srcValue->judgeStr, BSL_SAL_Strnlen(srcValue->judgeStr, UINT32_MAX) + 1);
-    newValue->valueStr = BSL_SAL_Dump(srcValue->valueStr, BSL_SAL_Strnlen(srcValue->valueStr, UINT32_MAX) + 1);
-
-    if (newValue->judgeStr == NULL || newValue->valueStr == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        goto ERR;
-    }
-
-    ret = BSL_LIST_AddElement(newList, newValue, BSL_LIST_POS_END);
+    int32_t ret = AttributeValueAdd(ptr, newList);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        BSL_SAL_Free(newList);
+        return NULL;
     }
-
     return newList;
-
-ERR:
-    AttributeValueFree(newValue);
-    BSL_SAL_Free(newList);
-    return NULL;
 }
 
 // Key copy callback function
@@ -133,31 +149,10 @@ static void KeyFreeFunc(void *ptr)
 static int32_t UpdateAttributeValueNode(BSL_HASH_Hash *hash, BSL_HASH_Iterator node,
     uintptr_t value, uint32_t valueSize)
 {
-    if (hash == NULL || valueSize == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
-        return CRYPT_INVALID_ARG;
-    }
-    AttributeValue *srcValue = (AttributeValue *)value;
-    AttributeValue *newValue = BSL_SAL_Calloc(1, sizeof(AttributeValue));
-    if (newValue == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    newValue->judgeStr = BSL_SAL_Dump(srcValue->judgeStr, BSL_SAL_Strnlen(srcValue->judgeStr, UINT32_MAX) + 1);
-    newValue->valueStr = BSL_SAL_Dump(srcValue->valueStr, BSL_SAL_Strnlen(srcValue->valueStr, UINT32_MAX) + 1);
-    if (newValue->judgeStr == NULL || newValue->valueStr == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        AttributeValueFree(newValue);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
+    (void)valueSize;
 
     BslList *valueList = (BslList *)(uintptr_t)BSL_HASH_IterValue(hash, node);
-    int32_t ret = BSL_LIST_AddElement(valueList, (AttributeValue *)newValue, BSL_LIST_POS_END);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        AttributeValueFree(newValue);
-    }
-    return ret;
+    return AttributeValueAdd((AttributeValue *)value, valueList);
 }
 
 // Get key-value pair positions
@@ -203,11 +198,12 @@ static int32_t GetAttributePositions(const char *attribute, int32_t start, int32
     return CRYPT_SUCCESS;
 }
 
-static int32_t ParseAttributeValue(const char *attribute, int32_t *startPos, char **key, AttributeValue **value)
+static int32_t ParseAttributeValue(const char *attribute, int32_t *startPos, char **key, AttributeValue *value)
 {
     int32_t start = *startPos;
-    char *tempKey = NULL;
-    AttributeValue *tempValue = NULL;
+    char *tempKey;
+    char *judgeStr;
+    char *valueStr;
 
     // Call the sub-function to get key-value pair positions
     int32_t keyStart, keyEnd, judgeStart, judgeEnd, valueStart, valueEnd;
@@ -223,37 +219,30 @@ static int32_t ParseAttributeValue(const char *attribute, int32_t *startPos, cha
     int32_t valueLen = valueEnd - valueStart;
 
     // Allocate space for keys and values
-    tempValue = BSL_SAL_Calloc(1, sizeof(AttributeValue));
-    if (tempValue == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
     tempKey = BSL_SAL_Calloc(1, keyLen + 1);
-    tempValue->judgeStr = BSL_SAL_Calloc(1, judgeLen + 1);
-    tempValue->valueStr = BSL_SAL_Calloc(1, valueLen + 1);
-    if (tempKey == NULL || tempValue->judgeStr == NULL || tempValue->valueStr == NULL) {
+    judgeStr = BSL_SAL_Calloc(1, judgeLen + 1);
+    valueStr = BSL_SAL_Calloc(1, valueLen + 1);
+    if (tempKey == NULL || judgeStr == NULL || valueStr == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
     // Copy the string corresponding to the key and value
-    if (memcpy_s(tempKey, keyLen + 1, attribute + keyStart, keyLen) != EOK ||
-        memcpy_s(tempValue->judgeStr, judgeLen + 1, attribute + judgeStart, judgeLen) != EOK ||
-        memcpy_s(tempValue->valueStr, valueLen + 1, attribute + valueStart, valueLen) != EOK) {
-        ret = CRYPT_MEM_CPY_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
+    (void)memcpy_s(tempKey, keyLen + 1, attribute + keyStart, keyLen);
+    (void)memcpy_s(judgeStr, judgeLen + 1, attribute + judgeStart, judgeLen);
+    (void)memcpy_s(valueStr, valueLen + 1, attribute + valueStart, valueLen);
 
     *startPos = attribute[valueEnd] == '\0' ? valueEnd : valueEnd + 1;
     *key = tempKey;
-    *value = tempValue;
+    value->judgeStr = judgeStr;
+    value->valueStr = valueStr;
     return CRYPT_SUCCESS;
 
 ERR:
-    BSL_SAL_FREE(tempKey);
-    AttributeValueFree(tempValue);
+    BSL_SAL_Free(tempKey);
+    BSL_SAL_Free(judgeStr);
+    BSL_SAL_Free(valueStr);
     return ret;
 }
 
@@ -261,10 +250,10 @@ static int32_t ParseAttributeString(InputAttributeStrInfo *attrInfo)
 {
     int32_t ret;
     const char *attribute = attrInfo->attribute;
-    BSL_HASH_Hash *hash = NULL;
+    BSL_HASH_Hash *hash;
     int32_t startPos = 0;
     char *key = NULL;
-    AttributeValue *value = NULL;
+    AttributeValue value = {0};
     uint32_t tempMustAttributeNum = 0, tempAttributeNum = 0;
 
     ListDupFreeFuncPair keyFunc = {KeyDupFunc, KeyFreeFunc};
@@ -287,14 +276,14 @@ static int32_t ParseAttributeString(InputAttributeStrInfo *attrInfo)
         }
 
         tempAttributeNum++;
-        if (value->judgeStr[0] == '=' || value->judgeStr[0] == '!') {
+        if (value.judgeStr[0] == '=' || value.judgeStr[0] == '!') {
             tempMustAttributeNum++;
         }
 
         ret = BSL_HASH_Put(hash, (uintptr_t)key, BSL_SAL_Strnlen(key, UINT32_MAX) + 1,
-                           (uintptr_t)value, sizeof(AttributeValue), UpdateAttributeValueNode);
-        BSL_SAL_FREE(key);
-        AttributeValueFree(value);
+                           (uintptr_t)&value, sizeof(AttributeValue), UpdateAttributeValueNode);
+        BSL_SAL_Free(key);
+        AttributeValueClear(&value);
         if (ret != BSL_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             BSL_HASH_Destroy(hash);
@@ -344,7 +333,7 @@ static int32_t CompareAttribute(BSL_HASH_Hash *hash, const char *attribute,
     int32_t ret;
     int32_t startPos = 0;
     char *key = NULL;
-    AttributeValue *value = NULL;
+    AttributeValue value = {0};
     uint32_t comparedCount = 0;
     uint32_t satisfiedMustCount = 0;
     int32_t totalScore = 0;
@@ -358,30 +347,29 @@ static int32_t CompareAttribute(BSL_HASH_Hash *hash, const char *attribute,
         BSL_HASH_Iterator it = BSL_HASH_Find(hash, (uintptr_t)key);
         if (it == BSL_HASH_IterEnd(hash)) {
             BSL_SAL_Free(key);
-            AttributeValueFree(value);
+            AttributeValueClear(&value);
             continue;
         }
         BslList *valueList = (BslList *)(uintptr_t)BSL_HASH_IterValue(hash, it);
         for (void *listValue = BSL_LIST_GET_FIRST(valueList);
             listValue != NULL; listValue = BSL_LIST_GET_NEXT(valueList)) {
             AttributeValue *hashValue = (AttributeValue *)listValue;
-            ret = CompareAttributeValue(value, hashValue, &comparedCount,
-                &satisfiedMustCount, &totalScore);
+            ret = CompareAttributeValue(&value, hashValue, &comparedCount, &satisfiedMustCount, &totalScore);
             if (ret == -1) {
                 BSL_SAL_Free(key);
-                AttributeValueFree(value);
+                AttributeValueClear(&value);
                 return -1;
             }
 
             if (comparedCount == attributeNum) {
                 BSL_SAL_Free(key);
-                AttributeValueFree(value);
+                AttributeValueClear(&value);
                 return (satisfiedMustCount < mustAttributeNum) ? -1 : totalScore;
             }
         }
 
         BSL_SAL_Free(key);
-        AttributeValueFree(value);
+        AttributeValueClear(&value);
     }
 
     if (satisfiedMustCount < mustAttributeNum) {
@@ -404,7 +392,7 @@ static void FindHighestScoreFunc(CRYPT_EAL_LibCtx *localCtx, int32_t operaId, in
     bool repeatFlag = attrInfo.repeatFlag;
 
     CRYPT_EAL_ProvMgrCtx *node = BSL_LIST_GET_FIRST(localCtx->providers);
-    for (; node!= NULL; node = BSL_LIST_GET_NEXT(localCtx->providers)) {
+    for (; node != NULL; node = BSL_LIST_GET_NEXT(localCtx->providers)) {
         CRYPT_EAL_AlgInfo *algInfos = NULL;
         ret = node->provQueryCb(node->provCtx, operaId, &algInfos);
         if (ret != CRYPT_SUCCESS) {

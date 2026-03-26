@@ -62,9 +62,7 @@ CRYPT_EAL_PkeyCtx *CRYPT_EAL_MakeKeyByPkeyAlgInfo(CRYPT_EAL_PkeyMgmtInfo *pkeyAl
 int32_t CRYPT_EAL_GetPkeyAlgInfo(CRYPT_EAL_LibCtx *libCtx, int32_t algId, const char *attrName,
     CRYPT_EAL_PkeyMgmtInfo *pkeyAlgInfo);
 
-int32_t CRYPT_EAL_SetPkeyMethod(EAL_PkeyUnitaryMethod *method, const CRYPT_EAL_Func *funcsKeyMgmt,
-    const CRYPT_EAL_Func *funcsAsyCipher, const CRYPT_EAL_Func *funcsExch, const CRYPT_EAL_Func *funcSign,
-    const CRYPT_EAL_Func *funcKem);
+int32_t CRYPT_EAL_SetPkeyMethod(EAL_PkeyUnitaryMethod *method, const CRYPT_EAL_AsyAlgFuncsInfo *funcs);
 
 int32_t CRYPT_EAL_ProviderGetAsyAlgFuncs(CRYPT_EAL_LibCtx *libCtx, int32_t algId, uint32_t pkeyOperType,
     const char *attrName, CRYPT_EAL_AsyAlgFuncsInfo *funcs);

@@ -40,7 +40,6 @@ int32_t CRYPT_EAL_PkeyEncrypt(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *data
 
     return pkey->method.encrypt(pkey->key, data, dataLen, out, outLen);
 }
-
 int32_t CRYPT_EAL_PkeyDecrypt(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *data, uint32_t dataLen,
     uint8_t *out, uint32_t *outLen)
 {

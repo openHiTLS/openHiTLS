@@ -59,7 +59,7 @@ HITLS_X509_Attrs *HITLS_X509_AttrsNew(void)
     if (attrs == NULL) {
         return NULL;
     }
-    attrs->list = BSL_LIST_New(sizeof(HITLS_X509_AttrEntry *));
+    attrs->list = BSL_LIST_New(sizeof(HITLS_X509_AttrEntry));
     if (attrs->list == NULL) {
         BSL_SAL_Free(attrs);
         return NULL;
@@ -194,6 +194,7 @@ int32_t HITLS_X509_ParseAttrsListAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, v
         if (ret != BSL_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
         }
+        // In parseCb, should add node to list, so no matter parse success or not, node should be freed.
         goto ERR;
     }
 
@@ -205,7 +206,7 @@ int32_t HITLS_X509_ParseAttrsListAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, v
 
     return ret;
 ERR:
-    BSL_SAL_FREE(node);
+    BSL_SAL_Free(node);
     return ret;
 }
 
@@ -370,7 +371,7 @@ static void FreeAsnAttrsBuff(BSL_ASN1_Buffer *asnBuf, uint32_t count)
     for (uint32_t i = 0; i < count; i++) {
         BSL_SAL_FREE(asnBuf[i].buff);
     }
-    BSL_SAL_FREE(asnBuf);
+    BSL_SAL_Free(asnBuf);
 }
 
 int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X509_EncodeAttrItemCb encodeCb,

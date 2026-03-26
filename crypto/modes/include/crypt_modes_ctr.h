@@ -33,10 +33,10 @@ int32_t MODES_CTR_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t
     uint32_t ivLen, bool enc);
 
 int32_t MODES_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
-int32_t MODES_CTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
-int32_t MODES_CTR_DeInitCtx(MODES_CipherCtx *modeCtx);
+#define MODES_CTR_Final MODES_CipherFinalComplete
+#define MODES_CTR_DeInitCtx MODES_CipherDeInitCtx
 int32_t MODES_CTR_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen);
-void MODES_CTR_FreeCtx(MODES_CipherCtx *modeCtx);
+#define MODES_CTR_FreeCtx MODES_CipherFreeCtx
 
 // AES CTR optimization implementation
 int32_t AES_CTR_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);

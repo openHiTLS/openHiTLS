@@ -96,16 +96,16 @@ int32_t CRYPT_SM4_AsmCheck(void)
 }
 #endif // HITLS_CRYPTO_SM4
 
-#if defined(HITLS_CRYPTO_GCM_ASM)
+#if defined(HITLS_CRYPTO_GHASH_ASM)
 int32_t CRYPT_GHASH_AsmCheck(void)
 {
-#if defined(HITLS_CRYPTO_GCM_X8664)
+#if defined(HITLS_CRYPTO_GHASH_X8664)
     if (!IsSupportAVX() || !IsOSSupportAVX()) {
         // GcmTableGen4bit uses the AVX.
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
         return CRYPT_EAL_ALG_ASM_NOT_SUPPORT;
     }
-#elif defined(HITLS_CRYPTO_GCM_ARMV8)
+#elif defined(HITLS_CRYPTO_GHASH_ARMV8)
     if (!IsSupportPMULL()) {
         // In ARMV8, GHASH_BLOCK must support the PMULL instruction set.
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_ASM_NOT_SUPPORT);
@@ -114,7 +114,7 @@ int32_t CRYPT_GHASH_AsmCheck(void)
 #endif
     return CRYPT_SUCCESS;
 }
-#endif // HITLS_CRYPTO_GCM
+#endif // HITLS_CRYPTO_GHASH_ASM
 
 #endif // HITLS_CRYPTO_CIPHER
 

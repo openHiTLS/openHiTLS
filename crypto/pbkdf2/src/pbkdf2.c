@@ -114,8 +114,8 @@ int32_t CRYPT_PBKDF2_Un(const CRYPT_PBKDF2_Ctx *pCtx, uint8_t *u, uint32_t *bloc
 
 int32_t CRYPT_PBKDF2_CalcT(const CRYPT_PBKDF2_Ctx *pCtx, uint32_t blockCount, uint8_t *t, uint32_t *tlen)
 {
-    uint8_t u[PBKDF2_MAX_BLOCKSIZE] = {0};
-    uint8_t tmpT[PBKDF2_MAX_BLOCKSIZE] = {0};
+    uint8_t u[PBKDF2_MAX_BLOCKSIZE];
+    uint8_t tmpT[PBKDF2_MAX_BLOCKSIZE];
     uint32_t blockSize = PBKDF2_MAX_BLOCKSIZE;
     int32_t ret;
     uint32_t iterCnt = pCtx->iterCnt;
@@ -318,8 +318,8 @@ static int32_t CRYPT_PBKDF2_SetMdAttr(CRYPT_PBKDF2_Ctx *ctx, const char *mdAttr,
 int32_t CRYPT_PBKDF2_SetParam(CRYPT_PBKDF2_Ctx *ctx, const BSL_Param *param)
 {
     uint32_t val = 0;
-    uint32_t len = 0;
-    const BSL_Param *temp = NULL;
+    uint32_t len;
+    const BSL_Param *temp;
     int32_t ret = CRYPT_PBKDF2_PARAM_ERROR;
     if (ctx == NULL || param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -410,7 +410,7 @@ int32_t CRYPT_PBKDF2_Deinit(CRYPT_PBKDF2_Ctx *ctx)
         ctx->macCtx = NULL;
     }
     BSL_SAL_ClearFree((void *)ctx->password, ctx->passLen);
-    BSL_SAL_FREE(ctx->salt);
+    BSL_SAL_Free(ctx->salt);
     (void)memset_s(ctx, sizeof(CRYPT_PBKDF2_Ctx), 0, sizeof(CRYPT_PBKDF2_Ctx));
     return CRYPT_SUCCESS;
 }
@@ -424,7 +424,7 @@ void CRYPT_PBKDF2_FreeCtx(CRYPT_PBKDF2_Ctx *ctx)
         ctx->macMeth.freeCtx(ctx->macCtx);
     }
     BSL_SAL_ClearFree((void *)ctx->password, ctx->passLen);
-    BSL_SAL_FREE(ctx->salt);
+    BSL_SAL_Free(ctx->salt);
     BSL_SAL_Free(ctx);
 }
 

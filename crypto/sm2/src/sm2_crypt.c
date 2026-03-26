@@ -34,15 +34,13 @@
 #define SM2_POINT_SINGLE_COORDINATE_LEN 32
 #define SM2_POINT_COORDINATE_LEN 65
 
-static void EncryptMemFree(ECC_Point *c1, ECC_Point *tmp, BN_BigNum *k, bool isInternal,
-    BN_BigNum *order, uint8_t *c2)
+static void EncryptMemFree(ECC_Point *c1, ECC_Point *tmp, BN_BigNum *k, bool isInternal, uint8_t *c2)
 {
     ECC_FreePoint(c1);
     ECC_FreePoint(tmp);
     if (isInternal) {
         BN_Destroy(k);
     }
-    BN_Destroy(order);
     BSL_SAL_FREE(c2);
 }
 
@@ -93,10 +91,9 @@ static int32_t IsDataZero(const uint8_t *data, uint32_t datalen)
     return CRYPT_SUCCESS;
 }
 
-static int32_t MemAllocCheck(const BN_BigNum *k, const BN_BigNum *order,
-    const ECC_Point *c1, const ECC_Point *tmp, const uint8_t *c2)
+static int32_t MemAllocCheck(const BN_BigNum *k, const ECC_Point *c1, const ECC_Point *tmp, const uint8_t *c2)
 {
-    if (k == NULL || order == NULL || c1 == NULL || tmp == NULL || c2 == NULL) {
+    if (k == NULL || c1 == NULL || tmp == NULL || c2 == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
@@ -192,7 +189,7 @@ int32_t CRYPT_SM2_Encrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
         k = BN_Create(CRYPT_SM2_GetBits(ctx));
         isInternal = true;
     }
-    BN_BigNum *order = ECC_GetParaN(ctx->pkey->para);
+    BN_BigNum *order = ECC_GetParaRawN(ctx->pkey->para);
     ECC_Point *c1 = ECC_NewPoint(ctx->pkey->para);
     ECC_Point *tmp = ECC_NewPoint(ctx->pkey->para);
     uint32_t buflen = SM2_POINT_COORDINATE_LEN;
@@ -208,7 +205,7 @@ int32_t CRYPT_SM2_Encrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
         .hash = c3Buf,                                    .hashLen = c3BufLen,
         .cipher = c2,                                     .cipherLen = datalen,
     };
-    GOTO_ERR_IF(MemAllocCheck(k, order, c1, tmp, c2), ret);
+    GOTO_ERR_IF(MemAllocCheck(k, c1, tmp, c2), ret);
     for (i = 0; i < CRYPT_ECC_TRY_MAX_CNT; i++) {
 #ifdef HITLS_CRYPTO_ACVP_TESTS
         if (isInternal) {
@@ -244,7 +241,7 @@ int32_t CRYPT_SM2_Encrypt(CRYPT_SM2_Ctx *ctx, const uint8_t *data, uint32_t data
 
     GOTO_ERR_IF(CRYPT_EAL_EncodeSm2EncryptData(&encData, out, outlen), ret);
 ERR:
-    EncryptMemFree(c1, tmp, k, isInternal, order, c2);
+    EncryptMemFree(c1, tmp, k, isInternal, c2);
     return ret;
 }
 
@@ -373,8 +370,7 @@ ERR:
     BSL_SAL_FREE(decode);
     ECC_FreePoint(c1);
     ECC_FreePoint(tmp);
-    BSL_SAL_CleanseData((void*)t, cipherLen);
-    BSL_SAL_FREE(t);
+    BSL_SAL_ClearFree((void*)t, cipherLen);
     return ret;
 }
 #endif // HITLS_CRYPTO_SM2_CRYPT

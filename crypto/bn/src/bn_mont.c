@@ -291,19 +291,8 @@ static int32_t MontExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    bool newOpt = (opt == NULL);
-    if (newOpt) {
-        opt = BN_OptimizerCreate();
-        if (opt == NULL) {
-            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-            return CRYPT_MEM_ALLOC_FAIL;
-        }
-    }
-    ret = MontExpCore(r, a, e, mont, opt, consttime);
-    if (newOpt) {
-        BN_OptimizerDestroy(opt);
-    }
-    return ret;
+
+    return MontExpCore(r, a, e, mont, opt, consttime);
 }
 
 int32_t BN_MontExp(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *e, BN_Mont *mont, BN_Optimizer *opt)
@@ -804,10 +793,6 @@ void BnMontDec(BN_BigNum *r, BN_Mont *mont)
 
 int32_t BN_EcPrimeMontSqr(BN_BigNum *r, const BN_BigNum *a, void *data, BN_Optimizer *opt)
 {
-    if (r == NULL || a == NULL || data == NULL || opt == NULL) {
-        BSL_ERR_PUSH_ERROR((CRYPT_NULL_INPUT));
-        return CRYPT_NULL_INPUT;
-    }
     int32_t ret;
     BN_Mont *mont = (BN_Mont *)data;
     BN_COPY_BYTES(r->data, mont->mSize, a->data, a->size);
@@ -819,10 +804,6 @@ ERR:
 
 int32_t BN_EcPrimeMontMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, void *data, BN_Optimizer *opt)
 {
-    if (r == NULL || a == NULL || b == NULL || data == NULL || opt == NULL) {
-        BSL_ERR_PUSH_ERROR((CRYPT_NULL_INPUT));
-        return CRYPT_NULL_INPUT;
-    }
     int32_t ret;
     BN_Mont *mont = (BN_Mont *)data;
     GOTO_ERR_IF(MontMulBin(r->data, a->data, b->data, mont, opt, false), ret);
@@ -830,6 +811,6 @@ int32_t BN_EcPrimeMontMul(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *b, 
 ERR:
     return ret;
 }
-#endif // HITLS_CRYPTO_CURVE_MONT
+#endif /* HITLS_CRYPTO_CURVE_MONT */
 
 #endif /* HITLS_CRYPTO_BN */

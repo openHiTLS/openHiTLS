@@ -49,7 +49,7 @@ static void DRBG_CtrXor(CRYPT_Data *dst, const CRYPT_Data *src)
 {
     uint32_t xorlen;
 
-    if (CRYPT_IsDataNull(dst) || CRYPT_IsDataNull(src)) {
+    if (CRYPT_IsDataNull(src)) {
         return;
     }
 
@@ -195,10 +195,7 @@ static int32_t DRBG_CtrBCCUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in, uint8_t t
     do {
         const uint32_t left = AES_BLOCK_LEN - tempPos;
         const uint32_t cpyLen = (left > dataLeft) ? dataLeft : left;
-        if (memcpy_s(temp + tempPos, left, in->data + offset, cpyLen) != EOK) {
-            BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-            return CRYPT_SECUREC_FAIL;
-        }
+        (void)memcpy_s(temp + tempPos, left, in->data + offset, cpyLen);
 
         if (left == cpyLen) {
             if ((ret = DRBG_CtrBCCUpdateKX(drbg, temp)) != CRYPT_SUCCESS) {
@@ -575,8 +572,8 @@ void DRBG_CtrFree(DRBG_Ctx *drbg)
 
     DRBG_CtrUnInstantiate(drbg);
     DRBG_CtrCtx *ctx = (DRBG_CtrCtx*)drbg->ctx;
-    BSL_SAL_FREE(ctx->dfCtx);
-    BSL_SAL_FREE(drbg);
+    BSL_SAL_Free(ctx->dfCtx);
+    BSL_SAL_Free(drbg);
 }
 
 static void DRBG_InitializeRanges(DRBG_Ctx *drbg, const DRBG_CtrCtx *ctx, bool isUsedDf, uint32_t keyLen)
@@ -625,7 +622,7 @@ DRBG_Ctx *DRBG_NewCtrCtx(const EAL_SymMethod *ciphMeth, uint32_t keyLen, bool is
     }
     void *dfCtx = (void*)BSL_SAL_Malloc(ciphMeth->ctxSize); // have 2 contexts
     if (dfCtx == NULL) {
-        BSL_SAL_FREE(drbg);
+        BSL_SAL_Free(drbg);
         return NULL;
     }
 

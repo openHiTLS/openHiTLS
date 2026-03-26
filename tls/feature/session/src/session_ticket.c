@@ -144,8 +144,7 @@ static int32_t PackEncryptTicket(HITLS_Lib_Ctx *libCtx, const char *attrName,
     }
     ret = SESS_Encode(sess, plaintext, plaintextLen, &plaintextLen);
     if (ret != HITLS_SUCCESS) {
-        BSL_SAL_CleanseData(plaintext, plaintextLen);
-        BSL_SAL_FREE(plaintext);
+        BSL_SAL_ClearFree(plaintext, plaintextLen);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16025, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "SESS_Encode fail when encrypt session ticket.", 0, 0, 0, 0);
         return ret;
@@ -167,8 +166,8 @@ static int32_t PackEncryptTicket(HITLS_Lib_Ctx *libCtx, const char *attrName,
     /* Encrypt and fill the ticket. */
     uint32_t encryptLen = len - offset;
     ret = SAL_CRYPT_Encrypt(libCtx, attrName, cipher, plaintext, plaintextLen, &data[offset], &encryptLen);
-    BSL_SAL_CleanseData(plaintext, plaintextLen);
-    BSL_SAL_FREE(plaintext);
+    BSL_SAL_ClearFree(plaintext, plaintextLen);
+
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16026, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "SAL_CRYPT_Encrypt fail when encrypt session ticket.", 0, 0, 0, 0);
@@ -405,8 +404,8 @@ static int32_t GenerateSessFromTicket(HITLS_Lib_Ctx *libCtx, const char *attrNam
     int32_t ret = SAL_CRYPT_Decrypt(libCtx, attrName,
         cipher, ticket->encryptedState, ticket->encryptedStateSize, plaintext, &plaintextLen);
     if (ret != HITLS_SUCCESS) {
-        BSL_SAL_CleanseData(plaintext, plaintextLen);
-        BSL_SAL_FREE(plaintext);
+        BSL_SAL_ClearFree(plaintext, plaintextLen);
+
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16038, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "SAL_CRYPT_Decrypt fail when decrypt session ticket.", 0, 0, 0, 0);
         /* The ticket fails to be decrypted, but the complete connection can be established. Therefore, HITLS_SUCCESS is
@@ -428,8 +427,8 @@ static int32_t GenerateSessFromTicket(HITLS_Lib_Ctx *libCtx, const char *attrNam
         }
 
         if (good == 0) {
-            BSL_SAL_CleanseData(plaintext, plaintextLen);
-            BSL_SAL_FREE(plaintext);
+            BSL_SAL_ClearFree(plaintext, plaintextLen);
+
             return HITLS_SUCCESS;
         }
         plaintextLen -= paddingLen + sizeof(uint8_t);
@@ -439,8 +438,8 @@ static int32_t GenerateSessFromTicket(HITLS_Lib_Ctx *libCtx, const char *attrNam
     /* Parse the ticket content to the SESS. */
     HITLS_Session *session = HITLS_SESS_New();
     if (session == NULL) {
-        BSL_SAL_CleanseData(plaintext, plaintextLen);
-        BSL_SAL_FREE(plaintext);
+        BSL_SAL_ClearFree(plaintext, plaintextLen);
+
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16039, "HITLS_SESS_New fail");
     }

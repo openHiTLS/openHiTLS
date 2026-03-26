@@ -39,7 +39,7 @@ void HITLS_PKCS12_AttributesFree(void *attribute)
     }
     HITLS_PKCS12_SafeBagAttr *attr = attribute;
     BSL_SAL_FREE(attr->attrValue.data);
-    BSL_SAL_FREE(attr);
+    BSL_SAL_Free(attr);
 }
 
 void HITLS_PKCS12_SafeBagFree(HITLS_PKCS12_SafeBag *safeBag)
@@ -49,8 +49,7 @@ void HITLS_PKCS12_SafeBagFree(HITLS_PKCS12_SafeBag *safeBag)
     }
     HITLS_X509_AttrsFree(safeBag->attributes, HITLS_PKCS12_AttributesFree);
     safeBag->attributes = NULL;
-    BSL_SAL_CleanseData(safeBag->bag->data, safeBag->bag->dataLen);
-    BSL_SAL_FREE(safeBag->bag->data);
+    BSL_SAL_ClearFree(safeBag->bag->data, safeBag->bag->dataLen);
     BSL_SAL_FREE(safeBag->bag);
     BSL_SAL_Free(safeBag);
     return;
@@ -95,8 +94,7 @@ void HITLS_PKCS12_MacDataFree(HITLS_PKCS12_MacData *macData)
     }
 
     if (macData->macSalt != NULL) {
-        BSL_SAL_CleanseData(macData->macSalt->data, macData->macSalt->dataLen);
-        BSL_SAL_FREE(macData->macSalt->data);
+        BSL_SAL_ClearFree(macData->macSalt->data, macData->macSalt->dataLen);
         BSL_SAL_Free(macData->macSalt);
     }
     BSL_SAL_Free(macData);
@@ -291,8 +289,7 @@ void HITLS_PKCS12_BagFree(HITLS_PKCS12_Bag *bag)
             }
             break;
         case BSL_CID_SECRETBAG:
-            BSL_SAL_CleanseData(bag->value.secret.data, bag->value.secret.dataLen);
-            BSL_SAL_FREE(bag->value.secret.data);
+            BSL_SAL_ClearFree(bag->value.secret.data, bag->value.secret.dataLen);
             break;
         default:
             break;
@@ -514,8 +511,7 @@ int32_t HITLS_PKCS12_KDF(HITLS_PKCS12 *p12, const uint8_t *pwd, uint32_t pwdLen,
 EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
     BSL_SAL_Free(D);
-    BSL_SAL_CleanseData(I, k);
-    BSL_SAL_Free(I);
+    BSL_SAL_ClearFree(I, k);
     BSL_SAL_Free(B);
     BSL_SAL_Free(A);
     return ret;
@@ -567,8 +563,7 @@ static int32_t TransCodePwd(BSL_Buffer *pwd, uint8_t **transcoded, uint32_t *tra
     }
     int32_t ret = Utf8ToUtf16(pwd->data, output, pwd->dataLen);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_SAL_CleanseData(output, outputLen);
-        BSL_SAL_FREE(output);
+        BSL_SAL_ClearFree(output, outputLen);
         return ret; // has pushed err code.
     }
     *transcodedLen = outputLen;
@@ -587,18 +582,15 @@ static int32_t GetHmacKey(HITLS_PKCS12 *p12, BSL_Buffer *pwd, uint32_t macSize, 
 
     uint8_t *key = BSL_SAL_Malloc(macSize);
     if (key == NULL) {
-        BSL_SAL_CleanseData(temPwd, temPwdLen);
-        BSL_SAL_FREE(temPwd);
+        BSL_SAL_ClearFree(temPwd, temPwdLen);
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
     BSL_Buffer keyBuffer = {key, macSize};
     ret = HITLS_PKCS12_KDF(p12, temPwd, temPwdLen, HITLS_PKCS12_KDF_MACKEY_ID, &keyBuffer);
-    BSL_SAL_CleanseData(temPwd, temPwdLen);
-    BSL_SAL_FREE(temPwd);
+    BSL_SAL_ClearFree(temPwd, temPwdLen);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_SAL_CleanseData(key, macSize);
-        BSL_SAL_FREE(key);
+        BSL_SAL_ClearFree(key, macSize);
         return ret;
     }
     *keyData = key;
@@ -664,14 +656,12 @@ int32_t HITLS_PKCS12_CalMac(HITLS_PKCS12 *p12, BSL_Buffer *pwd, BSL_Buffer *init
 
     CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_ProviderMacNewCtx(p12->libCtx, macId, p12->attrName);
     if (ctx == NULL) {
-        BSL_SAL_CleanseData(keyData, macSize);
-        BSL_SAL_FREE(keyData);
+        BSL_SAL_ClearFree(keyData, macSize);
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
     ret = CRYPT_EAL_MacInit(ctx, keyData, macSize);
-    BSL_SAL_CleanseData(keyData, macSize);
-    BSL_SAL_FREE(keyData);
+    BSL_SAL_ClearFree(keyData, macSize);
     if (ret != HITLS_PKI_SUCCESS) {
         CRYPT_EAL_MacFreeCtx(ctx);
         BSL_ERR_PUSH_ERROR(ret);
@@ -692,7 +682,7 @@ int32_t HITLS_PKCS12_CalMac(HITLS_PKCS12 *p12, BSL_Buffer *pwd, BSL_Buffer *init
     ret = CRYPT_EAL_MacFinal(ctx, temp, &macSize);
     CRYPT_EAL_MacFreeCtx(ctx);
     if (ret != HITLS_PKI_SUCCESS) {
-        BSL_SAL_FREE(temp);
+        BSL_SAL_Free(temp);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }

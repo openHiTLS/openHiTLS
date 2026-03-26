@@ -134,11 +134,11 @@ static int32_t ProcRsaPssParam(BSL_ASN1_Buffer *rsaPssParam, CRYPT_EAL_PkeyCtx *
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    if (rsaPssParam == NULL || rsaPssParam->buff == NULL) {
+    if (rsaPssParam->buff == NULL) {
         return CRYPT_SUCCESS;
     }
 
-    CRYPT_RSA_PssPara para = {0};
+    CRYPT_RSA_PssPara para;
     ret = CRYPT_EAL_ParseRsaPssAlgParam(rsaPssParam, &para);
     if (ret != CRYPT_SUCCESS) {
         return ret;
@@ -1144,7 +1144,7 @@ static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
     BSL_ASN1_Buffer *oid = algoId; // OID
     BSL_ASN1_Buffer *algParam = algoId + 1; // the parameters
     BSL_ASN1_Buffer *pubkey = &encode[CRYPT_SUBKEYINFO_BITSTRING_IDX]; // the last BSL_ASN1_Buffer, the pubkey
-    BSL_ASN1_BitString bitPubkey = {0};
+    BSL_ASN1_BitString bitPubkey;
     ret = BSL_ASN1_DecodePrimitiveItem(pubkey, &bitPubkey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -2191,7 +2191,7 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
     }
     BslOidString *oidStr = BSL_OBJ_GetOID((BslCid)cid);
     if (oidStr == NULL) {
-        BSL_SAL_FREE(bitTmp.data);
+        BSL_SAL_Free(bitTmp.data);
         ret = CRYPT_ERR_ALGID;
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
@@ -2201,7 +2201,7 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
     algoId[BSL_ASN1_TAG_ALGOID_IDX].tag = BSL_ASN1_TAG_OBJECT_ID;
     ret = CRYPT_ENCODE_AlgoIdAsn1Buff(algoId, BSL_ASN1_TAG_ALGOID_ANY_IDX + 1, &algo->buff, &algo->len);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_FREE(bitTmp.data);
+        BSL_SAL_Free(bitTmp.data);
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
@@ -2220,7 +2220,7 @@ EXIT:
 int32_t CRYPT_EAL_EncodeAsn1SubPubkey(CRYPT_EAL_PkeyCtx *ealPubKey, bool isComplete, BSL_Buffer *encodeH)
 {
     BSL_ASN1_Buffer algo = {0};
-    BSL_Buffer bitStr = {0};
+    BSL_Buffer bitStr;
     int32_t ret = CRYPT_EAL_SubPubkeyGetInfo(ealPubKey, &algo, &bitStr);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

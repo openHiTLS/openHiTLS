@@ -41,10 +41,7 @@ typedef struct {
 
 static int32_t BufferCreate(BSL_UIO *uio)
 {
-    if (uio == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
+    // Parameter has been validated in BSL_UIO_New()
     BufferCtx *ctx = BSL_SAL_Calloc(1, sizeof(BufferCtx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -53,26 +50,23 @@ static int32_t BufferCreate(BSL_UIO *uio)
     ctx->outSize = UIO_BUFFER_DEFAULT_SIZE;
     ctx->outBuf = (uint8_t *)BSL_SAL_Malloc(UIO_BUFFER_DEFAULT_SIZE);
     if (ctx->outBuf == NULL) {
-        BSL_SAL_FREE(ctx);
+        BSL_SAL_Free(ctx);
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    BSL_UIO_SetCtx(uio, ctx);
+    uio->ctx = ctx;
     uio->init = true;
     return BSL_SUCCESS;
 }
 
 static int32_t BufferDestroy(BSL_UIO *uio)
 {
-    if (uio == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
-    BufferCtx *ctx = BSL_UIO_GetCtx(uio);
+    // Parameter has been validated in BSL_UIO_Free()
+    BufferCtx *ctx = uio->ctx;
     if (ctx != NULL) {
         BSL_SAL_FREE(ctx->outBuf);
-        BSL_SAL_FREE(ctx);
-        BSL_UIO_SetCtx(uio, NULL);
+        BSL_SAL_Free(ctx);
+        uio->ctx = NULL;
     }
     uio->flags = 0;
     uio->init = false;
@@ -81,11 +75,8 @@ static int32_t BufferDestroy(BSL_UIO *uio)
 
 static int32_t BufferFlushInternal(BSL_UIO *uio)
 {
-    BufferCtx *ctx = BSL_UIO_GetCtx(uio);
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
-        return BSL_NULL_INPUT;
-    }
+    // Parameter uio->ctx has been validated in BufferFlush() and BufferWrite()
+    BufferCtx *ctx = uio->ctx;
     while (ctx->outLen > 0) {
         uint32_t tmpWriteLen = 0;
         int32_t ret = BSL_UIO_Write(uio->next, &ctx->outBuf[ctx->outOff], ctx->outLen, &tmpWriteLen);
@@ -106,12 +97,12 @@ static int32_t BufferFlushInternal(BSL_UIO *uio)
 
 static int32_t BufferFlush(BSL_UIO *uio, int32_t larg, void *parg)
 {
-    bool invalid = (uio == NULL) || (uio->next == NULL) || (uio->ctx == NULL);
+    BufferCtx *ctx = uio->ctx;
+    bool invalid = (uio->next == NULL) || (ctx == NULL);
     if (invalid) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
-    BufferCtx *ctx = BSL_UIO_GetCtx(uio);
     if (ctx->outLen == 0) { // invoke the flush of the next UIO object
         return BSL_UIO_Ctrl(uio->next, BSL_UIO_FLUSH, larg, parg);
     }
@@ -128,7 +119,7 @@ static int32_t BufferFlush(BSL_UIO *uio, int32_t larg, void *parg)
 
 static int32_t BufferReset(BSL_UIO *uio)
 {
-    if (uio == NULL || uio->ctx == NULL) {
+    if (uio->ctx == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
@@ -149,7 +140,7 @@ static int32_t BufferSetBufferSize(BSL_UIO *uio, int32_t larg, void *parg)
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
-    BufferCtx *ctx = BSL_UIO_GetCtx(uio);
+    BufferCtx *ctx = uio->ctx;
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
@@ -206,14 +197,14 @@ static int32_t TryCompleteBuffer(BufferCtx *ctx, const void *in, uint32_t remain
 
 static int32_t BufferWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen)
 {
-    bool invalid = (uio == NULL) || (buf == NULL) || (writeLen == NULL) || (uio->next == NULL);
-    if (invalid) {
+    // Parameter uio/buf/writeLen already checked by BSL_UIO_Write()
+    if (uio->next == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
     *writeLen = 0;
-    BufferCtx *ctx = BSL_UIO_GetCtx(uio);
-    invalid = (ctx == NULL) || (ctx->outBuf == NULL);
+    BufferCtx *ctx = uio->ctx;
+    bool invalid = (ctx == NULL) || (ctx->outBuf == NULL);
     if (invalid) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;

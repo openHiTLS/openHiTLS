@@ -2812,6 +2812,7 @@ void SDV_X509_VFY_EXT_UNSUPPORTED_CRIT_EXT_FAIL_TC001(void)
 {
     TestMemInit();
 
+    uint32_t secBits = 128;
     HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
     ASSERT_NE(store, NULL);
 
@@ -2838,8 +2839,11 @@ void SDV_X509_VFY_EXT_UNSUPPORTED_CRIT_EXT_FAIL_TC001(void)
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
-    int32_t ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_X509_ERR_PROCESS_CRITICALEXT);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_PROCESS_CRITICALEXT);
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_SECBITS, &secBits, sizeof(secBits)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_CHECK_SECBITS);
 
     HITLS_X509_List *built = NULL;
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),

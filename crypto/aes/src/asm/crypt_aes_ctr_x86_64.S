@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_CTR)
+#if defined(HITLS_CRYPTO_AES) && (defined(HITLS_CRYPTO_CTR) || defined(HITLS_CRYPTO_GCM))
 
 .text
 

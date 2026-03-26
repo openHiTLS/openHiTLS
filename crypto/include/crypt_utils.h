@@ -39,11 +39,15 @@ extern "C" {
     #define UNLIKELY(x) __builtin_expect(!!(x), 0)
     #define ALIGN32     __attribute__((aligned(32)))
     #define ALIGN64     __attribute__((aligned(64)))
+    #define NOINLINE    __attribute__((noinline))
+#elif defined(_MSC_VER)
+    #define NOINLINE    __declspec(noinline)
 #else
     #define LIKELY(x) x
     #define UNLIKELY(x) x
     #define ALIGN32
     #define ALIGN64
+    #define NOINLINE
 #endif
 
 #define FORCE_ADDR_ALIGN 1
@@ -180,6 +184,15 @@ do {                                         \
                 BSL_ERR_PUSH_ERROR((ret));                           \
                 goto ERR;                                   \
             }                                               \
+        }                                                   \
+    } while (0)
+
+#define GOTO_ERR_IF_DST_NULL(dest, func, ret)               \
+    do {                                                    \
+        (dest) = (func);                                    \
+        if ((dest) == NULL) {                               \
+            BSL_ERR_PUSH_ERROR((ret));                      \
+            goto ERR;                                       \
         }                                                   \
     } while (0)
 

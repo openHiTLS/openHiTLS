@@ -50,8 +50,8 @@ void CipherMacDeinitCtx(Cipher_MAC_Common_Ctx *ctx)
         return;
     }
     const EAL_SymMethod *method = ctx->method;
-    BSL_SAL_CleanseData((void *)(ctx->key), method->ctxSize);
-    BSL_SAL_FREE(ctx->key);
+    BSL_SAL_ClearFree((void *)(ctx->key), method->ctxSize);
+    ctx->key = NULL;
 }
 
 int32_t CipherMacInit(Cipher_MAC_Common_Ctx *ctx, const uint8_t *key, uint32_t len)

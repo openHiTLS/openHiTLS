@@ -35,9 +35,9 @@ int32_t MODES_ECB_InitCtx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t
 
 int32_t MODES_ECB_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);
 int32_t MODES_ECB_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen);
-int32_t MODES_ECB_DeinitCtx(MODES_CipherCtx *modeCtx);
+#define MODES_ECB_DeinitCtx MODES_CipherDeInitCtx
 int32_t MODES_ECB_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen);
-void MODES_ECB_FreeCtx(MODES_CipherCtx *modeCtx);
+#define MODES_ECB_FreeCtx MODES_CipherFreeCtx
 
 // AES ECB optimization implementation
 int32_t AES_ECB_Update(MODES_CipherCtx *modeCtx, const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen);

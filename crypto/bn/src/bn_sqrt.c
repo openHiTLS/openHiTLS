@@ -26,7 +26,6 @@
 #include "bn_optimizer.h"
 #include "crypt_bn.h"
 
-
 static uint32_t GetExp(const BN_BigNum *bn)
 {
     uint32_t s = 0;
@@ -286,16 +285,6 @@ ERR:
     return ret;
 }
 
-static int32_t BN_ModSqrtTempDataCheck(const BN_BigNum *pSubOne, const BN_BigNum *q,
-    const BN_BigNum *z, const BN_BigNum *c, const BN_BigNum *t)
-{
-    if (pSubOne == NULL || q == NULL || z == NULL || c == NULL || t == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    return CRYPT_SUCCESS;
-}
-
 /* 1. Input parameters a and p. p is an odd prime number, and a is an integer (0 <= a <= p-1)
 2. For P-1 processing, let p-1 = q * 2^s
 3. If s=1，r = a^((p + 1)/4)
@@ -312,19 +301,24 @@ int32_t BN_ModSqrt(BN_BigNum *r, const BN_BigNum *a, const BN_BigNum *p, BN_Opti
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = OptimizerStart(opt);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    uint32_t s = 0;
+    int32_t ret;
+    uint32_t s;
     BN_Mont *mont = NULL;
-    BN_BigNum *pSubOne = OptimizerGetBn(opt, p->size);
-    BN_BigNum *q = OptimizerGetBn(opt, p->size);
-    BN_BigNum *z = OptimizerGetBn(opt, p->size);
-    BN_BigNum *c = OptimizerGetBn(opt, p->size);
-    BN_BigNum *t = OptimizerGetBn(opt, p->size);
-    GOTO_ERR_IF(BN_ModSqrtTempDataCheck(pSubOne, q, z, c, t), ret);
+    BN_BigNum *pSubOne;
+    BN_BigNum *q;
+    BN_BigNum *z;
+    BN_BigNum *c;
+    BN_BigNum *t;
+    BN_BigNum *bns[5]; // get 5 BNs
+
+    RETURN_RET_IF_ERR(OptimizerStart(opt), ret);
+
+    GOTO_ERR_IF_EX(OptimizerGetXBn(opt, p->size, 5, bns), ret); // get 5 BNs
+    pSubOne = bns[0]; // 0th bn
+    q = bns[1]; // 1st bn
+    z = bns[2]; // 2nd bn
+    c = bns[3]; // 3rd bn
+    t = bns[4]; // 4th bn
 
     GOTO_ERR_IF_EX(CheckParam(a, p), ret);
 

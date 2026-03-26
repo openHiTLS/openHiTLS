@@ -56,8 +56,7 @@ void RecConnStateFree(RecConnState *state)
         SAL_CRYPT_CipherFree(state->suiteInfo->ctx);
     }
     /* Clear sensitive information */
-    BSL_SAL_CleanseData(state->suiteInfo, sizeof(RecConnSuitInfo));
-    BSL_SAL_FREE(state->suiteInfo);
+    BSL_SAL_ClearFree(state->suiteInfo, sizeof(RecConnSuitInfo));
     BSL_SAL_Free(state);
 }
 
@@ -93,10 +92,8 @@ int32_t RecConnStateSetCipherInfo(RecConnState *state, RecConnSuitInfo *suitInfo
         state->suiteInfo->macCtx = NULL;
 #endif
     }
-    /* Clear sensitive information */
-    BSL_SAL_CleanseData(state->suiteInfo, sizeof(RecConnSuitInfo));
-    // Ensure that no memory leak occurs
-    BSL_SAL_FREE(state->suiteInfo);
+    /* Clear sensitive information, Ensure that no memory leak occurs */
+    BSL_SAL_ClearFree(state->suiteInfo, sizeof(RecConnSuitInfo));
     state->suiteInfo = (RecConnSuitInfo *)BSL_SAL_Malloc(sizeof(RecConnSuitInfo));
     if (state->suiteInfo == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);

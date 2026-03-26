@@ -585,6 +585,28 @@ int32_t HITLS_X509_ParseX509(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int
     return HITLS_X509_ERR_FORMAT_UNSUPPORT;
 }
 
+int32_t HITLS_X509_ParseBundleBuff(void *libCtx, const char *attrName, int32_t format,
+    const BSL_Buffer *encode, X509_ParseFuncCbk *cbk, bool isCert, uint32_t objSize, HITLS_X509_List **list)
+{
+    if (encode == NULL || encode->data == NULL || encode->dataLen == 0 || list == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    HITLS_X509_List *tmpList = BSL_LIST_New(objSize);
+    if (tmpList == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    int32_t ret = HITLS_X509_ParseX509(libCtx, attrName, format, encode, isCert, cbk, tmpList);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_LIST_FREE(tmpList, (BSL_LIST_PFUNC_FREE)cbk->x509Free);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    *list = tmpList;
+    return HITLS_PKI_SUCCESS;
+}
+
 #ifdef HITLS_PKI_X509_VFY
 static int32_t X509_NodeNameCompare(BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *dest)
 {

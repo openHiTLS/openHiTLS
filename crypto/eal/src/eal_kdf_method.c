@@ -93,7 +93,7 @@ int32_t EAL_KdfFindMethod(CRYPT_KDF_AlgId id, EAL_KdfMethod *method)
         return CRYPT_EAL_ERR_ALGID;
     }
 
-    (void)memcpy_s(method, sizeof(EAL_KdfMethod), pKdfMeth, sizeof(EAL_KdfMethod));
+    *method = *pKdfMeth;
     return CRYPT_SUCCESS;
 }
 

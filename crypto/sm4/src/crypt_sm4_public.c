@@ -21,9 +21,6 @@
 
 void CRYPT_SM4_XTS_Clean(CRYPT_SM4_Ctx *ctx)
 {
-    if (ctx == NULL) {
-        return;
-    }
     BSL_SAL_CleanseData((void *)(ctx), sizeof(CRYPT_SM4_Ctx) * 2); // cipher context has 2 method contexts in xts mode
 }
 #endif /* HITLS_CRYPTO_SM4 */

@@ -152,13 +152,12 @@ static int32_t IsParamValid(const CRYPT_SM2_Ctx *selfCtx, const CRYPT_SM2_Ctx *p
     return CRYPT_SUCCESS;
 }
 
-static void BnMemDestroy(BN_BigNum *xs, BN_BigNum *xp, BN_BigNum *t, BN_BigNum *twoPowerW, BN_BigNum *order)
+static void BnMemDestroy(BN_BigNum *xs, BN_BigNum *xp, BN_BigNum *t, BN_BigNum *twoPowerW)
 {
     BN_Destroy(xs);
     BN_Destroy(xp);
     BN_Destroy(t);
     BN_Destroy(twoPowerW);
-    BN_Destroy(order);
 }
 
 static int32_t Sm3MsgHash(const EAL_MdMethod *hashMethod, const uint8_t *yBuf, const uint8_t *hashBuf,
@@ -333,11 +332,11 @@ int32_t CRYPT_SM2_KapComputeKey(const CRYPT_SM2_Ctx *selfCtx, const CRYPT_SM2_Ct
     BN_BigNum *xp = BN_Create(keyBits);
     BN_BigNum *t = BN_Create(keyBits);
     BN_BigNum *twoPowerW = BN_Create(keyBits);
-    BN_BigNum *order = ECC_GetParaN(selfCtx->pkey->para);
+    BN_BigNum *order = ECC_GetParaRawN(selfCtx->pkey->para);
     uint32_t w;
     int32_t ret;
     BN_Optimizer *opt = BN_OptimizerCreate();
-    if (uorv == NULL || xs == NULL || xp == NULL || t == NULL || twoPowerW == NULL || order == NULL || opt == NULL) {
+    if (uorv == NULL || xs == NULL || xp == NULL || t == NULL || twoPowerW == NULL || opt == NULL) {
         ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -374,7 +373,7 @@ int32_t CRYPT_SM2_KapComputeKey(const CRYPT_SM2_Ctx *selfCtx, const CRYPT_SM2_Ct
     GOTO_ERR_IF_EX(Sm2KapFinalCheck((CRYPT_SM2_Ctx *)(uintptr_t)selfCtx, (CRYPT_SM2_Ctx *)(uintptr_t)peerCtx, uorv),
         ret);
 ERR:
-    BnMemDestroy(xs, xp, t, twoPowerW, order);
+    BnMemDestroy(xs, xp, t, twoPowerW);
     ECC_FreePoint(uorv);
     Sm2CleanR((CRYPT_SM2_Ctx *)(uintptr_t)selfCtx);
     BN_OptimizerDestroy(opt);

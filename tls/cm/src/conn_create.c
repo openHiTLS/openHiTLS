@@ -897,9 +897,7 @@ int32_t HITLS_LogSecret(HITLS_Ctx *ctx, const char *label, const uint8_t *secret
 
     ctx->globalConfig->keyLogCb(ctx, (const char *)outBuffer);
 
-    BSL_SAL_CleanseData(outBuffer, (uint32_t)outLen);
-    BSL_SAL_FREE(outBuffer);
-
+    BSL_SAL_ClearFree(outBuffer, (uint32_t)outLen);
     return HITLS_SUCCESS;
 }
 #endif /* HITLS_TLS_MAINTAIN_KEYLOG */

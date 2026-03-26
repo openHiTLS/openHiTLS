@@ -94,11 +94,6 @@ int32_t MODES_ECB_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLen
     return MODES_CipherFinal(modeCtx, modeCtx->enc ? MODES_ECB_Encrypt : MODES_ECB_Decrypt, out, outLen);
 }
 
-int32_t MODES_ECB_DeinitCtx(MODES_CipherCtx *modeCtx)
-{
-    return MODES_CipherDeInitCtx(modeCtx);
-}
-
 int32_t MODES_ECB_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_t valLen)
 {
     int ret;
@@ -143,11 +138,6 @@ int32_t MODES_ECB_Ctrl(MODES_CipherCtx *modeCtx, int32_t cmd, void *val, uint32_
         default:
             return MODES_CipherCtrl(modeCtx, cmd, val, valLen);
     }
-}
-
-void MODES_ECB_FreeCtx(MODES_CipherCtx *modeCtx)
-{
-    MODES_CipherFreeCtx(modeCtx);
 }
 
 int32_t MODES_ECB_InitCtxEx(MODES_CipherCtx *modeCtx, const uint8_t *key, uint32_t keyLen, const uint8_t *iv,

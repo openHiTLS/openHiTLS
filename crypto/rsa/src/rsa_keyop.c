@@ -28,21 +28,14 @@
 
 static int32_t SetPrvPara(const CRYPT_RSA_PrvKey *prvKey, const CRYPT_RsaPrv *prv)
 {
-    int32_t ret = BN_Bin2Bn(prvKey->n, prv->n, prv->nLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    (void)BN_Bin2Bn(prvKey->n, prv->n, prv->nLen);
+
     uint32_t bnBits = BN_Bits(prvKey->n);
     if (bnBits > RSA_MAX_MODULUS_BITS || bnBits < RSA_MIN_MODULUS_BITS) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_KEY_BITS);
         return CRYPT_RSA_ERR_KEY_BITS;
     }
-    ret = BN_Bin2Bn(prvKey->d, prv->d, prv->dLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    (void)BN_Bin2Bn(prvKey->d, prv->d, prv->dLen);
     // d cannot be 0 or 1. The mathematical logic of e and d is that
     // d and e are reciprocal in mod((p-1) * (q-1)); When d is 1, e and d must be 1. When d is 0, e doesn't exist.
     if (BN_IsZero(prvKey->d) || BN_IsOne(prvKey->d)) {
@@ -53,6 +46,7 @@ static int32_t SetPrvPara(const CRYPT_RSA_PrvKey *prvKey, const CRYPT_RsaPrv *pr
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
         return CRYPT_RSA_ERR_INPUT_VALUE;
     }
+    int32_t ret = CRYPT_SUCCESS;
     if (prv->e != NULL) {
         ret = BN_Bin2Bn(prvKey->e, prv->e, prv->eLen);
         if (ret != CRYPT_SUCCESS) {
@@ -161,7 +155,7 @@ int32_t CRYPT_RSA_SetPrvKey(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPrv *prv)
     ctx->pad = newCtx->pad;
 
     BSL_SAL_ReferencesFree(&(newCtx->references));
-    BSL_SAL_FREE(newCtx);
+    BSL_SAL_Free(newCtx);
     return ret;
 ERR:
     CRYPT_RSA_FreeCtx(newCtx);
@@ -201,7 +195,7 @@ int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPub *pub)
     if (newPub == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    GOTO_ERR_IF(BN_Bin2Bn(newPub->n, pub->n, pub->nLen), ret);
+    (void)BN_Bin2Bn(newPub->n, pub->n, pub->nLen);
     bnBits = BN_Bits(newPub->n);
     if (bnBits > RSA_MAX_MODULUS_BITS || bnBits < RSA_MIN_MODULUS_BITS) {
         ret = CRYPT_RSA_ERR_KEY_BITS;
@@ -233,11 +227,11 @@ int32_t CRYPT_RSA_SetPubKey(CRYPT_RSA_Ctx *ctx, const CRYPT_RsaPub *pub)
         goto ERR;
     }
 
-    RSA_FREE_PUB_KEY(ctx->pubKey);
+    RSA_FreePubKey(ctx->pubKey);
     ctx->pubKey = newPub;
     return ret;
 ERR:
-    RSA_FREE_PUB_KEY(newPub);
+    RSA_FreePubKey(newPub);
     return ret;
 }
 
@@ -540,7 +534,7 @@ static int32_t FactorPQcheck(const BN_BigNum *e, const BN_BigNum *p, const BN_Bi
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    GOTO_ERR_IF(BN_SubLimb(tmp, p, 1), ret);
+    (void)BN_SubLimb(tmp, p, 1);
     GOTO_ERR_IF(BN_Gcd(tmp, e, tmp, opt), ret); // check gcd(p-1, e_pub) != 1
     if (!BN_IsOne(tmp)) {
         ret = CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
@@ -671,7 +665,7 @@ ERR:
 static int32_t RecoverPrimeFactorsAndCheck(const CRYPT_RSA_Ctx *pubKey, const CRYPT_RSA_Ctx *prvKey,
     BN_Optimizer *opt)
 {
-    int ret = OptimizerStart(opt);
+    int32_t ret = OptimizerStart(opt);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -680,18 +674,19 @@ static int32_t RecoverPrimeFactorsAndCheck(const CRYPT_RSA_Ctx *pubKey, const CR
     uint32_t tFactor;
     uint32_t nBits = BN_Bits(pubKey->pubKey->n);
     uint32_t needRoom = nBits / BN_UINT_BITS;
-    BN_BigNum *g = OptimizerGetBn(opt, needRoom);
-    BN_BigNum *x = OptimizerGetBn(opt, needRoom);
-    BN_BigNum *y = OptimizerGetBn(opt, needRoom);
-    BN_BigNum *nSubOne = OptimizerGetBn(opt, needRoom);
-    BN_BigNum *p = OptimizerGetBn(opt, needRoom);
-    BN_BigNum *q = OptimizerGetBn(opt, needRoom);
-    BN_BigNum *r = OptimizerGetBn(opt, needRoom);
-    if (g == NULL || x == NULL || y == NULL || nSubOne == NULL || p == NULL || q == NULL || r == NULL) {
+    BN_BigNum *bns[7]; // get 7 BNs
+    if (OptimizerGetXBn(opt, needRoom, 7, bns) != CRYPT_SUCCESS) { // get 7 BNs
         OptimizerEnd(opt);
         BSL_ERR_PUSH_ERROR(CRYPT_BN_OPTIMIZER_GET_FAIL);
         return CRYPT_BN_OPTIMIZER_GET_FAIL;
     }
+    BN_BigNum *g = bns[0]; // 0th bn
+    BN_BigNum *x = bns[1]; // 1st bn
+    BN_BigNum *y = bns[2]; // 2nd bn
+    BN_BigNum *nSubOne = bns[3]; // 3rd bn
+    BN_BigNum *p = bns[4]; // 4th bn
+    BN_BigNum *q = bns[5]; // 5th bn
+    BN_BigNum *r = bns[6]; // 6th bn
     GOTO_ERR_IF(BN_SubLimb(nSubOne, pubKey->pubKey->n, 1), ret); // n - 1
     // step 1: compute r = d * e - 1
     GOTO_ERR_IF(BN_Mul(r, prvKey->prvKey->d, pubKey->pubKey->e, opt), ret); // d * e

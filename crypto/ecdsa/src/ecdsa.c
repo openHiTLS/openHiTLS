@@ -247,11 +247,8 @@ static int32_t CryptEcdsaSign(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, u
     BN_BigNum *signR = NULL;
     BN_BigNum *signS = NULL;
     BN_BigNum *d = NULL;
-    BN_BigNum *paraN = ECC_GetParaN(ctx->para);
-    if (paraN == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
+    BN_BigNum *paraN = ECC_GetParaRawN(ctx->para);
+
     uint32_t keyBits = ECC_PkeyGetBits(ctx);
     signR = BN_Create(keyBits);
     signS = BN_Create(keyBits);
@@ -276,7 +273,6 @@ ERR:
     BN_Destroy(signR);
     BN_Destroy(signS);
 OK:
-    BN_Destroy(paraN);
     BN_Destroy(d);
     return rc;
 }
@@ -359,25 +355,24 @@ static int32_t EcdsaVerifyCore(const CRYPT_ECDSA_Ctx *ctx, const BN_BigNum *para
         return CRYPT_MEM_ALLOC_FAIL;
     }
     (void)OptimizerStart(opt);
+    uint32_t room = BITS_TO_BN_UNIT(CRYPT_ECDSA_GetBits(ctx));
+    BN_BigNum *w;
+    BN_BigNum *u1;
+    BN_BigNum *u2;
+    BN_BigNum *v;
+    BN_BigNum *tptX;
+    BN_BigNum *bns[5]; // get 5 BNs
     ECC_Point *tpt = ECC_NewPoint(ctx->para);
-    uint32_t keyBits = CRYPT_ECDSA_GetBits(ctx);
-    uint32_t room = BITS_TO_BN_UNIT(keyBits);
-    BN_BigNum *w = OptimizerGetBn(opt, room);
-    BN_BigNum *u1 = OptimizerGetBn(opt, room);
-    BN_BigNum *u2 = OptimizerGetBn(opt, room);
-    BN_BigNum *v = OptimizerGetBn(opt, room);
-    BN_BigNum *tptX = OptimizerGetBn(opt, room);
-    int32_t ret;
-    if (tpt == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
+    int32_t ret = CRYPT_MEM_ALLOC_FAIL;
+    if (tpt == NULL || (ret = OptimizerGetXBn(opt, room, 5, bns)) != CRYPT_SUCCESS) { // get 5 BNs
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    if ((w == NULL) || (u1 == NULL) || (u2 == NULL) || (v == NULL) || (tptX == NULL)) {
-        ret = CRYPT_BN_OPTIMIZER_GET_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
+    w = bns[0]; // 0th bn
+    u1 =  bns[1]; // 1st bn
+    u2 = bns[2]; // 2nd bn
+    v = bns[3]; // 3rd bn
+    tptX = bns[4]; // 4th bn
 
     // w = 1/s mod n
     GOTO_ERR_IF(ECC_ModOrderInv(ctx->para, w, s), ret);
@@ -422,11 +417,7 @@ int32_t CRYPT_ECDSA_VerifyData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, 
     }
 
     int32_t ret;
-    BN_BigNum *paraN = ECC_GetParaN(ctx->para);
-    if (paraN == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
+    BN_BigNum *paraN = ECC_GetParaRawN(ctx->para);
     uint32_t keyBits = ECC_PkeyGetBits(ctx);
     BN_BigNum *r = BN_Create(keyBits);
     BN_BigNum *s = BN_Create(keyBits);
@@ -442,7 +433,6 @@ int32_t CRYPT_ECDSA_VerifyData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, 
 
     GOTO_ERR_IF(EcdsaVerifyCore(ctx, paraN, d, r, s), ret);
 ERR:
-    BN_Destroy(paraN);
     BN_Destroy(r);
     BN_Destroy(s);
     BN_Destroy(d);
