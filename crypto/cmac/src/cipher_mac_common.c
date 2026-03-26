@@ -79,6 +79,10 @@ int32_t CipherMacUpdate(Cipher_MAC_Common_Ctx *ctx, const uint8_t *in, uint32_t 
     const EAL_SymMethod *method = ctx->method;
     int32_t ret;
     uint32_t blockSize = method->blockSize;
+    if (blockSize == 0 || blockSize > CIPHER_MAC_MAXBLOCKSIZE) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ERR_ALGID);
+        return CRYPT_ERR_ALGID;
+    }
     const uint8_t *inTmp = in;
     uint32_t lenTmp = len;
     if (ctx->len > 0) {
