@@ -63,7 +63,6 @@ void Poly1305SetKey(Poly1305Ctx *ctx, const uint8_t key[POLY1305_KEYSIZE])
 
 void Poly1305Update(Poly1305Ctx *ctx, const uint8_t *data, uint32_t dataLen)
 {
-    uint32_t i;
     uint32_t len = dataLen;
     const uint8_t *off = data;
     if (ctx->lastLen != 0) {
@@ -71,8 +70,11 @@ void Poly1305Update(Poly1305Ctx *ctx, const uint8_t *data, uint32_t dataLen)
         if (end > POLY1305_BLOCKSIZE) {
             end = POLY1305_BLOCKSIZE;
         }
-        for (i = ctx->lastLen; i < end; i++) {
-            ctx->last[i] = *off;
+        uint8_t *last = ctx->last + ctx->lastLen;
+        uint8_t *lastEnd = ctx->last + end;
+        while (last < lastEnd) {
+            *last = *off;
+            last++;
             off++;
         }
         len -= (uint32_t)(end - ctx->lastLen);
@@ -92,8 +94,12 @@ void Poly1305Update(Poly1305Ctx *ctx, const uint8_t *data, uint32_t dataLen)
     }
     ctx->lastLen = len & 0x0f; // mod 16;
     off += len - ctx->lastLen;
-    for (i = 0; i < ctx->lastLen; i++) {
-        ctx->last[i] = off[i];
+    uint8_t *last = ctx->last;
+    const uint8_t *lastSrcEnd = off + ctx->lastLen;
+    while (off < lastSrcEnd) {
+        *last = *off;
+        last++;
+        off++;
     }
 }
 

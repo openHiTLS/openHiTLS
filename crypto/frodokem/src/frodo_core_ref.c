@@ -228,15 +228,14 @@ static void MulSaPlusESHAKE(uint16_t *out, const uint16_t *matrixS, const int32_
 
 static int32_t FrodoCommonMulAddAsPlusESHAKE(uint16_t *out, const uint16_t *matrixST, const uint8_t *seedA,
                                              const FrodoKemParams *params, const int32_t n, const int32_t nBar,
-                                             uint16_t rows[FRODO_MATRIX_FOUR_ROWS_SIZE],
-                                             uint8_t seeds[FRODO_PRG_SEEDS_LEN], MultFunctionShake multFunction)
+                                             uint16_t rows[FRODO_MATRIX_FOUR_ROWS_SIZE], MultFunctionShake multFunction)
 {
     int32_t ret;
-    const size_t inLen = 2 + (size_t)params->lenSeedA;
-    uint8_t *in0 = &seeds[0 * inLen];
-    uint8_t *in1 = &seeds[1 * inLen];
-    uint8_t *in2 = &seeds[2 * inLen];
-    uint8_t *in3 = &seeds[3 * inLen];
+    const size_t inLen = 2 + (size_t)params->lenSeedA; // lenSeedA is FRODO_MAX_SEED_A
+    uint8_t in0[2 + FRODO_MAX_SEED_A];
+    uint8_t in1[2 + FRODO_MAX_SEED_A];
+    uint8_t in2[2 + FRODO_MAX_SEED_A];
+    uint8_t in3[2 + FRODO_MAX_SEED_A];
 
     for (int32_t ctr = 0; ctr < params->lenSeedA; ctr++) {
         in0[2 + ctr] = seedA[ctr];
@@ -274,8 +273,7 @@ int32_t FrodoCommonMulAddAsPlusEPortable(uint16_t *out, const uint16_t *matrixST
         uint8_t plaintext[FRODO_PRG_AES_PLAINTEXT_SIZE];
         return FrodoCommonMulAddAES(out, matrixST, seedA, N, nBar, rows, plaintext, MultAsPlusEAES);
     } else {
-        uint8_t seeds[FRODO_PRG_SEEDS_LEN];
-        return FrodoCommonMulAddAsPlusESHAKE(out, matrixST, seedA, params, N, nBar, rows, seeds, MulAsPlusESHAKE);
+        return FrodoCommonMulAddAsPlusESHAKE(out, matrixST, seedA, params, N, nBar, rows, MulAsPlusESHAKE);
     }
 }
 
@@ -293,8 +291,7 @@ int32_t FrodoCommonMulAddSaPlusEPortable(uint16_t *out, const uint16_t *s, const
         uint8_t plaintext[FRODO_PRG_AES_PLAINTEXT_SIZE];
         return FrodoCommonMulAddAES(out, s, seedA, n, nBar, rows, plaintext, MultSaPlusEAES);
     } else {
-        uint8_t seeds[FRODO_PRG_SEEDS_LEN];
-        return FrodoCommonMulAddAsPlusESHAKE(out, s, seedA, params, n, nBar, rows, seeds, MulSaPlusESHAKE);
+        return FrodoCommonMulAddAsPlusESHAKE(out, s, seedA, params, n, nBar, rows, MulSaPlusESHAKE);
     }
 }
 
