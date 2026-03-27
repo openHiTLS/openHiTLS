@@ -191,8 +191,10 @@ CHECK_SUPPORTED_GROUP:
 static uint16_t ServerSelectCurveId(const TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
     const TLS_Config *config = &ctx->config.tlsConfig;
-    const uint16_t *tuples = config->tuples == NULL ? config->groups : config->tuples;
-    const uint32_t tupleCount = config->tuples == NULL ? config->groupsSize : config->tuplesSize;
+    uint32_t tempTuples[1] = {config->groupsSize};
+    uint32_t tempTuplesSize = 1;
+    const uint32_t *tuples = config->tuples == NULL ? tempTuples : config->tuples;
+    const uint32_t tupleCount = config->tuples == NULL ? tempTuplesSize : config->tuplesSize;
 
     bool serverPrefer = false;
 #ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER

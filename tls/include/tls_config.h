@@ -153,7 +153,7 @@ typedef struct TlsConfig {
 
     /* Group tuple and keyshare configuration */
     uint32_t keyshareIndex[MAX_KEYSHARE_COUNT]; /* Indexes of groups that need to generate keyshare in client hello */
-    uint16_t *tuples;                  /* Number of groups in each tuple (priority groups) */
+    uint32_t *tuples;                  /* Number of groups in each tuple (priority groups) */
     uint32_t tuplesSize;               /* Number of tuples */
 
     uint16_t *signAlgorithms;           /* signature algorithm */

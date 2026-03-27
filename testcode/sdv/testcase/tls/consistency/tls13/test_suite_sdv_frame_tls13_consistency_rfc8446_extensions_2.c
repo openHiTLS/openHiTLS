@@ -41,6 +41,9 @@
 #include "alert.h"
 #include "bsl_sal.h"
 #include "hs_extensions.h"
+#include "stub_utils.h"
+#include "security.h"
+#include "hs_common.h"
 /* END_HEADER */
 #define MAX_BUF 16384
 
@@ -1801,5 +1804,105 @@ EXIT:
     HITLS_CFG_FreeConfig(clientCfg);
     HITLS_CFG_FreeConfig(serverCfg);
 
+}
+/* END_CASE */
+
+int32_t STUB_SECURITY_SslCheck(const HITLS_Ctx *ctx, int32_t option, int32_t bits, int32_t id, void *other)
+{
+    (void)ctx;
+    (void)option;
+    (void)bits;
+    (void)id;
+    (void)other;
+    return SECURITY_SUCCESS;
+}
+
+bool STUB_GroupConformToVersion(const TLS_Ctx *ctx, uint16_t version, uint16_t group)
+{
+    (void)ctx;
+    (void)version;
+    (void)group;
+    return true;
+}
+
+STUB_DEFINE_RET5(int32_t, SECURITY_SslCheck, const HITLS_Ctx *, int32_t, int32_t, int32_t, void *);
+STUB_DEFINE_RET3(bool, GroupConformToVersion, const TLS_Ctx *, uint16_t, uint16_t);
+
+/**
+ * @test UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC006
+ * @spec ServerSelectGroupByTuples
+ * @title Test the function of selecting a group when the tuple is empty.
+ * @precon nan
+ * @brief Scenario: The following configuration is created through the form of pile driving.
+ *        Server config Tuple: [1, 2, HITLS_EC_GROUP_SECP256R1]
+ *        Client keyshares: [2]
+ *        Client supported_groups: [1, 2, HITLS_EC_GROUP_SECP256R1]
+ *        Expected: The negotiated group is 2
+ * @expect The negotiated group is 2
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC006(int isServerPreference)
+{
+    FRAME_Init();
+    HITLS_Config *clientCfg = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *serverCfg = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientCfg != NULL && serverCfg != NULL);
+
+    uint16_t clientGroups[] = {HITLS_EC_GROUP_SECP384R1, HITLS_EC_GROUP_CURVE25519, HITLS_EC_GROUP_SECP256R1};
+    ASSERT_EQ(HITLS_CFG_SetGroups(clientCfg, clientGroups, sizeof(clientGroups) / sizeof(uint16_t)), HITLS_SUCCESS);
+
+    uint16_t serverGroups[] = {1, 2, HITLS_EC_GROUP_SECP256R1};
+    ASSERT_EQ(HITLS_CFG_SetGroups(serverCfg, serverGroups, sizeof(serverGroups) / sizeof(uint16_t)), HITLS_SUCCESS);
+    HITLS_CFG_SetCipherServerPreference(serverCfg, isServerPreference);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(clientCfg, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(serverCfg, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+
+    int32_t ret = FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO);
+    ASSERT_EQ(ret, HITLS_SUCCESS);
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recvLen != 0);
+
+    uint32_t parseLen = 0;
+    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+    frameType.handshakeType = CLIENT_HELLO;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+
+    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
+    clientMsg->keyshares.exKeyShares.data[0].group.state = ASSIGNED_FIELD;
+    clientMsg->keyshares.exKeyShares.data[0].group.data = 2;
+    clientMsg->supportedGroups.exData.state = ASSIGNED_FIELD;
+    clientMsg->supportedGroups.exData.data[0] = 1;
+    clientMsg->supportedGroups.exData.data[1] = 2;
+    uint32_t sendLen = MAX_RECORD_LENTH;
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    ASSERT_TRUE(FRAME_PackMsg(&frameType, &frameMsg, sendBuf, sendLen, &sendLen) == HITLS_SUCCESS);
+
+    ioUserData->recMsg.len = 0;
+    ASSERT_TRUE(FRAME_TransportRecMsg(server->io, sendBuf, sendLen) == HITLS_SUCCESS);
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+
+    STUB_REPLACE(SECURITY_SslCheck, STUB_SECURITY_SslCheck);
+    STUB_REPLACE(GroupConformToVersion, STUB_GroupConformToVersion);
+
+    (void)HITLS_Accept(server->ssl);
+
+    ASSERT_EQ(server->ssl->negotiatedInfo.negotiatedGroup, 2);
+
+EXIT:
+    STUB_RESTORE(SECURITY_SslCheck);
+    STUB_RESTORE(GroupConformToVersion);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(clientCfg);
+    HITLS_CFG_FreeConfig(serverCfg);
 }
 /* END_CASE */

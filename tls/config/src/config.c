@@ -281,7 +281,7 @@ static int32_t GroupCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *sr
 
     if (srcConfig->tuples != NULL) {
         int32_t ret2 = DeepCopy((void **)&destConfig->tuples, srcConfig->tuples, BINLOG_ID16585,
-            srcConfig->tuplesSize * sizeof(uint16_t));
+            srcConfig->tuplesSize * sizeof(uint32_t));
         if (ret2 != HITLS_SUCCESS) {
             return ret2;
         }
@@ -1002,6 +1002,7 @@ int32_t HITLS_CFG_SetGroups(HITLS_Config *config, const uint16_t *groups, uint32
         return HITLS_MEMALLOC_FAIL;
     }
 
+    BSL_SAL_FREE(config->tuples);
     BSL_SAL_FREE(config->groups);
     config->groups = newData;
     config->groupsSize = groupsSize;
@@ -1061,7 +1062,7 @@ static char *AllocAndCopyGroupName(const char *groupNames, uint32_t groupNamesLe
 typedef struct {
     uint16_t groupIds[MAX_GROUP_TYPE_NUM];
     uint32_t groupsSize;
-    uint16_t tuples[MAX_GROUP_TYPE_NUM];
+    uint32_t tuples[MAX_GROUP_TYPE_NUM];
     uint32_t tuplesSize;
     uint32_t keyshareIndex[MAX_KEYSHARE_COUNT];
     uint32_t keyshareCount;
@@ -1109,12 +1110,12 @@ static int32_t ParseGroupNameToId(HITLS_Config *config, char *groupName, GroupLi
     return HITLS_SUCCESS;
 }
 
-static int32_t SetTuples(HITLS_Config *config, uint16_t *tuples, uint32_t tuplesSize)
+static int32_t SetTuples(HITLS_Config *config, uint32_t *tuples, uint32_t tuplesSize)
 {
     if (config == NULL || tuples == NULL) {
         return HITLS_NULL_INPUT;
     }
-    uint16_t *tuplesData = BSL_SAL_Dump(tuples, tuplesSize * sizeof(uint16_t));
+    uint32_t *tuplesData = BSL_SAL_Dump(tuples, tuplesSize * sizeof(uint32_t));
     if (tuplesData == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16603, "Dump fail");
@@ -1157,11 +1158,11 @@ int32_t HITLS_CFG_SetGroupList(HITLS_Config *config, const char *groupNames, uin
     }
     BSL_SAL_FREE(groupNamesTmp);
 
-    ret = SetTuples(config, list.tuples, list.tuplesSize);
+    ret = HITLS_CFG_SetGroups(config, list.groupIds, list.groupsSize);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
-    ret = HITLS_CFG_SetGroups(config, list.groupIds, list.groupsSize);
+    ret = SetTuples(config, list.tuples, list.tuplesSize);
     (void)memcpy_s(config->keyshareIndex, sizeof(config->keyshareIndex), list.keyshareIndex, sizeof(list.keyshareIndex));
     return ret;
 }

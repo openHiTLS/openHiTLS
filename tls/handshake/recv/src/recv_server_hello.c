@@ -846,7 +846,7 @@ static int32_t Tls13ClientCheckServerHello(TLS_Ctx *ctx, const ServerHelloMsg *s
     return ClientCheckCipherSuite(ctx, serverHello, isHrr);
 }
 
-static bool FindGroupInKeyShare(TLS_Ctx *ctx, uint16_t selectedGroup)
+static bool FindGroupInKeyShare(const TLS_Ctx *ctx, uint16_t selectedGroup)
 {
     for (size_t i = 0; i < ctx->hsCtx->kxCtx->keyExchParam.share.count; i++) {
         if (selectedGroup == ctx->hsCtx->kxCtx->keyExchParam.share.groups[i]) {
