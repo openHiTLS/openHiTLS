@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
 #include "bsl_sal.h"
 #include "securec.h"
 #include "mceliece_local.h"

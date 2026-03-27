@@ -17,7 +17,7 @@
 #define ASM_ECP_SM2_ARMV7_H
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_CURVE_SM2_ARMV7
+#if defined(HITLS_CRYPTO_CURVE_SM2_ARMV7) && defined(HITLS_THIRTY_TWO_BITS)
 
 #include <stdint.h>
 

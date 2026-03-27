@@ -112,7 +112,8 @@
                             "deps": ["ghash"]
                         },
                         "hctr": null,
-                        "chacha20poly1305": null
+                        "chacha20poly1305": null,
+                        "wrap": null
                     },
                     "cipher": {
                         "aes": null,
@@ -189,7 +190,7 @@
                         "paillier": {"deps":["bn_rand", "bn_prime"]},
                         "elgamal": {"deps":["bn_rand", "bn_prime"]},
                         "slh_dsa": { "deps": ["sha3", "obj_default", "eal", "hmac", "sha256", "sha512", "xmss"]},
-                        "xmss": { "deps": ["sha3", "sha2", "obj_default", "eal", "sha256", "sha512"]},
+                        "xmss": { "deps": ["sha3", "obj_default", "eal", "sha256", "sha512"]},
                         "deps": ["params"]
                     },
                     "provider": {"deps": ["params", "hash", "list", "sal_str"]},
@@ -984,7 +985,7 @@
                 ]
             },
             "modes": {
-                ".features": ["cbc", "ecb", "xts", "ctr", "ofb", "cfb", "ccm", "gcm", "hctr", "chacha20poly1305", "ghash"],
+                ".features": ["cbc", "ecb", "xts", "ctr", "ofb", "cfb", "ccm", "gcm", "hctr", "chacha20poly1305", "wrap", "ghash"],
                 ".srcs": {
                     "public": "crypto/modes/src/modes*.c",
                     "no_asm": "crypto/modes/src/noasm_*.c",
