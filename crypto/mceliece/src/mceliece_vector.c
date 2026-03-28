@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
 #include <stdint.h>
 
 void VectorSetBit(uint8_t *vec, const uint32_t bitIdx, const uint32_t value)

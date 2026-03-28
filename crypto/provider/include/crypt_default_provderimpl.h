@@ -182,7 +182,7 @@ extern const CRYPT_EAL_Func g_defEalKeyMgmtMlKem[];
 #ifdef HITLS_CRYPTO_FRODOKEM
 extern const CRYPT_EAL_Func g_defEalKeyMgmtFrodoKem[];
 #endif
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
 extern const CRYPT_EAL_Func g_defEalKeyMgmtMceliece[];
 #endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
@@ -258,7 +258,7 @@ extern const CRYPT_EAL_Func g_defEalMlKem[];
 #ifdef HITLS_CRYPTO_FRODOKEM
 extern const CRYPT_EAL_Func g_defEalFrodoKem[];
 #endif
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
 extern const CRYPT_EAL_Func g_defEalMceliece[];
 #endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM

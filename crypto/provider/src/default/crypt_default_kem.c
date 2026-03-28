@@ -23,7 +23,7 @@
 #ifdef HITLS_CRYPTO_FRODOKEM
 #include "crypt_frodokem.h"
 #endif
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
 #include "crypt_mceliece.h"
 #endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
@@ -44,7 +44,7 @@ const CRYPT_EAL_Func g_defEalFrodoKem[] = {
     CRYPT_EAL_FUNC_END
 };
 #endif
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
 const CRYPT_EAL_Func g_defEalMceliece[] = {
     {CRYPT_EAL_IMPLPKEYKEM_ENCAPSULATE, (CRYPT_EAL_ImplPkeyKemEncapsulate)CRYPT_MCELIECE_Encaps},
     {CRYPT_EAL_IMPLPKEYKEM_DECAPSULATE, (CRYPT_EAL_ImplPkeyKemDecapsulate)CRYPT_MCELIECE_Decaps},

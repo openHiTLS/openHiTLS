@@ -357,7 +357,7 @@ int32_t PkeyProviderSetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *key
             return pkey->method.setPrv(pkey->key, &paParam);
         }
 #endif
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
         case CRYPT_PKEY_MCELIECE: {
             BSL_Param paParam[2] = {
                 {CRYPT_PARAM_MCELIECE_PRVKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemDk.data, key->key.kemDk.len, 0},
@@ -505,7 +505,7 @@ static int32_t GetFrodoKemPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemDecapsKey 
 }
 #endif
 
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
 static int32_t GetMceliecePrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemDecapsKey *kemDk)
 {
     BSL_Param param[2] = {
@@ -631,7 +631,7 @@ int32_t PkeyProviderGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *key
         case CRYPT_PKEY_FRODOKEM:
             return GetFrodoKemPrv(pkey, &key->key.kemDk);
 #endif
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
         case CRYPT_PKEY_MCELIECE:
             return GetMceliecePrv(pkey, &key->key.kemDk);
 #endif
@@ -733,7 +733,7 @@ int32_t PkeyProviderSetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *key
             return pkey->method.setPub(pkey->key, &paParam);
         }
 #endif
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
         case CRYPT_PKEY_MCELIECE : {
             BSL_Param paParam[2] = {
                 {CRYPT_PARAM_MCELIECE_PUBKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemEk.data, key->key.kemEk.len, 0},
@@ -899,7 +899,7 @@ static int32_t GetFrodoKemPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemEncapsKey 
 }
 #endif
 
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
 static int32_t GetMceliecePub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemEncapsKey *kemEk)
 {
     BSL_Param param[2] = {
@@ -1019,7 +1019,7 @@ int32_t PkeyProviderGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *key
         case CRYPT_PKEY_FRODOKEM:
             return GetFrodoKemPub(pkey, &key->key.kemEk);
 #endif
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
         case CRYPT_PKEY_MCELIECE:
             return GetMceliecePub(pkey, &key->key.kemEk);
 #endif

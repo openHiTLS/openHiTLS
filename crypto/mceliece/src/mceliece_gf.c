@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
 #include "mceliece_local.h"
 
 // Pre-computed logarithm table for GF(2^13) with polynomial 0x201B and generator 3

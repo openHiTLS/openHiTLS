@@ -638,9 +638,9 @@ static int32_t ECP_SM2FpPut(const Sm2Fp src, BN_BigNum *dst)
 static int32_t ECP_SM2PointGet(Sm2Point *dst, const ECC_Point *src)
 {
     int32_t ret;
-    GOTO_ERR_IF_EX(ECP_SM2FpGet(dst->x, src->x), ret);
-    GOTO_ERR_IF_EX(ECP_SM2FpGet(dst->y, src->y), ret);
-    GOTO_ERR_IF_EX(ECP_SM2FpGet(dst->z, src->z), ret);
+    GOTO_ERR_IF_EX(ECP_SM2FpGet(dst->x, &src->x), ret);
+    GOTO_ERR_IF_EX(ECP_SM2FpGet(dst->y, &src->y), ret);
+    GOTO_ERR_IF_EX(ECP_SM2FpGet(dst->z, &src->z), ret);
 ERR:
     return ret;
 }
@@ -648,9 +648,9 @@ ERR:
 static int32_t ECP_SM2PointPut(const Sm2Point *src, ECC_Point *dst)
 {
     int32_t ret;
-    GOTO_ERR_IF_EX(ECP_SM2FpPut(src->x, dst->x), ret);
-    GOTO_ERR_IF_EX(ECP_SM2FpPut(src->y, dst->y), ret);
-    GOTO_ERR_IF_EX(ECP_SM2FpPut(src->z, dst->z), ret);
+    GOTO_ERR_IF_EX(ECP_SM2FpPut(src->x, &dst->x), ret);
+    GOTO_ERR_IF_EX(ECP_SM2FpPut(src->y, &dst->y), ret);
+    GOTO_ERR_IF_EX(ECP_SM2FpPut(src->z, &dst->z), ret);
 ERR:
     return ret;
 }
@@ -785,7 +785,7 @@ int32_t ECP_Sm2Point2AffineWithInv(const ECC_Para *para, ECC_Point *r, const ECC
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_ERR_CURVE_ID);
         return CRYPT_ECC_POINT_ERR_CURVE_ID;
     }
-    if (BN_IsZero(a->z)) {
+    if (BN_IsZero(&a->z)) {
         // Infinite point multiplied by z is meaningless.
         BSL_ERR_PUSH_ERROR(CRYPT_ECC_POINT_AT_INFINITY);
         return CRYPT_ECC_POINT_AT_INFINITY;
@@ -812,15 +812,15 @@ int32_t ECP_Sm2PointAdd(const ECC_Para *para, ECC_Point *r, const ECC_Point *a, 
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (BN_IsZero(a->z)) {
+    if (BN_IsZero(&a->z)) {
         // If point a is an infinity point, r = b
         return ECC_CopyPoint(r, b);
     }
-    if (BN_IsZero(b->z)) {
+    if (BN_IsZero(&b->z)) {
         // If point b is an infinity point, r = a
         return ECC_CopyPoint(r, a);
     }
-    if (BN_Cmp(a->x, b->x) == 0 && BN_Cmp(a->y, b->y) == 0 && BN_Cmp(a->z, b->z) == 0) {
+    if (BN_Cmp(&a->x, &b->x) == 0 && BN_Cmp(&a->y, &b->y) == 0 && BN_Cmp(&a->z, &b->z) == 0) {
         return para->method->pointDouble(para, r, a);
     }
     int32_t ret = CRYPT_SUCCESS;
@@ -841,7 +841,7 @@ int32_t ECP_Sm2PointAddAffine(const ECC_Para *para, ECC_Point *r, const ECC_Poin
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    if (BN_IsZero(a->z)) { // If point a is an infinity point, r = b
+    if (BN_IsZero(&a->z)) { // If point a is an infinity point, r = b
         return ECC_CopyPoint(r, b);
     }
     int32_t ret = CRYPT_SUCCESS;

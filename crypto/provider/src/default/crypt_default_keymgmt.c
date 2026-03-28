@@ -18,7 +18,7 @@
     defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDSA) || \
     defined(HITLS_CRYPTO_ECDH) || defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_PAILLIER) || \
     defined(HITLS_CRYPTO_ELGAMAL) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_MLKEM) || \
-    defined(HITLS_CRYPTO_MLDSA) || defined(HILTS_CRYPTO_FRODOKEM) || defined(HITLS_CRYPTO_CLASSIC_MCELIECE) || \
+    defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_FRODOKEM) || defined(HITLS_CRYPTO_MCELIECE) || \
     defined(HITLS_CRYPTO_HYBRIDKEM)) && defined(HITLS_CRYPTO_PROVIDER)
 
 #include "crypt_eal_implprovider.h"
@@ -58,7 +58,7 @@
 #ifdef HITLS_CRYPTO_FRODOKEM
 #include "crypt_frodokem.h"
 #endif
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
 #include "crypt_mceliece.h"
 #endif
 
@@ -142,7 +142,7 @@ void *CRYPT_EAL_DefPkeyMgmtNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
         case CRYPT_PKEY_FRODOKEM:
             return CRYPT_FRODOKEM_NewCtxEx(provCtx->libCtx);
 #endif
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
         case CRYPT_PKEY_MCELIECE:
             return CRYPT_MCELIECE_NewCtxEx(provCtx->libCtx);
 #endif
@@ -424,7 +424,7 @@ const CRYPT_EAL_Func g_defEalKeyMgmtFrodoKem[] = {
 };
 #endif
 
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
 const CRYPT_EAL_Func g_defEalKeyMgmtMceliece[] = {
     {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_DefPkeyMgmtNewCtx},
     {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)CRYPT_MCELIECE_Gen},

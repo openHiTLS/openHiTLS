@@ -74,7 +74,7 @@
 #ifdef HITLS_CRYPTO_FRODOKEM
 #include "crypt_frodokem.h"
 #endif
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
 #include "crypt_mceliece.h"
 #endif
 
@@ -282,7 +282,7 @@ static const EAL_PkeyMethod METHODS[] = {
 #endif
     ),
 #endif
-#ifdef HITLS_CRYPTO_CLASSIC_MCELIECE
+#ifdef HITLS_CRYPTO_MCELIECE
         EAL_PKEY_METHOD_DEFINE(
                 CRYPT_PKEY_MCELIECE,
                 CRYPT_MCELIECE_NewCtx,
@@ -306,11 +306,7 @@ static const EAL_PkeyMethod METHODS[] = {
                 NULL, // decrypt
                 NULL, // headd
                 NULL, // hemul
-#ifdef HITLS_CRYPTO_MCELIECE_CHECK
-                CRYPT_MCELIECE_Check,
-#else
                 NULL, // check
-#endif
                 CRYPT_MCELIECE_Cmp,
                 NULL, // copyPara
                 CRYPT_MCELIECE_Encaps,
@@ -663,11 +659,7 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL, // decrypt
         NULL, // headd
         NULL, // hemul
-#ifdef HITLS_CRYPTO_FRODOKEM_CHECK
-        CRYPT_FRODOKEM_Check,
-#else
         NULL, // check
-#endif
         CRYPT_FRODOKEM_Cmp,
         NULL, // copyPara
         CRYPT_FRODOKEM_Encaps,
