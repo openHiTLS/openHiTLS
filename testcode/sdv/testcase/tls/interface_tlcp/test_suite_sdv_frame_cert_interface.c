@@ -1090,9 +1090,9 @@ void UT_TLS_CRL_VERIFICATION_HANDSHAKE_TC001(void)
     client = FRAME_CreateLinkBase(config, BSL_UIO_TCP, false);
     ASSERT_TRUE(client != NULL);
     ASSERT_EQ(HITLS_CFG_LoadCrlFile(config, crlPath, TLS_PARSE_FORMAT_ASN1), HITLS_SUCCESS);
-    
+
     HITLS_CFG_SetVerifyFlags(config, HITLS_X509_VFY_FLAG_CRL_DEV);
-    
+
     ASSERT_NE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     HITLS_ERROR ret;
     HITLS_GetVerifyResult(client->ssl, &ret);
@@ -1198,5 +1198,38 @@ void UT_TLS_CERT_CM_SetVerifyFlags_API_TC001(int version)
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
+}
+/* END_CASE */
+
+static int TestHITLS_AppVerifyCb(HITLS_CERT_StoreCtx *storeCtx, void *arg)
+{
+    (void)storeCtx;
+    (void)arg;
+    return 1;
+}
+
+/* @
+* @test    UT_TLS_CERT_CFG_Set_APPVerifyCb_API_TC001
+* @title   HITLS_CFG_SetCertVerifyCb interface input parameter test
+* @precon  This test case covers the HITLS_CFG_SetCertVerifyCb
+* @brief   1. Invoke the HITLS_CFG_SetCertVerifyCb interface. Input empty tlsConfig and non-empty certificate
+*          verification callback. Expected result 1
+*          2. Invoke the HITLS_CFG_SetCertVerifyCb interface. Input non-empty tlsConfig and non-empty certificate
+*          verification callback. Expected result 2
+* @expect  1. Return HITLS_NULL_INPUT
+*          2. Return HITLS_SUCCESS
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CERT_CFG_Set_APPVerifyCb_API_TC001()
+{
+    HitlsInit();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    void *arg = NULL;
+    ASSERT_TRUE(HITLS_CFG_SetCertVerifyCb(NULL, TestHITLS_AppVerifyCb, arg) == HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_SetCertVerifyCb(tlsConfig, NULL, NULL) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetCertVerifyCb(tlsConfig, TestHITLS_AppVerifyCb, arg) == HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
 }
 /* END_CASE */

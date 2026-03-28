@@ -133,8 +133,25 @@ int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store
     if ((ret = BuildCertListFromCertArray(list, num, &certList)) != HITLS_SUCCESS) {
         return ret;
     }
+
     HITLS_SetVerifyResult(ctx, HITLS_X509_V_OK);
-    ret = HITLS_X509_CertVerify(storeCtx, certList);
+#ifdef HITLS_TLS_CONFIG_CERT_CALLBACK
+    if (ctx->globalConfig->appVerifyCb != NULL) {
+        (void)HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PEER_CERT_CHAIN, certList,
+                                      sizeof(HITLS_X509_List *));
+        ret = ctx->globalConfig->appVerifyCb(storeCtx, ctx->globalConfig->appVerifyCbArg);
+        if (ret == 0) {
+            ret = HITLS_CERT_ERR_VERIFY_CERT_CHAIN;
+        } else if (ret == HITLS_APP_VERIFY_CALLBACK_SUCCESS) {
+            ret = HITLS_SUCCESS;
+        }
+        (void)HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PEER_CERT_CHAIN, NULL,
+                                      sizeof(HITLS_X509_List *));
+    } else
+#endif
+    {
+        ret = HITLS_X509_CertVerify(storeCtx, certList);
+    }
     BSL_LIST_FREE(certList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     if (ret != HITLS_SUCCESS) {
         int32_t x509Err = HITLS_SUCCESS;

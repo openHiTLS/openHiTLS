@@ -33,6 +33,8 @@
 #include "common_func.h"
 #include "stub_crypt.h"
 #include "stub_utils.h"
+#include "hitls_pki_types.h"
+#include "hitls_pki_x509.h"
 /* END_HEADER */
 
 /* ============================================================================
@@ -1283,6 +1285,78 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_VERIFY_CHAIN_TC003()
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
 
     ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(config_c);
+    HITLS_CFG_FreeConfig(config_s);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+static int TestHITLS_SUCCESS_AppVerifyCb(HITLS_CERT_StoreCtx *storeCtx, void *arg)
+{
+    (void)storeCtx;
+    (void)arg;
+    HITLS_X509_List *certList = NULL;
+    int32_t ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_GET_PEER_CERT_CHAIN, &certList,
+                                          sizeof(HITLS_X509_List *));
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ret = HITLS_X509_CertVerify(storeCtx, certList);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+EXIT:
+    return HITLS_APP_VERIFY_CALLBACK_SUCCESS;
+}
+
+static int TestHITLS_FAIL_AppVerifyCb(HITLS_CERT_StoreCtx *storeCtx, void *arg)
+{
+    (void)storeCtx;
+    (void)arg;
+    return 0;
+}
+
+/* @
+* @test  UT_TLS_TLS12_RFC5246_CONSISTENCY_APP_VERIFY_CALLBACK_TC001 rfc 5246
+* @title  Test application certificate verification callback function for TLS 1.2
+* @precon None
+* @brief  1. Initialize the test framework and create TLS 1.2 configurations for client and server.
+*         2. Set certificate verification callback based on isConnectSuccess parameter: use successful callback when isConnectSuccess is true, otherwise use failed callback.
+*         3. Create client and server links with TCP transport.
+*         4. Create TLS connection between client and server.
+*         5. Verify connection result and error stack status based on expected behavior.
+* @expect 1. Configuration and link creation should succeed.
+*         2. When isConnectSuccess is true: connection should succeed and error stack should be empty.
+*         3. When isConnectSuccess is false: connection should fail with HITLS_CERT_ERR_VERIFY_CERT_CHAIN error and error stack should not be empty.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_APP_VERIFY_CALLBACK_TC001(int isConnectSuccess)
+{
+    FRAME_Init();
+
+    HITLS_Config *config_c = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *config_s = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config_c != NULL);
+    ASSERT_TRUE(config_s != NULL);
+    if (isConnectSuccess) {
+        ASSERT_TRUE(HITLS_CFG_SetCertVerifyCb(config_c, TestHITLS_SUCCESS_AppVerifyCb, NULL) == HITLS_SUCCESS);
+    } else {
+        ASSERT_TRUE(HITLS_CFG_SetCertVerifyCb(config_c, TestHITLS_FAIL_AppVerifyCb, NULL) == HITLS_SUCCESS);
+    }
+
+    FRAME_LinkObj *client = FRAME_CreateLink(config_c, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(config_s, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    // Error stack exists
+    int32_t ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+    if (isConnectSuccess) {
+        ASSERT_EQ(ret, HITLS_SUCCESS);
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    } else {
+        ASSERT_EQ(ret, HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+        ASSERT_TRUE(TestIsErrStackNotEmpty());
+    }
 
 EXIT:
     HITLS_CFG_FreeConfig(config_c);
