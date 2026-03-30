@@ -18,6 +18,7 @@
 
 #include <ctype.h>
 #include <limits.h>
+#include <errno.h>
 #include "securec.h"
 #include "bsl_uio.h"
 #include "bsl_sal.h"
