@@ -71,16 +71,21 @@ HITLS_Config *HITLS_CFG_ProviderNewDTLSConfig(HITLS_Lib_Ctx *libCtx, const char 
     if (newConfig == NULL) {
         return NULL;
     }
-    newConfig->version |= DTLS_VERSION_MASK;      // Enable All Versions
+#ifdef HITLS_TLS_PROTO_DTLS12
+    newConfig->version |= DTLS12_VERSION_BIT;
+#endif
+#ifdef HITLS_TLS_PROTO_DTLCP11
+    newConfig->version |= DTLCP11_VERSION_BIT;
+#endif
 
     newConfig->libCtx = libCtx;
     newConfig->attrName = attrName;
 
+    newConfig->originVersionMask = newConfig->version;
     if (DefaultDtlsAllConfig(newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
     }
-    newConfig->originVersionMask = newConfig->version;
     return newConfig;
 }
 

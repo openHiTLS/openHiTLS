@@ -592,17 +592,17 @@ int32_t ServerSelectCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 static uint32_t MapLegacyVersionToBits(const TLS_Ctx *ctx, uint16_t version)
 {
     uint32_t ret = 0;
-    uint16_t versions[] = {HITLS_VERSION_DTLS12, HITLS_VERSION_TLS12, HITLS_VERSION_TLCP_DTLCP11};
-    bool isGreater = !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) ||
-                     IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask);
+    if (version >= HITLS_VERSION_TLCP_DTLCP11 && version < HITLS_VERSION_SSL30) {
+        ret = (ctx->config.tlsConfig.originVersionMask & TLCP_VERSION_BITS);
+        return ret;
+    }
+    uint16_t versions[] = {HITLS_VERSION_DTLS12, HITLS_VERSION_TLS12};
+    bool isGreater = !IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask);
 
     for (uint32_t i = 0; i < sizeof(versions) / sizeof(versions[0]); i++) {
         if (isGreater? version >= versions[i] : version <= versions[i]) {
             ret |= MapVersion2VersionBit(IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask), versions[i]);
         }
-    }
-    if (IS_SUPPORT_TLS(ret) && IS_SUPPORT_TLCP(ret)) {
-        ret &= ~TLCP_VERSION_BITS;
     }
     return ret;
 }
@@ -662,8 +662,13 @@ static int32_t ServerSelectNegoVersion(TLS_Ctx *ctx, const ClientHelloMsg *clien
 
 #ifdef HITLS_TLS_CONFIG_VERSION
     if (ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11) {
-        ctx->config.tlsConfig.version &= ~TLS_VERSION_MASK;
-        ctx->config.tlsConfig.originVersionMask &= ~TLS_VERSION_MASK;
+        if (IS_SUPPORT_STREAM(ctx->config.tlsConfig.version)) {
+            ctx->config.tlsConfig.version &= ~TLS_VERSION_MASK;
+            ctx->config.tlsConfig.originVersionMask &= ~TLS_VERSION_MASK;
+        } else if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.version)) {
+            ctx->config.tlsConfig.version &= ~DTLS_VERSION_MASK;
+            ctx->config.tlsConfig.originVersionMask &= ~DTLS_VERSION_MASK;
+        }
         ChangeMinMaxVersion(ctx->config.tlsConfig.version, ctx->config.tlsConfig.originVersionMask,
                             &ctx->config.tlsConfig.minVersion, &ctx->config.tlsConfig.maxVersion);
     } else {

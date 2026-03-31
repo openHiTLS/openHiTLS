@@ -562,7 +562,7 @@ int32_t DefaultTlsAllConfig(HITLS_Config *config)
 #ifdef HITLS_TLS_PROTO_DTLS
 static int32_t SetDefaultDtlsAllCipherSuites(HITLS_Config *config)
 {
-    const uint16_t cipherSuites[] = {
+    const uint16_t dtls12CipherSuites[] = {
         /* DTLS1.2 */
         HITLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, HITLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
         HITLS_DHE_DSS_WITH_AES_256_GCM_SHA384, HITLS_DHE_RSA_WITH_AES_256_GCM_SHA384,
@@ -573,16 +573,28 @@ static int32_t SetDefaultDtlsAllCipherSuites(HITLS_Config *config)
 
         /* The DTLS1.0 cipher suite is not supported */
     };
-
-    return SetDefaultCipherSuite(config, cipherSuites, sizeof(cipherSuites));
+#ifdef HITLS_TLS_PROTO_DTLCP11
+    uint32_t dtlcpCipherSuitesLen = sizeof(g_tlcpCipherSuites) / sizeof(uint16_t);
+    uint32_t dtls12CipherSuitesLen = sizeof(dtls12CipherSuites) / sizeof(uint16_t);
+    uint32_t dtlsCipherSuitesLen = dtlcpCipherSuitesLen + dtls12CipherSuitesLen;
+    uint16_t *dtlsCipherSuites = BSL_SAL_Calloc(dtlsCipherSuitesLen, sizeof(uint16_t));
+    if (dtlsCipherSuites == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+    (void)memcpy_s(dtlsCipherSuites, dtlsCipherSuitesLen * sizeof(uint16_t), g_tlcpCipherSuites, sizeof(g_tlcpCipherSuites));
+    (void)memcpy_s(dtlsCipherSuites + dtlcpCipherSuitesLen, sizeof(dtls12CipherSuites), dtls12CipherSuites, sizeof(dtls12CipherSuites));
+    int ret = SetDefaultCipherSuite(config, dtlsCipherSuites, dtlsCipherSuitesLen * sizeof(uint16_t));
+    BSL_SAL_FREE(dtlsCipherSuites);
+    return ret;
+#else
+    return SetDefaultCipherSuite(config, dtls12CipherSuites, sizeof(dtls12CipherSuites));
+#endif
 }
 
 int32_t DefaultDtlsAllConfig(HITLS_Config *config)
 {
     // Static settings
-    config->minVersion =
-        HITLS_VERSION_DTLS12;  // does not support DTLS 1.0. Therefore, the minimum version number is set to DTLS 1.2.
-    config->maxVersion = HITLS_VERSION_DTLS12;
+    ChangeMinMaxVersion(config->version, config->originVersionMask, &config->minVersion, &config->maxVersion);
     InitConfig(config);
 
     // Dynamic setting

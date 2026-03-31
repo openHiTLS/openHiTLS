@@ -658,3 +658,680 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/* @
+* @test UT_TLS_DTLCP_CONSISTENCY_RFC6347_TC002
+* @spec -
+* @title The client receives a Hello Request message which msg seq is not 0.
+* @precon nan
+* @brief 1. Use the default configuration items to configure the client and server. Expected result 1.
+* 2. After the client finished handshake, the client receives a Hello Request message. Expected result 2.
+* @expect 1. The initialization is successful.
+* 2. The client igore the message.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLCP_CONSISTENCY_RFC6347_TC002()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfigS = HITLS_CFG_NewDTLSConfig();
+    ASSERT_TRUE(tlsConfigS != NULL);
+    tlsConfigS->isSupportRenegotiation = true;
+    HITLS_Config *tlsConfigC = HITLS_CFG_NewDTLCPConfig();
+    ASSERT_TRUE(tlsConfigC != NULL);
+    tlsConfigC->isSupportRenegotiation = true;
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(tlsConfigC, BSL_UIO_UDP, true);
+    // Error stack exists
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(tlsConfigS, BSL_UIO_UDP, false);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+    uint8_t buf[DTLS_HS_MSG_HEADER_SIZE] = {0u};
+    buf[5] = 1;
+    size_t len = DTLS_HS_MSG_HEADER_SIZE;
+    REC_Write(serverTlsCtx, REC_TYPE_HANDSHAKE, buf, len);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    uint8_t readData[MAX_RECORD_LENTH] = {0};
+    uint32_t readLen = MAX_RECORD_LENTH;
+    ASSERT_EQ(HITLS_Read(clientTlsCtx, readData, MAX_RECORD_LENTH, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfigC);
+    HITLS_CFG_FreeConfig(tlsConfigS);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLCP_CONSISTENCY_BASIC_TC001
+* @spec -
+* @title Basic connection test with server using DTLS and client using DTLCP
+* @precon nan
+* @brief 1. Initialize server with DTLS config and client with DTLCP config. Expected result 1.
+* 2. Client initiates connection request. Expected result 2.
+* 3. Verify connection is successfully established. Expected result 3.
+* @expect 1: Both configurations are initialized successfully.
+* 2: Connection process starts without errors.
+* 3: Both client and server are in TRANSPORTING state.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLCP_CONSISTENCY_BASIC_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *serverConfig = HITLS_CFG_NewDTLSConfig();
+    ASSERT_TRUE(serverConfig != NULL);
+    HITLS_Config *clientConfig = HITLS_CFG_NewDTLCPConfig();
+    ASSERT_TRUE(clientConfig != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(clientConfig, BSL_UIO_UDP, true);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(serverConfig, BSL_UIO_UDP, false);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
+    ASSERT_TRUE(serverTlsCtx->state == CM_STATE_TRANSPORTING);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLCP_CONSISTENCY_DATA_TRANSFER_TC001
+* @spec -
+* @title Data transfer test with server using DTLS and client using DTLCP
+* @precon nan
+* @brief 1. Initialize server with DTLS config and client with DTLCP config. Expected result 1.
+* 2. Establish connection between client and server. Expected result 2.
+* 3. Client sends data to server and server reads it. Expected result 3.
+* 4. Server sends data to client and client reads it. Expected result 4.
+* @expect 1: Both configurations are initialized successfully.
+* 2: Connection is successfully established.
+* 3: Server receives data sent by client correctly.
+* 4: Client receives data sent by server correctly.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLCP_CONSISTENCY_DATA_TRANSFER_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *serverConfig = HITLS_CFG_NewDTLSConfig();
+    ASSERT_TRUE(serverConfig != NULL);
+    HITLS_Config *clientConfig = HITLS_CFG_NewDTLCPConfig();
+    ASSERT_TRUE(clientConfig != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(clientConfig, BSL_UIO_UDP, true);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(serverConfig, BSL_UIO_UDP, false);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    // Client sends data to server
+    uint8_t clientWriteData[] = "Client test data for DTLCP";
+    uint32_t clientWriteLen = strlen((char *)clientWriteData);
+    uint32_t clientSendNum = 0;
+    ASSERT_EQ(HITLS_Write(clientTlsCtx, clientWriteData, clientWriteLen, &clientSendNum), HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+
+    uint8_t serverReadData[MAX_RECORD_LENTH] = {0};
+    uint32_t serverReadLen = MAX_RECORD_LENTH;
+    ASSERT_EQ(HITLS_Read(serverTlsCtx, serverReadData, MAX_RECORD_LENTH, &serverReadLen), HITLS_SUCCESS);
+    ASSERT_EQ(serverReadLen, clientWriteLen);
+    ASSERT_EQ(memcmp(clientWriteData, serverReadData, serverReadLen), 0);
+
+    // Server sends data to client
+    uint8_t serverWriteData[] = "Server test data for DTLCP";
+    uint32_t serverWriteLen = strlen((char *)serverWriteData);
+    uint32_t serverSendNum = 0;
+    ASSERT_EQ(HITLS_Write(serverTlsCtx, serverWriteData, serverWriteLen, &serverSendNum), HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+
+    uint8_t clientReadData[MAX_RECORD_LENTH] = {0};
+    uint32_t clientReadLen = MAX_RECORD_LENTH;
+    ASSERT_EQ(HITLS_Read(clientTlsCtx, clientReadData, MAX_RECORD_LENTH, &clientReadLen), HITLS_SUCCESS);
+    ASSERT_EQ(clientReadLen, serverWriteLen);
+    ASSERT_EQ(memcmp(serverWriteData, clientReadData, clientReadLen), 0);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLCP_CONSISTENCY_CIPHER_SUITE_TC001
+* @spec -
+* @title Cipher suite negotiation test with server using DTLS and client using DTLCP
+* @precon nan
+* @brief 1. Initialize server with DTLS config and client with DTLCP config. Expected result 1.
+* 2. Set specific cipher suites on both sides. Expected result 2.
+* 3. Establish connection and verify negotiated cipher suite. Expected result 3.
+* @expect 1: Both configurations are initialized successfully.
+* 2: Cipher suites are set successfully.
+* 3: Connection is established and cipher suite is negotiated correctly.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLCP_CONSISTENCY_CIPHER_SUITE_TC001(int cipherSuite)
+{
+    FRAME_Init();
+    HITLS_Config *serverConfig = HITLS_CFG_NewDTLSConfig();
+    ASSERT_TRUE(serverConfig != NULL);
+    HITLS_Config *clientConfig = HITLS_CFG_NewDTLCPConfig();
+    ASSERT_TRUE(clientConfig != NULL);
+
+    // Set cipher suites
+    uint16_t cipherSuites[2] = {HITLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384};
+    cipherSuites[1] = cipherSuite;
+    HITLS_CFG_SetCipherSuites(serverConfig, cipherSuites, 2);
+    HITLS_CFG_SetCipherSuites(clientConfig, cipherSuites, 2);
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(clientConfig, BSL_UIO_UDP, true);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(serverConfig, BSL_UIO_UDP, false);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
+    ASSERT_TRUE(serverTlsCtx->state == CM_STATE_TRANSPORTING);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLCP_CONSISTENCY_HANDSHAKE_STATE_TC001
+* @spec -
+* @title Handshake state test with server using DTLS and client using DTLCP
+* @precon nan
+* @brief 1. Initialize server with DTLS config and client with DTLCP config. Expected result 1.
+* 2. Create connection up to TRY_RECV_SERVER_HELLO state. Expected result 2.
+* 3. Verify handshake state is correct. Expected result 3.
+* @expect 1: Both configurations are initialized successfully.
+* 2: Connection is created to the specified state.
+* 3: Handshake state matches TRY_RECV_SERVER_HELLO.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLCP_CONSISTENCY_HANDSHAKE_STATE_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *serverConfig = HITLS_CFG_NewDTLSConfig();
+    ASSERT_TRUE(serverConfig != NULL);
+    HITLS_Config *clientConfig = HITLS_CFG_NewDTLCPConfig();
+    ASSERT_TRUE(clientConfig != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(clientConfig, BSL_UIO_UDP, true);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(serverConfig, BSL_UIO_UDP, false);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_HELLO) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_HANDSHAKING);
+    ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_RECV_SERVER_HELLO);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLCP_CONSISTENCY_REORDER_SERVER_TC001
+* @spec -
+* @title Server receives out-of-order messages with server using DTLS and client using DTLCP
+* @precon nan
+* @brief 1. Initialize server with DTLS config and client with DTLCP config. Expected result 1.
+* 2. Establish connection between client and server. Expected result 2.
+* 3. Client sends out-of-order messages to server. Expected result 3.
+* 4. Server reads messages and verifies correct order. Expected result 4.
+* @expect 1: Both configurations are initialized successfully.
+* 2: Connection is successfully established.
+* 3: Messages are sent successfully.
+* 4: Server receives messages in correct order.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLCP_CONSISTENCY_REORDER_SERVER_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *serverConfig = HITLS_CFG_NewDTLSConfig();
+    ASSERT_TRUE(serverConfig != NULL);
+    HITLS_Config *clientConfig = HITLS_CFG_NewDTLCPConfig();
+    ASSERT_TRUE(clientConfig != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(clientConfig, BSL_UIO_UDP, true);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(serverConfig, BSL_UIO_UDP, false);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    // Prepare out-of-order messages
+    uint8_t data[MAX_RECORD_LENTH] = {0};
+    uint32_t len = MAX_RECORD_LENTH;
+    ASSERT_TRUE(GetDisorderApp(client, data, &len) == HITLS_SUCCESS);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+    ASSERT_TRUE(ioUserData->recMsg.len == 0);
+    ASSERT_TRUE(FRAME_TransportRecMsg(server->io, data, len) == HITLS_SUCCESS);
+
+    // Server should read messages in correct order
+    uint8_t app1Data[MAX_RECORD_LENTH] = {0};
+    uint32_t app1Len = MAX_RECORD_LENTH;
+    ASSERT_TRUE(HITLS_Read(serverTlsCtx, app1Data, MAX_RECORD_LENTH, &app1Len) == HITLS_SUCCESS);
+
+    uint8_t app2Data[MAX_RECORD_LENTH] = {0};
+    uint32_t app2Len = MAX_RECORD_LENTH;
+    ASSERT_TRUE(HITLS_Read(serverTlsCtx, app2Data, MAX_RECORD_LENTH, &app2Len) == HITLS_SUCCESS);
+
+    ASSERT_EQ(app1Len, app2Len);
+    ASSERT_EQ(memcmp(app1Data, app2Data, app2Len), 0);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLCP_CONSISTENCY_REORDER_CLIENT_TC001
+* @spec -
+* @title Client receives out-of-order messages with server using DTLS and client using DTLCP
+* @precon nan
+* @brief 1. Initialize server with DTLS config and client with DTLCP config. Expected result 1.
+* 2. Establish connection between client and server. Expected result 2.
+* 3. Server sends out-of-order messages to client. Expected result 3.
+* 4. Client reads messages and verifies correct order. Expected result 4.
+* @expect 1: Both configurations are initialized successfully.
+* 2: Connection is successfully established.
+* 3: Messages are sent successfully.
+* 4: Client receives messages in correct order.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLCP_CONSISTENCY_REORDER_CLIENT_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *serverConfig = HITLS_CFG_NewDTLSConfig();
+    ASSERT_TRUE(serverConfig != NULL);
+    HITLS_Config *clientConfig = HITLS_CFG_NewDTLCPConfig();
+    ASSERT_TRUE(clientConfig != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(clientConfig, BSL_UIO_UDP, true);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(serverConfig, BSL_UIO_UDP, false);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    // Prepare out-of-order messages
+    uint8_t data[MAX_RECORD_LENTH] = {0};
+    uint32_t len = MAX_RECORD_LENTH;
+    ASSERT_TRUE(GetDisorderApp(server, data, &len) == HITLS_SUCCESS);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    ASSERT_TRUE(ioUserData->recMsg.len == 0);
+    ASSERT_TRUE(FRAME_TransportRecMsg(client->io, data, len) == HITLS_SUCCESS);
+
+    // Client should read messages in correct order
+    uint8_t app1Data[MAX_RECORD_LENTH] = {0};
+    uint32_t app1Len = MAX_RECORD_LENTH;
+    ASSERT_TRUE(HITLS_Read(clientTlsCtx, app1Data, MAX_RECORD_LENTH, &app1Len) == HITLS_SUCCESS);
+
+    uint8_t app2Data[MAX_RECORD_LENTH] = {0};
+    uint32_t app2Len = MAX_RECORD_LENTH;
+    ASSERT_TRUE(HITLS_Read(clientTlsCtx, app2Data, MAX_RECORD_LENTH, &app2Len) == HITLS_SUCCESS);
+
+    ASSERT_EQ(app1Len, app2Len);
+    ASSERT_EQ(memcmp(app1Data, app2Data, app1Len), 0);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLCP_CONSISTENCY_DUPLICATE_SERVER_TC001
+* @spec -
+* @title Server receives duplicate messages with server using DTLS and client using DTLCP
+* @precon nan
+* @brief 1. Initialize server with DTLS config and client with DTLCP config. Expected result 1.
+* 2. Establish connection between client and server. Expected result 2.
+* 3. Client sends duplicate messages to server. Expected result 3.
+* 4. Server handles duplicate messages correctly. Expected result 4.
+* @expect 1: Both configurations are initialized successfully.
+* 2: Connection is successfully established.
+* 3: Duplicate messages are sent successfully.
+* 4: Server handles duplicate messages correctly.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLCP_CONSISTENCY_DUPLICATE_SERVER_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *serverConfig = HITLS_CFG_NewDTLSConfig();
+    ASSERT_TRUE(serverConfig != NULL);
+    HITLS_Config *clientConfig = HITLS_CFG_NewDTLCPConfig();
+    ASSERT_TRUE(clientConfig != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(clientConfig, BSL_UIO_UDP, true);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(serverConfig, BSL_UIO_UDP, false);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    // Prepare duplicate messages
+    uint8_t data[MAX_RECORD_LENTH] = {0};
+    uint32_t len = MAX_RECORD_LENTH;
+    ASSERT_TRUE(GetRepeatsApp(client, data, &len) == HITLS_SUCCESS);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+    ASSERT_TRUE(ioUserData->recMsg.len == 0);
+    ASSERT_TRUE(FRAME_TransportRecMsg(server->io, data, len) == HITLS_SUCCESS);
+
+    // Server should read first message successfully
+    uint8_t readData[MAX_RECORD_LENTH] = {0};
+    uint32_t readLen = MAX_RECORD_LENTH;
+    ASSERT_TRUE(HITLS_Read(serverTlsCtx, readData, MAX_RECORD_LENTH, &readLen) == HITLS_SUCCESS);
+
+    // Server should return empty buffer for duplicate message
+    ASSERT_EQ(HITLS_Read(serverTlsCtx, readData, MAX_RECORD_LENTH, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLCP_CONSISTENCY_DUPLICATE_CLIENT_TC001
+* @spec -
+* @title Client receives duplicate messages with server using DTLS and client using DTLCP
+* @precon nan
+* @brief 1. Initialize server with DTLS config and client with DTLCP config. Expected result 1.
+* 2. Establish connection between client and server. Expected result 2.
+* 3. Server sends duplicate messages to client. Expected result 3.
+* 4. Client handles duplicate messages correctly. Expected result 4.
+* @expect 1: Both configurations are initialized successfully.
+* 2: Connection is successfully established.
+* 3: Duplicate messages are sent successfully.
+* 4: Client handles duplicate messages correctly.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLCP_CONSISTENCY_DUPLICATE_CLIENT_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *serverConfig = HITLS_CFG_NewDTLSConfig();
+    ASSERT_TRUE(serverConfig != NULL);
+    HITLS_Config *clientConfig = HITLS_CFG_NewDTLCPConfig();
+    ASSERT_TRUE(clientConfig != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(clientConfig, BSL_UIO_UDP, true);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(serverConfig, BSL_UIO_UDP, false);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    // Prepare duplicate messages
+    uint8_t data[MAX_RECORD_LENTH] = {0};
+    uint32_t len = MAX_RECORD_LENTH;
+    ASSERT_TRUE(GetRepeatsApp(server, data, &len) == HITLS_SUCCESS);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    ASSERT_TRUE(ioUserData->recMsg.len == 0);
+    ASSERT_TRUE(FRAME_TransportRecMsg(client->io, data, len) == HITLS_SUCCESS);
+
+    // Client should read first message successfully
+    uint8_t readData[MAX_RECORD_LENTH] = {0};
+    uint32_t readLen = MAX_RECORD_LENTH;
+    ASSERT_TRUE(HITLS_Read(clientTlsCtx, readData, MAX_RECORD_LENTH, &readLen) == HITLS_SUCCESS);
+
+    // Client should return empty buffer for duplicate message
+    ASSERT_EQ(HITLS_Read(clientTlsCtx, readData, MAX_RECORD_LENTH, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLCP_CONSISTENCY_GROUPS_TC001
+* @spec -
+* @title Groups negotiation test with server using DTLS and client using DTLCP
+* @precon nan
+* @brief 1. Initialize server with DTLS config and client with DTLCP config. Expected result 1.
+* 2. Set specific groups on both sides. Expected result 2.
+* 3. Establish connection and verify group is negotiated correctly. Expected result 3.
+* @expect 1: Both configurations are initialized successfully.
+* 2: Groups are set successfully.
+* 3: Connection is established and group is negotiated correctly.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLCP_CONSISTENCY_GROUPS_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *serverConfig = HITLS_CFG_NewDTLSConfig();
+    ASSERT_TRUE(serverConfig != NULL);
+    HITLS_Config *clientConfig = HITLS_CFG_NewDTLCPConfig();
+    ASSERT_TRUE(clientConfig != NULL);
+
+    // Set groups
+    uint16_t groups[] = {HITLS_EC_GROUP_SM2, HITLS_EC_GROUP_BRAINPOOLP512R1};
+    HITLS_CFG_SetGroups(serverConfig, groups, sizeof(groups) / sizeof(uint16_t));
+    HITLS_CFG_SetGroups(clientConfig, groups, sizeof(groups) / sizeof(uint16_t));
+
+    // Set signature algorithms
+    uint16_t signAlgs[] = {CERT_SIG_SCHEME_SM2_SM3, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
+    HITLS_CFG_SetSignature(serverConfig, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
+    HITLS_CFG_SetSignature(clientConfig, signAlgs, sizeof(signAlgs) / sizeof(uint16_t));
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(clientConfig, BSL_UIO_UDP, true);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(serverConfig, BSL_UIO_UDP, false);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    ASSERT_TRUE(clientTlsCtx->state == CM_STATE_TRANSPORTING);
+    ASSERT_TRUE(serverTlsCtx->state == CM_STATE_TRANSPORTING);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLCP_CONSISTENCY_MULTI_DATA_TC001
+* @spec -
+* @title Multiple data transfer test with server using DTLS and client using DTLCP
+* @precon nan
+* @brief 1. Initialize server with DTLS config and client with DTLCP config. Expected result 1.
+* 2. Establish connection between client and server. Expected result 2.
+* 3. Perform multiple data transfers between client and server. Expected result 3.
+* @expect 1: Both configurations are initialized successfully.
+* 2: Connection is successfully established.
+* 3: All data transfers are successful.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLCP_CONSISTENCY_MULTI_DATA_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *serverConfig = HITLS_CFG_NewDTLSConfig();
+    ASSERT_TRUE(serverConfig != NULL);
+    HITLS_Config *clientConfig = HITLS_CFG_NewDTLCPConfig();
+    ASSERT_TRUE(clientConfig != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateTLCPLink(clientConfig, BSL_UIO_UDP, true);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateTLCPLink(serverConfig, BSL_UIO_UDP, false);
+    ASSERT_TRUE(server != NULL);
+
+    HITLS_SetMtu(client->ssl, 16384);
+    HITLS_SetMtu(server->ssl, 16384);
+
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    // Perform multiple data transfers
+    for (int i = 0; i < 5; i++) {
+        uint8_t clientWriteData[128] = {0};
+        sprintf_s((char *)clientWriteData, sizeof(clientWriteData), "Client message %d", i);
+        uint32_t clientWriteLen = strlen((char *)clientWriteData);
+        uint32_t clientSendNum = 0;
+        ASSERT_EQ(HITLS_Write(clientTlsCtx, clientWriteData, clientWriteLen, &clientSendNum), HITLS_SUCCESS);
+        ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+
+        uint8_t serverReadData[MAX_RECORD_LENTH] = {0};
+        uint32_t serverReadLen = MAX_RECORD_LENTH;
+        ASSERT_EQ(HITLS_Read(serverTlsCtx, serverReadData, MAX_RECORD_LENTH, &serverReadLen), HITLS_SUCCESS);
+        ASSERT_EQ(serverReadLen, clientWriteLen);
+        ASSERT_EQ(memcmp(clientWriteData, serverReadData, serverReadLen), 0);
+
+        uint8_t serverWriteData[128] = {0};
+        sprintf_s((char *)serverWriteData, sizeof(serverWriteData), "Server message %d", i);
+        uint32_t serverWriteLen = strlen((char *)serverWriteData);
+        uint32_t serverSendNum = 0;
+        ASSERT_EQ(HITLS_Write(serverTlsCtx, serverWriteData, serverWriteLen, &serverSendNum), HITLS_SUCCESS);
+        ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+
+        uint8_t clientReadData[MAX_RECORD_LENTH] = {0};
+        uint32_t clientReadLen = MAX_RECORD_LENTH;
+        ASSERT_EQ(HITLS_Read(clientTlsCtx, clientReadData, MAX_RECORD_LENTH, &clientReadLen), HITLS_SUCCESS);
+        ASSERT_EQ(clientReadLen, serverWriteLen);
+        ASSERT_EQ(memcmp(serverWriteData, clientReadData, clientReadLen), 0);
+    }
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    FRAME_DeRegCryptMethod();
+}
+/* END_CASE */

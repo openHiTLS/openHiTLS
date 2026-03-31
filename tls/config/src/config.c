@@ -700,7 +700,7 @@ int32_t CheckRenegotiatedVersion(TLS_Ctx *ctx)
 void ChangeMinMaxVersion(uint32_t versionMask, uint32_t originVersionMask, uint16_t *minVersion, uint16_t *maxVersion)
 {
     uint32_t versionMaskBit = versionMask;
-    if (IS_SUPPORT_TLS(versionMaskBit) && IS_SUPPORT_TLCP(versionMaskBit)) {
+    if ((IS_SUPPORT_TLS(versionMaskBit) || IS_SUPPORT_DTLS(versionMaskBit)) && IS_SUPPORT_TLCP(versionMaskBit)) {
         versionMaskBit &= ~TLCP_VERSION_BITS;
     }
     uint32_t versionBits[] = {TLS12_VERSION_BIT, TLS13_VERSION_BIT, DTLS12_VERSION_BIT, TLCP11_VERSION_BIT,

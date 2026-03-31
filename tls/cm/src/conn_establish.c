@@ -49,7 +49,13 @@ static int32_t ConnectEventInIdleState(HITLS_Ctx *ctx)
         HITLS_SetVersionForbid(ctx, TLCP11_VERSION_BIT);
     }
 #endif
-
+#ifdef HITLS_TLS_PROTO_DTLCP11
+    if (ctx->isClient && IS_SUPPORT_DTLS(ctx->config.tlsConfig.originVersionMask) &&
+        IS_SUPPORT_TLCP(ctx->config.tlsConfig.originVersionMask)) {
+        ctx->config.tlsConfig.originVersionMask &= ~DTLCP11_VERSION_BIT;
+        HITLS_SetVersionForbid(ctx, DTLCP11_VERSION_BIT);
+    }
+#endif
     int32_t ret = CONN_Init(ctx);
     if (ret != HITLS_SUCCESS) {
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16487, "CONN_Init fail");
