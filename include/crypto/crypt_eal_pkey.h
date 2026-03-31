@@ -422,6 +422,22 @@ int32_t CRYPT_EAL_PkeyVerifyData(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *h
 
 /**
  * @ingroup crypt_eal_pkey
+ * @brief   Verify and recover data.
+ *
+ * @param   pkey      [IN] Key session
+ * @param   sign      [IN] Signature data
+ * @param   signLen   [IN] Length of signature data
+ * @param   data      [OUT] Recovered data
+ * @param   dataLen   [OUT/IN] Length of recovered data
+ *
+ * @retval  #CRYPT_SUCCESS, if successful.
+ *          For other error codes, see crypt_errno.h.
+ */
+int32_t CRYPT_EAL_PkeyVerifyRecover(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *sign, uint32_t signLen,
+    uint8_t *data, uint32_t *dataLen);
+
+/**
+ * @ingroup crypt_eal_pkey
  * @brief   Encrypt data.
  *
  * @param   pkey      [IN] Key session

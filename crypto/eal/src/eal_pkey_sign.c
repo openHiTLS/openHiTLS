@@ -120,6 +120,25 @@ int32_t CRYPT_EAL_PkeyVerifyData(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *h
     return ret;
 }
 
+int32_t CRYPT_EAL_PkeyVerifyRecover(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *sign, uint32_t signLen,
+    uint8_t *data, uint32_t *dataLen)
+{
+    if (pkey == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (pkey->method.recover == NULL) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
+    }
+
+    int32_t ret = pkey->method.recover(pkey->key, sign, signLen, data, dataLen);
+    if (ret != CRYPT_SUCCESS) {
+        EAL_EVENT_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pkey->id, ret);
+    }
+    return ret;
+}
+
 int32_t CRYPT_EAL_PkeyBlind(CRYPT_EAL_PkeyCtx *pkey, CRYPT_MD_AlgId id, const uint8_t *input, uint32_t inputLen,
     uint8_t *out, uint32_t *outLen)
 {

@@ -30,6 +30,22 @@
 
 /* END_HEADER */
 
+static int NeedVerifyRecoverPadSkip(int padMode)
+{
+    switch (padMode) {
+#if defined(HITLS_CRYPTO_RSAES_PKCSV15) && defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15)
+        case CRYPT_CTRL_SET_RSA_RSAES_PKCSV15:
+            return 0;
+#endif
+#ifdef HITLS_CRYPTO_RSA_NO_PAD
+        case CRYPT_CTRL_SET_RSA_PADDING:
+            return 0;
+#endif
+        default:
+            return 1;
+    }
+}
+
 int MD_Data(CRYPT_MD_AlgId mdId, Hex *msgIn, Hex *mdOut)
 {
     uint32_t outLen;
@@ -127,6 +143,76 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     free(data);
     free(sign);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA_VERIFY_RECOVER_FUNC_TC002
+ * @title  RSA CRYPT_EAL_PkeyVerifyRecover: Wrong parameters.
+ * @precon Create the context of the rsa algorithm, set public key and set padding type.
+ * @brief
+ *    1. Create the context(ctx) of the rsa algorithm, expected result 1.
+ *    2. Set the public key for ctx, expected result 2.
+ *    3. Set padding type for ctx, expected result 3.
+ *    4. Call the CRYPT_EAL_PkeyVerifyRecover method with wrong parameters, expected result 4.
+ *    5. Call the CRYPT_EAL_PkeyVerifyRecover method with insufficient output buffer, expected result 5.
+ *    6. Call the CRYPT_EAL_PkeyVerifyRecover method with correct parameters, expected result 6.
+ * @expect
+ *    1-3. CRYPT_SUCCESS
+ *    4. Return corresponding error codes.
+ *    5. CRYPT_RSA_BUFF_LEN_NOT_ENOUGH
+ *    6. CRYPT_SUCCESS
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_VERIFY_RECOVER_FUNC_TC002(int padMode, Hex *n, Hex *e, Hex *cipherText)
+{
+#if !defined(HITLS_CRYPTO_RSA_VERIFY) || !defined(HITLS_CRYPTO_RSA_RECOVER)
+    SKIP_TEST();
+#endif
+    if (NeedVerifyRecoverPadSkip(padMode)) {
+        SKIP_TEST();
+    }
+
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_RSA);
+    ASSERT_TRUE(ctx != NULL);
+
+    CRYPT_EAL_PkeyPub pubkey = { 0 };
+    SetRsaPubKey(&pubkey, n->x, n->len, e->x, e->len);
+    ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx, &pubkey) == CRYPT_SUCCESS);
+
+    int paraSize = 0;
+    void *paraPtr = NULL;
+    int32_t noPad = CRYPT_RSA_NO_PAD;
+    int32_t pkcsv15 = CRYPT_MD_SHA1;
+    if (padMode == CRYPT_CTRL_SET_RSA_RSAES_PKCSV15) {
+        paraSize = sizeof(pkcsv15);
+        paraPtr = &pkcsv15;
+    } else if (padMode == CRYPT_CTRL_SET_RSA_PADDING) {
+        paraSize = sizeof(noPad);
+        paraPtr = &noPad;
+    }
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx, padMode, paraPtr, paraSize) == CRYPT_SUCCESS);
+
+    uint8_t data[512];
+    uint32_t dataLen = sizeof(data);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(NULL, cipherText->x, cipherText->len, data, &dataLen) == CRYPT_NULL_INPUT);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, NULL, cipherText->len, data, &dataLen) == CRYPT_NULL_INPUT);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, 0, data, &dataLen) == CRYPT_RSA_ERR_INPUT_VALUE);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, cipherText->len, NULL, &dataLen) == CRYPT_NULL_INPUT);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, cipherText->len, data, NULL) == CRYPT_NULL_INPUT);
+
+    uint8_t outErr[100];
+    uint32_t outLenErr = sizeof(outErr);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, cipherText->len, outErr, &outLenErr) ==
+        CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, cipherText->len, data, &dataLen) == CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    return;
 }
 /* END_CASE */
 
