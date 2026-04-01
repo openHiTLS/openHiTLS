@@ -758,7 +758,7 @@ int32_t HITLS_RemoveCertAndKey(HITLS_Ctx *ctx);
  * @param   isPreverifyOk [IN] Indicates whether the relevant certificate has passed the verification
  * (isPreverifyOk=1) or failed (isPreverifyOk=0)
  * @param   storeCtx [IN] Cert store context
- * @return  1 indicates success. Other values indicate failure.
+ * @return  0 indicates success. Other values indicate failure.
  */
 typedef int (*HITLS_VerifyCb)(int32_t isPreverifyOk, HITLS_CERT_StoreCtx *storeCtx);
 

@@ -3578,6 +3578,108 @@ EXIT:
 /* END_CASE */
 
 /* @
+* @test  UT_TLS_CM_GetError_API_TC002
+* @title  HITLS_GetError callback retry and IO mapping test
+* @precon  nan
+* @brief  1. Pass HITLS_CALLBACK_CLIENT_HELLO_RETRY as ret, expect HITLS_WANT_CLIENT_HELLO_CB.
+          2. Pass HITLS_CALLBACK_CERT_RETRY as ret, expect HITLS_WANT_X509_LOOKUP.
+          3. Pass HITLS_REC_NORMAL_IO_BUSY as ret, expect HITLS_WANT_WRITE.
+          4. Pass HITLS_REC_NORMAL_RECV_BUF_EMPTY as ret, expect HITLS_WANT_READ.
+* @expect  Return values match the expected mapping.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CM_GetError_API_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    /* ClientHello callback retry -> HITLS_WANT_CLIENT_HELLO_CB */
+    ASSERT_TRUE(HITLS_GetError(ctx, HITLS_CALLBACK_CLIENT_HELLO_RETRY) == HITLS_WANT_CLIENT_HELLO_CB);
+
+    /* Certificate callback retry -> HITLS_WANT_X509_LOOKUP */
+    ASSERT_TRUE(HITLS_GetError(ctx, HITLS_CALLBACK_CERT_RETRY) == HITLS_WANT_X509_LOOKUP);
+
+    /* IO busy -> HITLS_WANT_WRITE */
+    ASSERT_TRUE(HITLS_GetError(ctx, HITLS_REC_NORMAL_IO_BUSY) == HITLS_WANT_WRITE);
+
+    /* Recv buffer empty -> HITLS_WANT_READ */
+    ASSERT_TRUE(HITLS_GetError(ctx, HITLS_REC_NORMAL_RECV_BUF_EMPTY) == HITLS_WANT_READ);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CM_GetError_API_TC003
+* @title  HITLS_GetError IO exception and EOF error test
+* @precon  nan
+* @brief  1. Pass HITLS_REC_ERR_IO_EXCEPTION as ret, expect HITLS_ERR_SYSCALL.
+          2. Pass HITLS_REC_NORMAL_IO_EOF as ret, expect HITLS_ERR_SYSCALL.
+* @expect  Both return HITLS_ERR_SYSCALL.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CM_GetError_API_TC003(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    /* IO exception -> HITLS_ERR_SYSCALL */
+    ASSERT_TRUE(HITLS_GetError(ctx, HITLS_REC_ERR_IO_EXCEPTION) == HITLS_ERR_SYSCALL);
+
+    /* IO EOF -> HITLS_ERR_SYSCALL */
+    ASSERT_TRUE(HITLS_GetError(ctx, HITLS_REC_NORMAL_IO_EOF) == HITLS_ERR_SYSCALL);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CM_GetError_API_TC004
+* @title  HITLS_GetError ALERTING/ALERTED state and unknown error test
+* @precon  nan
+* @brief  1. Set ctx state to CM_STATE_ALERTING, pass an unknown ret, expect HITLS_ERR_TLS.
+          2. Set ctx state to CM_STATE_ALERTED, pass an unknown ret, expect HITLS_ERR_TLS.
+          3. Set ctx state to CM_STATE_IDLE, pass an unknown ret, expect HITLS_ERR_SYSCALL.
+* @expect  ALERTING/ALERTED return HITLS_ERR_TLS, other states return HITLS_ERR_SYSCALL.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_CM_GetError_API_TC004(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewDTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    /* ALERTING state with unknown error -> HITLS_ERR_TLS */
+    ctx->state = CM_STATE_ALERTING;
+    ASSERT_TRUE(HITLS_GetError(ctx, HITLS_INTERNAL_EXCEPTION) == HITLS_ERR_TLS);
+
+    /* ALERTED state with unknown error -> HITLS_ERR_TLS */
+    ctx->state = CM_STATE_ALERTED;
+    ASSERT_TRUE(HITLS_GetError(ctx, HITLS_INTERNAL_EXCEPTION) == HITLS_ERR_TLS);
+
+    /* IDLE state with unknown error -> HITLS_ERR_SYSCALL */
+    ctx->state = CM_STATE_IDLE;
+    ASSERT_TRUE(HITLS_GetError(ctx, HITLS_INTERNAL_EXCEPTION) == HITLS_ERR_SYSCALL);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
 * @test  UT_TLS_CM_SetAlpnProtos_API_TC001
 * @title  HITLS_SetAlpnProtos Interface Parameter Test
 * @precon  nan

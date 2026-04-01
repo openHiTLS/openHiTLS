@@ -544,63 +544,28 @@ int32_t HITLS_GetError(const HITLS_Ctx *ctx, int32_t ret)
     }
 
     if (ret == HITLS_CALLBACK_CLIENT_HELLO_RETRY) {
-        return HITLS_WANT_CLIENT_HELLO_CB;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_CLIENT_HELLO_CB, BINLOG_ID16500,
+            "ClientHello callback needs to be retried");
     }
     if (ret == HITLS_CALLBACK_CERT_RETRY) {
-        return HITLS_WANT_X509_LOOKUP;
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_X509_LOOKUP, BINLOG_ID16503,
+            "Certificate callback needs to be retried");
     }
 
-    /* HANDSHAKING state */
-    if (ctx->state == CM_STATE_HANDSHAKING) {
-        /* In non-blocking mode, I/O read/write failure is acceptable and link establishment is allowed */
-        if (ret == HITLS_REC_NORMAL_IO_BUSY || ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY) {
-            return (ctx->isClient == true) ? HITLS_WANT_CONNECT : HITLS_WANT_ACCEPT;
-        }
-
-        /* Unacceptable exceptions occur on the underlying I/O */
-        if (ret == HITLS_REC_ERR_IO_EXCEPTION) {
-            return RETURN_ERROR_NUMBER_PROCESS(HITLS_ERR_SYSCALL, BINLOG_ID16499, "Unacceptable exceptions occured");
-        }
-
-        /* The TLS protocol is incorrect */
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_ERR_TLS, BINLOG_ID16500, "TLS protocol err");
+    if (ret == HITLS_REC_NORMAL_IO_BUSY) {
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_WRITE, BINLOG_ID16501, "write processes need to be retried");
     }
 
-    /* TRANSPORTING state */
-    if (ctx->state == CM_STATE_TRANSPORTING) {
-        /* An I/O read/write failure occurs in non-blocking mode. This failure is acceptable and data can be written */
-        if (ret == HITLS_REC_NORMAL_IO_BUSY) {
-            return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_WRITE, BINLOG_ID16501, "This failure is acceptable");
-        }
-
-        /* An I/O read/write failure occurs in non-blocking mode. This failure is acceptable and data can be read
-         * continuously */
-        if (ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY) {
-            return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_READ, BINLOG_ID16502, "This failure is acceptable");
-        }
-
-        /* Unacceptable exceptions occur on the underlying I/O */
-        if (ret == HITLS_REC_ERR_IO_EXCEPTION) {
-            return RETURN_ERROR_NUMBER_PROCESS(HITLS_ERR_SYSCALL, BINLOG_ID16503, "Unacceptable exceptions occured");
-        }
-
-        /* The TLS protocol is incorrect */
-        return RETURN_ERROR_NUMBER_PROCESS(HITLS_ERR_TLS, BINLOG_ID16504, "TLS protocol err");
+    if (ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY) {
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_READ, BINLOG_ID16502, "read processes need to be retried");
     }
 
-    /* ALERTING state */
-    if (ctx->state == CM_STATE_ALERTING) {
-        if (ret == HITLS_REC_NORMAL_IO_BUSY) {
-            return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_WRITE, BINLOG_ID16505, "This failure is acceptable");
-        }
-
-        if (ret == HITLS_REC_NORMAL_RECV_BUF_EMPTY) {
-            return RETURN_ERROR_NUMBER_PROCESS(HITLS_WANT_READ, BINLOG_ID16506, "This failure is acceptable");
-        }
+    if (ret == HITLS_REC_ERR_IO_EXCEPTION || ret == HITLS_REC_NORMAL_IO_EOF) {
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_ERR_SYSCALL, BINLOG_ID16499, "Unacceptable exceptions occured");
     }
 
     /* ALERTED state ,indicating that the TLS protocol is faulty and the link is abnormal */
-    if (ctx->state == CM_STATE_ALERTED) {
+    if (ctx->state == CM_STATE_ALERTED || ctx->state == CM_STATE_ALERTING) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_ERR_TLS, BINLOG_ID16507, "TLS protocol is faulty");
     }
 

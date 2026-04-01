@@ -436,11 +436,8 @@ typedef enum {
  * @param   ctx [IN] TLS context
  * @param   ret [IN] Return value of the TLS interface called
  * @retval  HITLS_SUCCESS, No error.
- * @retval  HITLS_WANT_CONNECT, indicates that the connection is blocked.
- * You can call HITLS_Connect to continue the connection, This problem is usually caused
- * by the read and write operation failure.
- * @retval  HITLS_WANT_ACCEPT, indicates that the connection is blocked and the HITLS_Accept
- * can be called to continue the connection. This problem is usually caused by the read and write operation failure.
+ * @retval  HITLS_WANT_CLIENT_HELLO_CB, ClientHello callback needs to be retried.
+ * @retval  HITLS_WANT_X509_LOOKUP, Certificate callback needs to be retried.
  * @retval  HITLS_WANT_READ, indicates that the receiving buffer is empty and the interface
  * can be called to continue receiving data.
  * @retval  HITLS_WANT_WRITE, indicates that the sending buffer is full and the interface
@@ -448,8 +445,6 @@ typedef enum {
  * @retval  HITLS_ERR_TLS, An unrecoverable fatal error occurs in the TLS protocol, usually a protocol error.
  * @retval  HITLS_ERR_SYSCALL, An unrecoverable I/O error occurs. Generally, the I/O error is caused
  * by the Low level receiving and receiving exception and an unknown error occurs.
- * @retval  HITLS_WANT_BACKUP, in the scenario where the bearer and control are separated,
- * the user needs to perform backup and restoration.
  */
 int32_t HITLS_GetError(const HITLS_Ctx *ctx, int32_t ret);
 
