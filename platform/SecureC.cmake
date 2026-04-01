@@ -238,14 +238,14 @@ add_library(boundscheck ALIAS securec_boundscheck)
 
 # Install static library to openHiTLS output directory
 install(TARGETS securec_boundscheck
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 # Install headers
 install(FILES
     ${SECUREC_INCLUDE_DIR}/securec.h
     ${SECUREC_INCLUDE_DIR}/securectype.h
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/include
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 # ============================================================

@@ -7,9 +7,10 @@ Check whether the build tools have been installed in the system and can be used 
 | **Name**| **Recommended Version**| **Description**|
 | -------- | ------------ | -------- |
 | Gcc        | ≥ 7.3.0      | Linux    |
-| Python   | ≥ 3.5         | Linux    |
 | CMake    | ≥ 3.16        | Linux    |
 | Sctp        | No restriction on versions   | Linux    |
+
+Note: The DTLS feature depends on sctp. sctp is disabled by default. To enable it, install the sctp dependency in advance.
 
 ## 2. Preparing the Source Code
 
@@ -38,61 +39,38 @@ The openHiTLS code directory structure is as follows:
 └── openHiTLS
    ├── bsl
    ├── CMakeLists.txt
+   ├── cmake
    ├── config
-   ├── configure.py
    ├── crypto
    ├── docs
    ├── include
    ├── LICENSE
    ├── platform
-   ├── README-en.md
+   ├── README-zh.md
    ├── README.md
-   ├── script
    ├── testcode
    ├── tls
-   └── pki
+   ├── pki
    └── auth
 ```
 Where:
 
-- configure.py: provides the command line function for build configuration
-- config and script: stores build-related scripts
+- CMakeLists.txt: build entry file
+- cmake: CMake build modules, feature option definitions, platform presets, and toolchain files
+- config: stores the configuration header files used during the build
 - bsl: stores the code related to basic functions
-- crypto: stores the code related to cryptographic algorithm capabilities.
+- crypto: stores the code related to cryptographic algorithm capabilities
 - tls: stores the code related to secure transmission
 - platform: stores other dependent codes
 - testcode: stores the test project code
 - pki: stores the PKI related code
 - auth: stores the auth related code
 
-**Call CMake to build the source code. The detailed method is as follows:**
+**Call CMake directly to build the source code. The detailed method is as follows:**
 
 ### 3.1 CMake Build
 
-openHiTLS provides the CMake build mode, which can be configured using **configure.py**. You are advised to create a **build** directory to store temporary files generated during the build process, and then go to the **build** directory and run "cmake .. &&make" to build openHiTLS. You can run the `python3 ./configure.py –help` command to query the configuration of **configure.py**. The related parameters are as follows.
-
-| **Script Parameter**| **Parameter Description**| **Execution Mode**|
-| ------------- | ------------ | ---------------- |
-|--help           |Displays the help information about the script.|python3 configure.py --help|
-|-m                |Generates a **moudules.cmake** file.|python3 configure.py -m|
-|--build_dir    |Specifies the temporary directory for compilation.|python3 configure.py --build_dir build|
-|--output_dir |Specifies the output path of the compilation target.|python3 configure.py --output_dir output|
-|--feature_config|Specifies the compilation feature configuration file.|python3 configure.py --feature_config path/to/xxx.json|
-|--compile_config|Specifies the compilation parameter configuration file.|python3 configure.py --compile_config path/to/xxx.json|
-|--enable|Specifies build features.<br>Please refer to [Feature Description](./4_Configuration%20guide.md#1-Feature%20Description) to get supported features|python3 configure.py --enable hitls_crypto hitls_tls hitls_pse|
-|--disable|disable buld features|python3 configure.py --disable sal_thread |
-|--asm_type|Indicates the assembly type.|python3 configure.py --lib_type  static --asm_type armv8|
-|--asm|Specifes build asm features, whicht needs to be used simultaneously with parameter `asm_type`.|python3 configure.py --lib_type  static --asm_type armv8 --asm sha2|
-|--endian|Indicates big-endian or little-endian build.|python3 configure.py --endian little|
-|--system|Specified the system type, currently only supports `linux`, used for 'sal_xxx' related features|python3 configure.py --system linux|
-|--bits|To enable feature "bn", should specify the number of OS bits, `32\|64`|python3 configure.py --bits 64|
-|--lib_type|Builds a static library, a dynamic library, or an object.|python3 configure.py --lib_type  static|
-|--add_options|Adds compilation options.|python3 configure.py --add_options "-O0 -g3"|
-|--del_options|Removes compilation options.|python3 configure.py --del_options"-O2"|
-|--add_link_flags|Adds link options.|python3 configure.py --add_link_flags="-pie"|
-|--del_link_flags|Removes link options.|python3 configure.py --del_options="-O2 -Werror"|
-
-The **configure.py** script modifies the existing configuration based on the **compile.json** and **feature.json** configuration files at the top layer.
+openHiTLS uses a pure CMake build system. All build options are controlled directly via `-D` parameters. You are advised to create a **build** directory to store temporary files generated during the build process, then go to the **build** directory and run `cmake .. && make` to complete the build.
 
 The overall CMake build procedure is as follows:
 
@@ -100,57 +78,107 @@ The overall CMake build procedure is as follows:
 cd openHiTLS
 mkdir -p ./build
 cd ./build
-python3 ../configure.py # Modify the configuration. For details, see section 3.1.1.
-cmake ..
+cmake .. [options]  # Configure, see section 3.1.1 for details
 make -j
 ```
 
 The build result is stored in the **openHiTLS/build** directory.
 
+Common CMake parameters are as follows:
+
+| **CMake Parameter** | **Description** | **Example** |
+| ------------- | ------------ | -------- |
+| `HITLS_BUILD_PROFILE` | Use a preset configuration. Options: `full`, `iso19790` | `cmake .. -DHITLS_BUILD_PROFILE=full` |
+| `HITLS_BSL` / `HITLS_CRYPTO` / `HITLS_TLS` / `HITLS_PKI` / `HITLS_AUTH` | Enable or disable the corresponding component (ON/OFF). | `cmake .. -DHITLS_TLS=OFF` |
+| `HITLS_CRYPTO_<ALGO>` | Enable or disable a specific algorithm feature. Refer to [Feature Description](./4_Configuration%20guide.md#1-Feature-Description). | `cmake .. -DHITLS_CRYPTO_SHA256=ON` |
+| `HITLS_BUILD_STATIC` | Build static libraries (ON by default). | `cmake .. -DHITLS_BUILD_STATIC=ON` |
+| `HITLS_BUILD_SHARED` | Build shared libraries (ON by default). | `cmake .. -DHITLS_BUILD_SHARED=ON` |
+| `HITLS_BUNDLE_LIB` | Bundle all modules into a single library. | `cmake .. -DHITLS_BUNDLE_LIB=ON` |
+| `HITLS_BUILD_EXE` | Build the executable command line tool. | `cmake .. -DHITLS_BUILD_EXE=ON` |
+| `HITLS_ASM` | Auto-detect platform and enable assembly optimizations (x86_64 / ARMv8 / ARMv7). | `cmake .. -DHITLS_ASM=ON` |
+| `HITLS_ASM_X8664` | Enable x86_64 assembly optimizations. | `cmake .. -DHITLS_ASM_X8664=ON` |
+| `HITLS_ASM_ARMV8` | Enable ARMv8 assembly optimizations. | `cmake .. -DHITLS_ASM_ARMV8=ON` |
+| `HITLS_ASM_ARMV7` | Enable ARMv7 assembly optimizations. | `cmake .. -DHITLS_ASM_ARMV7=ON` |
+| `HITLS_ASM_X8664_AVX512` | Enable x86_64 AVX512 assembly optimizations. Enabling this automatically enables `HITLS_ASM_X8664` as the fallback optimization for features where AVX512 is not yet implemented. | `cmake .. -DHITLS_ASM_X8664_AVX512=ON` |
+| `HITLS_COMPILE_OPTIONS` | Override compile options completely (semicolon-separated CMake list). | `cmake .. -DHITLS_COMPILE_OPTIONS="-O0;-g"` |
+| `HITLS_SHARED_LINK_FLAGS` | Override shared library link flags completely (semicolon-separated CMake list). | `cmake .. -DHITLS_SHARED_LINK_FLAGS="-shared;-Wl,-z,now"` |
+| `HITLS_EXE_LINK_FLAGS` | Override executable link flags completely (semicolon-separated CMake list). | `cmake .. -DHITLS_EXE_LINK_FLAGS="-pie;-Wl,-z,now"` |
+| `HITLS_BUILD_GEN_INFO` | Generate build information files (macros.txt, sources.txt, include_dirs.txt). | `cmake .. -DHITLS_BUILD_GEN_INFO=ON` |
+| `HITLS_PLATFORM_ENDIAN` | Manually specify the endianness (auto-detected by default). | `cmake .. -DHITLS_PLATFORM_ENDIAN=little` |
+| `HITLS_PLATFORM_BITS` | Manually specify the platform bit width (auto-detected by default). | `cmake .. -DHITLS_PLATFORM_BITS=64` |
+| `HITLS_PLATFORM_INT128` | Manually specify whether 128-bit integer is supported (enabled by default). | `cmake .. -DHITLS_PLATFORM_INT128=OFF` |
+
 #### 3.1.1 Common Configuration Commands
 
 ```bash
-# Disable a feature.
-python3 ../configure.py --disable [feature]::[module]
+# Default build (all features enabled, builds static and shared libraries)
+cmake ..
 
-# Enable a feature.
-python3 ../configure.py --enable [feature]::[module]
+# Full build using preset
+cmake .. -DHITLS_BUILD_PROFILE=full
 
-# Default configuration file. If the file does not exist, a file is generated. Otherwise, no action is performed.
-python3 ../configure.py -m
+# Enable a specific algorithm feature (without preset)
+cmake .. -DHITLS_CRYPTO_SHA256=ON
 
-# Add or delete compilation options.
-# Note: If a compilation option already exists and you want to update it, you must run **--del_options** and **--add_options** in sequence. In this example, O0 needs to be changed to O2.
-python3 ../configure.py --del_options="-O2 -D_FORTIFY_SOURCE=2" --add_options="-O0 -g"
+# Disable a specific algorithm feature
+cmake .. -DHITLS_CRYPTO_SHA256=OFF
 
-# Add or delete link options.
-python3 ../configure.py --add_link_flags="-lxxx" --del_link_flags="-lxxx"
+# Generate static libraries only
+cmake .. -DHITLS_BUILD_SHARED=OFF
 
-# Generate static libraries only.
-python3 ../configure.py --lib_type static
+# Generate shared libraries only
+cmake .. -DHITLS_BUILD_STATIC=OFF
 
-# Generate dynamic libraries only.
-python3 ../configure.py --lib_type shared
+# Bundle into a single library
+cmake .. -DHITLS_BUNDLE_LIB=ON
 
-# Generate object files only.
-python3 ../configure.py --lib_type object
+# Build the command line tool
+cmake .. -DHITLS_BUILD_EXE=ON
 
-# Generate dynamic libraries, static libraries, and object files.
-python3 ../configure.py --lib_type shared static object
+# Enable assembly optimizations (auto-detect platform)
+cmake .. -DHITLS_ASM=ON
+
+# Enable x86_64 assembly optimizations (full build)
+cmake .. -DHITLS_BUILD_PROFILE=full -DHITLS_ASM_X8664=ON
+
+# Override compile options
+cmake .. -DHITLS_COMPILE_OPTIONS="-O0;-g"
+
+# Override shared library link flags
+cmake .. -DHITLS_SHARED_LINK_FLAGS="-shared;-Wl,-z,now"
+
+# Override executable link flags
+cmake .. -DHITLS_EXE_LINK_FLAGS="-pie;-Wl,-z,now"
+
+# Append compile flags
+cmake .. -DCMAKE_C_FLAGS="-O0 -g"
+
+# Modify the build type (CMAKE will automatically add corresponding compile options, e.g., -g for Debug mode, -O3 for Release mode, etc.)
+cmake .. -DCMAKE_BUILD_TYPE=Debug/Release/RelWithDebInfo/MinSizeRel
+
+# Load a custom feature configuration file via CMake's -C parameter
+# You can set any supported CMake variables in the custom file, for example:
+#     set(HITLS_CRYPTO_SHA256    ON CACHE BOOL "" FORCE)
+#     set(HITLS_BUILD_EXE        ON CACHE BOOL "" FORCE)
+#     set(HITLS_COMPILE_OPTIONS  "-O0;-g" CACHE STRING "" FORCE)
+#     set(HITLS_PRESET_LOADED    ON CACHE BOOL "" FORCE) # must be included to mark preset as loaded
+cmake .. -C ../path/to/your_feature_config.cmake
 ```
 
 #### 3.1.2 Cross Compilation
 
-To cross compile openHiTLS, you need to use the **-DCMAKE_TOOLCHAIN_FILE** parameter of CMake to transfer the cross compilation configuration, as follows:
+To cross compile openHiTLS, use the **-DCMAKE_TOOLCHAIN_FILE** parameter of CMake to specify a toolchain file. Pre-built toolchain files for common platforms are available under `cmake/toolchain/`:
 
 ```bash
 cd openHiTLS
 mkdir -p ./build
 cd ./build
-python3 ../configure.py --bits=64 --system=linux # Modify the configuration. For details, see section 3.1.1.
-cmake -DCMAKE_TOOLCHAIN_FILE=usr_gcc.toolchain.cmake .. # xxx.toolchain.cmake needs to be written by the user.
+# Use the built-in ARMv8 toolchain (see cmake/toolchain/ for other options)
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain/aarch64-linux-gnu-gcc.cmake
 make -j
 ```
+
+For a custom toolchain, use the files in `cmake/toolchain/` as templates and pass the path via `-DCMAKE_TOOLCHAIN_FILE`.
 
 ### 3.2 Installing the Build Result
 

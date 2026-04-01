@@ -27,7 +27,7 @@ extern "C" {
 #endif /* __clang__ */
 
 
-#ifdef HITLS_INT128
+#ifdef HITLS_PLATFORM_INT128
 typedef __int128_t int128_t;
 typedef __uint128_t uint128_t;
 

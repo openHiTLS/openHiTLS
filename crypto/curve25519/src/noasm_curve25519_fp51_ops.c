@@ -20,7 +20,7 @@
 #include "curve25519_local.h"
 
 // X25519 alternative implementation, faster but require int128
-#ifdef HITLS_INT128
+#ifdef HITLS_PLATFORM_INT128
 #define CURVE25519_51BITS_MASK 0x7ffffffffffff
 #define CURVE25519_51BITS 51
 

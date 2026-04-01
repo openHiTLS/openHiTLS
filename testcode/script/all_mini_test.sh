@@ -29,7 +29,7 @@ parse_option()
     for i in $PARAM_LIST
     do
         case "${i}" in
-            "bsl"|"md"|"mac"|"kdf"|"cipher"|"bn"|"ecc"|"pkey"|"pki"|"all"|"tls"|"provider")
+            "bsl"|"md"|"mac"|"kdf"|"cipher"|"bn"|"ecc"|"pkey"|"pki"|"all"|"tls"|"provider"|"preset_iso19790")
                 TEST=$i
                 ;;
             "x8664"|"armv8")
@@ -230,7 +230,7 @@ test_bn()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=bn_prime
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=bn_str_conv
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=bn_cb
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=bn_prime_rfc3526
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=bn_prime_rfc
 }
 
 test_ecc()
@@ -239,38 +239,38 @@ test_ecc()
     if [ "$ASM_TYPE" = "armv8" -o "$ASM_TYPE" = "x8664" ]; then
         # The curves that support assembly are: curve_sm2, curve_nistp256
         # all curves.
-        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,sm2,drbg_hash,entropy,sha2,ecc,ealinit test=curve_nistp224 add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM"
+        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,sm2,drbg_hash,entropy,sha2,ecc,ealinit test=curve_nistp224 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
         # sm2, depends on sm3
-        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2,drbg_hash,entropy,ealinit test=sm2 add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM" add-options="-DHITLS_CRYPTO_DRBG_GM"
-        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_crypt,drbg_hash,entropy,ealinit test=sm2_crypt add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM" add-options="-DHITLS_CRYPTO_DRBG_GM"
-        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_exch,drbg_hash,entropy,ealinit test=sm2_exch add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM" add-options="-DHITLS_CRYPTO_DRBG_GM"
-        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_sign,drbg_hash,entropy,ealinit test=sm2_sign add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM" add-options="-DHITLS_CRYPTO_DRBG_GM"
+        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2,drbg_hash,entropy,ealinit test=sm2 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
+        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_crypt,drbg_hash,entropy,ealinit test=sm2_crypt add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
+        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_exch,drbg_hash,entropy,ealinit test=sm2_exch add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
+        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_sign,drbg_hash,entropy,ealinit test=sm2_sign add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
         # nistp256
-        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp256,ealinit test=curve_nistp256 add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM"
+        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp256,ealinit test=curve_nistp256 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
 
         return
     fi
 
     # Test all curves.
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,sm2,drbg_hash,entropy,sha2,ecc test=curve_nistp224 add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,sm2,drbg_hash,entropy,sha2,ecc test=curve_nistp224 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
 
     # nist192/224/256/384/521
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp192 test=curve_nistp192 add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp224 test=curve_nistp224 add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp256 test=curve_nistp256 add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp384 test=curve_nistp384 add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp521 test=curve_nistp521 add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp192 test=curve_nistp192 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp224 test=curve_nistp224 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp256 test=curve_nistp256 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp384 test=curve_nistp384 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp521 test=curve_nistp521 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
 
     # br256/384/512
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_bp256r1 test=curve_bp256r1 add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_bp384r1 test=curve_bp384r1 add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_bp512r1 test=curve_bp512r1 add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_bp256r1 test=curve_bp256r1 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_bp384r1 test=curve_bp384r1 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_bp512r1 test=curve_bp512r1 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
 
     # sm2 depends on sm3 by default.
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2,drbg_hash,entropy test=sm2 add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM" add-options="-DHITLS_CRYPTO_DRBG_GM"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_crypt,drbg_hash,entropy test=sm2_crypt add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM" add-options="-DHITLS_CRYPTO_DRBG_GM"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_exch,drbg_hash,entropy test=sm2_exch add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM" add-options="-DHITLS_CRYPTO_DRBG_GM"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_sign,drbg_hash,entropy test=sm2_sign add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM" add-options="-DHITLS_CRYPTO_DRBG_GM"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2,drbg_hash,entropy test=sm2 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_crypt,drbg_hash,entropy test=sm2_crypt add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_exch,drbg_hash,entropy test=sm2_exch add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_sign,drbg_hash,entropy test=sm2_sign add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
 }
 
 test_pkey()
@@ -344,14 +344,19 @@ test_pkey()
 
 test_tls()
 {
-    include_path="-I${HITLS_ROOT_DIR}/testcode/script/mini_test_config"
     NO_LIB=""
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=tlcp_feature test=base,asn1,base64,buffer,err,hash,init,list,log,obj,params,pem,tlv,sal,sal_mem,sal_lock,sal_str,sal_file,sal_thread,sal_net,sal_time,aes,bn,chacha20,cmac_aes,drbg_ctr,drbg_hash,ecc,ecdh,ecdsa,entropy,gcm,hkdf,hpke,mlkem,mldsa,sha256,sha384,sha512,slh_dsa,sm2,sm3,sm4,x25519,curve_nistp256,curve_nistp384,curve_nistp521,x509_crl_gen,x509_crl_parse,x509_csr_gen,x509_csr_parse,x509_crt_gen,x509_crt_parse,x509_vfy,tlcp linux add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM" add-options="-DHITLS_CRYPTO_MLKEM_CMP" add-options="-DHITLS_CRYPTO_MLDSA_CMP"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=tlcp_feature \
+        test=base,asn1,base64,buffer,err,hash,init,list,log,obj,params,pem,tlv,sal,sal_mem,sal_lock,sal_str,sal_file,sal_thread,sal_net,sal_time,aes,bn,chacha20,cmac_aes,drbg_ctr,drbg_hash,ecc,ecdh,ecdsa,entropy,gcm,hkdf,hpke,mlkem,mldsa,sha256,sha384,sha512,slh_dsa,sm2,sm3,sm4,x25519,curve_nistp256,curve_nistp384,curve_nistp521,x509_crl_gen,x509_crl_parse,x509_csr_gen,x509_csr_parse,x509_crt_gen,x509_crt_parse,x509_vfy,tlcp \
+        linux \
+        add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" \
+        add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" \
+        add-feature-options="-DHITLS_CRYPTO_MLKEM_CMP=ON" \
+        add-feature-options="-DHITLS_CRYPTO_MLDSA_CMP=ON"
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=nokem_feature test=base linux
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=mtu_feature test=mtu linux
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=max_send_fragment_feature test=max_send_fragment linux
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=ca_list_feature test=ca_list linux
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=no_dfx_feature test=no_dfx compile-config=no_dfx_compile include-path="${include_path}" linux
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB feature-config=no_dfx_feature test=no_dfx add-options="-fno-short-enums" linux
 }
 
 test_pki()
@@ -431,7 +436,7 @@ test_pki()
 
     #### csr gen ####
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_csr_gen,x509_csr_attr,x509_csr_get,pem,rsa,sha256,drbg_hash test=x509_csr_gen
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_csr_gen,x509_csr_attr,x509_csr_get,sal_file,ed25519,drbg_hash test=x509_csr_gen add-options="-DHITLS_CRYPTO_ED25519_CHECK"
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_csr_gen,x509_csr_attr,x509_csr_get,sal_file,ed25519,drbg_hash test=x509_csr_gen add-feature-options="-DHITLS_CRYPTO_ED25519_CHECK=ON"
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_csr_gen,x509_csr_attr,x509_csr_get,sm2,sha256,drbg_hash test=x509_csr_gen
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_csr_gen,x509_csr_attr,x509_csr_get,sal_file,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=x509_csr_gen
 
@@ -478,33 +483,50 @@ provider_test_check()
 
 test_provider()
 {
-    include_path="-I${HITLS_ROOT_DIR}/testcode/script/mini_test_config"
     NO_LIB="no-tls"
+    MD_CONFIG_PARAM="add-feature-options=-DHITLS_CRYPTO_MD=ON add-feature-options=-DHITLS_CRYPTO_SHA256=OFF add-feature-options=-DHITLS_CRYPTO_SHA224=OFF add-feature-options=-DHITLS_CRYPTO_SM3=OFF"
 
     # sha256
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB linux enable=eal,provider,sal_dl test=provider add-options="-DHITLS_CONFIG_FILE='<test_config.h>'" include-path="${include_path}"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB $MD_CONFIG_PARAM linux enable=eal,provider,sal_dl test=provider add-feature-options="-DHITLS_CRYPTO_MD=ON"
     provider_test_check
 
     # hmac
     # build without sha256, and not check config
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB linux enable=eal,provider,sal_dl,hmac test=provider add-options="-DHITLS_CONFIG_FILE='<test_config.h>'" include-path="${include_path}" add-options="-DHITLS_NO_CONFIG_CHECK"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB $MD_CONFIG_PARAM linux enable=eal,provider,sal_dl,hmac test=provider add-feature-options="-DHITLS_SKIP_CONFIG_CHECK=ON"
     provider_test_check
 
     # hkdf
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB linux enable=eal,provider,sal_dl,hkdf test=provider add-options="-DHITLS_CONFIG_FILE='<test_config.h>'" include-path="${include_path}" add-options="-DHITLS_NO_CONFIG_CHECK"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB $MD_CONFIG_PARAM linux enable=eal,provider,sal_dl,hkdf test=provider add-feature-options="-DHITLS_SKIP_CONFIG_CHECK=ON"
     provider_test_check
 
     # pbkdf2
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB linux enable=eal,provider,sal_dl,pbkdf2 test=provider add-options="-DHITLS_CONFIG_FILE='<test_config.h>'" include-path="${include_path}" add-options="-DHITLS_NO_CONFIG_CHECK"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB $MD_CONFIG_PARAM linux enable=eal,provider,sal_dl,pbkdf2 test=provider add-feature-options="-DHITLS_SKIP_CONFIG_CHECK=ON"
     provider_test_check
 
     # kdftls12
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB linux enable=eal,provider,sal_dl,kdftls12 test=provider add-options="-DHITLS_CONFIG_FILE='<test_config.h>'" include-path="${include_path}" add-options="-DHITLS_NO_CONFIG_CHECK"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB $MD_CONFIG_PARAM linux enable=eal,provider,sal_dl,kdftls12 test=provider add-feature-options="-DHITLS_SKIP_CONFIG_CHECK=ON"
     provider_test_check
 
     # rsa
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB linux enable=eal,provider,sal_dl,rsa,sm3,drbg_hash,entropy,ealinit test=provider add-options="-DHITLS_CONFIG_FILE='<test_config.h>'" include-path="${include_path}" add-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-options="-DHITLS_CRYPTO_DRBG_GM" add-options="-DHITLS_NO_CONFIG_CHECK"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB $MD_CONFIG_PARAM linux enable=eal,provider,sal_dl,rsa,sm3,drbg_hash,entropy,ealinit test=provider add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON" add-feature-options="-DHITLS_SKIP_CONFIG_CHECK=ON"
     provider_test_check
+}
+
+test_preset_iso19790()
+{
+    NO_LIB="no-tls"
+    test_features="eal,provider,aes,chacha20,cbc,ecb,xts,ctr,ofb,cfb,ccm,gcm,chacha20poly1305"
+    test_features="$test_features,sha1,sha2,sha3,sm3,hmac,cmac_aes,gmac,hkdf,pbkdf2,kdftls12"
+    test_features="$test_features,drbg_ctr,drbg_hash,dsa,ed25519,x25519,rsa,dh,ecdsa,ecdh,sm2"
+    test_features="$test_features,curve_nistp192,curve_nistp224,curve_nistp256,curve_nistp384,curve_nistp521"
+    test_features="$test_features,slh_dsa,mlkem,mldsa,codecskey"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB test=$test_features \
+        add-feature-options="-DHITLS_BUILD_PROFILE=iso19790" \
+        add-feature-options="-DHITLS_CRYPTO_RAND_CB=ON" \
+        add-feature-options="-DHITLS_CRYPTO_EALINIT=ON" \
+        add-feature-options="-DHITLS_BSL_UIO_PLT=ON" \
+        add-feature-options="-DHITLS_CRYPTO_ENTROPY_SYS=ON" \
+        add-feature-options="-DHITLS_CRYPTO_BN=ON"
 }
 
 parse_option
@@ -521,6 +543,7 @@ case $TEST in
         test_pkey
         test_tls
         test_provider
+        test_preset_iso19790
         ;;
     "bsl")
         test_bsl
@@ -554,6 +577,9 @@ case $TEST in
         ;;
     "provider")
         test_provider
+        ;;
+    "preset_iso19790")
+        test_preset_iso19790
         ;;
     *)
         ;;

@@ -64,22 +64,22 @@ export_env()
     RUN_TESTS=${RUN_TESTS:=''}
     DEBUG=${DEBUG:=ON}
 
-    if [ -f ${HITLS_ROOT_DIR}/build/macro.txt ];then
-        CUSTOM_CFLAGS=$(cat ${HITLS_ROOT_DIR}/build/macro.txt)
+    if [ -f ${HITLS_ROOT_DIR}/build/macros.txt ];then
+        CUSTOM_CFLAGS=$(cat ${HITLS_ROOT_DIR}/build/macros.txt | tr '\n' ' ')
         CUSTOM_CFLAGS="$CUSTOM_CFLAGS -D__FILENAME__=__FILE__"
         # Add PKI macro if PKI library exists (needed for test framework linking)
         if ls ${HITLS_ROOT_DIR}/build/libhitls_pki.* 1> /dev/null 2>&1; then
             CUSTOM_CFLAGS="$CUSTOM_CFLAGS -DHITLS_PKI"
         fi
-        # Add UDP/TCP/SCTP only if main library has them (check macro.txt)
+        # Add UDP/TCP/SCTP only if main library has them (check macros.txt)
         # This ensures test framework matches the main library's UIO capabilities
-        if grep -q "HITLS_BSL_UIO_UDP" ${HITLS_ROOT_DIR}/build/macro.txt 2>/dev/null; then
+        if grep -q "HITLS_BSL_UIO_UDP" ${HITLS_ROOT_DIR}/build/macros.txt 2>/dev/null; then
             CUSTOM_CFLAGS="$CUSTOM_CFLAGS -DHITLS_BSL_UIO_UDP"
         fi
-        if grep -q "HITLS_BSL_UIO_TCP" ${HITLS_ROOT_DIR}/build/macro.txt 2>/dev/null; then
+        if grep -q "HITLS_BSL_UIO_TCP" ${HITLS_ROOT_DIR}/build/macros.txt 2>/dev/null; then
             CUSTOM_CFLAGS="$CUSTOM_CFLAGS -DHITLS_BSL_UIO_TCP"
         fi
-        if grep -q "HITLS_BSL_UIO_SCTP" ${HITLS_ROOT_DIR}/build/macro.txt 2>/dev/null; then
+        if grep -q "HITLS_BSL_UIO_SCTP" ${HITLS_ROOT_DIR}/build/macros.txt 2>/dev/null; then
             CUSTOM_CFLAGS="$CUSTOM_CFLAGS -DHITLS_BSL_UIO_SCTP"
         fi
     fi
@@ -172,13 +172,13 @@ build_test_suite()
 build_provider_so()
 {
     # Only build if provider support is enabled
-    if [ -f ${HITLS_ROOT_DIR}/build/macro.txt ]; then
-        if ! grep -q "HITLS_CRYPTO_PROVIDER" ${HITLS_ROOT_DIR}/build/macro.txt 2>/dev/null; then
+    if [ -f ${HITLS_ROOT_DIR}/build/macros.txt ]; then
+        if ! grep -q "HITLS_CRYPTO_PROVIDER" ${HITLS_ROOT_DIR}/build/macros.txt 2>/dev/null; then
             echo "[INFO] Provider support not enabled, skipping provider library build"
             return 0
         fi
     else
-        echo "[WARNING] macro.txt not found, skipping provider library build"
+        echo "[WARNING] macros.txt not found, skipping provider library build"
         return 0
     fi
 

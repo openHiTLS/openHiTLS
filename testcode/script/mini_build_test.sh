@@ -35,6 +35,7 @@ NO_LIB=""
 
 LIB_TYPE="static"
 DEBUG="off"
+ADD_FEATURE_OPTIONS="-DHITLS_BUILD_GEN_INFO=ON"
 ADD_OPTIONS=""
 DEL_OPTIONS=""
 SYSTEM=""
@@ -43,8 +44,8 @@ ENDIAN="little"
 ASAN_OPTIONS=""
 TLS_FLAG=""
 FEATURE_CONFIG_FILE=""
-COMPILE_CONFIG_FILE=""
-INCLUDE_PATH=""
+
+CMAKE_BUILD_OPTIONS=""
 
 print_usage() {
     printf "Usage: $0\n"
@@ -83,7 +84,6 @@ parse_option()
                 ;;
             "macro")
                 SHOW_MACRO="on"
-                ADD_OPTIONS="${ADD_OPTIONS} -E -dM"
                 LIB_TYPE="static"
                 ;;
             "size")
@@ -119,26 +119,14 @@ parse_option()
             "feature-config")
                 # First try to find file with ASM_TYPE suffix
                 if [ -n "$ASM_TYPE" ]; then
-                    FEATURE_CONFIG_FILE=$(find $HITLS_ROOT_DIR -name "${value}_${ASM_TYPE}.json" -type f | head -n 1)
+                    FEATURE_CONFIG_FILE=$(find $HITLS_ROOT_DIR -name "${value}_${ASM_TYPE}.cmake" -type f | head -n 1)
                 fi
                 # If not found with suffix, try the original filename
                 if [ -z "$FEATURE_CONFIG_FILE" ]; then
-                    FEATURE_CONFIG_FILE=$(find $HITLS_ROOT_DIR -name "${value}.json" -type f | head -n 1)
+                    FEATURE_CONFIG_FILE=$(find $HITLS_ROOT_DIR -name "${value}.cmake" -type f | head -n 1)
                 fi
                 if [ -z "$FEATURE_CONFIG_FILE" ]; then
-                    echo "Error: Cannot find feature config file '${value}.json' or '${value}.json' under $HITLS_ROOT_DIR"
-                    exit 1
-                fi
-                ;;
-            "compile-config")
-                if [ -n "$ASM_TYPE" ]; then
-                    COMPILE_CONFIG_FILE=$(find $HITLS_ROOT_DIR -name "${value}_${ASM_TYPE}.json" -type f | head -n 1)
-                fi
-                if [ -z "$COMPILE_CONFIG_FILE" ]; then
-                    COMPILE_CONFIG_FILE=$(find $HITLS_ROOT_DIR -name "${value}.json" -type f | head -n 1)
-                fi
-                if [ -z "$COMPILE_CONFIG_FILE" ]; then
-                    echo "Error: Cannot find compile config file '${value}.json' or '${value}.json' under $HITLS_ROOT_DIR"
+                    echo "Error: Cannot find feature config file '${value}.cmake' or '${value}.cmake' under $HITLS_ROOT_DIR"
                     exit 1
                 fi
                 ;;
@@ -146,7 +134,7 @@ parse_option()
                 LIB_TYPE="static shared"
                 TEST_FEATURE=$value
                 if [[ $value == *cmvp* ]]; then
-                    ADD_OPTIONS="$ADD_OPTIONS -DHITLS_CRYPTO_DRBG_GM -DHITLS_CRYPTO_CMVP_INTEGRITY"
+                    ADD_FEATURE_OPTIONS="$ADD_FEATURE_OPTIONS -DHITLS_CRYPTO_DRBG_GM=ON -DHITLS_CRYPTO_CMVP_INTEGRITY=ON"
                 fi
                 ;;
             "no-exe-test")
@@ -164,9 +152,8 @@ parse_option()
             "add-options")
                 ADD_OPTIONS="$ADD_OPTIONS $value"
                 ;;
-            "include-path")
-                INCLUDE_PATH="$value $INCLUDE_PATH "
-                ADD_OPTIONS="$ADD_OPTIONS $value"
+            "add-feature-options")
+                ADD_FEATURE_OPTIONS="$ADD_FEATURE_OPTIONS $value"
                 ;;
             "tls-debug")
                 TLS_FLAG=$value
@@ -197,90 +184,71 @@ show_size()
 show_macro()
 {
     cd ${HITLS_BUILD_DIR}
-    grep "#define HITLS_" libhitls_bsl.a | grep -v HITLS_VERSION |awk '{print $2}' > macro_new.txt
-    sort macro_new.txt | uniq >unique_macro.txt
-    cat unique_macro.txt
+    cat macros.txt
 }
 
-process_feature_config()
+build_args_to_cmake_options()
 {
-    local config_file="$1"
-    local endian="$2"
-    local bits="$3"
-    local asm_type="$4"
-    local build_dir="$5"
+    local options=""
 
-    python3 - "$config_file" "$endian" "$bits" "$asm_type" "$build_dir" <<END
-#!/usr/bin/env python
-import json
-import sys
-import os
-
-if __name__ == "__main__":
-    config_file = sys.argv[1]
-    endian = sys.argv[2]
-    bits = int(sys.argv[3])
-    asm_type = sys.argv[4] if len(sys.argv) > 4 and sys.argv[4] else None
-    build_dir = sys.argv[5]
-    # Read the current config
-    with open(config_file, 'r') as f:
-        config = json.load(f)
-    # Update the fields
-    config['endian'] = endian
-    config['bits'] = bits
-    if asm_type:
-        config['asmType'] = asm_type
-    else:
-        # If no asm_type is defined, remove the "asm" field from hitls_crypto
-        config['asmType'] = "no_asm"
-        if 'libs' in config and 'hitls_crypto' in config['libs'] and 'asm' in config['libs']['hitls_crypto']:
-            del config['libs']['hitls_crypto']['asm']
-
-    # Create build directory if it doesn't exist
-    os.makedirs(build_dir, exist_ok=True)
-    # Save to build directory
-    output_file = os.path.join(build_dir, 'feature_config_modified.json')
-    with open(output_file, 'w') as f:
-        json.dump(config, f, indent=4)
-    # Print the output file path for the shell script to use
-    print(output_file)
-END
-}
-
-mini_config()
-{
-    enables="--enable"
-    for feature in ${FEATURES[@]}
-    do
-        enables="$enables $feature"
-    done
-
-    if [ "$FEATURE_CONFIG_FILE" != "" ]; then
-        MODIFIED_CONFIG_FILE=$(process_feature_config "$FEATURE_CONFIG_FILE" "$ENDIAN" "$BITS" "$ASM_TYPE" "$HITLS_ROOT_DIR/build/")
-        enables="--feature_config $MODIFIED_CONFIG_FILE"
-    fi
-
-    if [ "$COMPILE_CONFIG_FILE" != "" ]; then
-        enables="$enables --compile_config $COMPILE_CONFIG_FILE"
-    fi
-
-    echo "python3 configure.py --lib_type $LIB_TYPE $enables --endian=$ENDIAN --bits=$BITS"
-    python3 $HITLS_ROOT_DIR/configure.py --lib_type $LIB_TYPE  $enables --endian=$ENDIAN --bits=$BITS
-
+    # asm type
     if [ "$ASM_TYPE" != "" ]; then
-        echo "python3 configure.py --asm_type $ASM_TYPE"
-        python3 $HITLS_ROOT_DIR/configure.py --asm_type $ASM_TYPE
+        options="$options -DHITLS_ASM_$(echo $ASM_TYPE | tr '[:lower:]' '[:upper:]')=ON"
+    fi
+    # lib type
+    [[ "$LIB_TYPE" == *"static"* ]] && options="${options} -DHITLS_BUILD_STATIC=ON"
+    [[ "$LIB_TYPE" == *"shared"* ]] && options="${options} -DHITLS_BUILD_SHARED=ON"
+    # bits
+    if [ "$BITS" != "" ]; then
+        options="$options -DHITLS_PLATFORM_BITS=$BITS"
+    fi
+    # endian
+    if [ "$ENDIAN" != "" ]; then
+        options="$options -DHITLS_PLATFORM_ENDIAN=$ENDIAN"
+    fi
+    # add feature options
+    if [ "$ADD_FEATURE_OPTIONS" != "" ]; then
+        options="$options $ADD_FEATURE_OPTIONS"
+    fi
+    # add compile options
+    if [ "$ADD_OPTIONS" != "" ]; then
+        ADD_OPTIONS=$(echo "$ADD_OPTIONS" | xargs)
+        options="$options -DCMAKE_C_FLAGS=\"$ADD_OPTIONS\""
+    fi
+    # del compile options
+    if [ "$DEL_OPTIONS" != "" ]; then
+        DEL_OPTIONS=$(echo "$DEL_OPTIONS" | xargs)
+        options="$options -D_HITLS_COMPILE_OPTIONS_DEL=\"$DEL_OPTIONS\""
+    fi
+    # features
+    if [ ${#FEATURES[@]} -gt 0 ]; then
+        FEATURE_MACRO_OPTS=$(python3 - "$HITLS_ROOT_DIR/testcode/script/feature_to_macro.json" "${FEATURES[@]}" <<'END'
+import json, sys
+mapping_file = sys.argv[1]
+with open(mapping_file, 'r') as f:
+    mapping = json.load(f)
+opts = []
+for feat in sys.argv[2:]:
+    macro = mapping.get(feat)
+    if macro:
+        opts.append('-D{}=ON'.format(macro))
+    else:
+        print('Warning: No macro mapping found for feature: {}'.format(feat), file=sys.stderr)
+print(' '.join(opts))
+END
+)
+        options="$options $FEATURE_MACRO_OPTS"
+    fi
+    # feature config file
+    if [ "$FEATURE_CONFIG_FILE" != "" ]; then
+        options="$options -C $FEATURE_CONFIG_FILE"
     fi
 
-    if [ "$SYSTEM" != "" ]; then
-        echo "python3 configure.py --system $SYSTEM"
-        python3 $HITLS_ROOT_DIR/configure.py --system $SYSTEM
-    fi
+    echo "================= CMake build options ================="
+    echo "$options"
+    echo "======================================================="
 
-    if [ "$ADD_OPTIONS" != "" -o "$DEL_OPTIONS" != "" ]; then
-        echo "python3 configure.py --add_options=\"$ADD_OPTIONS\" --del_options=\"$DEL_OPTIONS\""
-        python3 $HITLS_ROOT_DIR/configure.py --add_options="$ADD_OPTIONS" --del_options="$DEL_OPTIONS"
-    fi
+    CMAKE_BUILD_OPTIONS="$options"
 }
 
 check_cmd_res()
@@ -300,11 +268,10 @@ build_hitls()
     cd $HITLS_BUILD_DIR
 
     # config
-    mini_config
-    check_cmd_res "configure.py"
+    build_args_to_cmake_options
 
     # cmake ..
-    cmake .. > cmake.txt
+    cmake .. ${CMAKE_BUILD_OPTIONS} > cmake.txt
 
     # cmake ..
     check_cmd_res "cmake .."
@@ -381,12 +348,7 @@ test_feature()
         return
     fi
 
-    params=""
-    if [ "$INCLUDE_PATH" != "" ]; then
-        params="${params} include-path=$INCLUDE_PATH"
-    fi
-
-    bash build_sdv.sh run-tests="$files" $NO_LIB no-demos no-sctp $ASAN_OPTIONS $params $TLS_FLAG
+    bash build_sdv.sh run-tests="$files" $NO_LIB no-demos no-sctp $ASAN_OPTIONS $TLS_FLAG
 
     if [ $EXE_TEST == "on" ]; then
         # exe test
@@ -400,11 +362,6 @@ test_feature()
 
 parse_option
 
-# build securec
-if [ ! -d "${HITLS_ROOT_DIR}/platform/Secure_C/lib" ]; then
-    cd ${HITLS_ROOT_DIR}/platform/Secure_C
-    make -j
-fi
 
 if [ "${BUILD_HITLS}" = "on" ]; then
     build_hitls

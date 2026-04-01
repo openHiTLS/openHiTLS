@@ -26,7 +26,7 @@
 #include "ecc_local.h"
 #include "ecc_utils.h"
 
-#ifndef HITLS_INT128
+#ifndef HITLS_PLATFORM_INT128
 #error "This nistp256 implementation require the compiler support 128-bits integer."
 #endif
 

@@ -371,4 +371,4 @@ BN_BigNum *BN_GetRfcConstPrime(BN_BigNum *r, int32_t paraId)
             return NULL;
     }
 }
-#endif /* HITLS_CRYPTO_BN_PRIME_RFC3526 */
+#endif /* HITLS_CRYPTO_BN_RFC_PRIME */

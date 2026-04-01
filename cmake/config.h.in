@@ -1,0 +1,663 @@
+/*
+ * This file is part of the openHiTLS project.
+ *
+ * openHiTLS is licensed under the Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *     http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ */
+
+#ifndef HITLS_BUILD_CONFIG_H
+#define HITLS_BUILD_CONFIG_H
+
+
+/* ==============================================================================
+ * Variable macros
+ * ==============================================================================
+ */
+/* Eal init options */
+#cmakedefine HITLS_EAL_INIT_OPTS @HITLS_EAL_INIT_OPTS@
+/* Drbg gm level */
+#cmakedefine HITLS_CRYPTO_DRBG_GM_LEVEL @HITLS_CRYPTO_DRBG_GM_LEVEL@
+/* DRBG Initial Random Algorithm Configuration */
+#cmakedefine HITLS_SEED_DRBG_INIT_RAND_ALG @HITLS_SEED_DRBG_INIT_RAND_ALG@
+/* Configuration file for Provider Only */
+#cmakedefine HITLS_CONFIG_FILE "@HITLS_CONFIG_FILE@"
+
+
+/* ==============================================================================
+ * Platform
+ * ==============================================================================
+ */
+#cmakedefine HITLS_BIG_ENDIAN
+#cmakedefine HITLS_SIXTY_FOUR_BITS
+#cmakedefine HITLS_THIRTY_TWO_BITS
+
+#cmakedefine HITLS_PLATFORM_INT128
+
+/* ==============================================================================
+ * ASM Options
+ * ==============================================================================
+ */
+#cmakedefine HITLS_ASM
+#cmakedefine HITLS_ASM_ARMV8
+#cmakedefine HITLS_ASM_ARMV7
+#cmakedefine HITLS_ASM_X8664
+#cmakedefine HITLS_ASM_X8664_AVX512
+#cmakedefine HITLS_CRYPTO_ASM_CHECK
+
+/* ==============================================================================
+ * Top-Level Component Enables
+ * ==============================================================================
+ */
+#cmakedefine HITLS_BSL
+#cmakedefine HITLS_CRYPTO
+#cmakedefine HITLS_PKI
+#cmakedefine HITLS_TLS
+#cmakedefine HITLS_AUTH
+
+/* ==============================================================================
+ * BSL (Basic Support Library) Features
+ * ==============================================================================
+ */
+#cmakedefine HITLS_BSL_SAL
+#cmakedefine HITLS_BSL_SAL_DL
+#cmakedefine HITLS_BSL_SAL_FILE
+#cmakedefine HITLS_BSL_SAL_LOCK
+#cmakedefine HITLS_BSL_SAL_MEM
+#cmakedefine HITLS_BSL_SAL_NET
+#cmakedefine HITLS_BSL_SAL_STR
+#cmakedefine HITLS_BSL_SAL_THREAD
+#cmakedefine HITLS_BSL_SAL_TIME
+#cmakedefine HITLS_BSL_SAL_PID
+#cmakedefine HITLS_BSL_SAL_LINUX
+#cmakedefine HITLS_BSL_SAL_DARWIN
+#cmakedefine HITLS_ATOMIC_THREAD_LOCK
+#cmakedefine HITLS_BSL_ASN1
+#cmakedefine HITLS_BSL_BASE64
+#cmakedefine HITLS_BSL_BUFFER
+#cmakedefine HITLS_BSL_CONF
+#cmakedefine HITLS_BSL_ERR
+#cmakedefine HITLS_BSL_HASH
+#cmakedefine HITLS_BSL_INIT
+#cmakedefine HITLS_BSL_LIST
+#cmakedefine HITLS_BSL_LOG
+#cmakedefine HITLS_BSL_LOG_NO_FORMAT_STRING
+#cmakedefine HITLS_BSL_OBJ
+#cmakedefine HITLS_BSL_OBJ_DEFAULT
+#cmakedefine HITLS_BSL_OBJ_CUSTOM
+#cmakedefine HITLS_BSL_PARAMS
+#cmakedefine HITLS_BSL_PEM
+#cmakedefine HITLS_BSL_PRINT
+#cmakedefine HITLS_BSL_TLV
+#cmakedefine HITLS_BSL_UI
+#cmakedefine HITLS_BSL_UIO
+#cmakedefine HITLS_BSL_UIO_BUFFER
+#cmakedefine HITLS_BSL_UIO_FILE
+#cmakedefine HITLS_BSL_UIO_MEM
+#cmakedefine HITLS_BSL_UIO_PLT
+#cmakedefine HITLS_BSL_UIO_SCTP
+#cmakedefine HITLS_BSL_UIO_TCP
+#cmakedefine HITLS_BSL_UIO_UDP
+#cmakedefine HITLS_BSL_UIO_MTU_QUERY
+
+/* ==============================================================================
+ * CRYPTO Features
+ * ==============================================================================
+ */
+#cmakedefine HITLS_AARCH64_PACIASP
+// Eal
+#cmakedefine HITLS_CRYPTO_EAL
+#cmakedefine HITLS_CRYPTO_EAL_REPORT
+#cmakedefine HITLS_CRYPTO_PKEY_CRYPT
+#cmakedefine HITLS_CRYPTO_PKEY_EXCH
+#cmakedefine HITLS_CRYPTO_PKEY_SIGN
+#cmakedefine HITLS_CRYPTO_PKEY_KEM
+#cmakedefine HITLS_CRYPTO_RAND_CB
+#cmakedefine HITLS_CRYPTO_ENTROPY_GM_CF
+// EalInit
+#cmakedefine HITLS_CRYPTO_EALINIT
+#cmakedefine HITLS_CRYPTO_AUXVAL
+// Md(Hash)
+#cmakedefine HITLS_CRYPTO_MD
+#cmakedefine HITLS_CRYPTO_MD5
+#cmakedefine HITLS_CRYPTO_SHA1
+#cmakedefine HITLS_CRYPTO_SHA1_SMALL_MEM
+#cmakedefine HITLS_CRYPTO_SHA2
+#cmakedefine HITLS_CRYPTO_SHA224
+#cmakedefine HITLS_CRYPTO_SHA256
+#cmakedefine HITLS_CRYPTO_SHA256_SMALL_MEM
+#cmakedefine HITLS_CRYPTO_SHA384
+#cmakedefine HITLS_CRYPTO_SHA512
+#cmakedefine HITLS_CRYPTO_SHA512_SMALL_MEM
+#cmakedefine HITLS_CRYPTO_SHA3
+#cmakedefine HITLS_CRYPTO_SM3
+// Md_mb
+#cmakedefine HITLS_CRYPTO_MD_MB
+#cmakedefine HITLS_CRYPTO_SHA2_MB
+#cmakedefine HITLS_CRYPTO_SHA256_MB
+// Mac
+#cmakedefine HITLS_CRYPTO_MAC
+#cmakedefine HITLS_CRYPTO_HMAC
+#cmakedefine HITLS_CRYPTO_GMAC
+#cmakedefine HITLS_CRYPTO_CMAC
+#cmakedefine HITLS_CRYPTO_CMAC_AES
+#cmakedefine HITLS_CRYPTO_CMAC_SM4
+#cmakedefine HITLS_CRYPTO_CBC_MAC
+#cmakedefine HITLS_CRYPTO_SIPHASH
+// Hpke
+#cmakedefine HITLS_CRYPTO_HPKE
+// Kdf
+#cmakedefine HITLS_CRYPTO_KDF
+#cmakedefine HITLS_CRYPTO_HKDF
+#cmakedefine HITLS_CRYPTO_PBKDF2
+#cmakedefine HITLS_CRYPTO_SCRYPT
+#cmakedefine HITLS_CRYPTO_KDFTLS12
+// Drbg
+#cmakedefine HITLS_CRYPTO_DRBG
+#cmakedefine HITLS_CRYPTO_DRBG_CTR
+#cmakedefine HITLS_CRYPTO_DRBG_HASH
+#cmakedefine HITLS_CRYPTO_DRBG_HMAC
+#cmakedefine HITLS_CRYPTO_DRBG_GM
+// Entropy
+#cmakedefine HITLS_CRYPTO_ENTROPY
+#cmakedefine HITLS_CRYPTO_ENTROPY_HARDWARE
+#cmakedefine HITLS_CRYPTO_ENTROPY_DEVRANDOM
+#cmakedefine HITLS_CRYPTO_ENTROPY_GETENTROPY
+#cmakedefine HITLS_CRYPTO_ENTROPY_SYS
+// Modes
+#cmakedefine HITLS_CRYPTO_MODES
+#cmakedefine HITLS_CRYPTO_GCM
+#cmakedefine HITLS_CRYPTO_CBC
+#cmakedefine HITLS_CRYPTO_CTR
+#cmakedefine HITLS_CRYPTO_CCM
+#cmakedefine HITLS_CRYPTO_ECB
+#cmakedefine HITLS_CRYPTO_XTS
+#cmakedefine HITLS_CRYPTO_CFB
+#cmakedefine HITLS_CRYPTO_CFB128
+#cmakedefine HITLS_CRYPTO_OFB
+#cmakedefine HITLS_CRYPTO_HCTR
+#cmakedefine HITLS_CRYPTO_CHACHA20POLY1305
+#cmakedefine HITLS_CRYPTO_WRAP
+#cmakedefine HITLS_CRYPTO_GHASH
+// Cipher
+#cmakedefine HITLS_CRYPTO_CIPHER
+#cmakedefine HITLS_CRYPTO_AES
+#cmakedefine HITLS_CRYPTO_AES_PRECALC_TABLES
+#cmakedefine HITLS_CRYPTO_SM4
+#cmakedefine HITLS_CRYPTO_CHACHA20
+// Pkey
+#cmakedefine HITLS_CRYPTO_PKEY
+#cmakedefine HITLS_CRYPTO_PKEY_CMP
+#cmakedefine HITLS_CRYPTO_DSA
+#cmakedefine HITLS_CRYPTO_DSA_CHECK
+#cmakedefine HITLS_CRYPTO_DSA_CMP
+#cmakedefine HITLS_CRYPTO_DSA_GEN_PARA
+#cmakedefine HITLS_CRYPTO_CURVE25519
+#cmakedefine HITLS_CRYPTO_CURVE25519_CMP
+#cmakedefine HITLS_CRYPTO_ED25519
+#cmakedefine HITLS_CRYPTO_ED25519_CHECK
+#cmakedefine HITLS_CRYPTO_X25519
+#cmakedefine HITLS_CRYPTO_X25519_CHECK
+#cmakedefine HITLS_CRYPTO_RSA
+#cmakedefine HITLS_CRYPTO_RSA_GEN
+#cmakedefine HITLS_CRYPTO_RSA_SIGN
+#cmakedefine HITLS_CRYPTO_RSA_VERIFY
+#cmakedefine HITLS_CRYPTO_RSA_RECOVER
+#cmakedefine HITLS_CRYPTO_RSA_ENCRYPT
+#cmakedefine HITLS_CRYPTO_RSA_DECRYPT
+#cmakedefine HITLS_CRYPTO_RSA_PAD
+#cmakedefine HITLS_CRYPTO_RSA_NO_PAD
+#cmakedefine HITLS_CRYPTO_RSAES_OAEP
+#cmakedefine HITLS_CRYPTO_RSAES_PKCSV15
+#cmakedefine HITLS_CRYPTO_RSAES_PKCSV15_TLS
+#cmakedefine HITLS_CRYPTO_RSA_EMSA_ISO9796_2
+#cmakedefine HITLS_CRYPTO_RSA_EMSA_PKCSV15
+#cmakedefine HITLS_CRYPTO_RSA_EMSA_PSS
+#cmakedefine HITLS_CRYPTO_RSA_BLINDING
+#cmakedefine HITLS_CRYPTO_RSA_BSSA
+#cmakedefine HITLS_CRYPTO_RSA_CMP
+#cmakedefine HITLS_CRYPTO_RSA_CHECK
+#cmakedefine HITLS_CRYPTO_SP800_STRICT_CHECK
+#cmakedefine HITLS_CRYPTO_DH
+#cmakedefine HITLS_CRYPTO_DH_CMP
+#cmakedefine HITLS_CRYPTO_DH_CHECK
+#cmakedefine HITLS_CRYPTO_ECC
+#cmakedefine HITLS_CRYPTO_ECC_CMP
+#cmakedefine HITLS_CRYPTO_ECC_CHECK
+#cmakedefine HITLS_CRYPTO_CURVE_MONT
+#cmakedefine HITLS_CRYPTO_CURVE_MONT_NIST
+#cmakedefine HITLS_CRYPTO_CURVE_MONT_PRIME
+#cmakedefine HITLS_CRYPTO_CURVE_BP256R1
+#cmakedefine HITLS_CRYPTO_CURVE_BP384R1
+#cmakedefine HITLS_CRYPTO_CURVE_BP512R1
+#cmakedefine HITLS_CRYPTO_CURVE_NISTP192
+#cmakedefine HITLS_CRYPTO_CURVE_NISTP224
+#cmakedefine HITLS_CRYPTO_CURVE_NISTP256
+#cmakedefine HITLS_CRYPTO_CURVE_NISTP384
+#cmakedefine HITLS_CRYPTO_CURVE_NISTP521
+#cmakedefine HITLS_CRYPTO_CURVE_SM2
+#cmakedefine HITLS_CRYPTO_NIST_ECC_ACCELERATE
+#cmakedefine HITLS_CRYPTO_NIST_USE_ACCEL
+#cmakedefine HITLS_CRYPTO_ECDSA
+#cmakedefine HITLS_CRYPTO_ECDSA_CMP
+#cmakedefine HITLS_CRYPTO_ECDSA_CHECK
+#cmakedefine HITLS_CRYPTO_ECDH
+#cmakedefine HITLS_CRYPTO_ECDH_CMP
+#cmakedefine HITLS_CRYPTO_ECDH_CHECK
+#cmakedefine HITLS_CRYPTO_SM2
+#cmakedefine HITLS_CRYPTO_SM2_SIGN
+#cmakedefine HITLS_CRYPTO_SM2_CRYPT
+#cmakedefine HITLS_CRYPTO_SM2_EXCH
+#cmakedefine HITLS_CRYPTO_SM2_CMP
+#cmakedefine HITLS_CRYPTO_SM2_CHECK
+#cmakedefine HITLS_CRYPTO_SM9
+#cmakedefine HITLS_CRYPTO_SM9_CRYPT
+#cmakedefine HITLS_CRYPTO_SM9_EXCH
+#cmakedefine HITLS_CRYPTO_SM9_SIGN
+#cmakedefine HITLS_CRYPTO_SM9_CMP
+#cmakedefine HITLS_CRYPTO_SM9_CHECK
+#cmakedefine HITLS_CRYPTO_PAILLIER
+#cmakedefine HITLS_CRYPTO_ELGAMAL
+#cmakedefine HITLS_CRYPTO_XMSS
+#cmakedefine HITLS_CRYPTO_XMSS_CHECK
+#cmakedefine HITLS_CRYPTO_SLH_DSA
+#cmakedefine HITLS_CRYPTO_SLH_DSA_CHECK
+#cmakedefine HITLS_CRYPTO_MLKEM
+#cmakedefine HITLS_CRYPTO_MLKEM_CMP
+#cmakedefine HITLS_CRYPTO_MLKEM_CHECK
+#cmakedefine HITLS_CRYPTO_FRODOKEM
+#cmakedefine HITLS_CRYPTO_FRODOKEM_CMP
+#cmakedefine HITLS_CRYPTO_MCELIECE
+#cmakedefine HITLS_CRYPTO_MCELIECE_CMP
+#cmakedefine HITLS_CRYPTO_HYBRIDKEM
+#cmakedefine HITLS_CRYPTO_MLDSA
+#cmakedefine HITLS_CRYPTO_MLDSA_CMP
+#cmakedefine HITLS_CRYPTO_MLDSA_CHECK
+#cmakedefine HITLS_CRYPTO_ACVP_TESTS
+#cmakedefine HITLS_SM2_PRECOMPUTE_512K_TBL
+// Provider
+#cmakedefine HITLS_CRYPTO_PROVIDER
+#cmakedefine HITLS_CRYPTO_CMVP
+#cmakedefine HITLS_CRYPTO_CMVP_FIPS
+#cmakedefine HITLS_CRYPTO_CMVP_ISO19790
+#cmakedefine HITLS_CRYPTO_CMVP_SM
+// Bn
+#cmakedefine HITLS_CRYPTO_BN
+#cmakedefine HITLS_CRYPTO_BN_BASIC
+#cmakedefine HITLS_CRYPTO_BN_RAND
+#cmakedefine HITLS_CRYPTO_BN_PRIME
+#cmakedefine HITLS_CRYPTO_BN_RFC_PRIME
+#cmakedefine HITLS_CRYPTO_BN_COMBA
+#cmakedefine HITLS_CRYPTO_BN_SMALL_MEM
+#cmakedefine HITLS_CRYPTO_BN_STR_CONV
+#cmakedefine HITLS_CRYPTO_BN_CB
+#cmakedefine HITLS_CRYPTO_EAL_BN
+// CodecsKey
+#cmakedefine HITLS_CRYPTO_CODECSKEY
+#cmakedefine HITLS_CRYPTO_KEY_DECODE
+#cmakedefine HITLS_CRYPTO_KEY_ENCODE
+#cmakedefine HITLS_CRYPTO_KEY_EPKI
+#cmakedefine HITLS_CRYPTO_KEY_INFO
+// DecodeChain
+#cmakedefine HITLS_CRYPTO_KEY_DECODE_CHAIN
+// Codecs
+#cmakedefine HITLS_CRYPTO_CODECS
+
+/* ==============================================================================
+ * PKI Features
+ * ==============================================================================
+ */
+// X509
+#cmakedefine HITLS_PKI_X509
+#cmakedefine HITLS_PKI_X509_CRT
+#cmakedefine HITLS_PKI_X509_CRT_GEN
+#cmakedefine HITLS_PKI_X509_CRT_PARSE
+#cmakedefine HITLS_PKI_X509_CRT_AUTH
+#cmakedefine HITLS_PKI_X509_CSR
+#cmakedefine HITLS_PKI_X509_CSR_GEN
+#cmakedefine HITLS_PKI_X509_CSR_PARSE
+#cmakedefine HITLS_PKI_X509_CSR_ATTR
+#cmakedefine HITLS_PKI_X509_CSR_GET
+#cmakedefine HITLS_PKI_X509_CRL
+#cmakedefine HITLS_PKI_X509_CRL_GEN
+#cmakedefine HITLS_PKI_X509_CRL_PARSE
+#cmakedefine HITLS_PKI_X509_VFY
+#cmakedefine HITLS_PKI_X509_VFY_DEFAULT
+#cmakedefine HITLS_PKI_X509_VFY_CB
+#cmakedefine HITLS_PKI_X509_VFY_LOCATION
+#cmakedefine HITLS_PKI_X509_VFY_HOSTNAME
+// CMS
+#cmakedefine HITLS_PKI_CMS
+#cmakedefine HITLS_PKI_CMS_DATA
+#cmakedefine HITLS_PKI_CMS_DIGESTINFO
+#cmakedefine HITLS_PKI_CMS_SIGNEDDATA
+#cmakedefine HITLS_PKI_CMS_ENCRYPTDATA
+// PKCS12
+#cmakedefine HITLS_PKI_PKCS12
+#cmakedefine HITLS_PKI_PKCS12_GEN
+#cmakedefine HITLS_PKI_PKCS12_PARSE
+// Info/Print
+#cmakedefine HITLS_PKI_INFO
+#cmakedefine HITLS_PKI_INFO_DN_CONF
+#cmakedefine HITLS_PKI_INFO_DN_HASH
+#cmakedefine HITLS_PKI_INFO_CRT
+#cmakedefine HITLS_PKI_INFO_CSR
+#cmakedefine HITLS_PKI_INFO_CRL
+
+/* ==============================================================================
+ * Crypto Assembling Features
+ * ==============================================================================
+*/
+#cmakedefine HITLS_CRYPTO_BN_ASM
+#cmakedefine HITLS_CRYPTO_BN_ARMV8
+#cmakedefine HITLS_CRYPTO_BN_X8664
+#cmakedefine HITLS_CRYPTO_AES_ASM
+#cmakedefine HITLS_CRYPTO_AES_ARMV8
+#cmakedefine HITLS_CRYPTO_AES_X8664
+#cmakedefine HITLS_CRYPTO_SM4_ASM
+#cmakedefine HITLS_CRYPTO_SM4_ARMV8
+#cmakedefine HITLS_CRYPTO_SM4_X8664
+#cmakedefine HITLS_CRYPTO_CHACHA20_ASM
+#cmakedefine HITLS_CRYPTO_CHACHA20_ARMV8
+#cmakedefine HITLS_CRYPTO_CHACHA20_X8664
+#cmakedefine HITLS_CRYPTO_CHACHA20_X8664_AVX512
+#cmakedefine HITLS_CRYPTO_MODES_ASM
+#cmakedefine HITLS_CRYPTO_MODES_ARMV8
+#cmakedefine HITLS_CRYPTO_MODES_X8664
+#cmakedefine HITLS_CRYPTO_MODES_X8664_AVX512
+#cmakedefine HITLS_CRYPTO_GCM_ASM
+#cmakedefine HITLS_CRYPTO_GCM_ARMV8
+#cmakedefine HITLS_CRYPTO_GCM_X8664
+#cmakedefine HITLS_CRYPTO_CHACHA20POLY1305_ASM
+#cmakedefine HITLS_CRYPTO_CHACHA20POLY1305_X8664
+#cmakedefine HITLS_CRYPTO_CHACHA20POLY1305_X8664_AVX512
+#cmakedefine HITLS_CRYPTO_GHASH_ASM
+#cmakedefine HITLS_CRYPTO_GHASH_ARMV8
+#cmakedefine HITLS_CRYPTO_GHASH_X8664
+#cmakedefine HITLS_CRYPTO_MD5_ASM
+#cmakedefine HITLS_CRYPTO_MD5_X8664
+#cmakedefine HITLS_CRYPTO_SHA1_ASM
+#cmakedefine HITLS_CRYPTO_SHA1_ARMV8
+#cmakedefine HITLS_CRYPTO_SHA1_X8664
+#cmakedefine HITLS_CRYPTO_SHA2_ASM
+#cmakedefine HITLS_CRYPTO_SHA2_ARMV8
+#cmakedefine HITLS_CRYPTO_SHA2_X8664
+#cmakedefine HITLS_CRYPTO_SHA256_ARMV8
+#cmakedefine HITLS_CRYPTO_SHA256_X8664
+#cmakedefine HITLS_CRYPTO_SHA512_ARMV8
+#cmakedefine HITLS_CRYPTO_SHA512_X8664
+#cmakedefine HITLS_CRYPTO_SHA3_ASM
+#cmakedefine HITLS_CRYPTO_SHA3_ARMV8
+#cmakedefine HITLS_CRYPTO_SM3_ASM
+#cmakedefine HITLS_CRYPTO_SM3_ARMV8
+#cmakedefine HITLS_CRYPTO_SM3_ARMV7
+#cmakedefine HITLS_CRYPTO_SM3_X8664
+#cmakedefine HITLS_CRYPTO_ECC_ASM
+#cmakedefine HITLS_CRYPTO_ECC_ARMV8
+#cmakedefine HITLS_CRYPTO_ECC_ARMV7
+#cmakedefine HITLS_CRYPTO_ECC_X8664
+#cmakedefine HITLS_CRYPTO_CURVE_NISTP256_ASM
+#cmakedefine HITLS_CRYPTO_CURVE_NISTP256_ARMV8
+#cmakedefine HITLS_CRYPTO_CURVE_NISTP256_X8664
+#cmakedefine HITLS_CRYPTO_CURVE_NISTP384_ASM
+#cmakedefine HITLS_CRYPTO_CURVE_NISTP384_ARMV8
+#cmakedefine HITLS_CRYPTO_CURVE_NISTP384_X8664
+#cmakedefine HITLS_CRYPTO_CURVE_SM2_ASM
+#cmakedefine HITLS_CRYPTO_CURVE_SM2_ARMV8
+#cmakedefine HITLS_CRYPTO_CURVE_SM2_ARMV7
+#cmakedefine HITLS_CRYPTO_CURVE_SM2_X8664
+#cmakedefine HITLS_CRYPTO_X25519_ASM
+#cmakedefine HITLS_CRYPTO_X25519_ARMV8
+#cmakedefine HITLS_CRYPTO_X25519_X8664
+
+
+/* ==============================================================================
+ * TLS Features
+ * ==============================================================================
+ */
+#cmakedefine HITLS_TLS_PROTO_TLS
+#cmakedefine HITLS_TLS_PROTO_TLS_BASIC
+#cmakedefine HITLS_TLS_PROTO_DTLS
+
+// TLS Proto Version
+#cmakedefine HITLS_TLS_PROTO_VERSION
+#cmakedefine HITLS_TLS_PROTO_TLS12
+#cmakedefine HITLS_TLS_PROTO_TLS13
+#cmakedefine HITLS_TLS_PROTO_TLCP11
+#cmakedefine HITLS_TLS_PROTO_DTLS12
+#cmakedefine HITLS_TLS_PROTO_DTLCP11
+
+// TLS Host
+#cmakedefine HITLS_TLS_HOST
+#cmakedefine HITLS_TLS_HOST_CLIENT
+#cmakedefine HITLS_TLS_HOST_SERVER
+
+// TLS Callback / Provider
+#cmakedefine HITLS_TLS_FEATURE_PROVIDER
+#cmakedefine HITLS_TLS_FEATURE_PROVIDER_HARD_CODING
+#cmakedefine HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
+#cmakedefine HITLS_TLS_CALLBACK
+#cmakedefine HITLS_TLS_CALLBACK_SAL
+#cmakedefine HITLS_TLS_CALLBACK_CERT
+#cmakedefine HITLS_TLS_CALLBACK_CRYPT
+#cmakedefine HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES
+
+// TLS Features
+#cmakedefine HITLS_TLS_FEATURE
+#cmakedefine HITLS_TLS_FEATURE_RENEGOTIATION
+#cmakedefine HITLS_TLS_FEATURE_ALPN
+#cmakedefine HITLS_TLS_FEATURE_SNI
+#cmakedefine HITLS_TLS_FEATURE_PHA
+#cmakedefine HITLS_TLS_FEATURE_PSK
+#cmakedefine HITLS_TLS_FEATURE_SECURITY
+#cmakedefine HITLS_TLS_FEATURE_INDICATOR
+#cmakedefine HITLS_TLS_FEATURE_SESSION
+#cmakedefine HITLS_TLS_FEATURE_SESSION_TICKET
+#cmakedefine HITLS_TLS_FEATURE_SESSION_ID
+#cmakedefine HITLS_TLS_FEATURE_SESSION_CACHE_CB
+#cmakedefine HITLS_TLS_FEATURE_SESSION_CUSTOM_TICKET
+#cmakedefine HITLS_TLS_FEATURE_EXPORT_KEY_MATERIAL
+#cmakedefine HITLS_TLS_FEATURE_MODE
+#cmakedefine HITLS_TLS_FEATURE_MODE_FALL_BACK_SCSV
+#cmakedefine HITLS_TLS_FEATURE_MODE_AUTO_RETRY
+#cmakedefine HITLS_TLS_FEATURE_MODE_ACCEPT_MOVING_WRITE_BUFFER
+#cmakedefine HITLS_TLS_FEATURE_MODE_RELEASE_BUFFERS
+#cmakedefine HITLS_TLS_FEATURE_KEY_UPDATE
+#cmakedefine HITLS_TLS_FEATURE_FLIGHT
+#cmakedefine HITLS_TLS_FEATURE_CERT_MODE
+#cmakedefine HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY
+#cmakedefine HITLS_TLS_FEATURE_CERT_MODE_VERIFY_PEER
+#cmakedefine HITLS_TLS_FEATURE_ANTI_REPLAY
+#cmakedefine HITLS_TLS_FEATURE_EXTENDED_MASTER_SECRET
+#cmakedefine HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
+#cmakedefine HITLS_TLS_FEATURE_KEM
+#cmakedefine HITLS_TLS_FEATURE_CLIENT_HELLO_CB
+#cmakedefine HITLS_TLS_FEATURE_CERT_CB
+#cmakedefine HITLS_TLS_FEATURE_MAX_SEND_FRAGMENT
+#cmakedefine HITLS_TLS_FEATURE_REC_INBUFFER_SIZE
+#cmakedefine HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+#cmakedefine HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
+#cmakedefine HITLS_TLS_FEATURE_MTU_QUERY
+#cmakedefine HITLS_TLS_FEATURE_SM_TLS13
+#cmakedefine HITLS_TLS_FEATURE_DEFAULT_COOKIE
+#cmakedefine HITLS_TLS_FEATURE_ETM
+
+// TLS Proto Module
+#cmakedefine HITLS_TLS_PROTO
+#cmakedefine HITLS_TLS_PROTO_CLOSE_STATE
+#cmakedefine HITLS_TLS_PROTO_DFX
+#cmakedefine HITLS_TLS_PROTO_DFX_CHECK
+#cmakedefine HITLS_TLS_PROTO_DFX_INFO
+#cmakedefine HITLS_TLS_PROTO_DFX_ALERT_NUMBER
+#cmakedefine HITLS_TLS_PROTO_DFX_SERVER_PREFER
+
+// TLS Config
+#cmakedefine HITLS_TLS_CONFIG
+#cmakedefine HITLS_TLS_CONFIG_MANUAL_DH
+#cmakedefine HITLS_TLS_CONFIG_CERT
+#cmakedefine HITLS_TLS_CONFIG_CERT_LOAD_FILE
+#cmakedefine HITLS_TLS_CONFIG_CERT_CALLBACK
+#cmakedefine HITLS_TLS_CONFIG_CERT_BUILD_CHAIN
+#cmakedefine HITLS_TLS_CONFIG_CERT_VERIFY_LOCATION
+#cmakedefine HITLS_TLS_CONFIG_CERT_CRL
+#cmakedefine HITLS_TLS_CONFIG_KEY_USAGE
+#cmakedefine HITLS_TLS_CONFIG_STATE
+#cmakedefine HITLS_TLS_CONFIG_RECORD_PADDING
+#cmakedefine HITLS_TLS_CONFIG_USER_DATA
+#cmakedefine HITLS_TLS_CONFIG_CIPHER_SUITE
+#cmakedefine HITLS_TLS_CONFIG_VERSION
+
+// TLS Connection
+#cmakedefine HITLS_TLS_CONNECTION
+#cmakedefine HITLS_TLS_CONNECTION_INFO_NEGOTIATION
+
+// TLS Cipher Suites
+#cmakedefine HITLS_TLS_SUITE
+#cmakedefine HITLS_TLS_SUITE_AES_128_GCM_SHA256
+#cmakedefine HITLS_TLS_SUITE_AES_256_GCM_SHA384
+#cmakedefine HITLS_TLS_SUITE_CHACHA20_POLY1305_SHA256
+#cmakedefine HITLS_TLS_SUITE_AES_128_CCM_SHA256
+#cmakedefine HITLS_TLS_SUITE_AES_128_CCM_8_SHA256
+#cmakedefine HITLS_TLS_SUITE_RSA_WITH_AES_128_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_RSA_WITH_AES_256_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_RSA_WITH_AES_128_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_RSA_WITH_AES_256_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_RSA_WITH_AES_128_GCM_SHA256
+#cmakedefine HITLS_TLS_SUITE_RSA_WITH_AES_256_GCM_SHA384
+#cmakedefine HITLS_TLS_SUITE_RSA_WITH_AES_128_CCM
+#cmakedefine HITLS_TLS_SUITE_RSA_WITH_AES_128_CCM_8
+#cmakedefine HITLS_TLS_SUITE_RSA_WITH_AES_256_CCM
+#cmakedefine HITLS_TLS_SUITE_RSA_WITH_AES_256_CCM_8
+#cmakedefine HITLS_TLS_SUITE_DHE_RSA_WITH_AES_128_GCM_SHA256
+#cmakedefine HITLS_TLS_SUITE_DHE_RSA_WITH_AES_256_GCM_SHA384
+#cmakedefine HITLS_TLS_SUITE_DHE_RSA_WITH_AES_128_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_DHE_RSA_WITH_AES_256_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_DHE_RSA_WITH_AES_128_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_DHE_RSA_WITH_AES_256_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_DHE_RSA_WITH_AES_128_CCM
+#cmakedefine HITLS_TLS_SUITE_DHE_RSA_WITH_AES_256_CCM
+#cmakedefine HITLS_TLS_SUITE_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+#cmakedefine HITLS_TLS_SUITE_DHE_DSS_WITH_AES_128_GCM_SHA256
+#cmakedefine HITLS_TLS_SUITE_DHE_DSS_WITH_AES_256_GCM_SHA384
+#cmakedefine HITLS_TLS_SUITE_DHE_DSS_WITH_AES_128_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_DHE_DSS_WITH_AES_256_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_DHE_DSS_WITH_AES_128_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_DHE_DSS_WITH_AES_256_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384
+#cmakedefine HITLS_TLS_SUITE_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+#cmakedefine HITLS_TLS_SUITE_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+#cmakedefine HITLS_TLS_SUITE_ECDHE_ECDSA_WITH_AES_128_CCM
+#cmakedefine HITLS_TLS_SUITE_ECDHE_ECDSA_WITH_AES_256_CCM
+#cmakedefine HITLS_TLS_SUITE_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+#cmakedefine HITLS_TLS_SUITE_ECDHE_RSA_WITH_AES_128_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_ECDHE_RSA_WITH_AES_256_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_ECDHE_RSA_WITH_AES_128_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_ECDHE_RSA_WITH_AES_256_CBC_SHA384
+#cmakedefine HITLS_TLS_SUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+#cmakedefine HITLS_TLS_SUITE_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+#cmakedefine HITLS_TLS_SUITE_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+#cmakedefine HITLS_TLS_SUITE_DH_ANON_WITH_AES_128_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_DH_ANON_WITH_AES_256_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_DH_ANON_WITH_AES_128_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_DH_ANON_WITH_AES_256_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_DH_ANON_WITH_AES_128_GCM_SHA256
+#cmakedefine HITLS_TLS_SUITE_DH_ANON_WITH_AES_256_GCM_SHA384
+#cmakedefine HITLS_TLS_SUITE_ECDH_ANON_WITH_AES_128_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_ECDH_ANON_WITH_AES_256_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_PSK_WITH_AES_128_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_PSK_WITH_AES_256_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_PSK_WITH_AES_128_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_PSK_WITH_AES_256_CBC_SHA384
+#cmakedefine HITLS_TLS_SUITE_PSK_WITH_AES_128_GCM_SHA256
+#cmakedefine HITLS_TLS_SUITE_PSK_WITH_AES_256_GCM_SHA384
+#cmakedefine HITLS_TLS_SUITE_PSK_WITH_AES_256_CCM
+#cmakedefine HITLS_TLS_SUITE_PSK_WITH_CHACHA20_POLY1305_SHA256
+#cmakedefine HITLS_TLS_SUITE_DHE_PSK_WITH_AES_128_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_DHE_PSK_WITH_AES_256_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_DHE_PSK_WITH_AES_128_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_DHE_PSK_WITH_AES_256_CBC_SHA384
+#cmakedefine HITLS_TLS_SUITE_DHE_PSK_WITH_AES_128_GCM_SHA256
+#cmakedefine HITLS_TLS_SUITE_DHE_PSK_WITH_AES_256_GCM_SHA384
+#cmakedefine HITLS_TLS_SUITE_DHE_PSK_WITH_AES_128_CCM
+#cmakedefine HITLS_TLS_SUITE_DHE_PSK_WITH_AES_256_CCM
+#cmakedefine HITLS_TLS_SUITE_DHE_PSK_WITH_CHACHA20_POLY1305_SHA256
+#cmakedefine HITLS_TLS_SUITE_RSA_PSK_WITH_AES_128_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_RSA_PSK_WITH_AES_256_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_RSA_PSK_WITH_AES_128_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_RSA_PSK_WITH_AES_256_CBC_SHA384
+#cmakedefine HITLS_TLS_SUITE_RSA_PSK_WITH_AES_128_GCM_SHA256
+#cmakedefine HITLS_TLS_SUITE_RSA_PSK_WITH_AES_256_GCM_SHA384
+#cmakedefine HITLS_TLS_SUITE_RSA_PSK_WITH_CHACHA20_POLY1305_SHA256
+#cmakedefine HITLS_TLS_SUITE_ECDHE_PSK_WITH_AES_128_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_ECDHE_PSK_WITH_AES_256_CBC_SHA
+#cmakedefine HITLS_TLS_SUITE_ECDHE_PSK_WITH_AES_128_CBC_SHA256
+#cmakedefine HITLS_TLS_SUITE_ECDHE_PSK_WITH_AES_256_CBC_SHA384
+#cmakedefine HITLS_TLS_SUITE_ECDHE_PSK_WITH_AES_128_GCM_SHA256
+#cmakedefine HITLS_TLS_SUITE_ECDHE_PSK_WITH_AES_256_GCM_SHA384
+#cmakedefine HITLS_TLS_SUITE_ECDHE_PSK_WITH_AES_128_CCM_SHA256
+#cmakedefine HITLS_TLS_SUITE_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256
+#cmakedefine HITLS_TLS_SUITE_ECDHE_SM4_CBC_SM3
+#cmakedefine HITLS_TLS_SUITE_ECC_SM4_CBC_SM3
+#cmakedefine HITLS_TLS_SUITE_ECDHE_SM4_GCM_SM3
+#cmakedefine HITLS_TLS_SUITE_ECC_SM4_GCM_SM3
+#cmakedefine HITLS_TLS_SUITE_SM4_GCM_SM3
+#cmakedefine HITLS_TLS_SUITE_SM4_CCM_SM3
+
+// TLS Suite Cipher type
+#cmakedefine HITLS_TLS_SUITE_CIPHER
+#cmakedefine HITLS_TLS_SUITE_CIPHER_AEAD
+#cmakedefine HITLS_TLS_SUITE_CIPHER_CBC
+
+// TLS Suite Key Exchange
+#cmakedefine HITLS_TLS_SUITE_KX
+#cmakedefine HITLS_TLS_SUITE_KX_ECDHE
+#cmakedefine HITLS_TLS_SUITE_KX_DHE
+#cmakedefine HITLS_TLS_SUITE_KX_RSA
+
+// TLS Suite Authentication
+#cmakedefine HITLS_TLS_SUITE_AUTH
+#cmakedefine HITLS_TLS_SUITE_AUTH_RSA
+#cmakedefine HITLS_TLS_SUITE_AUTH_ECDSA
+#cmakedefine HITLS_TLS_SUITE_AUTH_DSS
+#cmakedefine HITLS_TLS_SUITE_AUTH_PSK
+#cmakedefine HITLS_TLS_SUITE_AUTH_SM2
+
+// TLS Maintain
+#cmakedefine HITLS_TLS_MAINTAIN
+#cmakedefine HITLS_TLS_MAINTAIN_KEYLOG
+
+// TLS OTHER
+#cmakedefine HITLS_TLS_CAP_NO_STR
+#cmakedefine HITLS_TLS_EXTENSION_COOKIE
+
+/* ==============================================================================
+ * AUTH Features
+ * ==============================================================================
+ */
+// PrivPass Token
+#cmakedefine HITLS_AUTH_PRIVPASS_TOKEN
+// OTP
+#cmakedefine HITLS_AUTH_OTP
+// PAKE
+#cmakedefine HITLS_AUTH_PAKE
+#cmakedefine HITLS_AUTH_PAKE_CORE
+#cmakedefine HITLS_AUTH_SPAKE2PLUS
+
+
+/* ==============================================================================
+ * APPS Features
+ * ==============================================================================
+ */
+#cmakedefine HITLS_APP_SM_MODE
+
+#endif /* HITLS_BUILD_CONFIG_H */

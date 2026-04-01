@@ -142,7 +142,7 @@ bool IsOSSupportAVX512(void)
 #include "crypt_arm.h"
 uint32_t g_cryptArmCpuInfo = 0;
 
-#if defined(HITLS_CRYPTO_NO_AUXVAL)
+#ifndef HITLS_CRYPTO_AUXVAL
 #include <setjmp.h>
 #include <signal.h>
 
@@ -244,7 +244,7 @@ bool IsSupportSHA512(void)
 }
 #endif // __aarch64__
 
-#endif // HITLS_CRYPTO_NO_AUXVAL
+#endif // HITLS_CRYPTO_AUXVAL
 #endif // x86_64 || __arm__ || __arm || __aarch64__
 
 void GetCpuInstrSupportState(void)
@@ -274,13 +274,13 @@ void GetCpuInstrSupportState(void)
         g_cpuState.osSupportAVX512 = opmask && zmmLow && zmmHigh;
     }
 #elif defined(__arm__) || defined (__arm) || defined(__aarch64__)
-#if defined(HITLS_CRYPTO_NO_AUXVAL)
+#ifndef HITLS_CRYPTO_AUXVAL
     getarmcap();
-#else // HITLS_CRYPTO_NO_AUXVAL
+#else // HITLS_CRYPTO_AUXVAL
     g_supportNEON = getauxval(CRYPT_CAP) & CRYPT_ARM_NEON;
     if (g_supportNEON) {
         g_cryptArmCpuInfo = (uint32_t)getauxval(CRYPT_CE);
     }
-#endif // HITLS_CRYPTO_NO_AUXVAL
+#endif // HITLS_CRYPTO_AUXVAL
 #endif // defined(__arm__) || defined (__arm) || defined(__aarch64__)
 }

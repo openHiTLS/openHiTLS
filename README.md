@@ -48,44 +48,35 @@ Currently, openHiTLS has 5 components. The BSL component will be used with other
 
 ### Dependency Preparation
 
-openHiTLS depends on Secure C (libboundscheck), which **is now automatically managed** by the configure.py script.
+openHiTLS depends on Secure C (libboundscheck), which **is now built automatically by the CMake build system**, requiring no additional scripts.
 
-**Quick Start (Automatic - Recommended)**:
+**Quick Start (Recommended)**:
 
 ```bash
-# Simply clone and configure - securec will be automatically initialized and built
-git clone https://gitcode.com/openhitls/openhitls.git
+# Clone with submodules to get source code and dependencies in one step
+git clone --recurse-submodules https://gitcode.com/openhitls/openhitls.git
 cd openhitls
 mkdir -p build && cd build
-python3 ../configure.py  # Securec is automatically handled here
 cmake .. && make && make install
 ```
 
 **Alternative Methods**:
 
-1. **Clone with submodules** (if you prefer to have everything ready):
+1. **Already cloned but submodule not initialized**:
    ```bash
-   git clone --recurse-submodules https://gitcode.com/openhitls/openhitls.git
-   cd openhitls
-   # Securec is already initialized, configure.py will build it automatically
+   git submodule update --init platform/Secure_C
+   mkdir -p build && cd build
+   cmake .. && make && make install
    ```
 
-2. **Manual dependency management** (if you need full control):
+2. **Manual clone of dependency** (without submodules):
    ```bash
    git clone https://gitcode.com/openhitls/openhitls.git
    cd openhitls
    git clone https://gitee.com/openeuler/libboundscheck platform/Secure_C
-   cd platform/Secure_C && make -j && cd ../..
-   # Use --no-auto-deps to skip automatic dependency handling
-   python3 configure.py --no-auto-deps
+   mkdir -p build && cd build
+   cmake .. && make && make install
    ```
-
-**Dependency Management Options**:
-- `--no-auto-deps`: Disable automatic dependency initialization and build
-- `--force-rebuild-deps`: Force rebuild securec even if already built
-
-The official Secure C repository is at <https://gitee.com/openeuler/libboundscheck>.
-
 ### For Application Developers
 
 Source code mirroring of the official releases is pending for planning.
@@ -108,37 +99,45 @@ The major steps in Linux are as follows. Refer to [build & install](docs/en/4_Us
 The major steps in Linux:
 
 Step 1 (Prepare the build directory):
-```
+```bash
 cd openhitls && mkdir -p ./build && cd ./build
 ```
-Step 2 (Generate configurations):
-```
-python3 ../configure.py ["option"]
-```
+Step 2 (Configure, choose as needed):
 
-* C Full build:
-```
-python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki hitls_auth --lib_type static --bits=64 --system=linux
-```
-
-* x86_64 Optimize the full build:
-```
-python3 ../configure.py --enable hitls_bsl hitls_crypto hitls_tls hitls_pki hitls_auth --lib_type static --bits=64 --system=linux --asm_type x8664
-```
-
-* build the app:
-```
-python3 ../configure.py --executes hitls
-```
-
-The options are described in [Build Installation Guide](docs/en/4_User%20Guide/1_Build%20and%20Installation%20Guide.md)
-
-Step 3 (Generate the build script):
-```
+* Default build (all features enabled, builds static libraries, shared libraries and object libraries):
+```bash
 cmake ..
 ```
-Step 4 (Build and install):
+
+* Full build using preset:
+```bash
+cmake .. -DHITLS_BUILD_PROFILE=full
 ```
+
+* Enable assembly optimizations (auto-detect platform type):
+```bash
+cmake .. -DHITLS_ASM=ON
+```
+
+* Full build with x86_64 assembly optimizations:
+```bash
+cmake .. -DHITLS_BUILD_PROFILE=full -DHITLS_ASM_X8664=ON
+```
+
+* Build the command line tool:
+```bash
+cmake .. -DHITLS_BUILD_EXE=ON
+```
+
+* Bundle all modules into a single library:
+```bash
+cmake .. -DHITLS_BUNDLE_LIB=ON
+```
+
+More options are described in [Build Installation Guide](docs/en/4_User%20Guide/1_Build%20and%20Installation%20Guide.md)
+
+Step 3 (Build and install):
+```bash
 make && make install
 ```
 
