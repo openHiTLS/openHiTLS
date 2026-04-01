@@ -26,6 +26,7 @@
 #include "hitls_pki_cert.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
+#include "hitls_pki_x509.h"
 
 /**
  *  Matches a string against a pattern containing exactly one wildcard ('*').
@@ -200,9 +201,10 @@ int32_t X509_VerifyHostnameWithCn(HITLS_X509_Cert *cert, const char *hostname,
     return ret;
 }
  
-int32_t HITLS_X509_VerifyHostname(HITLS_X509_Cert *cert, uint32_t flags, const char *hostname, uint32_t hostnameLen)
+int32_t HITLS_X509_VerifyIdentity(HITLS_X509_Cert *cert, uint32_t flags, uint32_t type, const char *hostname,
+    uint32_t hostnameLen)
 {
-    if (cert == NULL || hostname == NULL) {
+    if (cert == NULL || hostname == NULL || type != HITLS_GEN_DNS) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
