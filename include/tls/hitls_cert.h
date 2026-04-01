@@ -954,6 +954,30 @@ int32_t HITLS_CFG_SetCertCb(HITLS_Config *config, HITLS_CertCb certCb, void *arg
  */
 int32_t HITLS_SetCertCb(HITLS_Ctx *ctx, HITLS_CertCb certCb, void *arg);
 
+#define HITLS_APP_VERIFY_CALLBACK_SUCCESS 1       /* App Verify Callback */
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Certificate verification callback function
+ * @param   storeCtx    [OUT] Cert store context
+ * @param   arg         [IN] Parameters required in the certificate verification callback function
+ * @retval  HITLS_APP_VERIFY_CALLBACK_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+typedef int32_t (*HITLS_APPVerifyCb)(HITLS_CERT_StoreCtx *storeCtx, void *arg);
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Sets the certificate verification callback function.
+ * @param   config      [OUT] TLS Link Configuration
+ * @param   callback    [IN] Certificate verification callback function
+ * @param   arg         [IN] Parameters required in the certificate verification callback function
+ *
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_SetCertVerifyCb(HITLS_Config *config, HITLS_APPVerifyCb callback, void *arg);
+
 /**
  * @ingroup hitls_cert
  * @brief   Key logging callback

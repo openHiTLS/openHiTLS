@@ -1342,6 +1342,19 @@ int32_t HITLS_CFG_GetReadAhead(HITLS_Config *config, int32_t *onOff)
     return HITLS_SUCCESS;
 }
 
+#ifdef HITLS_TLS_CONFIG_CERT_CALLBACK
+int32_t HITLS_CFG_SetCertVerifyCb(HITLS_Config *config, HITLS_APPVerifyCb callback, void *arg)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->appVerifyCb = callback;
+    config->appVerifyCbArg = arg;
+    return HITLS_SUCCESS;
+}
+#endif
+
 int32_t HITLS_CFG_SetSignature(HITLS_Config *config, const uint16_t *signAlgs, uint16_t signAlgsSize)
 {
     if ((config == NULL) || (signAlgs == NULL) || (signAlgsSize == 0)) {

@@ -264,6 +264,8 @@ typedef struct TlsConfig {
     uint32_t sessionTicketExtSize;
     HITLS_SessionTicketExtProcessCb sessionTicketExtCb;
     void *sessionTicketExtCbArg;
+    HITLS_APPVerifyCb appVerifyCb;
+    void *appVerifyCbArg;
     HITLS_KeyLogCb keyLogCb;            /* the key log callback */
     bool isKeepPeerCert;                /* whether to save the peer certificate */
     bool isMiddleBoxCompat;             /* whether to support middlebox compatibility */

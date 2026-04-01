@@ -571,6 +571,25 @@ static int32_t X509_GetUsrData(HITLS_X509_StoreCtx *storeCtx, void **val, uint32
     *val = storeCtx->usrData;
     return HITLS_PKI_SUCCESS;
 }
+
+static int32_t X509_SetPeerCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain, uint32_t chainLen)
+{
+    if (chainLen != sizeof(HITLS_X509_List *)) {
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    storeCtx->peerCertChain = chain;
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t X509_GetPeerCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List **chain, uint32_t chainLen)
+{
+    if (chainLen != sizeof(HITLS_X509_List *)) {
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    *chain = storeCtx->peerCertChain;
+    return HITLS_PKI_SUCCESS;
+}
 #endif /* HITLS_PKI_X509_VFY_CB */
 
 static int32_t X509_GetCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List **val, uint32_t valLen)
@@ -613,6 +632,8 @@ int32_t X509VfyBeforeCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val,
             return X509_SetVerifyCb(storeCtx, val, valLen);
         case HITLS_X509_STORECTX_SET_USR_DATA:
             return X509_SetUsrData(storeCtx, val, valLen);
+        case HITLS_X509_STORECTX_SET_PEER_CERT_CHAIN:
+            return X509_SetPeerCertChain(storeCtx, val, valLen);
 #endif
 #ifdef HITLS_PKI_X509_VFY_LOCATION
         case HITLS_X509_STORECTX_ADD_CA_PATH:
@@ -640,6 +661,8 @@ int32_t X509VfyAllTimeCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val
             return X509_GetVerifyCb(storeCtx, val, valLen);
         case HITLS_X509_STORECTX_GET_USR_DATA:
             return X509_GetUsrData(storeCtx, val, valLen);
+        case HITLS_X509_STORECTX_GET_PEER_CERT_CHAIN:
+            return X509_GetPeerCertChain(storeCtx, val, valLen);
 #endif
         case HITLS_X509_STORECTX_GET_PARAM_FLAGS:
             return X509_GetParamFlag(storeCtx, val, valLen);
@@ -679,7 +702,8 @@ int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     // Allow val to be NULL only for specific commands like CLEAR_CRL and SET_DEFAULT_PATH
-    if (val == NULL && cmd != HITLS_X509_STORECTX_CLEAR_CRL && cmd != HITLS_X509_STORECTX_SET_DEFAULT_PATH) {
+    if (val == NULL && cmd != HITLS_X509_STORECTX_CLEAR_CRL && cmd != HITLS_X509_STORECTX_SET_DEFAULT_PATH &&
+        cmd != HITLS_X509_STORECTX_SET_PEER_CERT_CHAIN) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }

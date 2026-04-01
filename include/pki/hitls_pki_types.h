@@ -340,12 +340,14 @@ typedef enum {
     HITLS_X509_STORECTX_ADD_CA_PATH,       /**< Add additional CA path for on-demand loading */
     HITLS_X509_STORECTX_CLEAR_CRL,
     HITLS_X509_STORECTX_SET_DEFAULT_PATH,  /**< Set default CA path (OPENHITLSDIR/ssl/certs) */
+    HITLS_X509_STORECTX_SET_PEER_CERT_CHAIN,    /**< shallow copy peer cert chain to storeCtx*/
 
     HITLS_X509_STORECTX_REF_UP = 0x0100,
     HITLS_X509_STORECTX_GET_PARAM_DEPTH,
     HITLS_X509_STORECTX_GET_VERIFY_CB,
     HITLS_X509_STORECTX_GET_USR_DATA,
     HITLS_X509_STORECTX_GET_PARAM_FLAGS,
+    HITLS_X509_STORECTX_GET_PEER_CERT_CHAIN,    /**< shallow copy storeCtx peerCertChain to certList */
 
     /* New commands for the added fields */
     HITLS_X509_STORECTX_SET_ERROR = 0x0200,
@@ -463,7 +465,7 @@ typedef enum {
 typedef enum {
     HITLS_CMS_ADD_CERT = 0,                  /** Add certificate to cms struct. */
     HITLS_CMS_ADD_CRL,                       /** Add CRL to cms struct. */
-    
+
     HITLS_CMS_SET_MSG_MD          = 0x0101,           /** set SignedData message digest alg */
 } HITLS_CMS_Cmd;
 

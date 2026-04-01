@@ -61,6 +61,7 @@ struct _HITLS_X509_StoreCtx {
     HITLS_X509_Cert *curCert;         // Current certificate being verified
     X509_STORECTX_VerifyCb verifyCb;  // Verification callback function
     void *usrData;                    // user data
+    HITLS_X509_List *peerCertChain;   // Cert chain from peer
 #endif
 };
 
