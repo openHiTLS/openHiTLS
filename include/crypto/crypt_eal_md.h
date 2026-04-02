@@ -236,7 +236,7 @@ int32_t CRYPT_EAL_MdDeinit(CRYPT_EAL_MdCtx *ctx);
  *   will return #CRYPT_NOT_SUPPORT in subsequent MB operations.
  *
  * @param   libCtx [IN] Library context (reserved, currently unused).
- * @param   id [IN] MD algorithm ID (e.g. #CRYPT_MD_SHA256).
+ * @param   id [IN] MD algorithm ID (e.g. #CRYPT_MD_SHA256_MB).
  * @param   num [IN] Number of contexts/messages.
  * @retval  CRYPT_EAL_MdCtx pointer on success.
  *          NULL if memory allocation fails or input is invalid.

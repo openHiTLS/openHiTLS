@@ -8,7 +8,7 @@ Before running benchmark, openhitls should be built firstly.
 ```
 openhitls_benchmark    // run all benchmark testcases
 
-openhtils_benchmark -a sm2* // run all sm2 benchmark testcases
+openhitls_benchmark -a sm2* // run all sm2 benchmark testcases
 
 openhitls_benchmark -a sm2-KeyGen  // just run sm2 KeyGen
 
