@@ -16,7 +16,7 @@ set(_sha3_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/sha3.c
 )
 if(HITLS_CRYPTO_SHA3_ARMV8)
-    list(APPEND _sha3_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/sha3_armv8.S)
+    list(APPEND _sha3_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/sha3_armv8.S ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_sha3.c)
 else()
     list(APPEND _sha3_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/noasm_sha3.c)
 endif()

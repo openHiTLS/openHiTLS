@@ -268,7 +268,7 @@ int32_t CRYPT_SHAKE256_Init(CRYPT_SHAKE256_Ctx *ctx)
 
 int32_t CRYPT_SHAKE256_InitEx(CRYPT_SHAKE256_Ctx *ctx, void *param)
 {
-    (void) param;
+    (void)param;
     // 0x1f is SHA3 padding character, see https://keccak.team/keccak_specs_summary.html
     return CRYPT_SHA3_Init(ctx, 0, CRYPT_SHAKE256_BLOCKSIZE, 0x1F);
 }
@@ -310,4 +310,136 @@ int32_t CRYPT_SHAKE256_GetParam(CRYPT_SHAKE256_Ctx *ctx, BSL_Param *param)
     return CRYPT_MdCommonGetParam(CRYPT_SHAKE128_DIGESTSIZE, CRYPT_SHAKE256_BLOCKSIZE, param);
 }
 #endif // HITLS_CRYPTO_PROVIDER
+
+static uint64_t load64(const uint8_t x[8])
+{
+    uint32_t i;
+    uint64_t r = 0;
+
+    for (i = 0; i < 8; i++) {
+        r |= (uint64_t)x[i] << 8 * i;
+    }
+
+    return r;
+}
+
+static void store64(uint8_t x[8], uint64_t u)
+{
+    uint32_t i;
+
+    for (i = 0; i < 8; i++) {
+        x[i] = u >> 8 * i;
+    }
+}
+
+static uint32_t KeccakIncSqueeze(uint8_t *out, size_t outlen, uint64_t s[25], uint32_t pos, uint32_t r)
+{
+    uint32_t i;
+
+    while (outlen) {
+        if (pos == r) {
+            SHA3_Keccak((uint8_t *)s);
+            pos = 0;
+        }
+        for (i = pos; i < r && i < pos + outlen; i++) {
+            *out++ = s[i / 8] >> 8 * (i % 8);
+        }
+        outlen -= i - pos;
+        pos = i;
+    }
+
+    return pos;
+}
+
+void KeccakAbsorb(uint64_t s[25], uint32_t r, const uint8_t *in, size_t inlen, uint8_t p)
+{
+    uint32_t i;
+
+    for (i = 0; i < 25; i++) {
+        s[i] = 0;
+    }
+
+    while (inlen >= r) {
+        for (i = 0; i < r / 8; i++) {
+            s[i] ^= load64(in + 8 * i);
+        }
+        in += r;
+        inlen -= r;
+        SHA3_Keccak((uint8_t *)s);
+    }
+
+    for (i = 0; i < inlen; i++) {
+        s[i / 8] ^= (uint64_t)in[i] << 8 * (i % 8);
+    }
+
+    s[i / 8] ^= (uint64_t)p << 8 * (i % 8);
+    s[(r - 1) / 8] ^= 1ULL << 63;
+}
+
+void KeccakSqueeze(uint8_t *out, size_t nblocks, uint64_t s[25], uint32_t r)
+{
+    uint32_t i;
+
+    while (nblocks) {
+        SHA3_Keccak((uint8_t *)s);
+        for (i = 0; i < r / 8; i++) {
+            store64(out + 8 * i, s[i]);
+        }
+        out += r;
+        nblocks -= 1;
+    }
+}
+
+void CRYPT_SHAKE128(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
+{
+    size_t nblocks;
+    ShakeState state;
+
+    KeccakAbsorb(state.s, CRYPT_SHAKE128_BLOCKSIZE, in, inlen, 0x1F);
+    state.pos = CRYPT_SHAKE128_BLOCKSIZE;
+    nblocks = outlen / CRYPT_SHAKE128_BLOCKSIZE;
+    KeccakSqueeze(out, nblocks, state.s, CRYPT_SHAKE128_BLOCKSIZE);
+    outlen -= nblocks * CRYPT_SHAKE128_BLOCKSIZE;
+    out += nblocks * CRYPT_SHAKE128_BLOCKSIZE;
+    state.pos = KeccakIncSqueeze(out, outlen, state.s, state.pos, CRYPT_SHAKE128_BLOCKSIZE);
+}
+
+void CRYPT_SHAKE256(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
+{
+    size_t nblocks;
+    ShakeState state;
+
+    KeccakAbsorb(state.s, CRYPT_SHAKE256_BLOCKSIZE, in, inlen, 0x1F);
+    state.pos = CRYPT_SHAKE256_BLOCKSIZE;
+    nblocks = outlen / CRYPT_SHAKE256_BLOCKSIZE;
+    KeccakSqueeze(out, nblocks, state.s, CRYPT_SHAKE256_BLOCKSIZE);
+    outlen -= nblocks * CRYPT_SHAKE256_BLOCKSIZE;
+    out += nblocks * CRYPT_SHAKE256_BLOCKSIZE;
+    state.pos = KeccakIncSqueeze(out, outlen, state.s, state.pos, CRYPT_SHAKE256_BLOCKSIZE);
+}
+
+void CRYPT_SHA3_256(uint8_t h[32], const uint8_t *in, size_t inlen)
+{
+    uint32_t i;
+    uint64_t s[25];
+
+    KeccakAbsorb(s, CRYPT_SHA3_256_BLOCKSIZE, in, inlen, 0x06);
+    SHA3_Keccak((uint8_t *)s);
+    for (i = 0; i < 4; i++) {
+        store64(h + 8 * i, s[i]);
+    }
+}
+
+void CRYPT_SHA3_512(uint8_t h[64], const uint8_t *in, size_t inlen)
+{
+    uint32_t i;
+    uint64_t s[25];
+
+    KeccakAbsorb(s, CRYPT_SHA3_512_BLOCKSIZE, in, inlen, 0x06);
+    SHA3_Keccak((uint8_t *)s);
+    for (i = 0; i < 8; i++) {
+        store64(h + 8 * i, s[i]);
+    }
+}
+
 #endif // HITLS_CRYPTO_SHA3

@@ -12,7 +12,16 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _mlkem_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+set(_mlkem_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/ml_kem.c
+                   ${CMAKE_CURRENT_SOURCE_DIR}/src/ml_kem_pke.c)
+
+if(HITLS_CRYPTO_MLKEM_ARMV8)
+    file(GLOB _mlkem_armv8_cglues ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_*.c)
+    file(GLOB _mlkem_armv8 ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/*.S)
+    list(APPEND _mlkem_sources ${_mlkem_armv8} ${_mlkem_armv8_cglues})
+else()
+    list(APPEND _mlkem_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/ml_kem_poly.c ${CMAKE_CURRENT_SOURCE_DIR}/src/ml_kem_ntt.c)
+endif()
 
 add_library(_hitls_crypto_mlkem OBJECT ${_mlkem_sources})
 
@@ -28,6 +37,7 @@ target_include_directories(_hitls_crypto_mlkem
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${PROJECT_SOURCE_DIR}/crypto/eal/src
         ${PROJECT_SOURCE_DIR}/crypto/sha3/include
+        ${PROJECT_SOURCE_DIR}/crypto/sha3/src
 )
 
 hitls_register_objects(CRYPTO _hitls_crypto_mlkem)

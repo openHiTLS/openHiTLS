@@ -193,6 +193,21 @@ int32_t CRYPT_SHAKE256_GetParam(CRYPT_SHAKE256_Ctx *ctx, BSL_Param *param);
 #define CRYPT_SHAKE256_GetParam NULL
 #endif
 
+
+typedef struct {
+    uint64_t s[25];
+    uint32_t pos;
+} ShakeState;
+
+typedef uint64_t Sha3State[25];
+
+void CRYPT_SHAKE128(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen);
+void CRYPT_SHAKE256(uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen);
+void CRYPT_SHA3_256(uint8_t h[32], const uint8_t *in, size_t inlen);
+void CRYPT_SHA3_512(uint8_t h[64], const uint8_t *in, size_t inlen);
+void KeccakSqueeze(uint8_t *out, size_t nblocks, uint64_t s[25], uint32_t r);
+void KeccakAbsorb(uint64_t s[25], uint32_t r, const uint8_t *in, size_t inlen, uint8_t p);
+
 #ifdef __cplusplus
 }
 #endif

@@ -22,6 +22,7 @@
 #include "crypt_utils.h"
 #include "bsl_err_internal.h"
 #include "crypt_sha3.h"
+#include "sha3_core.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -520,6 +520,7 @@ hitls_define_dependency(HITLS_CRYPTO_CURVE_SM2_ARMV7    DEPS HITLS_CRYPTO_CURVE_
 hitls_define_dependency(HITLS_CRYPTO_CURVE_SM2_X8664    DEPS HITLS_CRYPTO_CURVE_SM2_ASM)
 hitls_define_dependency(HITLS_CRYPTO_X25519_ARMV8       DEPS HITLS_CRYPTO_X25519_ASM)
 hitls_define_dependency(HITLS_CRYPTO_X25519_X8664       DEPS HITLS_CRYPTO_X25519_ASM)
+hitls_define_dependency(HITLS_CRYPTO_MLKEM_ARMV8        DEPS HITLS_CRYPTO_MLKEM_ASM)
 
 # PKI Dependencies
 hitls_define_dependency(HITLS_PKI

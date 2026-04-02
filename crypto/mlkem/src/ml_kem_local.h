@@ -19,6 +19,10 @@
 #include "sal_atomic.h"
 #include "crypt_local_types.h"
 
+#define BITS_OF_BYTE 8
+#define MLKEM_ETA1_MAX    3
+#define MLKEM_ETA2_MAX    2
+
 #define MLKEM_N        256
 #define MLKEM_N_HALF   128
 #define MLKEM_CIPHER_LEN   384
@@ -127,5 +131,23 @@ int32_t MLKEM_EncapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen
 int32_t MLKEM_DecapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t ctLen, uint8_t *sk, uint32_t *skLen);
 
 int32_t MLKEM_CreateMatrixBuf(uint8_t k, MLKEM_MatrixSt *st);
+
+// For K-PKE.KeyGen: (ek, dk)
+int32_t MLKEM_PKEGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, uint8_t *pk, uint8_t *dk);
+
+// For K-PKE.Encrypt: (Compress(mu), Compress(v))
+int32_t MLKEM_PKEEnc(uint32_t k, MLKEM_MatrixSt *mat, uint8_t du, uint8_t dv, uint8_t *ct,
+    int16_t *y[], int16_t *e1[], int16_t *u[],
+    int16_t *e2, int16_t *mu, int16_t *c2);
+
+// For K-PKE.Decrypt: Compress(v' - INTT(s*NTT(V)))
+int32_t MLKEM_PKEDec(uint32_t k, MLKEM_MatrixSt *mat, int16_t *m, int16_t *c1[], int16_t *c2, uint8_t *result);
+
+void ByteEncode(uint8_t *out, int16_t *in, uint8_t bits);
+
+int32_t GenMatrix(const CRYPT_ML_KEM_Ctx *ctx, const uint8_t *seed,
+    int16_t *polyMatrix[MLKEM_K_MAX][MLKEM_K_MAX], bool isEnc);
+int32_t SampleEta2(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *seed, int16_t *s[], int16_t *e[]);
+
 
 #endif    // ML_KEM_LOCAL_H

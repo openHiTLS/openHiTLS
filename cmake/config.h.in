@@ -417,6 +417,8 @@
 #cmakedefine HITLS_CRYPTO_X25519_ASM
 #cmakedefine HITLS_CRYPTO_X25519_ARMV8
 #cmakedefine HITLS_CRYPTO_X25519_X8664
+#cmakedefine HITLS_CRYPTO_MLKEM_ASM
+#cmakedefine HITLS_CRYPTO_MLKEM_ARMV8
 
 
 /* ==============================================================================

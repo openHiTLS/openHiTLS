@@ -399,6 +399,9 @@ option(HITLS_CRYPTO_CURVE_SM2_X8664                            "Curve SM2 x86_64
 option(HITLS_CRYPTO_X25519_ASM                                 "X25519 ASM" OFF)
 option(HITLS_CRYPTO_X25519_ARMV8                               "X25519 ARMv8" OFF)
 option(HITLS_CRYPTO_X25519_X8664                               "X25519 x86_64" OFF)
+## MLKEM
+option(HITLS_CRYPTO_MLKEM_ASM                                  "MLKEM ASM" OFF)
+option(HITLS_CRYPTO_MLKEM_ARMV8                                "MLKEM ARMv8" OFF)
 
 # --- PKI Features ---
 ## X509
