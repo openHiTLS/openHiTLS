@@ -17,6 +17,7 @@
 /* INCLUDE_BASE test_suite_interface */
 
 #include <stdio.h>
+#include <arpa/inet.h>
 #include "hitls_error.h"
 #include "hitls_pki_errno.h"
 #include "hitls_cert.h"
@@ -40,6 +41,9 @@
 #include "hitls_crypt_init.h"
 #include "uio_base.h"
 #include "hitls_pki_types.h"
+#include "hitls_pki_x509.h"
+#include "hitls_x509_verify.h"
+#include "sal_ip_util.h"
 /* END_HEADER */
 
 #define BUF_MAX_SIZE 4096
@@ -1231,5 +1235,338 @@ void UT_TLS_CERT_CFG_Set_APPVerifyCb_API_TC001()
     ASSERT_TRUE(HITLS_CFG_SetCertVerifyCb(tlsConfig, TestHITLS_AppVerifyCb, arg) == HITLS_SUCCESS);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
+}
+/* END_CASE */
+/* BEGIN_CASE */
+void SDV_HITLS_SetHostFlags_TC001()
+{
+    HitlsInit();
+
+    HITLS_Config *config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(HITLS_SetHostFlags(ctx, -1), HITLS_CERT_STORE_CTRL_ERR_SET_HOST_FLAG);
+    ASSERT_EQ(HITLS_SetHostFlags(NULL, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_SetHostFlags(ctx, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_CFG_SetHostFlags(config, -1), HITLS_CERT_STORE_CTRL_ERR_SET_HOST_FLAG);
+    ASSERT_EQ(HITLS_CFG_SetHostFlags(NULL, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_NULL_INPUT);
+    ASSERT_EQ(HITLS_CFG_SetHostFlags(config, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_CFG_SetHost_TC001()
+{
+    HitlsInit();
+
+    HITLS_Config *config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(config != NULL);
+    char ip[] = "192.168.0.1";
+    ASSERT_EQ(HITLS_CFG_SetHost(config, NULL), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetHost(config, ip), HITLS_SUCCESS);
+    ASSERT_TRUE(((HITLS_X509_StoreCtx *)config->certMgrCtx->certStore)->verifyParam.ip != NULL);
+    ASSERT_EQ(HITLS_CFG_AddHost(config, NULL), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_CFG_AddHost(config, ip), HITLS_X509_ERR_ADD_VERIFY_IP);
+    char host[] = "www.abc.com";
+    ASSERT_EQ(HITLS_CFG_SetHost(config, host), HITLS_SUCCESS);
+    BslList *hostnames = ((HITLS_X509_StoreCtx *)config->certMgrCtx->certStore)->verifyParam.hostnames;
+    ASSERT_TRUE(hostnames != NULL);
+    ASSERT_TRUE(BSL_LIST_COUNT(hostnames) == 1);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_SetHost_TC001()
+{
+    HitlsInit();
+
+    HITLS_Config *config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(config != NULL);
+    HITLS_Ctx *ctx = HITLS_New(config);
+    ASSERT_TRUE(ctx != NULL);
+
+    char ip[] = "192.168.0.1";
+    ASSERT_EQ(HITLS_SetHost(ctx, ip), HITLS_SUCCESS);
+    ASSERT_TRUE(((HITLS_X509_StoreCtx *)ctx->config.tlsConfig.certMgrCtx->certStore)->verifyParam.ip != NULL);
+    unsigned char expectedBytes[16];
+    inet_pton(AF_INET, ip, expectedBytes);
+    ASSERT_TRUE(memcmp(((HITLS_X509_StoreCtx *)ctx->config.tlsConfig.certMgrCtx->certStore)->verifyParam.ip,
+        expectedBytes, 4) == 0);
+
+    char ip2[] = "::1:2:3:4:5:6:7";
+    ASSERT_EQ(HITLS_SetHost(ctx, ip2), HITLS_SUCCESS);
+    ASSERT_TRUE(((HITLS_X509_StoreCtx *)ctx->config.tlsConfig.certMgrCtx->certStore)->verifyParam.ip != NULL);
+    inet_pton(AF_INET6, ip2, expectedBytes);
+    ASSERT_TRUE(memcmp(((HITLS_X509_StoreCtx *)ctx->config.tlsConfig.certMgrCtx->certStore)->verifyParam.ip,
+        expectedBytes, 16) == 0);
+
+    char ip3[] = "112.118.0.1";
+    ASSERT_EQ(HITLS_AddHost(ctx, ip3), HITLS_X509_ERR_ADD_VERIFY_IP);
+
+    char host[] = "256.168.0.1.1";
+    ASSERT_EQ(HITLS_AddHost(ctx, host), HITLS_SUCCESS);
+    BslList *hostnames = ((HITLS_X509_StoreCtx *)ctx->config.tlsConfig.certMgrCtx->certStore)->verifyParam.hostnames;
+    ASSERT_TRUE(BSL_LIST_COUNT(hostnames) == 1);
+    char *innerhost = BSL_LIST_GET_FIRST(hostnames);
+    ASSERT_TRUE(innerhost != NULL);
+    ASSERT_TRUE(strcmp(innerhost, host) == 0);
+
+    char host2[] = "www.abc.com";
+    ASSERT_EQ(HITLS_AddHost(ctx, host2), HITLS_SUCCESS);
+    hostnames = ((HITLS_X509_StoreCtx *)ctx->config.tlsConfig.certMgrCtx->certStore)->verifyParam.hostnames;
+    ASSERT_TRUE(BSL_LIST_COUNT(hostnames) == 2);
+    innerhost = BSL_LIST_GET_LAST(hostnames);
+    ASSERT_TRUE(innerhost != NULL);
+    ASSERT_TRUE(strcmp(innerhost, host2) == 0);
+
+    char host3[] = "www.bbc.com";
+    ASSERT_EQ(HITLS_SetHost(ctx, host3), HITLS_SUCCESS);
+
+    hostnames = ((HITLS_X509_StoreCtx *)ctx->config.tlsConfig.certMgrCtx->certStore)->verifyParam.hostnames;
+    ASSERT_TRUE(BSL_LIST_COUNT(hostnames) == 1);
+    innerhost = BSL_LIST_GET_LAST(hostnames);
+    ASSERT_TRUE(innerhost != NULL);
+    ASSERT_TRUE(strcmp(innerhost, host3) == 0);
+
+    ASSERT_EQ(HITLS_SetHost(ctx, NULL), HITLS_SUCCESS);
+    hostnames = ((HITLS_X509_StoreCtx *)ctx->config.tlsConfig.certMgrCtx->certStore)->verifyParam.hostnames;
+    ASSERT_TRUE(BSL_LIST_COUNT(hostnames) == 0);
+    ASSERT_TRUE(((HITLS_X509_StoreCtx *)ctx->config.tlsConfig.certMgrCtx->certStore)->verifyParam.ip == NULL);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_HostNameVerify_TC001()
+{
+    HitlsInit();
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(s_config != NULL);
+    FRAME_CertInfo certInfoClient = {
+        "rsa_with_san_ext/rootca.der",
+        0,
+        "rsa_with_san_ext/server.der",
+        0,
+        "rsa_with_san_ext/server.key.der",
+        0
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_with_san_ext/rootca.der",
+        0,
+        "rsa_with_san_ext/server.der",
+        0,
+        "rsa_with_san_ext/server.key.der",
+        0
+    };
+
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    /* validate san host */
+    char host1[] = "www.example.com";
+    ASSERT_EQ(HITLS_SetHost(client->ssl, host1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetHostFlags(client->ssl, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    char *peername = NULL;
+    ASSERT_TRUE(HITLS_GetPeerName(client->ssl, &peername) == HITLS_SUCCESS);
+    ASSERT_TRUE(peername != NULL);
+    ASSERT_TRUE(strcmp(peername, host1) == 0);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+
+    /* validate san ipv6 */
+    char ipv6[] = "::ffff:192.0.2.128";
+    ASSERT_EQ(HITLS_SetHost(client->ssl, ipv6), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_GetPeerName(client->ssl, &peername) == HITLS_SUCCESS);
+    ASSERT_TRUE(peername == NULL);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+
+    /* validate san wildcard */
+    char host2[] = "abc.wildcard.com";
+    ASSERT_EQ(HITLS_SetHost(client->ssl, host2), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetHostFlags(client->ssl, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_GetPeerName(client->ssl, &peername) == HITLS_SUCCESS);
+    ASSERT_TRUE(peername != NULL);
+
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_HostNameVerify_TC002()
+{
+    HitlsInit();
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(c_config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+
+    FRAME_LinkObj *server = FRAME_CreateLink(s_config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    /* without san, validate cn */
+    char host1[] = "www.example.com";
+    ASSERT_EQ(HITLS_SetHost(client->ssl, host1), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = FRAME_CreateLink(c_config, BSL_UIO_TCP);
+    server = FRAME_CreateLink(s_config, BSL_UIO_TCP);
+
+    // The value of CN in the certificate is "certificate.testend-sha256.com"
+    char host2[] = "certificate.testend-sha256.com";
+    ASSERT_EQ(HITLS_SetHost(client->ssl, host2), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    char *peername = NULL;
+    ASSERT_TRUE(HITLS_GetPeerName(client->ssl, &peername) == HITLS_SUCCESS);
+    ASSERT_TRUE(peername != NULL);
+    ASSERT_TRUE(strcmp(peername, host2) == 0);
+
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_HostNameVerify_TC003()
+{
+    HitlsInit();
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(s_config != NULL);
+    FRAME_CertInfo certInfoClient = {
+        "rsa_with_san_ext/rootca.der",
+        0,
+        "rsa_with_san_ext/server_san_without_dns.der",
+        0,
+        "rsa_with_san_ext/server_san_without_dns.key.der",
+        0
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_with_san_ext/rootca.der",
+        0,
+        "rsa_with_san_ext/server_san_without_dns.der",
+        0,
+        "rsa_with_san_ext/server_san_without_dns.key.der",
+        0
+    };
+
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    // The value of CN in the certificate is "localhost"
+    char host[] = "localhost";
+    ASSERT_EQ(HITLS_SetHost(client->ssl, host), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    char *peername = NULL;
+    ASSERT_TRUE(HITLS_GetPeerName(client->ssl, &peername) == HITLS_SUCCESS);
+    ASSERT_TRUE(peername != NULL);
+    ASSERT_TRUE(strcmp(peername, host) == 0);
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+static int32_t X509StoreCtrlCbkSuc(int32_t err, HITLS_X509_StoreCtx *ctx)
+{
+    (void)ctx;
+    (void)err;
+    if (err == HITLS_X509_ERR_VFY_HOSTNAME_FAIL || err == HITLS_X509_ERR_VFY_IP_FAIL) {
+        return HITLS_PKI_SUCCESS;
+    }
+    return err;
+}
+
+/* BEGIN_CASE */
+void SDV_HITLS_HostNameVerify_TC004()
+{
+    HitlsInit();
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(s_config != NULL);
+    
+    HITLS_CFG_SetVerifyCb(c_config, (HITLS_VerifyCb)X509StoreCtrlCbkSuc);
+    FRAME_LinkObj *client = FRAME_CreateLink(c_config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+
+    FRAME_LinkObj *server = FRAME_CreateLink(s_config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    char host1[] = "www.example.com";
+    ASSERT_EQ(HITLS_SetHost(client->ssl, host1), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = FRAME_CreateLink(c_config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+
+    server = FRAME_CreateLink(s_config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    char ip[] = "127.0.0.1";
+    ASSERT_EQ(HITLS_SetHost(client->ssl, ip), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
 }
 /* END_CASE */

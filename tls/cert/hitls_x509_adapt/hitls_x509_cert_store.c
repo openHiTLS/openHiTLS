@@ -101,6 +101,20 @@ int32_t HITLS_X509_Adapt_StoreCtrl(HITLS_Config *config, HITLS_CERT_Store *store
 #endif
 		case CERT_STORE_CTRL_SET_DEFAULT_PATH:
             return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_DEFAULT_PATH, NULL, 0);
+#ifdef HITLS_PKI_X509_VFY_IDENTITY
+        case CERT_STORE_CTRL_SET_HOST_FLAG:
+            if (*(int64_t *)input > UINT32_MAX || *(int64_t *)input < 0) {
+                return HITLS_CERT_STORE_CTRL_ERR_SET_HOST_FLAG;
+            }
+            value1 = *(int64_t *)input;
+            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_HOST_FLAG, &value1, sizeof(uint32_t));
+        case CERT_STORE_CTRL_SET_HOST:
+            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_HOST, input, 0);
+        case CERT_STORE_CTRL_ADD_HOST:
+            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_ADD_HOST, input, 0);
+        case CERT_STORE_CTRL_GET_PEERNAME:
+            return HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_PEERNAME, output, 0);
+#endif
         default:
             return HITLS_CERT_SELF_ADAPT_ERR;
     }

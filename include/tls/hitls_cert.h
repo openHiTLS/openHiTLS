@@ -1233,6 +1233,83 @@ int32_t HITLS_ClearVerifyCrls(HITLS_Ctx *ctx);
 
 /**
  * @ingroup hitls_cert
+ * @brief   Set the hostflags.
+ * @param   ctx [IN] TLS link object
+ * @param   hostflag [IN] hostflag, type : int32_t.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_SetHostFlags(ctx, hostflag) HITLS_CtrlSetVerifyParams(ctx, \
+    NULL, CERT_STORE_CTRL_SET_HOST_FLAG, hostflag, NULL)
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Set the hostflags.
+ * @param   config [IN] TLS link configuration
+ * @param   hostflag [IN] hostflag, type : int32_t.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_CFG_SetHostFlags(config, hostflag) HITLS_CFG_CtrlSetVerifyParams(config, \
+    NULL, CERT_STORE_CTRL_SET_HOST_FLAG, hostflag, NULL)
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Set the hostname.
+ * @param   ctx [IN] TLS link object
+ * @param   hostname [IN] hostname, type : const char *.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_SetHost(ctx, hostname) HITLS_CtrlSetVerifyParams(ctx, \
+    NULL, CERT_STORE_CTRL_SET_HOST, 0, hostname)
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Set the hostname.
+ * @param   config [IN] TLS link configuration
+ * @param   hostname [IN] hostname, type : const char *.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_CFG_SetHost(config, hostname) HITLS_CFG_CtrlSetVerifyParams(config, \
+    NULL, CERT_STORE_CTRL_SET_HOST, 0, hostname)
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Add the hostname.
+ * @param   ctx [IN] TLS link object
+ * @param   hostname [IN] hostname, type : const char *.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_AddHost(ctx, hostname) HITLS_CtrlSetVerifyParams(ctx, \
+    NULL, CERT_STORE_CTRL_ADD_HOST, 0, hostname)
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Add the hostname.
+ * @param   config [IN] TLS link configuration
+ * @param   hostname [IN] hostname, type : const char *.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_CFG_AddHost(config, hostname) HITLS_CFG_CtrlSetVerifyParams(config, \
+    NULL, CERT_STORE_CTRL_ADD_HOST, 0, hostname)
+
+/**
+ * @ingroup hitls_cert
+ * @brief   Get the peername.
+ * @param   ctx [IN] TLS link object
+ * @param   peername [IN] peername, type : char **.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+#define HITLS_GetPeerName(ctx, peername) HITLS_CtrlGetVerifyParams(ctx, \
+    NULL, CERT_STORE_CTRL_GET_PEERNAME, peername)
+
+/**
+ * @ingroup hitls_cert
  * @brief   Release the certificate.
  *
  * @param   config [IN] Config handle

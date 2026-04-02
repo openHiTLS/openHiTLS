@@ -356,6 +356,7 @@ typedef enum {
     HITLS_CERT_CTRL_ERR_INVALID_CMD,               /**< certificate ctrl invalid command */
 	HITLS_CERT_STORE_CTRL_ERR_ADD_CRL_LIST,        /**< Failed to add CRL list to verify store. */
     HITLS_CERT_STORE_CTRL_ERR_CLEAR_CRL_LIST,      /**< Failed to clear CRL list from verify store. */
+    HITLS_CERT_STORE_CTRL_ERR_SET_HOST_FLAG,        /**< Failed to set the certificate hostflags. */
 
     HITLS_CRYPT_FAIL_START = 0x020D0001,           /**< Crypt adaptation module error code start bit. */
     HITLS_CRYPT_ERR_GENERATE_RANDOM,               /**< Failed to generate a random number. */

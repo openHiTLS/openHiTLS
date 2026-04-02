@@ -315,14 +315,14 @@ int32_t HiTLS_X509_LoadCertAndKey(HITLS_Config *tlsCfg, const char *caFile, cons
         if (ret != SUCCESS) {
             return ret;
         }
-        if ((privateKeyFile != NULL) && (strncmp(privateKeyFile, "NULL", strlen(eeFile)) != 0)) {
+        if ((privateKeyFile != NULL) && (strncmp(privateKeyFile, "NULL", strlen(privateKeyFile)) != 0)) {
             ret = HITLS_X509_LoadPrivateKeyList(tlsCfg, privateKeyFile, true);
             if (ret != SUCCESS) {
                 return ret;
             }
         }
     } else {
-        if ((privateKeyFile != NULL) && (strncmp(privateKeyFile, "NULL", strlen(eeFile)) != 0)) {
+        if ((privateKeyFile != NULL) && (strncmp(privateKeyFile, "NULL", strlen(privateKeyFile)) != 0)) {
             ret = HITLS_X509_LoadPrivateKeyList(tlsCfg, privateKeyFile, false);
             if (ret != SUCCESS) {
                 return ret;

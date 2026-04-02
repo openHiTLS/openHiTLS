@@ -24,6 +24,8 @@ extern "C" {
 #endif
 
 typedef struct _HITLS_X509_StoreCtx HITLS_X509_StoreCtx;
+#define HITLS_GEN_DNS 1
+#define HITLS_GEN_IP 2
 
 /**
  * @ingroup pki
@@ -154,15 +156,47 @@ int32_t HITLS_X509_CertChainBuild(HITLS_X509_StoreCtx *storeCtx, bool isWithRoot
  *               more flexible wildcard matching as RFC6125 like 'fo*.example.com' matches
  *              'foo.example.com', we also will check CN name if SAN is not present.
  *
- * @param cert [IN] The certificate to verify.
- * @param flags [IN] A flag controlling wildcard matching behavior.
- * @param hostname [IN] The hostname to match against.
- * @param hostnameLen [IN] The length of the hostname.
+ * @param cert [IN] The certificate to verify, type : HITLS_X509_Cert *.
+ * @param flags [IN] A flag controlling wildcard matching behavior, type : uint32_t.
+ * @param hostname [IN] The hostname to match against, type : const char *.
+ * @param hostnameLen [IN] The length of the hostname, type : uint32_t.
  * @retval #HITLS_PKI_SUCCESS if the hostname is successfully verified.
  * @retval #HITLS_X509_ERR_VFY_HOSTNAME_FAIL if the hostname does not match.
  * @retval Other error codes for parsing or parameter errors.
  */
-int32_t HITLS_X509_VerifyHostname(HITLS_X509_Cert *cert, uint32_t flags, const char *hostname, uint32_t hostnameLen);
+#define HITLS_X509_VerifyHostname(cert, flags, hostname, hostnameLen) HITLS_X509_VerifyIdentity(cert, flags, \
+    HITLS_GEN_DNS, hostname, hostnameLen)
+
+/**
+ * @ingroup pki
+ * @brief Verify the IP address in certificate extension San.
+
+ * @param cert [IN] The certificate to verify, type : HITLS_X509_Cert *.
+ * @param ip [IN] A string of ipv4 or ipv6, type : const char *.
+ * @param ipLen [IN] The length of the ip string, type : uint32_t.
+ * @retval #HITLS_PKI_SUCCESS if the hostname is successfully verified.
+ * @retval #HITLS_X509_ERR_VFY_IP_FAIL if the ip does not match.
+ * @retval Other error codes for parsing or parameter errors.
+ */
+#define HITLS_X509_VerifyIp(cert, ip, ipLen) HITLS_X509_VerifyIdentity(cert, 0, \
+    HITLS_GEN_IP, ip, ipLen)
+
+/**
+ * @ingroup pki
+ * @brief Certificate verification, currently supports verifying hostname and IP address.
+
+ * @param cert [IN] The certificate to verify, type : HITLS_X509_Cert *.
+ * @param flags [IN] A flag controlling wildcard matching behavior, type : uint32_t.
+ * @param type [IN] Types that need to be verified, type : uint32_t.
+ * @param val [IN] A string of ip or hostname, type : const char *.
+ * @param valLen [IN] The length of the val, type : uint32_t.
+ * @retval #HITLS_PKI_SUCCESS if the value is successfully verified.
+ * @retval #HITLS_X509_ERR_VFY_IP_FAIL if the value is ip and does not match.
+ * @retval #HITLS_X509_ERR_VFY_HOSTNAME_FAIL if the value is hostanme and does not match.
+ * @retval Other error codes for parsing or parameter errors.
+ */
+int32_t HITLS_X509_VerifyIdentity(HITLS_X509_Cert *cert, uint32_t flags, uint32_t type,
+    const char *val, uint32_t valLen);
 
 /**
  * @ingroup pki

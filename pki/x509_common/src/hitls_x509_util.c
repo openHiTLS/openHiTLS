@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#ifdef HITLS_PKI_X509_VFY_HOSTNAME
+#ifdef HITLS_PKI_X509_VFY_IDENTITY
 #include <string.h>
 #include <ctype.h>
 #include "hitls_pki_errno.h"
@@ -26,6 +26,8 @@
 #include "hitls_pki_cert.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
+#include "sal_ip_util.h"
+#include "hitls_pki_x509.h"
 
 /**
  *  Matches a string against a pattern containing exactly one wildcard ('*').
@@ -163,13 +165,13 @@ int32_t X509_VerifyHostnameWithSan(HITLS_X509_Cert *cert, const char *hostname,
     if (ret != HITLS_PKI_SUCCESS || san.names == NULL) {
         return HITLS_X509_ERR_EXT_NOT_FOUND;
     }
-    ret = HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
+    ret = HITLS_X509_ERR_EXT_NOT_FOUND;
     HITLS_X509_GeneralName *gn = BSL_LIST_GET_FIRST(san.names);
     while (gn != NULL) {
         if (gn->type == HITLS_X509_GN_DNS) {
             char *dnsName = (char *)BSL_SAL_Malloc(gn->value.dataLen + 1);
             if (dnsName == NULL) {
-                BSL_LIST_FREE(san.names, NULL);
+                HITLS_X509_ClearSubjectAltName(&san);
                 return BSL_MALLOC_FAIL;
             }
             (void)memcpy_s(dnsName, gn->value.dataLen + 1, gn->value.data, gn->value.dataLen);
@@ -183,7 +185,7 @@ int32_t X509_VerifyHostnameWithSan(HITLS_X509_Cert *cert, const char *hostname,
         gn = BSL_LIST_GET_NEXT(san.names);
     }
 
-    BSL_LIST_FREE(san.names, NULL);
+    HITLS_X509_ClearSubjectAltName(&san);
     return ret;
 }
 
@@ -200,7 +202,7 @@ int32_t X509_VerifyHostnameWithCn(HITLS_X509_Cert *cert, const char *hostname,
     return ret;
 }
  
-int32_t HITLS_X509_VerifyHostname(HITLS_X509_Cert *cert, uint32_t flags, const char *hostname, uint32_t hostnameLen)
+static int32_t X509_VerifyHostname(HITLS_X509_Cert *cert, uint32_t flags, const char *hostname, uint32_t hostnameLen)
 {
     if (cert == NULL || hostname == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -219,7 +221,7 @@ int32_t HITLS_X509_VerifyHostname(HITLS_X509_Cert *cert, uint32_t flags, const c
     }
 
     int32_t ret = X509_VerifyHostnameWithSan(cert, hostname, MatchCb);
-    // For compatibility with RFC6125, if SAN is not present, fall back to checking CN.
+    // For compatibility with RFC6125, if SAN is not present or there is no DNS in the SAN, fall back to checking CN.
     if (ret == HITLS_X509_ERR_EXT_NOT_FOUND) {
         return X509_VerifyHostnameWithCn(cert, hostname, MatchCb);
     }
@@ -227,6 +229,52 @@ int32_t HITLS_X509_VerifyHostname(HITLS_X509_Cert *cert, uint32_t flags, const c
         BSL_ERR_PUSH_ERROR(ret);
     }
     return ret;
+}
+
+static int32_t X509_VerifyIp(HITLS_X509_Cert *cert, const char *ip, int32_t ipLen)
+{
+    if (cert == NULL || ip == NULL || ipLen < 0 || strlen(ip) != (size_t)ipLen) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    unsigned char buff[16];
+    int32_t buffLen = sizeof(buff) / sizeof(buff[0]);
+    if (SAL_ParseIp(ip, buff, &buffLen) != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    HITLS_X509_ExtSan san = {0};
+    int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SAN, &san, sizeof(san));
+    if (ret != HITLS_PKI_SUCCESS || san.names == NULL) {
+        return HITLS_X509_ERR_EXT_NOT_FOUND;
+    }
+    HITLS_X509_GeneralName *gn = BSL_LIST_GET_FIRST(san.names);
+    ret = HITLS_X509_ERR_VFY_IP_FAIL;
+    while (gn != NULL) {
+        if (gn->type == HITLS_X509_GN_IP) {
+            if ((uint32_t)buffLen == gn->value.dataLen && memcmp(gn->value.data, buff, gn->value.dataLen) == 0) {
+                ret = HITLS_PKI_SUCCESS;
+                break;
+            }
+        }
+        gn = BSL_LIST_GET_NEXT(san.names);
+    }
+
+    HITLS_X509_ClearSubjectAltName(&san);
+    return ret;
+}
+
+int32_t HITLS_X509_VerifyIdentity(HITLS_X509_Cert *cert, uint32_t flags, uint32_t type,
+    const char *val, uint32_t valLen)
+{
+    if (type == HITLS_GEN_DNS) {
+        return X509_VerifyHostname(cert, flags, val, valLen);
+    } else if (type == HITLS_GEN_IP) {
+        return X509_VerifyIp(cert, val, valLen);
+    }
+    return HITLS_X509_ERR_INVALID_PARAM;
 }
 
 int32_t HITLS_X509_CheckKey(HITLS_X509_Cert *cert, CRYPT_EAL_PkeyCtx *prvKey)
@@ -252,4 +300,4 @@ int32_t HITLS_X509_CheckKey(HITLS_X509_Cert *cert, CRYPT_EAL_PkeyCtx *prvKey)
     }
     return HITLS_PKI_SUCCESS;
 }
-#endif // HITLS_PKI_X509_VFY_HOSTNAME
+#endif // HITLS_PKI_X509_VFY_IDENTITY

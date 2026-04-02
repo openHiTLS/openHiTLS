@@ -92,6 +92,10 @@ typedef enum {
     CERT_STORE_CTRL_SET_VERIFY_FLAGS,       /**< Set the certificate verification flags. */
     CERT_STORE_CTRL_GET_VERIFY_FLAGS,       /**< Get the certificate verification flags. */
     CERT_STORE_CTRL_SET_DEFAULT_PATH,       /**< Set the default CA path. */
+    CERT_STORE_CTRL_SET_HOST_FLAG,          /**< Set the certificate hostflags. */
+    CERT_STORE_CTRL_SET_HOST,               /**< Set the certificate host. */
+    CERT_STORE_CTRL_ADD_HOST,               /**< Add the certificate host. */
+    CERT_STORE_CTRL_GET_PEERNAME,           /**< Get the certificate peername. */
 
     CERT_CTRL_GET_ENCODE_LEN = 200,         /**< Obtain the length of the certificate code. */
     CERT_CTRL_GET_PUB_KEY,                  /**< Obtaining the Certificate Public Key (Release Required). */

@@ -76,6 +76,7 @@
 #cmakedefine HITLS_BSL_SAL_THREAD
 #cmakedefine HITLS_BSL_SAL_TIME
 #cmakedefine HITLS_BSL_SAL_PID
+#cmakedefine HITLS_BSL_SAL_IP
 #cmakedefine HITLS_BSL_SAL_LINUX
 #cmakedefine HITLS_BSL_SAL_DARWIN
 #cmakedefine HITLS_ATOMIC_THREAD_LOCK
@@ -332,7 +333,7 @@
 #cmakedefine HITLS_PKI_X509_VFY_DEFAULT
 #cmakedefine HITLS_PKI_X509_VFY_CB
 #cmakedefine HITLS_PKI_X509_VFY_LOCATION
-#cmakedefine HITLS_PKI_X509_VFY_HOSTNAME
+#cmakedefine HITLS_PKI_X509_VFY_IDENTITY
 // CMS
 #cmakedefine HITLS_PKI_CMS
 #cmakedefine HITLS_PKI_CMS_DATA

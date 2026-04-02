@@ -33,6 +33,9 @@
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "hitls_x509_verify.h"
+#ifdef HITLS_PKI_X509_VFY_IDENTITY
+#include "sal_ip_util.h"
+#endif
 
 #define CRYPT_SHA1_DIGESTSIZE 20
 #define MAX_PATH_LEN 4096
@@ -134,6 +137,11 @@ void HITLS_X509_StoreCtxFree(HITLS_X509_StoreCtx *storeCtx)
 
 #ifdef HITLS_CRYPTO_SM2
     BSL_SAL_FREE(storeCtx->verifyParam.sm2UserId.data);
+#endif
+#ifdef HITLS_PKI_X509_VFY_IDENTITY
+    BSL_LIST_FREE(storeCtx->verifyParam.hostnames, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
+    BSL_SAL_FREE(storeCtx->verifyParam.ip);
+    BSL_SAL_FREE(storeCtx->verifyParam.peername);
 #endif
     BSL_LIST_FREE(storeCtx->store, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     BSL_LIST_FREE(storeCtx->crl, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);
@@ -602,6 +610,128 @@ static int32_t X509_GetCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List 
     return HITLS_PKI_SUCCESS;
 }
 
+#ifdef HITLS_PKI_X509_VFY_IDENTITY
+static int32_t X509_SetHostFlags(HITLS_X509_StoreCtx *storeCtx, uint32_t *val, uint32_t valLen)
+{
+    if (valLen != sizeof(uint32_t)) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    storeCtx->verifyParam.hostflags |= *val;
+    return HITLS_PKI_SUCCESS;
+}
+
+static char *DupString(const char *str)
+{
+    char *dest = BSL_SAL_Dump(str, strlen(str) + 1);
+    if (dest == NULL) {
+        return NULL;
+    }
+    dest[strlen(str)] = '\0';
+    return dest;
+}
+
+static int32_t X509_SetVerifyHost(HITLS_X509_StoreCtx *storeCtx, const char *hostname, uint32_t hostnameLen)
+{
+    if (hostname == NULL || hostnameLen == 0) {
+        return HITLS_PKI_SUCCESS;
+    }
+
+    char *tmp = DupString(hostname);
+    if (tmp == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+
+    if (storeCtx->verifyParam.hostnames == NULL) {
+        storeCtx->verifyParam.hostnames = BSL_LIST_New(sizeof(char *));
+        if (storeCtx->verifyParam.hostnames == NULL) {
+            BSL_SAL_Free(tmp);
+            BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+            return BSL_MALLOC_FAIL;
+        }
+    }
+
+    int32_t ret = BSL_LIST_AddElement(storeCtx->verifyParam.hostnames, tmp, BSL_LIST_POS_END);
+    if (ret != BSL_SUCCESS) {
+        BSL_SAL_Free(tmp);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t X509_SetVerifyIp(HITLS_X509_StoreCtx *storeCtx, unsigned char *ip, uint32_t ipLen)
+{
+    storeCtx->verifyParam.ip = BSL_SAL_Malloc(ipLen);
+    if (storeCtx->verifyParam.ip == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    (void)memcpy_s(storeCtx->verifyParam.ip, ipLen, ip, ipLen);
+    storeCtx->verifyParam.ipLen = ipLen;
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t X509_SetHost(HITLS_X509_StoreCtx *storeCtx, const void *val)
+{
+    const char *hostname = (const char *)val;
+    uint32_t hostnameLen = hostname != NULL ? strlen(hostname) : 0;
+
+    BSL_SAL_FREE(storeCtx->verifyParam.ip);
+    BSL_LIST_FREE(storeCtx->verifyParam.hostnames, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
+
+    if (hostname != NULL) {
+        unsigned char buff[16];
+        int32_t len = sizeof(buff) / sizeof(buff[0]);
+        if (SAL_ParseIp(hostname, buff, &len) == BSL_SUCCESS) {
+            return X509_SetVerifyIp(storeCtx, buff, len);
+        }
+    }
+    return X509_SetVerifyHost(storeCtx, hostname, hostnameLen);
+}
+
+static int32_t X509_AddHost(HITLS_X509_StoreCtx *storeCtx, const void *val)
+{
+    const char *hostname = (const char *)val;
+    uint32_t hostnameLen = hostname != NULL ? strlen(hostname) : 0;
+    if (hostname != NULL) {
+        unsigned char buff[16];
+        int32_t len = sizeof(buff) / sizeof(buff[0]);
+        if (SAL_ParseIp(hostname, buff, &len) == BSL_SUCCESS) {
+            if (storeCtx->verifyParam.ip != NULL) {
+                BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ADD_VERIFY_IP);
+                return HITLS_X509_ERR_ADD_VERIFY_IP;
+            }
+            return X509_SetVerifyIp(storeCtx, buff, len);
+        }
+    }
+
+    return X509_SetVerifyHost(storeCtx, hostname, hostnameLen);
+}
+#endif
+
+static int32_t X509VfyOtherCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val, uint32_t valLen)
+{
+    (void)storeCtx;
+    (void)val;
+    (void)valLen;
+    switch (cmd) {
+#ifdef HITLS_PKI_X509_VFY_IDENTITY
+        case HITLS_X509_STORECTX_SET_HOST_FLAG:
+            return X509_SetHostFlags(storeCtx, val, valLen);
+        case HITLS_X509_STORECTX_SET_HOST:
+            return X509_SetHost(storeCtx, val);
+        case HITLS_X509_STORECTX_ADD_HOST:
+            return X509_AddHost(storeCtx, val);
+#endif
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+            return HITLS_X509_ERR_INVALID_PARAM;
+    }
+}
+
 int32_t X509VfyBeforeCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val, uint32_t valLen)
 {
     switch (cmd) {
@@ -644,8 +774,7 @@ int32_t X509VfyBeforeCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val,
         case HITLS_X509_STORECTX_CLEAR_CRL:
             return X509_ClearCRL(storeCtx);
         default:
-            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
-            return HITLS_X509_ERR_INVALID_PARAM;
+            return X509VfyOtherCtrl(storeCtx, cmd, val, valLen);
     }
 }
 
@@ -666,6 +795,13 @@ int32_t X509VfyAllTimeCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void *val
 #endif
         case HITLS_X509_STORECTX_GET_PARAM_FLAGS:
             return X509_GetParamFlag(storeCtx, val, valLen);
+#ifdef HITLS_PKI_X509_VFY_IDENTITY
+        case HITLS_X509_STORECTX_GET_PEERNAME:
+            {
+                *(char **)val = storeCtx->verifyParam.peername;
+                return HITLS_PKI_SUCCESS;
+            }
+#endif
         default:
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
@@ -703,7 +839,11 @@ int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
     }
     // Allow val to be NULL only for specific commands like CLEAR_CRL and SET_DEFAULT_PATH
     if (val == NULL && cmd != HITLS_X509_STORECTX_CLEAR_CRL && cmd != HITLS_X509_STORECTX_SET_DEFAULT_PATH &&
-        cmd != HITLS_X509_STORECTX_SET_PEER_CERT_CHAIN) {
+        cmd != HITLS_X509_STORECTX_SET_PEER_CERT_CHAIN
+#ifdef HITLS_PKI_X509_VFY_IDENTITY
+        && cmd != HITLS_X509_STORECTX_SET_HOST
+#endif
+    ) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
@@ -1527,6 +1667,69 @@ int32_t X509_CheckExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
     return HITLS_PKI_SUCCESS;
 }
 
+#ifdef HITLS_PKI_X509_VFY_IDENTITY
+static int32_t CheckHostnames(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
+{
+    int32_t ret = HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
+    HITLS_X509_Cert *certee = BSL_LIST_GET_FIRST(chain);
+    for (char *hostname = BSL_LIST_GET_FIRST(storeCtx->verifyParam.hostnames); hostname != NULL;) {
+        ret = HITLS_X509_VerifyHostname(certee, storeCtx->verifyParam.hostflags, hostname, strlen(hostname));
+        if (ret == HITLS_PKI_SUCCESS) {
+            storeCtx->verifyParam.peername = DupString(hostname);
+            if (storeCtx->verifyParam.peername == NULL) {
+                BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+                return BSL_MALLOC_FAIL;
+            }
+            break;
+        }
+        hostname = BSL_LIST_GET_NEXT(storeCtx->verifyParam.hostnames);
+    }
+
+    return ret;
+}
+
+static int32_t CheckIp(HITLS_X509_Cert *cert, unsigned char *ip, int32_t ipLen)
+{
+    HITLS_X509_ExtSan san = {0};
+    int32_t ret = HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SAN, &san, sizeof(san));
+    if (ret != HITLS_PKI_SUCCESS || san.names == NULL) {
+        return HITLS_X509_ERR_VFY_IP_FAIL;
+    }
+    HITLS_X509_GeneralName *gn = BSL_LIST_GET_FIRST(san.names);
+    ret = HITLS_X509_ERR_VFY_IP_FAIL;
+    while (gn != NULL) {
+        if (gn->type == HITLS_X509_GN_IP) {
+            if ((uint32_t)ipLen == gn->value.dataLen && memcmp(gn->value.data, ip, gn->value.dataLen) == 0) {
+                ret = HITLS_PKI_SUCCESS;
+                break;
+            }
+        }
+        gn = BSL_LIST_GET_NEXT(san.names);
+    }
+
+    HITLS_X509_ClearSubjectAltName(&san);
+    return ret;
+}
+
+static int32_t X509_CheckHost(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
+{
+    BSL_SAL_FREE(storeCtx->verifyParam.peername);
+    
+    int32_t ret;
+    if (storeCtx->verifyParam.hostnames != NULL && BSL_LIST_COUNT(storeCtx->verifyParam.hostnames) > 0) {
+        ret = CheckHostnames(storeCtx, chain);
+        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, BSL_LIST_GET_FIRST(chain), 0, ret);
+    }
+
+    if (storeCtx->verifyParam.ip != NULL) {
+        HITLS_X509_Cert *certee = BSL_LIST_GET_FIRST(chain);
+        ret = CheckIp(certee, storeCtx->verifyParam.ip, storeCtx->verifyParam.ipLen);
+        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, BSL_LIST_GET_FIRST(chain), 0, ret);
+    }
+    return HITLS_PKI_SUCCESS;
+}
+#endif
+
 int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
 {
     if (storeCtx == NULL || chain == NULL) {
@@ -1558,6 +1761,12 @@ int32_t HITLS_X509_CertVerify(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *ch
     if (ret != HITLS_PKI_SUCCESS) {
         goto EXIT;
     }
+#ifdef HITLS_PKI_X509_VFY_IDENTITY
+    ret = X509_CheckHost(storeCtx, storeCtx->certChain);
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+#endif
 #ifdef HITLS_PKI_X509_VFY_CB
     storeCtx->curCert = BSL_LIST_GET_FIRST(chain);
     storeCtx->curDepth = 0;

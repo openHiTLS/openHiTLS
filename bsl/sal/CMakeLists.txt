@@ -49,6 +49,11 @@ if(HITLS_BSL_SAL_DL)
     list(APPEND _sal_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/sal_dl.c)
 endif()
 
+# Ip Util
+if(HITLS_BSL_SAL_IP)
+    list(APPEND _sal_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/sal_ip_util.c)
+endif()
+
 # Platform-specific implementations
 if(HITLS_BSL_SAL_LINUX OR HITLS_BSL_SAL_DARWIN)
     # POSIX implementations for Unix/Linux/macOS

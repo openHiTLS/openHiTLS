@@ -1061,10 +1061,15 @@ int32_t HITLS_CFG_CtrlSetVerifyParams(
     if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
-    if (inArg == NULL) {
-        return SAL_CERT_CtrlVerifyParams(config, store, cmd, &in, NULL);
+    switch (cmd) {
+        case CERT_STORE_CTRL_SET_VERIFY_DEPTH:
+        case CERT_STORE_CTRL_SET_VERIFY_FLAGS:
+        case CERT_STORE_CTRL_SET_HOST_FLAG:
+            return SAL_CERT_CtrlVerifyParams(config, store, cmd, &in, NULL);
+        default:
+            /* Except for the above types, all other types of parameters are pointers */
+            return SAL_CERT_CtrlVerifyParams(config, store, cmd, inArg, NULL);
     }
-    return SAL_CERT_CtrlVerifyParams(config, store, cmd, inArg, NULL);
 }
 
 int32_t HITLS_CFG_CtrlGetVerifyParams(HITLS_Config *config, HITLS_CERT_Store *store, uint32_t cmd, void *out)

@@ -2053,7 +2053,7 @@ EXIT:
 }
 /* END_CASE */
 
-#if defined(HITLS_PKI_X509_VFY_HOSTNAME)
+#if defined(HITLS_PKI_X509_VFY_IDENTITY)
 
 static bool PkiSkipTest(int32_t algId, int32_t format)
 {
@@ -2086,14 +2086,14 @@ static bool PkiSkipTest(int32_t algId, int32_t format)
             return true;
     }
 }
-#endif // HITLS_PKI_X509_VFY_HOSTNAME
+#endif // HITLS_PKI_X509_VFY_IDENTITY
 /*
  * Test for exact hostname match, including case-insensitivity.
  */
 /* BEGIN_CASE */
 void SDV_PKI_HOSTNAME_EXACT_MATCH_TC001(int flag)
 {
-#if defined(HITLS_PKI_X509_VFY) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
+#if defined(HITLS_PKI_X509_VFY) && defined(HITLS_PKI_X509_VFY_IDENTITY)
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
     ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "", ""), HITLS_PKI_SUCCESS);
@@ -2133,7 +2133,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKI_HOSTNAME_WILDCARD_MATCH_TC002(int flag)
 {
-#if defined(HITLS_PKI_X509_VFY) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
+#if defined(HITLS_PKI_X509_VFY) && defined(HITLS_PKI_X509_VFY_IDENTITY)
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
     ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "*.openhitls.com", ".openhitls.com"), HITLS_PKI_SUCCESS);
@@ -2172,7 +2172,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKI_HOSTNAME_MISMATCH_TC001(int flag)
 {
-#if defined(HITLS_PKI_X509_VFY) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
+#if defined(HITLS_PKI_X509_VFY) && defined(HITLS_PKI_X509_VFY_IDENTITY)
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
     ASSERT_EQ(HITLS_X509_MatchPattern(testFlag, "*.openhitls.com", ".openhitls.com."),
@@ -2204,7 +2204,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKI_HOSTNAME_MISMATCH_TC002(int flag)
 {
-#if defined(HITLS_PKI_X509_VFY) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
+#if defined(HITLS_PKI_X509_VFY) && defined(HITLS_PKI_X509_VFY_IDENTITY)
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
     // Wildcard should not match multiple labels
@@ -2232,7 +2232,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKI_HOSTNAME_INVALID_INPUTS_TC001(int flag)
 {
-#if defined(HITLS_PKI_X509) && defined(HITLS_PKI_X509_CRT) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
+#if defined(HITLS_PKI_X509) && defined(HITLS_PKI_X509_CRT) && defined(HITLS_PKI_X509_VFY_IDENTITY)
     uint32_t testFlag = flag == 0 ? 0 : HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD;
     TestMemInit();
     // More invalid inputs
@@ -2280,7 +2280,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKI_VERIFY_HOSTNAME_TC001(int algId, int format, Hex *encode, int flag)
 {
-#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
+#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY_IDENTITY)
     if (PkiSkipTest(algId, format)) {
         SKIP_TEST();
     }
@@ -2354,7 +2354,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_PKI_VERIFY_HOSTNAME_WITH_CN_TC001(int algId, int format, Hex *encode, int flag)
 {
-#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY_HOSTNAME)
+#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY_IDENTITY)
     if (PkiSkipTest(algId, format)) {
         SKIP_TEST();
     }
@@ -2394,5 +2394,70 @@ void SDV_X509_CRL_PARSE_NAME_LIST_TC001(Hex *buff)
     ASSERT_EQ(HITLS_X509_ParseNameList(&name, list), BSL_ASN1_ERR_DECODE_LEN);
 EXIT:
     BSL_LIST_FreeWithoutData(list);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_PKI_VERIFY_IP_TC001()
+{
+#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY_IDENTITY)
+    TestMemInit();
+    HITLS_X509_Cert *cert = NULL;
+    char *path = "../testdata/tls/certificate/der/rsa_with_san_ext/server.der";
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyIp(NULL, "192.168.0.1", strlen("192.168.0.1")), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_VerifyIp(NULL, NULL, strlen("192.168.0.1")), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_VerifyIp(NULL, "192.168.0.1", 0), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_VerifyIp(cert, "192.168.0.1", strlen("192.168.0.1") + 1), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_VerifyIp(cert, "192.168.0.1", strlen("192.168.0.1")), HITLS_X509_ERR_VFY_IP_FAIL);
+    ASSERT_EQ(HITLS_X509_VerifyIp(cert, "::ffff:192.0.2.\0128", strlen("::ffff:192.0.2.128")), HITLS_X509_ERR_INVALID_PARAM);
+    TestErrClear();
+    // Normal cases
+    ASSERT_EQ(HITLS_X509_VerifyIp(cert, "::ffff:192.0.2.128", strlen("::ffff:192.0.2.128")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyIp(cert, "0000:0000:0000:0000:0000:ffff:c000:0280",
+        strlen("0000:0000:0000:0000:0000:ffff:c000:0280")), HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_CertFree(cert);
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_PKI_VERIFY_IDENTITY_TC001()
+{
+#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY_IDENTITY)
+    TestMemInit();
+    HITLS_X509_Cert *cert = NULL;
+    char *path = "../testdata/tls/certificate/der/rsa_with_san_ext/server.der";
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, path, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyIdentity(NULL, 0, HITLS_GEN_IP, "192.168.0.1", strlen("192.168.0.1")),
+        HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_VerifyIdentity(NULL, 0, HITLS_GEN_IP, NULL, strlen("192.168.0.1")),
+        HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_VerifyIdentity(NULL, 0, HITLS_GEN_IP, "192.168.0.1", 0), HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_VerifyIdentity(cert, 0, HITLS_GEN_IP, "192.168.0.1", strlen("192.168.0.1") + 1),
+        HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_VerifyIdentity(cert, 0, HITLS_GEN_IP, "192.168.0.1", strlen("192.168.0.1")),
+        HITLS_X509_ERR_VFY_IP_FAIL);
+    ASSERT_EQ(HITLS_X509_VerifyIdentity(cert, 0, HITLS_GEN_IP, "::ffff:192.0.2.\0128", strlen("::ffff:192.0.2.128")),
+        HITLS_X509_ERR_INVALID_PARAM);
+    ASSERT_EQ(HITLS_X509_VerifyIdentity(cert, 0, HITLS_GEN_IP, "00000000000000000000FFFFC0000280",
+        strlen("00000000000000000000FFFFC0000280")), HITLS_X509_ERR_INVALID_PARAM);
+    TestErrClear();
+    // Normal cases
+    ASSERT_EQ(HITLS_X509_VerifyIdentity(cert, 0, HITLS_GEN_IP, "::ffff:192.0.2.128", strlen("::ffff:192.0.2.128")),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyIdentity(cert, 0, HITLS_GEN_IP, "0000:0000:0000:0000:0000:ffff:c000:0280",
+        strlen("0000:0000:0000:0000:0000:ffff:c000:0280")), HITLS_PKI_SUCCESS);
+    
+    ASSERT_EQ(HITLS_X509_VerifyIdentity(cert, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD, HITLS_GEN_DNS,
+        "abc.wildcard.com", strlen("abc.wildcard.com")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyIdentity(cert, 0, HITLS_GEN_DNS, "abc.www.wildcard.com", strlen("abc.www.wildcard.com")),
+        HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    ASSERT_EQ(HITLS_X509_VerifyIdentity(cert, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD, HITLS_GEN_DNS,
+        "www.example.com", strlen("www.example.com")), HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_CertFree(cert);
+#endif
 }
 /* END_CASE */
