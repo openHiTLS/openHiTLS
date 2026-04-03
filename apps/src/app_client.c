@@ -89,7 +89,7 @@ typedef enum {
 static const HITLS_CmdOption g_clientOptions[] = {
     /* Connection options */
     {"host",        HITLS_CLIENT_OPT_HOST,        HITLS_APP_OPT_VALUETYPE_STRING,  "Target hostname or IP address"},
-    {"port",        HITLS_CLIENT_OPT_PORT,        HITLS_APP_OPT_VALUETYPE_UINT,    "Target port number (default 443)"},
+    {"port",        HITLS_CLIENT_OPT_PORT,        HITLS_APP_OPT_VALUETYPE_UINT,    "Target port number (default 4433)"},
 
     /* Protocol options */
     {"tls",         HITLS_CLIENT_OPT_TLS,         HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Use TLS protocol (default)"},
