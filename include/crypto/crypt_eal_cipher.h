@@ -130,9 +130,10 @@ int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, uint8_t *iv, uint32_t i
  * @ingroup crypt_eal_cipher
  *
  * Continuously enter encrypted and decrypted data.
- * CRYPT_EAL_CipherUpdate should be used in conjunction with CRYPT_EAL_CipherFinal, after one or more calls to
- * CRYPT_EAL_CipherUpdate, Call CRYPT_EAL_CipherFinal. With the exception of SM4_XTS mode, multiple calls to
- * CRYPT_EAL_CipherUpdate and CRYPT_EAL_CipherFinal are not supported.
+ * CRYPT_EAL_CipherUpdate should be used in conjunction with CRYPT_EAL_CipherFinal. After one or more calls to
+ * CRYPT_EAL_CipherUpdate, call CRYPT_EAL_CipherFinal if the selected mode caches trailing data internally. After
+ * CRYPT_EAL_CipherFinal returns successfully, CRYPT_EAL_CipherInit or CRYPT_EAL_CipherReinit needs to be called
+ * before data is entered again.
  *
  * @attention If the function is called by an external user and the error stack is concerned, it is recommended
  * that BSL_ERR_ClearError() be called before this function is called.
@@ -144,8 +145,8 @@ int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, uint8_t *iv, uint32_t i
  * @param outLen [IN/OUT] Input: For CBC and ECB block encryption, you are advised to set outLen > inLen + blockSize.
  * For CTR and XTS stream encryption, you are advised to set outLen >= inLen. blockSize can be obtained by using
  * CRYPT_CTRL_GET_BLOCKSIZE of CRYPT_EAL_CipherCtrl.
- * Output: Length of the encrypted data. If the block encryption algorithm is used and the length of the last data
- *         to be processed is insufficient, the output value of outLen is 0.
+ * Output: Length of the encrypted or decrypted data. If the block encryption algorithm caches the last data
+ *         internally, the output value of outLen may be 0 or smaller than inLen.
  * eg: CBC and ECB block encryption
  *     1. Encrypted data is input for the first time, and inLen is less than blockSize.
  *        In this case, the output value of outLen is 0.
@@ -156,12 +157,9 @@ int32_t CRYPT_EAL_CipherReinit(CRYPT_EAL_CipherCtx *ctx, uint8_t *iv, uint32_t i
  *     4. Enter the encrypted data for multiple times. (inLen% blockSize) + cache (CTX cache data) >= blockSize.
  *        At this point outLen = (inlen / blockSize) * blockSize + blockSize
  *        CTR outLen equals inLen.
- *     In XTS mode, update reserves the last two blocks for final processing, If the total length of the input data
- * plus the buffer is less than 32 blocks, the output is 0.
- *     1. When data is input for the first time, outLen = (inLen / 16 - 2) * 16.
- *     2. Enter the encrypted data for multiple times. At this time, outLen = ((inLen + cache) / 16 - 2) * 16.
- *     In SM4_XTS mode, after calling CRYPT_EAL_CipherUpdate, you need to use CRYPT_EAL_CipherInit or
- * CRYPT_EAL_CipherReinit to reset the key or iv.
+ *     In XTS mode, each Update call processes the data entered in that call. If inLen is not an integer multiple
+ *     of the block size, the last partial block is processed together with the previous block in Update, so outLen
+ *     equals inLen when the call succeeds. The input length of a single XTS Update call must be at least one block.
  * @retval  #CRYPT_SUCCESS, success.
  *          Other error codes see the crypt_errno.h.
  */
@@ -170,10 +168,10 @@ int32_t CRYPT_EAL_CipherUpdate(CRYPT_EAL_CipherCtx *ctx, const uint8_t *in, uint
 
 /**
  * @ingroup crypt_eal_cipher
- * @brief Fill the data with the size of the block and output the encrypted data; the AEAD tag is obtained
- * through CRYPT_EAL_CipherCtrl.
- *        For block encryption algorithms such as CBC and ECB, padding must be set, In XTS mode, final needs
- * to be called to obtain the last two blocks.
+ * @brief Output the remaining cached data in the CTX; the AEAD tag is obtained through CRYPT_EAL_CipherCtrl.
+ *        For block encryption algorithms such as CBC and ECB, the last block is padded or unpadded in Final.
+ *        For stream encryption algorithms such as CTR and XTS, Final does not output additional data. In XTS mode,
+ *        processing of the last partial block is completed in Update.
  * @attention If the function is called by an external user and the error stack is concerned,
  *            you are advised to call BSL_ERR_ClearError() before calling this function.
  *
