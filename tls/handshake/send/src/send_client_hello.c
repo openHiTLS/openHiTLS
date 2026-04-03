@@ -389,6 +389,7 @@ static UserPskList *ConstructUserPsk(HITLS_Session *sessoin, const uint8_t *iden
     userPsk->identity = BSL_SAL_Calloc(1, identityLen);
     if (userPsk->identity == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17116, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0, 0);
+        HITLS_SESS_Free(userPsk->pskSession);
         BSL_SAL_FREE(userPsk);
         return NULL;
     }

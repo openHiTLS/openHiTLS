@@ -3656,3 +3656,74 @@ EXIT:
     HITLS_Free(ctx);
 }
 /* END_CASE */
+
+static int g_stub_hit = false;
+static const char g_leak_test_identity[53] = "SDV_TEST_UNIQUE_IDENTITY_STRING_FOR_LEAK_TEST_123456"; // length 53
+static const uint32_t SPECIAL_IDENTITY_LEN = 52; // strlen
+
+static uint32_t CustomPskLeakCb(HITLS_Ctx *ctx, const uint8_t *hint, uint8_t *identity, uint32_t maxIdentityLen, uint8_t *psk, uint32_t maxPskLen)
+{
+    (void)ctx;
+    (void)hint;
+    // Provide a totally unique identity string to completely avoid normal business logic allocation collisions
+    if (memcpy_s(identity, maxIdentityLen, g_leak_test_identity, SPECIAL_IDENTITY_LEN + 1) != EOK) {
+        return 0;
+    }
+    memset_s(psk, maxPskLen, 0x11, 32);
+    return 32;
+}
+
+static void *STUB_SAL_Calloc_PSK_Leak(uint32_t n, uint32_t size)
+{
+    // Because we use a highly unique identity length (52), we are guaranteed this is exactly ConstructUserPsk's target allocation
+    if (size == SPECIAL_IDENTITY_LEN && !g_stub_hit) {
+        g_stub_hit = true;
+        printf("[TEST] Memory allocation failed specifically for PSK identity (size %d)!\n", SPECIAL_IDENTITY_LEN);
+        return NULL;
+    }
+    return calloc(n, size);
+}
+
+/* @
+* @test  SDV_TLS_PSK_LEAK_TC01
+* @spec  -
+* @title  Verify that memory for pskSession is successfully cleaned up if PSK identity allocation fails.
+* @precon  nan
+* @brief  1. Configure PSK and use a custom callback to return a predefined unique identity length.
+*         2. Use STUB_REPLACE(BSL_SAL_Calloc) to simulate allocation failure specifically on the PSK identity allocation.
+*         3. Call HITLS_Connect to trigger handshake up to ClientHelloPrepare.
+*         4. Assert that the STUB was hit and verify via ASAN that there are no leaks.
+* @expect  STUB hits correctly and execution completes without ASAN alerts.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_TLS_PSK_LEAK_TC01(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    HITLS_CFG_SetKeyExchMode(config, TLS13_KE_MODE_PSK_WITH_DHE);
+
+    // Use our custom callback so `ConstructUserPsk` will be forced to allocate exactly our precise target length
+    HITLS_CFG_SetPskClientCallback(config, (HITLS_PskClientCb)CustomPskLeakCb);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+
+    g_stub_hit = false;
+
+    STUB_REPLACE(BSL_SAL_Calloc, STUB_SAL_Calloc_PSK_Leak);
+
+    HITLS_Connect(client->ssl);
+
+    STUB_RESTORE(BSL_SAL_Calloc);
+
+    // Explicitly assert that the PSK identity allocation branch was actually reached and failed
+    ASSERT_TRUE(g_stub_hit);
+
+EXIT:
+    FRAME_FreeLink(client);
+    HITLS_CFG_FreeConfig(config);
+}
+/* END_CASE */
