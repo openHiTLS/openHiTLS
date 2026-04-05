@@ -1247,6 +1247,58 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_LIST_SET_OF_SORT_TC001(void)
+{
+    BSL_ASN1_TemplateItem item[] = {{BSL_ASN1_TAG_INTEGER, 0, 0}};
+    BSL_ASN1_Template templ = {item, sizeof(item) / sizeof(item[0])};
+    uint8_t data128[] = {0x80};
+    uint8_t data127[] = {0x7F};
+    uint8_t expect[] = {0x02, 0x01, 0x7F, 0x02, 0x02, 0x00, 0x80};
+    BSL_ASN1_Buffer in[] = {
+        {BSL_ASN1_TAG_INTEGER, sizeof(data128), data128},
+        {BSL_ASN1_TAG_INTEGER, sizeof(data127), data127},
+    };
+    BSL_ASN1_Buffer out = {0};
+
+    TestMemInit();
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, sizeof(in) / sizeof(in[0]), &templ, in,
+        sizeof(in) / sizeof(in[0]), &out), BSL_SUCCESS);
+    ASSERT_EQ(out.tag, BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET);
+    ASSERT_EQ(out.len, sizeof(expect));
+    ASSERT_COMPARE("Encode set of", expect, sizeof(expect), out.buff, out.len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_SAL_FREE(out.buff);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_LIST_SEQUENCE_OF_ORDER_TC001(void)
+{
+    BSL_ASN1_TemplateItem item[] = {{BSL_ASN1_TAG_INTEGER, 0, 0}};
+    BSL_ASN1_Template templ = {item, sizeof(item) / sizeof(item[0])};
+    uint8_t data128[] = {0x80};
+    uint8_t data127[] = {0x7F};
+    uint8_t expect[] = {0x02, 0x02, 0x00, 0x80, 0x02, 0x01, 0x7F};
+    BSL_ASN1_Buffer in[] = {
+        {BSL_ASN1_TAG_INTEGER, sizeof(data128), data128},
+        {BSL_ASN1_TAG_INTEGER, sizeof(data127), data127},
+    };
+    BSL_ASN1_Buffer out = {0};
+
+    TestMemInit();
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, sizeof(in) / sizeof(in[0]), &templ, in,
+        sizeof(in) / sizeof(in[0]), &out), BSL_SUCCESS);
+    ASSERT_EQ(out.tag, BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE);
+    ASSERT_EQ(out.len, sizeof(expect));
+    ASSERT_COMPARE("Encode sequence of", expect, sizeof(expect), out.buff, out.len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_SAL_FREE(out.buff);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_BSL_ASN1_DECODE_THEN_ENCODE_FUNC_TC001(int testIdx, char *path)
 {
 #ifndef HITLS_BSL_SAL_FILE

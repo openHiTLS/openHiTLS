@@ -14,6 +14,7 @@
  */
 
 #include <stdbool.h>
+#include <string.h>
 #include "securec.h"
 #include "bsl_err.h"
 #include "bsl_log_internal.h"
@@ -32,6 +33,11 @@ typedef struct {
     void *cbParam;
     BSL_ASN1_List *list;
 } BSL_ASN1_DecodeListInternalParam;
+
+typedef struct {
+    uint8_t *buff;
+    uint32_t len;
+} BSL_ASN1_EncodedListItem;
 
 int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen, uint32_t *len)
 {
@@ -1113,6 +1119,71 @@ static void EncodeItem(BSL_ASN1_EncodeItem *eItems, uint32_t itemNum, uint8_t *e
     }
 }
 
+static int CompareEncodedListItem(const void *left, const void *right)
+{
+    const BSL_ASN1_EncodedListItem *itemA = (const BSL_ASN1_EncodedListItem *)left;
+    const BSL_ASN1_EncodedListItem *itemB = (const BSL_ASN1_EncodedListItem *)right;
+    uint32_t cmpLen = itemA->len < itemB->len ? itemA->len : itemB->len;
+    int ret = cmpLen == 0 ? 0 : memcmp(itemA->buff, itemB->buff, cmpLen);
+
+    if (ret != 0) {
+        return ret;
+    }
+    if (itemA->len < itemB->len) {
+        return -1;
+    }
+    if (itemA->len > itemB->len) {
+        return 1;
+    }
+    return 0;
+}
+
+static void FreeEncodedListItems(BSL_ASN1_EncodedListItem *encodedItems, uint32_t listSize)
+{
+    if (encodedItems == NULL) {
+        return;
+    }
+    for (uint32_t i = 0; i < listSize; i++) {
+        BSL_SAL_Free(encodedItems[i].buff);
+    }
+    BSL_SAL_Free(encodedItems);
+}
+
+static int32_t EncodeAndSortSetItems(BSL_ASN1_EncodeItem *eItems, uint32_t listSize, uint32_t templNum,
+    uint8_t *encode, uint32_t encodeLen)
+{
+    BSL_ASN1_EncodedListItem *encodedItems =
+        (BSL_ASN1_EncodedListItem *)BSL_SAL_Calloc(listSize, sizeof(BSL_ASN1_EncodedListItem));
+    if (encodedItems == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+
+    for (uint32_t i = 0; i < listSize; i++) {
+        encodedItems[i].len = (eItems + i * templNum)->asnOctetNum;
+        if (encodedItems[i].len != 0) {
+            encodedItems[i].buff = (uint8_t *)BSL_SAL_Calloc(1, encodedItems[i].len);
+            if (encodedItems[i].buff == NULL) {
+                FreeEncodedListItems(encodedItems, listSize);
+                return BSL_MALLOC_FAIL;
+            }
+            EncodeItem(eItems + i * templNum, templNum, encodedItems[i].buff);
+        }
+    }
+
+    qsort(encodedItems, listSize, sizeof(BSL_ASN1_EncodedListItem), CompareEncodedListItem);
+    uint32_t offset = 0;
+    for (uint32_t i = 0; i < listSize; i++) {
+        if (encodedItems[i].len == 0) {
+            continue;
+        }
+        (void)memcpy_s(encode + offset, encodeLen - offset, encodedItems[i].buff, encodedItems[i].len);
+        offset += encodedItems[i].len;
+    }
+
+    FreeEncodedListItems(encodedItems, listSize);
+    return BSL_SUCCESS;
+}
+
 static int32_t CheckBslTime(BSL_ASN1_Buffer *asn)
 {
     if (asn->len != sizeof(BSL_TIME)) {
@@ -1302,9 +1373,19 @@ int32_t BSL_ASN1_EncodeListItem(uint8_t tag, uint32_t listSize, BSL_ASN1_Templat
         return BSL_MALLOC_FAIL;
     }
     uint8_t *encode = out->buff;
-    for (uint32_t i = 0; i < listSize; i++) {
-        EncodeItem(eItems + i * templ->templNum, templ->templNum, encode);
-        encode += (eItems + i * templ->templNum)->asnOctetNum;
+    if (tag == BSL_ASN1_TAG_SET) {
+        ret = EncodeAndSortSetItems(eItems, listSize, templ->templNum, encode, encodeLen);
+        if (ret != BSL_SUCCESS) {
+            BSL_SAL_Free(out->buff);
+            out->buff = NULL;
+            BSL_SAL_Free(eItems);
+            return ret;
+        }
+    } else {
+        for (uint32_t i = 0; i < listSize; i++) {
+            EncodeItem(eItems + i * templ->templNum, templ->templNum, encode);
+            encode += (eItems + i * templ->templNum)->asnOctetNum;
+        }
     }
 
     out->tag = tag | BSL_ASN1_TAG_CONSTRUCTED;

@@ -203,7 +203,7 @@ int32_t BSL_ASN1_EncodeTemplate(BSL_ASN1_Template *templ, BSL_ASN1_Buffer *asnAr
  * @attention
  *   1. BSL_ASN1_TAG_SEQUENCE is type 'SEQUENCE OF'.
  *   2. BSL_ASN1_TAG_SET is type 'SET OF'.
- *   3. The sorting in 'SET OF' is currently not supported.
+ *   3. For 'SET OF', elements are DER-sorted by their complete encoded octet string.
  *
  * @param tag [IN] BSL_ASN1_TAG_SEQUENCE or BSL_ASN1_TAG_SET
  * @param listSize [IN] The number of elements in the list.
