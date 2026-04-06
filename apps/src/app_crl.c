@@ -330,7 +330,7 @@ int32_t  HITLS_CrlMain(int argc, char *argv[])
     }
     BSL_UIO_SetIsUnderlyingClosedByUio(crlInfo.uio, !(crlInfo.outfile == NULL));
 
-    if (crlInfo.nextupdate == true) {
+    if (crlInfo.nextupdate) {
         mainRet = PrintNextUpdate(crlInfo.uio, crl);
         if (mainRet != HITLS_APP_SUCCESS) {
             goto end;
@@ -342,25 +342,25 @@ int32_t  HITLS_CrlMain(int argc, char *argv[])
             goto end;
         }
     }
-    if (crlInfo.issuer == true) {
+    if (crlInfo.issuer) {
         mainRet = PrintIssuer(crlInfo.uio, crl);
         if (mainRet != HITLS_APP_SUCCESS) {
             goto end;
         }
     }
-    if (crlInfo.hash == true) {
+    if (crlInfo.hash) {
         mainRet = PrintIssuerHash(crlInfo.uio, crl);
         if (mainRet != HITLS_APP_SUCCESS) {
             goto end;
         }
     }
-    if (crlInfo.text == true) {
+    if (crlInfo.text) {
         mainRet = PrintText(crlInfo.uio, crl);
         if (mainRet != HITLS_APP_SUCCESS) {
             goto end;
         }
     }
-    if (crlInfo.noout == false) {
+    if (!crlInfo.noout) {
         mainRet = OutCrlFileInfo(crlInfo.uio, crl, crlInfo.outform);
     }
 
