@@ -344,3 +344,71 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/* @
+* @test  UT_TLS_TLCP_CKX_PUBKEY_LENGTH_ERR_TC001
+* @title During the testing of the chain construction process, we aim to verify whether the sm2 decryption will reverse
+*       when the length is less than 97, and whether it will trigger asan.
+* @precon  nan
+* @brief   1. Use the default configuration items to configure the client and server. Expected result 1.
+*          2. Construct the clientkeyexchange message with the pubkey length to be less than 97. Expected result 2.
+*          3. Attempt to complete the handshake. Expected result 3.
+* @expect  1. The initialization is successful.
+*          2. The stubbed successfully.
+*          3. Length error, randomly generate pre-master secret key, the handshake failed due to decryption failure.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLCP_CKX_PUBKEY_LENGTH_ERR_TC001()
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    config = HITLS_CFG_NewTLCPConfig();
+    ASSERT_TRUE(config != NULL);
+    uint16_t cipherSuite[] = {HITLS_ECC_SM4_CBC_SM3};
+    HITLS_CFG_SetCipherSuites(config, cipherSuite, sizeof(cipherSuite) / sizeof(uint16_t));
+
+    client = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, true);
+    server = FRAME_CreateTLCPLink(config, BSL_UIO_TCP, false);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_TRUE(client != NULL);
+    uint8_t data[] = {0x3f, 0x30, 0x3d, 0x02, 0x01, 0x00, 0x02, 0x01, 0x00, 0x04, 0x20, 0x59, 0x98, 0x3c, 0x18, 0xf8,
+                      0x09, 0xe2, 0x62, 0x92, 0x3c, 0x53, 0xae, 0xc2, 0x95, 0xd3, 0x03, 0x83, 0xb5, 0x4e, 0x39, 0xd6,
+                      0x09, 0xd1, 0x60, 0xaf, 0xcb, 0x19, 0x08, 0xd0, 0xbd, 0x87, 0x66, 0x04, 0x13, 0x21, 0x88, 0x6c,
+                      0xa9, 0x89, 0xca, 0x9c, 0x7d, 0x58, 0x08, 0x73, 0x07, 0xca, 0x93, 0x09, 0x2d, 0x65, 0x1e, 0xfa};
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_KEY_EXCHANGE), HITLS_SUCCESS);
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recvLen != 0);
+
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
+    uint32_t parseLen = 0;
+    frameType.versionType = HITLS_VERSION_TLS12;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+    frameMsg.body.hsMsg.body.clientKeyExchange.pubKey.state = ASSIGNED_FIELD;
+    frameMsg.body.hsMsg.body.clientKeyExchange.pubKey.size = sizeof(data);
+    BSL_SAL_FREE(frameMsg.body.hsMsg.body.clientKeyExchange.pubKey.data);
+    frameMsg.body.hsMsg.body.clientKeyExchange.pubKey.data = BSL_SAL_Calloc(sizeof(data), 1);
+    memcpy(frameMsg.body.hsMsg.body.clientKeyExchange.pubKey.data, data, sizeof(data));
+    uint32_t sendLen = MAX_RECORD_LENTH;
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    ASSERT_TRUE(FRAME_PackMsg(&frameType, &frameMsg, sendBuf, sendLen, &sendLen) == HITLS_SUCCESS);
+    ioUserData->recMsg.len = 0;
+    ASSERT_TRUE(FRAME_TransportRecMsg(server->io, sendBuf, sendLen) == HITLS_SUCCESS);
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    memset_s(&frameMsg, sizeof(frameMsg), 0, sizeof(frameMsg));
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_REC_BAD_RECORD_MAC);
+
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
