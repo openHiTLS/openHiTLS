@@ -61,6 +61,7 @@
 #ifdef HITLS_CRYPTO_MLKEM
 
 #include "crypt_arm.h"
+#include "ml_kem_macros_armv8.S"
 CRYPT_AARCH64_ARCH_BASE
 
 CRYPT_AARCH64_FUNC_START(MLKEMPolyAddReduce)
@@ -625,6 +626,17 @@ AARCH64_PACIASP
         stp     q20, q21, [x1, #96]
         add     x1, x1, #128
 
+#ifdef HITLS_BIG_ENDIAN
+        VFIX_8H 0
+        VFIX_8H 1
+        VFIX_8H 16
+        VFIX_8H 17
+        VFIX_8H 18
+        VFIX_8H 19
+        VFIX_8H 20
+        VFIX_8H 21
+#endif
+
         uzp1    v2.8h, v0.8h, v1.8h
         uzp2    v3.8h, v0.8h, v1.8h
         xtn     v4.8b, v2.8h
@@ -820,15 +832,22 @@ AARCH64_PACIASP
     dup     v30.4s, w7              // v30 = 0x00249249 (every-3rd-bit mask for popcount)
 
     CRYPT_AARCH64_GET_RELA(x9, .LCBD3_shuffle)
-    ldr     q29, [x9]  // TBL shuffle: 12 bytes → 4 × 24-bit lanes
+    VLDQ_16B 29, x9  // TBL shuffle: 12 bytes → 4 × 24-bit lanes
 
     add     x2, x0, #512           // End pointer (256 × 2 bytes = 512)
 
 .LCBD3_loop:
     // ---- Load 12 bytes and rearrange via TBL ----
+    // In big-endian, scalar loads place the first byte in the MSB of the register.
+    // The subsequent fmov/mov transfers bits directly to NEON, so we must reverse
+    // the byte order to get byte[0] in v0.b[0] as the algorithm expects.
     ldr     x3, [x1]
     ldr     w4, [x1, #8]
     add     x1, x1, #12
+#ifdef __AARCH64EB__
+    rev     x3, x3
+    rev     w4, w4
+#endif
     fmov    d0, x3
     mov     v0.s[2], w4
 
@@ -881,7 +900,11 @@ AARCH64_PACIASP
     bfi     w10, w11, #16, #16
     orr     x8, x8, x10, lsl #32
 
-    stp     x3, x8, [x0]
+    // Use NEON st1 to correctly store int16_t values on both LE and BE.
+    // stp of GP registers on BE stores MSB-first, reversing the halfword order.
+    fmov    d0, x3
+    mov     v0.d[1], x8
+    st1     {v0.8h}, [x0]
 
     // Block 2 → x14 (d2 in w15, caller-saved temps: w3-w6)
     ubfx    w3, w15, #0, #3
@@ -917,7 +940,10 @@ AARCH64_PACIASP
     bfi     w4, w5, #16, #16
     orr     x3, x3, x4, lsl #32
 
-    stp     x14, x3, [x0, #16]
+    fmov    d0, x14
+    mov     v0.d[1], x3
+    add     x3, x0, #16       // x3 is free: its value was just moved into v0.d[1]
+    st1     {v0.8h}, [x3]
     add     x0, x0, #32
 
     cmp     x0, x2
@@ -1027,12 +1053,14 @@ CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyCompress4)
     movi    v5.8h, #0xf             // Mask for lower 4 bits (2^d - 1)
     dup     v4.4h, w3              // v4 = {315, 315, 315, 315}
 1:
-    ldp     q3, q2, [x1]           // Load 16 int16_t
-    sqdmulh v3.8h, v3.8h, v4.h[0]  // v3 = (v3 * 315) >> 32 (rounding)
-    sqdmulh v2.8h, v2.8h, v4.h[0]  // v2 = (v2 * 315) >> 32
-    shadd   v3.8h, v3.8h, v6.8h    // v3 = (v3 + 1) >> 1
-    shadd   v2.8h, v2.8h, v6.8h    // v2 = (v2 + 1) >> 1
-    ldp     q1, q0, [x1, #32]      // Load next 16 int16_t
+        VLDQ_8H 3, x1                  // Load 16 int16_t (q3 from [x1])
+        VLDQ_8H 2, x1, #16            // (q2 from [x1+16])
+        sqdmulh v3.8h, v3.8h, v4.h[0]  // v3 = (v3 * 315) >> 32 (rounding)
+        sqdmulh v2.8h, v2.8h, v4.h[0]  // v2 = (v2 * 315) >> 32
+        shadd   v3.8h, v3.8h, v6.8h    // v3 = (v3 + 1) >> 1
+        shadd   v2.8h, v2.8h, v6.8h    // v2 = (v2 + 1) >> 1
+        VLDQ_8H 1, x1, #32            // Load next 16 int16_t (q1 from [x1+32])
+        VLDQ_8H 0, x1, #48            // (q0 from [x1+48])
     sqdmulh v1.8h, v1.8h, v4.h[0]  // v1 = (v1 * 315) >> 32
     sqdmulh v0.8h, v0.8h, v4.h[0]  // v0 = (v0 * 315) >> 32
     shadd   v1.8h, v1.8h, v6.8h    // v1 = (v1 + 1) >> 1
@@ -1052,7 +1080,7 @@ CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyCompress4)
     orr     v0.16b, v0.16b, v2.16b  // v0 |= v2
     xtn     v2.8b, v1.8h            // v2 = low 8 bits of v1
     xtn2    v2.16b, v0.8h           // v2 += low 8 bits of v0
-    str     q2, [x0], #16          // Store 16 bytes
+    VSTQ_16B_POST 2, x0, #16       // Store 16 bytes
     cmp     x0, x2                 // Check if done
     b.ne    1b
     ret
@@ -1096,9 +1124,12 @@ CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyCompress5)
     movi    v18.8h, #0x1f, lsl #8  // Mask for bits 8-12 (0x1f00)
     movi    v17.8h, #0x1f          // Mask for lower 5 bits
     ldr     q16, 0f                // mask_h_lo
+    VFIX_4S 16
     ldr     q6, 1f                 // mask_w_hi
+    VFIX_4S 6
     movi    v7.4s, #0x3, msl #8    // mask_w_lo = {0x3ff, 0x3ff, 0x3ff, 0x3ff}
     ldr     q5, 2f                 // mask for final 12-bit shift
+    VFIX_4S 5
     mov     w2, #0x13b             // w2 = 315
     dup     v3.4h, w2              // v3 = {315, 315, 315, 315}
     b       100f
@@ -1116,7 +1147,8 @@ CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyCompress5)
     .word   0x00000000
 100:
     add     x0, x0, #0xa           // Pre-add for sturb addressing
-    ldp     q1, q0, [x1]           // Load 16 int16_t
+    VLDQ_8H 1, x1                  // Load 16 int16_t (q1 from [x1])
+    VLDQ_8H 0, x1, #16            // (q0 from [x1+16])
     sqrdmulh v1.8h, v1.8h, v3.h[0] // v1 = (v1 * 315) >> 16 (rounding)
     sqrdmulh v0.8h, v0.8h, v3.h[0] // v0 = (v0 * 315) >> 16
     and     v1.16b, v1.16b, v4.16b // v1 &= 0x1f
@@ -1147,9 +1179,11 @@ CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyCompress5)
     lsr     w11, w6, #8
     lsr     w10, w5, #8
     ubfx    x2, x2, #32, #16       // Extract bits 32-47 (t[2])
-    str     q0, [x13]              // Store packed result to stack
-    ldrh    w4, [sp, #34]          // t[5] from stack
-    ldrh    w8, [sp, #36]          // t[6] from stack
+    // Extract t[5] and t[6] directly from vector elements (endian-neutral).
+    // In LE these were loaded from the stack after "str q0, [x13]" but umov
+    // is equivalent and avoids a store/reload with endianness dependence.
+    umov    w4, v0.h[5]            // t[5]
+    umov    w8, v0.h[6]            // t[6]
     sturb   w7, [x0, #-10]         // r[0]
     lsr     w9, w4, #8
     sturb   w12, [x0, #-9]         // r[1]
@@ -1255,18 +1289,18 @@ CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyCompress11)
     add     x15, sp, #0x10         // Temp buffer on stack
     movi    v2.4h, #0x14           // v2 = {20, 20, 20, 20}
     CRYPT_AARCH64_GET_RELA(x9, .LMLKEMPolyCompress11_mask11)
-    ldr     q7, [x9]               // mask11 / mask for 0x7ff
+    VLDQ_4S 7, x9                  // mask11 / mask for 0x7ff
     mov     w2, #0xffffafb7        // w2 = -20553
     movi    v6.4s, #0x7, msl #8    // mask_w_lo = {0x7ff, 0x7ff, 0x7ff, 0x7ff}
     dup     v4.4h, w2              // v4 = {-20553, -20553, -20553, -20553}
     CRYPT_AARCH64_GET_RELA(x9, .LMLKEMPolyCompress11_mask_h_lo)
-    ldr     q5, [x9]               // mask_h_lo
+    VLDQ_4S 5, x9                  // mask_h_lo
     CRYPT_AARCH64_GET_RELA(x9, .LMLKEMPolyCompress11_mask_w_hi)
-    ldr     q3, [x9]               // mask_w_hi
+    VLDQ_4S 3, x9                  // mask_w_hi
     b       100f
 100:
     add     x0, x0, #0xb           // Pre-add for sturb addressing
-    ldr     q1, [x1], #16          // Load 8 int16_t
+    VLDQ_8H_POST 1, x1, #16        // Load 8 int16_t
     sqdmulh v0.8h, v1.8h, v4.h[0]  // v0 = (v1 * -20553) >> 16 (rounding)
     shadd   v0.8h, v0.8h, v16.8h   // v0 = (v0 + 0) >> 1
     mla     v0.8h, v1.8h, v2.h[0]  // v0 += v1 * 20
@@ -1293,10 +1327,12 @@ CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyCompress11)
     lsr     x10, x4, #16
     lsr     x9, x4, #24
     lsr     x8, x4, #32
-    str     q0, [x15]              // Store packed result to stack
     lsr     x7, x4, #40
     lsr     w13, w5, #8
     sturb   w6, [x0, #-11]         // r[0]
+    // Dead store removed: str q0, [x15] — all output bytes are extracted above
+    // via fmov/mov/lsr before this point; no stack spill needed.
+    // all required values are extracted above via fmov/mov/lsr.
     sturb   w14, [x0, #-10]        // r[1]
     sturb   w5, [x0, #-9]          // r[2]
     sturb   w13, [x0, #-8]         // r[3]
@@ -1336,7 +1372,7 @@ AARCH64_PACIASP
 
 100:
     // Load 8 coefficients
-    ldr     q1, [x1], #16
+    VLDQ_8H_POST 1, x1, #16
 
  // --- Setup: compression constant,15553, computation masks, bit packing constants ---
     mov     w3, #0xafb7             // w3 = -20553
@@ -1353,7 +1389,7 @@ AARCH64_PACIASP
     //   Step 1: mask even/odd half-words separately, shift odd down by 6
     movi    v6.4s, #0x3, msl #8     // mask_h_lo = {0x3ff, 0x3ff, 0x3ff, 0x3ff} (keeps all)
     CRYPT_AARCH64_GET_RELA(x9, .LMLKEMPolyCompress10_mask_h_hi)
-    ldr     q7, [x9]                // mask_h_hi = {0, 0x3ff, 0, 0x3ff, 0, 0x3ff, 0, 0x3ff}
+    VLDQ_8H 7, x9                   // mask_h_hi = {0, 0x3ff, 0, 0x3ff, 0, 0x3ff, 0, 0x3ff}
     and     v1.16b, v0.16b, v7.16b // tvec & mask_h_hi (odd indices)
     and     v0.16b, v0.16b, v6.16b // tvec & mask_h_lo (all indices, keeps low 10 bits)
     sshr    v1.4s, v1.4s, #6       // (tvec & mask_h_hi) >> 6 (32-bit shift)
@@ -1361,22 +1397,21 @@ AARCH64_PACIASP
     // --- SHIFT_WITH_HOLES_S: compress 32-bit lanes by removing gaps ---
     //   Step 2: mask alternating 32-bit words, shift upper by 12
     CRYPT_AARCH64_GET_RELA(x9, .LMLKEMPolyCompress10_mask_w_lo)
-    ldr     q5, [x9]                // mask_w_lo = {0xfffff, 0, 0xfffff, 0}
+    VLDQ_4S 5, x9                   // mask_w_lo = {0xfffff, 0, 0xfffff, 0}
     CRYPT_AARCH64_GET_RELA(x9, .LMLKEMPolyCompress10_mask_w_hi)
-    ldr     q7, [x9]                // mask_w_hi = {0, 0xfffff, 0, 0xfffff}
+    VLDQ_4S 7, x9                   // mask_w_hi = {0, 0xfffff, 0, 0xfffff}
     and     v0.16b, v1.16b, v5.16b // tvec & mask_w_lo
     and     v1.16b, v1.16b, v7.16b // tvec & mask_w_hi
     sshr    v1.2d, v1.2d, #12      // (tvec & mask_w_hi) >> 12 (64-bit shift)
     orr     v0.16b, v0.16b, v1.16b // final result
 
-    // Store to stack for byte extraction
-    str     q0, [sp, #16]
-
+    // Extract 32-bit packed words directly from the vector (endian-neutral).
+    // Replacing the LE-specific store-then-scalar-load pattern with umov.
     add     x0, x7, #10
-    ldr     w2, [sp, #16]          // t[0], t[1]
-    ldr     w3, [sp, #20]          // t[2], t[3]
-    ldr     w4, [sp, #24]          // t[4], t[5]
-    ldr     w5, [sp, #28]          // t[6], t[7]
+    umov    w2, v0.s[0]            // t[0], t[1]
+    umov    w3, v0.s[1]            // t[2], t[3]
+    umov    w4, v0.s[2]            // t[4], t[5]
+    umov    w5, v0.s[3]            // t[6], t[7]
 
     sturb   w2, [x0, #-10]
     lsr     w8, w2, #8
@@ -1448,11 +1483,11 @@ CRYPT_AARCH64_FUNC_START(MLKEMPolyCompress1)
     add     x4, x4, #272               // end of temp storage (sp + 16 + 16*16)
 
 110:
-    ldr     q0, [x3], #16
+    VLDQ_8H_POST 0, x3, #16
     sqdmulh v0.8h, v0.8h, v3.h[0]
     srshr   v0.8h, v0.8h, #4
     and     v0.16b, v0.16b, v2.16b
-    str     q0, [x2], #16
+    VSTQ_8H_POST 0, x2, #16
     cmp     x2, x4
     b.ne    110b
 
@@ -1461,12 +1496,13 @@ CRYPT_AARCH64_FUNC_START(MLKEMPolyCompress1)
     mov     x2, x7                     // x2 = x7 = sp + 16 (reset to constant!)
 
 120:
-    ldp     q4, q0, [x2]              // load tvec[j], tvec[j+1]
+    VLDQ_8H 4, x2                     // load tvec[j]
+    VLDQ_8H 0, x2, #16               // load tvec[j+1]
     xtn     v1.8b, v4.8h
     xtn2    v1.16b, v0.8h
     sshr    v0.8h, v1.8h, #7
     orr     v0.16b, v0.16b, v1.16b
-    str     q0, [x2], #32             // skip next vector (stride 32)
+    VSTQ_8H_POST 0, x2, #32           // skip next vector (stride 32)
     cmp     x2, x4
     b.ne    120b
 
@@ -1475,13 +1511,13 @@ CRYPT_AARCH64_FUNC_START(MLKEMPolyCompress1)
     mov     x5, x7                     // x5 = x7 = sp + 16 (reset to constant!)
 
 130:
-    ldr     q4, [x5]                  // tvec[j]
-    ldr     q0, [x5, #32]             // tvec[j+2]
+    VLDQ_8H 4, x5                     // tvec[j]
+    VLDQ_8H 0, x5, #32               // tvec[j+2]
     xtn     v1.8b, v4.8h
     xtn2    v1.16b, v0.8h
     sshr    v0.8h, v1.8h, #6
     orr     v0.16b, v0.16b, v1.16b
-    str     q0, [x5], #64             // stride 64
+    VSTQ_8H_POST 0, x5, #64           // stride 64
     cmp     x5, x4
     b.ne    130b
 
@@ -1489,11 +1525,11 @@ CRYPT_AARCH64_FUNC_START(MLKEMPolyCompress1)
     // Load 4 vectors from fixed positions:
     // tvec[0] = sp + 16, tvec[4] = sp + 80
     // tvec[8] = sp + 144, tvec[12] = sp + 208
-    ldr     q6, [sp, #16]             // tvec[0]
+    VLDQ_8H 6, sp, #16                // tvec[0]
     add     x6, x6, #16               // advance loop counter (MUST be here!)
-    ldr     q4, [sp, #80]             // tvec[4]
-    ldr     q1, [sp, #144]            // tvec[8]
-    ldr     q0, [sp, #208]            // tvec[12]
+    VLDQ_8H 4, sp, #80               // tvec[4]
+    VLDQ_8H 1, sp, #144              // tvec[8]
+    VLDQ_8H 0, sp, #208              // tvec[12]
 
     // First half: narrow tvec[0] and tvec[4]
     xtn     v5.8b, v6.8h
@@ -1513,11 +1549,8 @@ CRYPT_AARCH64_FUNC_START(MLKEMPolyCompress1)
     xtn     v4.8b, v1.8h
     xtn2    v4.16b, v0.8h
 
-    // Store intermediate results (matches NEON objdump)
-    str     q0, [sp, #144]
-    str     q4, [sp, #16]
-    // Store 16 bytes to output
-    str     q4, [x8]
+    // Store 16 bytes to output (byte-stream: use VSTQ_16B)
+    VSTQ_16B 4, x8
 
     cmp     x6, #32                  // 2 iterations * 16
     b.ne    100b
@@ -1574,7 +1607,7 @@ CRYPT_AARCH64_FUNC_START(MLKEMRejUniform)
     mov     w2, #0xfff                 // 12-bit mask for extracting candidates
     dup     v1.8h, w2
     CRYPT_AARCH64_GET_RELA(x9, .Lrej_bit_table)
-    ldr     q2, [x9]                   // bit_table = {1,2,4,8,16,32,64,128} for bitmask encoding
+    VLDQ_8H 2, x9                      // bit_table = {1,2,4,8,16,32,64,128} for bitmask encoding
 
 .Lrej_main_loop:
     cmp     w21, #480
@@ -1631,13 +1664,13 @@ CRYPT_AARCH64_FUNC_START(MLKEMRejUniform)
     umov    w13, v28.b[3]
 
     add     x14, x22, w6, uxtw #4
-    ldr     q24, [x14]
+    VLDQ_16B 24, x14
     add     x14, x22, w7, uxtw #4
-    ldr     q25, [x14]
+    VLDQ_16B 25, x14
     add     x14, x22, w8, uxtw #4
-    ldr     q26, [x14]
+    VLDQ_16B 26, x14
     add     x14, x22, w9, uxtw #4
-    ldr     q27, [x14]
+    VLDQ_16B 27, x14
 
     tbl     v20.16b, {v20.16b}, v24.16b
     tbl     v21.16b, {v21.16b}, v25.16b
@@ -2120,5 +2153,5 @@ CRYPT_AARCH64_RODATA_SECTION
     .byte   0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0xff, 0xff  // 14
     .byte   0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07  // 15
 
-.text
+
 #endif

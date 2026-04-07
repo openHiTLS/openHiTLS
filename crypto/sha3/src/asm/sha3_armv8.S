@@ -1186,9 +1186,11 @@ AARCH64_PACIASP
     lsr     x8,  x20, #3    /* remaining words in this block = rate / 8 */
 
 .Labsorb2_word_loop:
-    /* Load one 64-bit word from each input */
     ld1     {v30.d}[0], [x6], #8
     ld1     {v30.d}[1], [x7], #8
+#ifdef HITLS_BIG_ENDIAN
+    rev64   v30.16b, v30.16b
+#endif
     ldr     q31, [x0]
     eor     v31.16b, v31.16b, v30.16b
     str     q31, [x0], #16   /* advance state pointer by sizeof(uint64x2_t) = 16 */
@@ -1221,6 +1223,9 @@ AARCH64_PACIASP
 .Labsorb2_tail_word_loop:
     ld1     {v30.d}[0], [x14], #8
     ld1     {v30.d}[1], [x15], #8
+#ifdef HITLS_BIG_ENDIAN
+    rev64   v30.16b, v30.16b
+#endif
     ldr     q31, [x0]
     eor     v31.16b, v31.16b, v30.16b
     str     q31, [x0], #16
@@ -1331,6 +1336,9 @@ AARCH64_PACIASP
 
 .Lsqueeze2_word_loop:
     ldr     q30, [x0], #16   /* load state[i] = {lane0, lane1} */
+#ifdef HITLS_BIG_ENDIAN
+    rev64   v30.16b, v30.16b
+#endif
     st1     {v30.d}[0], [x19], #8
     st1     {v30.d}[1], [x20], #8
     subs    x5,  x5,  #1

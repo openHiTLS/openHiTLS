@@ -94,6 +94,8 @@
 #ifdef HITLS_CRYPTO_MLKEM
 
 #include "crypt_arm.h"
+#include "ml_kem_macros_armv8.S"
+
 CRYPT_AARCH64_ARCH_BASE
 
 // =============================================================================
@@ -144,19 +146,19 @@ AARCH64_PACIASP
 
     mov Q, #3329              // Q (ML-KEM modulus)
 
-    ldr  q0, [table, # 0*16]
-    ldr  q1, [table, # 1*16]
-    ldr  q2, [table, # 2*16]
-    ldr  q3, [table, # 3*16]
+    VLDQ_8H 0, table, # 0*16
+    VLDQ_8H 1, table, # 1*16
+    VLDQ_8H 2, table, # 2*16
+    VLDQ_8H 3, table, # 3*16
 
     mov v0.H[0], Q
 
     // ============================= Pass 1 (even vectors) =============================
     // Load upper half coefficients (indices 8-15 at stride 32)
-    ldr q13, [src, # 9*32]
-    ldr q15, [src, #11*32]
-    ldr q17, [src, #13*32]
-    ldr q19, [src, #15*32]
+    VLDQ_8H 13, src, # 9*32
+    VLDQ_8H 15, src, #11*32
+    VLDQ_8H 17, src, #13*32
+    VLDQ_8H 19, src, #15*32
 
     // ========== Layer 1 (stride 128): 1 twiddle v0.H[2,3], 8 butterflies ==========
     // Montgomery mul: result = (coeff × twiddle × R^{-1}) mod Q
@@ -168,13 +170,13 @@ AARCH64_PACIASP
     mul      v30.8H, v17.8H, v0.H[2]
     mul      v31.8H, v19.8H, v0.H[2]
 
-    ldr         q5, [src, #1*32]
+    VLDQ_8H 5, src, #1*32
     sqrdmulh v13.8H, v13.8H, v0.H[3]
-    ldr         q7, [src, #3*32]
+    VLDQ_8H 7, src, #3*32
     sqrdmulh v15.8H, v15.8H, v0.H[3]
-    ldr         q9, [src, #5*32]
+    VLDQ_8H 9, src, #5*32
     sqrdmulh v17.8H, v17.8H, v0.H[3]
-    ldr         q11, [src, #7*32]
+    VLDQ_8H 11, src, #7*32
     sqrdmulh v19.8H, v19.8H, v0.H[3]
 
     mls      v28.8H, v13.8H, v0.H[0]
@@ -182,29 +184,29 @@ AARCH64_PACIASP
     mls      v30.8H, v17.8H, v0.H[0]
     mls      v31.8H, v19.8H, v0.H[0]
 
-    ldr         q12, [src, #8*32]
+    VLDQ_8H 12, src, #8*32
     sub      v13.8H, v5.8H, v28.8H
     mul      v20.8H, v12.8H, v0.H[2]
-    ldr         q14, [src, #10*32]
+    VLDQ_8H 14, src, #10*32
     sub      v15.8H, v7.8H, v29.8H
     mul      v21.8H, v14.8H, v0.H[2]
-    ldr         q16, [src, #12*32]
+    VLDQ_8H 16, src, #12*32
     sub      v17.8H, v9.8H, v30.8H
     mul      v22.8H, v16.8H, v0.H[2]
-    ldr         q18, [src, #14*32]
+    VLDQ_8H 18, src, #14*32
     sub      v19.8H, v11.8H, v31.8H
     mul      v23.8H, v18.8H, v0.H[2]
 
-    ldr         q4, [src, #0*32]
+    VLDQ_8H 4, src, #0*32
     add      v5.8H, v5.8H, v28.8H
     sqrdmulh v12.8H, v12.8H, v0.H[3]
-    ldr         q6, [src, #2*32]
+    VLDQ_8H 6, src, #2*32
     add      v7.8H, v7.8H, v29.8H
     sqrdmulh v14.8H, v14.8H, v0.H[3]
-    ldr         q8, [src, #4*32]
+    VLDQ_8H 8, src, #4*32
     add      v9.8H, v9.8H, v30.8H
     sqrdmulh v16.8H, v16.8H, v0.H[3]
-    ldr         q10, [src, #6*32]
+    VLDQ_8H 10, src, #6*32
     add      v11.8H, v11.8H, v31.8H
     sqrdmulh v18.8H, v18.8H, v0.H[3]
 
@@ -338,61 +340,61 @@ AARCH64_PACIASP
     // Complete Layer 3 butterflies for the remaining coefficient pairs,
     // store pass 1 (even vector) results, and begin loading pass 2 (odd vector) data.
     sub      v5.8H, v4.8H, v28.8H
-    str         q5, [src, #1*32]
+    VSTQ_8H 5, src, #1*32
     mul      v20.8H, v13.8H, v3.H[0]
     sub      v7.8H, v6.8H, v29.8H
-    str         q7, [src, #3*32]
+    VSTQ_8H 7, src, #3*32
     mul      v21.8H, v15.8H, v3.H[2]
     sub      v9.8H, v8.8H, v30.8H
-    str         q9, [src, #5*32]
+    VSTQ_8H 9, src, #5*32
     mul      v22.8H, v17.8H, v3.H[4]
     sub      v11.8H, v10.8H, v31.8H
-    str         q11, [src, #7*32]
+    VSTQ_8H 11, src, #7*32
     mul      v23.8H, v19.8H, v3.H[6]
 
-    ldr         q5, [src, #(16+1*32)]
+    VLDQ_8H 5, src, #(16+1*32)
     add      v4.8H, v4.8H, v28.8H
     sqrdmulh v13.8H, v13.8H, v3.H[1]
-    ldr         q7, [src, #(16+3*32)]
+    VLDQ_8H 7, src, #(16+3*32)
     add      v6.8H, v6.8H, v29.8H
     sqrdmulh v15.8H, v15.8H, v3.H[3]
-    ldr         q9, [src, #(16+5*32)]
+    VLDQ_8H 9, src, #(16+5*32)
     add      v8.8H, v8.8H, v30.8H
     sqrdmulh v17.8H, v17.8H, v3.H[5]
-    ldr         q11, [src, #(16+7*32)]
+    VLDQ_8H 11, src, #(16+7*32)
     add      v10.8H, v10.8H, v31.8H
     sqrdmulh v19.8H, v19.8H, v3.H[7]
 
-    str         q4, [src, #0*32]
+    VSTQ_8H 4, src, #0*32
     mls      v20.8H, v13.8H, v0.H[0]
-    str         q6, [src, #2*32]
+    VSTQ_8H 6, src, #2*32
     mls      v21.8H, v15.8H, v0.H[0]
-    str         q8, [src, #4*32]
+    VSTQ_8H 8, src, #4*32
     mls      v22.8H, v17.8H, v0.H[0]
-    str         q10, [src, #6*32]
+    VSTQ_8H 10, src, #6*32
     mls      v23.8H, v19.8H, v0.H[0]
 
     sub     v13.8H, v12.8H, v20.8H
-    str        q13, [src, #9*32]
-    ldr        q13, [src, #(16+9*32)]
+    VSTQ_8H 13, src, #9*32
+    VLDQ_8H 13, src, #(16+9*32)
     sub     v15.8H, v14.8H, v21.8H
-    str        q15, [src, #11*32]
-    ldr        q15, [src, #(16+11*32)]
+    VSTQ_8H 15, src, #11*32
+    VLDQ_8H 15, src, #(16+11*32)
     sub     v17.8H, v16.8H, v22.8H
-    str        q17, [src, #13*32]
-    ldr        q17, [src, #(16+13*32)]
+    VSTQ_8H 17, src, #13*32
+    VLDQ_8H 17, src, #(16+13*32)
     sub     v19.8H, v18.8H, v23.8H
-    str        q19, [src, #15*32]
-    ldr        q19, [src, #(16+15*32)]
+    VSTQ_8H 19, src, #15*32
+    VLDQ_8H 19, src, #(16+15*32)
 
     add     v12.8H, v12.8H, v20.8H
-    str        q12, [src, #8*32]
+    VSTQ_8H 12, src, #8*32
     add     v14.8H, v14.8H, v21.8H
-    str        q14, [src, #10*32]
+    VSTQ_8H 14, src, #10*32
     add     v16.8H, v16.8H, v22.8H
-    str        q16, [src, #12*32]
+    VSTQ_8H 16, src, #12*32
     add     v18.8H, v18.8H, v23.8H
-    str        q18, [src, #14*32]
+    VSTQ_8H 18, src, #14*32
 
     // ============================= Pass 2 (odd vectors, offset +16) =============================
     // Same Layer 1-3 structure as pass 1, but on the odd-indexed 128-bit vectors
@@ -403,13 +405,13 @@ AARCH64_PACIASP
     mul      v30.8H, v17.8H, v0.H[2]
     mul      v31.8H, v19.8H, v0.H[2]
 
-    ldr         q12, [src, #(16+8*32)]
+    VLDQ_8H 12, src, #(16+8*32)
     sqrdmulh v13.8H, v13.8H, v0.H[3]
-    ldr         q14, [src, #(16+10*32)]
+    VLDQ_8H 14, src, #(16+10*32)
     sqrdmulh v15.8H, v15.8H, v0.H[3]
-    ldr         q16, [src, #(16+12*32)]
+    VLDQ_8H 16, src, #(16+12*32)
     sqrdmulh v17.8H, v17.8H, v0.H[3]
-    ldr         q18, [src, #(16+14*32)]
+    VLDQ_8H 18, src, #(16+14*32)
     sqrdmulh v19.8H, v19.8H, v0.H[3]
 
     mls      v28.8H, v13.8H, v0.H[0]
@@ -417,16 +419,16 @@ AARCH64_PACIASP
     mls      v30.8H, v17.8H, v0.H[0]
     mls      v31.8H, v19.8H, v0.H[0]
 
-    ldr         q4, [src, #(16+0*32)]
+    VLDQ_8H 4, src, #(16+0*32)
     sub      v13.8H, v5.8H, v28.8H
     mul      v20.8H, v12.8H, v0.H[2]
-    ldr         q6, [src, #(16+2*32)]
+    VLDQ_8H 6, src, #(16+2*32)
     sub      v15.8H, v7.8H, v29.8H
     mul      v21.8H, v14.8H, v0.H[2]
-    ldr         q8, [src, #(16+4*32)]
+    VLDQ_8H 8, src, #(16+4*32)
     sub      v17.8H, v9.8H, v30.8H
     mul      v22.8H, v16.8H, v0.H[2]
-    ldr         q10, [src, #(16+6*32)]
+    VLDQ_8H 10, src, #(16+6*32)
     sub      v19.8H, v11.8H, v31.8H
     mul      v23.8H, v18.8H, v0.H[2]
 
@@ -561,29 +563,29 @@ AARCH64_PACIASP
 
     mul      v20.8H, v13.8H, v3.H[0]
     sub      v5.8H, v4.8H, v28.8H
-    str         q5, [src, #(16+1*32)]
+    VSTQ_8H 5, src, #(16+1*32)
     mul      v21.8H, v15.8H, v3.H[2]
     sub      v7.8H, v6.8H, v29.8H
-    str         q7, [src, #(16+3*32)]
+    VSTQ_8H 7, src, #(16+3*32)
     mul      v22.8H, v17.8H, v3.H[4]
     sub      v9.8H, v8.8H, v30.8H
-    str         q9, [src, #(16+5*32)]
+    VSTQ_8H 9, src, #(16+5*32)
     mul      v23.8H, v19.8H, v3.H[6]
     sub      v11.8H, v10.8H, v31.8H
-    str         q11, [src, #(16+7*32)]
+    VSTQ_8H 11, src, #(16+7*32)
 
     sqrdmulh v13.8H, v13.8H, v3.H[1]
     add      v4.8H, v4.8H, v28.8H
-    str         q4, [src, #(16+0*32)]
+    VSTQ_8H 4, src, #(16+0*32)
     sqrdmulh v15.8H, v15.8H, v3.H[3]
     add      v6.8H, v6.8H, v29.8H
-    str         q6, [src, #(16+2*32)]
+    VSTQ_8H 6, src, #(16+2*32)
     sqrdmulh v17.8H, v17.8H, v3.H[5]
     add      v8.8H, v8.8H, v30.8H
-    str         q8, [src, #(16+4*32)]
+    VSTQ_8H 8, src, #(16+4*32)
     sqrdmulh v19.8H, v19.8H, v3.H[7]
     add      v10.8H, v10.8H, v31.8H
-    str         q10, [src, #(16+6*32)]
+    VSTQ_8H 10, src, #(16+6*32)
 
     mls      v20.8H, v13.8H, v0.H[0]
     mls      v21.8H, v15.8H, v0.H[0]
@@ -591,22 +593,22 @@ AARCH64_PACIASP
     mls      v23.8H, v19.8H, v0.H[0]
 
     sub     v13.8H, v12.8H, v20.8H
-    str        q13, [src, #(16+9*32)]
+    VSTQ_8H 13, src, #(16+9*32)
     sub     v15.8H, v14.8H, v21.8H
-    str        q15, [src, #(16+11*32)]
+    VSTQ_8H 15, src, #(16+11*32)
     sub     v17.8H, v16.8H, v22.8H
-    str        q17, [src, #(16+13*32)]
+    VSTQ_8H 17, src, #(16+13*32)
     sub     v19.8H, v18.8H, v23.8H
-    str        q19, [src, #(16+15*32)]
+    VSTQ_8H 19, src, #(16+15*32)
 
     add     v12.8H, v12.8H, v20.8H
-    str        q12, [src, #(16+8*32)]
+    VSTQ_8H 12, src, #(16+8*32)
     add     v14.8H, v14.8H, v21.8H
-    str        q14, [src, #(16+10*32)]
+    VSTQ_8H 14, src, #(16+10*32)
     add     v16.8H, v16.8H, v22.8H
-    str        q16, [src, #(16+12*32)]
+    VSTQ_8H 16, src, #(16+12*32)
     add     v18.8H, v18.8H, v23.8H
-    str        q18, [src, #(16+14*32)]
+    VSTQ_8H 18, src, #(16+14*32)
 
     .unreq    Q
     .unreq    src
@@ -688,10 +690,10 @@ AARCH64_PACIASP
     mov v0.H[0], Q
     mov v0.H[1], BarrettM
 
-    ldr q28, [src0, # 1*16]
-    ldr q29, [src1, # 1*16]
-    ldr q30, [src0, # 3*16]
-    ldr q31, [src1, # 3*16]
+    VLDQ_8H 28, src0, # 1*16
+    VLDQ_8H 29, src1, # 1*16
+    VLDQ_8H 30, src0, # 3*16
+    VLDQ_8H 31, src1, # 3*16
 
     // ========== 4×4 Matrix Transpose (pre-butterfly) ==========
     // Rearranges coefficient layout so that butterfly-dependent elements
@@ -700,27 +702,27 @@ AARCH64_PACIASP
     // (See [NeonNTT] §4.3 — Matrix transpose for sub-lane butterflies)
     trn1 v20.4S, v28.4S, v29.4S
     trn2 v21.4S, v28.4S, v29.4S
-    ldr        q1, [table, #1*16]
+    VLDQ_8H 1, table, #1*16
     trn1 v22.4S, v30.4S, v31.4S
     trn2 v23.4S, v30.4S, v31.4S
 
-    ldr        q2, [table, #2*16]
+    VLDQ_8H 2, table, #2*16
     trn1 v28.2D, v20.2D, v22.2D
     trn2 v30.2D, v20.2D, v22.2D
-    ldr        q3, [table, #3*16]
+    VLDQ_8H 3, table, #3*16
     trn1 v29.2D, v21.2D, v23.2D
     trn2 v31.2D, v21.2D, v23.2D
 
     // ========== Layer 4 (stride 16): full-vector twiddle, v2-v3 pairs ==========
-    ldr        q24, [src0, #0*16]
+    VLDQ_8H 24, src0, #0*16
     mul      v18.8H, v29.8H, v2.8H
-    ldr        q25, [src1, #0*16]
+    VLDQ_8H 25, src1, #0*16
     mul      v19.8H, v31.8H, v2.8H
 
-    ldr        q26, [src0, #2*16]
+    VLDQ_8H 26, src0, #2*16
     trn1   v20.4S, v24.4S, v25.4S
     trn2   v21.4S, v24.4S, v25.4S
-    ldr        q27, [src1, #2*16]
+    VLDQ_8H 27, src1, #2*16
     trn1   v22.4S, v26.4S, v27.4S
     trn2   v23.4S, v26.4S, v27.4S
 
@@ -734,17 +736,17 @@ AARCH64_PACIASP
     mls      v19.8H, v31.8H, v0.H[0]
     trn2   v27.2D, v21.2D, v23.2D
 
-    ldr         q4, [table, #4*16]
+    VLDQ_8H 4, table, #4*16
     sub      v29.8H, v25.8H, v18.8H
     mul      v16.8H, v28.8H, v2.8H
-    ldr         q5, [table, #5*16]
+    VLDQ_8H 5, table, #5*16
     sub      v31.8H, v27.8H, v19.8H
     mul      v17.8H, v30.8H, v2.8H
 
-    ldr         q6, [table, #6*16]
+    VLDQ_8H 6, table, #6*16
     add      v25.8H, v25.8H, v18.8H
     sqrdmulh v28.8H, v28.8H, v3.8H
-    ldr         q7, [table, #7*16]
+    VLDQ_8H 7, table, #7*16
     add      v27.8H, v27.8H, v19.8H
     sqrdmulh v30.8H, v30.8H, v3.8H
 
@@ -752,34 +754,34 @@ AARCH64_PACIASP
     mls      v17.8H, v30.8H, v0.H[0]
 
     // ========== Layer 5 (stride 8): half-vector twiddle, v4-v7 pairs ==========
-    ldr         q8, [table, #8*16]
+    VLDQ_8H 8, table, #8*16
     sub      v28.8H, v24.8H, v16.8H
     mul      v18.8H, v27.8H, v4.8H
-    ldr         q9, [table, #9*16]
+    VLDQ_8H 9, table, #9*16
     sub      v30.8H, v26.8H, v17.8H
     mul      v19.8H, v31.8H, v6.8H
 
-    ldr         q10, [table, #10*16]
+    VLDQ_8H 10, table, #10*16
     add      v24.8H, v24.8H, v16.8H
     sqrdmulh v27.8H, v27.8H, v5.8H
-    ldr         q11, [table, #11*16]
+    VLDQ_8H 11, table, #11*16
     add      v26.8H, v26.8H, v17.8H
     sqrdmulh v31.8H, v31.8H, v7.8H
 
     mls      v18.8H, v27.8H, v0.H[0]
     mls      v19.8H, v31.8H, v0.H[0]
 
-    ldr         q12, [table, #12*16]
+    VLDQ_8H 12, table, #12*16
     sub      v27.8H, v25.8H, v18.8H
     mul      v16.8H, v26.8H, v4.8H
-    ldr         q13, [table, #13*16]
+    VLDQ_8H 13, table, #13*16
     sub      v31.8H, v29.8H, v19.8H
     mul      v17.8H, v30.8H, v6.8H
 
-    ldr         q14, [table, #14*16]
+    VLDQ_8H 14, table, #14*16
     add      v25.8H, v25.8H, v18.8H
     sqrdmulh v26.8H, v26.8H, v5.8H
-    ldr         q15, [table, #15*16]
+    VLDQ_8H 15, table, #15*16
     add      v29.8H, v29.8H, v19.8H
     sqrdmulh v30.8H, v30.8H, v7.8H
 
@@ -861,17 +863,17 @@ AARCH64_PACIASP
     trn1     v25.2D, v21.2D, v23.2D
     trn2     v27.2D, v21.2D, v23.2D
 
-    str        q24, [src0, #0*16]
+    VSTQ_8H 24, src0, #0*16
     trn1 v16.4S, v28.4S, v29.4S
     trn2 v17.4S, v28.4S, v29.4S
-    str        q25, [src1, #0*16]
+    VSTQ_8H 25, src1, #0*16
     trn1 v18.4S, v30.4S, v31.4S
     trn2 v19.4S, v30.4S, v31.4S
 
-    str        q26, [src0, #2*16]
+    VSTQ_8H 26, src0, #2*16
     trn1 v28.2D, v16.2D, v18.2D
     trn2 v30.2D, v16.2D, v18.2D
-    str        q27, [src1, #2*16]
+    VSTQ_8H 27, src1, #2*16
     trn1 v29.2D, v17.2D, v19.2D
     trn2 v31.2D, v17.2D, v19.2D
 
@@ -879,14 +881,14 @@ AARCH64_PACIASP
 1:
 
     // ---- Store previous iteration results, load next 64-coeff block ----
-    str q28, [src0, # 1*16]
-    ldr q28, [src0, #(64+1*16)]
-    str q29, [src1, # 1*16]
-    ldr q29, [src1, #(64+1*16)]
-    str q30, [src0, # 3*16]
-    ldr q30, [src0, #(64+3*16)]
-    str q31, [src1, # 3*16]
-    ldr q31, [src1, #(64+3*16)]
+    VSTQ_8H 28, src0, # 1*16
+    VLDQ_8H 28, src0, #(64+1*16)
+    VSTQ_8H 29, src1, # 1*16
+    VLDQ_8H 29, src1, #(64+1*16)
+    VSTQ_8H 30, src0, # 3*16
+    VLDQ_8H 30, src0, #(64+3*16)
+    VSTQ_8H 31, src1, # 3*16
+    VLDQ_8H 31, src1, #(64+3*16)
 
     add src0, src0, #64
     add src1, src1, #64
@@ -894,27 +896,27 @@ AARCH64_PACIASP
     // ========== 4×4 Matrix Transpose (pre-butterfly) ==========
     trn1 v20.4S, v28.4S, v29.4S
     trn2 v21.4S, v28.4S, v29.4S
-    ldr        q1, [table, #1*16]
+    VLDQ_8H 1, table, #1*16
     trn1 v22.4S, v30.4S, v31.4S
     trn2 v23.4S, v30.4S, v31.4S
 
-    ldr        q2, [table, #2*16]
+    VLDQ_8H 2, table, #2*16
     trn1 v28.2D, v20.2D, v22.2D
     trn2 v30.2D, v20.2D, v22.2D
-    ldr        q3, [table, #3*16]
+    VLDQ_8H 3, table, #3*16
     trn1 v29.2D, v21.2D, v23.2D
     trn2 v31.2D, v21.2D, v23.2D
 
     // ========== Layer 4 (stride 16): full-vector twiddle, v2-v3 pairs ==========
-    ldr        q24, [src0, #0*16]
+    VLDQ_8H 24, src0, #0*16
     mul      v18.8H, v29.8H, v2.8H
-    ldr        q25, [src1, #0*16]
+    VLDQ_8H 25, src1, #0*16
     mul      v19.8H, v31.8H, v2.8H
 
-    ldr        q26, [src0, #2*16]
+    VLDQ_8H 26, src0, #2*16
     trn1   v20.4S, v24.4S, v25.4S
     trn2   v21.4S, v24.4S, v25.4S
-    ldr        q27, [src1, #2*16]
+    VLDQ_8H 27, src1, #2*16
     trn1   v22.4S, v26.4S, v27.4S
     trn2   v23.4S, v26.4S, v27.4S
 
@@ -928,17 +930,17 @@ AARCH64_PACIASP
     mls      v19.8H, v31.8H, v0.H[0]
     trn2   v27.2D, v21.2D, v23.2D
 
-    ldr         q4, [table, #4*16]
+    VLDQ_8H 4, table, #4*16
     sub      v29.8H, v25.8H, v18.8H
     mul      v16.8H, v28.8H, v2.8H
-    ldr         q5, [table, #5*16]
+    VLDQ_8H 5, table, #5*16
     sub      v31.8H, v27.8H, v19.8H
     mul      v17.8H, v30.8H, v2.8H
 
-    ldr         q6, [table, #6*16]
+    VLDQ_8H 6, table, #6*16
     add      v25.8H, v25.8H, v18.8H
     sqrdmulh v28.8H, v28.8H, v3.8H
-    ldr         q7, [table, #7*16]
+    VLDQ_8H 7, table, #7*16
     add      v27.8H, v27.8H, v19.8H
     sqrdmulh v30.8H, v30.8H, v3.8H
 
@@ -946,34 +948,34 @@ AARCH64_PACIASP
     mls      v17.8H, v30.8H, v0.H[0]
 
     // ========== Layer 5 (stride 8): half-vector twiddle, v4-v7 pairs ==========
-    ldr         q8, [table, #8*16]
+    VLDQ_8H 8, table, #8*16
     sub      v28.8H, v24.8H, v16.8H
     mul      v18.8H, v27.8H, v4.8H
-    ldr         q9, [table, #9*16]
+    VLDQ_8H 9, table, #9*16
     sub      v30.8H, v26.8H, v17.8H
     mul      v19.8H, v31.8H, v6.8H
 
-    ldr         q10, [table, #10*16]
+    VLDQ_8H 10, table, #10*16
     add      v24.8H, v24.8H, v16.8H
     sqrdmulh v27.8H, v27.8H, v5.8H
-    ldr         q11, [table, #11*16]
+    VLDQ_8H 11, table, #11*16
     add      v26.8H, v26.8H, v17.8H
     sqrdmulh v31.8H, v31.8H, v7.8H
 
     mls      v18.8H, v27.8H, v0.H[0]
     mls      v19.8H, v31.8H, v0.H[0]
 
-    ldr         q12, [table, #12*16]
+    VLDQ_8H 12, table, #12*16
     sub      v27.8H, v25.8H, v18.8H
     mul      v16.8H, v26.8H, v4.8H
-    ldr         q13, [table, #13*16]
+    VLDQ_8H 13, table, #13*16
     sub      v31.8H, v29.8H, v19.8H
     mul      v17.8H, v30.8H, v6.8H
 
-    ldr         q14, [table, #14*16]
+    VLDQ_8H 14, table, #14*16
     add      v25.8H, v25.8H, v18.8H
     sqrdmulh v26.8H, v26.8H, v5.8H
-    ldr         q15, [table, #15*16]
+    VLDQ_8H 15, table, #15*16
     add      v29.8H, v29.8H, v19.8H
     sqrdmulh v30.8H, v30.8H, v7.8H
 
@@ -1053,27 +1055,27 @@ AARCH64_PACIASP
     trn1     v25.2D, v21.2D, v23.2D
     trn2     v27.2D, v21.2D, v23.2D
 
-    str        q24, [src0, #0*16]
+    VSTQ_8H 24, src0, #0*16
     trn1 v16.4S, v28.4S, v29.4S
     trn2 v17.4S, v28.4S, v29.4S
-    str        q25, [src1, #0*16]
+    VSTQ_8H 25, src1, #0*16
     trn1 v18.4S, v30.4S, v31.4S
     trn2 v19.4S, v30.4S, v31.4S
 
-    str        q26, [src0, #2*16]
+    VSTQ_8H 26, src0, #2*16
     trn1 v28.2D, v16.2D, v18.2D
     trn2 v30.2D, v16.2D, v18.2D
-    str        q27, [src1, #2*16]
+    VSTQ_8H 27, src1, #2*16
     trn1 v29.2D, v17.2D, v19.2D
     trn2 v31.2D, v17.2D, v19.2D
 
     sub counter, counter, #1
     cbnz counter, 1b
 
-    str q28, [src0, # 1*16]
-    str q29, [src1, # 1*16]
-    str q30, [src0, # 3*16]
-    str q31, [src1, # 3*16]
+    VSTQ_8H 28, src0, # 1*16
+    VSTQ_8H 29, src1, # 1*16
+    VSTQ_8H 30, src0, # 3*16
+    VSTQ_8H 31, src1, # 3*16
 
     add src0, src0, #64
     add src1, src1, #64
@@ -1164,37 +1166,37 @@ AARCH64_PACIASP
     mov v0.H[0], Q
     mov v0.H[1], BarrettM
 
-    ldr q28, [src0, #1*16]
-    ldr q29, [src1, #1*16]
-    ldr q30, [src0, #3*16]
-    ldr q31, [src1, #3*16]
+    VLDQ_8H 28, src0, #1*16
+    VLDQ_8H 29, src1, #1*16
+    VLDQ_8H 30, src0, #3*16
+    VLDQ_8H 31, src1, #3*16
 
     // ========== 4×4 Matrix Transpose (pre-butterfly) ==========
-    ldr        q24, [src0, #0*16]
+    VLDQ_8H 24, src0, #0*16
     trn1 v20.4S, v28.4S, v29.4S
     trn2 v21.4S, v28.4S, v29.4S
-    ldr        q25, [src1, #0*16]
+    VLDQ_8H 25, src1, #0*16
     trn1 v22.4S, v30.4S, v31.4S
     trn2 v23.4S, v30.4S, v31.4S
 
-    ldr        q26, [src0, #2*16]
+    VLDQ_8H 26, src0, #2*16
     trn1 v28.2D, v20.2D, v22.2D
     trn2 v30.2D, v20.2D, v22.2D
-    ldr        q27, [src1, #2*16]
+    VLDQ_8H 27, src1, #2*16
     trn1 v29.2D, v21.2D, v23.2D
     trn2 v31.2D, v21.2D, v23.2D
 
-    ldr        q12, [table, #12*16]
+    VLDQ_8H 12, table, #12*16
     trn1 v20.4S, v24.4S, v25.4S
     trn2 v21.4S, v24.4S, v25.4S
-    ldr        q13, [table, #13*16]
+    VLDQ_8H 13, table, #13*16
     trn1 v22.4S, v26.4S, v27.4S
     trn2 v23.4S, v26.4S, v27.4S
 
-    ldr        q14, [table, #14*16]
+    VLDQ_8H 14, table, #14*16
     trn1 v24.2D, v20.2D, v22.2D
     trn2 v26.2D, v20.2D, v22.2D
-    ldr        q15, [table, #15*16]
+    VLDQ_8H 15, table, #15*16
     trn1 v25.2D, v21.2D, v23.2D
     trn2 v27.2D, v21.2D, v23.2D
 
@@ -1205,17 +1207,17 @@ AARCH64_PACIASP
     add     v28.8H, v28.8H, v29.8H
     add     v30.8H, v30.8H, v31.8H
 
-    ldr         q8, [table, #8*16]
+    VLDQ_8H 8, table, #8*16
     mul      v29.8H, v18.8H, v12.8H
     sub      v16.8H, v24.8H, v25.8H
-    ldr         q9, [table, #9*16]
+    VLDQ_8H 9, table, #9*16
     mul      v31.8H, v19.8H, v14.8H
     sub      v17.8H, v26.8H, v27.8H
 
-    ldr         q10, [table, #10*16]
+    VLDQ_8H 10, table, #10*16
     sqrdmulh v18.8H, v18.8H, v13.8H
     add      v24.8H, v24.8H, v25.8H
-    ldr         q11, [table, #11*16]
+    VLDQ_8H 11, table, #11*16
     sqrdmulh v19.8H, v19.8H, v15.8H
     add      v26.8H, v26.8H, v27.8H
 
@@ -1223,17 +1225,17 @@ AARCH64_PACIASP
     mls      v31.8H, v19.8H, v0.H[0]
 
     // ========== GS Layer 6 (stride 4): quarter-vector twiddle, v8-v11 pairs ==========
-    ldr         q4, [table, #4*16]
+    VLDQ_8H 4, table, #4*16
     mul      v25.8H, v16.8H, v8.8H
     sub      v18.8H, v28.8H, v30.8H
-    ldr         q5, [table, #5*16]
+    VLDQ_8H 5, table, #5*16
     mul      v27.8H, v17.8H, v10.8H
     sub      v19.8H, v29.8H, v31.8H
 
-    ldr         q6, [table, #6*16]
+    VLDQ_8H 6, table, #6*16
     sqrdmulh v16.8H, v16.8H, v9.8H
     add      v28.8H, v28.8H, v30.8H
-    ldr         q7, [table, #7*16]
+    VLDQ_8H 7, table, #7*16
     sqrdmulh v17.8H, v17.8H, v11.8H
     add      v29.8H, v29.8H, v31.8H
 
@@ -1243,14 +1245,14 @@ AARCH64_PACIASP
     // ========== GS Layer 5 (stride 8): half-vector twiddle, v6-v7 pairs ==========
     mul      v30.8H, v18.8H, v6.8H
     sub      v16.8H, v24.8H, v26.8H
-    ldr         q1, [table, #1*16]
+    VLDQ_8H 1, table, #1*16
     mul      v31.8H, v19.8H, v6.8H
     sub      v17.8H, v25.8H, v27.8H
 
-    ldr         q2, [table, #2*16]
+    VLDQ_8H 2, table, #2*16
     sqrdmulh v18.8H, v18.8H, v7.8H
     add      v24.8H, v24.8H, v26.8H
-    ldr         q3, [table, #3*16]
+    VLDQ_8H 3, table, #3*16
     sqrdmulh v19.8H, v19.8H, v7.8H
     add      v25.8H, v25.8H, v27.8H
 
@@ -1332,17 +1334,17 @@ AARCH64_PACIASP
     trn1 v29.2D, v17.2D, v19.2D
     trn2 v31.2D, v17.2D, v19.2D
 
-    str        q28, [src0, #1*16]
+    VSTQ_8H 28, src0, #1*16
     trn1 v16.4S, v24.4S, v25.4S
     trn2 v17.4S, v24.4S, v25.4S
-    str        q29, [src1, #1*16]
+    VSTQ_8H 29, src1, #1*16
     trn1 v18.4S, v26.4S, v27.4S
     trn2 v19.4S, v26.4S, v27.4S
 
-    str        q30, [src0, #3*16]
+    VSTQ_8H 30, src0, #3*16
     trn1 v24.2D, v16.2D, v18.2D
     trn2 v26.2D, v16.2D, v18.2D
-    str        q31, [src1, #3*16]
+    VSTQ_8H 31, src1, #3*16
     trn1 v25.2D, v17.2D, v19.2D
     trn2 v27.2D, v17.2D, v19.2D
 
@@ -1350,44 +1352,44 @@ AARCH64_PACIASP
 1:
 
     // ---- Store previous iteration results, load next 64-coeff block ----
-    str q24, [src0, #0*16]
-    ldr q28, [src0, #(64+1*16)]
-    str q25, [src1, #0*16]
-    ldr q29, [src1, #(64+1*16)]
-    str q26, [src0, #2*16]
-    ldr q30, [src0, #(64+3*16)]
-    str q27, [src1, #2*16]
-    ldr q31, [src1, #(64+3*16)]
+    VSTQ_8H 24, src0, #0*16
+    VLDQ_8H 28, src0, #(64+1*16)
+    VSTQ_8H 25, src1, #0*16
+    VLDQ_8H 29, src1, #(64+1*16)
+    VSTQ_8H 26, src0, #2*16
+    VLDQ_8H 30, src0, #(64+3*16)
+    VSTQ_8H 27, src1, #2*16
+    VLDQ_8H 31, src1, #(64+3*16)
 
     add src0, src0, #64
     add src1, src1, #64
 
     // ========== 4×4 Matrix Transpose (pre-butterfly) ==========
-    ldr        q24, [src0, #0*16]
+    VLDQ_8H 24, src0, #0*16
     trn1 v20.4S, v28.4S, v29.4S
     trn2 v21.4S, v28.4S, v29.4S
-    ldr        q25, [src1, #0*16]
+    VLDQ_8H 25, src1, #0*16
     trn1 v22.4S, v30.4S, v31.4S
     trn2 v23.4S, v30.4S, v31.4S
 
-    ldr        q26, [src0, #2*16]
+    VLDQ_8H 26, src0, #2*16
     trn1 v28.2D, v20.2D, v22.2D
     trn2 v30.2D, v20.2D, v22.2D
-    ldr        q27, [src1, #2*16]
+    VLDQ_8H 27, src1, #2*16
     trn1 v29.2D, v21.2D, v23.2D
     trn2 v31.2D, v21.2D, v23.2D
 
-    ldr        q12, [table, #12*16]
+    VLDQ_8H 12, table, #12*16
     trn1 v20.4S, v24.4S, v25.4S
     trn2 v21.4S, v24.4S, v25.4S
-    ldr        q13, [table, #13*16]
+    VLDQ_8H 13, table, #13*16
     trn1 v22.4S, v26.4S, v27.4S
     trn2 v23.4S, v26.4S, v27.4S
 
-    ldr        q14, [table, #14*16]
+    VLDQ_8H 14, table, #14*16
     trn1 v24.2D, v20.2D, v22.2D
     trn2 v26.2D, v20.2D, v22.2D
-    ldr        q15, [table, #15*16]
+    VLDQ_8H 15, table, #15*16
     trn1 v25.2D, v21.2D, v23.2D
     trn2 v27.2D, v21.2D, v23.2D
 
@@ -1397,17 +1399,17 @@ AARCH64_PACIASP
     add     v28.8H, v28.8H, v29.8H
     add     v30.8H, v30.8H, v31.8H
 
-    ldr         q8, [table, #8*16]
+    VLDQ_8H 8, table, #8*16
     mul      v29.8H, v18.8H, v12.8H
     sub      v16.8H, v24.8H, v25.8H
-    ldr         q9, [table, #9*16]
+    VLDQ_8H 9, table, #9*16
     mul      v31.8H, v19.8H, v14.8H
     sub      v17.8H, v26.8H, v27.8H
 
-    ldr         q10, [table, #10*16]
+    VLDQ_8H 10, table, #10*16
     sqrdmulh v18.8H, v18.8H, v13.8H
     add      v24.8H, v24.8H, v25.8H
-    ldr         q11, [table, #11*16]
+    VLDQ_8H 11, table, #11*16
     sqrdmulh v19.8H, v19.8H, v15.8H
     add      v26.8H, v26.8H, v27.8H
 
@@ -1415,17 +1417,17 @@ AARCH64_PACIASP
     mls      v31.8H, v19.8H, v0.H[0]
 
     // ========== GS Layer 6 (stride 4): quarter-vector twiddle, v8-v11 pairs ==========
-    ldr         q4, [table, #4*16]
+    VLDQ_8H 4, table, #4*16
     mul      v25.8H, v16.8H, v8.8H
     sub      v18.8H, v28.8H, v30.8H
-    ldr         q5, [table, #5*16]
+    VLDQ_8H 5, table, #5*16
     mul      v27.8H, v17.8H, v10.8H
     sub      v19.8H, v29.8H, v31.8H
 
-    ldr         q6, [table, #6*16]
+    VLDQ_8H 6, table, #6*16
     sqrdmulh v16.8H, v16.8H, v9.8H
     add      v28.8H, v28.8H, v30.8H
-    ldr         q7, [table, #7*16]
+    VLDQ_8H 7, table, #7*16
     sqrdmulh v17.8H, v17.8H, v11.8H
     add      v29.8H, v29.8H, v31.8H
 
@@ -1435,14 +1437,14 @@ AARCH64_PACIASP
     // ========== GS Layer 5 (stride 8): half-vector twiddle, v6-v7 pairs ==========
     mul      v30.8H, v18.8H, v6.8H
     sub      v16.8H, v24.8H, v26.8H
-    ldr         q1, [table, #1*16]
+    VLDQ_8H 1, table, #1*16
     mul      v31.8H, v19.8H, v6.8H
     sub      v17.8H, v25.8H, v27.8H
 
-    ldr         q2, [table, #2*16]
+    VLDQ_8H 2, table, #2*16
     sqrdmulh v18.8H, v18.8H, v7.8H
     add      v24.8H, v24.8H, v26.8H
-    ldr         q3, [table, #3*16]
+    VLDQ_8H 3, table, #3*16
     sqrdmulh v19.8H, v19.8H, v7.8H
     add      v25.8H, v25.8H, v27.8H
 
@@ -1524,27 +1526,27 @@ AARCH64_PACIASP
     trn1 v29.2D, v17.2D, v19.2D
     trn2 v31.2D, v17.2D, v19.2D
 
-    str        q28, [src0, #1*16]
+    VSTQ_8H 28, src0, #1*16
     trn1 v16.4S, v24.4S, v25.4S
     trn2 v17.4S, v24.4S, v25.4S
-    str        q29, [src1, #1*16]
+    VSTQ_8H 29, src1, #1*16
     trn1 v18.4S, v26.4S, v27.4S
     trn2 v19.4S, v26.4S, v27.4S
 
-    str        q30, [src0, #3*16]
+    VSTQ_8H 30, src0, #3*16
     trn1 v24.2D, v16.2D, v18.2D
     trn2 v26.2D, v16.2D, v18.2D
-    str        q31, [src1, #3*16]
+    VSTQ_8H 31, src1, #3*16
     trn1 v25.2D, v17.2D, v19.2D
     trn2 v27.2D, v17.2D, v19.2D
 
     sub counter, counter, #1
     cbnz counter, 1b
 
-    str q24, [src0, #0*16]
-    str q25, [src1, #0*16]
-    str q26, [src0, #2*16]
-    str q27, [src1, #2*16]
+    VSTQ_8H 24, src0, #0*16
+    VSTQ_8H 25, src1, #0*16
+    VSTQ_8H 26, src0, #2*16
+    VSTQ_8H 27, src1, #2*16
 
 
     .unreq    Q
@@ -1641,42 +1643,42 @@ AARCH64_PACIASP
     mov v4.S[0], invN
     mov v4.S[1], invN_f
 
-    ldr q0, [table, #0*16]
+    VLDQ_8H 0, table, #0*16
     mov v0.H[0], Q
 
-    ldr q1, [table, #1*16]
-    ldr q2, [table, #2*16]
-    ldr q3, [table, #3*16]
+    VLDQ_8H 1, table, #1*16
+    VLDQ_8H 2, table, #2*16
+    VLDQ_8H 3, table, #3*16
 
     // Load second half of coefficients (indices 8-15)
-    ldr q16, [src, # 8*32]
-    ldr q17, [src, # 9*32]
-    ldr q18, [src, #10*32]
-    ldr q19, [src, #11*32]
-    ldr q20, [src, #12*32]
-    ldr q21, [src, #13*32]
-    ldr q22, [src, #14*32]
-    ldr q23, [src, #15*32]
+    VLDQ_8H 16, src, # 8*32
+    VLDQ_8H 17, src, # 9*32
+    VLDQ_8H 18, src, #10*32
+    VLDQ_8H 19, src, #11*32
+    VLDQ_8H 20, src, #12*32
+    VLDQ_8H 21, src, #13*32
+    VLDQ_8H 22, src, #14*32
+    VLDQ_8H 23, src, #15*32
 
     // ========== GS Layer 3 (stride 32): 8 twiddles v3.H[0-7] ==========
     // GS butterfly: (a,b) → (a+b, (a−b)×ω^{-1})
     sub     v28.8H, v16.8H, v17.8H
-    ldr        q8, [src, #0*32]
+    VLDQ_8H 8, src, #0*32
     sub     v29.8H, v18.8H, v19.8H
-    ldr        q9, [src, #1*32]
+    VLDQ_8H 9, src, #1*32
     sub     v30.8H, v20.8H, v21.8H
-    ldr        q10, [src, #2*32]
+    VLDQ_8H 10, src, #2*32
     sub     v31.8H, v22.8H, v23.8H
-    ldr        q11, [src, #3*32]
+    VLDQ_8H 11, src, #3*32
 
     add     v16.8H, v16.8H, v17.8H
-    ldr        q12, [src, #4*32]
+    VLDQ_8H 12, src, #4*32
     add     v18.8H, v18.8H, v19.8H
-    ldr        q13, [src, #5*32]
+    VLDQ_8H 13, src, #5*32
     add     v20.8H, v20.8H, v21.8H
-    ldr        q14, [src, #6*32]
+    VLDQ_8H 14, src, #6*32
     add     v22.8H, v22.8H, v23.8H
-    ldr        q15, [src, #7*32]
+    VLDQ_8H 15, src, #7*32
 
 
     // Butterfly with multiplication (first half of qo_butterfly_botll)
@@ -1847,17 +1849,17 @@ AARCH64_PACIASP
     mul      v22.8H, v26.8H, v4.H[2]
     mul      v23.8H, v27.8H, v4.H[2]
 
-    str         q16, [src, #8*32]
-    ldr         q16, [src, #(16+8*32)]
+    VSTQ_8H 16, src, #8*32
+    VLDQ_8H 16, src, #(16+8*32)
     sqrdmulh v24.8H, v24.8H, v4.H[3]
-    str         q17, [src, #9*32]
-    ldr         q17, [src, #(16+9*32)]
+    VSTQ_8H 17, src, #9*32
+    VLDQ_8H 17, src, #(16+9*32)
     sqrdmulh v25.8H, v25.8H, v4.H[3]
-    str         q18, [src, #10*32]
-    ldr         q18, [src, #(16+10*32)]
+    VSTQ_8H 18, src, #10*32
+    VLDQ_8H 18, src, #(16+10*32)
     sqrdmulh v26.8H, v26.8H, v4.H[3]
-    str         q19, [src, #11*32]
-    ldr         q19, [src, #(16+11*32)]
+    VSTQ_8H 19, src, #11*32
+    VLDQ_8H 19, src, #(16+11*32)
     sqrdmulh v27.8H, v27.8H, v4.H[3]
 
     mls      v20.8H, v24.8H, v0.H[0]
@@ -1865,17 +1867,17 @@ AARCH64_PACIASP
     mls      v22.8H, v26.8H, v0.H[0]
     mls      v23.8H, v27.8H, v0.H[0]
 
-    str         q20, [src, #12*32]
-    ldr         q20, [src, #(16+12*32)]
+    VSTQ_8H 20, src, #12*32
+    VLDQ_8H 20, src, #(16+12*32)
     sqrdmulh v28.8H, v8.8H, v4.H[1]
-    str         q21, [src, #13*32]
-    ldr         q21, [src, #(16+13*32)]
+    VSTQ_8H 21, src, #13*32
+    VLDQ_8H 21, src, #(16+13*32)
     sqrdmulh v29.8H, v9.8H, v4.H[1]
-    str         q22, [src, #14*32]
-    ldr         q22, [src, #(16+14*32)]
+    VSTQ_8H 22, src, #14*32
+    VLDQ_8H 22, src, #(16+14*32)
     sqrdmulh v30.8H, v10.8H, v4.H[1]
-    str         q23, [src, #15*32]
-    ldr         q23, [src, #(16+15*32)]
+    VSTQ_8H 23, src, #15*32
+    VLDQ_8H 23, src, #(16+15*32)
     sqrdmulh v31.8H, v11.8H, v4.H[1]
 
     mul      v8.8H, v8.8H, v4.H[0]
@@ -1890,43 +1892,43 @@ AARCH64_PACIASP
 
     sqrdmulh v24.8H, v12.8H, v4.H[1]
     sub      v28.8H, v16.8H, v17.8H
-    str         q8, [src, #0*32]
+    VSTQ_8H 8, src, #0*32
     sqrdmulh v25.8H, v13.8H, v4.H[1]
     sub      v29.8H, v18.8H, v19.8H
-    str         q9, [src, #1*32]
+    VSTQ_8H 9, src, #1*32
     sqrdmulh v26.8H, v14.8H, v4.H[1]
     sub      v30.8H, v20.8H, v21.8H
-    str         q10, [src, #2*32]
+    VSTQ_8H 10, src, #2*32
     sqrdmulh v27.8H, v15.8H, v4.H[1]
     sub      v31.8H, v22.8H, v23.8H
-    str         q11, [src, #3*32]
+    VSTQ_8H 11, src, #3*32
 
     mul      v12.8H, v12.8H, v4.H[0]
     add      v16.8H, v16.8H, v17.8H
-    ldr         q8, [src, #(16+0*32)]
+    VLDQ_8H 8, src, #(16+0*32)
     mul      v13.8H, v13.8H, v4.H[0]
     add      v18.8H, v18.8H, v19.8H
-    ldr         q9, [src, #(16+1*32)]
+    VLDQ_8H 9, src, #(16+1*32)
     mul      v14.8H, v14.8H, v4.H[0]
     add      v20.8H, v20.8H, v21.8H
-    ldr         q10, [src, #(16+2*32)]
+    VLDQ_8H 10, src, #(16+2*32)
     mul      v15.8H, v15.8H, v4.H[0]
     add      v22.8H, v22.8H, v23.8H
-    ldr         q11, [src, #(16+3*32)]
+    VLDQ_8H 11, src, #(16+3*32)
 
     mls      v12.8H, v24.8H, v0.H[0]
     mls      v13.8H, v25.8H, v0.H[0]
     mls      v14.8H, v26.8H, v0.H[0]
     mls      v15.8H, v27.8H, v0.H[0]
 
-    str q12, [src, # 4*32]
-    ldr q12, [src, #(16+ 4*32)]
-    str q13, [src, # 5*32]
-    ldr q13, [src, #(16+ 5*32)]
-    str q14, [src, # 6*32]
-    ldr q14, [src, #(16+ 6*32)]
-    str q15, [src, # 7*32]
-    ldr q15, [src, #(16+ 7*32)]
+    VSTQ_8H 12, src, # 4*32
+    VLDQ_8H 12, src, #(16+ 4*32)
+    VSTQ_8H 13, src, # 5*32
+    VLDQ_8H 13, src, #(16+ 5*32)
+    VSTQ_8H 14, src, # 6*32
+    VLDQ_8H 14, src, #(16+ 6*32)
+    VSTQ_8H 15, src, # 7*32
+    VLDQ_8H 15, src, #(16+ 7*32)
 
     // ============================= Pass 2 (odd vectors, offset +16) =============================
     // Same GS Layer 3→1 + n^{-1} scaling as pass 1, on odd-indexed 128-bit vectors.
@@ -2094,13 +2096,13 @@ AARCH64_PACIASP
     mul      v22.8H, v26.8H, v4.H[2]
     mul      v23.8H, v27.8H, v4.H[2]
 
-    str         q16, [src, #(16+8*32)]
+    VSTQ_8H 16, src, #(16+8*32)
     sqrdmulh v24.8H, v24.8H, v4.H[3]
-    str         q17, [src, #(16+9*32)]
+    VSTQ_8H 17, src, #(16+9*32)
     sqrdmulh v25.8H, v25.8H, v4.H[3]
-    str         q18, [src, #(16+10*32)]
+    VSTQ_8H 18, src, #(16+10*32)
     sqrdmulh v26.8H, v26.8H, v4.H[3]
-    str         q19, [src, #(16+11*32)]
+    VSTQ_8H 19, src, #(16+11*32)
     sqrdmulh v27.8H, v27.8H, v4.H[3]
 
     mls      v20.8H, v24.8H, v0.H[0]
@@ -2109,13 +2111,13 @@ AARCH64_PACIASP
     mls      v23.8H, v27.8H, v0.H[0]
 
 
-    str         q20, [src, #(16+12*32)]
+    VSTQ_8H 20, src, #(16+12*32)
     sqrdmulh v28.8H, v8.8H, v4.H[1]
-    str         q21, [src, #(16+13*32)]
+    VSTQ_8H 21, src, #(16+13*32)
     sqrdmulh v29.8H, v9.8H, v4.H[1]
-    str         q22, [src, #(16+14*32)]
+    VSTQ_8H 22, src, #(16+14*32)
     sqrdmulh v30.8H, v10.8H, v4.H[1]
-    str         q23, [src, #(16+15*32)]
+    VSTQ_8H 23, src, #(16+15*32)
     sqrdmulh v31.8H, v11.8H, v4.H[1]
 
     mul      v8.8H, v8.8H, v4.H[0]
@@ -2128,13 +2130,13 @@ AARCH64_PACIASP
     mls      v10.8H, v30.8H, v0.H[0]
     mls      v11.8H, v31.8H, v0.H[0]
 
-    str         q8, [src, #(16+0*32)]
+    VSTQ_8H 8, src, #(16+0*32)
     sqrdmulh v24.8H, v12.8H, v4.H[1]
-    str         q9, [src, #(16+1*32)]
+    VSTQ_8H 9, src, #(16+1*32)
     sqrdmulh v25.8H, v13.8H, v4.H[1]
-    str         q10, [src, #(16+2*32)]
+    VSTQ_8H 10, src, #(16+2*32)
     sqrdmulh v26.8H, v14.8H, v4.H[1]
-    str         q11, [src, #(16+3*32)]
+    VSTQ_8H 11, src, #(16+3*32)
     sqrdmulh v27.8H, v15.8H, v4.H[1]
 
     mul      v12.8H, v12.8H, v4.H[0]
@@ -2147,10 +2149,10 @@ AARCH64_PACIASP
     mls      v14.8H, v26.8H, v0.H[0]
     mls      v15.8H, v27.8H, v0.H[0]
 
-    str q12, [src, #(16+ 4*32)]
-    str q13, [src, #(16+ 5*32)]
-    str q14, [src, #(16+ 6*32)]
-    str q15, [src, #(16+ 7*32)]
+    VSTQ_8H 12, src, #(16+ 4*32)
+    VSTQ_8H 13, src, #(16+ 5*32)
+    VSTQ_8H 14, src, #(16+ 6*32)
+    VSTQ_8H 15, src, #(16+ 7*32)
 
     .unreq    Q
     .unreq    BarrettM
@@ -2171,5 +2173,6 @@ AARCH64_PACIASP
 AARCH64_AUTIASP
     ret
     CRYPT_AARCH64_FUNC_END(MLKEM_INTT_top)
+
 
 #endif

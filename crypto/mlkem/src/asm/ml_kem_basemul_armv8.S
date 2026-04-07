@@ -84,7 +84,10 @@
 #ifdef HITLS_CRYPTO_MLKEM
 
 #include "crypt_arm.h"
+#include "ml_kem_macros_armv8.S"
+
 CRYPT_AARCH64_ARCH_BASE
+
 
 // =============================================================================
 // MLKEMPointMulExtended — Element-wise Montgomery multiplication
@@ -136,14 +139,14 @@ AARCH64_PACIASP
     dup v28.8H, Q
 
     // --- Load first 8×16B of interleaved source polynomial [a₀,a₁] pairs ---
-    ldr  q0, [src1, #0*16]
-    ldr  q1, [src1, #1*16]
-    ldr  q2, [src1, #2*16]
-    ldr  q3, [src1, #3*16]
-    ldr  q4, [src1, #4*16]
-    ldr  q5, [src1, #5*16]
-    ldr  q6, [src1, #6*16]
-    ldr  q7, [src1, #7*16]
+    VLDQ_8H 0, src1, #0*16
+    VLDQ_8H 1, src1, #1*16
+    VLDQ_8H 2, src1, #2*16
+    VLDQ_8H 3, src1, #3*16
+    VLDQ_8H 4, src1, #4*16
+    VLDQ_8H 5, src1, #5*16
+    VLDQ_8H 6, src1, #6*16
+    VLDQ_8H 7, src1, #7*16
 
     add src1, src1, #8*16
 
@@ -154,162 +157,162 @@ AARCH64_PACIASP
     uzp2  v7.8H,  v6.8H,  v7.8H
 
     // --- Load first 8 Montgomery table pairs (tw_lo, tw_hi) ---
-    ldr  q8, [src2ex, #0*16]
-    ldr q10, [src2ex, #2*16]
-    ldr q12, [src2ex, #4*16]
-    ldr q14, [src2ex, #6*16]
-    ldr  q9, [src2ex, #1*16]
-    ldr q11, [src2ex, #3*16]
-    ldr q13, [src2ex, #5*16]
-    ldr q15, [src2ex, #7*16]
+    VLDQ_8H 8, src2ex, #0*16
+    VLDQ_8H 10, src2ex, #2*16
+    VLDQ_8H 12, src2ex, #4*16
+    VLDQ_8H 14, src2ex, #6*16
+    VLDQ_8H 9, src2ex, #1*16
+    VLDQ_8H 11, src2ex, #3*16
+    VLDQ_8H 13, src2ex, #5*16
+    VLDQ_8H 15, src2ex, #7*16
 
     add src2ex, src2ex, #8*16
 
     // --- Interleaved: sqrdmulh high parts + load next src1 batch ---
-    ldr q16, [src1, #0*16]
+    VLDQ_8H 16, src1, #0*16
     sqrdmulh  v0.8H,  v1.8H,  v9.8H
-    ldr q17, [src1, #1*16]
+    VLDQ_8H 17, src1, #1*16
     sqrdmulh  v2.8H,  v3.8H, v11.8H
-    ldr q18, [src1, #2*16]
+    VLDQ_8H 18, src1, #2*16
     sqrdmulh  v4.8H,  v5.8H, v13.8H
-    ldr q19, [src1, #3*16]
+    VLDQ_8H 19, src1, #3*16
     sqrdmulh  v6.8H,  v7.8H, v15.8H
 
     // --- Interleaved: mul low parts + uzp2 extract odd coefficients ---
-    ldr q20, [src1, #4*16]
+    VLDQ_8H 20, src1, #4*16
     mul       v1.8H,  v1.8H,  v8.8H
     uzp2 v17.8H, v16.8H, v17.8H
-    ldr q21, [src1, #5*16]
+    VLDQ_8H 21, src1, #5*16
     mul       v3.8H,  v3.8H, v10.8H
     uzp2 v19.8H, v18.8H, v19.8H
-    ldr q22, [src1, #6*16]
+    VLDQ_8H 22, src1, #6*16
     mul       v5.8H,  v5.8H, v12.8H
     uzp2 v21.8H, v20.8H, v21.8H
-    ldr q23, [src1, #7*16]
+    VLDQ_8H 23, src1, #7*16
     mul       v7.8H,  v7.8H, v14.8H
     uzp2 v23.8H, v22.8H, v23.8H
 
     add src1, src1, #8*16
 
     // --- Interleaved: mls subtract correction + load next table_ext batch ---
-    ldr  q8, [src2ex, #0*16]
+    VLDQ_8H 8, src2ex, #0*16
     mls       v1.8H,  v0.8H, v28.8H
-    ldr q10, [src2ex, #2*16]
+    VLDQ_8H 10, src2ex, #2*16
     mls       v3.8H,  v2.8H, v28.8H
-    ldr q12, [src2ex, #4*16]
+    VLDQ_8H 12, src2ex, #4*16
     mls       v5.8H,  v4.8H, v28.8H
-    ldr q14, [src2ex, #6*16]
+    VLDQ_8H 14, src2ex, #6*16
     mls       v7.8H,  v6.8H, v28.8H
 
     // --- Store first batch results while loading remaining table_ext ---
-    ldr  q9, [src2ex, #1*16]
-    str  q1, [des, #0*16]
-    ldr q11, [src2ex, #3*16]
-    str  q3, [des, #1*16]
-    ldr q13, [src2ex, #5*16]
-    str  q5, [des, #2*16]
-    ldr q15, [src2ex, #7*16]
-    str  q7, [des, #3*16]
+    VLDQ_8H 9, src2ex, #1*16
+    VSTQ_8H 1, des, #0*16
+    VLDQ_8H 11, src2ex, #3*16
+    VSTQ_8H 3, des, #1*16
+    VLDQ_8H 13, src2ex, #5*16
+    VSTQ_8H 5, des, #2*16
+    VLDQ_8H 15, src2ex, #7*16
+    VSTQ_8H 7, des, #3*16
 
     add des, des, #4*16
 
     add src2ex, src2ex, #8*16
 
     // --- Batch 2: sqrdmulh high parts + load src1 ---
-    ldr  q0, [src1, #0*16]
+    VLDQ_8H 0, src1, #0*16
     sqrdmulh v16.8H, v17.8H,  v9.8H
-    ldr  q1, [src1, #1*16]
+    VLDQ_8H 1, src1, #1*16
     sqrdmulh v18.8H, v19.8H, v11.8H
-    ldr  q2, [src1, #2*16]
+    VLDQ_8H 2, src1, #2*16
     sqrdmulh v20.8H, v21.8H, v13.8H
-    ldr  q3, [src1, #3*16]
+    VLDQ_8H 3, src1, #3*16
     sqrdmulh v22.8H, v23.8H, v15.8H
 
     // --- Batch 2: mul low parts + uzp2 extract odd coefficients ---
-    ldr  q4, [src1, #4*16]
+    VLDQ_8H 4, src1, #4*16
     mul      v17.8H, v17.8H,  v8.8H
     uzp2  v1.8H,  v0.8H,  v1.8H
-    ldr  q5, [src1, #5*16]
+    VLDQ_8H 5, src1, #5*16
     mul      v19.8H, v19.8H, v10.8H
     uzp2  v3.8H,  v2.8H,  v3.8H
-    ldr  q6, [src1, #6*16]
+    VLDQ_8H 6, src1, #6*16
     mul      v21.8H, v21.8H, v12.8H
     uzp2  v5.8H,  v4.8H,  v5.8H
-    ldr  q7, [src1, #7*16]
+    VLDQ_8H 7, src1, #7*16
     mul      v23.8H, v23.8H, v14.8H
     uzp2  v7.8H,  v6.8H,  v7.8H
 
     add src1, src1, #8*16
 
     // --- Batch 2: mls subtract correction + load next table_ext ---
-    ldr  q8, [src2ex, #0*16]
+    VLDQ_8H 8, src2ex, #0*16
     mls      v17.8H, v16.8H, v28.8H
-    ldr q10, [src2ex, #2*16]
+    VLDQ_8H 10, src2ex, #2*16
     mls      v19.8H, v18.8H, v28.8H
-    ldr q12, [src2ex, #4*16]
+    VLDQ_8H 12, src2ex, #4*16
     mls      v21.8H, v20.8H, v28.8H
-    ldr q14, [src2ex, #6*16]
+    VLDQ_8H 14, src2ex, #6*16
     mls      v23.8H, v22.8H, v28.8H
 
     // --- Batch 2: store results + load tw_hi for batch 3 ---
-    ldr  q9, [src2ex, #1*16]
-    str q17, [des, #0*16]
-    ldr q11, [src2ex, #3*16]
-    str q19, [des, #1*16]
-    ldr q13, [src2ex, #5*16]
-    str q21, [des, #2*16]
-    ldr q15, [src2ex, #7*16]
-    str q23, [des, #3*16]
+    VLDQ_8H 9, src2ex, #1*16
+    VSTQ_8H 17, des, #0*16
+    VLDQ_8H 11, src2ex, #3*16
+    VSTQ_8H 19, des, #1*16
+    VLDQ_8H 13, src2ex, #5*16
+    VSTQ_8H 21, des, #2*16
+    VLDQ_8H 15, src2ex, #7*16
+    VSTQ_8H 23, des, #3*16
 
     add des, des, #4*16
 
     add src2ex, src2ex, #8*16
 
     // --- Batch 3: sqrdmulh high parts + load remaining src1 ---
-    ldr q16, [src1, #0*16]
+    VLDQ_8H 16, src1, #0*16
     sqrdmulh  v0.8H,  v1.8H,  v9.8H
-    ldr q17, [src1, #1*16]
+    VLDQ_8H 17, src1, #1*16
     sqrdmulh  v2.8H,  v3.8H, v11.8H
-    ldr q18, [src1, #2*16]
+    VLDQ_8H 18, src1, #2*16
     sqrdmulh  v4.8H,  v5.8H, v13.8H
-    ldr q19, [src1, #3*16]
+    VLDQ_8H 19, src1, #3*16
     sqrdmulh  v6.8H,  v7.8H, v15.8H
 
     // --- Batch 3: mul low parts + uzp2 extract odd coefficients ---
-    ldr q20, [src1, #4*16]
+    VLDQ_8H 20, src1, #4*16
     mul       v1.8H,  v1.8H,  v8.8H
     uzp2 v17.8H, v16.8H, v17.8H
-    ldr q21, [src1, #5*16]
+    VLDQ_8H 21, src1, #5*16
     mul       v3.8H,  v3.8H, v10.8H
     uzp2 v19.8H, v18.8H, v19.8H
-    ldr q22, [src1, #6*16]
+    VLDQ_8H 22, src1, #6*16
     mul       v5.8H,  v5.8H, v12.8H
     uzp2 v21.8H, v20.8H, v21.8H
-    ldr q23, [src1, #7*16]
+    VLDQ_8H 23, src1, #7*16
     mul       v7.8H,  v7.8H, v14.8H
     uzp2 v23.8H, v22.8H, v23.8H
 
     add src1, src1, #8*16
 
     // --- Batch 3: mls subtract correction ---
-    ldr  q8, [src2ex, #0*16]
+    VLDQ_8H 8, src2ex, #0*16
     mls       v1.8H,  v0.8H, v28.8H
-    ldr q10, [src2ex, #2*16]
+    VLDQ_8H 10, src2ex, #2*16
     mls       v3.8H,  v2.8H, v28.8H
-    ldr q12, [src2ex, #4*16]
+    VLDQ_8H 12, src2ex, #4*16
     mls       v5.8H,  v4.8H, v28.8H
-    ldr q14, [src2ex, #6*16]
+    VLDQ_8H 14, src2ex, #6*16
     mls       v7.8H,  v6.8H, v28.8H
 
     // --- Batch 3: store results + load tw_hi for batch 4 ---
-    ldr  q9, [src2ex, #1*16]
-    str  q1, [des, #0*16]
-    ldr q11, [src2ex, #3*16]
-    str  q3, [des, #1*16]
-    ldr q13, [src2ex, #5*16]
-    str  q5, [des, #2*16]
-    ldr q15, [src2ex, #7*16]
-    str  q7, [des, #3*16]
+    VLDQ_8H 9, src2ex, #1*16
+    VSTQ_8H 1, des, #0*16
+    VLDQ_8H 11, src2ex, #3*16
+    VSTQ_8H 3, des, #1*16
+    VLDQ_8H 13, src2ex, #5*16
+    VSTQ_8H 5, des, #2*16
+    VLDQ_8H 15, src2ex, #7*16
+    VSTQ_8H 7, des, #3*16
 
     add des, des, #4*16
 
@@ -332,10 +335,10 @@ AARCH64_PACIASP
     mls      v23.8H, v22.8H, v28.8H
 
     // --- Store batch 4 results ---
-    str q17, [des, #0*16]
-    str q19, [des, #1*16]
-    str q21, [des, #2*16]
-    str q23, [des, #3*16]
+    VSTQ_8H 17, des, #0*16
+    VSTQ_8H 19, des, #1*16
+    VSTQ_8H 21, des, #2*16
+    VSTQ_8H 23, des, #3*16
 
     add des, des, #4*16
 
@@ -473,10 +476,10 @@ AARCH64_PACIASP
     add  src2asy_1, src2asy_0, #256*1
 
     // --- Load and deinterleave first block of a[0] and b[0] ---
-    ldr q20, [src1_0, #0*16]
-    ldr q21, [src1_0, #1*16]
-    ldr q22, [src2_0, #0*16]
-    ldr q23, [src2_0, #1*16]
+    VLDQ_8H 20, src1_0, #0*16
+    VLDQ_8H 21, src1_0, #1*16
+    VLDQ_8H 22, src2_0, #0*16
+    VLDQ_8H 23, src2_0, #1*16
 
     add src1_0, src1_0, #32
     add src2_0, src2_0, #32
@@ -493,13 +496,13 @@ AARCH64_PACIASP
     // ---- Schoolbook product 0: c₀ = a₀·b₀, c₁ = a₀·b₁ (initial smull) ----
     // Interleaved with loading a[1] and b[1] for product 1
     smull  v16.4S,  v0.4H,  v2.4H
-    ldr q20, [src1_1, #0*16]
+    VLDQ_8H 20, src1_1, #0*16
     smull2 v18.4S,  v0.8H,  v2.8H
-    ldr q21, [src1_1, #1*16]
+    VLDQ_8H 21, src1_1, #1*16
     smull  v17.4S,  v0.4H,  v3.4H
-    ldr q22, [src2_1, #0*16]
+    VLDQ_8H 22, src2_1, #0*16
     smull2 v19.4S,  v0.8H,  v3.8H
-    ldr q23, [src2_1, #1*16]
+    VLDQ_8H 23, src2_1, #1*16
 
     add src1_1, src1_1, #32
     add src2_1, src2_1, #32
@@ -542,14 +545,14 @@ AARCH64_PACIASP
     // ---- Montgomery reduction: 32-bit accumulators → 16-bit results ----
     // uzp1 extracts low 16 bits from 32-bit accumulators for Q^{-1} mul
     // smlal adds correction back; uzp2 extracts final high 16 bits
-    ldr q20, [src1_0, #0*16]
+    VLDQ_8H 20, src1_0, #0*16
     uzp1    v6.8H, v16.8H, v18.8H
-    ldr q21, [src1_0, #1*16]
+    VLDQ_8H 21, src1_0, #1*16
     uzp1    v7.8H, v17.8H, v19.8H
 
-    ldr q22, [src2_0, #0*16]
+    VLDQ_8H 22, src2_0, #0*16
     mul     v6.8H,  v6.8H, v4.H[1]
-    ldr q23, [src2_0, #1*16]
+    VLDQ_8H 23, src2_0, #1*16
     mul     v7.8H,  v7.8H, v4.H[1]
 
     add src1_0, src1_0, #32
@@ -573,13 +576,13 @@ AARCH64_PACIASP
     // ---- Schoolbook accumulation: product 1 (a[0]⊗b[0]) ----
     // c₀ = a₀·b₀,  c₁ = a₀·b₁ (initial smull)
     smull  v16.4S,  v0.4H,  v2.4H
-    ldr q20, [src1_1, #0*16]
+    VLDQ_8H 20, src1_1, #0*16
     smull2 v18.4S,  v0.8H,  v2.8H
-    ldr q21, [src1_1, #1*16]
+    VLDQ_8H 21, src1_1, #1*16
     smull  v17.4S,  v0.4H,  v3.4H
-    ldr q22, [src2_1, #0*16]
+    VLDQ_8H 22, src2_1, #0*16
     smull2 v19.4S,  v0.8H,  v3.8H
-    ldr q23, [src2_1, #1*16]
+    VLDQ_8H 23, src2_1, #1*16
 
     add src1_1, src1_1, #32
     add src2_1, src2_1, #32
@@ -735,10 +738,10 @@ AARCH64_PACIASP
     add  src2asy_2, src2asy_0, #256*2
 
     // --- Load and deinterleave first block of a[0] and b[0] ---
-    ldr q20, [src1_0, #0*16]
-    ldr q21, [src1_0, #1*16]
-    ldr q22, [src2_0, #0*16]
-    ldr q23, [src2_0, #1*16]
+    VLDQ_8H 20, src1_0, #0*16
+    VLDQ_8H 21, src1_0, #1*16
+    VLDQ_8H 22, src2_0, #0*16
+    VLDQ_8H 23, src2_0, #1*16
 
     add src1_0, src1_0, #32
     add src2_0, src2_0, #32
@@ -755,13 +758,13 @@ AARCH64_PACIASP
     // ---- Schoolbook product 0: c₀ = a₀·b₀, c₁ = a₀·b₁ (smull) ----
     // Interleaved with loading a[1] and b[1]
     smull  v16.4S,  v0.4H,  v2.4H
-    ldr q20, [src1_1, #0*16]
+    VLDQ_8H 20, src1_1, #0*16
     smull2 v18.4S,  v0.8H,  v2.8H
-    ldr q21, [src1_1, #1*16]
+    VLDQ_8H 21, src1_1, #1*16
     smull  v17.4S,  v0.4H,  v3.4H
-    ldr q22, [src2_1, #0*16]
+    VLDQ_8H 22, src2_1, #0*16
     smull2 v19.4S,  v0.8H,  v3.8H
-    ldr q23, [src2_1, #1*16]
+    VLDQ_8H 23, src2_1, #1*16
 
     add src1_1, src1_1, #32
     add src2_1, src2_1, #32
@@ -782,13 +785,13 @@ AARCH64_PACIASP
     // ---- Schoolbook product 1: c₀ += a₀·b₀, c₁ += a₀·b₁ ----
     // Interleaved with loading a[2] and b[2]
     smlal  v16.4S,  v8.4H, v10.4H
-    ldr q20, [src1_2, #0*16]
+    VLDQ_8H 20, src1_2, #0*16
     smlal2 v18.4S,  v8.8H, v10.8H
-    ldr q21, [src1_2, #1*16]
+    VLDQ_8H 21, src1_2, #1*16
     smlal  v17.4S,  v8.4H, v11.4H
-    ldr q22, [src2_2, #0*16]
+    VLDQ_8H 22, src2_2, #0*16
     smlal2 v19.4S,  v8.8H, v11.8H
-    ldr q23, [src2_2, #1*16]
+    VLDQ_8H 23, src2_2, #1*16
 
     add src1_2, src1_2, #32
     add src2_2, src2_2, #32
@@ -827,14 +830,14 @@ AARCH64_PACIASP
 
     // ---- Phase A: Montgomery reduction of accumulated 32-bit products → 16-bit ----
     // uzp1 extracts low 16 bits, mul by Q^{-1}, smlal adds Q correction, uzp2 extracts result
-    ldr q20, [src1_0, #0*16]
+    VLDQ_8H 20, src1_0, #0*16
     uzp1    v6.8H, v16.8H, v18.8H
-    ldr q21, [src1_0, #1*16]
+    VLDQ_8H 21, src1_0, #1*16
     uzp1    v7.8H, v17.8H, v19.8H
 
-    ldr q22, [src2_0, #0*16]
+    VLDQ_8H 22, src2_0, #0*16
     mul     v6.8H,  v6.8H, v4.H[1]
-    ldr q23, [src2_0, #1*16]
+    VLDQ_8H 23, src2_0, #1*16
     mul     v7.8H,  v7.8H, v4.H[1]
 
     add src1_0, src1_0, #32
@@ -859,13 +862,13 @@ AARCH64_PACIASP
 
     // ---- Phase C product 0: a[0]⊗b[0] ---- schoolbook c₀ = a₀·b₀, c₁ = a₀·b₁ ----
     smull  v16.4S,  v0.4H,  v2.4H
-    ldr q20, [src1_1, #0*16]
+    VLDQ_8H 20, src1_1, #0*16
     smull2 v18.4S,  v0.8H,  v2.8H
-    ldr q21, [src1_1, #1*16]
+    VLDQ_8H 21, src1_1, #1*16
     smull  v17.4S,  v0.4H,  v3.4H
-    ldr q22, [src2_1, #0*16]
+    VLDQ_8H 22, src2_1, #0*16
     smull2 v19.4S,  v0.8H,  v3.8H
-    ldr q23, [src2_1, #1*16]
+    VLDQ_8H 23, src2_1, #1*16
 
     add src1_1, src1_1, #32
     add src2_1, src2_1, #32
@@ -884,13 +887,13 @@ AARCH64_PACIASP
 
     // ---- Phase C product 1: a[1]⊗b[1] ---- c₀ += a₀·b₀, c₁ += a₀·b₁ ----
     smlal  v16.4S,  v8.4H, v10.4H
-    ldr q20, [src1_2, #0*16]
+    VLDQ_8H 20, src1_2, #0*16
     smlal2 v18.4S,  v8.8H, v10.8H
-    ldr q21, [src1_2, #1*16]
+    VLDQ_8H 21, src1_2, #1*16
     smlal  v17.4S,  v8.4H, v11.4H
-    ldr q22, [src2_2, #0*16]
+    VLDQ_8H 22, src2_2, #0*16
     smlal2 v19.4S,  v8.8H, v11.8H
-    ldr q23, [src2_2, #1*16]
+    VLDQ_8H 23, src2_2, #1*16
 
     add src1_2, src1_2, #32
     add src2_2, src2_2, #32
@@ -1053,10 +1056,10 @@ AARCH64_PACIASP
     add  src2asy_3, src2asy_0, #256*3
 
     // --- Load and deinterleave first block of a[0] and b[0] ---
-    ldr q20, [src1_0, #0*16]
-    ldr q21, [src1_0, #1*16]
-    ldr q22, [src2_0, #0*16]
-    ldr q23, [src2_0, #1*16]
+    VLDQ_8H 20, src1_0, #0*16
+    VLDQ_8H 21, src1_0, #1*16
+    VLDQ_8H 22, src2_0, #0*16
+    VLDQ_8H 23, src2_0, #1*16
 
     add src1_0, src1_0, #32
     add src2_0, src2_0, #32
@@ -1072,13 +1075,13 @@ AARCH64_PACIASP
 
     // ---- Schoolbook product 0: c₀ = a₀·b₀, c₁ = a₀·b₁ (smull) ----
     smull  v16.4S,  v0.4H,  v2.4H
-    ldr q20, [src1_1, #0*16]
+    VLDQ_8H 20, src1_1, #0*16
     smull2 v18.4S,  v0.8H,  v2.8H
-    ldr q21, [src1_1, #1*16]
+    VLDQ_8H 21, src1_1, #1*16
     smull  v17.4S,  v0.4H,  v3.4H
-    ldr q22, [src2_1, #0*16]
+    VLDQ_8H 22, src2_1, #0*16
     smull2 v19.4S,  v0.8H,  v3.8H
-    ldr q23, [src2_1, #1*16]
+    VLDQ_8H 23, src2_1, #1*16
 
     add src1_1, src1_1, #32
     add src2_1, src2_1, #32
@@ -1099,13 +1102,13 @@ AARCH64_PACIASP
     // ---- Schoolbook product 1: c₀ += a₀·b₀, c₁ += a₀·b₁ ----
     // Interleaved with loading a[2], b[2]
     smlal  v16.4S,  v8.4H, v10.4H
-    ldr q20, [src1_2, #0*16]
+    VLDQ_8H 20, src1_2, #0*16
     smlal2 v18.4S,  v8.8H, v10.8H
-    ldr q21, [src1_2, #1*16]
+    VLDQ_8H 21, src1_2, #1*16
     smlal  v17.4S,  v8.4H, v11.4H
-    ldr q22, [src2_2, #0*16]
+    VLDQ_8H 22, src2_2, #0*16
     smlal2 v19.4S,  v8.8H, v11.8H
-    ldr q23, [src2_2, #1*16]
+    VLDQ_8H 23, src2_2, #1*16
 
     add src1_2, src1_2, #32
     add src2_2, src2_2, #32
@@ -1126,13 +1129,13 @@ AARCH64_PACIASP
     // ---- Schoolbook product 2: c₀ += a₀·b₀, c₁ += a₀·b₁ ----
     // Interleaved with loading a[3], b[3]
     smlal  v16.4S, v12.4H, v14.4H
-    ldr q20, [src1_3, #0*16]
+    VLDQ_8H 20, src1_3, #0*16
     smlal2 v18.4S, v12.8H, v14.8H
-    ldr q21, [src1_3, #1*16]
+    VLDQ_8H 21, src1_3, #1*16
     smlal  v17.4S, v12.4H, v15.4H
-    ldr q22, [src2_3, #0*16]
+    VLDQ_8H 22, src2_3, #0*16
     smlal2 v19.4S, v12.8H, v15.8H
-    ldr q23, [src2_3, #1*16]
+    VLDQ_8H 23, src2_3, #1*16
 
     add src1_3, src1_3, #32
     add src2_3, src2_3, #32
@@ -1171,14 +1174,14 @@ AARCH64_PACIASP
     1:
 
     // ---- Phase A: Montgomery reduction of accumulated 32-bit products → 16-bit ----
-    ldr q20, [src1_0, #0*16]
+    VLDQ_8H 20, src1_0, #0*16
     uzp1    v6.8H, v16.8H, v18.8H
-    ldr q21, [src1_0, #1*16]
+    VLDQ_8H 21, src1_0, #1*16
     uzp1    v7.8H, v17.8H, v19.8H
 
-    ldr q22, [src2_0, #0*16]
+    VLDQ_8H 22, src2_0, #0*16
     mul     v6.8H,  v6.8H, v4.H[1]
-    ldr q23, [src2_0, #1*16]
+    VLDQ_8H 23, src2_0, #1*16
     mul     v7.8H,  v7.8H, v4.H[1]
 
     add src1_0, src1_0, #32
@@ -1203,13 +1206,13 @@ AARCH64_PACIASP
 
     // ---- Phase C product 0: a[0]⊗b[0] ---- schoolbook c₀ = a₀·b₀, c₁ = a₀·b₁ ----
     smull  v16.4S,  v0.4H,  v2.4H
-    ldr q20, [src1_1, #0*16]
+    VLDQ_8H 20, src1_1, #0*16
     smull2 v18.4S,  v0.8H,  v2.8H
-    ldr q21, [src1_1, #1*16]
+    VLDQ_8H 21, src1_1, #1*16
     smull  v17.4S,  v0.4H,  v3.4H
-    ldr q22, [src2_1, #0*16]
+    VLDQ_8H 22, src2_1, #0*16
     smull2 v19.4S,  v0.8H,  v3.8H
-    ldr q23, [src2_1, #1*16]
+    VLDQ_8H 23, src2_1, #1*16
 
     add src1_1, src1_1, #32
     add src2_1, src2_1, #32
@@ -1228,13 +1231,13 @@ AARCH64_PACIASP
 
     // ---- Phase C product 1: a[1]⊗b[1] ---- c₀ += a₀·b₀, c₁ += a₀·b₁ ----
     smlal  v16.4S,  v8.4H, v10.4H
-    ldr q20, [src1_2, #0*16]
+    VLDQ_8H 20, src1_2, #0*16
     smlal2 v18.4S,  v8.8H, v10.8H
-    ldr q21, [src1_2, #1*16]
+    VLDQ_8H 21, src1_2, #1*16
     smlal  v17.4S,  v8.4H, v11.4H
-    ldr q22, [src2_2, #0*16]
+    VLDQ_8H 22, src2_2, #0*16
     smlal2 v19.4S,  v8.8H, v11.8H
-    ldr q23, [src2_2, #1*16]
+    VLDQ_8H 23, src2_2, #1*16
 
     add src1_2, src1_2, #32
     add src2_2, src2_2, #32
@@ -1253,13 +1256,13 @@ AARCH64_PACIASP
 
     // ---- Phase C product 2: a[2]⊗b[2] ---- c₀ += a₀·b₀, c₁ += a₀·b₁ ----
     smlal  v16.4S, v12.4H, v14.4H
-    ldr q20, [src1_3, #0*16]
+    VLDQ_8H 20, src1_3, #0*16
     smlal2 v18.4S, v12.8H, v14.8H
-    ldr q21, [src1_3, #1*16]
+    VLDQ_8H 21, src1_3, #1*16
     smlal  v17.4S, v12.4H, v15.4H
-    ldr q22, [src2_3, #0*16]
+    VLDQ_8H 22, src2_3, #0*16
     smlal2 v19.4S, v12.8H, v15.8H
-    ldr q23, [src2_3, #1*16]
+    VLDQ_8H 23, src2_3, #1*16
 
     add src1_3, src1_3, #32
     add src2_3, src2_3, #32
@@ -1464,10 +1467,10 @@ AARCH64_PACIASP
     add  src2asy_1, src2asy_0, #256*1
 
     // --- Load first 8×16B of interleaved source polynomial [a0,a1] pairs ---
-    ldr q20, [src1_0, #0*16]
-    ldr q21, [src1_0, #1*16]
-    ldr q22, [src2_0, #0*16]
-    ldr q23, [src2_0, #1*16]
+    VLDQ_8H 20, src1_0, #0*16
+    VLDQ_8H 21, src1_0, #1*16
+    VLDQ_8H 22, src2_0, #0*16
+    VLDQ_8H 23, src2_0, #1*16
 
     add src1_0, src1_0, #32
     add src2_0, src2_0, #32
@@ -1483,13 +1486,13 @@ AARCH64_PACIASP
 
     // --- Schoolbook multiply: accumulate 2 products (32-bit) ---
     smull  v16.4S,  v0.4H,  v2.4H
-    ldr q20, [src1_1, #0*16]
+    VLDQ_8H 20, src1_1, #0*16
     smull2 v18.4S,  v0.8H,  v2.8H
-    ldr q21, [src1_1, #1*16]
+    VLDQ_8H 21, src1_1, #1*16
     smull  v17.4S,  v0.4H,  v3.4H
-    ldr q22, [src2_1, #0*16]
+    VLDQ_8H 22, src2_1, #0*16
     smull2 v19.4S,  v0.8H,  v3.8H
-    ldr q23, [src2_1, #1*16]
+    VLDQ_8H 23, src2_1, #1*16
 
     add src1_1, src1_1, #32
     add src2_1, src2_1, #32
@@ -1530,13 +1533,13 @@ AARCH64_PACIASP
     mul     v7.8H,  v7.8H, v4.H[1]
 
     // --- Montgomery reduction step 2: accumulate correction + load next src ---
-    ldr q20, [src1_0, #0*16]
+    VLDQ_8H 20, src1_0, #0*16
     smlal  v16.4S,  v6.4H, v4.H[0]
-    ldr q21, [src1_0, #1*16]
+    VLDQ_8H 21, src1_0, #1*16
     smlal2 v18.4S,  v6.8H, v4.H[0]
-    ldr q22, [src2_0, #0*16]
+    VLDQ_8H 22, src2_0, #0*16
     smlal  v17.4S,  v7.4H, v4.H[0]
-    ldr q23, [src2_0, #1*16]
+    VLDQ_8H 23, src2_0, #1*16
     smlal2 v19.4S,  v7.8H, v4.H[0]
 
     add src1_0, src1_0, #32
@@ -1568,13 +1571,13 @@ AARCH64_PACIASP
 
     // --- Schoolbook multiply for next iteration ---
     smull  v16.4S,  v0.4H,  v2.4H
-    ldr q20, [src1_1, #0*16]
+    VLDQ_8H 20, src1_1, #0*16
     smull2 v18.4S,  v0.8H,  v2.8H
-    ldr q21, [src1_1, #1*16]
+    VLDQ_8H 21, src1_1, #1*16
     smull  v17.4S,  v0.4H,  v3.4H
-    ldr q22, [src2_1, #0*16]
+    VLDQ_8H 22, src2_1, #0*16
     smull2 v19.4S,  v0.8H,  v3.8H
-    ldr q23, [src2_1, #1*16]
+    VLDQ_8H 23, src2_1, #1*16
 
     add src1_1, src1_1, #32
     add src2_1, src2_1, #32
@@ -1736,10 +1739,10 @@ AARCH64_PACIASP
     add     src2_2,    src2_0, #512*2
     add  src2asy_2, src2asy_0, #256*2
 
-    ldr q20, [src1_0, #0*16]
-    ldr q21, [src1_0, #1*16]
-    ldr q22, [src2_0, #0*16]
-    ldr q23, [src2_0, #1*16]
+    VLDQ_8H 20, src1_0, #0*16
+    VLDQ_8H 21, src1_0, #1*16
+    VLDQ_8H 22, src2_0, #0*16
+    VLDQ_8H 23, src2_0, #1*16
 
     add src1_0, src1_0, #32
     add src2_0, src2_0, #32
@@ -1752,13 +1755,13 @@ AARCH64_PACIASP
     ld1 {v28.8H}, [src2asy_0], #16
 
     smull  v16.4S,  v0.4H,  v2.4H
-    ldr q20, [src1_1, #0*16]
+    VLDQ_8H 20, src1_1, #0*16
     smull2 v18.4S,  v0.8H,  v2.8H
-    ldr q21, [src1_1, #1*16]
+    VLDQ_8H 21, src1_1, #1*16
     smull  v17.4S,  v0.4H,  v3.4H
-    ldr q22, [src2_1, #0*16]
+    VLDQ_8H 22, src2_1, #0*16
     smull2 v19.4S,  v0.8H,  v3.8H
-    ldr q23, [src2_1, #1*16]
+    VLDQ_8H 23, src2_1, #1*16
 
     add src1_1, src1_1, #32
     add src2_1, src2_1, #32
@@ -1775,13 +1778,13 @@ AARCH64_PACIASP
     ld1 {v29.8H}, [src2asy_1], #16
 
     smlal  v16.4S,  v8.4H, v10.4H
-    ldr q20, [src1_2, #0*16]
+    VLDQ_8H 20, src1_2, #0*16
     smlal2 v18.4S,  v8.8H, v10.8H
-    ldr q21, [src1_2, #1*16]
+    VLDQ_8H 21, src1_2, #1*16
     smlal  v17.4S,  v8.4H, v11.4H
-    ldr q22, [src2_2, #0*16]
+    VLDQ_8H 22, src2_2, #0*16
     smlal2 v19.4S,  v8.8H, v11.8H
-    ldr q23, [src2_2, #1*16]
+    VLDQ_8H 23, src2_2, #1*16
 
     add src1_2, src1_2, #32
     add src2_2, src2_2, #32
@@ -1817,13 +1820,13 @@ AARCH64_PACIASP
     mul     v6.8H,  v6.8H, v4.H[1]
     mul     v7.8H,  v7.8H, v4.H[1]
 
-    ldr q20, [src1_0, #0*16]
+    VLDQ_8H 20, src1_0, #0*16
     smlal  v16.4S,  v6.4H, v4.H[0]
-    ldr q21, [src1_0, #1*16]
+    VLDQ_8H 21, src1_0, #1*16
     smlal2 v18.4S,  v6.8H, v4.H[0]
-    ldr q22, [src2_0, #0*16]
+    VLDQ_8H 22, src2_0, #0*16
     smlal  v17.4S,  v7.4H, v4.H[0]
-    ldr q23, [src2_0, #1*16]
+    VLDQ_8H 23, src2_0, #1*16
     smlal2 v19.4S,  v7.8H, v4.H[0]
 
     add src1_0, src1_0, #32
@@ -1850,13 +1853,13 @@ AARCH64_PACIASP
     ld1 {v28.8H}, [src2asy_0], #16
 
     smull  v16.4S,  v0.4H,  v2.4H
-    ldr q20, [src1_1, #0*16]
+    VLDQ_8H 20, src1_1, #0*16
     smull2 v18.4S,  v0.8H,  v2.8H
-    ldr q21, [src1_1, #1*16]
+    VLDQ_8H 21, src1_1, #1*16
     smull  v17.4S,  v0.4H,  v3.4H
-    ldr q22, [src2_1, #0*16]
+    VLDQ_8H 22, src2_1, #0*16
     smull2 v19.4S,  v0.8H,  v3.8H
-    ldr q23, [src2_1, #1*16]
+    VLDQ_8H 23, src2_1, #1*16
 
     add src1_1, src1_1, #32
     add src2_1, src2_1, #32
@@ -1873,13 +1876,13 @@ AARCH64_PACIASP
     ld1 {v29.8H}, [src2asy_1], #16
 
     smlal  v16.4S,  v8.4H, v10.4H
-    ldr q20, [src1_2, #0*16]
+    VLDQ_8H 20, src1_2, #0*16
     smlal2 v18.4S,  v8.8H, v10.8H
-    ldr q21, [src1_2, #1*16]
+    VLDQ_8H 21, src1_2, #1*16
     smlal  v17.4S,  v8.4H, v11.4H
-    ldr q22, [src2_2, #0*16]
+    VLDQ_8H 22, src2_2, #0*16
     smlal2 v19.4S,  v8.8H, v11.8H
-    ldr q23, [src2_2, #1*16]
+    VLDQ_8H 23, src2_2, #1*16
 
     add src1_2, src1_2, #32
     add src2_2, src2_2, #32
@@ -2041,10 +2044,10 @@ AARCH64_PACIASP
     add     src2_3,    src2_0, #512*3
     add  src2asy_3, src2asy_0, #256*3
 
-    ldr q20, [src1_0, #0*16]
-    ldr q21, [src1_0, #1*16]
-    ldr q22, [src2_0, #0*16]
-    ldr q23, [src2_0, #1*16]
+    VLDQ_8H 20, src1_0, #0*16
+    VLDQ_8H 21, src1_0, #1*16
+    VLDQ_8H 22, src2_0, #0*16
+    VLDQ_8H 23, src2_0, #1*16
 
     add src1_0, src1_0, #32
     add src2_0, src2_0, #32
@@ -2057,13 +2060,13 @@ AARCH64_PACIASP
     ld1 {v28.8H}, [src2asy_0], #16
 
     smull  v16.4S,  v0.4H,  v2.4H
-    ldr q20, [src1_1, #0*16]
+    VLDQ_8H 20, src1_1, #0*16
     smull2 v18.4S,  v0.8H,  v2.8H
-    ldr q21, [src1_1, #1*16]
+    VLDQ_8H 21, src1_1, #1*16
     smull  v17.4S,  v0.4H,  v3.4H
-    ldr q22, [src2_1, #0*16]
+    VLDQ_8H 22, src2_1, #0*16
     smull2 v19.4S,  v0.8H,  v3.8H
-    ldr q23, [src2_1, #1*16]
+    VLDQ_8H 23, src2_1, #1*16
 
     add src1_1, src1_1, #32
     add src2_1, src2_1, #32
@@ -2080,13 +2083,13 @@ AARCH64_PACIASP
     ld1 {v29.8H}, [src2asy_1], #16
 
     smlal  v16.4S,  v8.4H, v10.4H
-    ldr q20, [src1_2, #0*16]
+    VLDQ_8H 20, src1_2, #0*16
     smlal2 v18.4S,  v8.8H, v10.8H
-    ldr q21, [src1_2, #1*16]
+    VLDQ_8H 21, src1_2, #1*16
     smlal  v17.4S,  v8.4H, v11.4H
-    ldr q22, [src2_2, #0*16]
+    VLDQ_8H 22, src2_2, #0*16
     smlal2 v19.4S,  v8.8H, v11.8H
-    ldr q23, [src2_2, #1*16]
+    VLDQ_8H 23, src2_2, #1*16
 
     add src1_2, src1_2, #32
     add src2_2, src2_2, #32
@@ -2103,13 +2106,13 @@ AARCH64_PACIASP
     ld1 {v30.8H}, [src2asy_2], #16
 
     smlal  v16.4S, v12.4H, v14.4H
-    ldr q20, [src1_3, #0*16]
+    VLDQ_8H 20, src1_3, #0*16
     smlal2 v18.4S, v12.8H, v14.8H
-    ldr q21, [src1_3, #1*16]
+    VLDQ_8H 21, src1_3, #1*16
     smlal  v17.4S, v12.4H, v15.4H
-    ldr q22, [src2_3, #0*16]
+    VLDQ_8H 22, src2_3, #0*16
     smlal2 v19.4S, v12.8H, v15.8H
-    ldr q23, [src2_3, #1*16]
+    VLDQ_8H 23, src2_3, #1*16
 
     add src1_3, src1_3, #32
     add src2_3, src2_3, #32
@@ -2145,13 +2148,13 @@ AARCH64_PACIASP
     mul     v6.8H,  v6.8H, v4.H[1]
     mul     v7.8H,  v7.8H, v4.H[1]
 
-    ldr q20, [src1_0, #0*16]
+    VLDQ_8H 20, src1_0, #0*16
     smlal  v16.4S,  v6.4H, v4.H[0]
-    ldr q21, [src1_0, #1*16]
+    VLDQ_8H 21, src1_0, #1*16
     smlal2 v18.4S,  v6.8H, v4.H[0]
-    ldr q22, [src2_0, #0*16]
+    VLDQ_8H 22, src2_0, #0*16
     smlal  v17.4S,  v7.4H, v4.H[0]
-    ldr q23, [src2_0, #1*16]
+    VLDQ_8H 23, src2_0, #1*16
     smlal2 v19.4S,  v7.8H, v4.H[0]
 
     add src1_0, src1_0, #32
@@ -2178,13 +2181,13 @@ AARCH64_PACIASP
     ld1 {v28.8H}, [src2asy_0], #16
 
     smull  v16.4S,  v0.4H,  v2.4H
-    ldr q20, [src1_1, #0*16]
+    VLDQ_8H 20, src1_1, #0*16
     smull2 v18.4S,  v0.8H,  v2.8H
-    ldr q21, [src1_1, #1*16]
+    VLDQ_8H 21, src1_1, #1*16
     smull  v17.4S,  v0.4H,  v3.4H
-    ldr q22, [src2_1, #0*16]
+    VLDQ_8H 22, src2_1, #0*16
     smull2 v19.4S,  v0.8H,  v3.8H
-    ldr q23, [src2_1, #1*16]
+    VLDQ_8H 23, src2_1, #1*16
 
     add src1_1, src1_1, #32
     add src2_1, src2_1, #32
@@ -2201,13 +2204,13 @@ AARCH64_PACIASP
     ld1 {v29.8H}, [src2asy_1], #16
 
     smlal  v16.4S,  v8.4H, v10.4H
-    ldr q20, [src1_2, #0*16]
+    VLDQ_8H 20, src1_2, #0*16
     smlal2 v18.4S,  v8.8H, v10.8H
-    ldr q21, [src1_2, #1*16]
+    VLDQ_8H 21, src1_2, #1*16
     smlal  v17.4S,  v8.4H, v11.4H
-    ldr q22, [src2_2, #0*16]
+    VLDQ_8H 22, src2_2, #0*16
     smlal2 v19.4S,  v8.8H, v11.8H
-    ldr q23, [src2_2, #1*16]
+    VLDQ_8H 23, src2_2, #1*16
 
     add src1_2, src1_2, #32
     add src2_2, src2_2, #32
@@ -2224,13 +2227,13 @@ AARCH64_PACIASP
     ld1 {v30.8H}, [src2asy_2], #16
 
     smlal  v16.4S, v12.4H, v14.4H
-    ldr q20, [src1_3, #0*16]
+    VLDQ_8H 20, src1_3, #0*16
     smlal2 v18.4S, v12.8H, v14.8H
-    ldr q21, [src1_3, #1*16]
+    VLDQ_8H 21, src1_3, #1*16
     smlal  v17.4S, v12.4H, v15.4H
-    ldr q22, [src2_3, #0*16]
+    VLDQ_8H 22, src2_3, #0*16
     smlal2 v19.4S, v12.8H, v15.8H
-    ldr q23, [src2_3, #1*16]
+    VLDQ_8H 23, src2_3, #1*16
 
     add src1_3, src1_3, #32
     add src2_3, src2_3, #32
