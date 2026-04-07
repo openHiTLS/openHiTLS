@@ -16,13 +16,13 @@
 #ifdef HITLS_BSL_SAL_IP
 #include <stdio.h>
 #include <string.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include "bsl_err.h"
 
 #define MAX_IPV6_SEGMENT_COUNT 8
 #define IPV6_LEN 16
 #define IPV4_LEN 4
+#define MAX_IP_STR_LEN 39 // The maximum length of IPv6 is 39
 
 /*
 * Parse IPv4 strings and store their binary to *out
@@ -119,18 +119,17 @@ static bool IsXdigit(char c)
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
 
-static int32_t CharToDigit(char c)
+static uint16_t CharToDigit(char c)
 {
     if (c >= '0' && c <= '9') {
         return c - '0';
-    } else if (c >= 'a' && c <= 'z') {
+    } else if (c >= 'a' && c <= 'f') {
         /* Hexadecimal letters a-f have values 10-15 */
         return c - 'a' + 10;
-    } else if (c >= 'A' && c <= 'Z') {
+    } else {
         /* Hexadecimal letters A-F have values 10-15 */
         return c - 'A' + 10;
     }
-    return -1;
 }
 
 /* Analyze the hexadecimal segment of IPv6 (excluding IPv4) */
@@ -145,7 +144,7 @@ static bool ParseIpv6HexSegments(const char *str, int32_t len, uint16_t *segment
         char c = str[i];
 
         if (c != ':') {
-            if (!IsXdigit((unsigned char)c)) {
+            if (!IsXdigit(c)) {
                 return false;
             }
             inSegment = true;
@@ -153,7 +152,7 @@ static bool ParseIpv6HexSegments(const char *str, int32_t len, uint16_t *segment
             if (++currLen > 4) {
                 return false;
             }
-            int32_t digit = CharToDigit(c);
+            uint16_t digit = CharToDigit(c);
             /* Left shift by 4 bits for hexadecimal (base-16) */
             curr = (curr << 4) | digit;
             i++;
@@ -199,7 +198,7 @@ static bool ParseIpv6HexSegments(const char *str, int32_t len, uint16_t *segment
 
 /* Expand into 8 complete 16 bit segments */
 static bool ExpandSegments(const uint16_t *segments, int32_t segCount, int32_t dcPos,
-    uint8_t *ipv4Bytes, uint16_t *final)
+    const uint8_t *ipv4Bytes, uint16_t *final)
 {
     int32_t total = MAX_IPV6_SEGMENT_COUNT;
     /* IPv4 partially occupies 2 segments */
@@ -300,6 +299,10 @@ int32_t SAL_ParseIp(const char *str, unsigned char *out, int32_t *outLen)
 {
     if (str == NULL || out == NULL || outLen == NULL) {
         return BSL_NULL_INPUT;
+    }
+    if (strlen(str) > MAX_IP_STR_LEN) {
+        *outLen = 0;
+        return BSL_INVALID_ARG;
     }
 
     if (strchr(str, ':')) {

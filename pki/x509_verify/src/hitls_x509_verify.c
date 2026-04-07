@@ -39,6 +39,7 @@
 
 #define CRYPT_SHA1_DIGESTSIZE 20
 #define MAX_PATH_LEN 4096
+#define MAX_HOSTNAME_LEN 255
 
 typedef int32_t (*HITLS_X509_TrvListCallBack)(void *ctx, void *node, int32_t depth);
 typedef int32_t (*HITLS_X509_TrvListWithParentCallBack)(void *ctx, void *node, void *parent, int32_t depth);
@@ -611,7 +612,7 @@ static int32_t X509_GetCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List 
 }
 
 #ifdef HITLS_PKI_X509_VFY_IDENTITY
-static int32_t X509_SetHostFlags(HITLS_X509_StoreCtx *storeCtx, uint32_t *val, uint32_t valLen)
+static int32_t X509_SetHostFlags(HITLS_X509_StoreCtx *storeCtx, const uint32_t *val, uint32_t valLen)
 {
     if (valLen != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
@@ -632,9 +633,9 @@ static char *DupString(const char *str)
     return dest;
 }
 
-static int32_t X509_SetVerifyHost(HITLS_X509_StoreCtx *storeCtx, const char *hostname, uint32_t hostnameLen)
+static int32_t X509_SetVerifyHost(HITLS_X509_StoreCtx *storeCtx, const char *hostname)
 {
-    if (hostname == NULL || hostnameLen == 0) {
+    if (hostname == NULL) {
         return HITLS_PKI_SUCCESS;
     }
 
@@ -662,7 +663,7 @@ static int32_t X509_SetVerifyHost(HITLS_X509_StoreCtx *storeCtx, const char *hos
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t X509_SetVerifyIp(HITLS_X509_StoreCtx *storeCtx, unsigned char *ip, uint32_t ipLen)
+static int32_t X509_SetVerifyIp(HITLS_X509_StoreCtx *storeCtx, unsigned char *ip, int32_t ipLen)
 {
     storeCtx->verifyParam.ip = BSL_SAL_Malloc(ipLen);
     if (storeCtx->verifyParam.ip == NULL) {
@@ -677,25 +678,29 @@ static int32_t X509_SetVerifyIp(HITLS_X509_StoreCtx *storeCtx, unsigned char *ip
 static int32_t X509_SetHost(HITLS_X509_StoreCtx *storeCtx, const void *val)
 {
     const char *hostname = (const char *)val;
-    uint32_t hostnameLen = hostname != NULL ? strlen(hostname) : 0;
+    size_t hostnameLen = hostname != NULL ? strlen(hostname) : 0;
+    if (hostnameLen > MAX_HOSTNAME_LEN) {
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
 
     BSL_SAL_FREE(storeCtx->verifyParam.ip);
     BSL_LIST_FREE(storeCtx->verifyParam.hostnames, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
 
-    if (hostname != NULL) {
-        unsigned char buff[16];
-        int32_t len = sizeof(buff) / sizeof(buff[0]);
-        if (SAL_ParseIp(hostname, buff, &len) == BSL_SUCCESS) {
-            return X509_SetVerifyIp(storeCtx, buff, len);
-        }
+    unsigned char buff[16];
+    int32_t len = sizeof(buff) / sizeof(buff[0]);
+    if (SAL_ParseIp(hostname, buff, &len) == BSL_SUCCESS) {
+        return X509_SetVerifyIp(storeCtx, buff, len);
     }
-    return X509_SetVerifyHost(storeCtx, hostname, hostnameLen);
+    return X509_SetVerifyHost(storeCtx, hostname);
 }
 
 static int32_t X509_AddHost(HITLS_X509_StoreCtx *storeCtx, const void *val)
 {
     const char *hostname = (const char *)val;
-    uint32_t hostnameLen = hostname != NULL ? strlen(hostname) : 0;
+    size_t hostnameLen = strlen(hostname);
+    if (hostnameLen > MAX_HOSTNAME_LEN) {
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
     if (hostname != NULL) {
         unsigned char buff[16];
         int32_t len = sizeof(buff) / sizeof(buff[0]);
@@ -708,7 +713,7 @@ static int32_t X509_AddHost(HITLS_X509_StoreCtx *storeCtx, const void *val)
         }
     }
 
-    return X509_SetVerifyHost(storeCtx, hostname, hostnameLen);
+    return X509_SetVerifyHost(storeCtx, hostname);
 }
 #endif
 

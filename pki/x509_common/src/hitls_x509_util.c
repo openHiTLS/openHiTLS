@@ -231,9 +231,9 @@ static int32_t X509_VerifyHostname(HITLS_X509_Cert *cert, uint32_t flags, const 
     return ret;
 }
 
-static int32_t X509_VerifyIp(HITLS_X509_Cert *cert, const char *ip, int32_t ipLen)
+static int32_t X509_VerifyIp(HITLS_X509_Cert *cert, const char *ip, uint32_t ipLen)
 {
-    if (cert == NULL || ip == NULL || ipLen < 0 || strlen(ip) != (size_t)ipLen) {
+    if (cert == NULL || ip == NULL || strlen(ip) != ipLen) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
