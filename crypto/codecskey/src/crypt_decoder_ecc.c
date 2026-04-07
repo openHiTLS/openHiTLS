@@ -15,7 +15,8 @@
 
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_KEY_DECODE_CHAIN) && \
-    (defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_ED25519))
+    (defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) || \
+     defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_X25519))
 
 #include "crypt_ecc.h"
 #ifdef HITLS_CRYPTO_ECDSA

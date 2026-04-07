@@ -318,8 +318,6 @@ int32_t HITLS_CMS_GenFile(int32_t format, HITLS_CMS *cms, const BSL_Param *optio
 
 #endif // HITLS_BSL_SAL_FILE
 
-#ifdef HITLS_PKI_CMS_SIGNEDDATA
-
 int32_t HITLS_CMS_DataInit(int32_t option, HITLS_CMS *cms, const BSL_Param *param)
 {
     if (cms == NULL) {
@@ -366,5 +364,4 @@ int32_t HITLS_CMS_DataFinal(HITLS_CMS *cms, const BSL_Param *param)
 }
 
 #endif // HITLS_PKI_CMS_SIGNEDDATA
-#endif // HITLS_PKI_CMS
 #endif // HITLS_PKI_CMS

@@ -27,6 +27,21 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#ifdef HITLS_PKI_CMS_DATA
+// parse PKCS7-Data
+int32_t HITLS_CMS_ParseAsn1Data(BSL_Buffer *encode, BSL_Buffer *dataValue);
+#endif
+
+#ifdef HITLS_PKI_CMS_DIGESTINFO
+
+// parse PKCS7-DigestInfo：only support hash.
+int32_t HITLS_CMS_ParseDigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *digest);
+
+// encode PKCS7-DigestInfo：only support hash.
+int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *encode);
+
+#endif // HITLS_PKI_CMS_DIGESTINFO
+
 #ifdef HITLS_PKI_CMS_SIGNEDDATA
 
 #define HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1    0x01  /** v1 signerinfo. */
@@ -187,23 +202,6 @@ int32_t HITLS_CMS_SignedDataUpdate(HITLS_CMS *cms, const BSL_Buffer *input);
  */
 int32_t HITLS_CMS_SignedDataFinal(HITLS_CMS *cms, const BSL_Param *param);
 
-#endif
-
-#ifdef HITLS_PKI_CMS_DATA
-// parse PKCS7-Data
-int32_t HITLS_CMS_ParseAsn1Data(BSL_Buffer *encode, BSL_Buffer *dataValue);
-#endif
-
-#ifdef HITLS_PKI_CMS_DIGESTINFO
-
-// parse PKCS7-DigestInfo：only support hash.
-int32_t HITLS_CMS_ParseDigestInfo(BSL_Buffer *encode, BslCid *cid, BSL_Buffer *digest);
-
-// encode PKCS7-DigestInfo：only support hash.
-int32_t HITLS_CMS_EncodeDigestInfoBuff(BslCid cid, BSL_Buffer *in, BSL_Buffer *encode);
-
-#endif
-
 /**
  * @ingroup cms
  * @brief cms generate
@@ -232,6 +230,8 @@ int32_t HITLS_CMS_GenBuff(int32_t format, HITLS_CMS *cms, const BSL_Param *optio
  *         Error codes can be found in hitls_pki_errno.h
  */
 int32_t HITLS_CMS_GenFile(int32_t format, HITLS_CMS *cms, const BSL_Param *optionalParam, const char *path);
+
+#endif // HITLS_PKI_CMS_SIGNEDDATA
 
 #ifdef __cplusplus
 }

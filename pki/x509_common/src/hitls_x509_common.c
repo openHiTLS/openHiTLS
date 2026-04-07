@@ -111,6 +111,7 @@ int32_t HITLS_X509_ParseSignAlgInfo(BSL_ASN1_Buffer *algId, BSL_ASN1_Buffer *par
 }
 #endif
 
+#if defined(HITLS_PKI_INFO_DN_HASH) || defined(HITLS_PKI_X509_VFY)
 static uint8_t X509_ToLower(uint8_t c)
 {
     if (c >= 'A' && c <= 'Z') {
@@ -156,6 +157,7 @@ static int32_t X509_Asn1StringCanon(const BSL_ASN1_Buffer *in, BSL_ASN1_Buffer *
     X509_StringCanon(out);
     return ret;
 }
+#endif // defined(HITLS_PKI_INFO_DN_HASH) || defined(HITLS_PKI_X509_VFY) 
 
 static int32_t HITLS_X509_ParseNameNode(BSL_ASN1_Buffer *asn, HITLS_X509_NameNode *node)
 {

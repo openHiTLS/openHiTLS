@@ -389,8 +389,8 @@ test_pki()
     bash mini_build_test.sh no-tls enable=sal_thread,eal,info_csr,x509_csr_parse,rsa,drbg_hash,md,cipher,modes,hmac
     bash mini_build_test.sh no-tls enable=sal_thread,eal,info_crl,x509_crl_parse,rsa,drbg_hash,md,cipher,modes,hmac
 
-    #### key gen ####sal_thread,
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,sal_thread,eal,key_encode,sal_file,pem,rsa,sha256,drbg_hash test=key_encode
+    #### key gen ####
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_encode,sal_file,pem,rsa,sha256,drbg_hash test=key_encode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_encode,pem,ed25519,drbg_hash test=key_encode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_encode,key_epki,pem,x25519,drbg_hash,cipher,modes,sha256,hmac test=key_encode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_encode,sal_file,sm2,sha256,drbg_hash test=key_encode
@@ -409,7 +409,7 @@ test_pki()
     echo "Test: key_decode with provider"
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,provider,sal_dl,sal_file,pem,rsa,sha256,drbg_hash test=key_decode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,provider,sal_dl,sal_file,pem,ed25519,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,key_epki,provider,sal_dl,sal_file,pem,x25519,drbg_hash,cipher,modes,sha256,hmac test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,key_epki,provider,sal_dl,sal_file,pem,x25519,drbg_hash,cipher,ealinit,modes,sha256,hmac test=key_decode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,provider,sal_dl,sal_file,sm2,sha256,drbg_hash test=key_decode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,provider,sal_dl,sal_file,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=key_decode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,provider,sal_dl,sal_file,pem,mldsa,sha256,drbg_hash test=key_decode
@@ -417,7 +417,7 @@ test_pki()
     echo "Test: key_decode_chain (with provider)"
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode_chain,sal_dl,sal_file,pem,rsa,sha256,drbg_hash test=key_decode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode_chain,sal_dl,sal_file,pem,ed25519,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode_chain,key_epki,provider,sal_dl,sal_file,pem,x25519,drbg_hash,cipher,modes,sha256,hmac test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode_chain,key_epki,provider,sal_dl,sal_file,pem,x25519,drbg_hash,cipher,ealinit,modes,sha256,hmac test=key_decode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode_chain,sal_dl,sal_file,sm2,sha256,drbg_hash test=key_decode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode_chain,sal_dl,sal_file,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=key_decode
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode_chain,sal_dl,sal_file,pem,mldsa,sha256,drbg_hash test=key_decode
@@ -461,9 +461,9 @@ test_pki()
     #### cert chain ####
     bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_vfy,sal_file,sal_str,pem,rsa,ecdsa,curve_nistp256,curve_nistp384,ed25519,sm2,sha2,drbg_hash test=x509_vfy
 
-    #### pkcs12 gen ####
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,,sal_file,sal_str,pkcs12_gen,key_decode,sal_file,pem,rsa,ecdsa,curve_nistp256,ed25519,sm2,drbg_hash,cipher,modes,md,hmac test=pkcs12_gen
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,pkcs12_parse,sal_file,sal_str,pem,rsa,ecdsa,curve_nistp256,curve_nistp384,curve_nistp521,ed25519,sm2,cipher,modes,md,drbg_hash,hmac test=pkcs12_parse
+    ### pkcs12 gen ####
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,sal_file,sal_str,pkcs12_gen,key_decode,x509_crl,sal_file,pem,rsa,ecdsa,curve_nistp256,ed25519,sm2,drbg_hash,cipher,modes,md,hmac test=pkcs12_gen
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,pkcs12_parse,x509_crl,x509_crt,x509_crl,x509_vfy,sal_file,sal_str,pem,rsa,ecdsa,curve_nistp256,curve_nistp384,curve_nistp521,ed25519,sm2,cipher,modes,md,drbg_hash,hmac test=pkcs12_parse
 }
 
 provider_test_check()
@@ -541,6 +541,7 @@ case $TEST in
         test_bn
         test_ecc
         test_pkey
+        test_pki
         test_tls
         test_provider
         test_preset_iso19790

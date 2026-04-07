@@ -1142,7 +1142,10 @@ static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
         return ret;
     }
     BSL_ASN1_Buffer *oid = algoId; // OID
+#if defined(HITLS_CRYPTO_ECDSA) || defined(HITLS_CRYPTO_SM2) || \
+    defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_DSA) || defined(HITLS_CRYPTO_DH)
     BSL_ASN1_Buffer *algParam = algoId + 1; // the parameters
+#endif
     BSL_ASN1_Buffer *pubkey = &encode[CRYPT_SUBKEYINFO_BITSTRING_IDX]; // the last BSL_ASN1_Buffer, the pubkey
     BSL_ASN1_BitString bitPubkey;
     ret = BSL_ASN1_DecodePrimitiveItem(pubkey, &bitPubkey);

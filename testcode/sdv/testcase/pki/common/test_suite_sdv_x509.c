@@ -697,7 +697,7 @@ EXIT:
 }
 /* END_CASE */
 
-#ifdef HITLS_PKI_X509_CSR_ATTR
+#if defined(HITLS_PKI_X509_CSR_GEN) && defined(HITLS_PKI_X509_CSR_ATTR)
 static int32_t TestSetCsrAttrs(HITLS_X509_Csr *csr)
 {
     int32_t ret = -1;
