@@ -385,9 +385,8 @@ int32_t CRYPT_EAL_MdMBInit(CRYPT_EAL_MdCtx *ctx)
         return CRYPT_NULL_INPUT;
     }
 
-    CRYPT_MD_AlgId id = ctx->id;
     if (ctx->mbMethod.init == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_NOT_SUPPORT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_NOT_SUPPORT);
         return CRYPT_NOT_SUPPORT;
     }
     int32_t ret = ctx->mbMethod.init(ctx->data);
@@ -409,9 +408,8 @@ int32_t CRYPT_EAL_MdMBUpdate(CRYPT_EAL_MdCtx *ctx, const uint8_t *data[], uint32
         return CRYPT_SUCCESS;
     }
 
-    CRYPT_MD_AlgId id = ctx->id;
     if (ctx->mbMethod.update == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_NOT_SUPPORT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_NOT_SUPPORT);
         return CRYPT_NOT_SUPPORT;
     }
 
@@ -430,9 +428,8 @@ int32_t CRYPT_EAL_MdMBFinal(CRYPT_EAL_MdCtx *ctx, uint8_t *digest[], uint32_t *o
         return CRYPT_NULL_INPUT;
     }
 
-    CRYPT_MD_AlgId id = ctx->id;
     if (ctx->mbMethod.final == NULL) {
-        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, id, CRYPT_NOT_SUPPORT);
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_NOT_SUPPORT);
         return CRYPT_NOT_SUPPORT;
     }
 
