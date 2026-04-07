@@ -18,7 +18,7 @@ Use `-DHITLS_BUILD_PROFILE=<preset>` to load a built-in preset:
 You can also load a preset file directly via CMake's `-C` parameter:
 
 ```bash
-cmake .. -C cmake/presets/full.cmake
+cmake .. -C ../cmake/presets/full.cmake
 ```
 
 > **Note:** A custom preset file loaded via `-C` must contain `set(HITLS_PRESET_LOADED ON CACHE BOOL "" FORCE)`.

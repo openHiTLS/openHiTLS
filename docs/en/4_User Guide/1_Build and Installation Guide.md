@@ -167,18 +167,37 @@ cmake .. -C ../path/to/your_feature_config.cmake
 
 #### 3.1.2 Cross Compilation
 
+1. Using a toolchain file (recommended)
+
 To cross compile openHiTLS, use the **-DCMAKE_TOOLCHAIN_FILE** parameter of CMake to specify a toolchain file. Pre-built toolchain files for common platforms are available under `cmake/toolchain/`:
 
 ```bash
 cd openHiTLS
 mkdir -p ./build
 cd ./build
-# Use the built-in ARMv8 toolchain (see cmake/toolchain/ for other options)
+# Use the aarch64 (ARMv8 64-bit) toolchain file (requires prior installation of aarch64-linux-gnu-gcc)
 cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain/aarch64-linux-gnu-gcc.cmake
 make -j
 ```
 
 For a custom toolchain, use the files in `cmake/toolchain/` as templates and pass the path via `-DCMAKE_TOOLCHAIN_FILE`.
+
+2. Specifying the cross-compiler directly
+
+In addition to using a toolchain configuration file, you can also specify the cross-compiler directly in the CMake configuration phase, for example:
+
+```bash
+cd openHiTLS
+mkdir -p ./build
+cd ./build
+cmake .. \
+    -DCMAKE_SYSTEM_NAME=Linux \
+    -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+    -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+    -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+    -DCMAKE_ASM_COMPILER=aarch64-linux-gnu-gcc
+make -j
+```
 
 ### 3.2 Installing the Build Result
 

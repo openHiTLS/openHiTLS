@@ -104,7 +104,7 @@ cd openhitls && mkdir -p ./build && cd ./build
 ```
 Step 2 (Configure, choose as needed):
 
-* Default build (all features enabled, builds static libraries, shared libraries and object libraries):
+* Default build (all features enabled, builds static libraries and shared libraries):
 ```bash
 cmake ..
 ```
