@@ -22,6 +22,7 @@
 #include "crypt_eal_md.h"
 #include "hitls_cert_local.h"
 #include "hitls_pki_crl.h"
+#include "hitls_pki_cms.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -113,12 +114,12 @@ typedef struct {
     BSL_Buffer content;   /**< Content (optional) */
 } CMS_ContentInfo;
 
-typedef struct _HITLS_CMS {
+struct _HITLS_CMS {
     int32_t dataType;                     /**< CMS data type */
     union {
         CMS_SignedData *signedData;
     } ctx;
-} HITLS_CMS;
+};
 
 /**
  * @brief Parse SignedData from ASN.1 encoded buffer

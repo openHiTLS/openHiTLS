@@ -45,7 +45,7 @@ typedef enum {
 } HITLS_X509_CSR_STATE;
 
 /* PKCS #10 */
-typedef struct _HITLS_X509_Csr {
+struct _HITLS_X509_Csr {
     uint8_t flag; // Used to mark csr parsing or generation, indicating resource release behavior.
     uint8_t state;
 
@@ -59,7 +59,7 @@ typedef struct _HITLS_X509_Csr {
     BSL_SAL_RefCount references;
     CRYPT_EAL_LibCtx *libCtx;         // Provider context
     const char *attrName;             // Provider attribute name
-} HITLS_X509_Csr;
+};
 
 #ifdef __cplusplus
 }

@@ -35,6 +35,7 @@
 #endif
 #ifdef HITLS_PKI_INFO_CSR
 #include "hitls_csr_local.h"
+#include "hitls_pki_csr.h"
 #endif
 #ifdef HITLS_PKI_INFO_CRL
 #include "hitls_crl_local.h"
