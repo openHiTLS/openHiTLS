@@ -24,6 +24,7 @@
 #include "bsl_obj.h"
 #include "sal_atomic.h"
 #include "hitls_x509_local.h"
+#include "hitls_pki_cert.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,7 +53,7 @@ typedef enum {
     HITLS_X509_CERT_STATE_GEN,
 } HITLS_X509_CERT_STATE;
 
-typedef struct _HITLS_X509_Cert {
+struct _HITLS_X509_Cert {
     uint8_t flag; // Used to mark certificate parsing or generation, indicating resource release behavior.
     uint8_t state;
     bool isProvider;
@@ -67,7 +68,7 @@ typedef struct _HITLS_X509_Cert {
 
     CRYPT_EAL_LibCtx *libCtx;         // Provider context
     const char *attrName;             // Provider attribute name
-} HITLS_X509_Cert;
+};
 
 #ifdef HITLS_PKI_X509_VFY
 bool HITLS_X509_CheckIssued(HITLS_X509_Cert *issue, HITLS_X509_Cert *subject);

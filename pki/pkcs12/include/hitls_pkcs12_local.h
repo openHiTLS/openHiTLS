@@ -26,6 +26,7 @@
 #include "hitls_pki_cert.h"
 #include "hitls_pki_crl.h"
 #include "crypt_eal_codecs.h"
+#include "hitls_pki_pkcs12.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,7 +45,7 @@ typedef struct {
 } HITLS_PKCS12_MacData;
 
 /* This struct is provided for users to create related bags and add them to the p12-ctx. */
-typedef struct _HITLS_PKCS12_Bag {
+struct _HITLS_PKCS12_Bag {
     uint32_t type;
     uint32_t id;
     union {
@@ -55,13 +56,13 @@ typedef struct _HITLS_PKCS12_Bag {
     } value;
     HITLS_X509_Attrs *attributes; // localKeyId, friendlyName, ect. Item is HITLS_PKCS12_SafeBagAttr.
     BSL_SAL_RefCount references;
-} HITLS_PKCS12_Bag;
+};
 
 /*
  * The Top-Level p12-ctx, which can store certificates and pkey required by a .p12 file.
  * Note that the entity-cert and entity-pkey are unique.
  */
-typedef struct _HITLS_PKCS12 {
+struct _HITLS_PKCS12 {
     uint32_t version;
     HITLS_PKCS12_Bag *key;         /* for store p8ShroudedKeyBag, only one p8ShroudedKeyBag is supported. */
     HITLS_PKCS12_Bag *entityCert;  /* for store entity-cert bag. If we find a cert that matches the p8ShroudedKeyBag,
@@ -73,7 +74,7 @@ typedef struct _HITLS_PKCS12 {
     HITLS_PKCS12_MacData *macData;
     HITLS_PKI_LibCtx *libCtx;
     const char *attrName;
-} HITLS_PKCS12;
+};
 
 /* A common bag, could store a crl-bag, or a cert-bag, or a secret-bag... */
 typedef struct {

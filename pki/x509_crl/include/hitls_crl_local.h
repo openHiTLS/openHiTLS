@@ -33,12 +33,12 @@ extern "C" {
 
 #define BSL_TIME_REVOKE_TIME_IS_GMT  0x4
 
-typedef struct _HITLS_X509_CrlEntry {
+struct _HITLS_X509_CrlEntry {
     uint8_t flag;
     BSL_ASN1_Buffer serialNumber;
     BSL_TIME time;
     BSL_ASN1_List *extList;
-} HITLS_X509_CrlEntry;
+};
 
 typedef struct {
     uint8_t *tbsRawData;
@@ -61,7 +61,7 @@ typedef enum {
     HITLS_X509_CRL_STATE_GEN,
 } HITLS_X509_CRL_STATE;
 
-typedef struct _HITLS_X509_Crl {
+struct _HITLS_X509_Crl {
     uint8_t flag;
     uint8_t state;
 
@@ -72,7 +72,7 @@ typedef struct _HITLS_X509_Crl {
     BSL_ASN1_BitString signature;
 
     BSL_SAL_RefCount references;
-} HITLS_X509_Crl;
+};
 
 int32_t HITLS_ParseCrlExtReason(HITLS_X509_ExtEntry *extEntry, void *val);
 
