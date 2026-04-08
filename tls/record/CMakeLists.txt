@@ -12,7 +12,27 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _record_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+set(_record_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_alert.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_buf.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_conn.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_crypto.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_crypto_aead.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_crypto_cbc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_read.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_write.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/record.c
+)
+
+if(HITLS_TLS_PROTO_DTLS12)
+    list(APPEND _record_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_unprocessed_msg.c)
+    if(HITLS_BSL_UIO_UDP)
+        list(APPEND _record_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_retransmit.c)
+        if(HITLS_TLS_FEATURE_ANTI_REPLAY)
+            list(APPEND _record_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_anti_replay.c)
+        endif()
+    endif()
+endif()
 
 add_library(_hitls_tls_record OBJECT ${_record_sources})
 

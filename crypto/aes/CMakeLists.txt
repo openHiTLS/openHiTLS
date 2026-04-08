@@ -12,40 +12,45 @@
 # See the Mulan PSL v2 for more details.
 
 
-set(_aes_sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_aes_setkey.c
-)
+set(_aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_aes_setkey.c)
 
 if(HITLS_CRYPTO_AES_X8664)
-    list(APPEND _aes_sources 
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_x86_64.S
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_ecb_x86_64.S
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_cbc_x86_64.S
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_ctr_x86_64.S
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_xts_x86_64.S
-    )
-
+    list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_x86_64.S)
+    if(HITLS_CRYPTO_ECB)
+        list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_ecb_x86_64.S)
+    endif()
+    if(HITLS_CRYPTO_CBC)
+        list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_cbc_x86_64.S)
+    endif()
+    if(HITLS_CRYPTO_CTR OR HITLS_CRYPTO_GCM)
+        list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_ctr_x86_64.S)
+    endif()
+    if(HITLS_CRYPTO_XTS)
+        list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_xts_x86_64.S)
+    endif()
 elseif(HITLS_CRYPTO_AES_ARMV8)
-    list(APPEND _aes_sources 
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_armv8.S
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_ecb_armv8.S
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_cbc_armv8.S
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_ctr_armv8.S
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_xts_armv8.S
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_cfb_armv8.S
-    )
+    list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_armv8.S)
+    if(HITLS_CRYPTO_ECB)
+        list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_ecb_armv8.S)
+    endif()
+    if(HITLS_CRYPTO_CBC)
+        list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_cbc_armv8.S)
+    endif()
+    if(HITLS_CRYPTO_CTR OR HITLS_CRYPTO_GCM)
+        list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_ctr_armv8.S)
+    endif()
+    if(HITLS_CRYPTO_XTS)
+        list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_xts_armv8.S)
+    endif()
+    if(HITLS_CRYPTO_CFB)
+        list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/crypt_aes_cfb_armv8.S)
+    endif()
 else()
-    list(APPEND _aes_sources 
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_aes.c
-    ) 
+    list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_aes.c)
     if(HITLS_CRYPTO_AES_PRECALC_TABLES)
-        list(APPEND _aes_sources
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_aes_tbox.c
-        )
+        list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_aes_tbox.c)
     else()
-        list(APPEND _aes_sources
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_aes_sbox.c
-        )
+        list(APPEND _aes_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_aes_sbox.c)
     endif()
 endif()
 

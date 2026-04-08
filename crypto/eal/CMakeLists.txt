@@ -12,7 +12,60 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _eal_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+set(_eal_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_common.c)
+if(HITLS_CRYPTO_CIPHER)
+    list(APPEND _eal_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_cipher.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_cipher_method.c
+    )
+endif()
+if(HITLS_CRYPTO_ENTROPY)
+    list(APPEND _eal_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_entropy.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_entropyPool.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_entropy_ecf.c
+    )
+endif()
+if(HITLS_CRYPTO_KDF)
+    list(APPEND _eal_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_kdf.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_kdf_method.c
+    )
+endif()
+if(HITLS_CRYPTO_CODECSKEY AND HITLS_CRYPTO_PROVIDER)
+    list(APPEND _eal_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_keymgmt_util.c)
+endif()
+if(HITLS_CRYPTO_MAC)
+    list(APPEND _eal_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_mac.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_mac_method.c
+    )
+endif()
+if(HITLS_CRYPTO_MD)
+    list(APPEND _eal_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_md.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_md_method.c
+    )
+endif()
+if(HITLS_CRYPTO_PKEY)
+    list(APPEND _eal_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_pkey_computesharekey.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_pkey_crypt.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_pkey_gen.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_pkey_method.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_pkey_params.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_pkey_sign.c
+    )
+endif()
+if(HITLS_CRYPTO_PKEY_KEM)
+    list(APPEND _eal_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_pkey_kem.c)
+endif()
+if(HITLS_CRYPTO_DRBG)
+    list(APPEND _eal_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_rand.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/eal_rand_method.c
+    )
+endif()
 
 add_library(_hitls_crypto_eal OBJECT ${_eal_sources})
 

@@ -12,10 +12,21 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _ecc_sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc*.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp*.c
+set(_ecc_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc_method.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc_para.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecc_pkey.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_mont.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_nist.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_simple.c
 )
+if(HITLS_CRYPTO_CURVE_NISTP224 AND HITLS_CRYPTO_NIST_USE_ACCEL)
+    list(APPEND _ecc_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_nistp224.c)
+endif()
+if(HITLS_CRYPTO_CURVE_NISTP521 AND HITLS_CRYPTO_NIST_USE_ACCEL)
+    list(APPEND _ecc_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/ecp_nistp521.c)
+endif()
 
 if(HITLS_CRYPTO_ECC_X8664)
     list(APPEND _ecc_sources
@@ -41,7 +52,9 @@ elseif(HITLS_CRYPTO_ECC_ARMV7)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/ecp_sm2_armv7.S
     )
 else()
-    list(APPEND _ecc_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/noasm_ecp_nistp256.c)
+    if(HITLS_CRYPTO_CURVE_NISTP256 AND HITLS_CRYPTO_NIST_USE_ACCEL)
+        list(APPEND _ecc_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/noasm_ecp_nistp256.c)
+    endif()
 endif()
 
 add_library(_hitls_crypto_ecc OBJECT ${_ecc_sources})

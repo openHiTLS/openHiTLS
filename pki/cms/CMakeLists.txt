@@ -12,7 +12,16 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _cms_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+set(_cms_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_cms_common.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_cms_util.c
+)
+if(HITLS_PKI_CMS_SIGNEDDATA)
+    list(APPEND _cms_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_cms_pqc.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_cms_signdata.c
+    )
+endif()
 
 add_library(_hitls_pki_cms OBJECT ${_cms_sources})
 

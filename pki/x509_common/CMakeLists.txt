@@ -12,7 +12,17 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _x509_common_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+set(_x509_common_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_x509_ctrl.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_x509_common.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_x509_ext.c
+)
+if(HITLS_PKI_X509_VFY_IDENTITY)
+    list(APPEND _x509_common_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_x509_util.c)
+endif()
+if((HITLS_PKI_X509_CSR AND HITLS_PKI_X509_CSR_ATTR) OR HITLS_PKI_PKCS12)
+    list(APPEND _x509_common_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/hitls_x509_attrs.c)
+endif()
 
 add_library(_hitls_pki_x509_common OBJECT ${_x509_common_sources})
 

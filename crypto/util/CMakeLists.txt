@@ -12,7 +12,20 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _util_sources ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
+set(_util_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypt_util_ctrl.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypt_util_pkey.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypt_utils.c
+)
+if(HITLS_CRYPTO_PROVIDER AND HITLS_CRYPTO_MD)
+    list(APPEND _util_sources ${CMAKE_CURRENT_SOURCE_DIR}/crypt_util_md.c)
+endif()
+if(HITLS_CRYPTO_RSA_EMSA_PSS OR HITLS_CRYPTO_RSAES_OAEP OR HITLS_CRYPTO_SLH_DSA)
+    list(APPEND _util_sources ${CMAKE_CURRENT_SOURCE_DIR}/crypt_util_mgf.c)
+endif()
+if(HITLS_CRYPTO_DRBG OR HITLS_CRYPTO_CURVE25519 OR HITLS_CRYPTO_RSA OR HITLS_CRYPTO_BN_RAND OR HITLS_CRYPTO_SM9)
+    list(APPEND _util_sources ${CMAKE_CURRENT_SOURCE_DIR}/crypt_util_rand.c)
+endif()
 
 add_library(_hitls_crypto_util OBJECT ${_util_sources})
 

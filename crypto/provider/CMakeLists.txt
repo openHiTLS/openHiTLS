@@ -12,8 +12,46 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _mgr_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/mgr/*.c)
-file(GLOB _default_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/default/*.c)
+set(_mgr_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mgr/crypt_provider.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mgr/crypt_provider_common.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/mgr/crypt_provider_compare.c
+)
+set(_default_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/default/crypt_default_provider.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/default/crypt_default_keymgmt.c
+)
+if(HITLS_CRYPTO_CIPHER)
+    list(APPEND _default_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/default/crypt_default_cipher.c)
+endif()
+if(HITLS_CRYPTO_KEY_DECODE_CHAIN)
+    list(APPEND _default_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/default/crypt_default_decode.c)
+endif()
+if(HITLS_CRYPTO_KDF)
+    list(APPEND _default_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/default/crypt_default_kdf.c)
+endif()
+if(HITLS_CRYPTO_MAC)
+    list(APPEND _default_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/default/crypt_default_mac.c)
+endif()
+if(HITLS_CRYPTO_MD)
+    list(APPEND _default_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/default/crypt_default_md.c)
+endif()
+if(HITLS_CRYPTO_DRBG)
+    list(APPEND _default_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/default/crypt_default_rand.c)
+endif()
+if(HITLS_CRYPTO_PKEY_KEM)
+    list(APPEND _default_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/default/crypt_default_kem.c)
+endif()
+if(HITLS_CRYPTO_PKEY_EXCH)
+    list(APPEND _default_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/default/crypt_default_keyexch.c)
+endif()
+if(HITLS_CRYPTO_PKEY_CRYPT)
+    list(APPEND _default_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/default/crypt_default_pkeycipher.c)
+endif()
+if(HITLS_CRYPTO_PKEY_SIGN)
+    list(APPEND _default_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/default/crypt_default_sign.c)
+endif()
+
 file(GLOB _cmvp_utils_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/cmvp/cmvp_utils/*.c)
 file(GLOB _cmvp_fips_prov_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/cmvp/fips_prov/*.c)
 file(GLOB _cmvp_iso_prov_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/cmvp/iso_prov/*.c)

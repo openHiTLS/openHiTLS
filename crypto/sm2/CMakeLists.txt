@@ -12,7 +12,13 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _sm2_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+set(_sm2_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/sm2_sign.c)
+if(HITLS_CRYPTO_SM2_CRYPT)
+    list(APPEND _sm2_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/sm2_crypt.c)
+endif()
+if(HITLS_CRYPTO_SM2_EXCH OR HITLS_CRYPTO_SM2_CRYPT)
+    list(APPEND _sm2_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/sm2_exch.c)
+endif()
 
 add_library(_hitls_crypto_sm2 OBJECT ${_sm2_sources})
 

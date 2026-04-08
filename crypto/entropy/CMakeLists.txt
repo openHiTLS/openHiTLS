@@ -12,24 +12,11 @@
 # See the Mulan PSL v2 for more details.
 
 
-set(_entropy_sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/entropy.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/entropy_hardware.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/entropy_seed_pool.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/entropy_system.c
-)
+file(GLOB _entropy_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/entropy*.c)
 
 if(HITLS_CRYPTO_ENTROPY_SYS)
-    list(APPEND _entropy_sources
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/es_cf.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/es_cf_df.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/es_entropy.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/es_entropy_pool.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/es_health_test.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/es_noise_source.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/es_ns_jitter.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/es_ns_timestamp.c
-    )
+    file(GLOB _entropy_sources_es ${CMAKE_CURRENT_SOURCE_DIR}/src/es_*.c)
+    list(APPEND _entropy_sources ${_entropy_sources_es})
 endif()
 
 if(_entropy_sources)

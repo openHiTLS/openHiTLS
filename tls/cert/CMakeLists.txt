@@ -12,10 +12,21 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _cert_sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/cert_adapt/*.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/hitls_x509_adapt/*.c
-)
+file(GLOB _cert_sources ${CMAKE_CURRENT_SOURCE_DIR}/cert_adapt/*.c)
+
+list(APPEND _cert_sources ${CMAKE_CURRENT_SOURCE_DIR}/hitls_x509_adapt/hitls_x509_init.c)
+if(HITLS_TLS_CALLBACK_CERT OR HITLS_TLS_FEATURE_PROVIDER)
+    list(APPEND _cert_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/hitls_x509_adapt/hitls_x509_cert_chain.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/hitls_x509_adapt/hitls_x509_cert_magr.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/hitls_x509_adapt/hitls_x509_cert_store.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/hitls_x509_adapt/hitls_x509_crypto.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/hitls_x509_adapt/hitls_x509_pkey_magr.c
+    )
+    if(HITLS_TLS_CONFIG_CERT_CRL)
+        list(APPEND _cert_sources ${CMAKE_CURRENT_SOURCE_DIR}/hitls_x509_adapt/hitls_x509_crl_magr.c)
+    endif()
+endif()
 
 add_library(_hitls_tls_cert OBJECT ${_cert_sources})
 

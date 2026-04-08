@@ -12,7 +12,34 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _bn_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_*.c)
+set(_bn_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_basic.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_bincal.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_gcd.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_mont.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_operation.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_optimizer.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_ucal.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_utils.c
+)
+if(HITLS_CRYPTO_BN_COMBA)
+    list(APPEND _bn_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_comba.c)
+endif()
+if(HITLS_CRYPTO_BN_RFC_PRIME)
+    list(APPEND _bn_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_const.c)
+endif()
+if(HITLS_CRYPTO_ECC)
+    list(APPEND _bn_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_nistmod.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_sqrt.c
+    )
+endif()
+if(HITLS_CRYPTO_BN_PRIME)
+    list(APPEND _bn_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_prime.c)
+endif()
+if(HITLS_CRYPTO_BN_RAND)
+    list(APPEND _bn_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/bn_rand.c)
+endif()
 
 if(HITLS_CRYPTO_BN_X8664)
     list(APPEND _bn_sources
