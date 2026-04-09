@@ -452,18 +452,20 @@ static int32_t GetTag(MODES_CipherCCMCtx *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_MSGLEN_LEFT_ERROR);
         return CRYPT_MODES_MSGLEN_LEFT_ERROR;
     }
-    int32_t ret = TagInit(ctx);
+    // Copy the context to a local variable to avoid modifying the original context.
+    MODES_CipherCCMCtx localCtx = *ctx;
+    int32_t ret = TagInit(&localCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = CtrTagCalc(ctx);
+    ret = CtrTagCalc(&localCtx);
     if (ret != CRYPT_SUCCESS) {
         // An error is reported by the internal function, and no redundant pushErr is required.
         return ret;
     }
-    if (ctx->lastLen != 0) {
-        ret = ctx->ciphMeth->encryptBlock(ctx->ciphCtx, ctx->tag, ctx->tag, CCM_BLOCKSIZE);
+    if (localCtx.lastLen != 0) {
+        ret = localCtx.ciphMeth->encryptBlock(localCtx.ciphCtx, localCtx.tag, localCtx.tag, CCM_BLOCKSIZE);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
@@ -476,7 +478,7 @@ static int32_t GetTag(MODES_CipherCCMCtx *ctx, void *val, uint32_t len)
      * U := T XOR first-M-bytes( S_0 )
      */
     for (i = 0; i < len; i++) {
-        tag[i] = ctx->tag[i] ^ ctx->nonce[i];
+        tag[i] = localCtx.tag[i] ^ localCtx.nonce[i];
     }
     return CRYPT_SUCCESS;
 }
@@ -489,8 +491,13 @@ int32_t MODES_CCM_Ctrl(MODES_CCM_Ctx *modeCtx, int32_t opt, void *val, uint32_t 
     }
     switch (opt) {
         case CRYPT_CTRL_SET_IV:
-        case CRYPT_CTRL_REINIT_STATUS:
-            return SetIv(&modeCtx->ccmCtx, val, len);
+        case CRYPT_CTRL_REINIT_STATUS: {
+            int32_t ret = SetIv(&modeCtx->ccmCtx, val, len);
+            if (ret == CRYPT_SUCCESS) {
+                MODES_ClearVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, CCM_MAX_TAGSIZE);
+            }
+            return ret;
+        }
         case CRYPT_CTRL_GET_BLOCKSIZE:
             if (val == NULL || len != sizeof(uint32_t)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);
@@ -504,6 +511,8 @@ int32_t MODES_CCM_Ctrl(MODES_CCM_Ctx *modeCtx, int32_t opt, void *val, uint32_t 
             return SetMsgLen(&modeCtx->ccmCtx, val, len);
         case CRYPT_CTRL_SET_AAD:
             return SetAad(&modeCtx->ccmCtx, val, len);
+        case CRYPT_CTRL_SET_TAG:
+            return MODES_SetVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, CCM_MAX_TAGSIZE, val, len);
         case CRYPT_CTRL_GET_TAG:
             return GetTag(&modeCtx->ccmCtx, val, len);
         default:
@@ -575,10 +584,9 @@ int32_t MODES_CCM_Update(MODES_CCM_Ctx *modeCtx, const uint8_t *in, uint32_t inL
 
 int32_t MODES_CCM_Final(MODES_CCM_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
 {
-    (void) modeCtx;
-    (void) out;
-    (void) outLen;
-    return CRYPT_EAL_CIPHER_FINAL_WITH_AEAD_ERROR;
+    uint8_t tagBuf[CCM_MAX_TAGSIZE] = {0};
+    return MODES_AeadCheckTag(modeCtx->enc, &modeCtx->ccmCtx, out, outLen, modeCtx->vfyTag,
+        modeCtx->vfyTagLen, tagBuf, (MODES_AeadGetTag)GetTag);
 }
 
 int32_t MODES_CCM_DeInitCtx(MODES_CCM_Ctx *modeCtx)
@@ -593,6 +601,7 @@ int32_t MODES_CCM_DeInitCtx(MODES_CCM_Ctx *modeCtx)
     BSL_SAL_CleanseData(&modeCtx->ccmCtx, sizeof(MODES_CipherCCMCtx));
     modeCtx->ccmCtx.ciphMeth = ciphMeth;
     modeCtx->ccmCtx.ciphCtx = ciphCtx;
+    MODES_ClearVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, CCM_MAX_TAGSIZE);
     return CRYPT_SUCCESS;
 }
 
