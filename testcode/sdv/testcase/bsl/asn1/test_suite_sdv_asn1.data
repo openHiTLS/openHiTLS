@@ -370,6 +370,12 @@ SDV_BSL_ASN1_ENCODE_LIST_TC001:2:"31143012060355040a130b456e65726779205445535431
 EncodeListItem: set of elements are DER-sorted
 SDV_BSL_ASN1_ENCODE_LIST_SET_OF_SORT_TC001:
 
+EncodeListItem: set of single element keeps canonical encoding
+SDV_BSL_ASN1_ENCODE_LIST_SET_OF_SINGLE_ELEMENT_TC001:
+
+EncodeListItem: set of empty list keeps current interface behavior
+SDV_BSL_ASN1_ENCODE_LIST_SET_OF_EMPTY_LIST_TC001:
+
 EncodeListItem: sequence of preserves input order
 SDV_BSL_ASN1_ENCODE_LIST_SEQUENCE_OF_ORDER_TC001:
 

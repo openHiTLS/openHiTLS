@@ -1273,6 +1273,45 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_LIST_SET_OF_SINGLE_ELEMENT_TC001(void)
+{
+    BSL_ASN1_TemplateItem item[] = {{BSL_ASN1_TAG_INTEGER, 0, 0}};
+    BSL_ASN1_Template templ = {item, sizeof(item) / sizeof(item[0])};
+    uint8_t data128[] = {0x80};
+    uint8_t expect[] = {0x02, 0x02, 0x00, 0x80};
+    BSL_ASN1_Buffer in[] = {
+        {BSL_ASN1_TAG_INTEGER, sizeof(data128), data128},
+    };
+    BSL_ASN1_Buffer out = {0};
+
+    TestMemInit();
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, sizeof(in) / sizeof(in[0]), &templ, in,
+        sizeof(in) / sizeof(in[0]), &out), BSL_SUCCESS);
+    ASSERT_EQ(out.tag, BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET);
+    ASSERT_EQ(out.len, sizeof(expect));
+    ASSERT_COMPARE("Encode set of single element", expect, sizeof(expect), out.buff, out.len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_SAL_FREE(out.buff);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_ENCODE_LIST_SET_OF_EMPTY_LIST_TC001(void)
+{
+    BSL_ASN1_TemplateItem item[] = {{BSL_ASN1_TAG_INTEGER, 0, 0}};
+    BSL_ASN1_Template templ = {item, sizeof(item) / sizeof(item[0])};
+    uint8_t data = 1;
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_INTEGER, 1, &data};
+    BSL_ASN1_Buffer out = {0};
+
+    ASSERT_EQ(BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SET, 0, &templ, &asn, 1, &out), BSL_INVALID_ARG);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_BSL_ASN1_ENCODE_LIST_SEQUENCE_OF_ORDER_TC001(void)
 {
     BSL_ASN1_TemplateItem item[] = {{BSL_ASN1_TAG_INTEGER, 0, 0}};
