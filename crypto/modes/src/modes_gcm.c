@@ -325,13 +325,13 @@ static int32_t MODES_GCM_Crypt(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8
     return CRYPT_SUCCESS;
 }
 
-static void GcmPad(MODES_CipherGCMCtx *ctx)
+static void GcmPad(const MODES_CipherGCMCtx *ctx, uint8_t ghash[GCM_BLOCKSIZE], uint8_t remCt[GCM_BLOCKSIZE])
 {
     // S = GHASHH (A || 0v || C || 0u || [len(A)]64 || [len(C)]64).
     if (ctx->lastLen != 0) {
         uint32_t offset = GCM_BLOCKSIZE - ctx->lastLen;
-        (void)memset_s(ctx->remCt + offset, GCM_BLOCKSIZE - offset, 0, ctx->lastLen);
-        GcmHashMultiBlock(ctx->ghash, ctx->hTable, ctx->remCt, GCM_BLOCKSIZE);
+        (void)memset_s(remCt + offset, GCM_BLOCKSIZE - offset, 0, ctx->lastLen);
+        GcmHashMultiBlock(ghash, ctx->hTable, remCt, GCM_BLOCKSIZE);
     }
     uint64_t aadLen = (uint64_t)(ctx->aadLen) << 3; // bitLen = byteLen << 3
     uint64_t plaintextLen = ctx->plaintextLen << 3; // bitLen = byteLen << 3
@@ -339,7 +339,7 @@ static void GcmPad(MODES_CipherGCMCtx *ctx)
     Uint64ToBeBytes(aadLen, padBuf);
     Uint64ToBeBytes(plaintextLen, padBuf + 8); // The last 64 bits (8 bytes) is the length of the ciphertext.
 
-    GcmHashMultiBlock(ctx->ghash, ctx->hTable, padBuf, GCM_BLOCKSIZE);
+    GcmHashMultiBlock(ghash, ctx->hTable, padBuf, GCM_BLOCKSIZE);
 }
 
 static int32_t SetTagLen(MODES_CipherGCMCtx *ctx, const uint32_t *val, uint32_t len)
@@ -380,11 +380,16 @@ static int32_t GetTag(MODES_CipherGCMCtx *ctx, uint8_t *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_TAGLEN_ERROR);
         return CRYPT_MODES_TAGLEN_ERROR;
     }
+    // Copy the context to a local variable to avoid modifying the original context.
+    uint8_t ghash[GCM_BLOCKSIZE];
+    uint8_t remCt[GCM_BLOCKSIZE];
+    (void)memcpy_s(ghash, sizeof(ghash), ctx->ghash, sizeof(ctx->ghash));
+    (void)memcpy_s(remCt, sizeof(remCt), ctx->remCt, sizeof(ctx->remCt));
     ctx->cryptCnt++; // The encryption/decryption process ends. Key usage times + 1
-    GcmPad(ctx);
+    GcmPad(ctx, ghash, remCt);
     uint32_t i;
     for (i = 0; i < len; i++) {
-        val[i] = ctx->ghash[i] ^ ctx->ek0[i];
+        val[i] = ghash[i] ^ ctx->ek0[i];
     }
     return CRYPT_SUCCESS;
 }
@@ -406,12 +411,19 @@ int32_t MODES_GCM_Ctrl(MODES_GCM_Ctx *modeCtx, int32_t cmd, void *val, uint32_t 
     }
     switch (cmd) {
         case CRYPT_CTRL_SET_IV:
-        case CRYPT_CTRL_REINIT_STATUS:
-            return MODES_GCM_SetIv(&modeCtx->gcmCtx, val, len);
+        case CRYPT_CTRL_REINIT_STATUS: {
+            int32_t ret = MODES_GCM_SetIv(&modeCtx->gcmCtx, val, len);
+            if (ret == CRYPT_SUCCESS) {
+                MODES_ClearVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, GCM_MAX_TAGSIZE);
+            }
+            return ret;
+        }
         case CRYPT_CTRL_SET_TAGLEN:
             return SetTagLen(&modeCtx->gcmCtx, val, len);
         case CRYPT_CTRL_SET_AAD:
             return SetAad(&modeCtx->gcmCtx, val, len);
+        case CRYPT_CTRL_SET_TAG:
+            return MODES_SetVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, GCM_MAX_TAGSIZE, val, len);
         case CRYPT_CTRL_GET_TAG:
             return GetTag(&modeCtx->gcmCtx, val, len);
         case CRYPT_CTRL_GET_BLOCKSIZE:
@@ -486,10 +498,9 @@ int32_t MODES_GCM_Update(MODES_GCM_Ctx *modeCtx, const uint8_t *in, uint32_t inL
 
 int32_t MODES_GCM_Final(MODES_GCM_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
 {
-    (void) modeCtx;
-    (void) out;
-    (void) outLen;
-    return CRYPT_EAL_CIPHER_FINAL_WITH_AEAD_ERROR;
+    uint8_t tagBuf[GCM_MAX_TAGSIZE] = {0};
+    return MODES_AeadCheckTag(modeCtx->enc, &modeCtx->gcmCtx, out, outLen, modeCtx->vfyTag,
+        modeCtx->vfyTagLen, tagBuf, (MODES_AeadGetTag)GetTag);
 }
 
 int32_t MODES_GCM_DeInitCtx(MODES_GCM_Ctx *modeCtx)
@@ -505,6 +516,7 @@ int32_t MODES_GCM_DeInitCtx(MODES_GCM_Ctx *modeCtx)
     modeCtx->gcmCtx.ciphCtx = ciphCtx;
     modeCtx->gcmCtx.ciphMeth = ciphMeth;
     modeCtx->algId = algId;
+    MODES_ClearVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, GCM_MAX_TAGSIZE);
     return CRYPT_SUCCESS;
 }
 

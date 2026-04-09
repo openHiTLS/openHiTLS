@@ -615,6 +615,7 @@ typedef enum {
     CRYPT_CTRL_SET_PADDING,       /**< Set the padding mode of the algorithm. */
     CRYPT_CTRL_GET_PADDING,       /**< Obtain the padding mode of thealgorithm. */
     CRYPT_CTRL_REINIT_STATUS,     /**< Reinitialize the status of the algorithm. */
+    CRYPT_CTRL_SET_TAG,           /**< In AEAD decryption, set expected tag bytes for verification in final(). */
     CRYPT_CTRL_MAX
 } CRYPT_CipherCtrl;
 

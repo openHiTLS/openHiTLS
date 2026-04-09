@@ -289,6 +289,9 @@ static bool CipherCtrlIsCanSet(const CRYPT_EAL_CipherCtx *ctx, int32_t type)
     if (ctx->states == EAL_CIPHER_STATE_NEW) {
         return false;
     }
+    if (type == CRYPT_CTRL_GET_TAG) {
+        return true;
+    }
     if (ctx->states == EAL_CIPHER_STATE_FINAL) {
         return false;
     }
@@ -317,13 +320,6 @@ int32_t CRYPT_EAL_CipherCtrl(CRYPT_EAL_CipherCtx *ctx, int32_t type, void *data,
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }
-    // Setting AAD indicates that the encryption operation has started and no more write operations are allowed.
-    if (type == CRYPT_CTRL_SET_AAD) {
-        ctx->states = EAL_CIPHER_STATE_UPDATE;
-    } else if (type == CRYPT_CTRL_GET_TAG) {
-        // After getTag the system enters the final state.
-        ctx->states = EAL_CIPHER_STATE_FINAL;
-    }
     if (ctx->method.ctrl == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;
@@ -332,6 +328,10 @@ int32_t CRYPT_EAL_CipherCtrl(CRYPT_EAL_CipherCtx *ctx, int32_t type, void *data,
     if (ret != CRYPT_SUCCESS) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_CIPHER, ctx->id, ret);
         return ret;
+    }
+    // Advance the state only after the control path succeeds.
+    if (type == CRYPT_CTRL_SET_AAD) {
+        ctx->states = EAL_CIPHER_STATE_UPDATE;
     }
     return ret;
 }

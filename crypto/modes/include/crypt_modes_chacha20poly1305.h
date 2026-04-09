@@ -26,6 +26,8 @@
 extern "C" {
 #endif // __cplusplus
 
+#define POLY1305_MAX_TAGSIZE 16
+
 typedef struct {
     uint32_t acc[6];    // The intermediate data of the acc, must be greater than 130 bits.
     uint32_t r[4];      // Key information r, 16 bytes, that is, 4 * sizeof(uint32_t)
@@ -47,6 +49,8 @@ typedef struct {
 struct ModesChaChaCtx {
     int32_t algId;
     MODES_CipherChaChaPolyCtx chachaCtx;
+    uint8_t vfyTag[POLY1305_MAX_TAGSIZE];   // tag set by user via ctrl, used for decrypt final verify
+    uint32_t vfyTagLen;
     bool enc;
 };
 

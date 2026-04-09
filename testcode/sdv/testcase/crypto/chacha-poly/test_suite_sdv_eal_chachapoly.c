@@ -514,7 +514,7 @@ EXIT:
 
 /**
  * @test  SDV_CRYPTO_CHACHA20POLY1305_FINAL_API_TC001
- * @title  Invalid Algorithms to call Final Interface Test
+ * @title  ChaCha20-Poly1305 Final Interface Test
  * @precon Registering memory-related functions.
  * @brief
  *    1.Create the context ctx.
@@ -526,7 +526,7 @@ EXIT:
  *    1.Success. Return CRYPT_SUCCESS.
  *    2.Success. Return CRYPT_SUCCESS.
  *    3.Success. Return CRYPT_SUCCESS.
- *    4.Failed. The algorithm is not supported.
+ *    4.Success. Return CRYPT_SUCCESS.
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_CHACHA20POLY1305_FINAL_API_TC001(void)
@@ -546,7 +546,85 @@ void SDV_CRYPTO_CHACHA20POLY1305_FINAL_API_TC001(void)
     ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, data, dataLen, out, &outLen) == CRYPT_SUCCESS);
 
     outLen = sizeof(out);
-    ASSERT_TRUE(CRYPT_EAL_CipherFinal(ctx, out, &outLen) != CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherFinal(ctx, out, &outLen) == CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_CHACHA20POLY1305_FINAL_API_TC002(void)
+{
+    TestMemInit();
+    uint8_t key[32] = {0};
+    uint8_t iv[12] = {0};
+    uint8_t aad[20] = {0};
+    uint8_t pt[32] = {0};
+    uint8_t ct[32] = {0};
+    uint8_t out[32] = {0};
+    uint8_t tag[16] = {0};
+    uint32_t outLen = sizeof(ct);
+
+    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), true) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, pt, sizeof(pt), ct, &outLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, sizeof(tag)) == CRYPT_SUCCESS);
+
+    outLen = sizeof(out);
+    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), false) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAG, tag, sizeof(tag)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, ct, sizeof(ct), out, &outLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherFinal(ctx, out, &outLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(out, pt, sizeof(pt)) == 0);
+    ASSERT_TRUE(outLen == 0);
+
+    outLen = sizeof(out);
+    ASSERT_TRUE(CRYPT_EAL_CipherReinit(ctx, iv, sizeof(iv)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, ct, sizeof(ct), out, &outLen) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, out, &outLen), CRYPT_MODES_TAG_ERROR);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_CHACHA20POLY1305_FINAL_API_TC003(void)
+{
+    TestMemInit();
+    uint8_t key[32] = {0};
+    uint8_t iv[12] = {0};
+    uint8_t aad[20] = {0};
+    uint8_t pt[32] = {0};
+    uint8_t ct[32] = {0};
+    uint8_t out[32] = {0};
+    uint8_t tag[16] = {0};
+    uint8_t badTag[16] = {0};
+    uint32_t outLen = sizeof(ct);
+
+    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), true) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, pt, sizeof(pt), ct, &outLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, sizeof(tag)) == CRYPT_SUCCESS);
+
+    ASSERT_TRUE(memcpy_s(badTag, sizeof(badTag), tag, sizeof(tag)) == EOK);
+    badTag[0] ^= 0x01;
+
+    outLen = sizeof(out);
+    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), false) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAG, badTag, sizeof(badTag)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, ct, sizeof(ct), out, &outLen) == CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, out, &outLen), CRYPT_MODES_TAG_ERROR);
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
@@ -664,6 +742,8 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC001(Hex *key, Hex *iv, Hex *aad, 
     ASSERT_TRUE(outLen == cipher->len);
     ASSERT_TRUE(memcmp(out, cipher->x, cipher->len) == 0);
     ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) == 0);
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, (uint8_t *)outTag, tagLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) == 0);
 
     CRYPT_EAL_CipherDeinit(ctx);
 
@@ -675,6 +755,8 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC001(Hex *key, Hex *iv, Hex *aad, 
 
     ASSERT_TRUE(outLen == data->len);
     ASSERT_TRUE(memcmp(out, data->x, data->len) == 0);
+    ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) == 0);
+    ASSERT_TRUE(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, (uint8_t *)outTag, tagLen) == CRYPT_SUCCESS);
     ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) == 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
@@ -946,7 +1028,7 @@ void SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC006(Hex *key, Hex *iv, Hex *aad, 
     ASSERT_TRUE(memcmp(out, cipher->x, cipher->len) == 0);
     ASSERT_TRUE(memcmp(outTag, tag->x, tag->len) == 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
-    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, (uint8_t *)outTag, tagLen), CRYPT_EAL_ERR_STATE);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, (uint8_t *)outTag, tagLen), CRYPT_SUCCESS);
 
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);

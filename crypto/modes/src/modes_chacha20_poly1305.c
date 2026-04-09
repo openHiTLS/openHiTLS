@@ -199,8 +199,10 @@ static int32_t GetTag(MODES_CipherChaChaPolyCtx *ctx, uint8_t *val, uint32_t len
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_TAGLEN_ERROR);
         return CRYPT_MODES_TAGLEN_ERROR;
     }
-    CipherTextPad(ctx);
-    Poly1305Final(&(ctx->polyCtx), val);
+    // Copy the context to a local variable to avoid modifying the original context.
+    MODES_CipherChaChaPolyCtx localCtx = *ctx;
+    CipherTextPad(&localCtx);
+    Poly1305Final(&(localCtx.polyCtx), val);
     return CRYPT_SUCCESS;
 }
 
@@ -328,12 +330,19 @@ int32_t MODES_CHACHA20POLY1305_Ctrl(MODES_CHACHAPOLY_Ctx *modeCtx, int32_t cmd, 
     }
     
     switch (cmd) {
-        case CRYPT_CTRL_REINIT_STATUS:
-            return SetIv(&modeCtx->chachaCtx, val, len);
+        case CRYPT_CTRL_REINIT_STATUS: {
+            int32_t ret = SetIv(&modeCtx->chachaCtx, val, len);
+            if (ret == CRYPT_SUCCESS) {
+                MODES_ClearVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, POLY1305_MAX_TAGSIZE);
+            }
+            return ret;
+        }
         case CRYPT_CTRL_GET_TAG:
             return GetTag(&modeCtx->chachaCtx, val, len);
         case CRYPT_CTRL_SET_AAD:
             return SetAad(&modeCtx->chachaCtx, val, len);
+        case CRYPT_CTRL_SET_TAG:
+            return MODES_SetVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, POLY1305_MAX_TAGSIZE, val, len);
         case CRYPT_CTRL_GET_BLOCKSIZE:
             if (val == NULL || len != sizeof(uint32_t)) {
                 return CRYPT_INVALID_ARG;
@@ -418,10 +427,9 @@ int32_t MODES_CHACHA20POLY1305_Update(MODES_CHACHAPOLY_Ctx *modeCtx, const uint8
 
 int32_t MODES_CHACHA20POLY1305_Final(MODES_CHACHAPOLY_Ctx *modeCtx, uint8_t *out, uint32_t *outLen)
 {
-    (void) modeCtx;
-    (void) out;
-    (void) outLen;
-    return CRYPT_EAL_CIPHER_FINAL_WITH_AEAD_ERROR;
+    uint8_t tagBuf[POLY1305_MAX_TAGSIZE] = {0};
+    return MODES_AeadCheckTag(modeCtx->enc, &modeCtx->chachaCtx, out, outLen, modeCtx->vfyTag,
+        modeCtx->vfyTagLen, tagBuf, (MODES_AeadGetTag)GetTag);
 }
 
 int32_t MODES_CHACHA20POLY1305_DeInitCtx(MODES_CHACHAPOLY_Ctx *modeCtx)
@@ -434,6 +442,7 @@ int32_t MODES_CHACHA20POLY1305_DeInitCtx(MODES_CHACHAPOLY_Ctx *modeCtx)
     BSL_SAL_CleanseData((void *)(&(modeCtx->chachaCtx.polyCtx)), sizeof(Poly1305Ctx));
     modeCtx->chachaCtx.aadLen = 0;
     modeCtx->chachaCtx.cipherTextLen = 0;
+    MODES_ClearVfyTag(modeCtx->vfyTag, &modeCtx->vfyTagLen, POLY1305_MAX_TAGSIZE);
     Poly1305CleanRegister();
     return CRYPT_SUCCESS;
 }

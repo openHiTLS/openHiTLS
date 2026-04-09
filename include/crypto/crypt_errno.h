@@ -328,6 +328,7 @@ enum CRYPT_ERROR {
     CRYPT_MODES_FEEDBACKSIZE_NOT_SUPPORT,            /**< The algorithm does not support the setting of feedbacksize. */
     CRYPT_MODES_PADDING_NOT_SUPPORT,                 /**< Unsupported padding. */
     CRYPT_MODES_ERR_HCTR_DATA_TOO_SHORT,          /**< HCTR mode requires input data to be at least one block long. */
+    CRYPT_MODES_TAG_ERROR,                           /**< Failed to verify AEAD tag when decrypt. */
 
     CRYPT_HKDF_DKLEN_OVERFLOW = 0x01110001,          /**< The length of the derived key exceeds the maximum. */
     CRYPT_HKDF_NOT_SUPPORTED,                        /**< Unsupport HKDF algorithm. */

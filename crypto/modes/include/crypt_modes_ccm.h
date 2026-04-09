@@ -27,6 +27,7 @@ extern "C" {
 #endif // __cplusplus
 
 #define CCM_BLOCKSIZE 16
+#define CCM_MAX_TAGSIZE 16
 
 typedef struct {
     void *ciphCtx;  /* Context defined by each algorithm  */
@@ -44,6 +45,8 @@ typedef struct {
 struct ModesCcmCtx {
     int32_t algId;
     MODES_CipherCCMCtx ccmCtx;
+    uint8_t vfyTag[CCM_MAX_TAGSIZE];   // tag set by user via ctrl, used for decrypt final verify
+    uint32_t vfyTagLen;
     bool enc;
 };
 

@@ -18,6 +18,7 @@
 
 #include "securec.h"
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
 #include "modes_local.h"
@@ -106,6 +107,58 @@ int32_t MODES_CipherFinalComplete(void *modeCtx, uint8_t *out, uint32_t *outLen)
     (void)modeCtx;
     (void)out;
     *outLen = 0;
+    return CRYPT_SUCCESS;
+}
+
+void MODES_ClearVfyTag(uint8_t *vfyTag, uint32_t *vfyTagLen, uint32_t maxTagLen)
+{
+    if (vfyTag == NULL || vfyTagLen == NULL) {
+        return;
+    }
+    (void)memset_s(vfyTag, maxTagLen, 0, maxTagLen);
+    *vfyTagLen = 0;
+}
+
+int32_t MODES_SetVfyTag(uint8_t *vfyTag, uint32_t *vfyTagLen, uint32_t maxTagLen,
+    const uint8_t *tag, uint32_t inputTagLen)
+{
+    if (vfyTag == NULL || vfyTagLen == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if ((tag == NULL && inputTagLen > 0) || inputTagLen == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    if (inputTagLen > maxTagLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MODES_TAGLEN_ERROR);
+        return CRYPT_MODES_TAGLEN_ERROR;
+    }
+    (void)memcpy_s(vfyTag, maxTagLen, tag, inputTagLen);
+    *vfyTagLen = inputTagLen;
+    return CRYPT_SUCCESS;
+}
+
+int32_t MODES_AeadCheckTag(bool enc, void *ctx, uint8_t *out, uint32_t *outLen, const uint8_t *vfyTag,
+    uint32_t vfyTagLen, uint8_t *tagBuf, MODES_AeadGetTag getTag)
+{
+    if (ctx == NULL || out == NULL || outLen == NULL || vfyTag == NULL || getTag == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    *outLen = 0;
+    if (enc) {
+        return CRYPT_SUCCESS;
+    }
+    int32_t ret = getTag(ctx, tagBuf, vfyTagLen);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (ConstTimeMemcmp(tagBuf, vfyTag, vfyTagLen) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MODES_TAG_ERROR);
+        return CRYPT_MODES_TAG_ERROR;
+    }
     return CRYPT_SUCCESS;
 }
 

@@ -31,6 +31,7 @@ typedef struct {
 } MODES_GCM_GF128;
 
 #define GCM_BLOCKSIZE 16
+#define GCM_MAX_TAGSIZE 16
 
 #ifdef HITLS_CRYPTO_GCM
 
@@ -57,6 +58,8 @@ typedef struct {
 struct ModesGcmCtx {
     int32_t algId;
     MODES_CipherGCMCtx gcmCtx;
+    uint8_t vfyTag[GCM_MAX_TAGSIZE];   // tag set by user via ctrl, used for decrypt final verify
+    uint32_t vfyTagLen;
     bool enc;
 };
 

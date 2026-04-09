@@ -199,6 +199,9 @@ int32_t CRYPT_EAL_CipherFinal(CRYPT_EAL_CipherCtx *ctx, uint8_t *out, uint32_t *
                                              The length is related to the corresponding AEAD algorithm.
  * CRYPT_CTRL_GET_TAG        uint8_t array   It is used only for AEAD calculation.
                                              The length is the tagLen value set by the user.
+ * CRYPT_CTRL_SET_TAG        uint8_t array   It is used only for AEAD decryption verification in final().
+ *                                           The length is the tagLen value set by the user (or fixed tagLen
+ *                                           for algorithms such as chacha20-poly1305).
  * CRYPT_CTRL_SET_TAGLEN     uint32_t        length(len) 4
  * CRYPT_CTRL_SET_MSGLEN     uint64_t        length(len) 8
  * CRYPT_CTRL_SET_FEEDBACKSIZE     uint32_t            length(len) 4

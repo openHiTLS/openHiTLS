@@ -64,6 +64,13 @@ int32_t MODES_CipherCtrl(MODES_CipherCtx *ctx, int32_t opt, void *val, uint32_t 
 int32_t MODES_CipherStreamProcess(void *processFuncs, void *ctx, const uint8_t *in, uint32_t inLen,
     uint8_t *out, uint32_t *outLen);
 
+typedef int32_t (*MODES_AeadGetTag)(void *ctx, uint8_t *val, uint32_t len);
+void MODES_ClearVfyTag(uint8_t *vfyTag, uint32_t *vfyTagLen, uint32_t maxTagLen);
+int32_t MODES_SetVfyTag(uint8_t *vfyTag, uint32_t *vfyTagLen, uint32_t maxTagLen,
+    const uint8_t *tag, uint32_t inputTagLen);
+int32_t MODES_AeadCheckTag(bool enc, void *ctx, uint8_t *out, uint32_t *outLen, const uint8_t *vfyTag,
+    uint32_t vfyTagLen, uint8_t *tagBuf, MODES_AeadGetTag getTag);
+
 static inline void MODE_IncCounter(uint8_t *counter, uint32_t counterLen)
 {
     uint32_t i = counterLen;
