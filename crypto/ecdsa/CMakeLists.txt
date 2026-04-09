@@ -30,6 +30,7 @@ target_include_directories(_hitls_crypto_ecdsa
         ${PROJECT_SOURCE_DIR}/crypto/bn/include
         ${PROJECT_SOURCE_DIR}/crypto/codecsdata/include
         ${PROJECT_SOURCE_DIR}/crypto/ecc/include
+        ${PROJECT_SOURCE_DIR}/crypto/hmac/include
 )
 
 hitls_register_objects(CRYPTO _hitls_crypto_ecdsa)

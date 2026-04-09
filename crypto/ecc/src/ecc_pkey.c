@@ -71,6 +71,8 @@ ECC_Pkey *ECC_DupCtx(ECC_Pkey *ctx)
     }
 
     newCtx->useCofactorMode = ctx->useCofactorMode;
+    newCtx->useDeterministicSign = ctx->useDeterministicSign;
+    newCtx->signMdId = ctx->signMdId;
     newCtx->pointFormat = ctx->pointFormat;
     BSL_SAL_ReferencesInit(&(newCtx->references));
     GOTO_ERR_IF_SRC_NOT_NULL(newCtx->prvkey, ctx->prvkey, BN_Dup(ctx->prvkey), CRYPT_MEM_ALLOC_FAIL);

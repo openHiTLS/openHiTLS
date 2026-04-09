@@ -30,6 +30,7 @@
 #include "eal_pkey_local.h"
 #include "eal_md_local.h"
 #include "crypt_ecdsa.h"
+#include "ecdsa_internal.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 
@@ -172,7 +173,7 @@ static BN_BigNum *GetBnByData(const BN_BigNum *n, const uint8_t *data, uint32_t 
 }
 
 static int32_t EcdsaSignCore(const CRYPT_ECDSA_Ctx *ctx, const BN_BigNum *paraN, BN_BigNum *d,
-                             BN_BigNum *r, BN_BigNum *s)
+                             CRYPT_MD_AlgId mdId, const uint8_t *hash, uint32_t hashLen, BN_BigNum *r, BN_BigNum *s)
 {
     uint32_t keyBits = CRYPT_ECDSA_GetBits(ctx);    // input parameter has been checked externally.
     BN_BigNum *k = BN_Create(keyBits);
@@ -182,6 +183,14 @@ static int32_t EcdsaSignCore(const CRYPT_ECDSA_Ctx *ctx, const BN_BigNum *paraN,
     BN_Optimizer *opt = BN_OptimizerCreate();
     int32_t ret;
     int32_t i;
+#ifdef HITLS_CRYPTO_HMAC
+    ECDSA_Rfc6979State detState;
+    int32_t detStateActive = 0;
+#else
+    (void)mdId;
+    (void)hash;
+    (void)hashLen;
+#endif
 
     if ((k == NULL) || (k2 == NULL) || (pt == NULL) || (opt == NULL) || (ptX == NULL)) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
@@ -189,8 +198,25 @@ static int32_t EcdsaSignCore(const CRYPT_ECDSA_Ctx *ctx, const BN_BigNum *paraN,
         goto ERR;
     }
 
+#ifdef HITLS_CRYPTO_HMAC
+    if (ctx->useDeterministicSign != 0) {
+        GOTO_ERR_IF(ECDSA_Rfc6979Init(&detState, ctx, paraN, mdId, hash, hashLen), ret);
+        detStateActive = 1;
+    }
+#endif
+
     for (i = 0; i < CRYPT_ECC_TRY_MAX_CNT; i++) {
-        GOTO_ERR_IF(BN_RandRangeEx(ctx->libCtx, k, paraN), ret);
+        if (ctx->useDeterministicSign != 0) {
+#ifdef HITLS_CRYPTO_HMAC
+            GOTO_ERR_IF(ECDSA_Rfc6979Next(&detState, k), ret);
+#else
+            BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+            ret = CRYPT_NOT_SUPPORT;
+            goto ERR;
+#endif
+        } else {
+            GOTO_ERR_IF(BN_RandRangeEx(ctx->libCtx, k, paraN), ret);
+        }
         if (BN_IsZero(k)) {
             continue;
         }
@@ -231,6 +257,11 @@ static int32_t EcdsaSignCore(const CRYPT_ECDSA_Ctx *ctx, const BN_BigNum *paraN,
     }
 
 ERR:
+#ifdef HITLS_CRYPTO_HMAC
+    if (detStateActive != 0) {
+        ECDSA_Rfc6979Free(&detState);
+    }
+#endif
     BN_Destroy(k);
     BN_Destroy(k2);
     BN_Destroy(ptX);
@@ -239,9 +270,13 @@ ERR:
     return ret;
 }
 
-static int32_t CryptEcdsaSign(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+static int32_t CryptEcdsaSign(const CRYPT_ECDSA_Ctx *ctx, CRYPT_MD_AlgId mdId, const uint8_t *data, uint32_t dataLen,
                               BN_BigNum **r, BN_BigNum **s)
 {
+    if (r == NULL || s == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
     int32_t rc = CRYPT_SUCCESS;
     BN_BigNum *signR = NULL;
     BN_BigNum *signS = NULL;
@@ -263,7 +298,7 @@ static int32_t CryptEcdsaSign(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, u
         rc = CRYPT_MEM_ALLOC_FAIL;
         goto ERR;
     }
-    GOTO_ERR_IF_EX(EcdsaSignCore(ctx, paraN, d, signR, signS), rc);
+    GOTO_ERR_IF_EX(EcdsaSignCore(ctx, paraN, d, mdId, data, dataLen, signR, signS), rc);
 
     *r = signR;
     *s = signS;
@@ -294,6 +329,10 @@ int32_t CRYPT_ECDSA_SignData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, ui
         BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_ERR_EMPTY_KEY);
         return CRYPT_ECDSA_ERR_EMPTY_KEY;
     }
+    if (ctx->useDeterministicSign != 0 && ctx->signMdId == CRYPT_MD_MAX) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
 
     if (*signLen < CRYPT_ECDSA_GetSignLen(ctx)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_BUFF_LEN_NOT_ENOUGH);
@@ -303,7 +342,7 @@ int32_t CRYPT_ECDSA_SignData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, ui
     int32_t ret;
     BN_BigNum *r = NULL;
     BN_BigNum *s = NULL;
-    ret = CryptEcdsaSign(ctx, data, dataLen, &r, &s);
+    ret = CryptEcdsaSign(ctx, ctx->signMdId, data, dataLen, &r, &s);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
@@ -316,9 +355,23 @@ int32_t CRYPT_ECDSA_SignData(const CRYPT_ECDSA_Ctx *ctx, const uint8_t *data, ui
 int32_t CRYPT_ECDSA_Sign(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen)
 {
-    if (ctx == NULL) {
+    bool nullInput = (ctx == NULL) || (ctx->para == NULL) || (sign == NULL) || (signLen == NULL) ||
+        ((data == NULL) && (dataLen != 0));
+    if (nullInput == true) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
+    }
+    if (ctx->prvkey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_ERR_EMPTY_KEY);
+        return CRYPT_ECDSA_ERR_EMPTY_KEY;
+    }
+    if (ctx->useDeterministicSign != 0 && algId == CRYPT_MD_MAX) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
+    if (*signLen < CRYPT_ECDSA_GetSignLen(ctx)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_BUFF_LEN_NOT_ENOUGH);
+        return CRYPT_ECDSA_BUFF_LEN_NOT_ENOUGH;
     }
     uint8_t hash[64]; // 64 is max hash len
     uint32_t hashDataLen = sizeof(hash) / sizeof(hash[0]);
@@ -328,7 +381,20 @@ int32_t CRYPT_ECDSA_Sign(const CRYPT_ECDSA_Ctx *ctx, int32_t algId, const uint8_
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    return CRYPT_ECDSA_SignData(ctx, hash, hashDataLen, sign, signLen);
+    if (hashDataLen != CRYPT_GetMdSizeById((CRYPT_MD_AlgId)algId)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_ECDSA_PKEY_ERR_SIGN_DATA_LEN);
+        return CRYPT_ECDSA_PKEY_ERR_SIGN_DATA_LEN;
+    }
+    BN_BigNum *r = NULL;
+    BN_BigNum *s = NULL;
+    ret = CryptEcdsaSign(ctx, algId, hash, hashDataLen, &r, &s);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    ret = CRYPT_EAL_EncodeSign(r, s, sign, signLen);
+    BN_Destroy(r);
+    BN_Destroy(s);
+    return ret;
 }
 
 static int32_t VerifyCheckSign(const BN_BigNum *paraN, BN_BigNum *r, BN_BigNum *s)
@@ -479,6 +545,19 @@ int32_t CRYPT_ECDSA_Ctrl(CRYPT_ECDSA_Ctx *ctx, int32_t opt, void *val, uint32_t 
                 return CRYPT_INVALID_ARG;
             }
             return ECC_SetPara(ctx, CRYPT_ECDSA_NewParaById(*(int32_t *)val));
+        case CRYPT_CTRL_SET_DETERMINISTIC_FLAG:
+            if (val == NULL || len != sizeof(uint32_t)) {
+                BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+                return CRYPT_INVALID_ARG;
+            }
+#ifndef HITLS_CRYPTO_HMAC
+            if (*(uint32_t *)val != 0) {
+                BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+                return CRYPT_NOT_SUPPORT;
+            }
+#endif
+            ctx->useDeterministicSign = *(uint32_t *)val;
+            return CRYPT_SUCCESS;
         case CRYPT_CTRL_SET_SIGN_MD:
             return CRYPT_SetSignMdCtrl(&ctx->signMdId, val, len, NULL);
         default:

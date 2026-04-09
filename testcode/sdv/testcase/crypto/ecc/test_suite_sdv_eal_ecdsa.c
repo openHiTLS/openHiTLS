@@ -934,6 +934,275 @@ EXIT:
 }
 /* END_CASE */
 
+#if defined(HITLS_CRYPTO_HMAC)
+/**
+ * @test   SDV_CRYPTO_ECDSA_DETERMINISTIC_SIGN_FUNC_TC001
+ * @title  ECDSA CRYPT_EAL_PkeySign: RFC 6979 deterministic signatures (Appendix A.2.3–A.2.7, NIST P-192/224/256/384/521 with SHA-1/224/256/384/512).
+ * @precon nan
+ * @brief
+ *    1. Create an ECDSA context, expected result 1
+ *    2. Set curve, private key and deterministic sign flag, expected result 2
+ *    3. Call CRYPT_EAL_PkeySign twice with the same message, expected result 3
+ *    4. Compare both signatures and the RFC 6979 vector, expected result 4
+ *    5. Derive the public key from the private key, then CRYPT_EAL_PkeyVerify the signature (decode + math), expected 5
+ *    The .data file lists SignFunc(sample) then SignData(sample) with digest H("sample"), and SignData(test)
+ *    then SignFunc(test) with message "test", so raw-message and pre-hashed paths are cross-checked.
+ * @expect
+ *    1. Success, and the context is not NULL.
+ *    2-3. CRYPT_SUCCESS
+ *    4. The signatures are identical and match the vector.
+ *    5. CRYPT_SUCCESS
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDSA_DETERMINISTIC_SIGN_FUNC_TC001(int paraId, int mdId, Hex *prvKeyVector, Hex *msg,
+    Hex *signR, Hex *signS, int isProvider)
+{
+    if (IsCurveDisabled(paraId) || IsMdAlgDisabled(mdId)) {
+        SKIP_TEST();
+    }
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    CRYPT_EAL_PkeyPrv prv = {0};
+    uint32_t signLen1, signLen2, vectorSignLen;
+    uint32_t isDeterministic = 1;
+    uint8_t *sign1 = NULL;
+    uint8_t *sign2 = NULL;
+    uint8_t *vectorSign = NULL;
+
+    TestMemInit();
+    /* Scalar multiplication uses randomized projective coordinates (ECC_PointBlind); BN_RandRangeEx needs a
+     * registered RNG even when k is from RFC 6979. Provider builds often init RNG implicitly; no-provider does not. */
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
+
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraId), CRYPT_SUCCESS);
+    Ecc_SetPrvKey(&prv, CRYPT_PKEY_ECDSA, prvKeyVector->x, prvKeyVector->len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG,
+        &isDeterministic, sizeof(isDeterministic)), CRYPT_SUCCESS);
+
+    signLen1 = CRYPT_EAL_PkeyGetSignLen(pkey);
+    signLen2 = signLen1;
+    vectorSignLen = signLen1;
+    sign1 = (uint8_t *)malloc(signLen1);
+    sign2 = (uint8_t *)malloc(signLen2);
+    vectorSign = (uint8_t *)malloc(vectorSignLen);
+    ASSERT_TRUE(sign1 != NULL && sign2 != NULL && vectorSign != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, mdId, msg->x, msg->len, sign1, &signLen1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, mdId, msg->x, msg->len, sign2, &signLen2), CRYPT_SUCCESS);
+    ASSERT_EQ(signLen1, signLen2);
+    ASSERT_TRUE(memcmp(sign1, sign2, signLen1) == 0);
+
+    ASSERT_EQ(SignEncode(signR, signS, vectorSign, &vectorSignLen), CRYPT_SUCCESS);
+    ASSERT_EQ(signLen1, vectorSignLen);
+    ASSERT_TRUE(memcmp(sign1, vectorSign, signLen1) == 0);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GEN_ECC_PUBLICKEY, NULL, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, mdId, msg->x, msg->len, sign1, signLen1), CRYPT_SUCCESS);
+
+EXIT:
+    free(sign1);
+    free(sign2);
+    free(vectorSign);
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_RandRegist(NULL);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(NULL);
+#endif
+    CRYPT_EAL_RandDeinit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECDSA_DETERMINISTIC_SIGN_DATA_FUNC_TC001
+ * @title  ECDSA CRYPT_EAL_PkeySignData: RFC 6979 deterministic signatures (Appendix A.2.3–A.2.7, NIST P-192/224/256/384/521 with SHA-1/224/256/384/512).
+ * @precon nan
+ * @brief
+ *    1. Create an ECDSA context, expected result 1
+ *    2. Set curve, private key, sign md and deterministic sign flag, expected result 2
+ *    3. Call CRYPT_EAL_PkeySignData twice with the same digest, expected result 3
+ *    4. Compare both signatures and the RFC 6979 vector, expected result 4
+ *    5. Derive the public key, then CRYPT_EAL_PkeyVerifyData on the digest and signature, expected 5
+ *    Same .data layout: SignData(sample) after SignFunc(sample) uses H("sample"); SignFunc(test) after
+ *    SignData(test) uses message "test" — signatures must agree with the paired row.
+ * @expect
+ *    1. Success, and the context is not NULL.
+ *    2-3. CRYPT_SUCCESS
+ *    4. The signatures are identical and match the vector.
+ *    5. CRYPT_SUCCESS
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDSA_DETERMINISTIC_SIGN_DATA_FUNC_TC001(int paraId, int mdId, Hex *prvKeyVector, Hex *hashData,
+    Hex *signR, Hex *signS, int isProvider)
+{
+    if (IsCurveDisabled(paraId) || IsMdAlgDisabled(mdId)) {
+        SKIP_TEST();
+    }
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    CRYPT_EAL_PkeyPrv prv = {0};
+    uint32_t signLen1, signLen2, vectorSignLen;
+    uint32_t isDeterministic = 1;
+    uint8_t *sign1 = NULL;
+    uint8_t *sign2 = NULL;
+    uint8_t *vectorSign = NULL;
+
+    TestMemInit();
+    if (isProvider) {
+        ASSERT_EQ(TestRandInitSelfCheck(), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    }
+
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, paraId), CRYPT_SUCCESS);
+    Ecc_SetPrvKey(&prv, CRYPT_PKEY_ECDSA, prvKeyVector->x, prvKeyVector->len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_SIGN_MD, &mdId, sizeof(mdId)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG,
+        &isDeterministic, sizeof(isDeterministic)), CRYPT_SUCCESS);
+
+    signLen1 = CRYPT_EAL_PkeyGetSignLen(pkey);
+    signLen2 = signLen1;
+    vectorSignLen = signLen1;
+    sign1 = (uint8_t *)malloc(signLen1);
+    sign2 = (uint8_t *)malloc(signLen2);
+    vectorSign = (uint8_t *)malloc(vectorSignLen);
+    ASSERT_TRUE(sign1 != NULL && sign2 != NULL && vectorSign != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(pkey, hashData->x, hashData->len, sign1, &signLen1), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(pkey, hashData->x, hashData->len, sign2, &signLen2), CRYPT_SUCCESS);
+    ASSERT_EQ(signLen1, signLen2);
+    ASSERT_TRUE(memcmp(sign1, sign2, signLen1) == 0);
+
+    ASSERT_EQ(SignEncode(signR, signS, vectorSign, &vectorSignLen), CRYPT_SUCCESS);
+    ASSERT_EQ(signLen1, vectorSignLen);
+    ASSERT_TRUE(memcmp(sign1, vectorSign, signLen1) == 0);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GEN_ECC_PUBLICKEY, NULL, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, hashData->x, hashData->len, sign1, signLen1), CRYPT_SUCCESS);
+
+EXIT:
+    free(sign1);
+    free(sign2);
+    free(vectorSign);
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_RandRegist(NULL);
+#ifdef HITLS_CRYPTO_PROVIDER
+    CRYPT_RandRegistEx(NULL);
+#endif
+    CRYPT_EAL_RandDeinit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECDSA_DETERMINISTIC_SIGN_DATA_API_TC001
+ * @title  ECDSA CRYPT_EAL_PkeySignData: deterministic mode requires sign md.
+ * @precon nan
+ * @brief
+ *    1. Create an ECDSA context, expected result 1
+ *    2. Set curve and private key, expected result 2
+ *    3. Enable deterministic sign flag without setting sign md, expected result 3
+ *    4. Call CRYPT_EAL_PkeySignData, expected result 4
+ * @expect
+ *    1. Success, and the context is not NULL.
+ *    2-3. CRYPT_SUCCESS
+ *    4. CRYPT_EAL_ERR_ALGID
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECDSA_DETERMINISTIC_SIGN_DATA_API_TC001(Hex *prvKeyVector, Hex *msg, int isProvider)
+{
+    if (IsCurveDisabled(CRYPT_ECC_NISTP256)) {
+        SKIP_TEST();
+    }
+    uint32_t hitlsSignLen;
+    uint32_t isDeterministic = 1;
+    uint8_t *hitlsSign = NULL;
+    CRYPT_EAL_PkeyCtx *ecdsaPkey = NULL;
+    CRYPT_EAL_PkeyPrv ecdsaPrvkey = {0};
+
+    TestMemInit();
+
+    ecdsaPkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA,
+        CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(ecdsaPkey != NULL);
+    ASSERT_TRUE(CRYPT_EAL_PkeySetParaById(ecdsaPkey, CRYPT_ECC_NISTP256) == CRYPT_SUCCESS);
+    Ecc_SetPrvKey(&ecdsaPrvkey, CRYPT_PKEY_ECDSA, prvKeyVector->x, prvKeyVector->len);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(ecdsaPkey, &ecdsaPrvkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ecdsaPkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG,
+        &isDeterministic, sizeof(isDeterministic)), CRYPT_SUCCESS);
+
+    hitlsSignLen = CRYPT_EAL_PkeyGetSignLen(ecdsaPkey);
+    hitlsSign = (uint8_t *)malloc(hitlsSignLen);
+    ASSERT_TRUE(hitlsSign != NULL);
+    ASSERT_EQ(
+        CRYPT_EAL_PkeySignData(ecdsaPkey, msg->x, msg->len, hitlsSign, &hitlsSignLen), CRYPT_EAL_ERR_ALGID);
+
+EXIT:
+    free(hitlsSign);
+    CRYPT_EAL_PkeyFreeCtx(ecdsaPkey);
+    CRYPT_EAL_RandDeinit();
+}
+/* END_CASE */
+#else
+void SDV_CRYPTO_ECDSA_DETERMINISTIC_SIGN_FUNC_TC001(int paraId, int mdId, Hex *prvKeyVector, Hex *msg,
+    Hex *signR, Hex *signS, int isProvider)
+{
+    (void)paraId;
+    (void)mdId;
+    (void)prvKeyVector;
+    (void)msg;
+    (void)signR;
+    (void)signS;
+    (void)isProvider;
+    SKIP_TEST();
+}
+
+void SDV_CRYPTO_ECDSA_DETERMINISTIC_SIGN_DATA_FUNC_TC001(int paraId, int mdId, Hex *prvKeyVector, Hex *hashData,
+    Hex *signR, Hex *signS, int isProvider)
+{
+    (void)paraId;
+    (void)mdId;
+    (void)prvKeyVector;
+    (void)hashData;
+    (void)signR;
+    (void)signS;
+    (void)isProvider;
+    SKIP_TEST();
+}
+
+void SDV_CRYPTO_ECDSA_DETERMINISTIC_SIGN_DATA_API_TC001(Hex *prvKeyVector, Hex *msg, int isProvider)
+{
+    (void)prvKeyVector;
+    (void)msg;
+    if (IsCurveDisabled(CRYPT_ECC_NISTP256)) {
+        SKIP_TEST();
+    }
+    uint32_t isDeterministic = 1;
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+
+    TestMemInit();
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ECDSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pkey, CRYPT_ECC_NISTP256), CRYPT_SUCCESS);
+    /* Without HMAC, RFC 6979 is unavailable; ctrl must reject enabling deterministic signing. */
+    ASSERT_EQ(
+        CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_DETERMINISTIC_FLAG, &isDeterministic, sizeof(isDeterministic)),
+        CRYPT_NOT_SUPPORT);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_RandDeinit();
+}
+#endif
+
 /**
  * @test   SDV_CRYPTO_ECDSA_VERIFY_DATA_API_TC001
  * @title  ECDSA CRYPT_EAL_PkeyVerifyData: Test the validity of parameters.
