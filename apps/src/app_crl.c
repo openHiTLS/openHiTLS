@@ -19,6 +19,8 @@
 #include <string.h>
 #include <limits.h>
 #include "securec.h"
+#include "bsl_list.h"
+#include "bsl_print.h"
 #include "bsl_sal.h"
 #include "bsl_types.h"
 #include "hitls_pki_errno.h"
@@ -44,6 +46,9 @@ typedef enum OptionChoice {
     HITLS_APP_OPT_CRL_CAFILE,
     HITLS_APP_OPT_CRL_INFORM,
     HITLS_APP_OPT_CRL_OUTFORM,
+    HITLS_APP_OPT_CRL_ISSUER,
+    HITLS_APP_OPT_CRL_HASH,
+    HITLS_APP_OPT_CRL_TEXT,
 } HITLSOptType;
 
 static const HITLS_CmdOption g_crlOpts[] = {
@@ -55,6 +60,9 @@ static const HITLS_CmdOption g_crlOpts[] = {
     {"CAfile", HITLS_APP_OPT_CRL_CAFILE, HITLS_APP_OPT_VALUETYPE_IN_FILE, "Verify CRL using CAFile"},
     {"inform", HITLS_APP_OPT_CRL_INFORM, HITLS_APP_OPT_VALUETYPE_FMT_PEMDER, "Input crl file format"},
     {"outform", HITLS_APP_OPT_CRL_OUTFORM, HITLS_APP_OPT_VALUETYPE_FMT_PEMDER, "Output crl file format"},
+    {"issuer", HITLS_APP_OPT_CRL_ISSUER, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print issuer DN"},
+    {"hash", HITLS_APP_OPT_CRL_HASH, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print issuer DN hash"},
+    {"text", HITLS_APP_OPT_CRL_TEXT, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Print CRL in text"},
     {NULL, 0, 0, NULL}
 };
 
@@ -66,6 +74,9 @@ typedef struct {
     char *outfile;
     bool noout;
     bool nextupdate;
+    bool issuer;
+    bool hash;
+    bool text;
     BSL_UIO *uio;
 } CrlInfo;
 
@@ -160,6 +171,58 @@ static int32_t PrintNextUpdate(BSL_UIO *uio, HITLS_X509_Crl *crl)
     return HITLS_APP_SUCCESS;
 }
 
+static int32_t PrintIssuer(BSL_UIO *uio, HITLS_X509_Crl *crl)
+{
+    BslList *issuer = NULL;
+    int32_t ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DN, &issuer, sizeof(BslList *));
+    if (ret != HITLS_PKI_SUCCESS) {
+        AppPrintError("Failed to get CRL issuer name, errCode=%d.\n", ret);
+        return HITLS_APP_X509_FAIL;
+    }
+    ret = BSL_PRINT_Fmt(0, uio, "Issuer=");
+    if (ret != 0) {
+        AppPrintError("Failed to print CRL issuer name, errCode=%d.\n", ret);
+        return HITLS_APP_BSL_FAIL;
+    }
+    ret = HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DNNAME, issuer, sizeof(BslList), uio);
+    if (ret != HITLS_PKI_SUCCESS) {
+        AppPrintError("Failed to print CRL issuer, errCode=%d.\n", ret);
+        return HITLS_APP_X509_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t PrintIssuerHash(BSL_UIO *uio, HITLS_X509_Crl *crl)
+{
+    BslList *issuer = NULL;
+    int32_t ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_GET_ISSUER_DN, &issuer, sizeof(BslList *));
+    if (ret != HITLS_PKI_SUCCESS) {
+        AppPrintError("Failed to get CRL issuer name for hash, errCode=%d.\n", ret);
+        return HITLS_APP_X509_FAIL;
+    }
+    ret = BSL_PRINT_Fmt(0, uio, "Issuer Hash=");
+    if (ret != 0) {
+        AppPrintError("Failed to print CRL issuer hash prefix, errCode=%d.\n", ret);
+        return HITLS_APP_BSL_FAIL;
+    }
+    ret = HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_DNNAME_HASH, issuer, sizeof(BslList), uio);
+    if (ret != HITLS_PKI_SUCCESS) {
+        AppPrintError("Failed to print CRL issuer hash, errCode=%d.\n", ret);
+        return HITLS_APP_X509_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
+static int32_t PrintText(BSL_UIO *uio, HITLS_X509_Crl *crl)
+{
+    int32_t ret = HITLS_PKI_PrintCtrl(HITLS_PKI_PRINT_CRL, crl, sizeof(HITLS_X509_Crl *), uio);
+    if (ret != HITLS_PKI_SUCCESS) {
+        AppPrintError("Failed to print CRL text, errCode=%d.\n", ret);
+        return HITLS_APP_X509_FAIL;
+    }
+    return HITLS_APP_SUCCESS;
+}
+
 static int32_t OptParse(CrlInfo *outInfo)
 {
     HITLSOptType optType;
@@ -217,6 +280,15 @@ static int32_t OptParse(CrlInfo *outInfo)
                     return HITLS_APP_OPT_VALUE_INVALID;
                 }
                 break;
+            case HITLS_APP_OPT_CRL_ISSUER:
+                outInfo->issuer = true;
+                break;
+            case HITLS_APP_OPT_CRL_HASH:
+                outInfo->hash = true;
+                break;
+            case HITLS_APP_OPT_CRL_TEXT:
+                outInfo->text = true;
+                break;
             default:
                 return HITLS_APP_OPT_UNKOWN;
         }
@@ -226,7 +298,7 @@ static int32_t OptParse(CrlInfo *outInfo)
 
 int32_t  HITLS_CrlMain(int argc, char *argv[])
 {
-    CrlInfo crlInfo = {0, BSL_FORMAT_PEM, NULL, NULL, NULL, false, false, NULL};
+    CrlInfo crlInfo = {0, BSL_FORMAT_PEM, NULL, NULL, NULL, false, false, false, false, false, NULL};
     HITLS_X509_Crl *crl = NULL;
     int32_t mainRet = HITLS_APP_OptBegin(argc, argv, g_crlOpts);
     if (mainRet != HITLS_APP_SUCCESS) {
@@ -258,7 +330,7 @@ int32_t  HITLS_CrlMain(int argc, char *argv[])
     }
     BSL_UIO_SetIsUnderlyingClosedByUio(crlInfo.uio, !(crlInfo.outfile == NULL));
 
-    if (crlInfo.nextupdate == true) {
+    if (crlInfo.nextupdate) {
         mainRet = PrintNextUpdate(crlInfo.uio, crl);
         if (mainRet != HITLS_APP_SUCCESS) {
             goto end;
@@ -270,7 +342,25 @@ int32_t  HITLS_CrlMain(int argc, char *argv[])
             goto end;
         }
     }
-    if (crlInfo.noout == false) {
+    if (crlInfo.issuer) {
+        mainRet = PrintIssuer(crlInfo.uio, crl);
+        if (mainRet != HITLS_APP_SUCCESS) {
+            goto end;
+        }
+    }
+    if (crlInfo.hash) {
+        mainRet = PrintIssuerHash(crlInfo.uio, crl);
+        if (mainRet != HITLS_APP_SUCCESS) {
+            goto end;
+        }
+    }
+    if (crlInfo.text) {
+        mainRet = PrintText(crlInfo.uio, crl);
+        if (mainRet != HITLS_APP_SUCCESS) {
+            goto end;
+        }
+    }
+    if (!crlInfo.noout) {
         mainRet = OutCrlFileInfo(crlInfo.uio, crl, crlInfo.outform);
     }
 

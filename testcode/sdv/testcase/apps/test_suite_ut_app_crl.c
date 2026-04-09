@@ -14,6 +14,7 @@
  */
 
 /* BEGIN_HEADER */
+#include <string.h>
 #include "app_crl.h"
 #include "securec.h"
 #include "bsl_sal.h"
@@ -53,6 +54,7 @@ STUB_DEFINE_RET4(int32_t, HITLS_X509_CertCtrl, HITLS_X509_Cert *, int32_t, void 
 #define ERR_CERT_PATH "../testdata/certificate/crlAndCert/errCA.crt"
 #define CRL_PEM_PATH "./crl.pem"
 #define CRL_DER_PATH "./crl.der"
+#define CRL_TEXT_PATH "./crl_text.txt"
 
 /* INCLUDE_SOURCE  ${HITLS_ROOT_PATH}/apps/src/app_print.c ${HITLS_ROOT_PATH}/apps/src/app_crl.c
     ${HITLS_ROOT_PATH}/apps/src/app_opt.c ${HITLS_ROOT_PATH}/apps/src/app_utils.c */
@@ -327,6 +329,26 @@ bool IsFileExist(const char *fileName)
     return true;
 }
 
+static int32_t ReadFileToBuf(const char *fileName, char *buf, uint32_t bufLen)
+{
+    if (fileName == NULL || buf == NULL || bufLen == 0) {
+        return HITLS_APP_INTERNAL_EXCEPTION;
+    }
+    bsl_sal_file_handle handle = NULL;
+    int32_t ret = BSL_SAL_FileOpen(&handle, fileName, "r");
+    if (ret != BSL_SUCCESS) {
+        return HITLS_APP_INTERNAL_EXCEPTION;
+    }
+    size_t readLen = 0;
+    ret = BSL_SAL_FileRead(handle, buf, sizeof(char), bufLen - 1, &readLen);
+    (void)BSL_SAL_FileClose(handle);
+    if (ret != BSL_SUCCESS) {
+        return HITLS_APP_INTERNAL_EXCEPTION;
+    }
+    buf[readLen] = '\0';
+    return HITLS_APP_SUCCESS;
+}
+
 /**
  * @test UT_HITLS_APP_crl_TC008
  * @spec  -
@@ -347,6 +369,40 @@ void UT_HITLS_APP_crl_TC008(void)
         ASSERT_EQ(ret, testData[i].expect);
         ASSERT_TRUE(IsFileExist(filename));
         remove(filename);
+    }
+
+EXIT:
+    AppPrintErrorUioUnInit();
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test UtHitlsAppCrlTC009
+ * @spec  -
+ * @title Test the UtHitlsAppCrlTC009 function.
+ */
+/* BEGIN_CASE */
+void UtHitlsAppCrlTC009(void)
+{
+    char *argv[][20] = {{"crl", "-in", CRL_PATH, "-noout", "-issuer", "-hash", "-text", "-out", CRL_TEXT_PATH}};
+    OptTestData testData[] = {{9, argv[0], HITLS_APP_SUCCESS}};
+    char buf[4096] = {0};
+
+    ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
+    for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
+        if (IsFileExist(CRL_TEXT_PATH)) {
+            ASSERT_EQ(remove(CRL_TEXT_PATH), 0);
+        }
+        int ret = HITLS_CrlMain(testData[i].argc, testData[i].argv);
+        ASSERT_EQ(ret, testData[i].expect);
+        ASSERT_EQ(ReadFileToBuf(CRL_TEXT_PATH, buf, sizeof(buf)), HITLS_APP_SUCCESS);
+        ASSERT_TRUE(strstr(buf, "Issuer=") != NULL);
+        ASSERT_TRUE(strstr(buf, "Issuer Hash=") != NULL);
+        ASSERT_TRUE(strstr(buf, "Certificate Revocation List (CRL):") != NULL);
+        if (IsFileExist(CRL_TEXT_PATH)) {
+            ASSERT_EQ(remove(CRL_TEXT_PATH), 0);
+        }
     }
 
 EXIT:
