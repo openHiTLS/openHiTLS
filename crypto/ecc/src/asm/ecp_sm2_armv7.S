@@ -155,7 +155,7 @@
 
 .section .text, "ax"
 .thumb_func
-.align 4
+.p2align 4
 
 ### Compare a and b. If a >= b, return 1; otherwise, return 0.
 # int32_t ECP_Sm2FpCmp(const Sm2Fp a, const Sm2Fp b);

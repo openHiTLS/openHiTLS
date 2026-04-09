@@ -37,8 +37,10 @@
 #define ATALMatQ   q30
 #define ANDMaskQ   q31
 
-.section .rodata
-.align 4
+CRYPT_AARCH64_ARCH_CRYPTO
+
+CRYPT_AARCH64_RODATA_SECTION
+.p2align 4
 #ifdef HITLS_BIG_ENDIAN
  .qtmp0:
     .quad 0x0101010101010101,0x0101010101010187
@@ -86,8 +88,7 @@
 #endif
 
 .macro LOAD_SBOX_MATRIX
-    adrp    x15,.Lsbox_magic
-    add x15,x15,:lo12:.Lsbox_magic
+    CRYPT_AARCH64_GET_RELA(x15, .Lsbox_magic)
     ldr MaskQ,      [x15]
     ldr TAHMatQ,    [x15, #16]
     ldr TALMatQ,    [x15, #32]
@@ -96,16 +97,16 @@
     ldr ANDMaskQ,   [x15, #80]
 .endm
 
-/* matrix multiplication Mat*x = (lowerMat*x) ^ (higherMat*x) */
-#define MUL_MATRIX(X, HIGHERMAT, LOWERMAT, TMP)            \
-    ushr    TMP.16b, X.16b, 4                             ; \
-    and     X.16b, X.16b, ANDMaskV.16b                    ; \
-    tbl     X.16b, {LOWERMAT.16b}, X.16b                  ; \
-    tbl     TMP.16b, {HIGHERMAT.16b}, TMP.16b             ; \
-    eor     X.16b, X.16b, TMP.16b                         ;
+.macro MUL_MATRIX X, HIGHERMAT, LOWERMAT, TMP
+    ushr    \TMP\().16b, \X\().16b, 4
+    and     \X\().16b, \X\().16b, ANDMaskV.16b
+    tbl     \X\().16b, {\LOWERMAT\().16b}, \X\().16b
+    tbl     \TMP\().16b, {\HIGHERMAT\().16b}, \TMP\().16b
+    eor     \X\().16b, \X\().16b, \TMP\().16b
+.endm
 
 
-.arch    armv8-a+crypto
+
 .text
 #define USER_KEY x0
 #define ROUND_KEY1 x1
@@ -127,9 +128,7 @@
  *   ROUND_KEY1 => key ; 
  *   if encryption: ENC=>enc
  */
-.type    vpsm4_ex_set_key,%function
-.align 4
-vpsm4_ex_set_key:
+CRYPT_AARCH64_LOCAL_FUNC_START(vpsm4_ex_set_key)
 AARCH64_PACIASP
     stp x29, x30, [sp, #-0x30]!
     stp d8, d9, [sp, #0x10]
@@ -139,16 +138,13 @@ AARCH64_PACIASP
     LOAD_SBOX_MATRIX
     REV32_EQ(V_KEY,V_KEY)
 
-    adrp POINTER1,.Lshuffles
-    add POINTER1,POINTER1,:lo12:.Lshuffles
+    CRYPT_AARCH64_GET_RELA(POINTER1, .Lshuffles)
     ld1 {V_MAP.4s},[POINTER1]
-    adrp POINTER1,.Lfk
-    add POINTER1,POINTER1,:lo12:.Lfk
+    CRYPT_AARCH64_GET_RELA(POINTER1, .Lfk)
     ld1 {V_FK.4s},[POINTER1]
     eor V_KEY.16b,V_KEY.16b,V_FK.16b
     mov SCHEDULES,#32
-    adrp POINTER1,.Lck
-    add POINTER1,POINTER1,:lo12:.Lck
+    CRYPT_AARCH64_GET_RELA(POINTER1, .Lck)
     movi VTMP0.16b,#64
     cbnz ENC1,1f
     add ROUND_KEY1,ROUND_KEY1,124
@@ -164,10 +160,10 @@ AARCH64_PACIASP
     /* optimize sbox using AESE instruction */
     mov DATA0.s[0],ROUND_KEY2
     tbl VTMP0.16b, {DATA0.16b}, MaskV.16b
-    MUL_MATRIX(VTMP0, TAHMatV, TALMatV, VTMP2)
+    MUL_MATRIX VTMP0, TAHMatV, TALMatV, VTMP2
     eor VTMP1.16b, VTMP1.16b, VTMP1.16b
     aese VTMP0.16b,VTMP1.16b
-    MUL_MATRIX(VTMP0, ATAHMatV, ATALMatV, VTMP2)
+    MUL_MATRIX VTMP0, ATAHMatV, ATALMatV, VTMP2
     mov WTMP,VTMP0.s[0]
     
     /* linear transformation */
@@ -193,42 +189,36 @@ AARCH64_PACIASP
     ldp x29, x30, [sp], #0x30
 AARCH64_AUTIASP
     ret
-.size vpsm4_ex_set_key,.-vpsm4_ex_set_key
+CRYPT_AARCH64_LOCAL_FUNC_END(vpsm4_ex_set_key)
 
 /*
  * void Vpsm4SetEncryptKey(const unsigned char *userKey, SM4_KEY *key);
  * generate SM4 encrypt round KEY context 
  * x0 => userKey; x1 => key
  */
-.globl Vpsm4SetEncryptKey
-.type Vpsm4SetEncryptKey,%function
-.align 5
-Vpsm4SetEncryptKey:
+CRYPT_AARCH64_FUNC_START(Vpsm4SetEncryptKey)
 AARCH64_PACIASP
     stp x29,x30,[sp,#-16]!
     mov w2,1
-    bl vpsm4_ex_set_key
+    bl CRYPT_AARCH64_SYM(vpsm4_ex_set_key)
     ldp x29,x30,[sp],#16
 AARCH64_AUTIASP
     ret
-.size Vpsm4SetEncryptKey,.-Vpsm4SetEncryptKey
+CRYPT_AARCH64_FUNC_END(Vpsm4SetEncryptKey)
 
 /*
  * void Vpsm4SetDecryptKey(const unsigned char *userKey, SM4_KEY *key);
  * generate SM4 decryption round KEY context 
  * x0 => userKey; x1 => key
  */
-.globl Vpsm4SetDecryptKey
-.type Vpsm4SetDecryptKey,%function
-.align 5
-Vpsm4SetDecryptKey:
+CRYPT_AARCH64_FUNC_START(Vpsm4SetDecryptKey)
 AARCH64_PACIASP
     stp x29,x30,[sp,#-16]!
     mov w2,0
-    bl vpsm4_ex_set_key
+    bl CRYPT_AARCH64_SYM(vpsm4_ex_set_key)
     ldp x29,x30,[sp],#16
 AARCH64_AUTIASP
     ret
-.size Vpsm4SetDecryptKey,.-Vpsm4SetDecryptKey
+CRYPT_AARCH64_FUNC_END(Vpsm4SetDecryptKey)
 
 #endif

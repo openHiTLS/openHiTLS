@@ -19,10 +19,10 @@
 #include "crypt_arm.h"
 #include "ecp256_pre_comp_table.s"
 
-.arch   armv8-a+crypto
+CRYPT_AARCH64_ARCH_CRYPTO
 
-.section .rodata
-.align  4
+CRYPT_AARCH64_RODATA_SECTION
+.p2align 4
 .Lpoly:         // P
 .quad   0xffffffffffffffff,0x00000000ffffffff,0x0000000000000000,0xffffffff00000001
 .Lone_mont:     // R mod P, R = 2^256, = 2^256 - P
@@ -40,21 +40,14 @@ Initial z is not set to 1
 */
 
 .text
-.globl  ECP256_GetPreCompTable
-.type   ECP256_GetPreCompTable,%function
-.align  4
-ECP256_GetPreCompTable:
+CRYPT_AARCH64_FUNC_START(ECP256_GetPreCompTable)
 AARCH64_PACIASP
-    adrp x0, g_preCompTable
-    add	x0, x0, :lo12:g_preCompTable
+    CRYPT_AARCH64_GET_RELA(x0, g_preCompTable)
 AARCH64_AUTIASP
     ret
-.size    ECP256_GetPreCompTable,.-ECP256_GetPreCompTable
+CRYPT_AARCH64_FUNC_END(ECP256_GetPreCompTable)
 
-.globl  ECP256_FromMont
-.type   ECP256_FromMont,%function
-.align  4
-ECP256_FromMont:
+CRYPT_AARCH64_FUNC_START(ECP256_FromMont)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-32]!
     add     x29, sp , #0
@@ -62,24 +55,20 @@ AARCH64_PACIASP
 
     ldp     x4 , x5 , [x1]
     ldp     x6 , x7 , [x1, #16]
-    adrp    x14, .Lpoly+8
-    add x14,x14,:lo12:.Lpoly+8
+    CRYPT_AARCH64_GET_RELA(x14, .Lpoly+8)
     ldr x12,[x14]
     ldr x13,[x14,#16]
-    adrp    x2, .Lone // &bp[0]
-    add	    x2, x2, :lo12:.Lone
+    CRYPT_AARCH64_GET_RELA(x2, .Lone)
 
-    bl      ECP256_MulCore
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)
 
     ldp     x19, x20, [sp , #16]
     ldp     x29, x30, [sp], #32
 AARCH64_AUTIASP
     ret
-.size    ECP256_FromMont,.-ECP256_FromMont
+CRYPT_AARCH64_FUNC_END(ECP256_FromMont)
 
-.type   ECP256_AddCore,%function
-.align  4
-ECP256_AddCore:
+CRYPT_AARCH64_LOCAL_FUNC_START(ECP256_AddCore)
 AARCH64_PACIASP
     adds    x14, x14, x8            // ret = a+b
     adcs    x15, x15, x9
@@ -105,15 +94,13 @@ AARCH64_PACIASP
     stp     x16, x17, [x0, #16]
 AARCH64_AUTIASP
     ret
-.size    ECP256_AddCore,.-ECP256_AddCore
+CRYPT_AARCH64_LOCAL_FUNC_END(ECP256_AddCore)
 
 
 ///////////////////////////////////////
 // x14~x17 = a[0~3], x8~x11 = b[0~3] //
 ///////////////////////////////////////
-.type   ECP256_SubCore1,%function
-.align  4
-ECP256_SubCore1:
+CRYPT_AARCH64_LOCAL_FUNC_START(ECP256_SubCore1)
 AARCH64_PACIASP
     subs    x14, x14, x8
     sbcs    x15, x15, x9
@@ -137,11 +124,9 @@ AARCH64_PACIASP
     stp     x16, x17, [x0, #16]
 AARCH64_AUTIASP
     ret
-.size   ECP256_SubCore1,.-ECP256_SubCore1
+CRYPT_AARCH64_LOCAL_FUNC_END(ECP256_SubCore1)
 
-.type   ECP256_SubCore2,%function
-.align  4
-ECP256_SubCore2:
+CRYPT_AARCH64_LOCAL_FUNC_START(ECP256_SubCore2)
 AARCH64_PACIASP
     subs    x14, x8 , x14
     sbcs    x15, x9 , x15
@@ -165,12 +150,10 @@ AARCH64_PACIASP
     stp     x16, x17, [x0, #16]
 AARCH64_AUTIASP
     ret
-.size   ECP256_SubCore2,.-ECP256_SubCore2
+CRYPT_AARCH64_LOCAL_FUNC_END(ECP256_SubCore2)
 
 
-.type   ECP256_DivBy2Core,%function
-.align  4
-ECP256_DivBy2Core:
+CRYPT_AARCH64_LOCAL_FUNC_START(ECP256_DivBy2Core)
 AARCH64_PACIASP
     // a+p
     subs    x8 , x14, #1            // x8  = x14 + 0xffffffffffffffff = x14 - 1
@@ -201,12 +184,9 @@ AARCH64_PACIASP
     stp     x16, x17, [x0, #16]
 AARCH64_AUTIASP
     ret
-.size    ECP256_DivBy2Core,.-ECP256_DivBy2Core
+CRYPT_AARCH64_LOCAL_FUNC_END(ECP256_DivBy2Core)
 
-.globl  ECP256_Neg
-.type   ECP256_Neg,%function
-.align  4
-ECP256_Neg:
+CRYPT_AARCH64_FUNC_START(ECP256_Neg)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp , #0
@@ -219,22 +199,19 @@ AARCH64_PACIASP
     mov     x10, xzr
     mov     x11, xzr
 
-    adrp    x7, .Lpoly+8
-    add x7,x7,:lo12:.Lpoly+8
+    CRYPT_AARCH64_GET_RELA(x7, .Lpoly+8)
     ldr x12,[x7]
     ldr x13,[x7,#16]
     // -a = 0 - a
-    bl      ECP256_SubCore2
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore2)
 
     ldp     x29, x30, [sp], #16
 AARCH64_AUTIASP
     ret
-.size    ECP256_Neg,.-ECP256_Neg
+CRYPT_AARCH64_FUNC_END(ECP256_Neg)
 
 
-.type   ECP256_MulCore,%function
-.align  4
-ECP256_MulCore:
+CRYPT_AARCH64_LOCAL_FUNC_START(ECP256_MulCore)
 AARCH64_PACIASP
     ldr     x3 , [x2]               // b[0]
 
@@ -400,12 +377,10 @@ AARCH64_PACIASP
     stp     x16, x17, [x0, #8*2]
 AARCH64_AUTIASP
     ret
-.size   ECP256_MulCore, .-ECP256_MulCore
+CRYPT_AARCH64_LOCAL_FUNC_END(ECP256_MulCore)
 
 
-.type   ECP256_SqrCore,%function
-.align  4
-ECP256_SqrCore:
+CRYPT_AARCH64_LOCAL_FUNC_START(ECP256_SqrCore)
 AARCH64_PACIASP
 /******************************************
     x7   x1   x20  x19  x17  x16  x15  x14
@@ -538,12 +513,9 @@ AARCH64_PACIASP
     stp     x16, x17, [x0, #16]
 AARCH64_AUTIASP
     ret
-.size   ECP256_SqrCore,.-ECP256_SqrCore
+CRYPT_AARCH64_LOCAL_FUNC_END(ECP256_SqrCore)
 
-.globl  ECP256_Mul
-.type   ECP256_Mul,%function
-.align  4
-ECP256_Mul:
+CRYPT_AARCH64_FUNC_START(ECP256_Mul)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-32]!
     add     x29, sp , #0
@@ -552,23 +524,19 @@ AARCH64_PACIASP
     ldp     x4 , x5 , [x1]
     ldp     x6 , x7 , [x1,#16]
 
-    adrp    x3, .Lpoly+8
-    add x3,x3,:lo12:.Lpoly+8
+    CRYPT_AARCH64_GET_RELA(x3, .Lpoly+8)
     ldr x12,[x3]
     ldr x13,[x3,#16]
 
-    bl      ECP256_MulCore
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)
 
     ldp     x19, x20, [sp , #16]
     ldp     x29, x30, [sp], #32
 AARCH64_AUTIASP
     ret
-.size   ECP256_Mul,.-ECP256_Mul
+CRYPT_AARCH64_FUNC_END(ECP256_Mul)
 
-.globl  ECP256_Sqr
-.type   ECP256_Sqr,%function
-.align  4
-ECP256_Sqr:
+CRYPT_AARCH64_FUNC_START(ECP256_Sqr)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-32]!
     add     x29, sp , #0
@@ -576,18 +544,17 @@ AARCH64_PACIASP
 
     ldp     x4 , x5 , [x1]
     ldp     x6 , x7 , [x1, #16]
-    adrp    x3, .Lpoly+8
-    add x3,x3,:lo12:.Lpoly+8
+    CRYPT_AARCH64_GET_RELA(x3, .Lpoly+8)
     ldr x12,[x3]
     ldr x13,[x3,#16]
 
-    bl      ECP256_SqrCore
+    bl CRYPT_AARCH64_SYM(ECP256_SqrCore)
 
     ldp     x19, x20, [sp , #16]
     ldp     x29, x30, [sp], #32
 AARCH64_AUTIASP
     ret
-.size   ECP256_Sqr,.-ECP256_Sqr
+CRYPT_AARCH64_FUNC_END(ECP256_Sqr)
 
 # ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-madd-2007-bl
 # Deal process:
@@ -603,10 +570,7 @@ AARCH64_AUTIASP
 #     X3 = r2-J-2*V
 #     Y3 = r*(V-X3)-2*Y1*J
 #     Z3 = (Z1+H)2-Z1Z1-HH
-.globl  ECP256_AddAffine
-.type   ECP256_AddAffine,%function
-.align  5
-ECP256_AddAffine:
+CRYPT_AARCH64_FUNC_START(ECP256_AddAffine)
 AARCH64_PACIASP
 
     stp     x29, x30, [sp, #-80]!
@@ -627,8 +591,7 @@ AARCH64_PACIASP
     mov     x23, x2                     // CRYPT_P256_AffinePoint *b
 
 
-    adrp    x14, .Lpoly+8               // p[1]
-    add x14,x14,:lo12:.Lpoly+8
+    CRYPT_AARCH64_GET_RELA(x14, .Lpoly+8)
     ldr x12,[x14]                       // p[3]
     ldr x13,[x14,#16]
 
@@ -662,7 +625,7 @@ AARCH64_PACIASP
 
     add     x0 , sp , #32*3             // zsqr = sp[32*3]
     // x4~x7 = z1[0~3] (the value has been assigned.)
-    bl      ECP256_SqrCore     // zsqr = z1^2
+    bl CRYPT_AARCH64_SYM(ECP256_SqrCore)     // zsqr = z1^2
     // x14~x17 also temporarily stored results
 
     // The next calculation requires the zsqr calculation result as the input.
@@ -676,39 +639,39 @@ AARCH64_PACIASP
     add     x0 , sp , #32*4             // u2 = sp[32*4]
     add     x2 , x23, #0                // x2 points to b->x.
     // x4~x7 * [x2]
-    bl      ECP256_MulCore        // u2 = z1^2 * x2
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // u2 = z1^2 * x2
     // x14~x17  also temporarily stored results.
 
     ldp     x8 , x9 , [x22]             // a->x
     ldp     x10, x11, [x22, #16]
     add     x0 , sp , #32*5             // h = sp[32*5]
     // x14~x17 - x8~x11
-    bl      ECP256_SubCore1       // h = u2 - x1
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore1)       // h = u2 - x1
 
     ldp     x4 , x5 , [sp, #32*3]       // zsqr = sp[32*3]
     ldp     x6 , x7 , [sp, #32*3+16]
     add     x2 , x22, #64               // x2 points to a->z
     add     x0 , sp , #32*3             // s2 = sp[32*3], zsqr will not be used later.
                                         // You can use this block memory to store and calculate s2.
-    bl      ECP256_MulCore        // s2 = zsqr * z1 = z1^3
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // s2 = zsqr * z1 = z1^3
 
     ldp     x4 , x5 , [sp, #32*5]       // x4~x7 = h = sp[32*5]
     ldp     x6 , x7 , [sp, #32*5+16]
     add     x2 , x22, #64
     add     x0 , sp , #32*2             // x0 points to res_z.
-    bl      ECP256_MulCore        // res_z = h * z1
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // res_z = h * z1
 
     ldp     x4 , x5 , [sp, #32*3]       // x4~x7 = s2 = sp[32*3]
     ldp     x6 , x7 , [sp, #32*3+16]
     add     x2 , x23, #32               // x2 points to b->y.
     add     x0 , sp , #32*3             // s2 = sp[32*3]
-    bl      ECP256_MulCore        // s2 = s2 * y2 = y2 * z1^3
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // s2 = s2 * y2 = y2 * z1^3
 
     ldp     x8 , x9 , [x22, #32]
     ldp     x10, x11, [x22, #32+16]
     add     x0 , sp , #32*6             // R = sp[32*6]
     // x14~x17 - x8~x11
-    bl      ECP256_SubCore1       // R = s2 - y1
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore1)       // R = s2 - y1
 
     // Rsqr = R^2 and hsqr = h^2 are independent of each other. The sequence can be adjusted.
     // If Rsqr is calculated first, the memory can be read less once. (The pipeline bubble needs to be optimized.)
@@ -718,12 +681,12 @@ AARCH64_PACIASP
     mov     x6 , x16
     mov     x7 , x17
     add     x0 , sp , #32*7             // Rsqr = sp[32*7]
-    bl      ECP256_SqrCore     // Rsqr = R^2
+    bl CRYPT_AARCH64_SYM(ECP256_SqrCore)     // Rsqr = R^2
 
     ldp     x4 , x5 , [sp, #32*5]       // h = sp[32*5]
     ldp     x6 , x7 , [sp, #32*5+16]
     add     x0 , sp , #32*8             // hsqr = sp[32*8]
-    bl      ECP256_SqrCore     // hsqr = h^2
+    bl CRYPT_AARCH64_SYM(ECP256_SqrCore)     // hsqr = h^2
 
     // x14 to x17 stores the hsqr results and does not need to be read from the memory.
     // (The pipeline bubble exists and needs to be optimized.)
@@ -733,7 +696,7 @@ AARCH64_PACIASP
     mov     x7 , x17
     add     x2 , sp , #32*5             // h = sp[32*5]
     add     x0 , sp , #32*9             // hcub = sp[32*9]
-    bl      ECP256_MulCore        // hcub = hsqr * h = h^3
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // hcub = hsqr * h = h^3
 
     // Because the multiplication involves too many registers, the preceding hsqr cannot be backed up.
     // If the registers after x19 are used, the hsqr needs to be pushed and popped at the beginning
@@ -742,7 +705,7 @@ AARCH64_PACIASP
     ldp     x6 , x7 , [sp, #32*8+16]
     add     x2 , x22, #0                // x2 points to a->x
     add     x0 , sp , #32*4             // u2 = sp[32*4]
-    bl      ECP256_MulCore        // u2 = hsqr * x1
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // u2 = hsqr * x1
 
     mov     x8 , x14
     mov     x9 , x15
@@ -750,44 +713,44 @@ AARCH64_PACIASP
     mov     x11, x17
     add     x0 , sp , #32*8             // hsqr = sp[32*8]
     // x14~x17 + x8~x11
-    bl      ECP256_AddCore        // hsqr = 2 * u2
+    bl CRYPT_AARCH64_SYM(ECP256_AddCore)        // hsqr = 2 * u2
 
     // x14~x17 saves hsqr, so ECP256_SubCore2 is called.
     ldp     x8 , x9 , [sp, #32*7]       // Rsqr = sp[32*7]
     ldp     x10, x11, [sp, #32*7+16]
     // x8~x11 - x14~x17
     add     x0 , sp , #0                // x0 points to res_x
-    bl      ECP256_SubCore2       // res_x = Rsqr - hsqr
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore2)       // res_x = Rsqr - hsqr
 
     // x14~x17 save res_x, so call ECP256_SubCore1
     ldp     x8 , x9 , [sp, #32*9]       // hcub = sp[32*9]
     ldp     x10, x11, [sp, #32*9+16]
     // x14~x17 - x8~x11
-    bl      ECP256_SubCore1       // res_x = res_x - hcub
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore1)       // res_x = res_x - hcub
 
     // x14~x17 save res_x, so call ECP256_SubCore2
     ldp     x8 , x9 , [sp, #32*4]       // u2 = sp[32*4]
     ldp     x10, x11, [sp, #32*4+16]
     add     x0 , sp , #32*1
-    bl      ECP256_SubCore2       // res_y = u2 - res_x
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore2)       // res_y = u2 - res_x
 
     ldp     x4 , x5 , [sp, #32*9]       // hcub = sp[32*9]
     ldp     x6 , x7 , [sp, #32*9+16]
     add     x2 , x22, #32               // y1 = a->y
     add     x0 , sp , #32*3             // s2 = sp[32*3]
-    bl      ECP256_MulCore        // s2 = y1 * hcub
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // s2 = y1 * hcub
 
     add     x2 , sp , #32*6             // R = sp[32*6]
     add     x0 , sp , #32*1             // res_y = sp[32*1]
     ldp     x4 , x5 , [x0]
     ldp     x6 , x7 , [x0, #16]
-    bl      ECP256_MulCore        // res_y = res_y * R
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // res_y = res_y * R
 
     // x14–x17 stores res_y, and x0 is still res_y. No value needs to be assigned again.
     ldp     x8 , x9 , [sp, #32*3]       // s2 = sp[32*3]
     ldp     x10, x11, [sp, #32*3+16]
     // x14~x17 - x8~x11
-    bl      ECP256_SubCore1       // res_y = res_y - s2
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore1)       // res_y = res_y - s2
 
 
     // Four memory blocks are not read. (The pipeline bubble exists and needs to be optimized.)
@@ -839,8 +802,7 @@ AARCH64_PACIASP
     stp     x16, x17, [x21, #16]
 
     // copy z
-    adrp    x23, .Lone_mont
-    add	    x23, x23, :lo12:.Lone_mont
+    CRYPT_AARCH64_GET_RELA(x23, .Lone_mont)
     ldp     x4 , x5 , [x23]             // one_mont, 1 * RR * R' = R (mod p)
     ldp     x6 , x7 , [x23, #16]
     ldp     x8 , x9 , [x22, #64]        // in1_z, a->z
@@ -872,7 +834,7 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #80
 AARCH64_AUTIASP
     ret
-.size   ECP256_AddAffine,.-ECP256_AddAffine
+CRYPT_AARCH64_FUNC_END(ECP256_AddAffine)
 
 # ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo
 # Deal process:
@@ -885,10 +847,7 @@ AARCH64_AUTIASP
 #     X3 = r2-H3-2*U1*H2
 #     Y3 = r*(U1*H2-X3)-S1*H3
 #     Z3 = Z1*Z2*H
-.globl  ECP256_PointAdd
-.type   ECP256_PointAdd,%function
-.align  5
-ECP256_PointAdd:
+CRYPT_AARCH64_FUNC_START(ECP256_PointAdd)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-96]!
     add     x29, sp , #0
@@ -900,8 +859,7 @@ AARCH64_PACIASP
     sub     sp , sp , #32*12            // Each coordinate is 256 bits, that is, 32 bytes,
                                         // and a space of 10 coordinates is applied for.
 
-    adrp    x14, .Lpoly+8               // p[1]
-    add x14,x14,:lo12:.Lpoly+8
+    CRYPT_AARCH64_GET_RELA(x14, .Lpoly+8)
     ldr x12,[x14]                       // p[3]
     ldr x13,[x14,#16]
 
@@ -923,7 +881,7 @@ AARCH64_PACIASP
 
     // Because x4 to x7 exactly hold z1, z1^2 can be calculated first.
     add     x0 , sp , #0                 // z1sqr = sp[32*0]
-    bl      ECP256_SqrCore     // z1sqr = z1^2
+    bl CRYPT_AARCH64_SYM(ECP256_SqrCore)     // z1sqr = z1^2
 
     // x14 to x17 exactly save the z1sqr result (the pipeline bubble exists and needs to be optimized).
     mov     x4 , x14
@@ -932,7 +890,7 @@ AARCH64_PACIASP
     mov     x7 , x17
     add     x2 , x22, #64               // x2 points to z1, that is a->z
     add     x0 , sp , #32*1             // s2 = sp[32*1]
-    bl      ECP256_MulCore        // s2 = z1^3
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // s2 = z1^3
 
     // x14 to x17 exactly save the result of s2. (The pipeline bubble exists and needs to be optimized.)
     mov     x4 , x14
@@ -942,7 +900,7 @@ AARCH64_PACIASP
     add     x2 , x23, #32               // x2 points to y2, that is b->y
     // add     x0 , sp , #32*1             // s2 = sp[32*1], x0 It is exactly s2 and does not need to be set.
                                            // (There are pipeline bubbles to be optimized.)
-    bl      ECP256_MulCore        // s2 = y2 * z1^3
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // s2 = y2 * z1^3
 
     ldp     x4 , x5 , [x23, #64]        // z2
     ldp     x6 , x7 , [x23, #64+16]
@@ -956,7 +914,7 @@ AARCH64_PACIASP
 
     // Because x4~x7 happens to hold z2, z2^2 can be calculated
     add     x0 , sp , #32*2             // z2sqr = sp[32*2]
-    bl      ECP256_SqrCore     // z2sqr = z2^2
+    bl CRYPT_AARCH64_SYM(ECP256_SqrCore)     // z2sqr = z2^2
 
     // x14 to x17 exactly save the z2sqr result. (There are pipeline bubbles to be optimized.)
     mov     x4 , x14
@@ -965,7 +923,7 @@ AARCH64_PACIASP
     mov     x7 , x17
     add     x2 , x23, #64               // x2 points to z2, that is b->z
     add     x0 , sp , #32*3             // s1 = sp[32*3]
-    bl      ECP256_MulCore        // s1 = z2^3
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // s1 = z2^3
 
     // x14 to x17 exactly save the result of s2. (The pipeline bubble exists and needs to be optimized.)
     mov     x4 , x14
@@ -975,7 +933,7 @@ AARCH64_PACIASP
     add     x2 , x22, #32               // x2 points to y1, that is a->y
     // add     x0 , sp , #32*3             // s1 = sp[32*3], x0 is exactly s1 and does not need to be set.
                                            //  (There are pipeline bubbles to be optimized.)
-    bl      ECP256_MulCore        // s1 = y1 * z2^3
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // s1 = y1 * z2^3
 
 
     // x14 to x17 save the result of s1. Therefore, the ECP256_SubCore2 interface is selected.
@@ -983,7 +941,7 @@ AARCH64_PACIASP
     ldp     x10, x11, [sp, #32*1+16]
     // x8~x11 - x14~x17
     add     x0 , sp , #32*4             // R = sp[32*4]
-    bl      ECP256_SubCore2       // R = s2 - s1
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore2)       // R = s2 - s1
 
     // x14 to x17 save the result of R, (R==0) <==> (s2 == s1)
     orr     x26, x14, x15
@@ -994,20 +952,20 @@ AARCH64_PACIASP
     ldp     x6 , x7 , [x22, #16]
     add     x2 , sp , #32*2             // z2sqr = sp[32*2]
     add     x0 , sp , #32*5             // u1 = sp[32*5]
-    bl      ECP256_MulCore        // u1 = x1 * z2sqr
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // u1 = x1 * z2sqr
 
     ldp     x4 , x5 , [x23]             // Take x2, that is b->x
     ldp     x6 , x7 , [x23, #16]
     add     x2 , sp , #0                // z1sqr = sp[32*0]
     add     x0 , sp , #32*6             // u2 = sp[32*6]
-    bl      ECP256_MulCore        // u2 = x2 * z1sqr
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // u2 = x2 * z1sqr
 
     // x14 to x17 save the result of u2. Therefore, the ECP256_SubCore1 interface is selected.
     ldp     x8 , x9 , [sp, #32*5]       // u1 = sp[32*5]
     ldp     x10, x11, [sp, #32*5+16]
     // x14~x17 - x8~x11
     add     x0 , sp , #32*7             // h = sp[32*7]
-    bl      ECP256_SubCore1       // h = u2 - u1
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore1)       // h = u2 - u1
 
     // x14 to x17 save the result of h, (h==0) <==> (u2 == u1)
     orr     x14, x14, x15
@@ -1044,19 +1002,19 @@ AARCH64_PACIASP
                                         // only releases 32 x 4. Therefore, you need to release part of the stack space in advance.
     b       .Lpoint_double
 
-.align  4
+.p2align 4
 .Lpoint_add:
     ldp     x4 , x5 , [sp, #32*4]       // R = sp[32*4]
     ldp     x6 , x7 , [sp, #32*4+16]
     add     x0 , sp , #0                // Rsqr = sp[0], Because z1sqr will not be used later,
                                         // this memory can be used to save Rsqr.
-    bl      ECP256_SqrCore     // Rsqr = R^2
+    bl CRYPT_AARCH64_SYM(ECP256_SqrCore)     // Rsqr = R^2
 
     ldp     x4 , x5 , [sp, #32*7]       // h = sp[32*7]
     ldp     x6 , x7 , [sp, #32*7+16]
     add     x2 , x22, #64               // x2 points to z1
     add     x0 , sp , #32*11            // res_z = sp[32*11]
-    bl      ECP256_MulCore        // res_z = h * z1
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // res_z = h * z1
 
     // The res_z result is stored in x14 to x17. (The pipeline bubble needs to be optimized.)
     mov     x4 , x14
@@ -1066,13 +1024,13 @@ AARCH64_PACIASP
     add     x2 , x23, #64               // x2 points to z2
     // x0 is still res_z and does not need to be reassigned.
     // add     x0 , sp , #32*11         // res_z = sp[32*11]
-    bl      ECP256_MulCore        // res_z = res_z * z2
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // res_z = res_z * z2
 
     ldp     x4 , x5 , [sp, #32*7]       // h = sp[32*7]
     ldp     x6 , x7 , [sp, #32*7+16]
     add     x0 , sp , #32*2             // hsqr = sp[32*2], Because z2sqr will not be used later,
                                         // you can use this memory to save hsqr.
-    bl      ECP256_SqrCore
+    bl CRYPT_AARCH64_SYM(ECP256_SqrCore)
 
     // The hsqr result is stored in x14 to x17. (The pipeline bubble needs to be optimized.)
     mov     x4 , x14
@@ -1081,13 +1039,13 @@ AARCH64_PACIASP
     mov     x7 , x17
     add     x2 , sp , #32*7             // h = sp[32*7]
     add     x0 , sp , #32*8             // hcub = sp[32*8]
-    bl      ECP256_MulCore        // hcub = hsqr * h
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // hcub = hsqr * h
 
     ldp     x4 , x5 , [sp, #32*5]       // u1 = sp[32*5]
     ldp     x6 , x7 , [sp, #32*5+16]
     add     x2 , sp , #32*2             // hsqr = sp[32*2]
     add     x0 , sp , #32*6             // u2 = sp[32*6]
-    bl      ECP256_MulCore        // u2 = u1 * hsqr
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // u2 = u1 * hsqr
 
     // x14~x17 exactly save the result of u2.
     mov     x8 , x14
@@ -1098,47 +1056,47 @@ AARCH64_PACIASP
     // The previous operation x2 also saves the address of hsqr.
     mov     x0 , x2
     // x14~x17 + x8~x11
-    bl      ECP256_AddCore        // hsqr = 2 * u2
+    bl CRYPT_AARCH64_SYM(ECP256_AddCore)        // hsqr = 2 * u2
 
     // x14 to x17 save the hsqr result. Therefore, ECP256_SubCore2 is called.
     ldp     x8 , x9 , [sp]              // Rsqr = sp[0]
     ldp     x10, x11, [sp, #16]
     // x8~x11 - x14~x17
     add     x0 , sp , #32*9             // res_x = sp[32*9]
-    bl      ECP256_SubCore2       // res_x = Rsqr - hsqr
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore2)       // res_x = Rsqr - hsqr
 
     // x14 to x17 exactly save the result of res_x, so ECP256_SubCore1 is called.
     ldp     x8 , x9 , [sp, #32*8]       // hcub = sp[32*8]
     ldp     x10, x11, [sp, #32*8+16]
     // x14~x17 - x8~11
     // The previous operation x0 also stores the address of res_x.
-    bl      ECP256_SubCore1       // res_x = res_x - hcub
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore1)       // res_x = res_x - hcub
 
     // x14 to x17 exactly save the result of res_x. Therefore, ECP256_SubCore2 is called.
     ldp     x8 , x9 , [sp, #32*6]       // u2 = sp[0]
     ldp     x10, x11, [sp, #32*6+16]
     // x8~x11 - x14~x17
     add     x0 , sp , #32*10
-    bl      ECP256_SubCore2       // res_y = u2 - res_x
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore2)       // res_y = u2 - res_x
 
     ldp     x4 , x5 , [sp, #32*3]       // s1 = sp[32*3]
     ldp     x6 , x7 , [sp, #32*3+16]
     add     x2 , sp , #32*8             // hcub = sp[32*8]
     add     x0 , sp , #32*1             // s2 = sp[32*1]
-    bl      ECP256_MulCore        // s2 = s1 * hcub
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // s2 = s1 * hcub
 
     add     x2 , sp , #32*4             // R = sp[32*4]
     add     x0 , sp , #32*10            // res_y = sp[32*10]
     ldp     x4 , x5 , [x0]              // res_y = sp[32*10], Borrowing x0 address without offset
     ldp     x6 , x7 , [x0, #16]
-    bl      ECP256_MulCore        // res_y = res_y * R
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // res_y = res_y * R
 
     // x14 to x17 exactly save the result of res_y. Therefore, ECP256_SubCore1 is called.
     ldp     x8 , x9 , [sp, #32]         // s2 = sp[32*1]
     ldp     x10, x11, [sp, #32+16]
     // x14~x17 - x8~x11
     // The previous operation x0 also stores the address of res_y.
-    bl      ECP256_SubCore1       // res_y = res_y - s2
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore1)       // res_y = res_y - s2
 
     // Four memory blocks are not read. (The pipeline bubble exists and needs to be optimized.)
     // x14-x17 stores res_y. Therefore, res_y is judged and assigned a value.
@@ -1221,7 +1179,7 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #96
 AARCH64_AUTIASP
     ret
-.size    ECP256_PointAdd,.-ECP256_PointAdd
+CRYPT_AARCH64_FUNC_END(ECP256_PointAdd)
 
 # ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#doubling-dbl-2001-b
 # Deal process:
@@ -1232,10 +1190,7 @@ AARCH64_AUTIASP
 #     X3 = alpha2-8*beta
 #     Z3 = (Y1+Z1)2-gamma-delta
 #     Y3 = alpha*(4*beta-X3)-8*gamma2
-.globl  ECP256_PointDouble
-.type   ECP256_PointDouble,%function
-.align  5
-ECP256_PointDouble:
+CRYPT_AARCH64_FUNC_START(ECP256_PointDouble)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-96]!       // Why is 96 space given here? Only x19~x22 is stacked. Theoretically, only [sp, #-48] is required.
     add     x29, sp , #0                // Whether it is related to the Lpoint_double jump of the ecp_nistz256_point_add interface
@@ -1249,8 +1204,7 @@ AARCH64_PACIASP
     // Back up the initial input parameter pointer r, a.
     mov     x21, x0
     mov     x22, x1
-    adrp    x3, .Lpoly+8               // p[1]
-    add x3,x3,:lo12:.Lpoly+8
+    CRYPT_AARCH64_GET_RELA(x3, .Lpoly+8)
     ldr x12,[x3]                       // p[3]
     ldr x13,[x3,#16]
 
@@ -1261,36 +1215,36 @@ AARCH64_PACIASP
     mov     x11, x17
     ldp     x6 , x7 , [x22, #64+16]
     add     x0 , sp , #0                // s = sp[0]
-    bl      ECP256_AddCore        // s = 2 * a->y
+    bl CRYPT_AARCH64_SYM(ECP256_AddCore)        // s = 2 * a->y
 
     add     x0 , sp , #32               // zsqr = sp[32*1]
-    bl      ECP256_SqrCore        // zsqr = (a->z)^2
+    bl CRYPT_AARCH64_SYM(ECP256_SqrCore)        // zsqr = (a->z)^2
 
     // x14 to x17 save the result of s. Calculate s^2 first.
     ldp     x4 , x5 , [sp]
     add     x0 , sp , #0                // s = sp[0]
     ldp     x6 , x7 , [sp, #16]
-    bl      ECP256_SqrCore        // s = s^2
+    bl CRYPT_AARCH64_SYM(ECP256_SqrCore)        // s = s^2
 
     ldp     x14, x15, [sp, #32]             // a->x
     ldp     x8 , x9 , [x22]             // a->x
     ldp     x16, x17, [sp, #32+16]
     add     x0 , sp , #64               // m = sp[32*2]
     ldp     x10, x11, [x22, #16]
-    bl      ECP256_AddCore        // m = a->x + zsqr
+    bl CRYPT_AARCH64_SYM(ECP256_AddCore)        // m = a->x + zsqr
 
     ldp     x14 , x15 , [sp, #32]             // a->x
     ldp     x8 , x9 , [x22]             // a->x
     ldp     x16, x17, [sp, #32+16]
     add     x0 , sp , #32
     ldp     x10, x11, [x22, #16]
-    bl      ECP256_SubCore2       // zsqr = a->x - zsqr
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore2)       // zsqr = a->x - zsqr
 
     ldp     x4 , x5 , [x22, #64]        // a->z
     ldp     x6 , x7 , [x22, #64+16]
     add     x0 , x21, #64               // res_z
     add     x2 , x22, #32               // a->y
-    bl      ECP256_MulCore        // res_z = a->z * a->y
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // res_z = a->z * a->y
 
     // x14 to x17 save the result of res_z.
     mov     x8 , x14
@@ -1300,19 +1254,19 @@ AARCH64_PACIASP
     mov     x11, x17
     ldp     x6 , x7 , [sp, #16]
     add     x0 , x21, #64               // res_z
-    bl      ECP256_AddCore        // res_z = 2 * res_z
+    bl CRYPT_AARCH64_SYM(ECP256_AddCore)        // res_z = 2 * res_z
 
     add     x0 , x21, #32               // x0 points to res_y, that is r->y
-    bl      ECP256_SqrCore        // res_y = s^2
+    bl CRYPT_AARCH64_SYM(ECP256_SqrCore)        // res_y = s^2
 
     add     x0 , x21, #32
-    bl      ECP256_DivBy2Core     // res_y = res_y / 2
+    bl CRYPT_AARCH64_SYM(ECP256_DivBy2Core)     // res_y = res_y / 2
 
     ldp     x4 , x5 , [sp, #64]         // m = sp[64]
     ldp     x6 , x7 , [sp, #64+16]
     add     x2 , sp , #32               // zsqr = sp[32]
     add     x0 , sp , #64
-    bl      ECP256_MulCore        // m = m * zsqr
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // m = m * zsqr
 
     // x14–x17 saves the result of m. Save an extra copy to x4–x7.
     mov     x8 , x14
@@ -1324,18 +1278,18 @@ AARCH64_PACIASP
     mov     x11, x17
     mov     x7 , x17
     add     x0 , sp , #64
-    bl      ECP256_AddCore        // m = 2 * m
+    bl CRYPT_AARCH64_SYM(ECP256_AddCore)        // m = 2 * m
     mov     x8 , x4
     mov     x9 , x5
     mov     x10, x6
     mov     x11, x7
-    bl      ECP256_AddCore        // m = 3 * m
+    bl CRYPT_AARCH64_SYM(ECP256_AddCore)        // m = 3 * m
 
     ldp     x4 , x5 , [sp]              // s = sp[0]
     add     x2 , x22, #0                // a->x
     ldp     x6 , x7 , [sp, #16]
     add     x0 , sp , #0                // s = sp[0]
-    bl      ECP256_MulCore        // s = s * a->x
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // s = s * a->x
 
     // x14~x17 exactly saves the result of s
     mov     x8 , x14
@@ -1345,22 +1299,22 @@ AARCH64_PACIASP
     mov     x11, x17
     ldp     x6 , x7 , [sp, #64+16]
     add     x0 , sp , #96               // tmp = sp[96]
-    bl      ECP256_AddCore        // tmp = 2 * s
+    bl CRYPT_AARCH64_SYM(ECP256_AddCore)        // tmp = 2 * s
 
     // x14~x17 exactly saves the result of m.
     add     x0 , x21, #0                // res_x = r->x
-    bl      ECP256_SqrCore        // res_x = m^2
+    bl CRYPT_AARCH64_SYM(ECP256_SqrCore)        // res_x = m^2
 
     // x14~x17 exactly saves the result of res_x.
     ldp     x8 , x9 , [sp, #96]         // tmp = sp[96]
     ldp     x10, x11, [sp, #96+16]
-    bl      ECP256_SubCore1       // res_x = res_x - tmp
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore1)       // res_x = res_x - tmp
 
     // x14~x17 exactly saves the result of res_x, Therefore, ECP256_SubCore2 is invoked.
     ldp     x8 , x9 , [sp]              // s = sp[0]
     ldp     x10, x11, [sp, #16]
     add     x0 , sp , #0
-    bl      ECP256_SubCore2       // s = s - res_x
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore2)       // s = s - res_x
 
     // x14~x17 exactly saves the result of s, x0 still points to s.
     mov     x4 , x14
@@ -1368,13 +1322,13 @@ AARCH64_PACIASP
     mov     x6 , x16
     mov     x7 , x17
     add     x2 , sp , #64               // m = sp[64]
-    bl      ECP256_MulCore        // s = s * m
+    bl CRYPT_AARCH64_SYM(ECP256_MulCore)        // s = s * m
 
     // x14 to x17 just save the result of s, so call ECP256_SubCore1.
     add     x0 , x21, #32               // x0 points to res_y
     ldp     x8 , x9 , [x0]              // res_y
     ldp     x10, x11, [x0, #16]
-    bl      ECP256_SubCore1       // res_y = s - res_y
+    bl CRYPT_AARCH64_SYM(ECP256_SubCore1)       // res_y = s - res_y
 
     add     sp , x29, #0                // Free temporary variable
     ldp     x19, x20, [x29, #16]
@@ -1382,12 +1336,9 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #96
 AARCH64_AUTIASP
     ret
-.size    ECP256_PointDouble,.-ECP256_PointDouble
+CRYPT_AARCH64_FUNC_END(ECP256_PointDouble)
 
-.globl  ECP256_OrdMul
-.type   ECP256_OrdMul,%function
-.align  4
-ECP256_OrdMul:
+CRYPT_AARCH64_FUNC_START(ECP256_OrdMul)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-64]!
     add     x29, sp , #0
@@ -1395,8 +1346,7 @@ AARCH64_PACIASP
     stp     x21, x22, [sp, #32]
     stp     x23, x24, [sp, #48]
 
-    adrp    x23, .Lord
-    add	    x23, x23, :lo12:.Lord       // x23 = &n
+    CRYPT_AARCH64_GET_RELA(x23, .Lord)       // x23 = &n
     ldp     x12, x13, [x23]             // n[0~3]
     ldp     x21, x22, [x23, #16]
     ldr     x23, [x23, #32]             // x23 = LordK
@@ -1632,12 +1582,9 @@ AARCH64_PACIASP
     ldr     x29, [sp], #64
 AARCH64_AUTIASP
     ret
-.size   ECP256_OrdMul,.-ECP256_OrdMul
+CRYPT_AARCH64_FUNC_END(ECP256_OrdMul)
 
-.globl  ECP256_OrdSqr
-.type   ECP256_OrdSqr,%function
-.align  4
-ECP256_OrdSqr:
+CRYPT_AARCH64_FUNC_START(ECP256_OrdSqr)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-64]!
     add     x29, sp , #0
@@ -1645,8 +1592,7 @@ AARCH64_PACIASP
     stp     x21, x22, [sp, #32]
     stp     x23, x24, [sp, #48]
 
-    adrp    x23, .Lord
-    add	    x23, x23, :lo12:.Lord       // x23 = &n
+    CRYPT_AARCH64_GET_RELA(x23, .Lord)       // x23 = &n
     ldp     x12, x13, [x23]             // n[0~3]
     ldp     x21, x22, [x23, #16]
     ldr     x23, [x23, #32]             // x23 = LordK
@@ -1654,7 +1600,7 @@ AARCH64_PACIASP
     ldp     x4 , x5 , [x1]              // x4~x7 = a[0~3]
     ldp     x6 , x7 , [x1, #16]
 
-.align  4
+.p2align 4
 .Lord_sqr:
     sub     x2 , x2 , #1
 /******************************************
@@ -1864,12 +1810,9 @@ AARCH64_PACIASP
     ldr     x29, [sp], #64
 AARCH64_AUTIASP
     ret
-.size   ECP256_OrdSqr,.-ECP256_OrdSqr
+CRYPT_AARCH64_FUNC_END(ECP256_OrdSqr)
 
-.globl  ECP256_Scatterw5
-.type   ECP256_Scatterw5,%function
-.align  4
-ECP256_Scatterw5:
+CRYPT_AARCH64_FUNC_START(ECP256_Scatterw5)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp , #0
@@ -1908,12 +1851,9 @@ AARCH64_PACIASP
     ldr     x29, [sp], #16
 AARCH64_AUTIASP
     ret
-.size   ECP256_Scatterw5,.-ECP256_Scatterw5
+CRYPT_AARCH64_FUNC_END(ECP256_Scatterw5)
 
-.globl  ECP256_Gatherw5
-.type   ECP256_Gatherw5,%function
-.align  4
-ECP256_Gatherw5:
+CRYPT_AARCH64_FUNC_START(ECP256_Gatherw5)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp , #0
@@ -1970,12 +1910,9 @@ AARCH64_PACIASP
     ldr     x29, [sp], #16
 AARCH64_AUTIASP
     ret
-.size   ECP256_Gatherw5,.-ECP256_Gatherw5
+CRYPT_AARCH64_FUNC_END(ECP256_Gatherw5)
 
-.globl  ECP256_Scatterw7
-.type   ECP256_Scatterw7,%function
-.align  4
-ECP256_Scatterw7:
+CRYPT_AARCH64_FUNC_START(ECP256_Scatterw7)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp , #0
@@ -2009,13 +1946,10 @@ AARCH64_PACIASP
     ldr    x29, [sp], #16
 AARCH64_AUTIASP
     ret
-.size   ECP256_Scatterw7,.-ECP256_Scatterw7
+CRYPT_AARCH64_FUNC_END(ECP256_Scatterw7)
 
 // The anti-cache attack solution can be used together with ECP256_Scatterw7.
-.globl  ECP256_Gatherw7
-.type   ECP256_Gatherw7,%function
-.align  4
-ECP256_Gatherw7:
+CRYPT_AARCH64_FUNC_START(ECP256_Gatherw7)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp , #0
@@ -2069,6 +2003,6 @@ AARCH64_PACIASP
     ldr    x29,[sp],#16
 AARCH64_AUTIASP
     ret
-.size   ECP256_Gatherw7,.-ECP256_Gatherw7
+CRYPT_AARCH64_FUNC_END(ECP256_Gatherw7)
 
 #endif

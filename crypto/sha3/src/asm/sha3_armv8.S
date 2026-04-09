@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_SHA3
 
 #include "crypt_arm.h"
-.arch    armv8-a+crypto
+CRYPT_AARCH64_ARCH_CRYPTO
 
 /*
  * Status matrix using register aliases
@@ -46,7 +46,7 @@ A24 .req x14
 A30 .req x15
 A31 .req x16
 A32 .req x17
-A33 .req x18
+A33 .req x30
 A34 .req x19
 A40 .req x20
 A41 .req x21
@@ -228,8 +228,7 @@ T4  .req x29
     eor A03, A03, T2
     eor A04, A04, T1
 
-    adrp x25, g_roundConstant
-    add x25, x25, :lo12:g_roundConstant       // x25 === T0
+    CRYPT_AARCH64_GET_RELA(x25, .Lg_roundConstant)       // x25 === T0
 
     ldr T3, [x25, \offset*8]
     eor A00, A00, T3                // iota: A[0, 0] = A[0, 0] xor iotas[i]
@@ -366,10 +365,10 @@ T4  .req x29
     mov     x3, x28
 .endm
 
-.section .rodata
-.balign    64
-.type    g_roundConstant, %object
-g_roundConstant:
+CRYPT_AARCH64_RODATA_SECTION
+.balign 64
+
+.Lg_roundConstant:
     .quad   0x0000000000000001
     .quad   0x0000000000008082
     .quad   0x800000000000808a
@@ -394,7 +393,7 @@ g_roundConstant:
     .quad   0x8000000000008080
     .quad   0x0000000080000001
     .quad   0x8000000080008008
-    .size   g_roundConstant, .-g_roundConstant
+
 
 /**
  *  Function description: Perform shA3 absorption according to the input message.
@@ -411,10 +410,7 @@ g_roundConstant:
  */
 
 .text
-.balign 16
-.global SHA3_Absorb
-.type   SHA3_Absorb, %function
-SHA3_Absorb:
+CRYPT_AARCH64_FUNC_START(SHA3_Absorb)
 AARCH64_PACIASP
     /* push stack protection */
     stp x29, x30, [sp, #-96]!
@@ -680,9 +676,8 @@ AARCH64_PACIASP
     ldp x27, x28, [sp], #8*2
 AARCH64_AUTIASP
     ret
-.size SHA3_Absorb, .-SHA3_Absorb
+CRYPT_AARCH64_FUNC_END(SHA3_Absorb)
 
-.balign 16
 /**
  *  Function description: Perform SHA3 squeezing to obtain the digest message.
  *  Function prototyp: void SHA3_Squeeze(uint8_t *state, uint8_t *out, uinT32_t outLen, uinT32_t r, bool isNeedKeccak)
@@ -696,23 +691,22 @@ AARCH64_AUTIASP
  *  Output register: x1: Pointer to the output summary address
  *  Function/Macro Call: ROUND
  */
-.global SHA3_Squeeze
-.type   SHA3_Squeeze, %function
-SHA3_Squeeze:
+CRYPT_AARCH64_FUNC_START(SHA3_Squeeze)
 AARCH64_PACIASP
     /* push stack protection */
-    stp x29, x30, [sp, #-96]!
-    stp x19, x20, [sp, #8*2]
-    stp x21, x22, [sp, #8*4]
-    stp x23, x24, [sp, #8*6]
-    stp x25, x26, [sp, #8*8]
-    stp x27, x28, [sp, #8*10]
+    stp x29, x30, [sp, #-112]!
+    add x29, sp, #0
+    stp x19, x20, [sp, #16]
+    stp x21, x22, [sp, #32]
+    stp x23, x24, [sp, #48]
+    stp x25, x26, [sp, #64]
+    stp x27, x28, [sp, #80]
 
     mov x25, x0
     mov x26, x1
     mov x27, x2
     mov x28, x3
-    mov x30, x4
+    str x4, [sp, #96]
 
     /* Cyclically squeezing message summaries from the State Matrix */
 .Loop_squeeze:
@@ -763,20 +757,20 @@ AARCH64_PACIASP
 
 .Lsqueeze_done:
     /* End popping */
-    cmp x30, 0
-    beq .Lsqueeze_end
+    ldr x4, [sp, #96]
+    cbz x4, .Lsqueeze_end
     Keccak
 .Lsqueeze_end:
-    ldp x29, x30, [sp], #8*2
-    ldp x19, x20, [sp], #8*2
-    ldp x21, x22, [sp], #8*2
-    ldp x23, x24, [sp], #8*2
-    ldp x25, x26, [sp], #8*2
-    ldp x27, x28, [sp], #8*2
+    ldp x19, x20, [sp, #16]
+    ldp x21, x22, [sp, #32]
+    ldp x23, x24, [sp, #48]
+    ldp x25, x26, [sp, #64]
+    ldp x27, x28, [sp, #80]
+    ldp x29, x30, [sp], #112
     eor x0, x0, x0
 AARCH64_AUTIASP
     ret
-.size SHA3_Squeeze, .-SHA3_Squeeze
+CRYPT_AARCH64_FUNC_END(SHA3_Squeeze)
 
 /**
  *  Function description: Perform Keccak permutation on the state.
@@ -788,9 +782,7 @@ AARCH64_AUTIASP
  *  Output register: None
  *  Function/Macro Call: Keccak
  */
-.global SHA3_Keccak
-.type   SHA3_Keccak, %function
-SHA3_Keccak:
+CRYPT_AARCH64_FUNC_START(SHA3_Keccak)
 AARCH64_PACIASP
     /* push stack protection */
     stp x29, x30, [sp, #-96]!
@@ -811,7 +803,7 @@ AARCH64_PACIASP
     ldp x27, x28, [sp], #8*2
 AARCH64_AUTIASP
     ret
-.size SHA3_Keccak, .-SHA3_Keccak
+CRYPT_AARCH64_FUNC_END(SHA3_Keccak)
 
 
 /* ROL: rotate left by n bits for 2D vector */
@@ -834,11 +826,7 @@ AARCH64_AUTIASP
  *   x1:      round counter
  *   x2:      pointer to round constants
  */
-.text
-.balign 16
-.global KeccakF1600StatePermutex2
-.type   KeccakF1600StatePermutex2, %function
-KeccakF1600StatePermutex2:
+CRYPT_AARCH64_FUNC_START(KeccakF1600StatePermutex2)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-48]!
     stp     x19, x20, [sp, #16]
@@ -861,8 +849,7 @@ AARCH64_PACIASP
     ldp     q22, q23, [x0, #352]
     ldr     q24, [x0, #384]
 
-    adrp    x2, g_roundConstant
-    add     x2, x2, :lo12:g_roundConstant
+    CRYPT_AARCH64_GET_RELA(x2, .Lg_roundConstant)
     mov     x1, #24
 
 .Lx2_round_loop:
@@ -1119,7 +1106,7 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #48
 AARCH64_AUTIASP
     ret
-.size KeccakF1600StatePermutex2, .-KeccakF1600StatePermutex2
+CRYPT_AARCH64_FUNC_END(KeccakF1600StatePermutex2)
 
 /**
  * Keccakx2Absorb - AArch64 NEON implementation
@@ -1139,11 +1126,7 @@ AARCH64_AUTIASP
  * The Keccakx2State layout: s[i] = { lane_i_stream0, lane_i_stream1 }
  * (two parallel 1600-bit states tucked into 25 uint64x2_t registers)
  */
-.text
-.balign 16
-.global Keccakx2Absorb
-.type   Keccakx2Absorb, %function
-Keccakx2Absorb:
+CRYPT_AARCH64_FUNC_START(Keccakx2Absorb)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-64]!
     mov     x29, sp
@@ -1238,7 +1221,7 @@ AARCH64_PACIASP
 
     /* Call KeccakF1600StatePermutex2(state) */
     mov     x0, x19
-    bl      KeccakF1600StatePermutex2
+    bl      CRYPT_AARCH64_SYM(KeccakF1600StatePermutex2)
 
     b       .Labsorb2_full_block_check
 
@@ -1314,7 +1297,7 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #64
 AARCH64_AUTIASP
     ret
-.size Keccakx2Absorb, .-Keccakx2Absorb
+CRYPT_AARCH64_FUNC_END(Keccakx2Absorb)
 
 
 /**
@@ -1331,11 +1314,7 @@ AARCH64_AUTIASP
  *   x3  = r  (rate in bytes)
  *   x4  = s  (pointer to Keccakx2State)
  */
-.text
-.balign 16
-.global Keccakx2Squeeze
-.type   Keccakx2Squeeze, %function
-Keccakx2Squeeze:
+CRYPT_AARCH64_FUNC_START(Keccakx2Squeeze)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-48]!
     mov     x29, sp
@@ -1353,10 +1332,9 @@ AARCH64_PACIASP
 
     /* Permute */
     mov     x0, x4
-    bl      KeccakF1600StatePermutex2
+    bl      CRYPT_AARCH64_SYM(KeccakF1600StatePermutex2)
 
     /* Extract r/8 words from each state lane to out0 / out1 */
-    mov     x0,  x4    /* state pointer */
     mov     x5,  x22   /* remaining bytes = r */
 
 .Lsqueeze2_word_loop:
@@ -1380,6 +1358,6 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #48
 AARCH64_AUTIASP
     ret
-.size Keccakx2Squeeze, .-Keccakx2Squeeze
+CRYPT_AARCH64_FUNC_END(Keccakx2Squeeze)
 
 #endif

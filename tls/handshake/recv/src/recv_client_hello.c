@@ -127,7 +127,7 @@ static uint16_t ClientPrefSelectByTuple(const ClientHelloMsg *clientHello, const
         goto CHECK_SUPPORTED_GROUP;
     }
     LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(clientKeyShares->head)) {
-        cur = LIST_ENTRY(node, KeyShare, head);
+        cur = BSL_LIST_ENTRY(node, KeyShare, head);
         clientKeyshareGroup = cur->group;
         for (i = 0; i < tupleGroupCount; i++) {
             if (clientKeyshareGroup == tupleGroups[i]) {
@@ -168,7 +168,7 @@ static uint16_t ServerPrefSelectByTuple(const ClientHelloMsg *clientHello, const
     for (i = 0; i < tupleGroupCount; i++) {
         serverGroup = tupleGroups[i];
         LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(clientKeyShares->head)) {
-            cur = LIST_ENTRY(node, KeyShare, head);
+            cur = BSL_LIST_ENTRY(node, KeyShare, head);
             if (cur->group == serverGroup) {
                 return serverGroup;
             }
@@ -1669,7 +1669,7 @@ static int32_t ServerCheckKeyShare(TLS_Ctx *ctx, const ClientHelloMsg *clientHel
         of the triggering HelloRetryRequest. */
     if (ctx->hsCtx->haveHrr) {
         if (cache == NULL || cache->head.next != cache->head.prev || // parse must contain elements.
-            LIST_ENTRY(cache->head.next, KeyShare, head)->group != selectGroup) {
+            BSL_LIST_ENTRY(cache->head.next, KeyShare, head)->group != selectGroup) {
             BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16164, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "hrr client hello key Share error.", 0, 0, 0, 0);
@@ -1702,7 +1702,7 @@ static int32_t Tls13ServerProcessKeyShare(TLS_Ctx *ctx, const ClientHelloMsg *cl
     }
 
     LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(cache->head)) {
-        cur = LIST_ENTRY(node, KeyShare, head);
+        cur = BSL_LIST_ENTRY(node, KeyShare, head);
         /*  rfc8446 4.2.8 Clients MUST NOT offer any KeyShareEntry values
             for groups not listed in the client's "supported_groups" extension.
             Servers MAY check for violations of these rules and abort the
@@ -2012,7 +2012,7 @@ static int32_t ServerSelectPskAndCheckBinder(TLS_Ctx *ctx, const ClientHelloMsg 
     LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(offeredPsks->pskNode))
     {
         uint32_t pskLen = HS_PSK_MAX_LEN;
-        cur = LIST_ENTRY(node, PreSharedKey, pskNode);
+        cur = BSL_LIST_ENTRY(node, PreSharedKey, pskNode);
 
         ret = ServerFindPsk(ctx, cur, psk, &pskLen);
         if (ret != HITLS_SUCCESS) {

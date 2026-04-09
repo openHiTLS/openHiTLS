@@ -57,7 +57,7 @@ UnprocessedAppMsg *UnprocessedAppMsgNew(void)
         return NULL;
     }
 
-    LIST_INIT(&msg->head);
+    BSL_LIST_INIT(&msg->head);
     return msg;
 }
 
@@ -76,7 +76,7 @@ void UnprocessedAppMsgListInit(UnprocessedAppMsg *appMsgList)
     }
     appMsgList->count = 0;
     appMsgList->recordBody = NULL;
-    LIST_INIT(&appMsgList->head);
+    BSL_LIST_INIT(&appMsgList->head);
 }
 
 void UnprocessedAppMsgListDeinit(UnprocessedAppMsg *appMsgList)
@@ -86,8 +86,8 @@ void UnprocessedAppMsgListDeinit(UnprocessedAppMsg *appMsgList)
     UnprocessedAppMsg *cur = NULL;
 
     LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(appMsgList->head)) {
-        cur = LIST_ENTRY(node, UnprocessedAppMsg, head);
-        LIST_REMOVE(node);
+        cur = BSL_LIST_ENTRY(node, UnprocessedAppMsg, head);
+        BSL_LIST_REMOVE(node);
         /* releasing nodes and deleting user data */
         UnprocessedAppMsgFree(cur);
     }
@@ -138,11 +138,11 @@ UnprocessedAppMsg *UnprocessedAppMsgGet(UnprocessedAppMsg *appMsgList, uint16_t 
     ListHead *tmpNode = NULL;
     UnprocessedAppMsg *cur = NULL;
     LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(appMsgList->head)) {
-        cur = LIST_ENTRY(node, UnprocessedAppMsg, head);
+        cur = BSL_LIST_ENTRY(node, UnprocessedAppMsg, head);
         uint16_t epoch = REC_EPOCH_GET(cur->hdr.epochSeq);
         if (curEpoch == epoch) {
             /* remove a node and release it by the outside */
-            LIST_REMOVE(node);
+            BSL_LIST_REMOVE(node);
             appMsgList->count--;
             return cur;
         }

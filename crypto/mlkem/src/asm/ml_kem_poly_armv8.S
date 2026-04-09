@@ -61,12 +61,10 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MLKEM
 
-.arch    armv8-a
-
 #include "crypt_arm.h"
+CRYPT_AARCH64_ARCH_BASE
 
-.align 2
-.global MLKEMPolyAddReduce
+CRYPT_AARCH64_FUNC_START(MLKEMPolyAddReduce)
 // =============================================================================
 // MLKEMPolyAddReduce — Vector polynomial addition with reduction
 // =============================================================================
@@ -79,7 +77,6 @@
 //
 // Implementation: simple k-loop dispatching to MLKEMAddReduce for each pair.
 // =============================================================================
-MLKEMPolyAddReduce:
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-48]!
     stp     x19, x20, [sp, #16]
@@ -93,7 +90,7 @@ AARCH64_PACIASP
 .Lpolyaddreduce_loop:
     ldr     x0, [x20, x22, lsl #3]
     ldr     x1, [x21, x22, lsl #3]
-    bl      MLKEMAddReduce
+    bl      CRYPT_AARCH64_SYM(MLKEMAddReduce)
     add     w22, w22, #1
     cmp     w22, w19
     b.lo    .Lpolyaddreduce_loop
@@ -103,15 +100,14 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #48
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEMPolyAddReduce)
 
-.align 2
-// MLKEMAddReduce - internal, called by MLKEMPolyAddReduce
 // ========== Polynomial Addition with Modular Reduction ==========
 // Computes c = (a + b) mod Q where Q = 3329
 // Uses Barrett reduction for efficient modular arithmetic
 // Processes 256 coefficients (polynomial degree n-1) in parallel using NEON
 // (from NEON-NTT paper, Section 4.1 - Barrett reduction)
-MLKEMAddReduce:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMAddReduce)
 AARCH64_PACIASP
     // --- Setup: load Q=3329 and Barrett constant M=25519 ---
     mov w4, #3329    // Q = 3329 (ML-KEM modulus)
@@ -229,9 +225,8 @@ AARCH64_PACIASP
     st1 {v16.8H, v17.8H, v18.8H, v19.8H}, [x0], #64
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMAddReduce)
 
-.align 2
-.global MLKEMSubReduce
 // =============================================================================
 // MLKEMSubReduce — Polynomial subtraction with modular reduction
 // =============================================================================
@@ -244,7 +239,7 @@ AARCH64_AUTIASP
 // Uses Barrett reduction (M=25519) for signed values in [-2q, 2q].
 // Structure mirrors MLKEMAddReduce with sub instead of add.
 // =============================================================================
-MLKEMSubReduce:
+CRYPT_AARCH64_FUNC_START(MLKEMSubReduce)
 AARCH64_PACIASP
     // --- Setup: load Q=3329 and Barrett constant M=25519 ---
     mov w4, #3329    // Q = 3329 (ML-KEM modulus)
@@ -360,9 +355,8 @@ AARCH64_PACIASP
     st1 {v16.8H, v17.8H, v18.8H, v19.8H}, [x0], #64
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEMSubReduce)
 
-.align 2
-.global MLKEMAdd2Reduce
 // =============================================================================
 // MLKEMAdd2Reduce — Three-polynomial addition with modular reduction
 // =============================================================================
@@ -377,7 +371,7 @@ AARCH64_AUTIASP
 // values in [-3q, 3q], but Barrett reduction still works correctly
 // because M=25519 provides enough precision for values up to ±3q.
 // =============================================================================
-MLKEMAdd2Reduce:
+CRYPT_AARCH64_FUNC_START(MLKEMAdd2Reduce)
 AARCH64_PACIASP
     // --- Setup: load Q and Barrett constant ---
     mov w4, #3329    // Q = 3329 (ML-KEM modulus)
@@ -515,9 +509,8 @@ AARCH64_PACIASP
     st1 {v20.8H, v21.8H, v22.8H, v23.8H}, [x0], #64
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEMAdd2Reduce)
 
-.balign 4
-.global MLKEMPolyVecReduce
 // =============================================================================
 // MLKEMPolyVecReduce — Vector polynomial unsigned canonical reduction
 // =============================================================================
@@ -530,7 +523,7 @@ AARCH64_AUTIASP
 //
 // Implementation: simple k-loop dispatching to MLKEMPolyReduce for each poly.
 // =============================================================================
-MLKEMPolyVecReduce:
+CRYPT_AARCH64_FUNC_START(MLKEMPolyVecReduce)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-48]!
     stp     x19, x20, [sp, #16]
@@ -543,7 +536,7 @@ AARCH64_PACIASP
 .Lpolyvecreduce_loop:
     // --- Load pointer to i-th polynomial and reduce it ---
     ldr     x0, [x20, x21, lsl #3]
-    bl      MLKEMPolyReduce
+    bl      CRYPT_AARCH64_SYM(MLKEMPolyReduce)
     add     w21, w21, #1
     cmp     w21, w19
     b.lo    .Lpolyvecreduce_loop
@@ -553,9 +546,8 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #48
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEMPolyVecReduce)
 
-.balign 4
-// MLKEMPolyReduce - internal, called by MLKEMPolyVecReduce
 // ========== Unsigned Canonical Polynomial Reduction ==========
 // Reduces 256 polynomial coefficients to [0, Q) where Q = 3329.
 // Uses Barrett reduction followed by conditional correction.
@@ -575,7 +567,7 @@ AARCH64_AUTIASP
 // Note: The output loop interleaves pipeline stages for throughput:
 //   Barrett reduction of current pair → conditional correction of previous pair
 //   → store previous pair → load next pair
-MLKEMPolyReduce:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyReduce)
 AARCH64_PACIASP
         // --- Setup: Q=3329 (0xD01), Barrett M=20159 (0x4EBF) ---
         // Note: M=20159 differs from AddReduce's M=25519. This value is optimized
@@ -660,10 +652,9 @@ AARCH64_PACIASP
         stur	q24, [x0, #-0x40]
 AARCH64_AUTIASP
         ret
+        CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMPolyReduce)
 
 
-.balign 4
-.global PolyVectoBytes
 // =============================================================================
 // PolyVectoBytes — Encode vector of polynomials to byte arrays
 // =============================================================================
@@ -678,7 +669,7 @@ AARCH64_AUTIASP
 // Implementation: k-loop dispatching to MLKEMPolytoBytesAsm for each poly.
 // Stride is 384 bytes (= 256 × 12 / 8), the ByteEncode₁₂ output size.
 // =============================================================================
-PolyVectoBytes:
+CRYPT_AARCH64_FUNC_START(PolyVectoBytes)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-64]!
     stp     x19, x20, [sp, #16]
@@ -694,7 +685,7 @@ AARCH64_PACIASP
 .Lpolyvectobytes_loop:
     madd    x0, x22, x23, x20
     ldr     x1, [x21, x22, lsl #3]
-    bl      MLKEMPolytoBytesAsm
+    bl      CRYPT_AARCH64_SYM(MLKEMPolytoBytesAsm)
     add     w22, w22, #1
     cmp     w22, w19
     b.lo    .Lpolyvectobytes_loop
@@ -705,9 +696,8 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #64
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(PolyVectoBytes)
 
-.balign 4
-// MLKEMPolytoBytesAsm - internal, called by PolyVectoBytes
 // ========== Polynomial to Byte Encoding (FIPS 203 ByteEncode₁₂) ==========
 // Packs 256 × 12-bit coefficients into 384 bytes (3 bytes per 2 coefficients).
 //
@@ -726,7 +716,7 @@ AARCH64_AUTIASP
 //   7. st3:        store 3 interleaved byte vectors → packed 24 bytes
 //
 // Loop: 4 iterations of 4 groups each (16 coefficients/group × 4 × 4 = 256)
-MLKEMPolytoBytesAsm:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolytoBytesAsm)
 AARCH64_PACIASP
         mov	x2, #0x10               // Total: 16 groups of 16 coefficients
         ldr	q6, [x1], #0x20
@@ -817,9 +807,8 @@ AARCH64_PACIASP
         st3	{ v22.8b, v23.8b, v24.8b }, [x0], #24
 AARCH64_AUTIASP
         ret
+        CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMPolytoBytesAsm)
 
-.balign 4
-.global MLKEMPolyINTTtoMont
 // =============================================================================
 // MLKEMPolyINTTtoMont — Inverse NTT followed by Montgomery conversion
 // =============================================================================
@@ -833,7 +822,7 @@ AARCH64_AUTIASP
 // ml_kem_ntt_armv8.S). That function performs INTT and scales coefficients
 // by Montgomery factor n⁻¹ mod Q, bringing results to standard form.
 // =============================================================================
-MLKEMPolyINTTtoMont:
+CRYPT_AARCH64_FUNC_START(MLKEMPolyINTTtoMont)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-48]!
     stp     x19, x20, [sp, #16]
@@ -845,7 +834,7 @@ AARCH64_PACIASP
     mov     w21, #0
 .Lpolyintt_loop:
     ldr     x0, [x20, x21, lsl #3]
-    bl      MLKEM_ComputeINTTAsm
+    bl      CRYPT_AARCH64_SYM(MLKEM_ComputeINTTAsm)
     add     w21, w21, #1
     cmp     w21, w19
     b.lo    .Lpolyintt_loop
@@ -855,9 +844,8 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #48
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEMPolyINTTtoMont)
 
-.balign 4
-.global MLKEMPolyCBDEta
 // =============================================================================
 // MLKEMPolyCBDEta — Centered Binomial Distribution dispatcher
 // =============================================================================
@@ -873,7 +861,7 @@ AARCH64_AUTIASP
 //
 // FIPS 203, Algorithm 8: CBD_η(PRF_η(seed, nonce))
 // =============================================================================
-MLKEMPolyCBDEta:
+CRYPT_AARCH64_FUNC_START(MLKEMPolyCBDEta)
 AARCH64_PACIASP
     cmp     w0, #2
     b.eq    .Lpolycbd_eta2
@@ -881,16 +869,16 @@ AARCH64_PACIASP
     b.eq    .Lpolycbd_eta3
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEMPolyCBDEta)
 .Lpolycbd_eta2:
     mov     x0, x1
     mov     x1, x2
-    b       MLKEMCBD2
+    b       CRYPT_AARCH64_SYM(MLKEMCBD2)
 .Lpolycbd_eta3:
     mov     x0, x1
     mov     x1, x2
-    b       MLKEMCBD3
+    b       CRYPT_AARCH64_SYM(MLKEMCBD3)
 
-.balign 4
 // MLKEMCBD2 - Centered Binomial Distribution with eta=2 (internal, called by MLKEMPolyCBDEta)
 //
 // Input:  x0 = int16_t *r (output, 256 coefficients)
@@ -908,7 +896,7 @@ AARCH64_AUTIASP
 //   The result ranges from -2 to +2
 //
 // Loop: 4 iterations, each processes 32 input bytes, generates 128 int16_t
-MLKEMCBD2:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMCBD2)
     movi    v17.16b, #0x55         // Bit mask 0x55 for extracting even/odd bits
     add     x3, x0, #0x200         // End of output buffer (512 bytes)
     movi    v16.16b, #0x3          // Mask for lower 2 bits
@@ -964,30 +952,9 @@ MLKEMCBD2:
     cmp     x3, x0                 // Check if output buffer is filled
     b.ne    1b
     ret
+    CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMCBD2)
 
-.balign 4
-// MLKEMCBD3 - Centered Binomial Distribution with eta=3 (internal, called by MLKEMPolyCBDEta)
-//
-// Input:  x0 = int16_t *r (output, 256 coefficients)
-//         x1 = const uint8_t *buf (input, 192 bytes = 3 × 256 / 4)
-//
-// Algorithm (FIPS 203, Algorithm 8 with η=3):
-//   For each group of 6 input bits (3+3): a = popcount(bits[0:2]), b = popcount(bits[3:5])
-//   Output: r[i] = a - b ∈ [-3, +3]
-//
-// Hybrid TBL + scalar implementation:
-//   1. Load 12 bytes per iteration (96 bits = 16 × 6-bit groups = 16 coefficients)
-//   2. TBL rearranges 12 bytes into 4 × 24-bit blocks in separate .4S lanes
-//      Shuffle: [0,1,2,_,3,4,5,_,6,7,8,_,9,10,11,_]
-//   3. NEON parallel 3-bit popcount via bit masking:
-//      mask = 0x00249249 (selects every 3rd bit: bits 0,3,6,9,12,15,18,21)
-//      d = (x & mask) + ((x>>1) & mask) + ((x>>2) & mask)
-//      Each 3-bit field in d now holds popcount of original 3 bits.
-//   4. Scalar extraction (ubfx/bfi): extract 4 pairs of 3-bit popcounts,
-//      compute a-b for each, pack into int16 pairs via bfi+orr.
-//
-// Loop: 16 iterations × 16 coefficients = 256 total
-MLKEMCBD3:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMCBD3)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     mov     x29, sp
@@ -996,8 +963,8 @@ AARCH64_PACIASP
     movk    w7, #0x0024, lsl #16
     dup     v30.4s, w7              // v30 = 0x00249249 (every-3rd-bit mask for popcount)
 
-    adrp    x9, .LCBD3_shuffle
-    ldr     q29, [x9, :lo12:.LCBD3_shuffle]  // TBL shuffle: 12 bytes → 4 × 24-bit lanes
+    CRYPT_AARCH64_GET_RELA(x9, .LCBD3_shuffle)
+    ldr     q29, [x9]  // TBL shuffle: 12 bytes → 4 × 24-bit lanes
 
     add     x2, x0, #512           // End pointer (256 × 2 bytes = 512)
 
@@ -1103,9 +1070,8 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #16
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMCBD3)
 
-.balign 4
-.global PackCipherText
 // =============================================================================
 // PackCipherText — Pack ML-KEM ciphertext (FIPS 203, line 26 of Encaps)
 // =============================================================================
@@ -1123,7 +1089,7 @@ AARCH64_AUTIASP
 // Implementation: saves all argument registers, calls PolyVecCompress,
 // then PolyCompress with adjusted pointers, and restores callee-saved regs.
 // =============================================================================
-PackCipherText:
+CRYPT_AARCH64_FUNC_START(PackCipherText)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-48]!
     stp     x19, x20, [sp, #16]
@@ -1138,20 +1104,19 @@ AARCH64_PACIASP
     mov     w0, w19
     mov     x1, x21
     mov     x2, x22
-    bl      PolyVecCompress
+    bl      CRYPT_AARCH64_SYM(PolyVecCompress)
     add     x1, x21, x20
     mov     w0, w19
     mov     x2, x23
-    bl      PolyCompress
+    bl      CRYPT_AARCH64_SYM(PolyCompress)
     ldr     x23, [sp, #40]
     ldp     x21, x22, [sp, #32]
     ldp     x19, x20, [sp, #16]
     ldp     x29, x30, [sp], #48
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(PackCipherText)
 
-.balign 4
-.global PolyCompress
 // =============================================================================
 // PolyCompress — Compress single polynomial (dispatch by ML-KEM parameter set)
 // =============================================================================
@@ -1166,7 +1131,7 @@ AARCH64_AUTIASP
 //
 // FIPS 203: Compress_d(x) = round(2^d / q × x) mod 2^d
 // =============================================================================
-PolyCompress:
+CRYPT_AARCH64_FUNC_START(PolyCompress)
 AARCH64_PACIASP
     cmp     w0, #2
     b.eq    .Lpolycompress_4
@@ -1174,13 +1139,13 @@ AARCH64_PACIASP
     b.eq    .Lpolycompress_4
     mov     x0, x1
     mov     x1, x2
-    b       MLKEMPolyCompress5
+    b       CRYPT_AARCH64_SYM(MLKEMPolyCompress5)
 .Lpolycompress_4:
     mov     x0, x1
     mov     x1, x2
-    b       MLKEMPolyCompress4
+    b       CRYPT_AARCH64_SYM(MLKEMPolyCompress4)
+    CRYPT_AARCH64_FUNC_END(PolyCompress)
 
-.balign 4
 // =============================================================================
 // MLKEMPolyCompress4 — 4-bit polynomial compression (ML-KEM-512, ML-KEM-768)
 // =============================================================================
@@ -1200,7 +1165,7 @@ AARCH64_PACIASP
 //
 // Loop: 8 iterations × 32 coefficients = 256 total
 // =============================================================================
-MLKEMPolyCompress4:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyCompress4)
     mov     w3, #0x13b              // w3 = 315 ≈ round(2^15 × 16 / 3329)
     add     x2, x0, #0x80          // End of output buffer (128 bytes for d=4)
     movi    v6.8h, #0x1             // Constant 1 for rounding in shadd
@@ -1236,8 +1201,9 @@ MLKEMPolyCompress4:
     cmp     x0, x2                 // Check if done
     b.ne    1b
     ret
+    CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMPolyCompress4)
 
-.balign 4
+
 // =============================================================================
 // MLKEMPolyCompress5 — 5-bit polynomial compression (ML-KEM-1024)
 // =============================================================================
@@ -1264,7 +1230,7 @@ MLKEMPolyCompress4:
 //   v4  = 5-bit mask (0x1f)
 //   v5/v6/v7/v16/v17/v18 = intermediate packing masks (loaded from .rodata)
 // =============================================================================
-MLKEMPolyCompress5:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyCompress5)
     stp     x29, x30, [sp, #-64]!
     mov     x29, sp
     stp     x19, x20, [sp, #16]    // Save callee-saved regs we use
@@ -1346,9 +1312,8 @@ MLKEMPolyCompress5:
     ldp     x19, x20, [sp, #16]
     ldp     x29, x30, [sp], #64
     ret
+    CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMPolyCompress5)
 
-.balign 4
-.global PolyVecCompress
 // =============================================================================
 // PolyVecCompress — Compress vector of polynomials (dispatch by parameter set)
 // =============================================================================
@@ -1363,7 +1328,7 @@ MLKEMPolyCompress5:
 //
 // Output strides: 352 bytes/poly (d=11), 320 bytes/poly (d=10).
 // =============================================================================
-PolyVecCompress:
+CRYPT_AARCH64_FUNC_START(PolyVecCompress)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-64]!
     stp     x19, x20, [sp, #16]
@@ -1386,7 +1351,7 @@ AARCH64_PACIASP
 .Lpolyveccompress_k4_loop:
     madd    x0, x22, x23, x20
     ldr     x1, [x21, x22, lsl #3]
-    bl      MLKEMPolyCompress11
+    bl      CRYPT_AARCH64_SYM(MLKEMPolyCompress11)
     add     w22, w22, #1
     cmp     w22, w19
     b.lo    .Lpolyveccompress_k4_loop
@@ -1397,7 +1362,7 @@ AARCH64_PACIASP
 .Lpolyveccompress_k2k3_loop:
     madd    x0, x22, x23, x20
     ldr     x1, [x21, x22, lsl #3]
-    bl      MLKEMPolyCompress10
+    bl      CRYPT_AARCH64_SYM(MLKEMPolyCompress10)
     add     w22, w22, #1
     cmp     w22, w19
     b.lo    .Lpolyveccompress_k2k3_loop
@@ -1408,9 +1373,8 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #64
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(PolyVecCompress)
 
-.balign 4
-// MLKEMPolyCompress11 - internal, called by PolyVecCompress
 // FIPS 203 Compress_11(x) = round(2^11 / q × x) mod 2^11
 //
 // Input:  x0 = uint8_t r[352] (output)
@@ -1428,24 +1392,21 @@ AARCH64_AUTIASP
 // Bit packing via SHIFT_WITH_HOLES: 8 × 11-bit → 88 bits = 11 bytes.
 //
 // Loop: 32 iterations × 8 coefficients = 256 total
-MLKEMPolyCompress11:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyCompress11)
     stp     x29, x30, [sp, #-48]!
     mov     x29, sp
     add     x16, x0, #0x160        // End of output buffer (352 bytes)
     movi    v16.4s, #0x0           // Zero vector
     add     x15, sp, #0x10         // Temp buffer on stack
     movi    v2.4h, #0x14           // v2 = {20, 20, 20, 20}
-    adrp    x9, .LMLKEMPolyCompress11_mask11
-    add     x9, x9, :lo12:.LMLKEMPolyCompress11_mask11
+    CRYPT_AARCH64_GET_RELA(x9, .LMLKEMPolyCompress11_mask11)
     ldr     q7, [x9]               // mask11 / mask for 0x7ff
     mov     w2, #0xffffafb7        // w2 = -20553
     movi    v6.4s, #0x7, msl #8    // mask_w_lo = {0x7ff, 0x7ff, 0x7ff, 0x7ff}
     dup     v4.4h, w2              // v4 = {-20553, -20553, -20553, -20553}
-    adrp    x9, .LMLKEMPolyCompress11_mask_h_lo
-    add     x9, x9, :lo12:.LMLKEMPolyCompress11_mask_h_lo
+    CRYPT_AARCH64_GET_RELA(x9, .LMLKEMPolyCompress11_mask_h_lo)
     ldr     q5, [x9]               // mask_h_lo
-    adrp    x9, .LMLKEMPolyCompress11_mask_w_hi
-    add     x9, x9, :lo12:.LMLKEMPolyCompress11_mask_w_hi
+    CRYPT_AARCH64_GET_RELA(x9, .LMLKEMPolyCompress11_mask_w_hi)
     ldr     q3, [x9]               // mask_w_hi
     b       100f
 100:
@@ -1495,6 +1456,8 @@ MLKEMPolyCompress11:
     b.ne    100b
     ldp     x29, x30, [sp], #48
     ret
+    CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMPolyCompress11)
+
 
 // ============================================================================
 // MLKEMPolyCompress10 — 10-bit compression (k=2,3)
@@ -1507,7 +1470,7 @@ MLKEMPolyCompress11:
 // Bit packing: 8 × 10-bit → 80 bits = 10 bytes per iteration.
 // ============================================================================
 // MLKEMPolyCompress10 - internal, called by PolyVecCompress
-MLKEMPolyCompress10:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyCompress10)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-48]!
     mov     x29, sp
@@ -1534,8 +1497,7 @@ AARCH64_PACIASP
     // --- SHIFT_WITH_HOLES_H: compress 16-bit lanes by removing gaps ---
     //   Step 1: mask even/odd half-words separately, shift odd down by 6
     movi    v6.4s, #0x3, msl #8     // mask_h_lo = {0x3ff, 0x3ff, 0x3ff, 0x3ff} (keeps all)
-    adrp    x9, .LMLKEMPolyCompress10_mask_h_hi
-    add     x9, x9, :lo12:.LMLKEMPolyCompress10_mask_h_hi
+    CRYPT_AARCH64_GET_RELA(x9, .LMLKEMPolyCompress10_mask_h_hi)
     ldr     q7, [x9]                // mask_h_hi = {0, 0x3ff, 0, 0x3ff, 0, 0x3ff, 0, 0x3ff}
     and     v1.16b, v0.16b, v7.16b // tvec & mask_h_hi (odd indices)
     and     v0.16b, v0.16b, v6.16b // tvec & mask_h_lo (all indices, keeps low 10 bits)
@@ -1543,11 +1505,9 @@ AARCH64_PACIASP
     orr     v1.16b, v1.16b, v0.16b // combine: even indices stay, odd indices shifted
     // --- SHIFT_WITH_HOLES_S: compress 32-bit lanes by removing gaps ---
     //   Step 2: mask alternating 32-bit words, shift upper by 12
-    adrp    x9, .LMLKEMPolyCompress10_mask_w_lo
-    add     x9, x9, :lo12:.LMLKEMPolyCompress10_mask_w_lo
+    CRYPT_AARCH64_GET_RELA(x9, .LMLKEMPolyCompress10_mask_w_lo)
     ldr     q5, [x9]                // mask_w_lo = {0xfffff, 0, 0xfffff, 0}
-    adrp    x9, .LMLKEMPolyCompress10_mask_w_hi
-    add     x9, x9, :lo12:.LMLKEMPolyCompress10_mask_w_hi
+    CRYPT_AARCH64_GET_RELA(x9, .LMLKEMPolyCompress10_mask_w_hi)
     ldr     q7, [x9]                // mask_w_hi = {0, 0xfffff, 0, 0xfffff}
     and     v0.16b, v1.16b, v5.16b // tvec & mask_w_lo
     and     v1.16b, v1.16b, v7.16b // tvec & mask_w_hi
@@ -1592,6 +1552,7 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #48
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMPolyCompress10)
 
 // ============================================================================
 // MLKEMPolyCompress1 — 1-bit compression
@@ -1607,8 +1568,7 @@ AARCH64_AUTIASP
 //   Final:   2 vectors  → 1  (xtn/xtn2 + store 16 bytes)
 // Two outer iterations produce 2 × 16 = 32 output bytes.
 // ============================================================================
-.global MLKEMPolyCompress1
-MLKEMPolyCompress1:
+CRYPT_AARCH64_FUNC_START(MLKEMPolyCompress1)
     stp     x29, x30, [sp, #-288]!
     mov     x29, sp
 
@@ -1709,6 +1669,7 @@ MLKEMPolyCompress1:
 
     ldp     x29, x30, [sp], #288
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEMPolyCompress1)
 
 // ============================================================================
 // MLKEMRejUniform — Rejection uniform sampling (FIPS 203, Algorithm 7)
@@ -1737,9 +1698,7 @@ MLKEMPolyCompress1:
 // Tail loop: processes 24 bytes → up to 16 coefficients using 64-bit NEON.
 // Final scalar copy: move tail results from temp buffer to output.
 // ============================================================================
-.balign 4
-.global MLKEMRejUniform
-MLKEMRejUniform:
+CRYPT_AARCH64_FUNC_START(MLKEMRejUniform)
     stp     x29, x30, [sp, #-176]!
     mov     x29, sp
     stp     x19, x20, [sp, #16]
@@ -1752,17 +1711,14 @@ MLKEMRejUniform:
     mov     w21, #0                    // w21 = bytes consumed from input
     add     x24, sp, #80              // x24 = tail temp buffer (on stack)
 
-    adrp    x22, .Lrej_table_idx
-    add     x22, x22, :lo12:.Lrej_table_idx      // 128-bit TBL shuffle table (256 entries)
-    adrp    x23, .Lrej_table_idx_small
-    add     x23, x23, :lo12:.Lrej_table_idx_small // 64-bit TBL shuffle table (16 entries)
+    CRYPT_AARCH64_GET_RELA(x22, .Lrej_table_idx)
+    CRYPT_AARCH64_GET_RELA(x23, .Lrej_table_idx_small)
 
     mov     w2, #3328                  // Q - 1 = 3328 (for cmhs comparison: ≤ 3328 means < Q)
     dup     v0.8h, w2
     mov     w2, #0xfff                 // 12-bit mask for extracting candidates
     dup     v1.8h, w2
-    adrp    x9, .Lrej_bit_table
-    add     x9, x9, :lo12:.Lrej_bit_table
+    CRYPT_AARCH64_GET_RELA(x9, .Lrej_bit_table)
     ldr     q2, [x9]                   // bit_table = {1,2,4,8,16,32,64,128} for bitmask encoding
 
 .Lrej_main_loop:
@@ -1968,8 +1924,9 @@ MLKEMRejUniform:
     ldp     x19, x20, [sp, #16]
     ldp     x29, x30, [sp], #176
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEMRejUniform)
 
-.section .rodata
+CRYPT_AARCH64_RODATA_SECTION
 .balign 16
 .LMLKEMPolyCompress11_mask11:
     // mask11: {0x0000, 0x07ff, 0x0000, 0x07ff, ...}

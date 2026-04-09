@@ -19,8 +19,9 @@
 #include "crypt_arm.h"
 #include "crypt_aes_macro_armv8.s"
 
+
+CRYPT_AARCH64_ARCH_CRYPTO
 .text
-.arch	armv8-a+crypto
 
 KEY     .req    x0
 IN      .req    x1
@@ -125,9 +126,7 @@ RDK2    .req    v28
  * Output register：x0
  * Function/Macro Call: None
  */
-.globl    CRYPT_AES_CBC_Encrypt
-.type    CRYPT_AES_CBC_Encrypt, %function
-CRYPT_AES_CBC_Encrypt:
+CRYPT_AARCH64_FUNC_START(CRYPT_AES_CBC_Encrypt)
 AARCH64_PACIASP
     ld1 {IVENC.16b}, [P_IV]                    // load IV
     ldr w6, [KEY, #240]                      // load rounds
@@ -237,7 +236,7 @@ AARCH64_PACIASP
     mov x0, #0
 AARCH64_AUTIASP
     ret
-.size CRYPT_AES_CBC_Encrypt, .-CRYPT_AES_CBC_Encrypt
+CRYPT_AARCH64_FUNC_END(CRYPT_AES_CBC_Encrypt)
 
 /**
  * Function description: AES decryption and assembly acceleration API in CBC mode.
@@ -257,9 +256,7 @@ AARCH64_AUTIASP
  * Function/Macro Call: AES_DEC_8_BLKS, AES_DEC_1_BLK, AES_DEC_2_BLKS, AES_DEC_3_BLKS,
  *             AES_DEC_4_BLKS, AES_DEC_5_BLKS, AES_DEC_6_BLKS, AES_DEC_7_BLKS
  */
-.globl	CRYPT_AES_CBC_Decrypt
-.type	CRYPT_AES_CBC_Decrypt, %function
-CRYPT_AES_CBC_Decrypt:
+CRYPT_AARCH64_FUNC_START(CRYPT_AES_CBC_Decrypt)
 AARCH64_PACIASP
     ld1	{IV0.16b}, [P_IV]
 .Lcbc_aesdec_start:
@@ -289,7 +286,7 @@ AARCH64_PACIASP
     cmp    LEN, #128
     b.lt      .Lcbc_dec_proc_7_blks
 
-.align	4
+.p2align 4
 .Lcbc_aesdec_8_blks_loop:
     ld1	{BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN], #64
     mov KTMP, KEY
@@ -380,7 +377,7 @@ AARCH64_PACIASP
 
 .Lcbc_dec_proc_1_blk:
     ld1	{BLK0.16b}, [IN]
-    AES_DEC_1_BLK KEY BLK0.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_1_BLK KEY, BLK0.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     eor	BLK0.16b, BLK0.16b, IV0.16b
     ld1	{IV0.16b}, [IN]
     st1	{BLK0.16b}, [OUT]
@@ -389,7 +386,7 @@ AARCH64_PACIASP
 .Lcbc_dec_proc_2_blks:
     ld1	{BLK0.16b, BLK1.16b}, [IN]
     ld1	{IV1.16b}, [IN], #16
-    AES_DEC_2_BLKS KEY BLK0.16b BLK1.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_2_BLKS KEY, BLK0.16b, BLK1.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     eor	BLK0.16b, BLK0.16b, IV0.16b
     eor	BLK1.16b, BLK1.16b, IV1.16b
     ld1	{IV0.16b}, [IN]
@@ -399,7 +396,7 @@ AARCH64_PACIASP
 .Lcbc_dec_proc_3_blks:
     ld1	{BLK0.16b, BLK1.16b, BLK2.16b}, [IN]
     ld1	{IV1.16b, IV2.16b}, [IN], #32
-    AES_DEC_3_BLKS KEY BLK0.16b BLK1.16b BLK2.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_3_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     eor	BLK0.16b, BLK0.16b, IV0.16b
     eor	BLK1.16b, BLK1.16b, IV1.16b
     eor	BLK2.16b, BLK2.16b, IV2.16b
@@ -410,7 +407,7 @@ AARCH64_PACIASP
 .Lcbc_dec_proc_4_blks:
     ld1	{BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN]
     ld1	{IV1.16b, IV2.16b, IV3.16b}, [IN], #48
-    AES_DEC_4_BLKS KEY BLK0.16b BLK1.16b BLK2.16b BLK3.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_4_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     eor	BLK0.16b, BLK0.16b, IV0.16b
     eor	BLK1.16b, BLK1.16b, IV1.16b
     eor	BLK2.16b, BLK2.16b, IV2.16b
@@ -423,7 +420,7 @@ AARCH64_PACIASP
     ld1	{BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN]
     ld1	{IV1.16b, IV2.16b, IV3.16b, IV4.16b}, [IN], #64
     ld1	{BLK4.16b}, [IN]
-    AES_DEC_5_BLKS KEY BLK0.16b BLK1.16b BLK2.16b BLK3.16b BLK4.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_5_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, BLK4.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     eor	BLK0.16b, BLK0.16b, IV0.16b
     eor	BLK1.16b, BLK1.16b, IV1.16b
     eor	BLK2.16b, BLK2.16b, IV2.16b
@@ -439,7 +436,7 @@ AARCH64_PACIASP
     ld1	{IV1.16b, IV2.16b, IV3.16b, IV4.16b}, [IN], #64
     ld1	{BLK4.16b, BLK5.16b}, [IN]
     ld1	{IV5.16b}, [IN], #16
-    AES_DEC_6_BLKS KEY BLK0.16b BLK1.16b BLK2.16b BLK3.16b BLK4.16b BLK5.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_6_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, BLK4.16b, BLK5.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     eor	BLK0.16b, BLK0.16b, IV0.16b
     eor	BLK1.16b, BLK1.16b, IV1.16b
     eor	BLK2.16b, BLK2.16b, IV2.16b
@@ -456,7 +453,7 @@ AARCH64_PACIASP
     ld1	{IV1.16b, IV2.16b, IV3.16b, IV4.16b}, [IN], #64
     ld1	{BLK4.16b, BLK5.16b, BLK6.16b}, [IN]
     ld1	{IV5.16b, IV6.16b}, [IN], #32
-    AES_DEC_7_BLKS KEY BLK0.16b BLK1.16b BLK2.16b BLK3.16b BLK4.16b BLK5.16b BLK6.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_7_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, BLK4.16b, BLK5.16b, BLK6.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     eor	BLK0.16b, BLK0.16b, IV0.16b
     eor	BLK1.16b, BLK1.16b, IV1.16b
     eor	BLK2.16b, BLK2.16b, IV2.16b
@@ -477,6 +474,6 @@ AARCH64_PACIASP
     eor RDK2.16b, RDK2.16b, RDK2.16b
 AARCH64_AUTIASP
     ret
-.size	CRYPT_AES_CBC_Decrypt, .-CRYPT_AES_CBC_Decrypt
+CRYPT_AARCH64_FUNC_END(CRYPT_AES_CBC_Decrypt)
 
 #endif

@@ -372,8 +372,8 @@ void CleanKeyShare(KeyShare *keyShare)
     if (cache != NULL) {
         LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(cache->head))
         {
-            cur = LIST_ENTRY(node, KeyShare, head);
-            LIST_REMOVE(node);
+            cur = BSL_LIST_ENTRY(node, KeyShare, head);
+            BSL_LIST_REMOVE(node);
             BSL_SAL_FREE(cur->keyExchange);
             BSL_SAL_FREE(cur);
         }
@@ -427,7 +427,7 @@ int32_t ParseKeyShare(KeyShare *keyshare, const uint8_t *buf, uint32_t bufLen, A
             BSL_SAL_FREE(groupSet);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16993, "Calloc fail");
         }
-        LIST_INIT(&tmpNode->head);
+        BSL_LIST_INIT(&tmpNode->head);
         LIST_ADD_AFTER(&node->head, &tmpNode->head);
         node = tmpNode;
         node->group = BSL_ByteToUint16(&buf[bufOffset]);
@@ -494,7 +494,7 @@ int32_t ParseClientKeyShare(ParsePacket *pkt, ClientHelloMsg *msg)
             return RETURN_ALERT_PROCESS(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15150,
                 "calloc fail", ALERT_INTERNAL_ERROR);
         }
-        LIST_INIT(&msg->extension.content.keyShare->head);
+        BSL_LIST_INIT(&msg->extension.content.keyShare->head);
         ret = ParseKeyShare(msg->extension.content.keyShare, &pkt->buf[bufOffset], keyShareLen, &alert);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15151, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -555,7 +555,7 @@ static int32_t ParseBinders(TLS_Ctx *ctx, PreSharedKey *preSharedKey, const uint
 
     LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(cache->pskNode))
     {
-        cur = LIST_ENTRY(node, PreSharedKey, pskNode);
+        cur = BSL_LIST_ENTRY(node, PreSharedKey, pskNode);
         if (bufLen < bufOffset + sizeof(uint8_t)) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17001, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "bufLen error", 0, 0, 0, 0);
@@ -611,7 +611,7 @@ static int32_t ParseClientPreSharedKey(ParsePacket *pkt, ClientHelloMsg *msg)
         return HITLS_MEMALLOC_FAIL;
     }
     msg->extension.content.preSharedKey = offeredPsks;
-    LIST_INIT(&offeredPsks->pskNode);
+    BSL_LIST_INIT(&offeredPsks->pskNode);
     ret = ParseIdentities(pkt->ctx, offeredPsks, &pkt->buf[*pkt->bufOffset], identitiesLen);
     if (ret != HITLS_SUCCESS) {
         return ret;
@@ -964,8 +964,8 @@ void CleanPreShareKey(PreSharedKey *preSharedKey)
     if (cache != NULL) {
         LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(cache->pskNode))
         {
-            cur = LIST_ENTRY(node, PreSharedKey, pskNode);
-            LIST_REMOVE(node);
+            cur = BSL_LIST_ENTRY(node, PreSharedKey, pskNode);
+            BSL_LIST_REMOVE(node);
             BSL_SAL_FREE(cur->identity);
             BSL_SAL_FREE(cur->binder);
             BSL_SAL_FREE(cur);

@@ -93,8 +93,8 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MLKEM
 
-.arch    armv8-a
 #include "crypt_arm.h"
+CRYPT_AARCH64_ARCH_BASE
 
 // =============================================================================
 // MLKEM_NTT_top — Forward NTT, Layers 1-3 (Cooley-Tukey butterfly)
@@ -130,9 +130,7 @@
 //   to hide memory latency. After layer 3, data is in 16 independent blocks of
 //   16 coefficients each, ready for NTT_bot processing.
 // =============================================================================
-.align 2
-.global MLKEM_NTT_top
-MLKEM_NTT_top:
+CRYPT_AARCH64_FUNC_START(MLKEM_NTT_top)
 AARCH64_PACIASP
     sub sp, sp, #(4*16)
     stp  d8,  d9, [sp, #0*16]
@@ -621,6 +619,7 @@ AARCH64_PACIASP
     add sp, sp, #(4*16)
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEM_NTT_top)
 
 // =============================================================================
 // MLKEM_NTT_bot — Forward NTT, Layers 4-7 (Cooley-Tukey butterfly + Barrett reduction)
@@ -664,9 +663,7 @@ AARCH64_AUTIASP
 //   approximate division by Q, keeping coefficients bounded after layer 7.
 //   Pipeline interleaving: twiddle loads overlap with sqrdmulh computation.
 // =============================================================================
-.align 2
-.global MLKEM_NTT_bot
-MLKEM_NTT_bot:
+CRYPT_AARCH64_FUNC_START(MLKEM_NTT_bot)
 AARCH64_PACIASP
     sub sp, sp, #(4*16)
     stp  d8,  d9, [sp, #0*16]
@@ -1094,6 +1091,7 @@ AARCH64_PACIASP
     add sp, sp, #(4*16)
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEM_NTT_bot)
 
 // =============================================================================
 // MLKEM_INTT_bot — Inverse NTT, Layers 7-4 (Gentleman-Sander butterfly + Barrett reduction)
@@ -1136,9 +1134,7 @@ AARCH64_AUTIASP
 //   Extra callee-saved registers (x19-x28) accommodate the reversed layer order
 //   and additional pointer tracking compared to NTT_bot.
 // =============================================================================
-.align 2
-.global MLKEM_INTT_bot
-MLKEM_INTT_bot:
+CRYPT_AARCH64_FUNC_START(MLKEM_INTT_bot)
 AARCH64_PACIASP
     sub sp, sp, #(9*16)
     stp x19, x20, [sp, #0*16]
@@ -1569,6 +1565,7 @@ AARCH64_PACIASP
     add sp, sp, #(9*16)
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEM_INTT_bot)
 
 // =============================================================================
 // MLKEM_INTT_top — Inverse NTT, Layers 3-1 + n^{-1} Scaling (Gentleman-Sander butterfly)
@@ -1614,9 +1611,7 @@ AARCH64_AUTIASP
 //   during the GS butterfly computation by issuing stores/loads during
 //   the sqrdmulh latency window.
 // =============================================================================
-.align 2
-.global MLKEM_INTT_top
-MLKEM_INTT_top:
+CRYPT_AARCH64_FUNC_START(MLKEM_INTT_top)
 AARCH64_PACIASP
     sub sp, sp, #(9*16)
     stp x19, x20, [sp, #0*16]
@@ -2175,5 +2170,6 @@ AARCH64_PACIASP
     add sp, sp, #(9*16)
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEM_INTT_top)
 
 #endif

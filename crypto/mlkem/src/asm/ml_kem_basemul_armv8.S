@@ -83,9 +83,8 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_MLKEM
 
-.arch    armv8-a
-
 #include "crypt_arm.h"
+CRYPT_AARCH64_ARCH_BASE
 
 // =============================================================================
 // MLKEMPointMulExtended — Element-wise Montgomery multiplication
@@ -111,9 +110,7 @@
 //
 // Processes 256 input coefficients (128 odd-indexed) in 4 batches of 32 coefficients.
 // =============================================================================
-.align 2
-.global MLKEMPointMulExtended
-MLKEMPointMulExtended:
+CRYPT_AARCH64_FUNC_START(MLKEMPointMulExtended)
 AARCH64_PACIASP
     // --- Prologue: save callee-saved registers (x19-x28, d8-d15) ---
     sub sp, sp, #(9*16)
@@ -360,6 +357,7 @@ AARCH64_PACIASP
     add sp, sp, #(9*16)
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEMPointMulExtended)
 
 
 // =============================================================================
@@ -381,9 +379,7 @@ AARCH64_AUTIASP
 //   x3: b (int16_t*, k×256 contiguous coefficients)
 //   x4: c (int16_t*, k×128 precomputed mulcache = b₁·ζ values)
 // =============================================================================
-.align 2
-.global MLKEMAsymMul
-MLKEMAsymMul:
+CRYPT_AARCH64_FUNC_START(MLKEMAsymMul)
 AARCH64_PACIASP
     cmp     w0, #2
     b.eq    .Lasm_mul_k2
@@ -393,26 +389,26 @@ AARCH64_PACIASP
     b.eq    .Lasm_mul_k4
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEMAsymMul)
 .Lasm_mul_k2:
     mov     x0, x1
     mov     x1, x2
     mov     x2, x3
     mov     x3, x4
-    b       MLKEMAsymMulk2
+    b       CRYPT_AARCH64_SYM(MLKEMAsymMulk2)
 .Lasm_mul_k3:
     mov     x0, x1
     mov     x1, x2
     mov     x2, x3
     mov     x3, x4
-    b       MLKEMAsymMulk3
+    b       CRYPT_AARCH64_SYM(MLKEMAsymMulk3)
 .Lasm_mul_k4:
     mov     x0, x1
     mov     x1, x2
     mov     x2, x3
     mov     x3, x4
-    b       MLKEMAsymMulk4
+    b       CRYPT_AARCH64_SYM(MLKEMAsymMulk4)
 
-.align 2
 // =============================================================================
 // MLKEMAsymMulk2 — Asymmetric basemul accumulation, k=2 (ML-KEM-512)
 // =============================================================================
@@ -435,7 +431,7 @@ AARCH64_AUTIASP
 // Loop: 16 iterations (first unrolled, 15 in loop body)
 // Each iteration processes 16 output coefficients (8 interleaved pairs)
 // =============================================================================
-MLKEMAsymMulk2:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMAsymMulk2)
 AARCH64_PACIASP
     // --- Prologue: save callee-saved registers (x19-x28, d8-d15) ---
     sub sp, sp, #(9*16)
@@ -659,9 +655,8 @@ AARCH64_PACIASP
     add sp, sp, #(9*16)
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMAsymMulk2)
 
-
-.align 2
 // =============================================================================
 // MLKEMAsymMulk3 — Asymmetric basemul accumulation, k=3 (ML-KEM-768)
 // =============================================================================
@@ -694,7 +689,7 @@ AARCH64_AUTIASP
 // Uses 3 pairs of source pointers (src1_0/src2_0, src1_1/src2_1, src1_2/src2_2)
 // and 3 mulcache pointers (src2asy_0, src2asy_1, src2asy_2).
 // =============================================================================
-MLKEMAsymMulk3:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMAsymMulk3)
 AARCH64_PACIASP
     // --- Prologue: save callee-saved registers (x19-x28, d8-d15) ---
     sub sp, sp, #(9*16)
@@ -974,9 +969,8 @@ AARCH64_PACIASP
     add sp, sp, #(9*16)
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMAsymMulk3)
 
-
-.align 2
 // =============================================================================
 // MLKEMAsymMulk4 — Asymmetric basemul accumulation, k=4 (ML-KEM-1024)
 // =============================================================================
@@ -1010,7 +1004,7 @@ AARCH64_AUTIASP
 // Uses 4 pairs of source pointers and 4 mulcache pointers.
 // Maximum register pressure variant — all 14 callee-saved registers used.
 // =============================================================================
-MLKEMAsymMulk4:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMAsymMulk4)
 AARCH64_PACIASP
     // --- Prologue: save callee-saved registers (x19-x28, d8-d15) ---
     sub sp, sp, #(9*16)
@@ -1345,6 +1339,7 @@ AARCH64_PACIASP
     add sp, sp, #(9*16)
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMAsymMulk4)
 
 
 // =============================================================================
@@ -1367,9 +1362,7 @@ AARCH64_AUTIASP
 //   x3: b (int16_t*, k×256 contiguous coefficients)
 //   x4: c (int16_t*, k×128 precomputed mulcache = b₁·ζ values)
 // =============================================================================
-.align 2
-.global MLKEMAsymMulMont
-MLKEMAsymMulMont:
+CRYPT_AARCH64_FUNC_START(MLKEMAsymMulMont)
 AARCH64_PACIASP
     cmp     w0, #2
     b.eq    .Lasm_mont_k2
@@ -1379,26 +1372,26 @@ AARCH64_PACIASP
     b.eq    .Lasm_mont_k4
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_FUNC_END(MLKEMAsymMulMont)
 .Lasm_mont_k2:
     mov     x0, x1
     mov     x1, x2
     mov     x2, x3
     mov     x3, x4
-    b       MLKEMAsymMulMontk2
+    b       CRYPT_AARCH64_SYM(MLKEMAsymMulMontk2)
 .Lasm_mont_k3:
     mov     x0, x1
     mov     x1, x2
     mov     x2, x3
     mov     x3, x4
-    b       MLKEMAsymMulMontk3
+    b       CRYPT_AARCH64_SYM(MLKEMAsymMulMontk3)
 .Lasm_mont_k4:
     mov     x0, x1
     mov     x1, x2
     mov     x2, x3
     mov     x3, x4
-    b       MLKEMAsymMulMontk4
+    b       CRYPT_AARCH64_SYM(MLKEMAsymMulMontk4)
 
-.align 2
 // =============================================================================
 // MLKEMAsymMulMontk2 — Montgomery-form basemul accumulation, k=2 (ML-KEM-512)
 // =============================================================================
@@ -1431,7 +1424,7 @@ AARCH64_AUTIASP
 //
 // Loop: 16 iterations (first unrolled, 15 in loop body)
 // =============================================================================
-MLKEMAsymMulMontk2:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMAsymMulMontk2)
 AARCH64_PACIASP
     sub sp, sp, #(9*16)
     stp x19, x20, [sp, #0*16]
@@ -1670,8 +1663,8 @@ AARCH64_PACIASP
     add sp, sp, #(9*16)
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMAsymMulMontk2)
 
-.align 2
 // =============================================================================
 // MLKEMAsymMulMontk3 — Montgomery-form basemul accumulation, k=3 (ML-KEM-768)
 // =============================================================================
@@ -1700,7 +1693,7 @@ AARCH64_AUTIASP
 //   v16-v19:  32-bit accumulators
 //   v28-v30:  mulcache γ values for each of the 3 polynomial pairs
 // =============================================================================
-MLKEMAsymMulMontk3:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMAsymMulMontk3)
 AARCH64_PACIASP
     sub sp, sp, #(9*16)
     stp x19, x20, [sp, #0*16]
@@ -1970,9 +1963,8 @@ AARCH64_PACIASP
     add sp, sp, #(9*16)
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMAsymMulMontk3)
 
-.align 2
-.align 2
 // =============================================================================
 // MLKEMAsymMulMontk4 — Montgomery-form basemul accumulation, k=4 (ML-KEM-1024)
 // =============================================================================
@@ -2002,7 +1994,7 @@ AARCH64_AUTIASP
 //   v16-v19:  32-bit accumulators
 //   v28-v31:  mulcache γ values for each of the 4 polynomial pairs
 // =============================================================================
-MLKEMAsymMulMontk4:
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMAsymMulMontk4)
 AARCH64_PACIASP
     sub sp, sp, #(9*16)
     stp x19, x20, [sp, #0*16]
@@ -2322,4 +2314,5 @@ AARCH64_PACIASP
     add sp, sp, #(9*16)
 AARCH64_AUTIASP
     ret
+    CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMAsymMulMontk4)
 #endif

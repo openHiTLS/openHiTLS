@@ -33,7 +33,7 @@ int32_t REC_RetransmitListAppend(REC_Ctx *recCtx, REC_Type type, const uint8_t *
         return HITLS_MEMALLOC_FAIL;
     }
 
-    LIST_INIT(&(retransmitNode->head));
+    BSL_LIST_INIT(&(retransmitNode->head));
     retransmitNode->type = type;
     retransmitNode->msg = BSL_SAL_Dump(msg, len);
     if (retransmitNode->msg == NULL) {
@@ -61,8 +61,8 @@ void REC_RetransmitListClean(REC_Ctx *recCtx)
 
     retransmitList->isExistCcsMsg = false;
     LIST_FOR_EACH_ITEM_SAFE(head, tmpHead, &(retransmitList->head)) {
-        LIST_REMOVE(head);
-        retransmitNode = LIST_ENTRY(head, RecRetransmitList, head);
+        BSL_LIST_REMOVE(head);
+        retransmitNode = BSL_LIST_ENTRY(head, RecRetransmitList, head);
         BSL_SAL_FREE(retransmitNode->msg);
         BSL_SAL_FREE(retransmitNode);
     }
@@ -119,7 +119,7 @@ int32_t REC_RetransmitListFlush(TLS_Ctx *ctx)
     ListHead *head = NULL;
     ListHead *tmpHead = NULL;
     LIST_FOR_EACH_ITEM_SAFE(head, tmpHead, &(retransmitList->head)) {
-        retransmitNode = LIST_ENTRY(head, RecRetransmitList, head);
+        retransmitNode = BSL_LIST_ENTRY(head, RecRetransmitList, head);
         /* UDP does not fail to send. Therefore, the sending failure case does not need to be considered. */
         ret = WriteSingleRetransmitNode(ctx, retransmitNode->type, retransmitNode->msg, retransmitNode->len);
         if (ret != HITLS_SUCCESS) {

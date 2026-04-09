@@ -35,7 +35,7 @@ typedef struct ListHeadSt {
  *
  * @param head [IN] The address of the head node of the list
  */
-#define LIST_INIT(head) (head)->next = (head)->prev = (head)
+#define BSL_LIST_INIT(head) (head)->next = (head)->prev = (head)
 
 /**
  * @brief Insert the 'item' node after the 'where' node.
@@ -65,7 +65,7 @@ typedef struct ListHeadSt {
  *
  * @param item [IN] The address of the item to be removed
  */
-#define LIST_REMOVE(item) do { \
+#define BSL_LIST_REMOVE(item) do { \
     (item)->prev->next = (item)->next; \
     (item)->next->prev = (item)->prev; \
 } while (0)
@@ -109,7 +109,7 @@ typedef struct ListHeadSt {
  * the list (ListHead type) has only the head and tail pointers and does not contain the data area.
  * In this way, the list can be used for mounting any data and is universal.
  */
-#define LIST_ENTRY(item, type, member) \
+#define BSL_LIST_ENTRY(item, type, member) \
     ((type *)((uintptr_t)(char *)(item) - (uintptr_t)(&((type *)0)->member)))
 
 #ifdef __cplusplus

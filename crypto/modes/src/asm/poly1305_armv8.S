@@ -18,7 +18,7 @@
 
 #include "crypt_arm.h"
 
-.arch   armv8-a
+CRYPT_AARCH64_ARCH_BASE
 
 /**
  * c structure：Poly1305Ctx
@@ -211,10 +211,7 @@
  *  Function/Macro Call: Poly1305_MOD_MUL Fill_TABLE
  */
 .text
-.balign 64
-.global Poly1305InitForAsm
-.type Poly1305InitForAsm, %function
-Poly1305InitForAsm:
+CRYPT_AARCH64_FUNC_START(Poly1305InitForAsm)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp, #0
@@ -264,7 +261,7 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #16
 AARCH64_AUTIASP
     ret
-.size Poly1305InitForAsm, .-Poly1305InitForAsm
+CRYPT_AARCH64_FUNC_END(Poly1305InitForAsm)
 
 /**
  *  Function description: Outputs the final result value to the specified memory.
@@ -276,15 +273,11 @@ AARCH64_AUTIASP
  *  Output register: None
  *  Function/Macro Call: Poly1305LastNeon
  */
-.text
-.balign 64
-.global Poly1305Last
-.type Poly1305Last, %function
-Poly1305Last:
+CRYPT_AARCH64_FUNC_START(Poly1305Last)
 AARCH64_PACIASP
     ldr     w15, [x0, #CTX_flag]
     and     w15, w15, #FLAG_BASE2_26
-    cbnz    w15, Poly1305LastNeon
+    cbnz    w15, 1f
 
     ldp     x3, x4, [x0, #CTX_acc]
     ldr     x5, [x0, #CTX_acc + 16]
@@ -317,7 +310,7 @@ AARCH64_PACIASP
     stp     x3, x4, [x1]
 AARCH64_AUTIASP
     ret
-.size Poly1305Last, .-Poly1305Last
+CRYPT_AARCH64_FUNC_END(Poly1305Last)
 
 /**
  *  Function description: Outputs the final result value to the specified memory.
@@ -329,10 +322,8 @@ AARCH64_AUTIASP
  *  Output register: None
  *  Function/Macro Call: None
  */
-.text
-.balign 64
-.type   Poly1305LastNeon, %function
-Poly1305LastNeon:
+CRYPT_AARCH64_LOCAL_FUNC_START(Poly1305LastNeon)
+1:
     /* Load the value of base 2^26. */
     ldp     w11, w12, [x0, #CTX_acc]
     ldp     w13, w14, [x0, #CTX_acc + 8]
@@ -380,7 +371,7 @@ Poly1305LastNeon:
     stp     x2, x3, [x1]
 AARCH64_AUTIASP
     ret
-.size Poly1305LastNeon, .-Poly1305LastNeon
+CRYPT_AARCH64_LOCAL_FUNC_END(Poly1305LastNeon)
 
 
 /**
@@ -397,11 +388,7 @@ AARCH64_AUTIASP
  *  x0: length of the remaining data to be processed
  *  Function/Macro Call: CONVERT_26TO64 POLY1305_MOD_MUL Poly1305BlockNeon
  */
-.text
-.balign 64
-.global  Poly1305Block
-.type   Poly1305Block, %function
-Poly1305Block:
+CRYPT_AARCH64_FUNC_START(Poly1305Block)
 AARCH64_PACIASP
     /* x4 indicates the length of the basic instruction set to be processed,
        and x2 indicates the remaining length of the instruction set to be processed. */
@@ -461,7 +448,7 @@ AARCH64_PACIASP
 .Lskip_process:
     /* If the remaining length is 256 bytes or more, the NEON processes the remaining length. */
     bic     x4, x2, #0xFF
-    cbnz    x4, Poly1305BlockNeon
+    cbnz    x4, 2f
 
     /* function returns */
     and     x0, x2, #15 // The return value is the unprocessed length.
@@ -469,7 +456,7 @@ AARCH64_PACIASP
     eor     x9, x9, x9
 AARCH64_AUTIASP
     ret
-.size Poly1305Block, .-Poly1305Block
+CRYPT_AARCH64_FUNC_END(Poly1305Block)
 
 /**
  *  Function description: Compresses the input data, stores the data in the context structure, and uses the NEON register.
@@ -484,10 +471,8 @@ AARCH64_AUTIASP
  *         x0: length of the remaining data to be processed
  *  Function/Macro call: CONVERT_64TO26
  */
-.text
-.balign 64
-.type   Poly1305BlockNeon, %function
-Poly1305BlockNeon:
+CRYPT_AARCH64_LOCAL_FUNC_START(Poly1305BlockNeon)
+2:
     stp     x29, x30, [sp, #-16]!
     stp     d8, d9, [sp, #-16]!
     stp     d10, d11, [sp, #-16]!
@@ -955,7 +940,7 @@ Poly1305BlockNeon:
     and     x0, x2, #15 // The return value is the unprocessed length.
 AARCH64_AUTIASP
     ret
-.size Poly1305BlockNeon, .-Poly1305BlockNeon
+CRYPT_AARCH64_LOCAL_FUNC_END(Poly1305BlockNeon)
 
 /**
  *  Function description: This function is used to clear residual sensitive information in registers.
@@ -965,11 +950,7 @@ AARCH64_AUTIASP
  *  Output register: None
  *  Function/Macro Call: None
  */
-.text
-.balign 64
-.global Poly1305CleanRegister
-.type Poly1305CleanRegister, %function
-Poly1305CleanRegister:
+CRYPT_AARCH64_FUNC_START(Poly1305CleanRegister)
 AARCH64_PACIASP
     movi    v0.16b, #0
     and     v1.16b, v1.16b, v0.16b
@@ -998,6 +979,6 @@ AARCH64_PACIASP
     and     v31.16b, v31.16b, v0.16b
 AARCH64_AUTIASP
     ret
-.size Poly1305CleanRegister, .-Poly1305CleanRegister
+CRYPT_AARCH64_FUNC_END(Poly1305CleanRegister)
 
 #endif

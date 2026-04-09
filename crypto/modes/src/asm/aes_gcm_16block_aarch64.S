@@ -19,13 +19,11 @@
 #include "crypt_arm.h"
 #include "aes_gcm_common_aarch64.S"
 
-.text
-.arch armv8-a+crypto
 
-.globl AES_GCM_Encrypt16BlockAsm
-.type AES_GCM_Encrypt16BlockAsm,%function
-.align 4
-AES_GCM_Encrypt16BlockAsm:
+CRYPT_AARCH64_ARCH_CRYPTO
+.text
+
+CRYPT_AARCH64_FUNC_START(AES_GCM_Encrypt16BlockAsm)
 AARCH64_PACIASP
     IN_STP                                  // register Protection
     ldr ROUNDS, [KEY00, #240]               // load number of rounds
@@ -99,12 +97,9 @@ AARCH64_PACIASP
     mov w0, #0x0
 AARCH64_AUTIASP
     ret
-.size AES_GCM_Encrypt16BlockAsm,.-AES_GCM_Encrypt16BlockAsm
+CRYPT_AARCH64_FUNC_END(AES_GCM_Encrypt16BlockAsm)
 
-.globl AES_GCM_Decrypt16BlockAsm
-.type AES_GCM_Decrypt16BlockAsm,%function
-.align 4
-AES_GCM_Decrypt16BlockAsm:
+CRYPT_AARCH64_FUNC_START(AES_GCM_Decrypt16BlockAsm)
 AARCH64_PACIASP
     IN_STP                                              // stp
     ldr ROUNDS, [KEY00, #240]                           // pull rounds
@@ -176,5 +171,5 @@ AARCH64_PACIASP
     mov w0, #0x0
 AARCH64_AUTIASP
     ret
-.size AES_GCM_Decrypt16BlockAsm,.-AES_GCM_Decrypt16BlockAsm
+CRYPT_AARCH64_FUNC_END(AES_GCM_Decrypt16BlockAsm)
 #endif

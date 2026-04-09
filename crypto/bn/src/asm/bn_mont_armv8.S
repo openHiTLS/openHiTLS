@@ -46,18 +46,16 @@
 
 #include "crypt_arm.h"
 
-.arch   armv8-a+crypto
+
+CRYPT_AARCH64_ARCH_CRYPTO
 .text
 
-.global MontMul_Asm
-.type   MontMul_Asm, %function
-.align  5
-MontMul_Asm:
+CRYPT_AARCH64_FUNC_START(MontMul_Asm)
 AARCH64_PACIASP
     tst     x5, #7
-    b.eq    MontSqr8
+    b.eq    CRYPT_AARCH64_SYM(MontSqr8)
     tst     x5, #3
-    b.eq    MontMul4
+    b.eq    CRYPT_AARCH64_SYM(MontMul4)
 
     stp     x29, x30, [sp, #-64]!
     mov     x29, sp
@@ -251,12 +249,11 @@ AARCH64_PACIASP
     ldr     x29, [sp], #64
 AARCH64_AUTIASP
     ret
-.size   MontMul_Asm, .-MontMul_Asm
+CRYPT_AARCH64_FUNC_END(MontMul_Asm)
 
-.type   MontSqr8, %function
-MontSqr8:
+CRYPT_AARCH64_LOCAL_FUNC_START(MontSqr8)
     cmp     x1, x2
-    b.ne    MontMul4
+    b.ne    CRYPT_AARCH64_SYM(MontMul4)
 
     stp     x29, x30, [sp, #-128]!  //  sp = sp - 128(Modify the SP and then save the SP.), [sp] = x29, [sp + 8] = x30,
                                     //  !Indicates modification sp
@@ -588,7 +585,7 @@ MontSqr8:
     mov     x2 , x11                // x2 = &t[16]
     b       .LSqr8xLoopMul
 
-.align  4
+.p2align 4
 .LSqr8xLoopMulEnd:
     //===== Calculate the squared term =====
     //----- sp = &t[0] , x2 = &t[24]-----
@@ -937,7 +934,7 @@ MontSqr8:
     mov     x19, #-8*8
     b       .LSqr8xReduce
 
-.align  4
+.p2align 4
 .LSqr8xReduceBreak:
     sub     x12, x3, x5             // x12 = n, reassign to n
     ldr     x4 , [x29, #112]        // k0 pop-stack
@@ -1072,11 +1069,9 @@ MontSqr8:
     ldr     x29, [sp], #128         // x29 = [sp], sp = sp + 128,ldr reads only an 8-byte block of memory
 AARCH64_AUTIASP
     ret
-.size   MontSqr8, .-MontSqr8
+CRYPT_AARCH64_LOCAL_FUNC_END(MontSqr8)
 
-
-.type   MontMul4, %function
-MontMul4:
+CRYPT_AARCH64_LOCAL_FUNC_START(MontMul4)
     stp     x29, x30, [sp, #-128]!
     mov     x29, sp
     stp     x27, x28, [sp, #16]
@@ -1429,6 +1424,6 @@ MontMul4:
     ldr     x29, [sp], #128
 AARCH64_AUTIASP
     ret
-.size   MontMul4, .-MontMul4
+CRYPT_AARCH64_LOCAL_FUNC_END(MontMul4)
 
 #endif

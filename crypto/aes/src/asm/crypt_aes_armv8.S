@@ -18,8 +18,8 @@
 
 #include "crypt_arm.h"
 #include "crypt_aes_macro_armv8.s"
-.text
-.arch    armv8-a+crypto
+
+CRYPT_AARCH64_ARCH_CRYPTO
 
 KEY     .req    x0
 IN      .req    x1
@@ -30,11 +30,10 @@ ROUNDS  .req    w6
 RDK0    .req    v17
 RDK1    .req    v18
 
-.section .rodata
-.align  5
-.g_cron:
+CRYPT_AARCH64_RODATA_SECTION
+.p2align  4
+.Lg_cron:
 .long   0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36
-.align  5
 
 /*
  * In Return-oriented programming (ROP) and Jump-oriented programming (JOP), we explored features
@@ -58,17 +57,14 @@ RDK1    .req    v18
  *                              uint32_t len);
  */
 .text
-.globl  CRYPT_AES_Encrypt
-.type   CRYPT_AES_Encrypt, %function
-.align  5
-CRYPT_AES_Encrypt:
+CRYPT_AARCH64_FUNC_START(CRYPT_AES_Encrypt)
 .ecb_aesenc_start:
 AARCH64_PACIASP
     stp x29, x30, [sp, #-16]!
     add x29, sp, #0
 
     ld1 {BLK0.16b}, [IN]
-    AES_ENC_1_BLK KEY BLK0.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_1_BLK KEY, BLK0.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b}, [OUT]
 
     eor x0, x0, x0
@@ -77,7 +73,7 @@ AARCH64_PACIASP
     ldp x29, x30, [sp], #16
 AARCH64_AUTIASP
     ret
-.size   CRYPT_AES_Encrypt, .-CRYPT_AES_Encrypt
+CRYPT_AARCH64_FUNC_END(CRYPT_AES_Encrypt)
 
 /*
  * int32_t CRYPT_AES_Decrypt(const CRYPT_AES_Key *ctx,
@@ -85,17 +81,14 @@ AARCH64_AUTIASP
  *                              uint8_t *out,
  *                              uint32_t len);
  */
-.globl  CRYPT_AES_Decrypt
-.type   CRYPT_AES_Decrypt, %function
-.align  5
-CRYPT_AES_Decrypt:
+CRYPT_AARCH64_FUNC_START(CRYPT_AES_Decrypt)
 .ecb_aesdec_start:
 AARCH64_PACIASP
     stp x29, x30, [sp, #-16]!
     add x29, sp, #0
 
     ld1 {BLK0.16b}, [IN]
-    AES_DEC_1_BLK KEY BLK0.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_1_BLK KEY, BLK0.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b}, [OUT]
 
     eor x0, x0, x0
@@ -104,17 +97,14 @@ AARCH64_PACIASP
     ldp x29, x30, [sp], #16
 AARCH64_AUTIASP
     ret
-.size   CRYPT_AES_Decrypt, .-CRYPT_AES_Decrypt
+CRYPT_AARCH64_FUNC_END(CRYPT_AES_Decrypt)
 
 /*
  * void SetEncryptKey128(CRYPT_AES_Key *ctx, const uint8_t *key);
  * Generating extended keys.
  * x0 => CRYPT_AES_Key *ctx; x1 => const uint8_t *key
  */
-.globl  SetEncryptKey128
-.type   SetEncryptKey128, %function
-.align  5
-SetEncryptKey128:
+CRYPT_AARCH64_FUNC_START(SetEncryptKey128)
 .Lenc_key_128:
 AARCH64_PACIASP
     stp x29, x30, [sp, #-64]!
@@ -123,8 +113,7 @@ AARCH64_PACIASP
     stp x23, x24, [sp, #32]
     stp x21, x22, [sp, #48]             // Register push stack completed.
 
-    adrp x23, .g_cron
-    add x23, x23, :lo12:.g_cron         // Round key start address.
+    CRYPT_AARCH64_GET_RELA(x23, .Lg_cron)         // Round key start address.
     mov x24, x0                         // Copy key string address. The address increases by 16 bytes.
     ld1 {v1.16b}, [x1]                  // Reads the 16-byte key of a user.
     mov w26, #10                        // Number of encryption rounds, which is filled
@@ -160,7 +149,7 @@ AARCH64_PACIASP
     ldp x29, x30, [sp], #64             // Pop stack completed.
 AARCH64_AUTIASP
     ret
-.size   SetEncryptKey128, .-SetEncryptKey128
+CRYPT_AARCH64_FUNC_END(SetEncryptKey128)
 
 
 /*
@@ -168,10 +157,8 @@ AARCH64_AUTIASP
  * Set a decryption key string.
  * x0 => CRYPT_AES_Key *ctx; x1 => const uint8_t *key
  */
-.globl  SetDecryptKey128
-.type   SetDecryptKey128, %function
-.align 5
-SetDecryptKey128:
+CRYPT_AARCH64_FUNC_START(SetDecryptKey128)
+
 AARCH64_PACIASP
     stp x29, x30, [sp, #-0x40]!
     add x29, sp, #0
@@ -197,7 +184,7 @@ AARCH64_PACIASP
     ldp x29, x30, [sp], #0x40             // Stacking completed.
 AARCH64_AUTIASP
     ret
-.size   SetDecryptKey128, .-SetDecryptKey128
+CRYPT_AARCH64_FUNC_END(SetDecryptKey128)
 
 
 /*
@@ -205,10 +192,7 @@ AARCH64_AUTIASP
  * Generating extended keys.
  * x0 => CRYPT_AES_Key *ctx; x1 => const uint8_t *key
  */
-.globl  SetEncryptKey192
-.type   SetEncryptKey192, %function
-.align 5
-SetEncryptKey192:
+CRYPT_AARCH64_FUNC_START(SetEncryptKey192)
 .Lenc_key_192:
 AARCH64_PACIASP
     stp x29, x30, [sp, #-64]!
@@ -222,8 +206,7 @@ AARCH64_PACIASP
     mov w26, #12                        // Number of encryption rounds.
     st1 {v0.4s}, [x0], #16              // Store the first 128-bit key.
     ld1 {v1.8b}, [x1]                   // Obtains the last 64-bit key.
-    adrp x23, .g_cron
-    add x23, x23, :lo12:.g_cron         // Round key start address.
+    CRYPT_AARCH64_GET_RELA(x23, .Lg_cron)         // Round key start address.
     st1 {v1.2s}, [x0], #8               // Store the last 64-bit key.
     eor v0.16b, v0.16b, v0.16b          // Clear zeros in V0.
     mov w25, #8                         // loop for 8 times.
@@ -260,7 +243,7 @@ AARCH64_PACIASP
     ldp x29, x30, [sp], #64             // Stacking completed.
 AARCH64_AUTIASP
     ret
-.size   SetEncryptKey192, .-SetEncryptKey192
+CRYPT_AARCH64_FUNC_END(SetEncryptKey192)
 
 
 /*
@@ -268,10 +251,8 @@ AARCH64_AUTIASP
  * Set a decryption key string.
  * x0 => CRYPT_AES_Key *ctx; x1 => const uint8_t *key
  */
-.globl  SetDecryptKey192
-.type   SetDecryptKey192, %function
-.align 5
-SetDecryptKey192:
+CRYPT_AARCH64_FUNC_START(SetDecryptKey192)
+
 AARCH64_PACIASP
     stp x29, x30, [sp, #-0x50]!
     add x29, sp, #0
@@ -305,17 +286,14 @@ AARCH64_PACIASP
     ldp x29, x30, [sp], #0x50             // Stacking completed.
 AARCH64_AUTIASP
     ret
-.size   SetDecryptKey192, .-SetDecryptKey192
+CRYPT_AARCH64_FUNC_END(SetDecryptKey192)
 
 /*
  * void SetEncryptKey256(CRYPT_AES_Key *ctx, const uint8_t *key);
  * Generating extended keys.
  * x0 => CRYPT_AES_Key *ctx; x1 => const uint8_t *key
  */
-.globl  SetEncryptKey256
-.type   SetEncryptKey256, %function
-.align 5
-SetEncryptKey256:
+CRYPT_AARCH64_FUNC_START(SetEncryptKey256)
 .Lenc_key_256:
 AARCH64_PACIASP
     stp x29, x30, [sp, #-64]!
@@ -324,8 +302,7 @@ AARCH64_PACIASP
     stp x23, x24, [sp, #32]
     stp x21, x22, [sp, #48]             // Register is stacked.
 
-    adrp x23, .g_cron
-    add x23, x23, :lo12:.g_cron         // Round key start address.
+    CRYPT_AARCH64_GET_RELA(x23, .Lg_cron)         // Round key start address.
     ld1 {v0.16b}, [x1], #16             // Obtain the first 128-bit key.
     mov x24, x0                         // Copy key string address. The address increases by 16 bytes.
     st1 {v0.4s}, [x0], #16              // Store the first 128-bit key.
@@ -389,17 +366,15 @@ AARCH64_PACIASP
     ldp x29, x30, [sp], #64             // Stacking completed.
 AARCH64_AUTIASP
     ret
-.size   SetEncryptKey256, .-SetEncryptKey256
+CRYPT_AARCH64_FUNC_END(SetEncryptKey256)
 
 /*
  * void SetDecryptKey256(CRYPT_AES_Key *ctx, const uint8_t *key);
  * Set a decryption key string.
  * x0 => CRYPT_AES_Key *ctx; x1 => const uint8_t *key
  */
-.globl  SetDecryptKey256
-.type   SetDecryptKey256, %function
-.align 5
-SetDecryptKey256:
+CRYPT_AARCH64_FUNC_START(SetDecryptKey256)
+
 AARCH64_PACIASP
     stp x29, x30, [sp, #-0x60]!
     add x29, sp, #0
@@ -441,6 +416,6 @@ AARCH64_PACIASP
     ldp x29, x30, [sp], #0x60             // Stack has been popped.
 AARCH64_AUTIASP
     ret
-.size   SetDecryptKey256, .-SetDecryptKey256
+CRYPT_AARCH64_FUNC_END(SetDecryptKey256)
 
 #endif

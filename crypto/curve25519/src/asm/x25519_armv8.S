@@ -107,10 +107,7 @@
 # void Fp51Mul (Fp51 *out, const Fp51 *f, const Fp51 *g);
 #############################################################
 
-.globl  Fp51Mul
-.type   Fp51Mul, @function
-.align  6
-Fp51Mul:
+CRYPT_AARCH64_FUNC_START(Fp51Mul)
 AARCH64_PACIASP
     /* save register */
     push_stack
@@ -239,20 +236,17 @@ AARCH64_PACIASP
     pop_stack
 AARCH64_AUTIASP
     ret
-.size   Fp51Mul,.-Fp51Mul
+CRYPT_AARCH64_FUNC_END(Fp51Mul)
 
 #############################################################
 # void Fp51Square(Fp51 *out, const Fp51 *f);
 #############################################################
 
-.globl  Fp51Square
-.type   Fp51Square, @function
-.align  6
-Fp51Square:
+CRYPT_AARCH64_FUNC_START(Fp51Square)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-32]!
     mov     x29, sp
-    str     x19, [sp, #16]
+    stp     x19, x20, [sp, #16]
     ldr     x7, [x1, #32]                  // load f4
     ldp     x2, x17, [x1]                  // load f0, f1
     ldp     x10, x6, [x1, #16]             // load f2, f3
@@ -268,16 +262,16 @@ AARCH64_PACIASP
     sub     x14, x14, x6                   // f3 * 19
     mul     x1, x7, x5                     // 19 * f4 * f4   - low
     umulh   x11, x15, x6                   // 2 * f0 * f3  - high
-    mul     x18, x6, x13                   // 2 * f1 * f3  - low
+    mul     x20, x6, x13                   // 2 * f1 * f3  - low
     adds    x16, x16, x1                   // 2 * f0 * f3 + 19 * f4 * f4   h3 - low
     umulh   x4, x7, x5                     // 19 * f4 * f4   - high
     mul     x9, x15, x7                    // 2 * f0 * f4   - low
     umulh   x8, x6, x13                    // 2 * f1 * f3   - high
     adc     x4, x11, x4                    // 2 * f0 * f3 + 19 * f4 * f4   h3 - high
     umulh   x7, x15, x7                    // 2 * f0 * f4   - high
-    adds    x9, x18, x9                    // 2 * f1 * f3 + 2 * f0 * f4    h4 - low
+    adds    x9, x20, x9                    // 2 * f1 * f3 + 2 * f0 * f4    h4 - low
     mul     x1, x6, x14                    // 19 * f3 * f3   - low
-    lsl     x18, x10, #1                   // f2 * 2
+    lsl     x20, x10, #1                   // f2 * 2
     mul     x12, x15, x17                  // 2 * f0 * f1   - low
     adc     x8, x8, x7                     // 2 * f1 * f3 + 2 * f0 * f4    h4 - high
     mul     x19, x15, x10                  // 2 * f0 * f2   - low
@@ -292,14 +286,14 @@ AARCH64_PACIASP
     mul     x15, x17, x17                  // f1 * f1  - low
     adc     x1, x3, x1                     // 38 * f3 * f4 + 2 * f0 * f2   h2 - high
     mul     x6, x5, x13                    // 38 * f1 * f4 - low
-    mul     x3, x14, x18                   // 38 * f3 * f2 - low
+    mul     x3, x14, x20                   // 38 * f3 * f2 - low
     adds    x7, x15, x7                    // 38 * f3 * f4 + 2 * f0 * f2 + f1 * f1  h2 - low
     umulh   x17, x17, x17                  // f1 * f1  - high
     mul     x30, x10, x13                  // 2 * f1 * f2  - low
     adc     x1, x1, x17                    // 38 * f3 * f4 + 2 * f0 * f2 + f1 * f1  h2 - high
     mul     x19, x2, x2                    // f0 * f0  - low
     adds    x6, x6, x3                     // 38 * f1 * f4 + 38 * f3 * f2  h0 - low
-    umulh   x14, x14, x18                  // 38 * f3 * f2  - high
+    umulh   x14, x14, x20                  // 38 * f3 * f2  - high
     umulh   x3, x10, x13                   // 2 * f1 * f2  - high
     extr    x1, x1, x7, #51                // performs a carry operation from the upper 13 bits of the lower 64 bits of h2 to the upper 64 bits of h2. h2 - high
     umulh   x13, x5, x13                   // 38 * f1 * f4   - high
@@ -309,10 +303,10 @@ AARCH64_PACIASP
     adds    x6, x6, x19                    // h0 = 38 * f1 * f4 + 38 * f3 * f2 + f0 * f0  - low
     adc     x2, x2, x13                    // h0 = 38 * f3 * f2 + 38 * f1 * f4  + f0 * f0  - high
     adds    x1, x1, x30                    // carry h2 -> h3 (h2 - high + 2 * f1 * f2  - low)
-    mul     x17, x5, x18                   // 38 * f2 * f4   - low
+    mul     x17, x5, x20                   // 38 * f2 * f4   - low
     cinc    x3, x3, cs
     adds    x1, x1, x16                    // 2 * f0 * f3 +  19 * f4 * f4 + 2 * f1 * f2 + h2-carry  h3 - low
-    umulh   x5, x5, x18                    // 38 * f2 * f4   - high
+    umulh   x5, x5, x20                    // 38 * f2 * f4   - high
     adc     x3, x4, x3                     // h3 =  2 * f0 *f3 +  19 * f4 * f4 + 2 * f1 * f2  - high
     extr    x2, x2, x6, #51                // h0 - high
     adds    x2, x2, x17                    // carry: h0 -> h1 (38 * f2 * f4   - low)
@@ -340,23 +334,20 @@ AARCH64_PACIASP
     and     x4, x6, #0x7ffffffffffff       // h0
     add     x2, x2, x6, lsr #51            // carry: h0 -> h1
     and     x3, x3, #0x7ffffffffffff       // h4
-    ldr     x19, [sp, #16]
+    ldp     x19, x20, [sp, #16]
     stp     x4, x2, [x0]
     ldp     x29, x30, [sp], #32
     stp     x5, x1, [x0, #16]
     str     x3, [x0, #32]
 AARCH64_AUTIASP
     ret
-.size   Fp51Square,.-Fp51Square
+CRYPT_AARCH64_FUNC_END(Fp51Square)
 
 #############################################################
 # void Fp51MulScalar(Fp51 *out, const Fp51 *in);
 #############################################################
 
-.globl  Fp51MulScalar
-.type   Fp51MulScalar, @function
-.align  6
-Fp51MulScalar:
+CRYPT_AARCH64_FUNC_START(Fp51MulScalar)
 AARCH64_PACIASP
     /*
      * x0: out; x1: in; fp51 array [u64; 5]
@@ -397,6 +388,6 @@ AARCH64_PACIASP
 
 AARCH64_AUTIASP
     ret
-.size   Fp51MulScalar,.-Fp51MulScalar
+CRYPT_AARCH64_FUNC_END(Fp51MulScalar)
 
 #endif

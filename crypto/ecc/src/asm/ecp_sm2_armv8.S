@@ -26,9 +26,9 @@
 #define	s6 x13
 #define	s7 x14
 
-.section .rodata
+CRYPT_AARCH64_RODATA_SECTION
 # The polynomial
-.align	4
+.p2align 4
 .Lpoly:
 .quad	0xffffffffffffffff, 0xffffffff00000000, 0xffffffffffffffff, 0xfffffffeffffffff
 # The order of polynomial
@@ -67,10 +67,7 @@
 ### Right shift: in >> 1 ###
 # void ECP_Sm2Div2(BN_UINT *r, BN_UINT *a);
 # 1-bit right shift
-.globl	ECP_Sm2Div2
-.type	ECP_Sm2Div2, %function
-.align	4
-ECP_Sm2Div2:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2Div2)
 AARCH64_PACIASP
 	# Load inputs
 	ldp	x9, x10, [x1]
@@ -87,16 +84,13 @@ AARCH64_PACIASP
 	stp	x11, x12, [x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2Div2, .-ECP_Sm2Div2
+CRYPT_AARCH64_FUNC_END(ECP_Sm2Div2)
 
 ### Right shift: in >> 2 ###
 
 # void ECP_Sm2Div4(BN_UINT *r, BN_UINT *a);
 # 2-bit right shift
-.globl	ECP_Sm2Div4
-.type	ECP_Sm2Div4, %function
-.align	4
-ECP_Sm2Div4:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2Div4)
 AARCH64_PACIASP
 	# Load inputs
 	ldp	x7, x8, [x1]
@@ -113,13 +107,10 @@ AARCH64_PACIASP
 	stp	x9, x10, [x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2Div4, .-ECP_Sm2Div4
+CRYPT_AARCH64_FUNC_END(ECP_Sm2Div4)
 
 ### Sub: r = a-b ###
-.globl	ECP_Sm2BnSub
-.type	ECP_Sm2BnSub, %function
-.align	4
-ECP_Sm2BnSub:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2BnSub)
 AARCH64_PACIASP
 	# Load inputs
 	ldp	x7, x8, [x1]
@@ -138,13 +129,10 @@ AARCH64_PACIASP
 	stp	x9, x10, [x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2BnSub, .-ECP_Sm2BnSub
+CRYPT_AARCH64_FUNC_END(ECP_Sm2BnSub)
 
 ### Add: r = a+b ###
-.globl	ECP_Sm2BnAdd
-.type	ECP_Sm2BnAdd, %function
-.align	4
-ECP_Sm2BnAdd:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2BnAdd)
 AARCH64_PACIASP
 	# Load inputs
 	ldp	x7, x8, [x1]
@@ -163,14 +151,11 @@ AARCH64_PACIASP
 	stp	x9, x10, [x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2BnAdd, .-ECP_Sm2BnAdd
+CRYPT_AARCH64_FUNC_END(ECP_Sm2BnAdd)
 
 ### Modular div by 2: res = in/2 mod p ###
 # void ECP_Sm2Div2ModP(BN_UINT *r, BN_UINT *a)
-.globl	ECP_Sm2Div2ModP
-.type	ECP_Sm2Div2ModP, %function
-.align	4
-ECP_Sm2Div2ModP:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2Div2ModP)
 AARCH64_PACIASP
 	# Load inputs
 	ldp	x3, x4, [x1]
@@ -186,8 +171,7 @@ AARCH64_PACIASP
 	lsr	x6, x6, #1
 
 	# Load polynomial
-    adrp    x1, .Lpoly_div_2
-    add 	x1,x1,:lo12:.Lpoly_div_2
+    CRYPT_AARCH64_GET_RELA(x1, .Lpoly_div_2)
 
 	ldp	x7, x8, [x1]
 	ldp	x9, x10, [x1, #16]
@@ -210,14 +194,11 @@ AARCH64_PACIASP
 	stp	x5, x6, [x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2Div2ModP, .-ECP_Sm2Div2ModP
+CRYPT_AARCH64_FUNC_END(ECP_Sm2Div2ModP)
 
 ### Modular div by 2: res = in/2 mod n, where n = ord(p) ###
 # void ECP_Sm2Div2ModOrd(BN_UINT *r, BN_UINT *a)
-.globl	ECP_Sm2Div2ModOrd
-.type	ECP_Sm2Div2ModOrd, %function
-.align	4
-ECP_Sm2Div2ModOrd:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2Div2ModOrd)
 AARCH64_PACIASP
 	# Load inputs
 	ldp	x3, x4, [x1]
@@ -233,8 +214,7 @@ AARCH64_PACIASP
 	lsr	x6, x6, #1
 
 	# Load polynomial
-    adrp    x1, .Lord_div_2
-    add 	x1,x1,:lo12:.Lord_div_2
+    CRYPT_AARCH64_GET_RELA(x1, .Lord_div_2)
 	ldp	x7, x8, [x1]
 	ldp	x9, x10, [x1, #16]
 
@@ -256,15 +236,11 @@ AARCH64_PACIASP
 	stp	x5, x6, [x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2Div2ModOrd, .-ECP_Sm2Div2ModOrd
+CRYPT_AARCH64_FUNC_END(ECP_Sm2Div2ModOrd)
 
 ### Modular div by 4: res = in/4 mod p ###
 # void ECP_Sm2Div4ModP(BN_UINT *r, BN_UINT *a)
-.globl	ECP_Sm2Div4ModP
-.type	ECP_Sm2Div4ModP, %function
-.align	4
-
-ECP_Sm2Div4ModP:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2Div4ModP)
 AARCH64_PACIASP
 	# Load inputs
 	ldp	x3, x4, [x1]
@@ -280,14 +256,10 @@ AARCH64_PACIASP
 	lsr	x6, x6, #2
 
 	# Load polynomial
-    adrp    x12, .Lzero
-    add     x12,x12,:lo12:.Lzero
-    adrp    x13, .Lpoly_1div4
-    add     x13,x13,:lo12:.Lpoly_1div4
-    adrp    x14, .Lpoly_2div4
-    add     x14,x14,:lo12:.Lpoly_2div4
-    adrp    x15, .Lpoly_3div4
-    add     x15,x15,:lo12:.Lpoly_3div4
+    CRYPT_AARCH64_GET_RELA(x12, .Lzero)
+    CRYPT_AARCH64_GET_RELA(x13, .Lpoly_1div4)
+    CRYPT_AARCH64_GET_RELA(x14, .Lpoly_2div4)
+    CRYPT_AARCH64_GET_RELA(x15, .Lpoly_3div4)
 	cmp	x11, #1
 	csel	x1,x12,x13,cc
 	cmp	x11, #2
@@ -309,15 +281,11 @@ AARCH64_PACIASP
 	stp	x5, x6, [x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2Div4ModP, .-ECP_Sm2Div4ModP
+CRYPT_AARCH64_FUNC_END(ECP_Sm2Div4ModP)
 
 ### Modular div by 4: res = in/4 mod n, where n = ord(p) ###
 # void ECP_Sm2Div4ModOrd(BN_UINT *r, BN_UINT *a)
-.globl	ECP_Sm2Div4ModOrd
-.type	ECP_Sm2Div4ModOrd, %function
-.align	4
-
-ECP_Sm2Div4ModOrd:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2Div4ModOrd)
 AARCH64_PACIASP
 	# Load inputs
 	ldp	x3, x4, [x1]
@@ -333,14 +301,10 @@ AARCH64_PACIASP
 	lsr	x6, x6, #2
 
 	# Load polynomial
-    adrp    x12, .Lzero
-    add     x12,x12,:lo12:.Lzero
-    adrp    x13, .Lord_1div4
-    add     x13,x13,:lo12:.Lord_1div4
-    adrp    x14, .Lord_2div4
-    add     x14,x14,:lo12:.Lord_2div4
-    adrp    x15, .Lord_3div4
-    add     x15,x15,:lo12:.Lord_3div4
+    CRYPT_AARCH64_GET_RELA(x12, .Lzero)
+    CRYPT_AARCH64_GET_RELA(x13, .Lord_1div4)
+    CRYPT_AARCH64_GET_RELA(x14, .Lord_2div4)
+    CRYPT_AARCH64_GET_RELA(x15, .Lord_3div4)
 	cmp	x11, #1
 	csel	x1,x12,x13,cc
 	cmp	x11, #2
@@ -362,95 +326,78 @@ AARCH64_PACIASP
 	stp	x5, x6, [x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2Div4ModOrd, .-ECP_Sm2Div4ModOrd
+CRYPT_AARCH64_FUNC_END(ECP_Sm2Div4ModOrd)
 
-#define	bn_mod_add(mod)			\
-	/* Load inputs */			\
-	ldp		x3,x4,[x1];			\
-	ldp		x5,x6,[x1,#0x10];	\
-	/* Addition */				\
-	ldp		x7,x8,[x2];			\
-	ldp		x9,x10,[x2,#0x10];	\
-	adds	x3,x3,x7;			\
-	adcs	x4,x4,x8;			\
-	adcs	x5,x5,x9;			\
-	adcs	x6,x6,x10;			\
-	adc 	x15,xzr,xzr;		\
-	mov		x11,x3;				\
-	mov		x12,x4;				\
-	mov		x13,x5;				\
-	mov		x14,x6;				\
-	/* Sub polynomial */		\
-	adrp    x2, mod;            \
-    add	    x2, x2, :lo12:mod;  \
-	ldp		x7,x8,[x2];			\
-	ldp		x9,x10,[x2,#0x10];	\
-	subs	x11,x11,x7;			\
-	sbcs	x12,x12,x8;			\
-	sbcs	x13,x13,x9;			\
-	sbcs	x14,x14,x10;		\
-	sbcs	x15,x15,xzr;		\
-	csel	x3,x3,x11,cc;		\
-	csel	x4,x4,x12,cc;		\
-	csel	x5,x5,x13,cc;		\
-	csel	x6,x6,x14,cc;		\
-	/* Store results */			\
-	stp		x3,x4,[x0];			\
-	stp		x5,x6,[x0,#0x10];	\
+.macro	bn_mod_add mod
+	ldp		x3,x4,[x1]
+	ldp		x5,x6,[x1,#0x10]
+	ldp		x7,x8,[x2]
+	ldp		x9,x10,[x2,#0x10]
+	adds	x3,x3,x7
+	adcs	x4,x4,x8
+	adcs	x5,x5,x9
+	adcs	x6,x6,x10
+	adc 	x15,xzr,xzr
+	mov		x11,x3
+	mov		x12,x4
+	mov		x13,x5
+	mov		x14,x6
+	CRYPT_AARCH64_GET_RELA(x2, \mod)
+	ldp		x7,x8,[x2]
+	ldp		x9,x10,[x2,#0x10]
+	subs	x11,x11,x7
+	sbcs	x12,x12,x8
+	sbcs	x13,x13,x9
+	sbcs	x14,x14,x10
+	sbcs	x15,x15,xzr
+	csel	x3,x3,x11,cc
+	csel	x4,x4,x12,cc
+	csel	x5,x5,x13,cc
+	csel	x6,x6,x14,cc
+	stp		x3,x4,[x0]
+	stp		x5,x6,[x0,#0x10]
+.endm
 
-#define	bn_mod_sub(mod)			\
-	/* Load inputs */			\
-	ldp		x3,x4,[x1];			\
-	ldp		x5,x6,[x1,#0x10];	\
-	/* Addition */				\
-	ldp		x7,x8,[x2];			\
-	ldp		x9,x10,[x2,#0x10];	\
-	subs	x3,x3,x7;			\
-	sbcs	x4,x4,x8;			\
-	sbcs	x5,x5,x9;			\
-	sbcs	x6,x6,x10;			\
-	sbc 	x15,xzr,xzr;		\
-	mov		x11,x3;				\
-	mov		x12,x4;				\
-	mov		x13,x5;				\
-	mov		x14,x6;				\
-	/* Add polynomial */		\
-	adrp    x2, mod;            \
-    add	    x2, x2, :lo12:mod;  \
-	ldp		x7,x8,[x2];			\
-	ldp		x9,x10,[x2,#0x10];	\
-	adds	x11,x11,x7;			\
-	adcs	x12,x12,x8;			\
-	adcs	x13,x13,x9;			\
-	adcs	x14,x14,x10;		\
-	tst		x15,x15;			\
-	csel	x3,x3,x11,eq;		\
-	csel	x4,x4,x12,eq;		\
-	csel	x5,x5,x13,eq;		\
-	csel	x6,x6,x14,eq;		\
-	/* Store results */			\
-	stp		x3,x4,[x0];			\
-	stp		x5,x6,[x0,#0x10];	\
+.macro	bn_mod_sub mod
+	ldp		x3,x4,[x1]
+	ldp		x5,x6,[x1,#0x10]
+	ldp		x7,x8,[x2]
+	ldp		x9,x10,[x2,#0x10]
+	subs	x3,x3,x7
+	sbcs	x4,x4,x8
+	sbcs	x5,x5,x9
+	sbcs	x6,x6,x10
+	sbc 	x15,xzr,xzr
+	mov		x11,x3
+	mov		x12,x4
+	mov		x13,x5
+	mov		x14,x6
+	CRYPT_AARCH64_GET_RELA(x2, \mod)
+	ldp		x7,x8,[x2]
+	ldp		x9,x10,[x2,#0x10]
+	adds	x11,x11,x7
+	adcs	x12,x12,x8
+	adcs	x13,x13,x9
+	adcs	x14,x14,x10
+	tst		x15,x15
+	csel	x3,x3,x11,eq
+	csel	x4,x4,x12,eq
+	csel	x5,x5,x13,eq
+	csel	x6,x6,x14,eq
+	stp		x3,x4,[x0]
+	stp		x5,x6,[x0,#0x10]
+.endm
 
 ### Modular add: r = a+b mod p ###
-.globl	ECP_Sm2AddModP
-.type	ECP_Sm2AddModP, @function
-.align	4
-
-ECP_Sm2AddModP:
-
+CRYPT_AARCH64_FUNC_START(ECP_Sm2AddModP)
 AARCH64_PACIASP
-	bn_mod_add(.Lpoly);
+	bn_mod_add	.Lpoly
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2AddModP, .-ECP_Sm2AddModP
+CRYPT_AARCH64_FUNC_END(ECP_Sm2AddModP)
 
 ### Modular sub: r = p - r ###
-.globl	ECP_Sm2Neg
-.type	ECP_Sm2Neg, @function
-.align	4
-
-ECP_Sm2Neg:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2Neg)
 AARCH64_PACIASP
 	ldp	x11, x12, [x1]
     mov     x7, #0xffffffff00000000
@@ -466,44 +413,32 @@ AARCH64_PACIASP
 	stp	x10, x8, [x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2Neg, .-ECP_Sm2Neg
+CRYPT_AARCH64_FUNC_END(ECP_Sm2Neg)
 
 ### Modular sub: r = a-b mod p ###
-.globl	ECP_Sm2SubModP
-.type	ECP_Sm2SubModP, @function
-.align	4
-
-ECP_Sm2SubModP:
-
+CRYPT_AARCH64_FUNC_START(ECP_Sm2SubModP)
 AARCH64_PACIASP
-	bn_mod_sub(.Lpoly);
+	bn_mod_sub	.Lpoly
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2SubModP, .-ECP_Sm2SubModP
+CRYPT_AARCH64_FUNC_END(ECP_Sm2SubModP)
 
 ### Modular add: r = a+b mod n/p, where n = ord(p) ###
-.globl	ECP_Sm2AddModOrd
-.type	ECP_Sm2AddModOrd, @function
-.align	4
-ECP_Sm2AddModOrd:
-
+CRYPT_AARCH64_FUNC_START(ECP_Sm2AddModOrd)
 AARCH64_PACIASP
-	bn_mod_add(.Lord);
+	bn_mod_add	.Lord
 AARCH64_AUTIASP
 	ret
-.size ECP_Sm2AddModOrd, .-ECP_Sm2AddModOrd
+CRYPT_AARCH64_FUNC_END(ECP_Sm2AddModOrd)
 
 ### Modular sub: r = a-b mod n/p, where n = ord(p) ###
-.globl	ECP_Sm2SubModOrd
-.type	ECP_Sm2SubModOrd, @function
-.align	4
-ECP_Sm2SubModOrd:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2SubModOrd)
 
 AARCH64_PACIASP
-	bn_mod_sub(.Lord);
+	bn_mod_sub	.Lord
 AARCH64_AUTIASP
 	ret
-.size ECP_Sm2SubModOrd, .-ECP_Sm2SubModOrd
+CRYPT_AARCH64_FUNC_END(ECP_Sm2SubModOrd)
 
 .macro	RDC
 	# registers map
@@ -674,8 +609,7 @@ AARCH64_AUTIASP
 	mov s6, s2
 	mov s7, s3
 
-	adrp x3, .Lpoly
-    add	x3, x3, :lo12:.Lpoly
+	CRYPT_AARCH64_GET_RELA(x3, .Lpoly)
 	ldp x4, x15, [x3]
 	ldp x16, x17, [x3, #16]
 
@@ -707,16 +641,13 @@ AARCH64_AUTIASP
 # s0  s1  s2  s3  s4  s5  s6  s7
 # x7  x8  x9  x10 x11 x12 x13 x14 x3  x4  x5  x6  x15
 # r8  r9  r10 r11 r12 r13 r14 r15 rax rdx rbx rcx rsi
-.globl	ECP_Sm2Mul
-.type	ECP_Sm2Mul, @function
-.align	4
-ECP_Sm2Mul:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2Mul)
 AARCH64_PACIASP
 	# Store scalar registers
 	stp     x29, x30, [sp, #-80]!
     add     x29, sp, #0
     stp     x16, x17, [sp, #16]
-	stp     x18, x19, [sp, #64]
+	stp     x28, x19, [sp, #64]
 
 	# Load inputs
 	ldp s0, s1, [x1]
@@ -783,7 +714,7 @@ AARCH64_PACIASP
 	adds x6, x6, x3
 	adcs x15, x15, x4
 	adcs x5, x5, xzr
-	mov x18, x6
+	mov x28, x6
 	eor x6, x6, x6
 
 ### s3*s4 + s2*s5 + s1*s6 + s0*s7 ###
@@ -859,7 +790,7 @@ AARCH64_PACIASP
 
 	mov s0, x16
 	mov s1, x17
-	mov s2, x18
+	mov s2, x28
 	mov s3, x19
 
 	# result of mul: s7 s6 s5 s4 s3 s2 s1 s0
@@ -869,11 +800,11 @@ AARCH64_PACIASP
 
 	# Restore scalar registers
 	ldp x16, x17, [sp, #16]
-	ldp x18, x19, [sp, #64]
+	ldp x28, x19, [sp, #64]
 	ldp x29, x30, [sp], #80
 AARCH64_AUTIASP
 	ret
-.size ECP_Sm2Mul, .-ECP_Sm2Mul
+CRYPT_AARCH64_FUNC_END(ECP_Sm2Mul)
 
 ### Modular sqr: r = a^2 mod p ###
 # void ECP_Sm2Sqr(uint64_t *r, const uint64_t *a)
@@ -884,10 +815,7 @@ AARCH64_AUTIASP
 # s0  s1  s2  s3  s4  s5  s6  s7
 # x7  x8  x9  x10 x11 x12 x13 x14 x3  x4  x5  x6  x15 x16 x17
 # r8  r9  r10 r11 r12 r13 r14 r15 rax rdx rbx rcx rsi rbp rdi
-.globl	ECP_Sm2Sqr
-.type	ECP_Sm2Sqr, @function
-.align	4
-ECP_Sm2Sqr:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2Sqr)
 AARCH64_PACIASP
 	# Store scalar registers
 	stp     x29, x30, [sp, #-64]!
@@ -1016,78 +944,63 @@ AARCH64_PACIASP
 	ldp x29, x30, [sp], #64
 AARCH64_AUTIASP
 	ret
-.size ECP_Sm2Sqr, .-ECP_Sm2Sqr
+CRYPT_AARCH64_FUNC_END(ECP_Sm2Sqr)
 
-.globl	ECP_Sm2ToMont
-.type	ECP_Sm2ToMont,%function
-.align	4
-ECP_Sm2ToMont:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2ToMont)
 AARCH64_PACIASP
 	stp		x29, x30,[sp, #-32]!
 	add		x29,sp, #0
 	stp		x19, x20,[sp, #16]
 
-    adrp    x3, .LRR		// bp[0]
-    add 	x3, x3,:lo12:.LRR
+    CRYPT_AARCH64_GET_RELA(x3, .LRR)
 	ldr	   	x3,[x3]
 
 	ldp		x4, x5,[x1]
 	ldp		x6, x7,[x1, #16]
 
-    adrp    x14, .Lpoly+8
-    add 	x14, x14,:lo12:.Lpoly+8
+    CRYPT_AARCH64_GET_RELA(x14, .Lpoly+8)
 	ldr	   	x14,[x14]
 
-    adrp    x15, .Lpoly+24
-    add 	x15, x15,:lo12:.Lpoly+24
+    CRYPT_AARCH64_GET_RELA(x15, .Lpoly+24)
 	ldr	   	x15,[x15]
 
-    adrp    x2, .LRR
-    add 	x2, x2,:lo12:.LRR
+    CRYPT_AARCH64_GET_RELA(x2, .LRR)
 
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	ldp		x19, x20,[sp, #16]
 	ldp		x29, x30,[sp], #32
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2ToMont,.-ECP_Sm2ToMont
+CRYPT_AARCH64_FUNC_END(ECP_Sm2ToMont)
 
-.globl	ECP_Sm2FromMont
-.type	ECP_Sm2FromMont,%function
-.align	4
-ECP_Sm2FromMont:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2FromMont)
 AARCH64_PACIASP
 	stp		x29, x30,[sp, #-32]!
 	add		x29,sp, #0
 	stp		x19, x20,[sp, #16]
 
-    adrp    x2, .Lone
-    add 	x2, x2,:lo12:.Lone
+    CRYPT_AARCH64_GET_RELA(x2, .Lone)
 	ldr	   	x3, [x2]
 
 	ldp		x4, x5,[x1]
 	ldp		x6, x7,[x1, #16]
 
-    adrp    x14, .Lpoly+8
-    add 	x14, x14,:lo12:.Lpoly+8
+    CRYPT_AARCH64_GET_RELA(x14, .Lpoly+8)
 	ldr	   	x14, [x14]
 
-    adrp    x15, .Lpoly+24
-    add 	x15, x15,:lo12:.Lpoly+24
+    CRYPT_AARCH64_GET_RELA(x15, .Lpoly+24)
 	ldr	   	x15, [x15]
 	
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	ldp		x19, x20,[sp, #16]
 	ldp		x29, x30,[sp], #32
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2FromMont,.-ECP_Sm2FromMont
+CRYPT_AARCH64_FUNC_END(ECP_Sm2FromMont)
 
-.type	ECP_Sm2MulMont,%function
-.align	4
-ECP_Sm2MulMont:
+CRYPT_AARCH64_LOCAL_FUNC_START(ECP_Sm2MulMont)
 AARCH64_PACIASP
 
 	// a[0~3] * b[0]
@@ -1257,11 +1170,9 @@ AARCH64_PACIASP
 
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2MulMont,.-ECP_Sm2MulMont
+CRYPT_AARCH64_LOCAL_FUNC_END(ECP_Sm2MulMont)
 
-.type	ECP_Sm2SqrMont,%function
-.align	4
-ECP_Sm2SqrMont:
+CRYPT_AARCH64_LOCAL_FUNC_START(ECP_Sm2SqrMont)
 AARCH64_PACIASP
 
 	// a[1~3] * a[0]
@@ -1398,11 +1309,9 @@ AARCH64_PACIASP
 	stp		x10, x11,[x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2SqrMont,.-ECP_Sm2SqrMont
+CRYPT_AARCH64_LOCAL_FUNC_END(ECP_Sm2SqrMont)
 
-.type	ECP_Sm2AddCore,%function
-.align	4
-ECP_Sm2AddCore:
+CRYPT_AARCH64_LOCAL_FUNC_START(ECP_Sm2AddCore)
 AARCH64_PACIASP
 	adds	x8, x8, x16
 	adcs	x9, x9, x17
@@ -1425,11 +1334,9 @@ AARCH64_PACIASP
 	stp		x10, x11, [x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2AddCore,.-ECP_Sm2AddCore
+CRYPT_AARCH64_LOCAL_FUNC_END(ECP_Sm2AddCore)
 
-.type	ECP_Sm2DivBy2Core,%function
-.align	4
-ECP_Sm2DivBy2Core:
+CRYPT_AARCH64_LOCAL_FUNC_START(ECP_Sm2DivBy2Core)
 AARCH64_PACIASP
 	subs	x16, x8, #1
 	adcs	x17, x9, x14
@@ -1456,11 +1363,9 @@ AARCH64_PACIASP
 	stp		x10, x11, [x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2DivBy2Core,.-ECP_Sm2DivBy2Core
+CRYPT_AARCH64_LOCAL_FUNC_END(ECP_Sm2DivBy2Core)
 
-.type	ECP_Sm2SubAB,%function
-.align	4
-ECP_Sm2SubAB:
+CRYPT_AARCH64_LOCAL_FUNC_START(ECP_Sm2SubAB)
 
 AARCH64_PACIASP
 	ldp		x16, x17,[x2]
@@ -1481,11 +1386,9 @@ AARCH64_PACIASP
 	stp		x10, x11,[x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2SubAB,.-ECP_Sm2SubAB
+CRYPT_AARCH64_LOCAL_FUNC_END(ECP_Sm2SubAB)
 
-.type	ECP_Sm2SubBA,%function
-.align	4
-ECP_Sm2SubBA:
+CRYPT_AARCH64_LOCAL_FUNC_START(ECP_Sm2SubBA)
 AARCH64_PACIASP
 	ldp		x16, x17,[x2]
 	ldp		x19, x20,[x2, #16]
@@ -1505,7 +1408,7 @@ AARCH64_PACIASP
 	stp		x10, x11,[x0, #16]
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2SubBA,.-ECP_Sm2SubBA
+CRYPT_AARCH64_SIZE_FUNCTION(CRYPT_AARCH64_SYM(ECP_Sm2SubBA))
 
 # ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#doubling-dbl-2001-b
 # Deal process:
@@ -1516,10 +1419,7 @@ AARCH64_AUTIASP
 #     X3 = alpha2-8*beta
 #     Z3 = (Y1+Z1)2-gamma-delta
 #     Y3 = alpha*(4*beta-X3)-8*gamma2
-.globl	ECP_Sm2PointDoubleMont
-.type	ECP_Sm2PointDoubleMont,%function
-.align	4
-ECP_Sm2PointDoubleMont:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2PointDoubleMont)
 AARCH64_PACIASP
 	stp		x29, x30,[sp, #-80]!
 	mov		x29, sp
@@ -1534,12 +1434,10 @@ AARCH64_PACIASP
 	mov		x21, x0
 	mov		x22, x1 // backup point a
 
-    adrp    x14, .Lpoly+8
-    add 	x14, x14,:lo12:.Lpoly+8 // p[1]
+    CRYPT_AARCH64_GET_RELA(x14, .Lpoly+8) // p[1]
 	ldr	   	x14, [x14]
 
-    adrp    x15, .Lpoly+24
-    add 	x15, x15,:lo12:.Lpoly+24 // p[3]
+    CRYPT_AARCH64_GET_RELA(x15, .Lpoly+24) // p[3]
 	ldr	   	x15, [x15]
 
 	mov		x16, x8
@@ -1549,10 +1447,10 @@ AARCH64_PACIASP
 	ldp		x4, x5, [x22, #64]        // a->z
 	ldp		x6, x7, [x22, #64+16]
 	mov		x0, sp
-	bl		ECP_Sm2AddCore        // s = 2 * a->y
+	bl CRYPT_AARCH64_SYM(ECP_Sm2AddCore)        // s = 2 * a->y
 
 	add		x0, sp, #64
-	bl		ECP_Sm2SqrMont        // zsqr = (a->z)^2
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SqrMont)        // zsqr = (a->z)^2
 
 	ldp		x16, x17, [x22]
 	ldp		x19, x20, [x22, #16]
@@ -1561,7 +1459,7 @@ AARCH64_PACIASP
 	mov		x6, x10
 	mov		x7, x11
 	add		x0, sp, #32
-	bl		ECP_Sm2AddCore        // m = a->x + zsqr
+	bl CRYPT_AARCH64_SYM(ECP_Sm2AddCore)        // m = a->x + zsqr
 
 	add		x2, x22, #0
 	mov		x8, x4
@@ -1571,17 +1469,17 @@ AARCH64_PACIASP
 	mov		x11, x7
 	ldp		x6, x7,[sp, #16]
 	add		x0, sp, #64
-	bl		ECP_Sm2SubBA       // zsqr = a->x - zsqr
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubBA)       // zsqr = a->x - zsqr
 
 	add		x0, sp, #0
-	bl		ECP_Sm2SqrMont        // s = s^2
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SqrMont)        // s = s^2
 
 	ldr		x3, [x22, #32]
 	ldp		x4, x5,[x22, #64]
 	ldp		x6, x7,[x22, #64+16]
 	add		x2, x22, #32               // a->y
 	add		x0, sp, #96
-	bl		ECP_Sm2MulMont        // res_z = a->z * a->y
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)        // res_z = a->z * a->y
 
 	mov		x16, x8
 	mov		x17, x9
@@ -1590,20 +1488,20 @@ AARCH64_PACIASP
 	mov		x20, x11
 	ldp		x6, x7, [sp, #16]
 	add		x0, x21, #64
-	bl		ECP_Sm2AddCore        // res_z = 2 * res_z
+	bl CRYPT_AARCH64_SYM(ECP_Sm2AddCore)        // res_z = 2 * res_z
 
 	add		x0, sp, #96
-	bl		ECP_Sm2SqrMont        // res_y = s^2
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SqrMont)        // res_y = s^2
 
 	ldr		x3, [sp, #64]
 	ldp		x4, x5, [sp, #32]
 	ldp		x6, x7, [sp, #32+16]
 	add		x0, x21, #32
-	bl		ECP_Sm2DivBy2Core     // res_y = res_y / 2
+	bl CRYPT_AARCH64_SYM(ECP_Sm2DivBy2Core)     // res_y = res_y / 2
 
 	add		x2, sp, #64
 	add		x0, sp, #32
-	bl		ECP_Sm2MulMont        // m = m * zsqr
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)        // m = m * zsqr
 
 	mov		x16, x8
 	mov		x17, x9
@@ -1614,7 +1512,7 @@ AARCH64_PACIASP
 	mov		x6, x10
 	mov		x7, x11
 	add		x0, sp, #32
-	bl		ECP_Sm2AddCore
+	bl CRYPT_AARCH64_SYM(ECP_Sm2AddCore)
 	mov		x16, x4
 	mov		x17, x5
 	ldr		x3, [x22]
@@ -1622,11 +1520,11 @@ AARCH64_PACIASP
 	ldp		x4, x5, [sp, #0]
 	mov		x20, x7
 	ldp		x6, x7, [sp, #16]
-	bl		ECP_Sm2AddCore        // m = 3 * m
+	bl CRYPT_AARCH64_SYM(ECP_Sm2AddCore)        // m = 3 * m
 
 	mov		x2, x22
 	add		x0, sp, #0
-	bl		ECP_Sm2MulMont        // s = s * a->x
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)        // s = s * a->x
 
 	mov		x16, x8
 	mov		x17, x9
@@ -1635,17 +1533,17 @@ AARCH64_PACIASP
 	mov		x20, x11
 	ldp		x6, x7, [sp, #32+16]
 	add		x0, sp, #96
-	bl		ECP_Sm2AddCore        // tmp = 2 * s
+	bl CRYPT_AARCH64_SYM(ECP_Sm2AddCore)        // tmp = 2 * s
 
 	mov		x0, x21
-	bl		ECP_Sm2SqrMont        // res_x = m^2
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SqrMont)        // res_x = m^2
 
 	add		x2, sp, #96
-	bl		ECP_Sm2SubAB       // res_x = res_x - tmp
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubAB)       // res_x = res_x - tmp
 
 	add		x2, sp, #0
 	add		x0, sp, #0
-	bl		ECP_Sm2SubBA       // s = s - res_x
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubBA)       // s = s - res_x
 
 	ldr		x3, [sp, #32]
 	mov		x4, x8
@@ -1653,11 +1551,11 @@ AARCH64_PACIASP
 	mov		x6, x10
 	mov		x7, x11
 	add		x2, sp, #32
-	bl		ECP_Sm2MulMont        // s = s * m
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)        // s = s * m
 
 	add		x2, x21, #32
 	add		x0, x21, #32
-	bl		ECP_Sm2SubAB       // res_y = s - res_y
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubAB)       // res_y = s - res_y
 
 	mov		sp, x29
 	ldp		x19, x20,[x29, #16]
@@ -1665,7 +1563,7 @@ AARCH64_PACIASP
 	ldp		x29, x30,[sp], #80
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2PointDoubleMont,.-ECP_Sm2PointDoubleMont
+CRYPT_AARCH64_FUNC_END(ECP_Sm2PointDoubleMont)
 
 # ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-add-1998-cmo
 # Deal process:
@@ -1678,10 +1576,7 @@ AARCH64_AUTIASP
 #     X3 = r2-H3-2*U1*H2
 #     Y3 = r*(U1*H2-X3)-S1*H3
 #     Z3 = Z1*Z2*H
-.globl	ECP_Sm2PointAddMont
-.type	ECP_Sm2PointAddMont,%function
-.align	4
-ECP_Sm2PointAddMont:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2PointAddMont)
 AARCH64_PACIASP
 	stp		x29, x30,[sp, #-80]!
 	mov		x29, sp
@@ -1697,12 +1592,10 @@ AARCH64_PACIASP
 	mov		x22, x1 // backup points
 	mov		x23, x2
 
-    adrp    x14, .Lpoly+8
-    add 	x14, x14,:lo12:.Lpoly+8                // p[1]
+    CRYPT_AARCH64_GET_RELA(x14, .Lpoly+8)                // p[1]
 	ldr	   	x14, [x14]
 
-    adrp    x15, .Lpoly+24
-    add 	x15, x15,:lo12:.Lpoly+24               // p[3]
+    CRYPT_AARCH64_GET_RELA(x15, .Lpoly+24)               // p[3]
 	ldr	   	x15, [x15]
 
 
@@ -1712,7 +1605,7 @@ AARCH64_PACIASP
 	cmp		x25, #0
 	csetm	x25, ne 				// check the point is(x, y, 0)
 	add		x0, sp, #128
-	bl		ECP_Sm2SqrMont     // z1sqr = z1^2
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SqrMont)     // z1sqr = z1^2
 
 	ldp		x4, x5,[x22, #64]
 	ldp		x6, x7,[x22, #64+16]
@@ -1723,42 +1616,42 @@ AARCH64_PACIASP
 	csetm	x24, ne 				// check the point is(x, y, 0)
 
 	add		x0, sp, #224
-	bl		ECP_Sm2SqrMont     // z2sqr = z2^2
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SqrMont)     // z2sqr = z2^2
 
 	ldr		x3, [x23, #64]
 	ldp		x4, x5,[sp, #128]
 	ldp		x6, x7,[sp, #128+16]
 	add		x2, x23, #64
 	add		x0,sp, #320
-	bl		ECP_Sm2MulMont        // s2 = z1^3
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)        // s2 = z1^3
 
 	ldr		x3,[x22, #64]
 	ldp		x4, x5,[sp, #224]
 	ldp		x6, x7,[sp, #224+16]
 	add		x2, x22, #64
 	add		x0,sp, #352
-	bl		ECP_Sm2MulMont        // s2 = y2 * z1^3
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)        // s2 = y2 * z1^3
 
 	ldr		x3,[x22, #32]
 	ldp		x4, x5,[sp, #320]
 	ldp		x6, x7,[sp, #320+16]
 	add		x2, x22, #32
 	add		x0,sp, #320
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	ldr		x3,[x23, #32]
 	ldp		x4, x5,[sp, #352]
 	ldp		x6, x7,[sp, #352+16]
 	add		x2, x23, #32
 	add		x0,sp, #352
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	add		x2,sp, #320
 	ldr		x3,[sp, #128]
 	ldp		x4, x5,[x22]
 	ldp		x6, x7,[x22, #16]
 	add		x0,sp, #96
-	bl		ECP_Sm2SubAB
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubAB)
 
 	orr		x8, x8, x9
 	orr		x10, x10, x11
@@ -1766,20 +1659,20 @@ AARCH64_PACIASP
 
 	add		x2,sp, #128
 	add		x0,sp, #256
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	ldr		x3,[sp, #224]
 	ldp		x4, x5,[x23]
 	ldp		x6, x7,[x23, #16]
 	add		x2,sp, #224
 	add		x0,sp, #288
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	add		x2,sp, #256
 	ldp		x4, x5,[sp, #96]
 	ldp		x6, x7,[sp, #96+16]
 	add		x0,sp, #192
-	bl		ECP_Sm2SubAB
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubAB)
 
 	orr		x8, x8, x9
 	orr		x10, x10, x11
@@ -1801,7 +1694,7 @@ AARCH64_PACIASP
 	stp		xzr, xzr,[x21, #80]
 	b	.Ladd_done
 
-.align	4
+.p2align 4
 .Ladd_double:
 	mov		x1, x22
 	mov		x0, x21
@@ -1810,78 +1703,78 @@ AARCH64_PACIASP
 	add		sp,sp, #32*(12-4)
 	b		.Lpoint_double
 
-.align	4
+.p2align 4
 .Ladd_proceed:
 	add		x0,sp, #128
-	bl		ECP_Sm2SqrMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SqrMont)
 
 	ldr		x3,[x22, #64]
 	ldp		x4, x5,[sp, #192]
 	ldp		x6, x7,[sp, #192+16]
 	add		x2, x22, #64
 	add		x0,sp, #64
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	ldp		x4, x5,[sp, #192]
 	ldp		x6, x7,[sp, #192+16]
 	add		x0,sp, #224
-	bl		ECP_Sm2SqrMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SqrMont)
 
 	ldr		x3,[x23, #64]
 	ldp		x4, x5,[sp, #64]
 	ldp		x6, x7,[sp, #64+16]
 	add		x2, x23, #64
 	add		x0,sp, #64
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	ldr		x3,[sp, #192]
 	ldp		x4, x5,[sp, #224]
 	ldp		x6, x7,[sp, #224+16]
 	add		x2,sp, #192
 	add		x0,sp, #160
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	ldr		x3,[sp, #224]
 	ldp		x4, x5,[sp, #256]
 	ldp		x6, x7,[sp, #256+16]
 	add		x2,sp, #224
 	add		x0,sp, #288
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	mov		x16, x8
 	mov		x17, x9
 	mov		x19, x10
 	mov		x20, x11
 	add		x0,sp, #224
-	bl		ECP_Sm2AddCore
+	bl CRYPT_AARCH64_SYM(ECP_Sm2AddCore)
 
 	add		x2,sp, #128
 	add		x0,sp, #0
-	bl		ECP_Sm2SubBA
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubBA)
 
 	add		x2,sp, #160
-	bl		ECP_Sm2SubAB
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubAB)
 
 	add		x2,sp, #288
 	ldr		x3,[sp, #160]
 	ldp		x4, x5,[sp, #320]
 	ldp		x6, x7,[sp, #320+16]
 	add		x0,sp, #32
-	bl		ECP_Sm2SubBA
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubBA)
 
 	add		x2,sp, #160
 	add		x0,sp, #352
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	ldr		x3,[sp, #96]
 	ldp		x4, x5,[sp, #32]
 	ldp		x6, x7,[sp, #32+16]
 	add		x2,sp, #96
 	add		x0,sp, #32
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	add		x2,sp, #352
-	bl		ECP_Sm2SubAB
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubAB)
 
 	ldp		x4, x5,[sp, #0]
 	ldp		x6, x7,[sp, #16]
@@ -1959,7 +1852,7 @@ AARCH64_PACIASP
 	ldp		x29, x30,[sp], #80
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2PointAddMont,.-ECP_Sm2PointAddMont
+CRYPT_AARCH64_FUNC_END(ECP_Sm2PointAddMont)
 
 # ref. https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html#addition-madd-2007-bl
 # Deal process:
@@ -1975,10 +1868,7 @@ AARCH64_AUTIASP
 #     X3 = r2-J-2*V
 #     Y3 = r*(V-X3)-2*Y1*J
 #     Z3 = (Z1+H)2-Z1Z1-HH
-.globl	ECP_Sm2PointAddAffineMont
-.type	ECP_Sm2PointAddAffineMont,%function
-.align	4
-ECP_Sm2PointAddAffineMont:
+CRYPT_AARCH64_FUNC_START(ECP_Sm2PointAddAffineMont)
 AARCH64_PACIASP
 	stp		x29, x30,[sp, #-80]!
 	mov		x29, sp
@@ -1992,12 +1882,10 @@ AARCH64_PACIASP
 	mov		x22, x1	 // point a
 	mov		x23, x2	 // point b
 
-    adrp    x14, .Lpoly+8
-    add 	x14, x14,:lo12:.Lpoly+8
+    CRYPT_AARCH64_GET_RELA(x14, .Lpoly+8)
 	ldr	   	x14,[x14]
 
-    adrp    x15, .Lpoly+24
-    add 	x15, x15,:lo12:.Lpoly+24
+    CRYPT_AARCH64_GET_RELA(x15, .Lpoly+24)
 	ldr	   	x15,[x15]
 
 	ldp		x4, x5,[x1, #64]	// &(a->z[0]), a->z[0] is marked as z1[0]
@@ -2025,7 +1913,7 @@ AARCH64_PACIASP
 	csetm	x25, ne   // check is (x, y 0)
 
 	add		x0, sp, #128
-	bl		ECP_Sm2SqrMont     // zsqr = z1^2
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SqrMont)     // zsqr = z1^2
 
 	mov		x4, x8
 	mov		x5, x9
@@ -2035,95 +1923,95 @@ AARCH64_PACIASP
 	ldr		x3, [x23]
 	mov		x2, x23
 	add		x0, sp, #96
-	bl		ECP_Sm2MulMont        // u2 = z1^2 * x2
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)        // u2 = z1^2 * x2
 
 	mov		x2, x22
 	ldr		x3, [x22, #64]
 	ldp		x4, x5, [sp, #128]
 	ldp		x6, x7, [sp, #128+16]
 	add		x0,sp, #160
-	bl		ECP_Sm2SubAB
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubAB)
 
 	add		x2, x22, #64
 	add		x0,sp, #128
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	ldr		x3,[x22, #64]
 	ldp		x4, x5,[sp, #160]
 	ldp		x6, x7,[sp, #160+16]
 	add		x2, x22, #64
 	add		x0,sp, #64
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	ldr		x3,[x23, #32]
 	ldp		x4, x5,[sp, #128]
 	ldp		x6, x7,[sp, #128+16]
 	add		x2, x23, #32
 	add		x0,sp, #128
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	add		x2, x22, #32
 	ldp		x4, x5,[sp, #160]
 	ldp		x6, x7,[sp, #160+16]
 	add		x0,sp, #192
-	bl		ECP_Sm2SubAB
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubAB)
 
 	add		x0,sp, #224
-	bl		ECP_Sm2SqrMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SqrMont)
 
 	ldp		x4, x5,[sp, #192]
 	ldp		x6, x7,[sp, #192+16]
 	add		x0,sp, #288
-	bl		ECP_Sm2SqrMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SqrMont)
 
 	ldr		x3,[sp, #160]
 	ldp		x4, x5,[sp, #224]
 	ldp		x6, x7,[sp, #224+16]
 	add		x2,sp, #160
 	add		x0,sp, #256
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	ldr		x3,[x22]
 	ldp		x4, x5,[sp, #224]
 	ldp		x6, x7,[sp, #224+16]
 	mov		x2, x22
 	add		x0,sp, #96
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	mov		x16, x8
 	mov		x17, x9
 	mov		x19, x10
 	mov		x20, x11
 	add		x0,sp, #224
-	bl		ECP_Sm2AddCore
+	bl CRYPT_AARCH64_SYM(ECP_Sm2AddCore)
 
 	add		x2,sp, #288
 	add		x0,sp, #0
-	bl		ECP_Sm2SubBA
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubBA)
 
 	add		x2,sp, #256
-	bl		ECP_Sm2SubAB
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubAB)
 
 	add		x2,sp, #96
 	ldr		x3,[x22, #32]
 	ldp		x4, x5,[sp, #256]
 	ldp		x6, x7,[sp, #256+16]
 	add		x0,sp, #32
-	bl		ECP_Sm2SubBA
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubBA)
 
 	add		x2, x22, #32
 	add		x0,sp, #128
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	ldr		x3,[sp, #192]
 	ldp		x4, x5,[sp, #32]
 	ldp		x6, x7,[sp, #32+16]
 	add		x2,sp, #192
 	add		x0,sp, #32
-	bl		ECP_Sm2MulMont
+	bl CRYPT_AARCH64_SYM(ECP_Sm2MulMont)
 
 	add		x2,sp, #128
-	bl		ECP_Sm2SubAB
+	bl CRYPT_AARCH64_SYM(ECP_Sm2SubAB)
 
 	ldp		x4, x5,[sp, #0]
 	ldp		x6, x7,[sp, #16]
@@ -2172,8 +2060,7 @@ AARCH64_PACIASP
 	ldp		x4, x5,[sp, #32+32]
 	ldp		x6, x7,[sp, #32+48]
 
-    adrp    x23, .Lone_mont
-    add 	x23,x23,:lo12:.Lone_mont
+    CRYPT_AARCH64_GET_RELA(x23, .Lone_mont)
 	ldp		x16, x17,[x23]
 	ldp		x19, x20,[x23, #16]
 
@@ -2203,5 +2090,5 @@ AARCH64_PACIASP
 	ldp		x29, x30,[sp], #80
 AARCH64_AUTIASP
 	ret
-.size	ECP_Sm2PointAddAffineMont,.-ECP_Sm2PointAddAffineMont
+CRYPT_AARCH64_FUNC_END(ECP_Sm2PointAddAffineMont)
 #endif

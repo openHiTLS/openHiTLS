@@ -18,33 +18,31 @@
 
 #include "crypt_arm.h"
 
-.arch   armv8-a+crypto
-.extern	g_cryptArmCpuInfo
-.hidden	g_cryptArmCpuInfo
+
+CRYPT_AARCH64_ARCH_CRYPTO
+CRYPT_AARCH64_EXTERN(g_cryptArmCpuInfo)
 /* SHA1 used constant value. For the data source, see the RFC3174 document.
  * K(t) = 5A827999 ( 0 <= t <= 19)
  * K(t) = 6ED9EBA1 (20 <= t <= 39)
  * K(t) = 8F1BBCDC (40 <= t <= 59)
  * K(t) = CA62C1D6 (60 <= t <= 79)
  */
-.data
+CRYPT_AARCH64_RODATA_SECTION
 .balign 64         // Alignment based on the size of the read data block
-.type   g_k, %object
-g_k:
+.Lg_k:
     .long   0x5a827999
     .long   0x6ed9eba1
     .long   0x8f1bbcdc
     .long   0xca62c1d6
-.size   g_k, .-g_k
+
 
 .balign 64         // Alignment based on the size of the read data block
-.type   g_kExt, %object
-g_kExt:
+.Lg_kExt:
     .long   0x5a827999, 0x5a827999, 0x5a827999, 0x5a827999   //K_00_19
     .long   0x6ed9eba1, 0x6ed9eba1, 0x6ed9eba1, 0x6ed9eba1   //K_20_39
     .long   0x8f1bbcdc, 0x8f1bbcdc, 0x8f1bbcdc, 0x8f1bbcdc   //K_40_59
     .long   0xca62c1d6, 0xca62c1d6, 0xca62c1d6, 0xca62c1d6   //K_60_79
-.size   g_kExt, .-g_kExt
+
 
 /**
  *  Macro Description: 32位Message block扩展Wi
@@ -181,20 +179,18 @@ g_kExt:
  *  Function/Macro Call:  DATA_COMPRE_0_19、DATA_COMPRE_20_39_60_79、DATA_COMPRE_40_59、MESSAGE_EXPAND、SHA1CryptoExt
  */
 .text
-.balign 16
-.global SHA1_Step
-.type   SHA1_Step, %function
-SHA1_Step:
+CRYPT_AARCH64_FUNC_START(SHA1_Step)
 AARCH64_PACIASP
     cmp     x1, #64
     b.lo    .Lend_sha1
 
     /* If the SHA1 cryptography extension instruction is supported, go to. */
-    adrp    x5, g_cryptArmCpuInfo
-    add     x5, x5, :lo12:g_cryptArmCpuInfo
+    CRYPT_AARCH64_GET_GOTSYM(x5, g_cryptArmCpuInfo)
     ldr     x6, [x5]
     tst     x6, #CRYPT_ARM_SHA1
-    bne     SHA1CryptoExt
+    beq     1f
+    b       CRYPT_AARCH64_SYM(SHA1CryptoExt)
+1:
 
     /* Extended instructions are not supported, Using Base Instructions, Open up stack space, push stack protection */
     stp     x29, x30, [sp, #-96]!
@@ -214,8 +210,7 @@ AARCH64_PACIASP
     mov     x26, x1             // x26: stores the remaining message length.
 
 .Lloop_sha1_compress:
-    adrp    x16, g_k
-    add     x16, x16, :lo12:g_k
+    CRYPT_AARCH64_GET_RELA(x16, .Lg_k)
     ldr     w19, [x16]          // load k1
 
     ldp     w0, w1, [x25]       // load input value, load 64 bytes at a time
@@ -280,8 +275,7 @@ AARCH64_PACIASP
     DATA_COMPRE_0_19 w21, w22, w23, w24, w20, w3, w19, w16, w17, w28, w29
 
     /* 20~39 round data compression */
-    adrp    x16, g_k
-    add     x16, x16, :lo12:g_k
+    CRYPT_AARCH64_GET_RELA(x16, .Lg_k)
     ldr     w19, [x16, #4]      // load k2
     MESSAGE_EXPAND w4, w6, w12, w1, w16, w17
     DATA_COMPRE_20_39_60_79 w20, w21, w22, w23, w24, w4, w19, w16, w17, w28, w29
@@ -328,8 +322,7 @@ AARCH64_PACIASP
     DATA_COMPRE_20_39_60_79 w21, w22, w23, w24, w20, w7, w19, w16, w17, w28, w29
 
     /* 40~59 round data compression */
-    adrp    x16, g_k
-    add     x16, x16, :lo12:g_k
+    CRYPT_AARCH64_GET_RELA(x16, .Lg_k)
     ldr     w19, [x16, #8]      // load k3
     MESSAGE_EXPAND w8, w10, w0, w5, w16, w17
     DATA_COMPRE_40_59 w20, w21, w22, w23, w24, w8, w19, w16, w17, w28, w29
@@ -376,8 +369,7 @@ AARCH64_PACIASP
     DATA_COMPRE_40_59 w21, w22, w23, w24, w20, w11, w19, w16, w17, w28, w29
 
     /* 60~79 round data compression */
-    adrp    x16, g_k
-    add     x16, x16, :lo12:g_k
+    CRYPT_AARCH64_GET_RELA(x16, .Lg_k)
     ldr     w19, [x16, #12]         // load k4
     MESSAGE_EXPAND w12, w14, w4, w9, w16, w17
     DATA_COMPRE_20_39_60_79 w20, w21, w22, w23, w24, w12, w19, w16, w17, w28, w29
@@ -456,7 +448,7 @@ AARCH64_PACIASP
 .Lend_sha1:
 AARCH64_AUTIASP
     ret
-.size   SHA1_Step, .-SHA1_Step
+CRYPT_AARCH64_FUNC_END(SHA1_Step)
 
 /**
  *  Function Description: Based on the input message, compress the SHA1 dedicated instruction and
@@ -472,13 +464,9 @@ AARCH64_AUTIASP
  *  Output register:  x0 returns the address of the message for which sha1 calculation is not performed.
  *  Function/Macro Call:  NONE
  */
-.text
-.balign 16
-.type   SHA1CryptoExt, %function
-SHA1CryptoExt:
+CRYPT_AARCH64_FUNC_START(SHA1CryptoExt)
     /* load k */
-    adrp    x3, g_kExt
-    add     x3, x3, :lo12:g_kExt
+    CRYPT_AARCH64_GET_RELA(x3, .Lg_kExt)
     ld1     {v0.4s-v3.4s}, [x3]
 
     /* load a - e */
@@ -641,6 +629,6 @@ SHA1CryptoExt:
     st1     {v18.s}[0], [x2]
 AARCH64_AUTIASP
     ret
-.size   SHA1CryptoExt, .-SHA1CryptoExt
+CRYPT_AARCH64_FUNC_END(SHA1CryptoExt)
 
 #endif

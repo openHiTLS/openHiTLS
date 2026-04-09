@@ -19,10 +19,8 @@
 #include "crypt_arm.h"
 #include "crypt_aes_macro_armv8.s"
 
+CRYPT_AARCH64_ARCH_CRYPTO
 .text
-.arch    armv8-a+crypto
-
-.align   5
 
 KEY     .req    x0
 IN      .req    x1
@@ -83,9 +81,7 @@ ROUNDS  .req    w6
  *                              uint8_t *iv);
  */
 
-.globl CRYPT_AES_CTR_Encrypt
-.type CRYPT_AES_CTR_Encrypt, %function
-CRYPT_AES_CTR_Encrypt:
+CRYPT_AARCH64_FUNC_START(CRYPT_AES_CTR_Encrypt)
 AARCH64_PACIASP
     ld1	{CTR0.16b}, [IV]              // Reads the IV.
     mov	CTMP.16b, CTR0.16b
@@ -145,8 +141,8 @@ AARCH64_PACIASP
     ADDCTR CTR7.s[3]
 
     mov x14, KEY                      // Prevent the key from being changed.
-    AES_ENC_8_BLKS  x14 CTR0.16b CTR1.16b CTR2.16b CTR3.16b CTR4.16b \
-                    CTR5.16b CTR6.16b CTR7.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_8_BLKS  x14, CTR0.16b, CTR1.16b, CTR2.16b, CTR3.16b, CTR4.16b, \
+                    CTR5.16b, CTR6.16b, CTR7.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN], #64
     ld1 {BLK4.16b, BLK5.16b, BLK6.16b, BLK7.16b}, [IN], #64
@@ -176,7 +172,7 @@ AARCH64_PACIASP
 
 .Lctr_enc_proc_1_blk:
 
-    AES_ENC_1_BLK KEY CTR0.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_1_BLK KEY, CTR0.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     ld1 {BLK0.16b}, [IN]
     eor BLK0.16b, CTR0.16b, BLK0.16b
     st1 {BLK0.16b}, [OUT]
@@ -187,7 +183,7 @@ AARCH64_PACIASP
     mov	CTR1.16b, CTMP.16b
     ADDCTR CTR1.s[3]
 
-    AES_ENC_2_BLKS KEY CTR0.16b CTR1.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_2_BLKS KEY, CTR0.16b, CTR1.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     ld1 {BLK0.16b, BLK1.16b}, [IN]
 
@@ -205,7 +201,7 @@ AARCH64_PACIASP
     ADDCTR CTR1.s[3]
     ADDCTR CTR2.s[3]
 
-    AES_ENC_3_BLKS KEY CTR0.16b CTR1.16b CTR2.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_3_BLKS KEY, CTR0.16b, CTR1.16b, CTR2.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b}, [IN]
 
@@ -226,7 +222,7 @@ AARCH64_PACIASP
     ADDCTR CTR2.s[3]
     ADDCTR CTR3.s[3]
 
-    AES_ENC_4_BLKS KEY CTR0.16b CTR1.16b CTR2.16b CTR3.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_4_BLKS KEY, CTR0.16b, CTR1.16b, CTR2.16b, CTR3.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN]
 
@@ -250,7 +246,7 @@ AARCH64_PACIASP
     ADDCTR CTR3.s[3]
     ADDCTR CTR4.s[3]
 
-    AES_ENC_5_BLKS KEY CTR0.16b CTR1.16b CTR2.16b CTR3.16b CTR4.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_5_BLKS KEY, CTR0.16b, CTR1.16b, CTR2.16b, CTR3.16b, CTR4.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN], #64
     ld1 {BLK4.16b}, [IN]
@@ -279,8 +275,8 @@ AARCH64_PACIASP
     ADDCTR CTR4.s[3]
     ADDCTR CTR5.s[3]
 
-    AES_ENC_6_BLKS  KEY CTR0.16b CTR1.16b CTR2.16b CTR3.16b CTR4.16b \
-                    CTR5.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_6_BLKS  KEY, CTR0.16b, CTR1.16b, CTR2.16b, CTR3.16b, CTR4.16b, \
+                    CTR5.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN], #64
     ld1 {BLK4.16b, BLK5.16b}, [IN]
@@ -312,8 +308,8 @@ AARCH64_PACIASP
     ADDCTR CTR5.s[3]
     ADDCTR CTR6.s[3]
 
-    AES_ENC_7_BLKS  KEY CTR0.16b CTR1.16b CTR2.16b CTR3.16b CTR4.16b \
-                    CTR5.16b CTR6.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_7_BLKS  KEY, CTR0.16b, CTR1.16b, CTR2.16b, CTR3.16b, CTR4.16b, \
+                    CTR5.16b, CTR6.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN], #64
     ld1 {BLK4.16b, BLK5.16b, BLK6.16b}, [IN]
@@ -348,6 +344,6 @@ AARCH64_PACIASP
 
 AARCH64_AUTIASP
     ret
-.size CRYPT_AES_CTR_Encrypt, .-CRYPT_AES_CTR_Encrypt
+CRYPT_AARCH64_FUNC_END(CRYPT_AES_CTR_Encrypt)
 
 #endif

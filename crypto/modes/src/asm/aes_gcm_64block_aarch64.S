@@ -22,13 +22,11 @@
 #include "aes192_gcm_aarch64.S"
 #include "aes256_gcm_aarch64.S"
 
-.text
-.arch armv8-a+crypto
 
-.globl AES_GCM_ClearAsm
-.type AES_GCM_ClearAsm,%function
-.align 4
-AES_GCM_ClearAsm:
+.text
+CRYPT_AARCH64_ARCH_CRYPTO
+
+CRYPT_AARCH64_FUNC_START(AES_GCM_ClearAsm)
 AARCH64_PACIASP
     eor KEY0.16b, KEY0.16b, KEY0.16b
     eor KEY1.16b, KEY1.16b, KEY1.16b
@@ -43,12 +41,9 @@ AARCH64_PACIASP
     eor KEY10.16b, KEY10.16b, KEY10.16b
 AARCH64_AUTIASP
     ret
-.size AES_GCM_ClearAsm,.-AES_GCM_ClearAsm
+CRYPT_AARCH64_FUNC_END(AES_GCM_ClearAsm)
 
-.globl AES_GCM_EncryptBlockAsm
-.type AES_GCM_EncryptBlockAsm,%function
-.align 4
-AES_GCM_EncryptBlockAsm:
+CRYPT_AARCH64_FUNC_START(AES_GCM_EncryptBlockAsm)
 AARCH64_PACIASP
     IN_STP                                      // Register Protection
     ldr ROUNDS, [KEY00, #240]                   // Number of loading rounds
@@ -183,12 +178,9 @@ AARCH64_PACIASP
     and x0, INLEN, #-64                     // length of processed data
 AARCH64_AUTIASP
     ret
-.size AES_GCM_EncryptBlockAsm,.-AES_GCM_EncryptBlockAsm
+CRYPT_AARCH64_FUNC_END(AES_GCM_EncryptBlockAsm)
 
-.globl AES_GCM_DecryptBlockAsm
-.type AES_GCM_DecryptBlockAsm,%function
-.align 4
-AES_GCM_DecryptBlockAsm:
+CRYPT_AARCH64_FUNC_START(AES_GCM_DecryptBlockAsm)
 AARCH64_PACIASP
     IN_STP                                                           // stp
     ldr ROUNDS, [KEY00, #240]                                       // pull rounds
@@ -338,5 +330,5 @@ AARCH64_PACIASP
     and x0, INLEN, #-64                     // length of processed data
 AARCH64_AUTIASP
     ret
-.size AES_GCM_DecryptBlockAsm,.-AES_GCM_DecryptBlockAsm
+CRYPT_AARCH64_FUNC_END(AES_GCM_DecryptBlockAsm)
 #endif

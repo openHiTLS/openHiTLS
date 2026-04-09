@@ -320,7 +320,7 @@ int32_t REC_Init(TLS_Ctx *ctx)
 #ifdef HITLS_TLS_PROTO_DTLS12
     UnprocessedAppMsgListInit(&newRecCtx->unprocessedAppMsgList);
 #ifdef HITLS_BSL_UIO_UDP
-    LIST_INIT(&newRecCtx->retransmitList.head);
+    BSL_LIST_INIT(&newRecCtx->retransmitList.head);
 #endif
 #endif
     int32_t ret = RecBufInit(ctx, newRecCtx);

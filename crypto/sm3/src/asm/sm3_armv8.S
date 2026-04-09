@@ -18,7 +18,7 @@
 #ifdef HITLS_CRYPTO_SM3
 
 #include "crypt_arm.h"
-.arch    armv8-a+crypto
+CRYPT_AARCH64_ARCH_CRYPTO
 
 // The first 16 of the compression function, w13 is Tj.
 .macro first16 A B C D E F G H W1 W2
@@ -76,10 +76,7 @@
     .endm
 
 // void SM3_CompressAsm(uint32_t state[8], const uint8_t *data, uint32_t blockCnt);
-.globl SM3_CompressAsm
-.type  SM3_CompressAsm, %function
-.align 4
-SM3_CompressAsm:
+CRYPT_AARCH64_FUNC_START(SM3_CompressAsm)
 AARCH64_PACIASP
     sub sp, sp, 128
     stp x19, x20, [sp]
@@ -148,10 +145,10 @@ AARCH64_PACIASP
     shl v22.4s, v25.4s, #7
     sri v21.4s, v24.4s, #17  // 13, 14, 15<<<15
     sri v22.4s, v25.4s, #25  // 3, 4, 5<<<7
-    first16 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    first16 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v26.16b
-    first16 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    first16 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     // permutation function P1: X ^ (X ≪ 15) ^ (X ≪ 23)
     shl v29.4s, v27.4s, #15
     shl v30.4s, v27.4s, #23
@@ -167,13 +164,13 @@ AARCH64_PACIASP
     rev w21, w21
 #endif
     eor v27.16b, v27.16b, v30.16b
-    first16 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    first16 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     eor v4.16b, v27.16b, v28.16b
 
     // 2:19, 20, 21
     ext v23.16b, v1.16b, v2.16b, #8  // 6, 7, 8
     eor v27.16b, v25.16b, v26.16b
-    first16 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    first16 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     shl v21.4s, v4.4s, #15
     shl v22.4s, v23.4s, #7
     sri v21.4s, v4.4s, #17   // 16, 17, 18<<<15
@@ -188,13 +185,13 @@ AARCH64_PACIASP
 #endif
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v24.16b
-    first16 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    first16 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     shl v29.4s, v27.4s, #15
     shl v30.4s, v27.4s, #23
     sri v29.4s, v27.4s, #17
     sri v30.4s, v27.4s, #9
     eor v27.16b, v27.16b, v29.16b
-    first16 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    first16 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     eor v27.16b, v27.16b, v30.16b
     mov v4.s[3], v4.s[2]  // Due to ext requirements, to fill s[3]
     eor v5.16b, v27.16b, v28.16b
@@ -214,10 +211,10 @@ AARCH64_PACIASP
     shl v22.4s, v25.4s, #7
     sri v21.4s, v5.4s, #17   // 19, 20, 21<<<15
     sri v22.4s, v25.4s, #25  // 9, 10, 11<<<7
-    first16 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    first16 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v4.16b
-    first16 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    first16 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     shl v29.4s, v27.4s, #15
     shl v30.4s, v27.4s, #23
     sri v29.4s, v27.4s, #17
@@ -231,7 +228,7 @@ AARCH64_PACIASP
     rev w20, w20
     rev w21, w21
 #endif
-    first16 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    first16 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     eor v27.16b, v27.16b, v30.16b
     mov v5.s[3], v5.s[2]  // Due to ext requirements, to fill s[3]
     eor v6.16b, v27.16b, v28.16b
@@ -242,7 +239,7 @@ AARCH64_PACIASP
     shl v22.4s, v3.4s, #7
     sri v21.4s, v6.4s, #17  // 22, 23, 24<<<15
     sri v22.4s, v3.4s, #25  // 12, 13, 14<<<7
-    first16 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    first16 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v5.16b
     ldp w15, w20, [x23, #40]
@@ -257,9 +254,9 @@ AARCH64_PACIASP
     shl v30.4s, v27.4s, #23
     sri v29.4s, v27.4s, #17
     sri v30.4s, v27.4s, #9
-    first16 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    first16 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     eor v27.16b, v27.16b, v29.16b
-    first16 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    first16 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     eor v27.16b, v27.16b, v30.16b
     mov v6.s[3], v6.s[2]  // Due to ext requirements, to fill s[3]
     eor v7.16b, v27.16b, v28.16b
@@ -279,7 +276,7 @@ AARCH64_PACIASP
     rev w15, w15
     rev w20, w20
 #endif
-    first16 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    first16 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v6.16b
     shl v29.4s, v27.4s, #15
@@ -287,7 +284,7 @@ AARCH64_PACIASP
     sri v29.4s, v27.4s, #17
     sri v30.4s, v27.4s, #9
     eor v27.16b, v27.16b, v29.16b
-    first16 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    first16 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     ldp w15, w20, [x23, #56]
 #ifndef HITLS_BIG_ENDIAN
     rev w15, w15
@@ -298,14 +295,14 @@ AARCH64_PACIASP
     ldr w19, [x25, #8]
     ldr w21, [x25, #16]
     eor v27.16b, v27.16b, v30.16b
-    first16 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    first16 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     mov v7.s[3], v7.s[2]  // Due to ext requirements, to fill s[3]
     eor v8.16b, v27.16b, v28.16b
 
     // Message extension completed. Continue with the next 48 compression.
     ext v24.16b, v4.16b, v5.16b, #12  // 18, 19, 20
     eor v27.16b, v23.16b, v6.16b
-    first16 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    first16 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     shl v21.4s, v8.4s, #15
     shl v22.4s, v24.4s, #7
     sri v21.4s, v8.4s, #17   // 28, 29, 30<<<15
@@ -317,13 +314,13 @@ AARCH64_PACIASP
     // w13: constant Tj , 17 <= j <= 63
     mov w13, #0x3d43
     movk w13, #0xcec5, lsl #16
-    second48 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    second48 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     shl v29.4s, v27.4s, #15
     shl v30.4s, v27.4s, #23
     sri v29.4s, v27.4s, #17
     sri v30.4s, v27.4s, #9
     eor v27.16b, v27.16b, v29.16b
-    second48 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    second48 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     eor v27.16b, v27.16b, v30.16b
     mov v8.s[3], v8.s[2]  // Due to ext requirements, to fill s[3]
     eor v9.16b, v27.16b, v28.16b
@@ -338,10 +335,10 @@ AARCH64_PACIASP
     shl v22.4s, v23.4s, #7
     sri v21.4s, v9.4s, #17   // 31, 32, 33<<<15
     sri v22.4s, v23.4s, #25  // 21, 22, 23<<<7
-    second48 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    second48 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v8.16b
-    second48 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    second48 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     shl v29.4s, v27.4s, #15
     shl v30.4s, v27.4s, #23
     sri v29.4s, v27.4s, #17
@@ -351,14 +348,14 @@ AARCH64_PACIASP
     ldr w19, [x25, #40]
     ldr w21, [x25, #48]
     eor v27.16b, v27.16b, v30.16b
-    second48 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    second48 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     mov v9.s[3], v9.s[2]  // Due to ext requirements, to fill s[3]
     eor v10.16b, v27.16b, v28.16b
 
     // 8:37, 38, 39
     ext v24.16b, v6.16b, v7.16b, #12  // 24, 25, 26
     eor v27.16b, v23.16b, v8.16b
-    second48 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    second48 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     shl v21.4s, v10.4s, #15
     shl v22.4s, v24.4s, #7
     sri v21.4s, v10.4s, #17  // 34, 35, 36<<<15
@@ -367,13 +364,13 @@ AARCH64_PACIASP
     ldp w19, w21, [x25, #52]
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v9.16b
-    second48 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    second48 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     shl v29.4s, v27.4s, #15
     shl v30.4s, v27.4s, #23
     sri v29.4s, v27.4s, #17
     sri v30.4s, v27.4s, #9
     eor v27.16b, v27.16b, v29.16b
-    second48 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    second48 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     eor v27.16b, v27.16b, v30.16b
     mov v10.s[3], v10.s[2]  // Due to ext requirements, to fill s[3]
     eor v11.16b, v27.16b, v28.16b
@@ -389,10 +386,10 @@ AARCH64_PACIASP
     ldr w15, [x25, #40]
     ldr w20, [x25, #48]
     ldp w19, w21, [x26]
-    second48 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    second48 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v10.16b
-    second48 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    second48 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     shl v29.4s, v27.4s, #15
     shl v30.4s, v27.4s, #23
     sri v29.4s, v27.4s, #17
@@ -402,14 +399,14 @@ AARCH64_PACIASP
     ldr w19, [x26, #8]
     ldr w21, [x26, #16]
     eor v27.16b, v27.16b, v30.16b
-    second48 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    second48 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     mov v11.s[3], v11.s[2]  // Due to ext requirements, to fill s[3]
     eor v12.16b, v27.16b, v28.16b
 
     // 10:43, 44, 45
     ext v24.16b, v8.16b, v9.16b, #12  // 30, 31, 32
     eor v27.16b, v23.16b, v10.16b
-    second48 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    second48 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     shl v21.4s, v12.4s, #15
     shl v22.4s, v24.4s, #7
     sri v21.4s, v12.4s, #17  // 40, 41, 42<<<15
@@ -418,13 +415,13 @@ AARCH64_PACIASP
     ldp w19, w21, [x26, #20]
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v11.16b
-    second48 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    second48 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     shl v29.4s, v27.4s, #15
     shl v30.4s, v27.4s, #23
     sri v29.4s, v27.4s, #17
     sri v30.4s, v27.4s, #9
     eor v27.16b, v27.16b, v29.16b
-    second48 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    second48 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     eor v27.16b, v27.16b, v30.16b
     mov v12.s[3], v12.s[2]  // Due to ext requirements, to fill s[3]
     eor v13.16b, v27.16b, v28.16b
@@ -439,10 +436,10 @@ AARCH64_PACIASP
     shl v22.4s, v23.4s, #7
     sri v21.4s, v13.4s, #17  // 43, 44, 45<<<15
     sri v22.4s, v23.4s, #25  // 33, 34, 35<<<7
-    second48 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    second48 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v12.16b
-    second48 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    second48 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     shl v29.4s, v27.4s, #15
     shl v30.4s, v27.4s, #23
     sri v29.4s, v27.4s, #17
@@ -451,7 +448,7 @@ AARCH64_PACIASP
     ldp w15, w20, [x26, #20]
     ldr w19, [x26, #40]
     ldr w21, [x26, #48]
-    second48 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    second48 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     eor v27.16b, v27.16b, v30.16b
     mov v13.s[3], v13.s[2]  // Due to ext requirements, to fill s[3]
     eor v14.16b, v27.16b, v28.16b
@@ -459,7 +456,7 @@ AARCH64_PACIASP
     // 12:49, 50, 51
     ext v24.16b, v10.16b, v11.16b, #12  // 36, 37, 38
     eor v27.16b, v23.16b, v12.16b
-    second48 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    second48 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     shl v21.4s, v14.4s, #15
     shl v22.4s, v24.4s, #7
     sri v21.4s, v14.4s, #17  // 46, 47, 48<<<15
@@ -468,13 +465,13 @@ AARCH64_PACIASP
     ldp w19, w21, [x26, #52]
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v13.16b
-    second48 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    second48 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     shl v29.4s, v27.4s, #15
     shl v30.4s, v27.4s, #23
     sri v29.4s, v27.4s, #17
     sri v30.4s, v27.4s, #9
     eor v27.16b, v27.16b, v29.16b
-    second48 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    second48 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     eor v27.16b, v27.16b, v30.16b
     mov v14.s[3], v14.s[2]  // Due to ext requirements, to fill s[3]
     eor v15.16b, v27.16b, v28.16b
@@ -490,10 +487,10 @@ AARCH64_PACIASP
     ldr w15, [x26, #40]
     ldr w20, [x26, #48]
     ldp w19, w21, [x25]
-    second48 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    second48 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v14.16b
-    second48 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    second48 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     shl v29.4s, v27.4s, #15
     shl v30.4s, v27.4s, #23
     sri v29.4s, v27.4s, #17
@@ -502,7 +499,7 @@ AARCH64_PACIASP
     ldp w15, w20, [x26, #52]
     ldr w19, [x25, #8]
     ldr w21, [x25, #16]
-    second48 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    second48 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     eor v27.16b, v27.16b, v30.16b
     mov v15.s[3], v15.s[2]  // Due to ext requirements, to fill s[3]
     eor v16.16b, v27.16b, v28.16b
@@ -514,7 +511,7 @@ AARCH64_PACIASP
     shl v22.4s, v24.4s, #7
     sri v21.4s, v16.4s, #17  // 52, 53, 54<<<15
     sri v22.4s, v24.4s, #25  // 42, 43, 44<<<7
-    second48 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    second48 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v15.16b
     ldp w15, w20, [x25]
@@ -524,9 +521,9 @@ AARCH64_PACIASP
     sri v29.4s, v27.4s, #17
     sri v30.4s, v27.4s, #9
     eor v27.16b, v27.16b, v29.16b
-    second48 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    second48 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     eor v27.16b, v27.16b, v30.16b
-    second48 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    second48 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     mov v16.s[3], v16.s[2]  // Due to ext requirements, to fill s[3]
     eor v17.16b, v27.16b, v28.16b
 
@@ -540,10 +537,10 @@ AARCH64_PACIASP
     ldr w15, [x25, #8]
     ldr w20, [x25, #16]
     ldp w19, w21, [x25, #32]
-    second48 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    second48 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v16.16b
-    second48 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    second48 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     shl v29.4s, v27.4s, #15
     shl v30.4s, v27.4s, #23
     sri v29.4s, v27.4s, #17
@@ -552,7 +549,7 @@ AARCH64_PACIASP
     ldp w15, w20, [x25, #20]
     ldr w19, [x25, #40]
     ldr w21, [x25, #48]
-    second48 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    second48 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     eor v27.16b, v27.16b, v30.16b
     eor v18.16b, v27.16b, v28.16b
 
@@ -563,7 +560,7 @@ AARCH64_PACIASP
     shl v22.4s, v24.4s, #7
     sri v21.4s, v18.4s, #17  // 58, 59, 60<<<15
     sri v22.4s, v24.4s, #25  // 48, 49, 50<<<7
-    second48 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    second48 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v17.16b
     ldp w15, w20, [x25, #32]
@@ -573,9 +570,9 @@ AARCH64_PACIASP
     sri v29.4s, v27.4s, #17
     sri v30.4s, v27.4s, #9
     eor v27.16b, v27.16b, v29.16b
-    second48 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    second48 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     eor v27.16b, v27.16b, v30.16b
-    second48 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    second48 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     eor v19.16b, v27.16b, v28.16b
 
     // 17:64, 65, 66
@@ -589,10 +586,10 @@ AARCH64_PACIASP
     ldr w15, [x25, #40]
     ldr w20, [x25, #48]
     ldp w19, w21, [x26]
-    second48 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    second48 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v18.16b
-    second48 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    second48 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     shl v29.4s, v27.4s, #15
     shl v30.4s, v27.4s, #23
     sri v29.4s, v27.4s, #17
@@ -602,7 +599,7 @@ AARCH64_PACIASP
     ldr w19, [x26, #8]
     ldr w21, [x26, #16]
     eor v27.16b, v27.16b, v30.16b
-    second48 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    second48 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     eor v20.16b, v27.16b, v28.16b
 
     // 18:67
@@ -612,7 +609,7 @@ AARCH64_PACIASP
     shl v22.4s, v24.4s, #7
     sri v21.4s, v20.4s, #17  // 64, 65, 66<<<15
     sri v22.4s, v24.4s, #25  // 54, 55, 56<<<7
-    second48 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    second48 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     eor v27.16b, v21.16b, v27.16b
     eor v28.16b, v22.16b, v19.16b
     ldp w15, w20, [x26]
@@ -622,37 +619,37 @@ AARCH64_PACIASP
     sri v29.4s, v27.4s, #17
     sri v30.4s, v27.4s, #9
     eor v27.16b, v27.16b, v29.16b
-    second48 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    second48 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
     eor v27.16b, v27.16b, v30.16b
-    second48 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    second48 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     eor v21.16b, v27.16b, v28.16b
 
     ldr w15, [x26, #8]
     ldr w20, [x26, #16]
     ldp w19, w21, [x26, #32]
-    second48 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
+    second48 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
     st1 {v20.4s-v21.4s}, [x25]
-    second48 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    second48 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     ldp w15, w20, [x26, #20]
     ldr w19, [x26, #40]
     ldr w21, [x26, #48]
-    second48 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
+    second48 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
 
-    second48 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    second48 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     ldp w15, w20, [x26, #32]
     ldp w19, w21, [x26, #52]
-    second48 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
-    second48 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    second48 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
+    second48 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     ldr w15, [x26, #40]
     ldr w20, [x26, #48]
     ldp w19, w21, [x25]
-    second48 w0 w1 w2 w3 w4 w5 w6 w7 w15 w19
-    second48 w3 w0 w1 w2 w7 w4 w5 w6 w20 w21
+    second48 w0, w1, w2, w3, w4, w5, w6, w7, w15, w19
+    second48 w3, w0, w1, w2, w7, w4, w5, w6, w20, w21
     ldp w15, w20, [x26, #52]
     ldr w19, [x25, #8]
     ldr w21, [x25, #16]
-    second48 w2 w3 w0 w1 w6 w7 w4 w5 w15 w19
-    second48 w1 w2 w3 w0 w5 w6 w7 w4 w20 w21
+    second48 w2, w3, w0, w1, w6, w7, w4, w5, w15, w19
+    second48 w1, w2, w3, w0, w5, w6, w7, w4, w20, w21
     ldp w9, w10, [x22]  // XOR with the previous hash result
     ldp w11, w12, [x22, #8]
     ldp w13, w14, [x22, #16]
@@ -686,6 +683,6 @@ AARCH64_PACIASP
 
 AARCH64_AUTIASP
     ret
-.size SM3_CompressAsm,.-SM3_CompressAsm
+CRYPT_AARCH64_FUNC_END(SM3_CompressAsm)
 
 #endif

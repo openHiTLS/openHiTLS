@@ -58,4 +58,85 @@ extern uint32_t g_cryptArmCpuInfo;
 #  endif
 #endif
 
+/*
+ * ARMv8/AArch64 assembly compatibility layer for Linux (ELF/GNU as) and macOS (Mach-O/clang).
+ * Use __APPLE__ and __aarch64__ to keep one source tree building on both platforms.
+ */
+
+/* Assembly symbol name (with optional leading underscore on macOS) */
+#define CRYPT_AARCH64_SYM_CONCAT_HELP(a, b) a ## b
+#define CRYPT_AARCH64_SYM_CONCAT(a, b) CRYPT_AARCH64_SYM_CONCAT_HELP(a, b)
+#define CRYPT_AARCH64_SYM(name) CRYPT_AARCH64_SYM_CONCAT(CRYPT_AARCH64_PREFIX, name)
+
+#if defined(__aarch64__)
+#  if defined(__APPLE__) 
+/* macOS arm64 (Mach-O): no .type/.size, symbol has leading underscore */
+#    define CRYPT_AARCH64_PREFIX _
+#    define CRYPT_AARCH64_TYPE_FUNCTION(sym)
+#    define CRYPT_AARCH64_SIZE_FUNCTION(sym)
+#    define CRYPT_AARCH64_TYPE_OBJECT(sym)
+#    define CRYPT_AARCH64_SIZE_OBJECT(sym)
+#    define CRYPT_AARCH64_RODATA_SECTION .section __TEXT,__const
+#    define CRYPT_AARCH64_ARCH_CRYPTO
+#    define CRYPT_AARCH64_ARCH_BASE
+/* Mach-O: adrp/add need @PAGE and @PAGEOFF for section-relative data */
+#    define CRYPT_AARCH64_GET_RELA(reg, sym) \
+        adrp reg, sym@PAGE %% \
+        add reg, reg, sym@PAGEOFF
+/* Mach-O: .hidden -> .private_extern; .extern not needed */
+#    define CRYPT_AARCH64_EXTERN(sym) .private_extern CRYPT_AARCH64_SYM(sym)
+
+/* Mach-O: Load address of external global variables via GOT (Global Offset Table).
+   Unlike GET_RELA which uses section-relative addressing for local symbols,
+   GET_GOTSYM dereferences the GOT entry to obtain the runtime address of
+   an external symbol, which is required on Mach-O for position-independent code. */
+#    define CRYPT_AARCH64_GET_GOTSYM(reg, sym) \
+        adrp reg, CRYPT_AARCH64_SYM(sym)@GOTPAGE %% \
+        ldr reg, [reg, CRYPT_AARCH64_SYM(sym)@GOTPAGEOFF]
+
+#    define CRYPT_AARCH64_FUNC_START(name) \
+        .globl CRYPT_AARCH64_SYM(name) %% \
+        .p2align 4 %% \
+        CRYPT_AARCH64_SYM(name):
+#    define CRYPT_AARCH64_FUNC_END(name)
+
+#    define CRYPT_AARCH64_LOCAL_FUNC_START(name) \
+        .p2align 4 %% \
+        CRYPT_AARCH64_SYM(name):
+#    define CRYPT_AARCH64_LOCAL_FUNC_END(name)
+#  else
+/* Linux aarch64 (ELF/GNU as) */
+#    define CRYPT_AARCH64_PREFIX
+#    define CRYPT_AARCH64_TYPE_FUNCTION(sym) .type sym, %function
+#    define CRYPT_AARCH64_SIZE_FUNCTION(sym) .size sym, .-sym
+#    define CRYPT_AARCH64_TYPE_OBJECT(sym) .type sym, %object
+#    define CRYPT_AARCH64_SIZE_OBJECT(sym) .size sym, .-sym
+#    define CRYPT_AARCH64_RODATA_SECTION .section .rodata
+#    define CRYPT_AARCH64_ARCH_CRYPTO .arch armv8-a+crypto
+#    define CRYPT_AARCH64_ARCH_BASE .arch armv8-a
+/* ELF: standard adrp + :lo12: */
+#    define CRYPT_AARCH64_GET_RELA(reg, sym) \
+        adrp reg, sym ; \
+        add reg, reg, :lo12:sym
+#    define CRYPT_AARCH64_EXTERN(sym) \
+       .extern sym ; \
+       .hidden sym ;
+/* CRYPT_AARCH64_GET_RELA is avaliable for linux ELF, using it here to keep consistent with original code. */
+#    define CRYPT_AARCH64_GET_GOTSYM(reg, sym) CRYPT_AARCH64_GET_RELA(reg, sym)
+
+#    define CRYPT_AARCH64_FUNC_START(name) \
+        .globl CRYPT_AARCH64_SYM(name) ; \
+        .p2align 4 ; \
+        CRYPT_AARCH64_TYPE_FUNCTION(CRYPT_AARCH64_SYM(name)) ; \
+        CRYPT_AARCH64_SYM(name):
+#    define CRYPT_AARCH64_FUNC_END(name) CRYPT_AARCH64_SIZE_FUNCTION(CRYPT_AARCH64_SYM(name))
+
+#    define CRYPT_AARCH64_LOCAL_FUNC_START(name) \
+        CRYPT_AARCH64_TYPE_FUNCTION(name) ; \
+        .p2align 4 ; \
+        name:
+#    define CRYPT_AARCH64_LOCAL_FUNC_END(name) CRYPT_AARCH64_SIZE_FUNCTION(name)
+#  endif /* __APPLE__ */
+#endif /* __aarch64__ */
+
 #endif

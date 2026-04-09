@@ -85,7 +85,7 @@ HS_ReassQueue *HS_ReassNew(void)
             "reassQueue malloc fail when new a reassQueue.", 0, 0, 0, 0);
         return NULL;
     }
-    LIST_INIT(&reassQueue->head);
+    BSL_LIST_INIT(&reassQueue->head);
     return reassQueue;
 }
 
@@ -100,8 +100,8 @@ void HS_ReassFree(HS_ReassQueue *reassQueue)
     HS_ReassQueue *cur = NULL;
     LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(reassQueue->head))
     {
-        cur = LIST_ENTRY(node, HS_ReassQueue, head);
-        LIST_REMOVE(&cur->head);        /* Delete the node from the queue. */
+        cur = BSL_LIST_ENTRY(node, HS_ReassQueue, head);
+        BSL_LIST_REMOVE(&cur->head);        /* Delete the node from the queue. */
         BSL_SAL_FREE(cur->reassBitMap); /* Release node content. */
         BSL_SAL_FREE(cur->msg);         /* Release node content. */
         BSL_SAL_FREE(cur);              /* Release the node. */
@@ -117,7 +117,7 @@ static HS_ReassQueue *GetReassNode(HS_ReassQueue *reassQueue, uint16_t sequence)
 
     /* Find the node with the corresponding sequence number in the reassembly queue */
     LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(reassQueue->head)) {
-        cur = LIST_ENTRY(node, HS_ReassQueue, head);
+        cur = BSL_LIST_ENTRY(node, HS_ReassQueue, head);
         if (cur->sequence == sequence) {
             return cur;
         }
@@ -134,7 +134,7 @@ static HS_ReassQueue *ReassNodeNew(HS_ReassQueue *reassQueue, HS_MsgInfo *msgInf
             "node malloc fail when inser a msg to reassQueue.", 0, 0, 0, 0);
         return NULL;
     }
-    LIST_INIT(&node->head);
+    BSL_LIST_INIT(&node->head);
 
     if (msgInfo->length != 0) {
         /* 8 is the number of bits of one byte. The addition of 7 is used to supplement the number of bits. Ensure that
@@ -287,7 +287,7 @@ int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len)
     }
     msgInfo->rawMsg = ctx->hsCtx->msgBuf;
     *len = node->msgLen;             /* Set the message length. */
-    LIST_REMOVE(&node->head);        /* Delete the node from the queue. */
+    BSL_LIST_REMOVE(&node->head);        /* Delete the node from the queue. */
     BSL_SAL_FREE(node->reassBitMap); /* Release node content. */
     BSL_SAL_FREE(node->msg);         /* Release node content. */
     BSL_SAL_FREE(node);              /* Release the node. */

@@ -22,7 +22,7 @@
 #include "chacha20_256block_aarch64.S"
 #include "chacha20_512block_aarch64.S"
 
-.section .rodata
+CRYPT_AARCH64_RODATA_SECTION
 .LADD_LONG:
 .long 1,0,0,0
 .Lror8:
@@ -37,10 +37,7 @@
  */
 
 .text
-.globl CHACHA20_Update
-.type CHACHA20_Update,%function
-.align 4
-CHACHA20_Update:
+CRYPT_AARCH64_FUNC_START(CHACHA20_Update)
 AARCH64_PACIASP
     stp x29, x30, [sp, #-96]!
     add x29, sp, #0
@@ -54,8 +51,7 @@ AARCH64_PACIASP
     sub sp, sp, #128+64
     b.lo .Lchacha_end                       // Less than 1 block.
     b.eq .Lchacha64                         // just 1 block.
-    adrp x5, .LADD_LONG
-    add x5, x5, :lo12:.LADD_LONG                       // load(1, 0, 0, 0)
+    CRYPT_AARCH64_GET_RELA(x5, .LADD_LONG)                       // load(1, 0, 0, 0)
     stp d8, d9,[sp,#128+0]                  // Calling convention
     stp d10, d11,[sp,#128+16]
     stp d12, d13,[sp,#128+32]
@@ -377,6 +373,6 @@ AARCH64_PACIASP
 .Labort:
 AARCH64_AUTIASP
     ret
-.size CHACHA20_Update,.-CHACHA20_Update
+CRYPT_AARCH64_FUNC_END(CHACHA20_Update)
 
 #endif

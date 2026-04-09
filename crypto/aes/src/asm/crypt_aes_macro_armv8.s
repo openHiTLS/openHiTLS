@@ -16,9 +16,6 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_AES
 
-.text
-.arch    armv8-a+crypto
-
 BLK0     .req    v0
 
 /*

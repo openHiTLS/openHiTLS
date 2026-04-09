@@ -19,10 +19,9 @@
 #include "crypt_arm.h"
 #include "crypt_aes_macro_armv8.s"
 
-.text
-.arch    armv8-a+crypto
 
-.align   5
+CRYPT_AARCH64_ARCH_CRYPTO
+.text
 
 KEY     .req    x0
 IN      .req    x1
@@ -63,9 +62,7 @@ ROUNDS  .req    w6
  *                              uint8_t *iv);
  */
 
-.globl CRYPT_AES_CFB_Decrypt
-.type CRYPT_AES_CFB_Decrypt, %function
-CRYPT_AES_CFB_Decrypt:
+CRYPT_AARCH64_FUNC_START(CRYPT_AES_CFB_Decrypt)
 AARCH64_PACIASP
     ld1	{IVC.16b}, [IV]              // Load the IV
     mov LTMP, LEN
@@ -116,8 +113,8 @@ AARCH64_PACIASP
     mov	CT8.16b, BLK6.16b
 
     mov x14, KEY // Prevent the key from being changed
-    AES_ENC_8_BLKS  x14 CT1.16b CT2.16b CT3.16b CT4.16b CT5.16b \
-        CT6.16b CT7.16b CT8.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_8_BLKS  x14, CT1.16b, CT2.16b, CT3.16b, CT4.16b, CT5.16b, \
+        CT6.16b, CT7.16b, CT8.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
 
     mov	IVC.16b, BLK7.16b // Prepares for the next loop or update
@@ -146,7 +143,7 @@ AARCH64_PACIASP
     ld1 {BLK0.16b}, [IN]
     mov	CT1.16b, IVC.16b
 
-    AES_ENC_1_BLK KEY CT1.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_1_BLK KEY, CT1.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     mov	IVC.16b, BLK0.16b
     eor BLK0.16b, CT1.16b, BLK0.16b
@@ -158,7 +155,7 @@ AARCH64_PACIASP
     mov	CT1.16b, IVC.16b
     mov	CT2.16b, BLK0.16b
 
-    AES_ENC_2_BLKS KEY CT1.16b CT2.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_2_BLKS KEY, CT1.16b, CT2.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     mov	IVC.16b, BLK1.16b
     eor BLK0.16b, CT1.16b, BLK0.16b
@@ -172,7 +169,7 @@ AARCH64_PACIASP
     mov	CT1.16b, IVC.16b
     mov	CT2.16b, BLK0.16b
     mov	CT3.16b, BLK1.16b
-    AES_ENC_3_BLKS KEY CT1.16b CT2.16b CT3.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_3_BLKS KEY, CT1.16b, CT2.16b, CT3.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     mov	IVC.16b, BLK2.16b
     eor BLK0.16b, BLK0.16b, CT1.16b
@@ -189,7 +186,7 @@ AARCH64_PACIASP
     mov	CT2.16b, BLK0.16b
     mov	CT3.16b, BLK1.16b
     mov	CT4.16b, BLK2.16b
-    AES_ENC_4_BLKS KEY CT1.16b CT2.16b CT3.16b CT4.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_4_BLKS KEY, CT1.16b, CT2.16b, CT3.16b, CT4.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     mov	IVC.16b, BLK3.16b
 
@@ -211,7 +208,7 @@ AARCH64_PACIASP
     mov	CT4.16b, BLK2.16b
     mov	CT5.16b, BLK3.16b
 
-    AES_ENC_5_BLKS KEY CT1.16b CT2.16b CT3.16b CT4.16b CT5.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_5_BLKS KEY, CT1.16b, CT2.16b, CT3.16b, CT4.16b, CT5.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     mov	IVC.16b, BLK4.16b
 
@@ -235,7 +232,7 @@ AARCH64_PACIASP
     mov	CT5.16b, BLK3.16b
     mov	CT6.16b, BLK4.16b
 
-    AES_ENC_6_BLKS  KEY CT1.16b CT2.16b CT3.16b CT4.16b CT5.16b CT6.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_6_BLKS  KEY, CT1.16b, CT2.16b, CT3.16b, CT4.16b, CT5.16b, CT6.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     mov	IVC.16b, BLK5.16b
 
@@ -261,7 +258,7 @@ AARCH64_PACIASP
     mov	CT6.16b, BLK4.16b
     mov	CT7.16b, BLK5.16b
 
-    AES_ENC_7_BLKS  KEY CT1.16b CT2.16b CT3.16b CT4.16b CT5.16b CT6.16b CT7.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_7_BLKS  KEY, CT1.16b, CT2.16b, CT3.16b, CT4.16b, CT5.16b, CT6.16b, CT7.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
 
     mov	IVC.16b, BLK6.16b
 
@@ -292,6 +289,6 @@ AARCH64_PACIASP
 
 AARCH64_AUTIASP
     ret
-.size CRYPT_AES_CFB_Decrypt, .-CRYPT_AES_CFB_Decrypt
+CRYPT_AARCH64_FUNC_END(CRYPT_AES_CFB_Decrypt)
 
 #endif

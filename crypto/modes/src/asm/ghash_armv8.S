@@ -18,7 +18,7 @@
 
 #include "crypt_arm.h"
 
-.arch    armv8-a+crypto
+CRYPT_AARCH64_ARCH_CRYPTO
 .text
 
 INPUT_H  .req x0
@@ -131,10 +131,7 @@ OUT_X    .req v23
     st1 {OUT_H3.2d, OUT_H3_4.2d, OUT_H4.2d}, [OUT_TB]    // store h^3 h^3+h^4 h^4
 .endm
 
-.globl GcmTableGen4bit
-.type GcmTableGen4bit, %function
-.align 4
-GcmTableGen4bit:
+CRYPT_AARCH64_FUNC_START(GcmTableGen4bit)
 AARCH64_PACIASP
     stp x29, x30, [sp, #-0x50]!
     add x29, sp, #0
@@ -157,13 +154,10 @@ AARCH64_PACIASP
     ldp x29, x30, [sp], #0x50
 AARCH64_AUTIASP
     ret
-.size GcmTableGen4bit,.-GcmTableGen4bit
+CRYPT_AARCH64_FUNC_END(GcmTableGen4bit)
 
 // void GcmHashMultiBlock(uint8_t t[GCM_BLOCKSIZE], const MODES_GCM_GF128 hTable[16], const uint8_t *in, uint32_t inLen)
-.globl GcmHashMultiBlock
-.type  GcmHashMultiBlock, %function
-.align 4
-GcmHashMultiBlock:
+CRYPT_AARCH64_FUNC_START(GcmHashMultiBlock)
 AARCH64_PACIASP
     lsr x3, x3, #4                              // Divided by 64 16*2*2
     ld1 {INPUT_X.16b}, [INPUT_H]                // load Xi
@@ -206,6 +200,6 @@ AARCH64_PACIASP
 .LhashEnd:
 AARCH64_AUTIASP
     ret
-.size GcmHashMultiBlock,.-GcmHashMultiBlock
+CRYPT_AARCH64_FUNC_END(GcmHashMultiBlock)
 
 #endif

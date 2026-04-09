@@ -143,6 +143,47 @@ bool IsOSSupportAVX512(void)
 uint32_t g_cryptArmCpuInfo = 0;
 
 #ifndef HITLS_CRYPTO_AUXVAL
+
+#if defined(__APPLE__)
+#include <sys/types.h>
+#include <sys/sysctl.h>
+
+static bool CheckSysctlFeature(const char *featureName)
+{
+    int val = 0;
+    size_t size = sizeof(val);
+    if (sysctlbyname(featureName, &val, &size, NULL, 0) == 0) {
+        return val != 0;
+    }
+    return false;
+}
+
+void getarmcap(void)
+{
+    if (CheckSysctlFeature("hw.optional.neon") || CheckSysctlFeature("hw.optional.advsimd")) {
+        g_cryptArmCpuInfo |= CRYPT_ARM_NEON;
+    }
+    if (CheckSysctlFeature("hw.optional.arm.FEAT_AES")) {
+        g_cryptArmCpuInfo |= CRYPT_ARM_AES;
+    }
+    if (CheckSysctlFeature("hw.optional.arm.FEAT_PMULL")) {
+        g_cryptArmCpuInfo |= CRYPT_ARM_PMULL;
+    }
+    if (CheckSysctlFeature("hw.optional.arm.FEAT_SHA1")) {
+        g_cryptArmCpuInfo |= CRYPT_ARM_SHA1;
+    }
+    if (CheckSysctlFeature("hw.optional.arm.FEAT_SHA256")) {
+        g_cryptArmCpuInfo |= CRYPT_ARM_SHA256;
+    }
+#if defined(__aarch64__)
+    if (CheckSysctlFeature("hw.optional.arm.FEAT_SHA512")) {
+        g_cryptArmCpuInfo |= CRYPT_ARM_SHA512;
+    }
+#endif
+}
+
+#else /* __APPLE__ */
+
 #include <setjmp.h>
 #include <signal.h>
 
@@ -206,11 +247,14 @@ void getarmcap(void)
 
     sigaction(SIGILL, &old_sa, NULL);
 }
-#else
 
+#endif /* __APPLE__ */
+
+#else
+ 
 #include <sys/auxv.h>
 
-static bool g_supportNEON = {0};
+#endif // HITLS_CRYPTO_AUXVAL
 
 bool IsSupportAES(void)
 {
@@ -234,7 +278,7 @@ bool IsSupportSHA256(void)
 
 bool IsSupportNEON(void)
 {
-    return g_supportNEON;
+    return g_cryptArmCpuInfo & CRYPT_ARM_NEON;
 }
 
 #if defined(__aarch64__)
@@ -244,7 +288,6 @@ bool IsSupportSHA512(void)
 }
 #endif // __aarch64__
 
-#endif // HITLS_CRYPTO_AUXVAL
 #endif // x86_64 || __arm__ || __arm || __aarch64__
 
 void GetCpuInstrSupportState(void)
@@ -277,9 +320,9 @@ void GetCpuInstrSupportState(void)
 #ifndef HITLS_CRYPTO_AUXVAL
     getarmcap();
 #else // HITLS_CRYPTO_AUXVAL
-    g_supportNEON = getauxval(CRYPT_CAP) & CRYPT_ARM_NEON;
-    if (g_supportNEON) {
-        g_cryptArmCpuInfo = (uint32_t)getauxval(CRYPT_CE);
+
+    if (getauxval(CRYPT_CAP) & CRYPT_ARM_NEON) {
+        g_cryptArmCpuInfo = (uint32_t)getauxval(CRYPT_CE) | CRYPT_ARM_NEON;
     }
 #endif // HITLS_CRYPTO_AUXVAL
 #endif // defined(__arm__) || defined (__arm) || defined(__aarch64__)

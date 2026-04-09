@@ -19,8 +19,9 @@
 #include "crypt_arm.h"
 #include "crypt_aes_macro_armv8.s"
 
+
+CRYPT_AARCH64_ARCH_CRYPTO
 .text
-.arch    armv8-a+crypto
 
 KEY     .req    x0
 IN      .req    x1
@@ -80,9 +81,7 @@ RDK1    .req    v18
  *  Function/Macro Call: AES_ENC_8_BLKS, AES_ENC_1_BLK, AES_ENC_2_BLKS, AES_ENC_4_BLKS,
  *              AES_ENC_5_BLKS, AES_ENC_6_BLKS, AES_ENC_7_BLKS.
  */
-.globl CRYPT_AES_ECB_Encrypt
-.type CRYPT_AES_ECB_Encrypt, %function
-CRYPT_AES_ECB_Encrypt:
+CRYPT_AARCH64_FUNC_START(CRYPT_AES_ECB_Encrypt)
 AARCH64_PACIASP
     mov LTMP, LEN
 .Lecb_aesenc_start:
@@ -117,8 +116,8 @@ AARCH64_PACIASP
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN], #64
     ld1 {BLK4.16b, BLK5.16b, BLK6.16b, BLK7.16b}, [IN], #64
     mov KTMP, KEY
-    AES_ENC_8_BLKS KTMP BLK0.16b BLK1.16b BLK2.16b BLK3.16b BLK4.16b \
-                   BLK5.16b BLK6.16b BLK7.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_8_BLKS KTMP, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, BLK4.16b, \
+                   BLK5.16b, BLK6.16b, BLK7.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [OUT], #64
     st1 {BLK4.16b, BLK5.16b, BLK6.16b, BLK7.16b}, [OUT], #64
     sub LTMP, LTMP, #128
@@ -128,32 +127,32 @@ AARCH64_PACIASP
 
 .Lecb_enc_proc_1_blk:
     ld1 {BLK0.16b}, [IN]
-    AES_ENC_1_BLK KEY BLK0.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_1_BLK KEY, BLK0.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b}, [OUT]
     b .Lecb_aesenc_finish
 
 .Lecb_enc_proc_2_blks:
     ld1 {BLK0.16b, BLK1.16b}, [IN]
-    AES_ENC_2_BLKS KEY BLK0.16b BLK1.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_2_BLKS KEY, BLK0.16b, BLK1.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b}, [OUT]
     b .Lecb_aesenc_finish
 
 .Lecb_enc_proc_3_blks:
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b}, [IN]
-    AES_ENC_3_BLKS KEY BLK0.16b BLK1.16b BLK2.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_3_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b, BLK2.16b}, [OUT]
     b .Lecb_aesenc_finish
 
 .Lecb_enc_proc_4_blks:
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN]
-    AES_ENC_4_BLKS KEY BLK0.16b BLK1.16b BLK2.16b BLK3.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_4_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [OUT]
     b .Lecb_aesenc_finish
 
 .Lecb_enc_proc_5_blks:
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN], #64
     ld1 {BLK4.16b}, [IN]
-    AES_ENC_5_BLKS KEY BLK0.16b BLK1.16b BLK2.16b BLK3.16b BLK4.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_5_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, BLK4.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [OUT], #64
     st1 {BLK4.16b}, [OUT]
     b .Lecb_aesenc_finish
@@ -161,7 +160,7 @@ AARCH64_PACIASP
 .Lecb_enc_proc_6_blks:
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN], #64
     ld1 {BLK4.16b, BLK5.16b}, [IN]
-    AES_ENC_6_BLKS KEY BLK0.16b BLK1.16b BLK2.16b BLK3.16b BLK4.16b BLK5.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_6_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, BLK4.16b, BLK5.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [OUT], #64
     st1 {BLK4.16b, BLK5.16b}, [OUT]
     b .Lecb_aesenc_finish
@@ -169,7 +168,7 @@ AARCH64_PACIASP
 .Lecb_enc_proc_7_blks:
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN], #64
     ld1 {BLK4.16b, BLK5.16b, BLK6.16b}, [IN]
-    AES_ENC_7_BLKS KEY BLK0.16b BLK1.16b BLK2.16b BLK3.16b BLK4.16b BLK5.16b BLK6.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_ENC_7_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, BLK4.16b, BLK5.16b, BLK6.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [OUT], #64
     st1 {BLK4.16b, BLK5.16b, BLK6.16b}, [OUT]
 
@@ -179,7 +178,7 @@ AARCH64_PACIASP
     eor RDK1.16b, RDK1.16b, RDK1.16b
 AARCH64_AUTIASP
     ret
-.size CRYPT_AES_ECB_Encrypt, .-CRYPT_AES_ECB_Encrypt
+CRYPT_AARCH64_FUNC_END(CRYPT_AES_ECB_Encrypt)
 
 
 /**
@@ -198,9 +197,7 @@ AARCH64_AUTIASP
  *  Function/Macro Call: AES_DEC_8_BLKS, AES_DEC_1_BLK, AES_DEC_2_BLKS, AES_DEC_4_BLKS,
  *              AES_DEC_5_BLKS, AES_DEC_6_BLKS, AES_DEC_7_BLKS.
  */
-.globl CRYPT_AES_ECB_Decrypt
-.type CRYPT_AES_ECB_Decrypt, %function
-CRYPT_AES_ECB_Decrypt:
+CRYPT_AARCH64_FUNC_START(CRYPT_AES_ECB_Decrypt)
 AARCH64_PACIASP
     mov LTMP, LEN
 .Lecb_aesdec_start:
@@ -236,8 +233,8 @@ AARCH64_PACIASP
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN], #64
     ld1 {BLK4.16b, BLK5.16b, BLK6.16b, BLK7.16b}, [IN], #64
     mov KTMP, KEY
-    AES_DEC_8_BLKS KTMP BLK0.16b BLK1.16b BLK2.16b BLK3.16b BLK4.16b \
-                   BLK5.16b BLK6.16b BLK7.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_8_BLKS KTMP, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, BLK4.16b, \
+                   BLK5.16b, BLK6.16b, BLK7.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [OUT], #64
     st1 {BLK4.16b, BLK5.16b, BLK6.16b, BLK7.16b}, [OUT], #64
     sub LTMP, LTMP, #128
@@ -247,32 +244,32 @@ AARCH64_PACIASP
 
 .Lecb_dec_proc_1_blk:
     ld1 {BLK0.16b}, [IN]
-    AES_DEC_1_BLK KEY BLK0.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_1_BLK KEY, BLK0.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b}, [OUT]
     b .Lecb_aesdec_finish
 
 .Lecb_dec_proc_2_blks:
     ld1 {BLK0.16b, BLK1.16b}, [IN]
-    AES_DEC_2_BLKS KEY BLK0.16b BLK1.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_2_BLKS KEY, BLK0.16b, BLK1.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b}, [OUT]
     b .Lecb_aesdec_finish
 
 .Lecb_dec_proc_3_blks:
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b}, [IN]
-    AES_DEC_3_BLKS KEY BLK0.16b BLK1.16b BLK2.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_3_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b, BLK2.16b}, [OUT]
     b .Lecb_aesdec_finish
 
 .Lecb_dec_proc_4_blks:
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN]
-    AES_DEC_4_BLKS KEY BLK0.16b BLK1.16b BLK2.16b BLK3.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_4_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [OUT]
     b .Lecb_aesdec_finish
 
 .Lecb_dec_proc_5_blks:
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN], #64
     ld1 {BLK4.16b}, [IN]
-    AES_DEC_5_BLKS KEY BLK0.16b BLK1.16b BLK2.16b BLK3.16b BLK4.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_5_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, BLK4.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [OUT], #64
     st1 {BLK4.16b}, [OUT]
     b .Lecb_aesdec_finish
@@ -280,7 +277,7 @@ AARCH64_PACIASP
 .Lecb_dec_proc_6_blks:
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN], #64
     ld1 {BLK4.16b, BLK5.16b}, [IN]
-    AES_DEC_6_BLKS KEY BLK0.16b BLK1.16b BLK2.16b BLK3.16b BLK4.16b BLK5.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_6_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, BLK4.16b, BLK5.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [OUT], #64
     st1 {BLK4.16b, BLK5.16b}, [OUT]
     b .Lecb_aesdec_finish
@@ -288,7 +285,7 @@ AARCH64_PACIASP
 .Lecb_dec_proc_7_blks:
     ld1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [IN], #64
     ld1 {BLK4.16b, BLK5.16b, BLK6.16b}, [IN]
-    AES_DEC_7_BLKS KEY BLK0.16b BLK1.16b BLK2.16b BLK3.16b BLK4.16b BLK5.16b BLK6.16b RDK0.4s RDK1.4s RDK0.16b RDK1.16b ROUNDS
+    AES_DEC_7_BLKS KEY, BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b, BLK4.16b, BLK5.16b, BLK6.16b, RDK0.4s, RDK1.4s, RDK0.16b, RDK1.16b, ROUNDS
     st1 {BLK0.16b, BLK1.16b, BLK2.16b, BLK3.16b}, [OUT], #64
     st1 {BLK4.16b, BLK5.16b, BLK6.16b}, [OUT]
 
@@ -298,6 +295,6 @@ AARCH64_PACIASP
     eor RDK1.16b, RDK1.16b, RDK1.16b
 AARCH64_AUTIASP
     ret
-.size CRYPT_AES_ECB_Decrypt, .-CRYPT_AES_ECB_Decrypt
+CRYPT_AARCH64_FUNC_END(CRYPT_AES_ECB_Decrypt)
 
 #endif

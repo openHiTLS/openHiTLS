@@ -16,11 +16,12 @@
 #include "hitls_build.h"
 #if defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_XTS)
 
-#include "crypt_aes_macro_armv8.s"
 #include "crypt_arm.h"
+#include "crypt_aes_macro_armv8.s"
 
+
+CRYPT_AARCH64_ARCH_CRYPTO
 .text
-.arch    armv8-a+crypto
 
 KEY     .req    x0
 IN      .req    x1
@@ -100,9 +101,10 @@ TMP3    .req    v28
 TMP4    .req    v29
 
 
-#define MOV_REG_TO_VEC(SRC0, SRC1, DES0, DES1)        \
-    fmov DES0,SRC0                        ; \
-    fmov DES1,SRC1                        ; \
+.macro MOV_REG_TO_VEC SRC0, SRC1, DES0, DES1
+    fmov \DES0,\SRC0
+    fmov \DES1,\SRC1
+.endm
 
 .macro NextTweak twkl, twkh, twkd0, twkd1
 asr XTMP2,\twkh,#63
@@ -129,10 +131,7 @@ AesCrypt1x d, imc, \d0, \rk
 /**
  * int32_t CRYPT_AES_XTS_Encrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len, const uint8_t *tweak);
  */
-.globl CRYPT_AES_XTS_Encrypt
-.type CRYPT_AES_XTS_Encrypt, %function
-.align 4
-CRYPT_AES_XTS_Encrypt:
+CRYPT_AARCH64_FUNC_START(CRYPT_AES_XTS_Encrypt)
 AARCH64_PACIASP
     stp x29, x30, [sp,#-80]!
     add x29, sp, #0
@@ -355,7 +354,7 @@ AARCH64_PACIASP
     subs LTMP,LTMP,#48
     b.hs .Lxts_aesenc_start
 
-.align 4
+.p2align 4
 .Lxts_enc_proc_5_blks:
     ld1 {BLK0.16b}, [IN], #16   // first block
     NextTweak TWX0,TWX1,TWKD10,TWKD11
@@ -382,7 +381,7 @@ AARCH64_PACIASP
     mov KTMP, KEY
     ld1 {RDK0.4s,RDK1.4s},[KTMP],#32
     sub TROUNDS,ROUNDS,#2
-.align 4
+.p2align 4
 .Lxts_rounds_5blks:
     AesEncrypt1x BLK0,RDK0
     AesEncrypt1x BLK1,RDK0
@@ -539,7 +538,7 @@ AARCH64_PACIASP
     b .Lxts_rounds_3blks
 
 .Lxts_aesenc_finish:
-    MOV_REG_TO_VEC(TWX0,TWX1,TWKD00,TWKD01)
+    MOV_REG_TO_VEC TWX0,TWX1,TWKD00,TWKD01
     st1 {TWK0.16b}, [TWEAK]
 
     mov x0, #0  // return value ? no need
@@ -552,16 +551,13 @@ AARCH64_PACIASP
 
 AARCH64_AUTIASP
     ret
-.size CRYPT_AES_XTS_Encrypt, .-CRYPT_AES_XTS_Encrypt
+CRYPT_AARCH64_FUNC_END(CRYPT_AES_XTS_Encrypt)
 
 
 /**
  * int32_t CRYPT_AES_XTS_Decrypt(const CRYPT_AES_Key *ctx, const uint8_t *in, uint8_t *out, uint32_t len, const uint8_t *t);
  */
-.globl CRYPT_AES_XTS_Decrypt
-.type CRYPT_AES_XTS_Decrypt, %function
-.align    4
-CRYPT_AES_XTS_Decrypt:
+CRYPT_AARCH64_FUNC_START(CRYPT_AES_XTS_Decrypt)
 AARCH64_PACIASP
     stp x29, x30, [sp,#-80]!
     add x29, sp, #0
@@ -794,7 +790,7 @@ AARCH64_PACIASP
     subs LTMP,LTMP,#48
     b.hs .Lxts_aesdec_start
 
-.align 4
+.p2align 4
 .Lxts_dec_proc_5_blks:
     ld1 {BLK0.16b}, [IN], #16   // first block
     NextTweak TWX0,TWX1,TWKD10,TWKD11
@@ -821,7 +817,7 @@ AARCH64_PACIASP
     mov KTMP, KEY
     ld1 {RDK0.4s,RDK1.4s},[KTMP],#32
     sub TROUNDS,ROUNDS,#2
-.align 4
+.p2align 4
 .Lxts_dec_rounds_5blks:
     AesDecrypt1x BLK0,RDK0
     AesDecrypt1x BLK1,RDK0
@@ -984,7 +980,7 @@ AARCH64_PACIASP
     b .Lxts_dec_rounds_3blks
 
 .Lxts_aesdec_finish:
-    MOV_REG_TO_VEC(TWX0,TWX1,TWKD00,TWKD01)
+    MOV_REG_TO_VEC TWX0,TWX1,TWKD00,TWKD01
     st1 {TWK0.16b}, [TWEAK]
 
     mov x0, #0
@@ -996,6 +992,6 @@ AARCH64_PACIASP
     ldp x29, x30, [sp], #80
 AARCH64_AUTIASP
     ret
-.size CRYPT_AES_XTS_Decrypt, .-CRYPT_AES_XTS_Decrypt
+CRYPT_AARCH64_FUNC_END(CRYPT_AES_XTS_Decrypt)
 
 #endif

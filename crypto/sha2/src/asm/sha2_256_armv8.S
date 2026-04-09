@@ -18,12 +18,11 @@
 
 #include "crypt_arm.h"
 
-    .arch    armv8-a+crypto
+CRYPT_AARCH64_ARCH_CRYPTO
 
 /* sha256 used constant value. For the data source, see the RFC4634 document. */
-.extern	g_cryptArmCpuInfo
-.hidden	g_cryptArmCpuInfo
-.section .rodata
+CRYPT_AARCH64_EXTERN(g_cryptArmCpuInfo)
+CRYPT_AARCH64_RODATA_SECTION
 .balign 64
 .K256:
     .long    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5
@@ -109,17 +108,16 @@
  *
  */
     .text
-    .balign 16
-    .global SHA256CompressMultiBlocks
-    .type SHA256CompressMultiBlocks, %function
-SHA256CompressMultiBlocks:
+    CRYPT_AARCH64_FUNC_START(SHA256CompressMultiBlocks)
 AARCH64_PACIASP
     cbz     x2, .Lend_sha256
     /* If the SHA256 cryptography extension instruction is supported, go to. */
-    adrp    x5, g_cryptArmCpuInfo
-    ldr	    w6, [x5, #:lo12:g_cryptArmCpuInfo]
+    CRYPT_AARCH64_GET_GOTSYM(x5, g_cryptArmCpuInfo)
+    ldr	    w6, [x5]
     tst     w6, #CRYPT_ARM_SHA256
-    bne     SHA256CryptoExt
+    beq     1f
+    b       CRYPT_AARCH64_SYM(SHA256CryptoExt)
+1:
     /* Extension instructions are not supported. Base instructions are used. */
     stp     x29, x30, [sp, #-112]!
     add     x29, sp, #0
@@ -144,8 +142,7 @@ AARCH64_PACIASP
 
     /* Start a 64-round process */
     sub     x30, x30, #16
-    adrp    x19, .K256
-    add	    x19, x19, :lo12:.K256
+    CRYPT_AARCH64_GET_RELA(x19, .K256)
     /* 8 bytes are loaded each time, and then two rounds are processed. */
     ldp     w0, w1, [x16] // load input value
     ldp     w2, w3, [x16, #4*2]
@@ -304,7 +301,7 @@ AARCH64_PACIASP
 .Lend_sha256:
 AARCH64_AUTIASP
     ret
-    .size SHA256CompressMultiBlocks, .-SHA256CompressMultiBlocks
+    CRYPT_AARCH64_FUNC_END(SHA256CompressMultiBlocks)
 
 /*
  *  Function Description：Performs 64 rounds of compression calculation based on the input plaintext data
@@ -319,14 +316,11 @@ AARCH64_AUTIASP
  *  Function/Macro Call： None
  *
  */
-    .text
-    .balign 16
-    .type SHA256CryptoExt, %function
-SHA256CryptoExt:
+
+CRYPT_AARCH64_LOCAL_FUNC_START(SHA256CryptoExt)
     ld1     {v4.4s-v5.4s}, [x0]
 .Lloop_compress_64_ext:
-    adrp    x4, .K256
-    add	    x4, x4, :lo12:.K256
+    CRYPT_AARCH64_GET_RELA(x4, .K256)
     sub     x2, x2, #1
     /* 0-15 */
     ld1     {v16.16b-v19.16b}, [x1], #64
@@ -473,7 +467,7 @@ SHA256CryptoExt:
     st1     {v4.4s-v5.4s}, [x0]
 AARCH64_AUTIASP
     ret
-    .size SHA256CryptoExt, .-SHA256CryptoExt
+    CRYPT_AARCH64_LOCAL_FUNC_END(SHA256CryptoExt)
 
 /* 
  * Optimized macro for dual SHA-256 rounds - caller-saved registers only
@@ -527,15 +521,7 @@ AARCH64_AUTIASP
  * Handles padding internally per FIPS 180-4.
  */
 
-.balign 16
-#ifdef __APPLE__
-    .global _CRYPT_SHA256x2
-    _CRYPT_SHA256x2:
-#else
-    .global CRYPT_SHA256x2
-    .type CRYPT_SHA256x2, %function
-CRYPT_SHA256x2:
-#endif
+    CRYPT_AARCH64_FUNC_START(CRYPT_SHA256x2)
 AARCH64_PACIASP
     /* Stack: 256 bytes
      * 0-15: x29/x30, 96-159: buffer1, 160-223: buffer2 */
@@ -733,9 +719,7 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #160
 AARCH64_AUTIASP
     ret
-#ifndef __APPLE__
-    .size CRYPT_SHA256x2, .-CRYPT_SHA256x2
-#endif
+    CRYPT_AARCH64_FUNC_END(CRYPT_SHA256x2)
 
 /* Local subroutine: 64-round SHA-256 compression for dual messages
  * Input: v16-v19, v20-v23 (msg schedules), v24-v27 (states)
@@ -746,13 +730,7 @@ sha256_block_x2:
     mov v6.16b, v26.16b
     mov v7.16b, v27.16b
 
-#ifdef __APPLE__
-    adrp        x16, .K256@page
-    add         x16, x16, .K256@pageoff
-#else
-    adrp        x16, .K256
-    add         x16, x16, :lo12:.K256
-#endif
+    CRYPT_AARCH64_GET_RELA(x16, .K256)
     
     /* Rounds 0-47 */
     ld1 {v0.4s-v3.4s}, [x16], #64
@@ -801,15 +779,7 @@ sha256_block_x2:
  * Updates two SHA-256 states by compressing nblocks pairs of 64-byte blocks.
  */
 
-.balign 16
-#ifdef __APPLE__
-    .global _CRYPT_SHA256x2_Compress
-    _CRYPT_SHA256x2_Compress:
-#else
-    .global CRYPT_SHA256x2_Compress
-    .type CRYPT_SHA256x2_Compress, %function
-CRYPT_SHA256x2_Compress:
-#endif
+CRYPT_AARCH64_FUNC_START(CRYPT_SHA256x2_Compress)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-16]!
     add     x29, sp, #0
@@ -851,8 +821,6 @@ AARCH64_PACIASP
     ldp     x29, x30, [sp], #16
 AARCH64_AUTIASP
     ret
-#ifndef __APPLE__
-    .size CRYPT_SHA256x2_Compress, .-CRYPT_SHA256x2_Compress
-#endif
+CRYPT_AARCH64_FUNC_END(CRYPT_SHA256x2_Compress)
 
 #endif

@@ -18,9 +18,9 @@
 
 #include "crypt_arm.h"
 
-.arch    armv8-a+crypto
+CRYPT_AARCH64_ARCH_CRYPTO
 /* sha512 used constant value. For the data source, see the RFC4634 document. */
-.section .rodata
+CRYPT_AARCH64_RODATA_SECTION
 .balign 64
 .K512:
     .quad    0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f, 0xe9b5dba58189dbbc
@@ -122,11 +122,8 @@
  *  Function/Macro Call: None
  *
  */
-    .text
-    .balign 16
-    .global SHA512CompressMultiBlocks
-    .type SHA512CompressMultiBlocks, %function
-SHA512CompressMultiBlocks:
+
+CRYPT_AARCH64_FUNC_START(SHA512CompressMultiBlocks)
 AARCH64_PACIASP
     cbz     x2, .Lend_sha512
     stp     x29, x30, [sp, #-112]!
@@ -149,8 +146,7 @@ AARCH64_PACIASP
 
 .Lloop_compress_80:
     /* Start 80 rounds of processing */
-    adrp    x19, .K512
-    add	    x19, x19, :lo12:.K512
+    CRYPT_AARCH64_GET_RELA(x19, .K512)
     ldp     x0, x1, [x16] // Load input values.
     ldp     x2, x3, [x16, #8*2]
     ldp     x4, x5, [x16, #8*4]
@@ -309,6 +305,6 @@ AARCH64_PACIASP
 .Lend_sha512:
 AARCH64_AUTIASP
     ret
-    .size SHA512CompressMultiBlocks, .-SHA512CompressMultiBlocks
+    CRYPT_AARCH64_FUNC_END(SHA512CompressMultiBlocks)
 
 #endif

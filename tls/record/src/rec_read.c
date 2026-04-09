@@ -506,7 +506,7 @@ static bool IsExistUnprocessedAppMsg(RecCtx *recCtx)
     UnprocessedAppMsg *cur = NULL;
     uint16_t curEpoch = recCtx->readEpoch;
     LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(unprocessedAppMsgList->head)) {
-        cur = LIST_ENTRY(node, UnprocessedAppMsg, head);
+        cur = BSL_LIST_ENTRY(node, UnprocessedAppMsg, head);
         uint16_t epoch = REC_EPOCH_GET(cur->hdr.epochSeq);
         if (curEpoch == epoch) {
             /* The app message of the current epoch needs to be processed */

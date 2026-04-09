@@ -112,7 +112,7 @@
 // void SM3_CompressAsm(uint32_t state[8], const uint8_t *data, uint32_t blockCnt);
 .globl SM3_CompressAsm
 .type  SM3_CompressAsm, %function
-.align 4
+.p2align 4
 SM3_CompressAsm:
     PUSH {v1-ip, lr}
 	.Lloop_start:

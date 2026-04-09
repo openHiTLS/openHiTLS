@@ -17,7 +17,7 @@
 #ifdef HITLS_CRYPTO_SM4
 
 #include "crypt_arm.h"
-.arch	armv8-a+crypto
+CRYPT_AARCH64_ARCH_CRYPTO
 
 rk0       .req  v12
 rk1       .req  v13
@@ -102,8 +102,8 @@ ctr     .req   w5
 ivec    .req   v3
 ivec1   .req   v15
 
-.section .rodata
-.align 4
+CRYPT_AARCH64_RODATA_SECTION
+.p2align 4
 .Ltbox1:
 .word	0xd55b5b8e, 0x924242d0, 0xeaa7a74d, 0xfdfbfb06, 0xcf3333fc, 0xe2878765, 0x3df4f4c9, 0xb5dede6b, 0x1658584e
 .word	0xb4dada6e, 0x14505044, 0xc10b0bca, 0x28a0a088, 0xf8efef17, 0x2cb0b09c, 0x05141411, 0x2bacac87, 0x669d9dfb
@@ -257,8 +257,7 @@ ivec1   .req   v15
 #endif
 
 .macro LoadSbox
-	adrp	x15,.Lsbox_magic
-	add	x15,x15,:lo12:.Lsbox_magic
+	CRYPT_AARCH64_GET_RELA(x15, .Lsbox_magic)
     ldr MaskQ,      [x15]
     ldr TAHMatQ,    [x15, #16]
     ldr TALMatQ,    [x15, #32]
@@ -749,37 +748,28 @@ ivec1   .req   v15
 .endm
 
 .text
-.type	Sm4Enc4blks,%function
-.align	4
-Sm4Enc4blks:
+CRYPT_AARCH64_LOCAL_FUNC_START(Sm4Enc4blks)
 AARCH64_PACIASP
 	Encrypt4blks
 AARCH64_AUTIASP
 	ret
-.size	Sm4Enc4blks,.-Sm4Enc4blks
+CRYPT_AARCH64_LOCAL_FUNC_END(Sm4Enc4blks)
 
-.type	Sm4Enc8blks,%function
-.align	4
-Sm4Enc8blks:
+CRYPT_AARCH64_LOCAL_FUNC_START(Sm4Enc8blks)
 AARCH64_PACIASP
 	Encrypt8blks
 AARCH64_AUTIASP
 	ret 
-.size	Sm4Enc8blks,.-Sm4Enc8blks
+CRYPT_AARCH64_LOCAL_FUNC_END(Sm4Enc8blks)
 
-.type	Sm4Enc12blks,%function
-.align	4
-Sm4Enc12blks:
+CRYPT_AARCH64_LOCAL_FUNC_START(Sm4Enc12blks)
 AARCH64_PACIASP
 	Encrypt12blks
 AARCH64_AUTIASP
 	ret 
-.size	Sm4Enc12blks,.-Sm4Enc12blks
+CRYPT_AARCH64_LOCAL_FUNC_END(Sm4Enc12blks)
 
-.globl	Vpsm4EcbEncrypt
-.type	Vpsm4EcbEncrypt,%function
-.align	5
-Vpsm4EcbEncrypt:
+CRYPT_AARCH64_FUNC_START(Vpsm4EcbEncrypt)
 AARCH64_PACIASP
 	// convert length into blocks
 	lsr	x2,x2,4
@@ -816,7 +806,7 @@ AARCH64_PACIASP
 	rev32	v19.16b,v19.16b
 #endif
 
-	bl	Sm4Enc12blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc12blks)
 	st4	{v0.4s,v1.4s,v2.4s,v3.4s},[outp],#64
 	st4	{v4.4s,v5.4s,v6.4s,v7.4s},[outp],#64
 	st4	{v8.4s,v9.4s,v10.4s,v11.4s},[outp],#64
@@ -839,7 +829,7 @@ AARCH64_PACIASP
 	rev32	v10.16b,v10.16b
 	rev32	v11.16b,v11.16b
 #endif
-	bl	Sm4Enc8blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc8blks)
 	st4	{v0.4s,v1.4s,v2.4s,v3.4s},[x1],#64
 	st4	{v4.4s,v5.4s,v6.4s,v7.4s},[x1],#64
 	subs	blocks,blocks,#8
@@ -855,7 +845,7 @@ AARCH64_PACIASP
 	rev32	v6.16b, v6.16b
 	rev32	v7.16b, v7.16b
 #endif
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	st4	{v0.4s,v1.4s,v2.4s,v3.4s},[x1],#64
 	sub	blocks,blocks,#4
 1:
@@ -864,14 +854,10 @@ AARCH64_PACIASP
 	b.lt	100f
 	b.gt	1f
 
-	adrp	 x19, .Ltbox1
-    add x19,x19,:lo12:.Ltbox1
-	adrp	 x20, .Ltbox2
-    add x20,x20,:lo12:.Ltbox2
-	adrp	 x21, .Ltbox3
-    add x21,x21,:lo12:.Ltbox3
-	adrp	 x22, .Ltbox4
-    add x22,x22,:lo12:.Ltbox4
+	CRYPT_AARCH64_GET_RELA(x19, .Ltbox1)
+	CRYPT_AARCH64_GET_RELA(x20, .Ltbox2)
+	CRYPT_AARCH64_GET_RELA(x21, .Ltbox3)
+	CRYPT_AARCH64_GET_RELA(x22, .Ltbox4)
 
 	ldp	w8,w9,[inp],#8
 	ldp	w10,w11,[inp],#8
@@ -902,7 +888,7 @@ AARCH64_PACIASP
 	rev32	v6.16b,v6.16b
 	rev32	v7.16b,v7.16b
 #endif
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	st4	{v0.s,v1.s,v2.s,v3.s}[0],[outp],#16
 	st4	{v0.s,v1.s,v2.s,v3.s}[1],[outp]
 	b	100f // 
@@ -914,7 +900,7 @@ AARCH64_PACIASP
 	rev32	v6.16b,v6.16b
 	rev32	v7.16b,v7.16b
 #endif
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	st4	{v0.s,v1.s,v2.s,v3.s}[0],[outp],#16
 	st4	{v0.s,v1.s,v2.s,v3.s}[1],[outp],#16
 	st4	{v0.s,v1.s,v2.s,v3.s}[2],[outp]
@@ -928,13 +914,10 @@ AARCH64_PACIASP
 	ldp	d8,d9,[sp],#112
 AARCH64_AUTIASP
 	ret
-.size	Vpsm4EcbEncrypt,.-Vpsm4EcbEncrypt
+CRYPT_AARCH64_FUNC_END(Vpsm4EcbEncrypt)
 
 
-.globl	Vpsm4CbcEncrypt
-.type	Vpsm4CbcEncrypt,%function
-.align	5
-Vpsm4CbcEncrypt:
+CRYPT_AARCH64_FUNC_START(Vpsm4CbcEncrypt)
 AARCH64_PACIASP
 	lsr	len,len,4
 	stp	x29,x30,[sp,#-48]!
@@ -942,14 +925,10 @@ AARCH64_PACIASP
 	stp	x21,x22,[sp,#32]
 
 	// load tbox
-	adrp	 x19, .Ltbox1
-    add x19,x19,:lo12:.Ltbox1
-	adrp	 x20, .Ltbox2
-    add x20,x20,:lo12:.Ltbox2
-	adrp	 x21, .Ltbox3
-    add x21,x21,:lo12:.Ltbox3
-	adrp	 x22, .Ltbox4
-    add x22,x22,:lo12:.Ltbox4
+	CRYPT_AARCH64_GET_RELA(x19, .Ltbox1)
+	CRYPT_AARCH64_GET_RELA(x20, .Ltbox2)
+	CRYPT_AARCH64_GET_RELA(x21, .Ltbox3)
+	CRYPT_AARCH64_GET_RELA(x22, .Ltbox4)
 
 	cbz	w5,.Ldec
 
@@ -1031,7 +1010,7 @@ AARCH64_AUTIASP
 	rev32	v18.16b,v18.16b
 	rev32	v19.16b,v19.16b
 #endif
-	bl	Sm4Enc12blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc12blks)
 	// transpose to xor iv
 	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v16.4s,v17.4s,v18.4s,v19.4s,v16.2d,v17.2d,v18.2d,v19.2d
 	transpose v4.4s,v5.4s,v6.4s,v7.4s,v4.2d,v5.2d,v6.2d,v7.2d,v16.4s,v17.4s,v18.4s,v19.4s,v16.2d,v17.2d,v18.2d,v19.2d
@@ -1081,7 +1060,7 @@ AARCH64_AUTIASP
 	rev32	v10.16b,v10.16b
 	rev32	v11.16b,v11.16b
 #endif
-	bl	Sm4Enc8blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc8blks)
 	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 	transpose v4.4s,v5.4s,v6.4s,v7.4s,v4.2d,v5.2d,v6.2d,v7.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 	ld1	{ivec1.4s},[ivp]
@@ -1116,7 +1095,7 @@ AARCH64_AUTIASP
 	rev32	v6.16b,v6.16b
 	rev32	v7.16b,v7.16b
 #endif
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	ld1	{v4.4s,v5.4s,v6.4s,v7.4s},[inp],#64
 	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 	eor	v0.16b,v0.16b,ivec1.16b
@@ -1175,7 +1154,7 @@ AARCH64_AUTIASP
 	rev32	v6.16b,v6.16b
 	rev32	v7.16b,v7.16b
 #endif
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	ld1	{v4.4s,v5.4s},[inp],#32
 	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 	eor	v0.16b,v0.16b,ivec1.16b
@@ -1192,7 +1171,7 @@ AARCH64_AUTIASP
 	rev32	v6.16b,v6.16b
 	rev32	v7.16b,v7.16b
 #endif
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	ld1	{v4.4s,v5.4s,v6.4s},[inp],#48
 	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 	eor	v0.16b,v0.16b,ivec1.16b
@@ -1211,14 +1190,11 @@ AARCH64_AUTIASP
 	ldp	x29,x30,[sp],#48
 AARCH64_AUTIASP
 	ret
-.size	Vpsm4CbcEncrypt,.-Vpsm4CbcEncrypt
+CRYPT_AARCH64_FUNC_END(Vpsm4CbcEncrypt)
 
 
 # void Vpsm4Ctr32EncryptBlocks(const uint8_t *in, uint8_t *out, uint64_t blocks, const uint32_t *key, uint8_t *iv);
-.globl	Vpsm4Ctr32EncryptBlocks
-.type	Vpsm4Ctr32EncryptBlocks,%function
-.align	5
-Vpsm4Ctr32EncryptBlocks:
+CRYPT_AARCH64_FUNC_START(Vpsm4Ctr32EncryptBlocks)
 AARCH64_PACIASP
 	ld1	{ivec.4s},[ivp]
 #ifndef HITLS_BIG_ENDIAN
@@ -1231,14 +1207,10 @@ AARCH64_PACIASP
 	// context saving overhead
 	stp	x19,x20,[sp,#-32]!
 	stp	x21,x22,[sp,#16]
-	adrp	 x19, .Ltbox1
-    add x19,x19,:lo12:.Ltbox1
-	adrp	 x20, .Ltbox2
-    add x20,x20,:lo12:.Ltbox2
-	adrp	 x21, .Ltbox3
-    add x21,x21,:lo12:.Ltbox3
-	adrp	 x22, .Ltbox4
-    add x22,x22,:lo12:.Ltbox4
+	CRYPT_AARCH64_GET_RELA(x19, .Ltbox1)
+	CRYPT_AARCH64_GET_RELA(x20, .Ltbox2)
+	CRYPT_AARCH64_GET_RELA(x21, .Ltbox3)
+	CRYPT_AARCH64_GET_RELA(x22, .Ltbox4)
 
 	Encrypt1blkNorevCtr
 
@@ -1286,7 +1258,7 @@ AARCH64_AUTIASP
 	add	ctr,ctr,#1
 	cmp	blocks,#8
 	b.ge	.Lctr32_8_blocks_process
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	ld4	{v12.4s,v13.4s,v14.4s,v15.4s},[inp],#64
 	eor	v0.16b,v0.16b,v12.16b
 	eor	v1.16b,v1.16b,v13.16b
@@ -1310,7 +1282,7 @@ AARCH64_AUTIASP
 	add	ctr,ctr,#1
 	cmp	blocks,#12
 	b.ge	.Lctr32_12_blocks_process
-	bl	Sm4Enc8blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc8blks)
 	ld4	{v12.4s,v13.4s,v14.4s,v15.4s},[inp],#64
 	ld4	{v8.4s,v9.4s,v10.4s,v11.4s},[inp],#64
 	eor	v0.16b,v0.16b,v12.16b
@@ -1338,7 +1310,7 @@ AARCH64_AUTIASP
 	add	ctr,ctr,#1
 	mov	v19.s[3],ctr
 	add	ctr,ctr,#1
-	bl	Sm4Enc12blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc12blks)
 	ld4	{v12.4s,v13.4s,v14.4s,v15.4s},[inp],#64
 	eor	v0.16b,v0.16b,v12.16b
 	eor	v1.16b,v1.16b,v13.16b
@@ -1371,14 +1343,10 @@ AARCH64_AUTIASP
 	mov	ivec.s[3],ctr
 	add	ctr,ctr,#1
 
-	adrp	 x19, .Ltbox1
-    add x19,x19,:lo12:.Ltbox1
-	adrp	 x20, .Ltbox2
-    add x20,x20,:lo12:.Ltbox2
-	adrp	 x21, .Ltbox3
-    add x21,x21,:lo12:.Ltbox3
-	adrp	 x22, .Ltbox4
-    add x22,x22,:lo12:.Ltbox4
+	CRYPT_AARCH64_GET_RELA(x19, .Ltbox1)
+	CRYPT_AARCH64_GET_RELA(x20, .Ltbox2)
+	CRYPT_AARCH64_GET_RELA(x21, .Ltbox3)
+	CRYPT_AARCH64_GET_RELA(x22, .Ltbox4)
 
 	Encrypt1blkNorevCtr
 
@@ -1398,7 +1366,7 @@ AARCH64_AUTIASP
 	subs	blocks,blocks,#1
 	b.ne	1f
 	add	ctr,ctr,#1
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	ld4	{v12.s,v13.s,v14.s,v15.s}[0],[inp],#16
 	ld4	{v12.s,v13.s,v14.s,v15.s}[1],[inp],#16
 	eor	v0.16b,v0.16b,v12.16b
@@ -1413,7 +1381,7 @@ AARCH64_AUTIASP
 	add	ctr,ctr,#1
 	mov	v7.s[2],ctr
 	add	ctr,ctr,#1
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	ld4	{v12.s,v13.s,v14.s,v15.s}[0],[inp],#16
 	ld4	{v12.s,v13.s,v14.s,v15.s}[1],[inp],#16
 	ld4	{v12.s,v13.s,v14.s,v15.s}[2],[inp],#16
@@ -1438,12 +1406,9 @@ AARCH64_AUTIASP
 	str ctr, [ivp,#12]
 AARCH64_AUTIASP
 	ret
-.size	Vpsm4Ctr32EncryptBlocks,.-Vpsm4Ctr32EncryptBlocks
+CRYPT_AARCH64_FUNC_END(Vpsm4Ctr32EncryptBlocks)
 
-.globl	Vpsm4XtsCipher
-.type	Vpsm4XtsCipher,%function
-.align	5
-Vpsm4XtsCipher:
+CRYPT_AARCH64_FUNC_START(Vpsm4XtsCipher)
 AARCH64_PACIASP
 	stp	x19, x20, [sp, #-0x10]!
 	stp	x21, x22, [sp, #-0x10]!
@@ -1500,7 +1465,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 .Lxts_12_blocks_process:
 	mov	x24, sp
 	cmp	x2,#12
@@ -1512,9 +1477,9 @@ AARCH64_PACIASP
 #endif
 	mov	w7,0x87
 	extr	x9,x19,x19,#32
-	extr	x13,x19,x18,#63
+	extr	x13,x19,x20,#63
 	and	w8,w7,w9,asr#31
-	eor	x12,x8,x18,lsl#1
+	eor	x12,x8,x20,lsl#1
 	mov	v17.d[0],x14
 	mov	v17.d[1],x15
 #ifdef HITLS_BIG_ENDIAN
@@ -1535,7 +1500,7 @@ AARCH64_PACIASP
 	extr	x17,x15,x14,#63
 	and	w8,w7,w9,asr#31
 	eor	x16,x8,x14,lsl#1
-	mov	v19.d[0],x18
+	mov	v19.d[0],x20
 	mov	v19.d[1],x19
 #ifdef HITLS_BIG_ENDIAN
 	rev32	v19.16b,v19.16b
@@ -1544,7 +1509,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 	ld1	{v4.4s,v5.4s,v6.4s,v7.4s},[x0],#64
 	rbit	v16.16b,v16.16b
 	rbit	v17.16b,v17.16b
@@ -1563,9 +1528,9 @@ AARCH64_PACIASP
 #endif
 	mov	w7,0x87
 	extr	x9,x19,x19,#32
-	extr	x13,x19,x18,#63
+	extr	x13,x19,x20,#63
 	and	w8,w7,w9,asr#31
-	eor	x12,x8,x18,lsl#1
+	eor	x12,x8,x20,lsl#1
 	mov	v17.d[0],x14
 	mov	v17.d[1],x15
 #ifdef HITLS_BIG_ENDIAN
@@ -1586,7 +1551,7 @@ AARCH64_PACIASP
 	extr	x17,x15,x14,#63
 	and	w8,w7,w9,asr#31
 	eor	x16,x8,x14,lsl#1
-	mov	v19.d[0],x18
+	mov	v19.d[0],x20
 	mov	v19.d[1],x19
 #ifdef HITLS_BIG_ENDIAN
 	rev32	v19.16b,v19.16b
@@ -1595,7 +1560,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 	rbit	v16.16b,v16.16b
 	rbit	v17.16b,v17.16b
 	rbit	v18.16b,v18.16b
@@ -1613,9 +1578,9 @@ AARCH64_PACIASP
 #endif
 	mov	w7,0x87
 	extr	x9,x19,x19,#32
-	extr	x13,x19,x18,#63
+	extr	x13,x19,x20,#63
 	and	w8,w7,w9,asr#31
-	eor	x12,x8,x18,lsl#1
+	eor	x12,x8,x20,lsl#1
 	mov	v17.d[0],x14
 	mov	v17.d[1],x15
 #ifdef HITLS_BIG_ENDIAN
@@ -1636,7 +1601,7 @@ AARCH64_PACIASP
 	extr	x17,x15,x14,#63
 	and	w8,w7,w9,asr#31
 	eor	x16,x8,x14,lsl#1
-	mov	v19.d[0],x18
+	mov	v19.d[0],x20
 	mov	v19.d[1],x19
 #ifdef HITLS_BIG_ENDIAN
 	rev32	v19.16b,v19.16b
@@ -1645,7 +1610,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 	rbit	v16.16b,v16.16b
 	rbit	v17.16b,v17.16b
 	rbit	v18.16b,v18.16b
@@ -1697,7 +1662,7 @@ AARCH64_PACIASP
 	zip2	v17.2d,v0.2d,v2.2d
 	zip1	v18.2d,v1.2d,v3.2d
 	zip2	v19.2d,v1.2d,v3.2d
-	bl	Sm4Enc12blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc12blks)
 	zip1	v16.4s,v0.4s,v1.4s
 	zip2	v17.4s,v0.4s,v1.4s
 	zip1	v18.4s,v2.4s,v3.4s
@@ -1759,9 +1724,9 @@ AARCH64_PACIASP
 #endif
 	mov	w7,0x87
 	extr	x9,x19,x19,#32
-	extr	x13,x19,x18,#63
+	extr	x13,x19,x20,#63
 	and		w8,w7,w9,asr#31
-	eor	x12,x8,x18,lsl#1
+	eor	x12,x8,x20,lsl#1
 	mov	v17.d[0],x14
 	mov	v17.d[1],x15
 #ifdef HITLS_BIG_ENDIAN
@@ -1782,7 +1747,7 @@ AARCH64_PACIASP
 	extr	x17,x15,x14,#63
 	and	w8,w7,w9,asr#31
 	eor	x16,x8,x14,lsl#1
-	mov	v19.d[0],x18
+	mov	v19.d[0],x20
 	mov	v19.d[1],x19
 #ifdef HITLS_BIG_ENDIAN
 	rev32	v19.16b,v19.16b
@@ -1791,7 +1756,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 	b.lt	.Lxts_4_blocks_process
 	ld1	{v4.4s,v5.4s,v6.4s,v7.4s},[x0],#64
 	rbit	v16.16b,v16.16b
@@ -1811,9 +1776,9 @@ AARCH64_PACIASP
 #endif
 	mov	w7,0x87
 	extr	x9,x19,x19,#32
-	extr	x13,x19,x18,#63
+	extr	x13,x19,x20,#63
 	and	w8,w7,w9,asr#31
-	eor	x12,x8,x18,lsl#1
+	eor	x12,x8,x20,lsl#1
 	mov	v17.d[0],x14
 	mov	v17.d[1],x15
 #ifdef HITLS_BIG_ENDIAN
@@ -1834,7 +1799,7 @@ AARCH64_PACIASP
 	extr	x17,x15,x14,#63
 	and	w8,w7,w9,asr#31
 	eor	x16,x8,x14,lsl#1
-	mov	v19.d[0],x18
+	mov	v19.d[0],x20
 	mov	v19.d[1],x19
 #ifdef HITLS_BIG_ENDIAN
 	rev32	v19.16b,v19.16b
@@ -1843,7 +1808,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 	rbit	v16.16b,v16.16b
 	rbit	v17.16b,v17.16b
 	rbit	v18.16b,v18.16b
@@ -1879,7 +1844,7 @@ AARCH64_PACIASP
 	zip2	v9.2d,v0.2d,v2.2d
 	zip1	v10.2d,v1.2d,v3.2d
 	zip2	v11.2d,v1.2d,v3.2d
-	bl	Sm4Enc8blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc8blks)
 	zip1	v8.4s,v0.4s,v1.4s
 	zip2	v9.4s,v0.4s,v1.4s
 	zip1	v10.4s,v2.4s,v3.4s
@@ -1942,7 +1907,7 @@ AARCH64_PACIASP
 	zip2	v5.2d,v0.2d,v2.2d
 	zip1	v6.2d,v1.2d,v3.2d
 	zip2	v7.2d,v1.2d,v3.2d
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	zip1	v4.4s,v0.4s,v1.4s
 	zip2	v5.4s,v0.4s,v1.4s
 	zip1	v6.4s,v2.4s,v3.4s
@@ -1966,9 +1931,9 @@ AARCH64_PACIASP
 #endif
 	mov	w7,0x87
 	extr	x9,x19,x19,#32
-	extr	x13,x19,x18,#63
+	extr	x13,x19,x20,#63
 	and	w8,w7,w9,asr#31
-	eor	x12,x8,x18,lsl#1
+	eor	x12,x8,x20,lsl#1
 	mov	v17.d[0],x14
 	mov	v17.d[1],x15
 #ifdef HITLS_BIG_ENDIAN
@@ -1989,7 +1954,7 @@ AARCH64_PACIASP
 	extr	x17,x15,x14,#63
 	and	w8,w7,w9,asr#31
 	eor	x16,x8,x14,lsl#1
-	mov	v19.d[0],x18
+	mov	v19.d[0],x20
 	mov	v19.d[1],x19
 #ifdef HITLS_BIG_ENDIAN
 	rev32	v19.16b,v19.16b
@@ -1998,7 +1963,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 1:
 	// process last block
 	cmp	x2,#1
@@ -2161,7 +2126,7 @@ AARCH64_PACIASP
 	zip2	v5.2d,v0.2d,v2.2d
 	zip1	v6.2d,v1.2d,v3.2d
 	zip2	v7.2d,v1.2d,v3.2d
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	zip1	v4.4s,v0.4s,v1.4s
 	zip2	v5.4s,v0.4s,v1.4s
 	zip1	v6.4s,v2.4s,v3.4s
@@ -2197,7 +2162,7 @@ AARCH64_PACIASP
 	zip2	v5.2d,v0.2d,v2.2d
 	zip1	v6.2d,v1.2d,v3.2d
 	zip2	v7.2d,v1.2d,v3.2d
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	zip1	v4.4s,v0.4s,v1.4s
 	zip2	v5.4s,v0.4s,v1.4s
 	zip1	v6.4s,v2.4s,v3.4s
@@ -2223,8 +2188,7 @@ AARCH64_PACIASP
 	rev32	v24.16b,v24.16b
 #endif
 	rbit	v2.16b,v24.16b
-	adrp    x26, .Lxts_magic
-    add	    x26, x26, :lo12:.Lxts_magic
+	CRYPT_AARCH64_GET_RELA(x26, .Lxts_magic)
 	ldr	    q0, [x26]
 	shl	v17.16b, v2.16b, #1
 	ext	v1.16b, v2.16b, v2.16b,#15
@@ -2233,8 +2197,7 @@ AARCH64_PACIASP
 	eor	v17.16b, v17.16b, v1.16b
 	rbit	v17.16b,v17.16b
 	rbit	v2.16b,v17.16b
-	adrp    x26, .Lxts_magic
-    add	    x26, x26, :lo12:.Lxts_magic
+	CRYPT_AARCH64_GET_RELA(x26, .Lxts_magic)
 	ldr	    q0, [x26]
 	shl	v18.16b, v2.16b, #1
 	ext	v1.16b, v2.16b, v2.16b,#15
@@ -2253,8 +2216,7 @@ AARCH64_PACIASP
 	rev32	v17.16b,v17.16b
 #endif
 	rbit	v2.16b,v17.16b
-	adrp    x26, .Lxts_magic
-    add	    x26, x26, :lo12:.Lxts_magic
+	CRYPT_AARCH64_GET_RELA(x26, .Lxts_magic)
 	ldr	q0, [x26]
 	shl	v18.16b, v2.16b, #1
 	ext	v1.16b, v2.16b, v2.16b,#15
@@ -2569,12 +2531,9 @@ AARCH64_PACIASP
 	ldp	x19, x20, [sp], #0x10
 AARCH64_AUTIASP
 	ret
-.size	Vpsm4XtsCipher,.-Vpsm4XtsCipher
+CRYPT_AARCH64_FUNC_END(Vpsm4XtsCipher)
 
-.globl	Vpsm4Cfb128Encrypt
-.type	Vpsm4Cfb128Encrypt,%function
-.align	5
-Vpsm4Cfb128Encrypt:
+CRYPT_AARCH64_FUNC_START(Vpsm4Cfb128Encrypt)
 AARCH64_PACIASP
 	stp	x29,x30,[sp,#-80]!
 	add	x29,sp,#0
@@ -2584,14 +2543,10 @@ AARCH64_PACIASP
 	stp	x16,x17,[sp,#64]
 
 	// load tbox
-	adrp	 x19, .Ltbox1
-    add x19,x19,:lo12:.Ltbox1
-	adrp	 x20, .Ltbox2
-    add x20,x20,:lo12:.Ltbox2
-	adrp	 x21, .Ltbox3
-    add x21,x21,:lo12:.Ltbox3
-	adrp	 x22, .Ltbox4
-    add x22,x22,:lo12:.Ltbox4
+	CRYPT_AARCH64_GET_RELA(x19, .Ltbox1)
+	CRYPT_AARCH64_GET_RELA(x20, .Ltbox2)
+	CRYPT_AARCH64_GET_RELA(x21, .Ltbox3)
+	CRYPT_AARCH64_GET_RELA(x22, .Ltbox4)
 
 	// load num
 	ldr	w23,[x5]
@@ -2677,13 +2632,10 @@ AARCH64_PACIASP
 	ldp	x29,x30,[sp],#80
 AARCH64_AUTIASP
 	ret
-.size	Vpsm4Cfb128Encrypt,.-Vpsm4Cfb128Encrypt
+CRYPT_AARCH64_FUNC_END(Vpsm4Cfb128Encrypt)
 
 # void Vpsm4Cfb128Decrypt(const uint8_t *in, uint8_t *out, uint64_t len, const uint32_t *key, uint8_t *iv, int *num);
-.globl	Vpsm4Cfb128Decrypt
-.type	Vpsm4Cfb128Decrypt,%function
-.align	5
-Vpsm4Cfb128Decrypt:
+CRYPT_AARCH64_FUNC_START(Vpsm4Cfb128Decrypt)
 AARCH64_PACIASP
 	stp	x29,x30,[sp,#-128]!
 	stp	x19,x20,[sp,#16]
@@ -2695,14 +2647,10 @@ AARCH64_PACIASP
 	stp	d14,d15,[sp,#112]
 
 	// load tbox
-	adrp	 x19, .Ltbox1
-    add x19,x19,:lo12:.Ltbox1
-	adrp	 x20, .Ltbox2
-    add x20,x20,:lo12:.Ltbox2
-	adrp	 x21, .Ltbox3
-    add x21,x21,:lo12:.Ltbox3
-	adrp	 x22, .Ltbox4
-    add x22,x22,:lo12:.Ltbox4
+	CRYPT_AARCH64_GET_RELA(x19, .Ltbox1)
+	CRYPT_AARCH64_GET_RELA(x20, .Ltbox2)
+	CRYPT_AARCH64_GET_RELA(x21, .Ltbox3)
+	CRYPT_AARCH64_GET_RELA(x22, .Ltbox4)
 	LoadSbox
 // load num
 	ldr	w23,[x5]
@@ -2752,7 +2700,7 @@ AARCH64_PACIASP
 	rev32	v18.16b,v18.16b
 	rev32	v19.16b,v19.16b
 #endif
-	bl	Sm4Enc12blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc12blks)
 
 	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v16.4s,v17.4s,v18.4s,v19.4s,v16.2d,v17.2d,v18.2d,v19.2d
 	transpose v4.4s,v5.4s,v6.4s,v7.4s,v4.2d,v5.2d,v6.2d,v7.2d,v16.4s,v17.4s,v18.4s,v19.4s,v16.2d,v17.2d,v18.2d,v19.2d
@@ -2806,7 +2754,7 @@ AARCH64_PACIASP
 	rev32	v10.16b,v10.16b
 	rev32	v11.16b,v11.16b
 #endif
-	bl	Sm4Enc8blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc8blks)
 	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 	transpose v4.4s,v5.4s,v6.4s,v7.4s,v4.2d,v5.2d,v6.2d,v7.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 
@@ -2840,7 +2788,7 @@ AARCH64_PACIASP
 	rev32	v6.16b,v6.16b
 	rev32	v7.16b,v7.16b
 #endif
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	ld1	{v4.4s,v5.4s,v6.4s,v7.4s},[inp],#64
 	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 	eor	v0.16b,v0.16b,v5.16b
@@ -2913,7 +2861,7 @@ AARCH64_PACIASP
 	rev32	v6.16b,v6.16b
 	rev32	v7.16b,v7.16b
 #endif
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	ld1	{v4.4s,v5.4s},[inp],#32
 	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 	eor	v0.16b,v0.16b,v4.16b
@@ -2934,7 +2882,7 @@ AARCH64_PACIASP
 	rev32	v6.16b,v6.16b
 	rev32	v7.16b,v7.16b
 #endif
-	bl	Sm4Enc4blks
+	bl 	CRYPT_AARCH64_SYM(Sm4Enc4blks)
 	ld1	{v4.4s,v5.4s,v6.4s},[inp],#48
 	transpose v0.4s,v1.4s,v2.4s,v3.4s,v0.2d,v1.2d,v2.2d,v3.2d,v8.4s,v9.4s,v10.4s,v11.4s,v8.2d,v9.2d,v10.2d,v11.2d
 	eor	v0.16b,v0.16b,v4.16b
@@ -2972,6 +2920,6 @@ AARCH64_PACIASP
 	ldp	x29,x30,[sp],#128
 AARCH64_AUTIASP
 	ret
-.size	Vpsm4Cfb128Decrypt,.-Vpsm4Cfb128Decrypt
+CRYPT_AARCH64_FUNC_END(Vpsm4Cfb128Decrypt)
 
 #endif
