@@ -34,11 +34,6 @@ typedef struct {
     BSL_ASN1_List *list;
 } BSL_ASN1_DecodeListInternalParam;
 
-typedef struct {
-    uint8_t *buff;
-    uint32_t len;
-} BSL_ASN1_EncodedListItem;
-
 int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen, uint32_t *len)
 {
     if (encode == NULL || *encode == NULL || encLen == NULL || len == NULL) {
@@ -1121,8 +1116,8 @@ static void EncodeItem(BSL_ASN1_EncodeItem *eItems, uint32_t itemNum, uint8_t *e
 
 static int CompareEncodedListItem(const void *left, const void *right)
 {
-    const BSL_ASN1_EncodedListItem *itemA = (const BSL_ASN1_EncodedListItem *)left;
-    const BSL_ASN1_EncodedListItem *itemB = (const BSL_ASN1_EncodedListItem *)right;
+    const BSL_ASN1_Buffer *itemA = (const BSL_ASN1_Buffer *)left;
+    const BSL_ASN1_Buffer *itemB = (const BSL_ASN1_Buffer *)right;
     uint32_t cmpLen = itemA->len < itemB->len ? itemA->len : itemB->len;
     int ret = cmpLen == 0 ? 0 : memcmp(itemA->buff, itemB->buff, cmpLen);
 
@@ -1138,11 +1133,8 @@ static int CompareEncodedListItem(const void *left, const void *right)
     return 0;
 }
 
-static void FreeEncodedListItems(BSL_ASN1_EncodedListItem *encodedItems, uint32_t listSize)
+static void FreeEncodedListItems(BSL_ASN1_Buffer *encodedItems, uint32_t listSize)
 {
-    if (encodedItems == NULL) {
-        return;
-    }
     for (uint32_t i = 0; i < listSize; i++) {
         BSL_SAL_Free(encodedItems[i].buff);
     }
@@ -1152,8 +1144,7 @@ static void FreeEncodedListItems(BSL_ASN1_EncodedListItem *encodedItems, uint32_
 static int32_t EncodeAndSortSetItems(BSL_ASN1_EncodeItem *eItems, uint32_t listSize, uint32_t templNum,
     uint8_t *encode, uint32_t encodeLen)
 {
-    BSL_ASN1_EncodedListItem *encodedItems =
-        (BSL_ASN1_EncodedListItem *)BSL_SAL_Calloc(listSize, sizeof(BSL_ASN1_EncodedListItem));
+    BSL_ASN1_Buffer *encodedItems = (BSL_ASN1_Buffer *)BSL_SAL_Calloc(listSize, sizeof(BSL_ASN1_Buffer));
     if (encodedItems == NULL) {
         return BSL_MALLOC_FAIL;
     }
@@ -1170,7 +1161,7 @@ static int32_t EncodeAndSortSetItems(BSL_ASN1_EncodeItem *eItems, uint32_t listS
         }
     }
 
-    qsort(encodedItems, listSize, sizeof(BSL_ASN1_EncodedListItem), CompareEncodedListItem);
+    qsort(encodedItems, listSize, sizeof(BSL_ASN1_Buffer), CompareEncodedListItem);
     uint32_t offset = 0;
     for (uint32_t i = 0; i < listSize; i++) {
         if (encodedItems[i].len == 0) {

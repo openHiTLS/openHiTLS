@@ -370,6 +370,15 @@ SDV_BSL_ASN1_ENCODE_LIST_TC001:2:"31143012060355040a130b456e65726779205445535431
 EncodeListItem: set of elements are DER-sorted
 SDV_BSL_ASN1_ENCODE_LIST_SET_OF_SORT_TC001:
 
+EncodeListItem: set of same encoded length elements are DER-sorted
+SDV_BSL_ASN1_ENCODE_LIST_SET_OF_SORT_SAME_LEN_TC001:
+
+EncodeListItem: set of multiple items with different encoded lengths are DER-sorted
+SDV_BSL_ASN1_ENCODE_LIST_SET_OF_SORT_MULTI_ITEMS_TC001:
+
+EncodeListItem: already sorted set input keeps DER order
+SDV_BSL_ASN1_ENCODE_LIST_SET_OF_SORT_ALREADY_SORTED_TC001:
+
 EncodeListItem: set of single element keeps canonical encoding
 SDV_BSL_ASN1_ENCODE_LIST_SET_OF_SINGLE_ELEMENT_TC001:
 
