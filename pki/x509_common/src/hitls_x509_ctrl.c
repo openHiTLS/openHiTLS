@@ -348,7 +348,7 @@ static int32_t X509AddDnNameItemToList(BslList *dnNameList, BslCid cid, uint8_t 
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_DNNAME_INVALID_LEN);
         return HITLS_X509_ERR_SET_DNNAME_INVALID_LEN;
     }
-    BSL_ASN1_Buffer *encode = BSL_SAL_Calloc(1u, sizeof(HITLS_X509_NameNode));
+    BSL_ASN1_Buffer *encode = BSL_SAL_Calloc(1u, sizeof(BSL_ASN1_Buffer));
     if (encode == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
