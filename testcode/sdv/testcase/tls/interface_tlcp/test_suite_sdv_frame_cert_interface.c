@@ -1335,6 +1335,7 @@ void SDV_HITLS_SetHost_TC001()
     innerhost = BSL_LIST_GET_LAST(hostnames);
     ASSERT_TRUE(innerhost != NULL);
     ASSERT_TRUE(strcmp(innerhost, host3) == 0);
+    ASSERT_TRUE(((HITLS_X509_StoreCtx *)ctx->config.tlsConfig.certMgrCtx->certStore)->verifyParam.ip != NULL);
 
     ASSERT_EQ(HITLS_SetHost(ctx, NULL), HITLS_SUCCESS);
     hostnames = ((HITLS_X509_StoreCtx *)ctx->config.tlsConfig.certMgrCtx->certStore)->verifyParam.hostnames;

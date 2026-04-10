@@ -678,19 +678,24 @@ static int32_t X509_SetVerifyIp(HITLS_X509_StoreCtx *storeCtx, unsigned char *ip
 static int32_t X509_SetHost(HITLS_X509_StoreCtx *storeCtx, const void *val)
 {
     const char *hostname = (const char *)val;
-    size_t hostnameLen = hostname != NULL ? strlen(hostname) : 0;
+    if (hostname == NULL) {
+        BSL_SAL_FREE(storeCtx->verifyParam.ip);
+        BSL_LIST_FREE(storeCtx->verifyParam.hostnames, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
+        return HITLS_PKI_SUCCESS;
+    }
+    size_t hostnameLen = strlen(hostname);
     if (hostnameLen > MAX_HOSTNAME_LEN) {
         return HITLS_X509_ERR_INVALID_PARAM;
     }
 
-    BSL_SAL_FREE(storeCtx->verifyParam.ip);
-    BSL_LIST_FREE(storeCtx->verifyParam.hostnames, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
-
     unsigned char buff[16];
     int32_t len = sizeof(buff) / sizeof(buff[0]);
     if (SAL_ParseIp(hostname, buff, &len) == BSL_SUCCESS) {
+        BSL_SAL_FREE(storeCtx->verifyParam.ip);
         return X509_SetVerifyIp(storeCtx, buff, len);
     }
+
+    BSL_LIST_FREE(storeCtx->verifyParam.hostnames, (BSL_LIST_PFUNC_FREE)BSL_SAL_Free);
     return X509_SetVerifyHost(storeCtx, hostname);
 }
 
