@@ -1571,3 +1571,96 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_HITLS_HostNameVerify_TC005()
+{
+    HitlsInit();
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(s_config != NULL);
+    FRAME_CertInfo certInfoClient = {
+        "rsa_with_san_ext/rootca.der",
+        0,
+        "rsa_with_san_ext/server.der",
+        0,
+        "rsa_with_san_ext/server.key.der",
+        0
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_with_san_ext/rootca.der",
+        0,
+        "rsa_with_san_ext/server.der",
+        0,
+        "rsa_with_san_ext/server.key.der",
+        0
+    };
+
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    /* The correct IP and DNS */
+    char host1[] = "www.example.com";
+    char ipv6[] = "::ffff:192.0.2.128";
+    ASSERT_EQ(HITLS_SetHost(client->ssl, host1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetHost(client->ssl, ipv6), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    char *peername = NULL;
+    ASSERT_TRUE(HITLS_GetPeerName(client->ssl, &peername) == HITLS_SUCCESS);
+    ASSERT_TRUE(peername != NULL);
+    ASSERT_TRUE(strcmp(peername, host1) == 0);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+
+    /* The wrong dns */
+    char wrongHost[] = "a.www.example.com";
+    ASSERT_EQ(HITLS_SetHost(client->ssl, wrongHost), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetHost(client->ssl, ipv6), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+
+    ASSERT_TRUE(HITLS_GetPeerName(client->ssl, &peername) == HITLS_SUCCESS);
+    ASSERT_TRUE(peername == NULL);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+
+    /* The wrong ip */
+    char wrongIpv6[] = "::ffff:192.0.2.000";
+    ASSERT_EQ(HITLS_SetHost(client->ssl, host1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetHost(client->ssl, wrongIpv6), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+
+    ASSERT_TRUE(HITLS_GetPeerName(client->ssl, &peername) == HITLS_SUCCESS);
+    ASSERT_TRUE(peername == NULL);
+
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+
+    /* The wrong dns and ip */
+    ASSERT_EQ(HITLS_SetHost(client->ssl, wrongHost), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetHost(client->ssl, wrongIpv6), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+
+    ASSERT_TRUE(HITLS_GetPeerName(client->ssl, &peername) == HITLS_SUCCESS);
+    ASSERT_TRUE(peername == NULL);
+
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
