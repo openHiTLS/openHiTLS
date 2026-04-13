@@ -30,6 +30,8 @@
 #include "crypt_util_rand.h"
 #include "crypt_eal_md.h"
 #include "crypt_eal_cipher.h"
+#include "eal_cipher_local.h"
+#include "crypt_modes_gcm.h"
 /* END_HEADER */
 
 #define SUCCESS 0
@@ -324,5 +326,31 @@ void SDV_CRYPTO_GCM_FUNC_TC002(int algId, Hex *key, Hex *iv, Hex *aad, Hex *pt, 
 
 EXIT:
     return;
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_GCM_API_TC009
+ * @title  Testing scenarios where data exceeds the length limit in GCM mode.
+ * @precon Registering memory-related functions.
+ * @brief
+ * @expect
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_GCM_API_TC009(int algid, Hex *key, Hex *iv, int enc)
+{
+    TestMemInit();
+    uint8_t val[1024];   // The maximum length of the key is 32 bytes.
+    uint8_t out[1024];
+    uint32_t outLen = sizeof(out);
+    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(algid);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_TRUE(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, (bool)enc) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, val, sizeof(val), out, &outLen) == CRYPT_SUCCESS);
+    MODES_GCM_Ctx *modeCtx = ctx->ctx;
+    modeCtx->gcmCtx.plaintextLen = (((uint64_t)1<<36) - 32);
+    ASSERT_TRUE(CRYPT_EAL_CipherUpdate(ctx, val, sizeof(val), out, &outLen) == CRYPT_MODES_CRYPTLEN_OVERFLOW);
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */

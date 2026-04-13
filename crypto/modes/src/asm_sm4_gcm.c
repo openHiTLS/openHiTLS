@@ -71,7 +71,10 @@ static void GcmRemHandle(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8_t *ou
 
 int32_t MODES_SM4_GCM_EncryptBlock(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    ctx->plaintextLen += len;
+    int32_t ret = CryptLenCheckAndRefresh(ctx, len);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
     uint32_t lastLen = MODES_GCM_LastHandle(ctx, in, out, len, true);
     // Data processing is complete. Exit.
     if (lastLen == len) {
@@ -96,7 +99,10 @@ int32_t MODES_SM4_GCM_EncryptBlock(MODES_CipherGCMCtx *ctx, const uint8_t *in, u
 
 int32_t MODES_SM4_GCM_DecryptBlock(MODES_CipherGCMCtx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
-    ctx->plaintextLen += len;
+    int32_t ret = CryptLenCheckAndRefresh(ctx, len);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
     uint32_t lastLen = MODES_GCM_LastHandle(ctx, in, out, len, false);
     // Data processing is complete. Exit.
     if (lastLen == len) {
