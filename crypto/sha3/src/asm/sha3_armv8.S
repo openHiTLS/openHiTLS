@@ -828,9 +828,13 @@ CRYPT_AARCH64_FUNC_END(SHA3_Keccak)
  */
 CRYPT_AARCH64_FUNC_START(KeccakF1600StatePermutex2)
 AARCH64_PACIASP
-    stp     x29, x30, [sp, #-48]!
+    stp     x29, x30, [sp, #-112]!
     stp     x19, x20, [sp, #16]
     stp     x21, x22, [sp, #32]
+    stp     d8,  d9,  [sp, #48]
+    stp     d10, d11, [sp, #64]
+    stp     d12, d13, [sp, #80]
+    stp     d14, d15, [sp, #96]
     mov     x29, sp
 
     mov     x19, x0
@@ -1103,7 +1107,11 @@ AARCH64_PACIASP
 
     ldp     x19, x20, [x29, #16]
     ldp     x21, x22, [x29, #32]
-    ldp     x29, x30, [sp], #48
+    ldp     d8,  d9,  [x29, #48]
+    ldp     d10, d11, [x29, #64]
+    ldp     d12, d13, [x29, #80]
+    ldp     d14, d15, [x29, #96]
+    ldp     x29, x30, [sp], #112
 AARCH64_AUTIASP
     ret
 CRYPT_AARCH64_FUNC_END(KeccakF1600StatePermutex2)
@@ -1128,11 +1136,15 @@ CRYPT_AARCH64_FUNC_END(KeccakF1600StatePermutex2)
  */
 CRYPT_AARCH64_FUNC_START(Keccakx2Absorb)
 AARCH64_PACIASP
-    stp     x29, x30, [sp, #-64]!
+    stp     x29, x30, [sp, #-128]!
     mov     x29, sp
     stp     x19, x20, [sp, #16]
     stp     x21, x22, [sp, #32]
     stp     x23, x24, [sp, #48]
+    stp     d8,  d9,  [sp, #64]
+    stp     d10, d11, [sp, #80]
+    stp     d12, d13, [sp, #96]
+    stp     d14, d15, [sp, #112]
 
     /* Save parameters */
     mov     x19, x0     /* state  */
@@ -1294,7 +1306,11 @@ AARCH64_PACIASP
     ldp     x19, x20, [sp, #16]
     ldp     x21, x22, [sp, #32]
     ldp     x23, x24, [sp, #48]
-    ldp     x29, x30, [sp], #64
+    ldp     d8,  d9,  [sp, #64]
+    ldp     d10, d11, [sp, #80]
+    ldp     d12, d13, [sp, #96]
+    ldp     d14, d15, [sp, #112]
+    ldp     x29, x30, [sp], #128
 AARCH64_AUTIASP
     ret
 CRYPT_AARCH64_FUNC_END(Keccakx2Absorb)

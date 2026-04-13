@@ -862,12 +862,10 @@ AARCH64_AUTIASP
 // FIPS 203, Algorithm 8: CBD_η(PRF_η(seed, nonce))
 // =============================================================================
 CRYPT_AARCH64_FUNC_START(MLKEMPolyCBDEta)
-AARCH64_PACIASP
     cmp     w0, #2
     b.eq    .Lpolycbd_eta2
     cmp     w0, #3
     b.eq    .Lpolycbd_eta3
-AARCH64_AUTIASP
     ret
     CRYPT_AARCH64_FUNC_END(MLKEMPolyCBDEta)
 .Lpolycbd_eta2:
@@ -1132,7 +1130,6 @@ AARCH64_AUTIASP
 // FIPS 203: Compress_d(x) = round(2^d / q × x) mod 2^d
 // =============================================================================
 CRYPT_AARCH64_FUNC_START(PolyCompress)
-AARCH64_PACIASP
     cmp     w0, #2
     b.eq    .Lpolycompress_4
     cmp     w0, #3

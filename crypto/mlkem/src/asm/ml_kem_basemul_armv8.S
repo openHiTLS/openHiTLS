@@ -380,14 +380,12 @@ AARCH64_AUTIASP
 //   x4: c (int16_t*, k×128 precomputed mulcache = b₁·ζ values)
 // =============================================================================
 CRYPT_AARCH64_FUNC_START(MLKEMAsymMul)
-AARCH64_PACIASP
     cmp     w0, #2
     b.eq    .Lasm_mul_k2
     cmp     w0, #3
     b.eq    .Lasm_mul_k3
     cmp     w0, #4
     b.eq    .Lasm_mul_k4
-AARCH64_AUTIASP
     ret
     CRYPT_AARCH64_FUNC_END(MLKEMAsymMul)
 .Lasm_mul_k2:
@@ -1363,14 +1361,12 @@ AARCH64_AUTIASP
 //   x4: c (int16_t*, k×128 precomputed mulcache = b₁·ζ values)
 // =============================================================================
 CRYPT_AARCH64_FUNC_START(MLKEMAsymMulMont)
-AARCH64_PACIASP
     cmp     w0, #2
     b.eq    .Lasm_mont_k2
     cmp     w0, #3
     b.eq    .Lasm_mont_k3
     cmp     w0, #4
     b.eq    .Lasm_mont_k4
-AARCH64_AUTIASP
     ret
     CRYPT_AARCH64_FUNC_END(MLKEMAsymMulMont)
 .Lasm_mont_k2:

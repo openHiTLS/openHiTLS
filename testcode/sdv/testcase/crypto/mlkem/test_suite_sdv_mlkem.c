@@ -24,6 +24,7 @@
 #include "crypt_mlkem.h"
 #include "ml_kem_local.h"
 #include "stub_utils.h"
+#include "crypto_test_util.h"
 /* END_HEADER */
 
 STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
@@ -164,6 +165,43 @@ void SDV_CRYPTO_MLKEM_KEYGEN_API_TC002(int bits)
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     TestRandDeInit();
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLKEM_KEYGEN_API_TC003(int bits)
+{
+#ifndef HITLS_CRYPTO_MLKEM_ARMV8
+    (void)bits;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    TestRandInit();
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+#ifdef HITLS_CRYPTO_PROVIDER
+    ctx = CRYPT_EAL_ProviderPkeyNewCtx(NULL, CRYPT_PKEY_ML_KEM, CRYPT_EAL_PKEY_KEM_OPERATE, "provider=default");
+#else
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ML_KEM);
+#endif
+    ASSERT_TRUE(ctx != NULL);
+
+    uint32_t val = (uint32_t)bits;
+    int32_t ret = CRYPT_EAL_PkeySetParaById(ctx, val);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_PkeyEncapsInit(ctx, NULL);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    AARCH64_PUT_CANARY();
+    ret = CRYPT_EAL_PkeyGen(ctx);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    AARCH64_CHECK_CANARY();
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    TestRandDeInit();
+#endif
     return;
 }
 /* END_CASE */
