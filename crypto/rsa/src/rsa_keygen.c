@@ -484,6 +484,113 @@ uint32_t CRYPT_RSA_GetSignLen(const CRYPT_RSA_Ctx *ctx)
 #endif
 
 #ifdef HITLS_CRYPTO_RSA_GEN
+
+static int32_t RSA_Filter(const BN_BigNum *p, uint32_t bits, const BN_BigNum *e, BN_Optimizer *opt)
+{
+    int32_t ret;
+    BN_BigNum *pMinusOne = BN_Create(bits);
+    BN_BigNum *u = BN_Create(bits);
+    if (pMinusOne == NULL || u == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        goto ERR;
+    }
+    (void)BN_SubLimb(pMinusOne, p, 1);
+    ret = BN_Gcd(u, pMinusOne, e, opt);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+    if (!BN_IsOne(u)) {
+        ret = CRYPT_RSA_NOR_KEYGEN_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+ERR:
+    BN_Destroy(pMinusOne);
+    BN_Destroy(u);
+    return ret;
+}
+
+static int32_t RSAPGen(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *opt)
+{
+    uint32_t pBits = (para->bits + 1) >> 1;
+    int32_t ret = BN_GenPrime(priKey->p, para->e, pBits, true, opt, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    /*
+     * FIPS 186-5 A.1.3 Step 4.4: Verify p >= sqrt(2) * 2^(pBits-1).
+     * BN_GenPrime with top=true only guarantees the MSB is set (p >= 2^(pBits-1)).
+     * Checking that bit (pBits-2) is also set ensures:
+     *   p >= 2^(pBits-1) + 2^(pBits-2) = 3/2 * 2^(pBits-1) > sqrt(2) * 2^(pBits-1).
+     * when BN_GenPrime params 'half' is 'true', it will be satisfied.
+     */
+    return RSA_Filter(priKey->p, para->bits, para->e, opt);
+}
+
+static int32_t RSAQGen(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *opt)
+{
+    uint32_t pBits = (para->bits + 1) >> 1;
+    uint32_t qBits = para->bits - pBits;
+    int32_t ret = BN_GenPrime(priKey->q, para->e, qBits, true, opt, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return RSA_Filter(priKey->q, para->bits, para->e, opt);
+}
+
+static int32_t GenPQBasedOnRandomPrimes(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *opt)
+{
+    int32_t ret = CRYPT_BN_RAND_GEN_FAIL;
+    uint32_t i;
+    uint32_t halfBits = (para->bits) >> 1;
+    BN_BigNum *val = BN_Create(halfBits - 100);
+    BN_BigNum *sub = BN_Create(para->bits);
+    bool foundQ = false;
+    if (val == NULL || sub == NULL) {
+        ret = CRYPT_MEM_ALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        goto ERR;
+    }
+    /* we need to compare |p - q| with 2^(nlen/2 - 100) */
+    (void)BN_SetBit(val, halfBits - 100);
+    /* FIPS 186-5 B.3.3 Step 4.7: retry up to 5*nlen times to generate p */
+    for (i = 0; i < 5 * para->bits; i++) {
+        ret = RSAPGen(para, priKey, opt);
+        if (ret == CRYPT_SUCCESS) {
+            break;
+        }
+    }
+    if (ret != CRYPT_SUCCESS) {
+        goto ERR;
+    }
+    /* FIPS 186-5 B.3.3 Step 5.8: retry up to 10*nlen times to generate q */
+    for (i = 0; i < 10 * para->bits; i++) {
+        ret = RSAQGen(para, priKey, opt);
+        if (ret != CRYPT_SUCCESS) {
+            continue;
+        }
+        (void)BN_Sub(sub, priKey->p, priKey->q);
+        (void)BN_SetSign(sub, false);
+        if (BN_Cmp(sub, val) <= 0) {
+            continue;
+        }
+        foundQ = true;
+        break;
+    }
+    if ((ret == CRYPT_SUCCESS) && !foundQ) {
+        ret = CRYPT_RSA_NOR_KEYGEN_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+ERR:
+    BN_Destroy(val);
+    BN_Destroy(sub);
+    return ret;
+}
+
 static int32_t GetRandomX(void *libCtx, BN_BigNum *X, uint32_t nlen, bool isP)
 {
     /*
@@ -707,7 +814,7 @@ ERR:
 }
 
 // ref: FIPS 186-5, A.1.6 & B.9
-static int32_t GenPQBasedOnProbPrimes(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *opt)
+static int32_t GenPQBasedOnAuxPrimes(const CRYPT_RSA_Para *para, CRYPT_RSA_PrvKey *priKey, BN_Optimizer *opt)
 {
     uint32_t proBits = GetProbableNoLimitedBitLen(para->bits);
     uint32_t auxBits = GetAuxiliaryPrimeBitLen(para->bits);
@@ -939,7 +1046,11 @@ int32_t CRYPT_RSA_Gen(CRYPT_RSA_Ctx *ctx)
      * Meanwhile, the check of e is not added to ensure compatibility.
      */
     BN_OptimizerSetLibCtx(ctx->libCtx, optimizer);
-    ret = GenPQBasedOnProbPrimes(ctx->para, newCtx->prvKey, optimizer);
+    if (ctx->para->bits < 1024) {
+        ret = GenPQBasedOnRandomPrimes(ctx->para, newCtx->prvKey, optimizer);
+    } else {
+        ret = GenPQBasedOnAuxPrimes(ctx->para, newCtx->prvKey, optimizer);
+    }
     if (ret != CRYPT_SUCCESS) {
         BN_OptimizerDestroy(optimizer);
         BSL_ERR_PUSH_ERROR(ret);

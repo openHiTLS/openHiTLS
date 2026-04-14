@@ -19,7 +19,9 @@
 #include "bsl_err.h"
 #include "crypt_params_key.h"
 #include "crypt_local_types.h"
-
+#include "crypto_test_util.h"
+#include "crypt_util_rand.h"
+#include "crypt_eal_rand.h"
 /* END_HEADER */
 #define CRYPT_EAL_PKEY_KEYMGMT_OPERATE 0
 /**
@@ -161,9 +163,7 @@ void SDV_CRYPTO_RSA_PARA_API_TC002(int bits, int isProvider)
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_KEYMGMT_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
-
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_EAL_ERR_NEW_PARA_FAIL);
-
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
@@ -524,7 +524,7 @@ void SDV_CRYPTO_RSA_SET_PRV_API_TC002(int isProvider)
     ASSERT_TRUE_AND_LOG("d = n", CRYPT_EAL_PkeySetPrv(pkey, &prvKey) == CRYPT_RSA_ERR_INPUT_VALUE);
 
     prvKey.key.rsaPrv.nLen = RSA_MIN_KEYLEN - 1;
-    ASSERT_TRUE_AND_LOG("n less than 1024 bits", CRYPT_EAL_PkeySetPrv(pkey, &prvKey) == CRYPT_RSA_ERR_KEY_BITS);
+    ASSERT_TRUE_AND_LOG(" n len < d len", CRYPT_EAL_PkeySetPrv(pkey, &prvKey) == CRYPT_RSA_ERR_KEY_BITS);
 
     prvKey.key.rsaPrv.nLen = RSA_MAX_KEYLEN + 1;
     ASSERT_TRUE_AND_LOG("n greater than 16384 bits", CRYPT_EAL_PkeySetPrv(pkey, &prvKey) == CRYPT_RSA_ERR_KEY_BITS);
@@ -1492,9 +1492,10 @@ static int32_t ImportRsaKey(const BSL_Param *param, void *args)
  * @title  CRYPT_RSA_Import and CRYPT_RSA_Export test.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_RSA_Import_Export_FUNC_TC001(void)
+void SDV_CRYPTO_RSA_Import_Export_FUNC_TC001(int bits)
 {
 #ifndef HITLS_CRYPTO_PROVIDER
+    (void)bits;
     SKIP_TEST();
 #else
     CRYPT_RSA_Ctx *srcRsaCtx = NULL;
@@ -1506,7 +1507,6 @@ void SDV_CRYPTO_RSA_Import_Export_FUNC_TC001(void)
     uint32_t signDataLen = sizeof(signData);
     uint8_t e[] = {0x01, 0x00, 0x01};
     uint32_t eLen = sizeof(e);
-    uint32_t bits = 2048;
     BSL_Param param[3] = {
         {CRYPT_PARAM_PKEY_PROCESS_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ImportRsaKey, 0, 0},
         {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &dstRsaCtx, 0, 0},
@@ -1537,22 +1537,22 @@ EXIT:
 }
 /* END_CASE */
 
-
 /**
  * @test   SDV_CRYPTO_RSA_Import_Export_FUNC_TC002
  * @title  CRYPT_RSA_Import and CRYPT_RSA_Export test.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_RSA_Import_Export_FUNC_TC002(void)
+void SDV_CRYPTO_RSA_Import_Export_FUNC_TC002(int bits)
 {
 #ifndef HITLS_CRYPTO_PROVIDER
+    (void)bits;
     SKIP_TEST();
 #else
     CRYPT_RSA_Ctx *srcRsaCtx = NULL;
     CRYPT_RSA_Ctx *dstRsaCtx = NULL;
     CRYPT_RsaPadType padType = CRYPT_EMSA_PSS;
     RSA_PadingPara pssPara = {
-        .saltLen = -1,
+        .saltLen = 30,
         .mdId = CRYPT_MD_SHA256,
         .mgfId = CRYPT_MD_SHA256
     };
@@ -1561,7 +1561,6 @@ void SDV_CRYPTO_RSA_Import_Export_FUNC_TC002(void)
     uint32_t signDataLen = sizeof(signData);
     uint8_t e[] = {0x01, 0x00, 0x01};
     uint32_t eLen = sizeof(e);
-    uint32_t bits = 2048;
     BSL_Param param[3] = {
         {CRYPT_PARAM_PKEY_PROCESS_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ImportRsaKey, 0, 0},
         {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &dstRsaCtx, 0, 0},
@@ -1593,6 +1592,350 @@ void SDV_CRYPTO_RSA_Import_Export_FUNC_TC002(void)
 EXIT:
     CRYPT_RSA_FreeCtx(srcRsaCtx);
     CRYPT_RSA_FreeCtx(dstRsaCtx);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA512_GEN_SIGN_VERIFY_TC001
+ * @title  RSA 512-bit: Key generation + PKCS#1 v1.5 + SHA1 sign/verify round-trip.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA512_GEN_SIGN_VERIFY_TC001(int isProvider)
+{
+#if !defined(HITLS_CRYPTO_RSA_SIGN) || !defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15) || !defined(HITLS_CRYPTO_DRBG)
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    uint32_t signLen = 64;
+    uint8_t data[10] = {0};
+    uint32_t dataLen = sizeof(data);
+    int32_t pkcsv15 = CRYPT_MD_SHA1;
+
+    SetRsaPara(&para, e, 3, 512);
+    uint8_t *sign = (uint8_t *)malloc(signLen);
+    ASSERT_TRUE(sign != NULL);
+    TestMemInit();
+
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetKeyBits(pkey), 512);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA1, data, dataLen, sign, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(signLen, 64);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA1, data, dataLen, sign, signLen), CRYPT_SUCCESS);
+
+    pkcsv15 = CRYPT_MD_SHA256;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA256, data, dataLen, sign, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, CRYPT_MD_SHA256, data, dataLen, sign, signLen), CRYPT_SUCCESS);
+
+    pkcsv15 = CRYPT_MD_SHA384;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA384, data, dataLen, sign, &signLen), CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    free(sign);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA512_OAEP_SHA1_TC001
+ * @title  RSA 512-bit: OAEP + SHA1 encrypt/decrypt should succeed.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA512_OAEP_SHA1_TC001(int isProvider)
+{
+#if !defined(HITLS_CRYPTO_RSAES_OAEP) || !defined(HITLS_CRYPTO_RSA_ENCRYPT) || \
+    !defined(HITLS_CRYPTO_RSA_DECRYPT) || !defined(HITLS_CRYPTO_DRBG)
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    // For OAEP, the maximum data length is 22 bytes.
+    uint8_t plaintext[22] = {0};
+    uint8_t ct[64] = {0};
+    uint8_t pt[64] = {0};
+    uint32_t ctLen = sizeof(ct);
+    uint32_t ptLen = sizeof(pt);
+    CRYPT_MD_AlgId hashId = CRYPT_MD_SHA1;
+    BSL_Param oaepParam[3] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        BSL_PARAM_END};
+
+    SetRsaPara(&para, e, 3, 512);
+    TestMemInit();
+
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_OAEP, oaepParam, 0), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pkey, plaintext, sizeof(plaintext), ct, &ctLen), CRYPT_SUCCESS);
+    ASSERT_EQ(ctLen, 64u);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkey, ct, ctLen, pt, &ptLen), CRYPT_SUCCESS);
+    ASSERT_EQ(ptLen, sizeof(plaintext));
+    ASSERT_EQ(memcmp(pt, plaintext, ptLen), 0);
+
+    uint8_t plaintext1[23] = {0};
+    ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pkey, plaintext1, sizeof(plaintext1), ct, &ctLen), CRYPT_RSA_ERR_ENC_BITS);
+
+EXIT:
+    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA512_OAEP_SHA256_FAIL_TC001
+ * @title  RSA 512-bit: OAEP + SHA256 encrypt must fail (modulus too short).
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA512_OAEP_SHA256_FAIL_TC001(int isProvider)
+{
+#if !defined(HITLS_CRYPTO_RSAES_OAEP) || !defined(HITLS_CRYPTO_RSA_ENCRYPT) || !defined(HITLS_CRYPTO_DRBG)
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    uint8_t ct[64] = {0};
+    uint32_t ctLen = sizeof(ct);
+    CRYPT_MD_AlgId hashId = CRYPT_MD_SHA256;
+    BSL_Param oaepParam[3] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        BSL_PARAM_END};
+
+    SetRsaPara(&para, e, 3, 512);
+    TestMemInit();
+
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_OAEP, oaepParam, 0), CRYPT_SUCCESS);
+
+    /* 0-byte plaintext: overhead = 2*32+2 = 66 > 64 => must fail */
+    ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pkey, NULL, 0, ct, &ctLen), CRYPT_RSA_ERR_ENC_BITS);
+
+EXIT:
+    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA512_PKCS1_ENCRYPT_TC001
+ * @title  RSA 512-bit: PKCS1 encrypt/decrypt.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA512_PKCS1_ENCRYPT_TC001(int isProvider)
+{
+#if !defined(HITLS_CRYPTO_RSAES_PKCSV15) || !defined(HITLS_CRYPTO_RSA_ENCRYPT) || !defined(HITLS_CRYPTO_DRBG)
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    uint8_t ct[64] = {0};
+    uint32_t ctLen = sizeof(ct);
+    int32_t pkcsv15 = 0;
+    // (0x00 || 0x02 || ps || 0x00 || data) -> ptLen <= 53
+    uint8_t pt[53] = {1};
+    uint32_t ptLen = sizeof(pt);
+    uint8_t pt1[53] = {0};
+    uint32_t ptLen1 = sizeof(pt1);
+
+    SetRsaPara(&para, e, 3, 512);
+    TestMemInit();
+
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_PKCSV15, &pkcsv15, sizeof(pkcsv15)) == CRYPT_SUCCESS);
+
+    ASSERT_TRUE(CRYPT_EAL_PkeyEncrypt(pkey, pt, ptLen, ct, &ctLen) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, ct, ctLen, pt1, &ptLen1) == CRYPT_SUCCESS);
+    ASSERT_EQ(ptLen1, ptLen);
+    ASSERT_TRUE(memcmp(pt, pt1, ptLen) == 0);
+
+    uint8_t pt2[54] = {0};
+    ASSERT_TRUE(CRYPT_EAL_PkeyEncrypt(pkey, pt2, sizeof(pt2), ct, &ctLen) == CRYPT_RSA_ERR_ENC_BITS);
+
+EXIT:
+    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA512_PSS_SALT0_TC001
+ * @title  RSA 512-bit: PSS + SHA1 + saltLen=0 sign/verify should succeed.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA512_PSS_SALT0_TC001(int isProvider)
+{
+#if !defined(HITLS_CRYPTO_RSA_SIGN) || !defined(HITLS_CRYPTO_RSA_EMSA_PSS) || !defined(HITLS_CRYPTO_DRBG)
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    uint8_t *sign = NULL;
+    uint32_t signLen = 64;
+    uint8_t dataHash[20] = {0};
+    uint32_t hashLen = sizeof(dataHash);
+    CRYPT_MD_AlgId mdId = CRYPT_MD_SHA1;
+    int32_t saltLen = 42; // saltlen < rsaLen - hashlen -2
+    BSL_Param pssParam[4] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
+        BSL_PARAM_END};
+
+    SetRsaPara(&para, e, 3, 512);
+    sign = (uint8_t *)malloc(signLen);
+    ASSERT_TRUE(sign != NULL);
+    TestMemInit();
+
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(pkey, dataHash, hashLen, sign, &signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, dataHash, hashLen, sign, signLen), CRYPT_SUCCESS);
+
+    saltLen = 43;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pssParam, 0), CRYPT_RSA_ERR_PSS_SALT_LEN);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    free(sign);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA512_KEY_IMPORT_EXPORT_TC001
+ * @title  RSA 512-bit: keygen on ctx, export pub key to pubCtx and prv key to prvCtx, prvCtx signs and pubCtx verifies.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA512_KEY_IMPORT_EXPORT_TC001(int isProvider)
+{
+#if !defined(HITLS_CRYPTO_RSA_SIGN) || !defined(HITLS_CRYPTO_RSA_EMSA_PSS) || !defined(HITLS_CRYPTO_DRBG)
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyCtx *pubCtx = NULL;
+    CRYPT_EAL_PkeyCtx *prvCtx = NULL;
+
+    uint8_t pubN[64] = {0};
+    uint8_t pubE[64] = {0};
+    CRYPT_EAL_PkeyPub pubKey = {0};
+
+    uint8_t prvN[64] = {0};
+    uint8_t prvD[64] = {0};
+    uint8_t prvP[32] = {0};
+    uint8_t prvQ[32] = {0};
+    CRYPT_EAL_PkeyPrv prvKey = {0};
+
+    uint8_t *sign = NULL;
+    uint32_t signLen = 64;
+    uint8_t dataHash[20] = {0};
+    uint32_t hashLen = sizeof(dataHash);
+    CRYPT_MD_AlgId mdId = CRYPT_MD_SHA1;
+    int32_t saltLen = 0;
+    BSL_Param pssParam[4] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
+        BSL_PARAM_END};
+
+    SetRsaPara(&para, e, sizeof(e), 512);
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    sign = (uint8_t *)malloc(signLen);
+    ASSERT_TRUE(sign != NULL);
+
+    ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(ctx, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+
+    SetRsaPubKey(&pubKey, pubN, 64, pubE, 64);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(ctx, &pubKey), CRYPT_SUCCESS);
+
+    pubCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pubCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubCtx, &pubKey), CRYPT_SUCCESS);
+
+    SetRsaPrvKey(&prvKey, prvN, 64, prvD, 64);
+    prvKey.key.rsaPrv.p = prvP;
+    prvKey.key.rsaPrv.pLen = 32;
+    prvKey.key.rsaPrv.q = prvQ;
+    prvKey.key.rsaPrv.qLen = 32;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(ctx, &prvKey), CRYPT_SUCCESS);
+
+    prvCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(prvCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &prvKey), CRYPT_SUCCESS); // it will to cal crt params.
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(prvCtx, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(prvCtx, dataHash, hashLen, sign, &signLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pubCtx, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pubCtx, dataHash, hashLen, sign, signLen), CRYPT_SUCCESS);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    free(sign);
 #endif
 }
 /* END_CASE */
