@@ -29,17 +29,16 @@
 extern "C" {
 #endif /* __cpluscplus */
 
-#define RSA_MIN_MODULUS_BITS 1024
-#define RSA_MAX_MODULUS_BITS 16384
+#define RSA_MIN_MODULUS_BITS    512
+#define RSA_MAX_MODULUS_BITS    16384
 #define RSA_SMALL_MODULUS_BYTES (3072 / 8)
-#define RSA_MAX_PUBEXP_BYTES (64 / 8)
-#define RSA_MIN_MODULUS_LEN (RSA_MIN_MODULUS_BITS / 8)
-#define RSA_MAX_MODULUS_LEN (RSA_MAX_MODULUS_BITS / 8)
+#define RSA_MAX_PUBEXP_BYTES    (64 / 8)
+#define RSA_MIN_MODULUS_LEN     (RSA_MIN_MODULUS_BITS / 8)
+#define RSA_MAX_MODULUS_LEN     (RSA_MAX_MODULUS_BITS / 8)
 
 /* RSA */
 typedef struct RSA_Ctx CRYPT_RSA_Ctx;
 typedef struct RSA_Para CRYPT_RSA_Para;
-
 
 /* RSA method */
 
