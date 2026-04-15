@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "bsl_sal.h"
 #include "crypt_errno.h"
 #include "crypt_bn.h"
 #include "ecp_nistp256.h"
@@ -297,10 +298,9 @@ static void CRYPT_ECP256_PointDouble5Times(P256_Point *r)
 
 // r = k*point
 // Ensure that m is not empty and is in the range (0, n-1)
-static void ECP256_WindowMul(P256_Point *r, const BN_BigNum *k, const ECC_Point *point)
+static void ECP256_WindowMul(P256_Point *r, const BN_BigNum *k, const ECC_Point *point, P256_Point *table)
 {
     uint8_t kOctets[33] = {0}; // m big endian byte stream. Apply for 33 bytes and reserve one byte for the following offset.
-    P256_Point table[16]; // The pre-computation window is 2 ^ (5 - 1) = 16 points
     P256_Point temp; // Apply for temporary space of two points.
     Coord tempY;
     (void)BN_Bn2BinFixZero(k, kOctets, sizeof(kOctets));
@@ -414,7 +414,14 @@ int32_t ECP256_PointMul(ECC_Para *para, ECC_Point *r, const BN_BigNum *k, const 
     if (pt == NULL) {
         ComputeK1G(&rTemp, k);
     } else {
-        ECP256_WindowMul(&rTemp, k, pt);
+        // The pre-computation window is 2 ^ (5 - 1) = 16 points
+        P256_Point *table = (P256_Point *)BSL_SAL_Malloc(sizeof(P256_Point) * 16);
+        if (table == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            return CRYPT_MEM_ALLOC_FAIL;
+        }
+        ECP256_WindowMul(&rTemp, k, pt, table);
+        BSL_SAL_Free(table);
     }
 
     ECP256_P256Point2EccPoint(r, &rTemp);
@@ -433,7 +440,14 @@ int32_t ECP256_PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, co
     P256_Point k2Pt;
     P256_Point k1G = {0};
 
-    ECP256_WindowMul(&k2Pt, k2, pt);
+    // The pre-computation window is 2 ^ (5 - 1) = 16 points
+    P256_Point *table = (P256_Point *)BSL_SAL_Malloc(sizeof(P256_Point) * 16);
+    if (table == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    ECP256_WindowMul(&k2Pt, k2, pt, table);
+    BSL_SAL_Free(table);
     ComputeK1G(&k1G, k1);
     ECP256_PointAdd(&k1G, &k1G, &k2Pt);
     ECP256_P256Point2EccPoint(r, &k1G);
