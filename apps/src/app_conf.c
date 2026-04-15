@@ -339,7 +339,7 @@ static int32_t ProcExtendedKeyUsage(BSL_CONF *cnf, bool critical, const char *cn
             ret = HITLS_APP_CONF_FAIL;
             goto EXIT;
         }
-        if (BSL_LIST_Search(exku.oidList, oidStr, (BSL_LIST_PFUNC_CMP)CmpExKeyUsageByOid, NULL) != NULL) {
+        if (BSL_LIST_SearchDataConst(exku.oidList, oidStr, (BSL_LIST_PFUNC_CMP)CmpExKeyUsageByOid, NULL) != NULL) {
             continue;
         }
         ret = AddExtendKeyUsage(oidStr, exku.oidList);
@@ -469,8 +469,9 @@ static int32_t ParseDirNamenValue(BSL_CONF *conf, char *value, HITLS_X509_Genera
         ret = HITLS_APP_MEM_ALLOC_FAIL;
         goto EXIT;
     }
-    BSL_CONF_KeyValue *node = BSL_LIST_GET_FIRST(dirName);
-    while (node != NULL) {
+    for (BslListNode *nodeIt = BSL_LIST_FirstNode(dirName); nodeIt != NULL;
+        nodeIt = BSL_LIST_GetNextNode(dirName, nodeIt)) {
+        BSL_CONF_KeyValue *node = BSL_LIST_GetData(nodeIt);
         HITLS_X509_DN *dnName = BSL_SAL_Calloc(1, sizeof(HITLS_X509_DN));
         if (dnName == NULL) {
             AppPrintError("Failed to malloc X509 DN when parsing directory name.\n");
@@ -493,7 +494,6 @@ static int32_t ParseDirNamenValue(BSL_CONF *conf, char *value, HITLS_X509_Genera
             AppPrintError("Failed to HITLS_X509_AddDnName.\n");
             goto EXIT;
         }
-        node = BSL_LIST_GET_NEXT(dirName);
     }
 
     generalName->value.data = (uint8_t *)nameList;
@@ -699,14 +699,14 @@ int32_t HITLS_APP_CONF_ProcExt(BSL_CONF *cnf, const char *section, ProcExtCallBa
     if (BSL_LIST_EMPTY(list)) {
         return HITLS_APP_NO_EXT; // There is no configuration in the section.
     }
-    BSL_CONF_KeyValue *cnfNode = BSL_LIST_GET_FIRST(list);
-    while (cnfNode != NULL) {
+    for (BslListNode *nodeIt = BSL_LIST_FirstNode(list); nodeIt != NULL;
+        nodeIt = BSL_LIST_GetNextNode(list, nodeIt)) {
+        BSL_CONF_KeyValue *cnfNode = BSL_LIST_GetData(nodeIt);
         ret = AppConfProcExtEntry(cnf, cnfNode, extCb, ctx);
         if (ret != HITLS_APP_SUCCESS) {
             AppPrintError("Failed to process each x509 extension conf.\n");
             return ret;
         }
-        cnfNode = BSL_LIST_GET_NEXT(list);
     }
 
     return ret;
@@ -725,10 +725,10 @@ int32_t HiTLS_AddSubjDnNameToCsr(void *csr, BslList *nameList)
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
     size_t index = 0;
-    HITLS_X509_DN *node = BSL_LIST_GET_FIRST(nameList);
-    while (node != NULL) {
+    for (BslListNode *nodeIt = BSL_LIST_FirstNode(nameList); nodeIt != NULL;
+        nodeIt = BSL_LIST_GetNextNode(nameList, nodeIt)) {
+        HITLS_X509_DN *node = BSL_LIST_GetData(nodeIt);
         names[index++] = *node;
-        node = BSL_LIST_GET_NEXT(nameList);
     }
     int32_t ret = HITLS_X509_CsrCtrl(csr, HITLS_X509_ADD_SUBJECT_NAME, names, count);
     BSL_SAL_FREE(names);

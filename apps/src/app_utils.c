@@ -556,14 +556,13 @@ int32_t HITLS_APP_PrintPubKey(CRYPT_EAL_PkeyCtx *pkey, const char *outFilePath, 
         AppPrintError("Failed to export the public key.\n");
         return HITLS_APP_ENCODE_KEY_FAIL;
     }
-    BSL_UIO *wPubKeyUio = HITLS_APP_UioOpen(outFilePath, 'w', 0);
+    BSL_UIO *wPubKeyUio = HITLS_APP_UioOpen(outFilePath, 'w', outFilePath != NULL ? 1 : 0);
     if (wPubKeyUio == NULL) {
         BSL_SAL_FREE(pubKeyBuf.data);
         return HITLS_APP_UIO_FAIL;
     }
     int32_t ret = HITLS_APP_OptWriteUio(wPubKeyUio, pubKeyBuf.data, pubKeyBuf.dataLen, HITLS_APP_FORMAT_PEM);
     BSL_SAL_FREE(pubKeyBuf.data);
-    BSL_UIO_SetIsUnderlyingClosedByUio(wPubKeyUio, true);
     BSL_UIO_Free(wPubKeyUio);
     return ret;
 }
@@ -575,13 +574,12 @@ int32_t HITLS_APP_PrintPrvKey(CRYPT_EAL_PkeyCtx *pkey, const char *outFilePath, 
         return HITLS_APP_INVALID_ARG;
     }
 
-    BSL_UIO *wPrvUio = HITLS_APP_UioOpen(outFilePath, 'w', 0);
+    BSL_UIO *wPrvUio = HITLS_APP_UioOpen(outFilePath, 'w', outFilePath != NULL ? 1 : 0);
     if (wPrvUio == NULL) {
         return HITLS_APP_UIO_FAIL;
     }
     AppKeyPrintParam param = { outFilePath, outformat, cipherAlgCid, false, false};
     int32_t ret = HITLS_APP_PrintPrvKeyByUio(wPrvUio, pkey, &param, passout);
-    BSL_UIO_SetIsUnderlyingClosedByUio(wPrvUio, true);
     BSL_UIO_Free(wPrvUio);
     return ret;
 }
@@ -744,13 +742,11 @@ static int32_t ReadPemFromStdin(BSL_BufMem **data, BSL_PEM_Symbol *symbol)
     }
 
     // Read from stdin or file.
-    BSL_UIO *rUio = HITLS_APP_UioOpen(NULL, 'r', 1);
+    BSL_UIO *rUio = HITLS_APP_UioOpen(NULL, 'r', 0);
     if (rUio == NULL) {
         BSL_UIO_Free(memUio);
         return ret;
     }
-    BSL_UIO_SetIsUnderlyingClosedByUio(rUio, true);
-
     if (symbol == NULL || symbol->head == NULL || symbol->tail == NULL) {
         ret = ReadBlockFromStdin(memUio, rUio);
     } else {
@@ -907,12 +903,11 @@ int32_t HITLS_APP_GetAndCheckHashOpt(const char *name, int32_t *hashId)
 
 int32_t HITLS_APP_PrintText(const BSL_Buffer *csrBuf, const char *outFileName)
 {
-    BSL_UIO *wCsrUio = HITLS_APP_UioOpen(outFileName, 'w', 0);
+    BSL_UIO *wCsrUio = HITLS_APP_UioOpen(outFileName, 'w', outFileName != NULL ? 1 : 0);
     if (wCsrUio == NULL) {
         return HITLS_APP_UIO_FAIL;
     }
     int32_t ret = HITLS_APP_OptWriteUio(wCsrUio, csrBuf->data, csrBuf->dataLen, HITLS_APP_FORMAT_TEXT);
-    BSL_UIO_SetIsUnderlyingClosedByUio(wCsrUio, true);
     BSL_UIO_Free(wCsrUio);
     return ret;
 }
@@ -1077,13 +1072,12 @@ int32_t HITLS_APP_ReadFileOrStdin(uint8_t **buf, uint64_t *bufLen, const char *i
     }
 
     // Read from file
-    BSL_UIO *readUio = HITLS_APP_UioOpen(inFile, 'r', 0);
+    BSL_UIO *readUio = HITLS_APP_UioOpen(inFile, 'r', inFile != NULL ? 1 : 0);
     if (readUio == NULL) {
         AppPrintError("%s: Failed to open file <%s>, no such file or directory\n", module, inFile);
         return HITLS_APP_UIO_FAIL;
     }
 
-    BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
     int32_t ret = HITLS_APP_OptReadUio(readUio, buf, bufLen, maxSize);
     if (ret != HITLS_APP_SUCCESS) {
         AppPrintError("%s: Failed to read content from file <%s>\n", module, inFile);

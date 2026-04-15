@@ -379,7 +379,7 @@ static int32_t ProviderCertParseBuffInternal(HITLS_PKI_LibCtx *libCtx, const cha
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
-    HITLS_X509_Cert *tmp = BSL_LIST_GET_FIRST(list);
+    HITLS_X509_Cert *tmp = (HITLS_X509_Cert *)BSL_LIST_FirstNodeData(list);
     int ref;
     ret = HITLS_X509_CertCtrl(tmp, HITLS_X509_REF_UP, &ref, sizeof(int));
     BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
@@ -565,15 +565,15 @@ static int32_t X509_GetCNStrFromList(BSL_ASN1_List *nameList, BSL_Buffer *buff, 
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
-    HITLS_X509_NameNode *nameNode = BSL_LIST_GET_FIRST(nameList);
-    while (nameNode != NULL) {
+    for (BslListNode *nameNodeIt = BSL_LIST_FirstNode(nameList); nameNodeIt != NULL;
+        nameNodeIt = BSL_LIST_GetNextNode(nameList, nameNodeIt)) {
+        HITLS_X509_NameNode *nameNode = (HITLS_X509_NameNode *)BSL_LIST_GetData(nameNodeIt);
         BslOidString oid = {
             .octs = (char *)nameNode->nameType.buff,
             .octetLen = nameNode->nameType.len,
         };
         const char *oidName = BSL_OBJ_GetOidNameFromOid(&oid);
         if (oidName == NULL || strcmp(oidName, "CN") != 0) {
-            nameNode = BSL_LIST_GET_NEXT(nameList);
             continue;
         }
         buff->data = BSL_SAL_Malloc(nameNode->nameValue.len + 1);

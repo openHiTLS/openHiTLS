@@ -176,7 +176,7 @@ static int32_t MemWpending(int32_t larg, uint64_t *ret)
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }
-    *ret = 0; // For the UIO of the mem type, return 0
+    *ret = 0;
     return BSL_SUCCESS;
 }
 

@@ -20,6 +20,7 @@
 #include "hitls_x509_local.h"
 #include "bsl_obj.h"
 #include "bsl_sal.h"
+#include "bsl_list.h"
 #include "bsl_obj_internal.h"
 #include "bsl_err_internal.h"
 #include "crypt_errno.h"
@@ -120,9 +121,9 @@ HITLS_X509_Attrs *HITLS_X509_AttrsDup(const HITLS_X509_Attrs *src, HITLS_X509_Du
     if (dst == NULL) {
         return NULL;
     }
-    void *node = NULL;
-    for (node = BSL_LIST_GET_FIRST(src->list); node != NULL; node = BSL_LIST_GET_NEXT(src->list)) {
-        void *dstEntry = dupCb(node);
+    for (BslListNode *listNode = BSL_LIST_FirstNode(src->list); listNode != NULL;
+        listNode = BSL_LIST_GetNextNode(src->list, listNode)) {
+        void *dstEntry = dupCb(BSL_LIST_GetData(listNode));
         if (dstEntry == NULL) {
             HITLS_X509_AttrsFree(dst, freeCb);
             return NULL;
@@ -197,7 +198,7 @@ int32_t HITLS_X509_ParseAttrsListAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, v
         goto ERR;
     }
 
-    ret = BSL_LIST_AddElement(list, node, BSL_LIST_POS_AFTER);
+    ret = BSL_LIST_AddElement(list, node, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
@@ -229,14 +230,14 @@ int32_t HITLS_X509_ParseAttrList(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attrs *at
 }
 #endif
 
+typedef int32_t (*DecodeAttrCb)(HITLS_X509_Attrs *attributes, HITLS_X509_AttrEntry *attrEntry, void *val,
+    uint32_t valLen);
+
 static int32_t CmpAttrEntryByCid(const void *attrEntry, const void *cid)
 {
     const HITLS_X509_AttrEntry *node = attrEntry;
     return node->cid == *(const BslCid *)cid ? 0 : 1;
 }
-
-typedef int32_t (*DecodeAttrCb)(HITLS_X509_Attrs *attributes, HITLS_X509_AttrEntry *attrEntry, void *val,
-    uint32_t valLen);
 
 #if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_PKCS12_GEN)
 
@@ -253,7 +254,7 @@ static int32_t EncodeReqExtAttr(HITLS_X509_Attrs *attributes, void *val, uint32_
 static int32_t SetAttr(HITLS_X509_Attrs *attributes, BslCid cid, void *val, uint32_t valLen, EncodeAttrCb encodeAttrCb)
 {
     /* Check if the attribute already exists. */
-    if (BSL_LIST_Search(attributes->list, &cid, CmpAttrEntryByCid, NULL) != NULL) {
+    if (BSL_LIST_SearchDataConst(attributes->list, &cid, CmpAttrEntryByCid, NULL) != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_ATTR_REPEAT);
         return HITLS_X509_ERR_SET_ATTR_REPEAT;
     }
@@ -314,7 +315,8 @@ static int32_t DecodeReqExtAttr(HITLS_X509_Attrs *attributes, HITLS_X509_AttrEnt
 
 static int32_t GetAttr(HITLS_X509_Attrs *attributes, BslCid cid, void *val, uint32_t valLen, DecodeAttrCb decodeAttrCb)
 {
-    HITLS_X509_AttrEntry *attrEntry = BSL_LIST_Search(attributes->list, &cid, CmpAttrEntryByCid, NULL);
+    HITLS_X509_AttrEntry *attrEntry =
+        BSL_LIST_SearchDataConst(attributes->list, &cid, CmpAttrEntryByCid, NULL);
     if (attrEntry == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ATTR_NOT_FOUND);
         return HITLS_X509_ERR_ATTR_NOT_FOUND;
@@ -391,9 +393,10 @@ int32_t HITLS_X509_EncodeAttrList(uint8_t tag, HITLS_X509_Attrs *attrs, HITLS_X5
     }
     uint32_t iter = 0;
     int32_t ret;
-    void *node = NULL;
-    for (node = BSL_LIST_GET_FIRST(attrs->list); node != NULL; node = BSL_LIST_GET_NEXT(attrs->list), iter++) {
+    for (BslListNode *listNode = BSL_LIST_FirstNode(attrs->list); listNode != NULL;
+        listNode = BSL_LIST_GetNextNode(attrs->list, listNode), iter++) {
         HITLS_X509_AttrEntry attrEntry = {0};
+        void *node = BSL_LIST_GetData(listNode);
         if (encodeCb != NULL) {
             ret = encodeCb(node, &attrEntry);
             if (ret != HITLS_PKI_SUCCESS) {

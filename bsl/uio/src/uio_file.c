@@ -156,7 +156,7 @@ static int32_t FileWpending(int32_t larg, uint64_t *ret)
     if (larg != sizeof(uint64_t) || ret == NULL) {
         return BSL_INVALID_ARG;
     }
-    *ret = 0; // should return 0 if it's file UIO
+    *ret = 0;
     return BSL_SUCCESS;
 }
 

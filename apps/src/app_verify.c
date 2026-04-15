@@ -111,20 +111,20 @@ int32_t InitVerify(HITLS_X509_StoreCtx *store, const char *cafile)
         AppPrintError("Failed to parse certificate <%s>, errCode = %d.\n", cafile, ret);
         return HITLS_APP_X509_FAIL;
     }
-    HITLS_X509_Cert **cert = BSL_LIST_First(certlist);
-    while (cert != NULL) {
-        if (!CheckCertKeyUsage(*cert, cafile, HITLS_X509_EXT_KU_KEY_CERT_SIGN)) {
+    for (BslListNode *node = BSL_LIST_FirstNode(certlist); node != NULL;
+        node = BSL_LIST_GetNextNode(certlist, node)) {
+        HITLS_X509_Cert *cert = BSL_LIST_GetData(node);
+        if (!CheckCertKeyUsage(cert, cafile, HITLS_X509_EXT_KU_KEY_CERT_SIGN)) {
             ret = HITLS_APP_X509_FAIL;
             break;
         }
-        ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, *cert, sizeof(HITLS_X509_Cert *));
+        ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, sizeof(HITLS_X509_Cert *));
         if (ret != HITLS_PKI_SUCCESS) {
-            PrintCertErr(*cert);
+            PrintCertErr(cert);
             ret = HITLS_APP_X509_FAIL;
             AppPrintError("Failed to add the certificate <%s> to the trust store, errCode = %d.\n", cafile, ret);
             break;
         }
-        cert = BSL_LIST_Next(certlist);
     }
 
     BSL_LIST_FREE(certlist, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);

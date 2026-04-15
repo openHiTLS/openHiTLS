@@ -46,7 +46,6 @@
 #endif
 #include "config_check.h"
 #include "config_default.h"
-#include "bsl_list.h"
 #include "rec.h"
 #include "cert_method.h"
 #ifdef HITLS_TLS_FEATURE_SECURITY

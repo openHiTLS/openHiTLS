@@ -429,15 +429,15 @@ int ConfCertVerification(HITLS_Config *config, APP_CertConfig *certConfig,
             AppPrintError("Failed to parse certificate <%s>, errCode = %d.\n", certConfig->caChain, ret);
             return HITLS_APP_X509_FAIL;
         }
-        HITLS_X509_Cert **cert = BSL_LIST_First(certlist);
-        while (cert != NULL) {
-            ret = HITLS_CFG_AddCertToStore(config, *cert, TLS_CERT_STORE_TYPE_DEFAULT, true);
+        for (BslListNode *node = BSL_LIST_FirstNode(certlist); node != NULL;
+            node = BSL_LIST_GetNextNode(certlist, node)) {
+            HITLS_X509_Cert *cert = BSL_LIST_GetData(node);
+            ret = HITLS_CFG_AddCertToStore(config, cert, TLS_CERT_STORE_TYPE_DEFAULT, true);
             if (ret != HITLS_SUCCESS) {
                 AppPrintError("Failed to add CA-chain certificate to store: 0x%x\n", ret);
                 ret = HITLS_APP_ERR_LOAD_CA;
                 break;
             }
-            cert = BSL_LIST_Next(certlist);
         }
 
         BSL_LIST_FREE(certlist, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);

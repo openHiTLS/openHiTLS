@@ -164,24 +164,27 @@ int32_t X509_VerifyHostnameWithSan(HITLS_X509_Cert *cert, const char *hostname,
     if (ret != HITLS_PKI_SUCCESS || san.names == NULL) {
         return HITLS_X509_ERR_EXT_NOT_FOUND;
     }
-    ret = HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
-    HITLS_X509_GeneralName *gn = BSL_LIST_GET_FIRST(san.names);
-    while (gn != NULL) {
-        if (gn->type == HITLS_X509_GN_DNS) {
-            char *dnsName = (char *)BSL_SAL_Malloc(gn->value.dataLen + 1);
-            if (dnsName == NULL) {
-                BSL_LIST_FREE(san.names, NULL);
-                return BSL_MALLOC_FAIL;
-            }
-            (void)memcpy_s(dnsName, gn->value.dataLen + 1, gn->value.data, gn->value.dataLen);
-            dnsName[gn->value.dataLen] = '\0';
-            ret = MatchCb(dnsName, hostname);
-            BSL_SAL_Free(dnsName);
-            if (ret == HITLS_PKI_SUCCESS) {
-                break;
-            }
+
+    ret = HITLS_X509_ERR_EXT_NOT_FOUND;
+    for (BslListNode *nameNode = BSL_LIST_FirstNode(san.names); nameNode != NULL;
+        nameNode = BSL_LIST_GetNextNode(san.names, nameNode)) {
+        HITLS_X509_GeneralName *gn = (HITLS_X509_GeneralName *)BSL_LIST_GetData(nameNode);
+        if (gn == NULL || gn->type != HITLS_X509_GN_DNS) {
+            continue;
         }
-        gn = BSL_LIST_GET_NEXT(san.names);
+
+        char *dnsName = (char *)BSL_SAL_Malloc(gn->value.dataLen + 1);
+        if (dnsName == NULL) {
+            HITLS_X509_ClearSubjectAltName(&san);
+            return BSL_MALLOC_FAIL;
+        }
+        (void)memcpy_s(dnsName, gn->value.dataLen + 1, gn->value.data, gn->value.dataLen);
+        dnsName[gn->value.dataLen] = '\0';
+        ret = MatchCb(dnsName, hostname);
+        BSL_SAL_Free(dnsName);
+        if (ret == HITLS_PKI_SUCCESS) {
+            break;
+        }
     }
 
     BSL_LIST_FREE(san.names, NULL);

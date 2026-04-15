@@ -437,14 +437,11 @@ static int32_t KdfResult(CRYPT_EAL_KdfCtx *ctx, KdfOpt *kdfOpt)
         return HITLS_APP_CRYPTO_FAIL;
     }
 
-    BSL_UIO *fileOutUio = HITLS_APP_UioOpen(kdfOpt->outFile, 'w', 0);
+    BSL_UIO *fileOutUio = HITLS_APP_UioOpen(kdfOpt->outFile, 'w', kdfOpt->outFile != NULL ? 1 : 0);
     if (fileOutUio == NULL) {
         BSL_SAL_ClearFree(out, outLen);
         AppPrintError("kdf:UioOpen failed\n");
         return HITLS_APP_UIO_FAIL;
-    }
-    if (kdfOpt->outFile != NULL) {
-        BSL_UIO_SetIsUnderlyingClosedByUio(fileOutUio, true);
     }
     ret = HITLS_APP_OptWriteUio(fileOutUio, out, outLen,
         kdfOpt->isBinary == 1 ? HITLS_APP_FORMAT_TEXT: HITLS_APP_FORMAT_HEX);

@@ -31,15 +31,7 @@
 
 HITLS_CERT_Store *HITLS_X509_Adapt_StoreDup(HITLS_CERT_Store *store)
 {
-    int references = 0;
-    int32_t ret = HITLS_X509_StoreCtxCtrl((HITLS_X509_StoreCtx *)store, HITLS_X509_STORECTX_REF_UP, &references,
-        sizeof(int));
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return NULL;
-    }
-
-    return store;
+    return (HITLS_CERT_Store *)HITLS_X509_StoreCtxDup((HITLS_X509_StoreCtx *)store);
 }
 #ifdef HITLS_TLS_CONFIG_CERT_CRL
 static int32_t AddCrlList(HITLS_CERT_Store *store, void *input)
@@ -49,13 +41,13 @@ static int32_t AddCrlList(HITLS_CERT_Store *store, void *input)
     if (crlList == NULL) {
         return HITLS_CERT_STORE_CTRL_ERR_ADD_CRL_LIST;
     }
-    HITLS_X509_Crl *tempCrl = (HITLS_X509_Crl *)BSL_LIST_GET_FIRST(crlList);
-    while (tempCrl != NULL) {
+    for (BslListNode *crlNode = BSL_LIST_FirstNode(crlList); crlNode != NULL;
+        crlNode = BSL_LIST_GetNextNode(crlList, crlNode)) {
+        HITLS_X509_Crl *tempCrl = (HITLS_X509_Crl *)BSL_LIST_GetData(crlNode);
         int32_t ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_CRL, tempCrl, 0);
         if (ret != CRYPT_SUCCESS) {
             return ret;
         }
-        tempCrl = (HITLS_X509_Crl *)BSL_LIST_GET_NEXT(crlList);
     }
 
     return HITLS_SUCCESS;

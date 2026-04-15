@@ -17,10 +17,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <pthread.h>
 #include <string.h>
 #include "securec.h"
 #include "bsl_errno.h"
-#include "bsl_list.h"
 #include "bsl_list_internal.h"
 
 /* END_HEADER */
@@ -37,6 +37,21 @@ typedef struct userListData {
     int id;
     char name[MAX_NAME_LEN];
 } UserData;
+
+typedef struct {
+    BslList *list;
+    const char *expectSeq;
+    const char *searchName;
+    int32_t result;
+} ListStatelessThreadArg;
+
+typedef struct {
+    BslList *list;
+    const char *expectForwardSeq;
+    const char *expectReverseSeq;
+    const char *searchName;
+    int32_t result;
+} ListBidirectionalThreadArg;
 
 static void EmptyFree(void *data)
 {
@@ -125,6 +140,77 @@ static void *UserDataCopy(const void *a)
         return NULL;
     }
     return dest;
+}
+
+static void ListStatelessTraverseThread(void *arg)
+{
+    ListStatelessThreadArg *threadArg = (ListStatelessThreadArg *)arg;
+    char seq[64] = {0};
+    threadArg->result = BSL_INTERNAL_EXCEPTION;
+
+    for (uint32_t round = 0; round < 200; round++) {
+        size_t used = 0;
+        seq[0] = '\0';
+        for (BslListNode *node = BSL_LIST_FirstNode(threadArg->list); node != NULL;
+            node = BSL_LIST_GetNextNode(threadArg->list, node)) {
+            UserData *data = (UserData *)BSL_LIST_GetData(node);
+            ASSERT_TRUE(data != NULL);
+            int ret = snprintf(seq + used, sizeof(seq) - used, "%d-", data->id);
+            ASSERT_TRUE(ret > 0 && (size_t)ret < sizeof(seq) - used);
+            used += (size_t)ret;
+        }
+        ASSERT_TRUE(strcmp(seq, threadArg->expectSeq) == 0);
+
+        UserData *found = (UserData *)BSL_LIST_SearchDataConst(threadArg->list, threadArg->searchName,
+            UserDataCompareByName, NULL);
+        ASSERT_TRUE(found != NULL);
+        ASSERT_TRUE(strcmp(found->name, threadArg->searchName) == 0);
+    }
+    threadArg->result = BSL_SUCCESS;
+EXIT:
+    return;
+}
+
+static void ListBidirectionalTraverseThread(void *arg)
+{
+    ListBidirectionalThreadArg *threadArg = (ListBidirectionalThreadArg *)arg;
+    char forwardSeq[64] = {0};
+    char reverseSeq[64] = {0};
+    threadArg->result = BSL_INTERNAL_EXCEPTION;
+
+    for (uint32_t round = 0; round < 200; round++) {
+        size_t used = 0;
+        forwardSeq[0] = '\0';
+        for (BslListNode *node = BSL_LIST_FirstNode(threadArg->list); node != NULL;
+            node = BSL_LIST_GetNextNode(threadArg->list, node)) {
+            UserData *data = (UserData *)BSL_LIST_GetData(node);
+            ASSERT_TRUE(data != NULL);
+            int ret = snprintf(forwardSeq + used, sizeof(forwardSeq) - used, "%d-", data->id);
+            ASSERT_TRUE(ret > 0 && (size_t)ret < sizeof(forwardSeq) - used);
+            used += (size_t)ret;
+        }
+        ASSERT_TRUE(strcmp(forwardSeq, threadArg->expectForwardSeq) == 0);
+
+        used = 0;
+        reverseSeq[0] = '\0';
+        for (BslListNode *node = BSL_LIST_LastNode(threadArg->list); node != NULL;
+            node = BSL_LIST_GetPrevNode(node)) {
+            UserData *data = (UserData *)BSL_LIST_GetData(node);
+            ASSERT_TRUE(data != NULL);
+            int ret = snprintf(reverseSeq + used, sizeof(reverseSeq) - used, "%d-", data->id);
+            ASSERT_TRUE(ret > 0 && (size_t)ret < sizeof(reverseSeq) - used);
+            used += (size_t)ret;
+        }
+        ASSERT_TRUE(strcmp(reverseSeq, threadArg->expectReverseSeq) == 0);
+
+        UserData *found = (UserData *)BSL_LIST_SearchDataConst(threadArg->list, threadArg->searchName,
+            UserDataCompareByName, NULL);
+        ASSERT_TRUE(found != NULL);
+        ASSERT_TRUE(strcmp(found->name, threadArg->searchName) == 0);
+    }
+    threadArg->result = BSL_SUCCESS;
+EXIT:
+    return;
 }
 
 /**
@@ -338,6 +424,100 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test SDV_BSL_LIST_DETACH_DURING_TRAVERSE_FUNC_TC001
+ * @title  list detach during traversal test
+ * @precon nan
+ * @brief
+ *    1. Call BSL_LIST_AddElement to add data to the linked list. Expected result 1 is obtained.
+ *    2. Traverse with `for (node = FirstNode(list); node != NULL; node = GetNextNode(list, node))`.
+ *       When the middle node is matched, call BSL_LIST_DetachNode(&node) and exit the traversal.
+ *       Expected result 2 is obtained.
+ *    3. Repeat step 2 for the last node. Expected result 3 is obtained.
+ * @expect
+ *    1. BSL_SUCCESS
+ *    2. The matched middle node is detached, the iterator is updated to the original next node,
+ *       and the remaining order is correct.
+ *    3. The matched last node is detached, the iterator is updated to the previous node,
+ *       and the remaining order is correct.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_LIST_DETACH_DURING_TRAVERSE_FUNC_TC001(void)
+{
+    BslList *testList = BSL_LIST_New(MAX_NAME_LEN);
+    ASSERT_TRUE(testList != NULL);
+
+    UserData data[4] = {
+        {1, "Alice"},
+        {2, "Bob"},
+        {3, "Celina"},
+        {4, "Dave"}
+    };
+
+    for (int i = 0; i < 4; i++) {
+        ASSERT_TRUE(BSL_LIST_AddElement(testList, &data[i], BSL_LIST_POS_AFTER) == BSL_SUCCESS);
+    }
+
+    UserData *detachedData = NULL;
+    BslListNode *iterAfterDetach = NULL;
+    bool detached = false;
+    for (BslListNode *node = BSL_LIST_FirstNode(testList); node != NULL;
+        node = BSL_LIST_GetNextNode(testList, node)) {
+        UserData *curr = (UserData *)BSL_LIST_GetData(node);
+        ASSERT_TRUE(curr != NULL);
+        if (strcmp(curr->name, "Bob") != 0) {
+            continue;
+        }
+        detachedData = curr;
+        BSL_LIST_DetachNode(testList, &node);
+        iterAfterDetach = node;
+        detached = true;
+        /* DetachNode updates the iterator; exit immediately like SetEntityCert to avoid double advance. */
+        break;
+    }
+    ASSERT_TRUE(detached);
+    ASSERT_TRUE(detachedData == &data[1]);
+    ASSERT_TRUE(iterAfterDetach != NULL);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_GetData(iterAfterDetach), &data[2]) == 0);
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 3);
+    ASSERT_TRUE(BSL_LIST_SearchDataConst(testList, "Bob", UserDataCompareByName, NULL) == NULL);
+
+    BslListNode *first = BSL_LIST_FirstNode(testList);
+    ASSERT_TRUE(first != NULL);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_GetData(first), &data[0]) == 0);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_GetData(BSL_LIST_GetNextNode(testList, first)), &data[2]) == 0);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_GetData(BSL_LIST_LastNode(testList)), &data[3]) == 0);
+
+    detachedData = NULL;
+    iterAfterDetach = NULL;
+    detached = false;
+    for (BslListNode *node = BSL_LIST_FirstNode(testList); node != NULL;
+        node = BSL_LIST_GetNextNode(testList, node)) {
+        UserData *curr = (UserData *)BSL_LIST_GetData(node);
+        ASSERT_TRUE(curr != NULL);
+        if (strcmp(curr->name, "Dave") != 0) {
+            continue;
+        }
+        detachedData = curr;
+        BSL_LIST_DetachNode(testList, &node);
+        iterAfterDetach = node;
+        detached = true;
+        break;
+    }
+    ASSERT_TRUE(detached);
+    ASSERT_TRUE(detachedData == &data[3]);
+    ASSERT_TRUE(iterAfterDetach != NULL);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_GetData(iterAfterDetach), &data[2]) == 0);
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 2);
+    ASSERT_TRUE(BSL_LIST_SearchDataConst(testList, "Dave", UserDataCompareByName, NULL) == NULL);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_FirstNodeData(testList), &data[0]) == 0);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_GetData(BSL_LIST_LastNode(testList)), &data[2]) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_LIST_FREE(testList, UserDataFree);
+}
+/* END_CASE */
+
+/**
  * @test SDV_BSL_LIST_SEARCH_FUNC_TC001
  * @title  list search test
  * @precon nan
@@ -482,13 +662,19 @@ void SDV_BSL_LIST_COPY_FUNC_TC001(void)
         ASSERT_TRUE(BSL_LIST_AddElement(srcList, &data[i], BSL_LIST_POS_AFTER) == BSL_SUCCESS);
     }
 
-    BslList *destList = BSL_LIST_Copy(srcList, UserDataCopy, UserDataFree);
+    BslListNode *srcCurr = srcList->first->next;
+    ASSERT_TRUE(srcCurr != NULL);
+    srcList->curr = srcCurr;
 
-    UserData *srcTmp = BSL_LIST_GET_FIRST(srcList);
-    UserData *destTmp = BSL_LIST_GET_FIRST(destList);
+    BslList *destList = BSL_LIST_Copy(srcList, UserDataCopy, UserDataFree);
+    ASSERT_TRUE(destList != NULL);
+    ASSERT_TRUE(srcList->curr == srcCurr);
+
+    UserData *srcTmp = (UserData *)BSL_LIST_FirstNodeData(srcList);
+    UserData *destTmp = (UserData *)BSL_LIST_FirstNodeData(destList);
     ASSERT_TRUE(UserDataCompare((const void *)srcTmp, (const void *)destTmp) == 0);
-    srcTmp = BSL_LIST_GET_LAST(srcList);
-    destTmp = BSL_LIST_GET_LAST(destList);
+    srcTmp = (UserData *)BSL_LIST_GetData(BSL_LIST_LastNode(srcList));
+    destTmp = (UserData *)BSL_LIST_GetData(BSL_LIST_LastNode(destList));
     ASSERT_TRUE(UserDataCompare((const void *)srcTmp, (const void *)destTmp) == 0);
     ASSERT_TRUE(UserDataCompare(destList->first->next->data, srcList->first->next->data) == 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
@@ -1073,3 +1259,161 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_LIST_STATELESS_HELPER_FUNC_TC001
+ * @title test stateless list helper functions
+ * @brief
+ *    1. Create a shared list and add elements by POS_END.
+ *    2. Call BSL_LIST_LastNode to obtain the tail node.
+ *    3. Call BSL_LIST_SearchDataConst to search by comparator.
+ *    4. Call BSL_LIST_SearchDataConst with cmp == NULL on a primitive list.
+ * @expect
+ *    1. List creation and insertion succeed.
+ *    2. The returned tail node matches the last inserted element.
+ *    3. Search succeeds without changing the list curr pointer.
+ *    4. Primitive search succeeds without changing the list curr pointer.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_LIST_STATELESS_HELPER_FUNC_TC001(void)
+{
+    BslList *testList = BSL_LIST_New(MAX_NAME_LEN);
+    BslList *rawList = NULL;
+    ASSERT_TRUE(testList != NULL);
+    UserData data[5] = {
+        {1, "Alice"},
+        {2, "Bob"},
+        {3, "Celina"},
+        {4, "Dave"},
+        {5, "Emma"}
+    };
+    for (uint32_t i = 0; i < sizeof(data) / sizeof(data[0]); i++) {
+        ASSERT_TRUE(BSL_LIST_AddElement(testList, &data[i], BSL_LIST_POS_END) == BSL_SUCCESS);
+    }
+
+    BslListNode *curr = testList->curr;
+    BslListNode *lastNode = BSL_LIST_LastNode(testList);
+    ASSERT_TRUE(lastNode != NULL);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_GetData(lastNode), &data[4]) == 0);
+
+    int32_t err = 0;
+    UserData *found = (UserData *)BSL_LIST_SearchDataConst(testList, "Dave", UserDataCompareByName, &err);
+    ASSERT_TRUE(found != NULL);
+    ASSERT_TRUE(UserDataCompare(found, &data[3]) == 0);
+    ASSERT_TRUE(err == 0);
+    ASSERT_TRUE(testList->curr == curr);
+
+    int rawData[4] = {7, 9, 11, 13};
+    rawList = BSL_LIST_New(sizeof(int));
+    ASSERT_TRUE(rawList != NULL);
+    for (uint32_t i = 0; i < sizeof(rawData) / sizeof(rawData[0]); i++) {
+        ASSERT_TRUE(BSL_LIST_AddElement(rawList, &rawData[i], BSL_LIST_POS_END) == BSL_SUCCESS);
+    }
+    curr = rawList->curr;
+    int key = 11;
+    int *rawFound = (int *)BSL_LIST_SearchDataConst(rawList, &key, NULL, &err);
+    ASSERT_TRUE(rawFound != NULL);
+    ASSERT_TRUE(*rawFound == key);
+    ASSERT_TRUE(rawList->curr == curr);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_LIST_FREE(rawList, EmptyFree);
+    BSL_LIST_FREE(testList, UserDataFree);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_LIST_STATELESS_MULTI_THREAD_FUNC_TC001
+ * @title test stateless traversal and search on a shared list
+ * @brief
+ *    1. Create one shared list.
+ *    2. Start two threads that traverse the list with node-based APIs and search with BSL_LIST_SearchDataConst.
+ *    3. Wait for both threads and verify the results.
+ * @expect
+ *    1. The threads complete successfully.
+ *    2. The traversal order and search results remain stable across threads.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_LIST_STATELESS_MULTI_THREAD_FUNC_TC001(void)
+{
+    TestMemInit();
+    BslList *testList = BSL_LIST_New(MAX_NAME_LEN);
+    pthread_t thrd[2] = {0};
+    ListStatelessThreadArg arg[2];
+    ASSERT_TRUE(testList != NULL);
+    UserData data[5] = {
+        {1, "Alice"},
+        {2, "Bob"},
+        {3, "Celina"},
+        {4, "Dave"},
+        {5, "Emma"}
+    };
+    for (uint32_t i = 0; i < sizeof(data) / sizeof(data[0]); i++) {
+        ASSERT_TRUE(BSL_LIST_AddElement(testList, &data[i], BSL_LIST_POS_END) == BSL_SUCCESS);
+    }
+
+    ListStatelessThreadArg initArg[2] = {
+        {testList, "1-2-3-4-5-", "Dave", BSL_SUCCESS},
+        {testList, "1-2-3-4-5-", "Celina", BSL_SUCCESS}
+    };
+    (void)memcpy_s(arg, sizeof(arg), initArg, sizeof(initArg));
+    for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
+        ASSERT_TRUE(pthread_create(&thrd[i], NULL, (void *)ListStatelessTraverseThread, &arg[i]) == 0);
+    }
+    for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
+        pthread_join(thrd[i], NULL);
+        ASSERT_TRUE(arg[i].result == BSL_SUCCESS);
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_LIST_FREE(testList, UserDataFree);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_LIST_STATELESS_BIDIRECTIONAL_MULTI_THREAD_FUNC_TC001
+ * @title test shared list bidirectional traversal on multiple threads
+ * @brief
+ *    1. Create one shared list.
+ *    2. Start two threads that traverse the list with FirstNode/NextNode and LastNode/PrevNode.
+ *    3. Search on the shared list concurrently with BSL_LIST_SearchDataConst.
+ *    4. Wait for both threads and verify the traversal order remains stable.
+ * @expect
+ *    1. The threads complete successfully.
+ *    2. Forward and reverse traversal results remain stable across threads.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_LIST_STATELESS_BIDIRECTIONAL_MULTI_THREAD_FUNC_TC001(void)
+{
+    TestMemInit();
+    BslList *testList = BSL_LIST_New(MAX_NAME_LEN);
+    pthread_t thrd[2] = {0};
+    ListBidirectionalThreadArg arg[2];
+    ASSERT_TRUE(testList != NULL);
+    UserData data[5] = {
+        {1, "Alice"},
+        {2, "Bob"},
+        {3, "Celina"},
+        {4, "Dave"},
+        {5, "Emma"}
+    };
+    for (uint32_t i = 0; i < sizeof(data) / sizeof(data[0]); i++) {
+        ASSERT_TRUE(BSL_LIST_AddElement(testList, &data[i], BSL_LIST_POS_END) == BSL_SUCCESS);
+    }
+
+    ListBidirectionalThreadArg initArg[2] = {
+        {testList, "1-2-3-4-5-", "5-4-3-2-1-", "Alice", BSL_SUCCESS},
+        {testList, "1-2-3-4-5-", "5-4-3-2-1-", "Emma", BSL_SUCCESS}
+    };
+    (void)memcpy_s(arg, sizeof(arg), initArg, sizeof(initArg));
+    for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
+        ASSERT_TRUE(pthread_create(&thrd[i], NULL, (void *)ListBidirectionalTraverseThread, &arg[i]) == 0);
+    }
+    for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
+        pthread_join(thrd[i], NULL);
+        ASSERT_TRUE(arg[i].result == BSL_SUCCESS);
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_LIST_FREE(testList, UserDataFree);
+}
+/* END_CASE */

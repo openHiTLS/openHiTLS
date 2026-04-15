@@ -96,7 +96,7 @@ int32_t ENTROPY_SeedPoolAddEs(ENTROPY_SeedPool *pool, const CRYPT_EAL_EsPara *pa
      * The header insertion method is used to add an entropy source to ensure that the entropy source added by the
      * invoker is used first when the entropy data is obtained.
      */
-    int32_t ret = BSL_LIST_AddElement(pool->esList, es, BSL_LIST_POS_BEFORE);
+    int32_t ret = BSL_LIST_AddElement(pool->esList, es, BSL_LIST_POS_BEGIN);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_Free(es);
         BSL_ERR_PUSH_ERROR(ret);
@@ -146,7 +146,9 @@ uint32_t ENTROPY_SeedPoolCollect(ENTROPY_SeedPool *pool, bool isNpesUsed, uint32
     uint32_t bufLen = *len;
     uint8_t *buf = data;
     uint32_t curEntropy = 0;
-    for (ENTROPY_Source *es = BSL_LIST_GET_FIRST(pool->esList); es != NULL; es = BSL_LIST_GET_NEXT(pool->esList)) {
+    for (BslListNode *node = BSL_LIST_FirstNode(pool->esList); node != NULL;
+        node = BSL_LIST_GetNextNode(pool->esList, node)) {
+        ENTROPY_Source *es = BSL_LIST_GetData(node);
         if (!isNpesUsed && !es->isPhysical) {
             continue;
         }

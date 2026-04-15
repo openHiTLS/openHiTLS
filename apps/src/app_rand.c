@@ -152,12 +152,9 @@ static int32_t RandNumOut(RandCmdOpt *randCmdOpt)
 #endif
     int ret = HITLS_APP_SUCCESS;
     BSL_UIO *uio;
-    uio = HITLS_APP_UioOpen(randCmdOpt->outFile, 'w', 0);
+    uio = HITLS_APP_UioOpen(randCmdOpt->outFile, 'w', randCmdOpt->outFile != NULL ? 1 : 0);
     if (uio == NULL) {
         return HITLS_APP_UIO_FAIL;
-    }
-    if (randCmdOpt->outFile != NULL) {
-        BSL_UIO_SetIsUnderlyingClosedByUio(uio, true);
     }
     int32_t randNumLen = randCmdOpt->randNumLen;
     uint8_t outBuf[MAX_RANDOM_LEN] = {0};

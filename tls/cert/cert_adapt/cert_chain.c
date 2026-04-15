@@ -69,7 +69,6 @@ HITLS_CERT_Chain *SAL_CERT_ChainDup(CERT_MgrCtx *mgrCtx, HITLS_CERT_Chain *chain
 {
     int32_t ret;
     HITLS_CERT_X509 *dupCert = NULL;
-    HITLS_CERT_X509 *currCert = NULL;
 
     if (BSL_LIST_COUNT(chain) < 0) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16070, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -84,7 +83,9 @@ HITLS_CERT_Chain *SAL_CERT_ChainDup(CERT_MgrCtx *mgrCtx, HITLS_CERT_Chain *chain
         return NULL;
     }
 
-    for (currCert = BSL_LIST_GET_FIRST(chain); currCert != NULL; currCert = BSL_LIST_GET_NEXT(chain)) {
+    for (BslListNode *chainNode = BSL_LIST_FirstNode(chain); chainNode != NULL;
+        chainNode = BSL_LIST_GetNextNode(chain, chainNode)) {
+        HITLS_CERT_X509 *currCert = (HITLS_CERT_X509 *)BSL_LIST_GetData(chainNode);
         dupCert = SAL_CERT_X509Dup(mgrCtx, currCert);
         if (dupCert == NULL) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15013, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

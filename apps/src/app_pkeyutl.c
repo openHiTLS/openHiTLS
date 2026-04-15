@@ -509,8 +509,8 @@ static int32_t PkeyEncrypt(PkeyUtlOpt *pkeyUtlOpt)
             break;
         }
 
-        BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(pkeyUtlOpt->outFile, 'w', 0);  // overwrite the original content
-        BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
+        BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(pkeyUtlOpt->outFile, 'w',
+            pkeyUtlOpt->outFile != NULL ? 1 : 0);  // overwrite the original content
         if (fileWriteUio == NULL) {
             AppPrintError("Failed to open the outfile\n");
             ret = HITLS_APP_UIO_FAIL;
@@ -600,8 +600,8 @@ static int32_t PkeyDecrypt(PkeyUtlOpt *pkeyUtlOpt)
             break;
         }
 
-        BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(pkeyUtlOpt->outFile, 'w', 0);
-        BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
+        BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(pkeyUtlOpt->outFile, 'w',
+            pkeyUtlOpt->outFile != NULL ? 1 : 0);
         if (fileWriteUio == NULL) {
             AppPrintError("pkeyutl: Failed to open the output file for plaintext.\n");
             ret = HITLS_APP_UIO_FAIL;
@@ -714,7 +714,7 @@ static int32_t GetDataFromP12(AppProvider *provider, const char *file, uint8_t *
         AppPrintError("pkeyutl: Failed to get secret bags, errCode: 0x%x.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
-    HITLS_PKCS12_Bag *bag = BSL_LIST_GET_FIRST(bagList);
+    HITLS_PKCS12_Bag *bag = BSL_LIST_FirstNodeData(bagList);
     BSL_Buffer value = {data, *dataLen};
     ret = HITLS_PKCS12_BagCtrl(bag, HITLS_PKCS12_BAG_GET_VALUE, &value, 0);
     HITLS_PKCS12_Free(p12);
@@ -916,8 +916,8 @@ static int32_t PkeyDerive(PkeyUtlOpt *pkeyUtlOpt)
         }
 
         if (pkeyUtlOpt->outRFile != NULL) {
-            BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(pkeyUtlOpt->outRFile, 'w', 0);
-            BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
+            BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(pkeyUtlOpt->outRFile, 'w',
+                pkeyUtlOpt->outRFile != NULL ? 1 : 0);
             if (fileWriteUio == NULL) {
                 AppPrintError("pkeyutl: Failed to open the output file for R.\n");
                 ret = HITLS_APP_UIO_FAIL;
@@ -952,8 +952,8 @@ static int32_t PkeyDerive(PkeyUtlOpt *pkeyUtlOpt)
                 ret = HITLS_APP_CRYPTO_FAIL;
                 break;
             }
-            BSL_UIO *shareFileUio = HITLS_APP_UioOpen(pkeyUtlOpt->outFile, 'w', 0);
-            BSL_UIO_SetIsUnderlyingClosedByUio(shareFileUio, true);
+            BSL_UIO *shareFileUio = HITLS_APP_UioOpen(pkeyUtlOpt->outFile, 'w',
+                pkeyUtlOpt->outFile != NULL ? 1 : 0);
             if (shareFileUio == NULL) {
                 AppPrintError("pkeyutl: Failed to open the output file for plaintext.\n");
                 ret = HITLS_APP_UIO_FAIL;

@@ -25,7 +25,6 @@
 extern "C" {
 #endif
 
-
 /* Sort the list in ascending order of content */
 int32_t BSL_ListSortInternal(BslList *pList, int32_t((*cmp)(const void *, const void *)));
 

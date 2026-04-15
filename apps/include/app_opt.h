@@ -232,7 +232,8 @@ int32_t HITLS_APP_OptGetFormatType(const char *valueS, HITLS_ValueType type, BSL
  *
  * @param   filename [IN] name of input file
  * @param   mode     [IN] method of opening a file
- * @param   flag     [OUT] whether the closing of the standard input/output window is bound to the UIO
+ * @param   flag     [IN] ownership flag: 0 means borrowed handle, 1 means closed by UIO.
+ *                        When filename is NULL, stdin/stdout is always borrowed and flag is ignored.
  *
  * @retval  BSL_UIO * when succeeded, NULL when failed
 */

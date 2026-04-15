@@ -84,7 +84,7 @@ static int32_t DecodeCertFile(uint8_t *infileBuf, uint64_t infileBufLen, HITLS_X
 
 static int32_t VerifyCrlFile(const char *caFile, const HITLS_X509_Crl *crl)
 {
-    BSL_UIO *readUio = HITLS_APP_UioOpen(caFile, 'r', 0);
+    BSL_UIO *readUio = HITLS_APP_UioOpen(caFile, 'r', caFile != NULL ? 1 : 0);
     if (readUio == NULL) {
         AppPrintError("Failed to open the file <%s>, No such file or directory\n", caFile);
         return HITLS_APP_UIO_FAIL;
@@ -92,7 +92,6 @@ static int32_t VerifyCrlFile(const char *caFile, const HITLS_X509_Crl *crl)
     uint8_t *caFileBuf = NULL;
     uint64_t caFileBufLen = 0;
     int32_t ret = HITLS_APP_OptReadUio(readUio, &caFileBuf, &caFileBufLen, MAX_CRLFILE_SIZE);
-    BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
     BSL_UIO_Free(readUio);
     if (ret != HITLS_APP_SUCCESS || caFileBuf == NULL || caFileBufLen == 0) {
         BSL_SAL_FREE(caFileBuf);
@@ -250,13 +249,12 @@ int32_t  HITLS_CrlMain(int argc, char *argv[])
         mainRet = HITLS_APP_DECODE_FAIL;
         goto end;
     }
-    crlInfo.uio = HITLS_APP_UioOpen(crlInfo.outfile, 'w', 0);
+    crlInfo.uio = HITLS_APP_UioOpen(crlInfo.outfile, 'w', crlInfo.outfile != NULL ? 1 : 0);
     if (crlInfo.uio == NULL) {
         AppPrintError("Failed to open the standard output.");
         mainRet = HITLS_APP_UIO_FAIL;
         goto end;
     }
-    BSL_UIO_SetIsUnderlyingClosedByUio(crlInfo.uio, !(crlInfo.outfile == NULL));
 
     if (crlInfo.nextupdate == true) {
         mainRet = PrintNextUpdate(crlInfo.uio, crl);

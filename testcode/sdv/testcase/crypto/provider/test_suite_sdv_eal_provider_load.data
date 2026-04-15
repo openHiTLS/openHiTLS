@@ -4,6 +4,8 @@ SDV_CRYPTO_PROVIDER_LOAD_TC002
 SDV_CRYPTO_PROVIDER_LOAD_TC002:
 SDV_CRYPTO_PROVIDER_LOAD_TC003
 SDV_CRYPTO_PROVIDER_LOAD_TC003:"provider_test_data/path1":BSL_SAL_LIB_FMT_LIBSO:"provider_load_test1":"provider=test1,compare1=one,cpmpare3=three"
+SDV_CRYPTO_PROVIDER_LIST_MULTI_THREAD_TC001
+SDV_CRYPTO_PROVIDER_LIST_MULTI_THREAD_TC001:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #1
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001:"provider_test_data/path1":"provider_load_test1":"provider_load_test2":2:"provider=test1":1415926
 SDV_CRYPTO_PROVIDER_LOAD_COMPARE_TC001  #2

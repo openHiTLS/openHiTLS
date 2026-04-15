@@ -372,7 +372,7 @@ BslList *DefaultGetSectionNode(BslList *sectionList, const char *section)
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return NULL;
     }
-    BSL_CONF_Section *sectionNode = BSL_LIST_Search(sectionList, section, CmpSectionFunc, NULL);
+    BSL_CONF_Section *sectionNode = BSL_LIST_SearchDataConst(sectionList, section, CmpSectionFunc, NULL);
     if (sectionNode == NULL || sectionNode->keyValueList == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_CONF_GET_FAIL);
         return NULL;
@@ -386,12 +386,12 @@ int32_t DefaultGetString(BslList *sectionList, const char *section, const char *
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
-    BSL_CONF_Section *secCtx = BSL_LIST_Search(sectionList, section, CmpSectionFunc, NULL);
+    BSL_CONF_Section *secCtx = BSL_LIST_SearchDataConst(sectionList, section, CmpSectionFunc, NULL);
     if (secCtx == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_CONF_GET_FAIL);
         return BSL_CONF_GET_FAIL;
     }
-    BSL_CONF_KeyValue *keyValue = BSL_LIST_Search(secCtx->keyValueList, key, CmpKeyFunc, NULL);
+    BSL_CONF_KeyValue *keyValue = BSL_LIST_SearchDataConst(secCtx->keyValueList, key, CmpKeyFunc, NULL);
     if (keyValue == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_CONF_VALUE_NOT_FOUND);
         return BSL_CONF_VALUE_NOT_FOUND;
@@ -462,19 +462,19 @@ static int32_t SetSection(BslList *sectionList, const char *section, const char 
             BSL_ERR_PUSH_ERROR(BSL_CONF_CONTEXT_ERR);
             return BSL_CONF_CONTEXT_ERR;
         }
-        secCtx = BSL_LIST_Search(sectionList, "default", CmpSectionFunc, NULL);
+        secCtx = BSL_LIST_SearchDataConst(sectionList, "default", CmpSectionFunc, NULL);
         if (secCtx == NULL || secCtx->keyValueList == NULL) {
             BSL_ERR_PUSH_ERROR(BSL_CONF_GET_FAIL);
             return BSL_CONF_GET_FAIL;
         }
-        keyValue = BSL_LIST_Search(secCtx->keyValueList, key, CmpKeyFunc, NULL);
+        keyValue = BSL_LIST_SearchDataConst(secCtx->keyValueList, key, CmpKeyFunc, NULL);
         if (keyValue == NULL) {
             return AddKeyValue(secCtx->keyValueList, key, value);
         } else {
             return UpdateKeyValue(keyValue, value);
         }
     } else {
-        secCtx = BSL_LIST_Search(sectionList, section, CmpSectionFunc, NULL);
+        secCtx = BSL_LIST_SearchDataConst(sectionList, section, CmpSectionFunc, NULL);
         if (secCtx == NULL) {
             return AddSection(sectionList, section, key, value);
         }
@@ -485,7 +485,7 @@ static int32_t SetSection(BslList *sectionList, const char *section, const char 
             BSL_ERR_PUSH_ERROR(BSL_CONF_GET_FAIL);
             return BSL_CONF_GET_FAIL;
         }
-        keyValue = BSL_LIST_Search(secCtx->keyValueList, key, CmpKeyFunc, NULL);
+        keyValue = BSL_LIST_SearchDataConst(secCtx->keyValueList, key, CmpKeyFunc, NULL);
         if (keyValue == NULL) {
             return AddKeyValue(secCtx->keyValueList, key, value);
         } else {

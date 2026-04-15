@@ -91,8 +91,9 @@ void RecBufListFree(RecBufList *bufList)
 
 int32_t RecBufListDereference(RecBufList *bufList)
 {
-    RecBuf *recBuf = (RecBuf *)BSL_LIST_GET_FIRST(bufList);
-    while (recBuf != NULL) {
+    for (BslListNode *node = BSL_LIST_FirstNode(bufList); node != NULL;
+        node = BSL_LIST_GetNextNode(bufList, node)) {
+        RecBuf *recBuf = (RecBuf *)BSL_LIST_GetData(node);
         if (!recBuf->isHoldBuffer) {
             uint8_t *buf = (uint8_t *)BSL_SAL_Dump(recBuf->buf, recBuf->bufSize);
             if (buf == NULL) {
@@ -104,19 +105,19 @@ int32_t RecBufListDereference(RecBufList *bufList)
             recBuf->buf = buf;
             recBuf->isHoldBuffer = true;
         }
-        recBuf = (RecBuf *)BSL_LIST_GET_NEXT(bufList);
     }
     return HITLS_SUCCESS;
 }
 
 bool RecBufListEmpty(RecBufList *bufList)
 {
-    return BSL_LIST_GET_FIRST(bufList) == NULL;
+    return BSL_LIST_FirstNode(bufList) == NULL;
 }
 
 int32_t RecBufListGetBuffer(RecBufList *bufList, uint8_t *buf, uint32_t bufLen, uint32_t *getLen, bool isPeek)
 {
-    RecBuf *recBuf = (RecBuf *)BSL_LIST_GET_FIRST(bufList);
+    BslListNode *node = BSL_LIST_FirstNode(bufList);
+    RecBuf *recBuf = (RecBuf *)BSL_LIST_GetData(node);
     if (recBuf == NULL || recBuf->buf == NULL) {
         *getLen = 0;
         return HITLS_SUCCESS;
@@ -125,7 +126,7 @@ int32_t RecBufListGetBuffer(RecBufList *bufList, uint8_t *buf, uint32_t bufLen, 
     uint32_t copyLen = (remain > bufLen) ? bufLen : remain;
     if (copyLen == 0) {
         if (recBuf->start == recBuf->end) {
-            BSL_LIST_DeleteCurrent(bufList, (void(*)(void*))RecBufFree);
+            BSL_LIST_DeleteNode(bufList, node, (void(*)(void*))RecBufFree);
         }
         *getLen = 0;
         return HITLS_SUCCESS;
@@ -143,7 +144,7 @@ int32_t RecBufListGetBuffer(RecBufList *bufList, uint8_t *buf, uint32_t bufLen, 
     }
     *getLen = copyLen;
     if (recBuf->start == recBuf->end) {
-        BSL_LIST_DeleteCurrent(bufList, (void(*)(void*))RecBufFree);
+        BSL_LIST_DeleteNode(bufList, node, (void(*)(void*))RecBufFree);
     }
     return HITLS_SUCCESS;
 }

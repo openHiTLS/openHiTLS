@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include "securec.h"
 #include "crypt_errno.h"
-#include "bsl_list_internal.h"
+#include "bsl_list.h"
 #include "bsl_err_internal.h"
 #include "es_noise_source.h"
 
@@ -98,7 +98,7 @@ BslList *ES_NsListCreat(void)
     if (jitterCtx == NULL) {
         goto ERR;
     }
-    ret = BSL_LIST_AddElement(ns, jitterCtx, BSL_LIST_POS_AFTER);
+    ret = BSL_LIST_AddElement(ns, jitterCtx, BSL_LIST_POS_END);
     if (ret != CRYPT_SUCCESS) {
         ES_NsFree(jitterCtx);
         goto ERR;
@@ -109,7 +109,7 @@ BslList *ES_NsListCreat(void)
     if (stampCtx == NULL) {
         goto ERR;
     }
-    ret = BSL_LIST_AddElement(ns, stampCtx, BSL_LIST_POS_AFTER);
+    ret = BSL_LIST_AddElement(ns, stampCtx, BSL_LIST_POS_END);
     if (ret != CRYPT_SUCCESS) {
         ES_NsFree(stampCtx);
         goto ERR;
@@ -127,9 +127,9 @@ int32_t ES_NsListInit(BslList *nsList, bool enableTest)
         return CRYPT_ENTROPY_ES_NO_NS;
     }
     bool nsUsed = false;
-    ES_NoiseSource *ns = NULL;
     BSL_ERR_SET_MARK();
-    for (ns = BSL_LIST_GET_FIRST(nsList); ns != NULL; ns = BSL_LIST_GET_NEXT(nsList)) {
+    for (BslListNode *node = BSL_LIST_FirstNode(nsList); node != NULL; node = BSL_LIST_GetNextNode(nsList, node)) {
+        ES_NoiseSource *ns = BSL_LIST_GetData(node);
         /*
          * If the health check is automatically performed when the noise source is generated, no additional health
          * check is required. Otherwise, determine whether to perform the health check based on the configuration.
@@ -167,8 +167,8 @@ void ES_NsListDeinit(BslList *nsList)
     if (BSL_LIST_COUNT(nsList) == 0) {
         return;
     }
-    ES_NoiseSource *ns = NULL;
-    for (ns = BSL_LIST_GET_FIRST(nsList); ns != NULL; ns = BSL_LIST_GET_NEXT(nsList)) {
+    for (BslListNode *node = BSL_LIST_FirstNode(nsList); node != NULL; node = BSL_LIST_GetNextNode(nsList, node)) {
+        ES_NoiseSource *ns = BSL_LIST_GetData(node);
         ns->isInit = false;
         ns->isEnable = false;
         if (ns->deinit != NULL) {
@@ -205,7 +205,7 @@ int32_t ES_NsAdd(BslList *nsList, const char *name, bool autoTest, uint32_t minE
         BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_ES_NS_FULL);
         return CRYPT_ENTROPY_ES_NS_FULL;
     }
-    if (BSL_LIST_SearchEx(nsList, name, (BSL_LIST_PFUNC_CMP)ES_NsComp) != NULL) {
+    if (BSL_LIST_SearchDataConst(nsList, name, (BSL_LIST_PFUNC_CMP)ES_NsComp, NULL) != NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_ES_DUP_NS);
         return CRYPT_ENTROPY_ES_DUP_NS;
     }
@@ -214,7 +214,7 @@ int32_t ES_NsAdd(BslList *nsList, const char *name, bool autoTest, uint32_t minE
         BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_ES_CREATE_ERROR);
         return CRYPT_ENTROPY_ES_CREATE_ERROR;
     }
-    int32_t ret = BSL_LIST_AddElement(nsList, ns, BSL_LIST_POS_AFTER);
+    int32_t ret = BSL_LIST_AddElement(nsList, ns, BSL_LIST_POS_END);
     if (ret != CRYPT_SUCCESS) {
         ES_NsFree(ns);
     }
@@ -228,12 +228,14 @@ int32_t ES_NsRemove(BslList *nsList, const char *name)
         tmpNode = node;
         ES_NoiseSource *ns = BSL_LIST_GetData(tmpNode);
         if (ns == NULL) {
+            node = BSL_LIST_GetNextNode(nsList, tmpNode);
             continue;
         }
         if (strcmp(ns->name, name) == 0) {
             BSL_LIST_DeleteNode(nsList, (const BslListNode *)tmpNode, (BSL_LIST_PFUNC_FREE)ES_NsFree);
             return CRYPT_SUCCESS;
         }
+        /* Advance from the saved node so later delete/free never invalidates the iterator step. */
         node = BSL_LIST_GetNextNode(nsList, tmpNode);
     }
     BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_ES_NS_NOT_FOUND);
@@ -279,8 +281,8 @@ uint32_t ES_NsListGetMinEntropy(BslList *nsList)
         return 0;
     }
     uint32_t minEntropy = 8;
-    ES_NoiseSource *ns = NULL;
-    for (ns = BSL_LIST_GET_FIRST(nsList); ns != NULL; ns = BSL_LIST_GET_NEXT(nsList)) {
+    for (BslListNode *node = BSL_LIST_FirstNode(nsList); node != NULL; node = BSL_LIST_GetNextNode(nsList, node)) {
+        ES_NoiseSource *ns = BSL_LIST_GetData(node);
         minEntropy = (ns->minEntropy < minEntropy) ? ns->minEntropy : minEntropy;
     }
     return minEntropy;

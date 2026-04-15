@@ -17,7 +17,6 @@
 #ifdef HITLS_BSL_LIST
 
 #include <stdlib.h>
-#include "bsl_list.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "bsl_list_internal.h"

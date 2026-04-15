@@ -21,6 +21,7 @@
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "bsl_sal.h"
+#include "bsl_list.h"
 #include "bsl_err_internal.h"
 
 #include "crypt_eal_provider.h"
@@ -114,7 +115,7 @@ static int32_t CheckProviderLoaded(CRYPT_EAL_LibCtx *libCtx, const char *provide
     }
 
     CRYPT_EAL_ProvMgrCtx *tempProviderMgr =
-        (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_Search(libCtx->providers, providerName, ListCompareProvider, NULL);
+        (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_SearchDataConst(libCtx->providers, providerName, ListCompareProvider, NULL);
     if (tempProviderMgr != NULL && increaseRef) {
         // Provider is already loaded, increase the reference count
         int32_t tempCount = 0;
@@ -369,14 +370,14 @@ int32_t CRYPT_EAL_ProviderUnload(CRYPT_EAL_LibCtx *libCtx, BSL_SAL_LibFmtCmd cmd
     }
 
     // Search for the specified provider
-    ret = BSL_SAL_ThreadReadLock(localCtx->lock);
+    ret = BSL_SAL_ThreadWriteLock(localCtx->lock);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_FREE(providerFullName);
         return ret;
     }
-    CRYPT_EAL_ProvMgrCtx *providerMgr =
-        (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_Search(localCtx->providers, providerFullName, ListCompareProvider, NULL);
+    CRYPT_EAL_ProvMgrCtx *providerMgr = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_SearchDataConst(localCtx->providers,
+        providerFullName, ListCompareProvider, NULL);
     BSL_SAL_FREE(providerFullName);
     if (providerMgr == NULL) {
         (void)BSL_SAL_ThreadUnlock(localCtx->lock);

@@ -16,18 +16,29 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_LIST
 
+#include <string.h>
 #include "securec.h"
 #include "bsl_sal.h"
-#include "bsl_list.h"
+#include "bsl_list_internal.h"
 
 BslListNode *BSL_LIST_FirstNode(const BslList *list)
 {
     return list == NULL ? NULL : list->first;
 }
 
+BslListNode *BSL_LIST_LastNode(const BslList *list)
+{
+    return list == NULL ? NULL : list->last;
+}
+
 void *BSL_LIST_GetData(const BslListNode *pstNode)
 {
     return pstNode == NULL ? NULL : pstNode->data;
+}
+
+void *BSL_LIST_FirstNodeData(const BslList *list)
+{
+    return (list == NULL || list->first == NULL) ? NULL : list->first->data;
 }
 
 BslListNode *BSL_LIST_GetNextNode(const BslList *pstList, const BslListNode *pstListNode)
@@ -68,6 +79,40 @@ void *BSL_LIST_GetIndexNodeEx(uint32_t ulIndex, const BslListNode *pstListNode, 
 BslListNode *BSL_LIST_GetPrevNode(const BslListNode *pstListNode)
 {
     return pstListNode == NULL ? NULL : pstListNode->prev;
+}
+
+void *BSL_LIST_SearchDataConst(const BslList *pList, const void *pSearchFor, BSL_LIST_PFUNC_CMP pSearcher, int32_t *pstErr)
+{
+    const BslListNode *pstCurrentNode = NULL;
+
+    if (pList == NULL || pSearchFor == NULL) {
+        return NULL;
+    }
+    if (pstErr != NULL) {
+        *pstErr = 0;
+    }
+    /* Keep the same match order as BSL_LIST_Search, but leave list->curr untouched. */
+    for (pstCurrentNode = pList->first; pstCurrentNode != NULL; pstCurrentNode = pstCurrentNode->next) {
+        if (pSearcher == NULL) {
+            if (memcmp(pstCurrentNode->data, pSearchFor, (uint32_t)pList->dataSize) == 0) {
+                return pstCurrentNode->data;
+            }
+            continue;
+        }
+
+        int32_t retVal = pSearcher(pstCurrentNode->data, pSearchFor);
+        if (retVal == SEC_INT_ERROR) {
+            if (pstErr != NULL) {
+                *pstErr = SEC_INT_ERROR;
+            }
+            return NULL;
+        }
+        if (retVal == 0) {
+            return pstCurrentNode->data;
+        }
+    }
+
+    return NULL;
 }
 
 void BSL_LIST_DeleteNode(BslList *pstList, const BslListNode *pstListNode, BSL_LIST_PFUNC_FREE pfFreeFunc)

@@ -280,13 +280,11 @@ static int32_t VerifyHMAC(AppProvider *provider, int32_t macId, const uint8_t *d
 static int32_t WriteUserFile(char *userFile, UserInfo *userInfo)
 {
     // Simplified: use HITLS_APP_UioOpen instead of manual BSL_UIO_New + Ctrl
-    BSL_UIO *uio = HITLS_APP_UioOpen(userFile, 'w', 0);
+    BSL_UIO *uio = HITLS_APP_UioOpen(userFile, 'w', userFile != NULL ? 1 : 0);
     if (uio == NULL) {
         AppPrintError("Failed to open userFile for writing: %s\n", userFile);
         return HITLS_APP_UIO_FAIL;
     }
-    BSL_UIO_SetIsUnderlyingClosedByUio(uio, true);
-
     UserInfoOrderCvt(userInfo, true);
     uint32_t writeLen = 0;
     int32_t ret = BSL_UIO_Write(uio, userInfo, sizeof(UserInfo), &writeLen);
@@ -302,13 +300,11 @@ static int32_t WriteUserFile(char *userFile, UserInfo *userInfo)
 static int32_t ReadUserFile(char *userFile, UserInfo *userInfo)
 {
     // Simplified: use HITLS_APP_UioOpen instead of manual BSL_UIO_New + Ctrl
-    BSL_UIO *uio = HITLS_APP_UioOpen(userFile, 'r', 0);
+    BSL_UIO *uio = HITLS_APP_UioOpen(userFile, 'r', userFile != NULL ? 1 : 0);
     if (uio == NULL) {
         AppPrintError("Failed to open userFile: %s\n", userFile);
         return HITLS_APP_UIO_FAIL;
     }
-
-    BSL_UIO_SetIsUnderlyingClosedByUio(uio, true);
 
     uint32_t readLen = 0;
     int32_t ret = BSL_UIO_Read(uio, userInfo, sizeof(UserInfo), &readLen);

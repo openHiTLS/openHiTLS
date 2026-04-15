@@ -97,6 +97,7 @@ void SDV_TLS_DTLS_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
     TLS_TYPE local = HITLS;
     TLS_TYPE remote = HITLS;
     int32_t serverConfigId = 0;
+    HLT_ConfigTimeOut("20");
     localProcess = HLT_InitLocalProcess(local);
     ASSERT_TRUE(localProcess != NULL);
     remoteProcess = HLT_CreateRemoteProcess(remote);
@@ -146,7 +147,6 @@ void SDV_TLS_DTLS_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
     const char *writeBuf = "Hello world";
     pthread_t thrd;
     ASSERT_TRUE(pthread_create(&thrd, NULL, (void *)Hello, clientSsl) == 0);
-    sleep(2);
     uint8_t readBuf[BUF_SIZE_DTO_TEST] = {0};
     uint32_t readLen;
     ASSERT_TRUE(memset_s(readBuf, BUF_SIZE_DTO_TEST, 0, BUF_SIZE_DTO_TEST) == EOK);
@@ -162,6 +162,7 @@ void SDV_TLS_DTLS_CONSISTENCY_RFC5246_UNEXPETED_REORD_TYPE_TC001()
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
+    HLT_UnsetTimeOut();
     ClearWrapper();
     HLT_CleanFrameHandle();
     HITLS_SESS_Free(session);
@@ -250,6 +251,7 @@ void SDV_TLS_DTLS_CONSISTENCY_RFC6347_MTU_TC001()
 
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
+    HLT_UnsetTimeOut();
     ClearWrapper();
     HLT_FreeAllProcess();
 }

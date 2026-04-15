@@ -197,7 +197,7 @@ static int32_t SignedDataAddItem(HITLS_X509_List **ppList, void *item,
     }
 
     // Check if item already exists
-    if (BSL_LIST_Search(*ppList, item, pfnCmp, NULL) != NULL) {
+    if (BSL_LIST_SearchDataConst(*ppList, item, pfnCmp, NULL) != NULL) {
         return HITLS_PKI_SUCCESS;
     }
 
@@ -248,7 +248,7 @@ int32_t HITLS_CMS_AddMd(HITLS_X509_List *list, int32_t mdId)
         return HITLS_CMS_ERR_NULL_POINTER;
     }
     // Check if algorithm already exists.
-    CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_Search(list, &mdId, (BSL_LIST_PFUNC_CMP)CmpAlgId, NULL);
+    CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_SearchDataConst(list, &mdId, (BSL_LIST_PFUNC_CMP)CmpAlgId, NULL);
     if (alg != NULL) {
         return HITLS_PKI_SUCCESS;
     }

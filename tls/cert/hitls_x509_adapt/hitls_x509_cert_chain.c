@@ -28,11 +28,12 @@
 
 static int32_t BuildArrayFromList(HITLS_X509_List *list, HITLS_CERT_X509 **listArray, uint32_t *num)
 {
-    HITLS_X509_Cert *elemt = NULL;
     uint32_t i = 0;
     int32_t ret;
 
-    for (elemt = BSL_LIST_GET_FIRST(list); elemt != NULL; elemt = BSL_LIST_GET_NEXT(list), i++) {
+    for (BslListNode *listNode = BSL_LIST_FirstNode(list); listNode != NULL;
+        listNode = BSL_LIST_GetNextNode(list, listNode), i++) {
+        HITLS_X509_Cert *elemt = (HITLS_X509_Cert *)BSL_LIST_GetData(listNode);
         int ref = 0;
         if (i >= *num) {
             break;

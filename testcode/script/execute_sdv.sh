@@ -14,8 +14,8 @@
 # See the Mulan PSL v2 for more details.
 elapsed=0
 
-cd ../../
-HITLS_ROOT_DIR=`pwd`
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+HITLS_ROOT_DIR=$(cd "${SCRIPT_DIR}/../.." && pwd)
 
 paramList=$@
 paramNum=$#
@@ -73,7 +73,8 @@ fi
 
 # Check whether an ASAN alarm is generated.
 generate_asan_log() {
-    ASAN_LOG=$(find ../output -name "asan.log*")
+    ASAN_LOG=$(find "${HITLS_ROOT_DIR}/testcode/output" "${HITLS_ROOT_DIR}/testcode/demo/build" \
+        -name "asan.log*" -type f 2>/dev/null)
     if [ ! -z "$ASAN_LOG" ]; then
         for i in $ASAN_LOG
         do
@@ -363,6 +364,7 @@ parse_option
 if [ ${need_run_all} -eq 1 ]; then
     run_all
     run_demos
+    generate_asan_log
 else
     run_test
 fi

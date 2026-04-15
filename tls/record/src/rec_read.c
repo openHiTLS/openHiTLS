@@ -1082,7 +1082,7 @@ uint32_t APP_GetReadPendingBytes(const TLS_Ctx *ctx)
     if (ctx == NULL || ctx->recCtx == NULL || RecBufListEmpty(ctx->recCtx->appRecList)) {
         return 0;
     }
-    RecBuf *recBuf = (RecBuf *)BSL_LIST_GET_FIRST(ctx->recCtx->appRecList);
+    RecBuf *recBuf = (RecBuf *)BSL_LIST_FirstNodeData(ctx->recCtx->appRecList);
     if (recBuf == NULL) {
         return 0;
     }

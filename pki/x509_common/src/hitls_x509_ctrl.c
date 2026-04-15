@@ -396,14 +396,14 @@ static int32_t X509AddDnNamesToList(BslList *list, BslList *dnNameList)
         HITLS_X509_FreeNameNode(layer1);
         return ret;
     }
-    NameNodePack *node = BSL_LIST_GET_FIRST(dnNameList);
-    while (node != NULL) {
+    for (BslListNode *dnNode = BSL_LIST_FirstNode(dnNameList); dnNode != NULL;
+        dnNode = BSL_LIST_GetNextNode(dnNameList, dnNode)) {
+        NameNodePack *node = (NameNodePack *)BSL_LIST_GetData(dnNode);
         ret = BSL_LIST_AddElement(list, node->node, BSL_LIST_POS_END);
         if (ret != BSL_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        node = BSL_LIST_GET_NEXT(dnNameList);
     }
 
     return ret;
@@ -578,15 +578,16 @@ int32_t HITLS_X509_GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Bu
     char tmpBuffStr[MAX_DN_STR_LEN] = {0};
     char *tmpBuff = tmpBuffStr;
     uint32_t tmpBuffLen = MAX_DN_STR_LEN;
-    (void)BSL_LIST_GET_FIRST(nameList);
-    HITLS_X509_NameNode *firstNameNode = BSL_LIST_GET_NEXT(nameList);
-    HITLS_X509_NameNode *nameNode = firstNameNode;
-    while (nameNode != NULL) {
+    BslListNode *firstNodeIt = BSL_LIST_FirstNode(nameList);
+    BslListNode *firstNameNodeIt = BSL_LIST_GetNextNode(nameList, firstNodeIt);
+    for (BslListNode *nameNodeIt = firstNameNodeIt; nameNodeIt != NULL;
+        nameNodeIt = BSL_LIST_GetNextNode(nameList, nameNodeIt)) {
+        HITLS_X509_NameNode *nameNode = (HITLS_X509_NameNode *)BSL_LIST_GetData(nameNodeIt);
         if (tmpBuffLen - offset < 2) { // 2 denote buffer is enough to place two character, i.e ',' and '\0'
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
             return HITLS_X509_ERR_INVALID_PARAM;
         }
-        if (nameNode != firstNameNode && nameNode->layer == 2) {  // Is 2 nodes.
+        if (nameNodeIt != firstNameNodeIt && nameNode->layer == 2) {  // Is 2 nodes.
             *tmpBuff = ',';
             tmpBuff++;
             offset++;
@@ -599,7 +600,6 @@ int32_t HITLS_X509_GetDistinguishNameStrFromList(BSL_ASN1_List *nameList, BSL_Bu
         }
         tmpBuff += eachUsedLen;
         offset += eachUsedLen;
-        nameNode = BSL_LIST_GET_NEXT(nameList);
     }
     buff->data = BSL_SAL_Calloc(offset + 1, sizeof(char));
     if (buff->data == NULL) {

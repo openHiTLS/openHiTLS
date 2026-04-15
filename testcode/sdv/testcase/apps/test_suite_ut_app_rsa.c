@@ -65,6 +65,21 @@ typedef struct {
     int expect;
 } RsaTestData;
 
+static void RestoreStdoutByFd(int savedStdoutFd)
+{
+    if (savedStdoutFd < 0) {
+        return;
+    }
+    /*
+     * rsa falls back to process stdout when -out is absent.
+     * Restore the saved stdout fd after each invocation so later subcases and
+     * framework output are not affected, without relying on /dev/tty.
+     */
+    fflush(stdout);
+    (void)dup2(savedStdoutFd, STDOUT_FILENO);
+    clearerr(stdout);
+}
+
 /* INCLUDE_SOURCE  ${HITLS_ROOT_PATH}/apps/src/app_print.c  ${HITLS_ROOT_PATH}/apps/src/app_rsa.c  ${HITLS_ROOT_PATH}/apps/src/app_opt.c ${HITLS_ROOT_PATH}/apps/src/app_utils.c */
 
 /**
@@ -75,6 +90,7 @@ typedef struct {
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_TC001(void)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     char *argv[][10] = {
         {"rsa", "-in", PRV_PATH, "-noout"},
         {"rsa", "-in", PRV_PATH, "-out", OUT_FILE_PATH},
@@ -95,14 +111,16 @@ void UT_HITLS_APP_rsa_TC001(void)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(RsaTestData)); ++i) {
         int ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         if (ret != testData[i].expect) {
             printf("I is %d\n", i);
         }
         ASSERT_EQ(ret, testData[i].expect);
     }
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     return;
 }
@@ -116,6 +134,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_TC002(void)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     char *argv[][2] = {
         {"rsa", "-help"},
     };
@@ -127,12 +146,14 @@ void UT_HITLS_APP_rsa_TC002(void)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(RsaTestData)); ++i) {
         int ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     return;
 }
@@ -154,6 +175,7 @@ int32_t STUB_HITLS_APP_OptBegin(int32_t argc, char **argv, const HITLS_CmdOption
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T003(void)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     STUB_REPLACE(HITLS_APP_OptBegin, STUB_HITLS_APP_OptBegin);;
     char *argv[][4] = {{"rsa", "-in", PRV_PATH, "-noout"}};
 
@@ -164,11 +186,13 @@ void UT_HITLS_APP_rsa_T003(void)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(RsaTestData)); ++i) {
         int ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     STUB_RESTORE(HITLS_APP_OptBegin);
     return;
@@ -195,6 +219,7 @@ int32_t STUB_CRYPT_EAL_DecodeBuffKey(int32_t format, int32_t type, BSL_Buffer *e
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T004(void)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     STUB_REPLACE(CRYPT_EAL_DecodeBuffKey, STUB_CRYPT_EAL_DecodeBuffKey);;
     char *argv[][10] = {{"rsa", "-in", PRV_PATH, "-noout"}};
 
@@ -205,12 +230,14 @@ void UT_HITLS_APP_rsa_T004(void)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(RsaTestData)); ++i) {
         int ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     STUB_RESTORE(CRYPT_EAL_DecodeBuffKey);
     return;
@@ -231,6 +258,7 @@ BSL_UIO *STUB_BSL_UIO_New(const BSL_UIO_Method *method)
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T005(void)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     STUB_REPLACE(BSL_UIO_New, STUB_BSL_UIO_New);;
     char *argv[][10] = {{"rsa", "-in", PRV_PATH, "-noout"}};
 
@@ -240,12 +268,14 @@ void UT_HITLS_APP_rsa_T005(void)
 
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(RsaTestData)); ++i) {
         int ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     STUB_RESTORE(BSL_UIO_New);
     return;
 }
@@ -268,6 +298,7 @@ int32_t STUB_BSL_UIO_Ctrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T006(void)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     STUB_REPLACE(BSL_UIO_Ctrl, STUB_BSL_UIO_Ctrl);;
     char *argv[][10] = {{"rsa", "-in", PRV_PATH, "-noout"}};
 
@@ -277,12 +308,14 @@ void UT_HITLS_APP_rsa_T006(void)
 
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(RsaTestData)); ++i) {
         int ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     STUB_RESTORE(BSL_UIO_Ctrl);
     return;
 }
@@ -301,6 +334,7 @@ char *STUB_HITLS_APP_OptGetValueStr(void)
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T007(void)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     STUB_REPLACE(HITLS_APP_OptGetValueStr, STUB_HITLS_APP_OptGetValueStr);;
     char *argv[][10] = {{"rsa", "-in", PRV_PATH, "-noout"}};
 
@@ -311,12 +345,14 @@ void UT_HITLS_APP_rsa_T007(void)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(RsaTestData)); ++i) {
         int ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     STUB_RESTORE(HITLS_APP_OptGetValueStr);
     return;
@@ -340,6 +376,7 @@ int32_t STUB_HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t outLen, 
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T008(void)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     STUB_REPLACE(HITLS_APP_OptWriteUio, STUB_HITLS_APP_OptWriteUio);;
     char *argv[][10] = {{"rsa", "-in", PRV_PATH, "-text"}};
 
@@ -350,12 +387,14 @@ void UT_HITLS_APP_rsa_T008(void)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(RsaTestData)); ++i) {
         int ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     STUB_RESTORE(HITLS_APP_OptWriteUio);
     return;
@@ -381,6 +420,7 @@ bool IsFileExist(const char *fileName)
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T009(void)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     char *filename = "_APP_rsa_T009.txt";
     char *argv[][10] = {{"rsa", "-in", PRV_PATH, "-out", filename}};
 
@@ -390,14 +430,16 @@ void UT_HITLS_APP_rsa_T009(void)
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(RsaTestData)); ++i) {
         ASSERT_TRUE(IsFileExist(filename) == false);
         int ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
         ASSERT_TRUE(IsFileExist(filename));
         remove(filename);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     return;
 }
@@ -422,6 +464,7 @@ int32_t STUB_CRYPT_EAL_EncodeBuffKey(CRYPT_EAL_PkeyCtx *ealPKey, const CRYPT_Enc
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T0010(void)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     STUB_REPLACE(CRYPT_EAL_EncodeBuffKey, STUB_CRYPT_EAL_EncodeBuffKey);;
     char *argv[][10] = {{"rsa", "-in", PRV_PATH}};
 
@@ -432,12 +475,14 @@ void UT_HITLS_APP_rsa_T0010(void)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(RsaTestData)); ++i) {
         int ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     STUB_RESTORE(CRYPT_EAL_EncodeBuffKey);
     return;
@@ -456,6 +501,7 @@ int32_t STUB_HITLS_APP_GetPasswd(BSL_UI_ReadPwdParam *param, char **passin, uint
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_T0011(void)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     STUB_REPLACE(HITLS_APP_GetPasswd, STUB_HITLS_APP_GetPasswd);;
     char *argv[][10] = {
         {"rsa", "-in", PRV_PASSWD_PATH, "-noout"},
@@ -470,14 +516,16 @@ void UT_HITLS_APP_rsa_T0011(void)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(RsaTestData)); ++i) {
         int ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         if (ret != testData[i].expect) {
             printf("I is %d\n", i);
         }
         ASSERT_EQ(ret, testData[i].expect);
     }
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     STUB_RESTORE(HITLS_APP_GetPasswd);
     return;
@@ -487,6 +535,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_rsa_TC012(void)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     char *argv[][10] = {
         {"rsa", "-in", PRV_PATH},
         {"rsa", "-in", PRV_PATH, "-noout"},
@@ -512,11 +561,13 @@ void UT_HITLS_APP_rsa_TC012(void)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(RsaTestData)); ++i) {
         ret = HITLS_RsaMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     return;
 }

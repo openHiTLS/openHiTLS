@@ -362,11 +362,10 @@ static int32_t CompareAttribute(BSL_HASH_Hash *hash, const char *attribute,
             continue;
         }
         BslList *valueList = (BslList *)(uintptr_t)BSL_HASH_IterValue(hash, it);
-        for (void *listValue = BSL_LIST_GET_FIRST(valueList);
-            listValue != NULL; listValue = BSL_LIST_GET_NEXT(valueList)) {
-            AttributeValue *hashValue = (AttributeValue *)listValue;
-            ret = CompareAttributeValue(value, hashValue, &comparedCount,
-                &satisfiedMustCount, &totalScore);
+        for (BslListNode *listNode = BSL_LIST_FirstNode(valueList); listNode != NULL;
+            listNode = BSL_LIST_GetNextNode(valueList, listNode)) {
+            AttributeValue *hashValue = (AttributeValue *)BSL_LIST_GetData(listNode);
+            ret = CompareAttributeValue(value, hashValue, &comparedCount, &satisfiedMustCount, &totalScore);
             if (ret == -1) {
                 BSL_SAL_Free(key);
                 AttributeValueFree(value);
@@ -403,8 +402,9 @@ static void FindHighestScoreFunc(CRYPT_EAL_LibCtx *localCtx, int32_t operaId, in
     uint32_t mustAttributeNum = attrInfo.mustAttributeNum;
     bool repeatFlag = attrInfo.repeatFlag;
 
-    CRYPT_EAL_ProvMgrCtx *node = BSL_LIST_GET_FIRST(localCtx->providers);
-    for (; node!= NULL; node = BSL_LIST_GET_NEXT(localCtx->providers)) {
+    for (BslListNode *listNode = BSL_LIST_FirstNode(localCtx->providers); listNode != NULL;
+        listNode = BSL_LIST_GetNextNode(localCtx->providers, listNode)) {
+        CRYPT_EAL_ProvMgrCtx *node = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_GetData(listNode);
         CRYPT_EAL_AlgInfo *algInfos = NULL;
         ret = node->provQueryCb(node->provCtx, operaId, &algInfos);
         if (ret != CRYPT_SUCCESS) {

@@ -25,8 +25,6 @@
 #include "hs_ctx.h"
 #include "hitls_cert_type.h"
 #include "bsl_list.h"
-#include "hitls_cert_type.h"
-#include "bsl_list.h"
 #include "pack_common.h"
 #ifdef HITLS_TLS_FEATURE_SECURITY
 #include "security.h"
@@ -100,8 +98,9 @@ int32_t PackTrustedCAList(HITLS_TrustedCAList *caList, PackPacket *pkt)
         return HITLS_NULL_INPUT;
     }
     int32_t ret = HITLS_SUCCESS;
-    HITLS_TrustedCANode *node = (HITLS_TrustedCANode *)BSL_LIST_GET_FIRST(caList);
-    while (node != NULL) {
+    for (BslListNode *caNode = BSL_LIST_FirstNode(caList); caNode != NULL;
+        caNode = BSL_LIST_GetNextNode(caList, caNode)) {
+        HITLS_TrustedCANode *node = (HITLS_TrustedCANode *)BSL_LIST_GetData(caNode);
         if (node->data != NULL && node->dataSize != 0) {
             ret = PackAppendUint16ToBuf(pkt, (uint16_t)node->dataSize);
             if (ret != HITLS_SUCCESS) {
@@ -113,7 +112,6 @@ int32_t PackTrustedCAList(HITLS_TrustedCAList *caList, PackPacket *pkt)
                 return ret;
             }
         }
-        node = (HITLS_TrustedCANode *)BSL_LIST_GET_NEXT(caList);
     }
     return HITLS_SUCCESS;
 }

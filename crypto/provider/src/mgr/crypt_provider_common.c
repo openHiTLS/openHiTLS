@@ -257,6 +257,20 @@ static int32_t AddProviderToList(CRYPT_EAL_LibCtx *libCtx, CRYPT_EAL_ProvMgrCtx 
     return ret;
 }
 
+static void DeleteProviderFromList(CRYPT_EAL_LibCtx *libCtx, CRYPT_EAL_ProvMgrCtx *providerMgr)
+{
+    (void)BSL_SAL_ThreadWriteLock(libCtx->lock);
+    for (BslListNode *node = BSL_LIST_FirstNode(libCtx->providers); node != NULL;
+        node = BSL_LIST_GetNextNode(libCtx->providers, node)) {
+        if (BSL_LIST_GetData(node) == providerMgr) {
+            BSL_LIST_DeleteNode(libCtx->providers, node, (BSL_LIST_PFUNC_FREE)CRYPT_EAL_ProviderMgrCtxFree);
+            break;
+        }
+    }
+
+    (void)BSL_SAL_ThreadUnlock(libCtx->lock);
+}
+
 int32_t CRYPT_EAL_AddNewProvMgrCtx(CRYPT_EAL_LibCtx *libCtx, const char *providerName, const char *providerPath,
     CRYPT_EAL_ImplProviderInit init, void *handle, BSL_Param *param, CRYPT_EAL_ProvMgrCtx **ctx)
 {
@@ -296,7 +310,7 @@ int32_t CRYPT_EAL_AddNewProvMgrCtx(CRYPT_EAL_LibCtx *libCtx, const char *provide
     }
     ret = CRYPT_EAL_InitProviderMethod(mgrCtx, param, init);
     if (ret != BSL_SUCCESS) {
-        BSL_LIST_DeleteCurrent(libCtx->providers, (BSL_LIST_PFUNC_FREE)CRYPT_EAL_ProviderMgrCtxFree);
+        DeleteProviderFromList(libCtx, mgrCtx);
         return ret;
     }
     if (ctx != NULL) {

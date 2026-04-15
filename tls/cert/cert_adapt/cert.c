@@ -325,9 +325,10 @@ static int32_t EncodeCertificateChain(HITLS_Ctx *ctx, PackPacket *pkt)
     } else {
         chain = mgrCtx->extraChain;
     }
-    tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_FIRST(chain);
     uint32_t certIndex = 1;
-    while (tempCert != NULL) {
+    for (BslListNode *chainNode = BSL_LIST_FirstNode(chain); chainNode != NULL;
+        chainNode = BSL_LIST_GetNextNode(chain, chainNode)) {
+        tempCert = (HITLS_CERT_X509 *)BSL_LIST_GetData(chainNode);
 #ifdef HITLS_TLS_FEATURE_SECURITY
         ret = CheckCertChainFromStore(config, tempCert);
         if (ret != HITLS_SUCCESS) {
@@ -339,7 +340,6 @@ static int32_t EncodeCertificateChain(HITLS_Ctx *ctx, PackPacket *pkt)
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15048, "encode cert chain err");
         }
         certIndex++;
-        tempCert = BSL_LIST_GET_NEXT(chain);
     }
     return HITLS_SUCCESS;
 }
@@ -605,9 +605,9 @@ int32_t SAL_CERT_VerifyCertChain(HITLS_Ctx *ctx, CERT_Pair *certPair, bool isTlc
         isTlcpEncCert ? certPair->encCert :
 #endif
         certPair->cert;
-    HITLS_CERT_X509 *currCert = NULL;
-    for (currCert = BSL_LIST_GET_FIRST(chain); currCert != NULL; currCert = BSL_LIST_GET_NEXT(chain)) {
-        certList[i++] = currCert;
+    for (BslListNode *chainNode = BSL_LIST_FirstNode(chain); chainNode != NULL;
+        chainNode = BSL_LIST_GetNextNode(chain, chainNode)) {
+        certList[i++] = (HITLS_CERT_X509 *)BSL_LIST_GetData(chainNode);
     }
 
     /* Verify the certificate chain. */
