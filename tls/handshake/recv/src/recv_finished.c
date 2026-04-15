@@ -13,7 +13,6 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include <string.h>
 #include "securec.h"
 #include "hitls_build.h"
 #include "tls_binlog_id.h"
