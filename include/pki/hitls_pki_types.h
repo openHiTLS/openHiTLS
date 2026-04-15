@@ -296,10 +296,14 @@ typedef enum {
 } HITLS_X509_ExtType;
 
 typedef enum {
-    HITLS_X509_VFY_FLAG_CRL_ALL = 1,
-    HITLS_X509_VFY_FLAG_CRL_DEV = 2,
-    // not support certificate chains with a single trusted and non-self-signed certificate.
-    HITLS_X509_VFY_FLAG_PARTIAL_CHAIN = 4,
+    HITLS_X509_VFY_FLAG_CRL_ALL =            1 << 0,
+    HITLS_X509_VFY_FLAG_CRL_DEV =            1 << 1,
+
+    HITLS_X509_VFY_FLAG_PARTIAL_CHAIN =      1 << 2,    /** not support certificate chains with a single trusted
+                                                            and non-self-signed certificate. */
+
+    HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK = 1 << 3,    /** Disable the check on whether the cert and crl validity
+                                                            periods are within the current time. */
 } HITLS_X509_VFY_FLAGS;
 
 typedef enum {

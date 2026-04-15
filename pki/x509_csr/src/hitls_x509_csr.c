@@ -125,13 +125,13 @@ void HITLS_X509_CsrFree(HITLS_X509_Csr *csr)
         return;
     }
     BSL_SAL_ReferencesFree(&(csr->references));
+    BSL_LIST_PFUNC_FREE func = (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode;
     if (csr->flag == HITLS_X509_CSR_GEN_FLAG) {
-        BSL_LIST_FREE(csr->reqInfo.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
+        func = (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode;
         BSL_SAL_FREE(csr->reqInfo.reqInfoRawData);
         BSL_SAL_FREE(csr->signature.buff);
-    } else {
-        BSL_LIST_FREE(csr->reqInfo.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
     }
+    BSL_LIST_FREE(csr->reqInfo.subjectName, func);
 #ifdef HITLS_CRYPTO_SM2
     if (csr->signAlgId.algId == BSL_CID_SM2DSAWITHSM3) {
         BSL_SAL_FREE(csr->signAlgId.sm2UserId.data);

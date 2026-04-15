@@ -46,7 +46,7 @@
 /* ============================================================================
  * Stub Definitions
  * ============================================================================ */
-STUB_DEFINE_RET3(int32_t, HITLS_X509_CheckCertTime, HITLS_X509_StoreCtx *, HITLS_X509_Cert *, int32_t);
+STUB_DEFINE_RET4(int32_t, HITLS_X509_CheckCertTime, HITLS_X509_StoreCtx *, HITLS_X509_Cert *, int32_t, int64_t *);
 STUB_DEFINE_RET3(int32_t, BSL_LIST_AddElement, BslList *, void *, BslListPosition);
 STUB_DEFINE_VOID1(HITLS_X509_CertFree, HITLS_X509_Cert *);
 
@@ -250,7 +250,7 @@ void SDV_X509_STORE_VFY_CRL_FUNC_TC001(int type, int expResult, char *path1, cha
     ret = HITLS_BuildChain(storeCtx->crl, 1, crl1, crl2, NULL, NULL, NULL);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    ret = HITLS_X509_VerifyCrl(storeCtx, chain);
+    ret = HITLS_X509_VerifyCrl(storeCtx, chain, NULL);
     ASSERT_EQ(ret, expResult);
     if (ret == HITLS_PKI_SUCCESS) {
         ASSERT_TRUE(TestIsErrStackEmpty());
@@ -1432,53 +1432,50 @@ EXIT:
 /* END_CASE */
 
 #ifdef HITLS_PKI_X509_VFY_CB
-int32_t HITLS_X509_CheckCertTimeStub(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth)
+int32_t HITLS_X509_CheckCertTimeStub(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth, int64_t *time)
 {
-    (void)depth;  // Parameter used by VFYCBK_FAIL_IF macro
+    (void)depth;
     int64_t start = 0;
     int64_t end = 0;
     HITLS_X509_ValidTime *validTime = &cert->tbs.validTime;
-    if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_TIME) == 0) {
+    if (time == NULL) {
         return HITLS_PKI_SUCCESS;
     }
 
     int32_t ret = BSL_SAL_DateToUtcTimeConvert(&validTime->start, &start);
     VFYCBK_FAIL_IF(ret != BSL_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_VFY_GET_NOTBEFORE_FAIL);
-    VFYCBK_FAIL_IF(start > storeCtx->verifyParam.time, storeCtx, cert, depth, HITLS_X509_ERR_VFY_NOTBEFORE_IN_FUTURE);
-    if ((validTime->flag & BSL_TIME_AFTER_SET) == 0) {
-        return HITLS_PKI_SUCCESS;
-    }
+    VFYCBK_FAIL_IF(start > *time, storeCtx, cert, depth, HITLS_X509_ERR_VFY_NOTBEFORE_IN_FUTURE);
 
     ret = BSL_SAL_DateToUtcTimeConvert(&validTime->end, &end);
     VFYCBK_FAIL_IF(ret != BSL_SUCCESS, storeCtx, cert, depth, HITLS_X509_ERR_VFY_GET_NOTAFTER_FAIL);
-    VFYCBK_FAIL_IF(end < storeCtx->verifyParam.time, storeCtx, cert, depth, HITLS_X509_ERR_VFY_NOTAFTER_EXPIRED);
+    VFYCBK_FAIL_IF(end < *time, storeCtx, cert, depth, HITLS_X509_ERR_VFY_NOTAFTER_EXPIRED);
     return HITLS_PKI_SUCCESS;
 }
 
-int32_t CheckCertTimeGetNotBefore(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth)
+int32_t CheckCertTimeGetNotBefore(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth, int64_t *time)
 {
     cert->tbs.validTime.start.month = 13;
-    return HITLS_X509_CheckCertTimeStub(storeCtx, cert, depth);
+    return HITLS_X509_CheckCertTimeStub(storeCtx, cert, depth, time);
 }
 
-int32_t CheckCertTimeCheckNotBefore(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth)
+int32_t CheckCertTimeCheckNotBefore(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth, int64_t *time)
 {
     cert->tbs.validTime.start.year += 10;
     cert->tbs.validTime.end.year += 10;
-    return HITLS_X509_CheckCertTimeStub(storeCtx, cert, depth);
+    return HITLS_X509_CheckCertTimeStub(storeCtx, cert, depth, time);
 }
 
-int32_t CheckCertTimeGetNotAfter(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth)
+int32_t CheckCertTimeGetNotAfter(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth, int64_t *time)
 {
     cert->tbs.validTime.end.month = 13;
-    return HITLS_X509_CheckCertTimeStub(storeCtx, cert, depth);
+    return HITLS_X509_CheckCertTimeStub(storeCtx, cert, depth, time);
 }
 
-int32_t CheckCertTimeCheckNotAfter(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth)
+int32_t CheckCertTimeCheckNotAfter(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth, int64_t *time)
 {
     cert->tbs.validTime.start.year -= 10;
     cert->tbs.validTime.end.year -= 10;
-    return HITLS_X509_CheckCertTimeStub(storeCtx, cert, depth);
+    return HITLS_X509_CheckCertTimeStub(storeCtx, cert, depth, time);
 }
 
 static void TestReplace(int flag)
@@ -2014,15 +2011,6 @@ void SDV_X509_VFY_PATHLEN_FAIL_TC001(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_X509_ERR_VFY_PATHLEN_EXCEEDED);
 
-    // Release the internally constructed certChain to avoid leakage
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built,
-        sizeof(built)), HITLS_PKI_SUCCESS);
-    if (built) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
-
 EXIT:
     HITLS_X509_FreeStoreCtxMock(store);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
@@ -2079,13 +2067,6 @@ void SDV_X509_VFY_PATHLEN_PASS_TC002(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -2144,13 +2125,6 @@ void SDV_X509_VFY_PATHLEN_UNLIMITED_PASS_TC003(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -2213,14 +2187,6 @@ void SDV_X509_VFY_PATHLEN_KEYCERTSIGN_MISSING_FAIL_TC004(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_X509_ERR_VFY_KU_NO_CERTSIGN);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
-
 EXIT:
     HITLS_X509_FreeStoreCtxMock(store);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
@@ -2278,13 +2244,6 @@ void SDV_X509_VFY_TLS_CLIENT_KU_EKU_BOTH_MATCH_PASS_TC01(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -2344,14 +2303,6 @@ void SDV_X509_VFY_TLS_CLIENT_EKU_ONLY_KU_MISSING_FAIL_TC02(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_X509_ERR_VFY_PURPOSE_UNMATCH);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
-
 EXIT:
     HITLS_X509_FreeStoreCtxMock(store);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
@@ -2409,13 +2360,6 @@ void SDV_X509_VFY_TLS_SERVER_KU_EKU_BOTH_MATCH_PASS_TC03(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -2476,14 +2420,6 @@ void SDV_X509_VFY_TLS_SERVER_EKU_ONLY_KU_MISSING_FAIL_TC04(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_X509_ERR_VFY_PURPOSE_UNMATCH);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
-
 EXIT:
     HITLS_X509_FreeStoreCtxMock(store);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
@@ -2541,13 +2477,6 @@ void SDV_X509_VFY_ANYEKU_EKU_ALLOW_KU_MATCH_PASS_TC05(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -2607,14 +2536,6 @@ void SDV_X509_VFY_ANYEKU_KU_MISSING_FAIL_TC06(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_X509_ERR_VFY_PURPOSE_UNMATCH);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
-
 EXIT:
     HITLS_X509_FreeStoreCtxMock(store);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
@@ -2628,43 +2549,38 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_VFY_CERT_TIME_CURRENT_PASS_TC001(void)
 {
-    TestMemInit();
-
-    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
-    ASSERT_NE(store, NULL);
-
     HITLS_X509_Cert *root = NULL;
     HITLS_X509_Cert *inter = NULL;
     HITLS_X509_Cert *leaf = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_current.der", &root),
-              HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/inter_current.der", &inter),
-              HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/leaf_current.der", &leaf),
-              HITLS_PKI_SUCCESS);
+    int64_t now = (int64_t)time(NULL);
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
 
-    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
-    ASSERT_NE(chain, NULL);
+    // Prepare store and chain
+    TestMemInit();
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(store != NULL && chain != NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_current.der", &root), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/inter_current.der", &inter), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/leaf_current.der", &leaf), 0);
     ASSERT_EQ(BSL_LIST_AddElement(chain, leaf, BSL_LIST_POS_END), BSL_SUCCESS);
     ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
     ASSERT_EQ(BSL_LIST_AddElement(chain, root, BSL_LIST_POS_END), BSL_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
-        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root, sizeof(HITLS_X509_Cert)), 0);
 
-    int64_t now = (int64_t)time(NULL);
+    // By default, the system time is used to check the cert validity period
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+
+    // Set the flag to skip the validity period check
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+
+    // Use the configured time to check the validity period
     ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
 
-    int32_t ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     HITLS_X509_StoreCtxFree(store);
@@ -2679,48 +2595,44 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_VFY_CERT_TIME_HISTORY_PASS_TC001(void)
 {
-    TestMemInit();
-
-    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
-    ASSERT_NE(store, NULL);
-
     HITLS_X509_Cert *root = NULL;
     HITLS_X509_Cert *inter = NULL;
     HITLS_X509_Cert *leaf = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_expired.der", &root),
-              HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/inter_expired.der", &inter),
-              HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/leaf_expired.der", &leaf),
-              HITLS_PKI_SUCCESS);
+    int64_t start = 0;
+    int64_t end = 0;
+    int64_t history;
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
 
-    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
-    ASSERT_NE(chain, NULL);
+    // Prepare store and chain
+    TestMemInit();
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(store != NULL && chain != NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_expired.der", &root), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/inter_expired.der", &inter), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/leaf_expired.der", &leaf), 0);
     ASSERT_EQ(BSL_LIST_AddElement(chain, leaf, BSL_LIST_POS_END), BSL_SUCCESS);
     ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
     ASSERT_EQ(BSL_LIST_AddElement(chain, root, BSL_LIST_POS_END), BSL_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
-        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root, sizeof(HITLS_X509_Cert)), 0);
 
-    int64_t start = 0;
-    int64_t end = 0;
+    // By default, the system time is used to check the cert validity period
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_NOTAFTER_EXPIRED);
+    (void)BSL_ERR_PopToMark();
+
+    // Set the flag to skip the validity period check
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
+
+    // Use the configured time to check the validity period
     ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&leaf->tbs.validTime.start, &start), BSL_SUCCESS);
     ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&leaf->tbs.validTime.end, &end), BSL_SUCCESS);
-    int64_t history = start + (end - start) / 2;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &history, sizeof(history)),
-              HITLS_PKI_SUCCESS);
+    history = start + (end - start) / 2;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &history, sizeof(history)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
 
-    int32_t ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -2736,65 +2648,50 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_VFY_CERT_TIME_OUT_OF_RANGE_FAIL_TC001(void)
 {
-    TestMemInit();
-
-    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
-    ASSERT_NE(store, NULL);
-
     HITLS_X509_Cert *root = NULL;
     HITLS_X509_Cert *inter = NULL;
     HITLS_X509_Cert *leaf = NULL;
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_expired.der", &root),
-              HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/inter_expired.der", &inter),
-              HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/leaf_expired.der", &leaf),
-              HITLS_PKI_SUCCESS);
+    int64_t start = 0;
+    int64_t end = 0;
+    int64_t before;
+    int64_t after;
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
 
-    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
-    ASSERT_NE(chain, NULL);
+    // Prepare store and chain
+    TestMemInit();
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(store != NULL && chain != NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_expired.der", &root), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/inter_expired.der", &inter), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/leaf_expired.der", &leaf), 0);
     ASSERT_EQ(BSL_LIST_AddElement(chain, leaf, BSL_LIST_POS_END), BSL_SUCCESS);
     ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
     ASSERT_EQ(BSL_LIST_AddElement(chain, root, BSL_LIST_POS_END), BSL_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
-        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root, sizeof(HITLS_X509_Cert)), 0);
 
-    int64_t start = 0;
-    int64_t end = 0;
     ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&leaf->tbs.validTime.start, &start), BSL_SUCCESS);
     ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&leaf->tbs.validTime.end, &end), BSL_SUCCESS);
 
-    int64_t before = start - 60;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &before, sizeof(before)),
-              HITLS_PKI_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
-    int32_t ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_NOTBEFORE_IN_FUTURE);
+    // By default, the system time is used to check the cert validity period
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_NOTAFTER_EXPIRED);
+    (void)BSL_ERR_PopToMark();
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
+    // Set the flag to skip the validity period check
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
 
-    int64_t after = end + 60;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &after, sizeof(after)),
-              HITLS_PKI_SUCCESS);
-
-    ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_X509_ERR_VFY_NOTAFTER_EXPIRED);
-
-    built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
+    // Use the configured time to check the validity period
+    before = start - 60;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &before, sizeof(before)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_NOTBEFORE_IN_FUTURE);
+    after = end + 60;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &after, sizeof(after)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_NOTAFTER_EXPIRED);
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);
@@ -2815,16 +2712,6 @@ static int VerifyAtTime(HITLS_X509_StoreCtx *store, HITLS_X509_List *chain, int6
         return -1;
     }
 
-    HITLS_X509_List *built = NULL;
-    ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built));
-    if (ret != HITLS_PKI_SUCCESS) {
-        return -1;
-    }
-
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     return HITLS_PKI_SUCCESS;
 }
 /**
@@ -2833,49 +2720,42 @@ static int VerifyAtTime(HITLS_X509_StoreCtx *store, HITLS_X509_List *chain, int6
 /* BEGIN_CASE */
 void SDV_X509_VFY_CERT_TIME_BOUNDARY_PASS_TC001(void)
 {
-    TestMemInit();
-
-    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
-    ASSERT_NE(store, NULL);
-
     HITLS_X509_Cert *root = NULL;
     HITLS_X509_Cert *inter = NULL;
     HITLS_X509_Cert *leaf = NULL;
-    HITLS_X509_List *chain = NULL;
+    int64_t start = 0;
+    int64_t end = 0;
 
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_expired.der", &root),
-              HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/inter_expired.der", &inter),
-              HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/leaf_expired.der", &leaf),
-              HITLS_PKI_SUCCESS);
+    // Prepare store and chain
+    TestMemInit();
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    HITLS_X509_List *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(store != NULL && chain != NULL);
 
-    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
-    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_expired.der", &root), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/inter_expired.der", &inter), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/leaf_expired.der", &leaf), 0);
     ASSERT_EQ(X509_AddCertToChainTest(chain, leaf),  HITLS_PKI_SUCCESS);
     ASSERT_EQ(X509_AddCertToChainTest(chain, inter), HITLS_PKI_SUCCESS);
     ASSERT_EQ(X509_AddCertToChainTest(chain, root),  HITLS_PKI_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
-        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root, sizeof(HITLS_X509_Cert)), 0);
 
-    int64_t start = 0;
-    int64_t end   = 0;
+    // Use the configured time to check the validity period
     ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&leaf->tbs.validTime.start, &start), BSL_SUCCESS);
-    ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&leaf->tbs.validTime.end,   &end),   BSL_SUCCESS);
+    ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&leaf->tbs.validTime.end, &end), BSL_SUCCESS);
 
     int vret = VerifyAtTime(store, chain, start);
     ASSERT_EQ(vret, HITLS_PKI_SUCCESS);
 
     vret = VerifyAtTime(store, chain, end);
     ASSERT_EQ(vret, HITLS_PKI_SUCCESS);
+
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);
-    if (chain != NULL) {
-        BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-    }
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     HITLS_X509_CertFree(root);
     HITLS_X509_CertFree(inter);
     HITLS_X509_CertFree(leaf);
@@ -2888,65 +2768,39 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_VFY_CERT_TIME_BOUNDARY_PASS_TC002(void)
 {
-    TestMemInit();
-
-    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
-    ASSERT_NE(store, NULL);
-
     HITLS_X509_Cert *root = NULL;
     HITLS_X509_Cert *inter = NULL;
-    HITLS_X509_List *chain = NULL;
+    int64_t start = 0;
+    int64_t end = 0;
 
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_expired.der", &root),
-              HITLS_PKI_SUCCESS);
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/inter_expired.der", &inter),
-              HITLS_PKI_SUCCESS);
+    // Prepare store and chain
+    TestMemInit();
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(store != NULL && chain != NULL);
 
-    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
-    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_expired.der", &root), 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/inter_expired.der", &inter), 0);
     ASSERT_EQ(X509_AddCertToChainTest(chain, inter), HITLS_PKI_SUCCESS);
     ASSERT_EQ(X509_AddCertToChainTest(chain, root), HITLS_PKI_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
-        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root, sizeof(HITLS_X509_Cert)), 0);
 
-    int64_t start = 0;
-    int64_t end = 0;
+    // Use the configured time to check the validity period
     ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&inter->tbs.validTime.start, &start), BSL_SUCCESS);
     ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&inter->tbs.validTime.end, &end), BSL_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &start, sizeof(start)),
-              HITLS_PKI_SUCCESS);
-    int32_t ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &start, sizeof(start)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &end, sizeof(end)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &end, sizeof(end)),
-              HITLS_PKI_SUCCESS);
-    ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-
-    built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);
-    if (chain != NULL) {
-        BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-    }
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     HITLS_X509_CertFree(root);
     HITLS_X509_CertFree(inter);
 }
@@ -2958,61 +2812,36 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_VFY_CERT_TIME_BOUNDARY_PASS_TC003(void)
 {
-    TestMemInit();
-
-    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
-    ASSERT_NE(store, NULL);
-
     HITLS_X509_Cert *root = NULL;
-    HITLS_X509_List *chain = NULL;
-
-    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_expired.der", &root),
-              HITLS_PKI_SUCCESS);
-
-    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
-    ASSERT_NE(chain, NULL);
-    ASSERT_EQ(X509_AddCertToChainTest(chain, root), HITLS_PKI_SUCCESS);
-
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
-        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
-
     int64_t start = 0;
     int64_t end = 0;
+
+    // Prepare store and chain
+    TestMemInit();
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_TRUE(store != NULL && chain != NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/chain/time/root_expired.der", &root), 0);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, root), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root, sizeof(HITLS_X509_Cert)), 0);
+
+    // Use the configured time to check the validity period
     ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&root->tbs.validTime.start, &start), BSL_SUCCESS);
     ASSERT_EQ(BSL_SAL_DateToUtcTimeConvert(&root->tbs.validTime.end, &end), BSL_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &start, sizeof(start)),
-              HITLS_PKI_SUCCESS);
-    int32_t ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &start, sizeof(start)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &end, sizeof(end)), 0);
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_PKI_SUCCESS);
 
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &end, sizeof(end)),
-              HITLS_PKI_SUCCESS);
-    ret = HITLS_X509_CertVerify(store, chain);
-    ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
-
-    built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);
-    if (chain != NULL) {
-        BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-    }
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     HITLS_X509_CertFree(root);
 }
 /* END_CASE */
@@ -3055,13 +2884,6 @@ void SDV_X509_VFY_EXT_UNSUPPORTED_NONCRIT_EXT_PASS_TC001(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -3108,14 +2930,6 @@ void SDV_X509_VFY_EXT_UNSUPPORTED_CRIT_EXT_FAIL_TC001(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_X509_ERR_PROCESS_CRITICALEXT);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
-
 EXIT:
     HITLS_X509_StoreCtxFree(store);
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
@@ -3159,13 +2973,7 @@ void SDV_X509_VFY_EXT_SUPPORTED_EXT_PASS_TC001(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
+
     BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
     chain = NULL;
 
@@ -3177,13 +2985,6 @@ void SDV_X509_VFY_EXT_SUPPORTED_EXT_PASS_TC001(void)
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -3233,13 +3034,6 @@ void SDV_X509_VFY_CERT_CHAIN_BINDING_PASS_TC001(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -3292,14 +3086,6 @@ void SDV_X509_VFY_CERT_CHAIN_BINDING_FAIL_TC001(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_X509_ERR_VFY_CERT_SIGN_FAIL);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
-
 EXIT:
     HITLS_X509_StoreCtxFree(store);
     if (chain != NULL) {
@@ -3349,13 +3135,6 @@ void SDV_X509_VFY_CA_CHAIN_BINDING_PASS_TC001(void)
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -3407,14 +3186,6 @@ void SDV_X509_VFY_CA_CHAIN_BINDING_FAIL_TC001(void)
 
     int32_t ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_X509_ERR_VFY_CERT_SIGN_FAIL);
-
-    HITLS_X509_List *built = NULL;
-    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_GET_CERT_CHAIN, &built, sizeof(built)),
-              HITLS_PKI_SUCCESS);
-    if (built != NULL) {
-        BSL_LIST_FREE(built, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
-        store->certChain = NULL;
-    }
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);
@@ -4756,6 +4527,7 @@ void SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001(char *caPath, char *entity
     HITLS_X509_StoreCtx *store = NULL;
     HITLS_X509_Cert *entity = NULL;
     HITLS_X509_List *chain = NULL;
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
 
     TestMemInit();
     store = HITLS_X509_StoreCtxNew();
@@ -4772,6 +4544,7 @@ void SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001(char *caPath, char *entity
     ret = HITLS_X509_CertChainBuild(store, false, entity, &chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)), 0);
 
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, expectedResult);
@@ -4802,6 +4575,7 @@ void SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001(char *caCertPath, char
     HITLS_X509_Cert *ca = NULL;
     HITLS_X509_Cert *entity = NULL;
     HITLS_X509_List *chain = NULL;
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
 
     TestMemInit();
     store = HITLS_X509_StoreCtxNew();
@@ -4820,6 +4594,7 @@ void SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC001(char *caCertPath, char
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
     ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
 
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)), 0);
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, expectedResult);
 
@@ -4847,6 +4622,7 @@ void SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC002(char *rootCertPath, ch
     HITLS_X509_Cert *ca = NULL;
     HITLS_X509_Cert *entity = NULL;
     HITLS_X509_List *chain = NULL;
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
 
     TestMemInit();
     store = HITLS_X509_StoreCtxNew();
@@ -4870,6 +4646,7 @@ void SDV_X509_CERT_VERIFY_WITH_VARIOUS_CHARSET_FUNC_TC002(char *rootCertPath, ch
     /* 2:include inter CA */
     ASSERT_EQ(BSL_LIST_COUNT(chain), 2);
 
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)), 0);
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
 
