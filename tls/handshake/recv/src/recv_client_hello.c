@@ -1641,10 +1641,6 @@ static int32_t Tls13ServerProcessKeyShare(TLS_Ctx *ctx, const ClientHelloMsg *cl
             return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP, BINLOG_ID16138,
                 "The group in the keyshare does not exist in the support group extension.", ALERT_ILLEGAL_PARAMETER);
         }
-    }
-
-    LIST_FOR_EACH_ITEM_SAFE(node, tmpNode, &(cache->head)) {
-        cur = BSL_LIST_ENTRY(node, KeyShare, head);
         if (cur->group != selectGroup) {
             continue;
         }

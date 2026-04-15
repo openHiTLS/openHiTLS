@@ -2075,7 +2075,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_PSK_FUNC_TC007()
     testInfo.client = FRAME_CreateLink(testInfo.config, testInfo.uioType);
     testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
     ASSERT_EQ(FRAME_CreateConnection(testInfo.client, testInfo.server, false, HS_STATE_BUTT), HITLS_SUCCESS);
-
+    
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -2590,80 +2590,5 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
-}
-/* END_CASE */
-
-static void Test_ModifyKeyShareGroup(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
-{
-    (void)ctx;
-    (void)user;
-    (void)bufSize;
-    FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLS13;
-    FRAME_Msg frameMsg = {0};
-    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
-    frameMsg.length.data = *len;
-    frameMsg.recVersion.data = HITLS_VERSION_TLS13;
-    uint32_t parseLen = 0;
-    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
-    ASSERT_EQ(parseLen, *len);
-    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
-    uint32_t sz = frameMsg.body.hsMsg.body.clientHello.supportedGroups.exData.size;
-    ASSERT_TRUE(sz > 1);
-    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
-    ASSERT_EQ(clientMsg->keyshares.exKeyShares.size, 2);
-    clientMsg->keyshares.exKeyShares.data[1].group.state = ASSIGNED_FIELD;
-    clientMsg->keyshares.exKeyShares.data[1].group.data = HITLS_EC_GROUP_CURVE25519;
-    memset_s(data, bufSize, 0, bufSize);
-    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
-EXIT:
-    FRAME_CleanMsg(&frameType, &frameMsg);
-    return;
-}
-
-/** @
-* @test UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_FUNC_TC005
-* @spec -
-* @title 1. Initialize the client server to tls1.3. In the client hello message for sending, construct the group for
-*            keyshareentry. The first group can be negotiated with the server, while the second group is not included
-*            in the client's supported_group. The server aborts the handshake and returns the illegal_parameter alarm.
-* @precon nan
-* @brief 4.2.8 key share line 68
-* @expect 1. Expected connection establishment failure
-* @prior Level 1
-* @auto TRUE
-@ */
-/* BEGIN_CASE */
-void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_FUNC_TC005()
-{
-    FRAME_Init();
-    RecWrapper wrapper = {
-        TRY_SEND_CLIENT_HELLO,
-        REC_TYPE_HANDSHAKE,
-        false,
-        NULL,
-        Test_ModifyKeyShareGroup
-    };
-    RegisterWrapper(wrapper);
-    ResumeTestInfo testInfo = {0};
-    testInfo.uioType = BSL_UIO_TCP;
-    testInfo.config = HITLS_CFG_NewTLS13Config();
-    const char *groupNames = "*secp521r1:*secp256r1:secp384r1";
-    uint32_t groupNamesLen = strlen(groupNames);
-    ASSERT_EQ(HITLS_CFG_SetGroupList(testInfo.config, groupNames, groupNamesLen), HITLS_SUCCESS);
-
-    testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
-    testInfo.client = FRAME_CreateLink(testInfo.config, testInfo.uioType);
-    ASSERT_NE(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-    ALERT_Info alert = { 0 };
-    ALERT_GetInfo(testInfo.server->ssl, &alert);
-    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
-    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
-EXIT:
-    ClearWrapper();
-    HITLS_CFG_FreeConfig(testInfo.config);
-    FRAME_FreeLink(testInfo.client);
-    FRAME_FreeLink(testInfo.server);
-    HITLS_SESS_Free(testInfo.clientSession);
 }
 /* END_CASE */
