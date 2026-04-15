@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include "securec.h"
 #include "bsl_err.h"
 #include "bsl_sal.h"
 #include "crypt_algid.h"
@@ -114,7 +115,7 @@ static int ExecuteChacha20Demo(void)
 {
     // Test data
     const uint8_t plaintext[] = "0123456789ABCDEFFEDCBA09876543210";
-    const uint32_t plaintextLength = strlen((const char*)plaintext);
+    uint32_t plaintextLength = (uint32_t)strlen((const char *)plaintext);
 
     // ChaCha20 key (32 bytes)
     const uint8_t key[32] = {
@@ -161,6 +162,8 @@ static int ExecuteChacha20Demo(void)
     printf("Plaintext string: %s\n\n", plaintext);
 
     // Execute encryption
+    uint32_t ciphertextLength = plaintextLength;
+
     Chacha20Params encryptParams = {
         .key = key,
         .keyLength = (uint32_t)sizeof(key),
@@ -169,11 +172,8 @@ static int ExecuteChacha20Demo(void)
         .inputData = plaintext,
         .inputLength = plaintextLength,
         .outputData = ciphertext,
-        .outputLength = &plaintextLength
+        .outputLength = &ciphertextLength
     };
-
-    uint32_t ciphertextLength = plaintextLength;
-    encryptParams.outputLength = &ciphertextLength;
 
     int ret = Chacha20Process(&encryptParams, 1);
     if (ret != CRYPT_SUCCESS) {
@@ -191,6 +191,8 @@ static int ExecuteChacha20Demo(void)
     // Execute decryption
     printf("[Decryption Process]\n");
 
+    uint32_t decryptedLength = plaintextLength;
+
     Chacha20Params decryptParams = {
         .key = key,
         .keyLength = (uint32_t)sizeof(key),
@@ -199,11 +201,8 @@ static int ExecuteChacha20Demo(void)
         .inputData = ciphertext,
         .inputLength = plaintextLength,
         .outputData = decryptedText,
-        .outputLength = &plaintextLength
+        .outputLength = &decryptedLength
     };
-
-    uint32_t decryptedLength = plaintextLength;
-    decryptParams.outputLength = &decryptedLength;
 
     ret = Chacha20Process(&decryptParams, 0);
     if (ret != CRYPT_SUCCESS) {

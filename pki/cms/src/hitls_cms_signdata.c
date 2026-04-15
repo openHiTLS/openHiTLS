@@ -406,12 +406,12 @@ static int32_t SignedAttrsCheck(HITLS_X509_Attrs *attrs)
         return HITLS_PKI_SUCCESS;
     }
     int32_t nums = 0;
-    HITLS_X509_AttrEntry *node = (HITLS_X509_AttrEntry *)BSL_LIST_GET_FIRST(attrs->list);
-    while (node != NULL) {
+    for (BslListNode *attrNode = BSL_LIST_FirstNode(attrs->list); attrNode != NULL;
+        attrNode = BSL_LIST_GetNextNode(attrs->list, attrNode)) {
+        HITLS_X509_AttrEntry *node = (HITLS_X509_AttrEntry *)BSL_LIST_GetData(attrNode);
         if (node->cid == BSL_CID_PKCS9_AT_MESSAGEDIGEST || node->cid == BSL_CID_PKCS9_AT_CONTENTTYPE) {
             nums++;
         }
-        node = (HITLS_X509_AttrEntry *)BSL_LIST_GET_NEXT(attrs->list);
     }
     if (nums != 2) { // 2: the minimum number of required signed attributes.
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_SIGNEDATTRS_INVALID);
@@ -642,8 +642,9 @@ static int32_t EncodeListToSet(BslList *list, EncodeItemToAsnFunc encodeFunc, BS
         return BSL_MALLOC_FAIL;
     }
     uint32_t i = 0;
-    for (void *node = BSL_LIST_GET_FIRST(list); node != NULL; node = BSL_LIST_GET_NEXT(list)) {
-        int32_t ret = encodeFunc(node, &asnArr[i]);
+    for (BslListNode *listNode = BSL_LIST_FirstNode(list); listNode != NULL;
+        listNode = BSL_LIST_GetNextNode(list, listNode)) {
+        int32_t ret = encodeFunc(BSL_LIST_GetData(listNode), &asnArr[i]);
         if (ret != HITLS_PKI_SUCCESS) {
             FreeAsnList(asnArr, i);
             return ret;
@@ -714,7 +715,9 @@ static int32_t EncodeX509List(HITLS_X509_List *list, uint8_t implicitTag, Encode
     }
 
     uint32_t i = 0;
-    for (void *node = BSL_LIST_GET_FIRST(list); node != NULL; node = BSL_LIST_GET_NEXT(list), i++) {
+    for (BslListNode *listNode = BSL_LIST_FirstNode(list); listNode != NULL;
+        listNode = BSL_LIST_GetNextNode(list, listNode), i++) {
+        void *node = BSL_LIST_GetData(listNode);
         BSL_Buffer tmp = {0};
         int32_t ret = encodeFunc(BSL_FORMAT_ASN1, node, &tmp);
         if (ret != HITLS_PKI_SUCCESS) {
@@ -885,12 +888,12 @@ static int32_t CheckSignerInfosVersion(CMS_SignerInfos *signerInfo)
     if (BSL_LIST_COUNT(signerInfo) == 0) {
         return 0;
     }
-    CMS_SignerInfo *signerInfoItem = (CMS_SignerInfo *)BSL_LIST_GET_FIRST(signerInfo);
-    while (signerInfoItem != NULL) {
+    for (BslListNode *infoNode = BSL_LIST_FirstNode(signerInfo); infoNode != NULL;
+        infoNode = BSL_LIST_GetNextNode(signerInfo, infoNode)) {
+        CMS_SignerInfo *signerInfoItem = (CMS_SignerInfo *)BSL_LIST_GetData(infoNode);
         if (signerInfoItem->version != HITLS_CMS_SIGNEDDATA_SIGNERINFO_V3) {
             return 0;
         }
-        signerInfoItem = (CMS_SignerInfo *)BSL_LIST_GET_NEXT(signerInfo);
     }
     return HITLS_CMS_SIGNEDDATA_SIGNERINFO_V3;
 }
@@ -1528,14 +1531,18 @@ static int32_t AddOptionalParams(CMS_SignedData *signedData, const BSL_Param *op
         crls = (HITLS_X509_List *)param->value;
     }
 
-    for (HITLS_X509_Cert *addCert = BSL_LIST_GET_FIRST(certs); addCert != NULL; addCert = BSL_LIST_GET_NEXT(certs)) {
+    for (BslListNode *certNode = BSL_LIST_FirstNode(certs); certNode != NULL;
+        certNode = BSL_LIST_GetNextNode(certs, certNode)) {
+        HITLS_X509_Cert *addCert = (HITLS_X509_Cert *)BSL_LIST_GetData(certNode);
         ret = HITLS_CMS_AddCert(&signedData->certs, addCert);
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
         }
     }
 
-    for (HITLS_X509_Crl *addCrl = BSL_LIST_GET_FIRST(crls); addCrl != NULL; addCrl = BSL_LIST_GET_NEXT(crls)) {
+    for (BslListNode *crlNode = BSL_LIST_FirstNode(crls); crlNode != NULL;
+        crlNode = BSL_LIST_GetNextNode(crls, crlNode)) {
+        HITLS_X509_Crl *addCrl = (HITLS_X509_Crl *)BSL_LIST_GetData(crlNode);
         ret = HITLS_CMS_AddCrl(&signedData->crls, addCrl);
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
@@ -1718,8 +1725,9 @@ static int32_t InitMdCtxForAlgs(CMS_SignedData *signedData, const BSL_Param *par
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH);
         return HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH;
     }
-    for (CMS_AlgId *alg = BSL_LIST_GET_FIRST(signedData->digestAlg); alg != NULL;
-         alg = BSL_LIST_GET_NEXT(signedData->digestAlg)) {
+    for (BslListNode *algNode = BSL_LIST_FirstNode(signedData->digestAlg); algNode != NULL;
+         algNode = BSL_LIST_GetNextNode(signedData->digestAlg, algNode)) {
+        CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_GetData(algNode);
         if (alg->mdCtx != NULL) {
             CRYPT_EAL_MdFreeCtx(alg->mdCtx);
             alg->mdCtx = NULL;
@@ -1842,8 +1850,9 @@ static int32_t CMS_AttrDecodeContentType(HITLS_X509_AttrEntry *attr, void *out)
 // Find attribute by CID in signedAttrs list and decode via callback
 static int32_t CMS_DecodeAttr(HITLS_X509_Attrs *attrs, BslCid attrCid, CMS_AttrDecoder attrDecode, void *out)
 {
-    for (HITLS_X509_AttrEntry *node = (HITLS_X509_AttrEntry *)BSL_LIST_GET_FIRST(attrs->list);
-         node != NULL; node = (HITLS_X509_AttrEntry *)BSL_LIST_GET_NEXT(attrs->list)) {
+    for (BslListNode *attrNode = BSL_LIST_FirstNode(attrs->list); attrNode != NULL;
+         attrNode = BSL_LIST_GetNextNode(attrs->list, attrNode)) {
+        HITLS_X509_AttrEntry *node = (HITLS_X509_AttrEntry *)BSL_LIST_GetData(attrNode);
         if (node->cid == attrCid) {
             return attrDecode(node, out);
         }
@@ -1907,15 +1916,18 @@ static int32_t BuildCertChain(HITLS_X509_List **chain, HITLS_X509_Cert *deviceCe
         return ret;
     }
 
-    for (HITLS_X509_Cert *cert = BSL_LIST_GET_FIRST(p7certs); cert != NULL; cert = BSL_LIST_GET_NEXT(p7certs)) {
+    for (BslListNode *certNode = BSL_LIST_FirstNode(p7certs); certNode != NULL;
+        certNode = BSL_LIST_GetNextNode(p7certs, certNode)) {
+        HITLS_X509_Cert *cert = (HITLS_X509_Cert *)BSL_LIST_GetData(certNode);
         ret = HITLS_CMS_AddCert(chain, cert);
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
         }
     }
 
-    for (HITLS_X509_Cert *cert = BSL_LIST_GET_FIRST(untrustCerts); cert != NULL;
-         cert = BSL_LIST_GET_NEXT(untrustCerts)) {
+    for (BslListNode *certNode = BSL_LIST_FirstNode(untrustCerts); certNode != NULL;
+         certNode = BSL_LIST_GetNextNode(untrustCerts, certNode)) {
+        HITLS_X509_Cert *cert = (HITLS_X509_Cert *)BSL_LIST_GetData(certNode);
         ret = HITLS_CMS_AddCert(chain, cert);
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
@@ -1941,16 +1953,17 @@ static int32_t CheckCertIsValid(HITLS_X509_Cert *deviceCert, HITLS_X509_List *p7
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    // Set CRL list to StoreCtx
-    for (HITLS_X509_Crl *crl = BSL_LIST_GET_FIRST(crls); crl != NULL; crl = BSL_LIST_GET_NEXT(crls)) {
+    for (BslListNode *crlNode = BSL_LIST_FirstNode(crls); crlNode != NULL;
+        crlNode = BSL_LIST_GetNextNode(crls, crlNode)) {
+        HITLS_X509_Crl *crl = (HITLS_X509_Crl *)BSL_LIST_GetData(crlNode);
         ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_CRL, crl, 0);
         if (ret != HITLS_PKI_SUCCESS) {
             goto ERR;
         }
     }
-    // Set CA list to StoreCtx
-    for (HITLS_X509_Cert *cert = BSL_LIST_GET_FIRST(verifyParam->caCerts); cert != NULL;
-         cert = BSL_LIST_GET_NEXT(verifyParam->caCerts)) {
+    for (BslListNode *certNode = BSL_LIST_FirstNode(verifyParam->caCerts); certNode != NULL;
+         certNode = BSL_LIST_GetNextNode(verifyParam->caCerts, certNode)) {
+        HITLS_X509_Cert *cert = (HITLS_X509_Cert *)BSL_LIST_GetData(certNode);
         ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, 0);
         if (ret != HITLS_PKI_SUCCESS) {
             goto ERR;
@@ -1992,33 +2005,34 @@ static int32_t VerifyCertChainAndSignature(HITLS_X509_Cert *cert, CMS_SignedData
     return CheckSignerCert(cert, msgBuff->data, msgBuff->dataLen, signerInfo);
 }
 
+static int32_t VerifySignedDataFromList(HITLS_X509_List *certList, CMS_SignedData *sigData, BSL_Buffer *msgBuff,
+    CMS_SignerInfo *signerInfo, ChainVerifyParam *verifyParam)
+{
+    int32_t ret = HITLS_CMS_ERR_CERT_NOT_MATCH_SIGNERINFO;
+
+    for (BslListNode *certNode = BSL_LIST_FirstNode(certList); certNode != NULL;
+        certNode = BSL_LIST_GetNextNode(certList, certNode)) {
+        HITLS_X509_Cert *cert = (HITLS_X509_Cert *)BSL_LIST_GetData(certNode);
+        ret = VerifyCertChainAndSignature(cert, sigData, msgBuff, signerInfo, verifyParam);
+        if (ret == HITLS_PKI_SUCCESS || ret != HITLS_CMS_ERR_CERT_NOT_MATCH_SIGNERINFO) {
+            return ret;
+        }
+    }
+
+    return ret;
+}
+
 static int32_t VerifySignedData(CMS_SignedData *sigData, BSL_Buffer *msgBuff, CMS_SignerInfo *signerInfo,
     ChainVerifyParam *verifyParam)
 {
-    int32_t ret = HITLS_CMS_ERR_CERT_NOT_MATCH_SIGNERINFO; // that the cert is not matched with the signerInfo
-    HITLS_X509_List *certs = sigData->certs;
-    HITLS_X509_Cert *cert = BSL_LIST_GET_FIRST(certs);
-    while (cert != NULL) {
-        ret = VerifyCertChainAndSignature(cert, sigData, msgBuff, signerInfo, verifyParam);
-        if (ret == HITLS_PKI_SUCCESS) {
-            return HITLS_PKI_SUCCESS;
-        }
-        if (ret != HITLS_CMS_ERR_CERT_NOT_MATCH_SIGNERINFO) {
-            return ret;
-        }
-        cert = (HITLS_X509_Cert *)BSL_LIST_GET_NEXT(certs);
+    int32_t ret = VerifySignedDataFromList(sigData->certs, sigData, msgBuff, signerInfo, verifyParam);
+    if (ret == HITLS_PKI_SUCCESS || ret != HITLS_CMS_ERR_CERT_NOT_MATCH_SIGNERINFO) {
+        return ret;
     }
     // if cms has no matched certs, try to find in untrustCerts.
-    cert = (HITLS_X509_Cert *)BSL_LIST_GET_FIRST(verifyParam->untrustCerts);
-    while (cert != NULL) {
-        ret = VerifyCertChainAndSignature(cert, sigData, msgBuff, signerInfo, verifyParam);
-        if (ret == HITLS_PKI_SUCCESS) {
-            return HITLS_PKI_SUCCESS;
-        }
-        if (ret != HITLS_CMS_ERR_CERT_NOT_MATCH_SIGNERINFO) {
-            return ret;
-        }
-        cert = (HITLS_X509_Cert *)BSL_LIST_GET_NEXT(verifyParam->untrustCerts);
+    ret = VerifySignedDataFromList(verifyParam->untrustCerts, sigData, msgBuff, signerInfo, verifyParam);
+    if (ret == HITLS_PKI_SUCCESS || ret != HITLS_CMS_ERR_CERT_NOT_MATCH_SIGNERINFO) {
+        return ret;
     }
     BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_CERT);
     return HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_CERT;
@@ -2084,7 +2098,7 @@ static int32_t VerifySignerInfo(CMS_SignedData *sigData, CMS_SignerInfo *si, BSL
         }
     }
     // Check if signerInfo's digest algorithm is in SignedData's digestAlgorithms list
-    CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_Search(sigData->digestAlg, &si->digestAlg.id,
+    CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_SearchDataConst(sigData->digestAlg, &si->digestAlg.id,
         (BSL_LIST_PFUNC_CMP)CmpAlgId, NULL);
     if (alg == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH);
@@ -2143,8 +2157,9 @@ static int32_t CheckPqcSignAlgAndDigest(CMS_SignerInfo *si, bool isStream)
 static int32_t VerifyParamCheckForPqc(HITLS_CMS *cms, bool isStream)
 {
     CMS_SignedData *signedData = cms->ctx.signedData;
-    for (CMS_SignerInfo *si = (CMS_SignerInfo *)BSL_LIST_GET_FIRST(signedData->signerInfos); si != NULL;
-         si = (CMS_SignerInfo *)BSL_LIST_GET_NEXT(signedData->signerInfos)) {
+    for (BslListNode *siNode = BSL_LIST_FirstNode(signedData->signerInfos); siNode != NULL;
+         siNode = BSL_LIST_GetNextNode(signedData->signerInfos, siNode)) {
+        CMS_SignerInfo *si = (CMS_SignerInfo *)BSL_LIST_GetData(siNode);
         if (HITLS_CMS_IsPqcSignAlg((BslCid)si->sigAlg.algId)) {
             int32_t ret = CheckPqcSignAlgAndDigest(si, isStream);
             if (ret != HITLS_PKI_SUCCESS) {
@@ -2222,8 +2237,9 @@ int32_t HITLS_CMS_DataVerify(HITLS_CMS *cms, BSL_Buffer *msg, const BSL_Param *i
         return ret;
     }
     // Extract StoreCtx from param if provided
-    for (CMS_SignerInfo *si = (CMS_SignerInfo *)BSL_LIST_GET_FIRST(signedData->signerInfos); si != NULL;
-         si = (CMS_SignerInfo *)BSL_LIST_GET_NEXT(signedData->signerInfos)) {
+    for (BslListNode *siNode = BSL_LIST_FirstNode(signedData->signerInfos); siNode != NULL;
+         siNode = BSL_LIST_GetNextNode(signedData->signerInfos, siNode)) {
+        CMS_SignerInfo *si = (CMS_SignerInfo *)BSL_LIST_GetData(siNode);
         ret = VerifySignerInfo(signedData, si, &finalDataBuff, &verifyParam);
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
@@ -2303,7 +2319,9 @@ static int32_t SignedData_SignUpdate(HITLS_CMS *cms, const BSL_Buffer *msg)
         return HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH;
     }
     int32_t ret = HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH;
-    for (CMS_AlgId *alg = BSL_LIST_GET_FIRST(digestAlg); alg != NULL; alg = BSL_LIST_GET_NEXT(digestAlg)) {
+    for (BslListNode *algNode = BSL_LIST_FirstNode(digestAlg); algNode != NULL;
+        algNode = BSL_LIST_GetNextNode(digestAlg, algNode)) {
+        CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_GetData(algNode);
         if (alg->mdCtx == NULL) {
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_CTX_IS_NOT_INIT);
             return HITLS_CMS_ERR_CTX_IS_NOT_INIT;
@@ -2339,7 +2357,9 @@ static int32_t GetDigestFromMdCtx(HITLS_X509_List *digestAlg, int32_t mdId, uint
 {
     uint8_t tmpDigest[MAX_DIGEST_SIZE];
     uint32_t tmpDigestLen;
-    for (CMS_AlgId *alg = BSL_LIST_GET_FIRST(digestAlg); alg != NULL; alg = BSL_LIST_GET_NEXT(digestAlg)) {
+    for (BslListNode *algNode = BSL_LIST_FirstNode(digestAlg); algNode != NULL;
+        algNode = BSL_LIST_GetNextNode(digestAlg, algNode)) {
+        CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_GetData(algNode);
         if (alg->id == mdId) {
             tmpDigestLen = MAX_DIGEST_SIZE;
             int32_t ret = GetDigestValue(alg->mdCtx, tmpDigest, &tmpDigestLen);
@@ -2470,7 +2490,9 @@ static int32_t VerifyAllSignerInfos(CMS_SignedData *signedData, ChainVerifyParam
         return HITLS_CMS_ERR_SIGNEDDATA_NO_SIGNERINFO;
     }
 
-    for (CMS_SignerInfo *si = BSL_LIST_GET_FIRST(signerInfos); si != NULL; si = BSL_LIST_GET_NEXT(signerInfos)) {
+    for (BslListNode *siNode = BSL_LIST_FirstNode(signerInfos); siNode != NULL;
+        siNode = BSL_LIST_GetNextNode(signerInfos, siNode)) {
+        CMS_SignerInfo *si = (CMS_SignerInfo *)BSL_LIST_GetData(siNode);
         if (si->signedAttrs == NULL || BSL_LIST_COUNT(si->signedAttrs->list) == 0) {
             if (signedData->encapCont.contentType != BSL_CID_PKCS7_SIMPLEDATA) {
                 BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_ENCAPCONT_TYPE);
@@ -2478,7 +2500,7 @@ static int32_t VerifyAllSignerInfos(CMS_SignedData *signedData, ChainVerifyParam
             }
         }
 
-        CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_Search(signedData->digestAlg, &si->digestAlg.id,
+        CMS_AlgId *alg = (CMS_AlgId *)BSL_LIST_SearchDataConst(signedData->digestAlg, &si->digestAlg.id,
             (BSL_LIST_PFUNC_CMP)CmpAlgId, NULL);
         if (alg == NULL) {
             BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_NO_FIND_HASH);

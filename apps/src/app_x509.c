@@ -1165,11 +1165,11 @@ static int32_t OutputPubkey(X509OptCtx *optCtx)
 static int32_t X509Output(X509OptCtx *optCtx)
 {
     int32_t ret;
-    optCtx->outUio = HITLS_APP_UioOpen(optCtx->generalOpts.outPath, 'w', 0);
+    optCtx->outUio = HITLS_APP_UioOpen(optCtx->generalOpts.outPath, 'w',
+        optCtx->generalOpts.outPath != NULL ? 1 : 0);
     if (optCtx->outUio == NULL) {
         return HITLS_APP_UIO_FAIL;
     }
-    BSL_UIO_SetIsUnderlyingClosedByUio(optCtx->outUio, true);
     // Output cert info
     if (optCtx->printOpts.issuer || optCtx->printOpts.subject || optCtx->printOpts.text) {
         ret = HITLS_PKI_PrintCtrl(HITLS_PKI_SET_PRINT_FLAG, (void *)&optCtx->printOpts.nameOpt, sizeof(int32_t), NULL);

@@ -31,7 +31,7 @@
 #include "bsl_types.h"
 #include "crypt_errno.h"
 #include "stub_utils.h"
-#include "bsl_list_internal.h"
+#include "bsl_list.h"
 #include "crypt_eal_rand.h"
 #include "stub_utils.h"
 #include "hitls_pki_utils.h"

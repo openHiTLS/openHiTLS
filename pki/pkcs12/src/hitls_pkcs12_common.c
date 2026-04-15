@@ -535,14 +535,14 @@ int32_t HITLS_PKCS12_ParseSafeBagList(BSL_ASN1_List *bagList, const uint8_t *pas
         return HITLS_PKI_SUCCESS;
     }
     int32_t ret;
-    HITLS_PKCS12_SafeBag *node = BSL_LIST_GET_FIRST(bagList);
-    while (node != NULL) {
+    for (BslListNode *bagNode = BSL_LIST_FirstNode(bagList); bagNode != NULL;
+        bagNode = BSL_LIST_GetNextNode(bagList, bagNode)) {
+        HITLS_PKCS12_SafeBag *node = (HITLS_PKCS12_SafeBag *)BSL_LIST_GetData(bagNode);
         ret = HITLS_PKCS12_ConvertSafeBag(node, password, passLen, p12);
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        node = BSL_LIST_GET_NEXT(bagList);
     }
     return HITLS_PKI_SUCCESS;
 }
@@ -552,12 +552,12 @@ static BSL_Buffer *FindLocatedId(HITLS_X509_Attrs *attributes)
     if (attributes == NULL) {
         return NULL;
     }
-    HITLS_PKCS12_SafeBagAttr *node = BSL_LIST_GET_FIRST(attributes->list);
-    while (node != NULL) {
+    for (BslListNode *attrNode = BSL_LIST_FirstNode(attributes->list); attrNode != NULL;
+        attrNode = BSL_LIST_GetNextNode(attributes->list, attrNode)) {
+        HITLS_PKCS12_SafeBagAttr *node = (HITLS_PKCS12_SafeBagAttr *)BSL_LIST_GetData(attrNode);
         if (node->attrId == BSL_CID_LOCALKEYID) {
             return &node->attrValue;
         }
-        node = BSL_LIST_GET_NEXT(attributes->list);
     }
     return NULL;
 }
@@ -574,16 +574,16 @@ static int32_t SetEntityCert(HITLS_PKCS12 *p12)
     }
 
     BSL_ASN1_List *bags = p12->certList;
-    HITLS_PKCS12_Bag *node = BSL_LIST_GET_FIRST(bags);
-    while (node != NULL) {
+    for (BslListNode *bagNode = BSL_LIST_FirstNode(bags); bagNode != NULL;
+        bagNode = BSL_LIST_GetNextNode(bags, bagNode)) {
+        HITLS_PKCS12_Bag *node = (HITLS_PKCS12_Bag *)BSL_LIST_GetData(bagNode);
         BSL_Buffer *certId = FindLocatedId(node->attributes);
         if (certId != NULL && certId->dataLen == keyId->dataLen &&
             memcmp(certId->data, keyId->data, keyId->dataLen) == 0) {
             p12->entityCert = node;
-            BSL_LIST_DetachCurrent(bags);
+            BSL_LIST_DetachNode(bags, &bagNode);
             return HITLS_PKI_SUCCESS;
         }
-        node = BSL_LIST_GET_NEXT(bags);
     }
     BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NO_ENTITYCERT);
     return HITLS_PKCS12_ERR_NO_ENTITYCERT;
@@ -630,13 +630,13 @@ int32_t HITLS_PKCS12_ParseAuthSafeData(BSL_Buffer *encode, const uint8_t *passwo
         goto ERR;
     }
 
-    node = BSL_LIST_GET_FIRST(contentList);
-    while (node != NULL) {
+    for (BslListNode *contentNode = BSL_LIST_FirstNode(contentList); contentNode != NULL;
+        contentNode = BSL_LIST_GetNextNode(contentList, contentNode)) {
+        node = (BSL_Buffer *)BSL_LIST_GetData(contentNode);
         ret = ParseSafeBagList(p12->libCtx, p12->attrName, node, password, passLen, bagLists);
         if (ret != HITLS_PKI_SUCCESS) {
             goto ERR;
         }
-        node = BSL_LIST_GET_NEXT(contentList);
     }
     ret = HITLS_PKCS12_ParseSafeBagList(bagLists, password, passLen, p12);
     if (ret != HITLS_PKI_SUCCESS) {
@@ -1230,8 +1230,9 @@ static int32_t EncodeSafeContent(HITLS_PKCS12 *p12, BSL_ASN1_Buffer **output, BS
     }
     uint32_t iter = 0;
     int32_t ret = HITLS_PKI_SUCCESS;
-    HITLS_PKCS12_Bag *node = NULL;
-    for (node = BSL_LIST_GET_FIRST(list); node != NULL; node = BSL_LIST_GET_NEXT(list), iter++) {
+    for (BslListNode *bagNode = BSL_LIST_FirstNode(list); bagNode != NULL;
+        bagNode = BSL_LIST_GetNextNode(list, bagNode), iter++) {
+        HITLS_PKCS12_Bag *node = (HITLS_PKCS12_Bag *)BSL_LIST_GetData(bagNode);
         ret = EncodeSafeBag(p12, node, encodeType, encryptParam, &asnBuf[iter].buff, &asnBuf[iter].len);
         if (ret != BSL_SUCCESS) {
             FreeListBuff(asnBuf, iter);
@@ -1253,8 +1254,9 @@ static int32_t EncodeContentInfoList(BSL_ASN1_Buffer **output, BSL_ASN1_List *li
     }
     uint32_t iter = 0;
     int32_t ret = HITLS_PKI_SUCCESS;
-    BSL_Buffer *node = NULL;
-    for (node = BSL_LIST_GET_FIRST(list); node != NULL; node = BSL_LIST_GET_NEXT(list), iter++) {
+    for (BslListNode *bufNode = BSL_LIST_FirstNode(list); bufNode != NULL;
+        bufNode = BSL_LIST_GetNextNode(list, bufNode), iter++) {
+        BSL_Buffer *node = (BSL_Buffer *)BSL_LIST_GetData(bufNode);
         asnBuf[iter].buff = BSL_SAL_Dump(node->data, node->dataLen);
         if (asnBuf[iter].buff == NULL) {
             FreeListBuff(asnBuf, iter);
@@ -1390,8 +1392,8 @@ static int32_t EncodeCertListAddList(HITLS_PKCS12 *p12, const CRYPT_EncodeParam 
     }
     ret = HITLS_PKCS12_EncodeAsn1List(p12, p12->certList, BSL_CID_CERTBAG, NULL, &certEncode);
     if (p12->entityCert != NULL && p12->entityCert->value.cert != NULL) {
-        BSL_LIST_First(p12->certList);
-        BSL_LIST_DeleteCurrent(p12->certList, NULL);
+        BslListNode *firstNode = BSL_LIST_FirstNode(p12->certList);
+        BSL_LIST_DeleteNode(p12->certList, firstNode, NULL);
     }
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1426,7 +1428,7 @@ static int32_t EncodeUnitListAddList(HITLS_PKCS12 *p12, const CRYPT_EncodeParam 
         return HITLS_PKI_SUCCESS;
     }
     BSL_Buffer uintEncode = {0};
-    HITLS_PKCS12_Bag *bag = BSL_LIST_GET_FIRST(uintBags);
+    HITLS_PKCS12_Bag *bag = (HITLS_PKCS12_Bag *)BSL_LIST_FirstNodeData(uintBags);
     int32_t ret = HITLS_PKCS12_EncodeAsn1List(p12, uintBags, bag->id, NULL, &uintEncode);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1664,12 +1666,13 @@ static void DeleteAttribute(HITLS_PKCS12_Bag *bag, uint32_t type)
         return;
     }
     BSL_ASN1_List *list = bag->attributes->list;
-    HITLS_PKCS12_SafeBagAttr *node = BSL_LIST_GET_FIRST(list);
-    while (node != NULL) {
+    for (BslListNode *attrNode = BSL_LIST_FirstNode(list); attrNode != NULL;
+        attrNode = BSL_LIST_GetNextNode(list, attrNode)) {
+        HITLS_PKCS12_SafeBagAttr *node = (HITLS_PKCS12_SafeBagAttr *)BSL_LIST_GetData(attrNode);
         if (node->attrId == type) {
-            return BSL_LIST_DeleteCurrent(list, HITLS_PKCS12_AttributesFree);
+            BSL_LIST_DeleteNode(list, attrNode, HITLS_PKCS12_AttributesFree);
+            return;
         }
-        node = BSL_LIST_GET_NEXT(list);
     }
     return;
 }
@@ -1680,12 +1683,12 @@ static bool IsAttrExist(HITLS_PKCS12_Bag *bag, uint32_t type)
         return false;
     }
     BSL_ASN1_List *list = bag->attributes->list;
-    HITLS_PKCS12_SafeBagAttr *node = BSL_LIST_GET_FIRST(list);
-    while (node != NULL) {
+    for (BslListNode *attrNode = BSL_LIST_FirstNode(list); attrNode != NULL;
+        attrNode = BSL_LIST_GetNextNode(list, attrNode)) {
+        HITLS_PKCS12_SafeBagAttr *node = (HITLS_PKCS12_SafeBagAttr *)BSL_LIST_GetData(attrNode);
         if (node->attrId == type) {
             return true;
         }
-        node = BSL_LIST_GET_NEXT(list);
     }
     return false;
 }

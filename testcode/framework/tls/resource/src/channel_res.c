@@ -178,6 +178,9 @@ void FreeControlChannelRes(void)
         g_channelRes.isExit = true;
         pthread_join(g_channelRes.tid, NULL);
     }
+    if (g_channelRes.sockFd > 0) {
+        close(g_channelRes.sockFd);
+    }
     OsLockDestroy(g_channelRes.sendBufferLock);
     OsLockDestroy(g_channelRes.rcvBufferLock);
     memset_s(&g_channelRes, sizeof(g_channelRes), 0, sizeof(g_channelRes));

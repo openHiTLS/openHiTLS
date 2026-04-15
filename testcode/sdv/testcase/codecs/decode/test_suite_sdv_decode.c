@@ -513,7 +513,7 @@ void SDV_CRYPT_DECODE_POOL_CTRL_API_TC001(void)
     /* Test setting free output data flag */
     bool isFreeOutData = true;
     ASSERT_EQ(CRYPT_DECODE_PoolCtrl(poolCtx, CRYPT_DECODE_POOL_CMD_SET_FLAG_FREE_OUT_DATA, &isFreeOutData,
-        sizeof(bool)), CRYPT_SUCCESS);
+        sizeof(bool)), CRYPT_INVALID_ARG);
 
     /* Test with invalid format length */
     ASSERT_EQ(CRYPT_DECODE_PoolCtrl(poolCtx, CRYPT_DECODE_POOL_CMD_SET_TARGET_FORMAT, (void *)targetFormat,
@@ -571,6 +571,8 @@ void SDV_CRYPT_DECODE_POOL_CTRL_API_TC002(void)
     };
     poolCtx = CRYPT_DECODE_PoolNewCtx(NULL, NULL, CRYPT_PKEY_RSA, "PEM", "PRIKEY_RSA");
     ASSERT_TRUE(poolCtx != NULL);
+    ASSERT_EQ(CRYPT_DECODE_PoolCtrl(poolCtx, CRYPT_DECODE_POOL_CMD_SET_FLAG_FREE_OUT_DATA,
+        &isFreeOutData, sizeof(bool)), CRYPT_INVALID_ARG);
 
     /* Manually clear the decoder path to simulate no nodes condition */
     if (poolCtx->decoderPath != NULL) {
@@ -613,11 +615,26 @@ void SDV_CRYPT_DECODE_POOL_CTRL_API_TC002(void)
     ASSERT_EQ(CRYPT_DECODE_PoolCtrl(poolCtx, CRYPT_DECODE_POOL_CMD_SET_TARGET_TYPE, (void *)targetType,
         strlen(targetType)), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_DECODE_PoolDecode(poolCtx, inParam, &outParam), CRYPT_SUCCESS);
+    BslListNode *lastNode = BSL_LIST_LastNode(poolCtx->decoderPath);
+    BslListNode *prevNodeIt = BSL_LIST_GetPrevNode(lastNode);
+    ASSERT_TRUE(lastNode != NULL);
+    ASSERT_TRUE(prevNodeIt != NULL);
+    CRYPT_DECODER_Node *currNode = BSL_LIST_GetData(lastNode);
+    CRYPT_DECODER_Node *prevNode = BSL_LIST_GetData(prevNodeIt);
+    ASSERT_TRUE(currNode != NULL);
+    ASSERT_TRUE(prevNode != NULL);
+    ASSERT_EQ(currNode->inData.data, outParam);
+    ASSERT_EQ(prevNode->outData.data, outParam);
     isFreeOutData = false;
     ASSERT_EQ(CRYPT_DECODE_PoolCtrl(poolCtx, CRYPT_DECODE_POOL_CMD_SET_FLAG_FREE_OUT_DATA, 
         &isFreeOutData, sizeof(bool)), CRYPT_SUCCESS);
+    ASSERT_TRUE(currNode->inData.data == outParam);
+    ASSERT_TRUE(prevNode->outData.data == NULL);
     BSL_SAL_FREE(outParam->value);
     BSL_SAL_FREE(outParam);
+    outParam = NULL;
+    ASSERT_EQ(CRYPT_DECODE_PoolCtrl(poolCtx, CRYPT_DECODE_POOL_CMD_SET_FLAG_FREE_OUT_DATA,
+        &isFreeOutData, sizeof(bool)), CRYPT_INVALID_ARG);
 
 EXIT:
     BSL_SAL_Free(inputData);

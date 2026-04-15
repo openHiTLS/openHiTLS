@@ -52,7 +52,7 @@ int32_t HITLS_X509_AddListItemDefault(void *item, uint32_t len, BSL_ASN1_List *l
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    int32_t ret = BSL_LIST_AddElement(list, node, BSL_LIST_POS_AFTER);
+    int32_t ret = BSL_LIST_AddElement(list, node, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_Free(node);
@@ -111,7 +111,6 @@ int32_t HITLS_X509_ParseSignAlgInfo(BSL_ASN1_Buffer *algId, BSL_ASN1_Buffer *par
 }
 #endif
 
-#if defined(HITLS_PKI_INFO_DN_HASH) || defined(HITLS_PKI_X509_VFY)
 static uint8_t X509_ToLower(uint8_t c)
 {
     if (c >= 'A' && c <= 'Z') {
@@ -157,7 +156,6 @@ static int32_t X509_Asn1StringCanon(const BSL_ASN1_Buffer *in, BSL_ASN1_Buffer *
     X509_StringCanon(out);
     return ret;
 }
-#endif // defined(HITLS_PKI_INFO_DN_HASH) || defined(HITLS_PKI_X509_VFY) 
 
 static int32_t HITLS_X509_ParseNameNode(BSL_ASN1_Buffer *asn, HITLS_X509_NameNode *node)
 {
@@ -215,9 +213,14 @@ int32_t HITLS_X509_ParseListAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, void *
         if (ret != HITLS_PKI_SUCCESS) {
             goto ERR;
         }
+        ret = X509_Asn1StringCanon(&node->nameValue, &node->utf8Value);
+        if (ret != HITLS_PKI_SUCCESS) {
+            BSL_ERR_PUSH_ERROR(ret);
+            goto ERR;
+        }
     }
 
-    ret = BSL_LIST_AddElement(list, node, BSL_LIST_POS_AFTER);
+    ret = BSL_LIST_AddElement(list, node, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
         goto ERR;
     }
@@ -350,7 +353,8 @@ int32_t HITLS_X509_EncodeSignAlgInfo(HITLS_X509_Asn1AlgId *x509Alg, BSL_ASN1_Buf
 #if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_X509_CRT_GEN) || defined(HITLS_PKI_X509_CRL_GEN) || \
     defined(HITLS_PKI_X509_VFY_LOCATION) || defined(HITLS_PKI_X509_CRT_AUTH) || \
     defined(HITLS_PKI_INFO)
-static int32_t X509_EncodeRdName(BSL_ASN1_List *list, BSL_ASN1_Buffer *asnBuf)
+static int32_t X509_EncodeRdName(BSL_ASN1_List *list, const BslListNode *rdnNode, BSL_ASN1_Buffer *asnBuf,
+    const BslListNode **nextRdnNode)
 {
     uint32_t maxCount = (BSL_LIST_COUNT(list) - 1) * 2; // 2: layer 1 and layer 2
     BSL_ASN1_Buffer *tmpBuf = BSL_SAL_Calloc(maxCount, sizeof(BSL_ASN1_Buffer));
@@ -359,12 +363,17 @@ static int32_t X509_EncodeRdName(BSL_ASN1_List *list, BSL_ASN1_Buffer *asnBuf)
         return BSL_MALLOC_FAIL;
     }
     uint32_t iter = 0;
-    HITLS_X509_NameNode *node = BSL_LIST_GET_NEXT(list);
-    while (node != NULL && node->layer != 1) {
+    const BslListNode *nodeIt = BSL_LIST_GetNextNode(list, rdnNode);
+    while (nodeIt != NULL) {
+        HITLS_X509_NameNode *node = (HITLS_X509_NameNode *)BSL_LIST_GetData(nodeIt);
+        if (node->layer == 1) {
+            break;
+        }
         tmpBuf[iter++] = node->nameType;
         tmpBuf[iter++] = node->nameValue;
-        node = BSL_LIST_GET_NEXT(list);
+        nodeIt = BSL_LIST_GetNextNode(list, nodeIt);
     }
+    *nextRdnNode = nodeIt;
 
     BSL_ASN1_TemplateItem x509RdName[] = {
         {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
@@ -387,15 +396,15 @@ int32_t HITLS_X509_EncodeNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *name)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
-    HITLS_X509_NameNode *node = BSL_LIST_GET_FIRST(list);
     uint32_t iter = 0;
-    while (node != NULL) {
-        ret = X509_EncodeRdName(list, &asnBuf[iter]);
+    for (const BslListNode *rdnNode = BSL_LIST_FirstNode(list); rdnNode != NULL;) {
+        const BslListNode *nextRdnNode = NULL;
+        ret = X509_EncodeRdName(list, rdnNode, &asnBuf[iter], &nextRdnNode);
         if (ret != HITLS_PKI_SUCCESS) {
             goto EXIT;
         }
         iter++;
-        node = BSL_LIST_Curr(list);
+        rdnNode = nextRdnNode;
     }
 
     BSL_ASN1_TemplateItem x509Name[] = {
@@ -447,9 +456,11 @@ int32_t HITLS_X509_EncodeCanonNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *nam
         return BSL_MALLOC_FAIL;
     }
     int32_t ret;
-    HITLS_X509_NameNode *nodeOri = BSL_LIST_GET_FIRST(list);
-    HITLS_X509_NameNode *node = BSL_LIST_GET_FIRST(tmpList);
-    while (nodeOri != NULL) {
+    BslListNode *nodeOriIt = BSL_LIST_FirstNode(list);
+    BslListNode *nodeIt = BSL_LIST_FirstNode(tmpList);
+    while (nodeOriIt != NULL && nodeIt != NULL) {
+        HITLS_X509_NameNode *nodeOri = (HITLS_X509_NameNode *)BSL_LIST_GetData(nodeOriIt);
+        HITLS_X509_NameNode *node = (HITLS_X509_NameNode *)BSL_LIST_GetData(nodeIt);
         if (nodeOri->nameValue.len != 0 && nodeOri->nameValue.buff != NULL) {
             ret = X509_Asn1StringCanon(&nodeOri->nameValue, &node->nameValue);
             if (ret != BSL_SUCCESS) {
@@ -458,8 +469,8 @@ int32_t HITLS_X509_EncodeCanonNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *nam
                 return ret;
             }
         }
-        nodeOri = (HITLS_X509_NameNode *)BSL_LIST_GET_NEXT(list);
-        node = (HITLS_X509_NameNode *)BSL_LIST_GET_NEXT(tmpList);
+        nodeOriIt = BSL_LIST_GetNextNode(list, nodeOriIt);
+        nodeIt = BSL_LIST_GetNextNode(tmpList, nodeIt);
     }
     ret = HITLS_X509_EncodeNameList(tmpList, name);
     BSL_LIST_FREE(tmpList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
@@ -500,7 +511,7 @@ static int32_t X509_ParseAndAddRes(CRYPT_EAL_LibCtx *libCtx, const char *attrNam
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = BSL_LIST_AddElement(list, res, BSL_LIST_POS_AFTER);
+    ret = BSL_LIST_AddElement(list, res, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
         parseFun->x509Free(res);
         BSL_ERR_PUSH_ERROR(ret);
@@ -621,24 +632,59 @@ static int32_t X509_NodeNameCompare(BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *dest)
     return memcmp(src->buff, dest->buff, dest->len);
 }
 
-static int32_t X509_NeedStringCanon(HITLS_X509_NameNode *node)
+static int32_t X509_GetCanonNameValue(const HITLS_X509_NameNode *node, BSL_ASN1_Buffer *canon, bool *needFree)
 {
-    if (node->utf8Value.tag == 0 && node->layer != 1) {
-        return X509_Asn1StringCanon(&node->nameValue, &node->utf8Value);
+    /* Return either shared immutable storage or a temporary canonical buffer. */
+    *needFree = false;
+    if (node->layer == 1) {
+        *canon = node->nameValue;
+        return HITLS_PKI_SUCCESS;
     }
-    return BSL_SUCCESS;
+
+    /* Parsed nodes should already carry cached canonical UTF-8. */
+    if (node->utf8Value.tag != 0) {
+        *canon = node->utf8Value;
+        return HITLS_PKI_SUCCESS;
+    }
+
+    /*
+     * Keep a read-only compatibility fallback for callers that compare
+     * non-parsed/manual nodes without precomputed canonical storage.
+     */
+    int32_t ret = X509_Asn1StringCanon(&node->nameValue, canon);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    *needFree = true;
+    return HITLS_PKI_SUCCESS;
 }
 
 static int32_t X509_NodeNameValueCompare(HITLS_X509_NameNode *nodeOri, HITLS_X509_NameNode *node)
 {
+    BSL_ASN1_Buffer canonOri = {0};
+    BSL_ASN1_Buffer canon = {0};
+    bool freeCanonOri = false;
+    bool freeCanon = false;
+    int32_t ret = 1;
+
     // quick comparison
     if (X509_NodeNameCompare(&nodeOri->nameValue, &node->nameValue) == 0) {
         return 0;
     }
-    if (X509_NeedStringCanon(nodeOri) != BSL_SUCCESS || X509_NeedStringCanon(node) != BSL_SUCCESS) {
-        return 1;
+    if (X509_GetCanonNameValue(nodeOri, &canonOri, &freeCanonOri) != BSL_SUCCESS ||
+        X509_GetCanonNameValue(node, &canon, &freeCanon) != BSL_SUCCESS) {
+        goto EXIT;
     }
-    return X509_NodeNameCompare(&nodeOri->utf8Value, &node->utf8Value);
+    ret = X509_NodeNameCompare(&canonOri, &canon);
+
+EXIT:
+    if (freeCanonOri) {
+        BSL_SAL_FREE(canonOri.buff);
+    }
+    if (freeCanon) {
+        BSL_SAL_FREE(canon.buff);
+    }
+    return ret;
 }
 
 static int32_t X509_NodeCompare(BSL_ASN1_Buffer *buffOri, BSL_ASN1_Buffer *buff)
@@ -654,9 +700,11 @@ static int32_t X509_NodeCompare(BSL_ASN1_Buffer *buffOri, BSL_ASN1_Buffer *buff)
 
 int32_t HITLS_X509_CmpNameNode(BSL_ASN1_List *nameOri, BSL_ASN1_List *name)
 {
-    HITLS_X509_NameNode *nodeOri = BSL_LIST_GET_FIRST(nameOri);
-    HITLS_X509_NameNode *node = BSL_LIST_GET_FIRST(name);
-    while (nodeOri != NULL || node != NULL) {
+    BslListNode *nodeOriIt = BSL_LIST_FirstNode(nameOri);
+    BslListNode *nodeIt = BSL_LIST_FirstNode(name);
+    while (nodeOriIt != NULL || nodeIt != NULL) {
+        HITLS_X509_NameNode *nodeOri = (HITLS_X509_NameNode *)BSL_LIST_GetData(nodeOriIt);
+        HITLS_X509_NameNode *node = (HITLS_X509_NameNode *)BSL_LIST_GetData(nodeIt);
         if (nodeOri == NULL || node == NULL) {
             return 1;
         }
@@ -669,8 +717,8 @@ int32_t HITLS_X509_CmpNameNode(BSL_ASN1_List *nameOri, BSL_ASN1_List *name)
         if (X509_NodeNameValueCompare(nodeOri, node) != 0) {
             return 1;
         }
-        nodeOri = (HITLS_X509_NameNode *)BSL_LIST_GET_NEXT(nameOri);
-        node = (HITLS_X509_NameNode *)BSL_LIST_GET_NEXT(name);
+        nodeOriIt = BSL_LIST_GetNextNode(nameOri, nodeOriIt);
+        nodeIt = BSL_LIST_GetNextNode(name, nodeIt);
     }
     return 0;
 }
@@ -893,8 +941,9 @@ int32_t HITLS_X509_CheckSignature(const CRYPT_EAL_PkeyCtx *pubKey, uint8_t *rawD
 static int32_t X509_CheckAuthCertIssuer(BslList *authCertIssue, BSL_ASN1_List *issueName)
 {
     HITLS_X509_GeneralName *name = NULL;
-    for (HITLS_X509_GeneralName *tmp = BSL_LIST_GET_FIRST(authCertIssue); tmp != NULL;
-        tmp = BSL_LIST_GET_NEXT(authCertIssue)) {
+    for (BslListNode *node = BSL_LIST_FirstNode(authCertIssue); node != NULL;
+        node = BSL_LIST_GetNextNode(authCertIssue, node)) {
+        HITLS_X509_GeneralName *tmp = (HITLS_X509_GeneralName *)BSL_LIST_GetData(node);
         if (tmp->type == HITLS_X509_GN_DNNAME) {
             name = tmp;
             break;

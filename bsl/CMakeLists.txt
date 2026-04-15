@@ -31,6 +31,7 @@ include(helpers/hitls_target_helpers)
 add_library(_hitls_bsl_common_include INTERFACE)
 target_include_directories(_hitls_bsl_common_include INTERFACE
     ${PROJECT_SOURCE_DIR}/include/bsl               # expose bsl public headers
+    ${PROJECT_SOURCE_DIR}/bsl/list/include
     ${PROJECT_SOURCE_DIR}/bsl/err/include
     ${PROJECT_SOURCE_DIR}/bsl/log/include
     ${PROJECT_SOURCE_DIR}/bsl/sal/include

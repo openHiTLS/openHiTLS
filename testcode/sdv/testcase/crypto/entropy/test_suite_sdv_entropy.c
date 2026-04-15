@@ -28,6 +28,8 @@
 #include "securec.h"
 #include "crypt_eal_entropy.h"
 #include "crypt_algid.h"
+#include "bsl_list.h"
+#include "es_noise_source.h"
 
 /* Detect if running on WSL by checking /proc/version */
 __attribute__((unused)) static bool IsRunningOnWSL(void)
@@ -443,6 +445,70 @@ void SDV_CRYPTO_ENTROPY_EsCtrlTest2(void)
 EXIT:
     CRYPT_EAL_EsFree(es);
     return;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_ENTROPY_NS_REMOVE_NULL_NODE_FUNC_TC001
+* @spec  -
+* @title  Verify that removing a noise source skips list nodes whose data is NULL.
+* @precon  nan
+* @prior  Level 1
+* @auto  TRUE
+* @brief
+*    1. Create a noise source list and add two noise sources. Expected result 1.
+*    2. Manually set the first node data to NULL to simulate an abnormal empty node. Expected result 2.
+*    3. Call ES_NsRemove to remove the subsequent target noise source. Expected result 3.
+*    4. Restore the first node data and verify the remaining list content. Expected result 4.
+* @expect
+*    1. The list is created and both noise sources are added successfully.
+*    2. The list contains a node with NULL data and the test setup remains controllable.
+*    3. ES_NsRemove skips the NULL-data node and removes "target-node" successfully.
+*    4. Only the original first noise source remains in the list and the list structure is intact.
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ENTROPY_NS_REMOVE_NULL_NODE_FUNC_TC001(void)
+{
+#ifdef HITLS_CRYPTO_ENTROPY_SYS
+    BslList *nsList = NULL;
+    BslListNode *firstNode = NULL;
+    ES_NoiseSource *savedFirst = NULL;
+    CRYPT_EAL_NsMethod method = {
+        NULL,
+        NULL,
+        EntropyReadNormal,
+        NULL,
+    };
+    CRYPT_EAL_NsTestPara para = {5, 39, 512};
+
+    TestMemInit();
+    nsList = BSL_LIST_New(sizeof(ES_NoiseSource *));
+    ASSERT_TRUE(nsList != NULL);
+    ASSERT_TRUE(ES_NsAdd(nsList, "null-node", false, 7, &method, &para) == CRYPT_SUCCESS);
+    ASSERT_TRUE(ES_NsAdd(nsList, "target-node", false, 7, &method, &para) == CRYPT_SUCCESS);
+
+    firstNode = BSL_LIST_FirstNode(nsList);
+    ASSERT_TRUE(firstNode != NULL);
+    savedFirst = BSL_LIST_GetData(firstNode);
+    ASSERT_TRUE(savedFirst != NULL);
+    /* Deliberately inject a NULL payload node to cover ES_NsRemove traversal hardening. */
+    firstNode->data = NULL;
+
+    ASSERT_TRUE(ES_NsRemove(nsList, "target-node") == CRYPT_SUCCESS);
+    /* Restore the saved pointer before verification and list cleanup. */
+    firstNode->data = savedFirst;
+    ASSERT_TRUE(BSL_LIST_COUNT(nsList) == 1);
+    ASSERT_TRUE(BSL_LIST_FirstNodeData(nsList) == savedFirst);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    /* Ensure cleanup sees a valid node payload even if the case exits early. */
+    if (firstNode != NULL && firstNode->data == NULL) {
+        firstNode->data = savedFirst;
+    }
+    ES_NsListFree(nsList);
 #else
     SKIP_TEST();
 #endif
@@ -1737,6 +1803,7 @@ void HITLS_SDV_DRBG_GM_FUNC_TC019(int isCreateNullPool, int isPhysical, int minE
         if (attempt < maxRetries) {
             printf("[TC019] CRYPT_EAL_EsInit attempt %d/%d failed: 0x%08x (%d), retrying...\n",
                    attempt, maxRetries, ret, ret);
+            TestErrClear();
         } else {
             printf("[TC019] CRYPT_EAL_EsInit failed after %d attempts, last error: 0x%08x (%d)\n",
                    maxRetries, ret, ret);
@@ -1768,6 +1835,7 @@ void HITLS_SDV_DRBG_GM_FUNC_TC019(int isCreateNullPool, int isPhysical, int minE
     ASSERT_TRUE(TestIsErrStackEmpty());
     if (isCreateNullPool && !isValid) {
         ASSERT_TRUE(EAL_EntropyCollection(pool, ctx) == CRYPT_SEED_POOL_NOT_MEET_REQUIREMENT);
+        TestErrClear();
     } else {
         ASSERT_TRUE(EAL_EntropyCollection(pool, ctx) == CRYPT_SUCCESS);
     }
@@ -1827,6 +1895,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC039(int isCreateNullPool, int isPhysical, int minE
             }
             break;
         }
+        if (attempt < maxRetries) {
+            TestErrClear();
+        }
     }
     ASSERT_TRUE(ret1 == CRYPT_SUCCESS);
 
@@ -1847,6 +1918,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC039(int isCreateNullPool, int isPhysical, int minE
             }
             break;
         }
+        if (attempt < maxRetries) {
+            TestErrClear();
+        }
     }
     ASSERT_TRUE(ret2 == CRYPT_SUCCESS);
 
@@ -1866,6 +1940,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC039(int isCreateNullPool, int isPhysical, int minE
                 printf("[TC039] es3 init succeeded on attempt %d/%d\n", attempt, maxRetries);
             }
             break;
+        }
+        if (attempt < maxRetries) {
+            TestErrClear();
         }
     }
     ASSERT_TRUE(ret3 == CRYPT_SUCCESS);
@@ -1939,6 +2016,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC067(int isCreateNullPool, int isPhysical, int minE
             }
             break;
         }
+        if (attempt < maxRetries) {
+            TestErrClear();
+        }
     }
     ASSERT_TRUE(ret1 == CRYPT_SUCCESS);
 
@@ -1959,6 +2039,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC067(int isCreateNullPool, int isPhysical, int minE
             }
             break;
         }
+        if (attempt < maxRetries) {
+            TestErrClear();
+        }
     }
     ASSERT_TRUE(ret2 == CRYPT_SUCCESS);
 
@@ -1978,6 +2061,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC067(int isCreateNullPool, int isPhysical, int minE
                 printf("[TC067] es3 init succeeded on attempt %d/%d\n", attempt, maxRetries);
             }
             break;
+        }
+        if (attempt < maxRetries) {
+            TestErrClear();
         }
     }
     ASSERT_TRUE(ret3 == CRYPT_SUCCESS);
@@ -2050,6 +2136,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC071(int isCreateNullPool, int isPhysical, int minE
             }
             break;
         }
+        if (attempt < maxRetries) {
+            TestErrClear();
+        }
     }
     ASSERT_TRUE(ret1 == CRYPT_SUCCESS);
 
@@ -2070,6 +2159,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC071(int isCreateNullPool, int isPhysical, int minE
             }
             break;
         }
+        if (attempt < maxRetries) {
+            TestErrClear();
+        }
     }
     ASSERT_TRUE(ret2 == CRYPT_SUCCESS);
 
@@ -2089,6 +2181,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC071(int isCreateNullPool, int isPhysical, int minE
                 printf("[TC071] es3 init succeeded on attempt %d/%d\n", attempt, maxRetries);
             }
             break;
+        }
+        if (attempt < maxRetries) {
+            TestErrClear();
         }
     }
     ASSERT_TRUE(ret3 == CRYPT_SUCCESS);
@@ -2163,6 +2258,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC051(int isCreateNullPool, int isPhysical, int minE
             }
             break;
         }
+        if (attempt < maxRetries) {
+            TestErrClear();
+        }
     }
     ASSERT_TRUE(ret1 == CRYPT_SUCCESS);
 
@@ -2187,6 +2285,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC051(int isCreateNullPool, int isPhysical, int minE
             }
             break;
         }
+        if (attempt < maxRetries) {
+            TestErrClear();
+        }
     }
     ASSERT_TRUE(ret2 == CRYPT_SUCCESS);
 
@@ -2210,6 +2311,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC051(int isCreateNullPool, int isPhysical, int minE
                 printf("[TC051] es3 init succeeded on attempt %d/%d\n", attempt, maxRetries);
             }
             break;
+        }
+        if (attempt < maxRetries) {
+            TestErrClear();
         }
     }
     ASSERT_TRUE(ret3 == CRYPT_SUCCESS);
@@ -2287,6 +2391,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC056(int isCreateNullPool, int isPhysical, int minE
             }
             break;
         }
+        if (attempt < maxRetries) {
+            TestErrClear();
+        }
     }
     ASSERT_TRUE(ret1 == CRYPT_SUCCESS);
 
@@ -2306,6 +2413,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC056(int isCreateNullPool, int isPhysical, int minE
             }
             break;
         }
+        if (attempt < maxRetries) {
+            TestErrClear();
+        }
     }
     ASSERT_TRUE(ret2 == CRYPT_SUCCESS);
 
@@ -2324,6 +2434,9 @@ void HITLS_SDV_DRBG_GM_FUNC_TC056(int isCreateNullPool, int isPhysical, int minE
                 printf("[TC056] es3 init succeeded on attempt %d/%d\n", attempt, maxRetries);
             }
             break;
+        }
+        if (attempt < maxRetries) {
+            TestErrClear();
         }
     }
     ASSERT_TRUE(ret3 == CRYPT_SUCCESS);

@@ -97,7 +97,18 @@ typedef enum {
     CRYPT_DECODE_POOL_CMD_SET_TARGET_FORMAT,
     /** Set the target type */
     CRYPT_DECODE_POOL_CMD_SET_TARGET_TYPE,
-    /** Set the flag for whether to free out data */
+    /**
+     * Control whether the pool still owns the returned output of the last
+     * successful decode step.
+     *
+     * This command is meaningful only after CRYPT_DECODE_PoolDecode succeeds.
+     * If the final output is produced by the previous decoder-path node,
+     * passing false transfers ownership of that returned output to the caller
+     * so CRYPT_DECODE_PoolFreeCtx will not free it again.
+     *
+     * If the decode path contains only the initial node, the returned output is
+     * the original caller-owned input and this command is a no-op.
+     */
     CRYPT_DECODE_POOL_CMD_SET_FLAG_FREE_OUT_DATA,
 } CRYPT_DECODE_POOL_CMD;
 

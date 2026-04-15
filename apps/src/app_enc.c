@@ -313,22 +313,20 @@ static int32_t HandleIO(EncCmdOpt *encOpt)
     // Obtain the last value of the IN option.
     // If there is no last value or this option does not exist, the standard input is used.
     // If the file fails to be read, the process ends.
-    encOpt->encUio->rUio = HITLS_APP_UioOpen(encOpt->inFile, 'r', 1);
+    encOpt->encUio->rUio = HITLS_APP_UioOpen(encOpt->inFile, 'r', encOpt->inFile != NULL ? 1 : 0);
     if (encOpt->encUio->rUio == NULL) {
         AppPrintError("enc: Failed to open stdin or input file.\n");
         return HITLS_APP_UIO_FAIL;
     }
-    BSL_UIO_SetIsUnderlyingClosedByUio(encOpt->encUio->rUio, true);
     // Obtain the post-value of the OUT option.
     // If there is no post-value or the option does not exist, the standard output is used.
-    encOpt->encUio->wUio = HITLS_APP_UioOpen(encOpt->outFile, 'w', 1);
+    encOpt->encUio->wUio = HITLS_APP_UioOpen(encOpt->outFile, 'w', encOpt->outFile != NULL ? 1 : 0);
     if (encOpt->encUio->wUio == NULL) {
         BSL_UIO_Free(encOpt->encUio->rUio);
         encOpt->encUio->rUio = NULL;
         AppPrintError("enc: Failed to create the output pipeline.\n");
         return HITLS_APP_UIO_FAIL;
     }
-    BSL_UIO_SetIsUnderlyingClosedByUio(encOpt->encUio->wUio, true);
     return HITLS_APP_SUCCESS;
 }
 
@@ -350,15 +348,9 @@ static void FreeEnc(EncCmdOpt *encOpt)
         CRYPT_EAL_CipherFreeCtx(encOpt->keySet->ctx);
     }
     if (encOpt->encUio->rUio != NULL) {
-        if (encOpt->inFile != NULL) {
-            BSL_UIO_SetIsUnderlyingClosedByUio(encOpt->encUio->rUio, true);
-        }
         BSL_UIO_Free(encOpt->encUio->rUio);
     }
     if (encOpt->encUio->wUio != NULL) {
-        if (encOpt->outFile != NULL) {
-            BSL_UIO_SetIsUnderlyingClosedByUio(encOpt->encUio->wUio, true);
-        }
         BSL_UIO_Free(encOpt->encUio->wUio);
     }
     return;

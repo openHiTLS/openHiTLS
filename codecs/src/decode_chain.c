@@ -128,11 +128,30 @@ static int32_t SetFlagFreeOutData(CRYPT_DECODER_PoolCtx *poolCtx, void *val, int
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    CRYPT_DECODER_Node *prevNode = BSL_LIST_GET_PREV(poolCtx->decoderPath);
+    BslListNode *lastNode = BSL_LIST_LastNode(poolCtx->decoderPath);
+    if (lastNode == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    CRYPT_DECODER_Node *currNode = (CRYPT_DECODER_Node *)BSL_LIST_GetData(lastNode);
+    if (currNode == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    BslListNode *prevListNode = BSL_LIST_GetPrevNode(lastNode);
+    /*
+     * decoderPath tail is the current search node. Its input comes from the
+     * previous path node's outData
+     */
+    CRYPT_DECODER_Node *prevNode = (CRYPT_DECODER_Node *)BSL_LIST_GetData(prevListNode);
     if (prevNode == NULL) {
         return CRYPT_SUCCESS;
     }
     bool isFreeOutData = *(bool *)val;
+    if (prevNode->outData.data != currNode->inData.data) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
     if (!isFreeOutData) {
         prevNode->outData.data = NULL;
     }
@@ -187,39 +206,37 @@ static int32_t CollectDecoder(CRYPT_DECODER_Ctx *decoderCtx, void *args)
     return CRYPT_SUCCESS;
 }
 
-static CRYPT_DECODER_Ctx* GetUsableDecoderFromPool(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_DECODER_Node *currNode)
+static CRYPT_DECODER_Ctx *GetUsableDecoderFromPool(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_DECODER_Node *currNode)
 {
-    CRYPT_DECODER_Ctx *decoderCtx = NULL;
     const char *curFormat = currNode->inData.format;
     const char *curType = currNode->inData.type;
-    CRYPT_DECODER_Ctx *node = BSL_LIST_GET_FIRST(poolCtx->decoders);
-    while (node != NULL) {
-        decoderCtx = node;
+    for (BslListNode *decoderNode = BSL_LIST_FirstNode(poolCtx->decoders); decoderNode != NULL;
+        decoderNode = BSL_LIST_GetNextNode(poolCtx->decoders, decoderNode)) {
+        CRYPT_DECODER_Ctx *decoderCtx = (CRYPT_DECODER_Ctx *)BSL_LIST_GetData(decoderNode);
+        bool isMatch = false;
         if (decoderCtx == NULL || decoderCtx->decoderState != CRYPT_DECODER_STATE_UNTRIED) {
-            node = BSL_LIST_GET_NEXT(poolCtx->decoders);
             continue;
         }
         /* Check if decoder matches the current node's input format and type */
         if (curFormat != NULL && curType != NULL) {
             if ((decoderCtx->inFormat != NULL && BSL_SAL_StrcaseCmp(decoderCtx->inFormat, curFormat) == 0) &&
                 (decoderCtx->inType == NULL || BSL_SAL_StrcaseCmp(decoderCtx->inType, curType) == 0)) {
-                break;
+                isMatch = true;
             }
         } else if (curFormat == NULL && curType != NULL) {
             if (decoderCtx->inType == NULL || BSL_SAL_StrcaseCmp(decoderCtx->inType, curType) == 0) {
-                break;
+                isMatch = true;
             }
         } else if (curFormat != NULL && curType == NULL) {
             if (decoderCtx->inFormat != NULL && BSL_SAL_StrcaseCmp(decoderCtx->inFormat, curFormat) == 0) {
-                break;
+                isMatch = true;
             }
         } else {
-            break;
+            isMatch = true;
         }
-        node = BSL_LIST_GET_NEXT(poolCtx->decoders);
-    }
-    if (node != NULL) {
-        decoderCtx = node;
+        if (!isMatch) {
+            continue;
+        }
         decoderCtx->decoderState = CRYPT_DECODER_STATE_TRING;
         return decoderCtx;
     }
@@ -285,10 +302,11 @@ static int32_t TryDecodeWithDecoder(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_DECODE
     }
 }
 
-static void ResetLastNode(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_DECODER_Node *currNode)
+static void ResetLastNode(CRYPT_DECODER_PoolCtx *poolCtx)
 {
-    (void)currNode;
-    CRYPT_DECODER_Node *prevNode = BSL_LIST_GET_PREV(poolCtx->decoderPath);
+    BslListNode *currListNode = BSL_LIST_LastNode(poolCtx->decoderPath);
+    BslListNode *prevListNode = BSL_LIST_GetPrevNode(currListNode);
+    CRYPT_DECODER_Node *prevNode = (CRYPT_DECODER_Node *)BSL_LIST_GetData(prevListNode);
     /* Reset the out data of previous node if found */
     if (prevNode != NULL) {
         CRYPT_DECODE_FreeOutData(prevNode->decoderCtx, prevNode->outData.data);
@@ -296,12 +314,10 @@ static void ResetLastNode(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_DECODER_Node *cu
         prevNode->decoderCtx = NULL;
         prevNode->outData.format = poolCtx->targetFormat;
         prevNode->outData.type = poolCtx->targetType;
-        (void)BSL_LIST_GET_NEXT(poolCtx->decoderPath);
-    } else {
-        (void)BSL_LIST_GET_FIRST(poolCtx->decoderPath);
     }
-    BSL_LIST_DeleteCurrent(poolCtx->decoderPath, (BSL_LIST_PFUNC_FREE)FreeDecoderNode);
-    (void)BSL_LIST_GET_LAST(poolCtx->decoderPath);
+    if (currListNode != NULL) {
+        BSL_LIST_DeleteNode(poolCtx->decoderPath, currListNode, (BSL_LIST_PFUNC_FREE)FreeDecoderNode);
+    }
 }
 
 static int32_t BackToLastLayerDecodeNode(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_DECODER_Node *currNode)
@@ -310,14 +326,17 @@ static int32_t BackToLastLayerDecodeNode(CRYPT_DECODER_PoolCtx *poolCtx, CRYPT_D
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    ResetLastNode(poolCtx, currNode);
-    /* Reset all decoders marked as tried to untried state */
-    CRYPT_DECODER_Ctx *decoderCtx = BSL_LIST_GET_FIRST(poolCtx->decoders);
-    while (decoderCtx != NULL) {
+    ResetLastNode(poolCtx);
+    /*
+     * After popping one path node, restart candidate selection for the new tail.
+     * then rescanned decoders from the beginning for that layer.
+     */
+    for (BslListNode *decoderNode = BSL_LIST_FirstNode(poolCtx->decoders); decoderNode != NULL;
+        decoderNode = BSL_LIST_GetNextNode(poolCtx->decoders, decoderNode)) {
+        CRYPT_DECODER_Ctx *decoderCtx = (CRYPT_DECODER_Ctx *)BSL_LIST_GetData(decoderNode);
         if (decoderCtx->decoderState == CRYPT_DECODER_STATE_TRIED) {
             decoderCtx->decoderState = CRYPT_DECODER_STATE_UNTRIED;
         }
-        decoderCtx = BSL_LIST_GET_NEXT(poolCtx->decoders);
     }
 
     return CRYPT_SUCCESS;
@@ -338,8 +357,14 @@ static int32_t DecodeWithKeyChain(CRYPT_DECODER_PoolCtx *poolCtx, BSL_Param **ou
 {
     int32_t ret;
     CRYPT_DECODER_Ctx *decoderCtx = NULL;
-    CRYPT_DECODER_Node *currNode = BSL_LIST_GET_FIRST(poolCtx->decoderPath);
-    while (!BSL_LIST_EMPTY(poolCtx->decoderPath)) {
+    BslListNode *currPathNode = BSL_LIST_FirstNode(poolCtx->decoderPath);
+    /*
+     * decoderPath acts as an explicit DFS stack. The active search node is
+     * always the tail: successful decode appends a child and moves to the new
+     * tail; backtracking removes the tail and resumes from the new tail.
+     */
+    while (currPathNode != NULL) {
+        CRYPT_DECODER_Node *currNode = (CRYPT_DECODER_Node *)BSL_LIST_GetData(currPathNode);
         if (IsStrMatch(currNode->inData.format, poolCtx->targetFormat) &&
             IsStrMatch(currNode->inData.type, poolCtx->targetType)) {
             *outParam = currNode->inData.data;
@@ -352,17 +377,18 @@ static int32_t DecodeWithKeyChain(CRYPT_DECODER_PoolCtx *poolCtx, BSL_Param **ou
             currNode->decoderCtx = decoderCtx;
             ret = TryDecodeWithDecoder(poolCtx, currNode);
             if (ret == CRYPT_DECODE_RETRY) {
+                /* Stay on the same tail node and try the next decoder candidate. */
                 continue;
             }
+            currPathNode = BSL_LIST_LastNode(poolCtx->decoderPath);
         } else {
             ret = BackToLastLayerDecodeNode(poolCtx, currNode);
+            currPathNode = BSL_LIST_LastNode(poolCtx->decoderPath);
         }
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        CRYPT_DECODER_Node **curNodePtr = (CRYPT_DECODER_Node **)BSL_LIST_Curr(poolCtx->decoderPath);
-        currNode = curNodePtr == NULL ? NULL : *curNodePtr;
     }
 
     BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_NO_USABLE_DECODER);

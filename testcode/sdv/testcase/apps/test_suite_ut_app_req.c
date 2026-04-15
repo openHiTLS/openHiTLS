@@ -29,6 +29,21 @@
 
 /* END_HEADER */
 
+static void RestoreStdoutByFd(int savedStdoutFd)
+{
+    if (savedStdoutFd < 0) {
+        return;
+    }
+    /*
+     * req may print directly to process stdout when no output file is given.
+     * Restore stdout between iterations so later command cases and test logs do
+     * not reuse redirected state, and keep the recovery independent of /dev/tty.
+     */
+    fflush(stdout);
+    (void)dup2(savedStdoutFd, STDOUT_FILENO);
+    clearerr(stdout);
+}
+
 static void SplitArgs(char *str, char **result, int *count) {
     char *token;
     token = strtok(str, " ");
@@ -47,15 +62,18 @@ static void SplitArgs(char *str, char **result, int *count) {
 /* BEGIN_CASE */
 void UT_HITLS_APP_REQ_TC001(char *arg, int expect)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     char *argv[20] = {};
     int argc = 0;
     SplitArgs(arg, argv, &argc);
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     int ret = HITLS_ReqMain(argc, argv);
-    fflush(stdout);
-    freopen("/dev/tty", "w", stdout);
+    RestoreStdoutByFd(savedStdoutFd);
     ASSERT_EQ(ret, expect);
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     return;
 }

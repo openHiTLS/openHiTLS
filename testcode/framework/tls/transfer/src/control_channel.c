@@ -13,6 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
+#include <errno.h>
 #include <sys/time.h>
 #include "channel_res.h"
 #include "logger.h"
@@ -38,13 +39,17 @@ int ControlChannelInit(ControlChannelRes *channelInfo)
     timeOut.tv_sec = 0;      // Second
     timeOut.tv_usec = 10000; // 10000 microseconds
     if (setsockopt(sockFd, SOL_SOCKET, SO_RCVTIMEO, &timeOut, sizeof(timeOut)) == -1) {
-        LOG_ERROR("Setsockopt Fail");
-        return ERROR;
+        /*
+         * The control channel already uses select() for polling, so failing to
+         * apply SO_RCVTIMEO should not prevent the test framework from working.
+         */
+        LOG_DEBUG("Setsockopt SO_RCVTIMEO failed, errno=%d", errno);
     }
     // Binding ports.
     len = offsetof(struct sockaddr_un, sun_path) + strlen(channelInfo->srcDomainPath) + 1;
     if (bind(sockFd, (struct sockaddr *)&(channelInfo->srcAddr), len) < 0) {
         LOG_ERROR("Bind Error\n");
+        close(sockFd);
         return ERROR;
     }
     channelInfo->sockFd = sockFd;

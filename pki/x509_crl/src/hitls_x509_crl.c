@@ -457,10 +457,11 @@ int32_t HITLS_X509_EncodeRevokeCrlList(BSL_ASN1_List *crlList, BSL_ASN1_Buffer *
     }
     (void)memset_s(asnBuf, (uint32_t)count * sizeof(BSL_ASN1_Buffer) * X509_CRLENTRY_ELEM_NUMBER, 0,
         (uint32_t)count * sizeof(BSL_ASN1_Buffer) * X509_CRLENTRY_ELEM_NUMBER);
-    HITLS_X509_CrlEntry *crlEntry = NULL;
     uint32_t iter = 0;
     int32_t ret;
-    for (crlEntry = BSL_LIST_GET_FIRST(crlList); crlEntry != NULL; crlEntry = BSL_LIST_GET_NEXT(crlList)) {
+    for (BslListNode *crlNode = BSL_LIST_FirstNode(crlList); crlNode != NULL;
+        crlNode = BSL_LIST_GetNextNode(crlList, crlNode)) {
+        HITLS_X509_CrlEntry *crlEntry = (HITLS_X509_CrlEntry *)BSL_LIST_GetData(crlNode);
         ret = X509_EncodeCrlEntry(crlEntry, &asnBuf[iter]);
         if (ret != HITLS_PKI_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
@@ -672,8 +673,9 @@ static int32_t X509_CheckCrlRevoke(HITLS_X509_Crl *crl)
 {
     BSL_ASN1_List *revokedCerts = crl->tbs.revokedCerts;
     if (revokedCerts != NULL) {
-        HITLS_X509_CrlEntry *entry = NULL;
-        for (entry = BSL_LIST_GET_FIRST(revokedCerts); entry != NULL; entry = BSL_LIST_GET_NEXT(revokedCerts)) {
+        for (BslListNode *entryNode = BSL_LIST_FirstNode(revokedCerts); entryNode != NULL;
+            entryNode = BSL_LIST_GetNextNode(revokedCerts, entryNode)) {
+            HITLS_X509_CrlEntry *entry = (HITLS_X509_CrlEntry *)BSL_LIST_GetData(entryNode);
             // Check serial number
             if (entry->serialNumber.buff == NULL || entry->serialNumber.len == 0) {
                 BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CRL_ENTRY);
@@ -854,7 +856,7 @@ int32_t HITLS_X509_CrlParseBuff(int32_t format, const BSL_Buffer *encode, HITLS_
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    HITLS_X509_Crl *tmp = BSL_LIST_GET_FIRST(list);
+    HITLS_X509_Crl *tmp = (HITLS_X509_Crl *)BSL_LIST_FirstNodeData(list);
     int ref;
     ret = HITLS_X509_CrlCtrl(tmp, HITLS_X509_REF_UP, &ref, sizeof(int));
     BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CrlFree);

@@ -13,8 +13,8 @@
 # MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 set -e
-cd ../../
-HITLS_ROOT_DIR=`pwd`
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+HITLS_ROOT_DIR=$(cd "${SCRIPT_DIR}/../.." && pwd)
 
 hitls_compile_option=()
 

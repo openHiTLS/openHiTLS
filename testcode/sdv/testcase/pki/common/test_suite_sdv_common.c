@@ -14,6 +14,7 @@
  */
 
 /* BEGIN_HEADER */
+#include <pthread.h>
 #include <stdio.h>
 #include "bsl_sal.h"
 #include "securec.h"
@@ -51,6 +52,36 @@
 STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 STUB_DEFINE_RET3(int32_t, BSL_LIST_AddElement, BslList *, void *, BslListPosition);
 STUB_DEFINE_RET5(int32_t, BSL_ASN1_EncodeTemplate, BSL_ASN1_Template *, BSL_ASN1_Buffer *, uint32_t, uint8_t **, uint32_t *);
+
+typedef struct {
+    HITLS_X509_Cert *cert;
+    const char *expectDn;
+    int32_t result;
+} X509DnThreadArg;
+
+typedef struct {
+    HITLS_X509_Cert *cert;
+    int32_t ctrlCmd;
+    const char *expectDn;
+    uint32_t expectLen;
+    int32_t result;
+} X509DnCtrlThreadArg;
+
+typedef struct {
+    BslList *nameList;
+    const uint8_t *expectDer;
+    uint32_t expectLen;
+    BslListNode *expectCurr;
+    int32_t result;
+} X509CanonNameThreadArg;
+
+typedef struct {
+    BslList *nameListA;
+    BslList *nameListB;
+    BslListNode *expectCurrA;
+    BslListNode *expectCurrB;
+    int32_t result;
+} X509CmpNameThreadArg;
 
 static void FreeListData(void *data)
 {
@@ -99,6 +130,105 @@ static int32_t TestSignCb(int32_t mdId, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_As
     int32_t ret = CRYPT_EAL_PkeySign(prvKey, mdId, data, 1, sign, &signLen);
     BSL_SAL_Free(sign);
     return ret;
+}
+
+static void X509DnStringThread(void *arg)
+{
+    X509DnThreadArg *threadArg = (X509DnThreadArg *)arg;
+    uint32_t expectLen = (uint32_t)strlen(threadArg->expectDn);
+    threadArg->result = BSL_INTERNAL_EXCEPTION;
+
+    for (uint32_t i = 0; i < 200; i++) {
+        BSL_Buffer dn = {0};
+        int32_t ret = HITLS_X509_CertCtrl(threadArg->cert, HITLS_X509_GET_ISSUER_DN_STR, &dn, sizeof(BSL_Buffer));
+        if (ret != HITLS_PKI_SUCCESS) {
+            threadArg->result = ret;
+            return;
+        }
+        if (dn.data == NULL || dn.dataLen != expectLen || memcmp(dn.data, threadArg->expectDn, expectLen) != 0) {
+            BSL_SAL_FREE(dn.data);
+            threadArg->result = BSL_INTERNAL_EXCEPTION;
+            return;
+        }
+        BSL_SAL_FREE(dn.data);
+    }
+    threadArg->result = HITLS_PKI_SUCCESS;
+}
+
+static void X509DnCtrlThread(void *arg)
+{
+    X509DnCtrlThreadArg *threadArg = (X509DnCtrlThreadArg *)arg;
+    threadArg->result = BSL_INTERNAL_EXCEPTION;
+
+    for (uint32_t i = 0; i < 200; i++) {
+        BSL_Buffer dn = {0};
+        int32_t ret = HITLS_X509_CertCtrl(threadArg->cert, threadArg->ctrlCmd, &dn, sizeof(BSL_Buffer));
+        if (ret != HITLS_PKI_SUCCESS) {
+            threadArg->result = ret;
+            return;
+        }
+        if (dn.data == NULL || dn.dataLen != threadArg->expectLen ||
+            memcmp(dn.data, threadArg->expectDn, threadArg->expectLen) != 0) {
+            BSL_SAL_FREE(dn.data);
+            threadArg->result = BSL_INTERNAL_EXCEPTION;
+            return;
+        }
+        BSL_SAL_FREE(dn.data);
+    }
+    threadArg->result = HITLS_PKI_SUCCESS;
+}
+
+static void X509CanonNameThread(void *arg)
+{
+    X509CanonNameThreadArg *threadArg = (X509CanonNameThreadArg *)arg;
+    threadArg->result = BSL_INTERNAL_EXCEPTION;
+
+    for (uint32_t i = 0; i < 200; i++) {
+        BSL_ASN1_Buffer canonName = {0};
+        int32_t ret = HITLS_X509_EncodeCanonNameList(threadArg->nameList, &canonName);
+        if (ret != HITLS_PKI_SUCCESS) {
+            threadArg->result = ret;
+            return;
+        }
+        if (canonName.buff == NULL || canonName.len != threadArg->expectLen ||
+            memcmp(canonName.buff, threadArg->expectDer, threadArg->expectLen) != 0 ||
+            threadArg->nameList->curr != threadArg->expectCurr) {
+            BSL_SAL_Free(canonName.buff);
+            return;
+        }
+        BSL_SAL_Free(canonName.buff);
+    }
+    threadArg->result = HITLS_PKI_SUCCESS;
+}
+
+#if (defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CRL_PARSE) || defined(HITLS_PKI_X509_CSR_PARSE)) && \
+    defined(HITLS_PKI_X509_VFY)
+static void X509CmpNameThread(void *arg)
+{
+    X509CmpNameThreadArg *threadArg = (X509CmpNameThreadArg *)arg;
+    threadArg->result = BSL_INTERNAL_EXCEPTION;
+
+    for (uint32_t i = 0; i < 200; i++) {
+        if (HITLS_X509_CmpNameNode(threadArg->nameListA, threadArg->nameListB) != HITLS_PKI_SUCCESS ||
+            threadArg->nameListA->curr != threadArg->expectCurrA ||
+            threadArg->nameListB->curr != threadArg->expectCurrB) {
+            return;
+        }
+    }
+    threadArg->result = HITLS_PKI_SUCCESS;
+}
+#endif
+
+static HITLS_X509_NameNode *GetLayer2NameNode(BslList *list)
+{
+    for (BslListNode *nodeIt = BSL_LIST_FirstNode(list); nodeIt != NULL;
+        nodeIt = BSL_LIST_GetNextNode(list, nodeIt)) {
+        HITLS_X509_NameNode *node = (HITLS_X509_NameNode *)BSL_LIST_GetData(nodeIt);
+        if (node != NULL && node->layer == 2) {
+            return node;
+        }
+    }
+    return NULL;
 }
 
 /* BEGIN_CASE */
@@ -1459,6 +1589,183 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_HITLS_X509_DN_STR_MULTI_THREAD_TC001
+ * @title Concurrent issuer DN string query test
+ * @brief
+ *    1. Parse the certificate and prepare the expected issuer DN string.
+ *    2. Create two threads and concurrently call `HITLS_X509_CertCtrl` with
+ *       `HITLS_X509_GET_ISSUER_DN_STR` on the same certificate object.
+ *    3. Repeat the query 200 times in each thread and verify that every returned
+ *       DN string matches the expected content and length.
+ *    4. Wait for all threads to exit and verify that all thread results are successful
+ *       and the error stack remains empty.
+ * @expect
+ *    1. Certificate parsing succeeds.
+ *    2. Concurrent issuer DN string queries succeed.
+ *    3. All returned DN strings are stable and consistent with the expected issuer DN.
+ *    4. All threads return `HITLS_PKI_SUCCESS` and no unexpected error is left in the stack.
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_X509_DN_STR_MULTI_THREAD_TC001(void)
+{
+    HITLS_X509_Cert *cert = NULL;
+    pthread_t thrd[2] = {0};
+    X509DnThreadArg arg[2];
+    X509DnThreadArg initArg[2] = {
+        {NULL, "C=CN,ST=open,L=xian,O=openhitls,OU=asn1,CN=ca.asn1.com", BSL_INTERNAL_EXCEPTION},
+        {NULL, "C=CN,ST=open,L=xian,O=openhitls,OU=asn1,CN=ca.asn1.com", BSL_INTERNAL_EXCEPTION}
+    };
+
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/nist384ca.crt", &cert), HITLS_PKI_SUCCESS);
+    ASSERT_NE(cert, NULL);
+
+    (void)memcpy_s(arg, sizeof(arg), initArg, sizeof(initArg));
+    for (uint32_t i = 0; i < sizeof(arg) / sizeof(arg[0]); i++) {
+        arg[i].cert = cert;
+        ASSERT_TRUE(pthread_create(&thrd[i], NULL, (void *)X509DnStringThread, &arg[i]) == 0);
+    }
+    for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
+        pthread_join(thrd[i], NULL);
+        ASSERT_EQ(arg[i].result, HITLS_PKI_SUCCESS);
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    HITLS_X509_CertFree(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_HITLS_X509_DN_STR_MIXED_MULTI_THREAD_TC001
+ * @title Concurrent mixed subject and issuer DN string query test
+ * @brief
+ *    1. Parse the certificate and obtain the expected subject DN string and issuer DN string.
+ *    2. Create four threads and concurrently query `HITLS_X509_GET_SUBJECT_DN_STR`
+ *       and `HITLS_X509_GET_ISSUER_DN_STR` on the same certificate object.
+ *    3. Repeat the query 200 times in each thread and verify that the returned
+ *       DN string content and length always match the corresponding expected value.
+ *    4. Wait for all threads to finish and verify that all thread results are successful
+ *       and the error stack remains empty.
+ * @expect
+ *    1. Certificate parsing succeeds and both expected DN strings are obtained successfully.
+ *    2. Mixed concurrent subject/issuer DN string queries succeed.
+ *    3. All returned DN strings are stable and consistent with their expected subject or issuer DN.
+ *    4. All threads return `HITLS_PKI_SUCCESS` and no unexpected error is left in the stack.
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_X509_DN_STR_MIXED_MULTI_THREAD_TC001(void)
+{
+    HITLS_X509_Cert *cert = NULL;
+    pthread_t thrd[4] = {0};
+    X509DnCtrlThreadArg arg[4];
+    BSL_Buffer subjectDn = {0};
+    BSL_Buffer issuerDn = {0};
+
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, "../testdata/cert/chain/certVer/certVer_leaf.pem", &cert),
+        HITLS_PKI_SUCCESS);
+    ASSERT_NE(cert, NULL);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SUBJECT_DN_STR, &subjectDn, sizeof(BSL_Buffer)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN_STR, &issuerDn, sizeof(BSL_Buffer)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(subjectDn.data != NULL);
+    ASSERT_TRUE(issuerDn.data != NULL);
+
+    X509DnCtrlThreadArg initArg[4] = {
+        {cert, HITLS_X509_GET_SUBJECT_DN_STR, (const char *)subjectDn.data, subjectDn.dataLen, BSL_INTERNAL_EXCEPTION},
+        {cert, HITLS_X509_GET_ISSUER_DN_STR, (const char *)issuerDn.data, issuerDn.dataLen, BSL_INTERNAL_EXCEPTION},
+        {cert, HITLS_X509_GET_SUBJECT_DN_STR, (const char *)subjectDn.data, subjectDn.dataLen, BSL_INTERNAL_EXCEPTION},
+        {cert, HITLS_X509_GET_ISSUER_DN_STR, (const char *)issuerDn.data, issuerDn.dataLen, BSL_INTERNAL_EXCEPTION}
+    };
+    (void)memcpy_s(arg, sizeof(arg), initArg, sizeof(initArg));
+    for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
+        ASSERT_TRUE(pthread_create(&thrd[i], NULL, (void *)X509DnCtrlThread, &arg[i]) == 0);
+    }
+    for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
+        pthread_join(thrd[i], NULL);
+        ASSERT_EQ(arg[i].result, HITLS_PKI_SUCCESS);
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_SAL_FREE(subjectDn.data);
+    BSL_SAL_FREE(issuerDn.data);
+    HITLS_X509_CertFree(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_HITLS_X509_CANON_NAME_MULTI_THREAD_TC001
+ * @title Concurrent canonical name encoding test
+ * @brief
+ *    1. Parse the certificate, obtain the issuer DN list, and set a non-default current node.
+ *    2. Encode the issuer DN list once to obtain the expected canonical DER result.
+ *    3. Create four threads and concurrently call `HITLS_X509_EncodeCanonNameList`
+ *       on the same DN list object.
+ *    4. Repeat the encoding 200 times in each thread and verify that the returned
+ *       DER content and length always match the expected value and that the list
+ *       current pointer is not changed.
+ *    5. Wait for all threads to finish and verify that all thread results are successful
+ *       and the error stack remains empty.
+ * @expect
+ *    1. Certificate parsing and issuer DN list acquisition succeed.
+ *    2. The expected canonical name DER is encoded successfully.
+ *    3. Concurrent canonical name encoding succeeds.
+ *    4. All returned DER buffers are stable and consistent with the expected result,
+ *       and the DN list current pointer remains unchanged.
+ *    5. All threads return `HITLS_PKI_SUCCESS` and no unexpected error is left in the stack.
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_X509_CANON_NAME_MULTI_THREAD_TC001(void)
+{
+    HITLS_X509_Cert *cert = NULL;
+    BslList *issuerName = NULL;
+    BSL_ASN1_Buffer canonName = {0};
+    pthread_t thrd[4] = {0};
+    X509CanonNameThreadArg arg[4];
+
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/nist384ca.crt", &cert), HITLS_PKI_SUCCESS);
+    ASSERT_NE(cert, NULL);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_ISSUER_DN, &issuerName, sizeof(BslList *)), HITLS_PKI_SUCCESS);
+    ASSERT_NE(issuerName, NULL);
+
+    BslListNode *expectCurr = BSL_LIST_GetNextNode(issuerName, BSL_LIST_FirstNode(issuerName));
+    ASSERT_NE(expectCurr, NULL);
+    issuerName->curr = expectCurr;
+
+    ASSERT_EQ(HITLS_X509_EncodeCanonNameList(issuerName, &canonName), HITLS_PKI_SUCCESS);
+    ASSERT_NE(canonName.buff, NULL);
+    ASSERT_TRUE(issuerName->curr == expectCurr);
+
+    X509CanonNameThreadArg initArg[4] = {
+        {issuerName, canonName.buff, canonName.len, expectCurr, BSL_INTERNAL_EXCEPTION},
+        {issuerName, canonName.buff, canonName.len, expectCurr, BSL_INTERNAL_EXCEPTION},
+        {issuerName, canonName.buff, canonName.len, expectCurr, BSL_INTERNAL_EXCEPTION},
+        {issuerName, canonName.buff, canonName.len, expectCurr, BSL_INTERNAL_EXCEPTION}
+    };
+    (void)memcpy_s(arg, sizeof(arg), initArg, sizeof(initArg));
+    for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
+        ASSERT_TRUE(pthread_create(&thrd[i], NULL, (void *)X509CanonNameThread, &arg[i]) == 0);
+    }
+    for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
+        pthread_join(thrd[i], NULL);
+        ASSERT_EQ(arg[i].result, HITLS_PKI_SUCCESS);
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_SAL_Free(canonName.buff);
+    HITLS_X509_CertFree(cert);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_CRYPT_EAL_DecodeBuffKey_Ex_TC001(void)
 {
@@ -2382,6 +2689,140 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_X509_PARSE_NAME_LIST_UTF8_CACHE_TC001
+ * @title Parsed name UTF-8 canonical cache test
+ * @brief
+ *    1. Construct two ASN.1 encoded name lists whose original string encodings differ
+ *       but whose canonical UTF-8 values are expected to be equivalent.
+ *    2. Parse both name lists with `HITLS_X509_ParseNameList`.
+ *    3. Obtain the layer-2 name nodes and verify that their `utf8Value` cache has been
+ *       initialized as `BSL_ASN1_TAG_UTF8STRING`.
+ *    4. Verify that the cached canonical UTF-8 content of both parsed nodes matches the
+ *       expected normalized UTF-8 value.
+ *    5. Compare the two parsed name lists and verify that the canonical UTF-8 cache makes
+ *       the names compare equal.
+ * @expect
+ *    1. Both name lists are parsed successfully.
+ *    2. The parsed layer-2 nodes contain initialized UTF-8 canonical cache values.
+ *    3. The cached UTF-8 values match the expected normalized result.
+ *    4. `HITLS_X509_CmpNameNode` returns `HITLS_PKI_SUCCESS`.
+ */
+/* BEGIN_CASE */
+void SDV_X509_PARSE_NAME_LIST_UTF8_CACHE_TC001(Hex *nameAHex, Hex *nameBHex, Hex *expectUtf8)
+{
+    BSL_ASN1_Buffer nameA = {0};
+    BSL_ASN1_Buffer nameB = {0};
+    BslList *listA = NULL;
+    BslList *listB = NULL;
+    HITLS_X509_NameNode *nodeA = NULL;
+    HITLS_X509_NameNode *nodeB = NULL;
+
+    TestMemInit();
+    nameA.buff = nameAHex->x;
+    nameA.len = nameAHex->len;
+    nameB.buff = nameBHex->x;
+    nameB.len = nameBHex->len;
+    listA = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    listB = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    ASSERT_TRUE(listA != NULL);
+    ASSERT_TRUE(listB != NULL);
+    ASSERT_EQ(HITLS_X509_ParseNameList(&nameA, listA), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_ParseNameList(&nameB, listB), HITLS_PKI_SUCCESS);
+
+    nodeA = GetLayer2NameNode(listA);
+    nodeB = GetLayer2NameNode(listB);
+    ASSERT_TRUE(nodeA != NULL);
+    ASSERT_TRUE(nodeB != NULL);
+    ASSERT_EQ(nodeA->utf8Value.tag, BSL_ASN1_TAG_UTF8STRING);
+    ASSERT_EQ(nodeB->utf8Value.tag, BSL_ASN1_TAG_UTF8STRING);
+    ASSERT_COMPARE("parsed utf8 cache a", nodeA->utf8Value.buff, nodeA->utf8Value.len, expectUtf8->x, expectUtf8->len);
+    ASSERT_COMPARE("parsed utf8 cache b", nodeB->utf8Value.buff, nodeB->utf8Value.len, expectUtf8->x, expectUtf8->len);
+    ASSERT_EQ(HITLS_X509_CmpNameNode(listA, listB), HITLS_PKI_SUCCESS);
+EXIT:
+    BSL_LIST_FREE(listA, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+    BSL_LIST_FREE(listB, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_PARSE_NAME_LIST_UTF8_CACHE_MULTI_THREAD_TC001
+ * @title Concurrent parsed name UTF-8 cache compare test
+ * @brief
+ *    1. Construct two ASN.1 encoded name lists whose canonical UTF-8 values are expected
+ *       to be equivalent after parsing.
+ *    2. Parse both name lists with `HITLS_X509_ParseNameList` so that layer-2 nodes carry
+ *       cached canonical UTF-8 values.
+ *    3. Set non-default current nodes for both parsed name lists.
+ *    4. Create four threads and concurrently call `HITLS_X509_CmpNameNode` on the same
+ *       pair of parsed name lists.
+ *    5. Repeat the comparison 200 times in each thread and verify that every comparison
+ *       succeeds and does not change either list current pointer.
+ *    6. Wait for all threads to finish and verify that all thread results are successful
+ *       and the error stack remains empty.
+ * @expect
+ *    1. Both name lists are parsed successfully.
+ *    2. Concurrent name comparisons based on cached canonical UTF-8 succeed.
+ *    3. All threads return `HITLS_PKI_SUCCESS`.
+ *    4. The `curr` pointer of both name lists remains unchanged after concurrent comparison.
+ *    5. No unexpected error is left in the stack.
+ */
+/* BEGIN_CASE */
+void SDV_X509_PARSE_NAME_LIST_UTF8_CACHE_MULTI_THREAD_TC001(Hex *nameAHex, Hex *nameBHex)
+{
+    BSL_ASN1_Buffer nameA = {0};
+    BSL_ASN1_Buffer nameB = {0};
+    BslList *listA = NULL;
+    BslList *listB = NULL;
+    pthread_t thrd[4] = {0};
+    X509CmpNameThreadArg arg[4];
+    BslListNode *expectCurrA = NULL;
+    BslListNode *expectCurrB = NULL;
+
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    nameA.buff = nameAHex->x;
+    nameA.len = nameAHex->len;
+    nameB.buff = nameBHex->x;
+    nameB.len = nameBHex->len;
+    listA = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    listB = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    ASSERT_TRUE(listA != NULL);
+    ASSERT_TRUE(listB != NULL);
+    ASSERT_EQ(HITLS_X509_ParseNameList(&nameA, listA), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_ParseNameList(&nameB, listB), HITLS_PKI_SUCCESS);
+
+    expectCurrA = BSL_LIST_GetNextNode(listA, BSL_LIST_FirstNode(listA));
+    expectCurrB = BSL_LIST_GetNextNode(listB, BSL_LIST_FirstNode(listB));
+    ASSERT_NE(expectCurrA, NULL);
+    ASSERT_NE(expectCurrB, NULL);
+    listA->curr = expectCurrA;
+    listB->curr = expectCurrB;
+
+    X509CmpNameThreadArg initArg[4] = {
+        {listA, listB, expectCurrA, expectCurrB, BSL_INTERNAL_EXCEPTION},
+        {listA, listB, expectCurrA, expectCurrB, BSL_INTERNAL_EXCEPTION},
+        {listA, listB, expectCurrA, expectCurrB, BSL_INTERNAL_EXCEPTION},
+        {listA, listB, expectCurrA, expectCurrB, BSL_INTERNAL_EXCEPTION}
+    };
+    (void)memcpy_s(arg, sizeof(arg), initArg, sizeof(initArg));
+    for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
+        ASSERT_TRUE(pthread_create(&thrd[i], NULL, (void *)X509CmpNameThread, &arg[i]) == 0);
+    }
+    for (uint32_t i = 0; i < sizeof(thrd) / sizeof(thrd[0]); i++) {
+        pthread_join(thrd[i], NULL);
+        ASSERT_EQ(arg[i].result, HITLS_PKI_SUCCESS);
+    }
+    ASSERT_TRUE(listA->curr == expectCurrA);
+    ASSERT_TRUE(listB->curr == expectCurrB);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_LIST_FREE(listA, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+    BSL_LIST_FREE(listB, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_NAME_LIST_TC001(Hex *buff)
 {
@@ -2394,6 +2835,43 @@ void SDV_X509_CRL_PARSE_NAME_LIST_TC001(Hex *buff)
     ASSERT_EQ(HITLS_X509_ParseNameList(&name, list), BSL_ASN1_ERR_DECODE_LEN);
 EXIT:
     BSL_LIST_FreeWithoutData(list);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_PARSE_NAME_LIST_UTF8_CACHE_TC002
+ * @title Parsed name UTF-8 cache cleanup on parse failure test
+ * @brief
+ *    1. Construct an invalid ASN.1 encoded name list whose string field cannot be converted
+ *       into a valid canonical UTF-8 cache value.
+ *    2. Call `HITLS_X509_ParseNameList` and verify that it returns the expected parse error.
+ *    3. Verify that the target name list does not retain any partially parsed nodes after
+ *       the failure.
+ * @expect
+ *    1. `HITLS_X509_ParseNameList` returns the expected error code.
+ *    2. The parsed name list is rolled back to empty and no residual node remains.
+ */
+/* BEGIN_CASE */
+void SDV_X509_PARSE_NAME_LIST_UTF8_CACHE_TC002(Hex *buff, int expectRet)
+{
+#if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CRL_PARSE) || defined(HITLS_PKI_X509_CSR_PARSE)
+    TestMemInit();
+    BSL_ASN1_Buffer name = {0};
+    BslList *list = NULL;
+
+    name.buff = buff->x;
+    name.len = buff->len;
+    list = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    ASSERT_TRUE(list != NULL);
+    ASSERT_EQ(HITLS_X509_ParseNameList(&name, list), expectRet);
+    ASSERT_EQ(BSL_LIST_COUNT(list), 0);
+EXIT:
+    BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+#else
+    (void)buff;
+    (void)expectRet;
+    SKIP_TEST();
+#endif
 }
 /* END_CASE */
 

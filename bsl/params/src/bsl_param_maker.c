@@ -287,29 +287,29 @@ BSL_Param *BSL_PARAM_MAKER_ToParam(BSL_ParamMaker *maker)
     
     BslList *list = maker->params;
     uint8_t *valueIndex = (uint8_t *)(list->count + 1 + params);
-    BSL_PARAM_MAKER_DEF **paramMakerDef = BSL_LIST_First(list);
     int i = 0;
 
-    while (paramMakerDef != NULL) {
+    for (BslListNode *node = BSL_LIST_FirstNode(list); node != NULL; node = BSL_LIST_GetNextNode(list, node)) {
+        BSL_PARAM_MAKER_DEF *paramMakerDef = BSL_LIST_GetData(node);
         int32_t ret;
-        switch ((*paramMakerDef)->type) {
+        switch (paramMakerDef->type) {
             case BSL_PARAM_TYPE_UINT8:
             case BSL_PARAM_TYPE_UINT16:
             case BSL_PARAM_TYPE_UINT32:
             case BSL_PARAM_TYPE_INT32:
             case BSL_PARAM_TYPE_BOOL:
-                ret = BSL_PARAM_MAKER_NumberConvert(*paramMakerDef, params, i++, &valueIndex);
+                ret = BSL_PARAM_MAKER_NumberConvert(paramMakerDef, params, i++, &valueIndex);
                 break;
             case BSL_PARAM_TYPE_UINT32_PTR:
             case BSL_PARAM_TYPE_FUNC_PTR:
             case BSL_PARAM_TYPE_CTX_PTR:
             case BSL_PARAM_TYPE_OCTETS_PTR:
-                ret = BSL_PARAM_MAKER_PointerConvert(*paramMakerDef, params, i++);
+                ret = BSL_PARAM_MAKER_PointerConvert(paramMakerDef, params, i++);
                 break;
             case BSL_PARAM_TYPE_OCTETS:
             case BSL_PARAM_TYPE_UTF8_STR:
             default:
-                ret = BSL_PARAM_MAKER_StringConvert(*paramMakerDef, params, i++, &valueIndex);
+                ret = BSL_PARAM_MAKER_StringConvert(paramMakerDef, params, i++, &valueIndex);
                 break;
         }
 
@@ -317,7 +317,6 @@ BSL_Param *BSL_PARAM_MAKER_ToParam(BSL_ParamMaker *maker)
             BSL_SAL_Free(params);
             return NULL;
         }
-        paramMakerDef = BSL_LIST_Next(list);
     }
     return params;
 }

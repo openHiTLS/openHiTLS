@@ -146,15 +146,14 @@ typedef void *(*BSL_LIST_PFUNC_DUP)(const void *);
  *
  * Delete all the nodes in the list and then frees the header
  */
-#define BSL_LIST_FREE(pList, pFreeFunc)        \
-    do {                                       \
+#define BSL_LIST_FREE(pList, pFreeFunc)         \
+    do {                                        \
         BSL_LIST_DeleteAll((pList), pFreeFunc); \
-        if (NULL != (pList)) {             \
-            BSL_SAL_Free(pList);                  \
-            (pList) = NULL;                       \
-        }                                      \
+        if (NULL != (pList)) {                  \
+            BSL_SAL_Free(pList);                \
+            (pList) = NULL;                     \
+        }                                       \
     } while (0)
-
 
 #define SEC_INT_ERROR (-2)
 
@@ -163,6 +162,8 @@ typedef void *(*BSL_LIST_PFUNC_DUP)(const void *);
  *
  * This function sets the max element in BSL_LIST.Default value is 10000000 (10 Million).
  *
+ * @attention This function updates process-global configuration and is not thread-safe
+ * with concurrent callers that read or write the same setting.
  * @param iMaxElements [IN] Max allowed element in BSL_LIST. It should be in range[0xffff, 0xfffffff]
  * @retval #BSL_INVALID_ARG If input falls outside the range.
  * @retval #BSL_SUCCESS If successful.
@@ -174,6 +175,8 @@ int32_t BSL_LIST_SetMaxElements(int32_t iMaxElements);
  *
  * This function returns the max allowed elements in BSL_LIST.
  *
+ * @attention This function reads process-global configuration and is not thread-safe if
+ * another thread may update the same setting concurrently.
  * @retval int32_t Max configured elements in BSL_LIST
  */
 int32_t BSL_LIST_GetMaxElements(void);
@@ -233,6 +236,10 @@ void BSL_LIST_DetachCurrent(BslList *pList);
  * comparator as its second param and each data item on the
  * list is given as its first param while searching. The
  * comparator must return 0 to indicate a match.
+ * This function advances list->curr while searching. If a match is found,
+ * list->curr is left at the matching node. If no match is found, list->curr
+ * is restored to its original node. If an internal error is returned through
+ * pstErr, list->curr remains at the node where the error occurred.
  *
  * @param pList [IN] The list
  * @param pSearchFor [IN] The element to be searched
@@ -246,6 +253,7 @@ void *BSL_LIST_Search(BslList *pList, const void *pSearchFor, BSL_LIST_PFUNC_CMP
  * @ingroup bsl_list
  *
  * This function returns the node at the given index in the list, starting at 0.
+ * On success, list->curr is updated to the indexed node.
  *
  * @param pList [IN] The list
  * @param ulIndex [IN] The index in the list
@@ -259,6 +267,7 @@ void *BSL_LIST_GetIndexNode(uint32_t ulIndex, BslList *pList);
  *
  * This function dups a list by copying the list by creating a copy of list
  * and returns the destinaton list pointer.
+ * The source list curr pointer remains unchanged.
  *
  * @param pSrcList [IN] The list
  * @param pFuncCpy [IN] The dup function for the data in the node
@@ -285,6 +294,8 @@ BslList *BSL_LIST_Sort(BslList *pList, BSL_LIST_PFUNC_CMP pfCmp);
  *
  * This function is used to create a new list.
  *
+ * @attention This function is thread-safe. It creates and initializes an independent
+ * list object and does not access shared list state.
  * @param dataSize [IN] Size of the data inside the list node
  * @retval BslList* An NULL list [BslList*]
  */
@@ -295,6 +306,8 @@ BslList *BSL_LIST_New(int32_t dataSize);
  *
  * This function returns the data of the current element in the list.
  *
+ * @attention This function does not modify `list->curr`, but it is not thread-safe if
+ * another thread may modify or free the same list concurrently.
  * @param pstList [IN] Input list
  * @retval void* Data at the current element in the list [void*]
  * @retval void* If the current element does not exist in the list [NULL]
@@ -369,6 +382,9 @@ int32_t BSL_LIST_GetElmtIndex(const void *elmt, BslList *pstList);
  * @ingroup bsl_list
  *
  * This function is used to concatenate list 2 to list 1.
+ * If pDestList is empty and pSrcList is not empty, pDestList->curr is updated
+ * to the first node of the concatenated list. Otherwise pDestList->curr
+ * remains unchanged.
  *
  * @param pDestList [IN] The list to which the 2nd list is to be concatenated to.
  * @param pSrcList [IN] The list which is to be concatenated.
@@ -390,6 +406,7 @@ void BSL_LIST_FreeWithoutData(BslList *pstList);
  * @ingroup bsl_list
  *
  * This function is used to  reverse the linked list.
+ * After reversal, pstList->curr points to the new first node.
  *
  * @param pstList [IN] Pointer to the list which has to be reversed
  * @retval void This function does not return any value.
@@ -401,6 +418,8 @@ void BSL_LIST_RevList(BslList *pstList);
  *
  * This function set the max qsort Size.Default value is 100000
  *
+ * @attention This function updates process-global configuration and is not thread-safe
+ * with concurrent callers that read or write the same setting.
  * @param uiQsortSize [IN] Max Buff Size. it should in range of [10000, 67108864] Default value is 100000
  * @retval int32_t BSL_SUCCESS on success BSL_INVALID_ARG on Failure.
  */
@@ -411,6 +430,8 @@ int32_t BSL_LIST_SetMaxQsortCount(uint32_t uiQsortSize);
  *
  * This function returns the MAX qsort Size
  *
+ * @attention This function reads process-global configuration and is not thread-safe if
+ * another thread may update the same setting concurrently.
  * @retval uint32_t Returns the max qsort Size.
  */
 uint32_t BSL_LIST_GetMaxQsortCount(void);
@@ -431,6 +452,8 @@ void BSL_LIST_DeleteAllAfterSort(BslList *pList);
  *
  * This function returns the first element of the list.
  *
+ * @attention This function does not modify `list->curr`, but it is not thread-safe if
+ * another thread may modify or free the same list concurrently.
  * @param list [IN] The list.
  * @retval BslListNode* first element of the list [BslListNode*]
  * @retval BslListNode* If the first element does not exist [NULL]
@@ -442,6 +465,8 @@ BslListNode *BSL_LIST_FirstNode(const BslList *list);
  *
  * This function returns the data of the passed list node.
  *
+ * @attention This function only reads the input node, but it is not thread-safe if
+ * another thread may free or reuse the same node concurrently.
  * @param pstNode [IN] The node.
  * @retval void* Data of the passed list node. [void*]
  * @retval void* If the data is not present in the list node. [NULL]
@@ -456,6 +481,8 @@ void *BSL_LIST_GetData(const BslListNode *pstNode);
  * the new current node will be the first node of the list
  * (unless the list is NULL).
  *
+ * @attention This function does not modify `list->curr`, but it is not thread-safe if
+ * another thread may modify or free the same list concurrently.
  * @param pstList [IN] The list.
  * @param pstListNode [IN] The list node.
  * @retval BslListNode* Pointer to next element in the list. [void*]
@@ -469,6 +496,8 @@ BslListNode *BSL_LIST_GetNextNode(const BslList *pstList, const BslListNode *pst
  * This function backs up the current reference pointer by one and returns the
  * new current node.
  *
+ * @attention This function only reads the input node, but it is not thread-safe if
+ * another thread may free or reuse the same node concurrently.
  * @param pstListNode [IN] The list node.
  * @retval BslListNode* Pointer to the previous element in the list
  * @retval BslListNode* If the previous element does not exist[NULL]
@@ -500,6 +529,48 @@ void BSL_LIST_DeleteNode(BslList *pstList, const BslListNode *pstListNode, BSL_L
  * @param pstListNode [in/out] when it is input parameter, it is the list node to be detached.
  */
 void BSL_LIST_DetachNode(BslList *pstList, BslListNode **pstListNode);
+
+/**
+ * @ingroup bsl_list
+ * @brief Returns the last node in the list without changing curr.
+ *
+ * @attention This function does not modify `list->curr`, but it is not thread-safe if
+ * another thread may modify or free the same list concurrently.
+ * @param[IN] list The list.
+ *
+ * @retval BslListNode* The last node. [BslListNode*]
+ * @retval BslListNode* If the list is NULL or empty. [NULL]
+ */
+BslListNode *BSL_LIST_LastNode(const BslList *list);
+
+/**
+ * @ingroup bsl_list
+ * @brief Stateless search helper that does not modify list->curr.
+ *
+ * @attention This function does not modify `list->curr`, but it is not thread-safe if
+ * another thread may modify or free the same list concurrently.
+ * @param[IN] pList The list.
+ * @param[IN] pSearchFor The element to be searched.
+ * @param[IN] pSearcher The pointer to the comparison function of data.
+ * @param[OUT] pstErr Error codes for internal error. [0/-2]
+ *                    Reset to 0 when no internal error occurs.
+ *
+ * @retval void* The matching element. [void*]
+ * @retval void* If none found. [NULL]
+ */
+void *BSL_LIST_SearchDataConst(const BslList *pList, const void *pSearchFor, BSL_LIST_PFUNC_CMP pSearcher,
+                               int32_t *pstErr);
+
+/**
+ * @ingroup bsl_list
+ * @brief Returns the data of the first node in the list without changing curr.
+ *
+ * @param[IN] list The list.
+ *
+ * @retval void* The first node data. [void*]
+ * @retval void* If the list is NULL or empty. [NULL]
+ */
+void *BSL_LIST_FirstNodeData(const BslList *list);
 
 #ifdef __cplusplus
 }

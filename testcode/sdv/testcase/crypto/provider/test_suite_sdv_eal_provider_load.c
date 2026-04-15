@@ -15,6 +15,7 @@
 
 /* BEGIN_HEADER */
 #include <stdlib.h>
+#include <pthread.h>
 #include "securec.h"
 #include "bsl_sal.h"
 #include "crypt_errno.h"
@@ -53,6 +54,61 @@
 #define NEW_PKEY_ALGID (BSL_CID_MAX + 2)
 #define NEW_SIGN_HASH_ALGID (BSL_CID_MAX + 3)
 #define NEW_HASH_ALGID (BSL_CID_MAX + 4)
+
+#ifdef HITLS_CRYPTO_PROVIDER
+#define PROVIDER_MULTI_THREAD_ROUND 200
+
+typedef struct {
+    CRYPT_EAL_LibCtx *libCtx;
+    const char *firstProvider;
+    const char *lastProvider;
+    int32_t result;
+} ProviderThreadArg;
+
+static int32_t ProviderListCompare(const void *a, const void *b)
+{
+    const CRYPT_EAL_ProvMgrCtx *ctx = (const CRYPT_EAL_ProvMgrCtx *)a;
+    const char *providerName = (const char *)b;
+    return strcmp(ctx->providerName, providerName);
+}
+
+static void *ProviderListTraverseThread(void *arg)
+{
+    ProviderThreadArg *threadArg = (ProviderThreadArg *)arg;
+    threadArg->result = CRYPT_SUCCESS;
+    for (uint32_t iter = 0; iter < PROVIDER_MULTI_THREAD_ROUND; iter++) {
+        if ((uint32_t)BSL_LIST_COUNT(threadArg->libCtx->providers) != PROVIDER_LOAD_SAIZE_2) {
+            threadArg->result = CRYPT_PROVIDER_INVALID_LIB_CTX;
+            return NULL;
+        }
+
+        /* Read-only helpers exercise the stateless traversal path without touching providers->curr. */
+        BslListNode *firstNode = BSL_LIST_FirstNode(threadArg->libCtx->providers);
+        BslListNode *lastNode = BSL_LIST_LastNode(threadArg->libCtx->providers);
+        if (firstNode == NULL || lastNode == NULL) {
+            threadArg->result = CRYPT_NULL_INPUT;
+            return NULL;
+        }
+
+        CRYPT_EAL_ProvMgrCtx *firstProvider = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_GetData(firstNode);
+        CRYPT_EAL_ProvMgrCtx *lastProvider = (CRYPT_EAL_ProvMgrCtx *)BSL_LIST_GetData(lastNode);
+        if (strcmp(firstProvider->providerName, threadArg->firstProvider) != 0 ||
+            strcmp(lastProvider->providerName, threadArg->lastProvider) != 0) {
+            threadArg->result = CRYPT_PROVIDER_INVALID_LIB_CTX;
+            return NULL;
+        }
+
+        if (BSL_LIST_SearchDataConst(threadArg->libCtx->providers, threadArg->firstProvider,
+            ProviderListCompare, NULL) == NULL ||
+            BSL_LIST_SearchDataConst(threadArg->libCtx->providers, threadArg->lastProvider,
+            ProviderListCompare, NULL) == NULL) {
+            threadArg->result = CRYPT_NOT_SUPPORT;
+            return NULL;
+        }
+    }
+    return NULL;
+}
+#endif
 
 /**
  * @test SDV_CRYPTO_PROVIDER_LOAD_FUNC_TC001
@@ -237,6 +293,74 @@ EXIT:
     CRYPT_EAL_MdFreeCtx(mdCtx);
     CRYPT_EAL_Cleanup(CRYPT_EAL_INIT_ALL);
     ASSERT_EQ(CRYPT_EAL_Init(CRYPT_EAL_INIT_CPU|CRYPT_EAL_INIT_PROVIDER|CRYPT_EAL_INIT_PROVIDER_RAND), CRYPT_SUCCESS);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_CRYPTO_PROVIDER_LIST_MULTI_THREAD_TC001
+ * @title Concurrent traversal on a shared provider list
+ * @precon None
+ * @brief
+ *    1. Create one shared libctx and load two providers into the shared provider list.
+ *    2. Start multiple threads that repeatedly traverse and search the shared provider list.
+ *    3. Verify each thread always observes the same provider order and search result.
+ * @expect
+ *    1. Shared provider list traversal remains stable across threads.
+ *    2. All provider searches succeed with the expected entries.
+ * @prior Level 1
+ * @auto TRUE
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_PROVIDER_LIST_MULTI_THREAD_TC001(char *path, char *test1, char *test2, int cmd)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)test1;
+    (void)test2;
+    (void)cmd;
+    SKIP_TEST();
+#else
+    CRYPT_EAL_LibCtx *libCtx = NULL;
+    pthread_t thrd[4];
+    ProviderThreadArg arg[4] = {0};
+    const char *firstProviderName = NULL;
+    const char *lastProviderName = NULL;
+
+    libCtx = CRYPT_EAL_LibCtxNew();
+    ASSERT_TRUE(libCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_ProviderSetLoadPath(libCtx, path), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test1, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_ProviderLoad(libCtx, cmd, test2, NULL, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(libCtx->providers), 2);
+
+    BslListNode *firstNode = BSL_LIST_FirstNode(libCtx->providers);
+    BslListNode *lastNode = BSL_LIST_LastNode(libCtx->providers);
+    ASSERT_TRUE(firstNode != NULL);
+    ASSERT_TRUE(lastNode != NULL);
+    firstProviderName = ((CRYPT_EAL_ProvMgrCtx *)BSL_LIST_GetData(firstNode))->providerName;
+    lastProviderName = ((CRYPT_EAL_ProvMgrCtx *)BSL_LIST_GetData(lastNode))->providerName;
+
+    for (uint32_t i = 0; i < sizeof(arg) / sizeof(arg[0]); i++) {
+        arg[i].libCtx = libCtx;
+        arg[i].firstProvider = firstProviderName;
+        arg[i].lastProvider = lastProviderName;
+        arg[i].result = CRYPT_SUCCESS;
+        ASSERT_TRUE(pthread_create(&thrd[i], NULL, ProviderListTraverseThread, &arg[i]) == 0);
+    }
+
+    for (uint32_t i = 0; i < sizeof(arg) / sizeof(arg[0]); i++) {
+        pthread_join(thrd[i], NULL);
+        ASSERT_EQ(arg[i].result, CRYPT_SUCCESS);
+    }
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    if (libCtx != NULL) {
+        CRYPT_EAL_LibCtxFree(libCtx);
+    }
+    return;
 #endif
 }
 /* END_CASE */

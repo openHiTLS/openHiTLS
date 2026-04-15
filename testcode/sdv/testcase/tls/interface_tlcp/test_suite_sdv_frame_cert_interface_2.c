@@ -95,13 +95,12 @@ void UT_TLS_CERT_CM_SetVerifyStore_API_TC001(int version)
     ASSERT_TRUE(ctx != NULL);
 
     ASSERT_TRUE(HITLS_SetVerifyStore(NULL, verifyStore, false) == HITLS_NULL_INPUT);
-    ASSERT_EQ(HITLS_SetVerifyStore(ctx, verifyStore, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetVerifyStore(ctx, verifyStore, false), HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_GetVerifyStore(ctx) == verifyStore);
     ASSERT_TRUE(HITLS_GetVerifyStore(NULL) == NULL);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
-    HITLS_X509_StoreCtxFree(verifyStore);
 }
 /* END_CASE */
 

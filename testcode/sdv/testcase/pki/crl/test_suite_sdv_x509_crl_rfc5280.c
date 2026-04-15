@@ -96,7 +96,7 @@ EXIT:
 
 /* @
 * @test  SDV_X509_CRL_PARSE_FILE_FUNC_TC001
-* @title  Test the supported encoding formats for the Issuer Name field in CRL files.
+* @title  Test Issuer Name string encodings in CRL files, including malformed encoded content rejection.
 @ */
 /* BEGIN_CASE */
 void SDV_X509_CRL_PARSE_FILE_FUNC_TC004(char *path, int res, Hex *dn)

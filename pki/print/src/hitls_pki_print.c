@@ -262,15 +262,16 @@ int32_t HITLS_PKI_PrintDnName(uint32_t layer, BslList *list, bool newLine, BSL_U
 {
     BslOidString oid = {0};
     const char *oidName = NULL;
-    HITLS_X509_NameNode *name = NULL;
     bool preLayerIs2 = false;
     int8_t namePosFlag = -1;  // -1: not start; 0: first; 1: others
     int32_t ret = HITLS_PKI_SUCCESS;
 
     BSL_ERR_SET_MARK();
-    for (name = g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253 ? BSL_LIST_GET_LAST(list) : BSL_LIST_GET_FIRST(list);
-         name != NULL;
-         name = g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253 ? BSL_LIST_GET_PREV(list) : BSL_LIST_GET_NEXT(list)) {
+    for (BslListNode *nameNode = g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253 ? BSL_LIST_LastNode(list) :
+        BSL_LIST_FirstNode(list); nameNode != NULL;
+        nameNode = g_nameFlag == HITLS_PKI_PRINT_DN_RFC2253 ? BSL_LIST_GetPrevNode(nameNode) :
+        BSL_LIST_GetNextNode(list, nameNode)) {
+        HITLS_X509_NameNode *name = (HITLS_X509_NameNode *)BSL_LIST_GetData(nameNode);
         if (name->layer == 1) {
             preLayerIs2 = false;
             continue;
@@ -411,7 +412,9 @@ static int32_t PrintGeneralNames(BslList *list, uint32_t layer, BSL_UIO *uio)
 {
     uint32_t cnt = 0;
     int32_t ret;
-    for (HITLS_X509_GeneralName *gn = BSL_LIST_GET_FIRST(list); gn != NULL; gn = BSL_LIST_GET_NEXT(list)) {
+    for (BslListNode *nameNode = BSL_LIST_FirstNode(list); nameNode != NULL;
+        nameNode = BSL_LIST_GetNextNode(list, nameNode)) {
+        HITLS_X509_GeneralName *gn = (HITLS_X509_GeneralName *)BSL_LIST_GetData(nameNode);
         ret = PrintGeneralName(gn, cnt == 0, cnt == 0 ? layer : 0, uio);
         if (ret != 0) {
             BSL_ERR_PUSH_ERROR(HITLS_PRINT_ERR_GNNAME);
@@ -506,7 +509,9 @@ static int32_t PrintExtendedKeyUsage(HITLS_X509_ExtEntry *entry, uint32_t layer,
     uint32_t cnt = 0;
     char *fmt = NULL;
     const char *name = NULL;
-    for (BSL_Buffer *oid = BSL_LIST_GET_FIRST(exKu.oidList); oid != NULL; oid = BSL_LIST_GET_NEXT(exKu.oidList)) {
+    for (BslListNode *oidNode = BSL_LIST_FirstNode(exKu.oidList); oidNode != NULL;
+        oidNode = BSL_LIST_GetNextNode(exKu.oidList, oidNode)) {
+        BSL_Buffer *oid = (BSL_Buffer *)BSL_LIST_GetData(oidNode);
         fmt = cnt == 0 ? "%s" : ", %s";
         name = BSL_OBJ_GetOidNameFromOidBuff(oid->data, oid->dataLen);
         if (BSL_PRINT_Fmt(cnt == 0 ? layer : 0, uio, fmt, name == NULL ? HITLS_X509_UNKOWN : name) != 0) {
@@ -580,7 +585,6 @@ static int32_t PrintX509Ext(HITLS_X509_Ext *ext, bool isCertExt, uint32_t layer,
         }
     }
 
-    HITLS_X509_ExtEntry *entry = BSL_LIST_GET_FIRST(ext->extList);
     const char *extName = NULL;
     int32_t ret = HITLS_PRINT_ERR_EXT_NAME;
 #ifdef HITLS_PKI_INFO_DN_CONF
@@ -588,7 +592,9 @@ static int32_t PrintX509Ext(HITLS_X509_Ext *ext, bool isCertExt, uint32_t layer,
     g_nameFlag = HITLS_PKI_PRINT_DN_RFC2253; /* The ext content must be printed in one line. Therefore, the format of
                                                  dirname is RFC2253. */
 #endif
-    for (entry = BSL_LIST_GET_FIRST(ext->extList); entry != NULL; entry = BSL_LIST_GET_NEXT(ext->extList)) {
+    for (BslListNode *extNode = BSL_LIST_FirstNode(ext->extList); extNode != NULL;
+        extNode = BSL_LIST_GetNextNode(ext->extList, extNode)) {
+        HITLS_X509_ExtEntry *entry = (HITLS_X509_ExtEntry *)BSL_LIST_GetData(extNode);
         extName = BSL_OBJ_GetOidNameFromCID(entry->cid);
         if (extName == NULL) {
             char *tmpName = BSL_OBJ_GetOidNumericString(entry->extnId.buff, entry->extnId.len);
@@ -860,7 +866,9 @@ static int32_t PrintAttrs(BslList *attrs, uint32_t layer, BSL_UIO *uio)
         return HITLS_PKI_SUCCESS;
     }
     int32_t ret;
-    for (HITLS_X509_AttrEntry *entry = BSL_LIST_GET_FIRST(attrs); entry != NULL; entry = BSL_LIST_GET_NEXT(attrs)) {
+    for (BslListNode *attrNode = BSL_LIST_FirstNode(attrs); attrNode != NULL;
+        attrNode = BSL_LIST_GetNextNode(attrs, attrNode)) {
+        HITLS_X509_AttrEntry *entry = (HITLS_X509_AttrEntry *)BSL_LIST_GetData(attrNode);
         ret = PrintAttr(entry, layer + 1, uio);
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
@@ -914,9 +922,7 @@ static int32_t PrintCsr(void *val, BSL_UIO *uio)
 static int32_t CmpExtByCid(const void *pExt, const void *pCid)
 {
     const HITLS_X509_ExtEntry *ext = pExt;
-    BslCid cid = *(const BslCid *)pCid;
-
-    return cid == ext->cid ? 0 : 1;
+    return ext->cid == *(const BslCid *)pCid ? 0 : 1;
 }
 
 static int32_t PrintCrlReason(HITLS_X509_ExtEntry *extEntry, uint32_t layer, BSL_UIO *uio)
@@ -985,7 +991,7 @@ static int32_t PrintCrlEntry(uint32_t layer, HITLS_X509_CrlEntry *crlEntry, BSL_
 {
     int32_t ret;
     BslCid cid = BSL_CID_CE_CRLREASONS;
-    HITLS_X509_ExtEntry *extEntry = BSL_LIST_Search(crlEntry->extList, &cid, CmpExtByCid, NULL);
+    HITLS_X509_ExtEntry *extEntry = BSL_LIST_SearchDataConst(crlEntry->extList, &cid, CmpExtByCid, NULL);
     if (extEntry != NULL) {
         ret = PrintCrlReason(extEntry, layer, uio);
         if (ret != HITLS_PKI_SUCCESS) {
@@ -995,7 +1001,7 @@ static int32_t PrintCrlEntry(uint32_t layer, HITLS_X509_CrlEntry *crlEntry, BSL_
     }
 
     cid = BSL_CID_CE_INVALIDITYDATE;
-    extEntry = BSL_LIST_Search(crlEntry->extList, &cid, CmpExtByCid, NULL);
+    extEntry = BSL_LIST_SearchDataConst(crlEntry->extList, &cid, CmpExtByCid, NULL);
     if (extEntry != NULL) {
         ret = PrintInvalidTime(extEntry, layer, uio);
         if (ret != HITLS_PKI_SUCCESS) {
@@ -1005,7 +1011,7 @@ static int32_t PrintCrlEntry(uint32_t layer, HITLS_X509_CrlEntry *crlEntry, BSL_
     }
 
     cid = BSL_CID_CE_CERTIFICATEISSUER;
-    extEntry = BSL_LIST_Search(crlEntry->extList, &cid, CmpExtByCid, NULL);
+    extEntry = BSL_LIST_SearchDataConst(crlEntry->extList, &cid, CmpExtByCid, NULL);
     if (extEntry != NULL) {
         ret = PrintCertificateIssuer(extEntry, layer, uio);
         if (ret != HITLS_PKI_SUCCESS) {
@@ -1020,8 +1026,9 @@ static int32_t PrintCrlEntry(uint32_t layer, HITLS_X509_CrlEntry *crlEntry, BSL_
 static int32_t PrintRevokedCertificates(uint32_t layer, BSL_ASN1_List *revokedCerts, BSL_UIO *uio)
 {
     int32_t ret;
-    HITLS_X509_CrlEntry *crlEntry = BSL_LIST_GET_FIRST(revokedCerts);
-    while (crlEntry != NULL) {
+    for (BslListNode *entryNode = BSL_LIST_FirstNode(revokedCerts); entryNode != NULL;
+        entryNode = BSL_LIST_GetNextNode(revokedCerts, entryNode)) {
+        HITLS_X509_CrlEntry *crlEntry = (HITLS_X509_CrlEntry *)BSL_LIST_GetData(entryNode);
         /* serial number */
         RETURN_RET_IF(BSL_PRINT_Number(
             layer, "Serial Number", crlEntry->serialNumber.buff, crlEntry->serialNumber.len, uio) != 0,
@@ -1035,7 +1042,6 @@ static int32_t PrintRevokedCertificates(uint32_t layer, BSL_ASN1_List *revokedCe
                 return ret;
             }
         }
-        crlEntry = BSL_LIST_GET_NEXT(revokedCerts);
     }
     return HITLS_PKI_SUCCESS;
 }
@@ -1189,4 +1195,3 @@ int32_t HITLS_PKI_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *ui
     }
 }
 #endif // HITLS_PKI_INFO
-

@@ -467,6 +467,10 @@ BSL_UIO *HITLS_APP_UioOpen(const char *filename, char mode, int32_t flag)
         AppPrintError("Invalid mode, only support a/w/r\n");
         return NULL;
     }
+    if (flag != 0 && flag != 1) {
+        AppPrintError("Invalid flag, only support 0/1\n");
+        return NULL;
+    }
     BSL_UIO *uio = BSL_UIO_New(BSL_UIO_FileMethod());
     if (uio == NULL) {
         return uio;
@@ -475,8 +479,9 @@ BSL_UIO *HITLS_APP_UioOpen(const char *filename, char mode, int32_t flag)
     int32_t larg = 0;
     void *parg = NULL;
     if (filename == NULL) {
+        /* HITLS_APP_UioOpen only wraps process-owned stdin/stdout when no path is supplied. */
         cmd = BSL_UIO_FILE_PTR;
-        larg = flag;
+        larg = 0;
         switch (mode) {
             case 'w': parg = (void *)stdout;
                 break;
@@ -508,6 +513,8 @@ BSL_UIO *HITLS_APP_UioOpen(const char *filename, char mode, int32_t flag)
         AppPrintError("Failed to bind the filepath\n");
         BSL_UIO_Free(uio);
         uio = NULL;
+    } else if (filename != NULL) {
+        BSL_UIO_SetIsUnderlyingClosedByUio(uio, flag == 1);
     }
     return uio;
 }

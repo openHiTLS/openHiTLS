@@ -54,6 +54,32 @@ typedef struct {
     int expect;
 } OptTestData;
 
+static void RestoreStdoutByFd(int savedStdoutFd)
+{
+    if (savedStdoutFd < 0) {
+        return;
+    }
+    /*
+     * Some command paths write to process stdout when no -out option is supplied.
+     * Restore the original stdout fd before the next test iteration so subsequent
+     * cases and framework logs do not inherit redirected output state.
+     * Tests may run without a controlling tty, so recover by fd instead of /dev/tty.
+     */
+    fflush(stdout);
+    (void)dup2(savedStdoutFd, STDOUT_FILENO);
+    clearerr(stdout);
+}
+
+static void RestoreStdinByFd(int savedStdinFd)
+{
+    if (savedStdinFd < 0) {
+        return;
+    }
+    /* Keep stdin recovery independent from terminal availability in CI. */
+    (void)dup2(savedStdinFd, STDIN_FILENO);
+    clearerr(stdin);
+}
+
 static void PreProcArgs(char *args, int *argc, char **argv)
 {
     uint32_t len = strlen(args);
@@ -89,6 +115,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_PKEY_TC001(char *encKeyPath)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     char *argv[][20] = {
         {"pkey", "-in", encKeyPath, "-passin", "pass:123456"},
         {"pkey", "-in", encKeyPath, "-passin", "pass:123456", "-out", PKEY_TEST_FILE_PATH},
@@ -111,12 +138,14 @@ void UT_HITLS_APP_PKEY_TC001(char *encKeyPath)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_PkeyMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     remove(PKEY_TEST_FILE_PATH);
     return;
@@ -131,6 +160,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_PKEY_TC002(char *keyPath)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     char *argv[][20] = {
         {"pkey", "-in", keyPath},
         {"pkey", "-in", keyPath, "-out", PKEY_TEST_FILE_PATH},
@@ -148,12 +178,14 @@ void UT_HITLS_APP_PKEY_TC002(char *keyPath)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_PkeyMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     remove(PKEY_TEST_FILE_PATH);
     return;
@@ -168,6 +200,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_PKEY_TC003(char *encKeyPath, char *keyPath)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     mkdir(PKEY_TEST_DIR_PATH, 0775);
     char *argv[][20] = {
         {"pkey", "-ttt"},
@@ -196,12 +229,14 @@ void UT_HITLS_APP_PKEY_TC003(char *encKeyPath, char *keyPath)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_PkeyMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     rmdir(PKEY_TEST_DIR_PATH);
     remove(PKEY_TEST_FILE_PATH);
@@ -228,6 +263,7 @@ static int32_t BSL_UI_ReadPwdUtil_Mock(BSL_UI_ReadPwdParam *param, char *buff, u
 /* BEGIN_CASE */
 void UT_HITLS_APP_PKEY_TC004(char *encKeyPath, char *keyPath)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     STUB_REPLACE(BSL_UI_ReadPwdUtil, BSL_UI_ReadPwdUtil_Mock);;
     char *argv[][20] = {
         {"pkey", "-in", keyPath, "-passin", "pass:"},
@@ -258,12 +294,14 @@ void UT_HITLS_APP_PKEY_TC004(char *encKeyPath, char *keyPath)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_PkeyMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     STUB_RESTORE(BSL_UI_ReadPwdUtil);
     remove(PKEY_TEST_FILE_PATH);
@@ -305,6 +343,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_PKEY_STDIN_TC001(char *keyPath)
 {
+    int savedStdinFd = dup(STDIN_FILENO);
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
 
     /* Redirect stdin to specified PEM file, simulating stdin reading of `cat file | ./hitls pkey` */
@@ -318,8 +357,10 @@ void UT_HITLS_APP_PKEY_STDIN_TC001(char *keyPath)
 
 EXIT:
     (void)fflush(stdout);
-    /* Restore stdin to terminal to avoid affecting subsequent test cases */
-    (void)freopen("/dev/tty", "r", stdin);
+    RestoreStdinByFd(savedStdinFd);
+    if (savedStdinFd >= 0) {
+        close(savedStdinFd);
+    }
     AppPrintErrorUioUnInit();
     return;
 }

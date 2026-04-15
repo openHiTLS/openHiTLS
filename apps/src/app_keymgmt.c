@@ -705,13 +705,12 @@ static int32_t SplitUuidString(const char *uuid, BslList **uuidList)
 static int32_t DeleteKeyByUuidList(KeyMgmtCmdOpt *keyMgmtOpt, BslList *uuidList)
 {
     int32_t ret = HITLS_APP_SUCCESS;
-    const char *oneUuid = BSL_LIST_GET_FIRST(uuidList);
-    while (oneUuid != NULL) {
+    for (BslListNode *node = BSL_LIST_FirstNode(uuidList); node != NULL; node = BSL_LIST_GetNextNode(uuidList, node)) {
+        const char *oneUuid = BSL_LIST_GetData(node);
         ret = HITLS_APP_RmvKey(keyMgmtOpt, oneUuid);
         if (ret != HITLS_APP_SUCCESS) {
             return ret;
         }
-        oneUuid = BSL_LIST_GET_NEXT(uuidList);
     }
     return HITLS_APP_SUCCESS;
 }
@@ -1035,7 +1034,7 @@ static int32_t ReadCipherKey(AppProvider *provider, HITLS_APP_SM_Param *smParam,
         AppPrintError("keymgmt: Failed to get secret bags, errCode: 0x%x.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
-    tmpBag = BSL_LIST_GET_FIRST(secretBags);
+    tmpBag = BSL_LIST_FirstNodeData(secretBags);
 
     ret = GetKeyAttr(tmpBag, &keyInfo->attr);
     if (ret != HITLS_APP_SUCCESS) {
@@ -1244,7 +1243,7 @@ static int32_t ReadCipherOrAsymKey(AppProvider *provider, HITLS_APP_SM_Param *sm
         AppPrintError("keymgmt: Failed to get secret bags, errCode: 0x%x.\n", ret);
         return HITLS_APP_X509_FAIL;
     }
-    HITLS_PKCS12_Bag *tmpBag = BSL_LIST_GET_FIRST(secretBags);
+    HITLS_PKCS12_Bag *tmpBag = BSL_LIST_FirstNodeData(secretBags);
     ret = GetKeyAttr(tmpBag, &keyInfo->attr);
     if (ret != HITLS_APP_SUCCESS) {
         HITLS_PKCS12_Free(p12);
@@ -1328,13 +1327,12 @@ int32_t HITLS_APP_SendKey(AppProvider *provider, HITLS_APP_SM_Param *smParam, HI
 
     size_t index = 0;
     PreparHeaderInfo(n, buf, &index);
-    smParam->uuid = BSL_LIST_GET_FIRST(uuidList);
-    for (uint32_t i = 0; i < n; i++) {
+    for (BslListNode *node = BSL_LIST_FirstNode(uuidList); node != NULL; node = BSL_LIST_GetNextNode(uuidList, node)) {
+        smParam->uuid = BSL_LIST_GetData(node);
         ret = PrepareOneKey(provider, smParam, buf, &index);
         if (ret != HITLS_APP_SUCCESS) {
             break;
         }
-        smParam->uuid = BSL_LIST_GET_NEXT(uuidList);
     }
     smParam->uuid = uuid;
     BSL_LIST_FREE(uuidList, BSL_SAL_Free);

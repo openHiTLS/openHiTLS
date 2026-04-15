@@ -593,12 +593,10 @@ static int HandleClientDataExchange(HITLS_Ctx *ctx, HITLS_ClientParams *params)
     bool isEof = false;
     uint32_t readLen = 0;
     BSL_UIO *readUio = HITLS_APP_UioOpen(NULL, 'r', 0);
-    BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
     if (readUio == NULL) {
         AppPrintError("client: Failed to open stdin\n");
         return HITLS_APP_UIO_FAIL;
     }
-
     /* Interactive mode if no specific data to send */
     if (!params->prexit) {
         if (!params->quiet) {
@@ -768,8 +766,7 @@ static int32_t ConfirmAction(void)
     uint32_t readLen = 0;
     AppPrintInfo("client: Please enter 'y' to confirm send key to server\n");
 
-    BSL_UIO *rUio = HITLS_APP_UioOpen(NULL, 'r', 1);
-    BSL_UIO_SetIsUnderlyingClosedByUio(rUio, true);
+    BSL_UIO *rUio = HITLS_APP_UioOpen(NULL, 'r', 0);
     if (rUio == NULL) {
         AppPrintError("client: Failed to open the stdin.\n");
         return HITLS_APP_UIO_FAIL;

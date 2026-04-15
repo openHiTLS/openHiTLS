@@ -207,7 +207,7 @@ static int32_t StdSumAndOut(CRYPT_EAL_MdCtx *ctx, const char *outfile)
     int32_t stdRet = HITLS_APP_SUCCESS;
     uint8_t *outBuf = NULL;
     uint32_t outBufLen = 0;
-    BSL_UIO *readUio = HITLS_APP_UioOpen(NULL, 'r', 1);
+    BSL_UIO *readUio = HITLS_APP_UioOpen(NULL, 'r', 0);
     if (readUio == NULL) {
         AppPrintError("dgst: Failed to open the stdin\n");
         return HITLS_APP_UIO_FAIL;
@@ -215,7 +215,6 @@ static int32_t StdSumAndOut(CRYPT_EAL_MdCtx *ctx, const char *outfile)
     uint32_t readLen = MAX_DIGEST_SIZE;
     uint8_t *readBuf = (uint8_t *)BSL_SAL_Calloc(MAX_DIGEST_SIZE + 1, 1);
     if (readBuf == NULL) {
-        BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
         BSL_UIO_Free(readUio);
         AppPrintError("dgst: Failed to alloc memory.\n");
         return HITLS_APP_MEM_ALLOC_FAIL;
@@ -237,7 +236,6 @@ static int32_t StdSumAndOut(CRYPT_EAL_MdCtx *ctx, const char *outfile)
             break;
         }
     }
-    BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
     BSL_UIO_Free(readUio);
     BSL_SAL_FREE(readBuf);
     if (stdRet != HITLS_APP_SUCCESS) {
@@ -249,7 +247,7 @@ static int32_t StdSumAndOut(CRYPT_EAL_MdCtx *ctx, const char *outfile)
         BSL_SAL_FREE(outBuf);
         return stdRet;
     }
-    BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(outfile, 'w', 1);
+    BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(outfile, 'w', outfile != NULL ? 1 : 0);
     if (fileWriteUio == NULL) {
         BSL_SAL_FREE(outBuf);
         AppPrintError("dgst: Failed to open the <%s>\n", outfile);
@@ -257,7 +255,6 @@ static int32_t StdSumAndOut(CRYPT_EAL_MdCtx *ctx, const char *outfile)
     }
     // outputs the hash value to the UIO
     stdRet = BufOutToUio(outfile, fileWriteUio, (uint8_t *)outBuf, outBufLen);
-    BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
     BSL_UIO_Free(fileWriteUio);
     BSL_SAL_FREE(outBuf);
     return stdRet;
@@ -266,7 +263,7 @@ static int32_t StdSumAndOut(CRYPT_EAL_MdCtx *ctx, const char *outfile)
 static int32_t ReadFileToBuf(CRYPT_EAL_MdCtx *ctx, const char *filename)
 {
     int32_t readRet = HITLS_APP_SUCCESS;
-    BSL_UIO *readUio = HITLS_APP_UioOpen(filename, 'r', 0);
+    BSL_UIO *readUio = HITLS_APP_UioOpen(filename, 'r', filename != NULL ? 1 : 0);
     if (readUio == NULL) {
         AppPrintError("dgst: Failed to open the file <%s>, No such file or directory\n", filename);
         return HITLS_APP_UIO_FAIL;
@@ -274,14 +271,12 @@ static int32_t ReadFileToBuf(CRYPT_EAL_MdCtx *ctx, const char *filename)
     uint64_t readFileLen = 0;
     readRet = BSL_UIO_Ctrl(readUio, BSL_UIO_PENDING, sizeof(readFileLen), &readFileLen);
     if (readRet != BSL_SUCCESS) {
-        BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
         BSL_UIO_Free(readUio);
         AppPrintError("dgst: Failed to obtain the content length\n");
         return HITLS_APP_UIO_FAIL;
     }
     uint8_t *readBuf = (uint8_t *)BSL_SAL_Calloc(MAX_DIGEST_SIZE + 1, 1);
     if (readBuf == NULL) {
-        BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
         BSL_UIO_Free(readUio);
         AppPrintError("dgst: Failed to alloc memory.\n");
         return HITLS_APP_MEM_ALLOC_FAIL;
@@ -304,7 +299,6 @@ static int32_t ReadFileToBuf(CRYPT_EAL_MdCtx *ctx, const char *filename)
         }
         readFileLen -= bufLen;
     }
-    BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
     BSL_UIO_Free(readUio);
     BSL_SAL_FREE(readBuf);
     return readRet;
@@ -374,14 +368,13 @@ static int32_t MultiFileSetCtx(CRYPT_EAL_MdCtx *ctx)
 static int32_t FileSumOutFile(CRYPT_EAL_MdCtx *ctx, const char *outfile)
 {
     int32_t outRet = HITLS_APP_SUCCESS;
-    BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(outfile, 'w', 0);  // overwrite the original content
+    BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(outfile, 'w', outfile != NULL ? 1 : 0);  // overwrite the original content
     if (fileWriteUio == NULL) {
         AppPrintError("dgst: Failed to open the file path: %s\n", outfile);
         return HITLS_APP_UIO_FAIL;
     }
-    BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
     BSL_UIO_Free(fileWriteUio);
-    fileWriteUio = HITLS_APP_UioOpen(outfile, 'a', 0);
+    fileWriteUio = HITLS_APP_UioOpen(outfile, 'a', outfile != NULL ? 1 : 0);
     if (fileWriteUio == NULL) {
         AppPrintError("dgst: Failed to open the file path: %s\n", outfile);
         return HITLS_APP_UIO_FAIL;
@@ -391,13 +384,11 @@ static int32_t FileSumOutFile(CRYPT_EAL_MdCtx *ctx, const char *outfile)
         // and output the digest to the UIO.
         outRet = MultiFileSetCtx(ctx);
         if (outRet != HITLS_APP_SUCCESS) {
-            BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
             BSL_UIO_Free(fileWriteUio);
             return outRet;
         }
         outRet = ReadFileToBuf(ctx, g_argv[i]); // read the file content by block and calculate the hash value
         if (outRet != HITLS_APP_SUCCESS) {
-            BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
             BSL_UIO_Free(fileWriteUio);
             AppPrintError("dgst: Failed to read the file content by block and calculate the hash value\n");
             return HITLS_APP_UIO_FAIL;
@@ -407,7 +398,6 @@ static int32_t FileSumOutFile(CRYPT_EAL_MdCtx *ctx, const char *outfile)
         outRet = MdFinalToBuf(ctx, &outBuf, &outBufLen, g_argv[i]); // read the final hash value to the buffer
         if (outRet != HITLS_APP_SUCCESS) {
             BSL_SAL_FREE(outBuf);
-            BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
             BSL_UIO_Free(fileWriteUio);
             AppPrintError("dgst: Failed to output the final summary value\n");
             return outRet;
@@ -415,12 +405,10 @@ static int32_t FileSumOutFile(CRYPT_EAL_MdCtx *ctx, const char *outfile)
         outRet = BufOutToUio(outfile, fileWriteUio, (uint8_t *)outBuf, outBufLen); // output the hash value to the UIO
         BSL_SAL_FREE(outBuf);
         if (outRet != HITLS_APP_SUCCESS) {
-            BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
             BSL_UIO_Free(fileWriteUio);
             return outRet;
         }
     }
-    BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
     BSL_UIO_Free(fileWriteUio);
     return HITLS_APP_SUCCESS;
 }
@@ -551,7 +539,7 @@ static int32_t CalculateSign(char *outfile, uint8_t *msgBuf, uint32_t msgBufLen)
             break;
         }
 
-        BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(outfile, 'w', 0);  // overwrite the original content
+        BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(outfile, 'w', outfile != NULL ? 1 : 0);  // overwrite the original content
         if (fileWriteUio == NULL) {
             AppPrintError("dgst: Failed to open the outfile\n");
             ret = HITLS_APP_UIO_FAIL;
@@ -561,7 +549,6 @@ static int32_t CalculateSign(char *outfile, uint8_t *msgBuf, uint32_t msgBufLen)
         if (ret != HITLS_APP_SUCCESS) {
             AppPrintError("dgst:Failed to export data to the outfile path\n");
         }
-        BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
         BSL_UIO_Free(fileWriteUio);
     } while (0);
     CRYPT_EAL_RandDeinitEx(APP_GetCurrent_LibCtx());

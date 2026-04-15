@@ -379,8 +379,9 @@ static int32_t LoadCertList(const char *certFile, HITLS_X509_List **outCertList)
 
 static int32_t CheckCertListWithPriKey(HITLS_X509_List *certList, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509_Cert **userCert)
 {
-    HITLS_X509_Cert *pstCert = BSL_LIST_GET_FIRST(certList);
-    while (pstCert != NULL) {
+    for (BslListNode *node = BSL_LIST_FirstNode(certList); node != NULL;
+        node = BSL_LIST_GetNextNode(certList, node)) {
+        HITLS_X509_Cert *pstCert = BSL_LIST_GetData(node);
         CRYPT_EAL_PkeyCtx *pubKey = NULL;
         int32_t ret = HITLS_X509_CertCtrl(pstCert, HITLS_X509_GET_PUBKEY, &pubKey, 0);
         if (ret != HITLS_PKI_SUCCESS) {
@@ -396,10 +397,9 @@ static int32_t CheckCertListWithPriKey(HITLS_X509_List *certList, CRYPT_EAL_Pkey
                 AppPrintError("pkcs12: Failed to duplicate the certificate.\n");
                 return HITLS_APP_X509_FAIL;
             }
-            BSL_LIST_DeleteCurrent(certList, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+            BSL_LIST_DeleteNode(certList, node, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
             return HITLS_APP_SUCCESS;
         }
-        pstCert = BSL_LIST_GET_NEXT(certList);
     }
     AppPrintError("pkcs12: No certificate matches private key.\n");
     return HITLS_APP_X509_FAIL;
@@ -412,7 +412,7 @@ static int32_t AddCertToList(HITLS_X509_Cert *cert, HITLS_X509_List *certList)
         AppPrintError("pkcs12: Failed to duplicate the certificate.\n");
         return HITLS_APP_X509_FAIL;
     }
-    int32_t ret = BSL_LIST_AddElement(certList, tmpCert, BSL_LIST_POS_AFTER);
+    int32_t ret = BSL_LIST_AddElement(certList, tmpCert, BSL_LIST_POS_END);
     if (ret != BSL_SUCCESS) {
         AppPrintError("pkcs12: Failed to add cert list, errCode = 0x%x.\n", ret);
         HITLS_X509_CertFree(tmpCert);
@@ -436,27 +436,28 @@ static int32_t AddCertChain(Pkcs12OptCtx *opt)
         AppPrintError("pkcs12: Failed to create the dup store context.\n");
         return HITLS_APP_X509_FAIL;
     }
-    HITLS_X509_Cert *cert = BSL_LIST_GET_FIRST(opt->certList);
-    while (cert != NULL) {
+    for (BslListNode *node = BSL_LIST_FirstNode(opt->certList); node != NULL;
+        node = BSL_LIST_GetNextNode(opt->certList, node)) {
+        HITLS_X509_Cert *cert = BSL_LIST_GetData(node);
         (void)HITLS_X509_StoreCtxCtrl(opt->dupStore, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert,
             sizeof(HITLS_X509_Cert));
-        cert = BSL_LIST_GET_NEXT(opt->certList);
     }
 
     // The first element in the output certificate chain is the input certificate, skip it.
-    HITLS_X509_Cert *pstCert = BSL_LIST_GET_FIRST(opt->outCertChainList);
-    pstCert = BSL_LIST_GET_NEXT(opt->outCertChainList);
-    while (pstCert != NULL) {
+    BslListNode *node = BSL_LIST_FirstNode(opt->outCertChainList);
+    node = BSL_LIST_GetNextNode(opt->outCertChainList, node);
+    while (node != NULL) {
+        HITLS_X509_Cert *pstCert = BSL_LIST_GetData(node);
         if (HITLS_X509_StoreCtxCtrl(opt->dupStore, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, pstCert,
             sizeof(HITLS_X509_Cert)) == HITLS_X509_ERR_CERT_EXIST) {
-            pstCert = BSL_LIST_GET_NEXT(opt->outCertChainList);
+            node = BSL_LIST_GetNextNode(opt->outCertChainList, node);
             continue;
         }
         int32_t ret = AddCertToList(pstCert, opt->certList);
         if (ret != HITLS_APP_SUCCESS) {
             return ret;
         }
-        pstCert = BSL_LIST_GET_NEXT(opt->outCertChainList);
+        node = BSL_LIST_GetNextNode(opt->outCertChainList, node);
     }
     return HITLS_APP_SUCCESS;
 }
@@ -475,11 +476,11 @@ static int32_t ParseAndAddCertChain(Pkcs12OptCtx *opt)
         return HITLS_APP_X509_FAIL;
     }
 
-    HITLS_X509_Cert *cert = BSL_LIST_GET_FIRST(opt->caCertList);
-    while (cert != NULL) {
+    for (BslListNode *node = BSL_LIST_FirstNode(opt->caCertList); node != NULL;
+        node = BSL_LIST_GetNextNode(opt->caCertList, node)) {
+        HITLS_X509_Cert *cert = BSL_LIST_GetData(node);
         ret = HITLS_X509_StoreCtxCtrl(opt->store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, sizeof(HITLS_X509_Cert));
         if (ret == HITLS_X509_ERR_CERT_EXIST) {
-            cert = BSL_LIST_GET_NEXT(opt->caCertList);
             continue;
         }
         if (ret != HITLS_PKI_SUCCESS) {
@@ -487,7 +488,6 @@ static int32_t ParseAndAddCertChain(Pkcs12OptCtx *opt)
                 opt->outPutOpt.caFile, ret);
             return HITLS_APP_X509_FAIL;
         }
-        cert = BSL_LIST_GET_NEXT(opt->caCertList);
     }
 
     ret = HITLS_X509_CertChainBuild(opt->store, true, opt->userCert, &opt->outCertChainList);
@@ -557,9 +557,10 @@ static int32_t AddOtherCertListBagToP12(char **caName, uint32_t caNameSize, HITL
     HITLS_PKCS12 *p12)
 {
     int32_t ret = HITLS_APP_SUCCESS;
-    HITLS_X509_Cert *pstCert = BSL_LIST_GET_FIRST(certList);
+    BslListNode *node = BSL_LIST_FirstNode(certList);
     uint32_t index = 0;
-    while (pstCert != NULL) {
+    while (node != NULL) {
+        HITLS_X509_Cert *pstCert = BSL_LIST_GetData(node);
         HITLS_PKCS12_Bag *otherCertBag = HITLS_PKCS12_BagNew(BSL_CID_CERTBAG, BSL_CID_X509CERTIFICATE, pstCert);
         if (otherCertBag == NULL) {
             AppPrintError("pkcs12: Failed to create the other cert bag.\n");
@@ -582,7 +583,7 @@ static int32_t AddOtherCertListBagToP12(char **caName, uint32_t caNameSize, HITL
             AppPrintError("pkcs12: Failed to add the other cert bag, errCode = 0x%x.\n", ret);
             return HITLS_APP_X509_FAIL;
         }
-        pstCert = BSL_LIST_GET_NEXT(certList);
+        node = BSL_LIST_GetNextNode(certList, node);
     }
 
     if (index < caNameSize) {
@@ -737,13 +738,13 @@ static int32_t OutPutCerts(Pkcs12OptCtx *opt)
     }
 
     // Output other cert and cert chain
-    HITLS_PKCS12_Bag *pstCertBag = BSL_LIST_GET_FIRST(opt->p12->certList);
-    while (pstCertBag != NULL) {
+    for (BslListNode *node = BSL_LIST_FirstNode(opt->p12->certList); node != NULL;
+        node = BSL_LIST_GetNextNode(opt->p12->certList, node)) {
+        HITLS_PKCS12_Bag *pstCertBag = BSL_LIST_GetData(node);
         ret = OutPutCert("cert chain", opt->wUio, pstCertBag->value.cert);
         if (ret != HITLS_APP_SUCCESS) {
             return ret;
         }
-        pstCertBag = BSL_LIST_GET_NEXT(opt->p12->certList);
     }
 
     return HITLS_APP_SUCCESS;
@@ -921,11 +922,10 @@ static int32_t HandlePKCS12Opt(Pkcs12OptCtx *opt)
     }
 
     // 2.Create output uio
-    opt->wUio = HITLS_APP_UioOpen(opt->genOpt.outFile, 'w', 0);
+    opt->wUio = HITLS_APP_UioOpen(opt->genOpt.outFile, 'w', opt->genOpt.outFile != NULL ? 1 : 0);
     if (opt->wUio == NULL) {
         return HITLS_APP_UIO_FAIL;
     }
-    BSL_UIO_SetIsUnderlyingClosedByUio(opt->wUio, true);
 
     return opt->outPutOpt.export ? CreatePkcs12File(opt) : ParsePkcs12File(opt);
 }

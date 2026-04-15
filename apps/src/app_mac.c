@@ -346,8 +346,7 @@ static int32_t MacProcessInputAndUpdate(CRYPT_EAL_MacCtx *ctx, MacOpt *macOpt)
         AppPrintError("mac: Failed to allocate read buffer.\n");
         return HITLS_APP_MEM_ALLOC_FAIL;
     }
-    BSL_UIO *readUio = HITLS_APP_UioOpen(macOpt->inFile, 'r', 0);
-    BSL_UIO_SetIsUnderlyingClosedByUio(readUio, true);
+    BSL_UIO *readUio = HITLS_APP_UioOpen(macOpt->inFile, 'r', macOpt->inFile != NULL ? 1 : 0);
     if (readUio == NULL) {
         if (macOpt->inFile == NULL) {
             AppPrintError("mac: Failed to open stdin\n");
@@ -357,7 +356,6 @@ static int32_t MacProcessInputAndUpdate(CRYPT_EAL_MacCtx *ctx, MacOpt *macOpt)
         BSL_SAL_FREE(tmpBuf);
         return HITLS_APP_UIO_FAIL;
     }
-
     if (macOpt->inFile == NULL) {
         while (BSL_UIO_Ctrl(readUio, BSL_UIO_FILE_GET_EOF, IS_SUPPORT_GET_EOF, &isEof) == BSL_SUCCESS && !isEof) {
             if (BSL_UIO_Read(readUio, tmpBuf, MAX_BUFSIZE, &readLen) != BSL_SUCCESS) {
@@ -412,13 +410,12 @@ static int32_t MacProcessInputAndUpdate(CRYPT_EAL_MacCtx *ctx, MacOpt *macOpt)
 static int32_t MacResult(CRYPT_EAL_MacCtx *ctx, MacOpt *macOpt)
 {
     uint8_t *outBuf = NULL;
-    BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(macOpt->outFile, 'w', 0);  // overwrite the original content
-    BSL_UIO_SetIsUnderlyingClosedByUio(fileWriteUio, true);
+    BSL_UIO *fileWriteUio = HITLS_APP_UioOpen(macOpt->outFile, 'w',
+        macOpt->outFile != NULL ? 1 : 0);  // overwrite the original content
     if (fileWriteUio == NULL) {
         AppPrintError("Failed to open the outfile\n");
         return HITLS_APP_UIO_FAIL;
     }
-
     uint32_t macSize = CRYPT_EAL_GetMacLen(ctx);
     if (macSize <= 0) {
         AppPrintError("mac: Invalid MAC size: %u\n", macSize);

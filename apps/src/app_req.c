@@ -468,11 +468,11 @@ static int32_t ReqOutput(ReqOptCtx *optCtx)
         return HITLS_APP_SUCCESS;
     }
 
-    optCtx->wUio = HITLS_APP_UioOpen(optCtx->outPutOpt.outFilePath, 'w', 0);
+    optCtx->wUio = HITLS_APP_UioOpen(optCtx->outPutOpt.outFilePath, 'w',
+        optCtx->outPutOpt.outFilePath != NULL ? 1 : 0);
     if (optCtx->wUio == NULL) {
         return HITLS_APP_UIO_FAIL;
     }
-    BSL_UIO_SetIsUnderlyingClosedByUio(optCtx->wUio, true);
 
     int32_t ret;
     if (optCtx->certOpt.text) {

@@ -897,7 +897,7 @@ int32_t HITLS_CFG_ParseCAList(HITLS_Config *config, const char *input, uint32_t 
     if (certList == NULL) {
         return HITLS_CFG_ERR_LOAD_CERT_FILE;
     }
-    HITLS_CERT_X509 *tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_FIRST(certList);
+    HITLS_CERT_X509 *tempCert = (HITLS_CERT_X509 *)BSL_LIST_FirstNodeData(certList);
     if (tempCert == NULL) {
         SAL_CERT_ChainFree(certList);
         return HITLS_CFG_ERR_LOAD_CERT_FILE;
@@ -909,7 +909,9 @@ int32_t HITLS_CFG_ParseCAList(HITLS_Config *config, const char *input, uint32_t 
         ret = HITLS_MEMALLOC_FAIL;
         goto ERR;
     }
-    while (tempCert != NULL) {
+    for (BslListNode *certNode = BSL_LIST_FirstNode(certList); certNode != NULL;
+        certNode = BSL_LIST_GetNextNode(certList, certNode)) {
+        tempCert = (HITLS_CERT_X509 *)BSL_LIST_GetData(certNode);
         newCaNode = BSL_SAL_Calloc(1u, sizeof(HITLS_TrustedCANode));
         if (newCaNode == NULL) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17367, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Calloc fail", 0, 0, 0,
@@ -921,7 +923,6 @@ int32_t HITLS_CFG_ParseCAList(HITLS_Config *config, const char *input, uint32_t 
         if (ret != HITLS_SUCCESS) {
             goto ERR;
         }
-        tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_NEXT(certList);
     }
     *caList = list;
     SAL_CERT_ChainFree(certList);
@@ -1026,8 +1027,9 @@ int32_t HITLS_CFG_BuildCertChain(HITLS_Config *config, HITLS_BUILD_CHAIN_FLAG fl
         if (store == NULL) {
             return HITLS_MEMALLOC_FAIL;
         }
-        HITLS_CERT_X509 *tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_FIRST(chainCertList);
-        while (tempCert != NULL) {
+        for (BslListNode *certNode = BSL_LIST_FirstNode(chainCertList); certNode != NULL;
+            certNode = BSL_LIST_GetNextNode(chainCertList, certNode)) {
+            HITLS_CERT_X509 *tempCert = (HITLS_CERT_X509 *)BSL_LIST_GetData(certNode);
             HITLS_CERT_X509 *refCert = SAL_CERT_X509Ref(mgrCtx, tempCert);
             ret = SAL_CERT_StoreCtrl(config, store, CERT_STORE_CTRL_ADD_CERT_LIST, refCert, NULL);
             if (ret != HITLS_SUCCESS) {
@@ -1035,7 +1037,6 @@ int32_t HITLS_CFG_BuildCertChain(HITLS_Config *config, HITLS_BUILD_CHAIN_FLAG fl
                 SAL_CERT_StoreFree(mgrCtx, store);
                 return ret;
             }
-            tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_NEXT(chainCertList);
         }
     } else {
         HITLS_CERT_Store *chainStore = SAL_CERT_GET_CHAIN_STORE(mgrCtx);
@@ -1234,7 +1235,8 @@ int32_t HITLS_CFG_ClearVerifyCrls(HITLS_Config *config)
 
 static int32_t UseCertificateChainCommon(HITLS_Config *config, HITLS_CERT_Chain *certList)
 {
-    HITLS_CERT_X509 *tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_FIRST(certList);
+    BslListNode *certNode = BSL_LIST_FirstNode(certList);
+    HITLS_CERT_X509 *tempCert = (HITLS_CERT_X509 *)BSL_LIST_GetData(certNode);
     if (tempCert == NULL) {
         return HITLS_CFG_ERR_LOAD_CERT_FILE;
     }
@@ -1244,20 +1246,21 @@ static int32_t UseCertificateChainCommon(HITLS_Config *config, HITLS_CERT_Chain 
         return ret;
     }
 
-    tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_NEXT(certList);
+    certNode = BSL_LIST_GetNextNode(certList, certNode);
+    tempCert = (HITLS_CERT_X509 *)BSL_LIST_GetData(certNode);
     if (tempCert != NULL) {
         ret = HITLS_CFG_ClearChainCerts(config);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
 
-        do {
+        for (; certNode != NULL; certNode = BSL_LIST_GetNextNode(certList, certNode)) {
+            tempCert = (HITLS_CERT_X509 *)BSL_LIST_GetData(certNode);
             ret = HITLS_CFG_AddChainCert(config, tempCert, true);
             if (ret != HITLS_SUCCESS) {
                 return ret;
             }
-            tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_NEXT(certList);
-        } while (tempCert != NULL);
+        }
     }
 
     return HITLS_SUCCESS;
@@ -1294,8 +1297,9 @@ static int32_t LoadVerifyCommon(HITLS_Config *config, HITLS_CERT_Chain *certList
         return HITLS_NULL_INPUT;
     }
 
-    tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_FIRST(certList);
-    while (tempCert != NULL) {
+    for (BslListNode *verifyNode = BSL_LIST_FirstNode(certList); verifyNode != NULL;
+        verifyNode = BSL_LIST_GetNextNode(certList, verifyNode)) {
+        tempCert = (HITLS_CERT_X509 *)BSL_LIST_GetData(verifyNode);
         HITLS_CERT_X509 *certRef = SAL_CERT_X509Ref(config->certMgrCtx, tempCert);
         ret = SAL_CERT_StoreCtrl(config, store, CERT_STORE_CTRL_ADD_CERT_LIST, certRef, NULL);
         if (ret != HITLS_SUCCESS) {
@@ -1303,7 +1307,6 @@ static int32_t LoadVerifyCommon(HITLS_Config *config, HITLS_CERT_Chain *certList
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        tempCert = (HITLS_CERT_X509 *)BSL_LIST_GET_NEXT(certList);
     }
 
     return ret;

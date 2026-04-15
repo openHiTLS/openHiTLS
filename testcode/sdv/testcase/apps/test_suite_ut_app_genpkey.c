@@ -42,6 +42,21 @@ typedef struct {
     int expect;
 } OptTestData;
 
+static void RestoreStdoutByFd(int savedStdoutFd)
+{
+    if (savedStdoutFd < 0) {
+        return;
+    }
+    /*
+     * genpkey writes to process stdout when output is not redirected to a file.
+     * Restore the saved stdout fd after each command so later cases keep a clean
+     * stdout state, even when the test process has no controlling tty.
+     */
+    fflush(stdout);
+    (void)dup2(savedStdoutFd, STDOUT_FILENO);
+    clearerr(stdout);
+}
+
 /* INCLUDE_SOURCE  ${HITLS_ROOT_PATH}/apps/src/app_print.c ${HITLS_ROOT_PATH}/apps/src/app_genpkey.c
     ${HITLS_ROOT_PATH}/apps/src/app_opt.c ${HITLS_ROOT_PATH}/apps/src/app_utils.c */
 
@@ -53,6 +68,7 @@ typedef struct {
 /* BEGIN_CASE */
 void UT_HITLS_APP_GENPKEY_TC001()
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     char *argv[][20] = {
         {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P_224"},
         {"genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P_256"},
@@ -100,12 +116,14 @@ void UT_HITLS_APP_GENPKEY_TC001()
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_GenPkeyMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     remove(GENPKEY_TEST_FILE_PATH);
     return;
@@ -120,6 +138,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_GENPKEY_TC002()
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     mkdir(GENPKEY_TEST_DIR_PATH, 0775);
     char *argv[][20] = {
         {"genpkey", "-ttt"},
@@ -148,12 +167,14 @@ void UT_HITLS_APP_GENPKEY_TC002()
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_GenPkeyMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     rmdir(GENPKEY_TEST_DIR_PATH);
     remove(GENPKEY_TEST_FILE_PATH);
@@ -169,6 +190,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_GENPKEY_TC003(char *cipherOpt)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     mkdir(GENPKEY_TEST_DIR_PATH, 0775);
     char *argv[][20] = {
         {"genpkey", "-algorithm", "RSA", cipherOpt, "-pass", "pass:123456"},
@@ -181,12 +203,14 @@ void UT_HITLS_APP_GENPKEY_TC003(char *cipherOpt)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_GenPkeyMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     rmdir(GENPKEY_TEST_DIR_PATH);
     remove(GENPKEY_TEST_FILE_PATH);
@@ -202,6 +226,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_GENPKEY_TC004()
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     char *argv[][20] = {
         {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-44"},
         {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-65"},
@@ -229,12 +254,14 @@ void UT_HITLS_APP_GENPKEY_TC004()
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_GenPkeyMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     remove(GENPKEY_TEST_FILE_PATH);
     return;
@@ -249,6 +276,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_GENPKEY_TC005(char *outformOpt)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     char *argv[][20] = {
         {"genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", GENPKEY_TEST_FILE_PATH, "-outform", outformOpt},
     };
@@ -260,12 +288,14 @@ void UT_HITLS_APP_GENPKEY_TC005(char *outformOpt)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_GenPkeyMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     remove(GENPKEY_TEST_FILE_PATH);
     return;
@@ -280,6 +310,7 @@ EXIT:
 /* BEGIN_CASE */
 void UT_HITLS_APP_GENPKEY_TC006(char *outformOpt)
 {
+    int savedStdoutFd = dup(STDOUT_FILENO);
     char *argv[][20] = {
         {"genpkey", "-algorithm", "ML-DSA", "-pkeyopt", "mldsa_param:ML-DSA-65", "-out", GENPKEY_TEST_FILE_PATH, "-outform", outformOpt},
     };
@@ -291,12 +322,14 @@ void UT_HITLS_APP_GENPKEY_TC006(char *outformOpt)
     ASSERT_EQ(AppPrintErrorUioInit(stderr), HITLS_APP_SUCCESS);
     for (int i = 0; i < (int)(sizeof(testData) / sizeof(OptTestData)); ++i) {
         int ret = HITLS_GenPkeyMain(testData[i].argc, testData[i].argv);
-        fflush(stdout);
-        freopen("/dev/tty", "w", stdout);
+        RestoreStdoutByFd(savedStdoutFd);
         ASSERT_EQ(ret, testData[i].expect);
     }
 
 EXIT:
+    if (savedStdoutFd >= 0) {
+        close(savedStdoutFd);
+    }
     AppPrintErrorUioUnInit();
     remove(GENPKEY_TEST_FILE_PATH);
     return;

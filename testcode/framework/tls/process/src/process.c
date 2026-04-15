@@ -216,6 +216,9 @@ void MonitorControlChannel(void)
 HLT_Process *InitSrcProcess(TLS_TYPE tlsType, char *srcDomainPath)
 {
     int ret, srcPathLen;
+    bool processListInited = false;
+    bool tlsResListInited = false;
+    bool controlChannelResInited = false;
     ControlChannelRes *channelInfo;
     char srcControlDomainPath[DOMAIN_PATH_LEN] = {0};
     HLT_Process *process;
@@ -260,6 +263,7 @@ HLT_Process *InitSrcProcess(TLS_TYPE tlsType, char *srcDomainPath)
         LOG_ERROR("InitProcessList ERROR");
         goto ERR;
     }
+    processListInited = true;
 
     // Initializes the CTX SSL resource linked list.
     ret = InitTlsResList();
@@ -267,6 +271,7 @@ HLT_Process *InitSrcProcess(TLS_TYPE tlsType, char *srcDomainPath)
         LOG_ERROR("InitTlsResList ERROR");
         goto ERR;
     }
+    tlsResListInited = true;
 
     // Initialize the control link.
     ret = InitControlChannelRes(srcControlDomainPath, strlen(srcControlDomainPath), NULL, 0);
@@ -274,6 +279,7 @@ HLT_Process *InitSrcProcess(TLS_TYPE tlsType, char *srcDomainPath)
         LOG_ERROR("InitControlChannelRes ERROR");
         goto ERR;
     }
+    controlChannelResInited = true;
 
     channelInfo = GetControlChannelRes();
 
@@ -310,7 +316,16 @@ HLT_Process *InitSrcProcess(TLS_TYPE tlsType, char *srcDomainPath)
     return (HLT_Process*)process;
 
 ERR:
-    free(process);
+    if (controlChannelResInited) {
+        FreeControlChannelRes();
+    }
+    if (tlsResListInited) {
+        FreeTlsResList();
+    }
+    if (processListInited) {
+        FreeProcessResList();
+    }
+    FreeProcess();
     return NULL;
 }
 

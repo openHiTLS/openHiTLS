@@ -20,7 +20,6 @@
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "securec.h"
-#include "bsl_list.h"
 
 #define MAX_LIST_ELEM_CNT_DEFAULT 10000000
 
@@ -380,13 +379,15 @@ void *BSL_LIST_GetIndexNode(uint32_t ulIndex, BslList *pList)
 BslList *BSL_LIST_Copy(BslList *pSrcList, BSL_LIST_PFUNC_DUP pFuncCpy, BSL_LIST_PFUNC_FREE pfFreeFunc)
 {
     void *pDstData = NULL;
+    BslListNode *pSrcNode = NULL;
 
     if (pSrcList == NULL) {
         return NULL;
     }
 
-    /* we will first get the source data and if successful go ahead */
-    void *pSrcData = BSL_LIST_GET_FIRST(pSrcList);
+    /* Copy should not mutate the source list traversal state. */
+    pSrcNode = BSL_LIST_FirstNode(pSrcList);
+    void *pSrcData = BSL_LIST_GetData(pSrcNode);
     if (pSrcData == NULL) {
         return NULL;
     }
@@ -427,7 +428,8 @@ BslList *BSL_LIST_Copy(BslList *pSrcList, BSL_LIST_PFUNC_DUP pFuncCpy, BSL_LIST_
             return NULL;
         }
 
-        pSrcData = BSL_LIST_GET_NEXT(pSrcList);
+        pSrcNode = BSL_LIST_GetNextNode(pSrcList, pSrcNode);
+        pSrcData = BSL_LIST_GetData(pSrcNode);
     }
 
     return pDstList;

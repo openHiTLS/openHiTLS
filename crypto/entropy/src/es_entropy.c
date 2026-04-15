@@ -291,7 +291,9 @@ static uint32_t EsGetEntropy(ENTROPY_EntropySource *es, uint8_t *buf, uint32_t b
     uint8_t *data = buf;
     while (curEntropy < entropy) {
         uint32_t tmpEntropy = curEntropy;
-        for (ns = BSL_LIST_GET_FIRST(es->nsList); ns != NULL && needLen < bufLen; ns = BSL_LIST_GET_NEXT(es->nsList)) {
+        for (BslListNode *node = BSL_LIST_FirstNode(es->nsList); node != NULL && needLen < bufLen;
+            node = BSL_LIST_GetNextNode(es->nsList, node)) {
+            ns = BSL_LIST_GetData(node);
             int32_t ret = ES_NsRead(ns, data, 1);
             if (ret == CRYPT_SUCCESS) {
                 data++;

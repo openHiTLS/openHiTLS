@@ -25,6 +25,11 @@
 #include "hitls_pki_pkcs12.h"
 #include "hitls_pkcs12_local.h"
 
+static int32_t CmpBagAttrById(const HITLS_PKCS12_SafeBagAttr *attr, const uint32_t *attrId)
+{
+    return attr->attrId == *attrId ? 0 : 1;
+}
+
 int32_t BagGetAttr(HITLS_PKCS12_Bag *bag, uint32_t valType, BSL_Buffer *attrValue)
 {
     if (bag == NULL || attrValue == NULL) {
@@ -39,22 +44,19 @@ int32_t BagGetAttr(HITLS_PKCS12_Bag *bag, uint32_t valType, BSL_Buffer *attrValu
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NO_SAFEBAG_ATTRIBUTES);
         return HITLS_PKCS12_ERR_NO_SAFEBAG_ATTRIBUTES;
     }
-    BSL_ASN1_List *list = bag->attributes->list;
-    HITLS_PKCS12_SafeBagAttr *node = BSL_LIST_GET_FIRST(list);
-    while (node != NULL) {
-        if (node->attrId == valType) {
-            if (attrValue->data == NULL || attrValue->dataLen < node->attrValue.dataLen) {
-                BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_BUFFLEN_NOT_ENOUGH);
-                return HITLS_PKCS12_ERR_BUFFLEN_NOT_ENOUGH;
-            }
-            (void)memcpy_s(attrValue->data, attrValue->dataLen, node->attrValue.data, node->attrValue.dataLen);
-            attrValue->dataLen = node->attrValue.dataLen;
-            return HITLS_PKI_SUCCESS;
-        }
-        node = BSL_LIST_GET_NEXT(list);
+    HITLS_PKCS12_SafeBagAttr *attr = BSL_LIST_SearchDataConst(bag->attributes->list, &valType,
+        (BSL_LIST_PFUNC_CMP)CmpBagAttrById, NULL);
+    if (attr == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NO_SAFEBAG_ATTRIBUTES);
+        return HITLS_PKCS12_ERR_NO_SAFEBAG_ATTRIBUTES;
     }
-    BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NO_SAFEBAG_ATTRIBUTES);
-    return HITLS_PKCS12_ERR_NO_SAFEBAG_ATTRIBUTES;
+    if (attrValue->data == NULL || attrValue->dataLen < attr->attrValue.dataLen) {
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_BUFFLEN_NOT_ENOUGH);
+        return HITLS_PKCS12_ERR_BUFFLEN_NOT_ENOUGH;
+    }
+    (void)memcpy_s(attrValue->data, attrValue->dataLen, attr->attrValue.data, attr->attrValue.dataLen);
+    attrValue->dataLen = attr->attrValue.dataLen;
+    return HITLS_PKI_SUCCESS;
 }
 
 static int32_t GetKeyBagValue(HITLS_PKCS12_Bag *bag, void **value)
