@@ -59,7 +59,7 @@ ERR:
 typedef struct {
     int32_t *bufAddr;
     uint32_t bufSize;
-    int32_t *matrix[MLDSA_K_MAX][MLDSA_L_MAX];
+    int32_t *matrix[MLDSA_L_MAX];
     int32_t *s2[MLDSA_K_MAX];
     int32_t *t0[MLDSA_K_MAX];
     int32_t *t1[MLDSA_K_MAX];
@@ -79,22 +79,25 @@ static void MLDSASetMatrixMem(uint8_t k, uint8_t l, int32_t *matrix[MLDSA_K_MAX]
 
 static int32_t MLDSAKeyGenCreateMatrix(uint8_t k, uint8_t l, MLDSA_KeyGenMatrixSt *st)
 {
-    // Key generation requires 3 two-dimensional arrays of length k and 2 of length l.
-    st->bufSize = (k * l + 3 * k + 2 * l) * MLDSA_N * sizeof(int32_t);
+    // Key generation requires 3 two-dimensional arrays of length k and 3 of length l.
+    st->bufSize = (3 * k + 3 * l) * MLDSA_N * sizeof(int32_t);
     int32_t *buf = BSL_SAL_Malloc(st->bufSize);
     if (buf == NULL) {
         return BSL_MALLOC_FAIL;
     }
     st->bufAddr = buf;  // Used to free memory.
-    MLDSASetMatrixMem(k, l, st->matrix, buf);
-    buf += k * l * MLDSA_N;
     for (uint8_t i = 0; i < k; i++) {
         MLDSA_SET_VECTOR_MEM(st->t0[i], buf);
         MLDSA_SET_VECTOR_MEM(st->t1[i], buf);
         MLDSA_SET_VECTOR_MEM(st->s2[i], buf);
     }
     for (uint8_t i = 0; i < l; i++) {
+        MLDSA_SET_VECTOR_MEM(st->matrix[i], buf);
+    }
+    for (uint8_t i = 0; i < l; i++) {
         MLDSA_SET_VECTOR_MEM(st->s1[i], buf);
+    }
+    for (uint8_t i = 0; i < l; i++) {
         MLDSA_SET_VECTOR_MEM(st->s1Ntt[i], buf);
     }
     return CRYPT_SUCCESS;
@@ -107,20 +110,17 @@ typedef struct {
     int32_t *t0[MLDSA_K_MAX];
     int32_t *r0[MLDSA_K_MAX];
     int32_t *s2[MLDSA_K_MAX];
-    int32_t *cs2[MLDSA_K_MAX];
-    int32_t *ct0[MLDSA_K_MAX];
-    int32_t *h[MLDSA_K_MAX];
     int32_t *w[MLDSA_K_MAX];
     int32_t *w1[MLDSA_K_MAX];
+    int32_t *y[MLDSA_K_MAX];
     int32_t *s1[MLDSA_L_MAX];
-    int32_t *y[MLDSA_L_MAX];
     int32_t *z[MLDSA_L_MAX];
 } MLDSA_SignMatrixSt;
 
 static int32_t MLDSASignCreateMatrix(uint8_t k, uint8_t l, MLDSA_SignMatrixSt *st)
 {
-    // The signature requires 8 two-dimensional arrays of length k and 3 of length l.
-    st->bufSize = (k * l + 8 * k + 3 * l) * MLDSA_N * sizeof(int32_t);
+    // The signature requires 6 two-dimensional arrays of length k and 2 of length l.
+    st->bufSize = (k * l + 6 * k + 2 * l) * MLDSA_N * sizeof(int32_t);
     int32_t *buf = BSL_SAL_Malloc(st->bufSize);
     if (buf == NULL) {
         return BSL_MALLOC_FAIL;
@@ -132,15 +132,16 @@ static int32_t MLDSASignCreateMatrix(uint8_t k, uint8_t l, MLDSA_SignMatrixSt *s
         MLDSA_SET_VECTOR_MEM(st->r0[i], buf);
         MLDSA_SET_VECTOR_MEM(st->t0[i], buf);
         MLDSA_SET_VECTOR_MEM(st->s2[i], buf);
-        MLDSA_SET_VECTOR_MEM(st->cs2[i], buf);
-        MLDSA_SET_VECTOR_MEM(st->ct0[i], buf);
-        MLDSA_SET_VECTOR_MEM(st->h[i], buf);
         MLDSA_SET_VECTOR_MEM(st->w[i], buf);
         MLDSA_SET_VECTOR_MEM(st->w1[i], buf);
     }
+    for (uint8_t i = 0; i < k; i++) {
+        MLDSA_SET_VECTOR_MEM(st->y[i], buf);
+    }
     for (uint8_t i = 0; i < l; i++) {
         MLDSA_SET_VECTOR_MEM(st->s1[i], buf);
-        MLDSA_SET_VECTOR_MEM(st->y[i], buf);
+    }
+    for (uint8_t i = 0; i < l; i++) {
         MLDSA_SET_VECTOR_MEM(st->z[i], buf);
     }
     return CRYPT_SUCCESS;
@@ -149,7 +150,7 @@ static int32_t MLDSASignCreateMatrix(uint8_t k, uint8_t l, MLDSA_SignMatrixSt *s
 typedef struct {
     int32_t *bufAddr;
     uint32_t bufSize;
-    int32_t *matrix[MLDSA_K_MAX][MLDSA_L_MAX];
+    int32_t *matrix[MLDSA_L_MAX];
     int32_t *t1[MLDSA_K_MAX];
     int32_t *h[MLDSA_K_MAX];
     int32_t *w[MLDSA_K_MAX];
@@ -158,22 +159,20 @@ typedef struct {
 
 static int32_t MLDSAVerifyCreateMatrix(uint8_t k, uint8_t l, MLDSA_VerifyMatrixSt *st)
 {
-    // Signature verification requires 3 two-dimensional arrays of length k and 1 of length l.
-    st->bufSize = (k * l + 3 * k + l) * MLDSA_N * sizeof(int32_t);
+    // Signature verification requires 3 two-dimensional arrays of length k and 2 of length l.
+    st->bufSize = (3 * k + 2 * l) * MLDSA_N * sizeof(int32_t);
     int32_t *buf = BSL_SAL_Malloc(st->bufSize);
     if (buf == NULL) {
         return BSL_MALLOC_FAIL;
     }
     st->bufAddr = buf;  // Used to free memory.
-    MLDSASetMatrixMem(k, l, st->matrix, buf);
-    buf += k * l * MLDSA_N;
-
     for (uint8_t i = 0; i < k; i++) {
         MLDSA_SET_VECTOR_MEM(st->t1[i], buf);
         MLDSA_SET_VECTOR_MEM(st->h[i], buf);
         MLDSA_SET_VECTOR_MEM(st->w[i], buf);
     }
     for (uint8_t i = 0; i < l; i++) {
+        MLDSA_SET_VECTOR_MEM(st->matrix[i], buf);
         MLDSA_SET_VECTOR_MEM(st->z[i], buf);
     }
     return CRYPT_SUCCESS;
@@ -414,18 +413,26 @@ static void MatrixMul(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t, int32_t *const ma
     }
 }
 
-static void ComputesT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t[MLDSA_K_MAX],
-    int32_t *const matrix[MLDSA_K_MAX][MLDSA_L_MAX], int32_t *const s1[MLDSA_L_MAX], int32_t *const s2[MLDSA_K_MAX])
+static int32_t ComputesT(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t[MLDSA_K_MAX], MLDSA_KeyGenMatrixSt *st, uint8_t*pub)
 {
+    uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN];
+    (void)memcpy_s(seed, sizeof(seed), pub, MLDSA_PUBLIC_SEED_LEN);
     for (uint8_t i = 0; i < ctx->info->k; i++) {
-        MatrixMul(ctx, t[i], matrix[i], s1);
+        for (uint8_t j = 0; j < ctx->info->l; j++) {
+            seed[MLDSA_PUBLIC_SEED_LEN] = j;
+            seed[MLDSA_PUBLIC_SEED_LEN + 1] = i;
+            int32_t ret = RejNTTPoly(st->matrix[j], seed);
+            RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        }
+        MatrixMul(ctx, t[i], st->matrix, st->s1Ntt);
         MLDSA_ComputesINVNTT(t[i]);
         for (int32_t j = 0; j < MLDSA_N; j++) {
-            t[i][j] = t[i][j] + s2[i][j];
+            t[i][j] = t[i][j] + st->s2[i][j];
             // if t[i][j] < 0 then t[i][j] >> 31 is 0xFFFFFFFF else t[i][j] >> 31 is 0.
             t[i][j] = t[i][j] + (MLDSA_Q & (t[i][j] >> 31));
         }
     }
+    return CRYPT_SUCCESS;
 }
 
 static void ComputesPower2Round(const CRYPT_ML_DSA_Ctx *ctx, int32_t *t0[MLDSA_K_MAX], int32_t *t1[MLDSA_K_MAX])
@@ -899,9 +906,9 @@ static bool ValidityChecksK(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const z[MLDSA_
 static void ComputesR(const CRYPT_ML_DSA_Ctx *ctx, const int32_t *c, MLDSA_SignMatrixSt *st)
 {
     for (uint8_t i = 0; i < ctx->info->k; i++) {
-        VectorsMul(st->cs2[i], c, st->s2[i]);
-        MLDSA_ComputesINVNTT(st->cs2[i]);
-        MLDSA_VectorsSub(st->r0[i], st->w[i], st->cs2[i]);
+        VectorsMul(st->y[i], c, st->s2[i]);
+        MLDSA_ComputesINVNTT(st->y[i]);
+        MLDSA_VectorsSub(st->r0[i], st->w[i], st->y[i]);
     }
 }
 
@@ -926,7 +933,8 @@ static uint32_t MakeHint(const CRYPT_ML_DSA_Ctx *ctx, MLDSA_SignMatrixSt *st)
             // that HighBits(w - cs2) == w1.
             // Therefore, we only need to check if the accumulated low bits (v = w0 - cs2 + ct0) 
             // crosses the bucket boundary [-gamma2, gamma2].
-            int32_t v = st->w[i][j] + st->ct0[i][j] - st->cs2[i][j];
+            // To reduce memory, cs2 and ct0 reuse the memory of r0 and y.
+            int32_t v = st->w[i][j] + st->r0[i][j] - st->y[i][j];
             MLDSA_MOD_Q(v);
 
             uint32_t x = (uint32_t)(v + g);  // x = v + gamma2
@@ -943,7 +951,7 @@ static uint32_t MakeHint(const CRYPT_ML_DSA_Ctx *ctx, MLDSA_SignMatrixSt *st)
 
             // bit is 1 (overflow occurred) if v > gamma2 OR v < -gamma2 OR (v == -gamma2 AND w1 != 0)
             uint32_t bit = c1 | c2 | (isZero & isNonZero);
-            st->h[i][j] = (int32_t)bit;
+            st->w[i][j] = (int32_t)bit;
             num += bit;
         }
     }
@@ -1010,13 +1018,22 @@ static int32_t SigDecode(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *in, int32_t
     return CRYPT_SUCCESS;
 }
 
-static void ComputesApproxW(const CRYPT_ML_DSA_Ctx *ctx, MLDSA_VerifyMatrixSt *st, int32_t *c, int32_t *w[MLDSA_K_MAX])
+static int32_t ComputesApproxW(const CRYPT_ML_DSA_Ctx *ctx, MLDSA_VerifyMatrixSt *st, const uint8_t *pubSeed,
+    int32_t *c, int32_t *w[MLDSA_K_MAX])
 {
+    uint8_t seed[MLDSA_SEED_EXTEND_BYTES_LEN];
+    (void)memcpy_s(seed, sizeof(seed), pubSeed, MLDSA_PUBLIC_SEED_LEN);
     MLDSA_ComputesNTT(c);
     for (uint8_t i = 0; i < ctx->info->l; i++) {
         MLDSA_ComputesNTT(st->z[i]);
     }
     for (uint8_t i = 0; i < ctx->info->k; i++) {
+        for (uint8_t j = 0; j < ctx->info->l; j++) {
+            seed[MLDSA_PUBLIC_SEED_LEN] = j;
+            seed[MLDSA_PUBLIC_SEED_LEN + 1] = i;
+            int32_t ret = RejNTTPoly(st->matrix[j], seed);
+            RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        }
         for (int32_t j = 0; j < MLDSA_N; j++) {
             // t1 ⋅ 2^𝑑
             st->t1[i][j] = (int32_t)((uint32_t)st->t1[i][j] << MLDSA_D);
@@ -1026,11 +1043,12 @@ static void ComputesApproxW(const CRYPT_ML_DSA_Ctx *ctx, MLDSA_VerifyMatrixSt *s
         // NTT(𝑐) ∘ NTT(t1 ⋅ 2^𝑑)
         VectorsMul(st->t1[i], st->t1[i], c);
         // A ∘ NTT(z)
-        MatrixMul(ctx, w[i], st->matrix[i], st->z);
+        MatrixMul(ctx, w[i], st->matrix, st->z);
 
         MLDSA_VectorsSub(w[i], w[i], st->t1[i]);
         MLDSA_ComputesINVNTT(w[i]);
     }
+    return CRYPT_SUCCESS;
 }
 
 static void UseHint(const CRYPT_ML_DSA_Ctx *ctx, int32_t *const h[MLDSA_K_MAX], int32_t *w[MLDSA_K_MAX])
@@ -1079,14 +1097,12 @@ int32_t MLDSA_KeyGenInternal(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *d)
     uint8_t *prvSeed = digest + MLDSA_PUBLIC_SEED_LEN;
     uint8_t *signSeed = digest + MLDSA_PUBLIC_SEED_LEN + MLDSA_PRIVATE_SEED_LEN;
 
-    // A ← ExpandA(ρ)
-    GOTO_ERR_IF(ExpandA(ctx, pubSeed, st.matrix), ret);
     // (𝐬1, 𝐬2) ← ExpandS(ρ′)
     GOTO_ERR_IF(ExpandS(ctx, prvSeed, st.s1, st.s2), ret);
 
     // t ← NTT^−1(A ∘ NTT(𝐬1)) + 𝐬2
     ComputesNTT(ctx, st.s1, st.s1Ntt);
-    ComputesT(ctx, st.t1, st.matrix, st.s1Ntt, st.s2);  // t = As1 + s2
+    GOTO_ERR_IF(ComputesT(ctx, st.t1, &st, pubSeed), ret);  // t = As1 + s2
 
     // (t1, t0) ← Power2Round(t)
     ComputesPower2Round(ctx, st.t0, st.t1);
@@ -1177,9 +1193,10 @@ int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, u
             continue;
         }
         // ⟨⟨𝑐t0⟩⟩ ← NTT^−1(𝑐 ∘ t0)
-        ComputesCT(ctx, c, st.t0, st.ct0);
+        // To reduce memory, ct0 reuses r0's memory.
+        ComputesCT(ctx, c, st.t0, st.r0);
         // if ||⟨⟨𝑐t0⟩⟩||∞ ≥ 𝛾2
-        if (ValidityChecksK(ctx, st.ct0, ctx->info->gamma2) == false) {
+        if (ValidityChecksK(ctx, st.r0, ctx->info->gamma2) == false) {
             continue;
         }
         // h ← MakeHint(−⟨⟨𝑐t0⟩⟩, w − ⟨⟨𝑐𝐬2⟩⟩ + ⟨⟨𝑐t0⟩⟩)
@@ -1191,7 +1208,8 @@ int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, u
 
     *outLen = ctx->info->signatureLen;
     // σ ← sigEncode(𝑐, z̃ mod±𝑞, h)
-    SigEncode(ctx, out + cBufLen, *outLen - cBufLen, st.z, st.h);
+    // To reduce memory, h reuses w's memory.
+    SigEncode(ctx, out + cBufLen, *outLen - cBufLen, st.z, st.w);
 ERR:
     BSL_SAL_ClearFree(st.bufAddr, st.bufSize);
     BSL_SAL_ClearFree(w1Buf, w1Len);
@@ -1232,8 +1250,6 @@ int32_t MLDSA_VerifyInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg,
         goto ERR;
     }
 
-    // A ← ExpandA(ρ)
-    GOTO_ERR_IF(ExpandA(ctx, pubSeed, st.matrix), ret);
     if (ctx->isMuMsg) {
         (void)memcpy_s(uBuf, MLDSA_XOF_MSG_LEN, msg->data, msg->len);
     } else {
@@ -1246,7 +1262,7 @@ int32_t MLDSA_VerifyInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg,
     // 𝑐 ∈ 𝑅𝑞 ← SampleInBall(𝑐)
     SampleInBall(ctx, sign, cBufLen, c);
     // w′ ← NTT−1(A ∘ NTT(z) − NTT(𝑐) ∘ NTT(t1 ⋅ 2𝑑))
-    ComputesApproxW(ctx, &st, c, st.w);
+    GOTO_ERR_IF(ComputesApproxW(ctx, &st, pubSeed, c, st.w), ret);
     // w1′ ← UseHint(h, w′)
     UseHint(ctx, st.h, st.w);
     // c′← H(μ||w1Encode(w1′), 𝜆/4)
@@ -1265,41 +1281,44 @@ ERR:
     return ret;
 }
 
+static void DecodePrvKey(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pubSeed, MLDSA_KeyGenMatrixSt *st)
+{
+    uint32_t bitLen = ctx->info->eta == 2 ? 3 : 4;  // 3 and 4 is bitlen(2𝜂)
+    uint32_t index = MLDSA_PUBLIC_SEED_LEN + MLDSA_SIGNING_SEED_LEN + MLDSA_PRIVATE_SEED_LEN;
+    (void)memcpy_s(pubSeed, MLDSA_PUBLIC_SEED_LEN, ctx->prvKey, MLDSA_PUBLIC_SEED_LEN);
+
+    uint32_t i = 0;
+    for (i = 0; i < ctx->info->l; i++) {
+        BitUnPake(ctx->prvKey + index, (uint32_t *)st->s1[i], bitLen, ctx->info->eta);
+        index += MLDSA_N_BYTE * bitLen;
+    }
+    for (i = 0; i < ctx->info->k; i++) {
+        BitUnPake(ctx->prvKey + index, (uint32_t *)st->s2[i], bitLen, ctx->info->eta);
+        index += MLDSA_N_BYTE * bitLen;
+    }
+    for (i = 0; i < ctx->info->k; i++) {
+        BitUnPake(ctx->prvKey + index, (uint32_t *)st->t0[i], MLDSA_D, 4096);  // 2^(𝑑−1) == 4096
+        index += MLDSA_N_BYTE * MLDSA_D;
+    }
+}
+
 // calculate public key from private key
 int32_t MLDSA_CalPub(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pub, uint32_t pubLen)
 {
     int32_t ret;
-    MLDSA_SignMatrixSt st = { 0 };
+    MLDSA_KeyGenMatrixSt st = { 0 };
     uint8_t pubSeed[MLDSA_PUBLIC_SEED_LEN];
-    uint8_t kValue[MLDSA_SIGNING_SEED_LEN + MLDSA_SEED_BYTES_LEN];
-    int32_t tmp0[MLDSA_K_MAX][MLDSA_N];
-    int32_t tmp1[MLDSA_K_MAX][MLDSA_N];
-    int32_t tmp2[MLDSA_L_MAX][MLDSA_N];
-    uint8_t tr[MLDSA_TR_MSG_LEN];
 
-    int32_t *s1Ntt[MLDSA_L_MAX];
-    int32_t *t0[MLDSA_K_MAX];
-    int32_t *t1[MLDSA_K_MAX];
+    GOTO_ERR_IF(MLDSAKeyGenCreateMatrix(ctx->info->k, ctx->info->l, &st), ret);
+    DecodePrvKey(ctx, pubSeed, &st); // get ρ, s1, s2, t0
 
-    for (int32_t i = 0; i < ctx->info->k; i++) {
-        t0[i] = tmp0[i];
-        t1[i] = tmp1[i];
-    }
-    for (int32_t i = 0; i < ctx->info->l; i++) {
-        s1Ntt[i] = tmp2[i];
-    }
-
-    GOTO_ERR_IF(MLDSASignCreateMatrix(ctx->info->k, ctx->info->l, &st), ret);
-    SkDecode(ctx, pubSeed, kValue, tr, &st); // get ρ, K, tr, s1, s2, t0
-    // A <- ExpandA(ρ)
-    GOTO_ERR_IF(ExpandA(ctx, pubSeed, st.matrix), ret);
     // t <- NTT^−1(A ∘ NTT(s1)) + s2
-    ComputesNTT(ctx, st.s1, s1Ntt);
-    ComputesT(ctx, t1, st.matrix, s1Ntt, st.s2);  // t = As1 + s2
+    ComputesNTT(ctx, st.s1, st.s1Ntt);
+    GOTO_ERR_IF(ComputesT(ctx, st.t1, &st, pubSeed), ret);  // t = As1 + s2
     // (t1, t0) <- Power2Round(t)
-    ComputesPower2Round(ctx, t0, t1);
+    ComputesPower2Round(ctx, st.s2, st.t1);
     for (int32_t i = 0; i < ctx->info->k; i++) {
-        if (memcmp(t0[i], st.t0[i], MLDSA_N) != 0) {
+        if (memcmp(st.s2[i], st.t0[i], MLDSA_N) != 0) {
             BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_PAIRWISE_CHECK_FAIL);
             ret = CRYPT_MLDSA_PAIRWISE_CHECK_FAIL;
             goto ERR;
@@ -1313,11 +1332,10 @@ int32_t MLDSA_CalPub(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pub, uint32_t pubLen)
     }
     for (int32_t i = 0; i < ctx->info->k; i++) {
         // 10 is bitlen(q − 1) − d
-        ByteEncode(pub + MLDSA_PUBLIC_SEED_LEN + i * MLDSA_PUBKEY_POLYT_PACKEDBYTES, (uint32_t *)t1[i], 10);
+        ByteEncode(pub + MLDSA_PUBLIC_SEED_LEN + i * MLDSA_PUBKEY_POLYT_PACKEDBYTES, (uint32_t *)st.t1[i], 10);
     }
 ERR:
     BSL_SAL_ClearFree(st.bufAddr, st.bufSize);
-    BSL_SAL_CleanseData(kValue, sizeof(kValue));
     BSL_SAL_CleanseData(pubSeed, sizeof(pubSeed));
     return ret;
 }
