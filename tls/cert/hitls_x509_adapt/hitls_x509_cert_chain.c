@@ -93,16 +93,7 @@ int32_t HITLS_X509_Adapt_BuildCertChain(HITLS_Config *config, HITLS_CERT_Store *
 int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store, HITLS_CERT_X509 **list, uint32_t num)
 {
     HITLS_X509_StoreCtx *storeCtx = (HITLS_X509_StoreCtx *)store;
-    int64_t sysTime = BSL_SAL_CurrentSysTimeGet();
-    if (sysTime == 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_CERT_SELF_ADAPT_INVALID_TIME);
-        return HITLS_CERT_SELF_ADAPT_INVALID_TIME;
-    }
-    int32_t ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_TIME, &sysTime, sizeof(sysTime));
-    if (ret != HITLS_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
+    int32_t ret;
 #ifdef HITLS_CRYPTO_SM2
     /* The default user id as specified in GM/T 0009-2012 */
     char sm2UserId[] = "1234567812345678";

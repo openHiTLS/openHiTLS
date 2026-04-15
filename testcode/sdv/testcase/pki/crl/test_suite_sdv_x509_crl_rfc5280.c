@@ -308,6 +308,7 @@ EXIT:
 void SDV_X509_CRL_FILE_VERIFY_FUNC_TC001(char *caPath, char *crlPath, char *certPath, int flags, int crlVerResult,
     int expResult)
 {
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
     TestMemInit();
     HITLS_X509_StoreCtx *storeCtx = HITLS_X509_StoreCtxNew();
     ASSERT_TRUE(storeCtx != NULL);
@@ -328,7 +329,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC001(char *caPath, char *crlPath, char *cert
     ret = BSL_LIST_AddElement(storeCtx->crl, crl, BSL_LIST_POS_END);
     ASSERT_EQ(ret, BSL_SUCCESS);
 
-    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store);
+    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store, NULL);
     ASSERT_EQ(ret, crlVerResult);
 
     HITLS_X509_List *certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
@@ -340,6 +341,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC001(char *caPath, char *crlPath, char *cert
     ret = BSL_LIST_AddElement(certChain, testCert, BSL_LIST_POS_END);
     ASSERT_EQ(ret, BSL_SUCCESS);
 
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)), 0);
     ret = HITLS_X509_CertVerify(storeCtx, certChain);
     ASSERT_EQ(ret, expResult);
 EXIT:
@@ -356,6 +358,7 @@ EXIT:
 void SDV_X509_CRL_FILE_VERIFY_FUNC_TC002(char *rootCaPath, char *caPath, char *rootCrlPath, char *crlPath,
     char *certPath, int flags, int certVerResult, int crlVerResult)
 {
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
     TestMemInit();
     HITLS_X509_StoreCtx *storeCtx = HITLS_X509_StoreCtxNew();
     ASSERT_TRUE(storeCtx != NULL);
@@ -389,7 +392,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC002(char *rootCaPath, char *caPath, char *r
     }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
-    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store);
+    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store, NULL);
     ASSERT_EQ(ret, crlVerResult);
 
     HITLS_X509_List *certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
@@ -401,6 +404,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC002(char *rootCaPath, char *caPath, char *r
     ret = BSL_LIST_AddElement(certChain, testCert, BSL_LIST_POS_END);
     ASSERT_EQ(ret, BSL_SUCCESS);
 
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)), 0);
     ret = HITLS_X509_CertVerify(storeCtx, certChain);
     ASSERT_EQ(ret, certVerResult);
 EXIT:
@@ -417,6 +421,7 @@ EXIT:
 void SDV_X509_CRL_FILE_VERIFY_FUNC_TC003(char *caPath, char *crlPath, char *certPath, int flags,
     int crlVerResult, int certVerResult)
 {
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
     TestMemInit();
     char *rootCaPath = "../testdata/cert/test_for_crl/crl_verify/certs/ca.crt";
     char *rootCrlPath = "../testdata/cert/test_for_crl/crl_verify/crl/root_updated.crl";
@@ -450,7 +455,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC003(char *caPath, char *crlPath, char *cert
     ASSERT_EQ(ret, BSL_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
-    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store);
+    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store, NULL);
     ASSERT_EQ(ret, crlVerResult);
 
     HITLS_X509_List *certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
@@ -462,6 +467,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC003(char *caPath, char *crlPath, char *cert
     ret = BSL_LIST_AddElement(certChain, testCert, BSL_LIST_POS_END);
     ASSERT_EQ(ret, BSL_SUCCESS);
 
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)), 0);
     ret = HITLS_X509_CertVerify(storeCtx, certChain);
     ASSERT_EQ(ret, certVerResult);
 EXIT:
@@ -478,6 +484,7 @@ EXIT:
 void SDV_X509_CRL_FILE_VERIFY_FUNC_TC004(char *caPath, char *crlPath, char *certPath, int flags, int crlVerResult,
     int expResult, int isUseSm2UserId)
 {
+    uint64_t flag = HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
     TestMemInit();
     HITLS_X509_StoreCtx *storeCtx = HITLS_X509_StoreCtxNew();
     ASSERT_TRUE(storeCtx != NULL);
@@ -506,7 +513,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC004(char *caPath, char *crlPath, char *cert
     }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
-    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store);
+    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store, NULL);
     ASSERT_EQ(ret, crlVerResult);
 
     HITLS_X509_List *certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
@@ -518,6 +525,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC004(char *caPath, char *crlPath, char *cert
     ret = BSL_LIST_AddElement(certChain, testCert, BSL_LIST_POS_END);
     ASSERT_EQ(ret, BSL_SUCCESS);
 
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &flag, sizeof(flag)), 0);
     ret = HITLS_X509_CertVerify(storeCtx, certChain);
     ASSERT_EQ(ret, expResult);
 EXIT:
@@ -574,7 +582,7 @@ void SDV_X509_CRL_FILE_VERIFY_FUNC_TC005(char *rootCaPath, char *caPath, char *r
     }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
-    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store);
+    ret = HITLS_X509_VerifyCrl(storeCtx, storeCtx->store, NULL);
     ASSERT_EQ(ret, crlVerResult);
 
     HITLS_X509_List *certChain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));

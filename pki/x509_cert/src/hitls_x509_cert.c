@@ -165,16 +165,15 @@ void HITLS_X509_CertFree(HITLS_X509_Cert *cert)
         return;
     }
 
+    BSL_LIST_PFUNC_FREE func = (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode;
     if (cert->flag == HITLS_X509_CERT_GEN_FLAG) {
         BSL_SAL_FREE(cert->tbs.serialNum.buff);
         BSL_SAL_FREE(cert->tbs.tbsRawData);
         BSL_SAL_FREE(cert->signature.buff);
-        BSL_LIST_FREE(cert->tbs.issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
-        BSL_LIST_FREE(cert->tbs.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
-    } else {
-        BSL_LIST_FREE(cert->tbs.issuerName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
-        BSL_LIST_FREE(cert->tbs.subjectName, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeParsedNameNode);
+        func = (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode;
     }
+    BSL_LIST_FREE(cert->tbs.issuerName, func);
+    BSL_LIST_FREE(cert->tbs.subjectName, func);
 #ifdef HITLS_CRYPTO_SM2
     if (cert->signAlgId.algId == BSL_CID_SM2DSAWITHSM3) {
         BSL_SAL_FREE(cert->signAlgId.sm2UserId.data);
