@@ -558,6 +558,8 @@ option(HITLS_TLS_SUITE                                         "TLS Cipher Suite
   option(HITLS_TLS_SUITE_CHACHA20_POLY1305_SHA256                "TLS Suite CHACHA20-POLY1305-SHA256 (TLS 1.3)" OFF)
   option(HITLS_TLS_SUITE_AES_128_CCM_SHA256                      "TLS Suite AES-128-CCM-SHA256 (TLS 1.3)" OFF)
   option(HITLS_TLS_SUITE_AES_128_CCM_8_SHA256                    "TLS Suite AES-128-CCM-8-SHA256 (TLS 1.3)" OFF)
+  option(HITLS_TLS_SUITE_TLS_SHA256_SHA256                       "TLS Suite TLS_SHA256_SHA256 RFC9150 integrity-only (TLS 1.3)" OFF)
+  option(HITLS_TLS_SUITE_TLS_SHA384_SHA384                       "TLS Suite TLS_SHA384_SHA384 RFC9150 integrity-only (TLS 1.3)" OFF)
   option(HITLS_TLS_SUITE_RSA_WITH_AES_128_CBC_SHA                "TLS Suite RSA-AES-128-CBC-SHA" OFF)
   option(HITLS_TLS_SUITE_RSA_WITH_AES_256_CBC_SHA                "TLS Suite RSA-AES-256-CBC-SHA" OFF)
   option(HITLS_TLS_SUITE_RSA_WITH_AES_128_CBC_SHA256             "TLS Suite RSA-AES-128-CBC-SHA256" OFF)
@@ -649,6 +651,7 @@ option(HITLS_TLS_SUITE                                         "TLS Cipher Suite
 ## TLS Suite Cipher type
 option(HITLS_TLS_SUITE_CIPHER                                  "TLS Suite Cipher" OFF)
   option(HITLS_TLS_SUITE_CIPHER_AEAD                             "TLS Suite Cipher AEAD" OFF)
+  option(HITLS_TLS_SUITE_CIPHER_TLS13_INTEGRITY                  "TLS Suite Cipher TLS1.3 RFC9150 HMAC integrity" OFF)
   option(HITLS_TLS_SUITE_CIPHER_CBC                              "TLS Suite Cipher CBC" OFF)
 
 ## TLS Suite Key Exchange

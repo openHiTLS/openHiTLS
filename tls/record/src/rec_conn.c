@@ -49,7 +49,7 @@ void RecConnStateFree(RecConnState *state)
         return;
     }
     if (state->suiteInfo != NULL) {
-#ifdef HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES
+#if defined(HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES) || defined(HITLS_TLS_SUITE_CIPHER_TLS13_INTEGRITY)
         SAL_CRYPT_HmacFree(state->suiteInfo->macCtx);
 #endif
         SAL_CRYPT_CipherFree(state->suiteInfo->ctx);
@@ -86,7 +86,7 @@ int32_t RecConnStateSetCipherInfo(RecConnState *state, RecConnSuitInfo *suitInfo
     if (state->suiteInfo != NULL) {
         SAL_CRYPT_CipherFree(state->suiteInfo->ctx);
         state->suiteInfo->ctx = NULL;
-#ifdef HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES
+#if defined(HITLS_TLS_CALLBACK_CRYPT_HMAC_PRIMITIVES) || defined(HITLS_TLS_SUITE_CIPHER_TLS13_INTEGRITY)
         SAL_CRYPT_HmacFree(state->suiteInfo->macCtx);
         state->suiteInfo->macCtx = NULL;
 #endif

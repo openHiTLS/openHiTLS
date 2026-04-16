@@ -29,7 +29,7 @@ extern "C" {
 
 #define REC_MAX_MAC_KEY_LEN            64
 #define REC_MAX_KEY_LENGTH             64
-#define REC_MAX_IV_LENGTH              16
+#define REC_MAX_IV_LENGTH              64  /* RFC 9150 TLS_SHA384_SHA384 uses 48-byte IV; headroom for alignment */
 #define REC_MAX_KEY_BLOCK_LEN          (REC_MAX_MAC_KEY_LEN * 2 + REC_MAX_KEY_LENGTH * 2 + REC_MAX_IV_LENGTH * 2)
 #define MAX_SHA1_SIZE 20
 #define MAX_MD5_SIZE 16

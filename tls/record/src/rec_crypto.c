@@ -29,6 +29,17 @@
 #include "hs.h"
 #include "hitls_error.h"
 
+#if defined(HITLS_TLS_SUITE_CIPHER_TLS13_INTEGRITY) && defined(HITLS_TLS_PROTO_TLS13) && defined(__APPLE__)
+extern const RecCryptoFunc *RecGetTls13IntegrityCryptoFuncs(DecryptPostProcess decryptPostProcess,
+    EncryptPreProcess encryptPreProcess) __attribute__((weak_import));
+#elif defined(HITLS_TLS_SUITE_CIPHER_TLS13_INTEGRITY) && defined(HITLS_TLS_PROTO_TLS13) && defined(__GNUC__)
+extern const RecCryptoFunc *RecGetTls13IntegrityCryptoFuncs(DecryptPostProcess decryptPostProcess,
+    EncryptPreProcess encryptPreProcess) __attribute__((weak));
+#elif defined(HITLS_TLS_SUITE_CIPHER_TLS13_INTEGRITY) && defined(HITLS_TLS_PROTO_TLS13)
+extern const RecCryptoFunc *RecGetTls13IntegrityCryptoFuncs(DecryptPostProcess decryptPostProcess,
+    EncryptPreProcess encryptPreProcess);
+#endif
+
 #ifdef HITLS_TLS_PROTO_TLS13
 /* 16384 + 1: RFC8446 5.4. Record Padding the full encoded TLSInnerPlaintext MUST NOT exceed 2^14 + 1 octets. */
 #define MAX_PADDING_LEN 16385
@@ -239,6 +250,13 @@ const RecCryptoFunc *RecGetCryptoFuncs(const RecConnSuitInfo *suiteInfo)
 #ifdef HITLS_TLS_SUITE_CIPHER_AEAD
         case HITLS_AEAD_CIPHER:
             return RecGetAeadCryptoFuncs(DefaultDecryptPostProcess, DefaultEncryptPreProcess);
+#endif
+#if defined(HITLS_TLS_SUITE_CIPHER_TLS13_INTEGRITY) && defined(HITLS_TLS_PROTO_TLS13)
+        case HITLS_TLS13_INTEGRITY_CIPHER:
+            if (RecGetTls13IntegrityCryptoFuncs != NULL) {
+                return RecGetTls13IntegrityCryptoFuncs(DefaultDecryptPostProcess, DefaultEncryptPreProcess);
+            }
+            break;
 #endif
 #ifdef HITLS_TLS_SUITE_CIPHER_CBC
         case HITLS_CBC_CIPHER:

@@ -133,6 +133,38 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
         .cipherType = HITLS_AEAD_CIPHER,
         .strengthBits = 64},
 #endif
+#ifdef HITLS_TLS_SUITE_TLS_SHA256_SHA256
+    {.enable = true,
+        .name = CIPHER_NAME("HITLS_TLS_SHA256_SHA256"),
+        .stdName = CIPHER_NAME("TLS_SHA256_SHA256"),
+        .cipherSuite = HITLS_TLS_SHA256_SHA256,
+        .cipherAlg = HITLS_CIPHER_NULL,
+        .kxAlg = HITLS_KEY_EXCH_NULL,
+        .authAlg = HITLS_AUTH_ANY,
+        .macAlg = HITLS_MAC_256,
+        .hashAlg = HITLS_HASH_SHA_256,
+        .signScheme = CERT_SIG_SCHEME_UNKNOWN,
+        KEY_BLOCK_PARTITON_LENGTH(32u, 32u, 0u, 0u, 0u, 32u),
+        VERSION_SCOPE(HITLS_VERSION_TLS13, HITLS_VERSION_TLS13, 0u, 0u),
+        .cipherType = HITLS_TLS13_INTEGRITY_CIPHER,
+        .strengthBits = 0}, /* no confidentiality: explicit security-level downgrade required */
+#endif
+#ifdef HITLS_TLS_SUITE_TLS_SHA384_SHA384
+    {.enable = true,
+        .name = CIPHER_NAME("HITLS_TLS_SHA384_SHA384"),
+        .stdName = CIPHER_NAME("TLS_SHA384_SHA384"),
+        .cipherSuite = HITLS_TLS_SHA384_SHA384,
+        .cipherAlg = HITLS_CIPHER_NULL,
+        .kxAlg = HITLS_KEY_EXCH_NULL,
+        .authAlg = HITLS_AUTH_ANY,
+        .macAlg = HITLS_MAC_384,
+        .hashAlg = HITLS_HASH_SHA_384,
+        .signScheme = CERT_SIG_SCHEME_UNKNOWN,
+        KEY_BLOCK_PARTITON_LENGTH(48u, 48u, 0u, 0u, 0u, 48u),
+        VERSION_SCOPE(HITLS_VERSION_TLS13, HITLS_VERSION_TLS13, 0u, 0u),
+        .cipherType = HITLS_TLS13_INTEGRITY_CIPHER,
+        .strengthBits = 0}, /* no confidentiality: explicit security-level downgrade required */
+#endif
 #ifdef HITLS_TLS_FEATURE_SM_TLS13
 #ifdef HITLS_TLS_SUITE_SM4_GCM_SM3
     {.enable = true,

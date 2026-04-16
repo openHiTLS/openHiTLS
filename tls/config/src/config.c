@@ -869,7 +869,8 @@ static void GetCipherSuitesCnt(const uint16_t *cipherSuites, uint32_t cipherSuit
     for (uint32_t i = 0; i < cipherSuitesSize; i++) {
 #ifdef HITLS_TLS_PROTO_TLS13
         if ((cipherSuites[i] >= HITLS_AES_128_GCM_SHA256 && cipherSuites[i] <= HITLS_AES_128_CCM_8_SHA256) ||
-            (cipherSuites[i] == HITLS_SM4_GCM_SM3 || cipherSuites[i] == HITLS_SM4_CCM_SM3)) {
+            (cipherSuites[i] == HITLS_SM4_GCM_SM3 || cipherSuites[i] == HITLS_SM4_CCM_SM3) ||
+            (cipherSuites[i] == HITLS_TLS_SHA256_SHA256 || cipherSuites[i] == HITLS_TLS_SHA384_SHA384)) {
             tmpTls13CipherSize++;
             continue;
         }
@@ -917,7 +918,8 @@ int32_t HITLS_CFG_SetCipherSuites(HITLS_Config *config, const uint16_t *cipherSu
             continue;
         }
         if ((cipherSuites[i] >= HITLS_AES_128_GCM_SHA256 && cipherSuites[i] <= HITLS_AES_128_CCM_8_SHA256) ||
-            (cipherSuites[i] == HITLS_SM4_GCM_SM3 || cipherSuites[i] == HITLS_SM4_CCM_SM3)) {
+            (cipherSuites[i] == HITLS_SM4_GCM_SM3 || cipherSuites[i] == HITLS_SM4_CCM_SM3) ||
+            (cipherSuites[i] == HITLS_TLS_SHA256_SHA256 || cipherSuites[i] == HITLS_TLS_SHA384_SHA384)) {
 #ifdef HITLS_TLS_PROTO_TLS13
             tls13CipherSuite[validTls13Cipher] = cipherSuites[i];
             validTls13Cipher++;

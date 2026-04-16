@@ -176,6 +176,10 @@ HITLS_NamedGroup CFG_GetEcdsaCurveNameBySchemes(const HITLS_Ctx *ctx, HITLS_Sign
 
 #define IS_SM_TLS13(cipherSuite) (((cipherSuite) == HITLS_SM4_GCM_SM3) || ((cipherSuite) == HITLS_SM4_CCM_SM3))
 
+/** RFC 9150 TLS 1.3 integrity-only cipher suites */
+#define IS_TLS13_RFC9150(cipherSuite) \
+    (((cipherSuite) == HITLS_TLS_SHA256_SHA256) || ((cipherSuite) == HITLS_TLS_SHA384_SHA384))
+
 #ifdef __cplusplus
 }
 #endif

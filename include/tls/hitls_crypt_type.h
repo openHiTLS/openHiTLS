@@ -68,6 +68,8 @@ typedef struct BslList HITLS_CIPHER_List;
 typedef enum {
     HITLS_AEAD_CIPHER,
     HITLS_CBC_CIPHER,
+    /** TLS 1.3 RFC 9150 integrity-only (HMAC record protection, no encryption) */
+    HITLS_TLS13_INTEGRITY_CIPHER,
     HITLS_CIPHER_TYPE_BUTT = 255
 } HITLS_CipherType;
 

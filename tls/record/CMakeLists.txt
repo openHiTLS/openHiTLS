@@ -19,6 +19,7 @@ set(_record_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_crypto.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_crypto_aead.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_crypto_cbc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_crypto_tls13_hmac.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_read.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rec_write.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/record.c
