@@ -119,3 +119,169 @@ The test project depends on the following scripts:
 ### 3.4 Viewing Test Case Results
 
 After the test is complete, you can go to the **output/log** directory to view the test case execution results. If a problem is found in the community repository, check whether there is a trouble ticket in the repository issue. If there is no trouble ticket, submit a trouble ticket to track the problem.
+
+## 4. CI Pipeline Test Commands
+
+When a CI pipeline fails, you can run the corresponding commands locally to reproduce and resolve the issue.
+
+#### build/STM32F4
+
+Linux x86_64, cross-compile for armv7
+```bash
+if [ "${codeBranch}" = "main" ];then
+    mkdir build && cd build
+    cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/toolchain/arm-none-eabi-gcc.cmake  -C ../testcode/config/cmake/STM32F4/STM32F4_feature_config.cmake
+    make -j VERBOSE=1
+fi
+```
+
+#### build/amd64
+
+Linux x86_64
+```bash
+cd testcode/script
+bash build_hitls.sh gcov
+bash build_sdv.sh gcov fail-repeat
+bash execute_sdv.sh
+```
+
+#### build/app
+
+Linux x86_64
+```bash
+[ "${codeBranch}" != "main" ] && exit
+cd testcode/script
+bash build_hitls.sh exe
+bash build_sdv.sh apps
+script -q -e -c "bash execute_sdv.sh" /dev/null
+```
+
+#### build/arm64
+
+Linux aarch64
+```bash
+cd testcode/script
+bash build_hitls.sh gcov armv8_le
+bash build_sdv.sh gcov fail-repeat
+bash execute_sdv.sh
+```
+
+#### build/asan
+
+Linux x86_64 (SCTP required)
+```bash
+sudo modprobe sctp
+sudo sysctl -w net.sctp.auth_enable=1
+cd testcode/script
+sudo bash -x build_hitls.sh asan gcov
+sudo bash -x build_sdv.sh asan gcov fail-repeat
+sudo bash -x execute_sdv.sh
+```
+
+#### build/iso_arm
+
+Linux aarch64
+```bash
+[ "${codeBranch}" != "main" ] && exit
+cd testcode/script
+bash build_hitls.sh iso armv8_le
+bash build_hitls.sh add-options=-DHITLS_CRYPTO_CMVP
+bash build_sdv.sh add-options=-DHITLS_CRYPTO_CMVP_ISO19790_ARMV8_LE
+bash execute_sdv.sh test_suite_sdv_eal_iso19790_provider
+```
+
+#### build/iso_pure_c
+
+Linux x86_64
+```bash
+[ "${codeBranch}" != "main" ] && exit
+cd testcode/script
+bash build_hitls.sh iso pure_c
+bash build_hitls.sh add-options=-DHITLS_CRYPTO_CMVP
+bash build_sdv.sh add-options=-DHITLS_CRYPTO_CMVP_ISO19790_PURE_C
+bash execute_sdv.sh test_suite_sdv_eal_iso19790_provider
+```
+
+#### build/iso_x86
+
+Linux x86_64
+```bash
+[ "${codeBranch}" != "main" ] && exit
+cd testcode/script
+bash build_hitls.sh iso x86_64
+bash build_hitls.sh add-options=-DHITLS_CRYPTO_CMVP
+bash build_sdv.sh add-options=-DHITLS_CRYPTO_CMVP_ISO19790_X86_64
+bash execute_sdv.sh test_suite_sdv_eal_iso19790_provider
+```
+
+#### build/mini_x8664
+
+Linux x86_64
+```bash
+cd testcode/script
+bash all_mini_test.sh all x8664
+```
+
+#### build/no-provider
+
+Linux x86_64
+```bash
+cd testcode/script
+bash build_hitls.sh add-options=-fshort-enums add-options=-Wno-cast-function-type add-options=-Wno-type-limits no-provider gcov
+bash build_sdv.sh add-options=-fshort-enums add-options=-Wno-cast-function-type add-options=-Wno-type-limits gcov
+bash execute_sdv.sh
+```
+
+#### build/sdv_arm-app
+
+Linux aarch64
+```bash
+[ "${codeBranch}" != "main" ] && exit
+cd testcode/script
+bash build_hitls.sh sm armv8_le
+bash build_hitls.sh exe add-options=-DHITLS_APP_SM_MODE
+bash build_sdv.sh apps add-options="-DHITLS_APP_SM_MODE -DHITLS_CRYPTO_CMVP_SM_ARMV8_LE"
+script -q -e -c "bash execute_sdv.sh" /dev/null
+```
+
+#### build/sdv_macos
+
+macOS aarch64
+```bash
+mkdir build && cd build
+if [ -f "../configure.py" ]; then
+    python3 ../configure.py
+fi
+cmake ..
+make -j VERBOSE=1
+
+cd testcode/script
+if [ "${codeBranch}" = "main" ];then
+    ./build_hitls.sh armv8_le
+else
+    ./build_hitls.sh
+fi
+./build_sdv.sh
+./execute_sdv.sh
+```
+
+#### build/sm_arm
+
+Linux aarch64
+```bash
+[ "${codeBranch}" != "main" ] && exit
+cd testcode/script
+bash build_hitls.sh sm armv8_le
+bash build_hitls.sh add-options=-DHITLS_CRYPTO_CMVP
+bash build_sdv.sh add-options=-DHITLS_CRYPTO_CMVP_SM_ARMV8_LE
+bash execute_sdv.sh test_suite_sdv_eal_sm_provider
+```
+
+#### build/tls_sdv_arm
+
+Linux aarch64
+```bash
+cd testcode/script
+bash all_mini_test.sh tls armv8
+```
+
