@@ -36,8 +36,12 @@ project(openHiTLS)
 # for better cross-platform support (especially macOS and Windows).
 # The SecureC.cmake file is maintained in openHiTLS (not in the submodule)
 # to avoid git conflicts with upstream libboundscheck repository.
-message(STATUS "Configuring securec dependency...")
-include(${HiTLS_SOURCE_ROOT_DIR}/platform/SecureC.cmake)
+# Securec is compiled by default. If you do not need to compile it, use "cmake -DHITLS_BUILD_SECUREC=OFF"
+option(HITLS_BUILD_SECUREC "Build Secure C library (libboundscheck)" ON)
+if(HITLS_BUILD_SECUREC)
+    message(STATUS "Configuring securec dependency...")
+    include(${HiTLS_SOURCE_ROOT_DIR}/platform/SecureC.cmake)
+endif()
 
 # ============================================================
 # Generate modules.cmake from configure.py
