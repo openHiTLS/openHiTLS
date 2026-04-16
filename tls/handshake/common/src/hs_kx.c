@@ -24,7 +24,11 @@
 #include "hitls_error.h"
 #include "crypt.h"
 #include "cert_method.h"
+#include "hitls_cert_type.h"
 #include "session.h"
+#ifdef HITLS_TLS_FEATURE_SECURITY
+#include "security.h"
+#endif
 #include "hs_ctx.h"
 #include "transcript_hash.h"
 #include "hs_common.h"
@@ -184,6 +188,29 @@ int32_t HS_ProcessServerKxMsgDhe(TLS_Ctx *ctx, const ServerKeyExchangeMsg *serve
         return HITLS_MEMALLOC_FAIL;
     }
 
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    int32_t secBits = 0;
+    int32_t ret = SAL_CERT_KeyCtrl(&(ctx->config.tlsConfig), key, CERT_KEY_CTRL_GET_SECBITS, NULL, (void *)&secBits);
+    if (ret != HITLS_SUCCESS) {
+        BSL_SAL_FREE(pubkey);
+        SAL_CRYPT_FreeDhKey(key);
+        BSL_ERR_PUSH_ERROR(HITLS_CERT_KEY_CTRL_ERR_GET_SECBITS);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15519, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "get dh secbits fail when process server dhe kx msg.", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+        return HITLS_CERT_KEY_CTRL_ERR_GET_SECBITS;
+    }
+    ret = SECURITY_SslCheck((HITLS_Ctx *)ctx, HITLS_SECURITY_SECOP_TMP_DH, secBits, 0, key);
+    if (ret != SECURITY_SUCCESS) {
+        BSL_SAL_FREE(pubkey);
+        SAL_CRYPT_FreeDhKey(key);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15519, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "server dhe key security check fail, secBits %d.", secBits, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSECURE_CIPHER_SUITE);
+        return HITLS_MSG_HANDLE_UNSECURE_CIPHER_SUITE;
+    }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
     ctx->hsCtx->kxCtx->keyExchParam.dh.plen = dh->plen;
     ctx->hsCtx->kxCtx->key = key;
     ctx->hsCtx->kxCtx->peerPubkey = pubkey;
