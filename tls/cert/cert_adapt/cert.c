@@ -458,7 +458,8 @@ static bool TlcpCheckEncCertKeyUsage(HITLS_Ctx *ctx, HITLS_CERT_X509 *encCert)
 }
 #endif
 
-int32_t ParseChain(HITLS_Ctx *ctx, CERT_Item *item, HITLS_CERT_Chain **chain, HITLS_CERT_X509 **encCert)
+int32_t ParseChain(HITLS_Ctx *ctx, CERT_Item *item, HITLS_CERT_Chain **chain, HITLS_CERT_X509 **encCert,
+                   HITLS_CERT_X509 *signCert)
 {
     if (ctx == NULL || chain == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_NULL_INPUT);
@@ -469,6 +470,11 @@ int32_t ParseChain(HITLS_Ctx *ctx, CERT_Item *item, HITLS_CERT_Chain **chain, HI
     HITLS_CERT_Chain *newChain = SAL_CERT_ChainNew();
     if (newChain == NULL) {
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID15049, "ChainNew fail");
+    }
+    HITLS_CERT_X509 *tempCert = SAL_CERT_X509Ref(config->certMgrCtx, signCert);
+    if (SAL_CERT_ChainAppend(newChain, tempCert) != HITLS_SUCCESS) {
+        DestoryParseChain(NULL, tempCert, newChain);
+        return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID15054, "Append signCert fail");
     }
 
     CERT_Item *listNode = item;
@@ -490,9 +496,7 @@ int32_t ParseChain(HITLS_Ctx *ctx, CERT_Item *item, HITLS_CERT_Chain **chain, HI
 #ifdef HITLS_TLS_PROTO_TLCP11
         if ((encCert != NULL) && (TlcpCheckEncCertKeyUsage(ctx, cert) == true)) {
             SAL_CERT_X509Free(encCertLocal);
-            encCertLocal = cert;
-            listNode = listNode->next;
-            continue;
+            encCertLocal = SAL_CERT_X509Ref(config->certMgrCtx, cert);
         }
 #endif
         /* Add a certificate to the certificate chain. */
@@ -546,7 +550,7 @@ int32_t SAL_CERT_ParseCertChain(HITLS_Ctx *ctx, CERT_Item *item, CERT_Pair **cer
     /* Parse other certificates in the certificate chain. */
     HITLS_CERT_Chain *chain = NULL;
     HITLS_CERT_X509 **inParseEnc = ctx->negotiatedInfo.version == HITLS_VERSION_TLCP_DTLCP11 ? &encCert : NULL;
-    int32_t ret = ParseChain(ctx, item->next, &chain, inParseEnc);
+    int32_t ret = ParseChain(ctx, item->next, &chain, inParseEnc, cert);
     if (ret != HITLS_SUCCESS) {
         SAL_CERT_X509Free(cert);
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16330, "ParseChain fail");
@@ -601,7 +605,15 @@ int32_t SAL_CERT_VerifyCertChain(HITLS_Ctx *ctx, CERT_Pair *certPair, bool isTlc
         certPair->cert;
     for (BslListNode *chainNode = BSL_LIST_FirstNode(chain); chainNode != NULL;
         chainNode = BSL_LIST_GetNextNode(chain, chainNode)) {
-        certList[i++] = (HITLS_CERT_X509 *)BSL_LIST_GetData(chainNode);
+        HITLS_CERT_X509 *cert = (HITLS_CERT_X509 *)BSL_LIST_GetData(chainNode);
+        if (certPair->cert == cert
+#ifdef HITLS_TLS_PROTO_TLCP11
+            || certPair->encCert == cert
+#endif
+        ) {
+            continue;
+        }
+        certList[i++] = cert;
     }
 
     /* Verify the certificate chain. */

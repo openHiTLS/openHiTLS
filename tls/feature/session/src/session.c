@@ -405,7 +405,7 @@ int32_t HITLS_SESS_GetProtocolVersion(const HITLS_Session *sess, uint16_t *versi
 }
 
 #ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
-int32_t SESS_SetPeerCert(HITLS_Session *sess, CERT_Pair *peerCert, bool isClient)
+int32_t SESS_SetPeerCert(HITLS_Session *sess, CERT_Pair *peerCert)
 {
     int32_t ret = HITLS_SUCCESS;
     if (sess == NULL) {
@@ -416,34 +416,7 @@ int32_t SESS_SetPeerCert(HITLS_Session *sess, CERT_Pair *peerCert, bool isClient
 
     BSL_SAL_ThreadWriteLock(sess->lock);
     sess->peerCert = peerCert;
-    /* The peer_cert_chain of the client stores the device certificate of the server */
-    if (isClient && peerCert != NULL) {
-        /* Obtain the cert */
-        HITLS_CERT_X509 *tmpCert = SAL_CERT_PAIR_GET_X509(peerCert);
-        if (tmpCert == NULL) {
-            /* If cert in CERT_Pair is empty, the unlocking is returned */
-            goto EXIT;
-        }
-        /* Obtain the chain */
-        HITLS_CERT_Chain *tmpChain = SAL_CERT_PAIR_GET_CHAIN(peerCert);
-        if (tmpChain == NULL) {
-            /* If the chain in CERT_Pair is empty, the unlocking is returned */
-            goto EXIT;
-        }
 
-        /* Make a copy of the cert */
-        HITLS_CERT_X509 *newSubjectCert = SAL_CERT_X509Dup(sess->certMgrCtx, tmpCert);
-        if (newSubjectCert == NULL) {
-            ret = HITLS_CERT_ERR_X509_DUP;
-            goto EXIT;
-        }
-
-        ret = (int32_t)BSL_LIST_AddElement(tmpChain, newSubjectCert, BSL_LIST_POS_BEGIN);
-        if (ret != 0) {
-            SAL_CERT_X509Free(newSubjectCert);
-        }
-    }
-EXIT:
     BSL_SAL_ThreadUnlock(sess->lock);
     return ret;
 }

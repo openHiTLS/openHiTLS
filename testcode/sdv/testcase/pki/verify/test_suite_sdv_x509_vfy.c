@@ -307,7 +307,7 @@ void SDV_X509_STORE_CTRL_CERT_FUNC_TC002(void)
     ASSERT_EQ(cert->references.count, 2);
     ASSERT_EQ(BSL_LIST_COUNT(store->store), 1);
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, sizeof(HITLS_X509_Cert));
-    ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
+    ASSERT_EQ(ret, HITLS_X509_ERR_CERT_EXIST);
     HITLS_X509_Crl *crl = NULL;
     ret = HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, "../testdata/cert/asn1/ca-empty-rsa-sha256-v2.der", &crl);
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_CRL, crl, sizeof(HITLS_X509_Crl));
@@ -316,6 +316,7 @@ void SDV_X509_STORE_CTRL_CERT_FUNC_TC002(void)
     ASSERT_EQ(BSL_LIST_COUNT(store->crl), 1);
     ret = HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_CRL, crl, sizeof(HITLS_X509_Crl));
     ASSERT_TRUE(ret != HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     HITLS_X509_StoreCtxFree(store);

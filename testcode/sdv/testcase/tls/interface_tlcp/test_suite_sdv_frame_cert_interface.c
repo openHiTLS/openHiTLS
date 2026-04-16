@@ -764,7 +764,7 @@ void UT_TLS_CERT_GET_CALIST_FUNC_TC001(int version)
     ret = BSL_LIST_AddElement((BslList *)certChain, cert3, BSL_LIST_POS_END);
     ASSERT_TRUE(ret == 0);
 
-    ret = SESS_SetPeerCert(session, peerCert, false);
+    ret = SESS_SetPeerCert(session, peerCert);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
 
 
@@ -1537,7 +1537,7 @@ void SDV_HITLS_HostNameVerify_TC004()
     ASSERT_TRUE(c_config != NULL);
     HITLS_Config *s_config = HITLS_CFG_NewTLSConfig();
     ASSERT_TRUE(s_config != NULL);
-    
+
     HITLS_CFG_SetVerifyCb(c_config, (HITLS_VerifyCb)X509StoreCtrlCbkSuc);
     FRAME_LinkObj *client = FRAME_CreateLink(c_config, BSL_UIO_TCP);
     ASSERT_TRUE(client != NULL);

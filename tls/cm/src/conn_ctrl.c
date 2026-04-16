@@ -25,6 +25,7 @@
 #endif
 #include "cert_method.h"
 #include "record.h"
+#include "hs_ctx.h"
 
 #ifdef HITLS_TLS_CONNECTION_INFO_NEGOTIATION
 int32_t HITLS_GetNegotiatedVersion(const HITLS_Ctx *ctx, uint16_t *version)
@@ -182,12 +183,15 @@ HITLS_CERT_X509 *HITLS_GetPeerCertificate(const HITLS_Ctx *ctx)
     }
 
     CERT_Pair *peerCert = NULL;
-
-    int32_t ret = SESS_GetPeerCert(ctx->session, &peerCert);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17157, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "GetPeerCert fail", 0, 0, 0, 0);
-        return NULL;
+    if (ctx->hsCtx != NULL && ctx->hsCtx->peerCert != NULL) {
+        peerCert = ctx->hsCtx->peerCert;
+    } else {
+        int32_t ret = SESS_GetPeerCert(ctx->session, &peerCert);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17157, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "GetPeerCert fail", 0, 0, 0, 0);
+            return NULL;
+        }
     }
 
     HITLS_CERT_X509 *cert = SAL_CERT_PAIR_GET_X509_EX(peerCert);

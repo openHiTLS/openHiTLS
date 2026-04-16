@@ -524,7 +524,7 @@ void UT_TLS_CFG_SET_CIPHERSUITES_FUNC_TC001(int tlsVersion)
     ASSERT_TRUE(server != NULL);
 
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-    
+
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
@@ -1990,7 +1990,7 @@ EXIT:
 *   5. Call HITLS_CFG_BuildCertChain to verify the client certificate.
 * @expect
 *   1. The interface returns success.
-*   2. The client certificate verification fails.
+*   2. The client certificate verification success.
 @ */
 /* BEGIN_CASE */
 void UT_TLS_CFG_USECERTCHAINFILE_TC003(void)
@@ -2003,7 +2003,7 @@ void UT_TLS_CFG_USECERTCHAINFILE_TC003(void)
     int32_t ret = HITLS_CFG_UseCertificateChainFile(config, path);
     ASSERT_EQ(ret, HITLS_SUCCESS);
 
-    ASSERT_EQ(HITLS_CFG_BuildCertChain(config, HITLS_BUILD_CHAIN_FLAG_CHECK), HITLS_X509_ERR_CERT_EXIST);
+    ASSERT_EQ(HITLS_CFG_BuildCertChain(config, HITLS_BUILD_CHAIN_FLAG_CHECK), HITLS_SUCCESS);
 EXIT:
     HITLS_CFG_FreeConfig(config);
 }
@@ -3891,5 +3891,45 @@ void SDV_CONFIG_CONCURRENT_READ_WRITE_DTLCP_TC001(void)
     FRAME_Init();
     RunConcurrentReadWriteProtocolCase(CONFIG_CONCURRENT_PROTO_DTLCP11);
 #endif
+}
+/* END_CASE */
+
+/* @
+* @test SDV_CONFIG_SET_SAME_CERT_TC001
+* @spec -
+* @title When setting the same certificate in the test, verify whether the certificate can be successfully set.
+* @precon nan
+* @brief
+* 1. Create one TLS1.2 config. Expected result 1.
+* 2. Parse a certificate twice, and then set it to the store through deep copy and shallow copy respectively.
+*    Expected result 2.
+* 3. Set the same certificate pointer twice. Expected result 2.
+* @expect
+* 1. Shared TLS1.2 config connections complete concurrent I/O successfully.
+* 2. Setup successful.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CONFIG_SET_SAME_CERT_TC001(void)
+{
+    HitlsInit();
+    HITLS_Config *tlsConfig = NULL;
+    tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    const char *path1 = "../testdata/tls/certificate/pem/rsa_sha256/ca.pem";
+    HITLS_CERT_X509 *caCert = HITLS_CFG_ParseCert(tlsConfig, (const uint8_t *)path1, strlen(path1) + 1,
+                                                  TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_PEM);
+    ASSERT_TRUE(caCert != NULL);
+    HITLS_CERT_X509 *caCert2 = HITLS_CFG_ParseCert(tlsConfig, (const uint8_t *)path1, strlen(path1) + 1,
+                                                   TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_PEM);
+    ASSERT_TRUE(caCert2 != NULL);
+
+    ASSERT_EQ(HITLS_CFG_AddCertToStore(tlsConfig, caCert, TLS_CERT_STORE_TYPE_DEFAULT, false), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddCertToStore(tlsConfig, caCert, TLS_CERT_STORE_TYPE_DEFAULT, true), HITLS_X509_ERR_CERT_EXIST);
+    ASSERT_EQ(HITLS_CFG_AddCertToStore(tlsConfig, caCert, TLS_CERT_STORE_TYPE_DEFAULT, false), HITLS_X509_ERR_CERT_EXIST);
+    ASSERT_EQ(HITLS_CFG_AddCertToStore(tlsConfig, caCert2, TLS_CERT_STORE_TYPE_DEFAULT, false), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
 }
 /* END_CASE */

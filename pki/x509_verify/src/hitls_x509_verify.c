@@ -322,7 +322,7 @@ static int32_t X509_SetPurpose(HITLS_X509_StoreCtx *storeCtx, int32_t *val, uint
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t X509_CheckCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert)
+static int32_t X509_CheckCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, HITLS_X509_Cert **findCert)
 {
     if (!HITLS_X509_CertIsCA(cert)) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_NOT_CA);
@@ -331,7 +331,7 @@ static int32_t X509_CheckCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *ce
     HITLS_X509_List *certStore = storeCtx->store;
     HITLS_X509_Cert *tmp = BSL_LIST_SearchDataConst(certStore, cert, (BSL_LIST_PFUNC_CMP)HITLS_X509_CertCmp, NULL);
     if (tmp != NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_EXIST);
+        *findCert = tmp;
         return HITLS_X509_ERR_CERT_EXIST;
     }
 
@@ -340,7 +340,18 @@ static int32_t X509_CheckCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *ce
 
 static int32_t X509_SetCA(HITLS_X509_StoreCtx *storeCtx, void *val, bool isCopy)
 {
-    int32_t ret = X509_CheckCert(storeCtx, val);
+    HITLS_X509_Cert *findCert = NULL;
+    int32_t ret = X509_CheckCert(storeCtx, val, &findCert);
+    if (ret == HITLS_X509_ERR_CERT_EXIST) {
+        if (findCert == val) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_EXIST);
+            return HITLS_X509_ERR_CERT_EXIST;
+        }
+        if (!isCopy) {
+            HITLS_X509_CertFree(val);
+        }
+        return HITLS_PKI_SUCCESS;
+    }
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
@@ -1730,7 +1741,7 @@ static int32_t CheckIp(HITLS_X509_Cert *cert, unsigned char *ip, int32_t ipLen)
 static int32_t X509_CheckHost(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
 {
     BSL_SAL_FREE(storeCtx->verifyParam.peername);
-    
+
     int32_t ret;
     HITLS_X509_Cert *certee = (HITLS_X509_Cert *)BSL_LIST_FirstNodeData(chain);
     if (storeCtx->verifyParam.hostnames != NULL && BSL_LIST_COUNT(storeCtx->verifyParam.hostnames) > 0) {

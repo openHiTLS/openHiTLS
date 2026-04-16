@@ -2087,6 +2087,7 @@ uint32_t Compare_Certificates(FRAME_LinkObj *client, FRAME_LinkObj *server, bool
     HITLS_CERT_X509 *server_PeerChainCert = NULL;
     HITLS_CERT_X509 *server_ChainCert = NULL;
     HITLS_CERT_X509 *client_PeerEECert = NULL;
+    HITLS_CERT_X509 *server_PeerEECert = NULL;
     HITLS_CERT_X509 *client_PeerChainCert = NULL;
 
     if (!isClientPeerCertNull) {
@@ -2096,7 +2097,8 @@ uint32_t Compare_Certificates(FRAME_LinkObj *client, FRAME_LinkObj *server, bool
     }
     if (!isServerPeerCertNull) {
         client_ChainCert = (HITLS_CERT_X509*)client_Chain->first->data; // client chain cert
-        server_PeerChainCert = (HITLS_CERT_X509*)server_PeerChain->first->data; // client chain cert
+        server_PeerEECert = (HITLS_CERT_X509*)server_PeerChain->first->data; // client ee cert
+        server_PeerChainCert = (HITLS_CERT_X509*)server_PeerChain->last->data; // client chain cert
     }
 
     int client_result = 0;
@@ -2120,7 +2122,7 @@ uint32_t Compare_Certificates(FRAME_LinkObj *client, FRAME_LinkObj *server, bool
         server_result = 1;
     } else {
         ASSERT_TRUE(server_PeerCert != NULL);
-        if (X509_CertCmp(server_PeerCert, client_Cert) == 0 &&
+        if (X509_CertCmp(server_PeerCert, client_Cert) == 0 && X509_CertCmp(server_PeerEECert, client_Cert) == 0 &&
             X509_CertCmp(server_PeerChainCert, client_ChainCert) == 0) {
             server_result = 1;
         } else {
@@ -3764,7 +3766,7 @@ void HITLS_UT_TLS_GET_LEGACY_RENEGOTIATION_SUPPORT_API_TC001(void)
     ret = HITLS_CFG_GetLegacyRenegotiateSupport(tlsConfig, NULL);
     ASSERT_TRUE(ret == HITLS_NULL_INPUT);
     ret = HITLS_CFG_GetLegacyRenegotiateSupport(tlsConfig, &isSupport);
-    ASSERT_TRUE(ret == HITLS_SUCCESS); 
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     HITLS_Free(ctx);
@@ -3793,15 +3795,66 @@ void HITLS_UT_TLS_GET_TLCP_LEGACY_RENEGOTIATION_SUPPORT_TC001(void)
     ASSERT_TRUE(tlsConfig != NULL);
     bool isSupport = false;
     int32_t ret = HITLS_CFG_GetLegacyRenegotiateSupport(tlsConfig, &isSupport);
-    ASSERT_TRUE(ret == HITLS_SUCCESS); 
-    ASSERT_TRUE(isSupport == true); 
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(isSupport == true);
 
     ret = HITLS_CFG_SetRenegotiationSupport(tlsConfig, true);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
     ret = HITLS_CFG_GetLegacyRenegotiateSupport(tlsConfig, &isSupport);
-    ASSERT_TRUE(ret == HITLS_SUCCESS); 
-    ASSERT_TRUE(isSupport == false);  
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ASSERT_TRUE(isSupport == false);
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
+}
+/* END_CASE */
+
+/* @
+* @test SDV_HiTLS_HsCtx_Get_PeerCertificate_TC001
+* @spec -
+* @title The test obtains the peer certificate chain during the handshake process, and it is expected to succeed.
+* @precon nan
+* @brief
+* 1. Initialize the TLS12 client and server.
+* 2. Establish a link. Stop the handshake state at the TRY_RECV_SERVER_KEY_EXCHANGE state, the HITLS_GetPeerCertificate
+*    and HITLS_GetPeerCertChain interfaces are invoked to check the peer certificate cached at both ends.
+* @expect
+* 1. Initialization succeeded.
+* 2. The link is successfully established. The certificate cached on the client is the same as the certificate sent by the
+*  server.The peer certificate cached on the server is NULL.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_HiTLS_HsCtx_Get_PeerCertificate_TC001(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_CERT_X509 *client_PeerCert = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    client = FRAME_CreateLink(c_config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(s_config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_KEY_EXCHANGE), HITLS_SUCCESS);
+
+    ASSERT_TRUE(client->ssl->hsCtx->peerCert != NULL);
+    client_PeerCert = HITLS_GetPeerCertificate(client->ssl);
+    ASSERT_TRUE(client->ssl->hsCtx->peerCert->cert == client_PeerCert);
+    ASSERT_TRUE(client->ssl->hsCtx->peerCert->chain == HITLS_GetPeerCertChain(client->ssl));
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_CFG_FreeCert(c_config, client_PeerCert);
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
 }
 /* END_CASE */

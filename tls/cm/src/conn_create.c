@@ -39,6 +39,7 @@
 #include "conn_init.h"
 #include "crypt.h"
 #include "cipher_suite.h"
+#include "hs_ctx.h"
 
 #ifdef HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES
 static int32_t PeerInfoInit(HITLS_Ctx *ctx)
@@ -736,6 +737,10 @@ HITLS_CERT_Chain *HITLS_GetPeerCertChain(const HITLS_Ctx *ctx)
     if (ctx == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16477, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "ctx null", 0, 0, 0, 0);
         return NULL;
+    }
+
+    if (ctx->hsCtx != NULL && ctx->hsCtx->peerCert != NULL) {
+        return SAL_CERT_PAIR_GET_CHAIN(ctx->hsCtx->peerCert);
     }
 
     int32_t ret = SESS_GetPeerCert(ctx->session, &certPair);

@@ -146,7 +146,7 @@ static int32_t SessionConfig(TLS_Ctx *ctx)
     }
 #if defined(HITLS_TLS_CONNECTION_INFO_NEGOTIATION) && defined(HITLS_TLS_FEATURE_SESSION)
     if (ctx->config.tlsConfig.isKeepPeerCert) {
-        ret = SESS_SetPeerCert(ctx->session, hsCtx->peerCert, ctx->isClient);
+        ret = SESS_SetPeerCert(ctx->session, hsCtx->peerCert);
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
@@ -168,7 +168,7 @@ static int32_t HsSetSessionInfo(TLS_Ctx *ctx)
     if ((mode & HITLS_SESS_DISABLE_AUTO_CLEANUP) == 0) {
         SESSMGR_ClearTimeout(ctx->globalConfig, (uint64_t)BSL_SAL_CurrentSysTimeGet());
     }
-    
+
     /* This parameter is not required for session multiplexing */
     if (ctx->negotiatedInfo.isResume == true) {
         return HITLS_SUCCESS;
