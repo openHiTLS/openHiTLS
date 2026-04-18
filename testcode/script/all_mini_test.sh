@@ -61,10 +61,6 @@ parse_option()
 
 test_bsl()
 {
-    if [ "$ASM_TYPE" != "" ]; then
-        echo "bsl does not support assembly."
-        return
-    fi
     NO_LIB="no-crypto no-tls linux"
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=asn1 test=asn1
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=base64 test=base64
@@ -120,6 +116,7 @@ test_md()
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sha256 test=sha256
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sha384 test=sha384
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sha512 test=sha512
+        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sha3 test=sha3
     else
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,md5 test=md5
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,sm3 test=sm3
@@ -135,11 +132,11 @@ test_md()
 
 test_mac()
 {
-    if [ "$ASM_TYPE" != "" ]; then
-        echo "mac does not support assembly."
-        return
-    fi
     NO_LIB="no-tls"
+    ASM_EALINIT=""
+    if [ "$ASM_TYPE" != "" ]; then
+        ASM_EALINIT=",ealinit"
+    fi
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,hmac,md5 test=hmac
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,hmac,sha1 test=hmac
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,hmac,sha2 test=hmac
@@ -148,7 +145,7 @@ test_mac()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,hmac,sha384 test=hmac
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,hmac,sha512 test=hmac
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,hmac,sha3 test=hmac
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,hmac,sm3 test=hmac
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,hmac,sm3${ASM_EALINIT} test=hmac
 
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,gmac test=gmac
 
@@ -161,11 +158,11 @@ test_mac()
 
 test_kdf()
 {
-    if [ "$ASM_TYPE" != "" ]; then
-        echo "kdf does not support assembly."
-        return
-    fi
     NO_LIB="no-tls"
+    ASM_EALINIT=""
+    if [ "$ASM_TYPE" != "" ]; then
+        ASM_EALINIT=",ealinit"
+    fi
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,scrypt test=scrypt
 
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,hkdf,md5 test=hkdf
@@ -176,7 +173,7 @@ test_kdf()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,pbkdf2,sha1 test=pbkdf2
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,pbkdf2,sha2 test=pbkdf2
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,pbkdf2,sha3 test=pbkdf2
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,pbkdf2,sm3 test=pbkdf2
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,pbkdf2,sm3${ASM_EALINIT} test=pbkdf2
 
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,kdftls12,sha256 test=kdftls12
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,kdftls12,sha384 test=kdftls12
@@ -236,6 +233,12 @@ test_bn()
 test_ecc()
 {
     NO_LIB="no-tls"
+    ASM_EALINIT=""
+    EAL_BN_ENABLE="eal,eal_bn"
+    if [ "$ASM_TYPE" != "" ]; then
+        ASM_EALINIT=",ealinit"
+        EAL_BN_ENABLE="eal,eal_bn,ealinit"
+    fi
     if [ "$ASM_TYPE" = "armv8" -o "$ASM_TYPE" = "x8664" ]; then
         # The curves that support assembly are: curve_sm2, curve_nistp256
         # all curves.
@@ -247,99 +250,100 @@ test_ecc()
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_sign,drbg_hash,entropy,ealinit test=sm2_sign add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
         # nistp256
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp256,ealinit test=curve_nistp256 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
-
-        return
     fi
 
     # Test all curves.
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,sm2,drbg_hash,entropy,sha2,ecc test=curve_nistp224 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},ecdh,ecdsa,sm2,drbg_hash,entropy,sha2,ecc test=curve_nistp224 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
 
     # nist192/224/256/384/521
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp192 test=curve_nistp192 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp224 test=curve_nistp224 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp256 test=curve_nistp256 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp384 test=curve_nistp384 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp521 test=curve_nistp521 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp192 test=curve_nistp192 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp224 test=curve_nistp224 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp256 test=curve_nistp256 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp384 test=curve_nistp384 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},ecdh,ecdsa,drbg_hash,entropy,sha2,curve_nistp521 test=curve_nistp521 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
 
     # br256/384/512
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_bp256r1 test=curve_bp256r1 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_bp384r1 test=curve_bp384r1 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,ecdh,ecdsa,drbg_hash,entropy,sha2,curve_bp512r1 test=curve_bp512r1 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},ecdh,ecdsa,drbg_hash,entropy,sha2,curve_bp256r1 test=curve_bp256r1 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},ecdh,ecdsa,drbg_hash,entropy,sha2,curve_bp384r1 test=curve_bp384r1 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},ecdh,ecdsa,drbg_hash,entropy,sha2,curve_bp512r1 test=curve_bp512r1 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SHA256" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON"
 
     # sm2 depends on sm3 by default.
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2,drbg_hash,entropy test=sm2 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_crypt,drbg_hash,entropy test=sm2_crypt add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_exch,drbg_hash,entropy test=sm2_exch add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,sm2_sign,drbg_hash,entropy test=sm2_sign add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},sm2,drbg_hash,entropy test=sm2 add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},sm2_crypt,drbg_hash,entropy test=sm2_crypt add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},sm2_exch,drbg_hash,entropy test=sm2_exch add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},sm2_sign,drbg_hash,entropy test=sm2_sign add-feature-options="-DHITLS_SEED_DRBG_INIT_RAND_ALG=CRYPT_RAND_SM3" add-feature-options="-DHITLS_CRYPTO_ENTROPY_DEVRANDOM=ON" add-feature-options="-DHITLS_CRYPTO_DRBG_GM=ON"
 }
 
 test_pkey()
 {
     NO_LIB="no-tls"
+    EAL_ENABLE="eal"
+    EAL_BN_ENABLE="eal,eal_bn"
     if [ "$ASM_TYPE" = "x8664" -o "$ASM_TYPE" = "armv8" ]; then
+        EAL_ENABLE="eal,ealinit"
+        EAL_BN_ENABLE="eal,eal_bn,ealinit"
         # The pkey that support assembly is: x25519.
         bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=x25519,sha2,ealinit
-        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,x25519,drbg_hash,sha2,ealinit test=x25519
-        return
+        bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},x25519,drbg_hash,sha2 test=x25519
     fi
     # rsa
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa,rsa_bssa,drbg_hash,sha1,sha2 test=rsa
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa,drbg_hash,sha1,sha2 test=rsa
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa,rsa_bssa,drbg_hash,sha1,sha2 test=rsa
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa,drbg_hash,sha1,sha2 test=rsa
 
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_gen,drbg_hash,sha1,sha2 test=rsa_gen
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_gen,drbg_hash,sha1,sha2 test=rsa_gen
 
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_sign,rsa_emsa_pss,sha1,sha2,drbg_hash test=rsa_sign
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_sign,rsa_emsa_pss,drbg_hash,sha1,sha2 test=rsa_sign
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_sign,rsa_emsa_pkcsv15,sha1,sha2 test=rsa_sign # not need drbg
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_verify,rsa_emsa_pss,sha1,sha2 test=rsa_verify # not need drbg
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_verify,rsa_emsa_pkcsv15,sha1,sha2 test=rsa_verify # not need drbg
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_sign,rsa_emsa_pss,sha1,sha2,drbg_hash test=rsa_sign
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_sign,rsa_emsa_pss,drbg_hash,sha1,sha2 test=rsa_sign
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_sign,rsa_emsa_pkcsv15,sha1,sha2 test=rsa_sign # not need drbg
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_verify,rsa_emsa_pss,sha1,sha2 test=rsa_verify # not need drbg
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_verify,rsa_emsa_pkcsv15,sha1,sha2 test=rsa_verify # not need drbg
 
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_encrypt,rsa_no_pad,sha1,sha2 test=rsa_encrypt # not need drbg
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_encrypt,rsaes_oaep,drbg_hash,sha1,sha2 test=rsa_encrypt
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_encrypt,rsaes_pkcsv15,drbg_hash,sha1,sha2 test=rsa_encrypt
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_encrypt,rsaes_pkcsv15_tls,drbg_hash,sha1,sha2 test=rsa_encrypt
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_encrypt,rsa_no_pad,sha1,sha2 test=rsa_encrypt # not need drbg
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_encrypt,rsaes_oaep,drbg_hash,sha1,sha2 test=rsa_encrypt
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_encrypt,rsaes_pkcsv15,drbg_hash,sha1,sha2 test=rsa_encrypt
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_encrypt,rsaes_pkcsv15_tls,drbg_hash,sha1,sha2 test=rsa_encrypt
 
     # rsa_decrypt: not need drbg
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_decrypt,rsa_no_pad,sha1,sha2 test=rsa_decrypt
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_decrypt,rsaes_oaep,sha1,sha2 test=rsa_decrypt
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_decrypt,rsaes_pkcsv15,sha1,sha2 test=rsa_decrypt
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_decrypt,rsaes_pkcsv15_tls,sha1,sha2 test=rsa_decrypt
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_decrypt,rsa_no_pad,sha1,sha2 test=rsa_decrypt
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_decrypt,rsaes_oaep,sha1,sha2 test=rsa_decrypt
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_decrypt,rsaes_pkcsv15,sha1,sha2 test=rsa_decrypt
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_decrypt,rsaes_pkcsv15_tls,sha1,sha2 test=rsa_decrypt
 
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_sign,rsa_blinding,rsa_emsa_pkcsv15,drbg_hash,sha1,sha2 test=rsa_sign
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_decrypt,rsa_blinding,rsaes_oaep,drbg_hash,sha1,sha2 test=rsa_decrypt
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_sign,rsa_bssa,rsa_blinding,rsa_emsa_pss,drbg_hash,sha1,sha2 test=rsa_sign
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,rsa_sign,rsa_verify,rsa_bssa,rsa_emsa_pss,drbg_hash,sha1,sha2 test=rsa_sign
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_sign,rsa_blinding,rsa_emsa_pkcsv15,drbg_hash,sha1,sha2 test=rsa_sign
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_decrypt,rsa_blinding,rsaes_oaep,drbg_hash,sha1,sha2 test=rsa_decrypt
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_sign,rsa_bssa,rsa_blinding,rsa_emsa_pss,drbg_hash,sha1,sha2 test=rsa_sign
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},rsa_sign,rsa_verify,rsa_bssa,rsa_emsa_pss,drbg_hash,sha1,sha2 test=rsa_sign
 
     # dsa
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,eal_bn,dsa,drbg_hash,sha2 test=dsa
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_BN_ENABLE},dsa,drbg_hash,sha2 test=dsa
 
     # dh
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,dh,drbg_hash,sha2 test=dh
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},dh,drbg_hash,sha2 test=dh
 
     # curve25519: ed25519 depends on sha512 by default.
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,x25519,drbg_hash,sha2 test=x25519
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,ed25519,drbg_hash,sha2 test=ed25519
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},x25519,drbg_hash,sha2 test=x25519
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},ed25519,drbg_hash,sha2 test=ed25519
 
     # mldsa
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,mldsa,pkey_cmp,drbg_hash,sha2 test=mldsa
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},mldsa,pkey_cmp,drbg_hash,sha2 test=mldsa
 
     # paillier
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,paillier,drbg_hash,sha2 test=paillier
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},paillier,drbg_hash,sha2 test=paillier
 
     # mlkem
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,mlkem,pkey_cmp,drbg_hash,sha2 test=mlkem
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},mlkem,pkey_cmp,drbg_hash,sha2 test=mlkem
 
     # hybridkem
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,hybridkem,x25519,ecdh,ecc,drbg_hash,sha2 test=hybridkem
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},hybridkem,x25519,ecdh,ecc,drbg_hash,sha2 test=hybridkem
 
     # elgamal
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,elgamal,drbg_hash,sha2 test=elgamal
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},elgamal,drbg_hash,sha2 test=elgamal
 
     # slh_dsa
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,slh_dsa,drbg_hash,sha2 test=slh_dsa
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},slh_dsa,drbg_hash,sha2 test=slh_dsa
     
     # xmss
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=eal,xmss,slh_dsa,drbg_hash,sha2 test=xmss
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=${EAL_ENABLE},xmss,slh_dsa,drbg_hash,sha2 test=xmss
 }
 
 test_tls()
@@ -361,8 +365,13 @@ test_tls()
 
 test_pki()
 {
+    PKI_EAL_ENABLE="eal"
     if [ "$ASM_TYPE" != "" ]; then
-        return
+        PKI_EAL_ENABLE="eal,ealinit"
+    fi
+    PKI_PROVIDER_CIPHER_EAL_ENABLE="${PKI_EAL_ENABLE}"
+    if [[ ",${PKI_PROVIDER_CIPHER_EAL_ENABLE}," != *,ealinit,* ]]; then
+        PKI_PROVIDER_CIPHER_EAL_ENABLE="${PKI_PROVIDER_CIPHER_EAL_ENABLE},ealinit"
     fi
     bash mini_build_test.sh no-tls enable=sal_thread,eal,codecskey,rsa,drbg_hash,cipher,modes,sha256,hmac
     bash mini_build_test.sh no-tls enable=sal_thread,eal,key_epki,key_encode,rsa,drbg_hash,cipher,modes,sha256,hmac
@@ -390,80 +399,80 @@ test_pki()
     bash mini_build_test.sh no-tls enable=sal_thread,eal,info_crl,x509_crl_parse,rsa,drbg_hash,md,cipher,modes,hmac
 
     #### key gen ####
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_encode,sal_file,pem,rsa,sha256,drbg_hash test=key_encode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_encode,pem,ed25519,drbg_hash test=key_encode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_encode,key_epki,pem,x25519,drbg_hash,cipher,modes,sha256,hmac test=key_encode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_encode,sal_file,sm2,sha256,drbg_hash test=key_encode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_encode,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=key_encode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_encode,pem,mldsa,sha256,drbg_hash test=key_encode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_encode,sal_file,pem,rsa,sha256,drbg_hash test=key_encode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_encode,pem,ed25519,drbg_hash test=key_encode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_encode,key_epki,pem,x25519,drbg_hash,cipher,modes,sha256,hmac test=key_encode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_encode,sal_file,sm2,sha256,drbg_hash test=key_encode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_encode,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=key_encode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_encode,pem,mldsa,sha256,drbg_hash test=key_encode
 
     #### key parse ####
     echo "Test: key_decode without provider"
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,sal_file,pem,rsa,sha256,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,sal_file,pem,ed25519,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,key_epki,sal_file,pem,x25519,drbg_hash,cipher,modes,sha256,hmac test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,sal_file,sm2,sha256,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,sal_file,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,sal_file,pem,mldsa,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode,sal_file,pem,rsa,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode,sal_file,pem,ed25519,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode,key_epki,sal_file,pem,x25519,drbg_hash,cipher,modes,sha256,hmac test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode,sal_file,sm2,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode,sal_file,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode,sal_file,pem,mldsa,sha256,drbg_hash test=key_decode
 
     echo "Test: key_decode with provider"
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,provider,sal_dl,sal_file,pem,rsa,sha256,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,provider,sal_dl,sal_file,pem,ed25519,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,key_epki,provider,sal_dl,sal_file,pem,x25519,drbg_hash,cipher,ealinit,modes,sha256,hmac test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,provider,sal_dl,sal_file,sm2,sha256,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,provider,sal_dl,sal_file,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode,provider,sal_dl,sal_file,pem,mldsa,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode,provider,sal_dl,sal_file,pem,rsa,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode,provider,sal_dl,sal_file,pem,ed25519,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_PROVIDER_CIPHER_EAL_ENABLE},key_decode,key_epki,provider,sal_dl,sal_file,pem,x25519,drbg_hash,cipher,modes,sha256,hmac test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode,provider,sal_dl,sal_file,sm2,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode,provider,sal_dl,sal_file,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode,provider,sal_dl,sal_file,pem,mldsa,sha256,drbg_hash test=key_decode
 
     echo "Test: key_decode_chain (with provider)"
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode_chain,sal_dl,sal_file,pem,rsa,sha256,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode_chain,sal_dl,sal_file,pem,ed25519,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode_chain,key_epki,provider,sal_dl,sal_file,pem,x25519,drbg_hash,cipher,ealinit,modes,sha256,hmac test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode_chain,sal_dl,sal_file,sm2,sha256,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode_chain,sal_dl,sal_file,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=key_decode
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,key_decode_chain,sal_dl,sal_file,pem,mldsa,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode_chain,sal_dl,sal_file,pem,rsa,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode_chain,sal_dl,sal_file,pem,ed25519,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_PROVIDER_CIPHER_EAL_ENABLE},key_decode_chain,key_epki,provider,sal_dl,sal_file,pem,x25519,drbg_hash,cipher,modes,sha256,hmac test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode_chain,sal_dl,sal_file,sm2,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode_chain,sal_dl,sal_file,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=key_decode
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},key_decode_chain,sal_dl,sal_file,pem,mldsa,sha256,drbg_hash test=key_decode
 
     #### crl gen ####
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_crl_gen,rsa,sal_file,pem,sha256,drbg_hash test=x509_crl_gen
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_crl_gen,pem,ed25519,drbg_hash test=x509_crl_gen
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_crl_gen,sm2,sha256,drbg_hash test=x509_crl_gen
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_crl_gen,sal_file,ecdsa,curve_nistp256,sha256,drbg_hash test=x509_crl_gen
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_crl_gen,rsa,sal_file,pem,sha256,drbg_hash test=x509_crl_gen
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_crl_gen,pem,ed25519,drbg_hash test=x509_crl_gen
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_crl_gen,sm2,sha256,drbg_hash test=x509_crl_gen
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_crl_gen,sal_file,ecdsa,curve_nistp256,sha256,drbg_hash test=x509_crl_gen
 
     #### crl parse ####
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_crl_parse,pem,sal_file,rsa,sha256,drbg_hash test=x509_crl_parse
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_crl_parse,sal_file,ed25519,sha256,drbg_hash test=x509_crl_parse
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_crl_parse,pem,sal_file,sm2,sha256,drbg_hash test=x509_crl_parse
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_crl_parse,sal_file,ecdsa,curve_nistp256,sha256,drbg_hash test=x509_crl_parse
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_crl_parse,pem,sal_file,rsa,sha256,drbg_hash test=x509_crl_parse
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_crl_parse,sal_file,ed25519,sha256,drbg_hash test=x509_crl_parse
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_crl_parse,pem,sal_file,sm2,sha256,drbg_hash test=x509_crl_parse
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_crl_parse,sal_file,ecdsa,curve_nistp256,sha256,drbg_hash test=x509_crl_parse
 
     #### csr gen ####
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_csr_gen,x509_csr_attr,x509_csr_get,pem,rsa,sha256,drbg_hash test=x509_csr_gen
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_csr_gen,x509_csr_attr,x509_csr_get,sal_file,ed25519,drbg_hash test=x509_csr_gen add-feature-options="-DHITLS_CRYPTO_ED25519_CHECK=ON"
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_csr_gen,x509_csr_attr,x509_csr_get,sm2,sha256,drbg_hash test=x509_csr_gen
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_csr_gen,x509_csr_attr,x509_csr_get,sal_file,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=x509_csr_gen
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_csr_gen,x509_csr_attr,x509_csr_get,pem,rsa,sha256,drbg_hash test=x509_csr_gen
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_csr_gen,x509_csr_attr,x509_csr_get,sal_file,ed25519,drbg_hash test=x509_csr_gen add-feature-options="-DHITLS_CRYPTO_ED25519_CHECK=ON"
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_csr_gen,x509_csr_attr,x509_csr_get,sm2,sha256,drbg_hash test=x509_csr_gen
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_csr_gen,x509_csr_attr,x509_csr_get,sal_file,pem,ecdsa,curve_nistp256,sha256,drbg_hash test=x509_csr_gen
 
     #### csr parse ####
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_csr_parse,x509_csr_attr,x509_csr_get,sal_file,rsa,sha256,drbg_hash test=x509_csr_parse
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_csr_parse,x509_csr_attr,x509_csr_get,sal_file,pem,ed25519,drbg_hash test=x509_csr_parse
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_csr_parse,x509_csr_attr,x509_csr_get,sal_file,pem,sm2,sha256,drbg_hash test=x509_csr_parse
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_csr_parse,x509_csr_attr,x509_csr_get,sal_file,ecdsa,curve_nistp256,sha256,drbg_hash test=x509_csr_parse
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_csr_parse,x509_csr_attr,x509_csr_get,sal_file,rsa,sha256,drbg_hash test=x509_csr_parse
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_csr_parse,x509_csr_attr,x509_csr_get,sal_file,pem,ed25519,drbg_hash test=x509_csr_parse
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_csr_parse,x509_csr_attr,x509_csr_get,sal_file,pem,sm2,sha256,drbg_hash test=x509_csr_parse
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_csr_parse,x509_csr_attr,x509_csr_get,sal_file,ecdsa,curve_nistp256,sha256,drbg_hash test=x509_csr_parse
 
     #### cert gen ####
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,x509_crt_gen,pem,rsa,sha256,drbg_hash,sal_str,sal_thread test=x509_crt_gen
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,x509_crt_gen,sal_file,pem,ed25519,drbg_hash,sal_str,sal_thread test=x509_crt_gen
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,x509_crt_gen,sal_file,sm2,sha256,drbg_hash,sal_str,sal_thread test=x509_crt_gen
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=eal,x509_crt_gen,ecdsa,curve_nistp256,sha256,drbg_hash,sal_str,sal_thread test=x509_crt_gen
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=${PKI_EAL_ENABLE},x509_crt_gen,pem,rsa,sha256,drbg_hash,sal_str,sal_thread test=x509_crt_gen
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=${PKI_EAL_ENABLE},x509_crt_gen,sal_file,pem,ed25519,drbg_hash,sal_str,sal_thread test=x509_crt_gen
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=${PKI_EAL_ENABLE},x509_crt_gen,sal_file,sm2,sha256,drbg_hash,sal_str,sal_thread test=x509_crt_gen
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=${PKI_EAL_ENABLE},x509_crt_gen,ecdsa,curve_nistp256,sha256,drbg_hash,sal_str,sal_thread test=x509_crt_gen
 
     #### cert parse ####
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_crt_parse,sal_file,sal_str,pem,rsa,sha256,drbg_hash test=x509_crt_parse
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_crt_parse,sal_file,sal_str,ed25519,drbg_hash test=x509_crt_parse
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_crt_parse,sal_file,sal_str,sm2,sha256,drbg_hash test=x509_crt_parse
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_crt_parse,sal_file,sal_str,pem,ecdsa,curve_nistp256,curve_nistp384,sha256,drbg_hash test=x509_crt_parse
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_crt_parse,sal_file,sal_str,pem,rsa,sha256,drbg_hash test=x509_crt_parse
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_crt_parse,sal_file,sal_str,ed25519,drbg_hash test=x509_crt_parse
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_crt_parse,sal_file,sal_str,sm2,sha256,drbg_hash test=x509_crt_parse
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_crt_parse,sal_file,sal_str,pem,ecdsa,curve_nistp256,curve_nistp384,sha256,drbg_hash test=x509_crt_parse
 
     #### cert chain ####
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,x509_vfy,sal_file,sal_str,pem,rsa,ecdsa,curve_nistp256,curve_nistp384,ed25519,sm2,sha2,drbg_hash test=x509_vfy
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},x509_vfy,sal_file,sal_str,pem,rsa,ecdsa,curve_nistp256,curve_nistp384,ed25519,sm2,sha2,drbg_hash test=x509_vfy
 
     ### pkcs12 gen ####
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,sal_file,sal_str,pkcs12_gen,key_decode,x509_crl,sal_file,pem,rsa,ecdsa,curve_nistp256,ed25519,sm2,drbg_hash,cipher,modes,md,hmac test=pkcs12_gen
-    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,eal,pkcs12_parse,x509_crl,x509_crt,x509_crl,x509_vfy,sal_file,sal_str,pem,rsa,ecdsa,curve_nistp256,curve_nistp384,curve_nistp521,ed25519,sm2,cipher,modes,md,drbg_hash,hmac test=pkcs12_parse
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},sal_file,sal_str,pkcs12_gen,key_decode,x509_crl,sal_file,pem,rsa,ecdsa,curve_nistp256,ed25519,sm2,drbg_hash,cipher,modes,md,hmac test=pkcs12_gen
+    bash mini_build_test.sh $COMMON_PARAM linux no-tls enable=sal_thread,${PKI_EAL_ENABLE},pkcs12_parse,x509_crl,x509_crt,x509_crl,x509_vfy,sal_file,sal_str,pem,rsa,ecdsa,curve_nistp256,curve_nistp384,curve_nistp521,ed25519,sm2,cipher,modes,md,drbg_hash,hmac test=pkcs12_parse
 }
 
 provider_test_check()

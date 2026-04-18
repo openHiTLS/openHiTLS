@@ -1864,6 +1864,7 @@ static int32_t X509_CopyRefList(BslList *dst, const BslList *src, int32_t (*refU
     return HITLS_PKI_SUCCESS;
 }
 
+#if defined(HITLS_CRYPTO_SM2) || defined(HITLS_PKI_X509_VFY_IDENTITY)
 static int32_t X509_CopyBufferData(uint8_t **dst, const uint8_t *src, uint32_t srcLen)
 {
     if (src == NULL || srcLen == 0) {
@@ -1877,6 +1878,7 @@ static int32_t X509_CopyBufferData(uint8_t **dst, const uint8_t *src, uint32_t s
     }
     return HITLS_PKI_SUCCESS;
 }
+#endif
 
 static int32_t X509_CopyStoreLists(HITLS_X509_StoreCtx *dst, const HITLS_X509_StoreCtx *src)
 {
