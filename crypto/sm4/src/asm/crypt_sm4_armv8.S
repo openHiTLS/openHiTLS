@@ -2859,9 +2859,6 @@ AARCH64_PACIASP
 	cmp	len,#16
 	b.gt	.Llast_2_blocks
 1:
-	// load in
-	ldp	w6,w7,[inp]
-	ldp	w16,w17,[inp,#8]
 	// load iv
 	ldp	w8,w9,[ivp]
 	ldp	w10,w11,[ivp,#8]
@@ -2884,6 +2881,10 @@ AARCH64_PACIASP
 
 	cmp	len,#16
 	b.lt	.Lcfb128_dec_final
+
+	// load in only when len >= 16
+	ldp	w6,w7,[inp]
+	ldp	w16,w17,[inp,#8]
 
 	stp	w6,w7,[ivp]
 	stp	w16,w17,[ivp,#8]
