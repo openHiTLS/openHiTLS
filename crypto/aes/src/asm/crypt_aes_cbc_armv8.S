@@ -163,7 +163,10 @@ AARCH64_PACIASP
     ROUND IVENC.16b, KEY3.16b
     ROUND IVENC.16b, KEY4.16b
     ROUND IVENC.16b, KEY5.16b
-    ld1 {KEY0.16b}, [IN], #16             // load IN
+    b.le .Lskip_prefetch_256              // skip prefetch when no more data
+    ld1 {KEY0.16b}, [IN], #16             // prefetch next block
+    eor KEY0.16b, KEY0.16b, KEY0_END.16b  // IN + KEY0 + KEYEND
+.Lskip_prefetch_256:
     ROUND IVENC.16b, KEY6.16b
     ROUND IVENC.16b, KEY7.16b
     ROUND IVENC.16b, KEY8.16b
@@ -172,7 +175,6 @@ AARCH64_PACIASP
     ROUND IVENC.16b, KEY11.16b
     ROUND IVENC.16b, KEY12.16b
     aese IVENC.16b, KEY13.16b
-    eor KEY0.16b, KEY0.16b, KEY0_END.16b  // IN + KEY0 + KEYEND
     eor BLK0.16b, IVENC.16b, KEY14.16b
     b.gt .Laes_cbc_256_loop
     b .Lescbcenc_finish
@@ -194,13 +196,15 @@ AARCH64_PACIASP
     ROUND IVENC.16b, KEY3.16b
     ROUND IVENC.16b, KEY4.16b
     ROUND IVENC.16b, KEY5.16b
-    ld1 {KEY0.16b}, [IN], #16             // load IN
+    b.le .Lskip_prefetch_128              // skip prefetch when no more data
+    ld1 {KEY0.16b}, [IN], #16             // prefetch next block
+    eor KEY0.16b, KEY0.16b, KEY0_END.16b  // IN + KEY0 + KEYEND
+.Lskip_prefetch_128:
     ROUND IVENC.16b, KEY6.16b
     ROUND IVENC.16b, KEY7.16b
     ROUND IVENC.16b, KEY8.16b
     aese IVENC.16b, KEY9.16b
-    eor KEY0.16b, KEY0.16b, KEY0_END.16b  // IN + KEY0 + KEYEND
-    eor BLK0.16b, IVENC.16b, KEY10.16b      // enc OK
+    eor BLK0.16b, IVENC.16b, KEY10.16b
     b.gt .Laes_cbc_128_loop
     b .Lescbcenc_finish
 
@@ -221,14 +225,16 @@ AARCH64_PACIASP
     ROUND IVENC.16b, KEY3.16b
     ROUND IVENC.16b, KEY4.16b
     ROUND IVENC.16b, KEY5.16b
-    ld1 {KEY0.16b}, [IN], #16             // load IN
+    b.le .Lskip_prefetch_192             // skip prefetch when no more data
+    ld1 {KEY0.16b}, [IN], #16            // prefetch next block
+    eor KEY0.16b, KEY0.16b, KEY0_END.16b  // IN + KEY0 + KEYEND
+.Lskip_prefetch_192:
     ROUND IVENC.16b, KEY6.16b
     ROUND IVENC.16b, KEY7.16b
     ROUND IVENC.16b, KEY8.16b
     ROUND IVENC.16b, KEY9.16b
     ROUND IVENC.16b, KEY10.16b
     aese IVENC.16b, KEY11.16b
-    eor KEY0.16b, KEY0.16b, KEY0_END.16b  // IN + KEY0 + KEYEND
     eor BLK0.16b, IVENC.16b, KEY12.16b
     b.gt .Laes_cbc_192_loop
 
