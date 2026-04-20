@@ -121,6 +121,66 @@ uint32_t g_uiPort = 18888;
 #define HITLS_MIN_RECORDSIZE_LIMIT 64
 #define READ_BUF_LEN_18K 18432
 
+static int32_t InitSessionForEncodeTest(HITLS_Session *session)
+{
+    uint8_t masterKey[] = {0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F};
+    uint8_t sessionId[] = {0x11, 0x22, 0x33, 0x44};
+    uint8_t sessionIdCtx[] = {0x55, 0x66, 0x77, 0x88};
+
+    ASSERT_EQ(HITLS_SESS_SetProtocolVersion(session, HITLS_VERSION_TLS12), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SESS_SetCipherSuite(session, HITLS_RSA_WITH_AES_128_GCM_SHA256), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SESS_SetMasterKey(session, masterKey, sizeof(masterKey)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SESS_SetSessionId(session, sessionId, sizeof(sessionId)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SESS_SetSessionIdCtx(session, sessionIdCtx, sizeof(sessionIdCtx)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SESS_SetHaveExtMasterSecret(session, 1), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SESS_SetTimeout(session, 12345), HITLS_SUCCESS);
+    return HITLS_SUCCESS;
+EXIT:
+    return HITLS_INTERNAL_EXCEPTION;
+}
+
+static int32_t CheckDecodedSessionForEncodeTest(const HITLS_Session *session)
+{
+    uint16_t version = 0;
+    uint16_t cipherSuite = 0;
+    uint8_t masterKey[8] = {0};
+    uint32_t masterKeyLen = sizeof(masterKey);
+    uint8_t sessionId[4] = {0};
+    uint32_t sessionIdLen = sizeof(sessionId);
+    uint8_t sessionIdCtx[4] = {0};
+    uint32_t sessionIdCtxLen = sizeof(sessionIdCtx);
+    bool haveExtMasterSecret = false;
+
+    const uint8_t expectedMasterKey[] = {0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0x0D, 0x0F};
+    const uint8_t expectedSessionId[] = {0x11, 0x22, 0x33, 0x44};
+    const uint8_t expectedSessionIdCtx[] = {0x55, 0x66, 0x77, 0x88};
+
+    ASSERT_EQ(HITLS_SESS_GetProtocolVersion(session, &version), HITLS_SUCCESS);
+    ASSERT_EQ(version, HITLS_VERSION_TLS12);
+
+    ASSERT_EQ(HITLS_SESS_GetCipherSuite(session, &cipherSuite), HITLS_SUCCESS);
+    ASSERT_EQ(cipherSuite, HITLS_RSA_WITH_AES_128_GCM_SHA256);
+
+    ASSERT_EQ(HITLS_SESS_GetMasterKey(session, masterKey, &masterKeyLen), HITLS_SUCCESS);
+    ASSERT_EQ(masterKeyLen, sizeof(expectedMasterKey));
+    ASSERT_EQ(memcmp(masterKey, expectedMasterKey, sizeof(expectedMasterKey)), 0);
+
+    ASSERT_EQ(HITLS_SESS_GetSessionId(session, sessionId, &sessionIdLen), HITLS_SUCCESS);
+    ASSERT_EQ(sessionIdLen, sizeof(expectedSessionId));
+    ASSERT_EQ(memcmp(sessionId, expectedSessionId, sizeof(expectedSessionId)), 0);
+
+    ASSERT_EQ(HITLS_SESS_GetSessionIdCtx(session, sessionIdCtx, &sessionIdCtxLen), HITLS_SUCCESS);
+    ASSERT_EQ(sessionIdCtxLen, sizeof(expectedSessionIdCtx));
+    ASSERT_EQ(memcmp(sessionIdCtx, expectedSessionIdCtx, sizeof(expectedSessionIdCtx)), 0);
+
+    ASSERT_EQ(HITLS_SESS_GetHaveExtMasterSecret((HITLS_Session *)session, &haveExtMasterSecret), HITLS_SUCCESS);
+    ASSERT_EQ(haveExtMasterSecret, true);
+    ASSERT_EQ(HITLS_SESS_GetTimeout((HITLS_Session *)session), 12345);
+    return HITLS_SUCCESS;
+EXIT:
+    return HITLS_INTERNAL_EXCEPTION;
+}
+
 typedef struct {
     uint16_t version;
     BSL_UIO_TransportType uioType;
@@ -3856,5 +3916,103 @@ EXIT:
     HITLS_CFG_FreeConfig(s_config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC001
+* @title  Test HITLS_SESS_Encode/HITLS_SESS_Decode round-trip behavior
+* @precon  nan
+* @brief   1. Create a session and set several public fields.
+*          2. Call HITLS_SESS_Encode with length 0 to obtain the required encoded length.
+*          3. Call HITLS_SESS_Encode and HITLS_SESS_Decode to complete round-trip serialization.
+*          4. Verify that the decoded session data is consistent with the original values.
+* @expect  1. Interfaces return HITLS_SUCCESS.
+*          2. Encoded length is greater than 0 and matches the used length.
+*          3. Decoded session field values are correct.
+@*/
+/* BEGIN_CASE */
+void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC001(void)
+{
+    HitlsInit();
+    HITLS_Session *srcSession = HITLS_SESS_New();
+    HITLS_Session *dstSession = HITLS_SESS_New();
+    uint8_t *encodeBuf = NULL;
+    uint32_t encodeLen;
+    uint32_t usedLen = 0;
+
+    ASSERT_TRUE(srcSession != NULL);
+    ASSERT_TRUE(dstSession != NULL);
+    ASSERT_EQ(InitSessionForEncodeTest(srcSession), HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_SESS_Encode(srcSession, NULL, 0, &encodeLen), HITLS_SUCCESS);
+    ASSERT_TRUE(encodeLen > 0);
+
+    encodeBuf = BSL_SAL_Calloc(1u, encodeLen);
+    ASSERT_TRUE(encodeBuf != NULL);
+
+    ASSERT_EQ(HITLS_SESS_Encode(srcSession, encodeBuf, encodeLen, &usedLen), HITLS_SUCCESS);
+    ASSERT_EQ(usedLen, encodeLen);
+    ASSERT_EQ(HITLS_SESS_Decode(dstSession, encodeBuf, usedLen), HITLS_SUCCESS);
+    ASSERT_EQ(CheckDecodedSessionForEncodeTest(dstSession), HITLS_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_SAL_FREE(encodeBuf);
+    HITLS_SESS_Free(srcSession);
+    HITLS_SESS_Free(dstSession);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC002
+* @title  Test abnormal input handling for HITLS_SESS_Encode/HITLS_SESS_Decode
+* @precon  nan
+* @brief   1. Verify HITLS_SESS_Encode length-query behavior and parameter checks.
+*          2. Verify HITLS_SESS_Encode invalid parameter and insufficient buffer handling.
+*          3. Verify HITLS_SESS_Decode parameter checks and truncated buffer handling.
+* @expect  1. HITLS_SESS_Encode returns the required size when length is 0.
+*          2. Invalid input encode/decode returns HITLS_INTERNAL_EXCEPTION.
+*          3. Encode with insufficient buffer fails and truncating the last TLV header returns
+*             HITLS_SESS_ERR_DECODE_TICKET.
+@*/
+/* BEGIN_CASE */
+void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC002(void)
+{
+    HitlsInit();
+    HITLS_Session *srcSession = HITLS_SESS_New();
+    HITLS_Session *dstSession = HITLS_SESS_New();
+    uint8_t encodeBuf[1] = {0};
+    uint8_t *validEncodeBuf = NULL;
+    uint32_t encodeLen;
+    uint32_t usedLen = 0;
+
+    ASSERT_TRUE(srcSession != NULL);
+    ASSERT_TRUE(dstSession != NULL);
+    ASSERT_EQ(InitSessionForEncodeTest(srcSession), HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_SESS_Encode(srcSession, NULL, 0, &usedLen), HITLS_SUCCESS);
+    ASSERT_TRUE(usedLen > 0);
+    ASSERT_EQ(HITLS_SESS_Encode(NULL, NULL, 0, &usedLen), HITLS_INTERNAL_EXCEPTION);
+    ASSERT_EQ(HITLS_SESS_Encode(srcSession, encodeBuf, sizeof(encodeBuf), NULL), HITLS_INTERNAL_EXCEPTION);
+    ASSERT_EQ(HITLS_SESS_Encode(srcSession, NULL, sizeof(encodeBuf), &usedLen), HITLS_INTERNAL_EXCEPTION);
+    ASSERT_EQ(HITLS_SESS_Decode(NULL, encodeBuf, sizeof(encodeBuf)), HITLS_INTERNAL_EXCEPTION);
+    ASSERT_EQ(HITLS_SESS_Decode(dstSession, NULL, sizeof(encodeBuf)), HITLS_INTERNAL_EXCEPTION);
+    ASSERT_EQ(HITLS_SESS_Encode(srcSession, encodeBuf, 0, &usedLen), HITLS_SUCCESS);
+    ASSERT_TRUE(usedLen > 0);
+    ASSERT_EQ(HITLS_SESS_Encode(srcSession, encodeBuf, sizeof(encodeBuf), &usedLen), HITLS_SESS_ERR_ENC_VERSION_FAIL);
+
+    ASSERT_EQ(HITLS_SESS_Encode(srcSession, NULL, 0, &encodeLen), HITLS_SUCCESS);
+    validEncodeBuf = BSL_SAL_Calloc(1u, encodeLen);
+    ASSERT_TRUE(validEncodeBuf != NULL);
+    ASSERT_EQ(HITLS_SESS_Encode(srcSession, validEncodeBuf, encodeLen, &usedLen), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SESS_Decode(dstSession, validEncodeBuf, usedLen - (sizeof(uint32_t) * 2)),
+        HITLS_SESS_ERR_DECODE_TICKET);
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    BSL_SAL_FREE(validEncodeBuf);
+    HITLS_SESS_Free(srcSession);
+    HITLS_SESS_Free(dstSession);
 }
 /* END_CASE */

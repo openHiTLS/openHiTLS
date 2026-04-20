@@ -29,6 +29,9 @@
 #include "cert_mgr.h"
 #include "session_type.h"
 #include "session.h"
+#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
+#include "session_enc.h"
+#endif
 #ifdef HITLS_TLS_FEATURE_SESSION
 #define MAX_PRINTF_BUF 1024
 #define CTIME_BUF 26
@@ -630,6 +633,26 @@ bool HITLS_SESS_HasTicket(const HITLS_Session *sess)
     BSL_SAL_ThreadUnlock(sess->lock);
 
     return flag;
+}
+
+int32_t HITLS_SESS_Encode(const HITLS_Session *sess, uint8_t *data, uint32_t length, uint32_t *usedLen)
+{
+    if (sess == NULL || usedLen == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_INTERNAL_EXCEPTION);
+        return HITLS_INTERNAL_EXCEPTION;
+    }
+
+    if (length == 0) {
+        *usedLen = SESS_GetTotalEncodeSize(sess);
+        return HITLS_SUCCESS;
+    }
+
+    return SESS_Encode(sess, data, length, usedLen);
+}
+
+int32_t HITLS_SESS_Decode(HITLS_Session *sess, const uint8_t *data, uint32_t length)
+{
+    return SESS_Decode(sess, data, length);
 }
 #endif
 

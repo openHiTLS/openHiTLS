@@ -473,6 +473,31 @@ HITLS_Session *HITLS_GetDupSession(HITLS_Ctx *ctx);
 
 /**
  * @ingroup hitls_session
+ * @brief   Serialize a session object into a user-provided buffer.
+ *
+ * @param   sess [IN] Session information handle.
+ * @param   data [OUT] Serialized data buffer. When length is 0, this parameter can be NULL.
+ * @param   length [IN] Buffer size. If this parameter is 0, the required serialized data length is returned by usedLen.
+ * @param   usedLen [OUT] Actual serialized data length or required buffer size.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_SESS_Encode(const HITLS_Session *sess, uint8_t *data, uint32_t length, uint32_t *usedLen);
+
+/**
+ * @ingroup hitls_session
+ * @brief   Deserialize binary data into a session object.
+ *
+ * @param   sess [OUT] Session information handle.
+ * @param   data [IN] Serialized data buffer.
+ * @param   length [IN] Serialized data length.
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_SESS_Decode(HITLS_Session *sess, const uint8_t *data, uint32_t length);
+
+/**
+ * @ingroup hitls_session
  * @brief   Apply for a new session.
  *
  * @param   void
