@@ -1500,7 +1500,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 .Lxts_12_blocks_process:
 	mov	x24, sp
 	cmp	x2,#12
@@ -1512,9 +1512,9 @@ AARCH64_PACIASP
 #endif
 	mov	w7,0x87
 	extr	x9,x19,x19,#32
-	extr	x13,x19,x18,#63
+	extr	x13,x19,x20,#63
 	and	w8,w7,w9,asr#31
-	eor	x12,x8,x18,lsl#1
+	eor	x12,x8,x20,lsl#1
 	mov	v17.d[0],x14
 	mov	v17.d[1],x15
 #ifdef HITLS_BIG_ENDIAN
@@ -1535,7 +1535,7 @@ AARCH64_PACIASP
 	extr	x17,x15,x14,#63
 	and	w8,w7,w9,asr#31
 	eor	x16,x8,x14,lsl#1
-	mov	v19.d[0],x18
+	mov	v19.d[0],x20
 	mov	v19.d[1],x19
 #ifdef HITLS_BIG_ENDIAN
 	rev32	v19.16b,v19.16b
@@ -1544,7 +1544,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 	ld1	{v4.4s,v5.4s,v6.4s,v7.4s},[x0],#64
 	rbit	v16.16b,v16.16b
 	rbit	v17.16b,v17.16b
@@ -1563,9 +1563,9 @@ AARCH64_PACIASP
 #endif
 	mov	w7,0x87
 	extr	x9,x19,x19,#32
-	extr	x13,x19,x18,#63
+	extr	x13,x19,x20,#63
 	and	w8,w7,w9,asr#31
-	eor	x12,x8,x18,lsl#1
+	eor	x12,x8,x20,lsl#1
 	mov	v17.d[0],x14
 	mov	v17.d[1],x15
 #ifdef HITLS_BIG_ENDIAN
@@ -1586,7 +1586,7 @@ AARCH64_PACIASP
 	extr	x17,x15,x14,#63
 	and	w8,w7,w9,asr#31
 	eor	x16,x8,x14,lsl#1
-	mov	v19.d[0],x18
+	mov	v19.d[0],x20
 	mov	v19.d[1],x19
 #ifdef HITLS_BIG_ENDIAN
 	rev32	v19.16b,v19.16b
@@ -1595,7 +1595,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 	rbit	v16.16b,v16.16b
 	rbit	v17.16b,v17.16b
 	rbit	v18.16b,v18.16b
@@ -1613,9 +1613,9 @@ AARCH64_PACIASP
 #endif
 	mov	w7,0x87
 	extr	x9,x19,x19,#32
-	extr	x13,x19,x18,#63
+	extr	x13,x19,x20,#63
 	and	w8,w7,w9,asr#31
-	eor	x12,x8,x18,lsl#1
+	eor	x12,x8,x20,lsl#1
 	mov	v17.d[0],x14
 	mov	v17.d[1],x15
 #ifdef HITLS_BIG_ENDIAN
@@ -1636,7 +1636,7 @@ AARCH64_PACIASP
 	extr	x17,x15,x14,#63
 	and	w8,w7,w9,asr#31
 	eor	x16,x8,x14,lsl#1
-	mov	v19.d[0],x18
+	mov	v19.d[0],x20
 	mov	v19.d[1],x19
 #ifdef HITLS_BIG_ENDIAN
 	rev32	v19.16b,v19.16b
@@ -1645,7 +1645,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 	rbit	v16.16b,v16.16b
 	rbit	v17.16b,v17.16b
 	rbit	v18.16b,v18.16b
@@ -1759,9 +1759,9 @@ AARCH64_PACIASP
 #endif
 	mov	w7,0x87
 	extr	x9,x19,x19,#32
-	extr	x13,x19,x18,#63
+	extr	x13,x19,x20,#63
 	and		w8,w7,w9,asr#31
-	eor	x12,x8,x18,lsl#1
+	eor	x12,x8,x20,lsl#1
 	mov	v17.d[0],x14
 	mov	v17.d[1],x15
 #ifdef HITLS_BIG_ENDIAN
@@ -1782,7 +1782,7 @@ AARCH64_PACIASP
 	extr	x17,x15,x14,#63
 	and	w8,w7,w9,asr#31
 	eor	x16,x8,x14,lsl#1
-	mov	v19.d[0],x18
+	mov	v19.d[0],x20
 	mov	v19.d[1],x19
 #ifdef HITLS_BIG_ENDIAN
 	rev32	v19.16b,v19.16b
@@ -1791,7 +1791,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 	b.lt	.Lxts_4_blocks_process
 	ld1	{v4.4s,v5.4s,v6.4s,v7.4s},[x0],#64
 	rbit	v16.16b,v16.16b
@@ -1811,9 +1811,9 @@ AARCH64_PACIASP
 #endif
 	mov	w7,0x87
 	extr	x9,x19,x19,#32
-	extr	x13,x19,x18,#63
+	extr	x13,x19,x20,#63
 	and	w8,w7,w9,asr#31
-	eor	x12,x8,x18,lsl#1
+	eor	x12,x8,x20,lsl#1
 	mov	v17.d[0],x14
 	mov	v17.d[1],x15
 #ifdef HITLS_BIG_ENDIAN
@@ -1834,7 +1834,7 @@ AARCH64_PACIASP
 	extr	x17,x15,x14,#63
 	and	w8,w7,w9,asr#31
 	eor	x16,x8,x14,lsl#1
-	mov	v19.d[0],x18
+	mov	v19.d[0],x20
 	mov	v19.d[1],x19
 #ifdef HITLS_BIG_ENDIAN
 	rev32	v19.16b,v19.16b
@@ -1843,7 +1843,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 	rbit	v16.16b,v16.16b
 	rbit	v17.16b,v17.16b
 	rbit	v18.16b,v18.16b
@@ -1966,9 +1966,9 @@ AARCH64_PACIASP
 #endif
 	mov	w7,0x87
 	extr	x9,x19,x19,#32
-	extr	x13,x19,x18,#63
+	extr	x13,x19,x20,#63
 	and	w8,w7,w9,asr#31
-	eor	x12,x8,x18,lsl#1
+	eor	x12,x8,x20,lsl#1
 	mov	v17.d[0],x14
 	mov	v17.d[1],x15
 #ifdef HITLS_BIG_ENDIAN
@@ -1989,7 +1989,7 @@ AARCH64_PACIASP
 	extr	x17,x15,x14,#63
 	and	w8,w7,w9,asr#31
 	eor	x16,x8,x14,lsl#1
-	mov	v19.d[0],x18
+	mov	v19.d[0],x20
 	mov	v19.d[1],x19
 #ifdef HITLS_BIG_ENDIAN
 	rev32	v19.16b,v19.16b
@@ -1998,7 +1998,7 @@ AARCH64_PACIASP
 	extr	x9,x17,x17,#32
 	extr	x19,x17,x16,#63
 	and	w8,w7,w9,asr#31
-	eor	x18,x8,x16,lsl#1
+	eor	x20,x8,x16,lsl#1
 1:
 	// process last block
 	cmp	x2,#1

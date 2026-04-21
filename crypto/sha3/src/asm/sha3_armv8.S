@@ -46,7 +46,7 @@ A24 .req x14
 A30 .req x15
 A31 .req x16
 A32 .req x17
-A33 .req x18
+A33 .req x30
 A34 .req x19
 A40 .req x20
 A41 .req x21
@@ -701,18 +701,19 @@ AARCH64_AUTIASP
 SHA3_Squeeze:
 AARCH64_PACIASP
     /* push stack protection */
-    stp x29, x30, [sp, #-96]!
-    stp x19, x20, [sp, #8*2]
-    stp x21, x22, [sp, #8*4]
-    stp x23, x24, [sp, #8*6]
-    stp x25, x26, [sp, #8*8]
-    stp x27, x28, [sp, #8*10]
+    stp x29, x30, [sp, #-112]!
+    add x29, sp, #0
+    stp x19, x20, [sp, #16]
+    stp x21, x22, [sp, #32]
+    stp x23, x24, [sp, #48]
+    stp x25, x26, [sp, #64]
+    stp x27, x28, [sp, #80]
 
     mov x25, x0
     mov x26, x1
     mov x27, x2
     mov x28, x3
-    mov x30, x4
+    str x4, [sp, #96]
 
     /* Cyclically squeezing message summaries from the State Matrix */
 .Loop_squeeze:
@@ -763,16 +764,16 @@ AARCH64_PACIASP
 
 .Lsqueeze_done:
     /* End popping */
-    cmp x30, 0
-    beq .Lsqueeze_end
+    ldr x4, [sp, #96]
+    cbz x4, .Lsqueeze_end
     Keccak
 .Lsqueeze_end:
-    ldp x29, x30, [sp], #8*2
-    ldp x19, x20, [sp], #8*2
-    ldp x21, x22, [sp], #8*2
-    ldp x23, x24, [sp], #8*2
-    ldp x25, x26, [sp], #8*2
-    ldp x27, x28, [sp], #8*2
+    ldp x19, x20, [sp, #16]
+    ldp x21, x22, [sp, #32]
+    ldp x23, x24, [sp, #48]
+    ldp x25, x26, [sp, #64]
+    ldp x27, x28, [sp, #80]
+    ldp x29, x30, [sp], #112
     eor x0, x0, x0
 AARCH64_AUTIASP
     ret

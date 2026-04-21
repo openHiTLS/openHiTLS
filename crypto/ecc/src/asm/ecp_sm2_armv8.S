@@ -716,7 +716,7 @@ AARCH64_PACIASP
 	stp     x29, x30, [sp, #-80]!
     add     x29, sp, #0
     stp     x16, x17, [sp, #16]
-	stp     x18, x19, [sp, #64]
+	stp     x28, x19, [sp, #64]
 
 	# Load inputs
 	ldp s0, s1, [x1]
@@ -783,7 +783,7 @@ AARCH64_PACIASP
 	adds x6, x6, x3
 	adcs x15, x15, x4
 	adcs x5, x5, xzr
-	mov x18, x6
+	mov x28, x6
 	eor x6, x6, x6
 
 ### s3*s4 + s2*s5 + s1*s6 + s0*s7 ###
@@ -859,7 +859,7 @@ AARCH64_PACIASP
 
 	mov s0, x16
 	mov s1, x17
-	mov s2, x18
+	mov s2, x28
 	mov s3, x19
 
 	# result of mul: s7 s6 s5 s4 s3 s2 s1 s0
@@ -869,7 +869,7 @@ AARCH64_PACIASP
 
 	# Restore scalar registers
 	ldp x16, x17, [sp, #16]
-	ldp x18, x19, [sp, #64]
+	ldp x28, x19, [sp, #64]
 	ldp x29, x30, [sp], #80
 AARCH64_AUTIASP
 	ret
