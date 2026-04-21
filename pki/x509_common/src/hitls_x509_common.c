@@ -870,7 +870,7 @@ int32_t HITLS_X509_CtrlAlgInfo(CRYPT_EAL_PkeyCtx *pubKey, int32_t hashId, const 
 #endif
     switch (alg->algId) {
 #ifdef HITLS_CRYPTO_RSA
-        case BSL_CID_RSA:
+        case BSL_CID_RSA: // for support rsa with pkcs1 padding.
         case BSL_CID_MD5WITHRSA:
         case BSL_CID_SHA1WITHRSA:
         case BSL_CID_SHA224WITHRSAENCRYPTION:

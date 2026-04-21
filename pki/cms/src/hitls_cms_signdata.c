@@ -28,8 +28,6 @@
 #include "hitls_crl_local.h"
 #include "hitls_cert_local.h"
 #include "crypt_eal_md.h"
-#include "crypt_eal_pkey.h"
-#include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "bsl_params.h"
 #include "hitls_cms_util.h"

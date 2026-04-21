@@ -772,9 +772,6 @@ int32_t HITLS_PKCS12_ParseMacData(BSL_Buffer *encode, HITLS_PKCS12_MacData *macD
 
 static void ClearMacData(HITLS_PKCS12_MacData *p12Mac)
 {
-    if (p12Mac == NULL) {
-        return;
-    }
     BSL_SAL_FREE(p12Mac->mac->data);
     BSL_SAL_FREE(p12Mac->macSalt->data);
     p12Mac->macSalt->dataLen = 0;

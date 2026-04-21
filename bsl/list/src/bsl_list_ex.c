@@ -81,7 +81,8 @@ BslListNode *BSL_LIST_GetPrevNode(const BslListNode *pstListNode)
     return pstListNode == NULL ? NULL : pstListNode->prev;
 }
 
-void *BSL_LIST_SearchDataConst(const BslList *pList, const void *pSearchFor, BSL_LIST_PFUNC_CMP pSearcher, int32_t *pstErr)
+void *BSL_LIST_SearchDataConst(const BslList *pList, const void *pSearchFor, BSL_LIST_PFUNC_CMP pSearcher,
+    int32_t *pstErr)
 {
     const BslListNode *pstCurrentNode = NULL;
 

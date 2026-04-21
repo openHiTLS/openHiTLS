@@ -13,10 +13,9 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#include "hitls_build.h"
-#ifdef HITLS_PKI_X509_VFY_IDENTITY
 #include <string.h>
 #include <ctype.h>
+#include "hitls_build.h"
 #include "hitls_pki_errno.h"
 #include "securec.h"
 #include "bsl_sal.h"
@@ -29,6 +28,7 @@
 #include "sal_ip_util.h"
 #include "hitls_pki_x509.h"
 
+#ifdef HITLS_PKI_X509_VFY_IDENTITY
 /**
  *  Matches a string against a pattern containing exactly one wildcard ('*').
  *  The wildcard matches zero or more characters.
@@ -281,6 +281,9 @@ int32_t HITLS_X509_VerifyIdentity(HITLS_X509_Cert *cert, uint32_t flags, uint32_
     }
     return HITLS_X509_ERR_INVALID_PARAM;
 }
+#endif // HITLS_PKI_X509_VFY_IDENTITY
+
+#ifdef HITLS_PKI_CMS_SIGNEDDATA
 
 int32_t HITLS_X509_CheckKey(HITLS_X509_Cert *cert, CRYPT_EAL_PkeyCtx *prvKey)
 {
@@ -299,10 +302,10 @@ int32_t HITLS_X509_CheckKey(HITLS_X509_Cert *cert, CRYPT_EAL_PkeyCtx *prvKey)
 
     ret = CRYPT_EAL_PkeyPairCheck(pubKey, prvKey); // cmp cal speed is higher than CheckPair's.
     CRYPT_EAL_PkeyFreeCtx(pubKey);
-    if (ret != CRYPT_SUCCESS ) {
+    if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_CERT_NOT_MATCH_KEY);
         return HITLS_X509_ERR_CERT_NOT_MATCH_KEY;
     }
     return HITLS_PKI_SUCCESS;
 }
-#endif // HITLS_PKI_X509_VFY_IDENTITY
+#endif // HITLS_PKI_CMS_SIGNEDDATA

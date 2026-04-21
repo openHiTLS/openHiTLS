@@ -1868,7 +1868,6 @@ static int32_t X509_CopyRefList(BslList *dst, const BslList *src, int32_t (*refU
 static int32_t X509_CopyBufferData(uint8_t **dst, const uint8_t *src, uint32_t srcLen)
 {
     if (src == NULL || srcLen == 0) {
-        *dst = NULL;
         return HITLS_PKI_SUCCESS;
     }
     *dst = BSL_SAL_Dump(src, srcLen);
