@@ -407,7 +407,7 @@ uint32_t CRYPT_SM2_GetSignLen(const CRYPT_SM2_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return 0;
     }
-    uint32_t qLen = (ECC_ParaBits(ctx->pkey->para) / 8) + 1;
+    uint32_t qLen = (ECC_ParaBits(ctx->pkey->para) + 7) / 8;
     uint32_t maxSignLen = 0;
     int32_t ret = CRYPT_EAL_GetSignEncodeLen(qLen, qLen, &maxSignLen);
     if (ret != CRYPT_SUCCESS) {

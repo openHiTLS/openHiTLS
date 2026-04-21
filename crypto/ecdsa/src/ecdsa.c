@@ -128,7 +128,7 @@ uint32_t CRYPT_ECDSA_GetSignLen(const CRYPT_ECDSA_Ctx *ctx)
     // When the number of bits is a multiple of 8 and the most significant bit is 1, 0x00 needs to be added.
     // If the number of bits is not a multiple of 8,
     // an extra byte needs to be added to store the data with less than 8 bits.
-    uint32_t qLen = (ECC_ParaBits(ctx->para) / 8) + 1;    // divided by 8 to converted to bytes
+    uint32_t qLen = (ECC_ParaBits(ctx->para) + 7) / 8;    // divided by 8 to converted to bytes
     uint32_t maxSignLen = 0;
     int32_t ret = CRYPT_EAL_GetSignEncodeLen(qLen, qLen, &maxSignLen);
     if (ret != CRYPT_SUCCESS) {

@@ -22,7 +22,7 @@
 #include "crypt_sm2.h"
 #include "sm2_local.h"
 
-#define SM2_SIGN_MAX_LEN 74
+#define SM2_SIGN_MAX_LEN 72
 #define SM2_PRVKEY_MAX_LEN 32
 #define SM2_PUBKEY_LEN 65
 /* END_HEADER */
