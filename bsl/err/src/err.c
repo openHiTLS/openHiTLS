@@ -578,7 +578,7 @@ void BSL_ERR_OutputErrorStack(void)
     BSL_SAL_ThreadUnlock(g_errLock);
 }
 
-void BSL_ERR_RegErrStackLog(BSL_ERR_OutputFunc func)
+void BSL_ERR_RegErrStackLog(const BSL_ERR_OutputFunc func)
 {
     g_outputFunc = func;
 }

@@ -349,7 +349,7 @@ static void BSL_HASH_FixupListHeads(BSL_HASH_Hash *hash, RawList *oldListArray, 
         ListRawNode *newHead = &newListArray[i].head;
 
         if (newHead->next == oldHead) {
-            ListRawInit(&newListArray[i], NULL);
+            (void)ListRawInit(&newListArray[i], NULL);
         } else {
             newHead->next->prev = newHead;
             newHead->prev->next = newHead;
@@ -376,8 +376,8 @@ static void BSL_HASH_MoveNodes(BSL_HASH_Hash *hash, RawList *sourceList, RawList
         }
 
         if (shouldMove) {
-            ListRawRemove(sourceList, rawNode);
-            ListRawPushBack(destList, rawNode);
+            (void)ListRawRemove(sourceList, rawNode);
+            (void)ListRawPushBack(destList, rawNode);
         }
 
         rawNode = nextNode;
@@ -408,7 +408,10 @@ static int32_t BSL_HASH_SplitBucket(BSL_HASH_Hash *hash)
     uint32_t newBucketIndex = nLevel + splitIndex;
 
     /* Initialize the new bucket (was sentinel) */
-    ListRawInit(&hash->listArray[newBucketIndex], NULL);
+    int32_t ret = ListRawInit(&hash->listArray[newBucketIndex], NULL);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
 
     /* Rehash elements from the bucket being split */
     RawList *splitList = &hash->listArray[splitIndex];
@@ -576,7 +579,7 @@ BSL_HASH_Hash *BSL_HASH_Create(uint32_t bktSize, BSL_HASH_CodeCalcFunc hashFunc,
 
     /* Initialize bucket array (each bucket is a linked list) */
     for (i = 0; i < bktSize; ++i) {
-        ListRawInit(&hash->listArray[i], NULL);
+        (void)ListRawInit(&hash->listArray[i], NULL);
     }
 
     return hash;

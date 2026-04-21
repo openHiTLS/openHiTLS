@@ -1176,7 +1176,7 @@ int32_t MLDSA_SignInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg, u
         GOTO_ERR_IF(HashFuncH(uBuf, MLDSA_XOF_MSG_LEN, w1Buf, w1Len, out, cBufLen), ret);
         (void)memset_s(c, sizeof(c), 0, sizeof(c));
         // 𝑐 ∈ 𝑅𝑞 ← SampleInBall(c)
-        SampleInBall(ctx, out, cBufLen, c);
+        GOTO_ERR_IF(SampleInBall(ctx, out, cBufLen, c), ret);
         // 𝑐 ← NTT(𝑐)
         MLDSA_ComputesNTT(c);
 
@@ -1260,7 +1260,7 @@ int32_t MLDSA_VerifyInternal(const CRYPT_ML_DSA_Ctx *ctx, const CRYPT_Data *msg,
     }
 
     // 𝑐 ∈ 𝑅𝑞 ← SampleInBall(𝑐)
-    SampleInBall(ctx, sign, cBufLen, c);
+    GOTO_ERR_IF(SampleInBall(ctx, sign, cBufLen, c), ret);
     // w′ ← NTT−1(A ∘ NTT(z) − NTT(𝑐) ∘ NTT(t1 ⋅ 2𝑑))
     GOTO_ERR_IF(ComputesApproxW(ctx, &st, pubSeed, c, st.w), ret);
     // w1′ ← UseHint(h, w′)

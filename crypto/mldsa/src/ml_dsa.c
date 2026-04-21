@@ -66,7 +66,7 @@ CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_NewCtx(void)
     keyCtx->needPreHash = false;
     keyCtx->hasSeed = false;
     keyCtx->prvKeyFormat = CRYPT_ALGO_MLDSA_PRIV_FORMAT_NOT_SET;
-    BSL_SAL_ReferencesInit(&(keyCtx->references));
+    (void)BSL_SAL_ReferencesInit(&(keyCtx->references));
     return keyCtx;
 }
 
@@ -86,7 +86,7 @@ void CRYPT_ML_DSA_FreeCtx(CRYPT_ML_DSA_Ctx *ctx)
         return;
     }
     int ret = 0;
-    BSL_SAL_AtomicDownReferences(&(ctx->references), &ret);
+    (void)BSL_SAL_AtomicDownReferences(&(ctx->references), &ret);
     if (ret > 0) {
         return;
     }

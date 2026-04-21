@@ -750,11 +750,11 @@ static int32_t Iso9796_2_CheckMlHashLen(const CRYPT_RSA_Ctx *ctx, uint32_t mlHas
 }
 #endif // HITLS_CRYPTO_RSA_EMSA_ISO9796_2
 
-static int32_t RsaGetSignVerifyData(CRYPT_RSA_Ctx *ctx, const uint8_t *hash, uint32_t hashLen,
+static int32_t RsaGetSignVerifyData(CRYPT_RSA_Ctx *ctx, uint8_t *hash, uint32_t hashLen,
     const uint8_t *msg, uint32_t msgLen, uint8_t **data, uint32_t *dataLen, bool *needFree)
 {
     if (ctx->pad.type != EMSA_ISO9796_2) {
-        *data = (uint8_t *)(uintptr_t)hash;
+        *data = hash;
         *dataLen = hashLen;
         *needFree = false;
         return CRYPT_SUCCESS;
