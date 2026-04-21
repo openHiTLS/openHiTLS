@@ -2463,6 +2463,7 @@ EXIT:
 
 typedef struct {
     HITLS_Config *config;
+    int32_t result;
     int threadId;
 } ThreadTestData;
 
@@ -2490,6 +2491,15 @@ typedef struct {
     int32_t result;
     int threadId;
 } ProtocolThreadTestData;
+
+static void CleanupConcurrentConfigCaseState(void)
+{
+    /* These concurrent config cases all touch shared wrapper/connection/error-stack state.
+     * Clear it at case exit so long stress runs do not inherit leftovers from a prior case. */
+    ClearWrapper();
+    ClearConnectionList();
+    BSL_ERR_RemoveErrorStack(true);
+}
 
 static HITLS_Config *CreateConcurrentProtoConfig(ConfigConcurrentProto proto, BSL_UIO_TransportType *uioType,
     bool *useTlcpLink)
@@ -2592,21 +2602,52 @@ static void *ThreadConnectionTest(void *arg)
     uint32_t readLen = 0;
     HITLS_Ctx *clientCtx = NULL;
     HITLS_Ctx *serverCtx = NULL;
+    int32_t ret = HITLS_INTERNAL_EXCEPTION;
+    /* Worker threads report status back to the main thread instead of calling ASSERT_*
+     * directly because the test framework keeps global failure state. */
+    testData->result = HITLS_INTERNAL_EXCEPTION;
     FRAME_LinkObj *client = FRAME_CreateLinkEx(testData->config, BSL_UIO_UDP);
-    ASSERT_TRUE(client != NULL);
+    if (client == NULL) {
+        goto EXIT;
+    }
     FRAME_LinkObj *server = FRAME_CreateLinkEx(testData->config, BSL_UIO_UDP);
-    ASSERT_TRUE(server != NULL);
+    if (server == NULL) {
+        goto EXIT;
+    }
 
-    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+    if (ret != HITLS_SUCCESS) {
+        testData->result = ret;
+        goto EXIT;
+    }
 
     clientCtx = FRAME_GetTlsCtx(client);
     serverCtx = FRAME_GetTlsCtx(server);
+    if (clientCtx == NULL || serverCtx == NULL) {
+        goto EXIT;
+    }
 
-    ASSERT_EQ(HITLS_Write(clientCtx, writeBuf, writeLen, &writeLen), HITLS_SUCCESS);
+    ret = HITLS_Write(clientCtx, writeBuf, writeLen, &writeLen);
+    if (ret != HITLS_SUCCESS) {
+        testData->result = ret;
+        goto EXIT;
+    }
 
-    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ret = FRAME_TrasferMsgBetweenLink(client, server);
+    if (ret != HITLS_SUCCESS) {
+        testData->result = ret;
+        goto EXIT;
+    }
 
-    ASSERT_EQ(HITLS_Read(serverCtx, readBuf, sizeof(readBuf), &readLen), HITLS_SUCCESS);
+    ret = HITLS_Read(serverCtx, readBuf, sizeof(readBuf), &readLen);
+    if (ret != HITLS_SUCCESS) {
+        testData->result = ret;
+        goto EXIT;
+    }
+    if (readLen != writeLen || memcmp(readBuf, writeBuf, writeLen) != 0) {
+        goto EXIT;
+    }
+    testData->result = HITLS_SUCCESS;
 
 EXIT:
     FRAME_FreeLink(client);
@@ -2758,6 +2799,7 @@ static void RunSharedConfigProtocolConcurrentCase(ConfigConcurrentProto proto)
 EXIT:
     (void)pthread_mutex_destroy(&configLock);
     HITLS_CFG_FreeConfig(tlsConfig);
+    CleanupConcurrentConfigCaseState();
 }
 
 /* @
@@ -2778,9 +2820,12 @@ EXIT:
 void SDV_CONFIG_MULTI_THREAD_TC001(void)
 {
     FRAME_Init();
-    const int THREAD_COUNT = 100;
+    enum { THREAD_COUNT = 100 };
     pthread_t threads[THREAD_COUNT];
     ThreadTestData testData[THREAD_COUNT];
+    int createdThreadCount = 0;
+    int32_t createRet = HITLS_SUCCESS;
+    int32_t joinRet = HITLS_SUCCESS;
     HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
     ASSERT_TRUE(tlsConfig != NULL);
     FRAME_LinkObj *clientCtx = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
@@ -2789,24 +2834,41 @@ void SDV_CONFIG_MULTI_THREAD_TC001(void)
     tlsConfig->isSupportRenegotiation = true;
     tlsConfig->isSupportSessionTicket = false;
 
+    (void)memset(testData, 0, sizeof(testData));
     for (int i = 0; i < THREAD_COUNT; i++) {
         testData[i].config = tlsConfig;
+        testData[i].result = HITLS_INTERNAL_EXCEPTION;
         testData[i].threadId = i;
-        ASSERT_TRUE(pthread_create(&threads[i], NULL, ThreadConnectionTest, &testData[i]) == 0);
+        if (pthread_create(&threads[i], NULL, ThreadConnectionTest, &testData[i]) != 0) {
+            createRet = HITLS_INTERNAL_EXCEPTION;
+            break;
+        }
+        createdThreadCount++;
     }
 
-    for (int i = 0; i < THREAD_COUNT; i++) {
-        pthread_join(threads[i], NULL);
+    for (int i = 0; i < createdThreadCount; i++) {
+        if (pthread_join(threads[i], NULL) != 0) {
+            joinRet = HITLS_INTERNAL_EXCEPTION;
+        }
+    }
+
+    ASSERT_EQ(createRet, HITLS_SUCCESS);
+    ASSERT_EQ(joinRet, HITLS_SUCCESS);
+    ASSERT_EQ(createdThreadCount, THREAD_COUNT);
+    for (int i = 0; i < createdThreadCount; i++) {
+        ASSERT_EQ(testData[i].result, HITLS_SUCCESS);
     }
 
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
+    CleanupConcurrentConfigCaseState();
 }
 /* END_CASE */
 
 typedef struct {
+    int32_t result;
     int threadId;
 } IndependentThreadTestData;
 
@@ -2828,11 +2890,18 @@ static void *IndependentThreadConnectionTest(void *arg)
     HITLS_Config *tlsConfig = NULL;
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
+    int32_t ret = HITLS_INTERNAL_EXCEPTION;
+    testData->result = HITLS_INTERNAL_EXCEPTION;
 
     /* Create config inside the thread */
     tlsConfig = HITLS_CFG_NewTLS12Config();
-    ASSERT_TRUE(tlsConfig != NULL);
+    if (tlsConfig == NULL) {
+        goto EXIT;
+    }
     FRAME_LinkObj *clientCtx1 = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    if (clientCtx1 == NULL) {
+        goto EXIT;
+    }
     FRAME_FreeLink(clientCtx1);
 
     tlsConfig->isSupportRenegotiation = true;
@@ -2844,24 +2913,51 @@ static void *IndependentThreadConnectionTest(void *arg)
 
     /* Create client and server using the config */
     client = FRAME_CreateLinkEx(tlsConfig, BSL_UIO_TCP);
-    ASSERT_TRUE(client != NULL);
+    if (client == NULL) {
+        goto EXIT;
+    }
     server = FRAME_CreateLinkEx(tlsConfig, BSL_UIO_TCP);
-    ASSERT_TRUE(server != NULL);
+    if (server == NULL) {
+        goto EXIT;
+    }
 
     /* Establish connection */
-    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ret = FRAME_CreateConnection(client, server, true, HS_STATE_BUTT);
+    if (ret != HITLS_SUCCESS) {
+        testData->result = ret;
+        goto EXIT;
+    }
 
     clientCtx = FRAME_GetTlsCtx(client);
     serverCtx = FRAME_GetTlsCtx(server);
+    if (clientCtx == NULL || serverCtx == NULL) {
+        goto EXIT;
+    }
 
     /* Write from client */
-    ASSERT_EQ(HITLS_Write(clientCtx, writeBuf, writeLen, &writeLen), HITLS_SUCCESS);
+    ret = HITLS_Write(clientCtx, writeBuf, writeLen, &writeLen);
+    if (ret != HITLS_SUCCESS) {
+        testData->result = ret;
+        goto EXIT;
+    }
 
     /* Transfer message between links */
-    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ret = FRAME_TrasferMsgBetweenLink(client, server);
+    if (ret != HITLS_SUCCESS) {
+        testData->result = ret;
+        goto EXIT;
+    }
 
     /* Read on server */
-    ASSERT_EQ(HITLS_Read(serverCtx, readBuf, sizeof(readBuf), &readLen), HITLS_SUCCESS);
+    ret = HITLS_Read(serverCtx, readBuf, sizeof(readBuf), &readLen);
+    if (ret != HITLS_SUCCESS) {
+        testData->result = ret;
+        goto EXIT;
+    }
+    if (readLen != writeLen || memcmp(readBuf, writeBuf, writeLen) != 0) {
+        goto EXIT;
+    }
+    testData->result = HITLS_SUCCESS;
 EXIT:
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
@@ -2880,47 +2976,49 @@ static void *IndependentProtocolThreadConnectionTest(void *arg)
     bool useTlcpLink = false;
     HITLS_Ctx *clientCtx = NULL;
     HITLS_Ctx *serverCtx = NULL;
-    HITLS_Config *tlsConfig = NULL;
-    FRAME_LinkObj *warmupLink = NULL;
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
     FRAME_LinkObj *client = NULL;
     FRAME_LinkObj *server = NULL;
     int32_t ret = HITLS_INTERNAL_EXCEPTION;
 
+    /* Keep ASSERT_* out of worker threads so failures are funneled through the
+     * owning case after all created threads have been joined safely. */
     testData->result = HITLS_INTERNAL_EXCEPTION;
-    tlsConfig = CreateConcurrentProtoConfig(testData->proto, &uioType, &useTlcpLink);
-    if (tlsConfig == NULL) {
+    clientConfig = CreateConcurrentProtoConfig(testData->proto, &uioType, &useTlcpLink);
+    if (clientConfig == NULL) {
         goto EXIT;
     }
+    {
+        BSL_UIO_TransportType serverUioType = BSL_UIO_TCP;
+        bool serverUseTlcpLink = false;
+        serverConfig = CreateConcurrentProtoConfig(testData->proto, &serverUioType, &serverUseTlcpLink);
+        if (serverConfig == NULL || serverUioType != uioType || serverUseTlcpLink != useTlcpLink) {
+            goto EXIT;
+        }
+    }
 
-    warmupLink = PreloadSharedProtoConfig(tlsConfig, uioType, useTlcpLink);
-    if (warmupLink == NULL) {
+    clientConfig->isSupportRenegotiation = true;
+    clientConfig->isSupportSessionTicket = false;
+    serverConfig->isSupportRenegotiation = true;
+    serverConfig->isSupportSessionTicket = false;
+
+    /* TLCP/DTLCP link creation loads role-specific cert/key material into the config. Keep
+     * the client and server sides on separate configs so the role-specific state never gets
+     * rewritten within the same thread. */
+    if (useTlcpLink) {
+        client = FRAME_CreateTLCPLink(clientConfig, uioType, true);
+        server = FRAME_CreateTLCPLink(serverConfig, uioType, false);
+    } else {
+        client = FRAME_CreateLink(clientConfig, uioType);
+        server = FRAME_CreateLink(serverConfig, uioType);
+    }
+    if (client == NULL || server == NULL) {
         goto EXIT;
     }
-    FRAME_FreeLink(warmupLink);
-    warmupLink = NULL;
-
-    tlsConfig->isSupportRenegotiation = true;
-    tlsConfig->isSupportSessionTicket = false;
 
     (void)snprintf((char *)writeBuf, sizeof(writeBuf), "Independent protocol message from thread %d", testData->threadId);
     writeLen = (uint32_t)strlen((char *)writeBuf);
-
-    if (useTlcpLink) {
-        client = FRAME_CreateTLCPLink(tlsConfig, uioType, true);
-    } else {
-        client = FRAME_CreateLinkEx(tlsConfig, uioType);
-    }
-    if (client == NULL) {
-        goto EXIT;
-    }
-    if (useTlcpLink) {
-        server = FRAME_CreateTLCPLink(tlsConfig, uioType, false);
-    } else {
-        server = FRAME_CreateLinkEx(tlsConfig, uioType);
-    }
-    if (server == NULL) {
-        goto EXIT;
-    }
 
     clientCtx = FRAME_GetTlsCtx(client);
     serverCtx = FRAME_GetTlsCtx(server);
@@ -2961,10 +3059,10 @@ static void *IndependentProtocolThreadConnectionTest(void *arg)
     testData->result = HITLS_SUCCESS;
 
 EXIT:
-    FRAME_FreeLink(warmupLink);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
-    HITLS_CFG_FreeConfig(tlsConfig);
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
     return NULL;
 }
 
@@ -2995,6 +3093,8 @@ static void RunIndependentConfigProtocolConcurrentCase(ConfigConcurrentProto pro
         }
     }
 
+    /* Thread workers only write their per-thread result. The case performs the real
+     * assertions after every created thread has been joined to avoid dangling workers. */
     ASSERT_EQ(createRet, HITLS_SUCCESS);
     ASSERT_EQ(joinRet, HITLS_SUCCESS);
     ASSERT_EQ(createdThreadCount, THREAD_COUNT);
@@ -3005,6 +3105,7 @@ static void RunIndependentConfigProtocolConcurrentCase(ConfigConcurrentProto pro
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
+    CleanupConcurrentConfigCaseState();
     return;
 }
 
@@ -3026,18 +3127,37 @@ EXIT:
 void SDV_CONFIG_MULTI_THREAD_TC002(void)
 {
     FRAME_Init();
-    const int THREAD_COUNT = 100;
+    enum { THREAD_COUNT = 100 };
     pthread_t threads[THREAD_COUNT];
     IndependentThreadTestData threadData[THREAD_COUNT];
+    int createdThreadCount = 0;
+    int32_t createRet = HITLS_SUCCESS;
+    int32_t joinRet = HITLS_SUCCESS;
 
     /* Create threads for connection testing */
+    (void)memset(threadData, 0, sizeof(threadData));
     for (int i = 0; i < THREAD_COUNT; i++) {
-        ASSERT_TRUE(pthread_create(&threads[i], NULL, IndependentThreadConnectionTest, &threadData[i]) == 0);
+        threadData[i].result = HITLS_INTERNAL_EXCEPTION;
+        threadData[i].threadId = i;
+        if (pthread_create(&threads[i], NULL, IndependentThreadConnectionTest, &threadData[i]) != 0) {
+            createRet = HITLS_INTERNAL_EXCEPTION;
+            break;
+        }
+        createdThreadCount++;
     }
 
     /* Wait for all threads to complete */
-    for (int i = 0; i < THREAD_COUNT; i++) {
-        pthread_join(threads[i], NULL);
+    for (int i = 0; i < createdThreadCount; i++) {
+        if (pthread_join(threads[i], NULL) != 0) {
+            joinRet = HITLS_INTERNAL_EXCEPTION;
+        }
+    }
+
+    ASSERT_EQ(createRet, HITLS_SUCCESS);
+    ASSERT_EQ(joinRet, HITLS_SUCCESS);
+    ASSERT_EQ(createdThreadCount, THREAD_COUNT);
+    for (int i = 0; i < createdThreadCount; i++) {
+        ASSERT_EQ(threadData[i].result, HITLS_SUCCESS);
     }
 
     ASSERT_TRUE(TestIsErrStackEmpty());
@@ -3105,6 +3225,7 @@ EXIT:
         FRAME_FreeLink(servers[i]);
     }
     HITLS_CFG_FreeConfig(tlsConfig);
+    CleanupConcurrentConfigCaseState();
 }
 /* END_CASE */
 
@@ -3130,7 +3251,7 @@ EXIT:
 void UT_TLS_DTLS_CONSISTENCY_MULTI_THREAD_TC003(void)
 {
     FRAME_Init();
-    const int THREAD_COUNT = 10;
+    enum { THREAD_COUNT = 10 };
     ThreadTestData testData[THREAD_COUNT];
     HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
     ASSERT_TRUE(tlsConfig != NULL);
@@ -3142,10 +3263,13 @@ void UT_TLS_DTLS_CONSISTENCY_MULTI_THREAD_TC003(void)
     tlsConfig->isSupportSessionTicket = false;
 
     /* Reuse the same config for repeated DTLS connection/write/read rounds through the thread worker path. */
+    (void)memset(testData, 0, sizeof(testData));
     for (int i = 0; i < THREAD_COUNT; i++) {
         testData[i].config = tlsConfig;
+        testData[i].result = HITLS_INTERNAL_EXCEPTION;
         testData[i].threadId = i;
         ThreadConnectionTest(&testData[i]);
+        ASSERT_EQ(testData[i].result, HITLS_SUCCESS);
     }
 
     /* Shared-config repeated access should not leave residual errors in the global stack. */
@@ -3153,7 +3277,7 @@ void UT_TLS_DTLS_CONSISTENCY_MULTI_THREAD_TC003(void)
 
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
-
+    CleanupConcurrentConfigCaseState();
 }
 /* END_CASE */
 
@@ -3174,6 +3298,8 @@ static void *ConcurrentReadWriteTest(void *arg)
     uint32_t readLen = 0;
     HITLS_Ctx *clientCtx = NULL;
     HITLS_Ctx *serverCtx = NULL;
+    int32_t ret = HITLS_INTERNAL_EXCEPTION;
+    data->result = HITLS_INTERNAL_EXCEPTION;
 
     /* Prepare test message */
     (void)snprintf((char *)writeBuf, sizeof(writeBuf), "Concurrent test message from thread %d", data->threadId);
@@ -3182,17 +3308,34 @@ static void *ConcurrentReadWriteTest(void *arg)
     /* Perform read/write operations on each connection pair */
     clientCtx = FRAME_GetTlsCtx(data->client);
     serverCtx = FRAME_GetTlsCtx(data->server);
-    ASSERT_TRUE(clientCtx != NULL);
-    ASSERT_TRUE(serverCtx != NULL);
+    if (clientCtx == NULL || serverCtx == NULL) {
+        goto EXIT;
+    }
 
     /* Write from client */
-    ASSERT_TRUE(HITLS_Write(clientCtx, writeBuf, writeLen, &writeLen) == HITLS_SUCCESS);
+    ret = HITLS_Write(clientCtx, writeBuf, writeLen, &writeLen);
+    if (ret != HITLS_SUCCESS) {
+        data->result = ret;
+        goto EXIT;
+    }
 
     /* Transfer message between links */
-    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(data->client, data->server) == HITLS_SUCCESS);
+    ret = FRAME_TrasferMsgBetweenLink(data->client, data->server);
+    if (ret != HITLS_SUCCESS) {
+        data->result = ret;
+        goto EXIT;
+    }
 
     /* Read on server */
-    ASSERT_TRUE(HITLS_Read(serverCtx, readBuf, sizeof(readBuf), &readLen) == HITLS_SUCCESS);
+    ret = HITLS_Read(serverCtx, readBuf, sizeof(readBuf), &readLen);
+    if (ret != HITLS_SUCCESS) {
+        data->result = ret;
+        goto EXIT;
+    }
+    if (readLen != writeLen || memcmp(readBuf, writeBuf, writeLen) != 0) {
+        goto EXIT;
+    }
+    data->result = HITLS_SUCCESS;
 EXIT:
     return NULL;
 }
@@ -3343,6 +3486,7 @@ EXIT:
         FRAME_FreeLink(servers[i]);
     }
     HITLS_CFG_FreeConfig(tlsConfig);
+    CleanupConcurrentConfigCaseState();
 }
 
 /* @
@@ -3373,6 +3517,9 @@ void SDV_CONFIG_CONCURRENT_READ_WRITE_TC001(void)
     pthread_t threads[THREAD_COUNT];
     ConcurrentReadWriteTestData threadData[THREAD_COUNT];
     int ret;
+    int createdThreadCount = 0;
+    int32_t createRet = HITLS_SUCCESS;
+    int32_t joinRet = HITLS_SUCCESS;
 
     /* Initialize arrays */
     (void)memset(clients, 0, sizeof(clients));
@@ -3405,17 +3552,31 @@ void SDV_CONFIG_CONCURRENT_READ_WRITE_TC001(void)
         threadData[i].client = clients[i];
         threadData[i].server = servers[i];
         threadData[i].connectionCount = CONNECTION_COUNT;
+        threadData[i].result = HITLS_INTERNAL_EXCEPTION;
         threadData[i].threadId = i;
     }
 
     /* Create threads for concurrent read/write testing */
     for (int i = 0; i < THREAD_COUNT; i++) {
-        ASSERT_TRUE(pthread_create(&threads[i], NULL, ConcurrentReadWriteTest, &threadData[i]) == 0);
+        if (pthread_create(&threads[i], NULL, ConcurrentReadWriteTest, &threadData[i]) != 0) {
+            createRet = HITLS_INTERNAL_EXCEPTION;
+            break;
+        }
+        createdThreadCount++;
     }
 
     /* Wait for all threads to complete */
-    for (int i = 0; i < THREAD_COUNT; i++) {
-        pthread_join(threads[i], NULL);
+    for (int i = 0; i < createdThreadCount; i++) {
+        if (pthread_join(threads[i], NULL) != 0) {
+            joinRet = HITLS_INTERNAL_EXCEPTION;
+        }
+    }
+
+    ASSERT_EQ(createRet, HITLS_SUCCESS);
+    ASSERT_EQ(joinRet, HITLS_SUCCESS);
+    ASSERT_EQ(createdThreadCount, THREAD_COUNT);
+    for (int i = 0; i < createdThreadCount; i++) {
+        ASSERT_EQ(threadData[i].result, HITLS_SUCCESS);
     }
 
     ASSERT_TRUE(TestIsErrStackEmpty());
@@ -3427,6 +3588,7 @@ EXIT:
         FRAME_FreeLink(servers[i]);
     }
     HITLS_CFG_FreeConfig(tlsConfig);
+    CleanupConcurrentConfigCaseState();
 }
 /* END_CASE */
 
@@ -3449,11 +3611,11 @@ EXIT:
 void UT_TLS_CFG_LOADVERIFYDIR_MULTI_THREAD_TC001(void)
 {
     FRAME_Init();
-    const uint32_t threadCount = 8;
+    enum { THREAD_COUNT = 8 };
     const char *multiPath = "/tmp/ca1:/tmp/ca2:/tmp/ca3";
     const char *expectPaths[] = {"/tmp/ca1", "/tmp/ca2", "/tmp/ca3"};
-    pthread_t threads[threadCount];
-    ConfigPathThreadData threadData[threadCount];
+    pthread_t threads[THREAD_COUNT];
+    ConfigPathThreadData threadData[THREAD_COUNT];
     HITLS_Config *config = HITLS_CFG_NewDTLS12Config();
     uint32_t createdThreadCount = 0;
     int32_t createRet = HITLS_SUCCESS;
@@ -3464,7 +3626,7 @@ void UT_TLS_CFG_LOADVERIFYDIR_MULTI_THREAD_TC001(void)
     config->isSupportRenegotiation = true;
     config->isSupportSessionTicket = false;
 
-    for (uint32_t i = 0; i < threadCount; i++) {
+    for (uint32_t i = 0; i < THREAD_COUNT; i++) {
         threadData[i].config = config;
         threadData[i].expectPaths = expectPaths;
         threadData[i].pathCount = sizeof(expectPaths) / sizeof(expectPaths[0]);
@@ -3485,7 +3647,7 @@ void UT_TLS_CFG_LOADVERIFYDIR_MULTI_THREAD_TC001(void)
 
     ASSERT_EQ(createRet, HITLS_SUCCESS);
     ASSERT_EQ(joinRet, HITLS_SUCCESS);
-    ASSERT_EQ(createdThreadCount, threadCount);
+    ASSERT_EQ(createdThreadCount, THREAD_COUNT);
     for (uint32_t i = 0; i < createdThreadCount; i++) {
         ASSERT_EQ(threadData[i].result, HITLS_SUCCESS);
     }
@@ -3494,6 +3656,7 @@ void UT_TLS_CFG_LOADVERIFYDIR_MULTI_THREAD_TC001(void)
 
 EXIT:
     HITLS_CFG_FreeConfig(config);
+    CleanupConcurrentConfigCaseState();
 }
 /* END_CASE */
 
