@@ -16,6 +16,7 @@
 #include "hitls_error.h"
 #include "bsl_err_internal.h"
 #include "tls_binlog_id.h"
+#include "hitls.h"
 #include "hitls_type.h"
 #include "hitls_config.h"
 #include "tls.h"
@@ -455,6 +456,15 @@ int32_t HITLS_SetLegacyRenegotiateSupport(HITLS_Ctx *ctx, bool isSupport)
     }
 
     return HITLS_CFG_SetLegacyRenegotiateSupport(&(ctx->config.tlsConfig), isSupport);
+}
+
+int32_t HITLS_GetLegacyRenegotiateSupport(HITLS_Ctx *ctx, bool *isSupport)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_GetLegacyRenegotiateSupport(&(ctx->config.tlsConfig), isSupport);
 }
 #endif /* defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */
 #ifdef HITLS_TLS_FEATURE_SESSION_TICKET

@@ -1846,6 +1846,16 @@ int32_t HITLS_GetResumptionOnRenegoSupport(HITLS_Ctx *ctx, bool *isSupport);
  */
 int32_t HITLS_GetClientRenegotiateSupport(HITLS_Ctx *ctx, bool *isSupport);
 
+/**
+ * @ingroup tls
+ * @brief   Get whether to abort handshake when server doesn't support SecRenegotiation
+ * @param   ctx   [IN] TLS connection handle.
+ * @param   isSupport  [OUT] Indicates whether to abort handshake when server doesn't support SecRenegotiation
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  HITLS_NULL_INPUT, the input parameter pointer is NULL.
+ */
+int32_t HITLS_GetLegacyRenegotiateSupport(HITLS_Ctx *ctx, bool *isSupport);
+
 #ifdef __cplusplus
 }
 #endif

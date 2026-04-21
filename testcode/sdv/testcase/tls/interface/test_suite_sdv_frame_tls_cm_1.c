@@ -3727,3 +3727,80 @@ EXIT:
     HITLS_CFG_FreeConfig(config);
 }
 /* END_CASE */
+
+/* @
+* @test  HITLS_UT_TLS_GET_LEGACY_RENEGOTIATION_SUPPORT_API_TC001
+* @spec  -
+* @title  Cover input paramter of HITLS_GetLegacyRenegotiateSupport and HITLS_CFG_GetLegacyRenegotiateSupport
+* @precon  nan
+* @brief  1.Create tls config and tls ctx . Expected result 1.
+*         2.Invoke the HITLS_GetLegacyRenegotiateSupport interface with NULL parameters. Expected result 2.
+*         3.Invoke the HITLS_GetLegacyRenegotiateSupport interface with valid parameters. Expected result 3.
+* @expect  1.Return HITLS_SUCCESS
+*          2.Return HITLS_NULL_INPUT
+*          3.Return HITLS_SUCCESS
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void HITLS_UT_TLS_GET_LEGACY_RENEGOTIATION_SUPPORT_API_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+    HITLS_Ctx *ctx = HITLS_New(tlsConfig);
+    ASSERT_TRUE(ctx != NULL);
+    bool isSupport = false;
+    int32_t ret = HITLS_GetLegacyRenegotiateSupport(NULL, &isSupport);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+    ret = HITLS_GetLegacyRenegotiateSupport(ctx, NULL);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+    ret = HITLS_GetLegacyRenegotiateSupport(ctx, &isSupport);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+
+    ret = HITLS_CFG_GetLegacyRenegotiateSupport(NULL, &isSupport);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+    ret = HITLS_CFG_GetLegacyRenegotiateSupport(tlsConfig, NULL);
+    ASSERT_TRUE(ret == HITLS_NULL_INPUT);
+    ret = HITLS_CFG_GetLegacyRenegotiateSupport(tlsConfig, &isSupport);
+    ASSERT_TRUE(ret == HITLS_SUCCESS); 
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    HITLS_Free(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  HITLS_UT_TLS_GET_TLCP_LEGACY_RENEGOTIATION_SUPPORT_TC001
+* @spec  -
+* @title  HITLS_CFG_GetLegacyRenegotiateSupport for TLCP
+* @precon  nan
+* @brief  1.Create tls config . Expected result 1.
+*         2.Get LegacyRenegotiateSupport. Expected result 2.
+*         3.Get LegacyRenegotiateSupport after setting renegotiation support. Expected result 3.
+* @expect  1.Return HITLS_SUCCESS
+*          2.LegacyRenegotiateSupport is true
+*          3.LegacyRenegotiateSupport is false
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void HITLS_UT_TLS_GET_TLCP_LEGACY_RENEGOTIATION_SUPPORT_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLCPConfig();
+    ASSERT_TRUE(tlsConfig != NULL);
+    bool isSupport = false;
+    int32_t ret = HITLS_CFG_GetLegacyRenegotiateSupport(tlsConfig, &isSupport);
+    ASSERT_TRUE(ret == HITLS_SUCCESS); 
+    ASSERT_TRUE(isSupport == true); 
+
+    ret = HITLS_CFG_SetRenegotiationSupport(tlsConfig, true);
+    ASSERT_TRUE(ret == HITLS_SUCCESS);
+    ret = HITLS_CFG_GetLegacyRenegotiateSupport(tlsConfig, &isSupport);
+    ASSERT_TRUE(ret == HITLS_SUCCESS); 
+    ASSERT_TRUE(isSupport == false);  
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+}
+/* END_CASE */

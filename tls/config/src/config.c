@@ -1381,6 +1381,11 @@ int32_t HITLS_CFG_SetRenegotiationSupport(HITLS_Config *config, bool support)
     if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
+#ifdef HITLS_TLS_PROTO_TLCP11
+    if (IS_SUPPORT_TLCP(config->originVersionMask)) {
+        config->allowLegacyRenegotiate = false;
+    }
+#endif
     config->isSupportRenegotiation = support;
     return HITLS_SUCCESS;
 }
@@ -1392,6 +1397,15 @@ int32_t HITLS_CFG_SetLegacyRenegotiateSupport(HITLS_Config *config, bool support
         return HITLS_NULL_INPUT;
     }
     config->allowLegacyRenegotiate = support;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetLegacyRenegotiateSupport(HITLS_Config *config, bool *isSupport)
+{
+    if (config == NULL || isSupport == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+    *isSupport = config->allowLegacyRenegotiate;
     return HITLS_SUCCESS;
 }
 #endif /* defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12) */

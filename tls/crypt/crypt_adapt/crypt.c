@@ -35,6 +35,12 @@ HITLS_CRYPT_DhMethod g_cryptDhMethod = {0};
 #endif
 
 #ifdef HITLS_TLS_PROTO_TLS13
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+HITLS_CRYPT_KdfMethod g_cryptKdfMethod = {0};
+#endif /* HITLS_TLS_FEATURE_PROVIDER */
+#endif
+
+#ifdef HITLS_TLS_PROTO_TLS13
 #define TLS13_MAX_LABEL_LEN 255
 #define TLS13_MAX_CTX_LEN 255
 
@@ -43,9 +49,7 @@ HITLS_CRYPT_DhMethod g_cryptDhMethod = {0};
 
 #define TLS13_MAX_HKDF_LABEL_LEN TLS13_HKDF_LABEL_LEN(TLS13_MAX_LABEL_LEN, TLS13_MAX_CTX_LEN)
 
-#ifndef HITLS_TLS_FEATURE_PROVIDER
-HITLS_CRYPT_KdfMethod g_cryptKdfMethod = {0};
-#endif /* HITLS_TLS_FEATURE_PROVIDER */
+
 typedef struct {
     uint16_t length;        /* Length of the derived key */
     uint8_t labelLen;       /* Label length */
@@ -841,23 +845,6 @@ int32_t SAL_CRYPT_CalcDhSharedSecret(HITLS_Lib_Ctx *libCtx, const char *attrName
 }
 
 #ifdef HITLS_TLS_PROTO_TLS13
-int32_t SAL_CRYPT_HkdfExtract(HITLS_Lib_Ctx *libCtx,
-    const char *attrName, HITLS_CRYPT_HkdfExtractInput *input, uint8_t *prk, uint32_t *prkLen)
-{
-#ifdef HITLS_TLS_FEATURE_PROVIDER
-    int32_t ret = HITLS_CRYPT_HkdfExtract(libCtx, attrName, input, prk, prkLen);
-#else
-    (void)libCtx;
-    (void)attrName;
-    if (g_cryptKdfMethod.hkdfExtract == NULL) {
-        return HITLS_CRYPT_ERR_HKDF_EXTRACT;
-    }
-    int32_t ret = g_cryptKdfMethod.hkdfExtract(input, prk, prkLen);
-#endif
-    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_HKDF_EXTRACT, ret, BINLOG_ID15114,
-        HITLS_CRYPT_ERR_HKDF_EXTRACT);
-}
-
 int32_t SAL_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx,
     const char *attrName, HITLS_CRYPT_HkdfExpandInput *input, uint8_t *okm, uint32_t okmLen)
 {
@@ -873,6 +860,25 @@ int32_t SAL_CRYPT_HkdfExpand(HITLS_Lib_Ctx *libCtx,
 #endif
     return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_HKDF_EXPAND, ret, BINLOG_ID15116,
         HITLS_CRYPT_ERR_HKDF_EXPAND);
+}
+#endif
+
+#ifdef HITLS_TLS_PROTO_TLS13
+int32_t SAL_CRYPT_HkdfExtract(HITLS_Lib_Ctx *libCtx,
+    const char *attrName, HITLS_CRYPT_HkdfExtractInput *input, uint8_t *prk, uint32_t *prkLen)
+{
+#ifdef HITLS_TLS_FEATURE_PROVIDER
+    int32_t ret = HITLS_CRYPT_HkdfExtract(libCtx, attrName, input, prk, prkLen);
+#else
+    (void)libCtx;
+    (void)attrName;
+    if (g_cryptKdfMethod.hkdfExtract == NULL) {
+        return HITLS_CRYPT_ERR_HKDF_EXTRACT;
+    }
+    int32_t ret = g_cryptKdfMethod.hkdfExtract(input, prk, prkLen);
+#endif
+    return CheckCallBackRetVal(HITLS_CRYPT_CALLBACK_HKDF_EXTRACT, ret, BINLOG_ID15114,
+        HITLS_CRYPT_ERR_HKDF_EXTRACT);
 }
 
 /*

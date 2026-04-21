@@ -1706,6 +1706,16 @@ int32_t HITLS_CFG_GetClientRenegotiateSupport(HITLS_Config *config, bool *isSupp
 
 /**
  * @ingroup hitls_config
+ * @brief   Get whether to abort handshake when server doesn't support SecRenegotiation
+ * @param   config   [IN] Config handle
+ * @param   isSupport  [OUT] Indicates whether to abort handshake when server doesn't support SecRenegotiation
+ * @retval  HITLS_SUCCESS, if successful.
+ * @retval  For other error codes, see hitls_error.h.
+ */
+int32_t HITLS_CFG_GetLegacyRenegotiateSupport(HITLS_Config *config, bool *isSupport);
+
+/**
+ * @ingroup hitls_config
  * @brief   Set enable support tls1.3 SM
  * @param   config   [IN] Config handle
  * @param   isOnlySupportSM  [OUT] Indicates whether to only support tls1.3 SM
