@@ -62,6 +62,9 @@ if [[ "$(uname)" == "Darwin" ]]; then
     export DYLD_LIBRARY_PATH="${LIB_PATHS}"
     export LD_LIBRARY_PATH="${LIB_PATHS}"  # Also set for compatibility
     echo "[INFO] Final DYLD_LIBRARY_PATH: ${DYLD_LIBRARY_PATH}"
+    # Enable Guard Malloc for memory debugging on macOS
+    export DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib
+    echo "[INFO] Guard Malloc enabled: DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib"
 else
     # Linux uses LD_LIBRARY_PATH
     if [ -n "${LD_LIBRARY_PATH}" ]; then
@@ -114,10 +117,10 @@ run_test() {
             if [ "${i}" = "test_suite_sdv_eal_provider_load" ]; then
                 # Set custom LD_LIBRARY_PATH for provider load test suite
                 echo "Running ${i} with LD_LIBRARY_PATH set to ../testdata/provider/path1"
-                env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" ./${i} NO_DETAIL
+                env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${i} NO_DETAIL
             else
                 # Run other test suites normally
-                ./${i} NO_DETAIL
+                env DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${i} NO_DETAIL
             fi
         done
     fi
@@ -127,7 +130,7 @@ run_test() {
         num=0
         for i in ${testcase_array[@]}
         do
-            ./${testsuite_array[num]} ${i}
+            env DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${testsuite_array[num]} ${i}
             let num+=1
         done
     fi
@@ -198,9 +201,9 @@ run_all() {
             {
                 if [ "${i}" = "test_suite_sdv_eal_provider_load" ]; then
                     echo "Running ${i} with LD_LIBRARY_PATH set to ../testdata/provider/path1"
-                    env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" ./${i} NO_DETAIL || (read -u8 && echo "1 $i" >&8)
+                    env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${i} NO_DETAIL || (read -u8 && echo "1 $i" >&8)
                 else
-                    ./${i} NO_DETAIL || (read -u8 && echo "1 $i" >&8)
+                    env DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${i} NO_DETAIL || (read -u8 && echo "1 $i" >&8)
                 fi
                 echo >&5
             } &
@@ -222,9 +225,9 @@ run_all() {
         do
             if [ "${i}" = "test_suite_sdv_eal_provider_load" ]; then
                 echo "Running ${i} with LD_LIBRARY_PATH set to ../testdata/provider/path1"
-                env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" ./${i} NO_DETAIL
+                env LD_LIBRARY_PATH="../testdata/provider/path1:${LD_LIBRARY_PATH}" DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${i} NO_DETAIL
             else
-                ./${i} NO_DETAIL
+                env DYLD_INSERT_LIBRARIES="${DYLD_INSERT_LIBRARIES}" ./${i} NO_DETAIL
             fi
         done
     fi
