@@ -20,15 +20,16 @@
 #include "crypt_eal_pkey.h"
 #include "benchmark.h"
 
-static int32_t SlhDsaSetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t paraId)
+static int32_t SlhDsaSetUp(void **ctx, const Operation *op, int32_t algId, int32_t paraId)
 {
-    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(ops->algId);
+    (void)op;
+    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(algId);
     if (pkeyCtx == NULL) {
         printf("Failed to create pkey context\n");
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    int32_t algId = paraId;
-    int32_t rc = CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&algId, sizeof(algId));
+    int32_t paraAlgId = paraId;
+    int32_t rc = CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&paraAlgId, sizeof(paraAlgId));
     if (rc != CRYPT_SUCCESS) {
         return rc;
     }
@@ -46,54 +47,50 @@ static void SlhDsaTearDown(void *ctx)
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 
-static int32_t SlhDsaKeyGen(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t SlhDsaKeyGen(void *ctx, const BenchExecOptions *opts)
 {
     int32_t paraId = opts->paraId;
     int32_t rc = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, (void *)&paraId, sizeof(paraId));
     if (rc != CRYPT_SUCCESS) {
         return rc;
     }
-    BENCH_TIMES_VA(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts->times, "%s keyGen", GetAlgName(paraId));
+    BENCH_RUN_VA(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts, "%s keyGen", GetAlgName(paraId));
     return rc;
 }
 
-static int32_t GetHashId(BenchCtx *bench, BenchOptions *opts)
+static int32_t GetHashId(const BenchExecOptions *opts)
 {
-    int32_t hashId = bench->ctxOps->hashId;
-    if (opts->hashId != -1) {
-        hashId = opts->hashId;
-    }
-    return hashId;
+    return opts->hashId;
 }
 
 static int32_t SlhDsaSignInner(void *ctx, int32_t hashId, int32_t len)
 {
     static uint8_t sign[51200]; // maximum len is 49856
     uint32_t signLen = sizeof(sign);
-    return CRYPT_EAL_PkeySign(ctx, hashId, g_plain, len, sign, &signLen);
+    return CRYPT_EAL_PkeySign(ctx, hashId, BENCH_PLAIN, len, sign, &signLen);
 }
 
-static int32_t SlhDsaSign(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t SlhDsaSign(void *ctx, const BenchExecOptions *opts)
 {
     int32_t rc;
-    int32_t hashId = GetHashId(bench, opts);
-    BENCH_TIMES_VA(SlhDsaSignInner(ctx, hashId, opts->len), rc, CRYPT_SUCCESS, opts->len, opts->times, "%s sign",
+    int32_t hashId = GetHashId(opts);
+    BENCH_RUN_VA(SlhDsaSignInner(ctx, hashId, opts->len), rc, CRYPT_SUCCESS, opts->len, opts, "%s sign",
                    GetAlgName(opts->paraId));
     return rc;
 }
 
-static int32_t SlhDsaVerify(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t SlhDsaVerify(void *ctx, const BenchExecOptions *opts)
 {
     static uint8_t sign[51200]; // maximum len is 49856
     uint32_t signLen = sizeof(sign);
-    int32_t hashId = GetHashId(bench, opts);
-    int32_t rc = CRYPT_EAL_PkeySign(ctx, hashId, g_plain, opts->len, sign, &signLen);
+    int32_t hashId = GetHashId(opts);
+    int32_t rc = CRYPT_EAL_PkeySign(ctx, hashId, BENCH_PLAIN, opts->len, sign, &signLen);
     if (rc != CRYPT_SUCCESS) {
         printf("Failed to sign\n");
         return rc;
     }
-    BENCH_TIMES_VA(CRYPT_EAL_PkeyVerify(ctx, hashId, g_plain, opts->len, sign, signLen), rc, CRYPT_SUCCESS, opts->len,
-                   opts->times, "%s verify", GetAlgName(opts->paraId));
+    BENCH_RUN_VA(CRYPT_EAL_PkeyVerify(ctx, hashId, BENCH_PLAIN, opts->len, sign, signLen), rc, CRYPT_SUCCESS,
+        opts->len, opts, "%s verify", GetAlgName(opts->paraId));
     return rc;
 }
 

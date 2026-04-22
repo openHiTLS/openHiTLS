@@ -60,13 +60,91 @@ static unsigned char g_enc_master_key[32] = {
 
 static unsigned char g_user_id[] = "BenchmarkUser";
 
+static int32_t Sm9SetEncryptCtx(CRYPT_EAL_PkeyCtx *ctx)
+{
+    BSL_Param params[4];
+    int32_t keyType = SM9_KEY_TYPE_ENC;
 
-static int32_t Sm9SetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t paraId)
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
+        g_enc_master_key, sizeof(g_enc_master_key));
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_USER_ID, BSL_PARAM_TYPE_OCTETS,
+        g_user_id, strlen((char *)g_user_id));
+    BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+        &keyType, sizeof(keyType));
+    params[3] = (BSL_Param)BSL_PARAM_END;
+    return CRYPT_EAL_PkeySetPubEx(ctx, params);
+}
+
+static int32_t Sm9SetDecryptCtx(CRYPT_EAL_PkeyCtx *ctx)
+{
+    int32_t ret;
+    BSL_Param params[3];
+    int32_t keyType = SM9_KEY_TYPE_ENC;
+
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
+        g_enc_master_key, sizeof(g_enc_master_key));
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+        &keyType, sizeof(keyType));
+    params[2] = (BSL_Param)BSL_PARAM_END;
+    ret = CRYPT_EAL_PkeySetPubEx(ctx, params);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_USER_ID, BSL_PARAM_TYPE_OCTETS,
+        g_user_id, strlen((char *)g_user_id));
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+        &keyType, sizeof(keyType));
+    params[2] = (BSL_Param)BSL_PARAM_END;
+    return CRYPT_EAL_PkeySetPrvEx(ctx, params);
+}
+
+static int32_t Sm9SetSignCtx(CRYPT_EAL_PkeyCtx *ctx)
+{
+    int32_t ret;
+    BSL_Param params[3];
+    int32_t keyType = SM9_KEY_TYPE_SIGN;
+
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
+        g_sig_master_key, sizeof(g_sig_master_key));
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+        &keyType, sizeof(keyType));
+    params[2] = (BSL_Param)BSL_PARAM_END;
+    ret = CRYPT_EAL_PkeySetPubEx(ctx, params);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_USER_ID, BSL_PARAM_TYPE_OCTETS,
+        g_user_id, strlen((char *)g_user_id));
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+        &keyType, sizeof(keyType));
+    params[2] = (BSL_Param)BSL_PARAM_END;
+    return CRYPT_EAL_PkeySetPrvEx(ctx, params);
+}
+
+static int32_t Sm9BuildCiphertext(uint8_t *ciphertext, uint32_t *cipherLen)
+{
+    int32_t ret;
+    CRYPT_EAL_PkeyCtx *encCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
+    if (encCtx == NULL) {
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+
+    ret = Sm9SetEncryptCtx(encCtx);
+    if (ret == CRYPT_SUCCESS) {
+        ret = CRYPT_EAL_PkeyEncrypt(encCtx, g_plaintext, sizeof(g_plaintext), ciphertext, cipherLen);
+    }
+
+    CRYPT_EAL_PkeyFreeCtx(encCtx);
+    return ret;
+}
+
+
+static int32_t Sm9SetUp(void **ctx, const Operation *op, int32_t algId, int32_t paraId)
 {
     (void)paraId;
     int32_t ret;
-    BSL_Param params[3];
-    int32_t keyType;
 
     // Allocate context structure
     Sm9Context *sm9Ctx = (Sm9Context *)malloc(sizeof(Sm9Context));
@@ -76,51 +154,28 @@ static int32_t Sm9SetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t 
     }
     memset(sm9Ctx, 0, sizeof(Sm9Context));
     // Create SM9 context
-    sm9Ctx->ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
+    sm9Ctx->ctx = CRYPT_EAL_PkeyNewCtx(algId);
     if (sm9Ctx->ctx == NULL) {
         printf("Failed to create SM9 pkey context\n");
         free(sm9Ctx);
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    // Determine key type based on operation
-    // For sign/verify: use signature master key
-    // For enc/dec: use encryption master key
-    if (ops->opsNum > 0) {
-        // Check if this is sign/verify (default to sign for now)
-        keyType = SM9_KEY_TYPE_SIGN;
-
-        // Set master key
-        BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
-                            g_sig_master_key, sizeof(g_sig_master_key));
-        BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
-                            &keyType, sizeof(int32_t));
-        params[2] = (BSL_Param)BSL_PARAM_END;
-
-        ret = CRYPT_EAL_PkeySetPubEx(sm9Ctx->ctx, params);
-        if (ret != CRYPT_SUCCESS) {
-            printf("Failed to set SM9 master key: %d\n", ret);
-            CRYPT_EAL_PkeyFreeCtx(sm9Ctx->ctx);
-            free(sm9Ctx);
-            return ret;
+    if ((op->id & ENC_ID) || (op->id & DEC_ID)) {
+        if (op->id & ENC_ID) {
+            ret = Sm9SetEncryptCtx(sm9Ctx->ctx);
+        } else {
+            ret = Sm9SetDecryptCtx(sm9Ctx->ctx);
         }
-
-        // Generate user key
-        BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_USER_ID, BSL_PARAM_TYPE_OCTETS,
-                            g_user_id, strlen((char*)g_user_id));
-        BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
-                            &keyType, sizeof(int32_t));
-        params[2] = (BSL_Param)BSL_PARAM_END;
-
-        ret = CRYPT_EAL_PkeySetPrvEx(sm9Ctx->ctx, params);
-        if (ret != CRYPT_SUCCESS) {
-            printf("Failed to set SM9 user key: %d\n", ret);
-            CRYPT_EAL_PkeyFreeCtx(sm9Ctx->ctx);
-            free(sm9Ctx);
-            return ret;
-        }
+    } else {
+        ret = Sm9SetSignCtx(sm9Ctx->ctx);
     }
-
+    if (ret != CRYPT_SUCCESS) {
+        printf("Failed to set SM9 context: %d\n", ret);
+        CRYPT_EAL_PkeyFreeCtx(sm9Ctx->ctx);
+        free(sm9Ctx);
+        return ret;
+    }
     *ctx = sm9Ctx;
     return CRYPT_SUCCESS;
 }
@@ -138,33 +193,32 @@ static void Sm9TearDown(void *ctx)
     free(sm9Ctx);
 }
 
-static int32_t Sm9KeyGen(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t Sm9KeyGen(void *ctx, const BenchExecOptions *opts)
 {
     // SM9 doesn't use traditional key generation like RSA/ECC
     // Keys are derived from master key + user ID
     // This operation is already done in SetUp
     (void)ctx;
-    (void)bench;
     (void)opts;
     return CRYPT_SUCCESS;
 }
 
-static int32_t Sm9Sign(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t Sm9Sign(void *ctx, const BenchExecOptions *opts)
 {
     Sm9Context *sm9Ctx = (Sm9Context *)ctx;
     int rc = CRYPT_SUCCESS;
 
     sm9Ctx->signLen = SM9_SIGNATURE_LEN;
-    BENCH_TIMES(
+    BENCH_RUN(
         CRYPT_EAL_PkeySign(sm9Ctx->ctx, CRYPT_MD_SM3, g_msg, sizeof(g_msg),
                           sm9Ctx->sign, &sm9Ctx->signLen),
-        rc, CRYPT_SUCCESS, (int32_t)sizeof(g_msg), opts->times, "sm9 sign"
+        rc, CRYPT_SUCCESS, (int32_t)sizeof(g_msg), opts, "sm9 sign"
     );
 
     return rc;
 }
 
-static int32_t Sm9Verify(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t Sm9Verify(void *ctx, const BenchExecOptions *opts)
 {
     Sm9Context *sm9Ctx = (Sm9Context *)ctx;
     int rc = CRYPT_SUCCESS;
@@ -178,115 +232,57 @@ static int32_t Sm9Verify(void *ctx, BenchCtx *bench, BenchOptions *opts)
         return rc;
     }
 
-    BENCH_TIMES(
+    BENCH_RUN(
         CRYPT_EAL_PkeyVerify(sm9Ctx->ctx, CRYPT_MD_SM3, g_msg, sizeof(g_msg),
                             sm9Ctx->sign, sm9Ctx->signLen),
-        rc, CRYPT_SUCCESS, (int32_t)sizeof(g_msg), opts->times, "sm9 verify"
+        rc, CRYPT_SUCCESS, (int32_t)sizeof(g_msg), opts, "sm9 verify"
     );
 
     return rc;
 }
 
-static int32_t Sm9Enc(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t Sm9Enc(void *ctx, const BenchExecOptions *opts)
 {
     Sm9Context *sm9Ctx = (Sm9Context *)ctx;
     int rc = CRYPT_SUCCESS;
 
-    // Need to reconfigure context for encryption
-    BSL_Param params[3];
-    int32_t keyType = SM9_KEY_TYPE_ENC;
-
-    // Set encryption master key
-    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
-                        g_enc_master_key, sizeof(g_enc_master_key));
-    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
-                        &keyType, sizeof(int32_t));
-    params[2] = (BSL_Param)BSL_PARAM_END;
-
-    rc = CRYPT_EAL_PkeySetPubEx(sm9Ctx->ctx, params);
-    if (rc != CRYPT_SUCCESS) {
-        return rc;
-    }
-
-    // Set user key for encryption
-    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_USER_ID, BSL_PARAM_TYPE_OCTETS,
-                        g_user_id, strlen((char*)g_user_id));
-    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
-                        &keyType, sizeof(int32_t));
-    params[2] = (BSL_Param)BSL_PARAM_END;
-
-    rc = CRYPT_EAL_PkeySetPrvEx(sm9Ctx->ctx, params);
-    if (rc != CRYPT_SUCCESS) {
-        return rc;
-    }
-
     sm9Ctx->cipherLen = sizeof(sm9Ctx->ciphertext);
-    BENCH_TIMES(
+    BENCH_RUN(
         CRYPT_EAL_PkeyEncrypt(sm9Ctx->ctx, g_plaintext, sizeof(g_plaintext),
                              sm9Ctx->ciphertext, &sm9Ctx->cipherLen),
-        rc, CRYPT_SUCCESS, (int32_t)sizeof(g_plaintext), opts->times, "sm9 encrypt"
+        rc, CRYPT_SUCCESS, (int32_t)sizeof(g_plaintext), opts, "sm9 encrypt"
     );
 
     return rc;
 }
 
-static int32_t Sm9Dec(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t Sm9Dec(void *ctx, const BenchExecOptions *opts)
 {
     Sm9Context *sm9Ctx = (Sm9Context *)ctx;
     int rc = CRYPT_SUCCESS;
     uint8_t decrypted[256];
     uint32_t decryptLen = sizeof(decrypted);
-
-    // Need to reconfigure context for encryption (same as Enc)
-    BSL_Param params[3];
-    int32_t keyType = SM9_KEY_TYPE_ENC;
-
-    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
-                        g_enc_master_key, sizeof(g_enc_master_key));
-    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
-                        &keyType, sizeof(int32_t));
-    params[2] = (BSL_Param)BSL_PARAM_END;
-
-    rc = CRYPT_EAL_PkeySetPubEx(sm9Ctx->ctx, params);
-    if (rc != CRYPT_SUCCESS) {
-        return rc;
-    }
-
-    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_USER_ID, BSL_PARAM_TYPE_OCTETS,
-                        g_user_id, strlen((char*)g_user_id));
-    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
-                        &keyType, sizeof(int32_t));
-    params[2] = (BSL_Param)BSL_PARAM_END;
-
-    rc = CRYPT_EAL_PkeySetPrvEx(sm9Ctx->ctx, params);
-    if (rc != CRYPT_SUCCESS) {
-        return rc;
-    }
-
-    // First encrypt to get ciphertext
     sm9Ctx->cipherLen = sizeof(sm9Ctx->ciphertext);
-    rc = CRYPT_EAL_PkeyEncrypt(sm9Ctx->ctx, g_plaintext, sizeof(g_plaintext),
-                               sm9Ctx->ciphertext, &sm9Ctx->cipherLen);
+    rc = Sm9BuildCiphertext(sm9Ctx->ciphertext, &sm9Ctx->cipherLen);
     if (rc != CRYPT_SUCCESS) {
         printf("Failed to generate ciphertext for decrypt benchmark: %d\n", rc);
         return rc;
     }
 
-    BENCH_TIMES(
+    BENCH_RUN(
         CRYPT_EAL_PkeyDecrypt(sm9Ctx->ctx, sm9Ctx->ciphertext, sm9Ctx->cipherLen,
                              decrypted, &decryptLen),
-        rc, CRYPT_SUCCESS, (int32_t)sizeof(g_plaintext), opts->times, "sm9 decrypt"
+        rc, CRYPT_SUCCESS, (int32_t)sizeof(g_plaintext), opts, "sm9 decrypt"
     );
 
     return rc;
 }
 
-static int32_t Sm9KeyDerive(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t Sm9KeyDerive(void *ctx, const BenchExecOptions *opts)
 {
     // SM9 key exchange/derivation would require two contexts
     // For now, return success (can be implemented later if needed)
     (void)ctx;
-    (void)bench;
     (void)opts;
     return CRYPT_SUCCESS;
 }

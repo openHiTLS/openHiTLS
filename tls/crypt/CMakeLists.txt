@@ -12,10 +12,17 @@
 # See the Mulan PSL v2 for more details.
 
 
-file(GLOB _crypt_sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypt_adapt/*.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/crypt_self/*.c
+set(_crypt_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypt_adapt/crypt.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypt_self/crypt_init.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypt_self/hitls_crypt.c
 )
+
+if(HITLS_TLS_CALLBACK_CRYPT)
+    list(APPEND _crypt_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/crypt_self/crypt_default.c
+    )
+endif()
 
 add_library(_hitls_tls_crypt OBJECT ${_crypt_sources})
 

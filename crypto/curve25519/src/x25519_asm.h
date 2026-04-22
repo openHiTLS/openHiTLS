@@ -62,6 +62,10 @@ void Fp51Square(Fp51 *out, const Fp51 *f);
  */
 void Fp51MulScalar(Fp51 *out, const Fp51 *in);
 
+#if defined(HITLS_CRYPTO_X25519_ARMV8_NEON_INTERLEAVE) && !defined(HITLS_BIG_ENDIAN)
+void X25519ScalarMultiPointNeonInterleave(uint8_t out[32], const uint8_t scalar[32], const uint8_t point[32]);
+#endif
+
 #ifdef HITLS_CRYPTO_X25519_X8664
 
 typedef uint64_t Fp64[4];

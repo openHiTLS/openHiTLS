@@ -20,11 +20,11 @@
 #include "crypt_eal_mac.h"
 #include "benchmark.h"
 
-static int32_t MacSetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t paraId)
+static int32_t MacSetUp(void **ctx, const Operation *op, int32_t algId, int32_t paraId)
 {
     (void)ctx;
-    (void)bench;
-    (void)ops;
+    (void)op;
+    (void)algId;
     (void)paraId;
     return CRYPT_SUCCESS;
 }
@@ -44,10 +44,9 @@ static int32_t DoMacCtrl(CRYPT_EAL_MacCtx *mac, int32_t paraId)
     return CRYPT_SUCCESS;
 }
 
-static int32_t DoMac(void *ctx, BenchCtx *bench, BenchOptions *opts, uint32_t keyLen, uint32_t digestLen)
+static int32_t DoMac(void *ctx, const BenchExecOptions *opts, uint32_t keyLen, uint32_t digestLen)
 {
     (void)ctx;
-    (void)bench;
 
     int32_t rc = CRYPT_SUCCESS;
     int32_t paraId = opts->paraId;
@@ -57,9 +56,9 @@ static int32_t DoMac(void *ctx, BenchCtx *bench, BenchOptions *opts, uint32_t ke
         return CRYPT_ERR_ALGID;
     }
 
-    if ((rc = CRYPT_EAL_MacInit(mac, g_key, keyLen)) != CRYPT_SUCCESS ||
+    if ((rc = CRYPT_EAL_MacInit(mac, BENCH_KEY, keyLen)) != CRYPT_SUCCESS ||
         (rc = DoMacCtrl(mac, paraId)) != CRYPT_SUCCESS ||
-        (rc = CRYPT_EAL_MacUpdate(mac, g_plain, opts->len)) != CRYPT_SUCCESS ||
+        (rc = CRYPT_EAL_MacUpdate(mac, BENCH_PLAIN, opts->len)) != CRYPT_SUCCESS ||
         (rc = CRYPT_EAL_MacFinal(mac, digest, &digestLen)) != CRYPT_SUCCESS) {
         printf("do mac init failed\n");
         goto ERR;
@@ -70,7 +69,7 @@ ERR:
     return rc;
 }
 
-static int32_t MacOneShot(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t MacOneShot(void *ctx, const BenchExecOptions *opts)
 {
     int rc;
     int32_t paraId = opts->paraId;
@@ -86,7 +85,7 @@ static int32_t MacOneShot(void *ctx, BenchCtx *bench, BenchOptions *opts)
     if (paraId == CRYPT_MAC_GMAC_AES128 || paraId == CRYPT_MAC_GMAC_AES192 || paraId == CRYPT_MAC_GMAC_AES256) {
         digestLen = 16;
     }
-    BENCH_TIMES_VA(DoMac(ctx, bench, opts, keyLen, digestLen), rc, CRYPT_SUCCESS, opts->len, opts->times, "%s mac",
+    BENCH_RUN_VA(DoMac(ctx, opts, keyLen, digestLen), rc, CRYPT_SUCCESS, opts->len, opts, "%s mac",
                    macName);
     return rc;
 }

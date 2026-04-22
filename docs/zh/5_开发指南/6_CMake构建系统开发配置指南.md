@@ -21,7 +21,7 @@ openHiTLS 的 CMake 文件分为三个层次，各层职责明确：
 ├── cmake/hitls_compile_options.cmake        ← 全局编译／链接选项默认值（开发者通常不需要修改）
 ├── cmake/hitls_build_targets.cmake          ← 最终库目标的组装（bundle / split 模式，开发者通常不需要修改）
 ├── cmake/hitls_collect_feature_macros.cmake ← 收集编译时的宏列表（开发者通常不需要修改）
-├── cmake/hitls_load_preset.cmake            ← 预设加载（full / iso19790 等，开发者通常不需要修改）
+├── cmake/hitls_load_preset.cmake            ← profile 加载（full / iso19790 / none，开发者通常不需要修改）
 └── cmake/helpers/                           ← 内部辅助函数（开发者通常不需要修改）
     ├── hitls_target_helpers.cmake           ← hitls_register_objects() 注册对象库
     ├── hitls_lib_helpers.cmake              ← hitls_create_shared/static_library() 等

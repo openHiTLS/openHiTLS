@@ -34,6 +34,7 @@ include_guard(GLOBAL)
 
 option(HITLS_BUNDLE_LIB             "Bundle all libraries into single library"    OFF)
 option(HITLS_BUILD_EXE              "Build executable"                            OFF)
+option(HITLS_BUILD_BENCHMARK        "Build benchmark executable"                  OFF)
 option(HITLS_BUILD_GEN_INFO         "Generate build information files"            OFF)
 option(HITLS_BUILD_STATIC           "Build static libraries"                      ON)
 option(HITLS_BUILD_SHARED           "Build shared libraries"                      ON)
@@ -41,8 +42,8 @@ option(HITLS_BUILD_SHARED           "Build shared libraries"                    
 # Ignore feature dependencies check
 option(HITLS_SKIP_CONFIG_CHECK "Skip configuration checks for unsatisfied dependencies" OFF)
 
-# preset profile (full, iso19790)
-set(HITLS_BUILD_PROFILE       "full" CACHE STRING "Build profile (full, iso19790)")
+# preset profile (full, iso19790, none)
+set(HITLS_BUILD_PROFILE       "full" CACHE STRING "Build profile (full, iso19790, none)")
 
 # Compile/link options (Will be initialized in hitls_compile_options.cmake)
 set(HITLS_COMPILE_OPTIONS     "" CACHE STRING "Compile options applied to all HiTLS targets (via add_compile_options).")
@@ -398,6 +399,7 @@ option(HITLS_CRYPTO_CURVE_SM2_ARMV7                            "Curve SM2 ARMv7"
 option(HITLS_CRYPTO_CURVE_SM2_X8664                            "Curve SM2 x86_64" OFF)
 option(HITLS_CRYPTO_X25519_ASM                                 "X25519 ASM" OFF)
 option(HITLS_CRYPTO_X25519_ARMV8                               "X25519 ARMv8" OFF)
+option(HITLS_CRYPTO_X25519_ARMV8_NEON_INTERLEAVE               "X25519 ARMv8 NEON interleave" OFF)
 option(HITLS_CRYPTO_X25519_X8664                               "X25519 x86_64" OFF)
 ## MLKEM
 option(HITLS_CRYPTO_MLKEM_ASM                                  "MLKEM ASM" OFF)

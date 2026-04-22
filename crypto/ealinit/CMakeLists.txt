@@ -12,9 +12,28 @@
 # See the Mulan PSL v2 for more details.
 
 
-set(_ealinit_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(_ealinit_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/cpucap.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_asmcap.c
+)
 
-file(GLOB _ealinit_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c)
+if(HITLS_CRYPTO_ASM_CHECK AND (
+    HITLS_CRYPTO_AES_ASM OR
+    HITLS_CRYPTO_CHACHA20_ASM OR
+    HITLS_CRYPTO_CHACHA20POLY1305_ASM OR
+    HITLS_CRYPTO_SM4_ASM OR
+    HITLS_CRYPTO_GHASH_ASM OR
+    HITLS_CRYPTO_MD5_ASM OR
+    HITLS_CRYPTO_SHA1_ASM OR
+    HITLS_CRYPTO_SHA2_ASM OR
+    HITLS_CRYPTO_SM3_ASM OR
+    HITLS_CRYPTO_BN_ASM OR
+    HITLS_CRYPTO_CURVE_NISTP256_ASM
+))
+    list(APPEND _ealinit_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/asmcap_alg_asm.c
+    )
+endif()
 
 add_library(_hitls_crypto_ealinit OBJECT ${_ealinit_sources})
 

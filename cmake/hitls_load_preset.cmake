@@ -17,25 +17,13 @@ include_guard(GLOBAL)
 # Save user -D flags before preset loading (to restore after)
 get_cmake_property(_all_cache_vars CACHE_VARIABLES)
 
-# If HITLS_BUILD_PROFILE is not set, check if any HITLS_* options have been set by the user.
-# If any HITLS_* option is set, we consider that a preset has been loaded 
-#    (either via -C or external configuration), and we will not load the default profile.
-if(NOT HITLS_BUILD_PROFILE)
-    foreach(_var ${_all_cache_vars})
-        if(_var MATCHES "^HITLS_(CRYPTO|BSL|TLS|PKI|AUTH)" AND NOT _var MATCHES "_OBJECTS$")
-            if(DEFINED ${_var} AND ${_var})
-                set(HITLS_BUILD_PROFILE "none" CACHE STRING "Build profile" FORCE)
-                set(HITLS_PRESET_LOADED ON CACHE BOOL "" FORCE)
-            endif()
-        endif()
-    endforeach()
-endif()
- 
 # Check if a preset has already been loaded (e.g., via -C option)
 # If HITLS_PRESET_LOADED is already set by a preset file (via -C), skip default profile loading
 if(NOT HITLS_PRESET_LOADED)
-    # No preset has been loaded yet, use the default build profile
-    set(HITLS_BUILD_PROFILE "full" CACHE STRING "Build profile")
+    # No preset has been loaded yet, use the default build profile unless the user selected one explicitly.
+    if(NOT HITLS_BUILD_PROFILE)
+        set(HITLS_BUILD_PROFILE "full" CACHE STRING "Build profile")
+    endif()
     set(HITLS_PRESET_LOADED ON CACHE BOOL "" FORCE)
 
     set(_user_overrides "")
@@ -48,13 +36,17 @@ if(NOT HITLS_PRESET_LOADED)
         endif()
     endforeach()
 
-    set(_profile_file "${CMAKE_CURRENT_LIST_DIR}/presets/${HITLS_BUILD_PROFILE}.cmake")
-    if(EXISTS "${_profile_file}")
-        message(STATUS "Loading default build profile: ${HITLS_BUILD_PROFILE}")
-        include("${_profile_file}")
+    if(HITLS_BUILD_PROFILE STREQUAL "none")
+        message(STATUS "Using manual build profile: none")
     else()
-        message(FATAL_ERROR "Unknown build profile: ${HITLS_BUILD_PROFILE}\n"
-            "Available profiles: full, fips, minimal, standard, crypto-only, tls-only, embedded")
+        set(_profile_file "${CMAKE_CURRENT_LIST_DIR}/presets/${HITLS_BUILD_PROFILE}.cmake")
+        if(EXISTS "${_profile_file}")
+            message(STATUS "Loading default build profile: ${HITLS_BUILD_PROFILE}")
+            include("${_profile_file}")
+        else()
+            message(FATAL_ERROR "Unknown build profile: ${HITLS_BUILD_PROFILE}\n"
+                "Available profiles: full, iso19790, none")
+        endif()
     endif()
 
     # Restore user -D flags (priority over preset)

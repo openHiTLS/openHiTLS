@@ -8,12 +8,13 @@ openHiTLS uses CMake `option()` variables to control which features to build. Yo
 
 ### Presets
 
-Use `-DHITLS_BUILD_PROFILE=<preset>` to load a built-in preset:
+Use `-DHITLS_BUILD_PROFILE=<profile>` to select a build profile:
 
-| Preset | Description |
+| Profile | Description |
 |---|---|
 | `full` | All features enabled |
 | `iso19790` | Cryptographic algorithm library compliant with ISO/IEC 19790 |
+| `none` | Manual feature selection; no built-in preset file is loaded |
 
 You can also load a preset file directly via CMake's `-C` parameter:
 
@@ -23,9 +24,11 @@ cmake .. -C ../cmake/presets/full.cmake
 
 > **Note:** A custom preset file loaded via `-C` must contain `set(HITLS_PRESET_LOADED ON CACHE BOOL "" FORCE)`.
 
+`HITLS_BUILD_PROFILE` defaults to `full`. Use `none` when the configuration should be defined by explicit `-D` flags or a custom `-C` file. Command-line `-D` flags override the selected built-in profile after the profile is loaded.
+
 ### Component and Algorithm Flags
 
-After selecting a preset, use `-D` flags to enable or disable specific components and algorithms:
+After selecting a profile, use `-D` flags to enable or disable specific components and algorithms:
 
 - **Component-level**: `-DHITLS_CRYPTO=ON/OFF`, `-DHITLS_TLS=ON/OFF`, `-DHITLS_PKI=ON/OFF`, `-DHITLS_BSL=ON/OFF`
 - **Algorithm-level**: `-DHITLS_CRYPTO_<ALGO>=ON/OFF` (e.g., `-DHITLS_CRYPTO_AES=ON`, `-DHITLS_CRYPTO_SHA256=ON`)

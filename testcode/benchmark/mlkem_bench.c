@@ -36,10 +36,10 @@ static const char *GetParaName(int32_t paraId)
     return "";
 }
 
-static int32_t MlkemSetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t paraId)
+static int32_t MlkemSetUp(void **ctx, const Operation *op, int32_t algId, int32_t paraId)
 {
-    (void)paraId;
-    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(ops->algId);
+    (void)op;
+    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(algId);
     if (pkeyCtx == NULL) {
         printf("Failed to create pkey context\n");
         return CRYPT_MEM_ALLOC_FAIL;
@@ -63,14 +63,14 @@ static void MlkemTearDown(void *ctx)
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 
-static int32_t MlkemKeyGen(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t MlkemKeyGen(void *ctx, const BenchExecOptions *opts)
 {
     int rc = CRYPT_SUCCESS;
-    BENCH_TIMES_VA(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts->times, "%s keyGen", GetParaName(opts->paraId));
+    BENCH_RUN_VA(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts, "%s keyGen", GetParaName(opts->paraId));
     return rc;
 }
 
-static int32_t MlkemEncaps(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t MlkemEncaps(void *ctx, const BenchExecOptions *opts)
 {
     int rc;
     uint8_t ciphertext[2048]; // ML-KEM can have larger ciphertexts
@@ -78,12 +78,12 @@ static int32_t MlkemEncaps(void *ctx, BenchCtx *bench, BenchOptions *opts)
     uint8_t sharedKey[32];
     uint32_t sharedKeyLen = sizeof(sharedKey);
 
-    BENCH_TIMES_VA(CRYPT_EAL_PkeyEncaps(ctx, ciphertext, &ciphertextLen, sharedKey, &sharedKeyLen), rc, CRYPT_SUCCESS,
-                   -1, opts->times, "%s encaps", GetParaName(opts->paraId));
+    BENCH_RUN_VA(CRYPT_EAL_PkeyEncaps(ctx, ciphertext, &ciphertextLen, sharedKey, &sharedKeyLen), rc, CRYPT_SUCCESS,
+                   -1, opts, "%s encaps", GetParaName(opts->paraId));
     return rc;
 }
 
-static int32_t MlkemDecaps(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t MlkemDecaps(void *ctx, const BenchExecOptions *opts)
 {
     int rc;
     uint8_t ciphertext[2048]; // ML-KEM can have larger ciphertexts
@@ -98,8 +98,8 @@ static int32_t MlkemDecaps(void *ctx, BenchCtx *bench, BenchOptions *opts)
         return rc;
     }
 
-    BENCH_TIMES_VA(CRYPT_EAL_PkeyDecaps(ctx, ciphertext, ciphertextLen, sharedKey, &sharedKeyLen), rc, CRYPT_SUCCESS,
-                   -1, opts->times, "%s decaps", GetParaName(opts->paraId));
+    BENCH_RUN_VA(CRYPT_EAL_PkeyDecaps(ctx, ciphertext, ciphertextLen, sharedKey, &sharedKeyLen), rc, CRYPT_SUCCESS,
+                   -1, opts, "%s decaps", GetParaName(opts->paraId));
     return rc;
 }
 

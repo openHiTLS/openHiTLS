@@ -94,6 +94,11 @@ cmake ..
 cmake .. -DHITLS_BUILD_PROFILE=full
 ```
 
+* 手动选择特性：
+```bash
+cmake .. -DHITLS_BUILD_PROFILE=none -DHITLS_CRYPTO_SHA256=ON
+```
+
 * 启用汇编优化（自动检测平台类型）：
 ```bash
 cmake .. -DHITLS_ASM=ON

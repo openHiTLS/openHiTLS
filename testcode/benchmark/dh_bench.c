@@ -21,10 +21,11 @@
 #include "crypt_eal_md.h"
 #include "benchmark.h"
 
-static int32_t DhSetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t paraId)
+static int32_t DhSetUp(void **ctx, const Operation *op, int32_t algId, int32_t paraId)
 {
+    (void)op;
     int32_t ret;
-    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(ops->algId);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(algId);
     if (pkeyCtx == NULL) {
         printf("Failed to create pkey context\n");
         return CRYPT_MEM_ALLOC_FAIL;
@@ -49,17 +50,17 @@ static void DhTearDown(void *ctx)
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 
-static int32_t DhKeyGen(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t DhKeyGen(void *ctx, const BenchExecOptions *opts)
 {
     int rc = CRYPT_SUCCESS;
     int32_t paraId = opts->paraId;
     const char *group = GetAlgName(paraId);
 
-    BENCH_TIMES_VA(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts->times, "%s dh keyGen", group);
+    BENCH_RUN_VA(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts, "%s dh keyGen", group);
     return rc;
 }
 
-static int32_t DhKeyDerive(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t DhKeyDerive(void *ctx, const BenchExecOptions *opts)
 {
     int rc;
     int32_t paraId = opts->paraId;
@@ -89,8 +90,8 @@ static int32_t DhKeyDerive(void *ctx, BenchCtx *bench, BenchOptions *opts)
     uint8_t sharedKey[4096]; // DH can have larger key sizes
     uint32_t sharedKeyLen = sizeof(sharedKey);
 
-    BENCH_TIMES_VA(CRYPT_EAL_PkeyComputeShareKey(ctx, peerCtx, sharedKey, &sharedKeyLen), rc, CRYPT_SUCCESS, -1,
-                   opts->times, "%s dh keyDervie", group);
+    BENCH_RUN_VA(CRYPT_EAL_PkeyComputeShareKey(ctx, peerCtx, sharedKey, &sharedKeyLen), rc, CRYPT_SUCCESS, -1,
+        opts, "%s dh keyDervie", group);
 
     CRYPT_EAL_PkeyFreeCtx(peerCtx);
     return rc;

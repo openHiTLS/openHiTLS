@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_HASH
 
+#include <limits.h>
 #include <string.h>
 #include "bsl_sal.h"
 #include "list_base.h"
@@ -52,11 +53,10 @@ typedef struct BSL_HASH_TagNode BSL_HASH_Node;
 #define HASH_HC3 0xC2B2AE35
 #define HASH_HC4 5
 
-#define BSL_CHAR_BIT 8
 #define CHAR_FOR_PER_LOOP 4
 #define HASH_V_ROTATE 15
 #define HASH_H_ROTATE 13
-#define SYS_BUS_WIDTH sizeof(uint32_t)
+#define HASH_WORD_BITS (sizeof(uint32_t) * CHAR_BIT)
 #define HASH_SEED 0x3B9ACA07 /* large prime 1000000007. The seed can be random or specified. */
 
 /* Forward declarations for linear hash functions */
@@ -77,7 +77,7 @@ enum BSL_CstlShiftBit { SHIFT8 = 8, SHIFT13 = 13, SHIFT16 = 16, SHIFT24 = 24 };
 
 static uint32_t BSL_HASH_Rotate(uint32_t v, uint32_t offset)
 {
-    return ((v << offset) | (v >> (SYS_BUS_WIDTH * BSL_CHAR_BIT - offset)));
+    return ((v << offset) | (v >> (HASH_WORD_BITS - offset)));
 }
 
 static uint32_t BSL_HASH_MixV(uint32_t v)

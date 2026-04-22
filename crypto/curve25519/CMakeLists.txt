@@ -28,6 +28,11 @@ elseif(HITLS_CRYPTO_X25519_ARMV8)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/asm_curve25519_ops.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/x25519_armv8.S
     )
+    if(HITLS_CRYPTO_X25519_ARMV8_NEON_INTERLEAVE AND NOT HITLS_BIG_ENDIAN)
+        list(APPEND _curve25519_sources
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/asm/x25519_armv8_neon_interleave.S
+        )
+    endif()
 else()
     list(APPEND _curve25519_sources
         ${CMAKE_CURRENT_SOURCE_DIR}/src/noasm_curve25519_fp51_ops.c

@@ -221,6 +221,8 @@
             "SDV_CRYPTO_CURVE25519_KEY_GEN_API_TC002",
             "SDV_CRYPTO_X25519_EXCH_FUNC_TC001",
             "SDV_CRYPTO_X25519_EXCH_FUNC_TC002",
+            "SDV_CRYPTO_X25519_EXCH_FUNC_TC003",
+            "SDV_CRYPTO_X25519_ITER_FUNC_TC001",
             "SDV_CRYPTO_ED25519_SIGN_VERIFY_FUNC_TC001"
         ],
         "test_suite_sdv_eal_dh": [

@@ -21,10 +21,11 @@
 #include "crypt_eal_md.h"
 #include "benchmark.h"
 
-static int32_t EcdsaSetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t paraId)
+static int32_t EcdsaSetUp(void **ctx, const Operation *op, int32_t algId, int32_t paraId)
 {
+    (void)op;
     int32_t ret;
-    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(ops->algId);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(algId);
     if (pkeyCtx == NULL) {
         printf("Failed to create pkey context\n");
         return CRYPT_MEM_ALLOC_FAIL;
@@ -49,69 +50,65 @@ static void EcdsaTearDown(void *ctx)
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 
-static int32_t EcdsaKeyGen(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t EcdsaKeyGen(void *ctx, const BenchExecOptions *opts)
 {
     int rc = CRYPT_SUCCESS;
     int32_t paraId = opts->paraId;
     const char *curve = GetAlgName(paraId);
 
-    BENCH_TIMES_VA(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts->times, "%s keyGen", curve);
+    BENCH_RUN_VA(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts, "%s keyGen", curve);
     return rc;
 }
 
-static int32_t GetHashId(BenchCtx *bench, BenchOptions *opts)
+static int32_t GetHashId(const BenchExecOptions *opts)
 {
-    int32_t hashId = bench->ctxOps->hashId;
-    if (opts->hashId != -1) {
-        hashId = opts->hashId;
-    }
-    return hashId;
+    return opts->hashId;
 }
 
 static int32_t EcdsaSignInner(void *ctx, int32_t hashId, int32_t len)
 {
     uint8_t signature[256];
     uint32_t signatureLen = sizeof(signature);
-    return CRYPT_EAL_PkeySign(ctx, hashId, g_plain, len, signature, &signatureLen);
+    return CRYPT_EAL_PkeySign(ctx, hashId, BENCH_PLAIN, len, signature, &signatureLen);
 }
 
-static int32_t EcdsaSign(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t EcdsaSign(void *ctx, const BenchExecOptions *opts)
 {
     int rc;
     int32_t paraId = opts->paraId;
     const char *curve = GetAlgName(paraId);
-    int32_t hashId = GetHashId(bench, opts);
+    int32_t hashId = GetHashId(opts);
     if (hashId == -1) {
         return -1;
     }
     const char *mdName = GetAlgName(hashId);
 
-    BENCH_TIMES_VA(EcdsaSignInner(ctx, hashId, opts->len), rc, CRYPT_SUCCESS, -1, opts->times, "%s-%s sign", curve,
+    BENCH_RUN_VA(EcdsaSignInner(ctx, hashId, opts->len), rc, CRYPT_SUCCESS, -1, opts, "%s-%s sign", curve,
                    mdName);
     return rc;
 }
 
-static int32_t EcdsaVerify(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t EcdsaVerify(void *ctx, const BenchExecOptions *opts)
 {
     int rc;
     int32_t paraId = opts->paraId;
     const char *curve = GetAlgName(paraId);
-    int32_t hashId = GetHashId(bench, opts);
+    int32_t hashId = GetHashId(opts);
     if (hashId == -1) {
         return -1;
     }
 
     uint8_t signature[256];
     uint32_t signatureLen = sizeof(signature);
-    rc = CRYPT_EAL_PkeySign(ctx, hashId, g_plain, opts->len, signature, &signatureLen);
+    rc = CRYPT_EAL_PkeySign(ctx, hashId, BENCH_PLAIN, opts->len, signature, &signatureLen);
     if (rc != CRYPT_SUCCESS) {
         printf("Failed to sign\n");
         return rc;
     }
     const char *mdName = GetAlgName(hashId);
 
-    BENCH_TIMES_VA(CRYPT_EAL_PkeyVerify(ctx, hashId, g_plain, opts->len, signature, signatureLen), rc, CRYPT_SUCCESS,
-                   -1, opts->times, "%s-%s verify", curve, mdName);
+    BENCH_RUN_VA(CRYPT_EAL_PkeyVerify(ctx, hashId, BENCH_PLAIN, opts->len, signature, signatureLen), rc, CRYPT_SUCCESS,
+                   -1, opts, "%s-%s verify", curve, mdName);
     return rc;
 }
 

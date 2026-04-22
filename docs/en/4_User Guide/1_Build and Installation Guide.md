@@ -85,7 +85,7 @@ Common CMake parameters are as follows:
 
 | **CMake Parameter** | **Description** | **Example** |
 | ------------- | ------------ | -------- |
-| `HITLS_BUILD_PROFILE` | Use a preset configuration. Options: `full`, `iso19790` | `cmake .. -DHITLS_BUILD_PROFILE=full` |
+| `HITLS_BUILD_PROFILE` | Use a build profile. Options: `full`, `iso19790`, `none`. The `none` profile skips built-in preset loading and uses explicitly supplied feature flags. | `cmake .. -DHITLS_BUILD_PROFILE=full` |
 | `HITLS_BSL` / `HITLS_CRYPTO` / `HITLS_TLS` / `HITLS_PKI` / `HITLS_AUTH` | Enable or disable the corresponding component (ON/OFF). | `cmake .. -DHITLS_TLS=OFF` |
 | `HITLS_CRYPTO_<ALGO>` | Enable or disable a specific algorithm feature. Refer to [Feature Description](./4_Configuration%20guide.md#1-Feature-Description). | `cmake .. -DHITLS_CRYPTO_SHA256=ON` |
 | `HITLS_BUILD_STATIC` | Build static libraries (ON by default). | `cmake .. -DHITLS_BUILD_STATIC=ON` |
@@ -114,7 +114,10 @@ cmake ..
 # Full build using preset
 cmake .. -DHITLS_BUILD_PROFILE=full
 
-# Enable a specific algorithm feature (without preset)
+# Manual feature selection without loading a built-in preset
+cmake .. -DHITLS_BUILD_PROFILE=none -DHITLS_CRYPTO_SHA256=ON
+
+# Enable a specific algorithm feature while using the default full profile
 cmake .. -DHITLS_CRYPTO_SHA256=ON
 
 # Disable a specific algorithm feature

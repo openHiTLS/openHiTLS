@@ -261,7 +261,7 @@ void Fp51ScalarMultiPoint(uint8_t out[32], const uint8_t scalar[32], const uint8
         kTemp = (k[(uint32_t)t >> 3] >> ((uint32_t)t & 7)) & 1;           /* kTemp = (k >> t) & 1 */
         swap ^= kTemp;                                /* swap ^= kTemp */
         CURVE25519_FP51_CSWAP(swap, x2.data, x3.data);  /* (x_2, x_3) = cswap(swap, x_2, x_3) */
-        
+
         CURVE25519_FP51_CSWAP(swap, z2.data, z3.data);  /* (z_2, z_3) = cswap(swap, z_2, z_3) */
         swap = kTemp;                                 /* swap = kTemp */
         CURVE25519_FP51_SUB(t1.data, x3.data, z3.data);                /* x3 = D */
@@ -477,6 +477,10 @@ void ScalarMultiPoint(uint8_t out[32], const uint8_t scalar[32], const uint8_t p
         Fp64ScalarMultiPoint(out, scalar, point);
         return;
     }
+#endif
+#if defined (__aarch64__) && defined (HITLS_CRYPTO_X25519_ARMV8_NEON_INTERLEAVE) && !defined(HITLS_BIG_ENDIAN)
+    X25519ScalarMultiPointNeonInterleave(out, scalar, point);
+    return;
 #endif
     Fp51ScalarMultiPoint(out, scalar, point);
     return;

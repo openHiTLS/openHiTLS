@@ -189,7 +189,7 @@ show_macro()
 
 build_args_to_cmake_options()
 {
-    local options=""
+    local options="-DHITLS_BUILD_PROFILE=none"
 
     # asm type
     if [ "$ASM_TYPE" != "" ]; then

@@ -36,10 +36,11 @@ const char *GetParaName(int32_t paraId)
     return "";
 }
 
-static int32_t MldsaSetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t paraId)
+static int32_t MldsaSetUp(void **ctx, const Operation *op, int32_t algId, int32_t paraId)
 {
+    (void)op;
     (void)paraId;
-    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(ops->algId);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(algId);
     if (pkeyCtx == NULL) {
         printf("Failed to create pkey context\n");
         return CRYPT_MEM_ALLOC_FAIL;
@@ -63,50 +64,46 @@ static void MldsaTearDown(void *ctx)
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 
-static int32_t MldsaKeyGen(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t MldsaKeyGen(void *ctx, const BenchExecOptions *opts)
 {
     int rc = CRYPT_SUCCESS;
-    BENCH_TIMES_VA(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts->times, "%s keyGen", GetParaName(opts->paraId));
+    BENCH_RUN_VA(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts, "%s keyGen", GetParaName(opts->paraId));
     return rc;
 }
 
-static int32_t GetHashId(BenchCtx *bench, BenchOptions *opts)
+static int32_t GetHashId(const BenchExecOptions *opts)
 {
-    int32_t hashId = bench->ctxOps->hashId;
-    if (opts->hashId != -1) {
-        hashId = opts->hashId;
-    }
-    return hashId;
+    return opts->hashId;
 }
 
 static int32_t MldsaSignInner(void *ctx, int32_t hashId)
 {
-    uint8_t plainText[32];
+    uint8_t plainText[32] = {0};
     uint8_t signature[5120]; // ML-DSA can have larger signatures
     uint32_t signatureLen = sizeof(signature);
     return CRYPT_EAL_PkeySign(ctx, hashId, plainText, sizeof(plainText), signature, &signatureLen);
 }
 
-static int32_t MldsaSign(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t MldsaSign(void *ctx, const BenchExecOptions *opts)
 {
     int rc;
-    int32_t hashId = GetHashId(bench, opts);
+    int32_t hashId = GetHashId(opts);
     if (hashId == -1) {
         return -1;
     }
-    BENCH_TIMES_VA(MldsaSignInner(ctx, hashId), rc, CRYPT_SUCCESS, -1, opts->times, "%s sign",
+    BENCH_RUN_VA(MldsaSignInner(ctx, hashId), rc, CRYPT_SUCCESS, -1, opts, "%s sign",
                    GetParaName(opts->paraId));
     return rc;
 }
 
-static int32_t MldsaVerify(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t MldsaVerify(void *ctx, const BenchExecOptions *opts)
 {
     int rc;
-    int32_t hashId = GetHashId(bench, opts);
+    int32_t hashId = GetHashId(opts);
     if (hashId == -1) {
         return -1;
     }
-    uint8_t plainText[32];
+    uint8_t plainText[32] = {0};
     uint8_t signature[5120]; // ML-DSA can have larger signatures
     uint32_t signatureLen = sizeof(signature);
     rc = CRYPT_EAL_PkeySign(ctx, hashId, plainText, sizeof(plainText), signature, &signatureLen);
@@ -114,8 +111,8 @@ static int32_t MldsaVerify(void *ctx, BenchCtx *bench, BenchOptions *opts)
         printf("Failed to sign\n");
         return rc;
     }
-    BENCH_TIMES_VA(CRYPT_EAL_PkeyVerify(ctx, hashId, plainText, sizeof(plainText), signature, signatureLen), rc,
-                   CRYPT_SUCCESS, -1, opts->times, "%s verify", GetParaName(opts->paraId));
+    BENCH_RUN_VA(CRYPT_EAL_PkeyVerify(ctx, hashId, plainText, sizeof(plainText), signature, signatureLen), rc,
+                   CRYPT_SUCCESS, -1, opts, "%s verify", GetParaName(opts->paraId));
     return rc;
 }
 

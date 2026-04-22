@@ -84,6 +84,10 @@ include_directories(
 # Build all targets
 include(hitls_build_targets)
 
+if(HITLS_BUILD_BENCHMARK)
+    add_subdirectory(testcode/benchmark)
+endif()
+
 # Generate build information files if enabled
 if(HITLS_BUILD_GEN_INFO)
     include(hitls_gen_info)

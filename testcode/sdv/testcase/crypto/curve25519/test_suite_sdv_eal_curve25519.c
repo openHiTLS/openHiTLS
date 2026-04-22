@@ -777,8 +777,16 @@ void SDV_CRYPTO_X25519_EXCH_FUNC_TC001(int isProvider)
 
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey1), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey2), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, share1, &share1Len), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey2, pkey1, share2, &share2Len), CRYPT_SUCCESS);
+    {
+        AARCH64_PUT_CANARY();
+        ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, share1, &share1Len), CRYPT_SUCCESS);
+        AARCH64_CHECK_CANARY();
+    }
+    {
+        AARCH64_PUT_CANARY();
+        ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey2, pkey1, share2, &share2Len), CRYPT_SUCCESS);
+        AARCH64_CHECK_CANARY();
+    }
     ASSERT_EQ(share1Len, share2Len);
     ASSERT_EQ(memcmp(share1, share2, share1Len), 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
@@ -835,7 +843,11 @@ void SDV_CRYPTO_X25519_EXCH_FUNC_TC002(Hex *pubkey, Hex *prvkey, Hex *share, int
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey2, &pub), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey2, &prv), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareKey, &shareLen), CRYPT_SUCCESS);
+    {
+        AARCH64_PUT_CANARY();
+        ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareKey, &shareLen), CRYPT_SUCCESS);
+        AARCH64_CHECK_CANARY();
+    }
     ASSERT_EQ(shareLen, share->len);
     ASSERT_EQ(memcmp(shareKey, share->x, shareLen), 0);
 
@@ -845,7 +857,11 @@ void SDV_CRYPTO_X25519_EXCH_FUNC_TC002(Hex *pubkey, Hex *prvkey, Hex *share, int
     ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx1, pkey1), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCopyCtx(cpyCtx2, pkey2), CRYPT_SUCCESS);
     shareLen = sizeof(shareKey);
-    ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(cpyCtx1, cpyCtx2, shareKey, &shareLen), CRYPT_SUCCESS);
+    {
+        AARCH64_PUT_CANARY();
+        ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(cpyCtx1, cpyCtx2, shareKey, &shareLen), CRYPT_SUCCESS);
+        AARCH64_CHECK_CANARY();
+    }
     ASSERT_EQ(shareLen, share->len);
     ASSERT_EQ(memcmp(shareKey, share->x, shareLen), 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
@@ -855,6 +871,102 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey2);
     CRYPT_EAL_PkeyFreeCtx(cpyCtx1);
     CRYPT_EAL_PkeyFreeCtx(cpyCtx2);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_X25519_EXCH_FUNC_TC003(Hex *pubkey, Hex *prvkey, Hex *share, int expectRet, int isProvider)
+{
+#ifndef HITLS_CRYPTO_X25519
+    SKIP_TEST();
+#endif
+    uint8_t shareKey[CRYPT_CURVE25519_KEYLEN] = {0};
+    uint32_t shareLen = sizeof(shareKey);
+    int32_t ret;
+    CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPrv prv = {0};
+
+    Set_Curve25519_Pub(&pub, CRYPT_PKEY_X25519, pubkey->x, pubkey->len);
+    Set_Curve25519_Prv(&prv, CRYPT_PKEY_X25519, prvkey->x, prvkey->len);
+
+    TestMemInit();
+
+    CRYPT_EAL_PkeyCtx *pkey1 = TestPkeyNewCtx(NULL, CRYPT_PKEY_X25519,
+        CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *pkey2 = TestPkeyNewCtx(NULL, CRYPT_PKEY_X25519,
+        CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey1 != NULL && pkey2 != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey1, &prv), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey1, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey2, &pub), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey2, &prv), CRYPT_SUCCESS);
+
+    {
+        AARCH64_PUT_CANARY();
+        ret = CRYPT_EAL_PkeyComputeShareKey(pkey1, pkey2, shareKey, &shareLen);
+        AARCH64_CHECK_CANARY();
+    }
+    ASSERT_EQ(ret, expectRet);
+    if (expectRet == CRYPT_SUCCESS) {
+        ASSERT_EQ(shareLen, share->len);
+        ASSERT_EQ(memcmp(shareKey, share->x, shareLen), 0);
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey1);
+    CRYPT_EAL_PkeyFreeCtx(pkey2);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_X25519_ITER_FUNC_TC001(int iterCnt, Hex *expect, int isProvider)
+{
+#ifndef HITLS_CRYPTO_X25519
+    SKIP_TEST();
+#endif
+    uint8_t k[CRYPT_CURVE25519_KEYLEN] = {0};
+    uint8_t u[CRYPT_CURVE25519_KEYLEN] = {0};
+    uint8_t result[CRYPT_CURVE25519_KEYLEN] = {0};
+    uint32_t resultLen = sizeof(result);
+    CRYPT_EAL_PkeyPub pub = {0};
+    CRYPT_EAL_PkeyPrv prv = {0};
+
+    k[0] = 9;
+    u[0] = 9;
+
+    TestMemInit();
+
+    CRYPT_EAL_PkeyCtx *prvCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_X25519,
+        CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
+    CRYPT_EAL_PkeyCtx *pubCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_X25519,
+        CRYPT_EAL_PKEY_EXCH_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(prvCtx != NULL && pubCtx != NULL);
+
+    for (int i = 0; i < iterCnt; i++) {
+        Set_Curve25519_Prv(&prv, CRYPT_PKEY_X25519, k, sizeof(k));
+        Set_Curve25519_Pub(&pub, CRYPT_PKEY_X25519, u, sizeof(u));
+        ASSERT_EQ(CRYPT_EAL_PkeySetPrv(prvCtx, &prv), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeySetPub(pubCtx, &pub), CRYPT_SUCCESS);
+        resultLen = sizeof(result);
+        {
+            AARCH64_PUT_CANARY();
+            ASSERT_EQ(CRYPT_EAL_PkeyComputeShareKey(prvCtx, pubCtx, result, &resultLen), CRYPT_SUCCESS);
+            AARCH64_CHECK_CANARY();
+        }
+        ASSERT_EQ(resultLen, sizeof(result));
+        (void)memcpy(u, k, sizeof(k));
+        (void)memcpy(k, result, sizeof(result));
+    }
+
+    ASSERT_EQ(expect->len, sizeof(k));
+    ASSERT_EQ(memcmp(k, expect->x, sizeof(k)), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(prvCtx);
+    CRYPT_EAL_PkeyFreeCtx(pubCtx);
 }
 /* END_CASE */
 

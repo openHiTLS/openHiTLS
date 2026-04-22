@@ -21,7 +21,7 @@ Layer 1: Global Build Framework (cmake/ directory)
 ├── cmake/hitls_compile_options.cmake        ← Default global compile/link options (developers usually don't need to modify)
 ├── cmake/hitls_build_targets.cmake          ← Assembles final library targets (bundle / split mode, developers usually don't need to modify)
 ├── cmake/hitls_collect_feature_macros.cmake ← Collects compile-time macro list (developers usually don't need to modify)
-├── cmake/hitls_load_preset.cmake            ← Preset loading (full / iso19790, etc., developers usually don't need to modify)
+├── cmake/hitls_load_preset.cmake            ← Profile loading (full / iso19790 / none, developers usually don't need to modify)
 └── cmake/helpers/                           ← Internal helper functions (developers usually don't need to modify)
     ├── hitls_target_helpers.cmake           ← hitls_register_objects() registers object libraries
     ├── hitls_lib_helpers.cmake              ← hitls_create_shared/static_library(), etc.

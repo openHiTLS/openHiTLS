@@ -21,10 +21,11 @@
 #include "crypt_eal_md.h"
 #include "benchmark.h"
 
-static int32_t Sm2SetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t paraId)
+static int32_t Sm2SetUp(void **ctx, const Operation *op, int32_t algId, int32_t paraId)
 {
+    (void)op;
     (void)paraId;
-    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(ops->algId);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(algId);
     if (pkeyCtx == NULL) {
         printf("Failed to create pkey context\n");
         return CRYPT_MEM_ALLOC_FAIL;
@@ -43,10 +44,10 @@ static void Sm2TearDown(void *ctx)
     CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 
-static int32_t Sm2KeyGen(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t Sm2KeyGen(void *ctx, const BenchExecOptions *opts)
 {
     int rc = CRYPT_SUCCESS;
-    BENCH_TIMES(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts->times, "sm2 keyGen");
+    BENCH_RUN(CRYPT_EAL_PkeyGen(ctx), rc, CRYPT_SUCCESS, -1, opts, "sm2 keyGen");
     return rc;
 }
 
@@ -69,7 +70,7 @@ static int32_t Sm2KeyDeriveInner(void *ctx, void *peerCtx)
     return CRYPT_SUCCESS;
 }
 
-static int32_t Sm2KeyDerive(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t Sm2KeyDerive(void *ctx, const BenchExecOptions *opts)
 {
     int rc = CRYPT_SUCCESS;
     CRYPT_EAL_PkeyCtx *peerCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM2);
@@ -90,7 +91,7 @@ static int32_t Sm2KeyDerive(void *ctx, BenchCtx *bench, BenchOptions *opts)
         printf("Failed to set R\n");
         goto ERR_OUT;
     }
-    BENCH_TIMES(Sm2KeyDeriveInner(ctx, peerCtx), rc, CRYPT_SUCCESS, -1, opts->times, "sm2 keyDerive");
+    BENCH_RUN(Sm2KeyDeriveInner(ctx, peerCtx), rc, CRYPT_SUCCESS, -1, opts, "sm2 keyDerive");
 ERR_OUT:
     CRYPT_EAL_PkeyFreeCtx(peerCtx);
     return rc;
@@ -98,23 +99,23 @@ ERR_OUT:
 
 static int32_t Sm2EncInner(void *ctx)
 {
-    uint8_t plainText[32];
+    uint8_t plainText[32] = {0};
     uint8_t cipherText[256]; // > 32 + 97 + 12
     uint32_t outLen = sizeof(cipherText);
     return CRYPT_EAL_PkeyEncrypt(ctx, plainText, sizeof(plainText), cipherText, &outLen);
 }
 
-static int32_t Sm2Enc(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t Sm2Enc(void *ctx, const BenchExecOptions *opts)
 {
     int rc = CRYPT_SUCCESS;
-    BENCH_TIMES(Sm2EncInner(ctx), rc, CRYPT_SUCCESS, -1, opts->times, "sm2 enc");
+    BENCH_RUN(Sm2EncInner(ctx), rc, CRYPT_SUCCESS, -1, opts, "sm2 enc");
     return rc;
 }
 
-static int32_t Sm2Dec(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t Sm2Dec(void *ctx, const BenchExecOptions *opts)
 {
     int rc;
-    uint8_t plainText[32];
+    uint8_t plainText[32] = {0};
     uint32_t plainTextLen = sizeof(plainText);
     uint8_t cipherText[256]; // > 32 + 97 + 12
     uint32_t outLen = sizeof(cipherText);
@@ -123,51 +124,48 @@ static int32_t Sm2Dec(void *ctx, BenchCtx *bench, BenchOptions *opts)
         printf("Failed to encrypt\n");
         return rc;
     }
-    BENCH_TIMES(CRYPT_EAL_PkeyDecrypt(ctx, cipherText, outLen, plainText, &plainTextLen), rc, CRYPT_SUCCESS, -1,
-                opts->times, "sm2 dec");
+    BENCH_RUN(CRYPT_EAL_PkeyDecrypt(ctx, cipherText, outLen, plainText, &plainTextLen), rc, CRYPT_SUCCESS, -1,
+        opts, "sm2 dec");
     return rc;
 }
 
-static int32_t GetHashId(BenchCtx *bench, BenchOptions *opts)
+static int32_t GetHashId(const BenchExecOptions *opts)
 {
-    int32_t hashId = bench->ctxOps->hashId;
-    if (opts->hashId != -1) {
-        if (CRYPT_EAL_MdGetDigestSize(opts->hashId) != 32) {
-            printf("Wrong Hash Algorithm Id for Sm2.");
-            return -1;
-        }
-        hashId = opts->hashId;
+    int32_t hashId = opts->hashId;
+    if (hashId != CRYPT_MD_SM3) {
+        printf("Wrong Hash Algorithm Id for Sm2. Must be SM3.");
+        return -1;
     }
     return hashId;
 }
 
 static int32_t Sm2SignInner(void *ctx, int32_t hashId)
 {
-    uint8_t plainText[32];
+    uint8_t plainText[32] = {0};
     uint8_t signature[256];
     uint32_t signatureLen = sizeof(signature);
     return CRYPT_EAL_PkeySign(ctx, hashId, plainText, sizeof(plainText), signature, &signatureLen);
 }
 
-static int32_t Sm2Sign(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t Sm2Sign(void *ctx, const BenchExecOptions *opts)
 {
     int rc;
-    int32_t hashId = GetHashId(bench, opts);
+    int32_t hashId = GetHashId(opts);
     if (hashId == -1) {
         return -1;
     }
-    BENCH_TIMES(Sm2SignInner(ctx, hashId), rc, CRYPT_SUCCESS, -1, opts->times, "sm2 sign");
+    BENCH_RUN(Sm2SignInner(ctx, hashId), rc, CRYPT_SUCCESS, -1, opts, "sm2 sign");
     return rc;
 }
 
-static int32_t Sm2Verify(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t Sm2Verify(void *ctx, const BenchExecOptions *opts)
 {
     int rc;
-    int32_t hashId = GetHashId(bench, opts);
+    int32_t hashId = GetHashId(opts);
     if (hashId == -1) {
         return -1;
     }
-    uint8_t plainText[32];
+    uint8_t plainText[32] = {0};
     uint8_t signature[256];
     uint32_t signatureLen = sizeof(signature);
     rc = CRYPT_EAL_PkeySign(ctx, hashId, plainText, sizeof(plainText), signature, &signatureLen);
@@ -175,8 +173,8 @@ static int32_t Sm2Verify(void *ctx, BenchCtx *bench, BenchOptions *opts)
         printf("Failed to sign\n");
         return rc;
     }
-    BENCH_TIMES(CRYPT_EAL_PkeyVerify(ctx, hashId, plainText, sizeof(plainText), signature, signatureLen), rc,
-                CRYPT_SUCCESS, -1, opts->times, "sm2 verify");
+    BENCH_RUN(CRYPT_EAL_PkeyVerify(ctx, hashId, plainText, sizeof(plainText), signature, signatureLen), rc,
+                CRYPT_SUCCESS, -1, opts, "sm2 verify");
     return rc;
 }
 

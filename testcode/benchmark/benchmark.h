@@ -16,27 +16,54 @@
 #ifndef BENCHMARK_H
 #define BENCHMARK_H
 
+#include <inttypes.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
 #include <sys/time.h>
 
+static inline uint64_t BenchNowNs(void)
+{
+#if defined(__APPLE__) && defined(CLOCK_UPTIME_RAW)
+    return clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+#else
+    struct timespec now = {0};
+#if defined(CLOCK_MONOTONIC)
+    const clockid_t clockId = CLOCK_MONOTONIC;
+#else
+    const clockid_t clockId = CLOCK_REALTIME;
+#endif
+    if (clock_gettime(clockId, &now) != 0) {
+        return 0;
+    }
+    return (uint64_t)now.tv_sec * 1000000000ULL + (uint64_t)now.tv_nsec;
+#endif
+}
+
+static inline double BenchOpsPerSec(uint64_t count, uint64_t elapsedTime)
+{
+    if (elapsedTime == 0) {
+        return 0.0;
+    }
+    return ((double)count * 1000000000.0) / (double)elapsedTime;
+}
+
 #define BENCH_TIMES(func, rc, ok, len, times, header)                                                    \
     {                                                                                                    \
-        struct timespec start, end;                                                                      \
-        clock_gettime(CLOCK_REALTIME, &start);                                                           \
-        for (int i = 0; i < times; i++) {                                                                \
+        uint32_t benchTimes = (uint32_t)(times);                                                         \
+        uint64_t start = BenchNowNs();                                                                   \
+        for (uint32_t i = 0; i < benchTimes; i++) {                                                      \
             rc = func;                                                                                   \
             if (rc != ok) {                                                                              \
                 printf("Error: %s, ret = %08x\n", #func, rc);                                            \
                 break;                                                                                   \
             }                                                                                            \
         }                                                                                                \
-        clock_gettime(CLOCK_REALTIME, &end);                                                             \
-        uint64_t elapsedTime = (end.tv_sec - start.tv_sec) * 1000000000 + (end.tv_nsec - start.tv_nsec); \
-        printf("%-35s, %10d, %15d, %16.2f, %20.2f\n", header, len, times, (double)elapsedTime / 1000000, \
-               ((double)times * 1000000000) / elapsedTime);                                              \
+        uint64_t end = BenchNowNs();                                                                     \
+        uint64_t elapsedTime = end - start;                                                              \
+        printf("%-35s, %10d, %15u, %16.2f, %20.2f\n", header, len, benchTimes, (double)elapsedTime / 1000000, \
+               BenchOpsPerSec(benchTimes, elapsedTime));                                                 \
     }
 
 #define BENCH_TIMES_VA(func, rc, ok, len, times, headerFmt, ...)    \
@@ -48,29 +75,45 @@
 
 #define BENCH_SECONDS(func, rc, ok, len, secs, header)                                               \
     {                                                                                                \
-        struct timespec start, end;                                                                  \
-        uint64_t totalTime = secs * 1000000000;                                                      \
+        uint32_t benchSeconds = (uint32_t)(secs);                                                    \
+        uint64_t totalTime = (uint64_t)benchSeconds * 1000000000;                                    \
         uint64_t elapsedTime = 0;                                                                    \
         uint64_t cnt = 0;                                                                            \
         while (elapsedTime < totalTime) {                                                            \
-            clock_gettime(CLOCK_REALTIME, &start);                                                   \
+            uint64_t start = BenchNowNs();                                                           \
             rc = func;                                                                               \
+            uint64_t end = BenchNowNs();                                                             \
+            elapsedTime += end - start;                                                              \
             if (rc != ok) {                                                                          \
                 printf("Error: %s, ret = %08x\n", #func, rc);                                        \
                 break;                                                                               \
             }                                                                                        \
-            clock_gettime(CLOCK_REALTIME, &end);                                                     \
-            elapsedTime += (end.tv_sec - start.tv_sec) * 1000000000 + (end.tv_nsec - start.tv_nsec); \
             cnt++;                                                                                   \
         }                                                                                            \
-        printf("%-35s, %10d, %15d, %16.2f, %20.2f\n", header, len, cnt, elapsedTime / 1000000,       \
-               ((double)times * 1000000000) / elapsedTime);                                          \
+        printf("%-35s, %10d, %15" PRIu64 ", %16.2f, %20.2f\n", header, len, cnt,                    \
+               (double)elapsedTime / 1000000, BenchOpsPerSec(cnt, elapsedTime));                     \
     }
 
-#define BENCH_SETUP(ctx, bench, ops, id)                               \
+#define BENCH_RUN(func, rc, ok, len, opts, header)                  \
+    do {                                                            \
+        if ((opts)->seconds != 0) {                                 \
+            BENCH_SECONDS(func, rc, ok, len, (opts)->seconds, header); \
+        } else {                                                    \
+            BENCH_TIMES(func, rc, ok, len, (opts)->times, header);  \
+        }                                                           \
+    } while (0)
+
+#define BENCH_RUN_VA(func, rc, ok, len, opts, headerFmt, ...)       \
+    do {                                                            \
+        char header[256] = {0};                                     \
+        snprintf(header, sizeof(header), headerFmt, ##__VA_ARGS__); \
+        BENCH_RUN(func, rc, ok, len, opts, header);                 \
+    } while (0)
+
+#define BENCH_SETUP(ctx, op, ops, algId, paraId)                       \
     do {                                                               \
         int32_t ret;                                                   \
-        ret = ops->setUp(&ctx, bench, ops, id);                        \
+        ret = ops->setUp(&ctx, op, algId, paraId);                     \
         if (ret != CRYPT_SUCCESS) {                                    \
             printf("Failed to setup benchmark testcase: %08x\n", ret); \
             return;                                                    \
@@ -93,6 +136,23 @@
 #define COUNT_OPS(...) \
     (sizeof((Operation[]){ __VA_ARGS__ }) / sizeof(Operation))
 
+#define BENCH_LENS_NUM 6
+
+typedef struct BenchSharedData_ {
+    int32_t lens[BENCH_LENS_NUM];
+    uint8_t plain[16384];
+    uint8_t out[16384];
+    uint8_t key[32];
+    uint8_t iv[16];
+} BenchSharedData;
+
+BenchSharedData *BenchGetSharedData(void);
+
+#define BENCH_PLAIN (BenchGetSharedData()->plain)
+#define BENCH_OUT (BenchGetSharedData()->out)
+#define BENCH_KEY (BenchGetSharedData()->key)
+#define BENCH_IV (BenchGetSharedData()->iv)
+
 static inline void Hex2Bin(const char *hex, uint8_t *bin, uint32_t *len)
 {
     *len = strlen(hex) / 2;
@@ -112,29 +172,27 @@ typedef struct {
     int32_t hashId;
 } BenchOptions;
 
+typedef struct {
+    uint32_t times;
+    uint32_t seconds;
+    int32_t len;
+    int32_t paraId;
+    int32_t hashId;
+} BenchExecOptions;
+
 typedef struct BenchCtx_ BenchCtx;
 typedef struct CtxOps_ CtxOps;
+typedef struct Operation_ Operation;
 // every benchmark testcase should define "NewCtx" and "FreeCtx"
-typedef int32_t (*SetUp)(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t id);
+typedef int32_t (*SetUp)(void **ctx, const Operation *op, int32_t algId, int32_t paraId);
 typedef void (*TearDown)(void *ctx);
-typedef int32_t (*KeyGen)(void *ctx, BenchCtx *bench, BenchOptions *opts);
-typedef int32_t (*KeyDerive)(void *ctx, BenchCtx *bench, BenchOptions *opts);
-typedef int32_t (*Enc)(void *ctx, BenchCtx *bench, BenchOptions *opts);
-typedef int32_t (*Dec)(void *ctx, BenchCtx *bench, BenchOptions *opts);
-typedef int32_t (*Sign)(void *ctx, BenchCtx *bench, BenchOptions *opts);
-typedef int32_t (*Verify)(void *ctx, BenchCtx *bench, BenchOptions *opts);
-typedef int32_t (*OneShot)(void *ctx, BenchCtx *bench, BenchOptions *opts);
-typedef int32_t (*Encaps)(void *ctx, BenchCtx *bench, BenchOptions *opts);
-typedef int32_t (*Decaps)(void *ctx, BenchCtx *bench, BenchOptions *opts);
+typedef int32_t (*BenchOpFn)(void *ctx, const BenchExecOptions *opts);
 
-// return true if not be filetered; else return false.
-typedef bool (*ParaFilterCb)(BenchOptions *opts, int32_t paraId);
-
-typedef struct {
+struct Operation_ {
     uint32_t id;
     const char *name;
-    void *oper;
-} Operation;
+    BenchOpFn oper;
+};
 
 struct CtxOps_ {
     int32_t algId;
@@ -154,12 +212,6 @@ struct CtxOps_ {
 #define ONESHOT_ID    64U
 #define ENCAPS_ID     128U
 #define DECAPS_ID     256U
-
-static int32_t g_lens[] = {16, 64, 256, 1024, 8192, 16384};
-static uint8_t g_plain[16384];
-static uint8_t g_out[16384];
-static uint8_t g_key[32] = {1};
-static uint8_t g_iv[16];
 
 #define DEFINE_OPER(id, oper) {id, #oper, oper}
 
@@ -206,6 +258,30 @@ static uint8_t g_iv[16];
         .ops =                                                     \
             {                                                      \
                 DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),              \
+                DEFINE_OPER(SIGN_ID, alg##Sign),                   \
+                DEFINE_OPER(VERIFY_ID, alg##Verify),               \
+            },                                                     \
+    }
+
+#define DEFINE_OPS_CRYPT_SIGN(alg, id, hId)                        \
+    enum { alg##_OPS_NUM = COUNT_OPS(                              \
+        DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),                      \
+        DEFINE_OPER(ENC_ID, alg##Enc),                             \
+        DEFINE_OPER(DEC_ID, alg##Dec),                             \
+        DEFINE_OPER(SIGN_ID, alg##Sign),                           \
+        DEFINE_OPER(VERIFY_ID, alg##Verify)                        \
+    ) };                                                           \
+    static const CtxOps alg##CtxOps = {                            \
+        .algId = id,                                               \
+        .hashId = hId,                                             \
+        .opsNum = alg##_OPS_NUM,                                   \
+        .setUp = alg##SetUp,                                       \
+        .tearDown = alg##TearDown,                                 \
+        .ops =                                                     \
+            {                                                      \
+                DEFINE_OPER(KEY_GEN_ID, alg##KeyGen),              \
+                DEFINE_OPER(ENC_ID, alg##Enc),                     \
+                DEFINE_OPER(DEC_ID, alg##Dec),                     \
                 DEFINE_OPER(SIGN_ID, alg##Sign),                   \
                 DEFINE_OPER(VERIFY_ID, alg##Verify),               \
             },                                                     \
@@ -285,9 +361,7 @@ static uint8_t g_iv[16];
 
 typedef struct BenchCtx_ {
     const char *name;
-    const char *desc;
     const CtxOps *ctxOps;
-    int32_t opsNum;
     int32_t *paraIds;
     uint32_t paraIdsNum;
     int32_t *lens;
@@ -297,23 +371,25 @@ typedef struct BenchCtx_ {
 } BenchCtx;
 
 #define DEFINE_BENCH_CTX_PARA_TIMES_LEN(alg, pId, pIdNum, ts, l, ln) \
-    BenchCtx alg##BenchCtx = {                                       \
+    static const BenchCtx g_##alg##BenchCtx = {                     \
         .name = #alg,                                                \
-        .desc = #alg " benchmark",                                   \
         .ctxOps = &alg##CtxOps,                                      \
-        .opsNum = alg##_OPS_NUM,                                     \
         .paraIds = pId,                                              \
         .paraIdsNum = pIdNum,                                        \
         .lens = l,                                                   \
         .lensNum = ln,                                               \
         .times = ts,                                                 \
         .seconds = 0,                                                \
+    };                                                               \
+    const BenchCtx *BenchmarkGet##alg(void)                          \
+    {                                                                \
+        return &g_##alg##BenchCtx;                                   \
     }
 #define DEFINE_BENCH_CTX_PARA_TIMES(alg, pId, pIdNum, ts) \
-    DEFINE_BENCH_CTX_PARA_TIMES_LEN(alg, pId, pIdNum, ts, g_lens, SIZEOF(g_lens))
+    DEFINE_BENCH_CTX_PARA_TIMES_LEN(alg, pId, pIdNum, ts, NULL, BENCH_LENS_NUM)
 
 #define DEFINE_BENCH_CTX_PARA_TIMES_FIXLEN(alg, pId, pIdNum, ts) \
-    DEFINE_BENCH_CTX_PARA_TIMES_LEN(alg, pId, pIdNum, ts, g_lens, 1)
+    DEFINE_BENCH_CTX_PARA_TIMES_LEN(alg, pId, pIdNum, ts, NULL, 1)
 // default to run 10000 times
 #define DEFINE_BENCH_CTX_PARA(alg, pId, pIdNum)        DEFINE_BENCH_CTX_PARA_TIMES(alg, pId, pIdNum, 10000)
 #define DEFINE_BENCH_CTX_PARA_FIXLEN(alg, pId, pIdNum) DEFINE_BENCH_CTX_PARA_TIMES_FIXLEN(alg, pId, pIdNum, 10000)

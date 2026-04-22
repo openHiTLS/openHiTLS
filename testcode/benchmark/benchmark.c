@@ -20,32 +20,66 @@
 #include "crypt_errno.h"
 #include "crypt_algid.h"
 #include "crypt_eal_rand.h"
+#include "crypt_util_rand.h"
 #include "benchmark.h"
+#include "benchmark_registry.h"
 
-extern BenchCtx Sm2BenchCtx;
-extern BenchCtx Sm9BenchCtx;
-extern BenchCtx SlhDsaBenchCtx;
-extern BenchCtx EcdsaBenchCtx;
-extern BenchCtx MdBenchCtx;
-extern BenchCtx CipherBenchCtx;
-extern BenchCtx MacBenchCtx;
-extern BenchCtx DhBenchCtx;
-extern BenchCtx EcdhBenchCtx;
-extern BenchCtx RsaBenchCtx;
-extern BenchCtx X25519BenchCtx;
-extern BenchCtx Ed25519BenchCtx;
-extern BenchCtx MldsaBenchCtx;
-extern BenchCtx MlkemBenchCtx;
-
-BenchCtx *g_benchs[] = {
-    &Sm2BenchCtx, &Sm9BenchCtx, &SlhDsaBenchCtx, &EcdsaBenchCtx,  &MdBenchCtx,      &CipherBenchCtx, &MacBenchCtx,
-    &DhBenchCtx,  &EcdhBenchCtx,   &X25519BenchCtx, &Ed25519BenchCtx, &MldsaBenchCtx,  &MlkemBenchCtx,
+enum {
+    BENCHMARK_COUNT =
+#define COUNT_BENCH(name) +1
+        0 BENCHMARK_LIST(COUNT_BENCH)
+#undef COUNT_BENCH
 };
+
+static const BenchCtx *g_benchs[BENCHMARK_COUNT];
+
+static void InitBenchRegistry(void)
+{
+    static int inited = 0;
+    size_t index = 0;
+
+    if (inited != 0) {
+        return;
+    }
+
+#define REGISTER_BENCH(name) g_benchs[index++] = BenchmarkGet##name();
+    BENCHMARK_LIST(REGISTER_BENCH)
+#undef REGISTER_BENCH
+
+    inited = 1;
+}
 
 typedef struct {
     const char *s;
     int32_t id;
 } StrIdMap;
+
+static BenchSharedData g_benchSharedData = {
+    .lens = {16, 64, 256, 1024, 8192, 16384},
+    .key = {1},
+};
+
+BenchSharedData *BenchGetSharedData(void)
+{
+    return &g_benchSharedData;
+}
+
+#if defined(HITLS_CRYPTO_PROVIDER)
+/*
+ * Provider rand state lives on libctx->drbg. Some benchmarked algorithms still
+ * obtain randomness through the legacy CRYPT_Rand bridge, so benchmark startup
+ * installs a process-default callback that forwards to the global provider ctx.
+ */
+static int32_t BenchmarkProviderRand(uint8_t *rand, uint32_t randLen)
+{
+    return CRYPT_EAL_RandbytesEx(NULL, rand, randLen);
+}
+
+static int32_t BenchmarkProviderRandEx(void *libCtx, uint8_t *rand, uint32_t randLen)
+{
+    return CRYPT_EAL_RandbytesEx((CRYPT_EAL_LibCtx *)libCtx, rand, randLen);
+}
+#endif
 
 static StrIdMap g_strIdMap[] = {
     {"md5", CRYPT_MD_MD5},
@@ -148,14 +182,19 @@ static StrIdMap g_strIdMap[] = {
     {"dh-rfc7919-4096", CRYPT_DH_RFC7919_4096},
     {"dh-rfc7919-6144", CRYPT_DH_RFC7919_6144},
     {"dh-rfc7919-8192", CRYPT_DH_RFC7919_8192},
+    {"rsa-2048", 2048},
+    {"rsa-3072", 3072},
+    {"rsa-4096", 4096},
     {"mlkem-512", CRYPT_KEM_TYPE_MLKEM_512},
     {"mlkem-768", CRYPT_KEM_TYPE_MLKEM_768},
     {"mlkem-1024", CRYPT_KEM_TYPE_MLKEM_1024},
 };
 
-static int32_t AlgStr2Id(char *str)
+static uint32_t g_benchFailureCount = 0;
+
+static int32_t AlgStr2Id(const char *str)
 {
-    for (int i = 0; i < SIZEOF(g_strIdMap); i++) {
+    for (size_t i = 0; i < SIZEOF(g_strIdMap); i++) {
         if (strncasecmp(g_strIdMap[i].s, str, strlen(g_strIdMap[i].s)) == 0) {
             return g_strIdMap[i].id;
         }
@@ -165,7 +204,7 @@ static int32_t AlgStr2Id(char *str)
 
 const char *GetAlgName(int32_t algId)
 {
-    for (int i = 0; i < SIZEOF(g_strIdMap); i++) {
+    for (size_t i = 0; i < SIZEOF(g_strIdMap); i++) {
         if (g_strIdMap[i].id == algId) {
             return g_strIdMap[i].s;
         }
@@ -184,6 +223,16 @@ static void PrintUsage(void)
     printf("  -d <digest id>      Digest algorithm id before sign\n");
     printf("  -p <para id>        Parameter id to benchmark\n");
     printf("  -h                  Show this help message\n");
+}
+
+static int32_t ParseNamedIdOrExit(const char *value, const char *optName)
+{
+    int32_t id = AlgStr2Id(value);
+    if (id == -1) {
+        printf("Unknown %s: %s\n", optName, value);
+        exit(1);
+    }
+    return id;
 }
 
 static void ParseOptions(int argc, char **argv, BenchOptions *opts)
@@ -205,10 +254,10 @@ static void ParseOptions(int argc, char **argv, BenchOptions *opts)
                 opts->len = (uint32_t)atoi(optarg);
                 break;
             case 'd':
-                opts->hashId = AlgStr2Id(optarg);
+                opts->hashId = ParseNamedIdOrExit(optarg, "digest id");
                 break;
             case 'p':
-                opts->paraId = AlgStr2Id(optarg);
+                opts->paraId = ParseNamedIdOrExit(optarg, "parameter id");
                 break;
             case 'h':
                 PrintUsage();
@@ -252,12 +301,13 @@ bool MatchAlgorithm(const char *pattern, const char *name)
     return strncasecmp(pattern, name, strlen(name)) == 0;
 }
 
-static uint32_t MatchOperation(const char *pattern, BenchCtx *bench)
+static uint32_t MatchOperation(const char *pattern, const BenchCtx *bench)
 {
     uint32_t re = 0;
+    const CtxOps *ctxOps = bench->ctxOps;
 
-    for (uint32_t i = 0; i < bench->opsNum; i++) {
-        const Operation *op = &bench->ctxOps->ops[i];
+    for (int32_t i = 0; i < ctxOps->opsNum; i++) {
+        const Operation *op = &ctxOps->ops[i];
         const char *hyphen = strchr(pattern, '-');
         if (hyphen != NULL) {
             size_t algoLen = strlen(bench->name);
@@ -276,39 +326,51 @@ static uint32_t MatchOperation(const char *pattern, BenchCtx *bench)
     return re;
 }
 
-static int32_t InstantOperation(const Operation *op, void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t InstantOperation(const Operation *op, void *ctx, const BenchExecOptions *opts)
 {
-    if (op->id & KEY_GEN_ID) {
-        return ((KeyGen)op->oper)(ctx, bench, opts);
-    }
-    if (op->id & KEY_DERIVE_ID) {
-        return ((KeyDerive)op->oper)(ctx, bench, opts);
-    }
-    if (op->id & ENC_ID) {
-        return ((Enc)op->oper)(ctx, bench, opts);
-    }
-    if (op->id & DEC_ID) {
-        return ((Dec)op->oper)(ctx, bench, opts);
-    }
-    if (op->id & SIGN_ID) {
-        return ((Sign)op->oper)(ctx, bench, opts);
-    }
-    if (op->id & VERIFY_ID) {
-        return ((Verify)op->oper)(ctx, bench, opts);
-    }
-    if (op->id & ONESHOT_ID) {
-        return ((OneShot)op->oper)(ctx, bench, opts);
-    }
-    if (op->id & ENCAPS_ID) {
-        return ((Encaps)op->oper)(ctx, bench, opts);
-    }
-    if (op->id & DECAPS_ID) {
-        return ((Decaps)op->oper)(ctx, bench, opts);
-    }
-    return CRYPT_NOT_SUPPORT;
+    return op->oper(ctx, opts);
 }
 
-static void ResetOptions(BenchOptions *opts, BenchCtx *benchCtx)
+static BenchExecOptions ResolveExecOptions(const CtxOps *ctxOps, const BenchOptions *reqOpts, int32_t paraId, int32_t len)
+{
+    BenchExecOptions execOpts = {
+        .times = reqOpts->times,
+        .seconds = reqOpts->seconds,
+        .len = len,
+        .paraId = paraId,
+        .hashId = (reqOpts->hashId == -1) ? ctxOps->hashId : reqOpts->hashId,
+    };
+    return execOpts;
+}
+
+static bool IsFixedLenOperation(const Operation *op)
+{
+    return (op->id & (KEY_GEN_ID | KEY_DERIVE_ID)) != 0;
+}
+
+static bool IsRequestedLenMatch(const BenchOptions *reqOpts, int32_t len)
+{
+    return reqOpts->len == (uint32_t)-1 || reqOpts->len == (uint32_t)len;
+}
+
+static void RunBenchCase(const CtxOps *ctxOps, const Operation *op, const BenchExecOptions *execOpts)
+{
+    void *ctx = NULL;
+    int32_t ret = ctxOps->setUp(&ctx, op, ctxOps->algId, execOpts->paraId);
+    if (ret != CRYPT_SUCCESS) {
+        printf("Failed to setup benchmark testcase: %08x\n", ret);
+        g_benchFailureCount++;
+        return;
+    }
+    ret = InstantOperation(op, ctx, execOpts);
+    if (ret != CRYPT_SUCCESS) {
+        printf("Failed to %s, ret = %08x\n", op->name, ret);
+        g_benchFailureCount++;
+    }
+    ctxOps->tearDown(ctx);
+}
+
+static void ResetOptions(BenchOptions *opts, const BenchCtx *benchCtx)
 {
     if (opts->seconds == 0) {
         opts->seconds = benchCtx->seconds;
@@ -318,44 +380,59 @@ static void ResetOptions(BenchOptions *opts, BenchCtx *benchCtx)
     }
 }
 
-static void DoBenchTest(BenchCtx *benchs, const CtxOps *ctxOps, const Operation *op, BenchOptions *algOpts)
+static void DoBenchTest(const BenchCtx *benchs, const CtxOps *ctxOps, const Operation *op, BenchOptions *algOpts)
 {
-    void *ctx = NULL;
-    BENCH_SETUP(ctx, benchs, ctxOps, algOpts->paraId);
-    if (op->id & KEY_GEN_ID || op->id & KEY_DERIVE_ID) {
-        // keygen and keyderive just do one fixed len.
-        int32_t ret = InstantOperation(op, ctx, benchs, algOpts);
-        if (ret != CRYPT_SUCCESS) {
-            printf("Failed to %s, ret = %08x\n", op->name, ret);
-        }
-    } else {
-        bool is_match = false;
-        for (int i = 0; i < benchs->lensNum; i++) {
-            if (algOpts->len != -1 && algOpts->len != benchs->lens[i]) {
-                continue;
-            }
-            BENCH_SETUP(ctx, benchs, ctxOps, algOpts->paraId);
-            BenchOptions tmpOpts = *algOpts;
-            tmpOpts.len = benchs->lens[i];
-            int32_t ret = InstantOperation(op, ctx, benchs, &tmpOpts);
-            if (ret != CRYPT_SUCCESS) {
-                printf("Failed to %s, ret = %08x\n", op->name, ret);
-            }
-            is_match = true;
-        }
-        if (algOpts->len != -1 && !is_match) {
-            int32_t ret = InstantOperation(op, ctx, benchs, algOpts);
-            if (ret != CRYPT_SUCCESS) {
-                printf("Failed to %s, ret = %08x\n", op->name, ret);
-            }
-        }
+    const int32_t *lens = (benchs->lens != NULL) ? benchs->lens : BenchGetSharedData()->lens;
+    if (IsFixedLenOperation(op)) {
+        BenchExecOptions execOpts = ResolveExecOptions(ctxOps, algOpts, algOpts->paraId, -1);
+        RunBenchCase(ctxOps, op, &execOpts);
+        return;
     }
-    BENCH_TEARDOWN(ctx, ctxOps);
+
+    bool isMatch = false;
+    for (uint32_t i = 0; i < benchs->lensNum; i++) {
+        if (!IsRequestedLenMatch(algOpts, lens[i])) {
+            continue;
+        }
+        BenchExecOptions execOpts = ResolveExecOptions(ctxOps, algOpts, algOpts->paraId, lens[i]);
+        RunBenchCase(ctxOps, op, &execOpts);
+        isMatch = true;
+    }
+
+    if (algOpts->len != (uint32_t)-1 && !isMatch) {
+        BenchExecOptions execOpts = ResolveExecOptions(ctxOps, algOpts, algOpts->paraId, (int32_t)algOpts->len);
+        RunBenchCase(ctxOps, op, &execOpts);
+    }
+}
+
+static int32_t BenchmarkRandInit(void)
+{
+#if defined(HITLS_CRYPTO_PROVIDER)
+    int32_t ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    CRYPT_RandRegist(BenchmarkProviderRand);
+    CRYPT_RandRegistEx(BenchmarkProviderRandEx);
+    return CRYPT_SUCCESS;
+#else
+    return CRYPT_EAL_RandInit(CRYPT_RAND_SHA256, NULL, NULL, NULL, 0);
+#endif
+}
+
+static void BenchmarkRandCleanup(void)
+{
+#if defined(HITLS_CRYPTO_PROVIDER)
+    CRYPT_RandRegist(NULL);
+    CRYPT_RandRegistEx(NULL);
+#endif
+    CRYPT_EAL_RandDeinitEx(NULL);
 }
 
 int main(int argc, char **argv)
 {
     int32_t ret;
+    bool hasMatch = false;
     BenchOptions opts = {0};
 
     // default options
@@ -366,15 +443,16 @@ int main(int argc, char **argv)
     opts.len = -1; // fake len
     ParseOptions(argc, argv, &opts);
 
-    ret = CRYPT_EAL_ProviderRandInitCtx(NULL, CRYPT_RAND_SHA256, "provider=default", NULL, 0, NULL);
+    ret = BenchmarkRandInit();
     if (ret != CRYPT_SUCCESS) {
-        printf("Failed to initialize random number generator\n");
+        printf("Failed to initialize random number generator: %08x\n", ret);
         return -1;
     }
 
+    InitBenchRegistry();
     printf("%-35s, %10s, %15s, %15s, %20s\n", "algorithm operation", "len", "run times", "time elapsed(ms)", "ops/s");
 
-    for (int i = 0; i < SIZEOF(g_benchs); i++) {
+    for (size_t i = 0; i < SIZEOF(g_benchs); i++) {
         const CtxOps *ctxOps = g_benchs[i]->ctxOps;
         BenchOptions algOpts = opts;
         ResetOptions(&algOpts, g_benchs[i]);
@@ -383,9 +461,10 @@ int main(int argc, char **argv)
         if (!MatchAlgorithm(opts.algorithm, g_benchs[i]->name)) {
             continue;
         }
+        hasMatch = true;
         opts.filteredOps = MatchOperation(opts.algorithm, g_benchs[i]);
 
-        for (int j = 0; j < g_benchs[i]->opsNum; j++) {
+        for (int32_t j = 0; j < ctxOps->opsNum; j++) {
             const Operation *op = &ctxOps->ops[j];
             if ((uint32_t)(op->id & opts.filteredOps) == 0U) {
                 continue;
@@ -394,7 +473,7 @@ int main(int argc, char **argv)
             if (tmpOpts.paraId != -1 || g_benchs[i]->paraIdsNum == 0) {
                 DoBenchTest(g_benchs[i], ctxOps, op, &tmpOpts);
             } else {
-                for (int k = 0; k < g_benchs[i]->paraIdsNum; k++) {
+                for (uint32_t k = 0; k < g_benchs[i]->paraIdsNum; k++) {
                     tmpOpts.paraId = g_benchs[i]->paraIds[k];
                     DoBenchTest(g_benchs[i], ctxOps, op, &tmpOpts);
                 }
@@ -402,5 +481,13 @@ int main(int argc, char **argv)
         }
     }
 
+    BenchmarkRandCleanup();
+    if (!hasMatch) {
+        printf("No benchmark matched algorithm pattern: %s\n", opts.algorithm);
+        return 1;
+    }
+    if (g_benchFailureCount != 0) {
+        return 1;
+    }
     return 0;
 }

@@ -92,6 +92,11 @@ cmake ..
 cmake .. -DHITLS_BUILD_PROFILE=full
 ```
 
+* Manual feature selection:
+```bash
+cmake .. -DHITLS_BUILD_PROFILE=none -DHITLS_CRYPTO_SHA256=ON
+```
+
 * Enable assembly optimizations (auto-detect platform type):
 ```bash
 cmake .. -DHITLS_ASM=ON

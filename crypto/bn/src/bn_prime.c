@@ -514,9 +514,10 @@ static int32_t GenCheck(BN_BigNum *bn, uint32_t bits, const BN_Optimizer *opt)
 // If half is 1, the prime number whose two most significant bits are 1 is generated.
 int32_t BN_GenPrime(BN_BigNum *r, BN_BigNum *e, uint32_t bits, bool half, BN_Optimizer *opt, BN_CbCtx *cb)
 {
-    int32_t time = 0;
 #ifndef HITLS_CRYPTO_BN_CB
     (void)cb;
+#else
+    int32_t time = 0;
 #endif
     int32_t ret = GenCheck(r, bits, opt);
     if (ret != CRYPT_SUCCESS) {
@@ -554,7 +555,9 @@ int32_t BN_GenPrime(BN_BigNum *r, BN_BigNum *e, uint32_t bits, bool half, BN_Opt
             return ret;
         }
         ret = MillerRabinPrimeVerify(rnd, 0, opt, cb);
+#ifdef HITLS_CRYPTO_BN_CB
         time++;
+#endif
     } while (ret != CRYPT_SUCCESS);
 
     OptimizerEnd(opt);

@@ -37,9 +37,16 @@ elseif(HITLS_CRYPTO_AES_ARMV8)
 else()
     list(APPEND _aes_sources 
         ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_aes.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_aes_tbox.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_aes_sbox.c
     ) 
+    if(HITLS_CRYPTO_AES_PRECALC_TABLES)
+        list(APPEND _aes_sources
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_aes_tbox.c
+        )
+    else()
+        list(APPEND _aes_sources
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_aes_sbox.c
+        )
+    endif()
 endif()
 
 add_library(_hitls_crypto_aes OBJECT ${_aes_sources})

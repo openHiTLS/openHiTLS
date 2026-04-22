@@ -20,11 +20,11 @@
 #include "crypt_eal_md.h"
 #include "benchmark.h"
 
-static int32_t MdSetUp(void **ctx, BenchCtx *bench, const CtxOps *ops, int32_t paraId)
+static int32_t MdSetUp(void **ctx, const Operation *op, int32_t algId, int32_t paraId)
 {
+    (void)op;
+    (void)algId;
     (void)ctx;
-    (void)bench;
-    (void)ops;
     (void)paraId;
     return CRYPT_SUCCESS;
 }
@@ -34,7 +34,7 @@ static void MdTearDown(void *ctx)
     (void)ctx;
 }
 
-static int32_t MdOneShot(void *ctx, BenchCtx *bench, BenchOptions *opts)
+static int32_t MdOneShot(void *ctx, const BenchExecOptions *opts)
 {
     (void)ctx;
     int rc;
@@ -43,8 +43,8 @@ static int32_t MdOneShot(void *ctx, BenchCtx *bench, BenchOptions *opts)
     uint8_t digest[64]; // Maximum digest size for supported algorithms
     uint32_t digestLen = sizeof(digest);
 
-    BENCH_TIMES_VA(CRYPT_EAL_Md(paraId, g_plain, opts->len, digest, &digestLen), rc, CRYPT_SUCCESS, opts->len,
-                   opts->times, "%s digest", mdName);
+    BENCH_RUN_VA(CRYPT_EAL_Md(paraId, BENCH_PLAIN, opts->len, digest, &digestLen), rc, CRYPT_SUCCESS, opts->len,
+        opts, "%s digest", mdName);
     return rc;
 }
 
