@@ -1318,7 +1318,7 @@ int32_t MLDSA_CalPub(const CRYPT_ML_DSA_Ctx *ctx, uint8_t *pub, uint32_t pubLen)
     // (t1, t0) <- Power2Round(t)
     ComputesPower2Round(ctx, st.s2, st.t1);
     for (int32_t i = 0; i < ctx->info->k; i++) {
-        if (memcmp(st.s2[i], st.t0[i], MLDSA_N) != 0) {
+        if (memcmp(st.s2[i], st.t0[i], MLDSA_N * sizeof(int32_t)) != 0) {
             BSL_ERR_PUSH_ERROR(CRYPT_MLDSA_PAIRWISE_CHECK_FAIL);
             ret = CRYPT_MLDSA_PAIRWISE_CHECK_FAIL;
             goto ERR;
