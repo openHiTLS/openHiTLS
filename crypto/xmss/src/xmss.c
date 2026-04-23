@@ -471,7 +471,12 @@ CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    memcpy_s(newCtx, sizeof(CryptXmssCtx), ctx, sizeof(CryptXmssCtx));
+    newCtx->libCtx = ctx->libCtx;
+    newCtx->params = ctx->params;
+    newCtx->hashFuncs = ctx->hashFuncs;
+    newCtx->adrsOps = ctx->adrsOps;
+    (void)memcpy_s(newCtx->key.pubSeed, XMSS_MAX_SEED_SIZE, ctx->key.pubSeed, XMSS_MAX_SEED_SIZE);
+    (void)memcpy_s(newCtx->key.root, XMSS_MAX_MDSIZE, ctx->key.root, XMSS_MAX_MDSIZE);
     return newCtx;
 }
 
