@@ -31,6 +31,7 @@
 #include "hitls_pki_utils.h"
 #include "hitls_pki_x509.h"
 #include "hitls_x509_verify.h"
+#include "bsl_pem_internal.h"
 /* END_HEADER */
 
 /* @
@@ -211,12 +212,89 @@ void SDV_X509_CRL_PARSE_FILE_FUNC_TC009(char *path, int critical, Hex *crlNumber
     ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_CRLNUMBER, &crlNumExt, sizeof(HITLS_X509_ExtCrlNumber)), res);
     ASSERT_EQ(crlNumExt.critical, critical);
     ASSERT_EQ(crlNumExt.crlNumber.dataLen, crlNumber->len);
-    ASSERT_EQ(memcmp(crlNumber->x, crlNumExt.crlNumber.data, crlNumber->len), 0);
+    if (crlNumber->len != 0) {
+        ASSERT_TRUE(crlNumExt.crlNumber.data != NULL);
+        ASSERT_EQ(memcmp(crlNumber->x, crlNumExt.crlNumber.data, crlNumber->len), 0);
+    }
     if (res == HITLS_PKI_SUCCESS) {
         ASSERT_TRUE(TestIsErrStackEmpty());
     }
 EXIT:
     HITLS_X509_CrlFree(crl);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_X509_CRL_PARSE_FILE_FUNC_TC014
+* @title  Test the parsing capability of the Delta CRL Indicator extension field in CRL files.
+@ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_FILE_FUNC_TC014(char *path, int critical, Hex *baseCrlNumber, int res)
+{
+    HITLS_X509_Crl *crl = NULL;
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, path, &crl), HITLS_PKI_SUCCESS);
+    HITLS_X509_ExtDeltaCrl delta = {0};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_DELTA_CRL, &delta,
+        sizeof(HITLS_X509_ExtDeltaCrl)), res);
+    ASSERT_EQ(delta.critical, critical);
+    ASSERT_EQ(delta.crlNumber.dataLen, baseCrlNumber->len);
+    if (baseCrlNumber->len != 0) {
+        ASSERT_TRUE(delta.crlNumber.data != NULL);
+        ASSERT_EQ(memcmp(baseCrlNumber->x, delta.crlNumber.data, baseCrlNumber->len), 0);
+    }
+    if (res == HITLS_PKI_SUCCESS) {
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
+EXIT:
+    HITLS_X509_CrlFree(crl);
+}
+/* END_CASE */
+
+static int32_t CheckThirdPartyCrlExactRoundtripByPath(int32_t format, char *path)
+{
+    HITLS_X509_Crl *crl = NULL;
+    BSL_Buffer encode = {0};
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    uint8_t *expectAsn1 = NULL;
+    uint32_t expectAsn1Len = 0;
+    int32_t ret = -1;
+
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &data, &dataLen), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(format, path, &crl), HITLS_PKI_SUCCESS);
+    if (format == BSL_FORMAT_PEM) {
+        char *pem = (char *)data;
+        uint32_t pemLen = dataLen;
+        BSL_PEM_Symbol symbol = {BSL_PEM_CRL_BEGIN_STR, BSL_PEM_CRL_END_STR};
+        ASSERT_EQ(BSL_PEM_DecodePemToAsn1(&pem, &pemLen, &symbol, &expectAsn1, &expectAsn1Len), BSL_SUCCESS);
+        ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encode), HITLS_PKI_SUCCESS);
+        ASSERT_EQ(encode.dataLen, expectAsn1Len);
+        ASSERT_EQ(memcmp(encode.data, expectAsn1, expectAsn1Len), 0);
+    } else {
+        ASSERT_EQ(HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encode), HITLS_PKI_SUCCESS);
+        ASSERT_EQ(encode.dataLen, dataLen);
+        ASSERT_EQ(memcmp(encode.data, data, dataLen), 0);
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    ret = HITLS_PKI_SUCCESS;
+EXIT:
+    BSL_SAL_Free(expectAsn1);
+    BSL_SAL_Free(data);
+    BSL_SAL_Free(encode.data);
+    HITLS_X509_CrlFree(crl);
+    return ret;
+}
+
+/* @
+* @test  SDV_X509_CRL_DELTA_THIRDPARTY_ROUNDTRIP_TC001
+* @title  Preserve third-party Delta CRL bytes through parse and encode.
+@ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_DELTA_THIRDPARTY_ROUNDTRIP_TC001(char *path)
+{
+    ASSERT_EQ(CheckThirdPartyCrlExactRoundtripByPath(BSL_FORMAT_PEM, path), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
 }
 /* END_CASE */
 

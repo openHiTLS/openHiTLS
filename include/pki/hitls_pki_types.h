@@ -92,6 +92,8 @@ typedef enum {
     HITLS_X509_EXT_SET_CRLNUMBER,               /** Set the crlnumber extension. */
     HITLS_X509_EXT_SET_GENERIC,                 /** Set a generic extension by OID.
                                                     Note: Only supported for custom extensions. */
+    HITLS_X509_EXT_SET_DELTA_CRL,               /** Set the delta CRL indicator extension. */
+    HITLS_X509_EXT_SET_IDP,                     /** Set the issuing distribution point extension. */
 
     HITLS_X509_EXT_GET_SKI = 0x0500,            /** Get Subject Key Identifier from extensions.
                                                     Note: Kid is a shallow copy. */
@@ -104,6 +106,8 @@ typedef enum {
                                                     Note: Returns a list of HITLS_X509_GeneralName. */
     HITLS_X509_EXT_GET_GENERIC,                 /** Get a generic extension by OID.
                                                     Note: Only supported for custom extensions. */
+    HITLS_X509_EXT_GET_DELTA_CRL,               /** Get the delta CRL indicator extension. */
+    HITLS_X509_EXT_GET_IDP,                     /** Get the issuing distribution point extension. */
 
     HITLS_X509_EXT_CHECK_SKI = 0x0600,          /** Check if ski is exists. */
 
@@ -227,6 +231,58 @@ typedef struct {
     bool critical;        // Default to false.
     BSL_Buffer crlNumber; // crlNumber
 } HITLS_X509_ExtCrlNumber;
+
+/**
+ * Delta CRL indicator
+ * id-ce-deltaCRLIndicator OBJECT IDENTIFIER ::= { id-ce 27 }
+ * BaseCRLNumber ::= CRLNumber
+ */
+typedef HITLS_X509_ExtCrlNumber HITLS_X509_ExtDeltaCrl;
+
+typedef enum {
+    HITLS_X509_DP_FULLNAME = 0,
+    HITLS_X509_DP_RELATIVENAME = 1,
+} HITLS_X509_DistPointNameType;
+
+/**
+ * ASN.1: DistributionPointName ::= CHOICE {
+ *   fullName                [0] GeneralNames,
+ *   nameRelativeToCRLIssuer [1] RelativeDistinguishedName }
+ */
+typedef struct {
+    HITLS_X509_DistPointNameType type;
+    BslList *name; // FULLNAME: list of HITLS_X509_GeneralName, RELATIVENAME: list of HITLS_X509_NameNode
+} HITLS_X509_DistPointName;
+
+/**
+ * IssuingDistributionPoint ::= SEQUENCE {
+ *   distributionPoint          [0] DistributionPointName OPTIONAL,
+ *   onlyContainsUserCerts      [1] BOOLEAN DEFAULT FALSE,
+ *   onlyContainsCACerts        [2] BOOLEAN DEFAULT FALSE,
+ *   onlySomeReasons            [3] ReasonFlags OPTIONAL,
+ *   indirectCRL                [4] BOOLEAN DEFAULT FALSE,
+ *   onlyContainsAttributeCerts [5] BOOLEAN DEFAULT FALSE }
+ */
+typedef struct {
+    bool critical;
+    bool onlyContainsUserCerts;
+    bool onlyContainsCACerts;
+    bool onlyContainsAttributeCerts;
+    bool indirectCrl;
+    bool hasReasons; // ReasonFlags OPTIONAL presence
+    uint16_t onlySomeReasons; // ReasonFlags value, valid when hasReasons is true
+    HITLS_X509_DistPointName *distPoint; // DistributionPointName OPTIONAL, NULL if omitted
+} HITLS_X509_ExtIdp;
+
+#define HITLS_X509_REASON_FLAG_UNUSED                 0x0080
+#define HITLS_X509_REASON_FLAG_KEY_COMPROMISE         0x0040
+#define HITLS_X509_REASON_FLAG_CA_COMPROMISE          0x0020
+#define HITLS_X509_REASON_FLAG_AFFILIATION_CHANGED    0x0010
+#define HITLS_X509_REASON_FLAG_SUPERSEDED             0x0008
+#define HITLS_X509_REASON_FLAG_CESSATION_OPERATION    0x0004
+#define HITLS_X509_REASON_FLAG_CERTIFICATE_HOLD       0x0002
+#define HITLS_X509_REASON_FLAG_PRIVILEGE_WITHDRAWN    0x0001
+#define HITLS_X509_REASON_FLAG_AA_COMPROMISE          0x8000
 
 /**
  * Generic extension for setting/getting arbitrary extensions by OID

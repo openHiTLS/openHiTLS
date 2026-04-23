@@ -46,6 +46,8 @@ static char g_sm2DefaultUserid[] = "1234567812345678";
 
 /* Directly cover the CRL entry revocationDate CHOICE tag checker. */
 extern int32_t HITLS_X509_CrlEntryChoiceCheck(int32_t type, uint32_t idx, void *data, void *expVal);
+static void SetIdpReasons(HITLS_X509_ExtIdp *idp, uint16_t reasons);
+static HITLS_X509_DistPointName *NewIdpDistPoint(HITLS_X509_DistPointNameType type, BslList *name);
 /* END_HEADER */
 
 /* ============================================================================
@@ -752,6 +754,7 @@ void SDV_X509_CRL_ExtCtrl_FuncTest_TC001(void)
 {
     uint8_t keyId[8] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
     uint8_t serialNum[4] = {0x11, 0x22, 0x33, 0x44};
+    uint8_t baseCrlNum[4] = {0x55, 0x66, 0x77, 0x88};
 
     HITLS_X509_Crl *crl = HITLS_X509_CrlNew();
     ASSERT_NE(crl, NULL);
@@ -774,12 +777,138 @@ void SDV_X509_CRL_ExtCtrl_FuncTest_TC001(void)
     ASSERT_EQ(getaki.critical, aki.critical);
     ASSERT_EQ(getaki.kid.dataLen, aki.kid.dataLen);
     ASSERT_EQ(memcmp(getaki.kid.data, aki.kid.data, aki.kid.dataLen), 0);
+
+    HITLS_X509_ExtDeltaCrl delta = {true, {baseCrlNum, sizeof(baseCrlNum)}};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_DELTA_CRL, &delta, sizeof(delta)),
+        HITLS_PKI_SUCCESS);
+    HITLS_X509_ExtDeltaCrl getDelta = {0};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_DELTA_CRL, &getDelta, sizeof(getDelta)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(getDelta.critical, delta.critical);
+    ASSERT_EQ(getDelta.crlNumber.dataLen, delta.crlNumber.dataLen);
+    ASSERT_EQ(memcmp(getDelta.crlNumber.data, delta.crlNumber.data, delta.crlNumber.dataLen), 0);
+
+    HITLS_X509_ExtIdp idp = {0};
+    idp.critical = true;
+    idp.onlyContainsCACerts = true;
+    idp.indirectCrl = true;
+    SetIdpReasons(&idp, HITLS_X509_REASON_FLAG_KEY_COMPROMISE | HITLS_X509_REASON_FLAG_AA_COMPROMISE);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_IDP, &idp, sizeof(idp)),
+        HITLS_PKI_SUCCESS);
+    HITLS_X509_ExtIdp getIdp = {0};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_IDP, &getIdp, sizeof(getIdp)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(getIdp.critical, idp.critical);
+    ASSERT_EQ(getIdp.onlyContainsUserCerts, idp.onlyContainsUserCerts);
+    ASSERT_EQ(getIdp.onlyContainsCACerts, idp.onlyContainsCACerts);
+    ASSERT_EQ(getIdp.indirectCrl, idp.indirectCrl);
+    ASSERT_EQ(getIdp.onlyContainsAttributeCerts, idp.onlyContainsAttributeCerts);
+    ASSERT_TRUE(getIdp.hasReasons);
+    ASSERT_EQ(getIdp.onlySomeReasons, idp.onlySomeReasons);
+    ASSERT_EQ(getIdp.distPoint, NULL);
+
+    HITLS_X509_ExtIdp badIdp = {0};
+    badIdp.critical = true;
+    SetIdpReasons(&badIdp, 0x4000);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_IDP, &badIdp, sizeof(badIdp)),
+        HITLS_X509_ERR_EXT_REASONFLAGS);
+#ifdef HITLS_BSL_ERR
+    BSL_ERR_ClearError();
+#endif
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
+    HITLS_X509_ClearIdp(&idp);
+    HITLS_X509_ClearIdp(&badIdp);
+    HITLS_X509_ClearIdp(&getIdp);
     HITLS_X509_CrlFree(crl);
 }
 
+/* END_CASE */
+
+static int32_t ParseIdpDer(uint8_t *der, uint32_t derLen, bool critical, HITLS_X509_ExtIdp *idp)
+{
+    HITLS_X509_ExtEntry entry = {BSL_CID_CE_ISSUINGDISTRIBUTIONPOINT, {0}, critical, {0, derLen, der}};
+    ASSERT_EQ(HITLS_X509_ParseIdp(&entry, idp), HITLS_PKI_SUCCESS);
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    return -1;
+}
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC001
+ * @title  Parse empty IDP DER.
+ * @brief  1. Build an IDP extension value whose DER content is an empty SEQUENCE.
+ *         2. Parse the DER content through HITLS_X509_ParseIdp.
+ * @expect 1. IDP parsing succeeds.
+ *         2. The decoded IDP omits both onlySomeReasons and distributionPoint.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC001(void)
+{
+    uint8_t emptyIdpDer[] = {0x30, 0x00};
+    HITLS_X509_ExtIdp emptyIdp = {0};
+
+    ASSERT_EQ(ParseIdpDer(emptyIdpDer, sizeof(emptyIdpDer), true, &emptyIdp), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(emptyIdp.critical, true);
+    ASSERT_TRUE(!emptyIdp.hasReasons);
+    ASSERT_EQ(emptyIdp.onlySomeReasons, 0);
+    ASSERT_EQ(emptyIdp.distPoint, NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_ClearIdp(&emptyIdp);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC002
+ * @title  Parse IDP DER with multiple onlyContains flags.
+ * @brief  1. Build an IDP extension value with onlyContainsUserCerts, onlyContainsCACerts,
+ *            and onlyContainsAttributeCerts all encoded as true.
+ *         2. Parse the DER content through HITLS_X509_ParseIdp.
+ * @expect 1. IDP parsing succeeds.
+ *         2. All three onlyContains fields are decoded as true.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC002(void)
+{
+    uint8_t multiOnlyDer[] = {0x30, 0x09, 0x81, 0x01, 0xFF, 0x82, 0x01, 0xFF, 0x85, 0x01, 0xFF};
+    HITLS_X509_ExtIdp multiOnlyIdp = {0};
+
+    ASSERT_EQ(ParseIdpDer(multiOnlyDer, sizeof(multiOnlyDer), false, &multiOnlyIdp), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(multiOnlyIdp.onlyContainsUserCerts, true);
+    ASSERT_EQ(multiOnlyIdp.onlyContainsCACerts, true);
+    ASSERT_EQ(multiOnlyIdp.onlyContainsAttributeCerts, true);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_ClearIdp(&multiOnlyIdp);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC003
+ * @title  Parse IDP DER with unsupported reason bits.
+ * @brief  1. Build an IDP extension value whose onlySomeReasons contains an unsupported bit.
+ *         2. Parse the DER content through HITLS_X509_ParseIdp.
+ * @expect 1. IDP parsing succeeds.
+ *         2. The reason field remains present and unsupported bits are masked out.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC003(void)
+{
+    uint8_t unknownReasonDer[] = {0x30, 0x05, 0x83, 0x03, 0x06, 0x00, 0x40};
+    HITLS_X509_ExtIdp unknownReasonIdp = {0};
+
+    ASSERT_EQ(ParseIdpDer(unknownReasonDer, sizeof(unknownReasonDer), false, &unknownReasonIdp), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(unknownReasonIdp.hasReasons);
+    ASSERT_EQ(unknownReasonIdp.onlySomeReasons, 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_ClearIdp(&unknownReasonIdp);
+}
 /* END_CASE */
 
 /* BEGIN_CASE */
@@ -1525,6 +1654,32 @@ EXIT:
     return -1;
 }
 
+static int32_t CheckThirdPartyCrlExactRoundtrip(int32_t format, char *path)
+{
+    HITLS_X509_Crl *crl = NULL;
+    BSL_Buffer encode = {0};
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    int32_t ret = -1;
+
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &data, &dataLen), BSL_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(format, path, &crl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlGenBuff(format, crl, &encode), HITLS_PKI_SUCCESS);
+    if (format == BSL_FORMAT_ASN1) {
+        ASSERT_EQ(encode.dataLen, dataLen);
+    } else {
+        ASSERT_EQ(strlen((char *)encode.data), dataLen);
+    }
+    ASSERT_EQ(memcmp(encode.data, data, dataLen), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    ret = HITLS_PKI_SUCCESS;
+EXIT:
+    BSL_SAL_Free(data);
+    BSL_SAL_Free(encode.data);
+    HITLS_X509_CrlFree(crl);
+    return ret;
+}
+
 static int32_t ParseAllCrl(HITLS_X509_Crl *crl, HITLS_X509_Crl *parseCrl, bool includeOptional,
     bool useGMT, int isUseSm2UserId)
 {
@@ -1689,6 +1844,1633 @@ EXIT:
     HITLS_X509_CrlFree(parseCrl);
     HITLS_X509_CertFree(issuerCert);
     CRYPT_EAL_PkeyFreeCtx(prvKey);
+}
+/* END_CASE */
+
+#define IDP_TEST_URI "http://example.com/idp-fullname-uri.crl"
+#define IDP_TEST_RELATIVE_CN "relativeIDP"
+#define IDP_TEST_REASON_MULTI \
+    (HITLS_X509_REASON_FLAG_KEY_COMPROMISE | HITLS_X509_REASON_FLAG_CA_COMPROMISE | \
+     HITLS_X509_REASON_FLAG_AA_COMPROMISE)
+#define IDP_TEST_REASON_ALL \
+    (HITLS_X509_REASON_FLAG_UNUSED | HITLS_X509_REASON_FLAG_KEY_COMPROMISE | \
+     HITLS_X509_REASON_FLAG_CA_COMPROMISE | HITLS_X509_REASON_FLAG_AFFILIATION_CHANGED | \
+     HITLS_X509_REASON_FLAG_SUPERSEDED | HITLS_X509_REASON_FLAG_CESSATION_OPERATION | \
+     HITLS_X509_REASON_FLAG_CERTIFICATE_HOLD | HITLS_X509_REASON_FLAG_PRIVILEGE_WITHDRAWN | \
+     HITLS_X509_REASON_FLAG_AA_COMPROMISE)
+
+static void ClearExpectedError(void)
+{
+#ifdef HITLS_BSL_ERR
+    BSL_ERR_ClearError();
+#endif
+}
+
+static HITLS_X509_GeneralName *NewIdpGeneralName(HITLS_X509_GeneralNameType type, const uint8_t *data,
+    uint32_t dataLen)
+{
+    HITLS_X509_GeneralName *name = BSL_SAL_Calloc(1, sizeof(HITLS_X509_GeneralName));
+    ASSERT_NE(name, NULL);
+    name->type = type;
+    name->value.data = BSL_SAL_Dump(data, dataLen);
+    ASSERT_NE(name->value.data, NULL);
+    name->value.dataLen = dataLen;
+    return name;
+EXIT:
+    HITLS_X509_FreeGeneralName(name);
+    return NULL;
+}
+
+static BslList *NewIdpGeneralNameList(HITLS_X509_GeneralName *name)
+{
+    BslList *list = BSL_LIST_New(sizeof(HITLS_X509_GeneralName));
+    ASSERT_NE(list, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(list, name, BSL_LIST_POS_END), BSL_SUCCESS);
+    return list;
+EXIT:
+    BSL_LIST_FREE(list, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
+    return NULL;
+}
+
+static BslList *GenIdpFullNameUriList(void)
+{
+    HITLS_X509_GeneralName *name = NewIdpGeneralName(HITLS_X509_GN_URI, (const uint8_t *)IDP_TEST_URI,
+        (uint32_t)strlen(IDP_TEST_URI));
+    ASSERT_NE(name, NULL);
+    return NewIdpGeneralNameList(name);
+EXIT:
+    return NULL;
+}
+
+static BslList *GenIdpFullNameDirList(void)
+{
+    HITLS_X509_GeneralName *name = BSL_SAL_Calloc(1, sizeof(HITLS_X509_GeneralName));
+    ASSERT_NE(name, NULL);
+    name->type = HITLS_X509_GN_DNNAME;
+    name->value.data = (uint8_t *)GenDNList();
+    ASSERT_NE(name->value.data, NULL);
+    name->value.dataLen = sizeof(BslList *);
+    return NewIdpGeneralNameList(name);
+EXIT:
+    HITLS_X509_FreeGeneralName(name);
+    return NULL;
+}
+
+static BslList *GenIdpRelativeNameList(void)
+{
+    HITLS_X509_DN dnName[1] = {
+        {BSL_CID_AT_COMMONNAME, (uint8_t *)IDP_TEST_RELATIVE_CN, (uint32_t)strlen(IDP_TEST_RELATIVE_CN)}
+    };
+    BslList *name = HITLS_X509_DnListNew();
+    ASSERT_NE(name, NULL);
+    ASSERT_EQ(HITLS_X509_AddDnName(name, dnName, 1), HITLS_PKI_SUCCESS);
+    return name;
+EXIT:
+    HITLS_X509_DnListFree(name);
+    return NULL;
+}
+
+static void InitIdp(HITLS_X509_ExtIdp *idp, bool critical)
+{
+    memset(idp, 0, sizeof(*idp));
+    idp->critical = critical;
+}
+
+static void SetIdpReasons(HITLS_X509_ExtIdp *idp, uint16_t reasons)
+{
+    idp->hasReasons = true;
+    idp->onlySomeReasons = reasons;
+}
+
+static HITLS_X509_DistPointName *NewIdpDistPoint(HITLS_X509_DistPointNameType type, BslList *name)
+{
+    HITLS_X509_DistPointName *distPoint = BSL_SAL_Calloc(1, sizeof(*distPoint));
+    ASSERT_NE(distPoint, NULL);
+    distPoint->type = type;
+    distPoint->name = name;
+    return distPoint;
+EXIT:
+    return NULL;
+}
+
+static int32_t BuildIdpEmpty(HITLS_X509_ExtIdp *idp, bool critical)
+{
+    InitIdp(idp, critical);
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t BuildIdpFullNameUri(HITLS_X509_ExtIdp *idp, bool critical)
+{
+    BslList *names = NULL;
+
+    InitIdp(idp, critical);
+    names = GenIdpFullNameUriList();
+    if (names == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    idp->distPoint = NewIdpDistPoint(HITLS_X509_DP_FULLNAME, names);
+    if (idp->distPoint == NULL) {
+        BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
+        return BSL_MALLOC_FAIL;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t BuildIdpFullNameDir(HITLS_X509_ExtIdp *idp, bool critical)
+{
+    BslList *names = NULL;
+
+    InitIdp(idp, critical);
+    names = GenIdpFullNameDirList();
+    if (names == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    idp->distPoint = NewIdpDistPoint(HITLS_X509_DP_FULLNAME, names);
+    if (idp->distPoint == NULL) {
+        BSL_LIST_FREE(names, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
+        return BSL_MALLOC_FAIL;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t BuildIdpRelativeName(HITLS_X509_ExtIdp *idp, bool critical)
+{
+    BslList *names = NULL;
+
+    InitIdp(idp, critical);
+    names = GenIdpRelativeNameList();
+    if (names == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    idp->distPoint = NewIdpDistPoint(HITLS_X509_DP_RELATIVENAME, names);
+    if (idp->distPoint == NULL) {
+        HITLS_X509_DnListFree(names);
+        return BSL_MALLOC_FAIL;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t BuildIdpOnlyUserCerts(HITLS_X509_ExtIdp *idp, bool critical)
+{
+    InitIdp(idp, critical);
+    idp->onlyContainsUserCerts = true;
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t BuildIdpIndirectCrl(HITLS_X509_ExtIdp *idp, bool critical)
+{
+    InitIdp(idp, critical);
+    idp->indirectCrl = true;
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t BuildIdpOnlyAttrCerts(HITLS_X509_ExtIdp *idp, bool critical)
+{
+    InitIdp(idp, critical);
+    idp->onlyContainsAttributeCerts = true;
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t BuildIdpCaIndirectReasons(HITLS_X509_ExtIdp *idp, bool critical)
+{
+    InitIdp(idp, critical);
+    idp->onlyContainsCACerts = true;
+    idp->indirectCrl = true;
+    SetIdpReasons(idp, IDP_TEST_REASON_MULTI);
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t BuildIdpMultiOnly(HITLS_X509_ExtIdp *idp, bool critical)
+{
+    InitIdp(idp, critical);
+    idp->onlyContainsUserCerts = true;
+    idp->onlyContainsCACerts = true;
+    idp->onlyContainsAttributeCerts = true;
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t BuildIdpReasonZero(HITLS_X509_ExtIdp *idp, bool critical)
+{
+    InitIdp(idp, critical);
+    SetIdpReasons(idp, 0);
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t BuildIdpReasonAll(HITLS_X509_ExtIdp *idp, bool critical)
+{
+    InitIdp(idp, critical);
+    SetIdpReasons(idp, IDP_TEST_REASON_ALL);
+    return HITLS_PKI_SUCCESS;
+}
+
+static void FreeBuiltIdp(HITLS_X509_ExtIdp *idp)
+{
+    if (idp == NULL) {
+        return;
+    }
+    idp->hasReasons = false;
+    idp->onlySomeReasons = 0;
+    if (idp->distPoint == NULL) {
+        return;
+    }
+    if (idp->distPoint->type == HITLS_X509_DP_FULLNAME && idp->distPoint->name != NULL) {
+        BSL_LIST_FREE(idp->distPoint->name, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
+        idp->distPoint->name = NULL;
+    } else if (idp->distPoint->type == HITLS_X509_DP_RELATIVENAME && idp->distPoint->name != NULL) {
+        HITLS_X509_DnListFree(idp->distPoint->name);
+        idp->distPoint->name = NULL;
+    }
+    BSL_SAL_Free(idp->distPoint);
+    idp->distPoint = NULL;
+}
+
+static void FreeIdpDistPointContainer(HITLS_X509_ExtIdp *idp)
+{
+    if (idp == NULL || idp->distPoint == NULL) {
+        return;
+    }
+    BSL_SAL_Free(idp->distPoint);
+    idp->distPoint = NULL;
+}
+
+static void FreeIdpGeneralNameList(HITLS_X509_ExtIdp *idp)
+{
+    if (idp == NULL || idp->distPoint == NULL || idp->distPoint->name == NULL) {
+        return;
+    }
+    BSL_LIST_FREE(idp->distPoint->name, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeGeneralName);
+    idp->distPoint->name = NULL;
+    FreeIdpDistPointContainer(idp);
+}
+
+static void FreeIdpDnList(HITLS_X509_ExtIdp *idp)
+{
+    if (idp == NULL || idp->distPoint == NULL || idp->distPoint->name == NULL) {
+        return;
+    }
+    HITLS_X509_DnListFree(idp->distPoint->name);
+    idp->distPoint->name = NULL;
+    FreeIdpDistPointContainer(idp);
+}
+
+static int32_t CompareIdpReasons(const HITLS_X509_ExtIdp *expect, const HITLS_X509_ExtIdp *actual)
+{
+    ASSERT_EQ(expect->hasReasons, actual->hasReasons);
+    if (!expect->hasReasons) {
+        return HITLS_PKI_SUCCESS;
+    }
+    ASSERT_EQ(expect->onlySomeReasons, actual->onlySomeReasons);
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    return -1;
+}
+
+static int32_t CompareIdpNameNodeList(BslList *expect, BslList *actual)
+{
+    ASSERT_EQ(BSL_LIST_COUNT(expect), BSL_LIST_COUNT(actual));
+    HITLS_X509_NameNode **expectNode = BSL_LIST_First(expect);
+    HITLS_X509_NameNode **actualNode = BSL_LIST_First(actual);
+    for (int32_t i = 0; i < BSL_LIST_COUNT(expect); i++) {
+        ASSERT_NE(expectNode, NULL);
+        ASSERT_NE(actualNode, NULL);
+        ASSERT_EQ((*expectNode)->layer, (*actualNode)->layer);
+        ASSERT_EQ((*expectNode)->nameType.tag, (*actualNode)->nameType.tag);
+        ASSERT_COMPARE("idp name type", (*expectNode)->nameType.buff, (*expectNode)->nameType.len,
+            (*actualNode)->nameType.buff, (*actualNode)->nameType.len);
+        ASSERT_EQ((*expectNode)->nameValue.tag, (*actualNode)->nameValue.tag);
+        ASSERT_COMPARE("idp name value", (*expectNode)->nameValue.buff, (*expectNode)->nameValue.len,
+            (*actualNode)->nameValue.buff, (*actualNode)->nameValue.len);
+        expectNode = BSL_LIST_Next(expect);
+        actualNode = BSL_LIST_Next(actual);
+    }
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    return -1;
+}
+
+static int32_t CompareIdpGeneralNames(BslList *expect, BslList *actual)
+{
+    ASSERT_EQ(BSL_LIST_COUNT(expect), BSL_LIST_COUNT(actual));
+    HITLS_X509_GeneralName **expectGn = BSL_LIST_First(expect);
+    HITLS_X509_GeneralName **actualGn = BSL_LIST_First(actual);
+    for (int32_t i = 0; i < BSL_LIST_COUNT(expect); i++) {
+        ASSERT_NE(expectGn, NULL);
+        ASSERT_NE(actualGn, NULL);
+        ASSERT_EQ((*expectGn)->type, (*actualGn)->type);
+        if ((*expectGn)->type == HITLS_X509_GN_DNNAME) {
+            ASSERT_EQ(CompareIdpNameNodeList((BslList *)(uintptr_t)(*expectGn)->value.data,
+                (BslList *)(uintptr_t)(*actualGn)->value.data), HITLS_PKI_SUCCESS);
+        } else {
+            ASSERT_EQ((*expectGn)->value.dataLen, (*actualGn)->value.dataLen);
+            ASSERT_COMPARE("idp general name", (*expectGn)->value.data, (*expectGn)->value.dataLen,
+                (*actualGn)->value.data, (*actualGn)->value.dataLen);
+        }
+        expectGn = BSL_LIST_Next(expect);
+        actualGn = BSL_LIST_Next(actual);
+    }
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    return -1;
+}
+
+static int32_t CompareIdp(const HITLS_X509_ExtIdp *expect, const HITLS_X509_ExtIdp *actual)
+{
+    ASSERT_EQ(expect->critical, actual->critical);
+    ASSERT_EQ(expect->onlyContainsUserCerts, actual->onlyContainsUserCerts);
+    ASSERT_EQ(expect->onlyContainsCACerts, actual->onlyContainsCACerts);
+    ASSERT_EQ(expect->indirectCrl, actual->indirectCrl);
+    ASSERT_EQ(expect->onlyContainsAttributeCerts, actual->onlyContainsAttributeCerts);
+    ASSERT_EQ(CompareIdpReasons(expect, actual), HITLS_PKI_SUCCESS);
+
+    if (expect->distPoint == NULL) {
+        ASSERT_EQ(actual->distPoint, NULL);
+    } else if (expect->distPoint->type == HITLS_X509_DP_FULLNAME) {
+        ASSERT_NE(actual->distPoint, NULL);
+        ASSERT_EQ(actual->distPoint->type, HITLS_X509_DP_FULLNAME);
+        ASSERT_NE(expect->distPoint->name, NULL);
+        ASSERT_NE(actual->distPoint->name, NULL);
+        ASSERT_EQ(CompareIdpGeneralNames(expect->distPoint->name, actual->distPoint->name), HITLS_PKI_SUCCESS);
+    } else {
+        ASSERT_NE(actual->distPoint, NULL);
+        ASSERT_EQ(actual->distPoint->type, HITLS_X509_DP_RELATIVENAME);
+        ASSERT_NE(expect->distPoint->name, NULL);
+        ASSERT_NE(actual->distPoint->name, NULL);
+        ASSERT_EQ(CompareIdpNameNodeList(expect->distPoint->name, actual->distPoint->name), HITLS_PKI_SUCCESS);
+    }
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    return -1;
+}
+
+static int32_t CompareDeltaCrl(const HITLS_X509_ExtDeltaCrl *expect, const HITLS_X509_ExtDeltaCrl *actual)
+{
+    ASSERT_EQ(expect->critical, actual->critical);
+    ASSERT_EQ(expect->crlNumber.dataLen, actual->crlNumber.dataLen);
+    ASSERT_EQ(memcmp(expect->crlNumber.data, actual->crlNumber.data, expect->crlNumber.dataLen), 0);
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    return -1;
+}
+
+static int32_t ParseCrlAndGetIdp(char *path, HITLS_X509_Crl **crl, HITLS_X509_ExtIdp *idp)
+{
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, crl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(*crl, HITLS_X509_EXT_GET_IDP, idp,
+        sizeof(HITLS_X509_ExtIdp)), HITLS_PKI_SUCCESS);
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    return -1;
+}
+
+static int32_t CheckParsedIdp(char *path, HITLS_X509_ExtIdp *expect)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_ExtIdp actual = {0};
+
+    ASSERT_EQ(ParseCrlAndGetIdp(path, &crl, &actual), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CompareIdp(expect, &actual), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    HITLS_X509_ClearIdp(&actual);
+    HITLS_X509_CrlFree(crl);
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    HITLS_X509_ClearIdp(&actual);
+    HITLS_X509_CrlFree(crl);
+    return -1;
+}
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC001
+ * @title  Parse CRL IDP fullName URI.
+ * @brief  1. Parse a ThirdParty-generated CRL whose IDP extension contains a critical fullName URI.
+ *         2. Get the public IDP model from the parsed CRL.
+ * @expect 1. CRL parsing and IDP get both succeed.
+ *         2. The decoded IDP critical flag and URI GeneralName match the expected values.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC001(char *path)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpFullNameUri(&expect, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC002
+ * @title  Parse CRL IDP fullName directoryName.
+ * @brief  1. Parse a ThirdParty-generated CRL whose IDP extension contains fullName directoryName.
+ *         2. Get the public IDP model from the parsed CRL.
+ * @expect 1. CRL parsing and IDP get both succeed.
+ *         2. The decoded directoryName GeneralName matches the expected DN.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC002(char *path)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpFullNameDir(&expect, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC003
+ * @title  Parse CRL IDP relativeName.
+ * @brief  1. Parse a ThirdParty-generated CRL whose IDP extension contains relativeName.
+ *         2. Get the public IDP model from the parsed CRL.
+ * @expect 1. CRL parsing and IDP get both succeed.
+ *         2. The decoded relativeName RDN fragment matches the expected value.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC003(char *path)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpRelativeName(&expect, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC004
+ * @title  Parse CRL IDP onlyContainsUserCerts.
+ * @brief  1. Parse a ThirdParty-generated CRL whose IDP extension only sets onlyContainsUserCerts.
+ *         2. Get the public IDP model from the parsed CRL.
+ * @expect 1. CRL parsing and IDP get both succeed.
+ *         2. onlyContainsUserCerts is true and other IDP scope fields remain false.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC004(char *path)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpOnlyUserCerts(&expect, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC005
+ * @title  Parse CRL IDP CA scope, indirectCRL, and reasons.
+ * @brief  1. Parse a ThirdParty-generated CRL whose IDP extension sets onlyContainsCACerts,
+ *            indirectCRL, and a multi-bit onlySomeReasons value.
+ *         2. Get the public IDP model from the parsed CRL.
+ * @expect 1. CRL parsing and IDP get both succeed.
+ *         2. The CA scope flag, indirectCRL flag, and reason mask match the expected values.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC005(char *path)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpCaIndirectReasons(&expect, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC006
+ * @title  Parse empty CRL IDP extension.
+ * @brief  1. Parse a CRL whose IDP extension is an empty SEQUENCE.
+ *         2. Get the public IDP model from the parsed CRL.
+ * @expect 1. CRL parsing and IDP get both succeed.
+ *         2. The decoded IDP has no distribution point, no reasons, and no scope flags.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC006(char *path)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpEmpty(&expect, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC007
+ * @title  Parse CRL IDP with multiple onlyContains flags.
+ * @brief  1. Parse a CRL whose IDP extension sets multiple onlyContains flags at the same time.
+ *         2. Get the public IDP model from the parsed CRL.
+ * @expect 1. CRL parsing and IDP get both succeed.
+ *         2. The decoded IDP preserves all encoded onlyContains flags.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC007(char *path)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpMultiOnly(&expect, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC008
+ * @title  Parse CRL IDP with an empty reason mask.
+ * @brief  1. Parse a CRL whose IDP extension contains onlySomeReasons with no supported reason bits.
+ *         2. Get the public IDP model from the parsed CRL.
+ * @expect 1. CRL parsing and IDP get both succeed.
+ *         2. onlySomeReasons is present and decoded as zero.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC008(char *path)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpReasonZero(&expect, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC009
+ * @title  Parse CRL IDP with unsupported reason bits.
+ * @brief  1. Parse a CRL whose IDP extension contains unsupported onlySomeReasons bits.
+ *         2. Get the public IDP model from the parsed CRL.
+ * @expect 1. CRL parsing and IDP get both succeed.
+ *         2. onlySomeReasons remains present and unsupported bits are masked out.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC009(char *path)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpReasonZero(&expect, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC010
+ * @title  Parse CRL IDP with explicit FALSE boolean.
+ * @brief  1. Parse a CRL whose IDP extension explicitly encodes a boolean field as FALSE.
+ *         2. Get the public IDP model from the parsed CRL.
+ * @expect 1. CRL parsing and IDP get both succeed.
+ *         2. The decoded public model is the same as the default false value.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC010(char *path)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpEmpty(&expect, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckParsedIdp(path, &expect), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001
+ * @title  Preserve ThirdParty-generated IDP CRL bytes through parse and encode.
+ * @brief  1. Read a ThirdParty-generated DER CRL containing an IDP extension.
+ *         2. Parse the CRL with openhitls and re-encode it as DER.
+ * @expect 1. Parsing and re-encoding both succeed.
+ *         2. The re-encoded CRL is byte-identical to the original DER input.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001(char *path)
+{
+    ASSERT_EQ(CheckThirdPartyCrlExactRoundtrip(BSL_FORMAT_ASN1, path), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_IDP_DELTA_EXACT_ROUNDTRIP_TC001
+ * @title  Preserve ThirdParty CRL bytes when IDP and Delta CRL Indicator coexist.
+ * @brief  1. Parse a ThirdParty-generated DER CRL containing both IDP and Delta CRL Indicator extensions.
+ *         2. Re-encode the parsed CRL as DER.
+ * @expect 1. Parsing and re-encoding both succeed.
+ *         2. The re-encoded CRL is byte-identical to the original DER input.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_IDP_DELTA_EXACT_ROUNDTRIP_TC001(char *path)
+{
+    ASSERT_EQ(CheckThirdPartyCrlExactRoundtrip(BSL_FORMAT_ASN1, path), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+static int32_t CheckBadIdpGet(char *path, int32_t expectedRet)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_ExtIdp idp = {0};
+
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, path, &crl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_IDP, &idp,
+        sizeof(HITLS_X509_ExtIdp)), expectedRet);
+    ClearExpectedError();
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    HITLS_X509_ClearIdp(&idp);
+    HITLS_X509_CrlFree(crl);
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    HITLS_X509_ClearIdp(&idp);
+    HITLS_X509_CrlFree(crl);
+    return -1;
+}
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC001
+ * @title  Reject IDP extnValue that is not a SEQUENCE.
+ * @brief  1. Parse a CRL that stores malformed IDP extension bytes.
+ *         2. Get IDP from the parsed CRL.
+ * @expect 1. Raw CRL parsing succeeds.
+ *         2. IDP get fails with BSL_ASN1_ERR_TAG_EXPECTED.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC001(char *path)
+{
+    ASSERT_EQ(CheckBadIdpGet(path, BSL_ASN1_ERR_TAG_EXPECTED), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC002
+ * @title  Reject IDP SEQUENCE with trailing data.
+ * @brief  1. Parse a CRL whose malformed IDP extension has valid SEQUENCE content followed by extra bytes.
+ *         2. Get IDP from the parsed CRL.
+ * @expect 1. Raw CRL parsing succeeds.
+ *         2. IDP get fails with HITLS_X509_ERR_PARSE_EXT_BUF.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC002(char *path)
+{
+    ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_PARSE_EXT_BUF), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC003
+ * @title  Reject IDP BOOLEAN with invalid length.
+ * @brief  1. Parse a CRL whose malformed IDP extension encodes an implicit BOOLEAN with invalid length.
+ *         2. Get IDP from the parsed CRL.
+ * @expect 1. Raw CRL parsing succeeds.
+ *         2. IDP get fails with BSL_ASN1_ERR_DECODE_BOOL.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC003(char *path)
+{
+    ASSERT_EQ(CheckBadIdpGet(path, BSL_ASN1_ERR_DECODE_BOOL), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC004
+ * @title  Reject empty onlySomeReasons content.
+ * @brief  1. Parse a CRL whose malformed IDP extension contains an invalid onlySomeReasons BIT STRING.
+ *         2. Get IDP from the parsed CRL.
+ * @expect 1. Raw CRL parsing succeeds.
+ *         2. IDP get fails with HITLS_X509_ERR_EXT_IDP.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC004(char *path)
+{
+    ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC005
+ * @title  Reject empty distributionPoint wrapper.
+ * @brief  1. Parse a CRL whose malformed IDP extension has an empty distributionPoint wrapper.
+ *         2. Get IDP from the parsed CRL.
+ * @expect 1. Raw CRL parsing succeeds.
+ *         2. IDP get fails with HITLS_X509_ERR_EXT_IDP.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC005(char *path)
+{
+    ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC006
+ * @title  Reject invalid distributionPoint choice tag.
+ * @brief  1. Parse a CRL whose malformed IDP extension uses an unsupported distributionPoint choice tag.
+ *         2. Get IDP from the parsed CRL.
+ * @expect 1. Raw CRL parsing succeeds.
+ *         2. IDP get fails with HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC006(char *path)
+{
+    ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC007
+ * @title  Reject distributionPoint choice with trailing data.
+ * @brief  1. Parse a CRL whose malformed IDP extension has extra bytes after a valid distributionPoint choice.
+ *         2. Get IDP from the parsed CRL.
+ * @expect 1. Raw CRL parsing succeeds.
+ *         2. IDP get fails with HITLS_X509_ERR_PARSE_EXT_BUF.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC007(char *path)
+{
+    ASSERT_EQ(CheckBadIdpGet(path, HITLS_X509_ERR_PARSE_EXT_BUF), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC008
+ * @title  Reject invalid relativeName DER.
+ * @brief  1. Parse a CRL whose malformed IDP extension contains invalid relativeName DER.
+ *         2. Get IDP from the parsed CRL.
+ * @expect 1. Raw CRL parsing succeeds.
+ *         2. IDP get fails with BSL_ASN1_ERR_MISMATCH_TAG.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC008(char *path)
+{
+    ASSERT_EQ(CheckBadIdpGet(path, BSL_ASN1_ERR_MISMATCH_TAG), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+static int32_t GenerateCrlAndCheckIdp(char *cert, char *key, int keyType, HITLS_X509_ExtIdp *oldIdp,
+    HITLS_X509_ExtIdp *expect, char *crlFile)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_Crl *parseCrl = NULL;
+    HITLS_X509_Cert *issuerCert = NULL;
+    CRYPT_EAL_PkeyCtx *prvKey = NULL;
+    HITLS_X509_ExtIdp actual = {0};
+
+    TestRandInit();
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, keyType, key, NULL, 0, &prvKey), CRYPT_SUCCESS);
+
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    ASSERT_EQ(SetCrl(crl, issuerCert, true), HITLS_PKI_SUCCESS);
+
+    if (oldIdp != NULL) {
+        ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_IDP, oldIdp, sizeof(*oldIdp)),
+            HITLS_PKI_SUCCESS);
+    }
+
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_IDP, expect, sizeof(*expect)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlSign(CRYPT_MD_SHA256, prvKey, NULL, crl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlGenFile(BSL_FORMAT_ASN1, crl, crlFile), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlFile, &parseCrl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(parseCrl, HITLS_X509_EXT_GET_IDP, &actual,
+        sizeof(HITLS_X509_ExtIdp)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CompareIdp(expect, &actual), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    HITLS_X509_ClearIdp(&actual);
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CrlFree(parseCrl);
+    HITLS_X509_CertFree(issuerCert);
+    CRYPT_EAL_PkeyFreeCtx(prvKey);
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    HITLS_X509_ClearIdp(&actual);
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CrlFree(parseCrl);
+    HITLS_X509_CertFree(issuerCert);
+    CRYPT_EAL_PkeyFreeCtx(prvKey);
+    return -1;
+}
+
+static int32_t GenerateCrlAndCheckIdpAndDelta(char *cert, char *key, int keyType, HITLS_X509_ExtIdp *expectIdp,
+    HITLS_X509_ExtDeltaCrl *expectDelta, char *crlFile)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_Crl *parseCrl = NULL;
+    HITLS_X509_Cert *issuerCert = NULL;
+    CRYPT_EAL_PkeyCtx *prvKey = NULL;
+    HITLS_X509_ExtIdp actualIdp = {0};
+    HITLS_X509_ExtDeltaCrl actualDelta = {0};
+
+    TestRandInit();
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, keyType, key, NULL, 0, &prvKey), CRYPT_SUCCESS);
+
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    ASSERT_EQ(SetCrl(crl, issuerCert, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_IDP, expectIdp, sizeof(*expectIdp)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_DELTA_CRL, expectDelta, sizeof(*expectDelta)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlSign(CRYPT_MD_SHA256, prvKey, NULL, crl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlGenFile(BSL_FORMAT_ASN1, crl, crlFile), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_ASN1, crlFile, &parseCrl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(parseCrl, HITLS_X509_EXT_GET_IDP, &actualIdp, sizeof(actualIdp)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(parseCrl, HITLS_X509_EXT_GET_DELTA_CRL, &actualDelta, sizeof(actualDelta)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CompareIdp(expectIdp, &actualIdp), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CompareDeltaCrl(expectDelta, &actualDelta), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    HITLS_X509_ClearIdp(&actualIdp);
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CrlFree(parseCrl);
+    HITLS_X509_CertFree(issuerCert);
+    CRYPT_EAL_PkeyFreeCtx(prvKey);
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    HITLS_X509_ClearIdp(&actualIdp);
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CrlFree(parseCrl);
+    HITLS_X509_CertFree(issuerCert);
+    CRYPT_EAL_PkeyFreeCtx(prvKey);
+    return -1;
+}
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC001
+ * @title  Generate CRL IDP fullName URI.
+ * @brief  1. Set a critical fullName URI IDP on a generated CRL.
+ *         2. Sign, encode, parse the CRL, and get the IDP extension back.
+ * @expect 1. CRL generation and parsing succeed.
+ *         2. The parsed IDP matches the IDP used during generation.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC001(char *cert, char *key, int keyType, char *crlFile)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpFullNameUri(&expect, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC002
+ * @title  Generate CRL IDP fullName directoryName.
+ * @brief  1. Set a fullName directoryName IDP on a generated CRL.
+ *         2. Sign, encode, parse the CRL, and get the IDP extension back.
+ * @expect 1. CRL generation and parsing succeed.
+ *         2. The parsed directoryName IDP matches the IDP used during generation.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC002(char *cert, char *key, int keyType, char *crlFile)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpFullNameDir(&expect, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC003
+ * @title  Generate CRL IDP relativeName.
+ * @brief  1. Set a relativeName IDP on a generated CRL.
+ *         2. Sign, encode, parse the CRL, and get the IDP extension back.
+ * @expect 1. CRL generation and parsing succeed.
+ *         2. The parsed relativeName IDP matches the IDP used during generation.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC003(char *cert, char *key, int keyType, char *crlFile)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpRelativeName(&expect, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC004
+ * @title  Generate CRL IDP onlyContainsUserCerts.
+ * @brief  1. Set onlyContainsUserCerts on a generated CRL IDP.
+ *         2. Sign, encode, parse the CRL, and get the IDP extension back.
+ * @expect 1. CRL generation and parsing succeed.
+ *         2. The parsed IDP preserves onlyContainsUserCerts.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC004(char *cert, char *key, int keyType, char *crlFile)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpOnlyUserCerts(&expect, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC005
+ * @title  Generate CRL IDP CA scope, indirectCRL, and reasons.
+ * @brief  1. Set onlyContainsCACerts, indirectCRL, and a multi-bit reason mask on a generated CRL IDP.
+ *         2. Sign, encode, parse the CRL, and get the IDP extension back.
+ * @expect 1. CRL generation and parsing succeed.
+ *         2. The parsed IDP preserves the CA scope, indirectCRL, and reason mask.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC005(char *cert, char *key, int keyType, char *crlFile)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpCaIndirectReasons(&expect, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC006
+ * @title  Generate CRL IDP indirectCRL only.
+ * @brief  1. Set indirectCRL on a generated CRL IDP.
+ *         2. Sign, encode, parse the CRL, and get the IDP extension back.
+ * @expect 1. CRL generation and parsing succeed.
+ *         2. The parsed IDP preserves indirectCRL.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC006(char *cert, char *key, int keyType, char *crlFile)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpIndirectCrl(&expect, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC007
+ * @title  Generate CRL IDP onlyContainsAttributeCerts.
+ * @brief  1. Set onlyContainsAttributeCerts on a generated CRL IDP.
+ *         2. Sign, encode, parse the CRL, and get the IDP extension back.
+ * @expect 1. CRL generation and parsing succeed.
+ *         2. The parsed IDP preserves onlyContainsAttributeCerts.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC007(char *cert, char *key, int keyType, char *crlFile)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpOnlyAttrCerts(&expect, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC008
+ * @title  Generate CRL IDP with an empty reason mask.
+ * @brief  1. Set onlySomeReasons to a present zero mask on a generated CRL IDP.
+ *         2. Sign, encode, parse the CRL, and get the IDP extension back.
+ * @expect 1. CRL generation and parsing succeed.
+ *         2. The parsed IDP preserves the present zero reason mask.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC008(char *cert, char *key, int keyType, char *crlFile)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpReasonZero(&expect, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC009
+ * @title  Generate CRL IDP with all supported reason flags.
+ * @brief  1. Set all supported reason flags on a generated CRL IDP.
+ *         2. Sign, encode, parse the CRL, and get the IDP extension back.
+ * @expect 1. CRL generation and parsing succeed.
+ *         2. The parsed IDP preserves the complete supported reason mask.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC009(char *cert, char *key, int keyType, char *crlFile)
+{
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpReasonAll(&expect, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, NULL, &expect, crlFile), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC010
+ * @title  Overwrite CRL IDP extension.
+ * @brief  1. Set one IDP value on a generated CRL.
+ *         2. Set a second IDP value on the same CRL and generate the file.
+ *         3. Parse the CRL and get the IDP extension back.
+ * @expect 1. Both IDP set operations succeed.
+ *         2. The parsed CRL contains only the second IDP value.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC010(char *cert, char *key, int keyType, char *crlFile)
+{
+    HITLS_X509_ExtIdp oldIdp = {0};
+    HITLS_X509_ExtIdp expect = {0};
+
+    ASSERT_EQ(BuildIdpOnlyUserCerts(&oldIdp, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BuildIdpFullNameUri(&expect, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(GenerateCrlAndCheckIdp(cert, key, keyType, &oldIdp, &expect, crlFile), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&oldIdp);
+    FreeBuiltIdp(&expect);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_DELTA_ROUNDTRIP_TC001
+ * @title  Generate CRL with both IDP and Delta CRL Indicator.
+ * @brief  1. Set an IDP public model and a Delta CRL Indicator on the same generated CRL.
+ *         2. Sign, encode, parse the CRL, and get both extensions back.
+ * @expect 1. CRL generation and parsing succeed.
+ *         2. The parsed IDP and Delta CRL Indicator both match the values used during generation.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_DELTA_ROUNDTRIP_TC001(char *cert, char *key, int keyType, char *crlFile)
+{
+    uint8_t baseCrlNum[] = {0x01, 0x23, 0x45, 0x67};
+    HITLS_X509_ExtIdp expectIdp = {0};
+    HITLS_X509_ExtDeltaCrl expectDelta = {true, {baseCrlNum, sizeof(baseCrlNum)}};
+
+    ASSERT_EQ(BuildIdpFullNameUri(&expectIdp, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(GenerateCrlAndCheckIdpAndDelta(cert, key, keyType, &expectIdp, &expectDelta, crlFile),
+        HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&expectIdp);
+}
+/* END_CASE */
+
+static BslList *NewEmptyIdpList(int32_t dataSize)
+{
+    BslList *list = BSL_LIST_New(dataSize);
+    ASSERT_NE(list, NULL);
+    return list;
+EXIT:
+    return NULL;
+}
+
+static int32_t CheckSetBadIdp(HITLS_X509_ExtIdp *idp, int32_t expectedRet)
+{
+    HITLS_X509_Crl *crl = HITLS_X509_CrlNew();
+
+    ASSERT_NE(crl, NULL);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_IDP, idp, sizeof(*idp)), expectedRet);
+    ClearExpectedError();
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    HITLS_X509_CrlFree(crl);
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    HITLS_X509_CrlFree(crl);
+    return -1;
+}
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC001
+ * @title  Reject invalid distPoint type with non-null name.
+ * @brief  1. Build a public IDP model whose distPoint object uses an unsupported type and a non-null name list.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC001(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.critical = true;
+    idp.distPoint = NewIdpDistPoint((HITLS_X509_DistPointNameType)0x7FFFFFFF,
+        NewEmptyIdpList(sizeof(HITLS_X509_GeneralName)));
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_NE(idp.distPoint->name, NULL);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpGeneralNameList(&idp);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC002
+ * @title  Reject fullName with NULL name.
+ * @brief  1. Build a public IDP model whose distPoint object uses FULLNAME and a NULL name.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC002(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.critical = true;
+    idp.distPoint = NewIdpDistPoint(HITLS_X509_DP_FULLNAME, NULL);
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpDistPointContainer(&idp);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC003
+ * @title  Reject fullName with empty name list.
+ * @brief  1. Build a public IDP model whose distPoint object uses FULLNAME and an empty name list.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC003(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.critical = true;
+    idp.distPoint = NewIdpDistPoint(HITLS_X509_DP_FULLNAME, NewEmptyIdpList(sizeof(HITLS_X509_GeneralName)));
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_NE(idp.distPoint->name, NULL);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpGeneralNameList(&idp);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC004
+ * @title  Reject fullName with relativeName list.
+ * @brief  1. Build a public IDP model whose distPoint object uses FULLNAME but stores DN nodes.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC004(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.critical = true;
+    idp.distPoint = NewIdpDistPoint(HITLS_X509_DP_FULLNAME, GenIdpRelativeNameList());
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_NE(idp.distPoint->name, NULL);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpDnList(&idp);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC005
+ * @title  Reject fullName with unsupported GeneralName type.
+ * @brief  1. Build a public IDP model whose FULLNAME list contains an unsupported GeneralName type.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_GN_UNSUPPORT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC005(void)
+{
+    uint8_t val[] = {0x01};
+    HITLS_X509_GeneralName *name = NULL;
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.critical = true;
+    name = NewIdpGeneralName(HITLS_X509_GN_MAX, val, sizeof(val));
+    ASSERT_NE(name, NULL);
+    idp.distPoint = NewIdpDistPoint(HITLS_X509_DP_FULLNAME, NewIdpGeneralNameList(name));
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_NE(idp.distPoint->name, NULL);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_GN_UNSUPPORT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpGeneralNameList(&idp);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC006
+ * @title  Reject relativeName with NULL name.
+ * @brief  1. Build a public IDP model whose distPoint object uses RELATIVENAME and a NULL name.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC006(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.critical = true;
+    idp.distPoint = NewIdpDistPoint(HITLS_X509_DP_RELATIVENAME, NULL);
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpDistPointContainer(&idp);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC007
+ * @title  Reject relativeName with empty name list.
+ * @brief  1. Build a public IDP model whose distPoint object uses RELATIVENAME and an empty name list.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC007(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.critical = true;
+    idp.distPoint = NewIdpDistPoint(HITLS_X509_DP_RELATIVENAME, NewEmptyIdpList(sizeof(HITLS_X509_NameNode)));
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_NE(idp.distPoint->name, NULL);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpDnList(&idp);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC008
+ * @title  Reject relativeName with fullName list.
+ * @brief  1. Build a public IDP model whose distPoint object uses RELATIVENAME but stores GeneralNames.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC008(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.critical = true;
+    idp.distPoint = NewIdpDistPoint(HITLS_X509_DP_RELATIVENAME, GenIdpFullNameUriList());
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_NE(idp.distPoint->name, NULL);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpGeneralNameList(&idp);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC009
+ * @title  Reject relativeName that is not a single RDN.
+ * @brief  1. Build a public IDP model whose RELATIVENAME value contains a multi-RDN DN list.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC009(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.critical = true;
+    idp.distPoint = NewIdpDistPoint(HITLS_X509_DP_RELATIVENAME, GenDNList());
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_NE(idp.distPoint->name, NULL);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpDnList(&idp);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC010
+ * @title  Reject invalid distPoint type.
+ * @brief  1. Build a public IDP model whose distPoint object uses an unsupported enumeration value.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC010(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.critical = true;
+    idp.distPoint = NewIdpDistPoint((HITLS_X509_DistPointNameType)0x7FFFFFFF, NULL);
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpDistPointContainer(&idp);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC011
+ * @title  Reject reason flags with undefined bit.
+ * @brief  1. Build a public IDP model whose reason mask contains an undefined bit.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_REASONFLAGS.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC011(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.critical = true;
+    SetIdpReasons(&idp, 0x4000);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_REASONFLAGS), HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_ClearIdp(&idp);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC012
+ * @title  Reject non-critical IDP.
+ * @brief  1. Build an otherwise-valid public IDP model with critical set to FALSE.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_SET.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC012(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    ASSERT_EQ(BuildIdpFullNameUri(&idp, false), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_SET), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&idp);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC013
+ * @title  Reject empty IDP public model during generation.
+ * @brief  1. Build a critical but otherwise empty public IDP model.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_IDP.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC013(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    ASSERT_EQ(BuildIdpEmpty(&idp, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&idp);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_GEN_IDP_ABNORMAL_TC014
+ * @title  Reject multiple onlyContains flags during generation.
+ * @brief  1. Build a critical public IDP model with multiple onlyContains flags set.
+ *         2. Set the IDP on a CRL.
+ * @expect 1. IDP set fails with HITLS_X509_ERR_EXT_IDP.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_IDP_ABNORMAL_TC014(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    ASSERT_EQ(BuildIdpMultiOnly(&idp, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckSetBadIdp(&idp, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&idp);
+}
+/* END_CASE */
+
+static int32_t CheckIdpSemantic(const HITLS_X509_ExtIdp *idp, int32_t expectedRet)
+{
+    ASSERT_EQ(HITLS_X509_CheckIdp(idp), expectedRet);
+    if (expectedRet != HITLS_PKI_SUCCESS) {
+        ClearExpectedError();
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    return -1;
+}
+
+static int32_t ParseCrlAndCheckIdpSemantic(char *path, int32_t expectedRet)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_ExtIdp idp = {0};
+
+    ASSERT_EQ(ParseCrlAndGetIdp(path, &crl, &idp), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckIdpSemantic(&idp, expectedRet), HITLS_PKI_SUCCESS);
+    HITLS_X509_ClearIdp(&idp);
+    HITLS_X509_CrlFree(crl);
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    HITLS_X509_ClearIdp(&idp);
+    HITLS_X509_CrlFree(crl);
+    return -1;
+}
+
+/**
+ * @test   SDV_X509_CRL_CHECK_IDP_PARSE_ABNORMAL_TC001
+ * @title  Reject parsed empty IDP in semantic check.
+ * @brief  1. Parse a CRL whose IDP extension is an empty SEQUENCE.
+ *         2. Get IDP from the parsed CRL and check it through HITLS_X509_CheckIdp.
+ * @expect 1. CRL parse and GET IDP succeed.
+ *         2. HITLS_X509_CheckIdp returns HITLS_X509_ERR_EXT_IDP.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_CHECK_IDP_PARSE_ABNORMAL_TC001(char *path)
+{
+    ASSERT_EQ(ParseCrlAndCheckIdpSemantic(path, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_CHECK_IDP_PARSE_ABNORMAL_TC002
+ * @title  Reject parsed IDP with multiple onlyContains flags in semantic check.
+ * @brief  1. Parse a CRL whose IDP extension has multiple onlyContains flags set.
+ *         2. Get IDP from the parsed CRL and check it through HITLS_X509_CheckIdp.
+ * @expect 1. CRL parse and GET IDP succeed.
+ *         2. HITLS_X509_CheckIdp returns HITLS_X509_ERR_EXT_IDP.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_CHECK_IDP_PARSE_ABNORMAL_TC002(char *path)
+{
+    ASSERT_EQ(ParseCrlAndCheckIdpSemantic(path, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC001
+ * @title  Reject NULL IDP input.
+ * @brief  1. Check a NULL IDP pointer through HITLS_X509_CheckIdp.
+ * @expect 1. HITLS_X509_CheckIdp returns HITLS_X509_ERR_INVALID_PARAM.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC001(void)
+{
+    ASSERT_EQ(CheckIdpSemantic(NULL, HITLS_X509_ERR_INVALID_PARAM), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC002
+ * @title  Reject empty public IDP model.
+ * @brief  1. Build a zero-initialized public IDP model.
+ *         2. Check the IDP model through HITLS_X509_CheckIdp.
+ * @expect 1. HITLS_X509_CheckIdp returns HITLS_X509_ERR_EXT_IDP.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC002(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    ASSERT_EQ(CheckIdpSemantic(&idp, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC003
+ * @title  Reject multiple onlyContains flags.
+ * @brief  1. Build a public IDP model with both onlyContainsUserCerts and onlyContainsCACerts set.
+ *         2. Check the IDP model through HITLS_X509_CheckIdp.
+ * @expect 1. HITLS_X509_CheckIdp returns HITLS_X509_ERR_EXT_IDP.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC003(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.onlyContainsUserCerts = true;
+    idp.onlyContainsCACerts = true;
+    ASSERT_EQ(CheckIdpSemantic(&idp, HITLS_X509_ERR_EXT_IDP), HITLS_PKI_SUCCESS);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC004
+ * @title  Reject invalid distPoint type.
+ * @brief  1. Build a public IDP model whose distPoint object uses an unsupported enum value.
+ *         2. Check the IDP model through HITLS_X509_CheckIdp.
+ * @expect 1. HITLS_X509_CheckIdp returns HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC004(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.distPoint = NewIdpDistPoint((HITLS_X509_DistPointNameType)0x7FFFFFFF, NULL);
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_EQ(CheckIdpSemantic(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpDistPointContainer(&idp);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC005
+ * @title  Reject invalid distPoint type with non-null name.
+ * @brief  1. Build a public IDP model whose distPoint object uses an unsupported type and a non-null name list.
+ *         2. Check the IDP model through HITLS_X509_CheckIdp.
+ * @expect 1. HITLS_X509_CheckIdp returns HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC005(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.distPoint = NewIdpDistPoint((HITLS_X509_DistPointNameType)0x7FFFFFFF,
+        NewEmptyIdpList(sizeof(HITLS_X509_GeneralName)));
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_NE(idp.distPoint->name, NULL);
+    ASSERT_EQ(CheckIdpSemantic(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpGeneralNameList(&idp);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC006
+ * @title  Reject fullName with NULL name.
+ * @brief  1. Build a public IDP model whose distPoint object uses FULLNAME and a NULL name.
+ *         2. Check the IDP model through HITLS_X509_CheckIdp.
+ * @expect 1. HITLS_X509_CheckIdp returns HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC006(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.distPoint = NewIdpDistPoint(HITLS_X509_DP_FULLNAME, NULL);
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_EQ(CheckIdpSemantic(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpDistPointContainer(&idp);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC007
+ * @title  Reject relativeName with NULL name.
+ * @brief  1. Build a public IDP model whose distPoint object uses RELATIVENAME and a NULL name.
+ *         2. Check the IDP model through HITLS_X509_CheckIdp.
+ * @expect 1. HITLS_X509_CheckIdp returns HITLS_X509_ERR_EXT_DISTPOINT.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC007(void)
+{
+    HITLS_X509_ExtIdp idp = {0};
+
+    idp.distPoint = NewIdpDistPoint(HITLS_X509_DP_RELATIVENAME, NULL);
+    ASSERT_NE(idp.distPoint, NULL);
+    ASSERT_EQ(CheckIdpSemantic(&idp, HITLS_X509_ERR_EXT_DISTPOINT), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeIdpDistPointContainer(&idp);
+    return;
 }
 /* END_CASE */
 
@@ -1990,6 +3772,52 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_X509_CRL_GEN_ERRDELTACRLINDICATOR_FUNC_TC001(char *cert)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_Cert *issuerCert = NULL;
+    uint8_t baseCrlNum[] = {0x01, 0x23, 0x45, 0x67};
+    TestRandInit();
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_PKI_SUCCESS);
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    ASSERT_EQ(SetAllCrl(crl, issuerCert, 0, 0), 0);
+
+    HITLS_X509_ExtDeltaCrl delta = {false, {baseCrlNum, sizeof(baseCrlNum)}};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_DELTA_CRL, &delta,
+        sizeof(HITLS_X509_ExtDeltaCrl)), HITLS_X509_ERR_EXT_SET);
+
+EXIT:
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CertFree(issuerCert);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_X509_CRL_GEN_ERRDELTACRLINDICATOR_FUNC_TC002(char *cert)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_Cert *issuerCert = NULL;
+    uint8_t errLen[21] = {0};
+    TestRandInit();
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_PKI_SUCCESS);
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    ASSERT_EQ(SetAllCrl(crl, issuerCert, 0, 0), 0);
+
+    HITLS_X509_ExtDeltaCrl delta = {true, {errLen, sizeof(errLen)}};
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_DELTA_CRL, &delta,
+        sizeof(HITLS_X509_ExtDeltaCrl)), HITLS_X509_ERR_EXT_CRLNUMBER);
+
+EXIT:
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CertFree(issuerCert);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_X509_CRL_GEN_ERRREASONCODE_FUNC_TC001(char *cert, char *key, char *crlFile)
 {
     uint32_t version = 1;
@@ -2074,6 +3902,131 @@ static void *STUB_BSL_SAL_Malloc_Crl(uint32_t size)
     return NULL;
 }
 
+static int32_t CheckIdpGetMallocStub(HITLS_X509_Crl *crl)
+{
+    uint32_t totalMallocCount = 0;
+    int32_t ret = -1;
+    HITLS_X509_ExtIdp probe = {0};
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_IDP, &probe, sizeof(probe));
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+    totalMallocCount = STUB_GetMallocCallCount();
+    HITLS_X509_ClearIdp(&probe);
+
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        HITLS_X509_ExtIdp idp = {0};
+
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ret = HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_GET_IDP, &idp, sizeof(idp));
+        if (ret == HITLS_PKI_SUCCESS) {
+            HITLS_X509_ClearIdp(&idp);
+            continue;
+        }
+        HITLS_X509_ClearIdp(&idp);
+        ClearExpectedError();
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    ret = HITLS_PKI_SUCCESS;
+EXIT:
+    STUB_EnableMallocFail(false);
+    HITLS_X509_ClearIdp(&probe);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    return ret;
+}
+
+static int32_t CheckDeltaCrlParseMallocStub(int format, char *path)
+{
+    HITLS_X509_Crl *crl = NULL;
+    uint32_t totalMallocCount = 0;
+    int32_t ret = -1;
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ret = HITLS_X509_CrlParseFile((int32_t)format, path, &crl);
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+    totalMallocCount = STUB_GetMallocCallCount();
+    HITLS_X509_CrlFree(crl);
+    crl = NULL;
+
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ret = HITLS_X509_CrlParseFile((int32_t)format, path, &crl);
+        if (ret == HITLS_PKI_SUCCESS) {
+            HITLS_X509_CrlFree(crl);
+            crl = NULL;
+            continue;
+        }
+        HITLS_X509_CrlFree(crl);
+        crl = NULL;
+        ClearExpectedError();
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    ret = HITLS_PKI_SUCCESS;
+EXIT:
+    STUB_EnableMallocFail(false);
+    HITLS_X509_CrlFree(crl);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    return ret;
+}
+
+static int32_t CheckCrlEncodeMallocStub(HITLS_X509_Crl *crl)
+{
+    uint32_t totalMallocCount = 0;
+    int32_t ret = -1;
+    BSL_Buffer encode = {0};
+
+    STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
+
+    STUB_EnableMallocFail(false);
+    STUB_ResetMallocCount();
+    ret = HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encode);
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+    totalMallocCount = STUB_GetMallocCallCount();
+    BSL_SAL_Free(encode.data);
+    encode.data = NULL;
+    encode.dataLen = 0;
+
+    STUB_EnableMallocFail(true);
+    for (uint32_t i = 0; i < totalMallocCount; i++) {
+        STUB_ResetMallocCount();
+        STUB_SetMallocFailIndex(i);
+        ret = HITLS_X509_CrlGenBuff(BSL_FORMAT_ASN1, crl, &encode);
+        if (ret == HITLS_PKI_SUCCESS) {
+            BSL_SAL_Free(encode.data);
+            encode.data = NULL;
+            encode.dataLen = 0;
+            continue;
+        }
+        BSL_SAL_Free(encode.data);
+        encode.data = NULL;
+        encode.dataLen = 0;
+        ClearExpectedError();
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+    ret = HITLS_PKI_SUCCESS;
+EXIT:
+    STUB_EnableMallocFail(false);
+    BSL_SAL_Free(encode.data);
+    STUB_RESTORE(BSL_SAL_Malloc);
+    return ret;
+}
+
 /**
  * @test SDV_X509_CRL_PARSE_STUB_TC001
  * title 1. Test the decode crl with stub malloc fail
@@ -2156,6 +4109,103 @@ EXIT:
     HITLS_X509_CertFree(issuerCert);
     CRYPT_EAL_PkeyFreeCtx(prvKey);
     STUB_RESTORE(BSL_SAL_Malloc);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_CRL_IDP_PARSE_STUB_TC001
+ * title 1. Test malloc-fail coverage when getting the IDP extension (adaptive)
+ *
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_IDP_PARSE_STUB_TC001(int format, char *path)
+{
+    HITLS_X509_Crl *crl = NULL;
+
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    ASSERT_EQ(HITLS_X509_CrlParseFile((int32_t)format, path, &crl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckIdpGetMallocStub(crl), HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_CrlFree(crl);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_CRL_DELTA_PARSE_STUB_TC001
+ * title 1. Test malloc-fail coverage when parsing a CRL with the Delta CRL Indicator extension (adaptive)
+ *
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_DELTA_PARSE_STUB_TC001(int format, char *path)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    ASSERT_EQ(CheckDeltaCrlParseMallocStub(format, path), HITLS_PKI_SUCCESS);
+EXIT:
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_CRL_IDP_ENCODE_STUB_TC001
+ * title 1. Test malloc-fail coverage when encoding a CRL with the IDP extension (adaptive)
+ *
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_IDP_ENCODE_STUB_TC001(char *cert, char *key, int keytype)
+{
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_Cert *issuerCert = NULL;
+    CRYPT_EAL_PkeyCtx *prvKey = NULL;
+    HITLS_X509_ExtIdp idp = {0};
+
+    TestRandInit();
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, keytype, key, NULL, 0, &prvKey), 0);
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    ASSERT_EQ(SetCrl(crl, issuerCert, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BuildIdpFullNameDir(&idp, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_IDP, &idp, sizeof(idp)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlSign(CRYPT_MD_SHA256, prvKey, NULL, crl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckCrlEncodeMallocStub(crl), HITLS_PKI_SUCCESS);
+EXIT:
+    FreeBuiltIdp(&idp);
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CertFree(issuerCert);
+    CRYPT_EAL_PkeyFreeCtx(prvKey);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_CRL_DELTA_ENCODE_STUB_TC001
+ * title 1. Test malloc-fail coverage when encoding a CRL with the Delta CRL Indicator extension (adaptive)
+ *
+ */
+/* BEGIN_CASE */
+void SDV_X509_CRL_DELTA_ENCODE_STUB_TC001(char *cert, char *key, int keytype)
+{
+    uint8_t baseCrlNumber[] = {0x01};
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_Cert *issuerCert = NULL;
+    CRYPT_EAL_PkeyCtx *prvKey = NULL;
+    HITLS_X509_ExtDeltaCrl delta = {true, {baseCrlNumber, sizeof(baseCrlNumber)}};
+
+    TestRandInit();
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, cert, &issuerCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_UNKNOWN, keytype, key, NULL, 0, &prvKey), 0);
+    crl = HITLS_X509_CrlNew();
+    ASSERT_NE(crl, NULL);
+    ASSERT_EQ(SetCrl(crl, issuerCert, true), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlCtrl(crl, HITLS_X509_EXT_SET_DELTA_CRL, &delta, sizeof(delta)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CrlSign(CRYPT_MD_SHA256, prvKey, NULL, crl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CheckCrlEncodeMallocStub(crl), HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CertFree(issuerCert);
+    CRYPT_EAL_PkeyFreeCtx(prvKey);
 }
 /* END_CASE */
 

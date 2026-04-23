@@ -167,6 +167,9 @@ int32_t HITLS_X509_ParseTime(BSL_ASN1_Buffer *before, BSL_ASN1_Buffer *after, HI
     defined(HITLS_PKI_X509_VFY_LOCATION) || defined(HITLS_TLS_FEATURE_CERTIFICATE_AUTHORITIES) || \
     defined(HITLS_PKI_INFO)
 int32_t HITLS_X509_EncodeNameList(BSL_ASN1_List *list, BSL_ASN1_Buffer *name);
+
+int32_t X509_EncodeRdName(BSL_ASN1_List *list, const BslListNode *rdnNode, BSL_ASN1_Buffer *asnBuf,
+    const BslListNode **nextRdnNode);
 #endif
 
 #if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_X509_CRT_GEN) || defined(HITLS_PKI_X509_CRL_GEN)
@@ -198,6 +201,10 @@ void HITLS_X509_FreeNameNode(HITLS_X509_NameNode *node);
 
 void HITLS_X509_FreeParsedNameNode(HITLS_X509_NameNode *node);
 
+int32_t HITLS_X509_AddDnNameLayer1(BslList *name);
+
+int32_t HITLS_X509_ParseNameNode(BSL_ASN1_Buffer *asn, HITLS_X509_NameNode *node);
+
 int32_t HITLS_X509_ParseNameList(BSL_ASN1_Buffer *name, BSL_ASN1_List *list);
 
 int32_t HITLS_X509_ParseGeneralNames(uint8_t *encode, uint32_t encLen, BslList **list);
@@ -207,6 +214,10 @@ void HITLS_X509_FreeGeneralNames(BslList *names);
 int32_t HITLS_X509_ParseAuthorityKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtAki *aki);
 
 int32_t HITLS_X509_ParseSubjectKeyId(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtSki *ski);
+
+int32_t HITLS_X509_ParseIdp(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtIdp *idp);
+
+int32_t HITLS_X509_CheckIdp(const HITLS_X509_ExtIdp *idp);
 
 int32_t HITLS_X509_ParseSubjectAltName(HITLS_X509_ExtEntry *extEntry,  HITLS_X509_ExtSan *san);
 
@@ -225,6 +236,8 @@ int32_t HITLS_X509_ParseExt(BSL_ASN1_Buffer *ext, HITLS_X509_Ext *certExt);
 void HITLS_X509_ExtEntryFree(HITLS_X509_ExtEntry *entry);
 
 int32_t HITLS_X509_AddListItemDefault(void *item, uint32_t len, BSL_ASN1_List *list);
+
+int32_t HITLS_X509_CmpExtByOid(const void *pExt, const void *pOid);
 
 
 int32_t HITLS_X509_ParseX509(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int32_t format, const BSL_Buffer *encode,

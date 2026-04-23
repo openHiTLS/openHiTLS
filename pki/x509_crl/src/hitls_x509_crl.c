@@ -184,6 +184,11 @@ int32_t HITLS_CRL_ParseExtAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, void *pa
         return ret;
     }
 
+    if (BSL_LIST_SearchDataConst(list, &extEntry.extnId, HITLS_X509_CmpExtByOid, NULL) != NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_EXT_REPEAT);
+        return HITLS_X509_ERR_PARSE_EXT_REPEAT;
+    }
+
     return HITLS_X509_AddListItemDefault(&extEntry, sizeof(HITLS_X509_ExtEntry), list);
 }
 
@@ -1192,8 +1197,10 @@ int32_t HITLS_X509_CrlCtrl(HITLS_X509_Crl *crl, int32_t cmd, void *val, uint32_t
         return HITLS_X509_ERR_FUNC_UNSUPPORT;
 #endif
     } else if (cmd <= HITLS_X509_EXT_CHECK_SKI) {
-        static int32_t cmdSet[] = {HITLS_X509_EXT_SET_CRLNUMBER, HITLS_X509_EXT_SET_AKI, HITLS_X509_EXT_GET_CRLNUMBER,
-            HITLS_X509_EXT_GET_AKI};
+        static int32_t cmdSet[] = {HITLS_X509_EXT_SET_CRLNUMBER, HITLS_X509_EXT_SET_AKI,
+            HITLS_X509_EXT_SET_DELTA_CRL, HITLS_X509_EXT_SET_IDP,
+            HITLS_X509_EXT_GET_CRLNUMBER, HITLS_X509_EXT_GET_AKI, HITLS_X509_EXT_GET_DELTA_CRL,
+            HITLS_X509_EXT_GET_IDP};
         if (!X509_CheckCmdValid(cmdSet, sizeof(cmdSet) / sizeof(int32_t), cmd)) {
             BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_UNSUPPORT);
             return HITLS_X509_ERR_EXT_UNSUPPORT;

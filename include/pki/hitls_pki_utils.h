@@ -50,13 +50,15 @@ int32_t HITLS_PKI_PrintCtrl(int32_t cmd, void *val, uint32_t valLen, BSL_UIO *ui
  *
  * @param ext    [IN] extensions
  * @param cmd    [IN] HITLS_X509_EXT_SET_XXX
- *        cmd                               data type
+ *        cmd                                   data type
  *        HITLS_X509_EXT_GET|SET_KUSAGE         HITLS_X509_ExtKeyUsage
  *        HITLS_X509_EXT_GET|SET_BCONS          HITLS_X509_ExtBCons
  *        HITLS_X509_EXT_GET|SET_AKI            HITLS_X509_ExtAki
  *        HITLS_X509_EXT_GET|SET_SKI            HITLS_X509_ExtSki
  *        HITLS_X509_EXT_GET|SET_SAN            HITLS_X509_ExtSan
  *        HITLS_X509_EXT_GET|SET_EXKUSAGE       HITLS_X509_ExtExKeyUsage
+ *        HITLS_X509_EXT_GET|SET_DELTA_CRL      HITLS_X509_ExtDeltaCrl
+ *        HITLS_X509_EXT_GET|SET_IDP            HITLS_X509_ExtIdp
  *        HITLS_X509_EXT_CHECK_SKI              bool
  * @param val    [IN/OUT] input and output value
  * @param valLen [In] value length
@@ -90,6 +92,16 @@ void HITLS_X509_ExtFree(HITLS_X509_Ext *ext);
  * @param aki [IN] The HITLS_X509_ExtAki aki
  */
 void HITLS_X509_ClearAuthorityKeyId(HITLS_X509_ExtAki *aki);
+
+/**
+ * @ingroup pki
+ * @brief clear the HITLS_X509_ExtIdp structure.
+ * @par Description: This interface needs to be called to clean up memory when obtaining IDP extensions from
+ *  CRLs using the macro HITLS_X509_EXT_GET_IDP.
+ *
+ * @param idp [IN] The HITLS_X509_ExtIdp idp
+ */
+void HITLS_X509_ClearIdp(HITLS_X509_ExtIdp *idp);
 
 /**
  * @ingroup pki

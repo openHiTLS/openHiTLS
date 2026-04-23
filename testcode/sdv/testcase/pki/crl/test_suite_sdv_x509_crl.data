@@ -280,6 +280,189 @@ SDV_X509_CRL_CTRL_GetFunc_TC001:
 SDV_X509_CRL_ExtCtrl_FuncTest_TC001
 SDV_X509_CRL_ExtCtrl_FuncTest_TC001:
 
+SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC001 empty IDP DER
+SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC001:
+
+SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC002 multiple onlyContains fields DER
+SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC002:
+
+SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC003 unsupported reason bits DER
+SDV_X509_CRL_PARSE_IDP_DER_BOUNDARY_TC003:
+
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC001 fullName URI critical
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC001:"../testdata/cert/test_for_crl/ext_idp/fullname_uri.der"
+
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC002 fullName directoryName
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC002:"../testdata/cert/test_for_crl/ext_idp/fullname_dir.der"
+
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC003 relativeName
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC003:"../testdata/cert/test_for_crl/ext_idp/relativename.der"
+
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC004 onlyContainsUserCerts
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC004:"../testdata/cert/test_for_crl/ext_idp/onlyuser.der"
+
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC005 onlyContainsCACerts + indirectCRL + onlySomeReasons
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC005:"../testdata/cert/test_for_crl/ext_idp/onlyca_indirect_reasons.der"
+
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC006 empty IDP
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC006:"../testdata/cert/test_for_crl/ext_idp/raw_empty.der"
+
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC007 multiple onlyContains fields
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC007:"../testdata/cert/test_for_crl/ext_idp/raw_multi_only.der"
+
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC008 onlySomeReasons present but empty mask
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC008:"../testdata/cert/test_for_crl/ext_idp/raw_reason_zero.der"
+
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC009 onlySomeReasons contains unsupported bit
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC009:"../testdata/cert/test_for_crl/ext_idp/raw_reason_unknown.der"
+
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC010 explicit FALSE bool
+SDV_X509_CRL_PARSE_IDP_THIRDPARTY_FUNC_TC010:"../testdata/cert/test_for_crl/ext_idp/raw_bool_false.der"
+
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 fullname URI critical
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001:"../testdata/cert/test_for_crl/ext_idp/fullname_uri.der"
+
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 fullname directoryName
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001:"../testdata/cert/test_for_crl/ext_idp/fullname_dir.der"
+
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 relativeName
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001:"../testdata/cert/test_for_crl/ext_idp/relativename.der"
+
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 onlyContainsUserCerts
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001:"../testdata/cert/test_for_crl/ext_idp/onlyuser.der"
+
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001 onlyContainsCACerts + indirectCRL + onlySomeReasons
+SDV_X509_CRL_IDP_THIRDPARTY_ROUNDTRIP_TC001:"../testdata/cert/test_for_crl/ext_idp/onlyca_indirect_reasons.der"
+
+SDV_X509_CRL_IDP_DELTA_EXACT_ROUNDTRIP_TC001 IDP + Delta CRL Indicator exact roundtrip
+SDV_X509_CRL_IDP_DELTA_EXACT_ROUNDTRIP_TC001:"../testdata/cert/test_for_crl/ext_idp/idp_delta.der"
+
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC001 IDP extnValue not SEQUENCE
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC001:"../testdata/cert/test_for_crl/ext_idp/bad_not_sequence.der"
+
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC002 IDP SEQUENCE has trailing data
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC002:"../testdata/cert/test_for_crl/ext_idp/bad_sequence_trailing.der"
+
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC003 implicit BOOLEAN length invalid
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC003:"../testdata/cert/test_for_crl/ext_idp/bad_bool_len.der"
+
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC004 onlySomeReasons empty content
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC004:"../testdata/cert/test_for_crl/ext_idp/bad_reason_empty.der"
+
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC005 distributionPoint wrapper empty
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC005:"../testdata/cert/test_for_crl/ext_idp/bad_dist_empty.der"
+
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC006 distributionPoint choice tag invalid
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC006:"../testdata/cert/test_for_crl/ext_idp/bad_dist_choice_tag.der"
+
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC007 distributionPoint choice has trailing data
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC007:"../testdata/cert/test_for_crl/ext_idp/bad_dist_trailing.der"
+
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC008 relativeName DER invalid
+SDV_X509_CRL_PARSE_IDP_ABNORMAL_TC008:"../testdata/cert/test_for_crl/ext_idp/bad_relative_der.der"
+
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC001 fullName URI roundtrip
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:"gen_idp_fullname_uri.der"
+
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC002 fullName directoryName roundtrip
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC002:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:"gen_idp_fullname_dir.der"
+
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC003 relativeName roundtrip
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC003:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:"gen_idp_relativename.der"
+
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC004 onlyContainsUserCerts roundtrip
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC004:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:"gen_idp_onlyuser.der"
+
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC005 onlyContainsCACerts indirectCRL reasons roundtrip
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC005:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:"gen_idp_scope_reasons.der"
+
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC006 indirectCRL only roundtrip
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC006:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:"gen_idp_indirect.der"
+
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC007 onlyContainsAttributeCerts roundtrip
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC007:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:"gen_idp_onlyattr.der"
+
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC008 empty onlySomeReasons roundtrip
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC008:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:"gen_idp_reason_zero.der"
+
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC009 all supported reason flags roundtrip
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC009:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:"gen_idp_reason_all.der"
+
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC010 duplicate set IDP overwrite
+SDV_X509_CRL_GEN_IDP_ROUNDTRIP_TC010:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:"gen_idp_overwrite.der"
+
+SDV_X509_CRL_GEN_IDP_DELTA_ROUNDTRIP_TC001 generate CRL with both IDP and Delta CRL Indicator
+SDV_X509_CRL_GEN_IDP_DELTA_ROUNDTRIP_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:"gen_idp_delta_roundtrip.der"
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC001 distPoint NONE with non-null name
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC001:
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC002 fullName name is NULL
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC002:
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC003 fullName name is empty list
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC003:
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC004 fullName receives relativeName list
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC004:
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC005 fullName has unsupported GeneralName type
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC005:
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC006 relativeName name is NULL
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC006:
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC007 relativeName name is empty list
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC007:
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC008 relativeName receives fullName list
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC008:
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC009 relativeName is not single RDN
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC009:
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC010 invalid distPoint type
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC010:
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC011 reason flags contain undefined bit
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC011:
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC012 non-critical IDP
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC012:
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC013 empty IDP rejected by set semantic validation
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC013:
+
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC014 multiple onlyContains rejected by set semantic validation
+SDV_X509_CRL_GEN_IDP_ABNORMAL_TC014:
+
+SDV_X509_CRL_CHECK_IDP_PARSE_ABNORMAL_TC001 parsed empty IDP semantic check
+SDV_X509_CRL_CHECK_IDP_PARSE_ABNORMAL_TC001:"../testdata/cert/test_for_crl/ext_idp/raw_empty.der"
+
+SDV_X509_CRL_CHECK_IDP_PARSE_ABNORMAL_TC002 parsed multiple onlyContains semantic check
+SDV_X509_CRL_CHECK_IDP_PARSE_ABNORMAL_TC002:"../testdata/cert/test_for_crl/ext_idp/raw_multi_only.der"
+
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC001 null IDP semantic check
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC001:
+
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC002 empty IDP semantic check
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC002:
+
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC003 multiple onlyContains semantic check
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC003:
+
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC004 invalid distPoint type semantic check
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC004:
+
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC005 distPoint NONE with non-null name semantic check
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC005:
+
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC006 fullName NULL name semantic check
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC006:
+
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC007 relativeName NULL name semantic check
+SDV_X509_CRL_CHECK_IDP_ABNORMAL_TC007:
+
 SDV_X509_CRL_CTRL_SetFunc_TC001
 SDV_X509_CRL_CTRL_SetFunc_TC001:"../testdata/cert/pem/crl/inter.mul.crt"
 
@@ -400,6 +583,12 @@ SDV_X509_CRL_GEN_NULLAKI_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha3
 SDV_X509_CRL_GEN_ERRCRLNUMBER_FUNC_TC001 set err crl number
 SDV_X509_CRL_GEN_ERRCRLNUMBER_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.crt.der"
 
+SDV_X509_CRL_GEN_ERRDELTACRLINDICATOR_FUNC_TC001 reject non-critical delta crl indicator
+SDV_X509_CRL_GEN_ERRDELTACRLINDICATOR_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.crt.der"
+
+SDV_X509_CRL_GEN_ERRDELTACRLINDICATOR_FUNC_TC002 reject invalid delta crl indicator length
+SDV_X509_CRL_GEN_ERRDELTACRLINDICATOR_FUNC_TC002:"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.crt.der"
+
 SDV_X509_CRL_GEN_ERRREASONCODE_FUNC_TC001 set err reason code
 SDV_X509_CRL_GEN_ERRREASONCODE_FUNC_TC001:"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.crt.der":"../testdata/cert/asn1/ecdsa_cert/ecdsa_sha384.key.der":"gen-reasoncode8.crl"
 
@@ -408,6 +597,12 @@ SDV_X509_CRL_GEN_NULLCERTISSUER_FUNC_TC001:
 
 SDV_X509_CRL_INVALIED_TEST_TC001
 SDV_X509_CRL_INVALIED_TEST_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sha256-v1.der"
+
+SDV_X509_CRL_IDP_PARSE_STUB_TC001 ThirdParty IDP fullName directoryName
+SDV_X509_CRL_IDP_PARSE_STUB_TC001:BSL_FORMAT_ASN1:"../testdata/cert/test_for_crl/ext_idp/fullname_dir.der"
+
+SDV_X509_CRL_DELTA_PARSE_STUB_TC001 critical Delta CRL indicator
+SDV_X509_CRL_DELTA_PARSE_STUB_TC001:BSL_FORMAT_PEM:"../testdata/cert/test_for_crl/crl_parse/crl/demoCA_rsa2048_v2_critical_delta_crl_indicator.crl"
 
 SDV_X509_CRL_PARSE_STUB_TC001 parse pem time optional crl
 SDV_X509_CRL_PARSE_STUB_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/crl/time.optional.pem":35
@@ -426,6 +621,12 @@ SDV_X509_CRL_PARSE_STUB_TC001:BSL_FORMAT_ASN1:"../testdata/cert/asn1/ca-1-rsa-sh
 
 SDV_X509_CRL_PARSE_STUB_TC001 revokelist ext
 SDV_X509_CRL_PARSE_STUB_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/pem/crl/crl_v2.mul3.crl":49
+
+SDV_X509_CRL_IDP_ENCODE_STUB_TC001 v2 CRL with fullName directoryName IDP
+SDV_X509_CRL_IDP_ENCODE_STUB_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT
+
+SDV_X509_CRL_DELTA_ENCODE_STUB_TC001 v2 CRL with Delta CRL indicator
+SDV_X509_CRL_DELTA_ENCODE_STUB_TC001:"../testdata/cert/asn1/rsa_cert/rsa_p8.crt.der":"../testdata/cert/asn1/rsa_cert/rsa_p8.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT
 
 SDV_X509_CRL_ENCODE_STUB_TC001 v1 cert ed25519
 SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/ed25519/ed25519.ca.pem":"../testdata/cert/ed25519/ed25519.key.der":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SHA512:0:"tmp-ed25519.crl":0:3

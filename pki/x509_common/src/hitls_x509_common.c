@@ -45,6 +45,22 @@ void HITLS_X509_FreeParsedNameNode(HITLS_X509_NameNode *node)
     BSL_SAL_Free(node);
 }
 
+int32_t HITLS_X509_AddDnNameLayer1(BslList *name)
+{
+    HITLS_X509_NameNode *node = BSL_SAL_Calloc(1, sizeof(HITLS_X509_NameNode));
+    if (node == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    node->layer = 1;
+    int32_t ret = BSL_LIST_AddElement(name, node, BSL_LIST_POS_END);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        HITLS_X509_FreeNameNode(node);
+    }
+    return ret;
+}
+
 int32_t HITLS_X509_AddListItemDefault(void *item, uint32_t len, BSL_ASN1_List *list)
 {
     void *node = BSL_SAL_Dump(item, len);
@@ -58,6 +74,19 @@ int32_t HITLS_X509_AddListItemDefault(void *item, uint32_t len, BSL_ASN1_List *l
         BSL_SAL_Free(node);
     }
     return ret;
+}
+
+int32_t HITLS_X509_CmpExtByOid(const void *pExt, const void *pOid)
+{
+    const HITLS_X509_ExtEntry *ext = pExt;
+    const BSL_ASN1_Buffer *oid = pOid;
+    if (ext->extnId.len != oid->len) {
+        return 1;
+    }
+    if (oid->len == 0) {
+        return 0;
+    }
+    return memcmp(ext->extnId.buff, oid->buff, oid->len) == 0 ? 0 : 1;
 }
 
 #if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CRL_PARSE) || defined(HITLS_PKI_X509_CSR_PARSE)
@@ -175,7 +204,7 @@ static int32_t X509_Asn1StringCanon(const BSL_ASN1_Buffer *in, BSL_ASN1_Buffer *
     return ret;
 }
 
-static int32_t HITLS_X509_ParseNameNode(BSL_ASN1_Buffer *asn, HITLS_X509_NameNode *node)
+int32_t HITLS_X509_ParseNameNode(BSL_ASN1_Buffer *asn, HITLS_X509_NameNode *node)
 {
     uint8_t *temp = asn->buff;
     uint32_t tempLen = asn->len;
@@ -371,7 +400,7 @@ int32_t HITLS_X509_EncodeSignAlgInfo(HITLS_X509_Asn1AlgId *x509Alg, BSL_ASN1_Buf
 #if defined(HITLS_PKI_X509_CSR_GEN) || defined(HITLS_PKI_X509_CRT_GEN) || defined(HITLS_PKI_X509_CRL_GEN) || \
     defined(HITLS_PKI_X509_VFY_LOCATION) || defined(HITLS_PKI_X509_CRT_AUTH) || \
     defined(HITLS_PKI_INFO)
-static int32_t X509_EncodeRdName(BSL_ASN1_List *list, const BslListNode *rdnNode, BSL_ASN1_Buffer *asnBuf,
+int32_t X509_EncodeRdName(BSL_ASN1_List *list, const BslListNode *rdnNode, BSL_ASN1_Buffer *asnBuf,
     const BslListNode **nextRdnNode)
 {
     uint32_t maxCount = (BSL_LIST_COUNT(list) - 1) * 2; // 2: layer 1 and layer 2

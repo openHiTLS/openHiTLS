@@ -29,6 +29,12 @@
 #define BITS_OF_BYTE 8
 #define HITLS_X509_EXT_NOT_FOUND 1
 #define HITLS_X509_EXT_KEYUSAGE_UNUSED_BIT 0xFFFF7F00 // Only 9 bits are used.
+#define HITLS_X509_IDP_REASON_FLAGS_MASK \
+    (HITLS_X509_REASON_FLAG_UNUSED | HITLS_X509_REASON_FLAG_KEY_COMPROMISE | \
+     HITLS_X509_REASON_FLAG_CA_COMPROMISE | HITLS_X509_REASON_FLAG_AFFILIATION_CHANGED | \
+     HITLS_X509_REASON_FLAG_SUPERSEDED | HITLS_X509_REASON_FLAG_CESSATION_OPERATION | \
+     HITLS_X509_REASON_FLAG_CERTIFICATE_HOLD | HITLS_X509_REASON_FLAG_PRIVILEGE_WITHDRAWN | \
+     HITLS_X509_REASON_FLAG_AA_COMPROMISE)
 
 typedef enum {
     HITLS_X509_EXT_OID_IDX,
@@ -84,20 +90,70 @@ typedef enum {
     HITLS_X509_EXT_AKI_MAX,
 } HITLS_X509_EXT_AKI;
 
+#define HITLS_X509_CTX_SPECIFIC_TAG_IDP_DISTPOINT 0
+#define HITLS_X509_CTX_SPECIFIC_TAG_IDP_ONLYUSER 1
+#define HITLS_X509_CTX_SPECIFIC_TAG_IDP_ONLYCA 2
+#define HITLS_X509_CTX_SPECIFIC_TAG_IDP_REASONS 3
+#define HITLS_X509_CTX_SPECIFIC_TAG_IDP_INDIRECTCRL 4
+#define HITLS_X509_CTX_SPECIFIC_TAG_IDP_ONLYATTR 5
+
+#define HITLS_X509_IDP_DISTPOINT_TAG \
+    (BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | HITLS_X509_CTX_SPECIFIC_TAG_IDP_DISTPOINT)
+#define HITLS_X509_IDP_FULLNAME_TAG \
+    (BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 0)
+#define HITLS_X509_IDP_RELATIVENAME_TAG \
+    (BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | 1)
+
+static BSL_ASN1_TemplateItem g_idpTempl[] = {
+    {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE, 0, 0},
+        {HITLS_X509_IDP_DISTPOINT_TAG, BSL_ASN1_FLAG_OPTIONAL | BSL_ASN1_FLAG_HEADERONLY, 1},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_IDP_ONLYUSER, BSL_ASN1_FLAG_DEFAULT, 1},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_IDP_ONLYCA, BSL_ASN1_FLAG_DEFAULT, 1},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_IDP_REASONS, BSL_ASN1_FLAG_OPTIONAL, 1},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_IDP_INDIRECTCRL, BSL_ASN1_FLAG_DEFAULT, 1},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_IDP_ONLYATTR, BSL_ASN1_FLAG_DEFAULT, 1},
+};
+
+static BSL_ASN1_TemplateItem g_idpDistPointNameTempl[] = {
+    {BSL_ASN1_TAG_CHOICE, 0, 0},
+};
+
+typedef enum {
+    HITLS_X509_EXT_IDP_DISTPOINT_IDX,
+    HITLS_X509_EXT_IDP_ONLYUSER_IDX,
+    HITLS_X509_EXT_IDP_ONLYCA_IDX,
+    HITLS_X509_EXT_IDP_REASONS_IDX,
+    HITLS_X509_EXT_IDP_INDIRECTCRL_IDX,
+    HITLS_X509_EXT_IDP_ONLYATTR_IDX,
+    HITLS_X509_EXT_IDP_MAX,
+} HITLS_X509_EXT_IDP;
+
+#if defined(HITLS_PKI_X509_CRT_GEN) || defined(HITLS_PKI_X509_CRL_GEN) || defined(HITLS_PKI_X509_CSR_GEN)
+static int32_t SetExtGeneralNames(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, const void *val);
+static int32_t EncodeGeneralNamesList(BslList *names, BSL_ASN1_Buffer *out);
+static int32_t BuildGeneralNameAsns(BslList *names, BSL_ASN1_Buffer *asns);
+static void FreeGnAsns(BSL_ASN1_Buffer *asns, uint32_t number);
+#endif
+
 static int32_t CmpExtByCid(const void *pExt, const void *pCid)
 {
     const HITLS_X509_ExtEntry *ext = pExt;
     return ext->cid == *(const BslCid *)pCid ? 0 : 1;
 }
 
-static int32_t CmpExtByOid(const void *pExt, const void *pOid)
+static int32_t IdpDistPointNameTagCheck(int32_t type, uint32_t idx, void *data, void *expVal)
 {
-    const HITLS_X509_ExtEntry *ext = pExt;
-    const BSL_ASN1_Buffer *oid = pOid;
-    if (ext->extnId.len != oid->len) {
-        return 1;
+    (void)idx;
+    if (type != BSL_ASN1_TYPE_CHECK_CHOICE_TAG) {
+        return HITLS_X509_ERR_EXT_DISTPOINT;
     }
-    return memcmp(ext->extnId.buff, oid->buff, oid->len) == 0 ? 0 : 1;
+
+    uint8_t tag = *(uint8_t *)data;
+    if (tag == HITLS_X509_IDP_FULLNAME_TAG || tag == HITLS_X509_IDP_RELATIVENAME_TAG) {
+        *(uint8_t *)expVal = tag;
+        return BSL_SUCCESS;
+    }
+    return HITLS_X509_ERR_EXT_DISTPOINT;
 }
 
 /**
@@ -155,6 +211,11 @@ static HITLS_X509_GeneralNameMap g_generalNameMap[] = {
     {HITLS_X509_GENERALNAME_RID_TAG, HITLS_X509_GN_RID},
 };
 
+static uint8_t MaskBitStringUnusedBits(uint8_t octet, uint8_t unusedBits)
+{
+    return unusedBits == 0 ? octet : (uint8_t)(octet & (uint8_t)(0xFFu << unusedBits));
+}
+
 #if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CRL_PARSE) || defined(HITLS_PKI_X509_CSR)
 static int32_t ParseExtKeyUsage(HITLS_X509_ExtEntry *extEntry, HITLS_X509_CertExt *ext)
 {
@@ -178,7 +239,11 @@ static int32_t ParseExtKeyUsage(HITLS_X509_ExtEntry *extEntry, HITLS_X509_CertEx
         return HITLS_X509_ERR_PARSE_EXT_KU;
     }
     for (uint32_t i = 0; i < bitString.len; i++) {
-        ext->keyUsage |= (bitString.buff[i] << (BITS_OF_BYTE * i));
+        uint8_t octet = bitString.buff[i];
+        if (i + 1 == bitString.len) {
+            octet = MaskBitStringUnusedBits(octet, bitString.unusedBits);
+        }
+        ext->keyUsage |= ((uint32_t)octet << (BITS_OF_BYTE * i));
     }
     ext->extFlags |= HITLS_X509_EXT_FLAG_KUSAGE;
     return HITLS_PKI_SUCCESS;
@@ -512,6 +577,513 @@ int32_t X509_ParseCrlNumber(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtCrlNumb
     return HITLS_PKI_SUCCESS;
 }
 
+static int32_t ParseBool(BSL_ASN1_Buffer *asn, bool *val)
+{
+    if (asn->tag == 0) {
+        return HITLS_PKI_SUCCESS;
+    }
+    BSL_ASN1_Buffer boolAsn = {BSL_ASN1_TAG_BOOLEAN, asn->len, asn->buff};
+    int32_t ret = BSL_ASN1_DecodePrimitiveItem(&boolAsn, val);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static uint16_t ParseReasonFlags(BSL_ASN1_Buffer *asn)
+{
+    uint16_t reasons = 0;
+    uint32_t octetCount = asn->len - 1;
+    if (octetCount > sizeof(reasons)) {
+        octetCount = sizeof(reasons);
+    }
+    for (uint32_t i = 0; i < octetCount; i++) {
+        uint8_t octet = asn->buff[i + 1];
+        if (i + 1 == octetCount) {
+            octet = MaskBitStringUnusedBits(octet, asn->buff[0]);
+        }
+        reasons |= ((uint16_t)octet << (BITS_OF_BYTE * i));
+    }
+    return reasons & HITLS_X509_IDP_REASON_FLAGS_MASK;
+}
+
+static int32_t ParseIdpReasons(BSL_ASN1_Buffer *asn, HITLS_X509_ExtIdp *idp)
+{
+    if (asn->tag == 0) {
+        return HITLS_PKI_SUCCESS;
+    }
+    // Parse ReasonFlags leniently by truncating overlong octets to the uint16_t public model.
+    if (asn->len == 0 || asn->buff == NULL || asn->buff[0] >= BITS_OF_BYTE) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_IDP);
+        return HITLS_X509_ERR_EXT_IDP;
+    }
+    idp->hasReasons = true;
+    idp->onlySomeReasons = ParseReasonFlags(asn);
+    return HITLS_PKI_SUCCESS;
+}
+
+#if defined(HITLS_PKI_X509_CRT_GEN) || defined(HITLS_PKI_X509_CRL_GEN) || defined(HITLS_PKI_X509_CSR_GEN)
+static int32_t EncodeRawTlv(uint8_t tag, uint8_t *value, uint32_t valueLen, BSL_ASN1_Buffer *out)
+{
+    BSL_ASN1_Buffer asn = {tag, valueLen, value};
+    BSL_ASN1_TemplateItem item = {tag, 0, 0};
+    BSL_ASN1_Template templ = {&item, 1};
+    return BSL_ASN1_EncodeTemplate(&templ, &asn, 1, &out->buff, &out->len);
+}
+
+static int32_t EncodeGeneralNamesContent(BslList *names, BSL_ASN1_Buffer *out)
+{
+    BSL_ASN1_Buffer generalNames = {0};
+
+    int32_t ret = EncodeGeneralNamesList(names, &generalNames);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    ret = EncodeRawTlv(HITLS_X509_IDP_FULLNAME_TAG, generalNames.buff, generalNames.len, out);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    BSL_SAL_Free(generalNames.buff);
+    return ret;
+}
+
+static int32_t CheckIdpDistPointNameList(const BslList *name, int32_t expectSize)
+{
+    if (name == NULL || BSL_LIST_COUNT(name) == 0 || name->dataSize != expectSize) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_DISTPOINT);
+        return HITLS_X509_ERR_EXT_DISTPOINT;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t CheckSingleRdnList(BslList *name)
+{
+    if (BSL_LIST_COUNT(name) <= 1) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_DISTPOINT);
+        return HITLS_X509_ERR_EXT_DISTPOINT;
+    }
+
+    BslListNode *node = BSL_LIST_FirstNode(name);
+    HITLS_X509_NameNode *nameNode = (HITLS_X509_NameNode *)BSL_LIST_GetData(node);
+    if (nameNode == NULL || nameNode->layer != 1) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_DISTPOINT);
+        return HITLS_X509_ERR_EXT_DISTPOINT;
+    }
+
+    for (node = BSL_LIST_GetNextNode(name, node); node != NULL; node = BSL_LIST_GetNextNode(name, node)) {
+        nameNode = (HITLS_X509_NameNode *)BSL_LIST_GetData(node);
+        if (nameNode == NULL || nameNode->layer != 2) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_DISTPOINT);
+            return HITLS_X509_ERR_EXT_DISTPOINT;
+        }
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t EncodeRelativeNameContent(BslList *name, BSL_ASN1_Buffer *out)
+{
+    BSL_ASN1_Buffer rdn = {0};
+    const BslListNode *rdnNode = NULL;
+    const BslListNode *nextRdnNode = NULL;
+
+    int32_t ret = CheckSingleRdnList(name);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    rdnNode = BSL_LIST_FirstNode(name);
+    ret = X509_EncodeRdName(name, rdnNode, &rdn, &nextRdnNode);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = EncodeRawTlv(HITLS_X509_IDP_RELATIVENAME_TAG, rdn.buff, rdn.len, out);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    BSL_SAL_Free(rdn.buff);
+    return ret;
+}
+
+static int32_t EncodeIdpDistPoint(const HITLS_X509_DistPointName *distPoint, BSL_ASN1_Buffer *out)
+{
+    BSL_ASN1_Buffer inner = {0};
+    int32_t ret;
+
+    switch (distPoint->type) {
+        case HITLS_X509_DP_FULLNAME:
+            ret = CheckIdpDistPointNameList(distPoint->name, (int32_t)sizeof(HITLS_X509_GeneralName));
+            if (ret != HITLS_PKI_SUCCESS) {
+                return ret;
+            }
+            ret = EncodeGeneralNamesContent(distPoint->name, &inner);
+            break;
+        case HITLS_X509_DP_RELATIVENAME:
+            ret = CheckIdpDistPointNameList(distPoint->name, (int32_t)sizeof(HITLS_X509_NameNode));
+            if (ret != HITLS_PKI_SUCCESS) {
+                return ret;
+            }
+            ret = EncodeRelativeNameContent(distPoint->name, &inner);
+            break;
+        default:
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_DISTPOINT);
+            return HITLS_X509_ERR_EXT_DISTPOINT;
+    }
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    out->tag = HITLS_X509_IDP_DISTPOINT_TAG;
+    out->len = inner.len;
+    out->buff = inner.buff;
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t EncodeIdpReasons(uint16_t reasons, BSL_ASN1_Buffer *asn, uint8_t *reasonBuff)
+{
+    if ((reasons & ~HITLS_X509_IDP_REASON_FLAGS_MASK) != 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_REASONFLAGS);
+        return HITLS_X509_ERR_EXT_REASONFLAGS;
+    }
+
+    uint8_t bsBuff[2] = {(uint8_t)reasons, (uint8_t)(reasons >> BITS_OF_BYTE)};
+    BSL_ASN1_BitString bs = {bsBuff, 0, 0};
+    bs.len = (reasons == 0) ? 0 : ((reasons & HITLS_X509_REASON_FLAG_AA_COMPROMISE) == 0 ? 1 : 2);
+    if (bs.len != 0) {
+        uint8_t tmp = bs.len == 1 ? (uint8_t)reasons : (uint8_t)(reasons >> BITS_OF_BYTE);
+        for (int32_t i = 1; i < BITS_OF_BYTE; i++) {
+            if ((uint8_t)(tmp << i) == 0) {
+                bs.unusedBits = BITS_OF_BYTE - i;
+                break;
+            }
+        }
+    }
+    reasonBuff[0] = bs.unusedBits;
+    for (uint32_t i = 0; i < bs.len; i++) {
+        reasonBuff[i + 1] = bs.buff[i];
+    }
+    asn->tag = BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_IDP_REASONS;
+    asn->len = bs.len + 1;
+    asn->buff = reasonBuff;
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t SetExtIdp(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, const void *val)
+{
+    if (ext->type != HITLS_X509_EXT_TYPE_CRL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_SET);
+        return HITLS_X509_ERR_EXT_SET;
+    }
+    const HITLS_X509_ExtIdp *idp = (const HITLS_X509_ExtIdp *)val;
+    /*
+     * RFC5280 5.2.5 Issuing Distribution Point
+     * The issuing distribution point is a critical CRL extension that identifies the CRL...
+     */
+    if (!idp->critical) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_SET);
+        return HITLS_X509_ERR_EXT_SET;
+    }
+    int32_t ret = HITLS_X509_CheckIdp(idp);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    uint8_t boolTrue = 0xFF;
+    uint8_t reasonBuff[3] = {0};
+
+    BSL_ASN1_Buffer asns[] = {
+        {0},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_IDP_ONLYUSER,
+            idp->onlyContainsUserCerts ? sizeof(boolTrue) : 0,
+            idp->onlyContainsUserCerts ? &boolTrue : NULL},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_IDP_ONLYCA,
+            idp->onlyContainsCACerts ? sizeof(boolTrue) : 0,
+            idp->onlyContainsCACerts ? &boolTrue : NULL},
+        {0},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_IDP_INDIRECTCRL,
+            idp->indirectCrl ? sizeof(boolTrue) : 0,
+            idp->indirectCrl ? &boolTrue : NULL},
+        {BSL_ASN1_CLASS_CTX_SPECIFIC | HITLS_X509_CTX_SPECIFIC_TAG_IDP_ONLYATTR,
+            idp->onlyContainsAttributeCerts ? sizeof(boolTrue) : 0,
+            idp->onlyContainsAttributeCerts ? &boolTrue : NULL},
+    };
+    BSL_ASN1_Template templ = {g_idpTempl, sizeof(g_idpTempl) / sizeof(g_idpTempl[0])};
+
+    if (idp->distPoint != NULL) {
+        ret = EncodeIdpDistPoint(idp->distPoint, &asns[HITLS_X509_EXT_IDP_DISTPOINT_IDX]);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+    }
+    if (idp->hasReasons) {
+        ret = EncodeIdpReasons(idp->onlySomeReasons, &asns[HITLS_X509_EXT_IDP_REASONS_IDX], reasonBuff);
+        if (ret != HITLS_PKI_SUCCESS) {
+            goto EXIT;
+        }
+    }
+
+    ret = BSL_ASN1_EncodeTemplate(&templ, asns, HITLS_X509_EXT_IDP_MAX, &entry->extnValue.buff,
+        &entry->extnValue.len);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    entry->critical = true;
+EXIT:
+    BSL_SAL_Free(asns[HITLS_X509_EXT_IDP_DISTPOINT_IDX].buff);
+    return ret;
+}
+#endif
+
+void HITLS_X509_ClearIdp(HITLS_X509_ExtIdp *idp)
+{
+    if (idp == NULL) {
+        return;
+    }
+    if (idp->distPoint == NULL) {
+        return;
+    }
+    if (idp->distPoint->type == HITLS_X509_DP_FULLNAME) {
+        HITLS_X509_FreeGeneralNames(idp->distPoint->name);
+    } else if (idp->distPoint->type == HITLS_X509_DP_RELATIVENAME) {
+        HITLS_X509_DnListFree(idp->distPoint->name);
+    }
+    BSL_SAL_Free(idp->distPoint);
+    idp->distPoint = NULL;
+}
+
+static int32_t DupAsn1Buffer(const BSL_ASN1_Buffer *src, BSL_ASN1_Buffer *dest)
+{
+    dest->tag = src->tag;
+    dest->len = src->len;
+    if (src->len == 0) {
+        return HITLS_PKI_SUCCESS;
+    }
+    dest->buff = BSL_SAL_Dump(src->buff, src->len);
+    if (dest->buff == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
+        return BSL_DUMP_FAIL;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t NewRelativeNameNode(const BSL_ASN1_Buffer *type, const BSL_ASN1_Buffer *val,
+    HITLS_X509_NameNode **out)
+{
+    HITLS_X509_NameNode *node = BSL_SAL_Calloc(1, sizeof(HITLS_X509_NameNode));
+    if (node == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    node->layer = 2;
+    int32_t ret = DupAsn1Buffer(type, &node->nameType);
+    if (ret == HITLS_PKI_SUCCESS) {
+        ret = DupAsn1Buffer(val, &node->nameValue);
+    }
+    if (ret != HITLS_PKI_SUCCESS) {
+        HITLS_X509_FreeNameNode(node);
+        return ret;
+    }
+    *out = node;
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t ParseRelativeNameAsnItem(uint32_t layer, BSL_ASN1_Buffer *asn, void *cbParam, BSL_ASN1_List *list)
+{
+    (void)layer;
+    (void)cbParam;
+
+    HITLS_X509_NameNode parsedNode = {0};
+    HITLS_X509_NameNode *node = NULL;
+
+    int32_t ret = HITLS_X509_ParseNameNode(asn, &parsedNode);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    ret = NewRelativeNameNode(&parsedNode.nameType, &parsedNode.nameValue, &node);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    ret = BSL_LIST_AddElement(list, node, BSL_LIST_POS_END);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        HITLS_X509_FreeNameNode(node);
+        return ret;
+    }
+    return HITLS_PKI_SUCCESS;
+}
+
+static int32_t ParseRelativeName(uint8_t *encode, uint32_t encLen, BslList **list)
+{
+    uint8_t expTag[] = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE};
+    BSL_ASN1_DecodeListParam listParam = {1, expTag};
+    BslList *name = BSL_LIST_New(sizeof(HITLS_X509_NameNode));
+    if (name == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+    int32_t ret = HITLS_X509_AddDnNameLayer1(name);
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto ERR;
+    }
+    BSL_ASN1_Buffer asn = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SET, encLen, encode};
+    ret = BSL_ASN1_DecodeListItem(&listParam, &asn, ParseRelativeNameAsnItem, NULL, name);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+    if (BSL_LIST_COUNT(name) == 1) {
+        ret = HITLS_X509_ERR_EXT_DISTPOINT;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+    *list = name;
+    return HITLS_PKI_SUCCESS;
+ERR:
+    HITLS_X509_DnListFree(name);
+    return ret;
+}
+
+static int32_t ParseIdpDistPoint(BSL_ASN1_Buffer *asn, HITLS_X509_ExtIdp *idp)
+{
+    if (asn->tag == 0) {
+        return HITLS_PKI_SUCCESS;
+    }
+
+    uint8_t *tmp = asn->buff;
+    uint32_t tmpLen = asn->len;
+    BSL_ASN1_Buffer dpName = {0};
+    BSL_ASN1_Template templ = {g_idpDistPointNameTempl,
+        sizeof(g_idpDistPointNameTempl) / sizeof(g_idpDistPointNameTempl[0])};
+    if (tmpLen == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_IDP);
+        return HITLS_X509_ERR_EXT_IDP;
+    }
+    int32_t ret = BSL_ASN1_DecodeTemplate(&templ, IdpDistPointNameTagCheck, &tmp, &tmpLen, &dpName, 1);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (tmpLen != 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_EXT_BUF);
+        return HITLS_X509_ERR_PARSE_EXT_BUF;
+    }
+
+    idp->distPoint = BSL_SAL_Calloc(1, sizeof(*idp->distPoint));
+    if (idp->distPoint == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+
+    if (dpName.tag == HITLS_X509_IDP_FULLNAME_TAG) {
+        idp->distPoint->type = HITLS_X509_DP_FULLNAME;
+        ret = HITLS_X509_ParseGeneralNames(dpName.buff, dpName.len, &idp->distPoint->name);
+    } else if (dpName.tag == HITLS_X509_IDP_RELATIVENAME_TAG) {
+        idp->distPoint->type = HITLS_X509_DP_RELATIVENAME;
+        ret = ParseRelativeName(dpName.buff, dpName.len, &idp->distPoint->name);
+    } else {
+        ret = HITLS_X509_ERR_EXT_DISTPOINT;
+    }
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+    return ret;
+}
+
+int32_t HITLS_X509_ParseIdp(HITLS_X509_ExtEntry *extEntry, HITLS_X509_ExtIdp *idp)
+{
+    uint8_t *temp = extEntry->extnValue.buff;
+    uint32_t tempLen = extEntry->extnValue.len;
+    BSL_ASN1_Buffer asnArr[HITLS_X509_EXT_IDP_MAX] = {0};
+    BSL_ASN1_Template templ = {g_idpTempl, sizeof(g_idpTempl) / sizeof(g_idpTempl[0])};
+
+    int32_t ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &temp, &tempLen, asnArr, HITLS_X509_EXT_IDP_MAX);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    if (tempLen != 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_EXT_BUF);
+        return HITLS_X509_ERR_PARSE_EXT_BUF;
+    }
+
+    ret = ParseIdpDistPoint(&asnArr[HITLS_X509_EXT_IDP_DISTPOINT_IDX], idp);
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+    ret = ParseBool(&asnArr[HITLS_X509_EXT_IDP_ONLYUSER_IDX], &idp->onlyContainsUserCerts);
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+    ret = ParseBool(&asnArr[HITLS_X509_EXT_IDP_ONLYCA_IDX], &idp->onlyContainsCACerts);
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+    ret = ParseIdpReasons(&asnArr[HITLS_X509_EXT_IDP_REASONS_IDX], idp);
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+    ret = ParseBool(&asnArr[HITLS_X509_EXT_IDP_INDIRECTCRL_IDX], &idp->indirectCrl);
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+    ret = ParseBool(&asnArr[HITLS_X509_EXT_IDP_ONLYATTR_IDX], &idp->onlyContainsAttributeCerts);
+    if (ret != HITLS_PKI_SUCCESS) {
+        goto EXIT;
+    }
+    idp->critical = extEntry->critical;
+    return HITLS_PKI_SUCCESS;
+EXIT:
+    HITLS_X509_ClearIdp(idp);
+    return ret;
+}
+
+int32_t HITLS_X509_CheckIdp(const HITLS_X509_ExtIdp *idp)
+{
+    if (idp == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
+        return HITLS_X509_ERR_INVALID_PARAM;
+    }
+
+    uint32_t onlyCount = 0;
+    if (idp->onlyContainsUserCerts) {
+        onlyCount++;
+    }
+    if (idp->onlyContainsCACerts) {
+        onlyCount++;
+    }
+    if (idp->onlyContainsAttributeCerts) {
+        onlyCount++;
+    }
+    if (onlyCount > 1) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_IDP);
+        return HITLS_X509_ERR_EXT_IDP;
+    }
+
+    if (idp->distPoint != NULL) {
+        if (idp->distPoint->type != HITLS_X509_DP_FULLNAME &&
+            idp->distPoint->type != HITLS_X509_DP_RELATIVENAME) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_DISTPOINT);
+            return HITLS_X509_ERR_EXT_DISTPOINT;
+        }
+        if (idp->distPoint->name == NULL) {
+            BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_DISTPOINT);
+            return HITLS_X509_ERR_EXT_DISTPOINT;
+        }
+    }
+
+    /*
+     * RFC 5280 requires at least distributionPoint or onlySomeReasons if all
+     * scope booleans are FALSE.
+     */
+    if (idp->distPoint == NULL && !idp->hasReasons &&
+        !idp->onlyContainsUserCerts && !idp->onlyContainsCACerts && !idp->indirectCrl &&
+        !idp->onlyContainsAttributeCerts) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_IDP);
+        return HITLS_X509_ERR_EXT_IDP;
+    }
+
+    return HITLS_PKI_SUCCESS;
+}
+
 #if defined(HITLS_PKI_X509_CRT_PARSE) || defined(HITLS_PKI_X509_CSR) || defined(HITLS_PKI_X509_CRL_PARSE) || \
     defined(HITLS_PKI_INFO_CRT) || defined(HITLS_PKI_INFO_CSR)
 static int32_t ParseExKeyUsageList(uint32_t layer, BSL_ASN1_Buffer *asn, void *param, BSL_ASN1_List *list)
@@ -656,7 +1228,7 @@ static int32_t ParseExtAsnItem(BSL_ASN1_Buffer *asn, void *param, BSL_ASN1_List 
     }
 
     // Check if the extension already exists.
-    if (BSL_LIST_SearchDataConst(list, &extEntry.extnId, CmpExtByOid, NULL) != NULL) {
+    if (BSL_LIST_SearchDataConst(list, &extEntry.extnId, HITLS_X509_CmpExtByOid, NULL) != NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_PARSE_EXT_REPEAT);
         return HITLS_X509_ERR_PARSE_EXT_REPEAT;
     }
@@ -850,9 +1422,8 @@ static int32_t SetExtSki(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, const 
     return ret;
 }
 
-static inline void SetAsn1Templ(BSL_Buffer *value, uint8_t tag, BSL_ASN1_TemplateItem *item, BSL_ASN1_Buffer *asn)
+static inline void SetAsn1Buffer(BSL_Buffer *value, uint8_t tag, BSL_ASN1_Buffer *asn)
 {
-    item->tag = tag;
     asn->tag = tag;
     asn->len = value->dataLen;
     asn->buff = value->data;
@@ -882,9 +1453,16 @@ static int32_t EncodeGnDirNameValue(BslList *dirNames, BSL_ASN1_Buffer *extnValu
     return HITLS_PKI_SUCCESS;
 }
 
-static int32_t SetGnEncodeParam(BslList *names, BSL_ASN1_TemplateItem *items, BSL_ASN1_Buffer *asns)
+static void SetGnTemplateItems(BSL_ASN1_TemplateItem *items, const BSL_ASN1_Buffer *asns, uint32_t number)
 {
-    BSL_ASN1_TemplateItem *item = items;
+    for (uint32_t i = 0; i < number; i++) {
+        items[i].tag = asns[i].tag;
+        items[i].depth = 1;
+    }
+}
+
+static int32_t BuildGeneralNameAsns(BslList *names, BSL_ASN1_Buffer *asns)
+{
     BSL_ASN1_Buffer *asn = asns;
     int32_t ret;
     for (BslListNode *nameNode = BSL_LIST_FirstNode(names); nameNode != NULL;
@@ -896,33 +1474,55 @@ static int32_t SetGnEncodeParam(BslList *names, BSL_ASN1_TemplateItem *items, BS
         }
         switch (name->type) {
             case HITLS_X509_GN_EMAIL:
-                SetAsn1Templ(&name->value, HITLS_X509_GENERALNAME_RFC822_TAG, item, asn);
+                SetAsn1Buffer(&name->value, HITLS_X509_GENERALNAME_RFC822_TAG, asn);
                 break;
             case HITLS_X509_GN_DNS:
-                SetAsn1Templ(&name->value, HITLS_X509_GENERALNAME_DNS_TAG, item, asn);
+                SetAsn1Buffer(&name->value, HITLS_X509_GENERALNAME_DNS_TAG, asn);
                 break;
             case HITLS_X509_GN_DNNAME:
                 ret = EncodeGnDirNameValue((BSL_ASN1_List *)(uintptr_t)name->value.data, asn);
                 if (ret != HITLS_PKI_SUCCESS) {
                     return ret;
                 }
-                item->tag = HITLS_X509_GENERALNAME_DIR_TAG;
                 break;
             case HITLS_X509_GN_URI:
-                SetAsn1Templ(&name->value, HITLS_X509_GENERALNAME_URI_TAG, item, asn);
+                SetAsn1Buffer(&name->value, HITLS_X509_GENERALNAME_URI_TAG, asn);
                 break;
             case HITLS_X509_GN_IP:
-                SetAsn1Templ(&name->value, HITLS_X509_GENERALNAME_IP_TAG, item, asn);
+                SetAsn1Buffer(&name->value, HITLS_X509_GENERALNAME_IP_TAG, asn);
                 break;
             default:
                 BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_GN_UNSUPPORT);
                 return HITLS_X509_ERR_EXT_GN_UNSUPPORT;
         }
-        item->depth = 1;
-        item++;
         asn++;
     }
     return HITLS_PKI_SUCCESS;
+}
+
+static int32_t EncodeGeneralNamesList(BslList *names, BSL_ASN1_Buffer *out)
+{
+    uint32_t number = (uint32_t)BSL_LIST_COUNT(names);
+    BSL_ASN1_Buffer *asns = BSL_SAL_Calloc(number, sizeof(BSL_ASN1_Buffer));
+    if (asns == NULL) {
+        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
+        return BSL_MALLOC_FAIL;
+    }
+
+    BSL_ASN1_TemplateItem item = {BSL_ASN1_TAG_ANY, 0, 0};
+    BSL_ASN1_Template templ = {&item, 1};
+    int32_t ret = BuildGeneralNameAsns(names, asns);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
+    }
+    ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, number, &templ, asns, number, out);
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+    }
+EXIT:
+    FreeGnAsns(asns, number);
+    return ret;
 }
 
 static int32_t AllocEncodeParam(BSL_ASN1_TemplateItem **items, uint32_t itemNum, BSL_ASN1_Buffer **asns,
@@ -962,11 +1562,12 @@ static int32_t SetExtGeneralNames(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entr
     }
     items[0].depth = 0;
     items[0].tag = BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE;
-    ret = SetGnEncodeParam(san->names, items + 1, asns);
+    ret = BuildGeneralNameAsns(san->names, asns);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
+    SetGnTemplateItems(items + 1, asns, number);
 
     BSL_ASN1_Template templ = {items, number + 1};
     ret = BSL_ASN1_EncodeTemplate(&templ, asns, number, &entry->extnValue.buff, &entry->extnValue.len);
@@ -1051,6 +1652,21 @@ static int32_t SetExtCrlNumber(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, 
     return ret;
 }
 
+static int32_t SetExtDeltaCrl(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, const void *val)
+{
+    const HITLS_X509_ExtDeltaCrl *delta = (const HITLS_X509_ExtDeltaCrl *)val;
+
+    /*
+     * RFC5280 5.2.4 Delta CRL Indicator
+     * The delta CRL indicator is a critical CRL extension that identifies a CRL as being a delta CRL.
+     */
+    if (!delta->critical) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_SET);
+        return HITLS_X509_ERR_EXT_SET;
+    }
+    return SetExtCrlNumber(ext, entry, val);
+}
+
 static int32_t SetExtGeneric(HITLS_X509_Ext *ext, HITLS_X509_ExtEntry *entry, const void *val)
 {
     (void)ext;
@@ -1072,7 +1688,7 @@ static HITLS_X509_ExtEntry *GetExtEntry(BslList *extList, BslCid cid, void *val)
     if (cid == BSL_CID_UNKNOWN) {
         HITLS_X509_ExtGeneric *generic = (HITLS_X509_ExtGeneric *)val;
         BSL_ASN1_Buffer oidBuf = {BSL_ASN1_TAG_OBJECT_ID, generic->oid.dataLen, generic->oid.data};
-        return BSL_LIST_SearchDataConst(extList, &oidBuf, CmpExtByOid, NULL);
+        return BSL_LIST_SearchDataConst(extList, &oidBuf, HITLS_X509_CmpExtByOid, NULL);
     }
     return BSL_LIST_SearchDataConst(extList, &cid, CmpExtByCid, NULL);
 }
@@ -1204,6 +1820,12 @@ static int32_t SetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, uint32_t 
         case HITLS_X509_EXT_SET_CRLNUMBER:
             return SetExt(ext, BSL_CID_CE_CRLNUMBER, &buff, sizeof(HITLS_X509_ExtCrlNumber),
                 (EncodeExtCb)SetExtCrlNumber);
+        case HITLS_X509_EXT_SET_DELTA_CRL:
+            return SetExt(ext, BSL_CID_CE_DELTACRLINDICATOR, &buff, sizeof(HITLS_X509_ExtDeltaCrl),
+                (EncodeExtCb)SetExtDeltaCrl);
+        case HITLS_X509_EXT_SET_IDP:
+            return SetExt(ext, BSL_CID_CE_ISSUINGDISTRIBUTIONPOINT, &buff, sizeof(HITLS_X509_ExtIdp),
+                (EncodeExtCb)SetExtIdp);
         case HITLS_X509_EXT_SET_GENERIC:
             return SetExt(ext, BSL_CID_UNKNOWN, &buff, sizeof(HITLS_X509_ExtGeneric), (EncodeExtCb)SetExtGeneric);
         default:
@@ -1285,7 +1907,7 @@ static int32_t GetGenericExt(HITLS_X509_Ext *ext, HITLS_X509_ExtGeneric *generic
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     BSL_ASN1_Buffer oidBuf = {BSL_ASN1_TAG_OBJECT_ID, generic->oid.dataLen, generic->oid.data};
-    HITLS_X509_ExtEntry *extEntry = BSL_LIST_SearchDataConst(ext->extList, &oidBuf, CmpExtByOid, NULL);
+    HITLS_X509_ExtEntry *extEntry = BSL_LIST_SearchDataConst(ext->extList, &oidBuf, HITLS_X509_CmpExtByOid, NULL);
     if (extEntry == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_EXT_NOT_FOUND);
         return HITLS_X509_ERR_EXT_NOT_FOUND;
@@ -1314,6 +1936,12 @@ static int32_t GetExtCtrl(HITLS_X509_Ext *ext, int32_t cmd, void *val, uint32_t 
         case HITLS_X509_EXT_GET_CRLNUMBER:
             return HITLS_X509_GetExt(ext->extList, BSL_CID_CE_CRLNUMBER, &buff, sizeof(HITLS_X509_ExtCrlNumber),
                 (DecodeExtCb)X509_ParseCrlNumber);
+        case HITLS_X509_EXT_GET_DELTA_CRL:
+            return HITLS_X509_GetExt(ext->extList, BSL_CID_CE_DELTACRLINDICATOR, &buff,
+                sizeof(HITLS_X509_ExtDeltaCrl), (DecodeExtCb)X509_ParseCrlNumber);
+        case HITLS_X509_EXT_GET_IDP:
+            return HITLS_X509_GetExt(ext->extList, BSL_CID_CE_ISSUINGDISTRIBUTIONPOINT, &buff,
+                sizeof(HITLS_X509_ExtIdp), (DecodeExtCb)HITLS_X509_ParseIdp);
         case HITLS_X509_EXT_GET_KUSAGE:
             return GetExtKeyUsage(ext, val, valLen);
         case HITLS_X509_EXT_GET_BCONS:

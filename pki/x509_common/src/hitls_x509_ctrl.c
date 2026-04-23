@@ -380,17 +380,8 @@ static int32_t X509AddDnNameItemToList(BslList *dnNameList, BslCid cid, uint8_t 
 
 static int32_t X509AddDnNamesToList(BslList *list, BslList *dnNameList)
 {
-    HITLS_X509_NameNode *layer1 = BSL_SAL_Calloc(1, sizeof(HITLS_X509_NameNode));
-    if (layer1 == NULL) {
-        BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
-        return BSL_MALLOC_FAIL;
-    }
-    layer1->layer = 1;
-
-    int32_t ret = BSL_LIST_AddElement(list, layer1, BSL_LIST_POS_END);
+    int32_t ret = HITLS_X509_AddDnNameLayer1(list);
     if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        HITLS_X509_FreeNameNode(layer1);
         return ret;
     }
     for (BslListNode *dnNode = BSL_LIST_FirstNode(dnNameList); dnNode != NULL;
@@ -410,11 +401,6 @@ static int32_t X509AddDnNamesToList(BslList *list, BslList *dnNameList)
 BslList *HITLS_X509_DnListNew(void)
 {
     return BSL_LIST_New(sizeof(HITLS_X509_NameNode));
-}
-
-void HITLS_X509_DnListFree(BslList *dnList)
-{
-    BSL_LIST_FREE(dnList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
 }
 
 int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, uint32_t size)
@@ -454,6 +440,11 @@ EXIT:
     return ret;
 }
 #endif
+
+void HITLS_X509_DnListFree(BslList *dnList)
+{
+    BSL_LIST_FREE(dnList, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
+}
 
 #if defined(HITLS_PKI_X509_CRT_GEN) || defined(HITLS_PKI_X509_CRL_GEN)
 int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, uint32_t valLen)
