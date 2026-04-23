@@ -132,6 +132,13 @@ int32_t CRYPT_XMSS_SetPubKey(CryptXmssCtx *ctx, const BSL_Param *para);
  */
 int32_t CRYPT_XMSS_SetPrvKey(CryptXmssCtx *ctx, const BSL_Param *para);
 
+/**
+ * @brief Duplicate ctx
+ *
+ * @param ctx Pointer to the XMSS context
+ * @note Since XMSS is not allowed to sign with the same private key and state, the function only duplicates the public
+ * key of ctx to the new ctx, without duplicating private key;
+ */
 CryptXmssCtx *CRYPT_XMSS_DupCtx(CryptXmssCtx *ctx);
 
 #ifdef HITLS_CRYPTO_XMSS_CHECK
