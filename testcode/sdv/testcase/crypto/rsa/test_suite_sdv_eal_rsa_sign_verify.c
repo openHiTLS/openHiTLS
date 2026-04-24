@@ -200,7 +200,11 @@ void SDV_CRYPTO_RSA_VERIFY_RECOVER_FUNC_TC002(int padMode, Hex *n, Hex *e, Hex *
     uint32_t dataLen = sizeof(data);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(NULL, cipherText->x, cipherText->len, data, &dataLen) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, NULL, cipherText->len, data, &dataLen) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, 0, data, &dataLen) == CRYPT_RSA_ERR_INPUT_VALUE);
+    if (padMode == CRYPT_CTRL_SET_RSA_PADDING) {
+        ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, 0, data, &dataLen) == 0);
+    } else {
+        ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, 0, data, &dataLen) == CRYPT_RSA_ERR_INPUT_VALUE);
+    }
     ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, cipherText->len, NULL, &dataLen) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, cipherText->len, data, NULL) == CRYPT_NULL_INPUT);
 

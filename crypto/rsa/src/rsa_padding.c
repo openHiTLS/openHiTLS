@@ -1032,8 +1032,7 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type2TLS(const uint8_t *in, uint32_t inLen, uint8
     *outLen = secretLen;
 
     // if the 'plaintext' is PKCS15 , the valid should be 0xffffffff, else should be 0
-    // so return 0 for success, else return 0xffffffff
-    return ~valid;
+    return Uint32ConstTimeIsZero(valid) & CRYPT_RSA_NOR_VERIFY_FAIL;
 }
 #endif // HITLS_CRYPTO_RSAES_PKCSV15_TLS
 #endif // HITLS_CRYPTO_RSA_DECRYPT
