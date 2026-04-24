@@ -442,7 +442,7 @@ int32_t CRYPT_EAL_PkeyDecrypt(const CRYPT_EAL_PkeyCtx *pkey, const uint8_t *data
  * @ingroup crypt_eal_pkey
  * @brief Check whether the public and private keys match.
  *  Currently not supported in the provider, supported in the future
- *
+ *  this funciton has no support in rsa-512 key bits.
  * @param   pubKey      [IN] Public key
  * @param   prvKey      [IN] private key
  *

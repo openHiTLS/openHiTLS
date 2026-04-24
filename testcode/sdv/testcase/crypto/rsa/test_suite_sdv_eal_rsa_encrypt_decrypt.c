@@ -670,3 +670,246 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test   SDV_CRYPTO_RSA_NOPAD_ZERO_INPUT_TC001
+ * @title  RSA NO_PAD: encrypt all-zero plaintext and decrypt all-zero ciphertext both succeed.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_NOPAD_ZERO_INPUT_TC001(int bits, int isProvider)
+{
+#if !defined(HITLS_CRYPTO_RSA_NO_PAD) || !defined(HITLS_CRYPTO_RSA_ENCRYPT) || \
+    !defined(HITLS_CRYPTO_RSA_DECRYPT) || !defined(HITLS_CRYPTO_DRBG)
+    (void)bits;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    uint32_t bytes = (uint32_t)bits / 8;
+    uint8_t zeros[512] = {0};
+    uint8_t ct[512] = {0};
+    uint8_t pt[512] = {0};
+    uint32_t ctLen = bytes;
+    uint32_t ptLen = bytes;
+    int32_t noPad = CRYPT_RSA_NO_PAD;
+
+    SetRsaPara(&para, e, 3, bits);
+    TestMemInit();
+
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_PADDING, &noPad, sizeof(noPad)), CRYPT_SUCCESS);
+
+    // Encrypt all-zero plaintext: 0^e mod n = 0
+    ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pkey, zeros, bytes, ct, &ctLen), CRYPT_SUCCESS);
+    ASSERT_EQ(ctLen, bytes);
+    ASSERT_EQ(memcmp(ct, zeros, bytes), 0);
+
+    // Decrypt all-zero ciphertext: 0^d mod n = 0
+    ptLen = bytes;
+    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkey, zeros, bytes, pt, &ptLen), CRYPT_SUCCESS);
+    ASSERT_EQ(ptLen, bytes);
+    ASSERT_EQ(memcmp(pt, zeros, bytes), 0);
+
+EXIT:
+    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA_PADDED_ZERO_DECRYPT_TC001
+ * @title  RSA: padded modes (OAEP, PKCS1v15) must reject an all-zero ciphertext.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_PADDED_ZERO_DECRYPT_TC001(int bits, int padMode, int isProvider)
+{
+    if (NeedPadSkip(padMode)) {
+        (void)bits;
+        (void)isProvider;
+        SKIP_TEST();
+    }
+#if !defined(HITLS_CRYPTO_RSA_DECRYPT) || !defined(HITLS_CRYPTO_DRBG)
+    (void)bits;
+    (void)padMode;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    uint32_t bytes = (uint32_t)bits / 8;
+    uint8_t zeros[512] = {0};
+    uint8_t pt[512] = {0};
+    uint32_t ptLen = bytes;
+    int32_t hashId = CRYPT_MD_SHA1;
+    int32_t pkcsv15 = CRYPT_MD_SHA1;
+    BSL_Param oaepParam[3] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        BSL_PARAM_END};
+
+    SetRsaPara(&para, e, 3, bits);
+    TestMemInit();
+
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+
+    if (padMode == CRYPT_CTRL_SET_RSA_RSAES_OAEP) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_OAEP, oaepParam, 0), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, padMode, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
+    }
+
+    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkey, zeros, bytes, pt, &ptLen), CRYPT_RSA_NOR_VERIFY_FAIL);
+
+EXIT:
+    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA_DECRYPT_SHORT_INPUT_TC001
+ * @title  RSA decrypt with inputLen < keyBytes (leading-zero prefix).
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_DECRYPT_SHORT_INPUT_TC001(int bits, int padMode, int isProvider)
+{
+    if (NeedPadSkip(padMode)) {
+        (void)bits;
+        (void)isProvider;
+        SKIP_TEST();
+    }
+#if !defined(HITLS_CRYPTO_RSA_DECRYPT) || !defined(HITLS_CRYPTO_DRBG)
+    (void)bits;
+    (void)padMode;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    uint32_t bytes = (uint32_t)bits / 8;
+    uint32_t shortLen = bytes - 1;
+    uint8_t shortInput[512] = {0};
+    uint8_t pt[512] = {0};
+    uint32_t ptLen = bytes;
+    int32_t hashId = CRYPT_MD_SHA1;
+    int32_t pkcsv15 = CRYPT_MD_SHA1;
+    int32_t noPad = CRYPT_RSA_NO_PAD;
+    BSL_Param oaepParam[3] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        BSL_PARAM_END};
+
+    SetRsaPara(&para, e, 3, bits);
+    TestMemInit();
+
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+
+    if (padMode == CRYPT_CTRL_SET_RSA_PADDING) {
+        // NO_PAD short input is a valid small BN, RSA computes 0^d = 0, output is key-sized
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_PADDING, &noPad, sizeof(noPad)), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkey, shortInput, shortLen, pt, &ptLen), CRYPT_SUCCESS);
+        ASSERT_EQ(ptLen, bytes);
+    } else if (padMode == CRYPT_CTRL_SET_RSA_RSAES_OAEP) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_OAEP, oaepParam, 0), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkey, shortInput, shortLen, pt, &ptLen), CRYPT_RSA_NOR_VERIFY_FAIL);
+    } else {
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, padMode, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
+        ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkey, shortInput, shortLen, pt, &ptLen), CRYPT_RSA_NOR_VERIFY_FAIL);
+    }
+
+EXIT:
+    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA_DECRYPT_LONG_INPUT_TC001
+ * @title  RSA decrypt with inputLen > keyBytes is rejected immediately.
+ * @brief  AllocResultAndInputBN gates on inputLen > BN_BITS_TO_BYTES(bits) and returns
+ *         CRYPT_RSA_ERR_INPUT_VALUE before any cryptographic operation is performed.
+ *         This holds for all padding modes.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_DECRYPT_LONG_INPUT_TC001(int bits, int padMode, int isProvider)
+{
+    if (NeedPadSkip(padMode)) {
+        (void)bits;
+        (void)isProvider;
+        SKIP_TEST();
+    }
+#if !defined(HITLS_CRYPTO_RSA_DECRYPT) || !defined(HITLS_CRYPTO_DRBG)
+    (void)bits;
+    (void)padMode;
+    (void)isProvider;
+    SKIP_TEST();
+#else
+    uint8_t e[] = {1, 0, 1};
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    uint32_t bytes = (uint32_t)bits / 8;
+    uint32_t longLen = bytes + 1;
+    uint8_t longInput[513] = {0};
+    uint8_t pt[512] = {0};
+    uint32_t ptLen = bytes;
+    int32_t hashId = CRYPT_MD_SHA1;
+    int32_t pkcsv15 = CRYPT_MD_SHA1;
+    int32_t noPad = CRYPT_RSA_NO_PAD;
+    BSL_Param oaepParam[3] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &hashId, sizeof(hashId), 0},
+        BSL_PARAM_END};
+
+    SetRsaPara(&para, e, 3, bits);
+    TestMemInit();
+
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+
+    if (padMode == CRYPT_CTRL_SET_RSA_PADDING) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_PADDING, &noPad, sizeof(noPad)), CRYPT_SUCCESS);
+    } else if (padMode == CRYPT_CTRL_SET_RSA_RSAES_OAEP) {
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_RSAES_OAEP, oaepParam, 0), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, padMode, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
+    }
+
+    // Over-length input will failed
+    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkey, longInput, longLen, pt, &ptLen), CRYPT_RSA_ERR_INPUT_VALUE);
+
+EXIT:
+    CRYPT_EAL_RandDeinit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+#endif
+}
+/* END_CASE */
+

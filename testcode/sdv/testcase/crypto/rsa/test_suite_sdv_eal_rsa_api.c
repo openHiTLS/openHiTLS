@@ -815,9 +815,9 @@ void SDV_CRYPTO_RSA_DEC_API_TC001(Hex *n, Hex *d, int hashId, Hex *in, int isPro
 
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(NULL, in->x, in->len, crypt, &cryptLen) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, NULL, in->len, crypt, &cryptLen) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, 0, crypt, &cryptLen) == CRYPT_RSA_ERR_DEC_BITS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, 0, crypt, &cryptLen) == CRYPT_RSA_NOR_VERIFY_FAIL);
     const uint32_t invalidInLen = 1025;  // 1025: invalid data length
-    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, invalidInLen, crypt, &cryptLen) == CRYPT_RSA_ERR_DEC_BITS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, invalidInLen, crypt, &cryptLen) == CRYPT_RSA_ERR_INPUT_VALUE);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, NULL, &cryptLen) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, NULL) == CRYPT_NULL_INPUT);
 
@@ -1604,6 +1604,7 @@ EXIT:
 void SDV_CRYPTO_RSA512_GEN_SIGN_VERIFY_TC001(int isProvider)
 {
 #if !defined(HITLS_CRYPTO_RSA_SIGN) || !defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15) || !defined(HITLS_CRYPTO_DRBG)
+    (void)isProvider;
     SKIP_TEST();
 #else
     uint8_t e[] = {1, 0, 1};
@@ -1622,8 +1623,8 @@ void SDV_CRYPTO_RSA512_GEN_SIGN_VERIFY_TC001(int isProvider)
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
-
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyGetKeyBits(pkey), 512);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
@@ -1641,7 +1642,6 @@ void SDV_CRYPTO_RSA512_GEN_SIGN_VERIFY_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, CRYPT_MD_SHA384, data, dataLen, sign, &signLen), CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
 EXIT:
-    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     free(sign);
 #endif
@@ -1699,7 +1699,6 @@ void SDV_CRYPTO_RSA512_OAEP_SHA1_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pkey, plaintext1, sizeof(plaintext1), ct, &ctLen), CRYPT_RSA_ERR_ENC_BITS);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
 #endif
 }
@@ -1744,7 +1743,6 @@ void SDV_CRYPTO_RSA512_OAEP_SHA256_FAIL_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pkey, NULL, 0, ct, &ctLen), CRYPT_RSA_ERR_ENC_BITS);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
 #endif
 }
@@ -1795,7 +1793,6 @@ void SDV_CRYPTO_RSA512_PKCS1_ENCRYPT_TC001(int isProvider)
     ASSERT_TRUE(CRYPT_EAL_PkeyEncrypt(pkey, pt2, sizeof(pt2), ct, &ctLen) == CRYPT_RSA_ERR_ENC_BITS);
 
 EXIT:
-    CRYPT_EAL_RandDeinit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
 #endif
 }
@@ -1835,7 +1832,8 @@ void SDV_CRYPTO_RSA512_PSS_SALT0_TC001(int isProvider)
     pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkey != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
 
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
@@ -1847,7 +1845,6 @@ void SDV_CRYPTO_RSA512_PSS_SALT0_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pssParam, 0), CRYPT_RSA_ERR_PSS_SALT_LEN);
 
 EXIT:
-    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkey);
     free(sign);
 #endif
@@ -1896,7 +1893,8 @@ void SDV_CRYPTO_RSA512_KEY_IMPORT_EXPORT_TC001(int isProvider)
 
     SetRsaPara(&para, e, sizeof(e), 512);
     TestMemInit();
-    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
 
     sign = (uint8_t *)malloc(signLen);
     ASSERT_TRUE(sign != NULL);
@@ -1931,7 +1929,6 @@ void SDV_CRYPTO_RSA512_KEY_IMPORT_EXPORT_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pubCtx, dataHash, hashLen, sign, signLen), CRYPT_SUCCESS);
 
 EXIT:
-    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_PkeyFreeCtx(pubCtx);
     CRYPT_EAL_PkeyFreeCtx(prvCtx);

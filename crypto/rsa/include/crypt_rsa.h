@@ -177,7 +177,6 @@ int32_t  CRYPT_RSA_PubEnc(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32
  *                        Before being transferred, the value must be set to the maximum length of the array.
  *
  * @retval CRYPT_NULL_INPUT             Invalid null pointer input
- * @retval CRYPT_RSA_ERR_DEC_BITS       Incorrect length of the encrypted private key.
  * @retval CRYPT_RSA_NO_KEY_INFO        does not contain the key information.
  * @retval CRYPT_RSA_ERR_INPUT_VALUE    The entered value does not meet the calculation conditions.
  * @retval CRYPT_MEM_ALLOC_FAIL         Memory allocation failure
