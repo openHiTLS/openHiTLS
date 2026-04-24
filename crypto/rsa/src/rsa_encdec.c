@@ -33,34 +33,13 @@ typedef struct {
     BN_Mont *montQ;
 } RsaDecProcedurePara;
 
-static int32_t InputRangeCheck(const BN_BigNum *input, const BN_BigNum *n, uint32_t bits)
+static int32_t InputRangeCheck(const BN_BigNum *input, const BN_BigNum *n)
 {
-    // The value range defined in RFC is [0, n - 1]. Because the operation result of 0, 1, n - 1 is relatively fixed,
-    // it is considered invalid here. The actual valid value range is [2, n - 2].
-    int32_t ret;
-    BN_BigNum *nMinusOne = NULL;
-    if (BN_IsZero(input) == true || BN_IsOne(input) == true) {
+    if (BN_Cmp(input, n) >= 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
         return CRYPT_RSA_ERR_INPUT_VALUE;
     }
-    /* Allocate 8 extra bits to prevent calculation errors due to the feature of BigNum calculation. */
-    nMinusOne = BN_Create(bits);
-    if (nMinusOne == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    ret = BN_SubLimb(nMinusOne, n, 1);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        BN_Destroy(nMinusOne);
-        return ret;
-    }
-    if (BN_Cmp(input, nMinusOne) >= 0) {
-        ret = CRYPT_RSA_ERR_INPUT_VALUE;
-        BSL_ERR_PUSH_ERROR(ret);
-    }
-    BN_Destroy(nMinusOne);
-    return ret;
+    return CRYPT_SUCCESS;
 }
 
 static int32_t AddZero(uint32_t bits, uint8_t *out, uint32_t *outLen)
@@ -97,10 +76,6 @@ static int32_t ResultToOut(uint32_t bits, const BN_BigNum *result, uint8_t *out,
 static int32_t AllocResultAndInputBN(uint32_t bits, BN_BigNum **result, BN_BigNum **inputBN,
     const uint8_t *input, uint32_t inputLen)
 {
-    if (inputLen > BN_BITS_TO_BYTES(bits)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
-        return CRYPT_RSA_ERR_INPUT_VALUE;
-    }
     *result = BN_Create(bits + 1);
     *inputBN = BN_Create(bits);
     if (*result == NULL || *inputBN == NULL) {
@@ -161,7 +136,7 @@ int32_t  CRYPT_RSA_PubEnc(const CRYPT_RSA_Ctx *ctx, const uint8_t *input, uint32
         return CRYPT_MEM_ALLOC_FAIL;
     }
     GOTO_ERR_IF_EX(AllocResultAndInputBN(bits, &result, &inputBN, input, inputLen), ret);
-    GOTO_ERR_IF_EX(InputRangeCheck(inputBN, pubKey->n, bits), ret);
+    GOTO_ERR_IF_EX(InputRangeCheck(inputBN, pubKey->n), ret);
 
     // pubKey->mont: Ensure that this value is not empty when the public key is set or generated.
     GOTO_ERR_IF(BN_MontExp(result, inputBN, pubKey->e, pubKey->mont, optimizer), ret);
@@ -395,7 +370,7 @@ static int32_t RSA_AllocAndCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input,
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
-    ret = InputRangeCheck(*message, ctx->prvKey->n, bits);
+    ret = InputRangeCheck(*message, ctx->prvKey->n);
     if (ret != CRYPT_SUCCESS) {
         goto ERR;
     }
@@ -1183,8 +1158,8 @@ EXIT:
 #endif // HITLS_CRYPTO_RSA_ENCRYPT
 
 #ifdef HITLS_CRYPTO_RSA_DECRYPT
-static int32_t DecryptInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
-    const uint8_t *out, const uint32_t *outLen)
+static int32_t DecryptInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *data, const uint8_t *out,
+    const uint32_t *outLen)
 {
     if (ctx == NULL || data == NULL || out == NULL || outLen == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
@@ -1195,19 +1170,13 @@ static int32_t DecryptInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *data, 
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_NO_KEY_INFO);
         return CRYPT_RSA_NO_KEY_INFO;
     }
-
-    uint32_t bits = CRYPT_RSA_GetBits(ctx);
-    if (dataLen != BN_BITS_TO_BYTES(bits)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_DEC_BITS);
-        return CRYPT_RSA_ERR_DEC_BITS;
-    }
     return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_RSA_Decrypt(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen)
 {
     uint8_t *pad = NULL;
-    int32_t ret = DecryptInputCheck(ctx, data, dataLen, out, outLen);
+    int32_t ret = DecryptInputCheck(ctx, data, out, outLen);
     // The static function has pushed an error. The push error is not repeated here.
     if (ret != CRYPT_SUCCESS) {
         return ret;

@@ -787,6 +787,7 @@ void SDV_CRYPTO_RSA_DEC_API_TC001(Hex *n, Hex *d, int hashId, Hex *in, int isPro
     CRYPT_EAL_PkeyPrv prvkey = {0};
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     CRYPT_MD_AlgId mdId = hashId;
+    uint8_t invalidIn[1025] = {0};
     BSL_Param oaepParam[3] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
@@ -807,9 +808,9 @@ void SDV_CRYPTO_RSA_DEC_API_TC001(Hex *n, Hex *d, int hashId, Hex *in, int isPro
 
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(NULL, in->x, in->len, crypt, &cryptLen) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, NULL, in->len, crypt, &cryptLen) == CRYPT_NULL_INPUT);
-    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, 0, crypt, &cryptLen) == CRYPT_RSA_ERR_DEC_BITS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, 0, crypt, &cryptLen) == CRYPT_RSA_NOR_VERIFY_FAIL);
     const uint32_t invalidInLen = 1025;  // 1025: invalid data length
-    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, invalidInLen, crypt, &cryptLen) == CRYPT_RSA_ERR_DEC_BITS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, invalidIn, invalidInLen, crypt, &cryptLen) == CRYPT_RSA_NOR_VERIFY_FAIL);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, NULL, &cryptLen) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyDecrypt(pkey, in->x, in->len, crypt, NULL) == CRYPT_NULL_INPUT);
 
@@ -2067,7 +2068,7 @@ EXIT:
 
 /* END_CASE */
 
-#ifdef HITLS_CRYPTO_KEY_DECODE_CHAIN
+ #if defined(HITLS_CRYPTO_KEY_DECODE_CHAIN)
 static int32_t ImportRsaKey(const BSL_Param *param, void *args)
 {
     uint32_t bits = 0;
@@ -2102,7 +2103,8 @@ static int32_t ImportRsaKey(const BSL_Param *param, void *args)
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_Import_Export_FUNC_TC001(int bits)
 {
-#ifndef HITLS_CRYPTO_PROVIDER
+#ifndef HITLS_CRYPTO_KEY_DECODE_CHAIN
+    (void)bits;
     SKIP_TEST();
 #else
     CRYPT_RSA_Ctx *srcRsaCtx = NULL;
@@ -2113,8 +2115,6 @@ void SDV_CRYPTO_RSA_Import_Export_FUNC_TC001(int bits)
     uint8_t signData[1024] = {};
     uint32_t signDataLen = sizeof(signData);
     uint8_t e[] = {0x01, 0x00, 0x01};
-    uint32_t eLen = sizeof(e);
-    uint32_t bits = 2048;
     BSL_Param param[3] = {
         {CRYPT_PARAM_PKEY_PROCESS_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ImportRsaKey, 0, 0},
         {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &dstRsaCtx, 0, 0},
@@ -2125,7 +2125,7 @@ void SDV_CRYPTO_RSA_Import_Export_FUNC_TC001(int bits)
     srcRsaCtx = CRYPT_RSA_NewCtx();
     ASSERT_TRUE(srcRsaCtx != NULL);
 
-    CRYPT_RsaPara rsaPara = { e, sizeof(e), 2048 };
+    CRYPT_RsaPara rsaPara = { e, sizeof(e), bits };
     ASSERT_EQ(CRYPT_RSA_SetPara(srcRsaCtx, &rsaPara), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_RSA_Gen(srcRsaCtx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_RSA_Ctrl(srcRsaCtx, CRYPT_CTRL_SET_RSA_PADDING, &padType, sizeof(padType)), CRYPT_SUCCESS);
@@ -2149,14 +2149,15 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_CRYPTO_RSA_Import_Export_FUNC_TC002(int bits)
 {
-#ifndef HITLS_CRYPTO_PROVIDER
+#ifndef HITLS_CRYPTO_KEY_DECODE_CHAIN
+    (void)bits;
     SKIP_TEST();
 #else
     CRYPT_RSA_Ctx *srcRsaCtx = NULL;
     CRYPT_RSA_Ctx *dstRsaCtx = NULL;
     CRYPT_RsaPadType padType = CRYPT_EMSA_PSS;
     RSA_PadingPara pssPara = {
-        .saltLen = -1,
+        .saltLen = 30,
         .mdId = CRYPT_MD_SHA256,
         .mgfId = CRYPT_MD_SHA256
     };
@@ -2164,8 +2165,6 @@ void SDV_CRYPTO_RSA_Import_Export_FUNC_TC002(int bits)
     uint8_t signData[1024] = {};
     uint32_t signDataLen = sizeof(signData);
     uint8_t e[] = {0x01, 0x00, 0x01};
-    uint32_t eLen = sizeof(e);
-    uint32_t bits = 2048;
     BSL_Param param[3] = {
         {CRYPT_PARAM_PKEY_PROCESS_FUNC, BSL_PARAM_TYPE_FUNC_PTR, ImportRsaKey, 0, 0},
         {CRYPT_PARAM_PKEY_PROCESS_ARGS, BSL_PARAM_TYPE_CTX_PTR, &dstRsaCtx, 0, 0},
@@ -2181,7 +2180,7 @@ void SDV_CRYPTO_RSA_Import_Export_FUNC_TC002(int bits)
     srcRsaCtx = CRYPT_RSA_NewCtx();
     ASSERT_TRUE(srcRsaCtx != NULL);
 
-    CRYPT_RsaPara rsaPara = { e, sizeof(e), 2048 };
+    CRYPT_RsaPara rsaPara = { e, sizeof(e), bits };
     ASSERT_EQ(CRYPT_RSA_SetPara(srcRsaCtx, &rsaPara), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_RSA_Gen(srcRsaCtx), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_RSA_Ctrl(srcRsaCtx, CRYPT_CTRL_SET_RSA_PADDING, &padType, sizeof(padType)), CRYPT_SUCCESS);
@@ -2206,6 +2205,7 @@ EXIT:
 void SDV_CRYPTO_RSA512_GEN_SIGN_VERIFY_TC001(int isProvider)
 {
 #if !defined(HITLS_CRYPTO_RSA_SIGN) || !defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15) || !defined(HITLS_CRYPTO_DRBG)
+    (void)isProvider;
     SKIP_TEST();
 #else
     uint8_t e[] = {1, 0, 1};
