@@ -1254,7 +1254,9 @@ hitls_define_dependency(HITLS_TLS_SUITE_KX
 )
 hitls_define_dependency(HITLS_TLS_SUITE_KX_ECDHE            DEPS HITLS_TLS_SUITE_KX)
 hitls_define_dependency(HITLS_TLS_SUITE_KX_DHE              DEPS HITLS_TLS_SUITE_KX)
-hitls_define_dependency(HITLS_TLS_SUITE_KX_RSA              DEPS HITLS_TLS_SUITE_KX)
+hitls_define_dependency(HITLS_TLS_SUITE_KX_RSA
+    DEPS HITLS_TLS_SUITE_KX HITLS_CRYPTO_RSAES_PKCSV15_TLS HITLS_CRYPTO_RSA_ENCRYPT HITLS_CRYPTO_RSA_DECRYPT
+)
 
 ## Suite Authentication
 hitls_define_dependency(HITLS_TLS_SUITE_AUTH

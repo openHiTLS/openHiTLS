@@ -293,8 +293,8 @@ int32_t HS_ProcessClientKxMsgRsa(TLS_Ctx *ctx, const ClientKeyExchangeMsg *clien
 
     CERT_MgrCtx *certMgrCtx = ctx->config.tlsConfig.certMgrCtx;
     HITLS_CERT_Key *privateKey = SAL_CERT_GetCurrentPrivateKey(certMgrCtx, false);
-    uint32_t valid = ~(uint32_t)SAL_CERT_KeyDecrypt(ctx, privateKey, clientKxMsg->data,
-        clientKxMsg->dataSize, premasterSecret, &secretLen);
+    uint32_t valid = Uint32ConstTimeIsZero((uint32_t)SAL_CERT_KeyDecrypt(ctx, privateKey, clientKxMsg->data,
+        clientKxMsg->dataSize, premasterSecret, &secretLen));
     valid &= Uint32ConstTimeEqual(secretLen, MASTER_SECRET_LEN);
     // Check the version in the premaster secret
     uint16_t version = ctx->negotiatedInfo.clientVersion;

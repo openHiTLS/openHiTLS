@@ -907,3 +907,59 @@ EXIT:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_VERIFY_PKCSV15_TYPE2_TLS_BOUNDARY_TC001(void)
+{
+#if !defined(HITLS_CRYPTO_RSA_DECRYPT) || !defined(HITLS_CRYPTO_RSAES_PKCSV15_TLS)
+    SKIP_TEST();
+#else
+    uint8_t validIn[59] = {0};
+    uint8_t tooLongIn[60] = {0};
+    uint8_t expected[48] = {0};
+    uint8_t out[64] = {0};
+    uint8_t oneByte[1] = {0};
+    uint32_t outLen = 0;
+
+    validIn[1] = 0x02;
+    tooLongIn[1] = 0x02;
+    for (uint32_t i = 2; i < 10; i++) {
+        validIn[i] = 0xff;
+        tooLongIn[i] = 0xff;
+    }
+    for (uint32_t i = 0; i < sizeof(expected); i++) {
+        expected[i] = (uint8_t)(i + 1);
+        validIn[11 + i] = expected[i];
+        tooLongIn[11 + i] = expected[i];
+    }
+    tooLongIn[sizeof(tooLongIn) - 1] = 0xee;
+
+    outLen = sizeof(out);
+    memset(out, 0xa5, sizeof(out));
+    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2TLS(validIn, sizeof(validIn), out, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, sizeof(expected));
+    ASSERT_EQ(memcmp(out, expected, sizeof(expected)), 0);
+    for (uint32_t i = outLen; i < sizeof(out); i++) {
+        ASSERT_EQ(out[i], 0);
+    }
+
+    outLen = sizeof(expected);
+    memset(out, 0xa5, sizeof(out));
+    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2TLS(tooLongIn, sizeof(tooLongIn), out, &outLen),
+        CRYPT_RSA_NOR_VERIFY_FAIL);
+    ASSERT_EQ(outLen, sizeof(expected));
+    for (uint32_t i = 0; i < outLen; i++) {
+        ASSERT_EQ(out[i], 0);
+    }
+
+    outLen = sizeof(out);
+    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2TLS(oneByte, 0, out, &outLen), CRYPT_RSA_NOR_VERIFY_FAIL);
+    ASSERT_EQ(outLen, sizeof(out));
+
+    outLen = sizeof(out);
+    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2TLS(oneByte, sizeof(oneByte), out, &outLen), CRYPT_RSA_NOR_VERIFY_FAIL);
+    ASSERT_EQ(outLen, sizeof(out));
+EXIT:
+    return;
+#endif
+}
+/* END_CASE */

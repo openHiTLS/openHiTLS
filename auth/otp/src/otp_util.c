@@ -98,9 +98,19 @@ int32_t OtpSetCtxContent(HITLS_AUTH_OtpCtx *ctx, int32_t cmd, void *param)
                 BSL_ERR_PUSH_ERROR(HITLS_AUTH_OTP_INVALID_INPUT);
                 return HITLS_AUTH_OTP_INVALID_INPUT;
             }
-            valueLen = sizeof(((TotpCtx *)(ctx->ctx))->validWindow);
-            return BSL_PARAM_GetValue(input, AUTH_PARAM_OTP_CTX_TOTP_VALIDWINDOW, BSL_PARAM_TYPE_UINT32,
-                                      &((TotpCtx *)(ctx->ctx))->validWindow, &valueLen);
+            uint32_t validWindow;
+            valueLen = sizeof(validWindow);
+            ret = BSL_PARAM_GetValue(input, AUTH_PARAM_OTP_CTX_TOTP_VALIDWINDOW, BSL_PARAM_TYPE_UINT32,
+                                     &validWindow, &valueLen);
+            if (ret != BSL_SUCCESS) {
+                return ret;
+            }
+            if (validWindow > OTP_TOTP_MAX_VALID_WINDOW) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_OTP_INVALID_INPUT);
+                return HITLS_AUTH_OTP_INVALID_INPUT;
+            }
+            ((TotpCtx *)(ctx->ctx))->validWindow = validWindow;
+            return HITLS_AUTH_SUCCESS;
         default:
             BSL_ERR_PUSH_ERROR(HITLS_AUTH_OTP_INVALID_CMD);
             return HITLS_AUTH_OTP_INVALID_CMD;

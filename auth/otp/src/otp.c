@@ -194,7 +194,7 @@ int32_t HotpValidate(HITLS_AUTH_OtpCtx *ctx, const BSL_Param *param, const char 
         return ret;
     }
 
-    if (strncmp(otp, targetOtp, otpLen) != 0) {
+    if (ConstTimeMemcmp((const uint8_t *)otp, (const uint8_t *)targetOtp, otpLen) == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_OTP_VALIDATE_MISMATCH);
         return HITLS_AUTH_OTP_VALIDATE_MISMATCH;
     }
@@ -214,6 +214,8 @@ int32_t TotpValidate(HITLS_AUTH_OtpCtx *ctx, const BSL_Param *param, const char 
     uint32_t validWindow = ((TotpCtx *)ctx->ctx)->validWindow;
     uint64_t movingFactor;
 
+    /* Traverse [T - validWindow, T + validWindow] to tolerate clock drift between prover and verifier.
+     * Total 2 * validWindow + 1 TOTP computations, each involving one HMAC operation. */
     for (int64_t offset = -(int64_t)validWindow; offset < (int64_t)validWindow + 1; offset++) {
         ret = TotpGen(ctx, param, offset, targetOtp, &targetOtpLen, &movingFactor);
         if (ret != HITLS_AUTH_SUCCESS) {
@@ -221,7 +223,7 @@ int32_t TotpValidate(HITLS_AUTH_OtpCtx *ctx, const BSL_Param *param, const char 
             return ret;
         }
 
-        if (strncmp(otp, targetOtp, otpLen) == 0) {
+        if (ConstTimeMemcmp((const uint8_t *)otp, (const uint8_t *)targetOtp, otpLen) != 0) {
             if (matched != NULL) {
                 *matched = movingFactor;
             }

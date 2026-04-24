@@ -23,6 +23,7 @@
 #include "eal_cipher_local.h"
 #include "crypt_modes_cfb.h"
 #include "modes_local.h"
+#include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "crypt_local_types.h"
 #include "crypt_modes.h"
