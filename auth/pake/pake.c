@@ -93,8 +93,13 @@ HITLS_AUTH_PakeCtx *HITLS_AUTH_PakeNewCtx(CRYPT_EAL_LibCtx *libCtx, const char *
     switch (cipherSuite.type) {
         case HITLS_AUTH_PAKE_SPAKE2PLUS:
             ctx->ctx = Spake2PlusNewCtx(cipherSuite.params.spake2plus.curve);
+            if (ctx->ctx == NULL) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL);
+                HITLS_AUTH_PakeFreeCtx(ctx);
+                return NULL;
+            }
             ret = Spake2PlusInitCipherSuite(ctx->ctx, &cipherSuite);
-            if (ctx->ctx == NULL|| ret != HITLS_AUTH_SUCCESS) {
+            if (ret != HITLS_AUTH_SUCCESS) {
                 BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL);
                 HITLS_AUTH_PakeFreeCtx(ctx);
                 return NULL;
@@ -111,7 +116,8 @@ HITLS_AUTH_PakeCtx *HITLS_AUTH_PakeNewCtx(CRYPT_EAL_LibCtx *libCtx, const char *
     ctx->prover = (BSL_Buffer){.data = BSL_SAL_Malloc(prover.dataLen), .dataLen = prover.dataLen};
     ctx->verifier = (BSL_Buffer){.data = BSL_SAL_Malloc(verifier.dataLen), .dataLen = verifier.dataLen};
     ctx->context = (BSL_Buffer){.data = BSL_SAL_Malloc(context.dataLen), .dataLen = context.dataLen};
-    if (ctx->prover.data == NULL || ctx->verifier.data == NULL || ctx->context.data == NULL) {
+    if (ctx->password.data == NULL || ctx->prover.data == NULL ||
+        ctx->verifier.data == NULL || ctx->context.data == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL);
         HITLS_AUTH_PakeFreeCtx(ctx);
         return NULL;

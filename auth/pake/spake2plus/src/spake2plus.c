@@ -271,8 +271,8 @@ int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfC
     uint32_t w0sLen = outLen/2;
     uint8_t w1s[outLen/2];
     uint32_t w1sLen = outLen/2;
-    uint8_t p[MAX_ECC_PARAM_LEN];
-    uint32_t pLen = MAX_ECC_PARAM_LEN;
+    uint8_t n[MAX_ECC_PARAM_LEN];
+    uint32_t nLen = MAX_ECC_PARAM_LEN;
     uint8_t w0_data[outLen/2];
     uint32_t w0_dataLen = outLen/2;
     uint8_t w1_data[outLen/2];
@@ -283,13 +283,13 @@ int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfC
 
     BN_BigNum* w0s0 = BN_Create(w0sLen*8);
     BN_BigNum* w1s0 = BN_Create(w1sLen*8);
-    BN_BigNum* p0 = BN_Create(pLen*8);
-    BN_BigNum *result = BN_Create(pLen*8);
+    BN_BigNum* n0 = BN_Create(nLen*8);
+    BN_BigNum *result = BN_Create(nLen*8);
     ECC_Para *para = ECC_NewPara(g_spake2PlusAlgInfo[spakeCtx->index].curveId);
     ECC_Point* L = ECC_NewPoint(para);
     CRYPT_EAL_PkeyCtx *pkeyCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_ECDH);
     BN_Optimizer *opt = BN_OptimizerCreate();
-    if (opt == NULL || w0s0 == NULL || w1s0 == NULL || p0 == NULL || result == NULL || para == NULL ||
+    if (opt == NULL || w0s0 == NULL || w1s0 == NULL || n0 == NULL || result == NULL || para == NULL ||
         L == NULL || pkeyCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_MEM_ALLOC_FAIL);
         ret = HITLS_AUTH_MEM_ALLOC_FAIL;
@@ -318,16 +318,16 @@ int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfC
         goto ERR;
     }
 
-    ret = Spake2PlusGetEcc(pkeyCtx, ECC_PARAM_P, p, &pLen);
+    ret = Spake2PlusGetEcc(pkeyCtx, ECC_PARAM_N, n, &nLen);
     if (ret != HITLS_AUTH_SUCCESS) {
         goto ERR;
     }
 
-    ret = BN_Bin2Bn(p0, p, pLen);
+    ret = BN_Bin2Bn(n0, n, nLen);
     if (ret != HITLS_AUTH_SUCCESS) {
         goto ERR;
     }
-    ret = BN_Mod(result, w0s0, p0, opt);
+    ret = BN_Mod(result, w0s0, n0, opt);
     if (ret != HITLS_AUTH_SUCCESS) {
         goto ERR;
     }
@@ -335,7 +335,7 @@ int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfC
     if (ret != HITLS_AUTH_SUCCESS) {
         goto ERR;
     }
-    ret = BN_Mod(result, w1s0, p0, opt);
+    ret = BN_Mod(result, w1s0, n0, opt);
     if (ret != HITLS_AUTH_SUCCESS) {
         goto ERR;
     }
@@ -363,14 +363,16 @@ int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfC
 ERR:
     BN_Destroy(w0s0);
     BN_Destroy(w1s0);
-    BN_Destroy(p0);
+    BN_Destroy(n0);
     BN_Destroy(result);
     BN_OptimizerDestroy(opt);
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     ECC_FreePoint(L);
     ECC_FreePara(para);
     if (ret != HITLS_AUTH_SUCCESS) {
-        Spake2PlusFreeCtx(spakeCtx);
+        BSL_SAL_CleanseData(spakeCtx->w0.data, spakeCtx->w0.dataLen);
+        BSL_SAL_CleanseData(spakeCtx->w1.data, spakeCtx->w1.dataLen);
+        BSL_SAL_CleanseData(spakeCtx->l.data, spakeCtx->l.dataLen);
     }
     return ret;
 }

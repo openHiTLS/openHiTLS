@@ -986,6 +986,9 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type2(const uint8_t *in, uint32_t inLen, uint8_t 
 #ifdef HITLS_CRYPTO_RSAES_PKCSV15_TLS
 int32_t CRYPT_RSA_VerifyPkcsV15Type2TLS(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
+    if (inLen < 2) {
+        return CRYPT_RSA_NOR_VERIFY_FAIL;
+    }
     uint32_t masterSecretLen = *outLen;
     uint32_t zeroIndex = 0;
     uint32_t index = ~(0);
@@ -1006,10 +1009,10 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type2TLS(const uint8_t *in, uint32_t inLen, uint8
     valid &= ~(Uint32ConstTimeGt(secretLen, *outLen));
     for (uint32_t i = 0; i < masterSecretLen; i++) {
         uint32_t mask = valid & Uint32ConstTimeLt(i, secretLen);
-        uint32_t inIndex = mask & zeroIndex;
-        out[i] = Uint8ConstTimeSelect(mask, *(in + inIndex + i), 0);
+        uint32_t inIndex = Uint32ConstTimeSelect(mask, zeroIndex + i, 0);
+        out[i] = Uint8ConstTimeSelect(mask, in[inIndex], 0);
     }
-    *outLen = secretLen;
+    *outLen = Uint32ConstTimeSelect(valid, secretLen, masterSecretLen);
 
     // if the 'plaintext' is PKCS15 , the valid should be 0xffffffff, else should be 0
     return Uint32ConstTimeIsZero(valid) & CRYPT_RSA_NOR_VERIFY_FAIL;

@@ -115,7 +115,11 @@ int32_t HITLS_X509_Adapt_VerifySign(HITLS_Ctx *ctx, HITLS_CERT_Key *key, HITLS_S
 static int32_t CertSetRsaEncryptionScheme(CRYPT_EAL_PkeyCtx *ctx)
 {
     int32_t pad = CRYPT_MD_SHA256;
+#ifdef HITLS_CRYPTO_RSAES_PKCSV15_TLS
+    return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_RSAES_PKCSV15_TLS, &pad, sizeof(pad));
+#else
     return CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_RSAES_PKCSV15, &pad, sizeof(pad));
+#endif
 }
 
 /* only support rsa pkcs1.5 */

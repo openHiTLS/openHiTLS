@@ -32,6 +32,7 @@ extern "C" {
 #define OTP_TOTP_DEFAULT_TIME_STEP_SIZE 30
 #define OTP_TOTP_DEFAULT_START_OFFSET   0
 #define OTP_TOTP_DEFAULT_VALID_WINDOW   1
+#define OTP_TOTP_MAX_VALID_WINDOW       10
 
 typedef struct {
     HITLS_AUTH_OtpHmac hmac;
