@@ -45,7 +45,15 @@ int32_t SM4_XTS_InitCtx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t key
     uint32_t ivLen, bool enc)
 {
     int32_t ret;
-    RETURN_RET_IF((key == NULL || iv == NULL), CRYPT_NULL_INPUT);
+    RETURN_RET_IF((key == NULL || iv == NULL || modeCtx->xtsCtx.ciphCtx == NULL), CRYPT_NULL_INPUT);
+    if (keyLen != 32) {  // In xts mode, the value of keyLen can only be 32.
+        BSL_ERR_PUSH_ERROR(CRYPT_SM4_ERR_KEY_LEN);
+        return CRYPT_SM4_ERR_KEY_LEN;
+    }
+    if (memcmp(key, key + CRYPT_SM4_BLOCKSIZE, CRYPT_SM4_BLOCKSIZE) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SM4_UNSAFE_KEY);
+        return CRYPT_SM4_UNSAFE_KEY;
+    }
     if (enc) {
         ret = CRYPT_SM4_XTS_SetEncryptKey(modeCtx->xtsCtx.ciphCtx, key, keyLen);
     } else {

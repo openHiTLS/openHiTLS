@@ -26,24 +26,10 @@
 // key[16..32]: tweak key
 int32_t CRYPT_SM4_XTS_SetEncryptKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t len)
 {
-    if (ctx == NULL || key == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (len != XTS_KEY_LEN) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_ERR_KEY_LEN);
-        return CRYPT_SM4_ERR_KEY_LEN;
-    }
-
-    if (memcmp(key, key + CRYPT_SM4_BLOCKSIZE, CRYPT_SM4_BLOCKSIZE) == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_UNSAFE_KEY);
-        return CRYPT_SM4_UNSAFE_KEY;
-    }
+    (void)len;
     CRYPT_SM4_Ctx *tmk = (CRYPT_SM4_Ctx *)&ctx[1];
-    Vpsm4SetEncryptKey(key, (SM4_KEY *)ctx->rk);
-    Vpsm4SetEncryptKey(key + CRYPT_SM4_BLOCKSIZE, (SM4_KEY *)tmk->rk);
-
+    Vpsm4SetEncryptKey(key, ctx->rk);
+    Vpsm4SetEncryptKey(key + CRYPT_SM4_BLOCKSIZE, tmk->rk);
     return CRYPT_SUCCESS;
 }
 
@@ -51,24 +37,10 @@ int32_t CRYPT_SM4_XTS_SetEncryptKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint
 // key[16..32]: tweak key
 int32_t CRYPT_SM4_XTS_SetDecryptKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t len)
 {
-    if (ctx == NULL || key == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (len != XTS_KEY_LEN) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_ERR_KEY_LEN);
-        return CRYPT_SM4_ERR_KEY_LEN;
-    }
-
-    if (memcmp(key, key + CRYPT_SM4_BLOCKSIZE, CRYPT_SM4_BLOCKSIZE) == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_UNSAFE_KEY);
-        return CRYPT_SM4_UNSAFE_KEY;
-    }
+    (void)len;
     CRYPT_SM4_Ctx *tmk = (CRYPT_SM4_Ctx *)&ctx[1];
-    Vpsm4SetDecryptKey(key, (SM4_KEY *)ctx->rk);
-    Vpsm4SetEncryptKey(key + CRYPT_SM4_BLOCKSIZE, (SM4_KEY *)tmk->rk);
-
+    Vpsm4SetDecryptKey(key, ctx->rk);
+    Vpsm4SetEncryptKey(key + CRYPT_SM4_BLOCKSIZE, tmk->rk);
     return CRYPT_SUCCESS;
 }
 
@@ -85,7 +57,7 @@ int32_t CRYPT_SM4_XTS_Encrypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *ou
         return CRYPT_SM4_ERR_MSG_LEN;
     }
     tmk = (CRYPT_SM4_Ctx *)&ctx[1];
-    Vpsm4XtsCipher(in, out, len, (const SM4_KEY *)ctx->rk, (const SM4_KEY *)tmk->rk, iv, 1);
+    Vpsm4XtsCipher(in, out, len, ctx->rk, tmk->rk, iv, 1);
 
     return CRYPT_SUCCESS;
 }
@@ -103,7 +75,7 @@ int32_t CRYPT_SM4_XTS_Decrypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *ou
         return CRYPT_SM4_ERR_MSG_LEN;
     }
     tmk = (CRYPT_SM4_Ctx *)&ctx[1];
-    Vpsm4XtsCipher(in, out, len, (const SM4_KEY *)ctx->rk, (const SM4_KEY *)tmk->rk, iv, 0);
+    Vpsm4XtsCipher(in, out, len, ctx->rk, tmk->rk, iv, 0);
 
     return CRYPT_SUCCESS;
 }
@@ -120,7 +92,7 @@ int32_t CRYPT_SM4_SetEncryptKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t
         BSL_ERR_PUSH_ERROR(CRYPT_SM4_ERR_KEY_LEN);
         return CRYPT_SM4_ERR_KEY_LEN;
     }
-    Vpsm4SetEncryptKey(key, (SM4_KEY *)ctx->rk);
+    Vpsm4SetEncryptKey(key, ctx->rk);
 
     return CRYPT_SUCCESS;
 }
@@ -137,7 +109,7 @@ int32_t CRYPT_SM4_SetDecryptKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t
         return CRYPT_SM4_ERR_KEY_LEN;
     }
 
-    Vpsm4SetDecryptKey(key, (SM4_KEY *)ctx->rk);
+    Vpsm4SetDecryptKey(key, ctx->rk);
     return CRYPT_SUCCESS;
 }
 

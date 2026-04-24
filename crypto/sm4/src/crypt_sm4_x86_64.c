@@ -23,7 +23,6 @@
 #include "crypt_errno.h"
 #include <string.h>
 
-#define XTS_KEY_LEN 32
 #define SM4_KEY_LEN 16
 #define XTS_POLYNOMIAL 0xe1
 #define LAST_BLOCK_HEAD 240
@@ -224,51 +223,19 @@ int32_t SM4_XTS_De(uint8_t* plain, const uint8_t* cipher, const uint32_t* dataRk
 // key[16..32]: tweak key
 int32_t CRYPT_SM4_XTS_SetEncryptKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t len)
 {
-    CRYPT_SM4_Ctx *tmk = NULL;
-    if (ctx == NULL || key == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (len != XTS_KEY_LEN) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_ERR_KEY_LEN);
-        return CRYPT_SM4_ERR_KEY_LEN;
-    }
-
-    if (memcmp(key, key + CRYPT_SM4_BLOCKSIZE, CRYPT_SM4_BLOCKSIZE) == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_UNSAFE_KEY);
-        return CRYPT_SM4_UNSAFE_KEY;
-    }
-
-    tmk = (CRYPT_SM4_Ctx *)&ctx[1];
+    (void)len;
+    CRYPT_SM4_Ctx *tmk = (CRYPT_SM4_Ctx *)&ctx[1];
     SM4_SetEncKey(key, ctx->rk);
     SM4_SetEncKey(key + CRYPT_SM4_BLOCKSIZE, tmk->rk);
-
     return CRYPT_SUCCESS;
 }
 
 int32_t CRYPT_SM4_XTS_SetDecryptKey(CRYPT_SM4_Ctx *ctx, const uint8_t *key, uint32_t len)
 {
-    CRYPT_SM4_Ctx *tmk = NULL;
-    if (ctx == NULL || key == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-
-    if (len != XTS_KEY_LEN) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_ERR_KEY_LEN);
-        return CRYPT_SM4_ERR_KEY_LEN;
-    }
-
-    if (memcmp(key, key + CRYPT_SM4_BLOCKSIZE, CRYPT_SM4_BLOCKSIZE) == 0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_SM4_UNSAFE_KEY);
-        return CRYPT_SM4_UNSAFE_KEY;
-    }
-
-    tmk = (CRYPT_SM4_Ctx *)&ctx[1];
+    (void)len;
+    CRYPT_SM4_Ctx *tmk = (CRYPT_SM4_Ctx *)&ctx[1];
     SM4_SetDecKey(key, ctx->rk);
     SM4_SetEncKey(key + CRYPT_SM4_BLOCKSIZE, tmk->rk);
-
     return CRYPT_SUCCESS;
 }
 

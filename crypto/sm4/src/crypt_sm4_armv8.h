@@ -22,21 +22,16 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define XTS_KEY_LEN 32
 #define SM4_KEY_LEN 16
 
-typedef struct SM4_KEY_st {
-    uint32_t rk[XTS_KEY_LEN];
-} SM4_KEY;
+void Vpsm4SetEncryptKey(const unsigned char *userKey, uint32_t *key);
 
-void Vpsm4SetEncryptKey(const unsigned char *userKey, SM4_KEY *key);
-
-void Vpsm4SetDecryptKey(const unsigned char *userKey, SM4_KEY *key);
+void Vpsm4SetDecryptKey(const unsigned char *userKey, uint32_t *key);
 
 #ifdef HITLS_CRYPTO_XTS
 
-void Vpsm4XtsCipher(const unsigned char *in, unsigned char *out, uint32_t length, const SM4_KEY *key1,
-                    const SM4_KEY *key2, const uint8_t *iv, uint32_t enc);
+void Vpsm4XtsCipher(const unsigned char *in, unsigned char *out, uint32_t length, const uint32_t *key1,
+                    const uint32_t *key2, const uint8_t *iv, uint32_t enc);
 #endif
 
 #ifdef HITLS_CRYPTO_CBC

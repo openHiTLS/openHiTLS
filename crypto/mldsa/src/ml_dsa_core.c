@@ -29,23 +29,37 @@
 #define BITS_OF_BYTE 8
 #define MLDSA_SET_VECTOR_MEM(ptr, buf) {ptr = buf; buf += MLDSA_N;}
 
+static int32_t MLDSAInitHashCtx(int32_t mdId, const EAL_MdMethod **hashMethod, void **mdCtx)
+{
+    const EAL_MdMethod *method = EAL_MdFindDefaultMethod(mdId);
+    if (method == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_NOT_SUPPORT);
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
+    }
+    void *ctx = method->newCtx(NULL, method->id);
+    if (ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    int32_t ret = method->init(ctx, NULL);
+    if (ret != CRYPT_SUCCESS) {
+        method->freeCtx(ctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    *hashMethod = method;
+    *mdCtx = ctx;
+    return CRYPT_SUCCESS;
+}
+
 static int32_t HashFuncH(const uint8_t *inPutA, uint32_t lenA, const uint8_t *inPutB, uint32_t lenB,
     uint8_t *out, uint32_t outLen)
 {
     uint32_t len = outLen;
     int32_t ret = 0;
-    const EAL_MdMethod *hashMethod = EAL_MdFindDefaultMethod(CRYPT_MD_SHAKE256);
-    if (hashMethod == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-    void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
-    if (mdCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-
-    GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
+    const EAL_MdMethod *hashMethod = NULL;
+    void *mdCtx = NULL;
+    RETURN_RET_IF_ERR_EX(MLDSAInitHashCtx(CRYPT_MD_SHAKE256, &hashMethod, &mdCtx), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, inPutA, lenA), ret);
     if (inPutB != NULL) {
         GOTO_ERR_IF(hashMethod->update(mdCtx, inPutB, lenB), ret);
@@ -186,17 +200,9 @@ static int32_t RejNTTPoly(int32_t a[MLDSA_N], const uint8_t seed[MLDSA_SEED_EXTE
     const uint32_t buflen = CRYPT_SHAKE128_BLOCKSIZE / 4;
     uint32_t buf[CRYPT_SHAKE128_BLOCKSIZE / 4];
 
-    const EAL_MdMethod *hashMethod = EAL_MdFindDefaultMethod(CRYPT_MD_SHAKE128);
-    if (hashMethod == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-    void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
-    if (mdCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
+    const EAL_MdMethod *hashMethod = NULL;
+    void *mdCtx = NULL;
+    RETURN_RET_IF_ERR_EX(MLDSAInitHashCtx(CRYPT_MD_SHAKE128, &hashMethod, &mdCtx), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, seed, MLDSA_SEED_EXTEND_BYTES_LEN), ret);
     GOTO_ERR_IF(hashMethod->squeeze(mdCtx, (uint8_t *)buf, outlen), ret);
     uint32_t j = 0;
@@ -272,17 +278,9 @@ static int32_t RejBoundedPolyEta2(int32_t *a, const uint8_t *s)
     uint8_t buf[CRYPT_SHAKE256_BLOCKSIZE];
     uint32_t bufLen = CRYPT_SHAKE256_BLOCKSIZE;
     int32_t ret = CRYPT_SUCCESS;
-    const EAL_MdMethod *hashMethod = EAL_MdFindDefaultMethod(CRYPT_MD_SHAKE256);
-    if (hashMethod == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-    void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
-    if (mdCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
+    const EAL_MdMethod *hashMethod = NULL;
+    void *mdCtx = NULL;
+    RETURN_RET_IF_ERR_EX(MLDSAInitHashCtx(CRYPT_MD_SHAKE256, &hashMethod, &mdCtx), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, s, MLDSA_PRIVATE_SEED_LEN + 2), ret);  // k and l used 2 bytes.
     GOTO_ERR_IF(hashMethod->squeeze(mdCtx, buf, bufLen), ret);
     for (uint32_t i = 0, j = 0; i < MLDSA_N; j++) {
@@ -319,17 +317,9 @@ static int32_t RejBoundedPolyEta4(int32_t *a, const uint8_t *s)
     uint8_t buf[CRYPT_SHAKE256_BLOCKSIZE];
     uint32_t bufLen = CRYPT_SHAKE256_BLOCKSIZE;
     int32_t ret = CRYPT_SUCCESS;
-    const EAL_MdMethod *hashMethod = EAL_MdFindDefaultMethod(CRYPT_MD_SHAKE256);
-    if (hashMethod == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-    void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
-    if (mdCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
+    const EAL_MdMethod *hashMethod = NULL;
+    void *mdCtx = NULL;
+    RETURN_RET_IF_ERR_EX(MLDSAInitHashCtx(CRYPT_MD_SHAKE256, &hashMethod, &mdCtx), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, s, MLDSA_PRIVATE_SEED_LEN + 2), ret);  // k and l used 2 bytes.
     GOTO_ERR_IF(hashMethod->squeeze(mdCtx, buf, bufLen), ret);
     for (uint32_t i = 0, j = 0; i < MLDSA_N; j++) {
@@ -810,17 +800,9 @@ static int32_t SampleInBall(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *p, uint3
     uint32_t index = 0;
     uint8_t j = 0;
     int32_t ret;
-    const EAL_MdMethod *hashMethod = EAL_MdFindDefaultMethod(CRYPT_MD_SHAKE256);
-    if (hashMethod == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ALG_NOT_SUPPORT);
-        return CRYPT_EAL_ALG_NOT_SUPPORT;
-    }
-    void *mdCtx = hashMethod->newCtx(NULL, hashMethod->id);
-    if (mdCtx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
-    }
-    GOTO_ERR_IF(hashMethod->init(mdCtx, NULL), ret);
+    const EAL_MdMethod *hashMethod = NULL;
+    void *mdCtx = NULL;
+    RETURN_RET_IF_ERR_EX(MLDSAInitHashCtx(CRYPT_MD_SHAKE256, &hashMethod, &mdCtx), ret);
     GOTO_ERR_IF(hashMethod->update(mdCtx, p, pLen), ret);
     GOTO_ERR_IF(hashMethod->squeeze(mdCtx, s, sLen), ret);
     for (index = 0; index < 8; index++) {    //  𝑠 ← H.Squeeze(ctx, 8)
