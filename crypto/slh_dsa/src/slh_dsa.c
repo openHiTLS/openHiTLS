@@ -420,31 +420,32 @@ int32_t CRYPT_SLH_DSA_Gen(CryptSlhDsaCtx *ctx)
 
 static int32_t GetAddRand(CryptSlhDsaCtx *ctx)
 {
-    if (ctx->addrand != NULL) {
-        // the additional rand is set.
-        return CRYPT_SUCCESS;
-    }
     if (!ctx->isDeterministic) {
-        ctx->addrand = (uint8_t *)BSL_SAL_Malloc(ctx->para.n);
-        if (ctx->addrand == NULL) {
-            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-            return CRYPT_MEM_ALLOC_FAIL;
-        }
-        int32_t ret = CRYPT_RandEx(ctx->libCtx, ctx->addrand, ctx->para.n);
-        if (ret != CRYPT_SUCCESS) {
-            return ret;
-        }
-    } else {
-        // FIPS-204, Algorithm 19, line 2.
-        // if is deterministic, use the public key seed as the random number.
         uint8_t *rand = (uint8_t *)BSL_SAL_Malloc(ctx->para.n);
         if (rand == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
             return CRYPT_MEM_ALLOC_FAIL;
         }
-        (void)memcpy_s(rand, ctx->para.n, ctx->prvKey.pub.seed, ctx->para.n);
+        int32_t ret = CRYPT_RandEx(ctx->libCtx, rand, ctx->para.n);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_SAL_Free(rand);
+            return ret;
+        }
+        BSL_SAL_ClearFree(ctx->addrand, ctx->addrandLen);
         ctx->addrand = rand;
+        ctx->addrandLen = ctx->para.n;
+        return CRYPT_SUCCESS;
     }
+    if (ctx->addrand != NULL) {
+        return CRYPT_SUCCESS;
+    }
+    uint8_t *rand = (uint8_t *)BSL_SAL_Malloc(ctx->para.n);
+    if (rand == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    memcpy(rand, ctx->prvKey.pub.seed, ctx->para.n);
+    ctx->addrand = rand;
     ctx->addrandLen = ctx->para.n;
     return CRYPT_SUCCESS;
 }
@@ -802,12 +803,17 @@ int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t
             }
             *(uint32_t *)val = ctx->para.n;
             return CRYPT_SUCCESS;
+        /* Only supports switching from non-deterministic to deterministic.
+         * Switching back to non-deterministic is not supported. */
         case CRYPT_CTRL_SET_DETERMINISTIC_FLAG:
             if (val == NULL || len != sizeof(int32_t)) {
                 BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
                 return CRYPT_INVALID_ARG;
             }
             ctx->isDeterministic = (*(int32_t *)val != 0);
+            BSL_SAL_ClearFree(ctx->addrand, ctx->addrandLen);
+            ctx->addrand = NULL;
+            ctx->addrandLen = 0;
             return CRYPT_SUCCESS;
         case CRYPT_CTRL_SET_SLH_DSA_ADDRAND:
             return SetAddrand(ctx, val, len);

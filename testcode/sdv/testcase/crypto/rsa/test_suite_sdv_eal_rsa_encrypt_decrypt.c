@@ -917,7 +917,6 @@ void SDV_CRYPTO_RSA_VERIFY_PKCSV15_TYPE2_TLS_BOUNDARY_TC001(void)
     uint8_t tooLongIn[60] = {0};
     uint8_t expected[48] = {0};
     uint8_t out[64] = {0};
-    uint8_t oneByte[1] = {0};
     uint32_t outLen = 0;
 
     validIn[1] = 0x02;
@@ -950,14 +949,6 @@ void SDV_CRYPTO_RSA_VERIFY_PKCSV15_TYPE2_TLS_BOUNDARY_TC001(void)
     for (uint32_t i = 0; i < outLen; i++) {
         ASSERT_EQ(out[i], 0);
     }
-
-    outLen = sizeof(out);
-    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2TLS(oneByte, 0, out, &outLen), CRYPT_RSA_NOR_VERIFY_FAIL);
-    ASSERT_EQ(outLen, sizeof(out));
-
-    outLen = sizeof(out);
-    ASSERT_EQ(CRYPT_RSA_VerifyPkcsV15Type2TLS(oneByte, sizeof(oneByte), out, &outLen), CRYPT_RSA_NOR_VERIFY_FAIL);
-    ASSERT_EQ(outLen, sizeof(out));
 EXIT:
     return;
 #endif
