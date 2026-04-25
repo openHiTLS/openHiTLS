@@ -39,7 +39,7 @@ HITLS_Session *SESS_Copy(HITLS_Session *src);
 void SESS_Disable(HITLS_Session *sess);
 
 /* set peerCert */
-int32_t SESS_SetPeerCert(HITLS_Session *sess, CERT_Pair *peerCert, bool isClient);
+int32_t SESS_SetPeerCert(HITLS_Session *sess, CERT_Pair *peerCert);
 
 /* get peerCert */
 int32_t SESS_GetPeerCert(HITLS_Session *sess, CERT_Pair **peerCert);

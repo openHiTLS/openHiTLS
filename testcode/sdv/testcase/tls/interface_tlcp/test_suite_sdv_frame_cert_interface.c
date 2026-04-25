@@ -760,7 +760,7 @@ void UT_TLS_CERT_GET_CALIST_FUNC_TC001(int version)
     ret = BSL_LIST_AddElement((BslList *)certChain, cert3, BSL_LIST_POS_END);
     ASSERT_TRUE(ret == 0);
 
-    ret = SESS_SetPeerCert(session, peerCert, false);
+    ret = SESS_SetPeerCert(session, peerCert);
     ASSERT_TRUE(ret == HITLS_SUCCESS);
 
 

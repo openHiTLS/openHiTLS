@@ -84,7 +84,10 @@ typedef struct BslList HITLS_CERT_CRLList;
  */
 typedef enum {
     CERT_STORE_CTRL_SET_VERIFY_DEPTH = 0,   /**< Set the certificate verification depth. */
-    CERT_STORE_CTRL_ADD_CERT_LIST,          /**< Add ca and chain certificate to store */
+    CERT_STORE_CTRL_ADD_CERT_LIST,          /**< Add ca and chain certificate to store. After a successful shallow copy,
+                                                the ownership of the certificate pointer is transferred, and it is no
+                                                longer held. The same certificate pointer cannot be set twice.
+                                                Otherwise, an error is reported. */
     CERT_STORE_CTRL_GET_VERIFY_DEPTH,       /**< Get the certificate verification depth. */
     CERT_STORE_CTRL_ADD_CRL_LIST,           /**< Add CRL list to verify store */
     CERT_STORE_CTRL_CLEAR_CRL_LIST,         /**< Clear all CRLs from verify store */
