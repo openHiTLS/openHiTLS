@@ -103,27 +103,6 @@ HITLS_Config *HITLS_CFG_NewDTLCPConfig(void)
 {
     return HITLS_CFG_ProviderNewDTLCPConfig(NULL, NULL);
 }
-
-HITLS_Config *HITLS_CFG_ProviderNewDTLCPConfig(HITLS_Lib_Ctx *libCtx, const char *attrName)
-{
-    HITLS_Config *newConfig = CreateConfig();
-    if (newConfig == NULL) {
-        return NULL;
-    }
-
-    newConfig->version |= DTLCP11_VERSION_BIT;   // Enable DTLCP 1.1
-    if (DefaultConfig(libCtx, attrName, HITLS_VERSION_TLCP_DTLCP11, newConfig) != HITLS_SUCCESS) {
-        BSL_SAL_FREE(newConfig);
-        return NULL;
-    }
-    newConfig->emsMode = HITLS_EMS_MODE_FORBID;
-    newConfig->allowLegacyRenegotiate = true;
-#ifdef HITLS_TLS_FEATURE_SESSION_TICKET
-    newConfig->isSupportSessionTicket = false;
-#endif
-    newConfig->originVersionMask = newConfig->version;
-    return newConfig;
-}
 #endif
 
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)

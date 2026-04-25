@@ -105,13 +105,8 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
     switch (ctx->hsCtx->state) {
 #ifdef HITLS_TLS_HOST_SERVER
         case TRY_RECV_CLIENT_HELLO:
-#ifdef HITLS_TLS_PROTO_DTLS12
-            if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
-                return DtlsServerRecvClientHelloProcess(ctx, hsMsg);
-            }
-#endif /* HITLS_TLS_PROTO_DTLS12 */
-#ifdef HITLS_TLS_PROTO_TLS_BASIC
-            return Tls12ServerRecvClientHelloProcess(ctx, hsMsg, true);
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
+            return ServerRecvClientHelloProcess(ctx, hsMsg, true);
 #else
             break;
 #endif /* HITLS_TLS_PROTO_TLS_BASIC only for tls13 */
@@ -147,7 +142,7 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
             if (ctx->isClient) {
 #ifdef HITLS_TLS_PROTO_DTLS12
                 if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
-                    return DtlsClientRecvFinishedProcess(ctx, hsMsg);
+                    return DtlsRecvFinishedProcess(ctx, hsMsg);
                 }
 #endif /* HITLS_TLS_PROTO_DTLS12 */
 #ifdef HITLS_TLS_PROTO_TLS_BASIC
@@ -158,7 +153,7 @@ static int32_t ProcessHandshakeMsg(TLS_Ctx *ctx, HS_Msg *hsMsg)
 #ifdef HITLS_TLS_HOST_SERVER
 #ifdef HITLS_TLS_PROTO_DTLS12
             if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask)) {
-                return DtlsServerRecvFinishedProcess(ctx, hsMsg);
+                return DtlsRecvFinishedProcess(ctx, hsMsg);
             }
 #endif /* HITLS_TLS_PROTO_DTLS12 */
 #ifdef HITLS_TLS_PROTO_TLS_BASIC

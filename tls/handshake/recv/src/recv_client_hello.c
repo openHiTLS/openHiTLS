@@ -1449,55 +1449,6 @@ static int32_t ClientHelloCbCheck(TLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_FEATURE_CLIENT_HELLO_CB */
 
-#ifdef HITLS_TLS_PROTO_TLS_BASIC
-int32_t Tls12ServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg, bool isNeedClientHelloCb)
-{
-    int32_t ret = HITLS_SUCCESS;
-    const ClientHelloMsg *clientHello = &msg->body.clientHello;
-#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
-    CheckRenegotiate(ctx);
-#endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
-    if (ctx->hsCtx->readSubState == TLS_PROCESS_STATE_A) {
-#ifdef HITLS_TLS_FEATURE_CLIENT_HELLO_CB
-        /* Perform the ClientHello callback. The pause handshake status is not considered */
-        if (isNeedClientHelloCb) {
-            ret = ClientHelloCbCheck(ctx);
-            if (ret != HITLS_SUCCESS) {
-                return ret;
-            }
-        }
-#else
-        (void)isNeedClientHelloCb; // Avoid unused parameter warning
-#endif /* HITLS_TLS_FEATURE_CLIENT_HELLO_CB */
-        /* Process the client Hello message */
-        ret = ServerCheckAndProcessClientHello(ctx, clientHello);
-        if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17055, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "CheckAndProcessClientHello fail.", 0, 0, 0, 0);
-            return ret;
-        }
-        if (!ctx->negotiatedInfo.isResume) {
-            ctx->hsCtx->readSubState = TLS_PROCESS_STATE_B;
-        }
-    }
-    if (ctx->hsCtx->readSubState == TLS_PROCESS_STATE_B) {
-        ret = ServerPostProcessClientHello(ctx, clientHello);
-        if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17056, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "PostProcessClientHello fail.", 0, 0, 0, 0);
-            return ret;
-        }
-    }
-#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
-    if (ctx->state == CM_STATE_RENEGOTIATION && !ctx->userRenego) {
-        ctx->negotiatedInfo.isRenegotiation = true; /* Start renegotiation */
-        ctx->negotiatedInfo.renegotiationNum++;
-    }
-#endif
-    return HS_ChangeState(ctx, TRY_SEND_SERVER_HELLO);
-}
-#endif /* HITLS_TLS_PROTO_TLS_BASIC */
-
 #if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
 static int32_t PrepareDtlsCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
@@ -1523,9 +1474,7 @@ static int32_t PrepareDtlsCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello
     ctx->negotiatedInfo.cookieSize = (uint32_t)cookieSize;
     return HITLS_SUCCESS;
 }
-#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
 
-#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
 static int32_t DtlsServerCheckAndProcessCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool *isCookieValid)
 {
     int32_t ret = HS_CheckCookie(ctx, clientHello, isCookieValid);
@@ -1557,10 +1506,11 @@ static int32_t DtlsServerCheckAndProcessCookie(TLS_Ctx *ctx, const ClientHelloMs
 }
 #endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
 
-// The server processes the DTLS client hello message.
-#ifdef HITLS_TLS_PROTO_DTLS12
-int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
+#if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
+/* Unified server client hello messages processing function of both TLS and DTLS */
+int32_t ServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg, bool isNeedClientHelloCb)
 {
+    (void)isNeedClientHelloCb;
     int32_t ret;
     const ClientHelloMsg *clientHello = &msg->body.clientHello;
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
@@ -1569,14 +1519,18 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     if (ctx->hsCtx->readSubState == TLS_PROCESS_STATE_A) {
 #ifdef HITLS_TLS_FEATURE_CLIENT_HELLO_CB
         /* Perform the ClientHello callback. The pause handshake status is not considered */
-        ret = ClientHelloCbCheck(ctx);
-        if (ret != HITLS_SUCCESS) {
-            return ret;
+        if (isNeedClientHelloCb) {
+            ret = ClientHelloCbCheck(ctx);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
         }
 #endif /* HITLS_TLS_FEATURE_CLIENT_HELLO_CB */
-        /* The SCTP server does not process the cookie */
-#ifdef HITLS_BSL_UIO_UDP
-        if (!BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
+
+        /* DTLS specific: The SCTP server does not process the cookie */
+#if defined(HITLS_TLS_PROTO_DTLS12) && defined(HITLS_BSL_UIO_UDP)
+        if (IS_SUPPORT_DATAGRAM(ctx->config.tlsConfig.originVersionMask) &&
+            !BSL_UIO_GetUioChainTransportType(ctx->uio, BSL_UIO_SCTP)) {
             bool isCookieValid = false;
             ret = DtlsServerCheckAndProcessCookie(ctx, clientHello, &isCookieValid);
             if (ret == HITLS_SUCCESS && !isCookieValid) {
@@ -1585,13 +1539,12 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
                 return ret;
             }
         }
-#endif /* HITLS_BSL_UIO_UDP */
-    /* Process the client Hello message */
+#endif /* HITLS_TLS_PROTO_DTLS12 && HITLS_BSL_UIO_UDP */
+
+        /* Process the client Hello message */
         ret = ServerCheckAndProcessClientHello(ctx, clientHello);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15244, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "server process clientHello fail.", 0, 0, 0, 0);
-            return ret;
+            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID15244, "server process clientHello fail");
         }
         if (!ctx->negotiatedInfo.isResume) {
             ctx->hsCtx->readSubState = TLS_PROCESS_STATE_B;
@@ -1600,9 +1553,7 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
     if (ctx->hsCtx->readSubState == TLS_PROCESS_STATE_B) {
         ret = ServerPostProcessClientHello(ctx, clientHello);
         if (ret != HITLS_SUCCESS) {
-            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17056, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-                "PostProcessClientHello fail.", 0, 0, 0, 0);
-            return ret;
+            return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17056, "PostProcessClientHello fail");
         }
     }
 #ifdef HITLS_TLS_FEATURE_RENEGOTIATION
@@ -1613,7 +1564,7 @@ int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg)
 #endif
     return HS_ChangeState(ctx, TRY_SEND_SERVER_HELLO);
 }
-#endif
+#endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
 
 #ifdef HITLS_TLS_PROTO_TLS13
 
@@ -2471,7 +2422,7 @@ int32_t Tls13ServerRecvClientHelloProcess(TLS_Ctx *ctx, HS_Msg *msg)
         case HITLS_VERSION_TLS12:
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15251, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
                 "tls1.3 server receive a 0x%x clientHello.", clientHello->version, 0, 0, 0);
-            return Tls12ServerRecvClientHelloProcess(ctx, msg, false);
+            return ServerRecvClientHelloProcess(ctx, msg, false);
 #endif /* HITLS_TLS_PROTO_TLS_BASIC */
         case HITLS_VERSION_TLS13:
             return Tls13ServerProcessClientHello(ctx, msg);

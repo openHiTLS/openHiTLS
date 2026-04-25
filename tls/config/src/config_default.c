@@ -33,6 +33,7 @@
 #endif
 #include "config_type.h"
 #include "config_check.h"
+#include "config_default.h"
 
 #ifdef HITLS_TLS_PROTO_TLCP11
 uint16_t g_tlcpCipherSuites[] = {

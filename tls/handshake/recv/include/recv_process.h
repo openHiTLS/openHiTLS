@@ -24,20 +24,17 @@
 extern "C" {
 #endif
 
-int32_t Tls12ServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg, bool isNeedClientHelloCb);
-
 /*
- * @brief   Server processes DTLS client hello message
+ * @brief   Server processes client hello message (support TLS and DTLS)
  *
  * @param   ctx [IN] TLS context
  * @param   msg [IN] client hello message
+ * @param   isNeedClientHelloCb [IN] Whether to perform the ClientHello callback
  *
  * @retval  HITLS_SUCCESS
  * @retval  For other error codes, see hitls_error.h
  */
-#ifdef HITLS_TLS_PROTO_DTLS12
-int32_t DtlsServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg);
-#endif
+int32_t ServerRecvClientHelloProcess(TLS_Ctx *ctx, const HS_Msg *msg, bool isNeedClientHelloCb);
 
 /*
  * @brief   Dtls client processes hello verify request message
@@ -150,7 +147,7 @@ int32_t Tls12ServerRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg);
 int32_t Tls12ClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg);
 
 /**
- * @brief   Server processes dlts client finished message
+ * @brief   Process dtls finished message
  *
  * @param   ctx [IN] TLS context
  * @param   msg [IN] finished message
@@ -159,20 +156,7 @@ int32_t Tls12ClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg);
  * @retval  HITLS_MSG_HANDLE_VERIFY_FINISHED_FAIL Failed to verify the finished message
  */
 #ifdef HITLS_TLS_PROTO_DTLS12
-int32_t DtlsServerRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg);
-#endif
-
-/**
- * @brief   Client processes dlts server finished message
- *
- * @param   ctx [IN] TLS context
- * @param   msg [IN] finished message
- *
- * @retval  HITLS_SUCCESS
- * @retval  HITLS_MSG_HANDLE_VERIFY_FINISHED_FAIL Failed to verify the finished message
- */
-#ifdef HITLS_TLS_PROTO_DTLS12
-int32_t DtlsClientRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg);
+int32_t DtlsRecvFinishedProcess(TLS_Ctx *ctx, const HS_Msg *msg);
 #endif
 
 /**

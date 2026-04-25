@@ -26,19 +26,14 @@
 #include "rec.h"
 #include "cert_method.h"
 
-#ifdef HITLS_TLS_PROTO_TLCP11
-HITLS_Config *HITLS_CFG_NewTLCPConfig(void)
-{
-    return HITLS_CFG_ProviderNewTLCPConfig(NULL, NULL);
-}
-
-HITLS_Config *HITLS_CFG_ProviderNewTLCPConfig(HITLS_Lib_Ctx *libCtx, const char *attrName)
+#if defined(HITLS_TLS_PROTO_TLCP11) || defined(HITLS_TLS_PROTO_DTLCP11)
+static HITLS_Config *DefaultCreateTLCPConfig(HITLS_Lib_Ctx *libCtx, const char *attrName, uint32_t versionBits)
 {
     HITLS_Config *newConfig = CreateConfig();
     if (newConfig == NULL) {
         return NULL;
     }
-    newConfig->version |= TLCP11_VERSION_BIT;   // Enable TLCP 1.1
+    newConfig->version |= versionBits;
     if (DefaultConfig(libCtx, attrName, HITLS_VERSION_TLCP_DTLCP11, newConfig) != HITLS_SUCCESS) {
         BSL_SAL_FREE(newConfig);
         return NULL;
@@ -50,6 +45,25 @@ HITLS_Config *HITLS_CFG_ProviderNewTLCPConfig(HITLS_Lib_Ctx *libCtx, const char 
 #endif
     newConfig->originVersionMask = newConfig->version;
     return newConfig;
+}
+#endif
+
+#ifdef HITLS_TLS_PROTO_DTLCP11
+HITLS_Config *HITLS_CFG_ProviderNewDTLCPConfig(HITLS_Lib_Ctx *libCtx, const char *attrName)
+{
+    return DefaultCreateTLCPConfig(libCtx, attrName, DTLCP11_VERSION_BIT); // Enable DTLCP 1.1
+}
+#endif
+
+#ifdef HITLS_TLS_PROTO_TLCP11
+HITLS_Config *HITLS_CFG_NewTLCPConfig(void)
+{
+    return HITLS_CFG_ProviderNewTLCPConfig(NULL, NULL);
+}
+
+HITLS_Config *HITLS_CFG_ProviderNewTLCPConfig(HITLS_Lib_Ctx *libCtx, const char *attrName)
+{
+    return DefaultCreateTLCPConfig(libCtx, attrName, TLCP11_VERSION_BIT); // Enable TLCP 1.1
 }
 #endif
 

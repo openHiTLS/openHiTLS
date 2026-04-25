@@ -339,13 +339,8 @@ void UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC001(int version, int type)
     testInfo.server->ssl->method.sendAlert = STUB_SendAlert;
     CONN_Init(testInfo.server->ssl);
 
-    if (testInfo.type == BSL_UIO_TCP) {
-        ASSERT_TRUE(Tls12ServerRecvClientHelloProcess(testInfo.server->ssl, &frameMsg.body.handshakeMsg, true) ==
-                    HITLS_SUCCESS);
-    } else {
-        ASSERT_TRUE(DtlsServerRecvClientHelloProcess(testInfo.server->ssl, &frameMsg.body.handshakeMsg) ==
-                    HITLS_SUCCESS);
-    }
+    ASSERT_TRUE(ServerRecvClientHelloProcess(testInfo.server->ssl, &frameMsg.body.handshakeMsg, true) ==
+                HITLS_SUCCESS);
     frameMsg.body.handshakeMsg.body.clientHello.extension.content.serverName = serverName;
     frameMsg.body.handshakeMsg.body.clientHello.extension.content.serverNameSize = serverNameSize;
 
@@ -484,7 +479,7 @@ void UT_TLS_SNI_RESUME_SERVERNAME_FUNC_TC003()
     ASSERT_TRUE(*hostName == *g_serverName);
 
     ASSERT_TRUE(TestIsErrStackEmpty());
-    
+
 EXIT:
     HITLS_CFG_FreeConfig(clientconfig);
     HITLS_CFG_FreeConfig(serverconfig);
