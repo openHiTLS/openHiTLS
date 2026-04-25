@@ -24,7 +24,6 @@
 #include "hitls_pki_errno.h"
 #include "hitls_cms_local.h"
 #include "hitls_x509_local.h"
-#include "crypt_errno.h"
 #include "sal_file.h"
 #include "hitls_x509_verify.h"
 #ifdef HITLS_PKI_CMS_DATA

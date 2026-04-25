@@ -30,12 +30,12 @@
 #include "hitls_x509_verify.h"
 #ifdef HITLS_PKI_CMS_SIGNEDDATA
 
-void CMS_AlgIdFree(void *p)
+void CMS_AlgIdFree(void *algId)
 {
-    if (p == NULL) {
+    if (algId == NULL) {
         return;
     }
-    CMS_AlgId *alg = (CMS_AlgId *)p;
+    CMS_AlgId *alg = (CMS_AlgId *)algId;
     CRYPT_EAL_MdFreeCtx(alg->mdCtx);
     BSL_SAL_FREE(alg->param.data);
     BSL_SAL_Free(alg);

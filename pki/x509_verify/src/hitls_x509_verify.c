@@ -874,7 +874,8 @@ int32_t HITLS_X509_StoreCtxCtrl(HITLS_X509_StoreCtx *storeCtx, int32_t cmd, void
     }
 }
 
-int32_t HITLS_X509_CheckCertTime(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth, int64_t *time)
+int32_t HITLS_X509_CheckCertTime(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth,
+    const int64_t *time)
 {
     (void)depth;
     (void)storeCtx;
@@ -895,7 +896,8 @@ int32_t HITLS_X509_CheckCertTime(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert 
     return HITLS_PKI_SUCCESS;
 }
 
-int32_t HITLS_X509_CheckCrlTime(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Crl *crl, int32_t depth, int64_t *time)
+int32_t HITLS_X509_CheckCrlTime(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Crl *crl, int32_t depth,
+    const int64_t *time)
 {
     (void)depth;
     (void)storeCtx;

@@ -512,7 +512,7 @@ EXIT:
     return ret;
 }
 
-static uint32_t GetMacId(BslCid id)
+static int32_t GetMacId(BslCid id)
 {
     switch ((CRYPT_MD_AlgId)id) {
         case CRYPT_MD_SHA224:
@@ -592,7 +592,7 @@ static int32_t GetHmacKey(HITLS_PKCS12 *p12, BSL_Buffer *pwd, uint32_t macSize, 
     return ret;
 }
 
-static int32_t ParamCheckAndInit(HITLS_PKCS12 *p12, BSL_Buffer *pwd, uint32_t *macId, uint32_t *macSize)
+static int32_t ParamCheckAndInit(HITLS_PKCS12 *p12, BSL_Buffer *pwd, int32_t *macId, uint32_t *macSize)
 {
     if (p12 == NULL || p12->macData == NULL || p12->macData->macSalt == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_NULL_POINTER);
@@ -637,7 +637,7 @@ static int32_t ParamCheckAndInit(HITLS_PKCS12 *p12, BSL_Buffer *pwd, uint32_t *m
 
 int32_t HITLS_PKCS12_CalMac(HITLS_PKCS12 *p12, BSL_Buffer *pwd, BSL_Buffer *initData, BSL_Buffer *output)
 {
-    uint32_t macId;
+    int32_t macId;
     uint32_t macSize;
     int32_t ret = ParamCheckAndInit(p12, pwd, &macId, &macSize);
     if (ret != HITLS_PKI_SUCCESS) {
