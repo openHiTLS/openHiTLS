@@ -639,7 +639,9 @@ typedef enum {
     CRYPT_CTRL_GET_PUBKEY_LEN,           /**< Get the encapsulation key length */
     CRYPT_CTRL_GET_PRVKEY_LEN,           /**< Get the decapsulation key length */
     CRYPT_CTRL_GET_CIPHERTEXT_LEN,       /**< Get the ciphertext length */
-    CRYPT_CTRL_SET_DETERMINISTIC_FLAG,   /**< Whether to use deterministic signatures */
+    CRYPT_CTRL_SET_DETERMINISTIC_FLAG,   /**< Whether to use deterministic signatures.
+                                              Only supports switching from non-deterministic to deterministic.
+                                              Switching back to non-deterministic is not supported. */
     CRYPT_CTRL_SET_CTX_INFO,             /**< Set the context string. */
     CRYPT_CTRL_SET_PREHASH_MODE,         /**< Change the SLH-DSA or ML-DSA mode to prehash version or pure version. */
     CRYPT_CTRL_GEN_PARA,                 /**< Asymmetric cipher generate para. */

@@ -987,9 +987,6 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type2(const uint8_t *in, uint32_t inLen, uint8_t 
 #ifdef HITLS_CRYPTO_RSAES_PKCSV15_TLS
 int32_t CRYPT_RSA_VerifyPkcsV15Type2TLS(const uint8_t *in, uint32_t inLen, uint8_t *out, uint32_t *outLen)
 {
-    if (inLen < 2) {
-        return CRYPT_RSA_NOR_VERIFY_FAIL;
-    }
     uint32_t masterSecretLen = *outLen;
     uint32_t zeroIndex = 0;
     uint32_t index = ~(0);
