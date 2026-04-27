@@ -301,6 +301,8 @@ option(HITLS_CRYPTO_PKEY                                       "Public Key Crypt
   option(HITLS_CRYPTO_MLDSA                                      "MLDSA" OFF)
     option(HITLS_CRYPTO_MLDSA_CMP                                  "MLDSA Compare" OFF)
     option(HITLS_CRYPTO_MLDSA_CHECK                                "MLDSA Check" OFF)
+  option(HITLS_CRYPTO_COMPOSITE                                  "Composite signatures" OFF)
+    option(HITLS_CRYPTO_COMPOSITE_CHECK                            "Composite Check" OFF)
   option(HITLS_CRYPTO_ACVP_TESTS                                 "ACVP Tests" OFF)
   option(HITLS_SM2_PRECOMPUTE_512K_TBL                           "SM2 512K Precomputation Table" OFF)
 ## Provider

@@ -18,8 +18,9 @@
     defined(HITLS_CRYPTO_RSA) || defined(HITLS_CRYPTO_DH) || defined(HITLS_CRYPTO_ECDSA) || \
     defined(HITLS_CRYPTO_ECDH) || defined(HITLS_CRYPTO_SM2) || defined(HITLS_CRYPTO_PAILLIER) || \
     defined(HITLS_CRYPTO_ELGAMAL) || defined(HITLS_CRYPTO_SLH_DSA) || defined(HITLS_CRYPTO_MLKEM) || \
-    defined(HITLS_CRYPTO_MLDSA) || defined(HILTS_CRYPTO_FRODOKEM) || defined(HITLS_CRYPTO_MCELIECE) || \
-    defined(HITLS_CRYPTO_HYBRIDKEM)) && defined(HITLS_CRYPTO_PROVIDER)
+    defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_COMPOSITE) || defined(HITLS_CRYPTO_HYBRIDKEM) || \
+    defined(HITLS_CRYPTO_MCELIECE) || defined(HITLS_CRYPTO_FRODOKEM)) && \
+    defined(HITLS_CRYPTO_PROVIDER)
 
 #include "crypt_eal_implprovider.h"
 #ifdef HITLS_CRYPTO_DSA
@@ -64,6 +65,9 @@
 
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+#include "crypt_composite.h"
 #endif
 #ifdef HITLS_CRYPTO_XMSS
 #include "crypt_xmss.h"
@@ -153,6 +157,10 @@ void *CRYPT_EAL_DefPkeyMgmtNewCtx(CRYPT_EAL_DefProvCtx *provCtx, int32_t algId)
 #ifdef HITLS_CRYPTO_MLDSA
         case CRYPT_PKEY_ML_DSA:
             return CRYPT_ML_DSA_NewCtxEx(provCtx->libCtx);
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+        case CRYPT_PKEY_COMPOSITE:
+            return CRYPT_COMPOSITE_NewCtxEx(provCtx->libCtx);
 #endif
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_PROVIDER_NOT_SUPPORT);
@@ -457,6 +465,24 @@ const CRYPT_EAL_Func g_defEalKeyMgmtMlDsa[] = {
 #endif
     {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_ML_DSA_Ctrl},
     {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)CRYPT_ML_DSA_FreeCtx},
+    CRYPT_EAL_FUNC_END,
+};
+#endif
+
+#ifdef HITLS_CRYPTO_COMPOSITE
+const CRYPT_EAL_Func g_defEalKeyMgmtComposite[] = {
+    {CRYPT_EAL_IMPLPKEYMGMT_NEWCTX, (CRYPT_EAL_ImplPkeyMgmtNewCtx)CRYPT_EAL_DefPkeyMgmtNewCtx},
+    {CRYPT_EAL_IMPLPKEYMGMT_GENKEY, (CRYPT_EAL_ImplPkeyMgmtGenKey)CRYPT_COMPOSITE_GenKey},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPRV, (CRYPT_EAL_ImplPkeyMgmtSetPrv)CRYPT_COMPOSITE_SetPrvKeyEx},
+    {CRYPT_EAL_IMPLPKEYMGMT_SETPUB, (CRYPT_EAL_ImplPkeyMgmtSetPub)CRYPT_COMPOSITE_SetPubKeyEx},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPRV, (CRYPT_EAL_ImplPkeyMgmtGetPrv)CRYPT_COMPOSITE_GetPrvKeyEx},
+    {CRYPT_EAL_IMPLPKEYMGMT_GETPUB, (CRYPT_EAL_ImplPkeyMgmtGetPub)CRYPT_COMPOSITE_GetPubKeyEx},
+    {CRYPT_EAL_IMPLPKEYMGMT_DUPCTX, (CRYPT_EAL_ImplPkeyMgmtDupCtx)CRYPT_COMPOSITE_DupCtx},
+#ifdef HITLS_CRYPTO_COMPOSITE_CHECK
+    {CRYPT_EAL_IMPLPKEYMGMT_CHECK, (CRYPT_EAL_ImplPkeyMgmtCheck)CRYPT_COMPOSITE_Check},
+#endif
+    {CRYPT_EAL_IMPLPKEYMGMT_CTRL, (CRYPT_EAL_ImplPkeyMgmtCtrl)CRYPT_COMPOSITE_Ctrl},
+    {CRYPT_EAL_IMPLPKEYMGMT_FREECTX, (CRYPT_EAL_ImplPkeyMgmtFreeCtx)CRYPT_COMPOSITE_FreeCtx},
     CRYPT_EAL_FUNC_END,
 };
 #endif

@@ -30,6 +30,16 @@
 extern "C" {
 #endif // __cplusplus
 
+#ifdef HITLS_CRYPTO_COMPOSITE
+#ifdef HITLS_CRYPTO_COMPOSITE_CHECK
+#define CRYPT_DEFAULT_KEYMGMT_COMPOSITE_FUNC_CNT 11u
+#else
+#define CRYPT_DEFAULT_KEYMGMT_COMPOSITE_FUNC_CNT 10u
+#endif
+#define CRYPT_DEFAULT_SIGN_COMPOSITE_FUNC_CNT 3u
+#define CRYPT_DEFAULT_DECODE_COMPOSITE_FUNC_CNT 7u
+#endif
+
 #ifdef HITLS_CRYPTO_MD
 #ifdef HITLS_CRYPTO_MD5
 extern const CRYPT_EAL_Func g_defEalMdMd5[];
@@ -170,6 +180,9 @@ extern const CRYPT_EAL_Func g_defEalKeyMgmtElGamal[];
 #ifdef HITLS_CRYPTO_MLDSA
 extern const CRYPT_EAL_Func g_defEalKeyMgmtMlDsa[];
 #endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+extern const CRYPT_EAL_Func g_defEalKeyMgmtComposite[CRYPT_DEFAULT_KEYMGMT_COMPOSITE_FUNC_CNT];
+#endif
 #ifdef HITLS_CRYPTO_XMSS
 extern const CRYPT_EAL_Func g_defEalKeyMgmtXmss[];
 #endif
@@ -244,6 +257,9 @@ extern const CRYPT_EAL_Func g_defEalSignSm2[];
 #ifdef HITLS_CRYPTO_MLDSA
 extern const CRYPT_EAL_Func g_defEalSignMlDsa[];
 #endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+extern const CRYPT_EAL_Func g_defEalSignComposite[CRYPT_DEFAULT_SIGN_COMPOSITE_FUNC_CNT];
+#endif
 #ifdef HITLS_CRYPTO_SLH_DSA
 extern const CRYPT_EAL_Func g_defEalSignSlhDsa[];
 #endif
@@ -300,6 +316,9 @@ extern const CRYPT_EAL_Func g_defEalP8Der2X25519Key[];
 #ifdef HITLS_CRYPTO_MLDSA
 extern const CRYPT_EAL_Func g_defEalP8Der2MldsaKey[];
 #endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+extern const CRYPT_EAL_Func g_defEalP8Der2CompositeKey[CRYPT_DEFAULT_DECODE_COMPOSITE_FUNC_CNT];
+#endif
 #ifdef HITLS_CRYPTO_MLKEM
 extern const CRYPT_EAL_Func g_defEalP8Der2MlkemKey[];
 #endif
@@ -323,6 +342,9 @@ extern const CRYPT_EAL_Func g_defEalSubPubKeyDer2X25519Key[];
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
 extern const CRYPT_EAL_Func g_defEalSubPubKeyDer2MldsaKey[];
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+extern const CRYPT_EAL_Func g_defEalSubPubKeyDer2CompositeKey[CRYPT_DEFAULT_DECODE_COMPOSITE_FUNC_CNT];
 #endif
 #ifdef HITLS_CRYPTO_MLKEM
 extern const CRYPT_EAL_Func g_defEalSubPubKeyDer2MlkemKey[];
@@ -348,7 +370,9 @@ extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2X25519Key[];
 #ifdef HITLS_CRYPTO_MLDSA
 extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2MldsaKey[];
 #endif
-
+#ifdef HITLS_CRYPTO_COMPOSITE
+extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2CompositeKey[CRYPT_DEFAULT_DECODE_COMPOSITE_FUNC_CNT];
+#endif
 #ifdef HITLS_CRYPTO_MLKEM
 extern const CRYPT_EAL_Func g_defEalSubPubKeyWithoutSeqDer2MlkemKey[];
 #endif

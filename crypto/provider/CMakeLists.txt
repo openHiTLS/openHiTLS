@@ -114,6 +114,7 @@ target_include_directories(_hitls_crypto_provider
         ${PROJECT_SOURCE_DIR}/crypto/paillier/include
         ${PROJECT_SOURCE_DIR}/crypto/mlkem/include
         ${PROJECT_SOURCE_DIR}/crypto/mldsa/include
+        ${PROJECT_SOURCE_DIR}/crypto/composite/include
         ${PROJECT_SOURCE_DIR}/crypto/slh_dsa/include
         ${PROJECT_SOURCE_DIR}/crypto/xmss/include
         ${PROJECT_SOURCE_DIR}/crypto/hybridkem/include

@@ -381,6 +381,15 @@ int32_t PkeyProviderSetPrv(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPrv *key
             return pkey->method.setPrv(pkey->key, &paParam);
         }
 #endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+        case CRYPT_PKEY_COMPOSITE: {
+            BSL_Param compositeParam[2] = {
+                {CRYPT_PARAM_COMPOSITE_PRVKEY, BSL_PARAM_TYPE_OCTETS, key->key.compositePrv.data,
+                    key->key.compositePrv.len, 0},
+                BSL_PARAM_END};
+            return pkey->method.setPrv(pkey->key, &compositeParam);
+        }
+#endif
         default:
             (void)key;
             (void)pkey;
@@ -551,6 +560,21 @@ static int32_t GetHybridkemPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_KemDecapsKey
 }
 #endif
 
+#ifdef HITLS_CRYPTO_COMPOSITE
+static int32_t GetCompositePrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_CompositePrv *prv)
+{
+    BSL_Param param[2] = {
+        {CRYPT_PARAM_COMPOSITE_PRVKEY, BSL_PARAM_TYPE_OCTETS, prv->data, prv->len, 0},
+        BSL_PARAM_END};
+    int32_t ret = pkey->method.getPrv(pkey->key, &param);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    prv->len = param[0].useLen;
+    return CRYPT_SUCCESS;
+}
+#endif
+
 #ifdef HITLS_CRYPTO_SLH_DSA
 static int32_t GetSlhDsaPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_SlhDsaPrv *prv)
 {
@@ -650,6 +674,10 @@ int32_t PkeyProviderGetPrv(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPrv *key
 #ifdef HITLS_CRYPTO_HYBRIDKEM
         case CRYPT_PKEY_HYBRID_KEM:
             return GetHybridkemPrv(pkey, &key->key.kemDk);
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+        case CRYPT_PKEY_COMPOSITE:
+            return GetCompositePrv(pkey, &key->key.compositePrv);
 #endif
         default:
             (void)key;
@@ -787,6 +815,15 @@ int32_t PkeyProviderSetPub(CRYPT_EAL_PkeyCtx *pkey, const CRYPT_EAL_PkeyPub *key
                 {CRYPT_PARAM_HYBRID_PUBKEY, BSL_PARAM_TYPE_OCTETS, key->key.kemEk.data, key->key.kemEk.len, 0},
                 BSL_PARAM_END};
             return pkey->method.setPub(pkey->key, &paParam);
+        }
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+        case CRYPT_PKEY_COMPOSITE: {
+            BSL_Param compositeParam[2] = {
+                {CRYPT_PARAM_COMPOSITE_PUBKEY, BSL_PARAM_TYPE_OCTETS,
+                    key->key.compositePub.data, key->key.compositePub.len, 0},
+                BSL_PARAM_END};
+            return pkey->method.setPub(pkey->key, &compositeParam);
         }
 #endif
         default:
@@ -977,6 +1014,21 @@ static int32_t GetXmssPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_XmssPub *pub)
 }
 #endif
 
+#ifdef HITLS_CRYPTO_COMPOSITE
+static int32_t GetCompositePub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_CompositePub *pub)
+{
+    BSL_Param param[2] = {
+        {CRYPT_PARAM_COMPOSITE_PUBKEY, BSL_PARAM_TYPE_OCTETS, pub->data, pub->len, 0},
+        BSL_PARAM_END};
+    int32_t ret = pkey->method.getPub(pkey->key, &param);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    pub->len = param[0].useLen;
+    return CRYPT_SUCCESS;
+}
+#endif
+
 int32_t PkeyProviderGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *key)
 {
     switch (pkey->id) {
@@ -1038,6 +1090,10 @@ int32_t PkeyProviderGetPub(const CRYPT_EAL_PkeyCtx *pkey, CRYPT_EAL_PkeyPub *key
 #ifdef HITLS_CRYPTO_XMSS
         case CRYPT_PKEY_XMSS:
             return GetXmssPub(pkey, &key->key.xmssPub);
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+        case CRYPT_PKEY_COMPOSITE:
+            return GetCompositePub(pkey, &key->key.compositePub);
 #endif
         default:
             (void)key;

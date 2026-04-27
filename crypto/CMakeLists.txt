@@ -223,6 +223,10 @@ if(HITLS_CRYPTO_MLDSA)
     add_subdirectory(mldsa)
 endif()
 
+if(HITLS_CRYPTO_COMPOSITE)
+    add_subdirectory(composite)
+endif()
+
 if(HITLS_CRYPTO_SLH_DSA)
     add_subdirectory(slh_dsa)
 endif()

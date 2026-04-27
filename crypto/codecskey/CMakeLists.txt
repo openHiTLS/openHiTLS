@@ -20,6 +20,7 @@ set(_codecskey_sources
 )
 if(HITLS_CRYPTO_KEY_DECODE_CHAIN)
     list(APPEND _codecskey_sources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_decoder_composite.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_decoder_der2key.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_decoder_ecc.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/crypt_decoder_epki2pki.c
@@ -49,6 +50,7 @@ target_include_directories(_hitls_crypto_codecskey
         ${PROJECT_SOURCE_DIR}/crypto/ecc/include
         ${PROJECT_SOURCE_DIR}/crypto/rsa/include
         ${PROJECT_SOURCE_DIR}/crypto/ecdsa/include
+        ${PROJECT_SOURCE_DIR}/crypto/composite/include
         ${PROJECT_SOURCE_DIR}/crypto/sm2/include
         ${PROJECT_SOURCE_DIR}/crypto/curve25519/include
         ${PROJECT_SOURCE_DIR}/crypto/mldsa/include

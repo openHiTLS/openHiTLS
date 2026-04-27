@@ -183,6 +183,10 @@ extern "C" {
 #define CRYPT_PARAM_MCELIECE_PRVKEY                         (CRYPT_PARAM_MCELIECE_BASE + 1)
 #define CRYPT_PARAM_MCELIECE_PUBKEY                         (CRYPT_PARAM_MCELIECE_BASE + 2)
 
+#define CRYPT_PARAM_COMPOSITE_BASE                          2100
+#define CRYPT_PARAM_COMPOSITE_PRVKEY                        (CRYPT_PARAM_COMPOSITE_BASE + 1)
+#define CRYPT_PARAM_COMPOSITE_PUBKEY                        (CRYPT_PARAM_COMPOSITE_BASE + 2)
+
 #define CRYPT_PARAM_DECODE_BASE                             4000
 #define CRYPT_PARAM_DECODE_OUTPUT_FORMAT                    (CRYPT_PARAM_DECODE_BASE + 1)
 #define CRYPT_PARAM_DECODE_OUTPUT_TYPE                      (CRYPT_PARAM_DECODE_BASE + 2)

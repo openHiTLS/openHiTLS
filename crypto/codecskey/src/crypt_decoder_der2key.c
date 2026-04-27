@@ -39,6 +39,9 @@
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
 #endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+#include "crypt_composite.h"
+#endif
 #ifdef HITLS_CRYPTO_XMSS
 #include "crypt_xmss.h"
 #endif
@@ -351,6 +354,10 @@ DECODER_DEFINE_DER2KEY_NEW_CTX(X25519, CRYPT_PKEY_X25519, g_defEalKeyMgmtX25519,
 #ifdef HITLS_CRYPTO_MLDSA
 DECODER_DEFINE_DER2KEY_NEW_CTX(Mldsa, CRYPT_PKEY_ML_DSA, g_defEalKeyMgmtMlDsa, NULL, NULL, g_defEalSignMlDsa, NULL)
 #endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+DECODER_DEFINE_DER2KEY_NEW_CTX(Composite, CRYPT_PKEY_COMPOSITE, g_defEalKeyMgmtComposite, \
+    NULL, NULL, g_defEalSignComposite, NULL)
+#endif
 #ifdef HITLS_CRYPTO_XMSS
 DECODER_DEFINE_DER2KEY_NEW_CTX(Xmss, CRYPT_PKEY_XMSS, g_defEalKeyMgmtXmss, NULL, NULL, \
     g_defEalSignXmss, NULL)
@@ -402,6 +409,15 @@ DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(Mldsa, CRYPT_ML_DSA_Ctx, CRYPT_MLDSA_Par
 DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Mldsa, CRYPT_ML_DSA_Ctx, CRYPT_MLDSA_ParseSubPubkeyAsn1Buff)
 DECODER_DEFINE_PKCS8_DECODE(Mldsa, CRYPT_ML_DSA_Ctx, CRYPT_MLDSA_ParsePkcs8key)
 #endif
+
+#ifdef HITLS_CRYPTO_COMPOSITE
+DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(Composite, CRYPT_CompositeCtx, \
+                                        CRYPT_COMPOSITE_ParseSubPubkeyAsn1Buff)
+DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(Composite, CRYPT_CompositeCtx, \
+                                                    CRYPT_COMPOSITE_ParseSubPubkeyAsn1Buff)
+DECODER_DEFINE_PKCS8_DECODE(Composite, CRYPT_CompositeCtx, CRYPT_COMPOSITE_ParsePkcs8key)
+#endif
+
 #ifdef HITLS_CRYPTO_SLH_DSA
 DECODER_DEFINE_SUBPUBKEY_DER2KEY_DECODE(SlhDsa, CryptSlhDsaCtx, CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff)
 DECODER_DEFINE_SUBPUBKEY_WITHOUT_SEQ_DER2KEY_DECODE(SlhDsa, CryptSlhDsaCtx, CRYPT_SLHDSA_ParseSubPubkeyAsn1Buff)

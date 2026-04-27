@@ -326,6 +326,9 @@ static const CRYPT_EAL_AlgInfo g_defEalKeyMgmt[] = {
 #ifdef HITLS_CRYPTO_MLDSA
     {CRYPT_PKEY_ML_DSA, g_defEalKeyMgmtMlDsa, CRYPT_EAL_DEFAULT_ATTR},
 #endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+    {CRYPT_PKEY_COMPOSITE, g_defEalKeyMgmtComposite, CRYPT_EAL_DEFAULT_ATTR},
+#endif
 #ifdef HITLS_CRYPTO_XMSS
     {CRYPT_PKEY_XMSS, g_defEalKeyMgmtXmss, CRYPT_EAL_DEFAULT_ATTR},
 #endif
@@ -393,6 +396,9 @@ static const CRYPT_EAL_AlgInfo g_defEalSigns[] = {
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
     {CRYPT_PKEY_ML_DSA, g_defEalSignMlDsa, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+    {CRYPT_PKEY_COMPOSITE, g_defEalSignComposite, CRYPT_EAL_DEFAULT_ATTR},
 #endif
 #ifdef HITLS_CRYPTO_XMSS
     {CRYPT_PKEY_XMSS, g_defEalSignXmss, CRYPT_EAL_DEFAULT_ATTR},
@@ -468,6 +474,10 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
     {CRYPT_PKEY_ML_DSA, g_defEalP8Der2MldsaKey,
         "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+    {CRYPT_PKEY_COMPOSITE, g_defEalP8Der2CompositeKey,
+        "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
 #ifdef HITLS_CRYPTO_MLKEM
     {CRYPT_PKEY_ML_KEM, g_defEalP8Der2MlkemKey,
         "provider=default, inFormat=ASN1, inType=PRIKEY_PKCS8_UNENCRYPT, outFormat=OBJECT, outType=LOW_KEY"},
@@ -490,6 +500,10 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
     {CRYPT_PKEY_ML_DSA, g_defEalSubPubKeyDer2MldsaKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+    {CRYPT_PKEY_COMPOSITE, g_defEalSubPubKeyDer2CompositeKey,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
 #ifdef HITLS_CRYPTO_MLKEM
@@ -530,6 +544,10 @@ static const CRYPT_EAL_AlgInfo g_defEalDecoders[] = {
 #endif
 #ifdef HITLS_CRYPTO_MLDSA
     {CRYPT_PKEY_ML_DSA, g_defEalSubPubKeyWithoutSeqDer2MldsaKey,
+        "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+    {CRYPT_PKEY_COMPOSITE, g_defEalSubPubKeyWithoutSeqDer2CompositeKey,
         "provider=default, inFormat=ASN1, inType=PUBKEY_SUBKEY_WITHOUT_SEQ, outFormat=OBJECT, outType=LOW_KEY"},
 #endif
 #ifdef HITLS_CRYPTO_XMSS

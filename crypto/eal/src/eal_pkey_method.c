@@ -58,6 +58,9 @@
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
 #endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+#include "crypt_composite.h"
+#endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
 #include "crypt_hybridkem.h"
 #endif
@@ -809,6 +812,43 @@ static const EAL_PkeyMethod METHODS[] = {
         CRYPT_HYBRID_KEM_Decaps,
         NULL, // blind
         NULL  // unBlind
+    ),
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+    EAL_PKEY_METHOD_DEFINE(
+        CRYPT_PKEY_COMPOSITE,
+        CRYPT_COMPOSITE_NewCtx,
+        CRYPT_COMPOSITE_DupCtx,
+        CRYPT_COMPOSITE_FreeCtx,
+        NULL, // setPara
+        NULL, // getPara
+        CRYPT_COMPOSITE_GenKey,
+        CRYPT_COMPOSITE_Ctrl,
+        CRYPT_COMPOSITE_SetPubKeyEx,
+        CRYPT_COMPOSITE_SetPrvKeyEx,
+        CRYPT_COMPOSITE_GetPubKeyEx,
+        CRYPT_COMPOSITE_GetPrvKeyEx,
+        CRYPT_COMPOSITE_Sign,
+        NULL, // signData
+        CRYPT_COMPOSITE_Verify,
+        NULL, // verifyData
+        NULL, // recover
+        NULL, // computeShareKey
+        NULL, // encrypt
+        NULL, // decrypt
+        NULL, // headd
+        NULL, // hemul
+#ifdef HITLS_CRYPTO_COMPOSITE_CHECK
+        CRYPT_COMPOSITE_Check,
+#else
+        NULL,
+#endif
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL
     ),
 #endif
 };

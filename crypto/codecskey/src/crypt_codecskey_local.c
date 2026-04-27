@@ -1057,6 +1057,60 @@ static int32_t ParseSlhDsaPrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *a
 }
 #endif
 
+#ifdef HITLS_CRYPTO_COMPOSITE
+static int32_t ParseCompositePubkeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName, uint8_t *buff,
+                                            uint32_t buffLen, BslCid cid, CRYPT_EAL_PkeyCtx **ealPubKey)
+{
+    CRYPT_EAL_PkeyCtx *pctx =
+        CRYPT_EAL_ProviderPkeyNewCtx(libctx, CRYPT_PKEY_COMPOSITE, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, attrName);
+    if (pctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    int32_t ret = CRYPT_EAL_PkeySetParaById(pctx, (uint32_t)cid);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    CRYPT_EAL_PkeyPub pub = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePub = {.data = buff, .len = buffLen}};
+    ret = CRYPT_EAL_PkeySetPub(pctx, &pub);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    *ealPubKey = pctx;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t ParseCompositePrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *attrName, uint8_t *buff,
+                                            uint32_t buffLen, BslCid cid, CRYPT_EAL_PkeyCtx **ealPrikey)
+{
+    CRYPT_EAL_PkeyCtx *pctx =
+        CRYPT_EAL_ProviderPkeyNewCtx(libctx, CRYPT_PKEY_COMPOSITE, CRYPT_EAL_PKEY_UNKNOWN_OPERATE, attrName);
+    if (pctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    int32_t ret = CRYPT_EAL_PkeySetParaById(pctx, (uint32_t)cid);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    CRYPT_EAL_PkeyPrv prv = {.id = CRYPT_PKEY_COMPOSITE, .key.compositePrv = {.data = buff, .len = buffLen}};
+    ret = CRYPT_EAL_PkeySetPrv(pctx, &prv);
+    if (ret != CRYPT_SUCCESS) {
+        CRYPT_EAL_PkeyFreeCtx(pctx);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    *ealPrikey = pctx;
+    return CRYPT_SUCCESS;
+}
+#endif
+
 static int32_t ParsePk8PrikeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName,
     CRYPT_ENCODE_DECODE_Pk8PrikeyInfo *pk8PrikeyInfo, CRYPT_EAL_PkeyCtx **ealPriKey)
 {
@@ -1099,6 +1153,33 @@ static int32_t ParsePk8PrikeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
         case BSL_CID_ML_DSA_87:
             return ParseMldsaPrikeyAsn1Buff(libctx, attrName, pk8PrikeyInfo->pkeyRawKey,
                 pk8PrikeyInfo->pkeyRawKeyLen, pk8PrikeyInfo->keyType, ealPriKey);
+#endif
+#if defined(HITLS_CRYPTO_COMPOSITE) && defined(HITLS_CRYPTO_RSA)
+        case BSL_CID_MLDSA44_RSA2048_PSS_SHA256:
+        case BSL_CID_MLDSA44_RSA2048_PKCS15_SHA256:
+        case BSL_CID_MLDSA65_RSA3072_PSS_SHA512:
+        case BSL_CID_MLDSA65_RSA3072_PKCS15_SHA512:
+        case BSL_CID_MLDSA65_RSA4096_PSS_SHA512:
+        case BSL_CID_MLDSA65_RSA4096_PKCS15_SHA512:
+        case BSL_CID_MLDSA87_RSA3072_PSS_SHA512:
+        case BSL_CID_MLDSA87_RSA4096_PSS_SHA512:
+#endif
+#if defined(HITLS_CRYPTO_COMPOSITE) && defined(HITLS_CRYPTO_ECDSA)
+        case BSL_CID_MLDSA44_ECDSA_P256_SHA256:
+        case BSL_CID_MLDSA65_ECDSA_P256_SHA512:
+        case BSL_CID_MLDSA65_ECDSA_P384_SHA512:
+        case BSL_CID_MLDSA65_ECDSA_BRAINPOOLP256R1_SHA512:
+        case BSL_CID_MLDSA87_ECDSA_P384_SHA512:
+        case BSL_CID_MLDSA87_ECDSA_BRAINPOOLP384R1_SHA512:
+        case BSL_CID_MLDSA87_ECDSA_P521_SHA512:
+#endif
+#if defined(HITLS_CRYPTO_COMPOSITE) && defined(HITLS_CRYPTO_ED25519)
+        case BSL_CID_MLDSA44_ED25519_SHA512:
+        case BSL_CID_MLDSA65_ED25519_SHA512:
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+            return ParseCompositePrikeyAsn1Buff(libctx, attrName, pk8PrikeyInfo->pkeyRawKey,
+                                                pk8PrikeyInfo->pkeyRawKeyLen, pk8PrikeyInfo->keyType, ealPriKey);
 #endif
 #ifdef HITLS_CRYPTO_SLH_DSA
         case BSL_CID_SLH_DSA_SHA2_128S:
@@ -1187,6 +1268,32 @@ static int32_t ParseSubPubkeyAsn1(CRYPT_EAL_LibCtx *libctx, const char *attrName
         case BSL_CID_ML_DSA_65:
         case BSL_CID_ML_DSA_87:
             return ParseMldsaPubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, cid, ealPubKey);
+#endif
+#if defined(HITLS_CRYPTO_COMPOSITE) && defined(HITLS_CRYPTO_RSA)
+        case BSL_CID_MLDSA44_RSA2048_PSS_SHA256:
+        case BSL_CID_MLDSA44_RSA2048_PKCS15_SHA256:
+        case BSL_CID_MLDSA65_RSA3072_PSS_SHA512:
+        case BSL_CID_MLDSA65_RSA3072_PKCS15_SHA512:
+        case BSL_CID_MLDSA65_RSA4096_PSS_SHA512:
+        case BSL_CID_MLDSA65_RSA4096_PKCS15_SHA512:
+        case BSL_CID_MLDSA87_RSA3072_PSS_SHA512:
+        case BSL_CID_MLDSA87_RSA4096_PSS_SHA512:
+#endif
+#if defined(HITLS_CRYPTO_COMPOSITE) && defined(HITLS_CRYPTO_ECDSA)
+        case BSL_CID_MLDSA44_ECDSA_P256_SHA256:
+        case BSL_CID_MLDSA65_ECDSA_P256_SHA512:
+        case BSL_CID_MLDSA65_ECDSA_P384_SHA512:
+        case BSL_CID_MLDSA65_ECDSA_BRAINPOOLP256R1_SHA512:
+        case BSL_CID_MLDSA87_ECDSA_P384_SHA512:
+        case BSL_CID_MLDSA87_ECDSA_BRAINPOOLP384R1_SHA512:
+        case BSL_CID_MLDSA87_ECDSA_P521_SHA512:
+#endif
+#if defined(HITLS_CRYPTO_COMPOSITE) && defined(HITLS_CRYPTO_ED25519)
+        case BSL_CID_MLDSA44_ED25519_SHA512:
+        case BSL_CID_MLDSA65_ED25519_SHA512:
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+            return ParseCompositePubkeyAsn1Buff(libctx, attrName, bitPubkey.buff, bitPubkey.len, cid, ealPubKey);
 #endif
 #ifdef HITLS_CRYPTO_SLH_DSA
         case BSL_CID_SLH_DSA_SHA2_128S:
@@ -1685,6 +1792,70 @@ static int32_t EncodeMldsaPrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffe
 }
 #endif  // HITLS_CRYPTO_MLDSA
 
+#ifdef HITLS_CRYPTO_COMPOSITE
+static int32_t EncodeCompositePubKeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buffer *bitStr, BslCid *bslCid)
+{
+    uint32_t pubKeyLen = 0;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPubKey, CRYPT_CTRL_GET_PUBKEY_LEN, &pubKeyLen, sizeof(uint32_t));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = CRYPT_EAL_PkeyCtrl(ealPubKey, CRYPT_CTRL_GET_PARAID, bslCid, sizeof(int32_t));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    uint8_t *pub = (uint8_t *)BSL_SAL_Malloc(pubKeyLen);
+    if (pub == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    CRYPT_EAL_PkeyPub pubKey = {.id = CRYPT_PKEY_COMPOSITE,
+                                .key.compositePub = {.data = pub, .len = pubKeyLen}};
+    ret = CRYPT_EAL_PkeyGetPub(ealPubKey, &pubKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_Free(pub);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    bitStr->data = pubKey.key.compositePub.data;
+    bitStr->dataLen = pubKey.key.compositePub.len;
+    return CRYPT_SUCCESS;
+}
+
+static int32_t EncodeCompositePrvKeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_Buffer *bitStr, BslCid *bslCid)
+{
+    uint32_t prvKeyLen = 0;
+    int32_t ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_PRVKEY_LEN, &prvKeyLen, sizeof(uint32_t));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = CRYPT_EAL_PkeyCtrl(ealPriKey, CRYPT_CTRL_GET_PARAID, bslCid, sizeof(int32_t));
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    uint8_t *prv = (uint8_t *)BSL_SAL_Malloc(prvKeyLen);
+    if (prv == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+        return CRYPT_MEM_ALLOC_FAIL;
+    }
+    CRYPT_EAL_PkeyPrv prvKey = {.id = CRYPT_PKEY_COMPOSITE,
+                                .key.compositePrv = {.data = prv, .len = prvKeyLen}};
+    ret = CRYPT_EAL_PkeyGetPrv(ealPriKey, &prvKey);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_Free(prv);
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    bitStr->data = prvKey.key.compositePrv.data;
+    bitStr->dataLen = prvKey.key.compositePrv.len;
+    return CRYPT_SUCCESS;
+}
+#endif // HITLS_CRYPTO_COMPOSITE
+
 #if defined(HITLS_CRYPTO_ED25519) || defined(HITLS_CRYPTO_X25519)
 static int32_t EncodeCurve25519PubkeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_Buffer *bitStr)
 {
@@ -2017,6 +2188,11 @@ static int32_t EncodePk8AlgidAny(CRYPT_EAL_PkeyCtx *ealPriKey, CRYPT_ENCODE_DECO
             ret = EncodeMldsaPrikeyAsn1Buff(ealPriKey, &tmp, (BslCid *)&cid);
             break;
 #endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+        case CRYPT_PKEY_COMPOSITE:
+            ret = EncodeCompositePrvKeyAsn1Buff(ealPriKey, &tmp, (BslCid *)&cid);
+            break;
+#endif
 #ifdef HITLS_CRYPTO_SLH_DSA
         case CRYPT_PKEY_SLH_DSA:
             ret = EncodeSlhDsaPrikeyAsn1Buff(ealPriKey, &tmp, (BslCid *)&cid);
@@ -2165,6 +2341,11 @@ static int32_t CRYPT_EAL_SubPubkeyGetInfo(CRYPT_EAL_PkeyCtx *ealPubKey, BSL_ASN1
 #ifdef HITLS_CRYPTO_MLDSA
         case CRYPT_PKEY_ML_DSA:
             ret = EncodeMldsaPubkeyAsn1Buff(ealPubKey, &bitTmp, (BslCid *)&cid);
+            break;
+#endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+        case CRYPT_PKEY_COMPOSITE:
+            ret = EncodeCompositePubKeyAsn1Buff(ealPubKey, &bitTmp, (BslCid *)&cid);
             break;
 #endif
 #ifdef HITLS_CRYPTO_SLH_DSA

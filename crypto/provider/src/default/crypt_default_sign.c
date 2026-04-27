@@ -38,9 +38,13 @@
 #ifdef HITLS_CRYPTO_MLDSA
 #include "crypt_mldsa.h"
 #endif
+#ifdef HITLS_CRYPTO_COMPOSITE
+#include "crypt_composite.h"
+#endif
 #ifdef HITLS_CRYPTO_XMSS
 #include "crypt_xmss.h"
 #endif
+
 
 #ifdef HITLS_CRYPTO_DSA
 const CRYPT_EAL_Func g_defEalSignDsa[] = {
@@ -121,6 +125,14 @@ const CRYPT_EAL_Func g_defEalSignMlDsa[] = {
 };
 #endif
 
+#ifdef HITLS_CRYPTO_COMPOSITE
+const CRYPT_EAL_Func g_defEalSignComposite[] = {
+    {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_COMPOSITE_Sign},
+    {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_COMPOSITE_Verify},
+    CRYPT_EAL_FUNC_END,
+};
+#endif
+
 #ifdef HITLS_CRYPTO_XMSS
 const CRYPT_EAL_Func g_defEalSignXmss[] = {
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_XMSS_Sign},
@@ -130,3 +142,4 @@ const CRYPT_EAL_Func g_defEalSignXmss[] = {
 #endif
 
 #endif /* HITLS_CRYPTO_PROVIDER && HITLS_CRYPTO_PKEY_SIGN */
+

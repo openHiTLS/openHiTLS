@@ -326,6 +326,13 @@ typedef CRYPT_Data CRYPT_MlDsaPrv;
 /**
  * @ingroup crypt_types
  *
+ * Composite private key parameter structure
+ */
+typedef CRYPT_Data CRYPT_CompositePrv;
+
+/**
+ * @ingroup crypt_types
+ *
  * RSA public key parameter structure
  */
 typedef struct {
@@ -461,6 +468,13 @@ typedef CRYPT_Data CRYPT_KemEncapsKey;
  * MLDSA public key parameter structure
  */
 typedef CRYPT_Data CRYPT_MlDsaPub;
+
+/**
+ * @ingroup crypt_types
+ *
+ * Composite public key parameter structure
+ */
+typedef CRYPT_Data CRYPT_CompositePub;
 
 /**
  * @ingroup crypt_types
@@ -678,6 +692,7 @@ typedef enum {
     CRYPT_CTRL_CLR_RSA_FLAG,            /**< RSA clear the flag. */
     CRYPT_CTRL_SET_RSA_BSSA_FACTOR_R,   /**< Set the random bytes for RSA-BSSA. */
     CRYPT_CTRL_SET_RSA_EMSA_ISO9796_2,    /**< RSA set the signature padding mode to ISO/IEC 9796-2. */
+    CRYPT_CTRL_SET_RSA_E,               /**< Set the public exponent e of the RSA algorithm. */
 
     // ecc
     CRYPT_CTRL_SET_SM2_USER_ID = 300,

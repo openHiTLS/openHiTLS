@@ -656,6 +656,14 @@ enum CRYPT_ERROR {
     CRYPT_MCELIECE_DECODE_FAIL,
     CRYPT_MCELIECE_KEY_REPEATED_SET,
     CRYPT_MCELIECE_ERR_MATRIX_SIZE,
+
+    CRYPT_COMPOSITE_KEYINFO_NOT_SET = 0x013F0001,           /**< The algorithm not set. */
+    CRYPT_COMPOSITE_CTRL_INIT_REPEATED,                     /**< The CTX cannot be initialized repeatedly. */
+    CRYPT_COMPOSITE_INVALID_SIG_LEN,                        /**< The signature length is invalid. */
+    CRYPT_COMPOSITE_KEY_NOT_SET,                            /**< The public key or private not set. */
+    CRYPT_COMPOSITE_LEN_NOT_ENOUGH,                         /**< The buffer size of output is insufficient. */
+    CRYPT_COMPOSITE_KEYLEN_ERROR,                           /**< Incorrect input data length. */
+    CRYPT_COMPOSITE_KEY_REPEATED_SET,                       /**< The key is repeatedly set. */
 };
 #ifdef __cplusplus
 }

@@ -100,6 +100,7 @@
         "dh": ["test_suite_sdv_eal_dh"],
         "dsa": ["test_suite_sdv_eal_dsa"],
         "mldsa": ["test_suite_sdv_mldsa"],
+        "composite": ["test_suite_sdv_composite"],
         "paillier": ["test_suite_sdv_eal_paillier"],
         "elgamal": ["test_suite_sdv_eal_elgamal"],
         "hybridkem": ["test_suite_sdv_hybridkem"],
@@ -279,6 +280,7 @@
             "SDV_CRYPTO_SM2_SIGN_VERIFY_FUNC_TC001"
         ],
         "test_suite_sdv_mldsa": [],
+        "test_suite_sdv_composite": [],
         "test_suite_sdv_hybridkem": [],
         "test_suite_sdv_eal_paillier": [],
         "test_suite_sdv_mlkem": [],
