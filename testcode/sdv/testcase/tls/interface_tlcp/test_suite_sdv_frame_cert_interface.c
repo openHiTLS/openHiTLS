@@ -1664,3 +1664,100 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/*
+ * The San extension of the certificate contains NULL bytes,
+ * resulting in certificate verification failure and connection failure
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_HostNameVerify_TC006()
+{
+    HitlsInit();
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(s_config != NULL);
+    FRAME_CertInfo certInfoClient = {
+        "rsa_san_ext_with_null/CA.der",
+        0,
+        "rsa_san_ext_with_null/server_cert.der",
+        0,
+        "rsa_san_ext_with_null/server_key.der",
+        0
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_san_ext_with_null/CA.der",
+        0,
+        "rsa_san_ext_with_null/server_cert.der",
+        0,
+        "rsa_san_ext_with_null/server_key.der",
+        0
+    };
+
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    char host[] = "www.example.com";
+    ASSERT_EQ(HITLS_SetHost(client->ssl, host), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+
+/*
+ * The certificate does not include the san extension, CN contains NULL bytes,
+ * certificate verification failed, and connection failed
+ */
+/* BEGIN_CASE */
+void SDV_HITLS_HostNameVerify_TC007()
+{
+    HitlsInit();
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLSConfig();
+    ASSERT_TRUE(s_config != NULL);
+    FRAME_CertInfo certInfoClient = {
+        "rsa_san_ext_with_null/CA.der",
+        0,
+        "rsa_san_ext_with_null/server_cert_null_cn.der",
+        0,
+        "rsa_san_ext_with_null/server_key_null_cn.der",
+        0
+    };
+    FRAME_CertInfo certInfoServer = {
+        "rsa_san_ext_with_null/CA.der",
+        0,
+        "rsa_san_ext_with_null/server_cert_null_cn.der",
+        0,
+        "rsa_san_ext_with_null/server_key_null_cn.der",
+        0
+    };
+
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfoClient);
+    ASSERT_TRUE(client != NULL);
+
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfoServer);
+    ASSERT_TRUE(server != NULL);
+
+    char host[] = "example.com";
+    ASSERT_EQ(HITLS_SetHost(client->ssl, host), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */

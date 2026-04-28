@@ -173,6 +173,11 @@ int32_t X509_VerifyHostnameWithSan(HITLS_X509_Cert *cert, const char *hostname,
             continue;
         }
 
+        if (BSL_SAL_Memchr((const char *)gn->value.data, '\0', gn->value.dataLen)) {
+            ret = HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
+            continue;
+        }
+
         char *dnsName = (char *)BSL_SAL_Malloc(gn->value.dataLen + 1);
         if (dnsName == NULL) {
             HITLS_X509_ClearSubjectAltName(&san);
@@ -199,6 +204,12 @@ int32_t X509_VerifyHostnameWithCn(HITLS_X509_Cert *cert, const char *hostname,
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
+
+    if (BSL_SAL_Memchr((const char *)cnName.data, '\0', cnName.dataLen)) {
+        BSL_SAL_Free(cnName.data);
+        return HITLS_X509_ERR_VFY_HOSTNAME_FAIL;
+    }
+
     ret = MatchCb((const char *)cnName.data, hostname);
     BSL_SAL_Free(cnName.data);
     return ret;
