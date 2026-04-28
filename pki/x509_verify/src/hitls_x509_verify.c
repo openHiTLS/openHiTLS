@@ -1077,11 +1077,52 @@ static int32_t HITLS_X509_SecBitsCheck(HITLS_X509_StoreCtx *storeCtx, HITLS_X509
     return HITLS_PKI_SUCCESS;
 }
 
-int32_t HITLS_X509_CheckVerifyParam(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
+static uint32_t HITLS_X509_GetHashAlgSecBits(int32_t mdId)
 {
-    if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_SECBITS) != 0) {
-        return HITLS_X509_TrvList(chain, (HITLS_X509_TrvListCallBack)HITLS_X509_SecBitsCheck, storeCtx);
+    switch (mdId) {
+        case CRYPT_MD_MD5:
+            return 39;
+        case CRYPT_MD_SHA1:
+            return 63;
+        case CRYPT_MD_SHA224:
+        case CRYPT_MD_SHA3_224:
+            return 112;
+        case CRYPT_MD_SHA256:
+        case CRYPT_MD_SM3:
+        case CRYPT_MD_SHA3_256:
+            return 128;
+        case CRYPT_MD_SHA384:
+        case CRYPT_MD_SHA3_384:
+            return 192;
+        case CRYPT_MD_SHA512:
+        case CRYPT_MD_SHA3_512:
+            return 256;
+        default:
+            return 0;
     }
+}
+
+static int32_t HITLS_X509_HashAlgSecBitsCheck(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *cert, int32_t depth)
+{
+    /* Skip the root cert */
+    int32_t chainLen = BSL_LIST_COUNT(storeCtx->certChain);
+    if (chainLen <= 0 || depth >= chainLen - 1) {
+        return HITLS_PKI_SUCCESS;
+    }
+
+    int32_t mdId = BSL_CID_UNKNOWN;
+    int32_t ret = HITLS_X509_GetSignMdAlg(&cert->signAlgId, &mdId, sizeof(mdId));
+    if (ret != HITLS_PKI_SUCCESS) {
+        return HITLS_PKI_SUCCESS;
+    }
+
+    uint32_t secBits = HITLS_X509_GetHashAlgSecBits(mdId);
+    if (secBits == 0) {
+        return HITLS_PKI_SUCCESS;
+    }
+
+    VFYCBK_FAIL_IF(secBits < storeCtx->verifyParam.securityBits, storeCtx, cert, depth,
+        HITLS_X509_ERR_VFY_CHECK_SECBITS);
     return HITLS_PKI_SUCCESS;
 }
 
@@ -1211,10 +1252,17 @@ static int32_t HITLS_X509_CheckCertExt(void *ctx, HITLS_X509_Cert *cert, int32_t
 
 int32_t HITLS_X509_VerifyParamAndExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
 {
-    int32_t ret = HITLS_X509_CheckVerifyParam(storeCtx, chain);
-    if (ret != HITLS_PKI_SUCCESS) {
-        return ret;
+    if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_SECBITS) != 0) {
+        int32_t ret = HITLS_X509_TrvList(chain, (HITLS_X509_TrvListCallBack)HITLS_X509_SecBitsCheck, storeCtx);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
+        ret = HITLS_X509_TrvList(chain, (HITLS_X509_TrvListCallBack)HITLS_X509_HashAlgSecBitsCheck, storeCtx);
+        if (ret != HITLS_PKI_SUCCESS) {
+            return ret;
+        }
     }
+
     return HITLS_X509_TrvList(chain, (HITLS_X509_TrvListCallBack)HITLS_X509_CheckCertExt, storeCtx);
 }
 

@@ -776,6 +776,29 @@ static int32_t GetSignLen(const CryptSlhDsaCtx *ctx, void *val, uint32_t len)
     return CRYPT_SUCCESS;
 }
 
+static int32_t SlhDsaGetSecBits(const CryptSlhDsaCtx *ctx, void *val, uint32_t len)
+{
+    if (val == NULL || len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    // FIPS 205 Table 2: secCategory 1->128-bit, 3->192-bit, 5->256-bit
+    switch (ctx->para.secCategory) {
+        case 1:
+            *(int32_t *)val = 128;
+            break;
+        case 3:
+            *(int32_t *)val = 192;
+            break;
+        case 5:
+            *(int32_t *)val = 256;
+            break;
+        default:
+            return CRYPT_INVALID_ARG;
+    }
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t len)
 {
     if (ctx == NULL) {
@@ -823,6 +846,8 @@ int32_t CRYPT_SLH_DSA_Ctrl(CryptSlhDsaCtx *ctx, int32_t opt, void *val, uint32_t
             return CRYPT_SUCCESS;
         case CRYPT_CTRL_GET_SIGNLEN:
             return GetSignLen(ctx, val, len);
+        case CRYPT_CTRL_GET_SECBITS:
+            return SlhDsaGetSecBits(ctx, val, len);
         default:
             BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
             return CRYPT_NOT_SUPPORT;
