@@ -399,3 +399,82 @@ SDV_X509_STORE_CTX_DUP_MULTI_THREAD_TC001:"../testdata/tls/certificate/der/rsa_w
 
 SDV_X509_CERT_VERIFY_MULTI_THREAD_WITH_VARIOUS_CHARSET_FUNC_TC001
 SDV_X509_CERT_VERIFY_MULTI_THREAD_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8/ca_mix.crt":"../testdata/cert/chain/charset/convert_to_utf8/user_utf8.crt"
+
+
+SDV_X509_SECBITS_COMBINED_TC001: A_112: secbits=112, Root:112>=112 PASS, Inter:128>=112 PASS, Leaf:128>=112 PASS
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/a_ecp256_sha256_leaf.der":"../testdata/cert/chain/secbits/a_rsa3072_sha384_inter.der":"../testdata/cert/chain/secbits/a_rsa2048_sha256_root.der":112:HITLS_PKI_SUCCESS
+
+SDV_X509_SECBITS_COMBINED_TC001: A_128: secbits=128, Root:112<128 FAIL (key insufficient), Inter:128>=128 PASS, Leaf:128>=128 PASS
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/a_ecp256_sha256_leaf.der":"../testdata/cert/chain/secbits/a_rsa3072_sha384_inter.der":"../testdata/cert/chain/secbits/a_rsa2048_sha256_root.der":128:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+SDV_X509_SECBITS_COMBINED_TC001: A_192: secbits=192, Root:112<192 FAIL, Inter:128<192 FAIL, Leaf:128<192 FAIL
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/a_ecp256_sha256_leaf.der":"../testdata/cert/chain/secbits/a_rsa3072_sha384_inter.der":"../testdata/cert/chain/secbits/a_rsa2048_sha256_root.der":192:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+
+SDV_X509_SECBITS_COMBINED_TC001: B_128: secbits=128, Root:192>=128 PASS, Inter:192>=128 PASS, Leaf:128>=128 PASS
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/b_ecp256_sha256_leaf.der":"../testdata/cert/chain/secbits/b_ecp384_sha256_inter.der":"../testdata/cert/chain/secbits/b_ecp384_sha384_root.der":128:HITLS_PKI_SUCCESS
+
+SDV_X509_SECBITS_COMBINED_TC001: B_192: secbits=192, Root:192>=192 PASS, Inter:192>=192 PASS, Leaf:128<192 FAIL (key too weak)
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/b_ecp256_sha256_leaf.der":"../testdata/cert/chain/secbits/b_ecp384_sha256_inter.der":"../testdata/cert/chain/secbits/b_ecp384_sha384_root.der":192:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+SDV_X509_SECBITS_COMBINED_TC001: B_256: secbits=256, Root:192<256 FAIL, Inter:192<256 FAIL, Leaf:128<256 FAIL
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/b_ecp256_sha256_leaf.der":"../testdata/cert/chain/secbits/b_ecp384_sha256_inter.der":"../testdata/cert/chain/secbits/b_ecp384_sha384_root.der":256:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+
+SDV_X509_SECBITS_COMBINED_TC001: C_63: secbits=63, Root:112>=63 PASS, Inter:128>=63 PASS, 63>=63 PASS, Leaf:128>=63 PASS
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/c_rsa3072_sha256_leaf.der":"../testdata/cert/chain/secbits/c_rsa3072_sha1_inter.der":"../testdata/cert/chain/secbits/a_rsa2048_sha256_root.der":63:HITLS_PKI_SUCCESS
+
+SDV_X509_SECBITS_COMBINED_TC001: C_112: secbits=112, Root:112>=112 PASS, Inter:128>=112 PASS, 63<112 FAIL (hash too weak)
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/c_rsa3072_sha256_leaf.der":"../testdata/cert/chain/secbits/c_rsa3072_sha1_inter.der":"../testdata/cert/chain/secbits/a_rsa2048_sha256_root.der":112:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+SDV_X509_SECBITS_COMBINED_TC001: C_128: secbits=128, Root:112<128 FAIL (key too weak), Inter:128>=128 PASS, 63<128 FAIL
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/c_rsa3072_sha256_leaf.der":"../testdata/cert/chain/secbits/c_rsa3072_sha1_inter.der":"../testdata/cert/chain/secbits/a_rsa2048_sha256_root.der":128:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+
+SDV_X509_SECBITS_COMBINED_TC001: D_112: secbits=112, Root:192>=112 PASS, Inter:128>=112 PASS, Leaf:128>=112 PASS, 112>=112 PASS
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/d_rsa3072_sha224_leaf.der":"../testdata/cert/chain/secbits/d_rsa3072_sha256_inter.der":"../testdata/cert/chain/secbits/b_ecp384_sha384_root.der":112:HITLS_PKI_SUCCESS
+
+SDV_X509_SECBITS_COMBINED_TC001: D_128: secbits=128, Root:192>=128 PASS, Inter:128>=128 PASS, Leaf:128>=128 PASS, 112<128 FAIL (hash too weak)
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/d_rsa3072_sha224_leaf.der":"../testdata/cert/chain/secbits/d_rsa3072_sha256_inter.der":"../testdata/cert/chain/secbits/b_ecp384_sha384_root.der":128:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+SDV_X509_SECBITS_COMBINED_TC001: D_192: secbits=192, Root:192>=192 PASS, Inter:128<192 FAIL, Leaf:128<192 FAIL
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/d_rsa3072_sha224_leaf.der":"../testdata/cert/chain/secbits/d_rsa3072_sha256_inter.der":"../testdata/cert/chain/secbits/b_ecp384_sha384_root.der":192:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+
+SDV_X509_SECBITS_COMBINED_TC001: E_63: secbits=63, Root:128>=63 PASS, Inter:all PASS, Leaf:all PASS
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/e_ecp256_sha256_leaf.der":"../testdata/cert/chain/secbits/e_rsa3072_sha256_inter.der":"../testdata/cert/chain/secbits/e_rsa3072_sha1_root.der":63:HITLS_PKI_SUCCESS
+
+SDV_X509_SECBITS_COMBINED_TC001: E_128: secbits=128, Root:128>=128 PASS (hash SKIPPED for root), Inter:all PASS, Leaf:all PASS
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/e_ecp256_sha256_leaf.der":"../testdata/cert/chain/secbits/e_rsa3072_sha256_inter.der":"../testdata/cert/chain/secbits/e_rsa3072_sha1_root.der":128:HITLS_PKI_SUCCESS
+
+SDV_X509_SECBITS_COMBINED_TC001: E_192: secbits=192, Root:128<192 FAIL, Inter:128<192 FAIL, Leaf:128<192 FAIL
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/e_ecp256_sha256_leaf.der":"../testdata/cert/chain/secbits/e_rsa3072_sha256_inter.der":"../testdata/cert/chain/secbits/e_rsa3072_sha1_root.der":192:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+
+SDV_X509_SECBITS_COMBINED_TC001: F_128: secbits=128, Root:128>=128 PASS, Inter:128>=128 PASS, Leaf:128>=128 PASS
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/f_rsapss_sha256_leaf.der":"../testdata/cert/chain/secbits/f_rsa3072_sha384_inter.der":"../testdata/cert/chain/secbits/f_rsa3072_sha256_root.der":128:HITLS_PKI_SUCCESS
+
+SDV_X509_SECBITS_COMBINED_TC001: F_192: secbits=192, Root:128<192 FAIL, Inter:128<192 FAIL, Leaf:128<192 FAIL
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/f_rsapss_sha256_leaf.der":"../testdata/cert/chain/secbits/f_rsa3072_sha384_inter.der":"../testdata/cert/chain/secbits/f_rsa3072_sha256_root.der":192:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+SDV_X509_SECBITS_COMBINED_TC001: F_256: secbits=256, Root:128<256 FAIL, Inter:128<256 FAIL, Leaf:128<256 FAIL
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/f_rsapss_sha256_leaf.der":"../testdata/cert/chain/secbits/f_rsa3072_sha384_inter.der":"../testdata/cert/chain/secbits/f_rsa3072_sha256_root.der":256:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+SDV_X509_SECBITS_COMBINED_TC001: G_128: secbits=128, Root:256>=128 PASS, Inter:192>=128 PASS, Leaf:128>=128 PASS
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/g_slhdsa128s_leaf.der":"../testdata/cert/chain/secbits/g_slhdsa192s_inter.der":"../testdata/cert/chain/secbits/g_slhdsa256s_root.der":128:HITLS_PKI_SUCCESS
+
+SDV_X509_SECBITS_COMBINED_TC001: G_192: secbits=192, Root:256>=192 PASS, Inter:192>=192 PASS, Leaf:128<192 FAIL
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/g_slhdsa128s_leaf.der":"../testdata/cert/chain/secbits/g_slhdsa192s_inter.der":"../testdata/cert/chain/secbits/g_slhdsa256s_root.der":192:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+SDV_X509_SECBITS_COMBINED_TC001: G_256: secbits=256, Root:256>=256 PASS, Inter:192<256 FAIL, Leaf:128<256 FAIL
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/g_slhdsa128s_leaf.der":"../testdata/cert/chain/secbits/g_slhdsa192s_inter.der":"../testdata/cert/chain/secbits/g_slhdsa256s_root.der":256:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+
+SDV_X509_SECBITS_COMBINED_TC001: H_128: secbits=128, Root:256>=128 PASS, Inter:192>=128 PASS, Leaf:128>=128 PASS
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/h_mldsa44_leaf.der":"../testdata/cert/chain/secbits/h_mldsa65_inter.der":"../testdata/cert/chain/secbits/h_mldsa87_root.der":128:HITLS_PKI_SUCCESS
+
+SDV_X509_SECBITS_COMBINED_TC001: H_192: secbits=192, Root:256>=192 PASS, Inter:192>=192 PASS, Leaf:128<192 FAIL
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/h_mldsa44_leaf.der":"../testdata/cert/chain/secbits/h_mldsa65_inter.der":"../testdata/cert/chain/secbits/h_mldsa87_root.der":192:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+SDV_X509_SECBITS_COMBINED_TC001: H_256: secbits=256, Root:256>=256 PASS, Inter:192<256 FAIL, Leaf:128<256 FAIL
+SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/h_mldsa44_leaf.der":"../testdata/cert/chain/secbits/h_mldsa65_inter.der":"../testdata/cert/chain/secbits/h_mldsa87_root.der":256:HITLS_X509_ERR_VFY_CHECK_SECBITS
