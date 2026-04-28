@@ -482,6 +482,7 @@ int32_t CRYPT_HYBRID_KEM_Decaps(const CRYPT_HybridKemCtx *ctx, uint8_t *cipher, 
     BSL_Param kemCT = { 0 };
     BSL_Param pubKey[2] = {{CRYPT_PARAM_EC_PUBKEY, BSL_PARAM_TYPE_OCTETS, NULL, 0, 0}, BSL_PARAM_END};
     RETURN_RET_IF_ERR(CRYPT_HybridGetCipherTextLen(ctx, &pubKey[0].valueLen, &kemCT.valueLen), ret);
+    RETURN_RET_IF(cipherLen != (pubKey[0].valueLen + kemCT.valueLen), CRYPT_INVALID_ARG);
     RETURN_RET_IF_ERR(CRYPT_HybridGetKeyPtr(ctx, cipher, cipherLen, pubKey, &kemCT), ret);
 
     void *tmpKey = ctx->pKeyMethod->dupCtx(ctx->pkeyCtx);

@@ -86,45 +86,24 @@ static int32_t ComputeSyndrome(const uint8_t *received, const GFPolynomial *g, c
     return CRYPT_SUCCESS;
 }
 
-// Initialize BM state: C(x)=1, B(x)=1, L=0, m=1, b=1
-static void BmInitState(GFPolynomial *polyC, GFPolynomial *polyB, int32_t *lenLFSR, int32_t *m, GFElement *b)
+static void BmInitState(GFPolynomial *polyC, GFPolynomial *polyB, int32_t *lenLFSR, GFElement *b)
 {
-    PolynomialSetCoeff(polyC, 0, 1); // Constant coefficient 1 used to initialize the error-locator polynomial C(x)=1
-    PolynomialSetCoeff(polyB, 0, 1);
-    *lenLFSR = 0; // Initial length of the LFSR register before any update step
-    // Initial shift offset and discrepancy denominator values for Berlekamp–Massey
-    *m = 1;
+    PolynomialSetCoeff(polyC, 0, 1);
+    PolynomialSetCoeff(polyB, 1, 1);
+    *lenLFSR = 0;
     *b = 1;
 }
 
 // Compute discrepancy d_N = s_N + Σ C_i * s_{N-i}
 static GFElement BmComputeDiscrepancy(const GFElement *syndrome, const GFPolynomial *polyC, const int32_t lenN,
-                                      const int32_t lenLFSR)
+                                      const int32_t t)
 {
-    GFElement d = syndrome[lenN];
-    for (int32_t i = 1; i <= lenLFSR && (lenN - i) >= 0; i++) {
-        if (i <= polyC->degree && polyC->coeffs[i] != 0) {
-            d = GFAddtion(d, GFMultiplication(polyC->coeffs[i], syndrome[lenN - i]));
-        }
+    GFElement d = 0;
+    int32_t loopLen = (t <= lenN) ? t : lenN;
+    for (int32_t i = 0; i <= loopLen; i++) {
+        d = GFAddtion(d, GFMultiplication(polyC->coeffs[i], syndrome[lenN - i]));
     }
     return d;
-}
-
-// C(x) = C(x) - (d/b) * x^m * B(x)
-static void BmUpdateConnection(GFPolynomial *polyC, const GFPolynomial *polyB, GFElement d, GFElement b,
-                               const int32_t m)
-{
-    if (b == 0) {
-        return; // Guard against division by zero when discrepancy denominator is zero
-    }
-    GFElement corr = GFDivision(d, b);
-    for (int32_t i = 0; i <= polyB->degree; i++) {
-        if (polyB->coeffs[i] != 0 && (i + m) <= polyC->maxDegree) {
-            GFElement term = GFMultiplication(corr, polyB->coeffs[i]);
-            GFElement cur = (i + m <= polyC->degree) ? polyC->coeffs[i + m] : 0;
-            PolynomialSetCoeff(polyC, i + m, GFAddtion(cur, term));
-        }
-    }
 }
 
 // Copy sigma result out: sigma[i] = C[t-i]
@@ -158,29 +137,31 @@ static int32_t BerlekampMassey(const GFElement *syndrome, GFPolynomial *sigma, c
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-
-    int32_t lenLFSR, m;
+    int32_t lenLFSR;
     GFElement b;
-    BmInitState(polyC, polyB, &lenLFSR, &m, &b);
-
+    BmInitState(polyC, polyB, &lenLFSR, &b);
     for (int32_t lenN = 0; lenN < 2 * params->t; lenN++) {
-        GFElement d = BmComputeDiscrepancy(syndrome, polyC, lenN, lenLFSR);
-
-        if (d == 0) { // Zero-discrepancy sentinel; triggers simple increment of shift counter
-            m++;
-        } else {
-            PolynomialCopy(polyT, polyC);
-            BmUpdateConnection(polyC, polyB, d, b, m);
-
-            if (2 * lenLFSR <= lenN) {
-                lenLFSR = lenN + 1 - lenLFSR;
-                PolynomialCopy(polyB, polyT);
-                b = d;
-                m = 1;
-            } else {
-                m++;
-            }
+        GFElement d = BmComputeDiscrepancy(syndrome, polyC, lenN, params->t);
+        uint16_t dMask = ((d - 1) >> 15 ) - 1;
+        uint16_t nMask = ((uint16_t)(lenN - (lenLFSR << 1)) >> 15) - 1;
+        nMask &= dMask;
+        for (int32_t i = 0; i <= params->t; i++) {
+            polyT->coeffs[i] = polyC->coeffs[i];
         }
+        GFElement corr = GFDivision(d, b);
+        for (int32_t i = 0; i <= params->t; i++) {
+            GFElement term = GFMultiplication(corr, polyB->coeffs[i]);
+            polyC->coeffs[i] ^= (term & dMask);
+        }
+        lenLFSR = (((~nMask) & lenLFSR) | (nMask & (lenN + 1 - lenLFSR)));
+        for (int32_t i = 0; i <= params->t; i++) {
+            polyB->coeffs[i] = (((~nMask) & polyB->coeffs[i]) | (nMask & polyT->coeffs[i]));
+        }
+        b = (((~nMask) & b) | (nMask & d));
+        for (int32_t i = params->t; i >= 1; --i) {
+            polyB->coeffs[i] = polyB->coeffs[i - 1];
+        }
+        polyB->coeffs[0] = 0;
     }
     BmExportSigma(polyC, sigma, params->t);
     PolynomialFree(polyC);

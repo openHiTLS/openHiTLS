@@ -137,7 +137,7 @@ static int32_t FrodoKemEncapsInternal(const uint8_t *mu, const FrodoKemParams *p
     ret = FrodoShake(seedk, seedkLen, in, inLen);
     BSL_SAL_ClearFree(in, inLen);
     if (ret != CRYPT_SUCCESS) {
-        BSL_SAL_FREE(seedk);
+        BSL_SAL_ClearFree(seedk, seedkLen);
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
