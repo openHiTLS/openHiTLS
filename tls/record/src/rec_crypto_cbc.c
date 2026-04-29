@@ -406,7 +406,12 @@ static int32_t CbcDecrypt(TLS_Ctx *ctx, RecConnState *state, const REC_TextInput
 static int32_t RecConnCopyIV(TLS_Ctx *ctx, const RecConnState *state, uint8_t *cipherText, uint32_t cipherTextLen)
 {
     if (!state->suiteInfo->isExportIV) {
-        SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), state->suiteInfo->iv, state->suiteInfo->fixedIvLength);
+        int32_t ret = SAL_CRYPT_Rand(LIBCTX_FROM_CTX(ctx), state->suiteInfo->iv, state->suiteInfo->fixedIvLength);
+        if (ret != HITLS_SUCCESS) {
+            BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15847, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+                "Record CBC encrypt error: generate iv fail.", 0, 0, 0, 0);
+            return ret;
+        }
     }
     /* The IV set by the user can only be used once */
     state->suiteInfo->isExportIV = 0;

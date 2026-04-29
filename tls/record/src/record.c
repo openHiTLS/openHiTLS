@@ -519,6 +519,7 @@ int32_t REC_TLS13InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *p
     /* 1.Generate a secret */
     int32_t ret = RecTLS13ConnKeyBlockGen(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx), param, &suitInfo);
     if (ret != HITLS_SUCCESS) {
+        BSL_SAL_CleanseData((void *)&suitInfo, sizeof(RecConnSuitInfo));
         RecConnStateFree(state);
         return ret;
     }
@@ -532,6 +533,7 @@ int32_t REC_TLS13InitPendingState(const TLS_Ctx *ctx, const REC_SecParameters *p
     }
 
     ret = RecConnStateSetCipherInfo(state, &suitInfo);
+    BSL_SAL_CleanseData((void *)&suitInfo, sizeof(RecConnSuitInfo));
     if (ret != HITLS_SUCCESS) {
         RecConnStateFree(state);
         return ret;
