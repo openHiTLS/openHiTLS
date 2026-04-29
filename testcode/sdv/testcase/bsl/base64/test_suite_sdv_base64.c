@@ -280,6 +280,7 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_BSL_BASE64_FUNC_TC002(void)
 {
+    /* The first six cases cover valid final blocks: xxxx, xxx=, and xx==. */
     for (int32_t i = 0; i < 6; i++) {
         const uint8_t *srcBuf = testData[i].src;
         const uint32_t srcLen = testData[i].srcLen;
@@ -902,5 +903,31 @@ void SDV_BSL_BASE64_FUNC_TC012(char *src, int expectRes)
     ASSERT_EQ(BSL_BASE64_Decode(src, srcBufLen, dst, &dstBufLen), (int32_t)expectRes);
 EXIT:
     BSL_SAL_Free(dst);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_BASE64_FUNC_TC013(void)
+{
+    const uint8_t src = 0;
+    const char invalid[] = "A";
+    char enc[4] = {0};
+    uint8_t dec[4] = {0};
+    uint32_t len = UINT32_MAX;
+    BSL_Base64Ctx *ctx = BSL_BASE64_CtxNew();
+
+    /* Abnormal case: the encoded length of UINT32_MAX input overflows uint32_t. */
+    ASSERT_EQ(BSL_BASE64_Encode(&src, UINT32_MAX, enc, &len), BSL_BASE64_BUF_NOT_ENOUGH);
+    ASSERT_EQ(enc[0], 0);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(BSL_BASE64_DecodeInit(ctx), BSL_SUCCESS);
+    /* Abnormal case: one remaining base64 character is not a valid final block. */
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeUpdate(ctx, invalid, sizeof(invalid) - 1, dec, &len), BSL_SUCCESS);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeFinal(ctx, dec, &len), BSL_BASE64_INVALID_ENCODE);
+    ASSERT_EQ(len, 0);
+EXIT:
+    BSL_BASE64_CtxFree(ctx);
 }
 /* END_CASE */
