@@ -76,10 +76,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DOPENHITLS_VERSION_S='\"${OPENHITLS_VERSION
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DOPENHITLS_VERSION_I=${OPENHITLS_VERSION_I}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCMVP_INTEGRITYKEY='\"${CMVP_INTEGRITYKEY}\"'")
 # Define common include directories for all targets
-include_directories(
-    ${PROJECT_SOURCE_DIR}/config/macro_config
-    ${PROJECT_SOURCE_DIR}/platform/Secure_C/include
-)
+include_directories(${PROJECT_SOURCE_DIR}/config/macro_config)
 
 # Build all targets
 include(hitls_build_targets)

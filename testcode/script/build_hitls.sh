@@ -72,7 +72,6 @@ usage()
     printf "%-50s %-30s\n" "Build openHiTLS Code With No Sctp"         "sh build_hitls.sh no_sctp"
     printf "%-50s %-30s\n" "Build openHiTLS Code With Bits"            "sh build_hitls.sh bits=xxx"
     printf "%-50s %-30s\n" "Build openHiTLS Code With Lib Type"        "sh build_hitls.sh shared"
-    printf "%-50s %-30s\n" "Build openHiTLS Code With Lib Fuzzer"      "sh build_hitls.sh libfuzzer"
     printf "%-50s %-30s\n" "Build openHiTLS Code With command line"    "sh build_hitls.sh exe"
     printf "%-50s %-30s\n" "Build openHiTLS Code With Iso Provider"     "sh build_hitls.sh iso"
     printf "%-50s %-30s\n" "Build openHiTLS Code With Help"            "sh build_hitls.sh help"
@@ -276,12 +275,6 @@ parse_option()
                 ;;
             "shared")
                 LIB_TYPE="shared"
-                ;;
-            "libfuzzer")
-                add_options="${add_options} -fsanitize=fuzzer-no-link -fsanitize=signed-integer-overflow -fsanitize-coverage=trace-cmp"
-                del_options="${del_options} -Wtrampolines -O2 -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fomit-frame-pointer -fdump-rtl-expand"
-                export ASAN_OPTIONS=detect_stack_use_after_return=1:strict_string_checks=1:detect_leaks=1:log_path=asan.log
-                export CC=clang
                 ;;
             "exe") 
                 executes="ON"

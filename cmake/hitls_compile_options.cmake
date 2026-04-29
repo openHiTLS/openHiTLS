@@ -13,6 +13,7 @@
 
 
 include_guard(GLOBAL)
+include(CheckCCompilerFlag)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -50,7 +51,7 @@ endif()
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     list(APPEND _hitls_compile_options_list
         # CC_WARN_FLAGS
-        -Wdate-time -Wno-stringop-overread
+        -Wdate-time
         # CC_SEC_FLAGS
         --param=ssp-buffer-size=4
     )
@@ -60,6 +61,26 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "^(Clang|AppleClang)$")
         # CC_SEC_FLAGS
         -Wno-unused-command-line-argument
     )
+endif()
+
+# -fstack-clash-protection: prevents stack-clash exploits by inserting stack probes
+# that ensure the guard page is always touched before a large stack allocation,
+# closing the window where stack and heap can silently overlap.
+# Available in GCC >= 8 and Clang >= 11.
+check_c_compiler_flag(-fstack-clash-protection _HAS_STACK_CLASH_PROTECTION)
+if(_HAS_STACK_CLASH_PROTECTION)
+    list(APPEND _hitls_compile_options_list -fstack-clash-protection)
+endif()
+
+# -fcf-protection=full: enables Intel CET (Control-flow Enforcement Technology).
+# Provides hardware IBT (indirect branch tracking) and shadow stack (SHSTK) to
+# defeat ROP/JOP attacks. Only available and meaningful on x86/x86_64 targets;
+# the processor check avoids breakage on ARM, RISC-V, and other cross-compile targets.
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|x86|i[3-6]86|amd64")
+    check_c_compiler_flag(-fcf-protection=full _HAS_CF_PROTECTION)
+    if(_HAS_CF_PROTECTION)
+        list(APPEND _hitls_compile_options_list -fcf-protection=full)
+    endif()
 endif()
 
 # Linker flags based on detected linker
@@ -72,6 +93,7 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 if(_hitls_linker_version MATCHES "GNU gold|GNU ld|GNU Binutils")
+    list(APPEND _hitls_exe_link_flags_list -pie)
     list(APPEND _hitls_public_link_flags_list
         -Wl,-z,noexecstack
         -Wl,-z,relro
@@ -85,8 +107,11 @@ if(_hitls_linker_version MATCHES "GNU gold|GNU ld|GNU Binutils")
         )
     endif()
 elseif(_hitls_linker_version MATCHES "ld64" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # macOS 64-bit executables are always PIE by default (enforced by ld64 since macOS 10.7);
+    # explicitly passing -pie is redundant and ld64 may warn about it, so it is omitted here.
     list(APPEND _hitls_public_link_flags_list -Wl,-dead_strip)
 elseif(_hitls_linker_version MATCHES "LLD")
+    list(APPEND _hitls_exe_link_flags_list -pie)
     list(APPEND _hitls_public_link_flags_list
         -Wl,-z,noexecstack
         -Wl,-z,relro
