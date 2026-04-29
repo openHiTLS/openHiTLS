@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CMVP_ISO19790) || defined(HITLS_CRYPTO_CMVP_FIPS)
+#if defined(HITLS_CRYPTO_CMVP_ISO19790)
 
 #include <string.h>
 #include "crypt_cmvp_selftest.h"
@@ -142,4 +142,4 @@ bool CRYPT_CMVP_SelftestProviderChacha20poly1305(void *libCtx, const char *attrN
     return CRYPT_CMVP_SelftestChacha20poly1305Internal(libCtx, attrName);
 }
 
-#endif /* HITLS_CRYPTO_CMVP_ISO19790 || HITLS_CRYPTO_CMVP_FIPS */
+#endif /* HITLS_CRYPTO_CMVP_ISO19790 */

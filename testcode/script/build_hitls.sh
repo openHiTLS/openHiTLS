@@ -305,15 +305,6 @@ parse_option()
                     build_crypto_module_provider=true
                 fi
                 ;;
-            "fips")
-                if [[ "$(uname)" = "Darwin" ]]; then
-                    echo "Warning: FIPS provider build is not supported on macOS, due to sw-entropy skipping..."
-                else
-                    add_options="${add_options} -DHITLS_CRYPTO_CMVP_FIPS"
-                    libname="libhitls_fips${SHARED_LIB_EXT}"
-                    build_crypto_module_provider=true
-                fi
-                ;;
             "sm")
                 if [[ "$(uname)" = "Darwin" ]]; then
                     echo "Warning: SM provider build is not supported on macOS, due to sw-entropy skipping..."
@@ -343,7 +334,7 @@ ensure_securec_ready
 # Always build main library
 build_hitls_code
 
-# Build CMVP provider if requested (iso/fips/sm)
+# Build CMVP provider if requested (iso/sm)
 if [[ $build_crypto_module_provider == true ]]; then
     build_hitls_provider
 fi

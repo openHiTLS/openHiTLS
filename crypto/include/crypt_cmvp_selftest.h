@@ -17,7 +17,7 @@
 #define CRYPT_CMVP_SELFTEST_H
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CMVP_ISO19790) || defined(HITLS_CRYPTO_CMVP_SM) || defined(HITLS_CRYPTO_CMVP_FIPS)
+#if defined(HITLS_CRYPTO_CMVP_ISO19790) || defined(HITLS_CRYPTO_CMVP_SM)
 
 #include <stdint.h>
 #include "crypt_cmvp.h"
@@ -121,5 +121,5 @@ int32_t CRYPT_CMVP_RandomnessTest(const uint8_t *data, const uint32_t len);
 }
 #endif /* __cplusplus */
 
-#endif /* HITLS_CRYPTO_CMVP_ISO19790 || HITLS_CRYPTO_CMVP_SM || HITLS_CRYPTO_CMVP_FIPS */
+#endif /* HITLS_CRYPTO_CMVP_ISO19790 || HITLS_CRYPTO_CMVP_SM */
 #endif /* CRYPT_CMVP_SELFTEST_H */

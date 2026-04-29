@@ -915,6 +915,77 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CRYPT_EAL_SHA256_MB_API_TC003
+ * @title  CRYPT_EAL_MdMB* state validation test.
+ * @precon nan
+ * @brief
+ *    1.Call CRYPT_EAL_MdMBUpdate/Final before Init, expected result 1.
+ *    2.Call CRYPT_EAL_MdMBUpdate/Final in invalid states, expected result 2.
+ *    3.Call CRYPT_EAL_MdMBUpdate with zero length in valid state, expected result 3.
+ *    4.Call CRYPT_EAL_MdMBInit again after Final, expected result 4.
+ * @expect
+ *    1-2.Return CRYPT_EAL_ERR_STATE.
+ *    3.Return CRYPT_SUCCESS.
+ *    4.The context can be reused after Init.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_SHA256_MB_API_TC003(void)
+{
+#if !defined(HITLS_CRYPTO_SHA2_MB) || !defined(HITLS_CRYPTO_MD_MB)
+    SKIP_TEST();
+#else
+    TestMemInit();
+
+    CRYPT_EAL_MdCtx *ctx = CRYPT_EAL_MdMBNewCtx(NULL, CRYPT_MD_SHA256_MB, 2);
+    ASSERT_TRUE(ctx != NULL);
+
+    uint8_t in1[1] = {0x01};
+    uint8_t in2[1] = {0x02};
+    const uint8_t *dataArr[2] = {in1, in2};
+    uint32_t nbytesArr[2] = {1, 1};
+    uint8_t dgst1[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t dgst2[CRYPT_SHA2_256_DIGESTSIZE];
+    uint8_t *dgstArr[2] = {dgst1, dgst2};
+    uint32_t outlen = CRYPT_SHA2_256_DIGESTSIZE;
+
+    ASSERT_EQ(CRYPT_EAL_MdMBUpdate(ctx, dataArr, nbytesArr, 2), CRYPT_EAL_ERR_STATE);
+    ASSERT_EQ(CRYPT_EAL_MdMBFinal(ctx, dgstArr, &outlen, 2), CRYPT_EAL_ERR_STATE);
+
+    ctx->state = CRYPT_MD_STATE_FINAL;
+    ASSERT_EQ(CRYPT_EAL_MdMBUpdate(ctx, dataArr, nbytesArr, 2), CRYPT_EAL_ERR_STATE);
+    outlen = CRYPT_SHA2_256_DIGESTSIZE;
+    ASSERT_EQ(CRYPT_EAL_MdMBFinal(ctx, dgstArr, &outlen, 2), CRYPT_EAL_ERR_STATE);
+
+    ctx->state = CRYPT_MD_STATE_SQUEEZE;
+    ASSERT_EQ(CRYPT_EAL_MdMBUpdate(ctx, dataArr, nbytesArr, 2), CRYPT_EAL_ERR_STATE);
+    outlen = CRYPT_SHA2_256_DIGESTSIZE;
+    ASSERT_EQ(CRYPT_EAL_MdMBFinal(ctx, dgstArr, &outlen, 2), CRYPT_EAL_ERR_STATE);
+
+    ctx->state = CRYPT_MD_STATE_INIT;
+    uint32_t zeroNbytesArr[2] = {0, 0};
+    ASSERT_EQ(CRYPT_EAL_MdMBUpdate(ctx, dataArr, zeroNbytesArr, 2), CRYPT_SUCCESS);
+
+#if defined(__aarch64__) && defined(HITLS_CRYPTO_SHA2_ASM)
+    ASSERT_EQ(CRYPT_EAL_MdMBInit(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdMBUpdate(ctx, dataArr, nbytesArr, 2), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdMBFinal(ctx, dgstArr, &outlen, 2), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_MdMBUpdate(ctx, dataArr, nbytesArr, 2), CRYPT_EAL_ERR_STATE);
+    outlen = CRYPT_SHA2_256_DIGESTSIZE;
+    ASSERT_EQ(CRYPT_EAL_MdMBFinal(ctx, dgstArr, &outlen, 2), CRYPT_EAL_ERR_STATE);
+
+    ASSERT_EQ(CRYPT_EAL_MdMBInit(ctx), CRYPT_SUCCESS);
+    outlen = CRYPT_SHA2_256_DIGESTSIZE;
+    ASSERT_EQ(CRYPT_EAL_MdMBFinal(ctx, dgstArr, &outlen, 2), CRYPT_SUCCESS);
+#endif
+
+EXIT:
+    CRYPT_EAL_MdMBFreeCtx(ctx);
+#endif
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPT_EAL_SHA256_MB_FUNC_TC001
  * @title  CRYPT_EAL_MdMB* Init/Update/Final workflow test.
  * @precon nan

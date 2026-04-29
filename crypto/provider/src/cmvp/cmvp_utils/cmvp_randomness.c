@@ -14,7 +14,7 @@
  */
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CMVP_SM) || defined(HITLS_CRYPTO_CMVP_FIPS)
+#if defined(HITLS_CRYPTO_CMVP_SM)
 
 #include <math.h>
 #include <float.h>
@@ -197,4 +197,4 @@ int32_t CRYPT_CMVP_RandomnessTest(const uint8_t *data, const uint32_t len)
     return ret;
 }
 
-#endif /* HITLS_CRYPTO_CMVP_SM || HITLS_CRYPTO_CMVP_FIPS */
+#endif /* HITLS_CRYPTO_CMVP_SM */

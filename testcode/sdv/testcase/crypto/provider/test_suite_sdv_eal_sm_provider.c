@@ -50,17 +50,23 @@
 /* END_HEADER */
 
 #ifdef HITLS_CRYPTO_CMVP_SM_PURE_C
+#ifndef HITLS_CRYPTO_CMVP_SM
 #define HITLS_CRYPTO_CMVP_SM
+#endif
 #define HITLS_SM_PROVIDER_PATH "../../output/CMVP/C/lib"
 #endif
 
 #ifdef HITLS_CRYPTO_CMVP_SM_ARMV8_LE
+#ifndef HITLS_CRYPTO_CMVP_SM
 #define HITLS_CRYPTO_CMVP_SM
+#endif
 #define HITLS_SM_PROVIDER_PATH "../../output/CMVP/armv8_le/lib"
 #endif
 
 #ifdef HITLS_CRYPTO_CMVP_SM_X86_64
+#ifndef HITLS_CRYPTO_CMVP_SM
 #define HITLS_CRYPTO_CMVP_SM
+#endif
 #define HITLS_SM_PROVIDER_PATH "../../output/CMVP/x86_64/lib"
 #endif
 

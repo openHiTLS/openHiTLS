@@ -17,7 +17,7 @@
 #define CMVP_INTEGRITY_HMAC_H
 
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CMVP_ISO19790) || defined(HITLS_CRYPTO_CMVP_SM) || defined(HITLS_CRYPTO_CMVP_FIPS)
+#if defined(HITLS_CRYPTO_CMVP_ISO19790) || defined(HITLS_CRYPTO_CMVP_SM)
 
 #include <stdbool.h>
 #include "crypt_algid.h"
@@ -33,5 +33,5 @@ bool CMVP_IntegrityHmac(void *libCtx, const char *attrName, const char *libPath,
 #ifdef __cplusplus
 }
 #endif // __cplusplus
-#endif /* HITLS_CRYPTO_CMVP_ISO19790 || HITLS_CRYPTO_CMVP_SM || HITLS_CRYPTO_CMVP_FIPS */
+#endif /* HITLS_CRYPTO_CMVP_ISO19790 || HITLS_CRYPTO_CMVP_SM */
 #endif /* CMVP_INTEGRITY_HMAC_H */

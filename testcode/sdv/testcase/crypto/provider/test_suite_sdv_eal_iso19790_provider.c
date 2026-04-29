@@ -51,17 +51,23 @@
 /* END_HEADER */
 
 #ifdef HITLS_CRYPTO_CMVP_ISO19790_PURE_C
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
 #define HITLS_CRYPTO_CMVP_ISO19790
+#endif
 #define HITLS_ISO_PROVIDER_PATH "../../output/CMVP/C/lib"
 #endif
 
 #ifdef HITLS_CRYPTO_CMVP_ISO19790_ARMV8_LE
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
 #define HITLS_CRYPTO_CMVP_ISO19790
+#endif
 #define HITLS_ISO_PROVIDER_PATH "../../output/CMVP/armv8_le/lib"
 #endif
 
 #ifdef HITLS_CRYPTO_CMVP_ISO19790_X86_64
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
 #define HITLS_CRYPTO_CMVP_ISO19790
+#endif
 #define HITLS_ISO_PROVIDER_PATH "../../output/CMVP/x86_64/lib"
 #endif
 
@@ -1232,12 +1238,41 @@ void SDV_ISO19790_PROVIDER_RSA_PARAM_CHECK_TC002()
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         BSL_PARAM_END};
 
+    BSL_Param invalidPssParam[3] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, NULL, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        BSL_PARAM_END};
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PSS, invalidPssParam, 0),
+        CRYPT_CMVP_ERR_PARAM_CHECK);
+    invalidPssParam[0].value = &mdId;
+    invalidPssParam[1].value = NULL;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PSS, invalidPssParam, 0),
+        CRYPT_CMVP_ERR_PARAM_CHECK);
+    invalidPssParam[1].value = &mdId;
+    invalidPssParam[0].valueLen = sizeof(mdId) - 1;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PSS, invalidPssParam, 0),
+        CRYPT_CMVP_ERR_PARAM_CHECK);
+
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
 
     BSL_Param oaep[3] = {{CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         BSL_PARAM_END
     };
+    BSL_Param invalidOaep[3] = {{CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, NULL, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_RSAES_OAEP, invalidOaep, 0),
+        CRYPT_CMVP_ERR_PARAM_CHECK);
+    invalidOaep[0].value = &mdId;
+    invalidOaep[1].value = NULL;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_RSAES_OAEP, invalidOaep, 0),
+        CRYPT_CMVP_ERR_PARAM_CHECK);
+    invalidOaep[1].value = &mdId;
+    invalidOaep[0].valueLen = sizeof(mdId) - 1;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_RSAES_OAEP, invalidOaep, 0),
+        CRYPT_CMVP_ERR_PARAM_CHECK);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_RSAES_OAEP, oaep, 0), CRYPT_SUCCESS);
 
 EXIT:
