@@ -27,6 +27,9 @@
 #include "hs_extensions.h"
 #include "parse_common.h"
 #include "parse_extensions.h"
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+#include "custom_extensions.h"
+#endif
 
 // Parse an empty extended message.
 int32_t ParseEmptyExtension(TLS_Ctx *ctx, uint16_t extMsgType, uint32_t extMsgLen, bool *haveExtension)
@@ -283,7 +286,6 @@ int32_t CheckForDuplicateExtension(ParsePacket *pkt, uint16_t *extMsgType, uint3
     *pkt->bufOffset += HS_EX_HEADER_LEN;
 
     *extensionId = HS_GetExtensionTypeId(*extMsgType);
-    // can not process duplicated unknown ext, unknown ext is verified elsewhere
     if (((extensionTypeMask & (1ULL << *extensionId)) != 0) && *extensionId != HS_EX_TYPE_ID_UNRECOGNIZED) {
         BSL_ERR_PUSH_ERROR(HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17328, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -294,3 +296,27 @@ int32_t CheckForDuplicateExtension(ParsePacket *pkt, uint16_t *extMsgType, uint3
 
     return HITLS_SUCCESS;
 }
+
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+int32_t CheckForDuplicateCustomExtension(TLS_Ctx *ctx, uint16_t extMsgType, uint32_t context,
+    uint32_t *customExtSeenMask, bool *isCustomExt)
+{
+    uint32_t customExtIdx = 0;
+    if (isCustomExt != NULL) {
+        *isCustomExt = false;
+    }
+    if (FindCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType, context, &customExtIdx) == NULL) {
+        return HITLS_SUCCESS;
+    }
+    if (isCustomExt != NULL) {
+        *isCustomExt = true;
+    }
+
+    if ((*customExtSeenMask & (1U << customExtIdx)) != 0) {
+        return ParseDupExtProcess(ctx, BINLOG_ID17328, BINGLOG_STR("custom extension"));
+    }
+
+    *customExtSeenMask |= 1U << customExtIdx;
+    return HITLS_SUCCESS;
+}
+#endif

@@ -377,6 +377,9 @@ int32_t ParseServerExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
 {
     /* Initialize the message parsing length */
     uint32_t bufOffset = 0u;
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+    uint32_t customExtSeenMask = 0;
+#endif
     ParsePacket pkt = {.ctx = ctx, .buf = buf, .bufLen = bufLen, .bufOffset = &bufOffset};
 
     /* Parse the extended message from server */
@@ -388,6 +391,16 @@ int32_t ParseServerExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+        if (extensionId == HS_EX_TYPE_ID_UNRECOGNIZED) {
+            ret = CheckForDuplicateCustomExtension(ctx, extMsgType,
+                HITLS_EX_TYPE_TLS1_2_SERVER_HELLO | HITLS_EX_TYPE_TLS1_3_SERVER_HELLO |
+                HITLS_EX_TYPE_HELLO_RETRY_REQUEST, &customExtSeenMask, NULL);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+        }
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
         if (extensionId != HS_EX_TYPE_ID_UNRECOGNIZED
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
             || !IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType,

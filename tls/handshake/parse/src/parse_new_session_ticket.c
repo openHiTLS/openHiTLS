@@ -77,6 +77,9 @@ static int32_t ParseNewSessionTicketExtension(TLS_Ctx *ctx, const uint8_t *buf, 
     NewSessionTicketMsg *msg)
 {
     uint32_t bufOffset = 0u;
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+    uint32_t customExtSeenMask = 0;
+#endif
     int32_t ret = HITLS_SUCCESS;
 
     while (bufOffset < bufLen) {
@@ -91,6 +94,15 @@ static int32_t ParseNewSessionTicketExtension(TLS_Ctx *ctx, const uint8_t *buf, 
             return HITLS_PARSE_INVALID_MSG_LEN;
         }
         uint32_t hsExTypeId = HS_GetExtensionTypeId(extMsgType);
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+        if (hsExTypeId == HS_EX_TYPE_ID_UNRECOGNIZED) {
+            ret = CheckForDuplicateCustomExtension(ctx, extMsgType, HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET,
+                &customExtSeenMask, NULL);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+        }
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
         if (hsExTypeId != HS_EX_TYPE_ID_UNRECOGNIZED
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
             || !IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx),

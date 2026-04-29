@@ -41,9 +41,15 @@
 #include "frame_tls.h"
 #include "alert.h"
 #include "frame_link.h"
+#include "parse_extensions.h"
+#include "parse_msg.h"
+#include "conn_init.h"
+
 
 #define CUSTOM_EXTENTIONS_TYPE_1                      0x00001
 #define CUSTOM_EXTENTIONS_TYPE_2                      0x00002
+#define CUSTOM_PARSE_EXT_TYPE_1                       0x1234
+#define CUSTOM_PARSE_EXT_TYPE_2                       0x1235
 
 // Simple add_cb function, allocates buffer with 1 byte length and 1 byte data
 int SimpleAddCb(const struct TlsCtx *ctx, uint16_t extType, uint32_t context, uint8_t **out, uint32_t *outLen,
@@ -512,6 +518,111 @@ void SDV_HITLS_ADD_CUSTOM_EXTENSION_API_TC001(void)
     ASSERT_EQ(tlsConfig->customExts->methsCount, 1);  // Verify the number of extensions does not increase
 
 EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    return;
+}
+/* END_CASE */
+
+/** @
+ * @test  SDV_TLS_PARSE_CLIENT_HELLO_DUP_CUSTOM_EXTENSION_TC001
+ * @title Repeated custom extensions in ClientHello should be rejected
+ * @precon None
+ * @brief
+ * 1. Create a TLS1.3 context and register one custom extension for ClientHello parsing.
+ * 2. Build a ClientHello extension block with the same custom extension type repeated twice.
+ * 3. Parse the extension block and verify duplicate extension is rejected.
+ * @expect
+ * Returns HITLS_PARSE_DUPLICATE_EXTENDED_MSG.
+ @ */
+/* BEGIN_CASE */
+void SDV_TLS_PARSE_CLIENT_HELLO_DUP_CUSTOM_EXTENSION_TC001(void)
+{
+    FRAME_Init();
+    BSL_UIO *uio = NULL;
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_NE(tlsConfig, NULL);
+    ClientHelloMsg msg = {0};
+    uint8_t buf[] = {
+        0x12, 0x34, 0x00, 0x01, 0xAA,
+        0x12, 0x34, 0x00, 0x01, 0xAA
+    };
+    HITLS_CustomExtParams params = {
+        .extType = CUSTOM_PARSE_EXT_TYPE_1,
+        .context = HITLS_EX_TYPE_CLIENT_HELLO,
+        .addCb = NULL,
+        .freeCb = NULL,
+        .addArg = NULL,
+        .parseCb = SimpleParseCb,
+        .parseArg = NULL
+    };
+    
+    ASSERT_EQ(HITLS_CFG_AddCustomExtension(tlsConfig, &params), HITLS_SUCCESS);
+    HITLS_Ctx *ctx = HITLS_New(tlsConfig);
+    ASSERT_NE(ctx, NULL);
+    uio = BSL_UIO_New(BSL_UIO_TcpMethod());
+    HITLS_SetUio(ctx, uio);
+    CONN_Init(ctx);
+    ASSERT_EQ(ParseClientExtension(ctx, buf, sizeof(buf), &msg), HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
+
+EXIT:
+    BSL_UIO_Free(uio);
+    HITLS_Free(ctx);
+    HITLS_CFG_FreeConfig(tlsConfig);
+    return;
+}
+/* END_CASE */
+
+/** @
+ * @test  SDV_TLS_PARSE_NST_DUP_CUSTOM_EXTENSION_TC001
+ * @title Repeated custom extensions in TLS1.3 NewSessionTicket should be rejected
+ * @precon None
+ * @brief
+ * 1. Create a TLS1.3 context and register one custom extension for NewSessionTicket parsing.
+ * 2. Build a NewSessionTicket with the same custom extension repeated twice.
+ * 3. Parse the message and verify duplicate extension is rejected.
+ * @expect
+ * Returns HITLS_PARSE_DUPLICATE_EXTENDED_MSG.
+ @ */
+/* BEGIN_CASE */
+void SDV_TLS_PARSE_NST_DUP_CUSTOM_EXTENSION_TC001(void)
+{
+    FRAME_Init();
+    BSL_UIO *uio = NULL;
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_NE(tlsConfig, NULL);
+    HS_Msg hsMsg = {0};
+    uint8_t buf[] = {
+        0x00, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00, 0x01,
+        0x01, 0xAA,
+        0x00, 0x01, 0xBB,
+        0x00, 0x0A,
+        0x12, 0x35, 0x00, 0x01, 0xAA,
+        0x12, 0x35, 0x00, 0x01, 0xAA
+    };
+    HITLS_CustomExtParams params = {
+        .extType = CUSTOM_PARSE_EXT_TYPE_2,
+        .context = HITLS_EX_TYPE_TLS1_3_NEW_SESSION_TICKET,
+        .addCb = NULL,
+        .freeCb = NULL,
+        .addArg = NULL,
+        .parseCb = SimpleParseCb,
+        .parseArg = NULL
+    };
+    
+    ASSERT_EQ(HITLS_CFG_AddCustomExtension(tlsConfig, &params), HITLS_SUCCESS);
+    HITLS_Ctx *ctx = HITLS_New(tlsConfig);
+    ASSERT_NE(ctx, NULL);
+    uio = BSL_UIO_New(BSL_UIO_TcpMethod());
+    HITLS_SetUio(ctx, uio);
+    CONN_Init(ctx);
+    ctx->negotiatedInfo.version = HITLS_VERSION_TLS13;
+    ASSERT_EQ(ParseNewSessionTicket(ctx, buf, sizeof(buf), &hsMsg), HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
+
+EXIT:
+    BSL_UIO_Free(uio);
+    CleanNewSessionTicket(&hsMsg.body.newSessionTicket);
+    HITLS_Free(ctx);
     HITLS_CFG_FreeConfig(tlsConfig);
     return;
 }
