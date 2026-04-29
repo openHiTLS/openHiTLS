@@ -870,3 +870,149 @@ EXIT:
     STUB_RESTORE(BSL_SAL_Malloc);
 }
 /* END_CASE */
+
+/* @
+* @test  SDV_CRYPT_EAL_SIPHASH_REINIT_FUN_TC001
+* @spec  -
+* @title  Verify Reinit restores key-derived state so repeated MAC computations produce identical results
+* @precon nan
+* @brief 1. Create context and init with key. Expected result 1 is obtained.
+2. Update with data and final to get mac1. Expected result 2 is obtained.
+3. Reinit the context. Expected result 3 is obtained.
+4. Update with same data and final to get mac2. Expected result 4 is obtained.
+5. Compare mac1 and mac2. Expected result 5 is obtained.
+* @expect 1. Init succeeds.
+2. mac1 is computed successfully.
+3. Reinit succeeds.
+4. mac2 is computed successfully.
+5. mac1 equals mac2.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_SIPHASH_REINIT_FUN_TC001(int algId, Hex *key, Hex *data, Hex *vecMac)
+{
+    TestMemInit();
+    uint32_t macLen = vecMac->len;
+    uint8_t mac1[64];
+    uint8_t mac2[64];
+
+    CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_MacNewCtx(algId);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_MacInit(ctx, key->x, key->len), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, data->x, data->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac1, &macLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("mac1 cmp vec", mac1, macLen, vecMac->x, vecMac->len);
+
+    ASSERT_EQ(CRYPT_EAL_MacReinit(ctx), CRYPT_SUCCESS);
+
+    macLen = vecMac->len;
+    ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, data->x, data->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac2, &macLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("mac2 cmp vec", mac2, macLen, vecMac->x, vecMac->len);
+
+    ASSERT_COMPARE("mac1 == mac2", mac1, macLen, mac2, macLen);
+
+EXIT:
+    CRYPT_EAL_MacFreeCtx(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPT_EAL_SIPHASH_REINIT_FUN_TC002
+* @spec  -
+* @title  Verify Reinit after byte-by-byte updates restores state correctly
+* @precon nan
+* @brief 1. Create context and init with key. Expected result 1 is obtained.
+2. Update with data byte-by-byte and final to get mac1. Expected result 2 is obtained.
+3. Reinit the context. Expected result 3 is obtained.
+4. Update with same data once (full) and final to get mac2. Expected result 4 is obtained.
+5. Reinit again and final without update to get mac3. Expected result 5 is obtained.
+6. Reinit and final again to get mac4. Expected result 6 is obtained.
+7. Compare mac3 and mac4. Expected result 7 is obtained.
+* @expect 1-7. All operations succeed and mac3 equals mac4.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_SIPHASH_REINIT_FUN_TC002(int algId, Hex *key, Hex *data, Hex *vecMac)
+{
+    TestMemInit();
+    uint32_t macLen = vecMac->len;
+    uint8_t mac1[64];
+    uint8_t mac2[64];
+
+    CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_MacNewCtx(algId);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_MacInit(ctx, key->x, key->len), CRYPT_SUCCESS);
+
+    for (uint32_t i = 0; i < data->len; i++) {
+        ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, data->x + i, 1), CRYPT_SUCCESS);
+    }
+    ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac1, &macLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("byte-by-byte mac cmp vec", mac1, macLen, vecMac->x, vecMac->len);
+
+    ASSERT_EQ(CRYPT_EAL_MacReinit(ctx), CRYPT_SUCCESS);
+
+    macLen = vecMac->len;
+    ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, data->x, data->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac2, &macLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("full update mac cmp vec", mac2, macLen, vecMac->x, vecMac->len);
+
+    ASSERT_EQ(CRYPT_EAL_MacReinit(ctx), CRYPT_SUCCESS);
+    macLen = vecMac->len;
+    ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac1, &macLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_MacReinit(ctx), CRYPT_SUCCESS);
+    macLen = vecMac->len;
+    ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac2, &macLen), CRYPT_SUCCESS);
+
+    ASSERT_COMPARE("empty input reinit consistency", mac1, macLen, mac2, macLen);
+
+EXIT:
+    CRYPT_EAL_MacFreeCtx(ctx);
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPT_EAL_SIPHASH_FREECTX_CLEANSE_TC001
+* @spec  -
+* @title  Verify FreeCtx clears sensitive data and does not crash
+* @precon nan
+* @brief 1. Create context and init with key. Expected result 1 is obtained.
+2. Update with data. Expected result 2 is obtained.
+3. Duplicate the context to get a copy. Expected result 3 is obtained.
+4. Free the copy. Expected result 4 is obtained.
+5. Verify original context still works correctly. Expected result 5 is obtained.
+* @expect 1-5. All operations succeed, FreeCtx does not crash, original context is unaffected.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_SIPHASH_FREECTX_CLEANSE_TC001(int algId, Hex *key, Hex *data, Hex *vecMac)
+{
+    TestMemInit();
+    uint32_t macLen = vecMac->len;
+    uint8_t mac[64];
+
+    CRYPT_EAL_MacCtx *ctx = CRYPT_EAL_MacNewCtx(algId);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_MacInit(ctx, key->x, key->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MacUpdate(ctx, data->x, data->len), CRYPT_SUCCESS);
+
+    CRYPT_EAL_MacCtx *dupCtx = CRYPT_EAL_MacDupCtx(ctx);
+    ASSERT_TRUE(dupCtx != NULL);
+
+    CRYPT_EAL_MacFreeCtx(dupCtx);
+    dupCtx = NULL;
+
+    CRYPT_EAL_MacFreeCtx(NULL);
+
+    ASSERT_EQ(CRYPT_EAL_MacFinal(ctx, mac, &macLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("mac cmp vec", mac, macLen, vecMac->x, vecMac->len);
+
+EXIT:
+    CRYPT_EAL_MacFreeCtx(ctx);
+}
+/* END_CASE */

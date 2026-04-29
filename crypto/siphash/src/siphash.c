@@ -41,6 +41,11 @@ struct SIPHASH_Ctx {
     uint64_t state1;
     uint64_t state2;
     uint64_t state3;
+    // Snapshot of state0-3 after Init, used by Reinit to restore key-derived initial state.
+    uint64_t initState0;
+    uint64_t initState1;
+    uint64_t initState2;
+    uint64_t initState3;
     uint16_t compressionRounds;
     uint16_t finalizationRounds;
     uint32_t hashSize;
@@ -195,6 +200,13 @@ int32_t CRYPT_SIPHASH_Init(CRYPT_SIPHASH_Ctx *ctx, const uint8_t *key, uint32_t 
     if (hashSize == SIPHASH_MAX_DIGEST_SIZE) {
         ctx->state1 ^= 0xee;
     }
+    ctx->initState0 = ctx->state0;
+    ctx->initState1 = ctx->state1;
+    ctx->initState2 = ctx->state2;
+    ctx->initState3 = ctx->state3;
+    ctx->accInLen = 0;
+    ctx->offset = 0;
+    BSL_SAL_CleanseData(ctx->remainder, SIPHASH_WORD_SIZE);
     return CRYPT_SUCCESS;
 }
 
@@ -298,13 +310,13 @@ int32_t CRYPT_SIPHASH_Reinit(CRYPT_SIPHASH_Ctx *ctx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    ctx->state0 = 0;
-    ctx->state1 = 0;
-    ctx->state2 = 0;
-    ctx->state3 = 0;
+    ctx->state0 = ctx->initState0;
+    ctx->state1 = ctx->initState1;
+    ctx->state2 = ctx->initState2;
+    ctx->state3 = ctx->initState3;
     ctx->accInLen = 0;
     ctx->offset = 0;
-    memset(ctx->remainder, 0, SIPHASH_WORD_SIZE);
+    BSL_SAL_CleanseData(ctx->remainder, SIPHASH_WORD_SIZE);
     return CRYPT_SUCCESS;
 }
 
@@ -313,6 +325,13 @@ int32_t CRYPT_SIPHASH_Deinit(CRYPT_SIPHASH_Ctx *ctx)
     if (ctx == NULL) {
         return CRYPT_NULL_INPUT;
     }
+    uint16_t cRounds = ctx->compressionRounds;
+    uint16_t dRounds = ctx->finalizationRounds;
+    uint32_t hashSize = ctx->hashSize;
+    BSL_SAL_CleanseData(ctx, sizeof(CRYPT_SIPHASH_Ctx));
+    ctx->compressionRounds = cRounds;
+    ctx->finalizationRounds = dRounds;
+    ctx->hashSize = hashSize;
     return CRYPT_SUCCESS;
 }
 
@@ -335,6 +354,7 @@ int32_t CRYPT_SIPHASH_Ctrl(CRYPT_SIPHASH_Ctx *ctx, uint32_t opt, void *val, uint
 void CRYPT_SIPHASH_FreeCtx(CRYPT_SIPHASH_Ctx *ctx)
 {
     if (ctx != NULL) {
+        BSL_SAL_CleanseData(ctx, sizeof(CRYPT_SIPHASH_Ctx));
         BSL_SAL_Free(ctx);
     }
 }
