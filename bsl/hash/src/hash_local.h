@@ -21,7 +21,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,7 +31,7 @@ typedef struct {
     uint32_t dataSize;       /* Actual input size */
 } BSL_CstlUserData;
 
-/* Check whether overflow occurs when two numbers are multiplied in the current system. */
+/* Check whether overflow occurs when two uint32_t values are multiplied. */
 bool IsMultiOverflow(uint32_t x, uint32_t y);
 
 /* Check whether the sum of the two numbers overflows in the current system. */
