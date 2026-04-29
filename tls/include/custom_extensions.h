@@ -69,6 +69,23 @@ bool IsPackNeedCustomExtensions(CustomExtMethods *exts, uint32_t context);
 bool IsParseNeedCustomExtensions(CustomExtMethods *exts, uint16_t extType, uint32_t context);
 
 /**
+ * @brief   Finds a registered custom extension method for the specified type and context.
+ *
+ * This function searches the custom extension registry and returns the first method whose
+ * extension type matches the specified extType and whose context overlaps with the specified
+ * context. If idx is not NULL, the index of the matched method in the registry is returned.
+ *
+ * @param   exts    [IN]  Pointer to the CustomExtMethods structure containing extension methods
+ * @param   extType [IN]  The extension type to search for
+ * @param   context [IN]  The context to match against the custom extensions
+ * @param   idx     [OUT] Optional pointer used to return the matched method index
+ * @retval  Pointer to the matched CustomExtMethod structure
+ * @retval  NULL if no matched custom extension method is found
+ */
+CustomExtMethod *FindCustomExtensions(CustomExtMethods *exts, uint16_t extType, uint32_t context,
+    uint32_t *idx);
+
+/**
  * @brief   Packs custom extensions into the provided buffer for a given context.
  *
  * This function iterates through the list of custom extension methods associated with the TLS context

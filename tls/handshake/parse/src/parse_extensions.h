@@ -140,6 +140,11 @@ bool GetExtensionFlagValue(TLS_Ctx *ctx, uint32_t hsExTypeId);
 
 int32_t CheckForDuplicateExtension(ParsePacket *pkt, uint16_t *extMsgType, uint32_t *extMsgLen,
     uint32_t *extensionId, uint64_t extensionTypeMask);
+
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+int32_t CheckForDuplicateCustomExtension(TLS_Ctx *ctx, uint16_t extMsgType, uint32_t context,
+    uint32_t *customExtSeenMask, bool *isCustomExt);
+#endif
 #ifdef __cplusplus
 }
 #endif /* end __cplusplus */

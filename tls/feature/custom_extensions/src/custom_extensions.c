@@ -77,7 +77,7 @@ bool IsCustomExtensionTypeAdded(CustomExtMethods *exts, uint16_t extType)
     return false;
 }
 
-CustomExtMethod *FindCustomExtensions(CustomExtMethods *exts, uint16_t extType, uint32_t context)
+CustomExtMethod *FindCustomExtensions(CustomExtMethods *exts, uint16_t extType, uint32_t context, uint32_t *idx)
 {
     if (exts == NULL || exts->meths == NULL) {
         return NULL;
@@ -86,6 +86,9 @@ CustomExtMethod *FindCustomExtensions(CustomExtMethods *exts, uint16_t extType, 
     CustomExtMethod *meth = exts->meths;
     for (uint32_t i = 0; i < exts->methsCount; i++, meth++) {
         if (extType == meth->extType && (context & meth->context) != 0) {
+            if (idx != NULL) {
+                *idx = i;
+            }
             return meth;
         }
     }
@@ -108,7 +111,7 @@ uint32_t HITLS_CFG_AddCustomExtension(HITLS_Config *config, const HITLS_CustomEx
     CustomExtMethods *exts = config->customExts;
 
     if (IsCustomExtensionTypeAdded(exts, params->extType) ||
-        FindCustomExtensions(exts, params->extType, params->context) != NULL) {
+        FindCustomExtensions(exts, params->extType, params->context, NULL) != NULL) {
         return HITLS_CONFIG_DUP_CUSTOM_EXT;
     }
 
@@ -226,7 +229,7 @@ int32_t ParseCustomExtensions(const struct TlsCtx *ctx, const uint8_t *buf, uint
     uint32_t alert = 0u;
 
     CustomExtMethods *exts = CUSTOM_EXT_FROM_CTX(ctx);
-    CustomExtMethod *meth = FindCustomExtensions(exts, extType, context);
+    CustomExtMethod *meth = FindCustomExtensions(exts, extType, context, NULL);
     if (meth == NULL) {
         return HITLS_SUCCESS;
     }

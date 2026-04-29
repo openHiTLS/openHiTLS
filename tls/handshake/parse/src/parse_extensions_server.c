@@ -897,6 +897,9 @@ int32_t ParseClientExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
 {
     uint32_t bufOffset = 0u;
     uint8_t extensionCount = 0;
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+    uint32_t customExtSeenMask = 0;
+#endif
     ParsePacket pkt = {.ctx = ctx, .buf = buf, .bufLen = bufLen, .bufOffset = &bufOffset};
 
     /* Parse the extended message from client */
@@ -908,6 +911,15 @@ int32_t ParseClientExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, 
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+        if (extensionId == HS_EX_TYPE_ID_UNRECOGNIZED) {
+            ret = CheckForDuplicateCustomExtension(ctx, extMsgType, HITLS_EX_TYPE_CLIENT_HELLO,
+                &customExtSeenMask, NULL);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+        }
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
         if (extensionId != HS_EX_TYPE_ID_UNRECOGNIZED
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
             || !IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType, HITLS_EX_TYPE_CLIENT_HELLO)

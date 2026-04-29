@@ -309,6 +309,9 @@ static int32_t ParseCertificateRequestExBody(TLS_Ctx *ctx, uint16_t extMsgType, 
 
 int32_t ParseTls13CertificateRequestExtensions(ParsePacket *pkt, CertificateRequestMsg *msg)
 {
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+    uint32_t customExtSeenMask = 0;
+#endif
     if (pkt->bufLen - *pkt->bufOffset == 0u) {
         return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15472,
             BINGLOG_STR("the extension len of tls1.3 can not be 0"), ALERT_DECODE_ERROR);
@@ -323,6 +326,15 @@ int32_t ParseTls13CertificateRequestExtensions(ParsePacket *pkt, CertificateRequ
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+        if (extensionId == HS_EX_TYPE_ID_UNRECOGNIZED) {
+            ret = CheckForDuplicateCustomExtension(pkt->ctx, extMsgType,
+                HITLS_EX_TYPE_TLS1_3_CERTIFICATE_REQUEST, &customExtSeenMask, NULL);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+        }
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
         msg->extensionTypeMask |= 1ULL << extensionId;
         ret = ParseCertificateRequestExBody(pkt->ctx, extMsgType, &pkt->buf[*pkt->bufOffset], extMsgLen, msg);
         if (ret != HITLS_SUCCESS) {

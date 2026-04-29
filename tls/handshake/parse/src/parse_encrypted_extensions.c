@@ -139,6 +139,9 @@ static int32_t ParseEncryptedExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uin
 int32_t ParseEncryptedEx(TLS_Ctx *ctx, EncryptedExtensions *msg, const uint8_t *buf, uint32_t bufLen)
 {
     uint32_t bufOffset = 0u;
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+    uint32_t customExtSeenMask = 0;
+#endif
     ParsePacket pkt = {.ctx = ctx, .buf = buf, .bufLen = bufLen, .bufOffset = &bufOffset};
 
     while (bufOffset < bufLen) {
@@ -149,6 +152,15 @@ int32_t ParseEncryptedEx(TLS_Ctx *ctx, EncryptedExtensions *msg, const uint8_t *
         if (ret != HITLS_SUCCESS) {
             return ret;
         }
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+        if (extensionId == HS_EX_TYPE_ID_UNRECOGNIZED) {
+            ret = CheckForDuplicateCustomExtension(ctx, extMsgType, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS,
+                &customExtSeenMask, NULL);
+            if (ret != HITLS_SUCCESS) {
+                return ret;
+            }
+        }
+#endif /* HITLS_TLS_FEATURE_CUSTOM_EXTENSION */
         if (extensionId != HS_EX_TYPE_ID_UNRECOGNIZED
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
             || !IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(ctx), extMsgType, HITLS_EX_TYPE_ENCRYPTED_EXTENSIONS)

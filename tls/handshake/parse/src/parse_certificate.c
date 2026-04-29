@@ -95,6 +95,9 @@ static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg, CERT_It
     }
 
     uint32_t offset = 0;
+#ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
+    uint32_t customExtSeenMask = 0;
+#endif
     while (offset < certExLen) {
         uint16_t extMsgType = HS_EX_TYPE_END;
         uint32_t extMsgLen = 0u;
@@ -106,7 +109,13 @@ static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg, CERT_It
         *pkt->bufOffset += HS_EX_HEADER_LEN;
         offset += HS_EX_HEADER_LEN;
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
-        if (IsParseNeedCustomExtensions(CUSTOM_EXT_FROM_CTX(pkt->ctx), extMsgType, HITLS_EX_TYPE_TLS1_3_CERTIFICATE)) {
+        bool isCustomExt = false;
+        ret = CheckForDuplicateCustomExtension(pkt->ctx, extMsgType, HITLS_EX_TYPE_TLS1_3_CERTIFICATE,
+            &customExtSeenMask, &isCustomExt);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        if (isCustomExt) {
             HITLS_CERT_X509 *cert = SAL_CERT_X509Parse(LIBCTX_FROM_CTX(pkt->ctx),
                 ATTRIBUTE_FROM_CTX(pkt->ctx), &pkt->ctx->config.tlsConfig, item->data, item->dataSize,
                 TLS_PARSE_TYPE_BUFF, TLS_PARSE_FORMAT_ASN1);
