@@ -184,12 +184,14 @@ static int32_t BslBase64DecodeCheck(const char src, uint32_t *paddingCnt)
 
 int32_t BSL_BASE64_Encode(const uint8_t *srcBuf, const uint32_t srcBufLen, char *dstBuf, uint32_t *dstBufLen)
 {
+    uint64_t needLen = ((uint64_t)srcBufLen + 2U) / BASE64_ENCODE_BYTES * BASE64_DECODE_BYTES + 1U;
+
     if (srcBuf == NULL || srcBufLen == 0U || dstBuf == NULL || dstBufLen == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
     }
     /* The length of dstBuf of the user must be at least (srcBufLen+2)/3*4+1 */
-    if (*dstBufLen < BSL_BASE64_ENC_ENOUGH_LEN(srcBufLen)) {
+    if (needLen > UINT32_MAX || *dstBufLen < (uint32_t)needLen) {
         BSL_ERR_PUSH_ERROR(BSL_BASE64_BUF_NOT_ENOUGH);
         return BSL_BASE64_BUF_NOT_ENOUGH;
     }
@@ -510,10 +512,23 @@ int32_t BSL_BASE64_DecodeFinal(BSL_Base64Ctx *ctx, uint8_t *dstBuf, uint32_t *ds
 {
     int32_t ret = BSL_SUCCESS;
     uint32_t totalLen = 0;
+    uint32_t remain;
 
     if (ctx == NULL || dstBuf == NULL || dstBufLen == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_NULL_INPUT);
         return BSL_NULL_INPUT;
+    }
+
+    /*
+     * DecodeUpdate stores only non-padding base64 characters in ctx->buf.
+     * A valid final quartet has 4 data chars, 3 data chars plus '=', or 2 data chars plus '=='.
+     */
+    remain = ctx->num % BASE64_DECODE_BYTES;
+    if ((ctx->paddingCnt == 0U && remain != 0U) || (ctx->paddingCnt == 1U && remain != 3U) ||
+        (ctx->paddingCnt == BASE64_PAD_MAX && remain != 2U) || ctx->paddingCnt > BASE64_PAD_MAX) {
+        *dstBufLen = 0;
+        BSL_ERR_PUSH_ERROR(BSL_BASE64_INVALID_ENCODE);
+        return BSL_BASE64_INVALID_ENCODE;
     }
 
     if (ctx->num == 0) {
