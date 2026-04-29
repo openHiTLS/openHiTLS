@@ -27,6 +27,31 @@
 #include "bsl_pem_internal.h"
 #include "bsl_types.h"
 
+/*
+ * Length-bounded substring search, replacing strstr to prevent out-of-bounds reads
+ * when the input buffer is raw binary (e.g. DER-encoded cert/key) without a '\0' terminator.
+ */
+static char *PemMemStr(const char *haystack, uint32_t haystackLen, const char *needle, uint32_t needleLen)
+{
+    if (needleLen == 0 || haystackLen < needleLen) {
+        return NULL;
+    }
+    const char *end = haystack + haystackLen - needleLen;
+    const char *p = haystack;
+    while (p <= end) {
+        // memchr leverages SIMD in most libc implementations to skip non-matching bytes faster than a byte-by-byte loop.
+        p = memchr(p, needle[0], (size_t)(end - p + 1));
+        if (p == NULL) {
+            return NULL;
+        }
+        if (memcmp(p, needle, needleLen) == 0) {
+            return (char *)(uintptr_t)p;
+        }
+        p++;
+    }
+    return NULL;
+}
+
 int32_t BSL_PEM_GetPemRealEncode(char **encode, uint32_t *encodeLen, BSL_PEM_Symbol *symbol, char **realEncode,
     uint32_t *realLen)
 {
@@ -40,12 +65,13 @@ int32_t BSL_PEM_GetPemRealEncode(char **encode, uint32_t *encodeLen, BSL_PEM_Sym
         BSL_ERR_PUSH_ERROR(BSL_PEM_INVALID);
         return BSL_PEM_INVALID;
     }
-    char *begin = strstr(*encode, symbol->head);
+    char *begin = PemMemStr(*encode, *encodeLen, symbol->head, headLen);
     if (begin == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_PEM_SYMBOL_NOT_FOUND);
         return BSL_PEM_SYMBOL_NOT_FOUND;
     }
-    char *end = strstr(begin + headLen, symbol->tail);
+    uint32_t remaining = *encodeLen - (uint32_t)(begin + headLen - *encode);
+    char *end = PemMemStr(begin + headLen, remaining, symbol->tail, tailLen);
     if (end == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_PEM_SYMBOL_NOT_FOUND);
         return BSL_PEM_SYMBOL_NOT_FOUND;
@@ -179,22 +205,28 @@ bool BSL_PEM_IsPemFormat(char *encode, uint32_t encodeLen)
         return false;
     }
     // match "-----BEGIN"
-    char *begin = strstr(encode, BSL_PEM_BEGIN_STR);
+    char *begin = PemMemStr(encode, encodeLen, BSL_PEM_BEGIN_STR, BSL_PEM_BEGIN_STR_LEN);
     if (begin == NULL) {
         return false;
     }
     // match "-----"
-    char *dashAfterBegin = strstr(begin + BSL_PEM_BEGIN_STR_LEN, BSL_PEM_SHORT_DASH_STR);
+    uint32_t remaining = encodeLen - (uint32_t)(begin + BSL_PEM_BEGIN_STR_LEN - encode);
+    char *dashAfterBegin = PemMemStr(begin + BSL_PEM_BEGIN_STR_LEN, remaining, BSL_PEM_SHORT_DASH_STR,
+        BSL_PEM_SHORT_DASH_STR_LEN);
     if (dashAfterBegin == NULL) {
         return false;
     }
     // match "-----END"
-    char *end = strstr(dashAfterBegin + BSL_PEM_SHORT_DASH_STR_LEN, BSL_PEM_END_STR);
+    remaining = encodeLen - (uint32_t)(dashAfterBegin + BSL_PEM_SHORT_DASH_STR_LEN - encode);
+    char *end = PemMemStr(dashAfterBegin + BSL_PEM_SHORT_DASH_STR_LEN, remaining, BSL_PEM_END_STR,
+        BSL_PEM_END_STR_LEN);
     if (end == NULL) {
         return false;
     }
     // match "-----"
-    return (strstr(end + BSL_PEM_END_STR_LEN, BSL_PEM_SHORT_DASH_STR) != NULL);
+    remaining = encodeLen - (uint32_t)(end + BSL_PEM_END_STR_LEN - encode);
+    return (PemMemStr(end + BSL_PEM_END_STR_LEN, remaining, BSL_PEM_SHORT_DASH_STR,
+        BSL_PEM_SHORT_DASH_STR_LEN) != NULL);
 }
 
 typedef struct {
@@ -226,12 +258,16 @@ int32_t BSL_PEM_GetSymbolAndType(char *encode, uint32_t encodeLen, BSL_PEM_Symbo
         return BSL_PEM_INVALID;
     }
     for (uint32_t i = 0; i < sizeof(g_pemHeaderInfo) / sizeof(g_pemHeaderInfo[0]); i++) {
-        char *beginMarker = strstr(encode, g_pemHeaderInfo[i].symbol.head);
-        if (beginMarker != NULL &&
-            strstr(beginMarker + strlen(g_pemHeaderInfo[i].symbol.head), g_pemHeaderInfo[i].symbol.tail) != NULL) {
-            *symbol = g_pemHeaderInfo[i].symbol;
-            *type = g_pemHeaderInfo[i].type;
-            return BSL_SUCCESS;
+        uint32_t headLen = (uint32_t)strlen(g_pemHeaderInfo[i].symbol.head);
+        uint32_t tailLen = (uint32_t)strlen(g_pemHeaderInfo[i].symbol.tail);
+        char *beginMarker = PemMemStr(encode, encodeLen, g_pemHeaderInfo[i].symbol.head, headLen);
+        if (beginMarker != NULL) {
+            uint32_t remaining = encodeLen - (uint32_t)(beginMarker + headLen - encode);
+            if (PemMemStr(beginMarker + headLen, remaining, g_pemHeaderInfo[i].symbol.tail, tailLen) != NULL) {
+                *symbol = g_pemHeaderInfo[i].symbol;
+                *type = g_pemHeaderInfo[i].type;
+                return BSL_SUCCESS;
+            }
         }
     }
 
