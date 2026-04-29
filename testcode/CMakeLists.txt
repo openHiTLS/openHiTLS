@@ -42,13 +42,10 @@ else()
 endif()
 
 # Dynamically determine provider library name based on CMVP mode
-# This allows testing of ISO19790, FIPS, SM, or standard providers
+# This allows testing of ISO19790, SM, or standard providers
 if(CUSTOM_CFLAGS MATCHES "-DHITLS_CRYPTO_CMVP_ISO19790")
     set(HITLS_PROVIDER_LIB_NAME "libhitls_iso${SHARED_LIB_EXT}")
     message(STATUS "Provider library: ISO19790 mode (${HITLS_PROVIDER_LIB_NAME})")
-elseif(CUSTOM_CFLAGS MATCHES "-DHITLS_CRYPTO_CMVP_FIPS")
-    set(HITLS_PROVIDER_LIB_NAME "libhitls_fips${SHARED_LIB_EXT}")
-    message(STATUS "Provider library: FIPS mode (${HITLS_PROVIDER_LIB_NAME})")
 elseif(CUSTOM_CFLAGS MATCHES "-DHITLS_CRYPTO_CMVP_SM")
     set(HITLS_PROVIDER_LIB_NAME "libhitls_sm${SHARED_LIB_EXT}")
     message(STATUS "Provider library: SM mode (${HITLS_PROVIDER_LIB_NAME})")

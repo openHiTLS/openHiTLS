@@ -53,16 +53,12 @@ if(HITLS_CRYPTO_PKEY_SIGN)
 endif()
 
 file(GLOB _cmvp_utils_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/cmvp/cmvp_utils/*.c)
-file(GLOB _cmvp_fips_prov_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/cmvp/fips_prov/*.c)
 file(GLOB _cmvp_iso_prov_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/cmvp/iso_prov/*.c)
 file(GLOB _cmvp_sm_prov_sources ${CMAKE_CURRENT_SOURCE_DIR}/src/cmvp/sm_prov/*.c)
 
 list(APPEND _provider_sources ${_mgr_sources} ${_default_sources})
 if(HITLS_CRYPTO_CMVP)
     list(APPEND _provider_sources ${_cmvp_utils_sources})
-    if(HITLS_CRYPTO_CMVP_FIPS)
-        list(APPEND _provider_sources ${_cmvp_fips_prov_sources})
-    endif()
     if(HITLS_CRYPTO_CMVP_ISO19790)
         list(APPEND _provider_sources ${_cmvp_iso_prov_sources})
     endif()
@@ -86,7 +82,6 @@ target_include_directories(_hitls_crypto_provider
         ${CMAKE_CURRENT_SOURCE_DIR}/src/default
         ${CMAKE_CURRENT_SOURCE_DIR}/src/mgr
         ${CMAKE_CURRENT_SOURCE_DIR}/src/cmvp/cmvp_utils
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/cmvp/fips_prov
         ${CMAKE_CURRENT_SOURCE_DIR}/src/cmvp/iso_prov
         ${CMAKE_CURRENT_SOURCE_DIR}/src/cmvp/sm_prov
         ${PROJECT_SOURCE_DIR}/crypto/eal/include

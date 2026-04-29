@@ -136,6 +136,17 @@ static bool GetVaildFlag(uint32_t algId, uint32_t mdId, bool isSign)
     return false;
 }
 
+static bool RsaGetMdId(BSL_Param *params, int32_t key, CRYPT_MD_AlgId *mdId)
+{
+    BSL_Param *param = BSL_PARAM_FindParam(params, key);
+    if (param == NULL || param->value == NULL || param->valueLen < sizeof(*mdId)) {
+        return false;
+    }
+
+    *mdId = *(const CRYPT_MD_AlgId *)(uintptr_t)param->value;
+    return true;
+}
+
 // Check whether the RSA parameter is approved.
 static bool RsaParamCheck(const CRYPT_EAL_PkeyC2Data *data)
 {
@@ -163,25 +174,23 @@ static bool RsaParamCheck(const CRYPT_EAL_PkeyC2Data *data)
         return true;
     }
     if (data->pss != NULL) {
-        BSL_Param *mdParam = BSL_PARAM_FindParam(data->pss, CRYPT_PARAM_RSA_MD_ID);
-        GOTO_ERR_IF_TRUE(mdParam == NULL, CRYPT_CMVP_ERR_PARAM_CHECK);
-        BSL_Param *mgfParam = BSL_PARAM_FindParam(data->pss, CRYPT_PARAM_RSA_MGF1_ID);
-        GOTO_ERR_IF_TRUE(mgfParam == NULL, CRYPT_CMVP_ERR_PARAM_CHECK);
-        GOTO_ERR_IF_TRUE((GetVaildFlag(CRYPT_PKEY_RSA, *(uint32_t *)(mdParam->value), false) == false),
+        CRYPT_MD_AlgId mdId = CRYPT_MD_MAX;
+        CRYPT_MD_AlgId mgfId = CRYPT_MD_MAX;
+        GOTO_ERR_IF_TRUE(RsaGetMdId(data->pss, CRYPT_PARAM_RSA_MD_ID, &mdId) == false, CRYPT_CMVP_ERR_PARAM_CHECK);
+        GOTO_ERR_IF_TRUE(RsaGetMdId(data->pss, CRYPT_PARAM_RSA_MGF1_ID, &mgfId) == false,
             CRYPT_CMVP_ERR_PARAM_CHECK);
-        GOTO_ERR_IF_TRUE((GetVaildFlag(CRYPT_PKEY_RSA, *(uint32_t *)(mgfParam->value), false) == false),
-            CRYPT_CMVP_ERR_PARAM_CHECK);
+        GOTO_ERR_IF_TRUE((GetVaildFlag(CRYPT_PKEY_RSA, mdId, false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
+        GOTO_ERR_IF_TRUE((GetVaildFlag(CRYPT_PKEY_RSA, mgfId, false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
         return true;
     }
     if (data->oaep != NULL) {
-        BSL_Param *mdParam = BSL_PARAM_FindParam(data->oaep, CRYPT_PARAM_RSA_MD_ID);
-        GOTO_ERR_IF_TRUE(mdParam == NULL, CRYPT_CMVP_ERR_PARAM_CHECK);
-        BSL_Param *mgfParam = BSL_PARAM_FindParam(data->oaep, CRYPT_PARAM_RSA_MGF1_ID);
-        GOTO_ERR_IF_TRUE(mgfParam == NULL, CRYPT_CMVP_ERR_PARAM_CHECK);
-        GOTO_ERR_IF_TRUE((GetVaildFlag(CRYPT_PKEY_RSA, *(uint32_t *)(mdParam->value), false) == false),
+        CRYPT_MD_AlgId mdId = CRYPT_MD_MAX;
+        CRYPT_MD_AlgId mgfId = CRYPT_MD_MAX;
+        GOTO_ERR_IF_TRUE(RsaGetMdId(data->oaep, CRYPT_PARAM_RSA_MD_ID, &mdId) == false, CRYPT_CMVP_ERR_PARAM_CHECK);
+        GOTO_ERR_IF_TRUE(RsaGetMdId(data->oaep, CRYPT_PARAM_RSA_MGF1_ID, &mgfId) == false,
             CRYPT_CMVP_ERR_PARAM_CHECK);
-        GOTO_ERR_IF_TRUE((GetVaildFlag(CRYPT_PKEY_RSA, *(uint32_t *)(mgfParam->value), false) == false),
-            CRYPT_CMVP_ERR_PARAM_CHECK);
+        GOTO_ERR_IF_TRUE((GetVaildFlag(CRYPT_PKEY_RSA, mdId, false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
+        GOTO_ERR_IF_TRUE((GetVaildFlag(CRYPT_PKEY_RSA, mgfId, false) == false), CRYPT_CMVP_ERR_PARAM_CHECK);
         return true;
     }
     return true;

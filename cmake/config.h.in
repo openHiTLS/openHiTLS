@@ -287,7 +287,6 @@
 // Provider
 #cmakedefine HITLS_CRYPTO_PROVIDER
 #cmakedefine HITLS_CRYPTO_CMVP
-#cmakedefine HITLS_CRYPTO_CMVP_FIPS
 #cmakedefine HITLS_CRYPTO_CMVP_ISO19790
 #cmakedefine HITLS_CRYPTO_CMVP_SM
 // Bn

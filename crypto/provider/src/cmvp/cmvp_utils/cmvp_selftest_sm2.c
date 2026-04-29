@@ -13,7 +13,7 @@
  * See the Mulan PSL v2 for more details.
  */
 
-#if defined(HITLS_CRYPTO_CMVP_ISO19790) || defined(HITLS_CRYPTO_CMVP_SM) || defined(HITLS_CRYPTO_CMVP_FIPS)
+#if defined(HITLS_CRYPTO_CMVP_ISO19790) || defined(HITLS_CRYPTO_CMVP_SM)
 
 #include <string.h>
 #include "crypt_bn.h"
@@ -554,4 +554,4 @@ bool CRYPT_CMVP_SelftestProviderSM2(void *libCtx, const char *attrName)
     return CRYPT_CMVP_SelftestSM2Sign(libCtx, attrName) && CRYPT_CMVP_SelftestSM2Crypt(libCtx, attrName) &&
         CRYPT_CMVP_SelftestSM2Exchange(libCtx, attrName);
 }
-#endif /* HITLS_CRYPTO_CMVP_ISO19790 || HITLS_CRYPTO_CMVP_SM || HITLS_CRYPTO_CMVP_FIPS */
+#endif /* HITLS_CRYPTO_CMVP_ISO19790 || HITLS_CRYPTO_CMVP_SM */

@@ -14,7 +14,7 @@
  */
  
 #include "hitls_build.h"
-#if defined(HITLS_CRYPTO_CMVP_ISO19790) || defined(HITLS_CRYPTO_CMVP_FIPS)
+#if defined(HITLS_CRYPTO_CMVP_ISO19790)
 
 #include <string.h>
 #include "crypt_cmvp_selftest.h"
@@ -240,4 +240,4 @@ bool CRYPT_CMVP_SelftestProviderDsa(void *libCtx, const char *attrName)
     return CRYPT_CMVP_SelftestDsaInternal(libCtx, attrName);
 }
 
-#endif /* HITLS_CRYPTO_CMVP_ISO19790 || HITLS_CRYPTO_CMVP_FIPS */
+#endif /* HITLS_CRYPTO_CMVP_ISO19790 */

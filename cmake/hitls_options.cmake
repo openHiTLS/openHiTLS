@@ -306,7 +306,6 @@ option(HITLS_CRYPTO_PKEY                                       "Public Key Crypt
 ## Provider
 option(HITLS_CRYPTO_PROVIDER                                   "Provider" OFF)
   option(HITLS_CRYPTO_CMVP                                       "CMVP" OFF)
-  option(HITLS_CRYPTO_CMVP_FIPS                                  "CMVP FIPS" OFF)
   option(HITLS_CRYPTO_CMVP_ISO19790                              "CMVP ISO 19790" OFF)
   option(HITLS_CRYPTO_CMVP_SM                                    "CMVP SM" OFF)
 ## Bn
