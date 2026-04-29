@@ -51,6 +51,9 @@ int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen,
         tempLen--;
         parseLen += ((completeLen) ? 1 : 0);
     } else {
+        if (*temp == BSL_ASN1_INDEFINITE_LENGTH) {
+            return BSL_ASN1_ERR_DECODE_LEN;
+        }
         uint32_t index = *temp - BSL_ASN1_INDEFINITE_LENGTH;
         if (index > sizeof(int32_t)) {
             return BSL_ASN1_ERR_MAX_LEN_NUM;
