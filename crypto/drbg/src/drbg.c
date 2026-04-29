@@ -430,7 +430,12 @@ static int32_t DRBG_SetReseedInterval(DRBG_Ctx *ctx, const void *val, uint32_t l
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
-    ctx->reseedInterval = *(const uint32_t *)val;
+    uint32_t reseedInterval = *(const uint32_t *)val;
+    if (reseedInterval >= UINT32_MAX) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    ctx->reseedInterval = reseedInterval;
     return CRYPT_SUCCESS;
 }
 
