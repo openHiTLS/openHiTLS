@@ -19,13 +19,17 @@
 #include <string.h>
 #include "securec.h"
 #include "bsl_errno.h"
+#include "bsl_err.h"
 #include "list_base.h"
 #include "bsl_hash.h"
 #include "bsl_hash_list.h"
 #include "bsl_sal.h"
+#include "stub_utils.h"
 
 #define MAX_NAME_LEN 64
 /* END_HEADER */
+STUB_DEFINE_RET3(void *, BSL_SAL_Realloc, void *, uint32_t, uint32_t);
+
 typedef struct userData {
     int id;
     char name[MAX_NAME_LEN];
@@ -90,6 +94,14 @@ static int verify_int_elements(BSL_HASH_Hash *hash, int start, int count)
         }
     }
     return BSL_SUCCESS;
+}
+
+static void *STUB_BSL_SAL_Realloc_Fail(void *addr, uint32_t newSize, uint32_t oldSize)
+{
+    (void)addr;
+    (void)newSize;
+    (void)oldSize;
+    return NULL;
 }
 
 /**
@@ -232,17 +244,17 @@ EXIT:
 
 /**
  * @test SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC005
- * @title Hash table basic shrinking test
+ * @title Hash table delete path does not shrink bucket count
  * @precon nan
  * @brief
  *    1. Create hash table with initial size 16. Expected result 1.
  *    2. Insert 16 elements (load factor = 100%). Expected result 2.
- *    3. Delete 9 elements to trigger shrinking (load factor < 50%). Expected result 3.
- *    4. Verify bucketSize decreased and remaining elements accessible. Expected result 4.
+ *    3. Delete 9 elements. Expected result 3.
+ *    4. Verify bucketSize does not change and remaining elements are accessible. Expected result 4.
  * @expect
  *    1. Hash table created with bucketSize = 16
  *    2. Elements inserted, bucketSize remains 16
- *    3. Shrinking triggered, bucketSize decreased
+ *    3. Deletion does not trigger shrinking
  *    4. All remaining elements accessible
  */
 /* BEGIN_CASE */
@@ -262,16 +274,14 @@ void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC005(void)
     ASSERT_TRUE(hash->bucketSize == 16);
 
     // Delete 9 elements: 16 - 9 = 7 elements remain
-    // Load factor = 7/16 = 43.75% < 50%, SHOULD trigger shrinking
     uint32_t bucketSizeBeforeDelete = hash->bucketSize;
     for (int i = 0; i < 9; i++) {
         BSL_HASH_Erase(hash, (uintptr_t)i);
     }
     ASSERT_TRUE(BSL_HASH_Size(hash) == 7);
 
-    // Verify shrinking occurred: bucketSize should have decreased
+    // Verify deletion does not change bucket size
     ASSERT_TRUE(hash->bucketSize == bucketSizeBeforeDelete);
-    // Should not shrink below initialSize
     ASSERT_TRUE(hash->bucketSize == hash->initialSize);
 
     // Verify remaining 7 elements are still accessible
@@ -286,20 +296,20 @@ EXIT:
 
 /**
  * @test SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC006
- * @title Hash table expansion followed by shrinking test
+ * @title Hash table expansion followed by deletion without shrinking
  * @precon nan
  * @brief
  *    1. Create hash table with initial size 16. Expected result 1.
  *    2. Insert 17 elements to trigger one expansion. Expected result 2.
  *    3. Verify bucketSize increased to 17. Expected result 3.
- *    4. Delete 10 elements to trigger shrinking. Expected result 4.
- *    5. Verify bucketSize decreased and data integrity. Expected result 5.
+ *    4. Delete 10 elements. Expected result 4.
+ *    5. Verify bucketSize is unchanged and data integrity is preserved. Expected result 5.
  * @expect
  *    1. Hash table created with bucketSize = 16
  *    2. Expansion triggered when load factor >= 100%
  *    3. bucketSize = 17 after one split
- *    4. Shrinking triggered when load factor < 50%
- *    5. bucketSize decreased, all data accessible
+ *    4. Deletion does not trigger shrinking
+ *    5. bucketSize remains unchanged, all data accessible
  */
 /* BEGIN_CASE */
 void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC006(void)
@@ -319,15 +329,14 @@ void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC006(void)
     ASSERT_TRUE(hash->nextSplit == 1);  // Split pointer moved
 
     // Delete 10 elements: 17 - 10 = 7 elements remain
-    // Load factor = 7/17 ≈ 41% < 50%, SHOULD trigger shrinking
     uint32_t bucketSizeAfterExpansion = hash->bucketSize;
     for (int i = 0; i < 10; i++) {
         BSL_HASH_Erase(hash, (uintptr_t)i);
     }
     ASSERT_TRUE(BSL_HASH_Size(hash) == 7);
 
-    // Verify shrinking occurred
-    ASSERT_TRUE(hash->bucketSize < bucketSizeAfterExpansion);
+    // Verify deletion does not change bucket size
+    ASSERT_TRUE(hash->bucketSize == bucketSizeAfterExpansion);
 
     // Verify remaining elements are accessible
     ASSERT_TRUE(verify_int_elements(hash, 10, 7) == BSL_SUCCESS);
@@ -340,19 +349,19 @@ EXIT:
 
 /**
  * @test SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC007
- * @title Hash table multiple expansions and shrinks test
+ * @title Hash table multiple expansions and deletions without shrinking
  * @precon nan
  * @brief
  *    1. Create hash table and trigger multiple expansions. Expected result 1.
  *    2. Verify bucketSize increases progressively. Expected result 2.
- *    3. Delete elements to trigger multiple shrinks. Expected result 3.
- *    4. Verify bucketSize decreases but not below initialSize. Expected result 4.
+ *    3. Delete elements after multiple expansions. Expected result 3.
+ *    4. Verify bucketSize remains unchanged. Expected result 4.
  *    5. Verify all remaining elements accessible. Expected result 5.
  * @expect
  *    1. Multiple expansions triggered correctly
  *    2. bucketSize increases with each split
- *    3. Multiple shrinks triggered correctly
- *    4. bucketSize decreases but >= initialSize
+ *    3. Deletion does not trigger shrinking
+ *    4. bucketSize remains at the expanded value
  *    5. Data integrity maintained throughout
  */
 /* BEGIN_CASE */
@@ -379,19 +388,15 @@ void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC007(void)
     // Verify all 30 elements are accessible
     ASSERT_TRUE(verify_int_elements(hash, 0, 30) == BSL_SUCCESS);
 
-    // Phase 2: Trigger shrinking by deleting elements
+    // Phase 2: Delete elements
     // Delete 22 elements: 30 - 22 = 8 elements remain
-    // Load factor will be much lower, triggering shrinks
     for (int i = 0; i < 22; i++) {
         BSL_HASH_Erase(hash, (uintptr_t)i);
     }
     ASSERT_TRUE(BSL_HASH_Size(hash) == 8);
 
-    uint32_t bucketSizeAfterShrink = hash->bucketSize;
-    // Verify shrinking occurred
-    ASSERT_TRUE(bucketSizeAfterShrink < bucketSizeAfterExpansion);
-    // Verify not shrunk below initial size
-    ASSERT_TRUE(bucketSizeAfterShrink >= initialBuckets);
+    uint32_t bucketSizeAfterDelete = hash->bucketSize;
+    ASSERT_TRUE(bucketSizeAfterDelete == bucketSizeAfterExpansion);
 
     // Verify remaining 8 elements are accessible
     ASSERT_TRUE(verify_int_elements(hash, 22, 8) == BSL_SUCCESS);
@@ -405,7 +410,7 @@ EXIT:
 
 /**
  * @test SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC008
- * @title Hash table does not shrink below initialSize test
+ * @title Hash table delete path keeps initial bucket count
  * @precon nan
  * @brief
  *    1. Create hash table with initial size 16. Expected result 1.
@@ -413,7 +418,7 @@ EXIT:
  *    3. Verify bucketSize stays at initialSize. Expected result 3.
  * @expect
  *    1. Hash table created with bucketSize = 16
- *    2. Low load factor does not trigger shrink below initialSize
+ *    2. Low load factor does not trigger shrinking
  *    3. bucketSize remains at initialSize even with few elements
  */
 /* BEGIN_CASE */
@@ -452,17 +457,17 @@ EXIT:
 
 /**
  * @test SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC009
- * @title Hash table repeated expansion and shrinking cycles test
+ * @title Hash table repeated expansion and deletion cycles test
  * @precon nan
  * @brief
  *    1. Create hash table. Expected result 1.
- *    2. Perform multiple cycles of expansion and shrinking. Expected result 2.
- *    3. Verify bucketSize adjusts correctly in each cycle. Expected result 3.
+ *    2. Perform multiple cycles of expansion and deletion. Expected result 2.
+ *    3. Verify bucketSize only increases on expansion and stays unchanged on deletion. Expected result 3.
  *    4. Verify data integrity throughout all cycles. Expected result 4.
  * @expect
  *    1. Hash table created successfully
- *    2. Expansion and shrinking work correctly in cycles
- *    3. bucketSize increases and decreases appropriately
+ *    2. Expansion and deletion work correctly in cycles
+ *    3. bucketSize increases on insert pressure and remains unchanged on delete
  *    4. All elements remain accessible after each cycle
  */
 /* BEGIN_CASE */
@@ -474,7 +479,7 @@ void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC009(void)
 
     uint32_t initialBuckets = hash->bucketSize;
 
-    // Cycle 1: Expand then shrink
+    // Cycle 1: Expand then delete
     ASSERT_TRUE(insert_multiple_int_elements(hash, 0, 20) == BSL_SUCCESS);
     uint32_t bucketSizeExpanded1 = hash->bucketSize;
     ASSERT_TRUE(bucketSizeExpanded1 > initialBuckets);
@@ -482,27 +487,326 @@ void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC009(void)
     for (int i = 0; i < 13; i++) {
         BSL_HASH_Erase(hash, (uintptr_t)i);
     }
-    uint32_t bucketSizeShrank1 = hash->bucketSize;
-    ASSERT_TRUE(bucketSizeShrank1 < bucketSizeExpanded1);
+    uint32_t bucketSizeAfterDelete1 = hash->bucketSize;
+    ASSERT_TRUE(bucketSizeAfterDelete1 == bucketSizeExpanded1);
     ASSERT_TRUE(verify_int_elements(hash, 13, 7) == BSL_SUCCESS);
 
     // Cycle 2: Expand again
     ASSERT_TRUE(insert_multiple_int_elements(hash, 100, 15) == BSL_SUCCESS);
     uint32_t bucketSizeExpanded2 = hash->bucketSize;
-    ASSERT_TRUE(bucketSizeExpanded2 > bucketSizeShrank1);
+    ASSERT_TRUE(bucketSizeExpanded2 >= bucketSizeAfterDelete1);
     ASSERT_TRUE(verify_int_elements(hash, 13, 7) == BSL_SUCCESS);
     ASSERT_TRUE(verify_int_elements(hash, 100, 15) == BSL_SUCCESS);
 
-    // Cycle 2: Shrink again
+    // Cycle 2: Delete again
     for (int i = 13; i < 20; i++) {
         BSL_HASH_Erase(hash, (uintptr_t)i);
     }
     for (int i = 100; i < 110; i++) {
         BSL_HASH_Erase(hash, (uintptr_t)i);
     }
-    uint32_t bucketSizeShrank2 = hash->bucketSize;
-    ASSERT_TRUE(bucketSizeShrank2 < bucketSizeExpanded2);
+    uint32_t bucketSizeAfterDelete2 = hash->bucketSize;
+    ASSERT_TRUE(bucketSizeAfterDelete2 == bucketSizeExpanded2);
     ASSERT_TRUE(verify_int_elements(hash, 110, 5) == BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_HASH_Destroy(hash);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC010
+ * @title Hash erase returns current end iterator after deleting the last iterator
+ * @precon nan
+ * @brief
+ *    1. Create hash table with default configuration. Expected result 1.
+ *    2. Insert 17 elements to reach bucketSize = 17 and nextSplit = 1. Expected result 2.
+ *    3. Delete 8 elements so that only one tail iterator remains. Expected result 3.
+ *    4. Erase the current last iterator. Expected result 4.
+ *    5. Verify the returned iterator equals the current end iterator and bucketSize is unchanged. Expected result 5.
+ * @expect
+ *    1. Hash table created successfully
+ *    2. Expansion occurred and bucketSize = 17
+ *    3. size = 9 and bucket layout is unchanged
+ *    4. Deleting the current last iterator does not shrink
+ *    5. BSL_HASH_Erase returns the current BSL_HASH_IterEnd(hash)
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC010(void)
+{
+    TestMemInit();
+    BSL_HASH_Hash *hash = BSL_HASH_Create(0, NULL, NULL, NULL, NULL);
+    BSL_HASH_Iterator it = NULL;
+    BSL_HASH_Iterator lastIt = NULL;
+    BSL_HASH_Iterator nextIt = NULL;
+    uintptr_t lastKey;
+    uint32_t bucketSizeBeforeLastErase;
+
+    ASSERT_TRUE(hash != NULL);
+    ASSERT_TRUE(insert_multiple_int_elements(hash, 0, 17) == BSL_SUCCESS);
+    ASSERT_TRUE(BSL_HASH_Size(hash) == 17);
+    ASSERT_TRUE(hash->bucketSize == 17);
+    ASSERT_TRUE(hash->nextSplit == 1);
+
+    for (int i = 0; i < 8; i++) {
+        (void)BSL_HASH_Erase(hash, (uintptr_t)i);
+    }
+    ASSERT_TRUE(BSL_HASH_Size(hash) == 9);
+    ASSERT_TRUE(hash->bucketSize == 17);
+    ASSERT_TRUE(hash->nextSplit == 1);
+
+    for (it = BSL_HASH_IterBegin(hash); it != BSL_HASH_IterEnd(hash); it = BSL_HASH_IterNext(hash, it)) {
+        lastIt = it;
+    }
+    ASSERT_TRUE(lastIt != NULL);
+    ASSERT_TRUE(lastIt != BSL_HASH_IterEnd(hash));
+    ASSERT_TRUE(BSL_HASH_IterNext(hash, lastIt) == BSL_HASH_IterEnd(hash));
+
+    lastKey = BSL_HASH_HashIterKey(hash, lastIt);
+    bucketSizeBeforeLastErase = hash->bucketSize;
+    nextIt = BSL_HASH_Erase(hash, lastKey);
+
+    ASSERT_TRUE(BSL_HASH_Size(hash) == 8);
+    ASSERT_TRUE(hash->bucketSize == bucketSizeBeforeLastErase);
+    ASSERT_TRUE(nextIt == BSL_HASH_IterEnd(hash));
+
+    for (int i = 8; i < 17; i++) {
+        if ((uintptr_t)i == lastKey) {
+            continue;
+        }
+        uintptr_t value;
+        ASSERT_TRUE(BSL_HASH_At(hash, (uintptr_t)i, &value) == BSL_SUCCESS);
+        ASSERT_TRUE(value == (uintptr_t)(i * 2));
+    }
+    uintptr_t deletedValue = 0;
+    ASSERT_TRUE(BSL_HASH_At(hash, lastKey, &deletedValue) != BSL_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_HASH_Destroy(hash);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC011
+ * @title Hash table creation rejects initial bucket size that overflows nextLevelSize
+ * @precon nan
+ * @brief
+ *    1. Create a hash table with initial bucket size 0x80000000. Expected result 1.
+ * @expect
+ *    1. BSL_HASH_Create returns NULL because nextLevelSize would overflow uint32_t
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC011(void)
+{
+    TestMemInit();
+    BSL_HASH_Hash *hash = BSL_HASH_Create(0x80000000U, NULL, NULL, NULL, NULL);
+
+    ASSERT_TRUE(hash == NULL);
+#if defined(HITLS_BSL_ERR)
+    BSL_ERR_ClearError();
+#endif
+
+EXIT:
+    BSL_HASH_Destroy(hash);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC012
+ * @title Hash table creation rejects bucket size whose actual allocation object overflows uint32 bytes
+ * @precon nan
+ * @brief
+ *    1. Compute a bucket size where `(bktSize + 1) * sizeof(RawList)` still fits uint32,
+ *       but `(nextLevelSize + 1) * sizeof(RawList)` does not. Expected result 1.
+ *    2. Create the hash table with that bucket size. Expected result 2.
+ * @expect
+ *    1. Candidate bucket size is valid for the old partial check but invalid for the real allocation object
+ *    2. BSL_HASH_Create returns NULL
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC012(void)
+{
+    uint32_t maxCount = UINT32_MAX / sizeof(RawList);
+    uint32_t bktSize = (maxCount + 1) / 2;
+    BSL_HASH_Hash *hash = NULL;
+
+    TestMemInit();
+    ASSERT_TRUE(bktSize <= (UINT32_MAX >> 1));
+    ASSERT_TRUE((((uint64_t)bktSize + 1) * sizeof(RawList)) <= UINT32_MAX);
+    ASSERT_TRUE(((((uint64_t)bktSize << 1) + 1) * sizeof(RawList)) > UINT32_MAX);
+
+    hash = BSL_HASH_Create(bktSize, NULL, NULL, NULL, NULL);
+    ASSERT_TRUE(hash == NULL);
+#if defined(HITLS_BSL_ERR)
+    BSL_ERR_ClearError();
+#endif
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_HASH_Destroy(hash);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC013
+ * @title Resize arithmetic guard should reject uint32 overflow in hashCount * FACTOR
+ * @precon nan
+ * @brief
+ *    1. Create hash table with default configuration. Expected result 1.
+ *    2. Force hashCount to a value whose multiplication by FACTOR overflows uint32_t. Expected result 2.
+ *    3. Insert a new key. Expected result 3.
+ * @expect
+ *    1. Hash table created successfully
+ *    2. Internal state is prepared for overflow check
+ *    3. Insert returns BSL_INTERNAL_EXCEPTION
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC013(void)
+{
+    BSL_HASH_Hash *hash = NULL;
+
+    TestMemInit();
+    hash = BSL_HASH_Create(0, NULL, NULL, NULL, NULL);
+    ASSERT_TRUE(hash != NULL);
+
+    hash->hashCount = 42949673U;
+    ASSERT_TRUE(BSL_HASH_Insert(hash, (uintptr_t)1, sizeof(uintptr_t), (uintptr_t)2, sizeof(uintptr_t))
+        == BSL_INTERNAL_EXCEPTION);
+#if defined(HITLS_BSL_ERR)
+    BSL_ERR_ClearError();
+#endif
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_HASH_Destroy(hash);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC014
+ * @title Failed level-transition realloc should not advance split state
+ * @precon nan
+ * @brief
+ *    1. Create a hash table with initial bucket size 1 and insert one element. Expected result 1.
+ *    2. Stub BSL_SAL_Realloc to fail on the next level-transition split. Expected result 2.
+ *    3. Attempt the insert that triggers the transition split. Expected result 3.
+ *    4. Verify resize-related state remains unchanged and existing keys stay accessible. Expected result 4.
+ * @expect
+ *    1. Hash table starts with bucketSize 1, nextSplit 0, nextLevelSize 2
+ *    2. Realloc failure is injected
+ *    3. Insert returns BSL_INTERNAL_EXCEPTION
+ *    4. bucketSize, nextSplit, nextLevelSize, and hashCount remain unchanged
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC014(void)
+{
+    BSL_HASH_Hash *hash = NULL;
+    uintptr_t value = 0;
+    uint32_t bucketSizeBefore;
+    uint32_t nextSplitBefore;
+    uint32_t nextLevelSizeBefore;
+    uint32_t hashCountBefore;
+
+    TestMemInit();
+    hash = BSL_HASH_Create(1, NULL, NULL, NULL, NULL);
+    ASSERT_TRUE(hash != NULL);
+    ASSERT_TRUE(BSL_HASH_Insert(hash, (uintptr_t)0, sizeof(uintptr_t), (uintptr_t)10, sizeof(uintptr_t))
+        == BSL_SUCCESS);
+
+    bucketSizeBefore = hash->bucketSize;
+    nextSplitBefore = hash->nextSplit;
+    nextLevelSizeBefore = hash->nextLevelSize;
+    hashCountBefore = hash->hashCount;
+
+    STUB_REPLACE(BSL_SAL_Realloc, STUB_BSL_SAL_Realloc_Fail);
+    ASSERT_TRUE(BSL_HASH_Insert(hash, (uintptr_t)1, sizeof(uintptr_t), (uintptr_t)12, sizeof(uintptr_t))
+        == BSL_INTERNAL_EXCEPTION);
+    STUB_RESTORE(BSL_SAL_Realloc);
+#if defined(HITLS_BSL_ERR)
+    BSL_ERR_ClearError();
+#endif
+
+    ASSERT_TRUE(hash->bucketSize == bucketSizeBefore);
+    ASSERT_TRUE(hash->nextSplit == nextSplitBefore);
+    ASSERT_TRUE(hash->nextLevelSize == nextLevelSizeBefore);
+    ASSERT_TRUE(hash->hashCount == hashCountBefore);
+    ASSERT_TRUE(BSL_HASH_At(hash, (uintptr_t)0, &value) == BSL_SUCCESS);
+    ASSERT_TRUE(value == (uintptr_t)10);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    STUB_RESTORE(BSL_SAL_Realloc);
+    BSL_HASH_Destroy(hash);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC015
+ * @title Iteration can delete all even keys without triggering shrink
+ * @precon nan
+ * @brief
+ *    1. Create a hash table and insert 17 elements so bucketSize becomes 17. Expected result 1.
+ *    2. Traverse the table with iterators and delete every even key. Expected result 2.
+ *    3. Verify erase updates size only and does not change resize-related state. Expected result 3.
+ *    4. Verify no even key remains and all odd keys are still accessible. Expected result 4.
+ * @expect
+ *    1. bucketSize = 17 and nextSplit = 1 after expansion
+ *    2. Iterator-based conditional deletion completes without errors
+ *    3. bucketSize, nextSplit, and nextLevelSize remain unchanged
+ *    4. Only odd keys remain in the hash table
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HASH_DYNAMIC_RESIZE_FUNC_TC015(void)
+{
+    BSL_HASH_Hash *hash = NULL;
+    BSL_HASH_Iterator it = NULL;
+    uintptr_t key = 0;
+    uintptr_t value = 0;
+    uint32_t bucketSizeBefore;
+    uint32_t nextSplitBefore;
+    uint32_t nextLevelSizeBefore;
+
+    TestMemInit();
+    hash = BSL_HASH_Create(0, NULL, NULL, NULL, NULL);
+    ASSERT_TRUE(hash != NULL);
+    ASSERT_TRUE(insert_multiple_int_elements(hash, 0, 17) == BSL_SUCCESS);
+    ASSERT_TRUE(hash->bucketSize == 17);
+    ASSERT_TRUE(hash->nextSplit == 1);
+
+    bucketSizeBefore = hash->bucketSize;
+    nextSplitBefore = hash->nextSplit;
+    nextLevelSizeBefore = hash->nextLevelSize;
+
+    for (it = BSL_HASH_IterBegin(hash); it != BSL_HASH_IterEnd(hash);) {
+        key = BSL_HASH_HashIterKey(hash, it);
+        if ((key % 2U) == 0U) {
+            it = BSL_HASH_Erase(hash, key);
+            continue;
+        }
+        it = BSL_HASH_IterNext(hash, it);
+    }
+
+    ASSERT_TRUE(BSL_HASH_Size(hash) == 8);
+    ASSERT_TRUE(hash->bucketSize == bucketSizeBefore);
+    ASSERT_TRUE(hash->nextSplit == nextSplitBefore);
+    ASSERT_TRUE(hash->nextLevelSize == nextLevelSizeBefore);
+
+    for (int i = 0; i < 17; i++) {
+        if ((i % 2) == 0) {
+            ASSERT_TRUE(BSL_HASH_At(hash, (uintptr_t)i, &value) != BSL_SUCCESS);
+            continue;
+        }
+        ASSERT_TRUE(BSL_HASH_At(hash, (uintptr_t)i, &value) == BSL_SUCCESS);
+        ASSERT_TRUE(value == (uintptr_t)(i * 2));
+    }
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:

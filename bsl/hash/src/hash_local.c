@@ -27,7 +27,7 @@ bool IsMultiOverflow(uint32_t x, uint32_t y)
     bool ret = false;
 
     if ((x > 0) && (y > 0)) {
-        ret = ((SIZE_MAX / x) < y) ? true : false;
+        ret = ((UINT32_MAX / x) < y) ? true : false;
     }
 
     return ret;

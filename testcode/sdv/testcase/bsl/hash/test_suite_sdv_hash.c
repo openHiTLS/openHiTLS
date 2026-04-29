@@ -80,6 +80,14 @@ bool ListNodeCmpFunc(const void *node, uintptr_t data)
     return (uintptr_t)(t->prev) == data;
 }
 
+static uint32_t g_rawListFreeCount = 0;
+
+static void CountRawListFreeFunc(void *data)
+{
+    (void)data;
+    g_rawListFreeCount++;
+}
+
 /* END_HEADER */
 
 /**
@@ -348,6 +356,110 @@ void SDV_BSL_HASH_LIST_FUNC_TC004(void)
 EXIT:
     BSL_SAL_Free(list);
     BSL_SAL_Free(node);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_HASH_LIST_FUNC_TC005
+ * @title Hash iterator accessors should honor NULL hash contract
+ * @precon nan
+ * @brief
+ *    1. Create a hash and insert one element. Expected result 1.
+ *    2. Get a valid iterator to the inserted node. Expected result 2.
+ *    3. Call BSL_HASH_HashIterKey(NULL, it) and BSL_HASH_IterValue(NULL, it). Expected result 3.
+ * @expect
+ *    1. Hash created and element inserted successfully
+ *    2. Iterator is valid
+ *    3. Both interfaces return 0
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HASH_LIST_FUNC_TC005(void)
+{
+    BSL_HASH_Hash *hash = NULL;
+    BSL_HASH_Iterator it = NULL;
+
+    TestMemInit();
+    hash = BSL_HASH_Create(BACKET_SIZE, NULL, NULL, NULL, NULL);
+    ASSERT_TRUE(hash != NULL);
+    ASSERT_TRUE(BSL_HASH_Insert(hash, (uintptr_t)1, 0, (uintptr_t)2, 0) == BSL_SUCCESS);
+
+    it = BSL_HASH_Find(hash, (uintptr_t)1);
+    ASSERT_TRUE(it != BSL_HASH_IterEnd(hash));
+    ASSERT_TRUE(BSL_HASH_HashIterKey(NULL, it) == 0);
+    ASSERT_TRUE(BSL_HASH_IterValue(NULL, it) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_HASH_Destroy(hash);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_HASH_LIST_FUNC_TC006
+ * @title ListRawRemove should invoke freeFunc for the last node
+ * @precon nan
+ * @brief
+ *    1. Initialize a raw list with counting freeFunc. Expected result 1.
+ *    2. Push exactly one node into the list. Expected result 2.
+ *    3. Remove that node. Expected result 3.
+ * @expect
+ *    1. List initializes successfully
+ *    2. Push succeeds and list becomes non-empty
+ *    3. freeFunc is invoked exactly once
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HASH_LIST_FUNC_TC006(void)
+{
+    RawList list = {0};
+    ListRawNode node = {0};
+
+    TestMemInit();
+    g_rawListFreeCount = 0;
+
+    ASSERT_EQ(ListRawInit(&list, CountRawListFreeFunc), BSL_SUCCESS);
+    ASSERT_EQ(ListRawPushBack(&list, &node), BSL_SUCCESS);
+    ASSERT_TRUE(ListRawEmpty(&list) == false);
+    ASSERT_EQ(ListRawRemove(&list, &node), BSL_SUCCESS);
+    ASSERT_TRUE(g_rawListFreeCount == 1);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_HASH_LIST_FUNC_TC007
+ * @title BSL_HASH_At should reject NULL hash or NULL value output pointer
+ * @precon nan
+ * @brief
+ *    1. Create a hash and insert one element. Expected result 1.
+ *    2. Call BSL_HASH_At(NULL, key, &value). Expected result 2.
+ *    3. Call BSL_HASH_At(hash, key, NULL). Expected result 3.
+ * @expect
+ *    1. Hash created and element inserted successfully
+ *    2. Interface returns BSL_INTERNAL_EXCEPTION
+ *    3. Interface returns BSL_INTERNAL_EXCEPTION
+ */
+/* BEGIN_CASE */
+void SDV_BSL_HASH_LIST_FUNC_TC007(void)
+{
+    BSL_HASH_Hash *hash = NULL;
+    uintptr_t value = 0;
+
+    TestMemInit();
+    hash = BSL_HASH_Create(BACKET_SIZE, NULL, NULL, NULL, NULL);
+    ASSERT_TRUE(hash != NULL);
+    ASSERT_TRUE(BSL_HASH_Insert(hash, (uintptr_t)1, 0, (uintptr_t)2, 0) == BSL_SUCCESS);
+
+    ASSERT_TRUE(BSL_HASH_At(NULL, (uintptr_t)1, &value) == BSL_INTERNAL_EXCEPTION);
+    ASSERT_TRUE(BSL_HASH_At(hash, (uintptr_t)1, NULL) == BSL_INTERNAL_EXCEPTION);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    BSL_HASH_Destroy(hash);
     return;
 }
 /* END_CASE */

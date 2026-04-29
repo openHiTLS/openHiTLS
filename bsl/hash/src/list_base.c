@@ -187,7 +187,7 @@ static void ListRawRemoveInner(RawList *list, ListRawNode *node)
     node->prev->next = node->next;
     node->next->prev = node->prev;
 
-    if ((list != NULL) && !IsListRawEmptyCheck(list) && (list->freeFunc != NULL)) {
+    if ((list != NULL) && (list->freeFunc != NULL)) {
         list->freeFunc((void *)node);
     }
 }

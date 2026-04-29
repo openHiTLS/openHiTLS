@@ -65,7 +65,6 @@ static uint32_t BSL_HASH_GetBucketIndex(const BSL_HASH_Hash *hash, uintptr_t key
 /* Default configuration values */
 #define BSL_HASH_DEFAULT_MIN_SIZE 16  /* Minimum bucket size */
 #define BSL_HASH_DEFAULT_EXPAND_THRESHOLD 100  /* Expand when load factor >= 100% */
-#define BSL_HASH_DEFAULT_SHRINK_THRESHOLD 50   /* Shrink when load factor <= 50% */
 #define FACTOR 100  /* Factor for percentage calculation */
 
 enum BSL_CstlByte {
@@ -389,6 +388,12 @@ static void BSL_HASH_MoveNodes(BSL_HASH_Hash *hash, RawList *sourceList, RawList
 static RawList *BSL_HASH_ResizeListArray(BSL_HASH_Hash *hash, uint32_t newCapacity, uint32_t oldCapacity)
 {
     RawList *oldListArray = hash->listArray;
+
+    if (IsMultiOverflow(newCapacity, sizeof(RawList)) || IsMultiOverflow(oldCapacity, sizeof(RawList))) {
+        BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
+        return NULL;
+    }
+
     RawList *newListArray = (RawList *)BSL_SAL_Realloc(hash->listArray, newCapacity * sizeof(RawList),
         oldCapacity * sizeof(RawList));
 
@@ -406,6 +411,17 @@ static int32_t BSL_HASH_SplitBucket(BSL_HASH_Hash *hash)
     uint32_t nLevel = hash->nextLevelSize >> 1;
     uint32_t splitIndex = hash->nextSplit;
     uint32_t newBucketIndex = nLevel + splitIndex;
+    bool needLevelTransition = (splitIndex == (nLevel - 1));
+
+    if (needLevelTransition) {
+        uint32_t oldCapacity = hash->nextLevelSize + 1;
+        uint32_t newCapacity = (hash->nextLevelSize * 2) + 1;
+
+        if (BSL_HASH_ResizeListArray(hash, newCapacity, oldCapacity) == NULL) {
+            BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
+            return BSL_INTERNAL_EXCEPTION;
+        }
+    }
 
     /* Initialize the new bucket (was sentinel) */
     ListRawInit(&hash->listArray[newBucketIndex], NULL);
@@ -419,68 +435,9 @@ static int32_t BSL_HASH_SplitBucket(BSL_HASH_Hash *hash)
 
     /* Update split pointer and level */
     hash->nextSplit++;
-    if (hash->nextSplit >= nLevel) {
-        /* Level transition: Double the capacity */
-        uint32_t oldCapacity = hash->nextLevelSize + 1;
-        uint32_t newCapacity = (hash->nextLevelSize * 2) + 1;
-        
-        if (BSL_HASH_ResizeListArray(hash, newCapacity, oldCapacity) == NULL) {
-            BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
-            return BSL_INTERNAL_EXCEPTION;
-        }
-
+    if (needLevelTransition) {
         hash->nextSplit = 0;
         hash->nextLevelSize <<= 1;
-    }
-
-    return BSL_SUCCESS;
-}
-
-/* Merge a bucket for linear hashing (reverse of split operation) */
-static int32_t BSL_HASH_MergeBucket(BSL_HASH_Hash *hash)
-{
-    /* Cannot shrink below initial size */
-    if (hash->bucketSize <= hash->initialSize) {
-        return BSL_SUCCESS;
-    }
-
-    uint32_t mergeFromIndex;  /* Last bucket to be removed */
-    uint32_t mergeToIndex;    /* Target bucket to merge into */
-    bool levelDropped = false;
-
-    /* Determine which buckets to merge based on current split pointer */
-    if (hash->nextSplit > 0) {
-        /* Merge the last bucket back to its parent bucket */
-        uint32_t nLevel = hash->nextLevelSize >> 1;
-        mergeFromIndex = nLevel + hash->nextSplit - 1;
-        mergeToIndex = hash->nextSplit - 1;
-        hash->nextSplit--;
-    } else {
-        /* Need to go back to previous level */
-        hash->nextLevelSize >>= 1;  /* Reduce to previous level's nextLevelSize */
-        uint32_t nLevel = hash->nextLevelSize >> 1;  /* Current level size after reduction */
-        hash->nextSplit = nLevel - 1;  /* Set split pointer to last position of previous level */
-        mergeFromIndex = hash->bucketSize - 1;
-        mergeToIndex = hash->nextSplit;
-        levelDropped = true;
-    }
-
-    /* Move all elements from mergeFrom bucket to mergeTo bucket */
-    RawList *mergeFromList = &hash->listArray[mergeFromIndex];
-    RawList *mergeToList = &hash->listArray[mergeToIndex];
-    BSL_HASH_MoveNodes(hash, mergeFromList, mergeToList, 0, false); /* Unconditional move */
-
-    /* Decrease bucket size. The old bucket at mergeFromIndex (now empty) becomes the new sentinel if needed,
-       or simply remains as reserved capacity. */
-    hash->bucketSize--;
-
-    /* Shrink memory if we dropped a level */
-    if (levelDropped) {
-        uint32_t oldCapacity = (hash->nextLevelSize * 2) + 1; /* capacity before drop was 2*newNextLevelSize */
-        uint32_t newCapacity = hash->nextLevelSize + 1;
-        
-        (void)BSL_HASH_ResizeListArray(hash, newCapacity, oldCapacity);
-        /* If realloc fails, we just keep the larger memory, which is fine for shrinking */
     }
 
     return BSL_SUCCESS;
@@ -498,12 +455,6 @@ static int32_t BSL_HASH_CheckResize(BSL_HASH_Hash *hash)
     /* Check if split is needed using integer arithmetic to avoid float */
     if (hash->hashCount * FACTOR >= hash->bucketSize * BSL_HASH_DEFAULT_EXPAND_THRESHOLD) {
         return BSL_HASH_SplitBucket(hash);
-    }
-
-    /* Check if merge is needed (load factor <= 50% and above initial size) */
-    if (hash->bucketSize > hash->initialSize &&
-        hash->hashCount * FACTOR <= hash->bucketSize * BSL_HASH_DEFAULT_SHRINK_THRESHOLD) {
-        return BSL_HASH_MergeBucket(hash);
     }
 
     return BSL_SUCCESS;
@@ -543,14 +494,20 @@ BSL_HASH_Hash *BSL_HASH_Create(uint32_t bktSize, BSL_HASH_CodeCalcFunc hashFunc,
     ListDupFreeFuncPair *keyFunc, ListDupFreeFuncPair *valueFunc)
 {
     uint32_t i;
+    uint32_t actualBktSize;
+    uint32_t nextLevelSize;
     BSL_HASH_Hash *hash = NULL;
 
-    if (bktSize == 0) {
-        bktSize = BSL_HASH_DEFAULT_MIN_SIZE;
+    actualBktSize = (bktSize == 0) ? BSL_HASH_DEFAULT_MIN_SIZE : bktSize;
+
+    /* Check the actual level size and actual allocation object */
+    if (actualBktSize > (UINT32_MAX >> 1)) {
+        BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
+        return NULL;
     }
 
-    /* Check for overflow in bucket array size calculation */
-    if (IsAddOverflow(bktSize, 1) || IsMultiOverflow(bktSize + 1, sizeof(RawList))) {
+    nextLevelSize = actualBktSize << 1;
+    if (IsMultiOverflow(nextLevelSize + 1, sizeof(RawList))) {
         BSL_ERR_PUSH_ERROR(BSL_INTERNAL_EXCEPTION);
         return NULL;
     }
@@ -562,9 +519,9 @@ BSL_HASH_Hash *BSL_HASH_Create(uint32_t bktSize, BSL_HASH_CodeCalcFunc hashFunc,
     }
 
     /* Initialize hash table configuration */
-    hash->bucketSize = bktSize;
-    hash->initialSize = bktSize;  /* Set initial size to default bucket size */
-    hash->nextLevelSize = bktSize << 1; /* Start at level 0, next level size is 2 * initialSize */
+    hash->bucketSize = actualBktSize;
+    hash->initialSize = actualBktSize;  /* Set initial size to default bucket size */
+    hash->nextLevelSize = nextLevelSize; /* Start at level 0, next level size is 2 * initialSize */
     BSL_HASH_HookRegister(hash, hashFunc, matchFunc, keyFunc, valueFunc);
 
     /* Separately allocate bucket array (can be resized later) */
@@ -575,8 +532,8 @@ BSL_HASH_Hash *BSL_HASH_Create(uint32_t bktSize, BSL_HASH_CodeCalcFunc hashFunc,
     }
 
     /* Initialize bucket array (each bucket is a linked list) */
-    for (i = 0; i < bktSize; ++i) {
-        ListRawInit(&hash->listArray[i], NULL);
+    for (i = 0; i < actualBktSize; ++i) {
+        (void)ListRawInit(&hash->listArray[i], NULL);
     }
 
     return hash;
@@ -683,8 +640,13 @@ int32_t BSL_HASH_Put(BSL_HASH_Hash *hash, uintptr_t key, uint32_t keySize, uintp
 
 int32_t BSL_HASH_At(const BSL_HASH_Hash *hash, uintptr_t key, uintptr_t *value)
 {
-    BSL_HASH_Node *hashNode = BSL_HASH_Find(hash, key);
+    BSL_HASH_Node *hashNode = NULL;
 
+    if (hash == NULL || value == NULL) {
+        return BSL_INTERNAL_EXCEPTION;
+    }
+
+    hashNode = BSL_HASH_Find(hash, key);
     if (hashNode == BSL_HASH_IterEndGet(hash)) {
         // Sometimes the caller does not wish to push an error(CCA load cert).
         return BSL_INTERNAL_EXCEPTION;
@@ -745,8 +707,6 @@ BSL_HASH_Iterator BSL_HASH_Erase(BSL_HASH_Hash *hash, uintptr_t key)
     BSL_HASH_NodeFree(hash, hashNode);
     --hash->hashCount;
 
-    (void)BSL_HASH_CheckResize(hash);
-
     return nextHashNode;
 }
 
@@ -803,12 +763,12 @@ BSL_HASH_Iterator BSL_HASH_IterNext(const BSL_HASH_Hash *hash, BSL_HASH_Iterator
 
 uintptr_t BSL_HASH_HashIterKey(const BSL_HASH_Hash *hash, BSL_HASH_Iterator it)
 {
-    return (it == NULL || it == BSL_HASH_IterEnd(hash)) ? 0 : it->key;
+    return (hash == NULL || it == NULL || it == BSL_HASH_IterEnd(hash)) ? 0 : it->key;
 }
 
 uintptr_t BSL_HASH_IterValue(const BSL_HASH_Hash *hash, BSL_HASH_Iterator it)
 {
-    return (it == NULL || it == BSL_HASH_IterEnd(hash)) ? 0 : it->value;
+    return (hash == NULL || it == NULL || it == BSL_HASH_IterEnd(hash)) ? 0 : it->value;
 }
 
 #ifdef __cplusplus
