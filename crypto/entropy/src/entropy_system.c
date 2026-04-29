@@ -45,7 +45,10 @@ uint32_t ENTROPY_SysEntropyGet(void *ctx, uint8_t *buf, uint32_t bufLen)
         }
     }
 #if defined(__NR_getrandom)
-    return (uint32_t)syscall(__NR_getrandom, buf, bufLen, 0);
+    long ret = syscall(__NR_getrandom, buf, bufLen, 0);
+    if (ret > 0) {
+        return (uint32_t)ret;
+    }
 #endif
 #endif
 

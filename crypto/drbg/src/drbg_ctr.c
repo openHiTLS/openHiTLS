@@ -118,6 +118,7 @@ int32_t DRBG_CtrUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_Data *
     // The lower bits of temp.data are used for ctx->K, and the upper bits are used for ctx->V.
     memcpy(ctx->v, temp.data + ctx->keyLen, AES_BLOCK_LEN);
 EXIT:
+    BSL_SAL_CleanseData(tempData, sizeof(tempData));
     (void)ciphMeth->cipherDeInitCtx(ctx->ctrCtx);
     return ret;
 }
