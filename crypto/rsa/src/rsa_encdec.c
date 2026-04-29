@@ -1079,10 +1079,6 @@ static int32_t EncryptInputCheck(const CRYPT_RSA_Ctx *ctx, const uint8_t *input,
     }
     // Check whether the length of the out is sufficient to place the encryption information.
     uint32_t bits = CRYPT_RSA_GetBits(ctx);
-    if ((*outLen) < BN_BITS_TO_BYTES(bits)) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
-        return CRYPT_RSA_BUFF_LEN_NOT_ENOUGH;
-    }
     if (inputLen > BN_BITS_TO_BYTES(bits)) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_ENC_BITS);
         return CRYPT_RSA_ERR_ENC_BITS;
@@ -1258,14 +1254,14 @@ int32_t CRYPT_RSA_Recover(CRYPT_RSA_Ctx *ctx, const uint8_t *data, uint32_t data
     switch (ctx->pad.type) { // Remove padding based on the padding type to obtain the plaintext.
 #ifdef HITLS_CRYPTO_RSA_EMSA_PKCSV15
         case RSAES_PKCSV15:
-            ret = CRYPT_RSA_UnPackPkcsV15Type1(emMsg, emLen, out, outLen);
+            ret = CRYPT_RSA_UnPackPkcsV15Type1(ctx->pad.para.pkcsv15.mdId, emMsg, emLen, out, outLen);
             break;
 #endif
 #ifdef HITLS_CRYPTO_RSA_NO_PAD
         case RSA_NO_PAD:
             if (memcpy_s(out, *outLen, emMsg, emLen) != EOK) {
-                BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-                ret = CRYPT_SECUREC_FAIL;
+                BSL_ERR_PUSH_ERROR(CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
+                ret = CRYPT_RSA_BUFF_LEN_NOT_ENOUGH;
                 goto ERR;
             }
             *outLen = emLen;

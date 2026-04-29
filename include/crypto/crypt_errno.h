@@ -89,7 +89,7 @@ enum CRYPT_ERROR {
     CRYPT_RSA_ERR_KEY_BITS,             /**< Incorrect key length. */
     CRYPT_RSA_ERR_E_VALUE,              /**< The value of parameter e is incorrect. */
     CRYPT_RSA_NOR_KEYGEN_FAIL,          /**< Key generation failure, it's normal error. */
-    CRYPT_RSA_NOR_VERIFY_FAIL,          /**< Failed to verify the signature. it's normal error. */
+    CRYPT_RSA_NOR_VERIFY_FAIL,          /**< Failed to verify. it's normal error. */
     CRYPT_RSA_ERR_ENC_BITS,             /**< Incorrect length of the encrypted plaintext of the public key. */
     CRYPT_RSA_ERR_DEC_BITS,             /**< Incorrect length of the decrypted ciphertext of the private key. */
     CRYPT_RSA_ERR_PSS_SALT_LEN,         /**< Incorrect salt length of the PSS operation. */
