@@ -77,7 +77,8 @@ test_bsl()
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=obj_default test=obj
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=obj_custom,hash,sal_thread test=obj # depends on thread to init hash
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=params test=params
-    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=pem test=pem
+    # PEM cases read cert/key files via BSL_SAL_ReadFile, so sal_file is required.
+    bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=pem,sal_file test=pem
 
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=sal test=sal
     bash mini_build_test.sh $COMMON_PARAM $NO_LIB enable=sal_mem test=sal_mem
