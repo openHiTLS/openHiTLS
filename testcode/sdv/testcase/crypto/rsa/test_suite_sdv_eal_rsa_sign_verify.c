@@ -203,7 +203,7 @@ void SDV_CRYPTO_RSA_VERIFY_RECOVER_FUNC_TC002(int padMode, Hex *n, Hex *e, Hex *
     if (padMode == CRYPT_CTRL_SET_RSA_PADDING) {
         ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, 0, data, &dataLen) == 0);
     } else {
-        ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, 0, data, &dataLen) == CRYPT_RSA_ERR_INPUT_VALUE);
+        ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, 0, data, &dataLen) == CRYPT_RSA_NOR_VERIFY_FAIL);
     }
     ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, cipherText->len, NULL, &dataLen) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, cipherText->x, cipherText->len, data, NULL) == CRYPT_NULL_INPUT);
@@ -2136,5 +2136,71 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeySign);
     CRYPT_EAL_PkeyFreeCtx(pkeyVerify);
     BSL_SAL_Free(signdata);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_RSA_RECOVER_PKCSV15_VECTOR_TC001
+ * @title  RSA CRYPT_EAL_PkeyVerifyRecover: PKCS#1 v1.5 Type-1 hash recovery with known vectors.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_RSA_RECOVER_PKCSV15_VECTOR_TC001(
+    int mdAlgId, Hex *n, Hex *e, Hex *signature, Hex *expectedHash, int isProvider)
+{
+#if !defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15) || !defined(HITLS_CRYPTO_RSA_RECOVER) || \
+    !defined(HITLS_CRYPTO_RSA_VERIFY)
+    (void)mdAlgId;
+    (void)n;
+    (void)e;
+    (void)signature;
+    (void)expectedHash;
+    (void)isProvider;
+    SKIP_TEST();
+#endif
+    if (IsMdAlgDisabled(mdAlgId)) {
+        SKIP_TEST();
+    }
+
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyPub pubKey = {0};
+    uint8_t *recovered = NULL;
+    uint8_t *sigTamper = NULL;
+    uint32_t recoveredLen;
+    int32_t pkcsv15Md = mdAlgId;
+    int32_t wrongMdId = CRYPT_MD_SHA224;
+
+    SetRsaPubKey(&pubKey, n->x, n->len, e->x, e->len);
+    ctx = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA, CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(ctx, &pubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_RSAES_PKCSV15, &pkcsv15Md, sizeof(pkcsv15Md)),
+        CRYPT_SUCCESS);
+
+    recoveredLen = (uint32_t)(expectedHash->len);
+    recovered = BSL_SAL_Malloc(recoveredLen);
+    ASSERT_TRUE(recovered != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyRecover(ctx, signature->x, signature->len, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(recoveredLen, (uint32_t)expectedHash->len);
+    ASSERT_COMPARE("Recovered hash vs expected", recovered, recoveredLen, expectedHash->x, (uint32_t)expectedHash->len);
+
+    sigTamper = BSL_SAL_Malloc(signature->len);
+    ASSERT_TRUE(sigTamper != NULL);
+    memcpy(sigTamper, signature->x, signature->len);
+    sigTamper[signature->len - 1] ^= 0x01u;
+    recoveredLen = (uint32_t)(expectedHash->len);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, sigTamper, signature->len, recovered, &recoveredLen) != CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_RSA_RSAES_PKCSV15, &wrongMdId, sizeof(wrongMdId)),
+        CRYPT_SUCCESS);
+    recoveredLen = (uint32_t)(expectedHash->len);
+    ASSERT_TRUE(CRYPT_EAL_PkeyVerifyRecover(ctx, signature->x, signature->len, recovered, &recoveredLen) !=
+        CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    BSL_SAL_Free(recovered);
+    BSL_SAL_Free(sigTamper);
 }
 /* END_CASE */

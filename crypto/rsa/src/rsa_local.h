@@ -162,7 +162,8 @@ int32_t RSA_CalcPrvKey(const CRYPT_RSA_Para *para, CRYPT_RSA_Ctx *ctx, BN_Optimi
 void ShallowCopyCtx(CRYPT_RSA_Ctx *ctx, CRYPT_RSA_Ctx *newCtx);
 CRYPT_RSA_Para *CRYPT_RSA_DupPara(const CRYPT_RSA_Para *para);
 #if defined(HITLS_CRYPTO_RSA_EMSA_PKCSV15) || defined(HITLS_CRYPTO_RSA_RECOVER)
-int32_t CRYPT_RSA_UnPackPkcsV15Type1(uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen);
+int32_t CRYPT_RSA_UnPackPkcsV15Type1(CRYPT_MD_AlgId mdId, const uint8_t *emMsg, uint32_t emLen, uint8_t *out,
+    uint32_t *outLen);
 #endif
 
 #ifdef HITLS_CRYPTO_RSA_EMSA_ISO9796_2

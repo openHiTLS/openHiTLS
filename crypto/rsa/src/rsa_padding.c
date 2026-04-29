@@ -497,7 +497,7 @@ int32_t CRYPT_RSA_SetPkcsV15Type1(CRYPT_MD_AlgId hashId, const uint8_t *data, ui
     return CRYPT_SUCCESS;
 }
 
-#ifdef HITLS_CRYPTO_RSA_VERIFY
+#if defined(HITLS_CRYPTO_RSA_VERIFY) || defined(HITLS_CRYPTO_RSA_RECOVER)
 int32_t CRYPT_RSA_VerifyPkcsV15Type1(CRYPT_MD_AlgId hashId, const uint8_t *pad, uint32_t padLen,
     const uint8_t *data, uint32_t dataLen)
 {
@@ -532,51 +532,32 @@ int32_t CRYPT_RSA_VerifyPkcsV15Type1(CRYPT_MD_AlgId hashId, const uint8_t *pad, 
     BSL_SAL_FREE(padBuff);
     return CRYPT_SUCCESS;
 }
-#endif // HITLS_CRYPTO_RSA_VERIFY
+#endif // HITLS_CRYPTO_RSA_VERIFY || HITLS_CRYPTO_RSA_RECOVER
 
 #ifdef HITLS_CRYPTO_RSA_RECOVER
-int32_t CRYPT_RSA_UnPackPkcsV15Type1(uint8_t *data, uint32_t dataLen, uint8_t *out, uint32_t *outLen)
+int32_t CRYPT_RSA_UnPackPkcsV15Type1(CRYPT_MD_AlgId mdId, const uint8_t *emMsg, uint32_t emLen, uint8_t *out,
+    uint32_t *outLen)
 {
-    uint8_t *index = data;
-    uint32_t tmpLen = dataLen;
-    // Format of the data to be decrypted is EB = 00 || 01 || PS || 00 || T.
-    // The PS padding is at least 8. Therefore, the length of the data to be decrypted is at least 11.
-    if (dataLen < 11) {
+    uint32_t hashLen = CRYPT_GetMdSizeById(mdId);
+    if (hashLen == 0 || hashLen > emLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_MD_ALGID);
+        return CRYPT_RSA_ERR_MD_ALGID;
+    }
+
+    const uint8_t *candidateHash = emMsg + emLen - hashLen;
+    int32_t ret = CRYPT_RSA_VerifyPkcsV15Type1(mdId, emMsg, emLen, candidateHash, hashLen);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    if (hashLen > *outLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_RSA_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_RSA_BUFF_LEN_NOT_ENOUGH;
     }
-    if (*index != 0x0 || *(index + 1) != 0x01) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
-        return CRYPT_RSA_ERR_INPUT_VALUE;
-    }
-
-    index += 2; // Skip first 2 bytes.
-    tmpLen -= 2; // Skip first 2 bytes.
-    uint32_t padNum = 0;
-    while (*index == 0xff) {
-        index++;
-        tmpLen--;
-        padNum++;
-    }
-    if (padNum < 8) { // The PS padding is at least 8.
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_PAD_NUM);
-        return CRYPT_RSA_ERR_PAD_NUM;
-    }
-    if (tmpLen == 0 || *index != 0x0) {
-        BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_INPUT_VALUE);
-        return CRYPT_RSA_ERR_INPUT_VALUE;
-    }
-    index++;
-    tmpLen--;
-
-    if (tmpLen > *outLen) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_CPY_FAIL);
-        return CRYPT_MEM_CPY_FAIL;
-    }
-    memcpy(out, index, tmpLen);
-    *outLen = tmpLen;
+    memcpy(out, candidateHash, hashLen);
+    *outLen = hashLen;
     return CRYPT_SUCCESS;
 }
+
 #endif // HITLS_CRYPTO_RSA_RECOVER
 #endif // HITLS_CRYPTO_RSA_EMSA_PKCSV15
 
