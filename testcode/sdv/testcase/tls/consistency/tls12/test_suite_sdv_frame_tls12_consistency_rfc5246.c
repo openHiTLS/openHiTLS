@@ -1558,7 +1558,7 @@ state. Expected result 1 is obtained.
 * @expect 1. The initialization is successful.
 *         2. The outdatedState field is empty.
 *         3. The return value for reconnection is HITLS_REC_NORMAL_RECV_BUF_EMPTY.
-*         4. OutdatedState is the previous currentState.
+*         4. OutdatedState is empty.
 *            currentState is the previous pendingState.
 *            The pendingState field is empty.
 @ */
@@ -1587,7 +1587,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_READ_PENDING_STATE_TC001()
     RecConnState *newCurrentState = readStates->currentState;
     RecConnState *newPendingState = readStates->pendingState;
 
-    ASSERT_TRUE(newOutdatedState == oldCurrentState);
+    ASSERT_TRUE(newOutdatedState == NULL);
     ASSERT_TRUE(newCurrentState == oldPendingState);
     ASSERT_TRUE(newPendingState == NULL);
 
@@ -1611,7 +1611,7 @@ obtained.
 * @expect 1. The initialization is successful.
 *         2. OutdatedState is empty.
 *         3. The return value for reconnection is HITLS_REC_NORMAL_RECV_BUF_EMPTY.
-*         4. OutdatedState is the previous currentState.
+*         4. OutdatedState is empty.
 *            currentState is the previous pendingState.
 *            The pendingState field is empty.
 @ */
@@ -1639,7 +1639,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_READ_PENDING_STATE_TC002()
     RecConnState *newOutdatedState = readStates->outdatedState;
     RecConnState *newCurrentState = readStates->currentState;
     RecConnState *newPendingState = readStates->pendingState;
-    ASSERT_TRUE(newOutdatedState == oldCurrentState);
+    ASSERT_TRUE(newOutdatedState == NULL);
     ASSERT_TRUE(newCurrentState == oldPendingState);
     ASSERT_TRUE(newPendingState == NULL);
 
@@ -1663,7 +1663,7 @@ obtained.
 * @expect 1. The initialization is successful.
 *         2. The outdatedState field is empty.
 *         3. The return value for reconnection is HITLS_REC_NORMAL_IO_BUSY.
-*         4. OutdatedState is the previous currentState.
+*         4. OutdatedState is empty.
 *            currentState is the previous pendingState.
 *            The pendingState field is empty.
 @ */
@@ -1691,7 +1691,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_WRITE_PENDING_STATE_TC001()
     RecConnState *newOutdatedState = writeStates->outdatedState;
     RecConnState *newCurrentState = writeStates->currentState;
     RecConnState *newPendingState = writeStates->pendingState;
-    ASSERT_TRUE(newOutdatedState == oldCurrentState);
+    ASSERT_TRUE(newOutdatedState == NULL);
     ASSERT_TRUE(newCurrentState == oldPendingState);
     ASSERT_TRUE(newPendingState == NULL);
 
@@ -1717,7 +1717,7 @@ state. Expected result 1 is obtained.
 * @expect 1. The initialization is successful.
 *         2. The outdatedState field is empty.
 *         3. The return value for reconnection is HITLS_REC_NORMAL_IO_BUSY.
-*         4. OutdatedState is the previous currentState.
+*         4. OutdatedState is empty.
 *            currentState is the previous pendingState.
 *            The pendingState field is empty.
 @ */
@@ -1745,7 +1745,7 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_WRITE_PENDING_STATE_TC002()
     RecConnState *newOutdatedState = writeStates->outdatedState;
     RecConnState *newCurrentState = writeStates->currentState;
     RecConnState *newPendingState = writeStates->pendingState;
-    ASSERT_TRUE(newOutdatedState == oldCurrentState);
+    ASSERT_TRUE(newOutdatedState == NULL);
     ASSERT_TRUE(newCurrentState == oldPendingState);
     ASSERT_TRUE(newPendingState == NULL);
 
