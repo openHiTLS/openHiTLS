@@ -567,7 +567,12 @@ int32_t REC_ActivePendingState(TLS_Ctx *ctx, bool isOut)
     }
 
     RecConnStateFree(states->outdatedState);
-    states->outdatedState = states->currentState;
+    states->outdatedState = NULL;
+    if (IS_SUPPORT_STREAM(ctx->config.tlsConfig.originVersionMask)) {
+        RecConnStateFree(states->currentState);
+    } else {
+        states->outdatedState = states->currentState;
+    }
     states->currentState = states->pendingState;
     states->pendingState = NULL;
     RecConnSetSeqNum(states->currentState, 0);
