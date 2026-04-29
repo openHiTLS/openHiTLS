@@ -1575,7 +1575,6 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_READ_PENDING_STATE_TC001()
     /* Record the states at the record layer that the client reads. */
     RecConnStates *readStates = (RecConnStates *)&(testInfo.client->ssl->recCtx->readStates);
     RecConnState *oldOutdatedState = readStates->outdatedState;
-    RecConnState *oldCurrentState = readStates->currentState;
     RecConnState *oldPendingState = readStates->pendingState;
     ASSERT_TRUE(oldOutdatedState == NULL);
 
@@ -1628,7 +1627,6 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_READ_PENDING_STATE_TC002()
     /* Record the states of the record layer that the client reads. */
     RecConnStates *readStates = (RecConnStates *)&(testInfo.server->ssl->recCtx->readStates);
     RecConnState *oldOutdatedState = readStates->outdatedState;
-    RecConnState *oldCurrentState = readStates->currentState;
     RecConnState *oldPendingState = readStates->pendingState;
     ASSERT_TRUE(oldOutdatedState == NULL);
 
@@ -1680,7 +1678,6 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_WRITE_PENDING_STATE_TC001()
     /* Record the states of the client write record layer. */
     RecConnStates *writeStates = (RecConnStates *)&(testInfo.client->ssl->recCtx->writeStates);
     RecConnState *oldOutdatedState = writeStates->outdatedState;
-    RecConnState *oldCurrentState = writeStates->currentState;
     RecConnState *oldPendingState = writeStates->pendingState;
     ASSERT_TRUE(oldOutdatedState == NULL);
 
@@ -1734,7 +1731,6 @@ void UT_TLS_TLS12_RFC5246_CONSISTENCY_WRITE_PENDING_STATE_TC002()
     /* Record the states at the write record layer on the client. */
     RecConnStates *writeStates = (RecConnStates *)&(testInfo.server->ssl->recCtx->writeStates);
     RecConnState *oldOutdatedState = writeStates->outdatedState;
-    RecConnState *oldCurrentState = writeStates->currentState;
     RecConnState *oldPendingState = writeStates->pendingState;
     ASSERT_TRUE(oldOutdatedState == NULL);
 
