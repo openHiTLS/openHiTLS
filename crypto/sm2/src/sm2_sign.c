@@ -373,7 +373,7 @@ int32_t CRYPT_SM2_Export(const CRYPT_SM2_Ctx *ctx, BSL_Param *params)
         (void)BSL_PARAM_InitValue(&sm2Params[index], CRYPT_PARAM_EC_PRVKEY, BSL_PARAM_TYPE_OCTETS, buffer, keyBytes);
         ret = CRYPT_SM2_GetPrvKeyEx(ctx, sm2Params);
         if (ret != CRYPT_SUCCESS) {
-            BSL_SAL_Free(buffer);
+            BSL_SAL_Free(buffer); // No sensitive information is included, so no need for cleaning.
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
@@ -385,7 +385,7 @@ int32_t CRYPT_SM2_Export(const CRYPT_SM2_Ctx *ctx, BSL_Param *params)
             buffer + keyBytes, keyBytes);
         ret = CRYPT_SM2_GetPubKeyEx(ctx, sm2Params);
         if (ret != CRYPT_SUCCESS) {
-            BSL_SAL_Free(buffer);
+            BSL_SAL_ClearFree(buffer, keyBytes * 2); // 2: public and private key
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
@@ -393,7 +393,7 @@ int32_t CRYPT_SM2_Export(const CRYPT_SM2_Ctx *ctx, BSL_Param *params)
         index++;
     }
     ret = processCb(sm2Params, args);
-    BSL_SAL_Free(buffer);
+    BSL_SAL_ClearFree(buffer, keyBytes * 2); // 2: public and private key
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }

@@ -300,8 +300,7 @@ int32_t CRYPT_SCRYPT(PBKDF2_PRF pbkdf2Prf, const EAL_MacMethod *macMeth, CRYPT_M
     GOTO_ERR_IF(pbkdf2Prf(NULL, macMeth, macId, mdMeth, key, keyLen, b, bLen, 1, out, len), ret);
 
 ERR:
-    BSL_SAL_FREE(b);
-
+    BSL_SAL_ClearFree(b, sumLen);
     return ret;
 }
 

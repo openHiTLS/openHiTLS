@@ -322,7 +322,7 @@ CRYPT_EAL_KdfCtx* HITLS_AUTH_PakeGetKdfCtx(HITLS_AUTH_PakeCtx* ctx, HITLS_AUTH_P
                 BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL);
                 return NULL;
             }
-            
+
             CRYPT_MAC_AlgId algId = kdf.param.pbkdf2.mac;
             uint32_t it = kdf.param.pbkdf2.iteration;
             uint32_t saltLen = kdf.param.pbkdf2.salt.dataLen;
@@ -335,7 +335,7 @@ CRYPT_EAL_KdfCtx* HITLS_AUTH_PakeGetKdfCtx(HITLS_AUTH_PakeCtx* ctx, HITLS_AUTH_P
                 ctx->verifier.data, ctx->verifier.dataLen);
             CRYPT_EAL_KdfCtx *kdfCtx = CRYPT_EAL_KdfNewCtx(kdf.algId);
             if (kdfCtx == NULL) {
-                BSL_SAL_Free(buffer);
+                BSL_SAL_ClearFree(buffer, totalLen);
                 BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL);
                 return NULL;
             }
@@ -360,10 +360,10 @@ CRYPT_EAL_KdfCtx* HITLS_AUTH_PakeGetKdfCtx(HITLS_AUTH_PakeCtx* ctx, HITLS_AUTH_P
             if (ret != HITLS_AUTH_SUCCESS) {
                 goto ERR;
             }
-            BSL_SAL_Free(buffer);
+            BSL_SAL_ClearFree(buffer, totalLen);
             return kdfCtx;
-            ERR:
-            BSL_SAL_Free(buffer);
+ERR:
+            BSL_SAL_ClearFree(buffer, totalLen);
             CRYPT_EAL_KdfFreeCtx(kdfCtx);
             return NULL;
         }

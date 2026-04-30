@@ -136,7 +136,7 @@ static int32_t FrodoKemEncapsInternal(const uint8_t *mu, const FrodoKemParams *p
     (void)memcpy_s(in + params->lenPkHash, inLen - params->lenPkHash, mu, params->lenMu + params->lenSalt);
 
     ret = FrodoShake(seedk, seedkLen, in, inLen);
-    BSL_SAL_FREE(in);
+    BSL_SAL_ClearFree(in, inLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_SAL_FREE(seedk);
         BSL_ERR_PUSH_ERROR(ret);
@@ -149,7 +149,7 @@ static int32_t FrodoKemEncapsInternal(const uint8_t *mu, const FrodoKemParams *p
     ret = FrodoPkeEncrypt(params, pk, mu, seedSEp, ct);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        BSL_SAL_FREE(seedk);
+        BSL_SAL_ClearFree(seedk, seedkLen);
         return ret;
     }
 
@@ -160,9 +160,9 @@ static int32_t FrodoKemEncapsInternal(const uint8_t *mu, const FrodoKemParams *p
     uint32_t ctKLen = params->ctxSize + params->ss;
     uint8_t *ctK = (uint8_t *)BSL_SAL_Malloc(ctKLen);
     if (ctK == NULL) {
-        BSL_SAL_FREE(seedk);
+        ret = CRYPT_MEM_ALLOC_FAIL;
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
-        return CRYPT_MEM_ALLOC_FAIL;
+        goto EXIT;
     }
 
     (void)memcpy_s(ctK, ctKLen, ct, params->ctxSize);
@@ -170,8 +170,9 @@ static int32_t FrodoKemEncapsInternal(const uint8_t *mu, const FrodoKemParams *p
 
     ret = FrodoShake(ss, params->ss, ctK, ctKLen);
 
-    BSL_SAL_FREE(ctK);
-    BSL_SAL_FREE(seedk);
+EXIT:
+    BSL_SAL_ClearFree(ctK, ctKLen);
+    BSL_SAL_ClearFree(seedk, seedkLen);
     return ret;
 }
 
@@ -316,8 +317,8 @@ int32_t CRYPT_FRODOKEM_Gen(CRYPT_FRODOKEM_Ctx *ctx)
         BSL_SAL_FREE(ctx->publicKey);
     }
     if (ctx->privateKey != NULL) {
-        (void)memset_s(ctx->privateKey, ctx->para->kemSkSize, 0, ctx->para->kemSkSize);
-        BSL_SAL_FREE(ctx->privateKey);
+        BSL_SAL_ClearFree(ctx->privateKey, ctx->para->kemSkSize);
+        ctx->privateKey = NULL;
     }
     ctx->publicKey = BSL_SAL_Calloc(ctx->para->pkSize, sizeof(uint8_t));
     if (ctx->publicKey == NULL) {
@@ -334,7 +335,8 @@ int32_t CRYPT_FRODOKEM_Gen(CRYPT_FRODOKEM_Ctx *ctx)
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         BSL_SAL_FREE(ctx->publicKey);
-        BSL_SAL_FREE(ctx->privateKey);
+        BSL_SAL_ClearFree(ctx->privateKey, ctx->para->kemSkSize);
+        ctx->privateKey = NULL;
     }
     return ret;
 }

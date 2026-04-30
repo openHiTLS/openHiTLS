@@ -874,7 +874,7 @@ int32_t CRYPT_CURVE25519_Export(const CRYPT_CURVE25519_Ctx *ctx, BSL_Param *para
             buffer, keyBytes);
         ret = CRYPT_CURVE25519_GetPubKeyEx(ctx, ed25519Params);
         if (ret != CRYPT_SUCCESS) {
-            BSL_SAL_Free(buffer);
+            BSL_SAL_Free(buffer); // No sensitive information is included, so no need for cleaning.
             return ret;
         }
         ed25519Params[index].valueLen = ed25519Params[index].useLen;
@@ -885,14 +885,14 @@ int32_t CRYPT_CURVE25519_Export(const CRYPT_CURVE25519_Ctx *ctx, BSL_Param *para
             buffer + keyBytes, keyBytes);
         ret = CRYPT_CURVE25519_GetPrvKeyEx(ctx, ed25519Params);
         if (ret != CRYPT_SUCCESS) {
-            BSL_SAL_Free(buffer);
+            BSL_SAL_Free(buffer); // No sensitive information is included, so no need for cleaning.
             return ret;
         }
         ed25519Params[index].valueLen = ed25519Params[index].useLen;
         index++;
     }
     ret = processCb(ed25519Params, args);
-    BSL_SAL_Free(buffer);
+    BSL_SAL_ClearFree(buffer, keyBytes * 2); // 2: public + private key
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }

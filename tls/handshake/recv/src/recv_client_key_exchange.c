@@ -80,7 +80,7 @@ static int32_t RetriveServerPsk(TLS_Ctx *ctx, const ClientKeyExchangeMsg *client
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID17072, "Dump fail");
     }
 
-    BSL_SAL_FREE(ctx->hsCtx->kxCtx->pskInfo->psk);
+    BSL_SAL_ClearFree(ctx->hsCtx->kxCtx->pskInfo->psk, ctx->hsCtx->kxCtx->pskInfo->pskLen);
     ctx->hsCtx->kxCtx->pskInfo->psk = tmpPsk;
     ctx->hsCtx->kxCtx->pskInfo->pskLen = pskUsedLen;
 

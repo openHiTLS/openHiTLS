@@ -182,14 +182,15 @@ int32_t CRYPT_HKDF(void *macCtx, const EAL_MacMethod *macMeth, uint16_t mdSize,
     const uint8_t *key, uint32_t keyLen, const uint8_t *salt, uint32_t saltLen,
     const uint8_t *info, uint32_t infoLen, uint8_t *out, uint32_t len)
 {
-    int ret;
     uint8_t prk[HKDF_MAX_HMACSIZE];
     uint32_t prkLen = HKDF_MAX_HMACSIZE;
-    ret = CRYPT_HKDF_Extract(macCtx, macMeth, key, keyLen, salt, saltLen, prk, &prkLen);
+    int32_t ret = CRYPT_HKDF_Extract(macCtx, macMeth, key, keyLen, salt, saltLen, prk, &prkLen);
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    return CRYPT_HKDF_Expand(macCtx, macMeth, mdSize, prk, prkLen, info, infoLen, out, len);
+    ret = CRYPT_HKDF_Expand(macCtx, macMeth, mdSize, prk, prkLen, info, infoLen, out, len);
+    BSL_SAL_CleanseData(prk, HKDF_MAX_HMACSIZE);
+    return ret;
 }
 
 CRYPT_HKDF_Ctx *CRYPT_HKDF_NewCtx(void)

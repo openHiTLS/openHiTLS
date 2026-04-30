@@ -201,7 +201,7 @@ int32_t UI_Read(BSL_UI *ui, BSL_UI_DataPack *data)
         (void)strcpy_s(data->data, data->dataLen, result);
         data->dataLen = (uint32_t)strlen(result) + 1;
     } while (0);
-    (void)memset_s(result, sizeof(result), 0, sizeof(result));
+    BSL_SAL_CleanseData(result, sizeof(result));
     return ret;
 }
 
