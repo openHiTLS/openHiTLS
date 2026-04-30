@@ -234,7 +234,7 @@ static int32_t HandlePkey(GenrsaInOpt *opt, char *resBuf, uint32_t bufLen)
     CRYPT_EncodeParam encodeParam = {CRYPT_DERIVE_PBKDF2, &pbkdfParam};
     BSL_Buffer encode = {0};
     ret = CRYPT_EAL_EncodeBuffKey(pkey, &encodeParam, BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_ENCRYPT, &encode);
-    memset(pwd, 0, APP_MAX_PASS_LENGTH);
+    BSL_SAL_CleanseData(pwd, APP_MAX_PASS_LENGTH);
     if (ret != CRYPT_SUCCESS) {
         AppPrintError("Encode failed.\n");
         ret = HITLS_APP_ENCODE_FAIL;

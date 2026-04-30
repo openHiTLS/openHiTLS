@@ -54,15 +54,13 @@ void HS_KeyExchCtxFree(KeyExchCtx *keyExchCtx)
     }
 #ifdef HITLS_TLS_FEATURE_PSK
     if (keyExchCtx->pskInfo != NULL) {
-        BSL_SAL_CleanseData(keyExchCtx->pskInfo->psk, keyExchCtx->pskInfo->pskLen);
         BSL_SAL_Free(keyExchCtx->pskInfo->identity);
-        BSL_SAL_Free(keyExchCtx->pskInfo->psk);
+        BSL_SAL_ClearFree(keyExchCtx->pskInfo->psk, keyExchCtx->pskInfo->pskLen);
         BSL_SAL_Free(keyExchCtx->pskInfo);
     }
 #endif /* HITLS_TLS_FEATURE_PSK */
 #ifdef HITLS_TLS_PROTO_TLS13
-    BSL_SAL_CleanseData(keyExchCtx->pskInfo13.psk, keyExchCtx->pskInfo13.pskLen);
-    BSL_SAL_FREE(keyExchCtx->pskInfo13.psk);
+    BSL_SAL_ClearFree(keyExchCtx->pskInfo13.psk, keyExchCtx->pskInfo13.pskLen);
     HITLS_SESS_Free(keyExchCtx->pskInfo13.resumeSession);
     keyExchCtx->pskInfo13.resumeSession = NULL;
     if (keyExchCtx->pskInfo13.userPskSess != NULL) {
@@ -771,7 +769,7 @@ int32_t HS_ProcessServerKxMsgIdentityHint(TLS_Ctx *ctx, const ServerKeyExchangeM
         ctx->hsCtx->kxCtx->pskInfo->identity = tmpIdentity;
         ctx->hsCtx->kxCtx->pskInfo->identityLen = identityUsedLen;
 
-        BSL_SAL_FREE(ctx->hsCtx->kxCtx->pskInfo->psk);
+        BSL_SAL_ClearFree(ctx->hsCtx->kxCtx->pskInfo->psk, ctx->hsCtx->kxCtx->pskInfo->pskLen);
         ctx->hsCtx->kxCtx->pskInfo->psk = tmpPsk;
         ctx->hsCtx->kxCtx->pskInfo->pskLen = pskUsedLen;
     } while (false);

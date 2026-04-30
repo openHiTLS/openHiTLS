@@ -132,15 +132,16 @@ int32_t CRYPT_PBKDF2_CalcT(const CRYPT_PBKDF2_Ctx *pCtx, uint32_t blockCount, ui
         ret = CRYPT_PBKDF2_Un(pCtx, u, &blockSize, tmpT, blockSize);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
-            return ret;
+            goto EXIT;
         }
     }
     uint32_t len = (*tlen > blockSize) ? blockSize : (*tlen);
     memcpy(t, tmpT, len);
     *tlen = len;
+EXIT:
     BSL_SAL_CleanseData(u, PBKDF2_MAX_BLOCKSIZE);
     BSL_SAL_CleanseData(tmpT, PBKDF2_MAX_BLOCKSIZE);
-    return CRYPT_SUCCESS;
+    return ret;
 }
 
 int32_t CRYPT_PBKDF2_GenDk(const CRYPT_PBKDF2_Ctx *pCtx, uint8_t *dk, uint32_t dkLen)

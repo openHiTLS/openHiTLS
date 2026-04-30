@@ -584,7 +584,7 @@ int32_t CRYPT_ECDSA_Export(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *params)
             tempBuffer, keyBytes);
         ret = CRYPT_ECDSA_GetPubKeyEx(ctx, ecdsaParams);
         if (ret != CRYPT_SUCCESS) {
-            BSL_SAL_Free(tempBuffer);
+            BSL_SAL_Free(tempBuffer); // No sensitive information is included, so no need for cleaning.
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
@@ -596,7 +596,7 @@ int32_t CRYPT_ECDSA_Export(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *params)
             tempBuffer + keyBytes, keyBytes);
         ret = CRYPT_ECDSA_GetPrvKeyEx(ctx, ecdsaParams);
         if (ret != CRYPT_SUCCESS) {
-            BSL_SAL_Free(tempBuffer);
+            BSL_SAL_Free(tempBuffer); // No sensitive information is included, so no need for cleaning.
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
@@ -604,7 +604,7 @@ int32_t CRYPT_ECDSA_Export(const CRYPT_ECDSA_Ctx *ctx, BSL_Param *params)
         index++;
     }
     ret = processCb(ecdsaParams, args);
-    BSL_SAL_Free(tempBuffer);
+    BSL_SAL_ClearFree(tempBuffer, keyBytes * 2); // 2 denote private + public key
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }

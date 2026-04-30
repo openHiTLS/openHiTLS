@@ -1093,7 +1093,8 @@ static int32_t ClientProcessPreSharedKey(TLS_Ctx *ctx, const ServerHelloMsg *ser
     PskInfo13 *pskInfo = &ctx->hsCtx->kxCtx->pskInfo13;
     HITLS_Session *pskSession = NULL;
     bool isResumePsk = false;
-    BSL_SAL_FREE(pskInfo->psk);
+    BSL_SAL_ClearFree(pskInfo->psk, pskInfo->pskLen);
+    pskInfo->psk = NULL;
 
     if (pskInfo->resumeSession != NULL && serverHello->selectedIdentity == 0) {
         pskSession = pskInfo->resumeSession;

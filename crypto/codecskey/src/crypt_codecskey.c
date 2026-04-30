@@ -158,7 +158,7 @@ int32_t CRYPT_EAL_ParsePemPriKey(CRYPT_EAL_LibCtx *libctx, const char *attrName,
         return ret;
     }
     ret = CRYPT_EAL_ParseAsn1PriKey(libctx, attrName, type, &asn1, pwd, ealPriKey);
-    BSL_SAL_Free(asn1.data);
+    BSL_SAL_ClearFree(asn1.data, asn1.dataLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -541,7 +541,7 @@ int32_t CRYPT_EAL_EncodePemPriKey(CRYPT_EAL_LibCtx *libCtx, const char *attrName
         return ret;
     }
     ret = BSL_PEM_EncodeAsn1ToPem(asn1.data, asn1.dataLen, &symbol, (char **)&encode->data, &encode->dataLen);
-    BSL_SAL_Free(asn1.data);
+    BSL_SAL_ClearFree(asn1.data, asn1.dataLen);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }

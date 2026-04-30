@@ -1761,7 +1761,7 @@ static int32_t GetPskByIdentity(TLS_Ctx *ctx, const uint8_t *id, uint32_t idLen,
 static int32_t Tls13ServerSetPskInfo(TLS_Ctx *ctx, uint8_t *psk, uint32_t pskLen, uint16_t index)
 {
     PskInfo13 *pskInfo13 = &ctx->hsCtx->kxCtx->pskInfo13;
-    BSL_SAL_FREE(pskInfo13->psk);
+    BSL_SAL_ClearFree(pskInfo13->psk, pskInfo13->pskLen);
     pskInfo13->psk = BSL_SAL_Dump(psk, pskLen);
     if (pskInfo13->psk == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17058, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Dump fail", 0, 0, 0, 0);

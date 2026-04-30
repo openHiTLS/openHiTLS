@@ -343,12 +343,12 @@ int32_t ENTROPY_EsEntropyGather(ENTROPY_EntropySource *es)
     }
     uint32_t needLen = EsGetEntropy(es, buf, bufLen, needEntropy);
     if (needLen == 0) {
-        BSL_SAL_Free(buf);
+        BSL_SAL_ClearFree(buf, bufLen);
         BSL_ERR_PUSH_ERROR(CRYPT_ENTROPY_ES_ENTROPY_NOT_ENOUGH);
         return CRYPT_ENTROPY_ES_ENTROPY_NOT_ENOUGH;
     }
     int32_t ret = meth->update(meth->ctx, buf, needLen);
-    BSL_SAL_Free(buf);
+    BSL_SAL_ClearFree(buf, bufLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -360,8 +360,7 @@ int32_t ENTROPY_EsEntropyGather(ENTROPY_EntropySource *es)
         return CRYPT_MEM_ALLOC_FAIL;
     }
     ret = ES_EntropyPoolPushBytes(es->pool, data, len);
-    memset(data, 0, len);
-    BSL_SAL_Free(data);
+    BSL_SAL_ClearFree(data, len);
     return ret;
 }
 #endif

@@ -303,7 +303,7 @@ int32_t BSL_UI_ReadPwdUtil(BSL_UI_ReadPwdParam *param, char *buff, uint32_t *buf
     ui->method->uiClose(ui);
     BSL_UI_Free(ui);
     BSL_SAL_FREE(promptStr);
-    memset(result, 0, sizeof(result));
+    BSL_SAL_CleanseData(result, sizeof(result));
     return ret;
 }
 
