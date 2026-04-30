@@ -383,7 +383,7 @@ struct {
 /* Return a string describing the parameter type. */
 static const char *ValueType2Param(HITLS_ValueType type)
 {
-    for (int i = 0; i <= (int)sizeof(g_valTypeParam); i++) {
+    for (int i = 0; i < (int)sizeof(g_valTypeParam) / (int)sizeof(g_valTypeParam[0]); i++) {
         if (type == g_valTypeParam[i].type)
             return g_valTypeParam[i].param;
     }

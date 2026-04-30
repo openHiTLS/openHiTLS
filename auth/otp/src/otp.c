@@ -25,9 +25,17 @@
 #include "crypt_errno.h"
 #include "otp.h"
 
+// RFC 4226 requires the length of the shared secret MUST be at least 128 bits.
+#define OTP_MIN_KEY_SIZE 16
+
 int32_t HITLS_AUTH_OtpInit(HITLS_AUTH_OtpCtx *ctx, uint8_t *key, uint32_t keyLen)
 {
     if (ctx == NULL || keyLen == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_OTP_INVALID_INPUT);
+        return HITLS_AUTH_OTP_INVALID_INPUT;
+    }
+
+    if (keyLen < OTP_MIN_KEY_SIZE) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_OTP_INVALID_INPUT);
         return HITLS_AUTH_OTP_INVALID_INPUT;
     }
@@ -150,7 +158,13 @@ int32_t TotpGen(HITLS_AUTH_OtpCtx *ctx, const BSL_Param *param, const int32_t of
     }
 
     TotpCtx *totpCtx = (TotpCtx *)ctx->ctx;
-    uint64_t movingFactor = ((curTime - totpCtx->startOffset) / totpCtx->timeStepSize) + offset;
+
+    if (curTime < (uint64_t)totpCtx->startOffset) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_OTP_INVALID_INPUT);
+        return HITLS_AUTH_OTP_INVALID_INPUT;
+    }
+
+    uint64_t movingFactor = ((curTime - (uint64_t)totpCtx->startOffset) / totpCtx->timeStepSize) + offset;
 
     if (movingFactorOut != NULL) {
         *movingFactorOut = movingFactor;

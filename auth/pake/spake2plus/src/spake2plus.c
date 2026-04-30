@@ -245,6 +245,11 @@ int32_t HITLS_AUTH_Spake2plusReqRegister(HITLS_AUTH_PakeCtx* ctx, CRYPT_EAL_KdfC
         return HITLS_AUTH_PAKE_INVALID_CONTEXT;
     }
     if (allNotNull) {
+        if (exist_w0.dataLen > MAX_ECC_PARAM_LEN || exist_w1.dataLen > MAX_ECC_PARAM_LEN ||
+            exist_l.dataLen > MAX_ECC_KEY_LEN) {
+            BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
+            return HITLS_AUTH_INVALID_ARG;
+        }
         spakeCtx->w0.dataLen = exist_w0.dataLen;
         spakeCtx->w1.dataLen = exist_w1.dataLen;
         spakeCtx->l.dataLen = exist_l.dataLen;
@@ -387,6 +392,11 @@ int32_t HITLS_AUTH_Spake2plusRespRegister(HITLS_AUTH_PakeCtx* ctx, BSL_Buffer ex
     }
 
     if (exist_w0.data != NULL && exist_w1.data != NULL && exist_l.data != NULL) {
+        if (exist_w0.dataLen > MAX_ECC_PARAM_LEN || exist_w1.dataLen > MAX_ECC_PARAM_LEN ||
+            exist_l.dataLen > MAX_ECC_KEY_LEN) {
+            BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
+            return HITLS_AUTH_INVALID_ARG;
+        }
         spakeCtx->w0.dataLen = exist_w0.dataLen;
         spakeCtx->w1.dataLen = exist_w1.dataLen;
         spakeCtx->l.dataLen = exist_l.dataLen;
@@ -395,7 +405,6 @@ int32_t HITLS_AUTH_Spake2plusRespRegister(HITLS_AUTH_PakeCtx* ctx, BSL_Buffer ex
         (void)memcpy_s(spakeCtx->l.data, exist_l.dataLen, exist_l.data, exist_l.dataLen);
         return HITLS_AUTH_SUCCESS;
     }
-    Spake2PlusFreeCtx(spakeCtx);
     return HITLS_AUTH_PAKE_INVALID_PARAM;
 }
 
@@ -491,16 +500,13 @@ static int32_t Spake2PlusGenerateRandNum(uint8_t *num, uint8_t *p, uint32_t pLen
         ++retryCount;
     }
 
-    if (ret != HITLS_AUTH_SUCCESS) {
-        ret = CRYPT_NO_REGIST_RAND;
-    } else if (!success) {
-        ret = CRYPT_NO_REGIST_RAND;
-    } else {
-        (void)memcpy_s(num, pLen, x, pLen);
-        ret = HITLS_AUTH_SUCCESS;
+    if (!success) {
+        ret = HITLS_AUTH_PAKE_PROTOCOL_ERROR;
     }
-
-    BSL_SAL_Free(x);
+    if (ret == HITLS_AUTH_SUCCESS) {
+        (void)memcpy_s(num, pLen, x, pLen);
+    }
+    BSL_SAL_ClearFree(x, pLen);
     BN_Destroy(p0);
     BN_Destroy(x0);
     return ret;
@@ -542,11 +548,6 @@ ERR:
 static int32_t Spake2PlusProverComputeX(Spake2plusCtx* ctx, uint8_t *x, uint32_t xLen,
     uint8_t *shareP, uint32_t *sharePLen)
 {
-    if (ctx == NULL || x == NULL || xLen <= 0 || shareP == NULL || sharePLen == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
-        return HITLS_AUTH_INVALID_ARG;
-    }
-
     ECC_Para *para = ECC_NewPara(g_spake2PlusAlgInfo[ctx->index].curveId);
     ECC_Point *X = ECC_NewPoint(para);
     ECC_Point *m = ECC_NewPoint(para);
@@ -597,11 +598,6 @@ EXIT:
 static int32_t Spake2PlusVerifierComputeY(Spake2plusCtx* ctx, uint8_t *y, uint32_t yLen,
     uint8_t *shareV, uint32_t *shareVLen)
 {
-    if (ctx == NULL || y == NULL || yLen <= 0 || shareV == NULL || shareVLen == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
-        return HITLS_AUTH_INVALID_ARG;
-    }
-
     ECC_Para *para = ECC_NewPara(g_spake2PlusAlgInfo[ctx->index].curveId);
     ECC_Point *Y = ECC_NewPoint(para);
     ECC_Point *n = ECC_NewPoint(para);
@@ -651,11 +647,6 @@ EXIT:
 static int32_t Spake2PlusProverFinish(Spake2plusCtx *ctx, BSL_Buffer x, BSL_Buffer shareV,
     BSL_Buffer *z, BSL_Buffer *v)
 {
-    if (ctx == NULL || x.data == NULL || x.dataLen <= 0 || shareV.data == NULL || shareV.dataLen <= 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
-        return HITLS_AUTH_INVALID_ARG;
-    }
-
     BN_BigNum *w0 = BN_Create(ctx->w0.dataLen * 8);
     BN_BigNum *w1 = BN_Create(ctx->w1.dataLen * 8);
     BN_BigNum *w2 = BN_Create(ctx->w0.dataLen * 8);
@@ -769,11 +760,6 @@ ERR:
 static int32_t Spake2PlusVerifierFinish(Spake2plusCtx *ctx, BSL_Buffer y, BSL_Buffer shareP,
     BSL_Buffer *z, BSL_Buffer *v)
 {
-    if (ctx == NULL || y.data == NULL || y.dataLen <= 0 || shareP.data == NULL || shareP.dataLen <= 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
-        return HITLS_AUTH_INVALID_ARG;
-    }
-
     BN_BigNum *w0 = BN_Create(ctx->w0.dataLen * 8);
     BN_BigNum *n0 = BN_Create(ctx->w0.dataLen * 8);
     BN_BigNum *w2 = BN_Create(ctx->w0.dataLen * 8);
@@ -910,12 +896,6 @@ static void uint32_to_le_bytes(uint32_t len, uint8_t out[8])
 static int32_t Spake2PlusComputeTranscript(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer shareP, BSL_Buffer shareV,
     BSL_Buffer z, BSL_Buffer v, BSL_Buffer *tt, uint32_t *totalSize)
 {
-    if (ctx == NULL || shareP.data == NULL || shareP.dataLen <= 0 || shareV.data == NULL || shareV.dataLen <= 0 ||
-        z.data == NULL || z.dataLen <= 0 || v.data == NULL || v.dataLen <= 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
-        return HITLS_AUTH_INVALID_ARG;
-    }
-
     uint8_t *pos = tt ? tt->data : NULL;
     size_t remaining = tt ? tt->dataLen : 0;
     CRYPT_EAL_PkeyCtx* mKey = NULL;
@@ -1003,21 +983,12 @@ static int32_t Spake2PlusComputeTranscript(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer s
 ERR:
     CRYPT_EAL_PkeyFreeCtx(mKey);
     CRYPT_EAL_PkeyFreeCtx(nKey);
-    if (ret != HITLS_AUTH_SUCCESS) {
-        Spake2PlusFreeCtx(spakeCtx);
-    }
     return ret;
 }
 
 static int32_t Spake2PlusComputeKeySchedule(Spake2plusCtx *ctx, BSL_Buffer tt, BSL_Buffer *kConfirmP,
     BSL_Buffer *kConfirmV, BSL_Buffer *kShared)
 {
-    if (ctx == NULL || tt.data == NULL || tt.dataLen <= 0 || kConfirmP->data == NULL ||
-        kConfirmV->data == NULL || kShared->data == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
-        return HITLS_AUTH_INVALID_ARG;
-    }
-
     uint8_t kMain[g_spake2PlusAlgInfo[ctx->index].hashKeyLen];
     uint32_t kMainLen = g_spake2PlusAlgInfo[ctx->index].hashKeyLen;
 
@@ -1126,26 +1097,13 @@ ERR:
 static int32_t Spake2PlusComputeExpectedConfirm(Spake2plusCtx *ctx, BSL_Buffer kConfirm, BSL_Buffer share,
     BSL_Buffer *outHmac)
 {
-    if (ctx == NULL || kConfirm.data == NULL || kConfirm.dataLen <= 0 ||
-        share.data == NULL || share.dataLen <= 0 || outHmac->data == NULL) {
-        BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
-        return HITLS_AUTH_INVALID_ARG;
-    }
-
     CRYPT_EAL_MacCtx *MacCtx = CRYPT_EAL_MacNewCtx(g_spake2PlusAlgInfo[ctx->index].macId);
     if (MacCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL);
         return HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL;
     }
 
-    int32_t ret = HITLS_AUTH_SUCCESS;
-    if (MacCtx == NULL) {
-        ret = HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL;
-        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL);
-        return ret;
-    }
-
-    ret = CRYPT_EAL_MacInit(MacCtx, kConfirm.data, kConfirm.dataLen);
+    int32_t ret = CRYPT_EAL_MacInit(MacCtx, kConfirm.data, kConfirm.dataLen);
     if (ret != HITLS_AUTH_SUCCESS) {
         goto ERR;
     }
@@ -1167,7 +1125,7 @@ ERR:
 
 int32_t HITLS_AUTH_Spake2plusReqSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer randnumx, BSL_Buffer *share)
 {
-    if (ctx == NULL) {
+    if (ctx == NULL || share == NULL || share->data == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_NULL_INPUT);
         return HITLS_AUTH_NULL_INPUT;
     }
@@ -1175,20 +1133,24 @@ int32_t HITLS_AUTH_Spake2plusReqSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer randnu
     Spake2plusCtx *spakeCtx = (Spake2plusCtx *)HITLS_AUTH_PakeGetInternalCtx(ctx);
     if (spakeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_INVALID_CONTEXT);
-        return HITLS_AUTH_NULL_INPUT;
+        return HITLS_AUTH_PAKE_INVALID_CONTEXT;
     }
+
     int32_t ret = HITLS_AUTH_SUCCESS;
 
     uint8_t randnum[MAX_ECC_PARAM_LEN] = { 0 };
     uint32_t randnumLen = MAX_ECC_PARAM_LEN;
 
     if (randnumx.data != NULL) {
+        if (randnumx.dataLen == 0 || randnumx.dataLen > MAX_ECC_PARAM_LEN) {
+            BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
+            return HITLS_AUTH_INVALID_ARG;
+        }
         randnumLen = randnumx.dataLen;
         (void)memcpy_s(randnum, randnumx.dataLen, randnumx.data, randnumx.dataLen);
     } else {
         ret = Spake2PlusInit(spakeCtx, randnum, &randnumLen);
         if (ret != HITLS_AUTH_SUCCESS) {
-            Spake2PlusFreeCtx(spakeCtx);
             return ret;
         }
     }
@@ -1201,10 +1163,13 @@ int32_t HITLS_AUTH_Spake2plusReqSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer randnu
 
     ret = Spake2PlusProverComputeX(spakeCtx, randnum, randnumLen, shareP, &sharePLen);
     if (ret != HITLS_AUTH_SUCCESS) {
-        Spake2PlusFreeCtx(spakeCtx);
         return ret;
     }
-    
+    if (share->dataLen < sharePLen) {
+        BSL_SAL_CleanseData(shareP, MAX_ECC_KEY_LEN);
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_INVALID_PARAM);
+        return HITLS_AUTH_PAKE_INVALID_PARAM;
+    }
     spakeCtx->share.dataLen = sharePLen;
     (void)memcpy_s(spakeCtx->share.data, sharePLen, shareP, sharePLen);
 
@@ -1217,14 +1182,16 @@ int32_t HITLS_AUTH_Spake2plusReqSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer randnu
 int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BSL_Buffer shareP,
     BSL_Buffer *shareV, BSL_Buffer *confirmV)
 {
-    if (ctx == NULL) {
+    if (ctx == NULL || shareV == NULL || shareV->data == NULL ||
+        confirmV == NULL || confirmV->data == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_NULL_INPUT);
         return HITLS_AUTH_NULL_INPUT;
     }
+
     Spake2plusCtx *spakeCtx = (Spake2plusCtx *)HITLS_AUTH_PakeGetInternalCtx(ctx);
     if (spakeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_INVALID_CONTEXT);
-        return HITLS_AUTH_NULL_INPUT;
+        return HITLS_AUTH_PAKE_INVALID_CONTEXT;
     }
 
     int32_t ret = HITLS_AUTH_SUCCESS;
@@ -1248,6 +1215,11 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
     }
 
     if (y.data != NULL) {
+        if (y.dataLen == 0 || y.dataLen > MAX_ECC_PARAM_LEN) {
+            BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
+            ret = HITLS_AUTH_INVALID_ARG;
+            goto err;
+        }
         randnumLen = y.dataLen;
         (void)memcpy_s(randnum, y.dataLen, y.data, y.dataLen);
     } else {
@@ -1316,9 +1288,6 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
     (void)memcpy_s(spakeCtx->confirmP.data, outHmacBuffer.dataLen, outHmacBuffer.data, outHmacBuffer.dataLen);
 
 err:
-    if (ret != HITLS_AUTH_SUCCESS) {
-        Spake2PlusFreeCtx(spakeCtx);
-    }
     BSL_SAL_ClearFree(zBuffer.data, zBuffer.dataLen);
     BSL_SAL_ClearFree(vBuffer.data, vBuffer.dataLen);
     BSL_SAL_ClearFree(randnumBuffer.data, randnumBuffer.dataLen);
@@ -1333,14 +1302,15 @@ err:
 int32_t HITLS_AUTH_Spake2plusReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer shareV, BSL_Buffer confirmV,
     BSL_Buffer *confirmP, BSL_Buffer *out)
 {
-    if (ctx == NULL) {
+    if (ctx == NULL || confirmP == NULL || confirmP->data == NULL ||
+        out == NULL || out->data == NULL || shareV.data == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_NULL_INPUT);
         return HITLS_AUTH_NULL_INPUT;
     }
     Spake2plusCtx *spakeCtx = (Spake2plusCtx*)HITLS_AUTH_PakeGetInternalCtx(ctx);
     if (spakeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_INVALID_CONTEXT);
-        return HITLS_AUTH_NULL_INPUT;
+        return HITLS_AUTH_PAKE_INVALID_CONTEXT;
     }
 
     int32_t ret = HITLS_AUTH_SUCCESS;
@@ -1413,9 +1383,6 @@ int32_t HITLS_AUTH_Spake2plusReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer share
     out->dataLen = kSharedBuffer.dataLen;
     (void)memcpy_s(out->data, kSharedBuffer.dataLen, kSharedBuffer.data, kSharedBuffer.dataLen);
 err:
-    if (ret != HITLS_AUTH_SUCCESS) {
-        Spake2PlusFreeCtx(spakeCtx);
-    }
     BSL_SAL_ClearFree(zBuffer.data, zBuffer.dataLen);
     BSL_SAL_ClearFree(vBuffer.data, vBuffer.dataLen);
     BSL_SAL_ClearFree(ttBuffer.data, ttBuffer.dataLen);
@@ -1428,23 +1395,26 @@ err:
 
 int32_t HITLS_AUTH_Spake2plusRespDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer confirmP, BSL_Buffer *out)
 {
-    if (ctx == NULL) {
+    if (ctx == NULL || out == NULL || out->data == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_NULL_INPUT);
         return HITLS_AUTH_NULL_INPUT;
     }
+
     Spake2plusCtx *spakeCtx = (Spake2plusCtx *)HITLS_AUTH_PakeGetInternalCtx(ctx);
     if (spakeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_INVALID_CONTEXT);
-        return HITLS_AUTH_NULL_INPUT;
+        return HITLS_AUTH_PAKE_INVALID_CONTEXT;
     }
-
     if (spakeCtx->confirmP.dataLen != confirmP.dataLen ||
         ConstTimeMemcmp(spakeCtx->confirmP.data, confirmP.data, confirmP.dataLen) == 0) {
-        Spake2PlusFreeCtx(spakeCtx);
-        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_INVALID_PARAM);
-        return HITLS_AUTH_PAKE_INVALID_PARAM;
+            BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_INVALID_PARAM);
+            return HITLS_AUTH_PAKE_INVALID_PARAM;
     }
 
+    if (out->dataLen < spakeCtx->key_shared.dataLen) {
+        BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
+        return HITLS_AUTH_INVALID_ARG;
+    }
     out->dataLen = spakeCtx->key_shared.dataLen;
     (void)memcpy_s(out->data, spakeCtx->key_shared.dataLen, spakeCtx->key_shared.data, spakeCtx->key_shared.dataLen);
 

@@ -17,6 +17,7 @@
 #ifdef HITLS_CRYPTO_SM9
 
 #include "crypt_sm9.h"
+#include "crypt_errno.h"
 #include "sm9.h"
 #include "sm9_curve.h"
 #include "sm9_pairing.h"
@@ -34,13 +35,15 @@ int32_t SM9_KeyExchangeInit(SM9_Ctx *ctx, uint8_t *peer_id, uint32_t peer_id_len
         return SM9_ERR_BAD_INPUT;
     }
 
+    int32_t ret;
     if (rand) {
         memcpy(ctx->keyex_r, rand, SM9_CURVE_MODULE_BYTES);
     } else {
-        sm9_rand(ctx->keyex_r, SM9_CURVE_MODULE_BYTES);
+        ret = sm9_rand(ctx->keyex_r, SM9_CURVE_MODULE_BYTES);
+        if (ret != CRYPT_SUCCESS) {
+            return SM9_ERR_RND_UNUSEABLE;
+        }
     }
-
-    int32_t ret;
     if (is_initiator) {
         ret = SM9_Alg_KeyEx_InitA(
             ctx->user_id, ctx->user_id_len,

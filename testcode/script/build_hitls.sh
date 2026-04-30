@@ -33,6 +33,7 @@ BITS=64
 subdir="CMVP"
 libname=""
 build_crypto_module_provider=false
+debug_mode=false
 
 # Detect platform and set shared library extension
 # Reference: https://en.wikipedia.org/wiki/Dynamic_linker
@@ -244,15 +245,19 @@ parse_option()
                 dis_options="--disable feature_provider provider codecs codecsdata key_decode_chain"
                 ;;
             "gcov")
+                debug_mode=true
                 add_options="${add_options} -fno-omit-frame-pointer -fprofile-arcs -ftest-coverage -fdump-rtl-expand"
+                del_options="${del_options} -O3"
                 ;;
             "debug")
+                debug_mode=true
                 add_options="${add_options} -O0 -g3 -gdwarf-2"
-                del_options="${del_options} -O2 -D_FORTIFY_SOURCE=2"
+                del_options="${del_options} -O2 -O3 -D_FORTIFY_SOURCE=2"
                 ;;
             "asan")
+                debug_mode=true
                 add_options="${add_options} -fsanitize=address -fsanitize-address-use-after-scope -O0 -g3 -fno-stack-protector -fno-omit-frame-pointer -fgnu89-inline"
-                del_options="${del_options} -fstack-protector-strong -fomit-frame-pointer -O2 -D_FORTIFY_SOURCE=2"
+                del_options="${del_options} -fstack-protector-strong -fomit-frame-pointer -O2 -O3 -D_FORTIFY_SOURCE=2"
                 ;;
             "x86_64")
                 get_arch="x86_64"

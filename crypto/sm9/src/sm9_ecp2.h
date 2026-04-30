@@ -44,6 +44,8 @@ void SM9_Ecp2_J_DoubleJ(SM9_ECP2_J *pJp_Result, SM9_ECP2_J *pJp);
 
 void SM9_Ecp2_KP(SM9_ECP2_A *pKP, SM9_ECP2_A *pAp, uint32_t *pwK);
 
+int32_t SM9_Ecp2_A_Check(SM9_ECP2_A *pAp);
+
 #ifdef  __cplusplus
 }
 #endif

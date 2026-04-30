@@ -809,9 +809,13 @@ int ParseConnectString(const char *connectStr, APP_NetworkAddr *addr)
     *colon_pos = '\0';
     size_t host_len = strlen(strCopy) + 1;
     addr->host = BSL_SAL_Malloc(host_len);
-    if (addr->host != NULL) {
-        strcpy_s(addr->host, host_len, strCopy);
+    if (addr->host == NULL) {
+        BSL_SAL_Free(strCopy);
+        AppPrintError("Failed to alloc memory.");
+        return HITLS_APP_MEM_ALLOC_FAIL;
     }
+    strcpy_s(addr->host, host_len, strCopy);
+
     addr->port = atoi(colon_pos + 1);
     
     BSL_SAL_Free(strCopy);
@@ -819,9 +823,9 @@ int ParseConnectString(const char *connectStr, APP_NetworkAddr *addr)
     if (addr->port <= 0 || addr->port > 65535) {
         BSL_SAL_Free(addr->host);
         addr->host = NULL;
+        AppPrintError("Invalid port number in connect string\n");
         return HITLS_APP_INVALID_ARG;
     }
-    
     return HITLS_APP_SUCCESS;
 }
 

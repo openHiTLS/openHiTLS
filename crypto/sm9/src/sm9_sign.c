@@ -17,6 +17,7 @@
 #ifdef HITLS_CRYPTO_SM9
 
 #include "crypt_sm9.h"
+#include "crypt_errno.h"
 #include "sm9.h"
 #include "sm9_curve.h"
 #include "sm9_pairing.h"
@@ -128,7 +129,10 @@ int32_t SM9_SignCtx(const SM9_Ctx *ctx, const uint8_t *msg, uint32_t mlen, uint8
     }
 
     if (!rand) {
-        sm9_rand(default_rand, sizeof(default_rand));
+        int32_t ret = sm9_rand(default_rand, sizeof(default_rand));
+        if (ret != CRYPT_SUCCESS) {
+            return SM9_ERR_RND_UNUSEABLE;
+        }
         rand = default_rand;
     }
 

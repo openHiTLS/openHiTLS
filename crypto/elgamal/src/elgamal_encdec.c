@@ -24,38 +24,6 @@
 #include "securec.h"
 #include "bsl_err_internal.h"
 
-static int32_t AddZero(uint32_t bits, uint8_t *out, uint32_t *outLen)
-{
-    int32_t ret;
-    uint32_t i;
-    uint32_t zeros = 0;
-    /* Divide bits by 8 to obtain the byte length. If it is smaller than the key length, pad it with 0. */
-    if ((*outLen) < BN_BITS_TO_BYTES(bits)) {
-        /* Divide bits by 8 to obtain the byte length. If it is smaller than the key length, pad it with 0. */
-        zeros = BN_BITS_TO_BYTES(bits) - (*outLen);
-        ret = memmove_s(out + zeros, BN_BITS_TO_BYTES(bits) - zeros, out, (*outLen));
-        if (ret != EOK) {
-            BSL_ERR_PUSH_ERROR(CRYPT_SECUREC_FAIL);
-            return CRYPT_SECUREC_FAIL;
-        }
-        for (i = 0; i < zeros; i++) {
-            out[i] = 0x0;
-        }
-    }
-    *outLen = BN_BITS_TO_BYTES(bits);
-    return CRYPT_SUCCESS;
-}
-
-static int32_t ResultToOut(uint32_t bits, const BN_BigNum *result, uint8_t *out, uint32_t *outLen)
-{
-    int32_t ret = BN_Bn2Bin(result, out, outLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    return AddZero(bits, out, outLen);
-}
-
 int32_t CRYPT_ELGAMAL_PubEnc(const CRYPT_ELGAMAL_Ctx *ctx, const uint8_t *input, uint32_t inputLen, uint8_t *out1,
                              uint32_t *out1Len, uint8_t *out2, uint32_t *out2Len)
 {
@@ -67,8 +35,8 @@ int32_t CRYPT_ELGAMAL_PubEnc(const CRYPT_ELGAMAL_Ctx *ctx, const uint8_t *input,
     }
 
     BN_Mont *mont = BN_MontCreate(pubKey->p);
-
     uint32_t bits = CRYPT_ELGAMAL_GetBits(ctx);
+    uint32_t bytes = BN_BITS_TO_BYTES(bits);
     uint32_t k_bits = CRYPT_ELGAMAL_GetKBits(ctx);
     BN_Optimizer *optimizer = BN_OptimizerCreate();
     if (optimizer == NULL || mont == NULL) {
@@ -147,16 +115,19 @@ int32_t CRYPT_ELGAMAL_PubEnc(const CRYPT_ELGAMAL_Ctx *ctx, const uint8_t *input,
         goto EXIT;
     }
 
-    ret = BN_Bn2Bin(c1, out1, out1Len);
+    ret = BN_Bn2BinFixZero(c1, out1, bytes);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
 
-    ret = BN_Bn2Bin(c2, out2, out2Len);
+    ret = BN_Bn2BinFixZero(c2, out2, bytes);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
     }
+    *out1Len = bytes;
+    *out2Len = bytes;
 EXIT:
     BN_Destroy(m);
     BN_Destroy(r);
@@ -170,7 +141,7 @@ EXIT:
     return ret;
 }
 
-int32_t CRYPT_ELGAMAL_PrvDec(const CRYPT_ELGAMAL_Ctx *ctx, const BN_BigNum *c1, const BN_BigNum *c2, uint32_t bits,
+int32_t CRYPT_ELGAMAL_PrvDec(const CRYPT_ELGAMAL_Ctx *ctx, const BN_BigNum *c1, const BN_BigNum *c2,
                              uint8_t *out, uint32_t *outLen)
 {
     int32_t ret;
@@ -186,14 +157,11 @@ int32_t CRYPT_ELGAMAL_PrvDec(const CRYPT_ELGAMAL_Ctx *ctx, const BN_BigNum *c1, 
         return CRYPT_MEM_ALLOC_FAIL;
     }
 
-    bits = CRYPT_ELGAMAL_GetBits(ctx);
+    uint32_t bits = CRYPT_ELGAMAL_GetBits(ctx);
     BN_BigNum *m = BN_Create(bits);
     BN_BigNum *c1_x = BN_Create(bits);
     BN_BigNum *c1_x_inv = BN_Create(bits);
-    BN_BigNum *result = BN_Create(bits);
-
-    bool createFailed = (m == NULL || c1_x == NULL || c1_x_inv == NULL || result == NULL);
-
+    bool createFailed = (m == NULL || c1_x == NULL || c1_x_inv == NULL);
     if (createFailed) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ret = CRYPT_MEM_ALLOC_FAIL;
@@ -218,7 +186,7 @@ int32_t CRYPT_ELGAMAL_PrvDec(const CRYPT_ELGAMAL_Ctx *ctx, const BN_BigNum *c1, 
         goto EXIT;
     }
 
-    ret = ResultToOut(bits, result, out, outLen);
+    ret = BN_Bn2Bin(m, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }
@@ -226,7 +194,6 @@ EXIT:
     BN_Destroy(m);
     BN_Destroy(c1_x);
     BN_Destroy(c1_x_inv);
-    BN_Destroy(result);
     BN_OptimizerDestroy(optimizer);
     return ret;
 }
@@ -246,7 +213,7 @@ static int32_t EncryptInputCheck(const CRYPT_ELGAMAL_Ctx *ctx, const uint8_t *in
     }
     // Check whether the length of the out is sufficient to place the encryption information.
     uint32_t bits = CRYPT_ELGAMAL_GetBits(ctx);
-    if ((*outLen) < BN_BITS_TO_BYTES(bits)) {
+    if ((*outLen) < 2 * BN_BITS_TO_BYTES(bits)) {
         BSL_ERR_PUSH_ERROR(CRYPT_ELGAMAL_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_ELGAMAL_BUFF_LEN_NOT_ENOUGH;
     }
@@ -268,15 +235,12 @@ int32_t CRYPT_ELGAMAL_Encrypt(CRYPT_ELGAMAL_Ctx *ctx, const uint8_t *data, uint3
     }
 
     uint32_t bits = CRYPT_ELGAMAL_GetBits(ctx);
-    uint32_t out1Len = bits;
-    uint32_t out2Len = (*outLen) - bits;
-    uint32_t out3Len = 2 * bits ;
+    uint32_t bytes = BN_BITS_TO_BYTES(bits);
+    uint32_t out1Len = bytes;
+    uint32_t out2Len = bytes;
     uint8_t *out1 = BSL_SAL_Calloc(1u, out1Len);
     uint8_t *out2 = BSL_SAL_Calloc(1u, out2Len);
-    uint8_t *out3 = BSL_SAL_Calloc(1u, out3Len);
-    BN_BigNum *result = BN_Create(*outLen);
-    BN_BigNum *c = BN_Create(*outLen);
-    if (out1 == NULL || out2 == NULL || out3 == NULL || result == NULL || c == NULL) {
+    if (out1 == NULL || out2 == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ret = CRYPT_MEM_ALLOC_FAIL;
         goto EXIT;
@@ -288,26 +252,17 @@ int32_t CRYPT_ELGAMAL_Encrypt(CRYPT_ELGAMAL_Ctx *ctx, const uint8_t *data, uint3
         goto EXIT;
     }
 
-    (void)memcpy_s(out3, out3Len, out1, out1Len); // c1
-    (void)memcpy_s(out3 + out1Len, out3Len - out1Len, out2, out2Len); // c2
-
-    ret = BN_Bin2Bn(c,out3,out3Len);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        goto EXIT;
-    }
-
-    ret = ResultToOut(2 * bits, result, out, outLen);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-    }
+    // c1 and c2 are already in out1 and out2 (both allocated as 'bytes' size)
+    // They may have been written with less than 'bytes' bytes, so we need to pad
+    // Since we used calloc, the buffers are already zero-padded
+    // Just copy the full buffers to output
+    memcpy_s(out, bytes, out1, bytes);
+    memcpy_s(out + bytes, bytes, out2, bytes);
+    *outLen = 2 * bytes;
 
 EXIT:
     BSL_SAL_FREE(out1);
     BSL_SAL_FREE(out2);
-    BSL_SAL_FREE(out3);
-    BN_Destroy(result);
-    BN_Destroy(c);
     return ret;
 }
 
@@ -425,7 +380,7 @@ int32_t CRYPT_ELGAMAL_Decrypt(CRYPT_ELGAMAL_Ctx *ctx, const uint8_t *data, uint3
         goto EXIT;
     }
 
-    ret = CRYPT_ELGAMAL_PrvDec(ctx, c1, c2, bits, out, outLen);
+    ret = CRYPT_ELGAMAL_PrvDec(ctx, c1, c2, out, outLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
     }

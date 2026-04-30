@@ -21,7 +21,7 @@
 #include "sm9_pairing.h"
 #include "sm9_fp.h"
 #include "crypt_util_rand.h"
-
+#include "crypt_errno.h"
 #include <string.h>
 
 /***************************Compiler-Switches**********************************/
@@ -110,10 +110,10 @@ void SM9_Hash_Data(const uint8_t *data, uint32_t len, uint8_t *digest)
 /*                    Random Number Generation for SM9                       */
 /******************************************************************************/
 
-void sm9_rand(uint8_t *p, uint32_t len)
+int32_t sm9_rand(uint8_t *p, uint32_t len)
 {
-    // Use library's cryptographic random number generator
-    (void)CRYPT_Rand(p, len);
+    // Use library's cryptographic random number generator with context
+    return CRYPT_RandEx(NULL, p, len);
 }
 
 /******************************************************************************/
@@ -305,7 +305,10 @@ static int32_t _sm9_alg_sign(
     SM9_Fn_LastRes(BN_r);
 
     while (SM9_Bn_IsZero(BN_r)==1) {
-        sm9_rand(r, BNByteLen);
+        int32_t ret = sm9_rand(r, BNByteLen);
+        if (ret != CRYPT_SUCCESS) {
+            return SM9_ERR_RND_UNUSEABLE;
+        }
         SM9_Bn_ReadBytes(BN_r, r);
         SM9_Fn_LastRes(BN_r);
     }

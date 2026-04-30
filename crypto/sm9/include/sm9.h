@@ -36,8 +36,9 @@ void SM9_Hash_Data(const uint8_t *data, uint32_t len, uint8_t *digest);
  * @brief Generate random bytes for SM9 algorithms
  * @param p Output buffer for random bytes
  * @param len Number of random bytes to generate
+ * @return CRYPT_SUCCESS on success, error code otherwise
  */
-void sm9_rand(uint8_t *p, uint32_t len);
+int32_t sm9_rand(uint8_t *p, uint32_t len);
 
 /*----------------------SM9 algorithem length define--------------------------*/
 #define SM9_CURVE_MODULE_BYTES        32

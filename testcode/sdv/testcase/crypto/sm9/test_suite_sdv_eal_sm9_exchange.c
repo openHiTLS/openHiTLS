@@ -237,3 +237,82 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx_b);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SM9_KEYEX_USERID_OVERFLOW_TC001
+ * @title  SM9 Key Exchange: Test user ID length overflow check.
+ * @precon Prepare valid master key.
+ * @brief
+ *    1. Create contexts with very long user IDs, expected result 1
+ *    2. Set master keys and user keys, expected result 2
+ *    3. Test ComputeShareKey with combined user ID length > 512, expected result 3
+ * @expect
+ *    1. Success, contexts are not NULL
+ *    2. CRYPT_SUCCESS
+ *    3. CRYPT_SM9_ERR_BAD_INPUT (user ID overflow)
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM9_KEYEX_USERID_OVERFLOW_TC001(Hex *masterKey)
+{
+    CRYPT_EAL_PkeyCtx *ctx_a = NULL;
+    CRYPT_EAL_PkeyCtx *ctx_b = NULL;
+    uint8_t SK[SM9_SHARED_KEY_LEN] = {0};
+    uint32_t keyLen = SM9_SHARED_KEY_LEN;
+    int ret;
+    int32_t keyType = SM9_KEY_TYPE_ENC;
+
+    // Create very long user IDs that when combined exceed 512 bytes
+    uint8_t longUserIdA[256];  // Max allowed user ID length
+    uint8_t longUserIdB[256];  // Max allowed user ID length
+    memset(longUserIdA, 'A', sizeof(longUserIdA));
+    memset(longUserIdB, 'B', sizeof(longUserIdB));
+
+    // Create EAL contexts
+    ctx_a = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
+    ctx_b = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
+    ASSERT_TRUE(ctx_a != NULL && ctx_b != NULL);
+
+    // Set master private key via EAL
+    BSL_Param params_master[3];
+    BSL_PARAM_InitValue(&params_master[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
+                        masterKey->x, masterKey->len);
+    BSL_PARAM_InitValue(&params_master[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+                        &keyType, sizeof(int32_t));
+    params_master[2] = (BSL_Param)BSL_PARAM_END;
+
+    ret = CRYPT_EAL_PkeySetPubEx(ctx_a, params_master);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ret = CRYPT_EAL_PkeySetPubEx(ctx_b, params_master);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    // Set user keys via EAL
+    BSL_Param params_a[4];
+    BSL_PARAM_InitValue(&params_a[0], CRYPT_PARAM_SM9_USER_ID, BSL_PARAM_TYPE_OCTETS,
+                        longUserIdA, sizeof(longUserIdA));
+    BSL_PARAM_InitValue(&params_a[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+                        &keyType, sizeof(int32_t));
+    params_a[2] = (BSL_Param)BSL_PARAM_END;
+
+    ret = CRYPT_EAL_PkeySetPrvEx(ctx_a, params_a);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    BSL_Param params_b[4];
+    BSL_PARAM_InitValue(&params_b[0], CRYPT_PARAM_SM9_USER_ID, BSL_PARAM_TYPE_OCTETS,
+                        longUserIdB, sizeof(longUserIdB));
+    BSL_PARAM_InitValue(&params_b[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+                        &keyType, sizeof(int32_t));
+    params_b[2] = (BSL_Param)BSL_PARAM_END;
+
+    ret = CRYPT_EAL_PkeySetPrvEx(ctx_b, params_b);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    // Test ComputeShareKey - should fail due to user ID length overflow
+    // 256 + 256 + 1 = 513 > 512
+    ret = CRYPT_EAL_PkeyComputeShareKey(ctx_a, ctx_b, SK, &keyLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx_a);
+    CRYPT_EAL_PkeyFreeCtx(ctx_b);
+}
+/* END_CASE */
