@@ -687,9 +687,11 @@ void SDV_CRYPTO_ENTROPY_EsMultiNsTest()
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ADD_NS, (void *)&norPara, sizeof(CRYPT_EAL_NsPara)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
     uint8_t buf[32] = {0};
-    // Error stack exists
     ASSERT_TRUE(CRYPT_EAL_EsEntropyGet(es, buf, 32) == 32);
+#ifndef HITLS_BSL_SAL_DARWIN
+    // Error stack exists when the health test is enabled.
     ASSERT_TRUE(TestIsErrStackNotEmpty());
+#endif
 
 EXIT:
     CRYPT_EAL_EsFree(es);
