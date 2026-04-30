@@ -17,6 +17,7 @@
 #ifdef HITLS_CRYPTO_SM9
 
 #include "crypt_sm9.h"
+#include "crypt_errno.h"
 #include "sm9.h"
 #include <string.h>
 
@@ -102,7 +103,10 @@ int32_t SM9_EncryptCtx(const SM9_Ctx *ctx, const uint8_t *user_id, uint32_t id_l
     }
 
     if (!rand) {
-        sm9_rand(default_rand, sizeof(default_rand));
+        int32_t ret = sm9_rand(default_rand, sizeof(default_rand));
+        if (ret != CRYPT_SUCCESS) {
+            return SM9_ERR_RND_UNUSEABLE;
+        }
         rand = default_rand;
     }
 

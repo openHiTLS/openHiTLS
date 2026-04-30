@@ -195,6 +195,7 @@ int32_t BN_Copy(BN_BigNum *r, const BN_BigNum *a)
         r->sign = a->sign;
         BN_COPY_BYTES(r->data, r->size, a->data, a->size);
         r->size = a->size;
+        r->flag |= a->flag & CRYPT_BN_FLAG_CONSTTIME;
     }
     return CRYPT_SUCCESS;
 }
@@ -209,6 +210,7 @@ BN_BigNum *BN_Dup(const BN_BigNum *a)
         r->sign = a->sign;
         memcpy(r->data, a->data, a->size * sizeof(BN_UINT));
         r->size = a->size;
+        r->flag |= a->flag & CRYPT_BN_FLAG_CONSTTIME;
     }
     return r;
 }

@@ -168,7 +168,18 @@ static int HandleClientHost(HITLS_ClientParams *params)
 }
 static int HandleClientPort(HITLS_ClientParams *params)
 {
-    return HITLS_APP_OptGetUint32(HITLS_APP_OptGetValueStr(), (uint32_t*)&params->port);
+    uint32_t port = 0;
+    int32_t ret = HITLS_APP_OptGetUint32(HITLS_APP_OptGetValueStr(), &port);
+    if (ret != HITLS_APP_SUCCESS) {
+        return ret;
+    }
+    // Port number must be in valid range 1-65535
+    if (port == 0 || port > 65535) {
+        AppPrintError("Invalid port number: %u (valid range: 1-65535)\n", port);
+        return HITLS_APP_OPT_VALUE_INVALID;
+    }
+    params->port = (int)port;
+    return HITLS_APP_SUCCESS;
 }
 
 static int HandleClientTLS(HITLS_ClientParams *params)

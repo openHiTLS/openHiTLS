@@ -161,10 +161,10 @@ int32_t CRYPT_ELGAMAL_Gen(CRYPT_ELGAMAL_Ctx *ctx);
    * @param input [IN] Information to be encrypted
    * @param inputLen [IN] Length of the information to be encrypted
    * @param out1 [OUT] Pointer to the encrypted information output.(c1)
-   * @param out1Len [IN/OUT] Pointer to the length of the encrypted information.
+   * @param out1Len [OUT] Pointer to the length of the encrypted information.
    *                        Before being transferred, the value must be set to the maximum length of the array.
    * @param out2 [OUT] Pointer to the encrypted information output.(c2)
-   * @param out2Len [IN/OUT] Pointer to the length of the encrypted information.
+   * @param out2Len [OUT] Pointer to the length of the encrypted information.
    *                        Before being transferred, the value must be set to the maximum length of the array.
    *
    * @retval CRYPT_NULL_INPUT                 Invalid null pointer input
@@ -185,7 +185,6 @@ int32_t CRYPT_ELGAMAL_PubEnc(const CRYPT_ELGAMAL_Ctx *ctx, const uint8_t *input,
    * @param ctx [IN] ElGamal context structure
    * @param c1 [IN] Information to be decrypted
    * @param c2 [IN] Information to be decrypted
-   * @param bits [IN] Length of the information to be decrypted
    * @param out [OUT] Pointer to the decrypted information output.
    * @param outLen [IN/OUT] Pointer to the length of the decrypted information.
    *                        Before being transferred, the value must be set to the maximum length of the array.
@@ -199,7 +198,7 @@ int32_t CRYPT_ELGAMAL_PubEnc(const CRYPT_ELGAMAL_Ctx *ctx, const uint8_t *input,
    * @retval BN error.                        An error occurs in the internal BigNum operation.
    * @retval CRYPT_SUCCESS                    Decrypted Successfully
    */
-int32_t CRYPT_ELGAMAL_PrvDec(const CRYPT_ELGAMAL_Ctx *ctx, const BN_BigNum *c1, const BN_BigNum *c2, uint32_t bits,
+int32_t CRYPT_ELGAMAL_PrvDec(const CRYPT_ELGAMAL_Ctx *ctx, const BN_BigNum *c1, const BN_BigNum *c2,
                              uint8_t *out, uint32_t *outLen);
 
 /**

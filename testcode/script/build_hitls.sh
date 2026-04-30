@@ -35,6 +35,7 @@ BITS=64
 subdir="CMVP"
 libname=""
 build_crypto_module_provider=false
+debug_mode=false
 
 # Detect platform and set shared library extension
 # Reference: https://en.wikipedia.org/wiki/Dynamic_linker
@@ -130,7 +131,9 @@ build_hitls_code()
         feature_options="${feature_options} -DHITLS_CRYPTO_SP800_STRICT_CHECK=ON" # open the strict check in crypto.
         feature_options="${feature_options} -DHITLS_SM2_PRECOMPUTE_512K_TBL=OFF" # close the sm2 512k pre-table
         feature_options="${feature_options} -DHITLS_ASM_X8664=ON  -DHITLS_PLATFORM_ENDIAN=little"
-        add_options="${add_options} -O3"
+        if [[ $debug_mode = false ]]; then
+            add_options="${add_options} -O3"
+        fi
         del_options="${del_options} -O2 -D_FORTIFY_SOURCE=2"
     elif [[ $get_arch = "armv8_be" ]]; then
         echo "Compile: env=armv8, asm + c, big endian, 64bits"
@@ -138,7 +141,9 @@ build_hitls_code()
     elif [[ $get_arch = "armv8_le" ]]; then
         echo "Compile: env=armv8, asm + c, little endian, 64bits"
         feature_options="${feature_options} -DHITLS_ASM_ARMV8=ON -DHITLS_PLATFORM_ENDIAN=little"
-        add_options="${add_options} -O3"
+        if [[ $debug_mode = false ]]; then
+            add_options="${add_options} -O3"
+        fi
         del_options="${del_options} -O2 -D_FORTIFY_SOURCE=2"
     else
         echo "Compile: env=$get_arch, c, little endian, 64bits"
@@ -239,15 +244,19 @@ parse_option()
                 feature_options="${feature_options} -DHITLS_TLS_FEATURE_PROVIDER=OFF -DHITLS_CRYPTO_PROVIDER=OFF -DHITLS_CRYPTO_CODECS=OFF -DHITLS_CRYPTO_KEY_DECODE_CHAIN=OFF"
                 ;;
             "gcov")
+                debug_mode=true
                 add_options="${add_options} -fno-omit-frame-pointer -fprofile-arcs -ftest-coverage -fdump-rtl-expand"
+                del_options="${del_options} -O3"
                 ;;
             "debug")
+                debug_mode=true
                 add_options="${add_options} -O0 -g3 -gdwarf-2"
-                del_options="${del_options} -O2 -D_FORTIFY_SOURCE=2"
+                del_options="${del_options} -O2 -O3 -D_FORTIFY_SOURCE=2"
                 ;;
             "asan")
+                debug_mode=true
                 add_options="${add_options} -fsanitize=address -fsanitize-address-use-after-scope -O0 -g3 -fno-stack-protector -fno-omit-frame-pointer -fgnu89-inline"
-                del_options="${del_options} -fstack-protector-strong -fomit-frame-pointer -O2 -D_FORTIFY_SOURCE=2"
+                del_options="${del_options} -fstack-protector-strong -fomit-frame-pointer -O2 -O3 -D_FORTIFY_SOURCE=2"
                 ;;
             "x86_64")
                 get_arch="x86_64"

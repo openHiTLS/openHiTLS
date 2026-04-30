@@ -471,7 +471,8 @@ EXIT:
     return ret;
 }
 
-static int32_t ElGamal_CalcPubKey(CRYPT_ELGAMAL_PubKey *pubKey, CRYPT_ELGAMAL_PrvKey *prvKey, BN_Optimizer *optimizer)
+static int32_t ElGamal_CalcPubKey(CRYPT_ELGAMAL_PubKey *pubKey, CRYPT_ELGAMAL_PrvKey *prvKey,
+    CRYPT_ELGAMAL_Para *para, BN_Optimizer *optimizer)
 {
     int32_t ret = BN_Copy(pubKey->p, prvKey->p);
     if (ret != CRYPT_SUCCESS) {
@@ -479,6 +480,11 @@ static int32_t ElGamal_CalcPubKey(CRYPT_ELGAMAL_PubKey *pubKey, CRYPT_ELGAMAL_Pr
         return ret;
     }
     ret = BN_Copy(pubKey->g, prvKey->g);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    ret = BN_Copy(pubKey->q, para->q);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -531,7 +537,7 @@ int32_t CRYPT_ELGAMAL_Gen(CRYPT_ELGAMAL_Ctx *ctx)
         goto ERR;
     }
 
-    ret = ElGamal_CalcPubKey(newCtx->pubKey, newCtx->prvKey, optimizer);
+    ret = ElGamal_CalcPubKey(newCtx->pubKey, newCtx->prvKey, newCtx->para, optimizer);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;

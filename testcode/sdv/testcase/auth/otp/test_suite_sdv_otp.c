@@ -496,3 +496,78 @@ EXIT:
     HITLS_AUTH_OtpFreeCtx(ctx);
 }
 /* END_CASE */
+
+/**
+ * @test SDV_AUTH_OTP_MIN_KEYLEN_TC001
+ * @spec OTP Key Length Validation
+ * @title Test minimum key length validation for HMAC
+ * @brief Test that keys smaller than HMAC block size are rejected
+ */
+/* BEGIN_CASE */
+void SDV_AUTH_OTP_MIN_KEYLEN_TC001(int algId, int keyLen, int expectResult)
+{
+    HITLS_AUTH_OtpCtx *ctx = HITLS_AUTH_OtpNewCtx(HITLS_AUTH_OTP_HOTP);
+    ASSERT_TRUE(ctx != NULL);
+
+    uint8_t key[64];
+    memset(key, 0x12, sizeof(key));
+
+    BSL_Param paramSet[] = {
+        {AUTH_PARAM_OTP_CTX_HASHALGID, BSL_PARAM_TYPE_OCTETS, &algId, sizeof(algId), sizeof(algId)},
+        BSL_PARAM_END};
+    ASSERT_EQ(HITLS_AUTH_OtpCtxCtrl(ctx, HITLS_AUTH_OTP_SET_CTX_HASHALGID, paramSet, 0), HITLS_AUTH_SUCCESS);
+
+    int32_t ret = HITLS_AUTH_OtpInit(ctx, key, keyLen);
+    ASSERT_EQ(ret, expectResult);
+
+EXIT:
+    HITLS_AUTH_OtpFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_AUTH_OTP_TOTP_NEGATIVE_OFFSET_TC001
+ * @spec TOTP Negative Offset
+ * @title Test TOTP with negative offset in validation window
+ * @brief Test that negative offset in validation window works correctly
+ */
+/* BEGIN_CASE */
+void SDV_AUTH_OTP_TOTP_NEGATIVE_OFFSET_TC001(Hex *curTime, Hex *key, int digits, int algId, int validWindow)
+{
+    HITLS_AUTH_OtpCtx *ctx = HITLS_AUTH_OtpNewCtx(HITLS_AUTH_OTP_TOTP);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(HITLS_AUTH_OtpInit(ctx, key->x, key->len), HITLS_AUTH_SUCCESS);
+
+    char otp[10];
+    uint32_t otpLen = sizeof(otp);
+    ASSERT_TRUE(curTime->len <= sizeof(BslUnixTime));
+    BslUnixTime curTime64 = hexToBslUnixTime(curTime->x, curTime->len);
+    uint32_t validWindow32 = validWindow;
+
+    BSL_Param paramSet[] = {{AUTH_PARAM_OTP_CTX_DIGITS, BSL_PARAM_TYPE_UINT32, &digits, sizeof(digits), sizeof(digits)},
+                            {AUTH_PARAM_OTP_CTX_HASHALGID, BSL_PARAM_TYPE_OCTETS, &algId, sizeof(algId), sizeof(algId)},
+                            {AUTH_PARAM_OTP_CTX_TOTP_VALIDWINDOW, BSL_PARAM_TYPE_UINT32, &validWindow32,
+                             sizeof(validWindow32), sizeof(validWindow32)},
+                            BSL_PARAM_END};
+    ASSERT_EQ(HITLS_AUTH_OtpCtxCtrl(ctx, HITLS_AUTH_OTP_SET_CTX_DIGITS, paramSet, 0), HITLS_AUTH_SUCCESS);
+    ASSERT_EQ(HITLS_AUTH_OtpCtxCtrl(ctx, HITLS_AUTH_OTP_SET_CTX_HASHALGID, paramSet, 0), HITLS_AUTH_SUCCESS);
+    ASSERT_EQ(HITLS_AUTH_OtpCtxCtrl(ctx, HITLS_AUTH_OTP_SET_CTX_TOTP_VALIDWINDOW, paramSet, 0), HITLS_AUTH_SUCCESS);
+
+    // Generate OTP at current time
+    BSL_Param paramGen[] = {
+        {AUTH_PARAM_OTP_TOTP_CURTIME, BSL_PARAM_TYPE_OCTETS, &curTime64, sizeof(curTime64), sizeof(curTime64)},
+        BSL_PARAM_END};
+    ASSERT_EQ(HITLS_AUTH_OtpGen(ctx, paramGen, otp, &otpLen), HITLS_AUTH_SUCCESS);
+
+    // Validate with negative offset (time in the past) - should succeed
+    BslUnixTime pastTime = curTime64 - OTP_TOTP_DEFAULT_TIME_STEP_SIZE;
+    BSL_Param paramValidate[] = {
+        {AUTH_PARAM_OTP_TOTP_CURTIME, BSL_PARAM_TYPE_OCTETS, &pastTime, sizeof(pastTime), sizeof(pastTime)},
+        BSL_PARAM_END};
+    uint64_t matched;
+    ASSERT_EQ(HITLS_AUTH_OtpValidate(ctx, paramValidate, otp, otpLen, &matched), HITLS_AUTH_SUCCESS);
+
+EXIT:
+    HITLS_AUTH_OtpFreeCtx(ctx);
+}
+/* END_CASE */

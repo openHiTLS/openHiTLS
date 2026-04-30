@@ -18,6 +18,8 @@
 
 #include "sm9_ecp2.h"
 #include "sm9_fp.h"
+#include "sm9_fp2.h"
+#include <string.h>
 
 void SM9_Ecp2_A_ReadBytes(SM9_ECP2_A *dst, const uint8_t *src)
 {
@@ -172,6 +174,32 @@ void SM9_Ecp2_KP(SM9_ECP2_A *pKP, SM9_ECP2_A *pAp, uint32_t *pwK)
     SM9_Ecp2_J_ToA(pKP, &Jt);
 
     return;
+}
+
+// Check if G2 point is on the curve: y^2 = x^3 + a*x + b (over Fp2)
+int32_t SM9_Ecp2_A_Check(SM9_ECP2_A *pAp)
+{
+    SM9_Fp2 Fp2_tmp1;
+    SM9_Fp2 Fp2_tmp2;
+    SM9_Fp2 Fp2_x3;
+
+    // Calculate y^2
+    SM9_Fp2_Squ(&Fp2_tmp1, &pAp->Y);           // tmp1 = y^2
+    // Calculate x^3
+    SM9_Fp2_Squ(&Fp2_x3, &pAp->X);             // x3 = x^2
+    SM9_Fp2_Mul(&Fp2_x3, &Fp2_x3, &pAp->X);     // x3 = x^3
+
+    // Calculate x^3 + a*x + b
+    SM9_Fp2_Mul(&Fp2_tmp2, &pAp->X, &sm9_sys_para.EC_Fp2_A_Mont);  // tmp2 = a*x
+    SM9_Fp2_Add(&Fp2_tmp2, &Fp2_x3, &Fp2_tmp2);  // tmp2 = x^3 + a*x
+    SM9_Fp2_Add(&Fp2_tmp2, &Fp2_tmp2, &sm9_sys_para.EC_Fp2_B_Mont);
+
+    // Check y^2 == x^3 + a*x + b
+    if (bn_equal(Fp2_tmp1.Coef_0, Fp2_tmp2.Coef_0, sm9_sys_para.wsize) == 0
+        || bn_equal(Fp2_tmp1.Coef_1, Fp2_tmp2.Coef_1, sm9_sys_para.wsize) == 0) {
+        return -1;
+    }
+    return 0;
 }
 
 #endif // HITLS_CRYPTO_SM9

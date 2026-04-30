@@ -55,7 +55,6 @@ void HITLS_AUTH_PakeFreeCtx(HITLS_AUTH_PakeCtx *ctx)
                 Spake2PlusFreeCtx(ctx->ctx);
             }
             break;
-        case HITLS_AUTH_PAKE_INVALID:
         default:
             break;
     }
@@ -69,10 +68,6 @@ HITLS_AUTH_PakeCtx *HITLS_AUTH_PakeNewCtx(CRYPT_EAL_LibCtx *libCtx, const char *
     BSL_Buffer verifier, BSL_Buffer context )
 {
     int32_t ret = HITLS_AUTH_SUCCESS;
-    if (type == HITLS_AUTH_PAKE_INVALID) {
-        BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_INVALID_PARAM);
-        return NULL;
-    }
     if (role != HITLS_AUTH_PAKE_REQ && role != HITLS_AUTH_PAKE_RESP) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_INVALID_PARAM);
         return NULL;
@@ -105,7 +100,6 @@ HITLS_AUTH_PakeCtx *HITLS_AUTH_PakeNewCtx(CRYPT_EAL_LibCtx *libCtx, const char *
                 return NULL;
             }
             break;
-        case HITLS_AUTH_PAKE_INVALID:
         default:
             BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_INVALID_ALG_TYPE);
             HITLS_AUTH_PakeFreeCtx(ctx);
@@ -254,7 +248,6 @@ int32_t HITLS_AUTH_PakeRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer in0, BSL_Bu
         case HITLS_AUTH_PAKE_SPAKE2PLUS:
             ret = HITLS_AUTH_Spake2plusRespSetup(ctx, in0, in1, out0, out1);
             break;
-        case HITLS_AUTH_PAKE_INVALID:
         default:
             ret=HITLS_AUTH_INVALID_ARG;
             break;
@@ -280,7 +273,6 @@ int32_t HITLS_AUTH_PakeReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer in0, BSL_Bu
         case HITLS_AUTH_PAKE_SPAKE2PLUS:
             ret=HITLS_AUTH_Spake2plusReqDerive(ctx, in0, in1, out0, out1);
             break;
-        case HITLS_AUTH_PAKE_INVALID:
         default:
             ret = HITLS_AUTH_INVALID_ARG;
             break;
@@ -305,7 +297,6 @@ int32_t HITLS_AUTH_PakeRespDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer in0, BSL_B
         case HITLS_AUTH_PAKE_SPAKE2PLUS:
             ret = HITLS_AUTH_Spake2plusRespDerive(ctx, in0, out0);
             break;
-        case HITLS_AUTH_PAKE_INVALID:
         default:
             ret = HITLS_AUTH_INVALID_ARG;
             break;

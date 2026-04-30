@@ -25,10 +25,50 @@
 #include "crypt_params_key.h"
 #include "bsl_sal.h"
 #include "bsl_bytes.h"
+#include "sm9_ecp.h"
+#include "sm9_ecp2.h"
 
 /* Key type constants */
 #define SM9_KEY_TYPE_SIGN  1
 #define SM9_KEY_TYPE_ENC   2
+
+static int32_t SM9_ValidateG1PubKey(const uint8_t *pubkey, uint32_t len)
+{
+    SM9_ECP_A point;
+
+    if (len != SM9_ENC_SYS_PUBKEY_BYTES) {
+        return CRYPT_SM9_ERR_KEY_ERR;
+    }
+
+    // Read and convert to Montgomery representation
+    SM9_Ecp_A_ReadBytes(&point, pubkey);
+
+    // Check if point is on the curve
+    if (SM9_Ecp_A_Check(&point) != 0) {
+        return CRYPT_SM9_ERR_BAD_INPUT;
+    }
+
+    return CRYPT_SUCCESS;
+}
+
+static int32_t SM9_ValidateG2PubKey(const uint8_t *pubkey, uint32_t len)
+{
+    SM9_ECP2_A point;
+
+    if (len != SM9_SIG_SYS_PUBKEY_BYTES) {
+        return CRYPT_SM9_ERR_KEY_ERR;
+    }
+
+    // Read and convert to Montgomery representation
+    SM9_Ecp2_A_ReadBytes(&point, pubkey);
+
+    // Check if point is on the curve
+    if (SM9_Ecp2_A_Check(&point) != 0) {
+        return CRYPT_SM9_ERR_BAD_INPUT;
+    }
+
+    return CRYPT_SUCCESS;
+}
 
 CRYPT_SM9_Ctx *CRYPT_SM9_NewCtx(void)
 {
@@ -70,16 +110,26 @@ int32_t CRYPT_SM9_Gen(CRYPT_SM9_Ctx *ctx)
     uint8_t enc_msk[SM9_ENC_SYS_PRIKEY_BYTES];
 
     /* Generate random master private key for signature */
-    sm9_rand(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
+    ret = sm9_rand(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
+    if (ret != CRYPT_SUCCESS) {
+        return CRYPT_SM9_ERR_KEY_ERR;
+    }
     ret = SM9_SetSignMasterKey(ctx, sig_msk);
     if (ret != SM9_OK) {
+        BSL_SAL_CleanseData(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
         return CRYPT_SM9_ERR_KEY_ERR;
     }
 
     /* Generate random master private key for encryption */
-    sm9_rand(enc_msk, SM9_ENC_SYS_PRIKEY_BYTES);
+    ret = sm9_rand(enc_msk, SM9_ENC_SYS_PRIKEY_BYTES);
+    if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_CleanseData(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
+        return CRYPT_SM9_ERR_KEY_ERR;
+    }
     ret = SM9_SetEncMasterKey(ctx, enc_msk);
     if (ret != SM9_OK) {
+        BSL_SAL_CleanseData(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
+        BSL_SAL_CleanseData(enc_msk, SM9_ENC_SYS_PRIKEY_BYTES);
         return CRYPT_SM9_ERR_KEY_ERR;
     }
 
@@ -87,15 +137,21 @@ int32_t CRYPT_SM9_Gen(CRYPT_SM9_Ctx *ctx)
     if (ctx->user_id_len > 0) {
         ret = SM9_GenSignUserKey(ctx, ctx->user_id, ctx->user_id_len);
         if (ret != SM9_OK) {
+            BSL_SAL_CleanseData(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
+            BSL_SAL_CleanseData(enc_msk, SM9_ENC_SYS_PRIKEY_BYTES);
             return CRYPT_SM9_ERR_KEY_ERR;
         }
 
         ret = SM9_GenEncUserKey(ctx, ctx->user_id, ctx->user_id_len);
         if (ret != SM9_OK) {
+            BSL_SAL_CleanseData(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
+            BSL_SAL_CleanseData(enc_msk, SM9_ENC_SYS_PRIKEY_BYTES);
             return CRYPT_SM9_ERR_KEY_ERR;
         }
     }
 
+    BSL_SAL_CleanseData(sig_msk, SM9_SIG_SYS_PRIKEY_BYTES);
+    BSL_SAL_CleanseData(enc_msk, SM9_ENC_SYS_PRIKEY_BYTES);
     return CRYPT_SUCCESS;
 }
 
@@ -169,6 +225,11 @@ int32_t CRYPT_SM9_SetPubKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
             if (masterPubKeyLen != SM9_SIG_SYS_PUBKEY_BYTES) {
                 return CRYPT_SM9_ERR_KEY_ERR;
             }
+            /* Validate G2 point is on the curve */
+            ret = SM9_ValidateG2PubKey(masterPubKey, masterPubKeyLen);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
+            }
             memcpy(ctx->sig_mpk, masterPubKey, SM9_SIG_SYS_PUBKEY_BYTES);
         } else if (masterPrvKey != NULL) {
             /* Generate master public key from master private key */
@@ -200,6 +261,11 @@ int32_t CRYPT_SM9_SetPubKeyEx(CRYPT_SM9_Ctx *ctx, const BSL_Param *param)
         if (masterPubKey != NULL) {
             if (masterPubKeyLen != SM9_ENC_SYS_PUBKEY_BYTES) {
                 return CRYPT_SM9_ERR_KEY_ERR;
+            }
+            /* Validate G1 point is on the curve */
+            ret = SM9_ValidateG1PubKey(masterPubKey, masterPubKeyLen);
+            if (ret != CRYPT_SUCCESS) {
+                return ret;
             }
             memcpy(ctx->enc_mpk, masterPubKey, SM9_ENC_SYS_PUBKEY_BYTES);
         } else if (masterPrvKey != NULL) {
@@ -561,7 +627,7 @@ int32_t CRYPT_SM9_ComputeShareKey(const CRYPT_SM9_Ctx *selfCtx, const CRYPT_SM9_
     uint8_t SB[SM9_KEYEX_RB_BYTES];
 
     /* Generate deterministic random seeds based on user IDs to ensure consistent key exchange */
-    uint8_t seed_buffer[512]; /* Buffer to hold both user IDs */
+    uint8_t seed_buffer[512 + 1]; /* Buffer to hold both user IDs */
     uint32_t seed_len = 0;
     uint8_t hash[32];
     uint8_t rand_A[SM9_CURVE_MODULE_BYTES];

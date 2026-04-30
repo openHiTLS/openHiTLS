@@ -36,8 +36,7 @@ extern "C" {
 typedef struct HITLS_AUTH_PakeCtx HITLS_AUTH_PakeCtx;
 
 typedef enum {
-    HITLS_AUTH_PAKE_INVALID = 0,
-    HITLS_AUTH_PAKE_SPAKE2PLUS = 1,
+    HITLS_AUTH_PAKE_SPAKE2PLUS = 0,
 } HITLS_AUTH_PAKE_Type;
 
 typedef enum {

@@ -911,3 +911,82 @@ void SDV_CRYPTO_ELGAMAL_GET_SECURITY_BITS_FUNC_TC001(Hex *q,Hex *p, Hex *g, Hex 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
 }
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ELGAMAL_ENC_DEC_FUNC_TC001
+ * @title  ELGAMAL Encryption and Decryption functional test.
+ * @precon 1. Create the context of the elgamal algorithm.
+ *         2. Initialize the DRBG.
+ * @brief
+ *    1. Set para and generate a key pair, expected result 1
+ *    2. Encrypt plaintext using public key, expected result 1
+ *    3. Decrypt ciphertext using private key, expected result 1
+ *    4. Verify decrypted plaintext matches original plaintext, expected result 2
+ * @expect
+ *    1. CRYPT_SUCCESS
+ *    2. The decrypted plaintext is equal to the original plaintext.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ELGAMAL_ENC_DEC_FUNC_TC001(Hex *q, Hex *plainText, int k_bits, int bits, int isProvider)
+{
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    CRYPT_EAL_PkeyCtx *pkeyEnc = NULL;
+    CRYPT_EAL_PkeyCtx *pkeyDec = NULL;
+    CRYPT_EAL_PkeyPara para = {0};
+    CRYPT_EAL_PkeyPub pubKey = {0};
+    CRYPT_EAL_PkeyPrv prvKey = {0};
+
+    uint8_t pubG[600];
+    uint8_t pubP[600];
+    uint8_t pubY[600];
+    uint8_t pubQ[600];
+    uint8_t prvX[600];
+    uint8_t prvP[600];
+    uint8_t prvG[600];
+
+    SetElGamalPara(&para, q, bits, k_bits);
+    SetElGamalPubKey(&pubKey, pubG, 600, pubP, 600, pubY, 600, pubQ, 600);
+    SetElGamalPrvKey(&prvKey, prvX, 600);
+    prvKey.key.elgamalPrv.p = prvP;
+    prvKey.key.elgamalPrv.pLen = 600;
+    prvKey.key.elgamalPrv.g = prvG;
+    prvKey.key.elgamalPrv.gLen = 600;
+
+    uint8_t ciphertext[512];
+    uint32_t cipherLen = 512;
+    uint8_t decrypted[512];
+    uint32_t decryptedLen = 512;
+
+    TestMemInit();
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+
+    pkey = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+    pkeyEnc = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+    pkeyDec = TestPkeyNewCtx(NULL, CRYPT_PKEY_ELGAMAL, CRYPT_EAL_PKEY_CIPHER_OPERATE, "provider=default", isProvider);
+    ASSERT_TRUE(pkey != NULL && pkeyEnc != NULL && pkeyDec != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPara(pkey, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPub(pkey, &pubKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prvKey), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkeyEnc, &pubKey), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkeyDec, &prvKey), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyEncrypt(pkeyEnc, plainText->x, plainText->len, ciphertext, &cipherLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_PkeyDecrypt(pkeyDec, ciphertext, cipherLen, decrypted, &decryptedLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(decryptedLen, plainText->len);
+    ASSERT_COMPARE("Compare decrypted with original", plainText->x, plainText->len, decrypted, decryptedLen);
+
+EXIT:
+    TestRandDeInit();
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(pkeyEnc);
+    CRYPT_EAL_PkeyFreeCtx(pkeyDec);
+}
+/* END_CASE */

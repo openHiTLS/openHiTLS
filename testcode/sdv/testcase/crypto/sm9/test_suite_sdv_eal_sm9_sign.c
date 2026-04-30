@@ -33,105 +33,6 @@
 /* END_HEADER */
 
 /**
- * @test   SDV_CRYPTO_SM9_SIGN_API_TC001
- * @title  SM9 EAL Sign and Verify: Test basic sign and verify functionality using EAL interfaces.
- * @precon Prepare valid master key and user ID.
- * @brief
- *    1. Create SM9 context via EAL, expected result 1
- *    2. Set sign master key via SetPubKeyEx, expected result 2
- *    3. Generate and set sign user key via SetPrvKeyEx, expected result 3
- *    4. Sign a message using EAL PkeySign, expected result 4
- *    5. Verify the signature using EAL PkeyVerify, expected result 5
- *    6. Verify with wrong message, expected result 6
- * @expect
- *    1. Success, context is not NULL
- *    2. CRYPT_SUCCESS
- *    3. CRYPT_SUCCESS
- *    4. CRYPT_SUCCESS
- *    5. CRYPT_SUCCESS (signature valid)
- *    6. Verification failure
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_SM9_SIGN_API_TC001(Hex *masterKey, Hex *userId, Hex *message)
-{
-    CRYPT_EAL_PkeyCtx *signCtx = NULL;
-    CRYPT_EAL_PkeyCtx *verifyCtx = NULL;
-    SM9_Ctx *nativeCtx = NULL;
-    uint8_t signature[SM9_SIGNATURE_LEN] = {0};
-    uint32_t signLen = SM9_SIGNATURE_LEN;
-    uint8_t wrongMsg[] = "Wrong Message";
-    int ret;
-    BSL_Param params[4];
-    int32_t keyType = SM9_KEY_TYPE_SIGN;
-
-    // Step 1: Create signer context using EAL
-    signCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
-    ASSERT_TRUE(signCtx != NULL);
-
-    // Step 2: Set master private key via EAL SetPubKeyEx
-    nativeCtx = SM9_NewCtx();
-    ASSERT_TRUE(nativeCtx != NULL);
-    ret = SM9_SetSignMasterKey(nativeCtx, masterKey->x);
-    ASSERT_EQ(ret, SM9_OK);
-
-    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
-                        masterKey->x, masterKey->len);
-    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
-                        &keyType, sizeof(int32_t));
-    params[2] = (BSL_Param)BSL_PARAM_END;
-
-    ret = CRYPT_EAL_PkeySetPubEx(signCtx, params);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    // Step 3: Generate user private key via EAL SetPrvKeyEx using user ID
-    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_USER_ID, BSL_PARAM_TYPE_OCTETS,
-                        userId->x, userId->len);
-    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
-                        &keyType, sizeof(int32_t));
-    params[2] = (BSL_Param)BSL_PARAM_END;
-
-    ret = CRYPT_EAL_PkeySetPrvEx(signCtx, params);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    // Step 4: Sign message using EAL
-    ret = CRYPT_EAL_PkeySign(signCtx, CRYPT_MD_SM3, message->x, message->len,
-                             signature, &signLen);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-    ASSERT_EQ(signLen, SM9_SIGNATURE_LEN);
-
-    // Step 5: Create verifier context and set master public key
-    verifyCtx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
-    ASSERT_TRUE(verifyCtx != NULL);
-
-    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_PUB_KEY, BSL_PARAM_TYPE_OCTETS,
-                        nativeCtx->sig_mpk, SM9_SIG_SYS_PUBKEY_BYTES);
-    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_USER_ID, BSL_PARAM_TYPE_OCTETS,
-                        userId->x, userId->len);
-    BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
-                        &keyType, sizeof(int32_t));
-    params[3] = (BSL_Param)BSL_PARAM_END;
-
-    ret = CRYPT_EAL_PkeySetPubEx(verifyCtx, params);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    // Step 6: Verify signature - should succeed
-    ret = CRYPT_EAL_PkeyVerify(verifyCtx, CRYPT_MD_SM3, message->x, message->len,
-                               signature, signLen);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    // Step 7: Verify with wrong message - should fail
-    ret = CRYPT_EAL_PkeyVerify(verifyCtx, CRYPT_MD_SM3, wrongMsg, strlen((char*)wrongMsg),
-                               signature, signLen);
-    ASSERT_NE(ret, CRYPT_SUCCESS);
-
-EXIT:
-    CRYPT_EAL_PkeyFreeCtx(signCtx);
-    CRYPT_EAL_PkeyFreeCtx(verifyCtx);
-    SM9_FreeCtx(nativeCtx);
-}
-/* END_CASE */
-
-/**
  * @test   SDV_CRYPTO_SM9_SIGN_API_TC002
  * @title  SM9 EAL Sign: Test with NULL parameters using EAL interfaces.
  * @precon Prepare valid context.
@@ -378,101 +279,6 @@ void SDV_CRYPTO_SM9_GET_PRV_API_TC001(Hex *masterKey, Hex *userId)
     ASSERT_TRUE(p != NULL);
     ASSERT_EQ(p->useLen, userId->len);
     ASSERT_TRUE(memcmp(userIdBuf, userId->x, userId->len) == 0);
-
-EXIT:
-    CRYPT_EAL_PkeyFreeCtx(ctx);
-    SM9_FreeCtx(nativeCtx);
-}
-/* END_CASE */
-
-/**
- * @test   SDV_CRYPTO_SM9_SET_PUB_API_TC001
- * @title  SM9 CRYPT_EAL_PkeySetPubEx: Test setting master key.
- * @precon Prepare valid master private key.
- * @brief
- *    1. Create SM9 context, expected result 1
- *    2. Set with NULL ctx, expected result 2
- *    3. Set with NULL params, expected result 3
- *    4. Set with only master private key, expected result 4
- *    5. Set with both master private and public key, expected result 5
- *    6. Set with only master public key, expected result 6
- * @expect
- *    1. Success, context is not NULL
- *    2. CRYPT_NULL_INPUT
- *    3. CRYPT_NULL_INPUT
- *    4. CRYPT_SUCCESS (auto-generates public key)
- *    5. CRYPT_SUCCESS
- *    6. CRYPT_SUCCESS
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_SM9_SET_PUB_API_TC001(Hex *masterKey)
-{
-    CRYPT_EAL_PkeyCtx *ctx = NULL;
-    SM9_Ctx *nativeCtx = NULL;
-    uint8_t masterPubKey[SM9_SIG_SYS_PUBKEY_BYTES] = {0};
-    BSL_Param params[4];
-    int32_t keyType = SM9_KEY_TYPE_SIGN;
-    int ret;
-
-    // Generate master public key using native API
-    nativeCtx = SM9_NewCtx();
-    ASSERT_TRUE(nativeCtx != NULL);
-    ret = SM9_SetSignMasterKey(nativeCtx, masterKey->x);
-    ASSERT_EQ(ret, SM9_OK);
-    if ((SM9_SIG_SYS_PUBKEY_BYTES) <= (sizeof(masterPubKey)))
-        memcpy(masterPubKey, nativeCtx->sig_mpk, SM9_SIG_SYS_PUBKEY_BYTES);
-
-    // Step 1: Create context
-    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
-    ASSERT_TRUE(ctx != NULL);
-
-    // Step 2: Test NULL ctx
-    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
-                        masterKey->x, masterKey->len);
-    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
-                        &keyType, sizeof(int32_t));
-    params[2] = (BSL_Param)BSL_PARAM_END;
-
-    ret = CRYPT_EAL_PkeySetPubEx(NULL, params);
-    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
-
-    // Step 3: Test NULL params
-    ret = CRYPT_EAL_PkeySetPubEx(ctx, NULL);
-    ASSERT_EQ(ret, CRYPT_NULL_INPUT);
-
-    // Step 4: Set with only master private key
-    ret = CRYPT_EAL_PkeySetPubEx(ctx, params);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    // Step 5: Set with both keys
-    CRYPT_EAL_PkeyFreeCtx(ctx);
-    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
-    ASSERT_TRUE(ctx != NULL);
-
-    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
-                        masterKey->x, masterKey->len);
-    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_MASTER_PUB_KEY, BSL_PARAM_TYPE_OCTETS,
-                        masterPubKey, sizeof(masterPubKey));
-    BSL_PARAM_InitValue(&params[2], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
-                        &keyType, sizeof(int32_t));
-    params[3] = (BSL_Param)BSL_PARAM_END;
-
-    ret = CRYPT_EAL_PkeySetPubEx(ctx, params);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
-
-    // Step 6: Set with only master public key
-    CRYPT_EAL_PkeyFreeCtx(ctx);
-    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
-    ASSERT_TRUE(ctx != NULL);
-
-    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_PUB_KEY, BSL_PARAM_TYPE_OCTETS,
-                        masterPubKey, sizeof(masterPubKey));
-    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
-                        &keyType, sizeof(int32_t));
-    params[2] = (BSL_Param)BSL_PARAM_END;
-
-    ret = CRYPT_EAL_PkeySetPubEx(ctx, params);
-    ASSERT_EQ(ret, CRYPT_SUCCESS);
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
@@ -1072,5 +878,67 @@ void SDV_CRYPTO_SM9_CHECK_PRVKEY_FUNC_TC001(Hex *masterKey, Hex *userId)
 
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SM9_PUBKEY_SET_TEST_TC001
+ * @title  SM9 Public Key Round-trip: keygen, get master pub key, set it back, then tamper and set.
+ * @precon None.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM9_PUBKEY_SET_TEST_TC001(void)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    CRYPT_EAL_PkeyCtx *ctx2 = NULL;
+    uint8_t pubKeyBuf[SM9_SIG_SYS_PUBKEY_BYTES] = {0};
+    BSL_Param getParams[3];
+    BSL_Param setParams[3];
+    int32_t keyType = SM9_KEY_TYPE_SIGN;
+
+    // Create context and generate master key pair
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyGen(ctx), CRYPT_SUCCESS);
+
+    // Get master public key
+    BSL_PARAM_InitValue(&getParams[0], CRYPT_PARAM_SM9_MASTER_PUB_KEY, BSL_PARAM_TYPE_OCTETS,
+                        pubKeyBuf, sizeof(pubKeyBuf));
+    BSL_PARAM_InitValue(&getParams[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+                        &keyType, sizeof(int32_t));
+    getParams[2] = (BSL_Param)BSL_PARAM_END;
+
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPubEx(ctx, getParams), CRYPT_SUCCESS);
+    BSL_Param *p = BSL_PARAM_FindParam(getParams, CRYPT_PARAM_SM9_MASTER_PUB_KEY);
+    ASSERT_TRUE(p != NULL);
+    ASSERT_EQ(p->useLen, (uint32_t)SM9_SIG_SYS_PUBKEY_BYTES);
+
+    // Create new context, set the retrieved public key - expected success
+    ctx2 = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
+    ASSERT_TRUE(ctx2 != NULL);
+
+    BSL_PARAM_InitValue(&setParams[0], CRYPT_PARAM_SM9_MASTER_PUB_KEY, BSL_PARAM_TYPE_OCTETS,
+                        pubKeyBuf, SM9_SIG_SYS_PUBKEY_BYTES);
+    BSL_PARAM_InitValue(&setParams[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+                        &keyType, sizeof(int32_t));
+    setParams[2] = (BSL_Param)BSL_PARAM_END;
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx2, setParams), CRYPT_SUCCESS);
+
+    // Tamper the last byte of the public key
+    pubKeyBuf[SM9_SIG_SYS_PUBKEY_BYTES - 1]--;
+
+    // Set tampered public key - expected failure
+    BSL_PARAM_InitValue(&setParams[0], CRYPT_PARAM_SM9_MASTER_PUB_KEY, BSL_PARAM_TYPE_OCTETS,
+                        pubKeyBuf, SM9_SIG_SYS_PUBKEY_BYTES);
+    BSL_PARAM_InitValue(&setParams[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+                        &keyType, sizeof(int32_t));
+    setParams[2] = (BSL_Param)BSL_PARAM_END;
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetPubEx(ctx2, setParams), CRYPT_SM9_ERR_BAD_INPUT);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_EAL_PkeyFreeCtx(ctx2);
 }
 /* END_CASE */
