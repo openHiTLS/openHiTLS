@@ -73,6 +73,12 @@
 #ifdef HITLS_CRYPTO_XMSS
 #include "crypt_xmss.h"
 #endif
+#ifdef HITLS_CRYPTO_LMS
+#include "crypt_lms.h"
+#endif
+#ifdef HITLS_CRYPTO_HSS
+#include "crypt_hss.h"
+#endif
 #ifdef HITLS_CRYPTO_FRODOKEM
 #include "crypt_frodokem.h"
 #endif
@@ -774,6 +780,80 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL, // check
 #endif
         NULL, // cmp
+        NULL, // copyPara
+        NULL, // pkeyEncaps
+        NULL, // pkeyDecaps
+        NULL, // blind
+        NULL  // unBlind
+    ),
+#endif
+#ifdef HITLS_CRYPTO_LMS
+    EAL_PKEY_METHOD_DEFINE(
+        CRYPT_PKEY_LMS,
+        CRYPT_LMS_NewCtx,
+        CRYPT_LMS_DupCtx,
+        CRYPT_LMS_FreeCtx,
+        NULL, // setPara
+        NULL, // getPara
+        CRYPT_LMS_Gen,
+        CRYPT_LMS_Ctrl,
+        CRYPT_LMS_SetPubKey,
+        CRYPT_LMS_SetPrvKey,
+        CRYPT_LMS_GetPubKey,
+        CRYPT_LMS_GetPrvKey,
+        CRYPT_LMS_Sign,
+        NULL, // signData
+        CRYPT_LMS_Verify,
+        NULL, // verifyData
+        NULL, // recover
+        NULL, // computeShareKey
+        NULL, // encrypt
+        NULL, // decrypt
+        NULL, // headd
+        NULL, // hemul
+#ifdef HITLS_CRYPTO_LMS_CHECK
+        CRYPT_LMS_Check,
+#else
+        NULL, // check
+#endif
+        CRYPT_LMS_Cmp,
+        NULL, // copyPara
+        NULL, // pkeyEncaps
+        NULL, // pkeyDecaps
+        NULL, // blind
+        NULL  // unBlind
+    ),
+#endif
+#ifdef HITLS_CRYPTO_HSS
+    EAL_PKEY_METHOD_DEFINE(
+        CRYPT_PKEY_HSS,
+        CRYPT_HSS_NewCtx,
+        CRYPT_HSS_DupCtx,
+        CRYPT_HSS_FreeCtx,
+        NULL, // setPara
+        NULL, // getPara
+        CRYPT_HSS_Gen,
+        CRYPT_HSS_Ctrl,
+        CRYPT_HSS_SetPubKey,
+        CRYPT_HSS_SetPrvKey,
+        CRYPT_HSS_GetPubKey,
+        CRYPT_HSS_GetPrvKey,
+        CRYPT_HSS_Sign,
+        NULL, // signData
+        CRYPT_HSS_Verify,
+        NULL, // verifyData
+        NULL, // recover
+        NULL, // computeShareKey
+        NULL, // encrypt
+        NULL, // decrypt
+        NULL, // headd
+        NULL, // hemul
+#ifdef HITLS_CRYPTO_HSS_CHECK
+        CRYPT_HSS_Check,
+#else
+        NULL, // check
+#endif
+        CRYPT_HSS_Cmp,
         NULL, // copyPara
         NULL, // pkeyEncaps
         NULL, // pkeyDecaps

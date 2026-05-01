@@ -55,8 +55,7 @@ target_include_directories(_hitls_crypto_codecskey
         ${PROJECT_SOURCE_DIR}/crypto/curve25519/include
         ${PROJECT_SOURCE_DIR}/crypto/mldsa/include
         ${PROJECT_SOURCE_DIR}/crypto/mlkem/include
-        ${PROJECT_SOURCE_DIR}/crypto/slh_dsa/include
-        ${PROJECT_SOURCE_DIR}/crypto/xmss/include
+        ${PROJECT_SOURCE_DIR}/crypto/hbs/include
         ${PROJECT_SOURCE_DIR}/crypto/bn/include
         ${PROJECT_SOURCE_DIR}/bsl/asn1/include
         ${PROJECT_SOURCE_DIR}/bsl/print/include

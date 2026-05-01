@@ -116,8 +116,7 @@ target_include_directories(_hitls_crypto_eal
         ${PROJECT_SOURCE_DIR}/crypto/mlkem/include
         ${PROJECT_SOURCE_DIR}/crypto/mldsa/include
         ${PROJECT_SOURCE_DIR}/crypto/composite/include
-        ${PROJECT_SOURCE_DIR}/crypto/slh_dsa/include
-        ${PROJECT_SOURCE_DIR}/crypto/xmss/include
+        ${PROJECT_SOURCE_DIR}/crypto/hbs/include
         ${PROJECT_SOURCE_DIR}/crypto/hybridkem/include
         ${PROJECT_SOURCE_DIR}/crypto/frodokem/include
         ${PROJECT_SOURCE_DIR}/crypto/mceliece/include

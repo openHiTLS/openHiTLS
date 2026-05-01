@@ -664,6 +664,38 @@ enum CRYPT_ERROR {
     CRYPT_COMPOSITE_LEN_NOT_ENOUGH,                         /**< The buffer size of output is insufficient. */
     CRYPT_COMPOSITE_KEYLEN_ERROR,                           /**< Incorrect input data length. */
     CRYPT_COMPOSITE_KEY_REPEATED_SET,                       /**< The key is repeatedly set. */
+
+    CRYPT_LMS_INVALID_PARAM = 0x01400001,        /**< LMS invalid parameter. */
+    CRYPT_LMS_INVALID_CMD,                       /**< LMS invalid control command. */
+    CRYPT_LMS_INVALID_KEY_LEN,                   /**< LMS invalid key length. */
+    CRYPT_LMS_NO_KEY,                            /**< LMS key not set. */
+    CRYPT_LMS_KEY_EXHAUSTED,                     /**< LMS key exhausted (no more signatures available). */
+    CRYPT_LMS_NOT_INITIALIZED,                   /**< LMS operation not initialized. */
+    CRYPT_LMS_VERIFY_FAIL,                       /**< LMS signature verification failed. */
+    CRYPT_LMS_CMP_FALSE,                         /**< LMS contexts are not equal. */
+    CRYPT_LMS_HASH_FAIL,                         /**< LMS hash operation failed. */
+    CRYPT_LMS_SIGN_FAIL,                         /**< LMS signature generation failed. */
+    CRYPT_LMS_KEYGEN_FAIL,                       /**< LMS key generation failed. */
+    CRYPT_LMS_INVALID_LEAF_INDEX,                /**< LMS invalid leaf index. */
+    CRYPT_LMS_BUFFER_TOO_SMALL,                  /**< LMS buffer too small. */
+    CRYPT_LMS_DIVISION_BY_ZERO,                  /**< LMS division by zero error. */
+
+    CRYPT_HSS_INVALID_PARAM,                     /**< HSS invalid parameter. */
+    CRYPT_HSS_INVALID_LEVEL,                     /**< HSS invalid hierarchy level. */
+    CRYPT_HSS_INVALID_CMD,                       /**< HSS invalid control command. */
+    CRYPT_HSS_INVALID_KEY_LEN,                   /**< HSS invalid key length. */
+    CRYPT_HSS_NO_KEY,                            /**< HSS key not set. */
+    CRYPT_HSS_KEY_EXHAUSTED,                     /**< HSS key exhausted (no more signatures available). */
+    CRYPT_HSS_NOT_INITIALIZED,                   /**< HSS operation not initialized. */
+    CRYPT_HSS_VERIFY_FAIL,                       /**< HSS signature verification failed. */
+    CRYPT_HSS_CMP_FALSE,                         /**< HSS contexts are not equal. */
+    CRYPT_HSS_SIGNATURE_PARSE_FAIL,              /**< HSS signature parsing failed. */
+    CRYPT_HSS_SEED_DERIVE_FAIL,                  /**< HSS seed derivation failed. */
+    CRYPT_HSS_LEVEL_OUT_OF_RANGE,                /**< HSS level index out of range. */
+    CRYPT_HSS_SIGN_FAIL,                         /**< HSS signature generation failed. */
+    CRYPT_HSS_KEYGEN_FAIL,                       /**< HSS key generation failed. */
+    CRYPT_HSS_PAIRWISE_CHECK_FAIL,               /**< The public and private keys are inconsistent. */
+    CRYPT_LMS_PAIRWISE_CHECK_FAIL,               /**< The public and private keys are inconsistent. */
 };
 #ifdef __cplusplus
 }

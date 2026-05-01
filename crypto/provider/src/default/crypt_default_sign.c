@@ -44,6 +44,12 @@
 #ifdef HITLS_CRYPTO_XMSS
 #include "crypt_xmss.h"
 #endif
+#ifdef HITLS_CRYPTO_LMS
+#include "crypt_lms.h"
+#endif
+#ifdef HITLS_CRYPTO_HSS
+#include "crypt_hss.h"
+#endif
 
 
 #ifdef HITLS_CRYPTO_DSA
@@ -137,6 +143,22 @@ const CRYPT_EAL_Func g_defEalSignComposite[] = {
 const CRYPT_EAL_Func g_defEalSignXmss[] = {
     {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_XMSS_Sign},
     {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_XMSS_Verify},
+    CRYPT_EAL_FUNC_END,
+};
+#endif
+
+#ifdef HITLS_CRYPTO_LMS
+const CRYPT_EAL_Func g_defEalSignLms[] = {
+    {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_LMS_Sign},
+    {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_LMS_Verify},
+    CRYPT_EAL_FUNC_END,
+};
+#endif
+
+#ifdef HITLS_CRYPTO_HSS
+const CRYPT_EAL_Func g_defEalSignHss[] = {
+    {CRYPT_EAL_IMPLPKEYSIGN_SIGN, (CRYPT_EAL_ImplPkeySign)CRYPT_HSS_Sign},
+    {CRYPT_EAL_IMPLPKEYSIGN_VERIFY, (CRYPT_EAL_ImplPkeyVerify)CRYPT_HSS_Verify},
     CRYPT_EAL_FUNC_END,
 };
 #endif

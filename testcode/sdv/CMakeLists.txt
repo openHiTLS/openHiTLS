@@ -151,6 +151,9 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/crypto/paillier/src
     ${openHiTLS_SRC}/crypto/elgamal/include
     ${openHiTLS_SRC}/crypto/elgamal/src
+    ${openHiTLS_SRC}/crypto/hbs/include
+    ${openHiTLS_SRC}/crypto/hbs/lms/src
+    ${openHiTLS_SRC}/crypto/hbs/hss/src
     ${openHiTLS_SRC}/crypto/codecsdata/include
     ${openHiTLS_SRC}/crypto/codecskey/include
     ${openHiTLS_SRC}/crypto/codecskey/src
@@ -213,10 +216,12 @@ set(TEST_INTF_INCLUDE_DIRS
     ${openHiTLS_SRC}/crypto/mldsa/src
     ${openHiTLS_SRC}/crypto/composite/include
     ${openHiTLS_SRC}/crypto/composite/src
-    ${openHiTLS_SRC}/crypto/slh_dsa/include
-    ${openHiTLS_SRC}/crypto/slh_dsa/src
-    ${openHiTLS_SRC}/crypto/xmss/include
-    ${openHiTLS_SRC}/crypto/xmss/src
+    ${openHiTLS_SRC}/crypto/hbs/include
+    ${openHiTLS_SRC}/crypto/hbs/common
+    ${openHiTLS_SRC}/crypto/hbs/slh_dsa/src
+    ${openHiTLS_SRC}/crypto/hbs/xmss/src
+    ${openHiTLS_SRC}/crypto/hbs/lms/src
+    ${openHiTLS_SRC}/crypto/hbs/hss/src
     ${openHiTLS_SRC}/crypto/frodokem/include
     ${openHiTLS_SRC}/crypto/mceliece/include
     ${openHiTLS_SRC}/apps/include

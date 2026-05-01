@@ -267,6 +267,10 @@
 #cmakedefine HITLS_CRYPTO_SM9_CHECK
 #cmakedefine HITLS_CRYPTO_PAILLIER
 #cmakedefine HITLS_CRYPTO_ELGAMAL
+#cmakedefine HITLS_CRYPTO_LMS
+#cmakedefine HITLS_CRYPTO_LMS_CHECK
+#cmakedefine HITLS_CRYPTO_HSS
+#cmakedefine HITLS_CRYPTO_HSS_CHECK
 #cmakedefine HITLS_CRYPTO_XMSS
 #cmakedefine HITLS_CRYPTO_XMSS_CHECK
 #cmakedefine HITLS_CRYPTO_SLH_DSA

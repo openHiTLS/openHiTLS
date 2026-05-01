@@ -332,6 +332,12 @@ static const CRYPT_EAL_AlgInfo g_defEalKeyMgmt[] = {
 #ifdef HITLS_CRYPTO_XMSS
     {CRYPT_PKEY_XMSS, g_defEalKeyMgmtXmss, CRYPT_EAL_DEFAULT_ATTR},
 #endif
+#ifdef HITLS_CRYPTO_LMS
+    {CRYPT_PKEY_LMS, g_defEalKeyMgmtLms, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_HSS
+    {CRYPT_PKEY_HSS, g_defEalKeyMgmtHss, CRYPT_EAL_DEFAULT_ATTR},
+#endif
 #ifdef HITLS_CRYPTO_HYBRIDKEM
     {CRYPT_PKEY_HYBRID_KEM, g_defEalKeyMgmtHybridKem, CRYPT_EAL_DEFAULT_ATTR},
 #endif
@@ -402,6 +408,12 @@ static const CRYPT_EAL_AlgInfo g_defEalSigns[] = {
 #endif
 #ifdef HITLS_CRYPTO_XMSS
     {CRYPT_PKEY_XMSS, g_defEalSignXmss, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_LMS
+    {CRYPT_PKEY_LMS, g_defEalSignLms, CRYPT_EAL_DEFAULT_ATTR},
+#endif
+#ifdef HITLS_CRYPTO_HSS
+    {CRYPT_PKEY_HSS, g_defEalSignHss, CRYPT_EAL_DEFAULT_ATTR},
 #endif
     CRYPT_EAL_ALGINFO_END
 };
