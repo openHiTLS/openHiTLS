@@ -76,6 +76,7 @@ bool TestIsErrStackEmpty(void)
         return true;
     }
     Print("[BSL_ERR] unexpected error in stack: file=%s, line=%u\n", (file == NULL ? "NA" : file), line);
+    BSL_ERR_DeInit();
     return false;
 #else
     return true;

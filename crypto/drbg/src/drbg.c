@@ -44,30 +44,24 @@
 // According to the definition of DRBG_Ctx, ctx->seedMeth is not NULL
 static void DRBG_CleanEntropy(DRBG_Ctx *ctx, CRYPT_Data *entropy)
 {
-    CRYPT_RandSeedMethod *seedMeth = NULL;
-
-    if (ctx == NULL || CRYPT_IsDataNull(entropy)) {
+    if (entropy->data == NULL || entropy->len == 0) {
         return;
     }
 
-    seedMeth = &ctx->seedMeth;
+    CRYPT_RandSeedMethod *seedMeth = &ctx->seedMeth;
 
     if (seedMeth->cleanEntropy != NULL) {
         seedMeth->cleanEntropy(ctx->seedCtx, entropy);
     }
-
-    entropy->data = NULL;
-    entropy->len = 0;
 }
 
 // According to the definition of DRBG_Ctx, ctx->seedMeth is not NULL
 static int32_t DRBG_GetEntropy(DRBG_Ctx *ctx, CRYPT_Data *entropy, bool addEntropy)
 {
-    CRYPT_RandSeedMethod *seedMeth = NULL;
     CRYPT_Range entropyRange = ctx->entropyRange;
     uint32_t strength = ctx->strength;
 
-    seedMeth = &ctx->seedMeth;
+    CRYPT_RandSeedMethod *seedMeth = &ctx->seedMeth;
 
     if (addEntropy) {
         strength += strength / DRBG_NONCE_FROM_ENTROPY;
@@ -106,27 +100,21 @@ ERR:
 // According to the definition of DRBG_Ctx, ctx->seedMeth is not NULL
 static void DRBG_CleanNonce(DRBG_Ctx *ctx, CRYPT_Data *nonce)
 {
-    CRYPT_RandSeedMethod *seedMeth = NULL;
-
-    if (ctx == NULL || CRYPT_IsDataNull(nonce)) {
+    if (nonce->data == NULL || nonce->len == 0) {
         return;
     }
 
-    seedMeth = &ctx->seedMeth;
+    CRYPT_RandSeedMethod *seedMeth = &ctx->seedMeth;
 
     if (seedMeth->cleanNonce != NULL) {
         seedMeth->cleanNonce(ctx->seedCtx, nonce);
     }
-    nonce->data = NULL;
-    nonce->len = 0;
 }
 
 // According to the definition of DRBG_Ctx, ctx->seedMeth is not NULL
 static int32_t DRBG_GetNonce(DRBG_Ctx *ctx, CRYPT_Data *nonce, bool *addEntropy)
 {
-    CRYPT_RandSeedMethod *seedMeth = NULL;
-
-    seedMeth = &ctx->seedMeth;
+    CRYPT_RandSeedMethod *seedMeth = &ctx->seedMeth;
 
     // Allowed nonce which entered by the user can be NULL.
     // In this case, set *addEntropy to true to obtain the nonce from the entropy.

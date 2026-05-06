@@ -86,28 +86,6 @@ static int32_t EAL_RandSetMeth(EAL_RandUnitaryMethod *meth, CRYPT_EAL_RndCtx *ct
     return CRYPT_SUCCESS;
 }
 
-/* Initialize the global DRBG. */
-static int32_t EAL_RandNew(CRYPT_RAND_AlgId id, CRYPT_RandSeedMethod *seedMeth, void *seedCtx, CRYPT_EAL_RndCtx *ctx)
-{
-    if (ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
-        return CRYPT_NULL_INPUT;
-    }
-    if (ctx->working == true) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_RAND_WORKING);
-        return CRYPT_EAL_ERR_RAND_WORKING;
-    }
-
-    EAL_RandUnitaryMethod *meth = ctx->meth;
-    ctx->ctx = meth->newCtx(NULL, id, seedMeth, seedCtx);
-    if (ctx->ctx == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_DRBG_INIT_FAIL);
-        return CRYPT_EAL_ERR_DRBG_INIT_FAIL;
-    }
-
-    return CRYPT_SUCCESS;
-}
-
 static void MethFreeCtx(CRYPT_EAL_RndCtx *ctx)
 {
     EAL_RandUnitaryMethod *meth = ctx->meth;
@@ -187,7 +165,7 @@ void EAL_RandDeinit(CRYPT_EAL_RndCtx *ctx)
 #ifdef HITLS_CRYPTO_ENTROPY
         EAL_SeedDrbgDeinit(ctx->isDefaultSeed);
 #endif
-        BSL_SAL_FREE(ctx);
+        BSL_SAL_Free(ctx);
         return;
     }
 
@@ -476,9 +454,9 @@ static CRYPT_EAL_RndCtx *EAL_RandNewDrbg(CRYPT_RAND_AlgId id, CRYPT_RandSeedMeth
         goto ERR;
     }
 
-    ret = EAL_RandNew(id, seedMethond, seedCtx, randCtx);
-    if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
+    randCtx->ctx = meth->newCtx(NULL, id, seedMethond, seedCtx);
+    if (randCtx->ctx == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_DRBG_INIT_FAIL);
         goto ERR;
     }
     return randCtx;

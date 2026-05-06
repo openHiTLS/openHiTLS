@@ -45,17 +45,15 @@ typedef struct {
     bool isUsedDf;
 } DRBG_CtrCtx;
 
-static void DRBG_CtrXor(CRYPT_Data *dst, const CRYPT_Data *src)
+static void DRBG_CtrXor(uint8_t *dst, uint32_t len, const CRYPT_Data *src)
 {
-    uint32_t xorlen;
-
     if (CRYPT_IsDataNull(src)) {
         return;
     }
 
-    xorlen = (dst->len > src->len) ? src->len : dst->len;
+    uint32_t xorlen = (len > src->len) ? src->len : len;
 
-    DATA_XOR(dst->data, src->data, dst->data, xorlen);
+    DATA_XOR(dst, src->data, dst, xorlen);
 }
 
 static void DRBG_CtrInc(uint8_t *v, uint32_t len)
@@ -74,12 +72,9 @@ int32_t DRBG_CtrUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_Data *
 {
     DRBG_CtrCtx *ctx = (DRBG_CtrCtx *)drbg->ctx;
     const EAL_SymMethod *ciphMeth = ctx->ciphMeth;
-    int32_t ret;
     uint8_t tempData[DRBG_CTR_MAX_SEEDLEN];
-    CRYPT_Data temp;
-    uint32_t offset;
-
-    if ((ret = ciphMeth->setEncryptKey(ctx->ctrCtx, ctx->k, ctx->keyLen)) != CRYPT_SUCCESS) {
+    int32_t ret = ciphMeth->setEncryptKey(ctx->ctrCtx, ctx->k, ctx->keyLen);
+    if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
@@ -93,7 +88,7 @@ int32_t DRBG_CtrUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_Data *
         output_block = Block_Encrypt (Key, V).
         temp = temp || output_block.
     */
-    for (offset = 0; offset < ctx->seedLen; offset += AES_BLOCK_LEN) {
+    for (uint32_t offset = 0; offset < ctx->seedLen; offset += AES_BLOCK_LEN) {
         DRBG_CtrInc(ctx->v, AES_BLOCK_LEN);
         if ((ret = ciphMeth->encryptBlock(ctx->ctrCtx, ctx->v, tempData + offset, AES_BLOCK_LEN)) != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
@@ -102,10 +97,8 @@ int32_t DRBG_CtrUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_Data *
     }
 
     // temp = temp ⊕ provided_data
-    temp.data = tempData;
-    temp.len = ctx->seedLen;
-    DRBG_CtrXor(&temp, in1);
-    DRBG_CtrXor(&temp, in2);
+    DRBG_CtrXor(tempData, ctx->seedLen, in1);
+    DRBG_CtrXor(tempData, ctx->seedLen, in2);
 
     // Key = leftmost (temp, keylen). V = rightmost (temp, blocklen).
     if (ctx->keyLen > DRBG_CTR_MAX_KEYLEN) {
@@ -113,10 +106,10 @@ int32_t DRBG_CtrUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_Data *
         ret = CRYPT_MEM_CPY_FAIL;
         goto EXIT;
     }
-    memcpy(ctx->k, temp.data, ctx->keyLen);
+    memcpy(ctx->k, tempData, ctx->keyLen);
     // The length to be copied of ctx->V is AES_BLOCK_LEN, which is also the array length.
-    // The lower bits of temp.data are used for ctx->K, and the upper bits are used for ctx->V.
-    memcpy(ctx->v, temp.data + ctx->keyLen, AES_BLOCK_LEN);
+    // The lower bits of tempData are used for ctx->K, and the upper bits are used for ctx->V.
+    memcpy(ctx->v, tempData + ctx->keyLen, AES_BLOCK_LEN);
 EXIT:
     BSL_SAL_CleanseData(tempData, sizeof(tempData));
     (void)ciphMeth->cipherDeInitCtx(ctx->ctrCtx);
@@ -166,7 +159,7 @@ static int32_t DRBG_CtrBCCUpdateKX(DRBG_Ctx *drbg, const uint8_t *in)
 {
     DRBG_CtrCtx *ctx = (DRBG_CtrCtx *)drbg->ctx;
     uint8_t *out = ctx->kx;
-    int32_t ret = CRYPT_SUCCESS;
+    int32_t ret;
     uint32_t offset = 0;
 
     while (offset < ctx->seedLen) {
@@ -177,7 +170,7 @@ static int32_t DRBG_CtrBCCUpdateKX(DRBG_Ctx *drbg, const uint8_t *in)
         offset += AES_BLOCK_LEN;
     }
 
-    return ret;
+    return CRYPT_SUCCESS;
 }
 
 // Temporary block storage used by ctr_df
@@ -186,10 +179,10 @@ static int32_t DRBG_CtrBCCUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in, uint8_t t
     uint32_t dataLeft;
     uint32_t offset = 0;
     uint32_t tempPos = *tempLen;
-    int32_t ret = CRYPT_SUCCESS;
+    int32_t ret;
 
     if (CRYPT_IsDataNull(in) || in->len == 0) {
-        return ret;
+        return CRYPT_SUCCESS;
     }
 
     dataLeft = in->len;
@@ -215,15 +208,14 @@ static int32_t DRBG_CtrBCCUpdate(DRBG_Ctx *drbg, const CRYPT_Data *in, uint8_t t
 
     *tempLen = tempPos;
 
-    return ret;
+    return CRYPT_SUCCESS;
 }
 
 static int32_t DRBG_CtrBCCFinal(DRBG_Ctx *drbg, uint8_t temp[16], uint32_t tempLen)
 {
     int32_t ret;
-    uint32_t i;
 
-    for (i = tempLen; i < AES_BLOCK_LEN; i++) {
+    for (uint32_t i = tempLen; i < AES_BLOCK_LEN; i++) {
         temp[i] = 0;
     }
 
