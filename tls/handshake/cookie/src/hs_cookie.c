@@ -169,14 +169,14 @@ static int32_t AddCookieCalcMaterial(
     uint32_t usedLen = 0;
     ret = GenerateCookieCalcMaterial(ctx, clientHello, material, materialSize, &usedLen);
     if (ret != HITLS_SUCCESS) {
-        memset(material, 0, materialSize);
+        BSL_SAL_CleanseData(material, materialSize);
         BSL_SAL_FREE(material);
         return ret;
     }
 
     ret = SAL_CRYPT_Hmac(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
         HITLS_HASH_SHA_256, cookieInfo->macKey, MAC_KEY_LEN, material, usedLen, cookie, cookieLen);
-    memset(material, 0, materialSize);
+    BSL_SAL_CleanseData(material, materialSize);
     BSL_SAL_FREE(material);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15696, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
@@ -258,7 +258,7 @@ static int32_t CheckCookie(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool
         (ConstTimeMemcmp(cookie, clientHello->cookie, cookieLen) != 0)) {
         *isCookieValid = true;
     }
-    memset(cookie, 0, TLS_HS_MAX_COOKIE_SIZE);
+    BSL_SAL_CleanseData(cookie, TLS_HS_MAX_COOKIE_SIZE);
     return HITLS_SUCCESS;
 }
 

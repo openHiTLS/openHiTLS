@@ -471,6 +471,7 @@ int32_t VERIFY_Tls13CalcVerifyData(TLS_Ctx *ctx, bool isClient)
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15490, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "calc session hash fail when calc tls13 verify data.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
+        BSL_SAL_CleanseData(finishedKey, MAX_DIGEST_SIZE);
         return ret;
     }
 
@@ -483,6 +484,7 @@ int32_t VERIFY_Tls13CalcVerifyData(TLS_Ctx *ctx, bool isClient)
             "SAL_CRYPT_Hmac fail when calc tls13 verify data.", 0, 0, 0, 0);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
     }
+    BSL_SAL_CleanseData(finishedKey, MAX_DIGEST_SIZE);
     return ret;
 }
 

@@ -34,9 +34,7 @@
 #include "session_mgr.h"
 
 #define SESSION_DEFAULT_TIMEOUT 7200u
-#ifdef HITLS_TLS_FEATURE_SESSION
 #define SESSION_DEFAULT_CACHE_SIZE 256u
-#endif
 #define SESSION_GERNERATE_RETRY_MAX_TIMES 10
 
 #define SESSION_DEFAULT_HASH_BKT_SZIE 64u
@@ -95,6 +93,17 @@ static void SessionFreeFunc(void *ptr)
     HITLS_SESS_Free((HITLS_Session *)ptr);
 }
 
+static void SessMgrCleanTicketKeys(TLS_SessionMgr *mgr)
+{
+    if (mgr == NULL) {
+        return;
+    }
+
+    BSL_SAL_CleanseData(mgr->ticketKeyName, sizeof(mgr->ticketKeyName));
+    BSL_SAL_CleanseData(mgr->ticketAesKey, sizeof(mgr->ticketAesKey));
+    BSL_SAL_CleanseData(mgr->ticketHmacKey, sizeof(mgr->ticketHmacKey));
+}
+
 TLS_SessionMgr *SESSMGR_New(HITLS_Lib_Ctx *libCtx)
 {
     TLS_SessionMgr *mgr = (TLS_SessionMgr *)BSL_SAL_Calloc(1u, sizeof(TLS_SessionMgr));
@@ -115,6 +124,7 @@ TLS_SessionMgr *SESSMGR_New(HITLS_Lib_Ctx *libCtx)
         SAL_CRYPT_Rand(libCtx, mgr->ticketAesKey, sizeof(mgr->ticketAesKey)) != HITLS_SUCCESS ||
         SAL_CRYPT_Rand(libCtx, mgr->ticketHmacKey, sizeof(mgr->ticketHmacKey)) != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16704, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Rand fail", 0, 0, 0, 0);
+        SessMgrCleanTicketKeys(mgr);
         BSL_SAL_ThreadLockFree(mgr->lock);
         BSL_SAL_FREE(mgr);
         return NULL;
@@ -128,15 +138,14 @@ TLS_SessionMgr *SESSMGR_New(HITLS_Lib_Ctx *libCtx)
     if (mgr->hash == NULL) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16705, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "HASH_Create fail", 0, 0, 0, 0);
+        SessMgrCleanTicketKeys(mgr);
         BSL_SAL_ThreadLockFree(mgr->lock);
         BSL_SAL_FREE(mgr);
         return NULL;
     }
 
-#ifdef HITLS_TLS_FEATURE_SESSION
     mgr->sessCacheMode = HITLS_SESS_CACHE_SERVER;
     mgr->sessCacheSize = SESSION_DEFAULT_CACHE_SIZE;
-#endif
     mgr->sessTimeout = SESSION_DEFAULT_TIMEOUT;
     mgr->references = 1;
     return mgr;
@@ -170,6 +179,8 @@ void SESSMGR_Free(TLS_SessionMgr *mgr)
         // Delete all sessions
         BSL_HASH_Destroy(mgr->hash);
 
+        SessMgrCleanTicketKeys(mgr);
+
         BSL_SAL_ThreadLockFree(mgr->lock);
         BSL_SAL_Free(mgr);
     }
@@ -197,7 +208,6 @@ uint64_t SESSMGR_GetTimeout(TLS_SessionMgr *mgr)
     return sessTimeout;
 }
 
-#ifdef HITLS_TLS_FEATURE_SESSION
 void SESSMGR_SetCacheMode(TLS_SessionMgr *mgr, uint32_t mode)
 {
     if (mgr != NULL) {
@@ -240,7 +250,6 @@ uint32_t SESSMGR_GetCacheSize(TLS_SessionMgr *mgr)
 
     return sessCacheSize;
 }
-#endif
 
 void SESSMGR_InsertSession(TLS_SessionMgr *mgr, HITLS_Session *sess, bool isStore)
 {
