@@ -1229,14 +1229,12 @@ static uint32_t HITLS_X509_GetHashAlgSecBits(int32_t mdId)
         case CRYPT_MD_SHA256:
         case CRYPT_MD_SM3:
         case CRYPT_MD_SHA3_256:
-        case CRYPT_MD_SHAKE128:
             return 128;
         case CRYPT_MD_SHA384:
         case CRYPT_MD_SHA3_384:
             return 192;
         case CRYPT_MD_SHA512:
         case CRYPT_MD_SHA3_512:
-        case CRYPT_MD_SHAKE256:
             return 256;
         default:
             return 0;
