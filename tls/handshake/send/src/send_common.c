@@ -109,14 +109,14 @@ int32_t HS_DtlsSendFragmentHsMsg(TLS_Ctx *ctx, uint32_t maxRecPayloadLen, const 
         /* Write fragmented data */
         if (memcpy_s(&data[DTLS_HS_MSG_HEADER_SIZE], maxRecPayloadLen - DTLS_HS_MSG_HEADER_SIZE,
             &msgData[DTLS_HS_MSG_HEADER_SIZE + fragmentOffset], fragmentLen) != EOK) {
-            BSL_SAL_FREE(data);
+            BSL_SAL_ClearFree(data, maxRecPayloadLen);
             return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMCPY_FAIL, BINLOG_ID17127, "memcpy fail");
         }
 
         /* Send to the record layer */
         ret = REC_Write(ctx, REC_TYPE_HANDSHAKE, data, fragmentLen + DTLS_HS_MSG_HEADER_SIZE);
         if (ret != HITLS_SUCCESS) {
-            BSL_SAL_FREE(data);
+            BSL_SAL_ClearFree(data, maxRecPayloadLen);
             return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17128, "Write fail");
         }
 
@@ -124,7 +124,7 @@ int32_t HS_DtlsSendFragmentHsMsg(TLS_Ctx *ctx, uint32_t maxRecPayloadLen, const 
         packetLen -= fragmentLen;
     }
 
-    BSL_SAL_FREE(data);
+    BSL_SAL_ClearFree(data, maxRecPayloadLen);
     return ret;
 }
 

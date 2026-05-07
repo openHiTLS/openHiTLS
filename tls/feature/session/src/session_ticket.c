@@ -445,7 +445,7 @@ static int32_t GenerateSessFromTicket(HITLS_Lib_Ctx *libCtx, const char *attrNam
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID16039, "HITLS_SESS_New fail");
     }
     ret = SESS_Decode(session, plaintext, plaintextLen);
-    BSL_SAL_FREE(plaintext);
+    BSL_SAL_ClearFree(plaintext, plaintextLen);
     if (ret != HITLS_SUCCESS) {
         HITLS_SESS_Free(session);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16040, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,

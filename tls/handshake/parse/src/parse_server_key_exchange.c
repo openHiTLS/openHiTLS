@@ -141,7 +141,7 @@ int32_t VerifySignature(TLS_Ctx *ctx, const uint8_t *kxData, uint32_t kxDataLen,
     }
 
     if (ctx->hsCtx->peerCert == NULL) {
-        BSL_SAL_FREE(data);
+        BSL_SAL_ClearFree(data, signParam.dataLen);
         return ParseErrorProcess(ctx, HITLS_PARSE_VERIFY_SIGN_FAIL, BINLOG_ID17013,
             BINGLOG_STR("peerCert null"), ALERT_CERTIFICATE_REQUIRED);
     }
@@ -152,7 +152,7 @@ int32_t VerifySignature(TLS_Ctx *ctx, const uint8_t *kxData, uint32_t kxDataLen,
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17014, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "GET_PUB_KEY fail", 0, 0, 0, 0);
-        BSL_SAL_FREE(data);
+        BSL_SAL_ClearFree(data, signParam.dataLen);
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
@@ -160,7 +160,7 @@ int32_t VerifySignature(TLS_Ctx *ctx, const uint8_t *kxData, uint32_t kxDataLen,
     signParam.data = data;
     ret = SAL_CERT_VerifySign(ctx, pubkey, &signParam);
     SAL_CERT_KeyFree(ctx->config.tlsConfig.certMgrCtx, pubkey);
-    BSL_SAL_FREE(data);
+    BSL_SAL_ClearFree(data, signParam.dataLen);
     if (ret != HITLS_SUCCESS) {
         return ParseErrorProcess(ctx, HITLS_PARSE_VERIFY_SIGN_FAIL, BINLOG_ID15314,
             BINGLOG_STR("verify signature fail."), ALERT_DECRYPT_ERROR);
