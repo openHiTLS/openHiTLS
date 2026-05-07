@@ -1169,8 +1169,7 @@
                     "crypto/provider/src/default/*.c",
                     "crypto/provider/src/cmvp/cmvp_utils/*.c",
                     "crypto/provider/src/cmvp/iso_prov/*.c",
-                    "crypto/provider/src/cmvp/sm_prov/*.c",
-                    "crypto/provider/src/cmvp/fips_prov/*.c"],
+                    "crypto/provider/src/cmvp/sm_prov/*.c"],
                 ".deps": ["bsl::sal", "bsl::hash", "bsl::err", "bsl::params"],
                 ".include": [
                     "crypto/provider/include",

@@ -690,7 +690,6 @@ void SDV_CRYPTO_ENTROPY_EsMultiNsTest()
     uint8_t buf[32] = {0};
     // Error stack exists
     ASSERT_TRUE(CRYPT_EAL_EsEntropyGet(es, buf, 32) == 32);
-    ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     CRYPT_EAL_EsFree(es);

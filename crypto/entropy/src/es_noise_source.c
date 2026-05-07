@@ -246,7 +246,6 @@ static int32_t NsRead(ES_NoiseSource *ns, uint8_t *buf, uint32_t bufLen)
 {
     int32_t ret = ns->read(ns->usrdata, ES_MAX_TIMEOUT_MAX, buf, bufLen);
     if (ret != CRYPT_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
     if (!ns->enableTest) {

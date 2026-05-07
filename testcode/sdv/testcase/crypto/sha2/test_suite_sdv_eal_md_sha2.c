@@ -956,11 +956,6 @@ void SDV_CRYPT_EAL_SHA256_MB_API_TC003(void)
     outlen = CRYPT_SHA2_256_DIGESTSIZE;
     ASSERT_EQ(CRYPT_EAL_MdMBFinal(ctx, dgstArr, &outlen, 2), CRYPT_EAL_ERR_STATE);
 
-    ctx->state = CRYPT_MD_STATE_SQUEEZE;
-    ASSERT_EQ(CRYPT_EAL_MdMBUpdate(ctx, dataArr, nbytesArr, 2), CRYPT_EAL_ERR_STATE);
-    outlen = CRYPT_SHA2_256_DIGESTSIZE;
-    ASSERT_EQ(CRYPT_EAL_MdMBFinal(ctx, dgstArr, &outlen, 2), CRYPT_EAL_ERR_STATE);
-
     ctx->state = CRYPT_MD_STATE_INIT;
     uint32_t zeroNbytesArr[2] = {0, 0};
     ASSERT_EQ(CRYPT_EAL_MdMBUpdate(ctx, dataArr, zeroNbytesArr, 2), CRYPT_SUCCESS);

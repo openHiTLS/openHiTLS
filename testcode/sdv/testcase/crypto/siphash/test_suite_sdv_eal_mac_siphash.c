@@ -977,6 +977,49 @@ EXIT:
 /* END_CASE */
 
 /* @
+* @test  SDV_CRYPT_SIPHASH_DEINIT_API_TC001
+* @spec  -
+* @title  Verify direct CRYPT_SIPHASH_Deinit clears state and allows re-initialization
+* @precon nan
+* @brief 1. Create a SipHash context. Expected result 1 is obtained.
+2. Call CRYPT_SIPHASH_Deinit with NULL. Expected result 2 is obtained.
+3. Init and update the context. Expected result 3 is obtained.
+4. Call CRYPT_SIPHASH_Deinit. Expected result 4 is obtained.
+5. Init, update and final again. Expected result 5 is obtained.
+6. Compare the MAC with the vector. Expected result 6 is obtained.
+* @expect 1. Context creation succeeds.
+2. CRYPT_NULL_INPUT is returned.
+3-5. All operations succeed.
+6. The MAC equals the vector.
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPT_SIPHASH_DEINIT_API_TC001(int algId, Hex *key, Hex *data, Hex *vecMac)
+{
+    TestMemInit();
+    uint32_t macLen = vecMac->len;
+    uint8_t mac[64];
+    CRYPT_SIPHASH_Ctx *ctx = CRYPT_SIPHASH_NewCtx(algId);
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_EQ(CRYPT_SIPHASH_Deinit(NULL), CRYPT_NULL_INPUT);
+    ASSERT_EQ(CRYPT_SIPHASH_Init(ctx, key->x, key->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SIPHASH_Update(ctx, data->x, data->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SIPHASH_Deinit(ctx), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_SIPHASH_Init(ctx, key->x, key->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SIPHASH_Update(ctx, data->x, data->len), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_SIPHASH_Final(ctx, mac, &macLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("mac cmp vec", mac, macLen, vecMac->x, vecMac->len);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_SIPHASH_FreeCtx(ctx);
+}
+/* END_CASE */
+
+/* @
 * @test  SDV_CRYPT_EAL_SIPHASH_FREECTX_CLEANSE_TC001
 * @spec  -
 * @title  Verify FreeCtx clears sensitive data and does not crash

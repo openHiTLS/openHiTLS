@@ -51,6 +51,7 @@ int32_t BSL_ASN1_DecodeLen(uint8_t **encode, uint32_t *encLen, bool completeLen,
         tempLen--;
         parseLen += ((completeLen) ? 1 : 0);
     } else {
+        /* Indefinite length (0x80) is unsupported because this decoder only handles definite lengths. */
         if (*temp == BSL_ASN1_INDEFINITE_LENGTH) {
             return BSL_ASN1_ERR_DECODE_LEN;
         }

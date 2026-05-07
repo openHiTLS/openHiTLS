@@ -665,9 +665,9 @@ class CMakeGenerator:
         Check if lib_name is a bundled library.
         Bundled libraries include:
         - 'hitls': standard bundle
-        - 'hitls_iso', 'hitls_fips', 'hitls_sm': CMVP provider bundles
+        - 'hitls_iso', 'hitls_sm': CMVP provider bundles
         """
-        return lib_name == 'hitls' or lib_name in ['hitls_iso', 'hitls_fips', 'hitls_sm']
+        return lib_name == 'hitls' or lib_name in ['hitls_iso', 'hitls_sm']
 
     def _gen_module_cmake(self, lib, mod, mod_obj, mods_cmake):
         top_mod, module_name = mod.split('::')
@@ -731,7 +731,7 @@ class CMakeGenerator:
             cmake += self._gen_cmd_cmake(
                 "target_link_libraries", "hitls_auth-shared hitls_crypto-shared hitls_bsl-shared")
         elif self._is_bundled_lib(lib_name):
-            # Bundled library (hitls, hitls_iso, hitls_fips, hitls_sm) contains all modules
+            # Bundled library (hitls, hitls_iso, hitls_sm) contains all modules
             cmake += self._gen_cmd_cmake("target_link_directories", "{}-shared PRIVATE".format(lib_name) + " ${CMAKE_SOURCE_DIR}/platform/Secure_C/lib")
             libs_to_link = [str(self._args.securec_lib)]
             for item in macros:
@@ -796,7 +796,7 @@ class CMakeGenerator:
             }
         }
 
-        # Check exact match first, then handle bundled libraries (hitls, hitls_iso, hitls_fips, hitls_sm)
+        # Check exact match first, then handle bundled libraries (hitls, hitls_iso, hitls_sm)
         if lib_name in library_link_config:
             config = library_link_config[lib_name]
         elif self._is_bundled_lib(lib_name):
@@ -955,7 +955,7 @@ class CMakeGenerator:
     def _get_bundle_lib_name(self):
         """
         Determine the output library name based on CMVP mode.
-        Returns 'hitls_iso', 'hitls_fips', 'hitls_sm', or 'hitls' (default).
+        Returns 'hitls_iso', 'hitls_sm', or 'hitls' (default).
         """
         # Collect all compile flags from the nested structure
         # compileFlag structure: {'option_type': {'CC_FLAGS_ADD': [flags], ...}}
@@ -968,8 +968,6 @@ class CMakeGenerator:
         # Check for CMVP mode flags
         if '-DHITLS_CRYPTO_CMVP_ISO19790' in compile_flags:
             return 'hitls_iso'
-        elif '-DHITLS_CRYPTO_CMVP_FIPS' in compile_flags:
-            return 'hitls_fips'
         elif '-DHITLS_CRYPTO_CMVP_SM' in compile_flags:
             return 'hitls_sm'
         else:
