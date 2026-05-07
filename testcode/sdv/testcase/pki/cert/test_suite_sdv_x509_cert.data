@@ -28,6 +28,21 @@ SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/x25519/x2551
 SDV_X509_CERT_PARSE_FUNC_TC001 parse pem cert
 SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/cert/ca.pem"
 
+SDV_X509_CERT_PARSE_NO_NUL_TERMINATOR_TC001 parse pem cert buffer by dataLen when trailing sentinel is nonzero
+SDV_X509_CERT_PARSE_NO_NUL_TERMINATOR_TC001:"../testdata/cert/pem/cert/ca.pem"
+
+SDV_X509_CERT_PARSE_UNKNOWN_NO_NUL_TERMINATOR_TC001 parse unknown pem cert buffer without nul terminator by non-provider
+SDV_X509_CERT_PARSE_UNKNOWN_NO_NUL_TERMINATOR_TC001:0:"../testdata/cert/pem/cert/ca.pem"
+
+SDV_X509_CERT_PARSE_UNKNOWN_NO_NUL_TERMINATOR_TC001 parse unknown der cert buffer without nul terminator by non-provider
+SDV_X509_CERT_PARSE_UNKNOWN_NO_NUL_TERMINATOR_TC001:0:"../testdata/cert/asn1/rsa_cert/ca.der"
+
+SDV_X509_CERT_PARSE_UNKNOWN_NO_NUL_TERMINATOR_TC001 parse unknown pem cert buffer without nul terminator by provider
+SDV_X509_CERT_PARSE_UNKNOWN_NO_NUL_TERMINATOR_TC001:1:"../testdata/cert/pem/cert/ca.pem"
+
+SDV_X509_CERT_PARSE_UNKNOWN_NO_NUL_TERMINATOR_TC001 parse unknown der cert buffer without nul terminator by provider
+SDV_X509_CERT_PARSE_UNKNOWN_NO_NUL_TERMINATOR_TC001:1:"../testdata/cert/asn1/rsa_cert/ca.der"
+
 SDV_X509_CERT_PARSE_FUNC_TC001 parse unknown(pem) cert
 SDV_X509_CERT_PARSE_FUNC_TC001:BSL_FORMAT_UNKNOWN:"../testdata/cert/pem/cert/ca.pem"
 

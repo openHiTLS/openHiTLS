@@ -410,8 +410,7 @@ int32_t CRYPT_EAL_MdMBUpdate(CRYPT_EAL_MdCtx *ctx, const uint8_t *data[], uint32
         return CRYPT_NOT_SUPPORT;
     }
 
-    if ((ctx->state == CRYPT_MD_STATE_FINAL) || (ctx->state == CRYPT_MD_STATE_NEW) ||
-        (ctx->state == CRYPT_MD_STATE_SQUEEZE)) {
+    if ((ctx->state == CRYPT_MD_STATE_FINAL) || (ctx->state == CRYPT_MD_STATE_NEW)) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }
@@ -440,8 +439,7 @@ int32_t CRYPT_EAL_MdMBFinal(CRYPT_EAL_MdCtx *ctx, uint8_t *digest[], uint32_t *o
         return CRYPT_NOT_SUPPORT;
     }
 
-    if ((ctx->state == CRYPT_MD_STATE_NEW) || (ctx->state == CRYPT_MD_STATE_FINAL) ||
-        (ctx->state == CRYPT_MD_STATE_SQUEEZE)) {
+    if ((ctx->state == CRYPT_MD_STATE_NEW) || (ctx->state == CRYPT_MD_STATE_FINAL)) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_MD, ctx->id, CRYPT_EAL_ERR_STATE);
         return CRYPT_EAL_ERR_STATE;
     }

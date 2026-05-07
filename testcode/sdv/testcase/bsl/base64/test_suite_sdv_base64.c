@@ -22,6 +22,7 @@
 #include "bsl_sal.h"
 #include "bsl_errno.h"
 #include "bsl_base64.h"
+#include "bsl_base64_internal.h"
 #include "bsl_uio.h"
 #include "bsl_base64.h"
 
@@ -923,6 +924,91 @@ void SDV_BSL_BASE64_FUNC_TC013(void)
     /* Abnormal case: one remaining base64 character is not a valid final block. */
     len = sizeof(dec);
     ASSERT_EQ(BSL_BASE64_DecodeUpdate(ctx, invalid, sizeof(invalid) - 1, dec, &len), BSL_SUCCESS);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeFinal(ctx, dec, &len), BSL_BASE64_INVALID_ENCODE);
+    ASSERT_EQ(len, 0);
+EXIT:
+    BSL_BASE64_CtxFree(ctx);
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_BASE64_FUNC_TC014(void)
+{
+    BSL_Base64Ctx *ctx = BSL_BASE64_CtxNew();
+    uint8_t dec[4] = {0};
+    uint32_t len = sizeof(dec);
+    ASSERT_TRUE(ctx != NULL);
+
+    /*
+     * Cover DecodeFinal residual-block validation:
+     * DecodeUpdate keeps only non-padding base64 characters in ctx->buf, so ctx->num % 4 is remain.
+     * It records skipped '=' characters in paddingCnt. A valid final block must satisfy both:
+     * paddingCnt <= BASE64_PAD_MAX and (remain + paddingCnt) % BASE64_DECODE_BYTES == 0.
+     */
+
+    /* Valid branch: remain=0, paddingCnt=0. "MTIz" is a complete unpadded final quartet. */
+    ASSERT_EQ(BSL_BASE64_DecodeInit(ctx), BSL_SUCCESS);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeUpdate(ctx, "MTIz", 4, dec, &len), BSL_SUCCESS);
+    ASSERT_EQ(len, 0);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeFinal(ctx, dec, &len), BSL_SUCCESS);
+    ASSERT_EQ(len, 3);
+
+    /* Valid branch: remain=3, paddingCnt=1. "TWE=" completes the quartet and decodes to 2 bytes. */
+    ASSERT_EQ(BSL_BASE64_DecodeInit(ctx), BSL_SUCCESS);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeUpdate(ctx, "TWE=", 4, dec, &len), BSL_SUCCESS);
+    ASSERT_EQ(len, 0);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeFinal(ctx, dec, &len), BSL_SUCCESS);
+    ASSERT_EQ(len, 2);
+
+    /* Valid branch: remain=2, paddingCnt=2. "TQ==" completes the quartet and decodes to 1 byte. */
+    ASSERT_EQ(BSL_BASE64_DecodeInit(ctx), BSL_SUCCESS);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeUpdate(ctx, "TQ==", 4, dec, &len), BSL_SUCCESS);
+    ASSERT_EQ(len, 0);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeFinal(ctx, dec, &len), BSL_SUCCESS);
+    ASSERT_EQ(len, 1);
+
+    /* Invalid branch: remain=1, paddingCnt=0. (remain + paddingCnt) % 4 != 0. */
+    ASSERT_EQ(BSL_BASE64_DecodeInit(ctx), BSL_SUCCESS);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeUpdate(ctx, "T", 1, dec, &len), BSL_SUCCESS);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeFinal(ctx, dec, &len), BSL_BASE64_INVALID_ENCODE);
+    ASSERT_EQ(len, 0);
+
+    /* Invalid branch: remain=2, paddingCnt=0. Missing "==" padding, so the final quartet is incomplete. */
+    ASSERT_EQ(BSL_BASE64_DecodeInit(ctx), BSL_SUCCESS);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeUpdate(ctx, "TQ", 2, dec, &len), BSL_SUCCESS);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeFinal(ctx, dec, &len), BSL_BASE64_INVALID_ENCODE);
+    ASSERT_EQ(len, 0);
+
+    /* Invalid branch: remain=3, paddingCnt=0. Missing "=" padding, so the final quartet is incomplete. */
+    ASSERT_EQ(BSL_BASE64_DecodeInit(ctx), BSL_SUCCESS);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeUpdate(ctx, "TWE", 3, dec, &len), BSL_SUCCESS);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeFinal(ctx, dec, &len), BSL_BASE64_INVALID_ENCODE);
+    ASSERT_EQ(len, 0);
+
+    /* Invalid branch: remain=2, paddingCnt=1. (remain + paddingCnt) % 4 != 0. */
+    ASSERT_EQ(BSL_BASE64_DecodeInit(ctx), BSL_SUCCESS);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeUpdate(ctx, "TQ=", 3, dec, &len), BSL_SUCCESS);
+    len = sizeof(dec);
+    ASSERT_EQ(BSL_BASE64_DecodeFinal(ctx, dec, &len), BSL_BASE64_INVALID_ENCODE);
+    ASSERT_EQ(len, 0);
+
+    /* Invalid branch: force paddingCnt > BASE64_PAD_MAX to cover the abnormal context-state guard. */
+    ASSERT_EQ(BSL_BASE64_DecodeInit(ctx), BSL_SUCCESS);
+    ctx->paddingCnt = BASE64_PAD_MAX + 1U;
     len = sizeof(dec);
     ASSERT_EQ(BSL_BASE64_DecodeFinal(ctx, dec, &len), BSL_BASE64_INVALID_ENCODE);
     ASSERT_EQ(len, 0);

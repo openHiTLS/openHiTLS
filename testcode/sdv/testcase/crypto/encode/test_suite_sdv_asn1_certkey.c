@@ -404,6 +404,118 @@ static int32_t DecodeKeyBuff(int isProvider, BSL_Buffer *encode, int format, con
     }
 }
 
+/**
+ * @test SDV_BSL_ASN1_PARSE_PRIKEY_NO_NUL_TERMINATOR_TC001
+ * title 1. Test decoding a PEM private-key buffer whose byte after encode.dataLen is nonzero.
+ *       2. Verify DecodeBuffKey uses encode.dataLen as the boundary and does not require a trailing '\0'.
+ *
+ */
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_PRIKEY_NO_NUL_TERMINATOR_TC001(char *path, int fileType)
+{
+    uint8_t *fileData = NULL;
+    uint32_t fileLen = 0;
+    uint8_t *noNulData = NULL;
+    BSL_Buffer encode = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &fileData, &fileLen), BSL_SUCCESS);
+    ASSERT_TRUE(fileData != NULL && fileLen > 0);
+
+    /*
+     * Test point: build a PEM private-key buffer whose byte after encode.dataLen is nonzero.
+     * DecodeBuffKey must parse strictly within encode.dataLen and must not depend on a trailing '\0'.
+     */
+    noNulData = BSL_SAL_Malloc(strlen((const char *)fileData));
+    ASSERT_TRUE(noNulData != NULL);
+    memcpy(noNulData, fileData, strlen((const char *)fileData));
+
+    encode.data = noNulData;
+    encode.dataLen = strlen((const char *)fileData);
+    /* Verify the PEM private key buffer can still be decoded when the out-of-range sentinel is not '\0'. */
+    ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_PEM, fileType, &encode, NULL, 0, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(pkeyCtx != NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    if (fileData != NULL) {
+        BSL_SAL_CleanseData(fileData, fileLen);
+    }
+    if (noNulData != NULL) {
+        BSL_SAL_CleanseData(noNulData, strlen((const char *)fileData));
+    }
+    BSL_SAL_Free(fileData);
+    BSL_SAL_Free(noNulData);
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_ASN1_PARSE_PRIKEY_UNKNOWN_NO_NUL_TERMINATOR_TC001
+ * title 1. Test decoding PEM and DER private-key buffers with UNKNOWN format and UNKNOWN key type.
+ *       2. Test both DecodeBuffKey and ProviderDecodeBuffKey use encode.dataLen as the parsing boundary.
+ *
+ */
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_PRIKEY_UNKNOWN_NO_NUL_TERMINATOR_TC001(int isProvider, char *path)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    if (isProvider != 0) {
+        (void)path;
+        SKIP_TEST();
+    }
+#endif
+    uint8_t *fileData = NULL;
+    uint32_t fileLen = 0;
+    uint8_t *noNulData = NULL;
+    BSL_Buffer encode = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &fileData, &fileLen), BSL_SUCCESS);
+    ASSERT_TRUE(fileData != NULL && fileLen > 0);
+
+    /*
+     * Test point: append a nonzero sentinel after dataLen. UNKNOWN format and UNKNOWN key type must identify
+     * PEM or DER private-key content from encode.dataLen bytes only, without relying on a trailing '\0'.
+     */
+    noNulData = BSL_SAL_Malloc(fileLen + 1);
+    ASSERT_TRUE(noNulData != NULL);
+    memcpy(noNulData, fileData, fileLen);
+    noNulData[fileLen] = 0xA5;
+    ASSERT_TRUE(noNulData[fileLen] != 0);
+    encode.data = noNulData;
+    encode.dataLen = fileLen;
+
+#ifdef HITLS_CRYPTO_PROVIDER
+    if (isProvider != 0) {
+        CRYPT_RandRegist(RandFunc);
+        CRYPT_RandRegistEx(RandFuncEx);
+        /* Test point: provider format NULL and type NULL map to UNKNOWN format and UNKNOWN key type. */
+        ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, NULL, NULL, &encode, NULL, &pkeyCtx),
+            CRYPT_SUCCESS);
+    } else
+#endif
+    {
+        /* Test point: non-provider UNKNOWN format and CRYPT_ENCDEC_UNKNOW auto-detect PEM or DER private keys. */
+        ASSERT_EQ(CRYPT_EAL_DecodeBuffKey(BSL_FORMAT_UNKNOWN, CRYPT_ENCDEC_UNKNOW, &encode, NULL, 0, &pkeyCtx),
+            CRYPT_SUCCESS);
+    }
+    ASSERT_TRUE(pkeyCtx != NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    if (fileData != NULL) {
+        BSL_SAL_CleanseData(fileData, fileLen);
+    }
+    if (noNulData != NULL) {
+        BSL_SAL_CleanseData(noNulData, fileLen + 1);
+    }
+    BSL_SAL_Free(fileData);
+    BSL_SAL_Free(noNulData);
+}
+/* END_CASE */
+
 /* sign and optional compare in a reusable subroutine */
 static int32_t PrikeySign(CRYPT_EAL_PkeyCtx *pkeyCtx, int mdId, int fileType, char *fileTypeStr, Hex *msg, Hex *sign)
 {

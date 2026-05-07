@@ -62,6 +62,108 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_X509_CERT_PARSE_NO_NUL_TERMINATOR_TC001
+ * title 1. Test parsing a PEM certificate buffer whose byte after encode.dataLen is nonzero.
+ *       2. Verify CertParseBuff uses encode.dataLen as the boundary and does not require a trailing '\0'.
+ *
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_NO_NUL_TERMINATOR_TC001(char *path)
+{
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    uint8_t *fileData = NULL;
+    uint32_t fileLen = 0;
+    uint8_t *noNulData = NULL;
+    BSL_Buffer encode = {0};
+    HITLS_X509_Cert *cert = NULL;
+
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &fileData, &fileLen), BSL_SUCCESS);
+    ASSERT_TRUE(fileData != NULL && fileLen > 0);
+
+    /*
+     * Test point: build a PEM buffer whose byte after encode.dataLen is nonzero.
+     * CertParseBuff must parse strictly within encode.dataLen and must not depend on a trailing '\0'.
+     */
+    noNulData = BSL_SAL_Malloc(strlen((const char *)fileData));
+    ASSERT_TRUE(noNulData != NULL);
+    memcpy(noNulData, fileData, strlen((const char *)fileData));
+
+    encode.data = noNulData;
+    encode.dataLen = strlen((const char *)fileData);
+    /* Verify the PEM certificate buffer can still be parsed when the out-of-range sentinel is not '\0'. */
+    ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_PEM, &encode, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(cert != NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_CertFree(cert);
+    BSL_SAL_Free(fileData);
+    BSL_SAL_Free(noNulData);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
+/**
+ * @test SDV_X509_CERT_PARSE_UNKNOWN_NO_NUL_TERMINATOR_TC001
+ * title 1. Test parsing PEM and DER certificate buffers with UNKNOWN format and no trailing '\0'.
+ *       2. Test both CertParseBuff and ProviderCertParseBuff use encode.dataLen as the parsing boundary.
+ *
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_PARSE_UNKNOWN_NO_NUL_TERMINATOR_TC001(int isProvider, char *path)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    if (isProvider != 0) {
+        (void)path;
+        SKIP_TEST();
+    }
+#endif
+    TestMemInit();
+    BSL_GLOBAL_Init();
+    uint8_t *fileData = NULL;
+    uint32_t fileLen = 0;
+    uint8_t *noNulData = NULL;
+    BSL_Buffer encode = {0};
+    HITLS_X509_Cert *cert = NULL;
+
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &fileData, &fileLen), BSL_SUCCESS);
+    ASSERT_TRUE(fileData != NULL && fileLen > 0);
+
+    /*
+     * Test point: append a nonzero sentinel after dataLen. UNKNOWN format must identify PEM or DER from
+     * encode.dataLen bytes only and must not read the sentinel as a string terminator or input byte.
+     */
+    noNulData = BSL_SAL_Malloc(fileLen + 1);
+    ASSERT_TRUE(noNulData != NULL);
+    memcpy(noNulData, fileData, fileLen);
+    noNulData[fileLen] = 0xA5;
+    ASSERT_TRUE(noNulData[fileLen] != 0);
+    encode.data = noNulData;
+    encode.dataLen = fileLen;
+
+#ifdef HITLS_CRYPTO_PROVIDER
+    if (isProvider != 0) {
+        /* Test point: provider format NULL maps to BSL_FORMAT_UNKNOWN. */
+        ASSERT_EQ(HITLS_X509_ProviderCertParseBuff(NULL, NULL, NULL, &encode, &cert), HITLS_PKI_SUCCESS);
+    } else
+#endif
+    {
+        /* Test point: non-provider BSL_FORMAT_UNKNOWN auto-detects PEM or DER content. */
+        ASSERT_EQ(HITLS_X509_CertParseBuff(BSL_FORMAT_UNKNOWN, &encode, &cert), HITLS_PKI_SUCCESS);
+    }
+    ASSERT_TRUE(cert != NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_CertFree(cert);
+    BSL_SAL_Free(fileData);
+    BSL_SAL_Free(noNulData);
+    BSL_GLOBAL_DeInit();
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_X509_CERT_PARSE_PUBKEY_FUNC_TC002(int format, char *path, Hex *key)
 {

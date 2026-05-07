@@ -25,6 +25,18 @@
 
 /* END_HEADER */
 
+/**
+ * @test SDV_BSL_PEM_ISPEM_FUNC_TC001
+ * @spec  -
+ * @title  PEM format detection for marker patterns
+ * @precon  nan
+ * @brief   1. Call BSL_PEM_IsPemFormat with the input buffer from the data file.
+            2. Compare the return value with the expected PEM format flag.
+ * @expect  1. The function returns the expected flag.
+            2. The error stack remains empty.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_ISPEM_FUNC_TC001(char *data, int expflag)
 {
@@ -38,6 +50,18 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_ISPEM_FUNC_TC002
+ * @spec  -
+ * @title  PEM format detection for null and non-PEM input
+ * @precon  nan
+ * @brief   1. Call BSL_PEM_IsPemFormat with NULL input.
+            2. Call BSL_PEM_IsPemFormat with a plain text buffer.
+ * @expect  1. The NULL input is not recognized as PEM.
+            2. The plain text input is not recognized as PEM.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_ISPEM_FUNC_TC002(void)
 {
@@ -49,6 +73,19 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_PARSE_FUNC_TC001
+ * @spec  -
+ * @title  PEM decoding with configured begin and end symbols
+ * @precon  nan
+ * @brief   1. Build a BSL_PEM_Symbol from the begin and end strings.
+            2. Call BSL_PEM_DecodePemToAsn1 with the encoded input.
+            3. Compare the return value with the expected result.
+ * @expect  1. Valid PEM data is decoded successfully.
+            2. Missing or mismatched PEM symbols return the expected error code.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_PARSE_FUNC_TC001(char *encode, char *head, char *tail, int expRes)
 {
@@ -65,6 +102,19 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_PARSE_FUNC_TC002
+ * @spec  -
+ * @title  Sequential decoding of multiple PEM objects
+ * @precon  nan
+ * @brief   1. Prepare two consecutive EC private key PEM objects.
+            2. Decode the first PEM object and update the remaining input pointer.
+            3. Decode the second PEM object from the remaining input.
+ * @expect  1. Both PEM objects are decoded successfully.
+            2. The error stack remains empty.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_PARSE_FUNC_TC002(void)
 {
@@ -95,6 +145,17 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_PARSE_FUNC_TC003
+ * @spec  -
+ * @title  PEM decoding when the end symbol is malformed
+ * @precon  nan
+ * @brief   1. Prepare PEM-like data with an invalid EC private key end marker.
+            2. Call BSL_PEM_DecodePemToAsn1 with the EC private key symbol.
+ * @expect  1. The decoder reports BSL_PEM_SYMBOL_NOT_FOUND.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_PARSE_FUNC_TC003(void)
 {
@@ -112,6 +173,20 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_BINARY_INPUT_TC001
+ * @spec  -
+ * @title  PEM APIs reject binary and incomplete marker input
+ * @precon  nan
+ * @brief   1. Call BSL_PEM_IsPemFormat with DER-like binary data.
+            2. Call BSL_PEM_GetSymbolAndType with the same binary data.
+            3. Call BSL_PEM_IsPemFormat with an incomplete BEGIN marker.
+ * @expect  1. Binary data is not recognized as PEM.
+            2. Symbol detection returns BSL_PEM_INVALID.
+            3. The incomplete marker is not recognized as PEM.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_BINARY_INPUT_TC001(void)
 {
@@ -130,6 +205,20 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_BINARY_INPUT_TC002
+ * @spec  -
+ * @title  PEM detection rejects truncated valid PEM buffers
+ * @precon  nan
+ * @brief   1. Verify that a complete certificate PEM buffer is recognized as PEM.
+            2. Verify several truncated lengths of the same buffer.
+            3. Call BSL_PEM_GetSymbolAndType with a truncated buffer.
+ * @expect  1. The complete buffer is recognized as PEM.
+            2. Truncated buffers are not recognized as PEM.
+            3. Symbol detection returns BSL_PEM_INVALID for truncated input.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_BINARY_INPUT_TC002(void)
 {
@@ -151,6 +240,20 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_BINARY_INPUT_TC003
+ * @spec  -
+ * @title  Extract real PEM payload with complete and truncated input
+ * @precon  nan
+ * @brief   1. Call BSL_PEM_GetPemRealEncode with a complete certificate PEM buffer.
+            2. Verify the extracted payload length.
+            3. Call BSL_PEM_GetPemRealEncode with a truncated buffer length.
+ * @expect  1. The complete buffer returns BSL_SUCCESS.
+            2. The payload length is correct.
+            3. The truncated buffer returns BSL_PEM_INVALID.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_BINARY_INPUT_TC003(void)
 {
@@ -173,6 +276,18 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_BINARY_INPUT_TC004
+ * @spec  -
+ * @title  PEM APIs reject null, empty, and minimal input
+ * @precon  nan
+ * @brief   1. Call BSL_PEM_IsPemFormat with NULL, empty, and one-character inputs.
+            2. Call BSL_PEM_GetSymbolAndType with NULL and empty inputs.
+ * @expect  1. All invalid inputs are not recognized as PEM.
+            2. Symbol detection returns BSL_PEM_INVALID.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_BINARY_INPUT_TC004(void)
 {
@@ -194,6 +309,20 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_BINARY_INPUT_TC005
+ * @spec  -
+ * @title  PEM detection on binary buffers containing marker fragments
+ * @precon  nan
+ * @brief   1. Create a binary buffer containing only a BEGIN-like marker.
+            2. Create a binary buffer containing BEGIN and END marker strings.
+            3. Verify detection with the full and truncated binary buffers.
+ * @expect  1. The BEGIN-only buffer is not recognized as PEM.
+            2. The full buffer containing both markers is recognized as PEM.
+            3. The truncated buffer is not recognized as PEM.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_BINARY_INPUT_TC005(void)
 {
@@ -213,6 +342,20 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_BINARY_INPUT_TC006
+ * @spec  -
+ * @title  Certificate PEM APIs reject DER certificate input
+ * @precon  nan
+ * @brief   1. Call BSL_PEM_IsPemFormat with DER certificate-like bytes.
+            2. Call BSL_PEM_GetSymbolAndType with the DER buffer.
+            3. Call BSL_PEM_DecodePemToAsn1 with certificate PEM symbols.
+ * @expect  1. DER input is not recognized as PEM.
+            2. Symbol detection returns BSL_PEM_INVALID.
+            3. PEM decoding returns BSL_PEM_INVALID and does not allocate output.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_BINARY_INPUT_TC006(void)
 {
@@ -241,6 +384,21 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_BINARY_INPUT_TC007
+ * @spec  -
+ * @title  Private key PEM decoders reject DER key input
+ * @precon  nan
+ * @brief   1. Verify that DER private key-like bytes are not recognized as PEM.
+            2. Try to decode the buffer as RSA private key PEM.
+            3. Try to decode the buffer as EC private key PEM.
+            4. Try to decode the buffer as PKCS8 private key PEM.
+ * @expect  1. DER input is not recognized as PEM.
+            2. Each PEM decode attempt returns BSL_PEM_INVALID.
+            3. No ASN.1 output is allocated.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_BINARY_INPUT_TC007(void)
 {
@@ -275,6 +433,20 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_BINARY_INPUT_TC008
+ * @spec  -
+ * @title  PEM APIs reject malformed dash-heavy marker input
+ * @precon  nan
+ * @brief   1. Create a dash-filled buffer containing a BEGIN substring.
+            2. Call BSL_PEM_IsPemFormat and BSL_PEM_GetSymbolAndType.
+            3. Call BSL_PEM_DecodePemToAsn1 with certificate PEM symbols.
+ * @expect  1. The malformed buffer is not recognized as PEM.
+            2. Symbol detection returns BSL_PEM_INVALID.
+            3. PEM decoding returns BSL_PEM_INVALID.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_BINARY_INPUT_TC008(void)
 {
@@ -299,6 +471,20 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_BINARY_INPUT_TC009
+ * @spec  -
+ * @title  PEM decoding rejects truncated certificate buffers
+ * @precon  nan
+ * @brief   1. Decode a complete certificate PEM buffer.
+            2. Decode the same buffer with a truncated length.
+            3. Decode the same buffer with zero length.
+ * @expect  1. The complete buffer is decoded successfully.
+            2. Truncated and zero-length buffers return BSL_PEM_INVALID.
+            3. Invalid decode attempts do not allocate ASN.1 output.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_BINARY_INPUT_TC009(void)
 {
@@ -331,6 +517,19 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_BINARY_INPUT_TC010
+ * @spec  -
+ * @title  Sequential decoding of multiple certificate PEM buffers
+ * @precon  nan
+ * @brief   1. Prepare two consecutive certificate PEM objects.
+            2. Decode the first object and verify that remaining input exists.
+            3. Decode the second object from the updated input pointer.
+ * @expect  1. Both PEM objects are decoded successfully.
+            2. Both ASN.1 output buffers are allocated.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_BINARY_INPUT_TC010(void)
 {
@@ -362,6 +561,102 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_MEMSTR_BOUNDARY_TC001
+ * @spec  -
+ * @title  Boundary coverage for the bounded PEM substring search
+ * @precon  nan
+ * @brief   1. Search PEM markers when the target marker starts at the last valid position.
+            2. Search PEM markers when the search range length equals the marker length.
+            3. Search PEM markers when the remaining search range is shorter than the marker length.
+            4. Search PEM markers after false matches on the marker's first character.
+            5. Search PEM markers in length-bounded buffers that contain NUL bytes or excluded trailing data.
+            6. Search PEM markers with empty symbol strings.
+ * @expect  1. Markers at the last valid position are found.
+            2. Exact-length marker ranges are handled correctly.
+            3. Short ranges and mismatched exact-length ranges are rejected.
+            4. False first-character matches do not stop later valid matches.
+            5. The provided buffer length, not a C-string terminator, bounds the search.
+            6. Empty symbol strings are rejected.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
+/* BEGIN_CASE */
+void SDV_BSL_PEM_MEMSTR_BOUNDARY_TC001(void)
+{
+    BSL_PEM_Symbol certSym = {BSL_PEM_CERT_BEGIN_STR, BSL_PEM_CERT_END_STR};
+    char *realEncode = NULL;
+    uint32_t realLen = 0;
+
+    char tailAtLastPos[] = "-----BEGIN CERTIFICATE-----AAAA-----END CERTIFICATE-----";
+    char *next = tailAtLastPos;
+    uint32_t nextLen = strlen(tailAtLastPos);
+    ASSERT_EQ(BSL_PEM_GetPemRealEncode(&next, &nextLen, &certSym, &realEncode, &realLen), BSL_SUCCESS);
+    ASSERT_TRUE(realLen == 4);
+    ASSERT_TRUE(nextLen == 0);
+
+    char emptyPayloadPem[] = "-----BEGIN CERTIFICATE----------END CERTIFICATE-----";
+    next = emptyPayloadPem;
+    nextLen = strlen(emptyPayloadPem);
+    ASSERT_EQ(BSL_PEM_GetPemRealEncode(&next, &nextLen, &certSym, &realEncode, &realLen), BSL_SUCCESS);
+    ASSERT_TRUE(realLen == 0);
+    ASSERT_TRUE(nextLen == 0);
+
+    const char *beginStr = "-----BEGIN";
+    uint32_t beginLen = strlen(beginStr);
+    char beginAtEnd[32];
+    memset(beginAtEnd, 'X', sizeof(beginAtEnd));
+    memcpy(beginAtEnd + sizeof(beginAtEnd) - beginLen, beginStr, beginLen);
+    ASSERT_TRUE(BSL_PEM_IsPemFormat(beginAtEnd, sizeof(beginAtEnd)) == false);
+
+    char exactEndMismatch[] = "XXX-----BEGIN A----------ENX";
+    ASSERT_TRUE(BSL_PEM_IsPemFormat(exactEndMismatch, strlen(exactEndMismatch)) == false);
+
+    char falsePrefixThenBegin[] = "----X-----BEGIN A----------END A-----";
+    ASSERT_TRUE(BSL_PEM_IsPemFormat(falsePrefixThenBegin, strlen(falsePrefixThenBegin)) == true);
+
+    uint8_t binaryPem[40];
+    memset(binaryPem, 0, sizeof(binaryPem));
+    const char *shortPem = "-----BEGIN A----------END A-----";
+    uint32_t shortPemLen = strlen(shortPem);
+    memcpy(binaryPem + 3, shortPem, shortPemLen);
+    ASSERT_TRUE(BSL_PEM_IsPemFormat((char *)binaryPem, shortPemLen + 3) == true);
+
+    char excludedEnd[] = "-----BEGIN A-----AAAAAAAAAAA-----END A-----";
+    uint32_t excludedLen = strlen("-----BEGIN A-----AAAAAAAAAAA");
+    ASSERT_TRUE(BSL_PEM_IsPemFormat(excludedEnd, excludedLen) == false);
+
+    BSL_PEM_Symbol emptyHeadSym = {"", BSL_PEM_CERT_END_STR};
+    next = tailAtLastPos;
+    nextLen = strlen(tailAtLastPos);
+    ASSERT_EQ(BSL_PEM_GetPemRealEncode(&next, &nextLen, &emptyHeadSym, &realEncode, &realLen),
+        BSL_PEM_SYMBOL_NOT_FOUND);
+
+    BSL_PEM_Symbol emptyTailSym = {BSL_PEM_CERT_BEGIN_STR, ""};
+    next = tailAtLastPos;
+    nextLen = strlen(tailAtLastPos);
+    ASSERT_EQ(BSL_PEM_GetPemRealEncode(&next, &nextLen, &emptyTailSym, &realEncode, &realLen),
+        BSL_PEM_SYMBOL_NOT_FOUND);
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_PEM_REAL_CERT_PEM_TC001
+ * @spec  -
+ * @title  Decode real certificate or CRL PEM files
+ * @precon  nan
+ * @brief   1. Read the PEM file from the configured path.
+            2. Verify that the file is recognized as PEM.
+            3. Detect the PEM symbol and type.
+            4. Decode the PEM payload to ASN.1.
+ * @expect  1. File reading succeeds.
+            2. PEM format and symbol detection succeed.
+            3. ASN.1 output is decoded successfully and is non-empty.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_REAL_CERT_PEM_TC001(char *pemPath)
 {
@@ -389,6 +684,20 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_REAL_CERT_DER_TC001
+ * @spec  -
+ * @title  Certificate or CRL DER files are rejected by PEM APIs
+ * @precon  nan
+ * @brief   1. Read the DER file from the configured path.
+            2. Verify that the file is not recognized as PEM.
+            3. Try to detect a PEM symbol and decode with certificate PEM symbols.
+ * @expect  1. File reading succeeds.
+            2. PEM format and symbol detection reject the DER input.
+            3. PEM decoding returns BSL_PEM_INVALID and does not allocate output.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_REAL_CERT_DER_TC001(char *derPath)
 {
@@ -417,6 +726,20 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_REAL_KEY_PEM_TC001
+ * @spec  -
+ * @title  Decode real private key PEM files
+ * @precon  nan
+ * @brief   1. Read the private key PEM file from the configured path.
+            2. Verify that the file is recognized as PEM.
+            3. Decode the PEM payload with the configured key symbol.
+ * @expect  1. File reading succeeds.
+            2. The input is recognized as PEM.
+            3. ASN.1 output is decoded successfully and is non-empty.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_REAL_KEY_PEM_TC001(char *pemPath, char *beginStr, char *endStr)
 {
@@ -441,6 +764,20 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test SDV_BSL_PEM_REAL_KEY_DER_TC001
+ * @spec  -
+ * @title  Private key DER files are rejected by PEM APIs
+ * @precon  nan
+ * @brief   1. Read the DER private key file from the configured path.
+            2. Verify that the file is not recognized as PEM.
+            3. Try to detect a PEM symbol and decode with private key PEM symbols.
+ * @expect  1. File reading succeeds.
+            2. PEM format and symbol detection reject the DER input.
+            3. PEM decoding returns BSL_PEM_INVALID and does not allocate output.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
 /* BEGIN_CASE */
 void SDV_BSL_PEM_REAL_KEY_DER_TC001(char *derPath)
 {
