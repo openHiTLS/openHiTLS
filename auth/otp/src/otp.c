@@ -114,6 +114,7 @@ int32_t GenericOtpGen(HITLS_AUTH_OtpCtx *ctx, uint64_t movingFactor, char *otp, 
     }
 
     *otpLen = ctx->digits;
+    BSL_SAL_CleanseData(hmac, OTP_HMAC_SHA512SIZE);
     return HITLS_AUTH_SUCCESS;
 }
 
@@ -209,6 +210,7 @@ int32_t HotpValidate(HITLS_AUTH_OtpCtx *ctx, const BSL_Param *param, const char 
     }
 
     if (ConstTimeMemcmp((const uint8_t *)otp, (const uint8_t *)targetOtp, otpLen) == 0) {
+        BSL_SAL_CleanseData(targetOtp, OTP_MAX_DIGITS + 1);
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_OTP_VALIDATE_MISMATCH);
         return HITLS_AUTH_OTP_VALIDATE_MISMATCH;
     }
@@ -216,6 +218,7 @@ int32_t HotpValidate(HITLS_AUTH_OtpCtx *ctx, const BSL_Param *param, const char 
     if (matched != NULL) {
         *matched = movingFactor;
     }
+    BSL_SAL_CleanseData(targetOtp, OTP_MAX_DIGITS + 1);
     return HITLS_AUTH_SUCCESS;
 }
 
@@ -233,6 +236,7 @@ int32_t TotpValidate(HITLS_AUTH_OtpCtx *ctx, const BSL_Param *param, const char 
     for (int64_t offset = -(int64_t)validWindow; offset < (int64_t)validWindow + 1; offset++) {
         ret = TotpGen(ctx, param, offset, targetOtp, &targetOtpLen, &movingFactor);
         if (ret != HITLS_AUTH_SUCCESS) {
+            BSL_SAL_CleanseData(targetOtp, OTP_MAX_DIGITS + 1);
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
@@ -241,10 +245,12 @@ int32_t TotpValidate(HITLS_AUTH_OtpCtx *ctx, const BSL_Param *param, const char 
             if (matched != NULL) {
                 *matched = movingFactor;
             }
+            BSL_SAL_CleanseData(targetOtp, OTP_MAX_DIGITS + 1);
             return HITLS_AUTH_SUCCESS;
         }
     }
 
+    BSL_SAL_CleanseData(targetOtp, OTP_MAX_DIGITS + 1);
     BSL_ERR_PUSH_ERROR(HITLS_AUTH_OTP_VALIDATE_MISMATCH);
     return HITLS_AUTH_OTP_VALIDATE_MISMATCH;
 }

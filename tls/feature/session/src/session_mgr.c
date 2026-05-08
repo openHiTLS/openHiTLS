@@ -183,7 +183,7 @@ void SESSMGR_Free(TLS_SessionMgr *mgr)
         SessMgrCleanTicketKeys(mgr);
 
         BSL_SAL_ThreadLockFree(mgr->lock);
-        BSL_SAL_FREE(mgr);
+        BSL_SAL_ClearFree(mgr, sizeof(TLS_SessionMgr));
     }
 }
 

@@ -15,38 +15,27 @@
 
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM9
+#include <string.h>
+#include <stdlib.h>
 
-#include "crypt_sm9.h"
 #include "crypt_errno.h"
+#include "bsl_sal.h"
 #include "sm9.h"
 #include "sm9_curve.h"
 #include "sm9_pairing.h"
 #include "sm9_fp.h"
-#include <stdlib.h>
-#include <string.h>
+#include "crypt_sm9.h"
 
 /*============================================================================*/
 
-void SM9_ResetCtx(SM9_Ctx *ctx)
-{
-    if (ctx) {
-        memset(ctx, 0, sizeof(SM9_Ctx));
-    }
-}
-
 SM9_Ctx* SM9_NewCtx(void)
 {
-    SM9_Ctx *ctx = (SM9_Ctx*)malloc(sizeof(SM9_Ctx));
-    SM9_ResetCtx(ctx);
-    return ctx;
+    return (SM9_Ctx*)BSL_SAL_Calloc(1u, sizeof(SM9_Ctx));
 }
 
 void SM9_FreeCtx(SM9_Ctx *ctx)
 {
-    SM9_ResetCtx(ctx);
-    if (ctx) {
-        free(ctx);
-    }
+    BSL_SAL_ClearFree(ctx, sizeof(SM9_Ctx));
 }
 
 /*============================================================================*/

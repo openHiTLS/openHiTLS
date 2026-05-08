@@ -375,13 +375,20 @@ static int32_t ExpandS(const CRYPT_ML_DSA_Ctx *ctx, const uint8_t *prvSeed,
     for (uint8_t i = 0; i < l; i++) {
         seed[MLDSA_PRIVATE_SEED_LEN] = i;
         ret = rejBoundedPoly(s1[i], seed);
-        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_SAL_CleanseData(seed, MLDSA_PRIVATE_SEED_LEN + 2); // 2 bytes are reserved.
+            return ret;
+        }
     }
     for (uint8_t i = 0; i < k; i++) {
         seed[MLDSA_PRIVATE_SEED_LEN] = l + i;
         ret = rejBoundedPoly(s2[i], seed);
-        RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+        if (ret != CRYPT_SUCCESS) {
+            BSL_SAL_CleanseData(seed, MLDSA_PRIVATE_SEED_LEN + 2); // 2 bytes are reserved.
+            return ret;
+        }
     }
+    BSL_SAL_CleanseData(seed, MLDSA_PRIVATE_SEED_LEN + 2); // 2 bytes are reserved.
     return CRYPT_SUCCESS;
 }
 

@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM9
 
+#include "bsl_sal.h"
 #include "sm9_ecp2.h"
 #include "sm9_fp.h"
 #include "sm9_fp2.h"
@@ -39,12 +40,12 @@ void SM9_Ecp2_A_WriteBytes(uint8_t *dst, SM9_ECP2_A *src)
 
 void SM9_Ecp2_A_Reset(SM9_ECP2_A *pECP_A)
 {
-    memset(pECP_A, 0, sizeof(SM9_ECP2_A));
+    BSL_SAL_CleanseData(pECP_A, sizeof(SM9_ECP2_A));
 }
 
 void SM9_Ecp2_J_Reset(SM9_ECP2_J *pEcp2_J)
 {
-    memset(pEcp2_J, 0, sizeof(SM9_ECP2_J));
+    BSL_SAL_CleanseData(pEcp2_J, sizeof(SM9_ECP2_J));
 }
 
 void SM9_Ecp2_A_Assign(SM9_ECP2_A *pPointA, SM9_ECP2_A *pPointB)

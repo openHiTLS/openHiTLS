@@ -349,6 +349,8 @@ int32_t MODES_HCTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLe
     int32_t ret;
     uint64_t i;
 
+    uint8_t counterBlock[HCTR_BLOCK_SIZE];
+    uint8_t keystreamBlock[HCTR_BLOCK_SIZE];
     if (modeCtx->enc) {
         /* --- ENCRYPTION PATH --- */
         GOTO_ERR_IF(modeCtx->commonCtx.ciphMeth->setEncryptKey(packCtx->algCtx, hctrCtx->k1, HCTR_BLOCK_SIZE), ret);
@@ -363,10 +365,8 @@ int32_t MODES_HCTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLe
         GOTO_ERR_IF(modeCtx->commonCtx.ciphMeth->encryptBlock(algCtx, z1, z2, HCTR_BLOCK_SIZE), ret);
         DATA64_XOR(z1, z2, ctrBase, HCTR_BLOCK_SIZE);
 
-        uint8_t counterBlock[HCTR_BLOCK_SIZE];
-        uint8_t keystreamBlock[HCTR_BLOCK_SIZE];
         uint32_t processedLen = 0;
-        
+
         i = 1;
         uint32_t numFullBlocks = restLen / HCTR_BLOCK_SIZE;
 
@@ -413,14 +413,12 @@ int32_t MODES_HCTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLe
         GOTO_ERR_IF(modeCtx->commonCtx.ciphMeth->decryptBlock(algCtx, z2, z1, HCTR_BLOCK_SIZE), ret);
         DATA64_XOR(z1, z2, ctrBase, HCTR_BLOCK_SIZE);
         GOTO_ERR_IF(modeCtx->commonCtx.ciphMeth->setEncryptKey(packCtx->algCtx, hctrCtx->k1, HCTR_BLOCK_SIZE), ret);
-            
-        uint8_t counterBlock[HCTR_BLOCK_SIZE];
-        uint8_t keystreamBlock[HCTR_BLOCK_SIZE];
+
         uint32_t processedLen = 0;
-        
+
         i = 1;
         uint32_t numFullBlocks = restLen / HCTR_BLOCK_SIZE;
-        
+
         for (uint32_t j = 0; j < numFullBlocks; j++) {
             (void)memcpy_s(counterBlock, sizeof(counterBlock), ctrBase, sizeof(ctrBase));
             uint8_t iBe[sizeof(uint64_t)];
@@ -454,10 +452,12 @@ int32_t MODES_HCTR_Final(MODES_CipherCtx *modeCtx, uint8_t *out, uint32_t *outLe
     ret = CRYPT_SUCCESS;
 
 ERR:
-    (void)memset_s(z1, sizeof(z1), 0, sizeof(z1));
-    (void)memset_s(z2, sizeof(z2), 0, sizeof(z2));
-    (void)memset_s(hVal, sizeof(hVal), 0, sizeof(hVal));
-    (void)memset_s(ctrBase, sizeof(ctrBase), 0, sizeof(ctrBase));
+    BSL_SAL_CleanseData(z1, sizeof(z1));
+    BSL_SAL_CleanseData(z2, sizeof(z2));
+    BSL_SAL_CleanseData(hVal, sizeof(hVal));
+    BSL_SAL_CleanseData(ctrBase, sizeof(ctrBase));
+    BSL_SAL_CleanseData(keystreamBlock, HCTR_BLOCK_SIZE);
+    BSL_SAL_CleanseData(counterBlock, HCTR_BLOCK_SIZE);
     hctrCtx->dataBuffer.dataLen = 0;
     return ret;
 }

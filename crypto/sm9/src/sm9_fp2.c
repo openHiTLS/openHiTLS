@@ -16,13 +16,14 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM9
 
+#include "bsl_sal.h"
 #include "sm9_fp2.h"
 #include "sm9_curve.h"
 #include "sm9_fp.h"
 
 void SM9_Fp2_Reset(SM9_Fp2 *pElement)
 {
-    memset(pElement, 0, sizeof(SM9_Fp2));
+    BSL_SAL_CleanseData(pElement, sizeof(SM9_Fp2));
 }
 
 void SM9_Fp2_Assign(SM9_Fp2 *pFp2_D, SM9_Fp2 *pFp2_S)
@@ -33,7 +34,7 @@ void SM9_Fp2_Assign(SM9_Fp2 *pFp2_D, SM9_Fp2 *pFp2_S)
 void SM9_Fp2_SetOne(SM9_Fp2 *pFp2_E)
 {
     bn_assign(pFp2_E->Coef_0, sm9_sys_para.Q_R1, sm9_sys_para.wsize);
-    memset(pFp2_E->Coef_1, 0, 4 * sm9_sys_para.wsize);
+    BSL_SAL_CleanseData(pFp2_E->Coef_1, 4 * sm9_sys_para.wsize);
 }
 
 int32_t SM9_Fp2_IsZero(SM9_Fp2 *pFp2_E)

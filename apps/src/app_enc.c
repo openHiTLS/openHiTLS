@@ -1015,10 +1015,10 @@ static int32_t EncOrDecProc(EncCmdOpt *encOpt)
     if (CRYPT_EAL_CipherInit(encOpt->keySet->ctx, encOpt->keySet->dKey, encOpt->keySet->dKeyLen, encOpt->keySet->iv,
         encOpt->keySet->ivLen, encOpt->encTag) != CRYPT_SUCCESS) {
         AppPrintError("enc: Failed to init the cipher.\n");
-        (void)memset_s(encOpt->keySet->dKey, encOpt->keySet->dKeyLen, 0, encOpt->keySet->dKeyLen);
+        BSL_SAL_CleanseData(encOpt->keySet->dKey, encOpt->keySet->dKeyLen);
         return HITLS_APP_CRYPTO_FAIL;
     }
-    (void)memset_s(encOpt->keySet->dKey, encOpt->keySet->dKeyLen, 0, encOpt->keySet->dKeyLen);
+    BSL_SAL_CleanseData(encOpt->keySet->dKey, encOpt->keySet->dKeyLen);
     if (IsBlockCipher(encOpt->cipherId)) {
         if (CRYPT_EAL_CipherSetPadding(encOpt->keySet->ctx, CRYPT_PADDING_PKCS7) != CRYPT_SUCCESS) {
             return HITLS_APP_CRYPTO_FAIL;
