@@ -58,7 +58,6 @@ struct SM9_Ctx_st {
 
 typedef struct SM9_Ctx_st SM9_Ctx;
 
-void SM9_ResetCtx(SM9_Ctx *ctx);
 SM9_Ctx* SM9_NewCtx(void);
 void SM9_FreeCtx(SM9_Ctx *ctx);
 

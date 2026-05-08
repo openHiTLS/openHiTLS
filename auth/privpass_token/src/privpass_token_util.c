@@ -729,6 +729,7 @@ void HITLS_AUTH_PrivPassFreeCtx(HITLS_AUTH_PrivPassCtx *ctx)
             ctx->method.freePkeyCtx(ctx->pubKeyCtx);
         }
     }
+    BSL_SAL_CleanseData(ctx->nonce, PRIVPASS_TOKEN_NONCE_LEN);
     BSL_SAL_Free(ctx);
 }
 

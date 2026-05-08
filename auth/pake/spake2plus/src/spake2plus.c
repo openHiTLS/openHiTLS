@@ -373,6 +373,12 @@ ERR:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     ECC_FreePoint(L);
     ECC_FreePara(para);
+    BSL_SAL_CleanseData(out, outLen);
+    BSL_SAL_CleanseData(w0s, w0sLen);
+    BSL_SAL_CleanseData(w1s, w1sLen);
+    BSL_SAL_CleanseData(w0_data, w0_dataLen);
+    BSL_SAL_CleanseData(w1_data, w1_dataLen);
+    BSL_SAL_CleanseData(l_data, l_dataLen);
     if (ret != HITLS_AUTH_SUCCESS) {
         BSL_SAL_CleanseData(spakeCtx->w0.data, spakeCtx->w0.dataLen);
         BSL_SAL_CleanseData(spakeCtx->w1.data, spakeCtx->w1.dataLen);
@@ -467,8 +473,8 @@ static int32_t Spake2PlusGenerateRandNum(uint8_t *num, uint8_t *p, uint32_t pLen
         BN_Destroy(x0);
         return ret;
     }
-    
-    uint8_t *x = BSL_SAL_Malloc(pLen);
+
+    uint8_t *x = BSL_SAL_Calloc(1u, pLen);
     if (x == NULL) {
         BN_Destroy(p0);
         BN_Destroy(x0);
@@ -476,8 +482,6 @@ static int32_t Spake2PlusGenerateRandNum(uint8_t *num, uint8_t *p, uint32_t pLen
         return HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL;
     }
 
-    BSL_SAL_CleanseData(x, pLen);
-    
     uint32_t retryCount = 0;
     const uint32_t MAX_RETRIES = 1000;
     bool success = false;
@@ -1006,6 +1010,7 @@ static int32_t Spake2PlusComputeKeySchedule(Spake2plusCtx *ctx, BSL_Buffer tt, B
 
     CRYPT_EAL_KdfCtx *kdfCtx = CRYPT_EAL_KdfNewCtx(CRYPT_KDF_HKDF);
     if (kdfCtx == NULL) {
+        BSL_SAL_CleanseData(kMain, sizeof(kMain));
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL);
         return HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL;
     }
@@ -1082,11 +1087,10 @@ static int32_t Spake2PlusComputeKeySchedule(Spake2plusCtx *ctx, BSL_Buffer tt, B
     memcpy(kShared->data, out0, out0Len);
     kShared->dataLen = out0Len;
 
+ERR:
     BSL_SAL_CleanseData(kMain, sizeof(kMain));
     BSL_SAL_CleanseData(out, sizeof(out));
     BSL_SAL_CleanseData(out0, sizeof(out0));
-
-ERR:
     CRYPT_EAL_KdfFreeCtx(kdfCtx);
     return ret;
 }
@@ -1148,6 +1152,7 @@ int32_t HITLS_AUTH_Spake2plusReqSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer randnu
     } else {
         ret = Spake2PlusInit(spakeCtx, randnum, &randnumLen);
         if (ret != HITLS_AUTH_SUCCESS) {
+            BSL_SAL_CleanseData(randnum, randnumLen);
             return ret;
         }
     }
@@ -1160,17 +1165,21 @@ int32_t HITLS_AUTH_Spake2plusReqSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer randnu
 
     ret = Spake2PlusProverComputeX(spakeCtx, randnum, randnumLen, shareP, &sharePLen);
     if (ret != HITLS_AUTH_SUCCESS) {
-        return ret;
+        goto EXIT;
     }
     if (share->dataLen < sharePLen) {
-        BSL_SAL_CleanseData(shareP, MAX_ECC_KEY_LEN);
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_INVALID_PARAM);
-        return HITLS_AUTH_PAKE_INVALID_PARAM;
+        ret = HITLS_AUTH_PAKE_INVALID_PARAM;
+        goto EXIT;
     }
     spakeCtx->share.dataLen = sharePLen;
     memcpy(spakeCtx->share.data, shareP, sharePLen);
     share->dataLen = sharePLen;
     memcpy(share->data, shareP, sharePLen);
+
+EXIT:
+    BSL_SAL_CleanseData(randnum, randnumLen);
+    BSL_SAL_CleanseData(shareP, MAX_ECC_KEY_LEN);
     return ret;
 }
 
@@ -1192,6 +1201,8 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
     int32_t ret = HITLS_AUTH_SUCCESS;
     uint8_t randnum[MAX_ECC_PARAM_LEN] = { 0 };
     uint32_t randnumLen = MAX_ECC_PARAM_LEN;
+    uint8_t shareV0[MAX_ECC_KEY_LEN] = {0};
+    uint32_t shareV0Len = MAX_ECC_KEY_LEN;
 
     BSL_Buffer zBuffer = {.data = BSL_SAL_Malloc(MAX_ECC_KEY_LEN), .dataLen = MAX_ECC_KEY_LEN};
     BSL_Buffer vBuffer = {.data = BSL_SAL_Malloc(MAX_ECC_KEY_LEN), .dataLen = MAX_ECC_KEY_LEN};
@@ -1224,8 +1235,6 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
         }
     }
 
-    uint8_t shareV0[MAX_ECC_KEY_LEN] = {0};
-    uint32_t shareV0Len = MAX_ECC_KEY_LEN;
     ret = Spake2PlusVerifierComputeY(spakeCtx, randnum, randnumLen, shareV0, &shareV0Len);
     if (ret != HITLS_AUTH_SUCCESS) {
         goto err;
@@ -1283,6 +1292,8 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
     memcpy(spakeCtx->confirmP.data, outHmacBuffer.data, outHmacBuffer.dataLen);
 
 err:
+    BSL_SAL_CleanseData(randnum, MAX_ECC_PARAM_LEN);
+    BSL_SAL_CleanseData(shareV0, shareV0Len);
     BSL_SAL_ClearFree(zBuffer.data, zBuffer.dataLen);
     BSL_SAL_ClearFree(vBuffer.data, vBuffer.dataLen);
     BSL_SAL_ClearFree(randnumBuffer.data, randnumBuffer.dataLen);

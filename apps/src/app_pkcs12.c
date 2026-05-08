@@ -783,7 +783,7 @@ static int32_t ParsePkcs12File(Pkcs12OptCtx *opt)
         .macPwd = &encPwd,
     };
     int32_t ret = HITLS_PKCS12_ParseFile(BSL_FORMAT_ASN1, opt->genOpt.inFile, &param, &opt->p12, true);
-    memset(encPwd.data, 0, encPwd.dataLen);
+    BSL_SAL_CleanseData(encPwd.data, encPwd.dataLen);
     if (ret != HITLS_PKI_SUCCESS) {
         AppPrintError("pkcs12: Failed to parse the %s pkcs12 file, errCode = 0x%x.\n", opt->genOpt.inFile, ret);
         return HITLS_APP_X509_FAIL;

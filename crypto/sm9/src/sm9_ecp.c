@@ -16,17 +16,18 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM9
 
+#include "bsl_sal.h"
 #include "sm9_ecp.h"
 #include "sm9_fp.h"
 
 void SM9_Ecp_A_Reset(SM9_ECP_A *pECP_A)
 {
-    memset(pECP_A, 0, sizeof(SM9_ECP_A));
+    BSL_SAL_CleanseData(pECP_A, sizeof(SM9_ECP_A));
 }
 
 void SM9_Ecp_J_Reset(SM9_ECP_J *pECP_J)
 {
-    memset(pECP_J, 0, sizeof(SM9_ECP_J));
+    BSL_SAL_CleanseData(pECP_J, sizeof(SM9_ECP_J));
 }
 
 void SM9_Ecp_A_Assign(SM9_ECP_A *pPointA, SM9_ECP_A *pPointB)

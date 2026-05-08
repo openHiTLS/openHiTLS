@@ -100,6 +100,8 @@ void KyberShake256x2Prf(uint8_t *out1, uint8_t *out2, size_t outlen, const uint8
     extkey1[MLKEM_SEED_LEN] = nonce1;
     extkey2[MLKEM_SEED_LEN] = nonce2;
     Shake256x2(out1, out2, outlen, extkey1, extkey2, sizeof(extkey1));
+    BSL_SAL_CleanseData(extkey1, MLKEM_SEED_LEN + 1);
+    BSL_SAL_CleanseData(extkey2, MLKEM_SEED_LEN + 1);
 }
 
 void KyberShake128x2Absorb(Keccakx2State state, const uint8_t seed[MLKEM_SEED_LEN], uint8_t x1, uint8_t x2, uint8_t y1,

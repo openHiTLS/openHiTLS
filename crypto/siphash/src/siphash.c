@@ -353,10 +353,7 @@ int32_t CRYPT_SIPHASH_Ctrl(CRYPT_SIPHASH_Ctx *ctx, uint32_t opt, void *val, uint
 
 void CRYPT_SIPHASH_FreeCtx(CRYPT_SIPHASH_Ctx *ctx)
 {
-    if (ctx != NULL) {
-        BSL_SAL_CleanseData(ctx, sizeof(CRYPT_SIPHASH_Ctx));
-        BSL_SAL_Free(ctx);
-    }
+    BSL_SAL_ClearFree(ctx, sizeof(CRYPT_SIPHASH_Ctx));
 }
 
 CRYPT_SIPHASH_Ctx *CRYPT_SIPHASH_DupCtx(const CRYPT_SIPHASH_Ctx *ctx)

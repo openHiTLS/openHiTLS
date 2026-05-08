@@ -464,7 +464,7 @@ CRYPT_EAL_PkeyCtx *HITLS_APP_ProviderLoadPrvKey(CRYPT_EAL_LibCtx *libCtx, const 
     uint32_t passLen = 0;
     BSL_UI_ReadPwdParam passParam = { "passwd", inFilePath, false };
     if (isEncrypted && (HITLS_APP_GetPasswd(&passParam, passin, &passLen) != HITLS_APP_SUCCESS)) {
-        BSL_SAL_FREE(data);
+        BSL_SAL_ClearFree(data, dataLen);
         BSL_SAL_FREE(prvkeyName);
         return NULL;
     }
@@ -474,8 +474,8 @@ CRYPT_EAL_PkeyCtx *HITLS_APP_ProviderLoadPrvKey(CRYPT_EAL_LibCtx *libCtx, const 
     if (pkey == NULL) {
         PrintFileOrStdinError(inFilePath, "Failed to read the private key");
     }
-    memset(pass, 0, passLen);
-    BSL_SAL_FREE(data);
+    BSL_SAL_CleanseData(pass, passLen);
+    BSL_SAL_ClearFree(data, dataLen);
     BSL_SAL_FREE(prvkeyName);
     return pkey;
 }
@@ -505,7 +505,7 @@ CRYPT_EAL_PkeyCtx *HITLS_APP_LoadPrvKey(const char *inFilePath, BSL_ParseFormat 
     uint32_t passLen = 0;
     BSL_UI_ReadPwdParam passParam = { "passwd", inFilePath, false };
     if (isEncrypted && (HITLS_APP_GetPasswd(&passParam, passin, &passLen) != HITLS_APP_SUCCESS)) {
-        BSL_SAL_FREE(data);
+        BSL_SAL_ClearFree(data, dataLen);
         BSL_SAL_FREE(prvkeyName);
         return NULL;
     }
@@ -515,8 +515,8 @@ CRYPT_EAL_PkeyCtx *HITLS_APP_LoadPrvKey(const char *inFilePath, BSL_ParseFormat 
     if (pkey == NULL) {
         PrintFileOrStdinError(inFilePath, "Failed to read the private key");
     }
-    memset(pass, 0, passLen);
-    BSL_SAL_FREE(data);
+    BSL_SAL_CleanseData(pass, passLen);
+    BSL_SAL_ClearFree(data, dataLen);
     BSL_SAL_FREE(prvkeyName);
     return pkey;
 }

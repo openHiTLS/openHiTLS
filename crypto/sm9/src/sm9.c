@@ -69,7 +69,7 @@ static void SM9_Alg_Pair_Mont(SM9_Fp12 *pFp12_R, SM9_ECP_A *pEcp_P1, SM9_ECP2_A 
 void SM9_Hash_Init(SM9_Hash_Ctx *ctx)
 {
     // Manual initialization following CRYPT_SM3_Init logic
-    memset(&ctx->sm3State, 0, sizeof(SM9_CRYPT_SM3_Ctx));
+    BSL_SAL_CleanseData(&ctx->sm3State, sizeof(SM9_CRYPT_SM3_Ctx));
 
     // GM/T 0004-2012 chapter 4.1 - SM3 initial values
     ctx->sm3State.h[0] = 0x7380166F;

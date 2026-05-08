@@ -360,6 +360,7 @@ static int32_t FirstTimeLogin(AppProvider *provider, char *userFile, char **pwd)
 
     ret = SetUserInfo(provider, &userInfo, password);
     if (ret != HITLS_APP_SUCCESS) {
+        BSL_SAL_CleanseData(&userInfo, sizeof(UserInfo));
         BSL_SAL_ClearFree(password, strlen(password));
         return ret;
     }
@@ -370,6 +371,7 @@ static int32_t FirstTimeLogin(AppProvider *provider, char *userFile, char **pwd)
     ret = CalculateHMAC(provider, macId, (const uint8_t *)&userInfo.userParam, sizeof(UserParam), userInfo.hmac,
         &userInfo.hmacLen);
     if (ret != HITLS_APP_SUCCESS) {
+        BSL_SAL_CleanseData(&userInfo, sizeof(UserInfo));
         BSL_SAL_ClearFree(password, strlen(password));
         return ret;
     }
@@ -377,6 +379,7 @@ static int32_t FirstTimeLogin(AppProvider *provider, char *userFile, char **pwd)
     UserParamOrderCvt(&userInfo.userParam, false);
 
     ret = WriteUserFile(userFile, &userInfo);
+    BSL_SAL_CleanseData(&userInfo, sizeof(UserInfo));
     if (ret != HITLS_APP_SUCCESS) {
         BSL_SAL_ClearFree(password, strlen(password));
         return ret;
@@ -393,15 +396,18 @@ static int32_t VerifyPassword(AppProvider *provider, UserInfo *userInfo, char *p
         return ret;
     }
     if (userInfo->userParam.dKeyLen != sizeof(derivedKey)) {
+        BSL_SAL_CleanseData(derivedKey, HITLS_APP_SM_DKEY_LEN);
         AppPrintError("Admin verification failed.\n");
         return HITLS_APP_INFO_CMP_FAIL;
     }
 
     if (memcmp(derivedKey, userInfo->userParam.dKey, userInfo->userParam.dKeyLen) != 0) {
+        BSL_SAL_CleanseData(derivedKey, HITLS_APP_SM_DKEY_LEN);
         AppPrintError("Admin verification failed.\n");
         return HITLS_APP_PASSWD_FAIL;
     }
 
+    BSL_SAL_CleanseData(derivedKey, HITLS_APP_SM_DKEY_LEN);
     return HITLS_APP_SUCCESS;
 }
 
@@ -422,6 +428,7 @@ static int32_t ExistingUserLogin(AppProvider *provider, char *userFile, char **p
     ret = VerifyHMAC(provider, macId, (const uint8_t *)&userInfo.userParam, sizeof(UserParam),
         userInfo.hmac, userInfo.hmacLen);
     if (ret != HITLS_APP_SUCCESS) {
+        BSL_SAL_CleanseData(&userInfo, sizeof(UserInfo));
         AppPrintError("User file integrity check failed, errCode: 0x%x.\n", ret);
         return ret;
     }
@@ -430,10 +437,12 @@ static int32_t ExistingUserLogin(AppProvider *provider, char *userFile, char **p
 
     ret = GetPassword(&password);
     if (ret != HITLS_APP_SUCCESS) {
+        BSL_SAL_CleanseData(&userInfo, sizeof(UserInfo));
         return ret;
     }
 
     ret = VerifyPassword(provider, &userInfo, password);
+    BSL_SAL_CleanseData(&userInfo, sizeof(UserInfo));
     if (ret != HITLS_APP_SUCCESS) {
         BSL_SAL_ClearFree(password, strlen(password));
         return ret;

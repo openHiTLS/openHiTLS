@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SM9
 
+#include "bsl_sal.h"
 #include "sm9_fp12.h"
 #include "sm9_fp.h"
 
@@ -55,7 +56,7 @@ void SM9_Fp12_WriteBytes(uint8_t *dst, SM9_Fp12 *src)
 
 void SM9_Fp12_Reset(SM9_Fp12 *pFp12_E)
 {
-    memset(pFp12_E, 0, sizeof(SM9_Fp12));
+    BSL_SAL_CleanseData(pFp12_E, sizeof(SM9_Fp12));
 }
 
 void SM9_Fp12_Assign(SM9_Fp12 *pFp12_D, SM9_Fp12 *pFp12_S)
