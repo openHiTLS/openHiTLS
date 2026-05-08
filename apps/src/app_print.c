@@ -15,7 +15,6 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
-#include <string.h>
 #include "bsl_uio.h"
 #include "bsl_errno.h"
 #include "bsl_sal.h"

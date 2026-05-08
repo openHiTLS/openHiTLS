@@ -20,7 +20,6 @@
 #include <stddef.h>
 #include <termios.h>
 #include <unistd.h>
-#include <string.h>
 #include <limits.h>
 #include "bsl_ui.h"
 #include "bsl_uio.h"

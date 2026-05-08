@@ -31,7 +31,6 @@
 #include "eal_md_local.h"
 #include "eal_common.h"
 #include "crypt_ealinit.h"
-#include "bsl_err_internal.h"
 #include "bsl_params.h"
 #include "crypt_params_key.h"
 #include "eal_pkey.h"

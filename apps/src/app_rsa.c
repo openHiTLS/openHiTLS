@@ -27,7 +27,6 @@
 #include "bsl_sal.h"
 #include "app_utils.h"
 #include "app_opt.h"
-#include "app_utils.h"
 #include "app_print.h"
 #include "crypt_eal_codecs.h"
 #include "crypt_codecskey.h"

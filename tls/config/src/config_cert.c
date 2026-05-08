@@ -27,7 +27,6 @@
 #include "cert_mgr.h"
 #include "cert.h"
 #include "bsl_types.h"
-#include "cert_mgr.h"
 #ifdef HITLS_TLS_FEATURE_SECURITY
 #include "security.h"
 #endif

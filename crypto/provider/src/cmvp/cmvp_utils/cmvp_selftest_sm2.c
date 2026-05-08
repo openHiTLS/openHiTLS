@@ -22,7 +22,6 @@
 #include "err.h"
 #include "crypt_errno.h"
 #include "crypt_eal_pkey.h"
-#include "crypt_bn.h"
 #include "bsl_err_internal.h"
 #include "crypt_utils.h"
 #include "bsl_sal.h"

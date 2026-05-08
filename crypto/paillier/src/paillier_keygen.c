@@ -23,7 +23,6 @@
 #include "crypt_utils.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
-#include "crypt_utils.h"
 #include "crypt_params_key.h"
 
 CRYPT_PAILLIER_Ctx *CRYPT_PAILLIER_NewCtx(void)

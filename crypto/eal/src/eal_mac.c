@@ -23,7 +23,6 @@
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
 #include "crypt_local_types.h"
-#include "crypt_eal_mac.h"
 #include "crypt_algid.h"
 #include "crypt_errno.h"
 #include "crypt_ealinit.h"

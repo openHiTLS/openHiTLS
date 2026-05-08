@@ -35,7 +35,6 @@
 #include "crypt_iso_provider.h"
 #include "crypt_iso_selftest.h"
 #include "crypt_params_key.h"
-#include "crypt_params_key.h"
 #include "hitls_crypt_type.h"
 #include "hitls_cert_type.h"
 #include "crypt_eal_rand.h"

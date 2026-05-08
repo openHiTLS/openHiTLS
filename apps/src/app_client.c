@@ -21,7 +21,6 @@
 #include <sys/socket.h>
 #include <signal.h>
 #include <unistd.h>
-#include <string.h>
 #include "app_errno.h"
 #include "app_print.h"
 #include "app_opt.h"

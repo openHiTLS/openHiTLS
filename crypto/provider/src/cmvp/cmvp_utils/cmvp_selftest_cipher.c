@@ -27,7 +27,6 @@
 #include "crypt_utils.h"
 #include "crypt_local_types.h"
 #include "bsl_sal.h"
-#include <string.h>
 
 typedef struct {
     uint32_t id;

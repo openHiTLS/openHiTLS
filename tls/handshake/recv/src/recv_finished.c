@@ -26,7 +26,6 @@
 #include "hs_ctx.h"
 #include "hs_verify.h"
 #include "hs_common.h"
-#include "hs_verify.h"
 #include "recv_process.h"
 #include "hs_kx.h"
 #include "bsl_bytes.h"

@@ -19,7 +19,6 @@
 #include "bsl_err_internal.h"
 #include "hitls_error.h"
 #include "rec.h"
-#include "rec.h"
 #include "record.h"
 #include "app.h"
 

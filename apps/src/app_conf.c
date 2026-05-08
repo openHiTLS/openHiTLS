@@ -33,10 +33,8 @@
 #include "bsl_list.h"
 #include "hitls_pki_errno.h"
 #include "hitls_x509_local.h"
-#include "app_errno.h"
 #include "app_opt.h"
 #include "app_print.h"
-#include "app_conf.h"
 
 #define MAX_DN_LIST_SIZE 99
 #define X509_EXT_SAN_VALUE_MAX_CNT 30    // san

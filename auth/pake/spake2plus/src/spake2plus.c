@@ -21,7 +21,6 @@
 #include "crypt_ecc.h"
 #include "spake2plus_ecc.h"
 #include "auth_errno.h"
-#include <string.h>
 #include "crypt_bn.h"
 #include "crypt_eal_md.h"
 #include "crypt_eal_kdf.h"

@@ -15,7 +15,6 @@
 #include "app_utils.h"
 #include <stdio.h>
 #include <string.h>
-#include <string.h>
 #include <unistd.h>
 #include <limits.h>
 #include "bsl_sal.h"

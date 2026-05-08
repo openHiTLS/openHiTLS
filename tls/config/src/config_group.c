@@ -23,7 +23,6 @@
 #include "crypt_algid.h"
 #include "config.h"
 #ifdef HITLS_TLS_FEATURE_PROVIDER_DYNAMIC
-#include <string.h>
 #include "crypt_eal_provider.h"
 #include "crypt_params_key.h"
 #include "crypt_eal_implprovider.h"

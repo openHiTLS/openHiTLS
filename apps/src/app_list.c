@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
-#include <string.h>
 #include "hitls_error.h"
 #include "bsl_errno.h"
 #include "bsl_uio.h"
