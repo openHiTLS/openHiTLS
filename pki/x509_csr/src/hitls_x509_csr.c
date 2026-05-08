@@ -398,8 +398,9 @@ static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer
     BSL_Buffer pub = {0};
     ret = CRYPT_EAL_EncodePubKeyBuffInternal(reqInfo->ealPubKey, BSL_FORMAT_ASN1, CRYPT_PUBKEY_SUBKEY, false, &pub);
     if (ret != CRYPT_SUCCESS) {
+        BSL_SAL_Free(subject->buff);
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        return ret;
     }
 
 #ifdef HITLS_PKI_X509_CSR_ATTR
@@ -408,8 +409,10 @@ static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer
         BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | HITLS_CSR_CTX_SPECIFIC_TAG_ATTRIBUTE,
         reqInfo->attributes, NULL, attributes);
     if (ret != HITLS_PKI_SUCCESS) {
+        BSL_SAL_Free(subject->buff);
+        BSL_SAL_Free(pub.data);
         BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
+        return ret;
     }
 #else
     attributes->tag = BSL_ASN1_CLASS_CTX_SPECIFIC | BSL_ASN1_TAG_CONSTRUCTED | HITLS_CSR_CTX_SPECIFIC_TAG_ATTRIBUTE;
@@ -417,13 +420,6 @@ static int32_t EncodeCsrReqInfoItem(HITLS_X509_ReqInfo *reqInfo, BSL_ASN1_Buffer
 
     publicKey->buff = pub.data;
     publicKey->len = pub.dataLen;
-    return ret;
-ERR:
-    BSL_SAL_FREE(subject->buff);
-    BSL_SAL_FREE(pub.data);
-#ifdef HITLS_PKI_X509_CSR_ATTR
-    BSL_SAL_FREE(attributes->buff);
-#endif
     return ret;
 }
 
@@ -552,24 +548,14 @@ static int32_t X509EncodeAsn1Csr(HITLS_X509_Csr *csr, BSL_Buffer *buff)
 #ifdef HITLS_BSL_PEM
 static int32_t X509EncodePemCsr(HITLS_X509_Csr *csr, BSL_Buffer *buff)
 {
-    BSL_Buffer asn1 = {0};
-    int32_t ret = X509EncodeAsn1Csr(csr, &asn1);
+    int32_t ret = X509EncodeAsn1Csr(csr, NULL);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
 
-    BSL_Buffer base64 = {0};
     BSL_PEM_Symbol symbol = {BSL_PEM_CERT_REQ_BEGIN_STR, BSL_PEM_CERT_REQ_END_STR};
-    ret = BSL_PEM_EncodeAsn1ToPem(asn1.data, asn1.dataLen, &symbol, (char **)&base64.data, &base64.dataLen);
-    BSL_SAL_Free(asn1.data);
-    if (ret != BSL_SUCCESS) {
-        BSL_ERR_PUSH_ERROR(ret);
-        return ret;
-    }
-    buff->data = base64.data;
-    buff->dataLen = base64.dataLen;
-    return HITLS_PKI_SUCCESS;
+    return BSL_PEM_EncodeAsn1ToPem(csr->rawData, csr->rawDataLen, &symbol, (char **)&buff->data, &buff->dataLen);
 }
 #endif // HITLS_BSL_PEM
 
