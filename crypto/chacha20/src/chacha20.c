@@ -25,6 +25,7 @@
 
 #define KEYSET 0x01
 #define NONCESET 0x02
+#define CHACHA20_MAX_BLOCKS ((uint64_t)UINT32_MAX + 1u)
 
 // RFC7539-2.1
 #define QUARTER(a, b, c, d) \
@@ -74,6 +75,7 @@ int32_t CRYPT_CHACHA20_SetKey(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *key, uint3
     // Word 12 is a block counter
     // RFC7539-2.4: It makes sense to use one if we use the zero block
     ctx->state[12] = 1;
+    ctx->totalLen = ctx->state[12];
     ctx->set |= KEYSET;
     ctx->lastLen = 0;
     return CRYPT_SUCCESS;
@@ -115,6 +117,7 @@ static int32_t CRYPT_CHACHA20_SetCount(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *c
      * authenticator key as part of an AEAD algorithm
      */
     ctx->state[12] = GET_UINT32_LE((uintptr_t)cnt, 0);
+    ctx->totalLen = ctx->state[12];
     ctx->lastLen = 0;
     return CRYPT_SUCCESS;
 }
@@ -148,6 +151,17 @@ void CHACHA20_Block(CRYPT_CHACHA20_Ctx *ctx)
     ctx->state[12]++;
 }
 
+static int32_t CheckUpdateBlocks(const CRYPT_CHACHA20_Ctx *ctx, uint32_t len)
+{
+    uint64_t lenAfterCache = (len > ctx->lastLen) ? (uint64_t)(len - ctx->lastLen) : 0;
+    uint64_t blocks = (lenAfterCache + CHACHA20_STATEBYTES - 1u) / CHACHA20_STATEBYTES;
+    if (ctx->totalLen > CHACHA20_MAX_BLOCKS || blocks > CHACHA20_MAX_BLOCKS - ctx->totalLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MODES_CRYPTLEN_OVERFLOW);
+        return CRYPT_MODES_CRYPTLEN_OVERFLOW;
+    }
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_CHACHA20_Update(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *in, uint8_t *out, uint32_t len)
 {
     if (ctx == NULL || out == NULL || in == NULL || len == 0) {
@@ -162,13 +176,17 @@ int32_t CRYPT_CHACHA20_Update(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *in, uint8_
         BSL_ERR_PUSH_ERROR(CRYPT_CHACHA20_NO_NONCEINFO);
         return CRYPT_CHACHA20_NO_NONCEINFO;
     }
+    int32_t ret = CheckUpdateBlocks(ctx, len);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
     uint32_t i;
     const uint8_t *offIn = in;
     uint8_t *offOut = out;
     uint32_t tLen = len;
-    if (ctx->lastLen != 0) { // has remaining data during the last processing
+    if (ctx->lastLen != 0) {
         uint32_t num = (tLen < ctx->lastLen) ? tLen : ctx->lastLen;
-        uint8_t *tLast = ctx->last.u + CHACHA20_STATEBYTES - ctx->lastLen; // offset
+        uint8_t *tLast = ctx->last.u + CHACHA20_STATEBYTES - ctx->lastLen;
         for (i = 0; i < num; i++) {
             offOut[i] = tLast[i] ^ offIn[i];
         }
@@ -177,17 +195,22 @@ int32_t CRYPT_CHACHA20_Update(CRYPT_CHACHA20_Ctx *ctx, const uint8_t *in, uint8_
         tLen -= num;
         ctx->lastLen -= num;
     }
-    if (tLen >= CHACHA20_STATEBYTES) { // which is greater than or equal to an integer multiple of 64 bytes
-        CHACHA20_Update(ctx, offIn, offOut, tLen); // processes data that is an integer multiple of 64 bytes
-        uint32_t vLen = tLen - (tLen & 0x3f); // 0x3f = %CHACHA20_STATEBYTES
+    if (tLen == 0) {
+        return CRYPT_SUCCESS;
+    }
+    uint32_t fullBlocks = tLen / CHACHA20_STATEBYTES;
+    if (fullBlocks > 0) {
+        uint32_t vLen = fullBlocks * CHACHA20_STATEBYTES;
+        CHACHA20_Update(ctx, offIn, offOut, vLen);
+        ctx->totalLen += fullBlocks;
         offIn += vLen;
         offOut += vLen;
         tLen -= vLen;
     }
-    // Process the remaining data
     if (tLen > 0) {
         CHACHA20_Block(ctx);
-        uint32_t t = tLen & 0xf8; // processing length is a multiple of 8
+        ctx->totalLen++;
+        uint32_t t = tLen & 0xf8;
         if (t != 0) {
             DATA64_XOR(ctx->last.u, offIn, offOut, t);
         }

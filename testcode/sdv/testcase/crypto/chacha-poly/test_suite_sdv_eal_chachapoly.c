@@ -1302,3 +1302,135 @@ EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_CHACHA20POLY1305_COUNTER_WRAP_TC001
+ * @title  ChaCha20 second Update after counter exhaust must fail
+ * @precon Registering memory-related functions.
+ * @brief
+ *    Set counter to 0xFFFFFFFF, encrypt 1 block (last valid block), then call Update again.
+ *    The second Update must fail because the counter has wrapped.
+ * @expect
+ *    First Update succeeds, second Update returns error.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_CHACHA20POLY1305_COUNTER_WRAP_TC001(void)
+{
+    TestMemInit();
+    uint8_t key[32] = {
+        0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
+        0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
+        0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
+        0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f
+    };
+    uint8_t iv[12] = {0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47};
+    uint8_t aad[16] = {0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7};
+    uint8_t countMax[4] = {0xff, 0xff, 0xff, 0xff};
+
+    uint8_t plain[64];
+    memset(plain, 0x41, sizeof(plain));
+    uint8_t cipher[64] = {0};
+    uint32_t outLen = sizeof(cipher);
+
+    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_COUNT, countMax, sizeof(countMax)), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, plain, sizeof(plain), cipher, &outLen), CRYPT_SUCCESS);
+
+    outLen = sizeof(cipher);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, plain, sizeof(plain), cipher, &outLen),
+        CRYPT_MODES_CRYPTLEN_OVERFLOW);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_CHACHA20POLY1305_COUNTER_WRAP_TC003
+ * @title  ChaCha20 may consume cached bytes after counter exhaust
+ * @precon Registering memory-related functions.
+ * @brief
+ *    Set counter to 0xFFFFFFFF, encrypt 1 byte, then consume the remaining cached bytes.
+ * @expect
+ *    Cached bytes can be consumed, but a new block returns error.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_CHACHA20POLY1305_COUNTER_WRAP_TC003(void)
+{
+    TestMemInit();
+    uint8_t key[32] = {
+        0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
+        0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
+        0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
+        0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f
+    };
+    uint8_t iv[12] = {0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47};
+    uint8_t countMax[4] = {0xff, 0xff, 0xff, 0xff};
+    uint8_t plain[64];
+    uint8_t cipher[64] = {0};
+    uint32_t outLen = 1;
+
+    memset(plain, 0x41, sizeof(plain));
+
+    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_COUNT, countMax, sizeof(countMax)), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, plain, 1, cipher, &outLen), CRYPT_SUCCESS);
+    outLen = 63;
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, plain + 1, 63, cipher + 1, &outLen), CRYPT_SUCCESS);
+    outLen = 1;
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, plain, 1, cipher, &outLen), CRYPT_MODES_CRYPTLEN_OVERFLOW);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_CHACHA20POLY1305_COUNTER_WRAP_TC002
+ * @title  ChaCha20 single Update exceeding counter capacity must fail
+ * @precon Registering memory-related functions.
+ * @brief
+ *    Set counter to 0xFFFFFFFE (2 blocks remain), then encrypt 192 bytes (3 blocks) in one call.
+ *    Update must fail because the 3rd block would overflow the counter.
+ * @expect
+ *    Update returns error.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_CHACHA20POLY1305_COUNTER_WRAP_TC002(void)
+{
+    TestMemInit();
+    uint8_t key[32] = {
+        0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
+        0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
+        0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
+        0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f
+    };
+    uint8_t iv[12] = {0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47};
+    uint8_t aad[16] = {0x50, 0x51, 0x52, 0x53, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7};
+    uint8_t countNearMax[4] = {0xfe, 0xff, 0xff, 0xff};
+
+    uint8_t plain[192];
+    memset(plain, 0x42, sizeof(plain));
+    uint8_t cipher[192] = {0};
+    uint32_t outLen = sizeof(cipher);
+
+    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_COUNT, countNearMax, sizeof(countNearMax)), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, plain, sizeof(plain), cipher, &outLen),
+        CRYPT_MODES_CRYPTLEN_OVERFLOW);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */

@@ -37,6 +37,7 @@ typedef struct {
         uint32_t c[CHACHA20_STATESIZE];
         uint8_t u[CHACHA20_STATEBYTES];
     } last; // save the last data
+    uint64_t totalLen;
     uint32_t lastLen; // remaining length of the last data in bytes
     uint8_t set; // indicates whether the key and nonce are set
 } CRYPT_CHACHA20_Ctx;

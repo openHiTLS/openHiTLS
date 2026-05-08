@@ -2413,6 +2413,7 @@ void SDV_CMS_SIGN_VERIFY_STUB_TC001(char *basePath, char *msg)
     TestRandInit();
     HITLS_CMS *cms = NULL;
     HITLS_CMS *cms1 = NULL;
+    HITLS_CMS *warmCms = NULL;
     BSL_Buffer encode1 = {0};
     BSL_Buffer encode2 = {0};
     TestCertChainCtx certCtx = {0};
@@ -2446,6 +2447,11 @@ void SDV_CMS_SIGN_VERIFY_STUB_TC001(char *basePath, char *msg)
     ASSERT_NE(cms, NULL);
     cms1 = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_SIGNEDDATA);
     ASSERT_NE(cms1, NULL);
+    warmCms = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_SIGNEDDATA);
+    ASSERT_NE(warmCms, NULL);
+    ASSERT_EQ(HITLS_CMS_DataSign(warmCms, certCtx.pkey1, certCtx.device1Cert, &msgBuf, params), HITLS_PKI_SUCCESS);
+    HITLS_CMS_Free(warmCms);
+    warmCms = NULL;
     STUB_REPLACE(BSL_SAL_Malloc, STUB_BSL_SAL_Malloc);
     STUB_REPLACE(HITLS_X509_CheckKey, STUB_HITLS_X509_CheckKey);
     uint32_t totalMallocCount = 0;
@@ -2484,6 +2490,7 @@ EXIT:
     BSL_SAL_FREE(encode2.data);
     HITLS_CMS_Free(cms);
     HITLS_CMS_Free(cms1);
+    HITLS_CMS_Free(warmCms);
     CRYPT_EAL_PkeyFreeCtx(certCtx.pkey1);
     CRYPT_EAL_PkeyFreeCtx(certCtx.pkey2);
     BSL_LIST_FREE(cachain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);

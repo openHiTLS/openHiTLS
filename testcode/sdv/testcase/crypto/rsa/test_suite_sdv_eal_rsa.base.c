@@ -142,3 +142,11 @@ void SetRsaPrvKey(CRYPT_EAL_PkeyPrv *prvKey, uint8_t *n, uint32_t nLen, uint8_t 
     prvKey->key.rsaPrv.d = d;
     prvKey->key.rsaPrv.dLen = dLen;
 }
+
+void SetRsaPrvKeyEx(CRYPT_EAL_PkeyPrv *prvKey, uint8_t *n, uint32_t nLen, uint8_t *d, uint32_t dLen,
+    uint8_t *e, uint32_t eLen)
+{
+    SetRsaPrvKey(prvKey, n, nLen, d, dLen);
+    prvKey->key.rsaPrv.e = e;
+    prvKey->key.rsaPrv.eLen = eLen;
+}

@@ -24,6 +24,7 @@
 #include "bsl_err_internal.h"
 #include "crypt_util_rand.h"
 #include "crypt_util_ctrl.h"
+#include "bsl_bytes.h"
 
 #define CHECK_IF_NULL_RET(PTR, RET)  \
     do {                             \
@@ -429,20 +430,22 @@ static int32_t MceliecePrvKeyCmp(CRYPT_MCELIECE_Ctx *ctx1, CRYPT_MCELIECE_Ctx *c
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_KEY_NOT_EQUAL);
         return CRYPT_MCELIECE_KEY_NOT_EQUAL;
     }
-    if (memcmp(ctx1->privateKey->delta, ctx2->privateKey->delta, MCELIECE_L_BYTES) != 0) {
+    if (ConstTimeMemcmp(ctx1->privateKey->delta, ctx2->privateKey->delta, MCELIECE_L_BYTES) == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_KEY_NOT_EQUAL);
         return CRYPT_MCELIECE_KEY_NOT_EQUAL;
     }
-    if (memcmp(ctx1->privateKey->g.coeffs, ctx2->privateKey->g.coeffs, ctx1->para->t * sizeof(GFElement)) != 0) {
+    if (ConstTimeMemcmp((const uint8_t *)ctx1->privateKey->g.coeffs, (const uint8_t *)ctx2->privateKey->g.coeffs,
+        ctx1->para->t * sizeof(GFElement)) == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_KEY_NOT_EQUAL);
         return CRYPT_MCELIECE_KEY_NOT_EQUAL;
     }
     if (ctx1->privateKey->controlbitsLen != ctx2->privateKey->controlbitsLen ||
-        memcmp(ctx1->privateKey->controlbits, ctx2->privateKey->controlbits, ctx1->privateKey->controlbitsLen) != 0) {
+        ConstTimeMemcmp(ctx1->privateKey->controlbits, ctx2->privateKey->controlbits,
+        ctx1->privateKey->controlbitsLen) == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_KEY_NOT_EQUAL);
         return CRYPT_MCELIECE_KEY_NOT_EQUAL;
     }
-    if (memcmp(ctx1->privateKey->s, ctx2->privateKey->s, ctx1->para->nBytes) != 0) {
+    if (ConstTimeMemcmp(ctx1->privateKey->s, ctx2->privateKey->s, ctx1->para->nBytes) == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_MCELIECE_KEY_NOT_EQUAL);
         return CRYPT_MCELIECE_KEY_NOT_EQUAL;
     }

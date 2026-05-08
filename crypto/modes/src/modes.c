@@ -223,7 +223,7 @@ static int32_t UnPaddingX923(const uint8_t *pad, uint32_t padLen, uint32_t *finL
     uint32_t check = 0;
     len = pad[padLen - 1];
 
-    check |= (uint32_t)(len > padLen);
+    check |= (uint32_t)((len == 0) || (len > padLen));
 
     pos = padLen - len;
     for (i = 0; i < padLen - 1; i++) {

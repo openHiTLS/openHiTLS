@@ -792,6 +792,7 @@ void SDV_X509_CRL_Gen_Process_TC002(void)
     BSL_Buffer encodeCrl = {0};
 
     TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_ASN1, CRYPT_PRIKEY_PKCS8_UNENCRYPT, keyPath, NULL, 0, &prvKey), 0);
     ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &cert), 0);
 
@@ -868,6 +869,7 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(prvKey);
     CRYPT_EAL_PkeyFreeCtx(pubKey);
     BSL_SAL_Free(encodeCrl.data);
+    TestRandDeInit();
 }
 /* END_CASE */
 

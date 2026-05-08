@@ -322,6 +322,38 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test  SDV_CRYPTO_AES_X923_PADDING_INVALID_TC001
+ * @title  AES-CBC X9.23 unpadding rejects zero padding length
+ * @precon Registering memory-related functions.
+ * @brief
+ *    Decrypt one AES-CBC block whose plaintext block has X9.23 padding length 0.
+ * @expect
+ *    Final returns CRYPT_EAL_CIPHER_DATA_ERROR.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_AES_X923_PADDING_INVALID_TC001(Hex *key, Hex *iv, Hex *cipherText)
+{
+    TestMemInit();
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+    uint8_t out[AES_BLOCKSIZE] = {0};
+    uint32_t outLen = sizeof(out);
+
+    ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_AES128_CBC);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, false), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherSetPadding(ctx, CRYPT_PADDING_X923), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, cipherText->x, cipherText->len, out, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, 0);
+
+    outLen = sizeof(out);
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, out, &outLen), CRYPT_EAL_CIPHER_DATA_ERROR);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
  * @test  SDV_CRYPTO_AES_CTRL_API_TC001
  * @title  Impact of Input Parameters on the CRYPT_EAL_CipherCtrl Interface
  * @precon Registering memory-related functions.
@@ -1405,5 +1437,128 @@ void SDV_CRYPTO_EAL_AES_FUNC_TC010(int algId, Hex *key, Hex *iv, Hex *pt)
 EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 #endif
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_AES_XTS_DATA_UNIT_LIMIT_TC001
+ * @title  AES-XTS single Update exceeding 2^20 block data-unit limit must fail
+ * @precon Registering memory-related functions.
+ * @brief
+ *    Initialize AES-128-XTS, then call Update with inLen = 2^20*16+16 (one block over the
+ *    SP 800-38E / IEEE 1619 limit). Update must return CRYPT_MODES_CRYPTLEN_OVERFLOW.
+ * @expect
+ *    Update returns CRYPT_MODES_CRYPTLEN_OVERFLOW.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_AES_XTS_DATA_UNIT_LIMIT_TC001(int id, Hex *key, Hex *iv)
+{
+    TestMemInit();
+    uint32_t maxBytes = (1u << 20) * 16;
+    uint32_t overBytes = maxBytes + 16;
+    uint8_t *in = (uint8_t *)BSL_SAL_Malloc(overBytes);
+    uint8_t *out = (uint8_t *)BSL_SAL_Malloc(overBytes);
+    ASSERT_TRUE(in != NULL && out != NULL);
+    memset(in, 0x41, overBytes);
+    uint32_t outLen = overBytes;
+
+    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(id);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, in, overBytes, out, &outLen),
+        CRYPT_MODES_CRYPTLEN_OVERFLOW);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+    BSL_SAL_Free(in);
+    BSL_SAL_Free(out);
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_AES_XTS_DATA_UNIT_LIMIT_TC002
+ * @title  AES-XTS at-exact-limit Update succeeds, second Update fails
+ * @precon Registering memory-related functions.
+ * @brief
+ *    Initialize AES-128-XTS, call Update with inLen = 2^20*16 (exactly at the limit),
+ *    which should succeed. Then call a second Update with any data, which must fail because
+ *    the cumulative total exceeds the limit.
+ * @expect
+ *    First Update succeeds, second Update returns CRYPT_MODES_CRYPTLEN_OVERFLOW.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_AES_XTS_DATA_UNIT_LIMIT_TC002(int id, Hex *key, Hex *iv)
+{
+    TestMemInit();
+    uint32_t maxBytes = (1u << 20) * 16;
+    uint8_t *in = (uint8_t *)BSL_SAL_Malloc(maxBytes);
+    uint8_t *out = (uint8_t *)BSL_SAL_Malloc(maxBytes);
+    uint8_t extra[32] = {0};
+    uint8_t extraOut[32] = {0};
+    ASSERT_TRUE(in != NULL && out != NULL);
+    memset(in, 0x42, maxBytes);
+    uint32_t outLen = maxBytes;
+
+    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(id);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, in, maxBytes, out, &outLen), CRYPT_SUCCESS);
+
+    outLen = sizeof(extraOut);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, extra, sizeof(extra), extraOut, &outLen),
+        CRYPT_MODES_CRYPTLEN_OVERFLOW);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+    BSL_SAL_Free(in);
+    BSL_SAL_Free(out);
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_AES_XTS_DATA_UNIT_LIMIT_TC003
+ * @title  AES-XTS split Updates reaching exact data-unit limit must succeed
+ * @precon Registering memory-related functions.
+ * @brief
+ *    Initialize AES-128-XTS, call Update twice so the cumulative length reaches exactly
+ *    2^20*16, then call one more Update.
+ * @expect
+ *    Split Updates up to the limit succeed, next Update returns CRYPT_MODES_CRYPTLEN_OVERFLOW.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_AES_XTS_DATA_UNIT_LIMIT_TC003(int id, Hex *key, Hex *iv)
+{
+    TestMemInit();
+    uint32_t maxBytes = (1u << 20) * 16;
+    uint32_t firstLen = maxBytes - 16;
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+    uint8_t *in = (uint8_t *)BSL_SAL_Malloc(firstLen);
+    uint8_t *out = (uint8_t *)BSL_SAL_Malloc(firstLen);
+    uint8_t last[16] = {0};
+    uint8_t lastOut[16] = {0};
+    uint8_t extra[16] = {0};
+    uint8_t extraOut[16] = {0};
+    ASSERT_TRUE(in != NULL && out != NULL);
+    memset(in, 0x43, firstLen);
+    uint32_t outLen = firstLen;
+
+    ctx = CRYPT_EAL_CipherNewCtx(id);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, in, firstLen, out, &outLen), CRYPT_SUCCESS);
+    outLen = sizeof(lastOut);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, last, sizeof(last), lastOut, &outLen), CRYPT_SUCCESS);
+
+    outLen = sizeof(extraOut);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, extra, sizeof(extra), extraOut, &outLen),
+        CRYPT_MODES_CRYPTLEN_OVERFLOW);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+    BSL_SAL_Free(in);
+    BSL_SAL_Free(out);
 }
 /* END_CASE */

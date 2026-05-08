@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_PKI_PKCS12
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
 #ifdef HITLS_BSL_SAL_FILE
 #include "sal_file.h"
 #endif
@@ -796,7 +797,7 @@ static int32_t ParseMacDataAndVerify(HITLS_PKCS12 *p12, BSL_Buffer *initData, BS
         return ret;
     }
     if (p12->macData->mac->dataLen != verify.dataLen ||
-        memcmp(verify.data, p12->macData->mac->data, verify.dataLen) != 0) {
+        ConstTimeMemcmp(verify.data, p12->macData->mac->data, verify.dataLen) == 0) {
         ClearMacData(p12->macData);
         BSL_SAL_Free(verify.data);
         BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_VERIFY_FAIL);

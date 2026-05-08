@@ -39,6 +39,7 @@ struct ModesXTSCtx {
     MODES_CipherXTSCtx xtsCtx;
     uint8_t data[EAL_MAX_BLOCK_LENGTH];             /**< last data block that may not be processed */
     uint8_t dataLen;                                /**< size of the last data block that may not be processed. */
+    uint32_t totalLen;
     CRYPT_PaddingType pad;
     bool enc;
 };

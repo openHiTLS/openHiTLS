@@ -167,11 +167,13 @@ static const CMVP_RSA_ENC_DEC_VECTOR RSA_ENC_DEC_VECTOR = {
     .mdId = CRYPT_MD_SHA1,
 };
 
-static bool GetPrvKey(const char *n, const char *d, CRYPT_EAL_PkeyPrv *prv)
+static bool GetPrvKey(const char *n, const char *e, const char *d, CRYPT_EAL_PkeyPrv *prv)
 {
     memset(&prv->key.rsaPrv, 0, sizeof(prv->key.rsaPrv));
     prv->key.rsaPrv.n = CMVP_StringsToBins(n, &(prv->key.rsaPrv.nLen));
     GOTO_ERR_IF_TRUE(prv->key.rsaPrv.n == NULL, CRYPT_CMVP_COMMON_ERR);
+    prv->key.rsaPrv.e = CMVP_StringsToBins(e, &(prv->key.rsaPrv.eLen));
+    GOTO_ERR_IF_TRUE(prv->key.rsaPrv.e == NULL, CRYPT_CMVP_COMMON_ERR);
     prv->key.rsaPrv.d = CMVP_StringsToBins(d, &(prv->key.rsaPrv.dLen));
     GOTO_ERR_IF_TRUE(prv->key.rsaPrv.d == NULL, CRYPT_CMVP_COMMON_ERR);
     prv->id = CRYPT_PKEY_RSA;
@@ -231,6 +233,7 @@ static bool RsaSelftestSign(void *libCtx, const char *attrName, int32_t id)
     uint8_t *expectSign = NULL;
     uint8_t *sign = NULL;
     uint32_t msgLen, expectSignLen, signLen, saltLen;
+    uint32_t blindingFlag = CRYPT_RSA_BLINDING;
 
     msg = CMVP_StringsToBins(RSA_VECTOR[id].msg, &msgLen);
     GOTO_ERR_IF_TRUE(msg == NULL, CRYPT_CMVP_COMMON_ERR);
@@ -239,8 +242,11 @@ static bool RsaSelftestSign(void *libCtx, const char *attrName, int32_t id)
 
     pkey = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_RSA, 0, attrName);
     GOTO_ERR_IF_TRUE(pkey == NULL, CRYPT_CMVP_ERR_ALGO_SELFTEST);
-    GOTO_ERR_IF_TRUE(GetPrvKey(RSA_VECTOR[id].n, RSA_VECTOR[id].d, &prv) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_ERR_IF_TRUE(GetPrvKey(RSA_VECTOR[id].n, RSA_VECTOR[id].e, RSA_VECTOR[id].d, &prv) != true, CRYPT_CMVP_ERR_ALGO_SELFTEST);
     GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeySetPrv(pkey, &prv) != CRYPT_SUCCESS, CRYPT_CMVP_ERR_ALGO_SELFTEST);
+    GOTO_ERR_IF_TRUE(
+        CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_CLR_RSA_FLAG, &blindingFlag, sizeof(blindingFlag)) != CRYPT_SUCCESS,
+        CRYPT_CMVP_ERR_ALGO_SELFTEST);
     signLen = CRYPT_EAL_PkeyGetSignLen(pkey);
     sign = BSL_SAL_Malloc(sizeof(uint32_t) * signLen);
     GOTO_ERR_IF_TRUE(sign == NULL, CRYPT_MEM_ALLOC_FAIL);
@@ -265,6 +271,7 @@ ERR:
     BSL_SAL_Free(sign);
     BSL_SAL_Free(expectSign);
     BSL_SAL_Free(prv.key.rsaPrv.n);
+    BSL_SAL_Free(prv.key.rsaPrv.e);
     BSL_SAL_Free(prv.key.rsaPrv.d);
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return ret;
@@ -383,6 +390,7 @@ static bool RsaSelftestDecrypt(void *libCtx, const char *attrName, const uint8_t
     uint8_t plainText[MAX_CIPHER_TEXT_LEN] = {0};
     uint32_t plainTextLen = sizeof(plainText);
     int32_t err = CRYPT_CMVP_ERR_ALGO_SELFTEST;
+    uint32_t blindingFlag = CRYPT_RSA_BLINDING;
     CRYPT_MD_AlgId mdId = RSA_ENC_DEC_VECTOR.mdId;
     BSL_Param oaep[3] = {{CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
@@ -392,8 +400,10 @@ static bool RsaSelftestDecrypt(void *libCtx, const char *attrName, const uint8_t
     // decrypt
     prvCtx = CRYPT_EAL_ProviderPkeyNewCtx(libCtx, CRYPT_PKEY_RSA, 0, attrName);
     GOTO_ERR_IF_TRUE(prvCtx == NULL, err);
-    GOTO_ERR_IF_TRUE(GetPrvKey(RSA_ENC_DEC_VECTOR.n, RSA_ENC_DEC_VECTOR.d, &prv) != true, err);
+    GOTO_ERR_IF_TRUE(GetPrvKey(RSA_ENC_DEC_VECTOR.n, RSA_ENC_DEC_VECTOR.e, RSA_ENC_DEC_VECTOR.d, &prv) != true, err);
     GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeySetPrv(prvCtx, &prv) != CRYPT_SUCCESS, err);
+    GOTO_ERR_IF_TRUE(
+        CRYPT_EAL_PkeyCtrl(prvCtx, CRYPT_CTRL_CLR_RSA_FLAG, &blindingFlag, sizeof(blindingFlag)) != CRYPT_SUCCESS, err);
     GOTO_ERR_IF_TRUE(CRYPT_EAL_PkeyCtrl(prvCtx, CRYPT_CTRL_SET_RSA_RSAES_OAEP, oaep, 0) != CRYPT_SUCCESS, err);
     GOTO_ERR_IF_TRUE(
         CRYPT_EAL_PkeyDecrypt(prvCtx, cipher, cipherLen, plainText, &plainTextLen) != CRYPT_SUCCESS, err);
@@ -404,6 +414,7 @@ static bool RsaSelftestDecrypt(void *libCtx, const char *attrName, const uint8_t
 ERR:
     CRYPT_EAL_PkeyFreeCtx(prvCtx);
     BSL_SAL_Free(prv.key.rsaPrv.n);
+    BSL_SAL_Free(prv.key.rsaPrv.e);
     BSL_SAL_Free(prv.key.rsaPrv.d);
     return ret;
 }
