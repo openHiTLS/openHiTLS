@@ -348,10 +348,8 @@ static int32_t ParseServerExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
         case HS_EX_TYPE_ENCRYPT_THEN_MAC:
             return ParseServerEncryptThenMac(&pkt, msg);
 #endif /* HITLS_TLS_FEATURE_ETM */
-#ifdef HITLS_TLS_PROTO_TLS13
         case HS_EX_TYPE_SUPPORTED_GROUPS:
             return HITLS_SUCCESS;
-#endif /* HITLS_TLS_PROTO_TLS13 */
 #ifdef HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT
         case HS_EX_TYPE_RECORD_SIZE_LIMIT:
             return ParseRecordSizeLimit(pkt.ctx, pkt.buf, extMsgLen, &msg->haveRecordSizeLimit, &msg->recordSizeLimit);

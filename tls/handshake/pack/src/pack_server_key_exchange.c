@@ -177,7 +177,7 @@ static int32_t PackEcdhPublicKey(TLS_Ctx *ctx, uint32_t pubKeyLen, PackPacket *p
     (void)PackSkipBytes(pkt, pubKeyUsedLen);
 
     PackCloseUint8Field(pkt, pubKeyLenOffset);
-	
+
     return HITLS_SUCCESS;
 }
 static int32_t PackServerKxMsgNamedCurve(TLS_Ctx *ctx, PackPacket *pkt)
@@ -541,11 +541,11 @@ int32_t PackServerKeyExchange(TLS_Ctx *ctx, PackPacket *pkt)
 #endif /* HITLS_TLS_SUITE_KX_DHE */
 #ifdef HITLS_TLS_SUITE_KX_RSA
         case HITLS_KEY_EXCH_RSA_PSK:
+#endif /* HITLS_TLS_SUITE_KX_RSA */
         case HITLS_KEY_EXCH_PSK:
             /* for psk and rsa_psk nego, ServerKeyExchange msg contains only identity hint */
             ret = HITLS_SUCCESS;
             break;
-#endif /* HITLS_TLS_SUITE_KX_RSA */
 #ifdef HITLS_TLS_PROTO_TLCP11
         case HITLS_KEY_EXCH_ECC:
             ret = PackServerKxMsgEcc(ctx, pkt);

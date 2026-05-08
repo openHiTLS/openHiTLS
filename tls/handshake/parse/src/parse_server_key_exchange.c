@@ -531,12 +531,12 @@ int32_t ParseServerKeyExchange(TLS_Ctx *ctx, const uint8_t *data, uint32_t len, 
             ret = ParseServerDhe(&pkt, msg);
             break;
 #endif /* HITLS_TLS_SUITE_KX_DHE */
-#ifdef HITLS_TLS_SUITE_KX_RSA
         /* PSK & RSA_PSK nego may pack identity hint inside ServerKeyExchange msg */
         case HITLS_KEY_EXCH_PSK:
+#ifdef HITLS_TLS_SUITE_KX_RSA
         case HITLS_KEY_EXCH_RSA_PSK:
-            break;
 #endif /* HITLS_TLS_SUITE_KX_RSA */
+            break;
 #ifdef HITLS_TLS_PROTO_TLCP11
         case HITLS_KEY_EXCH_ECC:
             ret = ParseServerKxMsgEcc(&pkt);
