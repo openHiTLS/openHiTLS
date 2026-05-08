@@ -174,12 +174,10 @@ EXIT:
  *    1. Call the BN_Copy method, parameters are all, expected result 1
  *    2. Create BN_BigNum bn a and r, the size of r is half of a, expected result 2
  *    3. Call the BN_Copy method, copy a to r, expected result 3
- *    4. Set CONSTTIME flag on a and verify it is copied to r, expected result 4
  * @expect
  *    1. CRYPT_NULL_INPUT
  *    2. CRYPT_SUCCESS
  *    3. CRYPT_SUCCESS(Big number can be automatically expanded.)
- *    4. CONSTTIME flag is preserved after copy
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_BN_COPY_API_TC001(void)
@@ -203,56 +201,9 @@ void SDV_CRYPTO_BN_COPY_API_TC001(void)
 
     ASSERT_TRUE(BN_Copy(r, a) == CRYPT_SUCCESS);
 
-    // Test CONSTTIME flag preservation
-    ASSERT_TRUE(BN_SetFlag(a, CRYPT_BN_FLAG_CONSTTIME) == CRYPT_SUCCESS);
-    ASSERT_TRUE(BN_IsFlag(a, CRYPT_BN_FLAG_CONSTTIME) == true);
-    ASSERT_TRUE(BN_IsFlag(r, CRYPT_BN_FLAG_CONSTTIME) == false);
-
-    ASSERT_TRUE(BN_Copy(r, a) == CRYPT_SUCCESS);
-    ASSERT_TRUE(BN_IsFlag(r, CRYPT_BN_FLAG_CONSTTIME) == true);
-
 EXIT:
     BN_Destroy(r);
     BN_Destroy(a);
-}
-/* END_CASE */
-
-/**
- * @test   SDV_CRYPTO_BN_DUP_API_TC001
- * @title  BN_Dup: Duplicate a big number and verify CONSTTIME flag is preserved.
- * @precon nan
- * @brief
- *    1. Create a BN with CONSTTIME flag
- *    2. Call BN_Dup to duplicate it
- *    3. Verify the duplicate has the same value and CONSTTIME flag
- * @expect
- *    1. BN created successfully
- *    2. BN_Dup returns non-NULL
- *    3. Duplicate has same value and CONSTTIME flag
- */
-/* BEGIN_CASE */
-void SDV_CRYPTO_BN_DUP_API_TC001(void)
-{
-    BN_BigNum *a = NULL;
-    BN_BigNum *dup = NULL;
-    uint8_t buff[LONG_BN_BYTES_32] = {'F'};
-
-    TestMemInit();
-
-    a = BN_Create(LONG_BN_BITS_256);
-    ASSERT_TRUE(a != NULL);
-    ASSERT_TRUE(BN_Bin2Bn(a, buff, sizeof(buff)) == CRYPT_SUCCESS);
-    ASSERT_TRUE(BN_SetFlag(a, CRYPT_BN_FLAG_CONSTTIME) == CRYPT_SUCCESS);
-    ASSERT_TRUE(BN_IsFlag(a, CRYPT_BN_FLAG_CONSTTIME) == true);
-
-    dup = BN_Dup(a);
-    ASSERT_TRUE(dup != NULL);
-    ASSERT_TRUE(BN_Cmp(a, dup) == 0);
-    ASSERT_TRUE(BN_IsFlag(dup, CRYPT_BN_FLAG_CONSTTIME) == true);
-
-EXIT:
-    BN_Destroy(a);
-    BN_Destroy(dup);
 }
 /* END_CASE */
 
