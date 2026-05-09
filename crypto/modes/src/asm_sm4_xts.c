@@ -62,6 +62,7 @@ int32_t SM4_XTS_InitCtx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t key
     }
     
     modeCtx->enc = enc;
+    modeCtx->totalLen = 0;
     return ret;
 }
 #endif

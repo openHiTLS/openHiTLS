@@ -30,6 +30,9 @@
 
 /* END_HEADER */
 
+static uint8_t g_defaultE[] = {0x01, 0x00, 0x01};
+static uint32_t g_defaultELen = sizeof(g_defaultE);
+
 int MD_Data(CRYPT_MD_AlgId mdId, Hex *msgIn, Hex *mdOut)
 {
     uint32_t outLen;
@@ -98,9 +101,12 @@ void SDV_CRYPTO_RSA_SIGN_API_TC001(Hex *n, Hex *d, int isProvider)
     sign = (uint8_t *)malloc(signLen);
     data = (uint8_t *)malloc(signLen);
     ASSERT_TRUE(sign != NULL && data != NULL);
-    SetRsaPrvKey(&privaKey, n->x, n->len, d->x, d->len);
+    SetRsaPrvKeyEx(&privaKey, n->x, n->len, d->x, d->len, g_defaultE, g_defaultELen);
 
     TestMemInit();
+#ifdef HITLS_CRYPTO_DRBG
+    TestRandInit();
+#endif
 
     pkeyCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
          CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
@@ -158,8 +164,11 @@ void SDV_CRYPTO_RSA_SIGN_PKCSV15_FUNC_TC001(Hex *n, Hex *d, Hex *msg, Hex *sign,
     /* Malloc signature buffer */
     signdata = (uint8_t *)malloc(signLen);
     ASSERT_TRUE(signdata != NULL);
-    SetRsaPrvKey(&privaKey, n->x, n->len, d->x, d->len);
+    SetRsaPrvKeyEx(&privaKey, n->x, n->len, d->x, d->len, g_defaultE, g_defaultELen);
     TestMemInit();
+#ifdef HITLS_CRYPTO_DRBG
+    TestRandInit();
+#endif
 
     pkeyCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
          CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
@@ -210,14 +219,19 @@ void SDV_CRYPTO_RSA_SIGN_PKCSV15_FUNC_TC002(int mdId, Hex *n, Hex *d, Hex *msg, 
     uint8_t *signdata = NULL;
     uint32_t signLen;
 
-    SetRsaPrvKey(&privaKey, n->x, n->len, d->x, d->len);
+    SetRsaPrvKeyEx(&privaKey, n->x, n->len, d->x, d->len, g_defaultE, g_defaultELen);
 
     TestMemInit();
+#ifdef HITLS_CRYPTO_DRBG
+    TestRandInit();
+#endif
 
     pkeyCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
          CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkeyCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkeyCtx, &privaKey), CRYPT_SUCCESS);
+    uint32_t blindFlag = CRYPT_RSA_BLINDING;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_CLR_RSA_FLAG, &blindFlag, sizeof(blindFlag)), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)), 0);
 
@@ -273,7 +287,7 @@ void SDV_CRYPTO_RSA_SIGN_PSS_FUNC_TC001(int mdId, Hex *n, Hex *d, Hex *msg, Hex 
     uint8_t *signdata = NULL;
     uint32_t signLen = sign->len;
 
-    SetRsaPrvKey(&privaKey, n->x, n->len, d->x, d->len);
+    SetRsaPrvKeyEx(&privaKey, n->x, n->len, d->x, d->len, g_defaultE, g_defaultELen);
 
     /* Malloc signature buffer */
     signdata = (uint8_t *)malloc(signLen);
@@ -285,6 +299,8 @@ void SDV_CRYPTO_RSA_SIGN_PSS_FUNC_TC001(int mdId, Hex *n, Hex *d, Hex *msg, Hex 
          CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);
     ASSERT_TRUE(pkeyCtx != NULL);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkeyCtx, &privaKey), CRYPT_SUCCESS);
+    uint32_t blindFlag = CRYPT_RSA_BLINDING;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_CLR_RSA_FLAG, &blindFlag, sizeof(blindFlag)), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkeyCtx, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
 
@@ -338,7 +354,7 @@ void SDV_CRYPTO_RSA_SIGN_PSS_FUNC_TC002(int mdId, Hex *n, Hex *d, Hex *msg, int 
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
         {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
         BSL_PARAM_END};
-    SetRsaPrvKey(&privaKey, n->x, n->len, d->x, d->len);
+    SetRsaPrvKeyEx(&privaKey, n->x, n->len, d->x, d->len, g_defaultE, g_defaultELen);
 
     TestMemInit();
 
@@ -396,7 +412,7 @@ void SDV_CRYPTO_RSA_SIGN_PSS_FUNC_TC003(Hex *n, Hex *d, Hex *msg, int saltLen, i
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
         BSL_PARAM_END};
-    SetRsaPrvKey(&privaKey, n->x, n->len, d->x, d->len);
+    SetRsaPrvKeyEx(&privaKey, n->x, n->len, d->x, d->len, g_defaultE, g_defaultELen);
 
     TestMemInit();
 
@@ -1098,7 +1114,7 @@ void SDV_CRYPTO_RSA_BLINDING_FUNC_TC002(int mdId, Hex *p, Hex *q, Hex *n, Hex *d
     uint32_t flag = CRYPT_RSA_BLINDING;
     int32_t pkcsv15 = mdId;
 
-    SetRsaPrvKey(&prv, n->x, n->len, d->x, d->len);
+    SetRsaPrvKeyEx(&prv, n->x, n->len, d->x, d->len, g_defaultE, g_defaultELen);
     prv.key.rsaPrv.p = p->x;
     prv.key.rsaPrv.pLen = p->len;
     prv.key.rsaPrv.q = q->x;
@@ -1178,7 +1194,7 @@ void SDV_CRYPTO_RSA_KEY_PAIR_CHECK_FUNC_TC001(Hex *n, Hex *e, Hex *d, int expect
     int expectRet = expect == 1 ? CRYPT_SUCCESS : CRYPT_RSA_KEYPAIRWISE_CONSISTENCY_FAILURE;
 
     SetRsaPubKey(&pubKey, n->x, n->len, e->x, e->len);
-    SetRsaPrvKey(&prvKey, n->x, n->len, d->x, d->len);
+    SetRsaPrvKeyEx(&prvKey, n->x, n->len, d->x, d->len, e->x, e->len);
 
     TestMemInit();
     pubCtx = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
@@ -1244,7 +1260,7 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC001(int mdId, Hex *n, Hex *e, Hex *d
     CRYPT_EAL_PkeyPub pubKey = {0};
     CRYPT_EAL_PkeyPrv prvKey = {0};
     SetRsaPubKey(&pubKey, n->x, n->len, e->x, e->len);
-    SetRsaPrvKey(&prvKey, n->x, n->len, d->x, d->len);
+    SetRsaPrvKeyEx(&prvKey, n->x, n->len, d->x, d->len, e->x, e->len);
     CRYPT_MD_AlgId paramMdId = (CRYPT_MD_AlgId)mdId;
     BSL_Param pssParam[4] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &paramMdId, sizeof(paramMdId), 0},
@@ -1368,7 +1384,7 @@ void SDV_CRYPTO_RSA_RSABSSA_BLINDING_FUNC_TC002(Hex *e, Hex *nBuff, Hex *d, Hex 
     CRYPT_EAL_PkeyPub pubKey = {0};
 
     SetRsaPubKey(&pubKey, nBuff->x, nBuff->len, e->x, e->len);
-    SetRsaPrvKey(&priKey, nBuff->x, nBuff->len, d->x, d->len);
+    SetRsaPrvKeyEx(&priKey, nBuff->x, nBuff->len, d->x, d->len, e->x, e->len);
 
     ASSERT_EQ(CRYPT_EAL_PkeySetPub(pkey, &pubKey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySetPrv(pkey, &priKey), CRYPT_SUCCESS);
@@ -2013,10 +2029,13 @@ void SDV_CRYPTO_RSA_SIGN_VERIFY_ISO9796_2_VECTOR_TC001(
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         BSL_PARAM_END};
 
-    SetRsaPrvKey(&prvKey, n->x, n->len, d->x, d->len);
+    SetRsaPrvKeyEx(&prvKey, n->x, n->len, d->x, d->len, e->x, e->len);
     SetRsaPubKey(&pubKey, n->x, n->len, e->x, e->len);
 
     TestMemInit();
+#ifdef HITLS_CRYPTO_DRBG
+    TestRandInit();
+#endif
 
     pkeySign = TestPkeyNewCtx(NULL, CRYPT_PKEY_RSA,
          CRYPT_EAL_PKEY_SIGN_OPERATE, "provider=default", isProvider);

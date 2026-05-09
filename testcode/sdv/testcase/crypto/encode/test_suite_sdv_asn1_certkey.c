@@ -307,11 +307,13 @@ void SDV_BSL_ASN1_PARSE_RSA_PRV_TC001(char *path, Hex *version, Hex *n, Hex *e, 
     uint32_t signLen = CRYPT_EAL_PkeyGetSignLen(pkeyCtx);
     signdata = (uint8_t *)BSL_SAL_Malloc(signLen);
     ASSERT_TRUE(signdata != NULL);
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeySign(pkeyCtx, mdId, msg->x, msg->len, signdata, &signLen), CRYPT_SUCCESS);
     ASSERT_COMPARE("CRYPT_EAL_PkeySign Compare", sign->x, sign->len, signdata, signLen);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
+    TestRandDeInit();
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     BSL_SAL_FREE(signdata);
     BSL_SAL_FREE(rawBuff);

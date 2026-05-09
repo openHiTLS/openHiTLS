@@ -330,6 +330,7 @@ void SDV_PROVIDER_RSA_SIGN_VERIFY_PKCSV15_TC001(char *path, char *defProName, ch
     uint8_t sign[MAX_CIPHERTEXT_LEN] = {0};
     uint32_t signLen = MAX_CIPHERTEXT_LEN;
     CRYPT_EAL_PkeyPrv prvKey = {.id = CRYPT_PKEY_RSA, .key.rsaPrv.n = n->x, .key.rsaPrv.nLen = n->len,
+        .key.rsaPrv.e = e->x, .key.rsaPrv.eLen = e->len,
         .key.rsaPrv.d = d->x, .key.rsaPrv.dLen = d->len};
     CRYPT_EAL_PkeyPub pubKey = {.id = CRYPT_PKEY_RSA, .key.rsaPub.n = n->x, .key.rsaPub.nLen = n->len,
         .key.rsaPub.e = e->x, .key.rsaPub.eLen = e->len};
@@ -382,6 +383,7 @@ void SDV_PROVIDER_RSA_SIGN_VERIFY_PSS_TC001(char *path, char *defProName, char *
     CRYPT_EAL_LibCtx *libCtx = NULL;
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyPrv prvKey = {.id = CRYPT_PKEY_RSA, .key.rsaPrv.n = n->x, .key.rsaPrv.nLen = n->len,
+        .key.rsaPrv.e = e->x, .key.rsaPrv.eLen = e->len,
         .key.rsaPrv.d = d->x, .key.rsaPrv.dLen = d->len};
     CRYPT_EAL_PkeyPub pubKey = {.id = CRYPT_PKEY_RSA, .key.rsaPub.n = n->x, .key.rsaPub.nLen = n->len,
         .key.rsaPub.e = e->x, .key.rsaPub.eLen = e->len};
@@ -443,6 +445,7 @@ void SDV_PROVIDER_RSA_RSABSSA_BLINDING_TC001(char *path, char *defProName, char 
     CRYPT_EAL_LibCtx *libCtx = NULL;
     CRYPT_EAL_PkeyCtx *ctx = NULL;
     CRYPT_EAL_PkeyPrv prvKey = {.id = CRYPT_PKEY_RSA, .key.rsaPrv.n = n->x, .key.rsaPrv.nLen = n->len,
+        .key.rsaPrv.e = e->x, .key.rsaPrv.eLen = e->len,
         .key.rsaPrv.d = d->x, .key.rsaPrv.dLen = d->len};
     CRYPT_EAL_PkeyPub pubKey = {.id = CRYPT_PKEY_RSA, .key.rsaPub.n = n->x, .key.rsaPub.nLen = n->len,
         .key.rsaPub.e = e->x, .key.rsaPub.eLen = e->len};
@@ -515,6 +518,7 @@ void SDV_PROVIDER_RSA_CRYPT_FUNC_TC001(char *path, char *defProName, char *custo
 #if defined(HITLS_CRYPTO_RSA_DECRYPT) && defined(HITLS_CRYPTO_RSA_ENCRYPT) && defined(HITLS_CRYPTO_PROVIDER)
     CRYPT_EAL_LibCtx *libCtx = NULL;
     CRYPT_EAL_PkeyPrv prvkey = {.id = CRYPT_PKEY_RSA, .key.rsaPrv.n = n->x, .key.rsaPrv.nLen = n->len,
+        .key.rsaPrv.e = e->x, .key.rsaPrv.eLen = e->len,
         .key.rsaPrv.d = d->x, .key.rsaPrv.dLen = d->len};
     CRYPT_EAL_PkeyPub pubkey = {.id = CRYPT_PKEY_RSA, .key.rsaPub.n = n->x, .key.rsaPub.nLen = n->len,
         .key.rsaPub.e = e->x, .key.rsaPub.eLen = e->len};

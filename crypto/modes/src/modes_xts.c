@@ -27,6 +27,8 @@
 
 
 #define MODES_XTS_BLOCKSIZE 16
+#define MODES_XTS_MAX_BLOCKS_PER_DATA_UNIT (1u << 20)
+#define MODES_XTS_MAX_DATA_UNIT_BYTES (MODES_XTS_MAX_BLOCKS_PER_DATA_UNIT * MODES_XTS_BLOCKSIZE)
 #define SM4_XTS_POLYNOMIAL 0xE1
 #define XTS_UPDATE_VALUES(l, i, o, len) \
     do { \
@@ -359,15 +361,20 @@ static int32_t GetIv(MODES_CipherXTSCtx *ctx, uint8_t *val, uint32_t len)
 
 int32_t MODES_XTS_Ctrl(MODES_XTS_Ctx *modeCtx, int32_t cmd, void *val, uint32_t len)
 {
+    int32_t ret;
     if (modeCtx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
     switch (cmd) {
         case CRYPT_CTRL_REINIT_STATUS:
-            (void)memset_s(modeCtx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
-            modeCtx->dataLen = 0;
-            return MODES_XTS_SetIv(&modeCtx->xtsCtx, val, len);
+            ret = MODES_XTS_SetIv(&modeCtx->xtsCtx, val, len);
+            if (ret == CRYPT_SUCCESS) {
+                (void)memset_s(modeCtx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+                modeCtx->dataLen = 0;
+                modeCtx->totalLen = 0;
+            }
+            return ret;
         case CRYPT_CTRL_GET_IV:
             return GetIv(&modeCtx->xtsCtx, (uint8_t *)val, len);
         case CRYPT_CTRL_GET_BLOCKSIZE:
@@ -437,6 +444,7 @@ int32_t MODES_XTS_InitCtx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t k
     }
     
     modeCtx->enc = enc;
+    modeCtx->totalLen = 0;
     return ret;
 }
 
@@ -463,6 +471,7 @@ int32_t MODES_XTS_DeInitCtx(MODES_XTS_Ctx *modeCtx)
     MODES_XTS_Clean(&modeCtx->xtsCtx);
     (void)memset_s(modeCtx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
     modeCtx->dataLen = 0;
+    modeCtx->totalLen = 0;
     modeCtx->pad = CRYPT_PADDING_NONE;
     return CRYPT_SUCCESS;
 }
@@ -499,15 +508,20 @@ int32_t MODES_XTS_InitCtxEx(MODES_XTS_Ctx *modeCtx, const uint8_t *key, uint32_t
     }
 }
 
-static int32_t XTS_CheckUpdateParam(uint32_t cacheLen, uint32_t inLen, uint32_t *outLen)
+static int32_t XTS_CheckUpdateParam(uint32_t totalLen, uint32_t cacheLen, uint32_t inLen, uint32_t *outLen)
 {
-    if (inLen + cacheLen < inLen) {
+    uint32_t bufferedLen = inLen + cacheLen;
+    if (bufferedLen < inLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_TOO_LONG);
         return CRYPT_EAL_BUFF_LEN_TOO_LONG;
     }
-    if ((*outLen) < (inLen + cacheLen)) {
+    if ((*outLen) < bufferedLen) {
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
         return CRYPT_EAL_BUFF_LEN_NOT_ENOUGH;
+    }
+    if (inLen > MODES_XTS_MAX_DATA_UNIT_BYTES - totalLen) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MODES_CRYPTLEN_OVERFLOW);
+        return CRYPT_MODES_CRYPTLEN_OVERFLOW;
     }
     return CRYPT_SUCCESS;
 }
@@ -518,7 +532,7 @@ int32_t MODES_XTS_UpdateEx(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t i
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    int32_t ret = XTS_CheckUpdateParam(modeCtx->dataLen, inLen, outLen);
+    int32_t ret = XTS_CheckUpdateParam(modeCtx->totalLen, modeCtx->dataLen, inLen, outLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
@@ -527,19 +541,26 @@ int32_t MODES_XTS_UpdateEx(MODES_XTS_Ctx *modeCtx, const uint8_t *in, uint32_t i
         case CRYPT_CIPHER_AES128_XTS:
         case CRYPT_CIPHER_AES256_XTS:
 #ifdef HITLS_CRYPTO_AES
-            return AES_XTS_Update(modeCtx, in, inLen, out, outLen);
+            ret = AES_XTS_Update(modeCtx, in, inLen, out, outLen);
+            break;
 #else
             return CRYPT_EAL_ALG_NOT_SUPPORT;
 #endif
         case CRYPT_CIPHER_SM4_XTS:
 #ifdef HITLS_CRYPTO_SM4
-            return SM4_XTS_Update(modeCtx, in, inLen, out, outLen);
+            ret = SM4_XTS_Update(modeCtx, in, inLen, out, outLen);
+            break;
 #else
             return CRYPT_EAL_ALG_NOT_SUPPORT;
 #endif
         default:
-            return MODES_XTS_Update(modeCtx, in, inLen, out, outLen);
+            ret = MODES_XTS_Update(modeCtx, in, inLen, out, outLen);
+            break;
     }
+    if (ret == CRYPT_SUCCESS) {
+        modeCtx->totalLen += inLen;
+    }
+    return ret;
 }
 
 MODES_XTS_Ctx *MODES_XTS_DupCtx(const MODES_XTS_Ctx *modeCtx)

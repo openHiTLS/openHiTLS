@@ -563,7 +563,7 @@ MODES_CipherCtx *MODES_HCTR_DupCtx(const MODES_CipherCtx *modeCtx)
     }
 
     newPackCtx->algCtx = BSL_SAL_Dump(packCtx->algCtx, modeCtx->commonCtx.ciphMeth->ctxSize);
-    if (packCtx->algCtx == NULL) {
+    if (newPackCtx->algCtx == NULL) {
         BSL_SAL_ClearFree(newPackCtx->hctrCtx.dataBuffer.buffer, HCTR_DEFAULT_BUF_SIZE);
         BSL_SAL_ClearFree(newPackCtx, sizeof(HCTR_Pack_Ctx));
         BSL_SAL_ClearFree(ctx, sizeof(MODES_CipherCtx));

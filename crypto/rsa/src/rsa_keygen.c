@@ -33,6 +33,9 @@ CRYPT_RSA_Ctx *CRYPT_RSA_NewCtx(void)
         return NULL;
     }
     (void)memset_s(keyCtx, sizeof(CRYPT_RSA_Ctx), 0, sizeof(CRYPT_RSA_Ctx));
+#ifdef HITLS_CRYPTO_RSA_BLINDING
+    keyCtx->flags = CRYPT_RSA_BLINDING;
+#endif
     BSL_SAL_ReferencesInit(&(keyCtx->references));
     return keyCtx;
 }
