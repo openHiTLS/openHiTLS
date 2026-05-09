@@ -91,18 +91,16 @@ int32_t HITLS_CMS_ProviderParseFile(HITLS_PKI_LibCtx *libCtx, const char *attrNa
 
 /**
  * @ingroup cms
- * @brief Create signer information and optionally perform one-shot signing.
+ * @brief Create signer information and perform one-shot signing.
  * @par Description:
  *   - Always builds a CMS_SignerInfo from the supplied certificate using the requested version.
- *   - When msg/prvKey are provided, the function performs a complete one-shot signing flow and adds the
- *     SignerInfo into the CMS SignedData structure.
- *   - When msg is NULL, only the SignerInfo is created. The caller can then use the streaming APIs
- *     (SignInit/Update/Final) to finish signing later.
+ *   - The function performs a complete one-shot signing flow and adds the generated SignerInfo
+ *     into the CMS SignedData structure.
  *
  * @param cms             [IN] CMS SignedData handle that will own the signer (must be SignedData type)
- * @param prvKey          [IN] Private key used for signing (required for one-shot signing, optional when msg is NULL)
+ * @param prvKey          [IN] Private key used for signing
  * @param cert            [IN] Signer certificate used to derive identifier fields
- * @param msg             [IN] Message buffer to sign; set to NULL to only create SignerInfo for streaming usage
+ * @param msg             [IN] Message buffer to sign
  * @param optionalParam   [IN] Optional parameters (can be NULL). it may contains untrusted cert-list, ca-cert list,
  * @retval #HITLS_PKI_SUCCESS on success.
  *         Error codes can be found in hitls_pki_errno.h

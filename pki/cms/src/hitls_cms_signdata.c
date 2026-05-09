@@ -1669,7 +1669,7 @@ int32_t HITLS_CMS_DataSign(HITLS_CMS *cms, CRYPT_EAL_PkeyCtx *prvKey, HITLS_X509
     int32_t mdId = BSL_CID_UNKNOWN;
     bool hasSignedAttr = true;
     int32_t ret;
-    if (BSL_LIST_COUNT(signedData->digestAlg) > 0) {
+    if (BSL_LIST_COUNT(signedData->signerInfos) > 0) {
         ret = ObtainSignParams(optionalParam, &version, &mdId, NULL, &hasSignedAttr);
     } else {
         ret = ObtainSignParams(optionalParam, &version, &mdId, &signedData->detached, &hasSignedAttr);
@@ -2538,7 +2538,13 @@ static int32_t SignedData_VerifyFinal(HITLS_CMS *cms, const BSL_Param *inputPara
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
-    return VerifyAllSignerInfos(signedData, &verifyParam);
+
+    ret = VerifyAllSignerInfos(signedData, &verifyParam);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
+    signedData->state = HITLS_CMS_VERIFY_FINISHED;
+    return HITLS_PKI_SUCCESS;
 }
 
 int32_t HITLS_CMS_SignedDataInit(HITLS_CMS *cms, int32_t option, const BSL_Param *param)
