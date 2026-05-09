@@ -113,7 +113,7 @@ static int32_t MODES_CFB128_BytesEncrypt(MODES_CipherCFBCtx *ctx, const uint8_t 
 #ifdef FORCE_ADDR_ALIGN
         for (uint32_t i = 0; i < blockSize; i++) {
             iv[i] ^= inp[i];
-            out[i] = iv[i];
+            outp[i] = iv[i];
         }
 #else
         *((uint64_t *)((uintptr_t)iv)) ^= *((const uint64_t *)((uintptr_t)inp));
