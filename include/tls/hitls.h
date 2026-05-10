@@ -1624,6 +1624,12 @@ int32_t HITLS_SetRecordSizeLimit(HITLS_Ctx *ctx, uint16_t recordSize);
  */
 int32_t HITLS_GetRecordSizeLimit(HITLS_Ctx *ctx, uint16_t *recordSize);
 
+int32_t HITLS_SetCertCompressionSupport(HITLS_Ctx *ctx, bool isSupport);
+int32_t HITLS_GetCertCompressionSupport(HITLS_Ctx *ctx, bool *isSupport);
+int32_t HITLS_SetCertCompressionAlgs(HITLS_Ctx *ctx, const uint16_t *algs, uint32_t algsSize);
+int32_t HITLS_SetCertCompressionThreshold(HITLS_Ctx *ctx, uint32_t threshold);
+int32_t HITLS_SetCertCompressionMaxUncompressedLen(HITLS_Ctx *ctx, uint32_t maxLen);
+
 /**
  * @ingroup tls
  * @brief   Obtain the legacy version from client hello.

@@ -255,6 +255,7 @@ bool GetExtensionFlagValue(TLS_Ctx *ctx, uint32_t hsExTypeId)
         case HS_EX_TYPE_ID_SIGNATURE_ALGORITHMS:     return ctx->hsCtx->extFlag.haveSignatureAlgorithms;
         case HS_EX_TYPE_ID_EXTENDED_MASTER_SECRET:   return ctx->hsCtx->extFlag.haveExtendedMasterSecret;
         case HS_EX_TYPE_ID_SUPPORTED_VERSIONS:       return ctx->hsCtx->extFlag.haveSupportedVers;
+        case HS_EX_TYPE_ID_COMPRESS_CERTIFICATE:     return ctx->hsCtx->extFlag.haveCertCompression;
         case HS_EX_TYPE_ID_CERTIFICATE_AUTHORITIES:  return ctx->hsCtx->extFlag.haveCA;
         case HS_EX_TYPE_ID_POST_HS_AUTH:             return ctx->hsCtx->extFlag.havePostHsAuth;
         case HS_EX_TYPE_ID_KEY_SHARE:                return ctx->hsCtx->extFlag.haveKeyShare;

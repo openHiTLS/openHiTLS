@@ -61,9 +61,14 @@ if [[ "$(uname)" == "Darwin" ]]; then
     export DYLD_LIBRARY_PATH="${LIB_PATHS}"
     export LD_LIBRARY_PATH="${LIB_PATHS}"  # Also set for compatibility
     echo "[INFO] Final DYLD_LIBRARY_PATH: ${DYLD_LIBRARY_PATH}"
-    # Enable Guard Malloc for memory debugging on macOS
-    export DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib
-    echo "[INFO] Guard Malloc enabled: DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib"
+    # Guard Malloc 会显著放大内存与运行时开销，仅在显式要求时启用，避免全量 sdv_macos 被调试分配器拖慢。
+    if [ "${ENABLE_GUARD_MALLOC:=OFF}" = "ON" ]; then
+        export DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib
+        echo "[INFO] Guard Malloc enabled: DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib"
+    else
+        unset DYLD_INSERT_LIBRARIES
+        echo "[INFO] Guard Malloc disabled on Darwin by default"
+    fi
 else
     # Linux uses LD_LIBRARY_PATH
     if [ -n "${LD_LIBRARY_PATH}" ]; then
@@ -301,7 +306,8 @@ parse_option()
 run_demos()
 {
     pushd ${HITLS_ROOT_DIR}/testcode/demo/build
-    executales=$(find ./ -maxdepth 1 -type f -perm -a=x )
+    # 仅执行 demo 二进制，避免把 CMakeCache 等构建辅助文件误当成可执行文件。
+    executales=$(find ./ -maxdepth 1 -type f -perm -a=x ! -name "*.txt" ! -name "*.cmake" ! -name "Makefile")
     for e in $executales
     do
         if [[ ! "$e" == *"client"* ]] && [[ ! "$e" == *"server"* ]]; then
@@ -314,6 +320,33 @@ run_demos()
         fi
     done
 
+    DEMO_WAIT_TIMEOUT=${DEMO_WAIT_TIMEOUT:=30}
+
+    wait_demo_process()
+    {
+        local demo_pid=$1
+        local demo_name=$2
+        local timeout=${3}
+        local waited=0
+
+        # 轮询等待子进程退出，避免 wait 无边界阻塞整个流水线。
+        while kill -0 "${demo_pid}" 2>/dev/null; do
+            if [ "${waited}" -ge "${timeout}" ]; then
+                echo "Demo ${demo_name} timeout after ${timeout}s, killing pid ${demo_pid}"
+                kill "${demo_pid}" 2>/dev/null || true
+                sleep 1
+                kill -9 "${demo_pid}" 2>/dev/null || true
+                wait "${demo_pid}" 2>/dev/null || true
+                return 124
+            fi
+            sleep 1
+            waited=$((waited + 1))
+        done
+
+        wait "${demo_pid}"
+        return $?
+    }
+
     # run server and client in order.
     ./server &
     server_pid=$!
@@ -321,11 +354,13 @@ run_demos()
     ./client
     client_rc=$?
     if [ $client_rc -ne 0 ]; then
+        kill "${server_pid}" 2>/dev/null || true
+        wait "${server_pid}" 2>/dev/null || true
         echo "Demo client failed"
         exit 1
     fi
-    # wait server to exit and get exit code
-    wait $server_pid
+    # 为服务端退出增加超时边界，避免 demo 进程长期挂起。
+    wait_demo_process "$server_pid" "server" "${DEMO_WAIT_TIMEOUT}"
     server_rc=$?
     if [ $server_rc -ne 0 ]; then
         echo "Demo server failed"
@@ -340,10 +375,12 @@ run_demos()
     tlcp_client_rc=$?
     echo "tlcp_client_rc: $tlcp_client_rc"
     if [ $tlcp_client_rc -ne 0 ]; then
+        kill "${tlcp_server_pid}" 2>/dev/null || true
+        wait "${tlcp_server_pid}" 2>/dev/null || true
         echo "Demo tlcp client failed"
         exit 1
     fi
-    wait $tlcp_server_pid
+    wait_demo_process "$tlcp_server_pid" "tlcp_server" "${DEMO_WAIT_TIMEOUT}"
     tlcp_server_rc=$?
     echo "tlcp_server_rc: $tlcp_server_rc"
     if [ $tlcp_server_rc -ne 0 ]; then

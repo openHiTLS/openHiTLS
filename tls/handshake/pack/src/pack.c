@@ -118,6 +118,9 @@ static int32_t PackTls13HsMsgBody(TLS_Ctx *ctx, HS_MsgType type, PackPacket *pkt
         case CERTIFICATE:
             ret = Tls13PackCertificate(ctx, pkt);
             break;
+        case COMPRESSED_CERTIFICATE:
+            ret = Tls13PackCompressedCertificate(ctx, pkt);
+            break;
         case CERTIFICATE_VERIFY:
             ret = PackCertificateVerify(ctx, pkt);
             break;

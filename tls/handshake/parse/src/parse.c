@@ -88,7 +88,7 @@ static int32_t CheckCertificateRequestType(TLS_Ctx *ctx, const HS_MsgType msgTyp
 #ifdef HITLS_TLS_PROTO_TLS13
     uint32_t version = GET_VERSION_FROM_CTX(ctx);
     if (version == HITLS_VERSION_TLS13) {
-        if (msgType == CERTIFICATE) {
+        if (msgType == CERTIFICATE || msgType == COMPRESSED_CERTIFICATE) {
             (void)HS_ChangeState(ctx, TRY_RECV_CERTIFICATE);
             return HITLS_SUCCESS;
         }
@@ -105,6 +105,22 @@ static int32_t CheckCertificateRequestType(TLS_Ctx *ctx, const HS_MsgType msgTyp
     return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
 }
 
+static int32_t CheckCertificateType(TLS_Ctx *ctx, const HS_MsgType msgType)
+{
+#ifndef HITLS_TLS_PROTO_TLS13
+    (void)ctx;
+    (void)msgType;
+#endif
+#ifdef HITLS_TLS_PROTO_TLS13
+    if (GET_VERSION_FROM_CTX(ctx) == HITLS_VERSION_TLS13 && msgType == COMPRESSED_CERTIFICATE) {
+        return HITLS_SUCCESS;
+    }
+#endif
+    BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17026, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+        "Check certificate type fail", 0, 0, 0, 0);
+    return HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE;
+}
+
 static const HsMsgTypeCheck g_checkHsMsgTypeList[] = {
     [TRY_RECV_CLIENT_HELLO] = {.msgType = CLIENT_HELLO,
                                .checkCb = NULL},
@@ -115,7 +131,7 @@ static const HsMsgTypeCheck g_checkHsMsgTypeList[] = {
 #ifdef HITLS_TLS_PROTO_TLS13
     [TRY_RECV_ENCRYPTED_EXTENSIONS] = {.msgType = ENCRYPTED_EXTENSIONS, .checkCb = NULL},
 #endif
-    [TRY_RECV_CERTIFICATE] = {.msgType = CERTIFICATE, .checkCb = NULL},
+    [TRY_RECV_CERTIFICATE] = {.msgType = CERTIFICATE, .checkCb = CheckCertificateType},
     [TRY_RECV_SERVER_KEY_EXCHANGE] = {.msgType = SERVER_KEY_EXCHANGE, .checkCb = CheckServerKeyExchangeType},
     [TRY_RECV_CERTIFICATE_REQUEST] = {.msgType = CERTIFICATE_REQUEST, .checkCb = CheckCertificateRequestType},
     [TRY_RECV_SERVER_HELLO_DONE] = {.msgType = SERVER_HELLO_DONE, .checkCb = NULL},
@@ -337,6 +353,8 @@ int32_t Tls13ParseHandShakeMsg(TLS_Ctx *ctx, const uint8_t *hsBodyData, uint32_t
 #endif /* HITLS_TLS_HOST_CLIENT */
         case CERTIFICATE:
             return Tls13ParseCertificate(ctx, hsBodyData, hsBodyLen, hsMsg);
+        case COMPRESSED_CERTIFICATE:
+            return Tls13ParseCompressedCertificate(ctx, hsBodyData, hsBodyLen, hsMsg);
         case CERTIFICATE_VERIFY:
             return ParseCertificateVerify(ctx, hsBodyData, hsBodyLen, hsMsg);
         case FINISHED:
@@ -484,6 +502,7 @@ void HS_CleanMsg(HS_Msg *hsMsg)
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
 #endif /* HITLS_TLS_HOST_CLIENT */
         case CERTIFICATE:
+        case COMPRESSED_CERTIFICATE:
             return CleanCertificate(&hsMsg->body.certificate);
 #if (defined(HITLS_TLS_HOST_SERVER) && defined(HITLS_TLS_FEATURE_CERT_MODE_CLIENT_VERIFY)) || \
     defined(HITLS_TLS_PROTO_TLS13)    

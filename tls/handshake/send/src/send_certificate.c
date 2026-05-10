@@ -17,6 +17,7 @@
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
 #include "hitls_error.h"
 #include "tls.h"
 #include "hs_ctx.h"
@@ -78,10 +79,52 @@ int32_t SendCertificateProcess(TLS_Ctx *ctx)
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
 #ifdef HITLS_TLS_PROTO_TLS13
+int32_t Tls13PackCertificate(TLS_Ctx *ctx, PackPacket *pkt);
+
+static int32_t BuildTls13CertificateBody(TLS_Ctx *ctx, uint8_t **body, uint32_t *bodyLen)
+{
+    uint8_t *tmpBuf = NULL;
+    uint32_t tmpBufLen = 0;
+    uint32_t tmpOffset = 0;
+    PackPacket tmpPkt = {.buf = &tmpBuf, .bufLen = &tmpBufLen, .bufOffset = &tmpOffset};
+    int32_t ret = Tls13PackCertificate(ctx, &tmpPkt);
+
+    if (ret != HITLS_SUCCESS) {
+        BSL_SAL_FREE(tmpBuf);
+        return ret;
+    }
+    *body = tmpBuf;
+    *bodyLen = tmpOffset;
+    return HITLS_SUCCESS;
+}
+
+static int32_t GetTls13CertMsgType(TLS_Ctx *ctx, HS_MsgType *msgType)
+{
+    uint8_t *certBody = NULL;
+    uint32_t certBodyLen = 0;
+    int32_t ret = HITLS_SUCCESS;
+
+    *msgType = CERTIFICATE;
+    if (!ctx->negotiatedInfo.isCertCompressionNegotiated) {
+        return HITLS_SUCCESS;
+    }
+
+    ret = BuildTls13CertificateBody(ctx, &certBody, &certBodyLen);
+    BSL_SAL_FREE(certBody);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    if (HS_ShouldSendCompressedCertificate(ctx, certBodyLen)) {
+        *msgType = COMPRESSED_CERTIFICATE;
+    }
+    return HITLS_SUCCESS;
+}
+
 int32_t Tls13ClientSendCertificateProcess(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
+    HS_MsgType msgType = CERTIFICATE;
 
     /* Determine whether the message needs to be packed */
     if (hsCtx->msgLen == 0) {
@@ -117,7 +160,11 @@ int32_t Tls13ClientSendCertificateProcess(TLS_Ctx *ctx)
             }
         }
 
-        ret = HS_PackMsg(ctx, CERTIFICATE);
+        ret = GetTls13CertMsgType(ctx, &msgType);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        ret = HS_PackMsg(ctx, msgType);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15763, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "pack tls1.3 client certificate msg fail.", 0, 0, 0, 0);
@@ -144,6 +191,7 @@ int32_t Tls13ServerSendCertificateProcess(TLS_Ctx *ctx)
 {
     int32_t ret = HITLS_SUCCESS;
     HS_Ctx *hsCtx = (HS_Ctx *)ctx->hsCtx;
+    HS_MsgType msgType = CERTIFICATE;
 
     /* Determine whether the message needs to be packed */
     if (hsCtx->msgLen == 0) {
@@ -155,7 +203,11 @@ int32_t Tls13ServerSendCertificateProcess(TLS_Ctx *ctx)
             return HITLS_MSG_HANDLE_ERR_NO_SERVER_CERTIFICATE;
         }
 
-        ret = HS_PackMsg(ctx, CERTIFICATE);
+        ret = GetTls13CertMsgType(ctx, &msgType);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        ret = HS_PackMsg(ctx, msgType);
         if (ret != HITLS_SUCCESS) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15766, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "pack server tls1.3 certificate msg fail.", 0, 0, 0, 0);

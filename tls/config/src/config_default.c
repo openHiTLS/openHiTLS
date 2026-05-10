@@ -307,6 +307,8 @@ static void BasicInitConfig(HITLS_Config *config)
 {
     config->emsMode = HITLS_EMS_MODE_PREFER;
     config->emptyRecordsNum = HITLS_MAX_EMPTY_RECORDS;
+    config->certCompressionThreshold = HITLS_CERT_COMPRESSION_THRESHOLD_DEFAULT;
+    config->certCompressionMaxUncompLen = HITLS_CERT_COMPRESSION_MAX_UNCOMP_LEN;
 #ifdef HITLS_TLS_PROTO_TLS13
     config->isMiddleBoxCompat = true;
 #endif
@@ -325,6 +327,7 @@ static void BasicInitConfig(HITLS_Config *config)
 #ifdef HITLS_TLS_FEATURE_ETM
     config->isEncryptThenMac = true;
 #endif
+    config->isSupportCertCompression = false;
 }
 static void InitConfig(HITLS_Config *config)
 {

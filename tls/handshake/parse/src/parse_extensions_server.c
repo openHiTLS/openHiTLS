@@ -834,6 +834,41 @@ static int32_t ParseClientRecordSizeLimit(ParsePacket *pkt, ClientHelloMsg *msg)
 }
 #endif
 
+#ifdef HITLS_TLS_PROTO_TLS13
+static int32_t ParseClientCertCompression(ParsePacket *pkt, ClientHelloMsg *msg)
+{
+    uint8_t algListLen = 0;
+    uint16_t *algs = NULL;
+    uint32_t algCount = 0;
+    int32_t ret = ParseBytesToUint8(pkt, &algListLen);
+
+    if (msg->extension.flag.haveCertCompression == true) {
+        return ParseDupExtProcess(pkt->ctx, BINLOG_ID15188, BINGLOG_STR("compress_certificate"));
+    }
+    if (ret != HITLS_SUCCESS || algListLen == 0 || (algListLen % sizeof(uint16_t)) != 0 ||
+        (pkt->bufLen - *pkt->bufOffset) != algListLen) {
+        return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15188, BINGLOG_STR("compress_certificate"));
+    }
+
+    algCount = algListLen / sizeof(uint16_t);
+    algs = (uint16_t *)BSL_SAL_Calloc(algCount, sizeof(uint16_t));
+    if (algs == NULL) {
+        return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15188,
+            BINGLOG_STR("compress_certificate malloc fail"), ALERT_INTERNAL_ERROR);
+    }
+
+    for (uint32_t i = 0; i < algCount; i++) {
+        algs[i] = BSL_ByteToUint16(&pkt->buf[*pkt->bufOffset]);
+        *pkt->bufOffset += sizeof(uint16_t);
+    }
+
+    msg->extension.content.certCompressionAlgs = algs;
+    msg->extension.content.certCompressionAlgsSize = (uint16_t)algCount;
+    msg->extension.flag.haveCertCompression = true;
+    return HITLS_SUCCESS;
+}
+#endif
+
 // parses the extension message from client
 static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_t *buf, uint32_t extMsgLen,
     ClientHelloMsg *msg)
@@ -858,6 +893,7 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
 #endif
 #ifdef HITLS_TLS_PROTO_TLS13
         { .exMsgType = HS_EX_TYPE_SUPPORTED_VERSIONS, .parseFunc = ParseClientSupportedVersions},
+        { .exMsgType = HS_EX_TYPE_COMPRESS_CERTIFICATE, .parseFunc = ParseClientCertCompression},
         { .exMsgType = HS_EX_TYPE_PRE_SHARED_KEY, .parseFunc = ParseClientPreSharedKey},
         { .exMsgType = HS_EX_TYPE_PSK_KEY_EXCHANGE_MODES, .parseFunc = ParseClientPskKeyExModes},
         { .exMsgType = HS_EX_TYPE_COOKIE, .parseFunc = ParseClientCookie},
@@ -1013,6 +1049,7 @@ void CleanClientHelloExtension(ClientHelloMsg *msg)
     BSL_SAL_FREE(msg->extension.content.ticket);
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
 #ifdef HITLS_TLS_PROTO_TLS13
+    BSL_SAL_FREE(msg->extension.content.certCompressionAlgs);
     BSL_SAL_FREE(msg->extension.content.signatureAlgorithmsCert);
     BSL_SAL_FREE(msg->extension.content.supportedVersions);
     BSL_SAL_FREE(msg->extension.content.keModes);

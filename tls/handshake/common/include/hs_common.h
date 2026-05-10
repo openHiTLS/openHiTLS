@@ -43,6 +43,7 @@ extern "C" {
 #define HITLS_NEXT_PROTO_MAX_SIZE           514
 #define HITLS_FINISHED_MAX_SIZE             64
 #define HITLS_HELLO_REQUEST_MAX_SIZE        0
+#define HITLS_CERT_COMPRESS_MAX_WORST_RATIO 2u
 
 enum HITLS_CryptInfoCmd {
     HITLS_CRYPT_INFO_CMD_GET_PUBLIC_KEY_LEN = 0, /* Get the length of the public key, param is HITLS_NamedGroup */
@@ -210,6 +211,16 @@ uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type);
  * @return Binder length
  */
 uint32_t HS_GetBinderLen(HITLS_Session *session, HITLS_HashAlgo* hashAlg);
+
+bool HS_IsCertCompressionEnabled(const TLS_Ctx *ctx);
+bool HS_IsCertCompressionAlgConfigured(const TLS_Ctx *ctx, uint16_t algorithm);
+int32_t HS_SelectCertCompressionAlg(TLS_Ctx *ctx, const uint16_t *peerAlgs, uint16_t peerAlgCount);
+bool HS_ShouldSendCompressedCertificate(const TLS_Ctx *ctx, uint32_t certMsgLen);
+int32_t HS_CompressCertificate(const TLS_Ctx *ctx, uint16_t algorithm, const uint8_t *in, uint32_t inLen,
+    uint8_t *out, uint32_t *outLen);
+int32_t HS_DecompressCertificate(const TLS_Ctx *ctx, uint16_t algorithm, const uint8_t *in, uint32_t inLen,
+    uint8_t *out, uint32_t *outLen);
+uint32_t HS_GetCertCompressionBound(uint16_t algorithm, uint32_t inLen);
 
 /**
  * @brief  Check whether the current version supports this group.

@@ -2267,6 +2267,12 @@ static int32_t Tls13ServerPostCheckClientHello(TLS_Ctx *ctx, ClientHelloMsg *cli
     if (ret != HITLS_SUCCESS) {
         return ret;
     }
+    ctx->negotiatedInfo.isCertCompressionNegotiated = false;
+    ctx->negotiatedInfo.certCompressionAlg = 0;
+    if (clientHello->extension.flag.haveCertCompression) {
+        (void)HS_SelectCertCompressionAlg(ctx, clientHello->extension.content.certCompressionAlgs,
+            clientHello->extension.content.certCompressionAlgsSize);
+    }
     return Tls13ServerSelectCert(ctx, clientHello);
 }
 

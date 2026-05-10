@@ -67,6 +67,7 @@ typedef enum {
     CERTIFICATION_STATUS = 22,
     SUPPLEMENTAL_DATA = 23,
     KEY_UPDATE = 24,
+    COMPRESSED_CERTIFICATE = 25,
     MESSAGE_HASH = 254,
     HS_MSG_TYPE_END = 255
 } HS_MsgType;
@@ -108,6 +109,7 @@ typedef struct {
     uint8_t *serverName;    /* serverName after parsing */
     uint8_t *secRenegoInfo; /* renegotiation extension information */
     uint8_t *ticket;        /* ticket information */
+    uint16_t *certCompressionAlgs;
 
     uint32_t ticketSize;
     uint16_t supportedGroupsSize;
@@ -116,6 +118,7 @@ typedef struct {
     uint16_t alpnListSize; /* application-layer protocol negotiation list len */
     uint16_t serverNameSize;
     uint16_t recordSizeLimit;
+    uint16_t certCompressionAlgsSize;
     uint8_t pointFormatsSize;
     uint8_t serverNameType;    /* Type of the parsed serverName. */
     uint8_t secRenegoInfoSize; /* Length of the security renegotiation information */
@@ -155,6 +158,7 @@ typedef struct {
     bool haveTicket;         /* Indicates whether a ticket is available. */
     bool haveEncryptThenMac; /* Indicates whether EncryptThenMac is supported. */
     bool haveRecordSizeLimit;
+    bool haveCertCompression;
 } ExtensionFlag;
 
 typedef struct {

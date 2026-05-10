@@ -57,6 +57,11 @@ if(HITLS_BSL_BUFFER)
     add_subdirectory(buffer)
 endif()
 
+# COMP - Compression framework
+if(HITLS_BSL_COMP)
+    add_subdirectory(comp)
+endif()
+
 # CONF - Configuration
 if(HITLS_BSL_CONF)
     add_subdirectory(conf)

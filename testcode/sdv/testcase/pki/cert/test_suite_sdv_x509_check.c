@@ -1003,8 +1003,8 @@ EXIT:
 void SDV_X509_CERT_WITH_AKISKI_GEN_TEST_TC001(int isCritical, Hex *kid, int algId,
     int hashId, int curveId, int hasAki, int hasSki)
 {
-    char *path = "tmp.cert";
-    char *expectPath = "exp.cert";
+    char *path = "tmp_x509_check.cert";
+    char *expectPath = "exp_x509_check.cert";
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *parsedCert = NULL;
     HITLS_X509_ExtAki parsedAki = {0};
@@ -1169,8 +1169,8 @@ void SDV_X509_CERT_WITH_KUSAGE_GEN_TEST_TC001(int isCritical, int algId, int has
     int expKuDigitailSign, int expKuNonRepudiation, int expKuKeyEncipherment, int expKuDataEncipherment,
     int expKuAgreement, int expKuCertSign, int expKuCrlSign, int expKuEncipherOnly, int expKuDecipherOnly)
 {
-    char *path = "tmp.cert";
-    char *expectPath = "exp.cert";
+    char *path = "tmp_x509_check.cert";
+    char *expectPath = "exp_x509_check.cert";
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *parsedCert = NULL;
     BslList *dnList = NULL;
@@ -1362,8 +1362,8 @@ EXIT:
 void SDV_X509_CERT_WITH_SAN_GEN_TEST_TC001(int isCritical, int algId, int hashId,
     int curveId, char *nameValue, int nameType)
 {
-    char *path = "tmp.cert";
-    char *expectPath = "exp.cert";
+    char *path = "tmp_x509_check.cert";
+    char *expectPath = "exp_x509_check.cert";
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *parsedCert = NULL;
     BslList *dnList = NULL;
@@ -1438,8 +1438,8 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_WITH_SAN_ALL_GEN_TEST_TC001(int isCritical, int algId, int hashId, int curveId)
 {
-    char *path = "tmp.cert";
-    char *expectPath = "exp.cert";
+    char *path = "tmp_x509_check.cert";
+    char *expectPath = "exp_x509_check.cert";
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *parsedCert = NULL;
     BslList *dnList = NULL;
@@ -1718,8 +1718,8 @@ EXIT:
 void SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001(int isCritical, int isCa, int maxPathLen,
     int algId, int hashId, int curveId)
 {
-    char *path = "tmp.cert";
-    char *expectPath = "exp.cert";
+    char *path = "tmp_x509_check.cert";
+    char *expectPath = "exp_x509_check.cert";
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *parsedCert = NULL;
     BslList *dnList = NULL;
@@ -1821,8 +1821,8 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_WITH_EXTKU_GEN_TEST_TC001(int isCritical, int oidNum, int algId, int hashId, int curveId)
 {
-    char *path = "tmp.cert";
-    char *expectPath = "exp.cert";
+    char *path = "tmp_x509_check.cert";
+    char *expectPath = "exp_x509_check.cert";
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *parsedCert = NULL;
     BslList *dnList = NULL;
@@ -1912,8 +1912,8 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_WITH_EXTKU_WITH_ANYKU_GEN_TEST_TC001(int isCritical, int algId, int hashId, int curveId)
 {
-    char *path = "tmp.cert";
-    char *expectPath = "exp.cert";
+    char *path = "tmp_x509_check.cert";
+    char *expectPath = "exp_x509_check.cert";
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *parsedCert = NULL;
     BslList *dnList = NULL;
@@ -2101,8 +2101,8 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_WITH_DUPLICATE_EXT_GEN_TEST_TC001(int isCritical, Hex *kid, int algId, int hashId, int curveId)
 {
-    char *path = "tmp.cert";
-    char *expectPath = "exp.cert";
+    char *path = "tmp_x509_check.cert";
+    char *expectPath = "exp_x509_check.cert";
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *parsedCert = NULL;
     HITLS_X509_ExtAki parsedAki = {0};
@@ -2181,8 +2181,8 @@ EXIT:
 /* BEGIN_CASE */
 void SDV_X509_CERT_WITH_ALL_EXT_GEN_TEST_TC001(Hex *kid, int algId, int hashId, int curveId)
 {
-    char *path = "tmp.cert";
-    char *expectPath = "exp.cert";
+    char *path = "tmp_x509_check.cert";
+    char *expectPath = "exp_x509_check.cert";
     HITLS_X509_Cert *cert = NULL;
     HITLS_X509_Cert *parsedCert = NULL;
     HITLS_X509_ExtAki parsedAki = {0};

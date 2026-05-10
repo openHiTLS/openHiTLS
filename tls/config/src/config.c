@@ -62,6 +62,7 @@ void CFG_CleanConfig(HITLS_Config *config)
 #ifdef HITLS_TLS_PROTO_TLS13
     BSL_SAL_FREE(config->tls13CipherSuites);
 #endif
+    BSL_SAL_FREE(config->certCompressionAlgs);
     BSL_SAL_FREE(config->pointFormats);
     BSL_SAL_FREE(config->groups);
     BSL_SAL_FREE(config->tuples);
@@ -146,6 +147,9 @@ static void ShallowCopy(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
     destConfig->endpoint = srcConfig->endpoint;
 #ifdef HITLS_TLS_PROTO_TLS13
     destConfig->isMiddleBoxCompat = srcConfig->isMiddleBoxCompat;
+    destConfig->isSupportCertCompression = srcConfig->isSupportCertCompression;
+    destConfig->certCompressionThreshold = srcConfig->certCompressionThreshold;
+    destConfig->certCompressionMaxUncompLen = srcConfig->certCompressionMaxUncompLen;
 #endif
 #ifdef HITLS_TLS_FEATURE_MAX_SEND_FRAGMENT
     destConfig->maxSendFragment = srcConfig->maxSendFragment;
@@ -558,6 +562,19 @@ static int32_t BasicConfigDeepCopy(HITLS_Config *destConfig, const HITLS_Config 
     return HITLS_SUCCESS;
 }
 
+static int32_t CertCompressionCfgDeepCopy(HITLS_Config *destConfig, const HITLS_Config *srcConfig)
+{
+    if (srcConfig->certCompressionAlgs != NULL && srcConfig->certCompressionAlgsSize != 0) {
+        int32_t ret = DeepCopy((void **)&destConfig->certCompressionAlgs, srcConfig->certCompressionAlgs,
+            BINLOG_ID16593, srcConfig->certCompressionAlgsSize * sizeof(uint16_t));
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+        destConfig->certCompressionAlgsSize = srcConfig->certCompressionAlgsSize;
+    }
+    return HITLS_SUCCESS;
+}
+
 int32_t DumpConfig(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
 {
     int32_t ret;
@@ -582,6 +599,10 @@ int32_t DumpConfig(HITLS_Ctx *ctx, const HITLS_Config *srcConfig)
     }
 
     ret = SignAlgorithmsCfgDeepCopy(destConfig, srcConfig);
+    if (ret != HITLS_SUCCESS) {
+        goto EXIT;
+    }
+    ret = CertCompressionCfgDeepCopy(destConfig, srcConfig);
     if (ret != HITLS_SUCCESS) {
         goto EXIT;
     }

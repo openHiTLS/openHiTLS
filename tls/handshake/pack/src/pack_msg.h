@@ -76,6 +76,7 @@ int32_t PackEncryptedExtensions(const TLS_Ctx *ctx, PackPacket *pkt);
  * @retval  For other error codes, see hitls_error.h
  */
 int32_t Tls13PackCertificate(TLS_Ctx *ctx, PackPacket *pkt);
+int32_t Tls13PackCompressedCertificate(TLS_Ctx *ctx, PackPacket *pkt);
 /**
  * @brief   Pack certificate message
  *

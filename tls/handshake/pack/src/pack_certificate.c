@@ -15,6 +15,7 @@
 
 #include <stdint.h>
 #include "hitls_build.h"
+#include "bsl_sal.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -26,6 +27,7 @@
 #include "hs_common.h"
 #include "hs_extensions.h"
 #include "pack_common.h"
+#include "pack_msg.h"
 
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 int32_t PackCertificate(TLS_Ctx *ctx, PackPacket *pkt)
@@ -51,6 +53,23 @@ int32_t PackCertificate(TLS_Ctx *ctx, PackPacket *pkt)
 }
 #endif /* HITLS_TLS_PROTO_TLS_BASIC || HITLS_TLS_PROTO_DTLS12 */
 #ifdef HITLS_TLS_PROTO_TLS13
+static int32_t BuildTls13CertificateBody(TLS_Ctx *ctx, uint8_t **body, uint32_t *bodyLen)
+{
+    uint8_t *tmpBuf = NULL;
+    uint32_t tmpBufLen = 0;
+    uint32_t tmpOffset = 0;
+    PackPacket tmpPkt = {.buf = &tmpBuf, .bufLen = &tmpBufLen, .bufOffset = &tmpOffset};
+    int32_t ret = Tls13PackCertificate(ctx, &tmpPkt);
+
+    if (ret != HITLS_SUCCESS) {
+        BSL_SAL_FREE(tmpBuf);
+        return ret;
+    }
+    *body = tmpBuf;
+    *bodyLen = tmpOffset;
+    return HITLS_SUCCESS;
+}
+
 int32_t Tls13PackCertificate(TLS_Ctx *ctx, PackPacket *pkt)
 {
     int32_t ret = PackCertificateReqCtx(ctx, pkt);
@@ -76,5 +95,52 @@ int32_t Tls13PackCertificate(TLS_Ctx *ctx, PackPacket *pkt)
     /* Close certificate list length field */
     PackCloseUint24Field(pkt, certListLenPosition);
     return HITLS_SUCCESS;
+}
+
+int32_t Tls13PackCompressedCertificate(TLS_Ctx *ctx, PackPacket *pkt)
+{
+    uint8_t *certBody = NULL;
+    uint8_t *compressed = NULL;
+    uint32_t certBodyLen = 0;
+    uint32_t compressedLen = 0;
+    int32_t ret = BuildTls13CertificateBody(ctx, &certBody, &certBodyLen);
+
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+    if (certBodyLen > ctx->config.tlsConfig.certCompressionMaxUncompLen) {
+        BSL_SAL_FREE(certBody);
+        return HITLS_PACK_NOT_ENOUGH_BUF_LENGTH;
+    }
+
+    compressedLen = HS_GetCertCompressionBound(ctx->negotiatedInfo.certCompressionAlg, certBodyLen);
+    if (compressedLen == 0) {
+        BSL_SAL_FREE(certBody);
+        return HITLS_CONFIG_INVALID_SET;
+    }
+    compressed = (uint8_t *)BSL_SAL_Malloc(compressedLen);
+    if (compressed == NULL) {
+        BSL_SAL_FREE(certBody);
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    ret = HS_CompressCertificate(ctx, ctx->negotiatedInfo.certCompressionAlg, certBody, certBodyLen,
+        compressed, &compressedLen);
+    if (ret == HITLS_SUCCESS) {
+        ret = PackAppendUint16ToBuf(pkt, ctx->negotiatedInfo.certCompressionAlg);
+    }
+    if (ret == HITLS_SUCCESS) {
+        ret = PackAppendUint24ToBuf(pkt, certBodyLen);
+    }
+    if (ret == HITLS_SUCCESS) {
+        ret = PackAppendUint24ToBuf(pkt, compressedLen);
+    }
+    if (ret == HITLS_SUCCESS) {
+        ret = PackAppendDataToBuf(pkt, compressed, compressedLen);
+    }
+
+    BSL_SAL_FREE(compressed);
+    BSL_SAL_FREE(certBody);
+    return ret;
 }
 #endif

@@ -83,6 +83,8 @@
 #cmakedefine HITLS_BSL_ASN1
 #cmakedefine HITLS_BSL_BASE64
 #cmakedefine HITLS_BSL_BUFFER
+#cmakedefine HITLS_BSL_COMP
+#cmakedefine HITLS_BSL_COMP_ZLIB
 #cmakedefine HITLS_BSL_CONF
 #cmakedefine HITLS_BSL_ERR
 #cmakedefine HITLS_BSL_HASH

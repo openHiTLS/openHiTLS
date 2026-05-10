@@ -14,6 +14,7 @@
  */
 #include "hitls_build.h"
 #include <string.h>
+#include "bsl_bytes.h"
 #include "tls_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_log.h"
@@ -69,7 +70,9 @@ int32_t ParseSingleCert(ParsePacket *pkt, CERT_Item **certItem)
         return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15589,
             BINGLOG_STR("item->data malloc fail."), ALERT_UNKNOWN);
     }
-    memcpy(item->data, &pkt->buf[*pkt->bufOffset], item->dataSize);
+    for (uint32_t i = 0; i < item->dataSize; i++) {
+        item->data[i] = pkt->buf[*pkt->bufOffset + i];
+    }
     *pkt->bufOffset += certLen;
     *certItem = item;
 
@@ -256,7 +259,9 @@ int32_t Tls13ParseCertificateReqCtx(ParsePacket *pkt, HS_Msg *hsMsg)
             return ParseErrorProcess(pkt->ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15596,
                 BINGLOG_STR("certificateReqCtx malloc fail."), ALERT_UNKNOWN);
         }
-        memcpy(certMsg->certificateReqCtx, &pkt->buf[*pkt->bufOffset], certReqCtxLen);
+        for (uint16_t i = 0; i < certReqCtxLen; i++) {
+            certMsg->certificateReqCtx[i] = pkt->buf[*pkt->bufOffset + i];
+        }
         *pkt->bufOffset += certReqCtxLen;
     }
     return HITLS_SUCCESS;
@@ -310,6 +315,56 @@ int32_t Tls13ParseCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen,
     }
 
     return HITLS_SUCCESS;
+}
+
+int32_t Tls13ParseCompressedCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg)
+{
+    uint16_t algorithm = 0;
+    uint32_t uncompressedLen = 0;
+    uint32_t compressedLen = 0;
+    uint32_t decodedLen = 0;
+    uint8_t *decoded = NULL;
+    int32_t ret;
+
+    if (bufLen < sizeof(uint16_t) + UINT24_SIZE + UINT24_SIZE + 1u) {
+        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15598,
+            BINGLOG_STR("compressed certificate msg len invalid"), ALERT_DECODE_ERROR);
+    }
+
+    algorithm = BSL_ByteToUint16(buf);
+    uncompressedLen = BSL_ByteToUint24(buf + sizeof(uint16_t));
+    compressedLen = BSL_ByteToUint24(buf + sizeof(uint16_t) + UINT24_SIZE);
+    if (compressedLen == 0 || compressedLen != (bufLen - sizeof(uint16_t) - UINT24_SIZE - UINT24_SIZE)) {
+        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15598,
+            BINGLOG_STR("compressed certificate len invalid"), ALERT_DECODE_ERROR);
+    }
+    if (!HS_IsCertCompressionEnabled(ctx) || !HS_IsCertCompressionAlgConfigured(ctx, algorithm) ||
+        uncompressedLen == 0 || uncompressedLen > ctx->config.tlsConfig.certCompressionMaxUncompLen) {
+        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15598,
+            BINGLOG_STR("compressed certificate parameters invalid"), ALERT_ILLEGAL_PARAMETER);
+    }
+
+    ctx->negotiatedInfo.isCertCompressionNegotiated = true;
+    ctx->negotiatedInfo.certCompressionAlg = algorithm;
+
+    decoded = (uint8_t *)BSL_SAL_Malloc(uncompressedLen);
+    if (decoded == NULL) {
+        return ParseErrorProcess(ctx, HITLS_MEMALLOC_FAIL, BINLOG_ID15598,
+            BINGLOG_STR("compressed certificate malloc fail"), ALERT_INTERNAL_ERROR);
+    }
+    decodedLen = uncompressedLen;
+    ret = HS_DecompressCertificate(ctx, algorithm, buf + sizeof(uint16_t) + UINT24_SIZE + UINT24_SIZE, compressedLen,
+        decoded, &decodedLen);
+    if (ret != HITLS_SUCCESS || decodedLen != uncompressedLen) {
+        BSL_SAL_FREE(decoded);
+        return ParseErrorProcess(ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID15598,
+            BINGLOG_STR("compressed certificate decode fail"), ALERT_DECODE_ERROR);
+    }
+
+    ctx->negotiatedInfo.certCompressionUncompLen = uncompressedLen;
+    ret = Tls13ParseCertificate(ctx, decoded, decodedLen, hsMsg);
+    BSL_SAL_FREE(decoded);
+    return ret;
 }
 #endif /* HITLS_TLS_PROTO_TLS13 */
 //  Clear the memory applied for in the certificate message structure.

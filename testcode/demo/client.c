@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -24,7 +23,6 @@
 
 #define CERTS_PATH      "../../../testcode/testdata/tls/certificate/der/ecdsa_sha256/"
 #define HTTP_BUF_MAXLEN (18 * 1024) /* 18KB */
-
 int main(int32_t argc, char *argv[])
 {
     int32_t exitValue = -1;
@@ -32,7 +30,7 @@ int main(int32_t argc, char *argv[])
     HITLS_Config *config = NULL;
     HITLS_Ctx *ctx = NULL;
     BSL_UIO *uio = NULL;
-    int fd = 0;
+    int fd = -1;
     HITLS_X509_Cert *rootCA = NULL;
     HITLS_X509_Cert *subCA = NULL;
 
@@ -53,6 +51,7 @@ int main(int32_t argc, char *argv[])
     int option = 1;
     if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option)) < 0) {
         close(fd);
+        fd = -1;
         printf("setsockopt SO_REUSEADDR failed.\n");
         goto EXIT;
     }
@@ -80,7 +79,7 @@ int main(int32_t argc, char *argv[])
         goto EXIT;
     }
 
-    /* 加载证书：需要用户实现 */
+    /* Load certificates as needed for the local deployment. */
     ret = HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, CERTS_PATH "ca.der", &rootCA);
     if (ret != HITLS_SUCCESS) {
         printf("Parse ca failed.\n");
@@ -91,10 +90,18 @@ int main(int32_t argc, char *argv[])
         printf("Parse subca failed.\n");
         goto EXIT;
     }
-    HITLS_CFG_AddCertToStore(config, rootCA, TLS_CERT_STORE_TYPE_DEFAULT, true);
-    HITLS_CFG_AddCertToStore(config, subCA, TLS_CERT_STORE_TYPE_DEFAULT, true);
+    ret = HITLS_CFG_AddCertToStore(config, rootCA, TLS_CERT_STORE_TYPE_DEFAULT, true);
+    if (ret != HITLS_SUCCESS) {
+        printf("Add root CA to store failed, ret = 0x%x.\n", ret);
+        goto EXIT;
+    }
+    ret = HITLS_CFG_AddCertToStore(config, subCA, TLS_CERT_STORE_TYPE_DEFAULT, true);
+    if (ret != HITLS_SUCCESS) {
+        printf("Add intermediate CA to store failed, ret = 0x%x.\n", ret);
+        goto EXIT;
+    }
 
-    /* 新建openHiTLS上下文 */
+    /* Create the openHiTLS context. */
     ctx = HITLS_New(config);
     if (ctx == NULL) {
         printf("HITLS_New failed.\n");
@@ -110,6 +117,7 @@ int main(int32_t argc, char *argv[])
     ret = BSL_UIO_Ctrl(uio, BSL_UIO_SET_FD, (int32_t)sizeof(fd), &fd);
     if (ret != HITLS_SUCCESS) {
         BSL_UIO_Free(uio);
+        uio = NULL;
         printf("BSL_UIO_SET_FD failed, fd = %u.\n", fd);
         goto EXIT;
     }
@@ -117,18 +125,19 @@ int main(int32_t argc, char *argv[])
     ret = HITLS_SetUio(ctx, uio);
     if (ret != HITLS_SUCCESS) {
         BSL_UIO_Free(uio);
+        uio = NULL;
         printf("HITLS_SetUio failed. ret = 0x%x.\n", ret);
         goto EXIT;
     }
 
-    /* 进行TLS连接、用户需按实际场景考虑返回值 */
+    /* Establish the TLS connection. Handle the return value as needed by the caller. */
     ret = HITLS_Connect(ctx);
     if (ret != HITLS_SUCCESS) {
         printf("HITLS_Connect failed, ret = 0x%x.\n", ret);
         goto EXIT;
     }
 
-    /* 向对端发送报文、用户需按实际场景考虑返回值 */
+    /* Send application data. Handle the return value as needed by the caller. */
     const uint8_t sndBuf[] = "Hi, this is client\n";
     uint32_t writeLen = 0;
     ret = HITLS_Write(ctx, sndBuf, sizeof(sndBuf), &writeLen);
@@ -137,7 +146,7 @@ int main(int32_t argc, char *argv[])
         goto EXIT;
     }
 
-    /* 读取对端报文、用户需按实际场景考虑返回值 */
+    /* Read peer data. Handle the return value as needed by the caller. */
     uint8_t readBuf[HTTP_BUF_MAXLEN + 1] = {0};
     uint32_t readLen = 0;
     ret = HITLS_Read(ctx, readBuf, HTTP_BUF_MAXLEN, &readLen);
@@ -150,10 +159,14 @@ int main(int32_t argc, char *argv[])
 
     exitValue = 0;
 EXIT:
-    HITLS_Close(ctx);
+    if (ctx != NULL) {
+        HITLS_Close(ctx);
+    }
     HITLS_Free(ctx);
     HITLS_CFG_FreeConfig(config);
-    close(fd);
+    if (fd >= 0) {
+        close(fd);
+    }
     HITLS_X509_CertFree(rootCA);
     HITLS_X509_CertFree(subCA);
     BSL_UIO_Free(uio);

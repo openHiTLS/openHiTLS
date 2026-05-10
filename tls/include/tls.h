@@ -233,8 +233,11 @@ typedef struct {
     uint16_t recordSizeLimit;                      /* read record size limit */
     uint16_t renegoRecordSizeLimit;
     uint16_t peerRecordSizeLimit;                  /* write record size limit */
+    uint16_t certCompressionAlg;                   /* negotiated certificate compression algorithm */
+    uint32_t certCompressionUncompLen;
     bool isResume;                                 /* whether to resume the session */
     bool isRenegotiation;                          /* whether to renegotiate */
+    bool isCertCompressionNegotiated;              /* whether RFC 8879 was negotiated */
 
     bool isSecureRenegotiation;                    /* whether security renegotiation */
     bool isExtendedMasterSecret;                   /* whether to calculate the extended master sercret */

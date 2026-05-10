@@ -156,8 +156,8 @@ int32_t BSL_LIST_AddElement(BslList *pList, void *pData, BslListPosition enPosit
         return BSL_INVALID_ARG;
     }
 
-    /* we are doing a range checking. the same thing is done in another way for clarity */
-    if (enPosition < BSL_LIST_POS_BEFORE || enPosition > BSL_LIST_POS_END) {
+    /* 枚举最小值固定为 0，仅保留有效的上界检查，避免无意义的下界比较触发告警。 */
+    if (enPosition > BSL_LIST_POS_END) {
         BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
         return BSL_INVALID_ARG;
     }

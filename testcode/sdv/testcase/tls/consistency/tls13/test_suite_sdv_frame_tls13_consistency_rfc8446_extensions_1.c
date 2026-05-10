@@ -17,6 +17,7 @@
 /* INCLUDE_BASE test_suite_tls13_consistency_rfc8446 */
 
 #include <stdio.h>
+#include <string.h>
 #include "hitls.h"
 #include "hitls_config.h"
 #include "hitls_error.h"
@@ -32,7 +33,6 @@
 #include "parser_frame_msg.h"
 #include "rec_wrapper.h"
 #include "cert.h"
-#include <string.h>
 #include "process.h"
 #include "conn_init.h"
 #include "hitls_crypt_init.h"
@@ -40,8 +40,35 @@
 #include "common_func.h"
 #include "alert.h"
 #include "bsl_sal.h"
+#ifdef HITLS_BSL_COMP_ZLIB
+#define SKIP_IF_ZLIB_UNSUPPORTED()
+#else
+#define SKIP_IF_ZLIB_UNSUPPORTED() SKIP_TEST()
+#endif
 /* END_HEADER */
 #define MAX_BUF 16384
+#define EOK 0
+
+static int TestMemcpyS(void *dest, size_t destMax, const void *src, size_t count)
+{
+    if (dest == NULL || src == NULL || count > destMax) {
+        return -1;
+    }
+    (void)memcpy(dest, src, count);
+    return EOK;
+}
+
+static int TestMemsetS(void *dest, size_t destMax, int c, size_t count)
+{
+    if (dest == NULL || count > destMax) {
+        return -1;
+    }
+    (void)memset(dest, c, count);
+    return EOK;
+}
+
+#define memcpy_s TestMemcpyS
+#define memset_s TestMemsetS
 
 typedef struct {
     uint16_t version;
@@ -91,12 +118,10 @@ static void Test_PskGetCert(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32
     frameMsg.length.data = *len;
     frameMsg.recVersion.data = HITLS_VERSION_TLS13;
     if (user != NULL) {  // cert message
-        ASSERT_TRUE(*len <= (MAX_BUF));
-        memcpy(certBuf, data, *len);
+        ASSERT_EQ(memcpy_s(certBuf, MAX_BUF, data, *len), EOK);
         bufLen = *len;
     } else {
-        ASSERT_TRUE(bufLen <= bufSize);
-        memcpy(data, certBuf, bufLen);
+        ASSERT_EQ(memcpy_s(data, bufSize, certBuf, bufLen), EOK);
         *len = bufLen;
     }
 EXIT:
@@ -198,12 +223,10 @@ static void Test_PskGetCertReq(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uin
     frameMsg.length.data = *len;
     frameMsg.recVersion.data = HITLS_VERSION_TLS13;
     if (user != NULL) {  // cert message
-        ASSERT_TRUE(*len <= (READ_BUF_SIZE));
-        memcpy(certBuf, data, *len);
+        ASSERT_EQ(memcpy_s(certBuf, READ_BUF_SIZE, data, *len), EOK);
         bufLen = *len;
     } else {
-        ASSERT_TRUE(bufLen <= bufSize);
-        memcpy(data, certBuf, bufLen);
+        ASSERT_EQ(memcpy_s(data, bufSize, certBuf, bufLen), EOK);
         *len = bufLen;
     }
 EXIT:
@@ -452,11 +475,11 @@ static void Test_ErrorOrderPsk(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uin
     frameMsg.body.hsMsg.body.clientHello.extensionLen.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.length.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.body.clientHello.pskModes.exState = MISSING_FIELD;
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
     uint8_t pskMode[] = {0, 0x2d, 0, 2, 1, 1};  // psk with dhe mode
     ASSERT_NE(parseLen, *len);
-    memcpy(&data[*len], &pskMode, sizeof(pskMode));
+    ASSERT_EQ(memcpy_s(&data[*len], bufSize - *len, &pskMode, sizeof(pskMode)), EOK);
     *len += sizeof(pskMode);
     ASSERT_EQ(parseLen, *len);
 EXIT:
@@ -518,7 +541,7 @@ static void Test_RepeatClientHelloExtension(HITLS_Ctx *ctx, uint8_t *data, uint3
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
     FieldState *extensionState = GetDataAddress(&frameMsg, user);
     *extensionState = DUPLICATE_FIELD;
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
     ASSERT_NE(parseLen, *len);
 EXIT:
@@ -736,7 +759,7 @@ static void Test_RepeatServerHelloExtension(HITLS_Ctx *ctx, uint8_t *data, uint3
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     FieldState *extensionState = GetDataAddress(&frameMsg, user);
     *extensionState = DUPLICATE_FIELD;
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -867,7 +890,7 @@ static void Test_ErrLegacyVersion(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, 
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
     frameMsg.body.hsMsg.body.clientHello.version.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.body.clientHello.version.data = HITLS_VERSION_TLS13;
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -964,12 +987,13 @@ static void Test_UnknownVersion(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, ui
     uint16_t version[] = { 0x01, 0x02, *(uint16_t *)user };
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exData.data =
         BSL_SAL_Calloc(sizeof(version) / sizeof(uint16_t), sizeof(uint16_t));
-    memcpy(frameMsg.body.hsMsg.body.clientHello.supportedVersion.exData.data, version, sizeof(version));
+    ASSERT_EQ(memcpy_s(frameMsg.body.hsMsg.body.clientHello.supportedVersion.exData.data,
+        sizeof(version), version, sizeof(version)), EOK);
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exData.size = sizeof(version) / sizeof(uint16_t);
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exData.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exDataLen.data = sizeof(version);
     frameMsg.body.hsMsg.body.clientHello.supportedVersion.exLen.data = sizeof(version) + sizeof(uint8_t);
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1092,7 +1116,7 @@ static void Test_ServerVersion(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uin
     } else {
         ASSERT_EQ(0, 1);
     }
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1199,7 +1223,7 @@ static void Test_ServerHelloSessionId(HITLS_Ctx *ctx, uint8_t *data, uint32_t *l
 
     frameMsg.body.hsMsg.body.serverHello.sessionIdSize.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.body.serverHello.sessionIdSize.data = *len;
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     ASSERT_EQ(parseLen, *len);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
@@ -1356,7 +1380,7 @@ static void Test_ErrorServerVersion(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len
     } else {
         ASSERT_EQ(0, 1);
     }
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1466,7 +1490,7 @@ static void Test_AbsentGroup(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint3
     frameMsg.body.hsMsg.body.clientHello.supportedGroups.exData.data[0] =
         frameMsg.body.hsMsg.body.clientHello.supportedGroups.exData.data[1];
     frameMsg.body.hsMsg.body.clientHello.supportedGroups.exDataLen.data = sizeof(uint16_t);
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1568,7 +1592,7 @@ static void Test_HelloRetryRequest(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len,
     ASSERT_EQ(parseLen, *len);
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     frameMsg.body.hsMsg.body.serverHello.keyShare.data.group.data = HITLS_EC_GROUP_SECP384R1;
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1609,7 +1633,7 @@ static void Test_HelloRetryRequestSameGroup(HITLS_Ctx *ctx, uint8_t *data, uint3
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     ASSERT_EQ(frameMsg.body.hsMsg.body.serverHello.keyShare.data.group.data, HITLS_EC_GROUP_SECP256R1);
     frameMsg.body.hsMsg.body.serverHello.keyShare.data.group.data = HITLS_EC_GROUP_CURVE25519;
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1667,6 +1691,81 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_FUNC_TC004()
     testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
     ASSERT_NE(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT),
         HITLS_SUCCESS);
+    ALERT_Info alert = { 0 };
+    ALERT_GetInfo(testInfo.server->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(testInfo.config);
+    FRAME_FreeLink(testInfo.client);
+    FRAME_FreeLink(testInfo.server);
+    HITLS_SESS_Free(testInfo.clientSession);
+}
+/* END_CASE */
+
+static void Test_ModifyKeyShareGroup(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
+{
+    (void)ctx;
+    (void)user;
+    (void)bufSize;
+    FRAME_Type frameType = {0};
+    frameType.versionType = HITLS_VERSION_TLS13;
+    FRAME_Msg frameMsg = {0};
+    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
+    frameMsg.length.data = *len;
+    frameMsg.recVersion.data = HITLS_VERSION_TLS13;
+    uint32_t parseLen = 0;
+    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
+    ASSERT_EQ(parseLen, *len);
+    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
+    uint32_t sz = frameMsg.body.hsMsg.body.clientHello.supportedGroups.exData.size;
+    ASSERT_TRUE(sz > 1);
+    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
+    ASSERT_EQ(clientMsg->keyshares.exKeyShares.size, 2);
+    clientMsg->keyshares.exKeyShares.data[1].group.state = ASSIGNED_FIELD;
+    clientMsg->keyshares.exKeyShares.data[1].group.data = HITLS_EC_GROUP_CURVE25519;
+    memset(data, 0, bufSize);
+    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    return;
+}
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_FUNC_TC005
+* @spec -
+* @title 1. Initialize the client server to tls1.3. In the client hello message for sending, construct the group for
+*            keyshareentry. The first group can be negotiated with the server, while the second group is not included
+*            in the client's supported_group. The server aborts the handshake and returns the illegal_parameter alarm.
+* @precon nan
+* @brief 4.2.8 key share line 68
+* @expect 1. Expected connection establishment failure
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_FUNC_TC005()
+{
+    FRAME_Init();
+    RecWrapper wrapper = {
+        TRY_SEND_CLIENT_HELLO,
+        REC_TYPE_HANDSHAKE,
+        false,
+        NULL,
+        Test_ModifyKeyShareGroup
+    };
+    RegisterWrapper(wrapper);
+    ResumeTestInfo testInfo = {0};
+    testInfo.uioType = BSL_UIO_TCP;
+    testInfo.config = HITLS_CFG_NewTLS13Config();
+    const char *groupNames = "*secp521r1:*secp256r1:secp384r1";
+    uint32_t groupNamesLen = strlen(groupNames);
+    ASSERT_EQ(HITLS_CFG_SetGroupList(testInfo.config, groupNames, groupNamesLen), HITLS_SUCCESS);
+
+    testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
+    testInfo.client = FRAME_CreateLink(testInfo.config, testInfo.uioType);
+    ASSERT_NE(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_SUCCESS);
     ALERT_Info alert = { 0 };
     ALERT_GetInfo(testInfo.server->ssl, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
@@ -1745,7 +1844,7 @@ static void Test_InvalidSelectedIdentity(HITLS_Ctx *ctx, uint8_t *data, uint32_t
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     ASSERT_EQ(frameMsg.body.hsMsg.body.serverHello.pskSelectedIdentity.exState, INITIAL_FIELD);
     frameMsg.body.hsMsg.body.serverHello.pskSelectedIdentity.data.data = 1;
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -1865,7 +1964,7 @@ static void Test_InvalidCipherSuites(HITLS_Ctx *ctx, uint8_t *data, uint32_t *le
     ASSERT_EQ(frameMsg.body.hsMsg.type.data, SERVER_HELLO);
     ASSERT_EQ(frameMsg.body.hsMsg.body.serverHello.pskSelectedIdentity.exState, INITIAL_FIELD);
     frameMsg.body.hsMsg.body.serverHello.cipherSuite.data = HITLS_AES_256_GCM_SHA384;
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -2034,12 +2133,11 @@ static void Test_ServerErrorOrderPsk(HITLS_Ctx *ctx, uint8_t *data, uint32_t *le
     frameMsg.body.hsMsg.body.serverHello.extensionLen.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.length.state = ASSIGNED_FIELD;
     frameMsg.body.hsMsg.body.serverHello.supportedVersion.exState = MISSING_FIELD;
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
     uint8_t supportedVersion[] = {0, 0x2b, 0, 2, 3, 4};
     ASSERT_NE(parseLen, *len);
-    ASSERT_TRUE(sizeof(supportedVersion) <= (bufSize - *len));
-    memcpy(&data[*len], &supportedVersion, sizeof(supportedVersion));
+    ASSERT_EQ(memcpy_s(&data[*len], bufSize - *len, &supportedVersion, sizeof(supportedVersion)), EOK);
     *len += sizeof(supportedVersion);
     ASSERT_EQ(parseLen, *len);
 EXIT:
@@ -2162,7 +2260,7 @@ static void Test_HrrMisClientHelloExtension(HITLS_Ctx *ctx, uint8_t *data, uint3
         ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
         FieldState *extensionState = GetDataAddress(&frameMsg, user);
         *extensionState = MISSING_FIELD;
-        memset(data, 0, bufSize);
+        memset_s(data, bufSize, 0, bufSize);
         FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
     }
 EXIT:
@@ -2348,7 +2446,7 @@ static void Test_CertificateExtensionError001(HITLS_Ctx *ctx, uint8_t *data, uin
 
     uint8_t *extensionData = BSL_SAL_Calloc(extensionLen, sizeof(uint8_t));
     ASSERT_TRUE(extensionData != NULL);
-    memcpy(extensionData, certExtension, extensionLen);
+    ASSERT_EQ(memcpy_s(extensionData, extensionLen, certExtension, extensionLen), EOK);
     certItem->extension.state = ASSIGNED_FIELD;
     BSL_SAL_FREE(certItem->extension.data);
     certItem->extension.data = extensionData;
@@ -2357,7 +2455,7 @@ static void Test_CertificateExtensionError001(HITLS_Ctx *ctx, uint8_t *data, uin
     certItem->extensionLen.data = extensionLen;
     *len += extensionLen;
 
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -2439,7 +2537,7 @@ static void Test_CertificateExtensionError002(HITLS_Ctx *ctx, uint8_t *data, uin
 
     uint8_t *extensionData = BSL_SAL_Calloc(extensionLen, sizeof(uint8_t));
     ASSERT_TRUE(extensionData != NULL);
-    memcpy(extensionData, certExtension, extensionLen);
+    ASSERT_EQ(memcpy_s(extensionData, extensionLen, certExtension, extensionLen), EOK);
     certItem->extension.state = ASSIGNED_FIELD;
     BSL_SAL_FREE(certItem->extension.data);
     certItem->extension.data = extensionData;
@@ -2448,7 +2546,7 @@ static void Test_CertificateExtensionError002(HITLS_Ctx *ctx, uint8_t *data, uin
     certItem->extensionLen.data = extensionLen;
     *len += extensionLen;
 
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -2530,7 +2628,7 @@ static void Test_CertificateExtensionError003(HITLS_Ctx *ctx, uint8_t *data, uin
 
     uint8_t *extensionData = BSL_SAL_Calloc(extensionLen, sizeof(uint8_t));
     ASSERT_TRUE(extensionData != NULL);
-    memcpy(extensionData, certExtension, extensionLen);
+    ASSERT_EQ(memcpy_s(extensionData, extensionLen, certExtension, extensionLen), EOK);
     certItem->extension.state = ASSIGNED_FIELD;
     BSL_SAL_FREE(certItem->extension.data);
     certItem->extension.data = extensionData;
@@ -2539,7 +2637,7 @@ static void Test_CertificateExtensionError003(HITLS_Ctx *ctx, uint8_t *data, uin
     certItem->extensionLen.data = extensionLen;
     *len += extensionLen;
 
-    memset(data, 0, bufSize);
+    memset_s(data, bufSize, 0, bufSize);
     FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -2597,77 +2695,738 @@ EXIT:
 }
 /* END_CASE */
 
-static void Test_ModifyKeyShareGroup(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
+typedef struct {
+    uint8_t expectedHsType;
+    uint16_t expectedAlg;
+    uint8_t mutationType;
+    bool hasMutated;
+} Rfc8879CertWrapperInfo;
+
+typedef enum {
+    RFC8879_MUTATION_NONE = 0,
+    RFC8879_MUTATION_BAD_COMPRESSED_LEN,
+    RFC8879_MUTATION_ZERO_UNCOMPRESSED_LEN,
+    RFC8879_MUTATION_OVERSIZE_UNCOMPRESSED_LEN,
+    RFC8879_MUTATION_BAD_COMPRESSED_BODY
+} Rfc8879MutationType;
+
+typedef struct {
+    uint16_t version;
+    bool needDuplicate;
+    uint8_t algListLen;
+    uint32_t algBytesSize;
+    uint8_t algBytes[sizeof(uint16_t) * 2];
+} Rfc8879ClientHelloExtInfo;
+
+static void SetRfc8879CertCompressionConfig(HITLS_Config *config, const uint16_t *algs, uint32_t algsSize,
+    uint32_t threshold, uint32_t maxUncompressedLen)
+{
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetCertCompressionSupport(config, true), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCertCompressionAlgs(config, algs, algsSize), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCertCompressionThreshold(config, threshold), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCertCompressionMaxUncompressedLen(config, maxUncompressedLen), HITLS_SUCCESS);
+EXIT:
+    return;
+}
+
+static void Test_Rfc8879CertificateMessage(HITLS_Ctx *ctx, uint8_t *data, uint32_t *len, uint32_t bufSize, void *user)
 {
     (void)ctx;
-    (void)user;
     (void)bufSize;
-    FRAME_Type frameType = {0};
-    frameType.versionType = HITLS_VERSION_TLS13;
+    Rfc8879CertWrapperInfo *info = (Rfc8879CertWrapperInfo *)user;
+
+    ASSERT_TRUE(info != NULL);
+    ASSERT_TRUE(data != NULL);
+    ASSERT_TRUE(len != NULL);
+    ASSERT_TRUE(*len > 0);
+    ASSERT_EQ(data[0], info->expectedHsType);
+
+    if (info->expectedHsType == COMPRESSED_CERTIFICATE) {
+        uint32_t bodyLen = 0;
+        uint16_t algorithm = 0;
+        uint32_t uncompressedLen = 0;
+        uint32_t compressedLen = 0;
+
+        ASSERT_TRUE(*len >= 4u + sizeof(uint16_t) + UINT24_SIZE + UINT24_SIZE + 1u);
+        bodyLen = BSL_ByteToUint24(data + 1);
+        ASSERT_EQ(bodyLen + 4u, *len);
+        algorithm = BSL_ByteToUint16(data + 4);
+        uncompressedLen = BSL_ByteToUint24(data + 6);
+        compressedLen = BSL_ByteToUint24(data + 9);
+        ASSERT_EQ(algorithm, info->expectedAlg);
+        if (info->mutationType != RFC8879_MUTATION_ZERO_UNCOMPRESSED_LEN) {
+            ASSERT_TRUE(uncompressedLen > 0);
+        }
+        ASSERT_TRUE(compressedLen > 0);
+        if (!(info->mutationType == RFC8879_MUTATION_BAD_COMPRESSED_LEN && info->hasMutated)) {
+            ASSERT_EQ(sizeof(uint16_t) + UINT24_SIZE + UINT24_SIZE + compressedLen, bodyLen);
+        }
+        if (!info->hasMutated) {
+            switch (info->mutationType) {
+                case RFC8879_MUTATION_BAD_COMPRESSED_LEN:
+                    data[11] = (uint8_t)(data[11] + 1);
+                    info->hasMutated = true;
+                    break;
+                case RFC8879_MUTATION_ZERO_UNCOMPRESSED_LEN:
+                    data[6] = 0;
+                    data[7] = 0;
+                    data[8] = 0;
+                    info->hasMutated = true;
+                    break;
+                case RFC8879_MUTATION_OVERSIZE_UNCOMPRESSED_LEN:
+                    data[6] = 0x01;
+                    data[7] = 0x00;
+                    data[8] = 0x01;
+                    info->hasMutated = true;
+                    break;
+                case RFC8879_MUTATION_BAD_COMPRESSED_BODY:
+                    ASSERT_TRUE(*len > 12u);
+                    data[12] ^= 0xFFu;
+                    info->hasMutated = true;
+                    break;
+                case RFC8879_MUTATION_NONE:
+                default:
+                    break;
+            }
+        }
+    }
+EXIT:
+    return;
+}
+
+static void SetRfc8879ClientHelloExtension(FRAME_ClientHelloMsg *clientMsg, const Rfc8879ClientHelloExtInfo *info)
+{
+    uint8_t *algData = NULL;
+
+    ASSERT_TRUE(clientMsg != NULL);
+    ASSERT_TRUE(info != NULL);
+
+    if (clientMsg->extensionState == MISSING_FIELD) {
+        clientMsg->extensionState = INITIAL_FIELD;
+        clientMsg->extensionLen.state = INITIAL_FIELD;
+    }
+
+    clientMsg->pskModes.exState = info->needDuplicate ? DUPLICATE_FIELD : ASSIGNED_FIELD;
+    clientMsg->pskModes.exType.state = ASSIGNED_FIELD;
+    clientMsg->pskModes.exType.data = HS_EX_TYPE_COMPRESS_CERTIFICATE;
+    clientMsg->pskModes.exLen.state = INITIAL_FIELD;
+    clientMsg->pskModes.exDataLen.state = ASSIGNED_FIELD;
+    clientMsg->pskModes.exDataLen.data = info->algListLen;
+    algData = BSL_SAL_Calloc(info->algBytesSize, sizeof(uint8_t));
+    ASSERT_TRUE(algData != NULL);
+    ASSERT_EQ(memcpy_s(algData, info->algBytesSize, info->algBytes, info->algBytesSize), EOK);
+    BSL_SAL_FREE(clientMsg->pskModes.exData.data);
+    clientMsg->pskModes.exData.state = ASSIGNED_FIELD;
+    clientMsg->pskModes.exData.size = info->algBytesSize;
+    clientMsg->pskModes.exData.data = algData;
+EXIT:
+    return;
+}
+
+static void ReplacePendingClientHelloWithRfc8879Extension(FRAME_LinkObj *server, const Rfc8879ClientHelloExtInfo *info)
+{
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
     FRAME_Msg frameMsg = {0};
-    frameMsg.recType.data = REC_TYPE_HANDSHAKE;
-    frameMsg.length.data = *len;
-    frameMsg.recVersion.data = HITLS_VERSION_TLS13;
+    FRAME_Type frameType = {0};
     uint32_t parseLen = 0;
-    FRAME_ParseMsgBody(&frameType, data, *len, &frameMsg, &parseLen);
-    ASSERT_EQ(parseLen, *len);
-    ASSERT_EQ(frameMsg.body.hsMsg.type.data, CLIENT_HELLO);
-    uint32_t sz = frameMsg.body.hsMsg.body.clientHello.supportedGroups.exData.size;
-    ASSERT_TRUE(sz > 1);
-    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
-    ASSERT_EQ(clientMsg->keyshares.exKeyShares.size, 2);
-    clientMsg->keyshares.exKeyShares.data[1].group.state = ASSIGNED_FIELD;
-    clientMsg->keyshares.exKeyShares.data[1].group.data = HITLS_EC_GROUP_CURVE25519;
-    memset(data, 0, bufSize);
-    FRAME_PackRecordBody(&frameType, &frameMsg, data, bufSize, len);
+    uint32_t sendLen = MAX_RECORD_LENTH;
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+
+    ASSERT_TRUE(info != NULL);
+    ASSERT_TRUE(ioUserData != NULL);
+    ASSERT_TRUE(recvLen != 0);
+
+    SetFrameType(&frameType, info->version, REC_TYPE_HANDSHAKE, CLIENT_HELLO, HITLS_KEY_EXCH_ECDHE);
+    ASSERT_EQ(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen), HITLS_SUCCESS);
+
+    SetRfc8879ClientHelloExtension(&frameMsg.body.hsMsg.body.clientHello, info);
+    ASSERT_EQ(FRAME_PackMsg(&frameType, &frameMsg, sendBuf, sendLen, &sendLen), HITLS_SUCCESS);
+
+    ioUserData->recMsg.len = 0;
+    ASSERT_EQ(FRAME_TransportRecMsg(server->io, sendBuf, sendLen), HITLS_SUCCESS);
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     return;
 }
 
 /** @
-* @test UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_FUNC_TC005
+* @test UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC001
 * @spec -
-* @title 1. Initialize the client server to tls1.3. In the client hello message for sending, construct the group for
-*            keyshareentry. The first group can be negotiated with the server, while the second group is not included
-*            in the client's supported_group. The server aborts the handshake and returns the illegal_parameter alarm.
+* @title The server sends CompressedCertificate and completes the handshake when both peers configure the same algorithm.
 * @precon nan
-* @brief 4.2.8 key share line 68
-* @expect 1. Expected connection establishment failure
-* @prior Level 1
-* @auto TRUE
+* @brief
+* 1. Create TLS 1.3 configurations for the client and server.
+* 2. Enable certificate compression on both peers and configure the same algorithm.
+* 3. Assert that the server sends a CompressedCertificate handshake message.
+* 4. Establish the connection and verify the negotiated result.
+* @expect
+* 1. The handshake succeeds.
+* 2. The sent certificate handshake message type is CompressedCertificate(25).
+* 3. Both peers negotiate the same certificate compression algorithm.
 @ */
 /* BEGIN_CASE */
-void UT_TLS_TLS13_RFC8446_CONSISTENCY_KEY_SHARE_FUNC_TC005()
+void UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC001()
+{
+    SKIP_IF_ZLIB_UNSUPPORTED();
+
+    FRAME_Init();
+    HITLS_Config *configC = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *configS = HITLS_CFG_NewTLS13Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint16_t algs[] = {HITLS_CERT_COMPRESSION_ZLIB};
+    Rfc8879CertWrapperInfo wrapperInfo = {COMPRESSED_CERTIFICATE, HITLS_CERT_COMPRESSION_ZLIB, false, false};
+    RecWrapper wrapper = {TRY_SEND_CERTIFICATE, REC_TYPE_HANDSHAKE, false, &wrapperInfo, Test_Rfc8879CertificateMessage};
+
+    ASSERT_TRUE(configC != NULL);
+    ASSERT_TRUE(configS != NULL);
+    HITLS_CFG_SetCheckKeyUsage(configC, false);
+    HITLS_CFG_SetCheckKeyUsage(configS, false);
+    SetRfc8879CertCompressionConfig(configC, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+    SetRfc8879CertCompressionConfig(configS, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+
+    client = FRAME_CreateLink(configC, BSL_UIO_TCP);
+    server = FRAME_CreateLink(configS, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    RegisterWrapper(wrapper);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->negotiatedInfo.isCertCompressionNegotiated == true);
+    ASSERT_TRUE(server->ssl->negotiatedInfo.isCertCompressionNegotiated == true);
+    ASSERT_EQ(client->ssl->negotiatedInfo.certCompressionAlg, HITLS_CERT_COMPRESSION_ZLIB);
+    ASSERT_EQ(server->ssl->negotiatedInfo.certCompressionAlg, HITLS_CERT_COMPRESSION_ZLIB);
+    ASSERT_TRUE(client->ssl->negotiatedInfo.certCompressionUncompLen > 0);
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(configC);
+    HITLS_CFG_FreeConfig(configS);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC002
+* @spec -
+* @title The server falls back to Certificate when the peers do not share a certificate compression algorithm.
+* @precon nan
+* @brief
+* 1. Create TLS 1.3 configurations for the client and server.
+* 2. Enable certificate compression on both peers but configure different algorithms.
+* 3. Assert that the server sends a Certificate handshake message.
+* 4. Establish the connection and verify that certificate compression is not negotiated.
+* @expect
+* 1. The handshake succeeds.
+* 2. The sent certificate handshake message type is Certificate(11).
+* 3. Certificate compression is not negotiated on either side.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC002()
 {
     FRAME_Init();
-    RecWrapper wrapper = {
-        TRY_SEND_CLIENT_HELLO,
-        REC_TYPE_HANDSHAKE,
-        false,
-        NULL,
-        Test_ModifyKeyShareGroup
-    };
-    RegisterWrapper(wrapper);
-    ResumeTestInfo testInfo = {0};
-    testInfo.uioType = BSL_UIO_TCP;
-    testInfo.config = HITLS_CFG_NewTLS13Config();
-    const char *groupNames = "*secp521r1:*secp256r1:secp384r1";
-    uint32_t groupNamesLen = strlen(groupNames);
-    ASSERT_EQ(HITLS_CFG_SetGroupList(testInfo.config, groupNames, groupNamesLen), HITLS_SUCCESS);
+    HITLS_Config *configC = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *configS = HITLS_CFG_NewTLS13Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint16_t clientAlgs[] = {HITLS_CERT_COMPRESSION_ZLIB};
+    uint16_t serverAlgs[] = {HITLS_CERT_COMPRESSION_BROTLI};
+    Rfc8879CertWrapperInfo wrapperInfo = {CERTIFICATE, 0, false, false};
+    RecWrapper wrapper = {TRY_SEND_CERTIFICATE, REC_TYPE_HANDSHAKE, false, &wrapperInfo, Test_Rfc8879CertificateMessage};
 
-    testInfo.server = FRAME_CreateLink(testInfo.config, testInfo.uioType);
-    testInfo.client = FRAME_CreateLink(testInfo.config, testInfo.uioType);
-    ASSERT_NE(FRAME_CreateConnection(testInfo.client, testInfo.server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-    ALERT_Info alert = { 0 };
-    ALERT_GetInfo(testInfo.server->ssl, &alert);
+    ASSERT_TRUE(configC != NULL);
+    ASSERT_TRUE(configS != NULL);
+    HITLS_CFG_SetCheckKeyUsage(configC, false);
+    HITLS_CFG_SetCheckKeyUsage(configS, false);
+    SetRfc8879CertCompressionConfig(configC, clientAlgs, sizeof(clientAlgs) / sizeof(uint16_t), 1, 4096);
+    SetRfc8879CertCompressionConfig(configS, serverAlgs, sizeof(serverAlgs) / sizeof(uint16_t), 1, 4096);
+
+    client = FRAME_CreateLink(configC, BSL_UIO_TCP);
+    server = FRAME_CreateLink(configS, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    RegisterWrapper(wrapper);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_TRUE(client->ssl->negotiatedInfo.isCertCompressionNegotiated == false);
+    ASSERT_TRUE(server->ssl->negotiatedInfo.isCertCompressionNegotiated == false);
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(configC);
+    HITLS_CFG_FreeConfig(configS);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC003
+* @spec -
+* @title The client returns a parse error and sends an alert when the compressed length field is corrupted.
+* @precon nan
+* @brief
+* 1. Create TLS 1.3 configurations for the client and server.
+* 2. Enable certificate compression on both peers and configure the same algorithm.
+* 3. Corrupt the compressed length field before the server sends CompressedCertificate.
+* 4. Establish the connection and verify that client-side parsing fails.
+* @expect
+* 1. The handshake fails with HITLS_PARSE_INVALID_MSG_LEN.
+* 2. The client sends a fatal decode_error alert.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC003()
+{
+    SKIP_IF_ZLIB_UNSUPPORTED();
+
+    FRAME_Init();
+    HITLS_Config *configC = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *configS = HITLS_CFG_NewTLS13Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint16_t algs[] = {HITLS_CERT_COMPRESSION_ZLIB};
+    Rfc8879CertWrapperInfo wrapperInfo = {COMPRESSED_CERTIFICATE, HITLS_CERT_COMPRESSION_ZLIB,
+        RFC8879_MUTATION_BAD_COMPRESSED_LEN, false};
+    RecWrapper wrapper = {TRY_SEND_CERTIFICATE, REC_TYPE_HANDSHAKE, false, &wrapperInfo, Test_Rfc8879CertificateMessage};
+    ALERT_Info alert = {0};
+
+    ASSERT_TRUE(configC != NULL);
+    ASSERT_TRUE(configS != NULL);
+    HITLS_CFG_SetCheckKeyUsage(configC, false);
+    HITLS_CFG_SetCheckKeyUsage(configS, false);
+    SetRfc8879CertCompressionConfig(configC, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+    SetRfc8879CertCompressionConfig(configS, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+
+    client = FRAME_CreateLink(configC, BSL_UIO_TCP);
+    server = FRAME_CreateLink(configS, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    RegisterWrapper(wrapper);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_PARSE_INVALID_MSG_LEN);
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_DECODE_ERROR);
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(configC);
+    HITLS_CFG_FreeConfig(configS);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC008
+* @spec -
+* @title The client returns illegal_parameter when uncompressed_length in CompressedCertificate is zero.
+* @precon nan
+* @brief
+* 1. Create TLS 1.3 configurations for the client and server.
+* 2. Enable certificate compression on both peers and configure the same algorithm.
+* 3. Mutate uncompressed_length in the server CompressedCertificate message to zero.
+* 4. Establish the connection and verify the client alert.
+* @expect
+* 1. The handshake fails with HITLS_PARSE_INVALID_MSG_LEN.
+* 2. The client sends a fatal illegal_parameter alert.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC008()
+{
+    SKIP_IF_ZLIB_UNSUPPORTED();
+
+    FRAME_Init();
+    HITLS_Config *configC = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *configS = HITLS_CFG_NewTLS13Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint16_t algs[] = {HITLS_CERT_COMPRESSION_ZLIB};
+    Rfc8879CertWrapperInfo wrapperInfo = {COMPRESSED_CERTIFICATE, HITLS_CERT_COMPRESSION_ZLIB,
+        RFC8879_MUTATION_ZERO_UNCOMPRESSED_LEN, false};
+    RecWrapper wrapper = {TRY_SEND_CERTIFICATE, REC_TYPE_HANDSHAKE, false, &wrapperInfo, Test_Rfc8879CertificateMessage};
+    ALERT_Info alert = {0};
+
+    ASSERT_TRUE(configC != NULL);
+    ASSERT_TRUE(configS != NULL);
+    HITLS_CFG_SetCheckKeyUsage(configC, false);
+    HITLS_CFG_SetCheckKeyUsage(configS, false);
+    SetRfc8879CertCompressionConfig(configC, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+    SetRfc8879CertCompressionConfig(configS, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+
+    client = FRAME_CreateLink(configC, BSL_UIO_TCP);
+    server = FRAME_CreateLink(configS, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    RegisterWrapper(wrapper);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_PARSE_INVALID_MSG_LEN);
+    ALERT_GetInfo(client->ssl, &alert);
     ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
     ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
 EXIT:
     ClearWrapper();
-    HITLS_CFG_FreeConfig(testInfo.config);
-    FRAME_FreeLink(testInfo.client);
-    FRAME_FreeLink(testInfo.server);
-    HITLS_SESS_Free(testInfo.clientSession);
+    HITLS_CFG_FreeConfig(configC);
+    HITLS_CFG_FreeConfig(configS);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC009
+* @spec -
+* @title The client returns illegal_parameter when uncompressed_length exceeds the configured maximum.
+* @precon nan
+* @brief
+* 1. Create TLS 1.3 configurations for the client and server.
+* 2. Enable certificate compression on both peers and configure the same algorithm.
+* 3. Mutate uncompressed_length in the server CompressedCertificate message to exceed the client maximum.
+* 4. Establish the connection and verify the client alert.
+* @expect
+* 1. The handshake fails with HITLS_PARSE_INVALID_MSG_LEN.
+* 2. The client sends a fatal illegal_parameter alert.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC009()
+{
+    SKIP_IF_ZLIB_UNSUPPORTED();
+
+    FRAME_Init();
+    HITLS_Config *configC = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *configS = HITLS_CFG_NewTLS13Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint16_t algs[] = {HITLS_CERT_COMPRESSION_ZLIB};
+    Rfc8879CertWrapperInfo wrapperInfo = {COMPRESSED_CERTIFICATE, HITLS_CERT_COMPRESSION_ZLIB,
+        RFC8879_MUTATION_OVERSIZE_UNCOMPRESSED_LEN, false};
+    RecWrapper wrapper = {TRY_SEND_CERTIFICATE, REC_TYPE_HANDSHAKE, false, &wrapperInfo, Test_Rfc8879CertificateMessage};
+    ALERT_Info alert = {0};
+
+    ASSERT_TRUE(configC != NULL);
+    ASSERT_TRUE(configS != NULL);
+    HITLS_CFG_SetCheckKeyUsage(configC, false);
+    HITLS_CFG_SetCheckKeyUsage(configS, false);
+    SetRfc8879CertCompressionConfig(configC, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+    SetRfc8879CertCompressionConfig(configS, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+
+    client = FRAME_CreateLink(configC, BSL_UIO_TCP);
+    server = FRAME_CreateLink(configS, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    RegisterWrapper(wrapper);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_PARSE_INVALID_MSG_LEN);
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(configC);
+    HITLS_CFG_FreeConfig(configS);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC010
+* @spec -
+* @title The client returns decode_error when the compressed body is corrupted while length fields remain valid.
+* @precon nan
+* @brief
+* 1. Create TLS 1.3 configurations for the client and server.
+* 2. Enable certificate compression on both peers and configure the same algorithm.
+* 3. Corrupt one byte in the compressed certificate body without changing the declared lengths.
+* 4. Establish the connection and verify the client alert.
+* @expect
+* 1. The handshake fails with HITLS_PARSE_INVALID_MSG_LEN.
+* 2. The client sends a fatal decode_error alert.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC010()
+{
+    SKIP_IF_ZLIB_UNSUPPORTED();
+
+    FRAME_Init();
+    HITLS_Config *configC = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *configS = HITLS_CFG_NewTLS13Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    uint16_t algs[] = {HITLS_CERT_COMPRESSION_ZLIB};
+    Rfc8879CertWrapperInfo wrapperInfo = {COMPRESSED_CERTIFICATE, HITLS_CERT_COMPRESSION_ZLIB,
+        RFC8879_MUTATION_BAD_COMPRESSED_BODY, false};
+    RecWrapper wrapper = {TRY_SEND_CERTIFICATE, REC_TYPE_HANDSHAKE, false, &wrapperInfo, Test_Rfc8879CertificateMessage};
+    ALERT_Info alert = {0};
+
+    ASSERT_TRUE(configC != NULL);
+    ASSERT_TRUE(configS != NULL);
+    HITLS_CFG_SetCheckKeyUsage(configC, false);
+    HITLS_CFG_SetCheckKeyUsage(configS, false);
+    SetRfc8879CertCompressionConfig(configC, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+    SetRfc8879CertCompressionConfig(configS, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+
+    client = FRAME_CreateLink(configC, BSL_UIO_TCP);
+    server = FRAME_CreateLink(configS, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+
+    RegisterWrapper(wrapper);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_PARSE_INVALID_MSG_LEN);
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_DECODE_ERROR);
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(configC);
+    HITLS_CFG_FreeConfig(configS);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC004
+* @spec -
+* @title The server ignores compress_certificate and still sends Certificate after TLS 1.2 is negotiated.
+* @precon nan
+* @brief
+* 1. Create TLS 1.2 configurations for the client and server.
+* 2. Enable certificate compression on both peers and inject compress_certificate into the TLS 1.2 ClientHello.
+* 3. Drive the handshake to the client certificate receive state and assert that the server still sends Certificate.
+* 4. Verify the negotiated result.
+* @expect
+* 1. The server sends Certificate(11).
+* 2. Both peers negotiate TLS 1.2.
+* 3. Certificate compression is not negotiated on either side.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC004()
+{
+    FRAME_Init();
+    HITLS_Config *configC = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *configS = HITLS_CFG_NewTLS12Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Ctx *clientTlsCtx = NULL;
+    HITLS_Ctx *serverTlsCtx = NULL;
+    uint16_t algs[] = {HITLS_CERT_COMPRESSION_ZLIB};
+    Rfc8879ClientHelloExtInfo extInfo = {HITLS_VERSION_TLS12, false, 2, 2, {0x00, 0x01}};
+    Rfc8879CertWrapperInfo wrapperInfo = {CERTIFICATE, 0, false, false};
+    RecWrapper wrapper = {TRY_SEND_CERTIFICATE, REC_TYPE_HANDSHAKE, false, &wrapperInfo, Test_Rfc8879CertificateMessage};
+
+    ASSERT_TRUE(configC != NULL);
+    ASSERT_TRUE(configS != NULL);
+    HITLS_CFG_SetCheckKeyUsage(configC, false);
+    HITLS_CFG_SetCheckKeyUsage(configS, false);
+    SetRfc8879CertCompressionConfig(configC, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+    SetRfc8879CertCompressionConfig(configS, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+
+    client = FRAME_CreateLink(configC, BSL_UIO_TCP);
+    server = FRAME_CreateLink(configS, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    clientTlsCtx = FRAME_GetTlsCtx(client);
+    serverTlsCtx = FRAME_GetTlsCtx(server);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    ReplacePendingClientHelloWithRfc8879Extension(server, &extInfo);
+
+    RegisterWrapper(wrapper);
+    CONN_Deinit(serverTlsCtx);
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_RECV_CERTIFICATE);
+    ASSERT_EQ(clientTlsCtx->negotiatedInfo.version, HITLS_VERSION_TLS12);
+    ASSERT_EQ(serverTlsCtx->negotiatedInfo.version, HITLS_VERSION_TLS12);
+    ASSERT_TRUE(clientTlsCtx->negotiatedInfo.isCertCompressionNegotiated == false);
+    ASSERT_TRUE(serverTlsCtx->negotiatedInfo.isCertCompressionNegotiated == false);
+EXIT:
+    ClearWrapper();
+    HITLS_CFG_FreeConfig(configC);
+    HITLS_CFG_FreeConfig(configS);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC005
+* @spec -
+* @title The client sends unexpected_message and aborts the connection when it receives CompressedCertificate after TLS 1.2 negotiation.
+* @precon nan
+* @brief
+* 1. Create TLS 1.2 configurations for the client and server.
+* 2. Inject compress_certificate into the TLS 1.2 ClientHello sent by the client.
+* 3. Drive the handshake to the client certificate receive state and mutate the received Certificate type to
+*    CompressedCertificate.
+* 4. Resume the handshake and verify the client alert.
+* @expect
+* 1. The client returns HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE.
+* 2. The client sends a fatal unexpected_message alert.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC005()
+{
+    FRAME_Init();
+    HITLS_Config *configC = HITLS_CFG_NewTLS12Config();
+    HITLS_Config *configS = HITLS_CFG_NewTLS12Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Ctx *clientTlsCtx = NULL;
+    HITLS_Ctx *serverTlsCtx = NULL;
+    uint16_t algs[] = {HITLS_CERT_COMPRESSION_ZLIB};
+    Rfc8879ClientHelloExtInfo extInfo = {HITLS_VERSION_TLS12, false, 2, 2, {0x00, 0x01}};
+    ALERT_Info alert = {0};
+    FrameUioUserData *ioUserData = NULL;
+
+    ASSERT_TRUE(configC != NULL);
+    ASSERT_TRUE(configS != NULL);
+    HITLS_CFG_SetCheckKeyUsage(configC, false);
+    HITLS_CFG_SetCheckKeyUsage(configS, false);
+    SetRfc8879CertCompressionConfig(configC, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+    SetRfc8879CertCompressionConfig(configS, algs, sizeof(algs) / sizeof(uint16_t), 1, 4096);
+
+    client = FRAME_CreateLink(configC, BSL_UIO_TCP);
+    server = FRAME_CreateLink(configS, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    clientTlsCtx = FRAME_GetTlsCtx(client);
+    serverTlsCtx = FRAME_GetTlsCtx(server);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    ReplacePendingClientHelloWithRfc8879Extension(server, &extInfo);
+
+    CONN_Deinit(serverTlsCtx);
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_RECV_CERTIFICATE);
+
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ioUserData = BSL_UIO_GetUserData(client->io);
+    ASSERT_TRUE(ioUserData != NULL);
+    ASSERT_TRUE(ioUserData->recMsg.len > REC_TLS_RECORD_HEADER_LEN);
+    ASSERT_EQ(ioUserData->recMsg.msg[REC_TLS_RECORD_HEADER_LEN], CERTIFICATE);
+    ioUserData->recMsg.msg[REC_TLS_RECORD_HEADER_LEN] = COMPRESSED_CERTIFICATE;
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
+    ALERT_GetInfo(client->ssl, &alert);
+    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_UNEXPECTED_MESSAGE);
+EXIT:
+    HITLS_CFG_FreeConfig(configC);
+    HITLS_CFG_FreeConfig(configS);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC006
+* @spec -
+* @title The server returns illegal_parameter when compress_certificate appears twice in TLS 1.3 ClientHello.
+* @precon nan
+* @brief
+* 1. Create TLS 1.3 configurations for the client and server.
+* 2. Inject a duplicate compress_certificate extension into the client ClientHello.
+* 3. Resume server-side parsing and verify the return value and alert.
+* @expect
+* 1. The server returns HITLS_PARSE_DUPLICATE_EXTENDED_MSG.
+* 2. The server sends a fatal illegal_parameter alert.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC006()
+{
+    FRAME_Init();
+    HITLS_Config *configC = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *configS = HITLS_CFG_NewTLS13Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Ctx *serverTlsCtx = NULL;
+    Rfc8879ClientHelloExtInfo extInfo = {HITLS_VERSION_TLS13, true, 2, 2, {0x00, 0x01}};
+    ALERT_Info alert = {0};
+
+    ASSERT_TRUE(configC != NULL);
+    ASSERT_TRUE(configS != NULL);
+    HITLS_CFG_SetCheckKeyUsage(configC, false);
+    HITLS_CFG_SetCheckKeyUsage(configS, false);
+
+    client = FRAME_CreateLink(configC, BSL_UIO_TCP);
+    server = FRAME_CreateLink(configS, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    serverTlsCtx = FRAME_GetTlsCtx(server);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    ReplacePendingClientHelloWithRfc8879Extension(server, &extInfo);
+
+    CONN_Deinit(serverTlsCtx);
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_PARSE_DUPLICATE_EXTENDED_MSG);
+    ALERT_GetInfo(server->ssl, &alert);
+    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_ILLEGAL_PARAMETER);
+EXIT:
+    HITLS_CFG_FreeConfig(configC);
+    HITLS_CFG_FreeConfig(configS);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC007
+* @spec -
+* @title The server returns decode_error when the algorithm list length in compress_certificate is invalid.
+* @precon nan
+* @brief
+* 1. Create TLS 1.3 configurations for the client and server.
+* 2. Inject a compress_certificate extension with an odd-length algorithm list into the client ClientHello.
+* 3. Resume server-side parsing and verify the return value and alert.
+* @expect
+* 1. The server returns HITLS_PARSE_INVALID_MSG_LEN.
+* 2. The server sends a fatal decode_error alert.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CERT_COMPRESSION_FUNC_TC007()
+{
+    FRAME_Init();
+    HITLS_Config *configC = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *configS = HITLS_CFG_NewTLS13Config();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Ctx *serverTlsCtx = NULL;
+    Rfc8879ClientHelloExtInfo extInfo = {HITLS_VERSION_TLS13, false, 3, 2, {0x00, 0x01}};
+    ALERT_Info alert = {0};
+
+    ASSERT_TRUE(configC != NULL);
+    ASSERT_TRUE(configS != NULL);
+    HITLS_CFG_SetCheckKeyUsage(configC, false);
+    HITLS_CFG_SetCheckKeyUsage(configS, false);
+
+    client = FRAME_CreateLink(configC, BSL_UIO_TCP);
+    server = FRAME_CreateLink(configS, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    serverTlsCtx = FRAME_GetTlsCtx(server);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+    ReplacePendingClientHelloWithRfc8879Extension(server, &extInfo);
+
+    CONN_Deinit(serverTlsCtx);
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_PARSE_INVALID_MSG_LEN);
+    ALERT_GetInfo(server->ssl, &alert);
+    ASSERT_EQ(alert.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alert.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alert.description, ALERT_DECODE_ERROR);
+EXIT:
+    HITLS_CFG_FreeConfig(configC);
+    HITLS_CFG_FreeConfig(configS);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
 }
 /* END_CASE */

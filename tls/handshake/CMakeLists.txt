@@ -16,6 +16,7 @@ set(source_dir ${CMAKE_CURRENT_SOURCE_DIR})
 # common
 set(_handshake_sources_common
     ${source_dir}/common/src/hs_cert.c
+    ${source_dir}/common/src/hs_comp.c
     ${source_dir}/common/src/hs_common.c
     ${source_dir}/common/src/hs_kx.c
     ${source_dir}/common/src/hs_verify.c

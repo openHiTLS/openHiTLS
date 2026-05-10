@@ -99,6 +99,8 @@ option(HITLS_ATOMIC_THREAD_LOCK                                "Use atomic opera
 option(HITLS_BSL_ASN1                                          "ASN1" OFF)
 option(HITLS_BSL_BASE64                                        "BASE64" OFF)
 option(HITLS_BSL_BUFFER                                        "BUFFER" OFF)
+option(HITLS_BSL_COMP                                          "COMP" OFF)
+  option(HITLS_BSL_COMP_ZLIB                                     "COMP ZLIB" OFF)
 option(HITLS_BSL_CONF                                          "CONF" OFF)
 option(HITLS_BSL_ERR                                           "ERR" OFF)
 option(HITLS_BSL_HASH                                          "HASH" OFF)

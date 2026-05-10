@@ -436,7 +436,6 @@ void SDV_ISO19790_PROVIDER_DRBG_TEST_TC001()
         }
     }
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-
     bool healthTest = true;
     uint32_t seedPoolSize = 4096;
     es = CRYPT_EAL_EsNew();
@@ -454,7 +453,6 @@ void SDV_ISO19790_PROVIDER_DRBG_TEST_TC001()
         }
     }
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-
     pool = CRYPT_EAL_SeedPoolNew(true);
     ASSERT_TRUE(pool != NULL);
 
@@ -907,7 +905,7 @@ EXIT:
 
 /*
     SDV_ISO19790_PROVIDER_PKEY_TEST_TC001
-    测试DSA set para
+    Test DSA parameter setup.
 */
 /* BEGIN_CASE */
 void SDV_ISO19790_PROVIDER_PKEY_TEST_TC001(int hashId, Hex *p, Hex *q, Hex *g)

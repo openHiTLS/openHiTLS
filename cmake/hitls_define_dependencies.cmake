@@ -36,7 +36,8 @@ hitls_define_dependency(HITLS_BSL
         HITLS_BSL_SAL_STR    HITLS_BSL_SAL_THREAD HITLS_BSL_SAL_TIME
         HITLS_BSL_SAL_PID    HITLS_BSL_SAL_IP
         HITLS_BSL_ASN1       HITLS_BSL_BASE64     HITLS_BSL_BUFFER
-        HITLS_BSL_CONF       HITLS_BSL_ERR        HITLS_BSL_HASH
+        HITLS_BSL_COMP       HITLS_BSL_CONF       HITLS_BSL_ERR
+        HITLS_BSL_HASH
         HITLS_BSL_INIT       HITLS_BSL_LIST       HITLS_BSL_LOG
         HITLS_BSL_OBJ        HITLS_BSL_PARAMS     HITLS_BSL_PEM
         HITLS_BSL_PRINT      HITLS_BSL_TLV        HITLS_BSL_UI
@@ -58,6 +59,11 @@ hitls_define_dependency(HITLS_BSL_SAL_IP            DEPS HITLS_BSL)
 hitls_define_dependency(HITLS_BSL_ASN1              DEPS HITLS_BSL HITLS_BSL_SAL HITLS_BSL_SAL_TIME)
 hitls_define_dependency(HITLS_BSL_BASE64            DEPS HITLS_BSL HITLS_BSL_SAL)
 hitls_define_dependency(HITLS_BSL_BUFFER            DEPS HITLS_BSL HITLS_BSL_SAL)
+hitls_define_dependency(HITLS_BSL_COMP
+    DEPS HITLS_BSL
+    CHILDREN HITLS_BSL_COMP_ZLIB
+)
+hitls_define_dependency(HITLS_BSL_COMP_ZLIB         DEPS HITLS_BSL_COMP)
 hitls_define_dependency(HITLS_BSL_CONF              DEPS HITLS_BSL HITLS_BSL_SAL HITLS_BSL_UIO_FILE HITLS_BSL_LIST)
 hitls_define_dependency(HITLS_BSL_ERR               DEPS HITLS_BSL HITLS_BSL_SAL)
 hitls_define_dependency(HITLS_BSL_HASH              DEPS HITLS_BSL HITLS_BSL_SAL)
@@ -639,7 +645,7 @@ hitls_define_dependency(HITLS_PKI_INFO_CRL              DEPS HITLS_PKI_INFO HITL
 
 # TLS Dependencies
 hitls_define_dependency(HITLS_TLS
-    DEPS HITLS_BSL_SAL HITLS_BSL_HASH HITLS_BSL_LIST HITLS_BSL_UIO_PLT
+    DEPS HITLS_BSL_SAL HITLS_BSL_HASH HITLS_BSL_LIST HITLS_BSL_UIO_PLT HITLS_BSL_COMP
     CHILDREN
         HITLS_TLS_PROTO_VERSION HITLS_TLS_HOST
         HITLS_TLS_CALLBACK      HITLS_TLS_FEATURE
@@ -1673,6 +1679,17 @@ macro(hitls_special_depends_handle)
 
         if(HITLS_TLS_FEATURE_MTU_QUERY AND NOT HITLS_BSL_UIO_MTU_QUERY)
             hitls_feature_local_enable(HITLS_BSL_UIO_MTU_QUERY)
+        endif()
+    endif()
+
+    if(HITLS_BSL_COMP_ZLIB)
+        find_package(ZLIB QUIET)
+        if(NOT ZLIB_FOUND)
+            if(_G_HITLS_USER_DEFINED_HITLS_BSL_COMP_ZLIB)
+                message(FATAL_ERROR "HITLS_BSL_COMP_ZLIB=ON requires ZLIB")
+            endif()
+            set(HITLS_BSL_COMP_ZLIB OFF CACHE BOOL "" FORCE)
+            message(STATUS "  Disabled HITLS_BSL_COMP_ZLIB because ZLIB was not found")
         endif()
     endif()
 endmacro()

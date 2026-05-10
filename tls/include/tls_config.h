@@ -59,6 +59,11 @@ typedef struct TlsSessionManager TLS_SessionMgr;
 /* the default number of tickets of TLS1.3 server is 2 */
 #define HITLS_TLS13_TICKET_NUM_DEFAULT 2u
 #define HITLS_MAX_EMPTY_RECORDS 32
+#define HITLS_CERT_COMPRESSION_ZLIB 1u
+#define HITLS_CERT_COMPRESSION_BROTLI 2u
+#define HITLS_CERT_COMPRESSION_ZSTD 3u
+#define HITLS_CERT_COMPRESSION_MAX_UNCOMP_LEN (16u * 1024u * 1024u)
+#define HITLS_CERT_COMPRESSION_THRESHOLD_DEFAULT 1024u
 #ifdef HITLS_TLS_FEATURE_MAX_SEND_FRAGMENT
 #define HITLS_MAX_SEND_FRAGMENT_DEFAULT 16384
 #endif
@@ -214,6 +219,10 @@ typedef struct TlsConfig {
     HITLS_ConfigUserDataFreeCb userDataFreeCb;
 
     uint16_t recordSizeLimit;           /* record size limit RFC 8449 */
+    uint16_t *certCompressionAlgs;      /* RFC 8879 certificate compression algorithms */
+    uint32_t certCompressionAlgsSize;
+    uint32_t certCompressionThreshold;
+    uint32_t certCompressionMaxUncompLen;
 
     bool needCheckKeyUsage;             /* whether to check keyusage, default on */
     bool needCheckPmsVersion;           /* whether to verify the version in premastersecret */
@@ -269,6 +278,7 @@ typedef struct TlsConfig {
     HITLS_KeyLogCb keyLogCb;            /* the key log callback */
     bool isKeepPeerCert;                /* whether to save the peer certificate */
     bool isMiddleBoxCompat;             /* whether to support middlebox compatibility */
+    bool isSupportCertCompression;      /* whether to advertise/accept certificate compression */
 
     HITLS_CustomExts *customExts;
 } TLS_Config;

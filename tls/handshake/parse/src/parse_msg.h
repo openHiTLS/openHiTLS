@@ -111,6 +111,7 @@ int32_t ParseCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_M
  * @retval  HITLSPARSE_INVALID_MSG_LEN The message length is incorrect
  */
 int32_t Tls13ParseCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg);
+int32_t Tls13ParseCompressedCertificate(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, HS_Msg *hsMsg);
 /**
  * @brief   Parse Server Key Exchange message
  *

@@ -15,6 +15,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "hitls_build.h"
 #include <string.h>
 #include "cipher_suite.h"
@@ -653,6 +655,30 @@ static int32_t PackClientPskKeyExModes(const TLS_Ctx *ctx, PackPacket *pkt)
     return HITLS_SUCCESS;
 }
 
+static int32_t PackClientCertCompression(const TLS_Ctx *ctx, PackPacket *pkt)
+{
+    uint16_t algListLen = (uint16_t)(ctx->config.tlsConfig.certCompressionAlgsSize * sizeof(uint16_t));
+    int32_t ret = PackExtensionHeader(HS_EX_TYPE_COMPRESS_CERTIFICATE, (uint16_t)(sizeof(uint8_t) + algListLen), pkt);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    ret = PackAppendUint8ToBuf(pkt, (uint8_t)algListLen);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+
+    for (uint32_t i = 0; i < ctx->config.tlsConfig.certCompressionAlgsSize; i++) {
+        ret = PackAppendUint16ToBuf(pkt, ctx->config.tlsConfig.certCompressionAlgs[i]);
+        if (ret != HITLS_SUCCESS) {
+            return ret;
+        }
+    }
+
+    ctx->hsCtx->extFlag.haveCertCompression = true;
+    return HITLS_SUCCESS;
+}
+
 static int32_t PackClientKeyShare(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     uint32_t needKeyShareMode = TLS13_KE_MODE_PSK_WITH_DHE | TLS13_CERT_AUTH_WITH_DHE;
@@ -889,6 +915,8 @@ static int32_t PackClientExtensions(const TLS_Ctx *ctx, PackPacket *pkt)
         { EXTENSION_MSG(HS_EX_TYPE_POINT_FORMATS, isEcNeed, PackPointFormats) },
 #ifdef HITLS_TLS_PROTO_TLS13
         { EXTENSION_MSG(HS_EX_TYPE_SUPPORTED_VERSIONS, isTls13, PackClientSupportedVersions) },
+        { EXTENSION_MSG(HS_EX_TYPE_COMPRESS_CERTIFICATE, isTls13 && HS_IsCertCompressionEnabled(ctx),
+            PackClientCertCompression) },
 #endif /* HITLS_TLS_PROTO_TLS13 */
         { EXTENSION_MSG(HS_EX_TYPE_EARLY_DATA, false, NULL) },
 #ifdef HITLS_TLS_PROTO_TLS13

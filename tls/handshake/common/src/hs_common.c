@@ -146,6 +146,10 @@ const char *HS_GetMsgTypeStr(HS_MsgType type)
 #endif
         case CERTIFICATE:
             return "certificate";
+#ifdef HITLS_TLS_PROTO_TLS13
+        case COMPRESSED_CERTIFICATE:
+            return "compressed certificate";
+#endif
         case SERVER_KEY_EXCHANGE:
             return "server key exchange";
         case CERTIFICATE_REQUEST:
@@ -592,7 +596,15 @@ uint32_t HS_MaxMessageSize(TLS_Ctx *ctx, HS_MsgType type)
         case SERVER_KEY_EXCHANGE:
             return HITLS_SERVER_KEY_EXCH_MAX_SIZE;
         case CERTIFICATE:
+        case COMPRESSED_CERTIFICATE:
         case CERTIFICATE_REQUEST:
+#ifdef HITLS_TLS_PROTO_TLS13
+            if (type == COMPRESSED_CERTIFICATE) {
+                uint32_t maxCertList = ctx->config.tlsConfig.maxCertList == 0 ? HITLS_MAX_CERT_LIST_DEFAULT
+                                                                              : ctx->config.tlsConfig.maxCertList;
+                return maxCertList * HITLS_CERT_COMPRESS_MAX_WORST_RATIO + sizeof(uint16_t) + UINT24_SIZE;
+            }
+#endif
             return ctx->config.tlsConfig.maxCertList == 0 ? HITLS_MAX_CERT_LIST_DEFAULT
                                                           : ctx->config.tlsConfig.maxCertList;
         case SERVER_HELLO_DONE:
@@ -899,6 +911,7 @@ uint32_t HS_GetExtensionTypeId(uint32_t hsExtensionsType)
         case HS_EX_TYPE_ENCRYPT_THEN_MAC: return HS_EX_TYPE_ID_ENCRYPT_THEN_MAC;
         case HS_EX_TYPE_EXTENDED_MASTER_SECRET: return HS_EX_TYPE_ID_EXTENDED_MASTER_SECRET;
         case HS_EX_TYPE_RECORD_SIZE_LIMIT: return HS_EX_TYPE_ID_RECORD_SIZE_LIMIT;
+        case HS_EX_TYPE_COMPRESS_CERTIFICATE: return HS_EX_TYPE_ID_COMPRESS_CERTIFICATE;
         case HS_EX_TYPE_SESSION_TICKET: return HS_EX_TYPE_ID_SESSION_TICKET;
         case HS_EX_TYPE_PRE_SHARED_KEY: return HS_EX_TYPE_ID_PRE_SHARED_KEY;
         case HS_EX_TYPE_SUPPORTED_VERSIONS: return HS_EX_TYPE_ID_SUPPORTED_VERSIONS;
@@ -906,6 +919,7 @@ uint32_t HS_GetExtensionTypeId(uint32_t hsExtensionsType)
         case HS_EX_TYPE_PSK_KEY_EXCHANGE_MODES: return HS_EX_TYPE_ID_PSK_KEY_EXCHANGE_MODES;
         case HS_EX_TYPE_CERTIFICATE_AUTHORITIES: return HS_EX_TYPE_ID_CERTIFICATE_AUTHORITIES;
         case HS_EX_TYPE_POST_HS_AUTH: return HS_EX_TYPE_ID_POST_HS_AUTH;
+        case HS_EX_TYPE_SIGNATURE_ALGORITHMS_CERT: return HS_EX_TYPE_ID_SIGNATURE_ALGORITHMS_CERT;
         case HS_EX_TYPE_KEY_SHARE: return HS_EX_TYPE_ID_KEY_SHARE;
         case HS_EX_TYPE_RENEGOTIATION_INFO: return HS_EX_TYPE_ID_RENEGOTIATION_INFO;
         default: break;

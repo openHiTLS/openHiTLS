@@ -75,10 +75,14 @@ extern "C" {
 #define HITLS_VERSION_TLS13 0x0304u
 
 /**
-  * @ingroup  config
-  * @brief    Prefix of SSL 3.0 or later
+ * @ingroup  config
+ * @brief    Prefix of SSL 3.0 or later
  */
 #define HITLS_VERSION_TLS_MAJOR 0x03u
+
+#define HITLS_CERT_COMPRESSION_ZLIB 1u
+#define HITLS_CERT_COMPRESSION_BROTLI 2u
+#define HITLS_CERT_COMPRESSION_ZSTD 3u
 
 /**
  * @ingroup  hitls_config
@@ -1650,6 +1654,36 @@ int32_t HITLS_CFG_SetRecordSizeLimit(HITLS_Config *config, uint16_t recordSize);
  * @retval  HITLS_SUCCESS
  */
 int32_t HITLS_CFG_GetRecordSizeLimit(HITLS_Config *config, uint16_t *recordSize);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Enable or disable RFC 8879 certificate compression.
+ */
+int32_t HITLS_CFG_SetCertCompressionSupport(HITLS_Config *config, bool isSupport);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Query whether RFC 8879 certificate compression is enabled.
+ */
+int32_t HITLS_CFG_GetCertCompressionSupport(HITLS_Config *config, bool *isSupport);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Configure supported certificate compression algorithm IDs.
+ */
+int32_t HITLS_CFG_SetCertCompressionAlgs(HITLS_Config *config, const uint16_t *algs, uint32_t algsSize);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Configure the minimum certificate message size required before compression is attempted.
+ */
+int32_t HITLS_CFG_SetCertCompressionThreshold(HITLS_Config *config, uint32_t threshold);
+
+/**
+ * @ingroup hitls_config
+ * @brief   Configure the maximum allowed uncompressed certificate size.
+ */
+int32_t HITLS_CFG_SetCertCompressionMaxUncompressedLen(HITLS_Config *config, uint32_t maxLen);
 
 /**
  * @ingroup tls

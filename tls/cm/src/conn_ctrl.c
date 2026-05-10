@@ -738,6 +738,55 @@ int32_t HITLS_GetRecordSizeLimit(HITLS_Ctx *ctx, uint16_t *recordSize)
 }
 #endif
 
+int32_t HITLS_SetCertCompressionSupport(HITLS_Ctx *ctx, bool isSupport)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetCertCompressionSupport(&(ctx->config.tlsConfig), isSupport);
+}
+
+int32_t HITLS_GetCertCompressionSupport(HITLS_Ctx *ctx, bool *isSupport)
+{
+    if (ctx == NULL || isSupport == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13 && ctx->negotiatedInfo.isCertCompressionNegotiated) {
+        *isSupport = true;
+        return HITLS_SUCCESS;
+    }
+    return HITLS_CFG_GetCertCompressionSupport(&(ctx->config.tlsConfig), isSupport);
+}
+
+int32_t HITLS_SetCertCompressionAlgs(HITLS_Ctx *ctx, const uint16_t *algs, uint32_t algsSize)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetCertCompressionAlgs(&(ctx->config.tlsConfig), algs, algsSize);
+}
+
+int32_t HITLS_SetCertCompressionThreshold(HITLS_Ctx *ctx, uint32_t threshold)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetCertCompressionThreshold(&(ctx->config.tlsConfig), threshold);
+}
+
+int32_t HITLS_SetCertCompressionMaxUncompressedLen(HITLS_Ctx *ctx, uint32_t maxLen)
+{
+    if (ctx == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    return HITLS_CFG_SetCertCompressionMaxUncompressedLen(&(ctx->config.tlsConfig), maxLen);
+}
+
 #ifdef HITLS_TLS_PROTO_TLS13
 int32_t HITLS_SetMiddleBoxCompat(HITLS_Ctx *ctx, bool isMiddleBox)
 {

@@ -575,6 +575,96 @@ int32_t HITLS_CFG_GetRecordSizeLimit(HITLS_Config *config, uint16_t *recordSize)
 }
 #endif /* HITLS_TLS_FEATURE_RECORD_SIZE_LIMIT */
 
+int32_t HITLS_CFG_SetCertCompressionSupport(HITLS_Config *config, bool isSupport)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->isSupportCertCompression = isSupport;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_GetCertCompressionSupport(HITLS_Config *config, bool *isSupport)
+{
+    if (config == NULL || isSupport == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    *isSupport = config->isSupportCertCompression;
+    return HITLS_SUCCESS;
+}
+
+static bool IsValidCertCompressionAlg(uint16_t alg)
+{
+    return alg == HITLS_CERT_COMPRESSION_ZLIB || alg == HITLS_CERT_COMPRESSION_BROTLI ||
+        alg == HITLS_CERT_COMPRESSION_ZSTD;
+}
+
+int32_t HITLS_CFG_SetCertCompressionAlgs(HITLS_Config *config, const uint16_t *algs, uint32_t algsSize)
+{
+    uint16_t *newAlgs = NULL;
+
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    if (algs == NULL || algsSize == 0) {
+        BSL_SAL_FREE(config->certCompressionAlgs);
+        config->certCompressionAlgs = NULL;
+        config->certCompressionAlgsSize = 0;
+        return HITLS_SUCCESS;
+    }
+
+    if (algsSize > HITLS_CFG_MAX_SIZE || algsSize > (UINT8_MAX / sizeof(uint16_t))) {
+        return HITLS_CONFIG_INVALID_LENGTH;
+    }
+
+    for (uint32_t i = 0; i < algsSize; i++) {
+        if (!IsValidCertCompressionAlg(algs[i])) {
+            return HITLS_CONFIG_INVALID_SET;
+        }
+        for (uint32_t j = i + 1; j < algsSize; j++) {
+            if (algs[i] == algs[j]) {
+                return HITLS_CONFIG_INVALID_SET;
+            }
+        }
+    }
+
+    newAlgs = (uint16_t *)BSL_SAL_Dump(algs, algsSize * sizeof(uint16_t));
+    if (newAlgs == NULL) {
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    BSL_SAL_FREE(config->certCompressionAlgs);
+    config->certCompressionAlgs = newAlgs;
+    config->certCompressionAlgsSize = algsSize;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_SetCertCompressionThreshold(HITLS_Config *config, uint32_t threshold)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    config->certCompressionThreshold = threshold;
+    return HITLS_SUCCESS;
+}
+
+int32_t HITLS_CFG_SetCertCompressionMaxUncompressedLen(HITLS_Config *config, uint32_t maxLen)
+{
+    if (config == NULL) {
+        return HITLS_NULL_INPUT;
+    }
+
+    if (maxLen == 0 || maxLen > HITLS_CERT_COMPRESSION_MAX_UNCOMP_LEN) {
+        return HITLS_CONFIG_INVALID_LENGTH;
+    }
+    config->certCompressionMaxUncompLen = maxLen;
+    return HITLS_SUCCESS;
+}
+
 #ifdef HITLS_TLS_FEATURE_MAX_SEND_FRAGMENT
 int32_t HITLS_CFG_SetMaxSendFragment(HITLS_Config *config, uint16_t maxSendFragment)
 {
