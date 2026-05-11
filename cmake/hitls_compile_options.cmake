@@ -72,14 +72,18 @@ if(_HAS_STACK_CLASH_PROTECTION)
     list(APPEND _hitls_compile_options_list -fstack-clash-protection)
 endif()
 
-# -fcf-protection=full: enables Intel CET (Control-flow Enforcement Technology).
-# Provides hardware IBT (indirect branch tracking) and shadow stack (SHSTK) to
-# defeat ROP/JOP attacks. Only available and meaningful on x86/x86_64 targets;
-# the processor check avoids breakage on ARM, RISC-V, and other cross-compile targets.
+# -fcf-protection=full: Intel CET (IBT + shadow stack) to defeat ROP/JOP attacks.
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|x86|i[3-6]86|amd64")
     check_c_compiler_flag(-fcf-protection=full _HAS_CF_PROTECTION)
     if(_HAS_CF_PROTECTION)
         list(APPEND _hitls_compile_options_list -fcf-protection=full)
+    endif()
+endif()
+# -mbranch-protection=standard: AArch64 BTI + PAC-RET, the ARM equivalent of Intel CET.
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$")
+    check_c_compiler_flag(-mbranch-protection=standard _HAS_BRANCH_PROTECTION)
+    if(_HAS_BRANCH_PROTECTION)
+        list(APPEND _hitls_compile_options_list -mbranch-protection=standard)
     endif()
 endif()
 

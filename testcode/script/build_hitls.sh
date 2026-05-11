@@ -135,7 +135,7 @@ build_hitls_code()
         if [[ $debug_mode = false ]]; then
             add_options="${add_options} -O3"
         fi
-        del_options="${del_options} -O2 -D_FORTIFY_SOURCE=2"
+        del_options="${del_options} -O2"
     elif [[ $get_arch = "armv8_be" ]]; then
         echo "Compile: env=armv8, asm + c, big endian, 64bits"
         feature_options="${feature_options} -DHITLS_ASM_ARMV8=ON -DHITLS_PLATFORM_ENDIAN=big"
@@ -145,7 +145,7 @@ build_hitls_code()
         if [[ $debug_mode = false ]]; then
             add_options="${add_options} -O3"
         fi
-        del_options="${del_options} -O2 -D_FORTIFY_SOURCE=2"
+        del_options="${del_options} -O2"
     else
         echo "Compile: env=$get_arch, c, little endian, 64bits"
         feature_options="${feature_options} -DHITLS_PLATFORM_ENDIAN=little"
