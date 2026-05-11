@@ -20,6 +20,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_CRYPTO_SHA3
 
+#include <stdint.h>
 #include <stddef.h>
 #include <arm_neon.h>
 #include "crypt_sha3.h"
@@ -30,10 +31,15 @@ extern "C" {
 
 typedef uint64x2_t v128;
 typedef v128 Keccakx2State[25]; // 1600x2
+typedef uint64_t Keccakx4State[4][25];
 void Shake256x2(uint8_t *dgst0, uint8_t *dgst1, size_t dgstLen, const uint8_t *in0, const uint8_t *in1, size_t inlen);
 void Keccakx2Absorb(Keccakx2State state, size_t rate, const uint8_t *in0, const uint8_t *in1,
                     size_t inlen, uint8_t domain);
 void Keccakx2Squeeze(uint8_t *out0, uint8_t *out1, size_t nblocks, unsigned int r, Keccakx2State s);
+void Keccakx4Absorb(Keccakx4State state, size_t rate, const uint8_t *in0, const uint8_t *in1,
+                    const uint8_t *in2, const uint8_t *in3, size_t inlen, uint8_t domain);
+void Keccakx4Squeeze(uint8_t *out0, uint8_t *out1, uint8_t *out2, uint8_t *out3, size_t nblocks,
+                     unsigned int r, Keccakx4State state);
 
 #ifdef __cplusplus
 }

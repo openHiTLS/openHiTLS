@@ -1156,44 +1156,19 @@ AARCH64_PACIASP
 
     /* Step 1: initialize state to zero (25 x uint64x2_t = 400 bytes) */
     movi    v0.2d,  #0
-    movi    v1.2d,  #0
-    movi    v2.2d,  #0
-    movi    v3.2d,  #0
-    movi    v4.2d,  #0
-    movi    v5.2d,  #0
-    movi    v6.2d,  #0
-    movi    v7.2d,  #0
-    movi    v8.2d,  #0
-    movi    v9.2d,  #0
-    movi    v10.2d, #0
-    movi    v11.2d, #0
-    movi    v12.2d, #0
-    movi    v13.2d, #0
-    movi    v14.2d, #0
-    movi    v15.2d, #0
-    movi    v16.2d, #0
-    movi    v17.2d, #0
-    movi    v18.2d, #0
-    movi    v19.2d, #0
-    movi    v20.2d, #0
-    movi    v21.2d, #0
-    movi    v22.2d, #0
-    movi    v23.2d, #0
-    movi    v24.2d, #0
-
-    stp     q0,  q1,  [x19]
-    stp     q2,  q3,  [x19, #32]
-    stp     q4,  q5,  [x19, #64]
-    stp     q6,  q7,  [x19, #96]
-    stp     q8,  q9,  [x19, #128]
-    stp     q10, q11, [x19, #160]
-    stp     q12, q13, [x19, #192]
-    stp     q14, q15, [x19, #224]
-    stp     q16, q17, [x19, #256]
-    stp     q18, q19, [x19, #288]
-    stp     q20, q21, [x19, #320]
-    stp     q22, q23, [x19, #352]
-    str     q24, [x19, #384]
+    stp     q0, q0, [x19]
+    stp     q0, q0, [x19, #32]
+    stp     q0, q0, [x19, #64]
+    stp     q0, q0, [x19, #96]
+    stp     q0, q0, [x19, #128]
+    stp     q0, q0, [x19, #160]
+    stp     q0, q0, [x19, #192]
+    stp     q0, q0, [x19, #224]
+    stp     q0, q0, [x19, #256]
+    stp     q0, q0, [x19, #288]
+    stp     q0, q0, [x19, #320]
+    stp     q0, q0, [x19, #352]
+    str     q0, [x19, #384]
 
     /* Step 2: absorb full blocks */
     /* while (inlen >= rate): XOR rate/8 words from in0+in1 into state, then permute */
@@ -1208,24 +1183,18 @@ AARCH64_PACIASP
     mov     x0,  x19    /* state ptr current word */
     mov     x6,  x21    /* in0 current */
     mov     x7,  x22    /* in1 current */
-    mov     x8,  x20    /* remaining bytes in this block = rate */
+    lsr     x8,  x20, #3    /* remaining words in this block = rate / 8 */
 
 .Labsorb2_word_loop:
-    cmp     x8, #8
-    blo     .Labsorb2_word_done
     /* Load one 64-bit word from each input */
-    ldr     x9,  [x6], #8
-    ldr     x10, [x7], #8
-    /* Combine into a uint64x2_t and XOR into state */
-    fmov    d30, x9
-    fmov    v30.d[1], x10
+    ld1     {v30.d}[0], [x6], #8
+    ld1     {v30.d}[1], [x7], #8
     ldr     q31, [x0]
     eor     v31.16b, v31.16b, v30.16b
     str     q31, [x0], #16   /* advance state pointer by sizeof(uint64x2_t) = 16 */
-    sub     x8,  x8,  #8
-    b       .Labsorb2_word_loop
+    subs    x8,  x8,  #1
+    b.ne    .Labsorb2_word_loop
 
-.Labsorb2_word_done:
     /* Advance input pointers and reduce inlen */
     add     x21, x21, x20
     add     x22, x22, x20
@@ -1237,12 +1206,28 @@ AARCH64_PACIASP
 
     b       .Labsorb2_full_block_check
 
-    /* Step 3: handle remaining bytes (< rate), byte by byte */
+    /* Step 3: handle remaining bytes (< rate) */
 .Labsorb2_tail:
     /* x23 = number of remaining bytes; x6 = byte index 0..inlen-1 */
     cbz     x23, .Labsorb2_pad
 
     mov     x6,  #0   /* byte index i */
+    mov     x0,  x19
+    lsr     x8,  x23, #3
+    cbz     x8,  .Labsorb2_byte_loop
+    mov     x14, x21
+    mov     x15, x22
+
+.Labsorb2_tail_word_loop:
+    ld1     {v30.d}[0], [x14], #8
+    ld1     {v30.d}[1], [x15], #8
+    ldr     q31, [x0]
+    eor     v31.16b, v31.16b, v30.16b
+    str     q31, [x0], #16
+    add     x6,  x6,  #8
+    subs    x8,  x8,  #1
+    b.ne    .Labsorb2_tail_word_loop
+
 .Labsorb2_byte_loop:
     cmp     x6,  x23
     bge     .Labsorb2_pad
@@ -1276,32 +1261,23 @@ AARCH64_PACIASP
     and     x11, x23, #7
     lsl     x11, x11, #3
     lsl     x9,  x24, x11         /* domain << shift, lane0 */
-    mov     x10, x9               /* same for lane1 */
+    dup     v30.2d, x9
     lsr     x12, x23, #3          /* inlen/8 -- word index  */
     add     x13, x19, x12, lsl #4
-    ldr     q30, [x13]
-    fmov    x14, d30
-    fmov    x15, v30.d[1]
-    eor     x14, x14, x9
-    eor     x15, x15, x10
-    fmov    d30, x14
-    fmov    v30.d[1], x15
-    str     q30, [x13]
+    ldr     q31, [x13]
+    eor     v31.16b, v31.16b, v30.16b
+    str     q31, [x13]
 
     /* Step 5: set bit 63 of word at (rate-1)/8 */
     sub     x11, x20, #1          /* rate - 1         */
     lsr     x12, x11, #3          /* (rate-1)/8       */
     add     x13, x19, x12, lsl #4 /* &state[(rate-1)/8] */
-    ldr     q30, [x13]
-    fmov    x14, d30
-    fmov    x15, v30.d[1]
     mov     x9,  #1
     lsl     x9,  x9,  #63         /* 1ULL << 63       */
-    eor     x14, x14, x9
-    eor     x15, x15, x9
-    fmov    d30, x14
-    fmov    v30.d[1], x15
-    str     q30, [x13]
+    dup     v30.2d, x9
+    ldr     q31, [x13]
+    eor     v31.16b, v31.16b, v30.16b
+    str     q31, [x13]
 
     ldp     x19, x20, [sp, #16]
     ldp     x21, x22, [sp, #32]
@@ -1351,20 +1327,15 @@ AARCH64_PACIASP
     bl      CRYPT_AARCH64_SYM(KeccakF1600StatePermutex2)
 
     /* Extract r/8 words from each state lane to out0 / out1 */
-    mov     x5,  x22   /* remaining bytes = r */
+    lsr     x5,  x22, #3
 
 .Lsqueeze2_word_loop:
-    cmp     x5,  #8
-    blo     .Lsqueeze2_word_done
     ldr     q30, [x0], #16   /* load state[i] = {lane0, lane1} */
-    fmov    x6,  d30         /* lane for out0 */
-    fmov    x7,  v30.d[1]    /* lane for out1 */
-    str     x6,  [x19], #8
-    str     x7,  [x20], #8
-    sub     x5,  x5,  #8
-    b       .Lsqueeze2_word_loop
+    st1     {v30.d}[0], [x19], #8
+    st1     {v30.d}[1], [x20], #8
+    subs    x5,  x5,  #1
+    b.ne    .Lsqueeze2_word_loop
 
-.Lsqueeze2_word_done:
     sub     x21, x21, #1
     b       .Lsqueeze2_loop
 

@@ -313,6 +313,9 @@ int32_t CRYPT_SHAKE256_GetParam(CRYPT_SHAKE256_Ctx *ctx, BSL_Param *param)
 
 static uint64_t load64(const uint8_t x[8])
 {
+#if defined(__aarch64__) && !defined(HITLS_BIG_ENDIAN)
+    return *(const uint64_t *)(uintptr_t)x;
+#else
     uint32_t i;
     uint64_t r = 0;
 
@@ -321,15 +324,35 @@ static uint64_t load64(const uint8_t x[8])
     }
 
     return r;
+#endif
 }
 
 static void store64(uint8_t x[8], uint64_t u)
 {
+#if defined(__aarch64__) && !defined(HITLS_BIG_ENDIAN)
+    *(uint64_t *)(uintptr_t)x = u;
+#else
     uint32_t i;
 
     for (i = 0; i < 8; i++) {
         x[i] = u >> 8 * i;
     }
+#endif
+}
+
+static uint32_t KeccakAbsorbLastBlock(uint64_t s[25], const uint8_t *in, size_t inlen)
+{
+    uint32_t i = 0;
+    uint32_t laneCnt = (uint32_t)(inlen >> 3);
+
+    for (; i < laneCnt; i++) {
+        s[i] ^= load64(in + 8 * i);
+    }
+    i <<= 3;
+    for (; i < inlen; i++) {
+        s[i / 8] ^= (uint64_t)in[i] << 8 * (i % 8);
+    }
+    return i;
 }
 
 static uint32_t KeccakIncSqueeze(uint8_t *out, size_t outlen, uint64_t s[25], uint32_t pos, uint32_t r)
@@ -354,13 +377,14 @@ static uint32_t KeccakIncSqueeze(uint8_t *out, size_t outlen, uint64_t s[25], ui
 void KeccakAbsorb(uint64_t s[25], uint32_t r, const uint8_t *in, size_t inlen, uint8_t p)
 {
     uint32_t i;
+    uint32_t laneCnt = r >> 3;
 
     for (i = 0; i < 25; i++) {
         s[i] = 0;
     }
 
     while (inlen >= r) {
-        for (i = 0; i < r / 8; i++) {
+        for (i = 0; i < laneCnt; i++) {
             s[i] ^= load64(in + 8 * i);
         }
         in += r;
@@ -368,10 +392,7 @@ void KeccakAbsorb(uint64_t s[25], uint32_t r, const uint8_t *in, size_t inlen, u
         SHA3_Keccak((uint8_t *)s);
     }
 
-    for (i = 0; i < inlen; i++) {
-        s[i / 8] ^= (uint64_t)in[i] << 8 * (i % 8);
-    }
-
+    i = KeccakAbsorbLastBlock(s, in, inlen);
     s[i / 8] ^= (uint64_t)p << 8 * (i % 8);
     s[(r - 1) / 8] ^= 1ULL << 63;
 }
@@ -379,10 +400,11 @@ void KeccakAbsorb(uint64_t s[25], uint32_t r, const uint8_t *in, size_t inlen, u
 void KeccakSqueeze(uint8_t *out, size_t nblocks, uint64_t s[25], uint32_t r)
 {
     uint32_t i;
+    uint32_t laneCnt = r >> 3;
 
     while (nblocks) {
         SHA3_Keccak((uint8_t *)s);
-        for (i = 0; i < r / 8; i++) {
+        for (i = 0; i < laneCnt; i++) {
             store64(out + 8 * i, s[i]);
         }
         out += r;

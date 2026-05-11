@@ -31,7 +31,7 @@ void MLKEMPolyAddReduce(uint32_t k, int16_t **r, int16_t **e);
 void MLKEMAdd2Reduce(int16_t *, int16_t *, const int16_t *);
 void MLKEMSubReduce(int16_t *, int16_t *);
 void MLKEMPolyVecReduce(uint32_t k, int16_t **r);
-void PolyVectoBytes(uint32_t k, uint8_t *r, int16_t **a);
+void MLKEMPolyVecReduceToBytes(uint32_t k, uint8_t *r, int16_t **a);
 void MLKEMPolyINTTtoMont(uint32_t k, int16_t **r);
 void MLKEMPolyCBDEta(uint32_t eta, int16_t *r, const uint8_t *buf);
 void PolyVecCompress(uint32_t k, uint8_t *r, int16_t **a);
@@ -89,21 +89,6 @@ const __attribute__((aligned(16))) int16_t MLKEM_BASEMUL_TWIDDLE_TABLE[MLKEM_N] 
     10129,  -10129, -1219,  1219,   -394,   394,    885,   -885,   -1175,  1175,   -11999, 11999,  -3878,  3878,
     8711,   -8711,  -11566, 11566};
 
-void KyberShake256x2Prf(uint8_t *out1, uint8_t *out2, size_t outlen, const uint8_t key[MLKEM_SEED_LEN], uint8_t nonce1,
-                        uint8_t nonce2)
-{
-    uint8_t extkey1[MLKEM_SEED_LEN + 1];
-    uint8_t extkey2[MLKEM_SEED_LEN + 1];
-
-    memcpy(extkey1, key, MLKEM_SEED_LEN);
-    memcpy(extkey2, key, MLKEM_SEED_LEN);
-    extkey1[MLKEM_SEED_LEN] = nonce1;
-    extkey2[MLKEM_SEED_LEN] = nonce2;
-    Shake256x2(out1, out2, outlen, extkey1, extkey2, sizeof(extkey1));
-    BSL_SAL_CleanseData(extkey1, MLKEM_SEED_LEN + 1);
-    BSL_SAL_CleanseData(extkey2, MLKEM_SEED_LEN + 1);
-}
-
 void KyberShake128x2Absorb(Keccakx2State state, const uint8_t seed[MLKEM_SEED_LEN], uint8_t x1, uint8_t x2, uint8_t y1,
                            uint8_t y2)
 {
@@ -132,13 +117,84 @@ void KyberShakeAbsorb(ShakeState *state, const uint8_t seed[MLKEM_SEED_LEN], uin
     state->pos = CRYPT_SHAKE128_BLOCKSIZE;
 }
 
+static void KyberShake128x4Absorb(Keccakx4State state, const uint8_t seed[MLKEM_SEED_LEN],
+                                  const uint8_t x[4], const uint8_t y[4])
+{
+    uint8_t extseed[4][MLKEM_SEED_LEN + 2];
+
+    for (uint32_t i = 0; i < 4; i++) {
+        (void)memcpy(extseed[i], seed, MLKEM_SEED_LEN);
+        extseed[i][MLKEM_SEED_LEN] = x[i];
+        extseed[i][MLKEM_SEED_LEN + 1] = y[i];
+    }
+    Keccakx4Absorb(state, CRYPT_SHAKE128_BLOCKSIZE, extseed[0], extseed[1], extseed[2], extseed[3],
+                   MLKEM_SEED_LEN + 2, 0x1F);
+    BSL_SAL_CleanseData(extseed, sizeof(extseed));
+}
+
 void PolyGetNoiseEtaX2(uint32_t eta, int16_t vec1[MLKEM_N], int16_t vec2[MLKEM_N], const uint8_t seed[MLKEM_SEED_LEN],
                        uint8_t nonce1, uint8_t nonce2)
 {
-    uint8_t buf1[eta * MLKEM_N / 4], buf2[eta * MLKEM_N / 4];
-    KyberShake256x2Prf(buf1, buf2, sizeof(buf1), seed, nonce1, nonce2);
+    uint8_t extkey1[MLKEM_SEED_LEN + 1];
+    uint8_t extkey2[MLKEM_SEED_LEN + 1];
+    uint8_t buf1[2 * CRYPT_SHAKE256_BLOCKSIZE];
+    uint8_t buf2[2 * CRYPT_SHAKE256_BLOCKSIZE];
+    Keccakx2State state;
+    uint32_t outLen = eta * MLKEM_N / 4;
+    uint32_t nBlocks = (outLen + CRYPT_SHAKE256_BLOCKSIZE - 1) / CRYPT_SHAKE256_BLOCKSIZE;
+
+    memcpy(extkey1, seed, MLKEM_SEED_LEN);
+    memcpy(extkey2, seed, MLKEM_SEED_LEN);
+    extkey1[MLKEM_SEED_LEN] = nonce1;
+    extkey2[MLKEM_SEED_LEN] = nonce2;
+    Keccakx2Absorb(state, CRYPT_SHAKE256_BLOCKSIZE, extkey1, extkey2, sizeof(extkey1), 0x1F);
+    Keccakx2Squeeze(buf1, buf2, nBlocks, CRYPT_SHAKE256_BLOCKSIZE, state);
     MLKEMPolyCBDEta(eta, vec1, buf1);
     MLKEMPolyCBDEta(eta, vec2, buf2);
+    BSL_SAL_CleanseData(extkey1, sizeof(extkey1));
+    BSL_SAL_CleanseData(extkey2, sizeof(extkey2));
+}
+
+static void PolyGetNoiseEtaSingle(uint32_t eta, int16_t vec[MLKEM_N], const uint8_t seed[MLKEM_SEED_LEN],
+                                  uint8_t nonce)
+{
+    uint8_t extkey[MLKEM_SEED_LEN + 1];
+    uint8_t buf[2 * CRYPT_SHAKE256_BLOCKSIZE];
+    uint32_t outLen = eta * MLKEM_N / 4;
+    uint32_t nBlocks = (outLen + CRYPT_SHAKE256_BLOCKSIZE - 1) / CRYPT_SHAKE256_BLOCKSIZE;
+    ShakeState state;
+
+    memcpy(extkey, seed, MLKEM_SEED_LEN);
+    extkey[MLKEM_SEED_LEN] = nonce;
+    KeccakAbsorb(state.s, CRYPT_SHAKE256_BLOCKSIZE, extkey, sizeof(extkey), 0x1F);
+    KeccakSqueeze(buf, nBlocks, state.s, CRYPT_SHAKE256_BLOCKSIZE);
+    MLKEMPolyCBDEta(eta, vec, buf);
+    BSL_SAL_CleanseData(extkey, sizeof(extkey));
+}
+
+static void PolyGetNoiseEtaX4(uint32_t eta, int16_t *vec0, int16_t *vec1, int16_t *vec2, int16_t *vec3,
+                              const uint8_t seed[MLKEM_SEED_LEN], uint8_t nonce0, uint8_t nonce1,
+                              uint8_t nonce2, uint8_t nonce3)
+{
+    uint8_t extkey[4][MLKEM_SEED_LEN + 1];
+    uint8_t buf[4][2 * CRYPT_SHAKE256_BLOCKSIZE];
+    int16_t *vec[4] = {vec0, vec1, vec2, vec3};
+    uint8_t nonce[4] = {nonce0, nonce1, nonce2, nonce3};
+    uint32_t outLen = eta * MLKEM_N / 4;
+    uint32_t nBlocks = (outLen + CRYPT_SHAKE256_BLOCKSIZE - 1) / CRYPT_SHAKE256_BLOCKSIZE;
+    Keccakx4State state;
+
+    for (uint32_t i = 0; i < 4; i++) {
+        (void)memcpy(extkey[i], seed, MLKEM_SEED_LEN);
+        extkey[i][MLKEM_SEED_LEN] = nonce[i];
+    }
+    Keccakx4Absorb(state, CRYPT_SHAKE256_BLOCKSIZE, extkey[0], extkey[1], extkey[2], extkey[3],
+                   sizeof(extkey[0]), 0x1F);
+    Keccakx4Squeeze(buf[0], buf[1], buf[2], buf[3], nBlocks, CRYPT_SHAKE256_BLOCKSIZE, state);
+    for (uint32_t i = 0; i < 4; i++) {
+        MLKEMPolyCBDEta(eta, vec[i], buf[i]);
+    }
+    BSL_SAL_CleanseData(extkey, sizeof(extkey));
 }
 
 int32_t SampleEta1(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *seed, int16_t *s[], int16_t *e[])
@@ -146,17 +202,20 @@ int32_t SampleEta1(const CRYPT_ML_KEM_Ctx *ctx, uint8_t *seed, int16_t *s[], int
     uint32_t k = ctx->info->k;
     uint32_t eta1 = ctx->info->eta1;
     if (k == 2) {
-        PolyGetNoiseEtaX2(eta1, s[0], s[1], seed, 0, 1);
-        PolyGetNoiseEtaX2(eta1, e[0], e[1], seed, 2, 3);
+        PolyGetNoiseEtaX4(eta1, s[0], s[1], e[0], e[1], seed, 0, 1, 2, 3);
     } else if (k == 3) {
         PolyGetNoiseEtaX2(eta1, s[0], s[1], seed, 0, 1);
         PolyGetNoiseEtaX2(eta1, s[2], e[0], seed, 2, 3);
         PolyGetNoiseEtaX2(eta1, e[1], e[2], seed, 4, 5);
     } else if (k == 4) {
-        PolyGetNoiseEtaX2(eta1, s[0], s[1], seed, 0, 1);
-        PolyGetNoiseEtaX2(eta1, s[2], s[3], seed, 2, 3);
-        PolyGetNoiseEtaX2(eta1, e[0], e[1], seed, 4, 5);
-        PolyGetNoiseEtaX2(eta1, e[2], e[3], seed, 6, 7);
+        PolyGetNoiseEtaSingle(eta1, s[0], seed, 0);
+        PolyGetNoiseEtaSingle(eta1, s[1], seed, 1);
+        PolyGetNoiseEtaSingle(eta1, s[2], seed, 2);
+        PolyGetNoiseEtaSingle(eta1, s[3], seed, 3);
+        PolyGetNoiseEtaSingle(eta1, e[0], seed, 4);
+        PolyGetNoiseEtaSingle(eta1, e[1], seed, 5);
+        PolyGetNoiseEtaSingle(eta1, e[2], seed, 6);
+        PolyGetNoiseEtaSingle(eta1, e[3], seed, 7);
     }
     for (uint32_t i = 0; i < k; i++) {
         MLKEM_ComputeNTTAsm(s[i]);
@@ -223,8 +282,8 @@ static unsigned int Parse(int16_t *poly, uint8_t *arrayB, uint32_t arrayLen, uin
 }
 
 // Generate a pair of matrix polynomials using x2 (dual-lane) SHAKE128
-static void GenMatrixX2Pair(const uint8_t *seed, int16_t *poly0, int16_t *poly1,
-                            uint8_t x1, uint8_t x2, uint8_t y1, uint8_t y2)
+static void GenMatrixX2Pair(const uint8_t *seed, int16_t *poly0, int16_t *poly1, uint8_t x1, uint8_t x2, uint8_t y1,
+                            uint8_t y2)
 {
     uint8_t buf0[GEN_MATRIX_NBLOCKS * CRYPT_SHAKE128_BLOCKSIZE + 2];
     uint8_t buf1[GEN_MATRIX_NBLOCKS * CRYPT_SHAKE128_BLOCKSIZE + 2];
@@ -273,34 +332,114 @@ static void GenMatrixSingle(const uint8_t *seed, int16_t *poly, uint8_t x, uint8
     }
 }
 
+static void GenMatrixX4(const uint8_t *seed, int16_t *poly[4], const uint8_t x[4], const uint8_t y[4])
+{
+    uint8_t buf[4][GEN_MATRIX_NBLOCKS * CRYPT_SHAKE128_BLOCKSIZE + 2];
+    uint32_t buflen[4];
+    uint32_t ctr[4];
+    Keccakx4State state;
+
+    KyberShake128x4Absorb(state, seed, x, y);
+    Keccakx4Squeeze(buf[0], buf[1], buf[2], buf[3], GEN_MATRIX_NBLOCKS, CRYPT_SHAKE128_BLOCKSIZE, state);
+    for (uint32_t i = 0; i < 4; i++) {
+        buflen[i] = GEN_MATRIX_NBLOCKS * CRYPT_SHAKE128_BLOCKSIZE;
+        ctr[i] = MLKEMRejUniform(poly[i], buf[i]);
+    }
+
+    while (ctr[0] < MLKEM_N || ctr[1] < MLKEM_N || ctr[2] < MLKEM_N || ctr[3] < MLKEM_N) {
+        uint8_t tmp[4][CRYPT_SHAKE128_BLOCKSIZE];
+        Keccakx4Squeeze(tmp[0], tmp[1], tmp[2], tmp[3], 1, CRYPT_SHAKE128_BLOCKSIZE, state);
+        for (uint32_t i = 0; i < 4; i++) {
+            if (ctr[i] >= MLKEM_N) {
+                continue;
+            }
+            uint32_t off = buflen[i] % 3;
+            for (uint32_t m = 0; m < off; m++) {
+                buf[i][m] = buf[i][buflen[i] - off + m];
+            }
+            (void)memcpy(buf[i] + off, tmp[i], CRYPT_SHAKE128_BLOCKSIZE);
+            buflen[i] = off + CRYPT_SHAKE128_BLOCKSIZE;
+            ctr[i] += Parse(poly[i] + ctr[i], buf[i], buflen[i], MLKEM_N - ctr[i]);
+        }
+    }
+}
+
+static void GenMatrixK2X4(const uint8_t *seed, int16_t *polyMatrix[MLKEM_K_MAX][MLKEM_K_MAX], bool isEnc)
+{
+    int16_t *poly[4] = {polyMatrix[0][0], polyMatrix[0][1], polyMatrix[1][0], polyMatrix[1][1]};
+    uint8_t row[4] = {0, 0, 1, 1};
+    uint8_t col[4] = {0, 1, 0, 1};
+    uint8_t x[4];
+    uint8_t y[4];
+
+    for (uint32_t i = 0; i < 4; i++) {
+        x[i] = isEnc ? row[i] : col[i];
+        y[i] = isEnc ? col[i] : row[i];
+    }
+    GenMatrixX4(seed, poly, x, y);
+}
+
+static void GenMatrixK3X2(const uint8_t *seed, int16_t *polyMatrix[MLKEM_K_MAX][MLKEM_K_MAX], bool isEnc)
+{
+    int16_t *poly[MLKEM_K_MAX * MLKEM_K_MAX];
+    uint8_t x[MLKEM_K_MAX * MLKEM_K_MAX];
+    uint8_t y[MLKEM_K_MAX * MLKEM_K_MAX];
+    uint32_t idx = 0;
+
+    for (uint32_t i = 0; i < 3; i++) {
+        for (uint32_t j = 0; j < 3; j++) {
+            poly[idx] = polyMatrix[i][j];
+            x[idx] = isEnc ? i : j;
+            y[idx] = isEnc ? j : i;
+            idx++;
+        }
+    }
+    for (uint32_t i = 0; i + 1 < idx; i += 2) {
+        GenMatrixX2Pair(seed, poly[i], poly[i + 1], x[i], x[i + 1], y[i], y[i + 1]);
+    }
+    GenMatrixSingle(seed, poly[idx - 1], x[idx - 1], y[idx - 1]);
+}
+
+static void GenMatrixK3RowX2(const uint8_t *seed, int16_t *polyMatrix[MLKEM_K_MAX][MLKEM_K_MAX], uint32_t row,
+                             bool isEnc)
+{
+    uint8_t x0 = isEnc ? (uint8_t)row : 0;
+    uint8_t x1 = isEnc ? (uint8_t)row : 1;
+    uint8_t x2 = isEnc ? (uint8_t)row : 2;
+    uint8_t y0 = isEnc ? 0 : (uint8_t)row;
+    uint8_t y1 = isEnc ? 1 : (uint8_t)row;
+    uint8_t y2 = isEnc ? 2 : (uint8_t)row;
+
+    GenMatrixX2Pair(seed, polyMatrix[row][0], polyMatrix[row][1], x0, x1, y0, y1);
+    GenMatrixSingle(seed, polyMatrix[row][2], x2, y2);
+}
+
+static void GenMatrixK4X4(const uint8_t *seed, int16_t *polyMatrix[MLKEM_K_MAX][MLKEM_K_MAX], bool isEnc)
+{
+    for (uint32_t i = 0; i < 4; i++) {
+        int16_t *poly[4] = {polyMatrix[i][0], polyMatrix[i][1], polyMatrix[i][2], polyMatrix[i][3]};
+        uint8_t x[4];
+        uint8_t y[4];
+
+        for (uint32_t j = 0; j < 4; j++) {
+            x[j] = isEnc ? i : j;
+            y[j] = isEnc ? j : i;
+        }
+        GenMatrixX4(seed, poly, x, y);
+    }
+}
+
 int32_t GenMatrix(const CRYPT_ML_KEM_Ctx *ctx, const uint8_t *seed, int16_t *polyMatrix[MLKEM_K_MAX][MLKEM_K_MAX],
                   bool isEnc)
 {
     uint8_t k = ctx->info->k;
 
-    if (k == 2 || k == 4) {
-        for (uint32_t i = 0; i < k; i++) {
-            for (uint32_t j = 0; j < k; j += 2) {
-                uint8_t x1 = isEnc ? i : j;
-                uint8_t x2 = isEnc ? i : j + 1;
-                uint8_t y1 = isEnc ? j : i;
-                uint8_t y2 = isEnc ? j + 1 : i;
-                GenMatrixX2Pair(seed, polyMatrix[i][j], polyMatrix[i][j + 1], x1, x2, y1, y2);
-            }
-        }
+    if (k == 2) {
+        GenMatrixK2X4(seed, polyMatrix, isEnc);
+    } else if (k == 4) {
+        GenMatrixK4X4(seed, polyMatrix, isEnc);
     } else if (k == 3) {
-        // k=3: 8 entries use x2 mode (4 pairs), 1 entry [2][2] uses singleton mode
-        for (uint32_t idx = 0; idx < 8; idx += 2) {
-            uint32_t i1 = idx / 3, j1 = idx % 3;
-            uint32_t i2 = (idx + 1) / 3, j2 = (idx + 1) % 3;
-            uint8_t x1 = isEnc ? i1 : j1;
-            uint8_t x2 = isEnc ? i2 : j2;
-            uint8_t y1 = isEnc ? j1 : i1;
-            uint8_t y2 = isEnc ? j2 : i2;
-            GenMatrixX2Pair(seed, polyMatrix[i1][j1], polyMatrix[i2][j2], x1, x2, y1, y2);
-        }
-        // Last coefficient [2][2]: isEnc swap is a no-op since i == j == 2
-        GenMatrixSingle(seed, polyMatrix[2][2], 2, 2);
+        GenMatrixK3X2(seed, polyMatrix, isEnc);
     }
     return CRYPT_SUCCESS;
 }
@@ -312,23 +451,31 @@ int32_t MLKEM_PKEGen(CRYPT_ML_KEM_Ctx *ctx, uint8_t *digest, uint8_t *pk, uint8_
     // expand 32+1 bytes to two pseudorandom 32-byte seeds
     uint8_t *p = digest;
     uint8_t *q = digest + CRYPT_SHA3_512_DIGESTSIZE / 2;
-    GOTO_ERR_IF(GenMatrix(ctx, p, ctx->keyData.matrix, false), ret); // Step 3 - 7
-    GOTO_ERR_IF(SampleEta1(ctx, q, ctx->keyData.vectorS, ctx->keyData.vectorT), ret); // Step 8 - 15
+    int16_t *(*matrix)[MLKEM_K_MAX] = ctx->keyData.matrix;
+    int16_t **vectorS = ctx->keyData.vectorS;
+    int16_t **vectorE = ctx->keyData.vectorE;
+    int16_t **vectorT = ctx->keyData.vectorT;
+
+    GOTO_ERR_IF(SampleEta1(ctx, q, vectorS, vectorE), ret); // Step 8 - 15
 
     int16_t s_asym[MLKEM_K_MAX][MLKEM_N >> 1];
-    int16_t e[MLKEM_K_MAX][MLKEM_N];
-    int16_t *ae[MLKEM_K_MAX] = {e[0], e[1], e[2], e[3]};
     for (uint32_t i = 0; i < k; i++) {
-        MLKEMPointMulExtended(s_asym[i], ctx->keyData.vectorS[i], MLKEM_BASEMUL_TWIDDLE_TABLE);
+        MLKEMPointMulExtended(s_asym[i], vectorS[i], MLKEM_BASEMUL_TWIDDLE_TABLE);
     }
-    for (uint32_t i = 0; i < k; i++) {
-        MLKEMAsymMulMont(k, ae[i], ctx->keyData.matrix[i][0], &(ctx->keyData.vectorS[0][0]), &(s_asym[0][0]));
+    if (k == 3) {
+        for (uint32_t i = 0; i < 3; i++) {
+            GenMatrixK3RowX2(p, matrix, i, false); // Step 3 - 7
+            MLKEMAsymMulMont(k, vectorT[i], matrix[i][0], &(vectorS[0][0]), &(s_asym[0][0]));
+        }
+    } else {
+        GOTO_ERR_IF(GenMatrix(ctx, p, matrix, false), ret); // Step 3 - 7
+        for (uint32_t i = 0; i < k; i++) {
+            MLKEMAsymMulMont(k, vectorT[i], matrix[i][0], &(vectorS[0][0]), &(s_asym[0][0]));
+        }
     }
-    MLKEMPolyAddReduce(k, ctx->keyData.vectorT, ae);
-    MLKEMPolyVecReduce(k, ctx->keyData.vectorS);
-    MLKEMPolyVecReduce(k, ctx->keyData.vectorT);
-    PolyVectoBytes(k, pk, ctx->keyData.vectorT);
-    PolyVectoBytes(k, dk, ctx->keyData.vectorS);
+    MLKEMPolyAddReduce(k, vectorT, vectorE);
+    MLKEMPolyVecReduceToBytes(k, pk, vectorT);
+    MLKEMPolyVecReduceToBytes(k, dk, vectorS);
     memcpy(pk + k * MLKEM_CIPHER_LEN, p, MLKEM_SEED_LEN);
 ERR:
     return ret;

@@ -24,6 +24,7 @@
 #include "sal_memimpl.h"
 
 static BSL_SAL_MemCallback g_memCallback = {NULL, NULL};
+static void *(*const volatile g_memsetFunc)(void *, int, size_t) = memset;
 
 void *BSL_SAL_Malloc(uint32_t size)
 {
@@ -114,10 +115,7 @@ void BSL_SAL_CleanseData(void *ptr, uint32_t size)
     if (ptr == NULL || size == 0) {
         return;
     }
-    volatile uint8_t *p = (volatile uint8_t *)ptr;
-    while (size--) {
-        *p++ = 0;
-    }
+    g_memsetFunc(ptr, 0, size);
     __asm__ __volatile__("" : : "r"(ptr) : "memory");
 }
 

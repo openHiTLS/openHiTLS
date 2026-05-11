@@ -31,6 +31,8 @@
 #define MLKEM_SHARED_KEY_LEN 32
 #define MLKEM_PRF_BLOCKSIZE 64
 #define MLKEM_ENCODE_BLOCKSIZE 32
+#define MLKEM_MAX_ENCAPS_KEY_LEN (MLKEM_CIPHER_LEN * MLKEM_K_MAX + MLKEM_SEED_LEN)
+#define MLKEM_MAX_DECAPS_KEY_LEN (MLKEM_CIPHER_LEN * MLKEM_K_MAX * 2 + MLKEM_SEED_LEN * 3)
 
 #define MLKEM_Q    3329
 #define MLKEM_Q_INV_BETA (-3327)  //(-MLKEM_Q) ^{-1} mod BETA, BETA = 2^{16}
@@ -75,6 +77,7 @@ typedef struct {
     int16_t *vectorS[MLKEM_K_MAX];
     int16_t *vectorE[MLKEM_K_MAX];
     int16_t *vectorT[MLKEM_K_MAX];
+    int16_t buf[(MLKEM_K_MAX * MLKEM_K_MAX + 3 * MLKEM_K_MAX) * MLKEM_N];
 } MLKEM_MatrixSt;
 
 typedef struct {
@@ -105,6 +108,8 @@ struct CryptMlKemCtx {
     CRYPT_ALGO_MLKEM_DK_FORMAT_TYPE dkFormat;
     bool hasSeed;                      // Flag indicating if seed is stored
     uint8_t seed[MLKEM_SEED_LEN * 2]; // Store 64-byte seed (d || z)
+    uint8_t ekBuf[MLKEM_MAX_ENCAPS_KEY_LEN];
+    uint8_t dkBuf[MLKEM_MAX_DECAPS_KEY_LEN];
 };
 int32_t MLKEM_DecodeDk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *dk, uint32_t dkLen);
 int32_t MLKEM_DecodeEk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *ek, uint32_t ekLen);

@@ -33,9 +33,13 @@ uint32_t gKyberRandNum = 0;
 
 static int32_t TEST_KyberRandom(uint8_t *randNum, uint32_t randLen)
 {
-    (void)randLen;
-    memcpy(randNum, gKyberRandBuf[gKyberRandNum], 32);
-    gKyberRandNum++;
+    while (randLen > 0) {
+        uint32_t copyLen = randLen > sizeof(gKyberRandBuf[0]) ? sizeof(gKyberRandBuf[0]) : randLen;
+        memcpy(randNum, gKyberRandBuf[gKyberRandNum], copyLen);
+        randNum += copyLen;
+        randLen -= copyLen;
+        gKyberRandNum++;
+    }
     return 0;
 }
 
