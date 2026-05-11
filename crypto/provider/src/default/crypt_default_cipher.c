@@ -26,6 +26,9 @@
 #include "crypt_modes_ctr.h"
 #include "crypt_modes_ecb.h"
 #include "crypt_modes_gcm.h"
+#if defined(HITLS_CRYPTO_GHASH) && defined(HITLS_CRYPTO_AES)
+#include "crypt_modes_gcm_siv.h"
+#endif
 #include "crypt_modes_ofb.h"
 #include "crypt_modes_cfb.h"
 #include "crypt_modes_hctr.h"
@@ -80,6 +83,11 @@ static void *GetNewCtxFunc(int32_t algId)
         case CRYPT_CIPHER_SM4_CCM:
 #endif
             return MODES_CCM_NewCtxEx;
+#endif
+#if defined(HITLS_CRYPTO_GCM) && defined(HITLS_CRYPTO_AES) && defined(HITLS_CRYPTO_GHASH)
+        case CRYPT_CIPHER_AES128_GCM_SIV:
+        case CRYPT_CIPHER_AES256_GCM_SIV:
+            return MODES_GCM_SIV_NewCtxEx;
 #endif
 #if defined(HITLS_CRYPTO_GCM) && (defined(HITLS_CRYPTO_AES) || defined(HITLS_CRYPTO_SM4))
 #ifdef HITLS_CRYPTO_AES
@@ -260,6 +268,19 @@ const CRYPT_EAL_Func g_defEalGcm[] = {
     {CRYPT_EAL_IMPLCIPHER_DUPCTX, (CRYPT_EAL_ImplCipherDupCtx)MODES_GCM_DupCtx},
     CRYPT_EAL_FUNC_END,
 };
+#if defined(HITLS_CRYPTO_GHASH) && defined(HITLS_CRYPTO_AES)
+const CRYPT_EAL_Func g_defEalGcmSiv[] = {
+    {CRYPT_EAL_IMPLCIPHER_NEWCTX, (CRYPT_EAL_ImplCipherNewCtx)CRYPT_EAL_DefCipherNewCtx},
+    {CRYPT_EAL_IMPLCIPHER_INITCTX, (CRYPT_EAL_ImplCipherInitCtx)MODES_GCM_SIV_InitCtxEx},
+    {CRYPT_EAL_IMPLCIPHER_UPDATE, (CRYPT_EAL_ImplCipherUpdate)MODES_GCM_SIV_Update},
+    {CRYPT_EAL_IMPLCIPHER_FINAL, (CRYPT_EAL_ImplCipherFinal)MODES_GCM_SIV_Final},
+    {CRYPT_EAL_IMPLCIPHER_DEINITCTX, (CRYPT_EAL_ImplCipherDeinitCtx)MODES_GCM_SIV_DeInitCtx},
+    {CRYPT_EAL_IMPLCIPHER_CTRL, (CRYPT_EAL_ImplCipherCtrl)MODES_GCM_SIV_Ctrl},
+    {CRYPT_EAL_IMPLCIPHER_FREECTX, (CRYPT_EAL_ImplCipherFreeCtx)MODES_GCM_SIV_FreeCtx},
+    {CRYPT_EAL_IMPLCIPHER_DUPCTX, (CRYPT_EAL_ImplCipherDupCtx)MODES_GCM_SIV_DupCtx},
+    CRYPT_EAL_FUNC_END,
+};
+#endif
 #endif
 
 #ifdef HITLS_CRYPTO_OFB

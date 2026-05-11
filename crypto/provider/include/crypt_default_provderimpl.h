@@ -127,6 +127,9 @@ extern const CRYPT_EAL_Func g_defEalEcb[];
 #endif
 #ifdef HITLS_CRYPTO_GCM
 extern const CRYPT_EAL_Func g_defEalGcm[];
+#if defined(HITLS_CRYPTO_GHASH) && defined(HITLS_CRYPTO_AES)
+extern const CRYPT_EAL_Func g_defEalGcmSiv[];
+#endif
 #endif
 #ifdef HITLS_CRYPTO_OFB
 extern const CRYPT_EAL_Func g_defEalOfb[];

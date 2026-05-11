@@ -378,6 +378,13 @@ bool IsAesAlgDisabled(int id)
         case CRYPT_CIPHER_AES128_GCM:
         case CRYPT_CIPHER_AES192_GCM:
         case CRYPT_CIPHER_AES256_GCM:
+        case CRYPT_CIPHER_AES128_GCM_SIV:
+        case CRYPT_CIPHER_AES256_GCM_SIV:
+            return true;
+#endif
+#if defined(HITLS_CRYPTO_GCM) && !defined(HITLS_CRYPTO_GHASH)
+        case CRYPT_CIPHER_AES128_GCM_SIV:
+        case CRYPT_CIPHER_AES256_GCM_SIV:
             return true;
 #endif
 #ifndef HITLS_CRYPTO_CFB
@@ -466,6 +473,8 @@ bool IsCipherAlgDisabled(int id)
         case CRYPT_CIPHER_AES128_GCM:
         case CRYPT_CIPHER_AES192_GCM:
         case CRYPT_CIPHER_AES256_GCM:
+        case CRYPT_CIPHER_AES128_GCM_SIV:
+        case CRYPT_CIPHER_AES256_GCM_SIV:
         case CRYPT_CIPHER_AES128_CFB:
         case CRYPT_CIPHER_AES192_CFB:
         case CRYPT_CIPHER_AES256_CFB:

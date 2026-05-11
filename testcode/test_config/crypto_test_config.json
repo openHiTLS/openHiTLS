@@ -61,7 +61,8 @@
         "aes": [
             "test_suite_sdv_eal_aes_ccm",
             "test_suite_sdv_eal_aes",
-            "test_suite_sdv_eal_aes_gcm"
+            "test_suite_sdv_eal_aes_gcm",
+            "test_suite_sdv_eal_aes_gcm_siv"
         ],
         "chacha20": ["test_suite_sdv_eal_chachapoly"],
         "sm4": ["test_suite_sdv_eal_sm4"],
@@ -209,6 +210,11 @@
         "test_suite_sdv_eal_aes_gcm": [
             "SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC001",
             "SDV_CRYPTO_AES_GCM_UPDATE_FUNC_TC002"
+        ],
+        "test_suite_sdv_eal_aes_gcm_siv": [
+            "SDV_CRYPTO_AES_GCM_SIV_UPDATE_FUNC_TC001",
+            "SDV_CRYPTO_AES_GCM_SIV_UPDATE_FUNC_TC002",
+            "SDV_CRYPTO_AES_GCM_SIV_UPDATE_FUNC_TC003"
         ],
         "test_suite_sdv_eal_chachapoly":[
             "SDV_CRYPTO_CHACHA20POLY1305_UPDATE_FUNC_TC002"

@@ -34,6 +34,9 @@
 #endif
 #ifdef HITLS_CRYPTO_GCM
 #include "crypt_modes_gcm.h"
+#if defined(HITLS_CRYPTO_GHASH) && defined(HITLS_CRYPTO_AES)
+#include "crypt_modes_gcm_siv.h"
+#endif
 #endif
 #ifdef HITLS_CRYPTO_ECB
 #include "crypt_modes_ecb.h"
@@ -144,6 +147,18 @@ static const EAL_CipherMethod GCM_METHOD = {
     (CipherFreeCtx)MODES_GCM_FreeCtx,
     (CipherDupCtx)MODES_GCM_DupCtx
 };
+#if defined(HITLS_CRYPTO_GHASH) && defined(HITLS_CRYPTO_AES)
+static const EAL_CipherMethod GCM_SIV_METHOD = {
+    (CipherNewCtx)MODES_GCM_SIV_NewCtxEx,
+    (CipherInitCtx)MODES_GCM_SIV_InitCtxEx,
+    (CipherDeInitCtx)MODES_GCM_SIV_DeInitCtx,
+    (CipherUpdate)MODES_GCM_SIV_Update,
+    (CipherFinal)MODES_GCM_SIV_Final,
+    (CipherCtrl)MODES_GCM_SIV_Ctrl,
+    (CipherFreeCtx)MODES_GCM_SIV_FreeCtx,
+    (CipherDupCtx)MODES_GCM_SIV_DupCtx
+};
+#endif
 #endif
 
 
@@ -249,6 +264,10 @@ const EAL_CipherMethod *EAL_FindModeMethod(CRYPT_MODE_AlgId id)
 #ifdef HITLS_CRYPTO_GCM
         case HCRYPT_MODE_GCM:
             return &GCM_METHOD;
+#if defined(HITLS_CRYPTO_GHASH) && defined(HITLS_CRYPTO_AES)
+        case HCRYPT_MODE_GCM_SIV:
+            return &GCM_SIV_METHOD;
+#endif
 #endif
 #if defined(HITLS_CRYPTO_CHACHA20) && defined(HITLS_CRYPTO_CHACHA20POLY1305)
         case HCRYPT_MODE_CHACHA20_POLY1305:
@@ -303,6 +322,10 @@ static const EAL_SymAlgMap SYM_ID_MAP[] = {
     {.id = CRYPT_CIPHER_AES128_GCM, .modeId = HCRYPT_MODE_GCM },
     {.id = CRYPT_CIPHER_AES192_GCM, .modeId = HCRYPT_MODE_GCM },
     {.id = CRYPT_CIPHER_AES256_GCM, .modeId = HCRYPT_MODE_GCM },
+#if defined(HITLS_CRYPTO_GHASH) && defined(HITLS_CRYPTO_AES)
+    {.id = CRYPT_CIPHER_AES128_GCM_SIV, .modeId = HCRYPT_MODE_GCM_SIV },
+    {.id = CRYPT_CIPHER_AES256_GCM_SIV, .modeId = HCRYPT_MODE_GCM_SIV },
+#endif
 #endif
 #ifdef HITLS_CRYPTO_CFB
     {.id = CRYPT_CIPHER_AES128_CFB, .modeId = HCRYPT_MODE_CFB },
@@ -513,6 +536,10 @@ static CRYPT_CipherInfo g_cipherInfo[] = {
     {.id = CRYPT_CIPHER_AES128_GCM, .blockSize = 1, .keyLen = 16, .ivLen = 12},
     {.id = CRYPT_CIPHER_AES192_GCM, .blockSize = 1, .keyLen = 24, .ivLen = 12},
     {.id = CRYPT_CIPHER_AES256_GCM, .blockSize = 1, .keyLen = 32, .ivLen = 12},
+#if defined(HITLS_CRYPTO_GHASH) && defined(HITLS_CRYPTO_AES)
+    {.id = CRYPT_CIPHER_AES128_GCM_SIV, .blockSize = 1, .keyLen = 16, .ivLen = 12},
+    {.id = CRYPT_CIPHER_AES256_GCM_SIV, .blockSize = 1, .keyLen = 32, .ivLen = 12},
+#endif
 #endif
 #ifdef HITLS_CRYPTO_CFB
     {.id = CRYPT_CIPHER_AES128_CFB, .blockSize = 1, .keyLen = 16, .ivLen = 16},
