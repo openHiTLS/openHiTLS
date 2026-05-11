@@ -69,6 +69,10 @@ HITLS_SignHashAlgo SAL_CERT_GetDefaultSignHashAlgo(HITLS_CERT_KeyType keyType)
             return CERT_SIG_SCHEME_ECDSA_SHA1;
         case TLS_CERT_KEY_TYPE_ED25519:
             return CERT_SIG_SCHEME_ED25519;
+#if defined(HITLS_CRYPTO_COMPOSITE)
+        case TLS_CERT_KEY_TYPE_COMPOSITE:
+            return CERT_SIG_SCHEME_COMPOSITE_MLDSA44_RSA2048_PSS_SHA256;
+#endif
 #if defined(HITLS_TLS_PROTO_TLCP11) || defined(HITLS_TLS_FEATURE_SM_TLS13)
         case TLS_CERT_KEY_TYPE_SM2:
             return CERT_SIG_SCHEME_SM2_SM3;

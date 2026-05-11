@@ -107,6 +107,96 @@ extern "C" {
 #define ECDSA_SHA256_EE_PATH2   "ecdsa_sha256/client.der"
 #define ECDSA_SHA256_PRIV_PATH2 "ecdsa_sha256/client.key.der"
 
+#define COMPOSITE_CA_PATH       "composite/ca.der:composite/inter.der"
+#define COMPOSITE_CHAIN_PATH    "composite/inter.der"
+#define COMPOSITE_EE_PATH       "composite/end.der"
+#define COMPOSITE_PRIV_PATH     "composite/end.key.der"
+
+#define COMPOSITE_MLDSA44_RSA2048_PSS_SHA256_CA_PATH    "composite/mldsa44_rsa2048_pss_sha256/ca.der:composite/mldsa44_rsa2048_pss_sha256/inter.der"
+#define COMPOSITE_MLDSA44_RSA2048_PSS_SHA256_CHAIN_PATH "composite/mldsa44_rsa2048_pss_sha256/inter.der"
+#define COMPOSITE_MLDSA44_RSA2048_PSS_SHA256_EE_PATH    "composite/mldsa44_rsa2048_pss_sha256/end.der"
+#define COMPOSITE_MLDSA44_RSA2048_PSS_SHA256_PRIV_PATH  "composite/mldsa44_rsa2048_pss_sha256/end.key.der"
+
+#define COMPOSITE_MLDSA44_RSA2048_PKCS15_SHA256_CA_PATH    "composite/mldsa44_rsa2048_pkcs15_sha256/ca.der:composite/mldsa44_rsa2048_pkcs15_sha256/inter.der"
+#define COMPOSITE_MLDSA44_RSA2048_PKCS15_SHA256_CHAIN_PATH "composite/mldsa44_rsa2048_pkcs15_sha256/inter.der"
+#define COMPOSITE_MLDSA44_RSA2048_PKCS15_SHA256_EE_PATH    "composite/mldsa44_rsa2048_pkcs15_sha256/end.der"
+#define COMPOSITE_MLDSA44_RSA2048_PKCS15_SHA256_PRIV_PATH  "composite/mldsa44_rsa2048_pkcs15_sha256/end.key.der"
+
+#define COMPOSITE_MLDSA44_ED25519_SHA512_CA_PATH    "composite/mldsa44_ed25519_sha512/ca.der:composite/mldsa44_ed25519_sha512/inter.der"
+#define COMPOSITE_MLDSA44_ED25519_SHA512_CHAIN_PATH "composite/mldsa44_ed25519_sha512/inter.der"
+#define COMPOSITE_MLDSA44_ED25519_SHA512_EE_PATH    "composite/mldsa44_ed25519_sha512/end.der"
+#define COMPOSITE_MLDSA44_ED25519_SHA512_PRIV_PATH  "composite/mldsa44_ed25519_sha512/end.key.der"
+
+#define COMPOSITE_MLDSA44_ECDSA_P256_SHA256_CA_PATH    "composite/mldsa44_ecdsa_p256_sha256/ca.der:composite/mldsa44_ecdsa_p256_sha256/inter.der"
+#define COMPOSITE_MLDSA44_ECDSA_P256_SHA256_CHAIN_PATH "composite/mldsa44_ecdsa_p256_sha256/inter.der"
+#define COMPOSITE_MLDSA44_ECDSA_P256_SHA256_EE_PATH    "composite/mldsa44_ecdsa_p256_sha256/end.der"
+#define COMPOSITE_MLDSA44_ECDSA_P256_SHA256_PRIV_PATH  "composite/mldsa44_ecdsa_p256_sha256/end.key.der"
+
+#define COMPOSITE_MLDSA65_RSA3072_PSS_SHA512_CA_PATH    "composite/mldsa65_rsa3072_pss_sha512/ca.der:composite/mldsa65_rsa3072_pss_sha512/inter.der"
+#define COMPOSITE_MLDSA65_RSA3072_PSS_SHA512_CHAIN_PATH "composite/mldsa65_rsa3072_pss_sha512/inter.der"
+#define COMPOSITE_MLDSA65_RSA3072_PSS_SHA512_EE_PATH    "composite/mldsa65_rsa3072_pss_sha512/end.der"
+#define COMPOSITE_MLDSA65_RSA3072_PSS_SHA512_PRIV_PATH  "composite/mldsa65_rsa3072_pss_sha512/end.key.der"
+
+#define COMPOSITE_MLDSA65_RSA3072_PKCS15_SHA512_CA_PATH    "composite/mldsa65_rsa3072_pkcs15_sha512/ca.der:composite/mldsa65_rsa3072_pkcs15_sha512/inter.der"
+#define COMPOSITE_MLDSA65_RSA3072_PKCS15_SHA512_CHAIN_PATH "composite/mldsa65_rsa3072_pkcs15_sha512/inter.der"
+#define COMPOSITE_MLDSA65_RSA3072_PKCS15_SHA512_EE_PATH    "composite/mldsa65_rsa3072_pkcs15_sha512/end.der"
+#define COMPOSITE_MLDSA65_RSA3072_PKCS15_SHA512_PRIV_PATH  "composite/mldsa65_rsa3072_pkcs15_sha512/end.key.der"
+
+#define COMPOSITE_MLDSA65_RSA4096_PSS_SHA512_CA_PATH    "composite/mldsa65_rsa4096_pss_sha512/ca.der:composite/mldsa65_rsa4096_pss_sha512/inter.der"
+#define COMPOSITE_MLDSA65_RSA4096_PSS_SHA512_CHAIN_PATH "composite/mldsa65_rsa4096_pss_sha512/inter.der"
+#define COMPOSITE_MLDSA65_RSA4096_PSS_SHA512_EE_PATH    "composite/mldsa65_rsa4096_pss_sha512/end.der"
+#define COMPOSITE_MLDSA65_RSA4096_PSS_SHA512_PRIV_PATH  "composite/mldsa65_rsa4096_pss_sha512/end.key.der"
+
+#define COMPOSITE_MLDSA65_RSA4096_PKCS15_SHA512_CA_PATH    "composite/mldsa65_rsa4096_pkcs15_sha512/ca.der:composite/mldsa65_rsa4096_pkcs15_sha512/inter.der"
+#define COMPOSITE_MLDSA65_RSA4096_PKCS15_SHA512_CHAIN_PATH "composite/mldsa65_rsa4096_pkcs15_sha512/inter.der"
+#define COMPOSITE_MLDSA65_RSA4096_PKCS15_SHA512_EE_PATH    "composite/mldsa65_rsa4096_pkcs15_sha512/end.der"
+#define COMPOSITE_MLDSA65_RSA4096_PKCS15_SHA512_PRIV_PATH  "composite/mldsa65_rsa4096_pkcs15_sha512/end.key.der"
+
+#define COMPOSITE_MLDSA65_ECDSA_P256_SHA512_CA_PATH    "composite/mldsa65_ecdsa_p256_sha512/ca.der:composite/mldsa65_ecdsa_p256_sha512/inter.der"
+#define COMPOSITE_MLDSA65_ECDSA_P256_SHA512_CHAIN_PATH "composite/mldsa65_ecdsa_p256_sha512/inter.der"
+#define COMPOSITE_MLDSA65_ECDSA_P256_SHA512_EE_PATH    "composite/mldsa65_ecdsa_p256_sha512/end.der"
+#define COMPOSITE_MLDSA65_ECDSA_P256_SHA512_PRIV_PATH  "composite/mldsa65_ecdsa_p256_sha512/end.key.der"
+
+#define COMPOSITE_MLDSA65_ECDSA_P384_SHA512_CA_PATH    "composite/mldsa65_ecdsa_p384_sha512/ca.der:composite/mldsa65_ecdsa_p384_sha512/inter.der"
+#define COMPOSITE_MLDSA65_ECDSA_P384_SHA512_CHAIN_PATH "composite/mldsa65_ecdsa_p384_sha512/inter.der"
+#define COMPOSITE_MLDSA65_ECDSA_P384_SHA512_EE_PATH    "composite/mldsa65_ecdsa_p384_sha512/end.der"
+#define COMPOSITE_MLDSA65_ECDSA_P384_SHA512_PRIV_PATH  "composite/mldsa65_ecdsa_p384_sha512/end.key.der"
+
+#define COMPOSITE_MLDSA65_ECDSA_BRAINPOOLP256R1_SHA512_CA_PATH    "composite/mldsa65_ecdsa_bp256_sha512/ca.der:composite/mldsa65_ecdsa_bp256_sha512/inter.der"
+#define COMPOSITE_MLDSA65_ECDSA_BRAINPOOLP256R1_SHA512_CHAIN_PATH "composite/mldsa65_ecdsa_bp256_sha512/inter.der"
+#define COMPOSITE_MLDSA65_ECDSA_BRAINPOOLP256R1_SHA512_EE_PATH    "composite/mldsa65_ecdsa_bp256_sha512/end.der"
+#define COMPOSITE_MLDSA65_ECDSA_BRAINPOOLP256R1_SHA512_PRIV_PATH  "composite/mldsa65_ecdsa_bp256_sha512/end.key.der"
+
+#define COMPOSITE_MLDSA65_ED25519_SHA512_CA_PATH    "composite/mldsa65_ed25519_sha512/ca.der:composite/mldsa65_ed25519_sha512/inter.der"
+#define COMPOSITE_MLDSA65_ED25519_SHA512_CHAIN_PATH "composite/mldsa65_ed25519_sha512/inter.der"
+#define COMPOSITE_MLDSA65_ED25519_SHA512_EE_PATH    "composite/mldsa65_ed25519_sha512/end.der"
+#define COMPOSITE_MLDSA65_ED25519_SHA512_PRIV_PATH  "composite/mldsa65_ed25519_sha512/end.key.der"
+
+#define COMPOSITE_MLDSA87_ECDSA_P384_SHA512_CA_PATH    "composite/mldsa87_ecdsa_p384_sha512/ca.der:composite/mldsa87_ecdsa_p384_sha512/inter.der"
+#define COMPOSITE_MLDSA87_ECDSA_P384_SHA512_CHAIN_PATH "composite/mldsa87_ecdsa_p384_sha512/inter.der"
+#define COMPOSITE_MLDSA87_ECDSA_P384_SHA512_EE_PATH    "composite/mldsa87_ecdsa_p384_sha512/end.der"
+#define COMPOSITE_MLDSA87_ECDSA_P384_SHA512_PRIV_PATH  "composite/mldsa87_ecdsa_p384_sha512/end.key.der"
+
+#define COMPOSITE_MLDSA87_ECDSA_BRAINPOOLP384R1_SHA512_CA_PATH    "composite/mldsa87_ecdsa_bp384_sha512/ca.der:composite/mldsa87_ecdsa_bp384_sha512/inter.der"
+#define COMPOSITE_MLDSA87_ECDSA_BRAINPOOLP384R1_SHA512_CHAIN_PATH "composite/mldsa87_ecdsa_bp384_sha512/inter.der"
+#define COMPOSITE_MLDSA87_ECDSA_BRAINPOOLP384R1_SHA512_EE_PATH    "composite/mldsa87_ecdsa_bp384_sha512/end.der"
+#define COMPOSITE_MLDSA87_ECDSA_BRAINPOOLP384R1_SHA512_PRIV_PATH  "composite/mldsa87_ecdsa_bp384_sha512/end.key.der"
+
+#define COMPOSITE_MLDSA87_RSA3072_PSS_SHA512_CA_PATH    "composite/mldsa87_rsa3072_pss_sha512/ca.der:composite/mldsa87_rsa3072_pss_sha512/inter.der"
+#define COMPOSITE_MLDSA87_RSA3072_PSS_SHA512_CHAIN_PATH "composite/mldsa87_rsa3072_pss_sha512/inter.der"
+#define COMPOSITE_MLDSA87_RSA3072_PSS_SHA512_EE_PATH    "composite/mldsa87_rsa3072_pss_sha512/end.der"
+#define COMPOSITE_MLDSA87_RSA3072_PSS_SHA512_PRIV_PATH  "composite/mldsa87_rsa3072_pss_sha512/end.key.der"
+
+#define COMPOSITE_MLDSA87_RSA4096_PSS_SHA512_CA_PATH    "composite/mldsa87_rsa4096_pss_sha512/ca.der:composite/mldsa87_rsa4096_pss_sha512/inter.der"
+#define COMPOSITE_MLDSA87_RSA4096_PSS_SHA512_CHAIN_PATH "composite/mldsa87_rsa4096_pss_sha512/inter.der"
+#define COMPOSITE_MLDSA87_RSA4096_PSS_SHA512_EE_PATH    "composite/mldsa87_rsa4096_pss_sha512/end.der"
+#define COMPOSITE_MLDSA87_RSA4096_PSS_SHA512_PRIV_PATH  "composite/mldsa87_rsa4096_pss_sha512/end.key.der"
+
+#define COMPOSITE_MLDSA87_ECDSA_P521_SHA512_CA_PATH    "composite/mldsa87_ecdsa_p521_sha512/ca.der:composite/mldsa87_ecdsa_p521_sha512/inter.der"
+#define COMPOSITE_MLDSA87_ECDSA_P521_SHA512_CHAIN_PATH "composite/mldsa87_ecdsa_p521_sha512/inter.der"
+#define COMPOSITE_MLDSA87_ECDSA_P521_SHA512_EE_PATH    "composite/mldsa87_ecdsa_p521_sha512/end.der"
+#define COMPOSITE_MLDSA87_ECDSA_P521_SHA512_PRIV_PATH  "composite/mldsa87_ecdsa_p521_sha512/end.key.der"
+
 #define SM2_VERIFY_PATH "sm2_with_userid/ca.der:sm2_with_userid/inter.der"
 #define SM2_CHAIN_PATH "sm2_with_userid/inter.der"
 #define SM2_SERVER_ENC_CERT_PATH "sm2_with_userid/enc.der"

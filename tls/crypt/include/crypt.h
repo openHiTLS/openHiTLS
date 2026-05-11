@@ -25,8 +25,8 @@
 extern "C" {
 #endif
 
-/* The maximum length of the RSA signature is 512. The maximum length of the ECC signature does not reach 1024. */
-#define MAX_SIGN_SIZE 1024
+/* The maximum signature length needs to cover composite/PQ signatures. */
+#define MAX_SIGN_SIZE 8192
 
 /* Used to transfer key derivation parameters. */
 typedef struct {

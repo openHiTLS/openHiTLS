@@ -62,7 +62,8 @@ static bool HaveMatchSignAlg(const TLS_Config *config, HITLS_AuthAlgo authAlg, c
             return true;
         }
 
-        if (((signAlg == HITLS_SIGN_ECDSA) || (signAlg == HITLS_SIGN_ED25519)) &&
+        if (((signAlg == HITLS_SIGN_ECDSA) || (signAlg == HITLS_SIGN_ED25519) ||
+            (signAlg == HITLS_SIGN_COMPOSITE)) &&
             (authAlg == HITLS_AUTH_ECDSA)) {
             return true;
         }

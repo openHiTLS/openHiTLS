@@ -885,7 +885,7 @@ void SDV_CRYPTO_PROVIDER_GET_CAPS_TC001(void)
     ASSERT_EQ(CRYPT_EAL_ProviderGetCaps(providerMgr, CRYPT_EAL_GET_SIGALG_CAP, (CRYPT_EAL_ProcessFuncCb)SigAlgCapsCallback,
         &sigAlgCount), CRYPT_SUCCESS);
 #ifdef HITLS_TLS_FEATURE_PROVIDER
-    ASSERT_EQ(sigAlgCount, 23);
+    ASSERT_EQ(sigAlgCount, 40);
 #else
     ASSERT_EQ(sigAlgCount, 0);
 #endif
