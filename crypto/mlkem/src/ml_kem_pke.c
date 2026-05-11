@@ -29,15 +29,10 @@
 int32_t MLKEM_CreateMatrixBuf(uint8_t k, MLKEM_MatrixSt *st)
 {
     // A total of (k * k + 3 * k) data blocks are required. Each block has 512 bytes.
-    if (st->bufAddr != NULL) {
+    if (st->matrix[0][0] != NULL) {
         return CRYPT_SUCCESS;
     }
-    int16_t *buf = BSL_SAL_Calloc((k * k + 3 * k) * MLKEM_N, sizeof(int16_t));
-
-    if (buf == NULL) {
-        return BSL_MALLOC_FAIL;
-    }
-    st->bufAddr = buf; // Used to release memory.
+    int16_t *buf = st->bufAddr;
     for (uint8_t i = 0; i < k; i++) {
         for (uint8_t j = 0; j < k; j++) {
             st->matrix[i][j] = buf + (i * k + j) * MLKEM_N;
@@ -380,6 +375,7 @@ int32_t MLKEM_DecodeEk(CRYPT_ML_KEM_Ctx *ctx, const uint8_t *ek, uint32_t ekLen)
 // NIST.FIPS.203 Algorithm 14 K-PKE.Encrypt(ekPKE, m, r)
 static int32_t PkeEncrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint8_t *m, uint8_t *r)
 {
+    int32_t ret;
     uint8_t i;
     uint8_t k = ctx->info->k;
     ALIGN32 uint8_t encBuf[MLKEM_PRF_BLOCKSIZE * MLKEM_ETA1_MAX +
@@ -391,6 +387,7 @@ static int32_t PkeEncrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint8_t *m, uint8_
     int16_t *polyVecY[MLKEM_K_MAX] = {0};
     int16_t *polyVecE1[MLKEM_K_MAX] = {0};
     int16_t *polyVecU[MLKEM_K_MAX] = {0};
+
     int16_t *tmpPolyVec = BSL_SAL_Calloc(MLKEM_N * k * 3, sizeof(int16_t));
     if (tmpPolyVec == NULL) {
         return BSL_MALLOC_FAIL;
@@ -401,7 +398,6 @@ static int32_t PkeEncrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint8_t *m, uint8_
         polyVecE1[i] = tmpPolyVec + (1 * k + i) * MLKEM_N;
         polyVecU[i] = tmpPolyVec + (2 * k + i) * MLKEM_N;
     }
-    int32_t ret = 0;
 
     GOTO_ERR_IF(SampleEta2(ctx, r, polyVecY, polyVecE1), ret); // Step 9 - 16
     // Step 17
@@ -426,6 +422,11 @@ static int32_t PkeDecrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *result, const uint8_t 
 {
     uint8_t i;
     uint8_t k = ctx->info->k;
+
+    if (ctx->dkLen == 0) {
+        return CRYPT_MLKEM_KEY_NOT_SET;
+    }
+
     // tmpPolyVec = polyM || polyC2 || polyVecC1
     int16_t *tmpPolyVec = BSL_SAL_Calloc((k * 2 + 1) * MLKEM_N, sizeof(int16_t));
     if (tmpPolyVec == NULL) {

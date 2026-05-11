@@ -20,6 +20,7 @@
 #include "crypt_eal_pkey.h"
 #include "crypt_util_rand.h"
 #include "eal_pkey_local.h"
+#include "crypt_params_key.h"
 #include <string.h>
 #include "crypt_mlkem.h"
 #include "ml_kem_local.h"
@@ -33,9 +34,13 @@ uint32_t gKyberRandNum = 0;
 
 static int32_t TEST_KyberRandom(uint8_t *randNum, uint32_t randLen)
 {
-    (void)randLen;
-    memcpy(randNum, gKyberRandBuf[gKyberRandNum], 32);
-    gKyberRandNum++;
+    while (randLen > 0) {
+        uint32_t copyLen = randLen > sizeof(gKyberRandBuf[0]) ? sizeof(gKyberRandBuf[0]) : randLen;
+        memcpy(randNum, gKyberRandBuf[gKyberRandNum], copyLen);
+        randNum += copyLen;
+        randLen -= copyLen;
+        gKyberRandNum++;
+    }
     return 0;
 }
 
@@ -1595,6 +1600,97 @@ EXIT:
     BSL_SAL_FREE(cipher);
     BSL_SAL_FREE(sharedKey);
     STUB_RESTORE(BSL_SAL_Malloc);
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MLKEM_CLEAN_PUB_KEY_API_TC001
+* @spec  -
+* @title  Clean generated public key
+* @precon  nan
+* @brief  Clear a generated public key stored in the context buffer.
+* @expect  Clear succeeds and decapsulation still succeeds with the private key.
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLKEM_CLEAN_PUB_KEY_API_TC001(int bits)
+{
+    TestMemInit();
+    TestRandInit();
+    CRYPT_ML_KEM_Ctx *ctx = CRYPT_ML_KEM_NewCtx();
+    ASSERT_TRUE(ctx != NULL);
+
+    int32_t val = (int32_t)bits;
+    uint8_t cipher[MLKEM_MAX_ENCAPS_KEY_LEN];
+    uint8_t sharedKey[MLKEM_SHARED_KEY_LEN];
+    uint8_t decSharedKey[MLKEM_SHARED_KEY_LEN];
+    uint32_t cipherLen = sizeof(cipher);
+    uint32_t sharedLen = sizeof(sharedKey);
+    uint32_t decSharedLen = sizeof(decSharedKey);
+
+    ASSERT_EQ(CRYPT_ML_KEM_Ctrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_ML_KEM_GenKey(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_ML_KEM_Encaps(ctx, cipher, &cipherLen, sharedKey, &sharedLen), CRYPT_SUCCESS);
+    ASSERT_TRUE(ctx->ekLen != 0);
+    ASSERT_EQ(CRYPT_ML_KEM_Ctrl(ctx, CRYPT_CTRL_CLEAN_PUB_KEY, NULL, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(ctx->ekLen, 0);
+    ASSERT_EQ(CRYPT_ML_KEM_Decaps(ctx, cipher, cipherLen, decSharedKey, &decSharedLen), CRYPT_SUCCESS);
+    ASSERT_COMPARE("compare sk", sharedKey, sharedLen, decSharedKey, decSharedLen);
+
+EXIT:
+    CRYPT_ML_KEM_FreeCtx(ctx);
+    TestRandDeInit();
+    return;
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_MLKEM_RESET_SEED_API_TC001
+* @spec  -
+* @title  Reset seed on key import failure
+* @precon  nan
+* @brief  Import an inconsistent seed and expanded private key.
+* @expect  Import fails and seed cannot be read from the context.
+* @prior  nan
+* @auto  FALSE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_MLKEM_RESET_SEED_API_TC001(int bits)
+{
+    TestMemInit();
+    TestRandInit();
+    CRYPT_ML_KEM_Ctx *src = CRYPT_ML_KEM_NewCtx();
+    CRYPT_ML_KEM_Ctx *dst = CRYPT_ML_KEM_NewCtx();
+    ASSERT_TRUE(src != NULL);
+    ASSERT_TRUE(dst != NULL);
+
+    int32_t val = (int32_t)bits;
+    ASSERT_EQ(CRYPT_ML_KEM_Ctrl(src, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_ML_KEM_Ctrl(dst, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_ML_KEM_GenKey(src), CRYPT_SUCCESS);
+
+    uint8_t seed[MLKEM_SEED_LEN * 2];
+    uint8_t dk[MLKEM_MAX_DECAPS_KEY_LEN];
+    uint8_t out[MLKEM_SEED_LEN * 2];
+    ASSERT_TRUE(src->dkLen <= sizeof(dk));
+    (void)memcpy(seed, src->seed, sizeof(seed));
+    (void)memcpy(dk, src->dk, src->dkLen);
+    dk[0] ^= 1;
+
+    BSL_Param params[] = {
+        {CRYPT_PARAM_ML_KEM_PRVKEY, BSL_PARAM_TYPE_OCTETS, dk, src->dkLen, 0},
+        {CRYPT_PARAM_ML_KEM_PRVKEY_SEED, BSL_PARAM_TYPE_OCTETS, seed, sizeof(seed), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_ML_KEM_SetDecapsKeyEx(dst, params), CRYPT_MLKEM_SEED_EXPANDED_KEY_INCONSISTENT);
+    ASSERT_EQ(CRYPT_ML_KEM_Ctrl(dst, CRYPT_CTRL_GET_MLKEM_SEED, out, sizeof(out)), CRYPT_MLKEM_SEED_NOT_SET);
+
+EXIT:
+    CRYPT_ML_KEM_FreeCtx(src);
+    CRYPT_ML_KEM_FreeCtx(dst);
+    TestRandDeInit();
     return;
 }
 /* END_CASE */

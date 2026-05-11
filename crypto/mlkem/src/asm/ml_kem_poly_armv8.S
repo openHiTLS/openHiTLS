@@ -36,7 +36,7 @@
  *     mls      a.8H, t.8H, Q.H[0]    // a = a − t × Q
  *   Result is in [−⌊Q/2⌋, ⌊Q/2⌋], not necessarily canonical.
  *
- * Unsigned Canonical Reduction (MLKEMPolyReduce):
+ * Unsigned Canonical Reduction:
  *   Barrett reduction followed by conditional correction:
  *     sshr    t.8H, a.8H, #15        // t = sign extension (0x0000 or 0xFFFF)
  *     and     t.16B, Q.16B, t.16B    // t = (a < 0) ? Q : 0
@@ -46,8 +46,7 @@
  *   MLKEMPolyAddReduce(k, r, e)        — r[i] += e[i] mod Q, for i in 0..k-1
  *   MLKEMSubReduce(r, b)               — r -= b mod Q
  *   MLKEMAdd2Reduce(r, b, d)           — r += b + d mod Q
- *   MLKEMPolyVecReduce(k, r)           — reduce r[i] to [0, Q), for i in 0..k-1
- *   PolyVectoBytes(k, r, a)            — encode k polys to byte arrays (12-bit packing)
+ *   MLKEMPolyVecReduceToBytes(k, r, a) — reduce and encode k polys
  *   MLKEMPolyINTTtoMont(k, r)          — compute INTT for k polynomials
  *   MLKEMPolyCBDEta(eta, r, buf)       — CBD sampling (dispatches to CBD2 or CBD3)
  *   PackCipherText(k, c1len, ct, t, c2)— pack ciphertext (compress + encode)
@@ -512,164 +511,16 @@ AARCH64_AUTIASP
     CRYPT_AARCH64_FUNC_END(MLKEMAdd2Reduce)
 
 // =============================================================================
-// MLKEMPolyVecReduce — Vector polynomial unsigned canonical reduction
+// MLKEMPolyVecReduceToBytes — Reduce and encode vector of polynomials
 // =============================================================================
-// Computes: for i in 0..k-1: r[i] = MLKEMPolyReduce(r[i])
-//   Each polynomial is reduced in-place to unsigned canonical form [0, Q).
-//
-// Arguments:
-//   x0 = k  (number of polynomials, ML-KEM dimension)
-//   x1 = r  (int16_t** — array of pointers to polynomials)
-//
-// Implementation: simple k-loop dispatching to MLKEMPolyReduce for each poly.
-// =============================================================================
-CRYPT_AARCH64_FUNC_START(MLKEMPolyVecReduce)
-AARCH64_PACIASP
-    stp     x29, x30, [sp, #-48]!
-    stp     x19, x20, [sp, #16]
-    stp     x21, x22, [sp, #32]
-    mov     x29, sp
-    mov     w19, w0
-    mov     x20, x1
-    cbz     w19, .Lpolyvecreduce_done
-    mov     w21, #0
-.Lpolyvecreduce_loop:
-    // --- Load pointer to i-th polynomial and reduce it ---
-    ldr     x0, [x20, x21, lsl #3]
-    bl      CRYPT_AARCH64_SYM(MLKEMPolyReduce)
-    add     w21, w21, #1
-    cmp     w21, w19
-    b.lo    .Lpolyvecreduce_loop
-.Lpolyvecreduce_done:
-    ldp     x21, x22, [sp, #32]
-    ldp     x19, x20, [sp, #16]
-    ldp     x29, x30, [sp], #48
-AARCH64_AUTIASP
-    ret
-    CRYPT_AARCH64_FUNC_END(MLKEMPolyVecReduce)
-
-// ========== Unsigned Canonical Polynomial Reduction ==========
-// Reduces 256 polynomial coefficients to [0, Q) where Q = 3329.
-// Uses Barrett reduction followed by conditional correction.
-//
-// Processing: 4 coefficients per iteration (2 vectors of 8 each),
-//   8 loop iterations + prologue/epilogue = 256 coefficients total.
-//
-// Per-vector algorithm:
-//   1. Barrett reduction: sqdmulh → srshr → mls (same as AddReduce)
-//      This produces a ∈ (−Q, Q)
-//   2. Conditional correction to unsigned canonical form:
-//      sshr   t, a, #15        // t = 0x0000 if a ≥ 0, 0xFFFF if a < 0
-//      and    t, Q, t          // t = 0 if a ≥ 0, Q if a < 0
-//      add    a, a, t          // a = a (if a ≥ 0) or a + Q (if a < 0)
-//      Result: a ∈ [0, Q)
-//
-// Note: The output loop interleaves pipeline stages for throughput:
-//   Barrett reduction of current pair → conditional correction of previous pair
-//   → store previous pair → load next pair
-CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyReduce)
-AARCH64_PACIASP
-        // --- Setup: Q=3329 (0xD01), Barrett M=20159 (0x4EBF) ---
-        // Note: M=20159 differs from AddReduce's M=25519. This value is optimized
-        // for unsigned canonical reduction where inputs may be in a different range.
-        // The sign-extension trick (sshr #15 → and → add) converts signed results to [0, Q).
-        mov	w2, #0xd01              // Q = 3329
-        dup	v3.8h, w2
-        mov	w2, #0x4ebf             // Barrett constant M = 20159 (signed: 0x4ebf)
-        dup	v4.8h, w2
-        mov	x1, #0x8                // Loop counter: 8 iterations
-        // --- Prologue: load first pair, Barrett reduce, conditional correct ---
-        ldr	q21, [x0, #0x20]
-        ldr	q23, [x0, #0x30]
-        sqdmulh	v7.8h, v21.8h, v4.h[0]
-        sqdmulh	v30.8h, v23.8h, v4.h[0]
-        srshr	v7.8h, v7.8h, #0xb
-        srshr	v30.8h, v30.8h, #0xb
-        mls	v21.8h, v7.8h, v3.h[0]
-        mls	v23.8h, v30.8h, v3.h[0]
-        ldr	q5, [x0, #0x10]
-        sshr	v7.8h, v21.8h, #0xf
-        sshr	v30.8h, v23.8h, #0xf
-        and	v7.16b, v3.16b, v7.16b
-        add	v21.8h, v21.8h, v7.8h
-        and	v7.16b, v3.16b, v30.16b
-        add	v16.8h, v23.8h, v7.8h
-        sub	x1, x1, #0x1
-
-1:
-        // --- Interleaved pipeline: load next pair + Barrett reduce + sign-correct + store prev ---
-        ldr	q6, [x0], #0x40
-        ldr	q30, [x0, #0x20]
-        sqdmulh	v31.8h, v6.8h, v4.h[0]
-        sqdmulh	v29.8h, v5.8h, v4.h[0]
-        sqdmulh	v22.8h, v30.8h, v4.h[0]
-        stur	q16, [x0, #-0x10]
-        srshr	v20.8h, v31.8h, #0xb
-        srshr	v28.8h, v29.8h, #0xb
-        stur	q21, [x0, #-0x20]
-        mls	v6.8h, v20.8h, v3.h[0]
-        mls	v5.8h, v28.8h, v3.h[0]
-        ldr	q2, [x0, #0x30]
-        sshr	v31.8h, v6.8h, #0xf
-        srshr	v19.8h, v22.8h, #0xb
-        and	v22.16b, v3.16b, v31.16b
-        add	v0.8h, v6.8h, v22.8h
-        mls	v30.8h, v19.8h, v3.h[0]
-        sshr	v26.8h, v5.8h, #0xf
-        sqdmulh	v25.8h, v2.8h, v4.h[0]
-        and	v17.16b, v3.16b, v26.16b
-        add	v1.8h, v5.8h, v17.8h
-        sshr	v31.8h, v30.8h, #0xf
-        srshr	v25.8h, v25.8h, #0xb
-        stur	q1, [x0, #-0x30]
-        and	v18.16b, v3.16b, v31.16b
-        mls	v2.8h, v25.8h, v3.h[0]
-        add	v21.8h, v30.8h, v18.8h
-        ldr	q5, [x0, #0x10]
-        sshr	v18.8h, v2.8h, #0xf
-        stur	q0, [x0, #-0x40]
-        and	v27.16b, v3.16b, v18.16b
-        add	v16.8h, v2.8h, v27.8h
-        sub	x1, x1, #0x1
-        cbnz	x1, 1b
-        // --- Epilogue: reduce and store final pair ---
-        sqdmulh	v20.8h, v5.8h, v4.h[0]
-        ldr	q24, [x0], #0x40
-        stur	q21, [x0, #-0x20]
-        srshr	v20.8h, v20.8h, #0xb
-        sqdmulh	v25.8h, v24.8h, v4.h[0]
-        stur	q16, [x0, #-0x10]
-        mls	v5.8h, v20.8h, v3.h[0]
-        srshr	v20.8h, v25.8h, #0xb
-        sshr	v2.8h, v5.8h, #0xf
-        mls	v24.8h, v20.8h, v3.h[0]
-        and	v20.16b, v3.16b, v2.16b
-        add	v31.8h, v5.8h, v20.8h
-        sshr	v20.8h, v24.8h, #0xf
-        stur	q31, [x0, #-0x30]
-        and	v31.16b, v3.16b, v20.16b
-        add	v24.8h, v24.8h, v31.8h
-        stur	q24, [x0, #-0x40]
-AARCH64_AUTIASP
-        ret
-        CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMPolyReduce)
-
-
-// =============================================================================
-// PolyVectoBytes — Encode vector of polynomials to byte arrays
-// =============================================================================
-// Computes: for i in 0..k-1: MLKEMPolytoBytesAsm(r + i*384, a[i])
-//   Encodes each polynomial using ByteEncode₁₂ (12-bit packing → 384 bytes).
+// Computes: for i in 0..k-1: reduce a[i] in-place, then ByteEncode12 to r+i*384.
 //
 // Arguments:
 //   x0 = k  (number of polynomials, ML-KEM dimension: 2, 3, or 4)
 //   x1 = r  (uint8_t* — contiguous output buffer, k*384 bytes)
 //   x2 = a  (int16_t** — array of pointers to input polynomials)
-//
-// Implementation: k-loop dispatching to MLKEMPolytoBytesAsm for each poly.
-// Stride is 384 bytes (= 256 × 12 / 8), the ByteEncode₁₂ output size.
 // =============================================================================
-CRYPT_AARCH64_FUNC_START(PolyVectoBytes)
+CRYPT_AARCH64_FUNC_START(MLKEMPolyVecReduceToBytes)
 AARCH64_PACIASP
     stp     x29, x30, [sp, #-64]!
     stp     x19, x20, [sp, #16]
@@ -679,135 +530,142 @@ AARCH64_PACIASP
     mov     w19, w0
     mov     x20, x1
     mov     x21, x2
-    cbz     w19, .Lpolyvectobytes_done
+    cbz     w19, .Lpolyvecreducetobytes_done
     mov     w22, #0
     mov     x23, #384
-.Lpolyvectobytes_loop:
+.Lpolyvecreducetobytes_loop:
     madd    x0, x22, x23, x20
     ldr     x1, [x21, x22, lsl #3]
-    bl      CRYPT_AARCH64_SYM(MLKEMPolytoBytesAsm)
+    bl      CRYPT_AARCH64_SYM(MLKEMPolyReduceToBytesAsm)
     add     w22, w22, #1
     cmp     w22, w19
-    b.lo    .Lpolyvectobytes_loop
-.Lpolyvectobytes_done:
+    b.lo    .Lpolyvecreducetobytes_loop
+.Lpolyvecreducetobytes_done:
     ldp     x23, x24, [sp, #48]
     ldp     x21, x22, [sp, #32]
     ldp     x19, x20, [sp, #16]
     ldp     x29, x30, [sp], #64
 AARCH64_AUTIASP
     ret
-    CRYPT_AARCH64_FUNC_END(PolyVectoBytes)
+    CRYPT_AARCH64_FUNC_END(MLKEMPolyVecReduceToBytes)
 
-// ========== Polynomial to Byte Encoding (FIPS 203 ByteEncode₁₂) ==========
-// Packs 256 × 12-bit coefficients into 384 bytes (3 bytes per 2 coefficients).
-//
-// 12-bit packing pattern (for each pair of coefficients c_even, c_odd):
-//   byte0 = c_even[7:0]                     (low 8 bits of even coeff)
-//   byte1 = c_even[11:8] | c_odd[3:0] << 4  (top 4 bits of even + low 4 of odd)
-//   byte2 = c_odd[11:4]                      (top 8 bits of odd coeff)
-//
-// NEON implementation processes 16 coefficients (8 pairs) per group:
-//   1. uzp1/uzp2:  separate even-indexed and odd-indexed coefficients
-//   2. xtn:        extract low 8 bits → byte0
-//   3. shrn #8:    shift even coeffs right by 8 → top 4 bits of even
-//   4. xtn:        extract low 8 bits of odd coeffs (contains bits 3:0)
-//   5. sli #4:     shift-left-insert: merge odd[3:0]<<4 into byte1
-//   6. shrn #4:    shift odd coeffs right by 4 → byte2
-//   7. st3:        store 3 interleaved byte vectors → packed 24 bytes
-//
-// Loop: 4 iterations of 4 groups each (16 coefficients/group × 4 × 4 = 256)
-CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolytoBytesAsm)
+// ========== Fused Unsigned Canonical Reduction + ByteEncode12 ==========
+// Reduces 256 coefficients in-place and packs them to 384 bytes in one pass.
+CRYPT_AARCH64_LOCAL_FUNC_START(MLKEMPolyReduceToBytesAsm)
 AARCH64_PACIASP
-        mov	x2, #0x10               // Total: 16 groups of 16 coefficients
-        ldr	q6, [x1], #0x20
-        ldur	q24, [x1, #-0x10]
-        ldr	q30, [x1], #0x20
-        ldur	q22, [x1, #-0x10]
-        ldr	q5, [x1], #0x20
-        ldur	q17, [x1, #-0x10]
-        ldr	q19, [x1], #0x20
-        ldur	q4, [x1, #-0x10]
-        lsr	x2, x2, #2              // 16 / 4 = 4 loop iterations
-        sub	x2, x2, #0x1            // First iteration is unrolled (start with 3)
+        mov     w2, #0xd01
+        dup     v26.8h, w2
+        mov     w2, #0x4ebf
+        dup     v27.8h, w2
+        mov     x2, #4
 
 1:
-        uzp1	v25.8h, v6.8h, v24.8h
-        uzp2	v6.8h, v6.8h, v24.8h
-        xtn	v24.8b, v25.8h
-        shrn	v25.8b, v25.8h, #0x8
-        xtn	v18.8b, v6.8h
-        shrn	v26.8b, v6.8h, #0x4
-        sli	v25.8b, v18.8b, #0x4
-        st3	{ v24.8b, v25.8b, v26.8b }, [x0], #24
-        uzp1	v25.8h, v30.8h, v22.8h
-        uzp2	v6.8h, v30.8h, v22.8h
-        xtn	v24.8b, v25.8h
-        xtn	v18.8b, v6.8h
-        uzp1	v30.8h, v5.8h, v17.8h
-        uzp2	v22.8h, v5.8h, v17.8h
-        xtn	v5.8b, v30.8h
-        xtn	v17.8b, v22.8h
-        uzp1	v28.8h, v19.8h, v4.8h
-        uzp2	v19.8h, v19.8h, v4.8h
-        xtn	v4.8b, v28.8h
-        xtn	v20.8b, v19.8h
-        shrn	v25.8b, v25.8h, #0x8
-        sli	v25.8b, v18.8b, #0x4
-        shrn	v26.8b, v6.8h, #0x4
-        st3	{ v24.8b, v25.8b, v26.8b }, [x0], #24
-        shrn	v6.8b, v30.8h, #0x8
-        sli	v6.8b, v17.8b, #0x4
-        shrn	v7.8b, v22.8h, #0x4
-        st3	{ v5.8b, v6.8b, v7.8b }, [x0], #24
-        shrn	v5.8b, v28.8h, #0x8
-        shrn	v6.8b, v19.8h, #0x4
-        sli	v5.8b, v20.8b, #0x4
-        st3	{ v4.8b, v5.8b, v6.8b }, [x0], #24
-        ldr	q6, [x1], #0x20
-        ldur	q24, [x1, #-0x10]
-        ldr	q30, [x1], #0x20
-        ldur	q22, [x1, #-0x10]
-        ldr	q5, [x1], #0x20
-        ldur	q17, [x1, #-0x10]
-        ldr	q19, [x1], #0x20
-        ldur	q4, [x1, #-0x10]
-        sub	x2, x2, #0x1
-        cbnz	x2, 1b
-        uzp1	v25.8h, v30.8h, v22.8h
-        uzp2	v18.8h, v30.8h, v22.8h
-        uzp1	v30.8h, v6.8h, v24.8h
-        uzp2	v6.8h, v6.8h, v24.8h
-        uzp1	v24.8h, v5.8h, v17.8h
-        uzp2	v22.8h, v5.8h, v17.8h
-        uzp1	v5.8h, v19.8h, v4.8h
-        uzp2	v17.8h, v19.8h, v4.8h
-        xtn	v19.8b, v25.8h
-        shrn	v20.8b, v25.8h, #0x8
-        xtn	v25.8b, v18.8h
-        shrn	v21.8b, v18.8h, #0x4
-        xtn	v28.8b, v30.8h
-        shrn	v29.8b, v30.8h, #0x8
-        xtn	v18.8b, v6.8h
-        shrn	v30.8b, v6.8h, #0x4
-        xtn	v1.8b, v24.8h
-        shrn	v2.8b, v24.8h, #0x8
-        xtn	v6.8b, v22.8h
-        shrn	v3.8b, v22.8h, #0x4
-        xtn	v22.8b, v5.8h
-        shrn	v23.8b, v5.8h, #0x8
-        xtn	v5.8b, v17.8h
-        shrn	v24.8b, v17.8h, #0x4
-        sli	v20.8b, v25.8b, #0x4
-        sli	v29.8b, v18.8b, #0x4
-        st3	{ v28.8b, v29.8b, v30.8b }, [x0], #24
-        st3	{ v19.8b, v20.8b, v21.8b }, [x0], #24
-        sli	v2.8b, v6.8b, #0x4
-        st3	{ v1.8b, v2.8b, v3.8b }, [x0], #24
-        sli	v23.8b, v5.8b, #0x4
-        st3	{ v22.8b, v23.8b, v24.8b }, [x0], #24
+        ldp     q0, q1, [x1]
+        ldp     q16, q17, [x1, #32]
+        ldp     q18, q19, [x1, #64]
+        ldp     q20, q21, [x1, #96]
+
+        sqdmulh v2.8h, v0.8h, v27.8h
+        sqdmulh v3.8h, v1.8h, v27.8h
+        sqdmulh v4.8h, v16.8h, v27.8h
+        sqdmulh v5.8h, v17.8h, v27.8h
+        sqdmulh v22.8h, v18.8h, v27.8h
+        sqdmulh v23.8h, v19.8h, v27.8h
+        sqdmulh v24.8h, v20.8h, v27.8h
+        sqdmulh v25.8h, v21.8h, v27.8h
+
+        srshr   v2.8h, v2.8h, #0xb
+        srshr   v3.8h, v3.8h, #0xb
+        srshr   v4.8h, v4.8h, #0xb
+        srshr   v5.8h, v5.8h, #0xb
+        srshr   v22.8h, v22.8h, #0xb
+        srshr   v23.8h, v23.8h, #0xb
+        srshr   v24.8h, v24.8h, #0xb
+        srshr   v25.8h, v25.8h, #0xb
+
+        mls     v0.8h, v2.8h, v26.8h
+        mls     v1.8h, v3.8h, v26.8h
+        mls     v16.8h, v4.8h, v26.8h
+        mls     v17.8h, v5.8h, v26.8h
+        mls     v18.8h, v22.8h, v26.8h
+        mls     v19.8h, v23.8h, v26.8h
+        mls     v20.8h, v24.8h, v26.8h
+        mls     v21.8h, v25.8h, v26.8h
+
+        sshr    v2.8h, v0.8h, #0xf
+        sshr    v3.8h, v1.8h, #0xf
+        sshr    v4.8h, v16.8h, #0xf
+        sshr    v5.8h, v17.8h, #0xf
+        sshr    v22.8h, v18.8h, #0xf
+        sshr    v23.8h, v19.8h, #0xf
+        sshr    v24.8h, v20.8h, #0xf
+        sshr    v25.8h, v21.8h, #0xf
+
+        and     v2.16b, v26.16b, v2.16b
+        and     v3.16b, v26.16b, v3.16b
+        and     v4.16b, v26.16b, v4.16b
+        and     v5.16b, v26.16b, v5.16b
+        and     v22.16b, v26.16b, v22.16b
+        and     v23.16b, v26.16b, v23.16b
+        and     v24.16b, v26.16b, v24.16b
+        and     v25.16b, v26.16b, v25.16b
+
+        add     v0.8h, v0.8h, v2.8h
+        add     v1.8h, v1.8h, v3.8h
+        add     v16.8h, v16.8h, v4.8h
+        add     v17.8h, v17.8h, v5.8h
+        add     v18.8h, v18.8h, v22.8h
+        add     v19.8h, v19.8h, v23.8h
+        add     v20.8h, v20.8h, v24.8h
+        add     v21.8h, v21.8h, v25.8h
+
+        stp     q0, q1, [x1]
+        stp     q16, q17, [x1, #32]
+        stp     q18, q19, [x1, #64]
+        stp     q20, q21, [x1, #96]
+        add     x1, x1, #128
+
+        uzp1    v2.8h, v0.8h, v1.8h
+        uzp2    v3.8h, v0.8h, v1.8h
+        xtn     v4.8b, v2.8h
+        shrn    v5.8b, v2.8h, #0x8
+        xtn     v6.8b, v3.8h
+        sli     v5.8b, v6.8b, #0x4
+        shrn    v6.8b, v3.8h, #0x4
+        st3     { v4.8b, v5.8b, v6.8b }, [x0], #24
+
+        uzp1    v2.8h, v16.8h, v17.8h
+        uzp2    v3.8h, v16.8h, v17.8h
+        xtn     v4.8b, v2.8h
+        shrn    v5.8b, v2.8h, #0x8
+        xtn     v6.8b, v3.8h
+        sli     v5.8b, v6.8b, #0x4
+        shrn    v6.8b, v3.8h, #0x4
+        st3     { v4.8b, v5.8b, v6.8b }, [x0], #24
+
+        uzp1    v2.8h, v18.8h, v19.8h
+        uzp2    v3.8h, v18.8h, v19.8h
+        xtn     v4.8b, v2.8h
+        shrn    v5.8b, v2.8h, #0x8
+        xtn     v6.8b, v3.8h
+        sli     v5.8b, v6.8b, #0x4
+        shrn    v6.8b, v3.8h, #0x4
+        st3     { v4.8b, v5.8b, v6.8b }, [x0], #24
+
+        uzp1    v2.8h, v20.8h, v21.8h
+        uzp2    v3.8h, v20.8h, v21.8h
+        xtn     v4.8b, v2.8h
+        shrn    v5.8b, v2.8h, #0x8
+        xtn     v6.8b, v3.8h
+        sli     v5.8b, v6.8b, #0x4
+        shrn    v6.8b, v3.8h, #0x4
+        st3     { v4.8b, v5.8b, v6.8b }, [x0], #24
+
+        subs    x2, x2, #1
+        b.ne    1b
 AARCH64_AUTIASP
         ret
-        CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMPolytoBytesAsm)
+        CRYPT_AARCH64_LOCAL_FUNC_END(MLKEMPolyReduceToBytesAsm)
 
 // =============================================================================
 // MLKEMPolyINTTtoMont — Inverse NTT followed by Montgomery conversion
@@ -1984,7 +1842,7 @@ CRYPT_AARCH64_RODATA_SECTION
 .Lrej_bit_table:
     .short  1, 2, 4, 8, 16, 32, 64, 128
 
-.balign 16
+.balign 4096
 .Lrej_table_idx:
     .byte   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff  // 0
     .byte   0x00, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff  // 1

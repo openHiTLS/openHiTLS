@@ -49,4 +49,28 @@ void Shake256x2(uint8_t *dgst0, uint8_t *dgst1, size_t dgstLen, const uint8_t *i
     }
 }
 
+void Keccakx4Absorb(Keccakx4State state, size_t rate, const uint8_t *in0, const uint8_t *in1,
+                    const uint8_t *in2, const uint8_t *in3, size_t inlen, uint8_t domain)
+{
+    KeccakAbsorb(state[0], (uint32_t)rate, in0, inlen, domain);
+    KeccakAbsorb(state[1], (uint32_t)rate, in1, inlen, domain);
+    KeccakAbsorb(state[2], (uint32_t)rate, in2, inlen, domain);
+    KeccakAbsorb(state[3], (uint32_t)rate, in3, inlen, domain);
+}
+
+void Keccakx4Squeeze(uint8_t *out0, uint8_t *out1, uint8_t *out2, uint8_t *out3, size_t nblocks,
+                     unsigned int r, Keccakx4State state)
+{
+    for (size_t i = 0; i < nblocks; i++) {
+        KeccakSqueeze(out0, 1, state[0], r);
+        KeccakSqueeze(out1, 1, state[1], r);
+        KeccakSqueeze(out2, 1, state[2], r);
+        KeccakSqueeze(out3, 1, state[3], r);
+        out0 += r;
+        out1 += r;
+        out2 += r;
+        out3 += r;
+    }
+}
+
 #endif // HITLS_CRYPTO_SHA3
