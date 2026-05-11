@@ -40,7 +40,7 @@ static int32_t EntropyEcf(ENTROPY_ECFCtx *enCtx, uint8_t *data, uint32_t dataLen
     }
     uint32_t cpLen = (conLen > *outLen) ? *outLen : conLen;
     memcpy(out, conData, cpLen);
-    memset(conData, 0, conLen);
+    BSL_SAL_CleanseData(conData, conLen);
     *outLen = cpLen;
     return CRYPT_SUCCESS;
 }
@@ -103,8 +103,7 @@ int32_t ENTROPY_GetFullEntropyInput(void *ctx, ENTROPY_SeedPool *pool, bool isNp
         }
     }
 ERR:
-    memset(tmpData, 0, tmpDataLen);
-    BSL_SAL_FREE(tmpData);
+    BSL_SAL_ClearFree(tmpData, tmpDataLen);
     return ret;
 }
 

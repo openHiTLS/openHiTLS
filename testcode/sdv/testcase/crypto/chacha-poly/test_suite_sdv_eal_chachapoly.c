@@ -1434,3 +1434,37 @@ EXIT:
     CRYPT_EAL_CipherFreeCtx(ctx);
 }
 /* END_CASE */
+
+/**
+ * @test  SDV_CRYPTO_CHACHA20POLY1305_SET_COUNT_ZERO_TC001
+ * @title  ChaCha20-Poly1305 rejects counter value of zero
+ * @precon Registering memory-related functions.
+ * @brief
+ *    Attempt to set counter to 0 in ChaCha20-Poly1305 mode.
+ *    This must fail because counter=0 would leak the Poly1305 key.
+ * @expect
+ *    CRYPT_CTRL_SET_COUNT with zero value returns error.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_CHACHA20POLY1305_SET_COUNT_ZERO_TC001(void)
+{
+    TestMemInit();
+    uint8_t key[32] = {
+        0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
+        0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
+        0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
+        0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f
+    };
+    uint8_t iv[12] = {0x07, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47};
+    uint8_t countZero[4] = {0x00, 0x00, 0x00, 0x00};
+
+    CRYPT_EAL_CipherCtx *ctx = CRYPT_EAL_CipherNewCtx(CRYPT_CIPHER_CHACHA20_POLY1305);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, sizeof(key), iv, sizeof(iv), true), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_COUNT, countZero, sizeof(countZero)),
+        CRYPT_MODES_CTRL_TYPE_ERROR);
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */

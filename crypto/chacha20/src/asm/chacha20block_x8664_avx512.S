@@ -606,6 +606,7 @@ CHACHA20_Update:
 
 .Lchacha20_end:
     xor   %r11d, %r11d
+    vzeroupper
     mov   %r9, %rsp
     .cfi_endproc
     ret

@@ -18,6 +18,7 @@
 
 #include <string.h>
 #include "bsl_err_internal.h"
+#include "bsl_sal.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "crypt_chacha20.h"
@@ -249,7 +250,6 @@ void CRYPT_CHACHA20_Clean(CRYPT_CHACHA20_Ctx *ctx)
     if (ctx == NULL) {
         return;
     }
-    
-    memset(ctx, 0, sizeof(CRYPT_CHACHA20_Ctx));
+    BSL_SAL_CleanseData(ctx, sizeof(CRYPT_CHACHA20_Ctx));
 }
 #endif // HITLS_CRYPTO_CHACHA20
