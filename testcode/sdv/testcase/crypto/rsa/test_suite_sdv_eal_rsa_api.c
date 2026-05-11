@@ -2410,10 +2410,14 @@ EXIT:
  * @title  RSA 512-bit: PSS + SHA1 + saltLen=0 sign/verify should succeed.
  */
 /* BEGIN_CASE */
-void SDV_CRYPTO_RSA512_PSS_SALT0_TC001(int isProvider)
+void SDV_CRYPTO_RSA512_PSS_SALT0_TC001(int isProvider, int md, int hashLen, int sLen, int rest)
 {
 #if !defined(HITLS_CRYPTO_RSA_SIGN) || !defined(HITLS_CRYPTO_RSA_EMSA_PSS) || !defined(HITLS_CRYPTO_DRBG)
     (void)isProvider;
+    (void)md;
+    (void)hashLen;
+    (void)sLen;
+    (void)rest;
     SKIP_TEST();
 #else
     uint8_t e[] = {1, 0, 1};
@@ -2421,10 +2425,9 @@ void SDV_CRYPTO_RSA512_PSS_SALT0_TC001(int isProvider)
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     uint8_t *sign = NULL;
     uint32_t signLen = 64;
-    uint8_t dataHash[20] = {0};
-    uint32_t hashLen = sizeof(dataHash);
-    CRYPT_MD_AlgId mdId = CRYPT_MD_SHA1;
-    int32_t saltLen = 42; // saltlen < rsaLen - hashlen -2
+    uint8_t dataHash[64] = {0};
+    CRYPT_MD_AlgId mdId = (CRYPT_MD_AlgId)md;
+    int32_t saltLen = (int32_t)sLen;
     BSL_Param pssParam[4] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
         {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
@@ -2444,11 +2447,15 @@ void SDV_CRYPTO_RSA512_PSS_SALT0_TC001(int isProvider)
     ASSERT_EQ(CRYPT_EAL_PkeyGen(pkey), CRYPT_SUCCESS);
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
 
-    ASSERT_EQ(CRYPT_EAL_PkeySignData(pkey, dataHash, hashLen, sign, &signLen), CRYPT_SUCCESS);
-    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, dataHash, hashLen, sign, signLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySignData(pkey, dataHash, (uint32_t)hashLen, sign, &signLen), rest);
+    if (rest == CRYPT_SUCCESS) {
+        ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, dataHash, (uint32_t)hashLen, sign, signLen), rest);
+    }
 
-    saltLen = 43;
-    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pssParam, 0), CRYPT_RSA_ERR_PSS_SALT_LEN);
+    if (saltLen >= 0) {
+        saltLen += 1;
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, &pssParam, 0), CRYPT_RSA_ERR_PSS_SALT_LEN);
+    }
 
 EXIT:
     TestRandDeInit();

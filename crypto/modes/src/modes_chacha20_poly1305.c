@@ -354,6 +354,11 @@ int32_t MODES_CHACHA20POLY1305_Ctrl(MODES_CHACHAPOLY_Ctx *modeCtx, int32_t cmd, 
                 BSL_ERR_PUSH_ERROR(CRYPT_MODES_CTRL_TYPE_ERROR);
                 return CRYPT_MODES_CTRL_TYPE_ERROR;
             }
+            if (cmd == CRYPT_CTRL_SET_COUNT && val != NULL && len == sizeof(uint32_t) &&
+                GET_UINT32_LE(val, 0) == 0) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MODES_CTRL_TYPE_ERROR);
+                return CRYPT_MODES_CTRL_TYPE_ERROR;
+            }
             return modeCtx->chachaCtx.method->cipherCtrl(modeCtx->chachaCtx.key, cmd, val, len);
     }
 }

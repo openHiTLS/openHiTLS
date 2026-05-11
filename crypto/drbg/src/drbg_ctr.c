@@ -339,6 +339,7 @@ static int32_t BlockCipherDf(DRBG_Ctx *drbg, const CRYPT_Data *in1, const CRYPT_
         BSL_ERR_PUSH_ERROR(ret);
     }
 
+    BSL_SAL_CleanseData(temp, sizeof(temp));
     return ret;
 }
 
@@ -480,6 +481,7 @@ static int32_t DRBG_CtrGenerateBlocks(DRBG_Ctx *drbg, uint8_t *out, uint32_t out
         // tmpOutLen indicates the length of the out remaining. In the last part of DRBG generation,
         // truncate the length of tmpOutLen and assign it to the out remaining.
         (void)memcpy_s(out + offset, tmpOutLen, temp, tmpOutLen);
+        BSL_SAL_CleanseData(temp, sizeof(temp));
     }
 
     return ret;

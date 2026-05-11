@@ -90,10 +90,14 @@ static int32_t GenPssSalt(void *libCtx, CRYPT_Data *salt,
     const EAL_MdMethod *mdMethod, int32_t saltLen, uint32_t padBuffLen)
 {
     uint32_t hashLen = mdMethod->mdSize;
-    if (saltLen == CRYPT_RSA_SALTLEN_TYPE_HASHLEN) { // saltLen is -1
+    if (saltLen == CRYPT_RSA_SALTLEN_TYPE_HASHLEN) {
         salt->len = hashLen;
     } else if (saltLen == CRYPT_RSA_SALTLEN_TYPE_MAXLEN || saltLen == CRYPT_RSA_SALTLEN_TYPE_AUTOLEN) {
-        salt->len = padBuffLen - hashLen - 2; // rfc8017 page42: maximum emLen = hLen + sLen + 2
+        if (padBuffLen <= hashLen + 2) {
+            BSL_ERR_PUSH_ERROR(CRYPT_RSA_ERR_PSS_SALT_LEN);
+            return CRYPT_RSA_ERR_PSS_SALT_LEN;
+        }
+        salt->len = padBuffLen - hashLen - 2;
     } else {
         salt->len = (uint32_t)saltLen;
     }
@@ -153,6 +157,7 @@ int32_t CRYPT_RSA_SetPss(CRYPT_RSA_Ctx *ctx, const EAL_MdMethod *hashMethod, con
         CRYPT_NULL_INPUT);
     CRYPT_Data salt = {0};
     bool kat = false; // mark
+    int32_t ret = 0;
     if (ctx->pad.salt.data != NULL) {
         kat = true;
         salt.data = ctx->pad.salt.data;
@@ -161,13 +166,12 @@ int32_t CRYPT_RSA_SetPss(CRYPT_RSA_Ctx *ctx, const EAL_MdMethod *hashMethod, con
         ctx->pad.salt.len = 0;
     } else if (saltLen != 0) {
         // Generate a salt information to the salt.
-        RETURN_RET_IF(GenPssSalt(LIBCTX_FROM_RSA_CTX(ctx), &salt, hashMethod, (int32_t)saltLen, padLen) !=
-            CRYPT_SUCCESS, CRYPT_RSA_ERR_GEN_SALT);
+        RETURN_RET_IF_ERR_EX(GenPssSalt(LIBCTX_FROM_RSA_CTX(ctx), &salt, hashMethod, (int32_t)saltLen, padLen), ret);
     }
     RETURN_RET_IF((salt.data == NULL && salt.len != 0), CRYPT_RSA_ERR_PSS_SALT_DATA);
     uint32_t keyBits = CRYPT_RSA_GetBits(ctx);
     uint32_t hLen = hashMethod->mdSize;
-    int32_t ret = PssEncodeLengthCheck(keyBits, hLen, salt.len, dataLen, padLen);
+    ret = PssEncodeLengthCheck(keyBits, hLen, salt.len, dataLen, padLen);
     if (ret != CRYPT_SUCCESS) {
         if ((kat != true) && (saltLen != 0)) {
             BSL_SAL_ClearFree(salt.data, salt.len);

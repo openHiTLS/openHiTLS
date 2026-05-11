@@ -361,11 +361,15 @@ AARCH64_PACIASP
     eor XKEY02, XKEY02, XKEY02
     eor XKEY03, XKEY03, XKEY03
     eor XKEY04, XKEY04, XKEY04
-    eor XKEY04, XKEY04, XKEY04
+    eor XCOUN1, XCOUN1, XCOUN1
     eor XCOUN2, XCOUN2, XCOUN2
     eor VKEY01.16b, VKEY01.16b, VKEY01.16b
     eor VKEY02.16b, VKEY02.16b, VKEY02.16b
     eor VCUR01.16b, VCUR01.16b, VCUR01.16b
+    stp QCUR06, QKEY02, [sp, #0]
+    stp QCUR06, QKEY02, [sp, #32]
+    stp QCUR06, QKEY02, [sp, #64]
+    stp QCUR06, QKEY02, [sp, #96]
     ldp x19, x20, [x29, #80]
     add sp, sp, #128+64
     ldp x21, x22, [x29, #64]

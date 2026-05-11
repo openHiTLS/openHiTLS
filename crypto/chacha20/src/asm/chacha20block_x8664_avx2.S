@@ -600,6 +600,7 @@ CHACHA20_Update:
     vmovdqa %ymm0, 512+32(%rsp)
     vmovdqa %ymm0, 512+64(%rsp)
     vmovdqa %ymm0, 512+96(%rsp)
+    vzeroupper
     mov %rax, %rsp
     .cfi_endproc
     ret

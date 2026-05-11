@@ -17,6 +17,7 @@
 #ifdef HITLS_CRYPTO_CFB
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
@@ -327,6 +328,10 @@ int32_t MODES_CFB_Encrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *o
 
     switch (ctx->feedbackBits) {
         case 1:
+            if (len > UINT32_MAX / 8) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);
+                return CRYPT_MODE_ERR_INPUT_LEN;
+            }
             return MODES_CFB_BitCrypt(ctx, in, out, len * 8, true); // Each byte occupies 8 bits.
         case 8:
         case 64:
@@ -347,6 +352,10 @@ int32_t MODES_CFB_Decrypt(MODES_CipherCFBCtx *ctx, const uint8_t *in, uint8_t *o
     }
     switch (ctx->feedbackBits) {
         case 1:     // 1-bit cfb. Convert the length of bytes to the length of bits.
+            if (len > UINT32_MAX / 8) {
+                BSL_ERR_PUSH_ERROR(CRYPT_MODE_ERR_INPUT_LEN);
+                return CRYPT_MODE_ERR_INPUT_LEN;
+            }
             return MODES_CFB_BitCrypt(ctx, in, out, len * 8, false); // Each byte occupies 8 bits.
         case 8:     // 8-bit cfb
         case 64:    // 64-bit cfb

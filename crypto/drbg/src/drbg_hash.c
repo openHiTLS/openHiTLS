@@ -226,6 +226,7 @@ static int32_t DRBG_Hashgen(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen)
             }
 
             (void)memcpy_s(buf, len, temp, len);
+            BSL_SAL_CleanseData(temp, sizeof(temp));
             break;
         }
         buf += mdSize;
@@ -237,6 +238,7 @@ static int32_t DRBG_Hashgen(DRBG_HashCtx *ctx, uint8_t *out, uint32_t outLen)
 EXIT:
     // Clear MD data.
     md->deinit(mdCtx);
+    BSL_SAL_CleanseData(data, sizeof(data));
     return ret;
 }
 
@@ -287,6 +289,7 @@ static int32_t DRBG_HashAdinInHashGenerate(DRBG_HashCtx *ctx, const CRYPT_Data *
 ERR:
     // Clear MD data.
     md->deinit(mdCtx);
+    BSL_SAL_CleanseData(w, sizeof(w));
     return ret;
 }
 
@@ -338,6 +341,7 @@ int32_t DRBG_HashGenerate(DRBG_Ctx *drbg, uint8_t *out, uint32_t outLen, const C
 ERR:
     // Clear MD data.
     md->deinit(mdCtx);
+    BSL_SAL_CleanseData(h, sizeof(h));
     return ret;
 }
 
