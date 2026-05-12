@@ -4601,6 +4601,7 @@ void UT_TLS_CM_SET_SESSIONIDCTX_API_TC001(int version)
     ASSERT_TRUE(ctx != NULL);
     uint32_t keyLen = strlen(key);
     ASSERT_TRUE(HITLS_CFG_SetSessionIdCtx(NULL, (const uint8_t *)key, keyLen)== HITLS_NULL_INPUT);
+    ASSERT_TRUE(HITLS_CFG_SetSessionIdCtx(config, NULL, keyLen)== HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_CFG_SetSessionIdCtx(config, (const uint8_t *)key, keyLen)!= HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_SetSessionIdCtx(NULL, (const uint8_t *)key, keyLen)== HITLS_NULL_INPUT);
     ASSERT_TRUE(HITLS_SetSessionIdCtx(ctx, (const uint8_t *)key, keyLen)!= HITLS_NULL_INPUT);

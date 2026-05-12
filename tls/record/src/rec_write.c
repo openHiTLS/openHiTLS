@@ -424,7 +424,7 @@ int32_t TlsRecordWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, u
     const uint32_t outBufLen = REC_TLS_RECORD_HEADER_LEN + ciphertextLen;
     ret = LengthCheck(ciphertextLen, outBufLen, writeBuf);
     if (ret != HITLS_SUCCESS) {
-        BSL_SAL_FREE(recPlaintext.plainData);
+        BSL_SAL_ClearFree(recPlaintext.plainData, recPlaintext.plainLen);
         return ret;
     }
     /* If the value is not tls13, use the input parameter data */
@@ -434,13 +434,13 @@ int32_t TlsRecordWrite(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, u
 
     ret = CheckEncryptionLimits(ctx, state);
     if (ret != HITLS_SUCCESS) {
-        BSL_SAL_FREE(recPlaintext.plainData);
+        BSL_SAL_ClearFree(recPlaintext.plainData, recPlaintext.plainLen);
         return ret;
     }
 
     /** Encrypt the record body */
     ret = RecConnEncrypt(ctx, state, &plainMsg, writeBuf->buf + REC_TLS_RECORD_HEADER_LEN, ciphertextLen);
-    BSL_SAL_FREE(recPlaintext.plainData);
+    BSL_SAL_ClearFree(recPlaintext.plainData, recPlaintext.plainLen);
     if (ret != HITLS_SUCCESS) {
         return ret;
     }

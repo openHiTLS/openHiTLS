@@ -70,6 +70,7 @@ static int32_t BuildCertListFromCertArray(HITLS_CERT_X509 **listCert, uint32_t n
         if (ret != HITLS_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             BSL_LIST_FREE(*list, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+            HITLS_X509_CertFree(listArray[i]);
             return ret;
         }
     }

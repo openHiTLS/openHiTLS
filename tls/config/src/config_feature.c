@@ -471,7 +471,7 @@ int32_t HITLS_CFG_SetSessionTicketKey(HITLS_Config *config, const uint8_t *key, 
 #ifdef HITLS_TLS_FEATURE_SESSION_ID
 int32_t HITLS_CFG_SetSessionIdCtx(HITLS_Config *config, const uint8_t *sessionIdCtx, uint32_t len)
 {
-    if (config == NULL) {
+    if (config == NULL || (sessionIdCtx == NULL && len != 0)) {
         return HITLS_NULL_INPUT;
     }
 
