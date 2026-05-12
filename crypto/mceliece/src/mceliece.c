@@ -53,6 +53,7 @@ static void PrivateKeyFree(CMPrivateKey *sk, const McelieceParams *params)
             BSL_SAL_CleanseData(sk->s, params->nBytes);
             BSL_SAL_FREE(sk->s);
         }
+        BSL_SAL_CleanseData(sk->delta, MCELIECE_L_BYTES);
         BSL_SAL_FREE(sk);
     }
 }

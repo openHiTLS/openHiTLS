@@ -724,14 +724,16 @@ static int32_t SetContextInfo(CryptSlhDsaCtx *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_CONTEXT_LEN_OVERFLOW);
         return CRYPT_SLHDSA_ERR_CONTEXT_LEN_OVERFLOW;
     }
-    ctx->contextLen = len;
-    BSL_SAL_Free(ctx->context);
-    ctx->context = (uint8_t *)BSL_SAL_Malloc(len);
-    if (ctx->context == NULL) {
+    uint8_t *newContext = BSL_SAL_Dump(val, len);
+    if (newContext == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    (void)memcpy_s(ctx->context, len, val, len);
+    if (ctx->context != NULL) {
+        BSL_SAL_Free(ctx->context);
+    }
+    ctx->contextLen = len;
+    ctx->context = newContext;
     return CRYPT_SUCCESS;
 }
 

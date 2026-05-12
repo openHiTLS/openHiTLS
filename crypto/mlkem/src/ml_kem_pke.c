@@ -717,6 +717,7 @@ static int32_t PkeEncrypt(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint8_t *m, uint8_
     // Step 23
     ByteEncode(ct + MLKEM_ENCODE_BLOCKSIZE * ctx->info->du * k, polyC2, ctx->info->dv);
 ERR:
+    BSL_SAL_CleanseData(bufEncE, sizeof(bufEncE));
     BSL_SAL_Free(tmpPolyVec);
     return ret;
 }
@@ -818,6 +819,7 @@ int32_t MLKEM_EncapsInternal(CRYPT_ML_KEM_Ctx *ctx, uint8_t *ct, uint32_t *ctLen
     // 𝑐 ← K-PKE.Encrypt(ek,𝑚,𝑟)
     ret = PkeEncrypt(ctx, ct, m, kr + MLKEM_SHARED_KEY_LEN);
     BSL_SAL_CleanseData(kr, CRYPT_SHA3_512_DIGESTSIZE);
+    BSL_SAL_CleanseData(mhek, sizeof(mhek));
     RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
 
     *ctLen = ctx->info->cipherLen;

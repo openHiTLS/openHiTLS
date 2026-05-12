@@ -1203,6 +1203,7 @@ ERR:
     BSL_SAL_ClearFree(st.bufAddr, st.bufSize);
     BSL_SAL_ClearFree(w1Buf, w1Len);
     BSL_SAL_CleanseData(signSeed, sizeof(signSeed));
+    BSL_SAL_CleanseData(p, sizeof(p));
     return ret;
 }
 

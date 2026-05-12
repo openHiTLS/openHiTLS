@@ -242,7 +242,12 @@ void SDV_CRYPTO_MLDSA_FUNC_SIGNDATA_TC001(int type, Hex *seed, Hex *testPrvKey, 
     prvKey.key.mldsaPrv.len = testPrvKey->len;
     ret = CRYPT_EAL_PkeySetPrv(ctx, &prvKey);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
-
+    if (externalMu != 0) {
+        ASSERT_TRUE(TestIsErrStackEmpty());
+        ASSERT_EQ(CRYPT_EAL_PkeySign(ctx, CRYPT_MD_MAX, msg->x, msg->len + 1, out, &outLen), CRYPT_INVALID_ARG);
+        TestErrClear();
+        gMlDsaRandNum = 0;
+    }
     ret = CRYPT_EAL_PkeySign(ctx, CRYPT_MD_MAX, msg->x, msg->len, out, &outLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_COMPARE("compare sign", out, outLen, sign->x, sign->len);
@@ -353,7 +358,7 @@ void SDV_CRYPTO_MLDSA_FUNC_SIGN_TC001(int type, int hashId, Hex *seed, Hex *test
     uint32_t outLen = CRYPT_EAL_PkeyGetSignLen(ctx);
     ASSERT_EQ(outLen, sign->len);
     uint8_t *out = BSL_SAL_Malloc(outLen);
-
+    uint8_t *outDup = BSL_SAL_Malloc(outLen);
     CRYPT_EAL_PkeyPrv prvKey = { 0 };
     prvKey.id = CRYPT_PKEY_ML_DSA;
     prvKey.key.mldsaPrv.data = testPrvKey->x;
@@ -367,10 +372,18 @@ void SDV_CRYPTO_MLDSA_FUNC_SIGN_TC001(int type, int hashId, Hex *seed, Hex *test
     ret = CRYPT_EAL_PkeySign(ctx, hashId, msg->x, msg->len, out, &outLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_COMPARE("compare sign", out, outLen, sign->x, sign->len);
+    CRYPT_EAL_PkeyCtx *dupCtx = CRYPT_EAL_PkeyDupCtx(ctx);
+    ASSERT_NE(dupCtx, NULL);
+    gMlDsaRandNum = 0;
+    ret = CRYPT_EAL_PkeySign(dupCtx, hashId, msg->x, msg->len, outDup, &outLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_COMPARE("compare sign", outDup, outLen, sign->x, sign->len);
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
+    CRYPT_EAL_PkeyFreeCtx(dupCtx);
     BSL_SAL_FREE(out);
+    BSL_SAL_FREE(outDup);
     CRYPT_RandRegist(NULL);
     CRYPT_RandRegistEx(NULL);
     return;
