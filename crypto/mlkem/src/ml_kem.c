@@ -53,6 +53,7 @@ static void MLKEM_KeyReset(CRYPT_ML_KEM_Ctx *ctx)
     BSL_SAL_FREE(ctx->dk);
     BSL_SAL_FREE(ctx->ek);
     BSL_SAL_FREE(ctx->keyData.bufAddr);
+    BSL_SAL_CleanseData(ctx->seed, sizeof(ctx->seed));
 }
 
 CRYPT_ML_KEM_Ctx *CRYPT_ML_KEM_NewCtx(void)
@@ -89,11 +90,7 @@ void CRYPT_ML_KEM_FreeCtx(CRYPT_ML_KEM_Ctx *ctx)
     if (ret > 0) {
         return;
     }
-    BSL_SAL_CleanseData(ctx->seed, sizeof(ctx->seed));
-    BSL_SAL_CleanseData(ctx->dk, ctx->dkLen);
-    BSL_SAL_FREE(ctx->dk);
-    BSL_SAL_FREE(ctx->ek);
-    BSL_SAL_FREE(ctx->keyData.bufAddr);
+    MLKEM_KeyReset(ctx);
     BSL_SAL_ReferencesFree(&(ctx->references));
     BSL_SAL_FREE(ctx);
 }
@@ -690,14 +687,15 @@ int32_t CRYPT_ML_KEM_GenKey(CRYPT_ML_KEM_Ctx *ctx)
     uint8_t d[MLKEM_SEED_LEN];
     uint8_t z[MLKEM_SEED_LEN];
     int32_t ret = CRYPT_RandEx(ctx->libCtx, d, MLKEM_SEED_LEN);
-    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+    GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
     ret = CRYPT_RandEx(ctx->libCtx, z, MLKEM_SEED_LEN);
-    RETURN_RET_IF(ret != CRYPT_SUCCESS, ret);
+    GOTO_ERR_IF_TRUE(ret != CRYPT_SUCCESS, ret);
 
     ret = MLKEM_KeyGenInternal(ctx, d, z);
     if (ret != CRYPT_SUCCESS) {
         MLKEM_KeyReset(ctx);
     }
+ERR:
     BSL_SAL_CleanseData(d, MLKEM_SEED_LEN);
     BSL_SAL_CleanseData(z, MLKEM_SEED_LEN);
     return ret;

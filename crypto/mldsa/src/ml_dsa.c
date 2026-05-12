@@ -118,6 +118,14 @@ CRYPT_ML_DSA_Ctx *CRYPT_ML_DSA_DupCtx(CRYPT_ML_DSA_Ctx *ctx)
         memcpy(newCtx->seed, ctx->seed, MLDSA_SEED_BYTES_LEN);
         newCtx->hasSeed = true;
     }
+    if (ctx->ctxInfo != NULL) {
+        newCtx->ctxInfo = BSL_SAL_Dump(ctx->ctxInfo, ctx->ctxLen);
+        if (newCtx->ctxInfo == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            goto ERR;
+        }
+        newCtx->ctxLen = ctx->ctxLen;
+    }
     newCtx->pubLen = ctx->pubLen;
     newCtx->prvLen = ctx->prvLen;
     newCtx->isMuMsg = ctx->isMuMsg;
@@ -408,10 +416,10 @@ int32_t CRYPT_ML_DSA_GenKey(CRYPT_ML_DSA_Ctx *ctx)
     return ret;
 }
 
-static int32_t MLDSA_SignArgCheck(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
+static int32_t MLDSA_SignArgCheck(CRYPT_ML_DSA_Ctx *ctx, const uint8_t *data,
     uint8_t *sign, uint32_t *signLen)
 {
-    if (ctx == NULL || data == NULL || dataLen == 0 || sign == NULL || signLen == NULL) {
+    if (ctx == NULL || data == NULL || sign == NULL || signLen == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
@@ -782,6 +790,10 @@ static int32_t MLDSAEncodeInputData(CRYPT_ML_DSA_Ctx *ctx, int32_t hashId, const
 {
     int32_t ret;
     if (ctx->isMuMsg) {
+        if (dataLen > MLDSA_XOF_MSG_LEN) {
+            BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+            return CRYPT_INVALID_ARG;
+        }
         msg->data = BSL_SAL_Dump(data, dataLen);
         RETURN_RET_IF(msg->data == NULL, CRYPT_MEM_ALLOC_FAIL);
         msg->len = dataLen;
@@ -814,7 +826,7 @@ static int32_t MLDSAEncodeInputData(CRYPT_ML_DSA_Ctx *ctx, int32_t hashId, const
 int32_t CRYPT_ML_DSA_Sign(CRYPT_ML_DSA_Ctx *ctx, int32_t hashId, const uint8_t *data, uint32_t dataLen,
     uint8_t *sign, uint32_t *signLen)
 {
-    int32_t ret = MLDSA_SignArgCheck(ctx, data, dataLen, sign, signLen);
+    int32_t ret = MLDSA_SignArgCheck(ctx, data, sign, signLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
