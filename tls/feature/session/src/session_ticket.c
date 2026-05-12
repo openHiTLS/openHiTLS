@@ -253,7 +253,9 @@ int32_t SESSMGR_EncryptSessionTicket(TLS_Ctx *ctx,
 
     Ticket ticket = {0};
     HITLS_CipherParameters cipher = {0};
+    BSL_SAL_ThreadReadLock(sessMgr->lock);
     int32_t retVal = GetSessEncryptInfo(ctx, sessMgr, &ticket, &cipher);
+    BSL_SAL_ThreadUnlock(sessMgr->lock);
     if (retVal < 0) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_SESSION_TICKET_KEY_FAIL);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_SESS_ERR_SESSION_TICKET_KEY_FAIL, BINLOG_ID16030,

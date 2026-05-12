@@ -401,7 +401,6 @@ int32_t P_Hash(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
     uint32_t iteratorSize = 0;
     uint8_t *data = NULL;
     uint32_t alignLen;
-    uint32_t srcLen = outLen;
     uint32_t offset = 0;
     uint32_t hmacSize;
     int32_t ret = PHashPre(&hmacSize, &alignLen, outLen, input->hashAlgo);
@@ -409,6 +408,7 @@ int32_t P_Hash(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID16612, "PHashPre fail");
     }
     data = BSL_SAL_Calloc(1u, alignLen);
+    uint32_t srcLen = alignLen;
     if (data == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_MEMALLOC_FAIL, BINLOG_ID15081, "Calloc fail");
@@ -442,63 +442,15 @@ int32_t P_Hash(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
         }
     }
 
-    if (memcpy_s(out, outLen, data, srcLen) != EOK) {
+    if (memcpy_s(out, outLen, data, outLen) != EOK) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16614, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "memcpy fail", 0, 0, 0, 0);
         ret = HITLS_MEMCPY_FAIL;
     }
 EXIT:
-    BSL_SAL_FREE(iterator);
-    BSL_SAL_FREE(data);
+    BSL_SAL_ClearFree(iterator, iteratorSize);
+    BSL_SAL_ClearFree(data, srcLen);
     return ret;
 }
-
-#if defined(HITLS_CRYPTO_MD5) && defined(HITLS_CRYPTO_SHA1)
-int32_t PRF_MD5_SHA1(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
-{
-    uint32_t secretLen = input->secretLen;
-    const uint8_t *secret = input->secret;
-    int32_t ret;
-    uint32_t i;
-
-    /* The key is divided into two parts. The first part is the MD5 key, and the second part is the SHA1 key.
-       If the value is an odd number, for example, 7, the first half of the key is [1, 4]
-       and the second half of the key is [4, 7]. Both keys have the fourth byte. */
-    input->secretLen = ((secretLen + 1) >> 1);
-    input->hashAlgo = HITLS_HASH_MD5;
-    ret = P_Hash(input, out, outLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16615, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "P_Hash fail", 0, 0, 0, 0);
-        return ret;
-    }
-
-    uint8_t *sha1data = BSL_SAL_Calloc(1u, outLen);
-    if (sha1data == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15084, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "PRF_MD5_SHA1 error: out of memory.", 0, 0, 0, 0);
-        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
-        return HITLS_MEMALLOC_FAIL;
-    }
-
-    input->secret += (secretLen >> 1);
-    input->hashAlgo = HITLS_HASH_SHA1;
-    ret = P_Hash(input, sha1data, outLen);
-    if (ret != HITLS_SUCCESS) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16616, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "P_Hash fail", 0, 0, 0, 0);
-        BSL_SAL_FREE(sha1data);
-        return ret;
-    }
-
-    for (i = 0; i < outLen; i++) {
-        out[i] ^= sha1data[i];
-    }
-
-    input->secret = secret;
-    input->secretLen = secretLen;
-
-    BSL_SAL_FREE(sha1data);
-    return HITLS_SUCCESS;
-}
-#endif /* HITLS_CRYPTO_MD5 && HITLS_CRYPTO_SHA1 */
 #endif /* !HITLS_TLS_FEATURE_PROVIDER */
 
 int32_t SAL_CRYPT_PRF(CRYPT_KeyDeriveParameters *input, uint8_t *out, uint32_t outLen)
