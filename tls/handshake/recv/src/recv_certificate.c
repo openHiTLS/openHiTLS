@@ -83,6 +83,9 @@ ALERT_Description GetAlertfromX509Err(HITLS_ERROR x509err)
     if (x509err == HITLS_MEMALLOC_FAIL) {
         return ALERT_INTERNAL_ERROR;
     }
+    if (x509err == HITLS_CERT_ERR_NO_SIGN_SCHEME_MATCH) {
+        return ALERT_UNSUPPORTED_CERTIFICATE;
+    }
     for (size_t i = 0; i < sizeof(PKI_ALERT_MAPPING) / sizeof(PKI_ALERT_MAPPING[0]); i++) {
         if (PKI_ALERT_MAPPING[i].pki_err == (HITLS_X509_ERRNO)x509err) {
             return PKI_ALERT_MAPPING[i].alert;
@@ -260,7 +263,7 @@ static int32_t ProcessPeerCertificate(TLS_Ctx *ctx, const CertificateMsg *certs)
         ret = ServerCheckCert(ctx, peerCert);
     }
     if (ret != HITLS_SUCCESS) {
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_BAD_CERTIFICATE);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, GetAlertfromX509Err(ret));
         SAL_CERT_PairFree(ctx->config.tlsConfig.certMgrCtx, peerCert);
         return ret;
     }
