@@ -207,19 +207,23 @@ int32_t CRYPT_HMAC_Final(CRYPT_HMAC_Ctx *ctx, uint8_t *out, uint32_t *len)
     int32_t ret = method->final(ctx->mdCtx, tmp, &tmpLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto ERR;
     }
     ret = method->copyCtx(ctx->mdCtx, ctx->oCtx);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto ERR;
     }
     ret = method->update(ctx->mdCtx, tmp, tmpLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
-        return ret;
+        goto ERR;
     }
-    return method->final(ctx->mdCtx, out, len);
+    ret = method->final(ctx->mdCtx, out, len);
+
+ERR:
+    BSL_SAL_CleanseData(tmp, sizeof(tmp));
+    return ret;
 }
 
 int32_t CRYPT_HMAC_Reinit(CRYPT_HMAC_Ctx *ctx)

@@ -105,6 +105,8 @@ int32_t KDF_PHASH(CRYPT_KDFTLS12_Ctx *ctx, uint8_t *out, uint32_t len)
 
     ret = CRYPT_SUCCESS;
 ERR:
+    BSL_SAL_CleanseData(nextIn, sizeof(nextIn));
+    BSL_SAL_CleanseData(outTmp, sizeof(outTmp));
     macMeth->deinit(ctx->macCtx);
     return ret;
 }

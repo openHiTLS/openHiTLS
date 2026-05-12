@@ -86,7 +86,12 @@ int32_t BSL_PEM_GetPemRealEncode(char **encode, uint32_t *encodeLen, BSL_PEM_Sym
 int32_t BSL_PEM_GetAsn1Encode(const char *encode, const uint32_t encodeLen, uint8_t **asn1Encode,
     uint32_t *asn1Len)
 {
-    uint32_t len = BSL_BASE64_DEC_ENOUGH_LEN(encodeLen);
+    uint64_t needLen = ((uint64_t)encodeLen + BASE64_ENCODE_BYTES) / BASE64_DECODE_BYTES * BASE64_ENCODE_BYTES;
+    if (needLen > UINT32_MAX) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return BSL_INVALID_ARG;
+    }
+    uint32_t len = (uint32_t)needLen;
     uint8_t *asn1 = BSL_SAL_Malloc(len);
     if (asn1 == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -129,7 +134,12 @@ int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_S
     int32_t ret;
     uint32_t headLen = (uint32_t)strlen(symbol->head);
     uint32_t tailLen = (uint32_t)strlen(symbol->tail);
-    uint32_t len = BSL_BASE64_ENC_ENOUGH_LEN(asn1Len);
+    uint64_t needLen = ((uint64_t)asn1Len + 2U) / BASE64_ENCODE_BYTES * BASE64_DECODE_BYTES + 1U;
+    if (needLen > UINT32_MAX) {
+        BSL_ERR_PUSH_ERROR(BSL_INVALID_ARG);
+        return BSL_INVALID_ARG;
+    }
+    uint32_t len = (uint32_t)needLen;
     char *buff = BSL_SAL_Malloc(len);
     if (buff == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
@@ -275,3 +285,4 @@ int32_t BSL_PEM_GetSymbolAndType(char *encode, uint32_t encodeLen, BSL_PEM_Symbo
 }
 
 #endif /* HITLS_BSL_PEM */
+

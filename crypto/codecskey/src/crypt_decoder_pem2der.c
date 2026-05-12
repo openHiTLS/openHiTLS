@@ -119,7 +119,7 @@ void DECODER_Pem2DerFreeOutData(void *ctx, BSL_Param *outParam)
     if (asn1DataParam == NULL) {
         return;
     }
-    BSL_SAL_Free(asn1DataParam->value);
+    BSL_SAL_ClearFree(asn1DataParam->value, asn1DataParam->valueLen);
     asn1DataParam->value = NULL;
     asn1DataParam->valueLen = 0;
     BSL_SAL_Free(outParam);

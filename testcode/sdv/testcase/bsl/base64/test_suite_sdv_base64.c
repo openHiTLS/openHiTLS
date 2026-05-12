@@ -249,6 +249,35 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test SDV_BSL_BASE64_FUNC_TC015
+ * @spec  -
+ * @title  CtxNew initializes flags before SetFlags
+ * @precon  nan
+ * @brief   1. Call BSL_BASE64_CtxNew
+            2. Check ctx->flags
+            3. Call BSL_BASE64_SetFlags
+            4. Check ctx->flags
+ * @expect  1. ctx is not NULL
+            2. ctx->flags is 0
+            3. BSL_SUCCESS
+            4. requested flag is set
+ * @prior  Level 1
+ * @auto  TRUE
+ */
+/* BEGIN_CASE */
+void SDV_BSL_BASE64_FUNC_TC015(void)
+{
+    BSL_Base64Ctx *ctx = BSL_BASE64_CtxNew();
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(ctx->flags, 0U);
+    ASSERT_EQ(BSL_BASE64_SetFlags(ctx, BSL_BASE64_FLAGS_NO_NEWLINE), BSL_SUCCESS);
+    ASSERT_TRUE((ctx->flags & BSL_BASE64_FLAGS_NO_NEWLINE) != 0U);
+EXIT:
+    BSL_BASE64_CtxFree(ctx);
+}
+/* END_CASE */
+
+/**
  * @test SDV_BSL_BASE64_FUNC_TC002
  * @spec  -
  * @title  Encoding and decoding test for short input streams without line breaks
