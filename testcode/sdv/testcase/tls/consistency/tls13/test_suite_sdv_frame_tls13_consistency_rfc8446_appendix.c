@@ -55,7 +55,7 @@ int32_t NewConfig(HsTestInfo *testInfo)
         default:
             break;
     }
-    if (testInfo->config == NULL || testInfo->config == NULL) {
+    if (testInfo->config == NULL) {
         return HITLS_INTERNAL_EXCEPTION;
     }
 
