@@ -1129,7 +1129,7 @@ static int32_t ServerCheckResume(TLS_Ctx *ctx, const ClientHelloMsg *clientHello
         if (supportTicket && clientHello->extension.flag.haveTicket) {
             ctx->negotiatedInfo.isTicket = true;
         }
-        sess = HITLS_SESS_Dup(SESSMGR_Find(ctx, clientHello->sessionId, clientHello->sessionIdSize));
+        sess = SESSMGR_Find(ctx, clientHello->sessionId, clientHello->sessionIdSize);
 
         int32_t ret = ResumeCheckExtendedMasterScret(ctx, clientHello, &sess);
         if (ret != HITLS_SUCCESS) {

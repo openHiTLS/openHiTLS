@@ -293,7 +293,7 @@ void SESSMGR_InsertSession(TLS_SessionMgr *mgr, HITLS_Session *sess, bool isStor
 }
 
 #ifdef HITLS_TLS_FEATURE_SESSION_ID
-/* Find the matching session */
+/* Find a matching session, verify its validity (time), and only return it after duping it. */
 HITLS_Session *SESSMGR_Find(TLS_Ctx *ctx, uint8_t *sessionId, uint8_t sessionIdSize)
 {
     if (ctx == NULL || ctx->globalConfig == NULL || ctx->globalConfig->sessMgr == NULL || sessionId == NULL ||
@@ -312,8 +312,9 @@ HITLS_Session *SESSMGR_Find(TLS_Ctx *ctx, uint8_t *sessionId, uint8_t sessionIdS
             if (BSL_HASH_At(ctx->globalConfig->sessMgr->hash, (uintptr_t)&key, (uintptr_t *)&sess) != BSL_SUCCESS) {
                 BSL_LOG_BINLOG_FIXLEN(
                     BINLOG_ID15353, BSL_LOG_LEVEL_DEBUG, BSL_LOG_BINLOG_TYPE_RUN, "not find sess", 0, 0, 0, 0);
-                    sess = NULL;
+                sess = NULL;
             }
+            sess = HITLS_SESS_Dup(sess);
             BSL_SAL_ThreadUnlock(ctx->globalConfig->sessMgr->lock);
         }
 
@@ -322,6 +323,7 @@ HITLS_Session *SESSMGR_Find(TLS_Ctx *ctx, uint8_t *sessionId, uint8_t sessionIdS
         if (SESS_CheckValidity(sess, curTime) == false) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16707, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN, "sess time out", 0, 0, 0,
                                   0);
+            HITLS_SESS_Free(sess);
             sess = NULL;
         }
     }
@@ -330,12 +332,12 @@ HITLS_Session *SESSMGR_Find(TLS_Ctx *ctx, uint8_t *sessionId, uint8_t sessionIdS
         int32_t copy = 1;
         sess = ctx->globalConfig->sessionGetCb(ctx, sessionId, sessionIdSize, &copy);
         if (sess != NULL) {
+            if (copy != 0) {
+                sess = HITLS_SESS_Dup(sess);
+            }
             if (!HITLS_SESS_IsResumable(sess)) {
                 HITLS_SESS_Free(sess);
                 return NULL;
-            }
-            if (copy != 0) {
-                sess = HITLS_SESS_Dup(sess);
             }
             if ((SESSMGR_GetCacheMode(ctx->globalConfig->sessMgr) & HITLS_SESS_DISABLE_INTERNAL_STORE) == 0) {
                 // Store the session in the internal cache, unlock the lock first,
