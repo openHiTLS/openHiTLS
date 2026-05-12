@@ -763,7 +763,7 @@ void PrintConnectionInfo(HITLS_Ctx *ctx, bool showState)
     /* Print cipher suite */
     const HITLS_Cipher *cipher = HITLS_GetCurrentCipher(ctx);
     if (cipher != NULL) {
-        AppPrintError("Cipher: %p\n", (const void*)cipher);
+        AppPrintInfo("Cipher suite negotiated\n");
     }
     
     if (showState) {

@@ -317,7 +317,7 @@ static int32_t KdfParsePass(KdfOpt *kdfOpt, uint8_t **pass, uint32_t *passLen)
     } else {
         int32_t ret = HITLS_APP_ParseHex(kdfOpt->hexPass, true, pass, passLen);
         if (ret != HITLS_APP_SUCCESS) {
-            AppPrintError("kdf:Invalid pass: %s.\n", kdfOpt->hexPass);
+            AppPrintError("kdf:Invalid hexpass input.\n");
             return ret;
         }
     }

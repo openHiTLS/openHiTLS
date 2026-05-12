@@ -143,7 +143,8 @@ Spake2plusCtx* Spake2PlusNewCtx(CRYPT_PKEY_ParaId curve)
     ctx->confirmV = (BSL_Buffer){.data = BSL_SAL_Malloc(MAX_KEY_LEN), .dataLen = MAX_KEY_LEN};
 
     if (ctx->w0.data == NULL || ctx->w1.data == NULL || ctx->l.data == NULL || ctx->x.data == NULL ||
-        ctx->key_shared.data == NULL || ctx->confirmP.data == NULL || ctx->confirmV.data == NULL) {
+        ctx->share.data == NULL || ctx->key_shared.data == NULL || ctx->confirmP.data == NULL ||
+        ctx->confirmV.data == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_MEM_ALLOC_FAIL);
         goto err;
     }
@@ -1244,6 +1245,11 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
         goto err;
     }
 
+    if (shareV->dataLen < shareV0Len) {
+        ret = HITLS_AUTH_PAKE_BUFFER_TOO_SMALL;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto err;
+    }
     shareV->dataLen = shareV0Len;
     (void)memcpy_s(shareV->data, shareV0Len, shareV0, shareV0Len);
 
@@ -1262,6 +1268,11 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
         goto err;
     }
     ttBuffer.data = BSL_SAL_Malloc(ttSize);
+    if (ttBuffer.data == NULL) {
+        ret = HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto err;
+    }
     ttBuffer.dataLen = ttSize;
     ret = Spake2PlusComputeTranscript(ctx, shareP, *shareV, zBuffer, vBuffer, &ttBuffer, NULL);
     if (ret != HITLS_AUTH_SUCCESS) {
@@ -1281,6 +1292,11 @@ int32_t HITLS_AUTH_Spake2plusRespSetup(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer y, BS
         goto err;
     }
 
+    if (confirmV->dataLen < outHmacBuffer.dataLen) {
+        ret = HITLS_AUTH_PAKE_BUFFER_TOO_SMALL;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto err;
+    }
     spakeCtx->confirmV.dataLen = outHmacBuffer.dataLen;
     (void)memcpy_s(spakeCtx->confirmV.data, outHmacBuffer.dataLen, outHmacBuffer.data, outHmacBuffer.dataLen);
 
@@ -1313,7 +1329,7 @@ int32_t HITLS_AUTH_Spake2plusReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer share
     BSL_Buffer *confirmP, BSL_Buffer *out)
 {
     if (ctx == NULL || confirmP == NULL || confirmP->data == NULL ||
-        out == NULL || out->data == NULL || shareV.data == NULL) {
+        out == NULL || out->data == NULL || shareV.data == NULL || confirmV.data == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_AUTH_NULL_INPUT);
         return HITLS_AUTH_NULL_INPUT;
     }
@@ -1350,6 +1366,11 @@ int32_t HITLS_AUTH_Spake2plusReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer share
         goto err;
     }
     ttBuffer.data = BSL_SAL_Malloc(ttSize);
+    if (ttBuffer.data == NULL) {
+        ret = HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto err;
+    }
     ttBuffer.dataLen = ttSize;
     ret = Spake2PlusComputeTranscript(ctx, spakeCtx->share, shareV, zBuffer, vBuffer, &ttBuffer, NULL);
     if (ret != HITLS_AUTH_SUCCESS) {
@@ -1369,6 +1390,11 @@ int32_t HITLS_AUTH_Spake2plusReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer share
         goto err;
     }
 
+    if (confirmP->dataLen < outHmacBuffer.dataLen) {
+        ret = HITLS_AUTH_PAKE_BUFFER_TOO_SMALL;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto err;
+    }
     spakeCtx->confirmP.dataLen = outHmacBuffer.dataLen;
     (void)memcpy_s(spakeCtx->confirmP.data, outHmacBuffer.dataLen, outHmacBuffer.data, outHmacBuffer.dataLen);
 
@@ -1390,6 +1416,11 @@ int32_t HITLS_AUTH_Spake2plusReqDerive(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer share
         goto err;
     }
 
+    if (out->dataLen < kSharedBuffer.dataLen) {
+        ret = HITLS_AUTH_PAKE_BUFFER_TOO_SMALL;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto err;
+    }
     out->dataLen = kSharedBuffer.dataLen;
     (void)memcpy_s(out->data, kSharedBuffer.dataLen, kSharedBuffer.data, kSharedBuffer.dataLen);
 err:

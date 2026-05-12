@@ -41,7 +41,7 @@ int32_t HITLS_AUTH_OtpInit(HITLS_AUTH_OtpCtx *ctx, uint8_t *key, uint32_t keyLen
     }
 
     if (ctx->key.data != NULL) {
-        BSL_SAL_Free(ctx->key.data);
+        BSL_SAL_ClearFree(ctx->key.data, ctx->key.dataLen);
     }
 
     ctx->key.dataLen = keyLen;
@@ -54,8 +54,9 @@ int32_t HITLS_AUTH_OtpInit(HITLS_AUTH_OtpCtx *ctx, uint8_t *key, uint32_t keyLen
     if (key == NULL) {
         int32_t ret = ctx->method.random(ctx->key.data, ctx->key.dataLen);
         if (ret != CRYPT_SUCCESS) {
-            BSL_SAL_Free(ctx->key.data);
+            BSL_SAL_ClearFree(ctx->key.data, ctx->key.dataLen);
             ctx->key.data = NULL;
+            ctx->key.dataLen = 0;
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }

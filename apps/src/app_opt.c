@@ -593,11 +593,11 @@ int32_t HITLS_APP_OptWriteUio(BSL_UIO *uio, uint8_t *buf, uint32_t bufLen, int32
             break;
     }
     if (outRet != HITLS_APP_SUCCESS) {
-        BSL_SAL_FREE(outBuf);
+        BSL_SAL_ClearFree(outBuf, outBufLen + 1);
         return outRet;
     }
     int32_t writeRet = BSL_UIO_Write(uio, outBuf, outBufLen, &writeLen);
-    BSL_SAL_FREE(outBuf);
+    BSL_SAL_ClearFree(outBuf, outBufLen + 1);
     if (writeRet != BSL_SUCCESS || outBufLen != writeLen) {
         AppPrintError("Failed to output the content.\n");
         return HITLS_APP_UIO_FAIL;
