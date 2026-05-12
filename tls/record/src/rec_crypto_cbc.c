@@ -154,6 +154,12 @@ static uint32_t GetHmacBLen(HITLS_MacAlgo macAlgo)
     }
 }
 
+static inline uintptr_t UintPtrConstTimeSelect(uint32_t mask, uintptr_t a, uintptr_t b)
+{
+    uintptr_t wideMask = (uintptr_t)0 - (uintptr_t)((mask >> 31) & 0x1u);
+    return (wideMask & a) | (~wideMask & b);
+}
+
 /**
  * a constant-time implemenation of HMAC to prevent side-channel attacks
  * reference: https://datatracker.ietf.org/doc/html/rfc2104#autoid-2
@@ -209,11 +215,10 @@ static int32_t ConstTimeHmac(RecConnSuitInfo *suiteInfo, HITLS_HASH_Ctx **hashCt
     (void)SAL_CRYPT_DigestUpdate(obCtx, data, minLen);
 
     for (uint32_t i = minLen; i < maxLen; i++) {
-        if (i < plainLen) {
-            SAL_CRYPT_DigestUpdate(hashCtx[0], data + i, 1);
-        } else {
-            SAL_CRYPT_DigestUpdate(obCtx, data + i, 1);
-        }
+        uint32_t usePlainCtx = Uint32ConstTimeLt(i, plainLen);
+        HITLS_HASH_Ctx *dstCtx =
+            (HITLS_HASH_Ctx *)(uintptr_t)UintPtrConstTimeSelect(usePlainCtx, (uintptr_t)hashCtx[0], (uintptr_t)obCtx);
+        (void)SAL_CRYPT_DigestUpdate(dstCtx, data + i, 1);
     }
     (void)SAL_CRYPT_DigestFinal(hashCtx[0], ihash, &ihashLen);
     (void)memcpy_s(opad + blen, MAX_DIGEST_SIZE, ihash, ihashLen);
@@ -231,7 +236,7 @@ static int32_t ConstTimeHmac(RecConnSuitInfo *suiteInfo, HITLS_HASH_Ctx **hashCt
 
 static inline uint32_t ConstTimeSelectMemcmp(uint32_t good, uint8_t *a, uint8_t *b, uint32_t l)
 {
-    uint8_t *t = (good == 0) ? b : a;
+    uint8_t *t = (uint8_t *)(uintptr_t)UintPtrConstTimeSelect(good, (uintptr_t)a, (uintptr_t)b);
     return ConstTimeMemcmp(t, b, l);
 }
 
@@ -244,7 +249,7 @@ static int32_t RecConnCbcDecMtECheckMacTls(TLS_Ctx *ctx, const REC_TextInput *cr
     if (hashAlg == HITLS_HASH_BUTT) {
         return HITLS_CRYPT_ERR_HMAC;
     }
-    
+
     HITLS_HASH_Ctx *ihashCtx = NULL;
     HITLS_HASH_Ctx *ohashCtx = NULL;
     HITLS_HASH_Ctx *obscureHashCtx = NULL;
@@ -523,7 +528,7 @@ static int32_t RecConnCbcEncryptThenMac(
 
     ret = RecConnCopyIV(ctx, state, cipherText, cipherTextLen);
     if (ret != HITLS_SUCCESS) {
-        BSL_SAL_FREE(plainText);
+        BSL_SAL_ClearFree(plainText, plainTextLen);
         return ret;
     }
     offset += state->suiteInfo->fixedIvLength;
@@ -534,7 +539,7 @@ static int32_t RecConnCbcEncryptThenMac(
     RecConnInitCipherParam(&cipherParam, state);
     ret = SAL_CRYPT_Encrypt(LIBCTX_FROM_CTX(ctx), ATTRIBUTE_FROM_CTX(ctx),
         &cipherParam, plainText, plainTextLen, &cipherText[offset], &encLen);
-    BSL_SAL_FREE(plainText);
+    BSL_SAL_ClearFree(plainText, plainTextLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15848, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "CBC encrypt record error.", 0, 0, 0, 0);

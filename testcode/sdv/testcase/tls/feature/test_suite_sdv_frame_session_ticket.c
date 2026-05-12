@@ -532,7 +532,9 @@ static int32_t g_copyParamValue = 1;
 static void ClearExternalCache(void)
 {
     for (uint32_t i = 0; i < g_externalSessionCount; i++) {
-        HITLS_SESS_Free(g_externalSessionCache[i]);
+        if (g_copyParamValue == 1) {
+            HITLS_SESS_Free(g_externalSessionCache[i]);
+        }
         g_externalSessionCache[i] = NULL;
     }
     g_externalSessionCount = 0;
@@ -647,7 +649,7 @@ EXIT:
 *           2. Session resumption succeeds
 @ */
 /* BEGIN_CASE */
-void UT_EXTERNAL_CACHE_GET_CB_FUNCTION_TC003()
+void UT_EXTERNAL_CACHE_GET_CB_FUNCTION_TC003(int copyParamValue)
 {
     FRAME_Init();
     HITLS_Config *clientConfig = HITLS_CFG_NewTLS12Config();
@@ -655,6 +657,7 @@ void UT_EXTERNAL_CACHE_GET_CB_FUNCTION_TC003()
     ASSERT_TRUE(clientConfig != NULL && serverConfig != NULL);
 
     ClearExternalCache();
+    g_copyParamValue = copyParamValue;
 
     /* Set external lookup mode on server */
     uint32_t mode = HITLS_SESS_CACHE_SERVER | HITLS_SESS_DISABLE_INTERNAL_LOOKUP;
@@ -677,7 +680,6 @@ void UT_EXTERNAL_CACHE_GET_CB_FUNCTION_TC003()
 
     /* Store session in external cache manually */
     StoreSessionInExternalCache(clientSession);
-    HITLS_SESS_Free(clientSession);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
 
@@ -779,7 +781,7 @@ EXIT:
 *           2. Session resumption works through external cache
 @ */
 /* BEGIN_CASE */
-void UT_EXTERNAL_CACHE_FULL_EXTERNAL_MODE_TC005()
+void UT_EXTERNAL_CACHE_FULL_EXTERNAL_MODE_TC005(int copyParamValue)
 {
     FRAME_Init();
     HITLS_Config *clientConfig = HITLS_CFG_NewTLS12Config();
@@ -787,6 +789,7 @@ void UT_EXTERNAL_CACHE_FULL_EXTERNAL_MODE_TC005()
     ASSERT_TRUE(clientConfig != NULL && serverConfig != NULL);
 
     ClearExternalCache();
+    g_copyParamValue = copyParamValue;
 
     /* Set complete external mode on server */
     uint32_t mode = HITLS_SESS_CACHE_SERVER | HITLS_SESS_DISABLE_INTERNAL_STORE | HITLS_SESS_DISABLE_INTERNAL_LOOKUP;
@@ -812,7 +815,6 @@ void UT_EXTERNAL_CACHE_FULL_EXTERNAL_MODE_TC005()
 
     /* Manually store in external cache (simulating application behavior) */
     StoreSessionInExternalCache(clientSession);
-    HITLS_SESS_Free(clientSession);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
 

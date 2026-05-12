@@ -58,7 +58,7 @@ uint32_t SESSMGR_GetCacheSize(TLS_SessionMgr *mgr);
 /* add */
 void SESSMGR_InsertSession(TLS_SessionMgr *mgr, HITLS_Session *sess, bool isStore);
 
-/* Find the matching session and verify the validity of the session (time) */
+/* Find a matching session, verify its validity (time), and only return it after duping it. */
 HITLS_Session *SESSMGR_Find(TLS_Ctx *ctx, uint8_t *sessionId, uint8_t sessionIdSize);
 
 /* Search for the matching session without checking the validity of the session (time) */
