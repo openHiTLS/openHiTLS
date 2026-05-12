@@ -316,7 +316,7 @@ int32_t HITLS_APP_ParsePasswd(const char *passArg, char **pass)
     } else if (strncmp(passArg, APP_PASS_FILE_STR, APP_PASS_FILE_STR_LEN) == 0) {
         return GetPasswdByFile(passArg, strlen(passArg), pass);
     } else {
-        AppPrintError("The %s password parameter is not supported.\n", passArg);
+        AppPrintError("Unsupported password source. Use pass:, stdin, or file:.\n");
         return HITLS_APP_PASSWD_FAIL;
     }
     if (*pass == NULL) {
@@ -622,7 +622,7 @@ int32_t HITLS_APP_PrintPrvKeyByUio(BSL_UIO *uio, CRYPT_EAL_PkeyCtx *pkey, AppKey
         return HITLS_APP_ENCODE_KEY_FAIL;
     }
     ret = HITLS_APP_OptWriteUio(uio, prvKeyBuf.data, prvKeyBuf.dataLen, HITLS_APP_FORMAT_PEM);
-    BSL_SAL_FREE(prvKeyBuf.data);
+    BSL_SAL_ClearFree(prvKeyBuf.data, prvKeyBuf.dataLen);
     return ret;
 }
 

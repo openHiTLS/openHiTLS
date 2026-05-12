@@ -137,7 +137,11 @@ static int32_t AddCertToChain(HITLS_X509_List *chain, HITLS_X509_Cert *cert)
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
-    return BSL_LIST_AddElement(chain, cert, BSL_LIST_POS_END);
+    ret = BSL_LIST_AddElement(chain, cert, BSL_LIST_POS_END);
+    if (ret != BSL_SUCCESS) {
+        HITLS_X509_CertFree(cert);
+    }
+    return ret;
 }
 
 static int32_t VerifyCert(HITLS_X509_StoreCtx *storeCtx, const char *fileName)

@@ -722,6 +722,7 @@ typedef enum {
     CRYPT_CTRL_GET_FLAG,                /**< Get ECC pkey flags. */
     CRYPT_CTRL_SET_FLAG,                /**< Set ECC pkey flags (OR with existing). */
     CRYPT_CTRL_CLR_FLAG,                /**< Clear ECC pkey flags (AND NOT). */
+    CRYPT_CTRL_GET_SM2_R,               /**< SM2 get the R value. */
 
     // slh-dsa
     CRYPT_CTRL_GET_SLH_DSA_KEY_LEN = 600,     /**< Get the SLH-DSA key length. */

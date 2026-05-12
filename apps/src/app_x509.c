@@ -66,6 +66,7 @@ typedef enum {
     HITLS_APP_OPT_CA,
     HITLS_APP_OPT_CA_KEY,
     HITLS_APP_OPT_USERID,
+    HITLS_APP_OPT_COPY_EXTENSIONS,
 } HITLSOptType;
 
 static const HITLS_CmdOption g_x509Opts[] = {
@@ -99,6 +100,8 @@ static const HITLS_CmdOption g_x509Opts[] = {
     {"CA", HITLS_APP_OPT_CA, HITLS_APP_OPT_VALUETYPE_IN_FILE, "CA certificate, must be PEM format"},
     {"CAkey", HITLS_APP_OPT_CA_KEY, HITLS_APP_OPT_VALUETYPE_IN_FILE, "CA key, must be PEM format"},
     {"userid", HITLS_APP_OPT_USERID, HITLS_APP_OPT_VALUETYPE_STRING, "User ID for SM2"},
+    {"copy_extensions", HITLS_APP_OPT_COPY_EXTENSIONS, HITLS_APP_OPT_VALUETYPE_STRING,
+        "Copy extensions from CSR: none|copyall"},
     {NULL, 0, 0, NULL},
 };
 
@@ -133,6 +136,7 @@ typedef struct {
     char *signKeyPath;
     char *caPath;
     char *caKeyPath;
+    bool copyCsrExtensions;
 } X509CertOpts;
 
 typedef struct {
@@ -508,6 +512,21 @@ static int32_t X509UserId(X509OptCtx *optCtx)
     return HITLS_APP_SUCCESS;
 }
 
+static int32_t X509OptCopyExtensions(X509OptCtx *optCtx)
+{
+    char *str = HITLS_APP_OptGetValueStr();
+    if (strcmp(str, "none") == 0) {
+        optCtx->certOpts.copyCsrExtensions = false;
+        return HITLS_APP_SUCCESS;
+    }
+    if (strcmp(str, "copyall") == 0) {
+        optCtx->certOpts.copyCsrExtensions = true;
+        return HITLS_APP_SUCCESS;
+    }
+    AppPrintError("x509: Invalid copy_extensions %s. Use none or copyall.\n", str);
+    return HITLS_APP_OPT_VALUE_INVALID;
+}
+
 static const X509OptHandleFuncMap g_x509OptHandleFuncMap[] = {
     {HITLS_APP_OPT_ERR, X509OptErr},
     {HITLS_APP_OPT_HELP, X509OptHelp},
@@ -534,6 +553,7 @@ static const X509OptHandleFuncMap g_x509OptHandleFuncMap[] = {
     {HITLS_APP_OPT_CA, X509OptCa},
     {HITLS_APP_OPT_CA_KEY, X509OptCaKey},
     {HITLS_APP_OPT_USERID, X509UserId},
+    {HITLS_APP_OPT_COPY_EXTENSIONS, X509OptCopyExtensions},
 };
 
 static int32_t ParseX509Opt(int argc, char *argv[], X509OptCtx *optCtx)
@@ -1079,9 +1099,11 @@ static int32_t SetCertCont(X509OptCtx *optCtx)
         return ret;
     }
 
-    ret = CopyExtensionsFromCsr(optCtx);
-    if (ret != HITLS_APP_SUCCESS) {
-        return ret;
+    if (optCtx->certOpts.copyCsrExtensions) {
+        ret = CopyExtensionsFromCsr(optCtx);
+        if (ret != HITLS_APP_SUCCESS) {
+            return ret;
+        }
     }
     ret = SetCertExtensionsByConf(optCtx);
     if (ret != HITLS_APP_SUCCESS) {
@@ -1261,6 +1283,10 @@ static bool CheckOpt(X509OptCtx *optCtx)
             AppPrintError("x509: Warning: ignoring -extfile or -extensions since -req is not given.\n");
             optCtx->certOpts.extFile = NULL;
             optCtx->certOpts.extSection = NULL;
+        }
+        if (optCtx->certOpts.copyCsrExtensions) {
+            AppPrintError("x509: Warning: ignoring -copy_extensions since -req is not given.\n");
+            optCtx->certOpts.copyCsrExtensions = false;
         }
     }
     return true;

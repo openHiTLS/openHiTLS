@@ -913,6 +913,14 @@ static int32_t PkeyDerive(PkeyUtlOpt *pkeyUtlOpt)
             if (ret != HITLS_APP_SUCCESS) {
                 break;
             }
+            if (pkeyUtlOpt->outRFile != NULL) {
+                ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SM2_R, localR, sizeof(localR));
+                if (ret != CRYPT_SUCCESS) {
+                    AppPrintError("pkeyutl: Failed to get SM2 R, ret=%d\n", ret);
+                    ret = HITLS_APP_CRYPTO_FAIL;
+                    break;
+                }
+            }
         }
 
         if (pkeyUtlOpt->outRFile != NULL) {

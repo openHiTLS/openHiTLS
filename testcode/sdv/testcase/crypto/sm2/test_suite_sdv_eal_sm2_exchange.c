@@ -1025,6 +1025,8 @@ void SDV_CRYPTO_SM2_EXCHANGE_CHECK_TC001(Hex *prvKey, Hex *pubKey, Hex *r, Hex *
 
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_USER_ID, userId2->x, userId2->len) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_SET_SM2_R, R->x, R->len) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_PkeyCtrl(ctx2, CRYPT_CTRL_GET_SM2_R, localR, sizeof(localR)) == CRYPT_SUCCESS);
+    ASSERT_TRUE(memcmp(localR, R->x, R->len) == 0);
 
     ASSERT_TRUE(CRYPT_EAL_PkeySetPrv(ctx1, &prv) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_PkeySetPub(ctx2, &pub) == CRYPT_SUCCESS);

@@ -847,6 +847,19 @@ static int32_t Sm2GetRandom(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
     return BN_Bn2BinFixZero(ctx->r, val, len);
 }
 
+static int32_t Sm2GetR(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
+{
+    if (val == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
+        return CRYPT_NULL_INPUT;
+    }
+    if (ctx->pointR == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_SM2_R_NOT_SET);
+        return CRYPT_SM2_R_NOT_SET;
+    }
+    return ECC_EncodePoint(ctx->pkey->para, ctx->pointR, (uint8_t *)val, &len, CRYPT_POINT_UNCOMPRESSED);
+}
+
 static int32_t Sm2GetSumSend(CRYPT_SM2_Ctx *ctx, void *val, uint32_t len)
 {
     if (val == NULL) {
@@ -978,6 +991,8 @@ int32_t CRYPT_SM2_Ctrl(CRYPT_SM2_Ctx *ctx, int32_t opt, void *val, uint32_t len)
             return Sm2SetRandom(ctx, val, len);
         case CRYPT_CTRL_GET_SM2_RANDOM:
             return Sm2GetRandom(ctx, val, len);
+        case CRYPT_CTRL_GET_SM2_R:
+            return Sm2GetR(ctx, val, len);
         case CRYPT_CTRL_SM2_GET_SEND_CHECK:
             return Sm2GetSumSend(ctx, val, len);
         case CRYPT_CTRL_SM2_DO_CHECK:
