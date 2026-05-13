@@ -267,7 +267,7 @@ McelieceParams *McelieceGetParamsById(int32_t algId)
     const int32_t base = CRYPT_KEM_TYPE_MCELIECE_6688128;
     const int32_t max = CRYPT_KEM_TYPE_MCELIECE_8192128_PCF;
 
-    if ((algId - base) > (max - base)) {
+    if (algId > max || algId < base) {
         return NULL;
     }
 

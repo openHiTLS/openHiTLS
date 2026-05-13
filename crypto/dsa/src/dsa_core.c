@@ -1048,6 +1048,20 @@ EXIT:
     return ret;
 }
 
+static int32_t VerifyCheckSign(const BN_BigNum *q, BN_BigNum *r, BN_BigNum *s)
+{
+    if ((BN_Cmp(r, q) >= 0) || (BN_Cmp(s, q) >= 0)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DSA_VERIFY_FAIL);
+        return CRYPT_DSA_VERIFY_FAIL;
+    }
+    if (BN_IsZero(r) || BN_IsZero(s)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_DSA_VERIFY_FAIL);
+        return CRYPT_DSA_VERIFY_FAIL;
+    }
+
+    return CRYPT_SUCCESS;
+}
+
 int32_t CRYPT_DSA_VerifyData(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint32_t dataLen,
     const uint8_t *sign, uint32_t signLen)
 {
@@ -1069,6 +1083,10 @@ int32_t CRYPT_DSA_VerifyData(const CRYPT_DSA_Ctx *ctx, const uint8_t *data, uint
     }
 
     ret = CRYPT_EAL_DecodeSign(sign, signLen, r, s);
+    if (ret != CRYPT_SUCCESS) {
+        goto EXIT;
+    }
+    ret = VerifyCheckSign(ctx->para->q, r, s);
     if (ret != CRYPT_SUCCESS) {
         goto EXIT;
     }

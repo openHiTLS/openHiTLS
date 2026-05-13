@@ -1679,13 +1679,10 @@ EXIT:
 @test SDV_PKCS8_ENCODE_DHKEY_DSAKEY_TC001
 @title DH, DSA key encoding
 @step
-1.openHiTLS calls CRYPT_EAL_EncodeBuffKey interface to encode the key in pem format,
-    comparing if the encoding between openssl and openHiTLS is consistent
-2.openHiTLS calls CRYPT_EAL_EncodeBuffKey interface to encode the key in asn1 format,
-    comparing if the encoding between openssl and openHiTLS is consistent
+1.openHiTLS calls CRYPT_EAL_EncodeBuffKey interface to encode the key in pem format
+2.openHiTLS calls CRYPT_EAL_EncodeBuffKey interface to encode the key in asn1 format
 @expect
-1.Encoding succeeds, consistent with openssl
-2.Encoding succeeds, consistent with openssl
+Both success
 */
 /* BEGIN_CASE */
 void SDV_PKCS8_ENCODE_DHKEY_DSAKEY_TC001(char *path, int fileType, Hex *asn1)
@@ -1728,8 +1725,7 @@ EXIT:
 2.openHiTLS calls CRYPT_EAL_DecodeBuffKey interface to decode the key in asn1 format,
     comparing if the decrypted key is consistent with the original key
 @expect
-1.Encoding succeeds, consistent with openssl
-2.Encoding succeeds, consistent with openssl
+Both success
 */
 /* BEGIN_CASE */
 void SDV_PKCS8_DECODE_DHKEY_DSAKEY_TC001(char *path, int fileType,  Hex *asn1)
@@ -2040,6 +2036,64 @@ EXIT:
     (void)path;
     (void)fileType;
     (void)asn1;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/*
+@test SDV_CRYPT_DECODE_RSAPSS_MGF1_VALIDATE_TC001
+@title Test CRYPT_EAL_ParseRsaPssAlgParam rejects non-MGF1 mask generation algorithm
+@precon None
+@step
+1. Call CRYPT_EAL_ParseRsaPssAlgParam with valid RSA-PSS params (MGF1 OID), expect success
+2. Call CRYPT_EAL_ParseRsaPssAlgParam with invalid RSA-PSS params (non-MGF1 OID), expect CRYPT_DECODE_ERR_RSSPSS
+@expect
+1. Valid params parse successfully with correct mdId, mgfId, and saltLen
+2. Invalid params return CRYPT_DECODE_ERR_RSSPSS
+*/
+/* BEGIN_CASE */
+void SDV_CRYPT_DECODE_RSAPSS_MGF1_VALIDATE_TC001(void)
+{
+#if defined(HITLS_CRYPTO_RSA) && defined(HITLS_CRYPTO_KEY_DECODE)
+    /* RSA-PSS params: SHA-256 hash, MGF1(SHA-256), salt length 32
+     * Content of the SEQUENCE (without outer SEQUENCE TLV):
+     * [0] { SEQUENCE { OID sha256 } }
+     * [1] { SEQUENCE { OID mgf1, SEQUENCE { OID sha256 } } }
+     * [2] { INTEGER 32 }
+     */
+    uint8_t validPssParams[] = {
+        0xa0, 0x0d, 0x30, 0x0b, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01,
+        0xa1, 0x1a, 0x30, 0x18, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x08,
+        0x30, 0x0b, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01,
+        0xa2, 0x03, 0x02, 0x01, 0x20
+    };
+
+    /* Invalid: replace MGF1 OID (2a864886f70d010108) with RSASSA-PSS OID (2a864886f70d01010a) */
+    uint8_t invalidPssParams[] = {
+        0xa0, 0x0d, 0x30, 0x0b, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01,
+        0xa1, 0x1a, 0x30, 0x18, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0a,
+        0x30, 0x0b, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01,
+        0xa2, 0x03, 0x02, 0x01, 0x20
+    };
+
+    BSL_ASN1_Buffer validParam = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
+        sizeof(validPssParams), validPssParams};
+    BSL_ASN1_Buffer invalidParam = {BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE,
+        sizeof(invalidPssParams), invalidPssParams};
+    CRYPT_RSA_PssPara para = {0};
+
+    ASSERT_EQ(CRYPT_EAL_ParseRsaPssAlgParam(&validParam, &para), CRYPT_SUCCESS);
+    ASSERT_EQ(para.mdId, CRYPT_MD_SHA256);
+    ASSERT_EQ(para.mgfId, CRYPT_MD_SHA256);
+    ASSERT_EQ(para.saltLen, 32);
+
+    memset(&para, 0, sizeof(para));
+    ASSERT_EQ(CRYPT_EAL_ParseRsaPssAlgParam(&invalidParam, &para), CRYPT_DECODE_ERR_RSSPSS);
+
+EXIT:
+    return;
+#else
     SKIP_TEST();
 #endif
 }

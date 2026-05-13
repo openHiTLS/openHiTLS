@@ -21,11 +21,6 @@ Strategy: construct v1/v2 certificates with extensions by manually building DER:
   3. Re-sign the patched TBS with the issuer's private key
   4. Assemble the final Certificate SEQUENCE: [patched TBS, signatureAlgorithm, signatureValue]
 
-This produces v1/v2 certificates with extensions AND valid signatures, so both OpenSSL
-and openHiTLS can parse them. OpenSSL should reject them with
-X509_V_ERR_EXTENSIONS_REQUIRE_VERSION_3; openHiTLS should reject them with
-HITLS_X509_ERR_VFY_EXTENSIONS_REQUIRE_V3.
-
 Output files:
   a_v3_root.der          - v3 root CA (trust anchor for TC1-TC4)
   a_v1_ext_leaf.der      - TC1: v1 leaf with extensions, valid signature from root

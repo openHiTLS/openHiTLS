@@ -45,6 +45,7 @@
 #include "crypt_eal_entropy.h"
 #include "crypt_util_rand.h"
 #include "crypt_params_key.h"
+#include "crypt_eal_codecs.h"
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
@@ -1415,6 +1416,35 @@ EXIT:
     CRYPT_EAL_MdFreeCtx(mdCtx);
     CRYPT_EAL_RandDeinitEx(NULL);
     CRYPT_EAL_ProviderUnload(NULL, 0, HITLS_PROVIDER_LIB_NAME);
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_ISO19790_PROVIDER_DECODE_KEY_PARAM_CHECK_TC001(char *path, char *format, char *type, int expectRet)
+{
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    (void)path;
+    (void)format;
+    (void)type;
+    (void)expectRet;
+    SKIP_TEST();
+#else
+    Iso19790_ProviderLoadCtx ctx = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+
+    ASSERT_EQ(Iso19790_ProviderLoad(&ctx), CRYPT_SUCCESS);
+    // Register default provider to supply decoder implementations
+    ASSERT_EQ(CRYPT_EAL_ProviderRegister(ctx.libCtx, "default", CRYPT_EAL_DefaultProvInit, NULL, NULL), CRYPT_SUCCESS);
+    int32_t ret = CRYPT_EAL_ProviderDecodeFileKey(ctx.libCtx, "provider=iso", BSL_CID_UNKNOWN,
+        format, type, path, NULL, &pkeyCtx);
+    ASSERT_EQ(ret, expectRet);
+    if (expectRet == CRYPT_SUCCESS) {
+        ASSERT_TRUE(pkeyCtx != NULL);
+    }
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    Iso19790_ProviderUnload(&ctx);
 #endif
 }
 /* END_CASE */

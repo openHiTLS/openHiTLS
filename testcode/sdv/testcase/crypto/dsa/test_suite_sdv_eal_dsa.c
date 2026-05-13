@@ -525,6 +525,9 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_DATA_FUNC_TC001(
     BN_BigNum *bnS = NULL;
     CRYPT_EAL_PkeyCtx *pkey = NULL;
     Hex mdOut = {0};
+    BN_BigNum *q = NULL;
+    uint8_t *sigAddQ = NULL;
+    uint32_t sigAddQLen = 0;
 
     ASSERT_EQ(memcpy_s(g_kRandBuf, sizeof(g_kRandBuf), K->x, K->len), 0);
     g_kRandBufLen = K->len;
@@ -571,6 +574,14 @@ void SDV_CRYPTO_DSA_SIGN_VERIFY_DATA_FUNC_TC001(
     /* Verify the signature of the hash data. */
     ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, mdOut.x, mdOut.len, hitlsSign, hitlsSignOutLen), CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
+    q = BN_Create(Q->len * 8);
+    ASSERT_NE(q, NULL);
+    ASSERT_EQ(BN_Bin2Bn(q, Q->x, Q->len), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Add(bnS, q, bnS), CRYPT_SUCCESS);  // s' = s + q
+    sigAddQLen = signLen * 2;
+    sigAddQ = (uint8_t *)malloc(sigAddQLen);
+    ASSERT_EQ(CRYPT_EAL_EncodeSign(bnR, bnS, sigAddQ, &sigAddQLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, mdOut.x, mdOut.len, sigAddQ, sigAddQLen), CRYPT_DSA_VERIFY_FAIL);
 EXIT:
     CRYPT_RandRegist(NULL);
     CRYPT_RandRegistEx(NULL);
@@ -583,6 +594,8 @@ EXIT:
     BN_Destroy(bnS);
     BSL_ERR_RemoveErrorStack(true);
     CRYPT_EAL_PkeyFreeCtx(pkey);
+    free(sigAddQ);
+    BN_Destroy(q);
 }
 /* END_CASE */
 

@@ -704,7 +704,6 @@ class CMakeGenerator:
         cmake += self._gen_cmd_cmake('set_target_properties', '{} PROPERTIES'.format(tgt_name), properties)
         cmake += 'install(TARGETS %s DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)\n' % tgt_name
         if (self._approved_provider):
-            # Use the openssl command to generate an HMAC file.
             cmake += 'install(CODE "execute_process(COMMAND openssl dgst -hmac \\\"%s\\\" -%s -out lib%s.so.hmac lib%s.so)")\n' % (self._args.hkey, self._hmac, lib_name, lib_name)
             # Install the hmac file to the output directory.
             cmake += 'install(CODE "execute_process(COMMAND cp lib%s.so.hmac ${CMAKE_INSTALL_PREFIX}/lib/lib%s.so.hmac)")\n' % (lib_name, lib_name)

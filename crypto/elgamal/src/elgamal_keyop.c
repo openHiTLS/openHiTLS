@@ -70,33 +70,22 @@ int32_t CRYPT_ELGAMAL_SetPrvKey(CRYPT_ELGAMAL_Ctx *ctx, const CRYPT_ElGamalPrv *
         return CRYPT_ELGAMAL_ERR_INPUT_VALUE;
     }
     int32_t ret = CRYPT_SUCCESS;
-    CRYPT_ELGAMAL_Ctx *newCtx = CRYPT_ELGAMAL_NewCtx();
-    if (newCtx == NULL) {
+    CRYPT_ELGAMAL_PrvKey *newPrvKey = ElGamal_NewPrvKey(0);
+    if (newPrvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-
-    newCtx->prvKey = ElGamal_NewPrvKey(prv->pLen * 8); // Bit length is obtained by multiplying byte length by 8.
-    if (newCtx->prvKey == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
-
-    ret = SetPrvPara(newCtx->prvKey, prv);
+    ret = SetPrvPara(newPrvKey, prv);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
     ELGAMAL_FREE_PRV_KEY(ctx->prvKey);
-    ctx->prvKey = newCtx->prvKey;
-
-    BSL_SAL_ReferencesFree(&(newCtx->references));
-    BSL_SAL_FREE(newCtx);
-
+    ctx->prvKey = newPrvKey;
     return ret;
 ERR:
-    CRYPT_ELGAMAL_FreeCtx(newCtx);
+    ELGAMAL_FREE_PRV_KEY(newPrvKey);
     return ret;
 }
 
@@ -116,7 +105,7 @@ int32_t CRYPT_ELGAMAL_SetPubKey(CRYPT_ELGAMAL_Ctx *ctx, const CRYPT_ElGamalPub *
     int32_t ret = CRYPT_SUCCESS;
     CRYPT_ELGAMAL_PubKey *newPub = NULL;
     /* Bit length is obtained by multiplying byte length by 8. */
-    newPub = ElGamal_NewPubKey(pub->pLen * 8);
+    newPub = ElGamal_NewPubKey(0);
     if (newPub == NULL) {
         return CRYPT_MEM_ALLOC_FAIL;
     }

@@ -920,7 +920,6 @@ int32_t HITLS_SetCurrentCert(HITLS_Ctx *ctx, long option);
 /**
  * @ingroup hitls_cert
  * @brief   Process the certificate callback.
- * @attention This callback function is compatible with OpenSSL and has the same logic as OpenSSL.
  *
  * @param   ctx [IN] TLS link object
  * @param   arg [IN] Related parameters arg
