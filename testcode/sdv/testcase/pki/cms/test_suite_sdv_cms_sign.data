@@ -88,6 +88,9 @@ SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata
 SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001 version3 detached signerinfo
 SDV_CMS_PARSE_SIGNEDDATA_VERIFY_TEST_TC001:"../testdata/cert/asn1/cms/signeddata/v3detached.cms":"../testdata/cert/asn1/cms/signeddata/msg.txt":1:"../testdata/cert/asn1/cms/signeddata/noattr/ca_cert.pem":1
 
+SDV_CMS_PARSE_SIGNEDDATA_SIGNEDATTRS_INVALID_TC001 duplicate contentType and missing messageDigest
+SDV_CMS_PARSE_SIGNEDDATA_SIGNEDATTRS_INVALID_TC001:"../testdata/cert/asn1/cms/signeddata/p256_signedattrs_dup_contenttype.cms"
+
 SDV_CMS_PARSE_SIGNEDDATA_ENC_DEC_FILE_TC001 p256 with atttach
 SDV_CMS_PARSE_SIGNEDDATA_ENC_DEC_FILE_TC001:"../testdata/cert/asn1/cms/signeddata/p256_attached.cms":"../testdata/cert/asn1/cms/signeddata/msg.txt":0:"../testdata/cert/asn1/cms/signeddata/ca_cert.pem"
 

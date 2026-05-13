@@ -886,11 +886,11 @@ static void uint32_to_le_bytes(uint32_t len, uint8_t out[8])
     int32_t __ret = HITLS_AUTH_SUCCESS; \
     uint8_t len_bytes[8]; \
     uint32_to_le_bytes(len, len_bytes); \
-    if (remaining < 8 + len) { \
+    if (remaining < LITTLE_BYTEORDER_LEN || len > remaining - LITTLE_BYTEORDER_LEN) { \
         __ret = CRYPT_MEM_ALLOC_FAIL; \
     } else { \
-        memcpy(pos, len_bytes, 8); \
-        pos += 8; remaining -= 8; \
+        memcpy(pos, len_bytes, LITTLE_BYTEORDER_LEN); \
+        pos += LITTLE_BYTEORDER_LEN; remaining -= LITTLE_BYTEORDER_LEN; \
         memcpy(pos, data, len); \
         pos += len; remaining -= len; \
     } \
@@ -937,8 +937,15 @@ static int32_t Spake2PlusComputeTranscript(HITLS_AUTH_PakeCtx *ctx, BSL_Buffer s
         goto ERR;
     }
     if (totalSize) {
-        *totalSize = 8 + context.dataLen + 8 + prover.dataLen + 8 + verifier.dataLen + 8 + mLen + 8 + nLen +
-        8 + shareP.dataLen + 8 + shareV.dataLen + 8 + z.dataLen + 8 + v.dataLen + 8 + spakeCtx->w0.dataLen;
+        uint64_t calcSize = LITTLE_BYTEORDER_LEN * 10 + (uint64_t)context.dataLen + (uint64_t)prover.dataLen +
+            (uint64_t)verifier.dataLen + (uint64_t)mLen + (uint64_t)nLen + (uint64_t)shareP.dataLen +
+            (uint64_t)shareV.dataLen + (uint64_t)z.dataLen + (uint64_t)v.dataLen + (uint64_t)spakeCtx->w0.dataLen;
+        if (calcSize > UINT32_MAX) {
+            BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
+            ret = HITLS_AUTH_INVALID_ARG;
+            goto ERR;
+        }
+        *totalSize = (uint32_t)calcSize;
     }
     if (tt) {
         ret = APPEND_FIELD(context.data, context.dataLen);

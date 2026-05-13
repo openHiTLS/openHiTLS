@@ -163,6 +163,32 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CMS_PARSE_SIGNEDDATA_SIGNEDATTRS_INVALID_TC001
+ * @title  Parse CMS SignedData with invalid signedAttrs
+ * @brief
+ *    1. Parse CMS SignedData with repeated required signedAttrs
+ *    2. Parse CMS SignedData with multi-value signedAttrs SET
+ * @expect
+ *    1-2. Returns HITLS_CMS_ERR_SIGNEDDATA_SIGNEDATTRS_INVALID
+ */
+/* BEGIN_CASE */
+void SDV_CMS_PARSE_SIGNEDDATA_SIGNEDATTRS_INVALID_TC001(char *p7path)
+{
+#if !defined(HITLS_PKI_CMS_SIGNEDDATA)
+    (void)p7path;
+    SKIP_TEST();
+#else
+    HITLS_CMS *cms = NULL;
+    ASSERT_EQ(HITLS_CMS_ProviderParseFile(NULL, NULL, NULL, p7path, &cms),
+        HITLS_CMS_ERR_SIGNEDDATA_SIGNEDATTRS_INVALID);
+EXIT:
+    HITLS_CMS_Free(cms);
+    return;
+#endif
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CMS_PARSE_SIGNEDDATA_ENC_DEC_FILE_TC001
  * @title  Parse, encode and verify CMS SignedData from file
  * @brief

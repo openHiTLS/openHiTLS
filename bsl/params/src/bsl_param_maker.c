@@ -157,6 +157,10 @@ int32_t BSL_PARAM_MAKER_PushValue(BSL_ParamMaker *maker, int32_t key, uint32_t t
             paramMakerDef->allocLen = 0;
             break;
         case BSL_PARAM_TYPE_UTF8_STR:
+            if (len == UINT32_MAX) {
+                ret = BSL_PARAMS_OUT_LIMIT;
+                goto EXIT;
+            }
             paramMakerDef->value = value;
             paramMakerDef->allocLen = len + 1;
             break;
@@ -167,6 +171,10 @@ int32_t BSL_PARAM_MAKER_PushValue(BSL_ParamMaker *maker, int32_t key, uint32_t t
         default:
             ret = BSL_PARAMS_INVALID_TYPE;
             goto EXIT;
+    }
+    if (paramMakerDef->allocLen > UINT32_MAX - maker->valueLen) {
+        ret = BSL_PARAMS_OUT_LIMIT;
+        goto EXIT;
     }
     maker->valueLen += paramMakerDef->allocLen;
     ret = BSL_LIST_AddElement(maker->params, paramMakerDef, BSL_LIST_POS_END);
@@ -195,6 +203,11 @@ int32_t BSL_PARAM_MAKER_DeepPushValue(BSL_ParamMaker *maker, int32_t key, uint32
     uint32_t allocLen = 0;
     switch (type) {
         case BSL_PARAM_TYPE_UTF8_STR:
+            if (len == UINT32_MAX) {
+                ret = BSL_PARAMS_OUT_LIMIT;
+                BSL_ERR_PUSH_ERROR(ret);
+                goto EXIT;
+            }
             allocLen = len + 1;
             break;
         case BSL_PARAM_TYPE_OCTETS:
@@ -204,6 +217,11 @@ int32_t BSL_PARAM_MAKER_DeepPushValue(BSL_ParamMaker *maker, int32_t key, uint32
             ret = BSL_PARAMS_INVALID_TYPE;
             BSL_ERR_PUSH_ERROR(ret);
             goto EXIT;
+    }
+    if (allocLen > UINT32_MAX - maker->valueLen) {
+        ret = BSL_PARAMS_OUT_LIMIT;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto EXIT;
     }
     paramMakerDef->value = BSL_SAL_Malloc(len);
     if (paramMakerDef->value == NULL && value != NULL) {

@@ -153,8 +153,14 @@ int32_t BSL_PEM_EncodeAsn1ToPem(uint8_t *asn1Encode, uint32_t asn1Len, BSL_PEM_S
             BSL_ERR_PUSH_ERROR(ret);
             break;
         }
-        uint32_t line = (len + PEM_LINE_LEN - 1) / PEM_LINE_LEN;
-        uint32_t sumLen = line + len + headLen + tailLen + 3; // 3: \n + \n +\0
+        uint64_t line = ((uint64_t)len + PEM_LINE_LEN - 1) / PEM_LINE_LEN;
+        uint64_t sumLen64 = line + len + headLen + tailLen + 3; // 3: \n + \n +\0
+        if (sumLen64 > UINT32_MAX) {
+            BSL_ERR_PUSH_ERROR(BSL_BASE64_BUF_NOT_ENOUGH);
+            ret = BSL_BASE64_BUF_NOT_ENOUGH;
+            break;
+        }
+        uint32_t sumLen = (uint32_t)sumLen64;
         res = BSL_SAL_Malloc(sumLen);
         if (res == NULL) {
             BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
