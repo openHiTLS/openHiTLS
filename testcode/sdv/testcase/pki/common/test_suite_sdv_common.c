@@ -2689,6 +2689,60 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test SDV_PKI_VERIFY_HOSTNAME_SAN_ZERO_LEN_TC001
+ * @title Hostname verification with zero-length SAN DNS entry
+ */
+/* BEGIN_CASE */
+void SDV_PKI_VERIFY_HOSTNAME_SAN_ZERO_LEN_TC001(char *certPath)
+{
+#if defined(HITLS_PKI_X509_CRT_PARSE) && defined(HITLS_PKI_X509_VFY_IDENTITY)
+    TestMemInit();
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_ExtSan san = {0};
+    bool hasZeroLenDns = false;
+
+    // Certificate parses successfully (zero-length entry not rejected).
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, certPath, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_NE(cert, NULL);
+
+    // SAN list contains 4 entries including a zero-length DNS entry.
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_EXT_GET_SAN, &san, sizeof(HITLS_X509_ExtSan)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(san.names), 4); // 
+    for (BslListNode *node = BSL_LIST_FirstNode(san.names); node != NULL;
+        node = BSL_LIST_GetNextNode(san.names, node)) {
+        HITLS_X509_GeneralName *gn = (HITLS_X509_GeneralName *)BSL_LIST_GetData(node);
+        if (gn != NULL && gn->type == HITLS_X509_GN_DNS && gn->value.dataLen == 0) {
+            hasZeroLenDns = true;
+        }
+    }
+    ASSERT_TRUE(hasZeroLenDns);
+
+    // "test.example.com" matches via "*.example.com".
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, 0, "test.example.com", strlen("test.example.com")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD,
+        "test.example.com", strlen("test.example.com")), HITLS_PKI_SUCCESS);
+
+    // "example.com" does NOT match (CN fallback not triggered because SAN has DNS).
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, 0, "example.com", strlen("example.com")),
+        HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    TestErrClear();
+    ASSERT_EQ(HITLS_X509_VerifyHostname(cert, HITLS_X509_FLAG_VFY_WITH_PARTIAL_WILDCARD,
+        "example.com", strlen("example.com")), HITLS_X509_ERR_VFY_HOSTNAME_FAIL);
+    TestErrClear();
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_ClearSubjectAltName(&san);
+    HITLS_X509_CertFree(cert);
+#else
+    (void)certPath;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/**
  * @test SDV_X509_PARSE_NAME_LIST_UTF8_CACHE_TC001
  * @title Parsed name UTF-8 canonical cache test
  * @brief

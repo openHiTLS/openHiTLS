@@ -478,3 +478,33 @@ SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/h_mldsa44_leaf.d
 
 SDV_X509_SECBITS_COMBINED_TC001: H_256: secbits=256, Root:256>=256 PASS, Inter:192<256 FAIL, Leaf:128<256 FAIL
 SDV_X509_SECBITS_COMBINED_TC001:"../testdata/cert/chain/secbits/h_mldsa44_leaf.der":"../testdata/cert/chain/secbits/h_mldsa65_inter.der":"../testdata/cert/chain/secbits/h_mldsa87_root.der":256:HITLS_X509_ERR_VFY_CHECK_SECBITS
+
+SDV_X509_VFY_EXTENSIONS_REQUIRE_V3_TC001: TC1 v1 leaf with extensions
+SDV_X509_VFY_EXTENSIONS_REQUIRE_V3_TC001:"../testdata/cert/chain/v3_exts/a_v1_ext_leaf.der":"":"../testdata/cert/chain/v3_exts/a_v3_root.der":HITLS_X509_ERR_VFY_EXTENSIONS_REQUIRE_V3
+
+SDV_X509_VFY_EXTENSIONS_REQUIRE_V3_TC001: TC2 v2 leaf with extensions
+SDV_X509_VFY_EXTENSIONS_REQUIRE_V3_TC001:"../testdata/cert/chain/v3_exts/a_v2_ext_leaf.der":"":"../testdata/cert/chain/v3_exts/a_v3_root.der":HITLS_X509_ERR_VFY_EXTENSIONS_REQUIRE_V3
+
+SDV_X509_VFY_EXTENSIONS_REQUIRE_V3_TC001: TC3 v1 intermediate with extensions
+SDV_X509_VFY_EXTENSIONS_REQUIRE_V3_TC001:"../testdata/cert/chain/v3_exts/a_v3_leaf.der":"../testdata/cert/chain/v3_exts/a_v1_ext_inter.der":"../testdata/cert/chain/v3_exts/a_v3_root.der":HITLS_X509_ERR_VFY_EXTENSIONS_REQUIRE_V3
+
+SDV_X509_VFY_EXTENSIONS_REQUIRE_V3_TC001: TC4 v2 intermediate with extensions
+SDV_X509_VFY_EXTENSIONS_REQUIRE_V3_TC001:"../testdata/cert/chain/v3_exts/a_v3_leaf.der":"../testdata/cert/chain/v3_exts/a_v2_ext_inter.der":"../testdata/cert/chain/v3_exts/a_v3_root.der":HITLS_X509_ERR_VFY_EXTENSIONS_REQUIRE_V3
+
+SDV_X509_VFY_EXTENSIONS_REQUIRE_V3_TC001: TC5 v1 root with extensions as trust anchor
+SDV_X509_VFY_EXTENSIONS_REQUIRE_V3_TC001:"../testdata/cert/chain/v3_exts/b_v3_leaf.der":"":"../testdata/cert/chain/v3_exts/b_v1_ext_root.der":HITLS_X509_ERR_VFY_EXTENSIONS_REQUIRE_V3
+
+SDV_X509_VFY_V1_INTER_CA_TC001: TC1 v1 intermediate without extensions rejected
+SDV_X509_VFY_V1_INTER_CA_TC001:"../testdata/cert/chain/v1_inter/v3_leaf.der":"../testdata/cert/chain/v1_inter/v1_inter.der":"../testdata/cert/chain/v1_inter/v3_root.der":HITLS_X509_ERR_VFY_INTERCA_INVALID_VERSION
+
+SDV_X509_VFY_V1_INTER_CA_TC001: TC2 v2 intermediate without extensions rejected
+SDV_X509_VFY_V1_INTER_CA_TC001:"../testdata/cert/chain/v1_inter/v3_leaf.der":"../testdata/cert/chain/v1_inter/v2_inter.der":"../testdata/cert/chain/v1_inter/v3_root.der":HITLS_X509_ERR_VFY_INTERCA_INVALID_VERSION
+
+SDV_X509_VFY_V1_INTER_CA_TC001: TC3 v1 trust anchor without extensions accepted
+SDV_X509_VFY_V1_INTER_CA_TC001:"../testdata/cert/chain/v1_inter/v3_leaf_b.der":"":"../testdata/cert/chain/v1_inter/v1_root.der":HITLS_PKI_SUCCESS
+
+SDV_X509_VFY_V1_INTER_CA_TC001: TC4 v3 intermediate missing BasicConstraints
+SDV_X509_VFY_V1_INTER_CA_TC001:"../testdata/cert/chain/bcExt/bc_leaf_missing_bc.pem":"../testdata/cert/chain/bcExt/bc_inter_missing_bc.pem":"../testdata/cert/chain/bcExt/bc_root_general.pem":HITLS_X509_ERR_VFY_INTERCA_INVALID_BCONS
+
+SDV_X509_VFY_V1_INTER_CA_TC001: TC5 v3 intermediate BasicConstraints CA=false
+SDV_X509_VFY_V1_INTER_CA_TC001:"../testdata/cert/chain/bcExt/bc_leaf_ca_false.pem":"../testdata/cert/chain/bcExt/bc_inter_ca_false.pem":"../testdata/cert/chain/bcExt/bc_root_general.pem":HITLS_X509_ERR_VFY_INTERCA_INVALID_BCONS
