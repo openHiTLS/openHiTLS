@@ -130,7 +130,6 @@ static int32_t SetHmacMdAttr(CRYPT_EAL_MacCtx *ctx, const char *attrName)
     };
     int32_t ret = CRYPT_EAL_MacSetParam(ctx, param);
     if (ret != CRYPT_SUCCESS) {
-        CRYPT_EAL_MacFreeCtx(ctx);
         return RETURN_ERROR_NUMBER_PROCESS(ret, BINLOG_ID17372, "MacSetParam fail");
     }
     return ret;

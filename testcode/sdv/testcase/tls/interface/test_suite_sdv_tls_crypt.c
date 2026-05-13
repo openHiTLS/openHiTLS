@@ -18,8 +18,14 @@
 #include "crypt.h"
 #include "hitls_crypt_type.h"
 #include "hitls_crypt_init.h"
+#include "stub_utils.h"
+#include "crypt_eal_mac.h"
+#include "crypt_errno.h"
+#include "hitls_crypt.h"
 
 #define PRF_OUT_LEN 48
+
+STUB_DEFINE_RET2(int32_t, CRYPT_EAL_MacSetParam, CRYPT_EAL_MacCtx *, const BSL_Param *);
 
 /* END_HEADER */
 
@@ -45,5 +51,43 @@ void SDV_TLS_CRYPT_PRF_TC001(int hashAlgo, Hex *secret, Hex *label, Hex *seed, H
 
 EXIT:
     return;
+}
+/* END_CASE */
+
+#ifdef HITLS_CRYPTO_PROVIDER
+int32_t STUB_CRYPT_EAL_MacSetParam(CRYPT_EAL_MacCtx *ctx, const BSL_Param *param)
+{
+    (void)ctx;
+    (void)param;
+    return CRYPT_NULL_INPUT;
+}
+#endif
+
+/**
+ * @test SDV_CRYPTO_HMAC_STUB_TC001
+ * title 1. Test the mac with stub SetHmacMdAttr fail
+ *
+ */
+/* BEGIN_CASE */
+void SDV_TLS_CRYPTO_HMAC_STUB_TC001(int algId, Hex *key, Hex *data)
+{
+#ifndef HITLS_TLS_FEATURE_PROVIDER
+    (void)algId;
+    (void)key;
+    (void)data;
+    SKIP_TEST();
+#else
+    uint32_t macLen = 64;
+    uint8_t mac[64];
+    int ret = HITLS_CRYPT_HMAC(NULL, "provider?=default", algId, key->x, key->len, data->x, data->len, mac, &macLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    STUB_REPLACE(CRYPT_EAL_MacSetParam, STUB_CRYPT_EAL_MacSetParam);
+    ret = HITLS_CRYPT_HMAC(NULL, "provider?=default", algId, key->x, key->len, data->x, data->len, mac, &macLen);
+    ASSERT_NE(ret, CRYPT_SUCCESS);
+
+EXIT:
+    STUB_RESTORE(CRYPT_EAL_MacSetParam);
+#endif
 }
 /* END_CASE */

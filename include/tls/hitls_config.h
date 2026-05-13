@@ -604,7 +604,7 @@ int32_t HITLS_CFG_SetClientVerifySupport(HITLS_Config *config, bool support);
  *          This parameter takes effect only when client certificate verification is enabled.
             Client: This setting has no impact
             Server: Check whether the certificate passes the verification when receiving an empty
-               certificate from the client. The verification fails by default.
+               certificate from the client. The verification passes by default.
  * @param   config  [OUT] Config handle
  * @param   support [IN] Indicates whether the authentication is successful when no client certificate is available.
             true: The server still passes the verification when the certificate sent by the client is empty.

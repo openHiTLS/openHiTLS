@@ -21,7 +21,7 @@ Currently, openHiTLS supports the following protocol versions:
 | Elliptic curve| secp256r1 (23)<br>secp384r1 (24)<br>secp521r1 (25)<br>brainpoolP256r1 (26)<br>brainpoolP384r1 (27)<br>brainpoolP512r1 (28)<br>x25519 (29)|
 | Signature hash algorithm| dsa_sha256 (0x0402)<br>dsa_sha384 (0x0502)<br>dsa_sha512 (0x0602)<br>rsa_pkcs1_sha256 (0x0401)<br>rsa_pkcs1_sha384 (0x0501)<br>rsa_pkcs1_sha512 (0x0601)<br>ecdsa_secp256r1_sha256 (0x0403)<br>ecdsa_secp384r1_sha384 (0x0503)<br>ecdsa_secp521r1_sha512 (0x0603)<br>rsa_pss_rsae_sha256 (0x0804)<br>rsa_pss_rsae_sha384 (0x0805)<br>rsa_pss_rsae_sha512 (0x0806)<br>rsa_pss_pss_sha256 (0x0809)<br>rsa_pss_pss_sha384 (0x080a)<br>rsa_pss_pss_sha512 (0x080b)<br>ed25519 (0x0807)|
 | Dual-ended verification| **HITLS_CFG_SetClientVerifySupport** (disabled by default)|
-| Blank client certificate| **HITLS_CFG_SetNoClientCertSupport** (disabled by default)|
+| Blank client certificate| **HITLS_CFG_SetNoClientCertSupport** (enabled by default)|
 | Do not verify peer certificate| **HITLS_CFG_SetVerifyNoneSupport** (disabled by default)|
 | Renegotiation| **HITLS_CFG_SetRenegotiationSupport** (disabled by default)|
 | Verify client certificate only once| **HITLS_CFG_SetClientOnceVerifySupport** (disabled by default)|
@@ -42,7 +42,7 @@ Currently, openHiTLS supports the following protocol versions:
 | Supported Groups (Key Exchange Groups) | **Traditional Elliptic Curves:**<br>secp256r1 (23)<br>secp384r1 (24)<br>secp521r1 (25)<br>x25519 (29)<br>**Finite Field DH Groups:**<br>ffdhe2048 (256)<br>ffdhe3072 (257)<br>ffdhe4096 (258)<br>ffdhe6144 (259)<br>ffdhe8192 (260)<br>**Hybrid Key Exchange:**<br>X25519MLKEM768 (4588)<br>SecP256r1MLKEM768 (4587)<br>SecP384r1MLKEM1024 (4589) |
 | Signature hash algorithm| rsa_pkcs1_sha256 (0x0401)<br>rsa_pkcs1_sha384 (0x0501)<br>rsa_pkcs1_sha512 (0x0601)<br>ecdsa_secp256r1_sha256 (0x0403)<br>ecdsa_secp384r1_sha384 (0x0503)<br>ecdsa_secp521r1_sha512 (0x0603)<br>rsa_pss_rsae_sha256 (0x0804)<br>rsa_pss_rsae_sha384 (0x0805)<br>rsa_pss_rsae_sha512 (0x0806)<br>rsa_pss_pss_sha256 (0x0809)<br>rsa_pss_pss_sha384 (0x080a)<br>rsa_pss_pss_sha512 (0x080b)<br>ed25519 (0x0807)|
 | Dual-ended verification| **HITLS_CFG_SetClientVerifySupport** (disabled by default)|
-| Blank client certificate| **HITLS_CFG_SetNoClientCertSupport** (disabled by default)|
+| Blank client certificate| **HITLS_CFG_SetNoClientCertSupport** (enabled by default)|
 | Do not verify peer certificate| **HITLS_CFG_SetVerifyNoneSupport** (disabled by default)|
 | Verify client certificate only once| **HITLS_CFG_SetClientOnceVerifySupport** (disabled by default)|
 | Authentication after handshake| **HITLS_CFG_SetPostHandshakeAuthSupport** (disabled by default)|
@@ -94,7 +94,7 @@ HITLS_CFG_SetGroups(config, groups, sizeof(groups) / sizeof(groups[0]));
 | Elliptic curve| curveSM2 (41)|
 | Signature hash algorithm| sm2sig_sm3 (0x0708)|
 | Dual-ended verification| **HITLS_CFG_SetClientVerifySupport** (disabled by default)|
-| Blank client certificate| **HITLS_CFG_SetNoClientCertSupport** (disabled by default)|
+| Blank client certificate| **HITLS_CFG_SetNoClientCertSupport** (enabled by default)|
 | Do not verify peer certificate| **HITLS_CFG_SetVerifyNoneSupport** (disabled by default)|
 | Verify client certificate only once| **HITLS_CFG_SetClientOnceVerifySupport** (disabled by default)|
 | Send handshake packets in a single flight| **HITLS_CFG_SetFlightTransmitSwitch** (disabled by default)|
@@ -459,14 +459,15 @@ int32_t HITLS_CFG_SetClientVerifySupport(HITLS_Config *config, bool support);
 ```
 
 2. Acceptance of no client certificates
-   This setting takes effect only when two-way authentication is enabled. It is disabled by default, meaning that the TLS server must verify the client certificate. If the certificate chain sent by the client is empty or fails verification, the TLS server sends a critical alarm and terminates the handshake.
+   This setting takes effect only when two-way authentication is enabled. It is enabled by default, meaning that if the TLS server receives an empty certificate, the verification passes.
+
    You can control the function through the `HITLS_CFG_SetNoClientCertSupport` interface.
 
 ```c
 /**
  * @brief Set whether to accept the scenario without any client certificates. This setting takes effect only when client certificate verification is enabled.
             This setting has no impact on the client.
-            The server checks whether the certificate verification is successful when receiving an empty certificate from the client. The verification fails by default.
+            The server checks whether the certificate verification is successful when receiving an empty certificate from the client. The verification passed by default.
  */
 int32_t HITLS_CFG_SetNoClientCertSupport(HITLS_Config *config, bool support);
 ```
