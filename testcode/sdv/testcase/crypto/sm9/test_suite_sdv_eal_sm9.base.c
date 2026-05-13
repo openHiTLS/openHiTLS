@@ -19,6 +19,22 @@
 #include <string.h>
 #include "crypt_sm9.h"
 #include "crypt_util_rand.h"
+#include "stub_utils.h"
+
+STUB_DEFINE_RET3(int32_t, CRYPT_RandEx, void *, uint8_t *, uint32_t);
+
+static uint8_t *g_sm9StubRand = NULL;
+static uint32_t g_sm9StubRandLen = 0;
+
+int32_t STUB_CRYPT_RandEx(void *libCtx, uint8_t *rand, uint32_t randLen)
+{
+    (void)libCtx;
+    if (g_sm9StubRand == NULL || randLen > g_sm9StubRandLen) {
+        return -1;
+    }
+    memcpy(rand, g_sm9StubRand, randLen);
+    return 0;
+}
 
 #define RAND_BUF_LEN 2048
 #define UINT8_MAX_NUM 255

@@ -19,6 +19,7 @@
 #include "crypt_sm9.h"
 #include "crypt_errno.h"
 #include "sm9.h"
+#include "bsl_sal.h"
 #include <string.h>
 
 /*============================================================================*/
@@ -26,54 +27,54 @@
 int32_t SM9_SetEncMasterKey(SM9_Ctx *ctx, uint8_t *msk)
 {
     if (!ctx || !msk) {
-        return SM9_ERR_BAD_INPUT;
+        return CRYPT_SM9_ERR_BAD_INPUT;
     }
 
     memcpy(ctx->enc_msk, msk, SM9_ENC_SYS_PRIKEY_BYTES);
 
     int32_t ret = SM9_Alg_MEKG(ctx->enc_msk, ctx->enc_mpk);
-    if (ret != SM9_OK) {
+    if (ret != CRYPT_SUCCESS) {
         return ret;
     }
 
     ret = SM9_Get_Enc_G(ctx->enc_g, ctx->enc_mpk);
-    if (ret != SM9_OK) {
+    if (ret != CRYPT_SUCCESS) {
         return ret;
     }
 
     ctx->has_enc_sys = 1;
     ctx->has_enc_g = 1;
 
-    return SM9_OK;
+    return CRYPT_SUCCESS;
 }
 
  int32_t SM9_GenEncUserKey(SM9_Ctx *ctx, const uint8_t *user_id, uint32_t id_len)
 {
     if (!ctx || !user_id || id_len == 0 || id_len > 256) {
-        return SM9_ERR_BAD_INPUT;
+        return CRYPT_SM9_ERR_BAD_INPUT;
     }
 
     if (!ctx->has_enc_sys) {
-        return SM9_ERR_BAD_INPUT;
+        return CRYPT_SM9_ERR_BAD_INPUT;
     }
 
     memcpy(ctx->user_id, user_id, id_len);
     ctx->user_id_len = id_len;
 
     int32_t ret = SM9_Alg_UEKG(user_id, id_len, ctx->enc_msk, ctx->enc_dek);
-    if (ret != SM9_OK) {
+    if (ret != CRYPT_SUCCESS) {
         return ret;
     }
 
     ctx->has_enc_usr = 1;
 
-    return SM9_OK;
+    return CRYPT_SUCCESS;
 }
 
 int32_t SM9_SetEncUserKey(SM9_Ctx *ctx, uint8_t *user_id, uint32_t id_len, uint8_t *dek)
 {
     if (!ctx || !user_id || id_len == 0 || id_len > 256 || !dek) {
-        return SM9_ERR_BAD_INPUT;
+        return CRYPT_SM9_ERR_BAD_INPUT;
     }
 
     memcpy(ctx->user_id, user_id, id_len);
@@ -83,46 +84,43 @@ int32_t SM9_SetEncUserKey(SM9_Ctx *ctx, uint8_t *user_id, uint32_t id_len, uint8
 
     ctx->has_enc_usr = 1;
 
-    return SM9_OK;
+    return CRYPT_SUCCESS;
 }
 
 /*============================================================================*/
 /*============================================================================*/
 
 int32_t SM9_EncryptCtx(const SM9_Ctx *ctx, const uint8_t *user_id, uint32_t id_len,
-                       const uint8_t *msg, uint32_t mlen, uint8_t *rand, uint8_t *cipher, uint32_t *clen)
+                       const uint8_t *msg, uint32_t mlen, uint8_t *cipher, uint32_t *clen)
 {
-    static uint8_t default_rand[32];
+    uint8_t randBuf[32];
+    int32_t ret;
 
     if (!ctx || !user_id || !msg || !cipher || !clen) {
-        return SM9_ERR_BAD_INPUT;
+        return CRYPT_SM9_ERR_BAD_INPUT;
     }
 
     if (!ctx->has_enc_sys) {
-        return SM9_ERR_BAD_INPUT;
-    }
-
-    if (!rand) {
-        int32_t ret = sm9_rand(default_rand, sizeof(default_rand));
-        if (ret != CRYPT_SUCCESS) {
-            return SM9_ERR_RND_UNUSEABLE;
-        }
-        rand = default_rand;
+        return CRYPT_SM9_ERR_BAD_INPUT;
     }
 
     const uint8_t *g_ptr = ctx->has_enc_g ? ctx->enc_g : NULL;
 
-    return SM9_Alg_Enc(msg, mlen, user_id, id_len, rand, g_ptr, ctx->enc_mpk, cipher, clen);
+    ret = sm9_rand(randBuf, sizeof(randBuf));
+    if (ret != CRYPT_SUCCESS) {
+        return CRYPT_SM9_ERR_ENCRYPT_FAILED;
+    }
+    return SM9_Alg_Enc(msg, mlen, user_id, id_len, randBuf, g_ptr, ctx->enc_mpk, cipher, clen);
 }
 
 int32_t SM9_DecryptCtx(const SM9_Ctx *ctx, const uint8_t *cipher, uint32_t clen, uint8_t *msg, uint32_t *mlen)
 {
     if (!ctx || !cipher || !msg || !mlen) {
-        return SM9_ERR_BAD_INPUT;
+        return CRYPT_SM9_ERR_BAD_INPUT;
     }
 
     if (!ctx->has_enc_usr) {
-        return SM9_ERR_BAD_INPUT;
+        return CRYPT_SM9_ERR_BAD_INPUT;
     }
 
     return SM9_Alg_Dec(cipher, clen, ctx->enc_dek, ctx->user_id, ctx->user_id_len, msg, mlen);

@@ -741,6 +741,9 @@ typedef enum {
     // xmss
     CRYPT_CTRL_GET_XMSS_XDR_ALG_TYPE = 800,     /**< Get the XMSS xdr algId. */
     CRYPT_CTRL_SET_XMSS_XDR_ALG_TYPE = 801,     /**< Set the XMSS xdr algId. */
+
+    // sm9
+    CRYPT_CTRL_SET_SM9_USER_ID = 900,   /**< SM9 set the user ID. */
 } CRYPT_PkeyCtrl;
 
 

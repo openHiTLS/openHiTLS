@@ -280,7 +280,6 @@ option(HITLS_CRYPTO_PKEY                                       "Public Key Crypt
     option(HITLS_CRYPTO_SM2_CHECK                                  "SM2 Check" OFF)
   option(HITLS_CRYPTO_SM9                                        "SM9 Public Key Encryption" OFF)
     option(HITLS_CRYPTO_SM9_CRYPT                                  "SM9 Cryptography" OFF)
-    option(HITLS_CRYPTO_SM9_EXCH                                   "SM9 Key Exchange" OFF)
     option(HITLS_CRYPTO_SM9_SIGN                                   "SM9 Sign" OFF)
     option(HITLS_CRYPTO_SM9_CMP                                    "SM9 Compare" OFF)
     option(HITLS_CRYPTO_SM9_CHECK                                  "SM9 Check" OFF)

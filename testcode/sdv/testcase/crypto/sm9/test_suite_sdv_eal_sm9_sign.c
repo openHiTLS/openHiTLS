@@ -216,9 +216,9 @@ void SDV_CRYPTO_SM9_GET_PRV_API_TC001(Hex *masterKey, Hex *userId)
     nativeCtx = SM9_NewCtx();
     ASSERT_TRUE(nativeCtx != NULL);
     ret = SM9_SetSignMasterKey(nativeCtx, masterKey->x);
-    ASSERT_EQ(ret, SM9_OK);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
     ret = SM9_GenSignUserKey(nativeCtx, userId->x, userId->len);
-    ASSERT_EQ(ret, SM9_OK);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
     if ((SM9_SIG_USR_PRIKEY_BYTES) <= (sizeof(expectedUserKey)))
         memcpy(expectedUserKey, nativeCtx->sig_dsk, SM9_SIG_USR_PRIKEY_BYTES);
 
@@ -796,7 +796,7 @@ void SDV_CRYPTO_SM9_CHECK_KEYPAIR_FUNC_TC001(Hex *masterKey, Hex *userId1, Hex *
     BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_USER_ID, BSL_PARAM_TYPE_OCTETS,
                         userId1->x, userId1->len);
     params[1] = (BSL_Param)BSL_PARAM_END;
-    ret = CRYPT_EAL_PkeyCtrl(masterCtx, CRYPT_CTRL_SET_SM2_USER_ID, params[0].value, params[0].valueLen);
+    ret = CRYPT_EAL_PkeyCtrl(masterCtx, CRYPT_CTRL_SET_SM9_USER_ID, params[0].value, params[0].valueLen);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Check key pair - should succeed (same user ID)
@@ -804,7 +804,7 @@ void SDV_CRYPTO_SM9_CHECK_KEYPAIR_FUNC_TC001(Hex *masterKey, Hex *userId1, Hex *
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
     // Step 6: Change user ID in master context to userId2
-    ret = CRYPT_EAL_PkeyCtrl(masterCtx, CRYPT_CTRL_SET_SM2_USER_ID, userId2->x, userId2->len);
+    ret = CRYPT_EAL_PkeyCtrl(masterCtx, CRYPT_CTRL_SET_SM9_USER_ID, userId2->x, userId2->len);
     ASSERT_EQ(ret, CRYPT_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
@@ -940,5 +940,83 @@ void SDV_CRYPTO_SM9_PUBKEY_SET_TEST_TC001(void)
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(ctx);
     CRYPT_EAL_PkeyFreeCtx(ctx2);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_SM9_SIGN_VECTOR_TC001
+ * @title  SM9 Sign/Verify: Verify signature from standard vector via EAL interface.
+ * @precon Prepare master key, user ID, message, fixed random, and expected signature.
+ * @brief
+ *    Source: GB/T 38635.2-2020 Appendix A (SM9 digital signature algorithm example)
+ *    1. Create EAL context and set sign master key
+ *    2. Generate user signing key via EAL SetPrvEx
+ *    3. Verify the expected signature from standard via EAL PkeyVerify
+ *    4. Sign message via EAL PkeySign and verify the new signature
+ * @expect
+ *    1-2. Setup succeeds
+ *    3. Verification of standard signature succeeds
+ *    4. Round-trip sign/verify succeeds
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM9_SIGN_VECTOR_TC001(Hex *masterKey, Hex *userId, Hex *message,
+    Hex *randHex, Hex *expectedSig)
+{
+    CRYPT_EAL_PkeyCtx *ctx = NULL;
+    uint8_t signature[SM9_SIGNATURE_LEN] = {0};
+    uint32_t signLen = SM9_SIGNATURE_LEN;
+    BSL_Param params[4];
+    int32_t keyType = SM9_KEY_TYPE_SIGN;
+    int ret;
+
+    // Step 1: Create EAL context and set master key
+    ctx = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_SM9);
+    ASSERT_TRUE(ctx != NULL);
+
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_MASTER_KEY, BSL_PARAM_TYPE_OCTETS,
+                        masterKey->x, masterKey->len);
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+                        &keyType, sizeof(int32_t));
+    params[2] = (BSL_Param)BSL_PARAM_END;
+
+    ret = CRYPT_EAL_PkeySetPubEx(ctx, params);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    // Step 2: Generate user signing key via EAL
+    BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_SM9_USER_ID, BSL_PARAM_TYPE_OCTETS,
+                        userId->x, userId->len);
+    BSL_PARAM_InitValue(&params[1], CRYPT_PARAM_SM9_KEY_TYPE, BSL_PARAM_TYPE_INT32,
+                        &keyType, sizeof(int32_t));
+    params[2] = (BSL_Param)BSL_PARAM_END;
+
+    ret = CRYPT_EAL_PkeySetPrvEx(ctx, params);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    // Step 3: Verify the expected signature from standard
+    ret = CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, message->x, message->len,
+                               expectedSig->x, expectedSig->len);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+    // Step 4: Sign with stubbed random and verify signature matches standard vector
+    g_sm9StubRand = randHex->x;
+    g_sm9StubRandLen = randHex->len;
+    STUB_REPLACE(CRYPT_RandEx, STUB_CRYPT_RandEx);
+
+    ret = CRYPT_EAL_PkeySign(ctx, CRYPT_MD_SM3, message->x, message->len,
+                             signature, &signLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+    ASSERT_EQ(signLen, expectedSig->len);
+    ASSERT_EQ(memcmp(signature, expectedSig->x, signLen), 0);
+
+    // Step 5: Verify the generated signature
+    ret = CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, message->x, message->len,
+                               signature, signLen);
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
+EXIT:
+    STUB_RESTORE(CRYPT_RandEx);
+    g_sm9StubRand = NULL;
+    g_sm9StubRandLen = 0;
+    CRYPT_EAL_PkeyFreeCtx(ctx);
 }
 /* END_CASE */

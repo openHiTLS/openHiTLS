@@ -294,6 +294,10 @@ static int32_t ECP_Sm2WnafMul(SM2_point *r, const BN_BigNum *k, SM2_point p)
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
+    if (recodeK->size == 0) {
+        ECC_ReCodeFree(recodeK);
+        return CRYPT_SUCCESS;
+    }
     SM2_point doublePoint;
     SM2_point precomputed[PRECOMPUTED_TABLE_SIZE] ALIGN64;
     ECP_Sm2ToMont(precomputed[0].x, p.x);
@@ -415,6 +419,7 @@ int32_t ECP_Sm2PointMulAdd(ECC_Para *para, ECC_Point *r, const BN_BigNum *k1, co
     ECP_Sm2FromMont(k2Pt.z, k2Pt.z);
     GOTO_ERR_IF_EX(ECP_Sm2Array2Point(r, &k2Pt), ret);
 ERR:
+    BSL_SAL_CleanseData(k1Uint, SM2_LIMBS * sizeof(BN_UINT));
     return ret;
 }
 

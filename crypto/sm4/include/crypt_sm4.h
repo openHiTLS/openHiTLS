@@ -223,8 +223,8 @@ int32_t CRYPT_SM4_CBC_Decrypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *ou
  * @param ctx [IN] sm4 Context
  * @param in [IN] Data to be encrypted
  * @param out [OUT] Encrypted data
- * @param len [IN] Length of the encrypted data
- * @param iv [IN] Set IV
+ * @param len [IN] Number of blocks to be encrypted
+ * @param iv [IN/OUT] IV (counter), updated after encryption
  *
  * @return Success: CRYPT_SUCCESS
  *         Other error codes are returned if the operation fails.
@@ -235,9 +235,9 @@ int32_t CRYPT_SM4_CTR_Encrypt(CRYPT_SM4_Ctx *ctx, const uint8_t *in, uint8_t *ou
  * @brief SM4 CTR mode decryption (optimized).
  * @param ctx [IN] sm4 Context
  * @param in [IN] Data to be decrypted
- * @param out [OUT] decrypted data
- * @param len [IN] Length of the decrypted data
- * @param iv [IN] Set IV
+ * @param out [OUT] Decrypted data
+ * @param len [IN] Number of blocks to be decrypted
+ * @param iv [IN/OUT] IV (counter), updated after decryption
  *
  * @return Success: CRYPT_SUCCESS
  *         Other error codes are returned if the operation fails.

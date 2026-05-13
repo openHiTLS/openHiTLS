@@ -995,3 +995,61 @@ EXIT:
     TestRandDeInit();
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECC_POINTMUL_ZERO_K_TC001
+ * @title  ECC_PointMul and ECC_PointMulAdd with k=0 should not crash.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECC_POINTMUL_ZERO_K_TC001(int paraId)
+{
+    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ECC_Para *para = ECC_NewPara(paraId);
+    ASSERT_TRUE(para != NULL);
+
+    BN_BigNum *zero = BN_Create(0);
+    ASSERT_TRUE(zero != NULL);
+    BN_BigNum *one = BN_Create(0);
+    ASSERT_TRUE(one != NULL);
+    ASSERT_EQ(BN_SetLimb(one, 1), CRYPT_SUCCESS);
+
+    ECC_Point *r = ECC_NewPoint(para);
+    ASSERT_TRUE(r != NULL);
+    ECC_Point *G = ECC_NewPoint(para);
+    ASSERT_TRUE(G != NULL);
+
+    // Get generator point: 1*G
+    ASSERT_EQ(ECC_PointMul(para, G, one, NULL), CRYPT_SUCCESS);
+
+    // ECC_PointMul with k=0 should return infinity
+    ASSERT_EQ(ECC_PointMul(para, r, zero, NULL), CRYPT_SUCCESS);
+
+    // ECC_PointMul with k=0 and explicit point should return infinity
+    ASSERT_EQ(ECC_PointMul(para, r, zero, G), CRYPT_SUCCESS);
+
+    // ECC_PointMulAdd: k1=0, k2=0 should return infinity
+    ASSERT_EQ(ECC_PointMulAdd(para, r, zero, zero, G), CRYPT_SUCCESS);
+
+    // ECC_PointMulAdd: k1=0, k2!=0 should return k2*pt
+    ASSERT_EQ(ECC_PointMulAdd(para, r, zero, one, G), CRYPT_SUCCESS);
+    // Verify result equals G (since 0*G + 1*G = G)
+    ASSERT_EQ(ECC_PointCmp(para, r, G), CRYPT_SUCCESS);
+
+    // ECC_PointMulAdd: k1!=0, k2=0 should return k1*G
+    ASSERT_EQ(ECC_PointMulAdd(para, r, one, zero, G), CRYPT_SUCCESS);
+    // Verify result equals G (since 1*G + 0*G = G)
+    ASSERT_EQ(ECC_PointCmp(para, r, G), CRYPT_SUCCESS);
+
+EXIT:
+    ECC_FreePara(para);
+    ECC_FreePoint(r);
+    ECC_FreePoint(G);
+    BN_Destroy(zero);
+    BN_Destroy(one);
+    TestRandDeInit();
+}
+/* END_CASE */

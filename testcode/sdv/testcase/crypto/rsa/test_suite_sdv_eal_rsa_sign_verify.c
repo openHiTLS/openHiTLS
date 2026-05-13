@@ -1819,6 +1819,8 @@ void SDV_CRYPTO_RSA_SIGN_VERIFY_ISO9796_2_DETER_TC001(int isProvider, int bits, 
     ASSERT_EQ(signLen1, signLen2);
     ASSERT_EQ(memcmp(sign1, sign2, signLen1), 0);
 
+    mdId = CRYPT_MD_SHAKE128;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_ISO9796_2, isoParam, 0), CRYPT_EAL_ERR_ALGID);
 EXIT:
 #ifdef HITLS_CRYPTO_DRBG
     TestRandDeInit();

@@ -1598,7 +1598,6 @@ AARCH64_PACIASP
     CRYPT_AARCH64_GET_RELA(x15, .Lpoly+24)               // p[3]
 	ldr	   	x15, [x15]
 
-
 	orr		x16, x4, x5
 	orr		x19, x6, x7
 	orr		x25, x16, x19
@@ -1781,6 +1780,7 @@ AARCH64_PACIASP
 	ldp		x16, x17,[x23]
 	ldp		x19, x20,[x23, #16]
 	ldp		x8, x9,[x22, #0]
+	ldp		x10, x11,[x22, #16]
 
 	cmp		x24, #0
 	csel	x16, x4, x16,ne
@@ -1797,12 +1797,12 @@ AARCH64_PACIASP
 	stp		x8, x9,[x21, #0]
 	stp		x10, x11,[x21, #16]
 
-	ldp		x10, x11,[x22, #16]
 	ldp		x4, x5,[sp, #32]
 	ldp		x6, x7,[sp, #48]
 	ldp		x16, x17,[x23, #32]
 	ldp		x19, x20,[x23, #48]
 	ldp		x8, x9,[x22, #32]
+	ldp		x10, x11,[x22, #48]
 
 	cmp		x24, #0
 	csel	x16, x4, x16,ne

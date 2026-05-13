@@ -29,7 +29,7 @@ extern "C" {
  * @brief SM9 Context Structure
  *
  * Encapsulates all key materials and state information required for
- * signature, encryption, and key exchange operations.
+ * signature and encryption operations.
  */
 struct SM9_Ctx_st {
     uint8_t sig_msk[SM9_SIG_SYS_PRIKEY_BYTES];
@@ -44,9 +44,6 @@ struct SM9_Ctx_st {
 
     uint8_t user_id[256];
     uint32_t user_id_len;
-
-    uint8_t keyex_r[SM9_CURVE_MODULE_BYTES];
-    uint8_t keyex_R[SM9_KEYEX_RA_BYTES];
 
     uint32_t has_sig_sys : 1;
     uint32_t has_sig_usr : 1;
@@ -74,16 +71,8 @@ int32_t SM9_GenEncUserKey(SM9_Ctx *ctx, const uint8_t *user_id, uint32_t id_len)
 int32_t SM9_SetEncUserKey(SM9_Ctx *ctx, uint8_t *user_id, uint32_t id_len, uint8_t *dek);
 
 int32_t SM9_EncryptCtx(const SM9_Ctx *ctx, const uint8_t *user_id, uint32_t id_len,
-                       const uint8_t *msg, uint32_t mlen, uint8_t *rand, uint8_t *cipher, uint32_t *clen);
+                       const uint8_t *msg, uint32_t mlen, uint8_t *cipher, uint32_t *clen);
 int32_t SM9_DecryptCtx(const SM9_Ctx *ctx, const uint8_t *cipher, uint32_t clen, uint8_t *msg, uint32_t *mlen);
-
-int32_t SM9_KeyExchangeInit(SM9_Ctx *ctx, uint8_t *peer_id, uint32_t peer_id_len,
-                            int32_t is_initiator, uint8_t *rand, uint8_t *R);
-int32_t SM9_KeyExchangeConfirm(SM9_Ctx *ctx, uint8_t *peer_id, uint32_t peer_id_len,
-                               int32_t is_initiator, uint8_t *peer_R, uint32_t klen,
-                               uint8_t *shared_key, uint8_t *confirm_value);
-int32_t SM9_KeyExchangeVerify(SM9_Ctx *ctx, uint8_t *peer_id, uint32_t peer_id_len,
-                              int32_t is_initiator, uint8_t *peer_R, uint8_t *peer_confirm);
 
 #ifdef  __cplusplus
 }

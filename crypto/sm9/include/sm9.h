@@ -40,6 +40,14 @@ void SM9_Hash_Data(const uint8_t *data, uint32_t len, uint8_t *digest);
  */
 int32_t sm9_rand(uint8_t *p, uint32_t len);
 
+/**
+ * @brief Check if key is in valid range [1, N-1]
+ * @param key Key bytes (big-endian)
+ * @param len Key length in bytes (must be SM9_CURVE_MODULE_BYTES)
+ * @return CRYPT_SUCCESS if valid, error code otherwise
+ */
+void SM9_ModifyKeyRange(uint8_t *key);
+
 /*----------------------SM9 algorithem length define--------------------------*/
 #define SM9_CURVE_MODULE_BYTES        32
 
@@ -57,26 +65,13 @@ int32_t sm9_rand(uint8_t *p, uint32_t len);
 
 #define SM9_SIGNATURE_BYTES         (3*SM9_CURVE_MODULE_BYTES)
 
-#define SM9_KEYEX_RA_BYTES          (2*SM9_CURVE_MODULE_BYTES)
-#define SM9_KEYEX_RB_BYTES          (2*SM9_CURVE_MODULE_BYTES)
+#define SM9_ENC_OVERHEAD_BYTES      (3*SM9_CURVE_MODULE_BYTES)
 
 #define SM9_OPT_DM_MODE0            0x00
 #define SM9_OPT_DM_MODE1            0x04
 #define SM9_OPT_DM_MODE2            0x02
 #define SM9_OPT_DM_MODE3            0x06
 
-/*----------------------SM9 algorithem error code-----------------------------*/
-#define SM9_OK                      0             // OK
-#define SM9_ERR_ID_UNUSEABLE        0x3F01        // Current ID cannot use
-#define SM9_ERR_RND_UNUSEABLE       0x3F02        // Current rand number cannot use
-#define SM9_ERR_BAD_INPUT           0x3F03
-#define SM9_ERR_VERIFY_FAILED       0x3F04
-#define SM9_ERR_INVALID_POINT       0x3F05
-#define SM9_ERR_MAC_FAILED          0x3F06
-#define SM9_ERR_INPUT               0x3F07
-#define SM9_ERR_MODE_UNUSEABLE      0x3F0E
-#define SM9_ERR_NODEINFO            0x3F0A
-#define SM9_ERR_UNSUPPORT           0x3F0F
 
 /*============================================================================*/
 
@@ -174,84 +169,6 @@ int32_t SM9_Alg_Dec(
     uint32_t ilen,
     uint8_t *msg,
     uint32_t *mlen);
-
-int32_t SM9_Alg_KeyEx_InitA(
-    uint8_t *ida,
-    uint32_t ilen_a,
-    uint8_t *idb,
-    uint32_t ilen_b,
-    uint8_t *ra,
-    uint8_t *da,
-    uint8_t *mpk,
-    uint8_t *RA);
-
-int32_t SM9_Alg_KeyEx_InitB(
-    uint8_t *ida,
-    uint32_t ilen_a,
-    uint8_t *idb,
-    uint32_t ilen_b,
-    uint8_t *rb,
-    uint8_t *db,
-    uint8_t *mpk,
-    uint8_t *RB);
-
-// User A confirms and generates shared key SK_A and confirmation value SA
-// This function only generates, does not verify SB
-int32_t SM9_Alg_KeyEx_ConfirmA(
-    uint8_t *ida,
-    uint32_t ilen_a,
-    uint8_t *idb,
-    uint32_t ilen_b,
-    uint8_t *ra,
-    uint8_t *RA,
-    uint8_t *RB,
-    uint8_t *da,
-    uint8_t *mpk,
-    uint32_t klen,
-    uint8_t *SK,   // Output: Shared key
-    uint8_t *SA);  // Output: Confirmation value SA for User A
-
-// User B confirms and generates shared key SK_B and confirmation value SB
-// This function only generates, does not verify SA
-int32_t SM9_Alg_KeyEx_ConfirmB(
-    uint8_t *ida,
-    uint32_t ilen_a,
-    uint8_t *idb,
-    uint32_t ilen_b,
-    uint8_t *rb,
-    uint8_t *RA,
-    uint8_t *RB,
-    uint8_t *db,
-    uint8_t *mpk,
-    uint32_t klen,
-    uint8_t *SK,   // Output: Shared key
-    uint8_t *SB);  // Output: Confirmation value SB for User B
-
-// User B verifies SA received from User A (standalone verification function)
-int32_t SM9_Alg_KeyEx_VerifySA(
-    uint8_t *ida,
-    uint32_t ilen_a,
-    uint8_t *idb,
-    uint32_t ilen_b,
-    uint8_t *rb,
-    uint8_t *RA,
-    uint8_t *RB,
-    uint8_t *db,
-    uint8_t *mpk,
-    uint8_t *SA);  // Input: SA received from User A
-
-// User A verifies SB received from User B (standalone verification function)
-int32_t SM9_Alg_KeyEx_VerifySB(
-    uint8_t *ida,
-    uint32_t ilen_a,
-    uint8_t *idb,
-    uint32_t ilen_b,
-    uint8_t *ra,
-    uint8_t *RA,
-    uint8_t *RB,
-    uint8_t *da,
-    uint8_t *mpk,
-    uint8_t *SB);  // Input: SB received from User B
 
 #ifdef  __cplusplus
 }
