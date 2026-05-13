@@ -24,6 +24,9 @@
 #include "bsl_base64_internal.h"
 #include "bsl_base64.h"
 
+#define BSL_BASE64_ENC_ENOUGH_LEN(len) (((len) + 2) / 3 * 4 + 1)
+#define BSL_BASE64_DEC_ENOUGH_LEN(len) (((len) + 3) / 4 * 3)
+
 /* BASE64 mapping table */
 static const uint8_t BASE64_DECODE_MAP_TABLE[] = {
     67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 64U, 67U, 67U, 64U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U, 67U,
@@ -420,7 +423,11 @@ int32_t BSL_BASE64_EncodeFinal(BSL_Base64Ctx *ctx, char *dstBuf, uint32_t *dstBu
         return BSL_SUCCESS;
     }
 
-    if (*dstBufLen < BSL_BASE64_ENC_ENOUGH_LEN((ctx->num))) {
+    uint32_t needLen = BSL_BASE64_ENC_ENOUGH_LEN(ctx->num);
+    if ((ctx->flags & BSL_BASE64_FLAGS_NO_NEWLINE) == 0) {
+        needLen++;
+    }
+    if (*dstBufLen < needLen) {
         BSL_ERR_PUSH_ERROR(BSL_BASE64_BUF_NOT_ENOUGH);
         return BSL_BASE64_BUF_NOT_ENOUGH;
     }
