@@ -207,7 +207,7 @@ int32_t ECP_PointMul(ECC_Para *para,  ECC_Point *r, const BN_BigNum *k, const EC
     for (i = bits - 1; i > 0; i--) {
         GOTO_ERR_IF(para->method->pointDouble(para, r, r), ret);
         GOTO_ERR_IF(para->method->pointAddAffine(para, t, r, base), ret);
-        mask = BN_GetBit(k, i - 1) ? 0 : BN_MASK;
+        mask = (BN_UINT)BN_GetBit(k, i - 1) - 1;
         // The last bit must be 1, and r must be updated to the latest data.
         GOTO_ERR_IF(ECP_PointCopyWithMask(r, t, r, mask), ret);
     }
@@ -910,7 +910,6 @@ static int32_t GetFormatAndCheckLen(const uint8_t *data, uint32_t dataLen, CRYPT
     uint32_t curveBytes)
 {
     if (dataLen < curveBytes + 1) {
-        BSL_ERR_PUSH_ERROR(CRYPT_ECC_ERR_POINT_CODE);
         return CRYPT_ECC_ERR_POINT_CODE;
     }
     uint8_t pc = data[0];
@@ -923,7 +922,6 @@ static int32_t GetFormatAndCheckLen(const uint8_t *data, uint32_t dataLen, CRYPT
     if (pc == 0x04) {
         // uncompressed
         if (dataLen != (curveBytes << 1) + 1) {
-            BSL_ERR_PUSH_ERROR(CRYPT_ECC_ERR_POINT_CODE);
             return CRYPT_ECC_ERR_POINT_CODE;
         }
         *format = CRYPT_POINT_UNCOMPRESSED;
@@ -931,21 +929,18 @@ static int32_t GetFormatAndCheckLen(const uint8_t *data, uint32_t dataLen, CRYPT
     } else if (pc == 0x02 || pc == 0x03) {
         // compressed
         if (dataLen != curveBytes + 1) {
-            BSL_ERR_PUSH_ERROR(CRYPT_ECC_ERR_POINT_CODE);
             return CRYPT_ECC_ERR_POINT_CODE;
         }
         *format = CRYPT_POINT_COMPRESSED;
         return CRYPT_SUCCESS;
     } else if (pc == 0x06 || pc == 0x07) {
-        // hybriid
+        // hybrid
         if (dataLen != (curveBytes << 1) + 1) {
-            BSL_ERR_PUSH_ERROR(CRYPT_ECC_ERR_POINT_CODE);
             return CRYPT_ECC_ERR_POINT_CODE;
         }
         *format = CRYPT_POINT_HYBRID;
         return CRYPT_SUCCESS;
     }
-    BSL_ERR_PUSH_ERROR(CRYPT_ECC_ERR_POINT_CODE);
     return CRYPT_ECC_ERR_POINT_CODE;
 }
 
@@ -963,8 +958,8 @@ int32_t ECC_DecodePoint(const ECC_Para *para, ECC_Point *pt, const uint8_t *data
     int32_t ret;
     uint32_t curveBytes = BN_Bytes(para->p);
     CRYPT_PKEY_PointFormat format = CRYPT_POINT_UNCOMPRESSED;
+    RETURN_RET_IF_ERR(GetFormatAndCheckLen(data, dataLen, &format, curveBytes), ret);
     bool pcBit = ((data[0] & 0x01) == 1); // Parity check. If it's odd, return true. If it's even, return false.
-    GOTO_ERR_IF(GetFormatAndCheckLen(data, dataLen, &format, curveBytes), ret);
 
     GOTO_ERR_IF(BN_SetLimb(&pt->z, 1), ret);
     if (format == CRYPT_POINT_COMPRESSED) {

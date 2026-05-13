@@ -496,7 +496,10 @@ static int32_t RsaSetIso9796_2(CRYPT_RSA_Ctx *ctx, BSL_Param *param)
     uint32_t len = sizeof(padPara.mdId);
     int32_t ret = CRYPT_SUCCESS;
     GOTO_ERR_IF(BSL_PARAM_GetValue(temp, CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &padPara.mdId, &len), ret);
-
+    if (MdIdCheckSha1Sha2(padPara.mdId) == false) {
+        BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
     void *mdProvCtx = NULL;
     void *libCtx = LIBCTX_FROM_RSA_CTX(ctx);
     EAL_MdMethod *mdMeth = EAL_MdFindMethodEx(padPara.mdId, libCtx, MDATTR_FROM_RSA_CTX(ctx),

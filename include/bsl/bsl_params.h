@@ -52,8 +52,8 @@ typedef struct BslParam {
     int32_t key;
     uint32_t valueType;
     void *value;
-    uint32_t valueLen;
-    uint32_t useLen;
+    uint32_t valueLen; // Length of the para value
+    uint32_t useLen; // Allow users to write back the length used.
 } BSL_Param;
 
 typedef struct BslParamMaker BSL_ParamMaker;

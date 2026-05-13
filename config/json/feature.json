@@ -174,7 +174,6 @@
                         "sm9": {
                             "sm9_crypt": null,
                             "sm9_sign": null,
-                            "sm9_exch": null,
                             "deps": ["sm3"]
                         },
                         "kem": {
@@ -1366,7 +1365,7 @@
                 ]
             },
             "sm9": {
-                ".features": ["sm9_crypt", "sm9_sign", "sm9_exch"],
+                ".features": ["sm9_crypt", "sm9_sign"],
                 ".srcs": [
                     "crypto/sm9/src/*.c"
                 ],

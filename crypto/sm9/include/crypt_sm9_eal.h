@@ -20,7 +20,6 @@
  * This file provides EAL-compatible interfaces for SM9 algorithms including:
  * - Digital signature (sign/verify)
  * - Public key encryption (encrypt/decrypt)
- * - Key exchange protocol
  */
 
 #ifndef CRYPT_SM9_EAL_H
@@ -170,17 +169,6 @@ int32_t CRYPT_SM9_Encrypt(const CRYPT_SM9_Ctx *ctx,
 int32_t CRYPT_SM9_Decrypt(const CRYPT_SM9_Ctx *ctx,
                           const uint8_t *data, uint32_t dataLen,
                           uint8_t *out, uint32_t *outLen);
-
-/**
- * @brief SM9 key exchange (compute shared key)
- * @param selfCtx [IN] Local SM9 context (with encryption user key)
- * @param peerCtx [IN] Peer SM9 context (with encryption system public key and user ID)
- * @param out [OUT] Shared key output buffer
- * @param outLen [IN/OUT] Buffer size / actual key length
- * @return CRYPT_SUCCESS on success, error code otherwise
- */
-int32_t CRYPT_SM9_ComputeShareKey(const CRYPT_SM9_Ctx *selfCtx, const CRYPT_SM9_Ctx *peerCtx,
-                                  uint8_t *out, uint32_t *outLen);
 
 /**
  * @brief Control function for SM9 operations

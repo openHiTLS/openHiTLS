@@ -529,32 +529,11 @@ EXIT:
 
 /**
  * @test   SDV_CRYPTO_SM2_VERIFY_API_TC001
- * @title  SM2: CRYPT_EAL_PkeyVerify test.
+ * @title  SM2 verify: parameter validation and basic verify flow
  * @precon Vectors: public key, userId, msg, signature.
  * @brief
- *    1. Create the context of the SM2 algorithm, expected result 1.
- *    2. Call the CRYPT_EAL_PkeyCtrl method to set userId, expected result 2.
- *    3. Call the CRYPT_EAL_PkeyVerify method, where all parameters are valid, expected result 3.
- *    4. Free the context and create a new context of the SM2 algorithm, expected result 4.
- *    5. Set public key, expected result 5.
- *    6. Set userId, expected result 6.
- *    7. Call the CRYPT_EAL_PkeyVerify method:
- *        (1) signLen is invalid: sign->len - 1 or sign->len + 1, expected result 7
- *        (3) msg = NULL, msgLen != 0, expected result 8
- *        (2) sign = NULL, signLen != 0, expected result 9
- *        (4) all parameters are valid, expected result 10
- *        (5) mdId != CRYPT_MD_SM3, expected result 11
- * @expect
- *    1. Success, and context is not NULL.
- *    2. CRYPT_SUCCESS
- *    3. CRYPT_SM2_NO_PUBKEY
- *    4. Success, and context is not NULL.
- *    5. CRYPT_SUCCESS
- *    6. CRYPT_SUCCESS
- *    7. CRYPT_DSA_DECODE_FAIL
- *    8-9. CRYPT_NULL_INPUT
- *    10. CRYPT_SUCCESS
- *    11. CRYPT_EAL_ERR_ALGID
+ *    Test CRYPT_EAL_PkeyVerify with various invalid and valid parameter combinations,
+ *    including missing public key, invalid sign length, NULL pointers, and wrong mdId.
  */
 /* BEGIN_CASE */
 void SDV_CRYPTO_SM2_VERIFY_API_TC001(Hex *pubKey, Hex *userId, Hex *msg, Hex *sign, int isProvider)
@@ -583,7 +562,7 @@ void SDV_CRYPTO_SM2_VERIFY_API_TC001(Hex *pubKey, Hex *userId, Hex *msg, Hex *si
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg->x, msg->len, sign->x, sign->len - 1),
         BSL_ASN1_ERR_DECODE_LEN);
     ASSERT_EQ(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg->x, msg->len, bigSign, SM2_SIGN_MAX_LEN + 1),
-        CRYPT_SUCCESS);
+        CRYPT_DECODE_ASN1_BUFF_FAILED);
 
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, NULL, msg->len, sign->x, sign->len) == CRYPT_NULL_INPUT);
     ASSERT_TRUE(CRYPT_EAL_PkeyVerify(ctx, CRYPT_MD_SM3, msg->x, msg->len, NULL, sign->len) == CRYPT_NULL_INPUT);

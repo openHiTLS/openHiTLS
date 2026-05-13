@@ -24,7 +24,7 @@
 #include "crypt_util_rand.h"
 #include "crypt_errno.h"
 #include <string.h>
-
+#include "bsl_bytes.h"
 /***************************Compiler-Switches**********************************/
 
 #define SM9_ALG_RND_ENABLE
@@ -37,8 +37,6 @@
 #define SM9_ENC_SYS_ENABLE
 #define SM9_ENC_USR_ENABLE
 
-#define SM9_KEYEX_ENABLE
-
 #define SM9_HByteLen        40
 #define SM9_HWordLen        (SM9_HByteLen/4)
 
@@ -47,10 +45,8 @@
 #define SM9_C3_ByteLen        (BNByteLen)
 
 /*******************************Static Global *********************************/
-static uint8_t SM9_HID_Sign[1] = {0x01};
-static uint8_t SM9_HID_Enc[1]  = {0x03};
-
-static uint8_t g_RandBuf[BNByteLen] __attribute__((used));
+static const uint8_t SM9_HID_Sign[1]  = {0x01};
+static const uint8_t SM9_HID_Enc[1]   = {0x03};
 
 /******************************************************************************/
 /*                    SM3 Adaptation Layer for SM9                           */
@@ -117,6 +113,16 @@ int32_t sm9_rand(uint8_t *p, uint32_t len)
     return CRYPT_RandEx(NULL, p, len);
 }
 
+void SM9_ModifyKeyRange(uint8_t *key)
+{
+    uint32_t bn[BNWordLen];
+    SM9_Bn_ReadBytes(bn, key);
+    SM9_Fn_LastRes(bn);
+    bn_add_int(bn, bn, 1, BNWordLen);
+    SM9_Fn_LastRes(bn);
+    SM9_Fp_WriteBytes(key, bn);
+    BSL_SAL_CleanseData(bn, sizeof(bn));
+}
 /******************************************************************************/
 
 void _ibc_alg_rand(uint8_t *r, uint32_t len) // static
@@ -133,7 +139,7 @@ static void _ibc_write_fpbytes(uint8_t *dst, uint32_t *src)
     BNToByte(src, BNWordLen, dst, &bytelen);
 }
 
-static void _sm9_hash_h(uint32_t *pwH, uint8_t tag, const uint8_t * msg, uint32_t mlen, uint8_t *add, uint32_t alen)
+static void _sm9_hash_h(uint32_t *pwH, uint8_t tag, const uint8_t * msg, uint32_t mlen, const uint8_t *add, uint32_t alen)
 {
     SM9_Hash_Ctx ctx;
     uint8_t ct[4] = {0x00, 0x00, 0x00, 0x01};
@@ -163,7 +169,7 @@ static void _sm9_hash_h(uint32_t *pwH, uint8_t tag, const uint8_t * msg, uint32_
     bn_add_int(pwH, pwH, 1, BNWordLen);
 }
 
-static void SM9_Hash_H1(uint32_t *pwH, const uint8_t *msg, uint32_t mlen, uint8_t *add, uint32_t alen)
+static void SM9_Hash_H1(uint32_t *pwH, const uint8_t *msg, uint32_t mlen, const uint8_t *add, uint32_t alen)
 {
     _sm9_hash_h(pwH, 0x01, msg, mlen, add, alen);
 }
@@ -222,9 +228,9 @@ int32_t SM9_Alg_Pair(uint8_t *g, uint8_t *p1, uint8_t *p2)
     // Output to bytes
     SM9_Fp12_WriteBytes(g, &Fp12_G);
 
-    return SM9_OK;
+    return CRYPT_SUCCESS;
 #else
-    return SM9_ERR_UNSUPPORT;
+    return CRYPT_SM9_ERR_NOT_SUPPORT;
 #endif /* SM9_PAIR_ENABLE */
 }
 
@@ -251,9 +257,9 @@ int32_t SM9_Alg_MSKG(uint8_t *ks, uint8_t *mpk)
     // Convert System PubKey to bytes(in NormMode)
     SM9_Ecp2_A_WriteBytes(mpk, &Point_PK);
 
-    return SM9_OK;
+    return CRYPT_SUCCESS;
 #else
-    return SM9_ERR_UNSUPPORT;
+    return CRYPT_SM9_ERR_NOT_SUPPORT;
 #endif /* SM9_SIG_SYS_ENABLE */
 }
 
@@ -272,7 +278,7 @@ int32_t SM9_Alg_USKG(const uint8_t *id, uint32_t ilen, uint8_t *ks, uint8_t *ds)
     SM9_Fn_Add(BN_t1, BN_t1, BN_t2);
     // Check t1 != 0
     if (SM9_Bn_IsZero(BN_t1))
-        return SM9_ERR_ID_UNUSEABLE;
+        return CRYPT_SM9_ERR_KEY_ERR;
     // Compute t2 = ks*(t1^-1)
     BN_GetInv_Mont(BN_t1, BN_t1, sm9_sys_para.EC_N, sm9_sys_para.N_Mc, sm9_sys_para.N_R2, sm9_sys_para.wsize);
     bn_mont_mul(BN_t2, BN_t1, BN_t2, sm9_sys_para.EC_N, sm9_sys_para.N_Mc, sm9_sys_para.wsize);
@@ -282,9 +288,9 @@ int32_t SM9_Alg_USKG(const uint8_t *id, uint32_t ilen, uint8_t *ks, uint8_t *ds)
     // Convert User PriKey to bytes(in NormMode)
     SM9_Ecp_A_WriteBytes(ds, &Ecp_ds);
 
-    return SM9_OK;
+    return CRYPT_SUCCESS;
 #else
-    return SM9_ERR_UNSUPPORT;
+    return CRYPT_SM9_ERR_NOT_SUPPORT;
 #endif /* SM9_SIG_SYS_ENABLE */
 }
 
@@ -300,19 +306,11 @@ static int32_t _sm9_alg_sign(
     SM9_Fp12 Fp12_g;
     SM9_ECP2_A Ecp2_P;
 
-    // Read Random number r(in NormMode)
+    // Read Random number r(in NormMode), ensure r in [1, N-1]
     SM9_Bn_ReadBytes(BN_r, r);
-
     SM9_Fn_LastRes(BN_r);
-
-    while (SM9_Bn_IsZero(BN_r)==1) {
-        int32_t ret = sm9_rand(r, BNByteLen);
-        if (ret != CRYPT_SUCCESS) {
-            return SM9_ERR_RND_UNUSEABLE;
-        }
-        SM9_Bn_ReadBytes(BN_r, r);
-        SM9_Fn_LastRes(BN_r);
-    }
+    bn_add_int(BN_r, BN_r, 1, BNWordLen);
+    SM9_Fn_LastRes(BN_r);
 
     // Get System Element g and compute g^r
     if (g) // If g is given
@@ -338,13 +336,13 @@ static int32_t _sm9_alg_sign(
     // l = (r-h) mod N (l should not be zero)
     SM9_Fn_Sub(BN_r, BN_r, BN_h);
     if (SM9_Bn_IsZero(BN_r))
-        return SM9_ERR_RND_UNUSEABLE;
+        return CRYPT_SM9_ERR_SIGN_FAILED;
     // Read User Prikey and convert to MontMode
     SM9_Ecp_A_ReadBytes(Ecp_s, ds);
     // S = l * dsA
     SM9_Ecp_KP(Ecp_s, Ecp_s, BN_r);
 
-    return SM9_OK;
+    return CRYPT_SUCCESS;
 }
 #endif /* SM9_SIG_USR_ENABLE */
 
@@ -367,24 +365,25 @@ int32_t SM9_Sign(
     int32_t len;
 
 #ifndef SM9_ALG_RND_ENABLE
-    r = g_RandBuf;
+    uint8_t randBuf[BNByteLen];
+    r = randBuf;
     _ibc_alg_rand(r, BNByteLen);
 #endif // SM9_ALG_RND_ENABLE
 
     ret = _sm9_alg_sign(msg, mlen, ds, r, g, mpk, BN_h, &Ecp_s);
-    if (ret != SM9_OK)
+    if (ret != CRYPT_SUCCESS)
         return ret;
 
     // Output Signature to bytes
     _ibc_write_fpbytes(sign, BN_h);
     len = SM9_Fp_ECP_A_WriteBytesWithPC(sign + sm9_sys_para.wsize * WordByteLen, opt, &Ecp_s);
     if (len < 0)
-        return SM9_ERR_BAD_INPUT;
+        return CRYPT_SM9_ERR_BAD_INPUT;
     *slen = len + sm9_sys_para.wsize*WordByteLen;
 
-    return SM9_OK;
+    return CRYPT_SUCCESS;
 #else
-    return SM9_ERR_UNSUPPORT;
+    return CRYPT_SM9_ERR_NOT_SUPPORT;
 #endif /* SM9_SIG_USR_ENABLE */
 }
 
@@ -459,8 +458,8 @@ static int32_t _sm9_alg_vefiry(
     SM9_Hash_H2(BN_h1, msg, mlen, pbW, 12 * BNByteLen);
     // Verify h2 ?= h
     if (bn_equal(BN_h1, BN_h, BNWordLen))
-        return SM9_OK;
-    return SM9_ERR_VERIFY_FAILED;
+        return CRYPT_SUCCESS;
+    return CRYPT_SM9_VERIFY_FAIL;
 }
 #endif /* SM9_SIG_USR_ENABLE */
 
@@ -481,14 +480,18 @@ int32_t SM9_Verify(
 
     if (opt == SM9_OPT_DM_MODE1) {
         if (slen != SM9_SIGNATURE_BYTES + 1)
-            return SM9_ERR_BAD_INPUT;
+            return CRYPT_SM9_ERR_BAD_INPUT;
     } else {
         if (slen != SM9_SIGNATURE_BYTES)
-            return SM9_ERR_BAD_INPUT;
+            return CRYPT_SM9_ERR_BAD_INPUT;
     }
 
     // Read Signature(h,s) and convert s to MontMode
     SM9_Bn_ReadBytes(BN_h, sign);
+    // h must be in [1, N-1]
+    if (SM9_Bn_IsZero(BN_h) || bn_cmp(BN_h, sm9_sys_para.EC_N, sm9_sys_para.wsize) >= 0) {
+        return CRYPT_SM9_VERIFY_FAIL;
+    }
     sign += sm9_sys_para.wsize*WordByteLen;
     if (SM9_Fp_ECP_A_ReadBytesWithPC(&Ecp_s, opt, sign))
         return -1;
@@ -523,9 +526,9 @@ int32_t SM9_Alg_MEKG(uint8_t *ke, uint8_t *mpk)
     // Convert System PubKey to bytes(in NormMode)
     SM9_Ecp_A_WriteBytes(mpk, &Point_PK);
 
-    return SM9_OK;
+    return CRYPT_SUCCESS;
 #else
-    return SM9_ERR_UNSUPPORT;
+    return CRYPT_SM9_ERR_NOT_SUPPORT;
 #endif /* SM9_ENC_SYS_ENABLE */
 }
 
@@ -544,7 +547,7 @@ int32_t SM9_Alg_UEKG(const uint8_t *id, uint32_t ilen, uint8_t *ke, uint8_t *de)
     bn_mod_add(BN_t1, BN_t1, BN_t2, sm9_sys_para.EC_N, sm9_sys_para.wsize);
     // Check t1 != 0
     if (bn_is_zero(BN_t1, sm9_sys_para.wsize))
-        return SM9_ERR_ID_UNUSEABLE;
+        return CRYPT_SM9_ERR_KEY_ERR;
     // Compute t2 = ks*(t1^-1)
     BN_GetInv_Mont(BN_t1, BN_t1, sm9_sys_para.EC_N, sm9_sys_para.N_Mc, sm9_sys_para.N_R2, sm9_sys_para.wsize);
     bn_mont_mul(BN_t2, BN_t1, BN_t2, sm9_sys_para.EC_N, sm9_sys_para.N_Mc, sm9_sys_para.wsize);
@@ -554,9 +557,9 @@ int32_t SM9_Alg_UEKG(const uint8_t *id, uint32_t ilen, uint8_t *ke, uint8_t *de)
     // Convert User PriKey to bytes(in NormMode)
     SM9_Ecp2_A_WriteBytes(de, &Ecp2_ds);
 
-    return SM9_OK;
+    return CRYPT_SUCCESS;
 #else
-    return SM9_ERR_UNSUPPORT;
+    return CRYPT_SM9_ERR_NOT_SUPPORT;
 #endif /* SM9_ENC_SYS_ENABLE */
 }
 
@@ -595,8 +598,11 @@ static void _sm9_enc_init(SM9_CTX *ctx, const uint8_t *id, uint32_t ilen, uint8_
     SM9_Fp12 Fp12_g;
     uint8_t pbW[12 * BNByteLen];
 
-    // Read Random number r(in NormMode)
+    // Read Random number r(in NormMode), ensure r in [1, N-1]
     SM9_Bn_ReadBytes(BN_r, r);
+    SM9_Fn_LastRes(BN_r);
+    bn_add_int(BN_r, BN_r, 1, BNWordLen);
+    SM9_Fn_LastRes(BN_r);
     // Read System PubKey to JPoint in MontMode
     SM9_Ecp_A_ReadBytes(&Ecp_P, mpk);
 
@@ -705,7 +711,8 @@ int32_t SM9_Alg_Enc(const uint8_t *msg, uint32_t mlen,
     uint8_t mkey[SM9_Hash_Size];
 
 #ifndef SM9_ALG_RND_ENABLE
-    r = g_RandBuf;
+    uint8_t randBuf[BNByteLen];
+    r = randBuf;
     _ibc_alg_rand(r, BNByteLen);
 #endif // SM9_ALG_RND_ENABLE
 
@@ -720,13 +727,21 @@ int32_t SM9_Alg_Enc(const uint8_t *msg, uint32_t mlen,
     C2 = C3 + SM9_C3_ByteLen;
 
     if ((C2 > msg) && (C2 < msg + mlen))
-        return SM9_ERR_BAD_INPUT;
+        return CRYPT_SM9_ERR_BAD_INPUT;
 
     _sm9_enc_init(&sm9_ctx, id, ilen, r, g, mpk, C1);
     SM9_Mac_Init(&sm9_ctx);
 
     _sm9_pke_kdf(&sm9_ctx, msg, mlen, C2);
+
     SM9_Mac_Update(&sm9_ctx, C2, mlen);
+
+    // K1 is all zeros if C2 == msg after XOR, must reject per GM/T 0044-2016 A6 a.1
+    // ConstTimeMemcmp returns non-zero when equal
+    if (mlen > 0 && ConstTimeMemcmp(C2, msg, mlen) != 0) {
+        BSL_SAL_CleanseData(mkey, SM9_Hash_Size);
+        return CRYPT_SM9_ERR_ENCRYPT_FAILED;
+    }
 
     _sm9_pke_kdf(&sm9_ctx, 0, 0, mkey);
     SM9_Mac_Final(&sm9_ctx, mkey, SM9_Hash_Size, C3);
@@ -734,10 +749,11 @@ int32_t SM9_Alg_Enc(const uint8_t *msg, uint32_t mlen,
     if (elen)
         *elen = mlen + SM9_C1_ByteLen + SM9_C3_ByteLen;
 
-    return SM9_OK;
+    BSL_SAL_CleanseData(mkey, SM9_Hash_Size);
+    return CRYPT_SUCCESS;
 
 #else
-    return SM9_ERR_UNSUPPORT;
+    return CRYPT_SM9_ERR_NOT_SUPPORT;
 #endif /* SM9_ENC_USR_ENABLE */
 }
 
@@ -755,7 +771,7 @@ int32_t SM9_Dec_Init(SM9_CTX *ctx, const uint8_t *de, const uint8_t *id, uint32_
 
     // Check C1 is a point
     if (SM9_Ecp_A_Check(&Ecp_P))
-        return SM9_ERR_INVALID_POINT;
+        return CRYPT_SM9_ERR_DECRYPT_FAILED;
 
     // w'=e(C1, de)
     SM9_Alg_Pair_Mont(&Fp12_g, &Ecp_P, &Ecp2_D);
@@ -764,7 +780,7 @@ int32_t SM9_Dec_Init(SM9_CTX *ctx, const uint8_t *de, const uint8_t *id, uint32_
     SM9_Hash_KDF_Init(ctx, C1, pbW, id, ilen);
     ctx->enc.bytes = 0;
 
-    return SM9_OK;
+    return CRYPT_SUCCESS;
 }
 
 int32_t SM9_Alg_Dec(const uint8_t *enc, uint32_t elen,
@@ -778,12 +794,11 @@ int32_t SM9_Alg_Dec(const uint8_t *enc, uint32_t elen,
     const uint8_t *C3;
     uint8_t k[2 * SM9_Hash_Size];
     uint8_t mac[SM9_C3_ByteLen];
-    uint32_t i;
     uint32_t len;
     int32_t ret;
 
     if (elen < SM9_C1_ByteLen + SM9_C3_ByteLen)
-        return SM9_ERR_INPUT;
+        return CRYPT_SM9_ERR_BAD_INPUT;
     len = elen - SM9_C1_ByteLen - SM9_C3_ByteLen;
 
     C1 = enc;
@@ -791,542 +806,26 @@ int32_t SM9_Alg_Dec(const uint8_t *enc, uint32_t elen,
     C2 = C3 + SM9_C3_ByteLen;
 
     ret = SM9_Dec_Init(&sm9_ctx, de, id, ilen, C1);
-    if (ret != SM9_OK)
+    if (ret != CRYPT_SUCCESS)
         return ret;
     SM9_Mac_Init(&sm9_ctx);
-
     SM9_Mac_Update(&sm9_ctx, C2, len);
     _sm9_pke_kdf(&sm9_ctx, 0, len, k);
     SM9_Mac_Final(&sm9_ctx, k, SM9_Hash_Size, mac);
+     // Compute MAC(K2', C2) and Compare to C3
 
-    // Compute MAC(K2', C2) and Compare to C3
-    for (i = 0; i < SM9_C3_ByteLen; i++) {
-        if (mac[i] != C3[i])
-            return SM9_ERR_MAC_FAILED;
+    if (ConstTimeMemcmp(mac, C3, SM9_C3_ByteLen) == 0) {
+        return CRYPT_SM9_ERR_DECRYPT_FAILED;
     }
-
     _sm9_pke_kdf(&sm9_ctx, C2, len, msg);
 
     if (mlen)
         *mlen = elen - SM9_C1_ByteLen - SM9_C3_ByteLen;
 
-    return SM9_OK;
+    return CRYPT_SUCCESS;
 #else
-    return SM9_ERR_UNSUPPORT;
+    return CRYPT_SM9_ERR_NOT_SUPPORT;
 #endif /* SM9_ENC_USR_ENABLE */
 }
 
-/******************************************************************************/
-/*                          SM9 Key Exchange                                  */
-/******************************************************************************/
-
-#ifdef SM9_KEYEX_ENABLE
-
-// Key derivation function for key exchange
-static void _sm9_keyex_kdf(uint8_t *Z, uint32_t Zlen, uint32_t klen, uint8_t *K)
-{
-    SM9_Hash_Ctx ctx;
-    uint8_t ct[4];
-    uint32_t cnt = 1;
-    uint32_t rcnt = klen / SM9_Hash_Size;
-    uint32_t rbit = klen % SM9_Hash_Size;
-    uint32_t i;
-
-    for (i = 0; i < rcnt; i++) {
-        ct[0] = (cnt & 0xFF000000) >> 24;
-        ct[1] = (cnt & 0x00FF0000) >> 16;
-        ct[2] = (cnt & 0x0000FF00) >> 8;
-        ct[3] = cnt & 0x000000FF;
-
-        SM9_Hash_Init(&ctx);
-        SM9_Hash_Update(&ctx, Z, Zlen);
-        SM9_Hash_Update(&ctx, ct, 4);
-        SM9_Hash_Final(&ctx, K + i * SM9_Hash_Size);
-        cnt++;
-    }
-
-    if (rbit) {
-        uint8_t tmp[SM9_Hash_Size];
-        ct[0] = (cnt & 0xFF000000) >> 24;
-        ct[1] = (cnt & 0x00FF0000) >> 16;
-        ct[2] = (cnt & 0x0000FF00) >> 8;
-        ct[3] = cnt & 0x000000FF;
-
-        SM9_Hash_Init(&ctx);
-        SM9_Hash_Update(&ctx, Z, Zlen);
-        SM9_Hash_Update(&ctx, ct, 4);
-        SM9_Hash_Final(&ctx, tmp);
-        memcpy(K + rcnt * SM9_Hash_Size, tmp, rbit);
-    }
-}
-
-// Compute hash for key exchange confirmation
-__attribute__((unused)) static void _sm9_keyex_hash(uint8_t tag, uint8_t *Z, uint32_t Zlen, uint8_t *hash)
-{
-    SM9_Hash_Ctx ctx;
-    uint8_t Ztag[1];
-
-    Ztag[0] = tag;
-    SM9_Hash_Init(&ctx);
-    SM9_Hash_Update(&ctx, Ztag, 1);
-    SM9_Hash_Update(&ctx, Z, Zlen);
-    SM9_Hash_Final(&ctx, hash);
-}
-
-int32_t SM9_Alg_KeyEx_InitA(
-    uint8_t *ida,
-    uint32_t ilen_a,
-    uint8_t *idb,
-    uint32_t ilen_b,
-    uint8_t *ra,
-    uint8_t *da,
-    uint8_t *mpk,
-    uint8_t *RA)
-{
-#ifdef SM9_KEYEX_ENABLE
-    uint32_t BN_ra[BNWordLen];
-    SM9_ECP_A Ecp_QB;
-    SM9_ECP_A Ecp_RA;
-    uint32_t BN_h1[BNWordLen];
-
-    (void)ida;
-    (void)ilen_a;
-    (void)da;
-
-    // Read random number ra
-    SM9_Bn_ReadBytes(BN_ra, ra);
-    SM9_Fn_LastRes(BN_ra);
-    if (SM9_Bn_IsZero(BN_ra))
-        return SM9_ERR_RND_UNUSEABLE;
-
-    // Read system public key (for encryption system, mpk is on G1)
-    SM9_Ecp_A_ReadBytes(&Ecp_QB, mpk);
-
-    // Compute h1 = H1(IDB||hid, N) - Note: use IDB for QB! Must use same HID as key generation
-    SM9_Hash_H1(BN_h1, idb, ilen_b, SM9_HID_Enc, 1);
-
-    // Compute QB = [h1]P1 + Ppub
-    SM9_Fp_ECP_KPAddAToA(&Ecp_QB, &sm9_sys_para.EC_Fp_G_Mont, BN_h1, &Ecp_QB, &sm9_sys_para);
-
-    // Compute RA = [ra]QB
-    SM9_Ecp_KP(&Ecp_RA, &Ecp_QB, BN_ra);
-
-    // Output RA
-    SM9_Ecp_A_WriteBytes(RA, &Ecp_RA);
-
-    return SM9_OK;
-#else
-    return SM9_ERR_UNSUPPORT;
-#endif
-}
-
-int32_t SM9_Alg_KeyEx_InitB(
-    uint8_t *ida,
-    uint32_t ilen_a,
-    uint8_t *idb,
-    uint32_t ilen_b,
-    uint8_t *rb,
-    uint8_t *db,
-    uint8_t *mpk,
-    uint8_t *RB)
-{
-#ifdef SM9_KEYEX_ENABLE
-    uint32_t BN_rb[BNWordLen];
-    SM9_ECP_A Ecp_QA;
-    SM9_ECP_A Ecp_RB;
-    uint32_t BN_h1[BNWordLen];
-
-    (void)idb;
-    (void)ilen_b;
-    (void)db;
-
-    // Read random number rb
-    SM9_Bn_ReadBytes(BN_rb, rb);
-    SM9_Fn_LastRes(BN_rb);
-    if (SM9_Bn_IsZero(BN_rb))
-        return SM9_ERR_RND_UNUSEABLE;
-
-    // Read system public key (for encryption system, mpk is on G1)
-    SM9_Ecp_A_ReadBytes(&Ecp_QA, mpk);
-
-    // Compute h1 = H1(IDA||hid, N) - Note: use IDA for QA! Must use same HID as key generation
-    SM9_Hash_H1(BN_h1, ida, ilen_a, SM9_HID_Enc, 1);
-
-    // Compute QA = [h1]P1 + Ppub
-    SM9_Fp_ECP_KPAddAToA(&Ecp_QA, &sm9_sys_para.EC_Fp_G_Mont, BN_h1, &Ecp_QA, &sm9_sys_para);
-
-    // Compute RB = [rb]QA
-    SM9_Ecp_KP(&Ecp_RB, &Ecp_QA, BN_rb);
-
-    // Output RB
-    SM9_Ecp_A_WriteBytes(RB, &Ecp_RB);
-
-    return SM9_OK;
-#else
-    return SM9_ERR_UNSUPPORT;
-#endif
-}
-
-int32_t SM9_Alg_KeyEx_ConfirmA(
-    uint8_t *ida,
-    uint32_t ilen_a,
-    uint8_t *idb,
-    uint32_t ilen_b,
-    uint8_t *ra,
-    uint8_t *RA,
-    uint8_t *RB,
-    uint8_t *da,
-    uint8_t *mpk,
-    uint32_t klen,
-    uint8_t *SK,
-    uint8_t *SA)
-{
-#ifdef SM9_KEYEX_ENABLE
-    uint32_t BN_ra[BNWordLen];
-    SM9_ECP2_A Ecp2_dA;
-    SM9_ECP_A Ecp_RB;
-    SM9_Fp12 Fp12_g1, Fp12_g2, Fp12_g3;
-    uint8_t g1_bytes[12 * BNByteLen];
-    uint8_t g2_bytes[12 * BNByteLen];
-    uint8_t g3_bytes[12 * BNByteLen];
-    uint8_t Z[2048];
-    uint32_t Zlen = 0;
-    uint8_t inner_hash[SM9_Hash_Size];
-    SM9_Hash_Ctx ctx;
-
-    // Read random number ra
-    SM9_Bn_ReadBytes(BN_ra, ra);
-
-    // Read user private key dA (for encryption system, it's on G2)
-    SM9_Ecp2_A_ReadBytes(&Ecp2_dA, da);
-
-    // Read RB (G1 point)
-    SM9_Ecp_A_ReadBytes(&Ecp_RB, RB);
-
-    // User A computes (according to the diagram):
-    // g1 = e(Ppub, P2)^rA
-    SM9_ECP_A Ecp_Ppub;
-    SM9_Ecp_A_ReadBytes(&Ecp_Ppub, mpk);
-    SM9_Alg_Pair_Mont(&Fp12_g1, &Ecp_Ppub, &sm9_sys_para.EC_Fp2_G_Mont);
-    SM9_Fp12_Exp(&Fp12_g1, &Fp12_g1, BN_ra);
-
-    // g2 = e(RB, dA)
-    SM9_Alg_Pair_Mont(&Fp12_g2, &Ecp_RB, &Ecp2_dA);
-
-    // g3 = g2^rA
-    SM9_Fp12_Exp(&Fp12_g3, &Fp12_g2, BN_ra);
-
-    // Convert to bytes
-    SM9_Fp12_WriteBytes(g1_bytes, &Fp12_g1);
-    SM9_Fp12_WriteBytes(g2_bytes, &Fp12_g2);
-    SM9_Fp12_WriteBytes(g3_bytes, &Fp12_g3);
-
-    // Compute inner_hash = Hash(g2 || g3 || IDA || IDB || RA || RB)
-    SM9_Hash_Init(&ctx);
-    SM9_Hash_Update(&ctx, g2_bytes, 12 * BNByteLen);
-    SM9_Hash_Update(&ctx, g3_bytes, 12 * BNByteLen);
-    SM9_Hash_Update(&ctx, ida, ilen_a);
-    SM9_Hash_Update(&ctx, idb, ilen_b);
-    SM9_Hash_Update(&ctx, RA, 2 * BNByteLen);
-    SM9_Hash_Update(&ctx, RB, 2 * BNByteLen);
-    SM9_Hash_Final(&ctx, inner_hash);
-
-    // Compute Z = g1 || Hash(g2||g3||IDA||IDB||RA||RB)
-    // (according to diagram note: X=g1||Hash(g2||g3||IDA||IDB||RA||RB))
-    memcpy(Z + Zlen, g1_bytes, 12 * BNByteLen);
-    Zlen += 12 * BNByteLen;
-    memcpy(Z + Zlen, inner_hash, SM9_Hash_Size);
-    Zlen += SM9_Hash_Size;
-
-    // Derive shared key: SK = KDF(IDA||IDB||RA||RB||g1||g2||g3, klen)
-    _sm9_keyex_kdf(Z, Zlen, klen, SK);
-
-    // Compute SA = Hash(0x82 || g1 || Hash(g2||g3||IDA||IDB||RA||RB))
-    if (SA) {
-        uint8_t temp[1 + 12 * BNByteLen + SM9_Hash_Size];
-        temp[0] = 0x82;
-        memcpy(temp + 1, g1_bytes, 12 * BNByteLen);
-        memcpy(temp + 1 + 12 * BNByteLen, inner_hash, SM9_Hash_Size);
-
-        SM9_Hash_Init(&ctx);
-        SM9_Hash_Update(&ctx, temp, 1 + 12 * BNByteLen + SM9_Hash_Size);
-        SM9_Hash_Final(&ctx, SA);
-    }
-
-    return SM9_OK;
-#else
-    return SM9_ERR_UNSUPPORT;
-#endif
-}
-
-int32_t SM9_Alg_KeyEx_ConfirmB(
-    uint8_t *ida,
-    uint32_t ilen_a,
-    uint8_t *idb,
-    uint32_t ilen_b,
-    uint8_t *rb,
-    uint8_t *RA,
-    uint8_t *RB,
-    uint8_t *db,
-    uint8_t *mpk,
-    uint32_t klen,
-    uint8_t *SK,
-    uint8_t *SB)
-{
-#ifdef SM9_KEYEX_ENABLE
-    uint32_t BN_rb[BNWordLen];
-    SM9_ECP2_A Ecp2_dB;
-    SM9_ECP_A Ecp_RA;
-    SM9_Fp12 Fp12_g1, Fp12_g2, Fp12_g3;
-    uint8_t g1_bytes[12 * BNByteLen];
-    uint8_t g2_bytes[12 * BNByteLen];
-    uint8_t g3_bytes[12 * BNByteLen];
-    uint8_t Z[2048];
-    uint32_t Zlen = 0;
-    uint8_t inner_hash[SM9_Hash_Size];
-    SM9_Hash_Ctx ctx;
-
-    // Read random number rb
-    SM9_Bn_ReadBytes(BN_rb, rb);
-
-    // Read user private key dB (for encryption system, it's on G2)
-    SM9_Ecp2_A_ReadBytes(&Ecp2_dB, db);
-
-    // Read RA (G1 point)
-    SM9_Ecp_A_ReadBytes(&Ecp_RA, RA);
-
-    // User B computes (according to the diagram):
-    // g1 = e(RA, dB)
-    SM9_Alg_Pair_Mont(&Fp12_g1, &Ecp_RA, &Ecp2_dB);
-
-    // g2 = e(Ppub, P2)^rB
-    SM9_ECP_A Ecp_Ppub;
-    SM9_Ecp_A_ReadBytes(&Ecp_Ppub, mpk);
-    SM9_Alg_Pair_Mont(&Fp12_g2, &Ecp_Ppub, &sm9_sys_para.EC_Fp2_G_Mont);
-    SM9_Fp12_Exp(&Fp12_g2, &Fp12_g2, BN_rb);
-
-    // g3 = g1^rB
-    SM9_Fp12_Exp(&Fp12_g3, &Fp12_g1, BN_rb);
-
-    // Convert to bytes
-    SM9_Fp12_WriteBytes(g1_bytes, &Fp12_g1);
-    SM9_Fp12_WriteBytes(g2_bytes, &Fp12_g2);
-    SM9_Fp12_WriteBytes(g3_bytes, &Fp12_g3);
-
-    // Compute inner_hash = Hash(g2 || g3 || IDA || IDB || RA || RB)
-    SM9_Hash_Init(&ctx);
-    SM9_Hash_Update(&ctx, g2_bytes, 12 * BNByteLen);
-    SM9_Hash_Update(&ctx, g3_bytes, 12 * BNByteLen);
-    SM9_Hash_Update(&ctx, ida, ilen_a);
-    SM9_Hash_Update(&ctx, idb, ilen_b);
-    SM9_Hash_Update(&ctx, RA, 2 * BNByteLen);
-    SM9_Hash_Update(&ctx, RB, 2 * BNByteLen);
-    SM9_Hash_Final(&ctx, inner_hash);
-
-    // Compute Z = g1 || Hash(g2||g3||IDA||IDB||RA||RB)
-    memcpy(Z + Zlen, g1_bytes, 12 * BNByteLen);
-    Zlen += 12 * BNByteLen;
-    memcpy(Z + Zlen, inner_hash, SM9_Hash_Size);
-    Zlen += SM9_Hash_Size;
-
-    // Derive shared key: SK = KDF(Z, klen)
-    _sm9_keyex_kdf(Z, Zlen, klen, SK);
-
-    // Compute SB = Hash(0x83 || g1 || Hash(g2||g3||IDA||IDB||RA||RB))
-    if (SB) {
-        uint8_t temp[1 + 12 * BNByteLen + SM9_Hash_Size];
-
-        temp[0] = 0x83;
-        memcpy(temp + 1, g1_bytes, 12 * BNByteLen);
-        memcpy(temp + 1 + 12 * BNByteLen, inner_hash, SM9_Hash_Size);
-
-        SM9_Hash_Init(&ctx);
-        SM9_Hash_Update(&ctx, temp, 1 + 12 * BNByteLen + SM9_Hash_Size);
-        SM9_Hash_Final(&ctx, SB);
-    }
-
-    return SM9_OK;
-#else
-    return SM9_ERR_UNSUPPORT;
-#endif
-}
-
-// Verify SA received from User A (for User B to verify A's confirmation)
-int32_t SM9_Alg_KeyEx_VerifySA(
-    uint8_t *ida,
-    uint32_t ilen_a,
-    uint8_t *idb,
-    uint32_t ilen_b,
-    uint8_t *rb,
-    uint8_t *RA,
-    uint8_t *RB,
-    uint8_t *db,
-    uint8_t *mpk,
-    uint8_t *SA)
-{
-#ifdef SM9_KEYEX_ENABLE
-    uint32_t BN_rb[BNWordLen];
-    SM9_ECP2_A Ecp2_dB;
-    SM9_ECP_A Ecp_RA;
-    SM9_Fp12 Fp12_g1, Fp12_g2, Fp12_g3;
-    uint8_t g1_bytes[12 * BNByteLen];
-    uint8_t g2_bytes[12 * BNByteLen];
-    uint8_t g3_bytes[12 * BNByteLen];
-    uint8_t inner_hash[SM9_Hash_Size];
-    uint8_t expected_sa[SM9_Hash_Size];
-    SM9_Hash_Ctx ctx;
-    uint32_t i;
-
-    // Read random number rb
-    SM9_Bn_ReadBytes(BN_rb, rb);
-
-    // Read user private key dB (for encryption system, it's on G2)
-    SM9_Ecp2_A_ReadBytes(&Ecp2_dB, db);
-
-    // Read RA (G1 point)
-    SM9_Ecp_A_ReadBytes(&Ecp_RA, RA);
-
-    // User B computes (same as in ConfirmB):
-    // g1 = e(RA, dB)
-    SM9_Alg_Pair_Mont(&Fp12_g1, &Ecp_RA, &Ecp2_dB);
-
-    // g2 = e(Ppub, P2)^rB
-    SM9_ECP_A Ecp_Ppub;
-    SM9_Ecp_A_ReadBytes(&Ecp_Ppub, mpk);
-    SM9_Alg_Pair_Mont(&Fp12_g2, &Ecp_Ppub, &sm9_sys_para.EC_Fp2_G_Mont);
-    SM9_Fp12_Exp(&Fp12_g2, &Fp12_g2, BN_rb);
-
-    // g3 = g1^rB
-    SM9_Fp12_Exp(&Fp12_g3, &Fp12_g1, BN_rb);
-
-    // Convert to bytes
-    SM9_Fp12_WriteBytes(g1_bytes, &Fp12_g1);
-    SM9_Fp12_WriteBytes(g2_bytes, &Fp12_g2);
-    SM9_Fp12_WriteBytes(g3_bytes, &Fp12_g3);
-
-    // Compute inner_hash = Hash(g2 || g3 || IDA || IDB || RA || RB)
-    SM9_Hash_Init(&ctx);
-    SM9_Hash_Update(&ctx, g2_bytes, 12 * BNByteLen);
-    SM9_Hash_Update(&ctx, g3_bytes, 12 * BNByteLen);
-    SM9_Hash_Update(&ctx, ida, ilen_a);
-    SM9_Hash_Update(&ctx, idb, ilen_b);
-    SM9_Hash_Update(&ctx, RA, 2 * BNByteLen);
-    SM9_Hash_Update(&ctx, RB, 2 * BNByteLen);
-    SM9_Hash_Final(&ctx, inner_hash);
-
-    // Compute expected SA = Hash(0x82 || g1 || Hash(g2||g3||IDA||IDB||RA||RB))
-    {
-        uint8_t temp[1 + 12 * BNByteLen + SM9_Hash_Size];
-
-        temp[0] = 0x82;
-        memcpy(temp + 1, g1_bytes, 12 * BNByteLen);
-        memcpy(temp + 1 + 12 * BNByteLen, inner_hash, SM9_Hash_Size);
-
-        SM9_Hash_Init(&ctx);
-        SM9_Hash_Update(&ctx, temp, 1 + 12 * BNByteLen + SM9_Hash_Size);
-        SM9_Hash_Final(&ctx, expected_sa);
-    }
-
-    // Verify SA
-    for (i = 0; i < SM9_Hash_Size; i++)  {
-        if (SA[i] != expected_sa[i])
-            return SM9_ERR_VERIFY_FAILED;
-    }
-
-    return SM9_OK;
-#else
-    return SM9_ERR_UNSUPPORT;
-#endif
-}
-
-// Verify SB received from User B (for User A to verify B's confirmation)
-int32_t SM9_Alg_KeyEx_VerifySB(
-    uint8_t *ida,
-    uint32_t ilen_a,
-    uint8_t *idb,
-    uint32_t ilen_b,
-    uint8_t *ra,
-    uint8_t *RA,
-    uint8_t *RB,
-    uint8_t *da,
-    uint8_t *mpk,
-    uint8_t *SB)
-{
-#ifdef SM9_KEYEX_ENABLE
-    uint32_t BN_ra[BNWordLen];
-    SM9_ECP2_A Ecp2_dA;
-    SM9_ECP_A Ecp_RB;
-    SM9_Fp12 Fp12_g1, Fp12_g2, Fp12_g3;
-    uint8_t g1_bytes[12 * BNByteLen];
-    uint8_t g2_bytes[12 * BNByteLen];
-    uint8_t g3_bytes[12 * BNByteLen];
-    uint8_t inner_hash[SM9_Hash_Size];
-    uint8_t expected_sb[SM9_Hash_Size];
-    SM9_Hash_Ctx ctx;
-    uint32_t i;
-
-    // Read random number ra
-    SM9_Bn_ReadBytes(BN_ra, ra);
-
-    // Read user private key dA (for encryption system, it's on G2)
-    SM9_Ecp2_A_ReadBytes(&Ecp2_dA, da);
-
-    // Read RB (G1 point)
-    SM9_Ecp_A_ReadBytes(&Ecp_RB, RB);
-
-    // User A computes (same as in ConfirmA):
-    // g1 = e(Ppub, P2)^rA
-    SM9_ECP_A Ecp_Ppub;
-    SM9_Ecp_A_ReadBytes(&Ecp_Ppub, mpk);
-    SM9_Alg_Pair_Mont(&Fp12_g1, &Ecp_Ppub, &sm9_sys_para.EC_Fp2_G_Mont);
-    SM9_Fp12_Exp(&Fp12_g1, &Fp12_g1, BN_ra);
-
-    // g2 = e(RB, dA)
-    SM9_Alg_Pair_Mont(&Fp12_g2, &Ecp_RB, &Ecp2_dA);
-
-    // g3 = g2^rA
-    SM9_Fp12_Exp(&Fp12_g3, &Fp12_g2, BN_ra);
-
-    // Convert to bytes
-    SM9_Fp12_WriteBytes(g1_bytes, &Fp12_g1);
-    SM9_Fp12_WriteBytes(g2_bytes, &Fp12_g2);
-    SM9_Fp12_WriteBytes(g3_bytes, &Fp12_g3);
-
-    // Compute inner_hash = Hash(g2 || g3 || IDA || IDB || RA || RB)
-    SM9_Hash_Init(&ctx);
-    SM9_Hash_Update(&ctx, g2_bytes, 12 * BNByteLen);
-    SM9_Hash_Update(&ctx, g3_bytes, 12 * BNByteLen);
-    SM9_Hash_Update(&ctx, ida, ilen_a);
-    SM9_Hash_Update(&ctx, idb, ilen_b);
-    SM9_Hash_Update(&ctx, RA, 2 * BNByteLen);
-    SM9_Hash_Update(&ctx, RB, 2 * BNByteLen);
-    SM9_Hash_Final(&ctx, inner_hash);
-
-    // Compute expected SB = Hash(0x83 || g1 || Hash(g2||g3||IDA||IDB||RA||RB))
-    {
-        uint8_t temp[1 + 12 * BNByteLen + SM9_Hash_Size];
-
-        temp[0] = 0x83;
-        memcpy(temp + 1, g1_bytes, 12 * BNByteLen);
-        memcpy(temp + 1 + 12 * BNByteLen, inner_hash, SM9_Hash_Size);
-
-        SM9_Hash_Init(&ctx);
-        SM9_Hash_Update(&ctx, temp, 1 + 12 * BNByteLen + SM9_Hash_Size);
-        SM9_Hash_Final(&ctx, expected_sb);
-    }
-
-    // Verify SB
-    for (i = 0; i < SM9_Hash_Size; i++) {
-        if (SB[i] != expected_sb[i])
-            return SM9_ERR_VERIFY_FAILED;
-    }
-
-    return SM9_OK;
-#else
-    return SM9_ERR_UNSUPPORT;
-#endif
-}
-
 #endif // HITLS_CRYPTO_SM9
-
-#endif /* SM9_KEYEX_ENABLE */

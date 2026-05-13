@@ -598,7 +598,7 @@ int32_t CRYPT_EAL_PkeyBlind(CRYPT_EAL_PkeyCtx *pkey, CRYPT_MD_AlgId id, const ui
 
 /**
  * @ingroup crypt_eal_pkey
- * @brief   Perform unblind operation on blinded data.
+ * @brief   Perform unblind operation on blinded data. A ctx holds only one blinding factor.
  *
  * @param   pkey [IN] Key session
  * @param   input [IN] Blinded data to be unblinded

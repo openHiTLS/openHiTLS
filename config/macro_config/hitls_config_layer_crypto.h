@@ -535,7 +535,7 @@
     #endif
 #endif
 
-#if defined(HITLS_CRYPTO_SM9_SIGN) || defined(HITLS_CRYPTO_SM9_CRYPT) || defined(HITLS_CRYPTO_SM9_EXCH)
+#if defined(HITLS_CRYPTO_SM9_SIGN) || defined(HITLS_CRYPTO_SM9_CRYPT)
     #ifndef HITLS_CRYPTO_SM9
         #define HITLS_CRYPTO_SM9
     #endif
@@ -550,9 +550,6 @@
     #endif
     #ifndef HITLS_CRYPTO_SM9_CRYPT
         #define HITLS_CRYPTO_SM9_CRYPT
-    #endif
-    #ifndef HITLS_CRYPTO_SM9_EXCH
-        #define HITLS_CRYPTO_SM9_EXCH
     #endif
     #ifndef HITLS_CRYPTO_SM9_CHECK
         #define HITLS_CRYPTO_SM9_CHECK

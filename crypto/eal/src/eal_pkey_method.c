@@ -505,11 +505,7 @@ static const EAL_PkeyMethod METHODS[] = {
         NULL, // verifyData
 #endif
         NULL,                // recover
-#ifdef HITLS_CRYPTO_SM9_EXCH
-        CRYPT_SM9_ComputeShareKey,   // computeShareKey
-#else
         NULL, // computeShareKey
-#endif
 #ifdef HITLS_CRYPTO_SM9_CRYPT
         CRYPT_SM9_Encrypt,   // encrypt
         CRYPT_SM9_Decrypt,   // decrypt
