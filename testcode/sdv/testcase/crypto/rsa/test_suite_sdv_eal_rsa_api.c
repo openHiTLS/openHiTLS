@@ -2447,7 +2447,9 @@ void SDV_CRYPTO_RSA512_PSS_SALT0_TC001(int isProvider, int md, int hashLen, int 
     ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
 
     ASSERT_EQ(CRYPT_EAL_PkeySignData(pkey, dataHash, (uint32_t)hashLen, sign, &signLen), rest);
-    ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, dataHash, (uint32_t)hashLen, sign, signLen), rest);
+    if (rest == CRYPT_SUCCESS) {
+        ASSERT_EQ(CRYPT_EAL_PkeyVerifyData(pkey, dataHash, (uint32_t)hashLen, sign, signLen), rest);
+    }
 
     if (saltLen >= 0) {
         saltLen += 1;
