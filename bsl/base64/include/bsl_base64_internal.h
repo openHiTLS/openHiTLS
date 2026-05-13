@@ -45,9 +45,6 @@ struct BASE64_ControlBlock {
 #define BASE64_BLOCK_SIZE  1024
 #define BASE64_PAD_MAX 2
 #define BASE64_DECODE_BLOCKSIZE 64
-#define BASE64_CTX_BUF_SIZE HITLS_BASE64_ENCODE_LENGTH(BASE64_BLOCK_SIZE) + 10
-#define BSL_BASE64_ENC_ENOUGH_LEN(len) (((len) + 2) / 3 * 4 + 1)
-#define BSL_BASE64_DEC_ENOUGH_LEN(len) (((len) + 3) / 4 * 3)
 
 /**
  * @ingroup bsl_base64
