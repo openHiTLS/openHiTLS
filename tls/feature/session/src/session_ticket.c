@@ -256,31 +256,33 @@ int32_t SESSMGR_EncryptSessionTicket(TLS_Ctx *ctx,
     Ticket ticket = {0};
     HITLS_CipherParameters cipher = {0};
     BSL_SAL_ThreadReadLock(sessMgr->lock);
-    int32_t retVal = GetSessEncryptInfo(ctx, sessMgr, &ticket, &cipher);
-    BSL_SAL_ThreadUnlock(sessMgr->lock);
-    if (retVal < 0) {
+    int32_t ret = GetSessEncryptInfo(ctx, sessMgr, &ticket, &cipher);
+    if (ret < 0) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_SESSION_TICKET_KEY_FAIL);
+        BSL_SAL_ThreadUnlock(sessMgr->lock);
         return RETURN_ERROR_NUMBER_PROCESS(HITLS_SESS_ERR_SESSION_TICKET_KEY_FAIL, BINLOG_ID16030,
             "GetSessEncryptInfo fail");
     }
-    if (retVal == HITLS_TICKET_KEY_RET_FAIL) {
+    if (ret == HITLS_TICKET_KEY_RET_FAIL) {
         /* Failed to obtain the encryption information. An empty ticket is returned. */
         *ticketBufSize = 0;
-        return HITLS_SUCCESS;
+        ret = HITLS_SUCCESS;
+        goto exit;
     }
 
     uint32_t dataLen = 0;
     uint8_t *data = NewTicketBuf(sess, &cipher, &dataLen);
     if (data == NULL) {
-        return HITLS_MEMALLOC_FAIL;
+        ret = HITLS_MEMALLOC_FAIL;
+        goto exit;
     }
     /* Fill in the key name and iv. */
     uint32_t packLen = 0;
     uint32_t offset = 0;
-    int32_t ret = PackKeyNameAndIv(&ticket, &data[0], dataLen, &packLen);
+    ret = PackKeyNameAndIv(&ticket, &data[0], dataLen, &packLen);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(data);
-        return ret;
+        goto exit;
     }
     offset += packLen;
     /* Encrypt and fill the ticket. */
@@ -288,7 +290,7 @@ int32_t SESSMGR_EncryptSessionTicket(TLS_Ctx *ctx,
         sess, &cipher, &data[offset], dataLen - offset, &packLen);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(data);
-        return ret;
+        goto exit;
     }
     offset += packLen;
 
@@ -298,13 +300,15 @@ int32_t SESSMGR_EncryptSessionTicket(TLS_Ctx *ctx,
         &cipher, data, dataLen, offset, &packLen);
     if (ret != HITLS_SUCCESS) {
         BSL_SAL_FREE(data);
-        return ret;
+        goto exit;
     }
     offset += packLen;
 #endif
     *ticketBufSize = offset;
     *ticketBuf = data;
-    return HITLS_SUCCESS;
+exit:
+    BSL_SAL_ThreadUnlock(sessMgr->lock);
+    return ret;
 }
 static int32_t ParseSessionTicket(Ticket *ticket, const uint8_t *ticketBuf, uint32_t ticketBufSize)
 {
@@ -474,10 +478,9 @@ int32_t SESSMGR_DecryptSessionTicket(HITLS_Lib_Ctx *libCtx, const char *attrName
         return HITLS_INTERNAL_EXCEPTION;
     }
 
-    int32_t ret;
     Ticket ticket = {0};
     /* Parse the data into the ticket structure. */
-    ret = ParseSessionTicket(&ticket, ticketBuf, ticketBufSize);
+    int32_t ret = ParseSessionTicket(&ticket, ticketBuf, ticketBufSize);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16042, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
             "ParseSessionTicket fail when decrypt session ticket.", 0, 0, 0, 0);
@@ -489,11 +492,13 @@ int32_t SESSMGR_DecryptSessionTicket(HITLS_Lib_Ctx *libCtx, const char *attrName
 
     /* Obtain decryption information. */
     HITLS_CipherParameters cipher = {0};
+    BSL_SAL_ThreadReadLock(sessMgr->lock);
     int32_t retVal = GetSessDecryptInfo(sessMgr, &ticket, &cipher);
     if (retVal < 0) {
         BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_SESSION_TICKET_KEY_FAIL);
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16043, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
             "GetSessDecryptInfo fail when decrypt session ticket.", 0, 0, 0, 0);
+        BSL_SAL_ThreadUnlock(sessMgr->lock);
         return HITLS_SESS_ERR_SESSION_TICKET_KEY_FAIL;
     }
     switch (retVal) {
@@ -501,6 +506,7 @@ int32_t SESSMGR_DecryptSessionTicket(HITLS_Lib_Ctx *libCtx, const char *attrName
             /* If no corresponding key is found, the system directly returns a message and complete link establishment
              * is performed. */
             *isTicketExpect = true;
+            BSL_SAL_ThreadUnlock(sessMgr->lock);
             return HITLS_SUCCESS;
         case HITLS_TICKET_KEY_RET_SUCCESS_RENEW:
             *isTicketExpect = true;
@@ -516,10 +522,13 @@ int32_t SESSMGR_DecryptSessionTicket(HITLS_Lib_Ctx *libCtx, const char *attrName
     ret = CheckTicketHmac(libCtx, attrName, &cipher, &ticket, ticketBuf, ticketBufSize, &isPass);
     if ((ret != HITLS_SUCCESS) || (!isPass)) {
         /* If the HMAC check fails, the session is not restored and complete link establishment is performed. */
+        BSL_SAL_ThreadUnlock(sessMgr->lock);
         return ret;
     }
 #endif
     /* Parse the ticket content to the SESS. */
-    return GenerateSessFromTicket(libCtx, attrName, &cipher, &ticket, ticketBufSize, sess);
+    ret = GenerateSessFromTicket(libCtx, attrName, &cipher, &ticket, ticketBufSize, sess);
+    BSL_SAL_ThreadUnlock(sessMgr->lock);
+    return ret;
 }
 #endif /* HITLS_TLS_FEATURE_SESSION_TICKET */
