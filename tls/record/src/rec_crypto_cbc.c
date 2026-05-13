@@ -338,7 +338,6 @@ static int32_t RecConnCbcDecryptByEncryptThenMac(TLS_Ctx *ctx, const RecConnStat
      * Encrypt-then-MAC mode: Verify MAC first, then decrypt.
      * The MAC is computed over the ciphertext (including explicit IV),
      * so timing does not leak plaintext information.
-     * Reference: OpenSSL tls_common.c:787-811
      */
 
     /* Step 1: Check MAC (over ciphertext) */

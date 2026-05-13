@@ -62,7 +62,7 @@
 
 static int32_t ParaCheckAndLog(const CRYPT_Iso_Pkey_Ctx *ctx, const CRYPT_EAL_PkeyPara *para)
 {
-    CRYPT_EAL_PkeyC2Data data = {para, NULL, NULL, CRYPT_MD_MAX, CRYPT_PKEY_PARAID_MAX, CRYPT_EVENT_MAX,
+    CRYPT_EAL_PkeyC2Data data = {para, NULL, NULL, CRYPT_MD_MAX, (int32_t)para->id, CRYPT_EVENT_MAX,
         NULL, NULL, NULL};
     if (!CMVP_Iso19790PkeyC2(ctx->algId, &data)) {
         (void)CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_PARAM_CHECK, CRYPT_ALGO_PKEY, ctx->algId);
@@ -144,6 +144,23 @@ static int32_t CheckDhPara(const CRYPT_Iso_Pkey_Ctx *ctx, const BSL_Param *param
     return ParaCheckAndLog(ctx, &para);
 }
 
+static int32_t CheckEcdsaPara(const CRYPT_Iso_Pkey_Ctx *ctx, const BSL_Param *params)
+{
+    CRYPT_EAL_PkeyPara para = {0};
+    uint8_t *curveId = NULL;
+    uint32_t len = 0;
+    int32_t ret = GetParamValue(params, CRYPT_PARAM_EC_CURVE_ID, &curveId, &len);
+    if (ret != CRYPT_SUCCESS) {
+        return ret;
+    }
+    if (len != sizeof(int32_t)) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    para.id = *(int32_t *)curveId;
+    return ParaCheckAndLog(ctx, &para);
+}
+
 static int32_t CheckPkeyParam(const CRYPT_Iso_Pkey_Ctx *ctx, const BSL_Param *params)
 {
     switch (ctx->algId) {
@@ -153,6 +170,8 @@ static int32_t CheckPkeyParam(const CRYPT_Iso_Pkey_Ctx *ctx, const BSL_Param *pa
             return CheckDsaPara(ctx, params);
         case CRYPT_PKEY_RSA:
             return CheckRsaPara(ctx, params);
+        case CRYPT_PKEY_ECDSA:
+            return CheckEcdsaPara(ctx, params);
         default:
             return CRYPT_SUCCESS;
     }
@@ -536,7 +555,11 @@ static int32_t CRYPT_ASMCAP_PkeyCheck(int32_t algId)
             BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);                                                            \
             return CRYPT_NULL_INPUT;                                                                         \
         }                                                                                                    \
-        int32_t ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_PKEY, ctx->algId);          \
+        int32_t ret = CheckPkeyParam(ctx, params);                                                           \
+        if (ret != CRYPT_SUCCESS) {                                                                          \
+            return ret;                                                                                      \
+        }                                                                                                    \
+        ret = CRYPT_Iso_Log(ctx->provCtx, CRYPT_EVENT_SETSSP, CRYPT_ALGO_PKEY, ctx->algId);                  \
         if (ret != CRYPT_SUCCESS) {                                                                          \
             return ret;                                                                                      \
         }                                                                                                    \

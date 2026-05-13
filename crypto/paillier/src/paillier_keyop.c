@@ -129,31 +129,23 @@ int32_t CRYPT_PAILLIER_SetPrvKey(CRYPT_PAILLIER_Ctx *ctx, const CRYPT_PaillierPr
     if (ret != CRYPT_SUCCESS) {
         return ret;
     }
-    CRYPT_PAILLIER_Ctx *newCtx = CRYPT_PAILLIER_NewCtx();
-    if (newCtx == NULL) {
+    CRYPT_PAILLIER_PrvKey *newPrvKey = Paillier_NewPrvKey(0); // Bit length is obtained by multiplying byte length by 8.
+    if (newPrvKey == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return CRYPT_MEM_ALLOC_FAIL;
     }
-    newCtx->prvKey = Paillier_NewPrvKey(prv->lambdaLen * 8); // Bit length is obtained by multiplying byte length by 8.
-    if (newCtx->prvKey == NULL) {
-        ret = CRYPT_MEM_ALLOC_FAIL;
-        BSL_ERR_PUSH_ERROR(ret);
-        goto ERR;
-    }
 
-    ret = SetPrvPara(newCtx->prvKey, prv);
+    ret = SetPrvPara(newPrvKey, prv);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
 
     PAILLIER_FREE_PRV_KEY(ctx->prvKey);
-    ctx->prvKey = newCtx->prvKey;
-
-    BSL_SAL_ReferencesFree(&(newCtx->references));
-    BSL_SAL_FREE(newCtx);
+    ctx->prvKey = newPrvKey;
     return ret;
 ERR:
-    CRYPT_PAILLIER_FreeCtx(newCtx);
+    PAILLIER_FREE_PRV_KEY(newPrvKey);
     return ret;
 }
 

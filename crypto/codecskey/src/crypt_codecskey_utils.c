@@ -478,13 +478,20 @@ int32_t CRYPT_EAL_ParseRsaPssAlgParam(BSL_ASN1_Buffer *param, CRYPT_RSA_PssPara 
         BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_RSSPSS);
         return CRYPT_DECODE_ERR_RSSPSS;
     }
-
     if (asns[CRYPT_RSAPSS_HASH_IDX].tag != 0) {
         para->mdId = (CRYPT_MD_AlgId)BSL_OBJ_GetCidFromOidBuff(asns[CRYPT_RSAPSS_HASH_IDX].buff,
             asns[CRYPT_RSAPSS_HASH_IDX].len);
         if (para->mdId == (CRYPT_MD_AlgId)BSL_CID_UNKNOWN) {
             BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_RSSPSS_MD);
             return CRYPT_DECODE_ERR_RSSPSS_MD;
+        }
+    }
+    if (asns[CRYPT_RSAPSS_MGF1_IDX].tag != 0) {
+        int32_t mgfCid = (CRYPT_MD_AlgId)BSL_OBJ_GetCidFromOidBuff(asns[CRYPT_RSAPSS_MGF1_IDX].buff,
+            asns[CRYPT_RSAPSS_MGF1_IDX].len);
+        if (mgfCid != BSL_CID_MGF1) {
+            BSL_ERR_PUSH_ERROR(CRYPT_DECODE_ERR_RSSPSS);
+            return CRYPT_DECODE_ERR_RSSPSS;
         }
     }
     if (asns[CRYPT_RSAPSS_MGF1PARAM_IDX].tag != 0) {

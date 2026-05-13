@@ -53,7 +53,7 @@ typedef enum {
 #define ERR_FUNC_MASK 0xFFFU
 #define ERR_REASON_MASK 0xFFFU
 
-/* Error code field extraction functions (reference OpenSSL) */
+
 static inline int32_t ErrGetLib(uint64_t code)
 {
     return (int32_t)(((code) >> ERR_LIB_SHIFT) & ERR_LIB_MASK);
