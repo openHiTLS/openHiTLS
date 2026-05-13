@@ -115,6 +115,7 @@ static int32_t FileOpen(BSL_UIO *uio, uint32_t flags, const char *filename)
     }
 
     BSL_UIO_SetCtx(uio, (void *)fileHandle);
+    BSL_UIO_SetIsUnderlyingClosedByUio(uio, true);
     uio->init = true;
     return BSL_SUCCESS;
 }

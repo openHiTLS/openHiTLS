@@ -20,11 +20,15 @@
 #include <string.h>
 #include "securec.h"
 #include "bsl_errno.h"
+#include "bsl_base64.h"
 #include "bsl_sal.h"
 #include "sal_file.h"
 #include "bsl_pem_internal.h"
+#include "stub_utils.h"
 
 /* END_HEADER */
+
+STUB_DEFINE_RET4(int32_t, BSL_BASE64_Encode, const uint8_t *, const uint32_t, char *, uint32_t *);
 
 /**
  * @test SDV_BSL_PEM_ISPEM_FUNC_TC001
@@ -170,6 +174,52 @@ void SDV_BSL_PEM_PARSE_FUNC_TC003(void)
     ASSERT_TRUE(BSL_PEM_DecodePemToAsn1(&next, &nextLen, &sym, &asn1Encode, &asn1Len) == BSL_PEM_SYMBOL_NOT_FOUND);
 EXIT:
     BSL_SAL_Free(asn1Encode);
+    return;
+}
+/* END_CASE */
+
+static int32_t STUB_BSL_BASE64_Encode_LargeOutput(const uint8_t *srcBuf, const uint32_t srcBufLen,
+    char *dstBuf, uint32_t *dstBufLen)
+{
+    (void)srcBuf;
+    (void)srcBufLen;
+    (void)dstBuf;
+    *dstBufLen = UINT32_MAX - 1;
+    return BSL_SUCCESS;
+}
+
+/**
+ * @test SDV_BSL_PEM_ENCODE_ASN1_OVERFLOW_TC001
+ * @spec  -
+ * @title  ASN.1 to PEM encoding length overflow checks
+ * @precon  nan
+ * @brief   1. Call BSL_PEM_EncodeAsn1ToPem with an ASN.1 length whose Base64 output exceeds uint32_t.
+ *          2. Stub BSL_BASE64_Encode to report a near-uint32_t output length and encode a small ASN.1 buffer.
+ * @expect  1. The encoder rejects the input before allocation.
+ *          2. The PEM formatted length overflow is rejected.
+ * @prior  Level 1
+ * @auto  TRUE
+ */
+/* BEGIN_CASE */
+void SDV_BSL_PEM_ENCODE_ASN1_OVERFLOW_TC001(void)
+{
+    uint8_t asn1 = 0;
+    char *encode = NULL;
+    uint32_t encodeLen = 0;
+    BSL_PEM_Symbol sym = {BSL_PEM_CERT_BEGIN_STR, BSL_PEM_CERT_END_STR};
+
+    ASSERT_EQ(BSL_PEM_EncodeAsn1ToPem(&asn1, 0xC0000000U, &sym, &encode, &encodeLen), BSL_INVALID_ARG);
+    ASSERT_TRUE(encode == NULL);
+    TestErrClear();
+
+    STUB_REPLACE(BSL_BASE64_Encode, STUB_BSL_BASE64_Encode_LargeOutput);
+    ASSERT_EQ(BSL_PEM_EncodeAsn1ToPem(&asn1, sizeof(asn1), &sym, &encode, &encodeLen),
+        BSL_BASE64_BUF_NOT_ENOUGH);
+    ASSERT_TRUE(encode == NULL);
+
+EXIT:
+    STUB_RESTORE(BSL_BASE64_Encode);
+    BSL_SAL_Free(encode);
     return;
 }
 /* END_CASE */

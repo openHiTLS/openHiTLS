@@ -66,6 +66,29 @@ EXIT:
 /* END_CASE */
 
 /* BEGIN_CASE */
+void SDV_BSL_BSL_PARAM_MAKER_Push_Value_Overflow_TC001()
+{
+    uint8_t value = 0;
+    int32_t key = 1;
+    BSL_ParamMaker *maker = BSL_PARAM_MAKER_New();
+    ASSERT_TRUE(maker != NULL);
+
+    ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key++, BSL_PARAM_TYPE_UTF8_STR, &value, UINT32_MAX),
+        BSL_PARAMS_OUT_LIMIT);
+    ASSERT_EQ(BSL_PARAM_MAKER_DeepPushValue(maker, key++, BSL_PARAM_TYPE_UTF8_STR, &value, UINT32_MAX),
+        BSL_PARAMS_OUT_LIMIT);
+    TestErrClear();
+
+    ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key++, BSL_PARAM_TYPE_OCTETS, &value, UINT32_MAX), BSL_SUCCESS);
+    ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key++, BSL_PARAM_TYPE_OCTETS, &value, 1), BSL_PARAMS_OUT_LIMIT);
+
+EXIT:
+    BSL_PARAM_MAKER_Free(maker);
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
 void SDV_BSL_BSL_PARAM_MAKER_ToParam_API_TC001()
 {
     int32_t val = 1;

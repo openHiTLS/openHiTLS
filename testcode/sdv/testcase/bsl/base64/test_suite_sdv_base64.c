@@ -1046,3 +1046,32 @@ EXIT:
     BSL_BASE64_CtxFree(ctx);
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_BASE64_FUNC_TC016(void)
+{
+    const uint8_t src = 0;
+    const char decSrc[] = "A";
+    char enc[1] = {0};
+    uint8_t dec[1] = {0};
+    uint32_t len = UINT32_MAX;
+    BSL_Base64Ctx *ctx = BSL_BASE64_CtxNew();
+    ASSERT_TRUE(ctx != NULL);
+
+    ASSERT_EQ(BSL_BASE64_EncodeInit(ctx), BSL_SUCCESS);
+    ASSERT_EQ(BSL_BASE64_EncodeUpdate(ctx, &src, UINT32_MAX, enc, &len), BSL_BASE64_BUF_NOT_ENOUGH);
+    ASSERT_EQ(enc[0], 0);
+    TestErrClear();
+
+    ASSERT_EQ(BSL_BASE64_DecodeInit(ctx), BSL_SUCCESS);
+    len = 0;
+    ASSERT_EQ(BSL_BASE64_DecodeUpdate(ctx, decSrc, sizeof(decSrc) - 1, dec, &len), BSL_SUCCESS);
+    ASSERT_EQ(len, 0);
+    len = 0;
+    ASSERT_EQ(BSL_BASE64_DecodeUpdate(ctx, decSrc, UINT32_MAX, dec, &len), BSL_BASE64_BUF_NOT_ENOUGH);
+    ASSERT_EQ(len, 0);
+
+EXIT:
+    BSL_BASE64_CtxFree(ctx);
+}
+/* END_CASE */

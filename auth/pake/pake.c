@@ -313,7 +313,12 @@ CRYPT_EAL_KdfCtx* HITLS_AUTH_PakeGetKdfCtx(HITLS_AUTH_PakeCtx* ctx, HITLS_AUTH_P
 
     switch (kdf.algId) {
         case CRYPT_KDF_PBKDF2: {
-            uint32_t totalLen = ctx->password.dataLen + ctx->prover.dataLen + ctx->verifier.dataLen;
+            uint64_t totalLen64 = (uint64_t)ctx->password.dataLen + ctx->prover.dataLen + ctx->verifier.dataLen;
+            if (totalLen64 > UINT32_MAX) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
+                return NULL;
+            }
+            uint32_t totalLen = (uint32_t)totalLen64;
             uint8_t *buffer = BSL_SAL_Malloc(totalLen);
             if (buffer == NULL) {
                 BSL_ERR_PUSH_ERROR(HITLS_AUTH_PAKE_MEMORY_ALLOC_FAIL);

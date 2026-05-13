@@ -405,15 +405,26 @@ static int32_t SignedAttrsCheck(HITLS_X509_Attrs *attrs)
     if (attrs == NULL || BSL_LIST_COUNT(attrs->list) == 0) {
         return HITLS_PKI_SUCCESS;
     }
-    int32_t nums = 0;
+    bool hasContentType = false;
+    bool hasMessageDigest = false;
     for (BslListNode *attrNode = BSL_LIST_FirstNode(attrs->list); attrNode != NULL;
         attrNode = BSL_LIST_GetNextNode(attrs->list, attrNode)) {
         HITLS_X509_AttrEntry *node = (HITLS_X509_AttrEntry *)BSL_LIST_GetData(attrNode);
-        if (node->cid == BSL_CID_PKCS9_AT_MESSAGEDIGEST || node->cid == BSL_CID_PKCS9_AT_CONTENTTYPE) {
-            nums++;
+        if (node->cid == BSL_CID_PKCS9_AT_CONTENTTYPE) {
+            if (hasContentType) {
+                BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_SIGNEDATTRS_INVALID);
+                return HITLS_CMS_ERR_SIGNEDDATA_SIGNEDATTRS_INVALID;
+            }
+            hasContentType = true;
+        } else if (node->cid == BSL_CID_PKCS9_AT_MESSAGEDIGEST) {
+            if (hasMessageDigest) {
+                BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_SIGNEDATTRS_INVALID);
+                return HITLS_CMS_ERR_SIGNEDDATA_SIGNEDATTRS_INVALID;
+            }
+            hasMessageDigest = true;
         }
     }
-    if (nums != 2) { // 2: the minimum number of required signed attributes.
+    if (!hasContentType || !hasMessageDigest) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_SIGNEDATTRS_INVALID);
         return HITLS_CMS_ERR_SIGNEDDATA_SIGNEDATTRS_INVALID;
     }

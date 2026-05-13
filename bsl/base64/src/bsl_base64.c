@@ -382,7 +382,9 @@ int32_t BSL_BASE64_EncodeUpdate(BSL_Base64Ctx *ctx, const uint8_t *srcBuf, uint3
     }
     /* By default, the user selects the line feed, considers the terminator,
        and checks whether the length meets the (srcBufLen + ctx->num)/48*65+1 requirement. */
-    if (*dstBufLen < ((srcBufLen + ctx->num) / HITLS_BASE64_CTX_LENGTH * (BASE64_DECODE_BLOCKSIZE + 1) + 1)) {
+    uint64_t inLen = (uint64_t)srcBufLen + ctx->num;
+    uint64_t needLen = inLen / HITLS_BASE64_CTX_LENGTH * (BASE64_DECODE_BLOCKSIZE + 1) + 1;
+    if (needLen > UINT32_MAX || *dstBufLen < (uint32_t)needLen) {
         BSL_ERR_PUSH_ERROR(BSL_BASE64_BUF_NOT_ENOUGH);
         return BSL_BASE64_BUF_NOT_ENOUGH;
     }
@@ -456,7 +458,9 @@ int32_t BSL_BASE64_DecodeUpdate(BSL_Base64Ctx *ctx, const char *srcBuf, const ui
     }
     /* Estimated maximum value. By default, the input srcBuf is without line feed. Each line contains 64 characters.
        Check whether the length meets the (srcBufLen + ctx->num)/64*48 requirement. */
-    if (*dstBufLen < ((srcBufLen + ctx->num) / BASE64_DECODE_BLOCKSIZE * HITLS_BASE64_CTX_LENGTH)) {
+    uint64_t inLen = (uint64_t)srcBufLen + ctx->num;
+    uint64_t needLen = inLen / BASE64_DECODE_BLOCKSIZE * HITLS_BASE64_CTX_LENGTH;
+    if (needLen > UINT32_MAX || *dstBufLen < (uint32_t)needLen) {
         BSL_ERR_PUSH_ERROR(BSL_BASE64_BUF_NOT_ENOUGH);
         return BSL_BASE64_BUF_NOT_ENOUGH;
     }
