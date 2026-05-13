@@ -265,11 +265,20 @@ SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_
 SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:uri
 SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_parse_7.der":1:"https://www.openhitls.com/api":HITLS_X509_GN_URI
 
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC002:san element 0 length
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC002:0:"../testdata/cert/asn1/certcheck/cert_ext_san_element_0_length.der":"":HITLS_X509_GN_DNS
+
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC002:san no element
+SDV_X509_CERT_WITH_SAN_PARSE_TEST_TC002:0:"../testdata/cert/asn1/certcheck/cert_ext_san_no_element.der":"":-1
+
 SDV_X509_CERT_WITH_SAN_ALL_PARSE_TC001:all
 SDV_X509_CERT_WITH_SAN_ALL_PARSE_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_parse_8.der":1
 
 SDV_X509_CERT_WITH_ILLEGAL_SAN_PARSE_TEST_TC001:generalName is empty
 SDV_X509_CERT_WITH_ILLEGAL_SAN_PARSE_TEST_TC001:0:"../testdata/cert/asn1/certcheck/cert_ext_san_parse_9.der":1
+
+SDV_X509_CERT_WITH_ILLEGAL_SAN_DIRNAME_0_LEN_PARSE_TEST_TC001:directoryName with zero length
+SDV_X509_CERT_WITH_ILLEGAL_SAN_DIRNAME_0_LEN_PARSE_TEST_TC001:"../testdata/cert/asn1/certcheck/cert_ext_san_dirname_0_length.der"
 
 SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:critical, Ca, maxPathLen = 1
 SDV_X509_CERT_WITH_BCON_GEN_TEST_TC001:1:1:1:CRYPT_PKEY_RSA:CRYPT_MD_SHA256:0

@@ -24,6 +24,8 @@
 #include "bsl_list.h"
 #include "hitls_cert.h"
 #include "hitls_error.h"
+#include "hitls_security.h"
+#include "security.h"
 #include "tls.h"
 
 static int32_t BuildArrayFromList(HITLS_X509_List *list, HITLS_CERT_X509 **listArray, uint32_t *num)
@@ -91,6 +93,21 @@ int32_t HITLS_X509_Adapt_BuildCertChain(HITLS_Config *config, HITLS_CERT_Store *
     return ret;
 }
 
+#ifdef HITLS_TLS_FEATURE_SECURITY
+static int32_t SetAuthLevel(HITLS_Ctx *ctx, HITLS_X509_StoreCtx *storeCtx)
+{
+    int32_t securityLevel = 0;
+    int32_t ret = HITLS_CFG_GetSecurityLevel(&ctx->config.tlsConfig, &securityLevel);
+    if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+    int32_t secBits = SECURITY_GetSecbits(securityLevel);
+    uint32_t bits = (secBits > 0) ? (uint32_t)secBits : 0;
+    return HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_SECBITS, &bits, sizeof(bits));
+}
+#endif
+
 int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store, HITLS_CERT_X509 **list, uint32_t num)
 {
     HITLS_X509_StoreCtx *storeCtx = (HITLS_X509_StoreCtx *)store;
@@ -106,6 +123,13 @@ int32_t HITLS_X509_Adapt_VerifyCertChain(HITLS_Ctx *ctx, HITLS_CERT_Store *store
 #endif /* HITLS_CRYPTO_SM2 */
     int32_t purpose = ctx->isClient ? HITLS_X509_VFY_PURPOSE_TLS_SERVER : HITLS_X509_VFY_PURPOSE_TLS_CLIENT;
     HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_PURPOSE, &purpose, sizeof(purpose));
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    ret = SetAuthLevel(ctx, storeCtx);
+    if (ret != HITLS_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
+    }
+#endif
 #ifdef HITLS_TLS_CONFIG_CERT_CALLBACK
     HITLS_VerifyCb verCb = NULL;
     ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_SET_USR_DATA, ctx, sizeof(void *));

@@ -1225,9 +1225,6 @@ static int32_t CheckMlKemKeyUsage(HITLS_X509_Cert *cert)
 
 static int32_t HITLS_X509_CheckCertExt(void *ctx, HITLS_X509_Cert *cert, int32_t depth)
 {
-    if (cert->tbs.version != 2) { // no ext v1 cert, 2 : X509 v3
-        return HITLS_PKI_SUCCESS;
-    }
 #ifdef HITLS_PKI_X509_VFY_CB
     HITLS_X509_StoreCtx *storeCtx = (HITLS_X509_StoreCtx *)ctx;
     storeCtx->curCert = cert;
@@ -1235,6 +1232,12 @@ static int32_t HITLS_X509_CheckCertExt(void *ctx, HITLS_X509_Cert *cert, int32_t
 #else
     (void)depth;
 #endif
+    /* RFC5280 4.1.2.1: when extensions are used, as expected in this profile, version MUST be 3 (value is 2). */
+    if (cert->tbs.version < HITLS_X509_VERSION_3) {
+        VFYCBK_FAIL_IF(BSL_LIST_COUNT(cert->tbs.ext.extList) > 0,
+            (HITLS_X509_StoreCtx *)ctx, cert, depth, HITLS_X509_ERR_VFY_EXTENSIONS_REQUIRE_V3);
+        return HITLS_PKI_SUCCESS;
+    }
 #if defined(HITLS_CRYPTO_MLDSA) || defined(HITLS_CRYPTO_SLH_DSA)
     int32_t pqcSigKeyUsageRet = CheckPqcSigKeyUsage(cert);
     if (pqcSigKeyUsageRet != HITLS_PKI_SUCCESS) {
@@ -1587,39 +1590,49 @@ static int32_t X509_GetVerifyCertChain(HITLS_X509_StoreCtx *storeCtx, HITLS_X509
 int32_t X509_CheckExt(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *chain)
 {
     BslListNode *curNode = BSL_LIST_LastNode(chain);
-    int32_t depth = BSL_LIST_COUNT(chain) - 1;
+    int32_t rootDepth = BSL_LIST_COUNT(chain) - 1;
+    int32_t curDepth = rootDepth;
 
     while (curNode != NULL) {
         HITLS_X509_Cert *cur = (HITLS_X509_Cert *)BSL_LIST_GetData(curNode);
         HITLS_X509_CertExt *curExt = (HITLS_X509_CertExt *)cur->tbs.ext.extData;
 
-        if (depth > 0) {
-            /**
-             * If the basic constraints extension is not present in a version 3 certificate,
-             * or the extension is present but the cA boolean is not asserted,
-             * then the certified public key MUST NOT be used to verify certificate signatures.
+        if (curDepth > 0) { // CA certificates (root and intermediate)
+            /** RFC 5280 Section 6.1.4:
+             * (k) If certificate i is a version 3 certificate, verify that the basicConstraints extension is
+             *     present and that cA is set to TRUE. (If certificate i is a version 1 or version 2 certificate,
+             *     then the application MUST either verify that certificate i is a CA certificate through
+             *     out-of-band means or reject the certificate. Conforming implementations may choose to reject
+             *     all version 1 and version 2 intermediate certificates.)
              */
-            VFYCBK_FAIL_IF(((cur->tbs.version == HITLS_X509_VERSION_3) &&
-                ((curExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) == 0 || !curExt->isCa)),
-                storeCtx, cur, depth, HITLS_X509_ERR_VFY_INVALID_CA);
+            if (curDepth == rootDepth) {
+                VFYCBK_FAIL_IF(((cur->tbs.version == HITLS_X509_VERSION_3) &&
+                    ((curExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) == 0 || !curExt->isCa)),
+                    storeCtx, cur, curDepth, HITLS_X509_ERR_VFY_INVALID_CA);
+            } else {
+                VFYCBK_FAIL_IF(cur->tbs.version != HITLS_X509_VERSION_3,
+                    storeCtx, cur, curDepth, HITLS_X509_ERR_VFY_INTERCA_INVALID_VERSION);
+                VFYCBK_FAIL_IF((curExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) == 0 || !curExt->isCa,
+                    storeCtx, cur, curDepth, HITLS_X509_ERR_VFY_INTERCA_INVALID_BCONS);
+            }
             /**
              * Conforming CAs MUST include this extension in certificates that contain public keys
              * that are used to validate digital signatures on other public key certificates or CRLs.
              */
             VFYCBK_FAIL_IF(((curExt->extFlags & HITLS_X509_EXT_FLAG_KUSAGE) != 0) &&
                 ((curExt->keyUsage & HITLS_X509_EXT_KU_KEY_CERT_SIGN) == 0),
-                storeCtx, cur, depth, HITLS_X509_ERR_VFY_KU_NO_CERTSIGN);
+                storeCtx, cur, curDepth, HITLS_X509_ERR_VFY_KU_NO_CERTSIGN);
 
             if ((curExt->extFlags & HITLS_X509_EXT_FLAG_BCONS) != 0 && curExt->isCa && curExt->maxPathLen >= 0) {
-                VFYCBK_FAIL_IF(curExt->maxPathLen < depth - 1, storeCtx, cur, depth,
+                VFYCBK_FAIL_IF(curExt->maxPathLen < curDepth - 1, storeCtx, cur, curDepth,
                     HITLS_X509_ERR_VFY_PATHLEN_EXCEEDED);
             }
         } else {
             int32_t ret = X509_VerifyUsageEE(storeCtx, cur);
-            VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cur, depth, ret);
+            VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cur, curDepth, ret);
         }
         curNode = BSL_LIST_GetPrevNode(curNode);
-        depth--;
+        curDepth--;
     }
     return HITLS_PKI_SUCCESS;
 }

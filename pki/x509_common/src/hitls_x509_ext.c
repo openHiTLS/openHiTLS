@@ -383,18 +383,19 @@ int32_t HITLS_X509_ParseGeneralNames(uint8_t *encode, uint32_t encLen, BslList *
         if (ret != BSL_SUCCESS) {
             break;
         }
-        if (nameValueLen == 0) {
-            continue;
-        }
         // value
-        ret = ParseGeneralName(tag, &buff, &buffLen, nameValueLen, list);
+        uint8_t *nameBuff = buff;
+        uint32_t nameBuffLen = nameValueLen;
+        ret = ParseGeneralName(tag, &nameBuff, &nameBuffLen, nameValueLen, list);
         if (ret != BSL_SUCCESS) {
             break;
         }
-        if (tag != HITLS_X509_GENERALNAME_DIR_TAG) {
-            buff += nameValueLen;
-            buffLen -= nameValueLen;
+        if (tag == HITLS_X509_GENERALNAME_DIR_TAG && nameBuffLen != 0) {
+            ret = HITLS_X509_ERR_PARSE_SAN_ITEM;
+            break;
         }
+        buff += nameValueLen;
+        buffLen -= nameValueLen;
     }
     if (ret != BSL_SUCCESS) {
         HITLS_X509_ClearGeneralNames(list);

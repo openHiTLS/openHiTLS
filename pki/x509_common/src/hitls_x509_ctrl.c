@@ -299,13 +299,17 @@ int32_t HITLS_X509_SetNameList(BslList **dest, void *val, uint32_t valLen)
         return HITLS_X509_ERR_INVALID_PARAM;
     }
     BslList *src = (BslList *)val;
+    if (src == *dest) {
+        return HITLS_PKI_SUCCESS;
+    }
 
-    BSL_LIST_FREE(*dest, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
-    *dest = BSL_LIST_Copy(src, (BSL_LIST_PFUNC_DUP)DupNameNode, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
-    if (*dest == NULL) {
+    BslList *tmp = BSL_LIST_Copy(src, (BSL_LIST_PFUNC_DUP)DupNameNode, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
+    if (tmp == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_SET_NAME_LIST);
         return HITLS_X509_ERR_SET_NAME_LIST;
     }
+    BSL_LIST_FREE(*dest, (BSL_LIST_PFUNC_FREE)HITLS_X509_FreeNameNode);
+    *dest = tmp;
     return HITLS_PKI_SUCCESS;
 }
 

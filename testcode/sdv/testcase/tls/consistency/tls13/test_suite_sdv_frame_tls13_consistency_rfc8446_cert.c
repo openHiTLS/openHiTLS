@@ -2433,3 +2433,126 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/**
+ * Verify that SetAuthLevel propagates the TLS security level to the X509 verification layer secbits check,
+ * and SHA-1 signatures (63 bits < 80 bits) are correctly rejected
+ */
+/* BEGIN_CASE */
+void SDV_TLS13_SECBITS_AUTH_LEVEL_SHA1_FAIL_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    FRAME_CertInfo certInfo = {
+        "ecdsa_sha1/ca-nist521.der",
+        "ecdsa_sha1/inter-nist521.der",
+        "ecdsa_sha1/end384-sha1.der",
+        0,
+        "ecdsa_sha1/end384-sha1.key.der",
+        0,
+    };
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+    HITLS_SetSecurityLevel(client->ssl, 1);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT),
+        HITLS_CERT_ERR_VERIFY_CERT_CHAIN);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * When verifying security level 0, the secbits check is not triggered, and weak signature certificates can pass.
+ */
+/* BEGIN_CASE */
+void SDV_TLS13_SECBITS_AUTH_LEVEL_SHA1_LEVEL0_PASS_TC002(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    FRAME_CertInfo certInfo = {
+        "ecdsa_sha1/ca-nist521.der",
+        "ecdsa_sha1/inter-nist521.der",
+        "ecdsa_sha1/end384-sha1.der",
+        0,
+        "ecdsa_sha1/end384-sha1.key.der",
+        0,
+    };
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * Verification of normally strong certificate chains passes verification at security level 2.
+ */
+/* BEGIN_CASE */
+void SDV_TLS13_SECBITS_AUTH_LEVEL_RSA_LEVEL2_PASS_TC003(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    FRAME_CertInfo certInfo = {
+        "rsa_sha/ca-3072.der",
+        "rsa_sha/inter-3072.der",
+        "rsa_sha/end-sha256.der",
+        0,
+        "rsa_sha/end-sha256.key.der",
+        0,
+    };
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+    HITLS_SetSecurityLevel(client->ssl, 2);
+    HITLS_SetSecurityLevel(server->ssl, 2);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * Certificates with insufficient key strength are intercepted by the TLS layer key check when verifying at security level 3.
+ */
+/* BEGIN_CASE */
+void SDV_TLS13_SECBITS_AUTH_LEVEL_WEAK_KEY_FAIL_TC004(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+    FRAME_CertInfo certInfo = {
+        "rsa_sha/ca-3072.der",
+        "rsa_sha/inter-3072.der",
+        "rsa_sha/end-sha256.der",
+        0,
+        "rsa_sha/end-sha256.key.der",
+        0,
+    };
+    FRAME_LinkObj *client = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLinkWithCert(config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+    HITLS_SetSecurityLevel(client->ssl, 3);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT),
+        HITLS_CERT_ERR_EE_KEY_WITH_INSECURE_SECBITS);
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
