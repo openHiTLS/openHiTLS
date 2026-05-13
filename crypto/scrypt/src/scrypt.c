@@ -482,8 +482,7 @@ int32_t CRYPT_SCRYPT_Derive(CRYPT_SCRYPT_Ctx *ctx, uint8_t *out, uint32_t len)
         out, len), ret);
 
 ERR:
-    BSL_SAL_FREE(b);
-
+    BSL_SAL_ClearFree(b, sumLen);
     return ret;
 }
 

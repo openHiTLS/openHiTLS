@@ -174,6 +174,7 @@ int32_t CRYPT_HKDF_Expand(void *macCtx, const EAL_MacMethod *macMeth, uint16_t m
     }
 
 ERR:
+    BSL_SAL_CleanseData(hash, sizeof(hash));
     (void)macMeth->deinit(macCtx);
     return ret;
 }

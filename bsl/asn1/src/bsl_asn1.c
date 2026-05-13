@@ -235,8 +235,13 @@ static int32_t ParseTime(uint8_t tag, uint8_t *val, uint32_t len, BSL_TIME *deco
         return BSL_ASN1_ERR_DECODE_GENERAL_TIME;
     }
 
+    uint32_t digitLen = (tag == BSL_ASN1_TAG_UTCTIME) ? 12 : 14; // 12|14: digit length before optional Z
+    if (len == digitLen + 1 && val[len - 1] != 'Z') {
+        return BSL_ASN1_ERR_DECODE_TIME;
+    }
+
     // Check if the encoding is within the expected range and prepare for conversion
-    ret = tag == BSL_ASN1_TAG_UTCTIME ? CheckTime(val, 12) : CheckTime(val, 14); // 12|14: ignoring Z
+    ret = CheckTime(val, digitLen);
     if (ret != BSL_SUCCESS) {
         return ret;
     }
