@@ -35,6 +35,7 @@
 #include "session_mgr.h"
 #include "bsl_bytes.h"
 #include "config_type.h"
+#include "security.h"
 
 
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
@@ -182,6 +183,12 @@ static bool Tls13SelectGroup(TLS_Ctx *ctx, uint16_t *firstGroup, uint16_t *secon
         if (groupInfo == NULL) {
             continue;
         }
+#ifdef HITLS_TLS_FEATURE_SECURITY
+        if (SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CURVE_SUPPORTED, 0, tlsConfig->groups[i], NULL) !=
+            SECURITY_SUCCESS) {
+            continue;
+        }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
         if (GroupConformToVersion(ctx, version, tlsConfig->groups[i])) {
             if (group1 == HITLS_NAMED_GROUP_BUTT) {
                 group1 = tlsConfig->groups[i];

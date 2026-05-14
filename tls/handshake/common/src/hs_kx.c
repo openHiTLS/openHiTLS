@@ -111,6 +111,16 @@ static int32_t ProcessServerKxMsgNamedCurve(TLS_Ctx *ctx, const ServerKeyExchang
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
         return HITLS_MSG_HANDLE_UNSUPPORT_NAMED_CURVE;
     }
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    int32_t ret = SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CURVE_CHECK, 0, (int32_t)namedGroup, NULL);
+    if (ret != SECURITY_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_UNSUPPORT_NAMED_CURVE);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID17088, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "SslCheck fail, ret %d", ret, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
+        return HITLS_MSG_HANDLE_UNSUPPORT_NAMED_CURVE;
+    }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
 
     uint32_t peerPubkeyLen = serverKxMsg->keyEx.ecdh.pubKeySize;
 

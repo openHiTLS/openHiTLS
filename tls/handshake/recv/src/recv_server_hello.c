@@ -899,6 +899,14 @@ static int32_t ClientCheckHrrKeyShareExtension(TLS_Ctx *ctx, const ServerHelloMs
         ctx->hsCtx->kxCtx->keyExchParam.share.group = selectedGroup;
         ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup = HITLS_NAMED_GROUP_BUTT;
     }
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    if (SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CURVE_SUPPORTED, 0, (int32_t)selectedGroup, NULL) !=
+        SECURITY_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
+        return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP, BINLOG_ID15284,
+            "selected group failed security check", ALERT_ILLEGAL_PARAMETER);
+    }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
     // Save the selected group
     ctx->negotiatedInfo.negotiatedGroup = selectedGroup;
     return HITLS_SUCCESS;
@@ -1053,7 +1061,6 @@ static int32_t ClientProcessKeyShare(TLS_Ctx *ctx, const ServerHelloMsg *serverH
         return RETURN_ALERT_PROCESS(ctx, HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP, BINLOG_ID15289,
             "the keyshare parameter is illegal", ALERT_ILLEGAL_PARAMETER);
     }
-
     const KeyShare *keyShare = &serverHello->keyShare;
     if (keyShare->group == ctx->hsCtx->kxCtx->keyExchParam.share.secondGroup) {
         SAL_CRYPT_FreeEcdhKey(ctx->hsCtx->kxCtx->key);

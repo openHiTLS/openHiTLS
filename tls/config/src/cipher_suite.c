@@ -136,7 +136,7 @@ static const CipherSuiteInfo g_cipherSuiteList[] = {
 #ifdef HITLS_TLS_SUITE_SM4_GCM_SM3
     {.enable = true,
         .name = CIPHER_NAME("HITLS_SM4_GCM_SM3"),
-        .stdName = CIPHER_NAME("HITLS_SM4_GCM_SM3"),
+        .stdName = CIPHER_NAME("TLS_SM4_GCM_SM3"),
         .cipherSuite = HITLS_SM4_GCM_SM3,
         .cipherAlg = HITLS_CIPHER_SM4_GCM,
         .kxAlg = HITLS_KEY_EXCH_NULL,

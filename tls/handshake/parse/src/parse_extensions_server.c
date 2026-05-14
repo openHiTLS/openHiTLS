@@ -330,7 +330,7 @@ int32_t ParseIdentities(TLS_Ctx *ctx, PreSharedKey *preSharedKey, const uint8_t 
         node->identitySize = identitySize;
         bufOffset += sizeof(uint16_t);
 
-        if ((bufOffset + identitySize + sizeof(uint32_t)) > bufLen) {
+        if ((bufOffset + identitySize + sizeof(uint32_t)) > bufLen || identitySize == 0) {
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15146, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "ParseIdentities error. bufLen = %d, identitySize = %d.", bufLen, identitySize, 0, 0);
             ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_ILLEGAL_PARAMETER);
@@ -813,6 +813,10 @@ static int32_t ParseClientRecordSizeLimit(ParsePacket *pkt, ClientHelloMsg *msg)
     /* Parsed extensions of the same type */
     if (msg->extension.flag.haveRecordSizeLimit == true) {
         return ParseDupExtProcess(pkt->ctx, BINLOG_ID16243, BINGLOG_STR("recordSizeLimit"));
+    }
+
+    if (pkt->bufLen != sizeof(uint16_t)) {
+        return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID16244, BINGLOG_STR("recordSizeLimit"));
     }
 
     int32_t ret = ParseBytesToUint16(pkt, &msg->extension.content.recordSizeLimit);

@@ -85,14 +85,7 @@ static int32_t ServerCheckPointFormats(const ClientHelloMsg *clientHello)
 
 static uint16_t FindSupportedCurves(const TLS_Ctx *ctx, const uint16_t *perferenceGroups, uint32_t index)
 {
-    /* Support group security check */
-#ifdef HITLS_TLS_FEATURE_SECURITY
-    int32_t id = (int32_t)perferenceGroups[index];
-    int32_t ret = SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CURVE_SHARED, 0, id, NULL);
-    if (ret != SECURITY_SUCCESS || !GroupConformToVersion(ctx, ctx->negotiatedInfo.version, perferenceGroups[index])) {
-#else
     if (!GroupConformToVersion(ctx, ctx->negotiatedInfo.version, perferenceGroups[index])) {
-#endif /* HITLS_TLS_FEATURE_SECURITY */
         return 0;
     }
 #ifdef HITLS_TLS_FEATURE_SM_TLS13

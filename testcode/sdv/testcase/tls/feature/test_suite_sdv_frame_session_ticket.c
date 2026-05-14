@@ -1610,20 +1610,30 @@ EXIT:
 /* Global variables for session management testing */
 static bool g_sessionMgmtRemoveCbCalled = false;
 static HITLS_Session *g_sessionMgmtLastRemovedSession = NULL;
+static bool g_sessionMgmtRemoveCbCanQueryCache = false;
+static bool g_sessionMgmtRemoveCbHasValidSession = false;
 
 /* Helper function to clear session management test state */
 static void ClearSessionMgmtState(void)
 {
     g_sessionMgmtRemoveCbCalled = false;
     g_sessionMgmtLastRemovedSession = NULL;
+    g_sessionMgmtRemoveCbCanQueryCache = false;
+    g_sessionMgmtRemoveCbHasValidSession = false;
 }
 
 /* Session remove callback for management testing */
 static void TestSessionMgmtRemoveCb(HITLS_Config *config, HITLS_Session *sess)
 {
-    (void)config;
+    uint32_t cacheSize = 0;
+    uint8_t sessionId[HITLS_SESSION_ID_MAX_SIZE] = {0};
+    uint32_t sessionIdSize = sizeof(sessionId);
+
     g_sessionMgmtRemoveCbCalled = true;
     g_sessionMgmtLastRemovedSession = sess;
+    g_sessionMgmtRemoveCbCanQueryCache = (HITLS_CFG_GetSessionCacheSize(config, &cacheSize) == HITLS_SUCCESS);
+    g_sessionMgmtRemoveCbHasValidSession =
+        (sess != NULL && HITLS_SESS_GetSessionId(sess, sessionId, &sessionIdSize) == HITLS_SUCCESS && sessionIdSize > 0);
 }
 
 /** @
@@ -1805,6 +1815,8 @@ void UT_SESSION_MGMT_CLEAR_EXTERNAL_CALLBACK_TC005()
 
     /* Verify remove callback was called */
     ASSERT_TRUE(g_sessionMgmtRemoveCbCalled);
+    ASSERT_TRUE(g_sessionMgmtRemoveCbCanQueryCache);
+    ASSERT_TRUE(g_sessionMgmtRemoveCbHasValidSession);
 
     ASSERT_TRUE(TestIsErrStackEmpty());
 
@@ -2002,6 +2014,8 @@ void UT_SESSION_MGMT_REMOVE_CALLBACK_TC010()
     /* Remove session and verify callback */
     ASSERT_EQ(HITLS_CFG_RemoveSession(config, session), HITLS_SUCCESS);
     ASSERT_TRUE(g_sessionMgmtRemoveCbCalled);
+    ASSERT_TRUE(g_sessionMgmtRemoveCbCanQueryCache);
+    ASSERT_TRUE(g_sessionMgmtRemoveCbHasValidSession);
 
     ASSERT_TRUE(TestIsErrStackEmpty());
 

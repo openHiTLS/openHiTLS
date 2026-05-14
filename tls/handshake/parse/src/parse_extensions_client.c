@@ -175,7 +175,7 @@ int32_t ParseServerSelectedAlpnProtocol(
 
     /* If the length of the packet does not match the extended length, or the length is 0, the handshake message error
      * is returned */
-    if (((selectedAlpnListLen * sizeof(uint8_t)) != (pkt->bufLen - sizeof(uint16_t))) || (selectedAlpnListLen == 0)) {
+    if (((selectedAlpnListLen * sizeof(uint8_t)) != (pkt->bufLen - sizeof(uint16_t))) || (selectedAlpnLen == 0)) {
         return ParseErrorExtLengthProcess(pkt->ctx, BINLOG_ID15199, BINGLOG_STR("alpn"));
     }
     /* According to the protocol rfc7301, The alpn extension returned by s end is allowed to contain only one protocol

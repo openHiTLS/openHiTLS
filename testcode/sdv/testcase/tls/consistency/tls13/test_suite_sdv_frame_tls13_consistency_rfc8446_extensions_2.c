@@ -33,6 +33,8 @@
 #include "rec_wrapper.h"
 #include "cert.h"
 #include "securec.h"
+#include "hitls_security.h"
+#include <string.h>
 #include "process.h"
 #include "conn_init.h"
 #include "hitls_crypt_init.h"
@@ -41,6 +43,7 @@
 #include "alert.h"
 #include "bsl_sal.h"
 #include "hs_extensions.h"
+#include "hs_common.h"
 /* END_HEADER */
 #define MAX_BUF 16384
 
@@ -1365,5 +1368,36 @@ EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/**
+ * @test UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC007
+ * @spec GroupConformToVersion
+ * @title Test security-level filtering in GroupConformToVersion
+ * @precon nan
+ * @brief Scenario: A TLS 1.3 context enables security level 4 with secp256r1 and secp384r1 configured.
+ *        Expected: GroupConformToVersion rejects secp256r1 but keeps secp384r1.
+ * @expect GroupConformToVersion returns false for secp256r1 and true for secp384r1
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC007(void)
+{
+    FRAME_Init();
+    HITLS_Config *cfg = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(cfg != NULL);
+    uint16_t groups[] = {HITLS_EC_GROUP_SECP256R1, HITLS_EC_GROUP_SECP384R1};
+    ASSERT_EQ(HITLS_CFG_SetGroups(cfg, groups, sizeof(groups) / sizeof(uint16_t)), HITLS_SUCCESS);
+
+    FRAME_LinkObj *link = FRAME_CreateLink(cfg, BSL_UIO_TCP);
+    ASSERT_TRUE(link != NULL);
+    ASSERT_EQ(HITLS_SetSecurityLevel(link->ssl, HITLS_SECURITY_LEVEL_FOUR), HITLS_SUCCESS);
+
+    ASSERT_EQ(GroupConformToVersion(link->ssl, HITLS_VERSION_TLS13, HITLS_EC_GROUP_SECP256R1), false);
+    ASSERT_EQ(GroupConformToVersion(link->ssl, HITLS_VERSION_TLS13, HITLS_EC_GROUP_SECP384R1), true);
+
+EXIT:
+    FRAME_FreeLink(link);
+    HITLS_CFG_FreeConfig(cfg);
 }
 /* END_CASE */
