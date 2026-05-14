@@ -34,7 +34,7 @@
 #include "session_mgr.h"
 #include "bsl_bytes.h"
 #include "config_type.h"
-
+#include "security.h"
 
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
 #ifdef HITLS_TLS_FEATURE_SESSION
@@ -217,6 +217,12 @@ static int32_t PrepareKeyShareForInitialHello(TLS_Ctx *ctx)
 
     if (tlsConfig->keyshareIndex[0] == 0 && tlsConfig->keyshareIndex[1] == 0) {
         for (size_t i = 0; i < tlsConfig->groupsSize; i++) {
+#ifdef HITLS_TLS_FEATURE_SECURITY
+            if (SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CURVE_SUPPORTED, 0, tlsConfig->groups[i], NULL) !=
+                SECURITY_SUCCESS) {
+                continue;
+            }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
             const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(tlsConfig, tlsConfig->groups[i]);
             if (groupInfo != NULL && ((groupInfo->versionBits & tlsConfig->version) != 0)) {
                 share->groups[share->count++] = tlsConfig->groups[i];
@@ -232,6 +238,12 @@ static int32_t PrepareKeyShareForInitialHello(TLS_Ctx *ctx)
             if (groupIdx >= tlsConfig->groupsSize) {
                 continue;
             }
+#ifdef HITLS_TLS_FEATURE_SECURITY
+            if (SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CURVE_SUPPORTED, 0, tlsConfig->groups[groupIdx], NULL) !=
+                SECURITY_SUCCESS) {
+                continue;
+            }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
             const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(tlsConfig, tlsConfig->groups[groupIdx]);
             if (groupInfo != NULL && ((groupInfo->versionBits & tlsConfig->version) != 0)) {
                 share->groups[share->count++] = tlsConfig->groups[groupIdx];

@@ -92,12 +92,7 @@ static void BuildTupleGroupsArray(const TLS_Ctx *ctx, uint32_t tupleStartIdx, ui
 
     for (uint32_t i = 0; i < tupleSize && (tupleStartIdx + i) < config->groupsSize; i++) {
         uint16_t group = config->groups[tupleStartIdx + i];
-#ifdef HITLS_TLS_FEATURE_SECURITY
-        int32_t ret = SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CURVE_SHARED, 0, (int32_t)group, NULL);
-        if (ret != SECURITY_SUCCESS || !GroupConformToVersion(ctx, ctx->negotiatedInfo.version, group)) {
-#else
         if (!GroupConformToVersion(ctx, ctx->negotiatedInfo.version, group)) {
-#endif /* HITLS_TLS_FEATURE_SECURITY */
             continue;
         }
 #ifdef HITLS_TLS_FEATURE_SM_TLS13

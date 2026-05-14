@@ -42,6 +42,7 @@
 #include "uio_base.h"
 #include "hs.h"
 #include "stub_crypt.h"
+#include "hitls_security.h"
 /* END_HEADER */
 
 /* ============================================================================
@@ -49,6 +50,20 @@
  * ============================================================================ */
 STUB_DEFINE_RET1(int32_t, HS_DoHandshake, TLS_Ctx *);
 
+static int32_t TestSecurityCbRejectP256CurveCheckTls12(const HITLS_Ctx *ctx, const HITLS_Config *config, int32_t option,
+    int32_t bits, int32_t id, void *other, void *exData)
+{
+    (void)ctx;
+    (void)config;
+    (void)bits;
+    (void)exData;
+    (void)id;
+    if (option == HITLS_SECURITY_SECOP_CURVE_CHECK && other != NULL &&
+        *(uint16_t *)other == HITLS_EC_GROUP_SECP256R1) {
+        return 0;
+    }
+    return 1;
+}
 
 /* @
 * @test  UT_TLS_TLS12_RFC5246_CONSISTENCY_RECV_ZEROLENGTH_MSG_TC001
@@ -3545,6 +3560,217 @@ EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
     FRAME_FreeLink(testInfo.server);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_TLS12_SERVER_KEY_EXCHANGE_GROUP_FILTER_FUNC_TC001
+* @title  TLS 1.2 client rejects a configured but low-security ECDHE group with illegal_parameter
+* @precon  nan
+* @brief  1. Configure both peers with secp256r1 and secp384r1 and stop the client at TRY_RECV_SERVER_KEY_EXCHANGE.
+*         2. Replace the received namedcurve with secp256r1 and raise the client security level to 4.
+*         3. Continue the client handshake.
+* @expect 1. HITLS_Connect returns HITLS_MSG_HANDLE_UNSUPPORT_NAMED_CURVE.
+*         2. The client sends ALERT_ILLEGAL_PARAMETER.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_SERVER_KEY_EXCHANGE_GROUP_FILTER_FUNC_TC001(void)
+{
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
+    FRAME_CertInfo certInfo = {
+        "ecdsa/ca-nist521.der:ecdsa/inter-nist521.der",
+        "ecdsa/inter-nist521.der",
+        "ecdsa/end384-sha384.der",
+        0,
+        "ecdsa/end384-sha384.key.der",
+        0,
+    };
+
+    FRAME_Init();
+    clientConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(clientConfig != NULL);
+    serverConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(serverConfig != NULL);
+    uint16_t cipherSuite[] = {HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256};
+    uint16_t groups[] = {HITLS_EC_GROUP_SECP256R1, HITLS_EC_GROUP_SECP384R1};
+    uint16_t signAlgs[] = {CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384};
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(clientConfig, cipherSuite, sizeof(cipherSuite) / sizeof(uint16_t)),
+        HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(serverConfig, cipherSuite, sizeof(cipherSuite) / sizeof(uint16_t)),
+        HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(clientConfig, groups, sizeof(groups) / sizeof(uint16_t)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(serverConfig, groups, sizeof(groups) / sizeof(uint16_t)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSignature(clientConfig, signAlgs, sizeof(signAlgs) / sizeof(uint16_t)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSignature(serverConfig, signAlgs, sizeof(signAlgs) / sizeof(uint16_t)), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(clientConfig, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(serverConfig, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_KEY_EXCHANGE) == HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->hsCtx->state, TRY_RECV_SERVER_KEY_EXCHANGE);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recvLen != 0);
+
+    uint32_t parseLen = 0;
+    frameType.versionType = HITLS_VERSION_TLS12;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+    frameType.handshakeType = SERVER_KEY_EXCHANGE;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+
+    FRAME_ServerKeyExchangeMsg *serverMsg = &frameMsg.body.hsMsg.body.serverKeyExchange;
+    serverMsg->keyEx.ecdh.namedcurve.state = ASSIGNED_FIELD;
+    serverMsg->keyEx.ecdh.namedcurve.data = HITLS_EC_GROUP_SECP256R1;
+
+    uint32_t sendLen = MAX_RECORD_LENTH;
+    uint8_t sendBuf[MAX_RECORD_LENTH] = {0};
+    ASSERT_TRUE(FRAME_PackMsg(&frameType, &frameMsg, sendBuf, sendLen, &sendLen) == HITLS_SUCCESS);
+
+    ioUserData->recMsg.len = 0;
+    ASSERT_TRUE(FRAME_TransportRecMsg(client->io, sendBuf, sendLen) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SetSecurityLevel(client->ssl, HITLS_SECURITY_LEVEL_FOUR), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_MSG_HANDLE_UNSUPPORT_NAMED_CURVE);
+
+    ALERT_Info alertInfo = {0};
+    ALERT_GetInfo(client->ssl, &alertInfo);
+    ASSERT_EQ(alertInfo.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alertInfo.description, ALERT_ILLEGAL_PARAMETER);
+
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_TLS12_CURVECHECK_SHARED_GROUP_SELECTION_FUNC_TC001
+* @title  TLS 1.2 server-side CURVE_CHECK callback does not affect shared-group selection
+* @precon  nan
+* @brief  1. Configure both peers with secp256r1 and an ECDHE_ECDSA cipher suite signed by a P-384 certificate.
+*         2. Install a server-side security callback that rejects secp256r1 for CURVE_CHECK.
+*         3. Drive the handshake until the client is ready to receive ServerKeyExchange.
+* @expect 1. The handshake reaches TRY_RECV_SERVER_KEY_EXCHANGE.
+*         2. The negotiated ECDHE group remains secp256r1.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_CURVECHECK_SHARED_GROUP_SELECTION_FUNC_TC001(void)
+{
+    HITLS_Config *clientConfig = NULL;
+    HITLS_Config *serverConfig = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
+    FRAME_CertInfo certInfo = {
+        "ecdsa/ca-nist521.der:ecdsa/inter-nist521.der",
+        "ecdsa/inter-nist521.der",
+        "ecdsa/end384-sha384.der",
+        0,
+        "ecdsa/end384-sha384.key.der",
+        0,
+    };
+
+    FRAME_Init();
+    clientConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(clientConfig != NULL);
+    serverConfig = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(serverConfig != NULL);
+
+    uint16_t cipherSuite[] = {HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256};
+    uint16_t clientGroups[] = {HITLS_EC_GROUP_SECP256R1, HITLS_EC_GROUP_SECP384R1};
+    uint16_t serverGroups[] = {HITLS_EC_GROUP_SECP256R1};
+    uint16_t signAlgs[] = {CERT_SIG_SCHEME_ECDSA_SECP384R1_SHA384};
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(clientConfig, cipherSuite, sizeof(cipherSuite) / sizeof(uint16_t)),
+        HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(serverConfig, cipherSuite, sizeof(cipherSuite) / sizeof(uint16_t)),
+        HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(clientConfig, clientGroups, sizeof(clientGroups) / sizeof(uint16_t)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(serverConfig, serverGroups, sizeof(serverGroups) / sizeof(uint16_t)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSignature(clientConfig, signAlgs, sizeof(signAlgs) / sizeof(uint16_t)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetSignature(serverConfig, signAlgs, sizeof(signAlgs) / sizeof(uint16_t)), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(clientConfig, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(serverConfig, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(HITLS_SetSecurityCb(server->ssl, TestSecurityCbRejectP256CurveCheckTls12), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, TRY_RECV_SERVER_KEY_EXCHANGE), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->hsCtx->state, TRY_RECV_SERVER_KEY_EXCHANGE);
+    ASSERT_EQ(server->ssl->negotiatedInfo.negotiatedGroup, HITLS_EC_GROUP_SECP256R1);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    uint32_t parseLen = 0;
+    frameType.versionType = HITLS_VERSION_TLS12;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+    frameType.handshakeType = SERVER_KEY_EXCHANGE;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+    ASSERT_EQ(frameMsg.body.hsMsg.body.serverKeyExchange.keyEx.ecdh.namedcurve.data, HITLS_EC_GROUP_SECP256R1);
+
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    HITLS_CFG_FreeConfig(clientConfig);
+    HITLS_CFG_FreeConfig(serverConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test  UT_TLS_TLS12_SUPPORTED_GROUPS_FILTER_FUNC_TC001
+* @title TLS 1.2 client filters all supported_groups by security level and sends an alert
+* @precon  nan
+* @brief  1. Configure a TLS 1.2 client with only secp256r1 and ECDHE_ECDSA cipher suite.
+*          2. Raise the client security level to 4 before starting the handshake.
+*          3. Call HITLS_Connect on the client.
+* @expect 1. HITLS_Connect returns HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP.
+*         2. The client sends an alert.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_SUPPORTED_GROUPS_FILTER_FUNC_TC001(void)
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    ALERT_Info alertInfo = {0};
+
+    FRAME_Init();
+    config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+
+    uint16_t cipherSuite[] = {HITLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256};
+    uint16_t groups[] = {HITLS_EC_GROUP_SECP256R1};
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(config, cipherSuite, sizeof(cipherSuite) / sizeof(uint16_t)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(config, groups, sizeof(groups) / sizeof(uint16_t)), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+
+    ASSERT_EQ(HITLS_SetSecurityLevel(client->ssl, HITLS_SECURITY_LEVEL_FOUR), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
+
+    ALERT_GetInfo(client->ssl, &alertInfo);
+    ASSERT_EQ(alertInfo.flag, ALERT_FLAG_SEND);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
 }
 /* END_CASE */
 

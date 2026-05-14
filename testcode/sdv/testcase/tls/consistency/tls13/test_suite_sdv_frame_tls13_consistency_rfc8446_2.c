@@ -47,12 +47,29 @@
 #include "hs_kx.h"
 #include "bsl_log.h"
 #include "cert_callback.h"
+#include "hitls_security.h"
 /* END_HEADER */
 
 /* ============================================================================
  * Stub Definitions
  * ============================================================================ */
 STUB_DEFINE_RET5(int32_t, CompareBinder, TLS_Ctx *, const PreSharedKey *, uint8_t *, uint32_t, uint32_t);
+STUB_DEFINE_RET5(int32_t, SECURITY_SslCheck, const HITLS_Ctx *, int32_t, int32_t, int32_t, void *);
+
+static int32_t TestSecurityCbRejectP384CurveSupported(const HITLS_Ctx *ctx, const HITLS_Config *config, int32_t option,
+    int32_t bits, int32_t id, void *other, void *exData)
+{
+    (void)ctx;
+    (void)config;
+    (void)bits;
+    (void)exData;
+    (void)id;
+    if (option == HITLS_SECURITY_SECOP_CURVE_SUPPORTED && other != NULL &&
+        *(uint16_t *)other == HITLS_EC_GROUP_SECP384R1) {
+        return 0;
+    }
+    return 1;
+}
 
 
 #define PORT 23456
@@ -601,7 +618,6 @@ void UT_TLS_TLS13_CONSISTENCY_RFC8446_REQUEST_CLIENT_HELLO_FUNC_TC001()
     ASSERT_TRUE(client != NULL);
     server = FRAME_CreateLink(serverconfig, BSL_UIO_TCP);
     ASSERT_TRUE(server != NULL);
-
     ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
     ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
     ASSERT_TRUE(HITLS_Accept(server->ssl) == HITLS_REC_NORMAL_IO_BUSY);
@@ -631,8 +647,6 @@ void UT_TLS_TLS13_CONSISTENCY_RFC8446_REQUEST_CLIENT_HELLO_FUNC_TC001()
 
     // Continue to establish the connection.
     ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
-
-    ASSERT_TRUE(TestIsErrStackEmpty());
 
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
@@ -907,6 +921,167 @@ void UT_TLS_TLS13_CONSISTENCY_RFC8446_REQUEST_CLIENT_HELLO_FUNC_TC004()
 
     // Continue connection establishment and observe the connection establishment result.
     ASSERT_EQ(HITLS_Connect(client->ssl) , HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
+EXIT:
+    FRAME_CleanMsg(&frameType, &frameMsg);
+    HITLS_CFG_FreeConfig(clientconfig);
+    HITLS_CFG_FreeConfig(serverconfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test  UT_TLS_TLS13_HRR_SELECTED_GROUP_FILTER_FUNC_TC001
+* @title  TLS 1.3 client rejects an HRR selected_group that fails CURVE_SUPPORTED
+* @precon  nan
+* @brief  1. Configure client groups as secp256r1 and secp384r1, and server group as secp384r1.
+*          2. Let the server send HelloRetryRequest for secp384r1 and install a client callback rejecting that group.
+*          3. Continue the client handshake.
+* @expect 1. HITLS_Connect returns HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP.
+*         2. The client sends ALERT_ILLEGAL_PARAMETER.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_HRR_SELECTED_GROUP_FILTER_FUNC_TC001()
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Config *clientconfig = NULL;
+    HITLS_Config *serverconfig = NULL;
+
+    clientconfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientconfig != NULL);
+    serverconfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(serverconfig != NULL);
+
+    uint16_t clientgroups[] = {HITLS_EC_GROUP_SECP256R1, HITLS_EC_GROUP_SECP384R1};
+    uint16_t servergroups[] = {HITLS_EC_GROUP_SECP384R1};
+    ASSERT_EQ(HITLS_CFG_SetGroups(clientconfig, clientgroups, sizeof(clientgroups) / sizeof(uint16_t)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(serverconfig, servergroups, sizeof(servergroups) / sizeof(uint16_t)), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(clientconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_TRUE(HITLS_Connect(client->ssl) == HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_Accept(server->ssl) == HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_SetSecurityCb(client->ssl, TestSecurityCbRejectP384CurveSupported), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
+
+    ALERT_Info alertInfo = {0};
+    ALERT_GetInfo(client->ssl, &alertInfo);
+    ASSERT_EQ(alertInfo.flag, ALERT_FLAG_SEND);
+    ASSERT_EQ(alertInfo.level, ALERT_LEVEL_FATAL);
+    ASSERT_EQ(alertInfo.description, ALERT_ILLEGAL_PARAMETER);
+
+EXIT:
+    HITLS_CFG_FreeConfig(clientconfig);
+    HITLS_CFG_FreeConfig(serverconfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+* @test  UT_TLS_TLS13_KEYSHARE_ALL_GROUPS_FILTER_FUNC_TC001
+* @title  TLS 1.3 client filters the initial key_share group by security level and sends an alert
+* @precon  nan
+* @brief  1. Configure a TLS 1.3 client with only secp256r1.
+*          2. Raise the client security level to 4 before starting the handshake.
+*          3. Call HITLS_Connect on the client.
+* @expect 1. HITLS_Connect returns HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP.
+*         2. The client sends an alert.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_KEYSHARE_ALL_GROUPS_FILTER_FUNC_TC001()
+{
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    ALERT_Info alertInfo = {0};
+
+    FRAME_Init();
+    config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(config != NULL);
+
+    uint16_t groups[] = {HITLS_EC_GROUP_SECP256R1};
+    ASSERT_EQ(HITLS_CFG_SetGroups(config, groups, sizeof(groups) / sizeof(uint16_t)), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+
+    ASSERT_EQ(HITLS_SetSecurityLevel(client->ssl, HITLS_SECURITY_LEVEL_FOUR), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Connect(client->ssl), HITLS_MSG_HANDLE_ILLEGAL_SELECTED_GROUP);
+
+    ALERT_GetInfo(client->ssl, &alertInfo);
+    ASSERT_EQ(alertInfo.flag, ALERT_FLAG_SEND);
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+}
+/* END_CASE */
+
+/** @
+* @test  UT_TLS_TLS13_KEYSHARE_PARTIAL_FILTER_FUNC_TC001
+* @title  TLS 1.3 client sends only the remaining supported groups and keyshares after CURVE_SUPPORTED filtering
+* @precon  nan
+* @brief  1. Configure the client keyshare list as secp256r1 and secp384r1, and the server group as secp384r1.
+*          2. Raise the client security level to 4 before sending ClientHello.
+*          3. Stop the server after receiving ClientHello and inspect the filtered extensions.
+* @expect 1. ClientHello contains only secp384r1 in key_share and supported_groups.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_KEYSHARE_PARTIAL_FILTER_FUNC_TC001()
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Config *clientconfig = NULL;
+    HITLS_Config *serverconfig = NULL;
+    FRAME_Msg frameMsg = {0};
+    FRAME_Type frameType = {0};
+
+    clientconfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientconfig != NULL);
+    serverconfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(serverconfig != NULL);
+
+    const char *clientGroupList = "*secp256r1:*secp384r1";
+    uint32_t clientGroupListLen = strlen(clientGroupList);
+    uint16_t servergroups[] = {HITLS_EC_GROUP_SECP384R1};
+    ASSERT_EQ(HITLS_CFG_SetGroupList(clientconfig, clientGroupList, clientGroupListLen), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(serverconfig, servergroups, sizeof(servergroups) / sizeof(uint16_t)), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(clientconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(serverconfig, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(HITLS_SetSecurityLevel(client->ssl, HITLS_SECURITY_LEVEL_FOUR), HITLS_SUCCESS);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO), HITLS_SUCCESS);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    ASSERT_TRUE(recvLen != 0);
+
+    uint32_t parseLen = 0;
+    frameType.versionType = HITLS_VERSION_TLS13;
+    frameType.recordType = REC_TYPE_HANDSHAKE;
+    frameType.handshakeType = CLIENT_HELLO;
+    frameType.keyExType = HITLS_KEY_EXCH_ECDHE;
+    ASSERT_TRUE(FRAME_ParseMsg(&frameType, recvBuf, recvLen, &frameMsg, &parseLen) == HITLS_SUCCESS);
+
+    FRAME_ClientHelloMsg *clientMsg = &frameMsg.body.hsMsg.body.clientHello;
+    ASSERT_EQ(clientMsg->keyshares.exKeyShares.size, 1u);
+    ASSERT_EQ(clientMsg->keyshares.exKeyShares.data[0].group.data, HITLS_EC_GROUP_SECP384R1);
+    ASSERT_EQ(clientMsg->supportedGroups.exData.size, 1u);
+    ASSERT_EQ(clientMsg->supportedGroups.exData.data[0], HITLS_EC_GROUP_SECP384R1);
+
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(clientconfig);

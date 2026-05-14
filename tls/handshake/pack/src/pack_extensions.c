@@ -40,6 +40,7 @@
 #include "pack_common.h"
 #include "custom_extensions.h"
 #include "config_type.h"
+#include "security.h"
 #include "pack_extensions.h"
 
 
@@ -376,6 +377,22 @@ static int32_t PackClientSignatureAlgorithms(const TLS_Ctx *ctx, PackPacket *pkt
     return HITLS_SUCCESS;
 }
 
+static bool IsClientSupportedGroupAvailable(const TLS_Ctx *ctx, uint16_t group)
+{
+    const TLS_Config *config = &ctx->config.tlsConfig;
+    const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(config, group);
+
+    if (groupInfo == NULL || ((groupInfo->versionBits & config->version) == 0)) {
+        return false;
+    }
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    if (SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CURVE_SUPPORTED, 0, (int32_t)group, NULL) != SECURITY_SUCCESS) {
+        return false;
+    }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
+    return true;
+}
+
 static int32_t PackClientSupportedGroups(const TLS_Ctx *ctx, PackPacket *pkt)
 {
     int32_t ret = HITLS_SUCCESS;
@@ -410,8 +427,7 @@ static int32_t PackClientSupportedGroups(const TLS_Ctx *ctx, PackPacket *pkt)
 
     bool haveGroup = false;
     for (uint32_t i = 0; i < config->groupsSize; ++i) {
-        const TLS_GroupInfo *groupInfo = ConfigGetGroupInfo(&ctx->config.tlsConfig, config->groups[i]);
-        if (groupInfo == NULL || ((groupInfo->versionBits & config->version) == 0)) {
+        if (!IsClientSupportedGroupAvailable(ctx, config->groups[i])) {
             continue;
         }
         haveGroup = true;

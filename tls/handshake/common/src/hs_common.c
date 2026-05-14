@@ -832,6 +832,12 @@ bool GroupConformToVersion(const TLS_Ctx *ctx, uint16_t version, uint16_t group)
     if (groupInfo == NULL || ((groupInfo->versionBits & versionBits) != versionBits)) {
         return false;
     }
+#ifdef HITLS_TLS_FEATURE_SECURITY
+    int32_t ret = SECURITY_SslCheck(ctx, HITLS_SECURITY_SECOP_CURVE_SUPPORTED, 0, (int32_t)group, NULL);
+    if (ret != SECURITY_SUCCESS) {
+        return false;
+    }
+#endif /* HITLS_TLS_FEATURE_SECURITY */
     return true;
 }
 
