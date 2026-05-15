@@ -55,6 +55,14 @@ typedef struct {
     uint32_t line[SAL_MAX_ERROR_STACK];
 } ErrorCodeStack;
 
+typedef struct {
+    uint64_t threadId;
+    const char *file;
+    uint32_t lineNo;
+    int32_t errCode;
+    bool mark;
+} ErrorOutputItem;
+
 /* Avl tree root node of the error stack. */
 static BSL_AvlTree *g_avlRoot = NULL;
 
@@ -544,14 +552,21 @@ int32_t BSL_ERR_ClearLastMark(void)
 
 void BSL_ERR_OutputErrorStack(void)
 {
-    if (g_outputFunc == NULL) {
+    ErrorOutputItem items[SAL_MAX_ERROR_STACK];
+    uint16_t itemCount = 0;
+
+    (void)BSL_SAL_ThreadRunOnce(&g_isErrInit, ErrAutoInit);
+    int32_t ret = BSL_SAL_ThreadReadLock(g_errLock);
+    if (ret != BSL_SUCCESS) {
         return;
     }
-    (void)BSL_SAL_ThreadReadLock(g_errLock);
-    if (g_avlRoot == NULL) {
+
+    BSL_ERR_OutputFunc outputFunc = g_outputFunc;
+    if (outputFunc == NULL || g_avlRoot == NULL) {
         BSL_SAL_ThreadUnlock(g_errLock);
         return;
     }
+
     const uint64_t threadId = BSL_SAL_ThreadGetId();
     BSL_AvlTree *curNode = BSL_AVL_SearchNode(g_avlRoot, threadId);
     if (curNode == NULL) {
@@ -563,23 +578,34 @@ void BSL_ERR_OutputErrorStack(void)
     uint16_t idx = errStack->bottom;
     uint16_t count = 0;
     while (errStack->errorStack[idx] != 0 && count < SAL_MAX_ERROR_STACK) {
-        const char *file = errStack->filename[idx];
-        uint32_t lineNo = errStack->line[idx];
-        int32_t errCode = errStack->errorStack[idx];
-        bool mark = (errStack->errorFlags[idx] & ERR_FLAG_POP_MARK) != 0;
-        if (file == NULL) {
-            file = "NA";
-            lineNo = 0;
+        items[itemCount].threadId = threadId;
+        items[itemCount].file = errStack->filename[idx];
+        items[itemCount].lineNo = errStack->line[idx];
+        items[itemCount].errCode = errStack->errorStack[idx];
+        items[itemCount].mark = (errStack->errorFlags[idx] & ERR_FLAG_POP_MARK) != 0;
+        if (items[itemCount].file == NULL) {
+            items[itemCount].file = "NA";
+            items[itemCount].lineNo = 0;
         }
-        g_outputFunc(threadId, file, lineNo, errCode, mark);
+        itemCount++;
         idx = (idx + 1) % SAL_MAX_ERROR_STACK;
         count++;
     }
     BSL_SAL_ThreadUnlock(g_errLock);
+
+    for (uint16_t i = 0; i < itemCount; i++) {
+        outputFunc(items[i].threadId, items[i].file, items[i].lineNo, items[i].errCode, items[i].mark);
+    }
 }
 
 void BSL_ERR_RegErrStackLog(const BSL_ERR_OutputFunc func)
 {
+    (void)BSL_SAL_ThreadRunOnce(&g_isErrInit, ErrAutoInit);
+    int32_t ret = BSL_SAL_ThreadWriteLock(g_errLock);
+    if (ret != BSL_SUCCESS) {
+        return;
+    }
     g_outputFunc = func;
+    BSL_SAL_ThreadUnlock(g_errLock);
 }
 #endif /* HITLS_BSL_ERR */

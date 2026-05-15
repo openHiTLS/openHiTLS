@@ -164,33 +164,39 @@ void BSL_LIST_DetachNode(BslList *pstList, BslListNode **pstListNode)
         return;
     }
 
+    BslListNode *detachNode = *pstListNode;
+    if (detachNode == NULL) {
+        return;
+    }
+
     BslListNode *pstCurrentNode = pstList->first;
     while (pstCurrentNode != NULL) {
-        if (pstCurrentNode != *pstListNode) {
+        if (pstCurrentNode != detachNode) {
             pstCurrentNode = pstCurrentNode->next;
             continue;
         }
+
+        BslListNode *next = pstCurrentNode->next;
+        BslListNode *prev = pstCurrentNode->prev;
+
         // found matching node, delete this node and adjust the list
-        if ((pstCurrentNode->next) != NULL) {
-            pstCurrentNode->next->prev = pstCurrentNode->prev;
-            if (*pstListNode == pstList->curr) {
-                pstList->curr = pstCurrentNode->next;
-            }
-            *pstListNode = pstCurrentNode->next; // update the current node and point it to the next node
+        if (next != NULL) {
+            next->prev = prev;
         } else {
-            pstList->last = pstCurrentNode->prev;
-            if (*pstListNode == pstList->curr) {
-                pstList->curr = pstCurrentNode->prev;
-            }
-            *pstListNode = pstList->last;
+            pstList->last = prev;
         }
 
-        if ((pstCurrentNode->prev) != NULL) {
-            pstCurrentNode->prev->next = pstCurrentNode->next;
+        if (prev != NULL) {
+            prev->next = next;
         } else {
-            pstList->first = pstCurrentNode->next;
+            pstList->first = next;
         }
 
+        if (pstCurrentNode == pstList->curr) {
+            pstList->curr = next != NULL ? next : prev;
+        }
+
+        *pstListNode = next != NULL ? next : prev;
         pstList->count--;
 
         BSL_SAL_FREE(pstCurrentNode);

@@ -76,27 +76,27 @@ static int32_t BSL_PARAM_MAKER_CheckNumberLen(uint32_t type, uint32_t len)
 {
     switch (type) {
         case BSL_PARAM_TYPE_UINT8:
-            if (len < sizeof(uint8_t)) {
+            if (len != sizeof(uint8_t)) {
                 return BSL_INVALID_ARG;
             }
             break;
         case BSL_PARAM_TYPE_UINT16:
-            if (len < sizeof(uint16_t)) {
+            if (len != sizeof(uint16_t)) {
                 return BSL_INVALID_ARG;
             }
             break;
         case BSL_PARAM_TYPE_UINT32:
-            if (len < sizeof(uint32_t)) {
+            if (len != sizeof(uint32_t)) {
                 return BSL_INVALID_ARG;
             }
             break;
         case BSL_PARAM_TYPE_INT32:
-            if (len < sizeof(int32_t)) {
+            if (len != sizeof(int32_t)) {
                 return BSL_INVALID_ARG;
             }
             break;
         case BSL_PARAM_TYPE_BOOL:
-            if (len < sizeof(bool)) {
+            if (len != sizeof(bool)) {
                 return BSL_INVALID_ARG;
             }
             break;

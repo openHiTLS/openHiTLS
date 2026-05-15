@@ -417,6 +417,12 @@ void SDV_BSL_LIST_DETACH_FUNC_TC001(void)
     ASSERT_TRUE(UserDataCompare(testList->curr->prev->data, &data[5]) == 0);
     BSL_LIST_DetachNode(testList, &testList->curr);
     ASSERT_TRUE(UserDataCompare(BSL_LIST_CURR_ELMT(testList), &data[5]) == 0);
+
+    testList->curr = testList->last;
+    BSL_LIST_DetachNode(testList, &testList->last);
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 4);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_CURR_ELMT(testList), &data[4]) == 0);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_GET_LAST(testList), &data[4]) == 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_LIST_FREE(testList, UserDataFree);

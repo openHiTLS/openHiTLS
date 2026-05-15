@@ -1089,10 +1089,10 @@ AARCH64_AUTIASP
 // =============================================================================
 CRYPT_AARCH64_FUNC_START(PackCipherText)
 AARCH64_PACIASP
-    stp     x29, x30, [sp, #-48]!
+    stp     x29, x30, [sp, #-64]!
     stp     x19, x20, [sp, #16]
     stp     x21, x22, [sp, #32]
-    str     x23, [sp, #40]
+    str     x23, [sp, #48]
     mov     x29, sp
     mov     w19, w0
     mov     x20, x1
@@ -1107,10 +1107,10 @@ AARCH64_PACIASP
     mov     w0, w19
     mov     x2, x23
     bl      CRYPT_AARCH64_SYM(PolyCompress)
-    ldr     x23, [sp, #40]
+    ldr     x23, [sp, #48]
     ldp     x21, x22, [sp, #32]
     ldp     x19, x20, [sp, #16]
-    ldp     x29, x30, [sp], #48
+    ldp     x29, x30, [sp], #64
 AARCH64_AUTIASP
     ret
     CRYPT_AARCH64_FUNC_END(PackCipherText)

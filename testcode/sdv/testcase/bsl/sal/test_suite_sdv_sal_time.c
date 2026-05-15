@@ -287,7 +287,7 @@ EXIT:
  *    6. The value of utcTime is BSL_UTCTIME_MAX. Expected result 6 is obtained.
  * @expect
  *    1. Success, return BSL_SUCCESS
- *    2. Success, return BSL_SUCCESS
+ *    2. Failed, return BSL_SAL_TIME_BAD_PARAM
  *    3. Success, return BSL_SUCCESS
  *    4. Success, return BSL_SUCCESS
  *    5. Success, return BSL_SUCCESS
@@ -306,9 +306,7 @@ void SDV_BSL_SAL_CONVERT_TIME_API_TC001(void)
     TestBslSysTimeAndTmCompare(&dateTime, &tempTime);
 
     utcTime = -1;
-    ASSERT_TRUE(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime) == BSL_SUCCESS);
-    ASSERT_TRUE(gmtime_r((const time_t *)&utcTime, &tempTime) != NULL);
-    TestBslSysTimeAndTmCompare(&dateTime, &tempTime);
+    ASSERT_EQ(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime), BSL_SAL_TIME_BAD_PARAM);
 
     utcTime = INT32_MAX;
     ASSERT_TRUE(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime) == BSL_SUCCESS);
@@ -718,7 +716,12 @@ void SDV_BSL_TIME_ADD_DAY_SECOND_TC001(void)
     overflowSecond += 1;
     ASSERT_TRUE(overflowSecond > 0);
     ASSERT_EQ(BSL_DateTimeAddDaySecond(&result, &base, 0, overflowSecond), BSL_INTERNAL_EXCEPTION);
-    /* Negative utcTime overflow branch cannot be hit because utcTime >= 0 for valid inputs. */
+
+    BSL_TIME epoch = {0};
+    epoch.year = BSL_TIME_SYSTEM_EPOCH_YEAR;
+    epoch.month = BSL_MONTH_JAN;
+    epoch.day = 1;
+    ASSERT_EQ(BSL_DateTimeAddDaySecond(&result, &epoch, -1, 0), BSL_SAL_TIME_BAD_PARAM);
 
     /* 4.Invalid parameter */
     ASSERT_EQ(BSL_DateTimeAddDaySecond(NULL, &base, 0, 0), BSL_INTERNAL_EXCEPTION);

@@ -100,7 +100,7 @@ static uint64_t pthreadGetId(void)
     return (uint64_t)pthread_self();
 }
 
-#if defined(HITLS_BSL_SAL_PID) && defined(HITLS_BSL_SAL_LINUX)
+#if defined(HITLS_BSL_SAL_PID) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
 static int32_t getProcessId(void)
 {
     return (int32_t)getpid();
@@ -261,8 +261,8 @@ static int32_t MockGetPid(void)
  *    4. Call BSL_SAL_GetPid after setting mock callback function. Expected result 4 is obtained.
  * @expect
  *    1. Failed to register callback, returns BSL_SAL_ERR_BAD_PARAM
- *    2. Returns actual process ID on Linux, otherwise returns BSL_SUCCESS
- *    3. Returns actual process ID on Linux, otherwise returns BSL_SUCCESS
+ *    2. Returns actual process ID on Linux or Darwin, otherwise returns BSL_SUCCESS
+ *    3. Returns actual process ID on Linux or Darwin, otherwise returns BSL_SUCCESS
  *    4. Returns mock value (-1)
  */
 /* BEGIN_CASE */
@@ -274,7 +274,7 @@ static int32_t MockGetPid(void)
 
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_PID_GET_ID_CB_FUNC, NULL) == BSL_SUCCESS);
     pid = BSL_SAL_GetPid();
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     ASSERT_EQ(pid, getProcessId());
 #else
     ASSERT_EQ(pid, 0);
@@ -282,7 +282,7 @@ static int32_t MockGetPid(void)
 
     ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_PID_GET_ID_CB_FUNC, BSL_SAL_GetPid) == BSL_SUCCESS);
     pid = BSL_SAL_GetPid();
-#ifdef HITLS_BSL_SAL_LINUX
+#if defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)
     ASSERT_EQ(pid, getProcessId());
 #else
     ASSERT_EQ(pid, 0);

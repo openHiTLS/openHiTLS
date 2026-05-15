@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <sys/un.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/stat.h>
@@ -31,6 +32,7 @@
 #include <sys/time.h>
 #include "bsl_sal.h"
 #include "bsl_errno.h"
+#include "sal_net.h"
 
 #define READ_TIME_OUT_SEC 3   // 3s timeout
 
@@ -164,6 +166,59 @@ EXIT:
     BSL_SAL_ThreadClose(serverThread);
     BSL_SAL_ThreadClose(clientThread);
 #endif
+}
+/* END_CASE */
+
+/**
+ * @test SDV_BSL_SAL_SOCKET_FUNC_TC003
+ * @title Socket constant conversion test
+ * @precon nan
+ * @brief
+ *    1. Convert native AF_INET6 address family to SAL address family. Expected result 1 is displayed.
+ *    2. Create an IPv6 socket and set IPV6_V6ONLY through SAL constants. Expected result 2 is displayed.
+ *    3. Create an IPv4 socket and set/get SOL_SOCKET options through SAL constants. Expected result 3 is displayed.
+ * @expect
+ *    1. Converted to SAL_NET_IPV6.
+ *    2. Set successfully.
+ *    3. Set/get successfully.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_SAL_SOCKET_FUNC_TC003(void)
+{
+    int32_t ipv4Sock = -1;
+    int32_t ipv6Sock = -1;
+    int32_t optVal = 1;
+    int32_t optLen = sizeof(optVal);
+    struct sockaddr_storage addr = {0};
+
+    addr.ss_family = AF_INET6;
+    ASSERT_EQ(SAL_SockAddrGetFamily((BSL_SAL_SockAddr)&addr), SAL_NET_IPV6);
+
+    ipv6Sock = BSL_SAL_Socket(SAL_NET_IPV6, SAL_NET_SOCK_STREAM, SAL_NET_IPPROTO_TCP);
+    ASSERT_TRUE(ipv6Sock != -1);
+    ASSERT_EQ(BSL_SAL_SetSockopt(ipv6Sock, SAL_NET_IPPROTO_IPV6, SAL_NET_IPV6_V6ONLY,
+        (char *)&optVal, sizeof(optVal)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_SAL_SockClose(ipv6Sock), BSL_SUCCESS);
+    ipv6Sock = -1;
+
+    ipv4Sock = BSL_SAL_Socket(SAL_NET_IPV4, SAL_NET_SOCK_STREAM, SAL_NET_IPPROTO_TCP);
+    ASSERT_TRUE(ipv4Sock != -1);
+    ASSERT_EQ(BSL_SAL_SetSockopt(ipv4Sock, SAL_NET_SOL_SOCKET, SAL_NET_SO_REUSEADDR,
+        (char *)&optVal, sizeof(optVal)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_SAL_SetSockopt(ipv4Sock, SAL_NET_SOL_SOCKET, SAL_NET_SO_KEEPALIVE,
+        (char *)&optVal, sizeof(optVal)), BSL_SUCCESS);
+    ASSERT_EQ(BSL_SAL_GetSockopt(ipv4Sock, SAL_NET_SOL_SOCKET, SAL_NET_SO_ERROR,
+        (char *)&optVal, &optLen), BSL_SUCCESS);
+    ASSERT_EQ(BSL_SAL_SockClose(ipv4Sock), BSL_SUCCESS);
+    ipv4Sock = -1;
+EXIT:
+    if (ipv6Sock != -1) {
+        BSL_SAL_SockClose(ipv6Sock);
+    }
+    if (ipv4Sock != -1) {
+        BSL_SAL_SockClose(ipv4Sock);
+    }
+    return;
 }
 /* END_CASE */
 

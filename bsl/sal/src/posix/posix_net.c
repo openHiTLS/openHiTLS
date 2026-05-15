@@ -32,16 +32,22 @@
 
 typedef struct sockaddr_storage BSL_SOCKADDR_STORAGE;
 
-#define ADDRESS_FAMILY_HITLS_2_POSIX(hitlsType)       (hitlsType)
 #define ADDRESS_SOCKET_TYPE_HITLS_2_POSIX(hitlsType)  (hitlsType)
 #define ADDRESS_PROTOCOL_HITLS_2_POSIX(hitlsType)     (hitlsType)
 #ifdef __APPLE__
+#define ADDRESS_FAMILY_HITLS_2_POSIX(hitlsType)       ((hitlsType) == SAL_NET_IPV6 ? AF_INET6 : (hitlsType))
 #define ADDRESS_LEVEL_HITLS_2_POSIX(hitlsType)        ((hitlsType) == SAL_NET_SOL_SOCKET ? 65535 : (hitlsType))
+#define ADDRESS_OPTION_HITLS_2_POSIX(hitlsType)       ((hitlsType) == SAL_NET_SO_REUSEADDR ? SO_REUSEADDR : \
+    ((hitlsType) == SAL_NET_SO_KEEPALIVE ? SO_KEEPALIVE : \
+    ((hitlsType) == SAL_NET_SO_ERROR ? SO_ERROR : \
+    ((hitlsType) == SAL_NET_IPV6_V6ONLY ? IPV6_V6ONLY : (hitlsType)))))
+#define ADDRESS_FAMILY_POSIX_2_HITLS(hitlsType)       ((hitlsType) == AF_INET6 ? SAL_NET_IPV6 : (hitlsType))
 #else
+#define ADDRESS_FAMILY_HITLS_2_POSIX(hitlsType)       (hitlsType)
 #define ADDRESS_LEVEL_HITLS_2_POSIX(hitlsType)        (hitlsType)
-#endif
 #define ADDRESS_OPTION_HITLS_2_POSIX(hitlsType)       (hitlsType)
 #define ADDRESS_FAMILY_POSIX_2_HITLS(hitlsType)       (hitlsType)
+#endif
 
 int32_t SAL_NET_Write(int32_t fd, const void *buf, uint32_t len, int32_t *err)
 {

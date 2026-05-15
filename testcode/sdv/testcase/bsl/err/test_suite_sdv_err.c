@@ -1279,6 +1279,19 @@ void StdPrintfOutputFunc(uint64_t threadId, const char *file, uint32_t lineNo, i
            threadId, file, lineNo, errCode, mark ? 'M' : ' ');
 }
 
+static uint32_t g_reentrantOutputCount = 0;
+
+static void ReentrantOutputFunc(uint64_t threadId, const char *file, uint32_t lineNo, int32_t errCode, bool mark)
+{
+    (void)threadId;
+    (void)file;
+    (void)lineNo;
+    (void)errCode;
+    (void)mark;
+    g_reentrantOutputCount++;
+    BSL_ERR_PushError(BSL_INVALID_ARG, __FILENAME__, __LINE__);
+}
+
 /* BEGIN_CASE */
 void SDV_BSL_ERR_OUTPUT_TC001(int pushErrNum, char *outFilename, char *inFilename)
 {
@@ -1421,6 +1434,28 @@ void SDV_BSL_ERR_OUTPUT_TC004(char *outFilename, char *inFilename)
     ASSERT_EQ(outFileReadLen, inFileLen);
     ASSERT_EQ(memcmp(outFilebuff, inFilebuff, outFileReadLen), 0);
 EXIT:
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_ERR_DeInit();
+    return;
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_BSL_ERR_OUTPUT_TC005(void)
+{
+    TestMemInit();
+    ASSERT_TRUE(BSL_ERR_Init() == BSL_SUCCESS);
+    BSL_ERR_RemoveErrorStack(true);
+    BSL_SAL_CallBack_Ctrl(BSL_SAL_THREAD_GET_ID_CB_FUNC, PthreadGetId);
+
+    g_reentrantOutputCount = 0;
+    BSL_ERR_RegErrStackLog(ReentrantOutputFunc);
+    BSL_ERR_PushError(BSL_UIO_FAIL, __FILENAME__, __LINE__);
+    BSL_ERR_OutputErrorStack();
+    ASSERT_EQ(g_reentrantOutputCount, 1);
+    ASSERT_EQ(BSL_ERR_PeekLastError(), BSL_INVALID_ARG);
+EXIT:
+    BSL_ERR_RegErrStackLog(NULL);
     BSL_ERR_RemoveErrorStack(true);
     BSL_ERR_DeInit();
     return;

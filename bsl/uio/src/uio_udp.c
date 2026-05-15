@@ -16,6 +16,7 @@
 #include "hitls_build.h"
 #ifdef HITLS_BSL_UIO_UDP
 
+#include <string.h>
 #include "bsl_binlog_id.h"
 #include "bsl_log_internal.h"
 #include "bsl_err_internal.h"
@@ -32,8 +33,10 @@
 
 typedef struct {
     BSL_SAL_SockAddr peer;
+    BSL_SAL_SockAddr tmpPeer;
     int32_t fd; // Network socket
     uint32_t isConnected;
+    uint32_t peerSet;
     int32_t sysErrno;
 } UdpParameters;
 
@@ -59,6 +62,13 @@ static int32_t UdpNew(BSL_UIO *uio)
         BSL_SAL_Free(parameters);
         return ret;
     }
+    ret = SAL_SockAddrNew(&(parameters->tmpPeer));
+    if (ret != BSL_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        SAL_SockAddrFree(parameters->peer);
+        BSL_SAL_Free(parameters);
+        return ret;
+    }
     parameters->fd = -1;
     parameters->isConnected = 0;
 
@@ -67,6 +77,16 @@ static int32_t UdpNew(BSL_UIO *uio)
     // Specifies whether to be closed by uio when setting fd.
     // The default value of init is 0. Set the value of init to 1 after the fd is set.
     return BSL_SUCCESS;
+}
+
+static bool UdpPeerAddrEqual(const BSL_SAL_SockAddr peer, const BSL_SAL_SockAddr tmpPeer)
+{
+    uint32_t peerSize = SAL_SockAddrSize(peer);
+    uint32_t tmpPeerSize = SAL_SockAddrSize(tmpPeer);
+    if (peerSize == 0 || peerSize != tmpPeerSize) {
+        return false;
+    }
+    return memcmp(peer, tmpPeer, peerSize) == 0;
 }
 
 static int32_t UdpSocketWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint32_t *writeLen)
@@ -84,6 +104,10 @@ static int32_t UdpSocketWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint3
     if (ctx->isConnected == 1) {
         sendBytes = SAL_Write(fd, buf, len, &err);
     } else {
+        if (ctx->peerSet == 0) {
+            BSL_ERR_PUSH_ERROR(BSL_UIO_IO_EXCEPTION);
+            return BSL_UIO_IO_EXCEPTION;
+        }
         sendBytes = SAL_Sendto(fd, buf, len, 0, ctx->peer, peerAddrSize, &err);
     }
 
@@ -104,6 +128,16 @@ static int32_t UdpSocketWrite(BSL_UIO *uio, const void *buf, uint32_t len, uint3
     return BSL_SUCCESS;
 }
 
+static int32_t UdpPrepareRecvPeer(UdpParameters *ctx)
+{
+    uint32_t peerAddrSize = SAL_SockAddrSize(ctx->tmpPeer);
+    if (peerAddrSize == 0) {
+        return 0;
+    }
+    memset(ctx->tmpPeer, 0, peerAddrSize);
+    return (int32_t)SAL_SockAddrSize(ctx->tmpPeer);
+}
+
 static int32_t UdpSocketRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *readLen)
 {
     *readLen = 0;
@@ -114,8 +148,12 @@ static int32_t UdpSocketRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *re
         BSL_ERR_PUSH_ERROR(BSL_UIO_IO_EXCEPTION);
         return BSL_UIO_IO_EXCEPTION;
     }
-    int32_t addrlen = (int32_t)SAL_SockAddrSize(ctx->peer);
-    int32_t ret = SAL_Recvfrom(fd, buf, len, 0, ctx->peer, &addrlen, &err);
+    int32_t addrlen = UdpPrepareRecvPeer(ctx);
+    if (addrlen == 0) {
+        BSL_ERR_PUSH_ERROR(BSL_UIO_IO_EXCEPTION);
+        return BSL_UIO_IO_EXCEPTION;
+    }
+    int32_t ret = SAL_Recvfrom(fd, buf, len, 0, ctx->tmpPeer, &addrlen, &err);
     if (ret < 0) {
         if (UioIsNonFatalErr(err) == true) {
             (void)BSL_UIO_SetFlags(uio, BSL_UIO_FLAGS_READ | BSL_UIO_FLAGS_SHOULD_RETRY);
@@ -124,9 +162,16 @@ static int32_t UdpSocketRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *re
         /* Fatal error */
         BSL_ERR_PUSH_ERROR(BSL_UIO_IO_EXCEPTION);
         return BSL_UIO_IO_EXCEPTION;
-    } else if (ret == 0) {
-        BSL_ERR_PUSH_ERROR(BSL_UIO_IO_EXCEPTION);
-        return BSL_UIO_IO_EXCEPTION;
+    }
+    if (ret == 0) {
+        *readLen = 0;
+        return BSL_SUCCESS;
+    }
+    if (ctx->peerSet == 0) {
+        SAL_SockAddrCopy(ctx->peer, ctx->tmpPeer);
+        ctx->peerSet = 1;
+    } else if (!UdpPeerAddrEqual(ctx->peer, ctx->tmpPeer)) {
+        return BSL_SUCCESS;
     }
     *readLen = (uint32_t)ret;
     return BSL_SUCCESS;
@@ -139,7 +184,10 @@ static int32_t UdpSocketDestroy(BSL_UIO *uio)
         if (BSL_UIO_GetIsUnderlyingClosedByUio(uio) && ctx->fd != -1) {
             (void)BSL_SAL_SockClose(ctx->fd);
         }
+        ctx->isConnected = 0;
+        ctx->peerSet = 0;
         SAL_SockAddrFree(ctx->peer);
+        SAL_SockAddrFree(ctx->tmpPeer);
         BSL_SAL_Free(ctx);
         uio->ctx = NULL;
     }
@@ -157,6 +205,7 @@ static int32_t UdpSetPeerIpAddr(UdpParameters *parameters, uint32_t size, const 
         return BSL_NULL_INPUT;
     }
     SAL_SockAddrCopy(parameters->peer, (BSL_SAL_SockAddr)(uintptr_t)addr);
+    parameters->peerSet = 1;
     return BSL_SUCCESS;
 }
 
@@ -297,6 +346,7 @@ int32_t UdpSocketCtrl(BSL_UIO *uio, int32_t cmd, int32_t larg, void *parg)
             return UdpSetPeerIpAddr(ctx, (uint32_t)larg, parg);
         } else {
             ctx->isConnected = 0;
+            ctx->peerSet = 0;
             return BSL_SUCCESS;
         }
     }

@@ -76,7 +76,9 @@ typedef enum {
  *
  * This is a pointer to the list comparison function used in BSL_LIST_Search function.
  * It takes two pointers and compares them based on a criteria. If the two are equal a zero is returned.
- * If the first should preceed the second, a negative is returned. Else a positive value is returned.
+ * If the first should preceed the second, a negative value other than SEC_INT_ERROR is returned.
+ * Else a positive value is returned. SEC_INT_ERROR is reserved for internal comparison errors and must not
+ * be returned as an ordinary non-equal ordering result.
  */
 typedef int32_t (*BSL_LIST_PFUNC_CMP)(const void *, const void *);
 

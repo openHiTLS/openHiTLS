@@ -254,6 +254,8 @@ int32_t BSL_DateTimeAddDaySecond(BSL_TIME *dateR, const BSL_TIME *dateA, int32_t
     /* Check utcTime + add for overflow */
     if (add > 0 && utcTime > INT64_MAX - add) {
         return BSL_INTERNAL_EXCEPTION;
+    } else if (add < 0 && utcTime < INT64_MIN - add) {
+        return BSL_INTERNAL_EXCEPTION;
     }
     utcTime += add;
 
@@ -375,7 +377,7 @@ bool BSL_DateTimeCheck(const BSL_TIME *dateTime)
 
 int32_t BSL_SAL_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
 {
-    if (sysTime == NULL || utcTime > BSL_UTCTIME_MAX) {
+    if (sysTime == NULL || utcTime < 0 || utcTime > BSL_UTCTIME_MAX) {
         return BSL_SAL_TIME_BAD_PARAM;
     }
     if (g_timeCallBack.pfUtcTimeToBslTime != NULL &&

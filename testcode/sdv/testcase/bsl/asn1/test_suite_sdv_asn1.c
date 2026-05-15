@@ -1552,6 +1552,7 @@ void SDV_BSL_ASN1_ENCODE_BMPSTRING_TC001(Hex *enc, char *dec)
     BSL_ASN1_Buffer encode = {0};
     uint8_t tmp[10] = {0xff}; // select len 10.
     BSL_ASN1_Buffer wrong = {BSL_ASN1_TAG_BMPSTRING, 10, tmp};
+    BSL_ASN1_Buffer nullBuff = {BSL_ASN1_TAG_BMPSTRING, 1, NULL};
 
     TestMemInit();
     ret = BSL_ASN1_DecodePrimitiveItem(&asn, &decode);
@@ -1570,6 +1571,8 @@ void SDV_BSL_ASN1_ENCODE_BMPSTRING_TC001(Hex *enc, char *dec)
 
     BSL_SAL_FREE(encode.buff);
     ret = BSL_ASN1_EncodeTemplate(&templ, &wrong, 1, &encode.buff, &encode.len);
+    ASSERT_EQ(ret, BSL_INVALID_ARG);
+    ret = BSL_ASN1_EncodeTemplate(&templ, &nullBuff, 1, &encode.buff, &encode.len);
     ASSERT_EQ(ret, BSL_INVALID_ARG);
 EXIT:
     BSL_SAL_FREE(decode.buff);

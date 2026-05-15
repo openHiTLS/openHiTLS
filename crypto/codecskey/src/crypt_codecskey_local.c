@@ -921,7 +921,7 @@ static int32_t ParseMlKemPrikeyAsn1Buff(CRYPT_EAL_LibCtx *libctx, const char *at
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = CRYPT_ML_KEM_PrvKeyValidCheck((CRYPT_ML_KEM_Ctx *)pctx->key);
+    ret = CRYPT_EAL_PkeyPrvCheck(pctx);
     if (ret != CRYPT_SUCCESS) {
         CRYPT_EAL_PkeyFreeCtx(pctx);
         BSL_ERR_PUSH_ERROR(ret);

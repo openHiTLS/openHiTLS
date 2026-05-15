@@ -1241,6 +1241,9 @@ static int32_t CheckAsnArr(BSL_ASN1_Buffer *asnArr, uint32_t arrNum)
 {
     int32_t ret;
     for (uint32_t i = 0; i < arrNum; i++) {
+        if (asnArr[i].len != 0 && asnArr[i].buff == NULL) {
+            return BSL_INVALID_ARG;
+        }
         if (asnArr[i].buff != NULL) {
             ret = CheckAsn(asnArr + i);
             if (ret != BSL_SUCCESS) {
