@@ -890,14 +890,14 @@ static int32_t FindIssuerByDer(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *c
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
-    if (issuerDerData.buff != NULL && issuerDerData.len > 0) {
-        ret = HITLS_X509_GetCertBySubjectDer(storeCtx, &issuerDerData, cert, issue, issueInTrust);
-        BSL_SAL_FREE(issuerDerData.buff);
-        if (ret != HITLS_PKI_SUCCESS) {
-            return ret;
-        }
+    if (issuerDerData.buff == NULL || issuerDerData.len == 0) {
+        BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND);
+        return HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND;
     }
-    return HITLS_PKI_SUCCESS;
+
+    ret = HITLS_X509_GetCertBySubjectDer(storeCtx, &issuerDerData, cert, issue, issueInTrust);
+    BSL_SAL_Free(issuerDerData.buff);
+    return ret;
 }
 #endif /* HITLS_PKI_X509_VFY_LOCATION */
 
@@ -1426,9 +1426,12 @@ static int32_t X509_VerifyExtKeyUsage(HITLS_X509_Cert *cert, uint16_t requiredKu
         }
     }
 
-    // ExtendedKeyUsage check
-    if (OidInList(ext->exKeyUsage.oidList, requiredEkuOids) == false) {
-        return HITLS_X509_ERR_VFY_PURPOSE_UNMATCH;
+    // ExtendedKeyUsage check: per RFC 5280 4.2.1.12, if EKU is absent the cert is
+    // acceptable for any purpose (subject to KU constraints checked above).
+    if ((ext->extFlags & HITLS_X509_EXT_FLAG_EXKUSAGE) != 0) {
+        if (OidInList(ext->exKeyUsage.oidList, requiredEkuOids) == false) {
+            return HITLS_X509_ERR_VFY_PURPOSE_UNMATCH;
+        }
     }
 
     return HITLS_PKI_SUCCESS;
@@ -1447,8 +1450,7 @@ static int32_t X509_VerifyUsageEE(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert
     BslCid eku = 0;
     int32_t purpose = storeCtx->verifyParam.purpose;
     HITLS_X509_CertExt *ext = (HITLS_X509_CertExt *)ee->tbs.ext.extData;
-    if (ext == NULL || (ext->extFlags & HITLS_X509_EXT_FLAG_EXKUSAGE) == 0 || purpose == 0 ||
-        purpose == HITLS_X509_VFY_PURPOSE_ANY) {
+    if (ext == NULL || purpose == 0 || purpose == HITLS_X509_VFY_PURPOSE_ANY) {
         return HITLS_PKI_SUCCESS;
     }
     switch (purpose) {
@@ -1529,6 +1531,11 @@ int32_t X509_VerifyChainCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
     if ((storeCtx->verifyParam.flags & HITLS_X509_VFY_FLAG_PARTIAL_CHAIN) != 0) {
         bool selfSigned = HITLS_X509_CheckIssued(issue, issue);
         if (!selfSigned && depth > 0) {
+            // The partial-chain trust anchor is not self-signed, but its validity period still applies.
+            ret = HITLS_X509_CheckCertTime(storeCtx, issue, depth, time);
+            if (ret != HITLS_PKI_SUCCESS) {
+                return ret;
+            }
             curNode = BSL_LIST_GetPrevNode(curNode);
             depth--;
         }

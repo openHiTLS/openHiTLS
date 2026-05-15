@@ -19,6 +19,9 @@ SDV_X509_STORE_VFY_CRL_FUNC_TC001:1:HITLS_X509_ERR_VFY_CERT_REVOKED:"../testdata
 SDV_X509_STORE_CTRL_FUNC_TC001
 SDV_X509_STORE_CTRL_FUNC_TC001:
 
+SDV_X509_STORE_CTRL_LONG_IPV6_HOST_TC001
+SDV_X509_STORE_CTRL_LONG_IPV6_HOST_TC001:
+
 SDV_X509_STORE_CTRL_CERT_FUNC_TC002
 SDV_X509_STORE_CTRL_CERT_FUNC_TC002:
 
@@ -184,6 +187,21 @@ SDV_X509_VFY_ANYEKU_EKU_ALLOW_KU_MATCH_PASS_TC05:
 SDV_X509_VFY_ANYEKU_KU_MISSING_FAIL_TC06
 SDV_X509_VFY_ANYEKU_KU_MISSING_FAIL_TC06:
 
+SDV_X509_VFY_KU_NOEKU_PURPOSE_TC001 KU=digitalSignature no EKU TLS_SERVER pass
+SDV_X509_VFY_KU_NOEKU_PURPOSE_TC001:"../testdata/cert/chain/ku_noeku_suite/ku_good_noeku.der":HITLS_X509_VFY_PURPOSE_TLS_SERVER:HITLS_PKI_SUCCESS
+
+SDV_X509_VFY_KU_NOEKU_PURPOSE_TC001 KU=keyCertSign no EKU TLS_SERVER fail
+SDV_X509_VFY_KU_NOEKU_PURPOSE_TC001:"../testdata/cert/chain/ku_noeku_suite/ku_bad_noeku.der":HITLS_X509_VFY_PURPOSE_TLS_SERVER:HITLS_X509_ERR_VFY_PURPOSE_UNMATCH
+
+SDV_X509_VFY_KU_NOEKU_PURPOSE_TC001 KU=digitalSignature no EKU TLS_CLIENT pass
+SDV_X509_VFY_KU_NOEKU_PURPOSE_TC001:"../testdata/cert/chain/ku_noeku_suite/ku_good_noeku.der":HITLS_X509_VFY_PURPOSE_TLS_CLIENT:HITLS_PKI_SUCCESS
+
+SDV_X509_VFY_KU_NOEKU_PURPOSE_TC001 KU=keyCertSign no EKU TLS_CLIENT fail
+SDV_X509_VFY_KU_NOEKU_PURPOSE_TC001:"../testdata/cert/chain/ku_noeku_suite/ku_bad_noeku.der":HITLS_X509_VFY_PURPOSE_TLS_CLIENT:HITLS_X509_ERR_VFY_PURPOSE_UNMATCH
+
+SDV_X509_VFY_KU_NOEKU_PURPOSE_TC001 no KU no EKU TLS_SERVER pass
+SDV_X509_VFY_KU_NOEKU_PURPOSE_TC001:"../testdata/cert/chain/ku_noeku_suite/ku_none_noeku.der":HITLS_X509_VFY_PURPOSE_TLS_SERVER:HITLS_PKI_SUCCESS
+
 SDV_X509_VFY_CERT_TIME_CURRENT_PASS_TC001
 SDV_X509_VFY_CERT_TIME_CURRENT_PASS_TC001:
 
@@ -289,6 +307,9 @@ SDV_X509_VFY_CHAIN_LOOP_DEPTH_FAIL_TC001:
 SDV_X509_PARTIAL_CERT_VFY_FUNC_TC001
 SDV_X509_PARTIAL_CERT_VFY_FUNC_TC001:"../testdata/cert/chain/rsa-pss-v3/ca.der":"../testdata/cert/chain/rsa-pss-v3/inter.der":"../testdata/cert/chain/rsa-pss-v3/end.der"
 
+SDV_X509_PARTIAL_CERT_VFY_FUNC_TC006
+SDV_X509_PARTIAL_CERT_VFY_FUNC_TC006:"../testdata/cert/chain/partial_time/inter_future.pem":"../testdata/cert/chain/partial_time/leaf.pem"
+
 SDV_X509_PARTIAL_CERT_VFY_FUNC_TC002
 SDV_X509_PARTIAL_CERT_VFY_FUNC_TC002:"../testdata/cert/chain/rsa-pss-v3/ca.der":"../testdata/cert/chain/rsa-pss-v3/inter.der":"../testdata/cert/chain/rsa-pss-v3/end.der"
 
@@ -327,6 +348,9 @@ SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset
 
 SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001 mix charset user cert with error aki
 SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8":"../testdata/cert/chain/charset/convert_to_utf8/user_err_aki.der":HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND
+
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001 empty issuer DN
+SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/convert_to_utf8":"../testdata/cert/asn1/certcheck/certnodnname.der":HITLS_X509_ERR_ISSUE_CERT_NOT_FOUND
 
 SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001 Standardization of content:CA paths
 SDV_X509_CA_PATH_WITH_VARIOUS_CHARSET_FUNC_TC001:"../testdata/cert/chain/charset/string_canon":"../testdata/cert/chain/charset/string_canon/user_string_canon.crt":HITLS_PKI_SUCCESS
