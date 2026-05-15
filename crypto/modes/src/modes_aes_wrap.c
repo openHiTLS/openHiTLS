@@ -19,6 +19,8 @@
 #include "securec.h"
 #include "bsl_err_internal.h"
 #include "bsl_sal.h"
+#include "bsl_bytes.h"
+#include "eal_cipher_local.h"
 #include "crypt_utils.h"
 #include "crypt_errno.h"
 #include "crypt_modes_aes_wrap.h"
@@ -135,8 +137,8 @@ static int32_t WRAP_Decrypt(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint8_t
     if (ctx->flagPad != false) {  // In pad mode, aiv not NULL.
         (void)memcpy_s(aiv, CRYPT_WRAP_BLOCKSIZE, decBuf, CRYPT_WRAP_BLOCKSIZE);
         ret = CRYPT_SUCCESS;
-    } else if (memcmp(ctx->iv, decBuf, CRYPT_WRAP_BLOCKSIZE) != 0) {
-        (void)memset_s(out, outLen, 0, outLen);
+    } else if (ConstTimeMemcmp(ctx->iv, decBuf, CRYPT_WRAP_BLOCKSIZE) == 0) {
+        BSL_SAL_CleanseData(out, outLen);
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_WRAP_DEC_ERROR);
         ret = CRYPT_MODES_WRAP_DEC_ERROR;
     }
@@ -186,7 +188,7 @@ static int32_t DecryptResultGetLen(MODES_CipherWRAPCtx *ctx, uint8_t *plaintext,
     uint32_t inLen, uint32_t *outLen)
 {
     uint8_t zeroBuf[CRYPT_WRAP_BLOCKSIZE] = { 0 };
-    if (memcmp(aiv, ctx->iv, CRYPT_WRAP_AIV_SIZE) != 0) {
+    if (ConstTimeMemcmp(aiv, ctx->iv, CRYPT_WRAP_AIV_SIZE) == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_WRAP_DEC_ERROR);
         return CRYPT_MODES_WRAP_DEC_ERROR;
     }
@@ -198,7 +200,7 @@ static int32_t DecryptResultGetLen(MODES_CipherWRAPCtx *ctx, uint8_t *plaintext,
         return CRYPT_MODES_WRAP_DEC_ERROR;
     }
 
-    if (memcmp(plaintext + plaintextLen, zeroBuf, padLen - plaintextLen) != 0) {
+    if (ConstTimeMemcmp(plaintext + plaintextLen, zeroBuf, padLen - plaintextLen) == 0) {
         BSL_ERR_PUSH_ERROR(CRYPT_MODES_WRAP_DEC_ERROR);
         return CRYPT_MODES_WRAP_DEC_ERROR;
     }
@@ -246,14 +248,14 @@ int32_t MODE_WRAP_Encrypt(MODES_CipherWRAPCtx *ctx, const uint8_t *in, uint8_t *
     }
     int32_t ret;
     if (ctx->flagPad == false) {    // No padding
-        if (*outLen < inLen + CRYPT_WRAP_BLOCKSIZE) {
+        if ((uint64_t)*outLen < (uint64_t)inLen + CRYPT_WRAP_BLOCKSIZE) {
             BSL_ERR_PUSH_ERROR(CRYPT_MODE_BUFF_LEN_NOT_ENOUGH);
             return CRYPT_MODE_BUFF_LEN_NOT_ENOUGH;
         }
         (void)memmove_s(out + CRYPT_WRAP_BLOCKSIZE, *outLen - CRYPT_WRAP_BLOCKSIZE, in, inLen);
         ret = WRAP_Encrypt(ctx, out, inLen, ctx->iv);
         if (ret != CRYPT_SUCCESS) {
-            (void)memset_s(out, *outLen, 0, *outLen);  // Erasing sensitive information.
+            BSL_SAL_CleanseData(out, *outLen);  // Erasing sensitive information.
             return ret;
         }
         *outLen = inLen + CRYPT_WRAP_BLOCKSIZE;

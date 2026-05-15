@@ -2098,3 +2098,58 @@ EXIT:
 #endif
 }
 /* END_CASE */
+
+/**
+ * @test SDV_CRYPT_EAL_PROVIDER_DECODE_BUFF_KEY_ALGID_TC001
+ * @title Test CRYPT_EAL_ProviderDecodeBuffKey with mismatched pkeyAlgId
+ * @precon None
+ * @brief
+ *    1. Read key file into buffer
+ *    2. Decode with mismatched pkeyAlgId, expect CRYPT_EAL_ERR_ALGID
+ *    3. Decode with BSL_CID_UNKNOWN (no alg check), expect success
+ */
+/* BEGIN_CASE */
+void SDV_CRYPT_EAL_PROVIDER_DECODE_BUFF_KEY_ALGID_TC001(char *path, char *formatStr, char *typeStr,
+    int mismatchedAlgId, int correctAlgId)
+{
+#ifndef HITLS_CRYPTO_PROVIDER
+    (void)path;
+    (void)formatStr;
+    (void)typeStr;
+    (void)mismatchedAlgId;
+    (void)correctAlgId;
+    SKIP_TEST();
+#else
+    CRYPT_RandRegist(RandFunc);
+    CRYPT_RandRegistEx(RandFuncEx);
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+
+    ASSERT_EQ(BSL_SAL_ReadFile(path, &data, &dataLen), BSL_SUCCESS);
+    BSL_Buffer encode = {data, dataLen};
+
+    /* Step 1: Decode with mismatched pkeyAlgId, expect CRYPT_EAL_ERR_ALGID */
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, mismatchedAlgId, formatStr, typeStr, &encode,
+        NULL, &pkeyCtx), CRYPT_EAL_ERR_ALGID);
+    ASSERT_TRUE(pkeyCtx == NULL);
+
+    /* Step 2: Decode with BSL_CID_UNKNOWN (no alg check), expect success */
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, BSL_CID_UNKNOWN, formatStr, typeStr, &encode,
+        NULL, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(pkeyCtx != NULL);
+    ASSERT_EQ(CRYPT_EAL_PkeyGetId(pkeyCtx), correctAlgId);
+
+    /* Step 3: Decode with matching pkeyAlgId, expect success */
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    pkeyCtx = NULL;
+    ASSERT_EQ(CRYPT_EAL_ProviderDecodeBuffKey(NULL, NULL, correctAlgId, formatStr, typeStr, &encode,
+        NULL, &pkeyCtx), CRYPT_SUCCESS);
+    ASSERT_TRUE(pkeyCtx != NULL);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    BSL_SAL_FREE(data);
+#endif
+}
+/* END_CASE */

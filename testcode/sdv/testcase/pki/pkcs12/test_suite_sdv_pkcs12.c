@@ -941,12 +941,11 @@ EXIT:
  * For test encode authSafedata of correct data.
 */
 /* BEGIN_CASE */
-void SDV_PKCS12_ENCODE_MACDATA_TC001(Hex *buff, Hex *initData, Hex *expectData)
+void SDV_PKCS12_ENCODE_MACDATA_TC001(Hex *buff, Hex *initData)
 {
 #if !defined(HITLS_PKI_PKCS12_GEN) || !defined(HITLS_PKI_PKCS12_PARSE)
     (void)buff;
     (void)initData;
-    (void)expectData;
     SKIP_TEST();
 #else
     ASSERT_EQ(TestRandInit(), 0);
@@ -972,11 +971,16 @@ void SDV_PKCS12_ENCODE_MACDATA_TC001(Hex *buff, Hex *initData, Hex *expectData)
     hmacParam.saltLen = p12->macData->macSalt->dataLen;
     hmacParam.pwdLen = strlen(pwd);
     hmacParam.itCnt = 2048;
-
+    HITLS_PKCS12_MacData *macData = NULL;
     HITLS_PKCS12_MacParam macParam = {.para = &hmacParam, .algId = BSL_CID_PKCS12KDF};
     ASSERT_EQ(HITLS_PKCS12_EncodeMacData(p12, (BSL_Buffer *)initData, &macParam, &output), HITLS_PKI_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
-    ASSERT_EQ(memcmp(output.data, expectData->x, expectData->len), 0);
+    macData = HITLS_PKCS12_MacDataNew();
+    ASSERT_NE(macData, NULL);
+    ASSERT_EQ(HITLS_PKCS12_ParseMacData(&output, macData), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(macData->alg, hmacParam.macId);
+    ASSERT_EQ(macData->iteration, hmacParam.itCnt);
+    ASSERT_EQ(macData->macSalt->dataLen, hmacParam.saltLen);
     p12_1 = HITLS_PKCS12_New();
     ASSERT_NE(p12_1, NULL);
     hmacParam.itCnt = 999;
@@ -995,6 +999,7 @@ EXIT:
     BSL_SAL_Free(output1.data);
     HITLS_PKCS12_Free(p12);
     HITLS_PKCS12_Free(p12_1);
+    HITLS_PKCS12_MacDataFree(macData);
 #endif
 }
 /* END_CASE */

@@ -17,6 +17,7 @@
 #ifdef HITLS_CRYPTO_HMAC
 
 #include <stdlib.h>
+#include <string.h>
 #include "securec.h"
 #include "bsl_sal.h"
 #include "bsl_err_internal.h"
@@ -311,6 +312,7 @@ int32_t CRYPT_HMAC_SetParam(CRYPT_HMAC_Ctx *ctx, const BSL_Param *param)
 {
     const BSL_Param *temp = NULL;
     int32_t ret = CRYPT_HMAC_PARAM_ERROR;
+    char *attrBuf = NULL;
     if (ctx == NULL || param == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
@@ -320,10 +322,17 @@ int32_t CRYPT_HMAC_SetParam(CRYPT_HMAC_Ctx *ctx, const BSL_Param *param)
             BSL_ERR_PUSH_ERROR(CRYPT_HMAC_PARAM_ERROR);
             return CRYPT_HMAC_PARAM_ERROR;
         }
+        attrBuf = BSL_SAL_Malloc(temp->valueLen + 1);
+        if (attrBuf == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
+            return CRYPT_MEM_ALLOC_FAIL;
+        }
+        memcpy(attrBuf, temp->value, temp->valueLen);
+        attrBuf[temp->valueLen] = '\0';
         HmacFreeMdCtx(ctx);
-        GOTO_ERR_IF(HmacInitMdCtx(ctx, (const char *)temp->value), ret);
+        ret = HmacInitMdCtx(ctx, attrBuf);
+        BSL_SAL_Free(attrBuf);
     }
-ERR:
     return ret;
 }
 #endif // HITLS_CRYPTO_PROVIDER

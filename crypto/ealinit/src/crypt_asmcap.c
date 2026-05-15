@@ -203,6 +203,7 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
     // Step 2: BSL initialization (foundational layer, no dependencies)
     ret = BslModuleInit(initOpt);
     if (ret != CRYPT_SUCCESS) {
+        g_ealInitOpts &= ~CRYPT_EAL_INIT_CPU;
         return ret;
     }
 
@@ -212,6 +213,7 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
     ret = GlobalLockInit(initOpt);
     if (ret != CRYPT_SUCCESS) {
         BslModuleFree(initOpt);
+        g_ealInitOpts &= ~(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_BSL);
         return ret;
     }
 
@@ -220,6 +222,7 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
     if (ret != CRYPT_SUCCESS) {
         GlobalLockFree(initOpt);
         BslModuleFree(initOpt);
+        g_ealInitOpts &= ~(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_BSL | CRYPT_EAL_INIT_LOCK);
         return ret;
     }
 
@@ -230,6 +233,8 @@ int32_t CRYPT_EAL_Init(uint64_t opts)
         ProviderModuleFree(initOpt);
         GlobalLockFree(initOpt);
         BslModuleFree(initOpt);
+        g_ealInitOpts &= ~(CRYPT_EAL_INIT_CPU | CRYPT_EAL_INIT_BSL | CRYPT_EAL_INIT_LOCK |
+            CRYPT_EAL_INIT_PROVIDER | CRYPT_EAL_INIT_PROVIDER_RAND);
         return ret;
     }
 

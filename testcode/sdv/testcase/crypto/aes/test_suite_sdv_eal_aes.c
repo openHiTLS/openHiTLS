@@ -1562,3 +1562,65 @@ EXIT:
     BSL_SAL_Free(out);
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_AES_XTS_ENC_DEC_TC001(int algId, Hex *key, Hex *iv, Hex *ptA, Hex *ptB)
+{
+    if (IsAesAlgDisabled(algId)) {
+        SKIP_TEST();
+    }
+    uint8_t cipher[MAX_DATA_LEN] = {0};
+    uint32_t cipherLenA = 0;
+    uint32_t cipherLenB = 0;
+    uint32_t totalCipherLen = 0;
+    uint8_t plain[MAX_DATA_LEN] = {0};
+    uint32_t plainLenA = 0;
+    uint32_t plainLenB = 0;
+    uint32_t totalPlainLen = 0;
+    uint32_t finLen = 0;
+
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+    TestMemInit();
+
+    ASSERT_TRUE((ctx = CRYPT_EAL_CipherNewCtx(algId)) != NULL);
+
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, true), CRYPT_SUCCESS);
+
+    cipherLenA = MAX_DATA_LEN;
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, ptA->x, ptA->len, cipher, &cipherLenA), CRYPT_SUCCESS);
+    totalCipherLen += cipherLenA;
+
+    cipherLenB = MAX_DATA_LEN - totalCipherLen;
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, ptB->x, ptB->len, cipher + totalCipherLen, &cipherLenB), CRYPT_SUCCESS);
+    totalCipherLen += cipherLenB;
+
+    finLen = MAX_DATA_LEN - totalCipherLen;
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, cipher + totalCipherLen, &finLen), CRYPT_SUCCESS);
+    totalCipherLen += finLen;
+
+    CRYPT_EAL_CipherDeinit(ctx);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, iv->x, iv->len, false), CRYPT_SUCCESS);
+
+    plainLenA = MAX_DATA_LEN;
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, cipher, cipherLenA, plain, &plainLenA), CRYPT_SUCCESS);
+    totalPlainLen += plainLenA;
+
+    plainLenB = MAX_DATA_LEN - totalPlainLen;
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, cipher + cipherLenA, cipherLenB + finLen, plain + totalPlainLen, &plainLenB),
+        CRYPT_SUCCESS);
+    totalPlainLen += plainLenB;
+
+    finLen = MAX_DATA_LEN - totalPlainLen;
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, plain + totalPlainLen, &finLen), CRYPT_SUCCESS);
+    totalPlainLen += finLen;
+
+    ASSERT_COMPARE("AES decrypt ptA:", plain, plainLenA, ptA->x, ptA->len);
+    ASSERT_COMPARE("AES decrypt ptB:", plain + plainLenA, totalPlainLen - plainLenA, ptB->x, ptB->len);
+
+    CRYPT_EAL_CipherFreeCtx(ctx);
+    ctx = NULL;
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */

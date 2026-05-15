@@ -56,8 +56,8 @@ void *CRYPT_EAL_SmKdfNewCtxEx(CRYPT_EAL_SmProvCtx *provCtx, int32_t algId)
 
 static int32_t GetPbkdf2Params(const BSL_Param *param, CRYPT_EAL_Pbkdf2Param *pbkdf2Param)
 {
-    int32_t id;
-    uint32_t iter;
+    int32_t id = 0;
+    uint32_t iter = 0;
     uint32_t len;
     const BSL_Param *temp = NULL;
 
