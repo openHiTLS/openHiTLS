@@ -791,7 +791,7 @@ int32_t CRYPT_EAL_ProviderRandInitCtxInner(CRYPT_EAL_LibCtx *libCtx, int32_t alg
         BSL_ERR_PUSH_ERROR(CRYPT_EAL_ERR_DRBG_REPEAT_INIT);
         return CRYPT_EAL_ERR_DRBG_REPEAT_INIT;
     }
- 
+
     ctx = EAL_ProvRandInitDrbg(libCtx, algId, attrName, param);
     if (ctx == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_RAND, algId, CRYPT_EAL_ERR_DRBG_INIT_FAIL);
@@ -878,7 +878,6 @@ void CRYPT_EAL_RandDeinitEx(CRYPT_EAL_LibCtx *libCtx)
     }
     EAL_RandDeinit(localLibCtx->drbg);
     localLibCtx->drbg = NULL;
-    CRYPT_RandRegistEx(NULL);
     return;
 #else
     (void) libCtx;

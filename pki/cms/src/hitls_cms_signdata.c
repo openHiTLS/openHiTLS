@@ -1760,7 +1760,7 @@ static int32_t InitMdCtxForAlgs(CMS_SignedData *signedData, const BSL_Param *par
 }
 
 static int32_t CheckSignature(HITLS_X509_Asn1AlgId *alg, CRYPT_EAL_PkeyCtx *pubKey, int32_t hashId, uint8_t *msg,
-    uint32_t msgLen, uint8_t *signature, uint32_t signatureLen)
+    uint32_t msgLen, uint8_t *signature, uint32_t signatureLen, bool verifyByHash)
 {
     int32_t ret = HITLS_PKI_SUCCESS;
     CRYPT_EAL_PkeyCtx *verifyPubKey = CRYPT_EAL_PkeyDupCtx(pubKey);
@@ -1774,7 +1774,11 @@ static int32_t CheckSignature(HITLS_X509_Asn1AlgId *alg, CRYPT_EAL_PkeyCtx *pubK
         BSL_ERR_PUSH_ERROR(ret);
         return ret;
     }
-    ret = CRYPT_EAL_PkeyVerify(verifyPubKey, hashId, msg, msgLen, signature, signatureLen);
+    if (verifyByHash) {
+        ret = CRYPT_EAL_PkeyVerifyData(verifyPubKey, msg, msgLen, signature, signatureLen);
+    } else {
+        ret = CRYPT_EAL_PkeyVerify(verifyPubKey, hashId, msg, msgLen, signature, signatureLen);
+    }
     CRYPT_EAL_PkeyFreeCtx(verifyPubKey);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -1782,7 +1786,8 @@ static int32_t CheckSignature(HITLS_X509_Asn1AlgId *alg, CRYPT_EAL_PkeyCtx *pubK
     return ret;
 }
 
-static int32_t CheckSignerCert(HITLS_X509_Cert *cert, uint8_t *msg, uint32_t msgLen, CMS_SignerInfo *signerInfo)
+static int32_t CheckSignerCert(HITLS_X509_Cert *cert, uint8_t *msg, uint32_t msgLen, CMS_SignerInfo *signerInfo,
+    bool verifyByHash)
 {
     CRYPT_EAL_PkeyCtx *pubKey = NULL;
     // Obtaining the Public Key of the Certificate
@@ -1808,11 +1813,11 @@ static int32_t CheckSignerCert(HITLS_X509_Cert *cert, uint8_t *msg, uint32_t msg
             return ret;
         }
         ret = CheckSignature(&signerInfo->sigAlg, pubKey, signerInfo->digestAlg.id, data, dataLen,
-            signerInfo->sigValue.data, signerInfo->sigValue.dataLen);
+            signerInfo->sigValue.data, signerInfo->sigValue.dataLen, false);
         BSL_SAL_FREE(data);
     } else {
         ret = CheckSignature(&signerInfo->sigAlg, pubKey, signerInfo->digestAlg.id, msg, msgLen,
-            signerInfo->sigValue.data, signerInfo->sigValue.dataLen);
+            signerInfo->sigValue.data, signerInfo->sigValue.dataLen, verifyByHash);
     }
     CRYPT_EAL_PkeyFreeCtx(pubKey);
     return ret;
@@ -1862,7 +1867,7 @@ static int32_t CMS_AttrDecodeContentType(HITLS_X509_AttrEntry *attr, void *out)
 static int32_t CMS_DecodeAttr(HITLS_X509_Attrs *attrs, BslCid attrCid, CMS_AttrDecoder attrDecode, void *out)
 {
     for (BslListNode *attrNode = BSL_LIST_FirstNode(attrs->list); attrNode != NULL;
-         attrNode = BSL_LIST_GetNextNode(attrs->list, attrNode)) {
+        attrNode = BSL_LIST_GetNextNode(attrs->list, attrNode)) {
         HITLS_X509_AttrEntry *node = (HITLS_X509_AttrEntry *)BSL_LIST_GetData(attrNode);
         if (node->cid == attrCid) {
             return attrDecode(node, out);
@@ -1937,7 +1942,7 @@ static int32_t BuildCertChain(HITLS_X509_List **chain, HITLS_X509_Cert *deviceCe
     }
 
     for (BslListNode *certNode = BSL_LIST_FirstNode(untrustCerts); certNode != NULL;
-         certNode = BSL_LIST_GetNextNode(untrustCerts, certNode)) {
+        certNode = BSL_LIST_GetNextNode(untrustCerts, certNode)) {
         HITLS_X509_Cert *cert = (HITLS_X509_Cert *)BSL_LIST_GetData(certNode);
         ret = HITLS_CMS_AddCert(chain, cert);
         if (ret != HITLS_PKI_SUCCESS) {
@@ -1973,7 +1978,7 @@ static int32_t CheckCertIsValid(HITLS_X509_Cert *deviceCert, HITLS_X509_List *p7
         }
     }
     for (BslListNode *certNode = BSL_LIST_FirstNode(verifyParam->caCerts); certNode != NULL;
-         certNode = BSL_LIST_GetNextNode(verifyParam->caCerts, certNode)) {
+        certNode = BSL_LIST_GetNextNode(verifyParam->caCerts, certNode)) {
         HITLS_X509_Cert *cert = (HITLS_X509_Cert *)BSL_LIST_GetData(certNode);
         ret = HITLS_X509_StoreCtxCtrl(storeCtx, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, cert, 0);
         if (ret != HITLS_PKI_SUCCESS) {
@@ -2000,8 +2005,8 @@ ERR:
     return ret;
 }
 
-static int32_t VerifyCertChainAndSignature(HITLS_X509_Cert *cert, CMS_SignedData *sigData,
-    BSL_Buffer *msgBuff, CMS_SignerInfo *signerInfo, ChainVerifyParam *verifyParam)
+static int32_t VerifyCertChainAndSignature(HITLS_X509_Cert *cert, CMS_SignedData *sigData, BSL_Buffer *msgBuff,
+    CMS_SignerInfo *signerInfo, ChainVerifyParam *verifyParam, bool verifyByHash)
 {
     int ret = IsCertMatchingSignerInfo(cert, signerInfo);
     if (ret != HITLS_PKI_SUCCESS) {
@@ -2013,18 +2018,18 @@ static int32_t VerifyCertChainAndSignature(HITLS_X509_Cert *cert, CMS_SignedData
         return ret;
     }
 
-    return CheckSignerCert(cert, msgBuff->data, msgBuff->dataLen, signerInfo);
+    return CheckSignerCert(cert, msgBuff->data, msgBuff->dataLen, signerInfo, verifyByHash);
 }
 
 static int32_t VerifySignedDataFromList(HITLS_X509_List *certList, CMS_SignedData *sigData, BSL_Buffer *msgBuff,
-    CMS_SignerInfo *signerInfo, ChainVerifyParam *verifyParam)
+    CMS_SignerInfo *signerInfo, ChainVerifyParam *verifyParam, bool verifyByHash)
 {
     int32_t ret = HITLS_CMS_ERR_CERT_NOT_MATCH_SIGNERINFO;
 
     for (BslListNode *certNode = BSL_LIST_FirstNode(certList); certNode != NULL;
         certNode = BSL_LIST_GetNextNode(certList, certNode)) {
         HITLS_X509_Cert *cert = (HITLS_X509_Cert *)BSL_LIST_GetData(certNode);
-        ret = VerifyCertChainAndSignature(cert, sigData, msgBuff, signerInfo, verifyParam);
+        ret = VerifyCertChainAndSignature(cert, sigData, msgBuff, signerInfo, verifyParam, verifyByHash);
         if (ret == HITLS_PKI_SUCCESS || ret != HITLS_CMS_ERR_CERT_NOT_MATCH_SIGNERINFO) {
             return ret;
         }
@@ -2034,14 +2039,16 @@ static int32_t VerifySignedDataFromList(HITLS_X509_List *certList, CMS_SignedDat
 }
 
 static int32_t VerifySignedData(CMS_SignedData *sigData, BSL_Buffer *msgBuff, CMS_SignerInfo *signerInfo,
-    ChainVerifyParam *verifyParam)
+    ChainVerifyParam *verifyParam, bool verifyByHash)
 {
-    int32_t ret = VerifySignedDataFromList(sigData->certs, sigData, msgBuff, signerInfo, verifyParam);
+    int32_t ret = VerifySignedDataFromList(sigData->certs, sigData, msgBuff, signerInfo, verifyParam,
+        verifyByHash);
     if (ret == HITLS_PKI_SUCCESS || ret != HITLS_CMS_ERR_CERT_NOT_MATCH_SIGNERINFO) {
         return ret;
     }
     // if cms has no matched certs, try to find in untrustCerts.
-    ret = VerifySignedDataFromList(verifyParam->untrustCerts, sigData, msgBuff, signerInfo, verifyParam);
+    ret = VerifySignedDataFromList(verifyParam->untrustCerts, sigData, msgBuff, signerInfo, verifyParam,
+        verifyByHash);
     if (ret == HITLS_PKI_SUCCESS || ret != HITLS_CMS_ERR_CERT_NOT_MATCH_SIGNERINFO) {
         return ret;
     }
@@ -2054,9 +2061,9 @@ static int32_t CheckSignerInfoAttrs(CMS_SignedData *sigData, CMS_SignerInfo *si,
     if (si->signedAttrs == NULL || BSL_LIST_COUNT(si->signedAttrs->list) == 0) {
         return HITLS_PKI_SUCCESS;
     }
-    int32_t ret = HITLS_PKI_SUCCESS;
+
     BslCid cid = BSL_CID_UNKNOWN;
-    ret = CMS_DecodeAttr(si->signedAttrs, BSL_CID_PKCS9_AT_CONTENTTYPE, CMS_AttrDecodeContentType, &cid);
+    int32_t ret = CMS_DecodeAttr(si->signedAttrs, BSL_CID_PKCS9_AT_CONTENTTYPE, CMS_AttrDecodeContentType, &cid);
     if (ret != HITLS_PKI_SUCCESS) {
         return ret;
     }
@@ -2120,7 +2127,7 @@ static int32_t VerifySignerInfo(CMS_SignedData *sigData, CMS_SignerInfo *si, BSL
         return ret;
     }
 
-    return VerifySignedData(sigData, msgBuff, si, verifyParam);
+    return VerifySignedData(sigData, msgBuff, si, verifyParam, false);
 }
 
 // Validate and get message content for verification
@@ -2495,7 +2502,6 @@ static int32_t SignedData_VerifyUpdate(HITLS_CMS *cms, const BSL_Buffer *msg)
 static int32_t VerifyAllSignerInfos(CMS_SignedData *signedData, ChainVerifyParam *verifyParam)
 {
     CMS_SignerInfos *signerInfos = signedData->signerInfos;
-    BSL_Buffer finalDataBuff = {0};
     if (signerInfos == NULL || BSL_LIST_COUNT(signerInfos) == 0) {
         BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_SIGNEDDATA_NO_SIGNERINFO);
         return HITLS_CMS_ERR_SIGNEDDATA_NO_SIGNERINFO;
@@ -2504,7 +2510,8 @@ static int32_t VerifyAllSignerInfos(CMS_SignedData *signedData, ChainVerifyParam
     for (BslListNode *siNode = BSL_LIST_FirstNode(signerInfos); siNode != NULL;
         siNode = BSL_LIST_GetNextNode(signerInfos, siNode)) {
         CMS_SignerInfo *si = (CMS_SignerInfo *)BSL_LIST_GetData(siNode);
-        if (si->signedAttrs == NULL || BSL_LIST_COUNT(si->signedAttrs->list) == 0) {
+        bool hasSignedAttr = (si->signedAttrs != NULL && BSL_LIST_COUNT(si->signedAttrs->list) > 0);
+        if (!hasSignedAttr) {
             if (signedData->encapCont.contentType != BSL_CID_PKCS7_SIMPLEDATA) {
                 BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_ENCAPCONT_TYPE);
                 return HITLS_CMS_ERR_ENCAPCONT_TYPE;
@@ -2529,8 +2536,7 @@ static int32_t VerifyAllSignerInfos(CMS_SignedData *signedData, ChainVerifyParam
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
         }
-
-        ret = VerifySignedData(signedData, &finalDataBuff, si, verifyParam);
+        ret = VerifySignedData(signedData, &hashBuff, si, verifyParam, !hasSignedAttr);
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
         }

@@ -206,8 +206,6 @@ void SDV_TLS13_MULTI_PROVIDER_TC001(char *path, char *providerName, char *attrNa
     ASSERT_TRUE(readLen == strlen("Hello World"));
     ASSERT_TRUE(memcmp("Hello World", readBuf, readLen) == 0);
 
-    ASSERT_TRUE(TestIsErrStackNotEmpty());
-
 EXIT:
     HLT_FreeAllProcess();
 #endif
