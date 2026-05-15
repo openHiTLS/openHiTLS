@@ -402,6 +402,10 @@ int32_t ECP_Sm2OrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a)
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_DIVISOR_ZERO);
         return CRYPT_BN_ERR_DIVISOR_ZERO;
     }
+    if (BN_Cmp(para->n, a) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_NO_INVERSE);
+        return CRYPT_BN_ERR_NO_INVERSE;
+    }
     int32_t ret = BN_Extend(r, SM2_LIMBS);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

@@ -1054,3 +1054,219 @@ EXIT:
     TestRandDeInit();
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECC_MODORDERINV_EQUAL_ORDER_TC001
+ * @brief  ECC_ModOrderInv with input equal to the curve order N; verify ECP_Sm2OrderInv detects a==N and returns error.
+ * @expect Returns CRYPT_BN_ERR_NO_INVERSE (no inverse exists for N mod N == 0).
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECC_MODORDERINV_EQUAL_ORDER_TC001(int paraId)
+{
+    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ECC_Para *para = ECC_NewPara(paraId);
+    ASSERT_TRUE(para != NULL);
+    BN_BigNum *N = ECC_GetParaN(para);
+    ASSERT_TRUE(N != NULL);
+
+    BN_BigNum *r = BN_Create(0);
+    ASSERT_TRUE(r != NULL);
+    ASSERT_EQ(BN_Copy(r, N), CRYPT_SUCCESS);
+    int32_t ret = ECC_ModOrderInv(para, r, N);
+    ASSERT_EQ(ret, CRYPT_BN_ERR_NO_INVERSE);
+
+EXIT:
+    ECC_FreePara(para);
+    BN_Destroy(N);
+    BN_Destroy(r);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECC_MUL_INFINITY_POINT_TC001
+ * @brief  Compute 0*G to produce the point at infinity, then verify point operations do not hang.
+ * @expect 0*G is at infinity; ECC_GetPoint returns CRYPT_ECC_POINT_AT_INFINITY without hanging.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECC_MUL_INFINITY_POINT_TC001(int paraId)
+{
+    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ECC_Para *para = ECC_NewPara(paraId);
+    ASSERT_TRUE(para != NULL);
+    BN_BigNum *zero = BN_Create(0);
+    ASSERT_TRUE(zero != NULL);
+
+    ECC_Point *inf = ECC_NewPoint(para);
+    ASSERT_TRUE(inf != NULL);
+    ASSERT_EQ(ECC_PointMul(para, inf, zero, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(ECP_PointAtInfinity(para, inf), CRYPT_ECC_POINT_AT_INFINITY);
+
+    CRYPT_Data x = {0};
+    CRYPT_Data y = {0};
+    uint8_t xBuf[ECC_MAX_BIT_LEN / 8 + 1];
+    uint8_t yBuf[ECC_MAX_BIT_LEN / 8 + 1];
+    x.data = xBuf;
+    x.len = sizeof(xBuf);
+    y.data = yBuf;
+    y.len = sizeof(yBuf);
+    ASSERT_EQ(ECC_GetPoint(para, inf, &x, &y), CRYPT_ECC_POINT_AT_INFINITY);
+
+EXIT:
+    ECC_FreePara(para);
+    ECC_FreePoint(inf);
+    BN_Destroy(zero);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECC_MULADD_INFINITY_POINT_TC001
+ * @brief  ECC_PointMulAdd with k2=0 produces infinity; verify ECC_GetPoint does not hang.
+ * @expect k1*G + 0*pt = k1*G is a valid point (not infinity).
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECC_MULADD_INFINITY_POINT_TC001(int paraId)
+{
+    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ECC_Para *para = ECC_NewPara(paraId);
+    ASSERT_TRUE(para != NULL);
+    BN_BigNum *N = ECC_GetParaN(para);
+    ASSERT_TRUE(N != NULL);
+    ECC_Point *G = ECC_GetGFromPara(para);
+    ASSERT_TRUE(G != NULL);
+    BN_BigNum *k1 = BN_Create(0);
+    BN_BigNum *k2 = BN_Create(0);
+    ASSERT_TRUE(k1 != NULL);
+    ASSERT_TRUE(k2 != NULL);
+    ASSERT_EQ(BN_Bin2Bn(k1, (const uint8_t *)"\x02", 1), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Zeroize(k2), CRYPT_SUCCESS);
+
+    ECC_Point *r = ECC_NewPoint(para);
+    ASSERT_TRUE(r != NULL);
+    ASSERT_EQ(ECC_PointMulAdd(para, r, k1, k2, G), CRYPT_SUCCESS);
+
+    CRYPT_Data x = {0};
+    CRYPT_Data y = {0};
+    uint8_t xBuf[ECC_MAX_BIT_LEN / 8 + 1];
+    uint8_t yBuf[ECC_MAX_BIT_LEN / 8 + 1];
+    x.data = xBuf;
+    x.len = sizeof(xBuf);
+    y.data = yBuf;
+    y.len = sizeof(yBuf);
+    ASSERT_EQ(ECC_GetPoint(para, r, &x, &y), CRYPT_SUCCESS);
+
+EXIT:
+    ECC_FreePara(para);
+    ECC_FreePoint(G);
+    ECC_FreePoint(r);
+    BN_Destroy(k1);
+    BN_Destroy(k2);
+    BN_Destroy(N);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECC_POINTADD_INFINITY_POINT_TC001
+ * @brief  ECC_PointAddAffine with an infinity input point returns the other point without hanging.
+ * @expect Adding infinity to a valid point returns the valid point.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECC_POINTADD_INFINITY_POINT_TC001(int paraId)
+{
+    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ECC_Para *para = ECC_NewPara(paraId);
+    ASSERT_TRUE(para != NULL);
+    BN_BigNum *zero = BN_Create(0);
+    BN_BigNum *k = BN_Create(0);
+    ASSERT_TRUE(zero != NULL);
+    ASSERT_TRUE(k != NULL);
+    ASSERT_EQ(BN_Bin2Bn(k, (const uint8_t *)"\x02", 1), CRYPT_SUCCESS);
+
+    ECC_Point *P = ECC_NewPoint(para);
+    ECC_Point *inf = ECC_NewPoint(para);
+    ECC_Point *result = ECC_NewPoint(para);
+    ASSERT_TRUE(P != NULL);
+    ASSERT_TRUE(inf != NULL);
+    ASSERT_TRUE(result != NULL);
+    ASSERT_EQ(ECC_PointMul(para, P, k, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(ECC_PointMul(para, inf, zero, NULL), CRYPT_SUCCESS);
+    ASSERT_EQ(ECP_PointAtInfinity(para, inf), CRYPT_ECC_POINT_AT_INFINITY);
+
+    ASSERT_EQ(ECC_PointAddAffine(para, result, inf, P), CRYPT_SUCCESS);
+    ASSERT_EQ(ECP_PointAtInfinity(para, result), CRYPT_SUCCESS);
+
+EXIT:
+    ECC_FreePara(para);
+    ECC_FreePoint(P);
+    ECC_FreePoint(inf);
+    ECC_FreePoint(result);
+    BN_Destroy(zero);
+    BN_Destroy(k);
+    TestRandDeInit();
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_ECC_MULADD_INFINITY_RESULT_TC001
+ * @brief  ECC_PointMulAdd with k1=1, k2=N-1, pt=G produces infinity (z=0); verify PointToAffineCore handles infinity without hang.
+ * @expect ECC_PointMulAdd returns CRYPT_SUCCESS.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ECC_MULADD_INFINITY_RESULT_TC001(int paraId)
+{
+    if (IsCurveDisabled(paraId) && paraId != CRYPT_ECC_SM2) {
+        SKIP_TEST();
+    }
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    ECC_Para *para = ECC_NewPara(paraId);
+    ASSERT_TRUE(para != NULL);
+    BN_BigNum *N = ECC_GetParaN(para);
+    ASSERT_TRUE(N != NULL);
+    ECC_Point *G = ECC_GetGFromPara(para);
+    ASSERT_TRUE(G != NULL);
+
+    BN_BigNum *k1 = BN_Create(0);
+    BN_BigNum *k2 = BN_Create(0);
+    BN_BigNum *one = BN_Create(0);
+    ASSERT_TRUE(k1 != NULL);
+    ASSERT_TRUE(k2 != NULL);
+    ASSERT_TRUE(one != NULL);
+    ASSERT_EQ(BN_Bin2Bn(k1, (const uint8_t *)"\x01", 1), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Bin2Bn(one, (const uint8_t *)"\x01", 1), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Copy(k2, N), CRYPT_SUCCESS);
+    ASSERT_EQ(BN_Sub(k2, k2, one), CRYPT_SUCCESS);
+
+    ECC_Point *r = ECC_NewPoint(para);
+    ASSERT_TRUE(r != NULL);
+    ASSERT_EQ(ECC_PointMulAdd(para, r, k1, k2, G), CRYPT_SUCCESS);
+
+EXIT:
+    ECC_FreePara(para);
+    ECC_FreePoint(G);
+    ECC_FreePoint(r);
+    BN_Destroy(N);
+    BN_Destroy(k1);
+    BN_Destroy(k2);
+    BN_Destroy(one);
+    TestRandDeInit();
+}
+/* END_CASE */
