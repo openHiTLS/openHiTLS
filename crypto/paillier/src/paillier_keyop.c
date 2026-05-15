@@ -155,6 +155,10 @@ static int32_t SetPubBasicCheck(const CRYPT_PAILLIER_Ctx *ctx, const CRYPT_Paill
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    if (pub->nLen > PAILLIER_MAX_MODULUS_BITS / 8) {
+        BSL_ERR_PUSH_ERROR(CRYPT_PAILLIER_ERR_KEY_BITS);
+        return CRYPT_PAILLIER_ERR_KEY_BITS;
+    }
     return CRYPT_SUCCESS;
 }
 

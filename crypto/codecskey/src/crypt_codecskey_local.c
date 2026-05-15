@@ -1882,7 +1882,9 @@ static int32_t EncodeCurve25519PrikeyAsn1Buff(CRYPT_EAL_PkeyCtx *ealPriKey, BSL_
     BSL_ASN1_TemplateItem octStr[] = {{BSL_ASN1_TAG_OCTETSTRING, 0, 0}};
     BSL_ASN1_Template templ = {octStr, 1};
     BSL_ASN1_Buffer prvAsn1 = {BSL_ASN1_TAG_OCTETSTRING, prv.key.curve25519Prv.len, prv.key.curve25519Prv.data};
-    return BSL_ASN1_EncodeTemplate(&templ, &prvAsn1, 1, &bitStr->data, &bitStr->dataLen);
+    ret = BSL_ASN1_EncodeTemplate(&templ, &prvAsn1, 1, &bitStr->data, &bitStr->dataLen);
+    BSL_SAL_CleanseData(keyBuff, sizeof(keyBuff));
+    return ret;
 }
 #endif // HITLS_CRYPTO_ED25519 || HITLS_CRYPTO_X25519
 

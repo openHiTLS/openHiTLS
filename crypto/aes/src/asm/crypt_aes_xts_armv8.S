@@ -926,7 +926,7 @@ AARCH64_PACIASP
 
     b.hs .Lxts_dec_rounds_5blks
     add LTMP,LTMP,#80      // add 5 blocks length back if LTMP < 0
-    cbz LTMP, .Lxts_dec_pre_last_secondblks
+    cbz LTMP, .Lxts_dec_check_tail
     cmp LTMP, #16
     b.eq .Lxts_dec_pre_last_1blks
     cmp LTMP,#32
@@ -941,6 +941,11 @@ AARCH64_PACIASP
     mov TWK2.16b, TWK0.16b  //save the last second tweak
     mov TWK0.16b, TWK1.16b  // use the last tweak
     b .Lxts_dec_proc_1blk
+.Lxts_dec_check_tail:
+    cbnz TAILNUM, .Lxts_dec_pre_last_secondblks
+    fmov TWX0,TWKD00  // reset already computed tweak
+    fmov TWX1,TWKD01
+    b .Lxts_aesdec_finish
 .Lxts_dec_pre_last_1blks:
     eor IN0.16b,IN0.16b,IN4.16b   //in0 = in0 ^ in41
     eor BLK0.16b,BLK0.16b,IN0.16b   // blk0 =  in0 ^ twk0 ^ in0 ^ in4
