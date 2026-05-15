@@ -129,7 +129,7 @@ static int32_t TestVectorRandom(uint8_t *r, uint32_t rLen)
         return CRYPT_CMVP_ERR_ALGO_SELFTEST;
     }
 
-    for (uint32_t i = 0; i < randLen; i++) {
+    for (uint32_t i = 0; i < rLen; i++) {
         r[i] = rand[i];
     }
     BSL_SAL_Free(rand);
