@@ -341,7 +341,8 @@ int32_t HITLS_CFG_GetSessionCacheMode(HITLS_Config *config, uint32_t *mode);
 
 /**
  * @ingroup hitls_session
- * @brief   Set the maximum number of sessions in the session cache.
+ * @brief   Set the maximum number of sessions in the session cache. When size is 0, it indicates that the session can
+ *          be cached without any restrictions.
  *
  * @param   config  [OUT] Config context.
  * @param   size [IN] Maximum number of sessions in the cache.

@@ -12,6 +12,7 @@
  * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
  * See the Mulan PSL v2 for more details.
  */
+#include <string.h>
 #include "hitls_build.h"
 #ifdef HITLS_TLS_HOST_CLIENT
 #if defined(HITLS_TLS_PROTO_TLS_BASIC) || defined(HITLS_TLS_PROTO_DTLS12)
@@ -410,6 +411,7 @@ static int32_t ParseServerIdentityHint(ParsePacket *pkt, ServerKeyExchangeMsg *m
 {
     uint16_t identityHintLen = 0;
     uint8_t *identityHint = NULL;
+    uint8_t *tempIdentityHint = NULL;
 
     int32_t ret = ParseTwoByteLengthField(pkt, &identityHintLen, &identityHint);
     if (ret == HITLS_PARSE_INVALID_MSG_LEN) {
@@ -425,11 +427,20 @@ static int32_t ParseServerIdentityHint(ParsePacket *pkt, ServerKeyExchangeMsg *m
     }
 
     if (identityHintLen != 0) {
+        tempIdentityHint = (uint8_t *)BSL_SAL_Calloc(identityHintLen + 1, sizeof(uint8_t));
+        if (tempIdentityHint == NULL) {
+            BSL_SAL_FREE(identityHint);
+            BSL_LOG_BINLOG_FIXLEN(
+                BINLOG_ID15085, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN, "Malloc fail", 0, 0, 0, 0);
+            return HITLS_MEMALLOC_FAIL;
+        }
+        memcpy(tempIdentityHint, identityHint, identityHintLen);
+        BSL_SAL_FREE(identityHint);
         BSL_LOG_BINLOG_VARLEN(BINLOG_ID15324, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
-            "receive server identity hint: %s.", identityHint);
+            "receive server identity hint: %s.", tempIdentityHint);
     }
 
-    msg->pskIdentityHint = identityHint;
+    msg->pskIdentityHint = tempIdentityHint;
     msg->hintSize = identityHintLen;
 
     return HITLS_SUCCESS;

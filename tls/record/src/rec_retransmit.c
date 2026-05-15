@@ -118,14 +118,20 @@ int32_t REC_RetransmitListFlush(TLS_Ctx *ctx)
     int32_t ret = HITLS_SUCCESS;
     ListHead *head = NULL;
     ListHead *tmpHead = NULL;
+    bool isSendCcsMsg = false;
     LIST_FOR_EACH_ITEM_SAFE(head, tmpHead, &(retransmitList->head)) {
         retransmitNode = LIST_ENTRY(head, RecRetransmitList, head);
         /* UDP does not fail to send. Therefore, the sending failure case does not need to be considered. */
         ret = WriteSingleRetransmitNode(ctx, retransmitNode->type, retransmitNode->msg, retransmitNode->len);
         if (ret != HITLS_SUCCESS) {
+            if (!isSendCcsMsg && retransmitList->isExistCcsMsg == true) {
+                REC_DeActiveOutdatedWriteState(ctx);
+            }
+
             return ret;
         }
         if (retransmitNode->type == REC_TYPE_CHANGE_CIPHER_SPEC) {
+            isSendCcsMsg = true;
             REC_DeActiveOutdatedWriteState(ctx);
         }
     }

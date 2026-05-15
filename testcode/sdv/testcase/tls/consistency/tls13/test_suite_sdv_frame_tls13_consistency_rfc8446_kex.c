@@ -1098,7 +1098,7 @@ void UT_TLS_TLS13_RFC8446_CONSISTENCY_SECOND_GROUP_SUPPORT_FUNC_TC001()
     ASSERT_TRUE(serverTlsCtx->state == CM_STATE_TRANSPORTING);
 
     ASSERT_TRUE(TestIsErrStackEmpty());
-    
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);
@@ -5012,7 +5012,90 @@ void UT_TLS13_RFC8446_RECV_MUTI_CCS_TC001()
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
 
     ASSERT_TRUE(TestIsErrStackEmpty());
-    
+
+EXIT:
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+// The server sends an HTTP request without the key_share extension but with the cookie extension, expecting the client
+// to resend the client hello.
+/* BEGIN_CASE */
+void UT_TLS_TLS13_RFC8446_CONSISTENCY_HRR_EXTENSION_NO_KEYSHARE_FUNC_TC003()
+{
+    FRAME_Init();
+
+    HITLS_Config *tlsConfig = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(tlsConfig != NULL);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
+    const uint16_t clientGroups[] = {HITLS_EC_GROUP_SECP384R1, HITLS_EC_GROUP_SECP521R1};
+    uint32_t clientGroupsSize = sizeof(clientGroups) / sizeof(uint16_t);
+    HITLS_CFG_SetGroups(&(clientTlsCtx->config.tlsConfig), clientGroups, clientGroupsSize);
+
+    const uint16_t groups[] = {HITLS_EC_GROUP_SECP521R1};
+    uint32_t groupsSize = sizeof(groups) / sizeof(uint16_t);
+    HITLS_CFG_SetGroups(&(serverTlsCtx->config.tlsConfig), groups, groupsSize);
+    /* Initialize the client and server to tls1.3, construct the scenario where the hrr message is sent and the hrr
+     * message does not carry the key_share extension */
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_RECV_CLIENT_HELLO) == HITLS_SUCCESS);
+
+    CONN_Deinit(serverTlsCtx);
+    // send hrr message
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ASSERT_TRUE(serverTlsCtx->hsCtx->state == TRY_SEND_CHANGE_CIPHER_SPEC);
+    // send sh message
+    ASSERT_EQ(HITLS_Accept(serverTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_TRUE(serverTlsCtx->hsCtx->state == TRY_RECV_CLIENT_HELLO);
+
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+    uint8_t *recvBuf = ioUserData->recMsg.msg;
+    uint32_t recvLen = ioUserData->recMsg.len;
+    FRAME_Msg serverFrameMsg = { 0 };
+    FRAME_Type serverFrameType = { 0 };
+    uint32_t serverParseLen = 0;
+    SetFrameType(&serverFrameType, HITLS_VERSION_TLS13, REC_TYPE_HANDSHAKE, SERVER_HELLO, HITLS_KEY_EXCH_ECDHE);
+    ASSERT_TRUE(FRAME_ParseMsg(&serverFrameType, recvBuf, recvLen, &serverFrameMsg, &serverParseLen) == HITLS_SUCCESS);
+
+    FRAME_ServerHelloMsg *serverMsg = &serverFrameMsg.body.hsMsg.body.serverHello;
+    serverMsg->keyShare.exState = MISSING_FIELD;
+    serverMsg->tls13Cookie.exState = ASSIGNED_FIELD;
+    serverMsg->tls13Cookie.exType.state = INITIAL_FIELD;
+    serverMsg->tls13Cookie.exType.data = 0x2cu;
+    serverMsg->tls13Cookie.exLen.state = INITIAL_FIELD;
+    serverMsg->tls13Cookie.exLen.data = 32u;
+    serverMsg->tls13Cookie.exDataLen.state = INITIAL_FIELD;
+    serverMsg->tls13Cookie.exDataLen.data = 32u;
+    serverMsg->tls13Cookie.exData.state = INITIAL_FIELD;
+    serverMsg->tls13Cookie.exData.size = 32;
+    serverMsg->tls13Cookie.exData.data = BSL_SAL_Calloc(32, sizeof(uint8_t));
+    uint8_t tls13Cookie[32] = {0};
+    uint32_t tls13CookieSize = 32;
+    memcpy(serverMsg->tls13Cookie.exData.data, tls13Cookie, tls13CookieSize);
+
+    uint32_t serverSendLen = MAX_RECORD_LENTH;
+    uint8_t serverSendBuf[MAX_RECORD_LENTH] = {0};
+    ASSERT_TRUE(FRAME_PackMsg(&serverFrameType, &serverFrameMsg, serverSendBuf, serverSendLen, &serverSendLen) == HITLS_SUCCESS);
+    ioUserData->recMsg.len = 0;
+    ASSERT_TRUE(FRAME_TransportRecMsg(client->io, serverSendBuf, serverSendLen) == HITLS_SUCCESS);
+    FRAME_CleanMsg(&serverFrameType, &serverFrameMsg);
+
+    // send ch message
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_SEND_CLIENT_HELLO);
+    // send ccs message
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_TRUE(clientTlsCtx->hsCtx->state == TRY_RECV_SERVER_HELLO);
+
 EXIT:
     HITLS_CFG_FreeConfig(tlsConfig);
     FRAME_FreeLink(client);

@@ -266,7 +266,7 @@ static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyEx
     uint16_t secondGroup = HITLS_NAMED_GROUP_BUTT;
     /* The keyShare has passed the verification when receiving the HRR */
     KeyShareParam *share = &ctx->hsCtx->kxCtx->keyExchParam.share;
-    if (ctx->hsCtx->haveHrr) {
+    if (ctx->hsCtx->haveHrr && ctx->negotiatedInfo.negotiatedGroup != 0) {
         /* If the value of group is not updated in the hello retry request, the system directly returns */
         if (share->group == ctx->negotiatedInfo.negotiatedGroup ||
             share->secondGroup == ctx->negotiatedInfo.negotiatedGroup) {

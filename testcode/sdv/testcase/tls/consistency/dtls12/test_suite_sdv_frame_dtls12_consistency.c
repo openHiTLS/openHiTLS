@@ -17,6 +17,7 @@
 #include "hs_cookie.h"
 #include "record.h"
 #include "sal_timeimpl.h"
+#include "alert.h"
 /* INCLUDE_BASE test_suite_sdv_frame_dtls12_consistency */
 /* END_HEADER */
 
@@ -427,7 +428,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC5246_MSGLENGTH_TOOLONG_TC003(int uioType)
     ASSERT_TRUE(testInfo.server->ssl->hsCtx->state == TRY_RECV_CERTIFICATE_VERIFY);
     bool isCcsRecv = testInfo.server->ssl->method.isRecvCCS(testInfo.server->ssl);
     ASSERT_TRUE(isCcsRecv == false);
- 
+
 EXIT:
     FRAME_CleanMsg(&frameType, &frameMsg);
     HITLS_CFG_FreeConfig(testInfo.config);
@@ -2440,7 +2441,7 @@ void UT_TLS_DTLS_CONSISTENCY_RFC6347_APPDATA_TC002(int uioType)
     ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
 
     ASSERT_TRUE(TestIsErrStackEmpty());
-    
+
 EXIT:
     HITLS_CFG_FreeConfig(testInfo.config);
     FRAME_FreeLink(testInfo.client);
@@ -3000,7 +3001,7 @@ void UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC001(int isNeedSleep, int clientState)
             ret = FRAME_TrasferMsgBetweenLink(client, server);
         }
         ASSERT_EQ(ret, HITLS_SUCCESS);
-        
+
         ASSERT_TRUE(TestIsErrStackEmpty());
     } else {
         ret = HITLS_DtlsProcessTimeout(client->ssl);
@@ -3043,7 +3044,7 @@ void UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC002()
 
     uint32_t sendFinishLen = 24;
     // construct finish message with DTLS header
-    uint8_t sendfinish[24] = {0x14, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 
+    uint8_t sendfinish[24] = {0x14, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c,
                               0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01};
     ASSERT_EQ(REC_Write(clientTlsCtx, REC_TYPE_HANDSHAKE, sendfinish, sendFinishLen), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
@@ -3051,7 +3052,7 @@ void UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC002()
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
     ASSERT_EQ(HITLS_Read(serverTlsCtx, readBuf, READ_BUF_SIZE, &readLen), HITLS_REC_NORMAL_IO_BUSY);
-    
+
     FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
     uint8_t *sndBuf = ioUserData->sndMsg.msg;
     uint32_t sndLen = ioUserData->sndMsg.len;
@@ -3106,11 +3107,11 @@ void UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC003()
 
     uint32_t sendFinishLen = 24;
     // construct finish message with DTLS header
-    uint8_t sendfinish[24] = {0x14, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 
+    uint8_t sendfinish[24] = {0x14, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c,
                               0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01};
     ASSERT_EQ(REC_Write(clientTlsCtx, REC_TYPE_HANDSHAKE, sendfinish, sendFinishLen), HITLS_SUCCESS);
     ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
-    
+
     STUB_REPLACE(BSL_SAL_SysTimeGet, STUB_BSL_SAL_SysTimeGet);
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
@@ -3151,7 +3152,7 @@ void UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC004()
     ASSERT_TRUE(server != NULL);
     HITLS_Ctx *serverTlsCtx = FRAME_GetTlsCtx(server);
     ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
-    
+
     STUB_REPLACE(BSL_SAL_SysTimeGet, STUB_BSL_SAL_SysTimeGet);
     uint8_t readBuf[READ_BUF_SIZE] = {0};
     uint32_t readLen = 0;
@@ -3163,5 +3164,140 @@ EXIT:
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
     STUB_RESTORE(BSL_SAL_SysTimeGet);
+}
+/* END_CASE */
+
+STUB_DEFINE_RET4(int32_t, REC_Write, TLS_Ctx *, REC_Type, const uint8_t *, uint32_t);
+
+int32_t STUB_REC_Write001(TLS_Ctx *ctx, REC_Type recordType, const uint8_t *data, uint32_t num)
+{
+    (void)ctx;
+    (void)recordType;
+    (void)data;
+    (void)num;
+    static int32_t count = 0;
+    if (count == 1) {
+        count++;
+        return HITLS_REC_NORMAL_IO_BUSY;
+    }
+    count++;
+
+    return 0;
+}
+
+static uint32_t DtlsTimerCallBack(HITLS_Ctx *ctx, uint32_t us)
+{
+    (void)ctx;
+    (void)us;
+    return 10000000; // timeout value is 1 second.
+}
+
+// When constructing the client to retransmit the message for the voyage "ckx-ccs-finish", it failed before
+// retransmitting the CCS, and then retransmitted the message for this voyage again. The expected result is successful
+// link establishment.
+/* BEGIN_CASE */
+void UT_TLS_DTLS_CONSISTENCY_RETRANSMIT_TC010()
+{
+    FRAME_Init();
+    HITLS_Config *tlsConfig = HITLS_CFG_NewDTLS12Config();
+    tlsConfig->isSupportRenegotiation = true;
+    ASSERT_TRUE(tlsConfig != NULL);
+    FRAME_LinkObj *client = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    FRAME_LinkObj *server = FRAME_CreateLink(tlsConfig, BSL_UIO_UDP);
+    HITLS_SetDtlsTimerCb(server->ssl, DtlsTimerCallBack);
+    ASSERT_TRUE(client != NULL);
+    ASSERT_TRUE(server != NULL);
+    // ckx-ccs-finish
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, false, TRY_SEND_FINISH) == HITLS_SUCCESS);
+    sleep(1);
+    FrameUioUserData *ioUserData = BSL_UIO_GetUserData(client->io);
+
+    HITLS_Ctx *clientTlsCtx = FRAME_GetTlsCtx(client);
+    bool isRecWriteStubbed = false;
+    STUB_REPLACE(REC_Write, STUB_REC_Write001);
+    isRecWriteStubbed = true;
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_RECV_FINISH);
+    ioUserData->sndMsg.len = 0;
+
+    ASSERT_EQ(HITLS_Connect(clientTlsCtx), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(clientTlsCtx->hsCtx->state, TRY_RECV_FINISH);
+    ioUserData->sndMsg.len = 0;
+    STUB_RESTORE(REC_Write);
+    isRecWriteStubbed = false;
+
+    ASSERT_TRUE(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT) == HITLS_SUCCESS);
+
+    uint8_t writeData[] = {"abcd1234"};
+    uint32_t writeLen = strlen("abcd1234");
+    uint8_t readData[MAX_RECORD_LENTH] = {0};
+    uint32_t readLen = MAX_RECORD_LENTH;
+    uint32_t sendNum;
+    ASSERT_EQ(HITLS_Write(client->ssl, writeData, writeLen, &sendNum), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(server->ssl, readData, MAX_RECORD_LENTH, &readLen), HITLS_SUCCESS);
+    ASSERT_EQ(readLen, writeLen);
+    ASSERT_EQ(memcmp(writeData, readData, readLen), 0);
+
+EXIT:
+    if (isRecWriteStubbed) {
+        STUB_RESTORE(REC_Write);
+    }
+    HITLS_CFG_FreeConfig(tlsConfig);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/* @
+* @test UT_TLS_DTLS_CONSISTENCY_RFC5246_CONSUME_HANDSHAKE_LENGTH_TC001
+* @spec -
+* @title ConsumeHandshakeMessage should validate length after reading header.
+* @precon nan
+* @brief
+* 1. Use the default configuration items to configure the client and server. Expected result 1.
+* 2. A DTLS connection is established between the client and server. Expected result 2.
+* 3. After connection is established, send an unexpected handshake message with length exceeding 20k.
+*    Expected result 3: The system should reject the message during length validation.
+* @expect
+* 1. The initialization is successful.
+* 2. The connection is set up successfully.
+* 3. The system validates the length and rejects the oversized handshake message.
+* @prior Level 1
+* @auto TRUE
+@ */
+/* BEGIN_CASE */
+void UT_TLS_DTLS_CONSISTENCY_RFC5246_CONSUME_HANDSHAKE_LENGTH_TC001(void)
+{
+    HandshakeTestInfo testInfo = {0};
+    testInfo.state = HS_STATE_BUTT;
+    testInfo.isClient = false;
+    testInfo.emsMode = HITLS_EMS_MODE_FORCE;
+    ASSERT_TRUE(DefaultCfgStatusParkWithSuite(&testInfo, BSL_UIO_UDP) == HITLS_SUCCESS);
+    ASSERT_TRUE(testInfo.server->ssl->state == CM_STATE_TRANSPORTING);
+    ASSERT_TRUE(testInfo.client->ssl->state == CM_STATE_TRANSPORTING);
+
+    uint8_t unKnownHsHeader[12];
+    unKnownHsHeader[0] = 100;
+    BSL_Uint24ToByte(20480, &unKnownHsHeader[1]);
+    BSL_Uint24ToByte(20480, &unKnownHsHeader[9]);
+
+    ASSERT_EQ(REC_Write(testInfo.server->ssl, REC_TYPE_HANDSHAKE, unKnownHsHeader, sizeof(unKnownHsHeader)), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(testInfo.server, testInfo.client), HITLS_SUCCESS);
+
+    uint8_t data[1024] = {0};
+    uint32_t dataSize = 0;
+    /* The system should reject the message during length validation in ConsumeHandshakeMessage */
+    int32_t ret = HITLS_Read(testInfo.client->ssl, data, sizeof(data), &dataSize);
+    ASSERT_EQ(ret, HITLS_MSG_HANDLE_UNEXPECTED_MESSAGE);
+    ALERT_Info alertInfo = { 0 };
+    ALERT_GetInfo(testInfo.client->ssl, &alertInfo);
+    ASSERT_EQ(alertInfo.description, ALERT_UNEXPECTED_MESSAGE);
+
+EXIT:
+    HITLS_CFG_FreeConfig(testInfo.config);
+    FRAME_FreeLink(testInfo.client);
+    FRAME_FreeLink(testInfo.server);
+    FRAME_DeRegCryptMethod();
 }
 /* END_CASE */

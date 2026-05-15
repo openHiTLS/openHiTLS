@@ -1365,3 +1365,44 @@ EXIT:
     FRAME_FreeLink(server);
 }
 /* END_CASE */
+
+/* @
+ * @test UT_TLS_TLS12_RFC5246_PSK_IDENTITY_HINT_NULL_TERMINATOR_TC001
+ * @title ParseServerIdentityHint - IdentityHint without null terminator should be handled correctly
+ * @precon nan
+ * @brief
+ *     1. Configure PSK negotiation on both client and server
+ *     2. Server sends ServerKeyExchange with IdentityHint that has no null terminator
+ *     3. Client should handle the IdentityHint correctly by adding null terminator
+ * @expect The IdentityHint should be properly null-terminated after parsing
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_PSK_IDENTITY_HINT_NULL_TERMINATOR_TC001(void)
+{
+    FRAME_Init();
+
+    HITLS_Config *config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    uint16_t cipherSuits[] = {HITLS_ECDHE_PSK_WITH_AES_128_CBC_SHA};
+    ASSERT_TRUE(
+        HITLS_CFG_SetCipherSuites(config, cipherSuits, sizeof(cipherSuits) / sizeof(uint16_t)) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPskClientCallback(config, ExampleClientCb) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPskServerCallback(config, ExampleServerCb) == HITLS_SUCCESS);
+    uint8_t pskHint[] = {'C', 'l', 'i', 'e', 'n', 't', '_', 'h', 'i', 'n', 't'};
+    ASSERT_TRUE(HITLS_CFG_SetPskIdentityHint(config, pskHint, sizeof(pskHint)) == HITLS_SUCCESS);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    FRAME_LinkObj *server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
