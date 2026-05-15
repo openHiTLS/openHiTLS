@@ -346,9 +346,13 @@ DRBG_Ctx *DRBG_NewHmacCtx(void *libCtx, const EAL_MacMethod *hmacMeth, CRYPT_MAC
         BSL_SAL_FREE(drbg);
         return NULL;
     }
-
+    drbg->isGm = false;
     drbg->state = DRBG_STATE_UNINITIALISED;
     drbg->reseedInterval = DRBG_MAX_RESEED_INTERVAL;
+#if defined(HITLS_CRYPTO_DRBG_GM)
+    drbg->lastReseedTime = 0;
+    drbg->reseedIntervalTime = 0;
+#endif
 
     drbg->meth = &meth;
     drbg->ctx = ctx;

@@ -1395,6 +1395,124 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test   SDV_CMS_STREAM_VERIFY_NO_SIGNED_ATTRS_TC001
+ * @title  Support streaming verification for detached SignedData without signedAttrs
+ * @brief
+ *    1. Generate detached SignedData without signedAttrs using one-shot signing
+ *    2. Verify the SignedData with one-shot API
+ *    3. Verify the SignedData with streaming API using the correct message
+ *    4. Verify the SignedData with streaming API using a different message
+ * @expect
+ *    1-3. one-shot and streaming verification succeed with the correct message
+ *    4. streaming verification fails with a different message
+ */
+/* BEGIN_CASE */
+void SDV_CMS_STREAM_VERIFY_NO_SIGNED_ATTRS_TC001(char *capath, char *certPath, char *keyPath, char *msg)
+{
+#if !defined(HITLS_PKI_CMS_SIGNEDDATA) || !defined(HITLS_BSL_SAL_FILE)
+    (void)capath;
+    (void)certPath;
+    (void)keyPath;
+    (void)msg;
+    SKIP_TEST();
+#else
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_Cert *caCert = NULL;
+    HITLS_CMS *cms = NULL;
+    HITLS_CMS *parsedCms = NULL;
+    uint8_t *data = NULL;
+    uint32_t dataLen = 0;
+    uint8_t *wrongData = NULL;
+
+    ASSERT_EQ(BSL_SAL_ReadFile(msg, &data, &dataLen), HITLS_PKI_SUCCESS);
+    ASSERT_NE(dataLen, 0);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, certPath, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, capath, &caCert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_DecodeFileKey(BSL_FORMAT_PEM, CRYPT_PRIKEY_PKCS8_UNENCRYPT, keyPath, NULL, 0, &pkey),
+        CRYPT_SUCCESS);
+    if (CRYPT_EAL_PkeyGetId(pkey) == CRYPT_PKEY_RSA) {
+        int32_t pkcsv15 = CRYPT_MD_SHA256;
+        ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_SET_RSA_EMSA_PKCSV15, &pkcsv15, sizeof(pkcsv15)),
+            CRYPT_SUCCESS);
+    }
+
+    cms = HITLS_CMS_ProviderNew(NULL, NULL, BSL_CID_PKCS7_SIGNEDDATA);
+    ASSERT_NE(cms, NULL);
+
+    BSL_Buffer msgBuf = {data, dataLen};
+    int32_t signerVersion = HITLS_CMS_SIGNEDDATA_SIGNERINFO_V1;
+    int32_t mdId = BSL_CID_SHA256;
+    bool isDetached = true;
+    bool hasNoSignedAttrs = true;
+    HITLS_X509_List *caCertchain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(caCertchain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(caCertchain, caCert, BSL_LIST_POS_END), BSL_SUCCESS);
+    HITLS_X509_List *certchain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(certchain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(certchain, cert, BSL_LIST_POS_END), BSL_SUCCESS);
+    BSL_Param signParams[7] = {
+        {HITLS_CMS_PARAM_SIGNERINFO_VERSION, BSL_PARAM_TYPE_INT32, &signerVersion, sizeof(signerVersion), 0},
+        {HITLS_CMS_PARAM_DIGEST, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {HITLS_CMS_PARAM_DETACHED, BSL_PARAM_TYPE_BOOL, &isDetached, sizeof(isDetached), 0},
+        {HITLS_CMS_PARAM_NO_SIGNED_ATTRS, BSL_PARAM_TYPE_BOOL, &hasNoSignedAttrs, sizeof(hasNoSignedAttrs), 0},
+        {HITLS_CMS_PARAM_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, certchain, sizeof(HITLS_X509_List *), 0},
+        {HITLS_CMS_PARAM_CA_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, caCertchain, sizeof(HITLS_X509_List *), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(HITLS_CMS_DataSign(cms, pkey, cert, &msgBuf, signParams), HITLS_PKI_SUCCESS);
+
+    BSL_Buffer cmsBuffer = {0};
+    ASSERT_EQ(HITLS_CMS_GenBuff(BSL_FORMAT_ASN1, cms, NULL, &cmsBuffer), HITLS_PKI_SUCCESS);
+    ASSERT_NE(cmsBuffer.data, NULL);
+    ASSERT_EQ(HITLS_CMS_ProviderParseBuff(NULL, NULL, NULL, &cmsBuffer, &parsedCms), HITLS_PKI_SUCCESS);
+
+    BSL_Param verifyParams[2] = {
+        {HITLS_CMS_PARAM_CA_CERT_LISTS, BSL_PARAM_TYPE_CTX_PTR, caCertchain, sizeof(HITLS_X509_List *), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(HITLS_CMS_DataVerify(parsedCms, &msgBuf, verifyParams, NULL), HITLS_PKI_SUCCESS);
+
+    size_t chunkSize = dataLen / 3;
+    BSL_Buffer msgBuf1 = {data, chunkSize};
+    BSL_Buffer msgBuf2 = {data + chunkSize, chunkSize};
+    BSL_Buffer msgBuf3 = {data + 2 * chunkSize, dataLen - (uint32_t)(2 * chunkSize)};
+
+    ASSERT_EQ(HITLS_CMS_DataInit(HITLS_CMS_OPT_VERIFY, parsedCms, NULL), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_CMS_DataUpdate(parsedCms, &msgBuf1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_CMS_DataUpdate(parsedCms, &msgBuf2), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_CMS_DataUpdate(parsedCms, &msgBuf3), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_CMS_DataFinal(parsedCms, verifyParams), HITLS_PKI_SUCCESS);
+
+    wrongData = BSL_SAL_Dump(data, dataLen);
+    ASSERT_NE(wrongData, NULL);
+    wrongData[dataLen - 1] ^= 0x01;
+    BSL_Buffer wrongMsgBuf1 = {wrongData, chunkSize};
+    BSL_Buffer wrongMsgBuf2 = {wrongData + chunkSize, chunkSize};
+    BSL_Buffer wrongMsgBuf3 = {wrongData + 2 * chunkSize, dataLen - (uint32_t)(2 * chunkSize)};
+    ASSERT_EQ(HITLS_CMS_DataInit(HITLS_CMS_OPT_VERIFY, parsedCms, NULL), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_CMS_DataUpdate(parsedCms, &wrongMsgBuf1), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_CMS_DataUpdate(parsedCms, &wrongMsgBuf2), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_CMS_DataUpdate(parsedCms, &wrongMsgBuf3), HITLS_PKI_SUCCESS);
+    ASSERT_NE(HITLS_CMS_DataFinal(parsedCms, verifyParams), HITLS_PKI_SUCCESS);
+
+EXIT:
+    BSL_SAL_FREE(data);
+    BSL_SAL_FREE(wrongData);
+    BSL_SAL_FREE(cmsBuffer.data);
+    HITLS_CMS_Free(cms);
+    HITLS_CMS_Free(parsedCms);
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    BSL_LIST_FREE(certchain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    BSL_LIST_FREE(caCertchain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    TestRandDeInit();
+#endif
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CMS_STREAM_NODETACHED_TEST_TC001
  * @title  Test streaming APIs with non-detached CMS SignedData
  * @brief

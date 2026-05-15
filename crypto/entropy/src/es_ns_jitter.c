@@ -29,12 +29,21 @@
 #ifndef HITLS_CACHE_ROW_COUNT
     #define HITLS_CACHE_ROW_COUNT 1025
 #endif
+#if (HITLS_CACHE_LINE_SIZE == 0)
+    #error "HITLS_CACHE_LINE_SIZE must be greater than 0"
+#endif
+#if (HITLS_CACHE_ROW_COUNT == 0)
+    #error "HITLS_CACHE_ROW_COUNT must be greater than 0"
+#endif
 #ifndef HITLS_JITTER_APT_CUT_OFF
 /**
  * Binary WINDOW 1024, 0.8 Entropy CUT off 664 0.6 Entropy CUT off 748
  * reference to SP800-90B sec 4.4.2
  */
     #define HITLS_JITTER_APT_CUT_OFF 594
+#endif
+#if (HITLS_JITTER_APT_CUT_OFF < 589) || (HITLS_JITTER_APT_CUT_OFF > 1000)
+    #error "HITLS_JITTER_APT_CUT_OFF must be in the range [589, 1000]"
 #endif
 #ifndef HITLS_JITTER_RCT_CUT_OFF
 /**
@@ -44,6 +53,9 @@
  */
 #define HITLS_JITTER_RCT_CUT_OFF 22
 #endif
+#if (HITLS_JITTER_RCT_CUT_OFF < 21) || (HITLS_JITTER_RCT_CUT_OFF > 241)
+    #error "HITLS_JITTER_RCT_CUT_OFF must be in the range [21, 241]"
+#endif
 #ifndef HITLS_JITTER_MINENTROPY
 /**
  * HITLS_JITTER_RCT_CUT_OFF and HITLS_JITTER_APT_CUT_OFF are calculated based on HITLS_JITTER_MINENTROPY.
@@ -51,6 +63,10 @@
  * configured simultaneously.
  */
     #define HITLS_JITTER_MINENTROPY 5
+#endif
+
+#if (HITLS_JITTER_MINENTROPY < 1) || (HITLS_JITTER_MINENTROPY > 8)
+    #error "HITLS_JITTER_MINENTROPY must be in the range [1, 8]"
 #endif
 
 #define NS_APT_BIN_WINDOW_SIZE 1024

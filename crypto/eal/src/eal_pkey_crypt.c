@@ -79,7 +79,7 @@ int32_t CRYPT_EAL_PkeyPrvCheck(CRYPT_EAL_PkeyCtx *prvKey)
     }
     if (prvKey->method.check == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, prvKey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
-        return CRYPT_NULL_INPUT;
+        return CRYPT_EAL_ALG_NOT_SUPPORT;
     }
     return prvKey->method.check(CRYPT_PKEY_CHECK_PRVKEY, prvKey->key, NULL);
 }

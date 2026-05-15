@@ -304,8 +304,108 @@ EXIT:
     CRYPT_EAL_SeedPoolFree(pool);
     return NULL;
 }
+#if defined(HITLS_CRYPTO_ENTROPY_SYS)
+static void FreeNoiseSource(ES_NoiseSource *ns)
+{
+    if (ns == NULL) {
+        return;
+    }
+    if (ns->deinit != NULL && ns->usrdata != NULL) {
+        ns->deinit(ns->usrdata);
+    }
+    BSL_SAL_FREE(ns->name);
+    BSL_SAL_FREE(ns);
+}
 
+static uint64_t g_entropyTimeNs = 0;
+
+static uint64_t EntropyGetIncNs(void)
+{
+    return g_entropyTimeNs++;
+}
+
+static uint64_t EntropyGetFixedNs(void)
+{
+    return 0;
+}
+
+static uint32_t g_entropyNsFailCount = 0;
+
+static void EntropyRunLogCb(int32_t ret)
+{
+    if (ret != CRYPT_SUCCESS) {
+        g_entropyNsFailCount++;
+    }
+}
+#endif
 /* END_HEADER */
+
+/* @
+* @test  SDV_CRYPTO_ENTROPY_TIMESTAMP_AUTOTEST_TC001
+* @spec  -
+* @title  Verify timestamp noise source init enables autoTest and passes internal APT/RCT checks.
+* @precon  nan
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ENTROPY_TIMESTAMP_AUTOTEST_TC001(void)
+{
+#ifdef HITLS_CRYPTO_ENTROPY_SYS
+    uint8_t buf[32] = {0};
+    ES_NoiseSource *ns = NULL;
+
+    g_entropyTimeNs = 0;
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_TIME_GET_TIME_IN_NS, (void *)EntropyGetIncNs) == BSL_SUCCESS);
+    ns = ES_TimeStampGetCtx();
+    ASSERT_TRUE(ns != NULL);
+    ASSERT_TRUE(ns->autoTest == true);
+    ASSERT_TRUE(ns->init != NULL);
+    ASSERT_TRUE(ns->read != NULL);
+    ns->usrdata = ns->init(ns->para);
+    ASSERT_TRUE(ns->usrdata != NULL);
+    ns->isInit = true;
+    ns->isEnable = true;
+    ASSERT_TRUE(ES_NsRead(ns, buf, sizeof(buf)) == CRYPT_SUCCESS);
+EXIT:
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_TIME_GET_TIME_IN_NS, NULL) == BSL_SUCCESS);
+    FreeNoiseSource(ns);
+    return;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
+/* @
+* @test  SDV_CRYPTO_ENTROPY_TIMESTAMP_AUTOTEST_FAIL_TC001
+* @spec  -
+* @title  Verify timestamp noise source init fails when internal APT/RCT checks detect fixed data.
+* @precon  nan
+* @prior  Level 1
+* @auto  TRUE
+@ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_ENTROPY_TIMESTAMP_AUTOTEST_FAIL_TC001(void)
+{
+#ifdef HITLS_CRYPTO_ENTROPY_SYS
+    ES_NoiseSource *ns = NULL;
+
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_TIME_GET_TIME_IN_NS, (void *)EntropyGetFixedNs) == BSL_SUCCESS);
+    ns = ES_TimeStampGetCtx();
+    ASSERT_TRUE(ns != NULL);
+    ASSERT_TRUE(ns->init != NULL);
+    ns->usrdata = ns->init(ns->para);
+    ASSERT_TRUE(ns->usrdata == NULL);
+EXIT:
+    ASSERT_TRUE(BSL_SAL_CallBack_Ctrl(BSL_SAL_TIME_GET_TIME_IN_NS, NULL) == BSL_SUCCESS);
+    FreeNoiseSource(ns);
+    return;
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
 
 /* @
 * @test  SDV_CRYPTO_ENTROPY_EsNormalTest
@@ -633,6 +733,7 @@ void SDV_CRYPTO_ENTROPY_EsMultiNsTest()
     bool healthTest = IsRunningOnWSL() ? false : true;
 #endif
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ENABLE_TEST, &healthTest, 1) == CRYPT_SUCCESS);
+    ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_SET_LOG_CALLBACK, EntropyRunLogCb, 0) == CRYPT_SUCCESS);
     CRYPT_EAL_NsPara errPara = {
         "read-err-ns",
         false,
@@ -687,11 +788,9 @@ void SDV_CRYPTO_ENTROPY_EsMultiNsTest()
     ASSERT_TRUE(CRYPT_EAL_EsCtrl(es, CRYPT_ENTROPY_ADD_NS, (void *)&norPara, sizeof(CRYPT_EAL_NsPara)) == CRYPT_SUCCESS);
     ASSERT_TRUE(CRYPT_EAL_EsInit(es) == CRYPT_SUCCESS);
     uint8_t buf[32] = {0};
+    g_entropyNsFailCount = 0;
     ASSERT_TRUE(CRYPT_EAL_EsEntropyGet(es, buf, 32) == 32);
-#ifndef HITLS_BSL_SAL_DARWIN
-    // Error stack exists when the health test is enabled.
-    ASSERT_TRUE(TestIsErrStackNotEmpty());
-#endif
+    ASSERT_TRUE(g_entropyNsFailCount > 0);
 
 EXIT:
     CRYPT_EAL_EsFree(es);

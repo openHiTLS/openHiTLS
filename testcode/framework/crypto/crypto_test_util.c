@@ -92,6 +92,7 @@ bool TestIsErrStackNotEmpty(void)
     const char *file = NULL;
     uint32_t line = 0;
     int32_t err = BSL_ERR_GetErrorFileLine(&file, &line); /* get the earliest error and pop it */
+    BSL_ERR_DeInit();
     return err != BSL_SUCCESS;
 #else
     return true;
