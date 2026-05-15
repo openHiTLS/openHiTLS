@@ -316,7 +316,7 @@ static int32_t McEliecePrg(const uint8_t *seed, uint8_t *output, const size_t ou
     tempSeed[0] = MCELIECE_PRG_PREFIX; // the value of first element of tempSeed must be 64
     memcpy(tempSeed + 1, seed, MCELIECE_L_BYTES);
     int32_t ret = McElieceShake256(output, outputLen, tempSeed, MCELIECE_PRG_SEED_LEN);
-    memset(tempSeed, 0, MCELIECE_PRG_SEED_LEN);
+    BSL_SAL_CleanseData(tempSeed, MCELIECE_PRG_SEED_LEN);
     return ret;
 }
 
@@ -358,12 +358,12 @@ int32_t SeededKeyGenInternal(const uint8_t *delta, CMPublicKey *pk, CMPrivateKey
 
         ret = SystematicLoop(sBitsPtr, fieldOrderingBitsPtr, irreducibleBitsPtr, pk, sk, params, isSemi);
         if (ret == CRYPT_SUCCESS) {
-            BSL_SAL_FREE(rndE);
+            BSL_SAL_ClearFree(rndE, prgOutputByteLen);
             return CRYPT_SUCCESS;
         }
         memcpy(sk->delta, deltaPrime, MCELIECE_L_BYTES);
     }
-    BSL_SAL_ClearFree(rndE, prgOutputByteLen);
+    BSL_SAL_FREE(rndE);
     return CRYPT_MCELIECE_KEYGEN_FAIL;
 }
 #endif

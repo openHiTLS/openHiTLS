@@ -300,7 +300,7 @@ int32_t DecodeGoppa(const uint8_t *received, const GFPolynomial *g, const GFElem
         return CRYPT_MEM_ALLOC_FAIL;
     }
     if (IsZeroSyndrome(syndrome, 2 * params->t) == CRYPT_SUCCESS) {
-        memset(errorVector, 0, params->nBytes);
+        BSL_SAL_CleanseData(errorVector, params->nBytes);
         *decodeSuccess = 1; // Boolean success flag when the syndrome is all-zero (no errors to correct)
         BSL_SAL_FREE(syndrome);
         return CRYPT_SUCCESS;

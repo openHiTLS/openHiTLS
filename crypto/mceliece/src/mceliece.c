@@ -139,12 +139,11 @@ static CMPublicKey *PublicKeyCreate(const McelieceParams *params)
 
 CRYPT_MCELIECE_Ctx *CRYPT_MCELIECE_NewCtx(void)
 {
-    CRYPT_MCELIECE_Ctx *ctx = BSL_SAL_Malloc(sizeof(CRYPT_MCELIECE_Ctx));
+    CRYPT_MCELIECE_Ctx *ctx = BSL_SAL_Calloc(1u, sizeof(CRYPT_MCELIECE_Ctx));
     if (ctx == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         return NULL;
     }
-    memset(ctx, 0, sizeof(CRYPT_MCELIECE_Ctx));
     return ctx;
 }
 

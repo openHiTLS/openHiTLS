@@ -358,6 +358,8 @@ void SDV_CRYPTO_SLH_DSA_SIGN_KAT_TC002(int id, Hex *key, Hex *addrand, Hex *msg,
     ASSERT_TRUE(sigOutLen == sig->len);
     ASSERT_TRUE(memcmp(sigOut, sig->x, sigOutLen) == 0);
     ASSERT_TRUE(TestIsErrStackEmpty());
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, (int32_t)BSL_CID_AES128_ECB, msg->x, msg->len, sigOut, &sigOutLen),
+        CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED);
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkey);
     return;
