@@ -295,6 +295,42 @@ EXIT:
 }
 /* END_CASE */
 
+/**
+ * @test   SDV_X509_STORE_CTRL_LONG_IPV6_HOST_TC001
+ * @title  StoreCtx host setting accepts long IPv4-embedded IPv6 literals.
+ * @brief  1. Create a X509 store context.
+ *         2. Set a 45-character IPv4-embedded IPv6 literal as the verification host.
+ *         3. Verify that the value is parsed and stored as an IP address, not as a DNS hostname.
+ * @expect 1. Host setting succeeds.
+ *         2. The parsed IP bytes match the expected 16-byte IPv6 address.
+ *         3. No DNS hostname entry is added to the verification parameters.
+ */
+/* BEGIN_CASE */
+void SDV_X509_STORE_CTRL_LONG_IPV6_HOST_TC001(void)
+{
+#if defined(HITLS_PKI_X509_VFY_IDENTITY)
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    const char *host = "ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255";
+    const unsigned char expectIp[16] = {
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+    };
+
+    ASSERT_TRUE(store != NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_HOST, (void *)host, 0), HITLS_PKI_SUCCESS);
+    ASSERT_TRUE(store->verifyParam.ip != NULL);
+    ASSERT_EQ(store->verifyParam.ipLen, (int32_t)sizeof(expectIp));
+    ASSERT_TRUE(memcmp(store->verifyParam.ip, expectIp, sizeof(expectIp)) == 0);
+    ASSERT_TRUE(store->verifyParam.hostnames == NULL || BSL_LIST_COUNT(store->verifyParam.hostnames) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+#else
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
 /* BEGIN_CASE */
 void SDV_X509_STORE_CTRL_CERT_FUNC_TC002(void)
 {
@@ -2534,6 +2570,54 @@ EXIT:
 }
 /* END_CASE */
 
+// Verify that KU checking is independent of EKU presence (RFC 5280 4.2.1.12).
+// When EKU is absent, KU must still be enforced; when both KU and EKU are absent, purpose check passes.
+/* BEGIN_CASE */
+void SDV_X509_VFY_KU_NOEKU_PURPOSE_TC001(char *leafCertPath, int purpose, int expResult)
+{
+    TestMemInit();
+
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *inter = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1,
+        "../testdata/cert/chain/ku_noeku_suite/rootca.der", &root), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1,
+        "../testdata/cert/chain/ku_noeku_suite/ca.der", &inter), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_ASN1, leafCertPath, &leaf), HITLS_PKI_SUCCESS);
+
+    BslList *chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, leaf,  BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, inter, BSL_LIST_POS_END), BSL_SUCCESS);
+    ASSERT_EQ(BSL_LIST_AddElement(chain, root,  BSL_LIST_POS_END), BSL_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA,
+        root, sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    int32_t purposeVal = purpose;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PURPOSE, &purposeVal, sizeof(purposeVal)),
+              HITLS_PKI_SUCCESS);
+
+    int64_t now = time(NULL);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &now, sizeof(now)), HITLS_PKI_SUCCESS);
+
+    int32_t ret = HITLS_X509_CertVerify(store, chain);
+    ASSERT_EQ(ret, expResult);
+
+    if (expResult == HITLS_PKI_SUCCESS) {
+        ASSERT_TRUE(TestIsErrStackEmpty());
+    }
+
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
 /**
  * Construct a certificate chain, ensure that the validity period of all certificates covers the current system time,
  * call HITLS_X509_CertVerify for verification, which should pass successfully
@@ -3843,6 +3927,42 @@ void SDV_X509_PARTIAL_CERT_VFY_FUNC_TC001(char *caCertPath, char *interCertPath,
 
     ret = HITLS_X509_CertVerify(store, chain);
     ASSERT_EQ(ret, HITLS_PKI_SUCCESS);
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    HITLS_X509_CertFree(ca);
+    HITLS_X509_CertFree(entity);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+}
+/* END_CASE */
+
+/**
+ * @brief Test partial certificate chain checks trusted intermediate CA validity time
+ */
+/* BEGIN_CASE */
+void SDV_X509_PARTIAL_CERT_VFY_FUNC_TC006(char *interCertPath, char *entityCertPath)
+{
+    HITLS_X509_Cert *entity = NULL;
+    HITLS_X509_List *chain = NULL;
+    HITLS_X509_Cert *ca = NULL;
+    HITLS_X509_StoreCtx *store = HITLS_X509_StoreCtxNew();
+    ASSERT_TRUE(store != NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_UNKNOWN, entityCertPath, &entity), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertChainBuild(store, false, entity, &chain), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(BSL_LIST_COUNT(chain), 1);
+
+    ASSERT_EQ(HITLS_AddCertToStoreTest(interCertPath, store, &ca), HITLS_PKI_SUCCESS);
+
+    int64_t setFlag = HITLS_X509_VFY_FLAG_PARTIAL_CHAIN;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_PARAM_FLAGS, &setFlag, sizeof(setFlag)), 0);
+
+    // 2026-01-01 00:00:00 UTC is valid for the leaf but before the intermediate CA notBefore.
+    int64_t timeval = 1767225600;
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_TIME, &timeval, sizeof(timeval)), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_NOTBEFORE_IN_FUTURE);
+
 EXIT:
     HITLS_X509_StoreCtxFree(store);
     HITLS_X509_CertFree(ca);

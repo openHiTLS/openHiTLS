@@ -48,9 +48,9 @@
 
 #define BUF_MAX_SIZE 4096
 int32_t g_uiPort = 18886;
-static int TestHITLS_VerifyCb(int32_t isPreverifyOk, HITLS_CERT_StoreCtx *storeCtx)
+static int TestHITLS_VerifyCb(int32_t errCode, HITLS_CERT_StoreCtx *storeCtx)
 {
-    (void)isPreverifyOk;
+    (void)errCode;
     (void)storeCtx;
     return 0;
 }

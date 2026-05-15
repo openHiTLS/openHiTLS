@@ -18,6 +18,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <stdio.h>
+#include "bsl_errno.h"
 #include "sal_ip_util.h"
 
 /* END_HEADER */
@@ -27,7 +28,7 @@ void SDV_BSL_SAL_IP_CHECK_FUNC_TC001(char *str, int len, Hex *data)
 {
     unsigned char buff[16];
     int result = sizeof(buff) / sizeof(buff[0]);
-    SAL_ParseIp(str, buff, &result);
+    ASSERT_EQ(SAL_ParseIp(str, buff, &result), BSL_SUCCESS);
     ASSERT_EQ(result, len);
     ASSERT_TRUE(memcmp(buff, data->x, data->len) == 0);
 
@@ -51,7 +52,7 @@ void SDV_BSL_SAL_IP_CHECK_FUNC_TC002(char *str, int len)
 #else
     unsigned char buff[16];
     int result = sizeof(buff) / sizeof(buff[0]);
-    SAL_ParseIp(str, buff, &result);
+    ASSERT_TRUE(SAL_ParseIp(str, buff, &result) != BSL_SUCCESS);
     ASSERT_EQ(result, len);
     unsigned char expectedBytes[16];
     ASSERT_TRUE(inet_pton(AF_INET, str, expectedBytes) != 1);

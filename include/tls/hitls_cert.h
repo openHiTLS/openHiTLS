@@ -752,15 +752,15 @@ int32_t HITLS_CFG_RemoveCertAndKey(HITLS_Config *config);
 int32_t HITLS_RemoveCertAndKey(HITLS_Ctx *ctx);
 
 /**
- * @@ingroup hitls_cert
+ * @ingroup hitls_cert
  * @brief   Certificate verification callback
  *
- * @param   isPreverifyOk [IN] Indicates whether the relevant certificate has passed the verification
- * (isPreverifyOk=1) or failed (isPreverifyOk=0)
+ * @param   errCode [IN] Current error code. indicates that the certificate has passed the verification.
+ *                       Other values indicate verification failure.
  * @param   storeCtx [IN] Cert store context
  * @return  0 indicates success. Other values indicate failure.
  */
-typedef int (*HITLS_VerifyCb)(int32_t isPreverifyOk, HITLS_CERT_StoreCtx *storeCtx);
+typedef int (*HITLS_VerifyCb)(int32_t errCode, HITLS_CERT_StoreCtx *storeCtx);
 
 /**
  * @ingroup hitls_cert

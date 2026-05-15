@@ -2945,6 +2945,8 @@ void SDV_PKI_VERIFY_IP_TC001()
     TestErrClear();
     // Normal cases
     ASSERT_EQ(HITLS_X509_VerifyIp(cert, "::ffff:192.0.2.128", strlen("::ffff:192.0.2.128")), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyIp(cert, "0000:0000:0000:0000:0000:ffff:192.0.2.128",
+        strlen("0000:0000:0000:0000:0000:ffff:192.0.2.128")), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_VerifyIp(cert, "0000:0000:0000:0000:0000:ffff:c000:0280",
         strlen("0000:0000:0000:0000:0000:ffff:c000:0280")), HITLS_PKI_SUCCESS);
 EXIT:
@@ -2978,6 +2980,8 @@ void SDV_PKI_VERIFY_IDENTITY_TC001()
     // Normal cases
     ASSERT_EQ(HITLS_X509_VerifyIdentity(cert, 0, HITLS_GEN_IP, "::ffff:192.0.2.128", strlen("::ffff:192.0.2.128")),
         HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_VerifyIdentity(cert, 0, HITLS_GEN_IP, "0000:0000:0000:0000:0000:ffff:192.0.2.128",
+        strlen("0000:0000:0000:0000:0000:ffff:192.0.2.128")), HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_VerifyIdentity(cert, 0, HITLS_GEN_IP, "0000:0000:0000:0000:0000:ffff:c000:0280",
         strlen("0000:0000:0000:0000:0000:ffff:c000:0280")), HITLS_PKI_SUCCESS);
     

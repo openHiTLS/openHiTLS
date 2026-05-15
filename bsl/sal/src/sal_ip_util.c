@@ -22,8 +22,7 @@
 #define MAX_IPV6_SEGMENT_COUNT 8
 #define IPV6_LEN 16
 #define IPV4_LEN 4
-#define MAX_IP_STR_LEN 39 // The maximum length of IPv6 is 39
-
+#define MAX_IP_STR_LEN 45 // The maximum length of IPv6 (with embedded IPv4) is 45
 /*
 * Parse IPv4 strings and store their binary to *out
 * Success returns true, failure returns false

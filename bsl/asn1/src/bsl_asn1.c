@@ -1533,6 +1533,9 @@ static int32_t EncodeCodePointToUtf8(const uint8_t *data, uint32_t dataLen, uint
         if (ret != BSL_SUCCESS) {
             return ret;
         }
+        if (*outLen > UINT32_MAX - needLen) {
+            return BSL_ASN1_ERR_LEN_OVERFLOW;
+        }
         if (out != NULL) {
             out += needLen;
         }
