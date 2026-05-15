@@ -433,8 +433,8 @@ int32_t CRYPT_PAILLIER_Add(const void *ctx, const BSL_Param *input, uint8_t *out
 
     BN_Optimizer *optimizer = BN_OptimizerCreate();
     if (optimizer == NULL) {
-        BSL_ERR_PUSH_ERROR(CRYPT_MEM_ALLOC_FAIL);
         ret = CRYPT_MEM_ALLOC_FAIL;
+        BSL_ERR_PUSH_ERROR(ret);
         goto EXIT;
     }
 
