@@ -71,6 +71,7 @@ typedef struct {
 
 static char g_localIdentity[PSK_MAX_LEN] = "Client_identity";
 static char g_localPsk[PSK_MAX_LEN] = "1A1A1A1A1A";
+static char g_localHint[HS_PSK_IDENTITY_MAX_LEN] = "Client_hint";
 
 int32_t ExampleSetPsk(char *psk)
 {
@@ -130,6 +131,13 @@ uint32_t ExampleClientCb(HITLS_Ctx *ctx, const uint8_t *hint, uint8_t *identity,
     int32_t ret;
     uint8_t pskTrans[PSK_MAX_LEN] = {0};
     uint32_t pskTransUsedLen = 0u;
+
+    if (hint != NULL) {
+        if ((strlen((const char *)hint) != strlen(g_localHint)) ||
+            (memcmp(hint, g_localHint, strlen(g_localHint)) != 0)) {
+            return 0;
+        }
+    }
 
     ret = ExampleHexStr2BufHelper((uint8_t *)g_localPsk, sizeof(g_localPsk), pskTrans, PSK_MAX_LEN, &pskTransUsedLen);
     if (ret != 0) {

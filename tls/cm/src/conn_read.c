@@ -292,6 +292,13 @@ static void ConsumeHandshakeMessage(HITLS_Ctx *ctx)
         return;
     }
     uint32_t length = BSL_ByteToUint24(&ctx->hsCtx->msgBuf[headerLen - HS_MESSAGE_LEN_FIELD]);
+    if (length > HITLS_HS_BUFFER_SIZE_LIMIT - headerLen) {
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16167, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "Reading messages with a length exceeding %u is not supported. The current length is %u",
+            HITLS_HS_BUFFER_SIZE_LIMIT - headerLen, length, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNEXPECTED_MESSAGE);
+        return;
+    }
     ret = ReadHsMessage(ctx, length + headerLen);
     if (ret != HITLS_SUCCESS) {
         BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16526, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,

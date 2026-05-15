@@ -341,7 +341,8 @@ int32_t HITLS_CFG_GetSessionCacheMode(HITLS_Config *config, uint32_t *mode);
 
 /**
  * @ingroup hitls_session
- * @brief   Set the maximum number of sessions in the session cache.
+ * @brief   Set the maximum number of sessions in the session cache. When size is 0, it indicates that the session can
+ *          be cached without any restrictions.
  *
  * @param   config  [OUT] Config context.
  * @param   size [IN] Maximum number of sessions in the cache.
@@ -494,7 +495,7 @@ int32_t HITLS_SESS_Encode(const HITLS_Session *sess, uint8_t *data, uint32_t len
  * @retval  HITLS_SUCCESS, if successful.
  * @retval  For other error codes, see hitls_error.h.
  */
-int32_t HITLS_SESS_Decode(HITLS_Session *sess, const uint8_t *data, uint32_t length);
+int32_t HITLS_SESS_Decode(HITLS_Session **sess, const uint8_t *data, uint32_t length);
 
 /**
  * @ingroup hitls_session

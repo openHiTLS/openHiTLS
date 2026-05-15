@@ -4326,13 +4326,12 @@ void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC001(void)
 {
     HitlsInit();
     HITLS_Session *srcSession = HITLS_SESS_New();
-    HITLS_Session *dstSession = HITLS_SESS_New();
+    HITLS_Session *dstSession = NULL;
     uint8_t *encodeBuf = NULL;
     uint32_t encodeLen;
     uint32_t usedLen = 0;
 
     ASSERT_TRUE(srcSession != NULL);
-    ASSERT_TRUE(dstSession != NULL);
     ASSERT_EQ(InitSessionForEncodeTest(srcSession), HITLS_SUCCESS);
 
     ASSERT_EQ(HITLS_SESS_Encode(srcSession, NULL, 0, &encodeLen), HITLS_SUCCESS);
@@ -4343,7 +4342,7 @@ void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC001(void)
 
     ASSERT_EQ(HITLS_SESS_Encode(srcSession, encodeBuf, encodeLen, &usedLen), HITLS_SUCCESS);
     ASSERT_EQ(usedLen, encodeLen);
-    ASSERT_EQ(HITLS_SESS_Decode(dstSession, encodeBuf, usedLen), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SESS_Decode(&dstSession, encodeBuf, usedLen), HITLS_SUCCESS);
     ASSERT_EQ(CheckDecodedSessionForEncodeTest(dstSession), HITLS_SUCCESS);
     ASSERT_TRUE(TestIsErrStackEmpty());
 
@@ -4362,7 +4361,7 @@ EXIT:
 *          2. Verify HITLS_SESS_Encode invalid parameter and insufficient buffer handling.
 *          3. Verify HITLS_SESS_Decode parameter checks and truncated buffer handling.
 * @expect  1. HITLS_SESS_Encode returns the required size when length is 0.
-*          2. Invalid input encode/decode returns HITLS_INTERNAL_EXCEPTION.
+*          2. Invalid input encode/decode returns HITLS_INVALID_INPUT.
 *          3. Encode with insufficient buffer fails and truncating the last TLV header returns
 *             HITLS_SESS_ERR_DECODE_TICKET.
 @*/
@@ -4371,14 +4370,13 @@ void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC002(void)
 {
     HitlsInit();
     HITLS_Session *srcSession = HITLS_SESS_New();
-    HITLS_Session *dstSession = HITLS_SESS_New();
+    HITLS_Session *dstSession = NULL;
     uint8_t encodeBuf[1] = {0};
     uint8_t *validEncodeBuf = NULL;
     uint32_t encodeLen;
     uint32_t usedLen = 0;
 
     ASSERT_TRUE(srcSession != NULL);
-    ASSERT_TRUE(dstSession != NULL);
     ASSERT_EQ(InitSessionForEncodeTest(srcSession), HITLS_SUCCESS);
 
     ASSERT_EQ(HITLS_SESS_Encode(srcSession, NULL, 0, &usedLen), HITLS_SUCCESS);
@@ -4386,8 +4384,9 @@ void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC002(void)
     ASSERT_EQ(HITLS_SESS_Encode(NULL, NULL, 0, &usedLen), HITLS_INTERNAL_EXCEPTION);
     ASSERT_EQ(HITLS_SESS_Encode(srcSession, encodeBuf, sizeof(encodeBuf), NULL), HITLS_INTERNAL_EXCEPTION);
     ASSERT_EQ(HITLS_SESS_Encode(srcSession, NULL, sizeof(encodeBuf), &usedLen), HITLS_INTERNAL_EXCEPTION);
-    ASSERT_EQ(HITLS_SESS_Decode(NULL, encodeBuf, sizeof(encodeBuf)), HITLS_INTERNAL_EXCEPTION);
-    ASSERT_EQ(HITLS_SESS_Decode(dstSession, NULL, sizeof(encodeBuf)), HITLS_INTERNAL_EXCEPTION);
+    ASSERT_EQ(HITLS_SESS_Decode(&srcSession, encodeBuf, sizeof(encodeBuf)), HITLS_INVALID_INPUT);
+    ASSERT_EQ(HITLS_SESS_Decode(NULL, encodeBuf, sizeof(encodeBuf)), HITLS_INVALID_INPUT);
+    ASSERT_EQ(HITLS_SESS_Decode(&dstSession, NULL, sizeof(encodeBuf)), HITLS_INVALID_INPUT);
     ASSERT_EQ(HITLS_SESS_Encode(srcSession, encodeBuf, 0, &usedLen), HITLS_SUCCESS);
     ASSERT_TRUE(usedLen > 0);
     ASSERT_EQ(HITLS_SESS_Encode(srcSession, encodeBuf, sizeof(encodeBuf), &usedLen), HITLS_SESS_ERR_ENC_VERSION_FAIL);
@@ -4396,14 +4395,13 @@ void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC002(void)
     validEncodeBuf = BSL_SAL_Calloc(1u, encodeLen);
     ASSERT_TRUE(validEncodeBuf != NULL);
     ASSERT_EQ(HITLS_SESS_Encode(srcSession, validEncodeBuf, encodeLen, &usedLen), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_SESS_Decode(dstSession, validEncodeBuf, usedLen - (sizeof(uint32_t) * 2)),
+    ASSERT_EQ(HITLS_SESS_Decode(&dstSession, validEncodeBuf, usedLen - (sizeof(uint32_t) * 2)),
         HITLS_SESS_ERR_DECODE_TICKET);
     ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     BSL_SAL_FREE(validEncodeBuf);
     HITLS_SESS_Free(srcSession);
-    HITLS_SESS_Free(dstSession);
 }
 /* END_CASE */
 
@@ -4423,7 +4421,7 @@ void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC003(void)
 {
     const uint8_t expectedHostName[] = "session.example";
     HITLS_Session *srcSession = HITLS_SESS_New();
-    HITLS_Session *dstSession = HITLS_SESS_New();
+    HITLS_Session *dstSession = NULL;
     uint8_t *encodeBuf = NULL;
     uint8_t *hostName = NULL;
     uint32_t encodeLen = 0;
@@ -4434,14 +4432,13 @@ void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC003(void)
 
     HitlsInit();
     ASSERT_TRUE(srcSession != NULL);
-    ASSERT_TRUE(dstSession != NULL);
     ASSERT_EQ(InitSessionForEncodeTest(srcSession), HITLS_SUCCESS);
     ASSERT_EQ(SESS_SetHostName(srcSession, sizeof(expectedHostName), (uint8_t *)expectedHostName), HITLS_SUCCESS);
     ASSERT_EQ(HITLS_SESS_Encode(srcSession, NULL, 0, &encodeLen), HITLS_SUCCESS);
     encodeBuf = BSL_SAL_Calloc(1u, encodeLen);
     ASSERT_TRUE(encodeBuf != NULL);
     ASSERT_EQ(HITLS_SESS_Encode(srcSession, encodeBuf, encodeLen, &usedLen), HITLS_SUCCESS);
-    ASSERT_EQ(HITLS_SESS_Decode(dstSession, encodeBuf, usedLen), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SESS_Decode(&dstSession, encodeBuf, usedLen), HITLS_SUCCESS);
     ASSERT_EQ(SESS_GetHostName(dstSession, &hostNameSize, &hostName), HITLS_SUCCESS);
     ASSERT_EQ(hostNameSize, sizeof(expectedHostName));
     ASSERT_EQ(memcmp(hostName, expectedHostName, sizeof(expectedHostName)), 0);
@@ -4449,13 +4446,14 @@ void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC003(void)
 
     ASSERT_EQ(BSL_TLV_FindValuePos(SESS_OBJ_HOST_NAME, encodeBuf, usedLen, &valueOffset, &valueLen), BSL_SUCCESS);
     ASSERT_TRUE(valueLen > 0);
+    HITLS_SESS_Free(dstSession);
+    dstSession = NULL;
     encodeBuf[valueOffset + valueLen - 1u] = 'x';
-    ASSERT_EQ(HITLS_SESS_Decode(dstSession, encodeBuf, usedLen), HITLS_SESS_ERR_DEC_HOST_NAME_FAIL);
+    ASSERT_EQ(HITLS_SESS_Decode(&dstSession, encodeBuf, usedLen), HITLS_SESS_ERR_DEC_HOST_NAME_FAIL);
     ASSERT_TRUE(TestIsErrStackNotEmpty());
 
 EXIT:
     BSL_SAL_FREE(encodeBuf);
     HITLS_SESS_Free(srcSession);
-    HITLS_SESS_Free(dstSession);
 }
 /* END_CASE */

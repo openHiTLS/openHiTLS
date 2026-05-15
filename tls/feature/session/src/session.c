@@ -650,9 +650,25 @@ int32_t HITLS_SESS_Encode(const HITLS_Session *sess, uint8_t *data, uint32_t len
     return SESS_Encode(sess, data, length, usedLen);
 }
 
-int32_t HITLS_SESS_Decode(HITLS_Session *sess, const uint8_t *data, uint32_t length)
+int32_t HITLS_SESS_Decode(HITLS_Session **sess, const uint8_t *data, uint32_t length)
 {
-    return SESS_Decode(sess, data, length);
+    if (sess == NULL || data == NULL || *sess != NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_INVALID_INPUT);
+        return HITLS_INVALID_INPUT;
+    }
+
+    *sess = HITLS_SESS_New();
+    if (*sess == NULL) {
+        BSL_ERR_PUSH_ERROR(HITLS_MEMALLOC_FAIL);
+        return HITLS_MEMALLOC_FAIL;
+    }
+
+    int32_t ret = SESS_Decode(*sess, data, length);
+    if (ret != HITLS_SUCCESS) {
+        HITLS_SESS_Free(*sess);
+        *sess = NULL;
+    }
+    return ret;
 }
 #endif
 

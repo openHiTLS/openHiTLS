@@ -273,7 +273,7 @@ static int32_t Tls13ClientPrepareKeyShare(TLS_Ctx *ctx, uint32_t tls13BasicKeyEx
     }
 
     int32_t ret;
-    if (ctx->hsCtx->haveHrr) {
+    if (ctx->hsCtx->haveHrr && ctx->negotiatedInfo.negotiatedGroup != 0) {
         ret = PrepareKeyShareForHrr(ctx);
     } else {
         ret = PrepareKeyShareForInitialHello(ctx);
