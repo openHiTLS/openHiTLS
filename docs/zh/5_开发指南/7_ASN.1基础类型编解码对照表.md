@@ -193,7 +193,7 @@ ret = BSL_ASN1_DecodePrimitiveItem(&item, &v); // v == 1000
 - 编码 `SEQUENCE OF / SET OF`。
 
 **注意**
-- `SET OF` 的 DER 规范排序需调用方确认是否另行处理。
+- `SET OF` 的 DER 排序由 `BSL_ASN1_EncodeListItem` 内部按每个元素完整编码字节串完成，通常不需要调用方预先排序。
 
 ### 3.8 `BSL_ASN1_EncodeLimb`
 
@@ -224,7 +224,7 @@ ret = BSL_ASN1_DecodePrimitiveItem(&item, &v); // v == 1000
 BSL_ASN1_Buffer asn = {0};
 ret = BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, (uint64_t)1000, &asn);
 // asn.tag == INTEGER, asn.buff 指向 0x03 0xE8
-free(asn.buff);
+BSL_SAL_Free(asn.buff);
 ```
 
 ### 3.9 `BSL_ASN1_GetEncodeLen`
@@ -262,7 +262,7 @@ free(asn.buff);
 | 形参 | `**encode, *encLen, *asnItem` |
 | 返回值类型 | `int32_t`（`BSL_SUCCESS` 或错误码） |
 | 输入 | `*encode = 04 03 DE AD BE FF`<br>`*encLen = 6` |
-| 输出 | `asnItem = {tag=0x04, len=3, buff->DE AD BE}`<br>`*encLen = 1`（剩余 `FF`） |
+| 输出 | `asnItem = {tag=0x04, len=3, buff->DE AD BE}`<br>`*encLen = 1`（剩余 `FF`）<br>`*encode = FF` |
 | 效果 | 从输入流中取出完整 TLV 项（T+L+V），并把游标推进到下一项起点。 |
 
 ### 4.3 `BSL_ASN1_DecodePrimitiveItem`
@@ -341,7 +341,7 @@ free(asn.buff);
 | 形参 | `tag, listSize, *templ, *asnArr, arrNum, *out` |
 | 返回值类型 | `int32_t`（`BSL_SUCCESS` 或错误码） |
 | 输入 | `tag=BSL_ASN1_TAG_SEQUENCE`<br>`listSize=3`<br>`asnArr = {INTEGER(1),INTEGER(2),INTEGER(3)}` |
-| 输出（C 数据） | `out={tag=SEQUENCE\|CONSTRUCTED,len=11, buff=...}`<br>即`out = 30 09 02 01 01 02 01 02 02 01 03` |
+| 输出（C 数据） | `out={tag=SEQUENCE\|CONSTRUCTED,len=9, buff=02 01 01 02 01 02 02 01 03}`<br>即`out = 30 09 02 01 01 02 01 02 02 01 03` |
 | 效果 | 将多个同构元素编码成 `SEQUENCE OF/SET OF` 的 value，并返回外层构造项。 |
 
 ### 4.8 `BSL_ASN1_EncodeLimb`
@@ -404,14 +404,20 @@ int32_t ret = BSL_ASN1_DecodePrimitiveItem(&item, &out);
 ### 5.4 `BSL_ASN1_DecodeTemplate`
 
 ```c
-// 示例语义: SEQUENCE { INTEGER a, OCTET STRING b }
-// 注意：DecodeTemplate 输出为 BSL_ASN1_Buffer 数组（与模板项一一对应）。
-uint8_t der[] = {0x30,0x07,0x02,0x01,0x05,0x04,0x02,0xDE,0xAD};
-uint8_t *p = der;
-uint32_t left = sizeof(der);
-BSL_ASN1_Buffer outArr[3] = {0}; // 例如: [SEQUENCE, INTEGER, OCTET STRING]
-int32_t ret = BSL_ASN1_DecodeTemplate(&g_mySeqTempl, NULL, &p, &left, outArr, 3);
-// ret==0, outArr[1] 为 INTEGER, outArr[2] 为 OCTET STRING
+BSL_ASN1_TemplateItem items[] = {
+    {BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED, 0, 0}, // root：SEQUENCE (constructed)
+    {BSL_ASN1_TAG_INTEGER, 0, 1},                               // child：INTEGER
+    {BSL_ASN1_TAG_BOOLEAN, 0, 1}                                // child：BOOLEAN
+};
+BSL_ASN1_Template templ = {items, 3};
+int32_t ret;
+uint8_t encoded[] = {0x30, 0x07, 0x02, 0x02, 0x03, 0xE8, 0x01, 0x01, 0xFF};
+uint32_t encodedLen = sizeof(encoded)/sizeof(encoded[0]);
+uint8_t *cursor = encoded;
+uint32_t remain = encodedLen;
+BSL_ASN1_Buffer out[2] = {0};
+/* 解码：DecodeTemplate 会浅拷贝（out[i].buff 指向 encoded 内部），所以在使用前不要 free(encoded) */
+ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &cursor, &remain, out, 2);
 ```
 
 ### 5.5 `BSL_ASN1_DecodeListItem`
@@ -457,17 +463,30 @@ int32_t ret2 = BSL_ASN1_DecodeListItem(&setParam, &setAsn, ParseSeqNodeThenDecod
 ### 5.6 `BSL_ASN1_EncodeTemplate`
 
 ```c
-// 示例语义: SEQUENCE { INTEGER a, OCTET STRING b }
-BSL_ASN1_Buffer asnArr[2] = {
-  {BSL_ASN1_TAG_INTEGER, 1, (uint8_t[]){0x05}},
-  {BSL_ASN1_TAG_OCTETSTRING, 2, (uint8_t[]){0xDE, 0xAD}},
+/* Encode + DecodeTemplate: SEQUENCE { INTEGER, BOOLEAN } */
+BSL_ASN1_TemplateItem items[] = {
+    {BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED, 0, 0}, // 根：SEQUENCE (构造类型)
+    {BSL_ASN1_TAG_INTEGER, 0, 1},                               // 子：INTEGER
+    {BSL_ASN1_TAG_BOOLEAN, 0, 1}                                // 子：BOOLEAN
+};
+BSL_ASN1_Template templ = {items, 3};
+
+uint8_t serial[] = {0x03, 0xE8}; /* 整数 1000 的大端字节表示 */
+bool isAdmin = true; /* 布尔值要以 bool 地址传入编码器 */
+/* 输入数组：顺序必须与模板中叶子节点顺序一致 */
+BSL_ASN1_Buffer input[] = {
+    {.tag = BSL_ASN1_TAG_INTEGER, .len = sizeof(serial), .buff = serial},
+    {.tag = BSL_ASN1_TAG_BOOLEAN, .len = 1, .buff = (uint8_t *)&isAdmin}
 };
 
-uint8_t *der = NULL;
-uint32_t derLen = 0;
-int32_t ret = BSL_ASN1_EncodeTemplate(&g_mySeqTempl, asnArr, 2, &der, &derLen);
-// 期望 der: 30 07 02 01 05 04 02 DE AD
-BSL_SAL_Free(der);
+uint8_t *encoded = NULL;
+uint32_t encodedLen = 0;
+
+int32_t ret = BSL_ASN1_EncodeTemplate(&templ, input, 2, &encoded, &encodedLen);
+if (ret != 0) {
+    printf("EncodeTemplate failed: 0x%x\n", ret);
+    return -1;
+}
 ```
 
 ### 5.7 `BSL_ASN1_EncodeListItem`
@@ -485,7 +504,9 @@ BSL_ASN1_TemplateItem itemTemplItem[] = {
 BSL_ASN1_Template itemTempl = {itemTemplItem, 1};
 BSL_ASN1_Buffer out = {0};
 int32_t ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, 3, &itemTempl, elems, 3, &out);
-// out.buff 期望: 30 09 02 01 01 02 01 02 02 01 03
+// out.tag == (BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE)
+// out.len == 9
+// out.buff: 02 01 01 02 01 02 02 01 03
 BSL_SAL_Free(out.buff);
 ```
 

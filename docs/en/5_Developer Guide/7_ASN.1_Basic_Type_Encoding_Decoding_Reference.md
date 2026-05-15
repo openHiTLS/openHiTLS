@@ -193,7 +193,7 @@ ret = BSL_ASN1_DecodePrimitiveItem(&item, &v); // v == 1000
 - Encodes `SEQUENCE OF / SET OF`.
 
 **Note**
-- For `SET OF`, DER-required sorting should be verified and handled by the caller if needed.
+- For `SET OF`, `BSL_ASN1_EncodeListItem` performs DER sorting internally (by each element's complete encoded octet string).
 
 ### 3.8 `BSL_ASN1_EncodeLimb`
 
@@ -224,7 +224,7 @@ ret = BSL_ASN1_DecodePrimitiveItem(&item, &v); // v == 1000
 BSL_ASN1_Buffer asn = {0};
 ret = BSL_ASN1_EncodeLimb(BSL_ASN1_TAG_INTEGER, (uint64_t)1000, &asn);
 // asn.tag == INTEGER, asn.buff points to 0x03 0xE8
-free(asn.buff);
+BSL_SAL_Free(asn.buff);
 ```
 
 ### 3.9 `BSL_ASN1_GetEncodeLen`
@@ -262,7 +262,7 @@ free(asn.buff);
 | Parameters | `**encode, *encLen, *asnItem` |
 | Return type | `int32_t` (`BSL_SUCCESS` or error code) |
 | Input | `*encode = 04 03 DE AD BE FF`<br>`*encLen = 6` |
-| Output | `asnItem = {tag=0x04, len=3, buff->DE AD BE}`<br>`*encLen = 1` (remaining `FF`) |
+| Output | `asnItem = {tag=0x04, len=3, buff->DE AD BE}`<br>`*encLen = 1` (remaining `FF`)<br>`*encode = FF` |
 | Effect | Extracts one complete TLV item (T+L+V) from the input stream and advances the cursor to the next item start. |
 
 ### 4.3 `BSL_ASN1_DecodePrimitiveItem`
@@ -340,7 +340,7 @@ Capability boundary (important): only supports "single tag per layer"
 | Parameters | `tag, listSize, *templ, *asnArr, arrNum, *out` |
 | Return type | `int32_t` (`BSL_SUCCESS` or error code) |
 | Input | `tag=BSL_ASN1_TAG_SEQUENCE`<br>`listSize=3`<br>`asnArr = {INTEGER(1),INTEGER(2),INTEGER(3)}` |
-| Output (C data) | `out={tag=SEQUENCE|CONSTRUCTED,len=11, buff=...}`<br>i.e. `out = 30 09 02 01 01 02 01 02 02 01 03` |
+| Output (C data) | `out={tag=SEQUENCE|CONSTRUCTED,len=9, buff=02 01 01 02 01 02 02 01 03}`<br>i.e. `out = 30 09 02 01 01 02 01 02 02 01 03` |
 | Effect | Encodes multiple homogeneous elements into `SEQUENCE OF/SET OF` value and returns outer constructed item. |
 
 ### 4.8 `BSL_ASN1_EncodeLimb`
@@ -403,19 +403,38 @@ int32_t ret = BSL_ASN1_DecodePrimitiveItem(&item, &out);
 ### 5.4 `BSL_ASN1_DecodeTemplate`
 
 ```c
-// Example semantics: SEQUENCE { INTEGER a, OCTET STRING b }
-// Note: DecodeTemplate outputs a BSL_ASN1_Buffer array (one-to-one with template items).
-uint8_t der[] = {0x30,0x07,0x02,0x01,0x05,0x04,0x02,0xDE,0xAD};
-uint8_t *p = der;
-uint32_t left = sizeof(der);
-BSL_ASN1_Buffer outArr[3] = {0}; // e.g., [SEQUENCE, INTEGER, OCTET STRING]
-int32_t ret = BSL_ASN1_DecodeTemplate(&g_mySeqTempl, NULL, &p, &left, outArr, 3);
-// ret==0, outArr[1] is INTEGER, outArr[2] is OCTET STRING
+BSL_ASN1_TemplateItem items[] = {
+    {BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED, 0, 0}, // root：SEQUENCE (constructed)
+    {BSL_ASN1_TAG_INTEGER, 0, 1},                               // child：INTEGER
+    {BSL_ASN1_TAG_BOOLEAN, 0, 1}                                // child：BOOLEAN
+};
+BSL_ASN1_Template templ = {items, 3};
+int32_t ret;
+uint8_t encoded[] = {0x30, 0x07, 0x02, 0x02, 0x03, 0xE8, 0x01, 0x01, 0xFF};
+uint32_t encodedLen = sizeof(encoded)/sizeof(encoded[0]);
+uint8_t *cursor = encoded;
+uint32_t remain = encodedLen;
+BSL_ASN1_Buffer out[2] = {0};
+ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &cursor, &remain, out, 2);
 ```
 
 ### 5.5 `BSL_ASN1_DecodeListItem`
 
 ```c
+static int32_t ParseIntNodeCb(uint32_t layer, BSL_ASN1_Buffer *asn, void *cbParam, BSL_ASN1_List *list)
+{
+    int *v = (int *)BSL_SAL_Malloc(sizeof(int));
+    if (v == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    int32_t ret = BSL_ASN1_DecodePrimitiveItem(asn, v);
+    if (ret != BSL_SUCCESS) {
+        BSL_SAL_Free(v);
+        return ret;
+    }
+    return BSL_SUCCESS; // user can push to `list` as needed
+}
+
 // Example semantics: SEQUENCE OF SEQUENCE OF INTEGER {{1,2},{3}}
 uint8_t listVal[] = {
   0x30,0x06,0x02,0x01,0x01,0x02,0x01,0x02,
@@ -434,6 +453,11 @@ int32_t ret = BSL_ASN1_DecodeListItem(&param, &asn, ParseIntNodeCb, NULL, &outLi
 ```
 
 ```c
+static int32_t ParseSeqNodeThenDecodeTemplateCb(uint32_t layer, BSL_ASN1_Buffer *asn, void *cbParam, BSL_ASN1_List *list)
+{
+    (void)layer; (void)asn; (void)cbParam; (void)list;
+    return BSL_SUCCESS; // user callback: decode nested sequence using DecodeTemplate
+}
 // Supplemental example semantics: SET OF SEQUENCE { INTEGER, OCTET STRING }
 // Note: two-layer DecodeListItem cannot directly express heterogeneous second layer (INTEGER + OCTET STRING).
 // Recommended: split first layer by SEQUENCE, then parse each element with DecodeTemplate in callback.
@@ -456,17 +480,30 @@ int32_t ret2 = BSL_ASN1_DecodeListItem(&setParam, &setAsn, ParseSeqNodeThenDecod
 ### 5.6 `BSL_ASN1_EncodeTemplate`
 
 ```c
-// Example semantics: SEQUENCE { INTEGER a, OCTET STRING b }
-BSL_ASN1_Buffer asnArr[2] = {
-  {BSL_ASN1_TAG_INTEGER, 1, (uint8_t[]){0x05}},
-  {BSL_ASN1_TAG_OCTETSTRING, 2, (uint8_t[]){0xDE, 0xAD}},
+/* Encode + DecodeTemplate: SEQUENCE { INTEGER, BOOLEAN } */
+BSL_ASN1_TemplateItem items[] = {
+    {BSL_ASN1_TAG_SEQUENCE | BSL_ASN1_TAG_CONSTRUCTED, 0, 0}, // root：SEQUENCE (constructed)
+    {BSL_ASN1_TAG_INTEGER, 0, 1},                               // child：INTEGER
+    {BSL_ASN1_TAG_BOOLEAN, 0, 1}                                // child：BOOLEAN
+};
+BSL_ASN1_Template templ = {items, 3};
+
+uint8_t serial[] = {0x03, 0xE8}; /* big-endian byte representation of integer 1000 */
+bool isAdmin = true; /* boolean value must be passed as address of bool to encoder */
+/* Input array: order must match the order of leaf nodes in the template */
+BSL_ASN1_Buffer input[] = {
+    {.tag = BSL_ASN1_TAG_INTEGER, .len = sizeof(serial), .buff = serial},
+    {.tag = BSL_ASN1_TAG_BOOLEAN, .len = 1, .buff = (uint8_t *)&isAdmin}
 };
 
-uint8_t *der = NULL;
-uint32_t derLen = 0;
-int32_t ret = BSL_ASN1_EncodeTemplate(&g_mySeqTempl, asnArr, 2, &der, &derLen);
-// Expected der: 30 07 02 01 05 04 02 DE AD
-BSL_SAL_Free(der);
+uint8_t *encoded = NULL;
+uint32_t encodedLen = 0;
+
+int32_t ret = BSL_ASN1_EncodeTemplate(&templ, input, 2, &encoded, &encodedLen);
+if (ret != 0) {
+    printf("EncodeTemplate failed: 0x%x\n", ret);
+    return -1;
+}
 ```
 
 ### 5.7 `BSL_ASN1_EncodeListItem`
@@ -484,7 +521,9 @@ BSL_ASN1_TemplateItem itemTemplItem[] = {
 BSL_ASN1_Template itemTempl = {itemTemplItem, 1};
 BSL_ASN1_Buffer out = {0};
 int32_t ret = BSL_ASN1_EncodeListItem(BSL_ASN1_TAG_SEQUENCE, 3, &itemTempl, elems, 3, &out);
-// Expected out.buff: 30 09 02 01 01 02 01 02 02 01 03
+// out.tag == (BSL_ASN1_TAG_CONSTRUCTED | BSL_ASN1_TAG_SEQUENCE)
+// out.len == 9
+// Expected out.buff: 02 01 01 02 01 02 02 01 03
 BSL_SAL_Free(out.buff);
 ```
 
