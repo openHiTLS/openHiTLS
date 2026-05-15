@@ -78,6 +78,13 @@ void SDV_CRYPTO_MLKEM_CTRL_API_TC001(int bits)
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_SUCCESS);
 
+    int32_t secBits = 0;
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SECBITS, &secBits, sizeof(secBits) - 1);
+    ASSERT_EQ(ret, CRYPT_INVALID_ARG);
+
+    ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_GET_SECBITS, &secBits, sizeof(secBits));
+    ASSERT_EQ(ret, CRYPT_SUCCESS);
+
     ret = CRYPT_EAL_PkeyCtrl(ctx, CRYPT_CTRL_SET_PARA_BY_ID, &val, sizeof(val));
     ASSERT_EQ(ret, CRYPT_MLKEM_CTRL_INIT_REPEATED);
 EXIT:

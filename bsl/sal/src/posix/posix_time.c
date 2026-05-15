@@ -68,12 +68,22 @@ int32_t SAL_TIME_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
 {
     struct tm tempTime;
     time_t utcTimeTmp = (time_t)utcTime;
+    if ((int64_t)utcTimeTmp != utcTime) {
+        return BSL_SAL_TIME_BAD_PARAM;
+    }
     if (gmtime_r(&utcTimeTmp, &tempTime) == NULL) {
         return BSL_SAL_TIME_BAD_PARAM;
     }
 
-    sysTime->year = (uint16_t)((uint16_t)tempTime.tm_year + BSL_TIME_YEAR_START); /* 1900 is base year */
-    sysTime->month = (uint8_t)((uint8_t)tempTime.tm_mon + 1U);
+    int64_t year = (int64_t)tempTime.tm_year + (int64_t)BSL_TIME_YEAR_START; /* 1900 is base year */
+    if (year < 0 || year > UINT16_MAX || tempTime.tm_mon < 0 || tempTime.tm_mon > 11 ||
+        tempTime.tm_mday < 1 || tempTime.tm_mday > 31 || tempTime.tm_hour < 0 || tempTime.tm_hour > 23 ||
+        tempTime.tm_min < 0 || tempTime.tm_min > 59 || tempTime.tm_sec < 0 || tempTime.tm_sec > 60) {
+        return BSL_SAL_TIME_BAD_PARAM;
+    }
+
+    sysTime->year = (uint16_t)year;
+    sysTime->month = (uint8_t)(tempTime.tm_mon + 1);
     sysTime->day = (uint8_t)tempTime.tm_mday;
     sysTime->hour = (uint8_t)tempTime.tm_hour;
     sysTime->minute = (uint8_t)tempTime.tm_min;

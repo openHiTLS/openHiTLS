@@ -213,7 +213,7 @@ int32_t SAL_DeleteCondVar(BSL_SAL_CondVar condVar)
 }
 #endif
 
-#if defined(HITLS_BSL_SAL_LINUX) && defined(HITLS_BSL_SAL_PID)
+#if (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN)) && defined(HITLS_BSL_SAL_PID)
 int32_t SAL_GetPid(void)
 {
     return (int32_t)getpid();

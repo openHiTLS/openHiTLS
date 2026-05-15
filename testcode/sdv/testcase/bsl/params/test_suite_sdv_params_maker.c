@@ -318,6 +318,7 @@ void SDV_HITLS_PARAM_002()
     int32_t int32 = 65535;
     int32_t val_32 = -1;
     uint8_t val_8 = 255;
+    uint8_t val_long[sizeof(uint64_t) + 1] = {0};
     bool valBool = true;
     int32_t key = 1;
     int32_t index = 1;
@@ -331,6 +332,8 @@ void SDV_HITLS_PARAM_002()
     ASSERT_TRUE(TestIsErrStackEmpty());
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key++, BSL_PARAM_TYPE_UINT32, &val_8, sizeof(val_8)), BSL_INVALID_ARG);
     ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key++, BSL_PARAM_TYPE_UINT32, &val_8, sizeof(uint16_t)), BSL_INVALID_ARG);
+    ASSERT_EQ(BSL_PARAM_MAKER_PushValue(maker, key++, BSL_PARAM_TYPE_UINT32, val_long, sizeof(val_long)),
+        BSL_INVALID_ARG);
 
     BSL_Param *params = BSL_PARAM_MAKER_ToParam(maker);
     ASSERT_TRUE(params != NULL);

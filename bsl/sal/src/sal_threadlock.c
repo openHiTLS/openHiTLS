@@ -242,7 +242,7 @@ int32_t BSL_SAL_GetPid(void)
     if ((g_pidCallback.pfGetId != NULL) && (g_pidCallback.pfGetId != BSL_SAL_GetPid)) {
         return g_pidCallback.pfGetId();
     }
-#if defined (HITLS_BSL_SAL_PID) && defined(HITLS_BSL_SAL_LINUX)
+#if defined(HITLS_BSL_SAL_PID) && (defined(HITLS_BSL_SAL_LINUX) || defined(HITLS_BSL_SAL_DARWIN))
     return SAL_GetPid();
 #else
     return 0;

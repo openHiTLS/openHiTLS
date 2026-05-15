@@ -284,7 +284,7 @@ static int32_t CmpExKeyUsageByOid(const void *pCurr, const void *pOid)
     if (curr->dataLen != oid->octetLen) {
         return 1;
     }
-    return memcmp(curr->data, oid->octs, curr->dataLen);
+    return memcmp(curr->data, oid->octs, curr->dataLen) == 0 ? 0 : 1;
 }
 
 static int32_t AddExtendKeyUsage(BslOidString *oidStr, BslList *list)
