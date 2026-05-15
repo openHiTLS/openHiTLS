@@ -50,7 +50,7 @@ typedef enum OptionChoice {
     HITLS_SM_OPTIONS_ENUM,
 #endif
 } HITLSOptType;
-
+// Curently, MAC CLI doesn't support pass IV;
 static const HITLS_CmdOption g_macOpts[] = {
     {"help", HITLS_APP_OPT_MAC_HELP, HITLS_APP_OPT_VALUETYPE_NO_VALUE, "Show usage information for MAC command."},
     {"name", HITLS_APP_OPT_MAC_ALG, HITLS_APP_OPT_VALUETYPE_STRING, "Specify MAC algorithm (e.g., hmac-sha256)."},

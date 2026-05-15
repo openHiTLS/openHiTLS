@@ -584,6 +584,17 @@ static uint32_t GetMdSize(const EAL_MdMethod *hashMethod, int32_t hashId)
     return hashMethod->mdSize;
 }
 
+static int32_t SafeAddU32(uint32_t base, uint32_t add, uint32_t *out)
+{
+    if (base > UINT32_MAX - add) {
+        BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
+        return CRYPT_INVALID_ARG;
+    }
+    *out = base + add;
+    return CRYPT_SUCCESS;
+}
+
+
 static int32_t MsgEncode(const CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t *data, uint32_t dataLen,
     uint8_t **mpOut, uint32_t *mpLenOut)
 {
@@ -592,25 +603,30 @@ static int32_t MsgEncode(const CryptSlhDsaCtx *ctx, int32_t algId, const uint8_t
     uint32_t offset = 0;
     uint8_t prehash[MAX_DIGEST_SIZE] = {0};
     uint32_t prehashLen = sizeof(prehash);
-
-    uint32_t mpLen = SLH_DSA_PREFIX_LEN + ctx->contextLen;
+    uint32_t mpLen = SLH_DSA_PREFIX_LEN;
+    RETURN_RET_IF_ERR(SafeAddU32(mpLen, ctx->contextLen, &mpLen), ret);
     if (ctx->isPrehash) {
+        const EAL_MdMethod *md = EAL_MdFindDefaultMethod(algId);
+        if (md == NULL) {
+            BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED);
+            return CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED;
+        }
         oid = BSL_OBJ_GetOID((BslCid)algId);
         if (oid == NULL) {
             BSL_ERR_PUSH_ERROR(CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED);
             return CRYPT_SLHDSA_ERR_PREHASH_ID_NOT_SUPPORTED;
         }
-        mpLen += 2 + oid->octetLen; // asn1 header length is 2
-        prehashLen = GetMdSize(EAL_MdFindDefaultMethod(algId), algId);
+        RETURN_RET_IF_ERR(SafeAddU32(mpLen, 2 + oid->octetLen, &mpLen), ret);
+        prehashLen = GetMdSize(md, algId);
         const CRYPT_ConstData constData = {data, dataLen};
-        ret = CRYPT_CalcHash(NULL, EAL_MdFindDefaultMethod(algId), &constData, 1, prehash, &prehashLen);
+        ret = CRYPT_CalcHash(NULL, md, &constData, 1, prehash, &prehashLen);
         if (ret != CRYPT_SUCCESS) {
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
-        mpLen += prehashLen;
+        RETURN_RET_IF_ERR(SafeAddU32(mpLen, prehashLen, &mpLen), ret);
     } else {
-        mpLen += dataLen;
+        RETURN_RET_IF_ERR(SafeAddU32(mpLen, dataLen, &mpLen), ret);
     }
 
     uint8_t *mp = (uint8_t *)BSL_SAL_Malloc(mpLen);
@@ -691,6 +707,10 @@ static int32_t SlhDsaSetAlgId(CryptSlhDsaCtx *ctx, void *val, uint32_t len)
     if (val == NULL || len != sizeof(int32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
+    }
+    if (ctx->para.algId != 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_NOT_SUPPORT);
+        return CRYPT_NOT_SUPPORT;
     }
     int32_t algId = *(int32_t *)val;
     if (CheckNotSlhDsaAlgId(algId)) {
