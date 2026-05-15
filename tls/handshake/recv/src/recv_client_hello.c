@@ -431,6 +431,10 @@ static int32_t Tls13ServerNegotiateCipher(TLS_Ctx *ctx, uint16_t cipher, bool pr
     if (IS_SM_TLS13(cipher)) {
         int32_t certKeyType = TLS_CERT_KEY_TYPE_SM2;
         CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
+        if (mgrCtx == NULL) {
+            BSL_ERR_PUSH_ERROR(HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE);
+            return HITLS_CONFIG_NO_SUITABLE_CIPHER_SUITE;
+        }
         CERT_Pair *certPair =  NULL;
         ret = BSL_HASH_At(mgrCtx->certPairs, (uintptr_t)certKeyType, (uintptr_t *)&certPair);
         if (ret != HITLS_SUCCESS || certPair == NULL) {
@@ -505,6 +509,9 @@ static int32_t CheckCipherSuite(TLS_Ctx *ctx, const ClientHelloMsg *clientHello,
 static bool Tls13HasCertificate(TLS_Ctx *ctx)
 {
     CERT_MgrCtx *certMgrCtx = ctx->config.tlsConfig.certMgrCtx;
+    if (certMgrCtx == NULL) {
+        return false;
+    }
     BSL_HASH_Hash *certPairs = certMgrCtx->certPairs;
     BSL_HASH_Iterator it = BSL_HASH_IterBegin(certPairs);
     while (it != BSL_HASH_IterEnd(certPairs)) {
@@ -771,7 +778,7 @@ static int32_t ServerDealServerName(TLS_Ctx *ctx, const ClientHelloMsg *clientHe
                 "server did not accept server_name from client hello msg, stop handshake",
                 0, 0, 0, 0);
             ctx->negotiatedInfo.isSniStateOK = false;
-            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_UNRECOGNIZED_NAME);
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, (ALERT_Description)alert);
             return  HITLS_MSG_HANDLE_SNI_UNRECOGNIZED_NAME;
     }
 
@@ -802,6 +809,41 @@ static int32_t ServerDealRecordSizeLimit(TLS_Ctx *ctx, const ClientHelloMsg *cli
     return REC_RecOutBufReSet(ctx);
 }
 #endif
+
+#ifdef HITLS_TLS_FEATURE_ETM
+static int32_t ServerCheckEncryptThenMac(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
+{
+    bool haveEncryptThenMac = clientHello->extension.flag.haveEncryptThenMac;
+#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
+    /* Renegotiation cannot be downgraded from EncryptThenMac to MacThenEncrypt */
+    if (ctx->negotiatedInfo.isRenegotiation && ctx->negotiatedInfo.isEncryptThenMac && !haveEncryptThenMac) {
+        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ENCRYPT_THEN_MAC_ERR);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15919, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "regotiation should not change encrypt then mac to mac then encrypt.", 0, 0, 0, 0);
+        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
+        return HITLS_MSG_HANDLE_ENCRYPT_THEN_MAC_ERR;
+    }
+#endif
+    /* If EncryptThenMac is not configured, a success message is returned. */
+    if (!ctx->config.tlsConfig.isEncryptThenMac) {
+        return HITLS_SUCCESS;
+    }
+
+    /* TLS 1.3 does not need to negotiate this expansion. */
+    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
+        return HITLS_SUCCESS;
+    }
+
+    /* Only the CBC cipher suite has the EncryptThenMac setting. */
+    if (haveEncryptThenMac && ctx->negotiatedInfo.cipherSuiteInfo.cipherType == HITLS_CBC_CIPHER) {
+        ctx->negotiatedInfo.isEncryptThenMac = true;
+    } else {
+        ctx->negotiatedInfo.isEncryptThenMac = false;
+    }
+
+    return HITLS_SUCCESS;
+}
+#endif /* HITLS_TLS_FEATURE_ETM */
 
 static int32_t ProcessClientHelloExt(TLS_Ctx *ctx, const ClientHelloMsg *clientHello, bool isNeedSendHrr)
 {
@@ -922,6 +964,22 @@ static int32_t DealResumeServerName(TLS_Ctx *ctx, const ClientHelloMsg *clientHe
         return  HITLS_MSG_HANDLE_SNI_UNRECOGNIZED_NAME;
     }
 
+    int alert = ALERT_UNRECOGNIZED_NAME;
+    /* Execute the product callback function */
+    int32_t ret = ctx->globalConfig->sniDealCb(ctx, &alert, ctx->globalConfig->sniArg);
+    switch (ret) {
+        case HITLS_ACCEPT_SNI_ERR_OK:
+            ctx->negotiatedInfo.isSniStateOK = true;
+            break;
+        case HITLS_ACCEPT_SNI_ERR_NOACK:
+            ctx->negotiatedInfo.isSniStateOK = false;
+            break;
+        default:
+            ctx->negotiatedInfo.isSniStateOK = false;
+            ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, (ALERT_Description)alert);
+            return HITLS_MSG_HANDLE_SNI_UNRECOGNIZED_NAME;
+    }
+
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15236, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "during session resume, server accept server_name [%s] from client hello msg.", (char *)serverName, 0, 0, 0);
 
@@ -999,7 +1057,13 @@ static int32_t ServerCheckResumeParam(TLS_Ctx *ctx, const ClientHelloMsg *client
         ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_INTERNAL_ERROR);
         return ret;
     }
-
+#ifdef HITLS_TLS_FEATURE_ETM
+    /* Select the encryption mode (EncryptThenMac/MacThenEncrypt) */
+    ret = ServerCheckEncryptThenMac(ctx, clientHello);
+    if (ret != HITLS_SUCCESS) {
+        return ret;
+    }
+#endif /* HITLS_TLS_FEATURE_ETM */
 #ifdef HITLS_TLS_FEATURE_ALPN
     /* During session resumption, the server processes the ALPN extension in the ClientHello message */
     return DealResumeAlpnEx(ctx, clientHello);
@@ -1217,40 +1281,6 @@ static int32_t ServerCheckAndProcessRenegoInfo(TLS_Ctx *ctx, const ClientHelloMs
     return HITLS_SUCCESS;
 #endif /* HITLS_TLS_FEATURE_RENEGOTIATION */
 }
-#ifdef HITLS_TLS_FEATURE_ETM
-static int32_t ServerCheckEncryptThenMac(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
-{
-    bool haveEncryptThenMac = clientHello->extension.flag.haveEncryptThenMac;
-#ifdef HITLS_TLS_FEATURE_RENEGOTIATION
-    /* Renegotiation cannot be downgraded from EncryptThenMac to MacThenEncrypt */
-    if (ctx->negotiatedInfo.isRenegotiation && ctx->negotiatedInfo.isEncryptThenMac && !haveEncryptThenMac) {
-        BSL_ERR_PUSH_ERROR(HITLS_MSG_HANDLE_ENCRYPT_THEN_MAC_ERR);
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15919, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "regotiation should not change encrypt then mac to mac then encrypt.", 0, 0, 0, 0);
-        ctx->method.sendAlert(ctx, ALERT_LEVEL_FATAL, ALERT_HANDSHAKE_FAILURE);
-        return HITLS_MSG_HANDLE_ENCRYPT_THEN_MAC_ERR;
-    }
-#endif
-    /* If EncryptThenMac is not configured, a success message is returned. */
-    if (!ctx->config.tlsConfig.isEncryptThenMac) {
-        return HITLS_SUCCESS;
-    }
-
-    /* TLS 1.3 does not need to negotiate this expansion. */
-    if (ctx->negotiatedInfo.version == HITLS_VERSION_TLS13) {
-        return HITLS_SUCCESS;
-    }
-
-    /* Only the CBC cipher suite has the EncryptThenMac setting. */
-    if (haveEncryptThenMac && ctx->negotiatedInfo.cipherSuiteInfo.cipherType == HITLS_CBC_CIPHER) {
-        ctx->negotiatedInfo.isEncryptThenMac = true;
-    } else {
-        ctx->negotiatedInfo.isEncryptThenMac = false;
-    }
-
-    return HITLS_SUCCESS;
-}
-#endif /* HITLS_TLS_FEATURE_ETM */
 
 static int32_t ServerSelectCipherSuiteInfo(TLS_Ctx *ctx, const ClientHelloMsg *clientHello)
 {
@@ -1371,9 +1401,7 @@ int32_t ProcessCertCallback(TLS_Ctx *ctx)
 {
     CERT_MgrCtx *mgrCtx = ctx->config.tlsConfig.certMgrCtx;
     if (mgrCtx == NULL) {
-        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15229, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
-            "certMgrCtx is null when process client hello.", 0, 0, 0, 0);
-        return HITLS_INTERNAL_EXCEPTION;
+        return HITLS_SUCCESS;
     }
     HITLS_CertCb certCb = mgrCtx->certCb;
     void *certCbArg = mgrCtx->certCbArg;

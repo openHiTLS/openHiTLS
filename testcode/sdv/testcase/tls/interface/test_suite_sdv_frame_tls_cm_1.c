@@ -73,6 +73,7 @@
 #include "send_process.h"
 #include "cert.h"
 #include "hitls_cert_reg.h"
+#include "hitls_cert_init.h"
 #include "hitls_crypt_type.h"
 #include "hs.h"
 #include "hs_state_recv.h"
@@ -113,6 +114,12 @@ STUB_DEFINE_RET1(BslList *, BSL_LIST_New, int32_t);
 STUB_DEFINE_RET1(const HITLS_Config *, HITLS_GetConfig, const HITLS_Ctx *);
 STUB_DEFINE_RET2(void *, BSL_SAL_Dump, const void *, uint32_t);
 STUB_DEFINE_RET3(int32_t, BSL_LIST_AddElement, BslList *, void *, BslListPosition);
+STUB_DEFINE_RET0(bool, SAL_CERT_MgrIsEnable);
+
+static bool STUB_SAL_CERT_MgrIsEnable_FALSE(void)
+{
+    return false;
+}
 
 static char *g_serverName = "testServer";
 uint32_t g_uiPort = 18888;
@@ -411,6 +418,140 @@ EXIT:
     HITLS_CFG_FreeConfig(config);
     FRAME_FreeLink(client);
     FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+ * @test     UT_TLS_CM_SESSION_RESUME_ENCRYPTHENMAC_FUNC_TC001
+ * @title TLS1.2 session resumption keeps negotiated encrypt-then-mac
+ * @precon nan
+ * @brief
+ * 1. Configure both peers for TLS1.2 CBC cipher suite with encrypt-then-mac enabled and complete the first handshake.
+ * 2. Save the client session and create a new connection with the saved session.
+ * 3. Verify the second handshake is resumed and encrypt-then-mac remains enabled after resumption.
+ * @expect
+ * 1. The first handshake succeeds and encrypt-then-mac is negotiated.
+ * 2. The second handshake succeeds as a resumed session.
+ * 3. Encrypt-then-mac is still enabled on both peers after session resumption.
+ @ */
+/* BEGIN_CASE */
+void UT_TLS_CM_SESSION_RESUME_ENCRYPTHENMAC_FUNC_TC001(void)
+{
+    FRAME_Init();
+    HITLS_Config *config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    HITLS_Session *session = NULL;
+    bool encryptThenMacType = false;
+
+    config = HITLS_CFG_NewTLS12Config();
+    ASSERT_TRUE(config != NULL);
+    ASSERT_EQ(HITLS_CFG_SetEncryptThenMac(config, true), HITLS_SUCCESS);
+
+    uint16_t signAlgs[] = {CERT_SIG_SCHEME_RSA_PKCS1_SHA256, CERT_SIG_SCHEME_ECDSA_SECP256R1_SHA256};
+    ASSERT_EQ(HITLS_CFG_SetSignature(config, signAlgs, sizeof(signAlgs) / sizeof(uint16_t)), HITLS_SUCCESS);
+
+    uint16_t cipherSuite = HITLS_RSA_WITH_AES_128_CBC_SHA256;
+    ASSERT_EQ(HITLS_CFG_SetCipherSuites(config, &cipherSuite, 1), HITLS_SUCCESS);
+
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_GetEncryptThenMac(client->ssl, &encryptThenMacType), HITLS_SUCCESS);
+    ASSERT_EQ(encryptThenMacType, true);
+    ASSERT_EQ(HITLS_GetEncryptThenMac(server->ssl, &encryptThenMacType), HITLS_SUCCESS);
+    ASSERT_EQ(encryptThenMacType, true);
+
+    session = HITLS_GetDupSession(client->ssl);
+    ASSERT_TRUE(session != NULL);
+
+    FRAME_FreeLink(client);
+    client = NULL;
+    FRAME_FreeLink(server);
+    server = NULL;
+
+    client = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLink(config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(HITLS_SetSession(client->ssl, session), HITLS_SUCCESS);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.isResume, true);
+    ASSERT_EQ(server->ssl->negotiatedInfo.isResume, true);
+
+    ASSERT_EQ(HITLS_GetEncryptThenMac(client->ssl, &encryptThenMacType), HITLS_SUCCESS);
+    ASSERT_EQ(encryptThenMacType, true);
+    ASSERT_EQ(HITLS_GetEncryptThenMac(server->ssl, &encryptThenMacType), HITLS_SUCCESS);
+    ASSERT_EQ(encryptThenMacType, true);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_SESS_Free(session);
+    HITLS_CFG_FreeConfig(config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+/** @
+ * @test     UT_TLS13_CREATE_LINK_WITH_CERTMGR_DISABLED_PSK_TC001
+ * @title Create TLS1.3 client and server frame links with cert manager disabled in PSK modes
+ * @precon nan
+ * @brief
+ * 1. Disable SAL_CERT_MgrIsEnable by setting certStoreNew in the manager method to NULL.
+ * 2. Create TLS1.3 client and server configs, and set the input key exchange mode.
+ * 3. Configure PSK callbacks and call FRAME_CreateLinkEx to create both client and server links.
+ * 4. Complete a TLS1.3 handshake.
+ * @expect
+ * 1. Config creation and PSK configuration succeed.
+ * 2. Client and server link creation succeed when cert manager is disabled.
+ * 3. The PSK-only handshake succeeds without certificates.
+ * 4. The PSK-with-DHE handshake succeeds without certificates.
+  @ */
+/* BEGIN_CASE */
+void UT_TLS13_CREATE_LINK_WITH_CERTMGR_DISABLED_PSK_TC001(int keyExchMode)
+{
+    FRAME_Init();
+    HITLS_Config *c_config = NULL;
+    HITLS_Config *s_config = NULL;
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+    char psk[] = "aaaaaaaaaaaaaaaa";
+
+    STUB_REPLACE(SAL_CERT_MgrIsEnable, STUB_SAL_CERT_MgrIsEnable_FALSE);
+    ASSERT_TRUE(SAL_CERT_MgrIsEnable() == false);
+
+    c_config = HITLS_CFG_NewTLS13Config();
+    s_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(c_config != NULL);
+    ASSERT_TRUE(s_config != NULL);
+    ASSERT_TRUE(c_config->certMgrCtx == NULL);
+    ASSERT_TRUE(s_config->certMgrCtx == NULL);
+    ASSERT_EQ(ExampleSetPsk(psk), HITLS_SUCCESS);
+    ASSERT_TRUE(keyExchMode == TLS13_KE_MODE_PSK_ONLY || keyExchMode == TLS13_KE_MODE_PSK_WITH_DHE);
+    ASSERT_EQ(HITLS_CFG_SetKeyExchMode(c_config, (uint32_t)keyExchMode), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetKeyExchMode(s_config, (uint32_t)keyExchMode), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetPskClientCallback(c_config, ExampleClientCb), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetPskServerCallback(s_config, ExampleServerCb), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkEx(c_config, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkEx(s_config, BSL_UIO_TCP);
+    ASSERT_TRUE(server != NULL);
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    STUB_RESTORE(SAL_CERT_MgrIsEnable);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
 }
 /* END_CASE */
 
@@ -3581,6 +3722,141 @@ void SDV_HiTLS_KeepPeerCertificate_TC013(void)
     ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
     ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
 
+    ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    HITLS_CFG_FreeConfig(c_config);
+    HITLS_CFG_FreeConfig(s_config);
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+}
+/* END_CASE */
+
+static void Tls13PostHandshakeAuth(FRAME_LinkObj *client, FRAME_LinkObj *server, bool blockFirstSend)
+{
+    uint8_t readbuff[READ_BUF_LEN_18K] = {0};
+    uint32_t readLen = 0;
+
+    ASSERT_TRUE(HITLS_VerifyClientPostHandshake(server->ssl) == HITLS_SUCCESS);
+
+    if (blockFirstSend) {
+        FrameUioUserData *ioUserData = BSL_UIO_GetUserData(server->io);
+        ASSERT_TRUE(ioUserData != NULL);
+        ioUserData->sndMsg.len = 1;
+        ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_REC_NORMAL_IO_BUSY);
+        ASSERT_EQ(server->ssl->hsCtx->state, TRY_SEND_CERTIFICATE_REQUEST);
+        ASSERT_EQ(server->ssl->state, CM_STATE_HANDSHAKING);
+        ioUserData->sndMsg.len = 0;
+    }
+
+    ASSERT_EQ(HITLS_Accept(server->ssl), HITLS_SUCCESS);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(server, client) == HITLS_SUCCESS);
+
+    ASSERT_EQ(HITLS_Read(client->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_TRUE(FRAME_TrasferMsgBetweenLink(client, server) == HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->hsCtx->state, TRY_SEND_CERTIFICATE_VERIFY);
+    ASSERT_EQ(HITLS_Read(server->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(server->ssl->hsCtx->state, TRY_RECV_CERTIFICATE_VERIFY);
+
+    ASSERT_EQ(HITLS_Read(client->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->hsCtx->state, TRY_SEND_FINISH);
+    ASSERT_EQ(HITLS_Read(server->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(server->ssl->hsCtx->state, TRY_RECV_FINISH);
+
+    ASSERT_EQ(HITLS_Read(client->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(client, server), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(HITLS_Read(server->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_IO_BUSY);
+    ASSERT_EQ(server->ssl->hsCtx->state, TRY_SEND_NEW_SESSION_TICKET);
+
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(client->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(server->ssl->hsCtx->state, TRY_SEND_NEW_SESSION_TICKET);
+
+    ASSERT_EQ(HITLS_Read(server->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(FRAME_TrasferMsgBetweenLink(server, client), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_Read(client->ssl, readbuff, READ_BUF_LEN_18K, &readLen), HITLS_REC_NORMAL_RECV_BUF_EMPTY);
+    ASSERT_EQ(server->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(client->ssl->state, CM_STATE_TRANSPORTING);
+    ASSERT_EQ(server->ssl->phaState, PHA_EXTENSION);
+    ASSERT_EQ(client->ssl->phaState, PHA_EXTENSION);
+EXIT:
+    readLen = 1;
+}
+
+/* @
+ * @test SDV_TLS13_PHA_BLOCK_RESEND_TC001
+ * @spec -
+ * @title After one successful TLS1.3 PHA, the next PHA succeeds after a blocked send is retried
+ * @precon nan
+ * @brief
+ * 1. Create a TLS1.3 client and server that support post-handshake auth and client certificate verification.
+ * 2. Complete one post-handshake authentication successfully.
+ * 3. Trigger a second post-handshake authentication, make the server send path busy for the first send, and retry.
+ * 4. After the client replies with certificate-related messages, verify the second post-handshake authentication succeeds.
+ * @expect
+ * 1. The first post-handshake authentication succeeds.
+ * 2. The first send of the second PHA returns IO busy.
+ * 3. Retrying the second PHA succeeds, and both peers return to transporting state.
+ * @prior Level 1
+ * @auto TRUE
+ @ */
+/* BEGIN_CASE */
+void SDV_TLS13_PHA_BLOCK_RESEND_TC001(void)
+{
+    FRAME_Init();
+    FRAME_LinkObj *client = NULL;
+    FRAME_LinkObj *server = NULL;
+
+    HITLS_Config *c_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(c_config != NULL);
+    HITLS_Config *s_config = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(s_config != NULL);
+
+    FRAME_CertInfo certInfo = {RSA_SHA_CA_PATH, 0, 0, 0, 0, 0};
+    char certChainFile[] = "../testdata/tls/certificate/der/rsa_sha/inter-3072.der";
+    char certeeFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.der";
+    char privatekeyFile[] = "../testdata/tls/certificate/der/rsa_sha/end-sha256.key.der";
+
+    HITLS_CERT_X509 *certChain = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certChainFile,
+        strlen(certChainFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_X509 *certee = HITLS_CFG_ParseCert(c_config, (const uint8_t *)certeeFile,
+        strlen(certeeFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    HITLS_CERT_Key *privatekey = HITLS_CFG_ParseKey(c_config, (const uint8_t *)privatekeyFile,
+        strlen(privatekeyFile) + 1, TLS_PARSE_TYPE_FILE, TLS_PARSE_FORMAT_ASN1);
+    ASSERT_TRUE(certChain != NULL);
+    ASSERT_TRUE(certee != NULL);
+    ASSERT_TRUE(privatekey != NULL);
+
+    HITLS_CFG_SetClientVerifySupport(s_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(c_config, true);
+    HITLS_CFG_SetKeepPeerCertificate(s_config, true);
+    HITLS_CFG_SetPostHandshakeAuthSupport(c_config, true);
+    HITLS_CFG_SetPostHandshakeAuthSupport(s_config, true);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(c_config, certee, true) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(c_config, privatekey, true) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(c_config, certChain, true), HITLS_SUCCESS);
+
+    ASSERT_TRUE(HITLS_CFG_SetCertificate(s_config, certee, false) == HITLS_SUCCESS);
+    ASSERT_TRUE(HITLS_CFG_SetPrivateKey(s_config, privatekey, false) == HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_AddChainCert(s_config, certChain, false), HITLS_SUCCESS);
+
+    client = FRAME_CreateLinkWithCert(c_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(client != NULL);
+    server = FRAME_CreateLinkWithCert(s_config, BSL_UIO_TCP, &certInfo);
+    ASSERT_TRUE(server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, true, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(Compare_Certificates(client, server, false, true), HITLS_SUCCESS);
+
+    Tls13PostHandshakeAuth(client, server, false);
+    ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
+
+    Tls13PostHandshakeAuth(client, server, true);
     ASSERT_EQ(Compare_Certificates(client, server, false, false), HITLS_SUCCESS);
 
     ASSERT_TRUE(TestIsErrStackNotEmpty());

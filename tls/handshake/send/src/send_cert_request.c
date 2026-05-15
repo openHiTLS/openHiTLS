@@ -69,7 +69,7 @@ int32_t Tls13ServerSendCertRequestProcess(TLS_Ctx *ctx)
 {
     int32_t ret;
 #ifdef HITLS_TLS_FEATURE_PHA
-    if (ctx->phaState == PHA_PENDING) {
+    if (ctx->phaState == PHA_PENDING && ctx->hsCtx->msgLen == 0) {
         BSL_SAL_FREE(ctx->certificateReqCtx);
         ctx->certificateReqCtx = BSL_SAL_Calloc(CERT_REQ_CTX_SIZE, sizeof(uint8_t));
         if (ctx->certificateReqCtx == NULL) {

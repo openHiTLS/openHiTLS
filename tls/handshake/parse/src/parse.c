@@ -557,7 +557,7 @@ int32_t HITLS_ClientHelloGetCiphers(HITLS_Ctx *ctx, uint16_t **out, uint16_t *ou
     return HITLS_SUCCESS;
 }
 
-int32_t HITLS_ClientHelloGetExtensionsPresent(HITLS_Ctx *ctx, uint16_t **out, uint8_t *outlen)
+int32_t HITLS_ClientHelloGetExtensionsPresent(HITLS_Ctx *ctx, uint16_t **out, uint32_t *outlen)
 {
     if (ctx == NULL || out == NULL || outlen == NULL) {
         return HITLS_NULL_INPUT;
