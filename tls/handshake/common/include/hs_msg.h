@@ -184,7 +184,7 @@ typedef struct {
     uint64_t extensionTypeMask;
     uint8_t *extensionBuff;
     uint32_t extensionBuffLen;
-    uint8_t extensionCount; /* Size of the extension buffer */
+    uint32_t extensionCount; /* Size of the extension buffer */
 } ClientHelloMsg;
 
 /* It is used to transmit server hello message */

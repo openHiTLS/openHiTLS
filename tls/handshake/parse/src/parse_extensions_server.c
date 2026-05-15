@@ -900,7 +900,7 @@ static int32_t ParseClientExBody(TLS_Ctx *ctx, uint16_t extMsgType, const uint8_
 int32_t ParseClientExtension(TLS_Ctx *ctx, const uint8_t *buf, uint32_t bufLen, ClientHelloMsg *msg)
 {
     uint32_t bufOffset = 0u;
-    uint8_t extensionCount = 0;
+    uint32_t extensionCount = 0;
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
     uint32_t customExtSeenMask = 0;
 #endif

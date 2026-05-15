@@ -94,6 +94,8 @@ static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg, CERT_It
         return ParseErrorProcess(pkt->ctx, HITLS_PARSE_INVALID_MSG_LEN, BINLOG_ID16235, logStr, ALERT_DECODE_ERROR);
     }
 
+    uint32_t certExEnd = *pkt->bufOffset + certExLen;
+
     uint32_t offset = 0;
 #ifdef HITLS_TLS_FEATURE_CUSTOM_EXTENSION
     uint32_t customExtSeenMask = 0;
@@ -102,7 +104,7 @@ static int32_t ParseCertExtension(ParsePacket *pkt, CertificateMsg *msg, CERT_It
         uint16_t extMsgType = HS_EX_TYPE_END;
         uint32_t extMsgLen = 0u;
         ret = ParseExHeader(pkt->ctx, &pkt->buf[*pkt->bufOffset],
-            pkt->bufLen - *pkt->bufOffset, &extMsgType, &extMsgLen);
+            certExEnd - *pkt->bufOffset, &extMsgType, &extMsgLen);
         if (ret != HITLS_SUCCESS) {
             return ParseErrorProcess(pkt->ctx, ret, BINLOG_ID15330, logStr, ALERT_DECODE_ERROR);
         }

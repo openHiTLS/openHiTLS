@@ -74,7 +74,7 @@ int32_t full_client_hello_callback(HITLS_Ctx *ctx, int32_t *alert, void *arg)
     uint16_t *cipher;
     uint16_t cipherLen;
     uint16_t *exts;
-    uint8_t extLen;
+    uint32_t extLen;
     uint8_t *random;
     uint8_t randomLen;
     uint8_t *extBuff;
