@@ -424,6 +424,20 @@ ret = BSL_ASN1_DecodeTemplate(&templ, NULL, &cursor, &remain, out, 2);
 
 ```c
 // 示例语义: SEQUENCE OF SEQUENCE OF INTEGER {{1,2},{3}}
+static int32_t ParseIntNodeCb(uint32_t layer, BSL_ASN1_Buffer *asn, void *cbParam, BSL_ASN1_List *list)
+{
+    int *v = (int *)BSL_SAL_Malloc(sizeof(int));
+    if (v == NULL) {
+        return BSL_MALLOC_FAIL;
+    }
+    int32_t ret = BSL_ASN1_DecodePrimitiveItem(asn, v);
+    if (ret != BSL_SUCCESS) {
+        BSL_SAL_Free(v);
+        return ret;
+    }
+    return BSL_SUCCESS; // user can push to `list` as needed
+}
+
 uint8_t listVal[] = {
   0x30,0x06,0x02,0x01,0x01,0x02,0x01,0x02,
   0x30,0x03,0x02,0x01,0x03
@@ -441,9 +455,15 @@ int32_t ret = BSL_ASN1_DecodeListItem(&param, &asn, ParseIntNodeCb, NULL, &outLi
 ```
 
 ```c
+static int32_t ParseSeqNodeThenDecodeTemplateCb(uint32_t layer, BSL_ASN1_Buffer *asn, void *cbParam, BSL_ASN1_List *list)
+{
+    (void)layer; (void)asn; (void)cbParam; (void)list;
+    return BSL_SUCCESS; // user callback: decode nested sequence using DecodeTemplate
+}
 // 补充示例语义: SET OF SEQUENCE { INTEGER, OCTET STRING }
 // 注意：二层DecodeListItem无法直接表达异构第二层（INTEGER + OCTET STRING）。
 // 推荐：第一层按SEQUENCE拆分，再在回调里用DecodeTemplate解析每个元素。
+
 uint8_t setVal[] = {
   0x30,0x06,0x02,0x01,0x01,0x04,0x01,0xAA,
   0x30,0x06,0x02,0x01,0x02,0x04,0x01,0xBB
