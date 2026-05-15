@@ -102,7 +102,7 @@ void MODES_ClearVfyTag(uint8_t *vfyTag, uint32_t *vfyTagLen, uint32_t maxTagLen)
     if (vfyTag == NULL || vfyTagLen == NULL) {
         return;
     }
-    (void)memset_s(vfyTag, maxTagLen, 0, maxTagLen);
+    BSL_SAL_CleanseData(vfyTag, maxTagLen);
     *vfyTagLen = 0;
 }
 
@@ -400,16 +400,16 @@ int32_t MODES_CipherFinal(MODES_CipherCtx *modeCtx, void *blockUpdate, uint8_t *
         outLenTemp = modeCtx->dataLen;
         ret = MODES_BlockUnPadding(modeCtx->pad, tmpBuf, modeCtx->commonCtx.blockSize, &outLenTemp);
         if (ret != CRYPT_SUCCESS) {
-            (void)memset_s(tmpBuf, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+            BSL_SAL_CleanseData(tmpBuf, EAL_MAX_BLOCK_LENGTH);
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
         if (memcpy_s(out, *outLen, tmpBuf, outLenTemp) != EOK) {
-            (void)memset_s(tmpBuf, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+            BSL_SAL_CleanseData(tmpBuf, EAL_MAX_BLOCK_LENGTH);
             BSL_ERR_PUSH_ERROR(CRYPT_EAL_BUFF_LEN_NOT_ENOUGH);
             return CRYPT_EAL_BUFF_LEN_NOT_ENOUGH;
         }
-        (void)memset_s(tmpBuf, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+        BSL_SAL_CleanseData(tmpBuf, EAL_MAX_BLOCK_LENGTH);
         *outLen = outLenTemp;
     }
     modeCtx->dataLen = 0;
@@ -486,7 +486,7 @@ int32_t MODES_CipherDeInitCtx(MODES_CipherCtx *modeCtx)
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
-    (void)memset_s(modeCtx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+    BSL_SAL_CleanseData(modeCtx->data, EAL_MAX_BLOCK_LENGTH);
     modeCtx->dataLen = 0;
     modeCtx->pad = CRYPT_PADDING_NONE;
     MODES_Clean(&modeCtx->commonCtx);
@@ -548,7 +548,7 @@ int32_t MODES_CipherCtrl(MODES_CipherCtx *ctx, int32_t opt, void *val, uint32_t 
 {
     switch (opt) {
         case CRYPT_CTRL_REINIT_STATUS:
-            (void)memset_s(ctx->data, EAL_MAX_BLOCK_LENGTH, 0, EAL_MAX_BLOCK_LENGTH);
+            BSL_SAL_CleanseData(ctx->data, EAL_MAX_BLOCK_LENGTH);
             ctx->dataLen = 0;
             ctx->pad = CRYPT_PADDING_NONE;
             return MODES_SetIv(&ctx->commonCtx, val, len);

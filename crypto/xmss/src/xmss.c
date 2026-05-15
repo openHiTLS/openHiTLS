@@ -122,6 +122,10 @@ static int32_t XmssGetPubkeyLen(CryptXmssCtx *ctx, void *val, uint32_t len)
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
     }
+    if (ctx->params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
+        return CRYPT_XMSS_KEYINFO_NOT_SET;
+    }
     *(uint32_t *)val = ctx->params->n * 2 + HASH_SIGN_XDR_ALG_TYPE_LEN;
     return CRYPT_SUCCESS;
 }
@@ -135,6 +139,10 @@ static int32_t XmssGetSignatureLen(CryptXmssCtx *ctx, void *val, uint32_t len)
     if (len != sizeof(uint32_t)) {
         BSL_ERR_PUSH_ERROR(CRYPT_INVALID_ARG);
         return CRYPT_INVALID_ARG;
+    }
+    if (ctx->params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
+        return CRYPT_XMSS_KEYINFO_NOT_SET;
     }
     *(uint32_t *)val = ctx->params->sigBytes;
     return CRYPT_SUCCESS;
@@ -270,6 +278,10 @@ int32_t CRYPT_XMSS_Sign(CryptXmssCtx *ctx, int32_t algId,
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    if (ctx->params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
+        return CRYPT_XMSS_KEYINFO_NOT_SET;
+    }
     int32_t ret = CRYPT_XMSS_SignInternal(ctx, data, dataLen, sign, signLen);
     if (ret != CRYPT_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
@@ -286,6 +298,10 @@ int32_t CRYPT_XMSS_Verify(const CryptXmssCtx *ctx, int32_t algId,
     if (ctx == NULL || data == NULL || sign == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
+    }
+    if (ctx->params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
+        return CRYPT_XMSS_KEYINFO_NOT_SET;
     }
     /* Verify signature using internal API */
     int32_t ret = CRYPT_XMSS_VerifyInternal(ctx, data, dataLen, sign, signLen);
@@ -376,6 +392,10 @@ static int32_t XPrvKeyParamCheck(const CryptXmssCtx *ctx, BSL_Param *para, XmssP
 
 int32_t CRYPT_XMSS_GetPrvKey(const CryptXmssCtx *ctx, BSL_Param *para)
 {
+    if (ctx->params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
+        return CRYPT_XMSS_KEYINFO_NOT_SET;
+    }
     XmssPrvKeyParam prv;
     uint64_t index = ctx->key.idx;
     int32_t ret = XPrvKeyParamCheck(ctx, para, &prv);
@@ -510,6 +530,10 @@ static int32_t XMSSKeyPairCheck(const CryptXmssCtx *pubKey, const CryptXmssCtx *
         return CRYPT_NULL_INPUT;
     }
     if (prvKey->params == NULL) {
+        BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
+        return CRYPT_XMSS_KEYINFO_NOT_SET;
+    }
+    if (pubKey->params == NULL) {
         BSL_ERR_PUSH_ERROR(CRYPT_XMSS_KEYINFO_NOT_SET);
         return CRYPT_XMSS_KEYINFO_NOT_SET;
     }

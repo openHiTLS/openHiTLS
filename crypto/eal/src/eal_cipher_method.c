@@ -551,6 +551,9 @@ static CRYPT_CipherInfo g_cipherInfo[] = {
 #ifdef HITLS_CRYPTO_CTR
     {.id = CRYPT_CIPHER_SM4_CTR, .blockSize = 1, .keyLen = 16, .ivLen = 16},
 #endif
+#ifdef HITLS_CRYPTO_CCM
+    {.id = CRYPT_CIPHER_SM4_CCM, .blockSize = 1, .keyLen = 16, .ivLen = 12},
+#endif
 #ifdef HITLS_CRYPTO_GCM
     {.id = CRYPT_CIPHER_SM4_GCM, .blockSize = 1, .keyLen = 16, .ivLen = 12},
 #endif

@@ -308,3 +308,53 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_CRYPTO_XMSS_PARAM_NULL_TC001(void)
+{
+    TestMemInit();
+    CRYPT_EAL_PkeyCtx *pkey = NULL;
+    CRYPT_EAL_PkeyCtx *prvPkey = NULL;
+    pkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSS);
+    ASSERT_TRUE(pkey != NULL);
+    prvPkey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_XMSS);
+    ASSERT_TRUE(prvPkey != NULL);
+
+    int32_t algId = CRYPT_XMSS_SHA2_10_256;
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(prvPkey, algId), CRYPT_SUCCESS);
+
+    // GET_PUBKEY_LEN without setting params
+    uint32_t len = 0;
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_PUBKEY_LEN, (void *)&len, sizeof(len)),
+              CRYPT_XMSS_KEYINFO_NOT_SET);
+
+    // GET_SIGNLEN without setting params
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(pkey, CRYPT_CTRL_GET_SIGNLEN, (void *)&len, sizeof(len)),
+              CRYPT_XMSS_KEYINFO_NOT_SET);
+
+    // Sign without setting params
+    uint8_t data[32] = {0};
+    uint8_t sign[5000] = {0};
+    uint32_t signLen = sizeof(sign);
+    ASSERT_EQ(CRYPT_EAL_PkeySign(pkey, 0, data, sizeof(data), sign, &signLen),
+              CRYPT_XMSS_KEYINFO_NOT_SET);
+
+    // Verify without setting params
+    ASSERT_EQ(CRYPT_EAL_PkeyVerify(pkey, 0, data, sizeof(data), sign, sizeof(sign)),
+              CRYPT_XMSS_KEYINFO_NOT_SET);
+
+    // GetPrvKey without setting params
+    CRYPT_EAL_PkeyPrv prv;
+    memset(&prv, 0, sizeof(CRYPT_EAL_PkeyPrv));
+    prv.id = CRYPT_PKEY_XMSS;
+    ASSERT_EQ(CRYPT_EAL_PkeyGetPrv(pkey, &prv), CRYPT_XMSS_KEYINFO_NOT_SET);
+
+    // PairCheck: pubKey without params, prvKey with params
+    ASSERT_EQ(CRYPT_EAL_PkeyPairCheck(pkey, prvPkey), CRYPT_XMSS_KEYINFO_NOT_SET);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkey);
+    CRYPT_EAL_PkeyFreeCtx(prvPkey);
+    return;
+}
+/* END_CASE */
