@@ -183,7 +183,12 @@ static int ECP_Sm2FpEqu(const Sm2Fp a, const Sm2Fp b) {
  * @ref "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 2.22
  */
 static void ECP_Sm2FpInv(Sm2Fp r, const Sm2Fp q) {
-    Sm2Fp u, v = {0xFFFFFFFFU, 0xFFFFFFFFU, 0x00000000U, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFEU}, a = {1}, c = {0};
+    Sm2Fp v = {0xFFFFFFFFU, 0xFFFFFFFFU, 0x00000000U, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFEU};
+    if (ECP_Sm2FpIsZero(q) || ECP_Sm2FpEqu(q, v)) {
+        ECP_Sm2FpSet(r, g_Sm2Zero);
+        return;
+    }
+    Sm2Fp u, a = {1}, c = {0};
     ECP_Sm2FpSet(u, q);
     while (ECP_Sm2FpIsOne(u) == 0 && ECP_Sm2FpIsOne(v) == 0) {
         while (ECP_Sm2FpIsEven(u)) {
@@ -217,7 +222,12 @@ static void ECP_Sm2FpInv(Sm2Fp r, const Sm2Fp q) {
  * @ref "Guide to Elliptic Curve Cryptography" by Hankerson, Menezes and Vanstone, Algorithm 2.22
  */
 static void ECP_Sm2FnInv(Sm2Fp r, const Sm2Fp q) {
-    Sm2Fp u, v = {0x39D54123U, 0x53BBF409U, 0x21C6052BU, 0x7203DF6BU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFEU}, a = {1}, c = {0};
+    Sm2Fp v = {0x39D54123U, 0x53BBF409U, 0x21C6052BU, 0x7203DF6BU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFEU};
+    if (ECP_Sm2FpIsZero(q) || ECP_Sm2FpEqu(q, v)) {
+        ECP_Sm2FpSet(r, g_Sm2Zero);
+        return;
+    }
+    Sm2Fp u, a = {1}, c = {0};
     ECP_Sm2FpSet(u, q);
     while (ECP_Sm2FpIsOne(u) == 0 && ECP_Sm2FpIsOne(v) == 0) {
         while (ECP_Sm2FpIsEven(u)) {
@@ -308,6 +318,10 @@ static int ECP_Sm2PointAtInfinity(const Sm2Point *r){
  * @param [out] r Pointer to the resulting affine point.
  */
 void ECP_Sm2PointToAffineCore(const Sm2Point *a, Sm2Point *r) {
+    if (ECP_Sm2PointAtInfinity(a)) {
+        ECP_Sm2PointSetInfinity(r);
+        return;
+    }
     Sm2Fp t1, t2;
     ECP_Sm2FpInv(t1, a->z);
     ECP_Sm2FpSqr(t2, t1);
@@ -543,11 +557,10 @@ static void ECP_Sm2PointMultDoubleCore(Sm2Point *r, uint32_t m, const Sm2Point *
 static void ECP_Sm2PointMulCore(Sm2Point *r, const Sm2Fp k, const Sm2Point *g) {
 
     // compute the sm2_naf of k, The optimal parameter (window width) w = 4 is used here.
-    static Sm2Naf K;
+    Sm2Naf K;
     ECP_Sm2FpNaf(K, 4, k);
 
-    // compute the table of point g: {g, 3g, 5g, 7g, 9g, 11g, 13g, 15g}, a total of 2^{w-1} - 1 points.
-    static Sm2Point upt[8];
+    Sm2Point upt[8];
     upt[0] = *g;
     ECP_Sm2PointDouCore(r, g);
     for (uint32_t i = 1; i < 8; i++) {
@@ -629,7 +642,9 @@ static int32_t ECP_SM2FpPut(const Sm2Fp src, BN_BigNum *dst)
     BN_Zeroize(dst);
     for (uint32_t i = 0; i < SM2_LIMBS; i++) {
         dst->data[i] = src[i];
-        dst->size += dst->data != 0;
+        if (dst->data[i] != 0) {
+            dst->size = i + 1;
+        }
     }
     return CRYPT_SUCCESS;
 
@@ -727,9 +742,14 @@ ERR:
 
 int32_t ECP_Sm2OrderInv(const ECC_Para *para, BN_BigNum *r, const BN_BigNum *a)
 {
+    (void)para;
     if (BN_IsZero(a)) {
         BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_DIVISOR_ZERO);
         return CRYPT_BN_ERR_DIVISOR_ZERO;
+    }
+    if (BN_Cmp(para->n, a) == 0) {
+        BSL_ERR_PUSH_ERROR(CRYPT_BN_ERR_NO_INVERSE);
+        return CRYPT_BN_ERR_NO_INVERSE;
     }
     int32_t ret = CRYPT_SUCCESS;
     Sm2Fp n;

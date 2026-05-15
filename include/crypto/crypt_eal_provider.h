@@ -134,6 +134,12 @@ int32_t CRYPT_EAL_ProviderGetCaps(CRYPT_EAL_ProvMgrCtx *ctx, int32_t cmd, CRYPT_
  * @ingroup crypt_eal_provider
  * @brief Provider unload interface
  *
+ * @warning All crypto contexts (cipher, digest, sign, etc.) created from this
+ *          provider must be freed before calling this function. Unloading a
+ *          provider with active contexts will invalidate the function pointers
+ *          held by those contexts, causing crash or use-after-free on any
+ *          subsequent operation performed through them.
+ *
  * @param libCtx [IN] Library context
  * @param cmd [IN] Command specifying the conversion format for the provider library name.
  *                 This parameter is used to determine how the provider library name should be
