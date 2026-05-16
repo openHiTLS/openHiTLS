@@ -1761,6 +1761,68 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test  SDV_CRYPTO_SM4_HCTR_DUPCTX_FUNC_TC001
+ * @title Test SM4-HCTR context duplication after the buffered data grows beyond the default buffer size.
+ * @precon Registering memory-related functions.
+ * @brief
+ *    1.Create and initialize a SM4-HCTR context.
+ *    2.Update more than the default HCTR buffer size, then duplicate the context.
+ *    3.Finalize both the original and duplicated contexts.
+ * @expect
+ *    1-3.All operations succeed and the duplicated context produces the same output as the original.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_SM4_HCTR_DUPCTX_FUNC_TC001(int isProvider, int algId, Hex *key, Hex *tweak, int dataLen)
+{
+    TestMemInit();
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+    CRYPT_EAL_CipherCtx *dupCtx = NULL;
+    uint8_t *plain = NULL;
+    uint8_t *out = NULL;
+    uint8_t *dupOut = NULL;
+    uint32_t outLen = 0;
+    uint32_t dupOutLen = 0;
+
+    ASSERT_TRUE(dataLen > 4096);
+    plain = (uint8_t *)BSL_SAL_Malloc((uint32_t)dataLen);
+    out = (uint8_t *)BSL_SAL_Malloc((uint32_t)dataLen);
+    dupOut = (uint8_t *)BSL_SAL_Malloc((uint32_t)dataLen);
+    ASSERT_TRUE(plain != NULL && out != NULL && dupOut != NULL);
+
+    for (int i = 0; i < dataLen; i++) {
+        plain[i] = (uint8_t)(i & 0xFF);
+    }
+
+    ctx = TestCipherNewCtx(NULL, algId, "provider=default", isProvider);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key->x, key->len, tweak->x, tweak->len, true), CRYPT_SUCCESS);
+
+    outLen = (uint32_t)dataLen;
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, plain, (uint32_t)dataLen, out, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, 0);
+
+    dupCtx = CRYPT_EAL_CipherDupCtx(ctx);
+    ASSERT_TRUE(dupCtx != NULL);
+
+    outLen = (uint32_t)dataLen;
+    dupOutLen = (uint32_t)dataLen;
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, out, &outLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(dupCtx, dupOut, &dupOutLen), CRYPT_SUCCESS);
+    ASSERT_EQ(outLen, (uint32_t)dataLen);
+    ASSERT_EQ(dupOutLen, (uint32_t)dataLen);
+    ASSERT_COMPARE("HCTR DupCtx Compare", out, outLen, dupOut, dupOutLen);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+    CRYPT_EAL_CipherFreeCtx(dupCtx);
+    BSL_SAL_Free(plain);
+    BSL_SAL_Free(out);
+    BSL_SAL_Free(dupOut);
+}
+/* END_CASE */
+
+/**
  * @test   SDV_CRYPTO_EAL_SM4_FUNC_TC005
  * @title  Verify whether SM4 encryption and decryption will alter the values of registers d8 to d15 and x19 to x28.
  */
