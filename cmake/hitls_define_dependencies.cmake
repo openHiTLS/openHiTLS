@@ -1613,6 +1613,10 @@ macro(hitls_special_depends_handle)
         hitls_feature_local_enable(HITLS_CRYPTO_NIST_USE_ACCEL)
     endif()
 
+    if(HITLS_CRYPTO_KEY_EPKI AND HITLS_CRYPTO_MLKEM)
+        hitls_feature_local_enable(HITLS_CRYPTO_MLKEM_CHECK)
+    endif()
+
     if(NOT HITLS_SIXTY_FOUR_BITS)
         if(HITLS_CRYPTO_CURVE_NISTP192 OR
             HITLS_CRYPTO_CURVE_NISTP384 OR

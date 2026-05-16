@@ -285,13 +285,25 @@ EXIT:
  *    4. The value of utcTime is INT32_MAX. Expected result 4 is obtained.
  *    5. The value of utcTime is INT32_MAX + 1. Expected result 5 is obtained.
  *    6. The value of utcTime is BSL_UTCTIME_MAX. Expected result 6 is obtained.
+ *    7. The value of sysTime is NULL. Expected result 7 is obtained.
+ *    8. The value of utcTime is greater than BSL_UTCTIME_MAX. Expected result 8 is obtained.
+ *    9. The value of utcTime is -86400. Expected result 9 is obtained.
+ *    10. The value of utcTime is the UTC time of 1900-01-01 00:00:00. Expected result 10 is obtained.
+ *    11. The value of utcTime is the UTC time of 0000-01-01 00:00:00. Expected result 11 is obtained.
+ *    12. The value of utcTime is the UTC time of -0001-01-01 00:00:00. Expected result 12 is obtained.
  * @expect
  *    1. Success, return BSL_SUCCESS
- *    2. Failed, return BSL_SAL_TIME_BAD_PARAM
+ *    2. Success, return BSL_SUCCESS
  *    3. Success, return BSL_SUCCESS
  *    4. Success, return BSL_SUCCESS
  *    5. Success, return BSL_SUCCESS
  *    6. Success, return BSL_SUCCESS
+ *    7. Failed, return BSL_SAL_TIME_BAD_PARAM
+ *    8. Failed, return BSL_SAL_TIME_BAD_PARAM
+ *    9. Success, return BSL_SUCCESS, and date is 1969-12-31 00:00:00.
+ *    10. Success, return BSL_SUCCESS, and date is 1900-01-01 00:00:00.
+ *    11. Success, return BSL_SUCCESS, and date is 0000-01-01 00:00:00.
+ *    12. Failed, return BSL_SAL_TIME_BAD_PARAM.
  */
 /* BEGIN_CASE */
 void SDV_BSL_SAL_CONVERT_TIME_API_TC001(void)
@@ -306,7 +318,9 @@ void SDV_BSL_SAL_CONVERT_TIME_API_TC001(void)
     TestBslSysTimeAndTmCompare(&dateTime, &tempTime);
 
     utcTime = -1;
-    ASSERT_EQ(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime), BSL_SAL_TIME_BAD_PARAM);
+    ASSERT_TRUE(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime) == BSL_SUCCESS);
+    ASSERT_TRUE(gmtime_r((const time_t *)&utcTime, &tempTime) != NULL);
+    TestBslSysTimeAndTmCompare(&dateTime, &tempTime);
 
     utcTime = INT32_MAX;
     ASSERT_TRUE(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime) == BSL_SUCCESS);
@@ -327,6 +341,42 @@ void SDV_BSL_SAL_CONVERT_TIME_API_TC001(void)
     ASSERT_TRUE(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime) == BSL_SUCCESS);
     ASSERT_TRUE(gmtime_r((const time_t *)&utcTime, &tempTime) != NULL);
     TestBslSysTimeAndTmCompare(&dateTime, &tempTime);
+
+    ASSERT_EQ(BSL_SAL_UtcTimeToDateConvert(0, NULL), BSL_SAL_TIME_BAD_PARAM);
+
+    utcTime = BSL_UTCTIME_MAX + 1;
+    ASSERT_EQ(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime), BSL_SAL_TIME_BAD_PARAM);
+
+    utcTime = -BSL_TIME_SECS_PER_DAY;
+    ASSERT_TRUE(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime) == BSL_SUCCESS);
+    ASSERT_EQ(dateTime.year, 1969);
+    ASSERT_EQ(dateTime.month, 12);
+    ASSERT_EQ(dateTime.day, 31);
+    ASSERT_EQ(dateTime.hour, 0);
+    ASSERT_EQ(dateTime.minute, 0);
+    ASSERT_EQ(dateTime.second, 0);
+
+    utcTime = -2208988800LL; /* 1900-01-01 00:00:00 */
+    ASSERT_TRUE(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime) == BSL_SUCCESS);
+    ASSERT_EQ(dateTime.year, 1900);
+    ASSERT_EQ(dateTime.month, 1);
+    ASSERT_EQ(dateTime.day, 1);
+    ASSERT_EQ(dateTime.hour, 0);
+    ASSERT_EQ(dateTime.minute, 0);
+    ASSERT_EQ(dateTime.second, 0);
+
+    utcTime = -62167219200LL; /* 0000-01-01 00:00:00, tm_year = -1900 -> year = 0 */
+    ASSERT_TRUE(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime) == BSL_SUCCESS);
+    ASSERT_EQ(dateTime.year, 0);
+    ASSERT_EQ(dateTime.month, 1);
+    ASSERT_EQ(dateTime.day, 1);
+    ASSERT_EQ(dateTime.hour, 0);
+    ASSERT_EQ(dateTime.minute, 0);
+    ASSERT_EQ(dateTime.second, 0);
+
+    utcTime = -62198755200LL; /* -0001-01-01 00:00:00, tm_year = -1901 -> year = -1 < 0 */
+    ASSERT_EQ(BSL_SAL_UtcTimeToDateConvert(utcTime, &dateTime), BSL_SAL_TIME_BAD_PARAM);
+
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     return;
@@ -660,11 +710,13 @@ EXIT:
  * @brief    1.Add day/second with positive offsets succeeds.
  *           2.Add day/second with negative offsets succeeds even when dateR == dateA.
  *           3.Overflow parameters trigger error handling.
- *           4.Invalid input pointer fails.
+ *           4.Add negative offsets across the Unix epoch succeeds.
+ *           5.Invalid input pointer fails.
  * @expect   1.Succeed, return BSL_SUCCESS and keep sub-second fields.
  *           2.Succeed, return BSL_SUCCESS and keep sub-second fields.
  *           3.Fail, return BSL_INTERNAL_EXCEPTION.
- *           4.Fail, return BSL_INTERNAL_EXCEPTION.
+ *           4.Succeed, return BSL_SUCCESS and convert to 1969-12-31.
+ *           5.Fail, return BSL_INTERNAL_EXCEPTION.
  */
 /* BEGIN_CASE */
 void SDV_BSL_TIME_ADD_DAY_SECOND_TC001(void)
@@ -721,9 +773,15 @@ void SDV_BSL_TIME_ADD_DAY_SECOND_TC001(void)
     epoch.year = BSL_TIME_SYSTEM_EPOCH_YEAR;
     epoch.month = BSL_MONTH_JAN;
     epoch.day = 1;
-    ASSERT_EQ(BSL_DateTimeAddDaySecond(&result, &epoch, -1, 0), BSL_SAL_TIME_BAD_PARAM);
+    ASSERT_EQ(BSL_DateTimeAddDaySecond(&result, &epoch, -1, 0), BSL_SUCCESS);
+    ASSERT_EQ(result.year, 1969);
+    ASSERT_EQ(result.month, BSL_MONTH_DEC);
+    ASSERT_EQ(result.day, 31);
+    ASSERT_EQ(result.hour, 0);
+    ASSERT_EQ(result.minute, 0);
+    ASSERT_EQ(result.second, 0);
 
-    /* 4.Invalid parameter */
+    /* 5.Invalid parameter */
     ASSERT_EQ(BSL_DateTimeAddDaySecond(NULL, &base, 0, 0), BSL_INTERNAL_EXCEPTION);
     ASSERT_TRUE(TestIsErrStackEmpty());
 

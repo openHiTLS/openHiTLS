@@ -377,6 +377,9 @@ int32_t BSL_UIO_Write(BSL_UIO *uio, const void *data, uint32_t len, uint32_t *wr
  * @param data  [IN] Buffer for receiving data
  * @param len  [IN] Length of the received data buffer.
  * @param readLen [OUT] Length of the received data.
+ * @note For UDP UIO on an unconnected socket, the source address returned by recvfrom is recorded as the
+ * current peer. The UDP UIO does not enforce peer pinning; applications that require a fixed peer should connect
+ * the socket, configure the peer explicitly, or filter datagrams before calling BSL_UIO_Read.
  * @retval #BSL_SUCCESS, The data is read successfully(Determined based on the actual receive length,
  * if the length is 0 means no data is read.)
  * @retval #BSL_INTERNAL_EXCEPTION, an unexpected internal error occurs.

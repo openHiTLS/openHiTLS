@@ -664,6 +664,9 @@ SDV_HITLS_SLHDSA_PQCCert_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../t
 SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001-mlkem512-seed
 SDV_HITLS_MLKEM_PrivateKey_SeedFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_prikey_seed.pem"
 
+SDV_HITLS_MLKEM_PKCS8_PrivateKey_CheckDep_TC001-mlkem512-seed
+SDV_HITLS_MLKEM_PKCS8_PrivateKey_CheckDep_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_prikey_seed.pem"
+
 SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001-mlkem512-expanded
 SDV_HITLS_MLKEM_PrivateKey_ExpandedFormat_TC001:BSL_FORMAT_PEM:CRYPT_PRIKEY_PKCS8_UNENCRYPT:"../testdata/cert/asn1/mlkem_keys/mlkem512/mlkem512_prikey_expand.pem"
 

@@ -377,7 +377,7 @@ bool BSL_DateTimeCheck(const BSL_TIME *dateTime)
 
 int32_t BSL_SAL_UtcTimeToDateConvert(int64_t utcTime, BSL_TIME *sysTime)
 {
-    if (sysTime == NULL || utcTime < 0 || utcTime > BSL_UTCTIME_MAX) {
+    if (sysTime == NULL || utcTime > BSL_UTCTIME_MAX) {
         return BSL_SAL_TIME_BAD_PARAM;
     }
     if (g_timeCallBack.pfUtcTimeToBslTime != NULL &&

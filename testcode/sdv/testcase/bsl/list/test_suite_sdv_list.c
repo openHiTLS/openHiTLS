@@ -524,6 +524,126 @@ EXIT:
 /* END_CASE */
 
 /**
+ * @test SDV_BSL_LIST_DETACH_NODE_EDGE_FUNC_TC001
+ * @title  list detach node edge case test
+ * @precon nan
+ * @brief
+ *    1. Call BSL_LIST_DetachNode with null list, null node reference, and null node.
+ *    2. Call BSL_LIST_DetachNode on an empty list and with a node from another list.
+ *    3. Detach the only node in a single-node list.
+ *    4. Detach first, middle, last, and current nodes from a normal list.
+ * @expect
+ *    1. No crash and no state change.
+ *    2. No state change.
+ *    3. The list becomes empty and all list node pointers become NULL.
+ *    4. first, last, curr, count, and output node references are updated correctly.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_LIST_DETACH_NODE_EDGE_FUNC_TC001(void)
+{
+    BslList *testList = NULL;
+    BslList *otherList = NULL;
+    BslList *singleList = NULL;
+    BslListNode *nullNode = NULL;
+    BslListNode *externalNode = NULL;
+    BslListNode *localNode = NULL;
+    UserData data[5] = {
+        {1, "Alice"},
+        {2, "Bob"},
+        {3, "Celina"},
+        {4, "Dave"},
+        {5, "Emma"}
+    };
+
+    BSL_LIST_DetachNode(NULL, NULL);
+    BSL_LIST_DetachNode(NULL, &nullNode);
+    ASSERT_TRUE(nullNode == NULL);
+
+    testList = BSL_LIST_New(MAX_NAME_LEN);
+    ASSERT_TRUE(testList != NULL);
+    otherList = BSL_LIST_New(MAX_NAME_LEN);
+    ASSERT_TRUE(otherList != NULL);
+    singleList = BSL_LIST_New(MAX_NAME_LEN);
+    ASSERT_TRUE(singleList != NULL);
+
+    BSL_LIST_DetachNode(testList, NULL);
+    BSL_LIST_DetachNode(testList, &nullNode);
+    ASSERT_TRUE(nullNode == NULL);
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 0);
+
+    ASSERT_TRUE(BSL_LIST_AddElement(otherList, &data[4], BSL_LIST_POS_AFTER) == BSL_SUCCESS);
+    externalNode = BSL_LIST_FirstNode(otherList);
+    BSL_LIST_DetachNode(testList, &externalNode);
+    ASSERT_TRUE(externalNode == BSL_LIST_FirstNode(otherList));
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 0);
+    ASSERT_TRUE(BSL_LIST_COUNT(otherList) == 1);
+
+    ASSERT_TRUE(BSL_LIST_AddElement(singleList, &data[0], BSL_LIST_POS_AFTER) == BSL_SUCCESS);
+    localNode = BSL_LIST_FirstNode(singleList);
+    BSL_LIST_DetachNode(singleList, &localNode);
+    ASSERT_TRUE(localNode == NULL);
+    ASSERT_TRUE(BSL_LIST_COUNT(singleList) == 0);
+    ASSERT_TRUE(BSL_LIST_FirstNode(singleList) == NULL);
+    ASSERT_TRUE(BSL_LIST_LastNode(singleList) == NULL);
+    ASSERT_TRUE(BSL_LIST_CURR_ELMT(singleList) == NULL);
+
+    for (int i = 0; i < 5; i++) {
+        ASSERT_TRUE(BSL_LIST_AddElement(testList, &data[i], BSL_LIST_POS_AFTER) == BSL_SUCCESS);
+    }
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 5);
+
+    externalNode = BSL_LIST_FirstNode(otherList);
+    BSL_LIST_DetachNode(testList, &externalNode);
+    ASSERT_TRUE(externalNode == BSL_LIST_FirstNode(otherList));
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 5);
+    ASSERT_TRUE(BSL_LIST_COUNT(otherList) == 1);
+
+    testList->curr = testList->last;
+    BSL_LIST_DetachNode(testList, &testList->first);
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 4);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_FirstNodeData(testList), &data[1]) == 0);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_CURR_ELMT(testList), &data[4]) == 0);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_GetData(BSL_LIST_LastNode(testList)), &data[4]) == 0);
+    ASSERT_TRUE(testList->first->prev == NULL);
+
+    testList->curr = testList->first;
+    BSL_LIST_DetachNode(testList, &testList->first);
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 3);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_FirstNodeData(testList), &data[2]) == 0);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_CURR_ELMT(testList), &data[2]) == 0);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_GetData(BSL_LIST_LastNode(testList)), &data[4]) == 0);
+    ASSERT_TRUE(testList->first->prev == NULL);
+
+    localNode = testList->first->next;
+    testList->curr = testList->first;
+    BSL_LIST_DetachNode(testList, &localNode);
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 2);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_GetData(localNode), &data[4]) == 0);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_CURR_ELMT(testList), &data[2]) == 0);
+    ASSERT_TRUE(testList->first->next == testList->last);
+    ASSERT_TRUE(testList->last->prev == testList->first);
+
+    testList->curr = testList->first;
+    BSL_LIST_DetachNode(testList, &testList->last);
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 1);
+    ASSERT_TRUE(testList->first == testList->last);
+    ASSERT_TRUE(testList->curr == testList->first);
+    ASSERT_TRUE(UserDataCompare(BSL_LIST_CURR_ELMT(testList), &data[2]) == 0);
+
+    BSL_LIST_DetachNode(testList, &testList->curr);
+    ASSERT_TRUE(BSL_LIST_COUNT(testList) == 0);
+    ASSERT_TRUE(testList->first == NULL);
+    ASSERT_TRUE(testList->last == NULL);
+    ASSERT_TRUE(testList->curr == NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_LIST_FREE(testList, UserDataFree);
+    BSL_LIST_FREE(otherList, UserDataFree);
+    BSL_LIST_FREE(singleList, UserDataFree);
+}
+/* END_CASE */
+
+/**
  * @test SDV_BSL_LIST_SEARCH_FUNC_TC001
  * @title  list search test
  * @precon nan

@@ -193,10 +193,10 @@ void BSL_LIST_DetachNode(BslList *pstList, BslListNode **pstListNode)
         }
 
         if (pstCurrentNode == pstList->curr) {
-            pstList->curr = next != NULL ? next : prev;
+            pstList->curr = (next != NULL) ? next : prev;
         }
 
-        *pstListNode = next != NULL ? next : prev;
+        *pstListNode = (next != NULL) ? next : prev;
         pstList->count--;
 
         BSL_SAL_FREE(pstCurrentNode);
