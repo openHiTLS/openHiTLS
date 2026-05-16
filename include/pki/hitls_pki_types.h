@@ -97,7 +97,7 @@ typedef enum {
                                                     Note: Kid is a shallow copy. */
     HITLS_X509_EXT_GET_CRLNUMBER,               /** get the crlnumber form the crl. */
     HITLS_X509_EXT_GET_AKI,                     /** get the Authority Key Identifier form the crl/cert/csr. */
-    HITLS_X509_EXT_GET_KUSAGE,                  /** get the key usage form the crl/cert/csr.
+    HITLS_X509_EXT_GET_KUSAGE,                  /** get the key usage form the cert/csr.
                                                     Note: If key usage is not set, return 0xffff. */
     HITLS_X509_EXT_GET_BCONS,                   /** Get the basic constraints extension. */
     HITLS_X509_EXT_GET_SAN,                     /** Get Subject Alternative Name from extensions.

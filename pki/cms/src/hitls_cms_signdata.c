@@ -381,14 +381,6 @@ static int32_t ParseDigestSignAlgId(BSL_ASN1_Buffer *asn, CMS_AlgId *algId)
         return HITLS_CMS_ERR_PARSE_TYPE;
     }
 
-    // RFC 9882: ML-DSA AlgorithmIdentifier parameters MUST be omitted
-    // Validate that PQC algorithms do not have parameters
-    if (HITLS_CMS_PqcShouldOmitParams((BslCid)algId->id) &&
-        asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].len > 0) {
-        BSL_ERR_PUSH_ERROR(HITLS_CMS_ERR_PQC_PARAMS_NOT_OMITTED);
-        return HITLS_CMS_ERR_PQC_PARAMS_NOT_OMITTED;
-    }
-
     if (asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].len > 0) {
         algId->param.data = BSL_SAL_Dump(asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].buff,
             asn1[HITLS_CMS_ALGORITHM_IDENTIFIER_PARAMS_IDX].len);

@@ -84,25 +84,6 @@ BslCid HITLS_CMS_GetDefaultMlDsaDigestAlg(BslCid mldsaVariant, bool useSignedAtt
     return useSignedAttrs ? BSL_CID_SHAKE256 : BSL_CID_SHA512;
 }
 
-/**
- * According to RFC 9882 Section 3 for ML-DSA:
- * "The parameters field MUST be omitted when encoding an ML-DSA AlgorithmIdentifier."
- *
- * This function can be extended for other PQC algorithms as needed.
- */
-bool HITLS_CMS_PqcShouldOmitParams(BslCid algId)
-{
-    if (algId == BSL_CID_ML_DSA_44 ||
-        algId == BSL_CID_ML_DSA_65 ||
-        algId == BSL_CID_ML_DSA_87) {
-        return true;
-    }
-    if (algId >= BSL_CID_SLH_DSA_SHA2_128S && algId <= BSL_CID_SLH_DSA_SHAKE_256F) {
-        return true;
-    }
-
-    return false;
-}
 
 bool HITLS_CMS_IsPqcSignAlg(BslCid algId)
 {

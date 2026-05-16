@@ -285,7 +285,8 @@ static void FreeNodePack(NameNodePack *node)
     if (node == NULL) {
         return;
     }
-    if (node->encode != NULL) { // the node->node has been pushed in other list.
+    HITLS_X509_FreeNameNode(node->node);
+    if (node->encode != NULL) {
         BSL_SAL_FREE(node->encode->buff);
         BSL_SAL_Free(node->encode);
     }
@@ -408,6 +409,7 @@ static int32_t X509AddDnNamesToList(BslList *list, BslList *dnNameList)
             BSL_ERR_PUSH_ERROR(ret);
             return ret;
         }
+        node->node = NULL;
     }
 
     return ret;
@@ -447,11 +449,12 @@ int32_t HITLS_X509_AddDnName(BslList *list, HITLS_X509_DN *dnNames, uint32_t siz
         }
     }
     // sort
-    dnNameList = BSL_LIST_Sort(dnNameList, CmpDnNameByEncode);
-    if (dnNameList == NULL) {
+    BslList *sorted = BSL_LIST_Sort(dnNameList, CmpDnNameByEncode);
+    if (sorted == NULL) {
         ret = HITLS_X509_ERR_SORT_NAME_NODE;
         goto EXIT;
     }
+    dnNameList = sorted;
     // add dnNameList to list
     ret = X509AddDnNamesToList(list, dnNameList);
 EXIT:

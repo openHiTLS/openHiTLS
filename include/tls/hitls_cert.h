@@ -1343,7 +1343,8 @@ int32_t HITLS_CFG_LoadVerifyFile(HITLS_Config *config, const char *file);
 
 /**
  * @ingroup hitls_cert
- * @brief   Load the verification certificates from buffer.
+ * @brief   Load the verification certificates from buffer. If the CA verification in this interface fails,
+            and there is leftover CA in the config, this config cannot be used further.
  *
  * @param   config [OUT] TLS link configuration
  * @param   buf [IN] Certificate buffer data

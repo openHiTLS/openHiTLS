@@ -35,6 +35,7 @@
 #if defined(HITLS_TLS_CONFIG_CERT_VERIFY_LOCATION) && (defined(HITLS_TLS_CALLBACK_CERT) || defined(HITLS_TLS_FEATURE_PROVIDER))
 #define MAX_PATH_LEN 4096
 #endif
+
 #ifdef HITLS_TLS_FEATURE_SECURITY
 static int32_t CheckCertSecuritylevel(HITLS_Config *config, HITLS_CERT_X509 *cert, bool isCACert)
 {
@@ -1061,14 +1062,45 @@ int32_t HITLS_CFG_BuildCertChain(HITLS_Config *config, HITLS_BUILD_CHAIN_FLAG fl
 }
 #endif
 
+static bool IsSetVerifyParamCmd(uint32_t cmd)
+{
+    switch (cmd) {
+        case CERT_STORE_CTRL_SET_VERIFY_DEPTH:
+        case CERT_STORE_CTRL_SET_VERIFY_FLAGS:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static bool IsGetVerifyParamCmd(uint32_t cmd)
+{
+    switch (cmd) {
+        case CERT_STORE_CTRL_GET_VERIFY_DEPTH:
+        case CERT_STORE_CTRL_GET_VERIFY_FLAGS:
+            return true;
+        default:
+            return false;
+    }
+}
+
 int32_t HITLS_CFG_CtrlSetVerifyParams(
     HITLS_Config *config, HITLS_CERT_Store *store, uint32_t cmd, int64_t in, void *inArg)
 {
     if (config == NULL) {
         return HITLS_NULL_INPUT;
     }
-    if (inArg == NULL) {
-        return SAL_CERT_CtrlVerifyParams(config, store, cmd, &in, NULL);
+    if (!IsSetVerifyParamCmd(cmd)) {
+        BSL_ERR_PUSH_ERROR(HITLS_CERT_CTRL_ERR_INVALID_CMD);
+        return HITLS_CERT_CTRL_ERR_INVALID_CMD;
+    }
+    switch (cmd) {
+        case CERT_STORE_CTRL_SET_VERIFY_DEPTH:
+        case CERT_STORE_CTRL_SET_VERIFY_FLAGS:
+            return SAL_CERT_CtrlVerifyParams(config, store, cmd, &in, NULL);
+        default:
+            /* Except for the above types, all other types of parameters are pointers */
+            return SAL_CERT_CtrlVerifyParams(config, store, cmd, inArg, NULL);
     }
     return SAL_CERT_CtrlVerifyParams(config, store, cmd, inArg, NULL);
 }
@@ -1077,6 +1109,10 @@ int32_t HITLS_CFG_CtrlGetVerifyParams(HITLS_Config *config, HITLS_CERT_Store *st
 {
     if (config == NULL || out == NULL) {
         return HITLS_NULL_INPUT;
+    }
+    if (!IsGetVerifyParamCmd(cmd)) {
+        BSL_ERR_PUSH_ERROR(HITLS_CERT_CTRL_ERR_INVALID_CMD);
+        return HITLS_CERT_CTRL_ERR_INVALID_CMD;
     }
 
     return SAL_CERT_CtrlVerifyParams(config, store, cmd, NULL, out);
