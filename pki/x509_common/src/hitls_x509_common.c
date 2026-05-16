@@ -814,6 +814,23 @@ int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, const HITLS_X509_Asn1AlgI
     return HITLS_PKI_SUCCESS;
 }
 
+int32_t HITLS_X509_CheckSignAlgConsistency(const HITLS_X509_Asn1AlgId *inner, const HITLS_X509_Asn1AlgId *outer)
+{
+    if (inner->algId != outer->algId) {
+        return HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH;
+    }
+#ifdef HITLS_CRYPTO_RSA
+    if (inner->algId == BSL_CID_RSASSAPSS) {
+        if (inner->rsaPssParam.mdId != outer->rsaPssParam.mdId ||
+            inner->rsaPssParam.mgfId != outer->rsaPssParam.mgfId ||
+            inner->rsaPssParam.saltLen != outer->rsaPssParam.saltLen) {
+            return HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH;
+        }
+    }
+#endif
+    return HITLS_PKI_SUCCESS;
+}
+
 #if defined(HITLS_PKI_X509_CRT_GEN) || defined(HITLS_PKI_X509_CRL_GEN) || defined(HITLS_PKI_X509_CSR_GEN)
 int32_t HITLS_X509_SignAsn1Data(CRYPT_EAL_PkeyCtx *priv, CRYPT_MD_AlgId mdId,
     BSL_ASN1_Buffer *asn1Buff, BSL_Buffer *rawSignBuff, BSL_ASN1_BitString *sign)

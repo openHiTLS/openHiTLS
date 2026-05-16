@@ -17,6 +17,7 @@
 
 #include "bsl_sal.h"
 #include <string.h>
+#include <stdlib.h>
 #include "stub_utils.h"
 #include "hitls_pki_cert.h"
 #include "hitls_pki_csr.h"
@@ -46,6 +47,47 @@
 STUB_DEFINE_RET1(void *, BSL_SAL_Malloc, uint32_t);
 #endif
 STUB_DEFINE_RET2(int32_t, HITLS_X509_ParseCertTbs, BSL_ASN1_Buffer *, HITLS_X509_Cert *);
+
+static uint32_t g_certSerialMemAllocCount = 0;
+static uint32_t g_certSerialMemFreeCount = 0;
+
+static void *CertSerialMemMalloc(uint32_t size)
+{
+    void *ptr = malloc((size_t)size);
+    if (ptr != NULL) {
+        g_certSerialMemAllocCount++;
+    }
+    return ptr;
+}
+
+static void CertSerialMemFree(void *ptr)
+{
+    if (ptr != NULL) {
+        g_certSerialMemFreeCount++;
+    }
+    free(ptr);
+}
+
+static int32_t CertSerialMemTrackStart(void)
+{
+    g_certSerialMemAllocCount = 0;
+    g_certSerialMemFreeCount = 0;
+    int32_t ret = BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, CertSerialMemMalloc);
+    if (ret != BSL_SUCCESS) {
+        return ret;
+    }
+    return BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, CertSerialMemFree);
+}
+
+static void CertSerialMemTrackStop(void)
+{
+#ifdef HITLS_BSL_SAL_MEM
+    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_MALLOC, NULL);
+    (void)BSL_SAL_CallBack_Ctrl(BSL_SAL_MEM_FREE, NULL);
+#else
+    TestMemInit();
+#endif
+}
 
 /* BEGIN_CASE */
 void SDV_X509_CERT_PARSE_FUNC_TC001(int format, char *path)
@@ -1464,5 +1506,42 @@ EXIT:
     HITLS_X509_CertFree(cert);
     STUB_RESTORE(BSL_SAL_Malloc);
 #endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CERT_SET_SERIAL_REPLACE_MEM_TC001
+ * @title  Replace a generated certificate serial number without leaking the old buffer.
+ * @brief  Set serial number twice on the same generated certificate and release the certificate,
+ *         verifying that the second serial is effective and all SAL allocations are freed.
+ * @expect The second serial number is returned and allocation/free counts are balanced.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_SET_SERIAL_REPLACE_MEM_TC001(void)
+{
+    HITLS_X509_Cert *cert = NULL;
+    uint8_t serial1[] = {0x01, 0x02, 0x03, 0x04};
+    uint8_t serial2[] = {0x11, 0x22, 0x33, 0x44, 0x55};
+    BSL_Buffer getSerial = {0};
+
+    TestMemInit();
+    ASSERT_EQ(CertSerialMemTrackStart(), BSL_SUCCESS);
+
+    cert = HITLS_X509_CertNew();
+    ASSERT_NE(cert, NULL);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, serial1, sizeof(serial1)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_SET_SERIALNUM, serial2, sizeof(serial2)), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(cert, HITLS_X509_GET_SERIALNUM, &getSerial, sizeof(BSL_Buffer)), HITLS_PKI_SUCCESS);
+    ASSERT_COMPARE("cert serial", getSerial.data, getSerial.dataLen, serial2, sizeof(serial2));
+
+    HITLS_X509_CertFree(cert);
+    cert = NULL;
+    ASSERT_EQ(g_certSerialMemAllocCount, g_certSerialMemFreeCount);
+    CertSerialMemTrackStop();
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    HITLS_X509_CertFree(cert);
+    CertSerialMemTrackStop();
 }
 /* END_CASE */

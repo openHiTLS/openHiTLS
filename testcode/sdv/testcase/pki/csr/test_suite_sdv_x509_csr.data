@@ -249,3 +249,6 @@ SDV_X509_CSR_WITH_CUSTOM_EXT_PARSE_TEST_TC001:"../testdata/cert/asn1/csrcheck/cu
 
 SDV_X509_CSR_PRINT_UNKNOWN_ATTR_TC001: print CSR with unknown attribute OID
 SDV_X509_CSR_PRINT_UNKNOWN_ATTR_TC001:"../testdata/cert/asn1/csrcheck/unknown_attr_csr.der":"../testdata/cert/asn1/csrcheck/check/unknown_attr_csr"
+
+SDV_X509_CSR_VERIFY_RSA_PSS_KEY_MD_MISMATCH_TC001 #rsa-pss csr with mismatched key and signatureAlgorithm md
+SDV_X509_CSR_VERIFY_RSA_PSS_KEY_MD_MISMATCH_TC001:BSL_FORMAT_PEM:"../testdata/cert/pem/csr/rsa_pss_sha/rsa2048_pss_withattr.csr":CRYPT_MD_SHA1:HITLS_X509_ERR_MD_NOT_MATCH

@@ -1742,3 +1742,32 @@ EXIT:
     return;
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_BSL_ASN1_PARSE_INT_OVER_INTMAX_FUNC_TC001
+ * @title  Reject a positive ASN.1 INTEGER that exceeds INT_MAX.
+ * @brief  The DER INTEGER value 02 05 00 80 00 00 00 is a positive 2147483648.
+ *         Template decoding accepts the DER sign-protection byte and passes the
+ *         remaining 4-byte magnitude to primitive integer decoding.
+ * @expect Primitive integer decoding fails with BSL_ASN1_ERR_DECODE_INT.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_ASN1_PARSE_INT_OVER_INTMAX_FUNC_TC001(void)
+{
+    uint8_t encode[] = {0x02, 0x05, 0x00, 0x80, 0x00, 0x00, 0x00};
+    uint8_t *tmp = encode;
+    uint32_t tmpLen = sizeof(encode);
+    BSL_ASN1_Buffer asn = {0};
+    BSL_ASN1_TemplateItem item = {BSL_ASN1_TAG_INTEGER, 0, 0};
+    BSL_ASN1_Template templ = {&item, 1};
+    int32_t decoded = 0;
+
+    ASSERT_EQ(BSL_ASN1_DecodeTemplate(&templ, NULL, &tmp, &tmpLen, &asn, 1), BSL_SUCCESS);
+    ASSERT_EQ(tmpLen, 0);
+    ASSERT_EQ(asn.len, sizeof(int));
+    ASSERT_EQ(asn.buff[0], 0x80);
+    ASSERT_EQ(BSL_ASN1_DecodePrimitiveItem(&asn, &decoded), BSL_ASN1_ERR_DECODE_INT);
+EXIT:
+    return;
+}
+/* END_CASE */

@@ -460,11 +460,13 @@ int32_t HITLS_X509_SetSerial(BSL_ASN1_Buffer *serial, const void *val, uint32_t 
         return HITLS_X509_ERR_CERT_INVALID_SERIAL_NUM;
     }
     const uint8_t *src = (const uint8_t *)val;
-    serial->buff = BSL_SAL_Dump(src, valLen);
-    if (serial->buff == NULL) {
+    uint8_t *newBuff = BSL_SAL_Dump(src, valLen);
+    if (newBuff == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_DUMP_FAIL);
         return BSL_DUMP_FAIL;
     }
+    BSL_SAL_FREE(serial->buff);
+    serial->buff = newBuff;
     serial->len = valLen;
     serial->tag = BSL_ASN1_TAG_INTEGER;
     return HITLS_PKI_SUCCESS;

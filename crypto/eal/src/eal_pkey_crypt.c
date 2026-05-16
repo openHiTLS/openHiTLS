@@ -60,6 +60,10 @@ int32_t CRYPT_EAL_PkeyPairCheck(CRYPT_EAL_PkeyCtx *pubKey, CRYPT_EAL_PkeyCtx *pr
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, CRYPT_PKEY_MAX, CRYPT_NULL_INPUT);
         return CRYPT_NULL_INPUT;
     }
+    if (pubKey->id != prvKey->id) {
+        EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pubKey->id, CRYPT_EAL_ERR_ALGID);
+        return CRYPT_EAL_ERR_ALGID;
+    }
     if (pubKey->method.check == NULL) {
         EAL_ERR_REPORT(CRYPT_EVENT_ERR, CRYPT_ALGO_PKEY, pubKey->id, CRYPT_EAL_ALG_NOT_SUPPORT);
         return CRYPT_EAL_ALG_NOT_SUPPORT;

@@ -14,6 +14,7 @@
  */
 
 #include <stdbool.h>
+#include <limits.h>
 #include <string.h>
 #include "bsl_err.h"
 #include "bsl_log_internal.h"
@@ -175,16 +176,18 @@ static int32_t ParseBool(uint8_t *val, uint32_t len, bool *decodeData)
 
 static int32_t ParseInt(uint8_t *val, uint32_t len, int *decodeData)
 {
-    uint8_t *temp = val;
+    uint64_t acc = 0;
     if (len < 1 || len > sizeof(int)) {
         return BSL_ASN1_ERR_DECODE_INT;
     }
 
-    *decodeData = 0;
     for (uint32_t i = 0; i < len; i++) {
-        *decodeData = (*decodeData << 8) | *temp;
-        temp++;
+        acc = (acc << 8) | val[i];
+        if (acc > INT_MAX) {
+            return BSL_ASN1_ERR_DECODE_INT;
+        }
     }
+    *decodeData = (int)acc;
     return BSL_SUCCESS;
 }
 

@@ -1496,6 +1496,12 @@ int32_t HITLS_X509_CheckCertCrl(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_Cert *
             return ret;
         }
 
+        ret = HITLS_X509_CheckSignAlgConsistency(&crl->tbs.signAlgId, &crl->signAlgId);
+        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, ret);
+
+        ret = HITLS_X509_CheckAlg(parent->tbs.ealPubKey, &crl->tbs.signAlgId);
+        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cert, depth, ret);
+
 #ifdef HITLS_CRYPTO_SM2
         ret = X509_StoreCheckSignature(&storeCtx->verifyParam.sm2UserId, parent->tbs.ealPubKey, crl->tbs.tbsRawData,
             crl->tbs.tbsRawDataLen, &(crl->signAlgId), &(crl->signature));
@@ -1692,6 +1698,8 @@ int32_t X509_VerifyChainCert(HITLS_X509_StoreCtx *storeCtx, HITLS_X509_List *cha
         if (ret != HITLS_PKI_SUCCESS) {
             return ret;
         }
+        ret = HITLS_X509_CheckSignAlgConsistency(&cur->tbs.signAlgId, &cur->signAlgId);
+        VFYCBK_FAIL_IF(ret != HITLS_PKI_SUCCESS, storeCtx, cur, depth, ret);
 
 #ifdef HITLS_CRYPTO_SM2
         ret = X509_StoreCheckSignature(&storeCtx->verifyParam.sm2UserId, issue->tbs.ealPubKey, cur->tbs.tbsRawData,
@@ -1910,6 +1918,11 @@ int32_t HITLS_X509_CertVerifyByPubKey(HITLS_X509_Cert *cert, CRYPT_EAL_PkeyCtx *
     if (cert == NULL || pubKey == NULL) {
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
+    }
+    int32_t ret = HITLS_X509_CheckSignAlgConsistency(&cert->tbs.signAlgId, &cert->signAlgId);
+    if (ret != HITLS_PKI_SUCCESS) {
+        BSL_ERR_PUSH_ERROR(ret);
+        return ret;
     }
 
     return X509_StoreCheckSignature(NULL, pubKey, cert->tbs.tbsRawData,

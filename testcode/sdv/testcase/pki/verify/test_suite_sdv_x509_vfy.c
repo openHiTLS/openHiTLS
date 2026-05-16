@@ -34,6 +34,7 @@
 #include "hitls_x509_verify.h"
 #include "crypt_eal_md.h"
 #include "crypt_errno.h"
+#include "crypt_params_key.h"
 #include "bsl_uio.h"
 #include "hitls_pki_utils.h"
 #include "bsl_asn1.h"
@@ -5544,5 +5545,236 @@ EXIT:
     (void)exp;
     SKIP_TEST();
 #endif
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_VFY_RSA_PSS_INNER_OUTER_PARAM_MISMATCH_FAIL_TC001
+ * @title  Reject a certificate with inconsistent inner and outer RSA-PSS parameters.
+ * @brief  Build a chain where the issuer key and tbsCertificate.signature use RSA-PSS SHA256/MGF1-SHA256
+ *         with saltLen 20, while Certificate.signatureAlgorithm uses saltLen 32 and the signature value
+ *         is generated with saltLen 32.
+ * @expect Certificate chain verification fails because tbsCertificate.signature and
+ *         Certificate.signatureAlgorithm are inconsistent.
+ */
+/* BEGIN_CASE */
+void SDV_X509_VFY_RSA_PSS_INNER_OUTER_PARAM_MISMATCH_FAIL_TC001(char *rootPath, char *leafPath)
+{
+    HITLS_X509_StoreCtx *store = NULL;
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    HITLS_X509_List *chain = NULL;
+    CRYPT_EAL_PkeyCtx *rootPubKey = NULL;
+
+    TestMemInit();
+
+    store = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, rootPath, &root), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(root->tbs.signAlgId.algId, BSL_CID_RSASSAPSS);
+    ASSERT_EQ(root->tbs.signAlgId.rsaPssParam.saltLen, 20);
+    ASSERT_TRUE(HITLS_X509_CheckIssued(root, root));
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root,
+        sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, leafPath, &leaf), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(leaf->tbs.signAlgId.algId, BSL_CID_RSASSAPSS);
+    ASSERT_EQ(leaf->signAlgId.algId, BSL_CID_RSASSAPSS);
+    ASSERT_EQ(leaf->tbs.signAlgId.rsaPssParam.saltLen, 20);
+    ASSERT_EQ(leaf->signAlgId.rsaPssParam.saltLen, 32);
+    ASSERT_TRUE(HITLS_X509_CheckIssued(root, leaf));
+    ASSERT_EQ(HITLS_X509_CertCtrl(root, HITLS_X509_GET_PUBKEY, &rootPubKey, sizeof(CRYPT_EAL_PkeyCtx *)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerifyByPubKey(leaf, rootPubKey), HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+    TestErrClear();
+
+    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, leaf), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, root), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    if (chain != NULL) {
+        BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    }
+    HITLS_X509_CertFree(leaf);
+    HITLS_X509_CertFree(root);
+    CRYPT_EAL_PkeyFreeCtx(rootPubKey);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_CERT_VERIFY_BY_PUBKEY_RSA_PSS_KEY_MD_MISMATCH_TC001
+ * @title  Direct certificate verification ignores RSA-PSS key digest constraints.
+ * @brief  Parse an RSA-PSS certificate, set the issuer public key context to the specified RSA-PSS md/mgf
+ *         parameters, and verify that direct public-key verification only uses the certificate signatureAlgorithm.
+ * @expect Direct signature verification and certificate public-key verification both return the expected result.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_VERIFY_BY_PUBKEY_RSA_PSS_KEY_MD_MISMATCH_TC001(int format, char *certPath,
+    char *issuerCertPath, int pssMdId, int expect)
+{
+    TestMemInit();
+    HITLS_X509_Cert *cert = NULL;
+    HITLS_X509_Cert *issuer = NULL;
+    CRYPT_EAL_PkeyCtx *issuerPubKey = NULL;
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(format, certPath, &cert), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertParseFile(format, issuerCertPath, &issuer), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(cert->signAlgId.algId, BSL_CID_RSASSAPSS);
+    ASSERT_EQ(HITLS_X509_CertCtrl(issuer, HITLS_X509_GET_PUBKEY, &issuerPubKey, sizeof(CRYPT_EAL_PkeyCtx *)),
+        HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerifyByPubKey(cert, issuerPubKey), HITLS_PKI_SUCCESS);
+
+    int32_t mdId = pssMdId;
+    int32_t saltLen = cert->signAlgId.rsaPssParam.saltLen;
+    BSL_Param pssParam[4] = {
+        {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_MGF1_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
+        {CRYPT_PARAM_RSA_SALTLEN, BSL_PARAM_TYPE_INT32, &saltLen, sizeof(saltLen), 0},
+        BSL_PARAM_END
+    };
+    ASSERT_EQ(CRYPT_EAL_PkeyCtrl(issuerPubKey, CRYPT_CTRL_SET_RSA_EMSA_PSS, pssParam, 0), CRYPT_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CheckSignature(issuerPubKey, cert->tbs.tbsRawData,
+        cert->tbs.tbsRawDataLen, &cert->signAlgId, &cert->signature), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_CertVerifyByPubKey(cert, issuerPubKey), expect);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(issuerPubKey);
+    HITLS_X509_CertFree(cert);
+    HITLS_X509_CertFree(issuer);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_VFY_CRL_RSA_PSS_INNER_OUTER_PARAM_MISMATCH_FAIL_TC001
+ * @title  Reject a CRL whose inner and outer signatureAlgorithm differ.
+ * @brief  The CRL inner RSA-PSS saltLen is 20, while the outer RSA-PSS saltLen is 32.
+ *         The signature is valid with the outer parameters, so only the consistency check should reject it.
+ * @expect Certificate chain verification fails with HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH.
+ */
+/* BEGIN_CASE */
+void SDV_X509_VFY_CRL_RSA_PSS_INNER_OUTER_PARAM_MISMATCH_FAIL_TC001(char *rootPath, char *leafPath,
+    char *crlPath)
+{
+    HITLS_X509_StoreCtx *store = NULL;
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_List *chain = NULL;
+
+    TestMemInit();
+
+    store = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, rootPath, &root), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(root->tbs.signAlgId.algId, BSL_CID_SHA256WITHRSAENCRYPTION);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root,
+        sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, leafPath, &leaf), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(leaf->tbs.signAlgId.algId, BSL_CID_SHA256WITHRSAENCRYPTION);
+    ASSERT_TRUE(HITLS_X509_CheckIssued(root, leaf));
+
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, crlPath, &crl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(crl->tbs.signAlgId.algId, BSL_CID_RSASSAPSS);
+    ASSERT_EQ(crl->tbs.signAlgId.rsaPssParam.mdId, CRYPT_MD_SHA256);
+    ASSERT_EQ(crl->tbs.signAlgId.rsaPssParam.mgfId, CRYPT_MD_SHA256);
+    ASSERT_EQ(crl->tbs.signAlgId.rsaPssParam.saltLen, 20);
+    ASSERT_EQ(crl->signAlgId.algId, BSL_CID_RSASSAPSS);
+    ASSERT_EQ(crl->signAlgId.rsaPssParam.mdId, CRYPT_MD_SHA256);
+    ASSERT_EQ(crl->signAlgId.rsaPssParam.mgfId, CRYPT_MD_SHA256);
+    ASSERT_EQ(crl->signAlgId.rsaPssParam.saltLen, 32);
+    ASSERT_EQ(HITLS_X509_CheckSignature(root->tbs.ealPubKey, crl->tbs.tbsRawData,
+        crl->tbs.tbsRawDataLen, &crl->signAlgId, &crl->signature), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_CRL, crl,
+        sizeof(HITLS_X509_Crl)), HITLS_PKI_SUCCESS);
+
+    store->verifyParam.flags = HITLS_X509_VFY_FLAG_CRL_DEV | HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
+
+    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, leaf), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, root), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CertFree(leaf);
+    HITLS_X509_CertFree(root);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_X509_VFY_CRL_RSA_PSS_ISSUER_PARAM_MISMATCH_FAIL_TC001
+ * @title  Reject a CRL whose signatureAlgorithm violates issuer RSA-PSS key constraints.
+ * @brief  The issuer key is constrained to SHA256/MGF1-SHA256, but the CRL is signed with
+ *         SHA384/MGF1-SHA384. The signature is valid, so only the issuer key check should reject it.
+ * @expect Certificate chain verification fails with HITLS_X509_ERR_MD_NOT_MATCH.
+ */
+/* BEGIN_CASE */
+void SDV_X509_VFY_CRL_RSA_PSS_ISSUER_PARAM_MISMATCH_FAIL_TC001(char *rootPath, char *leafPath, char *crlPath)
+{
+    HITLS_X509_StoreCtx *store = NULL;
+    HITLS_X509_Cert *root = NULL;
+    HITLS_X509_Cert *leaf = NULL;
+    HITLS_X509_Crl *crl = NULL;
+    HITLS_X509_List *chain = NULL;
+
+    TestMemInit();
+
+    store = HITLS_X509_StoreCtxNew();
+    ASSERT_NE(store, NULL);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, rootPath, &root), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(root->tbs.signAlgId.algId, BSL_CID_RSASSAPSS);
+    ASSERT_EQ(root->tbs.signAlgId.rsaPssParam.mdId, CRYPT_MD_SHA256);
+    ASSERT_EQ(root->tbs.signAlgId.rsaPssParam.mgfId, CRYPT_MD_SHA256);
+    ASSERT_EQ(root->tbs.signAlgId.rsaPssParam.saltLen, 32);
+    ASSERT_TRUE(HITLS_X509_CheckIssued(root, root));
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_DEEP_COPY_SET_CA, root,
+        sizeof(HITLS_X509_Cert)), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertParseFile(BSL_FORMAT_PEM, leafPath, &leaf), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(leaf->tbs.signAlgId.algId, BSL_CID_RSASSAPSS);
+    ASSERT_EQ(leaf->tbs.signAlgId.rsaPssParam.mdId, CRYPT_MD_SHA256);
+    ASSERT_EQ(leaf->tbs.signAlgId.rsaPssParam.mgfId, CRYPT_MD_SHA256);
+    ASSERT_EQ(leaf->tbs.signAlgId.rsaPssParam.saltLen, 32);
+    ASSERT_TRUE(HITLS_X509_CheckIssued(root, leaf));
+
+    ASSERT_EQ(HITLS_X509_CrlParseFile(BSL_FORMAT_PEM, crlPath, &crl), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(crl->tbs.signAlgId.algId, BSL_CID_RSASSAPSS);
+    ASSERT_EQ(crl->tbs.signAlgId.rsaPssParam.mdId, CRYPT_MD_SHA384);
+    ASSERT_EQ(crl->tbs.signAlgId.rsaPssParam.mgfId, CRYPT_MD_SHA384);
+    ASSERT_EQ(crl->tbs.signAlgId.rsaPssParam.saltLen, 32);
+    ASSERT_EQ(crl->signAlgId.algId, BSL_CID_RSASSAPSS);
+    ASSERT_EQ(crl->signAlgId.rsaPssParam.mdId, CRYPT_MD_SHA384);
+    ASSERT_EQ(crl->signAlgId.rsaPssParam.mgfId, CRYPT_MD_SHA384);
+    ASSERT_EQ(crl->signAlgId.rsaPssParam.saltLen, 32);
+    ASSERT_EQ(HITLS_X509_CheckSignature(root->tbs.ealPubKey, crl->tbs.tbsRawData,
+        crl->tbs.tbsRawDataLen, &crl->signAlgId, &crl->signature), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(HITLS_X509_StoreCtxCtrl(store, HITLS_X509_STORECTX_SET_CRL, crl,
+        sizeof(HITLS_X509_Crl)), HITLS_PKI_SUCCESS);
+
+    store->verifyParam.flags = HITLS_X509_VFY_FLAG_CRL_DEV | HITLS_X509_VFY_FLAG_DISABLE_TIME_CHECK;
+
+    chain = BSL_LIST_New(sizeof(HITLS_X509_Cert *));
+    ASSERT_NE(chain, NULL);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, leaf), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(X509_AddCertToChainTest(chain, root), HITLS_PKI_SUCCESS);
+
+    ASSERT_EQ(HITLS_X509_CertVerify(store, chain), HITLS_X509_ERR_MD_NOT_MATCH);
+EXIT:
+    HITLS_X509_StoreCtxFree(store);
+    BSL_LIST_FREE(chain, (BSL_LIST_PFUNC_FREE)HITLS_X509_CertFree);
+    HITLS_X509_CrlFree(crl);
+    HITLS_X509_CertFree(leaf);
+    HITLS_X509_CertFree(root);
 }
 /* END_CASE */
