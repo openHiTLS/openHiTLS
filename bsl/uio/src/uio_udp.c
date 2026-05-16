@@ -109,6 +109,7 @@ static int32_t UdpSocketRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *re
 {
     *readLen = 0;
     int32_t err = 0;
+    (void)BSL_UIO_ClearFlags(uio, BSL_UIO_FLAGS_RWS | BSL_UIO_FLAGS_SHOULD_RETRY);
     int32_t fd = BSL_UIO_GetFd(uio);
     UdpParameters *ctx = BSL_UIO_GetCtx(uio);
     if (ctx == NULL || fd < 0) {
@@ -123,9 +124,6 @@ static int32_t UdpSocketRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *re
             return BSL_SUCCESS;
         }
         /* Fatal error */
-        BSL_ERR_PUSH_ERROR(BSL_UIO_IO_EXCEPTION);
-        return BSL_UIO_IO_EXCEPTION;
-    } else if (ret == 0) {
         BSL_ERR_PUSH_ERROR(BSL_UIO_IO_EXCEPTION);
         return BSL_UIO_IO_EXCEPTION;
     }
