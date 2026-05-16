@@ -80,7 +80,7 @@ int32_t SAL_NET_Sendto(int32_t sock, const void *buf, size_t len, int32_t flags,
         return BSL_NULL_INPUT;
     }
     int32_t ret = (int32_t)sendto(sock, buf, len, flags, (struct sockaddr *)address, (socklen_t)addrLen);
-    if (ret <= 0) {
+    if (ret < 0) {
         *err = errno;
     }
     return ret;
@@ -93,7 +93,7 @@ int32_t SAL_NET_Recvfrom(int32_t sock, void *buf, size_t len, int32_t flags, voi
         return BSL_NULL_INPUT;
     }
     int32_t ret = (int32_t)recvfrom(sock, buf, len, flags, (struct sockaddr *)address, (socklen_t *)addrLen);
-    if (ret <= 0) {
+    if (ret < 0) {
         *err = errno;
     }
     return ret;

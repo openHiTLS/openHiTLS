@@ -108,6 +108,7 @@ static int32_t UdpSocketRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *re
 {
     *readLen = 0;
     int32_t err = 0;
+    (void)BSL_UIO_ClearFlags(uio, BSL_UIO_FLAGS_RWS | BSL_UIO_FLAGS_SHOULD_RETRY);
     int32_t fd = BSL_UIO_GetFd(uio);
     UdpParameters *ctx = uio->ctx;
     if (ctx == NULL || fd < 0) {

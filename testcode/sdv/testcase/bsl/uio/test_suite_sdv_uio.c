@@ -1054,6 +1054,13 @@ typedef union {
     struct sockaddr_in addrIn;
     struct sockaddr_un addrUn;
 } UIO_Addr;
+
+static uint16_t GetUioUdpPort(void)
+{
+    const uint16_t basePort = 20000;
+    return (uint16_t)(basePort + (getpid() % 10000));
+}
+
 /**
  * @test  SDV_BSL_UIO_UDP_API_TC001
  * @title  UDP ctrl test
@@ -1071,6 +1078,9 @@ typedef union {
 /* BEGIN_CASE */
 void SDV_BSL_UIO_UDP_API_TC001(void)
 {
+#ifndef HITLS_BSL_UIO_UDP
+    SKIP_TEST();
+#else
     BSL_UIO *uio = NULL;
     int ret;
     UIO_Addr peerAddr = { 0 };
@@ -1105,6 +1115,87 @@ void SDV_BSL_UIO_UDP_API_TC001(void)
     ASSERT_TRUE(TestIsErrStackEmpty());
 EXIT:
     BSL_UIO_Free(uio);
+#endif
+}
+/* END_CASE */
+
+/**
+ * @test  SDV_BSL_UIO_UDP_READ_EMPTY_DATAGRAM_TC001
+ * @title  UDP read zero-length datagram test
+ * @precon  nan
+ * @brief
+ *    1. Create a UDP uio and bind a receiving socket to loopback. Expected result 1 is obtained.
+ *    2. Use another UDP socket to send a zero-length datagram to the bound address. Expected result 2 is obtained.
+ *    3. Call BSL_UIO_Read on the UDP uio. Expected result 3 is obtained.
+ * @expect
+ *    1. The UDP uio and socket are created successfully.
+ *    2. The zero-length datagram is sent successfully.
+ *    3. Return BSL_SUCCESS and readLen is 0.
+ */
+/* BEGIN_CASE */
+void SDV_BSL_UIO_UDP_READ_EMPTY_DATAGRAM_TC001(void)
+{
+#ifndef HITLS_BSL_UIO_UDP
+    SKIP_TEST();
+#else
+    int32_t recvFd = -1;
+    int32_t sendFd = -1;
+    BSL_UIO *recvUio = NULL;
+    BSL_UIO *sendUio = NULL;
+    const BSL_UIO_Method *method = BSL_UIO_UdpMethod();
+    UIO_Addr bindAddr = {0};
+    struct timeval timeOut = {1, 0};
+    uint8_t readBuf[1] = {0};
+    uint32_t readLen = 1;
+    uint32_t writeLen = 1;
+    uint32_t flags = 0;
+    int32_t ret;
+
+    recvFd = BSL_SAL_Socket(SAL_NET_IPV4, SAL_NET_SOCK_DGRAM, 0);
+    ASSERT_TRUE(recvFd >= 0);
+    sendFd = BSL_SAL_Socket(SAL_NET_IPV4, SAL_NET_SOCK_DGRAM, 0);
+    ASSERT_TRUE(sendFd >= 0);
+
+    ASSERT_TRUE(BSL_SAL_SetSockopt(recvFd, SAL_NET_SOL_SOCKET, SO_RCVTIMEO,
+        (char *)&timeOut, sizeof(timeOut)) == BSL_SUCCESS);
+
+    bindAddr.addrIn.sin_family = AF_INET;
+    bindAddr.addrIn.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    bindAddr.addrIn.sin_port = htons(GetUioUdpPort());
+    ASSERT_TRUE(BSL_SAL_SockBind(recvFd, (BSL_SAL_SockAddr)&bindAddr.addrIn, sizeof(bindAddr.addrIn)) == BSL_SUCCESS);
+
+    recvUio = BSL_UIO_New(method);
+    ASSERT_TRUE(recvUio != NULL);
+    BSL_UIO_SetIsUnderlyingClosedByUio(recvUio, true);
+    BSL_UIO_SetFD(recvUio, recvFd);
+    recvFd = -1;
+    ASSERT_TRUE(BSL_UIO_Ctrl(recvUio, BSL_UIO_SET_PEER_IP_ADDR, sizeof(bindAddr.addrIn), &bindAddr.addrIn) == BSL_SUCCESS);
+
+    sendUio = BSL_UIO_New(method);
+    ASSERT_TRUE(sendUio != NULL);
+    BSL_UIO_SetIsUnderlyingClosedByUio(sendUio, true);
+    BSL_UIO_SetFD(sendUio, sendFd);
+    sendFd = -1;
+    ASSERT_TRUE(BSL_UIO_Ctrl(sendUio, BSL_UIO_SET_PEER_IP_ADDR, sizeof(bindAddr.addrIn), &bindAddr.addrIn) == BSL_SUCCESS);
+    ASSERT_TRUE(method->uioWrite(sendUio, "", 0, &writeLen) == BSL_SUCCESS);
+    ASSERT_TRUE(writeLen == 0);
+
+    ret = BSL_UIO_Read(recvUio, readBuf, sizeof(readBuf), &readLen);
+    ASSERT_TRUE(ret == BSL_SUCCESS);
+    ASSERT_TRUE(readLen == 0);
+    BSL_UIO_TestFlags(recvUio, BSL_UIO_FLAGS_SHOULD_RETRY, &flags);
+    ASSERT_TRUE((flags & BSL_UIO_FLAGS_SHOULD_RETRY) == 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_UIO_Free(recvUio);
+    BSL_UIO_Free(sendUio);
+    if (recvFd >= 0) {
+        BSL_SAL_SockClose(recvFd);
+    }
+    if (sendFd >= 0) {
+        BSL_SAL_SockClose(sendFd);
+    }
+#endif
 }
 /* END_CASE */
 
@@ -1415,4 +1506,3 @@ EXIT:
 #endif
 }
 /* END_CASE */
-

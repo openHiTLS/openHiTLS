@@ -69,7 +69,7 @@ int32_t SAL_Read(int32_t fd, void *buf, uint32_t len, int32_t *err)
 int32_t SAL_Sendto(int32_t sock, const void *buf, size_t len, int32_t flags, BSL_SAL_SockAddr address,
                    int32_t addrLen, int32_t *err)
 {
-    if (buf == NULL || len == 0 || address == NULL || addrLen == 0 || err == NULL) {
+    if (buf == NULL || address == NULL || addrLen == 0 || err == NULL) {
         return BSL_SAL_ERR_BAD_PARAM;
     }
     if (g_netCallBack.pfSendTo != NULL && g_netCallBack.pfSendTo != SAL_Sendto) {
