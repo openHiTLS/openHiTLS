@@ -215,10 +215,18 @@ static int32_t Spake2PlusGetEcc(CRYPT_EAL_PkeyCtx *pkey, EccParamType type, uint
 
     switch (type) {
         case ECC_PARAM_P:
+            if (para.para.eccPara.pLen > MAX_ECC_PARAM_LEN) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
+                return HITLS_AUTH_INVALID_ARG;
+            }
             memcpy(out, para.para.eccPara.p, para.para.eccPara.pLen);
             *outLen = para.para.eccPara.pLen;
             break;
         case ECC_PARAM_N:
+            if (para.para.eccPara.nLen > MAX_ECC_PARAM_LEN) {
+                BSL_ERR_PUSH_ERROR(HITLS_AUTH_INVALID_ARG);
+                return HITLS_AUTH_INVALID_ARG;
+            }
             memcpy(out, para.para.eccPara.n, para.para.eccPara.nLen);
             *outLen = para.para.eccPara.nLen;
             break;
