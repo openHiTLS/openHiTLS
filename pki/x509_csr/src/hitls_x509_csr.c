@@ -193,11 +193,19 @@ static int32_t ParseCertRequestInfo(BSL_ASN1_Buffer *asnArr, HITLS_X509_Csr *csr
         goto ERR;
     }
     /* attributes */
+#ifdef HITLS_PKI_X509_CSR_ATTR
     ret = HITLS_X509_ParseAttrList(&asnArr[HITLS_X509_CSR_REQINFO_ATTRS_IDX], csr->reqInfo.attributes, NULL, NULL);
     if (ret != BSL_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);
         goto ERR;
     }
+#else
+    if (asnArr[HITLS_X509_CSR_REQINFO_ATTRS_IDX].len > 0) {
+        ret = HITLS_X509_ERR_ATTR_UNSUPPORT;
+        BSL_ERR_PUSH_ERROR(ret);
+        goto ERR;
+    }
+#endif
     return ret;
 
 ERR:

@@ -144,7 +144,7 @@ static int32_t CheckDhPara(const CRYPT_Iso_Pkey_Ctx *ctx, const BSL_Param *param
     return ParaCheckAndLog(ctx, &para);
 }
 
-static int32_t CheckEcdsaPara(const CRYPT_Iso_Pkey_Ctx *ctx, const BSL_Param *params)
+static int32_t CheckEcPara(const CRYPT_Iso_Pkey_Ctx *ctx, const BSL_Param *params)
 {
     CRYPT_EAL_PkeyPara para = {0};
     uint8_t *curveId = NULL;
@@ -171,7 +171,9 @@ static int32_t CheckPkeyParam(const CRYPT_Iso_Pkey_Ctx *ctx, const BSL_Param *pa
         case CRYPT_PKEY_RSA:
             return CheckRsaPara(ctx, params);
         case CRYPT_PKEY_ECDSA:
-            return CheckEcdsaPara(ctx, params);
+            return CheckEcPara(ctx, params);
+        case CRYPT_PKEY_ECDH:
+            return CheckEcPara(ctx, params);
         default:
             return CRYPT_SUCCESS;
     }

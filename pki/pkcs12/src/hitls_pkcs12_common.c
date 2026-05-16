@@ -1340,6 +1340,7 @@ int32_t HITLS_PKCS12_EncodeMacData(HITLS_PKCS12 *p12, BSL_Buffer *initData, cons
     HITLS_PKCS12_KdfParam *param = (HITLS_PKCS12_KdfParam *)macParam->para;
     p12Mac->alg = param->macId;
     p12Mac->iteration = param->itCnt;
+    BSL_SAL_FREE(p12Mac->macSalt->data);
     p12Mac->macSalt->dataLen = param->saltLen;
     BSL_Buffer macPwd = {param->pwd, param->pwdLen};
     int32_t ret = HITLS_PKCS12_CalMac(p12, &macPwd, initData, &mac);

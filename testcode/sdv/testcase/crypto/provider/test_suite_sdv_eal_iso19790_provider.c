@@ -886,6 +886,24 @@ static void SetDsaPara(CRYPT_EAL_PkeyPara *para, uint8_t *p, uint32_t pLen, uint
     para->para.dsaPara.g = g;
     para->para.dsaPara.gLen = gLen;
 }
+
+static void CheckEcCurveIdBySetParaEx(int32_t algId, int32_t curveId, int32_t expectRet)
+{
+    Iso19790_ProviderLoadCtx ctx = {0};
+    CRYPT_EAL_PkeyCtx *pkeyCtx = NULL;
+    BSL_Param params[2] = {{0}, BSL_PARAM_END};
+
+    ASSERT_EQ(Iso19790_ProviderLoad(&ctx), CRYPT_SUCCESS);
+
+    pkeyCtx = CRYPT_EAL_ProviderPkeyNewCtx(ctx.libCtx, algId, 0, HITLS_ISO_PROVIDER_ATTR);
+    ASSERT_TRUE(pkeyCtx != NULL);
+    ASSERT_EQ(BSL_PARAM_InitValue(&params[0], CRYPT_PARAM_EC_CURVE_ID, BSL_PARAM_TYPE_INT32,
+        &curveId, sizeof(curveId)), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaEx(pkeyCtx, params), expectRet);
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
+    Iso19790_ProviderUnload(&ctx);
+}
 #endif
 
 /*
@@ -1185,6 +1203,32 @@ void SDV_ISO19790_PROVIDER_RSA_PARAM_CHECK_TC001()
 EXIT:
     CRYPT_EAL_PkeyFreeCtx(pkeyCtx);
     Iso19790_ProviderUnload(&ctx);
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_ISO19790_PROVIDER_ECDSA_PARAM_CHECK_TC001(int curveId, int expectRet)
+{
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    (void)curveId;
+    (void)expectRet;
+    SKIP_TEST();
+#else
+    CheckEcCurveIdBySetParaEx(CRYPT_PKEY_ECDSA, curveId, expectRet);
+#endif
+}
+/* END_CASE */
+
+/* BEGIN_CASE */
+void SDV_ISO19790_PROVIDER_ECDH_PARAM_CHECK_TC001(int curveId, int expectRet)
+{
+#ifndef HITLS_CRYPTO_CMVP_ISO19790
+    (void)curveId;
+    (void)expectRet;
+    SKIP_TEST();
+#else
+    CheckEcCurveIdBySetParaEx(CRYPT_PKEY_ECDH, curveId, expectRet);
 #endif
 }
 /* END_CASE */

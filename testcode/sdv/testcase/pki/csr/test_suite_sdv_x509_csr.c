@@ -1031,6 +1031,25 @@ EXIT:
 }
 /* END_CASE */
 
+/* BEGIN_CASE */
+void SDV_X509_CSR_PARSE_FUNC_TC005(int format, char *path, int expectedRet)
+{
+#if defined(HITLS_PKI_X509_CSR_PARSE) && !defined(HITLS_PKI_X509_CSR_ATTR)
+    TestMemInit();
+    HITLS_X509_Csr *csr = NULL;
+    ASSERT_EQ(HITLS_X509_CsrParseFile(format, path, &csr), expectedRet);
+
+EXIT:
+    HITLS_X509_CsrFree(csr);
+#else
+    (void)format;
+    (void)path;
+    (void)expectedRet;
+    SKIP_TEST();
+#endif
+}
+/* END_CASE */
+
 static int32_t CertAssertSanEquals(HITLS_X509_Cert *cert, char *dns1, char *dns2, char *email1, char *uri1)
 {
     int32_t ret = HITLS_X509_ERR_ATTR_UNSUPPORT;

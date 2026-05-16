@@ -558,6 +558,10 @@ static int32_t TransCodePwd(BSL_Buffer *pwd, uint8_t **transcoded, uint32_t *tra
         *transcodedLen = 0;
         return HITLS_PKI_SUCCESS;
     }
+    if (pwd->dataLen > (UINT32_MAX - 2) / 2) {
+        BSL_ERR_PUSH_ERROR(HITLS_PKCS12_ERR_KDF_TOO_LONG_INPUT);
+        return HITLS_PKCS12_ERR_KDF_TOO_LONG_INPUT;
+    }
 
     uint32_t outputLen = 2 * pwd->dataLen + 2; // encodeLen = 2 * len, and two zeros at the end.
     uint8_t *output = BSL_SAL_Calloc(1u, outputLen);

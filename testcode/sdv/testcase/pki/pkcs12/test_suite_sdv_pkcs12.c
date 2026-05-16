@@ -371,6 +371,39 @@ EXIT:
 /* END_CASE */
 
 /**
+ * For test oversized password length is rejected before transcoding.
+*/
+/* BEGIN_CASE */
+void SDV_PKCS12_CAL_MACDATA_TC002(void)
+{
+    TestMemInit();
+    HITLS_PKCS12 *p12 = HITLS_PKCS12_New();
+    ASSERT_NE(p12, NULL);
+
+    uint8_t salt[] = {0x01, 0x02, 0x03, 0x04};
+    uint8_t pwdData = 'a';
+    uint8_t initData[] = {0x01};
+    BSL_Buffer pwd = {&pwdData, UINT32_MAX / 2 + 1};
+    BSL_Buffer init = {initData, sizeof(initData)};
+    BSL_Buffer output = {0};
+
+    HITLS_PKCS12_MacData *macData = p12->macData;
+    macData->alg = BSL_CID_SHA256;
+    macData->macSalt->data = BSL_SAL_Dump(salt, sizeof(salt));
+    ASSERT_NE(macData->macSalt->data, NULL);
+    macData->macSalt->dataLen = sizeof(salt);
+    macData->iteration = 2048;
+
+    ASSERT_EQ(HITLS_PKCS12_CalMac(p12, &pwd, &init, &output), HITLS_PKCS12_ERR_KDF_TOO_LONG_INPUT);
+    ASSERT_TRUE(output.data == NULL);
+    TestErrClear();
+EXIT:
+    BSL_SAL_FREE(output.data);
+    HITLS_PKCS12_Free(p12);
+}
+/* END_CASE */
+
+/**
  * For test cal key according to salt, alg, etc.
 */
 /* BEGIN_CASE */
@@ -962,6 +995,48 @@ EXIT:
     BSL_SAL_Free(output1.data);
     HITLS_PKCS12_Free(p12);
     HITLS_PKCS12_Free(p12_1);
+#endif
+}
+/* END_CASE */
+
+/**
+ * For test encoding macData does not reuse a smaller old salt buffer.
+*/
+/* BEGIN_CASE */
+void SDV_PKCS12_ENCODE_MACDATA_TC002(void)
+{
+#ifndef HITLS_PKI_PKCS12_GEN
+    SKIP_TEST();
+#else
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), 0);
+    uint8_t oldSalt[1] = {0xA5};
+    uint8_t initData[] = {0x01, 0x02, 0x03};
+    char *pwd = "123456";
+    BSL_Buffer init = {initData, sizeof(initData)};
+    BSL_Buffer output = {0};
+    HITLS_PKCS12 *p12 = HITLS_PKCS12_New();
+    ASSERT_NE(p12, NULL);
+
+    p12->macData->macSalt->data = BSL_SAL_Dump(oldSalt, sizeof(oldSalt));
+    ASSERT_NE(p12->macData->macSalt->data, NULL);
+    p12->macData->macSalt->dataLen = sizeof(oldSalt);
+
+    HITLS_PKCS12_KdfParam hmacParam = {0};
+    hmacParam.macId = BSL_CID_SHA256;
+    hmacParam.pwd = (uint8_t *)pwd;
+    hmacParam.pwdLen = strlen(pwd);
+    hmacParam.saltLen = 8;
+    hmacParam.itCnt = 2048;
+    HITLS_PKCS12_MacParam macParam = {.para = &hmacParam, .algId = BSL_CID_PKCS12KDF};
+
+    ASSERT_EQ(HITLS_PKCS12_EncodeMacData(p12, &init, &macParam, &output), HITLS_PKI_SUCCESS);
+    ASSERT_EQ(p12->macData->macSalt->dataLen, hmacParam.saltLen);
+    ASSERT_NE(p12->macData->macSalt->data, NULL);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    BSL_SAL_FREE(output.data);
+    HITLS_PKCS12_Free(p12);
 #endif
 }
 /* END_CASE */
