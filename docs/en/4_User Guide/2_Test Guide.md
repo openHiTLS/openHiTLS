@@ -255,7 +255,7 @@ fi
 cmake ..
 make -j VERBOSE=1
 
-cd testcode/script
+cd ../testcode/script
 if [ "${codeBranch}" = "main" ];then
     ./build_hitls.sh armv8_le
 else

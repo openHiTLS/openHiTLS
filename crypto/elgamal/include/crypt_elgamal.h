@@ -162,10 +162,8 @@ int32_t CRYPT_ELGAMAL_Gen(CRYPT_ELGAMAL_Ctx *ctx);
    * @param inputLen [IN] Length of the information to be encrypted
    * @param out1 [OUT] Pointer to the encrypted information output.(c1)
    * @param out1Len [OUT] Pointer to the length of the encrypted information.
-   *                        Before being transferred, the value must be set to the maximum length of the array.
    * @param out2 [OUT] Pointer to the encrypted information output.(c2)
    * @param out2Len [OUT] Pointer to the length of the encrypted information.
-   *                        Before being transferred, the value must be set to the maximum length of the array.
    *
    * @retval CRYPT_NULL_INPUT                 Invalid null pointer input
    * @retval CRYPT_ELGAMAL_NO_KEY_INFO       does not contain the key information.
