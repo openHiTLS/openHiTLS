@@ -56,6 +56,8 @@
 #include "hitls_type.h"
 #include "frame_link.h"
 #include "session_type.h"
+#include "session_enc.h"
+#include "tlv.h"
 #include "common_func.h"
 #include "hitls_func.h"
 #include "hitls_cert_type.h"
@@ -4124,6 +4126,59 @@ void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC002(void)
 
 EXIT:
     BSL_SAL_FREE(validEncodeBuf);
+    HITLS_SESS_Free(srcSession);
+    HITLS_SESS_Free(dstSession);
+}
+/* END_CASE */
+
+/* @
+* @test  UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC003
+* @title  Test session hostname round-trip and decode validation
+* @precon  nan
+* @brief   1. Create a session, set common fields and a hostname with trailing '\\0'.
+*          2. Encode and decode the session, then verify the hostname bytes and size are preserved.
+*          3. Corrupt the trailing '\\0' in the hostname TLV and verify decode fails.
+* @expect  1. Encode and decode return HITLS_SUCCESS for valid hostname data.
+*          2. Decoded hostname content and size match the encoded session.
+*          3. Decode returns HITLS_SESS_ERR_DEC_HOST_NAME_FAIL when hostname TLV lacks trailing '\\0'.
+@*/
+/* BEGIN_CASE */
+void UT_TLS_CM_SESSION_ENCODE_DECODE_API_TC003(void)
+{
+    const uint8_t expectedHostName[] = "session.example";
+    HITLS_Session *srcSession = HITLS_SESS_New();
+    HITLS_Session *dstSession = HITLS_SESS_New();
+    uint8_t *encodeBuf = NULL;
+    uint8_t *hostName = NULL;
+    uint32_t encodeLen = 0;
+    uint32_t usedLen = 0;
+    uint32_t hostNameSize = 0;
+    uint32_t valueOffset = 0;
+    uint32_t valueLen = 0;
+
+    HitlsInit();
+    ASSERT_TRUE(srcSession != NULL);
+    ASSERT_TRUE(dstSession != NULL);
+    ASSERT_EQ(InitSessionForEncodeTest(srcSession), HITLS_SUCCESS);
+    ASSERT_EQ(SESS_SetHostName(srcSession, sizeof(expectedHostName), (uint8_t *)expectedHostName), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SESS_Encode(srcSession, NULL, 0, &encodeLen), HITLS_SUCCESS);
+    encodeBuf = BSL_SAL_Calloc(1u, encodeLen);
+    ASSERT_TRUE(encodeBuf != NULL);
+    ASSERT_EQ(HITLS_SESS_Encode(srcSession, encodeBuf, encodeLen, &usedLen), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_SESS_Decode(dstSession, encodeBuf, usedLen), HITLS_SUCCESS);
+    ASSERT_EQ(SESS_GetHostName(dstSession, &hostNameSize, &hostName), HITLS_SUCCESS);
+    ASSERT_EQ(hostNameSize, sizeof(expectedHostName));
+    ASSERT_EQ(memcmp(hostName, expectedHostName, sizeof(expectedHostName)), 0);
+    ASSERT_EQ(hostName[hostNameSize - 1u], '\0');
+
+    ASSERT_EQ(BSL_TLV_FindValuePos(SESS_OBJ_HOST_NAME, encodeBuf, usedLen, &valueOffset, &valueLen), BSL_SUCCESS);
+    ASSERT_TRUE(valueLen > 0);
+    encodeBuf[valueOffset + valueLen - 1u] = 'x';
+    ASSERT_EQ(HITLS_SESS_Decode(dstSession, encodeBuf, usedLen), HITLS_SESS_ERR_DEC_HOST_NAME_FAIL);
+    ASSERT_TRUE(TestIsErrStackNotEmpty());
+
+EXIT:
+    BSL_SAL_FREE(encodeBuf);
     HITLS_SESS_Free(srcSession);
     HITLS_SESS_Free(dstSession);
 }

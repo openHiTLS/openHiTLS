@@ -106,7 +106,7 @@ static int32_t BslSctpRead(BSL_UIO *uio, void *buf, uint32_t len, uint32_t *read
     *readLen = 0;
     if (parameters->serialData.peerAuthed == false) {
         if (parameters->method.uioCtrl == NULL || parameters->method.uioCtrl(uio, BSL_UIO_SCTP_CHECK_PEER_AUTH,
-            sizeof(parameters->serialData.peerAuthed), &parameters->serialData.peerAuthed) != BSL_SUCCESS) {
+            0, NULL) != BSL_SUCCESS) {
             BSL_ERR_PUSH_ERROR(BSL_UIO_IO_EXCEPTION);
             BSL_LOG_BINLOG_FIXLEN(BINLOG_ID05108, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
                 "Uio: Check peer auth failed.", NULL, NULL, NULL, NULL);

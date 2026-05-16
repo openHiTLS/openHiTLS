@@ -426,7 +426,7 @@ static int32_t GeneratePskPreMasterSecret(TLS_Ctx *ctx, uint8_t *pmsBuf, uint32_
             /* padding pskLen with zeros */
             memset(p, 0, pskLen);
             offset += pskLen;
-            p += offset;
+            p += pskLen;
             break;
         default:
             /* no key exchange algo matched */

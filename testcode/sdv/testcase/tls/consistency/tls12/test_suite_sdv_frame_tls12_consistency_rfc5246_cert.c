@@ -564,6 +564,44 @@ EXIT:
 /* END_CASE */
 
 /** @
+* @test UT_TLS_TLS12_RFC5246_CONSISTENCY_PURE_PSK_TC001
+* @title Test pure-PSK premaster secret layout generation
+* @precon nan
+* @brief    1. Construct a minimal TLS context with a pure-PSK key exchange and a 4-byte PSK.
+            2. Call GeneratePskPreMasterSecret directly and verify the generated premaster secret layout.
+* @expect   1. The interface returns HITLS_SUCCESS.
+            2. The output bytes are exactly |pskLen|zero-pad|pskLen|psk|.
+@ */
+/* BEGIN_CASE */
+void UT_TLS_TLS12_RFC5246_CONSISTENCY_PURE_PSK_TC001(void)
+{
+    TLS_Ctx ctx = {0};
+    HS_Ctx hsCtx = {0};
+    KeyExchCtx kxCtx = {0};
+    PskInfo pskInfo = {0};
+    uint8_t psk[] = {0x01, 0x02, 0x03, 0x04};
+    uint8_t pmsBuf[16] = {0};
+    uint32_t pmsUsedLen = 0;
+    const uint8_t expectedPms[] = {0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x01, 0x02, 0x03, 0x04};
+
+    pskInfo.psk = psk;
+    pskInfo.pskLen = sizeof(psk);
+    kxCtx.keyExchAlgo = HITLS_KEY_EXCH_PSK;
+    kxCtx.pskInfo = &pskInfo;
+    hsCtx.kxCtx = &kxCtx;
+    ctx.hsCtx = &hsCtx;
+
+    ASSERT_EQ(GeneratePskPreMasterSecret(&ctx, pmsBuf, sizeof(pmsBuf), &pmsUsedLen), HITLS_SUCCESS);
+    ASSERT_EQ(pmsUsedLen, sizeof(expectedPms));
+    ASSERT_EQ(memcmp(pmsBuf, expectedPms, sizeof(expectedPms)), 0);
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    return;
+}
+/* END_CASE */
+
+/** @
 * @test UT_TLS_TLS12_RFC5246_RSA_REMASTER_TC001
 * @title After the premasterkey to be received by the server is modified, the connection fails to be established.
 * @precon nan

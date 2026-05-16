@@ -158,6 +158,13 @@ static int32_t DecSessObjHostName(HITLS_Session *sess, SessionObjType type, cons
             "decode session host name fail. ret %d", ret, 0, 0, 0);
         return HITLS_SESS_ERR_DEC_HOST_NAME_FAIL;
     }
+    if (hostName[tlvLen - 1] != '\0') {
+        BSL_SAL_FREE(hostName);
+        BSL_ERR_PUSH_ERROR(HITLS_SESS_ERR_DEC_HOST_NAME_FAIL);
+        BSL_LOG_BINLOG_FIXLEN(BINLOG_ID16001, BSL_LOG_LEVEL_ERR, BSL_LOG_BINLOG_TYPE_RUN,
+            "decode session host name fail. no null terminator", 0, 0, 0, 0);
+        return HITLS_SESS_ERR_DEC_HOST_NAME_FAIL;
+    }
 
     sess->hostName = tlv.value;
     sess->hostNameSize = tlv.length;
