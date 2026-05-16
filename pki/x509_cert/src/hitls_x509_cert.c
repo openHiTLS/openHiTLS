@@ -40,8 +40,6 @@
 #include "hitls_csr_local.h"
 #include "hitls_cert_local.h"
 
-#include "bsl_print.h"
-
 #include "hitls_pki_utils.h"
 #include "hitls_pki_csr.h"
 #include "hitls_pki_cert.h"
@@ -509,13 +507,9 @@ static int32_t X509_GetSerialNumStr(HITLS_X509_Cert *cert, BSL_Buffer *val)
     return HITLS_PKI_SUCCESS;
 }
 
-#ifndef HITLS_BSL_PRINT
 #define BSL_PRINT_TIME_FMT "%s %u %02u:%02u:%02u %u GMT"
 
-// rfc822: https://www.w3.org/Protocols/rfc822/
-const char BSL_PRINT_MONTH_STR[12][4] = {
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-#endif
+
 static int32_t X509_GetAsn1BslTimeStr(const BSL_TIME *time, BSL_Buffer *val)
 {
     val->data = BSL_SAL_Calloc(PRINT_TIME_MAX_SIZE, sizeof(uint8_t));
@@ -523,6 +517,9 @@ static int32_t X509_GetAsn1BslTimeStr(const BSL_TIME *time, BSL_Buffer *val)
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return BSL_MALLOC_FAIL;
     }
+    // rfc822: https://www.w3.org/Protocols/rfc822/
+    const char BSL_PRINT_MONTH_STR[12][4] = {
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
     int n = snprintf((char *)val->data, PRINT_TIME_MAX_SIZE, BSL_PRINT_TIME_FMT,
         BSL_PRINT_MONTH_STR[time->month - 1], time->day, time->hour, time->minute, time->second, time->year);
     if (n < 0 || (size_t)n >= PRINT_TIME_MAX_SIZE) {
