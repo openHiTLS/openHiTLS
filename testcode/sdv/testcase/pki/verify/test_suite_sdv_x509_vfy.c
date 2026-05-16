@@ -5629,7 +5629,7 @@ void SDV_X509_CERT_VERIFY_BY_PUBKEY_RSA_PSS_KEY_MD_MISMATCH_TC001(int format, ch
         HITLS_PKI_SUCCESS);
     ASSERT_EQ(HITLS_X509_CertVerifyByPubKey(cert, issuerPubKey), HITLS_PKI_SUCCESS);
 
-    int32_t mdId = pssMdId;
+    CRYPT_MD_AlgId mdId = (CRYPT_MD_AlgId)pssMdId;
     int32_t saltLen = cert->signAlgId.rsaPssParam.saltLen;
     BSL_Param pssParam[4] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},

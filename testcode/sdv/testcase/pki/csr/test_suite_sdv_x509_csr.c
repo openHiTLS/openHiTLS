@@ -1603,7 +1603,7 @@ void SDV_X509_CSR_VERIFY_RSA_PSS_KEY_MD_MISMATCH_TC001(int format, char *path, i
     ASSERT_EQ(csr->signAlgId.algId, BSL_CID_RSASSAPSS);
     ASSERT_EQ(HITLS_X509_CsrVerify(csr), HITLS_PKI_SUCCESS);
 
-    int32_t mdId = pssMdId;
+    CRYPT_MD_AlgId mdId = (CRYPT_MD_AlgId)pssMdId;
     int32_t saltLen = csr->signAlgId.rsaPssParam.saltLen;
     BSL_Param pssParam[4] = {
         {CRYPT_PARAM_RSA_MD_ID, BSL_PARAM_TYPE_INT32, &mdId, sizeof(mdId), 0},
