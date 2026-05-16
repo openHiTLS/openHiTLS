@@ -706,8 +706,12 @@ int32_t HITLS_X509_CsrVerify(HITLS_X509_Csr *csr)
         BSL_ERR_PUSH_ERROR(HITLS_X509_ERR_INVALID_PARAM);
         return HITLS_X509_ERR_INVALID_PARAM;
     }
+    int32_t ret = HITLS_X509_CheckAlg((CRYPT_EAL_PkeyCtx *)csr->reqInfo.ealPubKey, &csr->signAlgId);
+    if (ret != HITLS_PKI_SUCCESS) {
+        return ret;
+    }
 
-    int32_t ret = HITLS_X509_CheckSignature((const CRYPT_EAL_PkeyCtx *)csr->reqInfo.ealPubKey,
+    ret = HITLS_X509_CheckSignature((const CRYPT_EAL_PkeyCtx *)csr->reqInfo.ealPubKey,
         csr->reqInfo.reqInfoRawData, csr->reqInfo.reqInfoRawDataLen, &csr->signAlgId, &csr->signature);
     if (ret != HITLS_PKI_SUCCESS) {
         BSL_ERR_PUSH_ERROR(ret);

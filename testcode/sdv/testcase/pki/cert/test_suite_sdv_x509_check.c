@@ -2467,3 +2467,44 @@ EXIT:
     BSL_SAL_FREE(keyUsageExt.value.data);
 }
 /* END_CASE */
+
+/**
+ * @test   SDV_X509_CERT_CHECKKEY_DIFF_ALGID_FAIL_TC001
+ * @title  Reject a private key whose algorithm differs from the certificate public key algorithm.
+ * @brief  The certificate carries an RSA public key, but HITLS_X509_CheckKey is called with an
+ *         ECDSA private key. The EAL pair check should reject the algorithm mismatch before
+ *         invoking the RSA private method with an ECDSA key object.
+ * @expect HITLS_X509_CheckKey returns HITLS_X509_ERR_CERT_NOT_MATCH_KEY without entering an
+ *         algorithm-private pair check with mismatched key contexts.
+ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_CHECKKEY_DIFF_ALGID_FAIL_TC001(void)
+{
+    HITLS_X509_Cert *cert = NULL;
+    CRYPT_EAL_PkeyCtx *rsaKey = NULL;
+    CRYPT_EAL_PkeyCtx *ecdsaKey = NULL;
+    BslList *dnList = GenDNList();
+
+    TestMemInit();
+    ASSERT_EQ(TestRandInit(), CRYPT_SUCCESS);
+
+    rsaKey = GenKey(CRYPT_PKEY_RSA, 0);
+    ASSERT_NE(rsaKey, NULL);
+    ecdsaKey = GenKey(CRYPT_PKEY_ECDSA, CRYPT_ECC_NISTP256);
+    ASSERT_NE(ecdsaKey, NULL);
+
+    cert = HITLS_X509_CertNew();
+    ASSERT_NE(cert, NULL);
+    ASSERT_EQ(SetCertBasic(cert, g_version, g_serialNum, sizeof(g_serialNum),
+        &g_beforeTime, &g_afterTime, dnList, dnList, rsaKey), 0);
+
+    ASSERT_EQ(HITLS_X509_CheckKey(cert, ecdsaKey), HITLS_X509_ERR_CERT_NOT_MATCH_KEY);
+
+EXIT:
+    TestRandDeInit();
+    HITLS_X509_CertFree(cert);
+    CRYPT_EAL_PkeyFreeCtx(rsaKey);
+    CRYPT_EAL_PkeyFreeCtx(ecdsaKey);
+    HITLS_X509_DnListFree(dnList);
+}
+/* END_CASE */

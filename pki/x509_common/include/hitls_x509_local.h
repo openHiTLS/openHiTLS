@@ -232,6 +232,9 @@ int32_t HITLS_X509_ParseX509(CRYPT_EAL_LibCtx *libCtx, const char *attrName, int
 
 int32_t HITLS_X509_CheckAlg(CRYPT_EAL_PkeyCtx *pubkey, const HITLS_X509_Asn1AlgId *subAlg);
 
+int32_t HITLS_X509_CheckSignAlgConsistency(const HITLS_X509_Asn1AlgId *inner,
+    const HITLS_X509_Asn1AlgId *outer);
+
 #if defined(HITLS_PKI_X509_CSR_PARSE) || defined(HITLS_PKI_PKCS12_PARSE) || defined(HITLS_PKI_CMS_SIGNEDDATA)
 int32_t HITLS_X509_ParseAttrList(BSL_ASN1_Buffer *attrBuff, HITLS_X509_Attrs *attrs, HITLS_X509_ParseAttrItemCb parseCb,
     HITLS_X509_FreeAttrItemCb freeItem);

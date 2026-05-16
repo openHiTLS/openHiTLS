@@ -253,6 +253,9 @@ SDV_X509_CRL_Check_TC001:"../testdata/cert/chain/ecdsa-v3/inter.der":"../testdat
 SDV_X509_CRL_Check_TC001 success rsa-pss
 SDV_X509_CRL_Check_TC001:"../testdata/cert/chain/rsa-pss-v3/rootca.crt":"../testdata/cert/chain/rsa-pss-v3/crl.der":HITLS_PKI_SUCCESS
 
+SDV_X509_CRL_Check_TC001 inner/outer rsa-pss param mismatch
+SDV_X509_CRL_Check_TC001:"../testdata/cert/chain/sigParam/rsa_crl_inner_outer_mismatch_root.pem":"../testdata/cert/chain/sigParam/rsa_crl_inner_outer_mismatch.crl":HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH
+
 SDV_X509_CRL_Check_TC001 success sm2
 SDV_X509_CRL_Check_TC001:"../testdata/cert/sm2/inter.mul.der":"../testdata/cert/sm2/crl_v2.mul.der":HITLS_PKI_SUCCESS
 
@@ -447,3 +450,9 @@ SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/asn1/rsa_cert/inter2.mul.crt":"
 
 SDV_X509_CRL_ENCODE_STUB_TC001 v3 cert sm2 with userid
 SDV_X509_CRL_ENCODE_STUB_TC001:"../testdata/cert/sm2_with_userid/ca.crt":"../testdata/cert/sm2_with_userid/ca.key":CRYPT_PRIKEY_PKCS8_UNENCRYPT:0:CRYPT_MD_SM3:0:"tmp-sm2-withuserId.crl":1:3
+
+SDV_X509_CRL_ENTRY_SET_SERIAL_REPLACE_MEM_TC001 repeat set generated CRL entry serial
+SDV_X509_CRL_ENTRY_SET_SERIAL_REPLACE_MEM_TC001:
+
+SDV_X509_CRL_PARSE_REVOKED_EXT_FAIL_FREE_TC001 parse failure releases revoked entry extensions
+SDV_X509_CRL_PARSE_REVOKED_EXT_FAIL_FREE_TC001:"../testdata/cert/pem/crl/crl_v2.mul3.crl"

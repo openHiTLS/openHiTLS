@@ -508,3 +508,15 @@ SDV_X509_VFY_V1_INTER_CA_TC001:"../testdata/cert/chain/bcExt/bc_leaf_missing_bc.
 
 SDV_X509_VFY_V1_INTER_CA_TC001: TC5 v3 intermediate BasicConstraints CA=false
 SDV_X509_VFY_V1_INTER_CA_TC001:"../testdata/cert/chain/bcExt/bc_leaf_ca_false.pem":"../testdata/cert/chain/bcExt/bc_inter_ca_false.pem":"../testdata/cert/chain/bcExt/bc_root_general.pem":HITLS_X509_ERR_VFY_INTERCA_INVALID_BCONS
+
+SDV_X509_VFY_RSA_PSS_INNER_OUTER_PARAM_MISMATCH_FAIL_TC001 RSA-PSS inner saltLen=20 outer saltLen=32 is rejected
+SDV_X509_VFY_RSA_PSS_INNER_OUTER_PARAM_MISMATCH_FAIL_TC001:"../testdata/cert/chain/sigParam/rsa_pss_param_mismatch_root.pem":"../testdata/cert/chain/sigParam/rsa_pss_param_mismatch_leaf.pem"
+
+SDV_X509_CERT_VERIFY_BY_PUBKEY_RSA_PSS_KEY_MD_MISMATCH_TC001 #direct verify ignores rsa-pss key md constraint
+SDV_X509_CERT_VERIFY_BY_PUBKEY_RSA_PSS_KEY_MD_MISMATCH_TC001:BSL_FORMAT_ASN1:"../testdata/cert/chain/rsa-pss-v3/end.der":"../testdata/cert/chain/rsa-pss-v3/inter.der":CRYPT_MD_SHA1:HITLS_PKI_SUCCESS
+
+SDV_X509_VFY_CRL_RSA_PSS_INNER_OUTER_PARAM_MISMATCH_FAIL_TC001 RSA-PSS CRL inner saltLen=20 outer saltLen=32 is rejected
+SDV_X509_VFY_CRL_RSA_PSS_INNER_OUTER_PARAM_MISMATCH_FAIL_TC001:"../testdata/cert/chain/sigParam/rsa_crl_inner_outer_mismatch_root.pem":"../testdata/cert/chain/sigParam/rsa_crl_inner_outer_mismatch_leaf.pem":"../testdata/cert/chain/sigParam/rsa_crl_inner_outer_mismatch.crl"
+
+SDV_X509_VFY_CRL_RSA_PSS_ISSUER_PARAM_MISMATCH_FAIL_TC001 RSA-PSS constrained issuer rejects CRL signed with SHA384/MGF1-SHA384
+SDV_X509_VFY_CRL_RSA_PSS_ISSUER_PARAM_MISMATCH_FAIL_TC001:"../testdata/cert/chain/sigParam/rsa_pss_crl_key_param_root.pem":"../testdata/cert/chain/sigParam/rsa_pss_crl_key_param_leaf.pem":"../testdata/cert/chain/sigParam/rsa_pss_crl_key_param_mismatch.crl"

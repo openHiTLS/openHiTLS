@@ -1486,7 +1486,7 @@ int32_t HITLS_X509_EncodeExt(uint8_t tag, BSL_ASN1_List *list, BSL_ASN1_Buffer *
 HITLS_X509_ExtEntry *X509_DupExtEntry(const HITLS_X509_ExtEntry *src)
 {
     /* Src is not null. */
-    HITLS_X509_ExtEntry *dest = BSL_SAL_Malloc(sizeof(HITLS_X509_ExtEntry));
+    HITLS_X509_ExtEntry *dest = BSL_SAL_Calloc(1, sizeof(HITLS_X509_ExtEntry));
     if (dest == NULL) {
         BSL_ERR_PUSH_ERROR(BSL_MALLOC_FAIL);
         return NULL;
