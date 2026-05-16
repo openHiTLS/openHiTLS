@@ -879,6 +879,7 @@ static int32_t ReadKeyFile(AppProvider *provider, HITLS_APP_SM_Param *smParam, H
 static int32_t GetKeyAttr(HITLS_PKCS12_Bag *bag, HITLS_APP_KeyAttr *attr)
 {
     char attrValue[2 * sizeof(HITLS_APP_KeyAttr) + 1] = {0}; // 2: one byte to two hex chars.
+    const size_t expectedAttrValueLen = sizeof(attrValue) - 1;
     BSL_Buffer attrValueBuf = {0};
     attrValueBuf.data = (uint8_t *)attrValue;
     attrValueBuf.dataLen = sizeof(attrValue);
@@ -887,6 +888,11 @@ static int32_t GetKeyAttr(HITLS_PKCS12_Bag *bag, HITLS_APP_KeyAttr *attr)
     if (ret != HITLS_PKI_SUCCESS) {
         AppPrintError("keymgmt: Failed to get key attr, errCode: 0x%x.\n", ret);
         return HITLS_APP_X509_FAIL;
+    }
+    if (attrValueBuf.dataLen != sizeof(attrValue) || attrValue[expectedAttrValueLen] != '\0' ||
+        strlen(attrValue) != expectedAttrValueLen) {
+        AppPrintError("keymgmt: Invalid key attr friendlyName format, attrLen: %u.\n", attrValueBuf.dataLen);
+        return HITLS_APP_INFO_CMP_FAIL;
     }
     uint32_t attrLen = sizeof(HITLS_APP_KeyAttr);
     ret = HITLS_APP_HexToBytes(attrValue, (uint8_t *)attr, &attrLen);

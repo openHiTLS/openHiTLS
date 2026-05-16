@@ -96,6 +96,10 @@ static int32_t CheckKdfParam(IsoKdfCtx *ctx, const BSL_Param *param)
 {
     int32_t ret = CRYPT_SUCCESS;
     CRYPT_EAL_Pbkdf2Param pbkdf2 = {KDF_DEF_MAC_ALGID, KDF_DEF_SALT_LEN, KDF_DEF_PBKDF2_ITER, KDF_DEF_KEY_LEN};
+    /**
+     * Init key length for incremental HKDF/TLSKDF SetParam validation.
+     * Used only when CRYPT_PARAM_KDF_KEY is absent in this call.
+     */
     CRYPT_EAL_HkdfParam hkdf = {KDF_DEF_MAC_ALGID, KDF_DEF_KEY_LEN};
     CRYPT_EAL_KdfC2Data data = {&pbkdf2, &hkdf};
     switch (ctx->algId) {
