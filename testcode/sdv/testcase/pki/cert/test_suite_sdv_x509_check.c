@@ -24,6 +24,7 @@
 #include "bsl_types.h"
 #include "crypt_errno.h"
 #include "crypt_types.h"
+#include "crypt_algid.h"
 #include "crypt_params_key.h"
 #include "crypt_eal_pkey.h"
 #include "crypt_eal_codecs.h"
@@ -2505,5 +2506,57 @@ EXIT:
     CRYPT_EAL_PkeyFreeCtx(rsaKey);
     CRYPT_EAL_PkeyFreeCtx(ecdsaKey);
     HITLS_X509_DnListFree(dnList);
+}
+/* END_CASE */
+
+/* @
+ * @test SDV_X509_CERT_COMPOSITE_SIGNALG_CHECK_TC001
+ * @spec -
+ * @title Test that composite signature OID must match the composite public-key parameter ID.
+ * @precon nan
+ * @brief
+ * 1.Create a composite public-key context with a supported composite parameter ID.
+ * 2.Check algorithm with the same signature OID.
+ * 3.Check algorithm with another compatible composite signature OID.
+ * @expect
+ * 1.Same OID succeeds.
+ * 2.Different composite OID fails.
+ * @prior nan
+ * @auto TRUE
+ @ */
+/* BEGIN_CASE */
+void SDV_X509_CERT_COMPOSITE_SIGNALG_CHECK_TC001(void)
+{
+#ifndef HITLS_CRYPTO_COMPOSITE
+    SKIP_TEST();
+#else
+#if defined(HITLS_CRYPTO_RSA)
+    int32_t paraId = CRYPT_COMPOSITE_MLDSA44_RSA2048_PSS_SHA256;
+    int32_t wrongSignAlgId = CRYPT_COMPOSITE_MLDSA44_RSA2048_PKCS15_SHA256;
+#elif defined(HITLS_CRYPTO_ECDSA)
+    int32_t paraId = CRYPT_COMPOSITE_MLDSA65_ECDSA_P256_SHA512;
+    int32_t wrongSignAlgId = CRYPT_COMPOSITE_MLDSA65_ECDSA_P384_SHA512;
+#elif defined(HITLS_CRYPTO_ED25519)
+    int32_t paraId = CRYPT_COMPOSITE_MLDSA44_ED25519_SHA512;
+    int32_t wrongSignAlgId = CRYPT_COMPOSITE_MLDSA65_ED25519_SHA512;
+#else
+    SKIP_TEST();
+#endif
+
+    HITLS_X509_Asn1AlgId alg = {0};
+    CRYPT_EAL_PkeyCtx *pubKey = CRYPT_EAL_PkeyNewCtx(CRYPT_PKEY_COMPOSITE);
+    ASSERT_NE(pubKey, NULL);
+
+    ASSERT_EQ(CRYPT_EAL_PkeySetParaById(pubKey, paraId), CRYPT_SUCCESS);
+
+    alg.algId = paraId;
+    ASSERT_EQ(HITLS_X509_CheckAlg(pubKey, &alg), HITLS_PKI_SUCCESS);
+
+    alg.algId = wrongSignAlgId;
+    ASSERT_EQ(HITLS_X509_CheckAlg(pubKey, &alg), HITLS_X509_ERR_VFY_SIGNALG_NOT_MATCH);
+
+EXIT:
+    CRYPT_EAL_PkeyFreeCtx(pubKey);
+#endif
 }
 /* END_CASE */

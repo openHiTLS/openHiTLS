@@ -34,13 +34,6 @@ extern "C" {
 BslCid HITLS_CMS_GetDefaultMlDsaDigestAlg(BslCid mldsaVariant, bool useSignedAttrs);
 
 /**
- * @brief Check if PQC algorithm parameters should be omitted
- * @param algId Algorithm identifier CID
- * @return true if parameters must be omitted
- */
-bool HITLS_CMS_PqcShouldOmitParams(BslCid algId);
-
-/**
  * @brief Check if algorithm is a PQC signature algorithm
  * @param algId Algorithm identifier CID
  * @return true if it's a PQC signature algorithm

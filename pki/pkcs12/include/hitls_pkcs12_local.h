@@ -169,7 +169,7 @@ int32_t HITLS_PKCS12_EncodeMacData(HITLS_PKCS12 *p12, BSL_Buffer *initData, cons
     BSL_Buffer *encode);
 
 /*
- * Encode contentInfo.
+ * Encode contentInfo. in no-mac scenario, the p12 file will not be encrypted for output
 */
 int32_t HITLS_PKCS12_EncodeContentInfo(HITLS_PKI_LibCtx *libCtx, const char *attrName, BSL_Buffer *input,
     uint32_t encodeType, const CRYPT_EncodeParam *encryptParam, BSL_Buffer *encode);
