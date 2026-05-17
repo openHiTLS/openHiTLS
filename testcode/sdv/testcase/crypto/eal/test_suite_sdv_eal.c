@@ -127,6 +127,22 @@ static bool IsPkeyAlgIdValid(int id)
 }
 
 #define MD_OUTPUT_MAXSIZE 128
+#define EAL_ASM_GUARD_LEN 32
+#define EAL_ASM_GUARD_VALUE 0xA5
+#define EAL_ASM_CIPHER_MAX_LEN 1100
+#define EAL_ASM_SCAN_MAX_LEN 2048
+#define EAL_ASM_MD_MAX_MSG_LEN 400
+#define EAL_ASM_MAX_KEY_LEN 64
+#define EAL_ASM_MAX_IV_LEN 16
+#define EAL_ASM_AEAD_TAG_LEN 16
+#define EAL_ASM_AEAD_AAD_LEN 13
+#define EAL_ASM_BLOCK_LEN 16
+
+typedef struct {
+    int algId;
+    uint32_t keyLen;
+    uint32_t ivLen;
+} EAL_AsmCipherScanCase;
 
 static int32_t MdTest(CRYPT_EAL_MdCtx *ctx, Hex *msg, Hex *hash)
 {
@@ -143,6 +159,212 @@ static int32_t MdTest(CRYPT_EAL_MdCtx *ctx, Hex *msg, Hex *hash)
     }
     ASSERT_EQ(memcmp(output, hash->x, hash->len), 0);
     return 0;
+EXIT:
+    return -1;
+}
+
+static void EalAsmFill(uint8_t *buf, uint32_t len, uint8_t seed)
+{
+    for (uint32_t i = 0; i < len; i++) {
+        buf[i] = (uint8_t)(seed + i * 13u + (i >> 1));
+    }
+}
+
+static bool EalAsmIsGuardUnchanged(const uint8_t *buf, uint32_t len)
+{
+    for (uint32_t i = 0; i < len; i++) {
+        if (buf[i] != EAL_ASM_GUARD_VALUE) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool EalAsmIsCcm(int algId)
+{
+    return algId == CRYPT_CIPHER_AES128_CCM || algId == CRYPT_CIPHER_AES192_CCM ||
+        algId == CRYPT_CIPHER_AES256_CCM || algId == CRYPT_CIPHER_SM4_CCM;
+}
+
+static bool EalAsmIsGcm(int algId)
+{
+    return algId == CRYPT_CIPHER_AES128_GCM || algId == CRYPT_CIPHER_AES192_GCM ||
+        algId == CRYPT_CIPHER_AES256_GCM || algId == CRYPT_CIPHER_SM4_GCM;
+}
+
+static bool EalAsmIsAead(int algId)
+{
+    return EalAsmIsGcm(algId) || EalAsmIsCcm(algId) || algId == CRYPT_CIPHER_CHACHA20_POLY1305;
+}
+
+static bool EalAsmIsXts(int algId)
+{
+    return algId == CRYPT_CIPHER_AES128_XTS || algId == CRYPT_CIPHER_AES256_XTS ||
+        algId == CRYPT_CIPHER_SM4_XTS;
+}
+
+static bool EalAsmIsHctr(int algId)
+{
+    return algId == CRYPT_CIPHER_SM4_HCTR;
+}
+
+static bool EalAsmIsShake(int algId)
+{
+    return algId == CRYPT_MD_SHAKE128 || algId == CRYPT_MD_SHAKE256;
+}
+
+static uint32_t EalAsmMdOutputLen(int algId)
+{
+    if (!EalAsmIsShake(algId)) {
+        return CRYPT_EAL_MdGetDigestSize(algId);
+    }
+    if (algId == CRYPT_MD_SHAKE128) {
+        return 16;
+    }
+    return 32;
+}
+
+static bool EalAsmNeedsNoPadding(int algId)
+{
+    return algId == CRYPT_CIPHER_AES128_CBC || algId == CRYPT_CIPHER_AES192_CBC ||
+        algId == CRYPT_CIPHER_AES256_CBC || algId == CRYPT_CIPHER_AES128_ECB ||
+        algId == CRYPT_CIPHER_AES192_ECB || algId == CRYPT_CIPHER_AES256_ECB ||
+        algId == CRYPT_CIPHER_SM4_CBC || algId == CRYPT_CIPHER_SM4_ECB;
+}
+
+static bool EalAsmIsValidScanLen(int algId, uint32_t dataLen)
+{
+    if (EalAsmNeedsNoPadding(algId)) {
+        return dataLen % EAL_ASM_BLOCK_LEN == 0;
+    }
+    if (EalAsmIsXts(algId) || EalAsmIsHctr(algId)) {
+        return dataLen >= EAL_ASM_BLOCK_LEN;
+    }
+    return true;
+}
+
+static int32_t EalAsmPrepareCipher(CRYPT_EAL_CipherCtx *ctx, int algId, uint32_t msgLen)
+{
+    uint32_t tagLen = EAL_ASM_AEAD_TAG_LEN;
+    uint64_t msgLen64 = msgLen;
+    uint8_t aad[EAL_ASM_AEAD_AAD_LEN];
+
+    if (EalAsmNeedsNoPadding(algId)) {
+        int32_t ret = CRYPT_EAL_CipherSetPadding(ctx, CRYPT_PADDING_NONE);
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+    if (EalAsmIsGcm(algId) || EalAsmIsCcm(algId)) {
+        int32_t ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_TAGLEN, &tagLen, sizeof(tagLen));
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+    if (EalAsmIsCcm(algId)) {
+        int32_t ret = CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_MSGLEN, &msgLen64, sizeof(msgLen64));
+        if (ret != CRYPT_SUCCESS) {
+            return ret;
+        }
+    }
+    if (EalAsmIsAead(algId)) {
+        EalAsmFill(aad, sizeof(aad), 0x33);
+        return CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_SET_AAD, aad, sizeof(aad));
+    }
+    return CRYPT_SUCCESS;
+}
+
+static int32_t EalAsmCipherUpdateFinal(CRYPT_EAL_CipherCtx *ctx, int algId, const uint8_t *in, uint32_t inLen,
+    uint8_t *out, uint32_t *outLen)
+{
+    uint8_t finalOut[EAL_ASM_GUARD_LEN] = {0};
+    uint32_t finalLen = sizeof(finalOut);
+
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, in, inLen, out, outLen), CRYPT_SUCCESS);
+    if (EalAsmIsAead(algId)) {
+        return CRYPT_SUCCESS;
+    }
+    if (EalAsmIsHctr(algId)) {
+        ASSERT_EQ(*outLen, 0);
+        *outLen = inLen;
+        ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, out, outLen), CRYPT_SUCCESS);
+        return CRYPT_SUCCESS;
+    }
+    ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, finalOut, &finalLen), CRYPT_SUCCESS);
+    ASSERT_EQ(finalLen, 0);
+    return CRYPT_SUCCESS;
+EXIT:
+    return -1;
+}
+
+static int32_t EalAsmCipherRoundTripGuard(CRYPT_EAL_CipherCtx *ctx, int algId, const uint8_t *key, uint32_t keyLen,
+    const uint8_t *iv, uint32_t ivLen, uint8_t *plain, uint8_t *cipher, uint8_t *recovered, uint32_t dataLen)
+{
+    uint8_t ivTmp[EAL_ASM_MAX_IV_LEN] = {0};
+    uint8_t tag[EAL_ASM_AEAD_TAG_LEN] = {0};
+    uint8_t decTag[EAL_ASM_AEAD_TAG_LEN] = {0};
+    uint32_t cipherLen = dataLen;
+    uint32_t recoveredLen = dataLen;
+
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_TRUE(ivLen <= EAL_ASM_MAX_IV_LEN);
+    (void)memcpy(ivTmp, iv, ivLen);
+
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, keyLen, ivTmp, ivLen, true), CRYPT_SUCCESS);
+    ASSERT_EQ(EalAsmPrepareCipher(ctx, algId, dataLen), CRYPT_SUCCESS);
+    ASSERT_EQ(EalAsmCipherUpdateFinal(ctx, algId, plain, dataLen, cipher, &cipherLen), CRYPT_SUCCESS);
+    ASSERT_EQ(cipherLen, dataLen);
+    if (EalAsmIsAead(algId)) {
+        ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, sizeof(tag)), CRYPT_SUCCESS);
+    }
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(plain + dataLen, EAL_ASM_GUARD_LEN));
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(cipher + dataLen, EAL_ASM_GUARD_LEN));
+
+    CRYPT_EAL_CipherDeinit(ctx);
+    (void)memcpy(ivTmp, iv, ivLen);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, keyLen, ivTmp, ivLen, false), CRYPT_SUCCESS);
+    ASSERT_EQ(EalAsmPrepareCipher(ctx, algId, dataLen), CRYPT_SUCCESS);
+    ASSERT_EQ(EalAsmCipherUpdateFinal(ctx, algId, cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(recoveredLen, dataLen);
+    if (EalAsmIsAead(algId)) {
+        ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, decTag, sizeof(decTag)), CRYPT_SUCCESS);
+        ASSERT_COMPARE("AEAD tag:", decTag, sizeof(decTag), tag, sizeof(tag));
+    }
+
+    ASSERT_COMPARE("cipher varlen scan:", recovered, recoveredLen, plain, dataLen);
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(cipher + dataLen, EAL_ASM_GUARD_LEN));
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(recovered + dataLen, EAL_ASM_GUARD_LEN));
+    CRYPT_EAL_CipherDeinit(ctx);
+    return CRYPT_SUCCESS;
+EXIT:
+    CRYPT_EAL_CipherDeinit(ctx);
+    return -1;
+}
+
+static int32_t EalAsmMdDigestGuard(CRYPT_EAL_MdCtx *ctx, int algId, uint8_t *msg, uint32_t msgLen)
+{
+    uint8_t digest[EAL_ASM_GUARD_LEN + MD_OUTPUT_MAXSIZE] = {0};
+    uint8_t oneShotDigest[EAL_ASM_GUARD_LEN + MD_OUTPUT_MAXSIZE] = {0};
+    uint32_t digestLen = EalAsmMdOutputLen(algId);
+    uint32_t oneShotDigestLen = digestLen;
+
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_TRUE(digestLen > 0 && digestLen <= MD_OUTPUT_MAXSIZE);
+    memset(digest + digestLen, EAL_ASM_GUARD_VALUE, EAL_ASM_GUARD_LEN);
+    memset(oneShotDigest + digestLen, EAL_ASM_GUARD_VALUE, EAL_ASM_GUARD_LEN);
+
+    ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg, msgLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, digest, &digestLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_Md(algId, msg, msgLen, oneShotDigest, &oneShotDigestLen), CRYPT_SUCCESS);
+    ASSERT_EQ(oneShotDigestLen, digestLen);
+    ASSERT_COMPARE("hash varlen scan:", digest, digestLen, oneShotDigest, oneShotDigestLen);
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(msg + msgLen, EAL_ASM_GUARD_LEN));
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(digest + digestLen, EAL_ASM_GUARD_LEN));
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(oneShotDigest + digestLen, EAL_ASM_GUARD_LEN));
+
+    return CRYPT_SUCCESS;
 EXIT:
     return -1;
 }
@@ -219,6 +441,289 @@ void SDV_CRYPTO_MD_COPY_FUNC_TC001(int id, Hex *msg, Hex *hash)
 EXIT:
     CRYPT_EAL_MdFreeCtx(ctx);
     CRYPT_EAL_MdFreeCtx(cpyCtx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_EAL_CIPHER_ASM_BOUNDARY_GUARD_TC001
+ * @title  Symmetric cipher single Update guard test around assembly dispatch lengths.
+ * @precon Registering memory-related functions.
+ * @brief
+ *    1. Fill input, output and decrypted buffers with one guard area after the logical data.
+ *    2. Encrypt exactly dataLen bytes in one Update.
+ *    3. Decrypt the ciphertext in one Update.
+ *    4. Check roundtrip result and guard areas.
+ * @expect
+ *    1. Single Update succeeds.
+ *    2. Recovered plaintext is the same as input.
+ *    3. Input/output guard bytes are unchanged.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_CIPHER_ASM_BOUNDARY_GUARD_TC001(int algId, int keyLen, int ivLen, int dataLen)
+{
+    TestMemInit();
+    uint8_t key[EAL_ASM_MAX_KEY_LEN] = {0};
+    uint8_t iv[EAL_ASM_MAX_IV_LEN] = {0};
+    uint8_t plain[EAL_ASM_CIPHER_MAX_LEN + EAL_ASM_GUARD_LEN] = {0};
+    uint8_t cipher[EAL_ASM_CIPHER_MAX_LEN + EAL_ASM_GUARD_LEN] = {0};
+    uint8_t recovered[EAL_ASM_CIPHER_MAX_LEN + EAL_ASM_GUARD_LEN] = {0};
+    uint8_t tag[EAL_ASM_AEAD_TAG_LEN] = {0};
+    uint8_t decTag[EAL_ASM_AEAD_TAG_LEN] = {0};
+    uint8_t finalOut[EAL_ASM_GUARD_LEN] = {0};
+    uint32_t cipherLen = (uint32_t)dataLen;
+    uint32_t recoveredLen = (uint32_t)dataLen;
+    uint32_t finLen = sizeof(finalOut);
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+
+    ASSERT_TRUE(dataLen > 0 && dataLen <= EAL_ASM_CIPHER_MAX_LEN);
+    ASSERT_TRUE(keyLen > 0 && keyLen <= EAL_ASM_MAX_KEY_LEN);
+    ASSERT_TRUE(ivLen >= 0 && ivLen <= EAL_ASM_MAX_IV_LEN);
+
+    EalAsmFill(key, (uint32_t)keyLen, 0x21);
+    EalAsmFill(iv, (uint32_t)ivLen, 0x43);
+    EalAsmFill(plain, (uint32_t)dataLen, 0x65);
+    memset(plain + dataLen, EAL_ASM_GUARD_VALUE, EAL_ASM_GUARD_LEN);
+    memset(cipher + dataLen, EAL_ASM_GUARD_VALUE, EAL_ASM_GUARD_LEN);
+    memset(recovered + dataLen, EAL_ASM_GUARD_VALUE, EAL_ASM_GUARD_LEN);
+
+    ASSERT_TRUE((ctx = CRYPT_EAL_CipherNewCtx(algId)) != NULL);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, (uint32_t)keyLen, iv, (uint32_t)ivLen, true), CRYPT_SUCCESS);
+    ASSERT_EQ(EalAsmPrepareCipher(ctx, algId, (uint32_t)dataLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, plain, (uint32_t)dataLen, cipher, &cipherLen), CRYPT_SUCCESS);
+    ASSERT_EQ(cipherLen, (uint32_t)dataLen);
+    if (EalAsmIsAead(algId)) {
+        ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, tag, sizeof(tag)), CRYPT_SUCCESS);
+    } else {
+        ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, finalOut, &finLen), CRYPT_SUCCESS);
+        ASSERT_EQ(finLen, 0);
+    }
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(plain + dataLen, EAL_ASM_GUARD_LEN));
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(cipher + dataLen, EAL_ASM_GUARD_LEN));
+
+    CRYPT_EAL_CipherDeinit(ctx);
+    EalAsmFill(iv, (uint32_t)ivLen, 0x43);
+    ASSERT_EQ(CRYPT_EAL_CipherInit(ctx, key, (uint32_t)keyLen, iv, (uint32_t)ivLen, false), CRYPT_SUCCESS);
+    ASSERT_EQ(EalAsmPrepareCipher(ctx, algId, (uint32_t)dataLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_CipherUpdate(ctx, cipher, cipherLen, recovered, &recoveredLen), CRYPT_SUCCESS);
+    ASSERT_EQ(recoveredLen, (uint32_t)dataLen);
+    if (EalAsmIsAead(algId)) {
+        ASSERT_EQ(CRYPT_EAL_CipherCtrl(ctx, CRYPT_CTRL_GET_TAG, decTag, sizeof(decTag)), CRYPT_SUCCESS);
+        ASSERT_COMPARE("AEAD tag:", decTag, sizeof(decTag), tag, sizeof(tag));
+    } else {
+        finLen = sizeof(finalOut);
+        ASSERT_EQ(CRYPT_EAL_CipherFinal(ctx, finalOut, &finLen), CRYPT_SUCCESS);
+        ASSERT_EQ(finLen, 0);
+    }
+
+    ASSERT_COMPARE("cipher asm single Update:", recovered, recoveredLen, plain, (uint32_t)dataLen);
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(cipher + dataLen, EAL_ASM_GUARD_LEN));
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(recovered + dataLen, EAL_ASM_GUARD_LEN));
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_EAL_MD_ASM_BOUNDARY_GUARD_TC001
+ * @title  Hash single Update guard test around compression block or SHA3 rate boundaries.
+ * @precon Registering memory-related functions.
+ * @brief
+ *    1. Fill message and digest buffers with guard bytes after the logical data.
+ *    2. Hash msgLen bytes with one Update and Final.
+ *    3. Hash the same message with the one-shot EAL API.
+ *    4. Compare digests and guard areas.
+ * @expect
+ *    1. Hash succeeds.
+ *    2. The two digest results are the same.
+ *    3. Message and digest guard bytes are unchanged.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_MD_ASM_BOUNDARY_GUARD_TC001(int algId, int blockSize, int msgLen)
+{
+    TestMemInit();
+    uint8_t msg[EAL_ASM_MD_MAX_MSG_LEN + EAL_ASM_GUARD_LEN] = {0};
+    uint8_t digest[EAL_ASM_GUARD_LEN + MD_OUTPUT_MAXSIZE] = {0};
+    uint8_t oneShotDigest[EAL_ASM_GUARD_LEN + MD_OUTPUT_MAXSIZE] = {0};
+    uint32_t digestLen = CRYPT_EAL_MdGetDigestSize(algId);
+    uint32_t oneShotDigestLen = digestLen;
+    CRYPT_EAL_MdCtx *ctx = NULL;
+
+    ASSERT_TRUE(blockSize > 0);
+    ASSERT_TRUE(msgLen > 0 && msgLen <= EAL_ASM_MD_MAX_MSG_LEN);
+    ASSERT_TRUE(digestLen > 0 && digestLen <= MD_OUTPUT_MAXSIZE);
+
+    EalAsmFill(msg, (uint32_t)msgLen, 0x87);
+    memset(msg + msgLen, EAL_ASM_GUARD_VALUE, EAL_ASM_GUARD_LEN);
+    memset(digest + digestLen, EAL_ASM_GUARD_VALUE, EAL_ASM_GUARD_LEN);
+    memset(oneShotDigest + digestLen, EAL_ASM_GUARD_VALUE, EAL_ASM_GUARD_LEN);
+
+    ASSERT_TRUE((ctx = CRYPT_EAL_MdNewCtx(algId)) != NULL);
+    ASSERT_EQ(CRYPT_EAL_MdInit(ctx), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdUpdate(ctx, msg, (uint32_t)msgLen), CRYPT_SUCCESS);
+    ASSERT_EQ(CRYPT_EAL_MdFinal(ctx, digest, &digestLen), CRYPT_SUCCESS);
+
+    ASSERT_EQ(CRYPT_EAL_Md(algId, msg, (uint32_t)msgLen, oneShotDigest, &oneShotDigestLen), CRYPT_SUCCESS);
+    ASSERT_EQ(oneShotDigestLen, digestLen);
+    ASSERT_COMPARE("hash asm single Update:", digest, digestLen, oneShotDigest, oneShotDigestLen);
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(msg + msgLen, EAL_ASM_GUARD_LEN));
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(digest + digestLen, EAL_ASM_GUARD_LEN));
+    ASSERT_TRUE(EalAsmIsGuardUnchanged(oneShotDigest + digestLen, EAL_ASM_GUARD_LEN));
+    ASSERT_TRUE(TestIsErrStackEmpty());
+
+EXIT:
+    CRYPT_EAL_MdFreeCtx(ctx);
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_EAL_CIPHER_VARLEN_GUARD_TC001
+ * @title  Symmetric cipher 1..2048 byte single Update guard scan.
+ * @precon Registering memory-related functions.
+ * @brief
+ *    1. Traverse symmetric cipher mode IDs and lengths from 1 to 2048.
+ *    2. Skip lengths that violate the selected mode contract, such as partial ECB/CBC blocks.
+ *    3. Encrypt and decrypt each valid length with guard bytes after input and output buffers.
+ *    4. Check roundtrip result and guard areas.
+ * @expect
+ *    1. Every valid length succeeds.
+ *    2. Recovered plaintext is the same as input.
+ *    3. Input/output guard bytes are unchanged.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_CIPHER_VARLEN_GUARD_TC001(void)
+{
+    TestMemInit();
+    static const EAL_AsmCipherScanCase scanCases[] = {
+        {CRYPT_CIPHER_AES128_ECB, 16, 0},
+        {CRYPT_CIPHER_AES192_ECB, 24, 0},
+        {CRYPT_CIPHER_AES256_ECB, 32, 0},
+        {CRYPT_CIPHER_AES128_CBC, 16, 16},
+        {CRYPT_CIPHER_AES192_CBC, 24, 16},
+        {CRYPT_CIPHER_AES256_CBC, 32, 16},
+        {CRYPT_CIPHER_AES128_CTR, 16, 16},
+        {CRYPT_CIPHER_AES192_CTR, 24, 16},
+        {CRYPT_CIPHER_AES256_CTR, 32, 16},
+        {CRYPT_CIPHER_AES128_CFB, 16, 16},
+        {CRYPT_CIPHER_AES192_CFB, 24, 16},
+        {CRYPT_CIPHER_AES256_CFB, 32, 16},
+        {CRYPT_CIPHER_AES128_OFB, 16, 16},
+        {CRYPT_CIPHER_AES192_OFB, 24, 16},
+        {CRYPT_CIPHER_AES256_OFB, 32, 16},
+        {CRYPT_CIPHER_AES128_XTS, 32, 16},
+        {CRYPT_CIPHER_AES256_XTS, 64, 16},
+        {CRYPT_CIPHER_AES128_GCM, 16, 16},
+        {CRYPT_CIPHER_AES192_GCM, 24, 16},
+        {CRYPT_CIPHER_AES256_GCM, 32, 16},
+        {CRYPT_CIPHER_AES128_CCM, 16, 12},
+        {CRYPT_CIPHER_AES192_CCM, 24, 12},
+        {CRYPT_CIPHER_AES256_CCM, 32, 12},
+        {CRYPT_CIPHER_SM4_ECB, 16, 0},
+        {CRYPT_CIPHER_SM4_CBC, 16, 16},
+        {CRYPT_CIPHER_SM4_CTR, 16, 16},
+        {CRYPT_CIPHER_SM4_CFB, 16, 16},
+        {CRYPT_CIPHER_SM4_OFB, 16, 16},
+        {CRYPT_CIPHER_SM4_XTS, 32, 16},
+        {CRYPT_CIPHER_SM4_GCM, 16, 16},
+        {CRYPT_CIPHER_SM4_CCM, 16, 12},
+        {CRYPT_CIPHER_SM4_HCTR, 32, 16},
+        {CRYPT_CIPHER_CHACHA20_POLY1305, 32, 12},
+    };
+    uint8_t key[EAL_ASM_MAX_KEY_LEN] = {0};
+    uint8_t iv[EAL_ASM_MAX_IV_LEN] = {0};
+    uint8_t plain[EAL_ASM_SCAN_MAX_LEN + EAL_ASM_GUARD_LEN] = {0};
+    uint8_t cipher[EAL_ASM_SCAN_MAX_LEN + EAL_ASM_GUARD_LEN] = {0};
+    uint8_t recovered[EAL_ASM_SCAN_MAX_LEN + EAL_ASM_GUARD_LEN] = {0};
+    CRYPT_EAL_CipherCtx *ctx = NULL;
+
+    for (uint32_t caseIdx = 0; caseIdx < sizeof(scanCases) / sizeof(scanCases[0]); caseIdx++) {
+        ASSERT_TRUE((ctx = CRYPT_EAL_CipherNewCtx(scanCases[caseIdx].algId)) != NULL);
+        EalAsmFill(key, scanCases[caseIdx].keyLen, (uint8_t)(0x21 + caseIdx));
+        EalAsmFill(iv, scanCases[caseIdx].ivLen, (uint8_t)(0x43 + caseIdx));
+        for (uint32_t dataLen = 1; dataLen <= EAL_ASM_SCAN_MAX_LEN; dataLen++) {
+            if (!EalAsmIsValidScanLen(scanCases[caseIdx].algId, dataLen)) {
+                continue;
+            }
+            EalAsmFill(plain, dataLen, (uint8_t)(0x65 + dataLen));
+            memset(plain + dataLen, EAL_ASM_GUARD_VALUE, EAL_ASM_GUARD_LEN);
+            memset(cipher, 0, dataLen);
+            memset(recovered, 0, dataLen);
+            memset(cipher + dataLen, EAL_ASM_GUARD_VALUE, EAL_ASM_GUARD_LEN);
+            memset(recovered + dataLen, EAL_ASM_GUARD_VALUE, EAL_ASM_GUARD_LEN);
+
+            int32_t ret = EalAsmCipherRoundTripGuard(ctx, scanCases[caseIdx].algId, key, scanCases[caseIdx].keyLen, iv,
+                scanCases[caseIdx].ivLen, plain, cipher, recovered, dataLen);
+            if (ret != CRYPT_SUCCESS) {
+                Print("\nalgId=%d dataLen=%u\n", scanCases[caseIdx].algId, dataLen);
+            }
+            ASSERT_EQ(ret, CRYPT_SUCCESS);
+        }
+        CRYPT_EAL_CipherFreeCtx(ctx);
+        ctx = NULL;
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_CipherFreeCtx(ctx);
+    return;
+}
+/* END_CASE */
+
+/**
+ * @test   SDV_CRYPTO_EAL_MD_VARLEN_GUARD_TC001
+ * @title  Hash 1..2048 byte single Update guard scan.
+ * @precon Registering memory-related functions.
+ * @brief
+ *    1. Traverse digest algorithms and message lengths from 1 to 2048.
+ *    2. Hash each message with one Update and Final.
+ *    3. Hash the same message with the one-shot EAL API.
+ *    4. Compare digests and guard areas.
+ * @expect
+ *    1. Every length succeeds.
+ *    2. The two digest results are the same.
+ *    3. Message and digest guard bytes are unchanged.
+ */
+/* BEGIN_CASE */
+void SDV_CRYPTO_EAL_MD_VARLEN_GUARD_TC001(void)
+{
+    TestMemInit();
+    static const int mdCases[] = {
+        CRYPT_MD_MD5,
+        CRYPT_MD_SHA1,
+        CRYPT_MD_SM3,
+        CRYPT_MD_SHA224,
+        CRYPT_MD_SHA256,
+        CRYPT_MD_SHA384,
+        CRYPT_MD_SHA512,
+        CRYPT_MD_SHA3_224,
+        CRYPT_MD_SHA3_256,
+        CRYPT_MD_SHA3_384,
+        CRYPT_MD_SHA3_512,
+        CRYPT_MD_SHAKE128,
+        CRYPT_MD_SHAKE256,
+    };
+    uint8_t msg[EAL_ASM_SCAN_MAX_LEN + EAL_ASM_GUARD_LEN] = {0};
+    CRYPT_EAL_MdCtx *ctx = NULL;
+
+    for (uint32_t caseIdx = 0; caseIdx < sizeof(mdCases) / sizeof(mdCases[0]); caseIdx++) {
+        ASSERT_TRUE((ctx = CRYPT_EAL_MdNewCtx(mdCases[caseIdx])) != NULL);
+        for (uint32_t msgLen = 1; msgLen <= EAL_ASM_SCAN_MAX_LEN; msgLen++) {
+            EalAsmFill(msg, msgLen, (uint8_t)(0x87 + msgLen));
+            memset(msg + msgLen, EAL_ASM_GUARD_VALUE, EAL_ASM_GUARD_LEN);
+
+            int32_t ret = EalAsmMdDigestGuard(ctx, mdCases[caseIdx], msg, msgLen);
+            if (ret != CRYPT_SUCCESS) {
+                Print("\nalgId=%d msgLen=%u\n", mdCases[caseIdx], msgLen);
+            }
+            ASSERT_EQ(ret, CRYPT_SUCCESS);
+        }
+        CRYPT_EAL_MdFreeCtx(ctx);
+        ctx = NULL;
+    }
+    ASSERT_TRUE(TestIsErrStackEmpty());
+EXIT:
+    CRYPT_EAL_MdFreeCtx(ctx);
+    return;
 }
 /* END_CASE */
 
