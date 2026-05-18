@@ -1001,6 +1001,7 @@ int32_t HITLS_CFG_SetGroups(HITLS_Config *config, const uint16_t *groups, uint32
     }
 
     BSL_SAL_FREE(config->tuples);
+    config->tuplesSize = 0;
     BSL_SAL_FREE(config->groups);
     config->groups = newData;
     config->groupsSize = groupsSize;
@@ -1145,6 +1146,10 @@ int32_t HITLS_CFG_SetGroupList(HITLS_Config *config, const char *groupNames, uin
             }
             tupleGroupCount++;
             groupName = strtok_r(NULL, ":", &groupContext);
+        }
+        if (list.tuplesSize >= MAX_GROUP_TYPE_NUM) {
+            BSL_SAL_FREE(groupNamesTmp);
+            return RETURN_ERROR_NUMBER_PROCESS(HITLS_INVALID_INPUT, BINLOG_ID16167, "tuple number exceeds max");
         }
         list.tuples[(list.tuplesSize)++] = tupleGroupCount;
         tupleToken = strtok_r(NULL, "/", &tupleContext);

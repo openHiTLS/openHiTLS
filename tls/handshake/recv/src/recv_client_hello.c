@@ -190,6 +190,8 @@ static uint16_t ServerSelectCurveId(const TLS_Ctx *ctx, const ClientHelloMsg *cl
     uint32_t tempTuplesSize = 1;
     const uint32_t *tuples = config->tuples == NULL ? tempTuples : config->tuples;
     const uint32_t tupleCount = config->tuples == NULL ? tempTuplesSize : config->tuplesSize;
+    uint16_t *tupleGroups = NULL;
+    uint32_t tupleGroupsCapacity = 0;
 
     bool serverPrefer = false;
 #ifdef HITLS_TLS_PROTO_DFX_SERVER_PREFER
@@ -199,8 +201,17 @@ static uint16_t ServerSelectCurveId(const TLS_Ctx *ctx, const ClientHelloMsg *cl
     uint32_t currentTupleStartIdx = 0;
     for (uint32_t tupleIdx = 0; tupleIdx < tupleCount; tupleIdx++) {
         uint32_t tupleSize = tuples[tupleIdx];
-        uint16_t tupleGroups[MAX_GROUP_TYPE_NUM];
         uint32_t tupleGroupCount = 0;
+        if (tupleSize > tupleGroupsCapacity) {
+            uint16_t *newTupleGroups = BSL_SAL_Realloc(tupleGroups, tupleSize * sizeof(uint16_t),
+                tupleGroupsCapacity * sizeof(uint16_t));
+            if (newTupleGroups == NULL) {
+                BSL_SAL_FREE(tupleGroups);
+                return HITLS_NAMED_GROUP_BUTT;
+            }
+            tupleGroups = newTupleGroups;
+            tupleGroupsCapacity = tupleSize;
+        }
         BuildTupleGroupsArray(ctx, currentTupleStartIdx, tupleSize, tupleGroups, &tupleGroupCount);
         if (tupleGroupCount == 0) {
             currentTupleStartIdx += tupleSize;
@@ -213,12 +224,14 @@ static uint16_t ServerSelectCurveId(const TLS_Ctx *ctx, const ClientHelloMsg *cl
             selectedGroup = ServerPrefSelectByTuple(clientHello, tupleGroups, tupleGroupCount);
         }
         if (selectedGroup != HITLS_NAMED_GROUP_BUTT) {
+            BSL_SAL_FREE(tupleGroups);
             return selectedGroup;
         }
 
         currentTupleStartIdx += tupleSize;
     }
-
+    
+    BSL_SAL_FREE(tupleGroups);
     BSL_LOG_BINLOG_FIXLEN(BINLOG_ID15211, BSL_LOG_LEVEL_INFO, BSL_LOG_BINLOG_TYPE_RUN,
         "No supported group found in tuple configuration.", 0, 0, 0, 0);
     return HITLS_NAMED_GROUP_BUTT;

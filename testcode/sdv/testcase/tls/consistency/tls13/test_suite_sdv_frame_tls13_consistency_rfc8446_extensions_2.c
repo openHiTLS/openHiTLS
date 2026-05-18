@@ -1937,3 +1937,41 @@ EXIT:
     HITLS_CFG_FreeConfig(cfg);
 }
 /* END_CASE */
+
+/**
+ * @spec ServerSelectGroupByTuples
+ * @title Test group selection with more groups than MAX_GROUP_TYPE_NUM through HITLS_CFG_SetGroups
+ * @precon nan
+ * @brief Configure the server with 33 repeated valid groups through HITLS_CFG_SetGroups.
+ *        Expected: The handshake succeeds and no fixed-size tuple buffer is overflowed.
+ * @expect The negotiated group is HITLS_EC_GROUP_SECP256R1.
+ */
+/* BEGIN_CASE */
+void UT_TLS_TLS13_GROUP_TUPLE_KEYSHARE_SELECT_TC008(void)
+{
+    FRAME_Init();
+    HITLS_Config *clientCfg = HITLS_CFG_NewTLS13Config();
+    HITLS_Config *serverCfg = HITLS_CFG_NewTLS13Config();
+    ASSERT_TRUE(clientCfg != NULL && serverCfg != NULL);
+
+    uint16_t groups[33] = {0};
+    for (uint32_t i = 0; i < sizeof(groups) / sizeof(groups[0]); i++) {
+        groups[i] = HITLS_EC_GROUP_SECP256R1;
+    }
+    ASSERT_EQ(HITLS_CFG_SetGroups(clientCfg, groups, sizeof(groups) / sizeof(uint16_t)), HITLS_SUCCESS);
+    ASSERT_EQ(HITLS_CFG_SetGroups(serverCfg, groups, sizeof(groups) / sizeof(uint16_t)), HITLS_SUCCESS);
+
+    FRAME_LinkObj *client = FRAME_CreateLink(clientCfg, BSL_UIO_TCP);
+    FRAME_LinkObj *server = FRAME_CreateLink(serverCfg, BSL_UIO_TCP);
+    ASSERT_TRUE(client != NULL && server != NULL);
+
+    ASSERT_EQ(FRAME_CreateConnection(client, server, false, HS_STATE_BUTT), HITLS_SUCCESS);
+    ASSERT_EQ(client->ssl->negotiatedInfo.negotiatedGroup, HITLS_EC_GROUP_SECP256R1);
+
+EXIT:
+    FRAME_FreeLink(client);
+    FRAME_FreeLink(server);
+    HITLS_CFG_FreeConfig(clientCfg);
+    HITLS_CFG_FreeConfig(serverCfg);
+}
+/* END_CASE */
