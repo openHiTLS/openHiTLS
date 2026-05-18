@@ -274,6 +274,7 @@ int32_t HS_GetReassMsg(TLS_Ctx *ctx, HS_MsgInfo *msgInfo, uint32_t *len)
     msgInfo->sequence = node->sequence;
     msgInfo->fragmentOffset = 0u;
     msgInfo->fragmentLength = node->msgLen - DTLS_HS_MSG_HEADER_SIZE;
+    msgInfo->headerAndBodyLen = DTLS_HS_MSG_HEADER_SIZE + msgInfo->length;
     int32_t ret = HS_ReSizeMsgBuf(ctx, node->msgLen);
     if (ret != HITLS_SUCCESS) {
         return ret;

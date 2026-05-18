@@ -927,6 +927,8 @@ int32_t TryReadOneTlsRecord(TLS_Ctx *ctx, uint8_t **recordBody, RecHdr *recHeade
     recHeader->bodyLen = BSL_ByteToUint16(recordHeader + REC_TLS_RECORD_LENGTH_OFFSET);
 
     ret = TlsCheckRecordHeader(ctx, recHeader);
+    /* TlsCheckRecordHeader may reszie the buffer in inBuf */
+    recordHeader = &inBuf->buf[inBuf->start];
     if (ret != HITLS_SUCCESS) {
 #ifdef HITLS_TLS_FEATURE_INDICATOR
         INDICATOR_MessageIndicate(0, 0, RECORD_HEADER, recordHeader, REC_TLS_RECORD_HEADER_LEN, ctx,
