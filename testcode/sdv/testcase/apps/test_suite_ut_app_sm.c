@@ -324,7 +324,8 @@ void UT_HITLS_APP_SM_TC004(void)
 
     int32_t status = 0;
     ASSERT_EQ(HITLS_APP_SM_Init(&g_appProvider, WORK_PATH, &password, &status), HITLS_APP_SUCCESS);
-    snprintf(userFilePath, sizeof(userFilePath), "%s/openhitls_user", WORK_PATH);
+    ASSERT_TRUE(snprintf_s(userFilePath, sizeof(userFilePath), sizeof(userFilePath) - 1, "%s/openhitls_user",
+        WORK_PATH) > 0);
     ASSERT_EQ(stat(userFilePath, &st), 0);
     ASSERT_EQ(st.st_mode & 0777, S_IRUSR | S_IWUSR);
 

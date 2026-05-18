@@ -423,7 +423,7 @@ void UT_HITLS_APP_KEYMGMT_TC001(void)
 
     uuid = GetUuidFromP12(WORK_PATH);
     ASSERT_TRUE(uuid != NULL);
-    snprintf(keyPath, sizeof(keyPath), "%s/%s.p12", WORK_PATH, uuid);
+    ASSERT_TRUE(snprintf_s(keyPath, sizeof(keyPath), sizeof(keyPath) - 1, "%s/%s.p12", WORK_PATH, uuid) > 0);
     ASSERT_EQ(stat(keyPath, &st), 0);
     ASSERT_EQ(st.st_mode & 0777, S_IRUSR | S_IWUSR);
 
@@ -751,7 +751,7 @@ void UT_HITLS_APP_KEYMGMT_TC007(void)
 
     // Verify the key file exists
     char keyPath[256];
-    snprintf(keyPath, sizeof(keyPath), "%s/%s.p12", WORK_PATH, uuid);
+    ASSERT_TRUE(snprintf_s(keyPath, sizeof(keyPath), sizeof(keyPath) - 1, "%s/%s.p12", WORK_PATH, uuid) > 0);
     FILE *fp = fopen(keyPath, "r");
     ASSERT_TRUE(fp != NULL);
     fclose(fp);
@@ -804,7 +804,7 @@ void UT_HITLS_APP_KEYMGMT_TC008(void)
 
     // Verify there is indeed no corresponding key file in the work directory
     char keyPath[256];
-    snprintf(keyPath, sizeof(keyPath), "%s/%s.p12", WORK_PATH, fakeUuid);
+    ASSERT_TRUE(snprintf_s(keyPath, sizeof(keyPath), sizeof(keyPath) - 1, "%s/%s.p12", WORK_PATH, fakeUuid) > 0);
     FILE *fp = fopen(keyPath, "r");
     ASSERT_TRUE(fp == NULL);
 
@@ -867,8 +867,8 @@ void UT_HITLS_APP_KEYMGMT_TC009(void)
 
     // Verify both key files exist
     char keyPath1[256], keyPath2[256];
-    snprintf(keyPath1, sizeof(keyPath1), "%s/%s.p12", WORK_PATH, uuid1);
-    snprintf(keyPath2, sizeof(keyPath2), "%s/%s.p12", WORK_PATH, uuid2);
+    ASSERT_TRUE(snprintf_s(keyPath1, sizeof(keyPath1), sizeof(keyPath1) - 1, "%s/%s.p12", WORK_PATH, uuid1) > 0);
+    ASSERT_TRUE(snprintf_s(keyPath2, sizeof(keyPath2), sizeof(keyPath2) - 1, "%s/%s.p12", WORK_PATH, uuid2) > 0);
 
     FILE *fp1 = fopen(keyPath1, "r");
     ASSERT_TRUE(fp1 != NULL);
@@ -879,7 +879,7 @@ void UT_HITLS_APP_KEYMGMT_TC009(void)
 
     // Test deleting multiple keys - pass multiple UUIDs (comma-separated)
     char uuidList[256];
-    snprintf(uuidList, sizeof(uuidList), "%s,%s", uuid1, uuid2);
+    ASSERT_TRUE(snprintf_s(uuidList, sizeof(uuidList), sizeof(uuidList) - 1, "%s,%s", uuid1, uuid2) > 0);
     char *argv_delete[] = {"keymgmt", "-delete", SM_PARAM, "-uuid", uuidList, NULL};
     ret = HITLS_KeyMgmtMain(sizeof(argv_delete) / sizeof(argv_delete[0]) - 1, argv_delete);
     ASSERT_EQ(ret, HITLS_APP_SUCCESS);
@@ -935,7 +935,7 @@ void UT_HITLS_APP_KEYMGMT_TC010(void)
 
     // Verify the key file exists
     char keyPath1[256];
-    snprintf(keyPath1, sizeof(keyPath1), "%s/%s.p12", WORK_PATH, uuid1);
+    ASSERT_TRUE(snprintf_s(keyPath1, sizeof(keyPath1), sizeof(keyPath1) - 1, "%s/%s.p12", WORK_PATH, uuid1) > 0);
     FILE *fp1 = fopen(keyPath1, "r");
     ASSERT_TRUE(fp1 != NULL);
     fclose(fp1);
@@ -944,7 +944,7 @@ void UT_HITLS_APP_KEYMGMT_TC010(void)
     char fakeUuid[] = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
     char uuidList[256];
     // Note: Put the existing UUID first and the non-existing one after, to verify ordered deletion logic
-    snprintf(uuidList, sizeof(uuidList), "%s,%s", uuid1, fakeUuid);
+    ASSERT_TRUE(snprintf_s(uuidList, sizeof(uuidList), sizeof(uuidList) - 1, "%s,%s", uuid1, fakeUuid) > 0);
 
     char *argv_delete[] = {"keymgmt", "-delete", SM_PARAM, "-uuid", uuidList, NULL};
     ret = HITLS_KeyMgmtMain(sizeof(argv_delete) / sizeof(argv_delete[0]) - 1, argv_delete);
@@ -958,7 +958,7 @@ void UT_HITLS_APP_KEYMGMT_TC010(void)
 
     // Verify the non-existent key file indeed does not exist
     char keyPath2[256];
-    snprintf(keyPath2, sizeof(keyPath2), "%s/%s.p12", WORK_PATH, fakeUuid);
+    ASSERT_TRUE(snprintf_s(keyPath2, sizeof(keyPath2), sizeof(keyPath2) - 1, "%s/%s.p12", WORK_PATH, fakeUuid) > 0);
     FILE *fp2 = fopen(keyPath2, "r");
     ASSERT_TRUE(fp2 == NULL);
 
